@@ -91,9 +91,11 @@ const DOVRE = [182016, 6880000, 228000, 6930016], DOMBAS = [189000, 6892000, 197
 const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
-// /norge-1986 viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
+// /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
 const NORGE_TAG = '';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
-const ER_NORGE = location.pathname.startsWith('/norge-1986') && !!NORGE_TAG;
+const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
+if (PÅ_NORGE && !NORGE_TAG) location.replace('/kommuner-1986');   // til Norge-kartet er bygget: det gamle kommunekartet
+const ER_NORGE = PÅ_NORGE && !!NORGE_TAG;
 const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versjon.py
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
@@ -720,7 +722,7 @@ async function bygg3d(cx, cy, S) {
   const N = 321, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
   const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 400; }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
   const TW = 2048, mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = '#1a1710'; g.fillRect(0, 0, TW, TW);
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false }, kø = [];

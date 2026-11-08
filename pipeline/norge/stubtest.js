@@ -1,4 +1,4 @@
-const fs=require('fs');const h=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'../../site/norge/index.html'),'utf8');
+const fs=require('fs');const h=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'../../site/kommuner-1986/index.html'),'utf8');
 const data=h.split('<script id="mapdata" type="application/json">')[1].split('</script>')[0].replace(/<\\\//g,'</');
 const js=h.split('<script>')[1].split('</script>')[0];
 const noop=()=>{}; const ctxP=new Proxy({},{get:(t,k)=>{ if(k==='isPointInPath')return()=>true; if(k==='getTransform')return()=>({}); if(k==='measureText')return()=>({width:10}); if(k==='createPattern'||k==='createRadialGradient')return()=>({addColorStop:noop}); if(k==='createImageData')return()=>({data:new Uint8ClampedArray(256*256*4)}); return noop; }, set:()=>true});

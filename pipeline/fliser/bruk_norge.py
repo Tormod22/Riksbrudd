@@ -1,4 +1,4 @@
-"""Tar i bruk en ferdig bygget Norge-versjon på /norge-1986: setter NORGE_TAG i site/dovre-fliser/index.html.
+"""Tar i bruk en ferdig bygget Norge-versjon på /norge: setter NORGE_TAG i site/dovre-fliser/index.html.
 Sjekker først at releasen finnes og har manifest.json. Bruk: python3 bruk_norge.py kart-norge-<hash>"""
 import os, re, sys, json, urllib.request
 tag = sys.argv[1]; assert re.fullmatch(r'kart-norge-(\d{4}-)?[0-9a-f]{12}', tag), tag

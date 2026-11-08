@@ -3,6 +3,15 @@
 Dette er en rekonstruert logg av samtalen 7.–8. november 2026, med alle beslutninger, det som er bygget, og hva som gjenstår.
 (Ordrett transkripsjon av chatten var ikke tilgjengelig; dette er innholdet, i rekkefølge.)
 
+## 0. Oppdatert 8. nov 2026 (Claude Code) – les dette først
+
+- **Spillet foregår nå i 2023**, ikke 1986 (brukerens valg). Lore og fraksjoner i resten av dokumentet og i
+  designdokumentet er skrevet for 1986 og må tilpasses. Kartet bygges for 2023: Sentinel-2, ESA WorldCover, NVDB per 1.6.2023.
+- **Hele Norge** bygges i blokker i GitHub Actions (`.github/workflows/norge.yml`) og hentes via GitHub Releases + `site/api/kart.js`.
+  Se `docs/plan-hele-norge.md` og `CLAUDE.md`.
+- **Adresser:** `/norge` = hele Norge 2023 (når bygget), `/kommuner-1986` = den første kommuneprototypen (var `/norge`),
+  `/dovre-fliser` = flispiloten med lag, marsj, sikt, kamp, tåke og 3D.
+
 ## 1. Samtalen, kronologisk
 
 1. **Idé.** Bruker vil lage et krigsstrategispill «litt likt Supremacy 1914». Valg: nettleser først, sanntid med raskt tempo, både flerspiller og enspiller mot AI.
@@ -31,7 +40,7 @@ Dette er en rekonstruert logg av samtalen 7.–8. november 2026, med alle beslut
 
 ### site/ (statisk, klar for Vercel)
 - index.html – forside
-- norge/index.html – Norge 1986: 454 kommuner, verden grått, folkemening, spillogikk (trening/bevegelse/kamp/AI), 24-min døgn, trær ved dyp zoom. Alt innebygd (~1,3 MB).
+- kommuner-1986/index.html (var norge/) – Norge 1986: 454 kommuner, verden grått, folkemening, spillogikk (trening/bevegelse/kamp/AI), 24-min døgn, trær ved dyp zoom. Alt innebygd (~1,3 MB).
 - dovre/index.html – Dovre 1987 testområde (~1,9 MB), 2D + 3D.
 
 ### pipeline/norge/

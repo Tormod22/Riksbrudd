@@ -7,7 +7,7 @@
    "destination": "/api/kart?tag=:tag&fil=:fil&fra=:fra&lengde=:lengde"
   },
   {
-   "source": "/norge-1986",
+   "source": "/norge",
    "destination": "/dovre-fliser/index.html"
   }
  ],
@@ -29,6 +29,13 @@
      "value": "public, max-age=31536000, immutable"
     }
    ]
+  }
+ ],
+ "redirects": [
+  {
+   "source": "/norge-1986",
+   "destination": "/norge",
+   "permanent": false
   }
  ]
 }

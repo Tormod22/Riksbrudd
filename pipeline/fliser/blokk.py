@@ -42,6 +42,10 @@ def hent(url, data=None, headers={}, forsok=5):
 
 
 # ---------- høyde ----------
+# Dekningen til Kartverkets WCS (DescribeCoverage 8. nov): fastlandet, ikke Svalbard. Utsnitt helt utenfor gir
+# «BBOX is invalid» (det knakk fire kystblokker i vest); delvis utenfor går fint.
+WCS_DEKNING = (-100275.0, 6399725.0, 1150255.0, 8000275.0)
+
 def hoyde(b, r=8.0, bit=2080):
     WCS = "https://wcs.geonorge.no/skwms1/wcs.hoyde-dtm-nhm-25833"
     minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
@@ -49,10 +53,16 @@ def hoyde(b, r=8.0, bit=2080):
     def del_(ji):
         j, i = ji; w, h = min(bit, W - i), min(bit, H - j)
         bx = (minx + i * r, maxy - (j + h) * r, minx + (i + w) * r, maxy - j * r)
+        d = WCS_DEKNING
+        if bx[2] <= d[0] or bx[0] >= d[2] or bx[3] <= d[1] or bx[1] >= d[3]: return   # helt utenfor: hav (eller Svalbard)
         q = dict(service='WCS', version='1.0.0', request='GetCoverage', coverage='nhm_dtm_topo_25833', crs=CRS,
                  bbox=','.join(f'{v:.1f}' for v in bx), width=w, height=h, format='GeoTIFF')
-        t = tifffile.imread(io.BytesIO(hent(WCS + '?' + urllib.parse.urlencode(q)))).astype(np.float32)
-        t[(t < -500) | (t > 3000)] = np.nan
+        data = hent(WCS + '?' + urllib.parse.urlencode(q))
+        if data[:2] not in (b'II', b'MM'):   # ikke TIFF: tjenesten svarte med en feilmelding
+            if b'BBOX is invalid' in data: return
+            raise RuntimeError('høydetjenesten svarte: ' + data[:300].decode('utf-8', 'replace'))
+        t = tifffile.imread(io.BytesIO(data)).astype(np.float32)
+        t[(t < -500) | (t > 3000) | (t == 0)] = np.nan   # tjenesten gir havet nøyaktig 0 m: regnes som hav
         a[j:j + h, i:i + w] = t[:h, :w]
     with cf.ThreadPoolExecutor(4) as ex: list(ex.map(del_, [(j, i) for j in range(0, H, bit) for i in range(0, W, bit)]))
     return a
