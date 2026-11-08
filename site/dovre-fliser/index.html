@@ -131,7 +131,7 @@ const KLAR = (async () => {
   let m = await MANIFEST_RELEASE;
   if (!m) { try { m = await (await fetch(DATA + 'manifest.json')).json(); } catch (e) { m = null; } }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
-  if (m && m.omrade) OMRÅDE = m.omrade;
+  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInn(OMRÅDE); }   // /norge åpner med hele landet
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
     document.getElementById('kilde').textContent = `Høyde: Kartverket DTM (CC BY 4.0) · Inneholder modifiserte Copernicus Sentinel-data ${m.år} · Arealtype: ESA WorldCover 2021 (CC BY 4.0) · Veg: NVDB per 1. juni ${m.år} · Bygg: matrikkelen`;
