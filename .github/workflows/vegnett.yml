@@ -1,0 +1,72 @@
+# S1 eier bare nye spillfiler. Kartvisningen bygges ikke om av denne workflowen.
+name: Bygg og test vegnett
+on:
+  push:
+    branches: ['spill/s1-vegnett']
+    paths:
+      - 'site/dovre-fliser/spill/vegnett.js'
+      - 'pipeline/fliser/*vegnett*'
+      - '.github/workflows/vegnett.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vegnett-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  tester:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Alle eksisterende tester
+        run: |
+          node pipeline/norge/stubtest.js
+          node pipeline/dovre/stub.js
+          node pipeline/dovre/stub2.js
+          node pipeline/fliser/test_terreng.js
+          node pipeline/fliser/sjekk.js
+      - name: Bygger og ruteregler
+        run: |
+          python3 pipeline/fliser/test_vegnett.py
+          node pipeline/fliser/test_vegnett.js
+  bygg:
+    needs: tester
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Hent hele Norge fra NVDB (1. juni 2023)
+        run: python3 pipeline/fliser/vegnett.py vegnett --buffer "$RUNNER_TEMP/nvdb"
+      - name: Ekte E6 Oslo–Trondheim og sperret bru
+        run: node pipeline/fliser/test_vegnett.js vegnett/vegnett.bin
+      - name: Størrelsesbudsjett
+        run: |
+          python3 - <<'PY'
+          import json
+          m = json.load(open('vegnett/manifest.json'))
+          print(m['statistikk'], 'rå byte:', m['byte'], 'gzip byte:', m['gzip_byte'])
+          assert m['utvalg'] == 'hele Norge'
+          assert m['gzip_byte'] < 30_000_000, 'Nedlastingen overskrider 30 MB; del opp før publisering'
+          PY
+      - name: Last opp kontrollert release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(cat vegnett/tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --latest=false \
+            --title "Vegnett $TAG" --notes "S1: NVDB-vegnettet 1. juni 2023. Statens vegvesen, NLOD. Ferjeventing og reservefart er spillregler. Format og begrensninger i site/dovre-fliser/spill/VEGNETT.md."
+          gh release upload "$TAG" vegnett/vegnett.bin vegnett/vegnett.bin.gz vegnett/manifest.json --clobber
+          echo "### Kontrollert vegnett: $TAG" >> "$GITHUB_STEP_SUMMARY"
