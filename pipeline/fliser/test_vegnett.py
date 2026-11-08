@@ -4,7 +4,7 @@ from pathlib import Path
 import struct
 import sys
 import unittest
-from vegnett import bygg, geometri, indekser, LENKE, overlapper, retning
+from vegnett import bygg, geometri, indekser, MAGIC, overlapper, retning
 
 
 def segment(seq, a, b, p, **valg):
@@ -36,9 +36,11 @@ def fixture():
 class ByggerTest(unittest.TestCase):
     def test_format(self):
         b = fixture()
-        self.assertEqual(LENKE.size, 40)
-        self.assertEqual(b[:8], b'RBVEG001')
-        self.assertEqual(struct.unpack_from('<II', b, 8), (10, 9))
+        self.assertEqual(MAGIC, b'RBVEG002')
+        self.assertEqual(b[:8], MAGIC)
+        self.assertEqual(struct.unpack_from('<III', b, 8), (10, 9, 4))   # noder, lenker, infrakoblinger
+        k = struct.unpack_from('<I', b, 24)[0]
+        self.assertEqual(28 + 4 * k + sum(struct.unpack_from(f'<{k}I', b, 28)), len(b), 'kolonnelengdene dekker hele fila')
 
     def test_retning(self):
         for f, ventet in [([], 3), (['1'], 1), (['2'], 2), (['1', '2'], 3), (['1R'], 3), (['1K'], 1)]:

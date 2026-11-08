@@ -23,8 +23,9 @@ BASE = 'https://nvdbapiles.atlas.vegvesen.no'
 KATEGORIER = 'ERFKPS'
 VEGTYPER = 'enkelBilveg,kanalisertVeg,rampe,rundkjøring,bilferje,gatetun'
 HODE = {'X-Client': 'riksbrudd-vegnett', 'Accept': 'application/json'}
-LENKE = struct.Struct('<IIfIIIIBBBBII')  # 40 byte
-MAGIC = b'RBVEG001'
+MAGIC = b'RBVEG002'   # kolonneformat (se spill/VEGNETT.md); RBVEG001 (40 byte per lenke) kan fortsatt leses av vegnett.js
+KOLONNER = ('x', 'y', 'fra', 'til', 'lengde', 'sekvens', 'start', 'slutt', 'vegnummer', 'flagg', 'fart', 'kategori',
+            'indre', 'geometri', 'infratype', 'infralenke', 'infraid')
 
 
 def sider(sti, param, buffer):
@@ -85,13 +86,18 @@ def punkter(wkt):
     return [tuple(round(float(v)) for v in p.split()[:2]) for p in wkt[wkt.index('(') + 1:wkt.rindex(')')].split(',')]
 
 
-def varint(v):
-    v = v * 2 if v >= 0 else -2 * v - 1
-    ut = bytearray()
+def uvarint(v, ut):
+    if v < 0: raise ValueError('Negativt tall i uvarint')
     while v >= 128:
         ut.append((v & 127) | 128); v >>= 7
     ut.append(v)
-    return ut
+
+
+def zvarint(v, ut): uvarint(v * 2 if v >= 0 else -2 * v - 1, ut)
+
+
+def varint(v):
+    ut = bytearray(); zvarint(v, ut); return ut
 
 
 def geometri(p):
@@ -99,6 +105,44 @@ def geometri(p):
     for a, b in p:
         ut.extend(varint(a - x)); ut.extend(varint(b - y)); x, y = a, b
     return ut
+
+
+def pakk(xy, lenker, koblinger, dato):
+    """RBVEG002: hver verdi i sin egen kolonne, sortert så nabotall ligner hverandre, og små tall som varint.
+    Noder i bånd på 2 km (slangerekkefølge), lenker langs NVDB-sekvensene: fra-noden er da som regel forrige til-node,
+    og startposisjonen forrige sluttposisjon. Geometrien lagrer bare punktene mellom endenodene."""
+    band = lambda n: xy[n][1] // 2000
+    orden = sorted(range(len(xy)), key=lambda n: (band(n), xy[n][0] if band(n) % 2 == 0 else -xy[n][0], xy[n][1]))
+    ny = [0] * len(xy)
+    for i, n in enumerate(orden): ny[n] = i
+    lorden = sorted(range(len(lenker)), key=lambda e: (lenker[e][3], lenker[e][4], lenker[e][5]))
+    nyl = [0] * len(lenker)
+    for i, e in enumerate(lorden): nyl[e] = i
+    k = {n: bytearray() for n in KOLONNER}
+    px = py = 0
+    for n in orden:
+        x, y = xy[n]; zvarint(x - px, k['x']); zvarint(y - py, k['y']); px, py = x, y
+    forrige = (0, -1, 0, 0)   # til-node, sekvens, sluttposisjon, vegnummer
+    for e in lorden:
+        a, b, lengde, sekvens, start, slutt, vegnr, flagg, fart, kat, indre = lenker[e]
+        a, b = ny[a], ny[b]
+        zvarint(a - forrige[0], k['fra']); zvarint(b - a, k['til'])
+        uvarint(max(1, math.ceil(lengde * 10)), k['lengde'])   # desimeter, rundet opp (aldri kortere enn luftlinjen)
+        if sekvens < forrige[1] or not 0 <= start < slutt <= 10 ** 8: raise ValueError('Ugyldig sekvens eller posisjon')
+        uvarint(sekvens - max(forrige[1], 0), k['sekvens'])
+        zvarint(start - (forrige[2] if sekvens == forrige[1] else 0), k['start'])
+        uvarint(slutt - start, k['slutt']); zvarint(vegnr - forrige[3], k['vegnummer'])
+        k['flagg'].append(flagg); k['fart'].append(fart); k['kategori'].append(kat)
+        uvarint(len(indre), k['indre'])
+        qx, qy = xy[orden[a]]
+        for x, y in indre: zvarint(x - qx, k['geometri']); zvarint(y - qy, k['geometri']); qx, qy = x, y
+        forrige = (b, sekvens, slutt, vegnr)
+    sist = 0
+    for e, typ, ident in sorted((nyl[e], typ, ident) for e, typ, ident in koblinger):
+        k['infratype'].append((60, 67, 770).index(typ)); uvarint(e - sist, k['infralenke']); uvarint(ident, k['infraid']); sist = e
+    header = struct.pack('<8sIIII', MAGIC, len(xy), len(lenker), len(koblinger), int(dato.replace('-', ''))) + \
+        struct.pack('<I', len(KOLONNER)) + b''.join(struct.pack('<I', len(k[n])) for n in KOLONNER)
+    return header + b''.join(bytes(k[n]) for n in KOLONNER)
 
 
 def retning(o):
@@ -111,7 +155,7 @@ def retning(o):
 
 
 def bygg(veger, indekser_, dato):
-    noder, xy, lenker, geo, koblinger, sett = {}, [], bytearray(), bytearray(), [], set()
+    noder, xy, lenker, koblinger, sett = {}, [], [], [], set()
     stat = defaultdict(int)
 
     def node(navn, p):
@@ -142,19 +186,14 @@ def bygg(veger, indekser_, dato):
         if not 0 <= fart <= 255: raise ValueError('Ugyldig fartsgrense')
         ferje = o['typeVeg_sosi'] == 'bilferje'
         flagg = retning(o) | (4 if ferje else 0)
-        g = geometri(p)
-        e = len(lenker) // LENKE.size
-        lenker.extend(LENKE.pack(a, b, lengde, o['veglenkesekvensid'], round(o['startposisjon'] * 1e8),
-                                round(o['sluttposisjon'] * 1e8), vs['nummer'], flagg, fart,
-                                KATEGORIER.index(vs['vegkategori']), 0, len(geo), len(g)))
-        geo.extend(g)
+        e = len(lenker)
+        lenker.append((a, b, lengde, o['veglenkesekvensid'], round(o['startposisjon'] * 1e8), round(o['sluttposisjon'] * 1e8),
+                       vs['nummer'], flagg, fart, KATEGORIER.index(vs['vegkategori']), p[1:-1]))
         for typ in (60, 67, 770):
             for ident in overlapper(indekser_.get(typ, {}), o): koblinger.append((e, typ, ident))
         stat['ferjelenker' if ferje else 'veglenker'] += 1
         if fart: stat['med_fartsgrense'] += 1
-    header = struct.pack('<8sIIIIII', MAGIC, len(xy), len(lenker) // LENKE.size, len(geo), len(koblinger), int(dato.replace('-', '')), 0)
-    raw = header + b''.join(struct.pack('<ii', *p) for p in xy) + lenker + b''.join(struct.pack('<III', *r) for r in koblinger) + geo
-    return raw, dict(stat, noder=len(xy), koblinger=len(koblinger))
+    return pakk(xy, lenker, koblinger, dato), dict(stat, noder=len(xy), koblinger=len(koblinger))
 
 
 def landsdekkende(q, buffer):
@@ -205,7 +244,7 @@ def main():
     (args.ut / 'vegnett.bin').write_bytes(raw)
     (args.ut / 'vegnett.bin.gz').write_bytes(pakket)
     tag = 'kart-vegnett-' + hashlib.sha256(raw).hexdigest()[:12]
-    manifest = {'format': 'RBVEG001', 'dato': dato, 'crs': 'EPSG:25833', 'utvalg': args.veg or 'hele Norge',
+    manifest = {'format': MAGIC.decode(), 'dato': dato, 'crs': 'EPSG:25833', 'utvalg': args.veg or 'hele Norge',
                 'kilde': 'Statens vegvesen / NVDB (NLOD)', 'tag': tag, 'statistikk': stat,
                 'fil': 'vegnett.bin', 'byte': len(raw), 'gzip_byte': len(pakket), 'sha256': hashlib.sha256(raw).hexdigest(),
                 'ferje_ventetid_sekunder': 900, 'ferje_fart_kmt': 25,

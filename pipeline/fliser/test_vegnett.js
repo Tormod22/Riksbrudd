@@ -49,6 +49,8 @@ console.log('ok – ruter, omkjøring, ingen veg, gjenåpning, enveiskjøring, p
 
 // Uavhengig referanse: Dijkstra på fixture, inkludert tilfeldige sperringer.
 function referanse(graf, start, slutt) {
+  const land = new Set();   // noder med vanlig veg: der venter man på ferja (nodenumrene avhenger av filformatet)
+  for (let e = 0; e < 9; e++) { const l = graf.lenke(e); if (!l.ferje) { land.add(l.fra); land.add(l.til); } }
   const dist = Array(graf.antallNoder).fill(Infinity), ferdig = new Set(); dist[start] = 0;
   while (ferdig.size < dist.length) {
     let n = -1;
@@ -61,7 +63,7 @@ function referanse(graf, start, slutt) {
       if (l.sperret || (e === 3 && l.fra !== n)) continue;
       const v = l.fra === n ? l.til : l.til === n ? l.fra : -1;
       if (v < 0) continue;
-      const pris = l.lengde / ((l.ferje ? 25 : l.fartsgrense || 80) / 3.6) + (l.ferje && [4, 6].includes(n) ? 900 : 0);
+      const pris = l.lengde / ((l.ferje ? 25 : l.fartsgrense || 80) / 3.6) + (l.ferje && land.has(n) ? 900 : 0);
       dist[v] = Math.min(dist[v], dist[n] + pris);
     }
   }
@@ -94,9 +96,8 @@ async function sjekk() {
   assert(r, 'Sammenhengende Oslo–Trondheim langs E6');
   assert(r.meter > 400000 && r.meter < 650000, 'Rimelig reiselengde');
   assert(ms < 1000, 'Rutesøk under 1 sekund');
-  const d = fs.readFileSync(process.argv[2]), N = d.readUInt32LE(8), M = d.readUInt32LE(12), I = d.readUInt32LE(20), p = 32 + N * 8 + M * 40;
   const bruer = new Map();
-  for (let i = 0; i < I; i++) if (d.readUInt32LE(p + i * 12 + 4) === 60) bruer.set(d.readUInt32LE(p + i * 12), d.readUInt32LE(p + i * 12 + 8));
+  for (const e of r.lenker) for (const [type, id] of ekte.infraPåLenke(e)) if (type === 60) bruer.set(e, id);
   const bru = r.lenker.find(e => bruer.has(e));
   assert.notEqual(bru, undefined, 'Ruten må krysse en ekte NVDB-bru');
   const brulenker = ekte.infraLenker(60, bruer.get(bru));

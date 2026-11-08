@@ -60,17 +60,31 @@ aldri nærmeste geometri. Kilde-ID-ene tilsvarer de samme typene i INFRA. En bru
 - S1 har ingen automatisk innlasting i kartet. S2 registrerer kjøretøymodulen i `spill.js`, laster grafen,
   legger kreditering i `#kilde` og bruker KROKER. Slik unngås endringer i kart-chatens HTML under S1.
 
-## Binærformat RBVEG001 (little-endian)
+## Binærformat RBVEG002 (little-endian, kolonner)
+
+Byttet fra RBVEG001 8. nov etter nasjonal bygging: RBVEG001 ble 66,5 MB gzip (2 030 057 lenker), over budsjettet på 30 MB.
+RBVEG002 lagrer det samme innholdet i kolonner, sortert slik at nabotall ligner, med varint i stedet for faste 4 byte.
+E6-utvalget: 550 KB -> 189 KB gzip. `vegnett.js` leser fortsatt RBVEG001 (eldre testfiler).
 
 | Del | Innhold |
 |---|---|
-| Header, 32 byte | magic 8 byte; uint32: antall noder, lenker, geometribyte, infrakoblinger, YYYYMMDD, reservert=0 |
-| Noder, 8 byte hver | int32 x, y i EPSG:25833 |
-| Lenker, 40 byte hver | uint32 fra, til; float32 lengde; uint32 NVDB-sekvens, startposisjon×1e8, sluttposisjon×1e8, vegnummer; uint8 flagg, fartsgrense, kategori, reservert; uint32 geometrioffset, geometrilengde |
-| Infra, 12 byte hver | uint32 lenkeindeks, NVDB-type (60/67/770), kilde-ID |
-| Geometri | zigzag-varint av dx,dy i meter; første punkt absolutt; byteoffset relativt til geometridelen |
+| Header, 28 byte | magic `RBVEG002`; uint32: antall noder N, lenker M, infrakoblinger I, dato YYYYMMDD, antall kolonner K = 17 |
+| Kolonnetabell | K × uint32: bytelengden til hver kolonne, i rekkefølgen under. Kolonnene følger rett etter hverandre |
+
+Kolonner (u = uvarint, z = zigzag-varint):
+1–2 `x`, `y` (z): noder i bånd på 2 km (slangerekkefølge), differanse til forrige node, meter EPSG:25833.
+3–4 `fra` (z, minus forrige lenkes til-node), `til` (z, minus fra). Lenkene er sortert på NVDB-sekvens og startposisjon.
+5 `lengde` (u): desimeter, rundet opp. 6 `sekvens` (u, økning fra forrige). 7 `start` (z, minus forrige sluttposisjon i samme
+sekvens, ellers minus 0) og 8 `slutt` (u, minus start), posisjon × 1e8. 9 `vegnummer` (z, minus forrige).
+10–12 `flagg`, `fart`, `kategori`: én byte per lenke (som før). 13 `indre` (u): antall punkter mellom endenodene.
+14 `geometri` (z): de indre punktene, differanse fra fra-noden og så fra forrige punkt. Endepunktene er nodene.
+15 `infratype`: én byte (0 = bru 60, 1 = tunnelløp 67, 2 = ferjesamband 770); 16 `infralenke` (u, økning; sortert på lenke);
+17 `infraid` (u): kilde-ID.
 
 Flagg: bit 0 med, bit 1 mot, bit 2 ferje. Kategoriindeks i `ERFKPS`. Ukjent fartsgrense = 0.
+Nodenumre og lenkenumre gjelder én bestemt fil – lagre aldri tilstand på dem (se over).
+`infraPåLenke(e)` gir `[[type, kilde-id], …]` for en lenke (bruer, tunnelløp, ferjesamband).
+
 API-referanse: https://nvdb-docs.atlas.vegvesen.no/nvdbapil/v4/Vegnett/
 OpenAPI: https://nvdbapiles.atlas.vegvesen.no/api-docs/vegnett
 

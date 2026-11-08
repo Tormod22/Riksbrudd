@@ -28,25 +28,73 @@
     }
   }
   const heltall = (v, maks) => Number.isInteger(v) && v >= 0 && v < maks;
+  // Leser RBVEG001 (40 byte per lenke) eller RBVEG002 (kolonner med varint) til de samme typede tabellene.
+  function rå(data) {
+    const d = new DataView(data.buffer, data.byteOffset, data.byteLength), u = p => d.getUint32(p, true), magic = String.fromCharCode(...data.subarray(0, 8));
+    if (magic === 'RBVEG001') {
+      const N = u(8), M = u(12), G = u(16), I = u(20), eb = 32 + N * 8, ib = eb + M * 40, gb = ib + I * 12;
+      if (gb + G !== data.byteLength || u(28) !== 0) throw new Error('Skadet vegnettfil');
+      const r = { N, M, I, dato: u(24), x: new Int32Array(N), y: new Int32Array(N), fra: new Uint32Array(M), til: new Uint32Array(M),
+        l: new Float64Array(M), sekvens: new Uint32Array(M), start: new Uint32Array(M), slutt: new Uint32Array(M), vegnr: new Uint32Array(M),
+        flagg: new Uint8Array(M), fart: new Uint8Array(M), kat: new Uint8Array(M), ie: new Uint32Array(I), it: new Uint32Array(I), id: new Uint32Array(I) };
+      for (let n = 0; n < N; n++) { r.x[n] = d.getInt32(32 + n * 8, true); r.y[n] = d.getInt32(36 + n * 8, true); }
+      const go = new Uint32Array(M), gl = new Uint32Array(M);
+      for (let e = 0; e < M; e++) { const p = eb + e * 40;
+        r.fra[e] = u(p); r.til[e] = u(p + 4); r.l[e] = d.getFloat32(p + 8, true); r.sekvens[e] = u(p + 12); r.start[e] = u(p + 16); r.slutt[e] = u(p + 20);
+        r.vegnr[e] = u(p + 24); r.flagg[e] = d.getUint8(p + 28); r.fart[e] = d.getUint8(p + 29); r.kat[e] = d.getUint8(p + 30); go[e] = u(p + 32); gl[e] = u(p + 36);
+        if (go[e] + gl[e] > G || gl[e] < 4) throw new Error('Ugyldig veglenke ' + e); }
+      for (let i = 0; i < I; i++) { const p = ib + i * 12; r.ie[i] = u(p); r.it[i] = u(p + 4); r.id[i] = u(p + 8); }
+      r.linje = e => { const ut = []; let pos = gb + go[e], X = 0, Y = 0; const slutt = pos + gl[e], v = varint(data, () => pos, q => { pos = q; }, slutt);
+        while (pos < slutt) { X += zz(v()); Y += zz(v()); ut.push([X, Y]); } return ut; };
+      return r;
+    }
+    if (magic !== 'RBVEG002') throw new Error('Ukjent vegnettformat');
+    const N = u(8), M = u(12), I = u(16), K = u(24); if (K !== 17) throw new Error('Skadet vegnettfil');
+    const lengder = [], start = []; let p = 28 + K * 4;
+    for (let k = 0; k < K; k++) { lengder.push(u(28 + k * 4)); start.push(p); p += lengder[k]; }
+    if (p !== data.byteLength) throw new Error('Skadet vegnettfil');
+    const kol = k => { let pos = start[k]; const slutt = pos + lengder[k]; return { v: varint(data, () => pos, q => { pos = q; }, slutt), ferdig: () => pos === slutt }; };
+    const byte = (k, n) => { if (lengder[k] !== n) throw new Error('Skadet vegnettfil'); return data.subarray(start[k], start[k] + n); };
+    const r = { N, M, I, dato: u(20), x: new Int32Array(N), y: new Int32Array(N), fra: new Uint32Array(M), til: new Uint32Array(M),
+      l: new Float64Array(M), sekvens: new Uint32Array(M), start: new Uint32Array(M), slutt: new Uint32Array(M), vegnr: new Uint32Array(M),
+      flagg: byte(9, M), fart: byte(10, M), kat: byte(11, M), ie: new Uint32Array(I), it: new Uint32Array(I), id: new Uint32Array(I) };
+    const [cx, cy, cf, ct, cl, cs, cst, csl, cv, , , , ci, cg, , cie, cid] = Array.from({ length: K }, (_, k) => kol(k));
+    let X = 0, Y = 0; for (let n = 0; n < N; n++) { X += zz(cx.v()); Y += zz(cy.v()); r.x[n] = X; r.y[n] = Y; }
+    let til = 0, sek = -1, sl = 0, vn = 0; const goff = new Uint32Array(M + 1), indre = new Uint32Array(M);
+    for (let e = 0; e < M; e++) {
+      const a = til + zz(cf.v()), b = a + zz(ct.v()), s = sek < 0 ? cs.v() : sek + cs.v(), st = (s === sek ? sl : 0) + zz(cst.v()), slu = st + csl.v();
+      vn += zz(cv.v()); r.fra[e] = a; r.til[e] = b; r.l[e] = cl.v() / 10; r.sekvens[e] = s; r.start[e] = st; r.slutt[e] = slu; r.vegnr[e] = vn;
+      indre[e] = ci.v(); til = b; sek = s; sl = slu;
+    }
+    { let pos = start[13]; const slutt = pos + lengder[13], v = varint(data, () => pos, q => { pos = q; }, slutt);   // byteadresse for hver lenkes geometri
+      for (let e = 0; e < M; e++) { goff[e] = pos; for (let i = 0; i < 2 * indre[e]; i++) v(); } goff[M] = pos; if (pos !== slutt) throw new Error('Skadet veggeometri'); }
+    const typer = byte(14, I); let le = 0;
+    for (let i = 0; i < I; i++) { if (typer[i] > 2) throw new Error('Ugyldig infrastrukturkobling'); r.it[i] = [60, 67, 770][typer[i]]; le += cie.v(); r.ie[i] = le; r.id[i] = cid.v(); }
+    if (![cx, cy, cf, ct, cl, cs, cst, csl, cv, ci, cie, cid].every(c => c.ferdig())) throw new Error('Skadet vegnettfil');
+    r.linje = e => { let pos = goff[e]; const v = varint(data, () => pos, q => { pos = q; }, goff[e + 1]); let X = r.x[r.fra[e]], Y = r.y[r.fra[e]]; const ut = [[X, Y]];
+      for (let i = 0; i < indre[e]; i++) { X += zz(v()); Y += zz(v()); ut.push([X, Y]); } ut.push([r.x[r.til[e]], r.y[r.til[e]]]); return ut; };
+    return r;
+  }
+  const zz = v => v % 2 ? -(v + 1) / 2 : v / 2;
+  // Varint-leser over data fra posisjonen hent() til grense; settes() flytter posisjonen.
+  function varint(data, hent, sett, grense) {
+    return () => { let pos = hent(), v = 0, faktor = 1, b;
+      do { if (pos >= grense || faktor > 2 ** 49) throw new Error('Skadet vegnettfil'); b = data[pos++]; v += (b & 127) * faktor; faktor *= 128; } while (b & 128);
+      sett(pos); return v; };
+  }
   function les(data) {
     if (ArrayBuffer.isView(data)) data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     else if (data instanceof ArrayBuffer) data = new Uint8Array(data);
     else throw new TypeError('Forventet ArrayBuffer eller typet tabell');
-    if (data.byteLength < 32 || String.fromCharCode(...data.subarray(0, 8)) !== 'RBVEG001') throw new Error('Ukjent vegnettformat');
-    const d = new DataView(data.buffer, data.byteOffset, data.byteLength), u = p => d.getUint32(p, true);
-    const N = u(8), M = u(12), G = u(16), I = u(20), eb = 32 + N * 8, ib = eb + M * 40, gb = ib + I * 12;
-    if (gb + G !== data.byteLength || u(28) !== 0) throw new Error('Skadet vegnettfil');
-    const x = new Int32Array(N), y = new Int32Array(N), fra = new Uint32Array(M), til = new Uint32Array(M);
-    const lengde = new Float64Array(M), tid = new Float64Array(M), flagg = new Uint8Array(M);
+    if (data.byteLength < 28) throw new Error('Ukjent vegnettformat');
+    const R = rå(data), { N, M, I, x, y, fra, til, flagg } = R;
+    const lengde = new Float64Array(M), tid = new Float64Array(M);
     const antall = new Uint32Array(N + 1), land = new Uint8Array(N), sperret = new Uint8Array(M);
-    const infra = new Map(); let maksMS = 0;
-    for (let n = 0; n < N; n++) { x[n] = d.getInt32(32 + n * 8, true); y[n] = d.getInt32(36 + n * 8, true); }
+    const infra = new Map(), infraPå = new Map(); let maksMS = 0;
     for (let e = 0; e < M; e++) {
-      const p = eb + e * 40, a = u(p), b = u(p + 4), l = d.getFloat32(p + 8, true), f = d.getUint8(p + 28);
-      const kat = d.getUint8(p + 30), fart = d.getUint8(p + 29), go = u(p + 32), gl = u(p + 36);
+      const a = fra[e], b = til[e], l = R.l[e], f = flagg[e], kat = R.kat[e], fart = R.fart[e];
       if (a >= N || b >= N || !Number.isFinite(l) || l <= 0 || kat >= KATEGORIER.length || !(f & 3) || f > 7 ||
-          u(p + 16) >= u(p + 20) || u(p + 20) > 1e8 || go + gl > G || gl < 4) throw new Error('Ugyldig veglenke ' + e);
-      fra[e] = a; til[e] = b; flagg[e] = f;
+          R.start[e] >= R.slutt[e] || R.slutt[e] > 1e8) throw new Error('Ugyldig veglenke ' + e);
       lengde[e] = Math.max(l, Math.hypot(x[a] - x[b], y[a] - y[b]));
       const ms = (f & 4 ? 25 : (fart || FART[kat])) / 3.6;
       tid[e] = lengde[e] / ms; maksMS = Math.max(maksMS, ms);
@@ -55,10 +103,12 @@
       if (!(f & 4)) land[a] = land[b] = 1;
     }
     for (let i = 0; i < I; i++) {
-      const p = ib + i * 12, e = u(p), type = u(p + 4), id = u(p + 8), key = type + ':' + id;
+      const e = R.ie[i], type = R.it[i], id = R.id[i], key = type + ':' + id;
       if (e >= M || ![60, 67, 770].includes(type)) throw new Error('Ugyldig infrastrukturkobling');
       if (!infra.has(key)) infra.set(key, []);
       infra.get(key).push(e);
+      if (!infraPå.has(e)) infraPå.set(e, []);
+      infraPå.get(e).push([type, id]);
     }
     for (let n = 1; n <= N; n++) antall[n] += antall[n - 1];
     const neste = antall.slice(), kant = new Uint32Array(antall[N]), nabo = new Uint32Array(antall[N]);
@@ -79,26 +129,16 @@
     }
     function linje(e) {
       sjekkLenke(e);
-      const p = eb + e * 40, slutt = gb + u(p + 32) + u(p + 36), punkter = [];
-      let pos = gb + u(p + 32), X = 0, Y = 0;
-      function tall() {
-        let v = 0, faktor = 1, b;
-        do {
-          if (pos >= slutt || faktor > 2 ** 28) throw new Error('Skadet veggeometri');
-          b = data[pos++]; v += (b & 127) * faktor; faktor *= 128;
-        } while (b & 128);
-        return v % 2 ? -(v + 1) / 2 : v / 2;
-      }
-      while (pos < slutt) { X += tall(); Y += tall(); punkter.push([X, Y]); }
+      const punkter = R.linje(e);
       if (punkter.length < 2) throw new Error('Skadet veggeometri');
       return punkter;
     }
     function lenke(e) {
-      sjekkLenke(e); const p = eb + e * 40;
-      return { id: e, fra: fra[e], til: til[e], lengde: lengde[e], sekvens: u(p + 12),
-        startposisjon: u(p + 16) / 1e8, sluttposisjon: u(p + 20) / 1e8,
-        vegkategori: KATEGORIER[d.getUint8(p + 30)], vegnummer: u(p + 24),
-        fartsgrense: d.getUint8(p + 29) || null, ferje: !!(flagg[e] & 4), sperret: !!sperret[e] };
+      sjekkLenke(e);
+      return { id: e, fra: fra[e], til: til[e], lengde: lengde[e], sekvens: R.sekvens[e],
+        startposisjon: R.start[e] / 1e8, sluttposisjon: R.slutt[e] / 1e8,
+        vegkategori: KATEGORIER[R.kat[e]], vegnummer: R.vegnr[e],
+        fartsgrense: R.fart[e] || null, ferje: !!(flagg[e] & 4), sperret: !!sperret[e] };
     }
     function rute(start, slutt, valg = {}) {
       const maks = valg.maksAvstand === undefined ? 2000 : valg.maksAvstand;
@@ -134,8 +174,9 @@
       }
       return null;
     }
-    return { antallNoder: N, antallLenker: M, dato: String(u(24)), punkt, naermeste, linje, lenke, rute,
+    return { antallNoder: N, antallLenker: M, dato: String(R.dato), punkt, naermeste, linje, lenke, rute,
       infraLenker(type, id) { return (infra.get(type + ':' + id) || []).slice(); },
+      infraPåLenke(e) { sjekkLenke(e); return (infraPå.get(e) || []).map(t => t.slice()); },   // [[type, kilde-id], ...]
       sperr(e) { sjekkLenke(e); sperret[e] = 1; },
       åpne(e) { sjekkLenke(e); sperret[e] = 0; } };
   }
