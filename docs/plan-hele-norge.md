@@ -67,8 +67,8 @@ Origo flyttes til 9 200 km nord **før** noe annet bygges. Bare Dovre-flisene m�
   eller egen maskin løser det.
 
 ### 3. Lagring
-**Valgt 8. nov: GitHub Releases + mellomstasjon på Vercel**, fordi det ikke krever nøkler fra brukeren (repoet er offentlig,
-og Actions laster opp med GITHUB_TOKEN). Filene kan være opptil 2 GB, og hver bit lagres i Vercels hurtigbuffer
+**Valgt 8. nov: GitHub Releases + mellomstasjon på Vercel**, fordi det ikke krever nøkler fra brukeren (Actions laster opp
+med GITHUB_TOKEN). **Forutsetter at repoet er offentlig** – det er privat nå, så brukeren må velge (fase 0, spørsmål 4). Filene kan være opptil 2 GB, og hver bit lagres i Vercels hurtigbuffer
 (`site/api/kart.js`). Grenser å følge med på: Vercel Hobby har 100 GB overføring og 1 million kall i måneden. R2 under er
 reserven hvis det ikke holder, eller når spillet åpnes for mange.
 
