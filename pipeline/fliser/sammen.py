@@ -5,7 +5,7 @@
 - skriver manifest.json som visningen leser (hvilken fil som har hvilke fliser).
 
 Bruk: python3 sammen.py BLOKKMAPPE UTMAPPE      (BLOKKMAPPE har undermapper X_Y/ med *.pmtiles og stat.json)
-Skriver også UTMAPPE/tag.txt = kart-norge-<hash>, navnet på GitHub-releasen.
+Skriver også UTMAPPE/tag.txt = kart-norge-<år>-<hash>, navnet på GitHub-releasen.
 """
 import os, sys, io, json, glob, hashlib, numpy as np
 from PIL import Image
@@ -110,7 +110,7 @@ def main(inn, ut):
     xs = [b[0] for b in blokker]; ys = [b[1] for b in blokker]
     omr = [X0 + min(xs) * span(6), Y0 - (max(ys) + 1) * span(6), X0 + (max(xs) + 1) * span(6), Y0 - min(ys) * span(6)]
     man = {'rutenett': {'crs': CRS, 'x0': X0, 'y0': Y0, 'res0': 16384, 'tile': TILE}, 'omrade': omr, 'blokker': blokker,
-           'veger_per': '1986-06-01', 'filer': {}, 'statistikk': {}}
+           'filer': {}, 'statistikk': {}}
     h = hashlib.sha256()
     for n, (tt, komp) in TYPER.items():
         man['filer'][n] = []
@@ -122,7 +122,9 @@ def main(inn, ut):
     man['statistikk'] = {'blokker': len(stat), 'tomme': sum(1 for s in stat if s.get('tom')),
                          'landsat_dekning_min': min((s['landsat']['dekning'] for s in stat if 'landsat' in s), default=None),
                          'veger': sum(s.get('veger', 0) for s in stat), 'bygg': sum(s.get('bygg', 0) for s in stat)}
-    tag = 'kart-norge-' + h.hexdigest()[:12]; man['versjon'] = tag
+    år = stat[0].get('år', 1986) if stat else 0
+    tag = f'kart-norge-{år}-' + h.hexdigest()[:12]; man['versjon'] = tag; man['år'] = år
+    man['veger_per'] = f'{år}-06-01'
     json.dump(man, open(os.path.join(ut, 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
     open(os.path.join(ut, 'tag.txt'), 'w').write(tag); print('versjon', tag)
 

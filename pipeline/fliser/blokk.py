@@ -1,12 +1,16 @@
-"""Bygger én blokk av Norge 1986: en z6-flis (65,5 × 65,5 km) med alle lag, som egne PMTiles-filer.
+"""Bygger én blokk av Norge et gitt år (standard 2023): en z6-flis (65,5 × 65,5 km) med alle lag, som egne PMTiles-filer.
 Kjøres i GitHub Actions for hver blokk fra blokker.py; sammen.py setter blokkene sammen.
 
   høyde    Kartverket DTM (WCS), 8 m, hentet med 512 m margin (sømløse kanter mellom blokkene), z6–z11
-  kart     Landsat 5, somrene 1985–88, skyfri median av klare punkter (QA_PIXEL), stil 1-farge, 32 m, z6–z9
-  terreng  arealklasse fra samme Landsat + høyde, z6–z9
-  vektor   veger fra NVDB slik vegnettet var 1. juni 1986 (tidspunkt=1986-06-01) og bygg fra matrikkelen, z8–z13
+  ÅR >= 2017 (Sentinel-2-tiden):
+  kart     Sentinel-2 L2A, sommeren ÅR, skyfri median (SCL-maske), stil 1-farge etter arealklasse, 16 m, z6–z10
+  terreng  ESA WorldCover 2021 (10 m), med tettbebyggelse (klasse 7), z6–z10
+  ÅR < 2017 (Landsat 5-tiden, f.eks. 1986):
+  kart     Landsat 5, somrene ÅR-1 til ÅR+2, skyfri median (QA_PIXEL), 32 m, z6–z9; terreng klassifisert fra samme
+  Alltid:
+  vektor   veger fra NVDB slik vegnettet var 1. juni ÅR (tidspunkt) og bygg fra matrikkelen, z8–z13
 
-Bruk: python3 blokk.py X Y [utmappe]      (utmappe: standard arbeid/blokker/X_Y)
+Bruk: python3 blokk.py X Y [utmappe] [år]      (utmappe: standard arbeid/blokker/X_Y, år: miljøvariabel AAR eller 2023)
 Krever: numpy, pillow, rasterio, pyproj, shapely, tifffile, mapbox-vector-tile, pmtiles. Bak proxy: CURL_CA_BUNDLE.
 """
 import os, sys, io, json, time, urllib.request, urllib.parse, concurrent.futures as cf
@@ -17,12 +21,13 @@ from shapely import clip_by_rect, STRtree
 from pmtiles.writer import Writer
 from pmtiles.tile import zxy_to_tileid, TileType, Compression
 from felles import CRS, TILE, res, span, tile_bounds
-from fliskode import Lerret, kod_hoyde, kod_terreng, webp, klassifiser, flisomraade, mvt, INGEN
+from fliskode import Lerret, kod_hoyde, kod_terreng, webp, klassifiser, flisomraade, mvt, INGEN, fra_worldcover, farge
 
 HER = os.path.dirname(os.path.abspath(__file__))
 ZB = 6                 # blokknivå
 MARGIN = 512.0         # meter rundt blokken for høyden (delelig med alle nivåenes piksel ned til z6? 512 = 2 px på z6)
-VEG_DATO = '1986-06-01'
+ÅR = int(os.environ.get('AAR', '2023'))   # miljøvariabel AAR (bash tåler ikke «Å» i navnet) eller 4. argument
+VEG_DATO = f'{ÅR}-06-01'
 IKKE_BYGD = {'IG', 'RA', 'GR', 'BR', 'BF'}   # bare tillatelse, eller revet/brent/flyttet
 T0 = time.time()
 def logg(*a): print(f'[{time.time() - T0:6.0f} s]', *a, flush=True)
@@ -54,19 +59,19 @@ def hoyde(b, r=8.0, bit=2080):
 
 
 # ---------- Landsat 1985–88, skyfri median ----------
-def landsat(b, r=32.0, maks_scener=14, nok=3):
+def landsat(b, år=1986, r=32.0, maks_scener=14, nok=3):
     import rasterio
     from rasterio.warp import reproject, Resampling, transform_bounds
     from rasterio.transform import from_origin
     minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
     ll = list(transform_bounds(CRS, 'EPSG:4326', *b))
     feats = []
-    for år in (1985, 1986, 1987, 1988):
-        q = {"collections": ["landsat-c2-l2"], "bbox": ll, "datetime": f"{år}-06-15T00:00:00Z/{år}-09-10T23:59:59Z",
+    for a in (år - 1, år, år + 1, år + 2):
+        q = {"collections": ["landsat-c2-l2"], "bbox": ll, "datetime": f"{a}-06-15T00:00:00Z/{a}-09-10T23:59:59Z",
              "query": {"platform": {"in": ["landsat-5"]}, "eo:cloud_cover": {"lt": 70}}, "limit": 200}
         feats += json.loads(hent("https://planetarycomputer.microsoft.com/api/stac/v1/search", json.dumps(q).encode(), {"Content-Type": "application/json"}))['features']
     # helst 1986 og lite skyer
-    feats.sort(key=lambda f: f['properties']['eo:cloud_cover'] + 8 * abs(int(f['properties']['datetime'][:4]) - 1986))
+    feats.sort(key=lambda f: f['properties']['eo:cloud_cover'] + 8 * abs(int(f['properties']['datetime'][:4]) - år))
     logg('landsat:', len(feats), 'kandidater')
     sign = lambda h: json.loads(hent("https://planetarycomputer.microsoft.com/api/sas/v1/sign?href=" + urllib.parse.quote(h, safe='')))['href']
     T = from_origin(minx, maxy, r, r); BÅND = ['red', 'green', 'blue', 'nir08', 'swir16']
@@ -116,7 +121,83 @@ def skoggrense_for(b, rader):
     return np.clip(1150 - 80 * (np.asarray(lat) - 60), 250, 1200)[:, None]
 
 
-# ---------- veger (1986) og bygg ----------
+# ---------- Sentinel-2 (sommeren ÅR) og WorldCover ----------
+def sentinel2(b, år, r=16.0, maks_scener=12, nok=3):
+    """Skyfri median av rød/grønn/blå (reflektans 0–1) for sommeren `år`, i nettet r meter. SCL: 4 vegetasjon, 5 bart,
+    6 vann, 7 uklassifisert, 11 snø regnes som klart; skyer, skygger, cirrus og manglende data ikke."""
+    import rasterio
+    from rasterio.warp import reproject, Resampling, transform_bounds
+    from rasterio.transform import from_origin
+    minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
+    ll = list(transform_bounds(CRS, 'EPSG:4326', *b))
+    q = {"collections": ["sentinel-2-l2a"], "bbox": ll, "datetime": f"{år}-06-15T00:00:00Z/{år}-08-31T23:59:59Z",
+         "query": {"eo:cloud_cover": {"lt": 50}}, "limit": 300}
+    feats = json.loads(hent("https://planetarycomputer.microsoft.com/api/stac/v1/search", json.dumps(q).encode(), {"Content-Type": "application/json"}))['features']
+    feats.sort(key=lambda f: f['properties']['eo:cloud_cover'])
+    logg('sentinel-2:', len(feats), 'kandidater')
+    sign = lambda h: json.loads(hent("https://planetarycomputer.microsoft.com/api/sas/v1/sign?href=" + urllib.parse.quote(h, safe='')))['href']
+    T = from_origin(minx, maxy, r, r); BÅND = ['B04', 'B03', 'B02']
+    def les(f, bånd, kategori=False):
+        import rasterio
+        with rasterio.open(sign(f['assets'][bånd]['href'])) as src:
+            dst = np.zeros((H, W), np.uint16)
+            reproject(rasterio.band(src, 1), dst, dst_transform=T, dst_crs=CRS, src_nodata=0, dst_nodata=0,
+                      resampling=Resampling.nearest if kategori else Resampling.average)
+            return dst
+    # Minnevennlig: klare verdier lagres som heltall (DN + 1, 0 = mangler) i én ferdig tabell; reserven er første verdi
+    # uansett sky (QA kaller ofte snø og is for sky). Ca. 1,2 GB for 12 scener i 16 m, mot 7 GB med flyttall.
+    stabel = np.zeros((len(BÅND), maks_scener, H, W), np.uint16); reserve = np.zeros((len(BÅND), H, W), np.uint16)
+    antall = np.zeros((H, W), np.uint8); brukt = []
+    for f in feats:
+        if len(brukt) >= maks_scener or (antall >= nok).mean() > 0.995: break
+        try:
+            with cf.ThreadPoolExecutor(4) as ex:
+                scl = ex.submit(les, f, 'SCL', True); bb = {k: ex.submit(les, f, k) for k in BÅND}
+                scl = scl.result(); bb = {k: v.result() for k, v in bb.items()}
+        except Exception as e:
+            logg('hopper over', f['id'], str(e)[:100]); continue
+        if not (bb['B04'] > 0).any(): continue
+        forskyv = 1000 if f['properties'].get('s2:processing_baseline', '00.00') >= '04.00' else 0   # fra 2022: DN = 10000·ρ + 1000
+        klar = np.isin(scl, (4, 5, 6, 7, 11)) & (bb['B04'] > 0)
+        s = len(brukt)
+        for i, k in enumerate(BÅND):
+            dn = np.clip(bb[k].astype(np.int32) - forskyv, 0, 65534).astype(np.uint16) + 1   # +1 så 0 betyr «mangler»
+            stabel[i, s] = np.where(klar, dn, 0)
+            reserve[i] = np.where((reserve[i] == 0) & (bb[k] > 0), dn, reserve[i])
+        del bb, scl
+        antall += klar; brukt.append(f['id'])
+        logg('  scene', f['id'], f"sky {f['properties']['eo:cloud_cover']:.0f} %", f'dekning {(antall > 0).mean():.3f}')
+    S = len(brukt); ut = np.full((H, W, len(BÅND)), np.nan, np.float32)
+    for i in range(len(BÅND)):
+        for j in range(0, H, 256):   # median bit for bit
+            st = stabel[i, :S, j:j + 256].astype(np.float32); st[st == 0] = np.nan
+            with np.errstate(all='ignore'): m = np.nanmedian(st, axis=0) if S else np.full(st.shape[1:], np.nan, np.float32)
+            r_ = reserve[i, j:j + 256].astype(np.float32); m = np.where(np.isnan(m) & (r_ > 0), r_, m)
+            ut[j:j + 256, :, i] = (m - 1) / 10000
+    del stabel
+    return ut, brukt, float((antall > 0).mean())
+
+
+def worldcover(b, r=16.0):
+    """ESA WorldCover 2021 (10 m) i nettet r meter, mest vanlige klasse per rute (mode)."""
+    import rasterio
+    from rasterio.warp import reproject, Resampling, transform_bounds
+    from rasterio.transform import from_origin
+    minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
+    q = {"collections": ["esa-worldcover"], "bbox": list(transform_bounds(CRS, 'EPSG:4326', *b)), "limit": 20}
+    feats = [f for f in json.loads(hent("https://planetarycomputer.microsoft.com/api/stac/v1/search", json.dumps(q).encode(), {"Content-Type": "application/json"}))['features'] if '2021' in f['id']]
+    sign = lambda h: json.loads(hent("https://planetarycomputer.microsoft.com/api/sas/v1/sign?href=" + urllib.parse.quote(h, safe='')))['href']
+    ut = np.zeros((H, W), np.uint8); T = from_origin(minx, maxy, r, r)
+    for f in feats:
+        with rasterio.open(sign(f['assets']['map']['href'])) as src:
+            tmp = np.zeros((H, W), np.uint8)
+            reproject(rasterio.band(src, 1), tmp, dst_transform=T, dst_crs=CRS, src_nodata=0, dst_nodata=0, resampling=Resampling.mode)
+            ut = np.where(ut == 0, tmp, ut)
+    logg('worldcover:', [f['id'] for f in feats])
+    return ut
+
+
+# ---------- veger og bygg ----------
 def veger(b):
     q = urllib.parse.urlencode({'kartutsnitt': ','.join(f'{v:.0f}' for v in b), 'srid': '5973', 'antall': 1000, 'tidspunkt': VEG_DATO})
     base = "https://nvdbapiles.atlas.vegvesen.no/vegnett/api/v4/veglenkesekvenser/segmentert?" + q
@@ -170,7 +251,7 @@ def skriv(sti, fliser, ttype, komp):
 def main(bx, by, ut):
     os.makedirs(ut, exist_ok=True)
     B = tile_bounds(ZB, bx, by); M = (B[0] - MARGIN, B[1] - MARGIN, B[2] + MARGIN, B[3] + MARGIN)
-    stat = {'blokk': [bx, by], 'grenser': B}
+    stat = {'blokk': [bx, by], 'grenser': B, 'år': ÅR}
     logg('blokk', bx, by, B)
 
     # høyde
@@ -186,13 +267,21 @@ def main(bx, by, ut):
     del h8
     stat['hoyde'] = skriv(os.path.join(ut, 'hoyde.pmtiles'), hf, TileType.WEBP, Compression.NONE); logg('høydefliser', len(hf))
 
-    # Landsat -> terreng og kart (32 m, nøyaktig blokken)
-    bånd, brukt, dekning = landsat(B); stat['landsat'] = {'scener': brukt, 'dekning': round(dekning, 4)}
-    x0, y0, x1, y1 = flisomraade(bx, by, 9); oy = (y0 - h32.ty0) * TILE; ox = (x0 - h32.tx0) * TILE
-    dem = h32.a[oy:oy + (y1 - y0 + 1) * TILE, ox:ox + (x1 - x0 + 1) * TILE]
-    k, tex = klassifiser(bånd, dem, skoggrense_for(B, dem.shape[0])); del bånd
+    if ÅR >= 2017:   # Sentinel-2 og WorldCover, 16 m (z10)
+        zk = 10; x0, y0, x1, y1 = flisomraade(bx, by, zk)
+        rgb, brukt, dekning = sentinel2(B, ÅR); stat['satellitt'] = {'kilde': f'Sentinel-2 L2A sommeren {ÅR}', 'scener': brukt, 'dekning': round(dekning, 4)}
+        k = fra_worldcover(worldcover(B))
+        k[(k == 255) & np.isnan(rgb[..., 0])] = 255
+        tex = farge(k, rgb); del rgb
+    else:            # Landsat 5, 32 m (z9)
+        zk = 9; x0, y0, x1, y1 = flisomraade(bx, by, zk)
+        bånd, brukt, dekning = landsat(B, ÅR); stat['satellitt'] = {'kilde': f'Landsat 5 somrene {ÅR - 1}–{ÅR + 2}', 'scener': brukt, 'dekning': round(dekning, 4)}
+        oy = (y0 - h32.ty0) * TILE; ox = (x0 - h32.tx0) * TILE
+        dem = h32.a[oy:oy + (y1 - y0 + 1) * TILE, ox:ox + (x1 - x0 + 1) * TILE]
+        k, tex = klassifiser(bånd, dem, skoggrense_for(B, dem.shape[0])); del bånd
+    stat['landsat'] = stat['satellitt']   # gammelt navn (sammen.py)
     tf, kf = [], []
-    Lk = Lerret(k, x0, y0, 9); Lt = Lerret(tex, x0, y0, 9)
+    Lk = Lerret(k, x0, y0, zk); Lt = Lerret(tex, x0, y0, zk)
     while Lk.z >= ZB:
         for x, y, t in Lk.fliser():
             if (t != 255).any(): tf.append(((Lk.z, x, y), kod_terreng(t)))
@@ -239,4 +328,5 @@ def main(bx, by, ut):
 
 if __name__ == '__main__':
     bx, by = int(sys.argv[1]), int(sys.argv[2])
+    if len(sys.argv) > 4: ÅR = int(sys.argv[4]); VEG_DATO = f'{ÅR}-06-01'
     main(bx, by, sys.argv[3] if len(sys.argv) > 3 else os.path.join(HER, 'arbeid', 'blokker', f'{bx}_{by}'))

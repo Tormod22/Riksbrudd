@@ -117,6 +117,14 @@ For hele Norge, med raskere panorering, gir det hakking.
   vektorlag i samme flisnett, så du kan zoome fra hele landet ned til en enkelt soldat.
 - **Rutenett for erobring:** 2 km-sekskanter (ca. 80 000–95 000 på fastlandet, avhengig av hvordan 2 km måles) som eget lag med ID-er serveren bruker.
 
+## Beslutning 8. nov: spillet foregår i 2023 (foreløpig)
+
+Brukeren valgte 2023 etter å ha vurdert 1986 og 2020. Byggingen har årstallet som innstilling (`blokk.py … år`,
+workflow-input `aar`), så 1986-veien under er beholdt og testet (prøvebygg av fem blokker i Actions lyktes).
+For 2023: Sentinel-2 L2A sommeren 2023 (skyfri median, SCL-maske, 16 m), ESA WorldCover 2021 (10 m) som arealtyper med
+ny klasse 7 tettbebyggelse (fart 3,5 km/t, sikt ×0,4, hus skjuler som skog), NVDB per 1. juni 2023, matrikkelen.
+Dovre-blokken: 5 min, maks 2,7 GB minne. I Actions tok 1986-blokkene 14–23 min.
+
 ## Hele Norge slik det var i 1986 (undersøkt 8. nov)
 
 Målet (brukeren): **hele Norge slik det var i 1986, som ett sammenhengende spillkart.**

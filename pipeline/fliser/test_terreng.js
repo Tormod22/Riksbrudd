@@ -36,6 +36,7 @@ const S = (v, i, j) => T.senter(v, i, j);
   sjekk('sikt: speider 8 km', T.siktvidde(v, x, y, true, false) === 8000);
   sjekk('sikt: i bevegelse ×0,55', Math.abs(T.siktvidde(v, x, y, false, true) - 2200) < 1);
   v.K[50 * 100 + 50] = 1; sjekk('sikt: i skog ×0,35', Math.abs(T.siktvidde(v, x, y, false, false) - 1400) < 1); v.K[50 * 100 + 50] = 2;
+  v.K[50 * 100 + 50] = 7; sjekk('sikt: i tettbebyggelse ×0,4', Math.abs(T.siktvidde(v, x, y, false, false) - 1600) < 1); v.K[50 * 100 + 50] = 2;
   v.H[50 * 100 + 50] = 1150; sjekk('sikt: på en topp lenger', T.siktvidde(v, x, y, false, false) > 4000, Math.round(T.siktvidde(v, x, y, false, false)) + ' m');
 }
 { // 5. Siktfelt: en rygg skjuler dalen bak; skog skjuler det bak trærne
@@ -48,6 +49,9 @@ const S = (v, i, j) => T.senter(v, i, j);
   const sf2 = T.siktfelt(v2, ...S(v2, 30, 50), 3000);
   sjekk('siktfelt: skogkanten synes', sf2[50 * 100 + 40] === 1);
   sjekk('siktfelt: ikke bak skogen', sf2[50 * 100 + 60] === 0);
+  const v3 = flatt(); for (let j = 0; j < 100; j++) for (let i = 40; i < 44; i++) v3.K[j * 100 + i] = 7;
+  sjekk('siktfelt: ikke bak husene', T.siktfelt(v3, ...S(v3, 30, 50), 3000)[50 * 100 + 60] === 0);
+  sjekk('fart: tettbebyggelse 3,5 km/t, veg gjennom 4–5', T.fart(7, 0) === 3.5 && T.fart(7, 1) === 4);
   sjekk('siktfelt: ikke lenger enn radius', T.siktfelt(flatt(), ...S(v, 50, 50), 640)[50 * 100 + 75] === 0);
 }
 { // 6. Ildkamp

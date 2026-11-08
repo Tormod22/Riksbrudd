@@ -66,7 +66,7 @@ def flisomraade(bx, by, z, zb=6):
 
 
 # ---------- Landsat 5 (Collection 2, nivå 2) -> arealklasse og stil 1-farge ----------
-PAL = {0: (128, 116, 96), 1: (64, 82, 48), 2: (136, 128, 86), 3: (22, 30, 38), 4: (222, 220, 208), 5: (150, 142, 88), 6: (108, 104, 70)}
+PAL = {0: (128, 116, 96), 1: (64, 82, 48), 2: (136, 128, 86), 3: (22, 30, 38), 4: (222, 220, 208), 5: (150, 142, 88), 6: (108, 104, 70), 7: (118, 108, 98)}
 INGEN = (26, 23, 16)
 LYS = (0.01, 0.30)   # reflektans som strekkes til 0–1 for lysstyrken i kartfargen
 
@@ -95,6 +95,23 @@ def klassifiser(bånd, dem, skoggrense=1050):
     lum = rgb.mean(axis=2, keepdims=True); tex = tex * (0.75 + 0.5 * lum); tex[k == 3] = PAL[3]
     tex[~finnes] = INGEN
     return k, np.clip(tex, 0, 255).astype(np.uint8)
+
+
+# ESA WorldCover (10 m) -> våre klasser. 7 = tettbebyggelse (ny med 2023-kartet).
+WORLDCOVER = {10: 1, 20: 2, 30: 2, 40: 5, 50: 7, 60: 0, 70: 4, 80: 3, 90: 6, 95: 6, 100: 2}
+
+def fra_worldcover(wc):
+    k = np.full(wc.shape, 255, np.uint8)
+    for a, b in WORLDCOVER.items(): k[wc == a] = b
+    return k
+
+def farge(k, rgb):
+    """Stil 1-farge: fargen til klassen, lysere/mørkere etter satellittbildets lysstyrke (rgb = reflektans 0–1, NaN = ukjent)."""
+    tex = np.zeros(k.shape + (3,), np.float32)
+    for kl, c in PAL.items(): tex[k == kl] = c
+    lum = np.nan_to_num(np.clip((rgb - LYS[0]) / (LYS[1] - LYS[0]), 0, 1).mean(axis=2, keepdims=True), nan=0.5)
+    tex = tex * (0.75 + 0.5 * lum); tex[k == 3] = PAL[3]; tex[k == 255] = INGEN
+    return np.clip(tex, 0, 255).astype(np.uint8)
 
 
 def mvt(lag):

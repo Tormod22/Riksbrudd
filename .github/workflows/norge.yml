@@ -1,13 +1,16 @@
 # Bygger kartet for hele Norge 1986 i blokker (pipeline/fliser/blokk.py), setter dem sammen (sammen.py) og legger
 # resultatet i en GitHub-release kart-norge-<hash>. Ingen nøkler: GITHUB_TOKEN laster opp, kildene er åpne.
 # Startes for hånd: Actions -> «Bygg Norge 1986» -> Run workflow (eller av Claude via API).
-name: Bygg Norge 1986
+name: Bygg Norge
 on:
   workflow_dispatch:
     inputs:
       blokker:
         description: 'fastland, svalbard, alle – eller en liste som [[6,36],[7,36]]'
         default: 'fastland'
+      aar:
+        description: 'Årstall (2023: Sentinel-2 og WorldCover; før 2017: Landsat 5)'
+        default: '2023'
 permissions:
   contents: write
 concurrency: { group: norge, cancel-in-progress: false }
@@ -45,7 +48,7 @@ jobs:
       - run: pip install -q -r pipeline/fliser/krav.txt
       - name: Bygg blokk ${{ matrix.b[0] }}, ${{ matrix.b[1] }}
         working-directory: pipeline/fliser
-        run: python3 blokk.py ${{ matrix.b[0] }} ${{ matrix.b[1] }} ut/${{ matrix.b[0] }}_${{ matrix.b[1] }}
+        run: python3 blokk.py ${{ matrix.b[0] }} ${{ matrix.b[1] }} ut/${{ matrix.b[0] }}_${{ matrix.b[1] }} ${{ inputs.aar || '2023' }}
       - uses: actions/upload-artifact@v4
         with:
           name: blokk-${{ matrix.b[0] }}_${{ matrix.b[1] }}
@@ -73,8 +76,8 @@ jobs:
         working-directory: norge
         run: |
           TAG=$(cat tag.txt)
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Norge 1986 $TAG" \
-            --notes "Kartet for hele Norge 1986 (PMTiles). Lages av .github/workflows/norge.yml – ikke rediger for hånd."
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Norge $TAG" \
+            --notes "Kartet for hele Norge (PMTiles). Lages av .github/workflows/norge.yml – ikke rediger for hånd."
           gh release upload "$TAG" *.pmtiles manifest.json --clobber
           echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
           python3 -c "import json;m=json.load(open('manifest.json'));print(json.dumps(m['statistikk'],ensure_ascii=False))" >> "$GITHUB_STEP_SUMMARY"

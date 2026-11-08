@@ -81,7 +81,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/terreng.js?v=750f9da8da"></script>
+<script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
@@ -124,16 +124,22 @@ class Kilde {
   }
 }
 // Lagene kan være delt i flere filer (hele Norge: sammen.py), hver med zoomområde og eventuelt en stripe av z6-kolonner.
-let OMRÅDE = DOVRE, LAGFILER = null;
+let OMRÅDE = DOVRE, LAGFILER = null, ÅRSTALL = 1987;
 const KLAR = (async () => {
   let m = await MANIFEST_RELEASE;
   if (!m) { try { m = await (await fetch(DATA + 'manifest.json')).json(); } catch (e) { m = null; } }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
   if (m && m.omrade) OMRÅDE = m.omrade;
+  if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
+    ÅRSTALL = m.år;
+    document.getElementById('kilde').textContent = `Høyde: Kartverket DTM (CC BY 4.0) · Inneholder modifiserte Copernicus Sentinel-data ${m.år} · Arealtype: ESA WorldCover 2021 (CC BY 4.0) · Veg: NVDB per 1. juni ${m.år} · Bygg: matrikkelen`;
+    loggLinjer.length = 0; logg(`Dovre, sommeren ${m.år}. En fiendtlig patrulje er i området. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.`);
+  }
   LAGFILER = {};
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil)) }));
   skitten = true;
 })();
+function zmaks(lag, std) { const l = LAGFILER && LAGFILER[lag]; return l && l.length ? Math.max(...l.map(f => Math.min(f.zmax, 17))) : std; }   // 2023-kartet: kart/terreng til z10
 function filFor(lag, z, x) {
   const liste = LAGFILER && LAGFILER[lag]; if (!liste) return null;
   return liste.find(f => z >= f.zmin && z <= f.zmax && (!f.x6 || z < 6 || ((x >> (z - 6)) >= f.x6[0] && (x >> (z - 6)) <= f.x6[1])));
@@ -260,8 +266,8 @@ const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
 async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lager bakken uten skygge)
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
-  const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, 9, 0), beste('hoyde', z, x, y, 13, 0),
-    z >= 12 ? beste('terreng', z, x, y, 9, 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
+  const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, zmaks('kart', 9), 0), beste('hoyde', z, x, y, 13, 0),
+    z >= 12 ? beste('terreng', z, x, y, zmaks('terreng', 9), 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
   g.fillStyle = '#1a1710'; g.fillRect(0, 0, T, T);
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
   if (k && k.f <= 2) { const sw = T / k.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(k.t.bm, k.ix * sw, k.iy * sw, sw, sw, 0, 0, T, T); }
@@ -349,7 +355,7 @@ function traer(g, z, x, y, tr, E, N) {
   const klasse = (X, Y) => { const px = Math.floor((X - tx0) / rt), py = Math.floor((ty0 - Y) / rt);
     return A[Math.max(0, Math.min(T - 1, py)) * T + Math.max(0, Math.min(T - 1, px))]; };
   const i0 = Math.floor((minx - 6) / S), i1 = Math.ceil((minx + span(z) + 6) / S), j0 = Math.floor((maxy - span(z) - 6) / S), j1 = Math.ceil((maxy + 6) / S);
-  const SANNS = { 1: .62, 2: .05, 5: .015, 6: .04 }, liten = z <= 12;
+  const SANNS = { 1: .62, 2: .05, 5: .015, 6: .04, 7: .03 }, liten = z <= 12;
   const skygge = [], kroner = [];
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const X = (i + hash(i, j, 1)) * S, Y = (j + hash(i, j, 2)) * S;
