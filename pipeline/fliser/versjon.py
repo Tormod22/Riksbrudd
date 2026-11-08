@@ -16,6 +16,6 @@ def kart_tag():   # må regnes likt som i kartdata.yml: sha256 av filene etter h
 if __name__ == '__main__':
     p = os.path.join(D, 'index.html'); s = open(p, encoding='utf-8').read()
     s, n1 = re.subn(r'/dovre-fliser/terreng\.js(\?v=[0-9a-f]+)?"', f'/dovre-fliser/terreng.js?v={terreng_hash()}"', s)
-    s, n2 = re.subn(r"const KART_TAG = '[^']*';", f"const KART_TAG = '{kart_tag()}';", s)
+    s, n2 = re.subn(r"const KART_TAG_DOVRE = '[^']*';", f"const KART_TAG_DOVRE = '{kart_tag()}';", s)
     assert n1 == 1 and n2 == 1, (n1, n2)
     open(p, 'w', encoding='utf-8').write(s); print('terreng.js?v=' + terreng_hash(), kart_tag())
