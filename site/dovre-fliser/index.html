@@ -73,7 +73,14 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="skala"><div id="skalaStrek"></div><span id="skalaTekst"></span></div>
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
 <div id="feil"></div>
-<script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+<script>
+// Vis feil på skjermen i stedet for en stille, svart side.
+(function () { const vis = t => { const f = document.getElementById('feil'); if (f && f.style.display !== 'block') { f.style.display = 'block'; f.textContent = 'Noe gikk galt: ' + t + ' – prøv å laste siden på nytt (Ctrl+F5).'; } };
+  window.addEventListener('error', e => { const t = e.target;   // skrifter som ikke lastes er ufarlige; skript og kode er det ikke
+    if (t && t !== window && t.tagName !== 'SCRIPT') return; vis(e.message || 'kunne ikke laste ' + (t && t.src || 'et skript')); }, true);
+  window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
+</script>
+<script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/terreng.js"></script>
 <script>
 'use strict';
@@ -665,7 +672,7 @@ function visPanel() {
 let R3 = null, på3d = false, siktVersjon = 0;
 function lastThree() {
   return window.THREE ? Promise.resolve() : new Promise((ok, nei) => { const sc = document.createElement('script');
-    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'; sc.onload = ok; sc.onerror = () => nei(new Error('3D-biblioteket lastet ikke')); document.head.appendChild(sc); });
+    sc.src = '/dovre-fliser/lib/three-r128.min.js'; sc.onload = ok; sc.onerror = () => nei(new Error('3D-biblioteket lastet ikke')); document.head.appendChild(sc); });
 }
 function bilin(v, X, Y) {
   const fx = (X - v.x0) / v.r - .5, fy = (v.y0 - Y) / v.r - .5, i = Math.max(0, Math.min(v.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(v.h - 2, Math.floor(fy))), a = fx - i, b = fy - j, k = j * v.w + i;

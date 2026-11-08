@@ -25,6 +25,8 @@ Kartdata for hele Norge: les docs/komprimering.md (fliser i nivåer + PMTiles, f
   Tåke: fiender vises bare der egne lag ser (synlig()); ellers «sist sett». 3D (knappen «3D»): three.js r128, utsnitt av
   høydeflisene rundt kameraet (bygg3d), kartet uten skygge som overflate, tåke/sikt bakt inn (bak3d).
   Brukeren har iPhone (Safari/WebKit): ikke AVIF, og bildelesing går via bilde() med reserve (<img>) når createImageBitmap
-  feiler. Brukeren meldte «bare svart» 8. nov – dette var trolig årsaken; tåken ble også lysere.
+  feiler. Brukeren meldte «bare svart» 8. nov (Edge på Windows): årsaken var at pmtiles.js fra unpkg.com ble blokkert
+  (klokka sto på 06:00, «0 lastet»). Bibliotekene ligger nå i site/dovre-fliser/lib/ – ikke hent skript fra CDN-er.
+  Feil vises på skjermen (#feil).
   Sjekk før publisering: `node pipeline/fliser/sjekk.js` (testserver med Range; høyder, sikt, marsj, tåke, kamp, 3D, feil;
   også «eldre iPhone» uten OffscreenCanvas/createImageBitmap).

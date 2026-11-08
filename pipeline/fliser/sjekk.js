@@ -16,6 +16,7 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet hÃ
   for (const [w, h, navn, gammel] of [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]]) {
     const kt = await b.newContext({ viewport: { width: w, height: h } });
     if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke stÃ¸ttet')); });
+    await kt.route(/^https?:\/\/(?!localhost)/, r => r.abort());   // ingen andre nettsider: spillet skal virke selv om en CDN er blokkert (brukeren fikk svart side 8. nov)
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && err.push(m.text()));
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
