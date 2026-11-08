@@ -1,0 +1,188 @@
+{
+ "rutenett": {
+  "crs": "EPSG:25833",
+  "x0": -200000.0,
+  "y0": 9000000.0,
+  "res0": 16384,
+  "tile": 256
+ },
+ "omrade": [
+  182016.0,
+  6880000.0,
+  228000.0,
+  6930016.0
+ ],
+ "kjerne_2m": [
+  189000.0,
+  6892000.0,
+  197000.0,
+  6900000.0
+ ],
+ "lag": {
+  "hoyde": {
+   "fil": "hoyde.pmtiles",
+   "z": [
+    6,
+    13
+   ],
+   "kant": 1,
+   "presisjon": {
+    "z12+": 10,
+    "ellers": 4
+   }
+  },
+  "terreng": {
+   "fil": "terreng.pmtiles",
+   "z": [
+    6,
+    9
+   ]
+  },
+  "kart": {
+   "fil": "kart.pmtiles",
+   "z": [
+    5,
+    9
+   ]
+  },
+  "vektor": {
+   "fil": "vektor.pmtiles",
+   "z": [
+    8,
+    13
+   ]
+  }
+ },
+ "statistikk": {
+  "hoyde_8m": [
+   439.9727478027344,
+   2286.60302734375
+  ],
+  "hoyde": {
+   "byte": 25236236,
+   "fliser": 1103,
+   "per_niva": {
+    "6": {
+     "fliser": 4,
+     "snitt_kb": 10.7
+    },
+    "7": {
+     "fliser": 6,
+     "snitt_kb": 24.5
+    },
+    "8": {
+     "fliser": 16,
+     "snitt_kb": 29.3
+    },
+    "9": {
+     "fliser": 49,
+     "snitt_kb": 28.9
+    },
+    "10": {
+     "fliser": 156,
+     "snitt_kb": 27.0
+    },
+    "11": {
+     "fliser": 598,
+     "snitt_kb": 21.0
+    },
+    "12": {
+     "fliser": 49,
+     "snitt_kb": 26.4
+    },
+    "13": {
+     "fliser": 225,
+     "snitt_kb": 20.1
+    }
+   }
+  },
+  "klasser": {
+   "0": 238060,
+   "1": 462455,
+   "2": 1380657,
+   "3": 18472,
+   "4": 79973,
+   "5": 59920,
+   "6": 6494,
+   "255": 965233
+  },
+  "terreng": {
+   "byte": 160635,
+   "fliser": 75,
+   "per_niva": {
+    "6": {
+     "fliser": 4,
+     "snitt_kb": 1.2
+    },
+    "7": {
+     "fliser": 6,
+     "snitt_kb": 2.2
+    },
+    "8": {
+     "fliser": 16,
+     "snitt_kb": 2.4
+    },
+    "9": {
+     "fliser": 49,
+     "snitt_kb": 2.1
+    }
+   }
+  },
+  "kart": {
+   "byte": 178883,
+   "fliser": 79,
+   "per_niva": {
+    "5": {
+     "fliser": 4,
+     "snitt_kb": 0.6
+    },
+    "6": {
+     "fliser": 4,
+     "snitt_kb": 1.1
+    },
+    "7": {
+     "fliser": 6,
+     "snitt_kb": 2.2
+    },
+    "8": {
+     "fliser": 16,
+     "snitt_kb": 2.5
+    },
+    "9": {
+     "fliser": 49,
+     "snitt_kb": 2.3
+    }
+   }
+  },
+  "vektor": {
+   "byte": 869043,
+   "fliser": 2357,
+   "per_niva": {
+    "8": {
+     "fliser": 9,
+     "snitt_kb": 1.3
+    },
+    "9": {
+     "fliser": 21,
+     "snitt_kb": 1.1
+    },
+    "10": {
+     "fliser": 43,
+     "snitt_kb": 0.6
+    },
+    "11": {
+     "fliser": 270,
+     "snitt_kb": 0.5
+    },
+    "12": {
+     "fliser": 614,
+     "snitt_kb": 0.3
+    },
+    "13": {
+     "fliser": 1400,
+     "snitt_kb": 0.3
+    }
+   }
+  }
+ }
+}

@@ -23,30 +23,47 @@ Komprimering alene gir 2–4 ganger mindre data. Det holder ikke for «ufattelig
 
 Vercel komprimerer HTML automatisk allerede (Norge-siden: 1,3 MB → 405 KB over nettet).
 
-## Hele Norge (anslag, ×139)
+## Pilot: Dovre i fliser (bygget 8. nov 2026) – målt
+
+Side: https://riksbrudd.vercel.app/dovre-fliser · kode: `pipeline/fliser/` (01_hent.py, 02_fliser.py) og `site/dovre-fliser/`.
+Område 46 × 50 km (2 300 km²), kjerne 8 × 8 km rundt Dombås.
+
+| Lag | Innhold | Fil |
+|---|---|---|
+| hoyde | Kartverket DTM, 8 m for hele området, 2 m rundt Dombås, tapsfri WebP (0,25 m / 0,1 m presisjon) | 25,2 MB (1 103 fliser) |
+| kart | stil 1-farget bakke fra Landsat 1987, 32 m, AVIF | 0,18 MB |
+| terreng | arealklasse fra Landsat + høyde, 32 m | 0,16 MB |
+| vektor | veger (NVDB) og 7 108 bygg (matrikkelen), MVT | 0,87 MB |
+
+**Det spilleren faktisk laster** (målt med `node pipeline/fliser/sjekk.js`, fire visninger fra Dombås til Snøhetta):
+PC 1,7 MB, mobil 0,7 MB, av 26,4 MB totalt. Én skjermflis tegnes på 15–40 ms. Trær, skygge og koter lages i nettleseren.
+
+### Hele Norge, regnet fra piloten (×141)
 
 | Lag | Størrelse |
 |---|---|
-| Satellitt 30 m (Landsat 1986–87) | ca. 17 MB |
-| Høyde 120 m | ca. 14 MB |
-| Høyde 30 m / 10 m (Kartverket DTM10) | ca. 150–250 MB / ca. 1 GB *(anslag, ikke målt)* |
-| Bygg (ca. 4 mill.) | ca. 16 MB |
-| Veger (NVDB) | ca. 10–20 MB (tettere enn Dovre) |
+| Høyde 8 m (hele landet) | ca. 2,6 GB |
+| Høyde 2 m (hele landet) | ca. 29 GB – bare der det trengs (byer, slagmarker) |
+| Kart + terreng 32 m | ca. 50 MB |
+| Veger og bygg | ca. 100–300 MB (tettere i byene) |
 
-**Hele Norge på Dovre-nivå blir ca. 60 MB totalt, og med 10 m-høyde ca. 1 GB.** Spilleren laster bare en liten del av det.
+Høyden er den tunge delen. Den kan gjøres 2–3 ganger mindre med 0,5 m presisjon eller tapsbasert koding om det trengs.
+Filer over 100 MB legges i Cloudflare R2 eller Vercel Blob (ikke git). Spilleren laster fortsatt bare 1–2 MB per økt.
 
 ## Teknisk valg
 
 - **PMTiles**: alle fliser i én fil per lag. Nettleseren henter bare de bitene den trenger. Vercel støtter dette (testet: `206 Partial Content`). Filer over 100 MB (GitHubs grense) legges i Cloudflare R2 eller Vercel Blob.
 - **Vektor** (veger, bygg, kommunegrenser, vann, jernbane, kraftlinjer): Mapbox Vector Tiles laget med `tippecanoe`.
 - **Raster** (satellitt, terrengklasse): AVIF eller WebP.
-- **Høyde**: terrarium-WebP, som MapLibre og three.js leser direkte.
-- **Visning**: MapLibre GL viser fliser og 3D-terreng. Enheter tegnes i et eget lag oppå (three.js eller PixiJS).
+- **Høyde**: 16-bit høyde i R+G i tapsfri WebP, 258 px med 1 px kant så skyggen blir sømløs.
+- **Flisnett**: eget meternett i EPSG:25833 (UTM 33, som Kartverket) for hele Norge, ikke Web Mercator. Spillet regner i meter (marsj, sikt), og 1 punkt er like stort over hele landet. Definert i `pipeline/fliser/felles.py`.
+- **Visning**: egen canvas-tegner (stil 1) som henter fliser med pmtiles.js. three.js kan lese de samme høydeflisene til 3D.
 - **Spilltilstand**: sendes separat fra kartet. Serveren sender bare endringer (hvem eier hvilken rute, hvor lagene står), ikke kartet.
 - **Bygging** av flisene skjer en gang i GitHub Actions eller på egen maskin, ikke i nettleseren.
 
 ## Neste steg
 
-1. **Pilot på Dovre:** gjør om `data/dovre` til PMTiles (satellitt, høyde, terreng, veger, bygg) og lag en visning som laster fliser og lager trær fra frø. Mål hva spilleren faktisk laster.
-2. **Hele Norge i bolker:** kjør det samme for alle Landsat-scenene (ca. 60) og hele NVDB/matrikkelen med GitHub Actions.
-3. **Rutenett for spillet** (2 km-sekskanter) som eget vektorlag, med ID-er serveren bruker.
+1. ✅ Pilot på Dovre (over).
+2. Flytt lagene og marsjen fra `/dovre` over på flisene (A* og sikt leser høyde- og terrengflisene).
+3. Hele Norge i bolker: Landsat-scenene (ca. 60), DTM i 8 m, NVDB og matrikkelen, med GitHub Actions; lagring i R2.
+4. Rutenett for spillet (2 km-sekskanter) som eget vektorlag, med ID-er serveren bruker.
