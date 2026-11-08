@@ -54,6 +54,13 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   fylkesbiter som hentes ved behov.
 - `spill/vegnett.js` (uten DOM): last inn, A* mellom to punkter, `sperr(lenke)`/`åpne(lenke)`.
 - Ferdig når: test i Node finner ruten Oslo–Trondheim langs E6 på under 1 s, og når en bru sperres, finnes omkjøringen (eller «ingen vei»).
+- **FERDIG 8. nov** (spill-chatten skrev koden, kart-chatten la den inn og gjorde den nasjonale byggingen):
+  release `kart-vegnett-5b8cd00e2e8e`, format RBVEG002 (kolonner; RBVEG001 ble 66,5 MB og var over budsjettet),
+  2 030 080 lenker, 1 915 412 noder, 25,1 MB gzip / 43,4 MB rå. Oslo–Trondheim 514 km (< 50 ms), Kristiansand–Kirkenes
+  2 687 km (~0,5 s), innlesing ~0,5 s i Node. 99,2 % av nodene i én sammenhengende del. Anleggsveger (E6 Sørkjosen,
+  E39 Heim) tas med bare der NVDBs historikk ellers bryter vegnettet. Se `site/dovre-fliser/spill/VEGNETT.md`.
+  Til S2: `/api/kart` slipper i dag bare `.pmtiles`/`.json` og maks 4 MB per bit – `vegnett.bin` må enten tillates der
+  og hentes i biter, eller deles opp.
 
 ### S2 Kjøretøy på vegene
 - Typer: lastebil, speiderbil (senere stridsvogn). Fart etter vegkategori og terreng, kolonner, synlige på kartet med retning
