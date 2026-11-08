@@ -2,7 +2,7 @@
 name: Bygg og test vegnett
 on:
   push:
-    branches: ['spill/s1-vegnett']
+    branches: ['spill/s1-vegnett', 'claude/hallo-ohbasy']   # kart-chatens gren kan også starte byggingen
     paths:
       - 'site/dovre-fliser/spill/vegnett.js'
       - 'pipeline/fliser/*vegnett*'
