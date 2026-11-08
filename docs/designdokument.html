@@ -1,0 +1,143 @@
+<html><head><meta charset="utf-8"><style>
+@page{ size:A4; margin:18mm 16mm; }
+body{ font-family:"DejaVu Serif",Georgia,serif; font-size:13.5pt; line-height:1.45; color:#1d1a14; }
+h1{ font-size:32pt; margin:0 0 4pt; } h2{ font-size:19pt; margin:18pt 0 6pt; border-bottom:1px solid #8a7a5a; padding-bottom:2pt; page-break-after:avoid; }
+p{ margin:0 0 7pt; } ul{ margin:0 0 8pt 16pt; padding:0; } li{ margin-bottom:3pt; }
+img{ display:block; max-width:100%; margin:6pt 0 10pt; border:1px solid #c9bda0; }
+</style></head><body>
+<h1>Riksbrudd – designdokument</h1>
+<p><i>Sanntids strategispill satt til et splittet Norge i 1986. Arbeidsdokument, versjon 0.1, november 2026.</i></p>
+<p><img src="img/ebedf328-6a4a-4153-852a-cf7590a24359.png" style="width:100mm"></p>
+
+<h2>Sammendrag</h2>
+<p>Riksbrudd er et nettleserbasert strategispill i sanntid, i slekt med Supremacy 1914, der spillerne leder politiske fraksjoner som kjemper om kontrollen over et Norge som har gått i oppløsning under den kalde krigen. Spillet skiller seg fra sjangeren på tre punkter: kartet er bygget på ekte geodata ned til kommune- og terrengnivå, befolkningen i hver kommune har egne meninger utledet fra ekte statistikk, og fraksjonene er definert av politikk og ikke av geografi. Dette dokumentet beskriver bakgrunnshistorien, kartet, datagrunnlaget, spillreglene og utviklingsplanen. Delen om kart, folkemening og grunnleggende kamp er bygget som prototype; resten er planlagt.</p>
+
+<h2>Bakgrunnshistorie</h2>
+<p>Spillet foregår i en alternativ historie der den økonomiske krisen rundt 1980 ikke blir håndtert, og det norske partisystemet bryter sammen under presset. Hendelsene nedenfor er fiktive, men bygger på ekte forhold: oljeprisfallet, kald krig i nord, Sveriges nøytralitet og Norges rolle som NATOs nordflanke.</p>
+<p><b>1979.</b> Den andre oljekrisen og rentesjokket rammer et Norge som nettopp har begynt å låne mot framtidige oljeinntekter. Industrikommuner og kystsamfunn mister arbeidsplasser. Streiker sprer seg fra verftene til offentlig sektor.</p>
+<p><b>1982.</b> Regjeringen går av etter avsløringer om hemmelige avtaler om fordelingen av oljeinntektene. Nyvalget gir ingen styringsdyktig flertall. Partienes ytterfløyer vokser, og lokale «råd» i flere fylker begynner å holde tilbake skatteinntekter.</p>
+<p><b>1984.</b> De radikale fløyene bryter ut og danner fire landsdekkende bevegelser. Stortinget oppløser seg selv uten å kunne enes om nyvalg. Sverige stenger grensen for annet enn humanitær trafikk. NATO fryser Norges medlemskap «inntil konstitusjonell orden er gjenopprettet», men holder styrker i beredskap.</p>
+<p><b>1985.</b> Forsvaret nekter å gripe inn mot sivile og splittes langs politiske og regionale linjer. Garnisoner, kystfort og flystasjoner går til den bevegelsen som dominerer lokalt. Heimevernet i nøytrale kommuner bevæpner seg for å holde alle parter ute.</p>
+<p><b>Våren 1986.</b> Spillet begynner. Fire bevegelser med hver sin ideologi, et oljesystem i havet som alle trenger, et Sverige som kan kjøpes, og et Sovjet som lurer bak grensen i Finnmark.</p>
+<p><img src="img/5dcd402e-5d45-46dc-9729-51806c3dd01b.png" style="width:90mm"></p>
+
+<h2>Fraksjonene</h2>
+<p>Fraksjonene er posisjoner på tre ideologiske akser, ikke landsdeler. Hvor de starter avgjøres av hvor befolkningen deler deres syn, så startposisjonen varierer fra spill til spill.</p>
+<p>De tre aksene:</p>
+<ul>
+<li>Sentralisme mot regionalt selvstyre</li>
+<li>Marked mot fellesskap og stat</li>
+<li>Tradisjon mot modernitet</li>
+</ul>
+<p><b>Riksrådet.</b> Restene av statsapparatet, byråkratiet og industrien rundt hovedstaden. Sentralistisk, statsstyrt, moderne. «Landet må samles og styres.» Styrke: produksjon og administrasjon. Svakhet: mistillit i distriktene.</p>
+<p><b>Kystalliansen.</b> Oljebyene, rederne og eksportindustrien. Regionalt selvstyre, marked, moderne. «Vi skaper verdiene, vi bestemmer.» Styrke: oljeinntekter og flåte. Svakhet: avhengig av eksport og sjøveier.</p>
+<p><b>Folkefronten.</b> Fiskere, bønder, gruvearbeidere og samiske representanter. Regionalt selvstyre, fellesskap, tradisjon. «Bygdene og fjordene mot sentralmakta.» Styrke: hardføre tropper, lojal befolkning i distriktene, vinter. Svakhet: lite folk og lite penger.</p>
+<p><b>Nyordningen.</b> En orden-og-tro-bevegelse med støtte i religiøse og konservative miljøer. Sentralistisk, marked, tradisjon. «Orden, tro og hardt arbeid.» Styrke: rask mobilisering og disiplin. Svakhet: dårlig forhold til Sverige og NATO.</p>
+<p>Spilleren velger fraksjon og dermed sin plass på aksene. Ideologien kan flyttes litt underveis, men hvert skifte koster tillit hos egen befolkning.</p>
+
+<h2>Kartet</h2>
+<p>Kartet er Norge slik det faktisk er, i riktig målestokk, i projeksjonen UTM 33 (EPSG:25833) slik Kartverket bruker den. Prototypen bruker følgende data:</p>
+<ul>
+<li>357 kommuner og 15 fylker etter 2024-inndelingen, fra Kartverkets administrative grenser, forenklet med Mapshaper for rask rendering i nettleseren.</li>
+<li>Svalbard fra Natural Earth, plassert på sin faktiske posisjon nord for fastlandet og i samme målestokk.</li>
+<li>Sverige som grå, ikke-spillbar nabo langs hele grensen.</li>
+<li>Naboforhold mellom kommuner beregnet fra geometrien. Øykommuner uten landgrense får sjøforbindelse til nærmeste kommune.</li>
+</ul>
+<p>Kommunen er den politiske enheten: eierskap, inntekt, folkemening og naboforhold ligger der. Fylket er region: den som kontrollerer et helt fylke får bonus.</p>
+<p><img src="img/930ee313-08aa-40a6-aa0d-11f11a4d1316.png" style="width:150mm"></p>
+<p><b>Sekskantnett og detaljnivå.</b> Neste steg er å dele hver kommune i sekskanter på omtrent 5 × 5 km. Sekskanten er den fysiske enheten: terreng, bygg og tropper ligger på sekskanter, kommunen eier dem. Terrenget per sekskant hentes fra Kartverkets N50-data (skog, myr, dyrket mark, vann, bebyggelse) og høydemodellen (fjell, daler). Trærne spilleren ser når hun zoomer inn skal stå der det faktisk er skog. Kartet tegnes lagvis: kommuner på avstand, sekskanter og detaljer når spilleren zoomer inn.</p>
+
+<h2>Folkemening</h2>
+<p>Hver kommune har en egen posisjon på de tre ideologiaksene, regnet ut fra åpne data. Dette er allerede bygget i prototypen.</p>
+<p><img src="img/51c7a056-7727-4724-b21f-1e9e8c6a0fa2.png" style="width:150mm"></p>
+<p><b>Datagrunnlag.</b> Fra Statistisk sentralbyrå: folketall og landareal (befolkningstetthet), sysselsatte etter næring (industri, bergverk, jordbruk og fiske, offentlig sektor), og andel med høyere utdanning. Fra Valgdirektoratet: stemmeandeler per parti i kommunevalget 2023. Partiresultatene brukes bare som ingrediens i aksene; fraksjonene i spillet er oppdiktet og tilsvarer ingen ekte partier.</p>
+<p><b>Beregning.</b> Sentralisme øker med tetthet, folketall og utdanning og synker med primærnæring. Marked øker med stemmer til høyresiden og privat sysselsetting og synker med stemmer til venstresiden og offentlig sysselsetting. Tradisjon øker med stemmer til verdikonservative og landbrukspartier og med primærnæring, og synker med utdanning, tetthet og stemmer til urbane og grønne partier. Hver akse rangeres så alle kommuner fordeles jevnt fra 0 til 1. Oslo lander på sentralisme 1,0 og tradisjon 0,0; Kautokeino på sentralisme 0,17 og tradisjon 0,59; Klepp på marked 0,98.</p>
+<p><b>Sympati.</b> En kommunes sympati for en fraksjon er avstanden mellom kommunens og fraksjonens posisjon i det tredimensjonale rommet, omregnet til 0 til 100 prosent.</p>
+<p><b>Hva folkemeningen gjør i spillet:</b></p>
+<ul>
+<li>Startposisjon: hver fraksjon starter i den byen med over 15 000 innbyggere som ligger den nærmest politisk, med avstand til de andre fraksjonene.</li>
+<li>Forsvar: en kommune som deler angriperens syn forsvarer seg svakere, en som misliker ham kjemper hardere (faktor 0,6 til 1,4).</li>
+<li>Rekruttering og inntekt: høy sympati gir raskere trening og full inntekt, lav sympati gir lavere inntekt og risiko for opprør bak fronten (planlagt).</li>
+<li>Frivillig tilslutning: en nøytral kommune kan slutte seg til en fraksjon den deler syn med hvis fraksjonen er sterk i nabolaget (planlagt).</li>
+<li>Propaganda og investering flytter en kommunes mening langsomt, i konkurranse med andre fraksjoner (planlagt).</li>
+</ul>
+
+<h2>Ressurser og infrastruktur fra virkeligheten</h2>
+<p>Økonomien skal bygge på det som faktisk fantes i Norge på 1980-tallet, hentet fra åpne kilder. Målet er at Rana gir malm, Innlandet gir tømmer, Jæren gir mat og Nordsjøen gir olje, fordi dataene sier det.</p>
+<p><img src="img/45445024-e907-4b29-9d9b-62cca6f8666b.png" style="width:150mm"></p>
+<p><b>Olje og gass.</b> Feltene og rørledningene hentes fra Sokkeldirektoratets åpne faktasider, med startår, slik at bare det som var i drift i spillets tidsrom finnes på kartet. I 1986 var blant annet Ekofisk (1971), Frigg (1977), Statfjord (1979), Valhall (1982) og Gullfaks (1986) i produksjon; Oseberg kom i 1988 og Troll i 1996. Eksporten gikk i rør: Norpipe fra Ekofisk til Teesside (1975), Frigg til St Fergus (1977) og Statpipe til Kårstø (1985). Plattformer gir inntekt til eieren, men krever havn og forsyningsskip, og kan saboteres eller blokkeres. Rørledninger og landanlegg (Kårstø, Mongstad, Sture) er strategiske mål.</p>
+<p><b>Energi.</b> Vannkraftverk og dammer fra NVE og OpenStreetMap. Kraft er en egen ressurs som fabrikker og baser trenger; sabotasje av kraftlinjer er en spesialoperasjon.</p>
+<p><b>Industri og råvarer.</b> Fabrikker, smelteverk og gruver fra OpenStreetMap og SSBs næringstall: jern og malm i Rana og Sør-Varanger, aluminium i Årdal, Sunndal, Husnes og Mosjøen, ferrolegeringer langs kysten, skog i Innlandet og Trøndelag, kull på Svalbard, fiskeri langs hele kysten. Hver råvare brukes i en kort produksjonskjede: malm og kraft gir stål, stål og fabrikk gir kjøretøy og artilleri, tømmer gir forsvarsverk og bruer.</p>
+<p><b>Samferdsel.</b> Veier, jernbane, bruer, tunneler og ferjesamband fra Statens vegvesens NVDB og Bane NOR. Bruer og tunneler endrer naboforholdene: en øykommune med fastlandsforbindelse er ikke lenger isolert, og en sprengt bru stenger en rute. Jernbanen gir rask forflytning langs linjen. Flyplasser, med Bodø, Ørland, Rygge, Bardufoss og Sola som militære, gir rekkevidde for fly.</p>
+<p><b>Forsvarsanlegg.</b> Kystfort og batterier langs kysten, mange bygget under krigen og oppgradert fram til 1990-tallet, som Torgauten i Oslofjorden. Hærens garnisoner, flystasjoner, Sjøforsvarets hovedbase på Håkonsvern, radarkjeden og de over 20 000 tilfluktsrommene Sivilforsvaret bygde før 1998. Disse er ferdige bygg på kartet fra start, og går til den som kontrollerer kommunen.</p>
+<p><img src="img/f19f0aaf-9f08-4eb7-8c91-17d8fdec096b.png" style="width:150mm"></p>
+
+<h2>Spillregler</h2>
+<p>Tallene nedenfor er prototypens og vil bli justert etter spilltesting.</p>
+<p><b>Tid.</b> Serveren simulerer ti ganger i sekundet. En spilldag er 24 minutter reell tid, slik at ett minutt er én spilltime. En match varer inntil 60 dager, altså et døgn reell tid, og spilles i økter mens tropper er underveis. I enspiller kan spilleren pause og kjøre i 10 og 60 ganger hastighet; i flerspiller går tiden alltid i 1 ganger.</p>
+<p><b>Økonomi.</b> Én valuta i prototypen (gull, senere kroner). Hver kommune gir 1 til 4 per dag etter størrelse, hovedstaden dobbelt, Svalbard 5. Vedlikehold er 0,5 per tropp per dag, så ubegrenset opphopning straffes. Mister du hovedstaden faller inntekten 25 prosent til du tar den tilbake. Senere kommer råvarer, kraft og produksjonskjeder.</p>
+<p><b>Terreng.</b> I prototypen avledes terrenget av kommunens areal: slette, skog eller fjell med reisetid 1,0, 1,3 og 1,6 og forsvar 1,0, 1,2 og 1,5. Med sekskantnettet erstattes dette av ekte terreng per sekskant.</p>
+<p><b>Enheter.</b> Prototypen har én enhetstype. Planlagt liste for 1986: mekanisert infanteri, stridsvogner (sterke på Østlandet og Jæren, svake i fjell), artilleri, fjelljegere (bonus i fjell og vinter), helikoptre, jagerfly og bombefly med rekkevidde fra flystasjon, fregatter, missiltorpedobåter, ubåter og transportskip, samt spesialstyrker for sabotasje og etterretning.</p>
+<p><b>Bevegelse.</b> Tropper flyttes mellom nabokommuner. Reisetid er 8 spilltimer ganger terrengfaktor; sjøveien til Svalbard tar 36 timer. Trening av en tropp tar 6 timer. Jernbane og vei vil korte ned reisetiden langs ruten, sprengte bruer stenger den.</p>
+<p><b>Kamp.</b> Kamp starter når fiendtlige styrker møtes og avgjøres i én runde per spilltime, så et jevnt slag varer omtrent et døgn. Hver side mister motstanderens styrke ganger 0,1, justert for terreng, hovedstad, befolkningens sympati og en tilfeldig faktor mellom 0,8 og 1,2. Når forsvareren er borte tar den sterkeste angriperen kommunen. En tom kommune tas øyeblikkelig.</p>
+<p><b>Bygg.</b> Militærbase (trening, forsvar, raskere forsterkning), flystasjon, havn, fabrikk, radar, kraftverk, vei og jernbane. Bygg plasseres på en sekskant og krever råvarer og tid. Eksisterende anlegg fra virkeligheten står der fra start.</p>
+<p><b>Årstid.</b> Spillet starter om våren. Fra dag 30 kommer vinteren til nordlige og høytliggende kommuner: langsommere bevegelse, dyrere forsyning, fjelljegere får bonus, fjorder og fjelloverganger kan stenges. Vinteren er Norges naturlige terreng og gir nord og sør ulik spillestil.</p>
+<p><b>Seier.</b> Kontrollere 60 prosent av kommunene, eller være siste fraksjon med hovedstad. Når tiden er ute vinner den med flest kommuner. Senere: politisk seier ved at et flertall av befolkningen støtter deg.</p>
+
+<h2>Diplomati</h2>
+<p><img src="img/c5fe191f-16fa-478d-ac90-805cbae25b71.png" style="width:150mm"></p>
+<p>Tre makter står utenfor konflikten og kan påvirkes.</p>
+<p><b>Sverige.</b> Nøytralt. Har en velvilje-score for hver fraksjon fra 0 til 100 som stiger med donasjoner, synker litt hver dag av seg selv og faller kraftig ved avtalebrudd. Fraksjonene konkurrerer: Sverige lytter mest til den med høyest velvilje, og prisen for tjenester stiger når flere ber samtidig. Tjenestene er transittrett for tropper gjennom svensk område mellom norske grensekommuner, forsyninger, og på høyeste nivå at Sverige nekter en rival passasje. Angriper du fra svensk jord uten lov stenges grensen for deg i mange dager. Dette krever at Sverige får egne provinser (län) i dataene.</p>
+<p><b>NATO og Storbritannia.</b> Støtter den fraksjonen som virker stabil og vestvendt. Gir materiell, etterretning og i ytterste fall luftstøtte. Ideologi langt fra marked og modernitet gir mistillit.</p>
+<p><b>Sovjetunionen.</b> Presser på i nord med både trusler og tilbud. Kan gi våpen til en fraksjon som nærmer seg nøytralitet, men hver sovjetisk gave koster sympati i vestvendte kommuner og vekker NATO.</p>
+<p>Mellom fraksjonene: våpenhvile, allianse, handel med råvarer, utveksling av kommuner. Avtaler er synlige for alle og brudd rammer omdømmet hos de ytre maktene.</p>
+
+<h2>Ideologi som mekanikk</h2>
+<p>Hver akse gir små prosentbonuser og ulemper, og summen avgjør hvordan befolkning, AI og ytre makter oppfatter deg:</p>
+<ul>
+<li>Sentralisme: sterk hovedstad og rask mobilisering, men lavere inntekt i fjerne kommuner. Regionalt selvstyre: sterke fylker og lojale distrikter, men svakere sentral kommando.</li>
+<li>Marked: høyere inntekt fra olje og handel og bedre forhold til NATO, men dyrere tropper. Fellesskap: billigere tropper og høyere sympati i industrikommuner, men mindre eksportinntekt.</li>
+<li>Tradisjon: lojale og disiplinerte styrker og sterk støtte på bygdene, men mistillit hos Sverige og i byene. Modernitet: bedre teknologi og byer, men svakere på bygdene.</li>
+</ul>
+<p>Spilleren kan flytte ett hakk på én akse per tiende dag. Hvert skifte senker tilliten hos egen befolkning midlertidig.</p>
+
+<h2>Kunstig intelligens</h2>
+<p>Prototypens AI er enkel og handler én gang per dag: forsvarer kommuner under angrep med nærmeste styrke, angriper svakeste nabo fra kommuner med minst 15 tropper når overtaket er klart, flytter tropper fra innlandet mot fronten og trener langs fronten så lenge det er penger. Planlagt: AI-en følger samme ideologi som spillerne, prioriterer kommuner med høy sympati, bruker diplomati og reagerer på spillerens ideologiske skifter.</p>
+
+<h2>Flerspiller og teknisk arkitektur</h2>
+<p>Prototypen kjører i nettleseren som én HTML-fil med alle kartdata innebygd (om lag 280 KB). Kartet tegnes på canvas med lagvis detaljnivå, og simuleringen er skrevet slik at den kan flyttes uendret til en server.</p>
+<ul>
+<li>Klient: TypeScript med PixiJS for kartet og React for menyer.</li>
+<li>Server: Node.js med Colyseus for rom, tilstandssynkronisering og tick-sløyfe. Serveren er sannheten; klienten sender bare ordrer.</li>
+<li>Database: Postgres for kontoer og matchhistorikk. Spilltilstand lever i minnet under en match.</li>
+<li>Data: Kartverket (grenser, N50, høyde), SSB, Valgdirektoratet, Sokkeldirektoratet, NVE, NVDB, Bane NOR, OpenStreetMap. Alle under åpne lisenser som krever kildeangivelse.</li>
+</ul>
+<p>Enspiller mot AI bygges først, med den samme simuleringen, slik at flerspiller blir et spørsmål om nettverk og ikke om regler.</p>
+
+<h2>Utviklingsplan</h2>
+<p><b>Fase 1, ferdig.</b> Kart med ekte kommunegrenser, zoom og detaljnivå, enkel økonomi, bevegelse, kamp, nøytrale garnisoner, enkel AI, folkemening fra ekte data, sympatibasert start.</p>
+<p><b>Fase 2.</b> Sekskantnett med ekte terreng fra N50 og høydedata. Militærbase som første bygg. Oljefelt og rørledninger fra Sokkeldirektoratet, med startår. Bruer, tunneler og ferjer fra NVDB med oppdaterte naboforhold.</p>
+<p><b>Fase 3.</b> Flere enhetstyper, råvarer og produksjonskjeder, kraft, eksisterende forsvarsanlegg, vinter.</p>
+<p><b>Fase 4.</b> Diplomati med Sverige (svenske län i dataene), NATO og Sovjet. Ideologiakser som mekanikk. Propaganda og opprør.</p>
+<p><b>Fase 5.</b> Server, flerspiller, kontoer, matchmaking, valg av startkommune. Grafisk finpuss i stil 1.</p>
+
+<h2>Åpne spørsmål</h2>
+<ul>
+<li>Antall spillere per match: tre fraksjoner nå, fire når Nyordningen får AI. Flere spillere kan dele fraksjon.</li>
+<li>Hvor realistiske skal styrkeforholdene være? Et Sovjet som faktisk angriper vil dominere; løsningen er trolig at ytre makter bare gir støtte, aldri invaderer.</li>
+<li>Om valgresultater skal brukes direkte eller bare som en av flere kilder til folkemening, av hensyn til hvordan spillet oppfattes.</li>
+<li>Match-lengde: 60 dager er et døgn reell tid. Kortere matcher (20 dager) kan bli en egen modus for kveldsspill.</li>
+<li>Navn: Riksbrudd er arbeidstittel. Alternativer: Kald front, Norge 1986.</li>
+</ul>
+
+<h2>Kilder og inspirasjon</h2>
+<ul>
+<li>Kartverket og Geonorge: administrative grenser, N50 kartdata, høydemodell.</li>
+<li>Statistisk sentralbyrå: tabellene 11342 (areal og befolkning), 07984 (sysselsatte etter næring) og 09429 (utdanningsnivå).</li>
+<li>Valgdirektoratet, valgresultat.no: kommunevalget 2023.</li>
+<li>Sokkeldirektoratet: faktasider for felt, innretninger og rørledninger. Norsk Oljemuseum og Store norske leksikon om feltenes historie.</li>
+<li>Statens vegvesen NVDB, Bane NOR og OpenStreetMap: samferdsel, industri og kraft.</li>
+<li>Forsvarets museer, lokalhistoriewiki og Institutt for forsvarsstudier om kystfort, Bodø og nordområdene under den kalde krigen.</li>
+<li>Spill: Supremacy 1914, Hearts of Iron IV, Europa Universalis, Civilization, Risk.</li>
+</ul>
+</body></html>

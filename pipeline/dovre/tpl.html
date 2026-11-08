@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Riksbrudd – Dovre 1987</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ --sea:#161c22; --ink:#e7dcc3; --ink-dim:#a69b82; --rule:#5b5140; --hover:#f0d79a; --blue:#3b5878; --red:#8f3c2f; --panel:rgba(22,18,12,.94);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ color-scheme:dark; } } :root[data-theme="dark"]{ color-scheme:dark; }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); } html,body{ height:100%; margin:0; }
+body{ background:#1a1710; color:var(--ink); font-family:"Cormorant Garamond",Georgia,serif; overflow:hidden; font-size:15px; }
+body::before{ content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:#1a1710; }
+#c{ display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+button{ font:inherit; }
+.top{ position:fixed; left:10px; right:10px; top:calc(10px + env(safe-area-inset-top,0px)); display:flex; gap:8px; pointer-events:none; }
+.top>*{ pointer-events:auto; }
+.stats{ background:var(--panel); border:1px solid var(--rule); padding:6px 12px; display:flex; gap:14px; align-items:baseline; white-space:nowrap; }
+.stats b{ font-family:"IM Fell English",serif; font-weight:400; font-size:19px; } .stats span{ color:var(--ink-dim); }
+.speed{ margin-left:auto; display:flex; gap:4px; }
+.speed button,.ctl button{ background:var(--panel); border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-width:38px; height:38px; font-weight:600; }
+.speed button.on{ background:var(--rule); } button:focus-visible{ outline:2px solid var(--hover); }
+#panel{ position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); max-width:400px; max-height:48vh; overflow:auto; background:var(--panel); border:1px solid var(--rule); padding:12px 14px; display:none; }
+#panel.on{ display:block; }
+#panel h2{ font-family:"IM Fell English",serif; font-weight:400; font-size:22px; margin:0; } #panel .sub{ color:var(--ink-dim); margin:1px 0 8px; }
+.acts{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; } .acts button{ background:#3a3024; border:1px solid var(--rule); color:var(--ink); padding:7px 12px; cursor:pointer; } .acts button.on{ background:var(--blue); }
+.men{ display:grid; grid-template-columns:1fr 1fr; gap:3px 10px; font-size:14px; } .men div{ cursor:pointer; padding:2px 4px; border:1px solid transparent; } .men div.lead{ border-color:var(--hover); color:var(--hover); } .men span{ color:var(--ink-dim); font-size:12px; display:block; }
+#panel .hint{ color:var(--hover); font-style:italic; margin-top:6px; }
+#panel .close{ position:absolute; right:6px; top:4px; background:none; border:0; color:var(--ink-dim); font-size:20px; cursor:pointer; }
+.ctl{ position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:6px; }
+#log{ position:fixed; right:10px; top:calc(58px + env(safe-area-inset-top,0px)); width:220px; pointer-events:none; font-size:13px; color:var(--ink-dim); text-shadow:0 1px 2px #000; }
+@media (max-width:600px){ .stats{ gap:10px; padding:6px 9px; } .stats b{ font-size:16px; } #log{ width:140px; font-size:12px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="top"><div class="stats"><div><b id="sDay">1 · 06:00</b> <span>dag</span></div><div><b id="sZ">–</b> <span>moh.</span></div><div><b id="sSel">–</b></div></div>
+<div class="speed"><button id="v3d" title="3D">3D</button><button id="lay" title="Høydekurver">☰</button><button id="sp0">❚❚</button><button id="sp1" class="on">1×</button><button id="sp2">10×</button><button id="sp3">60×</button></div></div>
+<div id="log" aria-live="polite"></div>
+<div id="panel" role="dialog"><button class="close" id="close" aria-label="Lukk">×</button><h2 id="pname"></h2><div class="sub" id="psub"></div><div class="acts" id="acts"></div><div class="men" id="men"></div><div class="hint" id="hint"></div></div>
+<div class="ctl"><button id="zi" aria-label="Zoom inn">+</button><button id="zo" aria-label="Zoom ut">−</button><button id="zr" aria-label="Nullstill">⌂</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script id="mapdata" type="application/json">__MAPDATA__</script>
+<script>
+(function(){
+const D=JSON.parse(document.getElementById('mapdata').textContent);
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const PX=30; // metres per map unit
+function b64(s,T){ const bin=atob(s); const buf=new ArrayBuffer(bin.length); const u8=new Uint8Array(buf); for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i); return new T(buf); }
+const DEM=b64(D.dem,Int16Array), CLS=b64(D.cls,Uint8Array); const GW=D.gw,GH=D.gh,G=D.g; // grid of G*PX metres
+const tex=new Image(); tex.src='data:image/jpeg;base64,'+D.tex; tex.onload=()=>{dirty=true;};
+function demAt(x,y){ const gx=Math.max(0,Math.min(GW-1,Math.floor(x/G))), gy=Math.max(0,Math.min(GH-1,Math.floor(y/G))); return DEM[gy*GW+gx]; }
+function clsAt(x,y){ const gx=Math.max(0,Math.min(GW-1,Math.floor(x/G))), gy=Math.max(0,Math.min(GH-1,Math.floor(y/G))); return CLS[gy*GW+gx]; }
+// road raster on grid for cheap movement
+const ROAD=new Uint8Array(GW*GH);
+for(const r of D.roads){ const w=r.c==='E'||r.c==='R'?3:r.c==='F'?2:1; for(let i=1;i<r.p.length;i++){ const [x0,y0]=r.p[i-1],[x1,y1]=r.p[i]; const n=Math.ceil(Math.hypot(x1-x0,y1-y0)/(G/2))+1; for(let k=0;k<=n;k++){ const x=x0+(x1-x0)*k/n,y=y0+(y1-y0)*k/n; const gx=Math.floor(x/G),gy=Math.floor(y/G); if(gx>=0&&gy>=0&&gx<GW&&gy<GH) ROAD[gy*GW+gx]=Math.max(ROAD[gy*GW+gx],w); } } }
+// movement cost (hours per cell) by terrain
+function cellCost(gx,gy,from){ const i=gy*GW+gx; const c=CLS[i]; if(c===3&&!ROAD[i]) return Infinity;
+  let speed = ROAD[i]>=2?5:ROAD[i]===1?4:c===1?2:c===4?1.5:c===6?1.8:c===0?2.2:3; // km/h
+  if(from!==undefined){ const dz=DEM[i]-DEM[from]; const dist=G*PX; const grade=Math.abs(dz)/dist; speed/= (1+grade*8); }
+  return (G*PX/1000)/speed; }
+function astar(sx,sy,tx,ty){ const s=[Math.floor(sx/G),Math.floor(sy/G)], t=[Math.floor(tx/G),Math.floor(ty/G)]; if(t[0]<0||t[1]<0||t[0]>=GW||t[1]>=GH)return null;
+  const N=GW*GH, gs=new Float32Array(N).fill(Infinity), prev=new Int32Array(N).fill(-1), open=[]; const si=s[1]*GW+s[0], ti=t[1]*GW+t[0]; gs[si]=0;
+  const h=i=>Math.hypot((i%GW)-t[0],Math.floor(i/GW)-t[1])*0.1;
+  const push=(i,f)=>{ open.push([f,i]); let k=open.length-1; while(k>0){ const p=(k-1)>>1; if(open[p][0]<=open[k][0])break; [open[p],open[k]]=[open[k],open[p]]; k=p; } };
+  const pop=()=>{ const r=open[0]; const l=open.pop(); if(open.length){ open[0]=l; let k=0; for(;;){ let a=2*k+1,b=a+1,m=k; if(a<open.length&&open[a][0]<open[m][0])m=a; if(b<open.length&&open[b][0]<open[m][0])m=b; if(m===k)break; [open[m],open[k]]=[open[k],open[m]]; k=m; } } return r; };
+  push(si,h(si)); const closed=new Uint8Array(N); let it=0;
+  while(open.length&&it++<400000){ const [f,i]=pop(); if(i===ti)break; if(closed[i])continue; closed[i]=1; const x=i%GW,y=(i/GW)|0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ if(!dx&&!dy)continue; const nx=x+dx,ny=y+dy; if(nx<0||ny<0||nx>=GW||ny>=GH)continue; const j=ny*GW+nx; if(closed[j])continue; const c=cellCost(nx,ny,i)*(dx&&dy?1.414:1); if(c===Infinity)continue; const ng=gs[i]+c; if(ng<gs[j]){ gs[j]=ng; prev[j]=i; push(j,ng+h(j)); } } }
+  if(gs[ti]===Infinity)return null; const path=[]; let i=ti; while(i!==-1){ path.push([(i%GW+0.5)*G,((i/GW|0)+0.5)*G]); i=prev[i]; } path.reverse(); return {path,hours:gs[ti]}; }
+// line of sight from a point: visible cells within radius (cells)
+// sight range: base by role, reduced in forest/bog, reduced when moving, extended by height above surroundings
+function sightRange(s){ const c=clsAt(s.x,s.y); let r=s.mode==='scout'?8000:4000; if(c===1)r*=0.35; else if(c===6)r*=0.8; else if(c===4)r*=0.9; if(s.path)r*=0.55; const z=demAt(s.x,s.y); let lo=0,n=0; for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){ const gx=Math.floor(s.x/G)+dx,gy=Math.floor(s.y/G)+dy; if(gx<0||gy<0||gx>=GW||gy>=GH)continue; lo+=DEM[gy*GW+gx]; n++; } const prom=z-lo/n; if(prom>30)r*=1+Math.min(0.6,prom/300); return r; }
+function viewshed(px,py,radiusM){ const R=Math.ceil(radiusM/(G*PX)); const ox=Math.floor(px/G),oy=Math.floor(py/G); const oz=demAt(px,py)+2; const vis=new Set();
+  for(let a=0;a<360;a+=0.75){ const ca=Math.cos(a*Math.PI/180),sa=Math.sin(a*Math.PI/180); let maxSlope=-Infinity;
+    for(let r=1;r<=R;r++){ const gx=Math.round(ox+ca*r),gy=Math.round(oy+sa*r); if(gx<0||gy<0||gx>=GW||gy>=GH)break; const z=DEM[gy*GW+gx]+(CLS[gy*GW+gx]===1?8:0); const sl=(z-oz)/r; if(sl>=maxSlope){ vis.add(gy*GW+gx); maxSlope=sl; } } }
+  return vis; }
+// ---------- Squads ----------
+const FIRST=['Arne','Bjørn','Erik','Geir','Hans','Jan','Kjell','Knut','Lars','Nils','Ole','Per','Rolf','Svein','Tor','Trond','Odd','Kåre','Gunnar','Ivar','Åge','Egil','Finn','Harald','Johan','Leif','Magne','Oddvar','Roald','Steinar','Terje','Vidar'];
+const LAST=['Bakken','Dahl','Haugen','Lien','Moen','Nygård','Rustad','Sandvik','Skogen','Strand','Tangen','Volden','Berge','Enger','Fjeld','Grøtte','Hagen','Kleiven','Lunde','Myhre','Opheim','Rønning','Solberg','Tofte','Ulvund','Vangen','Øien','Aasen','Brekke','Eide'];
+const ROLES=['lagfører','nestlagfører','skarpskytter','sanitet','radio','maskingevær','maskingevær','rifle','rifle','rifle','rifle','rifle'];
+let rs=7; const rnd=()=>{ rs=(rs*1103515245+12345)&0x7fffffff; return rs/0x7fffffff; };
+function mkSquad(name,x,y,owner){ const men=ROLES.map((r,i)=>({name:FIRST[Math.floor(rnd()*FIRST.length)]+' '+LAST[Math.floor(rnd()*LAST.length)],role:r,hp:1,loy:0.6+rnd()*0.4})); return {name,x,y,owner,men,leader:0,path:null,prog:0,seg:0,speedHours:0,mode:'march',vis:null}; }
+const squads=[mkSquad('1. lag, Dombås',600,1130,'blue'),mkSquad('2. lag, Dombås',610,1150,'blue'),mkSquad('Speiderlag',540,980,'blue'),mkSquad('Fiendtlig patrulje',1050,700,'red')];
+// ---------- State / time ----------
+let T=0, speed=1; const HOUR=60; // seconds per game hour
+function clock(){ const h=6+T/HOUR; const d=Math.floor(h/24)+1; const hh=Math.floor(h%24); return d+' · '+String(hh).padStart(2,'0')+':'+String(Math.floor((h%1)*60)).padStart(2,'0'); }
+const PATROL=[[1050,700],[1180,760],[1120,900],[980,820]]; let patrolIdx=0, visT=0;
+function sim(dt){ T+=dt; visT+=dt; const en=squads[3]; if(!en.path){ patrolIdx=(patrolIdx+1)%PATROL.length; order(en,PATROL[patrolIdx][0],PATROL[patrolIdx][1],true); }
+  for(const s of squads){ if(!s.path)continue; const hours=dt/HOUR; s.hoursLeft-=hours; let move=hours; while(move>0&&s.seg<s.path.length-1){ const [x0,y0]=s.path[s.seg],[x1,y1]=s.path[s.seg+1]; const segH=s.segHours[s.seg]; const remain=(1-s.prog)*segH; if(move>=remain){ move-=remain; s.seg++; s.prog=0; s.x=x1; s.y=y1; } else { s.prog+=move/segH; move=0; s.x=x0+(x1-x0)*s.prog; s.y=y0+(y1-y0)*s.prog; } }
+    if(s.seg>=s.path.length-1){ s.path=null; if(s.owner==='blue')logMsg(s.name+' er framme.'); if(sel===s) renderPanel(); s.vis=null; } else if(visT>1.5){ s.vis=null; } } if(visT>1.5)visT=0; dirty=true; }
+function order(s,x,y,quiet){ const r=astar(s.x,s.y,x,y); if(!r){ if(!quiet)logMsg('Ingen framkommelig rute dit.'); return; } s.path=r.path; s.seg=0; s.prog=0; s.segHours=[]; for(let i=1;i<r.path.length;i++){ const gx=Math.floor(r.path[i][0]/G),gy=Math.floor(r.path[i][1]/G); const fi=Math.floor(r.path[i-1][1]/G)*GW+Math.floor(r.path[i-1][0]/G); const d=Math.hypot(r.path[i][0]-r.path[i-1][0],r.path[i][1]-r.path[i-1][1])/G; s.segHours.push(cellCost(gx,gy,fi)*d); } s.hoursLeft=r.hours; s.vis=null; if(!quiet)logMsg(s.name+': marsj, ca. '+r.hours.toFixed(1)+' t.'); }
+const L=document.getElementById('log'); const logs=[]; function logMsg(m){ logs.unshift(m); logs.length=Math.min(logs.length,6); L.innerHTML=logs.map((x,i)=>'<div style="opacity:'+(1-i*0.15)+'">'+x+'</div>').join(''); }
+// ---------- Rendering ----------
+let dpr=1,W=0,H=0,view={x:0,y:0,s:1},sel=null,mode=null,dirty=true,showVis=true,showCont=true,hoverZ=null;
+function resize(){ dpr=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; if(!mode3d){ cv.width=W*dpr; cv.height=H*dpr; } dirty=true; }
+function fit(){ const s=Math.min(W/D.W,H/D.H)*0.98; view={s,x:(W-D.W*s)/2,y:(H-D.H*s)/2}; dirty=true; }
+function draw(){ if(mode3d){ draw3d(); return; } ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle='#1a1710'; ctx.fillRect(0,0,W,H); ctx.save(); ctx.translate(view.x,view.y); ctx.scale(view.s,view.s);
+  drawMap(ctx,1/view.s,view.s,-view.x/view.s,-view.y/view.s,W/view.s,H/view.s); ctx.restore();
+  const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.4,W/2,H/2,Math.max(W,H)*0.8); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.55)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); credit(ctx); }
+function credit(c){ c.fillStyle='rgba(231,220,195,.5)'; c.font='italic 12px "IM Fell English",serif'; c.textAlign='left'; c.fillText('Landsat 5, 13. aug. 1987 · Kartverket (bygg) · NVDB (veg) · 30 m/px', 12, H-10-(parseFloat(getComputedStyle(document.documentElement).paddingBottom)||0)); }
+function drawMap(ctx,lw,zs,vx0,vy0,vw,vh){ const vx1=vx0+vw, vy1=vy0+vh; const view={s:zs};
+  ctx.imageSmoothingEnabled=zs<3; if(tex.complete&&tex.naturalWidth) ctx.drawImage(tex,0,0,D.W,D.H);
+  // viewshed for selected squad
+  if(showVis){ for(const s of squads){ if(!s.vis){ s.range=sightRange(s); s.vis=viewshed(s.x,s.y,s.range); } ctx.fillStyle=s.owner==='blue'?(s===sel?'rgba(240,215,154,.22)':'rgba(240,215,154,.11)'):'rgba(220,80,50,.16)'; for(const i of s.vis){ const gx=i%GW,gy=(i/GW)|0; ctx.fillRect(gx*G,gy*G,G,G); } } }
+  // contours
+  if(showCont&&view.s>1.2){ ctx.strokeStyle='rgba(40,28,14,.35)'; ctx.lineWidth=lw*0.8; for(const c of D.cont){ const p=c.p; if(p[0][0]<vx0-50&&p[p.length-1][0]<vx0-50)continue; ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++)ctx.lineTo(p[i][0],p[i][1]); ctx.stroke(); } }
+  // roads
+  for(const r of D.roads){ const p=r.p; let inv=false; for(const q of p){ if(q[0]>=vx0&&q[0]<=vx1&&q[1]>=vy0&&q[1]<=vy1){inv=true;break;} } if(!inv)continue;
+    const big=r.c==='E'||r.c==='R'; ctx.strokeStyle=big?'rgba(60,40,20,.95)':r.c==='F'?'rgba(60,40,20,.8)':'rgba(60,40,20,.55)'; ctx.lineWidth=big?lw*2.4+0.6:r.c==='F'?lw*1.6+0.3:lw*1.1; if(r.c==='P'&&view.s<2)continue; ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++)ctx.lineTo(p[i][0],p[i][1]); ctx.stroke();
+    if(big){ ctx.strokeStyle='rgba(214,190,140,.55)'; ctx.lineWidth=lw*0.9; ctx.stroke(); } }
+  // buildings
+  if(view.s>1.6){ const s=Math.min(0.42, 0.9*lw+0.08); for(const b of D.bld){ if(b[0]<vx0||b[0]>vx1||b[1]<vy0||b[1]>vy1)continue; const k=b[2]; const w=k===0?s*0.7:k===2?s*1.6:k===3?s*2:s; const h=k===2?s*0.9:k===3?s*1.4:s*0.9;
+      ctx.fillStyle=k===3?'rgba(70,50,40,.9)':k===2?'rgba(90,60,40,.85)':'rgba(40,28,16,.9)'; ctx.fillRect(b[0]-w/2,b[1]-h/2,w,h); if(view.s>6){ ctx.strokeStyle='rgba(231,220,195,.6)'; ctx.lineWidth=lw*0.6; ctx.strokeRect(b[0]-w/2,b[1]-h/2,w,h); } } }
+  else { ctx.fillStyle='rgba(40,28,16,.7)'; for(let i=0;i<D.bld.length;i+=3){ const b=D.bld[i]; ctx.fillRect(b[0]-0.6,b[1]-0.6,1.2,1.2); } }
+  // squads
+  for(const s of squads){ if(s.path){ ctx.strokeStyle=s.owner==='blue'?'rgba(120,160,210,.8)':'rgba(220,120,90,.8)'; ctx.lineWidth=lw*1.5; ctx.setLineDash([4*lw,3*lw]); ctx.beginPath(); ctx.moveTo(s.x,s.y); for(let i=s.seg+1;i<s.path.length;i++)ctx.lineTo(s.path[i][0],s.path[i][1]); ctx.stroke(); ctx.setLineDash([]); }
+    const r=6*lw+2; ctx.fillStyle=s.owner==='blue'?'#3b5878':'#8f3c2f'; ctx.strokeStyle=s===sel?'#f0d79a':'#e7dcc3'; ctx.lineWidth=lw*(s===sel?2.5:1.2);
+    if(view.s>5){ // 12 individual soldiers in formation
+      const alive=s.men.filter(m=>m.hp>0).length; for(let i=0;i<alive;i++){ const a=i*Math.PI*2/12; const rr=(i<4?1.2:2.4)*lw*3+1; ctx.beginPath(); ctx.arc(s.x+Math.cos(a)*rr,s.y+Math.sin(a)*rr,1.3*lw+0.3,0,7); ctx.fill(); } ctx.beginPath(); ctx.arc(s.x,s.y,1.6*lw+0.4,0,7); ctx.fillStyle='#f0d79a'; ctx.fill(); }
+    else { ctx.beginPath(); ctx.rect(s.x-r,s.y-r*0.7,r*2,r*1.4); ctx.fill(); ctx.stroke(); ctx.strokeStyle='#e7dcc3'; ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(s.x-r,s.y-r*0.7); ctx.lineTo(s.x+r,s.y+r*0.7); ctx.moveTo(s.x+r,s.y-r*0.7); ctx.lineTo(s.x-r,s.y+r*0.7); ctx.stroke(); }
+    ctx.fillStyle='#e7dcc3'; ctx.font='600 '+(10*lw+2)+'px "Cormorant Garamond",serif'; ctx.textAlign='center'; ctx.fillText(s.name,s.x,s.y-r-3*lw); }
+  if(mode==='move'&&hoverPt){ ctx.strokeStyle='#f0d79a'; ctx.lineWidth=lw*1.5; ctx.beginPath(); ctx.arc(hoverPt[0],hoverPt[1],5*lw+2,0,7); ctx.stroke(); } }
+// ---------- 3D (three.js) ----------
+let mode3d=false, R3=null;
+function init3d(){ if(R3||!window.THREE)return; const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true}); renderer.setPixelRatio(dpr); renderer.setSize(W,H,false);
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a1710); scene.fog=new THREE.Fog(0x1a1710,1500,4200);
+  const cam=new THREE.PerspectiveCamera(50,W/H,2,8000);
+  const geo=new THREE.PlaneGeometry(D.W,D.H,GW-1,GH-1); const pos=geo.attributes.position; const EX=1.6;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i)+D.W/2, y=-pos.getY(i)+D.H/2; const gx=Math.min(GW-1,Math.max(0,Math.round(x/G))), gy=Math.min(GH-1,Math.max(0,Math.round(y/G))); pos.setZ(i,DEM[gy*GW+gx]/PX*EX); }
+  geo.computeVertexNormals();
+  const oc=document.createElement('canvas'); oc.width=D.W; oc.height=D.H; const octx=oc.getContext('2d'); const ctex=new THREE.CanvasTexture(oc); ctex.flipY=true;
+  const mat=new THREE.MeshLambertMaterial({map:ctex}); const mesh=new THREE.Mesh(geo,mat); mesh.position.set(D.W/2,-D.H/2,0); scene.add(mesh);
+  scene.add(new THREE.AmbientLight(0xffffff,0.55)); const sun=new THREE.DirectionalLight(0xfff0d0,0.9); sun.position.set(-1,1,1.2); scene.add(sun);
+  const markers=new THREE.Group(); scene.add(markers);
+  R3={renderer,scene,cam,oc,octx,ctex,mesh,markers,EX,orbit:{tx:D.W/2,ty:-D.H/2,tz:30,dist:1400,yaw:-0.5,pitch:0.9},ray:new THREE.Raycaster()}; }
+function cam3d(){ const o=R3.orbit; const c=R3.cam; c.position.set(o.tx+Math.sin(o.yaw)*Math.cos(o.pitch)*o.dist, o.ty-Math.cos(o.yaw)*Math.cos(o.pitch)*o.dist, o.tz+Math.sin(o.pitch)*o.dist); c.up.set(0,0,1); c.lookAt(o.tx,o.ty,o.tz); c.aspect=W/H; c.updateProjectionMatrix(); }
+function draw3d(){ init3d(); if(!R3)return; const zs=Math.max(1.6,1400/R3.orbit.dist*2.2); R3.octx.setTransform(1,0,0,1,0,0); R3.octx.clearRect(0,0,D.W,D.H); drawMap(R3.octx,1/zs,zs,0,0,D.W,D.H); R3.ctex.needsUpdate=true;
+  // squad markers as upright sprites
+  R3.markers.clear(); for(const s of squads){ const z=demAt(s.x,s.y)/PX*R3.EX; const h=22; const g=new THREE.CylinderGeometry(0,6,h,4); const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:s.owner==='blue'?0x6f93c4:0xd0604a})); m.rotation.x=Math.PI/2; m.position.set(s.x,-s.y,z+h/2); R3.markers.add(m); if(s===sel){ const r=new THREE.Mesh(new THREE.RingGeometry(10,13,24),new THREE.MeshBasicMaterial({color:0xf0d79a,side:THREE.DoubleSide})); r.position.set(s.x,-s.y,z+1); R3.markers.add(r); } }
+  R3.renderer.setSize(W,H,false); cam3d(); R3.renderer.render(R3.scene,R3.cam); }
+function pick3d(cx,cy){ if(!R3)return null; const v=new THREE.Vector2((cx/W)*2-1,-(cy/H)*2+1); R3.ray.setFromCamera(v,R3.cam); const hit=R3.ray.intersectObject(R3.mesh)[0]; if(!hit)return null; return [hit.point.x,-hit.point.y]; }
+document.getElementById('v3d').onclick=function(){ if(!window.THREE){ logMsg('3D-biblioteket lastet ikke.'); return; } mode3d=!mode3d; this.classList.toggle('on',mode3d); if(mode3d){ init3d(); const [mx,my]=[(-view.x+W/2)/view.s,(-view.y+H/2)/view.s]; R3.orbit.tx=mx; R3.orbit.ty=-my; R3.orbit.tz=demAt(mx,my)/PX*R3.EX; R3.orbit.dist=Math.max(300,Math.min(3000,W/view.s)); } else { const o=R3.orbit; view.s=Math.max(0.2,W/o.dist); view.x=W/2-o.tx*view.s; view.y=H/2-(-o.ty)*view.s; ctx.setTransform(1,0,0,1,0,0); } dirty=true; };
+// ---------- Panel ----------
+const panel=document.getElementById('panel');
+function renderPanel(){ if(!sel){ panel.classList.remove('on'); document.getElementById('sSel').textContent='–'; return; } const s=sel;
+  document.getElementById('sSel').textContent=s.name; document.getElementById('pname').textContent=s.name; const alive=s.men.filter(m=>m.hp>0).length;
+  document.getElementById('psub').textContent=alive+' mann · '+Math.round(demAt(s.x,s.y))+' moh. · '+['snaufjell','skog','hei','vann','snø','dyrket mark','myr'][clsAt(s.x,s.y)]+(ROAD[Math.floor(s.y/G)*GW+Math.floor(s.x/G)]?' · ved veg':'')+(s.path?' · marsjerer, '+Math.max(0,s.hoursLeft).toFixed(1)+' t igjen':'')+' · sikt '+(sightRange(s)/1000).toFixed(1)+' km';
+  const A=document.getElementById('acts'); A.innerHTML='';
+  if(s.owner==='blue'){ const mb=document.createElement('button'); mb.textContent=mode==='move'?'Velg mål på kartet…':'Marsjer'; mb.className=mode==='move'?'on':''; mb.onclick=()=>{ mode=mode==='move'?null:'move'; renderPanel(); dirty=true; }; A.appendChild(mb);
+    const sb=document.createElement('button'); sb.textContent=s.mode==='scout'?'Speider (8 km sikt)':'Lag (4 km sikt)'; sb.onclick=()=>{ s.mode=s.mode==='scout'?'march':'scout'; s.vis=null; renderPanel(); dirty=true; }; A.appendChild(sb);
+    const vb=document.createElement('button'); vb.textContent=showVis?'Skjul sikt':'Vis sikt'; vb.onclick=()=>{ showVis=!showVis; renderPanel(); dirty=true; }; A.appendChild(vb);
+    if(s.path){ const hb=document.createElement('button'); hb.textContent='Stopp'; hb.onclick=()=>{ s.path=null; renderPanel(); dirty=true; }; A.appendChild(hb); } }
+  const M=document.getElementById('men'); M.innerHTML=''; s.men.forEach((m,i)=>{ const d=document.createElement('div'); d.className=i===s.leader?'lead':''; d.innerHTML=m.name+'<span>'+(i===s.leader?'lagfører · ':'')+(i===s.leader&&m.role==='lagfører'?'':m.role)+' · lojalitet '+Math.round(m.loy*100)+' %</span>'; d.onclick=()=>{ s.leader=i; renderPanel(); }; M.appendChild(d); });
+  document.getElementById('hint').textContent=mode==='move'?'Trykk hvor som helst på kartet. Ruten følger veier og terreng.':'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
+  panel.classList.add('on'); }
+document.getElementById('close').onclick=()=>{ sel=null; mode=null; renderPanel(); dirty=true; };
+// ---------- Input ----------
+let hoverPt=null;
+function local(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; }
+function toMap(cx,cy){ return [(cx-view.x)/view.s,(cy-view.y)/view.s]; }
+function pickSquad(mx,my){ let best=null,bd=1e9; const zs=mode3d?Math.max(0.3,W/R3.orbit.dist):view.s; for(const s of squads){ const d=Math.hypot(s.x-mx,s.y-my)*zs; if(d<26&&d<bd){best=s;bd=d;} } return best; }
+function zoomAt(cx,cy,f){ const ns=Math.max(0.2,Math.min(40,view.s*f)); const [mx,my]=toMap(cx,cy); view.s=ns; view.x=cx-mx*ns; view.y=cy-my*ns; dirty=true; }
+const pts=new Map(); let last=null,moved=false,pinch=null,downAt=null;
+function centre(){ const a=[...pts.values()]; return a.length===2?[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2,Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])]:[a[0][0],a[0][1],0]; }
+cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const p=local(e); pts.set(e.pointerId,p); if(pts.size===1){ last=p; downAt=p; moved=false; pinch=null; } else if(pts.size===2){ const [cx,cy,d]=centre(); pinch=mode3d?{d,dist:R3.orbit.dist,cx,cy}:{d,s:view.s,mx:(cx-view.x)/view.s,my:(cy-view.y)/view.s}; } });
+cv.addEventListener('pointermove',e=>{ const p=local(e); if(!pts.has(e.pointerId)){ const [mx,my]=toMap(p[0],p[1]); hoverZ=demAt(mx,my); document.getElementById('sZ').textContent=Math.round(hoverZ); if(mode==='move'){hoverPt=[mx,my]; dirty=true;} return; } pts.set(e.pointerId,p);
+  if(mode3d){ if(pts.size>=2&&pinch){ const [cx,cy,d]=centre(); R3.orbit.dist=Math.max(150,Math.min(4000,pinch.dist*pinch.d/d)); const o=R3.orbit; const k=o.dist/H*1.2; o.tx-=(cx-pinch.cx)*k*Math.cos(o.yaw)+(cy-pinch.cy)*k*Math.sin(o.yaw)*-1; o.ty+=(cx-pinch.cx)*k*Math.sin(o.yaw)*-1+(cy-pinch.cy)*k*Math.cos(o.yaw); pinch.cx=cx; pinch.cy=cy; moved=true; dirty=true; return; }
+    if(pts.size===1&&last){ const dx=p[0]-last[0],dy=p[1]-last[1]; if(e.shiftKey||e.buttons===2){ const o=R3.orbit,k=o.dist/H*1.2; o.tx-=dx*k*Math.cos(o.yaw)-dy*k*Math.sin(o.yaw); o.ty-=dx*k*Math.sin(o.yaw)+dy*k*Math.cos(o.yaw); } else { R3.orbit.yaw-=dx*0.006; R3.orbit.pitch=Math.max(0.15,Math.min(1.45,R3.orbit.pitch+dy*0.006)); } last=p; if(downAt&&Math.hypot(p[0]-downAt[0],p[1]-downAt[1])>6)moved=true; dirty=true; } return; }
+  if(pts.size>=2&&pinch){ const [cx,cy,d]=centre(); view.s=Math.max(0.2,Math.min(40,pinch.s*d/pinch.d)); view.x=cx-pinch.mx*view.s; view.y=cy-pinch.my*view.s; moved=true; dirty=true; return; }
+  if(pts.size===1&&last){ view.x+=p[0]-last[0]; view.y+=p[1]-last[1]; last=p; if(downAt&&Math.hypot(p[0]-downAt[0],p[1]-downAt[1])>6)moved=true; dirty=true; } });
+function up(e){ const p=local(e); pts.delete(e.pointerId); if(pts.size===0){ if(!moved&&!pinch){ const [mx,my]=mode3d?(pick3d(p[0],p[1])||[NaN,NaN]):toMap(p[0],p[1]); if(isNaN(mx)){ last=null; downAt=null; pinch=null; return; } if(mode==='move'&&sel){ order(sel,mx,my); mode=null; renderPanel(); } else { const s=pickSquad(mx,my); sel=s; mode=null; if(!s){ document.getElementById('sZ').textContent=Math.round(demAt(mx,my)); } renderPanel(); } dirty=true; } last=null; downAt=null; pinch=null; } else if(pts.size===1){ pinch=null; last=[...pts.values()][0]; moved=true; } }
+cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const p=local(e); const dy=e.deltaMode===1?e.deltaY*16:e.deltaY; if(mode3d){ R3.orbit.dist=Math.max(150,Math.min(4000,R3.orbit.dist*Math.exp(dy*0.0015))); dirty=true; return; } zoomAt(p[0],p[1],Math.exp(-dy*0.0015)); },{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+document.getElementById('zi').onclick=()=>{ if(mode3d){R3.orbit.dist=Math.max(150,R3.orbit.dist/1.4); dirty=true;} else zoomAt(W/2,H/2,1.5); }; document.getElementById('zo').onclick=()=>{ if(mode3d){R3.orbit.dist=Math.min(4000,R3.orbit.dist*1.4); dirty=true;} else zoomAt(W/2,H/2,1/1.5); }; document.getElementById('zr').onclick=()=>{ if(mode3d){ R3.orbit.dist=1400; R3.orbit.yaw=-0.5; R3.orbit.pitch=0.9; dirty=true; } else fit(); };
+[['sp0',0],['sp1',1],['sp2',10],['sp3',60]].forEach(([id,v])=>{ document.getElementById(id).onclick=()=>{ speed=v; document.querySelectorAll('.speed button').forEach(b=>{ if(b.id.startsWith('sp')) b.classList.toggle('on',b.id===id); }); }; });
+document.getElementById('lay').onclick=()=>{ showCont=!showCont; dirty=true; };
+let acc=0,lastT=performance.now();
+function frame(now){ const dt=Math.min(0.25,(now-lastT)/1000); lastT=now; acc+=dt*speed; while(acc>=0.1){ sim(0.1); acc-=0.1; } if(dirty){ draw(); dirty=false; } document.getElementById('sDay').textContent=clock(); requestAnimationFrame(frame); }
+window.addEventListener('resize',resize); resize(); fit(); logMsg('Dovre, august 1987. Gult: hva dine lag ser. Rødt: hva fienden ser. 3D-knappen gir terrengvisning.'); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

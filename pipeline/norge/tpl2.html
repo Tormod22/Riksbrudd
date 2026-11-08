@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Riket – prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sea:#161c22; --ink:#e7dcc3; --ink-dim:#a69b82; --rule:#5b5140;
+  --neutral:#6d6453; --blue:#3b5878; --red:#8f3c2f; --green:#5f6e3b; --hover:#f0d79a; --danger:#d9875a;
+  --panel:rgba(22,18,12,.94);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ color-scheme:dark; } }
+:root[data-theme="dark"]{ color-scheme:dark; }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+html,body{ height:100%; margin:0; }
+body{ background:var(--sea); color:var(--ink); font-family:"Cormorant Garamond",Georgia,serif; overflow:hidden; font-size:15px; }
+body::before{ content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--sea); }
+#c{ display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+button{ font:inherit; }
+.top{ position:fixed; left:10px; right:10px; top:calc(10px + env(safe-area-inset-top,0px)); display:flex; gap:8px; align-items:stretch; pointer-events:none; }
+.top>*{ pointer-events:auto; }
+.stats{ background:var(--panel); border:1px solid var(--rule); padding:6px 12px; display:flex; gap:14px; align-items:baseline; white-space:nowrap; }
+.stats b{ font-family:"IM Fell English",serif; font-weight:400; font-size:20px; }
+.stats span{ color:var(--ink-dim); }
+.stats .g{ color:var(--hover); }
+.speed{ margin-left:auto; display:flex; gap:4px; }
+.speed button,.ctl button{ background:var(--panel); border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-width:38px; height:38px; font-weight:600; }
+.speed button.on{ background:var(--rule); }
+button:focus-visible{ outline:2px solid var(--hover); }
+#panel{ position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); max-width:380px; background:var(--panel); border:1px solid var(--rule); padding:12px 14px 12px; display:none; }
+#panel.on{ display:block; }
+#panel h2{ font-family:"IM Fell English",serif; font-weight:400; font-size:24px; margin:0; line-height:1.1; }
+#panel .sub{ color:var(--ink-dim); margin:1px 0 8px; }
+#panel .row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
+#panel .row div span{ color:var(--ink-dim); display:block; font-size:13px; }
+#panel .row div b{ font-size:18px; font-weight:600; }
+.acts{ display:flex; gap:6px; flex-wrap:wrap; }
+.acts button{ background:#3a3024; border:1px solid var(--rule); color:var(--ink); padding:7px 12px; cursor:pointer; }
+.acts button.primary{ background:var(--blue); border-color:#6d8bb0; }
+.acts button:disabled{ opacity:.45; cursor:default; }
+#panel .hint{ margin-top:8px; color:var(--hover); font-style:italic; }
+#panel .op{ font-size:13px; color:var(--ink-dim); line-height:1.4; margin:-2px 0 10px; } #panel .op b{ color:var(--ink); }
+.speed button.on{ background:var(--rule); }
+#panel .close{ position:absolute; right:6px; top:4px; background:none; border:0; color:var(--ink-dim); font-size:20px; cursor:pointer; }
+.ctl{ position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:6px; }
+#log{ position:fixed; right:10px; top:calc(58px + env(safe-area-inset-top,0px)); width:230px; max-height:34vh; overflow:hidden; pointer-events:none; font-size:13px; line-height:1.35; color:var(--ink-dim); text-shadow:0 1px 2px #000; }
+#log div{ opacity:.9; }
+#end{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.6); }
+#end.on{ display:flex; }
+#end div{ background:var(--panel); border:1px solid var(--rule); padding:24px 30px; text-align:center; }
+#end h2{ font-family:"IM Fell English",serif; font-weight:400; font-size:32px; margin:0 0 6px; }
+@media (max-width:600px){ .stats{ gap:10px; padding:6px 9px; } .stats b{ font-size:17px; } #log{ width:150px; font-size:12px; max-height:22vh; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="top">
+  <div class="stats"><div><b class="g" id="sGold">0</b> <span>gull</span></div><div><b id="sInc">0</b> <span>/dag</span></div><div><b id="sUnits">0</b> <span>tropper</span></div><div><b id="sProv">0</b> <span>kommuner</span></div><div><b id="sDay">1</b> <span>dag · kl.</span></div></div>
+  <div class="speed"><button id="lay" aria-pressed="false" title="Folkemening">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="on">1×</button><button id="sp3">10×</button><button id="sp4">60×</button></div>
+</div>
+<div id="log" aria-live="polite"></div>
+<div id="panel" role="dialog"><button class="close" id="close" aria-label="Lukk">×</button><h2 id="pname"></h2><div class="sub" id="psub"></div>
+  <div class="row"><div><span>Tropper</span><b id="pUnits"></b></div><div><span>Inntekt</span><b id="pInc"></b></div><div><span>Terreng</span><b id="pTer"></b></div><div><span>Trenes</span><b id="pQ"></b></div></div>
+  <div class="op" id="pOp"></div><div class="acts" id="acts"></div><div class="hint" id="hint"></div></div>
+<div class="ctl"><button id="zi" aria-label="Zoom inn">+</button><button id="zo" aria-label="Zoom ut">−</button><button id="zr" aria-label="Fastlandet">⌂</button><button id="zw" aria-label="Verden" style="font-size:13px">🌍</button></div>
+<div id="end"><div><h2 id="endT"></h2><p id="endB"></p><button id="again" class="primary" style="padding:8px 16px;background:var(--blue);color:var(--ink);border:1px solid #6d8bb0;cursor:pointer">Spill igjen</button></div></div>
+<script id="mapdata" type="application/json">__MAPDATA__</script>
+<script>
+(function(){
+// ---------- Data & map ----------
+const M=JSON.parse(document.getElementById('mapdata').textContent);
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
+const C={sea:col('--sea'),neutral:col('--neutral'),blue:col('--blue'),red:col('--red'),green:col('--green'),gold:'#8a7a3a',hover:col('--hover'),ink:col('--ink')};
+// Factions are political positions on three axes: sentralisme, marked, tradisjon (0..1)
+const FACT={riks:{name:'Riksrådet',col:'blue',pos:[0.9,0.35,0.2],motto:'Landet må samles og styres.'},kyst:{name:'Kystalliansen',col:'red',pos:[0.3,0.9,0.35],motto:'Vi skaper verdiene, vi bestemmer.'},folk:{name:'Folkefronten',col:'green',pos:[0.15,0.25,0.8],motto:'Bygdene og fjordene mot sentralmakta.'},ny:{name:'Nyordningen',col:'gold',pos:[0.8,0.75,0.85],motto:'Orden, tro og hardt arbeid.'}};
+const PL={blue:{name:'Riksrådet',fac:'riks',cap:null,ai:false},red:{name:'Kystalliansen',fac:'kyst',cap:null,ai:true},green:{name:'Folkefronten',fac:'folk',cap:null,ai:true}};
+function symp(p,fac){ if(!p.op) return 0.5; const f=FACT[fac].pos; const d=Math.hypot(p.op[0]-f[0],p.op[1]-f[1],p.op[2]-f[2]); return Math.max(0,Math.min(1,1-d/1.25)); }
+function dominant(p){ let best=null,bs=-1; for(const k in FACT){ const s=symp(p,k); if(s>bs){bs=s;best=k;} } return [best,bs]; }
+const HUMAN='blue';
+// Svalbard as a province
+M.provinces.push({id:'SV',name:'Svalbard',fylke:'Svalbard',area_km2:M.svalbard.area_km2,c:M.svalbard.c,nb:['1902'],rings:M.svalbard.rings,sea:true,pop:2500,op:[0.5,0.5,0.4]});
+const byId={}; M.provinces.forEach(p=>byId[p.id]=p); byId['1902'].nb.push('SV');
+function mkPath(rings){ const P=new Path2D(); rings.forEach(r=>{ P.moveTo(r[0][0],r[0][1]); for(let i=1;i<r.length;i++)P.lineTo(r[i][0],r[i][1]); P.closePath(); }); return P; }
+M.provinces.forEach(p=>{ p.path=mkPath(p.rings);
+  p.ter=p.area_km2>1500?'fjell':p.area_km2>400?'skog':'slette';
+  p.tmul=p.ter==='fjell'?1.6:p.ter==='skog'?1.3:1; p.dmul=p.ter==='fjell'?1.5:p.ter==='skog'?1.2:1;
+  p.inc=p.id==='SV'?5:Math.max(1,Math.min(4,Math.round(Math.sqrt(p.area_km2)/12))); });
+M.fylker.forEach(f=>f.path=mkPath(f.rings));
+const NO={'Sweden':'Sverige','Finland':'Finland','Russia':'Sovjetunionen','Denmark':'Danmark','United Kingdom':'Storbritannia','Iceland':'Island','Germany':'Vest-Tyskland','Poland':'Polen','Estonia':'Estland','Latvia':'Latvia','Lithuania':'Litauen','Netherlands':'Nederland','Belgium':'Belgia','France':'Frankrike','Ireland':'Irland','Belarus':'Hviterussland','Ukraine':'Ukraina'};
+M.countries.forEach(k=>{ k.path=mkPath(k.rings); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; k.rings.forEach(r=>r.forEach(c=>{ if(c[0]<x0)x0=c[0]; if(c[0]>x1)x1=c[0]; if(c[1]<y0)y0=c[1]; if(c[1]>y1)y1=c[1]; })); k.bb=[x0,y0,x1,y1]; k.label=NO[k.n]||null; });
+// Procedural terrain detail (trees, peaks, fields), generated lazily per province with a seeded RNG
+function rng(seed){ let x=seed|0||1; return ()=>{ x^=x<<13; x^=x>>>17; x^=x<<5; return ((x>>>0)%100000)/100000; }; }
+function detail(p){ if(p.det) return p.det; const r=rng(parseInt(p.id,10)||777); let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  p.rings.forEach(rg=>rg.forEach(c=>{ if(c[0]<minx)minx=c[0]; if(c[0]>maxx)maxx=c[0]; if(c[1]<miny)miny=c[1]; if(c[1]>maxy)maxy=c[1]; }));
+  const want=Math.min(900,Math.max(40,Math.round(p.area_km2/2))); const out=[]; const keepT=ctx.getTransform(); ctx.setTransform(1,0,0,1,0,0); let tries=0;
+  while(out.length<want&&tries++<want*6){ const x=minx+r()*(maxx-minx), y=miny+r()*(maxy-miny); if(!ctx.isPointInPath(p.path,x,y))continue;
+    const k=r(); let t; if(p.sea) t=k<0.7?'peak':'snow'; else if(p.ter==='fjell') t=k<0.5?'peak':k<0.8?'tree':'snow'; else if(p.ter==='skog') t=k<0.8?'tree':k<0.9?'peak':'field'; else t=k<0.45?'tree':k<0.8?'field':'house';
+    out.push({x,y,t,s:0.7+r()*0.6,o:r()}); }
+  p.det=out; ctx.setTransform(keepT); return out; }
+function drawDetail(lw){ if(view.s<2.5) return; const vx0=-view.x/view.s, vy0=-view.y/view.s, vx1=vx0+W/view.s, vy1=vy0+H/view.s; const frac=Math.min(1,(view.s-2.5)/10);
+  ctx.lineWidth=lw*0.9; ctx.lineCap='round';
+  for(const p of M.provinces){ if(p.c[0]<vx0-400||p.c[0]>vx1+400||p.c[1]<vy0-400||p.c[1]>vy1+400)continue; const d=detail(p); const n=Math.round(d.length*frac);
+    for(let i=0;i<n;i++){ const e=d[i]; if(e.x<vx0||e.x>vx1||e.y<vy0||e.y>vy1)continue; const s=e.s*(5*lw+0.4);
+      if(e.t==='tree'){ ctx.fillStyle='rgba(20,30,14,.55)'; ctx.beginPath(); ctx.moveTo(e.x,e.y-s*1.6); ctx.lineTo(e.x+s*0.7,e.y); ctx.lineTo(e.x-s*0.7,e.y); ctx.closePath(); ctx.fill(); ctx.strokeStyle='rgba(20,14,8,.5)'; ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.x,e.y+s*0.5); ctx.stroke(); }
+      else if(e.t==='peak'){ ctx.strokeStyle='rgba(20,14,8,.7)'; ctx.beginPath(); ctx.moveTo(e.x-s*1.3,e.y+s*0.6); ctx.lineTo(e.x,e.y-s*1.3); ctx.lineTo(e.x+s*1.3,e.y+s*0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.x,e.y-s*1.3); ctx.lineTo(e.x+s*0.35,e.y-s*0.3); ctx.stroke(); }
+      else if(e.t==='snow'){ ctx.strokeStyle='rgba(20,14,8,.7)'; ctx.beginPath(); ctx.moveTo(e.x-s*1.3,e.y+s*0.6); ctx.lineTo(e.x,e.y-s*1.3); ctx.lineTo(e.x+s*1.3,e.y+s*0.6); ctx.stroke(); ctx.fillStyle='rgba(231,220,195,.8)'; ctx.beginPath(); ctx.moveTo(e.x,e.y-s*1.3); ctx.lineTo(e.x+s*0.45,e.y-s*0.6); ctx.lineTo(e.x-s*0.45,e.y-s*0.6); ctx.closePath(); ctx.fill(); }
+      else if(e.t==='field'){ ctx.strokeStyle='rgba(20,14,8,.35)'; for(let j=0;j<3;j++){ ctx.beginPath(); ctx.moveTo(e.x-s,e.y-s*0.5+j*s*0.5); ctx.lineTo(e.x+s,e.y-s*0.5+j*s*0.5); ctx.stroke(); } }
+      else { ctx.fillStyle='rgba(20,14,8,.6)'; ctx.fillRect(e.x-s*0.6,e.y-s*0.5,s*1.2,s*0.9); ctx.beginPath(); ctx.moveTo(e.x-s*0.75,e.y-s*0.5); ctx.lineTo(e.x,e.y-s*1.2); ctx.lineTo(e.x+s*0.75,e.y-s*0.5); ctx.closePath(); ctx.fill(); } } } }
+let mainBottom=0; M.provinces.forEach(p=>{ if(p.id!=='SV') p.rings.forEach(r=>r.forEach(c=>{ if(c[1]>mainBottom)mainBottom=c[1]; })); });
+const tex=document.createElement('canvas'); tex.width=tex.height=256; const tc=tex.getContext('2d'); const im=tc.createImageData(256,256);
+for(let i=0;i<im.data.length;i+=4){ const v=200+Math.random()*55; im.data[i]=v; im.data[i+1]=v*0.93; im.data[i+2]=v*0.78; im.data[i+3]=26+Math.random()*22; } tc.putImageData(im,0,0);
+const pat=ctx.createPattern(tex,'repeat');
+
+// ---------- Rules ----------
+const R={tick:0.1,day:1440,moveBase:480,seaMove:2160,unitCost:10,trainTime:360,upkeep:0.5,combatRound:60,lossRate:0.1,capDef:1.5,winShare:0.6,maxDays:60,startGold:100};
+
+// ---------- State ----------
+let S;
+function newGame(){
+  S={t:0,day:1,dayT:0,speed:1,over:false,players:{},owner:{},units:{},queue:{},armies:[],battles:{},log:[]};
+  for(const id in PL) S.players[id]={gold:R.startGold,capital:PL[id].cap,alive:true};
+  for(const p of M.provinces){ S.owner[p.id]=null; S.units[p.id]=Math.round(2+Math.log10((p.pop||1000))*1.5+Math.random()*3); S.queue[p.id]=[]; }
+  // capitals: the most sympathetic sizeable town for each faction, kept apart from each other
+  const taken=[]; for(const id in PL){ const cand=M.provinces.filter(p=>p.pop>15000&&!p.sea).map(p=>[symp(p,PL[id].fac)+Math.random()*0.05,p]).sort((a,b)=>b[0]-a[0]);
+    const pick=cand.find(([s,p])=>taken.every(t=>!p.nb.includes(t)&&!byId[t].nb.some(n=>p.nb.includes(n))))||cand[0]; PL[id].cap=pick[1].id; taken.push(pick[1].id); S.players[id].capital=pick[1].id; }
+  for(const id in PL){ const cap=PL[id].cap; let fr=[cap]; S.owner[cap]=id; S.units[cap]=15;
+    for(let d=0;d<2;d++){ const nx=[]; fr.forEach(x=>byId[x].nb.forEach(n=>{ if(!S.owner[n]&&n!=='SV'){ S.owner[n]=id; S.units[n]=5; nx.push(n);} })); fr=nx; } }
+  S.units['SV']=12; sel=null; mode=null; renderPanel(); logMsg('Dag 1. Erobre 60 % av kommunene, eller vær siste rike med hovedstad.'); document.getElementById('end').classList.remove('on'); hudDirty=true; dirty=true;
+  logMsg('Hovedsteder: '+Object.keys(PL).map(k=>PL[k].name+' i '+byId[PL[k].cap].name).join(', ')+'.');
+}
+function logMsg(s){ S.log.unshift(s); S.log=S.log.slice(0,7); const L=document.getElementById('log'); L.innerHTML=S.log.map((x,i)=>'<div style="opacity:'+(1-i*0.12)+'">'+x+'</div>').join(''); }
+function pName(id){ return PL[id]?PL[id].name:'Nøytral'; }
+function count(pl){ let pr=0,u=0,inc=0; for(const p of M.provinces){ if(S.owner[p.id]===pl){ pr++; u+=S.units[p.id]; inc+=p.inc*(PL[pl].cap===p.id?2:1); } } S.armies.forEach(a=>{ if(a.owner===pl)u+=a.n; });
+  if(S.owner[PL[pl].cap]!==pl) inc*=0.75; return {pr,u,inc:Math.round(inc)}; }
+
+// ---------- Simulation ----------
+function sim(dt){
+  if(S.over)return; S.t+=dt; S.dayT+=dt;
+  // training
+  for(const id in S.queue){ const q=S.queue[id]; if(q.length){ q[0]-=dt; if(q[0]<=0){ q.shift(); S.units[id]++; dirty=true; } } }
+  // movement
+  for(let i=S.armies.length-1;i>=0;i--){ const a=S.armies[i]; a.prog+=dt/a.dur; if(a.prog>=1){ S.armies.splice(i,1); arrive(a); } }
+  // combat
+  for(const id in S.battles){ const b=S.battles[id]; b.t+=dt; if(b.t>=R.combatRound){ b.t-=R.combatRound; combatRound(id,b); } }
+  // day tick
+  if(S.dayT>=R.day){ S.dayT-=R.day; S.day++; endOfDay(); }
+  dirty=true;
+}
+function arrive(a){ const p=byId[a.to]; const o=S.owner[a.to];
+  if(o===a.owner){ S.units[a.to]+=a.n; return; }
+  if(S.units[a.to]<=0&&!S.battles[a.to]){ capture(a.to,a.owner,a.n); return; }
+  let b=S.battles[a.to]; if(!b){ b=S.battles[a.to]={att:{},t:0}; }
+  b.att[a.owner]=(b.att[a.owner]||0)+a.n;
+  if(a.owner===HUMAN||o===HUMAN) logMsg('Kamp om '+p.name+': '+pName(a.owner)+' angriper '+pName(o)+'.');
+}
+function combatRound(id,b){ const p=byId[id]; const def=S.units[id]; const defOwner=S.owner[id];
+  const attackers=Object.keys(b.att).filter(k=>b.att[k]>0); if(!attackers.length){ delete S.battles[id]; return; }
+  const attTotal=attackers.reduce((s,k)=>s+b.att[k],0);
+  const top=attackers.sort((x,y)=>b.att[y]-b.att[x])[0]; const sy=symp(p,PL[top].fac);
+  const dbonus=p.dmul*(PL[defOwner]&&PL[defOwner].cap===id?R.capDef:1)*(1.4-sy*0.8);
+  const rnd=()=>0.8+Math.random()*0.4;
+  const defLoss=Math.min(def, attTotal*R.lossRate*rnd()/dbonus);
+  const attLoss=def*R.lossRate*rnd();
+  S.units[id]=Math.max(0,def-defLoss);
+  for(const k of attackers) b.att[k]=Math.max(0,b.att[k]-attLoss*(b.att[k]/attTotal));
+  const alive=attackers.filter(k=>b.att[k]>=0.5);
+  if(S.units[id]<0.5){ // defenders gone: strongest attacker takes it
+    alive.sort((x,y)=>b.att[y]-b.att[x]); const w=alive[0]; const rest=alive.slice(1).reduce((s,k)=>s+b.att[k],0);
+    delete S.battles[id]; if(w){ capture(id,w,Math.max(0,b.att[w]-rest)); } else S.units[id]=0;
+  } else if(!alive.length){ delete S.battles[id]; S.units[id]=Math.round(S.units[id]); if(defOwner===HUMAN) logMsg('Angrepet på '+p.name+' ble slått tilbake.'); }
+}
+function capture(id,owner,n){ const prev=S.owner[id]; S.owner[id]=owner; S.units[id]=Math.round(n); S.queue[id]=[];
+  logMsg(pName(owner)+' tok '+byId[id].name+(prev?' fra '+pName(prev):'')+'.');
+  if(prev&&PL[prev]&&PL[prev].cap===id){ logMsg(pName(prev)+' mistet hovedstaden!'); } checkWin(); }
+function endOfDay(){ for(const pl in PL){ const c=count(pl); S.players[pl].gold+=c.inc-c.u*R.upkeep; S.players[pl].gold=Math.max(0,S.players[pl].gold); if(PL[pl].ai) aiTurn(pl); }
+  logMsg('Dag '+S.day+'.'); hudDirty=true; if(S.day>R.maxDays) endGame(null); }
+function train(id){ const pl=S.owner[id]; if(S.players[pl].gold<R.unitCost||S.queue[id].length>=5)return false; S.players[pl].gold-=R.unitCost; S.queue[id].push(R.trainTime); hudDirty=true; return true; }
+function move(from,to,n){ n=Math.floor(Math.min(n,S.units[from])); if(n<1||!byId[from].nb.includes(to))return false; S.units[from]-=n;
+  const dur=(byId[to].sea||byId[from].sea)?R.seaMove:R.moveBase*byId[to].tmul; S.armies.push({owner:S.owner[from],n,from,to,prog:0,dur}); dirty=true; return true; }
+function checkWin(){ const total=M.provinces.length; for(const pl in PL){ const c=count(pl); if(c.pr/total>=R.winShare) return endGame(pl); }
+  const alive=Object.keys(PL).filter(pl=>S.owner[PL[pl].cap]===pl); if(alive.length===1) endGame(alive[0]); }
+function endGame(w){ if(S.over)return; S.over=true; const e=document.getElementById('end'); e.classList.add('on');
+  if(!w){ const best=Object.keys(PL).sort((a,b)=>count(b).pr-count(a).pr)[0]; w=best; document.getElementById('endT').textContent='Tiden er ute'; document.getElementById('endB').textContent=pName(w)+' har flest kommuner og vinner.'; }
+  else { document.getElementById('endT').textContent=w===HUMAN?'Seier!':'Nederlag'; document.getElementById('endB').textContent=pName(w)+' kontrollerer riket etter '+S.day+' dager.'; } }
+
+// ---------- AI ----------
+function aiTurn(pl){ const P=S.players[pl]; const mine=M.provinces.filter(p=>S.owner[p.id]===pl);
+  const frontier=mine.filter(p=>p.nb.some(n=>S.owner[n]!==pl));
+  // defend: if a battle rages in my province, send nearest reinforcement
+  for(const p of mine){ if(S.battles[p.id]){ const src=p.nb.filter(n=>S.owner[n]===pl&&S.units[n]>4).sort((a,b)=>S.units[b]-S.units[a])[0]; if(src) move(src,p.id,Math.floor(S.units[src]*0.7)); } }
+  // attack from strong frontier provinces
+  for(const p of frontier){ if(S.units[p.id]>=15){ const targets=p.nb.filter(n=>S.owner[n]!==pl); const weakest=targets.sort((a,b)=>S.units[a]*byId[a].dmul-S.units[b]*byId[b].dmul)[0];
+    if(weakest&&S.units[p.id]*0.7>S.units[weakest]*byId[weakest].dmul*1.2) move(p.id,weakest,Math.floor(S.units[p.id]*0.7)); } }
+  // shuffle interior troops toward frontier
+  for(const p of mine){ if(!frontier.includes(p)&&S.units[p.id]>6){ const f=p.nb.filter(n=>S.owner[n]===pl&&frontier.includes(byId[n]))[0]; if(f) move(p.id,f,S.units[p.id]-3); } }
+  // train in frontier, bias to capital and weakest
+  let guard=0; while(P.gold>=R.unitCost&&guard++<40){ const cand=frontier.filter(p=>S.queue[p.id].length<3).sort((a,b)=>S.units[a.id]-S.units[b.id])[0]; if(!cand||!train(cand.id))break; }
+}
+
+// ---------- Rendering ----------
+let dpr=1,W=0,H=0,view={x:0,y:0,s:1},hover=null,sel=null,mode=null,dirty=true,hudDirty=true,layer='map';
+document.getElementById('lay').onclick=function(){ layer=layer==='map'?'opinion':'map'; this.setAttribute('aria-pressed',layer==='opinion'); this.classList.toggle('on',layer==='opinion'); dirty=true; };
+function resize(){ dpr=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*dpr; cv.height=H*dpr; dirty=true; }
+function fit(){ const mh=mainBottom-M.mainland_top; const s=Math.min(W/M.width,H/mh)*0.95; view={s, x:(W-M.width*s)/2, y:(H-mh*s)/2-M.mainland_top*s}; dirty=true; }
+function star(x,y,r){ for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr=i%2?r*0.45:r; ctx[i?'lineTo':'moveTo'](x+Math.cos(a)*rr,y+Math.sin(a)*rr); } ctx.closePath(); }
+function draw(){
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle=C.sea; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.translate(view.x,view.y); ctx.scale(view.s,view.s); const lw=1/view.s;
+  // World: greyed out, visual only. Key countries slightly lighter and labelled.
+  { const vx0=-view.x/view.s, vy0=-view.y/view.s, vx1=vx0+W/view.s, vy1=vy0+H/view.s;
+    for(const k of M.countries){ if(k.bb[2]<vx0||k.bb[0]>vx1||k.bb[3]<vy0||k.bb[1]>vy1)continue; ctx.fillStyle=k.key?'#3b3b39':'#2e2f2e'; ctx.fill(k.path); ctx.strokeStyle='rgba(14,10,6,.8)'; ctx.lineWidth=lw*(k.key?2:1.2); ctx.stroke(k.path); } }
+  if(layer==='opinion'){ for(const p of M.provinces){ const [f,s]=dominant(p); ctx.fillStyle=C.neutral; ctx.fill(p.path); ctx.globalAlpha=0.25+s*0.75; ctx.fillStyle=C[FACT[f].col]; ctx.fill(p.path); ctx.globalAlpha=1; } }
+  else for(const p of M.provinces){ const o=S.owner[p.id]; ctx.fillStyle=o?C[o]:C.neutral; ctx.fill(p.path); }
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.fillStyle=pat; ctx.fillRect(0,0,M.width,M.height); ctx.restore();
+  drawDetail(lw);
+  ctx.strokeStyle='rgba(20,14,8,.55)'; ctx.lineWidth=lw*0.8; for(const p of M.provinces) ctx.stroke(p.path);
+  ctx.strokeStyle='rgba(14,10,6,.9)'; ctx.lineWidth=lw*2.2; for(const f of M.fylker) ctx.stroke(f.path);
+  // selection / targets
+  if(sel&&mode==='move'){ ctx.fillStyle='rgba(240,215,154,.18)'; for(const n of sel.nb) ctx.fill(byId[n].path); ctx.strokeStyle=C.hover; ctx.lineWidth=lw*1.5; ctx.setLineDash([6*lw,4*lw]); for(const n of sel.nb) ctx.stroke(byId[n].path); ctx.setLineDash([]); }
+  if(hover&&hover!==sel){ ctx.fillStyle='rgba(240,215,154,.2)'; ctx.fill(hover.path); }
+  if(sel){ ctx.strokeStyle=C.hover; ctx.lineWidth=lw*2.5; ctx.stroke(sel.path); }
+  // battles
+  for(const id in S.battles){ const p=byId[id]; ctx.fillStyle='rgba(217,80,50,.35)'; ctx.fill(p.path); }
+  // capitals
+  for(const pl in PL){ const p=byId[PL[pl].cap]; ctx.fillStyle=C.ink; ctx.beginPath(); star(p.c[0],p.c[1],6*lw+2); ctx.fill(); ctx.strokeStyle='#000'; ctx.lineWidth=lw; ctx.stroke(); }
+  // armies in transit
+  for(const a of S.armies){ const f=byId[a.from].c,t=byId[a.to].c; const x=f[0]+(t[0]-f[0])*a.prog, y=f[1]+(t[1]-f[1])*a.prog;
+    ctx.strokeStyle='rgba(231,220,195,.5)'; ctx.lineWidth=lw*1.2; ctx.setLineDash([4*lw,4*lw]); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(t[0],t[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=C[a.owner]; ctx.beginPath(); ctx.arc(x,y,5*lw+1.5,0,7); ctx.fill(); ctx.strokeStyle=C.ink; ctx.lineWidth=lw*1.2; ctx.stroke();
+    if(view.s>0.6){ ctx.fillStyle=C.ink; ctx.font='bold '+(11*lw+2)+'px "Cormorant Garamond",serif'; ctx.textAlign='center'; ctx.fillText(a.n,x,y-7*lw-2); } }
+  // unit counts
+  if(view.s>0.55){ const fs=10*lw+3; ctx.font='700 '+fs+'px "Cormorant Garamond",serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const p of M.provinces){ const u=Math.round(S.units[p.id]); const b=S.battles[p.id]; if(!u&&!b)continue; const txt=b?u+' ⚔ '+Math.round(Object.values(b.att).reduce((s,v)=>s+v,0)):String(u);
+      const w=ctx.measureText(txt).width+8*lw; ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(p.c[0]-w/2,p.c[1]+8*lw-fs*0.65,w,fs*1.3); ctx.fillStyle=S.owner[p.id]?C.ink:'#cfc4a8'; ctx.fillText(txt,p.c[0],p.c[1]+8*lw); }
+    ctx.textBaseline='alphabetic'; }
+  if(view.s>1.4){ ctx.fillStyle='rgba(231,220,195,.75)'; ctx.font=Math.min(9*lw+2,14*lw)+'px "IM Fell English",serif'; ctx.textAlign='center'; for(const p of M.provinces){ ctx.fillText(p.name,p.c[0],p.c[1]-6*lw); } }
+  ctx.fillStyle='rgba(231,220,195,.45)'; ctx.font='italic '+(26*lw+8)+'px "IM Fell English",serif'; ctx.textAlign='center';
+  for(const k of M.countries){ if(!k.label)continue; ctx.fillText(k.label,k.c[0],k.c[1]); }
+  ctx.font='italic '+(16*lw+6)+'px "IM Fell English",serif'; ctx.fillText('Svalbard',M.svalbard.c[0],M.svalbard.c[1]+9*lw+2);
+  ctx.textAlign='start'; ctx.restore();
+  const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.6)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+function hud(){ const c=count(HUMAN); document.getElementById('sGold').textContent=Math.floor(S.players[HUMAN].gold); document.getElementById('sInc').textContent=(c.inc-Math.round(c.u*R.upkeep)>=0?'+':'')+(c.inc-Math.round(c.u*R.upkeep)); document.getElementById('sUnits').textContent=Math.round(c.u); document.getElementById('sProv').textContent=c.pr+'/'+M.provinces.length; document.getElementById('sDay').textContent=S.day+' · '+String(Math.floor(S.dayT/60)).padStart(2,'0')+':'+String(Math.floor(S.dayT%60)).padStart(2,'0'); }
+
+// ---------- Panel ----------
+const panel=document.getElementById('panel');
+function renderPanel(){ if(!sel){ panel.classList.remove('on'); return; } const p=sel,o=S.owner[p.id];
+  document.getElementById('pname').textContent=p.name; document.getElementById('psub').textContent=p.fylke+' · '+pName(o)+(PL[o]&&PL[o].cap===p.id?' · hovedstad':'');
+  document.getElementById('pUnits').textContent=Math.round(S.units[p.id]); document.getElementById('pInc').textContent=(PL[o]&&PL[o].cap===p.id?p.inc*2:p.inc)+' gull';
+  document.getElementById('pTer').textContent=p.sea?'øy (sjøvei)':p.ter+(p.dmul>1?' ×'+p.dmul:''); document.getElementById('pQ').textContent=S.queue[p.id].length?S.queue[p.id].length+' ('+Math.ceil(S.queue[p.id][0]/60)+' t)':'–';
+  const [df,ds]=dominant(p); const mine=Math.round(symp(p,PL[HUMAN].fac)*100);
+  document.getElementById('pOp').innerHTML=(p.pop?'<b>'+p.pop.toLocaleString('nb-NO')+'</b> innb. · '+p.dens+' per km² · industri '+Math.round((p.ind||0)*100)+' % · jordbruk/fiske '+Math.round((p.agri||0)*100)+' % · høyere utd. '+Math.round(p.edu||0)+' %<br>':'')+
+    'Folkemening: <span style="color:'+C[FACT[df].col]+'">'+FACT[df].name+'</span> ('+Math.round(ds*100)+' %) · sympati for deg <b>'+mine+' %</b>';
+  const A=document.getElementById('acts'),Hn=document.getElementById('hint'); A.innerHTML=''; Hn.textContent='';
+  if(o===HUMAN&&!S.over){ const u=Math.floor(S.units[p.id]);
+    const bt=document.createElement('button'); bt.textContent='Tren tropp (10 gull · 6 t)'; bt.disabled=S.players[HUMAN].gold<R.unitCost||S.queue[p.id].length>=5; bt.onclick=()=>{ train(p.id); renderPanel(); }; A.appendChild(bt);
+    if(mode==='move'){ const b=document.createElement('button'); b.textContent='Avbryt'; b.onclick=()=>{ mode=null; dirty=true; renderPanel(); }; A.appendChild(b); Hn.textContent='Trykk på en nabokommune for å sende '+moveN+' tropper.'; }
+    else { [['Send alle',u],['Send halve',Math.floor(u/2)]].forEach(([t,n])=>{ const b=document.createElement('button'); b.textContent=t+' ('+n+')'; b.className=n===u?'primary':''; b.disabled=n<1; b.onclick=()=>{ moveN=n; mode='move'; dirty=true; renderPanel(); }; A.appendChild(b); }); }
+  } else if(o!==HUMAN){ const b=S.battles[p.id]; Hn.textContent=b?'Kamp pågår: '+Math.round(S.units[p.id])+' forsvarer mot '+Math.round(Object.values(b.att).reduce((s,v)=>s+v,0))+'.':'Naboer: '+p.nb.map(n=>byId[n].name).join(', '); }
+  panel.classList.add('on'); }
+let moveN=0;
+function select(p){ if(mode==='move'&&sel&&p&&sel.nb.includes(p.id)){ if(move(sel.id,p.id,moveN)){ mode=null; renderPanel(); } return; } mode=null; sel=p; dirty=true; renderPanel(); }
+document.getElementById('close').onclick=()=>select(null);
+
+// ---------- Input ----------
+function local(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; }
+function toMap(cx,cy){ return [(cx-view.x)/view.s,(cy-view.y)/view.s]; }
+function pick(cx,cy){ const [mx,my]=toMap(cx,cy); ctx.setTransform(1,0,0,1,0,0); for(let i=M.provinces.length-1;i>=0;i--){ const p=M.provinces[i]; if(ctx.isPointInPath(p.path,mx,my)) return p; } return null; }
+function zoomAt(cx,cy,f){ const ns=Math.max(0.015,Math.min(80,view.s*f)); const [mx,my]=toMap(cx,cy); view.s=ns; view.x=cx-mx*ns; view.y=cy-my*ns; dirty=true; }
+const pts=new Map(); let last=null,moved=false,pinch=null,downAt=null;
+function centre(){ const a=[...pts.values()]; return a.length===2?[(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2,Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])]:[a[0][0],a[0][1],0]; }
+cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const p=local(e); pts.set(e.pointerId,p);
+  if(pts.size===1){ last=p; downAt=p; moved=false; pinch=null; } else if(pts.size===2){ const [cx,cy,d]=centre(); pinch={d,s:view.s,mx:(cx-view.x)/view.s,my:(cy-view.y)/view.s}; } });
+cv.addEventListener('pointermove',e=>{ const p=local(e);
+  if(!pts.has(e.pointerId)){ if(e.pointerType==='mouse'){ const h=pick(p[0],p[1]); if(h!==hover){hover=h; cv.style.cursor=h?'pointer':'grab'; dirty=true;} } return; }
+  pts.set(e.pointerId,p);
+  if(pts.size>=2&&pinch){ const [cx,cy,d]=centre(); view.s=Math.max(0.015,Math.min(80,pinch.s*d/pinch.d)); view.x=cx-pinch.mx*view.s; view.y=cy-pinch.my*view.s; moved=true; dirty=true; return; }
+  if(pts.size===1&&last){ view.x+=p[0]-last[0]; view.y+=p[1]-last[1]; last=p; if(downAt&&Math.hypot(p[0]-downAt[0],p[1]-downAt[1])>6)moved=true; dirty=true; } });
+function up(e){ const p=local(e); pts.delete(e.pointerId);
+  if(pts.size===0){ if(!moved&&!pinch) select(pick(p[0],p[1])); last=null; downAt=null; pinch=null; } else if(pts.size===1){ pinch=null; last=[...pts.values()][0]; moved=true; } }
+cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const p=local(e); const dy=e.deltaMode===1?e.deltaY*16:e.deltaY; zoomAt(p[0],p[1],Math.exp(-dy*0.0015)); },{passive:false});
+cv.addEventListener('dblclick',e=>{ const p=local(e); zoomAt(p[0],p[1],1.8); });
+document.getElementById('zi').onclick=()=>zoomAt(W/2,H/2,1.5); document.getElementById('zo').onclick=()=>zoomAt(W/2,H/2,1/1.5); document.getElementById('zr').onclick=fit; document.getElementById('zw').onclick=()=>{ view.s=Math.min(W,H)/26000; view.x=W/2-M.width/2*view.s; view.y=H/2-2200*view.s; dirty=true; };
+[['sp0',0],['sp1',1],['sp3',10],['sp4',60]].forEach(([id,v])=>{ document.getElementById(id).onclick=()=>{ S.speed=v; document.querySelectorAll('.speed button').forEach(b=>b.classList.toggle('on',b.id===id)); }; });
+document.getElementById('again').onclick=()=>{ newGame(); fit(); };
+
+// ---------- Loop ----------
+let acc=0,lastT=performance.now(),panelT=0;
+function frame(now){ const dt=Math.min(0.25,(now-lastT)/1000); lastT=now; acc+=dt*S.speed;
+  while(acc>=R.tick){ sim(R.tick); acc-=R.tick; }
+  if(dirty){ draw(); dirty=false; } if(hudDirty||(now%1000)<20){ hud(); hudDirty=false; }
+  panelT+=dt; if(panelT>0.5&&sel){ panelT=0; renderPanel(); }
+  requestAnimationFrame(frame); }
+window.addEventListener('resize',resize); resize(); newGame(); fit(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
