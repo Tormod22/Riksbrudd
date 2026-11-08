@@ -92,7 +92,7 @@ const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
-const HUS_TAG = '';     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
+const HUS_TAG = 'kart-hus-502aa70491f9';     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
 const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
 const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
 if (PÅ_NORGE && !NORGE_TAG) location.replace('/kommuner-1986');   // til Norge-kartet er bygget: det gamle kommunekartet
