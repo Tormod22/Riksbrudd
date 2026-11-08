@@ -81,6 +81,15 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
       const iok = n.bru > 20 && n.kraft > 0 && n.dam > 0 &&   // Dovre-utsnittet har ingen vegtunneler
          dom && dom.folk > 500 && dom.panel === 'Dombås' && (bru[0] || 'Bru uten navn') === bru[2]; if (!iok) feil++;
       console.log(`${iok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur: ${JSON.stringify(n)}; Dombås ${dom && dom.folk} innb. (panel «${dom && dom.panel}»), lengste bru «${bru[0]}» ${bru[1]} m (panel «${bru[2]}»)`);
+      // 3D: bruene bygges som egne 3D-objekter, og trykk på en bru i 3D gir panelet
+      await pg.evaluate(() => { const b = INFRA.bru.find(o => o.e.navn === 'Jora bru') || INFRA.bru[0], a = b.deler[0]; kam.x = a[0]; kam.y = a[1]; kam.m = 1; window.testBru = b; });
+      await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
+      await pg.evaluate(() => { Object.assign(R3.bane, { x: window.testBru.deler[0][0] - R3.ut.cx, y: window.testBru.deler[0][1] - R3.ut.cy, avst: 500, pitch: .9 }); tegn3d(); });
+      const b3 = await pg.evaluate(() => { const b = window.testBru, a = b.deler[0], k = (a.length >> 2) << 1, q = brupunkt3(b, a[k], a[k + 1]), o = q && finnInfra3d(q[0], q[1]);
+        return { n: R3.ut.bru ? R3.ut.bru.antall : 0, mesh: !!R3.bruMesh, treff: o ? o.e.navn : null, navn: b.e.navn }; });
+      await pg.click('#v3d');
+      const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
+      console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);
       await pg.evaluate(() => { valgt = null; visPanel(); Object.assign(kam, window.kamFør); skitten = true; });   // tilbake til Snøhetta for 3D-testen
     }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
