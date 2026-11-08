@@ -94,6 +94,7 @@ const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
 const HUS_TAG = 'kart-hus-502aa70491f9';
 const OMLAND_TAG = 'kart-omland-e1becd1b04bf';   // Sverige, Finland, Danmark, Kola, Svalbard og havet (pipeline/fliser/omland.py), settes av bruk_omland.py
+const UTVEG_TAG = '';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
 const INFRA_TAG = 'kart-infra-2023-7bd50584c2a7';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
 const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
 const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
@@ -152,7 +153,12 @@ const KLAR = (async () => {
     try { const r = await fetch(`/api/kart/${OMLAND_TAG}/manifest.json/0/1048576`);
       if (r.ok) { const mo = await r.json(); for (const n of ['ohoyde', 'okart']) filer[n] = mo.filer[n].map(f => Object.assign({}, f, { tag: OMLAND_TAG }));
         NORGE_BLOKKER = new Set(mo.norge_blokker.map(([x, y]) => x + ',' + y));
-        document.getElementById('kilde').textContent += ' · Utenfor Norge: Copernicus DEM GLO-90 og ESA WorldCover'; } } catch (e) { /* uten omland */ }
+        document.getElementById('kilde').textContent += ' · Utenfor Norge: Copernicus DEM GLO-90 og ESA WorldCover'; lastVest(); } } catch (e) { /* uten omland */ }
+  }
+  if (UTVEG_TAG) {   // jernbane (hele Norden) og veger i nabolandene
+    try { const r = await fetch(`/api/kart/${UTVEG_TAG}/manifest.json/0/1048576`);
+      if (r.ok) { const mu = await r.json(); filer.utveg = mu.filer.utveg.map(f => Object.assign({}, f, { tag: UTVEG_TAG }));
+        const k = document.getElementById('kilde'); if (!k.textContent.includes('OpenStreetMap')) k.textContent += ' · Jernbane og utenlandske veger: © OpenStreetMap-bidragsytere (ODbL)'; else k.textContent += ' · Jernbane og veger i nabolandene fra OpenStreetMap'; } } catch (e) { /* uten */ }
   }
   LAGFILER = {};
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
@@ -201,6 +207,7 @@ const DEKOD = {
   async vektor(data) { return mvt(new Uint8Array(data)); },
   async hus(data) { return mvt(new Uint8Array(data)); },
   async okart(data) { return DEKOD.kart(data); },
+  async utveg(data) { return mvt(new Uint8Array(data)); },
   async ohoyde(data, z) { return DEKOD.hoyde(data, z); },
 };
 
@@ -283,10 +290,21 @@ function stoy(X, Y, s, k) {
 function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
 
 // ---------- komponering av én skjermflis ----------
-const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, infra: true, sikt: true, taake: true };
+const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, bygg: true, infra: true, sikt: true, taake: true };
 const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
+// Landene vest for flisnettet (Storbritannia, Shetland, Irland, Færøyene, Island) som ett grovt bilde (pipeline/fliser/vest.py).
+const VEST = { b: [-1300000, 5650000, -200000, 8000000], bilde: null };
+function lastVest() { const im = new Image(); im.onload = () => { VEST.bilde = im; skitten = true; }; im.src = '/dovre-fliser/data/vest.webp'; }
+function tegnVest(vx0, vy1) {
+  const im = VEST.bilde; if (!im) return;
+  const [a, b, c, d] = VEST.b, m = kam.m, vx1 = vx0 + VW * m, vy0 = vy1 - VH * m;
+  const x0 = Math.max(a, vx0), x1 = Math.min(c, vx1), y0 = Math.max(b, vy0), y1 = Math.min(d, vy1); if (x0 >= x1 || y0 >= y1) return;
+  const kx = im.naturalWidth / (c - a), ky = im.naturalHeight / (d - b);   // bare den synlige delen av bildet
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(im, (x0 - a) * kx, (d - y1) * ky, (x1 - x0) * kx, (y1 - y0) * ky, (x0 - vx0) / m, (vy1 - y1) / m, (x1 - x0) / m, (y1 - y0) / m);
+}
 // Hav og vann: dempet blått (stil 1), også bak kartet der det ikke finnes fliser.
 const HAV = [44, 74, 102], HAV_CSS = `rgb(${HAV})`;
 const OMLAND_LYS = .8;   // omlandet (WorldCover uten satellittbildets lysstyrke) er ca. 20 % lysere enn Norge-kartet: målt 8. nov
@@ -325,6 +343,7 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
   const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, zmaks('kart', 9), 0), beste('hoyde', z, x, y, 13, 0),
     z >= 12 ? beste('terreng', z, x, y, zmaks('terreng', 9), 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
+  const uv = z >= 5 ? await beste('utveg', z, x, y, 11, 5) : null;   // jernbane og veger i nabolandene (OpenStreetMap)
   const hs = z >= 12 && valg.bygg ? await beste('hus', z, x, y, 13, 12) : null;   // byggomriss (OpenStreetMap)
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
   const VK = vektRutenett(minx, maxy, span(z)), hel = VK.every(v => v >= 1);   // hvor mye av Norge-kartet som skal med (1 = bare det)
@@ -391,22 +410,33 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
   }
   if (tr && valg.traer) traer(g, z, x, y, tr, E, N, hel ? null : VK);
   let veger = null;
-  if (v) {
-    const s = T * v.f / 4096, ox = v.ix * T, oy = v.iy * T, P = ([a, b]) => [a * s - ox, b * s - oy];
-    const vl = v.t.veg ? v.t.veg.obj : [];
-    veger = vl.map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
-    if (valg.veg) {
-      g.lineCap = g.lineJoin = 'round';
-      for (const pass of [0, 1]) for (const kat of VEGREKKE) {
-        if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
-        const [m, min, farge] = VEG[kat], w = Math.max(min, m / r);
-        g.strokeStyle = pass ? farge : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2, w * .45);
-        g.beginPath(); for (const o of veger) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); }
-        g.stroke();
-      }
+  const flisP = t => { const s = T * t.f / 4096, ox = t.ix * T, oy = t.iy * T; return ([a, b]) => [a * s - ox, b * s - oy]; };
+  const P = v ? flisP(v) : null;
+  if (v) veger = (v.t.veg ? v.t.veg.obj : []).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
+  // veger i nabolandene og Norges hovedveger når man zoomer ut (OpenStreetMap); i Norge fra z8 brukes NVDB (n = 1 hoppes over)
+  const uP = uv ? flisP(uv) : null, uveger = uv && uv.t.veg ? uv.t.veg.obj.filter(o => !(z >= 8 && o.e.n)).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(uP)) })) : [];
+  const alle = (veger || []).concat(uveger);
+  if (valg.veg && alle.length) {
+    g.lineCap = g.lineJoin = 'round'; const tynn = z < 8 ? .6 : 1;   // utzoomet: tynnere streker
+    for (const pass of [0, 1]) for (const kat of VEGREKKE) {
+      if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
+      const [m, min, farge] = VEG[kat], w = Math.max(min * tynn, m / r);
+      g.strokeStyle = pass ? farge : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2 * tynn, w * .45);
+      g.beginPath(); for (const o of alle) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); }
+      g.stroke();
     }
-    if (valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   }
+  if (valg.bane && uv && uv.t.bane) {   // jernbane: mørk strek med lys stiplet kjerne, som på gamle kart
+    const w = z <= 7 ? 1 : z <= 10 ? 1.5 : Math.max(1.8, 3 / r);
+    g.lineCap = 'butt'; g.lineJoin = 'round';
+    for (const pass of [0, 1]) {
+      g.strokeStyle = pass ? '#d9cdb0' : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? w : w + (z <= 7 ? 1.4 : 2.2);
+      if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
+      g.beginPath(); for (const o of uv.t.bane.obj) for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); }
+      g.stroke(); g.setLineDash([]);
+    }
+  }
+  if (v && valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   if (hs && hs.t.hus) husomriss(g, z, hs);
   return { c, E };
 }
@@ -524,6 +554,7 @@ function tegn() {
   const midt = [(x0 + x1) / 2, (y0 + y1) / 2], liste = [];
   for (let y = Math.max(y0, ty0); y <= Math.min(y1, ty1); y++) for (let x = Math.max(x0, tx0); x <= Math.min(x1, tx1); x++) liste.push([x, y]);
   liste.sort((a, b) => Math.hypot(a[0] - midt[0], a[1] - midt[1]) - Math.hypot(b[0] - midt[0], b[1] - midt[1]));
+  tegnVest(vx0, vy1);
   ctx.imageSmoothingEnabled = true;
   for (const [x, y] of liste) {
     const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
@@ -1217,7 +1248,7 @@ document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = 
 document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(OMRÅDE); };
 document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
-const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
+const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
 for (const n of Object.keys(NAVN)) {
   const b = document.createElement('button'); b.textContent = NAVN[n]; b.setAttribute('aria-pressed', 'true');
