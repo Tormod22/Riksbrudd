@@ -1,0 +1,242 @@
+"""Bygger én blokk av Norge 1986: en z6-flis (65,5 × 65,5 km) med alle lag, som egne PMTiles-filer.
+Kjøres i GitHub Actions for hver blokk fra blokker.py; sammen.py setter blokkene sammen.
+
+  høyde    Kartverket DTM (WCS), 8 m, hentet med 512 m margin (sømløse kanter mellom blokkene), z6–z11
+  kart     Landsat 5, somrene 1985–88, skyfri median av klare punkter (QA_PIXEL), stil 1-farge, 32 m, z6–z9
+  terreng  arealklasse fra samme Landsat + høyde, z6–z9
+  vektor   veger fra NVDB slik vegnettet var 1. juni 1986 (tidspunkt=1986-06-01) og bygg fra matrikkelen, z8–z13
+
+Bruk: python3 blokk.py X Y [utmappe]      (utmappe: standard arbeid/blokker/X_Y)
+Krever: numpy, pillow, rasterio, pyproj, shapely, tifffile, mapbox-vector-tile, pmtiles. Bak proxy: CURL_CA_BUNDLE.
+"""
+import os, sys, io, json, time, urllib.request, urllib.parse, concurrent.futures as cf
+import numpy as np, tifffile
+from pyproj import Transformer
+from shapely.geometry import LineString, Point, box
+from shapely import clip_by_rect, STRtree
+from pmtiles.writer import Writer
+from pmtiles.tile import zxy_to_tileid, TileType, Compression
+from felles import CRS, TILE, res, span, tile_bounds
+from fliskode import Lerret, kod_hoyde, kod_terreng, webp, klassifiser, flisomraade, mvt, INGEN
+
+HER = os.path.dirname(os.path.abspath(__file__))
+ZB = 6                 # blokknivå
+MARGIN = 512.0         # meter rundt blokken for høyden (delelig med alle nivåenes piksel ned til z6? 512 = 2 px på z6)
+VEG_DATO = '1986-06-01'
+IKKE_BYGD = {'IG', 'RA', 'GR', 'BR', 'BF'}   # bare tillatelse, eller revet/brent/flyttet
+T0 = time.time()
+def logg(*a): print(f'[{time.time() - T0:6.0f} s]', *a, flush=True)
+
+
+def hent(url, data=None, headers={}, forsok=5):
+    for k in range(forsok):
+        try: return urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers), timeout=300).read()
+        except Exception as e:
+            if k == forsok - 1: raise
+            logg('prøver igjen:', str(e)[:120]); time.sleep(2 * (k + 1))
+
+
+# ---------- høyde ----------
+def hoyde(b, r=8.0, bit=2080):
+    WCS = "https://wcs.geonorge.no/skwms1/wcs.hoyde-dtm-nhm-25833"
+    minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
+    a = np.full((H, W), np.nan, np.float32)
+    def del_(ji):
+        j, i = ji; w, h = min(bit, W - i), min(bit, H - j)
+        bx = (minx + i * r, maxy - (j + h) * r, minx + (i + w) * r, maxy - j * r)
+        q = dict(service='WCS', version='1.0.0', request='GetCoverage', coverage='nhm_dtm_topo_25833', crs=CRS,
+                 bbox=','.join(f'{v:.1f}' for v in bx), width=w, height=h, format='GeoTIFF')
+        t = tifffile.imread(io.BytesIO(hent(WCS + '?' + urllib.parse.urlencode(q)))).astype(np.float32)
+        t[(t < -500) | (t > 3000)] = np.nan
+        a[j:j + h, i:i + w] = t[:h, :w]
+    with cf.ThreadPoolExecutor(4) as ex: list(ex.map(del_, [(j, i) for j in range(0, H, bit) for i in range(0, W, bit)]))
+    return a
+
+
+# ---------- Landsat 1985–88, skyfri median ----------
+def landsat(b, r=32.0, maks_scener=14, nok=3):
+    import rasterio
+    from rasterio.warp import reproject, Resampling, transform_bounds
+    from rasterio.transform import from_origin
+    minx, miny, maxx, maxy = b; W, H = round((maxx - minx) / r), round((maxy - miny) / r)
+    ll = list(transform_bounds(CRS, 'EPSG:4326', *b))
+    feats = []
+    for år in (1985, 1986, 1987, 1988):
+        q = {"collections": ["landsat-c2-l2"], "bbox": ll, "datetime": f"{år}-06-15T00:00:00Z/{år}-09-10T23:59:59Z",
+             "query": {"platform": {"in": ["landsat-5"]}, "eo:cloud_cover": {"lt": 70}}, "limit": 200}
+        feats += json.loads(hent("https://planetarycomputer.microsoft.com/api/stac/v1/search", json.dumps(q).encode(), {"Content-Type": "application/json"}))['features']
+    # helst 1986 og lite skyer
+    feats.sort(key=lambda f: f['properties']['eo:cloud_cover'] + 8 * abs(int(f['properties']['datetime'][:4]) - 1986))
+    logg('landsat:', len(feats), 'kandidater')
+    sign = lambda h: json.loads(hent("https://planetarycomputer.microsoft.com/api/sas/v1/sign?href=" + urllib.parse.quote(h, safe='')))['href']
+    T = from_origin(minx, maxy, r, r); BÅND = ['red', 'green', 'blue', 'nir08', 'swir16']
+    stabel = {k: [] for k in BÅND}; alle = {k: [] for k in BÅND}; antall = np.zeros((H, W), np.uint8); brukt = []
+    def les(f, bånd, nearest=False):
+        import rasterio
+        with rasterio.open(sign(f['assets'][bånd]['href'])) as src:
+            dst = np.zeros((H, W), np.float32 if not nearest else np.uint16)
+            reproject(rasterio.band(src, 1), dst, dst_transform=T, dst_crs=CRS,
+                      resampling=Resampling.nearest if nearest else Resampling.bilinear, src_nodata=0 if not nearest else 1, dst_nodata=0 if not nearest else 1)
+            return dst
+    for f in feats:
+        if len(brukt) >= maks_scener or (antall >= nok).mean() > 0.995: break
+        try:
+            with cf.ThreadPoolExecutor(6) as ex:
+                qa = ex.submit(les, f, 'qa_pixel', True); bb = {k: ex.submit(les, f, k) for k in BÅND}
+                qa = qa.result(); bb = {k: v.result() for k, v in bb.items()}
+        except Exception as e:
+            logg('hopper over', f['id'], str(e)[:100]); continue
+        # klar: ikke fyll (bit 0), ikke utvidet sky (1), sky (3) eller skygge (4)
+        klar = ((qa & 0b11011) == 0) & (bb['red'] > 0)
+        if klar.mean() < 0.01: continue
+        for k in BÅND:
+            stabel[k].append(np.where(klar, bb[k], np.nan).astype(np.float32))
+            alle[k].append(np.where(bb[k] > 0, bb[k], np.nan).astype(np.float32))   # reserve: QA kaller ofte snø og is for sky
+        antall += klar; brukt.append(f['id'])
+        logg('  scene', f['id'], f"sky {f['properties']['eo:cloud_cover']:.0f} %", f'dekning {(antall > 0).mean():.3f}')
+    ut = {}
+    for k in BÅND:
+        if stabel[k]:
+            with np.errstate(all='ignore'):
+                m = np.nanmedian(np.stack(stabel[k]), axis=0)
+                hull = np.isnan(m)
+                if hull.any(): m[hull] = np.nanmedian(np.stack(alle[k]), axis=0)[hull]   # ingen klare opptak: median av alle
+            ut[k] = np.where(np.isnan(m), 0, m).astype(np.float32)
+        else: ut[k] = np.zeros((H, W), np.float32)
+        stabel[k] = alle[k] = None
+    return ut, brukt, float((antall > 0).mean())
+
+
+def skoggrense_for(b, rader):
+    """Skoggrense per rad (moh.) etter breddegrad: ca. 1150 m ved 60° N, 980 m på Dovre, 350 m i Finnmark (70° N).
+    Grov tilnærming; kysten ligger lavere enn innlandet (TODO: avstand til kysten)."""
+    tr = Transformer.from_crs(CRS, 'EPSG:4326', always_xy=True)
+    ys = b[3] - (np.arange(rader) + .5) * (b[3] - b[1]) / rader
+    _, lat = tr.transform(np.full(rader, (b[0] + b[2]) / 2), ys)
+    return np.clip(1150 - 80 * (np.asarray(lat) - 60), 250, 1200)[:, None]
+
+
+# ---------- veger (1986) og bygg ----------
+def veger(b):
+    q = urllib.parse.urlencode({'kartutsnitt': ','.join(f'{v:.0f}' for v in b), 'srid': '5973', 'antall': 1000, 'tidspunkt': VEG_DATO})
+    base = "https://nvdbapiles.atlas.vegvesen.no/vegnett/api/v4/veglenkesekvenser/segmentert?" + q
+    u, ut = base, []
+    while u:
+        d = json.loads(hent(u, headers={'X-Client': 'riksbrudd', 'Accept': 'application/json'}))
+        for o in d['objekter']:
+            if o.get('detaljnivå') not in ('Vegtrase og kjørebane', 'Vegtrase'): continue
+            kat = (o.get('vegsystemreferanse') or {}).get('vegsystem', {}).get('vegkategori', 'P')
+            if kat == 'P' and o.get('typeVeg') != 'Enkel bilveg': continue
+            wkt = o['geometri']['wkt']; i, j = wkt.find('('), wkt.rfind(')')
+            p = [[float(c.split()[0]), float(c.split()[1])] for c in wkt[i + 1:j].replace('(', '').replace(')', '').split(',')]
+            if len(p) > 1: ut.append({'c': kat, 'p': p})
+        nx = d['metadata'].get('neste')
+        u = base + '&start=' + urllib.parse.quote(nx['start']) if nx and d['objekter'] else None
+    return ut
+
+def bygg(b):
+    import re
+    bb = ','.join(f'{v:.0f}' for v in b)
+    base = ("https://wfs.geonorge.no/skwms1/wfs.matrikkelen-bygningspunkt?service=WFS&version=2.0.0&request=GetFeature"
+            f"&typeNames=app:Bygning&srsName={CRS}&bbox={bb},{CRS}&count=5000&startIndex=")
+    ut, start = [], 0
+    while True:
+        x = hent(base + str(start)).decode('utf-8', 'ignore')
+        feats = re.findall(r'<app:Bygning .*?</app:Bygning>', x, re.S)
+        for f in feats:
+            t = re.search(r'<app:bygningstype>(\d+)', f); p = re.search(r'<gml:pos>([\d.]+) ([\d.]+)', f); st = re.search(r'<app:bygningsstatus>(\w+)', f)
+            if t and p and not (st and st.group(1) in IKKE_BYGD):
+                X, Y = float(p.group(1)), float(p.group(2))
+                if X > 2e6: X, Y = Y, X
+                if b[0] <= X < b[2] and b[1] <= Y < b[3]: ut.append([round(X, 1), round(Y, 1), int(t.group(1))])
+        if len(feats) < 5000: break
+        start += 5000
+    return ut
+
+
+# ---------- skriving ----------
+def skriv(sti, fliser, ttype, komp):
+    if not fliser: return 0
+    fliser.sort(key=lambda t: zxy_to_tileid(*t[0]))
+    zs = [z for (z, _, _), _ in fliser]
+    with open(sti, 'wb') as f:
+        w = Writer(f)
+        for (z, x, y), d in fliser: w.write_tile(zxy_to_tileid(z, x, y), d)
+        w.finalize({'tile_type': ttype, 'tile_compression': komp, 'min_zoom': min(zs), 'max_zoom': max(zs),
+                    'min_lon_e7': 0, 'min_lat_e7': 0, 'max_lon_e7': 0, 'max_lat_e7': 0, 'center_zoom': 0, 'center_lon_e7': 0, 'center_lat_e7': 0}, {})
+    return os.path.getsize(sti)
+
+
+def main(bx, by, ut):
+    os.makedirs(ut, exist_ok=True)
+    B = tile_bounds(ZB, bx, by); M = (B[0] - MARGIN, B[1] - MARGIN, B[2] + MARGIN, B[3] + MARGIN)
+    stat = {'blokk': [bx, by], 'grenser': B}
+    logg('blokk', bx, by, B)
+
+    # høyde
+    h8 = hoyde(M); land = float((~np.isnan(h8)).mean()); stat['land'] = land; logg('høyde ferdig, land', round(land, 3))
+    if land == 0:
+        stat['tom'] = True; json.dump(stat, open(os.path.join(ut, 'stat.json'), 'w')); logg('bare sjø – ingenting å bygge'); return
+    hf = []; L = Lerret.fra(h8, M, 11, np.nan); h32 = None
+    while L.z >= ZB:
+        for x, y, t in L.fliser(kant=1, innenfor=flisomraade(bx, by, L.z)):
+            if not np.all(np.isnan(t[1:-1, 1:-1])): hf.append(((L.z, x, y), kod_hoyde(t, L.z)))
+        if L.z == 9: h32 = L
+        L = L.ned('snitt')
+    del h8
+    stat['hoyde'] = skriv(os.path.join(ut, 'hoyde.pmtiles'), hf, TileType.WEBP, Compression.NONE); logg('høydefliser', len(hf))
+
+    # Landsat -> terreng og kart (32 m, nøyaktig blokken)
+    bånd, brukt, dekning = landsat(B); stat['landsat'] = {'scener': brukt, 'dekning': round(dekning, 4)}
+    x0, y0, x1, y1 = flisomraade(bx, by, 9); oy = (y0 - h32.ty0) * TILE; ox = (x0 - h32.tx0) * TILE
+    dem = h32.a[oy:oy + (y1 - y0 + 1) * TILE, ox:ox + (x1 - x0 + 1) * TILE]
+    k, tex = klassifiser(bånd, dem, skoggrense_for(B, dem.shape[0])); del bånd
+    tf, kf = [], []
+    Lk = Lerret(k, x0, y0, 9); Lt = Lerret(tex, x0, y0, 9)
+    while Lk.z >= ZB:
+        for x, y, t in Lk.fliser():
+            if (t != 255).any(): tf.append(((Lk.z, x, y), kod_terreng(t)))
+        for x, y, t in Lt.fliser():
+            if (t != INGEN).any(): kf.append(((Lt.z, x, y), webp(t)))
+        Lk = Lk.ned('naermest'); Lt = Lt.ned('snitt')
+    stat['terreng'] = skriv(os.path.join(ut, 'terreng.pmtiles'), tf, TileType.WEBP, Compression.NONE)
+    stat['kart'] = skriv(os.path.join(ut, 'kart.pmtiles'), kf, TileType.WEBP, Compression.NONE)
+    stat['klasser'] = {int(a): int(c) for a, c in zip(*np.unique(k, return_counts=True))}
+    logg('terreng og kart ferdig')
+
+    # veger 1986 og bygg -> vektor
+    vg = veger(M); bg = bygg(B); stat['veger'] = len(vg); stat['bygg'] = len(bg); logg('veger', len(vg), 'bygg', len(bg))
+    linjer = [LineString(v['p']) for v in vg]; kat = [v['c'] for v in vg]; punkt = [Point(b[0], b[1]) for b in bg]
+    tl, tp = STRtree(linjer), STRtree(punkt)
+    VIS = {8: 'ERF', 9: 'ERFK'}
+    vf = []
+    for z in range(8, 14):
+        s = span(z); buf = s * 8 / TILE; xa, ya, xb, yb = flisomraade(bx, by, z)
+        for y in range(ya, yb + 1):
+            for x in range(xa, xb + 1):
+                minx, miny, maxx, maxy = tile_bounds(z, x, y); lag = []
+                q = lambda X, Y: (round((X - minx) / s * 4096), round((maxy - Y) / s * 4096))
+                f = []
+                for i in tl.query(box(minx - buf, miny - buf, maxx + buf, maxy + buf)):
+                    if kat[i] not in VIS.get(z, 'ERFKPS'): continue
+                    g = clip_by_rect(linjer[i], minx - buf, miny - buf, maxx + buf, maxy + buf)
+                    if g.is_empty: continue
+                    if z < 13: g = g.simplify(res(z) * 0.5)
+                    for part in getattr(g, 'geoms', [g]):
+                        if part.geom_type != 'LineString' or len(part.coords) < 2: continue
+                        c = [q(X, Y) for X, Y in part.coords]; c = [p for n, p in enumerate(c) if n == 0 or p != c[n - 1]]
+                        if len(c) >= 2: f.append({'geometry': LineString(c), 'properties': {'k': kat[i]}})
+                if f: lag.append({'name': 'veg', 'features': f})
+                if z >= 11:
+                    bf = [{'geometry': Point(*q(punkt[i].x, punkt[i].y)), 'properties': {'t': bg[i][2]}}
+                          for i in tp.query(box(minx, miny, maxx, maxy)) if minx <= punkt[i].x < maxx and miny <= punkt[i].y < maxy]
+                    if bf: lag.append({'name': 'bygg', 'features': bf})
+                if lag: vf.append(((z, x, y), mvt(lag)))
+    stat['vektor'] = skriv(os.path.join(ut, 'vektor.pmtiles'), vf, TileType.MVT, Compression.GZIP)
+    stat['sekunder'] = round(time.time() - T0)
+    json.dump(stat, open(os.path.join(ut, 'stat.json'), 'w'), indent=1); logg('ferdig', json.dumps({k: stat[k] for k in ('hoyde', 'kart', 'terreng', 'vektor', 'veger', 'bygg')}))
+
+
+if __name__ == '__main__':
+    bx, by = int(sys.argv[1]), int(sys.argv[2])
+    main(bx, by, sys.argv[3] if len(sys.argv) > 3 else os.path.join(HER, 'arbeid', 'blokker', f'{bx}_{by}'))

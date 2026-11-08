@@ -1,0 +1,80 @@
+# Bygger kartet for hele Norge 1986 i blokker (pipeline/fliser/blokk.py), setter dem sammen (sammen.py) og legger
+# resultatet i en GitHub-release kart-norge-<hash>. Ingen nøkler: GITHUB_TOKEN laster opp, kildene er åpne.
+# Startes for hånd: Actions -> «Bygg Norge 1986» -> Run workflow (eller av Claude via API).
+name: Bygg Norge 1986
+on:
+  workflow_dispatch:
+    inputs:
+      blokker:
+        description: 'fastland, svalbard, alle – eller en liste som [[6,36],[7,36]]'
+        default: 'fastland'
+permissions:
+  contents: write
+concurrency: { group: norge, cancel-in-progress: false }
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      blokker: ${{ steps.p.outputs.blokker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q shapely pyproj
+      - id: p
+        working-directory: pipeline/fliser
+        env: { VALG: '${{ inputs.blokker }}' }
+        run: |
+          if [[ "$VALG" == \[* ]]; then B="$VALG"; else B=$(python3 blokker.py "$VALG"); fi
+          echo "blokker=$B" >> "$GITHUB_OUTPUT"
+          echo "Blokker: $(echo "$B" | python3 -c 'import json,sys;print(len(json.load(sys.stdin)))')"
+
+  blokk:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        b: ${{ fromJson(needs.plan.outputs.blokker) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: pipeline/fliser/krav.txt }
+      - run: pip install -q -r pipeline/fliser/krav.txt
+      - name: Bygg blokk ${{ matrix.b[0] }}, ${{ matrix.b[1] }}
+        working-directory: pipeline/fliser
+        run: python3 blokk.py ${{ matrix.b[0] }} ${{ matrix.b[1] }} ut/${{ matrix.b[0] }}_${{ matrix.b[1] }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blokk-${{ matrix.b[0] }}_${{ matrix.b[1] }}
+          path: pipeline/fliser/ut/
+          retention-days: 5
+
+  sammen:
+    needs: blokk
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q -r pipeline/fliser/krav.txt
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'blokk-*', path: blokker, merge-multiple: true }
+      - name: Sett sammen
+        run: |
+          echo "Blokker som ble ferdige: $(ls blokker | wc -l)"
+          python3 pipeline/fliser/sammen.py blokker norge
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: norge
+        run: |
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Norge 1986 $TAG" \
+            --notes "Kartet for hele Norge 1986 (PMTiles). Lages av .github/workflows/norge.yml – ikke rediger for hånd."
+          gh release upload "$TAG" *.pmtiles manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json;m=json.load(open('manifest.json'));print(json.dumps(m['statistikk'],ensure_ascii=False))" >> "$GITHUB_STEP_SUMMARY"

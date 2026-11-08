@@ -1,0 +1,9 @@
+numpy
+pillow
+rasterio
+pyproj
+shapely
+tifffile
+imagecodecs
+mapbox-vector-tile
+pmtiles

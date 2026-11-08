@@ -26,7 +26,7 @@ jobs:
             gh release create "$TAG" --title "Kartdata $TAG" --latest=false \
               --notes "Kartfliser (PMTiles) for Riksbrudd. Lages automatisk av .github/workflows/kartdata.yml – ikke rediger for hånd."
           fi
-          gh release upload "$TAG" hoyde.pmtiles kart.pmtiles terreng.pmtiles vektor.pmtiles --clobber
+          gh release upload "$TAG" hoyde.pmtiles kart.pmtiles terreng.pmtiles vektor.pmtiles manifest.json --clobber
           for f in hoyde kart terreng vektor; do
             curl -sfL -r 0-6 "https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$f.pmtiles" | grep -q PMTiles && echo "ok $f"
           done

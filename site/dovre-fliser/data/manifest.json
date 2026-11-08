@@ -53,6 +53,40 @@
    ]
   }
  },
+ "filer": {
+  "hoyde": [
+   {
+    "fil": "hoyde.pmtiles",
+    "zmin": 0,
+    "zmax": 99,
+    "x6": null
+   }
+  ],
+  "terreng": [
+   {
+    "fil": "terreng.pmtiles",
+    "zmin": 0,
+    "zmax": 99,
+    "x6": null
+   }
+  ],
+  "kart": [
+   {
+    "fil": "kart.pmtiles",
+    "zmin": 0,
+    "zmax": 99,
+    "x6": null
+   }
+  ],
+  "vektor": [
+   {
+    "fil": "vektor.pmtiles",
+    "zmin": 0,
+    "zmax": 99,
+    "x6": null
+   }
+  ]
+ },
  "statistikk": {
   "hoyde_8m": [
    439.9727478027344,

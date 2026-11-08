@@ -210,6 +210,7 @@ if __name__ == '__main__':
                    'terreng': {'fil': 'terreng.pmtiles', 'z': [6, 9]},
                    'kart': {'fil': 'kart.pmtiles', 'z': [5, 9]},
                    'vektor': {'fil': 'vektor.pmtiles', 'z': [8, 13]}},
+           'filer': {n: [{'fil': n + '.pmtiles', 'zmin': 0, 'zmax': 99, 'x6': None}] for n in ('hoyde', 'terreng', 'kart', 'vektor')},
            'statistikk': STAT}
     json.dump(man, open(os.path.join(UT, 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
     print(json.dumps(STAT, ensure_ascii=False)[:2000])

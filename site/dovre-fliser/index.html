@@ -89,22 +89,24 @@ const G = { x0: -200000, y0: 9300000, res0: 16384, T: 256 };
 const res = z => G.res0 / 2 ** z, span = z => G.T * res(z);
 const DOVRE = [182016, 6880000, 228000, 6930016], DOMBAS = [189000, 6892000, 197000, 6900000];
 const DATA = '/dovre-fliser/data/';
+const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
 const KART_TAG = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versjon.py
-const ZMIN = 5, ZMAX = 17;
+const ZMIN = 0, ZMAX = 17;
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
-// Spør mellomstasjonen én gang ved oppstart (første 127 byte av høydefila skal starte med «PMTiles»).
-const RELEASE = !KART_TAG ? Promise.resolve(false) : fetch(`/api/kart/${KART_TAG}/hoyde/0/127`)
-  .then(r => r.ok ? r.arrayBuffer() : null).then(b => !!b && new TextDecoder().decode(new Uint8Array(b, 0, 7)) === 'PMTiles').catch(() => false);
+// Spør mellomstasjonen én gang ved oppstart etter manifestet (hvilke filer som har hvilke fliser). Svarer den ikke, brukes DATA.
+const MANIFEST_RELEASE = !KART_TAG ? Promise.resolve(null) : fetch(`/api/kart/${KART_TAG}/manifest.json/0/1048576`)
+  .then(r => r.ok ? r.json() : null).catch(() => null);
+const RELEASE = MANIFEST_RELEASE.then(m => !!m);
 class Kilde {
-  constructor(lag) { this.lag = lag; this.url = DATA + lag + '.pmtiles'; }
+  constructor(fil) { this.fil = fil; this.url = DATA + fil; }
   getKey() { return this.url; }
   async getBytes(off, len, signal) {
     if (await RELEASE) {   // GitHub-releasen via mellomstasjonen: byteområdet i adressen, så Vercel kan lagre hver bit
       try {
-        const r = await fetch(`/api/kart/${KART_TAG}/${this.lag}/${off}/${len}`, { signal });
+        const r = await fetch(`/api/kart/${KART_TAG}/${this.fil}/${off}/${len}`, { signal });
         if (r.ok) { const data = await r.arrayBuffer(); STAT.byte += data.byteLength; STAT.req++; STAT.kilde = 'GitHub'; tegnHud(); return { data }; }
       } catch (e) { if (e.name === 'AbortError') throw e; }
     }
@@ -117,8 +119,21 @@ class Kilde {
     return { data };   // ingen etag: kildene kan byttes underveis, og versjonen ligger i KART_TAG
   }
 }
-const LAG = {};
-for (const n of ['hoyde', 'terreng', 'kart', 'vektor']) LAG[n] = new pmtiles.PMTiles(new Kilde(n));
+// Lagene kan være delt i flere filer (hele Norge: sammen.py), hver med zoomområde og eventuelt en stripe av z6-kolonner.
+let OMRÅDE = DOVRE, LAGFILER = null;
+const KLAR = (async () => {
+  let m = await MANIFEST_RELEASE;
+  if (!m) { try { m = await (await fetch(DATA + 'manifest.json')).json(); } catch (e) { m = null; } }
+  const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
+  if (m && m.omrade) OMRÅDE = m.omrade;
+  LAGFILER = {};
+  for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil)) }));
+  skitten = true;
+})();
+function filFor(lag, z, x) {
+  const liste = LAGFILER && LAGFILER[lag]; if (!liste) return null;
+  return liste.find(f => z >= f.zmin && z <= f.zmax && (!f.x6 || z < 6 || ((x >> (z - 6)) >= f.x6[0] && (x >> (z - 6)) <= f.x6[1])));
+}
 
 // ---------- dekoding ----------
 // Tegneflate i bakgrunnen: OffscreenCanvas der den har 2D (Safari fra 16.4), ellers et vanlig canvas.
@@ -204,7 +219,8 @@ const RÅ = new Map();
 function hentFlis(lag, z, x, y) {
   const k = lag + '/' + z + '/' + x + '/' + y;
   if (!RÅ.has(k)) {
-    RÅ.set(k, LAG[lag].getZxy(z, x, y).then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); visFeil(e); return null; }));
+    RÅ.set(k, KLAR.then(() => { const f = filFor(lag, z, x); return f ? f.pm.getZxy(z, x, y) : null; })
+      .then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); visFeil(e); return null; }));
     if (RÅ.size > 900) RÅ.delete(RÅ.keys().next().value);
   }
   return RÅ.get(k);
@@ -240,7 +256,7 @@ const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
 async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lager bakken uten skygge)
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
-  const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, 9, 5), beste('hoyde', z, x, y, 13, 6),
+  const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, 9, 0), beste('hoyde', z, x, y, 13, 0),
     z >= 12 ? beste('terreng', z, x, y, 9, 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
   g.fillStyle = '#1a1710'; g.fillRect(0, 0, T, T);
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
@@ -395,7 +411,7 @@ function tegn() {
   const vx0 = kam.x - VW / 2 * kam.m, vy1 = kam.y + VH / 2 * kam.m;
   const x0 = Math.floor((vx0 - G.x0) / s), x1 = Math.floor((vx0 + VW * kam.m - G.x0) / s);
   const y0 = Math.floor((G.y0 - vy1) / s), y1 = Math.floor((G.y0 - (vy1 - VH * kam.m)) / s);
-  const [ax, ay, bx, by] = DOVRE, tx0 = Math.floor((ax - G.x0) / s), tx1 = Math.floor((bx - G.x0) / s), ty0 = Math.floor((G.y0 - by) / s), ty1 = Math.floor((G.y0 - ay) / s);
+  const [ax, ay, bx, by] = OMRÅDE, tx0 = Math.floor((ax - G.x0) / s), tx1 = Math.floor((bx - G.x0) / s), ty0 = Math.floor((G.y0 - by) / s), ty1 = Math.floor((G.y0 - ay) / s);
   const midt = [(x0 + x1) / 2, (y0 + y1) / 2], liste = [];
   for (let y = Math.max(y0, ty0); y <= Math.min(y1, ty1); y++) for (let x = Math.max(x0, tx0); x <= Math.min(x1, tx1); x++) liste.push([x, y]);
   liste.sort((a, b) => Math.hypot(a[0] - midt[0], a[1] - midt[1]) - Math.hypot(b[0] - midt[0], b[1] - midt[1]));
@@ -441,7 +457,7 @@ function visFeil(e) { const f = document.getElementById('feil'); f.style.display
 // Ingen laster hele kartet: et vindu henter bare høyde-, terreng- og vegflisene det dekker.
 function flisområde(b, z) { const s = span(z); return [Math.floor((b[0] - G.x0) / s), Math.floor((G.y0 - b[3]) / s), Math.floor((b[2] - G.x0) / s), Math.floor((G.y0 - b[1]) / s)]; }
 async function lagVindu(b, medVeg, ZV = 9) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere)
-  b = [Math.max(b[0], DOVRE[0]), Math.max(b[1], DOVRE[1]), Math.min(b[2], DOVRE[2] - 1), Math.min(b[3], DOVRE[3] - 1)];
+  b = [Math.max(b[0], OMRÅDE[0]), Math.max(b[1], OMRÅDE[1]), Math.min(b[2], OMRÅDE[2] - 1), Math.min(b[3], OMRÅDE[3] - 1)];
   const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
   const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), ZV <= 9 ? hentFlis('terreng', ZV, x, y) : null]).then(([h, t]) => {
@@ -698,7 +714,7 @@ async function bygg3d(cx, cy, S) {
   const TW = 2048, mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = '#1a1710'; g.fillRect(0, 0, TW, TW);
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false }, kø = [];
-  const [ax, ay, bx, by] = flisområde(DOVRE, zt);
+  const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await komponer(zt, x, y, valg);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
@@ -824,7 +840,7 @@ async function slå3d(på) {
 // ---------- styring ----------
 function zoom(fak, cx = VW / 2, cy = VH / 2) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
-  kam.m = Math.max(0.1, Math.min(60, kam.m / fak));
+  kam.m = Math.max(0.1, Math.min(MAKS_M, kam.m / fak));
   kam.x = X - (cx - VW / 2) * kam.m; kam.y = Y + (cy - VH / 2) * kam.m; skitten = true;
 }
 const ptr = new Map(); let pinch = null;
@@ -852,7 +868,7 @@ cv.addEventListener('pointerleave', () => { peker = null; tegnHud(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0016)), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
 document.getElementById('zi').onclick = () => { if (på3d && R3) R3.bane.avst = Math.max(60, R3.bane.avst / 1.6); else zoom(2); };
 document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = Math.min(20000, R3.bane.avst * 1.6); else zoom(.5); };
-document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(DOVRE); };
+document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(OMRÅDE); };
 document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
 const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', sikt: 'Siktfelt', taake: 'Tåke' };
