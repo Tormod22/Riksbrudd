@@ -102,9 +102,20 @@ const LAG = {};
 for (const n of ['hoyde', 'terreng', 'kart', 'vektor']) LAG[n] = new pmtiles.PMTiles(new Kilde(DATA + n + '.pmtiles'));
 
 // ---------- dekoding ----------
-const lerret = (w, h) => typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+// Tegneflate i bakgrunnen: OffscreenCanvas der den har 2D (Safari fra 16.4), ellers et vanlig canvas.
+const HAR_OFFSCREEN = (() => { try { return typeof OffscreenCanvas !== 'undefined' && !!new OffscreenCanvas(1, 1).getContext('2d'); } catch (e) { return false; } })();
+const lerret = (w, h) => HAR_OFFSCREEN ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+// Leser et bilde. createImageBitmap med valg feiler i eldre Safari – da brukes et vanlig <img>.
+async function bilde(data, type) {
+  const blob = new Blob([data], { type });
+  try { return await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); } catch (e) { /* prøv neste */ }
+  try { return await createImageBitmap(blob); } catch (e) { /* prøv neste */ }
+  const url = URL.createObjectURL(blob);
+  try { const im = new Image(); im.src = url; await im.decode(); const c = Object.assign(document.createElement('canvas'), { width: im.naturalWidth, height: im.naturalHeight }); c.getContext('2d').drawImage(im, 0, 0); return c; }
+  finally { URL.revokeObjectURL(url); }
+}
 async function piksler(data, type) {
-  const bm = await createImageBitmap(new Blob([data], { type }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  const bm = await bilde(data, type);
   const c = lerret(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true });
   g.drawImage(bm, 0, 0); return { d: g.getImageData(0, 0, bm.width, bm.height).data, w: bm.width, h: bm.height };
 }
@@ -120,7 +131,7 @@ const DEKOD = {
     return { a, gx, gy, w, h }; },
   async terreng(data) { const { d, w, h } = await piksler(data, 'image/webp'); const a = new Uint8Array(w * h);
     for (let i = 0; i < w * h; i++) a[i] = d[i * 4]; return { a, w, h }; },
-  async kart(data) { const bm = await createImageBitmap(new Blob([data], { type: 'image/avif' }));
+  async kart(data) { const bm = await bilde(data, 'image/webp');
     const c = lerret(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(bm, 0, 0);
     return { bm, d: g.getImageData(0, 0, bm.width, bm.height).data, w: bm.width, h: bm.height }; },
   async vektor(data) { return mvt(new Uint8Array(data)); },
@@ -604,7 +615,7 @@ function tegnTåke() {
   if (!tåkeC || tåkeC.width !== cv.width || tåkeC.height !== cv.height) tåkeC = lerret(cv.width, cv.height);
   const g = tåkeC.getContext('2d'), vx0 = kam.x - VW / 2 * kam.m, vy1 = kam.y + VH / 2 * kam.m;
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, tåkeC.width, tåkeC.height);
-  g.fillStyle = 'rgba(14,11,7,.6)'; g.fillRect(0, 0, tåkeC.width, tåkeC.height);
+  g.fillStyle = 'rgba(14,11,7,.38)'; g.fillRect(0, 0, tåkeC.width, tåkeC.height);
   g.globalCompositeOperation = 'destination-out'; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = true;
   for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
   g.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tåkeC, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -704,7 +715,7 @@ function bak3d() {   // kart + tåke + siktfelt inn i overflaten
   const rekt = k => [(k.x0 - X0) / mpp, (Y1 - k.y0) / mpp, k.w / mpp, k.h / mpp];
   g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.drawImage(u.base, 0, 0);
   if (VIS.taake) { const t = R3.tåke || (R3.tåke = document.createElement('canvas')); t.width = t.height = TW; const tg = t.getContext('2d');
-    tg.fillStyle = 'rgba(14,11,7,.45)'; tg.fillRect(0, 0, TW, TW); tg.globalCompositeOperation = 'destination-out';
+    tg.fillStyle = 'rgba(14,11,7,.32)'; tg.fillRect(0, 0, TW, TW); tg.globalCompositeOperation = 'destination-out';
     for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) tg.drawImage(s.sikt.c, ...rekt(s.sikt));
     g.drawImage(t, 0, 0); }
   if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {

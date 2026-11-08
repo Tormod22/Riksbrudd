@@ -129,7 +129,7 @@
    }
   },
   "kart": {
-   "byte": 178883,
+   "byte": 316934,
    "fliser": 79,
    "per_niva": {
     "5": {
@@ -138,19 +138,19 @@
     },
     "6": {
      "fliser": 4,
-     "snitt_kb": 1.1
+     "snitt_kb": 1.7
     },
     "7": {
      "fliser": 6,
-     "snitt_kb": 2.2
+     "snitt_kb": 3.6
     },
     "8": {
      "fliser": 16,
-     "snitt_kb": 2.5
+     "snitt_kb": 4.3
     },
     "9": {
      "fliser": 49,
-     "snitt_kb": 2.3
+     "snitt_kb": 4.3
     }
    }
   },

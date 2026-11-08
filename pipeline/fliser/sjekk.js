@@ -12,8 +12,11 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL for 3D uten skjermkort
-  for (const [w, h, navn] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
-    const pg = await b.newPage({ viewport: { width: w, height: h } }); const err = [];
+  // «eldre iPhone»: uten OffscreenCanvas og createImageBitmap, så reserveveien (<img>) testes – som i Safari før 16.4.
+  for (const [w, h, navn, gammel] of [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]]) {
+    const kt = await b.newContext({ viewport: { width: w, height: h } });
+    if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke støttet')); });
+    const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && err.push(m.text()));
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
@@ -51,7 +54,7 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
     const d3ok = Math.abs(d3.h - 2287) < 40; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter)`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
-    await pg.close();
+    await kt.close();
   }
   await b.close(); srv.kill();
   console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);

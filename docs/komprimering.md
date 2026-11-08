@@ -31,7 +31,7 @@ Område 46 × 50 km (2 300 km²), kjerne 8 × 8 km rundt Dombås.
 | Lag | Innhold | Fil |
 |---|---|---|
 | hoyde | Kartverket DTM, 8 m for hele området, 2 m rundt Dombås, tapsfri WebP (0,25 m / 0,1 m presisjon) | 25,2 MB (1 103 fliser) |
-| kart | stil 1-farget bakke fra Landsat 1987, 32 m, AVIF | 0,18 MB |
+| kart | stil 1-farget bakke fra Landsat 1987, 32 m, WebP (AVIF var 0,18 MB, men virker ikke på eldre iPhone) | 0,32 MB |
 | terreng | arealklasse fra Landsat + høyde, 32 m | 0,16 MB |
 | vektor | veger (NVDB) og 7 108 bygg (matrikkelen), MVT | 0,87 MB |
 

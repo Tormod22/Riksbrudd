@@ -5,7 +5,7 @@ Lag (én .pmtiles per lag, alle i flisnettet i felles.py):
             og 4 ellers (presisjon()), 0 = ingen data.
             z6–z11 fra 8 m-modellen for hele området, z12–z13 fra 2 m-modellen rundt Dombås.
   terreng – arealklasse per 32 m (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 255 ingen data), tapsfri WebP (R-kanalen).
-  kart    – stil 1-fargelagt bakke uten skygge (klientene legger på skygge fra høyden), AVIF. z5–z9.
+  kart    – stil 1-fargelagt bakke uten skygge (klientene legger på skygge fra høyden), WebP (ikke AVIF: eldre iOS). z5–z9.
   vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S, alle fra z10) z8–z13 og «bygg» (t = bygningstype) z11–z13.
 Klienten bruker nærmeste forelderflis når en flis mangler («overzoom»).
 Bruk: python3 02_fliser.py   -> site/dovre-fliser/data/*.pmtiles + manifest.json
@@ -65,6 +65,7 @@ class Lerret:
 # ---------- koding ----------
 def webp_tapsfri(rgb): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'WEBP', lossless=True, quality=50, method=4); return b.getvalue()
 def avif(rgb, q=45): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'AVIF', quality=q, speed=4); return b.getvalue()
+def webp(rgb, q=80): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'WEBP', quality=q, method=4); return b.getvalue()   # virker også på eldre iPhone (AVIF gjør ikke det)
 
 def presisjon(z): return 10 if z >= 12 else 4   # enheter per meter: 0,1 m på z12–13, 0,25 m ellers (samme i visningen)
 
@@ -150,9 +151,9 @@ def lag_terreng_og_kart(hoyde9):
     ut = []; L = Lerret(tex, hoyde9.tx0, hoyde9.ty0, 9)
     while L.z >= 5:
         for x, y, t in L.fliser():
-            if (t != (26, 23, 16)).any(): ut.append(((L.z, x, y), avif(t)))
+            if (t != (26, 23, 16)).any(): ut.append(((L.z, x, y), webp(t)))
         L = L.ned('snitt')
-    skriv('kart', ut, TileType.AVIF, Compression.NONE, 'Stil 1-farget bakke fra Landsat 5 13.08.1987 (USGS), uten skygge.')
+    skriv('kart', ut, TileType.WEBP, Compression.NONE, 'Stil 1-farget bakke fra Landsat 5 13.08.1987 (USGS), uten skygge.')
 
 
 # ---------- vektor ----------
