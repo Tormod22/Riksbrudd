@@ -11,6 +11,12 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
 ];
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
+  { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
+    const fs = require('fs'), D = path.join(__dirname, '../../site/dovre-fliser');
+    const h = require('crypto').createHash('sha256').update(fs.readFileSync(path.join(D, 'terreng.js'))).digest('hex').slice(0, 10);
+    const ok = fs.readFileSync(path.join(D, 'index.html'), 'utf8').includes('terreng.js?v=' + h); if (!ok) feil++;
+    console.log(`${ok ? 'ok  ' : 'FEIL'} versjonsmerke på terreng.js` + (ok ? '' : ' – kjør python3 pipeline/fliser/versjon.py'));
+  }
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL for 3D uten skjermkort
   // «eldre iPhone»: uten OffscreenCanvas og createImageBitmap, så reserveveien (<img>) testes – som i Safari før 16.4.
   for (const [w, h, navn, gammel] of [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]]) {
