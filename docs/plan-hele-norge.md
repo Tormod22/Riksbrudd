@@ -142,6 +142,18 @@ Målet (brukeren): **hele Norge slik det var i 1986, som ett sammenhengende spil
 Gjort 8. nov: flisnettets origo er flyttet til 9 300 km nord (dekker Svalbard), og høyden på z ≤ 11 har 0,5 m presisjon
 (Dovre: 25,2 → 20,4 MB).
 
+## 2 m-høyde for hele Norge (målt 8. nov, utsatt av brukeren)
+
+Lagre **avviket** fra 8 m-flaten (std 0,24 m; 99 % innen ±0,9 m) som tapsbasert WebP (5 cm-trinn rundt 128):
+q90 4,4 KB/flis, **q80 ca. 1,6 KB**, q45 0,9 KB, mot 19,7 KB for hele høyden tapsfritt (12× mindre, snittfeil ca. 8 cm,
+nesten ikke synlig i skygge). Hele Norge ca. 2,5–3 GB. Flaskehals: ca. 320 GB må hentes fra Kartverkets WCS (5–6 MB/s per
+maskin målt) → 2–3 t hvis grensen er per maskin, 15–20 t hvis den er felles. Visningen legger avviket oppå bilineær 8 m.
+
+## Byggomriss (8. nov)
+
+OpenStreetMap (ODbL; norske bygg i stor grad importert fra Kartverket). Oslo: 132 500 omriss, 18 % med etasjetall
+(høyde = etasjer × 3 + 1 m, ellers anslag etter type). 6,9 MB for Oslo; hele Norge anslått ca. 250 MB.
+
 ## Faser
 
 | Fase | Innhold | Ferdig når |
