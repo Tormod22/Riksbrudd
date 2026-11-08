@@ -154,32 +154,36 @@
     }
    }
   },
+  "veg_bygg": {
+   "veglenker": 4680,
+   "bygg": 7111
+  },
   "vektor": {
-   "byte": 913553,
+   "byte": 908835,
    "fliser": 2396,
    "per_niva": {
     "8": {
      "fliser": 9,
-     "snitt_kb": 1.3
+     "snitt_kb": 1.2
     },
     "9": {
-     "fliser": 21,
-     "snitt_kb": 1.1
+     "fliser": 20,
+     "snitt_kb": 1.0
     },
     "10": {
      "fliser": 82,
      "snitt_kb": 0.8
     },
     "11": {
-     "fliser": 270,
+     "fliser": 271,
      "snitt_kb": 0.5
     },
     "12": {
-     "fliser": 614,
+     "fliser": 613,
      "snitt_kb": 0.3
     },
     "13": {
-     "fliser": 1400,
+     "fliser": 1401,
      "snitt_kb": 0.3
     }
    }

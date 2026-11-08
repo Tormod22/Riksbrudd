@@ -116,9 +116,46 @@
     }
   }
 
+  // ---------- ildkamp (forslag, lett å justere; ikke fra brukerens fasit ennå) ----------
+  // Én kamprunde = 5 spillminutter. Hver uskadde mann skyter én gang mot et mål han ser.
+  // Treffsjanse per skudd: grunn · (1 − avstand/rekkevidde), ganger med forholdene under.
+  const VÅPEN = { rifle: [600, .05], maskingevær: [900, .09], skarpskytter: [900, .08] };   // [rekkevidde m, grunnsjanse]
+  const KAMPRUNDE_MIN = 5, UTE_AV_KAMP = 6;
+  function vapen(rolle) { return VÅPEN[rolle] || VÅPEN.rifle; }
+  function treffsjanse(rolle, avstand, f) {
+    const [maks, p0] = vapen(rolle); if (avstand > maks) return 0;
+    let p = p0 * (1 - avstand / maks);
+    if (f.målISkog) p *= .5;              // skog gir dekning
+    if (f.målPåMarsj) p *= 1.3;           // folk på marsj er lettere å treffe
+    if (f.skytterPåMarsj) p *= .5;        // dårlig å skyte mens man går
+    if (f.høydefordel > 20) p *= 1.2;     // skytteren står høyere
+    return p;
+  }
+  // Én runde fra ett lag mot ett annet. menn: [{ rolle, hp }]. rng: () => [0, 1). Returnerer antall treff.
+  function ildrunde(menn, avstand, f, rng) {
+    let treff = 0;
+    for (const m of menn) if (m.hp >= 1 && rng() < treffsjanse(m.rolle, avstand, f)) treff++;
+    return treff;
+  }
+  // Fordeler treff på levende menn: halvparten faller, halvparten blir såret. Returnerer hva som skjedde.
+  function fordelTreff(menn, treff, rng) {
+    const ut = [];
+    for (let t = 0; t < treff; t++) {
+      const lev = menn.filter(m => m.hp > 0); if (!lev.length) break;
+      const m = lev[Math.floor(rng() * lev.length)];
+      if (m.hp < 1 || rng() < .5) { m.hp = 0; ut.push([m, 'falt']); } else { m.hp = .5; ut.push([m, 'såret']); }
+    }
+    return ut;
+  }
+  function uteAvKamp(menn) { return menn.filter(m => m.hp < 1).length; }
+  function slattUt(menn) { return uteAvKamp(menn) >= UTE_AV_KAMP; }
+  // Fast tilfeldighet (samme frø gir samme kamp), så kamper kan spilles av og testes.
+  function frø(n) { let s = n >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
   function nyttVindu(x0, y0, r, w, h) {
     return { x0, y0, r, w, h, H: new Float32Array(w * h).fill(NaN), K: new Uint8Array(w * h).fill(255), V: new Uint8Array(w * h) };
   }
 
-  eksport.Terreng = { KLASSE, VEGKLASSE, fart, rute, senter, verdi, steg, ruteTil: rute_til, siktvidde, siktfelt, leggInnVeger, nyttVindu };
+  eksport.Terreng = { KLASSE, VEGKLASSE, fart, rute, senter, verdi, steg, ruteTil: rute_til, siktvidde, siktfelt, leggInnVeger, nyttVindu,
+    VÅPEN, KAMPRUNDE_MIN, UTE_AV_KAMP, vapen, treffsjanse, ildrunde, fordelTreff, uteAvKamp, slattUt, frø };
 })(typeof module !== 'undefined' ? module.exports : window);

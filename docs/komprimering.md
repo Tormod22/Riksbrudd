@@ -66,5 +66,6 @@ Filer over 100 MB legges i Cloudflare R2 eller Vercel Blob (ikke git). Spilleren
 1. ✅ Pilot på Dovre (over).
 2. ✅ Lagene, marsjen og sikten er flyttet over på flisene (8. nov). Reglene ligger i `site/dovre-fliser/terreng.js` og regner
    på et vindu i 32 m-ruter som bygges av flisene rundt laget. Med spillet lastet en hel økt 2,1 MB på PC og 1,1 MB på mobil.
+   Ildkamp, tåke og 3D (utsnitt av høydeflisene rundt kameraet) kom samme dag; 3D over Dombås og Snøhetta la til ca. 1,2 MB.
 3. Hele Norge i bolker: Landsat-scenene (ca. 60), DTM i 8 m, NVDB og matrikkelen, med GitHub Actions; lagring i R2.
 4. Rutenett for spillet (2 km-sekskanter) som eget vektorlag, med ID-er serveren bruker.

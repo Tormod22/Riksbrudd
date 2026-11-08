@@ -69,7 +69,7 @@ Ikke brukt ennå: Sokkeldirektoratet (felt/rør med startår), NVE vannkraft-API
 2. Server (Colyseus) må komme tidlig pga. 24-min døgn: ordrekøer, tikking når ingen er pålogget.
 3. (8. nov: kartpilot ferdig, se docs/komprimering.md og /dovre-fliser.) Sekskant-/rutenett inni kommunene for hele Norge (2 km foreslått), terreng fra Landsat 1986–87 + Kartverket høyde; MapLibre + PMTiles for fliser; PixiJS-lag oppå for enheter.
 4. Bit-for-bit-erobring: kommunen eies av den som holder flertallet av bebodde ruter; tipper når hovedbygda tas.
-5. (8. nov: lag, marsj og sikt kjører på flisene i /dovre-fliser, med Kartverket-høyde.) Kamp mellom lag i Dovre, tåke der ingen ser, jernbane (Bane NOR). 3D finnes foreløpig bare på /dovre.
+5. (8. nov: /dovre-fliser har lag, marsj, sikt, ildkamp, tåke og 3D på flisene, med Kartverket-høyde; veger og bygg for hele området.) Gjenstår: jernbane (Bane NOR), kampregler fra brukeren, flere fiender/AI.
 6. Historiske valg 1983/85 og 1986-næringstall → erstatte arvet folkemening.
 7. Oljefelt/rør (Sokkeldir), kraftverk (NVE), bruer/tunneler (NVDB) → naboforhold og økonomi.
 8. Diplomati (Sverige med län), ideologiakser som mekanikk, politikerrollen (lojalitet, desertering, flere spillere per bevegelse).

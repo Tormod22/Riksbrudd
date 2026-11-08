@@ -13,6 +13,7 @@ body{ background:var(--bg); color:var(--ink); font-family:"Cormorant Garamond",G
 body::before{ content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--bg); }
 #c{ display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
 #c.drar{ cursor:grabbing; }
+.lag3d{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; } #c3o{ pointer-events:none; } .lag3d[hidden]{ display:none; }
 .papir{ position:fixed; inset:0; pointer-events:none;
   background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(8,6,3,.55) 100%),
   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .47 0 0 0 0 .33 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
@@ -52,6 +53,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 </head>
 <body>
 <canvas id="c"></canvas>
+<canvas id="c3" class="lag3d" hidden></canvas><canvas id="c3o" class="lag3d" hidden></canvas>
 <div class="papir"></div>
 <div class="top">
   <div class="stats">
@@ -59,7 +61,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
     <div><b id="sH">–</b> <span>moh.</span></div>
     <div><b id="sKB">0</b> <span id="sReq">lastet</span></div>
   </div>
-  <div class="knapper"><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button></div>
+  <div class="knapper"><button id="v3d" aria-pressed="false" title="3D-terreng">3D</button><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button></div>
 </div>
 <div id="lagmeny"></div>
 <div id="logg" aria-live="polite"></div>
@@ -202,11 +204,11 @@ function stoy(X, Y, s, k) {
 function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
 
 // ---------- komponering av én skjermflis ----------
-const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, sikt: true };
+const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, sikt: true, taake: true };
 const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
-async function komponer(z, x, y) {
+async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lager bakken uten skygge)
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
   const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, 9, 5), beste('hoyde', z, x, y, 13, 6),
     z >= 12 ? beste('terreng', z, x, y, 9, 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
@@ -234,7 +236,7 @@ async function komponer(z, x, y) {
       const x0 = Math.max(0, Math.min(W - 2, Math.floor(sx))), y0 = Math.max(0, Math.min(H.h - 2, Math.floor(sy))), fx = sx - x0, fy = sy - y0, i = y0 * W + x0, j = (py + 1) * N + px + 1;
       E[j] = bil(H.a, i, fx, fy); GX[j] = bil(H.gx, i, fx, fy); GY[j] = bil(H.gy, i, fx, fy);
     }
-    if (VIS.skygge) {
+    if (valg.skygge) {
       const im = g.getImageData(0, 0, T, T), d = im.data, ve = z <= 8 ? 2 : z <= 10 ? 1.5 : 1.2;
       const Lx = -.5417, Ly = .5417, Lz = .6428; // lys fra nordvest, 40° over horisonten
       for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
@@ -245,15 +247,15 @@ async function komponer(z, x, y) {
       }
       g.putImageData(im, 0, 0);
     }
-    if (VIS.koter) koter(g, E, N, z);
+    if (valg.koter) koter(g, E, N, z);
   }
-  if (tr && VIS.traer) traer(g, z, x, y, tr, E, N);
+  if (tr && valg.traer) traer(g, z, x, y, tr, E, N);
   let veger = null;
   if (v) {
     const s = T * v.f / 4096, ox = v.ix * T, oy = v.iy * T, P = ([a, b]) => [a * s - ox, b * s - oy];
     const vl = v.t.veg ? v.t.veg.obj : [];
     veger = vl.map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
-    if (VIS.veg) {
+    if (valg.veg) {
       g.lineCap = g.lineJoin = 'round';
       for (const pass of [0, 1]) for (const kat of VEGREKKE) {
         if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
@@ -263,7 +265,7 @@ async function komponer(z, x, y) {
         g.stroke();
       }
     }
-    if (VIS.bygg && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
+    if (valg.bygg && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   }
   return { c, E };
 }
@@ -395,8 +397,9 @@ function tegnHud() {
   document.getElementById('sDag').textContent = klokke();
   document.getElementById('sKB').textContent = STAT.byte > 1e6 ? nf.format(STAT.byte / 1048576) + ' MB' : Math.round(STAT.byte / 1024) + ' KB';
   document.getElementById('sReq').textContent = 'lastet (' + STAT.req + ' henting' + (STAT.req === 1 ? '' : 'er') + ')';
-  const h = peker ? hoydeVed(peker[0], peker[1]) : hoydeVed(kam.x, kam.y);
+  const h = på3d && R3 && R3.ut ? hoyde3d(R3.ut.cx + R3.bane.x, R3.ut.cy + R3.bane.y) : peker ? hoydeVed(peker[0], peker[1]) : hoydeVed(kam.x, kam.y);
   document.getElementById('sH').textContent = h == null ? '–' : Math.round(h);
+  document.getElementById('skala').hidden = på3d;
   const mål = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].find(m => m / r >= 70) || 20000;
   document.getElementById('skalaStrek').style.width = (mål / r) + 'px';
   document.getElementById('skalaTekst').textContent = mål >= 1000 ? mål / 1000 + ' km' : mål + ' m';
@@ -406,13 +409,12 @@ function visFeil(e) { const f = document.getElementById('feil'); f.style.display
 // ---------- spillet: vinduer av fliser for reglene i terreng.js ----------
 // Reglene (marsj, sikt) regner på et rutenett med 32 m ruter (z9) som bygges av flisene rundt laget.
 // Ingen laster hele kartet: et vindu henter bare høyde-, terreng- og vegflisene det dekker.
-const ZV = 9;
 function flisområde(b, z) { const s = span(z); return [Math.floor((b[0] - G.x0) / s), Math.floor((G.y0 - b[3]) / s), Math.floor((b[2] - G.x0) / s), Math.floor((G.y0 - b[1]) / s)]; }
-async function lagVindu(b, medVeg) {
+async function lagVindu(b, medVeg, ZV = 9) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere)
   b = [Math.max(b[0], DOVRE[0]), Math.max(b[1], DOVRE[1]), Math.min(b[2], DOVRE[2] - 1), Math.min(b[3], DOVRE[3] - 1)];
   const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
   const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), hentFlis('terreng', ZV, x, y)]).then(([h, t]) => {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), ZV <= 9 ? hentFlis('terreng', ZV, x, y) : null]).then(([h, t]) => {
     const ox = (x - x0) * T, oy = (y - y0) * T;
     for (let j = 0; j < T; j++) for (let i = 0; i < T; i++) { const k = (oy + j) * v.w + ox + i;
       if (h) v.H[k] = h.a[(j + 1) * h.w + i + 1]; if (t) v.K[k] = t.a[j * T + i]; }
@@ -447,8 +449,13 @@ const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [2108
 let tid = 0, tempo = 1; const TIME = 60;
 function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 function sim(dt) {
-  tid += dt; const fi = ENHETER[3];
-  if (!fi.sti && !fi.planlegger) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; ordre(fi, ...PATRULJE[patruljeNr], true); }
+  const før = tid; tid += dt; const fi = ENHETER[3];
+  if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // 1 spillminutt = 1 s ved 1×
+  if (!Terreng.slattUt(fi.menn)) {
+    const fiende = ENHETER.find(b => b.side === 'blå' && levende(b) && Math.hypot(b.x - fi.x, b.y - fi.y) < 900 && ser(fi, b.x, b.y));
+    if (fiende) { if (fi.sti) { fi.sti = null; fi.siktSkitten = true; } fi.roligTil = tid + 30; }   // stopper og tar kampen; patruljerer igjen etter 30 rolige minutter
+    else if (!fi.sti && !fi.planlegger && tid > (fi.roligTil || 0)) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; ordre(fi, ...PATRULJE[patruljeNr], true); }
+  }
   for (const s of ENHETER) {
     if (!s.sti) continue;
     let igjen = dt / TIME; s.timerIgjen -= igjen;
@@ -463,6 +470,37 @@ function sim(dt) {
   }
   if (valgt && valgt.sti && Math.floor(tid * 2) !== Math.floor((tid - dt) * 2)) visPanel();
 }
+// ---------- kamp og tåke ----------
+const KRNG = Terreng.frø(1987), SKUDD = [];
+const levende = s => s.menn.some(m => m.hp > 0);
+function ser(s, X, Y) { const v = s.sikt; if (!v) return false; const i = Math.floor((X - v.x0) / v.r), j = Math.floor((v.y0 - Y) / v.r);
+  return i >= 0 && j >= 0 && i < v.mw && j < v.mh && v.m[j * v.mw + i] === 1; }
+function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y)); }
+function kamprunde() {
+  for (const a of ENHETER) {
+    a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
+    if (!Terreng.slattUt(a.menn)) for (const b of ENHETER) {
+      if (a.side === b.side || !levende(b)) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 900 || !ser(a, b.x, b.y)) continue;
+      const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
+      if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.rolle, d, f) > 0)) continue;   // ingen når fram
+      const treff = Terreng.ildrunde(a.menn, d, f, KRNG);
+      SKUDD.push({ a, b, til: performance.now() + 1400 }); nå.add(b);
+      if (!a.skyterPå.has(b)) { if (a.side === 'blå') logg(a.navn + ' skyter mot ' + (synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
+      if (!treff) continue;
+      for (const [m, hva] of Terreng.fordelTreff(b.menn, treff, KRNG)) if (b.side === 'blå') logg(m.navn + ' (' + m.rolle + ', ' + b.navn + ') er ' + hva + '.');
+      if (b.side !== 'blå' && synlig(b)) logg(b.navn + ': ' + treff + ' treff.');
+      if (b.menn[b.leder].hp < 1) { const ny = b.menn.findIndex(m => m.hp >= 1); if (ny >= 0) { b.leder = ny; if (b.side === 'blå') logg(b.menn[ny].navn + ' tar over som lagfører i ' + b.navn + '.'); } }
+      if (Terreng.slattUt(b.menn) && !b.slattUtMeldt) { b.slattUtMeldt = true;
+        logg(b.navn + ' er slått ut av kamp (' + Terreng.uteAvKamp(b.menn) + ' av 12 falt eller såret).');
+        if (b.side !== 'blå') { const ang = Math.atan2(b.y - a.y, b.x - a.x); ordre(b, b.x + Math.cos(ang) * 3000, b.y + Math.sin(ang) * 3000, true); } }
+    }
+    a.skyterPå = nå;   // meldes på nytt bare når kampen tar seg opp igjen
+  }
+  if (valgt) visPanel();
+  skitten = true;
+}
+
 async function ordre(s, X, Y, stille) {
   s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
   const d = Math.hypot(X - s.x, Y - s.y), pad = Math.max(2500, d * .3);
@@ -489,7 +527,12 @@ async function oppdaterSikt(s) {
     const c = lerret(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), farge = s.side === 'blå' ? [240, 215, 154] : [220, 80, 50];
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[(j0 + j) * v.w + i0 + i]) { const o = (j * w + i) * 4; im.data[o] = farge[0]; im.data[o + 1] = farge[1]; im.data[o + 2] = farge[2]; im.data[o + 3] = 255; }
     g.putImageData(im, 0, 0);
-    s.sikt = { c, x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, w: w * v.r, h: h * v.r }; s.siktVidde = r; s.siktVed = [X, Y];
+    // glatt kant: forstørr 4× med utjevning og litt uskarphet, så 32 m-rutene ikke synes
+    const c4 = lerret(w * 4, h * 4), g4 = c4.getContext('2d'); g4.imageSmoothingEnabled = true; g4.imageSmoothingQuality = 'high';
+    if ('filter' in g4) g4.filter = 'blur(3px)'; g4.drawImage(c, 0, 0, w * 4, h * 4);
+    const mk = new Uint8Array(w * h); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) mk[j * w + i] = m[(j0 + j) * v.w + i0 + i];
+    siktVersjon++;
+    s.sikt = { c: c4, x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, w: w * v.r, h: h * v.r, m: mk, mw: w, mh: h, r: v.r }; s.siktVidde = r; s.siktVed = [X, Y];
     s.her = { k: Terreng.verdi(v, v.K, X, Y, 255), h: Terreng.verdi(v, v.H, X, Y, NaN) };
     const vv = await lagVindu([X - 50, Y - 50, X + 50, Y + 50], true); s.her.veg = Terreng.verdi(vv, vv.V, X, Y, 0);
     if (valgt === s) visPanel();
@@ -499,42 +542,80 @@ async function oppdaterSikt(s) {
 // ---------- tegning av lagene ----------
 let valgt = null, modus = null;
 function tilSkjerm(X, Y, vx0, vy1) { return [(X - vx0) / kam.m, (vy1 - Y) / kam.m]; }
+// Tegner lagene, skudd og «sist sett» med en projeksjon: i 2D rett ned, i 3D gjennom kameraet.
+// g = 2D-tegneflate, proj(X, Y) -> [x, y] i CSS-piksler (eller null bak kameraet), mPer(X, Y) = meter per piksel der.
 function tegnEnheter(vx0, vy1) {
+  const proj = (X, Y) => tilSkjerm(X, Y, vx0, vy1);
+  if (VIS.taake) tegnTåke(vx0, vy1);
   const m = kam.m;
-  if (VIS.sikt) for (const s of ENHETER) if (s.sikt) {
+  if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {
     const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1);
-    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .13) : .2; ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .24 : .13) : .2; ctx.imageSmoothingEnabled = true;
     ctx.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); ctx.globalAlpha = 1;
   }
+  tegnLag(ctx, proj, () => kam.m);
+}
+function tegnLag(g, proj, mPer) {
+  const nå = performance.now();
+  for (let i = SKUDD.length - 1; i >= 0; i--) { const k = SKUDD[i]; if (k.til < nå) { SKUDD.splice(i, 1); continue; }
+    if (VIS.taake && !synlig(k.a) && !synlig(k.b)) continue;
+    const pa = proj(k.a.x, k.a.y), pb = proj(k.b.x, k.b.y); if (!pa || !pb) continue;
+    const [ax, ay] = pa, [bx, by] = pb, t = (k.til - nå) / 1400;
+    g.strokeStyle = k.a.side === 'blå' ? `rgba(255,220,140,${.25 + .5 * t * (Math.sin(nå / 40) * .5 + .5)})` : `rgba(255,120,80,${.25 + .5 * t * (Math.sin(nå / 37) * .5 + .5)})`;
+    g.lineWidth = 1.5; g.setLineDash([3, 9]); g.lineDashOffset = -nå / 20; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]); skitten = true;
+  }
+  for (const s of ENHETER) if (s.side !== 'blå') {   // sist sett: der fienden var da noen av våre så den
+    if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
+    else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
+      g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]);
+      g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
+      g.fillText('sist sett ' + klokkeslett(s.sett.tid), a, b - 13); }
+  }
   for (const s of ENHETER) {
-    const [px, py] = tilSkjerm(s.x, s.y, vx0, vy1), blå = s.side === 'blå';
+    if (VIS.taake && !synlig(s)) continue;
+    const ps = proj(s.x, s.y); if (!ps) continue;
+    const [px, py] = ps, blå = s.side === 'blå', m = mPer(s.x, s.y);
     if (px < -200 || py < -200 || px > VW + 200 || py > VH + 200) continue;
-    if (s.sti) { ctx.strokeStyle = blå ? 'rgba(130,170,220,.9)' : 'rgba(225,125,95,.9)'; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(px, py);
-      for (let i = s.seg + 1; i < s.sti.length; i++) { const [a, b] = tilSkjerm(s.sti[i][0], s.sti[i][1], vx0, vy1); ctx.lineTo(a, b); } ctx.stroke(); ctx.setLineDash([]); }
+    if (s.sti) { g.strokeStyle = blå ? 'rgba(130,170,220,.9)' : 'rgba(225,125,95,.9)'; g.lineWidth = 2; g.setLineDash([7, 5]); g.beginPath(); g.moveTo(px, py);
+      for (let i = s.seg + 1; i < s.sti.length; i++) { const q = proj(s.sti[i][0], s.sti[i][1]); if (q) g.lineTo(q[0], q[1]); } g.stroke(); g.setLineDash([]); }
     if (m < 1.6) { // hver mann for seg, i formasjon: kolonne på marsj, kile når de står
       const levende = s.menn.filter(q => q.hp > 0), ca = Math.cos(s.retning), sa = Math.sin(s.retning), r = Math.max(3.4, .35 / m);
+      s.menn.filter(q => q.hp <= 0).forEach((q, n) => { const X = s.x - (n + 1) * 2.5 * ca + 6 * sa, Y = s.y - (n + 1) * 2.5 * sa - 6 * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2;
+        g.strokeStyle = 'rgba(40,30,20,.85)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(a - r, b - r); g.lineTo(a + r, b + r); g.moveTo(a + r, b - r); g.lineTo(a - r, b + r); g.stroke(); });
       levende.forEach((q, n) => {
         let fx, fy; if (s.sti) { fx = -n * 4; fy = (n % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((n + 1) / 2), side = n % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
-        const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, [a, b] = tilSkjerm(X, Y, vx0, vy1), leder = s.menn.indexOf(q) === s.leder;
-        ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(a + r * .35, b + r * .35, r, 0, 6.283); ctx.fill();
-        ctx.fillStyle = leder ? '#f0d79a' : blå ? '#5b7ea8' : '#b5503d'; ctx.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(a, b, r, 0, 6.283); ctx.fill(); ctx.stroke();
+        const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2, leder = s.menn.indexOf(q) === s.leder;
+        g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
+        g.fillStyle = leder ? '#f0d79a' : blå ? '#5b7ea8' : '#b5503d'; g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
+        g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); }
       });
     } else { // lagsymbol (infanteri)
-      const r = 11; ctx.fillStyle = blå ? '#3b5878' : '#8f3c2f'; ctx.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; ctx.lineWidth = s === valgt ? 2.5 : 1.3;
-      ctx.beginPath(); ctx.rect(px - r, py - r * .7, r * 2, r * 1.4); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = '#e7dcc3'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(px - r, py - r * .7); ctx.lineTo(px + r, py + r * .7); ctx.moveTo(px + r, py - r * .7); ctx.lineTo(px - r, py + r * .7); ctx.stroke();
+      const r = 11; g.fillStyle = blå ? '#3b5878' : '#8f3c2f'; g.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; g.lineWidth = s === valgt ? 2.5 : 1.3;
+      g.beginPath(); g.rect(px - r, py - r * .7, r * 2, r * 1.4); g.fill(); g.stroke();
+      g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - r, py - r * .7); g.lineTo(px + r, py + r * .7); g.moveTo(px + r, py - r * .7); g.lineTo(px - r, py + r * .7); g.stroke();
     }
-    ctx.font = '600 13px "Cormorant Garamond",serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(20,16,10,.85)';
-    const ty = py - (m < 1.6 ? Math.max(14, 30 / m) : 16); ctx.strokeText(s.navn, px, ty); ctx.fillStyle = '#e7dcc3'; ctx.fillText(s.navn, px, ty);
+    g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
+    const ty = py - (m < 1.6 ? Math.max(14, 30 / m) : 16); g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
   }
-  if (modus === 'marsj' && peker) { const [a, b] = tilSkjerm(peker[0], peker[1], vx0, vy1); ctx.strokeStyle = '#f0d79a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(a, b, 9, 0, 6.283); ctx.stroke(); }
+  if (modus === 'marsj' && peker) { const q = proj(peker[0], peker[1]); if (!q) return; const [a, b] = q; g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(a, b, 9, 0, 6.283); g.stroke(); }
 }
+let tåkeC = null;
+function tegnTåke() {
+  if (!tåkeC || tåkeC.width !== cv.width || tåkeC.height !== cv.height) tåkeC = lerret(cv.width, cv.height);
+  const g = tåkeC.getContext('2d'), vx0 = kam.x - VW / 2 * kam.m, vy1 = kam.y + VH / 2 * kam.m;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, tåkeC.width, tåkeC.height);
+  g.fillStyle = 'rgba(14,11,7,.6)'; g.fillRect(0, 0, tåkeC.width, tåkeC.height);
+  g.globalCompositeOperation = 'destination-out'; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = true;
+  for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
+  g.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tåkeC, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
+
 function trykkPå(cx, cy) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
   if (modus === 'marsj' && valgt) { modus = null; ordre(valgt, X, Y); visPanel(); return; }
   let best = null, bd = 28;
-  for (const s of ENHETER) { const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
+  for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
   valgt = best; modus = null; visPanel(); skitten = true;
 }
 
@@ -548,24 +629,167 @@ function visPanel() {
   const P = document.getElementById('panel'); if (!valgt) { P.classList.remove('på'); return; }
   const s = valgt, her = s.her, lev = s.menn.filter(q => q.hp > 0).length;
   document.getElementById('pnavn').textContent = s.navn;
-  document.getElementById('psub').textContent = [lev + ' mann', her && her.h === her.h ? Math.round(her.h) + ' moh.' : null,
+  document.getElementById('psub').textContent = [lev + ' mann' + (Terreng.uteAvKamp(s.menn) ? ' (' + s.menn.filter(q => q.hp > 0 && q.hp < 1).length + ' såret)' : ''),
+    Terreng.slattUt(s.menn) ? 'slått ut av kamp' : s.skyterPå && s.skyterPå.size ? 'i ildkamp' : null, her && her.h === her.h ? Math.round(her.h) + ' moh.' : null,
     her ? (Terreng.KLASSE[her.k] || 'utenfor kartet') : null, her && her.veg ? 'ved veg' : null,
     s.planlegger ? 'planlegger rute' : s.sti ? 'marsjerer, ' + nf.format(Math.max(0, s.timerIgjen)) + ' t igjen' : null,
     s.siktVidde ? 'sikt ' + nf.format(s.siktVidde / 1000) + ' km' : null].filter(Boolean).join(' · ');
   const H = document.getElementById('handl'); H.innerHTML = '';
-  if (s.side === 'blå') {
+  if (s.side === 'blå' && levende(s)) {
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
     H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => { s.speider = !s.speider; s.siktSkitten = true; visPanel(); }));
     if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.siktSkitten = true; visPanel(); skitten = true; }));
   }
   const M = document.getElementById('menn'); M.innerHTML = '';
   s.menn.forEach((q, i) => { const b = document.createElement('button'); b.className = i === s.leder ? 'leder' : '';
-    b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + ' · lojalitet ' + Math.round(q.loy * 100) + ' %';
+    b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + (q.hp <= 0 ? ' · falt' : q.hp < 1 ? ' · såret' : ' · lojalitet ' + Math.round(q.loy * 100) + ' %');
+    if (q.hp <= 0) b.style.opacity = '.45';
     b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
-  document.getElementById('hint').textContent = s.side !== 'blå' ? 'Fiendtlig patrulje. Rødt felt er det de ser.' :
+  document.getElementById('hint').textContent = s.side !== 'blå' ? 'Fiendtlig patrulje.' : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
     modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
   P.classList.add('på');
 }
+
+// ---------- 3D (three.js): et utsnitt av høydeflisene rundt kameraet, med kartet uten skygge som overflate ----------
+let R3 = null, på3d = false, siktVersjon = 0;
+function lastThree() {
+  return window.THREE ? Promise.resolve() : new Promise((ok, nei) => { const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'; sc.onload = ok; sc.onerror = () => nei(new Error('3D-biblioteket lastet ikke')); document.head.appendChild(sc); });
+}
+function bilin(v, X, Y) {
+  const fx = (X - v.x0) / v.r - .5, fy = (v.y0 - Y) / v.r - .5, i = Math.max(0, Math.min(v.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(v.h - 2, Math.floor(fy))), a = fx - i, b = fy - j, k = j * v.w + i;
+  return (v.H[k] * (1 - a) + v.H[k + 1] * a) * (1 - b) + (v.H[k + v.w] * (1 - a) + v.H[k + v.w + 1] * a) * b;
+}
+async function bygg3d(cx, cy, S) {
+  const N = 321, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
+  const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
+  const H = new Float32Array(N * N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 400; }
+  const TW = 2048, mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
+  const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = '#1a1710'; g.fillRect(0, 0, TW, TW);
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false }, kø = [];
+  const [ax, ay, bx, by] = flisområde(DOVRE, zt);
+  for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
+  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await komponer(zt, x, y, valg);
+    g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
+  return { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2] };
+}
+function hoyde3d(X, Y) {   // moh. fra 3D-utsnittet
+  const u = R3.ut, fx = (X - (u.cx - u.S)) / u.steg, fy = ((u.cy + u.S) - Y) / u.steg, N = u.N;
+  const i = Math.max(0, Math.min(N - 2, Math.floor(fx))), j = Math.max(0, Math.min(N - 2, Math.floor(fy))), a = Math.max(0, Math.min(1, fx - i)), b = Math.max(0, Math.min(1, fy - j)), k = j * N + i;
+  return (u.H[k] * (1 - a) + u.H[k + 1] * a) * (1 - b) + (u.H[k + N] * (1 - a) + u.H[k + N + 1] * a) * b;
+}
+function init3d() {
+  const c3 = document.getElementById('c3'), renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true });
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a1710);
+  const cam = new THREE.PerspectiveCamera(50, 1, 5, 80000);
+  scene.fog = new THREE.Fog(0x1a1710, 4000, 9000);   // dis mot horisonten skjuler kanten på utsnittet
+  scene.add(new THREE.AmbientLight(0xffffff, .62)); const sol = new THREE.DirectionalLight(0xfff0d8, .95); sol.position.set(-1, 1, 1.1); scene.add(sol);
+  R3 = { renderer, scene, cam, c3, ov: document.getElementById('c3o'), mesh: null, ut: null, tex: null, texC: document.createElement('canvas'),
+    bane: { x: 0, y: 0, avst: 3000, yaw: 0, pitch: .75 }, ray: new THREE.Raycaster(), EX: 1.2, bygger: false, nøkkel: '' };
+}
+function sett3d(u) {
+  const R = R3;
+  if (R.mesh) { R.scene.remove(R.mesh); R.mesh.geometry.dispose(); R.mesh.material.dispose(); R.tex.dispose(); }
+  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, u.N - 1, u.N - 1), pos = geo.attributes.position;
+  for (let k = 0; k < pos.count; k++) pos.setZ(k, (u.H[k] - u.h0) * R.EX);
+  geo.computeVertexNormals();
+  R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
+  R.mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex })); R.scene.add(R.mesh);
+  if (R.ut) { R.bane.x += R.ut.cx - u.cx; R.bane.y += R.ut.cy - u.cy; }
+  R.ut = u; R.tex = tex; R.nøkkel = '';
+}
+function bak3d() {   // kart + tåke + siktfelt inn i overflaten
+  const u = R3.ut, g = R3.texC.getContext('2d'), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
+  const rekt = k => [(k.x0 - X0) / mpp, (Y1 - k.y0) / mpp, k.w / mpp, k.h / mpp];
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.drawImage(u.base, 0, 0);
+  if (VIS.taake) { const t = R3.tåke || (R3.tåke = document.createElement('canvas')); t.width = t.height = TW; const tg = t.getContext('2d');
+    tg.fillStyle = 'rgba(14,11,7,.45)'; tg.fillRect(0, 0, TW, TW); tg.globalCompositeOperation = 'destination-out';
+    for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) tg.drawImage(s.sikt.c, ...rekt(s.sikt));
+    g.drawImage(t, 0, 0); }
+  if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {
+    g.globalAlpha = s.side === 'blå' ? (s === valgt ? .24 : .13) : .2; g.drawImage(s.sikt.c, ...rekt(s.sikt)); g.globalAlpha = 1; }
+  R3.tex.needsUpdate = true;
+}
+function proj3(X, Y) {
+  const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5).project(R3.cam);
+  return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
+}
+function mPer3(X, Y) { const u = R3.ut, c = R3.cam.position; return Math.hypot(X - u.cx - c.x, Y - u.cy - c.y, (hoyde3d(X, Y) - u.h0) * R3.EX - c.z) * 2 * Math.tan(25 * Math.PI / 180) / VH; }
+function kamera3d() {
+  const b = R3.bane, c = R3.cam, u = R3.ut, z = (hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0) * R3.EX;
+  c.position.set(b.x + Math.sin(b.yaw) * Math.cos(b.pitch) * b.avst, b.y - Math.cos(b.yaw) * Math.cos(b.pitch) * b.avst, z + Math.sin(b.pitch) * b.avst);
+  const bakke = (hoyde3d(u.cx + c.position.x, u.cy + c.position.y) - u.h0) * R3.EX + 30; if (c.position.z < bakke) c.position.z = bakke;   // aldri under bakken
+  c.up.set(0, 0, 1); c.lookAt(b.x, b.y, z);
+  R3.scene.fog.near = b.avst * .9 + u.S * .25; R3.scene.fog.far = b.avst + u.S * .95; c.aspect = VW / VH; c.near = Math.max(2, b.avst / 200); c.far = b.avst * 12 + 20000; c.updateProjectionMatrix();
+}
+async function nytt3dUtsnitt(cx, cy, S) {
+  if (R3.bygger) return; R3.bygger = true;
+  try { const u = await bygg3d(cx, cy, S); if (på3d) sett3d(u); } catch (e) { console.error(e); visFeil(e); } finally { R3.bygger = false; }
+}
+function tegn3d() {
+  const R = R3; if (!R || !R.ut) return;
+  const b = R.bane, u = R.ut, S = Math.max(1200, Math.min(6000, b.avst * 1.4));
+  if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
+  const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
+  if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); R.renderer.render(R.scene, R.cam);
+  const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
+  const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  tegnLag(g, proj3, mPer3);
+  tegnHud();
+}
+async function slå3d(på) {
+  const knapp = document.getElementById('v3d');
+  if (på) {
+    try { await lastThree(); } catch (e) { logg(e.message); return; }
+    if (!R3) init3d();
+    på3d = true; knapp.classList.add('på'); knapp.setAttribute('aria-pressed', 'true');
+    document.getElementById('c3').hidden = document.getElementById('c3o').hidden = false; cv.style.visibility = 'hidden';
+    const S = Math.max(1200, Math.min(6000, kam.m * Math.max(VW, VH) * .8));
+    R3.bane = { x: 0, y: 0, avst: Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
+    if (R3.ut) { R3.mesh && R3.scene.remove(R3.mesh); R3.ut = null; R3.mesh = null; }
+    logg('Bygger 3D …'); await nytt3dUtsnitt(kam.x, kam.y, S); if (på3d) logg('3D: dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
+  } else {
+    if (R3 && R3.ut) { const b = R3.bane; kam.x = R3.ut.cx + b.x; kam.y = R3.ut.cy + b.y; kam.m = Math.max(.1, Math.min(60, b.avst / (VH * 1.1))); }
+    på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false');
+    document.getElementById('c3').hidden = document.getElementById('c3o').hidden = true; cv.style.visibility = ''; skitten = true;
+  }
+}
+// styring i 3D
+(function () {
+  const c3 = document.getElementById('c3'), p = new Map(); let ned = null, flyttet = false, to = null;
+  const lok = e => { const r = c3.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const flytt = (dx, dy) => { const b = R3.bane, k = b.avst / VH * 1.15, ca = Math.cos(b.yaw), sa = Math.sin(b.yaw);
+    b.x += -dx * k * ca + dy * k * -sa; b.y += -dx * k * sa + dy * k * ca; };
+  c3.addEventListener('contextmenu', e => e.preventDefault());
+  c3.addEventListener('pointerdown', e => { c3.setPointerCapture(e.pointerId); p.set(e.pointerId, lok(e)); ned = p.size === 1 ? lok(e) : null; flyttet = false; to = null; });
+  c3.addEventListener('pointermove', e => {
+    if (!p.has(e.pointerId) || !R3) return; const forr = p.get(e.pointerId), nå = lok(e); p.set(e.pointerId, nå);
+    if (ned && Math.hypot(nå[0] - ned[0], nå[1] - ned[1]) > 6) flyttet = true;
+    const b = R3.bane;
+    if (p.size === 2) { const [a, c] = [...p.values()], d = Math.hypot(a[0] - c[0], a[1] - c[1]), vin = Math.atan2(c[1] - a[1], c[0] - a[0]), my = (a[1] + c[1]) / 2;
+      if (to) { b.avst = Math.max(60, Math.min(20000, b.avst * to.d / d)); b.yaw -= vin - to.vin; b.pitch = Math.max(.12, Math.min(1.5, b.pitch + (my - to.my) * .006)); }
+      to = { d, vin, my }; flyttet = true; return; }
+    const dx = nå[0] - forr[0], dy = nå[1] - forr[1];
+    if (e.buttons === 2 || e.shiftKey) { b.yaw -= dx * .006; b.pitch = Math.max(.12, Math.min(1.5, b.pitch + dy * .006)); } else flytt(dx, dy);
+  });
+  const opp = e => {
+    const nå = lok(e); p.delete(e.pointerId); if (p.size < 2) to = null;
+    if (e.type === 'pointerup' && ned && !flyttet && !p.size && R3 && R3.ut) {
+      const u = R3.ut;
+      let best = null, bd = 28; for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const q = proj3(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - nå[0], q[1] - nå[1]); if (d < bd) { bd = d; best = s; } }
+      if (modus === 'marsj' && valgt) {
+        R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
+        if (hit) { modus = null; ordre(valgt, u.cx + hit.point.x, u.cy + hit.point.y); visPanel(); }
+      } else { valgt = best; modus = null; visPanel(); }
+    }
+    if (!p.size) ned = null;
+  };
+  c3.addEventListener('pointerup', opp); c3.addEventListener('pointercancel', opp);
+  c3.addEventListener('wheel', e => { e.preventDefault(); if (R3) R3.bane.avst = Math.max(60, Math.min(20000, R3.bane.avst * Math.exp(e.deltaY * (e.deltaMode ? .05 : .0015)))); }, { passive: false });
+})();
 
 // ---------- styring ----------
 function zoom(fak, cx = VW / 2, cy = VH / 2) {
@@ -596,15 +820,16 @@ const slipp = e => {
 cv.addEventListener('pointerup', slipp); cv.addEventListener('pointercancel', slipp);
 cv.addEventListener('pointerleave', () => { peker = null; tegnHud(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0016)), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-document.getElementById('zi').onclick = () => zoom(2);
-document.getElementById('zo').onclick = () => zoom(.5);
-document.getElementById('hele').onclick = () => passInn(DOVRE);
-document.getElementById('dombas').onclick = () => { passInn(DOMBAS); };
-const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', sikt: 'Siktfelt' };
+document.getElementById('zi').onclick = () => { if (på3d && R3) R3.bane.avst = Math.max(60, R3.bane.avst / 1.6); else zoom(2); };
+document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = Math.min(20000, R3.bane.avst * 1.6); else zoom(.5); };
+document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(DOVRE); };
+document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
+document.getElementById('v3d').onclick = () => slå3d(!på3d);
+const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
 for (const n of Object.keys(NAVN)) {
   const b = document.createElement('button'); b.textContent = NAVN[n]; b.setAttribute('aria-pressed', 'true');
-  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); if (n !== 'sikt') FERDIG.clear(); skitten = true; };
+  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); if (n !== 'sikt' && n !== 'taake') FERDIG.clear(); skitten = true; };
   lk.appendChild(b);
 }
 document.getElementById('meny').onclick = function () { const på = lk.classList.toggle('på'); this.setAttribute('aria-expanded', String(på)); this.classList.toggle('på', på); };
@@ -614,12 +839,12 @@ document.getElementById('lukk').onclick = () => { valgt = null; modus = null; vi
 window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
-logg('Dovre, august 1987. Gult: hva dine lag ser. Rødt: hva fienden ser. Trykk på et lag for å gi ordre.');
+logg('Dovre, august 1987. En fiendtlig patrulje er i området. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 (function loop(nå) {
   if (nå) { rest += Math.min(.25, (nå - sist) / 1000) * tempo; sist = nå; while (rest >= .1) { sim(.1); rest -= .1; } }
   for (const s of ENHETER) if (!s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) oppdaterSikt(s);
-  tegn(); requestAnimationFrame(loop);
+  if (på3d) tegn3d(); else tegn(); requestAnimationFrame(loop);
 })();
 </script>
 </body>

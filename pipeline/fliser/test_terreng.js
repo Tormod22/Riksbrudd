@@ -50,4 +50,22 @@ const S = (v, i, j) => T.senter(v, i, j);
   sjekk('siktfelt: ikke bak skogen', sf2[50 * 100 + 60] === 0);
   sjekk('siktfelt: ikke lenger enn radius', T.siktfelt(flatt(), ...S(v, 50, 50), 640)[50 * 100 + 75] === 0);
 }
+{ // 6. Ildkamp
+  const lag = () => ['lagfører', 'nestlagfører', 'skarpskytter', 'sanitet', 'radio', 'maskingevær', 'maskingevær', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'].map(rolle => ({ rolle, hp: 1 }));
+  const snitt = (d, f) => { const r = T.frø(42); let s = 0; for (let i = 0; i < 4000; i++) s += T.ildrunde(lag(), d, f, r); return s / 4000; };
+  sjekk('kamp: ingen treff utenfor rekkevidde (1000 m)', snitt(1000, {}) === 0);
+  sjekk('kamp: bare MG og skarpskytter når 800 m', T.treffsjanse('rifle', 800, {}) === 0 && T.treffsjanse('maskingevær', 800, {}) > 0);
+  const nær = snitt(150, {}), langt = snitt(500, {});
+  sjekk('kamp: flere treff nær enn langt', nær > langt * 2, nær.toFixed(2) + ' mot ' + langt.toFixed(2) + ' per runde');
+  const skog = snitt(150, { målISkog: true });
+  sjekk('kamp: skog halverer treffene', Math.abs(skog / nær - .5) < .08, (skog / nær).toFixed(2));
+  sjekk('kamp: på marsj er lettere å treffe', snitt(150, { målPåMarsj: true }) > nær);
+  const a = T.frø(7), b = T.frø(7); sjekk('kamp: samme frø gir samme kamp', T.ildrunde(lag(), 200, {}, a) === T.ildrunde(lag(), 200, {}, b));
+  const m = lag(), r = T.frø(3); T.fordelTreff(m, 6, r);
+  sjekk('kamp: 6 treff gir 6 ute av kamp (eller flere falt)', T.uteAvKamp(m) === 6 && T.slattUt(m));
+  const m2 = lag(); m2.forEach((x, i) => { if (i < 5) x.hp = 0; });
+  sjekk('kamp: 5 ute er ikke slått ut', !T.slattUt(m2));
+  const m3 = lag(); m3.forEach(x => x.hp = .5);
+  sjekk('kamp: sårede skyter ikke', T.ildrunde(m3, 100, {}, () => 0) === 0);
+}
 console.log(feil ? feil + ' feil' : 'Alle terrengtester ok'); process.exit(feil ? 1 : 0);

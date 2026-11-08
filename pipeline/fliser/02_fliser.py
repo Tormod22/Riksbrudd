@@ -9,6 +9,7 @@ Lag (én .pmtiles per lag, alle i flisnettet i felles.py):
   vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S, alle fra z10) z8–z13 og «bygg» (t = bygningstype) z11–z13.
 Klienten bruker nærmeste forelderflis når en flis mangler («overzoom»).
 Bruk: python3 02_fliser.py   -> site/dovre-fliser/data/*.pmtiles + manifest.json
+Veger og bygg leses fra data/fliser/ (03_veg_bygg.py).
 """
 import os, io, json, gzip, numpy as np
 from PIL import Image
@@ -156,15 +157,15 @@ def lag_terreng_og_kart(hoyde9):
 
 # ---------- vektor ----------
 def lag_vektor():
-    tr = Transformer.from_crs('EPSG:32632', CRS, always_xy=True)
-    veger = json.load(open(os.path.join(ROT, 'data', 'dovre', 'roads.json')))
+    # data/fliser/ fra 03_veg_bygg.py, allerede i EPSG:25833 og for hele området
+    veger = json.load(open(os.path.join(ROT, 'data', 'fliser', 'veger.json')))
     linjer, kat = [], []
     for v in veger:
-        xs, ys = tr.transform([p[0] for p in v['p']], [p[1] for p in v['p']])
-        if len(xs) >= 2: linjer.append(LineString(list(zip(xs, ys)))); kat.append(v['c'])
-    bygg = json.load(open(os.path.join(ROT, 'data', 'dovre', 'buildings.json')))
-    bx, by = tr.transform([b[0] for b in bygg], [b[1] for b in bygg])
-    punkt = [Point(x, y) for x, y in zip(bx, by)]
+        if len(v['p']) >= 2: linjer.append(LineString(v['p'])); kat.append(v['c'])
+    IKKE_BYGD = {'IG', 'RA', 'GR', 'BR', 'BF'}   # bare tillatelse, eller revet/brent/flyttet
+    bygg = [b for b in json.load(open(os.path.join(ROT, 'data', 'fliser', 'bygg.json'))) if b[3] not in IKKE_BYGD]
+    punkt = [Point(b[0], b[1]) for b in bygg]
+    STAT['veg_bygg'] = {'veglenker': len(linjer), 'bygg': len(bygg)}
     tl, tp = STRtree(linjer), STRtree(punkt)
     VIS = {8: 'ERF', 9: 'ERFK'}  # fra z10 er alle veger med (marsjrutene trenger småvegene; visningen skjuler dem til z11)
     ut = []
