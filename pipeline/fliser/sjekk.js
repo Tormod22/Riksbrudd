@@ -23,8 +23,10 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
     const h = require('crypto').createHash('sha256').update(fs.readFileSync(path.join(D, 'terreng.js'))).digest('hex').slice(0, 10);
     const k = require('crypto').createHash('sha256'); for (const f of ['hoyde', 'kart', 'terreng', 'vektor']) k.update(fs.readFileSync(path.join(D, 'data', f + '.pmtiles')));
     const html = fs.readFileSync(path.join(D, 'index.html'), 'utf8'), tag = 'kart-' + k.digest('hex').slice(0, 12);
-    const ok = html.includes('terreng.js?v=' + h) && html.includes(`const KART_TAG_DOVRE = '${tag}';`); if (!ok) feil++;
-    console.log(`${ok ? 'ok  ' : 'FEIL'} versjonsmerker (terreng.js og ${tag})` + (ok ? '' : ' – kjør python3 pipeline/fliser/versjon.py'));
+    const spill = [...html.matchAll(/\/dovre-fliser\/(spill\/[a-z0-9_-]+\.js)\?v=([0-9a-f]+)/g)]
+      .every(([, f, v]) => require('crypto').createHash('sha256').update(fs.readFileSync(path.join(D, f))).digest('hex').slice(0, 10) === v);
+    const ok = html.includes('terreng.js?v=' + h) && html.includes(`const KART_TAG_DOVRE = '${tag}';`) && spill; if (!ok) feil++;
+    console.log(`${ok ? 'ok  ' : 'FEIL'} versjonsmerker (terreng.js, spill/*.js og ${tag})` + (ok ? '' : ' – kjør python3 pipeline/fliser/versjon.py'));
   }
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL for 3D uten skjermkort
   // «eldre iPhone»: uten OffscreenCanvas og createImageBitmap, så reserveveien (<img>) testes – som i Safari før 16.4.

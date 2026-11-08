@@ -102,6 +102,8 @@ const ER_NORGE = PÅ_NORGE && !!NORGE_TAG;
 const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versjon.py
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
+// Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
+const KROKER = { tegn: [], sim: [], trykk: [] };
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -530,6 +532,7 @@ function tegn() {
     }
   }
   tegnInfra(vx0, vy1);
+  for (const f of KROKER.tegn) f(ctx, vx0, vy1);
   tegnEnheter(vx0, vy1);
   tegnHud();
 }
@@ -796,6 +799,7 @@ const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [2108
 let tid = 0, tempo = 1; const TIME = 60;
 function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 function sim(dt) {
+  for (const f of KROKER.sim) f(dt);
   const før = tid; tid += dt; const fi = ENHETER[3];
   if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // 1 spillminutt = 1 s ved 1×
   if (!Terreng.slattUt(fi.menn)) {
@@ -960,6 +964,7 @@ function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 2
 
 function trykkPå(cx, cy) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
+  for (const f of KROKER.trykk) if (f(X, Y, cx, cy)) return;
   if (modus === 'marsj' && valgt) { modus = null; ordre(valgt, X, Y); visPanel(); return; }
   let best = null, bd = 28;
   for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
@@ -1231,5 +1236,6 @@ let sist = performance.now(), rest = 0;
   if (på3d) tegn3d(); else tegn(); requestAnimationFrame(loop);
 })();
 </script>
+<script src="/dovre-fliser/spill/spill.js?v=6718b7846b"></script>
 </body>
 </html>
