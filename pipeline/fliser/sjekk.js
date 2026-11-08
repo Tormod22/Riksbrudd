@@ -14,8 +14,10 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
   { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
     const fs = require('fs'), D = path.join(__dirname, '../../site/dovre-fliser');
     const h = require('crypto').createHash('sha256').update(fs.readFileSync(path.join(D, 'terreng.js'))).digest('hex').slice(0, 10);
-    const ok = fs.readFileSync(path.join(D, 'index.html'), 'utf8').includes('terreng.js?v=' + h); if (!ok) feil++;
-    console.log(`${ok ? 'ok  ' : 'FEIL'} versjonsmerke på terreng.js` + (ok ? '' : ' – kjør python3 pipeline/fliser/versjon.py'));
+    const k = require('crypto').createHash('sha256'); for (const f of ['hoyde', 'kart', 'terreng', 'vektor']) k.update(fs.readFileSync(path.join(D, 'data', f + '.pmtiles')));
+    const html = fs.readFileSync(path.join(D, 'index.html'), 'utf8'), tag = 'kart-' + k.digest('hex').slice(0, 12);
+    const ok = html.includes('terreng.js?v=' + h) && html.includes(`const KART_TAG = '${tag}';`); if (!ok) feil++;
+    console.log(`${ok ? 'ok  ' : 'FEIL'} versjonsmerker (terreng.js og ${tag})` + (ok ? '' : ' – kjør python3 pipeline/fliser/versjon.py'));
   }
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL for 3D uten skjermkort
   // «eldre iPhone»: uten OffscreenCanvas og createImageBitmap, så reserveveien (<img>) testes – som i Safari før 16.4.
@@ -24,7 +26,7 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
     if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke støttet')); });
     await kt.route(/^https?:\/\/(?!localhost)/, r => r.abort());   // ingen andre nettsider: spillet skal virke selv om en CDN er blokkert (brukeren fikk svart side 8. nov)
     const pg = await kt.newPage(); const err = [];
-    pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && err.push(m.text()));   // forespørsler testen selv blokkerer, teller ikke
+    pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
       await pg.evaluate(([x, y, m]) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; peker = null; }, [x, y, m]);
@@ -33,6 +35,8 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
       const ok = s.h != null && s.h >= lo && s.h <= hi; if (!ok) feil++;
       console.log(`${ok ? 'ok  ' : 'FEIL'} ${navn} ${v}: ${s.h == null ? '–' : Math.round(s.h)} moh. (venter ${lo}–${hi}), z${s.z}, totalt ${s.kb} KB i ${s.req} hentinger`);
     }
+    const kilde = await pg.evaluate(() => STAT.kilde); const kOk = kilde === 'Vercel'; if (!kOk) feil++;
+    console.log(`${kOk ? 'ok  ' : 'FEIL'} ${navn} reserve: uten /api brukes filene på serveren (kilde: ${kilde})`);
     // Spillet på flisene: alle lag får siktfelt, 1. lag får rute og går, patruljen går sin runde.
     await pg.waitForFunction(() => ENHETER.every(s => s.sikt), null, { timeout: 30000 });
     const sikt = await pg.evaluate(() => ENHETER.map(s => [s.navn, Math.round(s.siktVidde), s.her && Terreng.KLASSE[s.her.k]]));

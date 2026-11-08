@@ -1,0 +1,32 @@
+# Laster kartfilene (PMTiles) opp til en GitHub-release, så de kan være store (opptil 2 GB per fil) uten egne nøkler:
+# jobben bruker GitHubs innebygde GITHUB_TOKEN. Nettsiden henter biter via site/api/kart.js (Vercel).
+# Release-navnet er kart-<hash av filene>, regnet likt i pipeline/fliser/versjon.py, så nye data aldri blandes med gamle.
+name: Kartdata til GitHub Releases
+on:
+  push:
+    branches: [main]
+    paths: ['site/dovre-fliser/data/**', '.github/workflows/kartdata.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: kartdata, cancel-in-progress: false }
+jobs:
+  last-opp:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Last opp kartfilene
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd site/dovre-fliser/data
+          TAG="kart-$(cat hoyde.pmtiles kart.pmtiles terreng.pmtiles vektor.pmtiles | sha256sum | cut -c1-12)"
+          echo "Versjon: $TAG"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Kartdata $TAG" --latest=false \
+              --notes "Kartfliser (PMTiles) for Riksbrudd. Lages automatisk av .github/workflows/kartdata.yml – ikke rediger for hånd."
+          fi
+          gh release upload "$TAG" hoyde.pmtiles kart.pmtiles terreng.pmtiles vektor.pmtiles --clobber
+          for f in hoyde kart terreng vektor; do
+            curl -sfL -r 0-6 "https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$f.pmtiles" | grep -q PMTiles && echo "ok $f"
+          done

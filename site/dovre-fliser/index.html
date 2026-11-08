@@ -89,24 +89,36 @@ const G = { x0: -200000, y0: 9000000, res0: 16384, T: 256 };
 const res = z => G.res0 / 2 ** z, span = z => G.T * res(z);
 const DOVRE = [182016, 6880000, 228000, 6930016], DOMBAS = [189000, 6892000, 197000, 6900000];
 const DATA = '/dovre-fliser/data/';
+// Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
+const KART_TAG = 'kart-09eec66cd30c';   // settes av pipeline/fliser/versjon.py
 const ZMIN = 5, ZMAX = 17;
 
 // ---------- henting med telling av byte ----------
-const STAT = { byte: 0, req: 0 };
+const STAT = { byte: 0, req: 0, kilde: '' };
+// Spør mellomstasjonen én gang ved oppstart (første 127 byte av høydefila skal starte med «PMTiles»).
+const RELEASE = !KART_TAG ? Promise.resolve(false) : fetch(`/api/kart/${KART_TAG}/hoyde/0/127`)
+  .then(r => r.ok ? r.arrayBuffer() : null).then(b => !!b && new TextDecoder().decode(new Uint8Array(b, 0, 7)) === 'PMTiles').catch(() => false);
 class Kilde {
-  constructor(url) { this.url = url; }
+  constructor(lag) { this.lag = lag; this.url = DATA + lag + '.pmtiles'; }
   getKey() { return this.url; }
   async getBytes(off, len, signal) {
+    if (await RELEASE) {   // GitHub-releasen via mellomstasjonen: byteområdet i adressen, så Vercel kan lagre hver bit
+      try {
+        const r = await fetch(`/api/kart/${KART_TAG}/${this.lag}/${off}/${len}`, { signal });
+        if (r.ok) { const data = await r.arrayBuffer(); STAT.byte += data.byteLength; STAT.req++; STAT.kilde = 'GitHub'; tegnHud(); return { data }; }
+      } catch (e) { if (e.name === 'AbortError') throw e; }
+    }
+    STAT.kilde = 'Vercel';
     const r = await fetch(this.url, { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal });
     if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status + ' ' + this.url);
     let data = await r.arrayBuffer();
     if (r.status === 200 && data.byteLength > len) data = data.slice(off, off + len); // server uten Range
     STAT.byte += data.byteLength; STAT.req++; tegnHud();
-    return { data, etag: r.headers.get('ETag') || undefined };
+    return { data };   // ingen etag: kildene kan byttes underveis, og versjonen ligger i KART_TAG
   }
 }
 const LAG = {};
-for (const n of ['hoyde', 'terreng', 'kart', 'vektor']) LAG[n] = new pmtiles.PMTiles(new Kilde(DATA + n + '.pmtiles'));
+for (const n of ['hoyde', 'terreng', 'kart', 'vektor']) LAG[n] = new pmtiles.PMTiles(new Kilde(n));
 
 // ---------- dekoding ----------
 // Tegneflate i bakgrunnen: OffscreenCanvas der den har 2D (Safari fra 16.4), ellers et vanlig canvas.
