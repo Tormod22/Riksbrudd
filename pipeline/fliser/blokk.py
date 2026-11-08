@@ -57,11 +57,15 @@ def hoyde(b, r=8.0, bit=2080):
         if bx[2] <= d[0] or bx[0] >= d[2] or bx[3] <= d[1] or bx[1] >= d[3]: return   # helt utenfor: hav (eller Svalbard)
         q = dict(service='WCS', version='1.0.0', request='GetCoverage', coverage='nhm_dtm_topo_25833', crs=CRS,
                  bbox=','.join(f'{v:.1f}' for v in bx), width=w, height=h, format='GeoTIFF')
-        data = hent(WCS + '?' + urllib.parse.urlencode(q))
-        if data[:2] not in (b'II', b'MM'):   # ikke TIFF: tjenesten svarte med en feilmelding
-            if b'BBOX is invalid' in data: return
-            raise RuntimeError('høydetjenesten svarte: ' + data[:300].decode('utf-8', 'replace'))
-        t = tifffile.imread(io.BytesIO(data)).astype(np.float32)
+        for forsok in range(5):   # ødelagte/avkuttede bilder hender (blokk 3,40 8. nov): hent på nytt
+            data = hent(WCS + '?' + urllib.parse.urlencode(q))
+            if data[:2] not in (b'II', b'MM'):   # ikke TIFF: tjenesten svarte med en feilmelding
+                if b'BBOX is invalid' in data: return
+                raise RuntimeError('høydetjenesten svarte: ' + data[:300].decode('utf-8', 'replace'))
+            try: t = tifffile.imread(io.BytesIO(data)).astype(np.float32); break
+            except Exception as e:
+                if forsok == 4: raise
+                logg('ødelagt høydebilde, prøver igjen:', str(e)[:100]); time.sleep(3 * (forsok + 1))
         t[(t < -500) | (t > 3000) | (t == 0)] = np.nan   # tjenesten gir havet nøyaktig 0 m: regnes som hav
         a[j:j + h, i:i + w] = t[:h, :w]
     with cf.ThreadPoolExecutor(4) as ex: list(ex.map(del_, [(j, i) for j in range(0, H, bit) for i in range(0, W, bit)]))
