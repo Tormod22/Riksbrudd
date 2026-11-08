@@ -1,0 +1,46 @@
+# Jernbane (Norge og nabolandene) og hovedveger i Sverige, Finland, Danmark og Nordvest-Russland fra OpenStreetMap
+# (© OpenStreetMap-bidragsytere, ODbL) -> release kart-utveg-<hash>. Tas i bruk med pipeline/fliser/bruk_utveg.py.
+name: Bygg jernbane og veger i nabolandene
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/hallo-ohbasy]
+    paths: [pipeline/fliser/utveg.py, .github/workflows/utveg.yml]
+permissions:
+  contents: write
+concurrency: { group: utveg, cancel-in-progress: false }
+jobs:
+  utveg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+      - run: pip install -q -r pipeline/fliser/krav.txt osmium
+      - name: Last ned og filtrer (bare veger og jernbane)
+        run: |
+          for l in europe/norway europe/sweden europe/finland europe/denmark russia/northwestern-fed-district; do
+            n=$(basename $l)
+            curl -fL --retry 5 -o $n.osm.pbf https://download.geofabrik.de/$l-latest.osm.pbf
+            if [ $n = norway ]; then   # Norge: NVDB har vegene fra z8; herfra bare hovedvegene (for z5–z7) og jernbanen
+              osmium tags-filter $n.osm.pbf w/highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link w/railway=rail,narrow_gauge -o f-$n.osm.pbf
+            else
+              osmium tags-filter $n.osm.pbf w/highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary,tertiary w/railway=rail,narrow_gauge -o f-$n.osm.pbf
+            fi
+            rm $n.osm.pbf; ls -la f-$n.osm.pbf
+          done
+          osmium merge f-*.osm.pbf -o alle.osm.pbf && ls -la alle.osm.pbf
+      - name: Lag fliser
+        working-directory: pipeline/fliser
+        run: python3 utveg.py ../../alle.osm.pbf ../../utveg
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: utveg
+        run: |
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Jernbane og veger $TAG" \
+            --notes "Jernbane og hovedveger fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL). Lages av .github/workflows/utveg.yml."
+          gh release upload "$TAG" utveg.pmtiles manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
