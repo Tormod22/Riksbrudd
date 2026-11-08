@@ -72,6 +72,11 @@ Origo flyttes til 9 200 km nord **før** noe annet bygges. Bare Dovre-flisene m�
   (vilkår fra min kunnskap, må sjekkes ved oppstart).
 - Spillet (HTML/JS) blir liggende på Vercel som nå. Kartdataene hentes fra R2 med CORS og Range.
 - Alternativ: Vercel Blob. Det er enklere å sette opp, men nedlasting koster.
+- **Status 8. nov:** brukeren har R2-konto, og bøtta heter `riksbrudd-kart`. Den settes opp for hånd i Cloudflare, fordi brukeren ikke
+  vil gi API-nøkkel her og Cloudflare-utvidelsen ikke virker i sky-økter.
+- **r2.dev er bare for utvikling** (begrenset kapasitet, ingen hurtigbuffer i Cloudflares nett). Før spillet åpnes for flere:
+  eget domene i Cloudflare (f.eks. `kart.riksbrudd.no`), eller en Cloudflare Worker foran bøtta (gratis opp til 100 000
+  forespørsler per dag). Begge gir hurtigbuffer. Dette gjøres i fase 4, før hele landet legges ut.
 
 ### 4. Datakilder for hele landet
 | Lag | Kilde | Hvordan |
