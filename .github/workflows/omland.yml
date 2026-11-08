@@ -1,0 +1,48 @@
+# Omlandet rundt Norge (Sverige, Finland, Danmark, Kola, Svalbard, havet) fra Copernicus DEM GLO-90 og ESA WorldCover,
+# så kartet glir over i nabolandene uten synlig kant -> release kart-omland-<hash>. Tas i bruk med pipeline/fliser/bruk_omland.py.
+name: Bygg omland
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: omland, cancel-in-progress: false }
+jobs:
+  del:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix: { del: [0, 1, 2, 3] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q -r pipeline/fliser/krav.txt
+      - name: Bygg del ${{ matrix.del }} av 4 (del 0 tar også det grove nivået for hele Nord-Europa)
+        working-directory: pipeline/fliser
+        run: python3 omland.py ../../ut ${{ matrix.del }} 4
+      - uses: actions/upload-artifact@v4
+        with: { name: 'omland-${{ matrix.del }}', path: ut/*.pkl, retention-days: 1, compression-level: 0 }
+  samle:
+    needs: del
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q -r pipeline/fliser/krav.txt
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'omland-*', path: inn, merge-multiple: true }
+      - name: Samle til PMTiles
+        working-directory: pipeline/fliser
+        run: python3 omland.py --samle ../../omland ../../inn
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: omland
+        run: |
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Omland $TAG" \
+            --notes "Omlandet rundt Norge: Copernicus DEM GLO-90 og ESA WorldCover 2021 (CC BY 4.0). Lages av .github/workflows/omland.yml."
+          gh release upload "$TAG" ohoyde.pmtiles okart.pmtiles manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
