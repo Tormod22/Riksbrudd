@@ -85,10 +85,11 @@ async function sjekk() {
   assert.deepEqual(lastet.rute(a, c).lenker, [0, 1]);
   if (!process.argv[2]) return;
   const ekte = les(fs.readFileSync(process.argv[2]));
-  // E6 ved Alnabru i Oslo og E6 ved Klett sør for Trondheim. Sentrumsveger er ikke med i EV6-utvalget.
-  const oslo = [266000, 6652000], trondheim = [267000, 7028000];
+  // Faktiske noder på E6 i Oslo (sekvens 625213) og sør for Trondheim (3112188).
+  // Bruk hovedvegen: et rent EV6-utvalg mangler lokalvegene rundt avkjøringsramper.
+  const oslo = [266140, 6650261], trondheim = [266980, 7030419];
   const t = performance.now();
-  const r = ekte.rute(oslo, trondheim, { maksAvstand: 10000, tillat: e => e.vegkategori === 'E' && e.vegnummer === 6 });
+  const r = ekte.rute(oslo, trondheim, { maksAvstand: 30, tillat: e => e.vegkategori === 'E' && e.vegnummer === 6 });
   const ms = performance.now() - t;
   assert(r, 'Sammenhengende Oslo–Trondheim langs E6');
   assert(r.meter > 400000 && r.meter < 650000, 'Rimelig reiselengde');
@@ -100,9 +101,9 @@ async function sjekk() {
   assert.notEqual(bru, undefined, 'Ruten må krysse en ekte NVDB-bru');
   const brulenker = ekte.infraLenker(60, bruer.get(bru));
   brulenker.forEach(e => ekte.sperr(e));
-  const om = ekte.rute(oslo, trondheim, { maksAvstand: 10000, tillat: e => e.vegkategori === 'E' && e.vegnummer === 6 });
+  const om = ekte.rute(oslo, trondheim, { maksAvstand: 30, tillat: e => e.vegkategori === 'E' && e.vegnummer === 6 });
   assert(!om || !om.lenker.some(e => brulenker.includes(e)));
-  brulenker.forEach(e => ekte.åpne(e)); assert(ekte.rute(oslo, trondheim, { maksAvstand: 10000 }));
+  brulenker.forEach(e => ekte.åpne(e)); assert(ekte.rute(oslo, trondheim, { maksAvstand: 30 }));
   console.log(`ok – ekte E6 Oslo–Trondheim: ${(r.meter / 1000).toFixed(1)} km, ${ms.toFixed(1)} ms, ${r.lenker.length} lenker; sperret bru: ${om ? 'omkjøring' : 'ingen veg'}`);
 }
 sjekk().catch(e => { console.error(e); process.exitCode = 1; });

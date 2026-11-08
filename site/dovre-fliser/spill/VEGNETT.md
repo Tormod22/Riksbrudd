@@ -73,3 +73,16 @@ aldri nærmeste geometri. Kilde-ID-ene tilsvarer de samme typene i INFRA. En bru
 Flagg: bit 0 med, bit 1 mot, bit 2 ferje. Kategoriindeks i `ERFKPS`. Ukjent fartsgrense = 0.
 API-referanse: https://nvdb-docs.atlas.vegvesen.no/nvdbapil/v4/Vegnett/
 OpenAPI: https://nvdbapiles.atlas.vegvesen.no/api-docs/vegnett
+
+## Verifisering 8. november 2026
+
+- Byggerens 7 tester og 1600 sammenligninger mellom A* og en uavhengig Dijkstra-beregning består.
+- Ekte NVDB-utvalg `EV6`: 16 741 lenker, 16 266 noder, 1 780 infrastrukturkoblinger. Råfil 1 021 445 byte,
+  gzip 549 836 byte. SHA-256 `c1397f7f98e383328c1912e2b74b303640e43a46aa1118c44e7a2d7167c00097`.
+- E6 Oslo–Trondheim: 514,1 km over 2 278 lenker, rundt 6 ms i lokal Node-test. Sperring av en ekte bru
+  gir ingen rute i det rene E6-utvalget; syntetisk test bekrefter også omkjøring når sideveg finnes.
+- `stubtest.js`, `stub.js`, `stub2.js` og `test_terreng.js` består. `sjekk.js` forsøkt, men Chromium stoppes
+  av kjøremiljøets socket-begrensning før nettleseren starter. Dette er ikke en bestått nettlesertest.
+- **Ikke klarert for main:** nasjonal bygging, nasjonalt størrelsesbudsjett, nettlesertest og release er ennå
+  ikke gjennomført. GitHub avviser skriving med HTTP 403 «Resource not accessible by integration».
+  Workflowen er klargjort, men har ikke kjørt. Ingen release, opplasting eller sammenslåing er utført.
