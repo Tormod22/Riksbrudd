@@ -31,7 +31,7 @@ button{ font:inherit; }
 #panel .close{ position:absolute; right:6px; top:4px; background:none; border:0; color:var(--ink-dim); font-size:20px; cursor:pointer; }
 .ctl{ position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:6px; }
 #log{ position:fixed; right:10px; top:calc(58px + env(safe-area-inset-top,0px)); width:220px; pointer-events:none; font-size:13px; color:var(--ink-dim); text-shadow:0 1px 2px #000; }
-@media (max-width:600px){ .stats{ gap:10px; padding:6px 9px; } .stats b{ font-size:16px; } #log{ width:140px; font-size:12px; } }
+@media (max-width:600px){ .top{ flex-wrap:wrap; } .stats{ gap:10px; padding:6px 9px; } .stats b{ font-size:16px; } #log{ width:140px; font-size:12px; top:calc(104px + env(safe-area-inset-top,0px)); } }
 </style>
 </head>
 <body>

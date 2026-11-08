@@ -53,13 +53,13 @@ button:focus-visible{ outline:2px solid var(--hover); }
 #end.on{ display:flex; }
 #end div{ background:var(--panel); border:1px solid var(--rule); padding:24px 30px; text-align:center; }
 #end h2{ font-family:"IM Fell English",serif; font-weight:400; font-size:32px; margin:0 0 6px; }
-@media (max-width:600px){ .stats{ gap:10px; padding:6px 9px; } .stats b{ font-size:17px; } #log{ width:150px; font-size:12px; max-height:22vh; } }
+@media (max-width:600px){ .top{ flex-wrap:wrap; } .stats{ flex-wrap:wrap; gap:2px 10px; padding:6px 9px; } .stats b{ font-size:17px; } #log{ width:150px; font-size:12px; max-height:22vh; top:calc(150px + env(safe-area-inset-top,0px)); } }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="top">
-  <div class="stats"><div><b class="g" id="sGold">0</b> <span>gull</span></div><div><b id="sInc">0</b> <span>/dag</span></div><div><b id="sUnits">0</b> <span>tropper</span></div><div><b id="sProv">0</b> <span>kommuner</span></div><div><b id="sDay">1</b> <span>dag · kl.</span></div></div>
+  <div class="stats"><div><b class="g" id="sGold">0</b> <span>gull</span></div><div><b id="sInc">0</b> <span>/dag</span></div><div><b id="sUnits">0</b> <span>tropper</span></div><div><b id="sProv">0</b> <span>områder</span></div><div><b id="sDay">1</b> <span>dag · kl.</span></div></div>
   <div class="speed"><button id="lay" aria-pressed="false" title="Folkemening">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="on">1×</button><button id="sp3">10×</button><button id="sp4">60×</button></div>
 </div>
 <div id="log" aria-live="polite"></div>
@@ -130,7 +130,7 @@ function newGame(){
     const pick=cand.find(([s,p])=>taken.every(t=>!p.nb.includes(t)&&!byId[t].nb.some(n=>p.nb.includes(n))))||cand[0]; PL[id].cap=pick[1].id; taken.push(pick[1].id); S.players[id].capital=pick[1].id; }
   for(const id in PL){ const cap=PL[id].cap; let fr=[cap]; S.owner[cap]=id; S.units[cap]=15;
     for(let d=0;d<2;d++){ const nx=[]; fr.forEach(x=>byId[x].nb.forEach(n=>{ if(!S.owner[n]&&n!=='SV'){ S.owner[n]=id; S.units[n]=5; nx.push(n);} })); fr=nx; } }
-  S.units['SV']=12; sel=null; mode=null; renderPanel(); logMsg('Dag 1. Erobre 60 % av kommunene, eller vær siste rike med hovedstad.'); document.getElementById('end').classList.remove('on'); hudDirty=true; dirty=true;
+  S.units['SV']=12; sel=null; mode=null; renderPanel(); logMsg('Dag 1. Erobre 60 % av områdene (kommunene og Svalbard), eller vær siste rike med hovedstad.'); document.getElementById('end').classList.remove('on'); hudDirty=true; dirty=true;
   logMsg('Hovedsteder: '+Object.keys(PL).map(k=>PL[k].name+' i '+byId[PL[k].cap].name).join(', ')+'.');
 }
 function logMsg(s){ S.log.unshift(s); S.log=S.log.slice(0,7); const L=document.getElementById('log'); L.innerHTML=S.log.map((x,i)=>'<div style="opacity:'+(1-i*0.12)+'">'+x+'</div>').join(''); }
