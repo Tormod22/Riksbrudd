@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Expose-Headers', 'ETag, Content-Length');
   if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET'); return res.status(204).end(); }
   const { tag, fil } = req.query, fra = Number(req.query.fra), lengde = Number(req.query.lengde);
-  if (!/^kart-(norge-(\d{4}-)?|hus-)?[0-9a-f]{6,40}$/.test(tag || '') || !FIL.test(fil || '') || !Number.isInteger(fra) || fra < 0 || !Number.isInteger(lengde) || lengde < 1 || lengde > MAKS)
+  if (!/^kart-(norge-(\d{4}-)?|hus-|infra-(\d{4}-)?)?[0-9a-f]{6,40}$/.test(tag || '') || !FIL.test(fil || '') || !Number.isInteger(fra) || fra < 0 || !Number.isInteger(lengde) || lengde < 1 || lengde > MAKS)
     return res.status(400).json({ feil: 'ugyldig forespørsel' });
   const url = `https://github.com/${REPO}/releases/download/${tag}/${fil}`;
   let r;

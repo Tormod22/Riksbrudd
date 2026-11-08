@@ -1,0 +1,32 @@
+# Infrastruktur for hele Norge (fase A): bruer, tunneler, ferjer (NVDB), vannkraft, dammer, magasin (NVE),
+# olje og gass (Sokkeldirektoratet) og tettsteder (SSB) -> release kart-infra-<år>-<hash>. Tas i bruk med pipeline/fliser/bruk_infra.py.
+name: Bygg infrastruktur
+on:
+  workflow_dispatch:
+    inputs:
+      aar: { description: 'Årstall (vegnett 1. juni, tettsteder 1. januar)', default: '2023' }
+permissions:
+  contents: write
+concurrency: { group: infra, cancel-in-progress: false }
+jobs:
+  infra:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q shapely
+      - name: Hent og bygg
+        working-directory: pipeline/fliser
+        run: python3 infra.py ../../infra "${{ inputs.aar }}"
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: infra
+        run: |
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Infrastruktur $TAG" \
+            --notes "Bruer, tunneler, ferjer (NVDB), vannkraft (NVE), olje og gass (Sokkeldirektoratet), tettsteder (SSB) for hele Norge. Lages av .github/workflows/infra.yml."
+          gh release upload "$TAG" infra.json manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json;m=json.load(open('manifest.json'));print(json.dumps(m['statistikk']), m['filer']['infra'][0])" >> "$GITHUB_STEP_SUMMARY"

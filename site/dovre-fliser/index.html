@@ -92,7 +92,8 @@ const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
-const HUS_TAG = 'kart-hus-502aa70491f9';     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
+const HUS_TAG = 'kart-hus-502aa70491f9';
+const INFRA_TAG = '';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
 const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
 const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
 if (PÅ_NORGE && !NORGE_TAG) location.replace('/kommuner-1986');   // til Norge-kartet er bygget: det gamle kommunekartet
@@ -148,6 +149,7 @@ const KLAR = (async () => {
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
   skitten = true;
 })();
+KLAR.then(hentInfra);
 function zmaks(lag, std) { const l = LAGFILER && LAGFILER[lag]; return l && l.length ? Math.max(...l.map(f => Math.min(f.zmax, 17))) : std; }   // 2023-kartet: kart/terreng til z10
 function filFor(lag, z, x) {
   const liste = LAGFILER && LAGFILER[lag]; if (!liste) return null;
@@ -270,7 +272,7 @@ function stoy(X, Y, s, k) {
 function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
 
 // ---------- komponering av én skjermflis ----------
-const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, sikt: true, taake: true };
+const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, infra: true, sikt: true, taake: true };
 const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
@@ -461,6 +463,7 @@ function tegn() {
       if (a) { const w = G.T / f; ctx.drawImage(a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); break; }
     }
   }
+  tegnInfra(vx0, vy1);
   tegnEnheter(vx0, vy1);
   tegnHud();
 }
@@ -487,6 +490,202 @@ function tegnHud() {
   document.getElementById('skalaTekst').textContent = mål >= 1000 ? mål / 1000 + ' km' : mål + ' m';
 }
 function visFeil(e) { const f = document.getElementById('feil'); f.style.display = 'block'; f.textContent = 'Kunne ikke hente kartdata: ' + (e && e.message || e); }
+
+// ---------- infrastruktur (fase A): bruer, tunneler, ferjer, kraft, olje og tettsteder for hele Norge ----------
+// Én fil (infra.json, lages av pipeline/fliser/infra.py) med kildens egne id-er, så en spillserver senere kan holde
+// tilstanden (hel/skadet/sprengt) per objekt. Tegnes oppå kartflisene (ikke inn i dem), så en sprengt bru kan vises med en gang,
+// og olje i Nordsjøen vises selv vest for flisnettet.
+let INFRA = null;
+const INFRA_NAVN = { bru: 'Bru', tunnel: 'Tunnel', ferje: 'Ferjesamband', ferjekai: 'Ferjekai', kraft: 'Vannkraftverk', dam: 'Dam', magasin: 'Kraftmagasin',
+  olje: 'Innretning', ror: 'Rørledning', felt: 'Olje- og gassfelt', tettsted: 'Tettsted' };
+async function hentInfra() {
+  if (!INFRA_TAG) return;
+  try {
+    const r = await fetch(`/api/kart/${INFRA_TAG}/manifest.json/0/1048576`); if (!r.ok) return;
+    const f = (await r.json()).filer.infra[0], BIT = 4194304, biter = [];   // mellomstasjonen gir maks 4 MB per svar
+    for (let fra = 0; fra < f.byte; fra += BIT) biter.push(fetch(`/api/kart/${INFRA_TAG}/${f.fil}/${fra}/${Math.min(BIT, f.byte - fra)}`)
+      .then(s => { if (!s.ok) throw new Error('HTTP ' + s.status); return s.arrayBuffer(); }));
+    const deler = await Promise.all(biter), alt = new Uint8Array(f.byte); let p = 0;
+    for (const b of deler) { alt.set(new Uint8Array(b), p); p += b.byteLength; }
+    STAT.byte += f.byte; STAT.req += deler.length + 1;
+    INFRA = lesInfra(JSON.parse(new TextDecoder().decode(alt)));
+    const k = document.getElementById('kilde'); if (!k.textContent.includes('Infrastruktur')) k.textContent += ' · Infrastruktur: NVDB, NVE, Sokkeldirektoratet, SSB';
+    skitten = true;
+  } catch (e) { /* uten infrastruktur går resten som før */ }
+}
+// Hvert objekt: [id, egenskaper ..., deler]; hver del er delta-kodet [x0, y0, dx, dy, ...] i meter (EPSG:25833).
+function lesInfra(d) {
+  const ut = {};
+  for (const [lag, liste] of Object.entries(d.lag)) {
+    const felt = d.felt[lag], ng = felt.length - 1; ut[lag] = [];
+    for (const r of liste) {
+      const e = {}; for (let i = 0; i < ng; i++) e[felt[i]] = r[i];
+      const bb = [Infinity, Infinity, -Infinity, -Infinity];
+      const deler = r[ng].map(q => { const a = new Float64Array(q.length); let x = 0, y = 0;
+        for (let i = 0; i < q.length; i += 2) { x += q[i]; y += q[i + 1]; a[i] = x; a[i + 1] = y;
+          if (x < bb[0]) bb[0] = x; if (x > bb[2]) bb[2] = x; if (y < bb[1]) bb[1] = y; if (y > bb[3]) bb[3] = y; }
+        return a; });
+      if (!ER_NORGE && (bb[2] < OMRÅDE[0] || bb[0] > OMRÅDE[2] || bb[3] < OMRÅDE[1] || bb[1] > OMRÅDE[3])) continue;   // Dovre: bare området
+      const o = { lag, e, deler, bb }; if (lag === 'magasin' || lag === 'felt' || lag === 'tettsted') o.areal = (bb[2] - bb[0]) * (bb[3] - bb[1]);
+      ut[lag].push(o);
+    }
+  }
+  ut.tettsted.sort((a, b) => b.e.folk - a.e.folk);   // store byer får navnet først
+  return ut;
+}
+// Hva som vises ved hvilken målestokk (m = meter per skjermpiksel). De viktigste flaskehalsene synes langt ute.
+const VISES = {
+  felt: () => true, ror: () => true,
+  olje: (o, m) => o.e.type !== 1 || m < 150,
+  tettsted: (o, m) => m < 600 || o.e.folk >= 5000 && m < 2500 || o.e.folk >= 50000,
+  magasin: (o, m) => m < 250 || (o.e.volum_mm3 || 0) >= 100 && m < 1200,
+  dam: (o, m) => m < 60,
+  kraft: (o, m) => m < 250 || (o.e.mw || 0) >= 50 && m < 1500 || (o.e.mw || 0) >= 300,
+  ferje: (o, m) => m < 1500, ferjekai: (o, m) => m < 200,
+  tunnel: (o, m) => m < 60 || (o.e.lengde || 0) >= 2000 && m < 600 || (o.e.lengde || 0) >= 7000,
+  bru: (o, m) => m < 25 || (o.e.lengde || 0) >= 100 && m < 120 || (o.e.lengde || 0) >= 500 && m < 800 || (o.e.lengde || 0) >= 1000,
+};
+const INFRA_REKKE = ['felt', 'tettsted', 'magasin', 'ror', 'ferje', 'tunnel', 'dam', 'bru', 'ferjekai', 'kraft', 'olje'];
+function tegnInfra(vx0, vy1) {
+  if (!INFRA || !VIS.infra) return;
+  const g = ctx, m = kam.m, vx1 = vx0 + VW * m, vy0 = vy1 - VH * m, M = 30 * m;
+  const sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+  const inne = o => o.bb[2] >= vx0 - M && o.bb[0] <= vx1 + M && o.bb[3] >= vy0 - M && o.bb[1] <= vy1 + M;
+  const sti = (o, lukk) => { for (const a of o.deler) { g.moveTo(sx(a[0]), sy(a[1])); for (let i = 2; i < a.length; i += 2) g.lineTo(sx(a[i]), sy(a[i + 1])); if (lukk) g.closePath(); } };
+  const synlige = lag => INFRA[lag].filter(o => inne(o) && VISES[lag](o, m));
+  const etiketter = [];
+  const etikett = (X, Y, tekst, prio, font, farge, dy = 0) => tekst && etiketter.push({ x: sx(X), y: sy(Y) + dy, tekst, prio, font, farge });
+  g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+  // olje- og gassfelt: svake omriss på havbunnen (olje rødbrun, gass gul)
+  for (const o of synlige('felt')) { const gass = /gas/.test(o.e.hydrokarbon || '') && !/oil/.test(o.e.hydrokarbon || '');
+    g.beginPath(); sti(o, true); g.fillStyle = gass ? 'rgba(217,164,65,.07)' : 'rgba(181,80,61,.08)'; g.fill('evenodd');
+    g.strokeStyle = gass ? 'rgba(217,164,65,.45)' : 'rgba(190,95,70,.5)'; g.lineWidth = 1; g.setLineDash([2, 3]); g.stroke(); g.setLineDash([]);
+    if (m < 1500) { const [a, b, c, d] = o.bb; etikett((a + c) / 2, (b + d) / 2, o.e.navn, 3, 'italic 12px "Cormorant Garamond",serif', 'rgba(231,200,160,.8)'); } }
+  // tettsteder: omrisset av tettbebyggelsen
+  for (const o of synlige('tettsted')) {
+    if (m < 600) { g.beginPath(); sti(o, true); g.fillStyle = 'rgba(231,220,195,.05)'; g.fill('evenodd'); g.strokeStyle = 'rgba(231,220,195,.28)'; g.lineWidth = 1; g.stroke(); }
+    const f = o.e.folk, stor = f >= 50000 ? 19 : f >= 10000 ? 16 : f >= 2000 ? 14 : 12.5, [a, b, c, d] = o.bb;
+    if (f >= 50000 || f >= 10000 && m < 1500 || f >= 2000 && m < 300 || m < 80)
+      etikett((a + c) / 2, (b + d) / 2, o.e.navn, f >= 50000 ? 0 : f >= 10000 ? 1 : 4, `${f >= 10000 ? '600 ' : ''}${stor}px "IM Fell English",serif`, '#e7dcc3');
+  }
+  // regulerte magasin (blå flate med stiplet kant) og dammer (tykk lys strek)
+  for (const o of synlige('magasin')) { g.beginPath(); sti(o, true); g.fillStyle = 'rgba(90,130,170,.2)'; g.fill('evenodd');
+    g.strokeStyle = 'rgba(140,180,215,.6)'; g.lineWidth = 1; g.setLineDash([4, 3]); g.stroke(); g.setLineDash([]);
+    if (m < 60 && o.e.navn) { const [a, b, c, d] = o.bb; etikett((a + c) / 2, (b + d) / 2, o.e.navn, 6, 'italic 12px "Cormorant Garamond",serif', 'rgba(170,200,225,.9)'); } }
+  // rørledninger (gass gul, olje rødbrun)
+  for (const o of synlige('ror')) { const gass = /gas/.test(o.e.medium || '');
+    g.beginPath(); sti(o); g.strokeStyle = gass ? 'rgba(217,164,65,.7)' : 'rgba(190,95,70,.75)'; g.lineWidth = m < 200 ? 2 : 1.3; g.stroke(); }
+  // ferjesamband: stiplet sjøveg
+  for (const o of synlige('ferje')) { g.beginPath(); sti(o); g.strokeStyle = 'rgba(20,16,10,.6)'; g.lineWidth = 3.2; g.stroke();
+    g.strokeStyle = '#8fb3d4'; g.lineWidth = 1.6; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]); }
+  // tunneler: stiplet linje gjennom fjellet, portalene som en bue i hver ende
+  for (const o of synlige('tunnel')) {
+    g.beginPath(); sti(o); g.strokeStyle = 'rgba(231,220,195,.75)'; g.lineWidth = 1.6; g.setLineDash([4, 4]); g.stroke(); g.setLineDash([]);
+    if (m < 60) for (const a of o.deler) { const n = a.length; if (n < 4) continue;
+      for (const [i, j] of [[0, 2], [n - 2, n - 4]]) { const px = sx(a[i]), py = sy(a[i + 1]), v = Math.atan2(sy(a[j + 1]) - py, sx(a[j]) - px), r = Math.max(3, Math.min(7, 9 / m));
+        g.strokeStyle = 'rgba(20,16,10,.8)'; g.lineWidth = 3.5; g.beginPath(); g.arc(px, py, r, v + Math.PI / 2, v + 3 * Math.PI / 2); g.stroke();
+        g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.6; g.stroke(); } }
+    if ((o.e.lengde || 0) >= 2000 && m < 300 || m < 15) { const a = o.deler[0], k = (a.length >> 2) << 1; etikett(a[k], a[k + 1], o.e.navn, 5, 'italic 12px "Cormorant Garamond",serif', '#d8cfb8', -8); }
+  }
+  // dammer
+  for (const o of synlige('dam')) { g.beginPath(); sti(o); g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = Math.max(4, 10 / m) + 2; g.stroke();
+    g.strokeStyle = '#cfc6b0'; g.lineWidth = Math.max(4, 10 / m); g.stroke(); }
+  // bruer: lys kjerne med mørk kant og «vinger» i endene, som på et papirkart
+  for (const o of synlige('bru')) {
+    const w = Math.max(2.2, Math.min(9, 8 / m)), farge = ['#efe4cb', '#b8ad94', '#d7c08f'][o.e.type] || '#efe4cb';
+    g.beginPath(); sti(o); g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = w + 2.4; g.stroke(); g.strokeStyle = farge; g.lineWidth = w; g.stroke();
+    if (m < 25) for (const a of o.deler) { const n = a.length; if (n < 4) continue;
+      for (const [i, j] of [[0, 2], [n - 2, n - 4]]) { const px = sx(a[i]), py = sy(a[i + 1]), v = Math.atan2(sy(a[j + 1]) - py, sx(a[j]) - px), q = w / 2 + 2.5;
+        g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = 1.4; g.beginPath();
+        for (const s of [1, -1]) { const ex = px - Math.sin(v) * q * s, ey = py + Math.cos(v) * q * s; g.moveTo(ex, ey); g.lineTo(ex - Math.cos(v - s * .8) * 4, ey - Math.sin(v - s * .8) * 4); }
+        g.stroke(); } }
+    if ((o.e.lengde || 0) >= 500 && m < 120 || m < 6) { const a = o.deler[0], k = (a.length >> 2) << 1; etikett(a[k], a[k + 1], o.e.navn, 5, 'italic 12px "Cormorant Garamond",serif', '#efe4cb', -10); }
+  }
+  // ferjekaier
+  for (const o of synlige('ferjekai')) { const a = o.deler[0], px = sx(a[0]), py = sy(a[1]);
+    g.fillStyle = '#8fb3d4'; g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = 1.2; g.fillRect(px - 3.5, py - 3.5, 7, 7); g.strokeRect(px - 3.5, py - 3.5, 7, 7);
+    if (m < 40) etikett(a[0], a[1], o.e.navn, 7, 'italic 11.5px "Cormorant Garamond",serif', '#a9c6df', -9); }
+  // vannkraftverk: blå sirkel med lyn, størrelse etter ytelse
+  for (const o of synlige('kraft')) { const a = o.deler[0], px = sx(a[0]), py = sy(a[1]), r = Math.max(3.5, Math.min(10, 3 + Math.sqrt(o.e.mw || 0) / 2.5));
+    g.fillStyle = '#26394d'; g.strokeStyle = '#9cc1e0'; g.lineWidth = 1.3; g.beginPath(); g.arc(px, py, r, 0, 6.283); g.fill(); g.stroke();
+    if (r >= 5) { g.strokeStyle = '#f0d79a'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(px + r * .25, py - r * .65); g.lineTo(px - r * .3, py + r * .05); g.lineTo(px + r * .3, py - r * .05); g.lineTo(px - r * .25, py + r * .65); g.stroke(); }
+    if ((o.e.mw || 0) >= 200 && m < 400 || m < 40) etikett(a[0], a[1], o.e.navn, 6, 'italic 12px "Cormorant Garamond",serif', '#b9d3ea', -r - 5); }
+  // olje- og gassinnretninger: plattform (kvadrat med kryss), flytende (rute), havbunn (prikk), på land (stort kvadrat)
+  for (const o of synlige('olje')) { const a = o.deler[0], px = sx(a[0]), py = sy(a[1]), t = o.e.type;
+    g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = 1.2;
+    if (t === 1) { g.fillStyle = '#b07a52'; g.beginPath(); g.arc(px, py, 2.2, 0, 6.283); g.fill(); continue; }
+    const r = t === 3 ? 6.5 : 5; g.fillStyle = t === 3 ? '#4a3a24' : '#2a2318'; g.beginPath();
+    if (t === 2) { g.moveTo(px, py - r - 1); g.lineTo(px + r + 1, py); g.lineTo(px, py + r + 1); g.lineTo(px - r - 1, py); g.closePath(); } else g.rect(px - r, py - r, 2 * r, 2 * r);
+    g.fill(); g.strokeStyle = '#f0d79a'; g.stroke();
+    if (t === 0) { g.beginPath(); g.moveTo(px - r, py - r); g.lineTo(px + r, py + r); g.moveTo(px + r, py - r); g.lineTo(px - r, py + r); g.stroke(); }
+    if (t === 3 || m < 300) etikett(a[0], a[1], o.e.navn, t === 3 ? 2 : 6, 'italic 12px "Cormorant Garamond",serif', '#f0d79a', -r - 5); }
+  // navn til slutt, de viktigste først, uten overlapp
+  etiketter.sort((a, b) => a.prio - b.prio); const tatt = [];
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const e of etiketter) {
+    if (e.x < -50 || e.y < -20 || e.x > VW + 50 || e.y > VH + 20) continue;
+    g.font = e.font; const w = g.measureText(e.tekst).width + 6, h = 16, r = [e.x - w / 2, e.y - h / 2, w, h];
+    if (tatt.some(q => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3])) continue;
+    tatt.push(r); g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(e.tekst, e.x, e.y); g.fillStyle = e.farge; g.fillText(e.tekst, e.x, e.y);
+  }
+  g.restore();
+}
+// Nærmeste synlige objekt under fingeren: punkter og linjer først, så flater (minste først).
+function finnInfra(cx, cy) {
+  if (!INFRA || !VIS.infra) return null;
+  const m = kam.m, X = kam.x + (cx - VW / 2) * m, Y = kam.y - (cy - VH / 2) * m, R = 14 * m;
+  let best = null, bd = R;
+  for (const lag of ['olje', 'kraft', 'ferjekai', 'bru', 'dam', 'tunnel', 'ferje', 'ror']) for (const o of INFRA[lag]) {
+    if (o.bb[2] < X - R || o.bb[0] > X + R || o.bb[3] < Y - R || o.bb[1] > Y + R || !VISES[lag](o, m)) continue;
+    for (const a of o.deler) {
+      if (a.length === 2) { const d = Math.hypot(a[0] - X, a[1] - Y); if (d < bd) { bd = d; best = o; } continue; }
+      for (let i = 2; i < a.length; i += 2) { const ax = a[i - 2], ay = a[i - 1], vx = a[i] - ax, vy = a[i + 1] - ay, l2 = vx * vx + vy * vy || 1,
+        t = Math.max(0, Math.min(1, ((X - ax) * vx + (Y - ay) * vy) / l2)), d = Math.hypot(ax + vx * t - X, ay + vy * t - Y) + (lag === 'ror' || lag === 'ferje' ? R * .3 : 0);
+        if (d < bd) { bd = d; best = o; } }
+    }
+  }
+  if (best) return best;
+  const inni = (a) => { let inn = false; for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) { const xi = a[i], yi = a[i + 1], xj = a[j], yj = a[j + 1];
+    if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  for (const lag of ['magasin', 'tettsted', 'felt']) for (const o of INFRA[lag]) {
+    if (o.bb[2] < X || o.bb[0] > X || o.bb[3] < Y || o.bb[1] > Y || !VISES[lag](o, m)) continue;
+    if (o.deler.filter(inni).length % 2 && (!best || o.areal < best.areal)) best = o;
+  }
+  return best;
+}
+const ENGELSK = { 'in service': 'i drift', installation: 'under installasjon', fabrication: 'under bygging', future: 'planlagt', 'shut down': 'stengt', 'not in use': 'ikke i bruk',
+  'producing': 'i produksjon', 'approved for production': 'godkjent for produksjon', 'decided for production': 'vedtatt utbygd', oil: 'olje', gas: 'gass', condensate: 'kondensat',
+  drilling: 'boring', processing: 'prosessering', quarter: 'boliger', production: 'produksjon', injection: 'injeksjon', storage: 'lager', 'water injection': 'vanninjeksjon',
+  'gas injection': 'gassinjeksjon', 'oil/gas': 'olje/gass', 'gas/condensate': 'gass/kondensat', 'oil/gas/condensate': 'olje/gass/kondensat' };
+const norsk = t => t == null ? null : String(t).toLowerCase().split(/\s*-\s*/).map(s => ENGELSK[s] || s).join(', ');
+function visInfo(o) {
+  const e = o.e, P = document.getElementById('panel'), m = v => v == null ? null : nf.format(v);
+  const tittel = e.navn || (INFRA_NAVN[o.lag] + ' uten navn');
+  const sub = {
+    bru: [['Vegbru', 'Gang- og sykkelbru', 'Jernbanebru'][e.type], e.lengde && m(e.lengde) + ' m lang', e.aar && 'bygget ' + e.aar],
+    tunnel: ['Tunnel', e.lengde && m(e.lengde) + ' m', e.aar && 'åpnet ' + e.aar, e.undersjoisk ? 'undersjøisk' : null],
+    ferje: ['Ferjesamband'], ferjekai: ['Ferjekai'],
+    kraft: ['Vannkraftverk', e.mw != null && m(e.mw) + ' MW', e.aar && 'i drift fra ' + e.aar],
+    dam: ['Dam', e.aar && 'bygget ' + e.aar],
+    magasin: ['Regulert magasin', e.hrv != null && 'HRV ' + m(e.hrv) + ' moh.', e.lrv != null && 'LRV ' + m(e.lrv) + ' moh.', e.volum_mm3 && m(e.volum_mm3) + ' mill. m³'],
+    olje: [['Plattform', 'Havbunnsinnretning', 'Flytende innretning', 'Anlegg på land'][e.type], e.felt && 'felt: ' + e.felt.toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase()), norsk(e.fase), norsk(e.funksjon)],
+    ror: ['Rørledning', norsk(e.medium), e.tommer && m(e.tommer) + '″', e.fra || e.til ? (e.fra || '?') + ' → ' + (e.til || '?') : null],
+    felt: ['Olje- og gassfelt', norsk(e.hydrokarbon), norsk(e.status), e.funnet && 'funnet ' + e.funnet],
+    tettsted: ['Tettsted', m(e.folk) + ' innbyggere (1.1.2023)'],
+  }[o.lag].filter(Boolean).join(' · ');
+  const hint = {
+    bru: 'Flaskehals: en sprengt bru kutter vegen til ingeniørene har reparert den.', tunnel: 'Portalene kan sperres eller sprenges.',
+    ferje: 'Sjøveg for kjøretøy. Den som holder ferjekaiene, styrer kysten.', ferjekai: 'Den som holder kaien, styrer sambandet.',
+    kraft: 'Gir strøm til byene rundt. Uten strøm går produksjonen ned.', dam: 'En sprengt dam oversvømmer dalen nedenfor.',
+    magasin: 'Vann bak dammen – kraften til verkene nedenfor.', olje: 'Olje er pengene i spillet: den må fraktes fra terminal til base.',
+    ror: 'Røret fører olje eller gass til land.', felt: 'Oljen og gassen her er pengene i spillet.', tettsted: 'En garnison her gjør tettstedet ditt: rekruttering, reparasjon og produksjon.',
+  }[o.lag];
+  document.getElementById('pnavn').textContent = tittel; document.getElementById('psub').textContent = sub;
+  document.getElementById('handl').innerHTML = ''; document.getElementById('menn').innerHTML = '';
+  document.getElementById('hint').textContent = hint + ' (Kilde: ' + (INFRA_KILDE[o.lag] || '') + ', id ' + e.id + '.)';
+  P.classList.add('på');
+}
+const INFRA_KILDE = { bru: 'NVDB', tunnel: 'NVDB', ferje: 'NVDB', ferjekai: 'NVDB', kraft: 'NVE', dam: 'NVE', magasin: 'NVE', olje: 'Sokkeldirektoratet', ror: 'Sokkeldirektoratet', felt: 'Sokkeldirektoratet', tettsted: 'SSB' };
 
 // ---------- spillet: vinduer av fliser for reglene i terreng.js ----------
 // Reglene (marsj, sikt) regner på et rutenett med 32 m ruter (z9) som bygges av flisene rundt laget.
@@ -699,6 +898,7 @@ function trykkPå(cx, cy) {
   let best = null, bd = 28;
   for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
   valgt = best; modus = null; visPanel(); skitten = true;
+  const o = !best && finnInfra(cx, cy); if (o) visInfo(o);
 }
 
 // ---------- panel og logg ----------
@@ -943,11 +1143,11 @@ document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = 
 document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(OMRÅDE); };
 document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
-const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', sikt: 'Siktfelt', taake: 'Tåke' };
+const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
 for (const n of Object.keys(NAVN)) {
   const b = document.createElement('button'); b.textContent = NAVN[n]; b.setAttribute('aria-pressed', 'true');
-  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); if (n !== 'sikt' && n !== 'taake') FERDIG.clear(); skitten = true; };
+  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); if (n !== 'sikt' && n !== 'taake' && n !== 'infra') FERDIG.clear(); skitten = true; };
   lk.appendChild(b);
 }
 document.getElementById('meny').onclick = function () { const på = lk.classList.toggle('på'); this.setAttribute('aria-expanded', String(på)); this.classList.toggle('på', på); };

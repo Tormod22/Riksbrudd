@@ -60,7 +60,7 @@ WarFront viser hver lastebil, hver bro og hver eksplosjon. Hos oss, i stil 1:
 ## Faser (forslag)
 | Fase | Innhold |
 |---|---|
-| A | **Infrastruktur-laget**: bruer, tunneler, ferjer, kraftverk, olje, tettsteder for hele Norge, tegnet i kartet |
+| A | **Infrastruktur-laget**: bruer, tunneler, ferjer, kraftverk, olje, tettsteder for hele Norge, tegnet i kartet – **gjort 8. nov** (se under) |
 | B | **Vegnett som graf** + lastebiler som kjører langs vegene (også ferjer), synlige på kartet |
 | C | **Olje-økonomi**: felt → terminal → lastebil → base; forsyning til enhetene |
 | D | **Ødeleggelse og ingeniører**: sprenge/reparere bruer, tunneler, veger, demninger (flom fra høydemodellen) |
@@ -73,3 +73,12 @@ WarFront viser hver lastebil, hver bro og hver eksplosjon. Hos oss, i stil 1:
 1. Stil: beholde stil 1 (mørkt, realistisk) med mer detalj – eller gå mot WarFronts pikselstil?
 2. Atomvåpen og massevåpen: med eller ikke?
 3. Kampanje først eller fritt spill på hele kartet først?
+
+## Fase A – gjort 8. nov 2026
+- `pipeline/fliser/infra.py` -> `infra.json` (én fil, ca. 4 MB / 1,5 MB pakket), release `kart-infra-2023-<hash>` (Actions -> «Bygg infrastruktur»).
+- Innhold 2023: ca. 14 800 bruer (veg, gang/sykkel, jernbane; ikke kulverter), 1 500 tunnelløp (endene = portaler), 137 ferjesamband,
+  342 ferjekaier, 1 890 vannkraftverk, 3 260 dammer, 1 500 magasin, 780 olje-/gassinnretninger (plattformer, havbunn, flytende,
+  terminaler som Mongstad, Kårstø, Sture, Kollsnes), 69 rørledninger, 141 felt, 990 tettsteder med folketall.
+- Hvert objekt har kildens egen id (NVDB, NVE, Sodir npdid, SSB tettstedsnr.): grunnlaget for tilstand (hel/skadet/sprengt) i fase D.
+- Visningen tegner laget oppå kartet, viktigst først når man zoomer ut (lange bruer og tunneler, store kraftverk, byer); trykk gir info.
+- Ikke gjort ennå: lag i 3D, Svalbard, jernbane (Bane NOR-data) og bru-/tunneltilstand.

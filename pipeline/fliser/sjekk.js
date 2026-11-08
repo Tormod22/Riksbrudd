@@ -9,6 +9,13 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
   ['fjell 8 m', 215000, 6915000, 6, 950, 1150],
   ['Snøhetta', 203188, 6922980, 8, 2200, 2290],
 ];
+const fs = require('fs');
+// Infrastrukturen (INFRA_TAG i index.html) hentes fra GitHub-releasen én gang til en lokal mappe (eller INFRA_DIR).
+const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/index.html'), 'utf8').match(/const INFRA_TAG = '([^']*)';/);
+  if (!m || !m[1]) return null; const dir = process.env.INFRA_DIR || path.join(require('os').tmpdir(), m[1]);
+  for (const f of ['manifest.json', 'infra.json']) if (!fs.existsSync(path.join(dir, f))) { fs.mkdirSync(dir, { recursive: true });
+    require('child_process').execFileSync('curl', ['-fsSL', '-o', path.join(dir, f), `https://github.com/Tormod22/Riksbrudd/releases/download/${m[1]}/${f}`]); }
+  return { tag: m[1], dir }; })();
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
   { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
@@ -25,6 +32,9 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
     const kt = await b.newContext({ viewport: { width: w, height: h } });
     if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke støttet')); });
     await kt.route(/^https?:\/\/(?!localhost)/, r => r.abort());   // ingen andre nettsider: spillet skal virke selv om en CDN er blokkert (brukeren fikk svart side 8. nov)
+    if (INFRA) await kt.route(new RegExp('/api/kart/' + INFRA.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
+      const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/), b = fs.readFileSync(path.join(INFRA.dir, fil));
+      r.fulfill({ status: 200, contentType: fil.endsWith('.json') ? 'application/json' : 'application/octet-stream', body: b.subarray(+fra, +fra + +len) }); });
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
@@ -56,8 +66,21 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
     const settNå = await pg.evaluate(() => synlig(ENHETER[3]));
     await pg.evaluate(() => { for (let i = 0; i < 12 * 60 * 10; i++) sim(.1); });   // 12 spilltimer
     const k = await pg.evaluate(() => ENHETER.map(s => Terreng.uteAvKamp(s.menn)));
-    const kampOk = tåke && settNå && k[3] >= 6;   // 6 = Terreng.UTE_AV_KAMP if (!kampOk) feil++;
+    const kampOk = tåke && settNå && k[3] >= 6; if (!kampOk) feil++;   // 6 = Terreng.UTE_AV_KAMP
     console.log(`${kampOk ? 'ok  ' : 'FEIL'} ${navn} tåke og kamp: skjult på avstand ${tåke ? 'ja' : 'NEI'}, sett på 400 m ${settNå ? 'ja' : 'NEI'}, ute av kamp: ${k.join('/')} (patruljen sist)`);
+    if (INFRA) { // infrastruktur (fase A): lastes, tegnes og kan trykkes på
+      await pg.waitForFunction(() => INFRA, null, { timeout: 30000 }); await pg.evaluate(() => { window.kamFør = { ...kam }; });
+      const n = await pg.evaluate(() => Object.fromEntries(Object.entries(INFRA).map(([k, v]) => [k, v.length])));
+      const dom = await pg.evaluate(() => { const t = INFRA.tettsted.find(o => o.e.navn === 'Dombås'); if (!t) return null;
+        kam.x = (t.bb[0] + t.bb[2]) / 2; kam.y = (t.bb[1] + t.bb[3]) / 2; kam.m = 20; skitten = true; tegn(); trykkPå(VW / 2, VH / 2);
+        return { folk: t.e.folk, panel: document.getElementById('pnavn').textContent }; });
+      const bru = await pg.evaluate(() => { const b = INFRA.bru.filter(o => o.deler[0].length >= 4).sort((a, c) => (c.e.lengde || 0) - (a.e.lengde || 0))[0]; const a = b.deler[0];
+        kam.x = (a[0] + a[2]) / 2; kam.y = (a[1] + a[3]) / 2; kam.m = 2; skitten = true; tegn(); trykkPå(VW / 2, VH / 2); return [b.e.navn, b.e.lengde, document.getElementById('pnavn').textContent]; });
+      const iok = n.bru > 20 && n.kraft > 0 && n.dam > 0 &&   // Dovre-utsnittet har ingen vegtunneler
+         dom && dom.folk > 500 && dom.panel === 'Dombås' && (bru[0] || 'Bru uten navn') === bru[2]; if (!iok) feil++;
+      console.log(`${iok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur: ${JSON.stringify(n)}; Dombås ${dom && dom.folk} innb. (panel «${dom && dom.panel}»), lengste bru «${bru[0]}» ${bru[1]} m (panel «${bru[2]}»)`);
+      await pg.evaluate(() => { valgt = null; visPanel(); Object.assign(kam, window.kamFør); skitten = true; });   // tilbake til Snøhetta for 3D-testen
+    }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N }));
