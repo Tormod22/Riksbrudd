@@ -289,6 +289,7 @@ const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
 // Hav og vann: dempet blått (stil 1), også bak kartet der det ikke finnes fliser.
 const HAV = [44, 74, 102], HAV_CSS = `rgb(${HAV})`;
+const OMLAND_LYS = .8;   // omlandet (WorldCover uten satellittbildets lysstyrke) er ca. 20 % lysere enn Norge-kartet: målt 8. nov
 // Norge-kartets vekt (0–1): 1 inne i Norge-blokkene, tones ned mot 0 de siste TONING meterne før en blokk uten Norge-data.
 const TONING = 12000;
 function vekt(X, Y) {
@@ -329,7 +330,7 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
   const VK = vektRutenett(minx, maxy, span(z)), hel = VK.every(v => v >= 1);   // hvor mye av Norge-kartet som skal med (1 = bare det)
   const [ok, oh] = NORGE_BLOKKER && !hel ? await Promise.all([beste('okart', z, x, y, 8, 0), beste('ohoyde', z, x, y, 8, 0)]) : [null, null];
   g.fillStyle = HAV_CSS; g.fillRect(0, 0, T, T);
-  let od = null;   // omlandets farge under Norge-kartet
+  let od = null, vann = null;   // omlandets farge under Norge-kartet; hvor mye av hvert punkt som er vann
   if (ok) { const sw = T / ok.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T);
     od = g.getImageData(0, 0, T, T).data; if (!k) { g.fillStyle = HAV_CSS; g.fillRect(0, 0, T, T); g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T); } }
   if (k && k.f <= 2) { const sw = T / k.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(k.t.bm, k.ix * sw, k.iy * sw, sw, sw, 0, 0, T, T); }
@@ -345,17 +346,18 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
     g.putImageData(im, 0, 0);
   }
   { // Norge-kartet tones over i omlandet mot kanten av blokkene, og vann og hav blir blått
-    const im = g.getImageData(0, 0, T, T), d = im.data, M = VK.n - 1, q = M / T;
+    const im = g.getImageData(0, 0, T, T), d = im.data, M = VK.n - 1, q = M / T; vann = new Float32Array(T * T);
     for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
       const o = (py * T + px) * 4; let r = d[o], gg = d[o + 1], b = d[o + 2];
       if (od) { let w = 1;
         if (!hel) { const fx = (px + .5) * q, fy = (py + .5) * q, i = Math.min(M - 1, fx | 0), j = Math.min(M - 1, fy | 0), a = fx - i, c = fy - j, n = VK.n;
           w = (VK[j * n + i] * (1 - a) + VK[j * n + i + 1] * a) * (1 - c) + (VK[(j + 1) * n + i] * (1 - a) + VK[(j + 1) * n + i + 1] * a) * c; }
         if (!k || r + gg + b < 75 && b - r < 8) w = 0;   // Norge-kartet mangler her (utenfor blokkene eller uten satellittdata)
-        r = r * w + od[o] * (1 - w); gg = gg * w + od[o + 1] * (1 - w); b = b * w + od[o + 2] * (1 - w); }
+        const L = Math.abs(od[o] - 22) + Math.abs(od[o + 1] - 30) + Math.abs(od[o + 2] - 38) < 16 ? 1 : OMLAND_LYS;   // vann dempes ikke
+        r = r * w + od[o] * L * (1 - w); gg = gg * w + od[o + 1] * L * (1 - w); b = b * w + od[o + 2] * L * (1 - w); }
       else if (r + gg + b < 75 && b - r < 8) { r = HAV[0]; gg = HAV[1]; b = HAV[2]; }   // ingen data og intet omland: hav
       const v = Math.max(0, Math.min(1, (40 - Math.abs(r - 22) - Math.abs(gg - 30) - Math.abs(b - 38)) / 24));   // vannfargen i kartflisene
-      d[o] = r + (HAV[0] - r) * v; d[o + 1] = gg + (HAV[1] - gg) * v; d[o + 2] = b + (HAV[2] - b) * v;
+      d[o] = r + (HAV[0] - r) * v; d[o + 1] = gg + (HAV[1] - gg) * v; d[o + 2] = b + (HAV[2] - b) * v; vann[py * T + px] = v;
     }
     g.putImageData(im, 0, 0);
   }
@@ -379,7 +381,8 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
       for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
         const i = (py + 1) * N + px + 1, gx = GX[i] * ve, gy = GY[i] * ve;
         if (gx !== gx || gy !== gy) continue;
-        const n = Math.hypot(gx, gy, 1), s = Math.max(0, (-gx * Lx + gy * Ly + Lz) / n) / Lz, f = .3 + .7 * Math.min(1.35, s), o = (py * T + px) * 4;
+        const n = Math.hypot(gx, gy, 1), s = Math.max(0, (-gx * Lx + gy * Ly + Lz) / n) / Lz, o = (py * T + px) * 4, wv = vann[py * T + px];
+        const f = (.3 + .7 * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
         d[o] = Math.min(255, d[o] * f); d[o + 1] = Math.min(255, d[o + 1] * f); d[o + 2] = Math.min(255, d[o + 2] * f);
       }
       g.putImageData(im, 0, 0);
