@@ -16,6 +16,7 @@ Kjapp start:
   (leser site/norge og site/dovre; en annen HTML-fil kan gis som argument).
 
 Kartdata for hele Norge: les docs/komprimering.md (fliser i nivåer + PMTiles, format per lag, detaljer fra frø).
+PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, åpne beslutninger). Følg den; fase 0 venter på brukeren.
 - pipeline/fliser/ bygger Dovre-piloten (site/dovre-fliser): 01_hent.py (Kartverket DTM via WCS, Landsat) -> arbeid/ (ikke i git),
   02_fliser.py -> site/dovre-fliser/data/*.pmtiles. Flisnettet (EPSG:25833, hele Norge) står i felles.py og må være likt i visningen.
   03_veg_bygg.py henter veger (NVDB, srid 5973) og bygg (matrikkelen) for hele området til data/fliser/ (i git).
