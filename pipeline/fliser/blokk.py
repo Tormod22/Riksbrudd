@@ -33,12 +33,17 @@ T0 = time.time()
 def logg(*a): print(f'[{time.time() - T0:6.0f} s]', *a, flush=True)
 
 
-def hent(url, data=None, headers={}, forsok=5):
+def hent(url, data=None, headers={}, forsok=8):
+    """Henter med nye forsøk. 429 (for mange forespørsler) og nettbrudd hendte med 20 blokker samtidig 8. nov:
+    vent da lenger (Retry-After om kilden oppgir det), opptil ca. 4 min til sammen."""
     for k in range(forsok):
         try: return urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers), timeout=300).read()
         except Exception as e:
             if k == forsok - 1: raise
-            logg('prøver igjen:', str(e)[:120]); time.sleep(2 * (k + 1))
+            vent = 3 * 2 ** k if k < 6 else 60
+            ra = getattr(e, 'headers', None) and e.headers.get('Retry-After')
+            if ra and ra.isdigit(): vent = max(vent, min(120, int(ra)))
+            logg('prøver igjen om', vent, 's:', str(e)[:120]); time.sleep(vent)
 
 
 # ---------- høyde ----------
