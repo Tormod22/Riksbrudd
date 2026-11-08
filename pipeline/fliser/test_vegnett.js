@@ -47,6 +47,38 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/sp
 assert.equal(typeof kontekst.Vegnett.les, 'function');
 console.log('ok – ruter, omkjøring, ingen veg, gjenåpning, enveiskjøring, planskilt kryss, ferje, binærformat og DOM-fri modul');
 
+// Uavhengig referanse: Dijkstra på fixture, inkludert tilfeldige sperringer.
+function referanse(graf, start, slutt) {
+  const dist = Array(graf.antallNoder).fill(Infinity), ferdig = new Set(); dist[start] = 0;
+  while (ferdig.size < dist.length) {
+    let n = -1;
+    for (let i = 0; i < dist.length; i++) if (!ferdig.has(i) && (n < 0 || dist[i] < dist[n])) n = i;
+    if (n < 0 || !Number.isFinite(dist[n])) return null;
+    if (n === slutt) return dist[n];
+    ferdig.add(n);
+    for (let e = 0; e < 9; e++) {
+      const l = graf.lenke(e);
+      if (l.sperret || (e === 3 && l.fra !== n)) continue;
+      const v = l.fra === n ? l.til : l.til === n ? l.fra : -1;
+      if (v < 0) continue;
+      const pris = l.lengde / ((l.ferje ? 25 : l.fartsgrense || 80) / 3.6) + (l.ferje && [4, 6].includes(n) ? 900 : 0);
+      dist[v] = Math.min(dist[v], dist[n] + pris);
+    }
+  }
+  return null;
+}
+for (let mask = 0; mask < 16; mask++) {
+  for (let e = 0; e < 4; e++) mask & (1 << e) ? g.sperr(e) : g.åpne(e);
+  for (let start = 0; start < 10; start++) for (let slutt = 0; slutt < 10; slutt++) {
+    const fasit = referanse(g, start, slutt), r = g.rute(start, slutt);
+    if (fasit === null) assert.equal(r, null);
+    else assert(Math.abs(r.sekunder - fasit) < 1e-7, `A* og Dijkstra er uenige: ${mask}/${start}/${slutt}`);
+  }
+}
+for (let e = 0; e < 4; e++) g.åpne(e);
+console.log('ok – 1600 rutesøk samsvarer med uavhengig Dijkstra-referanse');
+
+
 async function sjekk() {
   await assert.rejects(last('test', async () => ({ ok: false, status: 404 })), /404/);
   const lastet = await last('test', async () => ({ ok: true, arrayBuffer: async () => data }));

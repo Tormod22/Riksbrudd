@@ -42,7 +42,10 @@ def sider(sti, param, buffer):
                         raw = svar.read()
                     d = json.loads(raw)
                     if 'objekter' not in d: raise ValueError('NVDB svarte uten objekter')
-                    fil.write_bytes(gzip.compress(raw, mtime=0))
+                    with tempfile.NamedTemporaryFile(dir=buffer, delete=False) as tmp:
+                        tmp.write(gzip.compress(raw, mtime=0))
+                        tmpnavn = tmp.name
+                    Path(tmpnavn).replace(fil)
                     break
                 except Exception:
                     if forsok == 4: raise
@@ -187,7 +190,9 @@ def main():
     q = {'tidspunkt': dato, 'antall': 10000, 'srid': 5973}
 
     def objekter(typ):
-        return typ, indekser(sider(f'/vegobjekter/api/v4/vegobjekter/{typ}', dict(q, inkluder='lokasjon,egenskaper'), args.buffer), typ)
+        oq = dict(q, inkluder='lokasjon,egenskaper')
+        if args.veg: oq['vegsystemreferanse'] = args.veg
+        return typ, indekser(sider(f'/vegobjekter/api/v4/vegobjekter/{typ}', oq, args.buffer), typ)
 
     with ThreadPoolExecutor(max_workers=4) as ex:
         indeks = dict(ex.map(objekter, (60, 67, 770, 105)))
