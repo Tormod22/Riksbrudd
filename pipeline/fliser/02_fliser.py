@@ -6,7 +6,7 @@ Lag (én .pmtiles per lag, alle i flisnettet i felles.py):
             z6–z11 fra 8 m-modellen for hele området, z12–z13 fra 2 m-modellen rundt Dombås.
   terreng – arealklasse per 32 m (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 255 ingen data), tapsfri WebP (R-kanalen).
   kart    – stil 1-fargelagt bakke uten skygge (klientene legger på skygge fra høyden), AVIF. z5–z9.
-  vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S) z8–z13 og «bygg» (t = bygningstype) z11–z13.
+  vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S, alle fra z10) z8–z13 og «bygg» (t = bygningstype) z11–z13.
 Klienten bruker nærmeste forelderflis når en flis mangler («overzoom»).
 Bruk: python3 02_fliser.py   -> site/dovre-fliser/data/*.pmtiles + manifest.json
 """
@@ -166,7 +166,7 @@ def lag_vektor():
     bx, by = tr.transform([b[0] for b in bygg], [b[1] for b in bygg])
     punkt = [Point(x, y) for x, y in zip(bx, by)]
     tl, tp = STRtree(linjer), STRtree(punkt)
-    VIS = {8: 'ERF', 9: 'ERFK', 10: 'ERFK'}
+    VIS = {8: 'ERF', 9: 'ERFK'}  # fra z10 er alle veger med (marsjrutene trenger småvegene; visningen skjuler dem til z11)
     ut = []
     for z in range(8, 14):
         s = span(z); buf = s * 8 / TILE

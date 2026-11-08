@@ -18,4 +18,6 @@ Kjapp start:
 Kartdata for hele Norge: les docs/komprimering.md (fliser i nivåer + PMTiles, format per lag, detaljer fra frø).
 - pipeline/fliser/ bygger Dovre-piloten (site/dovre-fliser): 01_hent.py (Kartverket DTM via WCS, Landsat) -> arbeid/ (ikke i git),
   02_fliser.py -> site/dovre-fliser/data/*.pmtiles. Flisnettet (EPSG:25833, hele Norge) står i felles.py og må være likt i visningen.
-  Sjekk før publisering: `node pipeline/fliser/sjekk.js` (starter testserver med Range, sjekker høyder og feil).
+  Spillreglene (fart, marsjrute A*, siktvidde, siktfelt) ligger i site/dovre-fliser/terreng.js uten DOM og regner på et vindu
+  i 32 m-ruter (z9) som visningen bygger av flisene rundt laget (lagVindu). Test: `node pipeline/fliser/test_terreng.js`.
+  Sjekk før publisering: `node pipeline/fliser/sjekk.js` (testserver med Range; høyder, sikt, marsj, feil i nettleseren).

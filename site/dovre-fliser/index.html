@@ -32,9 +32,22 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 #skala div{ height:5px; border:1px solid var(--ink); border-top:0; }
 #skala span{ font-size:13px; color:var(--ink); text-shadow:0 1px 2px #000; }
 #kilde{ position:fixed; left:12px; right:64px; bottom:calc(8px + env(safe-area-inset-bottom,0px)); font-size:12.5px; color:var(--ink-dim); font-style:italic; text-shadow:0 1px 2px #000; pointer-events:none; }
-#info{ position:fixed; right:10px; top:calc(62px + env(safe-area-inset-top,0px)); width:240px; font-size:13.5px; color:var(--ink-dim); text-shadow:0 1px 2px #000; pointer-events:none; line-height:1.35; }
+.knapper button.på{ background:var(--rule); }
+#logg{ position:fixed; right:10px; top:calc(var(--topp,58px) + 6px); width:250px; font-size:13.5px; color:var(--ink-dim); text-shadow:0 1px 2px #000; pointer-events:none; line-height:1.35; }
+#lagmeny{ position:fixed; right:10px; top:calc(var(--topp,58px) + 6px); background:var(--panel); border:1px solid var(--rule); padding:8px; display:none; flex-direction:column; gap:4px; z-index:5; }
+#lagmeny.på{ display:flex; }
+#lagmeny button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; height:38px; padding:0 14px; text-align:left; min-width:150px; }
+#lagmeny button.av{ color:var(--ink-dim); text-decoration:line-through; }
+#panel{ position:fixed; left:10px; right:66px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); max-width:420px; max-height:46vh; overflow:auto; background:var(--panel); border:1px solid var(--rule); padding:12px 14px; display:none; z-index:4; }
+#panel.på{ display:block; }
+#panel h2{ font-family:"IM Fell English",serif; font-weight:400; font-size:22px; margin:0; } #panel .sub{ color:var(--ink-dim); margin:1px 0 8px; }
+.handl{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; } .handl button{ background:#3a3024; border:1px solid var(--rule); color:var(--ink); padding:8px 12px; cursor:pointer; } .handl button.på{ background:#3b5878; }
+.menn{ display:grid; grid-template-columns:1fr 1fr; gap:3px 10px; font-size:14px; } .menn button{ all:unset; cursor:pointer; padding:2px 4px; border:1px solid transparent; } .menn button.leder{ border-color:var(--hover); color:var(--hover); } .menn span{ color:var(--ink-dim); font-size:12px; display:block; }
+.menn button:focus-visible{ outline:2px solid var(--hover); }
+#panel .hint{ color:var(--hover); font-style:italic; margin-top:6px; }
+#panel .lukk{ position:absolute; right:4px; top:2px; background:none; border:0; color:var(--ink-dim); font-size:22px; cursor:pointer; width:40px; height:40px; }
 #feil{ position:fixed; left:50%; top:40%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--rule); padding:14px 18px; display:none; max-width:320px; }
-@media (max-width:600px){ .stats{ gap:2px 10px; padding:6px 9px; } .stats b{ font-size:16px; } #info{ display:none; } }
+@media (max-width:600px){ .stats{ gap:2px 10px; padding:6px 9px; } .stats b{ font-size:16px; } #logg{ width:160px; font-size:12.5px; } .menn{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -42,13 +55,15 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div class="papir"></div>
 <div class="top">
   <div class="stats">
-    <div><b id="sZ">–</b> <span id="sRes">m/px</span></div>
+    <div><b id="sDag">1 · 06:00</b> <span>dag</span></div>
     <div><b id="sH">–</b> <span>moh.</span></div>
     <div><b id="sKB">0</b> <span id="sReq">lastet</span></div>
   </div>
-  <div class="knapper" id="lagknapper"></div>
+  <div class="knapper"><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button></div>
 </div>
-<div id="info">Dovre i fliser: kartet hentes bit for bit, bare det som er på skjermen. Høyde fra Kartverket (8 m, og 2 m rundt Dombås). Trær lages fra frø og arealklasse – de lagres ikke.</div>
+<div id="lagmeny"></div>
+<div id="logg" aria-live="polite"></div>
+<div id="panel" role="dialog" aria-label="Valgt lag"><button class="lukk" id="lukk" aria-label="Lukk">×</button><h2 id="pnavn"></h2><div class="sub" id="psub"></div><div class="handl" id="handl"></div><div class="menn" id="menn"></div><div class="hint" id="hint"></div></div>
 <div class="ctl">
   <button id="zi" aria-label="Zoom inn">+</button><button id="zo" aria-label="Zoom ut">−</button>
   <button id="dombas" aria-label="Dombås, 2 m høyde" title="Dombås (2 m høyde)">◎</button><button id="hele" aria-label="Hele området">⌂</button>
@@ -57,6 +72,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
 <div id="feil"></div>
 <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+<script src="/dovre-fliser/terreng.js"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
@@ -186,7 +202,7 @@ function stoy(X, Y, s, k) {
 function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
 
 // ---------- komponering av én skjermflis ----------
-const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true };
+const VIS = { skygge: true, koter: true, traer: true, veg: true, bygg: true, sikt: true };
 const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 
@@ -240,6 +256,7 @@ async function komponer(z, x, y) {
     if (VIS.veg) {
       g.lineCap = g.lineJoin = 'round';
       for (const pass of [0, 1]) for (const kat of VEGREKKE) {
+        if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
         const [m, min, farge] = VEG[kat], w = Math.max(min, m / r);
         g.strokeStyle = pass ? farge : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2, w * .45);
         g.beginPath(); for (const o of veger) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); }
@@ -329,7 +346,8 @@ let dpr = 1, VW = 0, VH = 0;
 const kam = { x: 0, y: 0, m: 30 }; // sentrum (m), meter per CSS-piksel
 const FERDIG = new Map(), VENTER = new Set(); let aktive = 0, skitten = true;
 function niva() { return Math.max(ZMIN, Math.min(ZMAX, Math.round(Math.log2(G.res0 / (kam.m / dpr))))); }
-function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.clientWidth; VH = cv.clientHeight; cv.width = VW * dpr; cv.height = VH * dpr; skitten = true; }
+function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.clientWidth; VH = cv.clientHeight; cv.width = VW * dpr; cv.height = VH * dpr; skitten = true;
+  document.documentElement.style.setProperty('--topp', document.querySelector('.top').getBoundingClientRect().bottom + 'px'); }
 function passInn(b) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * 1.05; skitten = true; }
 function kø(z, x, y, k) {
   if (VENTER.has(k) || aktive >= 6) return;
@@ -359,6 +377,7 @@ function tegn() {
       if (a) { const w = G.T / f; ctx.drawImage(a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); break; }
     }
   }
+  tegnEnheter(vx0, vy1);
   tegnHud();
 }
 
@@ -373,8 +392,7 @@ function hoydeVed(X, Y) {
 const nf = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 1 });
 function tegnHud() {
   const z = niva(), r = kam.m;
-  document.getElementById('sZ').textContent = r < 10 ? nf.format(r) : Math.round(r);
-  document.getElementById('sRes').textContent = 'm per punkt · z' + z;
+  document.getElementById('sDag').textContent = klokke();
   document.getElementById('sKB').textContent = STAT.byte > 1e6 ? nf.format(STAT.byte / 1048576) + ' MB' : Math.round(STAT.byte / 1024) + ' KB';
   document.getElementById('sReq').textContent = 'lastet (' + STAT.req + ' henting' + (STAT.req === 1 ? '' : 'er') + ')';
   const h = peker ? hoydeVed(peker[0], peker[1]) : hoydeVed(kam.x, kam.y);
@@ -385,6 +403,170 @@ function tegnHud() {
 }
 function visFeil(e) { const f = document.getElementById('feil'); f.style.display = 'block'; f.textContent = 'Kunne ikke hente kartdata: ' + (e && e.message || e); }
 
+// ---------- spillet: vinduer av fliser for reglene i terreng.js ----------
+// Reglene (marsj, sikt) regner på et rutenett med 32 m ruter (z9) som bygges av flisene rundt laget.
+// Ingen laster hele kartet: et vindu henter bare høyde-, terreng- og vegflisene det dekker.
+const ZV = 9;
+function flisområde(b, z) { const s = span(z); return [Math.floor((b[0] - G.x0) / s), Math.floor((G.y0 - b[3]) / s), Math.floor((b[2] - G.x0) / s), Math.floor((G.y0 - b[1]) / s)]; }
+async function lagVindu(b, medVeg) {
+  b = [Math.max(b[0], DOVRE[0]), Math.max(b[1], DOVRE[1]), Math.min(b[2], DOVRE[2] - 1), Math.min(b[3], DOVRE[3] - 1)];
+  const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
+  const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), hentFlis('terreng', ZV, x, y)]).then(([h, t]) => {
+    const ox = (x - x0) * T, oy = (y - y0) * T;
+    for (let j = 0; j < T; j++) for (let i = 0; i < T; i++) { const k = (oy + j) * v.w + ox + i;
+      if (h) v.H[k] = h.a[(j + 1) * h.w + i + 1]; if (t) v.K[k] = t.a[j * T + i]; }
+  }));
+  const linjer = [];
+  if (medVeg) { const zv = ZV + 1, sv = span(zv);   // alle veger finnes fra z10
+    for (let y = y0 * 2; y <= y1 * 2 + 1; y++) for (let x = x0 * 2; x <= x1 * 2 + 1; x++) jobber.push(hentFlis('vektor', zv, x, y).then(f => {
+      if (!f || !f.veg) return; const mx = G.x0 + x * sv, my = G.y0 - y * sv, e = f.veg.ext;
+      for (const o of f.veg.obj) for (const d of o.deler) linjer.push({ k: o.e.k, p: d.map(([a, c]) => [mx + a / e * sv, my - c / e * sv]) });
+    })); }
+  await Promise.all(jobber);
+  if (medVeg) Terreng.leggInnVeger(v, linjer);
+  return v;
+}
+
+// ---------- lag på 12 mann ----------
+const FORNAVN = ['Arne', 'Bjørn', 'Erik', 'Geir', 'Hans', 'Jan', 'Kjell', 'Knut', 'Lars', 'Nils', 'Ole', 'Per', 'Rolf', 'Svein', 'Tor', 'Trond', 'Odd', 'Kåre', 'Gunnar', 'Ivar', 'Åge', 'Egil', 'Finn', 'Harald', 'Johan', 'Leif', 'Magne', 'Oddvar', 'Roald', 'Steinar', 'Terje', 'Vidar'];
+const ETTERNAVN = ['Bakken', 'Dahl', 'Haugen', 'Lien', 'Moen', 'Nygård', 'Rustad', 'Sandvik', 'Skogen', 'Strand', 'Tangen', 'Volden', 'Berge', 'Enger', 'Fjeld', 'Grøtte', 'Hagen', 'Kleiven', 'Lunde', 'Myhre', 'Opheim', 'Rønning', 'Solberg', 'Tofte', 'Ulvund', 'Vangen', 'Øien', 'Aasen', 'Brekke', 'Eide'];
+const ROLLER = ['lagfører', 'nestlagfører', 'skarpskytter', 'sanitet', 'radio', 'maskingevær', 'maskingevær', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'];
+let frø = 7; const tilf = () => { frø = (frø * 1103515245 + 12345) & 0x7fffffff; return frø / 0x7fffffff; };
+function nyttLag(navn, x, y, side, speider) {
+  return { navn, x, y, side, speider, leder: 0, sti: null, steg: null, seg: 0, prog: 0, timerIgjen: 0, retning: -Math.PI / 2,
+    menn: ROLLER.map(rolle => ({ navn: FORNAVN[Math.floor(tilf() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(tilf() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + tilf() * .4 })),
+    sikt: null, siktVed: null, siktJobb: false, siktSkitten: false, her: null, planlegger: false };
+}
+// Samme steder som på /dovre (regnet om fra UTM 32 til UTM 33).
+const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2. lag, Dombås', 198872, 6896752, 'blå'),
+  nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Fiendtlig patrulje', 213280, 6908986, 'rød')];
+const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
+
+// ---------- tid: 1 spilltime = 60 s ved 1× ----------
+let tid = 0, tempo = 1; const TIME = 60;
+function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
+function sim(dt) {
+  tid += dt; const fi = ENHETER[3];
+  if (!fi.sti && !fi.planlegger) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; ordre(fi, ...PATRULJE[patruljeNr], true); }
+  for (const s of ENHETER) {
+    if (!s.sti) continue;
+    let igjen = dt / TIME; s.timerIgjen -= igjen;
+    while (igjen > 0 && s.seg < s.sti.length - 1) {
+      const [ax, ay] = s.sti[s.seg], [bx, by] = s.sti[s.seg + 1], t = s.steg[s.seg] || 1e-9, rest = (1 - s.prog) * t;
+      s.retning = Math.atan2(by - ay, bx - ax);
+      if (igjen >= rest) { igjen -= rest; s.seg++; s.prog = 0; s.x = bx; s.y = by; }
+      else { s.prog += igjen / t; igjen = 0; s.x = ax + (bx - ax) * s.prog; s.y = ay + (by - ay) * s.prog; }
+    }
+    if (s.seg >= s.sti.length - 1) { s.sti = null; s.siktSkitten = true; if (s.side === 'blå') logg(s.navn + ' er framme.'); if (valgt === s) visPanel(); }
+    skitten = true;
+  }
+  if (valgt && valgt.sti && Math.floor(tid * 2) !== Math.floor((tid - dt) * 2)) visPanel();
+}
+async function ordre(s, X, Y, stille) {
+  s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
+  const d = Math.hypot(X - s.x, Y - s.y), pad = Math.max(2500, d * .3);
+  try {
+    const v = await lagVindu([Math.min(s.x, X) - pad, Math.min(s.y, Y) - pad, Math.max(s.x, X) + pad, Math.max(s.y, Y) + pad], true);
+    const r = Terreng.ruteTil(v, s.x, s.y, X, Y);
+    if (!r) { if (!stille) logg('Ingen framkommelig rute dit.'); return; }
+    s.sti = r.sti; s.steg = r.steg; s.seg = 0; s.prog = 0; s.timerIgjen = r.timer; s.siktSkitten = true;
+    let km = 0; for (let i = 1; i < r.sti.length; i++) km += Math.hypot(r.sti[i][0] - r.sti[i - 1][0], r.sti[i][1] - r.sti[i - 1][1]) / 1000;
+    if (!stille) logg(s.navn + ': marsj ' + nf.format(km) + ' km, ca. ' + nf.format(r.timer) + ' t.');
+  } finally { s.planlegger = false; if (valgt === s) visPanel(); skitten = true; }
+}
+
+// ---------- sikt ----------
+async function oppdaterSikt(s) {
+  s.siktJobb = true; s.siktSkitten = false; const X = s.x, Y = s.y;
+  try {
+    // først siktvidden (trenger bare omgivelsene innen ca. 400 m), så bare de flisene den rekker over
+    const nær = await lagVindu([X - 400, Y - 400, X + 400, Y + 400], false), iB = !!s.sti;
+    const r = Terreng.siktvidde(nær, X, Y, s.speider, iB), R = r + 100;
+    const v = await lagVindu([X - R, Y - R, X + R, Y + R], false), m = Terreng.siktfelt(v, X, Y, r);
+    const [oi, oj] = Terreng.rute(v, X, Y), Rc = Math.ceil(r / v.r) + 1;
+    const i0 = Math.max(0, oi - Rc), j0 = Math.max(0, oj - Rc), i1 = Math.min(v.w - 1, oi + Rc), j1 = Math.min(v.h - 1, oj + Rc), w = i1 - i0 + 1, h = j1 - j0 + 1;
+    const c = lerret(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), farge = s.side === 'blå' ? [240, 215, 154] : [220, 80, 50];
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[(j0 + j) * v.w + i0 + i]) { const o = (j * w + i) * 4; im.data[o] = farge[0]; im.data[o + 1] = farge[1]; im.data[o + 2] = farge[2]; im.data[o + 3] = 255; }
+    g.putImageData(im, 0, 0);
+    s.sikt = { c, x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, w: w * v.r, h: h * v.r }; s.siktVidde = r; s.siktVed = [X, Y];
+    s.her = { k: Terreng.verdi(v, v.K, X, Y, 255), h: Terreng.verdi(v, v.H, X, Y, NaN) };
+    const vv = await lagVindu([X - 50, Y - 50, X + 50, Y + 50], true); s.her.veg = Terreng.verdi(vv, vv.V, X, Y, 0);
+    if (valgt === s) visPanel();
+  } catch (e) { console.error(e); } finally { s.siktJobb = false; skitten = true; }
+}
+
+// ---------- tegning av lagene ----------
+let valgt = null, modus = null;
+function tilSkjerm(X, Y, vx0, vy1) { return [(X - vx0) / kam.m, (vy1 - Y) / kam.m]; }
+function tegnEnheter(vx0, vy1) {
+  const m = kam.m;
+  if (VIS.sikt) for (const s of ENHETER) if (s.sikt) {
+    const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1);
+    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .13) : .2; ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); ctx.globalAlpha = 1;
+  }
+  for (const s of ENHETER) {
+    const [px, py] = tilSkjerm(s.x, s.y, vx0, vy1), blå = s.side === 'blå';
+    if (px < -200 || py < -200 || px > VW + 200 || py > VH + 200) continue;
+    if (s.sti) { ctx.strokeStyle = blå ? 'rgba(130,170,220,.9)' : 'rgba(225,125,95,.9)'; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(px, py);
+      for (let i = s.seg + 1; i < s.sti.length; i++) { const [a, b] = tilSkjerm(s.sti[i][0], s.sti[i][1], vx0, vy1); ctx.lineTo(a, b); } ctx.stroke(); ctx.setLineDash([]); }
+    if (m < 1.6) { // hver mann for seg, i formasjon: kolonne på marsj, kile når de står
+      const levende = s.menn.filter(q => q.hp > 0), ca = Math.cos(s.retning), sa = Math.sin(s.retning), r = Math.max(3.4, .35 / m);
+      levende.forEach((q, n) => {
+        let fx, fy; if (s.sti) { fx = -n * 4; fy = (n % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((n + 1) / 2), side = n % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
+        const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, [a, b] = tilSkjerm(X, Y, vx0, vy1), leder = s.menn.indexOf(q) === s.leder;
+        ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(a + r * .35, b + r * .35, r, 0, 6.283); ctx.fill();
+        ctx.fillStyle = leder ? '#f0d79a' : blå ? '#5b7ea8' : '#b5503d'; ctx.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(a, b, r, 0, 6.283); ctx.fill(); ctx.stroke();
+      });
+    } else { // lagsymbol (infanteri)
+      const r = 11; ctx.fillStyle = blå ? '#3b5878' : '#8f3c2f'; ctx.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; ctx.lineWidth = s === valgt ? 2.5 : 1.3;
+      ctx.beginPath(); ctx.rect(px - r, py - r * .7, r * 2, r * 1.4); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#e7dcc3'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(px - r, py - r * .7); ctx.lineTo(px + r, py + r * .7); ctx.moveTo(px + r, py - r * .7); ctx.lineTo(px - r, py + r * .7); ctx.stroke();
+    }
+    ctx.font = '600 13px "Cormorant Garamond",serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(20,16,10,.85)';
+    const ty = py - (m < 1.6 ? Math.max(14, 30 / m) : 16); ctx.strokeText(s.navn, px, ty); ctx.fillStyle = '#e7dcc3'; ctx.fillText(s.navn, px, ty);
+  }
+  if (modus === 'marsj' && peker) { const [a, b] = tilSkjerm(peker[0], peker[1], vx0, vy1); ctx.strokeStyle = '#f0d79a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(a, b, 9, 0, 6.283); ctx.stroke(); }
+}
+function trykkPå(cx, cy) {
+  const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
+  if (modus === 'marsj' && valgt) { modus = null; ordre(valgt, X, Y); visPanel(); return; }
+  let best = null, bd = 28;
+  for (const s of ENHETER) { const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
+  valgt = best; modus = null; visPanel(); skitten = true;
+}
+
+// ---------- panel og logg ----------
+const loggLinjer = [];
+function logg(t) { loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
+  document.getElementById('logg').innerHTML = loggLinjer.map((x, i) => '<div style="opacity:' + (1 - i * .15) + '"></div>').join('');
+  document.querySelectorAll('#logg div').forEach((d, i) => { d.textContent = loggLinjer[i]; }); }
+function knapp(tekst, på, fn) { const b = document.createElement('button'); b.textContent = tekst; if (på) b.className = 'på'; b.onclick = fn; return b; }
+function visPanel() {
+  const P = document.getElementById('panel'); if (!valgt) { P.classList.remove('på'); return; }
+  const s = valgt, her = s.her, lev = s.menn.filter(q => q.hp > 0).length;
+  document.getElementById('pnavn').textContent = s.navn;
+  document.getElementById('psub').textContent = [lev + ' mann', her && her.h === her.h ? Math.round(her.h) + ' moh.' : null,
+    her ? (Terreng.KLASSE[her.k] || 'utenfor kartet') : null, her && her.veg ? 'ved veg' : null,
+    s.planlegger ? 'planlegger rute' : s.sti ? 'marsjerer, ' + nf.format(Math.max(0, s.timerIgjen)) + ' t igjen' : null,
+    s.siktVidde ? 'sikt ' + nf.format(s.siktVidde / 1000) + ' km' : null].filter(Boolean).join(' · ');
+  const H = document.getElementById('handl'); H.innerHTML = '';
+  if (s.side === 'blå') {
+    H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
+    H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => { s.speider = !s.speider; s.siktSkitten = true; visPanel(); }));
+    if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.siktSkitten = true; visPanel(); skitten = true; }));
+  }
+  const M = document.getElementById('menn'); M.innerHTML = '';
+  s.menn.forEach((q, i) => { const b = document.createElement('button'); b.className = i === s.leder ? 'leder' : '';
+    b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + ' · lojalitet ' + Math.round(q.loy * 100) + ' %';
+    b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
+  document.getElementById('hint').textContent = s.side !== 'blå' ? 'Fiendtlig patrulje. Rødt felt er det de ser.' :
+    modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
+  P.classList.add('på');
+}
+
 // ---------- styring ----------
 function zoom(fak, cx = VW / 2, cy = VH / 2) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
@@ -392,19 +574,25 @@ function zoom(fak, cx = VW / 2, cy = VH / 2) {
   kam.x = X - (cx - VW / 2) * kam.m; kam.y = Y + (cy - VH / 2) * kam.m; skitten = true;
 }
 const ptr = new Map(); let pinch = null;
-cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); cv.classList.add('drar'); });
+let trykk = null;
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]); cv.classList.add('drar');
+  trykk = ptr.size === 1 ? [e.clientX, e.clientY] : null; });
 cv.addEventListener('pointermove', e => {
   const r = cv.getBoundingClientRect(), lx = e.clientX - r.left, ly = e.clientY - r.top;
   peker = [kam.x + (lx - VW / 2) * kam.m, kam.y - (ly - VH / 2) * kam.m];
   if (!ptr.has(e.pointerId)) { tegnHud(); return; }
   const forrige = ptr.get(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]);
+  if (trykk && Math.hypot(e.clientX - trykk[0], e.clientY - trykk[1]) > 6) trykk = null;
+  if (modus === 'marsj') skitten = true;
   if (ptr.size === 2) {
     const [a, b] = [...ptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2 - r.left, my = (a[1] + b[1]) / 2 - r.top;
     if (pinch) { zoom(d / pinch.d, mx, my); kam.x -= (mx - pinch.mx) * kam.m; kam.y += (my - pinch.my) * kam.m; }
     pinch = { d, mx, my };
   } else if (ptr.size === 1) { kam.x -= (e.clientX - forrige[0]) * kam.m; kam.y += (e.clientY - forrige[1]) * kam.m; skitten = true; }
 });
-const slipp = e => { ptr.delete(e.pointerId); if (ptr.size < 2) pinch = null; if (!ptr.size) cv.classList.remove('drar'); };
+const slipp = e => {
+  if (e.type === 'pointerup' && trykk && ptr.size === 1) { const r = cv.getBoundingClientRect(); trykkPå(e.clientX - r.left, e.clientY - r.top); }
+  ptr.delete(e.pointerId); if (ptr.size < 2) pinch = null; if (!ptr.size) { cv.classList.remove('drar'); trykk = null; } };
 cv.addEventListener('pointerup', slipp); cv.addEventListener('pointercancel', slipp);
 cv.addEventListener('pointerleave', () => { peker = null; tegnHud(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0016)), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
@@ -412,16 +600,27 @@ document.getElementById('zi').onclick = () => zoom(2);
 document.getElementById('zo').onclick = () => zoom(.5);
 document.getElementById('hele').onclick = () => passInn(DOVRE);
 document.getElementById('dombas').onclick = () => { passInn(DOMBAS); };
-const NAVN = { skygge: 'Skygge', koter: 'Koter', traer: 'Trær', veg: 'Veg', bygg: 'Bygg' };
-const lk = document.getElementById('lagknapper');
+const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bygg: 'Bygg', sikt: 'Siktfelt' };
+const lk = document.getElementById('lagmeny');
 for (const n of Object.keys(NAVN)) {
   const b = document.createElement('button'); b.textContent = NAVN[n]; b.setAttribute('aria-pressed', 'true');
-  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); FERDIG.clear(); skitten = true; };
+  b.onclick = () => { VIS[n] = !VIS[n]; b.classList.toggle('av', !VIS[n]); b.setAttribute('aria-pressed', String(VIS[n])); if (n !== 'sikt') FERDIG.clear(); skitten = true; };
   lk.appendChild(b);
 }
+document.getElementById('meny').onclick = function () { const på = lk.classList.toggle('på'); this.setAttribute('aria-expanded', String(på)); this.classList.toggle('på', på); };
+[['sp0', 0], ['sp1', 1], ['sp2', 10], ['sp3', 60]].forEach(([id, v]) => { document.getElementById(id).onclick = () => { tempo = v;
+  for (const b of document.querySelectorAll('[id^=sp]')) b.classList.toggle('på', b.id === id); }; });
+document.getElementById('lukk').onclick = () => { valgt = null; modus = null; visPanel(); skitten = true; };
+window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
-(function loop() { tegn(); requestAnimationFrame(loop); })();
+logg('Dovre, august 1987. Gult: hva dine lag ser. Rødt: hva fienden ser. Trykk på et lag for å gi ordre.');
+let sist = performance.now(), rest = 0;
+(function loop(nå) {
+  if (nå) { rest += Math.min(.25, (nå - sist) / 1000) * tempo; sist = nå; while (rest >= .1) { sim(.1); rest -= .1; } }
+  for (const s of ENHETER) if (!s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) oppdaterSikt(s);
+  tegn(); requestAnimationFrame(loop);
+})();
 </script>
 </body>
 </html>

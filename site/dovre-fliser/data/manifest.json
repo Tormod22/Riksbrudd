@@ -155,8 +155,8 @@
    }
   },
   "vektor": {
-   "byte": 869043,
-   "fliser": 2357,
+   "byte": 913553,
+   "fliser": 2396,
    "per_niva": {
     "8": {
      "fliser": 9,
@@ -167,8 +167,8 @@
      "snitt_kb": 1.1
     },
     "10": {
-     "fliser": 43,
-     "snitt_kb": 0.6
+     "fliser": 82,
+     "snitt_kb": 0.8
     },
     "11": {
      "fliser": 270,

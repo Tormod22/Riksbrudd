@@ -23,6 +23,18 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
       const ok = s.h != null && s.h >= lo && s.h <= hi; if (!ok) feil++;
       console.log(`${ok ? 'ok  ' : 'FEIL'} ${navn} ${v}: ${s.h == null ? '–' : Math.round(s.h)} moh. (venter ${lo}–${hi}), z${s.z}, totalt ${s.kb} KB i ${s.req} hentinger`);
     }
+    // Spillet på flisene: alle lag får siktfelt, 1. lag får rute og går, patruljen går sin runde.
+    await pg.waitForFunction(() => ENHETER.every(s => s.sikt), null, { timeout: 30000 });
+    const sikt = await pg.evaluate(() => ENHETER.map(s => [s.navn, Math.round(s.siktVidde), s.her && Terreng.KLASSE[s.her.k]]));
+    const siktOk = sikt.every(([, r]) => r >= 500 && r <= 12800); if (!siktOk) feil++;
+    console.log(`${siktOk ? 'ok  ' : 'FEIL'} ${navn} siktfelt: ` + sikt.map(([n, r, k]) => `${n} ${r} m (${k})`).join(', '));
+    await pg.evaluate(() => { ordre(ENHETER[0], 201500, 6900500); });
+    await pg.waitForFunction(() => ENHETER[0].sti, null, { timeout: 20000 });
+    const r = await pg.evaluate(() => ({ t: ENHETER[0].timerIgjen, n: ENHETER[0].sti.length, x: ENHETER[0].x, y: ENHETER[0].y }));
+    await pg.evaluate(() => { tempo = 60; }); await pg.waitForTimeout(2500);
+    const e2 = await pg.evaluate(() => ({ x: ENHETER[0].x, y: ENHETER[0].y, p: !!ENHETER[3].sti }));
+    const flytt = Math.hypot(e2.x - r.x, e2.y - r.y), ruteOk = r.t > 1 && r.t < 3 && flytt > 500 && e2.p; if (!ruteOk) feil++;
+    console.log(`${ruteOk ? 'ok  ' : 'FEIL'} ${navn} marsj: rute ${r.n} punkter, ${r.t.toFixed(2)} t (venter 1–3), gikk ${Math.round(flytt)} m på 2,5 s ved 60×, patruljen ${e2.p ? 'går' : 'står'}`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await pg.close();
   }
