@@ -105,6 +105,12 @@ async function sjekk() {
   const om = ekte.rute(oslo, trondheim, { maksAvstand: 30, tillat: e => e.vegkategori === 'E' && e.vegnummer === 6 });
   assert(!om || !om.lenker.some(e => brulenker.includes(e)));
   brulenker.forEach(e => ekte.åpne(e)); assert(ekte.rute(oslo, trondheim, { maksAvstand: 30 }));
+  if (ekte.antallLenker > 1e6) {   // hele Norge: landet henger sammen (8. nov var Finnmark avskåret ved Sørkjosen)
+    const kirkenes = [1076877, 7807011], bergen = [-32300, 6733600], kristiansand = [88083, 6466395];
+    for (const [navn, mål] of [['Kirkenes', kirkenes], ['Bergen', bergen], ['Kristiansand', kristiansand]])
+      assert(ekte.rute(oslo, mål, { maksAvstand: 3000 }), 'Ingen rute Oslo–' + navn + ': vegnettet er brutt');
+    console.log('ok – hele Norge henger sammen: Oslo–Kirkenes, Oslo–Bergen og Oslo–Kristiansand');
+  }
   console.log(`ok – ekte E6 Oslo–Trondheim: ${(r.meter / 1000).toFixed(1)} km, ${ms.toFixed(1)} ms, ${r.lenker.length} lenker; sperret bru: ${om ? 'omkjøring' : 'ingen veg'}`);
 }
 sjekk().catch(e => { console.error(e); process.exitCode = 1; });

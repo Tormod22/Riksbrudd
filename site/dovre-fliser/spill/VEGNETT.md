@@ -21,6 +21,14 @@ Veggeometrien forenkles av NVDB med 3 meters toleranse og avrundes til meter. NV
 Deretter testes ekte E6 Oslo–Trondheim (<1 sekund) og en faktisk NVDB-bru sperres. Release opprettes først når
 kontrollene består og gzip-filen er under 30 MB. Hele råfilen og gzip-filen publiseres, med SHA-256 i manifestet.
 
+## Anleggsveger der NVDBs historikk har hull
+
+Første nasjonale bygging (8. nov) hadde Finnmark avskåret: per 1. juni 2023 er E6 ved Sørkjosen (Nordreisa) registrert som
+anlegg (fase A), og den gamle vegen mangler i historikken. Regel: E/R/F-veg i fase A tas med bare som den **korteste**
+anleggsstrekningen som binder sammen deler av vegnettet som ellers er adskilt. Nye veger ved siden av eksisterende holdes
+utenfor. Manifestet viser `anlegg_lagt_til` og `anlegg_sekvenser`. Testen mot en nasjonal fil krever at Oslo–Kirkenes,
+Oslo–Bergen og Oslo–Kristiansand finnes, så et slikt brudd blir oppdaget.
+
 ## Bruk fra S2 / server
 
 ```js

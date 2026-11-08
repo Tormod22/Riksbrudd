@@ -68,6 +68,18 @@ class ByggerTest(unittest.TestCase):
         a = segment(1, 'A', 'B', [(0, 0), (10, 0)], typeVeg_sosi='gangOgSykkelveg')
         self.assertEqual(bygg([a], {}, '2023-06-01')[1]['noder'], 0)
 
+    def test_anlegg_bare_der_vegnettet_ellers_er_brutt(self):
+        anlegg = lambda seq, a, b, p: segment(seq, a, b, p, vegsystemreferanse={'vegsystem': {'vegkategori': 'E', 'fase': 'A', 'nummer': 6}})
+        v = [segment(1, 'A', 'B', [(0, 0), (100, 0)]), segment(2, 'C', 'D', [(300, 0), (400, 0)])]
+        bro = [anlegg(3, 'B', 'X', [(100, 0), (200, 0)]), anlegg(4, 'X', 'C', [(200, 0), (300, 0)])]   # binder sammen to deler
+        omkjoring = [anlegg(5, 'A', 'Y', [(0, 0), (50, 50)]), anlegg(6, 'Y', 'B', [(50, 50), (100, 0)])]   # ny veg ved siden av
+        raw, stat = bygg(v + bro + omkjoring, {}, '2023-06-01')
+        self.assertEqual(stat['anlegg_lagt_til'], 2)
+        self.assertEqual(stat['anlegg_sekvenser'], [3, 4])
+        self.assertEqual(stat['veglenker'], 4)
+        _, stat = bygg(v + omkjoring, {}, '2023-06-01')
+        self.assertEqual(stat.get('anlegg_lagt_til', 0), 0)
+
     def test_mangler_node(self):
         with self.assertRaises(ValueError): bygg([segment(1, None, 'B', [(0, 0), (10, 0)], startnode=None)], {}, '2023-06-01')
 

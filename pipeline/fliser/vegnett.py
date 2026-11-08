@@ -165,16 +165,9 @@ def bygg(veger, indekser_, dato):
             noder[navn] = len(xy); xy.append(p)
         return noder[navn]
 
-    for o in veger:
-        ref = (o['veglenkesekvensid'], o['startposisjon'], o['sluttposisjon'])
-        if ref in sett: continue
-        vsr = o.get('vegsystemreferanse') or {}
-        vs = vsr.get('vegsystem', {})
-        if vs.get('fase') != 'V' or vs.get('vegkategori') not in KATEGORIER: continue
-        if o.get('detaljnivå') not in ('Vegtrase', 'Vegtrase og kjørebane'): continue
-        if o.get('typeVeg_sosi') not in VEGTYPER.split(','): continue
-        if any(vsr.get(k, {}).get('trafikantgruppe') == 'G' for k in ('strekning', 'kryssystem', 'sideanlegg')): continue
-        sett.add(ref)
+    anlegg = []   # E/R/F-veg i anleggsfase (A): brukes bare der den binder sammen ellers adskilte deler (se under)
+
+    def legg_til(o, vs):
         p = punkter(o['geometri']['wkt'])
         if len(p) < 2: raise ValueError('Veg uten linje')
         a, b = node(o.get('startnode'), p[0]), node(o.get('sluttnode'), p[-1])
@@ -193,6 +186,69 @@ def bygg(veger, indekser_, dato):
             for ident in overlapper(indekser_.get(typ, {}), o): koblinger.append((e, typ, ident))
         stat['ferjelenker' if ferje else 'veglenker'] += 1
         if fart: stat['med_fartsgrense'] += 1
+
+    for o in veger:
+        ref = (o['veglenkesekvensid'], o['startposisjon'], o['sluttposisjon'])
+        if ref in sett: continue
+        vsr = o.get('vegsystemreferanse') or {}
+        vs = vsr.get('vegsystem', {})
+        if vs.get('fase') not in ('V', 'A') or vs.get('vegkategori') not in KATEGORIER: continue
+        if o.get('detaljnivå') not in ('Vegtrase', 'Vegtrase og kjørebane'): continue
+        if o.get('typeVeg_sosi') not in VEGTYPER.split(','): continue
+        if any(vsr.get(k, {}).get('trafikantgruppe') == 'G' for k in ('strekning', 'kryssystem', 'sideanlegg')): continue
+        sett.add(ref)
+        if vs['fase'] == 'A':
+            if vs['vegkategori'] in 'ERF': anlegg.append((o, vs))
+            continue
+        legg_til(o, vs)
+
+    # NVDBs historikk mangler noen steder den gamle vegen der en ny var under bygging (E6 ved Sørkjosen 1. juni 2023:
+    # Finnmark ble avskåret). En sammenhengende gruppe anleggssegmenter tas med bare hvis den binder sammen to deler av
+    # vegnettet som ellers ikke henger sammen; nye veger ved siden av eksisterende (samme del) holdes utenfor.
+    if anlegg:
+        forelder = list(range(len(xy)))
+        def rot(a):
+            while forelder[a] != a: forelder[a] = forelder[forelder[a]]; a = forelder[a]
+            return a
+        for a, b, *_ in lenker: forelder[rot(a)] = rot(b)
+        grupper, ag = {}, {}
+        def agr(n):
+            while ag.setdefault(n, n) != n: n = ag[n]
+            return n
+        for o, _ in anlegg: ag[agr(o.get('startnode'))] = agr(o.get('sluttnode'))
+        for o, vs in anlegg: grupper.setdefault(agr(o.get('startnode')), []).append((o, vs))
+        import heapq
+        for gruppe in grupper.values():
+            nab = defaultdict(list)   # anleggsnettet i gruppen: node -> [(nabo, segment)]
+            for i, (o, _) in enumerate(gruppe):
+                nab[o.get('startnode')].append((o.get('sluttnode'), i)); nab[o.get('sluttnode')].append((o.get('startnode'), i))
+            brukt = set()
+            while True:   # korteste anleggsstrekning mellom to ellers adskilte deler, til alle er bundet sammen
+                del_ = lambda n: rot(noder[n]) if n in noder else None
+                start = [n for n in nab if del_(n) is not None]
+                if len({del_(n) for n in start}) < 2: break
+                c = del_(start[0]); dist, via, kø, mål = {}, {}, [], None
+                for n in start:
+                    if del_(n) == c: dist[n] = 0; heapq.heappush(kø, (0, n))
+                while kø:
+                    d, n = heapq.heappop(kø)
+                    if d > dist[n]: continue
+                    if del_(n) not in (None, c): mål = n; break
+                    for m, i in nab[n]:
+                        nd = d + float(gruppe[i][0]['lengde'])
+                        if nd < dist.get(m, math.inf): dist[m] = nd; via[m] = (n, i); heapq.heappush(kø, (nd, m))
+                if mål is None: break
+                sti, n = [], mål
+                while n in via: n, i = via[n]; sti.append(i)
+                nye = [i for i in sti if i not in brukt]
+                if not nye: break   # sikring: ingen framgang
+                for i in nye: brukt.add(i); legg_til(*gruppe[i])
+                forelder.extend(range(len(forelder), len(xy)))
+                for i in sti:
+                    o = gruppe[i][0]; forelder[rot(noder[o.get('startnode')])] = rot(noder[o.get('sluttnode')])
+            if brukt:
+                stat['anlegg_lagt_til'] += len(brukt)
+                stat['anlegg_sekvenser'] = sorted(set(stat.get('anlegg_sekvenser', [])) | {gruppe[i][0]['veglenkesekvensid'] for i in brukt})
     return pakk(xy, lenker, koblinger, dato), dict(stat, noder=len(xy), koblinger=len(koblinger))
 
 
