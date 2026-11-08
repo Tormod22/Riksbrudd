@@ -94,7 +94,7 @@ const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
 const HUS_TAG = 'kart-hus-502aa70491f9';
 const OMLAND_TAG = 'kart-omland-e1becd1b04bf';   // Sverige, Finland, Danmark, Kola, Svalbard og havet (pipeline/fliser/omland.py), settes av bruk_omland.py
-const UTVEG_TAG = '';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
+const UTVEG_TAG = 'kart-utveg-b24af84eb3fd';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
 const INFRA_TAG = 'kart-infra-2023-7bd50584c2a7';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
 const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
 const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
