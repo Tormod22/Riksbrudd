@@ -117,6 +117,23 @@ For hele Norge, med raskere panorering, gir det hakking.
   vektorlag i samme flisnett, så du kan zoome fra hele landet ned til en enkelt soldat.
 - **Rutenett for erobring:** 2 km-sekskanter (ca. 80 000–95 000 på fastlandet, avhengig av hvordan 2 km måles) som eget lag med ID-er serveren bruker.
 
+## Hele Norge slik det var i 1986 (undersøkt 8. nov)
+
+Målet (brukeren): **hele Norge slik det var i 1986, som ett sammenhengende spillkart.**
+
+| Lag | 1986-riktig? | Kilde og funn |
+|---|---|---|
+| Satellittbilde, terrengklasse | ja | Landsat 5, somrene 1985–88: 467–569 scener per sommer under 60 % skyer over Norge; ca. 220 bildeutsnitt (path/row) har minst ett under 30 %. Skyfri sammensetning (median av klare punkter) per blokk. |
+| Høyde | ja | Kartverket DTM. Terrenget er i hovedsak uendret (unntak: steinbrudd, vegskjæringer, fyllinger). |
+| Veger | **ja** | NVDB `vegnett …/segmentert?tidspunkt=1986-06-01`. Testet: Lærdalstunnelen og Oslofjordtunnelen (begge 2000) er borte i 1986 og 1995, men med i 2010. Dovre: 837 km i 1986 mot 859 km i dag. NB: `metadata.startdato` er registreringsdato (2019–2026), ikke byggeår. Private veger kan mangle i den gamle historikken. |
+| Tunneler og bruer | ja | NVDB 581 Tunnel (`Åpningsår`) og 60 Bru (`Byggeår`), som ekstra kontroll. |
+| Kommuner, folketall | ja | `data/norge` (1986-grenser, SSB 1.1.1986). |
+| Bygg | **delvis** | Matrikkelens åpne bygningspunkt har ikke byggeår (bare type, status, SEFRAK-merke). Første versjon: dagens bygg. Forbedring senere: SSB-tall for bygg per kommune og år, og Landsat 1986 (fjerne bygg i felt som var skog eller jorde i 1986). |
+| Svalbard | ja | Med fra start (del av Norge 1986). Høyde: Norsk Polarinstitutt (Kartverkets WCS dekker trolig ikke Svalbard). Må sjekkes. |
+
+Gjort 8. nov: flisnettets origo er flyttet til 9 300 km nord (dekker Svalbard), og høyden på z ≤ 11 har 0,5 m presisjon
+(Dovre: 25,2 → 20,4 MB).
+
 ## Faser
 
 | Fase | Innhold | Ferdig når |

@@ -85,12 +85,12 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
-const G = { x0: -200000, y0: 9000000, res0: 16384, T: 256 };
+const G = { x0: -200000, y0: 9300000, res0: 16384, T: 256 };
 const res = z => G.res0 / 2 ** z, span = z => G.T * res(z);
 const DOVRE = [182016, 6880000, 228000, 6930016], DOMBAS = [189000, 6892000, 197000, 6900000];
 const DATA = '/dovre-fliser/data/';
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
-const KART_TAG = 'kart-09eec66cd30c';   // settes av pipeline/fliser/versjon.py
+const KART_TAG = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versjon.py
 const ZMIN = 5, ZMAX = 17;
 
 // ---------- henting med telling av byte ----------
@@ -139,8 +139,8 @@ async function piksler(data, type) {
   g.drawImage(bm, 0, 0); return { d: g.getImageData(0, 0, bm.width, bm.height).data, w: bm.width, h: bm.height };
 }
 const DEKOD = {
-  async hoyde(data, z) { // presisjon som i pipeline/fliser/02_fliser.py: 0,1 m på z12–13, 0,25 m ellers
-    const { d, w, h } = await piksler(data, 'image/webp'), p = z >= 12 ? 10 : 4, a = new Float32Array(w * h);
+  async hoyde(data, z) { // presisjon som i pipeline/fliser/02_fliser.py: 0,1 m på z12–13, 0,5 m ellers
+    const { d, w, h } = await piksler(data, 'image/webp'), p = z >= 12 ? 10 : 2, a = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) { const v = d[i * 4] * 256 + d[i * 4 + 1]; a[i] = v ? v / p - 1000 : NaN; }
     // helning (dz/dx østover, dz/dy nedover) i hvert kildepunkt; interpoleres i visningen så skyggen blir glatt ved overzoom
     const gx = new Float32Array(w * h), gy = new Float32Array(w * h), r2 = 2 * res(z);

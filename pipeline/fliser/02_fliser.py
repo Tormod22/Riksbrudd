@@ -2,7 +2,7 @@
 
 Lag (én .pmtiles per lag, alle i flisnettet i felles.py):
   hoyde   – høyde, 258 x 258 px (1 px kant til naboene), tapsfri WebP. h = (R*256 + G) / p - 1000 meter, p = 10 på z12–13
-            og 4 ellers (presisjon()), 0 = ingen data.
+            og 2 ellers (presisjon()), 0 = ingen data.
             z6–z11 fra 8 m-modellen for hele området, z12–z13 fra 2 m-modellen rundt Dombås.
   terreng – arealklasse per 32 m (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 255 ingen data), tapsfri WebP (R-kanalen).
   kart    – stil 1-fargelagt bakke uten skygge (klientene legger på skygge fra høyden), WebP (ikke AVIF: eldre iOS). z5–z9.
@@ -67,7 +67,7 @@ def webp_tapsfri(rgb): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'WEBP', lo
 def avif(rgb, q=45): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'AVIF', quality=q, speed=4); return b.getvalue()
 def webp(rgb, q=80): b = io.BytesIO(); Image.fromarray(rgb).save(b, 'WEBP', quality=q, method=4); return b.getvalue()   # virker også på eldre iPhone (AVIF gjør ikke det)
 
-def presisjon(z): return 10 if z >= 12 else 4   # enheter per meter: 0,1 m på z12–13, 0,25 m ellers (samme i visningen)
+def presisjon(z): return 10 if z >= 12 else 2   # enheter per meter: 0,1 m på z12–13, 0,5 m ellers (målt: ser likt ut, 24 % mindre; samme i visningen)
 
 def kod_hoyde(h, z):
     v = np.where(np.isnan(h), 0, np.clip(np.round((h + 1000) * presisjon(z)), 1, 65535)).astype(np.uint32)
@@ -109,7 +109,7 @@ def lag_hoyde():
         for x, y, t in L.fliser(kant=1):
             if not np.isnan(t[1:-1, 1:-1]).any(): ut.append(((L.z, x, y), kod_hoyde(t, L.z)))  # bare hele fliser, ellers brukes z11
         L = L.ned('snitt')
-    skriv('hoyde', ut, TileType.WEBP, Compression.NONE, 'Kartverket DTM (CC BY 4.0). h = (R*256+G)/p - 1000 m, p = 10 på z12-13, 4 ellers, 0 = ingen data. 258 px med 1 px kant.')
+    skriv('hoyde', ut, TileType.WEBP, Compression.NONE, 'Kartverket DTM (CC BY 4.0). h = (R*256+G)/p - 1000 m, p = 10 på z12-13, 2 ellers, 0 = ingen data. 258 px med 1 px kant.')
     return l9
 
 
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     lag_vektor()
     man = {'rutenett': {'crs': CRS, 'x0': X0, 'y0': Y0, 'res0': 16384, 'tile': TILE},
            'omrade': DOVRE, 'kjerne_2m': DOMBAS,
-           'lag': {'hoyde': {'fil': 'hoyde.pmtiles', 'z': [6, 13], 'kant': 1, 'presisjon': {'z12+': 10, 'ellers': 4}},
+           'lag': {'hoyde': {'fil': 'hoyde.pmtiles', 'z': [6, 13], 'kant': 1, 'presisjon': {'z12+': 10, 'ellers': 2}},
                    'terreng': {'fil': 'terreng.pmtiles', 'z': [6, 9]},
                    'kart': {'fil': 'kart.pmtiles', 'z': [5, 9]},
                    'vektor': {'fil': 'vektor.pmtiles', 'z': [8, 13]}},

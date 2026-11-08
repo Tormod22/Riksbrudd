@@ -6,7 +6,7 @@ Flis (z, x, y) dekker x: X0 + x*span .. og y: Y0 - y*span (nedover), span = 256 
 Origo og størrelse dekker fastlandet og Svalbard med god margin.
 """
 CRS = "EPSG:25833"
-X0, Y0 = -200000.0, 9000000.0   # øvre venstre hjørne (meter)
+X0, Y0 = -200000.0, 9300000.0   # øvre venstre hjørne (meter); 9300 km nord dekker hele Svalbard (nordligst ca. 9023 km)
 RES0 = 16384.0                   # meter per piksel på z0 (z0-flisen er 4194 km bred)
 TILE = 256
 
