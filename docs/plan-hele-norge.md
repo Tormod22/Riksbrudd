@@ -68,7 +68,7 @@ Origo flyttes til 9 200 km nord **før** noe annet bygges. Bare Dovre-flisene m�
 
 ### 3. Lagring
 **Valgt 8. nov: GitHub Releases + mellomstasjon på Vercel**, fordi det ikke krever nøkler fra brukeren (Actions laster opp
-med GITHUB_TOKEN). **Forutsetter at repoet er offentlig** – det er privat nå, så brukeren må velge (fase 0, spørsmål 4). Filene kan være opptil 2 GB, og hver bit lagres i Vercels hurtigbuffer
+med GITHUB_TOKEN). Repoet ble gjort offentlig 8. nov. Virker på den ekte siden, med hurtigbuffer i Vercel. Filene kan være opptil 2 GB, og hver bit lagres i Vercels hurtigbuffer
 (`site/api/kart.js`). Grenser å følge med på: Vercel Hobby har 100 GB overføring og 1 million kall i måneden. R2 under er
 reserven hvis det ikke holder, eller når spillet åpnes for mange.
 
@@ -135,9 +135,9 @@ Etter feilene 8. nov testes også blokkerte nettsider og gamle filer i hurtigmin
 
 ## Dette må du bestemme (fase 0)
 
-1. **Lagring:** skal vi bruke Cloudflare R2 (anbefalt, gratis nedlasting)? Da må du opprette en konto. Jeg kan ikke gjøre det for deg.
+1. ✅ **Lagring:** GitHub Releases + mellomstasjon på Vercel (8. nov). R2-kontoen finnes som reserve.
 2. **2 m-høyde:** bare noen få steder (byer, slagmarker du velger), eller ingen steder i første omgang?
 3. **Svalbard:** med fra start, eller etter fastlandet?
-4. **Repoet:** skal det være offentlig (ubegrensede Actions-minutter), eller skal tunge bygg kjøres på din maskin?
+4. ✅ **Repoet** er offentlig (8. nov), så Actions-minuttene er ubegrensede.
 5. **Tidsriktighet:** er det nok med dagens veger og bygg i første omgang, med 1986-filteret senere?
 6. **Fylket å prøve på:** Oppland (Dovre ligger der), eller et annet?
