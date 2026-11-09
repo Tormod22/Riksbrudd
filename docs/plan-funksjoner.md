@@ -89,6 +89,13 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 ### S4 Forsyning
 - Lag og kjøretøy har drivstoff og ammunisjon. Uten forsyning: saktere, skyter mindre, kan ikke forsterkes. Forsyning kjøres
   med lastebil. Endringer i ildkamp/fart i `terreng.js` (med tester).
+- **FERDIG 9. nov (natt):** `spill/forsyning.js` (regler uten DOM) + `spill/forsyning-visning.js`. Ammunisjon per lag: 2 % per
+  ildrunde (full last ca. 4 t sammenhengende kamp, 0,5 t olje), under 25 % færre treff, tom = skyter ikke (krok `KROKER.ild` i
+  kamprunde; terreng.js er uendret). Drivstoff per kjøretøy: lastebil 900 km/0,35 t, speiderbil 600 km/0,12 t; tom tank = står.
+  Påfyll automatisk for enheter i ro innen 400 m fra basen (betales med basens olje); «Forsyn …» for lastebiler: henter inntil
+  10 t forsyninger på basen og leverer til egne enheter innen 500 m fra målet. Panelene viser ammunisjon/drivstoff.
+  Kamptesten i sjekk.js: patruljen slås fortsatt ut (7 av 12), lagene mister færre (fienden har også begrenset ammunisjon).
+  Ikke gjort: forsterkning av lag (menn erstattes), mat/rasjoner, fiendens forsyning. Tallene er forslag – spør brukeren.
 
 ### S5 Ødeleggelse og ingeniører (fase D)
 - Tilstand per infrastruktur-id (hel / skadet / sprengt / under reparasjon). Ingeniørlag sprenger og reparerer bruer, sperrer

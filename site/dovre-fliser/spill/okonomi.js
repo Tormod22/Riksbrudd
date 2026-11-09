@@ -48,6 +48,7 @@
   // Ett simuleringssteg for kolonnen med oppdrag. Kaller K.steg (kjøring) og gir hendelser tilbake: [{ hva, tonn? }].
   function steg(kj, graf, sek, K) {
     const o = kj.oppdrag, hendelser = [];
+    if (o && o.type) return hendelser;   // andre oppdrag (S4 forsyning) kjøres av sin egen modul
     if (!o) { K.steg(kj, sek); return hendelser; }
     while (sek > 0 && kj.oppdrag) {
       if (o.fase === 'til terminal' || o.fase === 'til base') {
@@ -77,7 +78,7 @@
   }
   function avbryt(kj, K) { if (kj.oppdrag) { kj.oppdrag = null; K.stopp(kj); } }
   function tekst(kj) {
-    const o = kj.oppdrag; if (!o) return null;
+    const o = kj.oppdrag; if (!o || o.type) return null;
     const last = `last ${Math.round(o.last)}/${kapasitet(kj)} t`;
     return { 'til terminal': `kjører til ${o.terminal.navn}`, laster: `laster på ${o.terminal.navn}`, 'til base': `kjører olje til ${o.base.navn}`, losser: `losser på ${o.base.navn}` }[o.fase] + ' · ' + last + (o.skyttel ? ' · skytteltrafikk' : '');
   }

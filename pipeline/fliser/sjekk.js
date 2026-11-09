@@ -143,6 +143,17 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
         const s3ok = tom.panel === 'Hovedbase Dombås' && tom.låst && s3.terminal === 'Nyhamna' && s3.bygget && s3.nye === 1; if (!s3ok) feil++;
         console.log(`${s3ok ? 'ok  ' : 'FEIL'} ${navn} oljeøkonomi: tom base (knapper låst: ${tom.låst}), henter fra ${s3.terminal}, første last etter ${s3.timer.toFixed(1)} spilltimer, bygget lastebil: ${s3.bygget}, nye kjøretøy: ${s3.nye}`);
         await pg.evaluate(() => { Okonomi.avbryt(KJORETOY[0], Kjoretoy); });
+        // S4: 1. lag tomt for ammunisjon -> «Forsyn …» med kolonnen -> trykk på laget -> fullt igjen; kjøringen har brukt drivstoff
+        const s4før = await pg.evaluate(() => { const l = ENHETER[0], k = KJORETOY[0]; l.ammo = 0; k.x = OLJE.BASER[0].x; k.y = OLJE.BASER[0].y; k.sti = null;
+          velgKjoretoy(k); return { drivstoff: Forsyning.drivstoff(k), olje: OLJE.BASER[0].beholdning }; });
+        await pg.locator('#handl button', { hasText: 'Forsyn' }).click();
+        const lp = await pg.evaluate(() => { const l = ENHETER[0]; l.x = 193400; l.y = 6896000; kam.x = l.x; kam.y = l.y; kam.m = 2; skitten = true; tegn(); return [VW / 2, VH / 2]; });
+        await pg.mouse.click(lp[0], lp[1]);
+        await pg.waitForFunction(() => KJORETOY[0].oppdrag && KJORETOY[0].oppdrag.type === 'forsyning', null, { timeout: 60000 });
+        const s4 = await pg.evaluate(() => { let n = 0; while (KJORETOY[0].oppdrag && n < 3000) { sim(.1); n++; } const lag = ENHETER[0];
+          return { ammo: Forsyning.ammo(lag), skyt: Forsyning.skyt({ ammo: 0 }), tekst: KROKER.lagTekst.map(h => h(lag)).join() }; });
+        const s4ok = s4.ammo === 1 && s4.skyt === 0 && s4før.drivstoff < 1 && /ammunisjon/.test(s4.tekst); if (!s4ok) feil++;
+        console.log(`${s4ok ? 'ok  ' : 'FEIL'} ${navn} forsyning: kolonnens drivstoff etter kjøringen ${Math.round(100 * s4før.drivstoff)} %, laget fra 0 til ${Math.round(100 * s4.ammo)} % ammunisjon, tomt lag skyter ikke («${s4.tekst}»)`);
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
     }

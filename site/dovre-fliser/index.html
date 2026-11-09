@@ -104,7 +104,7 @@ const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versj
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
-const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [] };   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [] };   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -641,7 +641,9 @@ function kamprunde() {
       const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 900 || !ser(a, b.x, b.y)) continue;
       const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
       if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.rolle, d, f) > 0)) continue;   // ingen når fram
-      const treff = Terreng.ildrunde(a.menn, d, f, KRNG);
+      const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)
+      let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
+      if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
       SKUDD.push({ a, b, til: performance.now() + 1400 }); nå.add(b);
       if (!a.skyterPå.has(b)) { if (a.side === 'blå') logg(a.navn + ' skyter mot ' + (synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
       if (!treff) continue;
@@ -792,7 +794,7 @@ function visPanel() {
     Terreng.slattUt(s.menn) ? 'slått ut av kamp' : s.skyterPå && s.skyterPå.size ? 'i ildkamp' : null, her && her.h === her.h ? Math.round(her.h) + ' moh.' : null,
     her ? (Terreng.KLASSE[her.k] || 'utenfor kartet') : null, her && her.veg ? 'ved veg' : null,
     s.planlegger ? 'planlegger rute' : s.sti ? 'marsjerer, ' + nf.format(Math.max(0, s.timerIgjen)) + ' t igjen' : null,
-    s.siktVidde ? 'sikt ' + nf.format(s.siktVidde / 1000) + ' km' : null].filter(Boolean).join(' · ');
+    s.siktVidde ? 'sikt ' + nf.format(s.siktVidde / 1000) + ' km' : null, ...KROKER.lagTekst.map(h => h(s))].filter(Boolean).join(' · ');
   const H = document.getElementById('handl'); H.innerHTML = '';
   if (s.side === 'blå' && levende(s)) {
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
@@ -1075,7 +1077,9 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/vegnett.js?v=aa2cdf7aa8"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=e1282be56b"></script>
-<script src="/dovre-fliser/spill/okonomi.js?v=13cd66328a"></script>
+<script src="/dovre-fliser/spill/okonomi.js?v=5d1ea46197"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=455f392f64"></script>
+<script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
+<script src="/dovre-fliser/spill/forsyning-visning.js?v=ead7533791"></script>
 </body>
 </html>
