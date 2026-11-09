@@ -15,6 +15,7 @@
     ['Motstanderne', 'Du leder Riksrådet (blå). Kystalliansen (rød) og Folkefronten (grønn) tar tettsteder, henter forsyninger og angriper. «Motstandere» i ☰ stopper dem.'],
     ['Vær og årstid', 'Været skifter av seg selv: klart, skyet, regn, snø og tåke. I tåke ser lagene bare 30 % så langt, i snø 55 % og i regn 70 %. Under ☰ velger du årstid (sommer, høst, vinter, vår) og kan låse været. Om vinteren ligger snøen helt ned i dalen, om høsten blir bjørkene gule og røde.'],
     ['Byer og butikker', 'Butikkene har oppdiktede kjedenavn som ligner på de ekte: Pære (grønn), Toppris (gul), Rima 2000 og så videre. Trykk på et bygg for å se hva det er. Fotballbaner har oppmerking og mål, store baner har lysmaster.'],
+    ['Leiren', 'Trykk «Leir» øverst. Velg et bygg, trykk på kartet der det skal stå (grønn skisse = kan bygges), roter og trykk «Bygg her». Byggene koster kroner og spilltid. Aggregat (på drivstoff) og solceller gir strøm; kontrollrom, master og sykestue bruker strøm. Strømmen står øverst.'],
     ['Gå selv', 'I 3D: trykk «Gå», så står du på bakken i øyehøyde (ved det valgte laget hvis du har valgt et). PC: W/A/S/D eller piltastene, dra med musa for å se rundt, hold Shift for å løpe. Mobil: styrespaken nede til venstre, dra med den andre fingeren for å se rundt. «Gå» igjen eller Esc for å fly opp. Du kan ikke gå gjennom hus og trær.'],
     ['Kartet', '☰ slår kartlag av og på. «3D» viser terrenget i 3D. ◎ går til Dombås, ⌂ viser hele området. Trykk på bruer, kraftverk og tettsteder for å lese om dem.'],
   ];

@@ -105,7 +105,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1737,6 +1737,9 @@ async function slå3d(på) {
     const nå = lok(e); p.delete(e.pointerId); if (p.size < 2) to = null;
     if (e.type === 'pointerup' && ned && !flyttet && !p.size && R3 && R3.ut) {
       const u = R3.ut;
+      // trykk på bakken i 3D for moduler som velger et sted (leiren, bygg): KROKER.trykk3d(X, Y) -> true når det er brukt
+      if (KROKER.trykk3d.length) { R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
+        if (hit && KROKER.trykk3d.some(f => f(u.cx + hit.point.x, u.cy + hit.point.y))) { ned = null; return; } }
       let best = null, bd = 28; for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const q = proj3(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - nå[0], q[1] - nå[1]); if (d < bd) { bd = d; best = s; } }
       if (modus === 'marsj' && valgt) {
         R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
@@ -1826,7 +1829,7 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=fe0f945763"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=1af671ffcd"></script>
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
@@ -1835,6 +1838,8 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=73ca58c131"></script>
+<script src="/dovre-fliser/spill/leir.js?v=334de2da9e"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=a64958f07f"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=2c7fc1b411"></script>
 </body>
 </html>

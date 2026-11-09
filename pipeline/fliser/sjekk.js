@@ -350,9 +350,21 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           const r = { på, iBy, ute, ferdig: !!(S && S.ferdig), penger: document.getElementById('sPenger').textContent, lagret: !!(lagret && lagret.ferdig && lagret.fraksjon.navn === 'Dovrefolket'),
             fraksjon: Fraksjoner.FRAKSJONER.blå.navn, base: Math.round(Math.hypot(OLJE.BASER[0].x - 196400, OLJE.BASER[0].y - 6898900)), lag: Math.round(Math.hypot(lag.x - 196400, lag.y - 6898900)),
             skjult: !document.getElementById('oppstart').classList.contains('på'), sikt: KROKER.sikt.reduce((v, f) => v * f(lag), 1) };
-          localStorage.removeItem(OppstartSpill.NØKKEL); return r; });
+          // K2 leiren: kontrollrom og aggregat ved leiren, pengene trekkes, byggetid, strøm med drivstoff, lagret
+          const LX = 196400, LY = 6898900, k2 = [];
+          for (const [t, dx] of [['kontrollrom', 40], ['aggregat', -25], ['drivstofftank', -50]]) { LeirSpill.startPlassering(t); LeirSpill.trykk(LX + dx, LY + 10); await LeirSpill.prøv(); k2.push(LeirSpill.plassering().feil || 'ok'); LeirSpill.bekreft(); }
+          LeirSpill.startPlassering('brakke'); LeirSpill.trykk(LX + 40, LY + 10); await LeirSpill.prøv(); const opptatt = LeirSpill.plassering().feil; document.querySelector('#byggvalg button:last-child').click();
+          const L = LeirSpill.tilstand(); r.k2 = { k2, opptatt, penger: OppstartSpill.tilstand().penger, bygg: L.bygg.length };
+          for (const b of L.bygg) b.igjen = 1; sim(.1); for (let i = 0; i < 12; i++) sim(.1);
+          r.k2.ferdig = L.bygg.every(b => b.igjen === 0); const kj = Leir.kjøpDrivstoff(L, 100, OppstartSpill.betal); sim(.1); const st = LeirSpill.siste();
+          r.k2.strøm = [st.prod, st.behov, st.mangler.size]; r.k2.drivstoff = kj.liter; LeirSpill.lagre(); r.k2.lagret = (Leir.fraJSON(localStorage.getItem('riksbrudd-k2')) || { bygg: [] }).bygg.length;
+          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
+        const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
+          && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3;
+        if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
+        console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, ferdig etter byggetiden, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW med ${k2.drivstoff} l drivstoff, lagret`);
         console.log(`${k1ok ? 'ok  ' : 'FEIL'} ${navn} oppstart (K1): startskjerm, «${k1.iBy}», leir på land godtatt, ${k1.penger}, lagret, ${k1.fraksjon} tar over (base flyttet, lagene ${k1.lag} m unna), politi-bonus sikt ×${k1.sikt}`);
         }
       }

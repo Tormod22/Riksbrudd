@@ -150,6 +150,7 @@
     S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
   }
   KROKER.trykk.push((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
+  KROKER.trykk3d.push((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
 
   // ---------- valgene tas i bruk: fraksjonen tar over «blå», basen og lagene flytter til leiren ----------
   function bruk(ny) {
@@ -165,6 +166,8 @@
       kj.forEach((k, i) => { k.x = L.x + 160 + i * 45; k.y = L.y - 200; k.sti = null; });
     }
     visPenger(); visNyttKnapp();
+    // andre moduler (leiren i K2) får vite at spillet er klart
+    window.dispatchEvent(new Event('riksbrudd-spill'));
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
       logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`); }
     else logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
@@ -209,14 +212,16 @@
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;
-  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); } catch (e) { /* ingen lagring */ } location.reload(); };
+  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); } catch (e) { /* ingen lagring */ } location.reload(); };
   document.getElementById('lagmeny').appendChild(nyKnapp);
   const visNyttKnapp = () => { nyKnapp.hidden = !S; };
 
   // ---------- start ----------
   // Lagrede valg brukes straks; ellers vises startskjermen (ikke i de automatiske testene, som starter den selv)
   function nytt() { utkast = O.standard(); vis(1); }
-  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, tilstand: () => S, utkast: () => utkast, NØKKEL };
+  // betal(beløp): trekker pengene og lagrer når det er nok (brukes av leiren i K2 og senere markedet)
+  function betal(b) { if (!S || !(b >= 0) || S.penger < b) return false; S.penger -= b; lagre(); visPenger(); return true; }
+  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
   S = les(); if (S && !S.ferdig) S = null;
   if (S) setTimeout(() => bruk(false), 0); else if (!navigator.webdriver) nytt();
 })();

@@ -153,6 +153,44 @@ Lagres i nettleseren (localStorage «riksbrudd-k1»). «Nytt spill» i ☰ slett
 KROKER.ild kan nå gi over 1 (ekstra treff). Leiren i 3D: flaggstangen fra spill/modeller.js med ditt flagg som duk.
 Ikke gjort ennå: leiren rydder ikke trær der den står (kommer med byggene i K2).
 
+## K2 – ferdig (11. nov 2026)
+
+Bestemt av brukeren 11. nov:
+- **Byggetiden følger spilltiden** (1× = ekte tid, 10× og 60× går fortere). Bygging mens du er logget av kommer i K8.
+- **Priser og tider: Claudes forslag** som utgangspunkt, justeres etter testing:
+
+| Bygg | Pris | Tid | Strøm |
+|---|---|---|---|
+| Kontrollrom | 15 mill. | 6 t | bruker 8 kW |
+| Brakke (8 senger) | 4 mill. | 2 t | bruker 1 kW |
+| Vakttårn | 5 mill. | 1 t | – |
+| Port med vaktbu | 1,5 mill. | 1 t | – |
+| Gjerde | 50 000 kr per meter | 1,2 min per meter | – |
+| Lagertelt / container | 2 mill. / 0,5 mill. | 1 t / 30 min | – |
+| Verksted | 7 mill. | 3 t | bruker 4 kW |
+| Sykestue | 6 mill. | 3 t | bruker 3 kW |
+| Drivstofftank (5 000 l) | 3 mill. | 1 t | – |
+| Aggregat | 8 mill. | 1 t | gir 20 kW, 0,3 l drivstoff per kWt |
+| Solcellepaneler | 3 mill. | 30 min | gir opptil 5 kW i dagslys |
+| Kameramast | 0,5 mill. | 30 min | bruker 0,5 kW |
+| Radiomast | 2 mill. | 2 t | bruker 1 kW |
+| Drivhus | 2,5 mill. | 2 t | bruker 1 kW |
+| Helikopterplass | 10 mill. | 4 t | – |
+| Sandsekkvoll | 0,2 mill. | 30 min | – |
+
+- **Ingen grense for hvor du bygger** – men ikke i vann, ikke oppå et hus som står der og ikke oppå et annet bygg.
+- **Aggregatet går på drivstoff** fra tanken (aggregatet har selv 200 l). Drivstoff kjøpes for 8 000 kr per liter (10 l = 80 000 kr)
+  til markedet kommer (K5). Er det for lite strøm, får byggene strøm i rekkefølgen kontrollrom, radiomast, kameramast, sykestue,
+  verksted, drivhus, brakke.
+- Bakgrunnen **ingeniør** bygger 20 % raskere (bonusen fra K1 virker nå).
+
+Teknisk: spill/leir.js (regler, test pipeline/fliser/test_leir.js) + spill/leir-visning.js (knappen «Leir», byggemeny, plassering i 2D
+og 3D med skisse og «Roter», byggene i kartet og i 3D, strøm øverst). Lagres i nettleseren («riksbrudd-k2»), og «Nytt spill» sletter
+den også. Trær og busker ryddes 5 m rundt hvert bygg og 30 m rundt midten av leiren. Nye kroker: KROKER.trykk3d (trykk på bakken i
+3D), hendelsen «riksbrudd-spill» (K1 sier fra at spillet er klart), OppstartSpill.betal/bonus. Egne enkle 3D-modeller for aggregat,
+solceller, kameramast, radiomast og drivhus (de andre fra spill/modeller.js). Brakkene gir sengeplasser, men medlemmer finnes ikke
+ennå; kontrollrommet, kameraene og radioen får innhold i K3 og K4.
+
 ## 12. Åpne spørsmål til brukeren
 
 1. Skal fraksjonen fortsatt kunne ta **oppdrag i utlandet** (plan-gjeng.md, G3), eller skal alt foregå i Norge nå?

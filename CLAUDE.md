@@ -212,4 +212,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   amenity=fuel som punkt eller midten av området, k = kjede; 2177 stasjoner). 2D: bensin() i kartflis.js (pumpemerke i kjedens farge).
   3D: bensinstasjon() i spill/anlegg3d.js – tak, pumpeøyer, skiltstolpe med navn (skiltTekstur); langs nærmeste veg (u.veger), og
   flyttes langs vegen til taket ikke går inn i et bygg (u.hus.omriss).
+  LEIREN K2 (11. nov, brukeren, docs/plan-kollaps.md K2): spill/leir.js (BYGG med pris, tid i spilltimer, kW, fot; kanBygge med
+  overlapp/vann/hus, steg() for byggetid, strøm og drivstoff; test_leir.js) + leir-visning.js (knapp «Leir», byggemeny, plassering med
+  KROKER.trykk og ny KROKER.trykk3d, kart og 3D, sStrom øverst, lagres «riksbrudd-k2»). Pengene via OppstartSpill.betal; K1 sender
+  hendelsen «riksbrudd-spill» når spillet er klart. 3D: modellene fra spill/modeller.js + egne (aggregat, solcelle, kameramast,
+  radiomast, drivhus) i leir-visning.js; trær/steiner ryddes i byggene (bygg3d-krok og ryddTrær for nye bygg).
 
