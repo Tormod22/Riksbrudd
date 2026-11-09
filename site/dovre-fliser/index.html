@@ -293,6 +293,24 @@ function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23
 const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, bygg: true, infra: true, sikt: true, taake: true };
 const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
+// Nær (fra z14, 1 m per punkt): vegen som den ser ut – asfalt med Statens vegvesens oppmerking, forenklet.
+// E-, riks- og fylkesveg: hvite kantlinjer og gul midtlinje; kommunal veg: bare gul midtlinje; privat veg og skogsbilveg: grus.
+// Bredde i meter etter kategori (NVDB-lagene har ikke vegbredde). Midtlinja er skillelinje: 3 m strek, 9 m opphold.
+const VEGBREDDE = { E: 9.5, R: 8.5, F: 7, K: 5.5, P: 3.5, S: 3.2 }, KANTLINJE = 'FRE', MIDTLINJE = 'KFRE';
+function vegerRealistisk(g, veger, r) {
+  const sti = kat => { g.beginPath(); for (const o of veger) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); } };
+  const strek = m => Math.max(1, m / r), asfalt = k => k !== 'P' && k !== 'S';
+  g.save(); g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#55503f' : '#4b4433'; g.lineWidth = (VEGBREDDE[k] + 1.8) / r; g.stroke(); }   // skulder og grøftekant
+  for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#3f3e3a' : '#837458'; g.lineWidth = VEGBREDDE[k] / r; g.stroke(); }          // asfalt / grus
+  for (const k of KANTLINJE) { sti(k); g.strokeStyle = '#d8d4c8'; g.lineWidth = (VEGBREDDE[k] - .4) / r; g.stroke(); }                           // kantlinjene (hvit kant igjen etter neste lag)
+  for (const k of VEGREKKE) {   // flaten innenfor kantlinjene; mindre veger tegnes først, så kantlinja brytes der en sideveg kommer inn
+    sti(k); g.strokeStyle = asfalt(k) ? '#3f3e3a' : '#837458';
+    g.lineWidth = KANTLINJE.includes(k) ? Math.max(1, (VEGBREDDE[k] - .4) / r - 2 * strek(.12)) : VEGBREDDE[k] / r; g.stroke(); }
+  g.lineCap = 'butt';
+  for (const k of MIDTLINJE) { sti(k); g.strokeStyle = '#d6ac3c'; g.lineWidth = strek(.13); g.setLineDash([Math.max(2, 3 / r), Math.max(4, 9 / r)]); g.stroke(); }
+  g.setLineDash([]); g.restore();
+}
 
 // Landene vest for flisnettet (Storbritannia, Shetland, Irland, Færøyene, Island) som ett grovt bilde (pipeline/fliser/vest.py).
 const VEST = { b: [-1300000, 5650000, -200000, 8000000], bilde: null };
@@ -416,7 +434,8 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
   // veger i nabolandene og Norges hovedveger når man zoomer ut (OpenStreetMap); i Norge fra z8 brukes NVDB (n = 1 hoppes over)
   const uP = uv ? flisP(uv) : null, uveger = uv && uv.t.veg ? uv.t.veg.obj.filter(o => !(z >= 8 && o.e.n)).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(uP)) })) : [];
   const alle = (veger || []).concat(uveger);
-  if (valg.veg && alle.length) {
+  if (valg.veg && alle.length && z >= 14) vegerRealistisk(g, alle, r);   // nær: asfalt med oppmerking
+  else if (valg.veg && alle.length) {
     g.lineCap = g.lineJoin = 'round'; const tynn = z < 8 ? .6 : 1;   // utzoomet: tynnere streker
     for (const pass of [0, 1]) for (const kat of VEGREKKE) {
       if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
