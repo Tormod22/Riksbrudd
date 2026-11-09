@@ -82,12 +82,11 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
+<script src="/dovre-fliser/kartflis.js?v=0cfb9f95a4"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
-const G = { x0: -200000, y0: 9300000, res0: 16384, T: 256 };
-const res = z => G.res0 / 2 ** z, span = z => G.T * res(z);
 const DOVRE = [182016, 6880000, 228000, 6930016], DOMBAS = [189000, 6892000, 197000, 6900000];
 const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
@@ -113,28 +112,12 @@ const STAT = { byte: 0, req: 0, kilde: '' };
 const MANIFEST_RELEASE = !KART_TAG ? Promise.resolve(null) : fetch(`/api/kart/${KART_TAG}/manifest.json/0/1048576`)
   .then(r => r.ok ? r.json() : null).catch(() => null);
 const RELEASE = MANIFEST_RELEASE.then(m => !!m);
-class Kilde {
-  constructor(fil, tag) { this.fil = fil; this.tag = tag || null; this.url = DATA + fil; }   // tag: egen release (byggomriss)
-  getKey() { return (this.tag || '') + this.url; }
-  async getBytes(off, len, signal) {
-    if (this.tag || await RELEASE) {   // GitHub-releasen via mellomstasjonen: byteområdet i adressen, så Vercel kan lagre hver bit
-      try {
-        const r = await fetch(`/api/kart/${this.tag || KART_TAG}/${this.fil}/${off}/${len}`, { signal });
-        if (r.ok) { const data = await r.arrayBuffer(); STAT.byte += data.byteLength; STAT.req++; STAT.kilde = 'GitHub'; tegnHud(); return { data }; }
-        if (this.tag) throw new Error('HTTP ' + r.status + ' ' + this.fil);
-      } catch (e) { if (e.name === 'AbortError' || this.tag) throw e; }
-    }
-    STAT.kilde = 'Vercel';
-    const r = await fetch(this.url, { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal });
-    if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status + ' ' + this.url);
-    let data = await r.arrayBuffer();
-    if (r.status === 200 && data.byteLength > len) data = data.slice(off, off + len); // server uten Range
-    STAT.byte += data.byteLength; STAT.req++; tegnHud();
-    return { data };   // ingen etag: kildene kan byttes underveis, og versjonen ligger i KART_TAG
-  }
-}
+// Kartflisene (kartflis.js) får vite hvor filene ligger og melder bytene og feilene tilbake hit.
+KF.kartTag = KART_TAG; KF.release = RELEASE; KF.data = DATA;
+KF.vedBytes = (n, kilde) => { STAT.byte += n; STAT.req++; if (kilde) STAT.kilde = kilde; tegnHud(); };
+KF.vedFeil = e => { console.error(e); visFeil(e); };
 // Lagene kan være delt i flere filer (hele Norge: sammen.py), hver med zoomområde og eventuelt en stripe av z6-kolonner.
-let OMRÅDE = DOVRE, LAGFILER = null, ÅRSTALL = 1987, NORGE_BLOKKER = null;
+let OMRÅDE = DOVRE, LAGFILER = null, ÅRSTALL = 1987, NORGE_BLOKKER = null, KLAR_FERDIG = false;
 const KLAR = (async () => {
   let m = await MANIFEST_RELEASE;
   if (!m) { try { m = await (await fetch(DATA + 'manifest.json')).json(); } catch (e) { m = null; } }
@@ -163,156 +146,17 @@ const KLAR = (async () => {
   }
   LAGFILER = {};
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
+  KF.lagfiler = LAGFILER; KF.norgeBlokker = NORGE_BLOKKER;
+  startArbeider(filer, await RELEASE);   // bakgrunnstråden lager kartflisene fra nå av (der nettleseren kan)
+  if (!ARB) for (const liste of Object.values(LAGFILER)) for (const f of liste) f.pm.getHeader().catch(() => {});   // innholdsfortegnelsene hentes med en gang, samtidig
+  KLAR_FERDIG = true;
   skitten = true;
 })();
+KF.klar = KLAR;
 KLAR.then(hentInfra);
-function zmaks(lag, std) { const l = LAGFILER && LAGFILER[lag]; return l && l.length ? Math.max(...l.map(f => Math.min(f.zmax, 17))) : std; }   // 2023-kartet: kart/terreng til z10
-function filFor(lag, z, x) {
-  const liste = LAGFILER && LAGFILER[lag]; if (!liste) return null;
-  return liste.find(f => z >= f.zmin && z <= f.zmax && (!f.x6 || z < 6 || ((x >> (z - 6)) >= f.x6[0] && (x >> (z - 6)) <= f.x6[1])));
-}
 
-// ---------- dekoding ----------
-// Tegneflate i bakgrunnen: OffscreenCanvas der den har 2D (Safari fra 16.4), ellers et vanlig canvas.
-const HAR_OFFSCREEN = (() => { try { return typeof OffscreenCanvas !== 'undefined' && !!new OffscreenCanvas(1, 1).getContext('2d'); } catch (e) { return false; } })();
-const lerret = (w, h) => HAR_OFFSCREEN ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
-// Leser et bilde. createImageBitmap med valg feiler i eldre Safari – da brukes et vanlig <img>.
-async function bilde(data, type) {
-  const blob = new Blob([data], { type });
-  try { return await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); } catch (e) { /* prøv neste */ }
-  try { return await createImageBitmap(blob); } catch (e) { /* prøv neste */ }
-  const url = URL.createObjectURL(blob);
-  try { const im = new Image(); im.src = url; await im.decode(); const c = Object.assign(document.createElement('canvas'), { width: im.naturalWidth, height: im.naturalHeight }); c.getContext('2d').drawImage(im, 0, 0); return c; }
-  finally { URL.revokeObjectURL(url); }
-}
-async function piksler(data, type) {
-  const bm = await bilde(data, type);
-  const c = lerret(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true });
-  g.drawImage(bm, 0, 0); return { d: g.getImageData(0, 0, bm.width, bm.height).data, w: bm.width, h: bm.height };
-}
-const DEKOD = {
-  async hoyde(data, z) { // presisjon som i pipeline/fliser/02_fliser.py: 0,1 m på z12–13, 0,5 m ellers
-    const { d, w, h } = await piksler(data, 'image/webp'), p = z >= 12 ? 10 : 2, a = new Float32Array(w * h);
-    for (let i = 0; i < w * h; i++) { const v = d[i * 4] * 256 + d[i * 4 + 1]; a[i] = v ? v / p - 1000 : NaN; }
-    // helning (dz/dx østover, dz/dy nedover) i hvert kildepunkt; interpoleres i visningen så skyggen blir glatt ved overzoom
-    const gx = new Float32Array(w * h), gy = new Float32Array(w * h), r2 = 2 * res(z);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x;
-      gx[i] = (a[y * w + Math.min(w - 1, x + 1)] - a[y * w + Math.max(0, x - 1)]) / r2;
-      gy[i] = (a[Math.min(h - 1, y + 1) * w + x] - a[Math.max(0, y - 1) * w + x]) / r2; }
-    return { a, gx, gy, w, h }; },
-  async terreng(data) { const { d, w, h } = await piksler(data, 'image/webp'); const a = new Uint8Array(w * h);
-    for (let i = 0; i < w * h; i++) a[i] = d[i * 4]; return { a, w, h }; },
-  async kart(data) { const bm = await bilde(data, 'image/webp');
-    const c = lerret(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(bm, 0, 0);
-    return { bm, d: g.getImageData(0, 0, bm.width, bm.height).data, w: bm.width, h: bm.height }; },
-  async vektor(data) { return mvt(new Uint8Array(data)); },
-  async hus(data) { return mvt(new Uint8Array(data)); },
-  async okart(data) { return DEKOD.kart(data); },
-  async utveg(data) { return mvt(new Uint8Array(data)); },
-  async ohoyde(data, z) { return DEKOD.hoyde(data, z); },
-};
-
-// Liten MVT-leser (Mapbox Vector Tile 2.1): lag -> objekter med type, egenskaper og geometri i flis-koordinater.
-function mvt(b) {
-  let p = 0; const td = new TextDecoder();
-  const vi = () => { let r = 0, s = 0, x; do { x = b[p++]; r += (x & 127) * 2 ** s; s += 7; } while (x & 128); return r; };
-  const zz = n => (n % 2 ? -(n + 1) / 2 : n / 2);
-  const hopp = w => { if (w === 0) vi(); else if (w === 1) p += 8; else if (w === 2) p += vi(); else if (w === 5) p += 4; };
-  const pakket = () => { const e = vi() + p, r = []; while (p < e) r.push(vi()); return r; };
-  const ut = {};
-  while (p < b.length) {
-    const k = vi(); if ((k >> 3) !== 3) { hopp(k & 7); continue; }
-    const end = vi() + p, L = { navn: '', nok: [], verdi: [], obj: [], ext: 4096 }, rå = [];
-    while (p < end) {
-      const k2 = vi(), f = k2 >> 3, w = k2 & 7;
-      if (f === 1) { const l = vi(); L.navn = td.decode(b.subarray(p, p + l)); p += l; }
-      else if (f === 3) { const l = vi(); L.nok.push(td.decode(b.subarray(p, p + l))); p += l; }
-      else if (f === 5) L.ext = vi();
-      else if (f === 2) { const fe = vi() + p, o = { tags: [], type: 0, g: [] };
-        while (p < fe) { const k3 = vi(), f3 = k3 >> 3, w3 = k3 & 7;
-          if (f3 === 2) o.tags = pakket(); else if (f3 === 3) o.type = vi(); else if (f3 === 4) o.g = pakket(); else hopp(w3); }
-        rå.push(o); }
-      else if (f === 4) { const ve = vi() + p; let v = null;
-        while (p < ve) { const k3 = vi(), f3 = k3 >> 3, w3 = k3 & 7;
-          if (f3 === 1) { const l = vi(); v = td.decode(b.subarray(p, p + l)); p += l; }
-          else if (f3 === 2) { v = new DataView(b.buffer, b.byteOffset + p, 4).getFloat32(0, true); p += 4; }
-          else if (f3 === 3) { v = new DataView(b.buffer, b.byteOffset + p, 8).getFloat64(0, true); p += 8; }
-          else if (f3 === 4 || f3 === 5) v = vi(); else if (f3 === 6) v = zz(vi()); else if (f3 === 7) v = !!vi(); else hopp(w3); }
-        L.verdi.push(v); }
-      else hopp(w);
-    }
-    for (const o of rå) {
-      const e = {}; for (let i = 0; i < o.tags.length; i += 2) e[L.nok[o.tags[i]]] = L.verdi[o.tags[i + 1]];
-      const deler = []; let x = 0, y = 0, cur = null;
-      for (let i = 0; i < o.g.length;) { const c = o.g[i++], id = c & 7, n = c >> 3;
-        if (id === 7) { if (cur && cur.length) cur.push(cur[0]); continue; }
-        for (let j = 0; j < n; j++) { x += zz(o.g[i++]); y += zz(o.g[i++]);
-          if (id === 1) { cur = [[x, y]]; deler.push(cur); } else cur.push([x, y]); } }
-      L.obj.push({ type: o.type, e, deler });
-    }
-    ut[L.navn] = L;
-  }
-  return ut;
-}
-
-// ---------- flis-hurtigminne ----------
-const RÅ = new Map();
-function hentFlis(lag, z, x, y) {
-  const k = lag + '/' + z + '/' + x + '/' + y;
-  if (!RÅ.has(k)) {
-    RÅ.set(k, KLAR.then(() => { const f = filFor(lag, z, x); return f ? f.pm.getZxy(z, x, y) : null; })
-      .then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); visFeil(e); return null; }));
-    if (RÅ.size > 900) RÅ.delete(RÅ.keys().next().value);
-  }
-  return RÅ.get(k);
-}
-// Beste tilgjengelige flis for (z,x,y): prøver z, så forelder for forelder ned til zmin.
-async function beste(lag, z, x, y, zmax, zmin) {
-  for (let zz = Math.min(z, zmax); zz >= zmin; zz--) {
-    const s = z - zz, t = await hentFlis(lag, zz, x >> s, y >> s);
-    if (t) return { t, zz, f: 2 ** s, ix: x - ((x >> s) << s), iy: y - ((y >> s) << s) };
-  }
-  return null;
-}
-
-// ---------- frø: samme svar på samme sted, hver gang, for alle spillere ----------
-function hash(a, b, c) {
-  let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296;
-}
-
-// Glatt støy (verdistøy) og forskyvning: grensene mellom arealtyper følger naturlige linjer i stedet for 32 m-ruter.
-function stoy(X, Y, s, k) {
-  const gx = Math.floor(X / s), gy = Math.floor(Y / s); let fx = X / s - gx, fy = Y / s - gy;
-  fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-  const a = hash(gx, gy, k), b = hash(gx + 1, gy, k), c = hash(gx, gy + 1, k), d = hash(gx + 1, gy + 1, k);
-  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
-}
-function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
-
-// ---------- komponering av én skjermflis ----------
 const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, bygg: true, infra: true, sikt: true, taake: true };
-const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
-const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
-// Nær (fra z14, 1 m per punkt): vegen som den ser ut – asfalt med Statens vegvesens oppmerking, forenklet.
-// E-, riks- og fylkesveg: hvite kantlinjer og gul midtlinje; kommunal veg: bare gul midtlinje; privat veg og skogsbilveg: grus.
-// Bredde i meter etter kategori (NVDB-lagene har ikke vegbredde). Midtlinja er skillelinje: 3 m strek, 9 m opphold.
-const VEGBREDDE = { E: 9.5, R: 8.5, F: 7, K: 5.5, P: 3.5, S: 3.2 }, KANTLINJE = 'FRE', MIDTLINJE = 'KFRE';
-function vegerRealistisk(g, veger, r) {
-  const sti = kat => { g.beginPath(); for (const o of veger) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); } };
-  const strek = m => Math.max(1, m / r), asfalt = k => k !== 'P' && k !== 'S';
-  g.save(); g.lineCap = 'butt'; g.lineJoin = 'round';
-  for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#55503f' : '#4b4433'; g.lineWidth = (VEGBREDDE[k] + 1.8) / r; g.stroke(); }   // skulder og grøftekant
-  for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#3f3e3a' : '#837458'; g.lineWidth = VEGBREDDE[k] / r; g.stroke(); }          // asfalt / grus
-  for (const k of KANTLINJE) { sti(k); g.strokeStyle = '#d8d4c8'; g.lineWidth = (VEGBREDDE[k] - .4) / r; g.stroke(); }                           // kantlinjene (hvit kant igjen etter neste lag)
-  for (const k of VEGREKKE) {   // flaten innenfor kantlinjene; mindre veger tegnes først, så kantlinja brytes der en sideveg kommer inn
-    sti(k); g.strokeStyle = asfalt(k) ? '#3f3e3a' : '#837458';
-    g.lineWidth = KANTLINJE.includes(k) ? Math.max(1, (VEGBREDDE[k] - .4) / r - 2 * strek(.12)) : VEGBREDDE[k] / r; g.stroke(); }
-  g.lineCap = 'butt';
-  for (const k of MIDTLINJE) { sti(k); g.strokeStyle = '#d6ac3c'; g.lineWidth = strek(.13); g.setLineDash([Math.max(2, 3 / r), Math.max(4, 9 / r)]); g.stroke(); }
-  g.setLineDash([]); g.restore();
-}
-
+KF.vis = VIS;
 // Landene vest for flisnettet (Storbritannia, Shetland, Irland, Færøyene, Island) som ett grovt bilde (pipeline/fliser/vest.py).
 const VEST = { b: [-1300000, 5650000, -200000, 8000000], bilde: null };
 function lastVest() { const im = new Image(); im.onload = () => { VEST.bilde = im; skitten = true; }; im.src = '/dovre-fliser/data/vest.webp'; }
@@ -324,228 +168,35 @@ function tegnVest(vx0, vy1) {
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(im, (x0 - a) * kx, (d - y1) * ky, (x1 - x0) * kx, (y1 - y0) * ky, (x0 - vx0) / m, (vy1 - y1) / m, (x1 - x0) / m, (y1 - y0) / m);
 }
-// Hav og vann: dempet blått (stil 1), også bak kartet der det ikke finnes fliser.
-const HAV = [44, 74, 102], HAV_CSS = `rgb(${HAV})`;
-const OMLAND_LYS = .8;   // omlandet (WorldCover uten satellittbildets lysstyrke) er ca. 20 % lysere enn Norge-kartet: målt 8. nov
-// Norge-kartets vekt (0–1): 1 inne i Norge-blokkene, tones ned mot 0 de siste TONING meterne før en blokk uten Norge-data.
-const TONING = 12000;
-function vekt(X, Y) {
-  if (!NORGE_BLOKKER) return 1;
-  const s = span(6), u = (X - G.x0) / s, v = (G.y0 - Y) / s, bx = Math.floor(u), by = Math.floor(v);
-  if (!NORGE_BLOKKER.has(bx + ',' + by)) return 0;
-  const fx = u - bx, fy = v - by; let d = Infinity;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !NORGE_BLOKKER.has((bx + dx) + ',' + (by + dy)))
-    d = Math.min(d, Math.hypot(dx < 0 ? fx : dx > 0 ? 1 - fx : 0, dy < 0 ? fy : dy > 0 ? 1 - fy : 0) * s);
-  const t = Math.min(1, d / TONING); return t * t * (3 - 2 * t);
+// ---------- bakgrunnstråd for kartflisene (kartflis-arbeider.js) ----------
+// Komponeringen (dekoding, høyde, skygge, vann, trær, hus …) er tung og gjorde draing og zooming hakkete. Tråden lager
+// flisene og sender ferdige bilder tilbake; siden tegner bare. Uten OffscreenCanvas (eldre Safari) lages de her som før.
+let ARB = null, arbId = 0; const ARB_VENT = new Map();
+function startArbeider(filer, release) {
+  if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
+  try {
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=4d8b9a7fe4');
+    w.onmessage = ({ data: m }) => {
+      if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); return; }
+      if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
+      const v = ARB_VENT.get(m.id); if (!v) return; ARB_VENT.delete(m.id);
+      if (m.feil) v.nei(new Error(m.feil)); else v.ok({ c: m.bm, E: m.E });
+    };
+    w.onerror = e => { e.preventDefault(); console.error('kartflis-arbeider:', e.message); ARB = null;   // videre lages flisene her
+      for (const v of ARB_VENT.values()) v.ok(null); ARB_VENT.clear(); skitten = true; };
+    w.postMessage({ type: 'init', kartTag: KART_TAG, release, data: DATA, vis: { ...VIS },
+      norgeBlokker: NORGE_BLOKKER ? [...NORGE_BLOKKER] : null,
+      filer: Object.fromEntries(Object.entries(filer).map(([n, l]) => [n, l.map(f => ({ fil: f.fil, tag: f.tag || null, zmin: f.zmin, zmax: f.zmax, x6: f.x6 || null }))])) });
+    ARB = w;
+  } catch (e) { ARB = null; }
 }
-// Vekten på et grovt rutenett over flisen (17 × 17), interpoleres per punkt.
-function vektRutenett(minx, maxy, sp) {
-  const n = 17, a = new Float32Array(n * n); a.n = n;
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) a[j * n + i] = vekt(minx + sp * i / (n - 1), maxy - sp * j / (n - 1));
-  return a;
+// En ferdig flis { c: bilde, E: høyder } – fra tråden når den finnes, ellers lages den her.
+function lagFlis(z, x, y, valg = VIS) {
+  if (!ARB) return komponer(z, x, y, valg);
+  return new Promise((ok, nei) => { const id = ++arbId; ARB_VENT.set(id, { ok, nei }); ARB.postMessage({ type: 'flis', id, z, x, y, valg: { ...valg } }); })
+    .then(t => t || komponer(z, x, y, valg));   // tråden stoppet underveis: lag den her
 }
-function vektVed(VK, fx, fy) { const M = VK.n - 1, u = Math.max(0, Math.min(M - 1e-6, fx * M)), v = Math.max(0, Math.min(M - 1e-6, fy * M)), i = u | 0, j = v | 0, a = u - i, c = v - j, n = VK.n;
-  return (VK[j * n + i] * (1 - a) + VK[j * n + i + 1] * a) * (1 - c) + (VK[(j + 1) * n + i] * (1 - a) + VK[(j + 1) * n + i + 1] * a) * c; }
-// Omlandets høyde (64 m, Copernicus) der Norge-høyden mangler (bare = true: fyll bare NaN-punkter).
-function fyllHoyde(oh, E, GX, GY, N, bare) {
-  const T = G.T, H = oh.t, W = H.w;
-  const bil = (A, i, fx, fy) => (A[i] * (1 - fx) + A[i + 1] * fx) * (1 - fy) + (A[i + W] * (1 - fx) + A[i + W + 1] * fx) * fy;
-  for (let py = -1; py <= T; py++) for (let px = -1; px <= T; px++) {
-    const j = (py + 1) * N + px + 1; if (bare && E[j] === E[j]) continue;
-    const sx = (oh.ix * T + px + .5) / oh.f - .5 + 1, sy = (oh.iy * T + py + .5) / oh.f - .5 + 1;
-    const x0 = Math.max(0, Math.min(W - 2, Math.floor(sx))), y0 = Math.max(0, Math.min(H.h - 2, Math.floor(sy))), fx = sx - x0, fy = sy - y0, i = y0 * W + x0;
-    E[j] = bil(H.a, i, fx, fy); GX[j] = bil(H.gx, i, fx, fy); GY[j] = bil(H.gy, i, fx, fy);
-  }
-}
-
-async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lager bakken uten skygge)
-  const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
-  const [k, h, tr, v] = await Promise.all([beste('kart', z, x, y, zmaks('kart', 9), 0), beste('hoyde', z, x, y, 13, 0),
-    z >= 12 ? beste('terreng', z, x, y, zmaks('terreng', 9), 6) : null, z >= 8 ? beste('vektor', z, x, y, 13, 8) : null]);
-  const uv = z >= 5 ? await beste('utveg', z, x, y, 11, 5) : null;   // jernbane og veger i nabolandene (OpenStreetMap)
-  const hs = z >= 12 && valg.bygg ? await beste('hus', z, x, y, 13, 12) : null;   // byggomriss (OpenStreetMap)
-  const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
-  const VK = vektRutenett(minx, maxy, span(z)), hel = VK.every(v => v >= 1);   // hvor mye av Norge-kartet som skal med (1 = bare det)
-  const [ok, oh] = NORGE_BLOKKER && !hel ? await Promise.all([beste('okart', z, x, y, 8, 0), beste('ohoyde', z, x, y, 8, 0)]) : [null, null];
-  g.fillStyle = NORGE_BLOKKER ? HAV_CSS : '#1a1710'; g.fillRect(0, 0, T, T);   // uten omland (Dovre-piloten): mørkt der data mangler
-  let od = null, vann = null;   // omlandets farge under Norge-kartet; hvor mye av hvert punkt som er vann
-  if (ok) { const sw = T / ok.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T);
-    od = g.getImageData(0, 0, T, T).data; if (!k) { g.fillStyle = HAV_CSS; g.fillRect(0, 0, T, T); g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T); } }
-  if (k && k.f <= 2) { const sw = T / k.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(k.t.bm, k.ix * sw, k.iy * sw, sw, sw, 0, 0, T, T); }
-  else if (k) { // overzoom: hent hvert punkt fra en litt forskjøvet posisjon i kartflisen
-    const im = g.createImageData(T, T), d = im.data, K = k.t, rk = res(k.zz), kx0 = G.x0 + (x >> Math.log2(k.f)) * span(k.zz), ky0 = G.y0 - (y >> Math.log2(k.f)) * span(k.zz);
-    for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
-      const X = minx + (px + .5) * r, Y = maxy - (py + .5) * r, [dx, dy] = vri(X, Y);
-      const sx = Math.max(0, Math.min(K.w - 1.001, (X + dx - kx0) / rk - .5)), sy = Math.max(0, Math.min(K.h - 1.001, (ky0 - Y - dy) / rk - .5));
-      const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0, x1 = Math.min(K.w - 1, x0 + 1), y1 = Math.min(K.h - 1, y0 + 1), o = (py * T + px) * 4;
-      for (let c = 0; c < 3; c++) d[o + c] = (K.d[(y0 * K.w + x0) * 4 + c] * (1 - fx) + K.d[(y0 * K.w + x1) * 4 + c] * fx) * (1 - fy) + (K.d[(y1 * K.w + x0) * 4 + c] * (1 - fx) + K.d[(y1 * K.w + x1) * 4 + c] * fx) * fy;
-      d[o + 3] = 255;
-    }
-    g.putImageData(im, 0, 0);
-  }
-  { // Norge-kartet tones over i omlandet mot kanten av blokkene, og vann og hav blir blått
-    const im = g.getImageData(0, 0, T, T), d = im.data, M = VK.n - 1, q = M / T; vann = new Float32Array(T * T);
-    for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
-      const o = (py * T + px) * 4; let r = d[o], gg = d[o + 1], b = d[o + 2];
-      if (od) { let w = 1;
-        if (!hel) { const fx = (px + .5) * q, fy = (py + .5) * q, i = Math.min(M - 1, fx | 0), j = Math.min(M - 1, fy | 0), a = fx - i, c = fy - j, n = VK.n;
-          w = (VK[j * n + i] * (1 - a) + VK[j * n + i + 1] * a) * (1 - c) + (VK[(j + 1) * n + i] * (1 - a) + VK[(j + 1) * n + i + 1] * a) * c; }
-        if (!k || r + gg + b < 75 && b - r < 8) w = 0;   // Norge-kartet mangler her (utenfor blokkene eller uten satellittdata)
-        const L = Math.abs(od[o] - 22) + Math.abs(od[o + 1] - 30) + Math.abs(od[o + 2] - 38) < 16 ? 1 : OMLAND_LYS;   // vann dempes ikke
-        r = r * w + od[o] * L * (1 - w); gg = gg * w + od[o + 1] * L * (1 - w); b = b * w + od[o + 2] * L * (1 - w); }
-      else if (NORGE_BLOKKER && r + gg + b < 75 && b - r < 8) { r = HAV[0]; gg = HAV[1]; b = HAV[2]; }   // ingen data og intet omland på /norge: hav
-      const v = b - r < 6 ? 0 : Math.max(0, Math.min(1, (40 - Math.abs(r - 22) - Math.abs(gg - 30) - Math.abs(b - 38)) / 24));   // vannfargen i kartflisene (blåere enn rød; ikke den mørke bakgrunnen)
-      d[o] = r + (HAV[0] - r) * v; d[o + 1] = gg + (HAV[1] - gg) * v; d[o + 2] = b + (HAV[2] - b) * v; vann[py * T + px] = v;
-    }
-    g.putImageData(im, 0, 0);
-  }
-  // høyde på skjermflisens rutenett, med 1 px kant: E[(py+1)*258 + px+1]
-  let E = null; const N = T + 2;
-  const hh = h || oh;   // utenfor Norge: bare omlandets høyde
-  if (hh) {
-    E = new Float32Array(N * N); const GX = new Float32Array(N * N), GY = new Float32Array(N * N);
-    if (!h) fyllHoyde(oh, E, GX, GY, N, false);
-    else { const H = h.t, W = H.w;
-    const bil = (A, i, fx, fy) => (A[i] * (1 - fx) + A[i + 1] * fx) * (1 - fy) + (A[i + W] * (1 - fx) + A[i + W + 1] * fx) * fy;
-    for (let py = -1; py <= T; py++) for (let px = -1; px <= T; px++) {
-      const sx = (h.ix * T + px + .5) / h.f - .5 + 1, sy = (h.iy * T + py + .5) / h.f - .5 + 1;
-      const x0 = Math.max(0, Math.min(W - 2, Math.floor(sx))), y0 = Math.max(0, Math.min(H.h - 2, Math.floor(sy))), fx = sx - x0, fy = sy - y0, i = y0 * W + x0, j = (py + 1) * N + px + 1;
-      E[j] = bil(H.a, i, fx, fy); GX[j] = bil(H.gx, i, fx, fy); GY[j] = bil(H.gy, i, fx, fy);
-    }
-    if (oh) fyllHoyde(oh, E, GX, GY, N, true); }
-    if (valg.skygge) {
-      const im = g.getImageData(0, 0, T, T), d = im.data, ve = z <= 8 ? 2 : z <= 10 ? 1.5 : 1.2;
-      const Lx = -.5417, Ly = .5417, Lz = .6428; // lys fra nordvest, 40° over horisonten
-      for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
-        const i = (py + 1) * N + px + 1, gx = GX[i] * ve, gy = GY[i] * ve;
-        if (gx !== gx || gy !== gy) continue;
-        const n = Math.hypot(gx, gy, 1), s = Math.max(0, (-gx * Lx + gy * Ly + Lz) / n) / Lz, o = (py * T + px) * 4, wv = vann[py * T + px];
-        const f = (.3 + .7 * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
-        d[o] = Math.min(255, d[o] * f); d[o + 1] = Math.min(255, d[o + 1] * f); d[o + 2] = Math.min(255, d[o + 2] * f);
-      }
-      g.putImageData(im, 0, 0);
-    }
-    if (valg.koter) koter(g, E, N, z);
-  }
-  if (tr && valg.traer) traer(g, z, x, y, tr, E, N, hel ? null : VK);
-  let veger = null;
-  const flisP = t => { const s = T * t.f / 4096, ox = t.ix * T, oy = t.iy * T; return ([a, b]) => [a * s - ox, b * s - oy]; };
-  const P = v ? flisP(v) : null;
-  if (v) veger = (v.t.veg ? v.t.veg.obj : []).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
-  // veger i nabolandene og Norges hovedveger når man zoomer ut (OpenStreetMap); i Norge fra z8 brukes NVDB (n = 1 hoppes over)
-  const uP = uv ? flisP(uv) : null, uveger = uv && uv.t.veg ? uv.t.veg.obj.filter(o => !(z >= 8 && o.e.n)).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(uP)) })) : [];
-  const alle = (veger || []).concat(uveger);
-  if (valg.veg && alle.length && z >= 14) vegerRealistisk(g, alle, r);   // nær: asfalt med oppmerking
-  else if (valg.veg && alle.length) {
-    g.lineCap = g.lineJoin = 'round'; const tynn = z < 8 ? .6 : 1;   // utzoomet: tynnere streker
-    for (const pass of [0, 1]) for (const kat of VEGREKKE) {
-      if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
-      const [m, min, farge] = VEG[kat], w = Math.max(min * tynn, m / r);
-      g.strokeStyle = pass ? farge : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2 * tynn, w * .45);
-      g.beginPath(); for (const o of alle) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); }
-      g.stroke();
-    }
-  }
-  if (valg.bane && uv && uv.t.bane) {   // jernbane: mørk strek med lys stiplet kjerne, som på gamle kart
-    const w = z <= 7 ? 1 : z <= 10 ? 1.5 : Math.max(1.8, 3 / r);
-    g.lineCap = 'butt'; g.lineJoin = 'round';
-    for (const pass of [0, 1]) {
-      g.strokeStyle = pass ? '#d9cdb0' : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? w : w + (z <= 7 ? 1.4 : 2.2);
-      if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
-      g.beginPath(); for (const o of uv.t.bane.obj) for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); }
-      g.stroke(); g.setLineDash([]);
-    }
-  }
-  if (v && valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
-  if (hs && hs.t.hus) husomriss(g, z, hs);
-  return { c, E };
-}
-
-// Byggomriss: tak i farge etter type, skygge mot sørøst (lys fra nordvest) som blir lengre jo høyere bygget er.
-const TAK = ['#6e4a3c', '#5b524a', '#565c60', '#6b5c46', '#7a4634', '#5e564c'];   // bolig, garasje/uthus, næring, offentlig, landbruk, annet
-function husomriss(g, z, hs) {
-  const T = G.T, r = res(z), s = T * hs.f / 4096, ox = hs.ix * T, oy = hs.iy * T, liste = hs.t.hus.obj;
-  const ring = (o, dx, dy) => { for (const d of o.deler) { g.moveTo(d[0][0] * s - ox + dx, d[0][1] * s - oy + dy); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0] * s - ox + dx, d[i][1] * s - oy + dy); g.closePath(); } };
-  g.fillStyle = 'rgba(6,5,3,.38)';
-  for (const o of liste) { const d = Math.min(14, (o.e.h || 6) / r * .45); g.beginPath(); ring(o, d, d); g.fill(); }
-  g.lineJoin = 'round'; g.lineWidth = z >= 15 ? 1 : .6; g.strokeStyle = 'rgba(18,13,8,.75)';
-  for (const o of liste) {
-    g.fillStyle = TAK[o.e.t] || TAK[5]; g.beginPath(); ring(o, 0, 0); g.fill(); g.stroke();
-    if (z >= 15 && (o.e.h || 0) > 9) { g.strokeStyle = 'rgba(230,215,180,.18)'; g.beginPath(); ring(o, -1, -1); g.stroke(); g.strokeStyle = 'rgba(18,13,8,.75)'; }
-  }
-}
-
-function koter(g, E, N, z) {
-  const iv = z <= 8 ? 100 : z === 9 ? 50 : z <= 11 ? 20 : z === 12 ? 10 : 5, tykk = iv * 5;
-  const seg = [[], []];
-  for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
-    const a = E[j * N + i], b = E[j * N + i + 1], c = E[(j + 1) * N + i + 1], d = E[(j + 1) * N + i];
-    if (a !== a || b !== b || c !== c || d !== d) continue;
-    const lo = Math.min(a, b, c, d), hi = Math.max(a, b, c, d);
-    for (let L = Math.ceil(lo / iv) * iv; L < hi; L += iv) {
-      const kryss = [], X = i - 1, Y = j - 1;  // pikselsenter-koordinater
-      const kant = (v1, v2, x1, y1, x2, y2) => { if ((v1 < L) !== (v2 < L)) { const t = (L - v1) / (v2 - v1); kryss.push([x1 + (x2 - x1) * t + .5, y1 + (y2 - y1) * t + .5]); } };
-      kant(a, b, X, Y, X + 1, Y); kant(b, c, X + 1, Y, X + 1, Y + 1); kant(c, d, X + 1, Y + 1, X, Y + 1); kant(d, a, X, Y + 1, X, Y);
-      const s = seg[L % tykk === 0 ? 1 : 0];
-      for (let q = 0; q + 1 < kryss.length; q += 2) s.push(kryss[q], kryss[q + 1]);
-    }
-  }
-  [[.6, 'rgba(58,40,22,.38)'], [1.1, 'rgba(58,40,22,.6)']].forEach(([w, farge], t) => {
-    g.lineWidth = w; g.strokeStyle = farge; g.beginPath();
-    const s = seg[t]; for (let q = 0; q < s.length; q += 2) { g.moveTo(s[q][0], s[q][1]); g.lineTo(s[q + 1][0], s[q + 1][1]); }
-    g.stroke();
-  });
-}
-
-// Trær på et fast 5 m-gitter i verden: samme tre på samme sted på alle zoomnivåer og hos alle spillere.
-function traer(g, z, x, y, tr, E, N, VK) {
-  const T = G.T, r = res(z), S = 5, minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
-  const zt = tr.zz, rt = res(zt), tx0 = G.x0 + (x >> (z - zt)) * span(zt), ty0 = G.y0 - (y >> (z - zt)) * span(zt), A = tr.t.a;
-  const klasse = (X, Y) => { const px = Math.floor((X - tx0) / rt), py = Math.floor((ty0 - Y) / rt);
-    return A[Math.max(0, Math.min(T - 1, py)) * T + Math.max(0, Math.min(T - 1, px))]; };
-  const i0 = Math.floor((minx - 6) / S), i1 = Math.ceil((minx + span(z) + 6) / S), j0 = Math.floor((maxy - span(z) - 6) / S), j1 = Math.ceil((maxy + 6) / S);
-  const SANNS = { 1: .62, 2: .05, 5: .015, 6: .04, 7: .03 }, liten = z <= 12;
-  const skygge = [], kroner = [];
-  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-    const X = (i + hash(i, j, 1)) * S, Y = (j + hash(i, j, 2)) * S;
-    const [dx, dy] = vri(X, Y), k = klasse(X + dx + (hash(i, j, 9) - .5) * 8, Y + dy + (hash(i, j, 10) - .5) * 8);
-    let p = SANNS[k] || 0; if (VK) p *= vektVed(VK, (X - minx) / span(z), (maxy - Y) / span(z)); if (!p || hash(i, j, 3) >= p) continue;
-    const px = (X - minx) / r, py = (maxy - Y) / r;
-    if (px < -12 || py < -12 || px > T + 12 || py > T + 12) continue;
-    let hoy = 0; if (E) { const ix = Math.max(0, Math.min(N - 1, Math.round(px) + 1)), iy = Math.max(0, Math.min(N - 1, Math.round(py) + 1)); hoy = E[iy * N + ix]; }
-    const bjork = k !== 1 || hoy > 880 || hash(i, j, 5) < .15, rad = (bjork ? 1.4 : 1.6) + 2.2 * hash(i, j, 4);
-    kroner.push([px, py, Math.max(liten ? .55 : .8, rad / r), bjork, hash(i, j, 6)]);
-  }
-  if (liten) { g.fillStyle = 'rgba(22,30,14,.55)'; for (const [px, py, rr] of kroner) g.fillRect(px - rr / 2, py - rr / 2, rr, rr); return; }
-  g.fillStyle = 'rgba(8,10,4,.4)'; g.beginPath();
-  for (const [px, py, rr] of kroner) { g.moveTo(px + rr * 1.5, py + rr * .6); g.arc(px + rr * .6, py + rr * .6, rr, 0, 6.283); } g.fill();
-  for (const [px, py, rr, bjork, u] of kroner) {
-    g.fillStyle = bjork ? `rgb(${78 + u * 18 | 0},${92 + u * 16 | 0},${52 + u * 8 | 0})` : `rgb(${36 + u * 12 | 0},${50 + u * 14 | 0},${30 + u * 6 | 0})`;
-    g.beginPath(); g.arc(px, py, rr, 0, 6.283); g.fill();
-    if (rr > 2.5) { g.fillStyle = bjork ? 'rgba(170,176,110,.28)' : 'rgba(120,140,90,.22)'; g.beginPath(); g.arc(px - rr * .3, py - rr * .3, rr * .45, 0, 6.283); g.fill(); }
-  }
-}
-
-// Bygg: mål etter bygningstype (matrikkelen), vridd langs nærmeste veg.
-function bygg(g, z, liste, veger) {
-  const r = res(z);
-  const mal = t => t >= 160 && t < 200 ? [8, 6] : t < 160 ? [12, 9] : t >= 240 && t < 250 ? [20, 11] : t < 300 ? [18, 12] : [14, 10];
-  for (const b of liste) {
-    let [w, h] = mal(b.t); w /= r; h /= r;
-    if (w < 2.2) { g.fillStyle = '#2a2018'; g.fillRect(b.p[0] - 1.1, b.p[1] - 1.1, 2.2, 2.2); continue; }
-    let vinkel = hash(Math.round(b.p[0] * 7), Math.round(b.p[1] * 7), 11) * Math.PI / 2, best = 60 / r;
-    if (veger) for (const o of veger) for (const d of o.deler) for (let i = 1; i < d.length; i++) {
-      const [ax, ay] = d[i - 1], [bx, by] = d[i], vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy || 1;
-      const t = Math.max(0, Math.min(1, ((b.p[0] - ax) * vx + (b.p[1] - ay) * vy) / l2)), dd = Math.hypot(ax + vx * t - b.p[0], ay + vy * t - b.p[1]);
-      if (dd < best) { best = dd; vinkel = Math.atan2(vy, vx); }
-    }
-    g.save(); g.translate(b.p[0], b.p[1]); g.rotate(vinkel);
-    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(-w / 2 + w * .12, -h / 2 + h * .15, w, h);
-    g.fillStyle = b.t < 200 ? '#5a3a2c' : '#4a4038'; g.fillRect(-w / 2, -h / 2, w, h);
-    if (w > 6) { g.strokeStyle = 'rgba(230,215,180,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-w / 2, 0); g.lineTo(w / 2, 0); g.stroke(); }
-    g.restore();
-  }
-}
+function forhent(z, x, y) { if (ARB) ARB.postMessage({ type: 'hent', z, x, y, valg: { ...VIS } }); else flisData(z, x, y).catch(() => {}); }
 
 // ---------- kamera og tegning ----------
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -556,10 +207,12 @@ function niva() { return Math.max(ZMIN, Math.min(ZMAX, Math.round(Math.log2(G.re
 function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.clientWidth; VH = cv.clientHeight; cv.width = VW * dpr; cv.height = VH * dpr; skitten = true;
   document.documentElement.style.setProperty('--topp', document.querySelector('.top').getBoundingClientRect().bottom + 'px'); }
 function passInn(b) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * 1.05; skitten = true; }
+const HENTET = new Set();   // fliser vi allerede har bedt om data til
 function kø(z, x, y, k) {
+  if (!HENTET.has(k) && KLAR_FERDIG) { HENTET.add(k); if (HENTET.size > 2000) HENTET.delete(HENTET.keys().next().value); forhent(z, x, y); }   // nettet jobber mens køen venter
   if (VENTER.has(k) || aktive >= 6) return;
   VENTER.add(k); aktive++;
-  komponer(z, x, y).then(t => { FERDIG.set(k, t); if (FERDIG.size > 260) FERDIG.delete(FERDIG.keys().next().value); })
+  lagFlis(z, x, y).then(t => { FERDIG.set(k, t); if (FERDIG.size > 320) { const [gk, gt] = FERDIG.entries().next().value; FERDIG.delete(gk); if (gt.c.close) gt.c.close(); } })
     .catch(e => { console.error(e); visFeil(e); })
     .finally(() => { VENTER.delete(k); aktive--; skitten = true; });
 }
@@ -1176,7 +829,7 @@ async function bygg3d(cx, cy, S) {
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false }, kø = [];
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
-  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await komponer(zt, x, y, valg);
+  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
   if (INFRA && VIS.infra) tegnInfraPå(g, cx - S, cy + S, mpp, TW, TW, { bruer: false, punkter: false, etiketter: false });   // tunneler, ferjer, dammer … i overflaten
   const u = { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2], hus: null };
@@ -1194,7 +847,9 @@ async function bygg3d(cx, cy, S) {
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
 async function hus3d(u) {
   const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), pos = [], kol = [];
-  const FARGE = TAK.map(h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255]);
+  const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+  const tri = (a, b, c, farge) => { pos.push(...a, ...b, ...c); kol.push(...farge, ...farge, ...farge); };
+  const firkant = (a, b, c, d, farge) => { tri(a, b, c, farge); tri(a, c, d, farge); };
   const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]));
   for (const [x, y, t] of await Promise.all(fl)) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
@@ -1202,19 +857,30 @@ async function hus3d(u) {
       if (sett.has(o.e.i) || sett.size > 30000) continue;   // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
-      const P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);
+      let P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);
       let areal = 0; for (let i = 0; i < P.length; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length]; areal += ax * by - bx * ay; }
       if (areal < 0) P.reverse();   // alle omriss mot klokka, så veggene vender utover og taket opp
       let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; } mx /= P.length; my /= P.length;
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
-      const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + (o.e.h || 6), c = FARGE[o.e.t] || FARGE[5];
-      for (let i = 0; i < P.length; i++) {   // vegger (litt mørkere enn taket)
-        const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length];
-        pos.push(ax, ay, bunn, bx, by, bunn, bx, by, topp, ax, ay, bunn, bx, by, topp, ax, ay, topp);
-        for (let q = 0; q < 6; q++) kol.push(c[0] * .75, c[1] * .75, c[2] * .75);
+      const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), vegg = rgb(veggFarge(t, i));
+      const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
+      if (saltak(t, f.areal) && f.rekt > .82 && P.length <= 10 && f.lv > 3) {
+        // Saltak på det rettvinklede omrisset: vegger opp til raftet, gavler i veggfargen og to takflater opp til mønet.
+        const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2;
+        const p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
+        const A = [p(-hu, -hv, bunn), p(hu, -hv, bunn), p(hu, hv, bunn), p(-hu, hv, bunn)], Ar = A.map(q => [q[0], q[1], raft]);
+        for (let j = 0; j < 4; j++) firkant(A[j], A[(j + 1) % 4], Ar[(j + 1) % 4], Ar[j], vegg.map(v => v * (j % 2 ? .92 : 1)));
+        const M0 = p(-hu, 0, topp), M1 = p(hu, 0, topp);
+        tri(Ar[1], Ar[2], M1, vegg); tri(Ar[3], Ar[0], M0, vegg);   // gavlene
+        firkant(Ar[0], Ar[1], M1, M0, tak); firkant(Ar[2], Ar[3], M0, M1, tak);   // takflatene
+      } else {
+        for (let j = 0; j < P.length; j++) {   // vegger
+          const [ax, ay] = P[j], [bx, by] = P[(j + 1) % P.length];
+          firkant([ax, ay, bunn], [bx, by, bunn], [bx, by, topp], [ax, ay, topp], vegg.map(v => v * (j % 2 ? .92 : 1)));
+        }
+        const flat = tak.map(v => v * 1.05);
+        for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(P.map(q => new THREE.Vector2(q[0], q[1])), [])) tri([...P[a], topp], [...P[b], topp], [...P[c], topp], flat);
       }
-      const tri = THREE.ShapeUtils.triangulateShape(P.map(p => new THREE.Vector2(p[0], p[1])), []);
-      for (const [a, b, cc] of tri) { for (const n of [a, b, cc]) { pos.push(P[n][0], P[n][1], topp); kol.push(c[0], c[1], c[2]); } }
     }
   }
   return pos.length ? { pos: new Float32Array(pos), kol: new Float32Array(kol), antall: sett.size } : null;

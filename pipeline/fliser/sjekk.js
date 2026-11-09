@@ -24,6 +24,11 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
   return { tag: m[1], dir }; })();
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
+  { // syntaks i alle skriptfilene (en kommentar som slukte resten av en linje stoppet hele kartet 9. nov)
+    const D = path.join(__dirname, '../../site/dovre-fliser'), filer = ['kartflis.js', 'kartflis-arbeider.js', 'terreng.js', ...fs.readdirSync(path.join(D, 'spill')).filter(f => f.endsWith('.js')).map(f => 'spill/' + f)];
+    const dårlige = filer.filter(f => { try { require('child_process').execFileSync(process.execPath, ['--check', path.join(D, f)], { stdio: 'pipe' }); return false; } catch (e) { return true; } });
+    if (dårlige.length) feil++; console.log(`${dårlige.length ? 'FEIL' : 'ok  '} syntaks i ${filer.length} skriptfiler` + (dårlige.length ? ': ' + dårlige.join(', ') : ''));
+  }
   { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
     const fs = require('fs'), D = path.join(__dirname, '../../site/dovre-fliser');
     const h = require('crypto').createHash('sha256').update(fs.readFileSync(path.join(D, 'terreng.js'))).digest('hex').slice(0, 10);
