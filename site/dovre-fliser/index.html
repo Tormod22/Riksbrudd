@@ -105,7 +105,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1692,7 +1692,9 @@ function tegn3d() {
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015; R.renderer.render(R.scene, R.cam);   // skyene driver sakte
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015;   // skyene driver sakte
+  // bilde3d: (R3) => true når en krok har tegnet bildet selv (filtre/kameralinser i spill/filtre.js)
+  if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   tegnInfra3d(g);
