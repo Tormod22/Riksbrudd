@@ -1178,6 +1178,8 @@ function proj3(X, Y) {
 }
 function mPer3(X, Y) { const u = R3.ut, c = R3.cam.position; return Math.hypot(X - u.cx - c.x, Y - u.cy - c.y, (hoyde3d(X, Y) - u.h0) * R3.EX - c.z) * 2 * Math.tan(25 * Math.PI / 180) / VH; }
 function kamera3d() {
+  // førsteperson (spill/gange.js): kameraet i øyehøyde på bakken
+  if (R3.fot && window.Gange) { Gange.kamera(R3); return; }
   const b = R3.bane, c = R3.cam, u = R3.ut, z = (hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0) * R3.EX;
   c.position.set(b.x + Math.sin(b.yaw) * Math.cos(b.pitch) * b.avst, b.y - Math.cos(b.yaw) * Math.cos(b.pitch) * b.avst, z + Math.sin(b.pitch) * b.avst);
   const bakke = (hoyde3d(u.cx + c.position.x, u.cy + c.position.y) - u.h0) * R3.EX + 30; if (c.position.z < bakke) c.position.z = bakke;   // aldri under bakken
@@ -1226,6 +1228,8 @@ async function slå3d(på) {
   const flytt = (dx, dy) => { const b = R3.bane, k = b.avst / VH * 1.15, ca = Math.cos(b.yaw), sa = Math.sin(b.yaw);
     b.x += -dx * k * ca + dy * k * -sa; b.y += -dx * k * sa + dy * k * ca; };
   c3.addEventListener('contextmenu', e => e.preventDefault());
+  // mens du går selv (spill/gange.js) tar gangen pekerne
+  for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) c3.addEventListener(t, e => { if (window.Gange && Gange.peker(e)) e.stopImmediatePropagation(); });
   c3.addEventListener('pointerdown', e => { c3.setPointerCapture(e.pointerId); p.set(e.pointerId, lok(e)); ned = p.size === 1 ? lok(e) : null; flyttet = false; to = null; });
   c3.addEventListener('pointermove', e => {
     if (!p.has(e.pointerId) || !R3) return; const forr = p.get(e.pointerId), nå = lok(e); p.set(e.pointerId, nå);
@@ -1250,7 +1254,7 @@ async function slå3d(på) {
     if (!p.size) ned = null;
   };
   c3.addEventListener('pointerup', opp); c3.addEventListener('pointercancel', opp);
-  c3.addEventListener('wheel', e => { e.preventDefault(); if (R3) R3.bane.avst = Math.max(60, Math.min(20000, R3.bane.avst * Math.exp(e.deltaY * (e.deltaMode ? .05 : .0015)))); }, { passive: false });
+  c3.addEventListener('wheel', e => { e.preventDefault(); if (R3 && !R3.fot) R3.bane.avst = Math.max(60, Math.min(20000, R3.bane.avst * Math.exp(e.deltaY * (e.deltaMode ? .05 : .0015)))); }, { passive: false });
 })();
 
 // ---------- styring ----------
@@ -1329,6 +1333,7 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=7ea68a87d1"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=88f1cf193d"></script>
+<script src="/dovre-fliser/spill/gange.js?v=b26a1e5ad8"></script>
 </body>
 </html>

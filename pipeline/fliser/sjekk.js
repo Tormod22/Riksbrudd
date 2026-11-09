@@ -332,6 +332,13 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
+    // førsteperson: «Gå», hold W et sekund, kameraet står i øyehøyde og har flyttet seg; Esc flyr opp igjen
+    await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y }));
+    await pg.keyboard.down('w'); await pg.waitForTimeout(1500); await pg.keyboard.up('w');
+    const f1 = await pg.evaluate(() => { const c = R3.cam.position, u = R3.ut; return { x: R3.bane.x, y: R3.bane.y, over: c.z - (hoyde3d(u.cx + c.x, u.cy + c.y) - u.h0) * R3.EX }; });
+    await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
+    const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2; if (!fok) feil++;
+    console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, Esc flyr opp: ${!f2}`);
     await pg.click('#v3d');
     const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
