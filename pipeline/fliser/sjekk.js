@@ -403,13 +403,19 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // førsteperson: «Gå», hold W et sekund, kameraet står i øyehøyde og har flyttet seg; Esc flyr opp igjen
     await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y }));
-    await pg.keyboard.down('w'); await pg.waitForTimeout(1500); await pg.keyboard.up('w');
+    // hold W til du har gått et stykke (myk start: på trege maskiner tar det flere rammer), høyst 8 s
+    await pg.keyboard.down('w'); await pg.waitForFunction(f0 => Math.hypot(R3.bane.x - f0.x, R3.bane.y - f0.y) > .6, f0, { timeout: 8000 }).catch(() => {}); await pg.keyboard.up('w');
     const f1 = await pg.evaluate(() => { const c = R3.cam.position, u = R3.ut; return { x: R3.bane.x, y: R3.bane.y, over: c.z - (hoyde3d(u.cx + c.x, u.cy + c.y) - u.h0) * R3.EX }; });
     const kol = await pg.evaluate(() => { const P = R3.ut.hus && R3.ut.hus.omriss && R3.ut.hus.omriss[0]; if (!P) return null; const x = P.reduce((a, p) => a + p[0], 0) / P.length, y = P.reduce((a, p) => a + p[1], 0) / P.length; return { inne: hindring3d(x, y), ute: hindring3d(x + 500, y + 500) }; });
     if (kol && (!kol.inne || kol.ute)) { feil++; console.log(`FEIL ${navn} kollisjon: inne i hus ${kol.inne}, ute ${kol.ute}`); }
+    // bedre bevegelse: hopp med mellomrom, løp med Shift (spill/bevegelse.js)
+    await pg.keyboard.press(' '); const hopp = await pg.waitForFunction(() => { const k = Gange.kropp(); return k && !k.bakke && k.vz < 3; }, null, { timeout: 8000, polling: 'raf' }).then(() => true).catch(() => false);
+    await pg.waitForFunction(() => Gange.kropp().bakke, null, { timeout: 8000 }).catch(() => {});
+    await pg.keyboard.down('Shift'); await pg.keyboard.down('w'); const løp = await pg.waitForFunction(() => Gange.kropp().løper && Gange.kropp().fart > 2.5, null, { timeout: 8000, polling: 'raf' }).then(() => true).catch(() => false);
+    await pg.keyboard.up('w'); await pg.keyboard.up('Shift');
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
-    const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2; if (!fok) feil++;
-    console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, Esc flyr opp: ${!f2}`);
+    const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
+    console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}`);
     await pg.click('#v3d');
     const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);

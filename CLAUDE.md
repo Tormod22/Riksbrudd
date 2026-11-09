@@ -226,4 +226,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   riv/flytt/oppgrader/skade/reparer, festTilGjerde/gjerdeLedd, effekt(b), virker(b) ≠ ferdig(b); fraJSON gjør om versjon 1) og
   leir-visning.js (byggpanel, skisse3d, rutenett, gjerde3d per 10 m med helning). OppstartSpill.gi (penger tilbake). Kontrollrommet
   bruker Leir.virker og radiomastens nivå. spill/fps.js: FPS-teller (sFps, av/på i ☰, window.FPS).
+  BEDRE GANGE (11. nov, brukeren: «bedre movement-system for første person»): spill/bevegelse.js (regler uten DOM, test_bevegelse.js):
+  myk akselerasjon/bremsing, gå 1,7 / løp 5,5 / huk 0,9 m/s, utholdenhet (12 s løp, 6 s hvile), hopp med tyngdekraft, motbakke tregere og
+  stopp over ca. 40°, ikke i vann (vannmasken u.vann lest én gang per utsnitt), kropp med radius 0,3 m som glir langs hindringer, gynging.
+  gange.js bruker den: mus låses med klikk (pointer lock), Shift/mellomrom/C, mobil styrespak + knappene Hopp/Huk, sikte, utholdenhetsmåler,
+  litt større synsfelt når du løper (kameraets fov settes tilbake til 50 når du flyr opp). Hoppet huskes til neste ramme (hoppVent).
 
