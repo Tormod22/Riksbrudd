@@ -48,7 +48,10 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
   }
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL for 3D uten skjermkort
   // «eldre iPhone»: uten OffscreenCanvas og createImageBitmap, så reserveveien (<img>) testes – som i Safari før 16.4.
-  for (const [w, h, navn, gammel] of [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]]) {
+  // de tre profilene kjører samtidig (hver i sin fane), så hele sjekken tar omtrent like lang tid som én profil
+  // SJEKK_PROFIL=PC (eller mobil / «eldre iPhone») kjører bare den ene, for en rask runde underveis
+  const PROFILER = [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]].filter(p => !process.env.SJEKK_PROFIL || p[2] === process.env.SJEKK_PROFIL);
+  await Promise.all(PROFILER.map(async ([w, h, navn, gammel]) => {
     const kt = await b.newContext({ viewport: { width: w, height: h } });
     if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke støttet')); });
     await kt.route(/^https?:\/\/(?!localhost)/, r => r.abort());   // ingen andre nettsider: spillet skal virke selv om en CDN er blokkert (brukeren fikk svart side 8. nov)
@@ -355,7 +358,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await kt.close();
-  }
+  }));
   await b.close(); srv.kill();
   console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });

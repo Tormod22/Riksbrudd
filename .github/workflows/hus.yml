@@ -21,11 +21,14 @@ jobs:
           curl -fL --retry 5 -o norge.osm.pbf https://download.geofabrik.de/europe/norway-latest.osm.pbf \
             || curl -fL --retry 5 -o norge.osm.pbf https://download.openstreetmap.fr/extracts/europe/norway-latest.osm.pbf
           ls -la norge.osm.pbf
-      - name: Bare byggene (med nodene de trenger)
-        run: osmium tags-filter norge.osm.pbf w/building r/building -o bygg.osm.pbf && rm norge.osm.pbf && ls -la bygg.osm.pbf
+      - name: Byggene og anleggene (med nodene de trenger), og butikkpunktene for seg
+        run: |
+          osmium tags-filter -R norge.osm.pbf n/shop n/amenity=fuel,pharmacy,fast_food,restaurant,cafe,marketplace -o punkt.osm.pbf
+          osmium tags-filter norge.osm.pbf w/building r/building w/leisure=pitch,track,playground r/leisure=pitch w/amenity=parking r/amenity=parking -o bygg.osm.pbf
+          rm norge.osm.pbf && ls -la bygg.osm.pbf punkt.osm.pbf
       - name: Lag fliser
         working-directory: pipeline/fliser
-        run: python3 bygninger.py ../../bygg.osm.pbf ../../hus
+        run: python3 bygninger.py ../../bygg.osm.pbf ../../hus ../../punkt.osm.pbf
       - name: Last opp release
         env: { GH_TOKEN: '${{ github.token }}' }
         working-directory: hus
