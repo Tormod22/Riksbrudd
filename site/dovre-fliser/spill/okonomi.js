@@ -8,9 +8,9 @@
     last: { lastebil: 25, speiderbil: 0 },   // tonn per kjøretøy
     lastetid: 1800, lossetid: 1800,           // sekunder per kolonne (lasting/lossing skjer samtidig for alle bilene)
     produksjon: 150 / 3600, lagerTerminal: 3000,   // tonn per sekund (150 t/t) og plass på terminalen
-    pris: { lastebil: 40, speiderbil: 30, lag: 20 },
-    byggetid: { lastebil: 7200, speiderbil: 5400, lag: 3600 },
-    navn: { lastebil: 'Lastebil', speiderbil: 'Speiderbil', lag: 'Infanterilag' },
+    pris: { lastebil: 40, speiderbil: 30, lag: 20, ingeniør: 30 },
+    byggetid: { lastebil: 7200, speiderbil: 5400, lag: 3600, ingeniør: 5400 },
+    navn: { lastebil: 'Lastebil', speiderbil: 'Speiderbil', lag: 'Infanterilag', ingeniør: 'Ingeniørlag' },
   };
   function terminal({ id, navn, x, y, beholdning = 500 }) { return { id, navn, x, y, beholdning }; }
   function base({ navn, x, y, side = 'blå', beholdning = 0 }) { return { navn, x, y, side, beholdning, kø: [], bygget: 0 }; }

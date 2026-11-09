@@ -154,6 +154,39 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { ammo: Forsyning.ammo(lag), skyt: Forsyning.skyt({ ammo: 0 }), tekst: KROKER.lagTekst.map(h => h(lag)).join() }; });
         const s4ok = s4.ammo === 1 && s4.skyt === 0 && s4før.drivstoff < 1 && /ammunisjon/.test(s4.tekst); if (!s4ok) feil++;
         console.log(`${s4ok ? 'ok  ' : 'FEIL'} ${navn} forsyning: kolonnens drivstoff etter kjøringen ${Math.round(100 * s4før.drivstoff)} %, laget fra 0 til ${Math.round(100 * s4.ammo)} % ammunisjon, tomt lag skyter ikke («${s4.tekst}»)`);
+        // S5: ingeniørlaget sprenger en E6-bru på ruten Dombås–Otta (knapp + trykk), kolonnen som er underveis kjører om; så reparasjon fra infrastrukturpanelet
+        await pg.evaluate(() => { Okonomi.avbryt(KJORETOY[0], Kjoretoy); KJORETOY[0].oppdrag = null; });
+        const s5a = await pg.evaluate(() => { const k = KJORETOY[0]; k.x = 193233; k.y = 6896398; k.sti = null;
+          const p = Kjoretoy.planlegg(k, VEGNETT, [212021, 6860888]); let bru = null, lenke = -1;
+          for (const e of Kjoretoy.lenkerIgjen(k)) { for (const [t, id] of VEGNETT.infraPåLenke(e)) if (t === 60 && !bru) { bru = INFRA.bru.find(o => o.e.id === id) || null; lenke = e; } if (bru) break; }
+          window._s5sti = k.sti; k.sti = null; if (!bru) return null;
+          const s = ENHETER.find(s => s.ingeniør), a = bru.deler[0]; s.x = a[0] + 60; s.y = a[1] + 60; s.sti = null; valgt = s; visPanel();
+          kam.x = a[0]; kam.m = 1; kam.y = a[1] - .2 * VH * kam.m; skitten = true; tegn(); window._s5 = bru;   // brua øverst på skjermen (panelet dekker nedre del på mobil)
+          return { meter: p.meter, id: bru.e.id, lenke, xy: [VW / 2, VH * .3] }; });
+        if (!s5a) { feil++; console.log(`FEIL ${navn} ødeleggelse: fant ingen bru på ruten`); }
+        else {
+          await pg.locator('#handl button', { hasText: 'Spreng' }).click();
+          await pg.mouse.click(s5a.xy[0], s5a.xy[1]);
+          const s5b = await pg.evaluate(async () => { const bru = window._s5, s = ENHETER.find(s => s.ingeniør), mens = Odeleggelse.tilstand(INFRA_TILSTAND, 'bru', bru.e.id);
+            const arbeid = INGENIØRARBEID.has(s); let n = 0; while (INGENIØRARBEID.size && n < 2000) { sim(.1); n++; }
+            await new Promise(r => setTimeout(r, 50));
+            const k = KJORETOY[0]; k.sti = window._s5sti; k.x = 193233; k.y = 6896398; S5.endring(); await new Promise(r => setTimeout(r, 50));
+            const omkjørt = !!k.sti && !Kjoretoy.lenkerIgjen(k).some(e => VEGNETT._sperretAv.has(e)); Kjoretoy.stopp(k);
+            kam.x = (bru.bb[0] + bru.bb[2]) / 2; kam.y = (bru.bb[1] + bru.bb[3]) / 2; skitten = true; tegn();
+            const q = Kjoretoy.planlegg(KJORETOY[0], VEGNETT, [212021, 6860888]); Kjoretoy.stopp(KJORETOY[0]);
+            return { mens, arbeid, min: n * 6 / 60, t: Odeleggelse.tilstand(INFRA_TILSTAND, 'bru', bru.e.id), sperret: VEGNETT._sperretAv.size, omkjørt, meter: q.feil ? null : q.meter, tekst: document.getElementById('logg').textContent }; });
+          await pg.evaluate(() => { valgt = null; visPanel(); visInfo(window._s5); });
+          const info = await pg.evaluate(() => document.getElementById('psub').textContent);
+          if (!await pg.locator('#handl button', { hasText: 'Reparer med' }).count()) { feil++; console.log(`FEIL ${navn} ødeleggelse: ingen «Reparer med» i panelet «${info}»`, JSON.stringify(s5b), await pg.evaluate(() => [...INFRA_TILSTAND.keys()].join())); }
+          else await pg.locator('#handl button', { hasText: 'Reparer med' }).click();
+          const s5c = await pg.evaluate(async () => { const bru = window._s5; let n = 0; while (INGENIØRARBEID.size && n < 6000) { sim(.1); n++; }
+            await new Promise(r => setTimeout(r, 50)); const q = Kjoretoy.planlegg(KJORETOY[0], VEGNETT, [212021, 6860888]); Kjoretoy.stopp(KJORETOY[0]);
+            return { t: Odeleggelse.tilstand(INFRA_TILSTAND, 'bru', bru.e.id), timer: n * 6 / 3600, sperret: VEGNETT._sperretAv.size, meter: q.meter }; });
+          const s5ok = s5b.arbeid && s5b.t === 'sprengt' && s5b.sperret > 0 && s5b.omkjørt && (s5b.meter === null || s5b.meter > s5a.meter) && /SPRENGT/.test(info)
+            && s5c.t === 'hel' && s5c.sperret === 0 && Math.abs(s5c.meter - s5a.meter) < 1; if (!s5ok) feil++;
+          console.log(`${s5ok ? 'ok  ' : 'FEIL'} ${navn} ødeleggelse: NVDB-bru ${s5a.id} sprengt etter ${s5b.min.toFixed(0)} spillminutter, ${s5b.sperret} lenke(r) sperret, kolonnen underveis kjørte om: ${s5b.omkjørt}, `
+            + `${s5b.meter === null ? 'ingen veg' : 'omkjøring ' + ((s5b.meter - s5a.meter) / 1000).toFixed(1) + ' km'}; panelet: «${info}»; reparert etter ${s5c.timer.toFixed(1)} t: ${s5c.t}, ruten som før: ${Math.abs(s5c.meter - s5a.meter) < 1}`);
+        }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
     }

@@ -103,6 +103,17 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 - Visning: tilstanden skal synes på kartet (røyk, brutt bru). Avtal tegningen med kart-chatten: den tegner infrastrukturen,
   og spillet gir den tilstanden via en tabell `INFRA_TILSTAND[id]`.
 - Dam og flom (vann nedover dalen fra høydemodellen) kommer til slutt.
+- **FERDIG 9. nov (natt), første del:** `spill/odeleggelse.js` (regler uten DOM) + `spill/odeleggelse-visning.js`. Tilstand i
+  `INFRA_TILSTAND` (Map, nøkkel `lag:id` med kildens id, mangler = hel; `sprengt`/`reparasjon`). Ingeniørlag (startlag
+  «Ingeniørlag 1» ved Dombås, kan bygges på basen for 30 t olje / 1,5 t) sprenger bruer (0,5 t) og sperrer tunneler og ferjekaier
+  (1 t), og reparerer (bru 6 t, tunnel 4 t, kai 3 t). Laget må stå innen 150 m fra objektet (marsjerer dit selv); flytter det
+  seg, stopper arbeidet (avbrutt reparasjon = sprengt igjen). Valg: «Spreng / sperr …»/«Reparer …» i lagpanelet + trykk på
+  objektet, eller «Spreng/Sperr/Reparer med …» i infrastrukturpanelet (virker også i 3D). Vegnettet: lenkene sperres
+  (bru 60/tunnel 67 via infraLenker; kai: ferjesambandene med endepunkt innen 1 km), kjøretøy med sperret veg foran seg kjører om
+  eller stopper. Kartet: sprengt bru med mørkt gap og røyk (de første 6 spilltimene, så rødt kryss), gule stillas under reparasjon,
+  rødt kryss på sperret tunnelportal/kai, ring som fylles under arbeidet; i 3D har brua et gap i midten. Nye kroker i index.html:
+  `KROKER.lagKnapper` og `KROKER.info`. Tester: `node pipeline/fliser/test_odeleggelse.js [vegnett.bin]` (ekte E6-bru: 1,2 km
+  omkjøring) og sjekk.js («ødeleggelse»). Ikke gjort: skyttergraver, miner, «skadet», fiendens ingeniører, dam og flom. Tidene er forslag.
 
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),
@@ -127,6 +138,6 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 
 ## 3. Kart-chatten jobber videre med (samtidig)
 - Omlandet (Sverige, Finland, havet) og blått hav – pågår 8. nov.
-- Infrastrukturen i 3D; tilstand (sprengt bru) i tegningen når S5 kommer.
+- Infrastrukturen i 3D; tilstand (sprengt bru) i tegningen: gjort i S5 (odeleggelse-visning.js + gap i bruer3d).
 - Jernbane (Bane NOR) som eget infrastrukturlag; veger i nabolandene (OpenStreetMap).
 - Svalbard (høyde fra Norsk Polarinstitutt); 2 m høyde for hele Norge (utsatt av brukeren).

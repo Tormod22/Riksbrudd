@@ -102,4 +102,6 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   FORSYNING (S4, 9. nov natt): spill/forsyning.js + forsyning-visning.js – se docs/plan-funksjoner.md (S4). Nye kroker i
   index.html: KROKER.ild (faktor for treff per skytter) og KROKER.lagTekst (linjer i lagpanelet). Oppdrag med type
   ('forsyning') kjøres av sin modul; okonomi.js lar dem være.
-
+  ØDELEGGELSE (S5, 9. nov natt): spill/odeleggelse.js + odeleggelse-visning.js – se docs/plan-funksjoner.md (S5). Tilstanden i
+  INFRA_TILSTAND (Map 'lag:id'); nye kroker KROKER.lagKnapper (lagpanelet) og KROKER.info (infrastrukturpanelet). Ingeniørlag har
+  s.ingeniør = true (nyttIngeniørlag). bruer3d lager gap i midten av sprengte bruer.
