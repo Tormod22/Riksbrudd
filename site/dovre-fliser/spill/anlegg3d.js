@@ -72,12 +72,20 @@
   const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
   function bensinstasjon(u, st) {
     // langs nærmeste veg (innen 70 m): taket står ved siden av vegen, på samme side som stasjonen
-    let ret = 0, cx = st.x, cy = st.y, best = 70;
+    let ret = 0, cx = st.x, cy = st.y, best = 70, nær = null;
     for (const v of u.veger || []) { if (!'ERFK'.includes(v.k)) continue;
       for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, q = Math.max(0, Math.min(1, ((st.x - a[0]) * dx + (st.y - a[1]) * dy) / l2));
         const px = a[0] + dx * q, py = a[1] + dy * q, d = Math.hypot(st.x - px, st.y - py);
-        if (d < best) { best = d; ret = Math.atan2(dy, dx); const l = Math.sqrt(l2), side = ((st.x - px) * -dy + (st.y - py) * dx) >= 0 ? 1 : -1, ut = ({ E: 8, R: 7.5, F: 6.5, K: 5.5 }[v.k] / 2) + 8.5;
-          cx = px - dy / l * side * ut; cy = py + dx / l * side * ut; } } }
+        if (d < best) { best = d; ret = Math.atan2(dy, dx); const l = Math.sqrt(l2), side = ((st.x - px) * -dy + (st.y - py) * dx) >= 0 ? 1 : -1, w = { E: 8, R: 7.5, F: 6.5, K: 5.5 }[v.k] / 2;
+          nær = { px, py, ux: dx / l, uy: dy / l, nx: -dy / l * side, ny: dx / l * side, w }; } } }
+    // taket skal ikke gå inn i et bygg: prøv flere plasser langs vegen og litt nærmere vegen, ta den første som er fri
+    const inni = (x, y) => (u.hus && u.hus.omriss || []).some(P => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; });
+    if (nær) { let fri = null;
+      for (const ut of [8.5, 7]) for (const langs of [0, 8, -8, 16, -16, 24, -24]) { if (fri) break;
+        const x = nær.px + nær.nx * (nær.w + ut) + nær.ux * langs, y = nær.py + nær.ny * (nær.w + ut) + nær.uy * langs;
+        const hj = [[-8, -4.5], [8, -4.5], [8, 4.5], [-8, 4.5], [0, 0]].map(([a, b]) => [x + nær.ux * a - nær.uy * b, y + nær.uy * a + nær.ux * b]);
+        if (!hj.some(([a, b]) => inni(a, b))) fri = [x, y]; }
+      const [fx, fy] = fri || [nær.px + nær.nx * (nær.w + 8.5), nær.py + nær.ny * (nær.w + 8.5)]; cx = fx; cy = fy; }
     const kj = st.k && typeof BUTIKKER !== 'undefined' ? BUTIKKER[st.k] : null, farge = kj ? hex(kj[1]) : [.25, .3, .38], hvit = [.93, .93, .9], grå = [.55, .56, .57], betong = [.7, .69, .66];
     const deler = [];
     fargeboks(deler, 0, 0, 4.8, 16, 9, .9, farge); fargeboks(deler, 0, 0, 4.75, 15.6, 8.6, .06, hvit);
