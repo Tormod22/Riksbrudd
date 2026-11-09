@@ -17,14 +17,20 @@
       if (!t || !t.veg) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
       for (const o of t.veg.obj) { const k = o.e.k; if (!BREDDE[k]) continue;
         for (const d of o.deler) {
-          // punkt hver ~3 m langs vegen, så den følger terrenget
-          const P = [];
-          for (let i = 0; i < d.length; i++) { const X = mx + d[i][0] / e * sp, Y = my - d[i][1] / e * sp;
-            if (i) { const [ax, ay] = P[P.length - 1], l = Math.hypot(X - u.cx - ax, Y - u.cy - ay), n = Math.floor(l / 3); for (let s2 = 1; s2 < n; s2++) P.push([ax + (X - u.cx - ax) * s2 / n, ay + (Y - u.cy - ay) * s2 / n]); }
-            P.push([X - u.cx, Y - u.cy]); }
-          if (P.length < 2 || P.every(([a, b]) => Math.abs(a) > u.S || Math.abs(b) > u.S)) continue;
-          const by = byer.length && byer.some(b => Garnison.inni(b, P[P.length >> 1][0] + u.cx, P[P.length >> 1][1] + u.cy));
-          linjer.push({ k, P: P.map(([a, b]) => [a, b, (hoyde3d(a + u.cx, b + u.cy, u) - u.h0) * R3.EX + LØFT[k]]), by });
+          // jevne kurver (Chaikin to ganger: hjørnene rundes av, endene står), så punkt hver ~2,5 m som følger terrenget
+          let Q = d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]);
+          for (let k = 0; k < 2 && Q.length > 2; k++) { const ny = [Q[0]]; for (let i = 0; i < Q.length - 1; i++) { const [ax, ay] = Q[i], [bx, by] = Q[i + 1]; ny.push([ax * .75 + bx * .25, ay * .75 + by * .25], [ax * .25 + bx * .75, ay * .25 + by * .75]); } ny.push(Q[Q.length - 1]); Q = ny; }
+          const P = [Q[0]];
+          for (let i = 1; i < Q.length; i++) { const [ax, ay] = P[P.length - 1], [X, Y] = Q[i], l = Math.hypot(X - ax, Y - ay); if (l < 1.2 && i < Q.length - 1) continue;
+            const n = Math.floor(l / 2.5); for (let s2 = 1; s2 < n; s2++) P.push([ax + (X - ax) * s2 / n, ay + (Y - ay) * s2 / n]); P.push([X, Y]); }
+          // klipp ved kanten av utsnittet (utenfor finnes ikke terreng), del opp i biter som ligger inne
+          const biter = []; let bit = [];
+          for (const p of P) { if (Math.abs(p[0]) < u.S - 4 && Math.abs(p[1]) < u.S - 4) bit.push(p); else { if (bit.length > 1) biter.push(bit); bit = []; } }
+          if (bit.length > 1) biter.push(bit);
+          for (const B2 of biter) {
+            const by = byer.length && byer.some(b => Garnison.inni(b, B2[B2.length >> 1][0] + u.cx, B2[B2.length >> 1][1] + u.cy));
+            linjer.push({ k, P: B2.map(([a, b]) => [a, b, (hoyde3d(a + u.cx, b + u.cy, u) - u.h0) * R3.EX + LØFT[k]]), by });
+          }
         }
       }
     }
@@ -36,6 +42,7 @@
         for (let s2 = 0; s2 <= n; s2++) { const x = ax + (bx - ax) * s2 / n, y = ay + (by - ay) * s2 / n, ci = Math.floor((x + u.S) / celle), cj = Math.floor((u.S - y) / celle);
           for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a2 = ci + di, b2 = cj + dj; if (a2 < 0 || b2 < 0 || a2 >= W || b2 >= W || (di * di + dj * dj) * celle * celle > r * r) continue; m[b2 * W + a2] = 1; } } } }
     const påVeg = (x, y) => { const i = Math.floor((x + u.S) / celle), j = Math.floor((u.S - y) / celle); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] === 1; };
+    u.påVeg = påVeg;
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!påVeg(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
     if (u.trær) { u.trær.gran = sil(u.trær.gran); u.trær.løv = sil(u.trær.løv); }
@@ -48,7 +55,7 @@
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), im = g.createImageData(64, 256); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus', fortau = type === 'fortau';
-    for (let q = 0; q < 64 * 256; q++) { const n = rnd(), base = grus ? [118, 104, 82] : fortau ? [150, 148, 142] : [62, 63, 65], v = (n - .5) * (grus ? 46 : 18);
+    for (let q = 0; q < 64 * 256; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     g.putImageData(im, 0, 0);
     if (type === 'asfalt') { g.fillStyle = '#e8e6df'; g.fillRect(3, 0, 3, 256); g.fillRect(58, 0, 3, 256); g.fillStyle = '#d9b43a'; g.fillRect(30, 0, 4, 64); }   // kantlinjer + gul midtlinje 3 m av 12
@@ -78,13 +85,40 @@
     return m;
   }
   function lagVeger(u, R) {
-    const grupper = { asfalt: { pos: [], uv: [], idx: [] }, kommunal: { pos: [], uv: [], idx: [] }, grus: { pos: [], uv: [], idx: [] }, fortau: { pos: [], uv: [], idx: [] } };
+    const grupper = { asfalt: { pos: [], uv: [], idx: [] }, kommunal: { pos: [], uv: [], idx: [] }, grus: { pos: [], uv: [], idx: [] }, fortau: { pos: [], uv: [], idx: [] }, skulder: { pos: [], uv: [], idx: [] } };
     for (const v of u.veger) {
       const w = BREDDE[v.k] / 2, type = 'ERF'.includes(v.k) ? 'asfalt' : v.k === 'K' ? 'kommunal' : 'grus';
       bånd(v.P, -w, w, 0, grupper[type], false);
       if (v.by && 'RFK'.includes(v.k)) { bånd(v.P, w, w + 2, .15, grupper.fortau, true); bånd(v.P, -w, -w - 2, .15, grupper.fortau, true); }
+      else if ('ERFK'.includes(v.k)) { bånd(v.P, w, w + .8, -.04, grupper.skulder, false); bånd(v.P, -w - .8, -w, -.04, grupper.skulder, false); }
     }
+    vegutstyr(u, R);
     let off = -4; for (const [type, ut] of Object.entries(grupper)) { const m = nett(ut, type, off--); if (m) { R.scene.add(m); liv.mesh.push(m); } }
+  }
+
+  // Rekkverk langs E- og R-veg og brøytestikker (oransje topp) hver 25. meter langs vegene utenfor tettstedene.
+  function vegutstyr(u, R) {
+    const stolper = [], stikker = [], skinne = { pos: [], uv: [], idx: [] };
+    for (const v of u.veger) {
+      if (v.by || !'ERFK'.includes(v.k)) continue; const w = BREDDE[v.k] / 2;
+      let L = 0, nesteStikk = 12, nesteStolpe = 0;
+      for (let i = 1; i < v.P.length; i++) {
+        const a = v.P[i - 1], b = v.P[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!l) continue; const nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l, ret = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        for (; nesteStikk < L + l; nesteStikk += 25) { const f = (nesteStikk - L) / l, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f, z = a[2] + (b[2] - a[2]) * f;
+          for (const sd of [-1, 1]) stikker.push(x + nx * sd * (w + 1.1), y + ny * sd * (w + 1.1), z - .1, ret); }
+        if ('ER'.includes(v.k)) for (; nesteStolpe < L + l; nesteStolpe += 4) { const f = (nesteStolpe - L) / l, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f, z = a[2] + (b[2] - a[2]) * f;
+          stolper.push(x + nx * (w + .9), y + ny * (w + .9), z - .1, ret); }
+        L += l;
+      }
+      if ('ER'.includes(v.k)) bånd(v.P.map(p => [p[0], p[1], p[2] + .45]), w + .85, w + .85, 0, skinne, false);
+    }
+    // skinnen: en loddrett stripe (0,3 m høy) langs høyre side
+    if (skinne.pos.length) { for (let k = 0; k < skinne.pos.length; k += 6) skinne.pos[k + 5] -= .3; const m = nett(skinne, 'fortau', -1); m.material.color.setRGB(.75, .77, .8); R.scene.add(m); liv.mesh.push(m); }
+    const lag = (data, deler) => { const n = data.length / 4; if (!n) return; for (const [g, farge] of deler) { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: farge }), n), d = new THREE.Object3D();
+      for (let k = 0; k < n; k++) { d.position.set(data[k * 4], data[k * 4 + 1], data[k * 4 + 2]); d.rotation.set(0, 0, data[k * 4 + 3]); d.updateMatrix(); m.setMatrixAt(k, d.matrix); }
+      m.frustumCulled = false; R.scene.add(m); liv.mesh.push(m); } };
+    lag(stolper, [[kasse(0, 0, 0, .1, .1, .75), 0x8a8d90]]);
+    lag(stikker, [[kasse(0, 0, 0, .05, .05, 1.6), 0x2a2a2a], [kasse(0, 0, 1.6, .055, .055, .35), 0xe8641c]]);
   }
 
   // ---------- trafikk og folk ----------
