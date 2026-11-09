@@ -12,13 +12,14 @@ Kjeder (11. nov, brukeren: «en Kiwi blir en grønn butikk som heter Pære»): k
 eller fra et butikkpunkt (node med shop/amenity) som ligger inne i bygget. Spillet viser en oppdiktet parodi (BUTIKKER i index.html).
 Anlegg (lag «anlegg», bare z13): a = 1 fotballbane, 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass,
 7 rullebane (linjen gjort til flate med bredden, r = banenummer som «01/19»), 8 taksebane, 9 oppstillingsplass (apron).
+Punkter (lag «punkt», bare z13): p = 1 bensinstasjon (amenity=fuel, node eller midten av området), k = kjede.
 
 Bruk: python3 bygninger.py INN.osm.pbf UTMAPPE [PUNKT.osm.pbf]     -> UTMAPPE/hus-0.pmtiles + manifest.json
 """
 import os, sys, json, gzip, time, hashlib, numpy as np
 import osmium
 from pyproj import Transformer
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon, Point, box
 from shapely import simplify as forenkle
 import mapbox_vector_tile
 from pmtiles.writer import Writer
@@ -100,11 +101,14 @@ class Samler(osmium.SimpleHandler):
         s.ringer, s.h, s.t, s.k = [], [], [], []
         s.anlegg, s.anlegg_t, s.anlegg_r = [], [], []   # ringer, type og banenummer
         s.punkt = []                    # butikkpunkter: (x, y, kjede)
+        s.fuel = []                     # bensinstasjoner: (x, y, kjede)
         s.punkter = True                # False: hopp over nodene (byggfila har millioner av noder uten merker)
     def node(s, n):
         if not s.punkter or not (n.tags.get('shop') or n.tags.get('amenity')): return
         k = kjede(n.tags)
-        if k: x, y = s.tr.transform(n.location.lon, n.location.lat); s.punkt.append((x, y, k))
+        if k or n.tags.get('amenity') == 'fuel': x, y = s.tr.transform(n.location.lon, n.location.lat)
+        if k: s.punkt.append((x, y, k))
+        if n.tags.get('amenity') == 'fuel': s.fuel.append((x, y, k))
     def way(s, w):
         # rullebaner og taksebaner er linjer: gjøres til flater med bredden (width, ellers 45 m / 18 m)
         ae = w.tags.get('aeroway')
@@ -122,6 +126,12 @@ class Samler(osmium.SimpleHandler):
         except Exception: pass
     def area(s, a):
         b = a.tags.get('building')
+        if (not b or b == 'no') and a.tags.get('amenity') == 'fuel':
+            try:
+                for ytre in a.outer_rings():
+                    xs, ys = s.tr.transform([n.lon for n in ytre], [n.lat for n in ytre]); s.fuel.append((float(np.mean(xs)), float(np.mean(ys)), kjede(a.tags))); break
+            except Exception: pass
+            return
         if not b or b == 'no':
             at = anlegg_type(a.tags)
             if at:
@@ -162,7 +172,7 @@ def koble_punkter(ringer, k, punkt):
     return n
 
 
-def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=()):
+def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=()):
     """Fordeler byggene på z12- og z13-fliser etter omrissets ramme (med margin) og koder MVT."""
     ut = {}
     for z, min_areal, tol in ((12, 30.0, 1.0), (13, 0.0, 0.0)):
@@ -173,15 +183,16 @@ def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=()):
             for tx in range(int((x0 - marg - X0) // s), int((x1 + marg - X0) // s) + 1):
                 for ty in range(int((Y0 - y1 - marg) // s), int((Y0 - y0 + marg) // s) + 1):
                     per.setdefault((tx, ty), []).append(i)
-        anl = {}
+        anl, pkt = {}, {}
         if z == 13:
+            for j, (x, y, kj) in enumerate(fuel): pkt.setdefault((int((x - X0) // s), int((Y0 - y) // s)), []).append(j)
             for i, r in enumerate(anlegg):
                 x0, y0 = r.min(axis=0); x1, y1 = r.max(axis=0)
                 for tx in range(int((x0 - X0) // s), int((x1 - X0) // s) + 1):
                     for ty in range(int((Y0 - y1) // s), int((Y0 - y0) // s) + 1): anl.setdefault((tx, ty), []).append(i)
                         
         logg(f'z{z}: {len(per)} fliser, {len(anl)} med anlegg')
-        for (tx, ty) in sorted(set(per) | set(anl)):
+        for (tx, ty) in sorted(set(per) | set(anl) | set(pkt)):
             liste = per.get((tx, ty), [])
             minx, maxy = X0 + tx * s, Y0 - ty * s; k4 = 4096 / s
             f = []
@@ -205,6 +216,13 @@ def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=()):
                         if anlegg_r and anlegg_r[i]: e['r'] = anlegg_r[i]
                         fa.append({'geometry': Polygon(c), 'properties': e})
                 if fa: lag.append({'name': 'anlegg', 'features': fa})
+            if z == 13 and (tx, ty) in pkt:
+                fp = []
+                for j in pkt[(tx, ty)]:
+                    x, y, kj = fuel[j]; e = {'p': 1}
+                    if kj: e['k'] = kj
+                    fp.append({'geometry': Point(round((x - minx) * k4), round((maxy - y) * k4)), 'properties': e})
+                lag.append({'name': 'punkt', 'features': fp})
             if lag:
                 ut[(z, tx, ty)] = gzip.compress(mapbox_vector_tile.encode(lag,
                                                 default_options={'y_coord_down': True, 'extents': 4096}), mtime=0)
@@ -217,7 +235,14 @@ def main(inn, utmappe, punktfil=None):
     if punktfil: s.apply_file(punktfil); s.punkter = False   # butikkpunktene for seg (liten fil), så ikke alle nodene går gjennom Python
     s.apply_file(inn, locations=True, idx='flex_mem'); logg('bygg lest:', len(s.ringer), 'anlegg:', len(s.anlegg), 'butikkpunkter:', len(s.punkt))
     n = koble_punkter(s.ringer, s.k, s.punkt); logg('kjede fra punkt:', n, 'kjedebygg i alt:', sum(1 for v in s.k if v))
-    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r)
+    # samme stasjon kan være både punkt og område: én per 40 m
+    fuel = []
+    for x, y, kj in s.fuel:
+        nær = next((i for i, (a, b, _) in enumerate(fuel) if abs(a - x) < 40 and abs(b - y) < 40), None)
+        if nær is None: fuel.append((x, y, kj))
+        elif kj and not fuel[nær][2]: fuel[nær] = (fuel[nær][0], fuel[nær][1], kj)
+    logg('bensinstasjoner:', len(fuel))
+    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r, fuel)
     fil = os.path.join(utmappe, 'hus-0.pmtiles'); l = sorted(fl.items(), key=lambda kv: zxy_to_tileid(*kv[0]))
     with open(fil, 'wb') as f:
         w = Writer(f)
@@ -227,7 +252,7 @@ def main(inn, utmappe, punktfil=None):
                    {'description': 'Byggomriss fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL)', 'crs': CRS})
     b = os.path.getsize(fil); tag = 'kart-hus-' + hashlib.sha256(open(fil, 'rb').read()).hexdigest()[:12]
     man = {'versjon': tag, 'kilde': '© OpenStreetMap-bidragsytere (ODbL)', 'filer': {'hus': [{'fil': 'hus-0.pmtiles', 'zmin': 12, 'zmax': 13, 'x6': None, 'byte': b, 'fliser': len(l)}]},
-           'statistikk': {'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None}}
+           'statistikk': {'bensinstasjoner': len(fuel), 'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None}}
     json.dump(man, open(os.path.join(utmappe, 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
     open(os.path.join(utmappe, 'tag.txt'), 'w').write(tag)
     logg('ferdig:', len(l), 'fliser,', round(b / 1e6, 1), 'MB,', tag)
