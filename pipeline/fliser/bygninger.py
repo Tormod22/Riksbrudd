@@ -2,7 +2,8 @@
 
 Hvert bygg får omriss (polygon i EPSG:25833), høyde h (meter) og type t:
   0 bolig (hus), 1 garasje/uthus, 2 næring/kontor/hotell, 3 offentlig (sykehus, rådhus …), 4 landbruk, 5 annet/ukjent,
-  6 industri/lager, 7 butikk/handel, 8 kirke/kapell, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte (10. nov: finere typer)
+  6 industri, 7 butikk/handel, 8 kirke/kapell, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte, 12 lager, 13 sykehus, 14 flyplass
+  (10. nov: finere typer; bygg merket bare building=yes får typen fra amenity/shop/aeroway/office/craft på samme omriss)
 Høyde: OSM `height`, ellers `building:levels` × 3 m + 1 m (tak), ellers anslag etter type (se HØYDE).
 Fliser: z12 (forenklet, bygg over 30 m²) og z13 (alle). Et bygg legges i alle fliser omrisset berører (med margin),
 så visningen kan tegne det helt selv om det krysser en flisgrense. Egenskapen i = byggets nummer (for 3D, uten dubletter).
@@ -26,8 +27,11 @@ TYPE = {  # OSM building=* -> vår type
     **dict.fromkeys(['house', 'detached', 'semidetached_house', 'residential', 'bungalow', 'farm', 'houseboat'], 0),
     **dict.fromkeys(['garage', 'garages', 'shed', 'carport', 'roof', 'boathouse', 'container', 'service', 'toilets', 'storage_tank', 'transformer_tower'], 1),
     **dict.fromkeys(['commercial', 'office', 'hotel', 'parking', 'train_station', 'transportation'], 2),
-    **dict.fromkeys(['hospital', 'public', 'civic', 'government', 'fire_station', 'sports_hall', 'stadium', 'museum', 'prison', 'military', 'bunker'], 3),
-    **dict.fromkeys(['industrial', 'warehouse', 'manufacture', 'hangar'], 6),
+    **dict.fromkeys(['public', 'civic', 'government', 'fire_station', 'sports_hall', 'stadium', 'museum', 'prison', 'military', 'bunker'], 3),
+    **dict.fromkeys(['industrial', 'manufacture'], 6),
+    **dict.fromkeys(['warehouse', 'storage'], 12),
+    **dict.fromkeys(['hospital'], 13),
+    **dict.fromkeys(['hangar', 'terminal'], 14),
     **dict.fromkeys(['retail', 'supermarket', 'kiosk'], 7),
     **dict.fromkeys(['church', 'chapel', 'cathedral'], 8),
     **dict.fromkeys(['school', 'kindergarten', 'university', 'college'], 9),
@@ -40,6 +44,19 @@ HØYDE = {'house': 7, 'detached': 7, 'semidetached_house': 7, 'terrace': 8, 'apa
          'commercial': 12, 'office': 18, 'retail': 8, 'industrial': 10, 'warehouse': 9, 'supermarket': 7, 'hotel': 20, 'hospital': 20,
          'school': 10, 'kindergarten': 5, 'university': 18, 'church': 15, 'chapel': 8, 'cathedral': 30, 'barn': 9, 'farm_auxiliary': 6,
          'greenhouse': 4, 'silo': 15, 'stadium': 15, 'parking': 10}
+
+# Når building=yes: typen fra andre merker på samme omriss
+def type_fra_merker(tags):
+    am, ae = tags.get('amenity'), tags.get('aeroway')
+    if ae in ('terminal', 'hangar', 'aerodrome'): return 14
+    if am in ('hospital', 'clinic'): return 13
+    if am == 'place_of_worship': return 8
+    if am in ('school', 'kindergarten', 'college', 'university'): return 9
+    if tags.get('shop') or am in ('marketplace', 'fuel', 'restaurant', 'cafe', 'fast_food', 'pharmacy', 'bank'): return 7
+    if tags.get('office') or tags.get('tourism') in ('hotel', 'motel', 'hostel'): return 2
+    if tags.get('craft') or tags.get('industrial') or tags.get('man_made') == 'works': return 6
+    if am in ('townhall', 'fire_station', 'police', 'library', 'community_centre', 'courthouse'): return 3
+    return None
 
 def tall(s):
     try: return float(str(s).replace(',', '.').split()[0].rstrip('m'))
@@ -61,7 +78,7 @@ class Samler(osmium.SimpleHandler):
                 if h is None:
                     l = tall(a.tags.get('building:levels'))
                     h = l * 3 + 1 if l else HØYDE.get(b, 6)
-                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); s.t.append(TYPE.get(b, 5))
+                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); t = TYPE.get(b); t = t if t is not None else (type_fra_merker(a.tags) if b == 'yes' else None); s.t.append(t if t is not None else 5)
         except Exception: pass
 
 

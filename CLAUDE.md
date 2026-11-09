@@ -162,3 +162,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   trekledning, balkong i annethvert felt, kontorvinduer med etasjebånd, blikk med vindusbånd, planker uten vinduer, utstillingsvindu
   og skilt, buevinduer + kirketårn med spir; dører/porter (DØR); flate tak med brystning og ventilasjonshus. Trykk på et bygg (2D når
   kam.m < 4, og i 3D) viser typen, høyden og grunnflaten (finnBygg/visByggVed, BYGGTYPE). kartflis.js: farger og saltak for 6–11.
+  FLERE BYGGTYPER (10. nov): t 12 lager, 13 sykehus, 14 flyplass (terminal/hangar); bygg med bare building=yes får typen fra
+  amenity/shop/aeroway/office/craft/tourism (type_fra_merker i bygninger.py). 3D: lager (sandwichpaneler, flere porter), sykehus
+  (rødt kors på veggen, helikopterplass på store tak), hangar (blikk, kjempeport), terminal (glassfasade); dørteksturen har 6 felt.
+  2D: byggmerke() på taket fra z15 (kirke kors, sykehus rødt kors, flyplass fly, skole bok, butikk pose, industri/lager tannhjul).

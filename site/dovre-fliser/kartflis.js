@@ -328,11 +328,14 @@ const TAKFARGER = [['#5a3a30', '#3e3b38', '#6c4535', '#4a4b48', '#5f4a3c', '#723
   ['#7a3a2c', '#5c4a38', '#474845', '#83402f'], ['#5e564c', '#4f4c47'],
   // 6 industri/lager (blikk), 7 butikk, 8 kirke (skifer), 9 skole, 10 leilighetsbygg, 11 hytte (torv/svart)
   ['#5f6366', '#4d5458', '#6b6f70', '#56605f'], ['#5b5a56', '#66645e', '#4f5052'], ['#3a3836', '#45403b'], ['#6a5040', '#5b5a55', '#4f4c48'],
-  ['#5a5853', '#6a5040', '#4a4b48', '#3e3b38'], ['#3d4a3a', '#4a3a2e', '#2f2f2c']];
+  ['#5a5853', '#6a5040', '#4a4b48', '#3e3b38'], ['#3d4a3a', '#4a3a2e', '#2f2f2c'],
+  // 12 lager, 13 sykehus, 14 flyplass
+  ['#6e7276', '#5c6266', '#7a7c78'], ['#8a8a86', '#9a9890'], ['#6a6e72', '#7c8086']];
 const VEGGFARGER = [['#d8d0bf', '#8e3d2e', '#cfae66', '#7f847c', '#e6e0d2', '#5f6f74', '#d9d3c4'], ['#8e3d2e', '#a99f8d', '#6e6658', '#c8c0ae'],
   ['#9a9890', '#7c8084', '#b3aea2'], ['#b9b2a3', '#8a8478', '#a24a35'], ['#8e3d2e', '#8a3a2a', '#a8a090'], ['#9b9488', '#857e72'],
   ['#9aa3a8', '#7e8a91', '#b8b6ad', '#5d6d78', '#8f3a2c'], ['#c9c2b3', '#a8a39a', '#d6cfbf'], ['#ece6d8', '#e2dccb'], ['#c9a46a', '#b9b2a3', '#a24a35', '#d6cfbf'],
-  ['#d6cfbf', '#bda88a', '#9aa0a0', '#c9b28a', '#a24a35'], ['#5a3e2a', '#6b4a30', '#8e3d2e', '#4a3826']];
+  ['#d6cfbf', '#bda88a', '#9aa0a0', '#c9b28a', '#a24a35'], ['#5a3e2a', '#6b4a30', '#8e3d2e', '#4a3826'],
+  ['#b4b8ba', '#8d969c', '#c2b9a6', '#6f7d86'], ['#ecebe6', '#e2e4e2'], ['#c8ccd0', '#aeb6bc']];
 const TAK = TAKFARGER.map(p => p[0]);   // (eldre navn)
 const takFarge = (t, i) => { const p = TAKFARGER[t] || TAKFARGER[5]; return p[Math.floor(hash(i | 0, 7, 3) * p.length)]; };
 const veggFarge = (t, i) => { const p = VEGGFARGER[t] || VEGGFARGER[5]; return p[Math.floor(hash(i | 0, 9, 5) * p.length)]; };
@@ -387,7 +390,21 @@ function husomriss(g, z, hs) {
       }
     }
     g.strokeStyle = 'rgba(18,13,8,.75)'; g.lineWidth = z >= 15 ? 1 : .6; g.beginPath(); sti(P); g.stroke();
+    if (z >= 15 && arealM2 > 80) byggmerke(g, t, f.sx, f.sy, Math.max(5, Math.min(12, Math.sqrt(f.areal) * .22)));
   }
+}
+// Kjennetegn på taket når man er nær: kirke (kors), sykehus (rødt kors), flyplass (fly), skole (bok), butikk (handlepose), industri/lager (tannhjul)
+function byggmerke(g, t, x, y, r) {
+  if (![6, 7, 8, 9, 12, 13, 14].includes(t)) return;
+  g.save(); g.translate(x, y); g.fillStyle = 'rgba(20,16,10,.55)'; g.beginPath(); g.arc(0, 0, r, 0, 6.283); g.fill();
+  g.strokeStyle = g.fillStyle = '#f1ead9'; g.lineWidth = Math.max(1.2, r * .18); g.lineCap = 'round';
+  if (t === 8) { g.beginPath(); g.moveTo(0, -r * .65); g.lineTo(0, r * .65); g.moveTo(-r * .38, -r * .2); g.lineTo(r * .38, -r * .2); g.stroke(); }
+  else if (t === 13) { g.fillStyle = '#d32a2a'; g.fillRect(-r * .18, -r * .6, r * .36, r * 1.2); g.fillRect(-r * .6, -r * .18, r * 1.2, r * .36); }
+  else if (t === 14) { g.beginPath(); g.moveTo(0, -r * .7); g.lineTo(0, r * .6); g.moveTo(-r * .65, 0); g.lineTo(0, -r * .2); g.lineTo(r * .65, 0); g.moveTo(-r * .3, r * .55); g.lineTo(r * .3, r * .55); g.stroke(); }
+  else if (t === 9) { g.strokeRect(-r * .55, -r * .4, r * 1.1, r * .8); g.beginPath(); g.moveTo(0, -r * .4); g.lineTo(0, r * .4); g.stroke(); }
+  else if (t === 7) { g.strokeRect(-r * .45, -r * .2, r * .9, r * .7); g.beginPath(); g.arc(0, -r * .2, r * .25, Math.PI, 0); g.stroke(); }
+  else { g.beginPath(); g.arc(0, 0, r * .35, 0, 6.283); g.stroke(); for (let k = 0; k < 6; k++) { const v = k * Math.PI / 3; g.beginPath(); g.moveTo(Math.cos(v) * r * .4, Math.sin(v) * r * .4); g.lineTo(Math.cos(v) * r * .62, Math.sin(v) * r * .62); g.stroke(); } }
+  g.restore();
 }
 
 function koter(g, E, N, z) {
