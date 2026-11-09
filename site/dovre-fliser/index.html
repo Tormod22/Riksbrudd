@@ -855,20 +855,20 @@ function detaljTekstur() {
   return DETALJ;
 }
 // Vær og årstid i bakken (spill/vaer-visning.js setter verdiene): snø over snøgrensen på flatt nok terreng, høstfarger på grønt.
-const VAER_U = { uSnø: { value: 0 }, uSnøGrense: { value: 1900 }, uHøst: { value: 0 }, uH0: { value: 0 } };
+const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 } };
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform float detaljSkala;\nuniform float uSnø;\nuniform float uSnøGrense;\nuniform float uHøst;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
       float korn = texture2D(detalj, vUv * detaljSkala).r, flekk = texture2D(detalj, vUv * detaljSkala * 0.19).g;
-      float grønn = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
-      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHøst * grønn * (0.55 + 0.45 * flekk));
-      float snø = uSnø * smoothstep(uSnøGrense - 70.0, uSnøGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, vOpp + (korn - 0.5) * 0.15);
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96) * (0.94 + 0.08 * korn), snø);
-      diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85 * (1.0 - snø * 0.7));`);
+      float gronn = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronn * (0.55 + 0.45 * flekk));
+      float sno = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, vOpp + (korn - 0.5) * 0.15);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96) * (0.94 + 0.08 * korn), sno);
+      diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85 * (1.0 - sno * 0.7));`);
   };
 }
 // Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
@@ -1702,6 +1702,6 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=5ce0a96d8c"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=b101ca6835"></script>
 </body>
 </html>

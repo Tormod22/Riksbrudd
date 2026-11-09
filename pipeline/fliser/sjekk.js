@@ -328,7 +328,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
         const vr = await pg.evaluate(async () => { const s = ENHETER.find(e => e.side === 'blå' && levende(e)), r0 = s.siktR || null;
           const vent = async () => { s.siktSkitten = true; await new Promise(r => setTimeout(r, 50)); for (let i = 0; i < 200 && (s.siktJobb || s.siktSkitten); i++) await new Promise(r => setTimeout(r, 50)); return s.sikt ? s.sikt.mw * s.sikt.mh : 0; };
           const klar = await vent(); Vaer.låsVær(VaerSpill.S, 'tåke'); VaerSpill.oppdater(); const tåke = await vent();
-          Vaer.settÅrstid(VaerSpill.S, 'vinter', tid); VaerSpill.oppdater(); const vinter = { grense: VAER.snøgrense, tekst: document.getElementById('sVaer').textContent, u: VAER_U.uSnøGrense.value };
+          Vaer.settÅrstid(VaerSpill.S, 'vinter', tid); VaerSpill.oppdater(); const vinter = { grense: VAER.snøgrense, tekst: document.getElementById('sVaer').textContent, u: VAER_U.uSnoGrense.value };
           Vaer.settÅrstid(VaerSpill.S, 'sommer', tid); Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); await vent();
           return { klar, tåke, vinter }; });
         const vok = vr.tåke > 0 && vr.tåke < vr.klar * .5 && vr.vinter.grense < 0 && vr.vinter.u === vr.vinter.grense; if (!vok) { feil++; console.log(JSON.stringify(vr)); }

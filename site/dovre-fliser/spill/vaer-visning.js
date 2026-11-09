@@ -5,13 +5,13 @@
 (function () {
   const S = Vaer.ny('sommer'), r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
   let fall = null, sistT = 0;
-  const TRE_U = { uTreSnø: { value: 0 }, uHøstLøv: { value: 0 }, uNaken: { value: 0 } };
+  const TRE_U = { uTreSno: { value: 0 }, uHostLov: { value: 0 }, uNaken: { value: 0 } };
 
   function oppdater(melding) {
     const h = (6 + tid / TIME) % 24, V = Vaer.tilstand(S, h), før = window.VAER;
     window.VAER = { ...V, nøkkel: S.årstid + '|' + S.vær };
-    VAER_U.uSnø.value = 1; VAER_U.uSnøGrense.value = V.snøgrense; VAER_U.uHøst.value = V.høst;
-    TRE_U.uHøstLøv.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
+    VAER_U.uSno.value = 1; VAER_U.uSnoGrense.value = V.snøgrense; VAER_U.uHost.value = V.høst;
+    TRE_U.uHostLov.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
     if (!før || før.nøkkel !== window.VAER.nøkkel) {
       for (const s of ENHETER) s.siktSkitten = true;
       if (melding) logg(melding + (V.sikt < 1 ? ` Sikten er ${Math.round(V.sikt * 100)} % av vanlig.` : ''));
@@ -45,15 +45,15 @@
   // Grantrærne får snø på greinene over snøgrensen, bjørkene høstfarger (hver sin tone) eller står nakne om vinteren.
   function treVær(m, løv) {
     const før = m.material.onBeforeCompile;
-    m.material.onBeforeCompile = (sh, r) => { if (før) før(sh, r); Object.assign(sh.uniforms, TRE_U, { uSnøGrense: VAER_U.uSnøGrense, uH0: VAER_U.uH0 });
-      sh.vertexShader = 'uniform float uH0;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFrø;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-        vTOpp = objectNormal.z; vTMoh = instanceMatrix[3].z + uH0; vTFrø = fract(sin(instanceMatrix[3].x * 12.9898 + instanceMatrix[3].y * 78.233) * 43758.5453);`);
-      sh.fragmentShader = 'uniform float uSnøGrense;\nuniform float uHøstLøv;\nuniform float uNaken;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFrø;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-        float tSnø = smoothstep(uSnøGrense - 60.0, uSnøGrense + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);
-        ${løv ? `vec3 høst = mix(vec3(0.95, 0.72, 0.18), vec3(0.85, 0.32, 0.1), step(0.7, vTFrø)) * (0.75 + 0.35 * vTFrø);
-        diffuseColor.rgb = mix(diffuseColor.rgb, høst, uHøstLøv * (0.55 + 0.4 * vTFrø));
+    m.material.onBeforeCompile = (sh, r) => { if (før) før(sh, r); Object.assign(sh.uniforms, TRE_U, { uSnoGrense: VAER_U.uSnoGrense, uH0: VAER_U.uH0 });
+      sh.vertexShader = 'uniform float uH0;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        vTOpp = objectNormal.z; vTMoh = instanceMatrix[3].z + uH0; vTFro = fract(sin(instanceMatrix[3].x * 12.9898 + instanceMatrix[3].y * 78.233) * 43758.5453);`);
+      sh.fragmentShader = 'uniform float uSnoGrense;\nuniform float uHostLov;\nuniform float uNaken;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        float tSno = smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);
+        ${løv ? `vec3 lovFarge = mix(vec3(0.95, 0.72, 0.18), vec3(0.85, 0.32, 0.1), step(0.7, vTFro)) * (0.75 + 0.35 * vTFro);
+        diffuseColor.rgb = mix(diffuseColor.rgb, lovFarge, uHostLov * (0.55 + 0.4 * vTFro));
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.37, 0.33), uNaken * 0.85);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSnø * uNaken * 0.5);` : `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSnø * 0.72);`}`);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNaken * 0.5);` : `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`}`);
     };
     // samme funksjonstekst for gran og løv: egen nøkkel, ellers deler de program i three.js-hurtigbufferen
     m.material.customProgramCacheKey = () => 'vær|' + løv + '|' + !!før;
