@@ -2,6 +2,7 @@
 // «Slik spiller du»: ?-knappen øverst åpner en kort veiledning til alt i spillet. Vises av seg selv første gang (ikke i testene).
 (function () {
   const DELER = [
+    ['Nytt spill', 'Første gang lager du karakteren din (navn, utseende, bakgrunn med bonus) og fraksjonen (navn og eget flagg), og du velger hvor leiren skal ligge. Dere starter med 100 millioner kr (øverst). «Nytt spill» i ☰ begynner på nytt.'],
     ['Tiden', '1× er sanntid: ett minutt i spillet er ett minutt i virkeligheten. 10× og 60× går fortere, ❚❚ stopper tiden.'],
     ['Lagene', 'Trykk på et lag og så «Marsjer» og et sted på kartet – ruten følger veger og terreng. Trykk på en soldat for å gjøre ham til lagfører. «Grav ned» gir halvparten så mange treff.'],
     ['Tåke', 'Du ser bare det lagene, stridsvognene, dronene og radaren ser. Resten ligger i tåke; «sist sett» viser hvor fienden var.'],

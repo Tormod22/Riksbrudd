@@ -133,6 +133,24 @@ du ser med egne øyne, og kanskje det troppene melder på radio.
 | K8 | **Logget av:** automatisk forsvar og rapport |
 | K9 | **Flerspiller 1–5** (server) |
 
+## K1 – ferdig (11. nov 2026)
+
+Bestemt av brukeren 11. nov:
+- **Fraksjonen din tar over** det som fantes: lagene, kjøretøyene og basen får fraksjonens navn og farge, og basen flyttes til leiren.
+  Lagene og kjøretøyene samles rundt leiren. Motstanderne (Kystalliansen og Folkefronten) blir inntil videre.
+- **Bakgrunner og bonus** (forslaget): soldat +10 % treff, lege sårede friske dobbelt så fort, ingeniør bygger 20 % raskere,
+  bonde mat 25 % billigere, forretningsmann +10 mill. kr, politi +15 % sikt. Virker nå: treff, sikt og penger. Lege, ingeniør og
+  bonde lagres og tas i bruk når sanitet (K6), bygging (K2) og markedet (K5) kommer.
+- **Leiren kan ligge hvor som helst i Norge**, men ikke inne i et tettsted, i vann eller utenfor kartet.
+- **Eget flagg:** mønster (9), tre farger (16 å velge mellom), symbol (17 + ingen), farge på symbolet, opptil tre bokstaver og farge
+  på dem. Fargen til lagene på kartet er den første fargen i flagget som ikke er nesten hvit eller svart.
+- **Utseende:** hudtone, hårfarge, frisyre og skjegg (vises som portrett på startskjermen).
+
+Teknisk: spill/oppstart.js (regler, test pipeline/fliser/test_oppstart.js) + spill/oppstart-visning.js (startskjerm, kartet, 3D-flagg).
+Lagres i nettleseren (localStorage «riksbrudd-k1»). «Nytt spill» i ☰ sletter valgene. Nye kroker: KROKER.sikt (faktor på siktvidden);
+KROKER.ild kan nå gi over 1 (ekstra treff). Leiren i 3D: flaggstangen fra spill/modeller.js med ditt flagg som duk.
+Ikke gjort ennå: leiren rydder ikke trær der den står (kommer med byggene i K2).
+
 ## 12. Åpne spørsmål til brukeren
 
 1. Skal fraksjonen fortsatt kunne ta **oppdrag i utlandet** (plan-gjeng.md, G3), eller skal alt foregå i Norge nå?

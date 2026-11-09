@@ -201,4 +201,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (lodTrær: nær 260 m PC / 170 m mobil med alle greinene, ellers granEnkel/løvEnkel; halvparten fra 6×, en firedel fra 12× den avstanden), terrengnettet tett i midten og glissere mot kanten (sett3d: M = 289 PC / 225 mobil, g(t) = t·(A + (1 − A)·t²)), ca. 0,7 mill. nær / 0,43 mill. vidt; hus3d og trær3d gir
   nettleseren pusterom (pusterom()) under byggingen. Skjermbilder: scratchpad bilde3d.js (kartflisene på siden – forespørsler fra
   bakgrunnstråden henger i Playwright når siden har ruter; første 3D-utsnitt = ønsket utsnitt; byggdata hurtiglagres på disk).
+  OPPSTART K1 (11. nov, brukeren, docs/plan-kollaps.md): spill/oppstart.js (regler: karakter, fraksjon med eget flagg, 100 mill. kr,
+  gyldigLeir, lagring; test_oppstart.js) + oppstart-visning.js (startskjerm i tre steg, leir velges med KROKER.trykk, lagres i
+  localStorage «riksbrudd-k1», fraksjonen tar over «blå»: navn/farge i Fraksjoner.FRAKSJONER.blå, basen OLJE.BASER[0] og lagene
+  flyttes til leiren; sPenger øverst; 3D-flagg med MODELLER.flaggstang). Bonusene via KROKER.sikt (ny) og KROKER.ild (> 1 gir
+  ekstra treff). Startskjermen vises ikke av seg selv når navigator.webdriver (testene) – sjekk.js kjører den selv (OppstartSpill).
+  INFRA er en let i index.html (ikke window.INFRA) – bruk typeof INFRA.
 

@@ -336,6 +336,24 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { klar, tåke, vinter }; });
         const vok = vr.tåke > 0 && vr.tåke < vr.klar * .5 && vr.vinter.grense < 0 && vr.vinter.u === vr.vinter.grense; if (!vok) { feil++; console.log(JSON.stringify(vr)); }
         console.log(`${vok ? 'ok  ' : 'FEIL'} ${navn} vær: siktfeltet i tåke ${vr.tåke} ruter mot ${vr.klar} i klart vær; vinter: snø fra ${vr.vinter.grense} moh. («${vr.vinter.tekst}»)`);
+        // K1 oppstart: startskjermen, leir i Dombås avvises (tettsted), leir på land utenfor godtas, 100 mill. kr, lagret, fraksjonen tar over
+        const k1 = await pg.evaluate(async () => {
+          localStorage.removeItem(OppstartSpill.NØKKEL); OppstartSpill.nytt();
+          const på = document.getElementById('oppstart').classList.contains('på'), u = OppstartSpill.utkast();
+          u.karakter.navn = 'Kari Test'; u.karakter.bakgrunn = 'politi'; u.fraksjon.navn = 'Dovrefolket'; u.fraksjon.flagg.bokstaver = 'DF';
+          OppstartSpill.vis(3); [...document.querySelectorAll('#oppstart button')].find(b => /kartet/.test(b.textContent)).click();
+          const by = INFRA.tettsted.find(t => t.e.navn === 'Dombås'); let pb = null;
+          for (let j = 1; j < 20 && !pb; j++) for (let i = 1; i < 20 && !pb; i++) { const x = by.bb[0] + (by.bb[2] - by.bb[0]) * i / 20, y = by.bb[1] + (by.bb[3] - by.bb[1]) * j / 20; if (Garnison.inni(by, x, y)) pb = [x, y]; }
+          const iBy = await OppstartSpill.prøvLeir(pb[0], pb[1]), ute = await OppstartSpill.prøvLeir(196400, 6898900);
+          OppstartSpill.bekreft(); await new Promise(r => setTimeout(r, 100));
+          const S = OppstartSpill.tilstand(), lagret = Oppstart.fraJSON(localStorage.getItem(OppstartSpill.NØKKEL)), lag = ENHETER.find(e => e.side === 'blå');
+          const r = { på, iBy, ute, ferdig: !!(S && S.ferdig), penger: document.getElementById('sPenger').textContent, lagret: !!(lagret && lagret.ferdig && lagret.fraksjon.navn === 'Dovrefolket'),
+            fraksjon: Fraksjoner.FRAKSJONER.blå.navn, base: Math.round(Math.hypot(OLJE.BASER[0].x - 196400, OLJE.BASER[0].y - 6898900)), lag: Math.round(Math.hypot(lag.x - 196400, lag.y - 6898900)),
+            skjult: !document.getElementById('oppstart').classList.contains('på'), sikt: KROKER.sikt.reduce((v, f) => v * f(lag), 1) };
+          localStorage.removeItem(OppstartSpill.NØKKEL); return r; });
+        const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
+        if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
+        console.log(`${k1ok ? 'ok  ' : 'FEIL'} ${navn} oppstart (K1): startskjerm, «${k1.iBy}», leir på land godtatt, ${k1.penger}, lagret, ${k1.fraksjon} tar over (base flyttet, lagene ${k1.lag} m unna), politi-bonus sikt ×${k1.sikt}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

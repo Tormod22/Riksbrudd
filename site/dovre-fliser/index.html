@@ -105,7 +105,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -653,6 +653,8 @@ function kamprunde() {
       const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)
       let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
       if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
+      // over 1 (bonus, f.eks. bakgrunnen «soldat» i K1): hvert treff kan gi ett til
+      else if (ildf > 1) { let t = treff; for (let i = 0; i < treff; i++) if (KRNG() < ildf - 1) t++; treff = t; }
       SKUDD.push({ a, b, til: performance.now() + 1400 }); nå.add(b);
       if (!a.skyterPå.has(b)) { if (a.side === 'blå') logg(a.navn + ' skyter mot ' + (synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
       if (!treff) continue;
@@ -689,7 +691,7 @@ async function oppdaterSikt(s) {
     // først siktvidden (trenger bare omgivelsene innen ca. 400 m), så bare de flisene den rekker over
     const nær = await lagVindu([X - 400, Y - 400, X + 400, Y + 400], false), iB = !!s.sti;
     // været (spill/vaer.js) korter inn sikten: tåke 30 %, snø 55 %, regn 70 %
-    const r = Terreng.siktvidde(nær, X, Y, s.speider, iB) * (window.VAER ? VAER.sikt : 1), R = r + 100;
+    const r = Terreng.siktvidde(nær, X, Y, s.speider, iB) * (window.VAER ? VAER.sikt : 1) * KROKER.sikt.reduce((v, f) => v * f(s), 1), R = r + 100;
     const v = await lagVindu([X - R, Y - R, X + R, Y + R], false), m = Terreng.siktfelt(v, X, Y, r);
     const [oi, oj] = Terreng.rute(v, X, Y), Rc = Math.ceil(r / v.r) + 1;
     const i0 = Math.max(0, oi - Rc), j0 = Math.max(0, oj - Rc), i1 = Math.min(v.w - 1, oi + Rc), j1 = Math.min(v.h - 1, oj + Rc), w = i1 - i0 + 1, h = j1 - j0 + 1;
@@ -1824,12 +1826,14 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=516b61254f"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=fe0f945763"></script>
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=edb24ec341"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>
+<script src="/dovre-fliser/spill/oppstart.js?v=5b5960196b"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=713a446ae2"></script>
 </body>
 </html>
