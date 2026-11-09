@@ -170,3 +170,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   veg (T-kryss), minst tre armer og minst to på skrå (parallelle kjørebaner er ikke kryss). Krysset får en flate uten oppmerking
   (asfalt, eller grus når bare P/S møtes) som følger terrenget; fortau, rekkverk og brøytestikker stopper ved krysset (kryss.nær),
   fotgjengerfelt (gangTekstur) på R/F/K-armene i tettstedene. u.kryss har kryssene.
+  VÆR OG ÅRSTIDER (10. nov, brukeren valgte det): spill/vaer.js (regler, test_vaer.js) + vaer-visning.js. ☰ «Årstid» og «Vær»
+  (automatisk/låst), status øverst (sVaer). window.VAER: sikt (faktor i oppdaterSikt), dis (fog i ramme3d), sky (lys3d), nedbør,
+  snøgrense, høst. VAER_U (uniformer i detaljIBakken): snø over snøgrensen på flatt terreng, høstfarger; trærne via treVær.
+  Regn (LineSegments) og snø (Points) rundt kameraet. sjekk.js låser klart vær. VAKT: GLSL tåler bare ASCII – aldri æ/ø/å i
+  navn inne i shaderkode (uSno, ikke uSnø); sjekk.js fanger kompileringsfeilen («FEIL i nettleseren»).
+  BUTIKKJEDER OG ANLEGG (11. nov, brukeren: «en Kiwi blir en grønn butikk som heter Pære», fotballbaner): byggjobben gir k = kjede
+  (KJEDER i bygninger.py, fra brand/name/operator på bygget eller et butikkpunkt inne i bygget; punktene i en egen liten fil
+  punkt.osm.pbf) og et nytt lag «anlegg» (z13: a 1 fotball, 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkering).
+  Test: python3 pipeline/fliser/test_bygninger.py. BUTIKKER i kartflis.js (oppdiktede navn og farger, samme nummer som KJEDER).
+  2D: anlegg() i kartflis.js (gress med klipperstriper og oppmerking skalert etter lengden), kjedeskilt på taket (byggmerke).
+  3D: veggene i kjedens farge og skilt med navnet over døra (skilt3d/skiltTekstur), mål med nett, lysmaster og basketkurver
+  (spill/anlegg3d.js). Trykk på bygget viser kjedens navn.
+  RASKERE ARBEID (11. nov, brukeren: «oppdateringer tar lang tid»): sjekk.js kjører PC, mobil og eldre iPhone samtidig (~1,5 min);
+  SJEKK_PROFIL=PC kjører én profil.
+

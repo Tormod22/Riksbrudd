@@ -82,7 +82,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=f7114f51f3"></script>
+<script src="/dovre-fliser/kartflis.js?v=2cc5dfa524"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
@@ -92,7 +92,7 @@ const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
-const HUS_TAG = 'kart-hus-1d668dea952f';
+const HUS_TAG = 'kart-hus-ab991817d34b';
 const OMLAND_TAG = 'kart-omland-e1becd1b04bf';   // Sverige, Finland, Danmark, Kola, Svalbard og havet (pipeline/fliser/omland.py), settes av bruk_omland.py
 const UTVEG_TAG = 'kart-utveg-b24af84eb3fd';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
 const INFRA_TAG = 'kart-infra-2023-7bd50584c2a7';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
@@ -176,7 +176,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=2f7a255ec8');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=055d2e5e08');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -945,7 +945,7 @@ async function trær3d(u, px, b) {
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
 async function hus3d(u) {
-  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [], omriss = [], piper = [];
+  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [], omriss = [], piper = [], skilt = [];
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
   const B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'lager', 'glass', 'dør']) B[n] = { pos: [], kol: [], uv: [] }; let cur = B.mur;
   // Hva slags bygg (OSM-typen, ellers anslag fra størrelse og høyde) og hvordan veggene ser ut: [gruppe/tekstur, meter per felt langs, meter per felt opp (0 = hele veggen)]
@@ -976,7 +976,14 @@ async function hus3d(u) {
     const p1 = [cx - ux * w / 2, cy - uy * w / 2], p2 = [cx + ux * w / 2, cy + uy * w / 2], u0 = r / 6 + .003, u1 = (r + 1) / 6 - .003;
     firkant([p1[0], p1[1], z0], [p2[0], p2[1], z0], [p2[0], p2[1], z0 + hh], [p1[0], p1[1], z0 + hh], [1, 1, 1], [[u0, 0], [u1, 0], [u1, 1], [u0, 1]]); cur = før; };
   const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]));
-  for (const [x, y, t] of await Promise.all(fl)) {
+  const flisene = await Promise.all(fl);
+  // først midtpunktene: naboer innen 100 m (på landet får flere bygg tak med fall), industri (runde bygg der er tanker)
+  const SENTER = new Map(), IND = [];
+  for (const [x, y, t] of flisene) { if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
+    for (const o of t.hus.obj) { if (SENTER.has(o.e.i) || !o.deler[0]) continue; const d = o.deler[0]; let sx = 0, sy = 0; for (const [a, b] of d) { sx += a; sy += b; }
+      const c = [minx + sx / d.length * k - u.cx, maxy - sy / d.length * k - u.cy]; SENTER.set(o.e.i, c); if (o.e.t === 6 || o.e.t === 12) IND.push(c); } }
+  const idListe = [...SENTER.keys()], tl = naboer(idListe.map(i => SENTER.get(i))), TETT = new Map(idListe.map((i, n) => [i, tl[n]])), fyrer = [];
+  for (const [x, y, t] of flisene) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) {
       if (sett.has(o.e.i) || sett.size > 30000) continue;   // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil
@@ -989,8 +996,60 @@ async function hus3d(u) {
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
       omriss.push(P);
       const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
+      // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge og et skilt med navnet over døra
+      const kj = o.e.k ? BUTIKKER[o.e.k] : null; if (kj) { const c = rgb(kj[1]); for (let q = 0; q < 3; q++) veggF[q] = veggF[q] * .4 + c[q] * .6; }
       const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
-      if (saltak(t, f.areal) && f.rekt > .82 && P.length <= 10 && f.lv > 3) {
+      const rundt = rund(P, f), fall0 = !rundt && f.lv > 3 && harFall(t, f.areal, h, i, TETT.get(i) || 0), enkel = f.rekt > .82 && P.length <= 10;
+      const dTak = fall0 && !enkel ? takDeler(P, f) : null, fall = fall0 && (enkel || !!dTak);
+      if (rundt) {
+        // helt rundt bygg: tank nær industri, fyrtårn nær havet (aldri to fyr innen 1,5 km), ellers et rundt bygg med flatt tak
+        const D = (f.lu + f.lv) / 2, tank = t === 6 || t === 12 || IND.some(q => Math.hypot(q[0] - mx, q[1] - my) < 150);
+        let hav = false; for (let k2 = 0; k2 < 8 && !hav; k2++) { const a = k2 * Math.PI / 4; if (hoyde3d(mx + Math.cos(a) * 80 + u.cx, my + Math.sin(a) * 80 + u.cy, u) < 2) hav = true; }
+        const fyr = !tank && hav && D <= 12 && !fyrer.some(q => Math.hypot(q[0] - mx, q[1] - my) < 1500);
+        if (tank || fyr) {
+          if (fyr) fyrer.push([mx, my]);
+          const T1 = fyr ? Math.max(topp, bunn + 15) : topp, hvit = fyr ? [.95, .94, .92] : [.84, .85, .84], rød = [.75, .12, .1];
+          for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length];
+            if (fyr) { const zr = bunn + 1 + (T1 - bunn - 1) * .55; vegg(a, b, bunn + .5, zr, hvit, STIL.industri); vegg(a, b, zr, zr + 2.5, rød, STIL.industri); vegg(a, b, zr + 2.5, T1, hvit, STIL.industri); }
+            else vegg(a, b, bunn + .5, T1, hvit.map(v => v * (j % 2 ? .96 : 1)), STIL.industri); }
+          cur = B.mur; const kjegle = fyr ? 0 : D * .08;
+          for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length]; tri([...a, T1], [...b, T1], [mx, my, T1 + kjegle], [.72, .73, .72]); }
+          if (fyr) {
+            // lykta: glass rundt toppen og en rød hette
+            const L = P.map(([x2, y2]) => [mx + (x2 - mx) * .55, my + (y2 - my) * .55]);
+            for (let j = 0; j < L.length; j++) { const a = L[j], b = L[(j + 1) % L.length]; cur = B.glass; firkant([...a, T1], [...b, T1], [...b, T1 + 2.2], [...a, T1 + 2.2], [.9, .95, 1], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+              cur = B.mur; tri([...a, T1 + 2.2], [...b, T1 + 2.2], [mx, my, T1 + 3.6], rød); }
+          }
+          continue;
+        }
+      }
+      if (fall && !enkel) {
+        // tak med fall på et sammensatt omriss: vinkelrette hus deles i rektangler med hvert sitt saltak (kryssark, tilbygg),
+        // andre får valmtak opp mot mønet langs hovedretningen. Felles raft, og under takene et lokk så det aldri blir hull.
+        const kl = klasse(t, f.areal, h), st = STIL[kl] || STIL.hus, d = dTak, bred = d.rekt ? Math.max(...d.rekt.map(q => q.lv)) : f.lv;
+        const møne = Math.min(bred * .42, 5, h * .55), raft = topp - møne;
+        let lengst = 0, lj = 0;
+        for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
+          grunnmur(a, b, bunn); veggKl(kl, a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
+        dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
+        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], Math.min(bunn + 4.2, raft - .6), o.e.k]);
+        cur = B.mur; for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(P.map(q => new THREE.Vector2(q[0], q[1])), [])) tri([...P[a], raft], [...P[b], raft], [...P[c], raft], tak.map(v => v * .7));
+        if (d.rekt) for (const q of d.rekt) {
+          const hu = q.lu / 2, hv = q.lv / 2, m = Math.min(q.lv * .42, 5, h * .55), p = (du, dv, zz) => [q.sx + q.ux * du + q.vx * dv, q.sy + q.uy * du + q.vy * dv, zz];
+          cur = B[st[0]]; tri(p(hu, -hv, raft), p(hu, hv, raft), p(hu, 0, raft + m), veggF); tri(p(-hu, hv, raft), p(-hu, -hv, raft), p(-hu, 0, raft + m), veggF);
+          cur = B.tak; const e = .35, eg = .25, zE = raft - m * e / hv, Lu = 2 * (hu + eg), Vs = Math.hypot(hv + e, raft + m - zE) / .4, rader = [[0, 0], [Lu, 0], [Lu, Vs], [0, Vs]];
+          firkant(p(-hu - eg, -hv - e, zE), p(hu + eg, -hv - e, zE), p(hu + eg, 0, raft + m), p(-hu - eg, 0, raft + m), tak, rader);
+          firkant(p(hu + eg, hv + e, zE), p(-hu - eg, hv + e, zE), p(-hu - eg, 0, raft + m), p(hu + eg, 0, raft + m), tak, rader);
+        } else {
+          const [ax, ay] = d.valm.a, [bx, by] = d.valm.b, dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+          const R = ([x2, y2]) => { const k2 = l2 ? Math.max(0, Math.min(1, ((x2 - ax) * dx + (y2 - ay) * dy) / l2)) : 0; return [ax + dx * k2, ay + dy * k2, topp]; };
+          cur = B.tak;
+          for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ra = R(a), Vs = Math.hypot(Math.hypot(ra[0] - a[0], ra[1] - a[1]), møne) / .4;
+            firkant([...a, raft], [...b, raft], R(b), ra, tak, [[0, 0], [L, 0], [L, Vs], [0, Vs]]); }
+        }
+        continue;
+      }
+      if (fall) {
         // Saltak på det rettvinklede omrisset: vegger opp til raftet, gavler i veggfargen og to takflater opp til mønet.
         const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2;
         const p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
@@ -998,6 +1057,7 @@ async function hus3d(u) {
         const kl = klasse(t, f.areal, h), st = STIL[kl] || STIL.hus;
         for (let j = 0; j < 4; j++) { grunnmur(A[j], A[(j + 1) % 4], bunn); veggKl(kl, A[j], A[(j + 1) % 4], bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
         dør(kl, A[0], A[1], bunn + 1, kl === 'låve' ? .5 : .38);
+        if (kj) skilt.push([A[0], A[1], Math.min(bunn + 4.2, raft - .6), o.e.k]);
         cur = B[st[0]];
         const M0 = p(-hu, 0, topp), M1 = p(hu, 0, topp), nv = Math.max(1, Math.round(f.lv / 3.2)), g0 = (raft - bunn - 1.5) / 3 - .2, g1 = (topp - bunn - 1.5) / 3 - .2;
         // gavlene, med kledning og loftsvindu
@@ -1037,6 +1097,7 @@ async function hus3d(u) {
           grunnmur([ax, ay], [bx, by], bunn); veggKl(kl, [ax, ay], [bx, by], bunn + 1.5, topp, veggF.map(v => v * (j % 2 ? .92 : 1)));
         }
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
+        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], Math.min(bunn + 4.4, topp - .7), o.e.k]);
         if ((kl === 'industri' || kl === 'lager') && lengst > 30) for (let f2 = .2; f2 < .95; f2 += Math.max(.15, 14 / lengst)) dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, f2);
         if (kl === 'sykehus') {
           // rødt kors høyt på veggen og helikopterplass på taket
@@ -1063,7 +1124,7 @@ async function hus3d(u) {
     }
   }
   const deler = {}; for (const [n, b] of Object.entries(B)) if (b.pos.length) deler[n] = { pos: new Float32Array(b.pos), kol: new Float32Array(b.kol), uv: new Float32Array(b.uv) };
-  return Object.keys(deler).length ? { deler, biler: new Float32Array(biler), flagg: new Float32Array(flagg), omriss, piper, antall: sett.size } : null;
+  return Object.keys(deler).length ? { deler, biler: new Float32Array(biler), flagg: new Float32Array(flagg), omriss, piper, skilt, antall: sett.size } : null;
 }
 // Teksturer for byggtypene (hvit = veggfargen): leilighet (vindu med balkong), industri (blikk med ribber og et vindusbånd øverst),
 // planke (stående bord uten vinduer: låve, uthus), butikk (skilt og utstillingsvinduer), kirke (kledning med høyt buevindu) og dører/porter.
@@ -1131,9 +1192,31 @@ async function finnBygg(X, Y) {
     if (inn) return { o, P }; if (d < bd) { bd = d; best = { o, P }; } }
   return best;
 }
+// Skiltene på kjedebutikkene: ett nett per kjede med navnet på en tekstur (lages én gang per kjede)
+const SKILT_TEKSTUR = {};
+function skiltTekstur(k) {
+  if (SKILT_TEKSTUR[k]) return SKILT_TEKSTUR[k];
+  const [navn, bak, tekst] = BUTIKKER[k], c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = bak; g.fillRect(0, 0, 512, 128); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 6; g.strokeRect(3, 3, 506, 122);
+  g.fillStyle = tekst; g.textAlign = 'center'; g.textBaseline = 'middle'; let fs = 84; g.font = `bold ${fs}px sans-serif`;
+  while (g.measureText(navn).width > 470 && fs > 30) { fs -= 4; g.font = `bold ${fs}px sans-serif`; }
+  g.fillText(navn, 256, 68); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return (SKILT_TEKSTUR[k] = t);
+}
+function skilt3d(liste) {
+  const per = {};
+  for (const [a, b, zc, k] of liste) { if (!BUTIKKER[k]) continue;
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 3) continue;
+    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy * .12, ny = -ux * .12, w = Math.min(L * .75, 1.2 + BUTIKKER[k][0].length * .55), hh = w / 4;
+    const cx = (a[0] + b[0]) / 2 + nx, cy = (a[1] + b[1]) / 2 + ny, p1 = [cx - ux * w / 2, cy - uy * w / 2], p2 = [cx + ux * w / 2, cy + uy * w / 2];
+    const q = per[k] || (per[k] = { pos: [], uv: [] });
+    q.pos.push(p1[0], p1[1], zc - hh / 2, p2[0], p2[1], zc - hh / 2, p2[0], p2[1], zc + hh / 2, p1[0], p1[1], zc - hh / 2, p2[0], p2[1], zc + hh / 2, p1[0], p1[1], zc + hh / 2);
+    q.uv.push(0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1); }
+  return Object.entries(per).map(([k, q]) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(q.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(q.uv, 2)); g.computeVertexNormals();
+    return new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: skiltTekstur(k), emissive: 0x222222 })); });
+}
 async function visByggVed(X, Y) {
   const b = await finnBygg(X, Y); if (!b) return false;
-  const e = b.o.e, f = form(b.P), navn = BYGGTYPE[e.t] || 'Bygg';
+  const e = b.o.e, f = form(b.P), navn = e.k && BUTIKKER[e.k] ? BUTIKKER[e.k][0] + ' (butikk)' : BYGGTYPE[e.t] || 'Bygg';
   document.getElementById('pnavn').textContent = navn;
   document.getElementById('psub').textContent = [e.h ? 'ca. ' + nf.format(Math.round(e.h)) + ' m høyt' : null, nf.format(Math.round(f.areal)) + ' m² grunnflate', e.h > 4 ? 'ca. ' + Math.max(1, Math.round((e.h - 1) / 3)) + ' etasjer' : null].filter(Boolean).join(' · ');
   document.getElementById('handl').innerHTML = ''; document.getElementById('menn').innerHTML = '';
@@ -1513,6 +1596,7 @@ function sett3d(u) {
       hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); hg.computeVertexNormals();
       const m = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, map: tekstur[n]() })); R.scene.add(m); R.husMesh.push(m);
     }
+    if (u.hus.skilt && u.hus.skilt.length) for (const m of skilt3d(u.hus.skilt)) { R.scene.add(m); R.husMesh.push(m); }
     if (u.hus.flagg.length) småting(R, 'flagg', u.hus.flagg);
     if (u.hus.biler.length) småting(R, 'bil', u.hus.biler);
   }
@@ -1698,9 +1782,10 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=7460dbbadf"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=516b61254f"></script>
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=edb24ec341"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=b101ca6835"></script>
 </body>

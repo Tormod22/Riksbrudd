@@ -7,6 +7,22 @@ const KF = {
   kartTag: null, release: Promise.resolve(false), data: '/dovre-fliser/data/',
   vedBytes(n, kilde) {}, vedFeil(e) { console.error(e); },
 };
+// Kjedebutikkene (k i byggdataene, nummeret fra KJEDER i pipeline/fliser/bygninger.py) får oppdiktede navn og egne farger,
+// så man kjenner dem igjen fra virkeligheten uten å bruke de ekte merkene (brukeren 11. nov: «en Kiwi blir en grønn butikk som heter Pære»).
+// [navn, skiltfarge, tekstfarge]
+const BUTIKKER = {
+  1: ['Pære', '#5aa02c', '#ffffff'], 2: ['Rima 2000', '#0b3c8c', '#ffffff'], 3: ['Ekstrem', '#ffd400', '#d2001e'], 4: ['Priks', '#f6d000', '#1b3a8a'],
+  5: ['Giga', '#c8102e', '#ffffff'], 6: ['Oops!', '#c8102e', '#ffffff'], 7: ['Menyen', '#b5121b', '#ffffff'], 8: ['Sparegris', '#007a3d', '#ffffff'],
+  9: ['Knekt', '#e30613', '#ffd200'], 10: ['Toppris', '#ffd200', '#d2001e'], 11: ['Asiapris', '#1d4f9c', '#ffd200'], 12: ['Firkant Q', '#e4002b', '#ffffff'],
+  13: ['Ezzo', '#ffffff', '#d2001e'], 14: ['Skjell', '#ffd500', '#dd1d21'], 15: ['Duo-Y', '#e30613', '#ffffff'], 16: ['Ølmonopolet', '#1f1f1f', '#e6c35c'],
+  17: ['Apotek 2', '#00843d', '#ffffff'], 18: ['Vitaminapoteket', '#d50032', '#ffffff'], 19: ['Støvler', '#05054b', '#ffffff'], 20: ['XXS', '#111111', '#ffd400'],
+  21: ['Elsalg', '#00539f', '#ffffff'], 22: ['Kraft', '#ff5a00', '#ffffff'], 23: ['Klas Olsen', '#00488f', '#ffffff'], 24: ['Båttema', '#003a8c', '#ffd200'],
+  25: ['Stålia', '#e30613', '#ffffff'], 26: ['Narrvesen', '#d2001e', '#ffffff'], 27: ['8-Twelve', '#ffffff', '#008163'], 28: ["McRonny's", '#da291c', '#ffc72c'],
+  29: ['Burgerprinsen', '#f5ebdc', '#d62300'], 30: ['Min Burger', '#e30613', '#ffffff'], 31: ['Paprikas Pizza', '#1d1d1b', '#e30613'], 32: ['Samvirkelaget', '#00529b', '#ffffff'],
+  33: ['Unormal', '#ffffff', '#e30613'], 34: ['Dansk', '#143c8c', '#ffffff'], 36: ['Nulle', '#e5007e', '#ffffff'], 37: ['Blanding', '#e30613', '#ffffff'],
+  38: ['ZY', '#ffffff', '#e30613'], 39: ['St2', '#ffffff', '#003c78'],
+};
+
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
 const G = { x0: -200000, y0: 9300000, res0: 16384, T: 256 };
 const res = z => G.res0 / 2 ** z, span = z => G.T * res(z);
@@ -290,6 +306,7 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   const flisP = t => { const s = T * t.f / 4096, ox = t.ix * T, oy = t.iy * T; return ([a, b]) => [a * s - ox, b * s - oy]; };
   const P = v ? flisP(v) : null;
   if (v) veger = (v.t.veg ? v.t.veg.obj : []).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
+  if (hs && hs.t.anlegg) anlegg(g, z, hs);   // fotballbaner, ballbaner, løpebaner, lekeplasser, parkering (under vegene og husene)
   // veger i nabolandene og Norges hovedveger når man zoomer ut (OpenStreetMap); i Norge fra z8 brukes NVDB (n = 1 hoppes over)
   const uP = uv ? flisP(uv) : null, uveger = uv && uv.t.veg ? uv.t.veg.obj.filter(o => !(z >= 8 && o.e.n)).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(uP)) })) : [];
   const alle = (veger || []).concat(uveger);
@@ -319,6 +336,86 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   return { c, E };
 }
 
+// ---------- anlegg (OpenStreetMap) ----------
+// a: 1 fotballbane (gress med klipperstriper og oppmerking), 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass
+function anlegg(g, z, hs) {
+  const T = G.T, r = res(z), s = T * hs.f / 4096, ox = hs.ix * T, oy = hs.iy * T, lw = Math.max(1, .12 / r);
+  const FARGE = { 1: '#4d8a36', 2: '#3e6f86', 3: '#55585b', 4: '#a24a32', 5: '#c8b07e', 6: '#545350', 7: '#38393b', 8: '#444547', 9: '#4f5052' };
+  g.save(); g.lineJoin = 'round';
+  // oppstillingsplass under taksebane under rullebane; ballbaner og parkering først
+  const REKKE = { 9: 1, 8: 2, 7: 3 }, liste = hs.t.anlegg.obj.slice().sort((p, q) => (REKKE[p.e.a] || 0) - (REKKE[q.e.a] || 0));
+  for (const o of liste) { const a = o.e.a;
+    for (const d of o.deler) { if (d.length < 4) continue;
+      const P = []; for (let i = 0; i < d.length - 1; i++) P.push([d[i][0] * s - ox, d[i][1] * s - oy]);
+      const sti = () => { g.beginPath(); g.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) g.lineTo(P[i][0], P[i][1]); g.closePath(); };
+      sti(); g.fillStyle = FARGE[a] || '#666'; g.fill();
+      if (a === 6 && z >= 15) { g.strokeStyle = 'rgba(230,228,220,.5)'; g.lineWidth = lw; g.stroke(); }
+      if (a === 5 && z >= 15) { g.strokeStyle = 'rgba(90,70,40,.6)'; g.lineWidth = lw * 1.5; g.stroke(); }
+      if ((a === 1 || a === 2 || a === 3) && z >= 14) {
+        const f = form(P), L = f.lu * r, W = f.lv * r, m = (du, dv) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv];
+        const rekt = (u0, v0, u1, v1) => { const q = [m(u0, v0), m(u1, v0), m(u1, v1), m(u0, v1)]; g.beginPath(); g.moveTo(...q[0]); for (const p of q.slice(1)) g.lineTo(...p); g.closePath(); g.stroke(); };
+        g.save(); sti(); g.clip();
+        if (a === 1) {   // klipperstriper på tvers av banen
+          g.fillStyle = 'rgba(255,255,255,.07)'; const n = 12; for (let k = 0; k < n; k += 2) { const u0 = -f.lu / 2 + f.lu * k / n, u1 = u0 + f.lu / n, q = [m(u0, -f.lv), m(u1, -f.lv), m(u1, f.lv), m(u0, f.lv)];
+            g.beginPath(); g.moveTo(...q[0]); for (const p of q.slice(1)) g.lineTo(...p); g.closePath(); g.fill(); }
+        }
+        g.restore();
+        if (z >= 15) {
+          g.strokeStyle = 'rgba(245,245,240,.92)'; g.lineWidth = lw;
+          const inn = 1.5 / r, hu = f.lu / 2 - inn, hv = f.lv / 2 - inn; rekt(-hu, -hv, hu, hv);
+          if (a === 1) {
+            // oppmerking skalert etter banens lengde (11er-bane 105 m; 7er og 5er mindre)
+            const sk = Math.min(1, (L - 3) / 105), px = mtr => mtr * sk / r;
+            g.beginPath(); g.moveTo(...m(0, -hv)); g.lineTo(...m(0, hv)); g.stroke();
+            g.beginPath(); const c = m(0, 0); g.arc(c[0], c[1], px(9.15), 0, 6.283); g.stroke();
+            for (const sd of [-1, 1]) {
+              const ende = sd * hu, sb = Math.min(px(40.3) / 2, hv), mb = Math.min(px(18.3) / 2, hv);
+              rekt(ende, -sb, ende - sd * px(16.5), sb); rekt(ende, -mb, ende - sd * px(5.5), mb);
+              const ps = m(ende - sd * px(11), 0); g.fillStyle = 'rgba(245,245,240,.92)'; g.beginPath(); g.arc(ps[0], ps[1], Math.max(1, lw), 0, 6.283); g.fill();
+            }
+          } else if (a === 2) { g.beginPath(); g.moveTo(...m(0, -hv - inn * .6)); g.lineTo(...m(0, hv + inn * .6)); g.stroke(); rekt(-hu * .55, -hv * .75, hu * .55, hv * .75); }
+          else { g.beginPath(); g.moveTo(...m(0, -hv)); g.lineTo(...m(0, hv)); g.stroke(); const c = m(0, 0); g.beginPath(); g.arc(c[0], c[1], 1.8 / r, 0, 6.283); g.stroke(); }
+        }
+      }
+      if (a === 7 && z >= 13) rullebane(g, P, o.e.r, r, z);
+      if (a === 8 && z >= 15) { const f = form(P); if (f.rekt > .8 && f.lu > f.lv * 3) {   // taksebane: gul midtlinje
+        g.strokeStyle = 'rgba(232,190,40,.9)'; g.lineWidth = Math.max(1, .2 / r); g.beginPath(); g.moveTo(f.sx - f.ux * f.lu / 2, f.sy - f.uy * f.lu / 2); g.lineTo(f.sx + f.ux * f.lu / 2, f.sy + f.uy * f.lu / 2); g.stroke(); } }
+      if (a === 4 && z >= 15) {   // løpebane: hvite banelinjer langs kanten
+        g.strokeStyle = 'rgba(245,240,235,.75)'; g.lineWidth = lw; sti(); g.stroke();
+      }
+    }
+  }
+  g.restore();
+}
+
+// Rullebane med oppmerking etter ICAO: kantlinjer, stiplet midtlinje, terskelstriper («pianotangenter»), banenummer i hver ende
+// (lest av den som lander: «01» ved sørenden for fly som lander mot nord), landingssone-merker og siktepunkt. P i piksler, r meter per piksel.
+function rullebane(g, P, ref, r, z) {
+  const f = form(P); if (f.lu < f.lv * 3) return;
+  const L = f.lu, W = f.lv, m = (du, dv) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv], px = x => x / r;
+  const felt = (u0, u1, v0, v1) => { const q = [m(u0, v0), m(u1, v0), m(u1, v1), m(u0, v1)]; g.beginPath(); g.moveTo(...q[0]); for (const p of q.slice(1)) g.lineTo(...p); g.closePath(); g.fill(); };
+  g.fillStyle = 'rgba(240,240,236,.92)';
+  const hu = L / 2, hv = W / 2, lw = px(.9);
+  if (lw < .35) return;
+  felt(-hu + px(3), hu - px(3), hv - px(1.5) - lw, hv - px(1.5)); felt(-hu + px(3), hu - px(3), -hv + px(1.5), -hv + px(1.5) + lw);   // kantlinjene
+  for (let u = -hu + px(90); u < hu - px(90); u += px(50)) felt(u, Math.min(u + px(30), hu - px(90)), -lw / 2, lw / 2);              // midtlinjen: 30 m strek, 20 m mellomrom
+  const nr = String(ref || '').split('/').map(t => t.trim()).filter(Boolean), kurs = (Math.atan2(f.ux, -f.uy) * 180 / Math.PI + 360) % 360;
+  for (const sd of [-1, 1]) {
+    // enden ved -u er terskelen for fly som lander i +u-retning (kursen «kurs»); ved +u motsatt
+    const ende = sd * hu, inn = -sd, k = sd < 0 ? kurs : (kurs + 180) % 360;
+    const n = Math.max(4, Math.min(16, Math.round(W * r / 3.6))), bredde = (W - px(6)) / (2 * n);
+    for (let j = 0; j < n; j++) { const v = -hv + px(3) + (2 * j + .5) * bredde; felt(ende + inn * px(6), ende + inn * px(36), v, v + bredde); }   // terskelstriper 30 m
+    for (const [a1, a2, v0, v1] of [[150, 172.5, .18, .3], [300, 345, .2, .36], [450, 472.5, .18, .3]]) if (a2 * 2 < L * r) {   // landingssone og siktepunkt
+      for (const s2 of [-1, 1]) felt(ende + inn * px(a1), ende + inn * px(a2), s2 * hv * v0, s2 * hv * v1); }
+    // banenummeret: nærmest kursen (01–36), skrevet slik at det leses av den som lander
+    let tekst = null; for (const t of nr) { const tall = parseInt(t, 10); if (tall >= 1 && tall <= 36 && Math.abs(((tall * 10 - k + 540) % 360) - 180) < 40) tekst = t; }
+    if (!tekst || px(18) < 6) continue;
+    const [tx, ty] = m(ende + inn * px(48), 0), hgt = px(18);
+    g.save(); g.translate(tx, ty); g.rotate(Math.atan2(f.ux * inn, -f.uy * inn)); g.font = `bold ${hgt}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(tekst, 0, 0); g.restore();
+  }
+}
+
 // ---------- hus ----------
 // Farger etter type (0 bolig, 1 garasje/uthus, 2 næring, 3 offentlig, 4 landbruk, 5 annet), valgt fast per bygg (frø = byggets
 // nummer i), så hvert hus ser likt ut hver gang og hos alle. Tak: teglrødt, svart/grå skifer, brunt; låver med rødt tak.
@@ -342,6 +439,77 @@ const veggFarge = (t, i) => { const p = VEGGFARGER[t] || VEGGFARGER[5]; return p
 function nyanse(hex, f) { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f)))); return `rgb(${c})`; }
 // Saltak for små og mellomstore bygg av «hus-typene»; flatt tak for store næringsbygg og offentlige bygg.
 const saltak = (t, areal) => t === 0 || t === 1 || t === 4 || t === 11 ? areal < 1500 : t === 8 ? areal < 900 : t === 10 ? areal < 400 : t === 9 ? areal < 300 : t === 3 ? areal < 250 : t === 5 ? areal < 300 : false;
+// Tak med fall eller flatt tak (brukeren 11. nov: «for mange hus fikk flatt tak, blant annet låver»; «kirker har nesten aldri flatt tak»).
+// tett = antall bygg innen 100 m: på landet (få naboer) er saltak mye vanligere enn i sentrum. Industri, lager, sykehus og flyplass er flate.
+// Fast per bygg (frø = byggets nummer), så taket er det samme hver gang, i 2D og 3D.
+function harFall(t, areal, h, i, tett) {
+  if (t === 6 || t === 12 || t === 13 || t === 14) return false;
+  let c;
+  if (t === 8) c = areal < 3000 ? .9 : .5;
+  else if (t === 2) c = h > 12 || areal > 1500 ? 0 : .45;
+  else if (t === 10) c = areal < 400 ? .8 : h > 13 ? .05 : .25;
+  else { c = areal < 300 ? .97 : areal < 800 ? .85 : areal < 2000 ? .55 : .2; if (t === 4 && areal < 3500) c = Math.max(c, .93); }
+  if (c > 0 && c < 1 && t !== 8) c = tett < 6 ? 1 - (1 - c) * .2 : tett < 15 ? 1 - (1 - c) * .5 : tett > 40 ? c * .75 : c;
+  return hash(i, 7, 3) < c;
+}
+// Antall bygg innen R meter for hvert senter ([x, y] i meter), med et rutenett så det går fort.
+function naboer(sentre, R = 100) {
+  const rut = new Map(), k = (x, y) => Math.floor(x / R) + ',' + Math.floor(y / R);
+  sentre.forEach(([x, y], j) => { const n = k(x, y); if (!rut.has(n)) rut.set(n, []); rut.get(n).push(j); });
+  return sentre.map(([x, y]) => { let n = 0; const ci = Math.floor(x / R), cj = Math.floor(y / R);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const j of rut.get((ci + di) + ',' + (cj + dj)) || []) { const q = sentre[j]; if (Math.hypot(q[0] - x, q[1] - y) < R) n++; }
+    return n - 1; });
+}
+// Helt rundt bygg: mange hjørner, like langt som bredt, og arealet nær en sirkel (4πA/O² > 0,85).
+function rund(P, f) {
+  if (P.length < 8 || f.lu > f.lv * 1.25) return false;
+  let O = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; O += Math.hypot(b[0] - a[0], b[1] - a[1]); }
+  return 4 * Math.PI * f.areal / (O * O) > .85;
+}
+// Takflatene for et bygg med fall som ikke er et enkelt rektangel:
+// - vinkelrette omriss (L, T, U, Z …) deles i rektangler, hvert med eget saltak (som kryssark og tilbygg på ekte hus)
+// - andre omriss får valmtak: hver vegg får en takflate opp mot mønet langs hovedretningen
+// Gir { rekt: [{ sx, sy, ux, uy, vx, vy, lu, lv }] } eller { valm: { a: [x, y], b: [x, y] } } (mønet), i samme enheter som P,
+// eller null når ingen av delene passer (da får bygget flatt tak).
+function takDeler(P, f) {
+  const Q = P.map(([x, y]) => [x * f.ux + y * f.uy, x * f.vx + y * f.vy]);
+  let ok = Q.length <= 24; const ret = [];
+  for (let i = 0; i < Q.length && ok; i++) { const a = Q[i], b = Q[(i + 1) % Q.length], du = Math.abs(b[0] - a[0]), dv = Math.abs(b[1] - a[1]);
+    const v = Math.atan2(Math.min(du, dv), Math.max(du, dv)); if (v > .2 && Math.hypot(du, dv) > .02 * (f.lu + f.lv)) ok = false; ret.push(du >= dv ? 'H' : 'V'); }
+  if (ok) {
+    // slå sammen hjørner der to kanter går samme vei, så kantene veksler H, V, H, V …
+    let V = Q.map((q, i) => ({ q, inn: ret[(i - 1 + Q.length) % Q.length], ut: ret[i] })).filter(p => p.inn !== p.ut);
+    if (V.length >= 4 && V.length % 2 === 0) {
+      // hjørnene rettes opp: u fra den loddrette kanten, v fra den vannrette
+      const n = V.length, R = [];
+      for (let i = 0; i < n; i++) { const p = V[i], q = V[(i + 1) % n];
+        if (p.ut === 'H') { const v = (p.q[1] + q.q[1]) / 2; p.v = v; q.v = v; } else { const u = (p.q[0] + q.q[0]) / 2; p.u = u; q.u = u; } }
+      const H = []; for (let i = 0; i < n; i++) { const p = V[i], q = V[(i + 1) % n]; if (p.ut === 'H') H.push([Math.min(p.u, q.u), Math.max(p.u, q.u), p.v]); }
+      const Vk = []; for (let i = 0; i < n; i++) { const p = V[i], q = V[(i + 1) % n]; if (p.ut === 'V') Vk.push([Math.min(p.v, q.v), Math.max(p.v, q.v), p.u]); }
+      // skiver langs én akse: intervallene på tvers i hver skive, like naboskiver slås sammen til ett rektangel
+      const tol = (f.lu + f.lv) * .003;
+      const skiver = (kant, akse) => { const xs = [], ut = []; let åpne = [];
+        for (const x of kant.flatMap(e => [e[0], e[1]]).sort((a, b) => a - b)) if (!xs.length || x - xs[xs.length - 1] > tol) xs.push(x);   // like verdier (avrunding) slås sammen
+        for (let k = 0; k < xs.length - 1; k++) { const m = (xs[k] + xs[k + 1]) / 2, ys = kant.filter(e => e[0] < m && m < e[1]).map(e => e[2]).sort((a, b) => a - b), iv = [];
+          for (let j = 0; j + 1 < ys.length; j += 2) iv.push([ys[j], ys[j + 1]]);
+          const nye = [];
+          for (const [a, b] of iv) { const o = åpne.find(o => Math.abs(o.a - a) < tol && Math.abs(o.b - b) < tol); if (o) { o.x1 = xs[k + 1]; nye.push(o); } else nye.push({ a, b, x0: xs[k], x1: xs[k + 1] }); }
+          for (const o of åpne) if (!nye.includes(o)) ut.push(o); åpne = nye; }
+        ut.push(...åpne); return ut.map(o => akse === 'u' ? [o.x0, o.x1, o.a, o.b] : [o.a, o.b, o.x0, o.x1]); };
+      const ok2 = r => r[1] - r[0] > tol && r[3] - r[2] > tol, A = skiver(H, 'u').filter(ok2), B = skiver(Vk, 'v').filter(ok2), valgt = A.length <= B.length ? A : B;
+      if (valgt.length && valgt.length <= 6) return { rekt: valgt.map(([u0, u1, v0, v1]) => { const lu = u1 - u0, lv = v1 - v0, cu = (u0 + u1) / 2, cv = (v0 + v1) / 2, lang = lu >= lv;
+        return { sx: cu * f.ux + cv * f.vx, sy: cu * f.uy + cv * f.vy, ux: lang ? f.ux : f.vx, uy: lang ? f.uy : f.vy, vx: lang ? f.vx : -f.ux, vy: lang ? f.vy : -f.uy, lu: Math.max(lu, lv), lv: Math.min(lu, lv) }; }) };
+    }
+  }
+  // valmtak bare på omriss som er nesten konvekse og ikke for store (ellers blir det et stjernetak): ellers null = flatt tak
+  const Hl = [...P].sort((a, b) => a[0] - b[0] || a[1] - b[1]), kr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], hi = [];
+  for (const p of Hl) { while (lo.length > 1 && kr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (let i = Hl.length - 1; i >= 0; i--) { const p = Hl[i]; while (hi.length > 1 && kr(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop(); hi.push(p); }
+  const skall = lo.slice(0, -1).concat(hi.slice(0, -1)); let ha = 0; for (let i = 0; i < skall.length; i++) { const a = skall[i], b = skall[(i + 1) % skall.length]; ha += a[0] * b[1] - b[0] * a[1]; }
+  if (f.areal / (Math.abs(ha) / 2 || 1) < .88 || P.length > 16) return null;
+  const hv = f.lv / 2, m = Math.max(0, f.lu / 2 - hv);
+  return { valm: { a: [f.sx - f.ux * m, f.sy - f.uy * m], b: [f.sx + f.ux * m, f.sy + f.uy * m] } };
+}
 // Hovedretning (lengste kant), sentrum og mål langs (lu) og på tvers (lv) av omrisset, og hvor rektangulært det er (0–1).
 function form(P) {
   let best = 0, ux = 1, uy = 0, areal = 0;
@@ -362,10 +530,37 @@ function husomriss(g, z, hs) {
   g.fillStyle = 'rgba(6,5,3,.38)';
   for (const { o, P } of hus) { const d = Math.min(14, (o.e.h || 6) / r * .45); g.beginPath(); sti(P, d, d); g.fill(); }
   const Lx = -Math.SQRT1_2, Ly = -Math.SQRT1_2, detalj = z >= 14;
+  // naboer innen 100 m (på landet får flere bygg tak med fall) og industri innen 150 m (runde bygg der er tanker)
+  const tett = naboer(hus.map(h => [h.f.sx * r, h.f.sy * r])), ind = hus.filter(h => h.o.e.t === 6 || h.o.e.t === 12).map(h => [h.f.sx * r, h.f.sy * r]);
   g.lineJoin = 'round';
-  for (const { o, P, f } of hus) {
-    const t = o.e.t, i = o.e.i, base = takFarge(t, i), arealM2 = f.areal * r * r;
-    if (detalj && saltak(t, arealM2) && f.rekt > .7 && f.lv > 3) {   // saltak: mønet langs lengste side, gjennom midten
+  hus.forEach((h, n) => { h.tett = tett[n]; });
+  for (const { o, P, f, tett } of hus) {
+    const t = o.e.t, i = o.e.i, base = takFarge(t, i), arealM2 = f.areal * r * r, rundt = rund(P, f);
+    const fall0 = detalj && !rundt && f.lv * r > 3 && harFall(t, arealM2, o.e.h || 6, i, tett), enkel = f.rekt > .9 && P.length <= 6;
+    const d = fall0 && !enkel ? takDeler(P, f) : null, fall = fall0 && (enkel || !!d);
+    if (rundt && detalj) {
+      // rundt bygg sett ovenfra: tank (nær industri) i lyst blikk med ring, ellers hvitt med mørk kant (silo, fyr)
+      const tank = ind.some(q => Math.hypot(q[0] - f.sx * r, q[1] - f.sy * r) < 150);
+      g.fillStyle = tank ? '#c9cbc8' : '#e6e2d8'; g.beginPath(); sti(P); g.fill();
+      g.strokeStyle = tank ? 'rgba(90,92,95,.8)' : 'rgba(160,40,30,.7)'; g.lineWidth = Math.max(1, .5 / r);
+      g.beginPath(); g.arc(f.sx, f.sy, Math.min(f.lu, f.lv) * .3, 0, 6.283); g.stroke();
+    } else if (fall && !enkel) {
+      // tak med fall på et omriss som ikke er et rektangel: rektangler med eget saltak, eller valmtak opp mot mønet
+      g.fillStyle = nyanse(base, .82); g.beginPath(); sti(P); g.fill();
+      if (d.rekt) for (const q of d.rekt) {
+        const hu = q.lu / 2, hv = q.lv / 2, p = (du, dv) => [q.sx + q.ux * du + q.vx * dv, q.sy + q.uy * du + q.vy * dv], lys = (q.vx * Lx + q.vy * Ly) > 0 ? 1 : -1;
+        for (const sd of [1, -1]) { const a = p(-hu, 0), b = p(hu, 0), c = p(hu, sd * hv), e = p(-hu, sd * hv);
+          g.fillStyle = nyanse(base, sd === lys ? 1.16 : .82); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...c); g.lineTo(...e); g.closePath(); g.fill(); }
+        g.strokeStyle = nyanse(base, 1.45); g.lineWidth = Math.max(.6, .25 / r); g.beginPath(); g.moveTo(...p(-hu, 0)); g.lineTo(...p(hu, 0)); g.stroke();
+      } else {
+        const [ax, ay] = d.valm.a, [bx, by] = d.valm.b, dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+        const R = ([x, y]) => { const k = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0; return [ax + dx * k, ay + dy * k]; };
+        for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], ex = b[0] - a[0], ey = b[1] - a[1], el = Math.hypot(ex, ey) || 1;
+          const nx = ey / el, ny = -ex / el, mot = -(nx * Lx + ny * Ly);   // vegg med normal mot lyset: lys takflate
+          g.fillStyle = nyanse(base, .9 + .26 * mot); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.lineTo(...R(b)); g.lineTo(...R(a)); g.closePath(); g.fill(); }
+        g.strokeStyle = nyanse(base, 1.45); g.lineWidth = Math.max(.6, .25 / r); g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+      }
+    } else if (fall) {   // saltak: mønet langs lengste side, gjennom midten
       const lys = (f.vx * Lx + f.vy * Ly) > 0 ? 1 : -1, R = f.lu + f.lv;
       g.fillStyle = nyanse(base, .82); g.beginPath(); sti(P); g.fill();
       g.save(); g.beginPath(); sti(P); g.clip();
@@ -390,11 +585,22 @@ function husomriss(g, z, hs) {
       }
     }
     g.strokeStyle = 'rgba(18,13,8,.75)'; g.lineWidth = z >= 15 ? 1 : .6; g.beginPath(); sti(P); g.stroke();
-    if (z >= 15 && arealM2 > 80) byggmerke(g, t, f.sx, f.sy, Math.max(5, Math.min(12, Math.sqrt(f.areal) * .22)));
+    if (z >= 15 && arealM2 > 80) byggmerke(g, t, f.sx, f.sy, Math.max(5, Math.min(12, Math.sqrt(f.areal) * .22)), o.e.k, z);
   }
 }
 // Kjennetegn på taket når man er nær: kirke (kors), sykehus (rødt kors), flyplass (fly), skole (bok), butikk (handlepose), industri/lager (tannhjul)
-function byggmerke(g, t, x, y, r) {
+function byggmerke(g, t, x, y, r, k, z) {
+  const kj = k && BUTIKKER[k];
+  if (kj) {
+    // kjedebutikk: skilt i kjedens farger med navnet (nær), ellers en prikk med forbokstaven
+    g.save(); g.translate(x, y); g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (z >= 16) { const fs = Math.max(9, r * 1.1); g.font = `bold ${fs}px sans-serif`; const w = g.measureText(kj[0]).width + fs * .8, hh = fs * 1.5;
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-w / 2 + 1.5, -hh / 2 + 1.5, w, hh); g.fillStyle = kj[1]; g.fillRect(-w / 2, -hh / 2, w, hh);
+      g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1; g.strokeRect(-w / 2, -hh / 2, w, hh); g.fillStyle = kj[2]; g.fillText(kj[0], 0, fs * .05); }
+    else { g.fillStyle = kj[1]; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, r, 0, 6.283); g.fill(); g.stroke();
+      g.fillStyle = kj[2]; g.font = `bold ${r * 1.15}px sans-serif`; g.fillText(kj[0][0], 0, r * .05); }
+    g.restore(); return;
+  }
   if (![6, 7, 8, 9, 12, 13, 14].includes(t)) return;
   g.save(); g.translate(x, y); g.fillStyle = 'rgba(20,16,10,.55)'; g.beginPath(); g.arc(0, 0, r, 0, 6.283); g.fill();
   g.strokeStyle = g.fillStyle = '#f1ead9'; g.lineWidth = Math.max(1.2, r * .18); g.lineCap = 'round';
