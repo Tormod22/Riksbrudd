@@ -606,7 +606,7 @@ function nyttLag(navn, x, y, side, speider) {
 }
 // Samme steder som på /dovre (regnet om fra UTM 32 til UTM 33).
 const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2. lag, Dombås', 198872, 6896752, 'blå'),
-  nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Fiendtlig patrulje', 213280, 6908986, 'rød')];
+  nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Kystalliansens patrulje', 213280, 6908986, 'rød')];
 const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
 
 // ---------- tid: 1 spilltime = 60 s ved 1× ----------
@@ -722,6 +722,8 @@ function tegnEnheter(vx0, vy1) {
   }
   tegnLag(ctx, proj, () => kam.m);
 }
+// Fargene per side (fraksjonene i spill/fraksjoner.js; reserve: blå/rød).
+const sidefarge = (side, k) => ((window.Fraksjoner && Fraksjoner.FRAKSJONER[side]) || (side === 'blå' ? { farge: '#3b5878', lys: '#5b7ea8', sti: 'rgba(130,170,220,.9)' } : { farge: '#8f3c2f', lys: '#b5503d', sti: 'rgba(225,125,95,.9)' }))[k];
 function tegnLag(g, proj, mPer) {
   const nå = performance.now();
   for (let i = SKUDD.length - 1; i >= 0; i--) { const k = SKUDD[i]; if (k.til < nå) { SKUDD.splice(i, 1); continue; }
@@ -743,7 +745,7 @@ function tegnLag(g, proj, mPer) {
     const ps = proj(s.x, s.y); if (!ps) continue;
     const [px, py] = ps, blå = s.side === 'blå', m = mPer(s.x, s.y);
     if (px < -200 || py < -200 || px > VW + 200 || py > VH + 200) continue;
-    if (s.sti) { g.strokeStyle = blå ? 'rgba(130,170,220,.9)' : 'rgba(225,125,95,.9)'; g.lineWidth = 2; g.setLineDash([7, 5]); g.beginPath(); g.moveTo(px, py);
+    if (s.sti) { g.strokeStyle = sidefarge(s.side, 'sti'); g.lineWidth = 2; g.setLineDash([7, 5]); g.beginPath(); g.moveTo(px, py);
       for (let i = s.seg + 1; i < s.sti.length; i++) { const q = proj(s.sti[i][0], s.sti[i][1]); if (q) g.lineTo(q[0], q[1]); } g.stroke(); g.setLineDash([]); }
     if (m < 1.6) { // hver mann for seg, i formasjon: kolonne på marsj, kile når de står
       const levende = s.menn.filter(q => q.hp > 0), ca = Math.cos(s.retning), sa = Math.sin(s.retning), r = Math.max(3.4, .35 / m);
@@ -753,11 +755,11 @@ function tegnLag(g, proj, mPer) {
         let fx, fy; if (s.sti) { fx = -n * 4; fy = (n % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((n + 1) / 2), side = n % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
         const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2, leder = s.menn.indexOf(q) === s.leder;
         g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
-        g.fillStyle = leder ? '#f0d79a' : blå ? '#5b7ea8' : '#b5503d'; g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
+        g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
         g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); }
       });
     } else { // lagsymbol (infanteri)
-      const r = 11; g.fillStyle = blå ? '#3b5878' : '#8f3c2f'; g.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; g.lineWidth = s === valgt ? 2.5 : 1.3;
+      const r = 11; g.fillStyle = sidefarge(s.side, 'farge'); g.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; g.lineWidth = s === valgt ? 2.5 : 1.3;
       g.beginPath(); g.rect(px - r, py - r * .7, r * 2, r * 1.4); g.fill(); g.stroke();
       g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - r, py - r * .7); g.lineTo(px + r, py + r * .7); g.moveTo(px + r, py - r * .7); g.lineTo(px - r, py + r * .7); g.stroke();
     }
@@ -816,7 +818,7 @@ function visPanel() {
     b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + (q.hp <= 0 ? ' · falt' : q.hp < 1 ? ' · såret' : ' · lojalitet ' + Math.round(q.loy * 100) + ' %');
     if (q.hp <= 0) b.style.opacity = '.45';
     b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
-  document.getElementById('hint').textContent = s.side !== 'blå' ? 'Fiendtlig patrulje.' : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
+  document.getElementById('hint').textContent = s.side !== 'blå' ? (s.ai && window.Fraksjoner ? Fraksjoner.FRAKSJONER[s.side].navn + ' – motstander, styrt av AI-en.' : 'Fiendtlig patrulje.') : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
     modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
   P.classList.add('på');
 }
@@ -1075,7 +1077,7 @@ document.getElementById('lukk').onclick = () => { valgt = null; modus = null; vi
 window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
-logg('Dovre, august 1987. En fiendtlig patrulje er i området. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
+logg('Dovre, 2023. Riket har gått i oppløsning. Du leder Riksrådet (blå); Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 (function loop(nå) {
   if (nå) { let r = Math.min(.25, (nå - sist) / 1000) * tempo / 60; sist = nå; while (r > 1e-12) { const d = Math.min(.1, r); sim(d); r -= d; } }   // sanntid ved 1×, små steg hver ramme (jevn bevegelse)
@@ -1096,6 +1098,8 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/enheter-visning.js?v=6d22b32d51"></script>
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=1526348bd9"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=25c9069fdc"></script>
-<script src="/dovre-fliser/spill/garnison-visning.js?v=4c3748badd"></script>
+<script src="/dovre-fliser/spill/garnison-visning.js?v=14c238cce9"></script>
+<script src="/dovre-fliser/spill/fraksjoner.js?v=ef5c6c8c82"></script>
+<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=72b29ebc11"></script>
 </body>
 </html>

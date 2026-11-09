@@ -44,6 +44,7 @@ jobs:
           node pipeline/fliser/test_odeleggelse.js
           node pipeline/fliser/test_enheter.js
           node pipeline/fliser/test_garnison.js
+          node pipeline/fliser/test_fraksjoner.js
   bygg:   # nasjonal bygging (~70 min mot NVDB): bare manuelt eller med «[bygg vegnett]» i commit-meldingen
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[bygg vegnett]')
     needs: tester

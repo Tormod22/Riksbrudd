@@ -144,6 +144,16 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 
 ### S8 Fraksjoner og motstandere
 - De oppdiktede fraksjonene fra designdokumentet på hele kartet, enkel AI som tar tettsteder, forsyner seg og angriper.
+- **FERDIG 9. nov (natt), første del:** `spill/fraksjoner.js` (fraksjonene + AI uten DOM) + `spill/fraksjoner-visning.js`.
+  Spilleren er Riksrådet (blå); Kystalliansen (rød, to lag fra Lesja-kanten + patruljen) og Folkefronten (grønn, to lag fra
+  Dovre-bygda) styres av AI-en: hvert lag vurderer hvert 10. spillminutt – slått ut: trekk tilbake; 3+ ute eller under 30 %
+  ammunisjon: stell/forsyninger i eget tettsted; ser fiender innen 1,5 km: angrip når egen styrke ≥ 0,8 × deres, ellers trekk
+  unna; ellers ta det nærmeste tettstedet som ikke er deres (store teller som nærmere), og ett lag blir igjen som garnison.
+  Forsterkning: nytt lag hver 6. spilltime når fraksjonen har under 3. Alle sider får ammunisjon i egne tettsteder (25 %/t).
+  Farger per fraksjon (sidefarge i index.html), «Motstandere» i ☰ slår AI-en av/på. Tester: `node pipeline/fliser/test_fraksjoner.js`
+  og sjekk.js («motstandere»: begge fraksjonene marsjerer mot Dombås, en av dem tar det etter ca. 6 spilltimer når ingen av
+  våre er der). Ikke gjort: fraksjonene på hele kartet (/norge har fortsatt bare Dovre-enhetene), folkemening/sympati per
+  kommune i spillet, diplomati, AI som bygger kjøretøy eller bruker olje. Tallene er forslag.
 
 ### S9 Server og flerspiller (fase G)
 - Colyseus-server med én autoritativ simulering (bruker `terreng.js` og de samme flisene). Krever en vert (Vercel kan ikke kjøre

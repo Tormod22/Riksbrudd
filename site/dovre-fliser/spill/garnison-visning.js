@@ -7,8 +7,9 @@
   window.TETTSTEDER = S;
   const kraft = () => (INFRA && INFRA.kraft || []).map(k => ({ x: k.deler[0][0], y: k.deler[0][1], hel: !window.INFRA_TILSTAND || Odeleggelse.tilstand(INFRA_TILSTAND, 'kraft', k.e.id) === 'hel' }));
   const strømFor = by => G.harStrøm(by, kraft());
-  const eierTekst = e => e === 'blå' ? 'ditt' : e ? 'fiendens' : 'nøytralt';
+  const eierTekst = e => e === 'blå' ? 'ditt' : e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].eieform : 'fiendens') : 'nøytralt';
   const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
+  const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
 
   KROKER.sim.push(dt => {
@@ -17,8 +18,8 @@
     for (const h of G.steg(S, byer(), ENHETER, sek)) {
       const navn = h.by.e.navn, blå = h.side === 'blå';
       if (h.hva === 'inntar' && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
-        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${R.innta / 60} min uten fiender i tettstedet).` : `Fienden er i ${navn}!`); } }
-      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : `Fienden har tatt ${navn}.`);
+        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${R.innta / 60} min uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
+      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : `${hvem(h.side)} har tatt ${navn}.`);
       if (h.hva === 'strid') logg(`Kamp om ${navn}: ingen tar tettstedet mens begge sider er der.`);
       skitten = true;
     }
@@ -41,7 +42,7 @@
       return; }
     if (o.lag !== 'tettsted') return;
     const t = G.tilstand(S, o.e.id), strøm = strømFor(o), sub = document.getElementById('psub');
-    sub.textContent += ' · ' + eierTekst(t.eier) + (t.inntar ? ` (${t.inntar.side === 'blå' ? 'vi tar det' : 'fienden tar det'}: ${Math.round(100 * t.inntar.sek / R.innta)} %)` : '');
+    sub.textContent += ' · ' + eierTekst(t.eier) + (t.inntar ? ` (${t.inntar.side === 'blå' ? 'vi tar det' : hvem(t.inntar.side) + ' tar det'}: ${Math.round(100 * t.inntar.sek / R.innta)} %)` : '');
     const prod = G.rate(o.e.folk, R.produksjon, strøm), fs = G.rate(o.e.folk, R.forsterkning, strøm), gar = G.lagI(o, ENHETER.filter(s => s.side === t.eier && t.eier));
     document.getElementById('hint').textContent = `${strøm ? 'Har strøm' : 'Uten strøm (ingen hele kraftverk innen ' + R.strøm.radius / 1000 + ' km): ' + Math.round(R.strøm.uten * 100) + ' %'}. `
       + `Som ditt gir det ${nf.format(Math.round(prod * 10) / 10)} t olje i timen til basen og forsterker garnisonen med ${nf.format(Math.round(fs * 10) / 10)} mann i timen. `
@@ -55,12 +56,12 @@
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || (!t.eier && !t.inntar)) continue;
       if (sx(by.bb[2]) < -20 || sx(by.bb[0]) > VW + 20 || sy(by.bb[1]) < -20 || sy(by.bb[3]) > VH + 20) continue;
       if (t.eier && m < 600) { g.beginPath(); for (const a of by.deler) { g.moveTo(sx(a[0]), sy(a[1])); for (let i = 2; i < a.length; i += 2) g.lineTo(sx(a[i]), sy(a[i + 1])); g.closePath(); }
-        const blå = t.eier === 'blå'; g.fillStyle = blå ? 'rgba(91,126,168,.10)' : 'rgba(181,80,61,.12)'; g.fill('evenodd');
-        g.strokeStyle = blå ? 'rgba(130,170,220,.8)' : 'rgba(225,125,95,.85)'; g.lineWidth = 2; g.setLineDash([8, 4]); g.stroke(); g.setLineDash([]); }
+        g.globalAlpha = .12; g.fillStyle = sidefarge(t.eier, 'lys'); g.fill('evenodd'); g.globalAlpha = 1;
+        g.strokeStyle = sidefarge(t.eier, 'sti'); g.lineWidth = 2; g.setLineDash([8, 4]); g.stroke(); g.setLineDash([]); }
       const x = sx((by.bb[0] + by.bb[2]) / 2) - 34, y = sy((by.bb[1] + by.bb[3]) / 2) - 4, r = 9;   // vimpelen ved navnet
-      g.fillStyle = t.eier === 'blå' ? '#3b5878' : t.eier ? '#8f3c2f' : 'rgba(40,34,26,.85)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.3;
+      g.fillStyle = t.eier ? sidefarge(t.eier, 'farge') : 'rgba(40,34,26,.85)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.3;
       g.beginPath(); g.moveTo(x - 4, y + r); g.lineTo(x - 4, y - r); g.lineTo(x + 8, y - r + 4); g.lineTo(x - 4, y - r + 8); g.closePath(); g.fill(); g.stroke();   // vimpel
-      if (t.inntar) { const p = t.inntar.sek / R.innta; g.strokeStyle = t.inntar.side === 'blå' ? '#82aadc' : '#e17d5f'; g.lineWidth = 3;
+      if (t.inntar) { const p = t.inntar.sek / R.innta; g.strokeStyle = sidefarge(t.inntar.side, 'sti'); g.lineWidth = 3;
         g.beginPath(); g.arc(x, y, 14, -Math.PI / 2, -Math.PI / 2 + 6.283 * p); g.stroke(); }
     }
     g.restore();

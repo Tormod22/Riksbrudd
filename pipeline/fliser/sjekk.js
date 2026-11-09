@@ -55,6 +55,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
+    await pg.evaluate(() => { if (window.AI) AI.på = false; });   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
       await pg.evaluate(([x, y, m]) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; peker = null; }, [x, y, m]);
       await pg.waitForFunction(() => VENTER.size === 0 && FERDIG.size > 0, null, { timeout: 20000 }); await pg.waitForTimeout(400);
@@ -233,6 +234,19 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { eier, tekst, friske, ny, olje, info, uten: /Uten strøm/.test(uten), sab, kraft: INFRA.kraft.length }; });
         const s7ok = s7 && s7.eier === 'blå' && /garnison i Dombås/.test(s7.tekst) && s7.friske && s7.ny && s7.olje > 2 && /ditt/.test(s7.info) && (!s7.kraft || (s7.uten && /Saboter med/.test(s7.sab))); if (!s7ok) feil++;
         console.log(`${s7ok ? 'ok  ' : 'FEIL'} ${navn} tettsteder: ${s7 ? `Dombås ${s7.eier === 'blå' ? 'tatt' : 'IKKE tatt'} («${s7.tekst}»), forsterket (såret frisk, falt erstattet: ${s7.friske && s7.ny}), ${s7.olje.toFixed(1)} t olje på 3 t; uten strøm når kraftverkene er sabotert: ${s7.uten}; kraftverkpanelet: «${s7.sab}»` : 'fant ikke Dombås'}`);
+        // S8: motstanderne (AI) marsjerer mot Dombås og tar det når ingen av våre er der
+        const s8 = await pg.evaluate(async () => { const by = INFRA.tettsted.find(t => t.e.navn === 'Dombås'); TETTSTEDER.clear(); tempo = 0;
+          const blå = ENHETER.filter(s => s.side === 'blå'); for (const s of blå) { s.x += 4e4; s.sti = null; }
+          const ai = ENHETER.filter(s => s.ai); AI.på = true; for (const s of ai) s.ai.neste = 0;
+          for (let i = 0; i < 30; i++) { sim(.1); await new Promise(r => setTimeout(r, 20)); }
+          for (let n = 0; n < 200 && ai.some(s => s.planlegger); n++) await new Promise(r => setTimeout(r, 100));
+          const plan = ai.map(s => s.ai.tekst), stier = ai.filter(s => s.sti).length;
+          let i = 0; for (; i < 12000 && !Garnison.tilstand(TETTSTEDER, by.e.id).eier; i++) { sim(.1); if (i % 300 === 0) await new Promise(r => setTimeout(r, 30)); }
+          const eier = Garnison.tilstand(TETTSTEDER, by.e.id).eier; AI.på = false;
+          for (const s of blå) s.x -= 4e4; for (const s of ai) s.sti = null;
+          return { plan, stier, n: ai.length, eier, timer: i * 6 / 3600, farge: sidefarge('grønn', 'farge'), meny: [...document.querySelectorAll('#lagmeny button')].some(b => b.textContent === 'Motstandere') }; });
+        const s8ok = s8.n === 4 && s8.stier === 4 && s8.plan.every(t => /Dombås/.test(t)) && (s8.eier === 'rød' || s8.eier === 'grønn') && s8.farge === '#3f6b3a' && s8.meny; if (!s8ok) feil++;
+        console.log(`${s8ok ? 'ok  ' : 'FEIL'} ${navn} motstandere: ${s8.n} AI-lag, ${s8.stier} på marsj («${s8.plan[0]}»), Dombås tatt av ${s8.eier || 'ingen'} etter ${s8.timer.toFixed(1)} spilltimer; «Motstandere» i menyen: ${s8.meny}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
