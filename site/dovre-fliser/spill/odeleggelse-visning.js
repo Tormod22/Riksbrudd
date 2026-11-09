@@ -3,7 +3,7 @@
 // Et sprengt/sperret objekt sperres i vegnettet; kjøretøy som er underveis over det, kjører om eller stopper.
 // Kroker: KROKER.lagKnapper (knapper i lagpanelet), KROKER.info (knapper i infrastrukturpanelet), trykk, sim, tegn, tegn3d, lagTekst.
 (function () {
-  const O = Odeleggelse, R = O.REGLER, T = O.ny(), ARB = new Map(), RØYK = new Map(), TYPER = ['bru', 'tunnel', 'ferjekai'];
+  const O = Odeleggelse, R = O.REGLER, T = O.ny(), ARB = new Map(), RØYK = new Map(), TYPER = ['bru', 'tunnel', 'ferjekai', 'kraft'];
   let velg = null;   // { s, hva } mens spilleren velger objekt på kartet
   window.INFRA_TILSTAND = T; window.INGENIØRARBEID = ARB;
   window.S5 = { start: (...a) => start(...a), endring: (...a) => endring(...a), ferjeFor: id => ferjeFor(id) };   // for sjekk.js
@@ -84,7 +84,7 @@
       if (res === 'ferdig') {
         ARB.delete(s);
         if (w.a.hva === 'ødelegg') { RØYK.set(O.nøkkel(w.a.lag, w.a.id), tid);
-          logg(`${navnPå(w.o)} er ${O.tekst(w.a.lag, 'sprengt')}. Vegen er brutt til den blir reparert.`); }
+          logg(`${navnPå(w.o)} er ${O.tekst(w.a.lag, 'sprengt')}. ${w.a.lag === 'kraft' ? 'Tettstedene rundt mister strømmen til det er reparert.' : 'Vegen er brutt til den blir reparert.'}`); }
         else { RØYK.delete(O.nøkkel(w.a.lag, w.a.id)); logg(`${navnPå(w.o)} er reparert og åpen igjen.`); }
         endring();
       }
@@ -102,9 +102,9 @@
     if (!s.ingeniør) return;
     for (const [hva, tekst] of [['ødelegg', 'Spreng / sperr …'], ['reparer', 'Reparer …']]) {
       const på = velg && velg.s === s && velg.hva === hva;
-      H.appendChild(knapp(på ? 'Velg bru, tunnel eller kai …' : tekst, på, () => {
+      H.appendChild(knapp(på ? 'Velg bru, tunnel, kai eller kraftverk …' : tekst, på, () => {
         velg = på ? null : { s, hva };
-        if (velg) { if (!INFRA) logg('Infrastrukturen er ikke lastet ennå.'); else logg(hva === 'ødelegg' ? 'Trykk på en bru, en tunnel eller en ferjekai som skal sprenges eller sperres.' : 'Trykk på en sprengt bru eller sperret tunnel/kai som skal repareres.'); }
+        if (velg) { if (!INFRA) logg('Infrastrukturen er ikke lastet ennå.'); else logg(hva === 'ødelegg' ? 'Trykk på en bru, en tunnel, en ferjekai eller et kraftverk som skal sprenges, sperres eller saboteres.' : 'Trykk på en sprengt bru, en sperret tunnel/kai eller et sabotert kraftverk som skal repareres.'); }
         visPanel(); skitten = true; }));
     }
     if (ARB.has(s)) H.appendChild(knapp('Avbryt arbeidet', false, () => { stopp(s, 'arbeidet er avbrutt.'); visPanel(); }));
@@ -128,7 +128,7 @@
       if (o.bb[2] < X - bd || o.bb[0] > X + bd || o.bb[3] < Y - bd || o.bb[1] > Y + bd) continue;
       const d = nærmest(o, X, Y)[2]; if (d < bd) { bd = d; best = o; }
     }
-    if (!best) logg('Fant ingen bru, tunnel eller ferjekai der. Zoom inn og prøv igjen.'); else start(s, best, hva);
+    if (!best) logg('Fant ingen bru, tunnel, ferjekai eller kraftverk der. Zoom inn og prøv igjen.'); else start(s, best, hva);
     if (valgt === s) visPanel(); skitten = true; return true;
   });
 
@@ -170,7 +170,7 @@
       const p = 1 - w.a.igjen / w.a.total; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.beginPath(); g.arc(x, y, 11, 0, 6.283); g.stroke();
       g.strokeStyle = w.a.hva === 'ødelegg' ? '#e0703f' : '#e8c547'; g.beginPath(); g.arc(x, y, 11, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(.02, p)); g.stroke();
       if (velg || valgt === s) { g.setLineDash([4, 4]); g.lineWidth = 1.2; g.beginPath(); const [a, b] = S(s.x, s.y); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); g.setLineDash([]); } }
-    if (velg) { g.font = 'italic 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f0d79a'; g.fillText(velg.hva === 'ødelegg' ? 'Velg bru, tunnel eller ferjekai' : 'Velg det som skal repareres', VW / 2, 64); }
+    if (velg) { g.font = 'italic 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f0d79a'; g.fillText(velg.hva === 'ødelegg' ? 'Velg bru, tunnel, ferjekai eller kraftverk' : 'Velg det som skal repareres', VW / 2, 64); }
     g.restore();
     if (anim && tempo > 0) skitten = true;   // røyken beveger seg
   });

@@ -214,6 +214,25 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
         const s6ok = s6a.skjult && s6b.droner === 1 && s6b.sett && s6b.obs && s6c.salver === 1 && s6c.nedslag < 400 && s6c.lader && s6c.svTreff > 0 && s6c.bygget && s6c.radar === 'Radarbil 1' && s6c.radarSer; if (!s6ok) { feil++; console.log(JSON.stringify({ s6a, s6b, s6c })); }
         console.log(`${s6ok ? 'ok  ' : 'FEIL'} ${navn} flere enheter: patruljen skjult før dronen: ${s6a.skjult}, drone over etter ${s6b.min.toFixed(0)} min (sett: ${s6b.sett}); salve ${s6c.nedslag === null ? '–' : Math.round(s6c.nedslag) + ' m'} fra målet, ${s6c.artTreff} treff; `
           + `stridsvogn ${s6c.svTreff} treff på 12 runder; ${s6c.radar || 'ingen radar'} bygget, ser bevegelse (ikke ro): ${s6c.radarSer}`);
+        // S7: 1. lag tar Dombås (30 min), blir garnison og forsterkes, tettstedet gir olje; sabotert kraftverk = uten strøm
+        const s7 = await pg.evaluate(() => { const by = INFRA.tettsted.find(t => t.e.navn === 'Dombås'); if (!by) return null; let p = null;
+          for (let j = 1; j < 20 && !p; j++) for (let i = 1; i < 20 && !p; i++) { const x = by.bb[0] + (by.bb[2] - by.bb[0]) * i / 20, y = by.bb[1] + (by.bb[3] - by.bb[1]) * j / 20; if (Garnison.inni(by, x, y)) p = [x, y]; }
+          const f = ENHETER[3]; f.x = 213280; f.y = 6908986; f.sti = null; DRONER.length = 0;
+          for (const s of ENHETER) if (s.side === 'blå') { s.x += 4e4; s.sti = null; }
+          const l = ENHETER[0]; [l.x, l.y] = p; l.menn.forEach(m => { m.hp = 1; }); l.sti = null;
+          for (let i = 0; i < 380; i++) sim(.1);
+          const eier = Garnison.tilstand(TETTSTEDER, by.e.id).eier, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · ');
+          l.menn[4].hp = .5; l.menn[6].hp = 0; const b = OLJE.BASER[0], olje0 = b.beholdning, navn6 = l.menn[6].navn;
+          for (let i = 0; i < 1800; i++) sim(.1);
+          const friske = l.menn.every(m => m.hp === 1), olje = b.beholdning - olje0, ny = l.menn[6].navn !== navn6;
+          valgt = null; visPanel(); visInfo(by); const info = document.getElementById('psub').textContent + ' | ' + document.getElementById('hint').textContent;
+          for (const k of INFRA.kraft) INFRA_TILSTAND.set('kraft:' + k.e.id, { tilstand: 'sprengt' }); visInfo(by); const uten = document.getElementById('hint').textContent;
+          INFRA_TILSTAND.forEach((v, k) => { if (k.startsWith('kraft:')) INFRA_TILSTAND.delete(k); });
+          let sab = null; if (INFRA.kraft[0]) { visInfo(INFRA.kraft[0]); sab = [...document.querySelectorAll('#handl button')].map(b => b.textContent).join(); }
+          for (const s of ENHETER) if (s.side === 'blå' && s !== l) s.x -= 4e4;
+          return { eier, tekst, friske, ny, olje, info, uten: /Uten strøm/.test(uten), sab, kraft: INFRA.kraft.length }; });
+        const s7ok = s7 && s7.eier === 'blå' && /garnison i Dombås/.test(s7.tekst) && s7.friske && s7.ny && s7.olje > 2 && /ditt/.test(s7.info) && (!s7.kraft || (s7.uten && /Saboter med/.test(s7.sab))); if (!s7ok) feil++;
+        console.log(`${s7ok ? 'ok  ' : 'FEIL'} ${navn} tettsteder: ${s7 ? `Dombås ${s7.eier === 'blå' ? 'tatt' : 'IKKE tatt'} («${s7.tekst}»), forsterket (såret frisk, falt erstattet: ${s7.friske && s7.ny}), ${s7.olje.toFixed(1)} t olje på 3 t; uten strøm når kraftverkene er sabotert: ${s7.uten}; kraftverkpanelet: «${s7.sab}»` : 'fant ikke Dombås'}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

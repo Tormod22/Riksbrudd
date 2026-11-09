@@ -133,6 +133,14 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 ### S7 Garnisoner og tettsteder (fase F)
 - `INFRA.tettsted` (990 med folketall): et lag i et tettsted gjør det ditt; tettsteder rekrutterer, reparerer og produserer
   etter størrelse. Kraftverk gir strøm til byene rundt (uten strøm: lavere produksjon).
+- **FERDIG 9. nov (natt), første del:** `spill/garnison.js` (regler uten DOM) + `spill/garnison-visning.js`. Et tettsted blir
+  sidens når et av dens lag (ikke slått ut) har stått i omrisset i 30 spillminutter uten fiender der; er begge sider der, tar ingen
+  det. Lagene i et eget tettsted er garnison: sårede blir friske og falne erstattes (nye navn) med 1 mann per time per 1000
+  innbyggere (0,5–6). Et eget tettsted sender 1 t olje per time per 1000 innbyggere (høyst 40) til basen. Strøm: et helt
+  kraftverk (INFRA.kraft) innen 40 km; uten strøm 40 % av begge deler. Ingeniørene kan sabotere kraftverk (1 t, reparasjon 8 t;
+  S5-reglene). Kartet: omrisset i eierens farge og en vimpel, ring under inntak; panelene viser eier, strøm, produksjon og
+  garnison. Tester: `node pipeline/fliser/test_garnison.js` og sjekk.js («tettsteder»). Ikke gjort: fienden tar tettsteder av
+  seg selv (S8), lojalitet/opprør, rekruttering av nye lag (bare påfyll av garnisonen). Tallene er forslag – spør brukeren.
 
 ### S8 Fraksjoner og motstandere
 - De oppdiktede fraksjonene fra designdokumentet på hele kartet, enkel AI som tar tettsteder, forsyner seg og angriper.
