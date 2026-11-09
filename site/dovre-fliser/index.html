@@ -105,7 +105,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -641,7 +641,8 @@ const KRNG = Terreng.frø(1987), SKUDD = [];
 const levende = s => s.menn.some(m => m.hp > 0);
 function ser(s, X, Y) { const v = s.sikt; if (!v) return false; const i = Math.floor((X - v.x0) / v.r), j = Math.floor((v.y0 - Y) / v.r);
   return i >= 0 && j >= 0 && i < v.mw && j < v.mh && v.m[j * v.mw + i] === 1; }
-function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y)) || KROKER.ser.some(f => f(e)); }
+// KROKER.innsyn (K3): om det et eget lag ser, når fram til deg nå (radiokontakt og hvor du er)
+function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y) && KROKER.innsyn.every(f => f(s))) || KROKER.ser.some(f => f(e)); }
 function kamprunde() {
   for (const a of ENHETER) {
     a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
@@ -746,6 +747,8 @@ function tegnLag(g, proj, mPer) {
   }
   for (const s of ENHETER) {
     if (VIS.taake && !synlig(s)) continue;
+    // KROKER.skjul (K3): egne lag du ikke vet hvor er nå, tegnes «sist meldt» av kontrollrom-visning.js
+    if (KROKER.skjul.some(f => f(s))) continue;
     const ps = proj(s.x, s.y); if (!ps) continue;
     const [px, py] = ps, blå = s.side === 'blå', m = mPer(s.x, s.y);
     if (px < -200 || py < -200 || px > VW + 200 || py > VH + 200) continue;
@@ -782,7 +785,7 @@ function tegnTåke() {
   g.fillStyle = 'rgba(14,11,7,.38)'; g.fillRect(0, 0, tåkeC.width, tåkeC.height);
   g.globalCompositeOperation = 'destination-out'; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = true;
   for (const f of KROKER.tåke) f(g, vx0, vy1);
-  for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
+  for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s) && !KROKER.skjul.some(f => f(s))) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
   g.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tåkeC, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
@@ -790,7 +793,8 @@ function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 2
 function trykkPå(cx, cy) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
   for (const f of KROKER.trykk) if (f(X, Y, cx, cy)) return;
-  if (modus === 'marsj' && valgt) { modus = null; ordre(valgt, X, Y); visPanel(); return; }
+  // KROKER.kanOrdre (K3): ordren når ikke fram uten radiokontakt
+  if (modus === 'marsj' && valgt) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) ordre(valgt, X, Y); visPanel(); return; }
   let best = null, bd = 28;
   for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
   valgt = best; modus = null; visPanel(); skitten = true;
@@ -1743,7 +1747,7 @@ async function slå3d(på) {
       let best = null, bd = 28; for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const q = proj3(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - nå[0], q[1] - nå[1]); if (d < bd) { bd = d; best = s; } }
       if (modus === 'marsj' && valgt) {
         R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
-        if (hit) { modus = null; ordre(valgt, u.cx + hit.point.x, u.cy + hit.point.y); visPanel(); }
+        if (hit) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) ordre(valgt, u.cx + hit.point.x, u.cy + hit.point.y); visPanel(); }
       } else { valgt = best; modus = null; visPanel(); const o = !best && finnInfra3d(nå[0], nå[1]); if (o) visInfo(o);
         else if (!best) { R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObjects([R3.mesh, ...(R3.husMesh || [])])[0]; if (hit) visByggVed(u.cx + hit.point.x, u.cy + hit.point.y); } }
     }
@@ -1829,7 +1833,7 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=1af671ffcd"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=febc76cb47"></script>
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
@@ -1839,7 +1843,9 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
 <script src="/dovre-fliser/spill/leir.js?v=334de2da9e"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=a64958f07f"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=3f98de56ca"></script>
+<script src="/dovre-fliser/spill/kontrollrom.js?v=4154edd94f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=2c7fc1b411"></script>
+<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=36fb1b0cdd"></script>
 </body>
 </html>

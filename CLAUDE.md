@@ -217,4 +217,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   KROKER.trykk og ny KROKER.trykk3d, kart og 3D, sStrom øverst, lagres «riksbrudd-k2»). Pengene via OppstartSpill.betal; K1 sender
   hendelsen «riksbrudd-spill» når spillet er klart. 3D: modellene fra spill/modeller.js + egne (aggregat, solcelle, kameramast,
   radiomast, drivhus) i leir-visning.js; trær/steiner ryddes i byggene (bygg3d-krok og ryddTrær for nye bygg).
+  KONTROLLROMMET K3 (11. nov, brukeren, docs/plan-kollaps.md K3): spill/kontrollrom.js (regler, test_kontrollrom.js) +
+  kontrollrom-visning.js. Karakteren er et ENHETER-lag med én mann og s.karakter = true. Modus kontrollrom/nettbrett/ute styrer
+  KROKER.innsyn (synlig() for fiender), KROKER.skjul (egne lag tegnes «sist meldt» i 2D) og KROKER.kanOrdre (ingen ordre uten
+  radiokontakt). Radiokontakt med høydeprofil i 128 m-ruter (lagVindu ZV 7) og jordkrumning. Skjermen #kontrollrom (radio, feeds;
+  feed = Gange ved laget). KontrollromSpill.av() slår reglene av (sjekk.js gjør det etter K3-testen). 3D viser fortsatt alt.
 

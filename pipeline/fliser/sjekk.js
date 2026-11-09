@@ -358,12 +358,26 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           for (const b of L.bygg) b.igjen = 1; sim(.1); for (let i = 0; i < 12; i++) sim(.1);
           r.k2.ferdig = L.bygg.every(b => b.igjen === 0); const kj = Leir.kjøpDrivstoff(L, 100, OppstartSpill.betal); sim(.1); const st = LeirSpill.siste();
           r.k2.strøm = [st.prod, st.behov, st.mangler.size]; r.k2.drivstoff = kj.liter; LeirSpill.lagre(); r.k2.lagret = (Leir.fraJSON(localStorage.getItem('riksbrudd-k2')) || { bygg: [] }).bygg.length;
-          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); return r; });
+          // K3 kontrollrommet: gå inn, lag uten radiokontakt vises ikke der de er, lag med kontakt melder seg, ute bare «sist meldt»
+          const KS = KontrollromSpill, deg = KS.deg(), krom = L.bygg.find(b => b.type === 'kontrollrom'), blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter);
+          deg.x = krom.x; deg.y = krom.y; const inn = KS.gåInn(), mInne = KS.modus();
+          const A = blå[0], B = blå[1]; A.x = LX + 6000; A.y = LY; A.sti = null; B.x = LX + 1000; B.y = LY; B.sti = null;
+          await KS.sjekkKontakt(A); await KS.sjekkKontakt(B);
+          const skjul = s => KROKER.skjul.some(f => f(s)), r3 = { inn, mInne, aKontakt: KS.info(A).kontakt, bKontakt: KS.info(B).kontakt, aSkjult: skjul(A), bSkjult: skjul(B) };
+          KS.info(B).før = { marsj: true, ute: 0 }; KS.rapport(B, tid + 100); r3.melding = (KS.radiolog().slice(0, 5).find(m => /Framme/.test(m.tekst)) || KS.radiolog()[0] || {}).tekst;
+          r3.skjerm = document.getElementById('kontrollrom').classList.contains('på');
+          r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);
+          KS.av(); r3.avNøytral = !skjul(A) && KROKER.innsyn.every(f => f(A)); r.k3 = r3;
+          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
         const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
           && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
+        const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
+          && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
+        if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }
+        console.log(`${k3ok ? 'ok  ' : 'FEIL'} ${navn} kontrollrommet (K3): gikk inn, lag 6 km unna uten kontakt skjult, lag 1 km unna med kontakt vist, melding «${k3.melding}», ordre uten kontakt stoppet, ute bare «sist meldt»`);
         console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, ferdig etter byggetiden, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW med ${k2.drivstoff} l drivstoff, lagret`);
         console.log(`${k1ok ? 'ok  ' : 'FEIL'} ${navn} oppstart (K1): startskjerm, «${k1.iBy}», leir på land godtatt, ${k1.penger}, lagret, ${k1.fraksjon} tar over (base flyttet, lagene ${k1.lag} m unna), politi-bonus sikt ×${k1.sikt}`);
         }

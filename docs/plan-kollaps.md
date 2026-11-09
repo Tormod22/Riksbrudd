@@ -191,6 +191,27 @@ den også. Trær og busker ryddes 5 m rundt hvert bygg og 30 m rundt midten av l
 solceller, kameramast, radiomast og drivhus (de andre fra spill/modeller.js). Brakkene gir sengeplasser, men medlemmer finnes ikke
 ennå; kontrollrommet, kameraene og radioen får innhold i K3 og K4.
 
+## K3 – ferdig (11. nov 2026)
+
+Bestemt av brukeren 11. nov:
+- **Mellomting + nettbrett:** ute ser du lagene dine der de sist meldte seg på radio, og fiender der de sist ble meldt («sist sett»).
+  Med **nettbrett** (kjøpes for 1,5 mill. kr, 8 spilltimer batteri, lades på 2 t i leiren når det er strøm) ser du lagene med
+  radiokontakt der de er, men fiender bare meldt. **I kontrollrommet** (ferdig bygget, med strøm, og du har gått inn) ser du lagene
+  med radiokontakt der de er og fiendene de ser, og du har **feeds** (3D-bildet der laget står). Lag nærmere deg enn 500 m ser du alltid selv.
+- **Gå eller kjøre:** karakteren din er en figur på kartet («Navn (deg)»). Send den som et lag, eller gå selv i førsteperson med deg
+  selv valgt. Ved kontrollrommet: «Gå inn i kontrollrommet» (knappen øverst eller i panelet), «Gå ut».
+- **Radioen:** rekkevidden er den korteste av lagets radio (håndradio 3 km, feltradio 15 km – kjøpes per lag for 1 mill. kr) og
+  leirens radio (8 km, eller 40 km med radiomast med strøm). Står terrenget i veien (høydeprofil mellom laget og leiren, med
+  jordkrumning), blir rekkevidden 35 %. Lag uten kontakt melder ingenting og kan ikke få ordrer (lag nær deg kan alltid).
+- **Skjermbilde:** kontrollrommet er et eget skjermbilde i 80-talls stil (grønn skrift, radio til venstre, feeds til høyre, kartet i midten).
+- Meldingene: «Framme», «N menn såret eller falt», «Under ild!», «Fiende sett: navn, ca. 800 m nordøst», «Posisjon meldt. Alt rolig»
+  (hvert kvarter), «Kontakten er brutt» / «Kontakt igjen». Ute hører du radioen når du er innen 3 km fra leiren eller har nettbrett.
+
+Teknisk: spill/kontrollrom.js (regler: rekkevidde, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger; test
+pipeline/fliser/test_kontrollrom.js) + spill/kontrollrom-visning.js. Nye kroker i index.html: KROKER.innsyn (om det et lag ser når fram
+til deg), KROKER.skjul (egne lag som tegnes «sist meldt»), KROKER.kanOrdre (ordren når ikke fram). Lagres i nettleseren («riksbrudd-k3»).
+Ikke gjort ennå: kjøre selv (bare gå), reléstasjoner (lag som videresender), at 3D-bildet også følger reglene (3D viser fortsatt alt).
+
 ## 12. Åpne spørsmål til brukeren
 
 1. Skal fraksjonen fortsatt kunne ta **oppdrag i utlandet** (plan-gjeng.md, G3), eller skal alt foregå i Norge nå?
