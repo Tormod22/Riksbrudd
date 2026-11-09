@@ -78,6 +78,13 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 - Olje er eneste penger. Kilder: terminalene og raffineriene i `INFRA.olje` (type 3: Mongstad, Kårstø, Sture, Kollsnes …),
   felt via rør. Lagre/baser; lastebiler henter og leverer (S2); oljen brukes til å bygge enheter.
 - Panel med beholdning og flyt. Ferdig når: en runde der oljen må kjøres fra en terminal til en base før en enhet kan bygges.
+- **FERDIG 9. nov (natt):** `spill/okonomi.js` (regler uten DOM) + `spill/okonomi-visning.js`. Åtte norske terminaler
+  (Kårstø, Sture, Mongstad, Kollsnes, Tjeldbergodden, Slagentangen, Melkøya, Nyhamna) produserer 150 t/t (lager 3000 t).
+  Lastebil 25 t; lasting og lossing 30 min; «Hent olje …» gir skytteltrafikk terminal–base. Hovedbase Dombås starter tom;
+  pris/byggetid: lastebil 40 t/2 t, speiderbil 30 t/1,5 t, infanterilag 20 t/1 t. Teller «t olje» øverst. Dombås–Nyhamna:
+  første last etter ca. 8 spilltimer. Tester: `node pipeline/fliser/test_okonomi.js [vegnett.bin]` og sjekk.js («oljeøkonomi»).
+  Tallene er Claudes forslag – spør brukeren før de endres mye. Ikke gjort: flere baser, rørledninger/felt som påvirker
+  produksjonen, fiendens tilgang til terminalene.
 
 ### S4 Forsyning
 - Lag og kjøretøy har drivstoff og ammunisjon. Uten forsyning: saktere, skyter mindre, kan ikke forsterkes. Forsyning kjøres

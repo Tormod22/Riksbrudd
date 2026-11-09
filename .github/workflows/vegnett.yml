@@ -39,6 +39,7 @@ jobs:
           python3 pipeline/fliser/test_vegnett.py
           node pipeline/fliser/test_vegnett.js
           node pipeline/fliser/test_kjoretoy.js
+          node pipeline/fliser/test_okonomi.js
   bygg:   # nasjonal bygging (~70 min mot NVDB): bare manuelt eller med «[bygg vegnett]» i commit-meldingen
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[bygg vegnett]')
     needs: tester

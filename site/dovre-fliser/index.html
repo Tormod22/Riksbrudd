@@ -301,7 +301,7 @@ function lesInfra(d) {
         for (let i = 0; i < q.length; i += 2) { x += q[i]; y += q[i + 1]; a[i] = x; a[i + 1] = y;
           if (x < bb[0]) bb[0] = x; if (x > bb[2]) bb[2] = x; if (y < bb[1]) bb[1] = y; if (y > bb[3]) bb[3] = y; }
         return a; });
-      if (!ER_NORGE && (bb[2] < OMRÅDE[0] || bb[0] > OMRÅDE[2] || bb[3] < OMRÅDE[1] || bb[1] > OMRÅDE[3])) continue;   // Dovre: bare området
+      if (!ER_NORGE && !(lag === 'olje' && e.type === 3) && (bb[2] < OMRÅDE[0] || bb[0] > OMRÅDE[2] || bb[3] < OMRÅDE[1] || bb[1] > OMRÅDE[3])) continue;   // Dovre: bare området (oljeterminalene trengs i økonomien)
       const o = { lag, e, deler, bb }; if (lag === 'magasin' || lag === 'felt' || lag === 'tettsted') o.areal = (bb[2] - bb[0]) * (bb[3] - bb[1]);
       ut[lag].push(o);
     }
@@ -1074,6 +1074,8 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=aa2cdf7aa8"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=78567fc630"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=e1282be56b"></script>
+<script src="/dovre-fliser/spill/okonomi.js?v=13cd66328a"></script>
+<script src="/dovre-fliser/spill/okonomi-visning.js?v=455f392f64"></script>
 </body>
 </html>

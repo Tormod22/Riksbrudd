@@ -90,8 +90,9 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
       const n = await pg.evaluate(() => Object.fromEntries(Object.entries(INFRA).map(([k, v]) => [k, v.length])));
       const dom = await pg.evaluate(() => { const t = INFRA.tettsted.find(o => o.e.navn === 'Dombås'); if (!t) return null;
         if (window.KJORETOY) for (const k of KJORETOY) k.x += 1e5;   // kolonnen står i Dombås og ville tatt trykket (kjøretøy går foran kartobjekter)
+        if (window.OLJE) for (const b of OLJE.BASER) b.x += 1e5;     // det samme gjelder basen
         kam.x = (t.bb[0] + t.bb[2]) / 2; kam.y = (t.bb[1] + t.bb[3]) / 2; kam.m = 20; skitten = true; tegn(); trykkPå(VW / 2, VH / 2);
-        const svar = { folk: t.e.folk, panel: document.getElementById('pnavn').textContent }; if (window.KJORETOY) for (const k of KJORETOY) k.x -= 1e5; return svar; });
+        const svar = { folk: t.e.folk, panel: document.getElementById('pnavn').textContent }; if (window.KJORETOY) for (const k of KJORETOY) k.x -= 1e5; if (window.OLJE) for (const b of OLJE.BASER) b.x -= 1e5; return svar; });
       const bru = await pg.evaluate(() => { const b = INFRA.bru.filter(o => o.deler[0].length >= 4).sort((a, c) => (c.e.lengde || 0) - (a.e.lengde || 0))[0]; const a = b.deler[0];
         kam.x = (a[0] + a[2]) / 2; kam.y = (a[1] + a[3]) / 2; kam.m = 2; skitten = true; tegn(); trykkPå(VW / 2, VH / 2); return [b.e.navn, b.e.lengde, document.getElementById('pnavn').textContent]; });
       const iok = n.bru > 20 && n.kraft > 0 && n.dam > 0 &&   // Dovre-utsnittet har ingen vegtunneler
@@ -125,6 +126,24 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
         return { plan: s.sekunder, e6: e6 / alt, km: alt / 1000, framme: k.framme, kjørt: n * 6, nær: Math.hypot(k.x - 212021, k.y - 6860888) }; });
       const kok = valgtNavn === '1. lastebilkolonne' && k2.framme && k2.e6 > .9 && Math.abs(k2.kjørt - k2.plan) <= 7 && k2.nær < 300; if (!kok) feil++;
       console.log(`${kok ? 'ok  ' : 'FEIL'} ${navn} kjøretøy: «${valgtNavn}» Dombås–Otta ${k2.km.toFixed(1)} km, ${(100 * k2.e6).toFixed(0)} % på E6, plan ${(k2.plan / 60).toFixed(0)} min, framme etter ${(k2.kjørt / 60).toFixed(0)} spillminutter`);
+      // S3: tom base -> «Hent olje …» -> trykk ved Nyhamna -> oljen kjøres til basen -> en lastebil kan bygges
+      if (INFRA) {
+        await pg.waitForFunction(() => OLJE.TERMINALER.length >= 6, null, { timeout: 30000 });
+        const b0 = await pg.evaluate(() => { const b = OLJE.BASER[0]; kam.x = b.x; kam.y = b.y; kam.m = 2; skitten = true; tegn(); return [VW / 2, VH / 2]; });
+        await pg.mouse.click(b0[0], b0[1]);
+        const tom = await pg.evaluate(() => ({ panel: document.getElementById('pnavn').textContent, låst: [...document.querySelectorAll('#handl button')].every(b => b.disabled) }));
+        await pg.evaluate(() => velgKjoretoy(KJORETOY[0]));
+        await pg.locator('#handl button', { hasText: 'Hent olje' }).click();
+        const ny = await pg.evaluate(() => { const t = OLJE.TERMINALER.find(t => t.navn === 'Nyhamna'); kam.x = t.x; kam.y = t.y + 40 * 60; kam.m = 60; skitten = true; tegn(); return [VW / 2, VH / 2 + 40]; });
+        await pg.mouse.click(ny[0], ny[1]);
+        await pg.waitForFunction(() => KJORETOY[0].oppdrag && KJORETOY[0].sti, null, { timeout: 120000 });
+        const s3 = await pg.evaluate(() => { const b = OLJE.BASER[0]; let n = 0; while (b.beholdning < 100 && n < 30000) { sim(.1); n++; }
+          const timer = n * 6 / 3600, før = KJORETOY.length; const r = Okonomi.bygg(b, 'lastebil'); for (let i = 0; i < 1300; i++) sim(.1);
+          return { terminal: KJORETOY[0].oppdrag && KJORETOY[0].oppdrag.terminal.navn, olje: Math.round(b.beholdning), timer, bygget: !!r.ok, nye: KJORETOY.length - før }; });
+        const s3ok = tom.panel === 'Hovedbase Dombås' && tom.låst && s3.terminal === 'Nyhamna' && s3.bygget && s3.nye === 1; if (!s3ok) feil++;
+        console.log(`${s3ok ? 'ok  ' : 'FEIL'} ${navn} oljeøkonomi: tom base (knapper låst: ${tom.låst}), henter fra ${s3.terminal}, første last etter ${s3.timer.toFixed(1)} spilltimer, bygget lastebil: ${s3.bygget}, nye kjøretøy: ${s3.nye}`);
+        await pg.evaluate(() => { Okonomi.avbryt(KJORETOY[0], Kjoretoy); });
+      }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
     }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis

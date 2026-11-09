@@ -9,6 +9,8 @@
   const KJ = [Kjoretoy.ny({ navn: '1. lastebilkolonne', type: 'lastebil', antall: 4, x: 193212, y: 6896374, retning: -1.2 }),
     Kjoretoy.ny({ navn: 'Speiderbil 1', type: 'speiderbil', antall: 1, x: 193520, y: 6896780, retning: -1.2 })];
   window.KJORETOY = KJ;
+  // Andre moduler (S3 økonomi) kan legge knapper og linjer i panelet og ta over kjøringen for kolonner med oppdrag.
+  window.KJ_PANEL = []; window.KJ_TEKST = [];   // (k, knapperad) => void  og  k => tekst eller null
 
   // ---------- vegnettet: hentes i biter gjennom mellomstasjonen, pakkes ut i nettleseren der den kan ----------
   function lastVegnett() {
@@ -42,12 +44,12 @@
       logg(`${kj.navn}: ${nf.format(r.meter / 1000)} km, ca. ${tidTekst(r.sekunder)}${r.ferjer ? ', ' + r.ferjer + ' ferje' + (r.ferjer > 1 ? 'r' : '') : ''}.`);
     } catch (e) { /* meldt i loggen */ } finally { if (valgtKj === kj) visKj(kj); skitten = true; }
   }
-  window.kjørTil = kjørTil;
+  window.kjørTil = kjørTil; window.visKjoretoy = k => visKj(k);
   const tidTekst = s => s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : nf.format(s / 3600) + ' t';
 
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
-    for (const k of KJ) if (k.sti) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
+    for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
     if (valgtKj && performance.now() - sistPanel > 1000) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
 
@@ -66,16 +68,20 @@
   });
   function velg(k) { valgt = null; modus = null; valgtKj = k; kjørModus = false; visKj(k); skitten = true; }
   window.velgKjoretoy = velg;
+  window.valgtKjoretoy = () => valgtKj;
+  window.slippKjoretoy = () => { valgtKj = null; kjørModus = false; skitten = true; };
 
   function visKj(k) {
     const P = document.getElementById('panel'), T = Kjoretoy.TYPER[k.type], s = Kjoretoy.status(k);
     document.getElementById('pnavn').textContent = k.navn;
     document.getElementById('psub').textContent = [k.antall + ' ' + (k.antall > 1 ? T.flertall : T.navn.toLowerCase()), 'toppfart ' + T.maks + ' km/t',
       s.tilstand === 'kjører' ? `kjører, ${nf.format(s.meter / 1000)} km og ca. ${tidTekst(s.sekunder)} igjen` :
-      s.tilstand === 'venter på ferja' ? `venter på ferja (${tidTekst(s.ventIgjen)}), ${nf.format(s.meter / 1000)} km igjen` : s.tilstand].join(' · ');
+      s.tilstand === 'venter på ferja' ? `venter på ferja (${tidTekst(s.ventIgjen)}), ${nf.format(s.meter / 1000)} km igjen` : s.tilstand,
+      ...window.KJ_TEKST.map(f => f(k)).filter(Boolean)].join(' · ');
     const H = document.getElementById('handl'); H.innerHTML = '';
     H.appendChild(knapp(kjørModus ? 'Velg mål på kartet …' : 'Kjør til …', kjørModus, () => { kjørModus = !kjørModus; if (kjørModus) lastVegnett(); visKj(k); }));
-    if (k.sti) H.appendChild(knapp('Stopp', false, () => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); visKj(k); skitten = true; }));
+    if (k.sti && !k.oppdrag) H.appendChild(knapp('Stopp', false, () => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); visKj(k); skitten = true; }));
+    for (const f of window.KJ_PANEL) f(k, H);
     document.getElementById('menn').innerHTML = '';
     document.getElementById('hint').textContent = kjørModus ? 'Trykk der kolonnen skal kjøre. Den følger vegene (NVDB), også ferjer. Lastebilene holder seg helst på hovedvegen.'
       : graf ? 'Kolonnen kjører med vegens fartsgrense, høyst ' + T.maks + ' km/t. Ferje: 25 km/t og 15 min venting.' : 'Vegnettet lastes ned (25 MB) første gang et kjøretøy får en ordre.';
