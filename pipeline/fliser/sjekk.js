@@ -30,6 +30,10 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     { const html = fs.readFileSync(path.join(D, 'index.html'), 'utf8'), blokker = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]), tmp = path.join(require('os').tmpdir(), 'riksbrudd-hoved.js');
       fs.writeFileSync(tmp, blokker.sort((a, b) => b.length - a.length)[0]); filer.push('index.html (hovedskriptet)');
       try { require('child_process').execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' }); } catch (e) { dårlige.push('index.html (hovedskriptet)'); } }   // en kommentar kan sluke resten av en linje
+    // kode inne i en kommentar (en //-kommentar midt på en linje har slukt kode tre ganger 10. nov – gyldig syntaks, men koden kjøres ikke)
+    for (const f of [...filer.filter(f => !f.startsWith('index.html')), 'index.html']) fs.readFileSync(path.join(D, f), 'utf8').split('\n').forEach((l, n) => {
+      const i = l.search(/(^|[^:'"`\\])\/\/ /); if (i < 0) return; const k = l.slice(i);
+      if (/\b\w+(\.\w+)+\([^)]*\)\s*;|\b\w+(\.\w+)+\s*=\s*[^=>\s]/.test(k)) dårlige.push(`${f}:${n + 1} (kode i kommentar: ${k.trim().slice(0, 60)})`); });
     if (dårlige.length) feil++; console.log(`${dårlige.length ? 'FEIL' : 'ok  '} syntaks i ${filer.length} skriptfiler` + (dårlige.length ? ': ' + dårlige.join(', ') : ''));
   }
   { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
@@ -326,10 +330,11 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
-    const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N }));
+    await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
+    const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     await pg.click('#v3d');
-    const d3ok = Math.abs(d3.h - 2287) < 40; if (!d3ok) feil++;
-    console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter)`);
+    const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
+    console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await kt.close();
   }
