@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Riksbrudd – Dovre i fliser</title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/logo/ikon-32.png"><link rel="apple-touch-icon" href="/logo/ikon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -948,12 +949,12 @@ const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2
 const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
 
 // ---------- tid: 1 spilltime = 60 s ved 1× ----------
-let tid = 0, tempo = 1; const TIME = 60;
+let tid = 0, tempo = 1; const TIME = 60;   // tid i spillminutter (TIME per spilltime); 1× = sanntid: 1 spillminutt = 1 minutt (brukeren 9. nov)
 function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 function sim(dt) {
   for (const f of KROKER.sim) f(dt);
   const før = tid; tid += dt; const fi = ENHETER[3];
-  if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // 1 spillminutt = 1 s ved 1×
+  if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // kamprunde hvert KAMPRUNDE_MIN spillminutt
   if (!Terreng.slattUt(fi.menn)) {
     const fiende = ENHETER.find(b => b.side === 'blå' && levende(b) && Math.hypot(b.x - fi.x, b.y - fi.y) < 900 && ser(fi, b.x, b.y));
     if (fiende) { if (fi.sti) { fi.sti = null; fi.siktSkitten = true; } fi.roligTil = tid + 30; }   // stopper og tar kampen; patruljerer igjen etter 30 rolige minutter
@@ -971,7 +972,7 @@ function sim(dt) {
     if (s.seg >= s.sti.length - 1) { s.sti = null; s.siktSkitten = true; if (s.side === 'blå') logg(s.navn + ' er framme.'); if (valgt === s) visPanel(); }
     skitten = true;
   }
-  if (valgt && valgt.sti && Math.floor(tid * 2) !== Math.floor((tid - dt) * 2)) visPanel();
+  if (valgt && valgt.sti && performance.now() - (sim.panel || 0) > 1000) { sim.panel = performance.now(); visPanel(); }   // panelet oppdateres hvert sekund
 }
 // ---------- kamp og tåke ----------
 const KRNG = Terreng.frø(1987), SKUDD = [];
@@ -1399,14 +1400,14 @@ storrelse(); passInn(DOVRE);
 logg('Dovre, august 1987. En fiendtlig patrulje er i området. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 (function loop(nå) {
-  if (nå) { rest += Math.min(.25, (nå - sist) / 1000) * tempo; sist = nå; while (rest >= .1) { sim(.1); rest -= .1; } }
+  if (nå) { let r = Math.min(.25, (nå - sist) / 1000) * tempo / 60; sist = nå; while (r > 1e-12) { const d = Math.min(.1, r); sim(d); r -= d; } }   // sanntid ved 1×, små steg hver ramme (jevn bevegelse)
   for (const s of ENHETER) if (!s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) oppdaterSikt(s);
   if (på3d) tegn3d(); else tegn(); requestAnimationFrame(loop);
 })();
 </script>
-<script src="/dovre-fliser/spill/spill.js?v=6718b7846b"></script>
+<script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=aa2cdf7aa8"></script>
-<script src="/dovre-fliser/spill/kjoretoy.js?v=7b80900f10"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=3d01d412a4"></script>
+<script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=78567fc630"></script>
 </body>
 </html>

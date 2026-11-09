@@ -2,7 +2,7 @@
  * Node: const K = require('./kjoretoy'); nettleser: globalThis.Kjoretoy.
  * Et kjøretøy er en kolonne (antall like kjøretøy etter hverandre). Det kjører en rute fra vegnett.js (spill/VEGNETT.md):
  * fart = laveste av typens toppfart og vegens fartsgrense (ukjent: reservefart etter kategori), ferje 25 km/t og 15 min venting
- * når den går fra land. Tid er spillverdenens sekunder; visningen gir 60 spillsekunder per tid-enhet (1 spilltime = TIME = 60).
+ * når den går fra land. Tid er spillverdenens sekunder; visningen gir 60 spillsekunder per tid-enhet (1 spilltime = TIME = 60), og 1× er sanntid.
  */
 (function (rot) {
   'use strict';

@@ -45,10 +45,10 @@
   window.kjørTil = kjørTil;
   const tidTekst = s => s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : nf.format(s / 3600) + ' t';
 
-  // ---------- simulering: 1 tid-enhet = 60 spillsekunder (1 spilltime = TIME) ----------
+  // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
     for (const k of KJ) if (k.sti) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
-    if (valgtKj && Math.floor(tid * 2) !== sistPanel) { sistPanel = Math.floor(tid * 2); visKj(valgtKj); }
+    if (valgtKj && performance.now() - sistPanel > 1000) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
 
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------

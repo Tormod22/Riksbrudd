@@ -22,7 +22,7 @@ og denne fila. Snakk norsk med brukeren, enkelt – brukeren er ikke utvikler.
 **Krokene** (lagt inn 8. nov) gjør at spillkoden kan ligge i egne filer:
 ```js
 KROKER.tegn.push((ctx, vx0, vy1) => { ... })     // 2D-tegning over kart og infrastruktur, under lagene
-KROKER.sim.push(dt => { ... })                   // hvert simuleringssteg (1 spilltime = 60 s ved 1×)
+KROKER.sim.push(dt => { ... })                   // hvert simuleringssteg (dt i spillminutter; 1× = sanntid)
 KROKER.trykk.push((X, Y, cx, cy) => true/false)  // trykk på kartet; true = håndtert
 ```
 Nye skript lastes etter hovedskriptet: legg en linje `<script src="/dovre-fliser/spill/NAVN.js?v=0"></script>` nederst i
