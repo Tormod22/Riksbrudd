@@ -833,13 +833,41 @@ function bilin(v, X, Y) {
   const fx = (X - v.x0) / v.r - .5, fy = (v.y0 - Y) / v.r - .5, i = Math.max(0, Math.min(v.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(v.h - 2, Math.floor(fy))), a = fx - i, b = fy - j, k = j * v.w + i;
   return (v.H[k] * (1 - a) + v.H[k + 1] * a) * (1 - b) + (v.H[k + v.w] * (1 - a) + v.H[k + v.w + 1] * a) * b;
 }
+// Fin struktur i bakken (gress, lyng, grus) som tones inn nær kameraet: to lag støy (ca. 3 m og 17 m) ganget med kartfargen.
+let DETALJ = null;
+function detaljTekstur() {
+  if (DETALJ) return DETALJ;
+  const W = 256, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W);
+  let f = 12345; const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const fin = new Float32Array(W * W).map(rnd), grov = new Float32Array(16 * 16).map(rnd);
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+    let a = 0; for (const [di, dj] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]) a += fin[((j + dj + W) % W) * W + (i + di + W) % W]; a /= 5;   // litt utjevnet korn
+    const u = i / 16, v = j / 16, i0 = Math.floor(u), j0 = Math.floor(v), fu = u - i0, fv = v - j0, s2 = t => t * t * (3 - 2 * t), q = (x, y) => grov[(y % 16) * 16 + x % 16];
+    const b = (q(i0, j0) * (1 - s2(fu)) + q(i0 + 1, j0) * s2(fu)) * (1 - s2(fv)) + (q(i0, j0 + 1) * (1 - s2(fu)) + q(i0 + 1, j0 + 1) * s2(fu)) * s2(fv);   // flekker (sømløs)
+    const o = (j * W + i) * 4; im.data[o] = a * 255; im.data[o + 1] = b * 255; im.data[o + 2] = 128; im.data[o + 3] = 255;
+  }
+  g.putImageData(im, 0, 0); DETALJ = new THREE.CanvasTexture(c); DETALJ.wrapS = DETALJ.wrapT = THREE.RepeatWrapping; DETALJ.anisotropy = 8;
+  return DETALJ;
+}
+function detaljIBakken(mat, side) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 };
+    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform float detaljSkala;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
+      float korn = texture2D(detalj, vUv * detaljSkala).r, flekk = texture2D(detalj, vUv * detaljSkala * 0.19).g;
+      diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85);`);
+  };
+}
+// Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
+const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
 async function bygg3d(cx, cy, S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
   const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
-  const TW = 2048, mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
+  const TW = VW >= 900 && S <= 1700 && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
+    zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
@@ -885,7 +913,7 @@ async function trær3d(u, px, b) {
   const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
   const skog = []; for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) if (kv.K[j * kv.w + i] === 1) {
     const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) < u.S && Math.abs(Y - u.cy) < u.S) skog.push([X, Y, i * 7919 + j * 104729]); }
-  const MAKS = VW < 700 ? 22000 : 48000, per = Math.max(1, Math.min(4, Math.floor(MAKS / Math.max(1, skog.length))));
+  const MAKS = VW < 700 ? 18000 : 40000, per = Math.max(1, Math.min(4, Math.floor(MAKS / Math.max(1, skog.length))));
   const gran = [], løv = [], hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
   for (const [X, Y, frø] of skog) for (let k = 0; k < per; k++) {
     const a = hash(frø * 4 + k), c = hash(frø * 4 + k + 1e6), d = hash(frø * 4 + k + 2e6), x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r;
@@ -893,16 +921,20 @@ async function trær3d(u, px, b) {
     if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
     const moh = hoyde3d(x, y, u), fjell = Math.max(0, Math.min(1, (moh - 900) / 250)); if (d < fjell * .6) continue;   // glisnere mot tregrensen
     const h = (1 - fjell * .55) * (8 + d * 12), z = (moh - u.h0) * R3.EX;
-    (d < .62 && moh < 1050 ? gran : løv).push(x - u.cx, y - u.cy, z, h, d);
+    (d < .7 && moh < 1050 ? gran : løv).push(x - u.cx, y - u.cy, z, h, d);
   }
   return { gran: new Float32Array(gran), løv: new Float32Array(løv) };
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
 async function hus3d(u) {
-  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), pos = [], kol = [];
+  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), pos = [], kol = [], uv = [];
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
-  const tri = (a, b, c, farge) => { pos.push(...a, ...b, ...c); kol.push(...farge, ...farge, ...farge); };
-  const firkant = (a, b, c, d, farge) => { tri(a, b, c, farge); tri(a, c, d, farge); };
+  const P0 = [.02, .02];   // et punkt uten vindu i vindusflisen (tak, gavler, lave bygg)
+  const tri = (a, b, c, farge, t = [P0, P0, P0]) => { pos.push(...a, ...b, ...c); kol.push(...farge, ...farge, ...farge); uv.push(...t[0], ...t[1], ...t[2]); };
+  const firkant = (a, b, c, d, farge, t) => { tri(a, b, c, farge, t ? [t[0], t[1], t[2]] : undefined); tri(a, c, d, farge, t ? [t[0], t[2], t[3]] : undefined); };
+  // vegg med vinduer: ett vindusfelt per ca. 3,2 m langs veggen og per etasje (3 m); lave bygg (garasjer, uthus) uten
+  const vegg = (a, b, z0, z1, farge) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), nb = Math.max(1, Math.round(L / 3.2)), v1 = (z1 - z0) / 3 - .2;
+    firkant([a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1], farge, z1 - z0 < 3.2 || L < 2.4 ? null : [[0, -.2], [nb, -.2], [nb, v1], [0, v1]]); };
   const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]));
   for (const [x, y, t] of await Promise.all(fl)) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
@@ -915,30 +947,73 @@ async function hus3d(u) {
       if (areal < 0) P.reverse();   // alle omriss mot klokka, så veggene vender utover og taket opp
       let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; } mx /= P.length; my /= P.length;
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
-      const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), vegg = rgb(veggFarge(t, i));
+      const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
       const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
       if (saltak(t, f.areal) && f.rekt > .82 && P.length <= 10 && f.lv > 3) {
         // Saltak på det rettvinklede omrisset: vegger opp til raftet, gavler i veggfargen og to takflater opp til mønet.
         const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2;
         const p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
         const A = [p(-hu, -hv, bunn), p(hu, -hv, bunn), p(hu, hv, bunn), p(-hu, hv, bunn)], Ar = A.map(q => [q[0], q[1], raft]);
-        for (let j = 0; j < 4; j++) firkant(A[j], A[(j + 1) % 4], Ar[(j + 1) % 4], Ar[j], vegg.map(v => v * (j % 2 ? .92 : 1)));
+        for (let j = 0; j < 4; j++) vegg(A[j], A[(j + 1) % 4], bunn, raft, veggF.map(v => v * (j % 2 ? .92 : 1)));
         const M0 = p(-hu, 0, topp), M1 = p(hu, 0, topp);
-        tri(Ar[1], Ar[2], M1, vegg); tri(Ar[3], Ar[0], M0, vegg);   // gavlene
+        tri(Ar[1], Ar[2], M1, veggF); tri(Ar[3], Ar[0], M0, veggF);   // gavlene
         firkant(Ar[0], Ar[1], M1, M0, tak); firkant(Ar[2], Ar[3], M0, M1, tak);   // takflatene
       } else {
         for (let j = 0; j < P.length; j++) {   // vegger
           const [ax, ay] = P[j], [bx, by] = P[(j + 1) % P.length];
-          firkant([ax, ay, bunn], [bx, by, bunn], [bx, by, topp], [ax, ay, topp], vegg.map(v => v * (j % 2 ? .92 : 1)));
+          vegg([ax, ay], [bx, by], bunn, topp, veggF.map(v => v * (j % 2 ? .92 : 1)));
         }
         const flat = tak.map(v => v * 1.05);
         for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(P.map(q => new THREE.Vector2(q[0], q[1])), [])) tri([...P[a], topp], [...P[b], topp], [...P[c], topp], flat);
       }
     }
   }
-  return pos.length ? { pos: new Float32Array(pos), kol: new Float32Array(kol), antall: sett.size } : null;
+  return pos.length ? { pos: new Float32Array(pos), kol: new Float32Array(kol), uv: new Float32Array(uv), antall: sett.size } : null;
+}
+// Vindusflisen (ett felt = 3,2 m × 3 m vegg): hvit (= veggfargen) med ett vindu – lys karm, mørkt glass med himmelrefleks øverst.
+let VINDU = null;
+function vinduTekstur() {
+  if (VINDU) return VINDU;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#e9e6df'; g.fillRect(19, 12, 26, 30);                                   // karm
+  const gr = g.createLinearGradient(0, 14, 0, 40); gr.addColorStop(0, '#8e9fb0'); gr.addColorStop(.45, '#4a5866'); gr.addColorStop(1, '#2c343c');
+  g.fillStyle = gr; g.fillRect(21, 14, 22, 26);                                          // glass
+  g.fillStyle = '#e9e6df'; g.fillRect(31, 14, 2, 26); g.fillRect(21, 26, 22, 2);          // sprosser
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(19, 42, 26, 2);                              // skygge under vinduet
+  VINDU = new THREE.CanvasTexture(c); VINDU.wrapS = VINDU.wrapT = THREE.RepeatWrapping; VINDU.anisotropy = 8;
+  return VINDU;
 }
 
+// Tre-modeller (høyde 1, z opp, foten i 0), med farger i hjørnene: gran = stamme + tre lag grener, mørkt innerst og nederst,
+// lysere tupper; løvtre = lys stamme + krone av tre runde klumper. Brukes som instanser (trær3d gir plass og høyde).
+const TREGEO = {};
+function treGeo(type) {
+  if (TREGEO[type]) return TREGEO[type];
+  const deler = [], legg = (geo, farge) => { geo = geo.toNonIndexed(); const p = geo.attributes.position, k = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) { const f = farge(p.getX(i), p.getY(i), p.getZ(i)); k[i * 3] = f[0]; k[i * 3 + 1] = f[1]; k[i * 3 + 2] = f[2]; }
+    geo.setAttribute('color', new THREE.BufferAttribute(k, 3)); deler.push(geo); };
+  const stamme = (r0, r1, h, farge) => { const g = new THREE.CylinderGeometry(r1, r0, h, 5, 1, true); g.translate(0, h / 2, 0); g.rotateX(Math.PI / 2); legg(g, () => farge); };
+  if (type === 'gran') {
+    stamme(.07, .04, .3, [.22, .16, .1]);
+    for (const [z0, z1, r] of [[.12, .62, 1], [.38, .84, .74], [.62, 1, .46]]) {
+      const g = new THREE.ConeGeometry(r, z1 - z0, 9, 1, true); g.translate(0, (z0 + z1) / 2, 0); g.rotateX(Math.PI / 2);
+      legg(g, (x, y, z) => { const ute = Math.min(1, Math.hypot(x, y) / r), t = (z - z0) / (z1 - z0); return [.07 + .05 * t + .02 * ute, .15 + .08 * t + .03 * ute, .08 + .04 * t]; });
+    }
+  } else {
+    stamme(.05, .03, .55, [.78, .76, .7]);
+    for (const [x, y, z, r] of [[0, 0, .7, .34], [.24, .12, .56, .28], [-.22, -.16, .58, .27], [.05, -.25, .62, .25]]) {
+      let g = new THREE.IcosahedronGeometry(r, 0).toNonIndexed(); const p = g.attributes.position, nr = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
+      g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, .95, 1); g.translate(x, z, y); g.rotateX(Math.PI / 2);   // runde normaler: myk krone
+      legg(g, (px, py, pz) => { const t = Math.max(0, Math.min(1, (pz - z + r) / (2 * r))); return [.18 + .14 * t, .28 + .14 * t, .1 + .05 * t]; });
+    }
+  }
+  const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
+  for (const g of deler) { pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));   // delenes egne (myke) normaler
+  return (TREGEO[type] = geo);
+}
 function hoyde3d(X, Y, u = R3.ut) {   // moh. fra 3D-utsnittet (u: et utsnitt som bygges, ellers det som vises)
   const fx = (X - (u.cx - u.S)) / u.steg, fy = ((u.cy + u.S) - Y) / u.steg, N = u.N;
   const i = Math.max(0, Math.min(N - 2, Math.floor(fx))), j = Math.max(0, Math.min(N - 2, Math.floor(fy))), a = Math.max(0, Math.min(1, fx - i)), b = Math.max(0, Math.min(1, fy - j)), k = j * N + i;
@@ -979,14 +1054,14 @@ function sett3d(u) {
   geo.computeVertexNormals();
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
-  R.mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: 0x8a96a0, shininess: 70 })); R.scene.add(R.mesh);   // lys per punkt; bare vannet glinser
-  for (const t of R.treMesh || []) { R.scene.remove(t); t.geometry.dispose(); t.material.dispose(); } R.treMesh = [];
-  if (u.trær) for (const [data, smal, farge] of [[u.trær.gran, .27, [.11, .2, .11]], [u.trær.løv, .4, [.24, .33, .14]]]) {
+  const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: 0x8a96a0, shininess: 70 });   // lys per punkt; bare vannet glinser
+  detaljIBakken(mat, 2 * u.S); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
+  for (const t of R.treMesh || []) { R.scene.remove(t); t.material.dispose(); } R.treMesh = [];   // geometrien (TREGEO) brukes om igjen
+  if (u.trær) for (const [data, smal, geo] of [[u.trær.gran, .3, treGeo('gran')], [u.trær.løv, .5, treGeo('løv')]]) {
     const n = data.length / 5; if (!n) continue;
-    const geo = new THREE.ConeGeometry(1, 1, 7); geo.translate(0, .5, 0); geo.rotateX(Math.PI / 2);
-    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), n), d = new THREE.Object3D(), c = new THREE.Color();
-    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - .5); d.scale.set(h * smal, h * smal, h); d.rotation.set(0, 0, v * 6.283); d.updateMatrix();
-      mesh.setMatrixAt(k, d.matrix); const f = .8 + v * .4; c.setRGB(farge[0] * f, farge[1] * f, farge[2] * f); mesh.setColorAt(k, c); }
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), d = new THREE.Object3D(), c = new THREE.Color();
+    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - .3); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
+      mesh.setMatrixAt(k, d.matrix); const f = .82 + v * .36; c.setRGB(f * (.96 + v * .08), f, f * (1.04 - v * .08)); mesh.setColorAt(k, c); }   // lys og fargetone varierer litt fra tre til tre
     mesh.frustumCulled = false; R.scene.add(mesh); R.treMesh.push(mesh);   // instansene ligger over hele utsnittet
   }
   if (R.husMesh) { R.scene.remove(R.husMesh); R.husMesh.geometry.dispose(); R.husMesh.material.dispose(); R.husMesh = null; }
@@ -996,8 +1071,9 @@ function sett3d(u) {
     R.bruMesh = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); R.scene.add(R.bruMesh);
   }
   if (u.hus) {
-    const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(u.hus.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(u.hus.kol, 3)); hg.computeVertexNormals();
-    R.husMesh = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); R.scene.add(R.husMesh);
+    const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(u.hus.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(u.hus.kol, 3));
+    hg.setAttribute('uv', new THREE.BufferAttribute(u.hus.uv, 2)); hg.computeVertexNormals();
+    R.husMesh = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, map: vinduTekstur() })); R.scene.add(R.husMesh);
   }
   if (R.ut) { R.bane.x += R.ut.cx - u.cx; R.bane.y += R.ut.cy - u.cy; }
   R.ut = u; R.tex = tex; R.nøkkel = '';
@@ -1033,7 +1109,7 @@ async function nytt3dUtsnitt(cx, cy, S) {
 }
 function tegn3d() {
   const R = R3; if (!R || !R.ut) return;
-  const b = R.bane, u = R.ut, S = Math.max(1200, Math.min(6000, b.avst * 1.4));
+  const b = R.bane, u = R.ut, S = utsnittS(b.avst);
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
@@ -1052,7 +1128,7 @@ async function slå3d(på) {
     if (!R3) init3d();
     på3d = true; knapp.classList.add('på'); knapp.setAttribute('aria-pressed', 'true');
     document.getElementById('c3').hidden = document.getElementById('c3o').hidden = false; cv.style.visibility = 'hidden';
-    const S = Math.max(1200, Math.min(6000, kam.m * Math.max(VW, VH) * .8));
+    const S = utsnittS(kam.m * Math.max(VW, VH) * .6);
     R3.bane = { x: 0, y: 0, avst: Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
     if (R3.ut) { R3.mesh && R3.scene.remove(R3.mesh); R3.ut = null; R3.mesh = null; }
     logg('Bygger 3D …'); await nytt3dUtsnitt(kam.x, kam.y, S); if (på3d) logg('3D: dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
