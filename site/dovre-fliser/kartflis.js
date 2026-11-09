@@ -325,15 +325,20 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
 // Vegger (3D): hvitt, rødt, okergult og grått panel, som i Norge.
 const TAKFARGER = [['#5a3a30', '#3e3b38', '#6c4535', '#4a4b48', '#5f4a3c', '#723f31', '#35383a'], ['#4d4a45', '#5a4436', '#3f4a3e', '#55524c'],
   ['#6b6a66', '#62615c', '#78766e', '#6d6a63'], ['#64625d', '#6a5040', '#5b5a55', '#56604f'],   // flate tak: varme grånyanser (blåaktig ligner vann)
-  ['#7a3a2c', '#5c4a38', '#474845', '#83402f'], ['#5e564c', '#4f4c47']];
+  ['#7a3a2c', '#5c4a38', '#474845', '#83402f'], ['#5e564c', '#4f4c47'],
+  // 6 industri/lager (blikk), 7 butikk, 8 kirke (skifer), 9 skole, 10 leilighetsbygg, 11 hytte (torv/svart)
+  ['#5f6366', '#4d5458', '#6b6f70', '#56605f'], ['#5b5a56', '#66645e', '#4f5052'], ['#3a3836', '#45403b'], ['#6a5040', '#5b5a55', '#4f4c48'],
+  ['#5a5853', '#6a5040', '#4a4b48', '#3e3b38'], ['#3d4a3a', '#4a3a2e', '#2f2f2c']];
 const VEGGFARGER = [['#d8d0bf', '#8e3d2e', '#cfae66', '#7f847c', '#e6e0d2', '#5f6f74', '#d9d3c4'], ['#8e3d2e', '#a99f8d', '#6e6658', '#c8c0ae'],
-  ['#9a9890', '#7c8084', '#b3aea2'], ['#b9b2a3', '#8a8478', '#a24a35'], ['#8e3d2e', '#8a3a2a', '#a8a090'], ['#9b9488', '#857e72']];
+  ['#9a9890', '#7c8084', '#b3aea2'], ['#b9b2a3', '#8a8478', '#a24a35'], ['#8e3d2e', '#8a3a2a', '#a8a090'], ['#9b9488', '#857e72'],
+  ['#9aa3a8', '#7e8a91', '#b8b6ad', '#5d6d78', '#8f3a2c'], ['#c9c2b3', '#a8a39a', '#d6cfbf'], ['#ece6d8', '#e2dccb'], ['#c9a46a', '#b9b2a3', '#a24a35', '#d6cfbf'],
+  ['#d6cfbf', '#bda88a', '#9aa0a0', '#c9b28a', '#a24a35'], ['#5a3e2a', '#6b4a30', '#8e3d2e', '#4a3826']];
 const TAK = TAKFARGER.map(p => p[0]);   // (eldre navn)
 const takFarge = (t, i) => { const p = TAKFARGER[t] || TAKFARGER[5]; return p[Math.floor(hash(i | 0, 7, 3) * p.length)]; };
 const veggFarge = (t, i) => { const p = VEGGFARGER[t] || VEGGFARGER[5]; return p[Math.floor(hash(i | 0, 9, 5) * p.length)]; };
 function nyanse(hex, f) { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f)))); return `rgb(${c})`; }
 // Saltak for små og mellomstore bygg av «hus-typene»; flatt tak for store næringsbygg og offentlige bygg.
-const saltak = (t, areal) => t === 0 || t === 1 || t === 4 ? areal < 1500 : t === 3 ? areal < 250 : t === 5 ? areal < 300 : false;
+const saltak = (t, areal) => t === 0 || t === 1 || t === 4 || t === 11 ? areal < 1500 : t === 8 ? areal < 900 : t === 10 ? areal < 400 : t === 9 ? areal < 300 : t === 3 ? areal < 250 : t === 5 ? areal < 300 : false;
 // Hovedretning (lengste kant), sentrum og mål langs (lu) og på tvers (lv) av omrisset, og hvor rektangulært det er (0–1).
 function form(P) {
   let best = 0, ux = 1, uy = 0, areal = 0;

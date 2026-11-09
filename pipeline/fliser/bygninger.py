@@ -1,7 +1,8 @@
 """Byggomriss for hele Norge fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL) -> hus.pmtiles.
 
 Hvert bygg får omriss (polygon i EPSG:25833), høyde h (meter) og type t:
-  0 bolig, 1 garasje/uthus, 2 næring/kontor/industri, 3 offentlig (skole, kirke, sykehus), 4 landbruk, 5 annet/ukjent
+  0 bolig (hus), 1 garasje/uthus, 2 næring/kontor/hotell, 3 offentlig (sykehus, rådhus …), 4 landbruk, 5 annet/ukjent,
+  6 industri/lager, 7 butikk/handel, 8 kirke/kapell, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte (10. nov: finere typer)
 Høyde: OSM `height`, ellers `building:levels` × 3 m + 1 m (tak), ellers anslag etter type (se HØYDE).
 Fliser: z12 (forenklet, bygg over 30 m²) og z13 (alle). Et bygg legges i alle fliser omrisset berører (med margin),
 så visningen kan tegne det helt selv om det krysser en flisgrense. Egenskapen i = byggets nummer (for 3D, uten dubletter).
@@ -22,10 +23,16 @@ T0 = time.time()
 def logg(*a): print(f'[{time.time() - T0:6.0f} s]', *a, flush=True)
 
 TYPE = {  # OSM building=* -> vår type
-    **dict.fromkeys(['house', 'detached', 'semidetached_house', 'terrace', 'apartments', 'residential', 'dormitory', 'bungalow', 'cabin', 'farm', 'hut', 'houseboat'], 0),
-    **dict.fromkeys(['garage', 'garages', 'shed', 'carport', 'roof', 'boathouse', 'kiosk', 'container', 'service', 'toilets', 'storage_tank', 'transformer_tower'], 1),
-    **dict.fromkeys(['commercial', 'office', 'retail', 'industrial', 'warehouse', 'supermarket', 'hotel', 'manufacture', 'parking', 'train_station', 'transportation', 'hangar'], 2),
-    **dict.fromkeys(['school', 'kindergarten', 'university', 'college', 'hospital', 'church', 'chapel', 'cathedral', 'public', 'civic', 'government', 'fire_station', 'sports_hall', 'stadium', 'museum', 'prison', 'military', 'bunker'], 3),
+    **dict.fromkeys(['house', 'detached', 'semidetached_house', 'residential', 'bungalow', 'farm', 'houseboat'], 0),
+    **dict.fromkeys(['garage', 'garages', 'shed', 'carport', 'roof', 'boathouse', 'container', 'service', 'toilets', 'storage_tank', 'transformer_tower'], 1),
+    **dict.fromkeys(['commercial', 'office', 'hotel', 'parking', 'train_station', 'transportation'], 2),
+    **dict.fromkeys(['hospital', 'public', 'civic', 'government', 'fire_station', 'sports_hall', 'stadium', 'museum', 'prison', 'military', 'bunker'], 3),
+    **dict.fromkeys(['industrial', 'warehouse', 'manufacture', 'hangar'], 6),
+    **dict.fromkeys(['retail', 'supermarket', 'kiosk'], 7),
+    **dict.fromkeys(['church', 'chapel', 'cathedral'], 8),
+    **dict.fromkeys(['school', 'kindergarten', 'university', 'college'], 9),
+    **dict.fromkeys(['apartments', 'dormitory', 'terrace'], 10),
+    **dict.fromkeys(['cabin', 'hut'], 11),
     **dict.fromkeys(['barn', 'farm_auxiliary', 'cowshed', 'stable', 'greenhouse', 'silo', 'sty'], 4),
 }
 HØYDE = {'house': 7, 'detached': 7, 'semidetached_house': 7, 'terrace': 8, 'apartments': 15, 'residential': 9, 'dormitory': 12,
