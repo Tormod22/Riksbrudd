@@ -336,6 +336,8 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y }));
     await pg.keyboard.down('w'); await pg.waitForTimeout(1500); await pg.keyboard.up('w');
     const f1 = await pg.evaluate(() => { const c = R3.cam.position, u = R3.ut; return { x: R3.bane.x, y: R3.bane.y, over: c.z - (hoyde3d(u.cx + c.x, u.cy + c.y) - u.h0) * R3.EX }; });
+    const kol = await pg.evaluate(() => { const P = R3.ut.hus && R3.ut.hus.omriss && R3.ut.hus.omriss[0]; if (!P) return null; const x = P.reduce((a, p) => a + p[0], 0) / P.length, y = P.reduce((a, p) => a + p[1], 0) / P.length; return { inne: hindring3d(x, y), ute: hindring3d(x + 500, y + 500) }; });
+    if (kol && (!kol.inne || kol.ute)) { feil++; console.log(`FEIL ${navn} kollisjon: inne i hus ${kol.inne}, ute ${kol.ute}`); }
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
     const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2; if (!fok) feil++;
     console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, Esc flyr opp: ${!f2}`);

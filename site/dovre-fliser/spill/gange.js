@@ -34,7 +34,11 @@
     if (spak && spak.dx !== undefined) { const l = Math.min(1, Math.hypot(spak.dx, spak.dy) / 50); if (l > .1) { fram = -spak.dy / 50; side = spak.dx / 50; fart = GÅ + (LØP - GÅ) * Math.max(0, l - .6) / .4; } }
     const l = Math.hypot(fram, side);
     if (l > 0) { const fx = -Math.sin(f.a), fy = Math.cos(f.a), sx = Math.cos(f.a), sy = Math.sin(f.a), k = fart * dt / Math.max(1, l);
-      b.x = Math.max(-u.S * .97, Math.min(u.S * .97, b.x + (fx * fram + sx * side) * k)); b.y = Math.max(-u.S * .97, Math.min(u.S * .97, b.y + (fy * fram + sy * side) * k)); }
+      const nx = Math.max(-u.S * .97, Math.min(u.S * .97, b.x + (fx * fram + sx * side) * k)), ny = Math.max(-u.S * .97, Math.min(u.S * .97, b.y + (fy * fram + sy * side) * k));
+      // hus og trestammer stopper deg; langs en vegg glir du (prøver bare x eller bare y)
+      const fritt = (x, y) => !(typeof hindring3d === 'function' && hindring3d(x, y));
+      // står du inne i noe (ved start), kommer du deg ut
+      if (!fritt(b.x, b.y) || fritt(nx, ny)) { b.x = nx; b.y = ny; } else if (fritt(nx, b.y)) b.x = nx; else if (fritt(b.x, ny)) b.y = ny; }
     const z = (hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0) * R.EX + ØYE;
     c.position.set(b.x, b.y, z); c.up.set(0, 0, 1);
     c.lookAt(b.x - Math.sin(f.a) * Math.cos(f.pitch), b.y + Math.cos(f.a) * Math.cos(f.pitch), z + Math.sin(f.pitch));

@@ -104,7 +104,8 @@ const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versj
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
-const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+// bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
+const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -891,8 +892,10 @@ async function bygg3d(cx, cy, S) {
   u.vann = vannmaske(px, TW);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
-  u.bunn = bunnkart(px, TW);
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison) u.lys = await gatelys3d(u);
+  const skog = await skogmaske(u, b);
+  skogbunn(px, TW, skog); u.bunn = bunnkart(px, TW, skog);
+  for (const f of KROKER.bygg3d) await f(u, { px, TW, skog });
   naturfarger(px, TW); g.putImageData(new ImageData(px, TW, TW), 0, 0);
   return u;
 }
@@ -932,7 +935,7 @@ async function trær3d(u, px, b) {
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
 async function hus3d(u) {
-  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [];
+  const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [], omriss = [], piper = [];
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
   const B = { mur: { pos: [], kol: [], uv: [] }, tre: { pos: [], kol: [], uv: [] }, tak: { pos: [], kol: [], uv: [] } }; let cur = B.mur;
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
@@ -956,6 +959,7 @@ async function hus3d(u) {
       if (areal < 0) P.reverse();   // alle omriss mot klokka, så veggene vender utover og taket opp
       let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; } mx /= P.length; my /= P.length;
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
+      omriss.push(P);
       const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
       const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
       if (saltak(t, f.areal) && f.rekt > .82 && P.length <= 10 && f.lv > 3) {
@@ -987,6 +991,7 @@ async function hus3d(u) {
           const zr = topp - møne * .35, q = .3, pipe = i % 3 ? [.26, .24, .23] : [.46, .24, .18], c = [p(hu * .3 - q, hv * .35 - q, 0), p(hu * .3 + q, hv * .35 - q, 0), p(hu * .3 + q, hv * .35 + q, 0), p(hu * .3 - q, hv * .35 + q, 0)];
           for (let j = 0; j < 4; j++) { const a = c[j], b = c[(j + 1) % 4]; firkant([a[0], a[1], zr - .4], [b[0], b[1], zr - .4], [b[0], b[1], topp + .8], [a[0], a[1], topp + .8], pipe); }
           firkant(...c.map(q => [q[0], q[1], topp + .8]), pipe.map(v => v * .6));
+          piper.push(c[0][0] + q, c[0][1] + q, topp + .9);
         }
       } else {
         cur = B.mur;
@@ -1000,7 +1005,7 @@ async function hus3d(u) {
     }
   }
   const deler = {}; for (const [n, b] of Object.entries(B)) if (b.pos.length) deler[n] = { pos: new Float32Array(b.pos), kol: new Float32Array(b.kol), uv: new Float32Array(b.uv) };
-  return Object.keys(deler).length ? { deler, biler: new Float32Array(biler), flagg: new Float32Array(flagg), antall: sett.size } : null;
+  return Object.keys(deler).length ? { deler, biler: new Float32Array(biler), flagg: new Float32Array(flagg), omriss, piper, antall: sett.size } : null;
 }
 // Trekledning (stående panel, ca. 20 cm bord) med samme vindu som vindusflisen; takstein (en rad per flis med skygge under).
 let TREKL = null, TAKST = null, FLAGG = null;
@@ -1043,12 +1048,29 @@ function vinduTekstur() {
 }
 
 // Bakkekart (512 × 512) til gresset: fargen under og om det kan stå gress der (grønt/gult, ikke grått, blått eller hvitt).
-function bunnkart(px, TW) {
+// Skogrutene (terrengklasse skog, 32 m) som maske for utsnittet: [W, Uint8Array] i 512 × 512.
+async function skogmaske(u, b) {
+  const kv = await lagVindu(b, false, 9), W = 512, m = new Uint8Array(W * W);
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const X = u.cx - u.S + (i + .5) / W * 2 * u.S, Y = u.cy + u.S - (j + .5) / W * 2 * u.S;
+    const a = Math.floor((X - kv.x0) / kv.r), c = Math.floor((kv.y0 - Y) / kv.r); if (a >= 0 && c >= 0 && a < kv.w && c < kv.h && kv.K[c * kv.w + a] === 1) m[j * W + i] = 1; }
+  return { W, m };
+}
+// Skogbunnen: mørkere og brunere (mose, lyng, barnål) enn engene, med myke overganger, så skog og åpen mark skiller seg tydelig.
+function skogbunn(px, TW, skog) {
+  const W = skog.W, st = W / TW;
+  for (let y = 0; y < TW; y++) for (let x = 0; x < TW; x++) {
+    const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (B > R + 18 && B > G + 4) continue;
+    const i = Math.min(W - 1, Math.floor(x * st)), j = Math.min(W - 1, Math.floor(y * st)); if (!skog.m[j * W + i]) continue;
+    const l = (R + G + B) / 3; px[q] = l * .62 + 22; px[q + 1] = l * .7 + 26; px[q + 2] = l * .5 + 14;
+  }
+}
+function bunnkart(px, TW, skog) {
   const W = 512, st = TW / W, rgb = new Uint8Array(W * W * 3), gress = new Uint8Array(W * W);
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
     const q = (Math.floor(j * st) * TW + Math.floor(i * st)) * 4, R = px[q], G = px[q + 1], B = px[q + 2], k = j * W + i;
     rgb[k * 3] = R; rgb[k * 3 + 1] = G; rgb[k * 3 + 2] = B;
-    gress[k] = G >= R - 8 && G > B + 6 && Math.abs(R - G) + Math.abs(G - B) >= 14 && R + G + B < 600 ? 1 : 0;
+    const iSkog = skog && skog.m[Math.floor(j * skog.W / W) * skog.W + Math.floor(i * skog.W / W)];
+    gress[k] = iSkog ? 2 : G >= R - 8 && G > B + 6 && Math.abs(R - G) + Math.abs(G - B) >= 14 && R + G + B < 600 ? 1 : 0;   // 2 = skogbunn
   }
   return { W, rgb, gress };
 }
@@ -1142,6 +1164,22 @@ function treGeo(type) {
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));   // delenes egne (myke) normaler
   return (TREGEO[type] = geo);
 }
+// Hindringer når du går: husomrissene og trestammene i et rutenett (20 m). hindring3d(x, y) = true når du ikke kan stå der.
+function hindringer(u) {
+  const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
+  for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P }); }
+  if (u.trær) for (const data of [u.trær.gran, u.trær.løv]) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
+  return rute;
+}
+function hindring3d(x, y) {
+  const rute = R3 && R3.hindre; if (!rute) return false;
+  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  for (const o of rute.get(Math.floor(x / 20) + ',' + Math.floor(y / 20)) || []) {
+    if (o.P) { for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
+    else if (Math.hypot(o.x - x, o.y - y) < .55) return true;
+  }
+  return false;
+}
 // Biler ved husene og gatelys: [x, y, z, retning, (farge)] per stykk. Bilene i ni vanlige farger; lyktene lyser om kvelden (lys3d).
 const BILFARGER = [[.75, .76, .78], [.12, .13, .15], [.55, .57, .6], [.62, .1, .09], [.1, .2, .4], [.9, .9, .88], [.25, .3, .24], [.4, .32, .25], [.15, .35, .5]];
 function småting(R, type, data) {
@@ -1201,10 +1239,10 @@ function gress3d() {
   const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), .75), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
-    const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); if (i < 0 || j < 0 || i >= W || j >= W || !B.gress[j * W + i]) continue;
-    const k = (j * W + i) * 3, h = .18 + rnd() * .3, z = (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX - .05;
-    d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set(.4 + rnd() * .3, .4 + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
-    col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); m.setColorAt(n, col); n++;
+    const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
+    const k = (j * W + i) * 3, lyng = type === 2, h = lyng ? .14 + rnd() * .16 : .18 + rnd() * .3, z = (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX - .05;
+    d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set((lyng ? .6 : .4) + rnd() * .3, (lyng ? .6 : .4) + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
+    if (lyng) col.setRGB(.13 + rnd() * .05, .2 + rnd() * .06, .08); else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); m.setColorAt(n, col); n++;
   }
   m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
 }
@@ -1343,6 +1381,8 @@ function sett3d(u) {
     if (u.hus.biler.length) småting(R, 'bil', u.hus.biler);
   }
   if (u.lys) småting(R, 'lykt', u.lys);
+  R.hindre = hindringer(u);
+  for (const f of KROKER.sett3d) f(u, R);
   R.gressSenter = null;
   if (R.ut) { R.bane.x += R.ut.cx - u.cx; R.bane.y += R.ut.cy - u.cy; }
   R.ut = u; R.tex = tex; R.nøkkel = '';
@@ -1384,7 +1424,7 @@ function tegn3d() {
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015; R.renderer.render(R.scene, R.cam);   // skyene driver sakte
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015; R.renderer.render(R.scene, R.cam);   // skyene driver sakte
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   tegnInfra3d(g);
@@ -1521,7 +1561,8 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=88f1cf193d"></script>
-<script src="/dovre-fliser/spill/gange.js?v=b26a1e5ad8"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=90222b5c0f"></script>
+<script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=b09b17c236"></script>
 </body>
 </html>

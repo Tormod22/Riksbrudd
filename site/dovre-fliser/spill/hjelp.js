@@ -12,7 +12,7 @@
     ['Tettsteder', 'Et lag som står 30 minutter i et tettsted uten fiender, tar det. Tettstedet gir olje, forsterker garnisonen og reparerer kjøretøy – mest når det har strøm fra et kraftverk i nærheten.'],
     ['Flere enheter', 'Stridsvogn (kanon), rakettartilleri («Ild …» og et mål 2–30 km unna), radarbil (ser bevegelse på åpen mark) og drone («Send drone …» på basen). Alt bygges for olje på basen.'],
     ['Motstanderne', 'Du leder Riksrådet (blå). Kystalliansen (rød) og Folkefronten (grønn) tar tettsteder, henter forsyninger og angriper. «Motstandere» i ☰ stopper dem.'],
-    ['Gå selv', 'I 3D: trykk «Gå», så står du på bakken i øyehøyde (ved det valgte laget hvis du har valgt et). PC: W/A/S/D eller piltastene, dra med musa for å se rundt, hold Shift for å løpe. Mobil: styrespaken nede til venstre, dra med den andre fingeren for å se rundt. «Gå» igjen eller Esc for å fly opp.'],
+    ['Gå selv', 'I 3D: trykk «Gå», så står du på bakken i øyehøyde (ved det valgte laget hvis du har valgt et). PC: W/A/S/D eller piltastene, dra med musa for å se rundt, hold Shift for å løpe. Mobil: styrespaken nede til venstre, dra med den andre fingeren for å se rundt. «Gå» igjen eller Esc for å fly opp. Du kan ikke gå gjennom hus og trær.'],
     ['Kartet', '☰ slår kartlag av og på. «3D» viser terrenget i 3D. ◎ går til Dombås, ⌂ viser hele området. Trykk på bruer, kraftverk og tettsteder for å lese om dem.'],
   ];
   const css = document.createElement('style');
