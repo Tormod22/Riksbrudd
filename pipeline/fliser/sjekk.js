@@ -262,6 +262,20 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { ...res, aiValg: v.hva }; });
         const kjok = kjS.ser && (kjS.skade > 0 || kjS.etter < kjS.før) && /under ild/.test(kjS.logg) && kjS.aiValg === 'trekk'; if (!kjok) { feil++; console.log(JSON.stringify(kjS)); }
         console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjøretøy i kamp: patruljen ser kolonnen: ${kjS.ser}, etter 30 kamprunder ${kjS.etter} av ${kjS.før} lastebiler igjen (skade ${Math.round(100 * kjS.skade)} %); AI-laget mot stridsvogn: ${kjS.aiValg}`);
+        // S5 del 2: «Grav ned» (knapp) gir vern, ingeniørene legger miner (knapp), patruljen går på en mine
+        const lag2 = await pg.evaluate(() => { const l = ENHETER[1], b = OLJE.BASER[0]; l.x = b.x + 600; l.y = b.y + 300; l.sti = null; l.nedgravd = false; l.graver = null; valgt = l; visPanel(); return true; });
+        await pg.locator('#handl button', { hasText: 'Grav ned' }).click();
+        await pg.evaluate(() => { const s = ENHETER.find(s => s.ingeniør), l = ENHETER[1]; s.x = l.x + 2000; s.y = l.y; s.sti = null; valgt = s; visPanel(); });
+        await pg.locator('#handl button', { hasText: 'Legg miner' }).click();
+        const fa = await pg.evaluate(async () => { const l = ENHETER[1], s = ENHETER.find(s => s.ingeniør), f = ENHETER[3];
+          for (let i = 0; i < 700; i++) sim(.1);
+          const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
+          f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
+          await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
+          Feltarbeid.REGLER.mine.sjanse = sj; const treff = f.menn.filter(m => m.hp < 1).length; f.sti = null; MINEFELT.length = 0;
+          return { nedgravd, tekst, vern, felt, treff, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
+        const faok = fa.nedgravd && /nedgravd/.test(fa.tekst) && fa.vern === .5 && fa.felt === 1 && fa.treff > 0; if (!faok) { feil++; console.log(JSON.stringify(fa)); }
+        console.log(`${faok ? 'ok  ' : 'FEIL'} ${navn} feltarbeid: 2. lag nedgravd (${fa.tekst}), vern ×${fa.vern}; minefelt lagt: ${fa.felt}, patruljen gikk på en mine: ${fa.treff} treff`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

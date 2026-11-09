@@ -113,7 +113,13 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   eller stopper. Kartet: sprengt bru med mørkt gap og røyk (de første 6 spilltimene, så rødt kryss), gule stillas under reparasjon,
   rødt kryss på sperret tunnelportal/kai, ring som fylles under arbeidet; i 3D har brua et gap i midten. Nye kroker i index.html:
   `KROKER.lagKnapper` og `KROKER.info`. Tester: `node pipeline/fliser/test_odeleggelse.js [vegnett.bin]` (ekte E6-bru: 1,2 km
-  omkjøring) og sjekk.js («ødeleggelse»). Ikke gjort: skyttergraver, miner, «skadet», fiendens ingeniører, dam og flom. Tidene er forslag.
+  omkjøring) og sjekk.js («ødeleggelse»). Ikke gjort: «skadet», fiendens ingeniører, dam og flom. Tidene er forslag.
+- **Del 2 (9. nov natt):** `spill/feltarbeid.js` + `spill/feltarbeid-visning.js`. «Grav ned» for alle lag i ro (1 t, ingeniører
+  30 min): nedgravd = halvparten så mange treff fra håndvåpen (KROKER.ild) og færre fra artilleri; flytter laget seg, er graven
+  forlatt. AI-lag som holder et sted, graver seg ned selv. «Legg miner her» for ingeniørlag (1 t): minefelt med 6 miner og radius
+  120 m; fiender som går eller kjører gjennom, løser ut en mine med 30 % sjanse per minutt (lag: 1–3 treff, kjøretøy: skade).
+  Kartet: skyttergrav under nedgravde lag, egne minefelt som stiplet sirkel. Tester: `node pipeline/fliser/test_feltarbeid.js`
+  og sjekk.js («feltarbeid»).
 
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),
