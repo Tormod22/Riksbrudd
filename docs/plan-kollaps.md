@@ -212,6 +212,23 @@ pipeline/fliser/test_kontrollrom.js) + spill/kontrollrom-visning.js. Nye kroker 
 til deg), KROKER.skjul (egne lag som tegnes «sist meldt»), KROKER.kanOrdre (ordren når ikke fram). Lagres i nettleseren («riksbrudd-k3»).
 Ikke gjort ennå: kjøre selv (bare gå), reléstasjoner (lag som videresender), at 3D-bildet også følger reglene (3D viser fortsatt alt).
 
+## Bedre byggesystem – ferdig (11. nov 2026)
+
+Brukeren valgte alt: rive og flytte, bedre plassering, bedre gjerde og mer dybde. Claudes forslag (justeres etter testing):
+- **Byggpanel:** trykk på et bygg. **Riv** gir 30 % tilbake (90 % og materialene hvis det ikke er ferdig). **Flytt** koster 25 % av
+  prisen og 30 % av byggetiden, og bygget virker ikke imens. **Oppgrader** (nivå 2 for 60 %, nivå 3 for 100 % av prisen, halv
+  byggetid): aggregat 20/35/50 kW, solceller 5/9/14 kW, brakke 8/14/20 senger, tank 5 000/10 000/20 000 l, lagertelt 100/200/300 og
+  container 40/70/100 i lager, radiomast 40/60/80 km, kameramast 300/500/800 m. **Reparer** (25 % av prisen og 30 % av tiden ganger skaden).
+- **Byggelag og kø:** ett byggelag + ett per ferdig brakke. Resten venter i kø i den rekkefølgen de ble bestilt.
+- **Materialer:** tre (20 000 kr/m³), betong (30 000 kr/m³) og stål (60 000 kr/t) i tillegg til kroner. Grunnlageret tar 60 av hvert;
+  lagertelt og containere gir mer. Mangler noe, kan du kjøpe det som mangler og bygge med én knapp.
+- **Skade:** fiendtlige lag innen 120 m av et bygg skader det 8 % per spilltime. Under halvt helt: halv effekt. Helt ødelagt: borte.
+- **Plassering:** skissen vises gjennomsiktig i 3D (grønn/rød), roter 15° om gangen, rutenett 2,5 m og 15° (av/på), nye bygg retter
+  seg etter nærmeste bygg innen 60 m, trykk på nytt for å flytte skissen.
+- **Gjerde:** punkt for punkt, «Angre punkt», «Lukk ringen». I 3D følger gjerdet terrenget (stykker på 10 m). En port som settes
+  innen 8 m fra gjerdet festes i linja og lager en åpning.
+- **FPS-teller** øverst (av/på i ☰).
+
 ## 12. Åpne spørsmål til brukeren
 
 1. Skal fraksjonen fortsatt kunne ta **oppdrag i utlandet** (plan-gjeng.md, G3), eller skal alt foregå i Norge nå?

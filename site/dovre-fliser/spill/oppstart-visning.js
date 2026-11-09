@@ -221,7 +221,9 @@
   function nytt() { utkast = O.standard(); vis(1); }
   // betal(beløp): trekker pengene og lagrer når det er nok (brukes av leiren i K2 og senere markedet)
   function betal(b) { if (!S || !(b >= 0) || S.penger < b) return false; S.penger -= b; lagre(); visPenger(); return true; }
-  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
+  // gi(beløp): penger tilbake (for eksempel når et bygg rives)
+  function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
+  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, gi, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
   S = les(); if (S && !S.ferdig) S = null;
   if (S) setTimeout(() => bruk(false), 0); else if (!navigator.webdriver) nytt();
 })();

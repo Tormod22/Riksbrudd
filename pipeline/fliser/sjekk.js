@@ -352,12 +352,21 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
             skjult: !document.getElementById('oppstart').classList.contains('på'), sikt: KROKER.sikt.reduce((v, f) => v * f(lag), 1) };
           // K2 leiren: kontrollrom og aggregat ved leiren, pengene trekkes, byggetid, strøm med drivstoff, lagret
           const LX = 196400, LY = 6898900, k2 = [];
+          LeirSpill.rutenett(true); for (const m of ['tre', 'betong', 'stål']) Leir.kjøpMateriale(LeirSpill.tilstand(), m, 60, OppstartSpill.betal);
           for (const [t, dx] of [['kontrollrom', 40], ['aggregat', -25], ['drivstofftank', -50]]) { LeirSpill.startPlassering(t); LeirSpill.trykk(LX + dx, LY + 10); await LeirSpill.prøv(); k2.push(LeirSpill.plassering().feil || 'ok'); LeirSpill.bekreft(); }
           LeirSpill.startPlassering('brakke'); LeirSpill.trykk(LX + 40, LY + 10); await LeirSpill.prøv(); const opptatt = LeirSpill.plassering().feil; document.querySelector('#byggvalg button:last-child').click();
           const L = LeirSpill.tilstand(); r.k2 = { k2, opptatt, penger: OppstartSpill.tilstand().penger, bygg: L.bygg.length };
-          for (const b of L.bygg) b.igjen = 1; sim(.1); for (let i = 0; i < 12; i++) sim(.1);
+          for (const b of L.bygg) b.igjen = 0; sim(.1); for (let i = 0; i < 12; i++) sim(.1);
           r.k2.ferdig = L.bygg.every(b => b.igjen === 0); const kj = Leir.kjøpDrivstoff(L, 100, OppstartSpill.betal); sim(.1); const st = LeirSpill.siste();
           r.k2.strøm = [st.prod, st.behov, st.mangler.size]; r.k2.drivstoff = kj.liter; LeirSpill.lagre(); r.k2.lagret = (Leir.fraJSON(localStorage.getItem('riksbrudd-k2')) || { bygg: [] }).bygg.length;
+          // bedre byggesystem: byggpanelet, oppgradering, riving, lukket gjerde med port festet, FPS-telleren
+          const agg = L.bygg.find(b => b.type === 'aggregat'); LeirSpill.trykk(agg.x, agg.y); r.k2.panel = [...document.querySelectorAll('#byggvalg button')].map(b => b.textContent.split(' ')[0]).join(',');
+          const opp = Leir.oppgrader(L, agg.id, OppstartSpill.betal); for (let i = 0; i < 12; i++) sim(.1); for (const b of L.bygg) if (b.arbeid) b.arbeid.igjen = .01; sim(.1); r.k2.nivå = agg.nivå;
+          const p0 = OppstartSpill.tilstand().penger, tank = L.bygg.find(b => b.type === 'drivstofftank'), rv = Leir.riv(L, tank.id); OppstartSpill.gi(rv.penger); r.k2.riv = OppstartSpill.tilstand().penger - p0;
+          LeirSpill.startPlassering('gjerde'); for (const [x, y] of [[-60, -60], [80, -60], [80, 60], [-60, 60]]) LeirSpill.trykk(LX + x, LY + y); LeirSpill.plassering().lukket = true; await LeirSpill.prøv();
+          r.k2.gjerde = LeirSpill.plassering().feil || 'ok'; LeirSpill.bekreft();
+          LeirSpill.startPlassering('port'); LeirSpill.trykk(LX + 10, LY - 56); await LeirSpill.prøv(); r.k2.port = !!LeirSpill.plassering().festet; LeirSpill.avbryt();
+          await new Promise(r => setTimeout(r, 1200)); r.k2.fps = +document.getElementById('sFps').textContent > 0;
           // K3 kontrollrommet: gå inn, lag uten radiokontakt vises ikke der de er, lag med kontakt melder seg, ute bare «sist meldt»
           const KS = KontrollromSpill, deg = KS.deg(), krom = L.bygg.find(b => b.type === 'kontrollrom'), blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter);
           deg.x = krom.x; deg.y = krom.y; const inn = KS.gåInn(), mInne = KS.modus();
@@ -371,14 +380,15 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
-        const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
-          && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3;
+        const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 6.6e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
+          && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3
+          && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === .9e6 && k2.gjerde === 'ok' && k2.port && k2.fps;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
           && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }
         console.log(`${k3ok ? 'ok  ' : 'FEIL'} ${navn} kontrollrommet (K3): gikk inn, lag 6 km unna uten kontakt skjult, lag 1 km unna med kontakt vist, melding «${k3.melding}», ordre uten kontakt stoppet, ute bare «sist meldt»`);
-        console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, ferdig etter byggetiden, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW med ${k2.drivstoff} l drivstoff, lagret`);
+        console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): materialer kjøpt, kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW, lagret; byggpanel (${k2.panel}), aggregat nivå ${k2.nivå}, revet tank ga ${k2.riv / 1e6} mill., lukket gjerde, port festet i gjerdet, FPS-teller`);
         console.log(`${k1ok ? 'ok  ' : 'FEIL'} ${navn} oppstart (K1): startskjerm, «${k1.iBy}», leir på land godtatt, ${k1.penger}, lagret, ${k1.fraksjon} tar over (base flyttet, lagene ${k1.lag} m unna), politi-bonus sikt ×${k1.sikt}`);
         }
       }

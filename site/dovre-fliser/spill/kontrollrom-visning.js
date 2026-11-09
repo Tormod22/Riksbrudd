@@ -16,7 +16,7 @@
   const lagInfo = s => { if (!info.has(s)) info.set(s, { kontakt: false, meldt: null, før: null, sist: {} }); return info.get(s); };
 
   // ---------- hvor du er ----------
-  const kontrollrom = () => { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'kontrollrom' && Leir.ferdig(b)) : []; };
+  const kontrollrom = () => { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'kontrollrom' && Leir.virker(b)) : []; };
   const harStrøm = b => !(window.LeirSpill && LeirSpill.siste().mangler.has(b.id));
   const vedKontrollrom = () => deg && kontrollrom().find(b => Math.hypot(b.x - deg.x, b.y - deg.y) <= R.inne + 12);
   const inneMedStrøm = () => { if (!inne) return false; const b = vedKontrollrom(); return !!b && harStrøm(b); };
@@ -29,7 +29,8 @@
     logg(`${s.navn}: ingen radiokontakt – ordren når ikke fram.`); return false; });
 
   // ---------- radioen ----------
-  function mast() { const L = window.LeirSpill && LeirSpill.tilstand(); return !!L && L.bygg.some(b => b.type === 'radiomast' && Leir.ferdig(b) && harStrøm(b)); }
+  // rekkevidden til den beste radiomasten med strøm (0 uten)
+  function mast() { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'radiomast' && Leir.virker(b) && harStrøm(b)).reduce((m, b) => Math.max(m, Leir.effekt(b).rekkevidde), 0) : 0; }
   const høyde = (v, x, y) => { const [i, j] = Terreng.rute(v, x, y); const h = v.H[Math.max(0, Math.min(v.h - 1, j)) * v.w + Math.max(0, Math.min(v.w - 1, i))]; return h === h ? h : 0; };
   // Kontakt mellom laget og leiren: rekkevidden etter radioene, kortere når terrenget står i veien (profil i 128 m-ruter)
   async function sjekkKontakt(s) {

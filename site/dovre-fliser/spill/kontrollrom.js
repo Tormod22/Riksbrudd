@@ -20,7 +20,8 @@
     nettbrett: { pris: 1.5e6, timer: 8, lading: 2, ladeAvstand: 150 },   // batteri i spilltimer, full lading i leiren på 2 t
     mastHøyde: 24, antenne: 2,
   };
-  const rekkevidde = (radio, mast) => Math.min((RADIO[radio] || RADIO.hånd).meter, mast ? LEIR.mast : LEIR.uten);
+  // mast: true (40 km), eller rekkevidden i meter for radiomasten (nivå 1–3 gir 40, 60 og 80 km), eller 0/false uten mast
+  const rekkevidde = (radio, mast) => Math.min((RADIO[radio] || RADIO.hånd).meter, mast ? (typeof mast === 'number' ? mast : LEIR.mast) : LEIR.uten);
   // Står terrenget i veien? profil: høyder (moh.) i like store steg fra A til B; hA og hB er antennenes høyde (moh.). Jordkrumningen
   // (med radiohorisont, k = 4/3) senker punktene midt på linjen.
   function blokkert(profil, hA, hB, avstand) {

@@ -222,4 +222,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   KROKER.innsyn (synlig() for fiender), KROKER.skjul (egne lag tegnes «sist meldt» i 2D) og KROKER.kanOrdre (ingen ordre uten
   radiokontakt). Radiokontakt med høydeprofil i 128 m-ruter (lagVindu ZV 7) og jordkrumning. Skjermen #kontrollrom (radio, feeds;
   feed = Gange ved laget). KontrollromSpill.av() slår reglene av (sjekk.js gjør det etter K3-testen). 3D viser fortsatt alt.
+  BEDRE BYGGESYSTEM (11. nov, brukeren, docs/plan-kollaps.md): leir.js versjon 2 (nivå, hp, materialer/lager, jobber/byggelag/kø,
+  riv/flytt/oppgrader/skade/reparer, festTilGjerde/gjerdeLedd, effekt(b), virker(b) ≠ ferdig(b); fraJSON gjør om versjon 1) og
+  leir-visning.js (byggpanel, skisse3d, rutenett, gjerde3d per 10 m med helning). OppstartSpill.gi (penger tilbake). Kontrollrommet
+  bruker Leir.virker og radiomastens nivå. spill/fps.js: FPS-teller (sFps, av/på i ☰, window.FPS).
 
