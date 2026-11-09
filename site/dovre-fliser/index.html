@@ -82,7 +82,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=2cc5dfa524"></script>
+<script src="/dovre-fliser/kartflis.js?v=9bf6383f46"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
@@ -92,7 +92,7 @@ const DATA = '/dovre-fliser/data/';
 const MAKS_M = 4000;   // meter per punkt helt ut (hele Norge)
 // Kartfilene ligger i GitHub-releasen KART_TAG og hentes via /api/kart (site/api/kart.js). Svarer ikke den, brukes filene i DATA.
 // /norge viser kartet for hele Norge (release fra .github/workflows/norge.yml, ingen filer i repoet), ellers Dovre-piloten.
-const HUS_TAG = 'kart-hus-ab991817d34b';
+const HUS_TAG = 'kart-hus-8b5606f3d7b9';
 const OMLAND_TAG = 'kart-omland-e1becd1b04bf';   // Sverige, Finland, Danmark, Kola, Svalbard og havet (pipeline/fliser/omland.py), settes av bruk_omland.py
 const UTVEG_TAG = 'kart-utveg-b24af84eb3fd';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
 const INFRA_TAG = 'kart-infra-2023-7bd50584c2a7';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
@@ -176,7 +176,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=055d2e5e08');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=1f95e037d8');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1829,7 +1829,7 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/hjelp.js?v=fe0f945763"></script>
 <script src="/dovre-fliser/spill/gange.js?v=88c7c07eae"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
-<script src="/dovre-fliser/spill/anlegg3d.js?v=edb24ec341"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>

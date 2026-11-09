@@ -333,6 +333,7 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   }
   if (v && valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   if (hs && hs.t.hus) husomriss(g, z, hs);
+  if (hs && hs.t.punkt && z >= 14) bensin(g, z, hs);   // bensinstasjonene: pumpemerke i kjedens farge
   return { c, E };
 }
 
@@ -414,6 +415,21 @@ function rullebane(g, P, ref, r, z) {
     g.save(); g.translate(tx, ty); g.rotate(Math.atan2(f.ux * inn, -f.uy * inn)); g.font = `bold ${hgt}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(tekst, 0, 0); g.restore();
   }
+}
+
+// Bensinstasjon i kartet: firkant i kjedens farge (ellers mørk) med en hvit bensinpumpe
+function bensin(g, z, hs) {
+  const T = G.T, s = T * hs.f / 4096, ox = hs.ix * T, oy = hs.iy * T, r = z >= 16 ? 11 : z >= 15 ? 8 : 6;
+  for (const o of hs.t.punkt.obj) { if (o.e.p !== 1 || !o.deler[0]) continue;
+    const [x, y] = [o.deler[0][0][0] * s - ox, o.deler[0][0][1] * s - oy], kj = o.e.k && BUTIKKER[o.e.k];
+    if (x < -20 || y < -20 || x > T + 20 || y > T + 20) continue;
+    g.save(); g.translate(x, y); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(-r + 1.5, -r + 1.5, 2 * r, 2 * r);
+    g.fillStyle = kj ? kj[1] : '#3b3f45'; g.fillRect(-r, -r, 2 * r, 2 * r); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.strokeRect(-r, -r, 2 * r, 2 * r);
+    const f = kj ? kj[2] : '#f2efe6'; g.fillStyle = f; g.strokeStyle = f; g.lineWidth = Math.max(1, r * .12);
+    g.fillRect(-r * .55, -r * .6, r * .7, r * 1.2); g.fillStyle = kj ? kj[1] : '#3b3f45'; g.fillRect(-r * .42, -r * .45, r * .44, r * .35);
+    g.beginPath(); g.moveTo(r * .15, -r * .3); g.lineTo(r * .5, -r * .1); g.lineTo(r * .5, r * .45); g.stroke();
+    if (z >= 16 && kj) { g.font = `bold ${r * .9}px sans-serif`; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(kj[0], 1, r * 2.1 + 1); g.fillStyle = '#f5f1e6'; g.fillText(kj[0], 0, r * 2.1); }
+    g.restore(); }
 }
 
 // ---------- hus ----------
