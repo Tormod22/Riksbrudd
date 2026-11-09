@@ -112,7 +112,7 @@
 #kontrollrom .side{ position:absolute; top:calc(var(--topp,58px) + 56px); bottom:calc(60px + env(safe-area-inset-bottom,0px)); width:min(300px, 40vw); pointer-events:auto;
   background:rgba(10,16,10,.9); border:1px solid #3c5a35; color:#a9e29a; font:13px/1.4 ui-monospace,Menlo,Consolas,monospace; display:flex; flex-direction:column; }
 #kontrollrom .side h3{ margin:0; padding:8px 10px; border-bottom:1px solid #3c5a35; font-size:13px; letter-spacing:.12em; color:#c9f0bc; }
-#kontrollrom .side .innhold{ overflow:auto; padding:6px 10px; }
+#kontrollrom .side .innhold{ overflow:auto; padding:6px 10px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
 #kontrollrom .venstre{ left:10px; } #kontrollrom .høyre{ right:10px; }
 #kontrollrom .melding{ margin-bottom:6px; } #kontrollrom .melding b{ color:#e6f7c8; font-weight:600; } #kontrollrom .melding.leir{ color:#7fae73; }
 #kontrollrom .feed{ display:flex; justify-content:space-between; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid #22341f; }
@@ -134,13 +134,14 @@
     const m = modus(); document.getElementById('sHvor').textContent = m === 'kontrollrom' ? 'i kontrollrommet' : m === 'nettbrett' ? `ute, nettbrett ${Math.round(T.nettbrett.batteri)} t` : inne ? 'i mørkt kontrollrom' : 'ute';
     kNapp.hidden = !vedKontrollrom() && !inne; kNapp.classList.toggle('på', inne);
   }
-  function visRadio() { const I = venstre.querySelector('.innhold'); I.innerHTML = '';
+  // radio og feeds tegnes på nytt hvert spillminutt: behold plassen du har bladd til
+  function visRadio() { const I = venstre.querySelector('.innhold'), rulle = I.scrollTop; I.innerHTML = '';
     for (const m of radiolog.slice(0, 40)) I.appendChild(el('div', { klasse: 'melding' + (m.leir ? ' leir' : '') }, `${klokkeslett(m.tid)} `, el('b', {}, m.fra), `: ${m.tekst}`));
-    if (!radiolog.length) I.appendChild(el('div', {}, 'Ingen meldinger ennå.')); }
-  function visFeeds() { const I = høyre.querySelector('.innhold'); I.innerHTML = '';
+    if (!radiolog.length) I.appendChild(el('div', {}, 'Ingen meldinger ennå.')); I.scrollTop = rulle; }
+  function visFeeds() { const I = høyre.querySelector('.innhold'), rulle = I.scrollTop; I.innerHTML = '';
     for (const s of ENHETER) { if (s.side !== 'blå' || !levende(s)) continue; const k = s.karakter || lagInfo(s).kontakt;
       const b = el('button', {}, feed === s ? 'Lukk' : 'Se'); b.disabled = !k; b.onclick = () => (feed === s ? lukkFeed() : åpneFeed(s));
-      I.appendChild(el('div', { klasse: 'feed' }, el('span', {}, `${s.navn}${k ? '' : ' (ingen kontakt)'}`), b)); } }
+      I.appendChild(el('div', { klasse: 'feed' }, el('span', {}, `${s.navn}${k ? '' : ' (ingen kontakt)'}`), b)); } I.scrollTop = rulle; }
   function visSkjerm() {
     const mørk = inne && !inneMedStrøm(); skjerm.classList.toggle('mørk', mørk); topp.innerHTML = '';
     topp.append(el('span', {}, mørk ? 'KONTROLLROM · INGEN STRØM' : `KONTROLLROM · ${spill().fraksjon.navn.toUpperCase()}${feed ? ' · FEED: ' + feed.navn.toUpperCase() : ''}`));

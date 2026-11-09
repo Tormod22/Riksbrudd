@@ -16,13 +16,13 @@
   // ---------- stil og knapper ----------
   const css = document.createElement('style');
   css.textContent = `#leirmeny{ position:fixed; left:10px; top:calc(var(--topp,58px) + 6px); bottom:calc(60px + env(safe-area-inset-bottom,0px)); width:min(350px, calc(100vw - 20px));
-  z-index:6; display:none; flex-direction:column; background:var(--panel); border:1px solid var(--rule); color:var(--ink); }
+  z-index:6; display:none; flex-direction:column; background:var(--panel); border:1px solid var(--rule); color:var(--ink); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
 #leirmeny.på{ display:flex; }
-#leirmeny .hode{ padding:10px 12px 6px; border-bottom:1px solid var(--rule); max-height:48%; overflow:auto; }
+#leirmeny .hode{ padding:10px 12px 6px; border-bottom:1px solid var(--rule); flex:0 0 auto; }
 #leirmeny h2{ margin:0; font-family:"IM Fell English",serif; font-weight:400; font-size:22px; }
 #leirmeny h3{ margin:8px 0 2px; font-size:14px; color:var(--hover); font-weight:600; }
 #leirmeny .status{ font-size:14px; color:var(--ink-dim); margin-top:4px; line-height:1.45; }
-#leirmeny .liste{ overflow:auto; padding:6px 8px 10px; }
+#leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
 #leirmeny .bygg div{ flex:1; min-width:0; } #leirmeny .bygg b{ font-weight:600; } #leirmeny .bygg small{ display:block; color:var(--ink-dim); font-size:12.5px; }
 #leirmeny button, #byggvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:40px; padding:4px 12px; cursor:pointer; font:inherit; }
@@ -77,8 +77,9 @@
   });
 
   // ---------- menyen ----------
+  // Menyen tegnes på nytt hvert sekund (strøm, kø): behold plassen du har bladd til (brukeren 11. nov: «lar meg ikke bla ned»)
   function visMeny() {
-    const S = spill(); menyEl.innerHTML = '';
+    const S = spill(), rulle = menyEl.scrollTop; menyEl.innerHTML = '';
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
     const status = el('div', { klasse: 'status' },
       `Kassa: ${LB.kroner(S.penger)}`, el('br'),
@@ -108,7 +109,7 @@
       const b = knapp('Bygg', () => startPlassering(id)); b.disabled = !B.linje && S.penger < k.pris;
       liste.appendChild(el('div', { klasse: 'bygg' }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
     }
-    menyEl.append(hode, liste);
+    menyEl.append(hode, liste); menyEl.scrollTop = rulle;
   }
   const tidTekst = min => min >= 60 ? `${kw(min / 60)} t` : `${Math.ceil(min)} min`;
 
