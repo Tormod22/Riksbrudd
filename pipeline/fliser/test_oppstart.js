@@ -28,4 +28,9 @@ ok(O.hovedfarge({ farger: ['#f2efe6', '#1d3557', '#000000'] }) === '#1d3557', 'h
 let kall = 0; const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => { kall++; }), set: (o, k, v) => { o[k] = v; return true; } });
 for (const m of O.MØNSTER) for (const s of O.SYMBOL) O.tegnFlagg(g, { mønster: m, farger: ['#111111', '#eeeeee', '#aa2222'], symbol: s, symbolfarge: '#ffffff', bokstaver: 'AB', bokstavfarge: '#000000' }, 90, 60);
 ok(kall > 1000, `${O.MØNSTER.length} mønstre × ${O.SYMBOL.length} symboler tegnet uten feil (${kall} tegnekall)`);
+// portrettet (Karakterstudio v3): ukjente valg byttes med standard, navnet følger karakteren, SVG lages
+const U = O.standard(); U.karakter.navn = 'Per <b>'; U.fraksjon.navn = 'Fjellfolket'; U.karakter.portrett = { ...U.karakter.portrett, hair: 'braid', outfit: 'tull', skin: '#123456' };
+O.fullfør(U, { x: 1, y: 1 }); const svg = O.P.renderSVG(U.karakter.portrett);
+ok(U.karakter.portrett.hair === 'braid' && U.karakter.portrett.outfit === 'feltuniform' && U.karakter.portrett.skin !== '#123456', 'portrettet: kjent frisyre beholdt, ukjent antrekk og farge byttet ut');
+ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'portrettet tegnes som SVG, og navnet kan ikke lage HTML');
 process.exit(feil ? 1 : 0);

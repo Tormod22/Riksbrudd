@@ -206,5 +206,6 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   localStorage «riksbrudd-k1», fraksjonen tar over «blå»: navn/farge i Fraksjoner.FRAKSJONER.blå, basen OLJE.BASER[0] og lagene
   flyttes til leiren; sPenger øverst; 3D-flagg med MODELLER.flaggstang). Bonusene via KROKER.sikt (ny) og KROKER.ild (> 1 gir
   ekstra treff). Startskjermen vises ikke av seg selv når navigator.webdriver (testene) – sjekk.js kjører den selv (OppstartSpill).
-  INFRA er en let i index.html (ikke window.INFRA) – bruk typeof INFRA.
+  INFRA er en let i index.html (ikke window.INFRA) – bruk typeof INFRA. Portrettet: spill/portrett-motor.js (brukerens Karakterstudio v3,
+  RiksbruddPortrait.normalize/renderSVG, uendret); O.portrett() renser valgene, startskjermen viser SVG-en som bilde (data:-adresse).
 

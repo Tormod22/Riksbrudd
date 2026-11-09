@@ -22,6 +22,8 @@
 #oppstart .rad{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 #oppstart .to{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
 #oppstart .to>div{ flex:1 1 300px; min-width:0; }
+#oppstart .bilde{ position:sticky; top:0; }
+@media (max-width:700px){ #oppstart .bilde{ order:-1; position:static; text-align:center; } #oppstart .bilde img{ width:140px; height:auto; } }
 #oppstart button.valg{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-height:40px; padding:4px 10px; }
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
 #oppstart button.farge{ width:34px; height:34px; min-height:0; padding:0; border:2px solid #0006; cursor:pointer; }
@@ -52,22 +54,28 @@
   const el = (tag, egensk = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(egensk)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (tekst, på, gjør, klasse = 'valg') => { const b = el('button', { klasse: klasse + (på ? ' på' : ''), type: 'button' }, tekst); b.onclick = gjør; return b; };
 
-  function portrett(c, k, farge) {
-    const g = c.getContext('2d'), w = c.width, h = c.height, u = k.utseende, hud = O.UTSEENDE.hud[u.hud], hår = O.UTSEENDE.hår[u.hår];
-    g.clearRect(0, 0, w, h); g.fillStyle = '#2b251b'; g.fillRect(0, 0, w, h);
-    g.fillStyle = farge; g.beginPath(); g.moveTo(w * .12, h); g.quadraticCurveTo(w * .14, h * .7, w * .5, h * .68); g.quadraticCurveTo(w * .86, h * .7, w * .88, h); g.fill();   // jakke
-    g.fillStyle = hud; g.fillRect(w * .43, h * .55, w * .14, h * .15);   // hals
-    if (u.frisyre === 'langt') { g.fillStyle = hår; g.beginPath(); g.ellipse(w * .5, h * .42, w * .24, h * .3, 0, 0, 6.283); g.fill(); }
-    g.fillStyle = hud; g.beginPath(); g.ellipse(w * .5, h * .38, w * .19, h * .23, 0, 0, 6.283); g.fill();   // hode
-    g.fillStyle = '#1b1610'; g.beginPath(); g.arc(w * .43, h * .37, w * .022, 0, 6.283); g.arc(w * .57, h * .37, w * .022, 0, 6.283); g.fill();   // øyne
-    g.strokeStyle = '#5a3a2a'; g.lineWidth = w * .015; g.beginPath(); g.moveTo(w * .45, h * .5); g.lineTo(w * .55, h * .5); g.stroke();
-    g.fillStyle = hår;
-    if (u.frisyre === 'kort' || u.frisyre === 'langt' || u.frisyre === 'hestehale') { g.beginPath(); g.ellipse(w * .5, h * .25, w * .2, h * .12, 0, Math.PI, 0); g.fill(); g.fillRect(w * .31, h * .24, w * .38, h * .05); }
-    if (u.frisyre === 'snauklipt') { g.globalAlpha = .55; g.beginPath(); g.ellipse(w * .5, h * .25, w * .19, h * .1, 0, Math.PI, 0); g.fill(); g.globalAlpha = 1; }
-    if (u.frisyre === 'hestehale') { g.beginPath(); g.ellipse(w * .74, h * .4, w * .05, h * .14, -.3, 0, 6.283); g.fill(); }
-    if (u.skjegg !== 'ingen') { g.globalAlpha = u.skjegg === 'stubb' ? .45 : 1; g.beginPath(); g.moveTo(w * .32, h * .4); g.quadraticCurveTo(w * .33, h * .62, w * .5, h * .64); g.quadraticCurveTo(w * .67, h * .62, w * .68, h * .4);
-      g.quadraticCurveTo(w * .6, h * .52, w * .5, h * .53); g.quadraticCurveTo(w * .4, h * .52, w * .32, h * .4); g.fill(); g.globalAlpha = 1; }
-  }
+  // Portrettet fra portrettmotoren (Karakterstudio v3) som bilde. SVG-en lages bare av kjente valg (normalize), så den er trygg.
+  const portrettBilde = (k, bredde = 200) => { const img = el('img', { alt: 'Portrett av karakteren', width: bredde, height: Math.round(bredde * 740 / 600) });
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(O.P.renderSVG(O.portrett(k.portrett, k.navn))); img.style.border = '1px solid var(--rule)'; return img; };
+  // Valgene i portrettet, med norske navn (som i Karakterstudio v3), fordelt på faner
+  const NAVN = {
+    gender: [['kvinne', 'Kvinne'], ['mann', 'Mann']], face: [['oval', 'Oval'], ['kantete', 'Kantete'], ['rund', 'Rund'], ['smal', 'Smal'], ['hjerte', 'Hjerte'], ['bred', 'Bred']],
+    detail: [['ingen', 'Ingen'], ['fregner', 'Fregner'], ['arr', 'Lite arr'], ['foflekk', 'Føflekk']], expression: [['alvorlig', 'Alvorlig'], ['rolig', 'Rolig'], ['streng', 'Streng'], ['svakt-smil', 'Svakt smil'], ['bekymret', 'Bekymret']],
+    eyes: [['standard', 'Normal'], ['smale', 'Smale'], ['store', 'Store'], ['mandel', 'Mandelform'], ['dyptsittende', 'Dyptsittende'], ['runde', 'Runde']],
+    brows: [['normal', 'Naturlige'], ['rette', 'Rette'], ['buede', 'Buede'], ['kraftige', 'Kraftige'], ['smale', 'Smale'], ['sammenknepne', 'Sammentrukket']],
+    nose: [['rett', 'Rett'], ['kort', 'Kort'], ['lang', 'Lang'], ['bred', 'Bred'], ['smal', 'Smal'], ['romersk', 'Buet']], mouth: [['normal', 'Normal'], ['smal', 'Smal'], ['fyldig', 'Fyldig'], ['bred', 'Bred'], ['asymmetrisk', 'Asymmetrisk']],
+    glasses: [['ingen', 'Ingen'], ['runde', 'Runde'], ['firkantede', 'Firkantede'], ['pilot', 'Pilotbriller'], ['smale', 'Smale'], ['innfatningslose', 'Uten innfatning']],
+    hair: [['sidepart', 'Sideskill'], ['short', 'Kort'], ['slick', 'Bakovergredd'], ['waves', 'Bølget'], ['bob', 'Bob'], ['long', 'Langt'], ['curly', 'Krøllet'], ['buzz', 'Maskinklipt'], ['bald', 'Skallet'], ['fringe', 'Pannelugg'], ['crop', 'Kort lugg'], ['undercut', 'Undercut'], ['quiff', 'Høy lugg'], ['pompadour', 'Pompadour'], ['shag', 'Etasjeklipt'], ['mullet', 'Hockeysveis'], ['pixie', 'Pixie'], ['braid', 'Flette'], ['ponytail', 'Hestehale'], ['afro', 'Afro'], ['curls-short', 'Korte krøller'], ['crew', 'Militærklipp']],
+    facialHair: [['ingen', 'Ingen'], ['bart', 'Bart'], ['skjeggstubb', 'Skjeggstubb'], ['kort-skjegg', 'Kort skjegg'], ['helskjegg', 'Helskjegg'], ['fippskjegg', 'Fippskjegg'], ['hestesko', 'Hestesko']],
+    headwear: [['ingen', 'Ingen'], ['barett', 'Beret'], ['offiserslue', 'Offiserslue'], ['strikkelue', 'Strikkelue'], ['skyggelue', 'Skyggelue']],
+    outfit: [['feltuniform', 'Feltuniform'], ['arbeidsjakke', 'Arbeidsjakke'], ['skinnjakke', 'Skinnjakke'], ['jakke', 'Hverdagsjakke'], ['genser', 'Ullgenser'], ['frakk', 'Frakk'], ['hoyhalset', 'Høyhalset'], ['skjorte', 'Skjorte'], ['offisersjakke', 'Offisersjakke'], ['uniform', 'Paradeuniform'], ['marineuniform', 'Marineuniform'], ['dress', 'Mørk dress'], ['dress-gra', 'Grå dress'], ['dress-brun', 'Brun dress']],
+    shirt: [['hvit', 'Hvit'], ['krem', 'Krem'], ['bla', 'Blå'], ['mork', 'Mørk']], tieStyle: [['apen', 'Åpen krage'], ['slips', 'Slips'], ['sløyfe', 'Sløyfe'], ['hoyhalset', 'Høy hals']],
+  };
+  const FANER = [['Ansikt', [['Kjønn', 'gender'], ['Hud', 'skin', 'skin'], ['Alder', 'age'], ['Ansiktsform', 'face'], ['Uttrykk', 'expression'], ['Kjennetegn', 'detail']]],
+    ['Øyne', [['Øyne', 'eyes'], ['Øyenfarge', 'eyeColor', 'eyes'], ['Øyenbryn', 'brows'], ['Nese', 'nose'], ['Munn', 'mouth'], ['Briller', 'glasses']]],
+    ['Hår', [['Frisyre', 'hair'], ['Hårfarge', 'hairColor', 'hair'], ['Grått hår', 'grayAmount'], ['Skjegg', 'facialHair'], ['Hodeplagg', 'headwear']]],
+    ['Klær', [['Antrekk', 'outfit'], ['Farge', 'outfitColor', 'outfitColor'], ['Skjorte', 'shirt'], ['Krage', 'tieStyle'], ['Slips', 'tieColor', 'tie'], ['Bakgrunn', 'background', 'background']]]];
+  let fane = 0;
   function flaggLerret(fl, w, h) { const c = el('canvas', { width: w, height: h }); O.tegnFlagg(c.getContext('2d'), fl, w, h); return c; }
 
   function vis(steg) {
@@ -76,19 +84,25 @@
     if (steg === 1) {
       ark.append(el('h2', {}, 'Riksbrudd – nytt spill'), el('div', { klasse: 'steg' }, 'Steg 1 av 3: din karakter. Norge har falt sammen. Du starter med ' + O.kroner(O.STARTPENGER) + ' og en håndfull folk.'));
       const navn = el('input', { type: 'text', maxlength: 30, placeholder: 'Navnet ditt', value: k.navn, 'aria-label': 'Navnet til karakteren' });
-      const c = el('canvas', { width: 160, height: 200, 'aria-label': 'Slik ser karakteren ut' }), oppd = () => portrett(c, k, O.hovedfarge(fl));
+      const bilde = el('div'), oppd = () => { bilde.innerHTML = ''; bilde.appendChild(portrettBilde(k)); };
       navn.oninput = () => { k.navn = navn.value; };
       const valg = el('div');
-      const lagValg = () => { valg.innerHTML = ''; const u = k.utseende;
-        valg.append(el('h3', {}, 'Hud'), el('div', { klasse: 'rad' }, ...O.UTSEENDE.hud.map((f, i) => { const b = knapp('', u.hud === i, () => { u.hud = i; lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', 'Hudtone ' + (i + 1)); return b; })),
-          el('h3', {}, 'Hår'), el('div', { klasse: 'rad' }, ...O.UTSEENDE.hår.map((f, i) => { const b = knapp('', u.hår === i, () => { u.hår = i; lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', 'Hårfarge ' + (i + 1)); return b; })),
-          el('div', { klasse: 'rad', style: 'margin-top:6px' }, ...O.UTSEENDE.frisyre.map(f => knapp(f, u.frisyre === f, () => { u.frisyre = f; lagValg(); oppd(); }))),
-          el('h3', {}, 'Skjegg'), el('div', { klasse: 'rad' }, ...O.UTSEENDE.skjegg.map(f => knapp(f, u.skjegg === f, () => { u.skjegg = f; lagValg(); oppd(); })))); };
+      const lagValg = () => { valg.innerHTML = ''; const p = k.portrett;
+        valg.appendChild(el('div', { klasse: 'rad' }, ...FANER.map(([t], i) => knapp(t, fane === i, () => { fane = i; lagValg(); }))));
+        for (const [tittel, felt, palett] of FANER[fane][1]) {
+          valg.appendChild(el('h3', {}, tittel));
+          if (palett) valg.appendChild(el('div', { klasse: 'rad' }, ...O.P.palettes[palett].map(f => { const b = knapp('', p[felt] === f, () => { p[felt] = f; lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', tittel + ' ' + f); return b; })));
+          else if (O.P.numerics[felt]) { const [min, maks] = O.P.numerics[felt], r = el('input', { type: 'range', min, max: maks, value: p[felt], 'aria-label': tittel, style: 'width:100%; max-width:320px' }), v = el('span', { style: 'margin-left:8px' }, felt === 'age' ? p[felt] + ' år' : p[felt] + ' %');
+            r.oninput = () => { p[felt] = +r.value; v.textContent = felt === 'age' ? r.value + ' år' : r.value + ' %'; oppd(); }; valg.appendChild(el('div', { klasse: 'rad' }, r, v)); }
+          else valg.appendChild(el('div', { klasse: 'rad' }, ...NAVN[felt].map(([v, t]) => knapp(t, p[felt] === v, () => { p[felt] = v; lagValg(); oppd(); }))));
+        }
+        valg.appendChild(el('div', { klasse: 'rad', style: 'margin-top:12px' }, knapp('Tilfeldig utseende', false, () => { const t = O.P.randomCharacter(); k.portrett = O.portrett({ ...t, role: 'militaer', outfit: NAVN.outfit[Math.floor(Math.random() * 7)][0] }, k.navn); lagValg(); oppd(); })));
+      };
       lagValg(); oppd();
       const bg = el('div', { klasse: 'bakgrunn' });
       const lagBg = () => { bg.innerHTML = ''; for (const [id, b] of Object.entries(O.BAKGRUNNER)) { const kn = knapp('', k.bakgrunn === id, () => { k.bakgrunn = id; lagBg(); }); kn.append(el('b', {}, b.navn), el('small', {}, b.tekst)); bg.appendChild(kn); } };
       lagBg();
-      ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, valg), el('div', { style: 'flex:0 0 auto' }, c)), el('h3', {}, 'Bakgrunn (gir en liten bonus)'), bg, melding,
+      ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, valg), el('div', { klasse: 'bilde', style: 'flex:0 0 auto' }, bilde)), el('h3', {}, 'Bakgrunn (gir en liten bonus)'), bg, melding,
         el('div', { klasse: 'bunn' }, el('span'), knapp('Neste: fraksjonen →', false, () => { if (k.navn.trim().length < 2) { melding.textContent = 'Skriv et navn (minst 2 tegn).'; return; } vis(2); })));
       setTimeout(() => navn.focus(), 50);
     } else if (steg === 2) {

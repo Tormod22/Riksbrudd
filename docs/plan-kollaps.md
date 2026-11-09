@@ -144,7 +144,9 @@ Bestemt av brukeren 11. nov:
 - **Leiren kan ligge hvor som helst i Norge**, men ikke inne i et tettsted, i vann eller utenfor kartet.
 - **Eget flagg:** mønster (9), tre farger (16 å velge mellom), symbol (17 + ingen), farge på symbolet, opptil tre bokstaver og farge
   på dem. Fargen til lagene på kartet er den første fargen i flagget som ikke er nesten hvit eller svart.
-- **Utseende:** hudtone, hårfarge, frisyre og skjegg (vises som portrett på startskjermen).
+- **Utseende:** portrettmotoren fra brukerens Karakterstudio v3 (spill/portrett-motor.js, uendret): kjønn, hud, alder, ansiktsform,
+  uttrykk, kjennetegn, øyne, bryn, nese, munn, briller, 22 frisyrer, hårfarge, grått hår, skjegg, hodeplagg, 14 antrekk med farge,
+  skjorte og krage, bakgrunn, og «Tilfeldig utseende». Startverdien er en leder i feltuniform. Lagres som portrett i karakteren.
 
 Teknisk: spill/oppstart.js (regler, test pipeline/fliser/test_oppstart.js) + spill/oppstart-visning.js (startskjerm, kartet, 3D-flagg).
 Lagres i nettleseren (localStorage «riksbrudd-k1»). «Nytt spill» i ☰ sletter valgene. Nye kroker: KROKER.sikt (faktor på siktvidden);

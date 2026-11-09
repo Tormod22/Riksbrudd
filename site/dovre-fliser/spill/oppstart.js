@@ -16,13 +16,16 @@
     forretningsmann: { navn: 'Forretningsmann', tekst: '+10 millioner kr ved start', bonus: { penger: 10e6 } },
     politi: { navn: 'Politi', tekst: '+15 % sikt for lagene dine', bonus: { sikt: 1.15 } },
   };
-  // Utseende (enkelt): hudtone, hårfarge, frisyre og skjegg
-  const UTSEENDE = {
-    hud: ['#f1d3b8', '#e0b48f', '#c38d63', '#93613f', '#5e3d27'],
-    hår: ['#1f1a17', '#4a3020', '#8a5a33', '#c79a55', '#e2cf9a', '#9a9a98', '#a8402a'],
-    frisyre: ['kort', 'langt', 'snauklipt', 'skallet', 'hestehale'],
-    skjegg: ['ingen', 'stubb', 'fullt'],
-  };
+  // Utseendet er et portrett fra portrettmotoren i Karakterstudio v3 (spill/portrett-motor.js, brukerens egen, 11. nov):
+  // normalize() godtar bare kjente valg og farger. Startverdiene passer en leder etter kollapsen (feltuniform, åpen krage).
+  const P = typeof module !== 'undefined' && module.exports ? require('./portrett-motor.js') : rot.RiksbruddPortrait;
+  const PORTRETT = { gender: 'mann', role: 'militaer', age: 38, hair: 'short', hairColor: '#392824', facialHair: 'skjeggstubb',
+    outfit: 'feltuniform', outfitColor: '#5c6254', shirt: 'mork', tieStyle: 'apen', background: '#555d65', expression: 'rolig' };
+  // ugyldige valg faller tilbake til startverdiene våre (ikke motorens), så et ukjent antrekk blir feltuniform
+  const FARGEFELT = { skin: 'skin', hairColor: 'hair', eyeColor: 'eyes', tieColor: 'tie', outfitColor: 'outfitColor', background: 'background' };
+  const gyldig = (k, v) => (P.allowed[k] ? P.allowed[k].includes(v) : FARGEFELT[k] ? P.palettes[FARGEFELT[k]].includes(v) : P.numerics[k] ? Number.isFinite(Number(v)) : false);
+  const portrett = (valg, navn) => { const ren = {}; for (const [k, v] of Object.entries(valg || {})) if (gyldig(k, v)) ren[k] = v;
+    const c = P.normalize({ ...PORTRETT, ...ren }); c.name = String(navn || '').slice(0, 46); c.origin = ''; c.id = 'RB-27-0001'; return c; };
   // Flagget: et mønster i opptil tre farger, et symbol og opptil tre bokstaver
   const FARGER = ['#1f1f22', '#f2efe6', '#8f2a24', '#c8102e', '#e46c1e', '#e0b53a', '#4f7a2f', '#1f4d2e', '#2d6a8a', '#1d3557',
     '#5b3a6e', '#7a5a3a', '#9aa0a6', '#c9a227', '#3e5a3a', '#6b1e3a'];
@@ -33,7 +36,7 @@
   function standard() {
     return {
       versjon: 1, ferdig: false,
-      karakter: { navn: '', bakgrunn: 'soldat', utseende: { hud: 1, hår: 1, frisyre: 'kort', skjegg: 'ingen' } },
+      karakter: { navn: '', bakgrunn: 'soldat', portrett: portrett() },
       fraksjon: { navn: '', flagg: { mønster: 'loddrett', farger: ['#1d3557', '#f2efe6', '#8f2a24'], symbol: 'ulv', symbolfarge: '#f2efe6', bokstaver: '', bokstavfarge: '#f2efe6' } },
       penger: STARTPENGER, leir: null,
     };
@@ -44,8 +47,7 @@
     const f = [], k = S.karakter, fr = S.fraksjon, fl = fr.flagg;
     if (renTekst(k.navn, 30).length < 2) f.push('Karakteren må ha et navn (minst 2 tegn).');
     if (!BAKGRUNNER[k.bakgrunn]) f.push('Velg en bakgrunn.');
-    const u = k.utseende || {};
-    if (!(u.hud >= 0 && u.hud < UTSEENDE.hud.length) || !(u.hår >= 0 && u.hår < UTSEENDE.hår.length) || !UTSEENDE.frisyre.includes(u.frisyre) || !UTSEENDE.skjegg.includes(u.skjegg)) f.push('Utseendet er ugyldig.');
+    if (!k.portrett || typeof k.portrett !== 'object') f.push('Utseendet mangler.');
     if (renTekst(fr.navn, 40).length < 2) f.push('Fraksjonen må ha et navn (minst 2 tegn).');
     if (!MØNSTER.includes(fl.mønster) || !SYMBOL.includes(fl.symbol) || !Array.isArray(fl.farger) || fl.farger.length !== 3 || !fl.farger.every(c => /^#[0-9a-f]{6}$/i.test(c))) f.push('Flagget er ugyldig.');
     if (!/^[\p{L}\p{N}]{0,3}$/u.test(fl.bokstaver || '')) f.push('Flagget kan ha høyst tre bokstaver eller tall.');
@@ -63,7 +65,7 @@
   // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (100 mill. + eventuell bonus).
   function fullfør(S, leir) {
     const f = feil(S); if (f.length) return f;
-    S.karakter.navn = renTekst(S.karakter.navn, 30); S.fraksjon.navn = renTekst(S.fraksjon.navn, 40);
+    S.karakter.navn = renTekst(S.karakter.navn, 30); S.fraksjon.navn = renTekst(S.fraksjon.navn, 40); S.karakter.portrett = portrett(S.karakter.portrett, S.karakter.navn);
     S.fraksjon.flagg.bokstaver = (S.fraksjon.flagg.bokstaver || '').toUpperCase();
     S.leir = { x: Math.round(leir.x), y: Math.round(leir.y) };
     S.penger = STARTPENGER + (BAKGRUNNER[S.karakter.bakgrunn].bonus.penger || 0); S.ferdig = true; return [];
@@ -80,7 +82,7 @@
   // Leser lagrede valg; ødelagt eller ukjent versjon gir null (da starter man på nytt)
   function fraJSON(t) {
     try { const S = JSON.parse(t); if (!S || S.versjon !== 1 || !S.karakter || !S.fraksjon) return null;
-      const s = standard(); return { ...s, ...S, karakter: { ...s.karakter, ...S.karakter, utseende: { ...s.karakter.utseende, ...(S.karakter.utseende || {}) } }, fraksjon: { ...s.fraksjon, ...S.fraksjon, flagg: { ...s.fraksjon.flagg, ...(S.fraksjon.flagg || {}) } } };
+      const s = standard(); return { ...s, ...S, karakter: { ...s.karakter, ...S.karakter, portrett: portrett(S.karakter.portrett, S.karakter.navn) }, fraksjon: { ...s.fraksjon, ...S.fraksjon, flagg: { ...s.fraksjon.flagg, ...(S.fraksjon.flagg || {}) } } };
     } catch (e) { return null; }
   }
   // Lysere og mørkere utgave av en farge (for kartet: farge, lys, sti)
@@ -139,7 +141,7 @@
     }
     g.restore();
   }
-  const api = { STARTPENGER, BAKGRUNNER, UTSEENDE, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
+  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Oppstart = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
