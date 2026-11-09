@@ -41,6 +41,8 @@ for (const e of graf.infraLenker(60, bruId)) graf.sperr(e);
 for (const e of graf.infraLenker(60, bruId)) graf.åpne(e);
 ```
 
+Valg til `rute`: `maksAvstand`, `ferjeVentetid`, `tillat(lenke)` og `kategoriFaktor` (6 tall ≥ 1 for ERFKPS som gjør mindre veger
+«dyrere» i rutevalget; reisetiden som returneres er fortsatt den ekte). Kjøretøyene i S2 bruker dette (spill/kjoretoy.js).
 `rute` gir `{noder, lenker, meter, sekunder, besokt}`. Sekunder er **reisetid i spillverdenen**; S2 omregner til
 simuleringsklokken (1 spilltime = 60 reelle sekunder ved 1×). `lenke(id)` gir NVDB-sekvens og posisjoner,
 kategori, vegnummer, målt fartsgrense (null når ukjent), lengde og ferjeflagg. `linje(id)` dekoder bare den

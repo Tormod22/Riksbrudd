@@ -148,6 +148,9 @@
       if (!heltall(a, N) || !heltall(b, N)) throw new RangeError('Ukjent start- eller sluttnode');
       const vent = valg.ferjeVentetid === undefined ? 900 : valg.ferjeVentetid;
       if (!Number.isFinite(vent) || vent < 0) throw new RangeError('Ugyldig ferjeventetid');
+      // Kategorifaktor (≥ 1 per kategori i ERFKPS): gjør mindre veger «dyrere», f.eks. for lastebiler som holder seg på hovedvegen.
+      const kf = valg.kategoriFaktor;
+      if (kf !== undefined && !(Array.isArray(kf) && kf.length === KATEGORIER.length && kf.every(v => Number.isFinite(v) && v >= 1))) throw new RangeError('Ugyldig kategorifaktor');
       const dist = new Float64Array(N).fill(Infinity), forrige = new Int32Array(N).fill(-1), via = new Int32Array(N).fill(-1);
       const heap = new Haug(); let besokt = 0;
       const h = n => maksMS ? Math.hypot(x[n] - x[b], y[n] - y[b]) / maksMS : 0;
@@ -160,14 +163,16 @@
           const noder = [b], lenker = []; let v = b, meter = 0;
           while (v !== a) { const e = via[v]; lenker.push(e); meter += lengde[e]; v = forrige[v]; noder.push(v); }
           noder.reverse(); lenker.reverse();
-          return { noder, lenker, meter, sekunder: dist[b], besokt };
+          let sekunder = dist[b];
+          if (kf) { sekunder = 0; for (let i = 0; i < lenker.length; i++) { const e = lenker[i]; sekunder += tid[e] + ((flagg[e] & 4) && land[noder[i]] ? vent : 0); } }
+          return { noder, lenker, meter, sekunder, besokt };
         }
         for (let k = antall[n]; k < antall[n + 1]; k++) {
           const e = kant[k], v = nabo[k];
           if (sperret[e]) continue;
           if (valg.tillat && !valg.tillat(lenke(e))) continue;
           // Vent én gang ved avgang fra land, ikke på hvert NVDB-segment ute på fjorden.
-          const g = q.g + tid[e] + ((flagg[e] & 4) && land[n] ? vent : 0);
+          const g = q.g + tid[e] * (kf ? kf[R.kat[e]] : 1) + ((flagg[e] & 4) && land[n] ? vent : 0);
           if (g >= dist[v]) continue;
           dist[v] = g; forrige[v] = n; via[v] = e; heap.legg(v, g, g + h(v));
         }

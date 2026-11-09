@@ -16,6 +16,12 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
   for (const f of ['manifest.json', 'infra.json']) if (!fs.existsSync(path.join(dir, f))) { fs.mkdirSync(dir, { recursive: true });
     require('child_process').execFileSync('curl', ['-fsSL', '-o', path.join(dir, f), `https://github.com/Tormod22/Riksbrudd/releases/download/${m[1]}/${f}`]); }
   return { tag: m[1], dir }; })();
+// Vegnettet (S1/S2): VEGNETT_TAG i spill/kjoretoy-visning.js, hentes én gang til en lokal mappe (eller VEGNETT_DIR).
+const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/kjoretoy-visning.js'), 'utf8').match(/const VEGNETT_TAG = '([^']*)';/);
+  if (!m) return null; const dir = process.env.VEGNETT_DIR || path.join(require('os').tmpdir(), m[1]);
+  for (const f of ['manifest.json', 'vegnett.bin.gz']) if (!fs.existsSync(path.join(dir, f))) { fs.mkdirSync(dir, { recursive: true });
+    require('child_process').execFileSync('curl', ['-fsSL', '-o', path.join(dir, f), `https://github.com/Tormod22/Riksbrudd/releases/download/${m[1]}/${f}`]); }
+  return { tag: m[1], dir }; })();
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
   { // versjonsmerket på terreng.js må stemme med innholdet (ellers kan nettleseren bruke en gammel kopi)
@@ -37,6 +43,10 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
     if (INFRA) await kt.route(new RegExp('/api/kart/' + INFRA.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
       const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/), b = fs.readFileSync(path.join(INFRA.dir, fil));
       r.fulfill({ status: 200, contentType: fil.endsWith('.json') ? 'application/json' : 'application/octet-stream', body: b.subarray(+fra, +fra + +len) }); });
+    if (VEGNETT) await kt.route(new RegExp('/api/kart/' + VEGNETT.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
+      const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/);
+      if (!fs.existsSync(path.join(VEGNETT.dir, fil))) return r.fulfill({ status: 404, body: '' });
+      r.fulfill({ status: 200, body: fs.readFileSync(path.join(VEGNETT.dir, fil)).subarray(+fra, +fra + +len) }); });
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
@@ -74,8 +84,9 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
       await pg.waitForFunction(() => INFRA, null, { timeout: 30000 }); await pg.evaluate(() => { window.kamFør = { ...kam }; });
       const n = await pg.evaluate(() => Object.fromEntries(Object.entries(INFRA).map(([k, v]) => [k, v.length])));
       const dom = await pg.evaluate(() => { const t = INFRA.tettsted.find(o => o.e.navn === 'Dombås'); if (!t) return null;
+        if (window.KJORETOY) for (const k of KJORETOY) k.x += 1e5;   // kolonnen står i Dombås og ville tatt trykket (kjøretøy går foran kartobjekter)
         kam.x = (t.bb[0] + t.bb[2]) / 2; kam.y = (t.bb[1] + t.bb[3]) / 2; kam.m = 20; skitten = true; tegn(); trykkPå(VW / 2, VH / 2);
-        return { folk: t.e.folk, panel: document.getElementById('pnavn').textContent }; });
+        const svar = { folk: t.e.folk, panel: document.getElementById('pnavn').textContent }; if (window.KJORETOY) for (const k of KJORETOY) k.x -= 1e5; return svar; });
       const bru = await pg.evaluate(() => { const b = INFRA.bru.filter(o => o.deler[0].length >= 4).sort((a, c) => (c.e.lengde || 0) - (a.e.lengde || 0))[0]; const a = b.deler[0];
         kam.x = (a[0] + a[2]) / 2; kam.y = (a[1] + a[3]) / 2; kam.m = 2; skitten = true; tegn(); trykkPå(VW / 2, VH / 2); return [b.e.navn, b.e.lengde, document.getElementById('pnavn').textContent]; });
       const iok = n.bru > 20 && n.kraft > 0 && n.dam > 0 &&   // Dovre-utsnittet har ingen vegtunneler
@@ -91,6 +102,25 @@ const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../sit
       const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
       console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);
       await pg.evaluate(() => { valgt = null; visPanel(); Object.assign(kam, window.kamFør); skitten = true; });   // tilbake til Snøhetta for 3D-testen
+    }
+    if (VEGNETT) { // S2: kolonnen velges med et trykk, får ordre «Kjør til» Otta, følger E6 og er framme i riktig tid
+      const før = await pg.evaluate(() => ({ ...kam }));
+      await pg.evaluate(() => { tempo = 0; const k = KJORETOY[0]; kam.x = k.x; kam.y = k.y; kam.m = 1.2; skitten = true; tegn(); });
+      const [sx, sy] = await pg.evaluate(() => { const k = KJORETOY[0]; return [(k.x - kam.x) / kam.m + VW / 2, -(k.y - kam.y) / kam.m + VH / 2]; });
+      await pg.mouse.click(sx, sy);
+      const valgtNavn = await pg.evaluate(() => document.getElementById('pnavn').textContent);
+      await pg.click('#handl button');
+      await pg.evaluate(() => { kam.x = 212021; kam.y = 6860888 + 120 * 30; kam.m = 30; skitten = true; tegn(); });
+      const [ox, oy] = await pg.evaluate(() => [(212021 - kam.x) / kam.m + VW / 2, -(6860888 - kam.y) / kam.m + VH / 2]);
+      await pg.mouse.click(ox, oy);
+      await pg.waitForFunction(() => KJORETOY[0].sti, null, { timeout: 120000 });
+      const k2 = await pg.evaluate(() => { const k = KJORETOY[0], s = Kjoretoy.status(k); let e6 = 0, alt = 0;
+        for (const e of Kjoretoy.lenkerIgjen(k)) { const l = VEGNETT.lenke(e); alt += l.lengde; if (l.vegkategori === 'E' && l.vegnummer === 6) e6 += l.lengde; }
+        let n = 0; while (k.sti && n < 2000) { sim(.1); n++; }
+        return { plan: s.sekunder, e6: e6 / alt, km: alt / 1000, framme: k.framme, kjørt: n * 6, nær: Math.hypot(k.x - 212021, k.y - 6860888) }; });
+      const kok = valgtNavn === '1. lastebilkolonne' && k2.framme && k2.e6 > .9 && Math.abs(k2.kjørt - k2.plan) <= 7 && k2.nær < 300; if (!kok) feil++;
+      console.log(`${kok ? 'ok  ' : 'FEIL'} ${navn} kjøretøy: «${valgtNavn}» Dombås–Otta ${k2.km.toFixed(1)} km, ${(100 * k2.e6).toFixed(0)} % på E6, plan ${(k2.plan / 60).toFixed(0)} min, framme etter ${(k2.kjørt / 60).toFixed(0)} spillminutter`);
+      await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
     }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });

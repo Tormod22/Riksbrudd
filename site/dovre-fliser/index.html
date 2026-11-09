@@ -104,7 +104,7 @@ const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versj
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
-const KROKER = { tegn: [], sim: [], trykk: [] };
+const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [] };   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -348,7 +348,7 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
   const VK = vektRutenett(minx, maxy, span(z)), hel = VK.every(v => v >= 1);   // hvor mye av Norge-kartet som skal med (1 = bare det)
   const [ok, oh] = NORGE_BLOKKER && !hel ? await Promise.all([beste('okart', z, x, y, 8, 0), beste('ohoyde', z, x, y, 8, 0)]) : [null, null];
-  g.fillStyle = HAV_CSS; g.fillRect(0, 0, T, T);
+  g.fillStyle = NORGE_BLOKKER ? HAV_CSS : '#1a1710'; g.fillRect(0, 0, T, T);   // uten omland (Dovre-piloten): mørkt der data mangler
   let od = null, vann = null;   // omlandets farge under Norge-kartet; hvor mye av hvert punkt som er vann
   if (ok) { const sw = T / ok.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T);
     od = g.getImageData(0, 0, T, T).data; if (!k) { g.fillStyle = HAV_CSS; g.fillRect(0, 0, T, T); g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T); } }
@@ -374,8 +374,8 @@ async function komponer(z, x, y, valg = VIS) {   // valg: hvilke kartlag (3D lag
         if (!k || r + gg + b < 75 && b - r < 8) w = 0;   // Norge-kartet mangler her (utenfor blokkene eller uten satellittdata)
         const L = Math.abs(od[o] - 22) + Math.abs(od[o + 1] - 30) + Math.abs(od[o + 2] - 38) < 16 ? 1 : OMLAND_LYS;   // vann dempes ikke
         r = r * w + od[o] * L * (1 - w); gg = gg * w + od[o + 1] * L * (1 - w); b = b * w + od[o + 2] * L * (1 - w); }
-      else if (r + gg + b < 75 && b - r < 8) { r = HAV[0]; gg = HAV[1]; b = HAV[2]; }   // ingen data og intet omland: hav
-      const v = Math.max(0, Math.min(1, (40 - Math.abs(r - 22) - Math.abs(gg - 30) - Math.abs(b - 38)) / 24));   // vannfargen i kartflisene
+      else if (NORGE_BLOKKER && r + gg + b < 75 && b - r < 8) { r = HAV[0]; gg = HAV[1]; b = HAV[2]; }   // ingen data og intet omland på /norge: hav
+      const v = b - r < 6 ? 0 : Math.max(0, Math.min(1, (40 - Math.abs(r - 22) - Math.abs(gg - 30) - Math.abs(b - 38)) / 24));   // vannfargen i kartflisene (blåere enn rød; ikke den mørke bakgrunnen)
       d[o] = r + (HAV[0] - r) * v; d[o + 1] = gg + (HAV[1] - gg) * v; d[o + 2] = b + (HAV[2] - b) * v; vann[py * T + px] = v;
     }
     g.putImageData(im, 0, 0);
@@ -546,7 +546,7 @@ function kø(z, x, y, k) {
 function tegn() {
   if (!skitten) return; skitten = false;
   const z = niva(), s = span(z), px = s / kam.m;   // skjermflis i CSS-px
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = HAV_CSS; ctx.fillRect(0, 0, VW, VH);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = NORGE_BLOKKER ? HAV_CSS : '#1a1710'; ctx.fillRect(0, 0, VW, VH);   // Dovre-piloten: mørkt utenfor området (ikke hav)
   const vx0 = kam.x - VW / 2 * kam.m, vy1 = kam.y + VH / 2 * kam.m;
   const x0 = Math.floor((vx0 - G.x0) / s), x1 = Math.floor((vx0 + VW * kam.m - G.x0) / s);
   const y0 = Math.floor((G.y0 - vy1) / s), y1 = Math.floor((G.y0 - (vy1 - VH * kam.m)) / s);
@@ -1274,6 +1274,7 @@ function tegn3d() {
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   tegnInfra3d(g);
+  for (const f of KROKER.tegn3d) f(g, proj3, mPer3);
   tegnLag(g, proj3, mPer3);
   tegnHud();
 }
@@ -1385,5 +1386,8 @@ let sist = performance.now(), rest = 0;
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=6718b7846b"></script>
+<script src="/dovre-fliser/spill/vegnett.js?v=aa2cdf7aa8"></script>
+<script src="/dovre-fliser/spill/kjoretoy.js?v=7b80900f10"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=3d01d412a4"></script>
 </body>
 </html>

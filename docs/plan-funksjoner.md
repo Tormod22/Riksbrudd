@@ -66,6 +66,13 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 - Typer: lastebil, speiderbil (senere stridsvogn). Fart etter vegkategori og terreng, kolonner, synlige på kartet med retning
   (symbol når man zoomer ut), trykk gir panel. Tegnes med `KROKER.tegn`, beveges med `KROKER.sim`.
 - Ferdig når: en lastebil kan sendes fra Dombås til Otta og kjører langs E6 i riktig tempo, også med ferje (prøv Molde–Vestnes).
+- **FERDIG 9. nov:** `spill/kjoretoy.js` (regler uten DOM: typer, fart = min(toppfart, fartsgrense), ferje 25 km/t + 15 min
+  venting fra land, kolonne med avstand, stopp, status) og `spill/kjoretoy-visning.js` (KROKER: tegn, sim, trykk, tegn3d; panel
+  med «Kjør til …»/«Stopp»). Lastebiler foretrekker hovedveg (`kategoriFaktor` i rutesøket). Vegnettet lastes først ved første
+  ordre (25 MB gzip i biter à 4 MB via /api/kart, pakkes ut med DecompressionStream; ellers rå 43 MB).
+  Dombås–Otta 46,6 km, 99 % på E6, 37 min; Molde–Vestnes 16,3 km med ferje, 47 min. Test: `node pipeline/fliser/test_kjoretoy.js
+  [vegnett.bin]` og sjekk.js («kjøretøy»). Ikke gjort: terrengets innvirkning på fart (stigning), kjøring utenfor veg,
+  fiendtlige kjøretøy, flere kolonner kan lages i spillet, kjøretøy kan ikke trykkes på i 3D (bare vises).
 
 ### S3 Olje-økonomi (fase C)
 - Olje er eneste penger. Kilder: terminalene og raffineriene i `INFRA.olje` (type 3: Mongstad, Kårstø, Sture, Kollsnes …),

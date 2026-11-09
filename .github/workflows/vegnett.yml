@@ -6,6 +6,8 @@ on:
     paths:
       - 'site/dovre-fliser/spill/vegnett.js'
       - 'pipeline/fliser/*vegnett*'
+      - 'pipeline/fliser/test_kjoretoy.js'
+      - 'site/dovre-fliser/spill/kjoretoy*.js'
       - '.github/workflows/vegnett.yml'
   workflow_dispatch:
 permissions:
@@ -36,7 +38,9 @@ jobs:
         run: |
           python3 pipeline/fliser/test_vegnett.py
           node pipeline/fliser/test_vegnett.js
-  bygg:
+          node pipeline/fliser/test_kjoretoy.js
+  bygg:   # nasjonal bygging (~70 min mot NVDB): bare manuelt eller med «[bygg vegnett]» i commit-meldingen
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[bygg vegnett]')
     needs: tester
     runs-on: ubuntu-24.04
     timeout-minutes: 180

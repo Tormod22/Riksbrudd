@@ -4,7 +4,7 @@
 // Byteområdet ligger i adressen, ikke i en Range-header, så hver bit kan lagres for seg i hurtigbufferen.
 // Hvorfor: ingen nøkler trengs (Actions laster opp med GITHUB_TOKEN), og GitHub-filene kan være opptil 2 GB.
 const REPO = 'Tormod22/Riksbrudd';
-const FIL = /^[a-z0-9-]{1,40}\.(pmtiles|json)$/;   // f.eks. hoyde.pmtiles, hoyde-0.pmtiles, manifest.json
+const FIL = /^[a-z0-9-]{1,40}\.(pmtiles|json|bin|bin\.gz)$/;   // f.eks. hoyde.pmtiles, hoyde-0.pmtiles, manifest.json, vegnett.bin.gz
 const MAKS = 4 * 1024 * 1024;   // Vercel-funksjoner kan svare med maks 4,5 MB
 
 module.exports = async function handler(req, res) {
@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Expose-Headers', 'ETag, Content-Length');
   if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET'); return res.status(204).end(); }
   const { tag, fil } = req.query, fra = Number(req.query.fra), lengde = Number(req.query.lengde);
-  if (!/^kart-(norge-(\d{4}-)?|hus-|omland-|utveg-|infra-(\d{4}-)?)?[0-9a-f]{6,40}$/.test(tag || '') || !FIL.test(fil || '') || !Number.isInteger(fra) || fra < 0 || !Number.isInteger(lengde) || lengde < 1 || lengde > MAKS)
+  if (!/^kart-(norge-(\d{4}-)?|hus-|omland-|utveg-|vegnett-|infra-(\d{4}-)?)?[0-9a-f]{6,40}$/.test(tag || '') || !FIL.test(fil || '') || !Number.isInteger(fra) || fra < 0 || !Number.isInteger(lengde) || lengde < 1 || lengde > MAKS)
     return res.status(400).json({ feil: 'ugyldig forespørsel' });
   const url = `https://github.com/${REPO}/releases/download/${tag}/${fil}`;
   let r;
