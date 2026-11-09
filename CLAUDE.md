@@ -184,4 +184,17 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (spill/anlegg3d.js). Trykk på bygget viser kjedens navn.
   RASKERE ARBEID (11. nov, brukeren: «oppdateringer tar lang tid»): sjekk.js kjører PC, mobil og eldre iPhone samtidig (~1,5 min);
   SJEKK_PROFIL=PC kjører én profil.
+  TAK OG RUNDE BYGG (11. nov, brukeren: for mange flate tak, låver, kirker 90 % fall, «ikke alle hus er perfekte firkanter», runde bygg =
+  tank nær industri / fyr nær havet, aldri to fyr nær hverandre): harFall(t, areal, h, i, tett) i kartflis.js (tett = naboer innen
+  100 m; fast per bygg via hash), takDeler(P, f): vinkelrette omriss -> rektangler med hvert sitt saltak (kryssark), ellers valmtak mot
+  mønet bare når omrisset er nesten konvekst (≥ 0,88 av skallet, ≤ 16 hjørner), ellers null = flatt. rund(P, f): 4πA/O² > 0,85.
+  3D (hus3d): tank (lyst blikk, lav kjegle), fyr (hvitt med rødt bånd, lykt med rød hette; hav = terreng < 2 moh. innen 80 m; 1,5 km
+  mellom fyr). 2D (husomriss) bruker de samme reglene.
+  FLYPLASSER (11. nov, brukeren: «landingsstriper må se penere ut»): byggjobben gir anlegg a 7 rullebane (linje + bredde -> flate,
+  r = banenummer «01/19»), 8 taksebane, 9 oppstillingsplass. rullebane() i kartflis.js: kantlinjer, midtlinje 30+20 m, terskelstriper,
+  banenummer lest av den som lander, landingssone og siktepunkt. 3D får det gjennom kartet i bakken.
+  YTELSE 3D (11. nov, brukeren: «kjappere, ikke hakkete»): målt 1,9 mill. trekanter (trærne 1,4). Nå detaljnivå på trærne
+  (lodTrær: nær 260 m PC / 170 m mobil med alle greinene, ellers granEnkel/løvEnkel), ca. 1,1 mill.; hus3d og trær3d gir
+  nettleseren pusterom (pusterom()) under byggingen. Skjermbilder: scratchpad bilde3d.js (kartflisene på siden – forespørsler fra
+  bakgrunnstråden henger i Playwright når siden har ruter; første 3D-utsnitt = ønsket utsnitt; byggdata hurtiglagres på disk).
 

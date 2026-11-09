@@ -927,13 +927,17 @@ function vannmaske(px, TW) {
 }
 // Trær i 3D: gran (mørk, smal) og løvtre/furu (lysere, bredere) i skogrutene (terrengklasse skog, 32 m), 1–4 per rute med fast
 // tilfeldighet, ikke der kartet under er veg, hus eller vann. Mindre og glissent mot tregrensen. Høyde i meter (ikke overdrevet).
+// Gi nettleseren pusterom under tunge byggejobber, så kartet og 3D fortsetter å tegne (ikke hakking når et nytt utsnitt bygges)
+const pusterom = () => new Promise(r => setTimeout(r, 0));
 async function trær3d(u, px, b) {
   const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
   const skog = []; for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) if (kv.K[j * kv.w + i] === 1) {
     const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) < u.S && Math.abs(Y - u.cy) < u.S) skog.push([X, Y, i * 7919 + j * 104729]); }
   const MAKS = VW < 700 ? 18000 : 40000, per = Math.max(1, Math.min(4, Math.floor(MAKS / Math.max(1, skog.length))));
   const gran = [], løv = [], hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
+  let arb = 0;
   for (const [X, Y, frø] of skog) for (let k = 0; k < per; k++) {
+    if ((++arb & 4095) === 0) await pusterom();
     const a = hash(frø * 4 + k), c = hash(frø * 4 + k + 1e6), d = hash(frø * 4 + k + 2e6), x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r;
     const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
     if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
@@ -986,7 +990,9 @@ async function hus3d(u) {
   for (const [x, y, t] of flisene) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) {
-      if (sett.has(o.e.i) || sett.size > 30000) continue;   // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil
+      // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil; pusterom for nettleseren hvert 256. bygg
+      if (sett.has(o.e.i) || sett.size > 30000) continue;
+      if ((sett.size & 255) === 255) await pusterom();
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
       let P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);
@@ -1363,6 +1369,11 @@ function treGeo(type) {
       legg(g, (px, py, pz) => { const t = Math.max(0, Math.min(1, (pz - z + r) / (2 * r))), n = .5 + .5 * Math.sin(px * 41 + py * 29 + pz * 17); return [.17 + .14 * t + .03 * n, .27 + .14 * t + .03 * n, .09 + .05 * t]; });
     }
   }
+  // enkle trær for det som er langt unna (detaljnivå): gran som én kjegle, bjørk som én klump på en stamme
+  if (type === 'granEnkel') { const g = new THREE.ConeGeometry(.72, .96, 6, 1, true); g.translate(0, .5, 0); g.rotateX(Math.PI / 2);
+    legg(g, (x, y, z) => { const t = Math.max(0, Math.min(1, z)); return [.08 + .04 * t, .17 + .07 * t, .09 + .02 * t]; }); }
+  if (type === 'løvEnkel') { stamme(.05, .03, .5, [.78, .76, .7]); const g = new THREE.IcosahedronGeometry(.42, 0); g.scale(1, .95, 1); g.translate(0, .7, 0); g.rotateX(Math.PI / 2);
+    legg(g, (x, y, z) => { const t = Math.max(0, Math.min(1, (z - .3) / .8)); return [.2 + .12 * t, .3 + .12 * t, .1 + .04 * t]; }); }
   if (type === 'stein') {   // kantet blokk: tolvflate med forskjøvne hjørner, grå med lav (grønngrå) oppe
     const g = new THREE.DodecahedronGeometry(1, 0), p = g.attributes.position, flytt = new Map();
     for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 2.39; flytt.set(nøkkel, [1 + .28 * Math.sin(h * 3.1), 1 + .28 * Math.cos(h * 1.7), .55 + .2 * Math.sin(h * 2.3)]); }
@@ -1574,10 +1585,21 @@ function sett3d(u) {
   detaljIBakken(mat, 2 * u.S); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   for (const t of [...(R.treMesh || []), ...(R.småMesh || [])]) { R.scene.remove(t); t.material.dispose(); } R.treMesh = []; R.småMesh = [];   // geometrien (TREGEO) brukes om igjen
   const grupper = [];
-  if (u.trær) grupper.push([u.trær.gran, .3, treGeo('gran')], [u.trær.løv, .5, treGeo('løv')]);
+  if (u.trær) grupper.push([u.trær.gran, .3, treGeo('gran'), treGeo('granEnkel')], [u.trær.løv, .5, treGeo('løv'), treGeo('løvEnkel')]);
   if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.6, treGeo('busk')]);
-  for (const [data, smal, geo] of grupper) {
+  R.treLOD = []; R.lodVed = null;
+  for (const [data, smal, geo, enkel] of grupper) {
     const n = data.length / 5; if (!n) continue;
+    if (enkel) {
+      // detaljnivå: trærne nær kameraet med alle greinene, resten som enkle former (trærne var 1,4 av 1,9 mill. trekanter, 11. nov).
+      // Matrisene og fargene regnes én gang; lodTrær() fordeler dem på de to nettene når kameraet har flyttet seg.
+      const M = new Float32Array(n * 16), C = new Float32Array(n * 3), d = new THREE.Object3D(), c = new THREE.Color();
+      for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - .3); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
+        d.matrix.toArray(M, k * 16); const f = .82 + v * .36; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
+      const lag = g => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.count = 0; m.frustumCulled = false; R.scene.add(m); R.treMesh.push(m); return m; };
+      R.treLOD.push({ n, M, C, data, nær: lag(geo), fjern: lag(enkel) });
+      continue;
+    }
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), d = new THREE.Object3D(), c = new THREE.Color();
     for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (smal === 1 ? h * .25 : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();   // steiner står litt nedsunket
       mesh.setMatrixAt(k, d.matrix); const f = .82 + v * .36; c.setRGB(f * (.96 + v * .08), f, f * (1.04 - v * .08)); mesh.setColorAt(k, c); }   // lys og fargetone varierer litt fra tre til tre
@@ -1638,13 +1660,25 @@ async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) return; R3.bygger = true;
   try { const u = await bygg3d(cx, cy, S); if (på3d) sett3d(u); } catch (e) { console.error(e); visFeil(e); } finally { R3.bygger = false; }
 }
+// Fordeler trærne på det detaljerte og det enkle nettet etter avstanden til kameraet (når kameraet har flyttet seg 15 m).
+function lodTrær(R) {
+  if (!R.treLOD || !R.treLOD.length) return; const c = R.cam.position;
+  if (R.lodVed && Math.hypot(c.x - R.lodVed[0], c.y - R.lodVed[1], c.z - R.lodVed[2]) < 15) return; R.lodVed = [c.x, c.y, c.z];
+  const G2 = (VW < 700 ? 170 : 260) ** 2;
+  for (const t of R.treLOD) { let a = 0, b = 0; const NM = t.nær.instanceMatrix.array, FM = t.fjern.instanceMatrix.array, NC = t.nær.instanceColor.array, FC = t.fjern.instanceColor.array;
+    for (let k = 0; k < t.n; k++) { const dx = t.data[k * 5] - c.x, dy = t.data[k * 5 + 1] - c.y, dz = t.data[k * 5 + 2] - c.z;
+      if (dx * dx + dy * dy + dz * dz < G2) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; }
+      else { FM.set(t.M.subarray(k * 16, k * 16 + 16), b * 16); FC.set(t.C.subarray(k * 3, k * 3 + 3), b * 3); b++; } }
+    t.nær.count = a; t.fjern.count = b;
+    for (const m of [t.nær, t.fjern]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
+}
 function tegn3d() {
   const R = R3; if (!R || !R.ut) return;
   const b = R.bane, u = R.ut, S = utsnittS(b.avst);
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015; R.renderer.render(R.scene, R.cam);   // skyene driver sakte
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015; R.renderer.render(R.scene, R.cam);   // skyene driver sakte
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   tegnInfra3d(g);
@@ -1787,6 +1821,6 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=edb24ec341"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=b101ca6835"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>
 </body>
 </html>

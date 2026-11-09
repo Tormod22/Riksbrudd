@@ -61,7 +61,7 @@
   }
   KROKER.sett3d.push((u, R) => {
     VAER_U.uH0.value = u.h0;
-    for (const m of R.treMesh || []) if (m.geometry === TREGEO.gran || m.geometry === TREGEO['løv']) treVær(m, m.geometry === TREGEO['løv']);
+    for (const m of R.treMesh || []) if ([TREGEO.gran, TREGEO['løv'], TREGEO.granEnkel, TREGEO['løvEnkel']].includes(m.geometry)) treVær(m, m.geometry === TREGEO['løv'] || m.geometry === TREGEO['løvEnkel']);
   });
 
   function lagFall(R) {
