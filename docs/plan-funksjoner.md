@@ -120,6 +120,14 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   120 m; fiender som går eller kjører gjennom, løser ut en mine med 30 % sjanse per minutt (lag: 1–3 treff, kjøretøy: skade).
   Kartet: skyttergrav under nedgravde lag, egne minefelt som stiplet sirkel. Tester: `node pipeline/fliser/test_feltarbeid.js`
   og sjekk.js («feltarbeid»).
+- **Del 3 (9. nov natt): dam og flom.** `spill/flom.js` + `spill/flom-visning.js`. Ingeniørene kan sprenge en dam (2 t;
+  reparasjon 24 t, men flommen er gått). Flomveien: fra det laveste punktet ved damfoten, alltid til den laveste ubesøkte cellen
+  innen 64 m (over små søkk) i opptil 15 km i høydemodellen (32 m-ruter); flomfeltet er sammenhengende lavland innen 600 m fra
+  flomveien som ligger lavere enn vannflaten (15 m over dalbunnen ved dammen, 3 m nederst). Lag i feltet: 2–5 treff og stopper;
+  kjøretøy: 8 treff skade; veglenker med et endepunkt under vann stenges i 12 spilltimer (kjøretøy kjører om). Blått vann på
+  kartet (sist 2 t synker det). Kroken `KROKER.ødelagt` kalles når ingeniørene er ferdige. Tester: `node pipeline/fliser/test_flom.js`
+  (kunstig dal med søkk, magasin og en dal bak en rygg) og sjekk.js («dam og flom»). Ikke gjort: vannet i 3D-overflaten,
+  marsjruter som unngår vannet, magasinets volum (alle dammer gir samme flom). Ved kanten av Dovre-området stopper flommen.
 
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),

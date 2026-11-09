@@ -34,7 +34,8 @@ const bru = { lag: 'bru', e: { id: 12345, navn: 'Testbrua' } }, tunnel = { lag: 
   // ferjekai: sperrer ferjesambandet som visningen oppgir
   T.set('ferjekai:99', { tilstand: 'sprengt' }); O.oppdaterVegnett(T, g, id => id === 99 ? [34567] : []);
   assert(K.planlegg(K.ny({ navn: 'K', x: 2000, y: 0 }), g, [4000, 0]).feil, 'Sperret ferjekai: ingen ferje');
-  assert(O.nyttArbeid(T, { lag: 'dam', e: { id: 1 } }, 'ødelegg').feil, 'Dammer ikke ennå');
+  assert(O.nyttArbeid(T, { lag: 'magasin', e: { id: 1 } }, 'ødelegg').feil, 'Magasin kan ikke sprenges');
+  assert(!O.nyttArbeid(T, { lag: 'dam', e: { id: 1 } }, 'ødelegg').feil, 'Dam kan sprenges (S5 del 3)');
   // kraftverk (S7): kan saboteres og repareres, sperrer ingen veg
   const kraft = { lag: 'kraft', e: { id: 777, navn: 'Testverket' } }, { arbeid: k } = O.nyttArbeid(T, kraft, 'ødelegg');
   assert.equal(O.arbeid(T, k, R.tid.kraft[0], 10), 'ferdig'); assert.equal(O.tilstand(T, 'kraft', 777), 'sprengt'); assert.equal(O.tekst('kraft', 'sprengt'), 'sabotert');

@@ -3,7 +3,7 @@
 // Et sprengt/sperret objekt sperres i vegnettet; kjøretøy som er underveis over det, kjører om eller stopper.
 // Kroker: KROKER.lagKnapper (knapper i lagpanelet), KROKER.info (knapper i infrastrukturpanelet), trykk, sim, tegn, tegn3d, lagTekst.
 (function () {
-  const O = Odeleggelse, R = O.REGLER, T = O.ny(), ARB = new Map(), RØYK = new Map(), TYPER = ['bru', 'tunnel', 'ferjekai', 'kraft'];
+  const O = Odeleggelse, R = O.REGLER, T = O.ny(), ARB = new Map(), RØYK = new Map(), TYPER = ['bru', 'tunnel', 'ferjekai', 'kraft', 'dam'];
   let velg = null;   // { s, hva } mens spilleren velger objekt på kartet
   window.INFRA_TILSTAND = T; window.INGENIØRARBEID = ARB;
   window.S5 = { start: (...a) => start(...a), endring: (...a) => endring(...a), ferjeFor: id => ferjeFor(id) };   // for sjekk.js
@@ -84,9 +84,10 @@
       if (res === 'ferdig') {
         ARB.delete(s);
         if (w.a.hva === 'ødelegg') { RØYK.set(O.nøkkel(w.a.lag, w.a.id), tid);
-          logg(`${navnPå(w.o)} er ${O.tekst(w.a.lag, 'sprengt')}. ${w.a.lag === 'kraft' ? 'Tettstedene rundt mister strømmen til det er reparert.' : 'Vegen er brutt til den blir reparert.'}`); }
+          logg(`${navnPå(w.o)} er ${O.tekst(w.a.lag, 'sprengt')}. ${w.a.lag === 'kraft' ? 'Tettstedene rundt mister strømmen til det er reparert.' : w.a.lag === 'dam' ? 'Vannet strømmer ut i dalen nedenfor!' : 'Vegen er brutt til den blir reparert.'}`); }
         else { RØYK.delete(O.nøkkel(w.a.lag, w.a.id)); logg(`${navnPå(w.o)} er reparert og åpen igjen.`); }
         endring();
+        for (const f of KROKER.ødelagt || []) f(w.o, w.a.hva);   // f.eks. flom fra en sprengt dam (flom-visning.js)
       }
     }
   });

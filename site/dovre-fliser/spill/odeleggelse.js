@@ -7,12 +7,12 @@
   'use strict';
   const REGLER = {
     tid: { // sekunder: [ødelegge, reparere]
-      bru: [1800, 6 * 3600], tunnel: [3600, 4 * 3600], ferjekai: [3600, 3 * 3600], kraft: [3600, 8 * 3600],   // kraft: tettstedene rundt mister strømmen (S7)
+      bru: [1800, 6 * 3600], tunnel: [3600, 4 * 3600], ferjekai: [3600, 3 * 3600], kraft: [3600, 8 * 3600], dam: [7200, 24 * 3600],   // kraft: tettstedene rundt mister strømmen (S7); dam: flom nedover dalen (flom.js)
     },
     radius: 150,   // meter: ingeniørene må være så nær objektet for å arbeide
     vegnettType: { bru: 60, tunnel: 67, ferje: 770 },
   };
-  const ord = { bru: ['sprengt', 'sprenge', 'sprengt'], tunnel: ['sperret', 'sperre', 'sperret'], ferjekai: ['sperret', 'sperre', 'sperret'], kraft: ['sabotert', 'sabotere', 'sabotert'] };
+  const ord = { bru: ['sprengt', 'sprenge', 'sprengt'], tunnel: ['sperret', 'sperre', 'sperret'], ferjekai: ['sperret', 'sperre', 'sperret'], kraft: ['sabotert', 'sabotere', 'sabotert'], dam: ['sprengt', 'sprenge', 'sprengt'] };
   const nøkkel = (lag, id) => lag + ':' + id;
   function ny() { return new Map(); }   // nøkkel -> { tilstand: 'sprengt'|'reparasjon', igjen? }
   const tilstand = (T, lag, id) => (T.get(nøkkel(lag, id)) || { tilstand: 'hel' }).tilstand;
@@ -20,7 +20,7 @@
   // Et arbeid for et ingeniørlag: { lag, id, navn, x, y, hva: 'ødelegg'|'reparer', igjen }. Gir { feil } når det ikke passer.
   function nyttArbeid(T, obj, hva) {
     const lag = obj.lag, id = obj.e.id, t = tilstand(T, lag, id);
-    if (!kanØdelegges(lag)) return { feil: 'Ingeniørene kan sprenge bruer, sperre tunneler og ferjekaier og sabotere kraftverk.' };
+    if (!kanØdelegges(lag)) return { feil: 'Ingeniørene kan sprenge bruer og dammer, sperre tunneler og ferjekaier og sabotere kraftverk.' };
     if (hva === 'ødelegg' && t !== 'hel') return { feil: `${obj.e.navn || 'Objektet'} er allerede ${ord[lag][0]}.` };
     if (hva === 'reparer' && t === 'hel') return { feil: `${obj.e.navn || 'Objektet'} er helt.` };
     return { arbeid: { lag, id, navn: obj.e.navn || null, hva, igjen: REGLER.tid[lag][hva === 'ødelegg' ? 0 : 1], total: REGLER.tid[lag][hva === 'ødelegg' ? 0 : 1] } };

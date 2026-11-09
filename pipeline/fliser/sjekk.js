@@ -276,6 +276,20 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { nedgravd, tekst, vern, felt, treff, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
         const faok = fa.nedgravd && /nedgravd/.test(fa.tekst) && fa.vern === .5 && fa.felt === 1 && fa.treff > 0; if (!faok) { feil++; console.log(JSON.stringify(fa)); }
         console.log(`${faok ? 'ok  ' : 'FEIL'} ${navn} feltarbeid: 2. lag nedgravd (${fa.tekst}), vern ×${fa.vern}; minefelt lagt: ${fa.felt}, patruljen gikk på en mine: ${fa.treff} treff`);
+        // S5 del 3: ingeniørene sprenger en dam -> flom nedover dalen, et lag i flomfeltet får tap, vannet trekker seg tilbake etter 12 t
+        const fl = await pg.evaluate(async () => { const dam = INFRA.dam.slice().sort((a, b) => (b.e.navn ? 1 : 0) - (a.e.navn ? 1 : 0))[0]; if (!dam) return null;
+          const s = ENHETER.find(s => s.ingeniør), a = dam.deler[0]; s.x = a[0] + 40; s.y = a[1] + 40; s.sti = null; s.menn.forEach(m => { m.hp = 1; });
+          S5.start(s, dam, 'ødelegg'); let n = 0; while (INGENIØRARBEID.size && n < 2000) { sim(.1); n++; }
+          for (let k = 0; k < 300 && !FLOMMER.length; k++) await new Promise(r => setTimeout(r, 100));
+          const felt = FLOMMER[0]; if (!felt) return { dam: dam.e.navn, timer: n * 6 / 3600, flom: false };
+          let p = null; for (let q = 0; q < felt.maske.length && !p; q++) if (felt.maske[q]) { const i = q % felt.w, j = (q - i) / felt.w; p = [felt.x0 + (i + .5) * felt.r, felt.y0 - (j + .5) * felt.r]; }
+          const f = ENHETER[3]; [f.x, f.y] = p; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); await FLOM.rammer(felt); const tap = f.menn.filter(m => m.hp < 1).length;
+          kam.x = felt.x0 + felt.w * felt.r / 2; kam.y = felt.y0 - felt.h * felt.r / 2; kam.m = 20; skitten = true; tegn();
+          const km = felt.km; for (let k = 0; k < 7400 && FLOMMER.length; k++) sim(.1); const borte = !FLOMMER.length;
+          f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false;
+          return { dam: dam.e.navn, timer: n * 6 / 3600, flom: true, km, tap, borte, tilstand: Odeleggelse.tilstand(INFRA_TILSTAND, 'dam', dam.e.id) }; });
+        const flok = fl && fl.flom && fl.km > 1 && fl.tap > 0 && fl.borte && fl.tilstand === 'sprengt'; if (!flok) { feil++; console.log(JSON.stringify(fl)); }
+        console.log(`${flok ? 'ok  ' : 'FEIL'} ${navn} dam og flom: «${fl && fl.dam}» sprengt etter ${fl && fl.timer.toFixed(1)} t, flommen går ${fl && fl.km} km, patruljen i flomfeltet: ${fl && fl.tap} ute, vannet borte etter 12 t: ${fl && fl.borte}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

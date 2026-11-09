@@ -104,7 +104,7 @@ const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versj
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
-const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [] };   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1093,15 +1093,17 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=7e1d361fa6"></script>
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
 <script src="/dovre-fliser/spill/forsyning-visning.js?v=ead7533791"></script>
-<script src="/dovre-fliser/spill/odeleggelse.js?v=36d88249a7"></script>
+<script src="/dovre-fliser/spill/odeleggelse.js?v=39a4a6c095"></script>
 <script src="/dovre-fliser/spill/enheter.js?v=7f0b842503"></script>
 <script src="/dovre-fliser/spill/enheter-visning.js?v=42546c64ff"></script>
-<script src="/dovre-fliser/spill/odeleggelse-visning.js?v=1526348bd9"></script>
+<script src="/dovre-fliser/spill/odeleggelse-visning.js?v=b3d66d9fb9"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=25c9069fdc"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=14c238cce9"></script>
 <script src="/dovre-fliser/spill/fraksjoner.js?v=ef5c6c8c82"></script>
 <script src="/dovre-fliser/spill/fraksjoner-visning.js?v=9af72978dc"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
+<script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
+<script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 </body>
 </html>
