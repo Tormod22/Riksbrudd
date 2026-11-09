@@ -62,7 +62,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto('http://localhost:8765/dovre-fliser/'); await pg.waitForTimeout(3000);
-    await pg.evaluate(() => { if (window.AI) AI.på = false; });   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
+    await pg.evaluate(() => { if (window.AI) AI.på = false; if (window.VaerSpill) { Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); } });   // klart vær i testene (sikten ellers tilfeldig)   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
       await pg.evaluate(([x, y, m]) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; peker = null; }, [x, y, m]);
       await pg.waitForFunction(() => VENTER.size === 0 && FERDIG.size > 0, null, { timeout: 20000 }); await pg.waitForTimeout(400);
@@ -324,6 +324,15 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
         await pg.click('#hjelp .lukk'); const hj2 = await pg.evaluate(() => document.getElementById('hjelp').classList.contains('på'));
         const hjok = !hj0 && hj.på && hj.deler >= 10 && !hj2; if (!hjok) feil++;
         console.log(`${hjok ? 'ok  ' : 'FEIL'} ${navn} hjelp: åpnes med ?, ${hj.deler} avsnitt, lukkes med ×`);
+        // vær og årstid (spill/vaer.js): tåke korter inn sikten til laget, vinter gir snø helt ned; tilbake til klart sommervær
+        const vr = await pg.evaluate(async () => { const s = ENHETER.find(e => e.side === 'blå' && levende(e)), r0 = s.siktR || null;
+          const vent = async () => { s.siktSkitten = true; await new Promise(r => setTimeout(r, 50)); for (let i = 0; i < 200 && (s.siktJobb || s.siktSkitten); i++) await new Promise(r => setTimeout(r, 50)); return s.sikt ? s.sikt.mw * s.sikt.mh : 0; };
+          const klar = await vent(); Vaer.låsVær(VaerSpill.S, 'tåke'); VaerSpill.oppdater(); const tåke = await vent();
+          Vaer.settÅrstid(VaerSpill.S, 'vinter', tid); VaerSpill.oppdater(); const vinter = { grense: VAER.snøgrense, tekst: document.getElementById('sVaer').textContent, u: VAER_U.uSnøGrense.value };
+          Vaer.settÅrstid(VaerSpill.S, 'sommer', tid); Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); await vent();
+          return { klar, tåke, vinter }; });
+        const vok = vr.tåke > 0 && vr.tåke < vr.klar * .5 && vr.vinter.grense < 0 && vr.vinter.u === vr.vinter.grense; if (!vok) { feil++; console.log(JSON.stringify(vr)); }
+        console.log(`${vok ? 'ok  ' : 'FEIL'} ${navn} vær: siktfeltet i tåke ${vr.tåke} ruter mot ${vr.klar} i klart vær; vinter: snø fra ${vr.vinter.grense} moh. («${vr.vinter.tekst}»)`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

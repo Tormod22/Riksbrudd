@@ -38,7 +38,9 @@ Kartet og 3D, vegnettet, kjøretøy og trafikk, forsyning, olje, ødeleggelse og
 | G5 | **AI-gjenger:** rivaler med egne leirer, næringer og angrep |
 | G6 | **Flerspiller:** server (spør brukeren om vert), gjenger mot hverandre |
 
+## Besluttet av brukeren (10. nov)
+- Penger: **kroner**. Olje blir en vare som selges for kroner; oppdrag og næringer betaler i kroner.
+- Oppdrag i utlandet: **ekte land** (oppdragene og oppdragsgiverne er oppdiktet, landene er ekte).
+
 ## Åpne spørsmål til brukeren
-1. Penger: én valuta (kroner) der olje er en vare som selges – eller olje som penger slik det er nå?
-2. Oppdrag i utlandet: oppdiktede land og regioner (forslag), eller generelle regioner uten navn?
 3. Hvor «ulovlig» skal gjengen kunne bli (for eksempel smugling), og skal politiet reagere?
