@@ -166,7 +166,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { meter: p.meter, id: bru.e.id, lenke, xy: [VW / 2, VH * .3] }; });
         if (!s5a) { feil++; console.log(`FEIL ${navn} ødeleggelse: fant ingen bru på ruten`); }
         else {
-          await pg.locator('#handl button', { hasText: 'Spreng' }).click();
+          await pg.locator('#handl button', { hasText: 'Spreng / sperr' }).click();
           await pg.mouse.click(s5a.xy[0], s5a.xy[1]);
           const s5b = await pg.evaluate(async () => { const bru = window._s5, s = ENHETER.find(s => s.ingeniør), mens = Odeleggelse.tilstand(INFRA_TILSTAND, 'bru', bru.e.id);
             const arbeid = INGENIØRARBEID.has(s); let n = 0; while (INGENIØRARBEID.size && n < 2000) { sim(.1); n++; }
@@ -290,6 +290,27 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { dam: dam.e.navn, timer: n * 6 / 3600, flom: true, km, tap, borte, tilstand: Odeleggelse.tilstand(INFRA_TILSTAND, 'dam', dam.e.id) }; });
         const flok = fl && fl.flom && fl.km > 1 && fl.tap > 0 && fl.borte && fl.tilstand === 'sprengt'; if (!flok) { feil++; console.log(JSON.stringify(fl)); }
         console.log(`${flok ? 'ok  ' : 'FEIL'} ${navn} dam og flom: «${fl && fl.dam}» sprengt etter ${fl && fl.timer.toFixed(1)} t, flommen går ${fl && fl.km} km, patruljen i flomfeltet: ${fl && fl.tap} ute, vannet borte etter 12 t: ${fl && fl.borte}`);
+        // vegkrater: «Spreng vegen her» midt på E6-ruten Dombås–Otta, kolonnen må kjøre om (eller får ingen veg); «Reparer …» + trykk på krateret
+        const kr = await pg.evaluate(() => { const k = KJORETOY.find(k => k.type === 'lastebil'); k.x = 193233; k.y = 6896398; k.sti = null; k.oppdrag = null;
+          const p = Kjoretoy.planlegg(k, VEGNETT, [212021, 6860888]), L = Kjoretoy.lenkerIgjen(k), e = L.find((e, i) => i > L.length / 3 && !VEGNETT.lenke(e).ferje && !VEGNETT.infraPåLenke(e).length);
+          Kjoretoy.stopp(k); const P = VEGNETT.linje(e), [X, Y] = P[Math.floor(P.length / 2)], s = ENHETER.find(s => s.ingeniør); s.x = X + 20; s.y = Y; s.sti = null; s.menn.forEach(m => { m.hp = 1; });
+          valgt = s; visPanel(); return { meter: p.meter, e, X, Y }; });
+        await pg.locator('#handl button', { hasText: 'Spreng vegen her' }).click();
+        await pg.waitForFunction(() => INGENIØRARBEID.size > 0, null, { timeout: 20000 });
+        const kr2 = await pg.evaluate(async () => { let n = 0; while (INGENIØRARBEID.size && n < 2000) { sim(.1); n++; } await new Promise(r => setTimeout(r, 50));
+          const k = KJORETOY.find(k => k.type === 'lastebil'); k.x = 193233; k.y = 6896398; const q = Kjoretoy.planlegg(k, VEGNETT, [212021, 6860888]); Kjoretoy.stopp(k);
+          const s = ENHETER.find(s => s.ingeniør); valgt = s; visPanel(); return { min: n * 6 / 60, sperret: VEGNETT._sperretAv.size, meter: q.feil ? null : q.meter, xy: null }; });
+        await pg.locator('#handl button', { hasText: 'Reparer' }).first().click();
+        const kxy = await pg.evaluate(({ X, Y }) => { kam.x = X; kam.m = 1; kam.y = Y - .2 * VH; skitten = true; tegn(); return [VW / 2, VH * .3]; }, kr);
+        await pg.mouse.click(kxy[0], kxy[1]);
+        const kr3 = await pg.evaluate(async e => { const før = INGENIØRARBEID.size; let n = 0; while (INGENIØRARBEID.size && n < 3000) { sim(.1); n++; } await new Promise(r => setTimeout(r, 50));
+          // verkstedet: en skadet lastebil i et eget tettsted blir reparert
+          const by = INFRA.tettsted.find(t => t.e.navn === 'Dombås'); TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null }); let p = null;
+          for (let j = 1; j < 20 && !p; j++) for (let i = 1; i < 20 && !p; i++) { const x = by.bb[0] + (by.bb[2] - by.bb[0]) * i / 20, y = by.bb[1] + (by.bb[3] - by.bb[1]) * j / 20; if (Garnison.inni(by, x, y)) p = [x, y]; }
+          const k = KJORETOY.find(k => k.type === 'lastebil'); [k.x, k.y] = p; k.sti = null; k.skade = .5; for (let i = 0; i < 3200; i++) sim(.1);
+          return { reparasjon: før, tilstand: Odeleggelse.tilstand(INFRA_TILSTAND, 'veg', e), timer: n * 6 / 3600, skade: k.skade }; }, kr.e);
+        const krok = kr2.sperret > 0 && (kr2.meter === null || kr2.meter > kr.meter) && kr3.reparasjon === 1 && kr3.tilstand === 'hel' && kr3.skade === 0; if (!krok) { feil++; console.log(JSON.stringify({ kr, kr2, kr3 })); }
+        console.log(`${krok ? 'ok  ' : 'FEIL'} ${navn} vegkrater og verksted: E6 sprengt etter ${kr2.min.toFixed(0)} min, ${kr2.meter === null ? 'ingen veg' : 'omkjøring ' + ((kr2.meter - kr.meter) / 1000).toFixed(1) + ' km'}, reparert etter ${kr3.timer.toFixed(1)} t; lastebil i Dombås reparert: ${kr3.skade === 0}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

@@ -30,6 +30,11 @@
       for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek, strøm, nyMann))
         if (s.side === 'blå') logg(hva === 'ny' ? `${m.navn} (${m.rolle}) er rekruttert i ${by.e.navn} og går inn i ${s.navn}.` : `${m.navn} (${s.navn}) er frisk igjen etter stell i ${by.e.navn}.`);
     }
+    // verkstedene i egne tettsteder reparerer kjøretøy: 10 % skade per spilltime (uten strøm 4 %)
+    for (const k of KJORETOY) { if (!k.skade || k.sti) continue; const by = byer().find(b => b.bb[0] <= k.x && k.x <= b.bb[2] && b.bb[1] <= k.y && k.y <= b.bb[3] && G.inni(b, k.x, k.y));
+      if (!by || G.tilstand(S, by.e.id).eier !== k.side) continue;
+      k.skade = Math.max(0, k.skade - .1 * sek / 3600 * (strømFor(by) ? 1 : R.strøm.uten));
+      if (!k.skade && k.side === 'blå') logg(`${k.navn} er reparert på verkstedet i ${by.e.navn}.`); }
   });
 
   // ---------- panelene ----------

@@ -110,3 +110,5 @@ OpenAPI: https://nvdbapiles.atlas.vegvesen.no/api-docs/vegnett
 - **Ikke klarert for main:** nasjonal bygging, nasjonalt størrelsesbudsjett, nettlesertest og release er ennå
   ikke gjennomført. GitHub avviser skriving med HTTP 403 «Resource not accessible by integration».
   Workflowen er klargjort, men har ikke kjørt. Ingen release, opplasting eller sammenslåing er utført.
+
+`graf.lenkerVed(n)` (S5, 9. nov): lenkene som går fra eller til node `n` – brukes til vegkrater (ingeniørene sprenger lenken nærmest laget).

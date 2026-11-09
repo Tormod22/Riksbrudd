@@ -128,6 +128,9 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   kartet (sist 2 t synker det). Kroken `KROKER.ødelagt` kalles når ingeniørene er ferdige. Tester: `node pipeline/fliser/test_flom.js`
   (kunstig dal med søkk, magasin og en dal bak en rygg) og sjekk.js («dam og flom»). Ikke gjort: vannet i 3D-overflaten,
   marsjruter som unngår vannet, magasinets volum (alle dammer gir samme flom). Ved kanten av Dovre-området stopper flommen.
+- **Vegkrater og verksted (9. nov natt):** «Spreng vegen her» for ingeniørlag: veglenken nærmest laget (innen 150 m,
+  `graf.lenkerVed`) sprenges (20 min, reparasjon 3 t via «Reparer …» + trykk på krateret) og sperres i vegnettet (tilstand
+  `veg:<lenkenummer>`). Egne tettsteder reparerer kjøretøy som står der (10 % skade per time, uten strøm 4 %).
 
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),

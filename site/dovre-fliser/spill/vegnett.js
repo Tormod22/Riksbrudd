@@ -181,6 +181,7 @@
     }
     return { antallNoder: N, antallLenker: M, dato: String(R.dato), punkt, naermeste, linje, lenke, rute,
       infraLenker(type, id) { return (infra.get(type + ':' + id) || []).slice(); },
+      lenkerVed(n) { if (!heltall(n, N)) throw new RangeError('Ukjent node'); return [...new Set(kant.slice(antall[n], antall[n + 1]))]; },   // lenkene som går fra/til noden (S5 vegkrater)
       infraPåLenke(e) { sjekkLenke(e); return (infraPå.get(e) || []).map(t => t.slice()); },   // [[type, kilde-id], ...]
       sperr(e) { sjekkLenke(e); sperret[e] = 1; },
       åpne(e) { sjekkLenke(e); sperret[e] = 0; } };

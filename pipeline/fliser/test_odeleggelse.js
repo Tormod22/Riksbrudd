@@ -40,6 +40,11 @@ const bru = { lag: 'bru', e: { id: 12345, navn: 'Testbrua' } }, tunnel = { lag: 
   const kraft = { lag: 'kraft', e: { id: 777, navn: 'Testverket' } }, { arbeid: k } = O.nyttArbeid(T, kraft, 'ødelegg');
   assert.equal(O.arbeid(T, k, R.tid.kraft[0], 10), 'ferdig'); assert.equal(O.tilstand(T, 'kraft', 777), 'sprengt'); assert.equal(O.tekst('kraft', 'sprengt'), 'sabotert');
   assert.deepEqual(O.lenker(g, 'kraft', 777), []);
+  // vegkrater: én lenke sperres; lenkerVed gir lenkene ved en node
+  const n = g.naermeste([1000, 0], 50), ved = g.lenkerVed(n); assert(ved.length >= 2 && ved.includes(1), 'lenkene ved node B: ' + ved);
+  const T2 = O.ny(), { arbeid: v } = O.nyttArbeid(T2, { lag: 'veg', e: { id: 1, navn: 'Vegen' } }, 'ødelegg'); assert.equal(v.total, R.tid.veg[0]);
+  O.arbeid(T2, v, R.tid.veg[0], 0); assert.equal(O.oppdaterVegnett(T2, g), 1); assert(!K.lenkerIgjen((() => { const k = K.ny({ navn: 'K', x: 0, y: 0 }); K.planlegg(k, g, [2000, 0]); return k; })()).includes(1), 'kjører rundt krateret');
+  T2.clear(); O.oppdaterVegnett(T2, g);
 }
 { const vm = require('vm'), k = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/odeleggelse.js'), 'utf8'), k); assert.equal(typeof k.Odeleggelse.arbeid, 'function'); }
 console.log('ok – sprenging og reparasjon tar tid og krever nærhet, sperrer og åpner vegnettet, omkjøring/ingen veg, ferjekai');

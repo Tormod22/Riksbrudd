@@ -11,7 +11,18 @@
   window.nyttIngeniørlag = (navn, x, y) => { const s = nyttLag(navn, x, y, 'blå'); s.ingeniør = true; ENHETER.push(s); return s; };
 
   const navnPå = o => o.e.navn || (INFRA_NAVN[o.lag] + ' uten navn').toLowerCase().replace(/^./, c => c.toUpperCase());
-  const finnObj = (lag, id) => INFRA && INFRA[lag] ? INFRA[lag].find(o => o.e.id === id) : null;
+  const VEGER = new Map();   // vegkrater: lenkenummer -> objekt { lag: 'veg', e: { id, navn }, deler, bb } laget av vegnettets geometri
+  const finnObj = (lag, id) => lag === 'veg' ? VEGER.get(id) || null : INFRA && INFRA[lag] ? INFRA[lag].find(o => o.e.id === id) : null;
+  // Veglenken nærmest laget (innen 150 m), som et objekt ingeniørene kan sprenge.
+  function vegVed(g, X, Y) {
+    const n = g.naermeste([X, Y], 150); if (n < 0) return null; let best = null, bd = Infinity;
+    for (const e of g.lenkerVed(n)) { const l = g.lenke(e); if (l.ferje) continue; const P = g.linje(e), a = new Float64Array(P.flat()), kat = l.vegkategori, nr = l.vegnummer;
+      const o = { lag: 'veg', e: { id: e, navn: nr && 'ERF'.includes(kat) ? (kat === 'E' ? 'E' + nr : kat + 'v ' + nr) : 'Vegen' }, deler: [a], bb: [Infinity, Infinity, -Infinity, -Infinity] };
+      for (let i = 0; i < a.length; i += 2) { o.bb[0] = Math.min(o.bb[0], a[i]); o.bb[2] = Math.max(o.bb[2], a[i]); o.bb[1] = Math.min(o.bb[1], a[i + 1]); o.bb[3] = Math.max(o.bb[3], a[i + 1]); }
+      const d = nærmest(o, X, Y)[2]; if (d < bd) { bd = d; best = o; } }
+    if (best) VEGER.set(best.e.id, best);
+    return best;
+  }
   // Nærmeste punkt på objektet (portal, brukar, kai) fra (X, Y): [x, y, avstand].
   function nærmest(o, X, Y) {
     let best = [o.deler[0][0], o.deler[0][1], Infinity];
@@ -108,6 +119,8 @@
         if (velg) { if (!INFRA) logg('Infrastrukturen er ikke lastet ennå.'); else logg(hva === 'ødelegg' ? 'Trykk på en bru, en tunnel, en ferjekai eller et kraftverk som skal sprenges, sperres eller saboteres.' : 'Trykk på en sprengt bru, en sperret tunnel/kai eller et sabotert kraftverk som skal repareres.'); }
         visPanel(); skitten = true; }));
     }
+    if (!s.sti && !ARB.has(s)) H.appendChild(knapp('Spreng vegen her', false, () => { lastVegnett().then(g => { const o = vegVed(g, s.x, s.y);
+      if (!o) { logg(`${s.navn}: ingen veg innen 150 m. Marsjer til vegen først.`); return; } start(s, o, 'ødelegg'); }).catch(() => {}); }));
     if (ARB.has(s)) H.appendChild(knapp('Avbryt arbeidet', false, () => { stopp(s, 'arbeidet er avbrutt.'); visPanel(); }));
   });
   // Infrastrukturpanelet: tilstand og «Spreng»/«Reparer» med nærmeste ledige ingeniørlag (virker også i 3D).
@@ -129,6 +142,7 @@
       if (o.bb[2] < X - bd || o.bb[0] > X + bd || o.bb[3] < Y - bd || o.bb[1] > Y + bd) continue;
       const d = nærmest(o, X, Y)[2]; if (d < bd) { bd = d; best = o; }
     }
+    if (hva === 'reparer') for (const o of VEGER.values()) { if (O.tilstand(T, 'veg', o.e.id) === 'hel') continue; const d = nærmest(o, X, Y)[2]; if (d < bd) { bd = d; best = o; } }   // vegkratere
     if (!best) logg('Fant ingen bru, tunnel, ferjekai eller kraftverk der. Zoom inn og prøv igjen.'); else start(s, best, hva);
     if (valgt === s) visPanel(); skitten = true; return true;
   });
@@ -155,6 +169,9 @@
       g.lineCap = 'butt'; g.strokeStyle = 'rgba(16,12,8,.95)'; g.lineWidth = Math.max(8, Math.min(18, 11 / m)); g.beginPath(); g.moveTo(x - ex, y - ey); g.lineTo(x + ex, y + ey); g.stroke();
       g.strokeStyle = 'rgba(180,70,40,.8)'; g.lineWidth = 1.5; g.setLineDash([2, 2]); g.stroke(); g.setLineDash([]);
       if (t === 'reparasjon') stillas(g, x, y, -v, l); else if (alder < 6 * TIME) røyk(g, x, y - 4, 5, alder); else kryss(g, x, y, 5, '#c8553d');
+    } else if (o.lag === 'veg') { const [X, Y] = midten(o.deler[0]), [x, y] = S(X, Y), r = Math.max(6, 9 / m);   // krater i vegbanen
+      g.fillStyle = 'rgba(60,42,26,.95)'; g.beginPath(); g.arc(x, y, r * 1.35, 0, 6.283); g.fill(); g.fillStyle = 'rgba(18,13,8,.95)'; g.beginPath(); g.arc(x, y, r * .8, 0, 6.283); g.fill();
+      if (t === 'reparasjon') stillas(g, x, y, 0, r * 2.6); else if (alder < 6 * TIME) røyk(g, x, y - 4, 5, alder);
     } else if (o.lag === 'tunnel') { for (const a of o.deler) for (const k of [0, a.length - 2]) { const [x, y] = S(a[k], a[k + 1]); kryss(g, x, y, 6, t === 'reparasjon' ? '#e8c547' : '#c8553d'); } }
     else { const [x, y] = S(o.deler[0][0], o.deler[0][1]); kryss(g, x, y, 7, t === 'reparasjon' ? '#e8c547' : '#c8553d'); }
     return alder < 6 * TIME;
