@@ -938,12 +938,12 @@ async function trær3d(u, px, b) {
 async function hus3d(u) {
   const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [], omriss = [], piper = [];
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
-  const B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'industri', 'planke', 'butikk', 'kirke', 'dør']) B[n] = { pos: [], kol: [], uv: [] }; let cur = B.mur;
+  const B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'dør']) B[n] = { pos: [], kol: [], uv: [] }; let cur = B.mur;
   // Hva slags bygg (OSM-typen, ellers anslag fra størrelse og høyde) og hvordan veggene ser ut: [gruppe/tekstur, meter per felt langs, meter per felt opp (0 = hele veggen)]
   const klasse = (t, A, h) => t === 10 ? (A < 150 && h < 9 ? 'hus' : 'leil') : t === 0 ? (h >= 10 || A > 350 ? 'leil' : 'hus') : t === 1 ? 'uthus' : t === 6 ? 'industri'
     : t === 7 ? 'butikk' : t === 8 ? 'kirke' : t === 9 || t === 3 ? 'skole' : t === 4 ? 'låve' : t === 11 ? 'hytte'
     : t === 2 ? (h <= 11 && A > 700 ? 'industri' : h <= 9 ? 'butikk' : 'kontor') : (A < 60 ? 'uthus' : 'hus');
-  const STIL = { hus: ['tre', 3.2, 3], hytte: ['tre', 3.2, 3], leil: ['leil', 3.6, 3], kontor: ['mur', 3.2, 3], skole: ['mur', 3.2, 3.4], industri: ['industri', 4, 0],
+  const STIL = { hus: ['tre', 3.2, 3], hytte: ['tre', 3.2, 3], leil: ['leil', 7.2, 3], kontor: ['kontor', 3.2, 3], skole: ['kontor', 3.6, 3.4], industri: ['industri', 4, 0],
     låve: ['planke', 2, 0], uthus: ['planke', 2, 0], butikk: ['butikk', 3, 0], kirke: ['kirke', 3, 0] };
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
   const P0 = [.02, .02];   // et punkt uten vindu i vindusflisen (tak, gavler, lave bygg)
@@ -1028,7 +1028,18 @@ async function hus3d(u) {
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
         if (kl === 'industri' && lengst > 30) dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .2);
         const flat = tak.map(v => v * 1.05);
+        cur = B.mur;
         for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(P.map(q => new THREE.Vector2(q[0], q[1])), [])) tri([...P[a], topp], [...P[b], topp], [...P[c], topp], flat);
+        // brystning rundt taket (0,6 m) med lys beslag på toppen
+        if (kl !== 'uthus' && kl !== 'låve') for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length];
+          firkant([a[0], a[1], topp], [b[0], b[1], topp], [b[0], b[1], topp + .6], [a[0], a[1], topp + .6], veggF.map(v => v * .88)); firkant([b[0], b[1], topp + .6], [a[0], a[1], topp + .6], [a[0], a[1], topp + .25], [b[0], b[1], topp + .25], [.72, .72, .7]); }
+        if (f.areal > 350 && kl !== 'uthus') {
+          // ventilasjonshus og et lite trapperom på store flate tak
+          const q = Math.min(3, Math.sqrt(f.areal) * .12), c0 = [f.sx, f.sy], bokser = [[0, 0, q * 1.6, q, 2.4], [f.lu * .22, 0, q, q * .8, 1.4], [-f.lu * .22, f.lv * .1, q * .9, q * .9, 1.1]];
+          for (const [du, dv, a2, b2, hh] of bokser) { const p = (x, y) => [c0[0] + f.ux * (du + x) + f.vx * (dv + y), c0[1] + f.uy * (du + x) + f.vy * (dv + y)], K = [p(-a2, -b2), p(a2, -b2), p(a2, b2), p(-a2, b2)];
+            for (let j = 0; j < 4; j++) firkant([K[j][0], K[j][1], topp], [K[(j + 1) % 4][0], K[(j + 1) % 4][1], topp], [K[(j + 1) % 4][0], K[(j + 1) % 4][1], topp + hh], [K[j][0], K[j][1], topp + hh], [.6, .61, .6].map(v => v * (j % 2 ? .9 : 1)));
+            firkant(...K.map(k => [k[0], k[1], topp + hh]), [.5, .5, .49]); }
+        }
       }
     }
   }
@@ -1040,13 +1051,20 @@ async function hus3d(u) {
 const BYGGTEX = {};
 function byggTekstur(type) {
   if (BYGGTEX[type]) return BYGGTEX[type];
-  const W = type === 'dør' ? 256 : 64, c = document.createElement('canvas'); c.width = W; c.height = 64; const g = c.getContext('2d');
+  const W = type === 'dør' ? 256 : type === 'leil' ? 128 : 64, c = document.createElement('canvas'); c.width = W; c.height = 64; const g = c.getContext('2d');
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, 64);
   const glass = (x, y, w, h) => { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#9aabbb'); gr.addColorStop(.5, '#4e5c6a'); gr.addColorStop(1, '#2c343c'); g.fillStyle = gr; g.fillRect(x, y, w, h); };
   if (type === 'leil') {
-    g.fillStyle = '#e4e1da'; g.fillRect(17, 6, 30, 32); glass(19, 8, 26, 28); g.fillStyle = '#e4e1da'; g.fillRect(31, 8, 2, 28);
-    g.fillStyle = '#b8b5ae'; g.fillRect(8, 38, 48, 4);                                   // balkonggulv
-    g.fillStyle = 'rgba(60,70,80,.55)'; g.fillRect(8, 42, 48, 12); g.fillStyle = '#9a9790'; g.fillRect(8, 42, 48, 2);   // rekkverk (glass)
+    // to felt (7,2 m): balkong med dør og vindu, så et vanlig vindu og vegg
+    g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(0, 60, W, 4);
+    g.fillStyle = '#e4e1da'; g.fillRect(14, 8, 34, 34); glass(16, 10, 14, 32); glass(32, 10, 14, 18);
+    g.fillStyle = '#b8b5ae'; g.fillRect(8, 42, 48, 4); g.fillStyle = 'rgba(60,70,80,.5)'; g.fillRect(8, 46, 48, 10); g.fillStyle = '#9a9790'; g.fillRect(8, 46, 48, 2);
+    g.fillStyle = '#e4e1da'; g.fillRect(84, 14, 24, 26); glass(86, 16, 20, 22); g.fillStyle = '#e4e1da'; g.fillRect(95, 16, 2, 22); g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(84, 40, 24, 2);
+  } else if (type === 'kontor') {
+    // ett vindu per felt (ca. 1 × 1,1 m) med brystning og etasjebånd – mer vegg enn glass
+    g.fillStyle = 'rgba(0,0,0,.07)'; g.fillRect(0, 56, 64, 8); g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(0, 56, 64, 1);
+    g.fillStyle = '#dedad2'; g.fillRect(20, 15, 24, 28); glass(22, 17, 20, 24); g.fillStyle = '#dedad2'; g.fillRect(31, 17, 2, 24);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(19, 43, 26, 2);
   } else if (type === 'industri') {
     for (let x = 0; x < 64; x += 4) { g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x, 0, 1, 64); g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(x + 2, 0, 1, 64); }
     glass(0, 5, 64, 6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, 58, 64, 6);
@@ -1455,7 +1473,7 @@ function sett3d(u) {
     R.bruMesh = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); R.scene.add(R.bruMesh);
   }
   if (u.hus) {
-    const tekstur = { mur: vinduTekstur, tre: treTekstur, tak: takTekstur, leil: () => byggTekstur('leil'), industri: () => byggTekstur('industri'), planke: () => byggTekstur('planke'), butikk: () => byggTekstur('butikk'), kirke: () => byggTekstur('kirke'), dør: () => byggTekstur('dør') };
+    const tekstur = { mur: vinduTekstur, tre: treTekstur, tak: takTekstur, leil: () => byggTekstur('leil'), kontor: () => byggTekstur('kontor'), industri: () => byggTekstur('industri'), planke: () => byggTekstur('planke'), butikk: () => byggTekstur('butikk'), kirke: () => byggTekstur('kirke'), dør: () => byggTekstur('dør') };
     for (const [n, d] of Object.entries(u.hus.deler)) {
       const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(d.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(d.kol, 3));
       hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); hg.computeVertexNormals();

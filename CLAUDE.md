@@ -155,3 +155,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   VEGER 3D BEDRE (10. nov, brukeren: kantete svinger, dobbel/feil plass, for lite detaljer): Chaikin-utjevning ×2 og punkt hver
   2,5 m; kartvegene tegnes ikke i 3D-overflaten når S ≤ 2200 (valg.veg); grusskulder 0,8 m utenfor tettsted, rekkverk (stolpe hver
   4 m + skinne) langs E/R, brøytestikker med oransje topp hver 25 m på begge sider (vegutstyr i liv3d.js).
+  BYGGTYPER (10. nov, brukeren: «se hvilken type bygg – industri, butikk, hus», «liker ikke at noen bygg bare er vinduer»): byggjobben
+  (bygninger.py) gir nå t 0 bolig, 1 uthus, 2 næring/kontor/hotell, 3 offentlig, 4 landbruk, 5 annet, 6 industri/lager, 7 butikk,
+  8 kirke, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte (gamle data: bare 0–5, type 2 anslås fra størrelse/høyde). hus3d: klasse()
+  og STIL gir egen fasade per type (grupper/teksturer mur, tre, leil, kontor, industri, planke, butikk, kirke, tak, dør i byggTekstur):
+  trekledning, balkong i annethvert felt, kontorvinduer med etasjebånd, blikk med vindusbånd, planker uten vinduer, utstillingsvindu
+  og skilt, buevinduer + kirketårn med spir; dører/porter (DØR); flate tak med brystning og ventilasjonshus. Trykk på et bygg (2D når
+  kam.m < 4, og i 3D) viser typen, høyden og grunnflaten (finnBygg/visByggVed, BYGGTYPE). kartflis.js: farger og saltak for 6–11.
