@@ -5,7 +5,7 @@
   // De norske olje- og gassterminalene på land (Sokkeldirektoratet, INFRA.olje type 3). Utenlandske og dubletter er utelatt.
   const NAVN = ['KÅRSTØ', 'STURE', 'MONGSTAD', 'KOLLSNES', 'TJELDBERGODDEN', 'SLAGENTANGEN', 'MELKØYA', 'NYHAMNA'];
   const TERMINALER = [], BASER = [Okonomi.base({ navn: 'Hovedbase Dombås', x: 192960, y: 6896180 })];
-  let valgtBase = null, hentModus = null, sistPanel = 0, nyeKolonner = 0, nyeLag = 0, nyeIng = 0;
+  let valgtBase = null, hentModus = null, sistPanel = 0, nyeKolonner = 0, nyeLag = 0, nyeIng = 0; const nyeAndre = { radar: 0 };   // nummer per type (S6: stridsvogn, rakettartilleri, radar)
   window.OLJE = { TERMINALER, BASER };
   const pen = n => n.charAt(0) + n.slice(1).toLowerCase();
   KLAR.then(async () => { for (let i = 0; i < 400 && !INFRA; i++) await new Promise(r => setTimeout(r, 250));   // INFRA: infrastrukturlaget (index.html)
@@ -39,7 +39,7 @@
     const dx = 40 + 30 * (b.bygget % 4), dy = -60 - 30 * Math.floor((b.bygget % 12) / 4);
     if (type === 'ingeniør' && window.nyttIngeniørlag) { const navn = `Ingeniørlag ${++nyeIng + 1}`; nyttIngeniørlag(navn, b.x + dx, b.y + dy); logg(`${b.navn}: ${navn} er klart.`); }
     else if (type === 'lag') { const navn = `${++nyeLag}. nye lag`; ENHETER.push(nyttLag(navn, b.x + dx, b.y + dy, 'blå')); logg(`${b.navn}: ${navn} er klart.`); }
-    else { const navn = type === 'lastebil' ? `Lastebil ${++nyeKolonner}` : `Speiderbil ${++nyeKolonner + 1}`;
+    else { const navn = type === 'lastebil' ? `Lastebil ${++nyeKolonner}` : type === 'speiderbil' ? `Speiderbil ${++nyeKolonner + 1}` : `${Okonomi.REGLER.navn[type]} ${(nyeAndre[type] = (nyeAndre[type] ?? 1) + 1)}`;
       KJORETOY.push(Kjoretoy.ny({ navn, type, antall: 1, x: b.x + dx, y: b.y + dy, retning: -1.2 })); logg(`${b.navn}: ${navn} er klar.`); }
     if (valgtBase === b) visBase(b); skitten = true;
   }
@@ -73,10 +73,11 @@
     document.getElementById('pnavn').textContent = b.navn;
     document.getElementById('psub').textContent = `${Math.floor(b.beholdning).toLocaleString('nb-NO')} t olje` + (b.kø.length ? ` · bygger ${b.kø.length}` : '');
     const H = document.getElementById('handl'); H.innerHTML = '';
-    for (const type of ['lastebil', 'speiderbil', 'lag', 'ingeniør']) {
+    for (const type of Object.keys(R.pris)) {
       const kn = knapp(`${R.navn[type]} (${R.pris[type]} t)`, false, () => { const r = Okonomi.bygg(b, type); logg(r.feil ? b.navn + ': ' + r.feil : `${b.navn}: bygger ${R.navn[type].toLowerCase()} (${Math.round(R.byggetid[type] / 3600 * 10) / 10} t).`); visBase(b); visTeller(); });
       if (b.beholdning < R.pris[type]) { kn.disabled = true; kn.style.opacity = '.5'; kn.title = 'For lite olje'; } H.appendChild(kn);
     }
+    for (const f of window.BASE_PANEL || []) f(b, H);   // andre moduler (S6: «Send drone …»)
     const M = document.getElementById('menn'); M.innerHTML = '';
     b.kø.forEach((j, i) => { const d = document.createElement('div'); d.textContent = `${i + 1}. ${R.navn[j.type]}: ${i === 0 ? Math.round(100 * (1 - j.igjen / j.total)) + ' % ferdig' : 'venter'}`; M.appendChild(d); });
     document.getElementById('hint').textContent = b.beholdning < R.pris.lag ? 'Basen trenger olje. Velg lastebilkolonnen, trykk «Hent olje …» og så en oljeterminal.' : 'Olje brukes til å bygge nye enheter. Nye enheter stiller opp ved basen.';

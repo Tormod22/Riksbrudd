@@ -104,7 +104,7 @@ const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versj
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
-const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [] };   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [] };   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -640,7 +640,7 @@ const KRNG = Terreng.frø(1987), SKUDD = [];
 const levende = s => s.menn.some(m => m.hp > 0);
 function ser(s, X, Y) { const v = s.sikt; if (!v) return false; const i = Math.floor((X - v.x0) / v.r), j = Math.floor((v.y0 - Y) / v.r);
   return i >= 0 && j >= 0 && i < v.mw && j < v.mh && v.m[j * v.mw + i] === 1; }
-function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y)); }
+function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y)) || KROKER.ser.some(f => f(e)); }
 function kamprunde() {
   for (const a of ENHETER) {
     a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
@@ -773,6 +773,7 @@ function tegnTåke() {
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, tåkeC.width, tåkeC.height);
   g.fillStyle = 'rgba(14,11,7,.38)'; g.fillRect(0, 0, tåkeC.width, tåkeC.height);
   g.globalCompositeOperation = 'destination-out'; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = true;
+  for (const f of KROKER.tåke) f(g, vx0, vy1);
   for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
   g.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tåkeC, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
@@ -1085,12 +1086,14 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=aa2cdf7aa8"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=e1282be56b"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=3e87a37b23"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
-<script src="/dovre-fliser/spill/okonomi-visning.js?v=d956605b76"></script>
+<script src="/dovre-fliser/spill/okonomi-visning.js?v=7e1d361fa6"></script>
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
 <script src="/dovre-fliser/spill/forsyning-visning.js?v=ead7533791"></script>
 <script src="/dovre-fliser/spill/odeleggelse.js?v=650b5e0918"></script>
+<script src="/dovre-fliser/spill/enheter.js?v=60fdcd6e06"></script>
+<script src="/dovre-fliser/spill/enheter-visning.js?v=6d22b32d51"></script>
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=851cececa4"></script>
 </body>
 </html>

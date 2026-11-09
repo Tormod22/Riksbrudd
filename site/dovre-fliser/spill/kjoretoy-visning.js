@@ -118,6 +118,18 @@
       g.fillStyle = '#5d6a40'; g.fillRect(L / 2 - L * .24, -B / 2, L * .24, B);           // førerhus foran
       g.strokeStyle = 'rgba(20,24,12,.8)'; g.lineWidth = 1; g.strokeRect(-L / 2, -B / 2, L, B);
       if (L > 14) { g.strokeStyle = 'rgba(200,210,160,.25)'; g.beginPath(); for (let i = 1; i < 4; i++) { const xx = -L / 2 + L * .72 * i / 4; g.moveTo(xx, -B / 2); g.lineTo(xx, B / 2); } g.stroke(); }
+    } else if (k.type === 'stridsvogn') {   // belter, skrog, tårn og kanon framover (S6)
+      g.fillStyle = '#2f3424'; g.fillRect(-L / 2, -B / 2, L, B * .22); g.fillRect(-L / 2, B / 2 - B * .22, L, B * .22);
+      g.fillStyle = '#4f5a35'; g.fillRect(-L / 2 + L * .04, -B / 2 + B * .18, L * .92, B * .64); g.strokeStyle = 'rgba(20,24,12,.8)'; g.lineWidth = 1; g.strokeRect(-L / 2, -B / 2, L, B);
+      g.fillStyle = '#3f4829'; g.beginPath(); g.ellipse(-L * .05, 0, L * .2, B * .3, 0, 0, 6.283); g.fill(); g.stroke();
+      g.strokeStyle = '#2b311d'; g.lineWidth = Math.max(1.5, B * .12); g.beginPath(); g.moveTo(L * .12, 0); g.lineTo(L * .75, 0); g.stroke();
+    } else if (k.type === 'rakettartilleri' || k.type === 'radar') {   // førerhus foran; rakettkasse med rør, eller radarantenne (S6)
+      g.fillStyle = '#5d6a40'; g.fillRect(L / 2 - L * .22, -B / 2, L * .22, B);
+      g.fillStyle = '#4c5634'; g.fillRect(-L / 2, -B / 2, L * .74, B); g.strokeStyle = 'rgba(20,24,12,.8)'; g.lineWidth = 1; g.strokeRect(-L / 2, -B / 2, L, B);
+      if (k.type === 'rakettartilleri') { g.fillStyle = '#3a4228'; g.fillRect(-L / 2 + L * .06, -B * .38, L * .6, B * .76);
+        if (L > 14) { g.fillStyle = 'rgba(15,15,10,.8)'; for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) { g.beginPath(); g.arc(-L / 2 + L * (.14 + i * .18), -B * .2 + j * B * .4, B * .09, 0, 6.283); g.fill(); } } }
+      else { g.strokeStyle = '#c9d3dc'; g.lineWidth = Math.max(1.2, B * .1); const a = (performance.now() / 600) % 6.283, rr = B * .45;
+        g.beginPath(); g.moveTo(-L * .15 - Math.cos(a) * rr, -Math.sin(a) * rr); g.lineTo(-L * .15 + Math.cos(a) * rr, Math.sin(a) * rr); g.stroke(); }
     } else {
       g.fillStyle = '#56603a'; g.beginPath(); g.moveTo(-L / 2, -B / 2); g.lineTo(L / 2 - B * .4, -B / 2); g.lineTo(L / 2, 0); g.lineTo(L / 2 - B * .4, B / 2); g.lineTo(-L / 2, B / 2); g.closePath(); g.fill();
       g.strokeStyle = 'rgba(20,24,12,.8)'; g.lineWidth = 1; g.stroke();
@@ -133,8 +145,11 @@
     g.beginPath(); g.rect(x - r, y - r * .7, r * 2, r * 1.4); g.fill(); g.stroke();
     g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.2; g.beginPath();
     if (k.type === 'lastebil') { g.moveTo(x - r * .6, y - r * .1); g.lineTo(x + r * .6, y - r * .1); }
+    else if (k.type === 'stridsvogn') { g.ellipse(x, y, r * .7, r * .38, 0, 0, 6.283); }   // belter (S6)
+    else if (k.type === 'rakettartilleri') { g.moveTo(x - r * .6, y + r * .35); g.lineTo(x, y - r * .45); g.lineTo(x + r * .6, y + r * .35); }
+    else if (k.type === 'radar') { g.moveTo(x - r * .7, y + r * .1); g.lineTo(x - r * .3, y - r * .4); g.lineTo(x, y + r * .1); g.lineTo(x + r * .3, y - r * .4); g.lineTo(x + r * .7, y + r * .1); }
     else { g.moveTo(x - r, y + r * .7); g.lineTo(x + r, y - r * .7); }
-    g.stroke(); for (const dx of [-.45, .45]) { g.beginPath(); g.arc(x + dx * r, y + r * .35, 2.1, 0, 6.283); g.stroke(); }
+    g.stroke(); if (k.type !== 'stridsvogn') for (const dx of [-.45, .45]) { g.beginPath(); g.arc(x + dx * r, y + r * .35, 2.1, 0, 6.283); g.stroke(); }
     if (k.antall > 1) { g.font = '600 11px "Cormorant Garamond",serif'; g.fillStyle = '#e7dcc3'; g.textAlign = 'center'; g.fillText(String(k.antall), x + r + 7, y - r * .4); }
     navn(g, k, x, y - 16);
   }

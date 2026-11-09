@@ -118,6 +118,17 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),
   luftlandsatte, fartøy på sjø og fjord. Hver type: fart, sikt, våpen og pris i olje. Tåke og «sist sett» for alle.
+- **FERDIG 9. nov (natt), første del:** `spill/enheter.js` (regler uten DOM) + `spill/enheter-visning.js`. Nye kjøretøytyper i
+  Kjoretoy.TYPER (kjører på vegnettet): stridsvogn (60 km/t, kanon 2 km + mg 1 km, ca. 1 treff per kamprunde på 300 m – et lag
+  ca. 0,4; ser 1,2 km på åpen mark), rakettartilleri («Ild …» + trykk: 2–30 km, må stå i ro, salve etter 60 s, radius 150 m,
+  spredning 80 m når noen av våre ser målet ellers 300 m, rammer også egne, lader om 1 t), radarbil (ser fiender som beveger seg
+  på åpen mark innen 15 km når den har stått i ro i 10 min). Drone: «Send drone …» på basen (10 t olje), 120 km/t, ser 2,5 km
+  rundt seg også over fjellet, 2 t batteri; lager hull i tåka. Stridsvogn 80 t/4 t, rakettartilleri 90 t/4 t, radarbil 50 t/2 t
+  bygges på basen; «Stridsvogn 1» og «Rakettartilleri 1» står ved Dombås fra start. Drivstoff: stridsvogn 1,2 t/450 km,
+  rakettartilleri 0,4 t/600 km, radarbil 0,3 t/700 km. Nye kroker: `KROKER.ser` (noe annet enn lagene ser fienden) og
+  `KROKER.tåke` (hull i tåka), `BASE_PANEL` (knapper på basen). Tester: `node pipeline/fliser/test_enheter.js [vegnett.bin]`
+  og sjekk.js («flere enheter»). Ikke gjort: fienden kan ikke skade kjøretøy, stridsvogn i terrenget (bare på veg), radaren
+  regner ikke skygge fra fjell, dronen åpner ikke tåka i 3D, luftlandsatte og fartøy. Tallene er forslag – spør brukeren.
 
 ### S7 Garnisoner og tettsteder (fase F)
 - `INFRA.tettsted` (990 med folketall): et lag i et tettsted gjør det ditt; tettsteder rekrutterer, reparerer og produserer

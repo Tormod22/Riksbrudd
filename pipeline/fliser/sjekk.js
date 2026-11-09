@@ -186,6 +186,34 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
             && s5c.t === 'hel' && s5c.sperret === 0 && Math.abs(s5c.meter - s5a.meter) < 1; if (!s5ok) feil++;
           console.log(`${s5ok ? 'ok  ' : 'FEIL'} ${navn} ødeleggelse: NVDB-bru ${s5a.id} sprengt etter ${s5b.min.toFixed(0)} spillminutter, ${s5b.sperret} lenke(r) sperret, kolonnen underveis kjørte om: ${s5b.omkjørt}, `
             + `${s5b.meter === null ? 'ingen veg' : 'omkjøring ' + ((s5b.meter - s5a.meter) / 1000).toFixed(1) + ' km'}; panelet: «${info}»; reparert etter ${s5c.timer.toFixed(1)} t: ${s5c.t}, ruten som før: ${Math.abs(s5c.meter - s5a.meter) < 1}`);
+        // S6: drone over patruljen (fienden synes), rakettartilleri mot den (knapp + trykk), stridsvogna skyter, radarbil bygges og ser bevegelse
+        const s6a = await pg.evaluate(() => { tempo = 0; const f = ENHETER[3], b = OLJE.BASER[0]; f.x = 213280; f.y = 6908986; f.sti = null; f.roligTil = 1e9; f.siktSkitten = true;
+          for (const s of ENHETER) if (s.side === 'blå') { s.x = b.x + 300; s.y = b.y; s.sti = null; s.siktSkitten = true; }
+          for (const k of KJORETOY) k.sti = null; b.beholdning = 400; return { skjult: !synlig(f) }; });
+        await pg.waitForFunction(() => ENHETER.every(s => !s.siktJobb && !s.siktSkitten), null, { timeout: 30000 });
+        const b6 = await pg.evaluate(() => { const b = OLJE.BASER[0]; valgt = null; visPanel(); kam.x = b.x; kam.y = b.y; kam.m = 2; skitten = true; tegn(); return [VW / 2, VH / 2]; });
+        await pg.mouse.click(b6[0], b6[1]); await pg.locator('#handl button', { hasText: 'Send drone' }).click();
+        const fxy = await pg.evaluate(() => { const f = ENHETER[3]; kam.x = f.x; kam.m = 20; kam.y = f.y - .2 * VH * kam.m; skitten = true; tegn(); return [VW / 2, VH * .3]; });
+        await pg.mouse.click(fxy[0], fxy[1]);
+        const s6b = await pg.evaluate(() => { const f = ENHETER[3]; let n = 0; while (DRONER.length && DRONER[0].fase === 'flyr' && n < 3000) { sim(.1); n++; }
+          const k = KJORETOY.find(k => k.type === 'rakettartilleri'); k.x = f.x - 10000; k.y = f.y; k.sti = null; k.lader = 0; velgKjoretoy(k);
+          return { droner: DRONER.length, min: n * 6 / 60, sett: synlig(f), obs: S6.observert(f.x, f.y) }; });
+        await pg.locator('#handl button', { hasText: 'Ild' }).click();
+        await pg.evaluate(() => { const f = ENHETER[3]; kam.x = f.x; kam.m = 20; kam.y = f.y - .2 * VH * kam.m; skitten = true; tegn(); });
+        await pg.mouse.click(fxy[0], fxy[1]);
+        const s6c = await pg.evaluate(() => { const f = ENHETER[3], før = f.menn.filter(m => m.hp < 1).length, salver = SALVER.length, k = KJORETOY.find(k => k.type === 'rakettartilleri');
+          const nedslag = SALVER[0] ? Math.hypot(SALVER[0].x - f.x, SALVER[0].y - f.y) : null; let n = 0; while (SALVER.length && n < 100) { sim(.1); n++; } const lader = k.lader > 0;
+          const artTreff = f.menn.filter(m => m.hp < 1).length - før; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.sti = null; f.roligTil = 1e9;
+          const sv = KJORETOY.find(k => k.type === 'stridsvogn'); sv.x = f.x - 600; sv.y = f.y; sv.sti = null;
+          for (let i = 0; i < 600; i++) sim(.1);   // 60 spillminutter = 12 kamprunder
+          const svTreff = f.menn.filter(m => m.hp < 1).length;
+          const b = OLJE.BASER[0], antall = KJORETOY.length, r = Okonomi.bygg(b, 'radar'); for (let i = 0; i < 1300; i++) sim(.1);
+          const radar = KJORETOY.find(k => k.type === 'radar'); DRONER.length = 0; sv.x -= 5e4; let radarSer = false;   // stridsvogna ser også (1,2 km)
+          if (radar) { radar.x = f.x - 8000; radar.y = f.y; radar.sti = null; for (let i = 0; i < 120; i++) sim(.1); radarSer = KROKER.ser.some(h => h({ x: f.x, y: f.y, sti: [[0, 0]], her: { k: 2 } })) && !KROKER.ser.some(h => h({ x: f.x, y: f.y, sti: null, her: { k: 2 } })); }
+          return { salver, nedslag, lader, artTreff, svTreff, radar: radar && radar.navn, bygget: !!r.ok, radarSer, nye: KJORETOY.length - antall }; });
+        const s6ok = s6a.skjult && s6b.droner === 1 && s6b.sett && s6b.obs && s6c.salver === 1 && s6c.nedslag < 400 && s6c.lader && s6c.svTreff > 0 && s6c.bygget && s6c.radar === 'Radarbil 1' && s6c.radarSer; if (!s6ok) { feil++; console.log(JSON.stringify({ s6a, s6b, s6c })); }
+        console.log(`${s6ok ? 'ok  ' : 'FEIL'} ${navn} flere enheter: patruljen skjult før dronen: ${s6a.skjult}, drone over etter ${s6b.min.toFixed(0)} min (sett: ${s6b.sett}); salve ${s6c.nedslag === null ? '–' : Math.round(s6c.nedslag) + ' m'} fra målet, ${s6c.artTreff} treff; `
+          + `stridsvogn ${s6c.svTreff} treff på 12 runder; ${s6c.radar || 'ingen radar'} bygget, ser bevegelse (ikke ro): ${s6c.radarSer}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
