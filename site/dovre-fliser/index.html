@@ -834,13 +834,14 @@ function bilin(v, X, Y) {
   return (v.H[k] * (1 - a) + v.H[k + 1] * a) * (1 - b) + (v.H[k + v.w] * (1 - a) + v.H[k + v.w + 1] * a) * b;
 }
 async function bygg3d(cx, cy, S) {
-  const N = 321, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
+  // finere nett på PC (449 × 449 punkter) enn på mobil
+  const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
   const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
   const TW = 2048, mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
-  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false }, kø = [];
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg);
@@ -856,7 +857,45 @@ async function bygg3d(cx, cy, S) {
     g.restore();
   }
   if (S <= 3200 && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
+  const px = g.getImageData(0, 0, TW, TW).data;   // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus)
+  u.vann = vannmaske(px, TW);
+  if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
+  naturfarger(px, TW); g.putImageData(new ImageData(px, TW, TW), 0, 0);
   return u;
+}
+// 3D-kartet i naturligere farger: litt mer metning og lys enn papirkartet, og vannet speiler himmelen (lysere blågrått).
+function naturfarger(px, TW) {
+  for (let q = 0; q < TW * TW * 4; q += 4) {
+    let R = px[q], G = px[q + 1], B = px[q + 2];
+    if (B > R + 18 && B > G + 4) { R = R * .45 + 92 * .55; G = G * .45 + 126 * .55; B = B * .45 + 152 * .55; }
+    else { const l = .3 * R + .59 * G + .11 * B; R = (l + (R - l) * 1.15) * 1.1; G = (l + (G - l) * 1.18) * 1.12; B = (l + (B - l) * 1.15) * 1.1; }
+    px[q] = R < 0 ? 0 : R > 255 ? 255 : R; px[q + 1] = G < 0 ? 0 : G > 255 ? 255 : G; px[q + 2] = B < 0 ? 0 : B > 255 ? 255 : B;
+  }
+}
+// Glans: vann (blått i kartet) får sollys speilet, alt annet er matt. Halv oppløsning holder.
+function vannmaske(px, TW) {
+  const W = TW >> 1, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W);
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const q = ((j * 2) * TW + i * 2) * 4, R = px[q], G = px[q + 1], B = px[q + 2], o = (j * W + i) * 4;
+    const v = B > R + 18 && B > G + 4 ? 255 : 0; im.data[o] = im.data[o + 1] = im.data[o + 2] = v; im.data[o + 3] = 255; }
+  g.putImageData(im, 0, 0); return c;
+}
+// Trær i 3D: gran (mørk, smal) og løvtre/furu (lysere, bredere) i skogrutene (terrengklasse skog, 32 m), 1–4 per rute med fast
+// tilfeldighet, ikke der kartet under er veg, hus eller vann. Mindre og glissent mot tregrensen. Høyde i meter (ikke overdrevet).
+async function trær3d(u, px, b) {
+  const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
+  const skog = []; for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) if (kv.K[j * kv.w + i] === 1) {
+    const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) < u.S && Math.abs(Y - u.cy) < u.S) skog.push([X, Y, i * 7919 + j * 104729]); }
+  const MAKS = VW < 700 ? 22000 : 48000, per = Math.max(1, Math.min(4, Math.floor(MAKS / Math.max(1, skog.length))));
+  const gran = [], løv = [], hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
+  for (const [X, Y, frø] of skog) for (let k = 0; k < per; k++) {
+    const a = hash(frø * 4 + k), c = hash(frø * 4 + k + 1e6), d = hash(frø * 4 + k + 2e6), x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r;
+    const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
+    if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
+    const moh = hoyde3d(x, y, u), fjell = Math.max(0, Math.min(1, (moh - 900) / 250)); if (d < fjell * .6) continue;   // glisnere mot tregrensen
+    const h = (1 - fjell * .55) * (8 + d * 12), z = (moh - u.h0) * R3.EX;
+    (d < .62 && moh < 1050 ? gran : løv).push(x - u.cx, y - u.cy, z, h, d);
+  }
+  return { gran: new Float32Array(gran), løv: new Float32Array(løv) };
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
 async function hus3d(u) {
@@ -907,12 +946,30 @@ function hoyde3d(X, Y, u = R3.ut) {   // moh. fra 3D-utsnittet (u: et utsnitt so
 }
 function init3d() {
   const c3 = document.getElementById('c3'), renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true });
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a1710);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0xc4cdd2);
   const cam = new THREE.PerspectiveCamera(50, 1, 5, 80000);
-  scene.fog = new THREE.Fog(0x1a1710, 4000, 9000);   // dis mot horisonten skjuler kanten på utsnittet
-  scene.add(new THREE.AmbientLight(0xffffff, .62)); const sol = new THREE.DirectionalLight(0xfff0d8, .95); sol.position.set(-1, 1, 1.1); scene.add(sol);
+  scene.fog = new THREE.Fog(0xc4cdd2, 4000, 9000);   // dis mot horisonten (luftperspektiv) skjuler kanten på utsnittet
+  const himmelLys = new THREE.HemisphereLight(0xdbe6f0, 0x4a4434, .55), sol = new THREE.DirectionalLight(0xfff0d8, .95); scene.add(himmelLys, sol, sol.target);
+  // himmelkuppel som følger kameraet: fargene settes etter solhøyden (lys3d)
+  const kuppelGeo = new THREE.SphereGeometry(1, 32, 16); kuppelGeo.rotateX(Math.PI / 2); kuppelGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kuppelGeo.attributes.position.count * 3), 3));
+  const kuppel = new THREE.Mesh(kuppelGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false })); kuppel.renderOrder = -1; scene.add(kuppel);
   R3 = { renderer, scene, cam, c3, ov: document.getElementById('c3o'), mesh: null, ut: null, tex: null, texC: document.createElement('canvas'),
-    bane: { x: 0, y: 0, avst: 3000, yaw: 0, pitch: .75 }, ray: new THREE.Raycaster(), EX: 1.2, bygger: false, nøkkel: '' };
+    bane: { x: 0, y: 0, avst: 3000, yaw: 0, pitch: .75 }, ray: new THREE.Raycaster(), EX: 1, bygger: false, nøkkel: '', sol, himmelLys, kuppel, lysTid: null };   // EX 1: ingen overdrivelse av høyden
+}
+// Sol og himmel etter klokka i spillet (august på Dovre): soloppgang ca. 05:20, middag 13:30 (40° høy), solnedgang ca. 21:40.
+const solHøyde = h => 14 + 26 * Math.cos((h - 13.5) * Math.PI / 12);   // grader
+function blandFarge(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
+function lys3d() {
+  const h = (6 + tid / TIME) % 24, nøkkel = Math.round(h * 12); if (R3.lysTid === nøkkel) return; R3.lysTid = nøkkel;
+  const e = solHøyde(h), A = (h - 12) * Math.PI / 12 + Math.PI, er = Math.max(e, 4) * Math.PI / 180;   // asimut fra nord; lyset aldri helt flatt
+  R3.sol.position.set(Math.sin(A) * Math.cos(er) * 1000, Math.cos(A) * Math.cos(er) * 1000, Math.sin(er) * 1000);
+  const dag = Math.max(0, Math.min(1, (e + 6) / 10)), gull = Math.max(0, 1 - Math.abs(e - 3) / 9) * .4;   // gull: lavt sollys morgen/kveld
+  R3.sol.intensity = .12 + .78 * dag; R3.sol.color.setRGB(1, .95 - .2 * gull, .88 - .35 * gull);
+  R3.himmelLys.intensity = .25 + .6 * dag; R3.himmelLys.color.setRGB(...blandFarge([.35, .42, .6], [.86, .9, .94], dag));
+  const horisont = blandFarge(blandFarge([.09, .11, .17], [.72, .79, .86], dag), [.9, .66, .45], gull), senit = blandFarge([.03, .05, .1], [.3, .5, .78], dag), bakke = horisont.map(v => v * .75);
+  const pos = R3.kuppel.geometry.attributes.position, kol = R3.kuppel.geometry.attributes.color;
+  for (let k = 0; k < pos.count; k++) { const z = pos.getZ(k), c = z < 0 ? blandFarge(horisont, bakke, Math.min(1, -z * 4)) : blandFarge(horisont, senit, Math.pow(z, .55)); kol.setXYZ(k, ...c); }
+  kol.needsUpdate = true; R3.scene.fog.color.setRGB(...horisont); R3.scene.background.setRGB(...horisont);
 }
 function sett3d(u) {
   const R = R3;
@@ -921,7 +978,17 @@ function sett3d(u) {
   for (let k = 0; k < pos.count; k++) pos.setZ(k, (u.H[k] - u.h0) * R.EX);
   geo.computeVertexNormals();
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
-  R.mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex })); R.scene.add(R.mesh);
+  if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
+  R.mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: 0x8a96a0, shininess: 70 })); R.scene.add(R.mesh);   // lys per punkt; bare vannet glinser
+  for (const t of R.treMesh || []) { R.scene.remove(t); t.geometry.dispose(); t.material.dispose(); } R.treMesh = [];
+  if (u.trær) for (const [data, smal, farge] of [[u.trær.gran, .27, [.11, .2, .11]], [u.trær.løv, .4, [.24, .33, .14]]]) {
+    const n = data.length / 5; if (!n) continue;
+    const geo = new THREE.ConeGeometry(1, 1, 7); geo.translate(0, .5, 0); geo.rotateX(Math.PI / 2);
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), n), d = new THREE.Object3D(), c = new THREE.Color();
+    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - .5); d.scale.set(h * smal, h * smal, h); d.rotation.set(0, 0, v * 6.283); d.updateMatrix();
+      mesh.setMatrixAt(k, d.matrix); const f = .8 + v * .4; c.setRGB(farge[0] * f, farge[1] * f, farge[2] * f); mesh.setColorAt(k, c); }
+    mesh.frustumCulled = false; R.scene.add(mesh); R.treMesh.push(mesh);   // instansene ligger over hele utsnittet
+  }
   if (R.husMesh) { R.scene.remove(R.husMesh); R.husMesh.geometry.dispose(); R.husMesh.material.dispose(); R.husMesh = null; }
   if (R.bruMesh) { R.scene.remove(R.bruMesh); R.bruMesh.geometry.dispose(); R.bruMesh.material.dispose(); R.bruMesh = null; }
   if (u.bru) {
@@ -958,7 +1025,7 @@ function kamera3d() {
   c.position.set(b.x + Math.sin(b.yaw) * Math.cos(b.pitch) * b.avst, b.y - Math.cos(b.yaw) * Math.cos(b.pitch) * b.avst, z + Math.sin(b.pitch) * b.avst);
   const bakke = (hoyde3d(u.cx + c.position.x, u.cy + c.position.y) - u.h0) * R3.EX + 30; if (c.position.z < bakke) c.position.z = bakke;   // aldri under bakken
   c.up.set(0, 0, 1); c.lookAt(b.x, b.y, z);
-  R3.scene.fog.near = b.avst * .9 + u.S * .25; R3.scene.fog.far = b.avst + u.S * .95; c.aspect = VW / VH; c.near = Math.max(2, b.avst / 200); c.far = b.avst * 12 + 20000; c.updateProjectionMatrix();
+  R3.scene.fog.near = b.avst * .9 + u.S * .5; R3.scene.fog.far = b.avst + u.S * 1.2;   // luftperspektiv: svak dis innover, kanten skjult c.aspect = VW / VH; c.near = Math.max(2, b.avst / 200); c.far = b.avst * 12 + 20000; c.updateProjectionMatrix();
 }
 async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) return; R3.bygger = true;
@@ -970,7 +1037,7 @@ function tegn3d() {
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); R.renderer.render(R.scene, R.cam);
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lys3d(); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   tegnInfra3d(g);
