@@ -24,7 +24,7 @@ jobs:
       - name: Byggene og anleggene (med nodene de trenger), og butikkpunktene for seg
         run: |
           osmium tags-filter -R norge.osm.pbf n/shop n/amenity=fuel,pharmacy,fast_food,restaurant,cafe,marketplace -o punkt.osm.pbf
-          osmium tags-filter norge.osm.pbf w/building r/building w/leisure=pitch,track,playground r/leisure=pitch w/amenity=parking r/amenity=parking -o bygg.osm.pbf
+          osmium tags-filter norge.osm.pbf w/building r/building w/leisure=pitch,track,playground r/leisure=pitch w/amenity=parking r/amenity=parking w/aeroway=runway,taxiway,apron r/aeroway=apron -o bygg.osm.pbf
           rm norge.osm.pbf && ls -la bygg.osm.pbf punkt.osm.pbf
       - name: Lag fliser
         working-directory: pipeline/fliser

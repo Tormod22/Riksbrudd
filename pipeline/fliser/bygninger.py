@@ -10,7 +10,8 @@ så visningen kan tegne det helt selv om det krysser en flisgrense. Egenskapen i
 
 Kjeder (11. nov, brukeren: «en Kiwi blir en grønn butikk som heter Pære»): k = kjedens nummer (KJEDER) fra brand/name på bygget,
 eller fra et butikkpunkt (node med shop/amenity) som ligger inne i bygget. Spillet viser en oppdiktet parodi (BUTIKKER i index.html).
-Anlegg (lag «anlegg», bare z13): a = 1 fotballbane, 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass.
+Anlegg (lag «anlegg», bare z13): a = 1 fotballbane, 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass,
+7 rullebane (linjen gjort til flate med bredden, r = banenummer som «01/19»), 8 taksebane, 9 oppstillingsplass (apron).
 
 Bruk: python3 bygninger.py INN.osm.pbf UTMAPPE [PUNKT.osm.pbf]     -> UTMAPPE/hus-0.pmtiles + manifest.json
 """
@@ -84,6 +85,7 @@ def anlegg_type(tags):
     if l == 'track': return 4
     if l == 'playground': return 5
     if tags.get('amenity') == 'parking' and tags.get('parking', 'surface') == 'surface': return 6
+    if tags.get('aeroway') == 'apron': return 9
     return 0
 
 
@@ -96,13 +98,28 @@ class Samler(osmium.SimpleHandler):
     def __init__(s):
         super().__init__(); s.tr = Transformer.from_crs('EPSG:4326', CRS, always_xy=True)
         s.ringer, s.h, s.t, s.k = [], [], [], []
-        s.anlegg, s.anlegg_t = [], []   # ringer og type
+        s.anlegg, s.anlegg_t, s.anlegg_r = [], [], []   # ringer, type og banenummer
         s.punkt = []                    # butikkpunkter: (x, y, kjede)
         s.punkter = True                # False: hopp over nodene (byggfila har millioner av noder uten merker)
     def node(s, n):
         if not s.punkter or not (n.tags.get('shop') or n.tags.get('amenity')): return
         k = kjede(n.tags)
         if k: x, y = s.tr.transform(n.location.lon, n.location.lat); s.punkt.append((x, y, k))
+    def way(s, w):
+        # rullebaner og taksebaner er linjer: gjøres til flater med bredden (width, ellers 45 m / 18 m)
+        ae = w.tags.get('aeroway')
+        if ae not in ('runway', 'taxiway') or w.tags.get('area') == 'yes': return
+        try:
+            from shapely.geometry import LineString
+            ll = [(n.lon, n.lat) for n in w.nodes]
+            if len(ll) < 2: return
+            xs, ys = s.tr.transform([p[0] for p in ll], [p[1] for p in ll])
+            b = tall(w.tags.get('width')) or (45.0 if ae == 'runway' else 18.0)
+            f = LineString(list(zip(xs, ys))).buffer(min(max(b, 10), 80) / 2, cap_style=2, join_style=2)
+            if f.is_empty or f.geom_type != 'Polygon': return
+            s.anlegg.append(np.asarray(f.exterior.coords, dtype=np.float64)); s.anlegg_t.append(7 if ae == 'runway' else 8)
+            s.anlegg_r.append((w.tags.get('ref') or '')[:12] if ae == 'runway' else '')
+        except Exception: pass
     def area(s, a):
         b = a.tags.get('building')
         if not b or b == 'no':
@@ -111,7 +128,7 @@ class Samler(osmium.SimpleHandler):
                 try:
                     for ytre in a.outer_rings():
                         xs, ys = s.tr.transform([n.lon for n in ytre], [n.lat for n in ytre])
-                        if len(xs) >= 4: s.anlegg.append(np.column_stack([xs, ys]).astype(np.float64)); s.anlegg_t.append(at)
+                        if len(xs) >= 4: s.anlegg.append(np.column_stack([xs, ys]).astype(np.float64)); s.anlegg_t.append(at); s.anlegg_r.append('')
                 except Exception: pass
             return
         try:
@@ -145,7 +162,7 @@ def koble_punkter(ringer, k, punkt):
     return n
 
 
-def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=()):
+def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=()):
     """Fordeler byggene på z12- og z13-fliser etter omrissets ramme (med margin) og koder MVT."""
     ut = {}
     for z, min_areal, tol in ((12, 30.0, 1.0), (13, 0.0, 0.0)):
@@ -183,7 +200,10 @@ def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=()):
                 for i in anl[(tx, ty)]:
                     c = [(round((x - minx) * k4), round((maxy - y) * k4)) for x, y in anlegg[i]]
                     c = [p for n, p in enumerate(c) if n == 0 or p != c[n - 1]]
-                    if len(c) >= 4: fa.append({'geometry': Polygon(c), 'properties': {'a': anlegg_t[i]}})
+                    if len(c) >= 4:
+                        e = {'a': anlegg_t[i]}
+                        if anlegg_r and anlegg_r[i]: e['r'] = anlegg_r[i]
+                        fa.append({'geometry': Polygon(c), 'properties': e})
                 if fa: lag.append({'name': 'anlegg', 'features': fa})
             if lag:
                 ut[(z, tx, ty)] = gzip.compress(mapbox_vector_tile.encode(lag,
@@ -197,7 +217,7 @@ def main(inn, utmappe, punktfil=None):
     if punktfil: s.apply_file(punktfil); s.punkter = False   # butikkpunktene for seg (liten fil), så ikke alle nodene går gjennom Python
     s.apply_file(inn, locations=True, idx='flex_mem'); logg('bygg lest:', len(s.ringer), 'anlegg:', len(s.anlegg), 'butikkpunkter:', len(s.punkt))
     n = koble_punkter(s.ringer, s.k, s.punkt); logg('kjede fra punkt:', n, 'kjedebygg i alt:', sum(1 for v in s.k if v))
-    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t)
+    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r)
     fil = os.path.join(utmappe, 'hus-0.pmtiles'); l = sorted(fl.items(), key=lambda kv: zxy_to_tileid(*kv[0]))
     with open(fil, 'wb') as f:
         w = Writer(f)
