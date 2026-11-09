@@ -247,6 +247,21 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { plan, stier, n: ai.length, eier, timer: i * 6 / 3600, farge: sidefarge('grønn', 'farge'), meny: [...document.querySelectorAll('#lagmeny button')].some(b => b.textContent === 'Motstandere') }; });
         const s8ok = s8.n === 4 && s8.stier === 4 && s8.plan.every(t => /Dombås/.test(t)) && (s8.eier === 'rød' || s8.eier === 'grønn') && s8.farge === '#3f6b3a' && s8.meny; if (!s8ok) feil++;
         console.log(`${s8ok ? 'ok  ' : 'FEIL'} ${navn} motstandere: ${s8.n} AI-lag, ${s8.stier} på marsj («${s8.plan[0]}»), Dombås tatt av ${s8.eier || 'ingen'} etter ${s8.timer.toFixed(1)} spilltimer; «Motstandere» i menyen: ${s8.meny}`);
+        // S6 del 2: fienden skyter mot kjøretøy den ser (lastebilkolonnen tar skade), og AI-en trekker seg unna en stridsvogn
+        const kjS = await pg.evaluate(async () => { const f = ENHETER[3], k = KJORETOY.find(k => k.navn === '1. lastebilkolonne'), b = OLJE.BASER[0];
+          k.x = b.x; k.y = b.y; k.sti = null; k.oppdrag = null; k.skade = 0; const antall = k.antall;
+          f.x = k.x + 100; f.y = k.y; f.sti = null; f.roligTil = 1e9; f.menn.forEach(m => { m.hp = 1; }); f.ammo = 1; f.slattUtMeldt = false; f.siktSkitten = true;
+          for (const s of ENHETER) if (s.side === 'blå') s.x += 4e4; for (const v of KJORETOY) if (v !== k && Math.hypot(v.x - k.x, v.y - k.y) < 3000) v.x += 4e4;
+          for (let n = 0; n < 200 && (f.siktSkitten || f.siktJobb); n++) await new Promise(r => setTimeout(r, 100));
+          const serK = ser(f, k.x, k.y); for (let i = 0; i < 1500 && KJORETOY.includes(k); i++) sim(.1);
+          const res = { ser: serK, skade: k.skade, før: antall, etter: KJORETOY.includes(k) ? k.antall : 0, logg: document.getElementById('logg').textContent };
+          if (!KJORETOY.includes(k)) KJORETOY.unshift(k); k.antall = antall; k.skade = 0;
+          const ai = ENHETER.find(s => s.ai), sv = KJORETOY.find(v => v.type === 'stridsvogn'), lag = { ...ai };
+          const v = Fraksjoner.velg(ai, { side: ai.side, byer: [], fiender: [{ x: ai.x + 500, y: ai.y, navn: sv.navn, styrke: Enheter.REGLER.styrke.stridsvogn }], venner: [], hjem: [0, 0], ammo: 1 });
+          for (const s of ENHETER) if (s.side === 'blå') s.x -= 4e4; for (const v2 of KJORETOY) if (v2.x > 2e5 + 4e4) v2.x -= 4e4;
+          return { ...res, aiValg: v.hva }; });
+        const kjok = kjS.ser && (kjS.skade > 0 || kjS.etter < kjS.før) && /under ild/.test(kjS.logg) && kjS.aiValg === 'trekk'; if (!kjok) { feil++; console.log(JSON.stringify(kjS)); }
+        console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjøretøy i kamp: patruljen ser kolonnen: ${kjS.ser}, etter 30 kamprunder ${kjS.etter} av ${kjS.før} lastebiler igjen (skade ${Math.round(100 * kjS.skade)} %); AI-laget mot stridsvogn: ${kjS.aiValg}`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

@@ -129,6 +129,11 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   `KROKER.tåke` (hull i tåka), `BASE_PANEL` (knapper på basen). Tester: `node pipeline/fliser/test_enheter.js [vegnett.bin]`
   og sjekk.js («flere enheter»). Ikke gjort: fienden kan ikke skade kjøretøy, stridsvogn i terrenget (bare på veg), radaren
   regner ikke skygge fra fjell, dronen åpner ikke tåka i 3D, luftlandsatte og fartøy. Tallene er forslag – spør brukeren.
+- **Del 2 (9. nov natt):** kjøretøy tar skade. Lag som ikke skjøt mot et annet lag, skyter mot kjøretøy fra en annen side de ser
+  innen 600 m; skade per treff: lastebil/rakettartilleri/radar 12 %, speiderbil 8 %, stridsvogn 1 % (delt på √antall i kolonnen);
+  100 % = ett kjøretøy ødelagt, kolonnen er borte når alle er ødelagt. Artillerisalver skader kjøretøy i radien (60 % per treff,
+  stridsvogn 6 %). AI-en regner kjøretøy som fiender: stridsvogner (styrke 30) gjør at lagene trekker seg unna, lastebiler er bytte.
+  Test: sjekk.js («kjøretøy i kamp»).
 
 ### S7 Garnisoner og tettsteder (fase F)
 - `INFRA.tettsted` (990 med folketall): et lag i et tettsted gjør det ditt; tettsteder rekrutterer, reparerer og produserer

@@ -13,6 +13,9 @@
     drivstoff: { stridsvogn: { tank: 1.2, km: 450 }, rakettartilleri: { tank: .4, km: 600 }, radar: { tank: .3, km: 700 } },
     pris: { stridsvogn: 80, rakettartilleri: 90, radar: 50 }, byggetid: { stridsvogn: 4 * 3600, rakettartilleri: 4 * 3600, radar: 2 * 3600 },
     navn: { stridsvogn: 'Stridsvogn', rakettartilleri: 'Rakettartilleri', radar: 'Radarbil' },
+    skade: { lastebil: .12, speiderbil: .08, stridsvogn: .01, rakettartilleri: .12, radar: .12 },   // skade per treff fra håndvåpen (1 = ødelagt)
+    artilleriSkade: .6,   // skade per treff fra en salve (stridsvogn: en tiendedel)
+    styrke: { stridsvogn: 30, speiderbil: 3, lastebil: 1, rakettartilleri: 1, radar: 1 },   // hvor farlig kjøretøyet er for et lag (AI-en)
   };
   // Kjøretøytypene for spill/kjoretoy.js (legges inn i Kjoretoy.TYPER av visningen eller testen).
   const KJORETOY = {
@@ -43,6 +46,13 @@
     return { salve: { x: mål[0] + Math.cos(v) * r, y: mål[1] + Math.sin(v) * r, mål, igjen: R.flytid, fra: kj.navn, observert } };
   }
   // Nedslaget: treff per lag (begge sider) etter avstanden fra nedslaget til laget. lag: [{ x, y, menn, her? }]. Gir [[lag, treff]].
+  // Kjøretøy i nedslaget: 3 sjanser per kjøretøy i kolonnen innen radien. Gir [[kjøretøy, treff]].
+  function nedslagKj(salve, kjøretøy, rng) {
+    const R = REGLER.artilleri, ut = [];
+    for (const k of kjøretøy) { const d = Math.hypot(k.x - salve.x, k.y - salve.y); if (d > R.radius) continue;
+      let t = 0; for (let i = 0; i < 3 * k.antall; i++) if (rng() < R.sjanse * (1 - d / R.radius) * .5) t++; ut.push([k, t]); }
+    return ut;
+  }
   function nedslag(salve, lag, rng) {
     const R = REGLER.artilleri, ut = [];
     for (const s of lag) {
@@ -73,7 +83,16 @@
   }
   const droneSer = (d, X, Y) => d.fase !== 'tom' && Math.hypot(X - d.x, Y - d.y) <= REGLER.drone.sikt;
 
-  const api = { REGLER, KJORETOY, kanonrunde, avfyr, nedslag, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
+  // Skade på en kolonne: treffene deles på kjøretøyene; når skaden når 1, er ett kjøretøy ødelagt (antall går ned).
+  // Gir { ødelagt: antall kjøretøy som ble ødelagt nå, borte: hele kolonnen er borte }.
+  function skad(kj, treff, artilleri = false) {
+    const per = artilleri ? REGLER.artilleriSkade * (kj.type === 'stridsvogn' ? .1 : 1) : (REGLER.skade[kj.type] || .1);
+    kj.skade = (kj.skade || 0) + treff * per / Math.sqrt(kj.antall); let ødelagt = 0;
+    while (kj.skade >= 1 && kj.antall > 0) { kj.skade -= 1; kj.antall--; ødelagt++; }
+    if (kj.antall <= 0) kj.skade = 0;
+    return { ødelagt, borte: kj.antall <= 0 };
+  }
+  const api = { REGLER, KJORETOY, skad, kanonrunde, avfyr, nedslag, nedslagKj, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Enheter = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

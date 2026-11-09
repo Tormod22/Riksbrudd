@@ -31,7 +31,8 @@
       if (!s.ai || !levende(s) || s.planlegger) continue;
       s.ai.neste -= sek; if (s.ai.neste > 0) continue; s.ai.neste = R.tenk;
       const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y) }; });
-      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }));
+      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
+        .concat(KJORETOY.filter(k => k.side !== s.side && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
       const v = F.velg(s, { side: s.side, byer, fiender, venner: ENHETER.filter(e => e.side === s.side && e.ai), hjem: HJEM[s.side], ammo: Forsyning.ammo(s) });
       const ny = v.hva !== s.ai.hva; s.ai.hva = v.hva; s.ai.tekst = v.tekst;
       if (ny && synlig(s) && (v.hva === 'angrip' || v.hva === 'trekk')) logg(`${s.navn} ${v.tekst}.`);

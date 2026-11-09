@@ -34,7 +34,7 @@
       skitten = true; }
     for (let i = SALVER.length - 1; i >= 0; i--) { const s = SALVER[i]; s.igjen -= sek; if (s.igjen > 0) continue; SALVER.splice(i, 1); slå(s); }
     // stridsvognene skyter i kamprundene (som lagene, hvert KAMPRUNDE_MIN spillminutt)
-    if (Math.floor((tid + dt) / Terreng.KAMPRUNDE_MIN) !== Math.floor(tid / Terreng.KAMPRUNDE_MIN)) for (const k of av('stridsvogn')) kanon(k);
+    if (Math.floor((tid + dt) / Terreng.KAMPRUNDE_MIN) !== Math.floor(tid / Terreng.KAMPRUNDE_MIN)) { for (const k of av('stridsvogn')) kanon(k); motKjøretøy(); }
   });
   function treffPå(b, treff, hva) {
     for (const [m, h] of Terreng.fordelTreff(b.menn, treff, rng)) if (b.side === 'blå') logg(`${m.navn} (${m.rolle}, ${b.navn}) er ${h}${hva ? ' ' + hva : ''}.`);
@@ -52,20 +52,43 @@
     SKUDD.push({ a: k, b: best, til: performance.now() + 1400 });
     if (treff) { if (synlig(best)) logg(`${best.navn}: ${treff} treff fra ${k.navn}.`); treffPå(best, treff); }
   }
+  // Lag som ikke skjøt mot et annet lag sist runde, skyter mot kjøretøy fra en annen side som de ser innen 600 m.
+  function motKjøretøy() {
+    for (const a of ENHETER) {
+      if (!levende(a) || Terreng.slattUt(a.menn) || (a.skyterPå && a.skyterPå.size)) continue;
+      let best = null, bd = 600; for (const k of KJORETOY) { if (k.side === a.side) continue; const d = Math.hypot(k.x - a.x, k.y - a.y); if (d < bd && ser(a, k.x, k.y)) { bd = d; best = k; } }
+      if (!best) continue;
+      const ildf = KROKER.ild.reduce((v, h) => v * h(a, best), 1); if (ildf <= 0) continue;
+      let treff = Terreng.ildrunde(a.menn, bd, { målPåMarsj: !!best.sti }, rng); if (ildf < 1) treff = [...Array(treff)].filter(() => rng() < ildf).length;
+      SKUDD.push({ a, b: best, til: performance.now() + 1400 });
+      if (!best.angrepet || tid - best.angrepet > 30) logg(`${best.navn} er under ild fra ${synlig(a) ? a.navn : 'fienden'} (${Math.round(bd)} m)!`); best.angrepet = tid;
+      if (treff) skadKj(best, treff, false, synlig(a) ? a.navn : 'fienden');
+    }
+  }
+  function skadKj(k, treff, artilleri, fra) {
+    const T = Kjoretoy.TYPER[k.type], r = E.skad(k, treff, artilleri);
+    if (r.ødelagt) logg(r.borte ? `${k.navn} er ødelagt (${fra}).` : `${k.navn}: ${r.ødelagt} ${r.ødelagt === 1 ? T.navn.toLowerCase() : T.flertall} ødelagt, ${k.antall} igjen.`);
+    if (r.borte) { const i = KJORETOY.indexOf(k); if (i >= 0) KJORETOY.splice(i, 1); Kjoretoy.stopp(k); k.oppdrag = null;
+      if (window.valgtKjoretoy && valgtKjoretoy() === k && window.slippKjoretoy) { slippKjoretoy(); document.getElementById('panel').classList.remove('på'); } }
+    else if (window.valgtKjoretoy && valgtKjoretoy() === k) visKjoretoy(k);
+    skitten = true;
+  }
+  window.skadKjoretoy = skadKj;
   function slå(s) {
     SMELL.push({ x: s.x, y: s.y, t: performance.now() }); const treffet = E.nedslag(s, ENHETER.filter(levende), rng);
     const egne = treffet.filter(([b, t]) => b.side === 'blå' && t), fi = treffet.filter(([b, t]) => b.side !== 'blå' && t);
     logg(`Salven fra ${s.fra} slo ned ${Math.round(Math.hypot(s.x - s.mål[0], s.y - s.mål[1]))} m fra målet` + (fi.length ? ` – ${fi.map(([b, t]) => `${b.navn}: ${t} treff`).join(', ')}.` : treffet.length ? ' – ingen treff.' : ' – ingen enheter i nærheten.'));
     if (egne.length) logg('Egne tap i salven: ' + egne.map(([b, t]) => `${b.navn} ${t}`).join(', ') + '!');
     for (const [b, t] of treffet) if (t) treffPå(b, t, 'av artilleri');
+    for (const [k, t] of E.nedslagKj(s, KJORETOY.slice(), rng)) if (t) { logg(`${k.navn} ble truffet av salven.`); skadKj(k, t, true, 'artilleri'); }
   }
 
   // ---------- panelene ----------
   KJ_TEKST.push(k => {
     if (k.type === 'rakettartilleri') return k.lader > 0 ? `lader om (${Math.ceil(k.lader / 60)} min)` : `klar til å skyte, ${R.artilleri.minimum / 1000}–${R.artilleri.rekkevidde / 1000} km`;
     if (k.type === 'radar') return k.sti ? 'radar pakket ned (kjører)' : (k.iRo || 0) >= R.radar.oppstart ? `radar i drift, ${R.radar.rekkevidde / 1000} km` : `setter opp radaren (${Math.ceil((R.radar.oppstart - (k.iRo || 0)) / 60)} min)`;
-    if (k.type === 'stridsvogn') return `kanon ${R.stridsvogn.rekkevidde / 1000} km` + (k.skyterPå ? ' · i ildkamp' : '');
-    return null;
+    if (k.type === 'stridsvogn') return `kanon ${R.stridsvogn.rekkevidde / 1000} km` + (k.skyterPå ? ' · i ildkamp' : '') + (k.skade ? ` · skade ${Math.round(100 * k.skade)} %` : '');
+    return k.skade ? `skade ${Math.round(100 * k.skade)} %` : null;
   });
   KJ_PANEL.push((k, H) => {
     if (k.type !== 'rakettartilleri') return;

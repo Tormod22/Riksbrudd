@@ -35,6 +35,12 @@ const lag = (x, y, k) => ({ x, y, her: { k }, menn: Array.from({ length: 12 }, (
   assert.equal(E.droneSteg(d, 60), 'flyr'); assert(Math.abs(d.x - 2000) < 1); assert(E.droneSer(d, 4000, 1000) && !E.droneSer(d, 5000, 0));
   let h; for (let i = 0; i < 10; i++) h = E.droneSteg(d, 60); assert.equal(d.x, 10000); assert(h === 'framme' || h === 'over målet');
   assert.equal(E.droneSteg(d, R.drone.levetid), 'tom'); assert(!E.droneSer(d, 10000, 0)); }
+// skade på kjøretøy: lastebiler går i stykker av håndvåpen, stridsvogner nesten ikke; en kolonne mister ett kjøretøy om gangen
+{ const lb = { type: 'lastebil', antall: 1 }; let r = E.skad(lb, 5); assert(!r.ødelagt && lb.skade > .5); r = E.skad(lb, 5); assert.equal(r.ødelagt, 1); assert(r.borte);
+  const kol = { type: 'lastebil', antall: 4 }; r = E.skad(kol, 17); assert.equal(r.ødelagt, 1); assert.equal(kol.antall, 3); assert(!r.borte);
+  const sv = { type: 'stridsvogn', antall: 1 }; E.skad(sv, 50); assert.equal(sv.antall, 1, 'stridsvogna tåler håndvåpen'); assert.equal(E.skad({ type: 'stridsvogn', antall: 1, skade: .9 }, 1, true).ødelagt, 0);
+  assert.equal(E.skad({ type: 'lastebil', antall: 1 }, 2, true).ødelagt, 1, 'artilleri');
+  let t = 0; for (let i = 0; i < 300; i++) for (const [, n] of E.nedslagKj({ x: 0, y: 0 }, [{ x: 50, y: 0, antall: 2 }, { x: 400, y: 0, antall: 1 }], rng)) t += n; assert(t > 100, 'kjøretøy i nedslaget får treff'); }
 // nye kjøretøytyper på vegnettet (testgrafen fra test_vegnett.py)
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'riksbrudd-entest-'));
 let data; try { const fil = path.join(dir, 'f.bin'); execFileSync('python3', [path.join(__dirname, 'test_vegnett.py'), '--fixture', fil]); data = fs.readFileSync(fil); }
