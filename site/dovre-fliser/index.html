@@ -1576,8 +1576,13 @@ function lys3d() {
 function sett3d(u) {
   const R = R3;
   if (R.mesh) { R.scene.remove(R.mesh); R.mesh.geometry.dispose(); R.mesh.material.dispose(); R.tex.dispose(); }
-  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, u.N - 1, u.N - 1), pos = geo.attributes.position;
-  for (let k = 0; k < pos.count; k++) pos.setZ(k, (u.H[k] - u.h0) * R.EX);
+  // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
+  // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
+  // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
+  const M = VW >= 900 ? 289 : 225, A = (M - 1) / (u.N - 1), gt = t => t * (A + (1 - A) * t * t);
+  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
+    pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); }
   geo.computeVertexNormals();
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
@@ -1667,8 +1672,11 @@ function lodTrær(R) {
   const G2 = (VW < 700 ? 170 : 260) ** 2;
   for (const t of R.treLOD) { let a = 0, b = 0; const NM = t.nær.instanceMatrix.array, FM = t.fjern.instanceMatrix.array, NC = t.nær.instanceColor.array, FC = t.fjern.instanceColor.array;
     for (let k = 0; k < t.n; k++) { const dx = t.data[k * 5] - c.x, dy = t.data[k * 5 + 1] - c.y, dz = t.data[k * 5 + 2] - c.z;
-      if (dx * dx + dy * dy + dz * dz < G2) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; }
-      else { FM.set(t.M.subarray(k * 16, k * 16 + 16), b * 16); FC.set(t.C.subarray(k * 3, k * 3 + 3), b * 3); b++; } }
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 < G2) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
+      // langt unna er trærne bare prikker: halvparten fra 6 × detaljavstanden, en firedel fra 12 × (fast utvalg per tre)
+      const frø = (t.data[k * 5 + 4] * 7.31) % 1; if ((d2 > 36 * G2 && frø > .5) || (d2 > 144 * G2 && frø > .25)) continue;
+      { FM.set(t.M.subarray(k * 16, k * 16 + 16), b * 16); FC.set(t.C.subarray(k * 3, k * 3 + 3), b * 3); b++; } }
     t.nær.count = a; t.fjern.count = b;
     for (const m of [t.nær, t.fjern]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
 }
