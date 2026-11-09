@@ -17,4 +17,4 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_response(206); self.send_header('Content-Range',f'bytes {a}-{b}/{size}'); self.send_header('Content-Length',str(b-a+1))
             self.send_header('Content-Type',ct); self.end_headers(); f.seek(a); self.wfile.write(f.read(b-a+1)); f.close(); return None
         self.send_response(200); self.send_header('Content-Type',ct); self.send_header('Content-Length',str(size)); self.send_header('Accept-Ranges','bytes'); self.end_headers(); return f
-os.chdir(sys.argv[1]); http.server.ThreadingHTTPServer(('',8765),H).serve_forever()
+os.chdir(sys.argv[1]); http.server.ThreadingHTTPServer(('',int(os.environ.get('PORT','8765'))),H).serve_forever()
