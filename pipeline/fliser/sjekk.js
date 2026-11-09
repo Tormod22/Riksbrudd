@@ -311,6 +311,12 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           return { reparasjon: før, tilstand: Odeleggelse.tilstand(INFRA_TILSTAND, 'veg', e), timer: n * 6 / 3600, skade: k.skade }; }, kr.e);
         const krok = kr2.sperret > 0 && (kr2.meter === null || kr2.meter > kr.meter) && kr3.reparasjon === 1 && kr3.tilstand === 'hel' && kr3.skade === 0; if (!krok) { feil++; console.log(JSON.stringify({ kr, kr2, kr3 })); }
         console.log(`${krok ? 'ok  ' : 'FEIL'} ${navn} vegkrater og verksted: E6 sprengt etter ${kr2.min.toFixed(0)} min, ${kr2.meter === null ? 'ingen veg' : 'omkjøring ' + ((kr2.meter - kr.meter) / 1000).toFixed(1) + ' km'}, reparert etter ${kr3.timer.toFixed(1)} t; lastebil i Dombås reparert: ${kr3.skade === 0}`);
+        // «Slik spiller du»: ?-knappen åpner veiledningen, × lukker den (vises ikke av seg selv i testene)
+        const hj0 = await pg.evaluate(() => document.getElementById('hjelp').classList.contains('på'));
+        await pg.click('#hjelpknapp'); const hj = await pg.evaluate(() => ({ på: document.getElementById('hjelp').classList.contains('på'), deler: document.querySelectorAll('#hjelp h3').length }));
+        await pg.click('#hjelp .lukk'); const hj2 = await pg.evaluate(() => document.getElementById('hjelp').classList.contains('på'));
+        const hjok = !hj0 && hj.på && hj.deler >= 10 && !hj2; if (!hjok) feil++;
+        console.log(`${hjok ? 'ok  ' : 'FEIL'} ${navn} hjelp: åpnes med ?, ${hj.deler} avsnitt, lukkes med ×`);
         }
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);

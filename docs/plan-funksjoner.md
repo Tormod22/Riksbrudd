@@ -132,6 +132,9 @@ Hver funksjon skal være spillbar og testet før neste starter. «Ferdig når» 
   `graf.lenkerVed`) sprenges (20 min, reparasjon 3 t via «Reparer …» + trykk på krateret) og sperres i vegnettet (tilstand
   `veg:<lenkenummer>`). Egne tettsteder reparerer kjøretøy som står der (10 % skade per time, uten strøm 4 %).
 
+- **Hjelp (9. nov natt):** `spill/hjelp.js` – ?-knappen øverst åpner «Slik spiller du» (alt over på enkel norsk); vises av seg
+  selv første gang (localStorage, ikke under automatiske tester). Hold teksten oppdatert når noe nytt kommer.
+
 ### S6 Flere enheter (fase E)
 - Speiderbil, stridsvogn, rakettartilleri, radar (fast, lang sikt over åpen mark), drone (kort levetid, ser over fjell),
   luftlandsatte, fartøy på sjø og fjord. Hver type: fart, sikt, våpen og pris i olje. Tåke og «sist sett» for alle.
