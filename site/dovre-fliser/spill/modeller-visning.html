@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riksbrudd – 3D-modeller</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #6f716f; overflow: hidden; font: 13px system-ui, sans-serif; color: #e8e6df; }
+  canvas { display: block; touch-action: none; }
+  #info { position: fixed; left: 10px; top: 8px; background: rgba(20, 22, 24, .72); padding: 6px 10px; border-radius: 4px; max-width: 70vw; }
+  #feil { position: fixed; left: 10px; bottom: 8px; color: #ff9a8a; white-space: pre-wrap; }
+  a { color: #d8cfae; }
+</style>
+</head>
+<body>
+<div id="info">3D-modeller (spill/modeller.js) – dra for å snu, hjul/knip for å zoome. <span id="telling"></span></div>
+<div id="feil"></div>
+<script>
+// Testside for modellene i spill/modeller.js: alle modellene på rad på et grått gulv, lys fra himmelen og sola, navnet over hver.
+// Adresse: ?modell=brakke viser bare én; az/el/avst (grader og meter) setter kameraet. window.kamera(az, el, avst, [x, y, z]) og
+// window.vis(navn) brukes av skjermbildeskriptet. window.TELLING har antall trekanter per modell.
+window.onerror = (m, k, l) => { document.getElementById('feil').textContent += m + ' (' + l + ')\n'; };
+</script>
+<script src="../lib/three-r128.min.js"></script>
+<script src="modeller.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#9fb0be'); scene.fog = new THREE.Fog('#9fb0be', 250, 600);
+  const kam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, .1, 2000); kam.up.set(0, 0, 1);
+  scene.add(new THREE.HemisphereLight('#d6e0ea', '#5b5649', .62));
+  const sol = new THREE.DirectionalLight('#fff3dc', .85); sol.castShadow = true; sol.shadow.mapSize.set(4096, 4096); sol.shadow.bias = -.0004;
+  scene.add(sol, sol.target);
+  const gulv = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshLambertMaterial({ color: '#7d7f7c' }));
+  gulv.receiveShadow = true; scene.add(gulv);
+  const mat = MODELLER.materiale();
+
+  // Navn over modellen (bilde av teksten)
+  function etikett(tekst) {
+    const c = document.createElement('canvas'), g = c.getContext('2d'); c.width = 512; c.height = 64;
+    g.fillStyle = 'rgba(20,22,24,.75)'; g.fillRect(0, 0, 512, 64); g.fillStyle = '#efece2'; g.font = '30px system-ui, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tekst, 256, 33);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false })); s.scale.set(8, 1, 1); return s;
+  }
+
+  // Lag alle modellene og sett dem på rader (avstand etter størrelsen)
+  const valgt = q.get('modell'), MOD = {}, TELLING = window.TELLING = {};
+  let x = 0, y = 0, radH = 0, tot = 0; const BREDDE = 140;
+  for (const m of MODELLER.LISTE) {
+    if (valgt && m.navn !== valgt) continue;
+    const g = m.lag(), t = MODELLER.trekanter(g); TELLING[m.navn] = t; tot += t;
+    const b = g.boundingBox, sx = b.max.x - b.min.x, sy = b.max.y - b.min.y, sz = b.max.z - b.min.z;
+    if (x + sx > BREDDE) { x = 0; y -= radH + 12; radH = 0; }
+    const mesh = new THREE.Mesh(g, mat); mesh.castShadow = mesh.receiveShadow = true;
+    const cx = x - b.min.x, cy = y - b.max.y; mesh.position.set(cx, cy, 0); scene.add(mesh);
+    const e = etikett(`${m.nr}. ${m.tittel} · ${t} △`); e.position.set(x + sx / 2, cy + (b.min.y + b.max.y) / 2, sz + 2.2); scene.add(e);
+    MOD[m.navn] = { mesh, midt: [x + sx / 2, cy + (b.min.y + b.max.y) / 2, sz / 2], str: Math.max(sx, sy, sz) };
+    x += sx + 10; radH = Math.max(radH, sy);
+  }
+  document.getElementById('telling').textContent = `${Object.keys(TELLING).length} modeller, ${tot} trekanter.`;
+  // midten av alt (for oversikten)
+  const alle = new THREE.Box3(); Object.values(MOD).forEach(o => alle.expandByObject(o.mesh));
+  const ALT = { midt: [(alle.min.x + alle.max.x) / 2, (alle.min.y + alle.max.y) / 2, 0], str: Math.max(alle.max.x - alle.min.x, alle.max.y - alle.min.y) };
+
+  // Kamera rundt et midtpunkt: az = retning fra midten (0 = fra +x, altså forfra), el = høyde over horisonten
+  let K = { az: +(q.get('az') || 35), el: +(q.get('el') || 28), avst: 0, mål: [0, 0, 0] };
+  function plasser() {
+    const a = K.az * Math.PI / 180, e = K.el * Math.PI / 180, [mx, my, mz] = K.mål;
+    kam.position.set(mx + K.avst * Math.cos(e) * Math.cos(a), my + K.avst * Math.cos(e) * Math.sin(a), mz + K.avst * Math.sin(e));
+    kam.lookAt(mx, my, mz);
+    sol.position.set(mx + 60, my - 90, 140); sol.target.position.set(mx, my, 0);
+    const r = Math.max(30, K.avst * .9); Object.assign(sol.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: 600 });
+    sol.shadow.camera.updateProjectionMatrix();
+  }
+  window.kamera = (az, el, avst, mål) => { K.az = az; K.el = el; if (avst) K.avst = avst; if (mål) K.mål = mål; plasser(); tegn(); };
+  window.vis = navn => {
+    const o = navn ? MOD[navn] : ALT; if (!o) return false;
+    K.mål = o.midt; K.avst = navn ? o.str * 1.9 + 4 : o.str * 1.25; plasser(); tegn(); return true;
+  };
+  function tegn() { renderer.render(scene, kam); }
+  vis(valgt); if (q.get('avst')) { K.avst = +q.get('avst'); plasser(); tegn(); }
+
+  // Dra for å snu, hjul for å zoome
+  let ned = null;
+  renderer.domElement.addEventListener('pointerdown', e => { ned = [e.clientX, e.clientY]; });
+  addEventListener('pointerup', () => { ned = null; });
+  addEventListener('pointermove', e => {
+    if (!ned) return; K.az -= (e.clientX - ned[0]) * .3; K.el = Math.max(3, Math.min(89, K.el + (e.clientY - ned[1]) * .3));
+    ned = [e.clientX, e.clientY]; plasser(); tegn();
+  });
+  addEventListener('wheel', e => { K.avst *= e.deltaY > 0 ? 1.1 : .9; plasser(); tegn(); });
+  addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); kam.aspect = innerWidth / innerHeight; kam.updateProjectionMatrix(); tegn(); });
+  window.KLAR = true;
+})();
+</script>
+</body>
+</html>
