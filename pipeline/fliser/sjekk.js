@@ -401,6 +401,14 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
+    // filtre i 3D (spill/filtre.js): hvert filter tegner uten GL-feil, bildet er ikke svart, tellerne gjelder fortsatt scenen; tilbake til «Ingen»
+    const fil = await pg.evaluate(() => { const gl = R3.renderer.getContext(), ut = []; gl.getError();
+      for (const { id } of Filtre.liste) { Filtre.velg(id); tegn3d(); const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, p = new Uint8Array(4); let sum = 0, ulike = new Set();
+        for (let i = 1; i < 8; i++) for (let j = 1; j < 8; j++) { gl.readPixels(Math.floor(W * i / 8), Math.floor(H * j / 8), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); sum += p[0] + p[1] + p[2]; ulike.add(p[0] + ',' + p[1] + ',' + p[2]); }
+        ut.push({ id, lys: Math.round(sum / 49 / 3), ulike: ulike.size, glFeil: gl.getError(), trekanter: R3.renderer.info.render.triangles }); }
+      Filtre.velg('ingen'); return { ut, dybde: Filtre.harDybde() }; });
+    const filok = fil.ut.length === 11 && fil.ut.every(f => f.lys > 8 && f.ulike > 3 && f.glFeil === 0 && f.trekanter > 1000); if (!filok) { feil++; console.log(JSON.stringify(fil)); }
+    console.log(`${filok ? 'ok  ' : 'FEIL'} ${navn} filtre i 3D: ${fil.ut.map(f => f.id + ' ' + f.lys).join(', ')} (lysstyrke 0–255), dybdetekstur: ${fil.dybde}`);
     // førsteperson: «Gå», hold W et sekund, kameraet står i øyehøyde og har flyttet seg; Esc flyr opp igjen
     await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y }));
     // hold W til du har gått et stykke (myk start: på trege maskiner tar det flere rammer), høyst 8 s

@@ -231,4 +231,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   stopp over ca. 40°, ikke i vann (vannmasken u.vann lest én gang per utsnitt), kropp med radius 0,3 m som glir langs hindringer, gynging.
   gange.js bruker den: mus låses med klikk (pointer lock), Shift/mellomrom/C, mobil styrespak + knappene Hopp/Huk, sikte, utholdenhetsmåler,
   litt større synsfelt når du løper (kameraets fov settes tilbake til 50 når du flyr opp). Hoppet huskes til neste ramme (hoppVent).
-
+  FILTRE I 3D (10. nov, brukeren: «10 forskjellige filter/kamera-linse-forslag … pikselert, grain osv.»): spill/filtre.js henger seg på
+  KROKER.bilde3d: scenen tegnes til en WebGLRenderTarget (multisample i WebGL2; med DepthTexture for Varmesøker og Tegneserie; Piksel
+  rett i lav oppløsning 200/170 px høy) og så en fullskjerm-firkant med filterets shader. Ti stiler + «Ingen» (kroken svarer false, ingen
+  kostnad): Piksel (16 farger, Bayer-raster), Filmkorn, VHS-kamera, Nattsikt, Varmesøker, Tegneserie (konturer fra laplace av 1/z),
+  Akvarell, Sepia 1940, Kald nordisk (bleach bypass), Miniatyr (tilt-shift). Akvarell og Miniatyr tegnes i 0,75 oppløsning på mobil.
+  Tekst i overlegget (KROKER.tegn3d): tidsstempel på VHS, sikte på varmesøkeren. Knapp «Filter: …» i ☰ blar, valget i localStorage
+  «riksbrudd-filter»; window.Filtre.velg(id). info.autoReset slås av under filteret så trekanttelleren gjelder scenen. VAKT i sjekk.js:
+  hvert filter tegnes, gl.getError() = 0, punkter lest med readPixels er ikke svarte/ensfarget.
