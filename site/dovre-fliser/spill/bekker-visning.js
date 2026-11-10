@@ -70,9 +70,10 @@
     if (u.bunn) { const Bn = u.bunn; for (let j = 0; j < Bn.W; j++) for (let i = 0; i < Bn.W; i++) { const x = -S + (i + .5) / Bn.W * 2 * S, y = S - (j + .5) / Bn.W * 2 * S; if (iBekk(x, y)) Bn.gress[j * Bn.W + i] = 0; } }
     if (S > 2200) return;
     // vannbåndet: myke svinger, punkt hver ~2 m, høyde fra terrenget; rennretning nedover (v øker med strømmen)
-    const bånd = [];
+    // punkt hver 2 m i lite utsnitt, opp til 4 m i store (trekanter: ca. 22 000 ved S 800, under ca. 60 000 ved S 1700–2200)
+    const bånd = [], stegB = Math.max(2, Math.min(4, 2 + (S - 800) / 600));
     for (const l of linjer) {
-      let P = Bekker.punkter(Bekker.myk(l.P), 2).map(([x, y]) => [x - u.cx, y - u.cy]);
+      let P = Bekker.punkter(Bekker.myk(l.P), stegB).map(([x, y]) => [x - u.cx, y - u.cy]);
       const biter = []; let bit = [];
       for (const p of P) { if (Math.abs(p[0]) < S - 4 && Math.abs(p[1]) < S - 4) bit.push(p); else { if (bit.length > 1) biter.push(bit); bit = []; } }
       if (bit.length > 1) biter.push(bit);
