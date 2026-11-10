@@ -1831,13 +1831,21 @@ async function nytt3dUtsnitt(cx, cy, S) {
   try { const u = await bygg3d(cx, cy, S); if (på3d) sett3d(u); } catch (e) { console.error(e); visFeil(e); } finally { R3.bygger = false; }
 }
 // Fordeler trærne på det detaljerte og det enkle nettet etter avstanden til kameraet (når kameraet har flyttet seg 15 m).
+// Ytelse (12. nov): bare trærne i synsfeltet (med god margin: synsvinkelen × 1,4) legges i nettene, og fordelingen gjøres også på nytt
+// når kameraet har dreid mer enn 8° – i førsteperson og lavt over bakken står de fleste trærne bak eller ved siden av kameraet.
 function lodTrær(R) {
   if (!R.treLOD || !R.treLOD.length) return; const c = R.cam.position;
-  if (R.lodVed && Math.hypot(c.x - R.lodVed[0], c.y - R.lodVed[1], c.z - R.lodVed[2]) < 15) return; R.lodVed = [c.x, c.y, c.z];
+  const F = R.lodFr || (R.lodFr = { fr: new THREE.Frustum(), m: new THREE.Matrix4(), cam: new THREE.PerspectiveCamera(), s: new THREE.Sphere(), d: new THREE.Vector3() });
+  const dir = R.cam.getWorldDirection(F.d);
+  if (R.lodVed && Math.hypot(c.x - R.lodVed[0], c.y - R.lodVed[1], c.z - R.lodVed[2]) < 15 && R.lodDir && dir.x * R.lodDir[0] + dir.y * R.lodDir[1] + dir.z * R.lodDir[2] > .99 && R.lodAsp === R.cam.aspect) return;
+  R.lodVed = [c.x, c.y, c.z]; R.lodDir = [dir.x, dir.y, dir.z]; R.lodAsp = R.cam.aspect;
+  F.cam.copy(R.cam); F.cam.fov = Math.min(170, R.cam.fov * 1.4); F.cam.near = .1; F.cam.updateProjectionMatrix(); F.cam.updateMatrixWorld();
+  F.fr.setFromProjectionMatrix(F.m.multiplyMatrices(F.cam.projectionMatrix, F.cam.matrixWorldInverse)); const sf = F.s;
   const G2 = (VW < 700 ? 170 : 260) ** 2;
   for (const t of R.treLOD) { let a = 0, b = 0; const NM = t.nær.instanceMatrix.array, FM = t.fjern.instanceMatrix.array, NC = t.nær.instanceColor.array, FC = t.fjern.instanceColor.array;
     for (let k = 0; k < t.n; k++) { const dx = t.data[k * 5] - c.x, dy = t.data[k * 5 + 1] - c.y, dz = t.data[k * 5 + 2] - c.z;
-      const d2 = dx * dx + dy * dy + dz * dz;
+      const d2 = dx * dx + dy * dy + dz * dz, h = t.data[k * 5 + 3];
+      sf.center.set(t.data[k * 5], t.data[k * 5 + 1], t.data[k * 5 + 2] + h * .5); sf.radius = h * .7 + 4; if (!F.fr.intersectsSphere(sf)) continue;
       if (d2 < (t.G2 || G2)) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
       // langt unna er trærne bare prikker: halvparten fra 6 × detaljavstanden, en firedel fra 12 × (fast utvalg per tre)
       const frø = (t.data[k * 5 + 4] * 7.31) % 1; if ((d2 > 36 * G2 && frø > .5) || (d2 > 144 * G2 && frø > .25)) continue;
@@ -1845,13 +1853,25 @@ function lodTrær(R) {
     t.nær.count = a; t.fjern.count = b;
     for (const m of [t.nær, t.fjern]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
 }
+// Ytelse (12. nov): 3D tegnes med lavere pikseltetthet enn skjermen (PC høyst 1,5, mobil høyst 1,25), og størrelsen settes bare når den endres
+// (setSize hver ramme satte lerretet på nytt). Går det tregt (over 28 ms per bilde i snitt), senkes oppløsningen trinnvis til 60 %; går det
+// lett (under 17 ms), heves den igjen. R3.skala og R3.pr viser hva som brukes (ytelsesmåleren og testene).
+function størrelse3d(R) {
+  const nå = performance.now(), dt = R.sistRamme ? nå - R.sistRamme : 16; R.sistRamme = nå;
+  R.rammeSnitt = (R.rammeSnitt || 16) * .95 + Math.min(200, dt) * .05;
+  if (!R.skala) R.skala = 1;
+  if (!R.skalaVed || nå - R.skalaVed > 1500) { R.skalaVed = nå;
+    if (R.rammeSnitt > 28 && R.skala > .6) R.skala = Math.max(.6, R.skala - .1); else if (R.rammeSnitt < 17 && R.skala < 1) R.skala = Math.min(1, R.skala + .1); }
+  const pr = Math.round(Math.min(window.devicePixelRatio || 1, VW < 900 ? 1.25 : 1.5) * R.skala * 20) / 20;
+  if (pr !== R.pr || VW !== R.prW || VH !== R.prH) { R.pr = pr; R.prW = VW; R.prH = VH; R.renderer.setPixelRatio(pr); R.renderer.setSize(VW, VH, false); }
+}
 function tegn3d() {
   const R = R3; if (!R || !R.ut) return;
   const b = R.bane, u = R.ut, S = utsnittS(b.avst);
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
+  størrelse3d(R); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
   // bilde3d: (R3) => true når en krok har tegnet bildet selv (filtre/kameralinser i spill/filtre.js)
   if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
@@ -1968,10 +1988,22 @@ window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
 logg('Dovre, 2023. Riket har gått i oppløsning. Du leder Riksrådet (blå); Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
+// Ytelse (12. nov): står tida stille (pause) og kameraet har ikke rørt seg på et sekund, tegnes 3D bare fire ganger i sekundet
+// (vind, vann og lys går da tregere, men mobilen slipper å tegne det samme bildet 60 ganger i sekundet). Trykk og taster vekker den.
+let sistAktiv = 0, sistTegnet3d = 0, kamNøkkel3d = '';
+for (const h of ['pointerdown', 'pointermove', 'wheel', 'keydown']) window.addEventListener(h, () => { sistAktiv = performance.now(); }, { passive: true });
+function trengerTegning3d(nå) {
+  nå = nå || performance.now(); const R = R3, b = R && R.bane, f = R && R.fot;
+  const k = b ? [b.x, b.y, b.avst, b.pitch, b.yaw, f ? f.a + ',' + f.pitch : '', VW, VH, R.bygger].join('|') : '';
+  if (k !== kamNøkkel3d) { kamNøkkel3d = k; sistAktiv = nå; }
+  if (tempo > 0 || nå - sistAktiv < 1000 || nå - sistTegnet3d > 250) { sistTegnet3d = nå; return true; }
+  return false;
+}
 (function loop(nå) {
   if (nå) { let r = Math.min(.25, (nå - sist) / 1000) * tempo / 60; sist = nå; while (r > 1e-12) { const d = Math.min(.1, r); sim(d); r -= d; } }   // sanntid ved 1×, små steg hver ramme (jevn bevegelse)
-  for (const s of ENHETER) if (!s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) oppdaterSikt(s);
-  if (på3d) tegn3d(); else tegn(); requestAnimationFrame(loop);
+  // høyst tre nye siktberegninger per ramme (resten tas i neste ramme), så mange lag som flytter seg samtidig ikke gir hakk
+  let nySikt = 0; for (const s of ENHETER) if (nySikt < 3 && !s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) { oppdaterSikt(s); nySikt++; }
+  if (på3d) { if (trengerTegning3d(nå)) tegn3d(); } else tegn(); requestAnimationFrame(loop);
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>

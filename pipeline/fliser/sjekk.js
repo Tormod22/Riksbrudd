@@ -453,6 +453,11 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
+    // VAKT ytelse (12. nov): 3D tegnes med høyst 1,5 (PC) / 1,25 (mobil) i pikseltetthet, og i pause uten bevegelse hoppes rammer over
+    const yt = await pg.evaluate(() => { const t0 = tempo; tempo = 0; sistAktiv = 0; trengerTegning3d(performance.now() + 2000); const a = trengerTegning3d(performance.now() + 2010); tempo = 1; const b = trengerTegning3d(performance.now() + 2020); tempo = t0;
+      return { pr: R3.pr, maks: VW < 900 ? 1.25 : 1.5, hopper: !a, tegnerIgjen: b }; });
+    const ytok = yt.pr > 0 && yt.pr <= yt.maks && yt.hopper && yt.tegnerIgjen; if (!ytok) feil++;
+    console.log(`${ytok ? 'ok  ' : 'FEIL'} ${navn} ytelse: pikseltetthet ${yt.pr} (høyst ${yt.maks}), pause uten bevegelse hopper over rammer: ${yt.hopper}, tegner igjen når tida går: ${yt.tegnerIgjen}`);
     // fjernterrenget rundt utsnittet (spill/fjern3d.js): ringen finnes i scenen (horisonten var avklipte vegger 12. nov)
     await pg.waitForFunction(() => window.Fjern3d && Fjern3d.sjekk(), null, { timeout: 30000 }).catch(() => {});
     const fj = await pg.evaluate(() => Fjern3d.sjekk()), fjok = !!(fj && fj.iScene && fj.trekanter > 1000); if (!fjok) feil++;
