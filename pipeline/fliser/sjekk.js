@@ -474,9 +474,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // tegnes i scenen uten GL-feil og forsvinner igjen. Reglene (rutefart, venting, snu) testes i test_ferje.js.
     const fe = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = async n => { for (let i = 0; i < n; i++) { tegn3d(); await new Promise(r => setTimeout(r, 90)); } };
       if (!window.Ferje3d || !window.Kjølvann || !window.Ferje) return { mangler: true };
-      const s = Kjølvann.nyttSpor(4, 20), nå = Kjølvann.nå(), z = (hoyde3d(R3.ut.cx, R3.ut.cy) - R3.ut.h0) * R3.EX + .3;
-      for (let i = 0; i <= 40; i++) Kjølvann.flytt(s, i * 3, 0, z, 4, nå - 6 + i * .15);
-      await vent(4); const n = Kjølvann.antall(), iScene = !!(Ferje3d.KV.mesh && Ferje3d.KV.mesh.parent), glFeil = gl.getError();
+      // sporet lever 10 min (tregt i swiftshader); et nytt utsnitt (sett3d) tømmer sporene: vent til byggingen er ferdig, og prøv igjen om det skjedde underveis
+      let n = 0;
+      for (let forsøk = 0; forsøk < 4 && n <= 20; forsøk++) { while (R3.bygger) await new Promise(r => setTimeout(r, 200));
+        const s = Kjølvann.nyttSpor(4, 600), nå = Kjølvann.nå(), z = (hoyde3d(R3.ut.cx, R3.ut.cy) - R3.ut.h0) * R3.EX + .3;
+        for (let i = 0; i <= 40; i++) Kjølvann.flytt(s, i * 3, 0, z, 4, nå - 6 + i * .15);
+        await vent(4); n = Kjølvann.antall(); }
+      const iScene = !!(Ferje3d.KV.mesh && Ferje3d.KV.mesh.parent), glFeil = gl.getError();
       Ferje3d.KV.spor = []; await vent(3); return { ...Ferje3d.sjekk(), n, iScene, glFeil, etter: Kjølvann.antall() }; });
     const feok = !fe.mangler && fe.ferjer === 0 && fe.n > 20 && fe.iScene && fe.glFeil === 0 && fe.etter === 0; if (!feok) feil++;
     console.log(`${feok ? 'ok  ' : 'FEIL'} ${navn} ferjer og kjølvann: ${fe.mangler ? 'modulene mangler' : `${fe.ferjer} ferjer (ingen kai på Dovre), kjølvann ${fe.n} firkanter i scenen ${fe.iScene}, borte etterpå ${fe.etter === 0}, GL-feil ${fe.glFeil}`}`);
