@@ -898,14 +898,19 @@ async function bygg3d(cx, cy, S) {
   const u = { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2], hus: null };
   u.infra = infraI(u); if (VIS.infra) u.bru = bruer3d(u);
   if (u.bru) {   // skyggen av bruene på bakken/vannet (dekker vegen som ellers ligger nede i dalen under brua)
-    g.save(); g.lineCap = 'butt'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(14,16,18,.82)';
-    for (const o of u.infra) if (o.lag === 'bru') { g.lineWidth = ([9, 3.5, 6][o.e.type] || 8) / mpp + 7; g.beginPath();
+    // med 3D-bruene (spill/infra3d.js) bare en svak skygge: den sterke ga svarte flekker der det er mange korte bruer (Bergen)
+    const myk = !!window.Infra3d; g.save(); g.lineCap = 'butt'; g.lineJoin = 'round'; g.strokeStyle = myk ? 'rgba(14,16,18,.28)' : 'rgba(14,16,18,.82)';
+    for (const o of u.infra) if (o.lag === 'bru') { g.lineWidth = ([9, 3.5, 6][o.e.type] || 8) / mpp + (myk ? 1 : 7); g.beginPath();
       for (const q of o.deler) { g.moveTo((q[0] - cx + S) / mpp + 2, (cy + S - q[1]) / mpp + 2); for (let i = 2; i < q.length; i += 2) g.lineTo((q[i] - cx + S) / mpp + 2, (cy + S - q[i + 1]) / mpp + 2); }
       g.stroke(); }
     g.restore();
   }
   if (S <= 3200 && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
   const px = g.getImageData(0, 0, TW, TW).data;   // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus)
+  // /norge: der kartflisene ikke har noe (havet utenfor dataene) er bildet gjennomsiktig – det ble svart i 3D (Bergen). Fylles med havet.
+  if (NORGE_BLOKKER) for (let q = 0; q < px.length; q += 4) if (px[q + 3] < 200) { const a = px[q + 3] / 255; px[q] = px[q] * a + 44 * (1 - a); px[q + 1] = px[q + 1] * a + 74 * (1 - a); px[q + 2] = px[q + 2] * a + 102 * (1 - a); px[q + 3] = 255; }
+  // /norge: sjøen i satellittbildet er ofte grå (havna i Bergen ble mørk og ble ikke vann i 3D). Det som ligger på havnivå (under 0,3 m), blir hav.
+  if (NORGE_BLOKKER) havnivå(px, TW, H, N);
   u.vann = vannmaske(px, TW);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
@@ -916,6 +921,15 @@ async function bygg3d(cx, cy, S) {
   for (const f of KROKER.bygg3d) await f(u, { px, TW, skog });
   naturfarger(px, TW); g.putImageData(new ImageData(px, TW, TW), 0, 0);
   return u;
+}
+// Punktene i teksturen der terrenget ligger på havnivå (bilineært i høydenettet), farges i havets farge med en myk kant (0,3–0,8 m)
+function havnivå(px, TW, H, N) {
+  const f = (N - 1) / TW;
+  for (let j = 0; j < TW; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
+    for (let i = 0; i < TW; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0;
+      const h = (H[y0 * N + x0] * (1 - a) + H[y0 * N + x0 + 1] * a) * (1 - b) + (H[(y0 + 1) * N + x0] * (1 - a) + H[(y0 + 1) * N + x0 + 1] * a) * b;
+      if (h > .8) continue; const v = h <= .3 ? 1 : (.8 - h) / .5, q = (j * TW + i) * 4;
+      px[q] += (44 - px[q]) * v; px[q + 1] += (74 - px[q + 1]) * v; px[q + 2] += (102 - px[q + 2]) * v; px[q + 3] = 255; } }
 }
 // 3D-kartet i naturligere farger: litt mer metning og lys enn papirkartet, og vannet speiler himmelen (lysere blågrått).
 function naturfarger(px, TW) {
