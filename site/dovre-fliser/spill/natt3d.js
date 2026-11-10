@@ -115,8 +115,8 @@
     if (glød > .01 || rosa > .01) {
       const pos = R.kuppel.geometry.attributes.position, kol = R.kuppel.geometry.attributes.color;
       for (let k = 0; k < pos.count; k++) { tmp.set(pos.getX(k), pos.getY(k), pos.getZ(k)); const z = tmp.z;
-        const d = tmp.dot(solVek), nær = Math.pow(Math.max(0, d), 5), side = Math.pow(Math.max(0, d * .5 + .5), 2.5), lav = Math.max(0, 1 - Math.abs(z) * 3.2);
-        const gs = glød * (nær * .32 + side * lav * .3), ps = rosa * Math.pow(Math.max(0, -d * .5 + .5), 3) * Math.max(0, 1 - Math.abs(z - .08) * 5) * .22;   // rosa belte motsatt sola
+        const d = tmp.dot(solVek), nær = Math.pow(Math.max(0, d), 5), side = Math.pow(Math.max(0, d * .5 + .5), 4), lav = Math.pow(Math.max(0, 1 - Math.abs(z) * 5.5), 1.5);
+        const gs = glød * (nær * .3 + side * lav * .24), ps = rosa * Math.pow(Math.max(0, -d * .5 + .5), 3) * Math.max(0, 1 - Math.abs(z - .08) * 5) * .22;   // rosa belte motsatt sola
         kol.setXYZ(k, kol.getX(k) + gs + ps * .9, kol.getY(k) + gs * .46 + ps * .55, kol.getZ(k) + gs * .16 + ps * .62); }
       kol.needsUpdate = true;
     }
