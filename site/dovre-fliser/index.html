@@ -1683,8 +1683,17 @@ function bak3d() {   // kart + tåke + siktfelt inn i overflaten
 }
 function proj3(X, Y) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
-  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5).project(R3.cam);
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
+  if (bakÅs(v)) return null;
+  v.project(R3.cam);
   return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
+}
+// Navn og merker bak en ås skal ikke synes gjennom terrenget: terrenget prøves 15 steder langs linja fra kameraet (2 m slingringsmonn)
+function bakÅs(v) {
+  const u = R3.ut, c = R3.cam.position, d = Math.hypot(v.x - c.x, v.y - c.y); if (d < 40) return false;
+  for (const t of [.07, .13, .2, .27, .33, .4, .47, .53, .6, .67, .73, .8, .87, .93, .97]) { const x = c.x + (v.x - c.x) * t, y = c.y + (v.y - c.y) * t, z = c.z + (v.z + 2 - c.z) * t;
+    if ((hoyde3d(x + u.cx, y + u.cy) - u.h0) * R3.EX > z + 2) return true; }
+  return false;
 }
 function mPer3(X, Y) { const u = R3.ut, c = R3.cam.position; return Math.hypot(X - u.cx - c.x, Y - u.cy - c.y, (hoyde3d(X, Y) - u.h0) * R3.EX - c.z) * 2 * Math.tan(25 * Math.PI / 180) / VH; }
 function kamera3d() {
@@ -1864,7 +1873,7 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=2ee2ae4355"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=242dbbe972"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=8c478efdba"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=b76b111598"></script>
@@ -1879,6 +1888,8 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/natt3d.js?v=359bc1d03d"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=22e139c0bb"></script>
+<script src="/dovre-fliser/spill/kraft.js?v=9b3e79c9db"></script>
+<script src="/dovre-fliser/spill/kraft3d.js?v=675b5d0845"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
 <script src="/dovre-fliser/spill/leir.js?v=8f63ed5f0b"></script>
