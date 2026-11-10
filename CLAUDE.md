@@ -317,3 +317,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   stavene i mastGeo), linene som LineSegments (parabel, delliner på 300 kV, toppliner), rød/hvite varselkuler der topplina går > 60 m
   over bakken, trafostasjonen (gjerde, transformatorer, portaler, kontrollbygg); KROKER.ramme3d: røde flyvarsellys (Points) på
   portal-/stålmaster når NATT.mørke > 0,15. VAKT i sjekk.js (Kraft3d.sjekk på Dombås-utsnittet: lastet, foten innen 0,5 m, 0 trær i beltet).
+  RARE TING I 3D (10. nov, brukeren: «se om det er noen plasser ting ser rart ut i 3D og fiks slik at slikt ikke skjer igjen»): ryddHus(u)
+  i bygg3d fjerner trær (alle treslag), steiner, busker, biler, flagg og gatelys som havnet inne i/inntil et hus (nærHus: husomrissene +
+  2 m, hindring3d med eget rutenett); smått3d setter ikke steiner/busker på grått i kartet (asfalt, parkering) utenom lys stein på
+  snaufjell; steinene er rundere med lavflekker, buskene ujevne; trekronene (klump i vegetasjon3d.js) har forskjøvne hjørner. Gange.start
+  leter i spiral etter et sted med 1,6 m klaring (ikke i hus/tre/vann). bakÅs(v): navn/merker i 3D bak en ås skjules (proj3). Loggen tones
+  ut i 3D 10 s etter siste melding (spill/hud.js). VAKT: spill/vakt3d.js – Vakt3d.sjekk(u) teller ting i hus og svevende/begravde ting
+  (sjekk.js bygger et utsnitt i Dombås og krever 0); sjekk.js sjekker også bakÅs og at «Gå» ikke starter i et hus.
+  NATTARBEIDET 10. nov (parallelle hjelpere i worktrees, hver med egen PORT – server.py/sjekk.js/bilde3d.js leser PORT) ble samlet på
+  grenen claude/natt-3d: filtre, kompass, natt/vær, vegetasjon, bekker, bruer, kraft, dyr og revisjonen over. Ikke publisert før brukeren
+  sier «Publiser».
