@@ -35,9 +35,9 @@
     logg(VW < 900 ? 'Du går selv: styrespaken nede til venstre (helt ut = løp), dra ellers for å se rundt, «Hopp» og «Huk» nede til høyre. «Gå» flyr opp.'
       : 'Du går selv: W/A/S/D, Shift løper, mellomrom hopper, C på huk. Klikk i bildet for å styre med musa; Esc slipper musa, Esc igjen flyr opp.');
   }
-  // Start aldri inne i et hus, et tre eller i vann: let utover i en spiral (høyst 60 m) til et sted der kroppen får plass
+  // Start aldri inne i (eller tett inntil) et hus, et tre eller i vann: let utover i en spiral (høyst 60 m) til et sted der kroppen får plass
   function ledig(u, b) {
-    const vann = vannVed(u), fri = (x, y) => !vann(x, y) && ![[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6]].some(([dx, dy]) => typeof hindring3d === 'function' && hindring3d(x + dx, y + dy));
+    const vann = vannVed(u), fri = (x, y) => !vann(x, y) && ![[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6], [1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [1.1, 1.1], [-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1]].some(([dx, dy]) => typeof hindring3d === 'function' && hindring3d(x + dx, y + dy));
     if (fri(b.x, b.y)) return;
     for (let r = 1; r <= 60; r++) for (let k = 0; k < 8 + r * 2; k++) { const v = k / (8 + r * 2) * 6.283, x = b.x + Math.cos(v) * r, y = b.y + Math.sin(v) * r; if (fri(x, y)) { b.x = x; b.y = y; return; } }
   }
