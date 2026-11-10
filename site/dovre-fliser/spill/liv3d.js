@@ -37,12 +37,14 @@
     u.veger = linjer;
     // vegmaske (1024 × 1024): ingen stein, busker, trær eller gress i vegbanen og på fortauet
     const W = 1024, m = new Uint8Array(W * W), celle = 2 * u.S / W;
-    for (const v of linjer) { const r = BREDDE[v.k] / 2 + (v.by ? 2.6 : .8), rc = Math.ceil(r / celle);
+    // 1 = grus (P/S), 2 = asfalt/fortau (E/R/F/K) – lyd.js lar fottrinnene knase på grus
+    for (const v of linjer) { const r = BREDDE[v.k] / 2 + (v.by ? 2.6 : .8), rc = Math.ceil(r / celle), kode = 'ERFK'.includes(v.k) ? 2 : 1;
       for (let i = 1; i < v.P.length; i++) { const [ax, ay] = v.P[i - 1], [bx, by] = v.P[i], l = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(l / celle));
         for (let s2 = 0; s2 <= n; s2++) { const x = ax + (bx - ax) * s2 / n, y = ay + (by - ay) * s2 / n, ci = Math.floor((x + u.S) / celle), cj = Math.floor((u.S - y) / celle);
-          for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a2 = ci + di, b2 = cj + dj; if (a2 < 0 || b2 < 0 || a2 >= W || b2 >= W || (di * di + dj * dj) * celle * celle > r * r) continue; m[b2 * W + a2] = 1; } } } }
-    const påVeg = (x, y) => { const i = Math.floor((x + u.S) / celle), j = Math.floor((u.S - y) / celle); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] === 1; };
+          for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a2 = ci + di, b2 = cj + dj; if (a2 < 0 || b2 < 0 || a2 >= W || b2 >= W || (di * di + dj * dj) * celle * celle > r * r) continue; if (m[b2 * W + a2] < kode) m[b2 * W + a2] = kode; } } } }
+    const påVeg = (x, y) => { const i = Math.floor((x + u.S) / celle), j = Math.floor((u.S - y) / celle); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] > 0; };
     u.påVeg = påVeg;
+    u.vegType = (x, y) => { const i = Math.floor((x + u.S) / celle), j = Math.floor((u.S - y) / celle); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] === 2 ? 'asfalt' : 'grus'; };
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!påVeg(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
     if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);

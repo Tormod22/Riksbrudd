@@ -470,6 +470,11 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, k, tå, glFeil: gl.getError() }; });
     const viok = vi.bølger && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
     console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
+    // VAKT lyd (spill/lyd.js, 12. nov): lydmotoren starter (8 kanaler) og regner ut nivåer i 3D uten feil; ☰ har «Lyd»
+    const ly = await pg.evaluate(async () => { Lyd.start(); await new Promise(r => { let k = 0; const f = () => (++k > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const s = Lyd.sjekk(); return { ...s, knapp: !!document.getElementById('vis-lyd') }; });
+    const lyok = ly.startet && ly.kanaler >= 8 && ly.nivå && ly.nivå.vind > 0 && ly.knapp; if (!lyok) feil++;
+    console.log(`${lyok ? 'ok  ' : 'FEIL'} ${navn} lyd: ${ly.kanaler} kanaler (${ly.tilstand}), vind ${ly.nivå && ly.nivå.vind != null ? ly.nivå.vind.toFixed(2) : '–'}, fugler ${ly.nivå && ly.nivå.fugler != null ? ly.nivå.fugler.toFixed(2) : '–'}, ☰-knapp ${ly.knapp}`);
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // filtre i 3D (spill/filtre.js): hvert filter tegner uten GL-feil, bildet er ikke svart, tellerne gjelder fortsatt scenen; tilbake til «Ingen»
     const fil = await pg.evaluate(() => { const gl = R3.renderer.getContext(), ut = []; gl.getError();
