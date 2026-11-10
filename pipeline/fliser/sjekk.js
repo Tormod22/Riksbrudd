@@ -397,6 +397,17 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           LeirSpill.startPlassering('gjerde'); for (const [x, y] of [[-60, -60], [80, -60], [80, 60], [-60, 60]]) LeirSpill.trykk(LX + x, LY + y); LeirSpill.plassering().lukket = true; await LeirSpill.prøv();
           r.k2.gjerde = LeirSpill.plassering().feil || 'ok'; LeirSpill.bekreft();
           LeirSpill.startPlassering('port'); LeirSpill.trykk(LX + 10, LY - 56); await LeirSpill.prøv(); r.k2.port = !!LeirSpill.plassering().festet; LeirSpill.avbryt();
+          // planlegging (12. nov): to skisser i planen (gratis), den andre legger seg inntil den første, angre/gjør om, mal, bygg hele planen
+          { const pen0 = OppstartSpill.tilstand().penger; LeirSpill.planModus(true); LeirSpill.inntil(true); LeirSpill.rutenett(false);
+            LeirSpill.startPlassering('lagertelt', null, { plan: true }); LeirSpill.trykk(LX - 40, LY + 70); await LeirSpill.prøv(); LeirSpill.bekreft();
+            const a = L.plan[L.plan.length - 1]; LeirSpill.startPlassering('lagertelt', null, { plan: true, ret: a.ret }); LeirSpill.trykk(a.x + 9.8, a.y + .6); await LeirSpill.prøv();
+            const pl = LeirSpill.plassering(), linjer = (pl.linjer || []).length; LeirSpill.bekreft(); const b2 = L.plan[L.plan.length - 1];
+            const gap = Math.round((Math.hypot(b2.x - a.x, b2.y - a.y) - 8.6) * 10) / 10, n2 = L.plan.length;
+            LeirSpill.angre(); const n1 = L.plan.length; LeirSpill.gjørOm(); const n3 = L.plan.length;
+            const nm = LeirSpill.lagreMal('Test'), mal = LeirSpill.maler()[nm - 1]; LeirSpill.startMal(nm - 1); LeirSpill.trykk(LX + 400, LY + 400); await LeirSpill.prøv(); const malOk = !LeirSpill.plassering().feil; LeirSpill.avbryt();
+            const gratis = OppstartSpill.tilstand().penger === pen0, før = L.bygg.length, nb = LeirSpill.byggFraPlan(null, true);
+            r.k2.plan = { gap, linjer, n: [n1, n2, n3], gratis, bygget: nb, tom: L.plan.length === 0, flere: L.bygg.length - før, malBygg: mal && mal.bygg.length, malOk };
+            LeirSpill.planModus(false); LeirSpill.rutenett(true); try { localStorage.removeItem('riksbrudd-maler'); } catch (e) { /* privat */ } }
           await new Promise(r => setTimeout(r, 1200)); r.k2.fps = +document.getElementById('sFps').textContent > 0;
           // menyen kan blas i: plassen holdes når den tegnes på nytt (brukeren 11. nov: «lar meg ikke bla ned»)
           const meny = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); lk.click(); meny.scrollTop = 250; const før = meny.scrollTop; lk.click(); lk.click();
@@ -418,6 +429,8 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3
           && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === .9e6 && k2.gjerde === 'ok' && k2.port && k2.fps && k2.bla;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
+        const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
+        console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
           && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }

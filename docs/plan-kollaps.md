@@ -229,6 +229,24 @@ Brukeren valgte alt: rive og flytte, bedre plassering, bedre gjerde og mer dybde
   innen 8 m fra gjerdet festes i linja og lager en åpning.
 - **FPS-teller** øverst (av/på i ☰).
 
+## Plassering og planlegging – ferdig (12. nov 2026)
+
+Brukeren 12. nov: «Bedre å plassere bygg å planlegge leiren». Claudes forslag (justeres etter testing):
+- **Inntil naboen:** nye bygg (og skisser) legger seg 2 m fra nærmeste bygg eller på linje med kanten/midten når de er innen 3 m, i
+  naboens retning (også 90° på tvers). Gule hjelpelinjer viser linjen; skjermen viser målene og avstanden til naboen. Kan slås av.
+- **For bratt:** mer enn 3 m høydeforskjell under bygget går ikke.
+- **Fortsett:** samme bygg står klart etter hvert du har satt ut (samme retning). PC-taster: R/Q roterer 15°, Enter bygger, Esc avbryter.
+- **Kopier:** fra byggpanelet og skissepanelet – likt bygg med samme retning.
+- **Planen:** «Planlegging: på» i Leir-menyen gjør byggene til gratis blå skisser (2D og 3D) som holder plassen (andre bygg kan ikke settes
+  oppå). Menyen viser antall, pris, byggetid og materialer for hele planen. «Bygg hele planen» bygger i den rekkefølgen de ble planlagt
+  og kjøper materialene som mangler for hvert bygg; det som ikke har råd, blir liggende. Skissepanelet: Bygg nå, Flytt, Kopier, Fjern.
+  Angre/gjør om (også Ctrl+Z / Ctrl+Y) for endringer i planen.
+- **Maler:** «Lagre leiren som mal» lagrer byggene og planen rundt midten av leiren (i nettleseren, «riksbrudd-maler»). «Sett inn»: trykk
+  der midten skal være, roter, «Legg i planen» – det som ikke får plass, hoppes over.
+
+Teknisk: leir.js (snapp, BRATT, planLegg/planFlytt/planFjern/planKostnad/byggPlan, tilMal/fraMal/planMal; L.plan lagres med leiren;
+test_leir.js) og leir-visning.js. Vakt i sjekk.js: to skisser (gratis), den andre 2 m inntil, angre/gjør om, mal, «Bygg hele planen».
+
 ## 12. Åpne spørsmål til brukeren
 
 1. Skal fraksjonen fortsatt kunne ta **oppdrag i utlandet** (plan-gjeng.md, G3), eller skal alt foregå i Norge nå?

@@ -327,3 +327,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   NATTARBEIDET 10. nov (parallelle hjelpere i worktrees, hver med egen PORT – server.py/sjekk.js/bilde3d.js leser PORT) ble samlet på
   grenen claude/natt-3d: filtre, kompass, natt/vær, vegetasjon, bekker, bruer, kraft, dyr og revisjonen over. Ikke publisert før brukeren
   sier «Publiser».
+  PLASSERING OG PLANLEGGING (12. nov, brukeren: «bedre å plassere bygg og planlegge leiren»): leir.js – snapp(L, b, {gap 2, rad 3}) legger
+  bygget inntil nærmeste bygg/skisse (side mot side med 2 m, eller kant/midte på linje) i naboens retning og gir hjelpelinjer og avstand;
+  kanBygge avviser > BRATT (3 m) høydeforskjell (v.høyde = hoydeVed) og overlapp med skissene i L.plan (o.planUnntatt); planLegg/planFlytt/
+  planFjern/planKostnad/byggPlan; tilMal/fraMal/planMal. leir-visning.js: «Planlegging» i Leir-menyen (blå skisser i 2D og 3D, skissepanel:
+  Bygg nå/Flytt/Kopier/Fjern, «Bygg hele planen» kjøper materialene per bygg), angre/gjør om (øyeblikk av planen, Ctrl+Z/Y), maler
+  («riksbrudd-maler», startMal), «Inntil naboen», «Fortsett», Kopier i byggpanelet, tastene R/Q/Enter/Esc. Se docs/plan-kollaps.md.
