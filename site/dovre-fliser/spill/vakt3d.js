@@ -30,6 +30,8 @@
     if (u.lys) gå('lykt', u.lys, 4, { hus: true, tol: .6 });
     // kulturlandskapet (spill/gard3d.js): rundballer og starten av hver gjerdebit
     if (window.Gard3d && u.gard) { const P = Gard3d.punkter(u); for (const k in P) gå(k, P[k], 3, { hus: true, tol: .4 }); }
+    // gatemøblene (spill/gate3d.js): benker, søppelkasser, sykkelstativ, busskur, skilt og postkasser – ikke i hus, ikke svevende
+    if (window.Gate3d && u.gate) { const P = Gate3d.punkter(u); for (const k in P) gå(k, P[k], 3, { hus: true, tol: .6 }); }
     // dyrene (spill/dyr3d.js) for årstiden: ikke i hus, ikke svevende, og ikke i vann (vannmasken u.vann, uavhengig av dyrenes egen maske)
     if (window.Dyr3d && u.dyrSteder) {
       const P = Dyr3d.punkter(u, årstid || 'sommer'); ut.dyr = {}; ut.iVann = {};

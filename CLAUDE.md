@@ -417,3 +417,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   dempes om natta (NATT.mørke). kyst3d.js: båtene gynger etter Vind3d.VIND.fart (Ferje.gynging; fasen samles opp), 2–6 av båtene ute på sjøen
   kjører rundt med kjølvann (mobil høyst 3, stopper i storm ≥ 14 m/s). Ferje3d.T.ekstra hopper i ruteplanen, Ferje3d.forspol(sek) bygger opp
   kjølvannet (skjermbilder). VAKT i sjekk.js (ingen ferjer på Dovre, kunstig kjølvann tegnes uten GL-feil); bilder: /norge, Mannheller–Fodnes.
+  GATEMØBLER (12. nov, brukeren: «fortsett å forbedre»): spill/gate.js (regler uten DOM, test_gate.js) + spill/gate3d.js (KROKER.bygg3d/sett3d,
+  S ≤ 2200, lastes etter byhus.js og bane3d.js). Busskur med benk, glass og reklametavle langs E/R/F i tettstedene (kandidater hver 20. m,
+  valgt etter hash, minst 420 m mellom holdeplassene, ikke innen 18 m av et kryss eller i en midtdeler; på fortauet, på E-veg bak skulderen) med holdeplasskilt på
+  begge sider av vegen; sykkelstativ (med 0–4 sykler) inntil veggen mot vegen ved ca. 65 % av butikkene/kjedene (t 7 eller k) og to ved skoler (t 9), med
+  søppelkasse og benk ved siden av; søppelkasse/benk ved fotgjengerfeltene i kryssene (Liv3d.finnKryss, eksportert fra liv3d.js) og her og der
+  langs fortauene (samme slag ikke nærmere enn 50/60 m); postkassestativ (1–3 kasser) ved vegkanten for ca. 45 % av eneboligene (t 0) langs
+  K/P. Byggene leses fra hus-flisene (z13) i kroken. Aldri på kjørebanen (rutenett med vegbitene), i/inntil hus (nærHus), vann, bekk, på
+  sporet, inntil trær (1,6 m), lykter, flagg eller biler; høyden = fortauet (vegbanen + 15 cm) og bare der det stemmer med bakken (± 0,45 m).
+  Fast via hash av kartkoordinatene; småting bare innen 650 m fra midten (Gate.RADIUS), tak PC 900 / mobil 300 (busskur og skilt beholdes,
+  resten nærmest midten). Ett nett per slag med hjørnefarger (InstancedMesh). Målt: Dombås ca. 25 000 trekanter, Trondheim/Oslo sentrum ca.
+  41 000 / 44 000, kroken 0,1–0,25 s. Vakt3d teller slagene (i hus/svever); VAKT i sjekk.js (benker, søppelkasser og
+  minst ett busskur i Dombås, 0 i hus/svevende, < 60 000 trekanter). window.Gate3d (punkter, antall).
