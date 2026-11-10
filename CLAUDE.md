@@ -259,3 +259,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (bakkeshaderen utvides i sett3d), lyse vinduer (glasspikslene i husteksturene, uniform uVindu/uAndel), lysflekker under gatelysene,
   tåkebanker (sprites) i dalbunnen. liv3d.js: bilene har front-/baklys og lyskjegle om kvelden. lys3d går nå hvert spillminutt med
   mykere overgang (dag fra −8° til 8°); skyene dreier med vinden (R3.skyVri). Himmelobjektene ligger på kuppelen innenfor skyene (0,97).
+  TRESLAG OG BLOMSTER (10. nov, brukeren: «legg til blomster og flere forskjellige tresorter»): spill/vegetasjon.js (regler uten DOM,
+  test_vegetasjon.js) + spill/vegetasjon3d.js. Kartdataene sier bare «skog» (ingen AR5/SR16), så treslaget velges etter regler: høyden mot
+  tregrensen (Vegetasjon.tregrense(y): 1100 m på Dovre, lavere nordover), helning, avstand til vann (vannmasken), myr og hei rundt (32 m-klassene).
+  bygg3d-kroken fordeler trærne fra trær3d på u.trær.{gran, furu, løv (bjørk), osp, rogn, fjellbjørk, selje, einer} (samme antall; aldri i
+  vannmasken) og setter einer/vier/fjellbjørk på åpen mark (maks 4000 PC / 1500 mobil, S ≤ 2200). Alle som leser u.trær skal gå over alle
+  nøklene (hindringer, liv3d og leir-visning gjør det). sett3d-kroken lager de seks nye slagene med detaljnivå i R3.treLOD (lodTrær) og eget
+  materiale (vind, høstfarge per treslag, nakne løvtrær om vinteren, snø; bladene = grønnere enn rødt, så stammer og rognebær ikke farges).
+  Rundt kameraet (som gresset, avst < 110 eller Gå): blomster (smørblomst, løvetann, hvitkløver, prestekrage, blåklokke, røsslyng, geitrams,
+  skogstjerne etter sted eng/hei/skog/veikant og årstid, ingen om vinteren), bregner i skogen og siv i vannkanten; u.vegKart (512²) sier hvor.
+  window.Vegetasjon3d (treslag, antall, utvalg, iVann) brukes av VAKTEN i sjekk.js: minst tre treslag ved Jora bru, ingen trær/planter i vann
+  eller på veg.

@@ -115,6 +115,14 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
       await pg.evaluate(() => { Object.assign(R3.bane, { x: window.testBru.deler[0][0] - R3.ut.cx, y: window.testBru.deler[0][1] - R3.ut.cy, avst: 500, pitch: .9 }); tegn3d(); });
       const b3 = await pg.evaluate(() => { const b = window.testBru, a = b.deler[0], k = (a.length >> 2) << 1, q = brupunkt3(b, a[k], a[k + 1]), o = q && finnInfra3d(q[0], q[1]);
         return { n: R3.ut.bru ? R3.ut.bru.antall : 0, mesh: !!R3.bruMesh, treff: o ? o.e.navn : null, navn: b.e.navn }; });
+      // vegetasjon (spill/vegetasjon3d.js): minst tre treslag i scenen ved Jora (elv, skog, myr), og ingen trær, blomster, bregner eller siv
+      // i vannet (vannmasken) eller på vegen; kameraet ned til bakken (avst 80) så plantene rundt kameraet lages
+      await pg.evaluate(() => { R3.bane.avst = 80; R3.bane.pitch = .3; R3.lodVed = null; tegn3d(); tegn3d(); });
+      const veg = await pg.evaluate(() => { const V3 = window.Vegetasjon3d, u = R3.ut; if (!V3) return null; const ut = V3.utvalg(4000), feil = [];
+        for (const [x, y, art] of ut) if (V3.iVann(x, y) || (u.påVeg && u.påVeg(x, y))) feil.push([Math.round(x), Math.round(y), art]);
+        return { slag: V3.treslag(), antall: V3.antall(), n: ut.length, planter: ut.filter(q => ['blomst', 'bregne', 'siv'].includes(q[2])).length, feil: feil.slice(0, 5), nFeil: feil.length }; });
+      const vegOk = veg && veg.slag.length >= 3 && veg.nFeil === 0 && veg.n > 100; if (!vegOk) feil++;
+      console.log(`${vegOk ? 'ok  ' : 'FEIL'} ${navn} vegetasjon i 3D: treslag ${veg && veg.slag.join(', ')}; ${veg && veg.n} sjekket (${veg && veg.planter} planter), ${veg && veg.nFeil} i vann eller på veg ${veg && veg.nFeil ? JSON.stringify(veg.feil) : ''}`);
       await pg.click('#v3d');
       const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
       console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);

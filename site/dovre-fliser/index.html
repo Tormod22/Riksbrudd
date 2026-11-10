@@ -1410,7 +1410,7 @@ function treGeo(type) {
 function hindringer(u) {
   const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
   for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P }); }
-  if (u.trær) for (const data of [u.trær.gran, u.trær.løv]) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
+  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
   return rute;
 }
 // Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
@@ -1866,18 +1866,20 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/hjelp.js?v=038a91bde0"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=8c478efdba"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=41be4356dc"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=918df29c7e"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=fb9712446a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=879e9e18d3"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=359bc1d03d"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=a65c007771"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
 <script src="/dovre-fliser/spill/leir.js?v=8f63ed5f0b"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=70a8d53cbe"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=b9c3c8651f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=c94a43a59f"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=09cd04afcb"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9fad675c80"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=674095da0d"></script>

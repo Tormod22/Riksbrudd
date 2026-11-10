@@ -45,7 +45,7 @@
     u.påVeg = påVeg;
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!påVeg(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
-    if (u.trær) { u.trær.gran = sil(u.trær.gran); u.trær.løv = sil(u.trær.løv); }
+    if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.bunn) { const B = u.bunn; for (let j = 0; j < B.W; j++) for (let i = 0; i < B.W; i++) { const x = -u.S + (i + .5) / B.W * 2 * u.S, y = u.S - (j + .5) / B.W * 2 * u.S; if (påVeg(x, y)) B.gress[j * B.W + i] = 0; } }
   });
 
