@@ -36,7 +36,8 @@
 
   // ---------- bygg3d: treslag ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
-    if (!u.trær || !u.trær.gran) return;
+    // window.VEG_AV = true: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
+    if (!u.trær || !u.trær.gran || window.VEG_AV) return;
     const kv = await lagVindu([u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], false, 9);
     const klasse = (X, Y) => { const a = Math.floor((X - kv.x0) / kv.r), c = Math.floor((kv.y0 - Y) / kv.r); return a >= 0 && c >= 0 && a < kv.w && c < kv.h ? kv.K[c * kv.w + a] : 255; };
     // andel myr og hei i de ni rutene rundt (ca. 100 × 100 m)
@@ -92,7 +93,7 @@
       for (let i = 0; i < p.count; i++) { const f = farge(p.getX(i), p.getY(i), p.getZ(i)); k[i * 3] = f[0]; k[i * 3 + 1] = f[1]; k[i * 3 + 2] = f[2]; }
       g.setAttribute('color', new THREE.BufferAttribute(k, 3)); deler.push(g); };
     // stamme fra foten (x, y) med lengde h, hellende v radianer mot retningen r; farge(z) etter høyden
-    const stamme = (r0, r1, h, farge, x = 0, y = 0, v = 0, r = 0, seg = 5) => { const g = new THREE.CylinderGeometry(r1, r0, h, seg, 2, true); g.translate(0, h / 2, 0); g.rotateZ(v); g.rotateY(r); g.translate(x, 0, -y); g.rotateX(Math.PI / 2);
+    const stamme = (r0, r1, h, farge, x = 0, y = 0, v = 0, r = 0, seg = 5) => { const g = new THREE.CylinderGeometry(r1, r0, h, seg, seg >= 6 ? 2 : 1, true); g.translate(0, h / 2, 0); g.rotateZ(v); g.rotateY(r); g.translate(x, 0, -y); g.rotateX(Math.PI / 2);
       legg(g, (a, b, z) => farge(z)); };
     // klump i kronen: polyeder med runde normaler (myk krone), strukket med (sx, sz)
     const klump = (x, y, z, r, farge, sx = 1, sz = 1, detalj = 0) => { const g = new THREE.IcosahedronGeometry(r, detalj), p = g.attributes.position, nr = new Float32Array(p.count * 3);
@@ -120,14 +121,14 @@
       stamme(.045, .025, .45, () => [.42, .4, .37]); stamme(.025, .015, .3, () => [.42, .4, .37], .02, 0, .5, 1);
       const f = blad([.16, .28, .09], [.28, .4, .14]);
       for (const [x, y, z, r] of fin ? [[0, 0, .64, .25], [.2, .1, .56, .2], [-.2, -.1, .57, .2], [.08, -.2, .6, .19], [-.08, .2, .68, .18]] : [[0, 0, .62, .28], [.18, .08, .55, .2], [-.18, -.1, .56, .2]]) klump(x, y, z, r, f, 1, .9);
-      if (fin) for (let k = 0; k < 7; k++) { const a = k * 2.4, rr = .3 + .04 * (k % 2); klump(Math.cos(a) * rr, Math.sin(a) * rr, .5 + .05 * (k % 3), .032, () => [.86, .14, .07]); }
+      if (fin) for (let k = 0; k < 6; k++) { const a = k * 2.4, rr = .3 + .04 * (k % 2), g = new THREE.OctahedronGeometry(.034); g.translate(Math.cos(a) * rr, .5 + .05 * (k % 3), -Math.sin(a) * rr); g.rotateX(Math.PI / 2); legg(g, () => [.86, .14, .07]); }
     } else if (art === 'rognEnkel') {
       stamme(.04, .03, .45, () => [.42, .4, .37]); klump(0, 0, .6, .3, blad([.17, .29, .09], [.27, .39, .14]), 1, .85);
     } else if (art === 'fjellbjørk') {
       // krokete og lav: tre hvite stammer som heller ut, små klumper med blader
       for (const [v, r] of [[.38, .3], [-.32, 1.8], [.18, 3.9]]) stamme(.026, .014, .6, z => z < .15 ? [.36, .33, .3] : [.7, .68, .64], 0, 0, v, r);
       const f = blad([.17, .28, .09], [.3, .42, .14]);
-      for (const [x, y, z, r] of fin ? [[.2, -.06, .6, .2], [-.17, .08, .56, .19], [.06, .12, .72, .18], [-.02, -.14, .5, .17], [.1, -.02, .84, .15], [-.1, -.04, .7, .15]] : [[.15, 0, .58, .2], [-.14, .06, .55, .18], [0, 0, .76, .16]]) klump(x, y, z, r, f, 1, .8);
+      for (const [x, y, z, r] of fin ? [[.2, -.06, .6, .21], [-.17, .08, .56, .2], [.04, .1, .76, .19], [-.02, -.14, .5, .18]] : [[.15, 0, .58, .2], [-.14, .06, .55, .18], [0, 0, .76, .16]]) klump(x, y, z, r, f, 1, .8);
     } else if (art === 'fjellbjørkEnkel') {
       stamme(.035, .02, .5, () => [.8, .78, .74]); klump(0, 0, .6, .3, blad([.18, .29, .1], [.28, .4, .14]), 1, .7);
     } else if (art === 'selje') {
@@ -191,7 +192,9 @@
         d.matrix.toArray(M, k * 16); const f = .84 + v * .32; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
       const lag = (geo, enkel) => { const m = new THREE.InstancedMesh(geo, treMateriale(art, enkel), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
         m.count = 0; m.frustumCulled = false; m.userData.treslag = art; R.scene.add(m); R.treMesh.push(m); return m; };
-      R.treLOD.push({ n, M, C, data, nær: lag(lagGeo(art), false), fjern: lag(lagGeo(art + 'Enkel'), true) });
+      // små treslag (einer, rogn, fjellbjørk, selje) med alle detaljene bare nær kameraet (lodTrær leser G2)
+      const G2 = ['einer', 'rogn', 'fjellbjørk', 'selje'].includes(art) ? (mob() ? 80 : 130) ** 2 : undefined;
+      R.treLOD.push({ n, M, C, data, G2, nær: lag(lagGeo(art), false), fjern: lag(lagGeo(art + 'Enkel'), true) });
     }
     R.lodVed = null; U.uH0V.value = u.h0; vekstSenter = null;
   });
@@ -213,9 +216,10 @@
           g.strokeStyle = `rgb(${150 + rnd() * 40 | 0},${205 + rnd() * 40 | 0},${100 + rnd() * 30 | 0})`; g.lineWidth = 2.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - l, y - 3); g.moveTo(x, y); g.lineTo(x + l, y - 3); g.stroke(); } }
     } else {
       // siv: smale strå, noen med brun dunkolle
-      for (let i = 0; i < 16; i++) { const x = 6 + rnd() * 52, h = 34 + rnd() * 28, b = (rnd() - .5) * 10; g.strokeStyle = `rgb(${180 + rnd() * 40 | 0},${200 + rnd() * 35 | 0},${140 + rnd() * 30 | 0})`; g.lineWidth = 1.2 + rnd();
-        g.beginPath(); g.moveTo(x, 64); g.quadraticCurveTo(x + b * .3, 64 - h * .6, x + b, 64 - h); g.stroke();
-        if (i % 5 === 0) { g.fillStyle = 'rgb(90,62,40)'; g.fillRect(x + b - 1.6, 64 - h, 3.2, 8); } }
+      c.width = c.height = 128; g.lineCap = 'round';
+      for (let i = 0; i < 30; i++) { const x = 10 + rnd() * 108, h = 66 + rnd() * 58, b = (rnd() - .5) * 26; g.strokeStyle = `rgb(${175 + rnd() * 45 | 0},${200 + rnd() * 40 | 0},${135 + rnd() * 35 | 0})`; g.lineWidth = 1.3 + rnd() * 1.4;
+        g.beginPath(); g.moveTo(x, 128); g.quadraticCurveTo(x + b * .2, 128 - h * .6, x + b, 128 - h); g.stroke();
+        if (i % 9 === 0) { g.fillStyle = 'rgb(96,66,42)'; g.fillRect(x + b - 1.8, 128 - h, 3.6, 11); } }
     }
     return (TEX[type] = new THREE.CanvasTexture(c));
   }
