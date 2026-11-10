@@ -5,22 +5,25 @@
 //     og lager vannbåndet nær kameraet (S ≤ 2200); KROKER.sett3d lager nettet (vann med glans, rennende krusning og hvitt skum
 //     der det er bratt); KROKER.ramme3d driver strømmen. Under vegene går bekken i kulvert (kuttet ut i bekker.py).
 (function () {
+  // DATA_V = sha256 av reservefila data/bekker.json (Dovre-piloten, brukes når releasen med hele Norge ikke svarer)
   const DATA_V = '075ec685';
-  let B = null, kildeSjekk = 0;
-  const STAT = window.BEKKER_STAT = { linjer: 0, tegnet2d: 0, bånd3d: 0, maling3d: 0, trærFjernet: 0, trekanter: 0 };
-  fetch('/dovre-fliser/data/bekker.json?v=' + DATA_V).then(r => r.ok ? r.json() : null).then(d => {
-    if (!d) return; B = Bekker.les(d); STAT.linjer = B.linjer.length; window.BEKKER = B; kreditér();
-    if (typeof skitten !== 'undefined') skitten = true;
-  }).catch(e => console.warn('bekker', e));
+  let kildeSjekk = 0;
+  const STAT = window.BEKKER_STAT = { linjer: 0, tegnet2d: 0, bånd3d: 0, maling3d: 0, trærFjernet: 0, trekanter: 0, kulvert: 0, biter: 0 };
+  // hele Norge i biter (spill/nvebiter.js): nivå 0 = brede elver og orden ≥ 5, 1 = orden 3–4, 2 = orden 1–2
+  const LAG = window.BEKKER = NveBiter.lag('bekker', '/dovre-fliser/data/bekker.json?v=' + DATA_V, d => Bekker.les(d), () => { kreditér(); if (typeof skitten !== 'undefined') skitten = true; });
+  const nivåer = mo => (mo <= 2 ? [0, 1, 2] : mo <= 4 ? [0, 1] : [0]);
+  // linjene i bb fra alle bitene
+  const iBiter = (biter, bb) => { const ut = []; for (const B of biter) for (const l of Bekker.i(B, bb)) ut.push(l); return ut; };
   function kreditér() { const k = document.getElementById('kilde'); if (k && !k.textContent.includes('Elvenett')) k.textContent += ' · Bekker og elver: NVE Elvenett (NLOD)'; }
 
   // ---------- 2D ----------
   // minste orden som vises ved målestokken (meter per skjermpunkt)
   const minOrden = m => m <= 6 ? 1 : m <= 12 ? 2 : m <= 24 ? 3 : m <= 48 ? 4 : m <= 90 ? 5 : 99;
   KROKER.tegn.push((g, vx0, vy1) => {
-    if (!B) return; const m = kam.m, mo = minOrden(m); STAT.tegnet2d = 0; if (mo > 7) return;
+    const m = kam.m, mo = minOrden(m); STAT.tegnet2d = 0; if (mo > 7) return;
+    const bb = [vx0, vy1 - VH * m, vx0 + VW * m, vy1], biter = LAG.har(bb, nivåer(mo)); if (!biter.length) return;
     if (++kildeSjekk % 30 === 0) kreditér();
-    const bb = [vx0, vy1 - VH * m, vx0 + VW * m, vy1], linjer = Bekker.i(B, bb), grupper = new Map();
+    const linjer = iBiter(biter, bb), grupper = new Map();
     for (const l of linjer) { if (l.orden < mo && !(l.type === 1 && l.orden + 2 >= mo)) continue;
       const w = Math.max(l.type === 1 ? 1.4 : .8 + (l.orden - mo) * .3, l.b / m), k = Math.round(w * 4) / 4;
       if (!grupper.has(k)) grupper.set(k, []); grupper.get(k).push(l); }
@@ -37,9 +40,18 @@
 
   // ---------- 3D: bakken, vegetasjonen og båndet ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
-    u.bekk = null; if (!B) return;
-    const S = u.S, mpp = 2 * S / TW, mo = mpp <= 1.2 ? 1 : mpp <= 2.5 ? 2 : mpp <= 5 ? 3 : 4;
-    const linjer = Bekker.i(B, [u.cx - S, u.cy - S, u.cx + S, u.cy + S]).filter(l => l.orden >= mo || l.type === 1);
+    u.bekk = null; u.iBekk = null;
+    const S = u.S, mpp = 2 * S / TW, mo = mpp <= 1.2 ? 1 : mpp <= 2.5 ? 2 : mpp <= 5 ? 3 : 4, bb = [u.cx - S, u.cy - S, u.cx + S, u.cy + S];
+    const biter = await LAG.hent(bb, nivåer(mo)); STAT.biter = biter.length; if (!biter.length) return;
+    STAT.linjer = biter.reduce((n, B) => n + B.linjer.length, 0); kreditér();
+    // kulvert: små bekker (orden ≤ 3) går under vegene i utsnittet (u.påVeg fra liv3d.js, lokale meter) – delene i vegbanen tas bort
+    const påVeg = u.påVeg; STAT.kulvert = 0;
+    const kulvert = l => { if (!påVeg || l.type !== 0 || l.orden > 3) return null; const ut = []; let bit = [], kutt = false;
+      for (const p of Bekker.punkter(l.P, 2)) { if (påVeg(p[0] - u.cx, p[1] - u.cy)) { kutt = true; if (bit.length > 1) ut.push(bit); bit = []; } else bit.push(p); }
+      if (!kutt) return null; STAT.kulvert++; if (bit.length > 1) ut.push(bit); return ut; };
+    const linjer = [];
+    for (const l of iBiter(biter, bb)) { if (!(l.orden >= mo || l.type === 1)) continue;
+      const k = kulvert(l); if (!k) linjer.push(l); else for (const P of k) linjer.push({ ...l, P }); }
     // maling i kartet under: våt, mørk kant og vannet i vannfargen (naturfarger() gjør det blankt og lysere etterpå)
     const stemple = (x, y, r, f, a) => {
       const ci = (x - (u.cx - S)) / mpp, cj = ((u.cy + S) - y) / mpp, rp = r / mpp, R2 = Math.max(.5, rp), n = Math.ceil(R2);

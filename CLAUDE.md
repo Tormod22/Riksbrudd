@@ -290,7 +290,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   vann og våt kant i bakken (ikke i u.vann: den stopper gange), fjerner trær/busker/gress i bekken (u.iBekk, før hindringer() bygges), og ved
   S ≤ 2200 et vannbånd (5 punkt på tvers: steinkant, vann, steinkant; bredden varierer) som følger terrenget, rennende krusning,
   himmelspeiling og skum der det er bratt (KROKER.sett3d/ramme3d, R3.bekkMesh). DATA_V i bekker-visning.js = sha256 av bekker.json
-  (8 tegn) – sett ny etter bekker.py. Bare Dovre-piloten foreløpig (hele Norge krever en Actions-jobb som for infra). VAKT i sjekk.js:
+  (8 tegn) – sett ny etter bekker.py. Hele Norge: se BEKKER OG KRAFT I HELE NORGE (data/bekker.json er nå reserven). VAKT i sjekk.js:
   bekkene lastes, tegnes i 2D, og båndet ligger 0–1 m over terrengnettet (raycast) ved Dombås.
   BRUER OG FERJEKAIER I 3D (10. nov, brukeren: «bruer skal se pent ut i 3D, ferjekaier skal se realistiske ut»): spill/bruer.js (regler uten DOM,
   test_bruer.js: finnLinje – brua følger vegen i vektorflisene z13 og forlenges til NVDB-lengden når geometrien er kortere, profil – dekket
@@ -308,7 +308,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Nettanlegg5: transmisjon/regional luftledning, master, trafostasjoner; Nettanlegg4 lag 2: distribusjonsnett 22 kV; NLOD) for DOVRE til
   site/dovre-fliser/data/kraft.json (55 KB, i git): linjer {kv, n nettnivå, m = mastene i rekkefølge, e = 1 mast fra NVE / 0 lagt inn},
   trafo [[x, y, kv]]. NVE har ofte ett punkt per mastebein (slås sammen innen 15 m); mangler master, legges de i knekkpunkt og hver
-  ~380/300/90 m. Test: python3 pipeline/fliser/test_kraft.py. Hele Norge senere via en Action (som infra.yml) – bare Dovre nå.
+  ~380/300/90 m. Test: python3 pipeline/fliser/test_kraft.py. Hele Norge: se BEKKER OG KRAFT I HELE NORGE (data/kraft.json er nå reserven).
   (nve.geodataonline.no svarer ikke fra økt-maskinen; Overpass heller ikke.) Regler uten DOM: spill/kraft.js (TYPER: portal 300/420 kV,
   stål 132, h66 H-mast i tre, h22 trestolper i H-form; nedheng L²/8C, retning, ryddebelte, utsnitt; test_kraft.js). spill/kraft3d.js:
   2D via KROKER.tegn (strek fra m < 60/30/7, mastemerker nærmere, trafostasjon), «Kraftledninger» i ☰ (VIS.kraft); 3D: KROKER.bygg3d
@@ -333,3 +333,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   planFjern/planKostnad/byggPlan; tilMal/fraMal/planMal. leir-visning.js: «Planlegging» i Leir-menyen (blå skisser i 2D og 3D, skissepanel:
   Bygg nå/Flytt/Kopier/Fjern, «Bygg hele planen» kjøper materialene per bygg), angre/gjør om (øyeblikk av planen, Ctrl+Z/Y), maler
   («riksbrudd-maler», startMal), «Inntil naboen», «Fortsett», Kopier i byggpanelet, tastene R/Q/Enter/Esc. Se docs/plan-kollaps.md.
+  BEKKER OG KRAFT I HELE NORGE (12. nov, brukeren: «få ting til å se penere ut også i hele Norge»): pipeline/fliser/nve.py henter hele
+  NVE Elvenett (ElvBekk/ElvBekkMidtlinje, 1,28 mill. linjebiter, 527 000 km) og Nettanlegg (147 000 linjer, 914 000 master, 1194 trafo)
+  fra kart.nve.no (svarer både herfra og fra Actions; i biter etter objectid, 8 tråder) og deler dem på blokker z7 (32 768 m, felles.py):
+  bekker.json (150 MB, nivå 0 grov = brede elver og orden ≥ 5, 1 = orden 3–4, 2 = orden 1–2; median 176 KB per fin bit) og kraft.json
+  (14 MB, nivå 0 transmisjon/regional + trafo, 1 = 22 kV), delta-kodet fra blokkens hjørne; manifest.json har [fra, lengde] per blokk og nivå.
+  .github/workflows/nve.yml (push av nve.py/kraft.py/nve.yml på claude/norge-data, ca. 6 min) -> release kart-nve-<hash>; bruk_nve.py setter
+  NVE_TAG i spill/nvebiter.js (kjør versjon.py etterpå). site/api/kart.js slipper kart-nve-. spill/nvebiter.js (NveBiter.lag: hent(bb, nivåer)
+  for 3D, har() for 2D, maks 160 biter i minnet, Vercel komprimerer svarene med br) brukes av bekker-visning.js og kraft3d.js; svarer ikke
+  releasen, brukes Dovre-filene i data/ som reserve. Kulvert for hele Norge kuttes i 3D mot vegene i utsnittet (u.påVeg, orden ≤ 3).
+  Kraft.utsnitt slår sammen like master (en mastrekke over blokkanten tar med første mast i neste blokk). Tester: test_nve.py
+  (NVE_UT=<mappe> sjekker også filene), test_nvebiter.js (falsk fetch; NVE_UT leser ekte biter for Dombås, Voss, Sogndal, Trondheim, Oslo),
+  test_kraft.js. sjekk.js henter releasen én gang (NVE_DIR) og VAKTEN krever kilde «release» for begge lagene.
