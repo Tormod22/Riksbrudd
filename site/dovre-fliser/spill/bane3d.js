@@ -99,10 +99,10 @@
     if (tex) return tex;
     const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d'), im = g.createImageData(128, 128); let f = 11;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-    for (let q = 0; q < 128 * 128; q++) { const v = 112 + (rnd() - .5) * 70; im.data[q * 4] = v; im.data[q * 4 + 1] = v - 3; im.data[q * 4 + 2] = v - 6; im.data[q * 4 + 3] = 255; }
+    for (let q = 0; q < 128 * 128; q++) { const v = 132 + (rnd() - .5) * 80; im.data[q * 4] = v; im.data[q * 4 + 1] = v - 3; im.data[q * 4 + 2] = v - 6; im.data[q * 4 + 3] = 255; }
     g.putImageData(im, 0, 0);
     // to sviller per tekstur (v = 1,2 m): brune betongsviller med skygge
-    for (const y of [10, 74]) { g.fillStyle = 'rgba(20,18,15,.5)'; g.fillRect(40, y + 2, 82, 30); g.fillStyle = '#6d665c'; g.fillRect(38, y, 84, 28); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(38, y, 84, 4); }
+    for (const y of [10, 74]) { g.fillStyle = 'rgba(20,18,15,.5)'; g.fillRect(40, y + 2, 82, 30); g.fillStyle = '#4b4239'; g.fillRect(38, y, 84, 28); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(38, y, 84, 4); }
     tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 8; return tex;
   }
 
