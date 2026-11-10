@@ -358,3 +358,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tettstedene der det er plass (ikke i/inntil hus, på veg eller i vann; maks 1500 PC / 500 mobil). hus3d gir u.hus.stat (fasader, tak, utenTak,
   gate). VAKT i sjekk.js: Dombås har minst fem fasader (minst én fra Byhus), 0 bygg uten tak, og alle Byhus-teksturene har vindusglass.
   Målt i Oslo/Bergen/Trondheim: + ca. 7 % trekanter totalt (husene + ca. 14 %).
+  TUNNELPORTALER (12. nov, brukeren: «legg til flere detaljer i hele Norge»): spill/portal3d.js (KROKER.sett3d) – i begge ender av hver
+  tunnel i INFRA.tunnel (o.deler) en portal i betong: vegg på tvers med gesims, mørk buet åpning og en 5 m kappe (halvt rør, mørk inni);
+  retningen ut av tunnelen er bort fra neste punkt; gang- og sykkeltunneler smalere. Ett samlet nett (MODELLER.samle). window.Portal3d.sjekk().
+  (Vegskilt ved tettstedene ble prøvd og tatt ut: noen E-veglinjer i u.veger tegnes ikke som asfalt, så skiltet sto på jordet –
+  utkastet ligger ikke i repoet.)
