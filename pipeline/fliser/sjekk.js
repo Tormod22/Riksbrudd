@@ -416,6 +416,23 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
     const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
     console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}`);
+    // kompass og minikart (spill/kompass.js): kameraet mot nord/øst gir N/Ø midt på båndet, også når du går; minikartet er tegnet; ☰ slår av og på
+    const rammer = n => pg.evaluate(n => new Promise(r => { const f0 = R3.renderer.info.render.frame; const f = () => (R3.renderer.info.render.frame - f0 >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+    const retn = async (yaw, fot) => { await pg.evaluate(([yaw, fot]) => { if (fot) { if (!R3.fot) Gange.start(); R3.fot.a = yaw; R3.fot.pitch = 0; } else { if (R3.fot) Gange.stopp(); R3.bane.yaw = yaw; } }, [yaw, fot]); await rammer(2);
+      return pg.evaluate(() => { const d = R3.cam.getWorldDirection(new THREE.Vector3()), l = Math.hypot(d.x, d.y) || 1, m = Kompass.midt(); return { tekst: m && m.tekst, øst: d.x / l, nord: d.y / l }; }); };
+    const kN = await retn(0), kØ = await retn(-Math.PI / 2), kgØ = await retn(-Math.PI / 2, true), kgS = await retn(Math.PI, true); await retn(0);
+    await new Promise(r => setTimeout(r, 400)); await rammer(2);
+    const mini = await pg.evaluate(() => ({ synes: getComputedStyle(document.getElementById('minikart')).display !== 'none', bånd: getComputedStyle(Kompass.bånd).display !== 'none', fylt: Kompass.fylt() }));
+    const vis = sel => pg.evaluate(s => getComputedStyle(document.querySelector(s)).display !== 'none', sel);
+    // knappene trykkes i siden (pg.click venter på rammer, som er trege i 3D på tre profiler samtidig)
+    const trykk = (...id) => pg.evaluate(id => id.forEach(i => document.getElementById(i).click()), id);
+    await trykk('meny', 'vis-kompass', 'vis-minikart'); await new Promise(r => setTimeout(r, 450));
+    const av = { bånd: await vis('#kompass'), mini: await vis('#minikart') };
+    await trykk('vis-kompass', 'vis-minikart'); await new Promise(r => setTimeout(r, 450));
+    const igjen = { bånd: await vis('#kompass'), mini: await vis('#minikart') }; await trykk('meny');
+    const kok = kN.tekst === 'N' && kN.nord > .9 && kØ.tekst === 'Ø' && kØ.øst > .9 && kgØ.tekst === 'Ø' && kgØ.øst > .9 && kgS.tekst === 'S' && kgS.nord < -.9
+      && mini.synes && mini.bånd && mini.fylt > .5 && !av.bånd && !av.mini && igjen.bånd && igjen.mini; if (!kok) feil++;
+    console.log(`${kok ? 'ok  ' : 'FEIL'} ${navn} kompass: mot nord «${kN.tekst}», mot øst «${kØ.tekst}», går mot øst «${kgØ.tekst}», går mot sør «${kgS.tekst}»; minikart ${Math.round(mini.fylt * 100)} % tegnet; ☰ av: bånd ${!av.bånd}, minikart ${!av.mini}, på igjen: ${igjen.bånd && igjen.mini}`);
     await pg.click('#v3d');
     const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
