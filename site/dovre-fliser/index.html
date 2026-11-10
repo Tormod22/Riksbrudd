@@ -1683,8 +1683,17 @@ function bak3d() {   // kart + tåke + siktfelt inn i overflaten
 }
 function proj3(X, Y) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
-  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5).project(R3.cam);
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
+  if (bakÅs(v)) return null;
+  v.project(R3.cam);
   return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
+}
+// Navn og merker bak en ås skal ikke synes gjennom terrenget: terrenget prøves 14 steder langs linja fra kameraet (2 m slingringsmonn)
+function bakÅs(v) {
+  const u = R3.ut, c = R3.cam.position, d = Math.hypot(v.x - c.x, v.y - c.y); if (d < 40) return false;
+  for (let i = 1; i < 15; i++) { const t = i / 15, x = c.x + (v.x - c.x) * t, y = c.y + (v.y - c.y) * t, z = c.z + (v.z + 2 - c.z) * t;
+    if ((hoyde3d(x + u.cx, y + u.cy) - u.h0) * R3.EX > z + 2) return true; }
+  return false;
 }
 function mPer3(X, Y) { const u = R3.ut, c = R3.cam.position; return Math.hypot(X - u.cx - c.x, Y - u.cy - c.y, (hoyde3d(X, Y) - u.h0) * R3.EX - c.z) * 2 * Math.tan(25 * Math.PI / 180) / VH; }
 function kamera3d() {

@@ -455,6 +455,10 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
     const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && !f0.iHus && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
     console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}, startet i hus: ${f0.iHus}`);
+    // VAKT: navn bak en ås skjules (bakÅs): et punkt 60 m under terrenget 500 m unna er skjult, et punkt 300 m over er ikke det
+    const ås = await pg.evaluate(() => { const c = R3.cam.position, u = R3.ut, x = c.x + 500, y = c.y, b = (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R3.EX;
+      return { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; });
+    if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; return Vakt3d.sjekk(u); });
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
