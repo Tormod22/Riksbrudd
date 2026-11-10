@@ -465,6 +465,16 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; return Vakt3d.sjekk(u); });
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
     console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
+    // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
+    // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
+    const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      const tell = P => Object.fromEntries(Object.entries(P).map(([k, a]) => [k, a.length / 3])), feil = (s, felt) => Object.keys(s.dyr || {}).reduce((a, k) => a + (s[felt][k] || 0), 0);
+      const hei = await bygg3d(201400, 6893300, 900), s = Vakt3d.sjekk(hei, 'sommer'), by = Vakt3d.sjekk(await bygg3d(193300, 6896300, 900), 'sommer');
+      const fjell = await bygg3d(205000, 6921000, 900);
+      return { sommer: s.dyr, vinter: tell(Dyr3d.punkter(hei, 'vinter')), fjellVinter: tell(Dyr3d.punkter(fjell, 'vinter')), by: by.dyr,
+        iHus: feil(s, 'iHus') + feil(by, 'iHus'), svever: feil(s, 'svever') + feil(by, 'svever'), iVann: feil(s, 'iVann') + feil(by, 'iVann'), eks: s.eksempel.concat(by.eksempel), tri: Dyr3d.prøvShadere(R3) }; });
+    const dok = dy.sommer && dy.sommer.sau > 0 && !dy.vinter.sau && dy.fjellVinter.rein > 0 && dy.iHus + dy.svever + dy.iVann <= 2 && Object.keys(dy.tri).length === 5; if (!dok) feil++;
+    console.log(`${dok ? 'ok  ' : 'FEIL'} ${navn} dyr i 3D: heia om sommeren ${JSON.stringify(dy.sommer)}, om vinteren ${JSON.stringify(dy.vinter)}, Snøhetta om vinteren ${JSON.stringify(dy.fjellVinter)}, Dombås ${JSON.stringify(dy.by)}; i hus ${dy.iHus}, svever ${dy.svever}, i vann ${dy.iVann}; trekanter per dyr ${JSON.stringify(dy.tri)}${dok ? '' : ' ' + JSON.stringify(dy.eks)}`);
     // VAKT kraftledninger (spill/kraft3d.js): dataene lastes, mastene i utsnittet står på bakken (fot innen 0,5 m), ingen trær i ryddebeltet
     const kr = await pg.evaluate(() => window.KRAFT_SJEKK), krok = kr && kr.lastet && kr.linjer > 100 && kr.master > 5 && kr.spenn > 3 && kr.svever === 0 && kr.iBelte === 0 && kr.trær > 0; if (!krok) feil++;
     console.log(`${krok ? 'ok  ' : 'FEIL'} ${navn} kraftledninger: ${JSON.stringify(kr)}`);

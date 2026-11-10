@@ -259,6 +259,17 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (bakkeshaderen utvides i sett3d), lyse vinduer (glasspikslene i husteksturene, uniform uVindu/uAndel), lysflekker under gatelysene,
   tåkebanker (sprites) i dalbunnen. liv3d.js: bilene har front-/baklys og lyskjegle om kvelden. lys3d går nå hvert spillminutt med
   mykere overgang (dag fra −8° til 8°); skyene dreier med vinden (R3.skyVri). Himmelobjektene ligger på kuppelen innenfor skyene (0,97).
+  DYR I 3D (10. nov, brukeren: «Norge i 3D mer realistisk og levende»): spill/dyr.js (regler uten DOM, test_dyr.js) + spill/dyr3d.js
+  (KROKER.bygg3d/sett3d/ramme3d, bare når S ≤ 2200). Sau (5–30, hei/snaufjell/myr under 1400 moh. + innmark nær gårder, sommer og høst),
+  kyr (innmark nær gårder, sommer), villrein (flokker 18–60 over 1100 moh., hele året), moskus (3–8, 950–1700 moh. i boksen
+  x 198000–216000, y 6912000–6930000 rundt Snøhetta/Kongsvoll – boksen er Claudes anslag) og sjelden elg i skogkanten. Flokkene står fast
+  per blokk i kartet (Dyr.flokkIBlokk: hash av art og blokk), nærmest midten først til taket PC 400 / mobil 150; årstiden (VAER.årstid)
+  velger hvilke som vises (velg() på nytt når den skifter). Dyr.steg: beite (står, hodet ned), gå mot flokken/målet, løp unna når du går
+  nær (Gange.kropp(); flukt sau 28 m, rein 170 m, halvparten på huk) eller ved skudd (SKUDD, minst 300 m). Ikke i vann, på veg/asfalt
+  (u.dyrMaske 1024², fra kartet + u.påVeg), i tunet (husomriss + 6 m), i trær (hindringer(u)), i bekker (u.iBekk) eller i bratt ur. Én InstancedMesh per art
+  med hjørnefarger; beina svinger og hodet senkes i vertex-shaderen (aGang = fase, gange, hode; aPels = hvor mye dyrets farge virker).
+  Ca. 150–480 trekanter per dyr. window.Dyr3d (punkter, antall, prøvShadere); Vakt3d.sjekk(u, årstid) teller dyrene (i hus, svever, i vann).
+  VAKT i sjekk.js: sauer på heia ved Dombås om sommeren, ingen om vinteren, rein ved Snøhetta om vinteren, ingen dyr i hus/vann/svevende.
   TRESLAG OG BLOMSTER (10. nov, brukeren: «legg til blomster og flere forskjellige tresorter»): spill/vegetasjon.js (regler uten DOM,
   test_vegetasjon.js) + spill/vegetasjon3d.js. Kartdataene sier bare «skog» (ingen AR5/SR16), så treslaget velges etter regler: høyden mot
   tregrensen (Vegetasjon.tregrense(y): 1100 m på Dovre, lavere nordover), helning, avstand til vann (vannmasken), myr og hei rundt (32 m-klassene).

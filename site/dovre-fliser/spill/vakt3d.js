@@ -2,9 +2,10 @@
 // Vakt mot ting som ser rart ut i 3D (10. nov, brukeren: «se om det er noen plasser ting ser rart ut i 3D og fiks slik at slikt ikke skjer igjen»).
 // Vakt3d.sjekk(u) går gjennom det som er plassert i et 3D-utsnitt og teller feil: steiner, busker, trær, biler, flagg og lykter inne i hus,
 // og ting som svever over eller er begravd i terrenget. sjekk.js bygger et utsnitt i Dombås og krever at tallene er 0 (eller nesten).
+// Dyrene telles også (ut.dyr, ut.iVann; årstid: 'sommer' om ikke annet er gitt).
 // Kan også kjøres i konsollen: Vakt3d.sjekk(R3.ut).
 (function () {
-  function sjekk(u) {
+  function sjekk(u, årstid) {
     const ut = { antall: {}, iHus: {}, svever: {}, eksempel: [] };
     if (!u) return ut;
     const rute = u.hus && u.hus.omriss ? hindringer({ hus: u.hus }) : null;
@@ -27,6 +28,14 @@
     if (u.trær) for (const [art, data] of Object.entries(u.trær)) gå(art, data, 5, { hus: true, tol: .6 });   // alle treslagene (spill/vegetasjon3d.js)
     if (u.hus) { gå('bil', u.hus.biler, 5, { hus: true, tol: .6 }); gå('flagg', u.hus.flagg, 4, { hus: true, tol: .6 }); }
     if (u.lys) gå('lykt', u.lys, 4, { hus: true, tol: .6 });
+    // dyrene (spill/dyr3d.js) for årstiden: ikke i hus, ikke svevende, og ikke i vann (vannmasken u.vann, uavhengig av dyrenes egen maske)
+    if (window.Dyr3d && u.dyrSteder) {
+      const P = Dyr3d.punkter(u, årstid || 'sommer'); ut.dyr = {}; ut.iVann = {};
+      let vann = null; if (u.vann) { const W = u.vann.width; vann = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; }
+      for (const art in P) { gå(art, P[art], 3, { hus: true, tol: .3 }); ut.dyr[art] = P[art].length / 3; ut.iVann[art] = 0;
+        if (vann) for (let k = 0; k < P[art].length; k += 3) { const i = Math.floor((P[art][k] + u.S) / (2 * u.S) * vann.W), j = Math.floor((u.S - P[art][k + 1]) / (2 * u.S) * vann.W);
+          if (i >= 0 && j >= 0 && i < vann.W && j < vann.W && vann.d[(j * vann.W + i) * 4] > 128) { ut.iVann[art]++; if (ut.eksempel.length < 8) ut.eksempel.push([art, 'i vann', Math.round(P[art][k] + u.cx), Math.round(P[art][k + 1] + u.cy)]); } } }
+    }
     return ut;
   }
   window.Vakt3d = { sjekk };
