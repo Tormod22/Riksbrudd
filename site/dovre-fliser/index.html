@@ -1002,10 +1002,11 @@ async function hus3d(u) {
     const p1 = [cx - ux * w / 2, cy - uy * w / 2], p2 = [cx + ux * w / 2, cy + uy * w / 2], u0 = r / 6 + .003, u1 = (r + 1) / 6 - .003;
     firkant([p1[0], p1[1], z0], [p2[0], p2[1], z0], [p2[0], p2[1], z0 + hh], [p1[0], p1[1], z0 + hh], [1, 1, 1], [[u0, 0], [u1, 0], [u1, 1], [u0, 1]]); cur = før; };
   // Byhus (spill/byhus.js): fasader i byene. Veggen deles i butikkfront i 1. etasje (bare mot gata) og hele etasjer over.
-  const BY = window.Byhus, stat = { fasader: {}, tak: {}, utenTak: 0, bygg: 0 };
+  const BY = window.Byhus, stat = { fasader: {}, tak: {}, utenTak: 0, bygg: 0, gate: [0, 0], gater: 0 };
   const byVegg = (st, a, b, z0, z1, farge, gF, motGate) => {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]), før = cur; let zs = z0;
-    if (st.gate && z1 - z0 > 6 && L >= 4 && motGate(a, b)) { cur = B.gate; const nb = Math.max(1, Math.round(L / 4.5));
+    if (st.gate && z1 - z0 > 6 && L >= 4) stat.gate[0]++;
+    if (st.gate && z1 - z0 > 6 && L >= 4 && motGate(a, b)) { stat.gate[1]++; cur = B.gate; const nb = Math.max(1, Math.round(L / 4.5));
       firkant([a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z0 + 4.2], [a[0], a[1], z0 + 4.2], gF, [[0, 0], [nb, 0], [nb, 1], [0, 1]]); zs = z0 + 4.2; }
     const [du, eh] = BY.MÅL[st.fasade], n = Math.max(1, Math.round((z1 - zs) / eh)), nb = Math.max(1, Math.round(L / du));
     cur = B[st.fasade]; firkant([a[0], a[1], zs], [b[0], b[1], zs], [b[0], b[1], z1], [a[0], a[1], z1], farge, L < 2.4 || z1 - zs < 2.2 ? undefined : [[0, 0], [nb, 0], [nb, n], [0, n]]); cur = før; };
@@ -1027,8 +1028,9 @@ async function hus3d(u) {
         for (const d of o.deler) for (let q = 1; q < d.length; q++) { const ax = mx + d[q - 1][0] / e * sp, ay = my - d[q - 1][1] / e * sp, bx = mx + d[q][0] / e * sp, by = my - d[q][1] / e * sp, n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 3));
           for (let s2 = 0; s2 <= n; s2++) { const px = ax + (bx - ax) * s2 / n, py = ay + (by - ay) * s2 / n, kk = gk(px, py); if (!GATE.has(kk)) GATE.set(kk, []); GATE.get(kk).push(px, py); } } } } }
   const vegVed = (x, y, r) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = GATE.get((Math.floor(x / GC) + di) + ',' + (Math.floor(y / GC) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < r) return true; } return false; };
+  stat.gater = GATE.size;
   const motGate = (a, b) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 4 || !GATE.size) return false; const nx = (b[1] - a[1]) / L, ny = -(b[0] - a[0]) / L, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-    for (const s2 of [3, 7, 11]) if (vegVed(mx + nx * s2, my + ny * s2, 3.5)) return true; return false; };
+    for (const s2 of [3, 7, 11, 15]) if (vegVed(mx + nx * s2, my + ny * s2, 3.5)) return true; return false; };
   const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]));
   const flisene = await Promise.all(fl);
   // først midtpunktene: naboer innen 100 m (på landet får flere bygg tak med fall), industri (runde bygg der er tanker)
@@ -1991,6 +1993,6 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/hud.js?v=0413d13579"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=ea42b8b902"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=c48879fb11"></script>
-<script src="/dovre-fliser/spill/byhus.js?v=acd45bff66"></script>
+<script src="/dovre-fliser/spill/byhus.js?v=c85ea3b423"></script>
 </body>
 </html>

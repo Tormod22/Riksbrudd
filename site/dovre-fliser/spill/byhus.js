@@ -23,14 +23,14 @@
   // dempede, naturlige farger (norske bygårder): oker, gul, lys grå, rødbrun, hvit, beige, grønngrå, støvrosa, terrakotta.
   // Ingen blåaktige vegger (natt3d.js tenner vinduer der teksturen er blåere enn rød).
   const FARGER = {
-    murgard: ['#c9a66e', '#d6c18c', '#bdb9af', '#9a6150', '#e0dbcf', '#cdb999', '#aeb19c', '#c8a08f', '#b77d5f', '#d9cdb4', '#a98f72'],
+    murgard: ['#c9a66e', '#d6c18c', '#bdb9af', '#9a6150', '#e0dbcf', '#cdb999', '#aeb19c', '#c2a596', '#b77d5f', '#d9cdb4', '#a98f72'],
     tegl: ['#ffffff', '#f2e6dc', '#e8d8c8', '#d9cfc6', '#fff4e6'],
     funkis: ['#e6e2d8', '#d4d0c6', '#ddd2b0', '#d9c6b6', '#c9cbbf'],
     plate: ['#8c8d8b', '#626463', '#a8885f', '#bab7af', '#7c5e4a', '#d2cfc6'],
     leil: ['#d6cfbf', '#bda88a', '#a8a59c', '#c9b28a', '#9e6a55', '#ddd6c6'],
     kontor: ['#c9c4b8', '#a9a69e', '#b9a48a', '#d8d2c4', '#8e8a82']
   };
-  const TAKPAPP = ['#4b4845', '#57534e', '#43413f', '#5e5a54', '#4f4a44'], GRØNT = ['#5e6c43', '#687547', '#55623d'];
+  const TAKPAPP = ['#55524e', '#615d57', '#4d4b48', '#68635c', '#5a554e'], GRØNT = ['#5e6c43', '#687547', '#55623d'];
   const BYTAK = ['#3c3b3a', '#4a4440', '#6b4535', '#5a3a30', '#535659'];   // skifer, blikk, tegl på bygårdene
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
 
@@ -148,6 +148,10 @@
     const maks = typeof VW !== 'undefined' && VW < 900 ? 500 : 1500, ny = [], vann = u.vann && u.vann.getContext ? (() => { try { const W = u.vann.width, d = u.vann.getContext('2d').getImageData(0, 0, W, W).data;
       return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; }; } catch (e) { return () => false; } })() : () => false;
     const satt = new Map(), nær = (x, y) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of satt.get((Math.floor(x / 8) + di) + ',' + (Math.floor(y / 8) + dj)) || []) if (Math.hypot(a - x, b - y) < 7) return true; return false; };
+    // bare der det er bymessig tett (minst 14 bygg innen 80 m): ikke langs vegene i bygder og villastrøk
+    const sentre = new Map(), C = 40;
+    for (const P of u.hus.omriss) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x /= P.length; y /= P.length; const kk = Math.floor(x / C) + ',' + Math.floor(y / C); if (!sentre.has(kk)) sentre.set(kk, []); sentre.get(kk).push(x, y); }
+    const tett = (x, y) => { let n = 0; for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const l = sentre.get((Math.floor(x / C) + di) + ',' + (Math.floor(y / C) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < 80) n++; } return n; };
     for (const v of u.veger) {
       if (!v.by || !'RFK'.includes(v.k) || ny.length / 5 >= maks) continue;
       const off = BREDDE[v.k] / 2 + 2.9; let d = 6;
@@ -157,7 +161,7 @@
         for (; d < L; d += 12) {
           const x0 = ax + (bx - ax) * d / L, y0 = ay + (by - ay) * d / L;
           for (const side of [1, -1]) { const x = x0 + nx * off * side, y = y0 + ny2 * off * side, r = hash(Math.round(x * 3), Math.round(y * 3), 71);
-            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || nærHus(u, x, y) || vann(x, y) || nær(x, y)) continue;
+            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || nærHus(u, x, y) || vann(x, y) || nær(x, y) || tett(x, y) < 14) continue;
             const z = (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX, kk = Math.floor(x / 8) + ',' + Math.floor(y / 8);
             if (!satt.has(kk)) satt.set(kk, []); satt.get(kk).push([x, y]); ny.push(x, y, z, 8 + r * 5, r); }
         }

@@ -333,3 +333,16 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   planFjern/planKostnad/byggPlan; tilMal/fraMal/planMal. leir-visning.js: «Planlegging» i Leir-menyen (blå skisser i 2D og 3D, skissepanel:
   Bygg nå/Flytt/Kopier/Fjern, «Bygg hele planen» kjøper materialene per bygg), angre/gjør om (øyeblikk av planen, Ctrl+Z/Y), maler
   («riksbrudd-maler», startMal), «Inntil naboen», «Fortsett», Kopier i byggpanelet, tastene R/Q/Enter/Esc. Se docs/plan-kollaps.md.
+  BYENE I 3D (12. nov, brukeren: «få ting til å se penere ut også i hele Norge»): spill/byhus.js (regler uten DOM, test_byhus.js; teksturene
+  males bare i 3D). Byhus.stil(kl, t, i, h, A, tett, enkel) gir større bygg (leil, kontor, butikk > 7,5 m, skole) en fasade: murgård (puss,
+  omramming, gesims), tegl, funkis (båndvinduer), plate (nyere glass/plate), eller som før leil/kontor – etter tetthet (tett = bygg innen 100 m;
+  by ≥ 25, sentrum ≥ 40) og høyde (> 30 m: plate). Hele etasjer etter høyden (MÅL: felt langs og etasjehøyde per fasade), butikkfront (gate)
+  i 1. etasje på vegger som vender mot en gate (vektor z13 E/R/F/K 3–15 m rett ut) i sentrum, dempede farger (FARGER; ingen blåaktige vegger –
+  natt3d.js tenner blåere-enn-rødt som vinduer; Byhus.TEX er lagt til i natt3d sin liste). Eldre bygårder i byen (murgård/tegl, 8–26 m, enkelt
+  omriss) får valmtak (ca. 30°) eller mansard (bratt nedre del med takarker i teksturen «mansard», takpapp øverst); flate tak får takpapp, ca.
+  14 % grønne tak på plate/funkis og 1–4 takhus med fast plass (Byhus.takhus). Kjedefarger bare i butikkfronten på bygårder (før ble hele
+  bygget knallrødt/-grønt). Store bygg uten type (t 5) i tett bebyggelse regnes som bygård/kontor, ikke småhus. lokk() i hus3d gir alltid et
+  tak (vifte fra midten når trianguleringen feiler). Gatetrær: kroken i byhus.js setter løvtrær hver 12. m bak fortauet langs R/F/K i
+  tettstedene der det er plass (ikke i/inntil hus, på veg eller i vann; maks 1500 PC / 500 mobil). hus3d gir u.hus.stat (fasader, tak, utenTak,
+  gate). VAKT i sjekk.js: Dombås har minst fem fasader (minst én fra Byhus), 0 bygg uten tak, og alle Byhus-teksturene har vindusglass.
+  Målt i Oslo/Bergen/Trondheim: + ca. 7 % trekanter totalt (husene + ca. 14 %).
