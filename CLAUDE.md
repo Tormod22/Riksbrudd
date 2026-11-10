@@ -358,3 +358,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tettstedene der det er plass (ikke i/inntil hus, på veg eller i vann; maks 1500 PC / 500 mobil). hus3d gir u.hus.stat (fasader, tak, utenTak,
   gate). VAKT i sjekk.js: Dombås har minst fem fasader (minst én fra Byhus), 0 bygg uten tak, og alle Byhus-teksturene har vindusglass.
   Målt i Oslo/Bergen/Trondheim: + ca. 7 % trekanter totalt (husene + ca. 14 %).
+  JERNBANE I 3D (12. nov, brukeren: «legg til flere detaljer i hele Norge»): spill/bane3d.js (reglene øverst uten DOM, test_bane3d.js)
+  henter sporene fra utveg-flisene (lag bane, z11, OpenStreetMap) i KROKER.bygg3d når S ≤ 2200 og VIS.bane (u.baner, u.påBane), og lager i
+  KROKER.sett3d pukkbane med sviller (ett nett, tekstur), to skinner (ett nett) og på elektriske baner kontaktledningsmaster hver 60 m
+  (InstancedMesh med utligger) og kontakttråd (LineSegments). Høyden: glidende median over ±80 m + snitt; der terrenget avviker > 4 m fra
+  profilen (tunnel, bru, dyp skjæring) eller i vannmasken tegnes ikke sporet. Trær, steiner, busker og gress ryddes 4 m fra midten.
+  Elektrisk = normalspor unntatt Nordlandsbanen og Rørosbanen (Claudes anslag, OSM-flisene har ikke «electrified»). VAKT i sjekk.js
+  (jernbane i Dombås-utsnittet, elektrisk, 0 trær på sporet – bare når utveg-flisene er lastet; testserveren har dem ikke uten videre).
+  Skjermbilder: scratchpad bilde3d-bane.js (som bilde3d.js, men henter også kart-utveg- fra den ekte siden). Ikke koblet til INFRA-bruene ennå.
