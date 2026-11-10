@@ -8,11 +8,18 @@
 // (LineSegments), varselkuler over dype dalsprang og trafostasjonen; KROKER.ramme3d tenner røde flyvarsellys på høye master om natta.
 (function () {
   const K = window.Kraft, r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
-  let KD = null, obj = null;
+  let obj = null, sist = { linjer: 0 };
   VIS.kraft = true;
-  fetch(DATA_URL()).then(r => (r.ok ? r.json() : null)).then(d => { if (!d) return; KD = d; skitten = true; kreditt(); }).catch(() => {});
-  function DATA_URL() { return (typeof DATA === 'string' ? DATA : '/dovre-fliser/data/') + 'kraft.json'; }
-  function kreditt() { const k = document.getElementById('kilde'); if (k && KD && !k.textContent.includes('Kraftnett')) k.textContent += ' · Kraftnett: NVE (NLOD)'; }
+  // hele Norge i biter (spill/nvebiter.js): nivå 0 = transmisjon/regional + trafostasjoner, 1 = distribusjon (22 kV).
+  // Reserven er Dovre-fila data/kraft.json (hele meter); bitene i releasen er delta-kodet fra blokkens hjørne (d = 1).
+  const les = d => {
+    if (!d.d) return d;
+    const linjer = d.linjer.map(l => { const m = l.m.slice(); m[0] += d.x0; m[1] += d.y0; for (let i = 2; i < m.length; i++) m[i] += m[i - 2]; return { ...l, m }; });
+    return { linjer, trafo: (d.trafo || []).map(([x, y, kv]) => [x + d.x0, y + d.y0, kv]) };
+  };
+  const LAG = NveBiter.lag('kraft', (typeof DATA === 'string' ? DATA : '/dovre-fliser/data/') + 'kraft.json', les, () => { skitten = true; });
+  const samle = biter => ({ linjer: biter.flatMap(b => b.linjer), trafo: biter.flatMap(b => b.trafo || []) });
+  function kreditt() { const k = document.getElementById('kilde'); if (k && !k.textContent.includes('Kraftnett')) k.textContent += ' · Kraftnett: NVE (NLOD)'; }
 
   // ---------- av/på i ☰ ----------
   const knapp = document.createElement('button'); knapp.id = 'vis-kraft'; knapp.textContent = 'Kraftledninger'; knapp.setAttribute('aria-pressed', 'true');
@@ -23,8 +30,9 @@
   // m = meter per skjermpunkt: store linjer fra 1:~200 000, 66 kV nærmere, 22 kV først når kartet er ganske nært
   const SYNES = { portal: [60, 9], stål: [60, 9], h66: [30, 5], h22: [7, 2.2] }, BREDDE = { portal: 1.8, stål: 1.5, h66: 1.2, h22: .9 };
   KROKER.tegn.push((g, vx0, vy1) => {
-    if (!KD || !VIS.kraft) return; kreditt();
-    const m = kam.m, vx1 = vx0 + VW * m, vy0 = vy1 - VH * m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    const m = kam.m; if (!VIS.kraft || m >= 60) return;
+    const vx1 = vx0 + VW * m, vy0 = vy1 - VH * m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    const KD = samle(LAG.har([vx0, vy0, vx1, vy1], m < 7 ? [0, 1] : [0])); if (!KD.linjer.length && !KD.trafo.length) return; kreditt();
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
     for (const l of KD.linjer) {
       const t = K.type(l.kv), [lin, mast] = SYNES[t]; if (m >= lin) continue;
@@ -58,7 +66,9 @@
   const treslag = u => Object.keys(u.trær).filter(n => { const d = u.trær[n]; return d && (Array.isArray(d) || ArrayBuffer.isView(d)) && d.length % 5 === 0; });
   const TRAFO = { b: 46, d: 34 };
   KROKER.bygg3d.push(async (u, { px, TW, skog }) => {
-    u.kraft = null; if (!KD) return;
+    u.kraft = null;
+    const S3 = Math.min(u.S, 3000), [b0, b1] = await Promise.all([LAG.hent([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], [0]), LAG.hent([u.cx - S3, u.cy - S3, u.cx + S3, u.cy + S3], [1])]);
+    const KD = samle([...new Set(b0.concat(b1))]); sist = { linjer: KD.linjer.length }; if (!KD.linjer.length && !KD.trafo.length) return; kreditt();
     const z = (X, Y) => (hoyde3d(X, Y, u) - u.h0) * R3.EX, mob = VW < 900;
     const ut = K.utsnitt(KD.linjer, u.cx, u.cy, u.S, z, mob ? 1600 : 4000);
     ut.trafo = KD.trafo.filter(([X, Y]) => Math.abs(X - u.cx) < u.S - 40 && Math.abs(Y - u.cy) < u.S - 40).map(([X, Y, kv]) => ({ x: X - u.cx, y: Y - u.cy, kv }));
@@ -247,7 +257,7 @@
 
   // ---------- vakt (sjekk.js): mastene står på bakken, ingen trær i ryddebeltet ----------
   function sjekk(u) {
-    const ut = { lastet: !!KD, linjer: KD ? KD.linjer.length : 0, master: 0, spenn: 0, svever: 0, iBelte: 0, trær: 0, eksempel: [] };
+    const ut = { lastet: sist.linjer > 0, linjer: sist.linjer, kilde: LAG.STAT.kilde, master: 0, spenn: 0, svever: 0, iBelte: 0, trær: 0, eksempel: [] };
     const k = u && u.kraft; if (!k) return ut;
     ut.master = k.master.length; ut.spenn = k.spenn.length;
     for (const m of k.master) { const d = m.z - (hoyde3d(u.cx + m.x, u.cy + m.y, u) - u.h0) * R3.EX; if (Math.abs(d) > .5) { ut.svever++; if (ut.eksempel.length < 6) ut.eksempel.push(['mast', Math.round(m.x + u.cx), Math.round(m.y + u.cy), +d.toFixed(2)]); } }
@@ -255,5 +265,5 @@
       for (const b of k.belte) if (K.avstand(data[i], data[i + 1], b.ax, b.ay, b.bx, b.by) < b.b - .01) { ut.iBelte++; if (ut.eksempel.length < 6) ut.eksempel.push(['tre i beltet', Math.round(data[i] + u.cx), Math.round(data[i + 1] + u.cy)]); break; } }
     return ut;
   }
-  window.Kraft3d = { sjekk, data: () => KD };
+  window.Kraft3d = { sjekk, lag: LAG };
 })();

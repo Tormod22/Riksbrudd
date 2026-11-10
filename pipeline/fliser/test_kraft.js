@@ -21,6 +21,12 @@ sjekk('ryddebelte ±15 m', iB(200, 14) && iB(200, -14) && !iB(200, 16) && !iB(-2
 // utsnitt: master utenfor kuttes, spenn bare mellom master som begge er inne
 const u = K.utsnitt([{ kv: 300, m: [-2000, 0, -500, 0, 0, 0, 500, 0, 2000, 0], e: '11111' }], 0, 0, 1000, () => 100);
 sjekk('utsnitt', u.master.length === 3 && u.spenn.length === 2 && u.master.every(m => m.z === 100 && m.t === 'portal'), `${u.master.length} master, ${u.spenn.length} spenn`);
+// bitene for hele Norge: rekka er delt ved blokkanten (x = 0) og første mast i neste blokk er med i begge – blir én mast, ingen dobbelt spenn
+const ud = K.utsnitt([{ kv: 300, m: [-600, 0, -250, 0, 120, 0], e: '111' }, { kv: 300, m: [120, 0, 480, 0], e: '11' }, { kv: 300, m: [-600, 0, -250, 0, 120, 0], e: '111' }], 0, 0, 1000, () => 0);
+sjekk('utsnitt: like master ved blokkanten slås sammen', ud.master.length === 4 && ud.spenn.length === 3, `${ud.master.length} master, ${ud.spenn.length} spenn`);
+// et 22 kV-punkt på samme sted som en 300 kV-mast er ikke samme mast
+const u2 = K.utsnitt([{ kv: 300, m: [0, 0, 300, 0], e: '11' }, { kv: 22, m: [0, 0, 0, 90], e: '11' }], 0, 0, 1000, () => 0);
+sjekk('utsnitt: ulik type på samme sted er to master', u2.master.length === 4 && u2.spenn.length === 2);
 
 // dataene
 const fil = path.join(__dirname, '../../site/dovre-fliser/data/kraft.json');

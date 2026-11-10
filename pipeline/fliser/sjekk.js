@@ -22,6 +22,12 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
   for (const f of ['manifest.json', 'vegnett.bin.gz']) if (!fs.existsSync(path.join(dir, f))) { fs.mkdirSync(dir, { recursive: true });
     require('child_process').execFileSync('curl', ['-fsSL', '-o', path.join(dir, f), `https://github.com/Tormod22/Riksbrudd/releases/download/${m[1]}/${f}`]); }
   return { tag: m[1], dir }; })();
+// Bekker og kraftledninger for hele Norge (NVE_TAG i spill/nvebiter.js, pipeline/fliser/nve.py): hentes én gang til en lokal mappe (eller NVE_DIR)
+const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/nvebiter.js'), 'utf8').match(/const NVE_TAG = '(kart-nve-[0-9a-f]{12})';/);
+  if (!m) return null; const dir = process.env.NVE_DIR || path.join(require('os').tmpdir(), m[1]);
+  for (const f of ['manifest.json', 'kraft.json', 'bekker.json']) if (!fs.existsSync(path.join(dir, f))) { fs.mkdirSync(dir, { recursive: true });
+    require('child_process').execFileSync('curl', ['-fsSL', '-o', path.join(dir, f), `https://github.com/Tormod22/Riksbrudd/releases/download/${m[1]}/${f}`]); }
+  return { tag: m[1], dir }; })();
 (async () => {
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
   { // syntaks i alle skriptfilene (en kommentar som slukte resten av en linje stoppet hele kartet 9. nov)
@@ -58,6 +64,9 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     if (INFRA) await kt.route(new RegExp('/api/kart/' + INFRA.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
       const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/), b = fs.readFileSync(path.join(INFRA.dir, fil));
       r.fulfill({ status: 200, contentType: fil.endsWith('.json') ? 'application/json' : 'application/octet-stream', body: b.subarray(+fra, +fra + +len) }); });
+    if (NVE) await kt.route(new RegExp('/api/kart/' + NVE.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
+      const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/);
+      r.fulfill({ status: 200, contentType: 'application/json', body: (NVE[fil] = NVE[fil] || fs.readFileSync(path.join(NVE.dir, fil))).subarray(+fra, +fra + +len) }); });
     if (VEGNETT) await kt.route(new RegExp('/api/kart/' + VEGNETT.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
       const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/);
       if (!fs.existsSync(path.join(VEGNETT.dir, fil))) return r.fulfill({ status: 404, body: '' });
@@ -535,13 +544,13 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
       while (R3.bygger) await new Promise(r => setTimeout(r, 100));
       await nytt3dUtsnitt(193135, 6897627, 800); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
       await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
-      const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
+      const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, kulvert: S.kulvert, kilde: BEKKER.STAT.kilde, kraftKilde: Kraft3d.lag.STAT.kilde, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
       if (m) { const p = m.geometry.attributes.position, ray = new THREE.Raycaster();
         for (let k = 1; k < p.count; k += 3 * 7) { const x = p.getX(k), y = p.getY(k), z = p.getZ(k); ray.set(new THREE.Vector3(x, y, z + 100), new THREE.Vector3(0, 0, -1));
           const hit = ray.intersectObject(R3.mesh)[0]; if (!hit) continue; const d = z - hit.point.z; r.min = Math.min(r.min, d); r.maks = Math.max(r.maks, d); r.n++; } }
       return r; });
-    const bkok = bk.linjer > 1000 && bk.bånd > 0 && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
-    console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås, høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
+    const bkok = bk.linjer > 1000 && bk.bånd > 0 && (!NVE || (bk.kilde === 'release' && bk.kraftKilde === 'release')) && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
+    console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås (kilde ${bk.kilde}/${bk.kraftKilde}, ${bk.kulvert} kulvertkutt), høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
     await pg.click('#v3d');
     const bk2 = await pg.evaluate(async () => { Object.assign(kam, { x: 193135, y: 6897627, m: 4 }); skitten = true; await new Promise(r => setTimeout(r, 400)); return window.BEKKER_STAT.tegnet2d; });
     const bk2ok = bk2 > 0; if (!bk2ok) feil++;

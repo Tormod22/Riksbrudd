@@ -43,16 +43,20 @@
 
   // Lager mastene og spennene for et utsnitt: linjer fra kraft.json, (cx, cy) midten, S halv side, z(X, Y) = høyden i 3D.
   // Gir { master: [{ x, y, z, a, t }], spenn: [{ i, j, t, L }] } – x, y relativt til midten. Mast utenfor utsnittet tas ikke med.
+  // Bitene for hele Norge deler mastrekkene ved blokkanten og tar med første mast i neste blokk: like master (samme punkt og type)
+  // blir én, og et spenn som finnes to ganger tegnes én gang.
   function utsnitt(linjer, cx, cy, S, z, maks = 4000) {
-    const master = [], spenn = [];
+    const master = [], spenn = [], sett = new Map(), sp = new Set();
     for (const l of linjer) {
       // 22 kV-stolpene bare innen 3 km (lenger unna er de mindre enn et punkt på skjermen)
       const P = l.m, n = P.length / 2, t = type(l.kv), nr = new Array(n).fill(-1), kant = (t === 'h22' ? Math.min(S, 3000) : S) - 3;
       let inne = false; for (let i = 0; i < n; i++) if (Math.abs(P[2 * i] - cx) < kant && Math.abs(P[2 * i + 1] - cy) < kant) { inne = true; break; }
       if (!inne) continue;
       for (let i = 0; i < n; i++) { const x = P[2 * i] - cx, y = P[2 * i + 1] - cy; if (Math.abs(x) >= kant || Math.abs(y) >= kant || master.length >= maks) continue;
-        nr[i] = master.length; master.push({ x, y, z: z(P[2 * i], P[2 * i + 1]), a: retning(P, i), t, ekte: l.e ? l.e[i] === '1' : true }); }
-      for (let i = 0; i < n - 1; i++) if (nr[i] >= 0 && nr[i + 1] >= 0) { const A = master[nr[i]], B = master[nr[i + 1]]; spenn.push({ i: nr[i], j: nr[i + 1], t, L: Math.hypot(B.x - A.x, B.y - A.y) }); }
+        const k = P[2 * i] + ',' + P[2 * i + 1] + ',' + t; if (sett.has(k)) { nr[i] = sett.get(k); continue; }
+        nr[i] = master.length; sett.set(k, nr[i]); master.push({ x, y, z: z(P[2 * i], P[2 * i + 1]), a: retning(P, i), t, ekte: l.e ? l.e[i] === '1' : true }); }
+      for (let i = 0; i < n - 1; i++) if (nr[i] >= 0 && nr[i + 1] >= 0 && nr[i] !== nr[i + 1]) { const a = Math.min(nr[i], nr[i + 1]) + ',' + Math.max(nr[i], nr[i + 1]); if (sp.has(a)) continue; sp.add(a);
+        const A = master[nr[i]], B = master[nr[i + 1]]; spenn.push({ i: nr[i], j: nr[i + 1], t, L: Math.hypot(B.x - A.x, B.y - A.y) }); }
     }
     return { master, spenn };
   }
