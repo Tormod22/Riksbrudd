@@ -501,7 +501,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const r = { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; c.z = z0; return r; });
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat;
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb }; return Vakt3d.sjekk(u); });
     // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær på sporet
@@ -512,6 +512,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT kulturlandskapet (spill/gard3d.js): Dombås-utsnittet har gjerder og rundballer på innmarka (i hus/svever telles over)
     const gard = ['rundball', 'gjerde', 'skigard', 'steingjerde'].map(k => rart.antall[k] || 0), gok = gard[0] > 0 && gard[1] + gard[2] + gard[3] > 20; if (!gok) feil++;
     console.log(`${gok ? 'ok  ' : 'FEIL'} ${navn} kulturlandskap: rundballer ${gard[0]}, gjerdebiter ${gard.slice(1).join('/')}`);
+    // VAKT gatemøbler (spill/gate3d.js): Dombås sentrum har benker, søppelkasser og minst ett busskur; ingen gatemøbler i hus eller svevende,
+    // og modellene i utsnittet holder seg under 60 000 trekanter
+    const gs = ['benk', 'søppel', 'sykkel', 'skur', 'skilt', 'postkasse'], gtri = await pg.evaluate(() => window.GATE_TRI);
+    const gfeil = gs.reduce((a, k) => a + (rart.iHus[k] || 0) + (rart.svever[k] || 0), 0), gmok = (rart.antall.benk || 0) > 0 && (rart.antall['søppel'] || 0) > 0 && (rart.antall.skur || 0) >= 1 && gfeil === 0 && gtri > 0 && gtri < 60000;
+    if (!gmok) feil++;
+    console.log(`${gmok ? 'ok  ' : 'FEIL'} ${navn} gatemøbler: ${gs.map(k => k + ' ' + (rart.antall[k] || 0)).join(', ')}; i hus/svever ${gfeil}; trekanter ${Math.round(gtri)}${gmok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
     // VAKT byhus (spill/byhus.js, hus3d): Dombås-utsnittet har bygg, alle har tak, minst fem ulike fasader (minst én fra Byhus), noen valm/mansard,
     // og alle Byhus-teksturene har vindusglass som natt3d.js kan tenne (blåere enn rødt)
     // Uten byggomrissene (testserveren har ikke releasen) lages et oppdiktet sentrum med 64 bygg av ulike typer i flisen midt i utsnittet.

@@ -301,4 +301,6 @@
       liv.røyk.alder.forEach((a, k) => { a = (a + dt) % 10; liv.røyk.alder[k] = a; const [x, y, z] = liv.røyk.piper[Math.floor(k / 8)]; p.setXYZ(k, x + a * .35, y + a * .15 + Math.sin(a + k) * .3, z + a * .55); });
       p.needsUpdate = true; }
   });
+  // kryssene kan også finnes av andre moduler (spill/gate3d.js: benker og søppelkasser ved fotgjengerfeltene)
+  window.Liv3d = { finnKryss };
 })();
