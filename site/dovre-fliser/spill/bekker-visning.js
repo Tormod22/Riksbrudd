@@ -110,7 +110,7 @@
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(kol, 3));
     g.setAttribute('aSkum', new THREE.Float32BufferAttribute(sk, 1)); g.setAttribute('aStrom', new THREE.Float32BufferAttribute(st, 2)); g.setIndex(idx); g.computeVertexNormals();
-    const mat = new THREE.MeshPhongMaterial({ vertexColors: true, specular: 0x3a4248, shininess: 60, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, side: THREE.DoubleSide });
+    const mat = new THREE.MeshPhongMaterial({ vertexColors: true, specular: 0x14181c, shininess: 40, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, side: THREE.DoubleSide });
     // GLSL: bare ASCII i navnene
     mat.onBeforeCompile = sh => { sh.uniforms.uTid = { value: 0 }; sh.uniforms.uHimmel = { value: new THREE.Color(.7, .78, .85) }; shader = sh;
       sh.vertexShader = 'attribute float aSkum;\nattribute vec2 aStrom;\nvarying float vSkum;\nvarying vec2 vStrom;\n' + sh.vertexShader.replace('void main() {', 'void main() {\n  vSkum = aSkum; vStrom = aStrom;');
