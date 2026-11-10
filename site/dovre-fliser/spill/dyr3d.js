@@ -162,7 +162,7 @@
     const geo = new THREE.BufferGeometry(); for (const k in A) geo.setAttribute(k, new THREE.BufferAttribute(ut[k], A[k]));
     return (GEO[art] = { geo, M, trekanter: n / 3 });
   }
-  // Materialet: Lambert med hjørnefarger; i shaderen svinger beina (aGang.x = fase, .y = hvor mye) og hodet går ned (aGang.z).
+  // Materialet: Lambert med hjørnefarger. I shaderen svinger beina og hodet går ned (aGang: x er fasen, y hvor mye beina svinger, z hvor langt hodet er nede).
   // Bare ASCII-navn i GLSL.
   function materiale(M) {
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
