@@ -17,7 +17,8 @@
     if (!u.vannData) { try { const W = u.vann.width; u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { u.vannData = { W: 0 }; } }
     return u.vannData;
   }
-  const iVann = (u, x, y) => { const D = vannData(u); if (!D.W) return false; const i = Math.floor((x + u.S) / (2 * u.S) * D.W), j = Math.floor((u.S - y) / (2 * u.S) * D.W);
+  // vannet: vannmasken, og bekkene fra spill/bekker-visning.js (u.iBekk) så trær og blomster ikke står i bekken
+  const iVann = (u, x, y) => { if (u.iBekk && u.iBekk(x, y)) return true; const D = vannData(u); if (!D.W) return false; const i = Math.floor((x + u.S) / (2 * u.S) * D.W), j = Math.floor((u.S - y) / (2 * u.S) * D.W);
     return i >= 0 && j >= 0 && i < D.W && j < D.W && D.d[(j * D.W + i) * 4] > 127; };
   // avstand til nærmeste vann i meter, i et rutenett på 256 × 256 (to omganger med «chamfer»-avstand)
   function vannAvstand(u) {

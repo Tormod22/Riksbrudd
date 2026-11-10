@@ -471,8 +471,23 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const ntok = nt.natt.synlig && nt.natt.stj > .5 && nt.natt.himmel >= .42 && !nt.dag.synlig && nt.dag.stj < .01 && Math.abs(nt.natt.fase - .342) < .02 && nt.maks < .06 && nt.slutt.vær === 'regn' && nt.slutt.regn === 1;
     if (!ntok) { feil++; console.log(JSON.stringify(nt)); }
     console.log(`${ntok ? 'ok  ' : 'FEIL'} ${navn} dag og natt: stjerner ${nt.natt.stj.toFixed(2)} en vinternatt (himmellys ${nt.natt.himmel.toFixed(2)}), ${nt.dag.stj.toFixed(2)} kl. 13; månefase ${nt.natt.fase && nt.natt.fase.toFixed(3)} 31. jan.; regnet kom med største endring ${nt.maks.toFixed(3)} per minutt`);
+    // bekker (NVE Elvenett): lastet, vannbåndet i 3D i lia ovenfor Dombås ligger på terrenget (ikke svevende > 1 m eller begravd)
+    const bk = await pg.evaluate(async () => {
+      while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      await nytt3dUtsnitt(193135, 6897627, 800); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
+      await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
+      if (m) { const p = m.geometry.attributes.position, ray = new THREE.Raycaster();
+        for (let k = 1; k < p.count; k += 3 * 7) { const x = p.getX(k), y = p.getY(k), z = p.getZ(k); ray.set(new THREE.Vector3(x, y, z + 100), new THREE.Vector3(0, 0, -1));
+          const hit = ray.intersectObject(R3.mesh)[0]; if (!hit) continue; const d = z - hit.point.z; r.min = Math.min(r.min, d); r.maks = Math.max(r.maks, d); r.n++; } }
+      return r; });
+    const bkok = bk.linjer > 1000 && bk.bånd > 0 && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
+    console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås, høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
     await pg.click('#v3d');
-    const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
+    const bk2 = await pg.evaluate(async () => { Object.assign(kam, { x: 193135, y: 6897627, m: 4 }); skitten = true; await new Promise(r => setTimeout(r, 400)); return window.BEKKER_STAT.tegnet2d; });
+    const bk2ok = bk2 > 0; if (!bk2ok) feil++;
+    console.log(`${bk2ok ? 'ok  ' : 'FEIL'} ${navn} bekker 2D: ${bk2} bekker tegnet ved Dombås`);
+    const d3ok =Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await kt.close();

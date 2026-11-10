@@ -270,3 +270,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   skogstjerne etter sted eng/hei/skog/veikant og årstid, ingen om vinteren), bregner i skogen og siv i vannkanten; u.vegKart (512²) sier hvor.
   window.Vegetasjon3d (treslag, antall, utvalg, iVann) brukes av VAKTEN i sjekk.js: minst tre treslag ved Jora bru, ingen trær/planter i vann
   eller på veg.
+  BEKKER (10. nov, brukeren: «legg til bekker hvor det skal være det»): pipeline/fliser/bekker.py henter NVE Elvenett (ELVIS, NLOD,
+  kart.nve.no svarer herfra; Overpass og nve.geodataonline.no gjør ikke) for Dovre-området -> site/dovre-fliser/data/bekker.json
+  (0,7 MB, heltall i meter, delta-kodet; ElvBekk = bekk, ElvBekkMidtlinje = bred elv, Strahler-orden; innsjømidtlinjer hoppes over).
+  Kulvert: bekker med orden ≤ 3 kuttes der de krysser en veg (data/fliser/veger.json, vegbredde/2 + 1,5 m); større elver går under bru.
+  Regler uten DOM i spill/bekker.js (les, i, bredde, fall/skum; test_bekker.js sjekker også datafila og kulvertene), visningen i
+  spill/bekker-visning.js: 2D (KROKER.tegn) blå streker, små bekker først nær (minOrden etter kam.m); 3D (KROKER.bygg3d) maler
+  vann og våt kant i bakken (ikke i u.vann: den stopper gange), fjerner trær/busker/gress i bekken (u.iBekk, før hindringer() bygges), og ved
+  S ≤ 2200 et vannbånd (5 punkt på tvers: steinkant, vann, steinkant; bredden varierer) som følger terrenget, rennende krusning,
+  himmelspeiling og skum der det er bratt (KROKER.sett3d/ramme3d, R3.bekkMesh). DATA_V i bekker-visning.js = sha256 av bekker.json
+  (8 tegn) – sett ny etter bekker.py. Bare Dovre-piloten foreløpig (hele Norge krever en Actions-jobb som for infra). VAKT i sjekk.js:
+  bekkene lastes, tegnes i 2D, og båndet ligger 0–1 m over terrengnettet (raycast) ved Dombås.
