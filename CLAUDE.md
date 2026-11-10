@@ -397,3 +397,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   du ca. 120 m, tåkedotter (sprites) som driver med vinden, havtåke over sjøen (sjøpunkter fra vannmasken under 1 moh.) i tåke og
   morgentåke. Vinden i statuslinja (#sVind, «6 m/s SV», tittel med beaufortnavn). window.Vind3d.sjekk(); VAKT i sjekk.js (storm gir bølger,
   skum, sterkere trevind og vind i statuslinja uten GL-feil; tåke gir grå himmel). Testet med bilder i Bergen (storm/klart) og på Dombås.
+  FERJER I RUTE OG KJØLVANN (12. nov, brukeren: «fortsett å forbedre» – mer liv på sjøen): spill/ferje.js (regler uten DOM, test_ferje.js:
+  lagRute – liggeplassen ved kaien, rett ut 40 m forbi baugen, så ferjelinja, Chaikin; reise/langs – akselerasjon 0,12, marsj 6,5 m/s, bremsing
+  0,1 m/s²; tilstand/stilling – vent 60–120 s ved hver kai (sanntid), A→B, vent, B→A, styrbord 22 m midt i sambandet, skroget snur aldri; kjør –
+  småbåter mot tilfeldige mål på sjøen minst 30 m fra land; gynging/antallKjører) + spill/ferje3d.js (KROKER.bygg3d/sett3d/ramme3d, S ≤ 2200):
+  ferjelinjer (INFRA.ferje) med begge ender inne i utsnittet og en ferjekai (u.kaier3d) i hver ende med plass til ferja; ferjemodellen er
+  Infra3d.ferjeGeo (trukket ut av byggKai i infra3d.js som ferjeModell/ferjeLengde) og kaiene i en rute får k.iRute (ingen dobbel ferje ved kai).
+  Samband over 2,5 km får to ferjer (en halv runde forskjøvet), tak 4 PC / 2 mobil. window.Kjølvann (nyttSpor/flytt): akterendens spor, to
+  firkanter per stykke – svake Kelvin-armer som brer seg ca. 0,33 × farten og hvit uro rett bak – additivt (lysner bare sjøen), tones ut og
+  dempes om natta (NATT.mørke). kyst3d.js: båtene gynger etter Vind3d.VIND.fart (Ferje.gynging; fasen samles opp), 2–6 av båtene ute på sjøen
+  kjører rundt med kjølvann (mobil høyst 3, stopper i storm ≥ 14 m/s). Ferje3d.T.ekstra hopper i ruteplanen, Ferje3d.forspol(sek) bygger opp
+  kjølvannet (skjermbilder). VAKT i sjekk.js (ingen ferjer på Dovre, kunstig kjølvann tegnes uten GL-feil); bilder: /norge, Mannheller–Fodnes.

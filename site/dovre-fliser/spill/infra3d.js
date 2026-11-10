@@ -266,6 +266,31 @@
     const zw = Math.min(gz(14, 0), gz(26, 0), gz(40, 0)), zk = zw + 2.2;
     return { navn: o.e.navn, id: o.e.id, Q: [Qx, Qy], f: [fx, fy], zw, zk, pt, gz, iv, ferje: null };
   }
+  // Ferjelengden som får plass ut fra kaien: hele skroget (og 8 m til hver side) må være vann. iv(a, b) i kaiens ramme. 40–72 m, ellers 0.
+  function ferjeLengde(iv) { let Lf = 72; while (Lf >= 40 && ![...Array(8)].every((_, i) => iv(23 + Lf * i / 7, 0) && iv(23 + Lf * i / 7, 8) && iv(23 + Lf * i / 7, -8))) Lf -= 8; return Lf >= 40 ? Lf : 0; }
+  // Ferja: skrog, bildekk, sidebygg med vinduer, styrehus på brodekket, skorstein, biler på dekket. I en ramme der a går langs ferja
+  // (fra a0 til a0 + Lf), b på tvers; K(a0, a1, b0, b1, z0, z1, farge, toppfarge) er en kloss og P3(a, b, z) et punkt i rammen; zw = vannlinja.
+  function ferjeModell(G, K, P3, a0, Lf, zw, id) {
+    const a1 = a0 + Lf, m = (a0 + a1) / 2, B2 = 7.5, dekk = zw + 1.6;
+    const skrog = [[a0 + 3, -B2 + 1], [a1 - 3, -B2 + 1], [a1 - 3, B2 - 1], [a0 + 3, B2 - 1]], topp = [[a0, -B2], [a1, -B2], [a1, B2], [a0, B2]];
+    kloss(G, skrog.map(([a, b]) => P3(a, b, zw - 2.2)), topp.map(([a, b]) => P3(a, b, dekk)), F.skrog, F.bildekk, true);
+    for (const sd of [-1, 1]) { K(a0 + 1, a1 - 1, sd * B2 - .2, sd * B2 + .2, dekk - .9, dekk + 1.1, F.hvit); K(a0 + 1, a1 - 1, sd * B2 - .22, sd * B2 + .22, dekk - 1.6, dekk - .9, F.rød); }
+    for (const sd of [-1, 1]) { K(a0 + 12, a1 - 12, sd * 5, sd * B2, dekk, dekk + 5, F.hvit); K(a0 + 13, a1 - 13, sd * (B2 + .02) - .02, sd * (B2 + .02) + .02, dekk + 3.4, dekk + 4.3, F.vindu); }
+    K(m - 8, m + 8, -B2, B2, dekk + 5, dekk + 5.4, F.hvit);
+    K(m - 3, m + 3, -4.2, 4.2, dekk + 5.4, dekk + 8.2, F.hvit, F.tak);
+    K(m - 3.05, m + 3.05, -4.25, 4.25, dekk + 6.8, dekk + 7.8, F.vindu);
+    K(m + 5, m + 7.2, 5.4, 7, dekk + 5, dekk + 10.5, F.hvit); K(m + 5, m + 7.2, 5.4, 7, dekk + 10.5, dekk + 11.3, F.tak);
+    stang(G, P3(m, 0, dekk + 8.2), P3(m, 0, dekk + 12), .15, F.stål);
+    let f = (id % 991) + 7; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 7; i++) { const a = a0 + 8 + (i % 4) * 11 + rnd() * 2, b = (Math.floor(i / 4) ? 1 : -1) * 2.2, c = BILER[Math.floor(rnd() * BILER.length)];
+      if (a + 4.4 > a1 - 4) continue;
+      K(a, a + 4.4, b - .9, b + .9, dekk, dekk + .8, c); K(a + 1.1, a + 3.4, b - .8, b + .8, dekk + .8, dekk + 1.4, F.vindu); }
+  }
+  // Ferja som egen geometri (spill/ferje3d.js): midt i origo, langs x, vannlinja z = 0. Gir { pos, kol } (trekanter, farge per hjørne).
+  function ferjeGeo(Lf, id) {
+    const G = ny(), P3 = (a, b, z) => [a, b, z], K = (a0, a1, b0, b1, z0, z1, kf, kt) => { const c = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]]; kloss(G, c.map(([a, b]) => P3(a, b, z0)), c.map(([a, b]) => P3(a, b, z1)), kf, kt, true); };
+    ferjeModell(G, K, P3, -Lf / 2, Lf, 0, id | 0); return G;
+  }
   function byggKai(u, k, G, T) {
     const { pt, gz, iv, zw, zk } = k, [fx, fy] = k.f, lx = -fy, ly = fx;
     const P3 = (a, b, z) => { const [x, y] = pt(a, b); return [x, y, z]; };
@@ -289,24 +314,9 @@
     // ledeveggene: peler med fenderbjelke på hver side av ferja
     for (const sd of [-1, 1]) { for (let a = 24; a <= 48; a += 6) { const [x, y] = pt(a, sd * 8.6); syl(G, x, y, zw - 2.5, zw + 3.2, .45, 8, F.kabel); }
       K(24, 48, sd * 8.6 - .35, sd * 8.6 + .35, zw + 2.4, zw + 3.1, F.gummi); }
-    // ferja ved kai (hvis det er vann nok): skrog, bildekk, sidebygg med vinduer, styrehus på brodekket, skorstein, biler på dekket
-    let Lf = 72; while (Lf >= 40 && ![...Array(8)].every((_, i) => iv(23 + Lf * i / 7, 0) && iv(23 + Lf * i / 7, 8) && iv(23 + Lf * i / 7, -8))) Lf -= 8;
-    if (Lf >= 40) {
-      const a0 = 22.6, a1 = a0 + Lf, m = (a0 + a1) / 2, B2 = 7.5, dekk = zw + 1.6;
-      const skrog = [[a0 + 3, -B2 + 1], [a1 - 3, -B2 + 1], [a1 - 3, B2 - 1], [a0 + 3, B2 - 1]], topp = [[a0, -B2], [a1, -B2], [a1, B2], [a0, B2]];
-      kloss(G, skrog.map(([a, b]) => P3(a, b, zw - 2.2)), topp.map(([a, b]) => P3(a, b, dekk)), F.skrog, F.bildekk, true);
-      for (const sd of [-1, 1]) { K(a0 + 1, a1 - 1, sd * B2 - .2, sd * B2 + .2, dekk - .9, dekk + 1.1, F.hvit); K(a0 + 1, a1 - 1, sd * B2 - .22, sd * B2 + .22, dekk - 1.6, dekk - .9, F.rød); }
-      for (const sd of [-1, 1]) { K(a0 + 12, a1 - 12, sd * 5, sd * B2, dekk, dekk + 5, F.hvit); K(a0 + 13, a1 - 13, sd * (B2 + .02) - .02, sd * (B2 + .02) + .02, dekk + 3.4, dekk + 4.3, F.vindu); }
-      K(m - 8, m + 8, -B2, B2, dekk + 5, dekk + 5.4, F.hvit);
-      K(m - 3, m + 3, -4.2, 4.2, dekk + 5.4, dekk + 8.2, F.hvit, F.tak);
-      K(m - 3.05, m + 3.05, -4.25, 4.25, dekk + 6.8, dekk + 7.8, F.vindu);
-      K(m + 5, m + 7.2, 5.4, 7, dekk + 5, dekk + 10.5, F.hvit); K(m + 5, m + 7.2, 5.4, 7, dekk + 10.5, dekk + 11.3, F.tak);
-      stang(G, P3(m, 0, dekk + 8.2), P3(m, 0, dekk + 12), .15, F.stål);
-      let f = (k.id % 991) + 7; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
-      for (let i = 0; i < 7; i++) { const a = a0 + 8 + (i % 4) * 11 + rnd() * 2, b = (Math.floor(i / 4) ? 1 : -1) * 2.2, c = BILER[Math.floor(rnd() * BILER.length)];
-        K(a, a + 4.4, b - .9, b + .9, dekk, dekk + .8, c); K(a + 1.1, a + 3.4, b - .8, b + .8, dekk + .8, dekk + 1.4, F.vindu); }
-      k.ferje = { a0, a1, Lf };
-    }
+    // ferja ved kai (hvis det er vann nok). Ligger kaien i et samband med ferje i rute (spill/ferje3d.js: k.iRute), tegnes den der i stedet.
+    const Lf = ferjeLengde(iv);
+    if (Lf >= 40) { k.ferje = { a0: 22.6, a1: 22.6 + Lf, Lf }; if (!k.iRute) ferjeModell(G, K, P3, 22.6, Lf, zw, k.id); }
     // oppstillingsplassen: asfalt med hvite linjer mellom feltene, lagt på terrenget (ikke der det er vann)
     const pl = T.plass, A0 = -6, A1 = -66, B0 = -17, B1 = 17, st = 3, na = Math.round((A0 - A1) / st), nb = Math.round((B1 - B0) / st), id = [];
     const zp = (a, b) => { const g = Math.max(gz(a, b), zw + 1) + .18; const t = Math.max(0, Math.min(1, (A0 - a) / 10)); return zk * (1 - t) + g * t; };
@@ -351,5 +361,5 @@
       const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); tg.computeVertexNormals();
       const tm = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: tekstur(type), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide })); R.scene.add(tm); mesh.push(tm); }
   });
-  window.Infra3d = { bruModell, modeller, F };
+  window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok };
 })();

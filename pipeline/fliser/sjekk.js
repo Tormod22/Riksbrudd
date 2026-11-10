@@ -470,6 +470,16 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, k, tå, glFeil: gl.getError() }; });
     const viok = vi.bølger && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
     console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
+    // VAKT ferjer og kjølvann (spill/ferje3d.js): Dovre har ingen ferjekai, så ingen ferjer; et kunstig kjølvann (en båt som kjører 120 m)
+    // tegnes i scenen uten GL-feil og forsvinner igjen. Reglene (rutefart, venting, snu) testes i test_ferje.js.
+    const fe = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = async n => { for (let i = 0; i < n; i++) { tegn3d(); await new Promise(r => setTimeout(r, 90)); } };
+      if (!window.Ferje3d || !window.Kjølvann || !window.Ferje) return { mangler: true };
+      const s = Kjølvann.nyttSpor(4, 20), nå = Kjølvann.nå(), z = (hoyde3d(R3.ut.cx, R3.ut.cy) - R3.ut.h0) * R3.EX + .3;
+      for (let i = 0; i <= 40; i++) Kjølvann.flytt(s, i * 3, 0, z, 4, nå - 6 + i * .15);
+      await vent(4); const n = Kjølvann.antall(), iScene = !!(Ferje3d.KV.mesh && Ferje3d.KV.mesh.parent), glFeil = gl.getError();
+      Ferje3d.KV.spor = []; await vent(3); return { ...Ferje3d.sjekk(), n, iScene, glFeil, etter: Kjølvann.antall() }; });
+    const feok = !fe.mangler && fe.ferjer === 0 && fe.n > 20 && fe.iScene && fe.glFeil === 0 && fe.etter === 0; if (!feok) feil++;
+    console.log(`${feok ? 'ok  ' : 'FEIL'} ${navn} ferjer og kjølvann: ${fe.mangler ? 'modulene mangler' : `${fe.ferjer} ferjer (ingen kai på Dovre), kjølvann ${fe.n} firkanter i scenen ${fe.iScene}, borte etterpå ${fe.etter === 0}, GL-feil ${fe.glFeil}`}`);
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // filtre i 3D (spill/filtre.js): hvert filter tegner uten GL-feil, bildet er ikke svart, tellerne gjelder fortsatt scenen; tilbake til «Ingen»
     const fil = await pg.evaluate(() => { const gl = R3.renderer.getContext(), ut = []; gl.getError();
