@@ -493,7 +493,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const r = { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; c.z = z0; return r; });
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; return Vakt3d.sjekk(u); });
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat;
+      let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
+      window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb }; return Vakt3d.sjekk(u); });
+    // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær på sporet
+    const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0)); if (!bok) feil++;
+    console.log(`${bok ? 'ok  ' : 'FEIL'} ${navn} jernbane i 3D: ${JSON.stringify(bs)}`);
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
     console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
     // VAKT byhus (spill/byhus.js, hus3d): Dombås-utsnittet har bygg, alle har tak, minst fem ulike fasader (minst én fra Byhus), noen valm/mansard,
