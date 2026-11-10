@@ -63,9 +63,10 @@
     if (type === 'kommunal') { g.fillStyle = 'rgba(40,40,42,.5)'; g.fillRect(14, 0, 8, 256); g.fillRect(42, 0, 8, 256); }   // hjulspor
     if (fortau) { g.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < 256; y += 32) g.fillRect(0, y, 64, 2); g.fillStyle = '#bdbab2'; g.fillRect(0, 0, 6, 256); }   // fuger + kantstein
     // småstein med skygge, så grusen ser skarp ut nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»)
-    if (grus || type === 'skulder') for (let k = 0; k < 900; k++) { const x = rnd() * 64, y = rnd() * 256, r = .7 + rnd() * 1.6, l = 70 + rnd() * 110;
-      g.fillStyle = 'rgba(30,26,20,.45)'; g.beginPath(); g.ellipse(x + .6, y + .8, r, r * .8, 0, 0, 6.283); g.fill();
-      g.fillStyle = `rgb(${l + 8},${l},${l - 12})`; g.beginPath(); g.ellipse(x, y, r, r * .8, rnd() * 3, 0, 6.283); g.fill(); }
+    // (12. nov: steinene var 8–28 cm og så ut som brostein; nå mest 1–4 cm grus med noen få større, lavere kontrast)
+    if (grus || type === 'skulder') for (let k = 0; k < 5200; k++) { const x = rnd() * 64, y = rnd() * 256, stor = rnd() < .04, r = stor ? .6 + rnd() * .5 : .18 + rnd() * .38, l = 92 + rnd() * 70;
+      g.fillStyle = 'rgba(40,34,26,.35)'; g.beginPath(); g.ellipse(x + .25, y + .35, r, r * .75, 0, 0, 6.283); g.fill();
+      g.fillStyle = `rgb(${l + 8},${l + 1},${l - 10})`; g.beginPath(); g.ellipse(x, y, r, r * (.55 + rnd() * .35), rnd() * 3, 0, 6.283); g.fill(); }
     if (type === 'grus') { g.fillStyle = 'rgba(70,90,40,.35)'; g.fillRect(28, 0, 8, 256); }   // gress i midten
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return (tekst[type] = t);
   }
