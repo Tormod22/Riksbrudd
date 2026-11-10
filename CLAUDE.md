@@ -293,3 +293,16 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   oppstillingsplass med felt, venterom, lyktestolper. Dovre har ingen ferjekai: testet på /norge (Mannheller) med scratchpad bruer/norge3d.js
   (/api/kart videresendt til riksbrudd.vercel.app). VAKT i sjekk.js: modellene i scenen, søyler/landkar ikke over terrenget, dekket over
   terrenget, vegene løftet, sprengt bru har gap uten veg i gapet.
+  KRAFTLEDNINGER (10. nov, brukeren: «Norge i 3D mer realistisk»): pipeline/fliser/kraft.py henter NVEs kraftnett (kart.nve.no/enterprise,
+  Nettanlegg5: transmisjon/regional luftledning, master, trafostasjoner; Nettanlegg4 lag 2: distribusjonsnett 22 kV; NLOD) for DOVRE til
+  site/dovre-fliser/data/kraft.json (55 KB, i git): linjer {kv, n nettnivå, m = mastene i rekkefølge, e = 1 mast fra NVE / 0 lagt inn},
+  trafo [[x, y, kv]]. NVE har ofte ett punkt per mastebein (slås sammen innen 15 m); mangler master, legges de i knekkpunkt og hver
+  ~380/300/90 m. Test: python3 pipeline/fliser/test_kraft.py. Hele Norge senere via en Action (som infra.yml) – bare Dovre nå.
+  (nve.geodataonline.no svarer ikke fra økt-maskinen; Overpass heller ikke.) Regler uten DOM: spill/kraft.js (TYPER: portal 300/420 kV,
+  stål 132, h66 H-mast i tre, h22 trestolper i H-form; nedheng L²/8C, retning, ryddebelte, utsnitt; test_kraft.js). spill/kraft3d.js:
+  2D via KROKER.tegn (strek fra m < 60/30/7, mastemerker nærmere, trafostasjon), «Kraftledninger» i ☰ (VIS.kraft); 3D: KROKER.bygg3d
+  rydder trær/busker i beltet (±20/15/12/5 m) og maler ryddegata (lyng) og grusen på trafostasjonen i bakken (i kroken, ikke i
+  index.html: den kjører etter ryddHus og før hindringer/sett3d), KROKER.sett3d lager mastene som InstancedMesh per type (fagverk av
+  stavene i mastGeo), linene som LineSegments (parabel, delliner på 300 kV, toppliner), rød/hvite varselkuler der topplina går > 60 m
+  over bakken, trafostasjonen (gjerde, transformatorer, portaler, kontrollbygg); KROKER.ramme3d: røde flyvarsellys (Points) på
+  portal-/stålmaster når NATT.mørke > 0,15. VAKT i sjekk.js (Kraft3d.sjekk på Dombås-utsnittet: lastet, foten innen 0,5 m, 0 trær i beltet).

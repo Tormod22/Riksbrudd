@@ -456,9 +456,12 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && !f0.iHus && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
     console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}, startet i hus: ${f0.iHus}`);
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); return Vakt3d.sjekk(await bygg3d(193300, 6896300, 900)); });
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; return Vakt3d.sjekk(u); });
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
     console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
+    // VAKT kraftledninger (spill/kraft3d.js): dataene lastes, mastene i utsnittet står på bakken (fot innen 0,5 m), ingen trær i ryddebeltet
+    const kr = await pg.evaluate(() => window.KRAFT_SJEKK), krok = kr && kr.lastet && kr.linjer > 100 && kr.master > 5 && kr.spenn > 3 && kr.svever === 0 && kr.iBelte === 0 && kr.trær > 0; if (!krok) feil++;
+    console.log(`${krok ? 'ok  ' : 'FEIL'} ${navn} kraftledninger: ${JSON.stringify(kr)}`);
     // kompass og minikart (spill/kompass.js): kameraet mot nord/øst gir N/Ø midt på båndet, også når du går; minikartet er tegnet; ☰ slår av og på
     const rammer = n => pg.evaluate(n => new Promise(r => { const f0 = R3.renderer.info.render.frame; const f = () => (R3.renderer.info.render.frame - f0 >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
     const retn = async (yaw, fot) => { await pg.evaluate(([yaw, fot]) => { if (fot) { if (!R3.fot) Gange.start(); R3.fot.a = yaw; R3.fot.pitch = 0; } else { if (R3.fot) Gange.stopp(); R3.bane.yaw = yaw; } }, [yaw, fot]); await rammer(2);
