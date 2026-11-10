@@ -444,6 +444,10 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
+    // fjernterrenget rundt utsnittet (spill/fjern3d.js): ringen finnes i scenen (horisonten var avklipte vegger 12. nov)
+    await pg.waitForFunction(() => window.Fjern3d && Fjern3d.sjekk(), null, { timeout: 30000 }).catch(() => {});
+    const fj = await pg.evaluate(() => Fjern3d.sjekk()), fjok = !!(fj && fj.iScene && fj.trekanter > 1000); if (!fjok) feil++;
+    console.log(`${fjok ? 'ok  ' : 'FEIL'} ${navn} fjernterreng: ${fj ? `${fj.trekanter} trekanter ut til ${Math.round(fj.R2 / 1000)} km` : 'mangler'}`);
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // filtre i 3D (spill/filtre.js): hvert filter tegner uten GL-feil, bildet er ikke svart, tellerne gjelder fortsatt scenen; tilbake til «Ingen»
     const fil = await pg.evaluate(() => { const gl = R3.renderer.getContext(), ut = []; gl.getError();

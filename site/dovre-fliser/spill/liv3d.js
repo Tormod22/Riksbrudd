@@ -53,14 +53,19 @@
   const tekst = {};
   function vegTekstur(type) {
     if (tekst[type]) return tekst[type];
-    const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), im = g.createImageData(64, 256); let f = 7 + type.length;
+    const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 64 * 256; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
-    g.putImageData(im, 0, 0);
+    // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
+    g.putImageData(im, 0, 0); g.scale(2, 2);
     if (type === 'asfalt') { g.fillStyle = '#e8e6df'; g.fillRect(3, 0, 3, 256); g.fillRect(58, 0, 3, 256); g.fillStyle = '#d9b43a'; g.fillRect(30, 0, 4, 64); }   // kantlinjer + gul midtlinje 3 m av 12
     if (type === 'kommunal') { g.fillStyle = 'rgba(40,40,42,.5)'; g.fillRect(14, 0, 8, 256); g.fillRect(42, 0, 8, 256); }   // hjulspor
     if (fortau) { g.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < 256; y += 32) g.fillRect(0, y, 64, 2); g.fillStyle = '#bdbab2'; g.fillRect(0, 0, 6, 256); }   // fuger + kantstein
+    // småstein med skygge, så grusen ser skarp ut nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»)
+    if (grus || type === 'skulder') for (let k = 0; k < 900; k++) { const x = rnd() * 64, y = rnd() * 256, r = .7 + rnd() * 1.6, l = 70 + rnd() * 110;
+      g.fillStyle = 'rgba(30,26,20,.45)'; g.beginPath(); g.ellipse(x + .6, y + .8, r, r * .8, 0, 0, 6.283); g.fill();
+      g.fillStyle = `rgb(${l + 8},${l},${l - 12})`; g.beginPath(); g.ellipse(x, y, r, r * .8, rnd() * 3, 0, 6.283); g.fill(); }
     if (type === 'grus') { g.fillStyle = 'rgba(70,90,40,.35)'; g.fillRect(28, 0, 8, 256); }   // gress i midten
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return (tekst[type] = t);
   }

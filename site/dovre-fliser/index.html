@@ -847,35 +847,67 @@ function bilin(v, X, Y) {
 }
 // Fin struktur i bakken (gress, lyng, grus) som tones inn nær kameraet: to lag støy (ca. 3 m og 17 m) ganget med kartfargen.
 let DETALJ = null;
+// Strå sett ovenfra (gråtoner, sømløs): tusenvis av korte, tynne streker i lyse og mørke toner – brukes nær kameraet der det er vegetasjon
+let STRÅ = null;
+function stråTekstur() {
+  if (STRÅ) return STRÅ;
+  const W = 256, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'); g.fillStyle = '#7a7a7a'; g.fillRect(0, 0, W, W);
+  let f = 4242; const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; g.lineCap = 'round';
+  for (let k = 0; k < 4200; k++) { const x = rnd() * W, y = rnd() * W, a = rnd() * 6.283, l = 3 + rnd() * 7, v = Math.round(40 + rnd() * 175);
+    g.strokeStyle = `rgb(${v},${v},${v})`; g.lineWidth = .8 + rnd() * 1.1;
+    for (const ox of [-W, 0, W]) for (const oy of [-W, 0, W]) { g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + Math.cos(a) * l, y + oy + Math.sin(a) * l); g.stroke(); } }
+  STRÅ = new THREE.CanvasTexture(c); STRÅ.wrapS = STRÅ.wrapT = THREE.RepeatWrapping; STRÅ.anisotropy = 8; return STRÅ;
+}
 function detaljTekstur() {
   if (DETALJ) return DETALJ;
   const W = 256, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W);
   let f = 12345; const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
   const fin = new Float32Array(W * W).map(rnd), grov = new Float32Array(16 * 16).map(rnd);
+  // småstein: Voronoi-celler (sømløse) – lys midt i steinen, mørk fuge mellom, og ulik lysstyrke per stein
+  const P = Array.from({ length: 90 }, () => [rnd() * W, rnd() * W, .55 + .45 * rnd()]);
+  const stein = (i, j) => { let d1 = 1e9, d2 = 1e9, l = 0;
+    for (const [px, py, v] of P) for (const ox of [-W, 0, W]) for (const oy of [-W, 0, W]) { const d = Math.hypot(i - px - ox, j - py - oy); if (d < d1) { d2 = d1; d1 = d; l = v; } else if (d < d2) d2 = d; }
+    const kant = Math.min(1, (d2 - d1) / 3.5); return Math.max(0, Math.min(1, l * (.35 + .65 * kant) * (1.05 - .25 * d1 / 22))); };
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
     let a = 0; for (const [di, dj] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]) a += fin[((j + dj + W) % W) * W + (i + di + W) % W]; a /= 5;   // litt utjevnet korn
     const u = i / 16, v = j / 16, i0 = Math.floor(u), j0 = Math.floor(v), fu = u - i0, fv = v - j0, s2 = t => t * t * (3 - 2 * t), q = (x, y) => grov[(y % 16) * 16 + x % 16];
     const b = (q(i0, j0) * (1 - s2(fu)) + q(i0 + 1, j0) * s2(fu)) * (1 - s2(fv)) + (q(i0, j0 + 1) * (1 - s2(fu)) + q(i0 + 1, j0 + 1) * s2(fu)) * s2(fv);   // flekker (sømløs)
-    const o = (j * W + i) * 4; im.data[o] = a * 255; im.data[o + 1] = b * 255; im.data[o + 2] = 128; im.data[o + 3] = 255;
+    const o = (j * W + i) * 4, skarp = stein(i, j); im.data[o] = a * 255; im.data[o + 1] = b * 255; im.data[o + 2] = skarp * 255; im.data[o + 3] = 255;   // blått: småstein/torver med skarpe kanter (nær bakken)
   }
   g.putImageData(im, 0, 0); DETALJ = new THREE.CanvasTexture(c); DETALJ.wrapS = DETALJ.wrapT = THREE.RepeatWrapping; DETALJ.anisotropy = 8;
   return DETALJ;
 }
 // Vær og årstid i bakken (spill/vaer-visning.js setter verdiene): snø over snøgrensen på flatt nok terreng, høstfarger på grønt.
 const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 } };
+// Bakkens shader: korn og flekker nær kameraet, høstfarger, snø over snøgrensen, og berg i stedet for strukket kartbilde der det er bratt
+// (brukeren 12. nov: fjellveggene i Jotunheimen var utvasket og utstrukket)
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
-    sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
+    sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
       float korn = texture2D(detalj, vUv * detaljSkala).r, flekk = texture2D(detalj, vUv * detaljSkala * 0.19).g;
       float gronn = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronn * (0.55 + 0.45 * flekk));
+      float bratt = smoothstep(0.66, 0.42, vOpp + (flekk - 0.5) * 0.12);
+      float lag = 0.5 + 0.5 * sin(vMoh * 0.11 + flekk * 5.0);
+      vec3 berg = vec3(0.43, 0.41, 0.37) * mix(1.0, 0.72 + 0.4 * korn, detVekt) * (0.9 + 0.16 * mix(0.5, lag, 1.0 - smoothstep(600.0, 2500.0, detAvst)));
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, berg, 0.8), bratt);
       float sno = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, vOpp + (korn - 0.5) * 0.15);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96) * (0.94 + 0.08 * korn), sno);
-      diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85 * (1.0 - sno * 0.7));`);
+      diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85 * (1.0 - sno * 0.7));
+      // helt nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»): finere korn (ca. 0,7 m) og småstein/torver (ca. 0,8 m per rute) som ikke følger kartbildet,
+      // og i grønt litt lysere og mørkere gress og gule strå, så bakken ser skarp ut der kartbildet bare er noen meter per punkt
+      float naer = 1.0 - smoothstep(6.0, 90.0, detAvst);
+      float k2 = texture2D(detalj, vUv * detaljSkala * 4.7 + vec2(0.31, 0.17)).r, k3 = texture2D(detalj, vUv * detaljSkala * 4.1 + vec2(0.71, 0.43)).b;
+      float k4 = texture2D(detalj, vUv * detaljSkala * 1.9 + vec2(0.13, 0.59)).g;
+      float veg = clamp((diffuseColor.g - diffuseColor.b) * 5.0, 0.0, 1.0);
+      float k5 = texture2D(straa, vUv * detaljSkala * 3.0 + vec2(0.53, 0.29)).r, k6 = texture2D(detalj, vUv * detaljSkala * 7.3 + vec2(0.11, 0.83)).r;
+      vec3 naerF = diffuseColor.rgb * (0.8 + 0.4 * k2) * mix(0.72 + 0.46 * k3, (0.7 + 0.55 * k5) * (0.85 + 0.3 * k6), veg);
+      naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
+      diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));`);
   };
 }
 // Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
@@ -1890,13 +1922,14 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/hjelp.js?v=e21ece0569"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=b76b111598"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=fa2c38825c"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=f2be8b3ffa"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=a074b7fc05"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=dc44fd3716"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=a047d00d36"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=329283c7a5"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=fb9712446a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=879e9e18d3"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=359bc1d03d"></script>
