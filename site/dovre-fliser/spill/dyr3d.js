@@ -70,7 +70,7 @@
   // Hver del: geometri, farge (eller funksjon av punktet), pels (0–1: hvor mye flokkfargen/dyrets farge virker), bein (+1/−1 svinger i
   // motsatt takt, diagonalt som når dyr går), hofte (høyden beinet svinger om), hode (1 = følger hodet ned når dyret beiter)
   const kasse = (x, y, z, sx, sy, sz) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); return g; };
-  const kule = (x, y, z, rx, ry, rz, a = 10, b = 7) => { const g = new THREE.SphereGeometry(1, a, b); g.scale(rx, ry, rz); g.translate(x, y, z); return g; };
+  const kule = (x, y, z, rx, ry, rz, a = 8, b = 6) => { const g = new THREE.SphereGeometry(1, a, b); g.scale(rx, ry, rz); g.translate(x, y, z); return g; };
   const bein = (xs, ys, h, t, farge, pels, hov) => { const ut = [];
     for (const x of xs) for (const y of ys) { const s = (x > 0) === (y > 0) ? 1 : -1; ut.push([kasse(x, y, 0, t, t, h), farge, { pels, bein: s, hofte: h }]);
       if (hov) ut.push([kasse(x, y, 0, t * 1.15, t * 1.15, .07), hov, { pels: 0, bein: s, hofte: h }]); }
@@ -78,8 +78,8 @@
   const MODELL = {
     sau: () => ({ nakke: [.36, .64], vinkel: 1.25, senk: .18, deler: [
       [kule(0, 0, .66, .52, .31, .28), (x, y, z) => { const n = .5 + .5 * Math.sin(x * 31 + y * 23 + z * 41); return [.9 + .06 * n, .88 + .06 * n, .82 + .05 * n]; }, { pels: 1 }],
-      [kule(-.32, 0, .64, .26, .28, .25, 8, 6), [.9, .88, .82], { pels: 1 }],
-      [kule(.38, 0, .76, .2, .15, .15, 8, 6), [.9, .88, .82], { pels: 1, hode: 1 }],
+      [kule(-.32, 0, .64, .26, .28, .25, 6, 4), [.9, .88, .82], { pels: 1 }],
+      [kule(.38, 0, .76, .2, .15, .15, 6, 4), [.9, .88, .82], { pels: 1, hode: 1 }],
       [kasse(.6, 0, .7, .28, .15, .17), [.86, .82, .76], { pels: .55, hode: 1 }],
       [kasse(.75, 0, .7, .05, .11, .09), [.28, .22, .21], { pels: 0, hode: 1 }],
       [kasse(.52, .1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }], [kasse(.52, -.1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }],
@@ -87,8 +87,8 @@
       ...bein([.28, -.3], [.13, -.13], .47, .075, [.74, .7, .64], .55, [.2, .17, .15])] }),
     ku: () => ({ nakke: [.8, 1.18], vinkel: 1, senk: .4, deler: [
       [kule(0, 0, 1.08, .92, .37, .4), [.94, .92, .88], { pels: (x, y, z) => z < .86 || (Math.sin(x * 4.3 + y * 2) > .6 && z < 1.2) ? 0 : 1 }],
-      [kule(-.55, 0, 1.08, .42, .36, .38, 8, 6), [.94, .92, .88], { pels: (x, y, z) => z < .86 ? 0 : 1 }],
-      [kule(.75, 0, 1.18, .3, .3, .3, 8, 6), [1, 1, 1], { pels: 1, hode: 1 }],
+      [kule(-.55, 0, 1.08, .42, .36, .38, 6, 4), [.94, .92, .88], { pels: (x, y, z) => z < .86 ? 0 : 1 }],
+      [kule(.75, 0, 1.18, .3, .3, .3, 6, 4), [1, 1, 1], { pels: 1, hode: 1 }],
       [kasse(1.08, 0, .98, .5, .3, .34), [.95, .93, .9], { pels: .8, hode: 1 }],
       [kasse(1.35, 0, .98, .1, .27, .2), [.72, .54, .5], { pels: 0, hode: 1 }],
       [kasse(.98, .2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }], [kasse(.98, -.2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }],
@@ -102,7 +102,7 @@
         const k = new THREE.BoxGeometry(.035, .035, .28); k.translate(0, 0, .14); k.rotateY(-.1); k.rotateX(s * .5); k.translate(.62, s * .25, 1.82); gevir.push([k, [.6, .52, .4], { pels: 0, hode: 1 }]); }
       return { nakke: [.58, 1.12], vinkel: 1.15, senk: .45, deler: [
         [kule(0, 0, 1.05, .75, .3, .32), (x, y, z) => z < .92 ? [.8, .77, .7] : x < -.55 ? [.86, .84, .78] : [.47, .42, .35], { pels: 1 }],
-        [kule(.65, 0, 1.2, .3, .17, .2, 8, 6), [.76, .73, .66], { pels: .6, hode: 1 }],
+        [kule(.65, 0, 1.2, .3, .17, .2, 6, 4), [.76, .73, .66], { pels: .6, hode: 1 }],
         [kasse(.98, 0, 1.18, .4, .18, .2), (x, y, z) => x > 1.1 ? [.32, .28, .24] : [.46, .41, .34], { pels: .5, hode: 1 }],
         [kasse(.84, .11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }], [kasse(.84, -.11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }],
         [kasse(-.76, 0, 1, .06, .1, .14), [.9, .88, .84], { pels: 0 }],
@@ -112,15 +112,15 @@
     moskus: () => {
       // lav, bred kropp med lang pels som henger nesten til bakken (skjørt), pukkel over skuldrene og lys sal på ryggen
       // en avlang kule der undersiden er trukket ned og ut (pelsen henger), med ujevn frynsekant
-      const k = new THREE.SphereGeometry(1, 12, 9), p = k.attributes.position;
+      const k = new THREE.SphereGeometry(1, 10, 7), p = k.attributes.position;
       for (let i = 0; i < p.count; i++) { let x = p.getX(i) * .98, y = p.getY(i) * .52, z = p.getZ(i) * .5;
         if (z < 0) { const f = -z / .5; z *= 1.3 + .12 * Math.sin(x * 13 + y * 9); y *= 1 + .14 * f; x *= 1 + .05 * f; }
         p.setXYZ(i, x, y, z + .92); }
       k.computeVertexNormals();
       return { nakke: [.72, .82], vinkel: .7, senk: .12, deler: [
         [k, (x, y, z) => z < .6 ? [.14, .1, .07] : [.21, .16, .11], { pels: 1 }],
-        [kule(.38, 0, 1.25, .62, .44, .3, 8, 6), [.28, .22, .15], { pels: 1 }],
-        [kule(-.38, 0, 1.25, .5, .38, .14, 8, 5), [.52, .44, .33], { pels: .6 }],
+        [kule(.38, 0, 1.25, .62, .44, .3, 6, 4), [.28, .22, .15], { pels: 1 }],
+        [kule(-.38, 0, 1.25, .5, .38, .14, 6, 4), [.52, .44, .33], { pels: .6 }],
         [kasse(1, 0, .52, .46, .44, .44), (x, y, z) => x > 1.15 && z < .7 ? [.3, .26, .22] : [.17, .13, .09], { pels: 1, hode: 1 }],
         [kasse(.94, 0, .9, .22, .5, .1), [.6, .55, .46], { pels: 0, hode: 1 }],
         [kasse(.98, .3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }], [kasse(.98, -.3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }],
@@ -131,8 +131,8 @@
         const st = new THREE.BoxGeometry(.06, .2, .06); st.translate(1.2, s * .16, 2.02); skovl.push([st, [.6, .53, .42], { pels: 0, hode: 1 }]); }
       return { nakke: [.95, 1.85], vinkel: 1, senk: .65, deler: [
         [kule(0, 0, 1.68, 1.05, .38, .46), [.25, .18, .12], { pels: 1 }],
-        [kule(.55, 0, 1.95, .48, .33, .36, 8, 6), [.22, .16, .1], { pels: 1 }],
-        [kule(1, 0, 1.86, .36, .2, .24, 8, 6), [.22, .16, .1], { pels: 1, hode: 1 }],
+        [kule(.55, 0, 1.95, .48, .33, .36, 6, 4), [.22, .16, .1], { pels: 1 }],
+        [kule(1, 0, 1.86, .36, .2, .24, 6, 4), [.22, .16, .1], { pels: 1, hode: 1 }],
         [kasse(1.38, 0, 1.6, .62, .24, .32), [.21, .15, .1], { pels: 1, hode: 1 }],
         [kasse(1.66, 0, 1.52, .2, .28, .3), [.26, .2, .14], { pels: 1, hode: 1 }],
         [kasse(1.2, 0, 1.32, .08, .06, .26), [.18, .13, .09], { pels: 1, hode: 1 }],
