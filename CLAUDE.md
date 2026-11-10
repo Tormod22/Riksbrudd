@@ -397,3 +397,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   du ca. 120 m, tåkedotter (sprites) som driver med vinden, havtåke over sjøen (sjøpunkter fra vannmasken under 1 moh.) i tåke og
   morgentåke. Vinden i statuslinja (#sVind, «6 m/s SV», tittel med beaufortnavn). window.Vind3d.sjekk(); VAKT i sjekk.js (storm gir bølger,
   skum, sterkere trevind og vind i statuslinja uten GL-feil; tåke gir grå himmel). Testet med bilder i Bergen (storm/klart) og på Dombås.
+  LYD I 3D (12. nov, brukeren: «fortsett å forbedre»): spill/lyd.js (reglene øverst uten DOM: Lyd.nivåer/skritt, test_lyd.js) – alt laget med
+  Web Audio, ingen lydfiler: vedvarende kanaler (støy -> filter -> forsterker) for vind (båndpass, kast fra Vind3d), plystring i storm, hav
+  (brun støy + bølgedrag med 6–9 s puls), skvulp ved innsjø, regn, bylyd; korte lyder for fugler (tre slags sang), måker, torden 1–5 s etter
+  NATT.lyn og fottrinn når du går (underlag fra u.vegType: grus knaser, asfalt, gress, snø). Omgivelsene leses hvert 0,5 s i en ring rundt
+  kameraet (vannmasken 128², < 1,2 moh. = hav, bunnkartet = skog, nærHus = by). Bare i 3D, tones ned i 2D/skjult fane; starter ved første
+  trykk/tast (nettleserens regel); ☰ «Lyd» (localStorage «riksbrudd-lyd»). liv3d.js: vegmasken har nå 1 = grus, 2 = asfalt (u.vegType).
+  Målt i Bergen: storm ved sjøen rms 0,07 / topp 0,23, klart 0,016. VAKT i sjekk.js (8 kanaler, nivåer, knappen). Lydmåling: scratchpad
+  norge/norge3d-lyd.js (Chromium med --autoplay-policy=no-user-gesture-required) og Lyd.sjekk().rms.
+  GRUSVEGER (12. nov): småsteinene i vegTekstur er nå 1–4 cm (før 8–28 cm, så ut som brostein).
