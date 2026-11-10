@@ -97,7 +97,9 @@
     const stamme = (r0, r1, h, farge, x = 0, y = 0, v = 0, r = 0, seg = 5) => { const g = new THREE.CylinderGeometry(r1, r0, h, seg, seg >= 6 ? 2 : 1, true); g.translate(0, h / 2, 0); g.rotateZ(v); g.rotateY(r); g.translate(x, 0, -y); g.rotateX(Math.PI / 2);
       legg(g, (a, b, z) => farge(z)); };
     // klump i kronen: polyeder med runde normaler (myk krone), strukket med (sx, sz)
+    // hjørnene skyves litt ut og inn (samme hjørne får samme forskyvning) så kronene ikke ser ut som glatte tallerkener eller kuler
     const klump = (x, y, z, r, farge, sx = 1, sz = 1, detalj = 0) => { const g = new THREE.IcosahedronGeometry(r, detalj), p = g.attributes.position, nr = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) { const a = p.getX(i) / r, b = p.getY(i) / r, c = p.getZ(i) / r, f = 1 + .2 * Math.sin(a * 12.9 + b * 7.3 + c * 4.1 + x * 31 + y * 17); p.setXYZ(i, p.getX(i) * f, p.getY(i) * f, p.getZ(i) * f); }
       for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
       g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(sx, sz, sx); g.translate(x, z, -y); g.rotateX(Math.PI / 2);
       legg(g, (a, b, zz) => farge(Math.max(0, Math.min(1, (zz - z + r * sz) / (2 * r * sz))), a, b, zz)); };
@@ -105,11 +107,11 @@
     const fin = !mob();
     if (art === 'furu') {
       // høy, rett stamme: gråbrun nede, rødoransje oppover; flat, mørk krone høyt oppe
-      stamme(.024, .013, .8, z => z < .3 ? [.33, .27, .22] : [.56, .36, .24], 0, 0, 0, 0, 6);
+      stamme(.024, .013, .8, z => z < .3 ? [.31, .26, .22] : [.48, .34, .25], 0, 0, 0, 0, 6);
       const f = blad([.08, .15, .1], [.18, .27, .15]);
-      for (const [x, y, z, r] of fin ? [[0, 0, .86, .15], [.13, .05, .78, .12], [-.12, -.07, .8, .12], [.05, -.14, .7, .11], [-.05, .12, .93, .1], [.1, .12, .64, .09], [-.1, .02, .7, .09]] : [[0, 0, .84, .17], [.13, .05, .74, .13], [-.12, -.08, .77, .12]]) klump(x, y, z, r, f, 1.05, .78);
+      for (const [x, y, z, r] of fin ? [[0, 0, .86, .15], [.13, .05, .78, .12], [-.12, -.07, .8, .12], [.05, -.14, .7, .11], [-.05, .12, .93, .1], [.1, .12, .64, .09], [-.1, .02, .7, .09]] : [[0, 0, .84, .17], [.13, .05, .74, .13], [-.12, -.08, .77, .12]]) klump(x, y, z, r, f, 1.05, .92);
     } else if (art === 'furuEnkel') {
-      stamme(.026, .016, .76, () => [.52, .34, .22]); klump(0, 0, .82, .2, blad([.08, .15, .1], [.16, .25, .14]), 1, .8);
+      stamme(.026, .016, .76, () => [.46, .33, .24]); klump(0, 0, .82, .2, blad([.08, .15, .1], [.16, .25, .14]), 1, .8);
     } else if (art === 'osp') {
       // lys, grågrønn stamme, rund og litt høy krone i friskt grønt
       stamme(.03, .018, .72, () => [.63, .63, .59]);
