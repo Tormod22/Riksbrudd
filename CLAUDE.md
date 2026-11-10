@@ -239,3 +239,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Tekst i overlegget (KROKER.tegn3d): tidsstempel på VHS, sikte på varmesøkeren. Knapp «Filter: …» i ☰ blar, valget i localStorage
   «riksbrudd-filter»; window.Filtre.velg(id). info.autoReset slås av under filteret så trekanttelleren gjelder scenen. VAKT i sjekk.js:
   hvert filter tegnes, gl.getError() = 0, punkter lest med readPixels er ikke svarte/ensfarget.
+  KOMPASS OG MINIKART (10. nov, brukeren: «bygg bedre UI med kompass og evt. minikart»): spill/kompass.js (reglene øverst uten DOM,
+  test_kompass.js). Kursen = −yaw (kameraet ser mot (−sin yaw, cos yaw), nord = +y; R3.fot.a når du går). I 3D: kompassbånd øverst midt
+  på (canvas #kompass: hvert 5°, N/NØ … og 015/030, kursen i en tavle, merker for leiren, valgt lag og nærmeste synlige fiende, ved kanten
+  med pil når de er utenfor), minikart (#minikart: PC nede til høyre ved +/−, mobil over knappene til høyre) fra R3.texC (samme kart, tåke
+  og siktfelt som 3D-overflaten), roterer med kameraet eller nord opp (knappen på kanten, huskes), lag/kjøretøy/leir/synsfelt, trykk = 2D-kartet
+  der. 2D: nordpil (#nordpil) over målestokken. «Kompass»/«Minikart» i ☰ (localStorage). Kompass.midt() gir det båndet viser (VAKT i sjekk.js:
+  N/Ø/S i lufta og når du går, minikartet tegnet, ☰ av/på). Også: --topp følger statuslinja (ResizeObserver), mobil: loggen under båndet,
+  mindre kildetekst, målestokken over kildeteksten.
+
