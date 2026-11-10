@@ -35,4 +35,9 @@ const M = V.måne(213, 23.5); ok(M.lys > .97 && M.høyde > -20 && M.høyde < 25,
   ok(n > 40 && n < 120 && V.nordlys('sommer', 3, 23, -5, 0) === 0 && V.nordlys('vinter', 0, 13, 5, 0) === 0, `nordlys: ${n} av 200 klare vinternetter, aldri om sommeren eller dagen`); }
 ok(V.vinduAndel(20) > V.vinduAndel(3) && V.vinduAndel(3) > 0, 'lyse vinduer: flere kl. 20 enn kl. 03');
 ok(V.mørke(30) === 0 && V.mørke(-10) === 1, 'mørke: 0 midt på dagen, 1 dypt på natta');
+// storm (12. nov): kuling med regn, snøstorm om vinteren, i årstidenes sannsynligheter som summerer til 1
+{ const S2 = V.ny('høst'); V.låsVær(S2, 'storm'); const T2 = V.tilstand(S2, 12, 0); ok(T2.regn === 1 && T2.vind.fart > 9, 'storm: regn og vind ' + T2.vind.fart.toFixed(1) + ' m/s');
+  const S3 = V.ny('vinter'); V.låsVær(S3, 'storm'); const T3 = V.tilstand(S3, 12, 0); ok(T3.snø === 1 && T3.regn === 0, 'storm om vinteren er snøstorm');
+  for (const [å, o] of Object.entries(V.ÅRSTIDER)) ok(Math.abs(Object.values(o.vær).reduce((a, b) => a + b, 0) - 1) < 1e-9, 'værsannsynlighetene summerer til 1: ' + å);
+  ok(V.VÆRREKKE.includes('storm'), 'storm kan velges i menyen'); }
 process.exit(feil ? 1 : 0);

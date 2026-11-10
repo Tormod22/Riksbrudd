@@ -12,16 +12,18 @@
     regn: { navn: 'Regn', sikt: .7, dis: .4, sky: 1, nedbør: 'regn', vind: 4, dt: .2, dh: 0 },
     snø: { navn: 'Snø', sikt: .55, dis: .3, sky: 1, nedbør: 'snø', vind: 3, dt: 0, dh: 0 },
     tåke: { navn: 'Tåke', sikt: .3, dis: .1, sky: .6, nedbør: null, vind: -2, dt: 1, dh: .85 },
+    // storm (12. nov, brukeren: «legg til bølger, vind og tåke»): kuling med regn (snø om vinteren), store bølger og skum på sjøen
+    storm: { navn: 'Storm', sikt: .6, dis: .45, sky: 1, nedbør: 'regn', vind: 10, dt: 0, dh: 0 },
   };
   // dag: dagen i året spillet går på; snøgrense i moh.; temp: [natt, dag] i dalen (Dombås, ca. 650 moh.); vær: sannsynligheter;
   // fukt: hvor lett det blir morgentåke i dalen; nordlys: andelen klare netter med nordlys
   const ÅRSTIDER = {
-    vinter: { navn: 'Vinter', dag: 31, snøgrense: -1000, høst: 0, temp: [-16, -6], fukt: .3, nordlys: .4, vær: { klart: .3, skyet: .3, snø: .32, tåke: .08 } },
+    vinter: { navn: 'Vinter', dag: 31, snøgrense: -1000, høst: 0, temp: [-16, -6], fukt: .3, nordlys: .4, vær: { klart: .28, skyet: .3, snø: .3, tåke: .07, storm: .05 } },
     vår: { navn: 'Vår', dag: 125, snøgrense: 1050, høst: 0, temp: [-2, 9], fukt: .55, nordlys: .2, vær: { klart: .35, skyet: .35, regn: .15, snø: .07, tåke: .08 } },
     sommer: { navn: 'Sommer', dag: 200, snøgrense: 1900, høst: 0, temp: [6, 18], fukt: .4, nordlys: 0, vær: { klart: .45, skyet: .3, regn: .18, tåke: .07 } },
-    høst: { navn: 'Høst', dag: 268, snøgrense: 1350, høst: 1, temp: [0, 10], fukt: .85, nordlys: .3, vær: { klart: .3, skyet: .35, regn: .22, snø: .03, tåke: .1 } },
+    høst: { navn: 'Høst', dag: 268, snøgrense: 1350, høst: 1, temp: [0, 10], fukt: .85, nordlys: .3, vær: { klart: .27, skyet: .33, regn: .2, snø: .03, tåke: .1, storm: .07 } },
   };
-  const REKKE = ['sommer', 'høst', 'vinter', 'vår'], VÆRREKKE = ['auto', 'klart', 'skyet', 'regn', 'snø', 'tåke'];
+  const REKKE = ['sommer', 'høst', 'vinter', 'vår'], VÆRREKKE = ['auto', 'klart', 'skyet', 'regn', 'snø', 'tåke', 'storm'];
   const FELT = ['sikt', 'dis', 'sky', 'regn', 'snø', 'vind', 'dt', 'dh'];
 
   // fra: verdiene været skifter fra (blandet), start/varighet: overgangen i spillminutter; styrke: hvor kraftig været er (torden ved kraftig regn)
@@ -33,6 +35,7 @@
   function verdier(S, vær) {
     const V = VÆR[vær], å = ÅRSTIDER[S.årstid]; let regn = V.nedbør === 'regn' ? 1 : 0, snø = V.nedbør === 'snø' ? 1 : 0;
     if (snø && å.snøgrense > 700) { snø = 0; regn = 1; }
+    if (regn && vær === 'storm' && å.snøgrense < 0) { regn = 0; snø = 1; }
     return { sikt: V.sikt, dis: V.dis, sky: V.sky, regn, snø, vind: V.vind, dt: V.dt, dh: V.dh };
   }
   // Blandingen ved spillminutt t: myk overgang (glatt kurve) fra de gamle verdiene til det nye været over S.varighet minutter.

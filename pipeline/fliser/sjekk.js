@@ -462,6 +462,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     await pg.waitForFunction(() => window.Fjern3d && Fjern3d.sjekk(), null, { timeout: 30000 }).catch(() => {});
     const fj = await pg.evaluate(() => Fjern3d.sjekk()), fjok = !!(fj && fj.iScene && fj.trekanter > 1000); if (!fjok) feil++;
     console.log(`${fjok ? 'ok  ' : 'FEIL'} ${navn} fjernterreng: ${fj ? `${fj.trekanter} trekanter ut til ${Math.round(fj.R2 / 1000)} km` : 'mangler'}`);
+    // VAKT bølger, vind og tåke (spill/vind3d.js, 12. nov): i storm har bakkeshaderen bølger med skum, trærne svaier mer, statuslinja viser
+    // vinden og det tegnes uten GL-feil; i tåke blir himmelen grå. Klart vær igjen etterpå.
+    const vi = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      Vaer.låsVær(VaerSpill.S, 'storm'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); await new Promise(r => setTimeout(r, 1200)); await vent(2); const st = Vind3d.sjekk(), k = Vind3d.U().uVindK.value;
+      Vaer.låsVær(VaerSpill.S, 'tåke'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); const tå = Vind3d.VIND.grå || 0;
+      Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, k, tå, glFeil: gl.getError() }; });
+    const viok = vi.bølger && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
+    console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // filtre i 3D (spill/filtre.js): hvert filter tegner uten GL-feil, bildet er ikke svart, tellerne gjelder fortsatt scenen; tilbake til «Ingen»
     const fil = await pg.evaluate(() => { const gl = R3.renderer.getContext(), ut = []; gl.getError();

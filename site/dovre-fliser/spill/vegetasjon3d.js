@@ -166,13 +166,14 @@
   function treMateriale(art, enkel) {
     const T = V.TRESLAG[art], m = new THREE.MeshLambertMaterial({ vertexColors: true }), vind = enkel ? 0 : art === 'einer' ? .01 : art === 'furu' ? .02 : .035;
     const høst = T.høst ? `vec3(${T.høst.map(glf).join(', ')})` : '';
-    m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U);
-      sh.vertexShader = 'uniform float uTid;\nuniform float uH0V;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.vertexShader
+    m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U, Vind3d.U());
+      sh.vertexShader = Vind3d.DEKL + 'uniform float uTid;\nuniform float uH0V;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         vTOpp = objectNormal.z; vTMoh = instanceMatrix[3].z + uH0V; vTFro = fract(sin(instanceMatrix[3].x * 12.9898 + instanceMatrix[3].y * 78.233) * 43758.5453);`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
         float vh = max(0.0, transformed.z), fx = instanceMatrix[3].x, fy = instanceMatrix[3].y;
-        transformed.x += sin(uTid * 1.3 + fx * 0.05 + fy * 0.07) * ${glf(vind)} * vh * vh; transformed.y += cos(uTid * 1.1 + fx * 0.06) * ${glf(vind * .6)} * vh * vh;`);
+        transformed.x += sin(uVindT * 1.3 + fx * 0.05 + fy * 0.07) * ${glf(vind)} * uVindK * vh * vh; transformed.y += cos(uVindT * 1.1 + fx * 0.06) * ${glf(vind * .6)} * uVindK * vh * vh;`)
+        .replace('#include <project_vertex>', Vind3d.prosjekt(vind ? 1 : .4));
       sh.fragmentShader = 'uniform float uHostV;\nuniform float uNakenV;\nuniform float uSnoGrV;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
         float blad = step(diffuseColor.r + 0.015, diffuseColor.g);
         float tSno = smoothstep(uSnoGrV - 60.0, uSnoGrV + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);

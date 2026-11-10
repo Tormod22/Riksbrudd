@@ -42,7 +42,7 @@
   KROKER.sim.push(() => {
     if (tid - sistT < 1 && tid >= sistT) return; sistT = tid;
     const før = S.vær; Vaer.steg(S, tid);
-    oppdater(S.vær !== før ? { klart: 'Det klarner opp.', skyet: 'Det skyer over.', regn: 'Det begynner å regne.', snø: 'Det begynner å snø.', tåke: 'Tåka kommer sigende.' }[S.vær] : null);
+    oppdater(S.vær !== før ? { klart: 'Det klarner opp.', skyet: 'Det skyer over.', regn: 'Det begynner å regne.', snø: 'Det begynner å snø.', tåke: 'Tåka kommer sigende.', storm: 'Det blåser opp til storm.' }[S.vær] : null);
   });
 
   // ---------- 2D: tåke og nedbør som et slør over kartet ----------

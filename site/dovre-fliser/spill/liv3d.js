@@ -264,10 +264,12 @@
     // vind i trærne: toppen svaier litt, hvert tre i sin egen takt
     liv.vind = [];
     for (const m of R.treMesh || []) if (m.geometry === TREGEO.gran || m.geometry === TREGEO['løv']) {
-      m.material.onBeforeCompile = sh => { sh.uniforms.uTid = { value: 0 }; liv.vind.push(sh);
-        sh.vertexShader = 'uniform float uTid;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      // vinden (spill/vind3d.js): svaiingen og takten følger vindfarten, og trærne heller med vinden
+      m.material.onBeforeCompile = sh => { sh.uniforms.uTid = { value: 0 }; Object.assign(sh.uniforms, Vind3d.U()); liv.vind.push(sh);
+        sh.vertexShader = Vind3d.DEKL + 'uniform float uTid;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
           float vh = max(0.0, transformed.z), fx = instanceMatrix[3].x, fy = instanceMatrix[3].y;
-          transformed.x += sin(uTid * 1.3 + fx * .05 + fy * .07) * .035 * vh * vh; transformed.y += cos(uTid * 1.1 + fx * .06) * .02 * vh * vh;`); };
+          transformed.x += sin(uVindT * 1.3 + fx * .05 + fy * .07) * .035 * uVindK * vh * vh; transformed.y += cos(uVindT * 1.1 + fx * .06) * .02 * uVindK * vh * vh;`)
+          .replace('#include <project_vertex>', Vind3d.prosjekt(1)); };
       m.material.needsUpdate = true;
     }
   }

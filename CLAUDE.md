@@ -386,3 +386,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   400 m-rute (gård) – stolper med netting (alphaTest-tekstur), skigard (ca. 30 %) eller steingjerde (ca. 15 %). Alt fast via hash av
   kartkoordinatene. InstancedMesh, tak PC 360 baller / 1600 gjerdebiter, mobil 120 / 700. Ingen kollisjon når du går. window.Gard3d
   (punkter, antall); Vakt3d teller rundball/gjerde/skigard/steingjerde (i hus, svever). VAKT i sjekk.js: Dombås har rundballer og gjerder.
+  BØLGER, VIND OG TÅKE (12. nov, brukeren: «legg til bølger, vind og tåke»): nytt vær «Storm» i spill/vaer.js (kuling med regn, snøstorm om
+  vinteren, høst 7 % / vinter 5 %; test_vaer.js). spill/vind3d.js (lastes etter natt3d.js): vindkast oppå VAER.vind; bølger i bakkeshaderen
+  (sett3d kjeder onBeforeCompile etter natt3d, customProgramCacheKey + '-bolger'): fem bølgetog med lengde 13–1,25 m som går med vinden
+  (ω = √(g·k)), styrken per tog fra flekkene i detaljteksturen (ellers blir det rutemønster), krusning fra støy, høyde uBAmp 0,2–1,8 etter
+  vinden (innsjøer under halvparten), himmelspeiling ved flat vinkel, skumtopper fra frisk bris (uBSkum) og brenninger langs land på havet
+  (vannmasken < 1 og < 1 moh.). Trærne i liv3d.js og vegetasjon3d.js bruker Vind3d.U/DEKL/prosjekt: svaiing ×(0,35 + 0,22·fart), takt etter
+  vinden og toppen heller med vinden etter instansmatrisen. Rundt kameraet nær bakken: løv om høsten (eller storm), snøfokk på snø ved
+  > 6 m/s (Points). Tåke: himmelkuppel og skyer tones ut mot grått (gråHimmel, tåkefargen tas fra lys3d uten å dra seg), nede i tåka ser
+  du ca. 120 m, tåkedotter (sprites) som driver med vinden, havtåke over sjøen (sjøpunkter fra vannmasken under 1 moh.) i tåke og
+  morgentåke. Vinden i statuslinja (#sVind, «6 m/s SV», tittel med beaufortnavn). window.Vind3d.sjekk(); VAKT i sjekk.js (storm gir bølger,
+  skum, sterkere trevind og vind i statuslinja uten GL-feil; tåke gir grå himmel). Testet med bilder i Bergen (storm/klart) og på Dombås.
