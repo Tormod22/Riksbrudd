@@ -177,12 +177,13 @@
         if (s.visible) VIND.tåke++; }
     } else if (T) for (const s of T) { s.visible = false; s.userData.ny = true; }
     // havtåke: store, lave banker over sjøen i tåkevær og når det er morgentåke
-    const hs = Math.max(trinn(.6, .15, V.dis), (V.dalTåke || 0) * .9); VIND.hav = 0;
+    // bare i tåke og tydelig morgentåke; ovenfra (høyt over sjøen) ble dottene flate, hvite ovaler – der tones de nesten bort
+    const hs = Math.max(trinn(.6, .15, V.dis), trinn(.3, .85, V.dalTåke || 0) * .8) * (1 - .8 * trinn(60, 400, c.z + R.ut.h0)); VIND.hav = 0;
     for (const s of HAV) { const d = s.userData;
       d.dx = (d.dx + VIND.vx * .5 * dt) % 300; d.dy = (d.dy + VIND.vy * .5 * dt) % 300;
       s.position.set(d.x + d.dx, d.y + d.dy, d.z);
       const dd = Math.hypot(s.position.x - c.x, s.position.y - c.y, s.position.z - c.z);
-      s.material.opacity = hs * d.a * .55 * trinn(30, 160, dd); s.visible = s.material.opacity > .01;
+      s.material.opacity = hs * d.a * .4 * trinn(30, 160, dd); s.visible = s.material.opacity > .01;
       if (fc) s.material.color.setRGB(Math.min(1, fc.r * .4 + .6) * lys, Math.min(1, fc.g * .4 + .6) * lys, Math.min(1, fc.b * .4 + .62) * lys);
       if (s.visible) VIND.hav++; }
   }
