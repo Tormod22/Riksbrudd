@@ -322,12 +322,19 @@
   }
 
   // ---------- krokene ----------
+  // Bromodellene for utsnittet u. Med kopi = true endres ikke utsnittet: modellene og en løftet kopi av vegene gis tilbake (testene bruker det).
+  async function modeller(u, kopi) {
+    const bruer = u.infra.filter(o => o.lag === 'bru'), ms = [];
+    const linjer = bruer.length ? await vegLinjer(u, bruer) : [];
+    for (const o of bruer) for (const del of o.deler) { const m = bruModell(u, o, del, linjer); if (m) ms.push(m); }
+    if (!kopi) return ms;
+    const k = { ...u, bruer3d: ms, veger: u.veger ? u.veger.map(v => ({ ...v, P: v.P.map(p => p.slice()) })) : null }; løftVeger(k);
+    return { bruer: ms, veger: k.veger };
+  }
   KROKER.bygg3d.push(async u => {
     u.bruer3d = []; u.kaier3d = [];
     if (!window.Bruer || !INFRA || !VIS.infra || !u.infra) return;
-    const bruer = u.infra.filter(o => o.lag === 'bru');
-    const linjer = bruer.length ? await vegLinjer(u, bruer) : [];
-    for (const o of bruer) for (const del of o.deler) { const m = bruModell(u, o, del, linjer); if (m) u.bruer3d.push(m); }
+    u.bruer3d = await modeller(u, false);
     løftVeger(u); ryddTrær(u);
     for (const o of u.infra) if (o.lag === 'ferjekai') { const k = kaiModell(u, o); if (k) u.kaier3d.push(k); }
   });
@@ -344,5 +351,5 @@
       const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); tg.computeVertexNormals();
       const tm = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: tekstur(type), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide })); R.scene.add(tm); mesh.push(tm); }
   });
-  window.Infra3d = { bruModell, F };
+  window.Infra3d = { bruModell, modeller, F };
 })();

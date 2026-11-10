@@ -57,9 +57,11 @@
   // Dekkets overkant langs brua: rett linje mellom endene (+ litt overhøyde på lange bruer), aldri nærmere terrenget enn «klaring» meter,
   // jevnet ut så dekket ikke får knekker der terrenget stikker opp. g = terrenghøyde per punkt, s = meter langs brua.
   function profil(g, s, klaring = 1.1) {
-    const n = g.length, L = s[n - 1] || 1, zA = g[0], zB = g[n - 1], kam = L > 25 ? Math.min(2, L * .01) : 0;
-    let z = g.map((_, i) => { const f = s[i] / L; return Math.max(zA + (zB - zA) * f + kam * 4 * f * (1 - f), g[i] + klaring); });
-    for (let k = 0; k < 3; k++) z = z.map((v, i) => i === 0 || i === n - 1 ? v : Math.max(.25 * z[i - 1] + .5 * v + .25 * z[i + 1], g[i] + klaring));
+    // i endene ligger dekket i vegens høyde (0,15 m over terrenget, ingen trapp opp på brua); full klaring fra 6 m inn på brua
+    const n = g.length, L = s[n - 1] || 1, K = i => .15 + (klaring - .15) * Math.min(1, s[i] / 6, (L - s[i]) / 6);
+    const zA = g[0] + .15, zB = g[n - 1] + .15, kam = L > 25 ? Math.min(2, L * .01) : 0;
+    let z = g.map((_, i) => { const f = s[i] / L; return Math.max(zA + (zB - zA) * f + kam * 4 * f * (1 - f), g[i] + K(i)); });
+    for (let k = 0; k < 3; k++) z = z.map((v, i) => i === 0 || i === n - 1 ? v : Math.max(.25 * z[i - 1] + .5 * v + .25 * z[i + 1], g[i] + K(i)));
     return z;
   }
   // Brutype: 'plate' (kort platebru/kulvert), 'bjelke' (bjelkebru med søyler), 'bue' (betongbue under dekket over juv/dyp dal),

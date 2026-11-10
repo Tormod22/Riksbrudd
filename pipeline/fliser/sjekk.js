@@ -122,16 +122,17 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
           const søyler = ms.flatMap(m => m.søyler), svever = søyler.filter(s => s.bunn > z(s.x, s.y) + .05), dype = søyler.filter(s => !s.landkar && s.bunn < z(s.x, s.y) - 2.5);
           const mesh = (R3.infra3d || []).find(m => m.name === 'infra3d'), tri = mesh && R3.scene.children.includes(mesh) ? mesh.geometry.attributes.position.count / 3 : 0;
           return { ms, u, bruer: ms.length, søyler: søyler.filter(s => !s.landkar).length, landkar: søyler.filter(s => s.landkar).length, svever: svever.length, dype: dype.length, tri,
-            under: ms.filter(m => m.D.some(d => d.z < z(d.x, d.y) + .5)).map(m => m.navn), typer: [...new Set(ms.map(m => m.sort))].join('/'), løftet: ms.reduce((a, m) => a + (m.løftet || 0), 0) }; };
+            under: ms.filter(m => m.D.some(d => d.z < z(d.x, d.y) + (d.s > 6 && d.s < m.L - 6 ? .5 : .05))).map(m => m.navn), typer: [...new Set(ms.map(m => m.sort))].join('/'), løftet: ms.reduce((a, m) => a + (m.løftet || 0), 0) }; };
         const a = sjekk(), m0 = a.ms.find(m => m.navn === window.testBru.e.navn && m.veg) || a.ms.find(m => m.veg) || a.ms[0];
         if (!m0) return { a, gap: null };
-        INFRA_TILSTAND.set('bru:' + m0.id, { tilstand: 'sprengt' }); await nytt3dUtsnitt(R3.ut.cx, R3.ut.cy, R3.ut.S);
-        const b = sjekk(), m1 = b.ms.find(m => m.id === m0.id), G = Bruer.GAP;
+        // sprengt: modellene lages på nytt for utsnittet (uten å bygge 3D om igjen) med brua i INFRA_TILSTAND
+        INFRA_TILSTAND.set('bru:' + m0.id, { tilstand: 'sprengt' }); const b = await Infra3d.modeller(R3.ut, true);
+        const m1 = b.bruer.find(m => m.id === m0.id), G = Bruer.GAP;
         // ingen veg på dekkhøyde inne i gapet (bilene kjører ikke ut i lufta)
-        const iGap = m1 ? (b.u.veger || []).flatMap(v => v.P).filter(p => { const q = Bruer.projiser(m1.P2, p[0], p[1]); return q.d < m1.W / 2 && q.s > m1.L * G[0] && q.s < m1.L * G[1] && p[2] > m1.zPå(q.s) - 1; }).length : -1;
-        INFRA_TILSTAND.delete('bru:' + m0.id); await nytt3dUtsnitt(R3.ut.cx, R3.ut.cy, R3.ut.S);
+        const iGap = m1 ? (b.veger || []).flatMap(v => v.P).filter(p => { const q = Bruer.projiser(m1.P2, p[0], p[1]); return q.d < m1.W / 2 && q.s > m1.L * G[0] && q.s < m1.L * G[1] && p[2] > m1.zPå(q.s) - 1; }).length : -1;
+        INFRA_TILSTAND.delete('bru:' + m0.id); const c = await Infra3d.modeller(R3.ut, true);
         const strip = x => { delete x.ms; delete x.u; return x; };
-        return { a: strip(a), navn: m0.navn, gap: m1 ? { stykker: m1.stykker.length, sprengt: m1.sprengt, iGap } : null, etter: !sjekk().ms.find(m => m.id === m0.id).sprengt };
+        return { a: strip(a), navn: m0.navn, gap: m1 ? { stykker: m1.stykker.length, sprengt: m1.sprengt, iGap } : null, etter: !c.bruer.find(m => m.id === m0.id).sprengt };
       });
       const bvok = bv.a.bruer > 0 && bv.a.tri > 1000 && bv.a.søyler > 0 && bv.a.landkar >= 2 * bv.a.bruer && !bv.a.svever && !bv.a.dype && !bv.a.under.length && bv.a.løftet > 0 &&
         bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter; if (!bvok) feil++;

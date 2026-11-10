@@ -21,7 +21,7 @@ sjekk(en && en.k === 'R' && Math.abs(B.lengde(en.P) - 30) < .5, 'ett punkt med l
 // dekket ligger over terrenget, også der terrenget stikker opp
 const s = [], g = []; for (let i = 0; i <= 40; i++) { s.push(i * 2); g.push(i === 20 ? 9 : 10 - 30 * Math.sin(Math.PI * i / 40)); }
 const z = B.profil(g, s);
-sjekk(z.every((v, i) => v >= g[i] + 1.1 - 1e-9) && Math.abs(z[0] - g[0] - 1.1) < 1e-9, `dekket minst 1,1 m over terrenget (minste klaring ${Math.min(...z.map((v, i) => v - g[i])).toFixed(2)} m)`);
+sjekk(z.every((v, i) => v >= g[i] + (s[i] >= 6 && s[i] <= 74 ? 1.1 : .15) - 1e-9) && Math.abs(z[0] - g[0] - .15) < 1e-9, `dekket minst 1,1 m over terrenget, i endene i vegens høyde (minste klaring inne på brua ${Math.min(...z.filter((v, i) => s[i] >= 6 && s[i] <= 74).map((v, i) => v - g[i + 3])).toFixed(2)} m)`);
 
 // brutyper
 sjekk(B.velgType({ lengde: 8, klaring: 2, type: 0 }) === 'plate', 'kort bru: platebru');
