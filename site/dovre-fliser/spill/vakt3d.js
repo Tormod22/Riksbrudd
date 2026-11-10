@@ -28,6 +28,8 @@
     if (u.trær) for (const [art, data] of Object.entries(u.trær)) gå(art, data, 5, { hus: true, tol: .6 });   // alle treslagene (spill/vegetasjon3d.js)
     if (u.hus) { gå('bil', u.hus.biler, 5, { hus: true, tol: .6 }); gå('flagg', u.hus.flagg, 4, { hus: true, tol: .6 }); }
     if (u.lys) gå('lykt', u.lys, 4, { hus: true, tol: .6 });
+    // kulturlandskapet (spill/gard3d.js): rundballer og starten av hver gjerdebit
+    if (window.Gard3d && u.gard) { const P = Gard3d.punkter(u); for (const k in P) gå(k, P[k], 3, { hus: true, tol: .4 }); }
     // dyrene (spill/dyr3d.js) for årstiden: ikke i hus, ikke svevende, og ikke i vann (vannmasken u.vann, uavhengig av dyrenes egen maske)
     if (window.Dyr3d && u.dyrSteder) {
       const P = Dyr3d.punkter(u, årstid || 'sommer'); ut.dyr = {}; ut.iVann = {};

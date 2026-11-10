@@ -358,3 +358,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tettstedene der det er plass (ikke i/inntil hus, på veg eller i vann; maks 1500 PC / 500 mobil). hus3d gir u.hus.stat (fasader, tak, utenTak,
   gate). VAKT i sjekk.js: Dombås har minst fem fasader (minst én fra Byhus), 0 bygg uten tak, og alle Byhus-teksturene har vindusglass.
   Målt i Oslo/Bergen/Trondheim: + ca. 7 % trekanter totalt (husene + ca. 14 %).
+  KULTURLANDSKAPET (12. nov, brukeren: «legg til flere detaljer i hele Norge»): spill/gard3d.js (KROKER.bygg3d/sett3d/ramme3d, S ≤ 2200,
+  lastes etter dyr3d.js og bruker Dyr3d.lovlig: ikke i vann, på veg/asfalt, i tunet, i trær, i bekker eller i bratt ur). Dyrket mark =
+  terrengklasse 5 i lagVindu (32 m-ruter). Rundballer (hvit/grønn/svart plast, klynger på 3–9 i ca. 7 % av rutene) bare sommer og høst
+  (VAER.årstid); gjerder langs sidene der naboruta ikke er dyrket (grovt langs rutenettet, 30 % av kantene åpne): gjerdetypen per
+  400 m-rute (gård) – stolper med netting (alphaTest-tekstur), skigard (ca. 30 %) eller steingjerde (ca. 15 %). Alt fast via hash av
+  kartkoordinatene. InstancedMesh, tak PC 360 baller / 1600 gjerdebiter, mobil 120 / 700. Ingen kollisjon når du går. window.Gard3d
+  (punkter, antall); Vakt3d teller rundball/gjerde/skigard/steingjerde (i hus, svever). VAKT i sjekk.js: Dombås har rundballer og gjerder.
