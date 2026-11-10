@@ -148,12 +148,12 @@
     const maks = typeof VW !== 'undefined' && VW < 900 ? 500 : 1500, ny = [], vann = u.vann && u.vann.getContext ? (() => { try { const W = u.vann.width, d = u.vann.getContext('2d').getImageData(0, 0, W, W).data;
       return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; }; } catch (e) { return () => false; } })() : () => false;
     const satt = new Map(), nær = (x, y) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of satt.get((Math.floor(x / 8) + di) + ',' + (Math.floor(y / 8) + dj)) || []) if (Math.hypot(a - x, b - y) < 7) return true; return false; };
-    // bare der det er bymessig tett (minst 14 bygg innen 80 m): ikke langs vegene i bygder og villastrøk
+    // bare der det er bymessig tett (minst 10 bygg innen 80 m): ikke langs vegene i bygder og villastrøk
     const sentre = new Map(), C = 40;
     for (const P of u.hus.omriss) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x /= P.length; y /= P.length; const kk = Math.floor(x / C) + ',' + Math.floor(y / C); if (!sentre.has(kk)) sentre.set(kk, []); sentre.get(kk).push(x, y); }
     const tett = (x, y) => { let n = 0; for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const l = sentre.get((Math.floor(x / C) + di) + ',' + (Math.floor(y / C) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < 80) n++; } return n; };
     for (const v of u.veger) {
-      if (!v.by || !'RFK'.includes(v.k) || ny.length / 5 >= maks) continue;
+      if (!v.by || !'RFK'.includes(v.k) || ny.length / 5 >= maks * 4) continue;
       const off = BREDDE[v.k] / 2 + 2.9; let d = 6;
       for (let q = 1; q < v.P.length; q++, d = Math.max(0, d)) {
         const [ax, ay] = v.P[q - 1], [bx, by] = v.P[q], L = Math.hypot(bx - ax, by - ay); if (L < .01) continue;
@@ -161,7 +161,7 @@
         for (; d < L; d += 12) {
           const x0 = ax + (bx - ax) * d / L, y0 = ay + (by - ay) * d / L;
           for (const side of [1, -1]) { const x = x0 + nx * off * side, y = y0 + ny2 * off * side, r = hash(Math.round(x * 3), Math.round(y * 3), 71);
-            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || nærHus(u, x, y) || vann(x, y) || nær(x, y) || tett(x, y) < 14) continue;
+            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || nærHus(u, x, y) || vann(x, y) || nær(x, y) || tett(x, y) < 10) continue;
             const z = (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX, kk = Math.floor(x / 8) + ',' + Math.floor(y / 8);
             if (!satt.has(kk)) satt.set(kk, []); satt.get(kk).push([x, y]); ny.push(x, y, z, 8 + r * 5, r); }
         }
@@ -169,6 +169,9 @@
       }
     }
     if (!ny.length) return;
+    // nærmest midten (kameraet) først, så taket ikke brukes opp i utkanten av utsnittet
+    if (ny.length / 5 > maks) { const idx = Array.from({ length: ny.length / 5 }, (_, k) => k).sort((a, b) => Math.hypot(ny[a * 5], ny[a * 5 + 1]) - Math.hypot(ny[b * 5], ny[b * 5 + 1])).slice(0, maks);
+      const ut = []; for (const k of idx) for (let q = 0; q < 5; q++) ut.push(ny[k * 5 + q]); ny.length = 0; ny.push(...ut); }
     const gml = u.trær.løv || new Float32Array(0), alle = new Float32Array(gml.length + ny.length); alle.set(gml); alle.set(ny, gml.length); u.trær.løv = alle;
     gatetrær.antall = ny.length / 5;
   });
