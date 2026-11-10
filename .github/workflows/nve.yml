@@ -1,0 +1,36 @@
+# Bekker/elver (NVE Elvenett) og kraftledninger (NVE Nettanlegg) for hele Norge, i biter per blokk (z7) -> release kart-nve-<hash>.
+# NLOD. Tas i bruk med pipeline/fliser/bruk_nve.py (NVE_TAG i site/dovre-fliser/spill/nvebiter.js).
+name: Bygg bekker og kraftledninger
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/norge-data]
+    paths: [pipeline/fliser/nve.py, pipeline/fliser/kraft.py, .github/workflows/nve.yml]
+permissions:
+  contents: write
+concurrency: { group: nve, cancel-in-progress: false }
+jobs:
+  nve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q shapely
+      - name: Test
+        run: python3 pipeline/fliser/test_nve.py
+      - name: Hent fra NVE og del i biter
+        working-directory: pipeline/fliser
+        run: python3 nve.py ../../nve
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: nve
+        run: |
+          ls -la
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Bekker og kraftledninger $TAG" \
+            --notes "Bekker og elver (NVE Elvenett/ELVIS) og kraftledninger (NVE Nettanlegg) for hele Norge, NLOD. Lages av .github/workflows/nve.yml."
+          gh release upload "$TAG" bekker.json kraft.json manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json;m=json.load(open('manifest.json'));print(json.dumps(m['statistikk']), m['byte'])" >> "$GITHUB_STEP_SUMMARY"
