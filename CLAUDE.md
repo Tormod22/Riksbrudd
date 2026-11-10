@@ -266,7 +266,41 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   per blokk i kartet (Dyr.flokkIBlokk: hash av art og blokk), nærmest midten først til taket PC 400 / mobil 150; årstiden (VAER.årstid)
   velger hvilke som vises (velg() på nytt når den skifter). Dyr.steg: beite (står, hodet ned), gå mot flokken/målet, løp unna når du går
   nær (Gange.kropp(); flukt sau 28 m, rein 170 m, halvparten på huk) eller ved skudd (SKUDD, minst 300 m). Ikke i vann, på veg/asfalt
-  (u.dyrMaske 1024², fra kartet + u.påVeg), i tunet (husomriss + 6 m), i trær (hindringer(u)) eller i bratt ur. Én InstancedMesh per art
+  (u.dyrMaske 1024², fra kartet + u.påVeg), i tunet (husomriss + 6 m), i trær (hindringer(u)), i bekker (u.iBekk) eller i bratt ur. Én InstancedMesh per art
   med hjørnefarger; beina svinger og hodet senkes i vertex-shaderen (aGang = fase, gange, hode; aPels = hvor mye dyrets farge virker).
   Ca. 150–480 trekanter per dyr. window.Dyr3d (punkter, antall, prøvShadere); Vakt3d.sjekk(u, årstid) teller dyrene (i hus, svever, i vann).
   VAKT i sjekk.js: sauer på heia ved Dombås om sommeren, ingen om vinteren, rein ved Snøhetta om vinteren, ingen dyr i hus/vann/svevende.
+  TRESLAG OG BLOMSTER (10. nov, brukeren: «legg til blomster og flere forskjellige tresorter»): spill/vegetasjon.js (regler uten DOM,
+  test_vegetasjon.js) + spill/vegetasjon3d.js. Kartdataene sier bare «skog» (ingen AR5/SR16), så treslaget velges etter regler: høyden mot
+  tregrensen (Vegetasjon.tregrense(y): 1100 m på Dovre, lavere nordover), helning, avstand til vann (vannmasken), myr og hei rundt (32 m-klassene).
+  bygg3d-kroken fordeler trærne fra trær3d på u.trær.{gran, furu, løv (bjørk), osp, rogn, fjellbjørk, selje, einer} (samme antall; aldri i
+  vannmasken) og setter einer/vier/fjellbjørk på åpen mark (maks 4000 PC / 1500 mobil, S ≤ 2200). Alle som leser u.trær skal gå over alle
+  nøklene (hindringer, liv3d og leir-visning gjør det). sett3d-kroken lager de seks nye slagene med detaljnivå i R3.treLOD (lodTrær) og eget
+  materiale (vind, høstfarge per treslag, nakne løvtrær om vinteren, snø; bladene = grønnere enn rødt, så stammer og rognebær ikke farges).
+  Rundt kameraet (som gresset, avst < 110 eller Gå): blomster (smørblomst, løvetann, hvitkløver, prestekrage, blåklokke, røsslyng, geitrams,
+  skogstjerne etter sted eng/hei/skog/veikant og årstid, ingen om vinteren), bregner i skogen og siv i vannkanten; u.vegKart (512²) sier hvor.
+  window.Vegetasjon3d (treslag, antall, utvalg, iVann) brukes av VAKTEN i sjekk.js: minst tre treslag ved Jora bru, ingen trær/planter i vann
+  eller på veg.
+  BEKKER (10. nov, brukeren: «legg til bekker hvor det skal være det»): pipeline/fliser/bekker.py henter NVE Elvenett (ELVIS, NLOD,
+  kart.nve.no svarer herfra; Overpass og nve.geodataonline.no gjør ikke) for Dovre-området -> site/dovre-fliser/data/bekker.json
+  (0,7 MB, heltall i meter, delta-kodet; ElvBekk = bekk, ElvBekkMidtlinje = bred elv, Strahler-orden; innsjømidtlinjer hoppes over).
+  Kulvert: bekker med orden ≤ 3 kuttes der de krysser en veg (data/fliser/veger.json, vegbredde/2 + 1,5 m); større elver går under bru.
+  Regler uten DOM i spill/bekker.js (les, i, bredde, fall/skum; test_bekker.js sjekker også datafila og kulvertene), visningen i
+  spill/bekker-visning.js: 2D (KROKER.tegn) blå streker, små bekker først nær (minOrden etter kam.m); 3D (KROKER.bygg3d) maler
+  vann og våt kant i bakken (ikke i u.vann: den stopper gange), fjerner trær/busker/gress i bekken (u.iBekk, før hindringer() bygges), og ved
+  S ≤ 2200 et vannbånd (5 punkt på tvers: steinkant, vann, steinkant; bredden varierer) som følger terrenget, rennende krusning,
+  himmelspeiling og skum der det er bratt (KROKER.sett3d/ramme3d, R3.bekkMesh). DATA_V i bekker-visning.js = sha256 av bekker.json
+  (8 tegn) – sett ny etter bekker.py. Bare Dovre-piloten foreløpig (hele Norge krever en Actions-jobb som for infra). VAKT i sjekk.js:
+  bekkene lastes, tegnes i 2D, og båndet ligger 0–1 m over terrengnettet (raycast) ved Dombås.
+  BRUER OG FERJEKAIER I 3D (10. nov, brukeren: «bruer skal se pent ut i 3D, ferjekaier skal se realistiske ut»): spill/bruer.js (regler uten DOM,
+  test_bruer.js: finnLinje – brua følger vegen i vektorflisene z13 og forlenges til NVDB-lengden når geometrien er kortere, profil – dekket
+  minst 1,1 m over terrenget, velgType plate/bjelke/bue/henge/fagverk, søyler, bue, kaiRetning/vannkant) + spill/infra3d.js (KROKER.bygg3d og
+  sett3d; bruer3d i index.html gir bare { antall } når Infra3d finnes). Bru: asfalt med oppmerking, kantbjelke, rekkverk, kassebjelker,
+  landkar med vingemurer, søyler (to runde + tverrbjelke) ned til laveste terreng under foten − 0,4 m, buebru med søyler på buen, hengebru med
+  tårn der fjorden begynner, kabler og hengestenger, jernbanebru i stål-fagverk; sprengt bru (INFRA_TILSTAND) får gap, hengende dekkender og
+  betongbiter. Vegene i liv3d.js som går over brua løftes opp på dekket (bilene bruker vegens z), i gapet tas de bort, og vegbiter som går
+  > 30 m over vann (ferjesambandene ligger i vegnettet) fjernes. Ferjekai: retning fra ferjelinja som ender nær kaien (ellers mot mest vann),
+  vannkanten fra vannmasken; kai i betong med fendere, klaff med løftetårn, ledevegger, ferje (skrog, bildekk, sidebygg, styrehus, biler),
+  oppstillingsplass med felt, venterom, lyktestolper. Dovre har ingen ferjekai: testet på /norge (Mannheller) med scratchpad bruer/norge3d.js
+  (/api/kart videresendt til riksbrudd.vercel.app). VAKT i sjekk.js: modellene i scenen, søyler/landkar ikke over terrenget, dekket over
+  terrenget, vegene løftet, sprengt bru har gap uten veg i gapet.

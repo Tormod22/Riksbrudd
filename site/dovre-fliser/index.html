@@ -436,6 +436,7 @@ function infraI(u) {
 }
 // Bruene som ekte 3D: dekket går rett mellom brukarene (høyden i endene), aldri under bakken, med søyler ned til bakken.
 function bruer3d(u) {
+  if (window.Infra3d) { const n = u.infra.filter(o => o.lag === 'bru').length; return n ? { antall: n } : null; }   // modellene lages i spill/infra3d.js
   const EX = R3.EX, pos = [], kol = [], H = (X, Y) => (hoyde3d(X, Y, u) - u.h0) * EX;
   const FARGE = [[.86, .82, .72], [.72, .68, .58], [.80, .72, .55]];   // vegbru, gang/sykkel, jernbane
   const kvad = (p, c) => { for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...p[i]); kol.push(...c); } };
@@ -1410,7 +1411,7 @@ function treGeo(type) {
 function hindringer(u) {
   const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
   for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P }); }
-  if (u.trær) for (const data of [u.trær.gran, u.trær.løv]) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
+  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
   return rute;
 }
 // Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
@@ -1419,7 +1420,7 @@ function ryddHus(u) {
   const rens = (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
     for (let k = 0; k < data.length; k += steg) if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]);
     return ut.length === data.length ? data : Array.isArray(data) ? ut : new Float32Array(ut); };
-  if (u.trær) { u.trær.gran = rens(u.trær.gran, 5); u.trær.løv = rens(u.trær.løv, 5); }
+  if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = rens(u.trær[art], 5);
   if (u.smått) { u.smått.stein = rens(u.smått.stein, 5); u.smått.busk = rens(u.smått.busk, 5); }
   if (!u.husRute) u.husRute = hindringer({ hus: u.hus });
   u.hus.biler = rens(u.hus.biler, 5, true); u.hus.flagg = rens(u.hus.flagg, 4); if (u.lys) u.lys = rens(u.lys, 4);
@@ -1646,7 +1647,7 @@ function sett3d(u) {
   }
   for (const m of R.husMesh || []) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } R.husMesh = [];
   if (R.bruMesh) { R.scene.remove(R.bruMesh); R.bruMesh.geometry.dispose(); R.bruMesh.material.dispose(); R.bruMesh = null; }
-  if (u.bru) {
+  if (u.bru && u.bru.pos) {
     const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(u.bru.pos, 3)); bg.setAttribute('color', new THREE.BufferAttribute(u.bru.kol, 3)); bg.computeVertexNormals();
     R.bruMesh = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); R.scene.add(R.bruMesh);
   }
@@ -1707,7 +1708,7 @@ function lodTrær(R) {
   for (const t of R.treLOD) { let a = 0, b = 0; const NM = t.nær.instanceMatrix.array, FM = t.fjern.instanceMatrix.array, NC = t.nær.instanceColor.array, FC = t.fjern.instanceColor.array;
     for (let k = 0; k < t.n; k++) { const dx = t.data[k * 5] - c.x, dy = t.data[k * 5 + 1] - c.y, dz = t.data[k * 5 + 2] - c.z;
       const d2 = dx * dx + dy * dy + dz * dz;
-      if (d2 < G2) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
+      if (d2 < (t.G2 || G2)) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
       // langt unna er trærne bare prikker: halvparten fra 6 × detaljavstanden, en firedel fra 12 × (fast utvalg per tre)
       const frø = (t.data[k * 5 + 4] * 7.31) % 1; if ((d2 > 36 * G2 && frø > .5) || (d2 > 144 * G2 && frø > .25)) continue;
       { FM.set(t.M.subarray(k * 16, k * 16 + 16), b * 16); FC.set(t.C.subarray(k * 3, k * 3 + 3), b * 3); b++; } }
@@ -1863,26 +1864,32 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=5e18e858e7"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=2ee2ae4355"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=8c478efdba"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=41be4356dc"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=b76b111598"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
+<script src="/dovre-fliser/spill/bekker.js?v=f2be8b3ffa"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=a074b7fc05"></script>
+<script src="/dovre-fliser/spill/bruer.js?v=dc44fd3716"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=a047d00d36"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=fb9712446a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=879e9e18d3"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=359bc1d03d"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=22e139c0bb"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
 <script src="/dovre-fliser/spill/leir.js?v=8f63ed5f0b"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=70a8d53cbe"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=b9c3c8651f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=c94a43a59f"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=09cd04afcb"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9fad675c80"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
-<script src="/dovre-fliser/spill/dyr3d.js?v=3f5caf6056"></script>
-<script src="/dovre-fliser/spill/vakt3d.js?v=ff91d4f0b6"></script>
+<script src="/dovre-fliser/spill/dyr3d.js?v=52fea1f233"></script>
+<script src="/dovre-fliser/spill/vakt3d.js?v=001881d75a"></script>
 <script src="/dovre-fliser/spill/hud.js?v=0413d13579"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=ea42b8b902"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=c48879fb11"></script>

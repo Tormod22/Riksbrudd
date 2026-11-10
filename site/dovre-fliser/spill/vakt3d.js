@@ -25,7 +25,7 @@
       if (hopp > 1) { ut.iHus[navn] = Math.round(ut.iHus[navn] * hopp); ut.svever[navn] = Math.round(ut.svever[navn] * hopp); }
     };
     if (u.smått) { gå('stein', u.smått.stein, 5, { hus: true, tol: .6 }); gå('busk', u.smått.busk, 5, { hus: true, tol: .6 }); }
-    if (u.trær) { gå('gran', u.trær.gran, 5, { hus: true, tol: .6 }); gå('løv', u.trær.løv, 5, { hus: true, tol: .6 }); }
+    if (u.trær) for (const [art, data] of Object.entries(u.trær)) gå(art, data, 5, { hus: true, tol: .6 });   // alle treslagene (spill/vegetasjon3d.js)
     if (u.hus) { gå('bil', u.hus.biler, 5, { hus: true, tol: .6 }); gå('flagg', u.hus.flagg, 4, { hus: true, tol: .6 }); }
     if (u.lys) gå('lykt', u.lys, 4, { hus: true, tol: .6 });
     // dyrene (spill/dyr3d.js) for årstiden: ikke i hus, ikke svevende, og ikke i vann (vannmasken u.vann, uavhengig av dyrenes egen maske)

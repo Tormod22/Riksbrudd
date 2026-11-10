@@ -315,7 +315,7 @@
   KROKER.bygg3d.push(async u => {
     if (!L || !spill()) return; const inni = innenfor(u);
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!inni(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
-    if (u.trær) { u.trær.gran = sil(u.trær.gran); u.trær.løv = sil(u.trær.løv); }
+    if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
   });
   function ryddTrær(R) {

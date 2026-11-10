@@ -45,7 +45,7 @@
     u.påVeg = påVeg;
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!påVeg(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
-    if (u.trær) { u.trær.gran = sil(u.trær.gran); u.trær.løv = sil(u.trær.løv); }
+    if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.bunn) { const B = u.bunn; for (let j = 0; j < B.W; j++) for (let i = 0; i < B.W; i++) { const x = -u.S + (i + .5) / B.W * 2 * u.S, y = u.S - (j + .5) / B.W * 2 * u.S; if (påVeg(x, y)) B.gress[j * B.W + i] = 0; } }
   });
 
@@ -277,7 +277,8 @@
     const flytt = (liste, mesh, høyde) => liste.forEach((o, k) => {
       o.s += o.fart * dt * o.dir; if (o.s > o.v.L) { o.s = o.v.L; o.dir = -1; } else if (o.s < 0) { o.s = 0; o.dir = 1; }
       const [x, y, z, v] = punkt(o.v, o.s, (o.side || 1.7) * o.dir), bob = høyde ? Math.abs(Math.sin(nå * 7 + (o.fase || 0))) * .04 : 0;
-      d.position.set(x, y, (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX + (høyde ? .15 : .12) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
+      // z er vegens høyde (løftet opp på bruene av infra3d.js), ellers terrenget
+      d.position.set(x, y, Math.max((hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX, z - .3) + (høyde ? .15 : .12) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
       for (const m of mesh) m.setMatrixAt(k, d.matrix); });
     if (liv.lys) { const m = window.NATT ? Math.max(0, Math.min(1, (NATT.mørke - .25) / .4)) : 0;
       liv.lys.front.material.color.setRGB(.7 + .3 * m, .7 + .27 * m, .68 + .17 * m); liv.lys.bak.material.color.setRGB(.44 + .56 * m, .055 + .07 * m, .04 + .05 * m);

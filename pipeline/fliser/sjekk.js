@@ -114,7 +114,38 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
       await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
       await pg.evaluate(() => { Object.assign(R3.bane, { x: window.testBru.deler[0][0] - R3.ut.cx, y: window.testBru.deler[0][1] - R3.ut.cy, avst: 500, pitch: .9 }); tegn3d(); });
       const b3 = await pg.evaluate(() => { const b = window.testBru, a = b.deler[0], k = (a.length >> 2) << 1, q = brupunkt3(b, a[k], a[k + 1]), o = q && finnInfra3d(q[0], q[1]);
-        return { n: R3.ut.bru ? R3.ut.bru.antall : 0, mesh: !!R3.bruMesh, treff: o ? o.e.navn : null, navn: b.e.navn }; });
+        return { n: R3.ut.bru ? R3.ut.bru.antall : 0, mesh: !!R3.bruMesh || !!(R3.infra3d && R3.infra3d.length), treff: o ? o.e.navn : null, navn: b.e.navn }; });
+      // vegetasjon (spill/vegetasjon3d.js): minst tre treslag i scenen ved Jora (elv, skog, myr), og ingen trær, blomster, bregner eller siv
+      // i vannet (vannmasken) eller på vegen; kameraet ned til bakken (avst 80) så plantene rundt kameraet lages
+      await pg.evaluate(() => { R3.bane.avst = 80; R3.bane.pitch = .3; R3.lodVed = null; tegn3d(); tegn3d(); });
+      const veg = await pg.evaluate(() => { const V3 = window.Vegetasjon3d, u = R3.ut; if (!V3) return null; const ut = V3.utvalg(4000), feil = [];
+        for (const [x, y, art] of ut) if (V3.iVann(x, y) || (u.påVeg && u.påVeg(x, y))) feil.push([Math.round(x), Math.round(y), art]);
+        return { slag: V3.treslag(), antall: V3.antall(), n: ut.length, planter: ut.filter(q => ['blomst', 'bregne', 'siv'].includes(q[2])).length, feil: feil.slice(0, 5), nFeil: feil.length }; });
+      const vegOk = veg && veg.slag.length >= 3 && veg.nFeil === 0 && veg.n > 100; if (!vegOk) feil++;
+      console.log(`${vegOk ? 'ok  ' : 'FEIL'} ${navn} vegetasjon i 3D: treslag ${veg && veg.slag.join(', ')}; ${veg && veg.n} sjekket (${veg && veg.planter} planter), ${veg && veg.nFeil} i vann eller på veg ${veg && veg.nFeil ? JSON.stringify(veg.feil) : ''}`);
+      // VAKT (bruer i 3D, spill/infra3d.js): modellene finnes i scenen, søylene og landkarene står på bakken (bunnen ikke over terrenget og
+      // ikke mer enn 2,5 m ned i det), dekket ligger over terrenget langs hele brua, vegene er løftet opp på dekket, og en sprengt bru har gap
+      const bv = await pg.evaluate(async () => {
+        const sjekk = () => { const u = R3.ut, ms = u.bruer3d || [], z = (x, y) => (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R3.EX;
+          const søyler = ms.flatMap(m => m.søyler), svever = søyler.filter(s => s.bunn > z(s.x, s.y) + .05), dype = søyler.filter(s => !s.landkar && s.bunn < z(s.x, s.y) - 2.5);
+          const mesh = (R3.infra3d || []).find(m => m.name === 'infra3d'), tri = mesh && R3.scene.children.includes(mesh) ? mesh.geometry.attributes.position.count / 3 : 0;
+          return { ms, u, bruer: ms.length, søyler: søyler.filter(s => !s.landkar).length, landkar: søyler.filter(s => s.landkar).length, svever: svever.length, dype: dype.length, tri,
+            under: ms.filter(m => m.D.some(d => d.z < z(d.x, d.y) + (d.s > 6 && d.s < m.L - 6 ? .5 : .05))).map(m => m.navn), typer: [...new Set(ms.map(m => m.sort))].join('/'), løftet: ms.reduce((a, m) => a + (m.løftet || 0), 0) }; };
+        const a = sjekk(), m0 = a.ms.find(m => m.navn === window.testBru.e.navn && m.veg) || a.ms.find(m => m.veg) || a.ms[0];
+        if (!m0) return { a, gap: null };
+        // sprengt: modellene lages på nytt for utsnittet (uten å bygge 3D om igjen) med brua i INFRA_TILSTAND
+        INFRA_TILSTAND.set('bru:' + m0.id, { tilstand: 'sprengt' }); const b = await Infra3d.modeller(R3.ut, true);
+        const m1 = b.bruer.find(m => m.id === m0.id), G = Bruer.GAP;
+        // ingen veg på dekkhøyde inne i gapet (bilene kjører ikke ut i lufta)
+        const iGap = m1 ? (b.veger || []).flatMap(v => v.P).filter(p => { const q = Bruer.projiser(m1.P2, p[0], p[1]); return q.d < m1.W / 2 && q.s > m1.L * G[0] && q.s < m1.L * G[1] && p[2] > m1.zPå(q.s) - 1; }).length : -1;
+        INFRA_TILSTAND.delete('bru:' + m0.id); const c = await Infra3d.modeller(R3.ut, true);
+        const strip = x => { delete x.ms; delete x.u; return x; };
+        return { a: strip(a), navn: m0.navn, gap: m1 ? { stykker: m1.stykker.length, sprengt: m1.sprengt, iGap } : null, etter: !c.bruer.find(m => m.id === m0.id).sprengt };
+      });
+      const bvok = bv.a.bruer > 0 && bv.a.tri > 1000 && bv.a.søyler > 0 && bv.a.landkar >= 2 * bv.a.bruer && !bv.a.svever && !bv.a.dype && !bv.a.under.length && bv.a.løftet > 0 &&
+        bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter; if (!bvok) feil++;
+      console.log(`${bvok ? 'ok  ' : 'FEIL'} ${navn} bruer i 3D: ${bv.a.bruer} modeller (${bv.a.typer}, ${bv.a.tri} trekanter), ${bv.a.søyler} søyler og ${bv.a.landkar} landkar – ${bv.a.svever} svever, ${bv.a.dype} for dype; `
+        + `dekket under terrenget: ${bv.a.under.join(', ') || 'ingen'}; ${bv.a.løftet} vegpunkter løftet opp på dekket; sprengt «${bv.navn}»: ${bv.gap ? bv.gap.stykker + ' stykker, ' + bv.gap.iGap + ' vegpunkter i gapet' : 'ingen'}, hel igjen etterpå: ${bv.etter}`);
       await pg.click('#v3d');
       const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
       console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);
@@ -473,8 +504,23 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const ntok = nt.natt.synlig && nt.natt.stj > .5 && nt.natt.himmel >= .42 && !nt.dag.synlig && nt.dag.stj < .01 && Math.abs(nt.natt.fase - .342) < .02 && nt.maks < .06 && nt.slutt.vær === 'regn' && nt.slutt.regn === 1;
     if (!ntok) { feil++; console.log(JSON.stringify(nt)); }
     console.log(`${ntok ? 'ok  ' : 'FEIL'} ${navn} dag og natt: stjerner ${nt.natt.stj.toFixed(2)} en vinternatt (himmellys ${nt.natt.himmel.toFixed(2)}), ${nt.dag.stj.toFixed(2)} kl. 13; månefase ${nt.natt.fase && nt.natt.fase.toFixed(3)} 31. jan.; regnet kom med største endring ${nt.maks.toFixed(3)} per minutt`);
+    // bekker (NVE Elvenett): lastet, vannbåndet i 3D i lia ovenfor Dombås ligger på terrenget (ikke svevende > 1 m eller begravd)
+    const bk = await pg.evaluate(async () => {
+      while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      await nytt3dUtsnitt(193135, 6897627, 800); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
+      await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
+      if (m) { const p = m.geometry.attributes.position, ray = new THREE.Raycaster();
+        for (let k = 1; k < p.count; k += 3 * 7) { const x = p.getX(k), y = p.getY(k), z = p.getZ(k); ray.set(new THREE.Vector3(x, y, z + 100), new THREE.Vector3(0, 0, -1));
+          const hit = ray.intersectObject(R3.mesh)[0]; if (!hit) continue; const d = z - hit.point.z; r.min = Math.min(r.min, d); r.maks = Math.max(r.maks, d); r.n++; } }
+      return r; });
+    const bkok = bk.linjer > 1000 && bk.bånd > 0 && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
+    console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås, høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
     await pg.click('#v3d');
-    const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
+    const bk2 = await pg.evaluate(async () => { Object.assign(kam, { x: 193135, y: 6897627, m: 4 }); skitten = true; await new Promise(r => setTimeout(r, 400)); return window.BEKKER_STAT.tegnet2d; });
+    const bk2ok = bk2 > 0; if (!bk2ok) feil++;
+    console.log(`${bk2ok ? 'ok  ' : 'FEIL'} ${navn} bekker 2D: ${bk2} bekker tegnet ved Dombås`);
+    const d3ok =Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await kt.close();

@@ -50,7 +50,7 @@
   function lovlig(u, x, y) {
     const M = u.dyrMaske; if (!M || Math.abs(x) > u.S * .96 || Math.abs(y) > u.S * .96) return false;
     const i = Math.floor((x + u.S) / M.celle), j = Math.floor((u.S - y) / M.celle); if (M.m[j * W + i]) return false;
-    if (hindring3d(x, y, u.dyrRute)) return false;
+    if (hindring3d(x, y, u.dyrRute) || (u.iBekk && u.iBekk(x, y))) return false;
     const h = X => hoyde3d(X[0] + u.cx, X[1] + u.cy, u), h0 = h([x, y]);
     return Math.abs(h([x + 2, y]) - h0) < 1.5 && Math.abs(h([x, y + 2]) - h0) < 1.5;
   }
