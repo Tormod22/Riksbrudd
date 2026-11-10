@@ -416,6 +416,10 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
     const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
     console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}`);
+    // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); return Vakt3d.sjekk(await bygg3d(193300, 6896300, 900)); });
+    const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
+    console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
     await pg.click('#v3d');
     const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);

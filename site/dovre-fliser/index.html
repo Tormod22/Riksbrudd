@@ -909,6 +909,7 @@ async function bygg3d(cx, cy, S) {
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison) u.lys = await gatelys3d(u);
+  ryddHus(u);
   const skog = await skogmaske(u, b);
   skogbunn(px, TW, skog); u.bunn = bunnkart(px, TW, skog);
   for (const f of KROKER.bygg3d) await f(u, { px, TW, skog });
@@ -1338,6 +1339,10 @@ async function smått3d(u, px, b) {
       const frø = (i * 7919 + j * 104729) * 16 + k0 + k, a = hash(frø), c = hash(frø + 1e6), d = hash(frø + 2e6); if (d > n - k) continue;
       const x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r, q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4;
       if (px[q + 2] > px[q] + 18 && px[q + 2] > px[q + 1] + 4) continue;   // vann
+      // ikke på asfalt, parkeringsplasser, veger og hus (grått i kartet); på snaufjellet er lys grå stein naturlig, men ikke mørk asfalt
+      const kl = kv.K[j * kv.w + i], gr = Math.abs(px[q] - px[q + 1]) + Math.abs(px[q + 1] - px[q + 2]) < 14, lys = .3 * px[q] + .59 * px[q + 1] + .11 * px[q + 2];
+      if (gr && (kl !== 0 || lys < 120)) continue;
+      if (u.hus && u.hus.omriss && nærHus(u, x - u.cx, y - u.cy)) continue;
       liste.push(x - u.cx, y - u.cy, (hoyde3d(x, y, u) - u.h0) * R3.EX, liste === stein ? .5 + Math.pow(hash(frø + 3e6), 2.5) * 2.8 : .45 + hash(frø + 3e6) * .7, hash(frø + 4e6));
     }
     if (stein.length + busk.length > MAKS * 5) break;
@@ -1380,17 +1385,21 @@ function treGeo(type) {
     legg(g, (x, y, z) => { const t = Math.max(0, Math.min(1, z)); return [.08 + .04 * t, .17 + .07 * t, .09 + .02 * t]; }); }
   if (type === 'løvEnkel') { stamme(.05, .03, .5, [.78, .76, .7]); const g = new THREE.IcosahedronGeometry(.42, 0); g.scale(1, .95, 1); g.translate(0, .7, 0); g.rotateX(Math.PI / 2);
     legg(g, (x, y, z) => { const t = Math.max(0, Math.min(1, (z - .3) / .8)); return [.2 + .12 * t, .3 + .12 * t, .1 + .04 * t]; }); }
-  if (type === 'stein') {   // kantet blokk: tolvflate med forskjøvne hjørner, grå med lav (grønngrå) oppe
+  if (type === 'stein') {   // kantet blokk: tolvflate med forskjøvne hjørner, grå med lav (grønngrå flekker) oppe
     const g = new THREE.DodecahedronGeometry(1, 0), p = g.attributes.position, flytt = new Map();
-    for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 2.39; flytt.set(nøkkel, [1 + .28 * Math.sin(h * 3.1), 1 + .28 * Math.cos(h * 1.7), .55 + .2 * Math.sin(h * 2.3)]); }
+    for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 2.39; flytt.set(nøkkel, [1 + .22 * Math.sin(h * 3.1), 1 + .22 * Math.cos(h * 1.7), .78 + .16 * Math.sin(h * 2.3)]); }
       const f = flytt.get(nøkkel); p.setXYZ(i, p.getX(i) * f[0], p.getY(i) * f[1], p.getZ(i) * f[2]); }
-    g.computeVertexNormals(); legg(g, (x, y, z) => z > .25 ? [.47, .5, .43] : [.44, .43, .41]);
+    // flate sider (toNonIndexed i legg): hvert hjørne får sin farge, så hver flate får litt ulik tone
+    g.computeVertexNormals(); legg(g, (x, y, z) => { const n = .5 + .5 * Math.sin(x * 9.1 + y * 7.3 + z * 5.7), m = .5 + .5 * Math.sin(x * 3.3 - y * 4.1); return z > .3 && m > .55 ? [.4 + .05 * n, .44 + .05 * n, .34] : [.34 + .06 * n, .34 + .05 * n, .33 + .04 * n]; });
   }
-  if (type === 'busk') {   // lav, rund busk (einer, dvergbjørk)
-    let g = new THREE.IcosahedronGeometry(1, 0); const p = g.attributes.position, nr = new Float32Array(p.count * 3);
+  if (type === 'busk') {   // lav, ujevn busk (einer, dvergbjørk): skjev ikosaeder med klumpete omriss og flekkete grønt
+    let g = new THREE.IcosahedronGeometry(1, 0); const p = g.attributes.position, flytt = new Map();
+    for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 1.91; flytt.set(nøkkel, .72 + .32 * (.5 + .5 * Math.sin(h * 2.7 + 1))); }
+      const f = flytt.get(nøkkel); p.setXYZ(i, p.getX(i) * f, p.getY(i) * f, p.getZ(i) * f); }
+    const nr = new Float32Array(p.count * 3);
     for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
-    g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, .6, 1); g.translate(0, .35, 0); g.rotateX(Math.PI / 2);
-    legg(g, (x, y, z) => z > .4 ? [.2, .29, .13] : [.13, .19, .09]);
+    g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, .62, .82); g.translate(0, .32, 0); g.rotateX(Math.PI / 2);
+    legg(g, (x, y, z) => { const n = .5 + .5 * Math.sin(x * 11.3 + y * 8.9 + z * 6.1); return z > .38 ? [.17 + .07 * n, .27 + .06 * n, .11 + .02 * n] : [.11 + .03 * n, .17 + .04 * n, .08]; });
   }
   const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
   for (const g of deler) { pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
@@ -1404,8 +1413,25 @@ function hindringer(u) {
   if (u.trær) for (const data of [u.trær.gran, u.trær.løv]) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
   return rute;
 }
-function hindring3d(x, y) {
-  const rute = R3 && R3.hindre; if (!rute) return false;
+// Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
+function ryddHus(u) {
+  if (!u.hus || !u.hus.omriss) return;
+  const rens = (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
+    for (let k = 0; k < data.length; k += steg) if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]);
+    return ut.length === data.length ? data : Array.isArray(data) ? ut : new Float32Array(ut); };
+  if (u.trær) { u.trær.gran = rens(u.trær.gran, 5); u.trær.løv = rens(u.trær.løv, 5); }
+  if (u.smått) { u.smått.stein = rens(u.smått.stein, 5); u.smått.busk = rens(u.smått.busk, 5); }
+  if (!u.husRute) u.husRute = hindringer({ hus: u.hus });
+  u.hus.biler = rens(u.hus.biler, 5, true); u.hus.flagg = rens(u.hus.flagg, 4); if (u.lys) u.lys = rens(u.lys, 4);
+}
+// Steiner og busker skal ikke stå i eller helt inntil hus (x, y relativt til utsnittets midte). Rutenettet lages én gang per utsnitt.
+function nærHus(u, x, y) {
+  if (!u.husRute) u.husRute = hindringer({ hus: u.hus });
+  for (const [dx, dy] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (hindring3d(x + dx, y + dy, u.husRute)) return true;
+  return false;
+}
+function hindring3d(x, y, egen) {
+  const rute = egen || (R3 && R3.hindre); if (!rute) return false;
   const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
   for (const o of rute.get(Math.floor(x / 20) + ',' + Math.floor(y / 20)) || []) {
     if (o.P) { for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
@@ -1612,7 +1638,7 @@ function sett3d(u) {
       continue;
     }
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), d = new THREE.Object3D(), c = new THREE.Color();
-    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (smal === 1 ? h * .25 : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();   // steiner står litt nedsunket
+    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (smal === 1 ? h * .3 : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();   // steiner står litt nedsunket
       mesh.setMatrixAt(k, d.matrix); const f = .82 + v * .36; c.setRGB(f * (.96 + v * .08), f, f * (1.04 - v * .08)); mesh.setColorAt(k, c); }   // lys og fargetone varierer litt fra tre til tre
     mesh.frustumCulled = false; R.scene.add(mesh); R.treMesh.push(mesh);   // instansene ligger over hele utsnittet
   }
@@ -1851,5 +1877,6 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/leir-visning.js?v=c94a43a59f"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9fad675c80"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
+<script src="/dovre-fliser/spill/vakt3d.js?v=674095da0d"></script>
 </body>
 </html>
