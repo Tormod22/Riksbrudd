@@ -445,6 +445,24 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const kok = kN.tekst === 'N' && kN.nord > .9 && kØ.tekst === 'Ø' && kØ.øst > .9 && kgØ.tekst === 'Ø' && kgØ.øst > .9 && kgS.tekst === 'S' && kgS.nord < -.9
       && mini.synes && mini.bånd && mini.fylt > .5 && !av.bånd && !av.mini && igjen.bånd && igjen.mini; if (!kok) feil++;
     console.log(`${kok ? 'ok  ' : 'FEIL'} ${navn} kompass: mot nord «${kN.tekst}», mot øst «${kØ.tekst}», går mot øst «${kgØ.tekst}», går mot sør «${kgS.tekst}»; minikart ${Math.round(mini.fylt * 100)} % tegnet; ☰ av: bånd ${!av.bånd}, minikart ${!av.mini}, på igjen: ${igjen.bånd && igjen.mini}`);
+    // dag og natt (spill/natt3d.js): stjerner synlige en klar vinternatt og borte midt på dagen, månefasen 31. jan. 2023 (10 døgn etter
+    // nymånen 21. jan.), værskiftet går jevnt over spilltiden (ingen hopp > 6 % per minutt), og ingen shaderfeil (fanges som feil i nettleseren)
+    const nt = await pg.evaluate(async () => {
+      const S = VaerSpill.S, t0 = tid, ramme = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      Vaer.settÅrstid(S, 'vinter', tid); Vaer.låsVær(S, 'klart'); tid = 17 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
+      NATT.prøvShadere(R3);
+      const H = NATT.himmel, natt = { stj: NATT.stjerner, synlig: !!(H && H.stjerner.visible && H.stjerner.parent), fase: NATT.måne && NATT.måne.fase, mørke: NATT.mørke, himmel: R3.himmelLys.intensity };
+      tid = 7 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
+      const dag = { stj: NATT.stjerner, synlig: H.stjerner.visible };
+      Vaer.settÅrstid(S, 'sommer', tid); Vaer.låsVær(S, 'auto'); S.vær = 'klart'; S.til = tid; let maks = 0, før = null;
+      for (let i = 0; i < 120; i++) { tid += 1; Vaer.steg(S, tid, () => .8); VaerSpill.oppdater(); const v = VAER.regel;
+        if (før) for (const k of ['sikt', 'dis', 'sky', 'regn']) maks = Math.max(maks, Math.abs(v[k] - før[k])); før = { ...v }; }
+      const slutt = { vær: S.vær, regn: VAER.regel.regn };
+      Vaer.låsVær(S, 'klart'); tid = t0; VaerSpill.straks(); R3.lysTid = null; await ramme();
+      return { natt, dag, maks, slutt }; });
+    const ntok = nt.natt.synlig && nt.natt.stj > .5 && nt.natt.himmel >= .42 && !nt.dag.synlig && nt.dag.stj < .01 && Math.abs(nt.natt.fase - .342) < .02 && nt.maks < .06 && nt.slutt.vær === 'regn' && nt.slutt.regn === 1;
+    if (!ntok) { feil++; console.log(JSON.stringify(nt)); }
+    console.log(`${ntok ? 'ok  ' : 'FEIL'} ${navn} dag og natt: stjerner ${nt.natt.stj.toFixed(2)} en vinternatt (himmellys ${nt.natt.himmel.toFixed(2)}), ${nt.dag.stj.toFixed(2)} kl. 13; månefase ${nt.natt.fase && nt.natt.fase.toFixed(3)} 31. jan.; regnet kom med største endring ${nt.maks.toFixed(3)} per minutt`);
     await pg.click('#v3d');
     const d3ok = Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);

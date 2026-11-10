@@ -248,3 +248,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   N/Ø/S i lufta og når du går, minikartet tegnet, ☰ av/på). Også: --topp følger statuslinja (ResizeObserver), mobil: loggen under båndet,
   mindre kildetekst, målestokken over kildeteksten.
 
+  DAG, NATT OG VÆR (10. nov, brukeren: «lag dynamisk dag/natt-system, samme med vær»): spill/vaer.js blander været mykt (blandet():
+  overgang 45–90 spillminutter, S.fra/start/varighet; låst vær fra menyen kommer straks i reglene), regn/snø som mengde 0–1, vind (fart,
+  retning) som skifter sakte, våt bakke (S.våt, tørker på ca. 2,5 t), dalTåke om morgenen (årstidens fukt), torden ved kraftig regn,
+  månen (måneFase/måne: år 2023, fase etter dato = årstidens dag + dagNr), mørke(e), vinduAndel(time), nordlys (noen klare netter i den
+  mørke årstiden). vaer-visning.js: window.VAER.regel = reglene, mens sky/dis/regn/snø/våt/dalTåke er en glattet kopi (ca. 1,5 s)
+  for 3D; VaerSpill.straks() hopper over glattingen (tester/skjermbilder). spill/natt3d.js (KROKER.lys3d – ny, kalles sist i lys3d –,
+  sett3d, ramme3d; window.NATT): stjerner (Points, dreier om himmelpolen), måne med fase og blått månelys (sol-lyset flyttes til månen
+  om natta), sol-skive med glød, varm himmel nær sola og rosa belte motsatt, nordlys-bånd mot nord, lyn, skyskygger og våt bakke/pytter
+  (bakkeshaderen utvides i sett3d), lyse vinduer (glasspikslene i husteksturene, uniform uVindu/uAndel), lysflekker under gatelysene,
+  tåkebanker (sprites) i dalbunnen. liv3d.js: bilene har front-/baklys og lyskjegle om kvelden. lys3d går nå hvert spillminutt med
+  mykere overgang (dag fra −8° til 8°); skyene dreier med vinden (R3.skyVri). Himmelobjektene ligger på kuppelen innenfor skyene (0,97).
