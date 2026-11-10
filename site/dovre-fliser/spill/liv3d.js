@@ -222,6 +222,15 @@
       liv.bilMesh = instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], mob ? 12 : 32);
       liv.biler = Array.from({ length: mob ? 12 : 32 }, () => { const v = veg[Math.floor(rnd() * veg.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: (v.k === 'K' ? 8 : 13) + rnd() * 5, farge: BILFARGER[Math.floor(rnd() * BILFARGER.length)] }; });
       liv.biler.forEach((b, k) => { liv.bilMesh[0].setColorAt(k, new THREE.Color(...b.farge)); });
+      // frontlys og baklys (lyser om kvelden, spill/natt3d.js gir mørket) og lyskjegler på vegen foran bilen
+      const n = liv.biler.length, front = samle([kasse(2.21, .6, .5, .05, .32, .13), kasse(2.21, -.6, .5, .05, .32, .13)]), bak = samle([kasse(-2.21, .62, .55, .05, .28, .12), kasse(-2.21, -.62, .55, .05, .28, .12)]);
+      const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.Float32BufferAttribute([2.3, -.9, .08, 16, -3.2, .08, 16, 3.2, .08, 2.3, -.9, .08, 16, 3.2, .08, 2.3, .9, .08], 3));
+      kg.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2));
+      const kc = document.createElement('canvas'); kc.width = 64; kc.height = 32; const kgx = kc.getContext('2d'); for (let x = 0; x < 64; x++) for (let y = 0; y < 32; y++) {
+        const a = Math.pow(1 - x / 64, 1.4) * Math.sin(Math.PI * (y + .5) / 32) ** 2; kgx.fillStyle = `rgba(255,240,200,${a.toFixed(3)})`; kgx.fillRect(x, y, 1, 1); }
+      const lag = (g, mat) => { const m = new THREE.InstancedMesh(g, mat, n); m.frustumCulled = false; m.count = 0; R.scene.add(m); liv.mesh.push(m); liv.bilMesh.push(m); return m; };
+      liv.lys = { front: lag(front, new THREE.MeshBasicMaterial({ color: 0xb4b4ae })), bak: lag(bak, new THREE.MeshBasicMaterial({ color: 0x700e0a })),
+        kjegle: lag(kg, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(kc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 })) };
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
     const gate = velgLinjer(u, v => v.by && 'RFK'.includes(v.k));
@@ -270,6 +279,9 @@
       const [x, y, z, v] = punkt(o.v, o.s, (o.side || 1.7) * o.dir), bob = høyde ? Math.abs(Math.sin(nå * 7 + (o.fase || 0))) * .04 : 0;
       d.position.set(x, y, (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX + (høyde ? .15 : .12) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
       for (const m of mesh) m.setMatrixAt(k, d.matrix); });
+    if (liv.lys) { const m = window.NATT ? Math.max(0, Math.min(1, (NATT.mørke - .25) / .4)) : 0;
+      liv.lys.front.material.color.setRGB(.7 + .3 * m, .7 + .27 * m, .68 + .17 * m); liv.lys.bak.material.color.setRGB(.44 + .56 * m, .055 + .07 * m, .04 + .05 * m);
+      liv.lys.kjegle.visible = m > .01; liv.lys.kjegle.material.opacity = m * .42; }
     if (liv.biler) { flytt(liv.biler, liv.bilMesh, false); for (const m of liv.bilMesh) { m.count = liv.biler.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
     if (liv.folk) { flytt(liv.folk, liv.folkMesh, true); for (const m of liv.folkMesh) { m.count = liv.folk.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
     if (liv.fugler) { liv.fugler.forEach((f, k) => { const F = liv.flokker[f.flokk], a = nå * F.v + f.nr * .05, rr = F.r + (f.nr % 3) * 6;

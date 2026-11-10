@@ -105,7 +105,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1563,11 +1563,11 @@ function skyTekstur() {
 const solHøyde = h => 14 + 26 * Math.cos((h - 13.5) * Math.PI / 12);   // grader
 function blandFarge(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
 function lys3d() {
-  const V = window.VAER, h = (6 + tid / TIME) % 24, nøkkel = Math.round(h * 12) + (V ? '|' + V.nøkkel : ''); if (R3.lysTid === nøkkel) return; R3.lysTid = nøkkel;
+  const V = window.VAER, h = (6 + tid / TIME) % 24, nøkkel = Math.round(h * 60) + (V ? '|' + V.nøkkel : ''); if (R3.lysTid === nøkkel) return; R3.lysTid = nøkkel;
   // årstiden gir solhøyden (spill/vaer.js); skydekket demper sola og gjør himmelen grå
   const e = V ? Vaer.solHøyde(V.dag, h) : solHøyde(h), sky = V ? Math.max(0, (V.sky - .3) / .7) : 0, A = (h - 12) * Math.PI / 12 + Math.PI, er = Math.max(e, 4) * Math.PI / 180;   // asimut fra nord; lyset aldri helt flatt
   R3.sol.position.set(Math.sin(A) * Math.cos(er) * 1000, Math.cos(A) * Math.cos(er) * 1000, Math.sin(er) * 1000);
-  const dag = Math.max(0, Math.min(1, (e + 6) / 10)), gull = Math.max(0, 1 - Math.abs(e - 3) / 9) * .4;   // gull: lavt sollys morgen/kveld
+  const dt0 = Math.max(0, Math.min(1, (e + 8) / 16)), dag = dt0 * dt0 * (3 - 2 * dt0), gull = Math.max(0, 1 - Math.abs(e - 2) / 11) * .45;   // dag: myk overgang fra 8° under til 8° over horisonten; gull: lavt sollys morgen/kveld
   R3.sol.intensity = (.12 + .78 * dag) * (1 - .78 * sky); R3.sol.color.setRGB(1, .95 - .2 * gull, .88 - .35 * gull);
   R3.himmelLys.intensity = (.42 + .43 * dag) * (1 + .25 * sky); R3.himmelLys.color.setRGB(...blandFarge(blandFarge([.42, .5, .72], [.86, .9, .94], dag), [.8, .82, .84], sky));
   const grå = [.62, .65, .68].map(v => v * (.25 + .75 * dag));
@@ -1578,6 +1578,8 @@ function lys3d() {
   if (R3.lyktMat) R3.lyktMat.color.setRGB(...(dag < .45 ? [1, .88, .6] : [.72, .7, .66]));
   R3.skyer.material.color.setRGB(...blandFarge(blandFarge([.16, .18, .24], [1, 1, 1], dag), [1, .78, .62], gull * 1.5)); R3.skyer.material.opacity = Math.min(1, (.45 + .5 * dag) + sky * .5);
   if (sky) R3.skyer.material.color.multiplyScalar(1 - .35 * sky);
+  // lys3d: (R3, { e, dag, gull, sky, h, A }) etter at sol og himmel er satt (spill/natt3d.js: måne, glød rundt sola)
+  for (const f of KROKER.lys3d) f(R3, { e, dag, gull, sky, h, A });
 }
 function sett3d(u) {
   const R = R3;
@@ -1692,7 +1694,7 @@ function tegn3d() {
   if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = tid * .0015;   // skyene driver sakte
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(VW, VH, false); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
   // bilde3d: (R3) => true når en krok har tegnet bildet selv (filtre/kameralinser i spill/filtre.js)
   if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
@@ -1835,14 +1837,15 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=3b29d16b35"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=da0aa51c95"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=9c3627985e"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=41be4356dc"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>
+<script src="/dovre-fliser/spill/vaer.js?v=fb9712446a"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=879e9e18d3"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=dfeb5a6b4a"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
 <script src="/dovre-fliser/spill/leir.js?v=8f63ed5f0b"></script>

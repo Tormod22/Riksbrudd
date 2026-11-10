@@ -7,12 +7,22 @@
   let fall = null, sistT = 0;
   const TRE_U = { uTreSno: { value: 0 }, uHostLov: { value: 0 }, uNaken: { value: 0 } };
 
+  // Været blandes mykt over spilltiden (spill/vaer.js). 3D viser i tillegg en glattet kopi (vist) som tar igjen været på et par
+  // sekunder, så også et vær valgt i menyen kommer gradvis. Sikten til lagene bruker reglenes verdi direkte.
+  const VIST = ['sky', 'dis', 'regn', 'snø', 'våt', 'dalTåke', 'torden'];
+  let vist = null;
+  function settVist() {
+    const V = window.VAER; if (!V || !vist) return;
+    for (const f of VIST) V[f] = vist[f];
+    V.nøkkel = S.årstid + '|' + Math.round(vist.sky * 40) + '|' + Math.round(vist.dis * 40);
+  }
   function oppdater(melding) {
-    const h = (6 + tid / TIME) % 24, V = Vaer.tilstand(S, h), før = window.VAER;
-    window.VAER = { ...V, nøkkel: S.årstid + '|' + S.vær };
+    const h = (6 + tid / TIME) % 24, V = Vaer.tilstand(S, h, tid), før = window.VAER;
+    if (!vist) vist = {}; for (const f of VIST) if (vist[f] == null) vist[f] = V[f];
+    window.VAER = { ...V, regel: { ...V }, mål: S.årstid + '|' + S.vær + '|' + Math.round(V.sikt * 20) }; settVist();
     VAER_U.uSno.value = 1; VAER_U.uSnoGrense.value = V.snøgrense; VAER_U.uHost.value = V.høst;
     TRE_U.uHostLov.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
-    if (!før || før.nøkkel !== window.VAER.nøkkel) {
+    if (!før || før.mål !== window.VAER.mål) {
       for (const s of ENHETER) s.siktSkitten = true;
       if (melding) logg(melding + (V.sikt < 1 ? ` Sikten er ${Math.round(V.sikt * 100)} % av vanlig.` : ''));
       skitten = true;
@@ -82,26 +92,34 @@
   KROKER.ramme3d.push(R => {
     const V = window.VAER; if (!V || !R.ut) return;
     const nå = performance.now() / 1000, dt = Math.min(.1, nå - (sist || nå)); sist = nå;
+    // den glattede kopien tar igjen reglene (ca. 1,5 s), uavhengig av tempoet
+    if (vist && V.regel) { const k = Math.min(1, dt / 1.5); for (const f of VIST) vist[f] += (V.regel[f] - vist[f]) * k; settVist(); }
     // dis: tåke og nedbør trekker disen inn mot kameraet (kamera3d setter den på nytt hver ramme)
     if (V.dis < 1) { const fog = R.scene.fog; fog.far = Math.max(140, fog.far * V.dis); fog.near = Math.min(fog.near * V.dis, fog.far * .25); }
     const c = R.cam.position, bakke = hoyde3d(R.ut.cx + c.x, R.ut.cy + c.y) ;
     if (R.gressMesh && bakke > V.snøgrense) R.gressMesh.visible = false;   // gresset ligger under snøen
-    if (!fall && V.nedbør) fall = lagFall(R);
+    if (!fall && (V.regn > .02 || V.snø > .02)) fall = lagFall(R);
     if (!fall) return;
     if (fall.regn.parent !== R.scene) { R.scene.add(fall.regn, fall.snø); }
-    const regn = V.nedbør === 'regn', snø = V.nedbør === 'snø', høyt = c.z - (bakke - R.ut.h0) * R.EX > 600;
+    const regn = V.regn > .02, snø = V.snø > .02, høyt = c.z - (bakke - R.ut.h0) * R.EX > 600;
+    const vx = Math.cos(V.vind.retning) * V.vind.fart, vy = Math.sin(V.vind.retning) * V.vind.fart;
     fall.regn.visible = regn && !høyt; fall.snø.visible = snø && !høyt; if (høyt || (!regn && !snø)) return;
     const { B, H } = fall, wrap = (v, m) => ((v + m) % (2 * m) + 2 * m) % (2 * m) - m;
     if (regn) { const p = fall.regn.geometry.attributes.position.array;
-      fall.dråper.forEach((d, k) => { d[2] -= 9 * dt; if (d[2] < 0) d[2] += H;
+      // regndråpene driver med vinden og står på skrå (toppen mot vinden)
+      const sx = -vx * .06, sy = -vy * .06;
+      fall.dråper.forEach((d, k) => { d[2] -= 9 * dt; if (d[2] < 0) d[2] += H; d[0] += vx * dt * .8; d[1] += vy * dt * .8;
         const x = c.x + wrap(d[0] - c.x, B), y = c.y + wrap(d[1] - c.y, B), z = c.z - H / 2 + d[2];
-        p.set([x, y, z, x + .08, y + .05, z + .55], k * 6); });
+        p.set([x, y, z, x + sx, y + sy, z + .55], k * 6); });
+      fall.regn.geometry.setDrawRange(0, 2 * Math.round(fall.dråper.length * Math.min(1, V.regn * (.5 + .5 * (V.styrke || .6)))));
       fall.regn.geometry.attributes.position.needsUpdate = true; }
     if (snø) { const p = fall.snø.geometry.attributes.position.array;
-      fall.fnugg.forEach((d, k) => { d[2] -= 1.1 * dt; if (d[2] < 0) d[2] += H; d[3] += dt;
+      fall.fnugg.forEach((d, k) => { d[2] -= 1.1 * dt; if (d[2] < 0) d[2] += H; d[3] += dt; d[0] += vx * dt * .6; d[1] += vy * dt * .6;
         const x = c.x + wrap(d[0] + Math.sin(d[3]) * .6 - c.x, B), y = c.y + wrap(d[1] + Math.cos(d[3] * .8) * .5 - c.y, B);
         p[k * 3] = x; p[k * 3 + 1] = y; p[k * 3 + 2] = c.z - H / 2 + d[2]; });
+      fall.snø.geometry.setDrawRange(0, Math.round(fall.fnugg.length * Math.min(1, V.snø)));
       fall.snø.geometry.attributes.position.needsUpdate = true; }
   });
-  window.VaerSpill = { S, oppdater };
+  // straks(): 3D viser været med en gang (testene og skjermbildene)
+  window.VaerSpill = { S, oppdater, straks() { vist = null; oppdater(); } };
 })();
