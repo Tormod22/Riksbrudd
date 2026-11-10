@@ -65,6 +65,7 @@
           const x = X + (a - .5) * kv.r - u.cx, y = Y + (c - .5) * kv.r - u.cy, p = (Math.floor((u.S - y) / mpp) * TW + Math.floor((x + u.S) / mpp)) * 4;
           const R = px[p], G = px[p + 1], B = px[p + 2];
           if ((B > R + 18 && B > G + 4) || Math.abs(R - G) + Math.abs(G - B) < 14 || iVann(u, x, y) || (u.påVeg && u.påVeg(x, y))) continue;   // ikke vann, veg eller hus
+          if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) continue;
           const h = (8 + hash(frø + 3e6) * 12) * (1 - Math.max(0, Math.min(1, (rel - .8) / .3)) * .5) * V.TRESLAG[art].høyde;
           ut[art].push(x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX, h, hash(frø + 4e6)); n++;
         }
