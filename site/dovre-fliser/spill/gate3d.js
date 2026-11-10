@@ -62,11 +62,11 @@
     const M = {};
     M.benk = flett([boks(-.78, -.03, 0, .06, .48, .43, F.metall), boks(.78, -.03, 0, .06, .48, .43, F.metall), boks(-.78, -.24, .43, .05, .05, .42, F.metall), boks(.78, -.24, .43, .05, .05, .42, F.metall),
       boks(0, .09, .43, 1.8, .17, .04, F.tre), boks(0, -.1, .43, 1.8, .17, .04, F.tre), boks(0, -.27, .58, 1.8, .04, .12, F.tre), boks(0, -.27, .75, 1.8, .04, .12, F.tre)]);
-    M.søppel = flett([boks(0, -.25, 0, .07, .07, 1.05, F.grå), syl(0, 0, .38, .22, .55, 8, F.grønn), syl(0, 0, .93, .235, .07, 8, F.grønnMørk)]);
-    const bøyler = []; for (let k = 0; k < 5; k++) { const x = -1 + k * .5; bøyler.push(boks(x, .27, 0, .04, .04, .76, F.galv), boks(x, -.27, 0, .04, .04, .76, F.galv), boks(x, 0, .74, .04, .58, .04, F.galv)); }
+    M.søppel = flett([boks(0, -.25, 0, .07, .07, 1.05, F.grå), syl(0, 0, .38, .22, .55, 6, F.grønn), syl(0, 0, .93, .235, .07, 6, F.grønnMørk)]);
+    const bøyler = []; for (let k = 0; k < 4; k++) { const x = -.9 + k * .6; bøyler.push(boks(x, .27, 0, .04, .04, .76, F.galv), boks(x, -.27, 0, .04, .04, .76, F.galv), boks(x, 0, .74, .04, .58, .04, F.galv)); }
     M.sykkel = flett(bøyler);
     // sykkelen (står på tvers av stativet, framhjulet mot stativet): hjul og sete mørke, rammen i instansens farge
-    const hjul = y => { const g = new THREE.CylinderGeometry(.33, .33, .035, 12); g.rotateZ(Math.PI / 2); g.translate(0, y, .33); return farg(g, F.hjul); };
+    const hjul = y => { const g = new THREE.CylinderGeometry(.33, .33, .035, 9); g.rotateZ(Math.PI / 2); g.translate(0, y, .33); return farg(g, F.hjul); };
     M.syklene = flett([hjul(.52), hjul(-.52), boks(0, 0, .58, .03, .78, .035, F.hvitt), boks(0, .08, .4, .03, .62, .035, F.hvitt), boks(0, -.22, .4, .03, .03, .5, F.hvitt),
       boks(0, -.22, .9, .1, .22, .05, F.hjul), boks(0, .47, .4, .03, .03, .52, F.hvitt), boks(0, .45, .92, .55, .03, .03, F.hjul)]);
     // busskuret: stolper, tak, benk og reklametavle på den lukkede siden; glasset er eget (gjennomsiktig)
@@ -102,11 +102,11 @@
     lag(M.skur, g.skur.length / 4, mat(), k => fire(g.skur, k));
     lag(M.glass, g.skur.length / 4, new THREE.MeshLambertMaterial({ vertexColors: true, color: 0xb9d0da, transparent: true, opacity: .3, depthWrite: false, side: THREE.DoubleSide }), k => fire(g.skur, k));
     lag(M.skilt, g.skilt.length / 4, mat(), k => fire(g.skilt, k));
-    // syklene: 0–3 i hvert stativ (fast per stativ), i en av de fem bøylene, litt skjevt
+    // syklene: 0–4 i hvert stativ (oftest 1), fast per stativ, i en av de fire bøylene, litt skjevt
     const sykler = [];
     for (let k = 0; k < g.sykkel.length / 4; k++) { const [x, y, z, r] = fire(g.sykkel, k), cs = Math.cos(r), sn = Math.sin(r);
-      for (let b = 0; b < 5; b++) { const h = Gate.hash(Math.round((x + u.cx) * 3) + b, Math.round((y + u.cy) * 3), 21); if (h > .35) continue;
-        const lx = -1 + b * .5 + .2, ly = .15; sykler.push([x + lx * cs - ly * sn, y + lx * sn + ly * cs, z, r + (h - .17) * .3, 1, SYKKELFARGER[Math.floor(h * 1e3) % SYKKELFARGER.length]]); } }
+      for (let b = 0; b < 4; b++) { const h = Gate.hash(Math.round((x + u.cx) * 3) + b, Math.round((y + u.cy) * 3), 21); if (h > .3) continue;
+        const lx = -.9 + b * .6 + .2, ly = .15; sykler.push([x + lx * cs - ly * sn, y + lx * sn + ly * cs, z, r + (h - .17) * .3, 1, SYKKELFARGER[Math.floor(h * 1e3) % SYKKELFARGER.length]]); } }
     lag(M.syklene, sykler.length, mat(), k => sykler[k]);
     // postkassene: stolpe, ligger (bredde etter antall) og 1–3 kasser i rad
     const n = g.postkasse.length / 6, kasser = [];
@@ -126,13 +126,13 @@
     for (const m of L.mesh) { ut.mesh++; const g = m.geometry; ut.trekanter += g.attributes.position.count / 3 * m.count; }
     return ut;
   }
-  // trekantene et utsnitt gir (uten å lage nettene): modellene × antall; syklene og postkassene regnet med 1,5 / 2 per stativ
+  // trekantene et utsnitt gir (uten å lage nettene): modellene × antall; syklene og postkassene regnet med 1,2 / 2 per stativ
   let TRI = null;
   function trekanter(u) {
     if (!u || !u.gate) return 0;
     if (!TRI) { const M = modeller(); TRI = {}; for (const k in M) { TRI[k] = M[k].attributes.position.count / 3; M[k].dispose(); } }
     const n = k => u.gate[k].length / (k === 'postkasse' ? 6 : 4);
-    return n('benk') * TRI.benk + n('søppel') * TRI.søppel + n('sykkel') * (TRI.sykkel + 1.5 * TRI.syklene) + n('skur') * (TRI.skur + TRI.glass) + n('skilt') * TRI.skilt
+    return n('benk') * TRI.benk + n('søppel') * TRI.søppel + n('sykkel') * (TRI.sykkel + 1.2 * TRI.syklene) + n('skur') * (TRI.skur + TRI.glass) + n('skilt') * TRI.skilt
       + n('postkasse') * (TRI.stolpe + TRI.ligger + 2 * TRI.kasse);
   }
   window.Gate3d = { punkter, antall, trekanter };

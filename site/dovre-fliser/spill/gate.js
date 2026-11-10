@@ -14,7 +14,7 @@
   // hvor mye plass hver ting tar (radius, m) – ingen ting står oppå hverandre
   const RAD = { benk: 1.1, søppel: .5, sykkel: 1.5, skur: 2.1, skilt: .45, postkasse: .7 };
   const SLAG = ['benk', 'søppel', 'sykkel', 'skur', 'skilt', 'postkasse'];
-  const TAK = { pc: 1200, mobil: 400 };
+  const TAK = { pc: 900, mobil: 300 }, RADIUS = 650;
   const BUSS_AVSTAND = 420;
 
   function hash(a, b, s = 0) {
@@ -34,7 +34,15 @@
     const bit = (x, y, f) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const [a, b, v] of rute.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) {
       const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2));
       const d = Math.hypot(a[0] + dx * t - x, a[1] + dy * t - y); if (f(d, v, a[2] + (b[2] - a[2]) * t)) return true; } return false; };
+    // nærmest(x, y, r, filter): nærmeste punkt på en veg (filter(v) = true) innen r meter: { d, v, p: [x, y, z, ux, uy] }
+    const nærmest = (x, y, r, filter) => { let best = null; const n = Math.ceil(r / C);
+      for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) for (const [a, b, v] of rute.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) {
+        if (!filter(v)) continue; const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, L = Math.sqrt(L2); if (L < .01) continue;
+        const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)), px = a[0] + dx * t, py = a[1] + dy * t, d = Math.hypot(px - x, py - y);
+        if (d < r && (!best || d < best.d)) best = { d, v, p: [px, py, a[2] + (b[2] - a[2]) * t, dx / L, dy / L] }; }
+      return best; };
     return {
+      nærmest,
       nær: (x, y, ekstra) => bit(x, y, (d, v) => d < BREDDE[v.k] / 2 + ekstra),
       fortau: (x, y) => { let z = null; bit(x, y, (d, v, zz) => { if (v.by && 'RFK'.includes(v.k) && d > BREDDE[v.k] / 2 - .1 && d < BREDDE[v.k] / 2 + FORTAU + .1) { z = zz + KANT; return true; } return false; }); return z; }
     };
@@ -66,9 +74,10 @@
     const legg = (slag, x, y, z, ret, ...ekstra) => { const k = Math.floor(x / C) + ',' + Math.floor(y / C); if (!satt.has(k)) satt.set(k, []);
       satt.get(k).push({ x, y, slag }); ut[slag].push(x, y, z, ret, ...ekstra); };
     // kan en ting med radius r stå her? (innenfor utsnittet, ikke på en kjørebane, ikke i hus/vann/tre, ikke i et kryss, flatt nok)
-    const inne = (x, y) => Math.abs(x) < S - 12 && Math.abs(y) < S - 12;
+    // småting lenger unna midten enn RADIUS ser du ikke (under ett punkt på skjermen): bare busskur og skilt lenger ut
+    const inne = (x, y, slag) => Math.abs(x) < S - 12 && Math.abs(y) < S - 12 && (slag === 'skur' || slag === 'skilt' || Math.hypot(x, y) < RADIUS);
     const prøv = (slag, x, y, ret, min, ...ekstra) => {
-      const r = RAD[slag]; if (!inne(x, y) || VR.nær(x, y, .25) || kryssNær(x, y, 1.5) || !ledig(x, y, r, slag, min)) return false;
+      const r = RAD[slag]; if (!inne(x, y, slag) || VR.nær(x, y, .25) || kryssNær(x, y, 1.5) || !ledig(x, y, r, slag, min)) return false;
       // fotavtrykket: midten og fire punkter rundt (i retningen langs og på tvers)
       const c = Math.cos(ret), s = Math.sin(ret), a = r * .9, b = Math.min(r, .7) * .9, P = [[0, 0], [a, 0], [-a, 0], [0, b], [0, -b]];
       let z = null;
@@ -87,24 +96,27 @@
     kand.sort((a, b) => a.h - b.h);
     const stopp = [];
     for (const k of kand) {
-      const { v, p } = k, w = BREDDE[v.k] / 2; if (!inne(p[0], p[1]) || kryssNær(p[0], p[1], 18) || stopp.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < BUSS_AVSTAND)) continue;
+      const { v, p } = k, w = BREDDE[v.k] / 2; if (!inne(p[0], p[1], 'skur') || kryssNær(p[0], p[1], 18) || stopp.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < BUSS_AVSTAND)) continue;
       // E-veg i tettsted har skulder og ikke fortau: skuret står bak skulderen på bakken
       const off = v.k === 'E' ? w + 2.1 : w + 1.35, s0 = k.h * 1e4 % 1 < .5 ? 1 : -1;
       for (const sd of [s0, -s0]) {
+        // ikke i en midtdeler: bak skuret (5 m lenger ut) skal det ikke være en annen kjørebane
+        const [bx0, by0] = ved(k.p, sd, off + 5); if (VR.nær(bx0, by0, 1.5)) continue;
         const [x, y, ret] = ved(k.p, sd, off); if (!prøv('skur', x, y, ret)) continue;
         // holdeplasskiltet ved kantsteinen foran skuret, og et på andre siden av vegen (holdeplass i begge retninger)
         const p2 = langs(v, k.D, Math.min(k.D[k.D.length - 1], k.s + 3.2)), [ax, ay, ar] = ved(p2, sd, w + (v.k === 'E' ? 1 : .6)); prøv('skilt', ax, ay, ar + Math.PI / 2);
-        const [bx, by, br] = ved(p2, -sd, w + (v.k === 'E' ? 1 : .6)); prøv('skilt', bx, by, br + Math.PI / 2);
+        const [bx, by, br] = ved(p2, -sd, w + (v.k === 'E' ? 1 : .6)), [mx, my] = ved(p2, -sd, w + 5); if (!VR.nær(mx, my, 1.5)) prøv('skilt', bx, by, br + Math.PI / 2);
         stopp.push(p); break;
       }
     }
     // 2) butikker og skoler: sykkelstativ inntil veggen mot vegen, med søppelkasse og benk ved siden av
     for (const g of o.bygg || []) {
       const butikk = g.t === 7 || (g.k && g.t !== 0 && g.t !== 10), skole = g.t === 9; if (!butikk && !skole) continue;
-      // nærmeste vegpunkt innen 60 m
-      let best = null; for (const { v, D } of linjer) { if (v.k === 'S') continue; for (const q of v.P) { const d = Math.hypot(q[0] - g.x, q[1] - g.y); if (d < 60 && (!best || d < best.d)) best = { d, q }; } }
+      // ikke alle butikker har sykkelstativ; nærmeste veg innen 60 m
+      if (Math.hypot(g.x, g.y) > RADIUS || (butikk && H(g.x, g.y, 4) > .65)) continue;
+      const best = VR.nærmest(g.x, g.y, 60, v => v.k !== 'S');
       if (!best) continue;
-      const tx = (best.q[0] - g.x) / (best.d || 1), ty = (best.q[1] - g.y) / (best.d || 1);
+      const tx = (best.p[0] - g.x) / (best.d || 1), ty = (best.p[1] - g.y) / (best.d || 1);
       // gå fra midten mot vegen til det er fritt (utenfor huset + 2 m), og et halvt steg til
       let t = 0; while (t < best.d && !ok(g.x + tx * t, g.y + ty * t)) t += .5;
       if (t >= best.d - 4) continue; t += .6;
@@ -121,18 +133,18 @@
         if (h < .45) prøv('søppel', a.x + a.dx * 6 + nx * off, a.y + a.dy * 6 + ny * off, ret, 20);
         else if (h < .7) prøv('benk', a.x + a.dx * 10 + nx * (a.w + 1.45), a.y + a.dy * 10 + ny * (a.w + 1.45), ret, 30);
       } }
-    // 4) langs fortauene ellers: en benk eller søppelkasse her og der (ikke tettere enn 40 / 35 m for samme slag)
+    // 4) langs fortauene ellers: en benk eller søppelkasse her og der (ikke tettere enn 60 / 50 m for samme slag)
     for (const { v, D } of linjer) { if (!v.by || !'RFK'.includes(v.k)) continue; const L = D[D.length - 1], w = BREDDE[v.k] / 2;
       for (let s = 7; s < L - 4; s += 15) { const p = langs(v, D, s), h = Hq(p[0], p[1], 15, 11);
-        if (h > .22) continue; const sd = h * 1e3 % 1 < .5 ? 1 : -1;
-        if (h < .09) { const [x, y, r] = ved(p, sd, w + 1.45); prøv('benk', x, y, r, 40); }
-        else { const [x, y, r] = ved(p, sd, w + 1.6); prøv('søppel', x, y, r, 35); } } }
+        if (h > .2) continue; const sd = h * 1e3 % 1 < .5 ? 1 : -1;
+        if (h < .08) { const [x, y, r] = ved(p, sd, w + 1.45); prøv('benk', x, y, r, 60); }
+        else { const [x, y, r] = ved(p, sd, w + 1.6); prøv('søppel', x, y, r, 50); } } }
     // 5) postkassestativ ved innkjørselen til en del eneboliger langs K/P-veger (1–3 kasser), ikke nærmere hverandre enn 12 m
     for (const g of o.bygg || []) {
-      if (g.t !== 0 || g.A > 400 || H(g.x, g.y, 13) > .45) continue;
-      let best = null; for (const { v, D } of linjer) { if (!'KP'.includes(v.k)) continue; for (let i = 0; i < v.P.length; i++) { const q = v.P[i], d = Math.hypot(q[0] - g.x, q[1] - g.y); if (d < 35 && (!best || d < best.d)) best = { d, v, D, i }; } }
+      if (g.t !== 0 || g.A > 400 || H(g.x, g.y, 13) > .45 || Math.hypot(g.x, g.y) > RADIUS) continue;
+      const best = VR.nærmest(g.x, g.y, 35, v => 'KP'.includes(v.k));
       if (!best) continue;
-      const { v, D, i } = best, p = langs(v, D, D[i]), w = BREDDE[v.k] / 2, sd = ((g.x - p[0]) * -p[4] + (g.y - p[1]) * p[3]) > 0 ? 1 : -1;
+      const { v, p } = best, w = BREDDE[v.k] / 2, sd = ((g.x - p[0]) * -p[4] + (g.y - p[1]) * p[3]) > 0 ? 1 : -1;
       const off = v.by && v.k === 'K' ? w + 1.7 : w + (v.k === 'K' ? 1.2 : .95), [x, y, r] = ved(p, sd, off), hn = H(g.x, g.y, 14);
       prøv('postkasse', x, y, r, 12, 1 + Math.floor(hn * 3), Math.floor(H(g.x, g.y, 15) * 6));
     }
@@ -153,6 +165,6 @@
     for (const s of SLAG) { const st = s === 'postkasse' ? 6 : 4, a = g[s] || [], p = []; for (let q = 0; q < a.length; q += st) p.push(a[q], a[q + 1], a[q + 2]); ut[s] = p; }
     return ut;
   }
-  const Gate = { plasser, punkter, hash, BREDDE, RAD, SLAG, TAK, FORTAU, KANT, BUSS_AVSTAND, vegRute };
+  const Gate = { plasser, punkter, hash, BREDDE, RAD, SLAG, TAK, RADIUS, FORTAU, KANT, BUSS_AVSTAND, vegRute };
   if (typeof module !== 'undefined' && module.exports) module.exports = Gate; else rot.Gate = Gate;
 })(typeof window !== 'undefined' ? window : this);

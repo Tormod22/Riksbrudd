@@ -12,13 +12,16 @@ function scene(dx = 0, dy = 0) {
   const veger = [{ k: 'R', by: true, P: linje(-700, 0, 94, 0) }, { k: 'R', by: true, P: linje(106, 0, 700, 0) }, { k: 'K', by: true, P: linje(100, 6, 100, 300) },
     { k: 'P', by: false, P: linje(-300, 200, -40, 200) },
     // to smale private veger tett inntil riksvegen (gatemøbler på fortauet der ville stått i kjørebanen på den)
-    { k: 'P', by: false, P: linje(-640, 7, -420, 7) }, { k: 'P', by: false, P: linje(-640, -7, -420, -7) }];
+    { k: 'P', by: false, P: linje(-640, 7, -420, 7) }, { k: 'P', by: false, P: linje(-640, -7, -420, -7) },
+    // en firefelts E-veg (to kjørebaner 16 m fra hverandre) i tettstedet: busskur ved siden av, aldri i midtdeleren
+    { k: 'E', by: true, P: linje(-650, -400, 650, -400) }, { k: 'E', by: true, P: linje(-650, -416, 650, -416) }];
   const node = { x: 100 - dx, y: -dy, d: 6, by: true, armer: [{ x: 94 - dx, y: -dy, dx: -1, dy: 0, w: 3.75, k: 'R', by: true, L: 6 }, { x: 106 - dx, y: -dy, dx: 1, dy: 0, w: 3.75, k: 'R', by: true, L: 6 },
     { x: 100 - dx, y: 6 - dy, dx: 0, dy: 1, w: 2.75, k: 'K', by: true, L: 6 }] };
   const kryss = [node]; kryss.nær = (x, y, e) => Math.hypot(x - node.x, y - node.y) < node.d + e;
   const hus = [];
   const rekt = (x, y, bx, by, t, k) => hus.push({ x0: x - bx / 2 - dx, x1: x + bx / 2 - dx, y0: y - by / 2 - dy, y1: y + by / 2 - dy, x: x - dx, y: y - dy, t, k, A: bx * by });
-  rekt(0, 20, 20, 14, 7, 3);            // butikk med kjede, 13 m fra vegmidten
+  rekt(0, 20, 20, 14, 7, 3);            // butikker (en med kjede), 13 m fra vegmidten
+  rekt(250, -20, 18, 14, 7); rekt(-200, 20, 16, 14, 7); rekt(-120, -20, 16, 14, 7);
   rekt(-300, -40, 40, 20, 9);           // skole
   for (let x = -280; x <= -60; x += 22) rekt(x, 214, 10, 8, 0);   // eneboliger langs P-vegen
   for (let y = 30; y <= 280; y += 25) rekt(115, y, 10, 9, 0);     // eneboliger langs K-vegen
@@ -34,16 +37,21 @@ console.log('antall', JSON.stringify(ant));
 // busskur: minst to langs 1,4 km riksveg, minst 420 m mellom dem, ikke nær krysset, hvert med kilt på begge sider av vegen
 const skur = []; for (let q = 0; q < P.skur.length; q += 3) skur.push([P.skur[q], P.skur[q + 1]]);
 const minAvst = Math.min(...skur.flatMap((a, i) => skur.slice(i + 1).map(b => Math.hypot(a[0] - b[0], a[1] - b[1]))));
-sjekk(skur.length >= 2 && skur.length <= 4 && (skur.length < 2 || minAvst >= G.BUSS_AVSTAND), `busskur: ${skur.length}, minste avstand ${Math.round(minAvst)} m`);
+sjekk(skur.length >= 3 && skur.length <= 8 && minAvst >= G.BUSS_AVSTAND, `busskur: ${skur.length}, minste avstand ${Math.round(minAvst)} m`);
 sjekk(skur.every(([x, y]) => Math.hypot(x - 100, y) > 20), 'ingen busskur i krysset');
-sjekk(skur.every(([x, y]) => Math.abs(Math.abs(y) - (3.75 + 1.35)) < .05), 'busskurene står på fortauet (midten 1,35 m fra kantsteinen)');
+const rv = skur.filter(([, y]) => Math.abs(y) < 50), ev = skur.filter(([, y]) => y < -300);
+sjekk(rv.length >= 2 && rv.every(([x, y]) => Math.abs(Math.abs(y) - (3.75 + 1.35)) < .05), 'busskurene langs riksvegen står på fortauet (midten 1,35 m fra kantsteinen)');
+sjekk(ev.length >= 1 && ev.every(([, y]) => y > -400 || y < -416), `busskur ved firefeltsvegen: ${ev.length}, ingen i midtdeleren (${ev.map(([, y]) => y.toFixed(1)).join(', ')})`);
 sjekk(ant.skilt >= skur.length * 2 - 1, `holdeplasskilt på begge sider: ${ant.skilt}`);
 // busskuret vender den åpne siden mot vegen: modellens +y (−sin r, cos r) peker mot vegmidten
-sjekk(ut.skur.length && Array.from({ length: ut.skur.length / 4 }, (_, k) => { const y = ut.skur[k * 4 + 1], r = ut.skur[k * 4 + 3]; return Math.cos(r) * -Math.sign(y) > .99; }).every(Boolean), 'busskurene vender mot vegen');
+sjekk(ut.skur.length && Array.from({ length: ut.skur.length / 4 }, (_, k) => { const y = ut.skur[k * 4 + 1], r = ut.skur[k * 4 + 3]; const y0 = [0, -400, -416].sort((a, b) => Math.abs(a - y) - Math.abs(b - y))[0]; return Math.cos(r) * Math.sign(y0 - y) > .99; }).every(Boolean), 'busskurene vender mot vegen');
 sjekk(ant.benk >= 3 && ant.søppel >= 4, `benker ${ant.benk} og søppelkasser ${ant.søppel} langs fortauene`);
 // sykkelstativ ved butikken og skolen (to ved skolen)
 const nærBygg = (x0, y0, r) => { let n = 0; for (let q = 0; q < P.sykkel.length; q += 3) if (Math.hypot(P.sykkel[q] - x0, P.sykkel[q + 1] - y0) < r) n++; return n; };
-sjekk(nærBygg(0, 20, 20) >= 1 && nærBygg(-300, -40, 30) >= 2, `sykkelstativ ved butikken ${nærBygg(0, 20, 20)} og skolen ${nærBygg(-300, -40, 30)}`);
+const vedButikk = [[0, 20], [250, -20], [-200, 20], [-120, -20]].map(([x, y]) => nærBygg(x, y, 20));
+sjekk(vedButikk.filter(n => n).length >= 1 && vedButikk.filter(n => n).length < 4 && nærBygg(-300, -40, 30) >= 2, `sykkelstativ ved butikkene ${vedButikk.join('/')} (ikke alle har) og skolen ${nærBygg(-300, -40, 30)}`);
+// småting bare innen RADIUS fra midten (lenger ut ser du dem ikke), busskur og skilt også lenger ut
+sjekk(G.SLAG.every(k => { if (k === 'skur' || k === 'skilt') return true; for (let q = 0; q < P[k].length; q += 3) if (Math.hypot(P[k][q], P[k][q + 1]) > G.RADIUS) return false; return true; }), `småting innen ${G.RADIUS} m fra midten`);
 sjekk(ant.postkasse >= 4, `postkassestativ ved eneboligene: ${ant.postkasse}`);
 // postkassene står ved P/K-vegen, og har 1–3 kasser
 const pk = []; for (let q = 0; q < ut.postkasse.length; q += 6) pk.push(ut.postkasse.slice(q, q + 6));
