@@ -488,9 +488,26 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const r = { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; c.z = z0; return r; });
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; return Vakt3d.sjekk(u); });
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; return Vakt3d.sjekk(u); });
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
     console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
+    // VAKT byhus (spill/byhus.js, hus3d): Dombås-utsnittet har bygg, alle har tak, minst fem ulike fasader (minst én fra Byhus), noen valm/mansard,
+    // og alle Byhus-teksturene har vindusglass som natt3d.js kan tenne (blåere enn rødt)
+    // Uten byggomrissene (testserveren har ikke releasen) lages et oppdiktet sentrum med 64 bygg av ulike typer i flisen midt i utsnittet.
+    const hs = await pg.evaluate(async () => { let s = window.HUS_SJEKK; const glass = {};
+      if (!s && R3.ut) { const u = R3.ut, z = 13, sp = span(z), fx = Math.floor((u.cx - G.x0) / sp), fy = Math.floor((G.y0 - u.cy) / sp), k = 4096 / sp, obj = [];
+        const lx = (u.cx - (G.x0 + fx * sp)) * k, ly = ((G.y0 - fy * sp) - u.cy) * k, T = [[10, 18], [2, 14], [7, 12], [0, 6], [10, 22], [5, 20], [3, 15], [2, 40]];
+        for (let j = 0; j < 8; j++) for (let q = 0; q < 8; q++) { const n = j * 8 + q, [t, h] = T[n % 8], x0 = lx + (q - 4) * 26 * k, y0 = ly + (j - 4) * 26 * k, w = (14 + (n % 3) * 4) * k, d = (11 + (n % 2) * 5) * k;
+          const R = n % 5 === 4 ? [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d / 2], [x0 + w / 2, y0 + d / 2], [x0 + w / 2, y0 + d], [x0, y0 + d], [x0, y0]] : [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d], [x0, y0]];
+          obj.push({ e: { i: 900000 + n * 7919, t, h }, deler: [R] }); }
+        const ekte = window.hentFlis; window.hentFlis = (lag, zz, x, y) => lag === 'hus' ? Promise.resolve(zz === z && x === fx && y === fy ? { hus: { obj } } : null) : ekte(lag, zz, x, y);
+        try { const r = await hus3d(u); s = r && r.stat; } finally { window.hentFlis = ekte; } }
+
+      for (const n of Byhus.FASADER) { const c = Byhus.tekstur(n).image, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let k = 0; for (let q = 0; q < d.length; q += 4) if (d[q + 2] - d[q] > 10 && d[q] < 158) k++; glass[n] = Math.round(k / (d.length / 4) * 100); }
+      return { s, glass }; });
+    const hfas = hs.s ? Object.keys(hs.s.fasader) : [], hok = hs.s && hs.s.bygg >= 50 && (hs.s.tak.valm || 0) + (hs.s.tak.mansard || 0) > 0 && hs.s.utenTak === 0 && hfas.length >= 5 && hfas.some(n => ['murgard', 'tegl', 'funkis', 'plate'].includes(n)) && Object.values(hs.glass).every(v => v >= 3);
+    if (!hok) feil++;
+    console.log(`${hok ? 'ok  ' : 'FEIL'} ${navn} byhus: ${hs.s && hs.s.bygg} bygg, uten tak ${hs.s && hs.s.utenTak}, fasader ${JSON.stringify(hs.s && hs.s.fasader)}, tak ${JSON.stringify(hs.s && hs.s.tak)}, glass i teksturene (%) ${JSON.stringify(hs.glass)}`);
     // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
     // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
     const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));

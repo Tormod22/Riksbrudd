@@ -181,7 +181,7 @@
     U.uSentrum.value.set(((u.cx % 2400) + 2400) % 2400, ((u.cy % 2400) + 2400) % 2400);
     bakkeShader(R.mesh.material);
     // husene med vindusglass (ikke tak, dører, planker og lager)
-    const medGlass = [typeof VINDU !== 'undefined' && VINDU, typeof TREKL !== 'undefined' && TREKL, ...['leil', 'kontor', 'butikk', 'kirke', 'glass', 'industri'].map(t => BYGGTEX[t])].filter(Boolean);
+    const medGlass = [typeof VINDU !== 'undefined' && VINDU, typeof TREKL !== 'undefined' && TREKL, ...['leil', 'kontor', 'butikk', 'kirke', 'glass', 'industri'].map(t => BYGGTEX[t]), ...(window.Byhus ? Object.values(Byhus.TEX) : [])].filter(Boolean);
     for (const m of R.husMesh || []) if (m.material.map && medGlass.includes(m.material.map)) vinduShader(m.material);
     // gamle objekter bort
     for (const o of R.nattObj || []) { R.scene.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); } R.nattObj = [];
