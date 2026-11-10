@@ -436,6 +436,7 @@ function infraI(u) {
 }
 // Bruene som ekte 3D: dekket går rett mellom brukarene (høyden i endene), aldri under bakken, med søyler ned til bakken.
 function bruer3d(u) {
+  if (window.Infra3d) { const n = u.infra.filter(o => o.lag === 'bru').length; return n ? { antall: n } : null; }   // modellene lages i spill/infra3d.js
   const EX = R3.EX, pos = [], kol = [], H = (X, Y) => (hoyde3d(X, Y, u) - u.h0) * EX;
   const FARGE = [[.86, .82, .72], [.72, .68, .58], [.80, .72, .55]];   // vegbru, gang/sykkel, jernbane
   const kvad = (p, c) => { for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...p[i]); kol.push(...c); } };
@@ -1618,7 +1619,7 @@ function sett3d(u) {
   }
   for (const m of R.husMesh || []) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } R.husMesh = [];
   if (R.bruMesh) { R.scene.remove(R.bruMesh); R.bruMesh.geometry.dispose(); R.bruMesh.material.dispose(); R.bruMesh = null; }
-  if (u.bru) {
+  if (u.bru && u.bru.pos) {
     const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(u.bru.pos, 3)); bg.setAttribute('color', new THREE.BufferAttribute(u.bru.kol, 3)); bg.computeVertexNormals();
     R.bruMesh = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); R.scene.add(R.bruMesh);
   }
@@ -1838,8 +1839,10 @@ let sist = performance.now(), rest = 0;
 <script src="/dovre-fliser/spill/hjelp.js?v=3b29d16b35"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=9c3627985e"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=edb4457179"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=0f5a2ff5b5"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
+<script src="/dovre-fliser/spill/bruer.js?v=5fdd234807"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=49607b922c"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=c33582465c"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=444b40b667"></script>

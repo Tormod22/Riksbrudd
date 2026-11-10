@@ -232,3 +232,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   gange.js bruker den: mus låses med klikk (pointer lock), Shift/mellomrom/C, mobil styrespak + knappene Hopp/Huk, sikte, utholdenhetsmåler,
   litt større synsfelt når du løper (kameraets fov settes tilbake til 50 når du flyr opp). Hoppet huskes til neste ramme (hoppVent).
 
+  BRUER OG FERJEKAIER I 3D (10. nov, brukeren: «bruer skal se pent ut i 3D, ferjekaier skal se realistiske ut»): spill/bruer.js (regler uten DOM,
+  test_bruer.js: finnLinje – brua følger vegen i vektorflisene z13 og forlenges til NVDB-lengden når geometrien er kortere, profil – dekket
+  minst 1,1 m over terrenget, velgType plate/bjelke/bue/henge/fagverk, søyler, bue, kaiRetning/vannkant) + spill/infra3d.js (KROKER.bygg3d og
+  sett3d; bruer3d i index.html gir bare { antall } når Infra3d finnes). Bru: asfalt med oppmerking, kantbjelke, rekkverk, kassebjelker,
+  landkar med vingemurer, søyler (to runde + tverrbjelke) ned til laveste terreng under foten − 0,4 m, buebru med søyler på buen, hengebru med
+  tårn der fjorden begynner, kabler og hengestenger, jernbanebru i stål-fagverk; sprengt bru (INFRA_TILSTAND) får gap, hengende dekkender og
+  betongbiter. Vegene i liv3d.js som går over brua løftes opp på dekket (bilene bruker vegens z), i gapet tas de bort, og vegbiter som går
+  > 30 m over vann (ferjesambandene ligger i vegnettet) fjernes. Ferjekai: retning fra ferjelinja som ender nær kaien (ellers mot mest vann),
+  vannkanten fra vannmasken; kai i betong med fendere, klaff med løftetårn, ledevegger, ferje (skrog, bildekk, sidebygg, styrehus, biler),
+  oppstillingsplass med felt, venterom, lyktestolper. Dovre har ingen ferjekai: testet på /norge (Mannheller) med scratchpad bruer/norge3d.js
+  (/api/kart videresendt til riksbrudd.vercel.app). VAKT i sjekk.js: modellene i scenen, søyler/landkar ikke over terrenget, dekket over
+  terrenget, vegene løftet, sprengt bru har gap uten veg i gapet.
