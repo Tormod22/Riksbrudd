@@ -402,7 +402,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
     const d3 = await pg.evaluate(() => ({ h: Math.round(hoyde3d(203188, 6922980)), n: R3.ut.N, bilder: R3.renderer.info.render.frame, trekanter: R3.renderer.info.render.triangles }));
     // førsteperson: «Gå», hold W et sekund, kameraet står i øyehøyde og har flyttet seg; Esc flyr opp igjen
-    await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y }));
+    await pg.click('#gaaknapp'); const f0 = await pg.evaluate(() => ({ på: !!R3.fot, x: R3.bane.x, y: R3.bane.y, iHus: hindring3d(R3.bane.x, R3.bane.y) }));
     // hold W til du har gått et stykke (myk start: på trege maskiner tar det flere rammer), høyst 8 s
     await pg.keyboard.down('w'); await pg.waitForFunction(f0 => Math.hypot(R3.bane.x - f0.x, R3.bane.y - f0.y) > .6, f0, { timeout: 8000 }).catch(() => {}); await pg.keyboard.up('w');
     const f1 = await pg.evaluate(() => { const c = R3.cam.position, u = R3.ut; return { x: R3.bane.x, y: R3.bane.y, over: c.z - (hoyde3d(u.cx + c.x, u.cy + c.y) - u.h0) * R3.EX }; });
@@ -414,8 +414,8 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     await pg.keyboard.down('Shift'); await pg.keyboard.down('w'); const løp = await pg.waitForFunction(() => Gange.kropp().løper && Gange.kropp().fart > 2.5, null, { timeout: 8000, polling: 'raf' }).then(() => true).catch(() => false);
     await pg.keyboard.up('w'); await pg.keyboard.up('Shift');
     await pg.keyboard.press('Escape'); const f2 = await pg.evaluate(() => !!R3.fot);
-    const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
-    console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}`);
+    const gå = Math.hypot(f1.x - f0.x, f1.y - f0.y), fok = f0.på && !f0.iHus && gå > .3 && Math.abs(f1.over - 1.7) < .3 && !f2 && hopp && løp; if (!fok) feil++;
+    console.log(`${fok ? 'ok  ' : 'FEIL'} ${navn} gå selv: gikk ${gå.toFixed(1)} m med W, øyehøyde ${f1.over.toFixed(2)} m, hopp: ${hopp}, løp: ${løp}, Esc flyr opp: ${!f2}, startet i hus: ${f0.iHus}`);
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); return Vakt3d.sjekk(await bygg3d(193300, 6896300, 900)); });
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;

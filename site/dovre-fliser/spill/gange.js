@@ -29,10 +29,17 @@
     const b = R3.bane; lagret = { avst: b.avst, pitch: b.pitch, x: b.x, y: b.y };
     if (valgt && Math.abs(valgt.x - R3.ut.cx) < R3.ut.S && Math.abs(valgt.y - R3.ut.cy) < R3.ut.S) { b.x = valgt.x - R3.ut.cx + 3; b.y = valgt.y - R3.ut.cy - 3; }   // ved siden av laget
     R3.fot = { a: b.yaw, pitch: -.05 }; b.avst = 1000;   // utsnittet rundt deg: ca. 3,4 km, skarpt kart nær
-    const u = R3.ut; kropp = Bevegelse.ny(b.x, b.y, hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0);
+    const u = R3.ut; ledig(u, b);
+    kropp = Bevegelse.ny(b.x, b.y, hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0);
     knapp.classList.add('på'); sist = performance.now(); mobilHuk = false; kb.classList.remove('på'); mk.classList.toggle('på', VW < 900);
     logg(VW < 900 ? 'Du går selv: styrespaken nede til venstre (helt ut = løp), dra ellers for å se rundt, «Hopp» og «Huk» nede til høyre. «Gå» flyr opp.'
       : 'Du går selv: W/A/S/D, Shift løper, mellomrom hopper, C på huk. Klikk i bildet for å styre med musa; Esc slipper musa, Esc igjen flyr opp.');
+  }
+  // Start aldri inne i et hus, et tre eller i vann: let utover i en spiral (høyst 60 m) til et sted der kroppen får plass
+  function ledig(u, b) {
+    const vann = vannVed(u), fri = (x, y) => !vann(x, y) && ![[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6]].some(([dx, dy]) => typeof hindring3d === 'function' && hindring3d(x + dx, y + dy));
+    if (fri(b.x, b.y)) return;
+    for (let r = 1; r <= 60; r++) for (let k = 0; k < 8 + r * 2; k++) { const v = k / (8 + r * 2) * 6.283, x = b.x + Math.cos(v) * r, y = b.y + Math.sin(v) * r; if (fri(x, y)) { b.x = x; b.y = y; return; } }
   }
   function stopp() {
     if (!r3() || !R3.fot) return; const b = R3.bane;
