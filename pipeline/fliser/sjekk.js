@@ -421,6 +421,7 @@ const VEGNETT = (() => { const m = fs.readFileSync(path.join(__dirname, '../../s
     const nt = await pg.evaluate(async () => {
       const S = VaerSpill.S, t0 = tid, ramme = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       Vaer.settÅrstid(S, 'vinter', tid); Vaer.låsVær(S, 'klart'); tid = 17 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
+      NATT.prøvShadere(R3);
       const H = NATT.himmel, natt = { stj: NATT.stjerner, synlig: !!(H && H.stjerner.visible && H.stjerner.parent), fase: NATT.måne && NATT.måne.fase, mørke: NATT.mørke, himmel: R3.himmelLys.intensity };
       tid = 7 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
       const dag = { stj: NATT.stjerner, synlig: H.stjerner.visible };

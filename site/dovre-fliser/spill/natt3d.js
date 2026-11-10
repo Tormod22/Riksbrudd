@@ -172,6 +172,9 @@
       if (h - lav > 25) continue; const x = -u.S + i * steg * u.steg, y = u.S - j * steg * u.steg; ut.push([x, y, h, Math.hypot(x, y) / u.S + rnd() * .6]); }
     return ut.sort((a, b) => a[3] - b[3]).slice(0, maks);
   }
+  // testene (sjekk.js): kompilerer vindusshaderen også der det ikke står hus (en shaderfeil logges som feil i nettleseren)
+  N.prøvShadere = R => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: vinduTekstur() })); vinduShader(m.material);
+    m.position.copy(R.cam.position); R.scene.add(m); R.renderer.compile(R.scene, R.cam); R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); return true; };
   let tåkeTex = null, poolTex = null, glødTex = null;
   KROKER.sett3d.push((u, R) => {
     if (!U.uStoy.value) { U.uStoy.value = støyTekstur(); U.uSkyFlytt.value = new THREE.Vector2(); U.uSentrum.value = new THREE.Vector2(); }
