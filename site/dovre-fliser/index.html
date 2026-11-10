@@ -1419,7 +1419,7 @@ function ryddHus(u) {
   const rens = (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
     for (let k = 0; k < data.length; k += steg) if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]);
     return ut.length === data.length ? data : Array.isArray(data) ? ut : new Float32Array(ut); };
-  if (u.trær) { u.trær.gran = rens(u.trær.gran, 5); u.trær.løv = rens(u.trær.løv, 5); }
+  if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = rens(u.trær[art], 5);
   if (u.smått) { u.smått.stein = rens(u.smått.stein, 5); u.smått.busk = rens(u.smått.busk, 5); }
   if (!u.husRute) u.husRute = hindringer({ hus: u.hus });
   u.hus.biler = rens(u.hus.biler, 5, true); u.hus.flagg = rens(u.hus.flagg, 4); if (u.lys) u.lys = rens(u.lys, 4);
