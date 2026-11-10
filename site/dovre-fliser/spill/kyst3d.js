@@ -31,6 +31,9 @@
     const vekk = (x, y) => k.naust.some(n => Math.hypot(n.x - x, n.y - y) < n.L / 2 + 2.5);
     const sil = (a, steg) => { if (!a || !a.length) return a; const ut = []; for (let q = 0; q < a.length; q += steg) if (!vekk(a[q], a[q + 1])) for (let i = 0; i < steg; i++) ut.push(a[q + i]); return ut.length === a.length ? a : Array.isArray(a) ? ut : new Float32Array(ut); };
     if (k.naust.length) { if (u.trær) for (const n of Object.keys(u.trær)) u.trær[n] = sil(u.trær[n], 5); if (u.smått) { u.smått.stein = sil(u.smått.stein, 5); u.smått.busk = sil(u.smått.busk, 5); } }
+    // sjø med minst 30 m til land (båtene som kjører rundt holder seg der; spill/ferje.js Ferje.kjør)
+    const R8 = [...Array(8)].map((_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
+    k.fri = (x, y) => Math.abs(x) < u.S - 80 && Math.abs(y) < u.S - 80 && sjø(x, y) && R8.every(([dx, dy]) => sjø(x + dx * 15, y + dy * 15) && sjø(x + dx * 30, y + dy * 30));
     u.kyst = k;
   });
 
@@ -80,7 +83,11 @@
         if (farget) { m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, liste.length) * 3), 3); liste.forEach((b, i) => m.setColorAt(i, new THREE.Color(...b.farge))); }
         m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.name = 'kyst3d'; R.scene.add(m); mesh.push(m); return { m, liste }; };
       båter = [del(skrog(), k.båter, true), del(dekk(), k.båter, false), del(hus(false), k.båter.filter(b => b.type === 'sjark'), false), del(hus(true), k.båter.filter(b => b.type === 'motorbåt'), false)];
-      gyng(0);
+      // noen få båter ute på sjøen kjører sakte rundt (2–6, mobil høyst 3; ingen i storm – da stopper de)
+      const frie = k.båter.filter(b => b.fri && k.fri(b.x, b.y)), n = window.Ferje ? Ferje.antallKjører(0, frie.length, tak(), Math.round(u.cx * 7 + u.cy)) : 0;
+      for (let i = 0; i < n; i++) { const b = frie[i]; let f = (Math.round(b.x * 13 + b.y * 7) >>> 0) % 2147483646 + 1;
+        Object.assign(b, { kjører: true, v: 0, vmål: b.type === 'motorbåt' ? 6 : b.type === 'sjark' ? 4 : 3, rnd: () => (f = (f * 16807) % 2147483647) / 2147483647 }); }
+      gyng(performance.now() / 1000);
     }
     // brygger, naust og bøyer: én geometri
     const G = ny();
@@ -109,15 +116,25 @@
     if (G.pos.length) { const m = new THREE.Mesh(geo(G), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); m.name = 'kyst3d'; R.scene.add(m); mesh.push(m); }
   });
 
-  // ---------- båtene gynger (ute på sjøen mer enn ved kai) ----------
-  const D = { o: null };
+  // ---------- båtene gynger etter vinden (ute på sjøen mer enn ved kai) og noen kjører rundt ----------
+  // Amplituden og takten følger Vind3d.VIND.fart (Ferje.gynging): stille = nesten ingenting, storm = kraftig. Fasen samles opp, så
+  // takten kan endre seg uten hopp. Båtene som kjører, får kjølvann (window.Kjølvann i spill/ferje3d.js) og løfter baugen litt.
+  const D = { o: null, fase: 0, t: null };
   function gyng(t) {
-    if (!båter) return; const o = D.o || (D.o = new THREE.Object3D());
-    for (const { m, liste } of båter) { for (let i = 0; i < liste.length; i++) { const b = liste[i], a = b.fri ? 1 : .35, f = t * (b.fri ? 1.1 : .8) + b.fase;
-        o.position.set(b.x, b.y, b.z + Math.sin(f) * .12 * a); o.rotation.set(Math.sin(f * .9) * .05 * a, Math.sin(f * .7 + 1) * .03 * a, b.a, 'ZYX'); o.scale.set(b.L, b.B, 1); o.updateMatrix(); m.setMatrixAt(i, o.matrix); }
+    if (!båter) return; const o = D.o || (D.o = new THREE.Object3D()), k = R3.ut && R3.ut.kyst;
+    const fart = (window.Vind3d && Vind3d.VIND && Vind3d.VIND.fart) || 0, G = window.Ferje ? Ferje.gynging : (f, fri) => ({ amp: fri ? 1 : .35, takt: 1 });
+    const gf = G(fart, true), gk = G(fart, false), dt = D.t == null ? 0 : Math.min(.5, Math.max(0, t - D.t)); D.t = t; D.fase += dt * gf.takt;
+    // båtene som kjører (storm: de stopper)
+    if (k && k.fri && window.Ferje) for (const b of k.båter) if (b.kjører) {
+      Ferje.kjør(b, dt, k.fri, b.rnd, fart >= 14);
+      const KV = window.Kjølvann; if (KV) { if (!b.spor || b.spor.gen !== KV.gen) b.spor = KV.nyttSpor(b.B * 1.3, 18);
+        KV.flytt(b.spor, b.x - Math.cos(b.a) * b.L * .45, b.y - Math.sin(b.a) * b.L * .45, b.z + .1, b.v, KV.nå()); }
+    }
+    for (const { m, liste } of båter) { for (let i = 0; i < liste.length; i++) { const b = liste[i], a = (b.fri ? gf : gk).amp, f = D.fase * (b.fri ? 1.1 : .8) + b.fase, baug = b.kjører ? -.05 * Math.min(1, b.v / 5) : 0;
+        o.position.set(b.x, b.y, b.z + Math.sin(f) * .12 * a); o.rotation.set(Math.sin(f * .9) * .05 * a, Math.sin(f * .7 + 1) * .03 * a + baug, b.a, 'ZYX'); o.scale.set(b.L, b.B, 1); o.updateMatrix(); m.setMatrixAt(i, o.matrix); }
       m.instanceMatrix.needsUpdate = true; }
   }
   let sist = 0;
-  KROKER.ramme3d.push(R => { if (!båter) return; const t = performance.now() / 1000; if (t - sist < (tak() ? .1 : .05)) return; sist = t; gyng(t); });
-  window.Kyst3d = { antall: () => { const k = typeof R3 !== 'undefined' && R3 && R3.ut && R3.ut.kyst; return k ? { båter: k.båter.length, brygger: k.brygger.length, naust: k.naust.length, bøyer: k.bøyer.length } : null; } };
+  KROKER.ramme3d.push(R => { if (!båter) return; const t = window.Kjølvann ? Kjølvann.nå() : performance.now() / 1000; if (t - sist < (tak() ? .1 : .05)) return; sist = t; gyng(t); });
+  window.Kyst3d = { steg: gyng, antall: () => { const k = typeof R3 !== 'undefined' && R3 && R3.ut && R3.ut.kyst; return k ? { båter: k.båter.length, brygger: k.brygger.length, naust: k.naust.length, bøyer: k.bøyer.length, kjører: k.båter.filter(b => b.kjører).length } : null; } };
 })();

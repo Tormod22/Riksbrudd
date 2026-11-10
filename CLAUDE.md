@@ -406,3 +406,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Målt i Bergen: storm ved sjøen rms 0,07 / topp 0,23, klart 0,016. VAKT i sjekk.js (8 kanaler, nivåer, knappen). Lydmåling: scratchpad
   norge/norge3d-lyd.js (Chromium med --autoplay-policy=no-user-gesture-required) og Lyd.sjekk().rms.
   GRUSVEGER (12. nov): småsteinene i vegTekstur er nå 1–4 cm (før 8–28 cm, så ut som brostein).
+  FERJER I RUTE OG KJØLVANN (12. nov, brukeren: «fortsett å forbedre» – mer liv på sjøen): spill/ferje.js (regler uten DOM, test_ferje.js:
+  lagRute – liggeplassen ved kaien, rett ut 40 m forbi baugen, så ferjelinja, Chaikin; reise/langs – akselerasjon 0,12, marsj 6,5 m/s, bremsing
+  0,1 m/s²; tilstand/stilling – vent 60–120 s ved hver kai (sanntid), A→B, vent, B→A, styrbord 22 m midt i sambandet, skroget snur aldri; kjør –
+  småbåter mot tilfeldige mål på sjøen minst 30 m fra land; gynging/antallKjører) + spill/ferje3d.js (KROKER.bygg3d/sett3d/ramme3d, S ≤ 2200):
+  ferjelinjer (INFRA.ferje) med begge ender inne i utsnittet og en ferjekai (u.kaier3d) i hver ende med plass til ferja; ferjemodellen er
+  Infra3d.ferjeGeo (trukket ut av byggKai i infra3d.js som ferjeModell/ferjeLengde) og kaiene i en rute får k.iRute (ingen dobbel ferje ved kai).
+  Samband over 2,5 km får to ferjer (en halv runde forskjøvet), tak 4 PC / 2 mobil. window.Kjølvann (nyttSpor/flytt): akterendens spor, to
+  firkanter per stykke – svake Kelvin-armer som brer seg ca. 0,33 × farten og hvit uro rett bak – additivt (lysner bare sjøen), tones ut og
+  dempes om natta (NATT.mørke). kyst3d.js: båtene gynger etter Vind3d.VIND.fart (Ferje.gynging; fasen samles opp), 2–6 av båtene ute på sjøen
+  kjører rundt med kjølvann (mobil høyst 3, stopper i storm ≥ 14 m/s). Ferje3d.T.ekstra hopper i ruteplanen, Ferje3d.forspol(sek) bygger opp
+  kjølvannet (skjermbilder). VAKT i sjekk.js (ingen ferjer på Dovre, kunstig kjølvann tegnes uten GL-feil); bilder: /norge, Mannheller–Fodnes.
