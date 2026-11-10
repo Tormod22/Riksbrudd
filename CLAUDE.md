@@ -379,3 +379,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Elektrisk = normalspor unntatt Nordlandsbanen og Rørosbanen (Claudes anslag, OSM-flisene har ikke «electrified»). VAKT i sjekk.js
   (jernbane i Dombås-utsnittet, elektrisk, 0 trær på sporet – bare når utveg-flisene er lastet; testserveren har dem ikke uten videre).
   Skjermbilder: scratchpad bilde3d-bane.js (som bilde3d.js, men henter også kart-utveg- fra den ekte siden). Ikke koblet til INFRA-bruene ennå.
+  KULTURLANDSKAPET (12. nov, brukeren: «legg til flere detaljer i hele Norge»): spill/gard3d.js (KROKER.bygg3d/sett3d/ramme3d, S ≤ 2200,
+  lastes etter dyr3d.js og bruker Dyr3d.lovlig: ikke i vann, på veg/asfalt, i tunet, i trær, i bekker eller i bratt ur). Dyrket mark =
+  terrengklasse 5 i lagVindu (32 m-ruter). Rundballer (hvit/grønn/svart plast, klynger på 3–9 i ca. 7 % av rutene) bare sommer og høst
+  (VAER.årstid); gjerder langs sidene der naboruta ikke er dyrket (grovt langs rutenettet, 30 % av kantene åpne): gjerdetypen per
+  400 m-rute (gård) – stolper med netting (alphaTest-tekstur), skigard (ca. 30 %) eller steingjerde (ca. 15 %). Alt fast via hash av
+  kartkoordinatene. InstancedMesh, tak PC 360 baller / 1600 gjerdebiter, mobil 120 / 700. Ingen kollisjon når du går. window.Gard3d
+  (punkter, antall); Vakt3d teller rundball/gjerde/skigard/steingjerde (i hus, svever). VAKT i sjekk.js: Dombås har rundballer og gjerder.
