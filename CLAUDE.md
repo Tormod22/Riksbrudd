@@ -363,3 +363,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   retningen ut av tunnelen er bort fra neste punkt; gang- og sykkeltunneler smalere. Ett samlet nett (MODELLER.samle). window.Portal3d.sjekk().
   (Vegskilt ved tettstedene ble prøvd og tatt ut: noen E-veglinjer i u.veger tegnes ikke som asfalt, så skiltet sto på jordet –
   utkastet ligger ikke i repoet.)
+  KYSTEN I 3D (12. nov, brukeren: «legg til flere detaljer i hele Norge»): spill/kyst.js (regler uten DOM, test_kyst.js) + spill/kyst3d.js
+  (KROKER.bygg3d/sett3d/ramme3d, bare S ≤ 2200). Sjø = vannmasken u.vann OG terreng under 1 moh. (innsjøer får ingenting). Kystpunkter i et
+  rutenett på 12 m i kartets meter med fast hash (samme sted gir samme ting): i tettsteder (INFRA.tettsted, Garnison.inni) flytebrygger 14–30 m
+  rett ut med båter langs begge sider og båter fortøyd langs kaia; utenfor tettstedene av og til naust (saltak, gavl med port mot sjøen, rødt/
+  hvitt/tjærebrunt, ikke i hus/på veg, trær ryddes) med en snekke utenfor; båter ute på sjøen (ingen land innen 40 m) og bøyer (land innen
+  45–90 m). Ingenting innen 90 m av ferjekaiene (u.kaier3d). Båtene (snekke, sjark med styrehus, motorbåt med kabin) er InstancedMesh med
+  fargen per båt, z = terrenget under båten (høyst 0,3 moh.), og gynger i ramme3d. Tak PC 260 båter/40 brygger/60 naust/40 bøyer, mobil 90/15/25/15.
+  window.Kyst3d.antall() teller. Ingen VAKT i sjekk.js (Dovre har ingen kyst) – testet med norge3d.js i Bergen og Reine.
