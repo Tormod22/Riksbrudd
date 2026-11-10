@@ -36,7 +36,7 @@
 
   // ---------- bygg3d: treslag ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
-    // window.VEG_AV = true: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
+    // bryteren VEG_AV på window slår dette av: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
     if (!u.trær || !u.trær.gran || window.VEG_AV) return;
     const kv = await lagVindu([u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], false, 9);
     const klasse = (X, Y) => { const a = Math.floor((X - kv.x0) / kv.r), c = Math.floor((kv.y0 - Y) / kv.r); return a >= 0 && c >= 0 && a < kv.w && c < kv.h ? kv.K[c * kv.w + a] : 255; };
