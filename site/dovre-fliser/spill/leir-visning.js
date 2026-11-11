@@ -142,6 +142,8 @@
     hode.appendChild(rad(knapp('Lagre leiren som mal', () => { const n = prompt('Navn på malen:', `Leir ${maler().length + 1}`); if (n === null) return; lagreMal(n); logg(`Malen «${n}» er lagret.`); visMeny(); }, (L.bygg.length || L.plan.length) ? {} : { disabled: '' })));
     maler().forEach((m, i) => hode.appendChild(rad(el('span', {}, `${m.navn} (${m.bygg.length} bygg)`),
       knapp('Sett inn', () => startMal(i)), knapp('Slett', () => { if (!confirm(`Slette malen «${m.navn}»?`)) return; const a = maler(); a.splice(i, 1); lagreMaler(a); visMeny(); }))));
+    // andre deler kan legge til sitt eget i menyen (LEIR_MENY: hode => void), f.eks. materialer fra verden (ressurser-visning.js)
+    for (const f of window.LEIR_MENY || []) try { f(hode); } catch (e) { console.error(e); }
     const liste = el('div', { klasse: 'liste' });
     for (const [id, B] of Object.entries(LB.BYGG)) {
       const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;

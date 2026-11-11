@@ -1078,7 +1078,7 @@ async function hus3d(u) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) {
       // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil; pusterom for nettleseren hvert 256. bygg
-      if (sett.has(o.e.i) || sett.size > 30000) continue;
+      if (sett.has(o.e.i) || sett.size > 30000 || (window.HUS_BORT && HUS_BORT.has(o.e.i))) continue;   // HUS_BORT: revet (spill/ressurser-visning.js)
       if ((sett.size & 255) === 255) await pusterom();
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
@@ -1323,7 +1323,7 @@ async function finnBygg(X, Y) {
   if (!LAGFILER || !LAGFILER.hus) return null;
   const z = 13, sp = span(z), x = Math.floor((X - G.x0) / sp), y = Math.floor((G.y0 - Y) / sp), t = await hentFlis('hus', z, x, y); if (!t || !t.hus) return null;
   const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096; let best = null, bd = 3;
-  for (const o of t.hus.obj) { const P = o.deler[0].map(([a, b]) => [minx + a * k, maxy - b * k]); let inn = false, d = Infinity;
+  for (const o of t.hus.obj) { if (window.HUS_BORT && HUS_BORT.has(o.e.i)) continue; const P = o.deler[0].map(([a, b]) => [minx + a * k, maxy - b * k]); let inn = false, d = Infinity;
     for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn;
       const vx = xi - xj, vy = yi - yj, l2 = vx * vx + vy * vy || 1, q = Math.max(0, Math.min(1, ((X - xj) * vx + (Y - yj) * vy) / l2)); d = Math.min(d, Math.hypot(xj + vx * q - X, yj + vy * q - Y)); }
     if (inn) return { o, P }; if (d < bd) { bd = d; best = { o, P }; } }
@@ -2033,7 +2033,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=6d2e871992"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=b35e9c2ba3"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=4cb95e78aa"></script>
@@ -2062,10 +2062,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=af895aee0c"></script>
-<script src="/dovre-fliser/spill/leir.js?v=37f4cf100d"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=70a8d53cbe"></script>
+<script src="/dovre-fliser/spill/leir.js?v=628aa22631"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=7d5012daaf"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=b9c3c8651f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=9bda766f8c"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=16aeeee31e"></script>
+<script src="/dovre-fliser/spill/ressurser.js?v=577dbe0269"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=13e6b5ff96"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9fad675c80"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>

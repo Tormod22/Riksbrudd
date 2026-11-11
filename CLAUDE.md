@@ -447,3 +447,16 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   For alle skjermer: navn/merker i 3D tegnes ikke under knappene og kompasset (window.UI_TOPP3D, klipp i tegn3d). Bilder: scratchpad
   mobilbilde.js (Playwright med isMobile/hasTouch, W/H/DPR, starter spillet). VAKT i sjekk.js (mobil: kompakt, statuslinja < 34 px,
   kildeteksten én linje, én fartsknapp; PC: som før). OBS: #panel beholder max-height 46vh (høyere panel dekket kartet i S5-testen).
+  MATERIALER FRA VERDEN (12. nov, brukeren valgte det i «et enda bedre byggesystem», del 3): spill/ressurser.js (regler uten DOM,
+  test_ressurser.js) + ressurser-visning.js. Hogst (rundt felt 20/35/50 m med ujevn kant, Ressurser.kant/iFelt; tre etter andelen skog i
+  32 m-rutene, 0,012 m³/m²) og riving av forlatte hus (husomrissene via finnBygg; tre/betong/stål etter type og størrelse, husUtbytte;
+  over 3000 m² avvises) innen 3 km fra leiren. Arbeidet: folk på 'hogst'/'riving' (window.Folk, uten Folk 2 på hver), jobbene i kø per
+  slag; materialene legges i en haug som fraktes av folk på 'frakt' til fots (0,15 m³ per tur) eller av en lastebil (k.oppdrag type
+  'ressurs', turer til haugen er tom; KJ_TEKST). Innen 150 m rett i lageret. Leir.leggInn(L, type, mengde) (nederst i leir.js) har
+  lagerplassen som tak; fullt lager = resten venter. Lagres i «riksbrudd-ressurser» (fjernes ved «Nytt spill»): R.hogd (felt, også
+  avbrutte med andel) og R.revet (i, P). Kroker: LEIR_MENY (ny, i leir-visning.js visMeny), window.HUS_BORT (Set av revne hus-id-er –
+  hus3d og finnBygg i index.html hopper over dem). 3D: trærne i feltet forsvinner etter framdriften (fast hash per tre; ryddHogst nuller
+  matrisene som ryddTrær), stubber (InstancedMesh), hogstflate og grus malt i bakken, ruin (brutt grunnmur + steinhaug, ett nett) og
+  tømmerstabel ved haugene; et ferdig revet hus bygger utsnittet på nytt (nytt3dUtsnitt). 2D: hogstfelt med stubber, ruiner over
+  husene i kartflisene, haugene. VAKT i sjekk.js (2D: panel, hogst/riving gir materialer, huskes, lagring; 3D: ingen trær i hogd felt,
+  stubber, revet hus borte fra hus3d, ruin). Grus/stein (steinbrudd) er ikke laget.
