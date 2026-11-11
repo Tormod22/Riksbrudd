@@ -1880,9 +1880,12 @@ function tegn3d() {
   if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // navn og merker tegnes ikke oppe under knappene og kompasset (spill/kompakt.js setter UI_TOPP3D)
+  const klipp = window.UI_TOPP3D || 0; if (klipp) { g.save(); g.beginPath(); g.rect(0, klipp, VW, VH); g.clip(); }
   tegnInfra3d(g);
   for (const f of KROKER.tegn3d) f(g, proj3, mPer3);
   tegnLag(g, proj3, mPer3);
+  if (klipp) g.restore();
   tegnHud();
 }
 async function slå3d(på) {
@@ -2030,7 +2033,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=52202d7f2f"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=6d2e871992"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=4cb95e78aa"></script>
@@ -2076,5 +2079,6 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bane3d.js?v=d564330830"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
+<script src="/dovre-fliser/spill/kompakt.js?v=d87925d6e6"></script>
 </body>
 </html>
