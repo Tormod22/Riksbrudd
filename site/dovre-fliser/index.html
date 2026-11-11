@@ -62,7 +62,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
     <div><b id="sH">–</b> <span>moh.</span></div>
     <div><b id="sKB">0</b> <span id="sReq">lastet</span></div>
   </div>
-  <div class="knapper"><button id="v3d" aria-pressed="false" title="3D-terreng">3D</button><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button></div>
+  <div class="knapper"><button id="v3d" aria-pressed="false" title="3D-terreng">3D</button><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button><button id="sp4" title="600 ganger fart: 10 spilltimer per minutt">600×</button></div>
 </div>
 <div id="lagmeny"></div>
 <div id="logg" aria-live="polite"></div>
@@ -1987,7 +1987,7 @@ for (const n of Object.keys(NAVN)) {
   lk.appendChild(b);
 }
 document.getElementById('meny').onclick = function () { const på = lk.classList.toggle('på'); this.setAttribute('aria-expanded', String(på)); this.classList.toggle('på', på); };
-[['sp0', 0], ['sp1', 1], ['sp2', 10], ['sp3', 60]].forEach(([id, v]) => { document.getElementById(id).onclick = () => { tempo = v;
+[['sp0', 0], ['sp1', 1], ['sp2', 10], ['sp3', 60], ['sp4', 600]].forEach(([id, v]) => { document.getElementById(id).onclick = () => { tempo = v;
   for (const b of document.querySelectorAll('[id^=sp]')) b.classList.toggle('på', b.id === id); }; });
 document.getElementById('lukk').onclick = () => { valgt = null; modus = null; visPanel(); skitten = true; };
 window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
@@ -2033,7 +2033,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=6d2e871992"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=0bade696bd"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=4cb95e78aa"></script>
@@ -2079,6 +2079,6 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bane3d.js?v=d564330830"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
-<script src="/dovre-fliser/spill/kompakt.js?v=e8de9c85bc"></script>
+<script src="/dovre-fliser/spill/kompakt.js?v=482b12147c"></script>
 </body>
 </html>

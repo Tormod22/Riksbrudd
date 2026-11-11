@@ -480,9 +480,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT kompakt skjerm (spill/kompakt.js, 12. nov, brukeren: «Dette er ikke god nok UI» om iPhone på tvers): på mobil én rad status,
     // kildeteksten på én linje og fartsknappene som én knapp; på PC som før
     const ko = await pg.evaluate(() => { const k = Kompakt.sjekk(), h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : -1; };
-      const synlige = ['sp1', 'sp2', 'sp3'].filter(id => { const e = document.getElementById(id); return e && e.offsetParent !== null; }).length;
+      const synlige = ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => { const e = document.getElementById(id); return e && e.offsetParent !== null; }).length;
       return { kort: k.kort, stats: h('.stats'), kilde: h('#kilde'), fart: synlige, mobil: VW < 900 }; });
-    const kook = ko.mobil ? (ko.kort && ko.stats > 0 && ko.stats < 34 && ko.kilde < 22 && ko.fart === 1) : (!ko.kort && ko.fart === 3); if (!kook) feil++;
+    const kook = ko.mobil ? (ko.kort && ko.stats > 0 && ko.stats < 34 && ko.kilde < 22 && ko.fart === 1) : (!ko.kort && ko.fart === 4); if (!kook) feil++;
     console.log(`${kook ? 'ok  ' : 'FEIL'} ${navn} kompakt skjerm: ${ko.kort ? 'kompakt' : 'vanlig'}, statuslinja ${ko.stats} px, kildeteksten ${ko.kilde} px, ${ko.fart} fartsknapp(er) synlig`);
     // VAKT lyd (spill/lyd.js, 12. nov): lydmotoren starter (8 kanaler) og regner ut nivåer i 3D uten feil; ☰ har «Lyd»
     const ly = await pg.evaluate(async () => { Lyd.start(); await new Promise(r => { let k = 0; const f = () => (++k > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });

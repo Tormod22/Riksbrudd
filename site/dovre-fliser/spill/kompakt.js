@@ -2,7 +2,7 @@
 // KOMPAKT SKJERM (12. nov, brukeren med skjermbilde fra iPhone på tvers: «Dette er ikke god nok UI»). På lave skjermer (under 560 px høyde,
 // f.eks. telefon liggende) ble statuslinja to rader, knapperaden og minikartet tok halve bildet, minikartet lå oppå Huk/Hopp og
 // kildeteksten dekket nederste tredjedel. body.kort gir da:
-//  - én tynn rad øverst: status (kort, uten «lastet»), knapper i mindre størrelse, fartsknappene som én knapp som blar 1× → 10× → 60× → 1×;
+//  - én tynn rad øverst: status (kort, uten «lastet»), knapper i mindre størrelse, fartsknappene som én knapp som blar 1× → 10× → 60× → 600× → 1×;
 //  - minikartet lite oppe til høyre under knappene, loggen oppe til venstre, zoomknappene små nede til høyre, Huk/Hopp ved siden av dem;
 //  - kildeteksten som én kort linje «Kilder ⓘ» (trykk viser hele);
 //  - avstand til kanten der telefonen har kamera/avrundede hjørner (env(safe-area-inset-*));
@@ -18,7 +18,7 @@ body.kort .stats b{ font-size:14.5px; } body.kort .stats span{ font-size:11.5px;
 body.kort .stats .ikke-kort, body.kort #sAar{ display:none; } body.kort .stats::-webkit-scrollbar{ display:none; }
 body.kort .knapper{ flex:none; flex-wrap:nowrap; gap:3px; }
 body.kort .knapper button{ height:31px; min-width:31px; padding:0 7px; font-size:13.5px; }
-body.kort .knapper #sp1:not(.på), body.kort .knapper #sp2:not(.på), body.kort .knapper #sp3:not(.på){ display:none; }
+body.kort .knapper #sp1:not(.på), body.kort .knapper #sp2:not(.på), body.kort .knapper #sp3:not(.på), body.kort .knapper #sp4:not(.på){ display:none; }
 body.kort #kompass{ top:calc(var(--topp,44px) + 3px); }
 body.kort #minikart{ right:calc(8px + ${Rt}); left:auto; top:calc(var(--topp,44px) + 8px); bottom:auto; width:104px; height:104px; }
 body.kort #minikart button{ width:26px; height:26px; right:-5px; top:-5px; font-size:11px; }
@@ -52,8 +52,8 @@ body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); 
   // statusfelt som ikke trengs på en lav skjerm: hvor mye som er lastet
   const kb = document.getElementById('sKB'); if (kb && kb.parentElement) kb.parentElement.classList.add('ikke-kort');
 
-  // fartsknappene: på en lav skjerm vises bare den valgte, og et trykk går videre til neste (1× → 10× → 60× → 1×)
-  const fart = ['sp1', 'sp2', 'sp3'].map(id => document.getElementById(id)).filter(Boolean); let blar = false;
+  // fartsknappene: på en lav skjerm vises bare den valgte, og et trykk går videre til neste (1× → 10× → 60× → 600× → 1×)
+  const fart = ['sp1', 'sp2', 'sp3', 'sp4'].map(id => document.getElementById(id)).filter(Boolean); let blar = false;
   fart.forEach((b, i) => b.addEventListener('click', e => {
     if (blar || !document.body.classList.contains('kort') || !b.classList.contains('på')) return;
     e.stopImmediatePropagation(); blar = true; fart[(i + 1) % fart.length].click(); blar = false;
