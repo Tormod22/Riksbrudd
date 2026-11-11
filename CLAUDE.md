@@ -454,7 +454,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   dekket: 0 bakken, 1 mellom etasjene eller tak over 1. etasje, 2 tak over 2.), vegger/forsvar på en kant (a 'x'/'y', n = etasjen).
   Støtte: ingen svevende deler (vegg i 2. etasje på vegg eller gulv, dekke på en vegg eller et nabodekke). Dør/port bytter ut veggen i
   1. etasje, vindu den øverste hele veggen; ellers neste ledige etasje («Etasje: auto/1/2»). To trykk = rad (gulv/tak: rektangel; vegger:
-  linje, eller rundt rektangelet ved to hjørner); ferdige hus (hytte, brakke, betongbu) og «Riv». Delene bygges med Leir.bygg som jobber for
+  linje, eller rundt rektangelet ved to hjørner; med mus følger raden pekeren etter første trykk, i 3D treffer trykket også veggene); ferdige hus (hytte, brakke, betongbu) og «Riv». Delene bygges med Leir.bygg som jobber for
   byggelagene; kanBygge hopper over overlapp mellom deler (leir.js, del: true), men ikke mot vanlige bygg, hus og vann. rom(): lukkede rom
   (gulv, vegger rundt, tak over) med dør = «egenbygd brakke» med 1 seng per 8 m² (Leir.plasser er utvidet; window.Byggesett.rom() for Folk).
   3D: fem samlede nett (tre/betong/murstein/tak med teksturer laget i koden, og resten med hjørnefarger), rødmalt kledning med hvite hjørner,

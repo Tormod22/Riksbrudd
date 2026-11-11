@@ -172,14 +172,23 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   KROKER.trykk.unshift(trykk); KROKER.trykk3d.unshift((X, Y) => { if (!V.åpen) return false; const p = pek3d(); return trykk(p ? p[0] : X, p ? p[1] : Y); });
   // i 3D treffer trykket også delene (en vegg eller et tak), ikke bare bakken: siste pekerposisjon over 3D-lerretet
   let sistPek = null; window.addEventListener('pointerup', e => { sistPek = [e.clientX, e.clientY]; }, true);
-  function pek3d() {
-    const R = r3(); if (!R || !R.ut || !sistPek || !mesh.length) return null; const r = R.c3.getBoundingClientRect();
-    R.ray.setFromCamera(new THREE.Vector2((sistPek[0] - r.left) / r.width * 2 - 1, -(sistPek[1] - r.top) / r.height * 2 + 1), R.cam);
+  function pek3d(pek = sistPek, medBakken) {
+    const R = r3(); if (!R || !R.ut || !pek || (!mesh.length && !medBakken)) return null; const r = R.c3.getBoundingClientRect();
+    R.ray.setFromCamera(new THREE.Vector2((pek[0] - r.left) / r.width * 2 - 1, -(pek[1] - r.top) / r.height * 2 + 1), R.cam);
     const hit = R.ray.intersectObjects([R.mesh, ...mesh])[0]; if (!hit) return null;
     // litt inn i veggen (punktet på veggflaten ligger en halv veggtykkelse fra kanten)
     const n = hit.face ? hit.face.normal : null, inn = n && Math.abs(n.z) < .5 ? .1 : 0;
     return [R.ut.cx + hit.point.x - (n ? n.x * inn : 0), R.ut.cy + hit.point.y - (n ? n.y * inn : 0)];
   }
+  // med mus: etter første trykk følger raden pekeren (som å dra en linje) til du trykker igjen
+  let svev = 0;
+  window.addEventListener('pointermove', e => {
+    if (!V.åpen || !A || B || V.fane === 'hus' || e.pointerType !== 'mouse' || e.buttons || performance.now() - svev < 150) return;
+    const p3 = typeof på3d !== 'undefined' && på3d, mål = e.target && e.target.id; if (mål !== (p3 ? 'c3' : 'c') && !(p3 && mål === 'c3o')) return;
+    let P = null; if (p3) P = pek3d([e.clientX, e.clientY], true); else { const r = cv.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top; P = [kam.x + (cx - VW / 2) * kam.m, kam.y - (cy - VH / 2) * kam.m]; }
+    // oppdater() leser B før den venter på kartet: B settes bare så lenge forslaget regnes ut
+    if (!P || Math.hypot(P[0] - A[0], P[1] - A[1]) < G * .6) return; svev = performance.now(); B = P; oppdater(); B = null;
+  }, { passive: true });
   window.addEventListener('keydown', e => {
     if (!V.åpen || (r3() && R3.fot) || /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) return;
     const k = e.key.toLowerCase();
