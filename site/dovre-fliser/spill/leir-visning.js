@@ -115,6 +115,8 @@
       const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l drivstoff for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); });
     kjøp.disabled = kap - L.drivstoff < 1;
     const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp));
+    // folket og oppgavene (spill/folk-visning.js)
+    if (window.FolkSpill) hode.appendChild(FolkSpill.menyRad());
     // materialene: lager og kjøp
     hode.appendChild(el('h3', {}, `Materialer (lager ${plass} av hvert)`));
     for (const [k, M] of Object.entries(LB.MATERIALER)) {
@@ -124,7 +126,7 @@
     }
     // byggelag og køen
     const J = LB.jobber(L), lag = LB.byggelag(L);
-    hode.appendChild(el('h3', {}, `Byggelag: ${lag} (ett + ett per brakke)`));
+    hode.appendChild(el('h3', {}, L.folk ? `Byggelag: ${lag} (to på «bygg» = ett lag)` : `Byggelag: ${lag} (ett + ett per brakke)`));
     J.forEach((j, i) => hode.appendChild(el('div', { klasse: 'igang' }, `${LB.BYGG[j.b.type].navn} ${HVA[j.hva]} – ` + (i < lag ? `${Math.round(LB.framdrift(j.b) * 100)} % (${tidTekst(j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen)} igjen)` : 'venter i kø'))));
     if (!J.length) hode.appendChild(el('div', { klasse: 'igang' }, 'Ingen jobber.'));
     // planen: gratis skisser, hva de koster, bygg alle, angre, maler
