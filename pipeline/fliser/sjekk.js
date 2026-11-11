@@ -421,6 +421,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           // menyen kan blas i: plassen holdes når den tegnes på nytt (brukeren 11. nov: «lar meg ikke bla ned»)
           const meny = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); lk.click(); meny.scrollTop = 250; const før = meny.scrollTop; lk.click(); lk.click();
           r.k2.bla = før > 100 && Math.abs(meny.scrollTop - før) < 2; lk.click();
+          // FOLK (12. nov): ti personer, byggelagene fra folk på «bygg», panelet fra Leir-menyen med − / + per oppgave, vakttårn gir sikt
+          { const fo = { antall: Folk.liste().length, bygg: Folk.arbeidere('bygg'), lag: Leir.byggelag(L), lagret: !!(Leir.fraJSON(localStorage.getItem('riksbrudd-k2')) || {}).folk };
+            lk.click(); const fk = document.getElementById('folkknapp'); if (fk) fk.click(); const fm = document.getElementById('folkmeny');
+            fo.åpen = fm.classList.contains('på') && !meny.classList.contains('på'); fo.rader = fm.querySelectorAll('.opp').length;
+            const v0 = Folk.arbeidere('vakt'); fm.querySelector('button.pluss[data-o="vakt"]').click(); fo.pluss = Folk.arbeidere('vakt') - v0;
+            fm.querySelector('button.minus[data-o="vakt"]').click(); fo.minus = Folk.arbeidere('vakt') - v0;
+            const F = FolkSpill.tilstand(), byggere = F.personer.filter(p => p.oppgave === 'bygg'); byggere.forEach(p => { p.oppgave = 'fri'; }); fo.ingenLag = Leir.byggelag(L); byggere.forEach(p => { p.oppgave = 'bygg'; });
+            const rb = fm.getBoundingClientRect(); fo.innenfor = rb.left >= 0 && rb.right <= innerWidth + 1 && rb.bottom <= innerHeight + 1 && rb.height > 100;
+            fo.mangler = fm.querySelectorAll('.mangler').length;
+            // vakttårn med vakt: et eget lag ved tårnet ser 25 % lenger; uten vakt ingen forskjell
+            const s = ENHETER.find(e => e.side === 'blå' && !e.karakter), sx = s.x, sy = s.y; s.x = LX - 90; s.y = LY - 90; const k0 = KROKER.sikt.reduce((v, f) => v * f(s), 1);
+            const vt = { id: 99999, type: 'vakttårn', x: LX - 100, y: LY - 100, ret: 0, igjen: 0, totalt: 60, hp: 1, nivå: 1, arbeid: null, mat: {}, pris: 5e6 }; L.bygg.push(vt);
+            sim(.1); await new Promise(r => setTimeout(r, 1100)); sim(.1); fo.sikt = Math.round(KROKER.sikt.reduce((v, f) => v * f(s), 1) / k0 * 100) / 100;
+            L.bygg = L.bygg.filter(b => b !== vt); s.x = sx; s.y = sy; await new Promise(r => setTimeout(r, 1100)); sim(.1);
+            fo.kjøkken = !!(Leir.BYGG.kjøkken && window.MODELLER && MODELLER.kjøkken);
+            FolkSpill.åpne(false); r.folk = fo; }
           // K3 kontrollrommet: gå inn, lag uten radiokontakt vises ikke der de er, lag med kontakt melder seg, ute bare «sist meldt»
           const KS = KontrollromSpill, deg = KS.deg(), krom = L.bygg.find(b => b.type === 'kontrollrom'), blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter);
           deg.x = krom.x; deg.y = krom.y; const inn = KS.gåInn(), mInne = KS.modus();
@@ -440,6 +456,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
         console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
+        const fo = k1.folk || {}, fook = fo.antall === 10 && fo.bygg === 4 && fo.lag === 2 && fo.lagret && fo.åpen && fo.rader === 9 && fo.pluss === 1 && fo.minus === 0 && fo.ingenLag === 0 && fo.innenfor && fo.sikt === 1.25 && fo.kjøkken;
+        if (!fook) { feil++; console.log(JSON.stringify(fo)); }
+        console.log(`${fook ? 'ok  ' : 'FEIL'} ${navn} folk: ${fo.antall} personer, ${fo.bygg} på bygg = ${fo.lag} byggelag (0 uten byggere), lagret i leiren, panelet fra Leir-menyen (${fo.rader} oppgaver, + og − virker, innenfor skjermen, ${fo.mangler} ting mangler), bemannet vakttårn gir sikt ×${fo.sikt}, kjøkken finnes`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
           && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }

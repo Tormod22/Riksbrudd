@@ -257,7 +257,8 @@
     return { lagt, feil };
   }
   // ---------- tid, strøm og drivstoff ----------
-  const byggelag = L => 1 + L.bygg.filter(b => b.type === 'brakke' && virker(b)).length;
+  // byggelagene: fra folket på oppgaven «bygg» når leiren har folk (spill/folk.js setter folkLag/folkTempo), ellers ett + ett per brakke
+  const byggelag = L => { const n = api.folkLag ? api.folkLag(L) : null; return n === null || n === undefined ? 1 + L.bygg.filter(b => b.type === 'brakke' && virker(b)).length : n; };
   // Jobbene i køen (ny bygging, oppgradering, flytting, reparasjon) i den rekkefølgen de ble bestilt
   function jobber(L) {
     const j = [];
@@ -266,10 +267,10 @@
   }
   // Ett steg på dt spillminutter. sol: 0–1. Gir { prod, behov, mangler: Set av id-er uten strøm, liter, nyFerdig: [bygg], ferdigArbeid: [[bygg, hva]] }
   function steg(L, dt, sol = 1) {
-    const nyFerdig = [], ferdigArbeid = [], J = jobber(L), aktive = J.slice(0, byggelag(L));
+    const nyFerdig = [], ferdigArbeid = [], J = jobber(L), aktive = J.slice(0, byggelag(L)), fart = api.folkTempo ? api.folkTempo(L) : 1, db = dt * fart;
     for (const { b, hva } of aktive) {
-      if (hva === 'bygg') { b.igjen = Math.max(0, b.igjen - dt); if (b.igjen === 0) nyFerdig.push(b); }
-      else { b.arbeid.igjen = Math.max(0, b.arbeid.igjen - dt);
+      if (hva === 'bygg') { b.igjen = Math.max(0, b.igjen - db); if (b.igjen === 0) nyFerdig.push(b); }
+      else { b.arbeid.igjen = Math.max(0, b.arbeid.igjen - db);
         if (b.arbeid.igjen === 0) { if (hva === 'oppgrader') b.nivå = (b.nivå || 1) + 1; if (hva === 'reparer') b.hp = 1; ferdigArbeid.push([b, hva]); b.arbeid = null; } }
     }
     const klare = L.bygg.filter(virker), agg = klare.filter(b => b.type === 'aggregat'), sc = klare.filter(b => b.type === 'solcelle');

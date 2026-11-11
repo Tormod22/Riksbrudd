@@ -447,3 +447,17 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   For alle skjermer: navn/merker i 3D tegnes ikke under knappene og kompasset (window.UI_TOPP3D, klipp i tegn3d). Bilder: scratchpad
   mobilbilde.js (Playwright med isMobile/hasTouch, W/H/DPR, starter spillet). VAKT i sjekk.js (mobil: kompakt, statuslinja < 34 px,
   kildeteksten én linje, én fartsknapp; PC: som før). OBS: #panel beholder max-height 46vh (høyere panel dekket kartet i S5-testen).
+  FOLK (12. nov, brukeren: «et enda bedre byggesystem» – «dele inn folk til å bygge» og «bygg som betyr noe»; del 1 av tre): spill/folk.js
+  (regler uten DOM, test_folk.js) + folk-visning.js. Gjengen starter med ti personer (norske navn, alder, yrke før kollapsen, ferdighet
+  0,7–1,45 per oppgave, lojalitet, helse), lagret i leiren (L.folk i «riksbrudd-k2»; gamle leirer får folk ved start). Oppgavene (i denne
+  rekkefølgen): bygg, hogst, riving, frakt, vakt, kjøkken, stell, verksted, fri. Byggelagene i leir.js kommer fra folk på «bygg» (to = ett lag,
+  ett med én person går halvt så fort; Leir.folkLag/folkTempo, uten folk som før). Behov: senger (brakker; Byggesett.rom() teller med hvis den
+  finnes), mat (1 rasjon per person per døgn, 1,2 om vinteren; drivhus 3/døgn, kjøp 3000 kr/rasjon, bemannet kjøkken = 15 % mindre svinn og
+  varm mat), varme (vinter: 0,5 m³ ved eller 50 l drivstoff per åtte personer per døgn, halvt vår/høst), helse (sult og kulde tærer, stell
+  og sykestue leger), moral (glir 4 poeng per spilltime mot et mål fra behovene; under 25 et døgn: den minst lojale går). Syke (< 40 % helse)
+  arbeider ikke. Tempo = ferdighet × moral × søvn × helse (0–1,5). Bygg som betyr noe: nytt bygg kjøkken (MODELLER.kjøkken i folk-visning.js),
+  vakttårn med vakt gir egne lag innen 150 m sikt ×1,25 (KROKER.sikt) og treff ×1,2 innen 100 m (KROKER.ild), vaktene ser fiender nær leiren
+  (KROKER.ser, 400–800 m) og melder dem; sandsekkvoll: lag innen 15 m tar treff ×0,6; verksted med folk reparerer byggene og lager stål;
+  sykestue med folk på «stell» leger sårede soldater i lag innen 150 m. Panelet «Folk» fra Leir-menyen (#folkknapp; #folkmeny, − / + per
+  oppgave, hva som mangler, kjøp mat, rekrutter 500 000 kr når det er ledig seng; kortere status på telefon). window.Folk (arbeidere, tempo,
+  liste, moral, byggelag) er avtalen med byggesett og materialer. Tallene er Claudes forslag. VAKT i sjekk.js («folk»). Bilder: scratchpad folk/folkbilde.js.
