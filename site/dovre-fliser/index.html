@@ -901,13 +901,16 @@ function detaljIBakken(mat, side) {
       // helt nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»): finere korn (ca. 0,7 m) og småstein/torver (ca. 0,8 m per rute) som ikke følger kartbildet,
       // og i grønt litt lysere og mørkere gress og gule strå, så bakken ser skarp ut der kartbildet bare er noen meter per punkt
       float naer = 1.0 - smoothstep(6.0, 90.0, detAvst);
+      // (ytelse 12. nov: resten av bildet slipper de fem oppslagene under – bakken var den tyngste delen å tegne)
+      if (naer > 0.0) {
       float k2 = texture2D(detalj, vUv * detaljSkala * 4.7 + vec2(0.31, 0.17)).r, k3 = texture2D(detalj, vUv * detaljSkala * 4.1 + vec2(0.71, 0.43)).b;
       float k4 = texture2D(detalj, vUv * detaljSkala * 1.9 + vec2(0.13, 0.59)).g;
       float veg = clamp((diffuseColor.g - diffuseColor.b) * 5.0, 0.0, 1.0);
       float k5 = texture2D(straa, vUv * detaljSkala * 3.0 + vec2(0.53, 0.29)).r, k6 = texture2D(detalj, vUv * detaljSkala * 7.3 + vec2(0.11, 0.83)).r;
       vec3 naerF = diffuseColor.rgb * (0.8 + 0.4 * k2) * mix(0.72 + 0.46 * k3, (0.7 + 0.55 * k5) * (0.85 + 0.3 * k6), veg);
       naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
-      diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));`);
+      diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));
+      }`);
   };
 }
 // Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
@@ -918,7 +921,7 @@ async function bygg3d(cx, cy, S) {
   const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
-  const TW = VW >= 900 && S <= 1700 && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
+  const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
@@ -1605,7 +1608,7 @@ function gressTekstur() {
 }
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
-  const nær = R.fot || R.bane.avst < 110, c = R.cam.position;
+  const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
   if (!nær) { if (R.gressMesh) R.gressMesh.visible = false; return; }
   if (!R.gressMesh) { const MAKS = VW < 700 ? 5000 : 12000, g1 = new THREE.PlaneGeometry(1, 1); g1.rotateX(Math.PI / 2); g1.translate(0, 0, .5);
     const g2 = g1.clone(); g2.rotateZ(Math.PI / 2); const pos = new Float32Array([...g1.attributes.position.array, ...g2.attributes.position.array]), uv = new Float32Array([...g1.attributes.uv.array, ...g2.attributes.uv.array]);
@@ -1615,7 +1618,7 @@ function gress3d() {
   const m = R.gressMesh; m.visible = true;
   if (R.gressSenter && Math.hypot(c.x - R.gressSenter[0], c.y - R.gressSenter[1]) < 12) return;
   R.gressSenter = [c.x, c.y];
-  const MAKS = m.instanceMatrix.count, RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
+  const MAKS = Math.round(m.instanceMatrix.count * (window.KVAL ? KVAL.p.gress : 1)), RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
   const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), .75), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
@@ -1841,12 +1844,12 @@ function lodTrær(R) {
   R.lodVed = [c.x, c.y, c.z]; R.lodDir = [dir.x, dir.y, dir.z]; R.lodAsp = R.cam.aspect;
   F.cam.copy(R.cam); F.cam.fov = Math.min(170, R.cam.fov * 1.4); F.cam.near = .1; F.cam.updateProjectionMatrix(); F.cam.updateMatrixWorld();
   F.fr.setFromProjectionMatrix(F.m.multiplyMatrices(F.cam.projectionMatrix, F.cam.matrixWorldInverse)); const sf = F.s;
-  const G2 = (VW < 700 ? 170 : 260) ** 2;
+  const kt = window.KVAL ? KVAL.p.tre : 1, G2 = ((VW < 700 ? 170 : 260) * kt) ** 2;
   for (const t of R.treLOD) { let a = 0, b = 0; const NM = t.nær.instanceMatrix.array, FM = t.fjern.instanceMatrix.array, NC = t.nær.instanceColor.array, FC = t.fjern.instanceColor.array;
     for (let k = 0; k < t.n; k++) { const dx = t.data[k * 5] - c.x, dy = t.data[k * 5 + 1] - c.y, dz = t.data[k * 5 + 2] - c.z;
       const d2 = dx * dx + dy * dy + dz * dz, h = t.data[k * 5 + 3];
       sf.center.set(t.data[k * 5], t.data[k * 5 + 1], t.data[k * 5 + 2] + h * .5); sf.radius = h * .7 + 4; if (!F.fr.intersectsSphere(sf)) continue;
-      if (d2 < (t.G2 || G2)) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
+      if (d2 < (t.G2 ? t.G2 * kt * kt : G2)) { NM.set(t.M.subarray(k * 16, k * 16 + 16), a * 16); NC.set(t.C.subarray(k * 3, k * 3 + 3), a * 3); a++; continue; }
       // langt unna er trærne bare prikker: halvparten fra 6 × detaljavstanden, en firedel fra 12 × (fast utvalg per tre)
       const frø = (t.data[k * 5 + 4] * 7.31) % 1; if ((d2 > 36 * G2 && frø > .5) || (d2 > 144 * G2 && frø > .25)) continue;
       { FM.set(t.M.subarray(k * 16, k * 16 + 16), b * 16); FC.set(t.C.subarray(k * 3, k * 3 + 3), b * 3); b++; } }
@@ -1858,11 +1861,12 @@ function lodTrær(R) {
 // lett (under 17 ms), heves den igjen. R3.skala og R3.pr viser hva som brukes (ytelsesmåleren og testene).
 function størrelse3d(R) {
   const nå = performance.now(), dt = R.sistRamme ? nå - R.sistRamme : 16; R.sistRamme = nå;
-  R.rammeSnitt = (R.rammeSnitt || 16) * .95 + Math.min(200, dt) * .05;
+  // pausene (tegning fire ganger i sekundet når ingenting rører seg) teller ikke: de er ikke trege bilder
+  if (dt < 240) R.rammeSnitt = (R.rammeSnitt || 16) * .95 + Math.min(200, dt) * .05;
   if (!R.skala) R.skala = 1;
   if (!R.skalaVed || nå - R.skalaVed > 1500) { R.skalaVed = nå;
     if (R.rammeSnitt > 28 && R.skala > .6) R.skala = Math.max(.6, R.skala - .1); else if (R.rammeSnitt < 17 && R.skala < 1) R.skala = Math.min(1, R.skala + .1); }
-  const pr = Math.round(Math.min(window.devicePixelRatio || 1, VW < 900 ? 1.25 : 1.5) * R.skala * 20) / 20;
+  const kp = window.KVAL ? KVAL.p.pr : [1.5, 1.25], pr = Math.round(Math.min(window.devicePixelRatio || 1, VW < 900 ? kp[1] : kp[0]) * R.skala * 20) / 20;
   if (pr !== R.pr || VW !== R.prW || VH !== R.prH) { R.pr = pr; R.prW = VW; R.prH = VH; R.renderer.setPixelRatio(pr); R.renderer.setSize(VW, VH, false); }
 }
 function tegn3d() {
@@ -2026,7 +2030,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=8cef6fd716"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=52202d7f2f"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=4cb95e78aa"></script>
@@ -2045,11 +2049,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=329283c7a5"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=9d12b1fe99"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=9fed0f8f7b"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=b0fac9429d"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=d16520c108"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=757f3c4be2"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=71d16cb624"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>

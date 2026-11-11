@@ -470,6 +470,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, k, tå, glFeil: gl.getError() }; });
     const viok = vi.bølger && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
     console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
+    // VAKT grafikk (spill/kvalitet.js, 12. nov, brukeren: «spillet går alt for hakkete»): «Lav» gir lavere pikseltetthet, kortere detaljavstand for
+    // trærne og ingen gress/blomster; tilbake til auto etterpå
+    const kv = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      KVAL.bytt('lav'); await vent(3); const lav = { pr: R3.pr, nivå: KVAL.nivå, tre: KVAL.p.tre, gress: !!(R3.gressMesh && R3.gressMesh.visible) };
+      KVAL.bytt('auto'); await vent(2); return { lav, auto: KVAL.valg, knapp: (document.getElementById('vis-grafikk') || {}).textContent || '' }; });
+    const kvok = kv.lav.nivå === 'lav' && kv.lav.pr <= .75 && kv.lav.tre < .5 && !kv.lav.gress && kv.auto === 'auto' && /Grafikk/.test(kv.knapp); if (!kvok) feil++;
+    console.log(`${kvok ? 'ok  ' : 'FEIL'} ${navn} grafikk: lav gir pikseltetthet ${kv.lav.pr}, trær ×${kv.lav.tre}, gress ${kv.lav.gress}; knapp «${kv.knapp}»`);
     // VAKT lyd (spill/lyd.js, 12. nov): lydmotoren starter (8 kanaler) og regner ut nivåer i 3D uten feil; ☰ har «Lyd»
     const ly = await pg.evaluate(async () => { Lyd.start(); await new Promise(r => { let k = 0; const f = () => (++k > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
       const s = Lyd.sjekk(); return { ...s, knapp: !!document.getElementById('vis-lyd') }; });

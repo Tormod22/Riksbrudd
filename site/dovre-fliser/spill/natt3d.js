@@ -140,10 +140,11 @@
       sh.vertexShader = 'uniform vec2 uSentrum;\nvarying vec2 vVerd;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vVerd = position.xy + uSentrum;');
       sh.fragmentShader = 'uniform float uSkySkygge;\nuniform float uSkyTerskel;\nuniform vec2 uSkyFlytt;\nuniform float uVaat;\nuniform sampler2D uStoy;\nvarying vec2 vVerd;\n' + sh.fragmentShader
         .replace('#include <color_fragment>', `#include <color_fragment>
-      float skyN = texture2D(uStoy, (vVerd + uSkyFlytt) / 2400.0).r;
-      diffuseColor.rgb *= 1.0 - uSkySkygge * smoothstep(uSkyTerskel, uSkyTerskel + 0.1, skyN);
-      float vaat = uVaat * smoothstep(0.55, 0.85, vOpp) * (1.0 - sno);
-      float pytt = vaat * smoothstep(0.6, 0.7, texture2D(uStoy, vVerd / 41.0).g) * smoothstep(0.96, 0.995, vOpp);
+      // (ytelse 12. nov: teksturoppslagene bare når det er skyskygger / våt bakke)
+      if (uSkySkygge > 0.001) { float skyN = texture2D(uStoy, (vVerd + uSkyFlytt) / 2400.0).r;
+      diffuseColor.rgb *= 1.0 - uSkySkygge * smoothstep(uSkyTerskel, uSkyTerskel + 0.1, skyN); }
+      float vaat = uVaat * smoothstep(0.55, 0.85, vOpp) * (1.0 - sno), pytt = 0.0;
+      if (vaat > 0.001) pytt = vaat * smoothstep(0.6, 0.7, texture2D(uStoy, vVerd / 41.0).g) * smoothstep(0.96, 0.995, vOpp);
       diffuseColor.rgb *= 1.0 - 0.3 * vaat - 0.25 * pytt;`)
         .replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength = max(specularStrength, vaat * 0.22 + pytt * 0.85);'); };
     mat.customProgramCacheKey = () => 'natt-bakke'; mat.needsUpdate = true;

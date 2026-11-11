@@ -253,7 +253,7 @@
     const nær = R.fot || R.bane.avst < 110, c = R.cam.position;
     if (!vekst || vekst.blomst.parent !== R.scene) vekst = lagVekst(R);
     const VR = window.VAER || { årstid: 'sommer', høst: 0, snøgrense: 1900 }, å = VR.årstid || 'sommer', bakke = hoyde3d(u.cx + c.x, u.cy + c.y);
-    const synlig = nær && å !== 'vinter' && bakke < VR.snøgrense;
+    const synlig = nær && å !== 'vinter' && bakke < VR.snøgrense && (!window.KVAL || KVAL.p.blomster);
     for (const m of Object.values(vekst)) m.visible = synlig;
     if (!synlig) return;
     const nøkkel = å + '|' + (R.fot ? 1 : 0);
