@@ -437,6 +437,18 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             L.bygg = L.bygg.filter(b => b !== vt); s.x = sx; s.y = sy; await new Promise(r => setTimeout(r, 1100)); sim(.1);
             fo.kjøkken = !!(Leir.BYGG.kjøkken && window.MODELLER && MODELLER.kjøkken);
             FolkSpill.åpne(false); r.folk = fo; }
+          // materialer fra verden (spill/ressurser*.js): hogst nær leiren gir tre i lageret og huskes, et (oppdiktet) hus rives og huskes,
+          // panelet viser utbytte og kjøpspris, menyen har delen, og lagringen leses igjen
+          { const RS = RessursSpill, Rr = RS.tilstand(), leir = { x: LX, y: LY }; L.lager.tre = 0; L.lager.betong = 0;
+            RS.startVelg('hogst'); RS.trykk(LX - 32, LY - 4); await RS.prøv(); const v = RS.velg(), bt = document.getElementById('ressursvalg').textContent;
+            const panel = !v.feil && /Start hogst/.test(bt) && /kjøpe like mye/.test(bt) && v.ut.mat.tre > 0; RS.start();
+            const hj = Rr.jobber.find(j => j.type === 'hogst'), P = [[LX + 300, LY + 300], [LX + 312, LY + 300], [LX + 312, LY + 310], [LX + 300, LY + 310]], rj = Ressurser.startRiving(Rr, { i: 999001, P, t: 6, h: 6 }, leir).jobb;
+            for (const j of [hj, rj]) if (j) { j.gjort = j.arbeid - .001; j.haug = { ...j.mat }; } if (rj) rj.avst = 100; for (let i = 0; i < 3; i++) sim(1);
+            lk.click(); const del = !!document.querySelector('#leirmeny .ressurs #r-hogst'); lk.click(); RS.lagre();
+            const lest = Ressurser.fraJSON(localStorage.getItem('riksbrudd-ressurser'));
+            r.res = { panel, tre: Math.round(L.lager.tre * 10) / 10, betong: Math.round(L.lager.betong * 10) / 10, hogd: Rr.hogd.length, hogdHer: Ressurser.erHogd(Rr, LX - 32, LY - 4, .99),
+              revet: HUS_BORT.has(999001), jobber: Rr.jobber.length, del, lagret: !!(lest && lest.hogd.length === 1 && lest.revet.length === 1) };
+            RS.sett(Ressurser.ny()); }
           // K3 kontrollrommet: gå inn, lag uten radiokontakt vises ikke der de er, lag med kontakt melder seg, ute bare «sist meldt»
           const KS = KontrollromSpill, deg = KS.deg(), krom = L.bygg.find(b => b.type === 'kontrollrom'), blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter);
           deg.x = krom.x; deg.y = krom.y; const inn = KS.gåInn(), mInne = KS.modus();
@@ -447,13 +459,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           r3.skjerm = document.getElementById('kontrollrom').classList.contains('på');
           r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);
           KS.av(); r3.avNøytral = !skjul(A) && KROKER.innsyn.every(f => f(A)); r.k3 = r3;
-          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); return r; });
+          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
         const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 6.6e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
           && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3
           && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === .9e6 && k2.gjerde === 'ok' && k2.port && k2.fps && k2.bla;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
+        const rs = k1.res || {}, rsok = rs.panel && rs.tre > 0 && rs.betong > 0 && rs.hogd === 1 && rs.hogdHer && rs.revet && rs.jobber === 0 && rs.del && rs.lagret; if (!rsok) feil++;
+        console.log(`${rsok ? 'ok  ' : 'FEIL'} ${navn} materialer fra verden: panelet viser utbytte og kjøpspris ${rs.panel}, hogst og riving ga ${rs.tre} m³ tre og ${rs.betong} m³ betong, hogd felt huskes ${rs.hogdHer}, revet hus borte ${rs.revet}, menyen har delen ${rs.del}, lagret ${rs.lagret}`);
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
         console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
         const fo = k1.folk || {}, fook = fo.antall === 10 && fo.bygg === 4 && fo.lag === 2 && fo.lagret && fo.åpen && fo.rader === 9 && fo.pluss === 1 && fo.minus === 0 && fo.ingenLag === 0 && fo.innenfor && fo.sikt === 1.25 && fo.kjøkken;
@@ -556,6 +570,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb }; return Vakt3d.sjekk(u); });
+    // VAKT materialer fra verden i 3D (spill/ressurser-visning.js): et hogstfelt (40 m) legges der skogen i Dombås-utsnittet over er tettest; etter
+    // krok3d har feltet ingen trær, men stubber, og skog rundt; et revet hus (HUS_BORT) er borte fra hus3d, og ruinen lages
+    const rs3 = await pg.evaluate(async () => { const u = RessursSpill.sisteU(193300, 6896300), ut = { inne: 0, rundt: 0 }; if (!u || !u.trær) return ut;
+      const alle = []; for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) alle.push([u.trær[k][q], u.trær[k][q + 1]]);
+      let p = null, best = 0; for (let n = 0; n < alle.length; n += Math.max(1, Math.floor(alle.length / 400))) { const [x, y] = alle[n]; let c = 0; for (const [a, b] of alle) if (Math.abs(a - x) < 40 && Math.abs(b - y) < 40) c++; if (c > best) { best = c; p = [x + u.cx, y + u.cy]; } }
+      const R0 = Ressurser.ny(); R0.hogd.push({ x: p[0], y: p[1], r: 40 }); RessursSpill.sett(R0); await RessursSpill.krok3d(u, {}); ut.stubber = u.stubber.length / 3;
+      for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) { const d = Math.hypot(u.trær[k][q] + u.cx - p[0], u.trær[k][q + 1] + u.cy - p[1]); if (d < 31) ut.inne++; else if (d > 44 && d < 80) ut.rundt++; }
+      // hus3d med to oppdiktede hus i flisen midt i utsnittet; det ene er revet
+      const z = 13, sp = span(z), fx = Math.floor((u.cx - G.x0) / sp), fy = Math.floor((G.y0 - u.cy) / sp), k = 4096 / sp, lx = (u.cx - (G.x0 + fx * sp)) * k, ly = ((G.y0 - fy * sp) - u.cy) * k;
+      const hus = n => ({ e: { i: 998000 + n, t: 0, h: 6 }, deler: [[[lx + n * 30 * k, ly], [lx + (n * 30 + 12) * k, ly], [lx + (n * 30 + 12) * k, ly + 10 * k], [lx + n * 30 * k, ly + 10 * k], [lx + n * 30 * k, ly]]] });
+      const ekte = window.hentFlis, R = RessursSpill.tilstand(); R.revet.push({ i: 998001, P: [[u.cx + 30, u.cy], [u.cx + 42, u.cy], [u.cx + 42, u.cy - 10], [u.cx + 30, u.cy - 10]], gruppe: 'betong' }); RessursSpill.sett(R);
+      window.hentFlis = (lag, zz, x, y) => lag === 'hus' ? Promise.resolve(zz === z && x === fx && y === fy ? { hus: { obj: [hus(0), hus(1)] } } : null) : ekte(lag, zz, x, y);
+      try { const h = await hus3d(u); ut.hus = h ? h.omriss.length : -1; } finally { window.hentFlis = ekte; }
+      ut.ruin = RessursSpill.ruinTrekanter(u); RessursSpill.sett(Ressurser.ny()); return ut; });
+    const rs3ok = rs3.inne === 0 && rs3.rundt > 0 && rs3.stubber > 0 && rs3.hus === 1 && rs3.ruin > 50; if (!rs3ok) feil++;
+    console.log(`${rs3ok ? 'ok  ' : 'FEIL'} ${navn} hogst og riving i 3D: trær i det hogde feltet ${rs3.inne}, rundt ${rs3.rundt}, stubber ${rs3.stubber}; hus igjen av to (ett revet) ${rs3.hus}, ruin ${rs3.ruin} trekanter`);
     // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær på sporet
     const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0)); if (!bok) feil++;
     console.log(`${bok ? 'ok  ' : 'FEIL'} ${navn} jernbane i 3D: ${JSON.stringify(bs)}`);
