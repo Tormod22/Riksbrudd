@@ -41,7 +41,7 @@ body.kort.smal #logg{ width:calc(100% - 140px - ${L}); }
 body.kort.smal #kilde{ max-width:44vw; }
 body.kort #lagmeny{ right:calc(8px + ${Rt}); top:calc(var(--topp,44px) + 4px); max-height:calc(100% - var(--topp,44px) - 12px); overflow:auto; z-index:9; }
 body.kort #lagmeny button{ height:32px; font-size:14px; }
-body.kort #panel{ left:calc(8px + ${L}); bottom:calc(6px + ${B}); max-height:calc(100% - var(--topp,44px) - 16px); }
+body.kort #panel{ left:calc(8px + ${L}); bottom:calc(6px + ${B}); }
 body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); left:calc(8px + ${L}); }
 `;
   document.head.appendChild(css);

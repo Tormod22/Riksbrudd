@@ -439,3 +439,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   det er under 18 ms med full oppløsning i 20 s, ikke tilbake til et nivå som var for tungt det siste minuttet. Målt (swiftshader, fast
   oppløsning): ovenfra 1946 -> 1509 ms per bilde; går du: høy 1786, middels 1439 (0,66 mill. trekanter mot 1,25), lav 999 ms.
   Hakk som gjenstår: nytt utsnitt (sett3d + første tegning med ny tekstur) når du flytter deg langt. VAKT i sjekk.js (Lav gir lav pr/trær).
+  KOMPAKT SKJERM (12. nov, brukeren med skjermbilde fra iPhone liggende: «Dette er ikke god nok UI»): spill/kompakt.js (lastes sist) gir
+  body.kort når vinduet er under 560 px høyt eller under 700 px bredt (body.smal): status og knapper på én rad (status sveipbar, uten
+  «lastet» og årstid), mindre knapper, fartsknappene som én knapp som blar 1× → 10× → 60×, minikartet 104 px oppe til høyre under
+  knappene (stående: under kompasset), loggen oppe til venstre under kompasset med bare tre linjer, zoomknapper 36 px og Huk/Hopp nede
+  til høyre, kildeteksten på én linje (trykk = alle kildene), avstand til skjermkanten (env(safe-area-inset-*)), rullbar ☰-meny.
+  For alle skjermer: navn/merker i 3D tegnes ikke under knappene og kompasset (window.UI_TOPP3D, klipp i tegn3d). Bilder: scratchpad
+  mobilbilde.js (Playwright med isMobile/hasTouch, W/H/DPR, starter spillet). VAKT i sjekk.js (mobil: kompakt, statuslinja < 34 px,
+  kildeteksten én linje, én fartsknapp; PC: som før). OBS: #panel beholder max-height 46vh (høyere panel dekket kartet i S5-testen).
