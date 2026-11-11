@@ -429,3 +429,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   resten nærmest midten). Ett nett per slag med hjørnefarger (InstancedMesh). Målt: Dombås ca. 25 000 trekanter, Trondheim/Oslo sentrum ca.
   41 000 / 44 000, kroken 0,1–0,25 s. Vakt3d teller slagene (i hus/svever); VAKT i sjekk.js (benker, søppelkasser og
   minst ett busskur i Dombås, 0 i hus/svevende, < 60 000 trekanter). window.Gate3d (punkter, antall).
+  JEVNERE 3D (12. nov, brukeren: «spillet går alt for hakkete»): målt med scratchpad prof-jevn.js (tid per funksjon/krok per ramme) og
+  prof-gpu.js (rammetid med og uten hver del): JS per ramme bare ca. 6 ms – det tunge er tegningen, og bakken (terrengnettet med den store
+  shaderen) var 40–60 % av den. Nå: nærdetaljen i detaljIBakken (fem teksturoppslag) bare innen 90 m (if), skyskygger og pytter i natt3d bare
+  når de trengs; rammesnittet (R3.rammeSnitt) teller ikke pausene (tegning 4 ganger i sekundet ga «trege» bilder og senket oppløsningen).
+  spill/kvalitet.js (Kvalitet.neste uten DOM, test_kvalitet.js): ☰ «Grafikk: auto/Høy/Middels/Lav» (localStorage «riksbrudd-grafikk»);
+  window.KVAL.p gir pikseltetthet [PC, mobil] (størrelse3d), trærnes detaljavstand (lodTrær), andel gress (gress3d), blomster (vegetasjon3d),
+  stor bakketekstur 4096 (bygg3d). Auto: ned et nivå når snittet er over 24 ms og oppløsningen alt er senket (eller over 40 ms), opp når
+  det er under 18 ms med full oppløsning i 20 s, ikke tilbake til et nivå som var for tungt det siste minuttet. Målt (swiftshader, fast
+  oppløsning): ovenfra 1946 -> 1509 ms per bilde; går du: høy 1786, middels 1439 (0,66 mill. trekanter mot 1,25), lav 999 ms.
+  Hakk som gjenstår: nytt utsnitt (sett3d + første tegning med ny tekstur) når du flytter deg langt. VAKT i sjekk.js (Lav gir lav pr/trær).
