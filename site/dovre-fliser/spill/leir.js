@@ -79,8 +79,9 @@
     const P = hjørner(b), punkter = B.linje ? b.punkter : [...P, [b.x, b.y]];
     for (const [x, y] of punkter) { const k = v.klasse ? v.klasse(x, y) : 2; if (k === 3) return 'Kan ikke bygge i vann.'; if (k === 255 || k === undefined) return 'Her finnes det ikke kart.'; }
     if (!B.linje && v.iHus && punkter.some(([x, y]) => v.iHus(x, y))) return 'Det står et hus her.';
-    if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
-    if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
+    // delene i byggesettet (del: true) står inntil og oppå hverandre; plassene deres sjekkes i byggesett.js
+    if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
+    if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje && v.høyde) { const h = P.map(([x, y]) => v.høyde(x, y)).filter(z => z !== null && z !== undefined && z === z);
       // store bygg tåler litt mer høydeforskjell (planering): 3 m, eller 18 % av diagonalen
       const diag = Math.hypot(P[2][0] - P[0][0], P[2][1] - P[0][1]), grense = Math.max(BRATT, .18 * diag), d = h.length > 1 ? Math.max(...h) - Math.min(...h) : 0;
@@ -185,7 +186,7 @@
   // når det er innen `rad` meter. Bare når byggene står i samme retning (eller 90° på tvers). Gir { x, y, linjer, nabo, avstand }.
   function snapp(L, b, o = {}) {
     const gap = o.gap === undefined ? 2 : o.gap, rad = o.rad || 3, B = BYGG[b.type]; if (!B || B.linje) return { x: b.x, y: b.y, linjer: [] };
-    const andre = [...L.bygg.filter(a => a.id !== o.unntatt), ...(L.plan || []).filter(a => a.pid !== o.unntattPid)].filter(a => !BYGG[a.type].linje);
+    const andre = [...L.bygg.filter(a => a.id !== o.unntatt), ...(L.plan || []).filter(a => a.pid !== o.unntattPid)].filter(a => !BYGG[a.type].linje && !BYGG[a.type].del);
     let n = null, best = 60; for (const a of andre) { const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < best) { best = d; n = a; } }
     if (!n) return { x: b.x, y: b.y, linjer: [] };
     const dr = (((b.ret || 0) - (n.ret || 0)) % (Math.PI / 2) + Math.PI / 2) % (Math.PI / 2);

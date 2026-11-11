@@ -474,3 +474,19 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tømmerstabel ved haugene; et ferdig revet hus bygger utsnittet på nytt (nytt3dUtsnitt). 2D: hogstfelt med stubber, ruiner over
   husene i kartflisene, haugene. VAKT i sjekk.js (2D: panel, hogst/riving gir materialer, huskes, lagring; 3D: ingen trær i hogd felt,
   stubber, revet hus borte fra hus3d, ruin). Grus/stein (steinbrudd) er ikke laget.
+  FRITT BYGGESETT (12. nov, brukeren: «et enda bedre byggesystem» – del 2 av fire, se scratchpad BYGG-BRIEF.md): spill/byggesett.js (regler
+  uten DOM, test_byggesett.js; lastes etter leir.js og legger delene inn i Leir.BYGG som type 'bs_…' med del: true) + byggesett-visning.js
+  («Åpne byggesettet» i Leir-menyen via window.LEIR_MENY; verktøylinja #byggesett nederst). Rutenett på G = 2,4 m fra leirens midte
+  (L.byggesett = { ox, oy }), etasje H = 3 m, høyst to etasjer. Delen ligger på bygget som b.bs = { i, j, a, n, r }: gulv/tak i ruta (n =
+  dekket: 0 bakken, 1 mellom etasjene eller tak over 1. etasje, 2 tak over 2.), vegger/forsvar på en kant (a 'x'/'y', n = etasjen).
+  Støtte: ingen svevende deler (vegg i 2. etasje på vegg eller gulv, dekke på en vegg eller et nabodekke). Dør/port bytter ut veggen i
+  1. etasje, vindu den øverste hele veggen; ellers neste ledige etasje («Etasje: auto/1/2»). To trykk = rad (gulv/tak: rektangel; vegger:
+  linje, eller rundt rektangelet ved to hjørner; med mus følger raden pekeren etter første trykk, i 3D treffer trykket også veggene); ferdige hus (hytte, brakke, betongbu) og «Riv». Delene bygges med Leir.bygg som jobber for
+  byggelagene; kanBygge hopper over overlapp mellom deler (leir.js, del: true), men ikke mot vanlige bygg, hus og vann. rom(): lukkede rom
+  (gulv, vegger rundt, tak over) med dør = «egenbygd brakke» med 1 seng per 8 m² (Leir.plasser er utvidet; window.Byggesett.rom() for Folk).
+  3D: fem samlede nett (tre/betong/murstein/tak med teksturer laget i koden, og resten med hjørnefarger), rødmalt kledning med hvite hjørner,
+  vindskier og karmer, saltak per sammenhengende takflate (møne langs lengste side, gavler i veggens stoff), palisade, mur, jordvoll, piggtråd
+  som følger terrenget. Hele huset står på samme grunnhøyde (BS.høyder: høyeste terreng + 0,25 m) med sokkel ned i terrenget. Veggene legges i
+  R3.hindre (stopper deg når du går; døra er åpen). leir-visning.js: delene tegnes/listes ikke der (jobbene samlet på én linje), LeirSpill.oppdater3d.
+  VAKT i sjekk.js (2D: hytte 16 deler som jobber, rad, tak i lufta avvist, rom og senger, riving; 3D: brakke i scenen, 0 svever, vegg/dør i
+  R3.hindre, ingen GL-feil). Bilder: scratchpad bs/bilde.js (PRE=bs/pre.js bygger en liten leir av deler).
