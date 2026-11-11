@@ -417,6 +417,18 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             const gratis = OppstartSpill.tilstand().penger === pen0, før = L.bygg.length, nb = LeirSpill.byggFraPlan(null, true);
             r.k2.plan = { gap, linjer, n: [n1, n2, n3], gratis, bygget: nb, tom: L.plan.length === 0, flere: L.bygg.length - før, malBygg: mal && mal.bygg.length, malOk };
             LeirSpill.planModus(false); LeirSpill.rutenett(true); try { localStorage.removeItem('riksbrudd-maler'); } catch (e) { /* privat */ } }
+          // VAKT byggesett (12. nov): åpnes fra Leir-menyen, en hytte (16 deler) som jobber for byggelagene, rad med vegger, tak i lufta avvises,
+          // ferdig hytte = rom med dør og senger (Leir.plasser), riving gir penger tilbake, verktøylinja passer på skjermen
+          { const lk = document.getElementById('leirknapp'); lk.click(); const knappBs = document.getElementById('bs-apne'); if (knappBs) knappBs.click();
+            const bs = { åpen: document.getElementById('byggesett').classList.contains('på') }, BSs = Byggesett, s0 = Leir.plasser(L), j0 = Leir.jobber(L).length;
+            BSs.velg({ fane: 'hus', hus: 'hytte', rot: 0 }); BSs.trykk(LX - 12, LY - 36); await BSs.oppdater(); bs.hytte = BSs.forslag().filter(q => !q.feil).length; bs.bygget = BSs.bekreft(true);
+            bs.jobber = Leir.jobber(L).length - j0;
+            BSs.velg({ fane: 'tak', tak: 'bs_tak_flatt' }); BSs.trykk(LX - 30, LY - 45); await BSs.oppdater(); bs.lufttak = (BSs.forslag()[0] || {}).feil || 'ok';
+            BSs.velg({ fane: 'vegg', stoff: 'betong', variant: 'hel', nivå: 'auto' }); BSs.trykk(LX - 28.9, LY - 45); BSs.trykk(LX - 21.5, LY - 45); await BSs.oppdater(); bs.rad = BSs.forslag().filter(q => !q.feil).length; BSs.bekreft(true);
+            for (const b of L.bygg) b.igjen = 0; sim(.1); const rom = BSs.rom(); bs.rom = rom.length; bs.senger = Leir.plasser(L) - s0; bs.dør = rom[0] && rom[0].dører;
+            BSs.velg({ fane: 'riv' }); BSs.trykk(LX - 27.6, LY - 45.5); await BSs.oppdater(); const p0 = OppstartSpill.tilstand().penger; bs.revet = BSs.riv(); bs.tilbake = OppstartSpill.tilstand().penger - p0;
+            const rb = document.getElementById('byggesett').getBoundingClientRect(); bs.passer = rb.left >= 0 && rb.right <= VW + 1 && rb.bottom <= VH + 1 && rb.height < VH * .5;
+            BSs.lukk(); bs.lukket = !document.getElementById('byggesett').classList.contains('på'); r.k2.bs = bs; }
           await new Promise(r => setTimeout(r, 1200)); r.k2.fps = +document.getElementById('sFps').textContent > 0;
           // menyen kan blas i: plassen holdes når den tegnes på nytt (brukeren 11. nov: «lar meg ikke bla ned»)
           const meny = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); lk.click(); meny.scrollTop = 250; const før = meny.scrollTop; lk.click(); lk.click();
@@ -439,6 +451,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === .9e6 && k2.gjerde === 'ok' && k2.port && k2.fps && k2.bla;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
+        const bs = k2.bs || {}, bsok = bs.åpen && bs.hytte === 16 && bs.bygget === 16 && bs.jobber === 16 && /vegger/.test(bs.lufttak || '') && bs.rad === 3 && bs.rom === 1 && bs.dør === 1 && bs.senger === 2
+          && bs.revet === 1 && bs.tilbake > 0 && bs.passer && bs.lukket; if (!bsok) { feil++; console.log(JSON.stringify(bs)); }
+        console.log(`${bsok ? 'ok  ' : 'FEIL'} ${navn} byggesett: åpnes fra Leir-menyen, hytte ${bs.bygget} deler som ${bs.jobber} jobber, tak i lufta avvist, rad med ${bs.rad} vegger, ferdig hytte = ${bs.rom} rom med dør og ${bs.senger} senger, revet vegg ga ${bs.tilbake} kr`);
         console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
           && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
@@ -462,6 +477,21 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     await pg.waitForFunction(() => window.Fjern3d && Fjern3d.sjekk(), null, { timeout: 30000 }).catch(() => {});
     const fj = await pg.evaluate(() => Fjern3d.sjekk()), fjok = !!(fj && fj.iScene && fj.trekanter > 1000); if (!fjok) feil++;
     console.log(`${fjok ? 'ok  ' : 'FEIL'} ${navn} fjernterreng: ${fj ? `${fj.trekanter} trekanter ut til ${Math.round(fj.R2 / 1000)} km` : 'mangler'}`);
+    // VAKT byggesett i 3D (12. nov): en brakke av deler i utsnittet står i scenen (samlede nett), ingen del svever eller mangler støtte,
+    // rommet finnes, veggene stopper deg når du går (døra er åpen), og det tegnes uten GL-feil; delene rives etterpå
+    const bs3 = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !window.Byggesett || !L.byggesett) return null;
+      const u = R3.ut, gl = R3.renderer.getContext(), BR = ByggesettRegler, før = new Set(L.bygg.map(b => b.id)); for (const m of ['tre', 'betong', 'stål']) Leir.kjøpMateriale(L, m, 60, OppstartSpill.betal);
+      Byggesett.åpne(); Byggesett.velg({ fane: 'hus', hus: 'brakke', rot: 0 }); let n = 0;
+      for (let k = 0; k < 40 && !n; k++) { Byggesett.trykk(u.cx + 60 + (k % 8) * 45, u.cy - 400 + Math.floor(k / 8) * 60); await Byggesett.oppdater(); const F = Byggesett.forslag(); if (F.length && F.every(q => !q.feil)) n = Byggesett.bekreft(true); }
+      for (const b of L.bygg) if (!før.has(b.id)) b.igjen = 0; Byggesett.lag3d(); gl.getError();
+      await new Promise(r => { let k = 0; const f = () => (++k > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const sj = Byggesett.sjekk(), nye = Byggesett.deler().filter(d => !før.has(d.id)), o = Byggesett.opphav(), lok = d => { const m = BR.midt(o, d); return [m.x - u.cx, m.y - u.cy]; };
+      const hel = nye.find(d => BR.DELER[d.type].v === 'hel' && d.n === 0), dør = nye.find(d => BR.DELER[d.type].v === 'dør');
+      const r = { n, ...sj, glFeil: gl.getError(), vegg: !!hel && hindring3d(...lok(hel)), dør: !!dør && !hindring3d(...lok(dør)), rom: Byggesett.rom().filter(q => q.celler.length === 12).length };
+      for (const d of nye) Leir.riv(L, d.id); Byggesett.lag3d(); Byggesett.lukk(); r.etter = Byggesett.sjekk().deler; return r; });
+    const bs3ok = !!(bs3 && bs3.n === 4 * 3 * 2 + 14 && bs3.iScene >= 3 && bs3.trekanter > 1000 && bs3.svever === 0 && bs3.ustøttet === 0 && bs3.rom === 1 && bs3.vegg && bs3.dør && bs3.glFeil === 0);
+    if (!bs3ok) { feil++; console.log(JSON.stringify(bs3)); }
+    console.log(`${bs3ok ? 'ok  ' : 'FEIL'} ${navn} byggesett i 3D: brakke av ${bs3 && bs3.n} deler i ${bs3 && bs3.iScene} samlede nett (${bs3 && bs3.trekanter} trekanter), ${bs3 && bs3.svever} svever, ${bs3 && bs3.ustøttet} uten støtte, rommet funnet, veggen stopper deg og døra er åpen`);
     // VAKT bølger, vind og tåke (spill/vind3d.js, 12. nov): i storm har bakkeshaderen bølger med skum, trærne svaier mer, statuslinja viser
     // vinden og det tegnes uten GL-feil; i tåke blir himmelen grå. Klart vær igjen etterpå.
     const vi = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
