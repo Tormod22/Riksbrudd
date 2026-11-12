@@ -20,7 +20,7 @@
   // ---------- stil ----------
   const css = document.createElement('style');
   css.textContent = `#folkmeny{ position:fixed; left:10px; top:calc(var(--topp,58px) + 6px); bottom:calc(60px + env(safe-area-inset-bottom,0px)); width:min(370px, calc(100vw - 20px));
-  box-sizing:border-box; z-index:7; display:none; background:var(--panel); border:1px solid var(--rule); color:var(--ink); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:10px 12px 12px; }
+  box-sizing:border-box; z-index:7; display:none; background:#16120c; border:1px solid var(--rule); color:var(--ink); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:10px 12px 12px; }
 #folkmeny.på{ display:block; }
 #folkmeny h2{ margin:0; font-family:"IM Fell English",serif; font-weight:400; font-size:22px; }
 #folkmeny h3{ margin:10px 0 3px; font-size:14px; color:var(--hover); font-weight:600; }
@@ -46,12 +46,12 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
   const panel = el('div', { id: 'folkmeny', role: 'dialog', 'aria-label': 'Folk' }); document.body.appendChild(panel);
-  const st = el('div', {}, el('b', { id: 'sFolk' }, '–'), ' ', el('span', {}, 'folk')); st.hidden = true; document.querySelector('.stats').appendChild(st);
+  const st = el('div', {}, el('b', { id: 'sFolk' }, '–'), ' ', el('span', {}, 'folk')); st.hidden = true; st.className = 'viktig'; document.querySelector('.stats').appendChild(st);
 
   // ---------- panelet ----------
   function åpne(på) {
     åpen = på === undefined ? !åpen : !!på; panel.classList.toggle('på', åpen);
-    if (åpen) { const lm = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (lm && lm.classList.contains('på') && lk) lk.click(); vis(); }
+    if (åpen) { const lm = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (lm && lm.classList.contains('på') && lk) lk.click(); if (window.lukkPanel) lukkPanel(); vis(); }
   }
   // Hva som mangler, med hva du kan gjøre
   function mangler(B) {
@@ -68,8 +68,14 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (FR.nød(F)) ut.unshift(F.personer.length ? `Bare ${F.personer.length} igjen i gjengen: rekrutter flere (ingen krav om seng når dere er færre enn tre).` : 'Gjengen er tom: rekrutter nye folk (de første tre trenger ikke seng).');
     return ut;
   }
+  let sistHtml = '';
   function vis() {
-    if (!åpen) return; const rulle = panel.scrollTop; panel.innerHTML = '';
+    if (!åpen) return; const ny = el('div'); fyll(ny);
+    if (ny.innerHTML === sistHtml && panel.firstChild) return;
+    const rulle = panel.scrollTop; sistHtml = ny.innerHTML; panel.innerHTML = ''; panel.append(...ny.childNodes); panel.scrollTop = rulle;
+  }
+  // fyll(panel): innholdet i panelet (panel er her en løs boks som vis() setter inn)
+  function fyll(panel) {
     const Lr = L(); if (!F || !Lr) { panel.append(knapp('×', () => åpne(false), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Folk'), el('div', { klasse: 'status' }, 'Start et spill først.')); return; }
     const B = FR.behov(F, Lr, valg()), s = F.sist || {}, n = F.personer.length, pil = F.mål > F.moral + 1 ? ' ↑' : F.mål < F.moral - 1 ? ' ↓' : '';
     const farge = F.moral >= 60 ? '#7fb06a' : F.moral >= 35 ? '#d6b25a' : '#d0684a';
@@ -111,7 +117,6 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør ? ' syk' : '') }, `${p.navn}, ${p.alder} – ${FR.OPPGAVE[p.oppgave].navn.toLowerCase()}`,
         el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}`)));
     }
-    panel.scrollTop = rulle;
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
   const lagre = () => { if (window.LeirSpill) LeirSpill.lagre(); };
@@ -135,7 +140,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); akk = 0;
       for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre(); }
     soldater(dt); vakter();
-    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); vis(); forsvarNå = null; }
+    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel))) vis(); forsvarNå = null; }
   });
   // sykestua med folk på «stell» leger sårede soldater i egne lag innen 150 m (fra 50 % til helt på ca. 5 timer)
   function soldater(dt) {

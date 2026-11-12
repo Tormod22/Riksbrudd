@@ -42,7 +42,8 @@
 @media (max-width:700px){ #minikart{ right:10px; bottom:calc(240px + env(safe-area-inset-bottom,0px)); width:128px; height:128px; }
   #minikart button{ width:30px; height:30px; right:-6px; top:-6px; } body.kompass3d #logg{ top:calc(var(--topp,58px) + 56px); }
   #kilde{ font-size:10.5px; } #skala{ bottom:calc(60px + env(safe-area-inset-bottom,0px)); } #nordpil{ bottom:calc(84px + env(safe-area-inset-bottom,0px)); } }
-body.kompass3d #logg{ text-shadow:0 0 3px #000, 0 1px 2px #000; }`;
+body.kompass3d #logg{ text-shadow:0 0 3px #000, 0 1px 2px #000; }
+body.minikart3d:not(.kort) #kilde{ right:280px; }`;
   document.head.appendChild(css);
 
   // ---------- elementene ----------
@@ -78,7 +79,7 @@ body.kompass3d #logg{ text-shadow:0 0 3px #000, 0 1px 2px #000; }`;
     const i3d = typeof på3d !== 'undefined' && på3d && !!r3(), kr = document.getElementById('kontrollrom'), iRom = !!(kr && kr.classList.contains('på'));
     bånd.classList.toggle('på', på.kompass && i3d && !iRom); mk.classList.toggle('på', på.minikart && i3d && !iRom);
     np.classList.toggle('på', på.kompass && !(typeof på3d !== 'undefined' && på3d) && !iRom);
-    document.body.classList.toggle('kompass3d', på.kompass && i3d && !iRom);
+    document.body.classList.toggle('kompass3d', på.kompass && i3d && !iRom); document.body.classList.toggle('minikart3d', på.minikart && i3d && !iRom);
   }
   for (const n in knapper) knapper[n].sett();
   setInterval(synk, 300);

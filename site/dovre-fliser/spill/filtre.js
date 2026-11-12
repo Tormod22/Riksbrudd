@@ -326,7 +326,7 @@ void main() {
 
   // knappen i ☰: blar gjennom filtrene
   const knapp = document.createElement('button'); knapp.id = 'filterknapp'; knapp.title = 'Filter / kameralinse i 3D (trykk for neste)';
-  const sett = () => { knapp.textContent = 'Filter: ' + FILTRE.find(f => f.id === valgt).navn; knapp.classList.toggle('av', valgt === 'ingen'); };
+  const sett = () => { knapp.textContent = 'Filter: ' + FILTRE.find(f => f.id === valgt).navn; };
   function velg(id) {
     if (!FILTRE.some(f => f.id === id)) return false;
     valgt = id; try { localStorage.setItem(NØKKEL, id); } catch (e) { /* privat vindu */ } sett(); return true;

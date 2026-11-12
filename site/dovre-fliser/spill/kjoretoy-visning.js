@@ -50,7 +50,7 @@
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
     for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
-    if (valgtKj && performance.now() - sistPanel > 1000) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
+    if (valgtKj && performance.now() - sistPanel > 1000 && !pekerNede(document.getElementById('panel'))) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
 
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------
@@ -155,6 +155,7 @@
   }
   function navn(g, k, x, y) {
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
+    if (window.Etikett) y = Etikett.tekst(g, k.navn, x, y, -1);   // ikke oppå navnet til et annet kjøretøy eller lag
     g.strokeText(k.navn, x, y); g.fillStyle = '#e7dcc3'; g.fillText(k.navn, x, y);
   }
 

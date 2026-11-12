@@ -523,3 +523,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   pagehide; leses ved første «riksbrudd-spill» når et lagret spill fantes (bare for samme leir). Ordre i gang, fiendens lag, olje,
   tettsteder og sprengt infrastruktur lagres IKKE ennå. oppstart-visning.js: lagret spill tas i bruk ved DOMContentLoaded (setTimeout(0)
   kunne slå til mellom to skript, så leiren/kontrollrommet ikke hørte «riksbrudd-spill»). VAKT i sjekk.js («feilretting (mekanikk)»).
+  GRENSESNITT ETTER FEILJAKTEN (12. nov natt, ui-telefon): paneler som tegnes på nytt hvert sekund (Leir-menyen, Folk, byggpanelet, kjøretøy-, base-
+  og lagpanelet) venter mens en finger/museknapp er nede på dem (window.pekerNede(el) i index.html) – ellers forsvinner klikket; Leir-menyen og Folk
+  bygges ved siden av og byttes bare inn når innholdet er endret (visMeny/vis sammenligner innerHTML), byggpanelet har en nøkkel. Nye panel som
+  tegnes jevnlig skal gjøre det samme. window.lukkPanel() lukker panelet nede til venstre (Leir, Folk og byggesettet kaller den). spill/etikett.js
+  (uten DOM, test_etikett.js): Etikett.nullstill() hver ramme, Etikett.tekst(g, t, x, y, retning) gir y-en et navn skal tegnes i, så navnene på lag,
+  kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
+  (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
+  VAKT grensesnitt i sjekk.js.

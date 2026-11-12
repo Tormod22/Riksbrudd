@@ -70,7 +70,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const t = typeNå(), K = D[t].kat;
     return K === 'gulv' || K === 'tak' ? `${D[t].navn}: trykk en rute, og et punkt til for et rektangel.` : `${D[t].navn}: trykk ved en kant, og et punkt til for en rad (to hjørner: rundt).`;
   }
-  function åpne() { V.åpen = true; LB && window.LeirSpill && LeirSpill.avbryt && LeirSpill.avbryt(); const m = document.getElementById('leirmeny'); if (m && m.classList.contains('på')) document.getElementById('leirknapp').click(); A = null; B = null; forslag = []; opphav(); visLinje(); skitten = true; }
+  function åpne() { V.åpen = true; if (window.lukkPanel) lukkPanel(); LB && window.LeirSpill && LeirSpill.avbryt && LeirSpill.avbryt(); const m = document.getElementById('leirmeny'); if (m && m.classList.contains('på')) document.getElementById('leirknapp').click(); A = null; B = null; forslag = []; opphav(); visLinje(); skitten = true; }
   function lukk() { V.åpen = false; A = null; B = null; forslag = []; visLinje(); skisse3d(); skitten = true; }
   // knappen i Leir-menyen
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e2, knapp: k2 }) => {

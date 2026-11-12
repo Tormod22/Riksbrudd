@@ -21,7 +21,7 @@
   // ---------- stil og knapper ----------
   const css = document.createElement('style');
   css.textContent = `#leirmeny{ position:fixed; left:10px; top:calc(var(--topp,58px) + 6px); bottom:calc(60px + env(safe-area-inset-bottom,0px)); width:min(350px, calc(100vw - 20px));
-  z-index:6; display:none; flex-direction:column; background:var(--panel); border:1px solid var(--rule); color:var(--ink); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
+  z-index:6; display:none; flex-direction:column; background:#16120c; border:1px solid var(--rule); color:var(--ink); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
 #leirmeny.på{ display:flex; }
 #leirmeny .hode{ padding:10px 12px 6px; border-bottom:1px solid var(--rule); flex:0 0 auto; }
 #leirmeny h2{ margin:0; font-family:"IM Fell English",serif; font-weight:400; font-size:22px; }
@@ -38,7 +38,10 @@
 #leirmeny .mat button{ min-height:34px; padding:2px 8px; font-size:13px; }
 #byggvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
   border:1px solid var(--hover); padding:10px 14px; color:var(--ink); max-width:min(600px,94vw); text-align:center; }
-#byggvalg.på{ display:block; } #byggvalg button{ margin:6px 3px 0; } #byggvalg small{ color:var(--ink-dim); display:block; }`;
+#byggvalg.på{ display:block; } #byggvalg button{ margin:6px 3px 0; } #byggvalg small{ color:var(--ink-dim); display:block; }
+body.kort #byggvalg{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); transform:none; max-width:none; bottom:calc(6px + env(safe-area-inset-bottom,0px));
+  padding:6px 8px; font-size:13.5px; max-height:44vh; overflow-y:auto; }
+body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
@@ -46,7 +49,7 @@
   const banner = el('div', { id: 'byggvalg' }); document.body.appendChild(banner);
   const leirKnapp = el('button', { id: 'leirknapp', title: 'Bygg leiren' }, 'Leir'); leirKnapp.hidden = true;
   document.querySelector('.knapper').insertBefore(leirKnapp, document.getElementById('meny'));
-  leirKnapp.onclick = () => { meny = !meny; menyEl.classList.toggle('på', meny); leirKnapp.classList.toggle('på', meny); if (meny) visMeny(); };
+  leirKnapp.onclick = () => { meny = !meny; menyEl.classList.toggle('på', meny); leirKnapp.classList.toggle('på', meny); if (meny) { if (window.lukkPanel) lukkPanel(); visMeny(); } };
   const st = el('div', {}, el('b', { id: 'sStrom' }, '–'), ' ', el('span', {}, 'strøm')); st.hidden = true; document.querySelector('.stats').appendChild(st);
   const matTekst = mat => Object.entries(mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
   const matPris = mat => Object.entries(mat || {}).reduce((s, [k, v]) => s + Math.max(0, v - (L.lager[k] || 0)) * LB.MATERIALER[k].pris, 0);
@@ -99,23 +102,24 @@
           logg(`${LB.BYGG[b.type].navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l drivstoff gikk tapt.` : '')); bygg3dPåNytt(); lagre(); }
         else if (!skadeMeldt.has(b.id)) { skadeMeldt.add(b.id); logg(`${e.navn} skader ${LB.BYGG[b.type].navn.toLowerCase()} i leiren!`); } } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
-    if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); if (meny) visMeny(); if (valgtBygg && !plassering) visByggPanel(); skitten = true; }
+    if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }
   });
 
   // ---------- menyen ----------
   // Menyen tegnes på nytt hvert sekund (strøm, kø): behold plassen du har bladd til (brukeren 11. nov: «lar meg ikke bla ned»)
+  let menyNøkkel = '';
   function visMeny() {
-    const S = spill(), rulle = menyEl.scrollTop; menyEl.innerHTML = '';
+    const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
     const status = el('div', { klasse: 'status' },
       `Kassa: ${LB.kroner(S.penger)}`, el('br'),
-      `Strøm: ${kw(siste.prod)} kW brukt av ${kw(siste.behov)} kW behov (kan gi ${kw(siste.kapasitet)} kW)`, el('br'),
+      siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå', el('br'),
       siste.mangler.size ? el('span', { style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : 'Alle bygg har strøm', el('br'),
       `Drivstoff: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l · Sengeplasser: ${LB.plasser(L)}`);
     const kjøp = knapp(`Kjøp 500 l drivstoff (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
       const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l drivstoff for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); });
-    kjøp.disabled = kap - L.drivstoff < 1;
-    const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp));
+    kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en drivstofftank først';
+    const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp), kap ? '' : el('div', { klasse: 'igang' }, 'Drivstoff trenger en drivstofftank (i lista under).'));
     // folket og oppgavene (spill/folk-visning.js)
     if (window.FolkSpill) hode.appendChild(FolkSpill.menyRad());
     // materialene: lager og kjøp
@@ -158,7 +162,8 @@
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       liste.appendChild(el('div', { klasse: 'bygg' }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
     }
-    menyEl.append(hode, liste); menyEl.scrollTop = rulle;
+    const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
   }
   const tidTekst = min => min >= 60 ? `${kw(min / 60)} t` : `${Math.ceil(min)} min`;
 
@@ -307,8 +312,11 @@
     const status = b.igjen > 0 ? `bygges ${Math.round(LB.framdrift(b) * 100)} %` : b.arbeid ? `${HVA[b.arbeid.hva]} ${Math.round(LB.framdrift(b) * 100)} %` : siste.mangler.has(b.id) ? 'uten strøm' : 'i drift';
     const verdier = [e.kw > 0 ? `gir ${kw(e.kw)} kW` : null, e.plasser ? `${e.plasser} senger` : null, B.nivå && B.nivå.liter ? `${LB.BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1].toLocaleString('nb-NO')} l` : null,
       e.lager ? `lager +${e.lager}` : null, e.rekkevidde ? (e.rekkevidde >= 1000 ? `${e.rekkevidde / 1000} km radio` : `${e.rekkevidde} m`) : null].filter(Boolean).join(' · ');
+    const nøkkel = [b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus].join('|');
+    if (banner.firstChild && banner.firstChild.byggNøkkel === nøkkel && banner.classList.contains('på')) return;
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '');
+    banner.firstChild.byggNøkkel = nøkkel;
     if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());
         if (r.feil && r.mangler && confirm(`${r.feil} Kjøpe det som mangler for ${LB.kroner(matPris(r.mangler))}?`) && kjøpManglende(r.mangler)) return k.onclick();
         logg(r.feil || `${B.navn} oppgraderes til nivå ${r.til}.`); lagre(); visByggPanel(); });

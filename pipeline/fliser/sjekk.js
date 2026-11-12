@@ -522,6 +522,52 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       }
       await pg.evaluate(f => { Object.assign(kam, f); tempo = 1; valgt = null; visPanel(); skitten = true; }, før);
     }
+    // VAKT grensesnitt (feiljakten 12. nov, ui-telefon): hjelpen åpner ikke oppå startskjermen; leirvalget går foran et kjøretøy som står der
+    // du trykker; ☰ holder seg innenfor skjermen (rulles); Leir-menyen tegnes ikke på nytt mens en knapp holdes nede, men oppdateres etterpå;
+    // Leir-menyen lukker panelet nede til venstre; byggbanneret ligger ikke midt over bygget på telefon; kontrollrommet dekker ikke
+    // zoomknappene; navnene ved leiren ligger ikke oppå hverandre; «Riksrådet»/«Hovedbase Dombås» er borte fra tekstene
+    { const ui = await pg.evaluate(async () => {
+        if (!OppstartSpill.tilstand() || !window.LeirSpill || !LeirSpill.tilstand()) return null;
+        const vent = ms => new Promise(r => setTimeout(r, ms)), el = id => document.getElementById(id), på = id => el(id).classList.contains('på'), r = {}, kam0 = { ...kam }, tempo0 = tempo;
+        const fri = id => { const b = el(id), q = b.getBoundingClientRect(), e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return e === b || b.contains(e); };
+        valgt = null; visPanel(); tempo = 1;
+        // hjelpen og startskjermen
+        localStorage.removeItem('riksbrudd-hjelp'); OppstartSpill.nytt(); r.hjelpOver = Hjelp.første() || på('hjelp');
+        // leirvalget: trykk der et kjøretøy står
+        OppstartSpill.vis(3); [...document.querySelectorAll('#oppstart button')].find(b => /kartet/.test(b.textContent)).click();
+        const k = KJORETOY.find(q => q.side === 'blå'); kam.x = k.x; kam.y = k.y; trykkPå(VW / 2, VH / 2); await vent(600);
+        r.leirvalg = !på('panel') && !/^Trykk på kartet/.test(el('leirvalg').textContent);
+        [...document.querySelectorAll('#leirvalg button')].find(b => /Tilbake/.test(b.textContent)).click(); r.steg2Topp = document.querySelector('#oppstart .ark').scrollTop === 0;
+        el('oppstart').classList.remove('på'); r.hjelpEtter = Hjelp.første() && på('hjelp'); visHjelp(false); Object.assign(kam, kam0);
+        // ☰
+        el('meny').click(); const m = el('lagmeny'), mr = m.getBoundingClientRect(); r.meny = mr.bottom <= innerHeight + 1 && (m.scrollHeight <= m.clientHeight + 1 || getComputedStyle(m).overflowY === 'auto');
+        r.filter = !el('filterknapp').classList.contains('av'); el('meny').click();
+        // Leir-menyen: lukker panelet, står i ro mens en knapp holdes nede, oppdateres når den slippes
+        valgt = ENHETER.find(e => e.side === 'blå' && levende(e)); visPanel(); const panelFør = på('panel'); el('leirknapp').click(); r.lukker = panelFør && !på('panel');
+        const L = LeirSpill.tilstand(), kn = el('planmodus'), tre = () => document.querySelector('#leirmeny .mat span').textContent;
+        const l0 = tre(); kn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); L.lager.tre += 1; await vent(1400); r.holdt = kn.isConnected && tre() === l0;
+        window.dispatchEvent(new PointerEvent('pointerup')); await vent(1400); r.oppdatert = tre() !== l0; L.lager.tre -= 1;
+        r.strøm = !/brukt av/.test(document.querySelector('#leirmeny .status').textContent); el('leirknapp').click();
+        // byggbanneret under plassering
+        const S = OppstartSpill.tilstand().leir; LeirSpill.startPlassering('solcelle'); LeirSpill.trykk(S.x + 300, S.y + 300); await vent(400);
+        const br = el('byggvalg').getBoundingClientRect(); r.banner = !(br.left < VW / 2 && br.right > VW / 2 && br.top < VH / 2 && br.bottom > VH / 2) && br.bottom <= innerHeight && br.left >= 0 && br.right <= innerWidth; LeirSpill.avbryt();
+        // kontrollrommet
+        const KS = KontrollromSpill, deg = KS.deg(), krom = L.bygg.find(b => b.type === 'kontrollrom' && b.igjen === 0);
+        if (krom && deg) { KS.av(false); const d0 = [deg.x, deg.y]; deg.x = krom.x; deg.y = krom.y; KS.gåInn(); await vent(50);
+          r.zoom = ['zi', 'zo', 'dombas', 'hele'].every(fri); const t = document.querySelector('#kontrollrom .topp'); r.topp = t.getBoundingClientRect().height < 60 && t.getBoundingClientRect().right <= innerWidth;
+          KS.gåUt(); [deg.x, deg.y] = d0; KS.av(); } else r.zoom = r.topp = 'ingen kontrollrom';
+        // navnene ved leiren, sett langt ute
+        kam.x = S.x; kam.y = S.y; kam.m = 30; skitten = true; await new Promise(q => requestAnimationFrame(() => requestAnimationFrame(q))); await vent(60);
+        r.navn = [Etikett.antall(), Etikett.overlapp()];
+        // tekstene
+        r.tekst = !/Riksrådet|Hovedbase/.test(el('logg').textContent + el('hjelp').textContent) && /600×/.test(el('hjelp').textContent) && el('sHvor').previousElementSibling.textContent === 'du er';
+        const xs = id => el(id).getBoundingClientRect().left; r.kassa = !document.body.classList.contains('kort') || xs('sPenger') < xs('sH');
+        localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-k2');
+        Object.assign(kam, kam0); tempo = tempo0; valgt = null; visPanel(); skitten = true; return r; });
+      const uiok = ui && !ui.hjelpOver && ui.hjelpEtter && ui.leirvalg && ui.steg2Topp && ui.meny && ui.filter && ui.lukker && ui.holdt && ui.oppdatert && ui.strøm && ui.banner && ui.zoom === true && ui.topp === true
+        && ui.navn[0] >= 3 && ui.navn[1] === 0 && ui.tekst && ui.kassa;
+      if (ui && !uiok) { feil++; console.log(JSON.stringify(ui)); }
+      console.log(ui ? `${uiok ? 'ok  ' : 'FEIL'} ${navn} grensesnitt: hjelpen venter på startskjermen, leirvalget går foran kjøretøy, ☰ innenfor skjermen, Leir-menyen står i ro mens en knapp holdes (${ui.holdt}) og oppdateres etterpå (${ui.oppdatert}), byggbanneret ikke midt på, zoomknappene fri i kontrollrommet, ${ui.navn[0]} navn uten overlapp` : `     ${navn} grensesnitt: hoppet over (ingen leir uten infrastrukturdata)`); }
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)

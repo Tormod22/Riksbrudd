@@ -37,7 +37,7 @@
     return {
       versjon: 1, ferdig: false,
       karakter: { navn: '', bakgrunn: 'soldat', portrett: portrett() },
-      fraksjon: { navn: '', flagg: { mønster: 'loddrett', farger: ['#1d3557', '#f2efe6', '#8f2a24'], symbol: 'ulv', symbolfarge: '#f2efe6', bokstaver: '', bokstavfarge: '#f2efe6' } },
+      fraksjon: { navn: '', flagg: { mønster: 'loddrett', farger: ['#1d3557', '#f2efe6', '#8f2a24'], symbol: 'ulv', symbolfarge: '#e0b53a', bokstaver: '', bokstavfarge: '#e0b53a' } },
       penger: STARTPENGER, leir: null,
     };
   }

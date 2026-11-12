@@ -33,4 +33,7 @@ const U = O.standard(); U.karakter.navn = 'Per <b>'; U.fraksjon.navn = 'Fjellfol
 O.fullfør(U, { x: 1, y: 1 }); const svg = O.P.renderSVG(U.karakter.portrett);
 ok(U.karakter.portrett.hair === 'braid' && U.karakter.portrett.outfit === 'feltuniform' && U.karakter.portrett.skin !== '#123456', 'portrettet: kjent frisyre beholdt, ukjent antrekk og farge byttet ut');
 ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'portrettet tegnes som SVG, og navnet kan ikke lage HTML');
+// VAKT (feiljakten 12. nov): symbolet og bokstavene i standardflagget har en egen farge, så de ikke forsvinner i et av feltene
+{ const fl = O.standard().fraksjon.flagg;
+  ok(!fl.farger.includes(fl.symbolfarge) && !fl.farger.includes(fl.bokstavfarge) && O.FARGER.includes(fl.symbolfarge), 'standardflagget: symbolet (' + fl.symbolfarge + ') synes mot alle feltene ' + fl.farger.join(' ')); }
 process.exit(feil ? 1 : 0);

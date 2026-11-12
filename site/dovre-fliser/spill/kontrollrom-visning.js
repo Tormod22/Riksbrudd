@@ -84,7 +84,7 @@
       g.save(); g.globalAlpha = .75; g.fillStyle = sidefarge('blå', 'farge'); g.strokeStyle = '#e7dcc3'; g.setLineDash([3, 2]); g.lineWidth = 1.3;
       g.beginPath(); g.rect(x - 11, y - 8, 22, 16); g.fill(); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
-      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist'} ${klokkeslett(p.tid)}`; g.strokeText(t, x, y - 13); g.fillStyle = '#e7dcc3'; g.fillText(t, x, y - 13); g.restore(); }
+      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist'} ${klokkeslett(p.tid)}`; const ty = window.Etikett ? Etikett.tekst(g, t, x, y - 13, -1) : y - 13; g.strokeText(t, x, ty); g.fillStyle = '#e7dcc3'; g.fillText(t, x, ty); g.restore(); }
     if (deg) { const [x, y] = tilSkjerm(deg.x, deg.y, vx0, vy1); g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 14, 0, 6.283); g.stroke(); g.restore(); }
   });
 
@@ -114,13 +114,18 @@
   background:rgba(10,16,10,.9); border:1px solid #3c5a35; color:#a9e29a; font:13px/1.4 ui-monospace,Menlo,Consolas,monospace; display:flex; flex-direction:column; }
 #kontrollrom .side h3{ margin:0; padding:8px 10px; border-bottom:1px solid #3c5a35; font-size:13px; letter-spacing:.12em; color:#c9f0bc; }
 #kontrollrom .side .innhold{ overflow:auto; padding:6px 10px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
-#kontrollrom .venstre{ left:10px; } #kontrollrom .høyre{ right:10px; }
+#kontrollrom .venstre{ left:10px; } #kontrollrom .høyre{ right:64px; }
+#kontrollrom .topp{ white-space:nowrap; max-width:calc(100vw - 20px); box-sizing:border-box; } #kontrollrom .topp span{ overflow:hidden; text-overflow:ellipsis; min-width:0; }
 #kontrollrom .melding{ margin-bottom:6px; } #kontrollrom .melding b{ color:#e6f7c8; font-weight:600; } #kontrollrom .melding.leir{ color:#7fae73; }
 #kontrollrom .feed{ display:flex; justify-content:space-between; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid #22341f; }
 #kontrollrom .feed button{ background:#1b2a18; border:1px solid #3c5a35; color:#c9f0bc; min-height:34px; padding:2px 10px; cursor:pointer; font:inherit; }
 #kontrollrom .feed button:disabled{ opacity:.4; cursor:default; }
 #kontrollrom.mørk .glass{ background:rgba(2,3,2,.92); }
-@media (max-width:700px){ #kontrollrom .side{ top:auto; height:34vh; width:calc(50vw - 15px); } }`;
+body.kort #kontrollrom .side{ width:min(250px, 30vw); bottom:calc(8px + env(safe-area-inset-bottom,0px)); } body.kort #kontrollrom .høyre{ right:calc(52px + env(safe-area-inset-right,0px)); }
+body.kort #kontrollrom .venstre{ left:calc(8px + env(safe-area-inset-left,0px)); }
+body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 8px; gap:6px; } body.kort #kontrollrom .topp button{ min-height:28px; }
+@media (max-width:700px){ #kontrollrom .side, body.kort #kontrollrom .side{ top:auto; height:34vh; width:calc(50vw - 15px); bottom:calc(60px + env(safe-area-inset-bottom,0px)); }
+  body.kort #kontrollrom .høyre{ right:10px; } body.kort.ikontrollrom .ctl{ bottom:calc(34vh + 68px + env(safe-area-inset-bottom,0px)); } }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const skjerm = el('div', { id: 'kontrollrom', 'aria-label': 'Kontrollrommet' }), glass = el('div', { klasse: 'glass' }), topp = el('div', { klasse: 'topp' });
@@ -129,9 +134,9 @@
   const kNapp = el('button', { id: 'kontrollknapp', title: 'Kontrollrommet' }, 'Kontrollrom'); kNapp.hidden = true;
   document.querySelector('.knapper').insertBefore(kNapp, document.getElementById('meny'));
   kNapp.onclick = () => (inne ? gåUt() : gåInn());
-  const st = el('div', {}, el('b', { id: 'sHvor' }, '–'), ' ', el('span', {}, 'du er')); st.hidden = true; document.querySelector('.stats').appendChild(st);
+  const st = el('div', {}, el('span', {}, 'du er'), ' ', el('b', { id: 'sHvor' }, '–')); st.hidden = true; document.querySelector('.stats').appendChild(st);
   function visStatus() {
-    st.hidden = !aktiv(); if (st.hidden) { kNapp.hidden = true; return; }
+    st.hidden = !aktiv(); document.body.classList.toggle('ikontrollrom', !st.hidden && inne); if (st.hidden) { kNapp.hidden = true; return; }
     const m = modus(); document.getElementById('sHvor').textContent = m === 'kontrollrom' ? 'i kontrollrommet' : m === 'nettbrett' ? `ute, nettbrett ${Math.round(T.nettbrett.batteri)} t` : inne ? 'i mørkt kontrollrom' : 'ute';
     kNapp.hidden = !vedKontrollrom() && !inne; kNapp.classList.toggle('på', inne);
   }
