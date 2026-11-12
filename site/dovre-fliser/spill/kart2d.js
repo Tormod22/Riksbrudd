@@ -4,6 +4,7 @@
 // Kart2d.skalaTekst(meter)      «500 m», «20 km»
 // Kart2d.navnepunkt(deler, bb)  hvor navnet på en flate (tettsted) skal stå: punktet inne i flaten som ligger lengst fra kanten
 //                               (før: midt i rammen rundt flaten – «Oslo» sto ute i fjorden)
+// Kart2d.erFyr({ tank, hav, iBy, D, nærFyr }) om et rundt bygg skal bli fyrtårn i 3D (ikke i tettsteder)
 // Kart2d.åpning(område, VW, VH, hva) hva /norge passer inn: hele landet med Svalbard på brede skjermer; på høye, smale skjermer
 //                               (telefon) Sør-Norge når siden åpner og fastlandet for «hele landet» – der ble Norge liten og lå langs venstre kant
 (function (rot) {
@@ -56,6 +57,10 @@
     return b[2] > b[0] && b[3] > b[1] ? { b, luft: hva === 'hele' ? 1.12 : 1.06, smal } : { b: område, luft: 1.05, smal };
   }
 
-  const Kart2d = { MÅL, skalaMål, skalaTekst, navnepunkt, FASTLAND, SØR_NORGE, åpning };
+  // Et helt rundt bygg blir fyrtårn bare når det ikke er en tank, ligger ved havet, er lite (tverrmål høyst 12 m), ikke står i et
+  // tettsted og ikke har et annet fyr innen 1,5 km. (12. nov: en rund paviljong ved Lille Lungegårdsvann i Bergen ble fyr.)
+  function erFyr(o) { return !o.tank && !!o.hav && !o.iBy && o.D <= 12 && !o.nærFyr; }
+
+  const Kart2d = { erFyr, MÅL, skalaMål, skalaTekst, navnepunkt, FASTLAND, SØR_NORGE, åpning };
   if (typeof module !== 'undefined' && module.exports) module.exports = Kart2d; else rot.Kart2d = Kart2d;
 })(typeof window !== 'undefined' ? window : globalThis);
