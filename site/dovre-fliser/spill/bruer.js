@@ -31,7 +31,8 @@
   }
   // Brua langs vegen: begge endene av NVDB-brua (eller midten og lengden) projiseres på vegene i nærheten; den vegen som passer best gir
   // linjen og kategorien. linjer = [{ k, P }]. Uten treff: NVDB-geometrien (rett linje mellom endene).
-  function finnLinje(bru, linjer, lengdeData) {
+  // bareVeg: gi null (ikke NVDB-linjen) når ingen veg passer – da prøver visningen de andre vegene før den gir opp.
+  function finnLinje(bru, linjer, lengdeData, bareVeg) {
     const A = bru[0], B = bru[bru.length - 1], Ln = lengde(bru), en = bru.length < 2 || Ln < 1;
     let best = null;
     for (const v of linjer) {
@@ -51,7 +52,7 @@
       best.s0 = Math.max(0, Math.min(L, best.s0 - sn * ekstra)); best.s1 = Math.max(0, Math.min(L, best.s1 + sn * ekstra));
     }
     if (best && Math.abs(best.s1 - best.s0) >= 4) return { P: delLinje(best.v.P, best.s0, best.s1), k: best.v.k, veg: true };
-    if (en) return null;
+    if (en || bareVeg) return null;
     return { P: delLinje(bru, 0, Ln), k: null, veg: false };
   }
   // Dekkets overkant langs brua: rett linje mellom endene (+ litt overhøyde på lange bruer), aldri nærmere terrenget enn «klaring» meter,

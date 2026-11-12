@@ -10,8 +10,8 @@
   // ---------- vegene fra vektorflisene (z13, ca. 2 m) ----------
   // Reglene ligger i spill/veg.js (uten DOM): vegene klippes til flisen og skjøtes til hele veger, gang- og sykkelvegene skilles ut
   // (u.gangveger), biter i tunnel tas bort, og vegbanen legges flatt på tvers i høyden til det høyeste punktet under den.
-  // u.veger = bilvegene [{ k, t, by, w, P: [[x, y, z]], åpen: [start, slutt] }] (t: 1 svingefelt, 2 rampe, 3 rundkjøring; w = halv bredde;
-  // åpen: enden står i en tunnelportal eller ved kanten av utsnittet). Punkter på en bru får p[3] = 1 (spill/infra3d.js).
+  // u.veger er bilvegene: kategori k, vegtype t (1 svingefelt, 2 rampe, 3 rundkjøring), by, halv bredde w, punktene P med høyde og
+  // «åpen» (enden står i en tunnelportal eller ved kanten av utsnittet). Punkter på en bru får et fjerde tall (spill/infra3d.js).
   const tunnelLinjer = u => { const ut = []; if (!u.infra) return ut;
     for (const o of u.infra) if (o.lag === 'tunnel') for (const d of o.deler) { const P = []; for (let i = 0; i < d.length; i += 2) P.push([d[i] - u.cx, d[i + 1] - u.cy]); if (P.length > 1) ut.push(Veg.tunnel(P)); }
     return ut; };
@@ -205,7 +205,7 @@
   }
 
   // ---------- trafikk og folk ----------
-  function velgLinjer(u, krav) { return u.veger.filter(krav).map(v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return { ...v, D, L: D[D.length - 1] }; }).filter(v => v.L > 80); }
+  function velgLinjer(u, krav, liste) { return (liste || u.veger).filter(krav).map(v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return { ...v, D, L: D[D.length - 1] }; }).filter(v => v.L > 80); }
   function punkt(v, s, side) {   // posisjon s meter langs linjen, «side» meter til høyre for kjøreretningen
     let i = 1; while (i < v.D.length - 1 && v.D[i] < s) i++;
     const a = v.P[i - 1], b = v.P[i], f = Math.max(0, Math.min(1, (s - v.D[i - 1]) / (v.D[i] - v.D[i - 1] || 1))), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
@@ -217,7 +217,9 @@
   function startLiv(u, R) {
     let f = 4242; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296, mob = VW < 700;
     // biler: lakk (instansfarge), ruter, hjul
-    const veg = velgLinjer(u, v => 'ERFK'.includes(v.k));
+    const veg = velgLinjer(u, v => 'ERFK'.includes(v.k) && Veg.vanlig(v));
+    // ender i en tunnelportal eller ved kanten av utsnittet: bilen kommer inn igjen et annet slikt sted i stedet for å snu
+    liv.åpne = []; for (const v of veg) for (const e of [0, 1]) if (v.åpen && v.åpen[e]) liv.åpne.push([v, e]);
     if (veg.length) {
       const hjul = []; for (const [x, y] of [[1.35, .82], [1.35, -.82], [-1.35, .82], [-1.35, -.82]]) { const g = new THREE.CylinderGeometry(.33, .33, .22, 10); g.translate(x, y, .33); hjul.push(g); }
       liv.bilMesh = instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], mob ? 12 : 32);
@@ -235,13 +237,13 @@
       liv.lys.kjegle.material.userData.egetKart = true;
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
-    const gate = velgLinjer(u, v => v.by && 'RFK'.includes(v.k));
+    const gate = velgLinjer(u, v => v.by && 'RFK'.includes(v.k) && Veg.vanlig(v)).concat(velgLinjer(u, v => v.by && v.t !== 5, u.gangveger || []));
     if (gate.length) {
       const bein = samle([kasse(0, .1, 0, .14, .14, .84), kasse(0, -.1, 0, .14, .14, .84)]), kropp = kasse(0, 0, .84, .26, .42, .62), hode = new THREE.SphereGeometry(.11, 10, 8); hode.translate(0, 0, 1.6);
       const hår = new THREE.SphereGeometry(.115, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.2); hår.rotateX(Math.PI / 2); hår.translate(-.01, 0, 1.62);
       liv.folkMesh = instanser(R, [[bein, 0x2a2c33], [kropp], [hode, 0xd2a888], [hår, 0x3a2a1c]], mob ? 16 : 45);
       const KLÆR = [[.6, .12, .1], [.15, .25, .45], [.85, .78, .6], [.25, .35, .2], [.2, .2, .22], [.7, .55, .2], [.5, .5, .55], [.35, .15, .35]];
-      liv.folk = Array.from({ length: mob ? 16 : 45 }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: BREDDE[v.k] / 2 + .9, fase: rnd() * 6 }; });
+      liv.folk = Array.from({ length: mob ? 16 : 45 }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
       liv.folk.forEach((p, k) => liv.folkMesh[1].setColorAt(k, new THREE.Color(...KLÆR[k % KLÆR.length])));
     }
     // fugler: tre flokker som sirkler over utsnittet
@@ -281,10 +283,13 @@
     if (!liv || !R.ut) return; if (!d) d = new THREE.Object3D(); const nå = performance.now() / 1000, dt = Math.min(.1, nå - (sist || nå)); sist = nå; const u = R.ut;
     for (const sh of liv.vind || []) sh.uniforms.uTid.value = nå;
     const flytt = (liste, mesh, høyde) => liste.forEach((o, k) => {
-      o.s += o.fart * dt * o.dir; if (o.s > o.v.L) { o.s = o.v.L; o.dir = -1; } else if (o.s < 0) { o.s = 0; o.dir = 1; }
+      o.s += o.fart * dt * o.dir;
+      if (o.s > o.v.L || o.s < 0) { const e = o.s < 0 ? 0 : 1;
+        if (!høyde && o.v.åpen && o.v.åpen[e] && liv.åpne.length > 1) { const [v2, e2] = liv.åpne[Math.floor(Math.random() * liv.åpne.length)]; o.v = v2; o.s = e2 ? v2.L : 0; o.dir = e2 ? -1 : 1; }
+        else { o.s = e ? o.v.L : 0; o.dir = e ? -1 : 1; } }
       const [x, y, z, v] = punkt(o.v, o.s, (o.side || 1.7) * o.dir), bob = høyde ? Math.abs(Math.sin(nå * 7 + (o.fase || 0))) * .04 : 0;
-      // z er vegens høyde (løftet opp på bruene av infra3d.js), ellers terrenget
-      d.position.set(x, y, Math.max((hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX, z - .3) + (høyde ? .15 : .12) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
+      // z er vegbanens høyde (flat på tvers, løftet opp på bruene av infra3d.js); fortauet ligger 15 cm over
+      d.position.set(x, y, z + (høyde && !o.gs ? .17 : .02) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
       for (const m of mesh) m.setMatrixAt(k, d.matrix); });
     if (liv.lys) { const m = window.NATT ? Math.max(0, Math.min(1, (NATT.mørke - .25) / .4)) : 0;
       liv.lys.front.material.color.setRGB(.7 + .3 * m, .7 + .27 * m, .68 + .17 * m); liv.lys.bak.material.color.setRGB(.44 + .56 * m, .055 + .07 * m, .04 + .05 * m);
@@ -300,5 +305,13 @@
       p.needsUpdate = true; }
   });
   // kryssene kan også finnes av andre moduler (spill/gate3d.js: benker og søppelkasser ved fotgjengerfeltene)
-  window.Liv3d = { finnKryss };
+  // Vegbanen eller brudekket under et punkt (Gå-modus går oppå dem): høyden, eller null når punktet ikke ligger på en veg eller bru.
+  function dekke(u, x, y) {
+    let z = null;
+    if (u.vegRute) { const b = u.vegRute.ru.nærmest(x, y, 6); if (b) { const v = u.vegRute.alle[b.li]; if (b.d < v.w + .3) { const p = v.P[b.i - 1], q = v.P[b.i]; z = p[2] + (q[2] - p[2]) * b.f; } } }
+    for (const m of u.bruer3d || []) { if (x < m.bb[0] || x > m.bb[2] || y < m.bb[1] || y > m.bb[3]) continue;
+      const pr = Bruer.projiser(m.P2, x, y); if (pr.d < m.W / 2 && pr.s > 0 && pr.s < m.L && !(m.sprengt && pr.s > m.L * Bruer.GAP[0] && pr.s < m.L * Bruer.GAP[1])) { const zb = m.zPå(pr.s) + .03; if (z === null || zb > z) z = zb; } }
+    return z;
+  }
+  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke };
 })();

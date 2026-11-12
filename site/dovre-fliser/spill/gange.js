@@ -64,7 +64,10 @@
     if (spak && spak.dx !== undefined) { const l = Math.min(1, Math.hypot(spak.dx, spak.dy) / 55); if (l > .12) { fram = -spak.dy / 55; side = spak.dx / 55; løp = l > .9; } }
     // utsnittets kant: hold deg innenfor (et nytt utsnitt bygges når du går langt)
     kropp.x = Math.max(-u.S * .97, Math.min(u.S * .97, kropp.x)); kropp.y = Math.max(-u.S * .97, Math.min(u.S * .97, kropp.y));
-    const verden = { høyde: (x, y) => (hoyde3d(u.cx + x, u.cy + y) - u.h0) * R.EX, hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: vannVed(u) };
+    // vegbanen og brudekkene (Liv3d.dekke) går du oppå når de ligger høyst 1,6 m over føttene dine (ellers går du under brua)
+    const vann = vannVed(u), dekke = (x, y) => { const d = window.Liv3d && Liv3d.dekke ? Liv3d.dekke(u, x, y) : null; return d !== null && d - kropp.z < 1.6 ? d : null; };
+    const verden = { høyde: (x, y) => { const t = (hoyde3d(u.cx + x, u.cy + y) - u.h0) * R.EX, d = dekke(x, y); return d !== null && d > t ? d : t; },
+      hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => vann(x, y) && dekke(x, y) === null };
     const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk }, dt, verden);
     hoppVent = false;
     b.x = kropp.x; b.y = kropp.y;

@@ -94,14 +94,15 @@
     for (const o of bruer) { const [x0, y0, x1, y1] = flisområde([o.bb[0] - 30, o.bb[1] - 30, o.bb[2] + 30, o.bb[3] + 30], z); for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) sett.add(x + ',' + y); }
     const fl = await Promise.all([...sett].map(k => { const [x, y] = k.split(',').map(Number); return hentFlis('vektor', z, x, y).then(t => [x, y, t]).catch(() => [x, y, null]); }));
     for (const [x, y, t] of fl) { if (!t || !t.veg) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
-      for (const o of t.veg.obj) for (const d of o.deler) linjer.push({ k: o.e.k, P: d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]) }); }
-    return linjer;
+      for (const o of t.veg.obj) { if (o.e.t === 4) continue; for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]), mx - u.cx, my - sp - u.cy, mx + sp - u.cx, my - u.cy)) linjer.push({ k: o.e.k, g: o.e.g ? 1 : 0, t: o.e.t || 0, P }); } }
+    // hele veger (skjøtet over flisgrenser og lenker), så en bru kan forlenges langs vegen forbi enden av en lenke
+    return Veg.skjøt(linjer);
   }
 
   // ---------- bruene ----------
   function bruModell(u, o, del, linjer) {
     const R = B(), bru = []; for (let i = 0; i < del.length; i += 2) bru.push([del[i] - u.cx, del[i + 1] - u.cy]);
-    const lin = o.e.type === 2 ? (bru.length > 1 ? { P: R.delLinje(bru, 0, R.lengde(bru)), k: null, veg: false } : null) : R.finnLinje(bru, linjer, o.e.lengde);
+    const lin = o.e.type === 2 ? (bru.length > 1 ? { P: R.delLinje(bru, 0, R.lengde(bru)), k: null, veg: false } : null) : (R.finnLinje(bru, linjer.filter(l => o.e.type === 1 ? l.g : !l.g), o.e.lengde, true) || R.finnLinje(bru, linjer, o.e.lengde));
     if (!lin || lin.P.length < 2) return null;
     if (lin.P.some(([x, y]) => Math.abs(x) > u.S - 12 || Math.abs(y) > u.S - 12)) return null;
     // punktene langs brua med retning, normal og terrenghøyde
@@ -221,10 +222,10 @@
 
   // Vegene fra liv3d.js som går over en bru løftes opp på dekket; i gapet på en sprengt bru tas de bort (vegen deles i to).
   // Ferjesambandene ligger også i vegnettet: vegbiter som går mer enn 30 m over vann (uten bru) tas bort, så ingen veg ligger på fjorden.
-  function løftVeger(u) {
-    if (!u.veger) return;
+  function løftVeger(u) { for (const liste of [u.veger, u.gangveger]) if (liste) løftListe(u, liste); }
+  function løftListe(u, veger) {
     const R = B(), ut = [];
-    for (const v of u.veger) {
+    for (const v of veger) {
       let bit = [];
       const våt = v.P.map(p => iVann(u, p[0], p[1])), sjø = våt.map(() => false);
       for (let i = 0; i < våt.length;) { if (!våt[i]) { i++; continue; } let j = i; while (j < våt.length && våt[j]) j++; if (j - i >= 12) for (let k = i; k < j; k++) sjø[k] = true; i = j; }
@@ -234,14 +235,14 @@
           if (p[0] < m.bb[0] || p[0] > m.bb[2] || p[1] < m.bb[1] || p[1] > m.bb[3]) continue;
           const pr = R.projiser(m.P2, p[0], p[1]); if (pr.d > m.W / 2 + .5 || pr.s < .2 || pr.s > m.L - .2 || Math.abs(pr.ex * dx / l + pr.ey * dy / l) < .85) continue;
           if (m.sprengt && pr.s > m.L * R.GAP[0] - 1 && pr.s < m.L * R.GAP[1] + 1) { borte = true; break; }
-          p[2] = m.zPå(pr.s) + .08; m.løftet = (m.løftet || 0) + 1; påBru = true;
+          p[2] = m.zPå(pr.s) + .08; p[3] = 1; m.løftet = (m.løftet || 0) + 1; påBru = true;
         }
         if (sjø[i] && !påBru) borte = true;
         if (borte) { if (bit.length > 1) ut.push({ ...v, P: bit }); bit = []; } else bit.push(p);
       }
       if (bit.length > 1) ut.push(bit.length === v.P.length ? v : { ...v, P: bit });
     }
-    u.veger.length = 0; for (const v of ut) u.veger.push(v);
+    veger.length = 0; for (const v of ut) veger.push(v);
   }
   // trær som ville stukket opp gjennom brua tas bort
   function ryddTrær(u) {
@@ -338,7 +339,7 @@
     const linjer = bruer.length ? await vegLinjer(u, bruer) : [];
     for (const o of bruer) for (const del of o.deler) { const m = bruModell(u, o, del, linjer); if (m) ms.push(m); }
     if (!kopi) return ms;
-    const k = { ...u, bruer3d: ms, veger: u.veger ? u.veger.map(v => ({ ...v, P: v.P.map(p => p.slice()) })) : null }; løftVeger(k);
+    const k = { ...u, bruer3d: ms, gangveger: null, veger: u.veger ? u.veger.map(v => ({ ...v, P: v.P.map(p => p.slice()) })) : null }; løftVeger(k);
     return { bruer: ms, veger: k.veger };
   }
   KROKER.bygg3d.push(async u => {
