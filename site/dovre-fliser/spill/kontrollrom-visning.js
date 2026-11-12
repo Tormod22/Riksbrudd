@@ -83,7 +83,7 @@
       g.save(); g.globalAlpha = .75; g.fillStyle = sidefarge('blå', 'farge'); g.strokeStyle = '#e7dcc3'; g.setLineDash([3, 2]); g.lineWidth = 1.3;
       g.beginPath(); g.rect(x - 11, y - 8, 22, 16); g.fill(); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
-      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist'} ${klokkeslett(p.tid)}`; g.strokeText(t, x, y - 13); g.fillStyle = '#e7dcc3'; g.fillText(t, x, y - 13); g.restore(); }
+      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist'} ${klokkeslett(p.tid)}`; const ty = window.Etikett ? Etikett.tekst(g, t, x, y - 13, -1) : y - 13; g.strokeText(t, x, ty); g.fillStyle = '#e7dcc3'; g.fillText(t, x, ty); g.restore(); }
     if (deg) { const [x, y] = tilSkjerm(deg.x, deg.y, vx0, vy1); g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 14, 0, 6.283); g.stroke(); g.restore(); }
   });
 

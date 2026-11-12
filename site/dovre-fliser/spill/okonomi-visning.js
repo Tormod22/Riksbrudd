@@ -104,8 +104,10 @@
     g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x - r * .45, y + r * .5); g.lineTo(x - r * .45, y - r * .5); g.stroke();
     g.fillStyle = '#e7dcc3'; g.beginPath(); g.moveTo(x - r * .45, y - r * .5); g.lineTo(x + r * .5, y - r * .25); g.lineTo(x - r * .45, y); g.closePath(); g.fill();
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
-    g.strokeText(b.navn, x, y - r - 6); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, y - r - 6);
+    const ny = window.Etikett ? Etikett.tekst(g, b.navn, x, y - r - 6, -1) : y - r - 6;
+    g.strokeText(b.navn, x, ny); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, ny);
     const tx = Math.floor(b.beholdning).toLocaleString('nb-NO') + ' t olje' + (b.kø.length ? ' · bygger' : '');
-    g.font = 'italic 12px "Cormorant Garamond",serif'; g.strokeText(tx, x, y + r + 14); g.fillStyle = '#f0d79a'; g.fillText(tx, x, y + r + 14);
+    g.font = 'italic 12px "Cormorant Garamond",serif'; const oy = window.Etikett ? Etikett.tekst(g, tx, x, y + r + 14, 1) : y + r + 14;
+    g.strokeText(tx, x, oy); g.fillStyle = '#f0d79a'; g.fillText(tx, x, oy);
   }
 })();

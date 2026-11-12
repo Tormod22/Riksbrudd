@@ -57,7 +57,8 @@
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && d.classList.contains('på')) vis(false); });
   // Første gang vises veiledningen av seg selv – men aldri oppå startskjermen (feiljakten 12. nov: hjelpen lå over kartet da leirplassen
   // skulle velges). Er et nytt spill på gang, venter den til spillet er klart (hendelsen «riksbrudd-spill» fra oppstart-visning.js).
-  const nyttSpillPåGang = () => { const o = window.OppstartSpill; return !!o && !(o.tilstand() && o.tilstand().ferdig); };
+  const nyttSpillPåGang = () => { const o = window.OppstartSpill, åpen = id => { const e = document.getElementById(id); return !!e && e.classList.contains('på'); };
+    return åpen('oppstart') || åpen('leirvalg') || (!!o && !(o.tilstand() && o.tilstand().ferdig)); };
   function første() {
     let sett = true; try { sett = localStorage.getItem('riksbrudd-hjelp') === '1'; } catch (e) { /* privat vindu: vis ikke */ }
     if (sett) return false;

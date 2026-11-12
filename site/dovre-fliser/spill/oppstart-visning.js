@@ -25,7 +25,7 @@
 #oppstart .bilde{ position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .bilde{ order:-1; position:static; text-align:center; } #oppstart .bilde img{ width:140px; height:auto; } }
 #oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
-@media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:0; z-index:1; background:#16120c; text-align:center; padding:6px 0; border-bottom:1px solid var(--rule); }
+@media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:1; background:#16120c; text-align:center; padding:22px 0 6px; border-bottom:1px solid var(--rule); }
   #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
 #oppstart button.valg{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-height:40px; padding:4px 10px; }
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
@@ -187,7 +187,7 @@
     const f = flaggBilde(); if (f && ok !== false && !forslag) { g.drawImage(f, x + 1, y - 38, 30, 20); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.strokeRect(x + 1, y - 38, 30, 20); }
     else { g.fillStyle = ok ? '#e0b53a' : '#c8102e'; g.fillRect(x + 1, y - 38, 24, 16); }
     g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(x, y, 7, 3, 0, 0, 6.283); g.fill();
-    if (navn) { g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(navn, x, y + 16); g.fillStyle = '#f2ead6'; g.fillText(navn, x, y + 16); }
+    if (navn) { g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, navn, x, y + 16, 1) : y + 16; g.strokeText(navn, x, ny); g.fillStyle = '#f2ead6'; g.fillText(navn, x, ny); }
     g.restore();
   }
   KROKER.tegn.push((g, vx0, vy1) => {
@@ -196,7 +196,7 @@
   });
   KROKER.tegn3d.push((g, proj3) => {
     if (!S || !S.leir) return; const p = proj3(S.leir.x, S.leir.y); if (!p) return;
-    g.save(); g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(S.fraksjon.navn, p[0], p[1] + 18); g.fillStyle = '#f2ead6'; g.fillText(S.fraksjon.navn, p[0], p[1] + 18); g.restore();
+    g.save(); g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, S.fraksjon.navn, p[0], p[1] + 18, 1) : p[1] + 18; g.strokeText(S.fraksjon.navn, p[0], ny); g.fillStyle = '#f2ead6'; g.fillText(S.fraksjon.navn, p[0], ny); g.restore();
   });
   // 3D: flaggstangen fra leirmodellene (spill/modeller.js) med ditt flagg som duk
   let stang = [];
