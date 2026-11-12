@@ -1999,7 +1999,7 @@ window.lukkPanel = () => { if (document.getElementById('panel').classList.contai
 // pekerNede(el): en finger eller museknapp er nede på noe inne i el. Paneler som tegnes på nytt hvert sekund, venter da –
 // ellers havner «ned» og «opp» på to ulike knapper, og klikket forsvinner (feiljakten 12. nov)
 { let nedePå = null; const slipp = () => { nedePå = null; };
-  window.addEventListener('pointerdown', e => { nedePå = e.target; }, true); window.addEventListener('pointerup', slipp, true); window.addEventListener('pointercancel', slipp, true);
+  window.addEventListener('pointerdown', e => { nedePå = e.target; }, true); window.addEventListener('pointerup', slipp, true); window.addEventListener('pointercancel', slipp, true); window.addEventListener('blur', slipp);
   window.pekerNede = el => !!(nedePå && el && el.contains(nedePå)); }
 window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
 window.addEventListener('resize', storrelse);
