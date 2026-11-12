@@ -133,13 +133,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const vegOk = veg && veg.slag.length >= 3 && veg.nFeil === 0 && veg.n > 100; if (!vegOk) feil++;
       console.log(`${vegOk ? 'ok  ' : 'FEIL'} ${navn} vegetasjon i 3D: treslag ${veg && veg.slag.join(', ')}; ${veg && veg.n} sjekket (${veg && veg.planter} planter), ${veg && veg.nFeil} i vann eller på veg ${veg && veg.nFeil ? JSON.stringify(veg.feil) : ''}`);
       // VAKT (12. nov, Nidelva): der kartet alt har elva som vannflate (vannmasken), tegnes ikke bekkebåndet oppå – ingen punkter i
-      // båndet ligger tydelig ute i vannet (vann i punktet og 2 m til hver side). Jora er bred nok til å være vannflate i kartet.
+      // båndet ligger tydelig ute i vannet (vann i punktet og 2 m til hver side).
       const bvann = await pg.evaluate(() => { const u = R3.ut, S = window.BEKKER_STAT || {}, vd = u.vannData, r = { bånd: (u.bekk || []).length, kutt: S.iVann, iVann: 0, n: 0, maske: !!(vd && vd.W) };
         if (!r.maske) return r;
         const v = (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * vd.W), j = Math.floor((u.S - y) / (2 * u.S) * vd.W); return i >= 0 && j >= 0 && i < vd.W && j < vd.W && vd.d[(j * vd.W + i) * 4] > 127; };
         for (const b of u.bekk || []) for (const p of b.P3) { r.n++; if (v(p[0], p[1]) && v(p[0] + 2, p[1]) && v(p[0] - 2, p[1]) && v(p[0], p[1] + 2) && v(p[0], p[1] - 2)) r.iVann++; }
         return r; });
-      const bvannOk = bvann.maske && bvann.n > 20 && bvann.iVann === 0 && bvann.kutt > 0; if (!bvannOk) feil++;
+      const bvannOk = bvann.maske && bvann.n > 20 && bvann.iVann === 0; if (!bvannOk) feil++;   // ved Jora er ingen linjer kuttet (elva er ikke vannflate i kartet her): regelen selv testes i test_bekker.js
       console.log(`${bvannOk ? 'ok  ' : 'FEIL'} ${navn} bekker og vannflater: ${bvann.bånd} vannbånd ved Jora bru (${bvann.n} punkt), ${bvann.iVann} ute i kartets vannflate, ${bvann.kutt} linjer kuttet mot vannet`);
       // VAKT (bruer i 3D, spill/infra3d.js): modellene finnes i scenen, søylene og landkarene står på bakken (bunnen ikke over terrenget og
       // ikke mer enn 2,5 m ned i det), dekket ligger over terrenget langs hele brua, vegene er løftet opp på dekket, og en sprengt bru har gap
