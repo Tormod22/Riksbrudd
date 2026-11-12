@@ -37,6 +37,8 @@
 
   // ---------- bygg3d: treslag ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
+    // nøyaktig avstand til vegene og fortauene (for blomster og gress – vegmasken u.påVeg er for grov i store utsnitt)
+    u.vegNær = u.veger && u.veger.length ? V.vegRute(u.veger) : null;
     // bryteren VEG_AV på window slår dette av: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
     if (!u.trær || !u.trær.gran || window.VEG_AV) return;
     const kv = await lagVindu([u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], false, 9);
@@ -80,6 +82,10 @@
         const x = -u.S + (i + .5) * c, y = u.S - (j + .5) * c, k = j * W + i, g = B ? B.gress[Math.floor(j * B.W / W) * B.W + Math.floor(i * B.W / W)] : 0, K = klasse(x + u.cx, y + u.cy);
         const dv = vann(x, y); if (dv < 14 && !iVann(u, x, y)) nærVann[k] = 1;
         if (dv < 1 || (u.påVeg && u.påVeg(x, y))) continue;
+        // grått i kartet under er asfalt, parkeringsplass, heller eller tak: der vokser ingenting (12. nov: blomster over hele
+        // parkeringsplassen i Dombås – hei-ruta på 32 m fikk blomster uansett hva som lå der)
+        if (B && !g) { const q = (Math.floor(j * B.W / W) * B.W + Math.floor(i * B.W / W)) * 3, r0 = B.rgb[q], g0 = B.rgb[q + 1], b0 = B.rgb[q + 2];
+          if (Math.abs(r0 - g0) + Math.abs(g0 - b0) < 14 || r0 + g0 + b0 >= 600) continue; }
         if (g === 2) sted[k] = 3; else if (K === 2 || (K === 0 && g)) sted[k] = 2; else if (g === 1) sted[k] = 1; else continue;
         if (sted[k] !== 3 && u.påVeg && (u.påVeg(x + 4, y) || u.påVeg(x - 4, y) || u.påVeg(x, y + 4) || u.påVeg(x, y - 4))) sted[k] = 4;
       } }
@@ -236,6 +242,13 @@
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
     g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 2 ? 1 : 0)), 3)); g.setIndex(idx); return g;
   }
+  // Her kan en blomst, bregne eller sivtust stå: ikke i vann eller bekk, ikke i vegbanen eller på fortauet (nøyaktig avstand til
+  // vegene, u.vegNær), ikke i jernbanesporet (u.påBane fra bane3d.js) og ikke inntil husveggene (12. nov: blomster på fortauet og
+  // helt inn til veggene, bregner mellom svillene).
+  function fri(u, x, y) {
+    if (iVann(u, x, y) || (u.vegNær ? u.vegNær(x, y, .3) : u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
+    return !(u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y));
+  }
   let vekst = null, vekstSenter = null, vekstNøkkel = '';
   function lagVekst(R) {
     const lag = (type, plan, maks) => {
@@ -259,28 +272,31 @@
     const nøkkel = å + '|' + (R.fot ? 1 : 0);
     if (vekstSenter && nøkkel === vekstNøkkel && Math.hypot(c.x - vekstSenter[0], c.y - vekstSenter[1]) < 12) return;
     vekstSenter = [c.x, c.y]; vekstNøkkel = nøkkel;
-    const RAD = R.fot ? 45 : 70, d = new THREE.Object3D(), col = new THREE.Color(), W = K.W, bl = V.blomstring(å), høst = å === 'høst';
+    const RAD = R.fot ? 45 : 70, d = new THREE.Object3D(), col = new THREE.Color(), W = K.W, bl = V.blomstring(å), høst = å === 'høst', tg = V.tregrense(u.cy);
     let f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
     const n = { blomst: 0, bregne: 0, siv: 0 }, STED = [null, 'eng', 'hei', 'skog', 'veikant'];
-    const sett = (type, x, y, s, h, farge) => { const m = vekst[type]; if (n[type] >= m.instanceMatrix.count || iVann(u, x, y) || (u.påVeg && u.påVeg(x, y))) return;
-      d.position.set(x, y, (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX - .04); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set(s, s, h); d.updateMatrix();
+    const sett = (type, x, y, s, h, farge, moh) => { const m = vekst[type]; if (n[type] >= m.instanceMatrix.count || !fri(u, x, y)) return;
+      d.position.set(x, y, (moh - u.h0) * R.EX - .04); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set(s, s, h); d.updateMatrix();
       m.setMatrixAt(n[type], d.matrix); col.setRGB(...farge); m.setColorAt(n[type], col); n[type]++; };
     const forsøk = vekst.blomst.instanceMatrix.count * 3;
     for (let t = 0; t < forsøk; t++) {
       const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), .7), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
       const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); if (i < 0 || j < 0 || i >= W || j >= W) continue;
       const k = j * W + i, st = K.sted[k], r = rnd();
-      if (K.nærVann[k] && r < .5) {
+      // høyden over havet mot tregrensen: glisnere oppover i fjellet, og ingenting i ura høyt oppe (Vegetasjon.vekst)
+      const moh = hoyde3d(x + u.cx, y + u.cy), rel = moh / tg, vk = V.vekst(rel);
+      if (K.nærVann[k] && r < .5 && vk > .5) {
         // siv i vannkanten: på land, men med vann innen 3 m
         if (!iVann(u, x, y) && (iVann(u, x + 3, y) || iVann(u, x - 3, y) || iVann(u, x, y + 3) || iVann(u, x, y - 3))) { const l = .85 + rnd() * .3;
-          sett('siv', x, y, .7 + rnd() * .5, .9 + rnd() * .7, høst ? [.78 * l, .66 * l, .4 * l] : [.55 * l, .66 * l, .38 * l]); continue; }
+          sett('siv', x, y, .7 + rnd() * .5, .9 + rnd() * .7, høst ? [.78 * l, .66 * l, .4 * l] : [.55 * l, .66 * l, .38 * l], moh); continue; }
       }
-      if (!st) continue;
-      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.62 * l, .42 * l, .2 * l] : [.32 * l, .48 * l, .24 * l]); continue; } }
-      if (rnd() > V.STEDTETTHET[STED[st]] * bl) continue;
-      const art = V.blomst(STED[st], å, rnd()); if (!art) continue;
+      if (!st || !vk) continue;
+      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.62 * l, .42 * l, .2 * l] : [.32 * l, .48 * l, .24 * l], moh); continue; } }
+      const sted = V.stedIHøyden(STED[st], rel);
+      if (rnd() > V.STEDTETTHET[sted] * bl * vk) continue;
+      const art = V.blomst(sted, å, rnd()); if (!art) continue;
       const fa = V.BLOMSTER[art].farge, l = .88 + rnd() * .24, høy = art === 'geitrams' ? .7 + rnd() * .5 : art === 'røsslyng' ? .16 + rnd() * .1 : .2 + rnd() * .22;
-      sett('blomst', x, y, art === 'røsslyng' ? .35 : .22 + rnd() * .12, høy, fa.map(v => Math.min(1, v * l)));
+      sett('blomst', x, y, art === 'røsslyng' ? .35 : .22 + rnd() * .12, høy * (.6 + .4 * vk), fa.map(v => Math.min(1, v * l)), moh);
     }
     for (const [type, m] of Object.entries(vekst)) { m.count = n[type]; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
   }
@@ -303,5 +319,10 @@
       if (vekst) { const M = new THREE.Matrix4(), p = new THREE.Vector3(); for (const [type, m] of Object.entries(vekst)) for (let k = 0; k < m.count; k += Math.max(1, Math.floor(m.count / 300))) { m.getMatrixAt(k, M); p.setFromMatrixPosition(M); ut.push([p.x, p.y, type]); } }
       return ut; },
     iVann: (x, y) => { const R = r3(); return !!(R && R.ut && iVann(R.ut, x, y)); },
+    // plantene rundt kameraet nå: [x, y, slag] for alle – vakten i sjekk.js teller dem på veg/fortau, i sporet, inntil hus og på asfalt
+    planter: () => { const ut = []; if (!vekst) return ut; const M = new THREE.Matrix4(), p = new THREE.Vector3();
+      for (const [type, m] of Object.entries(vekst)) if (m.visible) for (let k = 0; k < m.count; k++) { m.getMatrixAt(k, M); p.setFromMatrixPosition(M); ut.push([p.x, p.y, type]); }
+      return ut; },
+    fri: (x, y) => { const R = r3(); return !!(R && R.ut && fri(R.ut, x, y)); },
   };
 })();

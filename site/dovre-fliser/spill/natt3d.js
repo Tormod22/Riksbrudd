@@ -163,12 +163,15 @@
       #endif`); };
     mat.customProgramCacheKey = () => 'natt-vindu'; mat.needsUpdate = true;
   }
-  // Tåkebanker: steder i dalbunnen (under 25 m over det laveste innen ca. 1 km), helst nær midten
+  // Tåkebanker: steder i dalbunnen (under 25 m over det laveste innen ca. 1 km), helst nær midten. Bare under tregrensen: morgentåka
+  // ligger i dalene, ikke oppe i fjellsiden (12. nov: to lyse klatter lå på bakken 1650 moh. ved Snøhetta – de laveste punktene
+  // i et utsnitt som bare var høyfjell).
   function dalpunkter(u, maks) {
+    const tak = (window.Vegetasjon ? Vegetasjon.tregrense(u.cy) : 1100) - 50;
     const steg = Math.max(1, Math.round(100 / u.steg)), m = Math.floor((u.N - 1) / steg) + 1, G = new Float32Array(m * m);
     for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) G[j * m + i] = u.H[(j * steg) * u.N + i * steg];
     const R = Math.max(2, Math.round(1000 / (steg * u.steg))), ut = []; let f = 77; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
-    for (let j = 0; j < m; j += 2) for (let i = 0; i < m; i += 2) { const h = G[j * m + i]; if (!(h > 5)) continue; let lav = h;
+    for (let j = 0; j < m; j += 2) for (let i = 0; i < m; i += 2) { const h = G[j * m + i]; if (!(h > 5) || h > tak) continue; let lav = h;
       for (let b = Math.max(0, j - R); b <= Math.min(m - 1, j + R); b += 2) for (let a = Math.max(0, i - R); a <= Math.min(m - 1, i + R); a += 2) lav = Math.min(lav, G[b * m + a]);
       if (h - lav > 25) continue; const x = -u.S + i * steg * u.steg, y = u.S - j * steg * u.steg; ut.push([x, y, h, Math.hypot(x, y) / u.S + rnd() * .6]); }
     return ut.sort((a, b) => a[3] - b[3]).slice(0, maks);
@@ -202,9 +205,14 @@
     // tåkebanker i dalbunnen
     if (!tåkeTex) tåkeTex = tåkeTekstur();
     let f = 3; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+    // Bankene er flate plakater som vender mot kameraet. Brukeren fant 12. nov at de så ut som firkantede bokser og hvite klatter over
+    // halve hus: plakatene var opptil 150 m høye og sto med midten 8–24 m over bakken, så de skar tvers gjennom bakken, husene og
+    // trærne i en rett linje. Nå er de lavere (26–90 m), og underkanten av den synlige delen holdes et par meter over bakken
+    // (høyden settes hver ramme etter hvor mye plakaten heller når du ser ned på den), så de ligger som lave skyer i dalen.
     R.nattTåke = dalpunkter(u, mob() ? 28 : 64).map(([x, y, h]) => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tåkeTex, transparent: true, depthWrite: false, opacity: 0 })), str = 160 + rnd() * 200;
-      s.scale.set(str, str * (.28 + rnd() * .14), 1); s.position.set(x + (rnd() - .5) * 60, y + (rnd() - .5) * 60, (h - u.h0) * R.EX + 8 + rnd() * 16); s.userData.a = .55 + rnd() * .45;
+      s.scale.set(str, str * (.16 + rnd() * .1), 1); s.position.set(x + (rnd() - .5) * 60, y + (rnd() - .5) * 60, 0); s.userData.a = .55 + rnd() * .45;
+      s.userData.bakke = (hoyde3d(s.position.x + u.cx, s.position.y + u.cy, u) - u.h0) * R.EX + 2 + rnd() * 6; s.position.z = s.userData.bakke + s.scale.y * .31;
       s.visible = false; s.renderOrder = 2; R.scene.add(s); R.nattObj.push(s); return s; });
   });
 
@@ -246,8 +254,11 @@
     // tåkebanker i dalen om morgenen (og i tåkevær), tones ut nær kameraet; litt dis i lavlandet om morgenen
     const dt = V.dalTåke || 0, høyde = c.z;
     if (dt > .01) { const fc = R.scene.fog.color, lys = .35 + .65 * (1 - m);
-      for (const s of R.nattTåke || []) { const dd = Math.hypot(s.position.x - c.x, s.position.y - c.y, s.position.z - c.z);
-        s.material.opacity = Math.min(.85, dt * s.userData.a * .95) * trinn(40, 220, dd); s.visible = s.material.opacity > .01;
+      // plakatens «opp» er kameraets: den synlige delen (31 % av høyden til hver side av midten) rekker oppZ ganger så langt ned
+      const oppZ = Math.abs(R.cam.matrixWorld.elements[6]);
+      for (const s of R.nattTåke || []) { s.position.z = s.userData.bakke + s.scale.y * .31 * oppZ;
+        const dd = Math.hypot(s.position.x - c.x, s.position.y - c.y, s.position.z - c.z);
+        s.material.opacity = Math.min(.6, dt * s.userData.a * .7) * trinn(40, 220, dd); s.visible = s.material.opacity > .01;
         s.material.color.setRGB((fc.r * .5 + .5) * lys, (fc.g * .5 + .5) * lys, (fc.b * .5 + .52) * lys); }
       const fog = R.scene.fog; fog.far = Math.max(160, fog.far * (1 - .3 * dt * trinn(3000, 300, høyde))); fog.near = Math.min(fog.near, fog.far * .3);
     } else for (const s of R.nattTåke || []) s.visible = false;

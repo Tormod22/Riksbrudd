@@ -253,7 +253,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   // Trærne i scenen som nå er hogd, tas bort (som ryddTrær i leir-visning.js), og stubbene legges inn
   function ryddHogst() {
     const R3_ = r3(); if (!R3_ || !R3_.ut || !window.THREE || R3_.bygger) return; const u = R3_.ut, er = hogdLokal(u), null16 = new Float32Array(16); u.stubber = u.stubber || [];
-    for (const t of R3_.treLOD || []) for (let k = 0; k < t.n; k++) { const x = t.data[k * 5], y = t.data[k * 5 + 1]; if (t.M[k * 16 + 15] !== 0 && er(x, y)) { t.M.set(null16, k * 16); u.stubber.push(x, y, t.data[k * 5 + 2]); } }
+    for (const t of R3_.treLOD || []) for (let k = 0; k < t.n; k++) { const x = t.data[k * 5], y = t.data[k * 5 + 1]; if (t.M[k * 16 + 15] !== 0 && er(x, y)) { t.M.set(null16, k * 16); if (!t.busk) u.stubber.push(x, y, t.data[k * 5 + 2]); } }
     R3_.lodVed = null;
     const mm = new THREE.Matrix4(), v = new THREE.Vector3(), nullM = new THREE.Matrix4().makeScale(0, 0, 0);
     for (const m of [...(R3_.treMesh || []), ...(R3_.småMesh || [])]) { if (!m.isInstancedMesh || (R3_.treLOD || []).some(t => t.nær === m || t.fjern === m)) continue;
