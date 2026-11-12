@@ -452,6 +452,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           // materialer fra verden (spill/ressurser*.js): hogst nær leiren gir tre i lageret og huskes, et (oppdiktet) hus rives og huskes,
           // panelet viser utbytte og kjøpspris, menyen har delen, og lagringen leses igjen
           { const RS = RessursSpill, Rr = RS.tilstand(), leir = { x: LX, y: LY }; L.lager.tre = 0; L.lager.betong = 0;
+            // med Folk-delen gjøres arbeidet bare av folk på oppgaven: sett én ledig person på hogst og én på riving
+            const ledige = window.FolkSpill ? FolkSpill.tilstand().personer.filter(p => p.oppgave === 'fri') : [];
+            if (ledige[0] && !Folk.arbeidere('riving')) ledige[0].oppgave = 'riving'; if (ledige[1] && !Folk.arbeidere('hogst')) ledige[1].oppgave = 'hogst';
             RS.startVelg('hogst'); RS.trykk(LX - 32, LY - 4); await RS.prøv(); const v = RS.velg(), bt = document.getElementById('ressursvalg').textContent;
             const panel = !v.feil && /Start hogst/.test(bt) && /kjøpe like mye/.test(bt) && v.ut.mat.tre > 0; RS.start();
             const hj = Rr.jobber.find(j => j.type === 'hogst'), P = [[LX + 300, LY + 300], [LX + 312, LY + 300], [LX + 312, LY + 310], [LX + 300, LY + 310]], rj = Ressurser.startRiving(Rr, { i: 999001, P, t: 6, h: 6 }, leir).jobb;

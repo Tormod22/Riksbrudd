@@ -50,7 +50,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   });
   function jobbLinje(j) {
     const navn = j.type === 'hogst' ? `Hogst (${j.r} m)` : `Riving: ${husNavn(j.hus)}`, f = RS.fram(j), h = RS.iHaug(j);
-    return `${navn} – ${j.stoppet ? 'stoppet' : f >= 1 ? 'arbeidet er ferdig' : `${Math.round(f * 100)} %`}${h > .05 ? `, ${tall(h)} venter på frakt` : ''}${j.bil ? ` (${j.bil})` : ''}`;
+    return `${navn} – ${j.stoppet ? 'stoppet' : f >= 1 ? 'arbeidet er ferdig' : `${Math.round(f * 100)} %` + (folk(j.type) ? '' : ` – venter: ingen har oppgaven «${j.type}» (sett noen i Folk)`)}${h > .05 ? `, ${tall(h)} venter på frakt` : ''}${j.bil ? ` (${j.bil})` : ''}`;
   }
   const husNavn = h => ((typeof BYGGTYPE !== 'undefined' && BYGGTYPE[h.t]) || 'Bygg').toLowerCase();
   function startVelg(type) {
