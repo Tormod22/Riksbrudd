@@ -193,12 +193,12 @@
    "bygg": 7111
   },
   "vektor": {
-   "byte": 913029,
+   "byte": 918762,
    "fliser": 2407,
    "per_niva": {
     "8": {
      "fliser": 8,
-     "snitt_kb": 1.3
+     "snitt_kb": 1.4
     },
     "9": {
      "fliser": 23,

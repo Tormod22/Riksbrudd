@@ -9,6 +9,7 @@ Kjøres i GitHub Actions for hver blokk fra blokker.py; sammen.py setter blokken
   kart     Landsat 5, somrene ÅR-1 til ÅR+2, skyfri median (QA_PIXEL), 32 m, z6–z9; terreng klassifisert fra samme
   Alltid:
   vektor   veger fra NVDB slik vegnettet var 1. juni ÅR (tidspunkt) og bygg fra matrikkelen, z8–z13
+           (veg: k = kategori, g = 1 gang- og sykkelveg, t = 1 kanalisert veg, 2 rampe, 3 rundkjøring, 4 ferje – se vegtype.py)
 
 Bruk: python3 blokk.py X Y [utmappe] [år]      (utmappe: standard arbeid/blokker/X_Y, år: miljøvariabel AAR eller 2023)
 Krever: numpy, pillow, rasterio, pyproj, shapely, tifffile, mapbox-vector-tile, pmtiles. Bak proxy: CURL_CA_BUNDLE.
@@ -21,6 +22,7 @@ from shapely import clip_by_rect, STRtree
 from pmtiles.writer import Writer
 from pmtiles.tile import zxy_to_tileid, TileType, Compression
 from felles import CRS, TILE, res, span, tile_bounds
+from vegtype import vegtype
 from fliskode import Lerret, kod_hoyde, kod_terreng, webp, klassifiser, flisomraade, mvt, INGEN, fra_worldcover, farge
 
 HER = os.path.dirname(os.path.abspath(__file__))
@@ -229,7 +231,7 @@ def veger(b):
             if kat == 'P' and o.get('typeVeg') != 'Enkel bilveg': continue
             wkt = o['geometri']['wkt']; i, j = wkt.find('('), wkt.rfind(')')
             p = [[float(c.split()[0]), float(c.split()[1])] for c in wkt[i + 1:j].replace('(', '').replace(')', '').split(',')]
-            if len(p) > 1: ut.append({'c': kat, 'p': p})
+            if len(p) > 1: ut.append({'c': kat, 'p': p, **vegtype(o)})
         nx = d['metadata'].get('neste')
         u = base + '&start=' + urllib.parse.quote(nx['start']) if nx and d['objekter'] else None
     return ut
@@ -314,7 +316,7 @@ def main(bx, by, ut):
 
     # veger 1986 og bygg -> vektor
     vg = veger(M); bg = bygg(B); stat['veger'] = len(vg); stat['bygg'] = len(bg); logg('veger', len(vg), 'bygg', len(bg))
-    linjer = [LineString(v['p']) for v in vg]; kat = [v['c'] for v in vg]; punkt = [Point(b[0], b[1]) for b in bg]
+    linjer = [LineString(v['p']) for v in vg]; kat = [v['c'] for v in vg]; ekstra = [{k: v[k] for k in ('g', 't') if v.get(k)} for v in vg]; punkt = [Point(b[0], b[1]) for b in bg]
     tl, tp = STRtree(linjer), STRtree(punkt)
     VIS = {8: 'ERF', 9: 'ERFK'}
     vf = []
@@ -333,7 +335,7 @@ def main(bx, by, ut):
                     for part in getattr(g, 'geoms', [g]):
                         if part.geom_type != 'LineString' or len(part.coords) < 2: continue
                         c = [q(X, Y) for X, Y in part.coords]; c = [p for n, p in enumerate(c) if n == 0 or p != c[n - 1]]
-                        if len(c) >= 2: f.append({'geometry': LineString(c), 'properties': {'k': kat[i]}})
+                        if len(c) >= 2: f.append({'geometry': LineString(c), 'properties': {'k': kat[i], **ekstra[i]}})
                 if f: lag.append({'name': 'veg', 'features': f})
                 if z >= 11:
                     bf = [{'geometry': Point(*q(punkt[i].x, punkt[i].y)), 'properties': {'t': bg[i][2]}}

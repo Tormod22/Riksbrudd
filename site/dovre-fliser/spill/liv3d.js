@@ -8,37 +8,53 @@
   let liv = null, sist = 0;
 
   // ---------- vegene fra vektorflisene (z13, ca. 2 m) ----------
+  // Reglene ligger i spill/veg.js (uten DOM): vegene klippes til flisen og skjøtes til hele veger, gang- og sykkelvegene skilles ut
+  // (u.gangveger), biter i tunnel tas bort, og vegbanen legges flatt på tvers i høyden til det høyeste punktet under den.
+  // u.veger = bilvegene [{ k, t, by, w, P: [[x, y, z]], åpen: [start, slutt] }] (t: 1 svingefelt, 2 rampe, 3 rundkjøring; w = halv bredde;
+  // åpen: enden står i en tunnelportal eller ved kanten av utsnittet). Punkter på en bru får p[3] = 1 (spill/infra3d.js).
+  const tunnelLinjer = u => { const ut = []; if (!u.infra) return ut;
+    for (const o of u.infra) if (o.lag === 'tunnel') for (const d of o.deler) { const P = []; for (let i = 0; i < d.length; i += 2) P.push([d[i] - u.cx, d[i + 1] - u.cy]); if (P.length > 1) ut.push(Veg.tunnel(P)); }
+    return ut; };
   KROKER.bygg3d.push(async u => {
     if (u.S > 2200 || !VIS.veg) return;
-    const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), linjer = [];
+    const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), rå = [];
     const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('vektor', z, x, y).then(t => [x, y, t]));
     const byer = INFRA && INFRA.tettsted && window.Garnison ? INFRA.tettsted.filter(t => t.bb[2] > u.cx - u.S && t.bb[0] < u.cx + u.S && t.bb[3] > u.cy - u.S && t.bb[1] < u.cy + u.S) : [];
     for (const [x, y, t] of await Promise.all(fl)) {
-      if (!t || !t.veg) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
-      for (const o of t.veg.obj) { const k = o.e.k; if (!BREDDE[k]) continue;
-        for (const d of o.deler) {
-          // jevne kurver (Chaikin to ganger: hjørnene rundes av, endene står), så punkt hver ~2,5 m som følger terrenget
-          let Q = d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]);
-          for (let k = 0; k < 2 && Q.length > 2; k++) { const ny = [Q[0]]; for (let i = 0; i < Q.length - 1; i++) { const [ax, ay] = Q[i], [bx, by] = Q[i + 1]; ny.push([ax * .75 + bx * .25, ay * .75 + by * .25], [ax * .25 + bx * .75, ay * .25 + by * .75]); } ny.push(Q[Q.length - 1]); Q = ny; }
-          const P = [Q[0]];
-          for (let i = 1; i < Q.length; i++) { const [ax, ay] = P[P.length - 1], [X, Y] = Q[i], l = Math.hypot(X - ax, Y - ay); if (l < 1.2 && i < Q.length - 1) continue;
-            const n = Math.floor(l / 2.5); for (let s2 = 1; s2 < n; s2++) P.push([ax + (X - ax) * s2 / n, ay + (Y - ay) * s2 / n]); P.push([X, Y]); }
-          // klipp ved kanten av utsnittet (utenfor finnes ikke terreng), del opp i biter som ligger inne
-          const biter = []; let bit = [];
-          for (const p of P) { if (Math.abs(p[0]) < u.S - 4 && Math.abs(p[1]) < u.S - 4) bit.push(p); else { if (bit.length > 1) biter.push(bit); bit = []; } }
-          if (bit.length > 1) biter.push(bit);
-          for (const B2 of biter) {
-            const by = byer.length && byer.some(b => Garnison.inni(b, B2[B2.length >> 1][0] + u.cx, B2[B2.length >> 1][1] + u.cy));
-            linjer.push({ k, P: B2.map(([a, b]) => [a, b, (hoyde3d(a + u.cx, b + u.cy, u) - u.h0) * R3.EX + LØFT[k]]), by });
-          }
+      if (!t || !t.veg) continue; const mx = G.x0 + x * sp - u.cx, my = G.y0 - y * sp - u.cy, e = t.veg.ext;
+      for (const o of t.veg.obj) { const k = o.e.k; if (!BREDDE[k] || o.e.t === 4) continue;
+        for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp, my - b / e * sp]), mx, my - sp, mx + sp, my)) rå.push({ k, g: o.e.g ? 1 : 0, t: o.e.t || 0, P });
+      }
+    }
+    // hele veger med jevne kurver og punkt hver ~2,5 m; eldre fliser uten vegtype: gjett gang- og sykkelveger og svingefelt
+    const hele = Veg.skjøt(rå).map(v => ({ ...v, P: Veg.jevn(v.P) }));
+    u.vegtype = rå.some(v => v.g || v.t); if (!u.vegtype) Veg.gjett(hele);
+    const tun = VIS.infra ? tunnelLinjer(u) : [], iBy = (x, y) => byer.some(b => Garnison.inni(b, x + u.cx, y + u.cy)), zf = (x, y) => nettHoyde(u, x, y);
+    const veger = [], gang = [];
+    for (const v of hele) { const w = Veg.halv(v);
+      for (const T of Veg.utenTunnel(v.P, tun)) {
+        // klipp ved kanten av utsnittet (utenfor finnes ikke terreng), del opp i biter som ligger inne
+        const biter = []; let bit = [], fra = 0;
+        T.P.forEach((p, i) => { if (Math.abs(p[0]) < u.S - 4 && Math.abs(p[1]) < u.S - 4) { if (!bit.length) fra = i; bit.push(p); } else { if (bit.length > 1) biter.push([bit, fra]); bit = []; } });
+        if (bit.length > 1) biter.push([bit, fra]);
+        for (const [B, i0] of biter) {
+          // i tettsted eller ikke (prøves hver 10. m); et skifte kortere enn 25 m teller ikke
+          const by = B.map((p, i) => i % 4 ? null : iBy(p[0], p[1])); for (let i = 0; i < by.length; i++) if (by[i] === null) by[i] = by[i - (i % 4)];
+          for (let i = 0; i < by.length;) { let j = i; while (j < by.length && by[j] === by[i]) j++; if (j - i < 10 && i > 0) by.fill(by[i - 1], i, j); i = j; }
+          const h = Veg.høyder(B, w, zf);
+          for (let i = 0; i < B.length;) { let j = i; while (j < B.length && by[j] === by[i]) j++; const til = Math.min(B.length, j + 1);
+            if (til - i > 1) (v.g ? gang : veger).push({ k: v.k, g: v.g, t: v.t, by: !!by[i], w, P: B.slice(i, til).map(([a, b], q) => [a, b, h[i + q] + LØFT[v.k]]),
+              åpen: [i === 0 && (i0 > 0 || T.kutt[0]), til === B.length && (i0 + B.length < T.P.length || T.kutt[1])] });
+            i = j; }
         }
       }
     }
-    u.veger = linjer;
+    u.veger = veger; u.gangveger = gang;
+    const alle = veger.concat(gang);
     // vegmaske (1024 × 1024): ingen stein, busker, trær eller gress i vegbanen og på fortauet
     const W = 1024, m = new Uint8Array(W * W), celle = 2 * u.S / W;
-    // 1 = grus (P/S), 2 = asfalt/fortau (E/R/F/K) – lyd.js lar fottrinnene knase på grus
-    for (const v of linjer) { const r = BREDDE[v.k] / 2 + (v.by ? 2.6 : .8), rc = Math.ceil(r / celle), kode = 'ERFK'.includes(v.k) ? 2 : 1;
+    // 1 = grus (P/S), 2 = asfalt/fortau (E/R/F/K og gang- og sykkelveger) – lyd.js lar fottrinnene knase på grus
+    for (const v of alle) { const r = v.w + (v.by && Veg.vanlig(v) ? 2.6 : .8), rc = Math.ceil(r / celle), kode = v.g || 'ERFK'.includes(v.k) ? 2 : 1;
       for (let i = 1; i < v.P.length; i++) { const [ax, ay] = v.P[i - 1], [bx, by] = v.P[i], l = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(l / celle));
         for (let s2 = 0; s2 <= n; s2++) { const x = ax + (bx - ax) * s2 / n, y = ay + (by - ay) * s2 / n, ci = Math.floor((x + u.S) / celle), cj = Math.floor((u.S - y) / celle);
           for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a2 = ci + di, b2 = cj + dj; if (a2 < 0 || b2 < 0 || a2 >= W || b2 >= W || (di * di + dj * dj) * celle * celle > r * r) continue; if (m[b2 * W + a2] < kode) m[b2 * W + a2] = kode; } } } }
@@ -49,6 +65,12 @@
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
     if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.bunn) { const B = u.bunn; for (let j = 0; j < B.W; j++) for (let i = 0; i < B.W; i++) { const x = -u.S + (i + .5) / B.W * 2 * u.S, y = u.S - (j + .5) / B.W * 2 * u.S; if (påVeg(x, y)) B.gress[j * B.W + i] = 0; } }
+    // gatelysene følger de ferdige vegene: aldri i en vegbane, på en gangveg, i et kryss, i et hus eller i vann
+    u.lys = null;
+    if (byer.length) { const ru = Veg.rute(alle), nr = new Map(alle.map((v, i) => [v, i])), vann = window.Infra3d && Infra3d.iVann;
+      const L = Veg.lykter(veger, { ru, nr: v => nr.get(v), kryss: Veg.finnKryss(veger), ok: (x, y) => !(u.hus && u.hus.omriss && nærHus(u, x, y)) && !(vann && vann(u, x, y)) }), ut = [];
+      for (let q = 0; q < L.length; q += 3) ut.push(L[q], L[q + 1], zf(L[q], L[q + 1]), L[q + 2]);
+      if (ut.length) u.lys = new Float32Array(ut); }
   });
 
   // ---------- teksturer ----------
@@ -57,11 +79,12 @@
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? [78, 70, 68] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
     g.putImageData(im, 0, 0); g.scale(2, 2);
     if (type === 'asfalt') { g.fillStyle = '#e8e6df'; g.fillRect(3, 0, 3, 256); g.fillRect(58, 0, 3, 256); g.fillStyle = '#d9b43a'; g.fillRect(30, 0, 4, 64); }   // kantlinjer + gul midtlinje 3 m av 12
+    if (type === 'rampe') { g.fillStyle = '#e8e6df'; g.fillRect(3, 0, 3, 256); g.fillRect(58, 0, 3, 256); }   // rampe: bare kantlinjer
     if (type === 'kommunal') { g.fillStyle = 'rgba(40,40,42,.5)'; g.fillRect(14, 0, 8, 256); g.fillRect(42, 0, 8, 256); }   // hjulspor
     if (fortau) { g.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < 256; y += 32) g.fillRect(0, y, 64, 2); g.fillStyle = '#bdbab2'; g.fillRect(0, 0, 6, 256); }   // fuger + kantstein
     // småstein med skygge, så grusen ser skarp ut nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»)
@@ -92,116 +115,86 @@
     const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: vegTekstur(type), polygonOffset: true, polygonOffsetFactor: offset, polygonOffsetUnits: offset, side: THREE.DoubleSide }));
     return m;
   }
-  // ---------- vegkryss ----------
-  // Kryss = minst tre vegarmer møtes: ender som ligger innen 3 m av hverandre, eller en ende som treffer midt på en annen veg (T-kryss).
-  // To ender alene er bare en skjøt (flisgrense) og ikke et kryss. Hvert kryss får armene sine med retning ut fra krysset.
-  function finnKryss(veger) {
-    const C = 8, rut = new Map(), nk = (x, y) => Math.floor(x / C) + ',' + Math.floor(y / C), noder = [];
-    const nærNode = (x, y, r) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const n of rut.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) if (Math.hypot(n.x - x, n.y - y) < r) return n; return null; };
-    veger.forEach((v, li) => { if (v.P.length < 2) return;
-      for (const s of [0, 1]) { const p = s ? v.P[v.P.length - 1] : v.P[0]; let n = nærNode(p[0], p[1], 3);
-        if (!n) { n = { x: p[0], y: p[1], z: p[2], armer: [] }; noder.push(n); const k = nk(p[0], p[1]); if (!rut.has(k)) rut.set(k, []); rut.get(k).push(n); }
-        n.armer.push({ li, j: s ? v.P.length - 1 : 0, r: s ? -1 : 1 }); } });
-    // T-kryss: en vegende som ligger på en annen veg (ikke nær den vegens ender)
-    const pr = new Map(); veger.forEach((v, li) => v.P.forEach((p, j) => { const k = nk(p[0], p[1]); if (!pr.has(k)) pr.set(k, []); pr.get(k).push([li, j]); }));
-    for (const n of noder) {
-      const har = new Set(n.armer.map(a => a.li)); let best = null;
-      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const [li, pj] of pr.get((Math.floor(n.x / C) + i) + ',' + (Math.floor(n.y / C) + j)) || []) {
-        if (har.has(li)) continue; const v = veger[li], p = v.P[pj], d = Math.hypot(p[0] - n.x, p[1] - n.y);
-        if (d < BREDDE[v.k] / 2 + 1.5 && Math.abs(p[2] - n.z) < 2 && pj > 1 && pj < v.P.length - 2 && (!best || d < best.d)) best = { li, pj, d }; }
-      if (best) n.armer.push({ li: best.li, j: best.pj, r: 1 }, { li: best.li, j: best.pj, r: -1 });
-    }
-    const ut = [];
-    for (const n of noder) { if (n.armer.length < 3) continue;
-      const maks = Math.max(...n.armer.map(a => BREDDE[veger[a.li].k] / 2)), d = maks + 1.4; let z = -1e9;
-      const armer = n.armer.map(a => { const v = veger[a.li], P = v.P; let j = a.j, L = 0; z = Math.max(z, P[j][2]);
-        while (j + a.r >= 0 && j + a.r < P.length && L < d) { L += Math.hypot(P[j + a.r][0] - P[j][0], P[j + a.r][1] - P[j][1]); j += a.r; }
-        const p = P[j], dx = p[0] - n.x, dy = p[1] - n.y, l = Math.hypot(dx, dy) || 1;
-        return { x: p[0], y: p[1], z: p[2], dx: dx / l, dy: dy / l, w: BREDDE[v.k] / 2, k: v.k, by: v.by, L: Math.max(L, .5) }; });
-      // parallelle veger (to kjørebaner, flisskjøt ved siden av en annen veg) er ikke kryss: minst to armer må stå på skrå (25–155°)
-      if (!armer.some(a => armer.some(b => Math.abs(a.dx * b.dy - a.dy * b.dx) > .42))) continue;
-      ut.push({ x: n.x, y: n.y, z, d, armer, by: armer.some(a => a.by) });
-    }
-    const kr = new Map(); for (const n of ut) { const k = nk(n.x, n.y); if (!kr.has(k)) kr.set(k, []); kr.get(k).push(n); }
-    // nær(x, y, ekstra): ligger punktet innenfor krysset (+ ekstra meter)?
-    ut.nær = (x, y, ekstra) => { for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) for (const n of kr.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) if (Math.hypot(n.x - x, n.y - y) < n.d + ekstra) return true; return false; };
-    return ut;
-  }
-  // Delene av linjen som ikke ligger i et kryss
-  function utenomKryss(P, kryss, ekstra) { const biter = []; let b = [];
-    for (const p of P) { if (kryss.nær(p[0], p[1], ekstra)) { if (b.length > 1) biter.push(b); b = []; } else b.push(p); }
-    if (b.length > 1) biter.push(b); return biter; }
-  // Krysset: et asfaltfelt (konveks omkrets rundt armene) uten oppmerking, og fotgjengerfelt på armene i tettstedene.
-  function kryssFlate(n, ut, gang, u) {
-    const hj = [];
-    for (const a of n.armer) { const nx = -a.dy, ny = a.dx, w = a.w + .35; hj.push([a.x + nx * w, a.y + ny * w, a.z], [a.x - nx * w, a.y - ny * w, a.z]); }
-    hj.push([n.x, n.y, n.z]);
-    hj.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
-    const kryssp = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lav = [], høy = [];
-    for (const p of hj) { while (lav.length > 1 && kryssp(lav[lav.length - 2], lav[lav.length - 1], p) <= 0) lav.pop(); lav.push(p); }
-    for (let i = hj.length - 1; i >= 0; i--) { const p = hj[i]; while (høy.length > 1 && kryssp(høy[høy.length - 2], høy[høy.length - 1], p) <= 0) høy.pop(); høy.push(p); }
-    const om = lav.slice(0, -1).concat(høy.slice(0, -1)); if (om.length < 3) return;
-    // flaten deles i ringer og biter (ca. 2,5 m) som følger terrenget, så bakken ikke stikker gjennom midt i krysset
-    const z = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX + .2, RING = 3, kant = [];
-    for (let i = 0; i < om.length; i++) { const a = om[i], b = om[(i + 1) % om.length], m = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2.5));
-      for (let k = 0; k < m; k++) kant.push([a[0] + (b[0] - a[0]) * k / m, a[1] + (b[1] - a[1]) * k / m]); }
-    const n0 = ut.pos.length / 3, K = kant.length; ut.pos.push(n.x, n.y, z(n.x, n.y)); ut.uv.push(n.x / 12, n.y / 12);
-    for (let r = 1; r <= RING; r++) for (const [x0, y0] of kant) { const x = n.x + (x0 - n.x) * r / RING, y = n.y + (y0 - n.y) * r / RING; ut.pos.push(x, y, z(x, y)); ut.uv.push(x / 12, y / 12); }
-    for (let i = 0; i < K; i++) { const i2 = (i + 1) % K; ut.idx.push(n0, n0 + 1 + i, n0 + 1 + i2);
-      for (let r = 1; r < RING; r++) { const a = n0 + 1 + (r - 1) * K, b = a + K; ut.idx.push(a + i, b + i, b + i2, a + i, b + i2, a + i2); } }
-    // fotgjengerfelt: 3 m bredt, striper langs vegen, like utenfor krysset
-    if (!n.by) return;
-    for (const a of n.armer) { if (!'RFK'.includes(a.k) || a.L < n.d - .5) continue;
-      const nx = -a.dy, ny = a.dx, s0 = 1, s1 = 4, g0 = gang.pos.length / 3;
-      for (const [s, t] of [[s0, 0], [s1, 1]]) for (const sd of [-1, 1]) { gang.pos.push(a.x + a.dx * s + nx * sd * a.w, a.y + a.dy * s + ny * sd * a.w, a.z + .04); gang.uv.push((sd + 1) / 2 * a.w * 2 / 1.1, t); }
-      gang.idx.push(g0, g0 + 1, g0 + 2, g0 + 1, g0 + 3, g0 + 2);
+  // Kanten utenfor vegbanen: fra a meter fra midtlinjen (i vegens høyde + løft) og «bredde» meter ut. Der bakken ligger lavere enn
+  // vegen (fylling i en skråning), går kanten skrått ned til bakken (1 : 1,5), så vegen ikke svever. bareFall: bare der den svever.
+  function kant(P, sd, a, bredde, løft, ut, zf, bareFall) {
+    let L = 0, forrige = -1;
+    for (let i = 0; i < P.length; i++) {
+      const p = P[i], q = P[Math.min(P.length - 1, i + 1)], o = P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * sd, ny = dx / l * sd;
+      if (i) L += Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1]);
+      const zi = p[2] + løft, x0 = p[0] + nx * (a + bredde), y0 = p[1] + ny * (a + bredde), fall = p[3] ? 0 : zi - zf(x0, y0);
+      if (bareFall && fall < .25) { forrige = -1; continue; }
+      let x1 = x0, y1 = y0, z1 = zi;
+      if (fall > .12) { const e = Math.min(6, fall * 1.5); x1 = x0 + nx * e; y1 = y0 + ny * e; z1 = Math.min(zi, zf(x1, y1) + .02); }
+      const n0 = ut.pos.length / 3; ut.pos.push(p[0] + nx * a, p[1] + ny * a, zi, x1, y1, z1); ut.uv.push(0, L / 12, 1, L / 12);
+      if (forrige >= 0) ut.idx.push(forrige, n0, forrige + 1, forrige + 1, n0, n0 + 1);
+      forrige = n0;
     }
   }
-  function gangTekstur() {
-    if (tekst.gang) return tekst.gang;
-    const c = document.createElement('canvas'); c.width = 32; c.height = 8; const g = c.getContext('2d'); g.fillStyle = '#ecebe5'; g.fillRect(2, 0, 15, 8);
-    const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return (tekst.gang = t);
-  }
+  const tom = () => ({ pos: [], uv: [], idx: [] });
   function lagVeger(u, R) {
-    const grupper = { asfalt: { pos: [], uv: [], idx: [] }, kommunal: { pos: [], uv: [], idx: [] }, grus: { pos: [], uv: [], idx: [] }, fortau: { pos: [], uv: [], idx: [] }, skulder: { pos: [], uv: [], idx: [] } };
-    const kryss = finnKryss(u.veger); u.kryss = kryss;
-    for (const v of u.veger) {
-      const w = BREDDE[v.k] / 2, type = 'ERF'.includes(v.k) ? 'asfalt' : v.k === 'K' ? 'kommunal' : 'grus';
+    const grupper = { skulder: tom(), gs: tom(), grus: tom(), kommunal: tom(), asfalt: tom(), rampe: tom(), kryss: tom(), fortau: tom() };
+    const gang = u.gangveger || [], alle = u.veger.concat(gang), ru = Veg.rute(alle), zf = (x, y) => nettHoyde(u, x, y);
+    const kryss = Veg.finnKryss(u.veger); u.kryss = kryss; u.vegRute = { ru, alle };
+    u.veger.forEach((v, li) => {
+      const w = v.w, type = v.t === 2 ? 'rampe' : v.t ? 'kryss' : 'ERF'.includes(v.k) ? 'asfalt' : v.k === 'K' ? 'kommunal' : 'grus';
       bånd(v.P, -w, w, 0, grupper[type], false);
-      // fortauet stopper ved krysset i stedet for å gå tvers over den andre vegen
-      if (v.by && 'RFK'.includes(v.k)) for (const B of utenomKryss(v.P, kryss, 2.2)) { bånd(B, w, w + 2, .15, grupper.fortau, true); bånd(B, -w, -w - 2, .15, grupper.fortau, true); }
-      else if ('ERFK'.includes(v.k)) { bånd(v.P, w, w + .8, -.04, grupper.skulder, false); bånd(v.P, -w - .8, -w, -.04, grupper.skulder, false); }
-    }
-    vegutstyr(u, R, kryss);
-    let off = -4; for (const [type, ut] of Object.entries(grupper)) { const m = nett(ut, type, off--); if (m) { R.scene.add(m); liv.mesh.push(m); } }
-    if (!kryss.length) return;
-    // grusveger møtes på grus, ellers asfalt (uten oppmerking)
-    const flate = { pos: [], uv: [], idx: [] }, grusflate = { pos: [], uv: [], idx: [] }, gang = { pos: [], uv: [], idx: [] };
-    for (const n of kryss) kryssFlate(n, n.armer.some(a => 'ERFK'.includes(a.k)) ? flate : grusflate, gang, u);
+      if (!Veg.vanlig(v) || !'ERFK'.includes(v.k)) { for (const sd of [1, -1]) kant(v.P, sd, w, 0, -.02, grupper.skulder, zf, true); return; }
+      if (v.by && 'RFK'.includes(v.k)) for (const sd of [1, -1]) {
+        // fortauet stopper ved kryssene og der det ville ligget på en annen veg eller gang- og sykkelveg; korte rester (under 6 m) droppes
+        const biter = []; let b = [];
+        v.P.forEach((p, i) => { const q = v.P[Math.min(v.P.length - 1, i + 1)], o = v.P[Math.max(0, i - 1)], l = Math.hypot(q[0] - o[0], q[1] - o[1]) || 1, x = p[0] - (q[1] - o[1]) / l * sd * (w + 1), y = p[1] + (q[0] - o[0]) / l * sd * (w + 1);
+          if (kryss.nær(p[0], p[1], 2.2) || ru.klaring(x, y, li, 10) < 1.1) { if (b.length > 1) biter.push(b); b = []; } else b.push(p); });
+        if (b.length > 1) biter.push(b);
+        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(B, sd * w, sd * (w + 2), .15, grupper.fortau, true); kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true); }
+      } else for (const sd of [1, -1]) kant(v.P, sd, w, .8, -.04, grupper.skulder, zf, false);
+    });
+    // gang- og sykkelvegene: smal asfalt uten oppmerking (gangfeltene, t = 5, er striper og ikke asfalt)
+    for (const v of gang) if (v.t !== 5) { bånd(v.P, -v.w, v.w, 0, grupper.gs, false); for (const sd of [1, -1]) kant(v.P, sd, v.w, 0, -.02, grupper.skulder, zf, true); }
+    vegutstyr(u, R, kryss, ru);
+    // rekkefølgen når flater ligger oppå hverandre: skulder nederst, så gangveg, grus, kommunal veg, asfalt, svingefelt og fortau øverst
+    const OFF = { skulder: -2, gs: -3, grus: -3.5, kommunal: -4, asfalt: -5, rampe: -5, kryss: -6, fortau: -7 };
+    for (const [type, ut] of Object.entries(grupper)) { const m = nett(ut, type, OFF[type]); if (m) { R.scene.add(m); liv.mesh.push(m); } }
+    // kryssene: asfalt uten oppmerking langs hver arm (grusveger møtes på grus), og fotgjengerfeltene som hvite striper
+    const flate = tom(), grusflate = tom(), felt = { pos: [], idx: [] };
+    for (const n of kryss) Veg.kryssFlate(n, u.veger, n.armer.some(a => 'ERFK'.includes(a.k)) ? flate : grusflate);
     for (const [ut, type] of [[flate, 'kryss'], [grusflate, 'grusflate']]) { const m = nett(ut, type, -10); if (m) { R.scene.add(m); liv.mesh.push(m); } }
-    if (gang.idx.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(gang.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(gang.uv, 2)); g.setIndex(gang.idx); g.computeVertexNormals();
-      const mg = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: gangTekstur(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12, side: THREE.DoubleSide }));
+    // gangfeltene fra NVDB (t = 5): stripene der gangfeltet ligger i en vegbane. Uten vegtype i dataene: felt ved kryssene i tettstedene.
+    u.gangfelt = [];
+    if (u.vegtype) { for (const v of gang) { if (v.t !== 5) continue;
+        const bil = li => li < u.veger.length, inne = v.P.map(p => { const b = ru.nærmest(p[0], p[1], 5, bil); return !!b && b.d < alle[b.li].w; });
+        for (let i = 0; i < inne.length;) { if (!inne[i]) { i++; continue; } let j = i; while (j + 1 < inne.length && inne[j + 1]) j++;
+          const a = v.P[i], b = v.P[j], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          if (l > 2) { Veg.striper(a[0], a[1], (b[0] - a[0]) / l, (b[1] - a[1]) / l, l, 3, Math.max(a[2], b[2]) + .05, felt); u.gangfelt.push({ x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2 }); }
+          i = j + 1; } } }
+    else for (const f of Veg.gangfelt(kryss)) { Veg.striper(f.x + f.dy * f.w, f.y - f.dx * f.w, -f.dy, f.dx, 2 * f.w, 3, f.z + .05, felt); u.gangfelt.push({ x: f.x, y: f.y }); }
+    if (felt.idx.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(felt.pos, 3)); g.setIndex(felt.idx); g.computeVertexNormals();
+      const mg = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xecebe5, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12, side: THREE.DoubleSide }));
       R.scene.add(mg); liv.mesh.push(mg); }
   }
 
-  // Rekkverk langs E- og R-veg og brøytestikker (oransje topp) hver 25. meter langs vegene utenfor tettstedene.
-  function vegutstyr(u, R, kryss) {
-    const stolper = [], stikker = [], skinne = { pos: [], uv: [], idx: [] };
-    for (const v of u.veger) {
-      if (v.by || !'ERFK'.includes(v.k)) continue; const w = BREDDE[v.k] / 2;
-      let L = 0, nesteStikk = 12, nesteStolpe = 0;
+  // Rekkverk langs E- og R-veg og brøytestikker (oransje topp) hver 25. meter langs de vanlige vegene utenfor tettstedene.
+  // Ingenting i kryssene eller der det ville stått i en annen vegbane eller på en gang- og sykkelveg (klaring under 0,4 m).
+  function vegutstyr(u, R, kryss, ru) {
+    const stolper = [], stikker = [], skinne = tom();
+    u.veger.forEach((v, li) => {
+      if (v.by || !Veg.vanlig(v) || !'ERFK'.includes(v.k)) return; const w = v.w, fri = (x, y) => ru.klaring(x, y, li, 8) > .4;
+      let L = 0, nesteStikk = 12, nesteStolpe = 0, bit = [];
+      const slutt = () => { if (bit.length > 1) bånd(bit, w + .85, w + .85, 0, skinne, false); bit = []; };
       for (let i = 1; i < v.P.length; i++) {
         const a = v.P[i - 1], b = v.P[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!l) continue; const nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l, ret = Math.atan2(b[1] - a[1], b[0] - a[0]);
         for (; nesteStikk < L + l; nesteStikk += 25) { const f = (nesteStikk - L) / l, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f, z = a[2] + (b[2] - a[2]) * f;
           if (kryss.nær(x, y, 2)) continue;
-          for (const sd of [-1, 1]) stikker.push(x + nx * sd * (w + 1.1), y + ny * sd * (w + 1.1), z - .1, ret); }
-        if ('ER'.includes(v.k)) for (; nesteStolpe < L + l; nesteStolpe += 4) { const f = (nesteStolpe - L) / l, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f, z = a[2] + (b[2] - a[2]) * f;
-          if (kryss.nær(x, y, 3)) continue;
-          stolper.push(x + nx * (w + .9), y + ny * (w + .9), z - .1, ret); }
+          for (const sd of [-1, 1]) if (fri(x + nx * sd * (w + 1.1), y + ny * sd * (w + 1.1))) stikker.push(x + nx * sd * (w + 1.1), y + ny * sd * (w + 1.1), z - .1, ret); }
+        if ('ER'.includes(v.k)) { for (; nesteStolpe < L + l; nesteStolpe += 4) { const f = (nesteStolpe - L) / l, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f, z = a[2] + (b[2] - a[2]) * f;
+            if (kryss.nær(x, y, 3) || !fri(x + nx * (w + .9), y + ny * (w + .9))) continue;
+            stolper.push(x + nx * (w + .9), y + ny * (w + .9), z - .1, ret); }
+          // skinnen: der stolpene står
+          if (kryss.nær(a[0], a[1], 3) || !fri(a[0] + nx * (w + .9), a[1] + ny * (w + .9))) slutt(); else bit.push([a[0], a[1], a[2] + .45]); }
         L += l;
       }
-      if ('ER'.includes(v.k)) for (const B of utenomKryss(v.P, kryss, 3)) bånd(B.map(p => [p[0], p[1], p[2] + .45]), w + .85, w + .85, 0, skinne, false);
-    }
+      slutt();
+    });
     // skinnen: en loddrett stripe (0,3 m høy) langs høyre side
     if (skinne.pos.length) { for (let k = 0; k < skinne.pos.length; k += 6) skinne.pos[k + 5] -= .3; const m = nett(skinne, 'fortau', -1); m.material.color.setRGB(.75, .77, .8); R.scene.add(m); liv.mesh.push(m); }
     const lag = (data, deler) => { const n = data.length / 4; if (!n) return; for (const [g, farge] of deler) { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: farge }), n), d = new THREE.Object3D();
