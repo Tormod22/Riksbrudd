@@ -143,7 +143,8 @@
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   const iTettsted = (x, y) => { const by = ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []).find(b => b.bb[0] <= x && x <= b.bb[2] && b.bb[1] <= y && y <= b.bb[3] && window.Garnison && Garnison.inni(b, x, y)); return by ? by.e.navn : null; };
   async function prøvLeir(x, y) {
-    const kl = await klasseVed(x, y), grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl });
+    const rg = typeof RIKSGRENSE !== 'undefined' && RIKSGRENSE && window.Riksgrense ? RIKSGRENSE : null;   // RIKSGRENSE er en let i index.html
+    const kl = await klasseVed(x, y), grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
     forslag = { x, y, ok: !grunn }; skitten = true;
     let h = null; try { h = hoydeVed(x, y); } catch (e) { /* ingen høyde her */ }
     visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?'), !grunn); return grunn;

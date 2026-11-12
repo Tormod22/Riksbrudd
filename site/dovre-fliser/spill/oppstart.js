@@ -53,12 +53,16 @@
     if (!/^[\p{L}\p{N}]{0,3}$/u.test(fl.bokstaver || '')) f.push('Flagget kan ha høyst tre bokstaver eller tall.');
     return f;
   }
-  // Leirplassen: v = { iTettsted(x, y) -> navn | null, klasse(x, y) -> arealklasse (3 = vann, 255 = utenfor kartet) | undefined }
+  // Leirplassen: v = { iTettsted(x, y) -> navn | null, klasse(x, y) -> arealklasse (3 = vann, 255 = utenfor kartet) | undefined,
+  //                    iNorge(x, y) -> false utenfor riksgrensa (valgfri) }
   function gyldigLeir(x, y, v) {
     if (!isFinite(x) || !isFinite(y)) return 'Ugyldig sted.';
+    // riksgrensa (v.iNorge finnes når grensedataene er hentet): leiren kunne legges 5 km inn i Sverige (12. nov)
+    if (v.iNorge && !v.iNorge(x, y)) return 'Leiren må ligge i Norge. Dette er på den andre siden av riksgrensa.';
     const by = v.iTettsted && v.iTettsted(x, y); if (by) return `Leiren kan ikke ligge inne i et tettsted (${by}).`;
     const k = v.klasse && v.klasse(x, y);
-    if (k === 255 || k === undefined) return 'Her finnes det ikke kart. Velg et sted i Norge.';
+    // Svalbard (nord for 8150 km) vises i kartet, men har ikke arealdata: da er «her finnes det ikke kart» feil beskjed
+    if (k === 255 || k === undefined) return y > 8150000 ? 'Svalbard er med i kartet, men kan ikke brukes til leir ennå. Velg et sted på fastlandet.' : 'Her finnes det ikke kart. Velg et sted i Norge.';
     if (k === 3) return 'Leiren kan ikke ligge i vann.';
     return null;
   }

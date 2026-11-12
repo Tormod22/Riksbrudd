@@ -13,6 +13,13 @@ ok(/Dombås/.test(O.gyldigLeir(50, 0, v)), 'ikke i et tettsted');
 ok(/vann/.test(O.gyldigLeir(-500, 0, v)), 'ikke i vann');
 ok(/kart/.test(O.gyldigLeir(5000, 0, v)), 'ikke utenfor kartet');
 ok(O.gyldigLeir(500, 0, v) === null, 'utenfor tettstedet på land: godkjent');
+// riksgrensa (12. nov: leiren kunne legges 5 km inn i Sverige) og Svalbard (kart, men ikke arealdata)
+{ const RG = require('../../site/dovre-fliser/spill/riksgrense.js'), R = RG.les(JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../../site/dovre-fliser/data/riksgrense.json'))));
+  const vg = { iTettsted: () => null, klasse: () => 1, iNorge: (x, y) => RG.iNorge(R, x, y) };
+  ok(/riksgrensa/.test(O.gyldigLeir(292000, 6551000, vg)), 'ikke 5 km inn i Sverige ved Svinesund');
+  ok(O.gyldigLeir(285500, 6557500, vg) === null && O.gyldigLeir(193300, 6898900, vg) === null, 'norsk side ved Svinesund og Dombås: godkjent');
+  ok(O.gyldigLeir(292000, 6551000, { iTettsted: () => null, klasse: () => 1 }) === null, 'uten grensedata sjekkes ikke grensa');
+  ok(/Svalbard/.test(O.gyldigLeir(514000, 8680000, { iTettsted: () => null, klasse: () => undefined, iNorge: vg.iNorge })), 'Svalbard: egen beskjed (kartet finnes, men ikke arealdata)'); }
 // fullfør: pengene og bonusen
 S.karakter.bakgrunn = 'forretningsmann'; ok(O.fullfør(S, { x: 500.4, y: 7.6 }).length === 0 && S.ferdig, 'fullført');
 ok(S.penger === 110e6 && O.kroner(S.penger) === '110 mill. kr', 'forretningsmann starter med ' + O.kroner(S.penger));

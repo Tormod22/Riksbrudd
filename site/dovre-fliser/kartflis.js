@@ -4,6 +4,7 @@
 // (reserve for nettlesere uten OffscreenCanvas). Siden og tråden fyller inn KF med det de vet.
 const KF = {
   klar: Promise.resolve(), lagfiler: null, norgeBlokker: null, vis: null,   // kartfilene, Norge-blokkene (omlandet), kartlagene som vises
+  riksgrense: null,   // riksgrensa (Riksgrense.les fra spill/riksgrense.js) – Norge-kartet tones over i omlandet rett utenfor den
   kartTag: null, release: Promise.resolve(false), data: '/dovre-fliser/data/',
   vedBytes(n, kilde) {}, vedFeil(e) { console.error(e); },
   feil: 0,   // antall hentinger som har feilet: en flis som ble laget mens tallet steg, mangler noe og lages på nytt (ufull)
@@ -226,11 +227,26 @@ function vekt(X, Y) {
   const fx = u - bx, fy = v - by; let d = Infinity;
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !KF.norgeBlokker.has((bx + dx) + ',' + (by + dy)))
     d = Math.min(d, Math.hypot(dx < 0 ? fx : dx > 0 ? 1 - fx : 0, dy < 0 ? fy : dy > 0 ? 1 - fy : 0) * s);
-  const t = Math.min(1, d / TONING); return t * t * (3 - 2 * t);
+  const t = Math.min(1, d / TONING); return t * t * (3 - 2 * t) * grensevekt(X, Y, bx, by);
 }
-// Vekten på et grovt rutenett over flisen (17 × 17), interpoleres per punkt.
+// Riksgrensa (12. nov): Norge-blokkene dekker også et stykke av Sverige, Finland og Russland, og der hadde Norge-kartet rette
+// sømmer (satellittmosaikken skifter lysstyrke fra blokk til blokk og fra opptak til opptak). Utenfor grensa vises derfor omlandet:
+// vekten er 1 i Norge og de første GRENSE_INNE meterne utenfor, og tones til 0 ved GRENSE_UTE. Uten grensedata: 1 (som før).
+const GRENSE_INNE = 300, GRENSE_UTE = 3500, GRENSE_BLOKK = new Map();
+function grensevekt(X, Y, bx, by) {
+  const R = KF.riksgrense; if (!R || typeof Riksgrense === 'undefined') return 1;
+  if (GRENSE_BLOKK.R !== R) { GRENSE_BLOKK.clear(); GRENSE_BLOKK.R = R; }
+  // per blokk: ligger hele blokka langt fra grensa (halv diagonal + toningen + unøyaktigheten langt unna), er svaret det samme overalt
+  const k = bx + ',' + by; let b = GRENSE_BLOKK.get(k);
+  if (b === undefined) { const s = span(6), d = Riksgrense.avstand(R, G.x0 + (bx + .5) * s, G.y0 - (by + .5) * s);
+    b = Math.abs(d) > s * .75 + GRENSE_UTE + 9000 ? (d > 0 ? 1 : 0) : -1; GRENSE_BLOKK.set(k, b); }
+  if (b >= 0) return b;
+  const d = Riksgrense.avstand(R, X, Y); if (d >= -GRENSE_INNE) return 1; if (d <= -GRENSE_UTE) return 0;
+  const t = (d + GRENSE_UTE) / (GRENSE_UTE - GRENSE_INNE); return t * t * (3 - 2 * t);
+}
+// Vekten på et grovt rutenett over flisen (33 × 33, før 17 × 17: toningen ved riksgrensa er smalere enn den mot blokkantene), interpoleres per punkt.
 function vektRutenett(minx, maxy, sp) {
-  const n = 17, a = new Float32Array(n * n); a.n = n;
+  const n = 33, a = new Float32Array(n * n); a.n = n;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) a[j * n + i] = vekt(minx + sp * i / (n - 1), maxy - sp * j / (n - 1));
   return a;
 }
