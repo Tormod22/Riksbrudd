@@ -533,7 +533,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   VAKT grensesnitt i sjekk.js.
   SJØ, OMLAND OG 3D-START (12. nov dag, feilretting pakke «hav», brukeren: «Rett alle»): bakkeshaderen (detaljIBakken) leser vannmasken
   (specularMap) én gang: rød = vann, grønn = flathet (normalens z fra høydegitteret, glattet – vannmaske(px, TW, H, N, steg)); berg i bratte
-  sider og snø bruker den (ikke nettets hjørnenormaler, som ga trekantete flekker). Sjø (vann under 1–3 moh.) får aldri snø; islagte
+  sider og snø bruker den (ikke nettets hjørnenormaler). De trekantete lyse flekkene i lia over Mannheller (nr. 7 i feiljakten) er IKKE
+  borte med dette – de kommer trolig fra skogmaske/skogbunn i bygg3d (32 m-rutene) og gjenstår. Sjø (vann under 1–3 moh.) får aldri snø; islagte
   innsjøer har ikke bølger eller glans. VANN_GLANS (farge, skarphet, tak) er solglansen på vann – glansen flater ut mot et tak og brenner
   ikke ut; spill/fjern3d.js bruker de samme tallene, HAVFARGE og himmelspeilingen (Vind3d.BU()) på sjøen i ringen (aVann), så havet ikke
   har en firkantet kant. havnivå(): lyst strandberg de siste ca. 10 m mot sjøen (når høydegitteret har ruter ≤ 8 m). lagVindu(b, medVeg, ZV,
