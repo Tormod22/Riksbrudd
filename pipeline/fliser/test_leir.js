@@ -110,4 +110,81 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
     'riv en av to tanker: 5000 l blir i den andre, 3000 l selges tilbake til innkjøpspris');
   const r2 = L0.riv(T, t2.id); L0.steg(T, 1); ok(T.drivstoff === 0 && r2.drivstoff === 5000 && r2.drivstoffPenger === 40e6, 'riv den siste tanken: alt drivstoffet selges tilbake (ikke borte uten varsel)');
   full(); const br2 = L0.bygg(G, { type: 'container', x: 100, y: 100 }, betal, {}, land).bygg; br2.igjen = 0; const r3 = L0.riv(G, br2.id); ok(r3.drivstoff === 0 && r3.penger === r3.bygg, 'riv et annet bygg: ingen drivstoffpenger'); }
+// BRUKERENS VALG 12. nov (etter feiljakten): utposter med reisetid, byggeplasser kan skades, radiomastens nivåer, diesel
+{ const full = U => { for (const k of ['tre', 'betong', 'stål']) U.lager[k] = 60; }, nær = (a, b) => Math.abs(a - b) < 1e-9;
+  // ---- utposter: du kan bygge hvor som helst, men byggelaget må reise dit (300 m fritt, så 10 km/t fra leirens midte)
+  const U = L0.ny(); full(U);
+  ok(L0.reise(U, 17600, 0).min === 0 && !L0.bygg(U, { type: 'sandsekkvoll', x: 9000, y: 0 }, betal).bygg.reise, 'uten leirens midte (gamle regler, testene): ingen reisetid');
+  U.bygg = []; U.midt = { x: 0, y: 0 };
+  ok(L0.REGLER.reise.fri === 300 && L0.REGLER.reise.kmt === 10, 'regelen: 300 m uten reisetid, så 10 km/t');
+  ok(L0.reise(U, 250, 0).min === 0 && L0.reise(U, 0, -300).min === 0 && L0.reise(U, 250, 0).full === 0, 'innen 300 m fra leirens midte: ingen reisetid');
+  ok(nær(L0.reise(U, 1300, 0).min, 6) && nær(L0.reise(U, 0, 5300).min, 30) && nær(L0.reise(U, 17600, 0).min, 103.8), 'reisetid: 1,3 km = 6 min, 5,3 km = 30 min, 17,6 km = 1 t 44 min');
+  ok(L0.reise(U, 3000, 4000).meter === 5000 && L0.reise(U, 20000, 0).min > L0.reise(U, 10000, 0).min, 'luftlinje fra leiren, og lengre tid jo lenger unna');
+  ok(L0.kanBygge(U, { type: 'brakke', x: 17600, y: 0 }, { klasse: () => 2 }) === null, 'utposter er lov: en brakke 17,6 km fra leiren godtas');
+  const u1 = L0.bygg(U, { type: 'brakke', x: 5300, y: 0 }, betal);
+  ok(u1.bygg && nær(u1.bygg.reise, 30) && nær(u1.reise.min, 30) && u1.bygg.igjen === 120, 'brakke 5,3 km unna: 30 min reise legges foran 2 t bygging');
+  ok(/Utpost 5,3 km fra leiren: byggelaget reiser 30 min/.test(L0.reiseTekst(u1.reise)) && L0.reiseTekst(L0.reise(U, 100, 0)) === '', 'teksten til banneret: «' + L0.reiseTekst(u1.reise) + '»');
+  let st = L0.steg(U, 20); ok(nær(u1.bygg.reise, 10) && u1.bygg.igjen === 120 && !st.framme.length && L0.jobber(U)[0].reise === 10, 'etter 20 min: byggelaget er på vei (10 min igjen), ingenting bygget');
+  // et bygg til i samme utpost, bestilt mens laget er på vei: får reisetid nå, men den faller bort når laget kommer fram
+  const u2 = L0.bygg(U, { type: 'container', x: 5330, y: 40 }, betal);
+  ok(nær(u2.bygg.reise, L0.reise(U, 5330, 40).full) && !u2.reise.påStedet, 'nabobygg i utposten mens laget er på vei: egen reisetid inntil videre');
+  st = L0.steg(U, 10); ok(st.framme.length === 1 && st.framme[0] === u1.bygg && u1.bygg.reise === undefined && u2.bygg.reise === undefined && u1.bygg.igjen === 120,
+    'framme etter 30 min: meldt én gang, og nabojobben i utposten trenger ingen ny reise');
+  st = L0.steg(U, 60); ok(u1.bygg.igjen === 60 && u2.bygg.igjen === 30 && st.kø === 1, 'så bygges det (ett lag: containeren venter i kø)');
+  const u3 = L0.reise(U, 5250, -60); ok(u3.min === 0 && u3.påStedet && u3.full > 0 && /arbeider alt her/.test(L0.reiseTekst(u3)), 'nytt bygg der et byggelag alt arbeider (innen 300 m): ingen ny reise');
+  ok(nær(L0.reise(U, 5300, 2000).min, L0.reise(U, 5300, 2000).full) && !L0.reise(U, 5300, 2000).påStedet, 'en annen utpost 2 km derfra: full reise fra leiren');
+  for (let i = 0; i < 100; i++) L0.steg(U, 1);
+  ok(L0.ferdig(u1.bygg) && L0.ferdig(u2.bygg) && nær(L0.reise(U, 5250, -60).min, L0.reise(U, 5250, -60).full), 'utposten ferdig: laget er hjemme igjen, neste bygg der ute krever ny reise');
+  // oppgradering, reparasjon og flytting i en utpost krever også reise; reisen går like fort uansett hvor flinke byggerne er
+  full(U); const op = L0.oppgrader(U, u1.bygg.id, betal);
+  ok(nær(op.reise.min, 30) && nær(u1.bygg.arbeid.reise, 30) && op.til === 2, 'oppgradering i utposten: 30 min reise først');
+  L0.folkTempo = () => 2; L0.steg(U, 10); ok(nær(u1.bygg.arbeid.reise, 20) && u1.bygg.arbeid.igjen === u1.bygg.arbeid.totalt, 'dobbelt så flinke byggere reiser ikke fortere');
+  L0.steg(U, 20); L0.steg(U, 10); ok(u1.bygg.arbeid && nær(u1.bygg.arbeid.igjen, u1.bygg.arbeid.totalt - 20), '… men de bygger dobbelt så fort når de er framme'); delete L0.folkTempo;
+  for (let i = 0; i < 100; i++) L0.steg(U, 1); ok(u1.bygg.nivå === 2 && !u1.bygg.arbeid, 'oppgraderingen ble ferdig');
+  u2.bygg.hp = .5; const rp = L0.reparer(U, u2.bygg.id, betal); ok(nær(u2.bygg.arbeid.reise, rp.reise.min) && rp.reise.min > 29, 'reparasjon i utposten: reise først');
+  for (let i = 0; i < 100; i++) L0.steg(U, 1);
+  const fl2 = L0.flytt(U, u2.bygg.id, { x: 100, y: 100, ret: 0 }, betal); ok(fl2.reise.min === 0 && !u2.bygg.arbeid.reise, 'flytting hjem til leiren: ingen reise');
+  for (let i = 0; i < 100; i++) L0.steg(U, 1);
+  const fl3 = L0.flytt(U, u2.bygg.id, { x: 0, y: 12300, ret: 0 }, betal); ok(nær(fl3.reise.min, 72) && nær(u2.bygg.arbeid.reise, 72), 'flytting til en utpost 12,3 km unna: 72 min reise');
+  // køen: en jobb som venter, reiser ikke
+  full(U); const u4 = L0.bygg(U, { type: 'sandsekkvoll', x: -9300, y: 0 }, betal).bygg, u5 = L0.bygg(U, { type: 'sandsekkvoll', x: 0, y: -7300 }, betal).bygg; st = L0.steg(U, 30);
+  ok(L0.byggelag(U) === 2 && st.kø === 1 && nær(u2.bygg.arbeid.reise, 42) && nær(u4.reise, 24) && nær(u5.reise, 42), 'to byggelag (brakka i utposten): to lag reiser samtidig, den tredje jobben venter i kø og reiser ikke ennå');
+  // lagring: reisen og leirens midte følger med; gamle lagrede leirer uten midte lastes som før
+  const J3 = L0.fraJSON(L0.tilJSON(U)), j4 = J3.bygg.find(b => b.id === u4.id);
+  ok(J3.midt.x === 0 && nær(j4.reise, 24) && nær(L0.jobber(J3).find(j => j.b.id === u2.bygg.id).reise, 42), 'reisen og leirens midte lagres og leses inn igjen');
+  const gammel = L0.fraJSON(JSON.stringify({ versjon: 2, bygg: [{ id: 1, type: 'brakke', x: 9000, y: 0, ret: 0, igjen: 60, totalt: 120, pris: 4e6, nivå: 1, hp: 1, nr: 1, arbeid: null, mat: { tre: 25, betong: 5 } }], neste: 2, nesteJobb: 2, drivstoff: 0, lager: { tre: 1, betong: 1, stål: 1 } }));
+  L0.steg(gammel, 30); ok(gammel && gammel.bygg[0].igjen === 30 && L0.reise(gammel, 9000, 0).min === 0, 'gammel lagret leir (uten midte og reise): bygges videre som før');
+  ok(require('../../site/dovre-fliser/spill/ressurser.js').REGLER.maksAvstand === 3000, 'hogst og riving har fortsatt grensen på 3 km');
+
+  // ---- byggeplasser kan skades; en ødelagt byggeplass gir de ubrukte materialene tilbake
+  const S = L0.ny(); full(S);
+  const k1 = L0.bygg(S, { type: 'kontrollrom', x: 0, y: 0 }, betal).bygg, k2 = L0.bygg(S, { type: 'brakke', x: 40, y: 0 }, betal).bygg;
+  ok(S.lager.betong === 15 && S.lager.tre === 25 && S.lager.stål === 52, 'kontrollrom og brakke bestilt: materialene er tatt fra lageret');
+  let sk = L0.skad(S, k2.id, .3); ok(!sk.ødelagt && sk.byggeplass && nær(sk.hp, .7) && nær(k2.hp, .7) && L0.finn(S, k2.id), 'en byggeplass i kø tar skade (70 % hel)');
+  sk = L0.skad(S, k2.id, .8); ok(sk.ødelagt && sk.byggeplass && sk.mat.tre === 25 && sk.mat.betong === 5 && S.lager.tre === 50 && S.lager.betong === 20 && !L0.finn(S, k2.id),
+    'byggeplass i kø ødelagt: alle materialene (25 m³ tre, 5 m³ betong) er tilbake på lageret');
+  for (let i = 0; i < 180; i++) L0.steg(S, 1); ok(nær(k1.igjen, 180), 'kontrollrommet er halvferdig');
+  S.lager.betong = 60; sk = L0.skad(S, k1.id, 1);
+  ok(sk.ødelagt && sk.byggeplass && sk.mat.betong === 20 && sk.mat.tre === 5 && sk.mat.stål === 4 && S.lager.betong === 80 && S.lager.tre === 55,
+    'halvferdig byggeplass ødelagt: halvparten av materialene tilbake (20 m³ betong, 5 m³ tre, 4 t stål) – også når lageret er fullt');
+  full(S); const k3 = L0.bygg(S, { type: 'lagertelt', x: 0, y: 0 }, betal).bygg; k3.igjen = 0;
+  sk = L0.skad(S, k3.id, 1); ok(sk.ødelagt && !sk.byggeplass && !Object.keys(sk.mat).length, 'ferdig bygg ødelagt: ingen materialer tilbake');
+  full(S); const k4 = L0.bygg(S, { type: 'aggregat', x: 0, y: 0 }, betal).bygg; k4.igjen = 0; const stål0 = S.lager.stål; L0.oppgrader(S, k4.id, betal);
+  ok(nær(stål0 - S.lager.stål, 2.4) && k4.arbeid.mat.stål === 2.4, 'oppgraderingen husker materialene sine (2,4 t stål)');
+  sk = L0.skad(S, k4.id, 1); ok(sk.ødelagt && !sk.byggeplass && sk.mat.stål === 2.4 && nær(S.lager.stål, stål0), 'bygg ødelagt mens det oppgraderes: de ubrukte materialene til oppgraderingen tilbake');
+  full(S); const k5 = L0.bygg(S, { type: 'container', x: 0, y: 0 }, betal).bygg;
+  ok(L0.skade(S, k5.id, .25) === .75 && L0.skade(S, k5.id, 1) === 'ødelagt' && L0.skade(S, 999, 1) === null && L0.skad(S, 999, 1) === null, 'skade() svarer som før (tall, «ødelagt», null)');
+  // riving av et uferdig bygg kutter ikke et overfullt lager (før: Math.min(lagerplass, …))
+  full(S); const k6 = L0.bygg(S, { type: 'container', x: 0, y: 0 }, betal).bygg; S.lager.stål = 156; S.lager.tre = 156; L0.riv(S, k6.id);
+  ok(S.lager.stål === 156 && S.lager.tre === 156, 'riving av uferdig bygg: et overfullt lager blir ikke kuttet ned');
+
+  // ---- radiomasten: nivå 1, 2 og 3 gir 15, 25 og 40 km (reglene for kontakten: test_kontrollrom.js)
+  const M = L0.ny(); full(M); const mast = L0.bygg(M, { type: 'radiomast', x: 0, y: 0 }, betal).bygg;
+  ok(L0.mastRekkevidde(M) === 0, 'radiomast under bygging: gir ingenting');
+  mast.igjen = 0; ok(L0.BYGG.radiomast.nivå.rekkevidde.join() === '15000,25000,40000' && L0.mastRekkevidde(M) === 15000, 'radiomast nivå 1: 15 km');
+  mast.nivå = 2; ok(L0.effekt(mast).rekkevidde === 25000, 'radiomast nivå 2: 25 km'); mast.nivå = 3; ok(L0.effekt(mast).rekkevidde === 40000 && L0.maksNivå('radiomast') === 3, 'radiomast nivå 3: 40 km');
+  mast.hp = .4; ok(L0.effekt(mast).rekkevidde === 20000, 'hardt skadet mast: halv rekkevidde');
+  // ---- diesel: tekstene i leiren sier «diesel» (kjøretøyene bruker olje fra basen)
+  ok(L0.BYGG.drivstofftank.navn === 'Dieseltank' && /diesel/.test(L0.BYGG.drivstofftank.tekst) && /kjøretøy/.test(L0.BYGG.drivstofftank.tekst) && /diesel/.test(L0.BYGG.aggregat.tekst),
+    'dieseltanken og aggregatet sier «diesel», og at den ikke er til kjøretøyene'); }
 process.exit(feil ? 1 : 0);

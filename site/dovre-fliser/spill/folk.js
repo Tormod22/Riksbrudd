@@ -188,7 +188,7 @@
     if (sult && !F.sist.sult) H.push('Leiren er tom for mat! Kjøp mat eller bygg drivhus.');
     const sultTid = sult ? (F.sist.sultTid || 0) + dt : 0;
     if (sult && F.sist.sult && Math.floor(sultTid / 720) > Math.floor((F.sist.sultTid || 0) / 720)) H.push('Folk sulter fortsatt og blir syke: kjøp mat i Folk-panelet.');
-    if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller drivstoff, og bygg brakker.');
+    if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller kjøp diesel til leiren, og bygg brakker.');
     F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, sultTid };
     return { hendelser: H, behov: B, sult, kald };
   }

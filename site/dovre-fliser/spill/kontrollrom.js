@@ -5,11 +5,16 @@
  *  - ute uten nettbrett: lagene vises der de sist meldte seg på radio, fiender der de sist ble meldt.
  * Lag nær deg (500 m) ser du alltid selv. Radioens rekkevidde avhenger av radioen laget har, leirens radio (mast eller ikke) og
  * terrenget mellom (brukeren: «spør på hvilken radio du har samt terreng samt om du har ekstra mast»). Tallene er forslag.
+ * Radiomasten (brukeren 12. nov, etter feiljakten: nivå 2 og 3 hadde ingen virkning): nivået forlenger lagenes rekkevidde. Feltradio når
+ * 8 km uten mast, og 15, 25 og 40 km med radiomast på nivå 1, 2 og 3 (masten må virke og ha strøm). Håndradioen når 3 km uansett.
  */
 (function (rot) {
   'use strict';
-  const RADIO = { hånd: { navn: 'Håndradio', meter: 3000 }, felt: { navn: 'Feltradio', meter: 15000, pris: 1e6 } };
-  const LEIR = { uten: 8000, mast: 40000 };     // leirens egen radio; radiomasten (K2) med strøm gir lengre rekkevidde
+  // meter: det lengste radioen selv kan nå. Feltradioen når så langt som leirens radio (se LEIR); håndradioen er den som begrenser.
+  const RADIO = { hånd: { navn: 'Håndradio', meter: 3000 }, felt: { navn: 'Feltradio', meter: 40000, pris: 1e6 } };
+  // leirens egen radio: 8 km uten radiomast; masten (K2, med strøm) gir 15, 25 og 40 km på nivå 1, 2 og 3
+  // (samme tall som Leir.BYGG.radiomast.nivå.rekkevidde – test_kontrollrom.js sjekker at de er like)
+  const LEIR = { uten: 8000, mast: 15000, nivå: [15000, 25000, 40000] };
   const REGLER = {
     terreng: .35,          // en fjellrygg mellom: rekkevidden blir 35 % (radiobølgene bøyes litt over kanten)
     nær: 500,              // lag nærmere deg enn dette ser du selv
@@ -20,8 +25,21 @@
     nettbrett: { pris: 1.5e6, timer: 8, lading: 2, ladeAvstand: 150 },   // batteri i spilltimer, full lading i leiren på 2 t
     mastHøyde: 24, antenne: 2,
   };
-  // mast: true (40 km), eller rekkevidden i meter for radiomasten (nivå 1–3 gir 40, 60 og 80 km), eller 0/false uten mast
-  const rekkevidde = (radio, mast) => Math.min((RADIO[radio] || RADIO.hånd).meter, mast ? (typeof mast === 'number' ? mast : LEIR.mast) : LEIR.uten);
+  // mast: true (nivå 1: 15 km), eller rekkevidden i meter for radiomasten (nivå 1–3 gir 15, 25 og 40 km), eller 0/false uten mast.
+  // En hardt skadet mast (halv rekkevidde) er aldri dårligere enn ingen mast.
+  const leirRadio = mast => (mast ? Math.max(LEIR.uten, typeof mast === 'number' ? mast : LEIR.mast) : LEIR.uten);
+  const rekkevidde = (radio, mast) => Math.min((RADIO[radio] || RADIO.hånd).meter, leirRadio(mast));
+  const km = m => (m / 1000).toLocaleString('nb-NO', { maximumFractionDigits: 1 }) + ' km';
+  // Forklaringen av radiorekkevidden (lagpanelet, kontrollrommet, byggpanelet for radiomasten og hjelpen bruker samme tekst)
+  const forklaring = () => `Håndradio når ${km(RADIO.hånd.meter)}. Feltradio når ${km(LEIR.uten)} uten radiomast og ${LEIR.nivå.slice(0, -1).map(v => v / 1000).join(', ')} og ${km(LEIR.nivå[LEIR.nivå.length - 1])} med radiomast på nivå 1, 2 og 3 (masten må ha strøm). Står terrenget i veien, rekker radioen bare ${Math.round(REGLER.terreng * 100)} % så langt.`;
+  // Hvorfor laget ikke har kontakt: «12,4 km fra leiren – håndradioen når 3 km» (+ hva som hjelper)
+  function utenKontakt(radio, mast, avstand) {
+    const r = rekkevidde(radio, mast), felt = radio === 'felt', n = (RADIO[radio] || RADIO.hånd).navn.toLowerCase();
+    if (avstand <= r) return `${km(avstand)} fra leiren – ${n}en når ${km(r)}, men terrenget står i veien (da rekker den ${km(r * REGLER.terreng)})`;
+    const nivå = LEIR.nivå.findIndex(v => v >= avstand), råd = !felt ? (avstand <= rekkevidde('felt', mast) ? 'kjøp feltradio' : 'kjøp feltradio og bygg ut radiomasten')
+      : nivå < 0 ? 'for langt for radioen' : mast ? `oppgrader radiomasten til nivå ${nivå + 1}` : `bygg radiomast${nivå > 0 ? ` og oppgrader den til nivå ${nivå + 1}` : ''}`;
+    return `${km(avstand)} fra leiren – ${n}en når ${km(r)} (${råd})`;
+  }
   // Står terrenget i veien? profil: høyder (moh.) i like store steg fra A til B; hA og hB er antennenes høyde (moh.). Jordkrumningen
   // (med radiohorisont, k = 4/3) senker punktene midt på linjen.
   function blokkert(profil, hA, hB, avstand) {
@@ -68,7 +86,7 @@
     if (ut.length) sistMeldt.pos = t;
     return ut;
   }
-  const api = { RADIO, LEIR, REGLER, RUTINE, rekkevidde, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
+  const api = { RADIO, LEIR, REGLER, RUTINE, rekkevidde, leirRadio, km, forklaring, utenKontakt, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Kontrollrom = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

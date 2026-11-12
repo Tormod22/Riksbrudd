@@ -58,7 +58,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const ut = [], s = F.sist || {};
     if (B.utenSeng) ut.push(`${B.utenSeng} sover i telt: bygg en brakke (eller oppgrader).`);
     if (s.sult) ut.push('Tom for mat! Kjøp mat eller bygg drivhus.'); else if (B.dager < 2) ut.push(`Maten varer under ${B.dager < 1 ? 'ett døgn' : 'to døgn'}: kjøp mat eller bygg drivhus.`);
-    if (s.kald > .05) ut.push('Folk fryser: legg inn ved (tre) eller drivstoff' + (B.utenSeng ? ', og bygg brakker.' : '.'));
+    if (s.kald > .05) ut.push('Folk fryser: legg inn ved (tre) eller kjøp diesel til leiren' + (B.utenSeng ? ', og bygg brakker.' : '.'));
     if (!B.kjøkken) ut.push(B.ferdige('kjøkken') ? 'Kjøkkenet har ikke strøm: maten lages på bål.' : 'Ingen kjøkken: maten lages på bål (bygg et kjøkken for varm mat og mindre svinn).');
     else if (!B.bemannet) ut.push('Kjøkkenet står tomt: sett noen på «kjøkken».');
     if (B.syke && !FR.arbeidere(F, 'stell')) ut.push(`${B.syke} er syke eller skadet: sett noen på «stell»${B.sykestue ? '' : B.ferdige('sykestue') ? ' (sykestua har ikke strøm)' : ' (best med sykestue)'}.`);
@@ -83,7 +83,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       el('h2', {}, `Folk (${n})`));
     const strek = el('span', { klasse: 'strek' }, el('i', { style: `width:${Math.round(F.moral)}%;background:${farge}` }));
     panel.append(el('div', { klasse: 'moral' }, el('span', {}, `Moral ${Math.round(F.moral)}${pil}`), strek));
-    const varme = B.fyring ? (s.kald > .05 ? 'mangler' : `${nf(B.ved, 1)} m³ ved eller ${nf(B.drivstoff)} l per døgn`) : 'trengs ikke nå';
+    const varme = B.fyring ? (s.kald > .05 ? 'mangler' : `${nf(B.ved, 1)} m³ ved eller ${nf(B.drivstoff)} l diesel per døgn`) : 'trengs ikke nå';
     const sh = F.personer.reduce((a, p) => a + p.helse, 0) / Math.max(1, n);
     const linjer = [`Senger: ${Math.min(n, B.senger)} av ${n}` + (B.senger > n ? ` (${B.senger - n} ledige)` : ''),
       `Mat: ${nf(F.mat)} rasjoner` + (B.dager === Infinity ? ' (drivhusene holder)' : ` (ca. ${nf(B.dager, 1)} døgn)`) + (B.drivhus ? ` · drivhus +${nf(B.drivhus, 1)}/døgn` : '') + (B.varmMat ? ' · varm mat' : ''),

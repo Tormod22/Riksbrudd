@@ -130,7 +130,9 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       const etg = [...new Set(ok.map(q => (erTak ? q.d.n : q.d.n + 1)))].sort().join('/') + '. etasje';
       tekst = `${navn}${n > 1 ? ` × ${n}` : ''}: ${LB.kroner(s.pris)}, ${tidTekst(s.timer * 60)} arbeid` + (V.fane !== 'hus' && V.fane !== 'forsvar' ? ` (${erTak ? 'oppå ' : ''}${etg})` : '')
         + (ok.some(q => q.bytt) ? ` – bytter ut ${ok.filter(q => q.bytt).length}` : '') + '.';
-      const m = matMangler(); ekstra = [matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
+      // utpost: byggelaget må reise dit først (Leir.reise, brukeren 12. nov) – si det før du bekrefter
+      const sted = BS.midt(o, ok[0].d), rs = LB.reise ? LB.reise(l, sted.x, sted.y) : null;
+      const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
     visLinje(); skisse3d(); skitten = true;
   }
   // Delene som rives: den øverste nær trykket, eller alt i rektangelet mellom to trykk
