@@ -86,12 +86,14 @@
         if (!gang(x, y) || sett.has(k) || Math.abs(x - ci) > n || Math.abs(y - cj) > n) continue;
         if (!veg(x, y) && !veg(i, j) && Math.abs(v.H[k] - v.H[j * W + i]) / v.r > BRATT) continue;
         sett.add(k); kø.push([x, y]); } }
-    const brukt = new Map(), ut = { lag: [], kj: [], iVann: 0 };
-    // nærmeste rute til (tx, ty) som består ok(i, j); en rute som alt er tatt, teller som tre ruter lenger unna
+    const brukt = new Map(), tatt = [], ut = { lag: [], kj: [], iVann: 0 };
+    // nærmeste rute til (tx, ty) som består ok(i, j); en rute som alt er tatt, teller som tre ruter lenger unna, og en rute nærmere
+    // enn 60 m fra en som alt har fått plass, som to ruter lenger unna (så de ikke klumper seg og navnene i kartet får plass)
     const velg = (tx, ty, ok) => { let best = null, bd = Infinity;
-      for (const [i, j] of kand) { if (!ok(i, j)) continue; const [x, y] = midt(i, j), d = Math.hypot(x - tx, y - ty) + (brukt.get(j * W + i) || 0) * 3 * v.r; if (d < bd) { bd = d; best = [i, j]; } }
+      for (const [i, j] of kand) { if (!ok(i, j)) continue; const [x, y] = midt(i, j);
+        const d = Math.hypot(x - tx, y - ty) + (brukt.get(j * W + i) || 0) * 3 * v.r + (tatt.some(p => Math.hypot(p[0] - x, p[1] - y) < 60) ? 2 * v.r : 0); if (d < bd) { bd = d; best = [i, j]; } }
       if (!best) return null; const k = best[1] * W + best[0], nr = brukt.get(k) || 0; brukt.set(k, nr + 1);
-      const [x, y] = midt(best[0], best[1]), a = nr * 2.4; return nr ? [x + Math.cos(a) * v.r * .3, y + Math.sin(a) * v.r * .3] : [x, y]; };
+      const [x, y] = midt(best[0], best[1]), a = nr * 2.4, p = nr ? [x + Math.cos(a) * v.r * .3, y + Math.sin(a) * v.r * .3] : [x, y]; tatt.push(p); return p; };
     for (let i = 0; i < nLag; i++) { const a = i / Math.max(1, nLag) * 6.283, tx = L.x + Math.cos(a) * R, ty = L.y + Math.sin(a) * R;
       const p = velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= BRATT) || velg(tx, ty, land); if (!p) ut.iVann++; ut.lag.push(p || [tx, ty]); }
     for (let i = 0; i < nKj; i++) { const tx = L.x + 160 + i * 45, ty = L.y - 200;
