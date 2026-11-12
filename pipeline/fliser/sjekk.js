@@ -449,6 +449,16 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             L.bygg = L.bygg.filter(b => b !== vt); s.x = sx; s.y = sy; await new Promise(r => setTimeout(r, 1100)); sim(.1);
             fo.kjøkken = !!(Leir.BYGG.kjøkken && window.MODELLER && MODELLER.kjøkken);
             FolkSpill.åpne(false); r.folk = fo; }
+          // VAKT feilretting 12. nov (mekanikk): sengene i det egenbygde rommet telles én gang for folket, malen har ikke med delene i
+          // byggesettet og avvises i et vann (et tjern nordøst for Dombås), gjerdet tvers over vannet avvises, og en tom gjeng kan rekruttere
+          { const fx = {}, F = FolkSpill.tilstand(), VX = 200368, VY = 6901360;
+            fx.rom = Byggesett.senger(); fx.senger = FolkRegler.behov(F, L, FolkSpill.valg()).senger - Leir.plasser(L);
+            const nm = LeirSpill.lagreMal('Vakt'), mal = LeirSpill.maler()[nm - 1]; fx.malDeler = mal.bygg.filter(b => Leir.BYGG[b.type].del).length; fx.malBygg = mal.bygg.length;
+            LeirSpill.startMal(nm - 1); LeirSpill.trykk(VX, VY); await LeirSpill.prøv(); const pm = LeirSpill.plassering(); fx.malVann = pm.feil; fx.malRøde = (pm.deler || []).filter(b => /vann/.test(b.feil || '')).length; LeirSpill.avbryt();
+            try { localStorage.removeItem('riksbrudd-maler'); } catch (e) { /* privat */ }
+            LeirSpill.startPlassering('gjerde'); LeirSpill.trykk(VX - 160, VY - 20); LeirSpill.trykk(VX + 260, VY + 40); await LeirSpill.prøv(); fx.gjerde = LeirSpill.plassering().feil; LeirSpill.avbryt();
+            const alle = F.personer; F.personer = []; const m0 = F.moral; F.moral = 5; fx.tom = FolkRegler.kanRekruttere(F, L, FolkSpill.valg()); F.personer = alle; F.moral = m0; fx.full = FolkRegler.kanRekruttere({ ...F, moral: 5 }, L, FolkSpill.valg());
+            r.fiks = fx; }
           // materialer fra verden (spill/ressurser*.js): hogst nær leiren gir tre i lageret og huskes, et (oppdiktet) hus rives og huskes,
           // panelet viser utbytte og kjøpspris, menyen har delen, og lagringen leses igjen
           { const RS = RessursSpill, Rr = RS.tilstand(), leir = { x: LX, y: LY }; L.lager.tre = 0; L.lager.betong = 0;
@@ -471,10 +481,17 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           await KS.sjekkKontakt(A); await KS.sjekkKontakt(B);
           const skjul = s => KROKER.skjul.some(f => f(s)), r3 = { inn, mInne, aKontakt: KS.info(A).kontakt, bKontakt: KS.info(B).kontakt, aSkjult: skjul(A), bSkjult: skjul(B) };
           KS.info(B).før = { marsj: true, ute: 0 }; KS.rapport(B, tid + 100); r3.melding = (KS.radiolog().slice(0, 5).find(m => /Framme/.test(m.tekst)) || KS.radiolog()[0] || {}).tekst;
+          // VAKT (feilretting 12. nov): rutinemeldingen «Alt rolig» står i radiolista, men ikke i loggen på kartet
+          KS.info(B).sist = {}; KS.info(B).før = { marsj: false, ute: B.menn.filter(q => q.hp < 1).length }; KS.rapport(B, tid + 5000);
+          r3.rutine = KS.radiolog()[0] && KS.radiolog()[0].tekst === Kontrollrom.RUTINE; r3.rutineILogg = loggLinjer.some(t => /Alt rolig/.test(t));
           r3.skjerm = document.getElementById('kontrollrom').classList.contains('på');
           r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);
           KS.av(); r3.avNøytral = !skjul(A) && KROKER.innsyn.every(f => f(A)); r.k3 = r3;
-          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); return r; });
+          // VAKT (feilretting 12. nov): verden lagres og leses inn igjen – klokka, laget (plass og helse) og kolonnen (plass)
+          { const s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.ai), k = KJORETOY.find(q => q.side === 'blå'), t0 = tid, x0 = s.x, hp0 = s.menn[1].hp, kx = k.x;
+            s.menn[1].hp = .5; const lagret = LagringSpill.lagre(); tid = 0; s.x = x0 + 5000; s.menn[1].hp = 1; k.x = kx + 5000; const lest = LagringSpill.les();
+            r.lagring = { lagret, lest, tid: Math.abs(tid - t0) < 1e-6, lag: Math.abs(s.x - x0) < .1 && s.menn[1].hp === .5, kj: Math.abs(k.x - kx) < .1 }; s.menn[1].hp = hp0; tid = t0; }
+          localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
         const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 6.6e6 - 15e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
@@ -491,8 +508,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         const fo = k1.folk || {}, fook = fo.antall === 10 && fo.bygg === 4 && fo.lag === 2 && fo.lagret && fo.åpen && fo.rader === 9 && fo.pluss === 1 && fo.minus === 0 && fo.ingenLag === 0 && fo.innenfor && fo.sikt === 1.25 && fo.kjøkken;
         if (!fook) { feil++; console.log(JSON.stringify(fo)); }
         console.log(`${fook ? 'ok  ' : 'FEIL'} ${navn} folk: ${fo.antall} personer, ${fo.bygg} på bygg = ${fo.lag} byggelag (0 uten byggere), lagret i leiren, panelet fra Leir-menyen (${fo.rader} oppgaver, + og − virker, innenfor skjermen, ${fo.mangler} ting mangler), bemannet vakttårn gir sikt ×${fo.sikt}, kjøkken finnes`);
+        const fx = k1.fiks || {}, lg = k1.lagring || {}, fxok = fx.rom > 0 && fx.senger === 0 && fx.malDeler === 0 && fx.malBygg > 2 && fx.malVann && fx.malRøde > 0 && /vann/.test(fx.gjerde || '') && fx.tom === null && /seng|Moralen/.test(fx.full || '')
+          && lg.lagret && lg.lest && lg.tid && lg.lag && lg.kj;
+        if (!fxok) { feil++; console.log(JSON.stringify(fx), JSON.stringify(lg)); }
+        console.log(`${fxok ? 'ok  ' : 'FEIL'} ${navn} feilretting (mekanikk): ${fx.rom} senger i egenbygd rom telt én gang, mal uten byggesettdeler (${fx.malBygg} bygg) avvist i vann («${fx.malVann}»), gjerde over vann avvist («${fx.gjerde}»), tom gjeng kan rekruttere; klokka, lag og kolonne lagres og leses inn`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
-          && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral;
+          && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral && k3.rutine && !k3.rutineILogg;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }
         console.log(`${k3ok ? 'ok  ' : 'FEIL'} ${navn} kontrollrommet (K3): gikk inn, lag 6 km unna uten kontakt skjult, lag 1 km unna med kontakt vist, melding «${k3.melding}», ordre uten kontakt stoppet, ute bare «sist meldt»`);
         console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): materialer kjøpt, kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW, lagret; byggpanel (${k2.panel}), aggregat nivå ${k2.nivå}, revet tank ga ${k2.riv / 1e6} mill., lukket gjerde, port festet i gjerdet, FPS-teller, menyen kan blas i`);

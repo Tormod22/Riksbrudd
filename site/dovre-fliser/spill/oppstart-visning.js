@@ -212,7 +212,7 @@
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;
-  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); } catch (e) { /* ingen lagring */ } location.reload(); };
+  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); } catch (e) { /* ingen lagring */ } location.reload(); };
   document.getElementById('lagmeny').appendChild(nyKnapp);
   const visNyttKnapp = () => { nyKnapp.hidden = !S; };
 
@@ -225,5 +225,8 @@
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
   window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, gi, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
   S = les(); if (S && !S.ferdig) S = null;
-  if (S) setTimeout(() => bruk(false), 0); else if (!navigator.webdriver) nytt();
+  // Et lagret spill tas i bruk når ALLE skriptene på siden er kjørt (DOMContentLoaded). Før var det setTimeout(0), som kan slå til mellom
+  // to skript når nettet er tregt – da gikk «riksbrudd-spill» ut før leiren, folket og kontrollrommet lyttet (feilretting 12. nov).
+  if (S) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => bruk(false)); else setTimeout(() => bruk(false), 0); }
+  else if (!navigator.webdriver) nytt();
 })();

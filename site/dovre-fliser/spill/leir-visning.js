@@ -380,7 +380,7 @@
     g.restore();
     const p = plassering;
     if (p && p.mal && p.deler) for (const d of p.deler) tegn1(d, true, !d.feil);
-    else if (p && (p.x !== null || (p.punkter && p.punkter.length))) {
+    else if (p && !p.mal && (p.x !== null || (p.punkter && p.punkter.length))) {
       tegn1(sp(p), true, !p.feil);
       // hjelpelinjene når bygget ligger på linje med naboen
       if (p.linjer && p.linjer.length) { g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 1.2; g.setLineDash([3, 3]);
