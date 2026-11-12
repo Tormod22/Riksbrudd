@@ -490,3 +490,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   R3.hindre (stopper deg når du går; døra er åpen). leir-visning.js: delene tegnes/listes ikke der (jobbene samlet på én linje), LeirSpill.oppdater3d.
   VAKT i sjekk.js (2D: hytte 16 deler som jobber, rad, tak i lufta avvist, rom og senger, riving; 3D: brakke i scenen, 0 svever, vegg/dør i
   R3.hindre, ingen GL-feil). Bilder: scratchpad bs/bilde.js (PRE=bs/pre.js bygger en liten leir av deler).
+  GRENSESNITT ETTER FEILJAKTEN (12. nov natt, ui-telefon): paneler som tegnes på nytt hvert sekund (Leir-menyen, Folk, byggpanelet, kjøretøy-, base-
+  og lagpanelet) venter mens en finger/museknapp er nede på dem (window.pekerNede(el) i index.html) – ellers forsvinner klikket; Leir-menyen og Folk
+  bygges ved siden av og byttes bare inn når innholdet er endret (visMeny/vis sammenligner innerHTML), byggpanelet har en nøkkel. Nye panel som
+  tegnes jevnlig skal gjøre det samme. window.lukkPanel() lukker panelet nede til venstre (Leir, Folk og byggesettet kaller den). spill/etikett.js
+  (uten DOM, test_etikett.js): Etikett.nullstill() hver ramme, Etikett.tekst(g, t, x, y, retning) gir y-en et navn skal tegnes i, så navnene på lag,
+  kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
+  (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
+  VAKT grensesnitt i sjekk.js.
