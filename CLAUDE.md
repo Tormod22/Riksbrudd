@@ -490,3 +490,21 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   R3.hindre (stopper deg når du går; døra er åpen). leir-visning.js: delene tegnes/listes ikke der (jobbene samlet på én linje), LeirSpill.oppdater3d.
   VAKT i sjekk.js (2D: hytte 16 deler som jobber, rad, tak i lufta avvist, rom og senger, riving; 3D: brakke i scenen, 0 svever, vegg/dør i
   R3.hindre, ingen GL-feil). Bilder: scratchpad bs/bilde.js (PRE=bs/pre.js bygger en liten leir av deler).
+  TEKNISK FEILRETTING (12. nov natt, feiljakten «teknisk»): MINNE I 3D – frigjørTerreng(R) (slå3d og sett3d) frigjør terrengnettet og
+  teksturen; småtingene (biler, flagg, gatelys) frigjør geometrien sin (trærne deler TREGEO og beholder den); scene.remove er pakket inn i
+  init3d så instansnett (InstancedMesh) alltid får dispose() når de tas ut; liv3d frigjør lyskjegle- og røykteksturen (userData.egetKart).
+  En funksjon som legges på utsnittet u (u.iBekk, u.påBane …) må lages UTENFOR kroken eller bare bruke små ting: en funksjon laget inne i
+  bygg3d-kroken holder på alt kroken bruker (bekkemasken holdt kartbildet px, 67 MB ved 4096²). Ikke husk gamle utsnitt (RessursSpill.sisteU
+  husker bare det siste). u.vannData har ÉN form: { W, d } (to former gjorde at man kunne gå på vannet og at trær sto i vann når kyst3d kjørte
+  først). VAKT i sjekk.js «minne i 3D»: 3D av og på to ganger ved Dombås, geometrier/teksturer skal ikke øke, alle instansnett frigjort.
+  NETT: hentMedFrist(url, ms, 'json'|'arrayBuffer') i kartflis.js (tidsgrense; brukes for manifestene 8 s, flisbitene 25 s, infrastrukturen 60 s).
+  Manifestene hentes samtidig; det som mangler meldes i loggen; hentInfra prøver igjen etter 1 og 2 min. /norge uten kartlager: melding,
+  Dovre vises imens, kartlageret spørres igjen (10 s, 20 s … 60 s) og «Last inn Norgeskartet» tilbys (norgeMangler). Meldingsboksen #feil:
+  visMelding(tekst, { type, knapp, vedTrykk }) / skjulMelding(type) – lukkeknapp, norsk tekst; type 'nett' tas bort av nettOk() når data kommer
+  inn igjen, type '3d' når utsnittet er bygget. Fliser laget mens en henting feilet er merket ufull (KF.feil telles i hentFlis) og lages på nytt
+  mens de er i bildet (4 s, 8 s … høyst hvert minutt, 8 forsøk; «online» nullstiller). rensLager(): pmtiles husker mislykkede oppslag for
+  alltid – de tas ut etter en feil. 3D: byggefeil gir melding og nytt forsøk (R3.byggFeil, byggVent: 4 s, 8 s … 30 s; det forrige utsnittet
+  står), et utsnitt som bes om mens et annet bygges, bygges rett etterpå (R3.neste). three.js hentes i bakgrunnen 2,5 s etter at kartet er
+  klart. Test: node pipeline/fliser/test_nett.js (med selvtest av rensLager). Skript for måling: scratchpad feiljakt/teknisk/skript
+  (dev.py = testserver som henter /api/kart fra den ekte siden og kan settes til å henge/feile, lekk.js, spor.js, heap.js, nettest.js).
+  IKKE ENDRET med vilje: vercel.json (alt revalideres – gamle kopier ga feil før) og at infra.json for hele Norge lastes på Dovre-siden.
