@@ -645,7 +645,7 @@ function flisområde(b, z) { const s = span(z); return [Math.floor((b[0] - G.x0)
 // Omlandets høyde (Copernicus, 64 m) der Kartverkets mangler – bare for 3D (feilretting 12. nov: Sverige og Finland var en flat sjø i 3D).
 // Bare i fliser ved eller utenfor kanten av Norge-blokkene (samme regel som kartet bruker for omlandets farger, vektRutenett i kartflis.js):
 // langs norskekysten ellers er manglende høyde hav. Omlandet har ingen høyde i havet, og et punkt fylles bare når alle de fire
-// nabopunktene i omlandet har høyde, så det ikke vokser land ut i sjøen. v.omland = antall punkter som ble fylt.
+// nabopunktene i omlandet har høyde, så det ikke vokser land ut i sjøen. Feltet omland i vinduet teller punktene som ble fylt.
 async function fyllOmland(v, ZV, x0, y0, x1, y1) {
   const T = G.T, jobber = []; v.omland = 0;
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -2224,8 +2224,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=25c9069fdc"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=47ad30087c"></script>
-<script src="/dovre-fliser/spill/fraksjoner.js?v=ef5c6c8c82"></script>
-<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=9af72978dc"></script>
+<script src="/dovre-fliser/spill/fraksjoner.js?v=e21957af97"></script>
+<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=258a0cb8f8"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
@@ -2241,17 +2241,17 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bruer.js?v=dc44fd3716"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=7f94321d2c"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
-<script src="/dovre-fliser/spill/olje3d.js?v=0"></script>
-<script src="/dovre-fliser/spill/kyst.js?v=6c90c01c75"></script>
+<script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
+<script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>
 <script src="/dovre-fliser/spill/kyst3d.js?v=98f09c90f4"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=329283c7a5"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=35c65c72bc"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=9d12b1fe99"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=b0fac9429d"></script>
-<script src="/dovre-fliser/spill/vind3d.js?v=d16520c108"></script>
+<script src="/dovre-fliser/spill/vind3d.js?v=72dc706476"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
@@ -2259,10 +2259,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
-<script src="/dovre-fliser/spill/oppstart.js?v=922cd38f72"></script>
+<script src="/dovre-fliser/spill/oppstart.js?v=7875c61bbf"></script>
 <script src="/dovre-fliser/spill/leir.js?v=ee80ef5ec2"></script>
 <script src="/dovre-fliser/spill/folk.js?v=7f4b357c36"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=9f78c1c3ae"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=4799976404"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=d8e4de759a"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=d2515dfb2e"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=9fd12e50fe"></script>
@@ -2275,7 +2275,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=faf02f8e85"></script>
-<script src="/dovre-fliser/spill/gard3d.js?v=b22d87b179"></script>
+<script src="/dovre-fliser/spill/gard3d.js?v=ccff9cd549"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=0413d13579"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>

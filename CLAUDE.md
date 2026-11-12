@@ -531,3 +531,17 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
   (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
   VAKT grensesnitt i sjekk.js.
+  SJØ, OMLAND OG 3D-START (12. nov dag, feilretting pakke «hav», brukeren: «Rett alle»): bakkeshaderen (detaljIBakken) leser vannmasken
+  (specularMap) én gang: rød = vann, grønn = flathet (normalens z fra høydegitteret, glattet – vannmaske(px, TW, H, N, steg)); berg i bratte
+  sider og snø bruker den (ikke nettets hjørnenormaler, som ga trekantete flekker). Sjø (vann under 1–3 moh.) får aldri snø; islagte
+  innsjøer har ikke bølger eller glans. VANN_GLANS (farge, skarphet, tak) er solglansen på vann – glansen flater ut mot et tak og brenner
+  ikke ut; spill/fjern3d.js bruker de samme tallene, HAVFARGE og himmelspeilingen (Vind3d.BU()) på sjøen i ringen (aVann), så havet ikke
+  har en firkantet kant. havnivå(): lyst strandberg de siste ca. 10 m mot sjøen (når høydegitteret har ruter ≤ 8 m). lagVindu(b, medVeg, ZV,
+  omland): omland = true fyller manglende høyde fra omlandet (fyllOmland – bare 3D: bygg3d og fjern3d; reglene bruker fortsatt bare Norge),
+  så Sverige/Finland har terreng i 3D (uten veger, hus og trær – gjenstår). start3d(): viser kartet over 60 km, åpner 3D ved valgt lag /
+  leiren / nærmeste egne lag (1300 m unna). Oppstart.startplasser (test_oppstart.js): lag og kjøretøy settes på land som henger sammen med
+  leiren (OppstartSpill.påLand, bare et nytt spill / når ringen ikke er rørt). Fraksjoner.startsteder + AI.flytt(leir) (fraksjoner-visning.js):
+  ligger leiren utenfor Dovre-piloten, flytter motstanderne og patruljen til de nærmeste tettstedene rundt leiren (AI.hjem()). Det er
+  fortsatt bare to fraksjoner med to lag hver – et opplegg for hele landet gjenstår. spill/kyst.js: småbåter ute på sjøen bare med land
+  innen 800 m. spill/olje3d.js (test_olje3d.js): plattformer og produksjonsskip fra INFRA.olje i 3D (Olje3d.sjekk()).
+  IKKE GJORT: ytelsen i byene (nr. 1 i feiljakten: 1,6–2,0 mill. trekanter i Bergen/Trondheim/Tromsø) – må måles per del (hus, gatetrær, gatelys) først.
