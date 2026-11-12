@@ -101,7 +101,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=f4e35f0bfd"></script>
+<script src="/dovre-fliser/kartflis.js?v=3b2fc399d0"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
@@ -216,7 +216,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=82b6f3aa5b');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40a5f39be2');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -2184,7 +2184,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/filtre.js?v=ea42b8b902"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=c48879fb11"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
-<script src="/dovre-fliser/spill/bane3d.js?v=2516d12f6f"></script>
+<script src="/dovre-fliser/spill/bane3d.js?v=2935007d46"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=482b12147c"></script>

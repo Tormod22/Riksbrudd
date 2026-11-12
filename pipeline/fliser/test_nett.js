@@ -12,6 +12,7 @@ const falskFetch = (url, valg = {}) => new Promise((ja, nei) => {
   kall.push(url); const api = url.startsWith('/api/kart/'), m = api ? lager : modus;
   if (valg.signal) valg.signal.addEventListener('abort', () => { const e = new Error('avbrutt'); e.name = 'AbortError'; nei(e); });
   if (m === 'heng') return;
+  if (m === 'sent') { modus = 'ok'; return setTimeout(() => setImmediate(() => falskFetch(url, valg).then(ja, nei)), 10); }   // svaret kommer som en egen oppgave etter klokkene
   if (m === 'brudd') return nei(new TypeError('Failed to fetch'));
   let fil, fra, til;
   if (api) { const d = url.split('/'); fil = d[4]; fra = +d[5]; til = fra + +d[6] - 1; }
@@ -19,7 +20,7 @@ const falskFetch = (url, valg = {}) => new Promise((ja, nei) => {
   const f = path.join(D, 'data', fil); if (!fs.existsSync(f)) return ja(svar(Buffer.from('{}'), 404));
   const fd = fs.openSync(f, 'r'), buf = Buffer.alloc(til - fra + 1), n = fs.readSync(fd, buf, 0, buf.length, fra); fs.closeSync(fd); ja(svar(buf.subarray(0, n), 206));
 });
-const ctx = vm.createContext({ console: { error() {}, log: console.log }, fetch: falskFetch, AbortController, setTimeout, clearTimeout, TextDecoder, Uint8Array, DataView, Promise, Math, Error, TypeError,
+const ctx = vm.createContext({ console: { error() {}, log: console.log }, fetch: falskFetch, AbortController, setTimeout, clearTimeout, setImmediate, TextDecoder, Uint8Array, DataView, Promise, Math, Error, TypeError,
   DecompressionStream: globalThis.DecompressionStream, Response: globalThis.Response, Blob: globalThis.Blob, ReadableStream: globalThis.ReadableStream });
 ctx.globalThis = ctx; ctx.self = ctx; ctx.window = undefined;
 vm.runInContext(fs.readFileSync(path.join(D, 'lib', 'pmtiles-4.3.0.js'), 'utf8'), ctx);
@@ -36,6 +37,11 @@ const T = ctx.T, KF = T.KF;
   ok(s.r.ok && s.data && s.data.filer, 'en henting som svarer, gir dataene');
   { const a = new AbortController(); let e2 = null; modus = 'heng'; const p = T.hentMedFrist('/x/y', 5000, 'json', { signal: a.signal }).catch(e => { e2 = e; }); a.abort(); await p; modus = 'ok';
     ok(e2 && e2.name === 'AbortError', 'avbrytes hentingen utenfra, er det fortsatt et avbrudd (ikke en tidsgrense)'); }
+
+  // siden står stille i 3 s (et 3D-utsnitt settes inn) mens svaret alt er på veg: fristen på 2,5 s skal ikke regnes som ute
+  { modus = 'sent'; let e4 = null, d4 = null; const p = T.hentMedFrist('/dovre-fliser/data/manifest.json', 2500, 'json', { headers: { Range: 'bytes=0-99999' } }).then(s => { d4 = s.data; }, e => { e4 = e; });
+    const slutt = Date.now() + 3000; while (Date.now() < slutt) { /* opptatt */ } await p; modus = 'ok';
+    ok(!e4 && d4 && d4.filer, 'siden står stille lenger enn fristen mens svaret er på veg: svaret leses likevel (' + (e4 ? e4.message : 'ok') + ')'); }
 
   // 2) kartlageret (/api/kart) svarer ikke: Dovre-filene brukes som reserve; lag med egen release (tag) gir feil
   const kilder = []; KF.vedBytes = (n, k) => kilder.push(k); KF.release = Promise.resolve(true); KF.kartTag = 'kart-test';

@@ -12,7 +12,10 @@ const KF = {
 // les: 'arrayBuffer' eller 'json'. Avbrytes hentingen utenfra (signal), kastes AbortError som før.
 async function hentMedFrist(url, ms, les, valg) {
   const a = new AbortController(), ytre = valg && valg.signal, stopp = () => a.abort(); let forSent = false;
-  const t = setTimeout(() => { forSent = true; a.abort(); }, ms); if (ytre) ytre.addEventListener('abort', stopp);
+  // Fristen telles i sekundsteg: står siden stille en stund (et 3D-utsnitt som settes inn kan ta mange sekunder på en treg maskin),
+  // går bare ett steg i mellomtiden, så et svar som alt er kommet rekker å bli lest før fristen regnes som ute.
+  let igjen = ms, t = null; const steg = () => { const s = Math.min(1000, igjen); igjen -= s; t = setTimeout(() => { if (igjen > 0) steg(); else { forSent = true; a.abort(); } }, s); };
+  steg(); if (ytre) ytre.addEventListener('abort', stopp);
   try { const r = await fetch(url, Object.assign({}, valg, { signal: a.signal })); return { r, data: r.ok ? await r[les]() : null }; }
   catch (e) { if (forSent) throw new Error('tidsgrense: kartlageret svarte ikke på ' + Math.round(ms / 1000) + ' s'); throw e; }
   finally { clearTimeout(t); if (ytre) ytre.removeEventListener('abort', stopp); }
