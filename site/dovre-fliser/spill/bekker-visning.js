@@ -8,7 +8,7 @@
   // DATA_V = sha256 av reservefila data/bekker.json (Dovre-piloten, brukes når releasen med hele Norge ikke svarer)
   const DATA_V = '075ec685';
   let kildeSjekk = 0;
-  const STAT = window.BEKKER_STAT = { linjer: 0, tegnet2d: 0, bånd3d: 0, maling3d: 0, trærFjernet: 0, trekanter: 0, kulvert: 0, biter: 0 };
+  const STAT = window.BEKKER_STAT = { linjer: 0, tegnet2d: 0, bånd3d: 0, maling3d: 0, trærFjernet: 0, trekanter: 0, kulvert: 0, biter: 0, iVann: 0 };
   // hele Norge i biter (spill/nvebiter.js): nivå 0 = brede elver og orden ≥ 5, 1 = orden 3–4, 2 = orden 1–2
   const LAG = window.BEKKER = NveBiter.lag('bekker', '/dovre-fliser/data/bekker.json?v=' + DATA_V, d => Bekker.les(d), () => { kreditér(); if (typeof skitten !== 'undefined') skitten = true; });
   const nivåer = mo => (mo <= 2 ? [0, 1, 2] : mo <= 4 ? [0, 1] : [0]);
@@ -19,17 +19,22 @@
   // ---------- 2D ----------
   // minste orden som vises ved målestokken (meter per skjermpunkt)
   const minOrden = m => m <= 6 ? 1 : m <= 12 ? 2 : m <= 24 ? 3 : m <= 48 ? 4 : m <= 90 ? 5 : 99;
+  // elvemidtlinjer fra denne bredden (skjermpunkter) tegnes i kartets vannfarge (HAV i kartflis.js, målt i ferdig kart)
+  const ELV_BRED = 2.5, ELV_FARGE = 'rgb(48,77,103)';
   KROKER.tegn.push((g, vx0, vy1) => {
     const m = kam.m, mo = minOrden(m); STAT.tegnet2d = 0; if (mo > 7) return;
     const bb = [vx0, vy1 - VH * m, vx0 + VW * m, vy1], biter = LAG.har(bb, nivåer(mo)); if (!biter.length) return;
     if (++kildeSjekk % 30 === 0) kreditér();
     const linjer = iBiter(biter, bb), grupper = new Map();
     for (const l of linjer) { if (l.orden < mo && !(l.type === 1 && l.orden + 2 >= mo)) continue;
-      const w = Math.max(l.type === 1 ? 1.4 : .8 + (l.orden - mo) * .3, l.b / m), k = Math.round(w * 4) / 4;
+      const w = Math.max(l.type === 1 ? 1.4 : .8 + (l.orden - mo) * .3, l.b / m);
+      // Midtlinjen i en bred elv (type 1) som er bred nok til å synes som et eget bånd, tegnes i kartets vannfarge: der kartet alt
+      // har elva som vannflate, går den i ett med den (før: en lysere stripe midt i Nidelva), ellers er den elva i samme farge som vannet.
+      const k = Math.round(w * 4) / 4 + (l.type === 1 && w >= ELV_BRED ? 1000 : 0);
       if (!grupper.has(k)) grupper.set(k, []); grupper.get(k).push(l); }
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-    for (const [w, ls] of grupper) {
-      g.lineWidth = w; g.strokeStyle = w < 1.2 ? 'rgba(78,128,168,.9)' : 'rgb(64,108,146)'; g.beginPath();
+    for (const [k, ls] of grupper) { const w = k % 1000;
+      g.lineWidth = w; g.strokeStyle = k >= 1000 ? ELV_FARGE : w < 1.2 ? 'rgba(78,128,168,.9)' : 'rgb(64,108,146)'; g.beginPath();
       for (const l of ls) { let sx = -1e9, sy = -1e9;
         for (let k = 0; k < l.P.length; k++) { const x = (l.P[k][0] - vx0) / m, y = (vy1 - l.P[k][1]) / m;
           if (k === 0) g.moveTo(x, y); else if (k === l.P.length - 1 || Math.abs(x - sx) + Math.abs(y - sy) > 1.5) g.lineTo(x, y); else continue; sx = x; sy = y; } }
@@ -49,12 +54,22 @@
     STAT.linjer = biter.reduce((n, B) => n + B.linjer.length, 0); kreditér();
     // kulvert: små bekker (orden ≤ 3) går under vegene i utsnittet (u.påVeg fra liv3d.js, lokale meter) – delene i vegbanen tas bort
     const påVeg = u.påVeg; STAT.kulvert = 0;
-    const kulvert = l => { if (!påVeg || l.type !== 0 || l.orden > 3) return null; const ut = []; let bit = [], kutt = false;
-      for (const p of Bekker.punkter(l.P, 2)) { if (påVeg(p[0] - u.cx, p[1] - u.cy)) { kutt = true; if (bit.length > 1) ut.push(bit); bit = []; } else bit.push(p); }
-      if (!kutt) return null; STAT.kulvert++; if (bit.length > 1) ut.push(bit); return ut; };
-    const linjer = [];
+    const kulvert = l => { if (!påVeg || l.type !== 0 || l.orden > 3) return null;
+      const k = Bekker.klipp(l.P, (x, y) => påVeg(x - u.cx, y - u.cy)); if (k) STAT.kulvert++; return k; };
+    // Der kartet alt har elva eller vannet som vannflate (vannmasken fra bygg3d, lest én gang – samme form som i gange.js), tegnes
+    // verken maling eller vannbånd: midtlinjen lå som en smal stripe med steinkant midt i Nidelva (12. nov). Midtlinjen i en bred elv
+    // ligger ikke alltid midt i kartets vannflate, så den regnes som «i vannet» også når vannet ligger rett ved siden av.
+    let vd = null; STAT.iVann = 0;
+    if (u.vann && u.vann.getContext) { if (!u.vannData) { try { const W = u.vann.width; u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { u.vannData = { W: 0 }; } }
+      if (u.vannData.W) vd = u.vannData; }
+    const vannPkt = (x, y) => { const i = Math.floor((x + S) / (2 * S) * vd.W), j = Math.floor((S - y) / (2 * S) * vd.W); return i >= 0 && j >= 0 && i < vd.W && j < vd.W && vd.d[(j * vd.W + i) * 4] > 127; };
+    const iVann = l => { const r = l.type === 1 ? Math.max(6, l.b * .6) : 0;
+      return (X, Y) => { const x = X - u.cx, y = Y - u.cy; return vannPkt(x, y) || r > 0 && (vannPkt(x + r, y) || vannPkt(x - r, y) || vannPkt(x, y + r) || vannPkt(x, y - r)); }; };
+    const linjer = [], stegV = Math.max(2, mpp * 1.5);
     for (const l of iBiter(biter, bb)) { if (!(l.orden >= mo || l.type === 1)) continue;
-      const k = kulvert(l); if (!k) linjer.push(l); else for (const P of k) linjer.push({ ...l, P }); }
+      const k = kulvert(l); let deler = k ? k.map(P => ({ ...l, P })) : [l];
+      if (vd) deler = deler.flatMap(d => { const v = Bekker.klipp(d.P, iVann(d), stegV, Math.max(8, d.b)); if (!v) return [d]; STAT.iVann++; return v.map(P => ({ ...d, P })); });
+      for (const d of deler) linjer.push(d); }
     // maling i kartet under: våt, mørk kant og vannet i vannfargen (naturfarger() gjør det blankt og lysere etterpå)
     const stemple = (x, y, r, f, a) => {
       const ci = (x - (u.cx - S)) / mpp, cj = ((u.cy + S) - y) / mpp, rp = r / mpp, R2 = Math.max(.5, rp), n = Math.ceil(R2);
