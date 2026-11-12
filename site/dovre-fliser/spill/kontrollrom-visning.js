@@ -49,7 +49,8 @@
     const m = { tid, fra: s.navn, tekst, leir: !!fraLeiren }; radiolog.unshift(m); radiolog.length = Math.min(radiolog.length, 60);
     // høres i kontrollrommet, på nettbrettet, og ute når du er innen håndradioens rekkevidde av leiren
     const S = spill(), hører = modus() !== 'ute' || (deg && Math.hypot(deg.x - S.leir.x, deg.y - S.leir.y) <= K.RADIO.hånd.meter);
-    if (hører) logg(`📻 ${s.navn}: ${tekst}`);
+    // rutinemeldingene («Alt rolig») står bare i radiolista i kontrollrommet: i loggen skjøv de ut alt annet
+    if (hører && tekst !== K.RUTINE) logg(`📻 ${s.navn}: ${tekst}`);
     if (inne) visRadio();
   }
   function rapport(s, t) {

@@ -188,6 +188,13 @@
     for (const j of R.jobber) if (j.type === 'hogst' && !j.stoppet && h < fram(j) && iFelt(j, x, y)) return true;
     return false;
   }
+  // Kan det hogges i (x, y)? Ikke i et pågående hogstfelt (der hogges alt), og ikke der skogen er hogd fra før: et ferdig felt er helt
+  // hogd, et stoppet felt bare så langt arbeidet kom (andel). h: punktets egen tilfeldighet 0–1, som for trærne i erHogd.
+  // (Før sperret et felt som ble stoppet etter 10 % hele sirkelen for ny hogst, feiljakt 12. nov.)
+  function ledigSkog(R, x, y, h = 0) {
+    if (R.jobber.some(j => j.type === 'hogst' && !j.stoppet && Math.hypot(x - j.x, y - j.y) < j.r)) return false;
+    return !R.hogd.some(f => h < (f.andel === undefined ? 1 : f.andel) && Math.hypot(x - f.x, y - f.y) < f.r);
+  }
   const revetSett = R => new Set(R.revet.map(q => q.i));
   // Hva det koster å kjøpe like mye (MATERIALER fra leir.js: { tre: { pris }, … })
   const kjøpsverdi = (mat, M) => Math.round(MAT.reduce((s, k) => s + (mat[k] || 0) * (M[k] ? M[k].pris : 0), 0));
@@ -207,7 +214,7 @@
     } catch (e) { return null; }
   }
   const api = { REGLER, MAT, ny, areal, gruppe, husUtbytte, hogstUtbytte, startHogst, startRiving, avbryt, finn, fram, iHaug, ta, lever, steg, lastebil, bilSteg, bilTekst,
-    erHogd, kant, iFelt, revetSett, kjøpsverdi, timerMed, fotsTimer, sum, midt, tilJSON, fraJSON };
+    erHogd, ledigSkog, kant, iFelt, revetSett, kjøpsverdi, timerMed, fotsTimer, sum, midt, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Ressurser = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

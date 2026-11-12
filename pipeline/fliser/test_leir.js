@@ -91,4 +91,23 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   const pm2 = L0.planMal(P, mal, 1000, 0, 0); ok(pm2.feil.length > 0, 'samme mal oppå seg selv: det som ikke får plass hoppes over');
   const J2 = L0.fraJSON(L0.tilJSON(P)); ok(J2.plan.length === P.plan.length && J2.nestePlan === P.nestePlan, 'planen lagres og leses inn igjen');
 }
+// FEILJAKT 12. nov: gjerdet sjekkes langs hele linja, og drivstoffet forsvinner ikke når en tank rives
+{ const G = L0.ny(), full = () => { for (const k of ['tre', 'betong', 'stål']) G.lager[k] = 60; };
+  const land = { klasse: () => 2 }, sjø = { klasse: (x, y) => (x > 10 && x < 190 ? 3 : 2) }, hus = { klasse: () => 2, iHus: (x, y) => x > 50 && x < 60 };
+  ok(L0.gjerdePunkter([[0, 0], [20, 0]], false).length === 4 && L0.gjerdePunkter([[0, 0], [20, 0], [20, 20]], true).length === 11, 'gjerdePunkter: et punkt hver 8. m, også i det siste leddet i en ring');
+  ok(/vann/.test(L0.kanBygge(G, { type: 'gjerde', punkter: [[0, 0], [200, 0]] }, sjø) || ''), 'gjerde fra land til land tvers over et vann avvises');
+  ok(/hus/.test(L0.kanBygge(G, { type: 'gjerde', punkter: [[0, 0], [200, 0]] }, hus) || ''), 'gjerde gjennom et hus i kartet avvises');
+  full(); const br = L0.bygg(G, { type: 'brakke', x: 100, y: 0 }, betal, {}, land).bygg; br.igjen = 0;
+  ok(/gjennom brakke/.test(L0.kanBygge(G, { type: 'gjerde', punkter: [[0, 0], [200, 0]] }, land) || ''), 'gjerde tvers gjennom en brakke avvises');
+  ok(L0.kanBygge(G, { type: 'gjerde', punkter: [[0, 20], [200, 20]] }, land) === null && L0.kanBygge(G, { type: 'gjerde', punkter: [[0, -30], [200, -30], [200, 30], [0, 30]], lukket: true }, land) === null, 'gjerde forbi og i ring rundt brakka er lov');
+  full(); const gj = L0.bygg(G, { type: 'gjerde', punkter: [[0, 20], [200, 20]] }, betal, {}, land).bygg, f = L0.festTilGjerde(G, 50, 21); full(); const port = L0.bygg(G, { type: 'port', x: f.x, y: f.y, ret: f.ret }, betal, {}, land);
+  ok(port.bygg && L0.kanBygge(G, { type: 'gjerde', punkter: [[0, 20], [200, 20]] }, land) === null, 'porten står i gjerdet: den stopper ikke et gjerde');
+  // riving av tank med drivstoff
+  const T = L0.ny(); for (const k of ['tre', 'betong', 'stål']) T.lager[k] = 60;
+  const t1 = L0.bygg(T, { type: 'drivstofftank', x: 0, y: 0 }, betal).bygg, t2 = L0.bygg(T, { type: 'drivstofftank', x: 30, y: 0 }, betal).bygg; t1.igjen = t2.igjen = 0;
+  L0.kjøpDrivstoff(T, 8000, betal); const r1 = L0.riv(T, t1.id);
+  ok(T.drivstoff === 5000 && r1.drivstoff === 3000 && r1.drivstoffPenger === 3000 * L0.DRIVSTOFF.prisPerLiter && r1.penger === r1.bygg + r1.drivstoffPenger && r1.bygg === Math.round(3e6 * L0.REGLER.rivFerdig),
+    'riv en av to tanker: 5000 l blir i den andre, 3000 l selges tilbake til innkjøpspris');
+  const r2 = L0.riv(T, t2.id); L0.steg(T, 1); ok(T.drivstoff === 0 && r2.drivstoff === 5000 && r2.drivstoffPenger === 40e6, 'riv den siste tanken: alt drivstoffet selges tilbake (ikke borte uten varsel)');
+  full(); const br2 = L0.bygg(G, { type: 'container', x: 100, y: 100 }, betal, {}, land).bygg; br2.igjen = 0; const r3 = L0.riv(G, br2.id); ok(r3.drivstoff === 0 && r3.penger === r3.bygg, 'riv et annet bygg: ingen drivstoffpenger'); }
 process.exit(feil ? 1 : 0);

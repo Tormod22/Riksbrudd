@@ -54,6 +54,9 @@
     const m = d >= 2000 ? (Math.round(d / 500) * 500 / 1000).toLocaleString('nb-NO') + ' km' : Math.round(d / 50) * 50 + ' m';
     return `ca. ${m} ${RETNINGER[Math.round(a / 45) % 8]}`;
   }
+  // Rutinemeldingen (hvert 15. spillminutt per lag): står i radiolista i kontrollrommet, men ikke i loggen på kartet, der den
+  // skjøv ut alle viktige meldinger (feiljakt 12. nov: 352 av 364 linjer)
+  const RUTINE = 'Posisjon meldt. Alt rolig.';
   // Meldingene fra et lag siden forrige gang (ren logikk): før/nå = { framme, ute (sårede+falne), underIld, fiender: [{ id, navn, x, y }] }
   function meldinger(lag, før, nå, sistMeldt, t) {
     const ut = [];
@@ -61,11 +64,11 @@
     if (nå.ute > før.ute) ut.push(`${nå.ute - før.ute} ${nå.ute - før.ute === 1 ? 'mann' : 'menn'} såret eller falt. ${nå.ute} ute av kamp nå.`);
     if (nå.underIld && (t - (sistMeldt.ild || -1e9)) >= REGLER.underIld) { ut.push('Under ild!'); sistMeldt.ild = t; }
     for (const f of nå.fiender) { const k = 'f' + f.id; if (t - (sistMeldt[k] || -1e9) < REGLER.nyFiende) continue; sistMeldt[k] = t; ut.push(`Fiende sett: ${f.navn}, ${retning(lag, f)}.`); }
-    if (!ut.length && t - (sistMeldt.pos || -1e9) >= REGLER.posisjon) { ut.push('Posisjon meldt. Alt rolig.'); }
+    if (!ut.length && t - (sistMeldt.pos || -1e9) >= REGLER.posisjon) { ut.push(RUTINE); }
     if (ut.length) sistMeldt.pos = t;
     return ut;
   }
-  const api = { RADIO, LEIR, REGLER, rekkevidde, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
+  const api = { RADIO, LEIR, REGLER, RUTINE, rekkevidde, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Kontrollrom = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -91,5 +91,26 @@ ok(L0.BYGG.kjøkken && L0.kostnad('kjøkken').pris === 3e6 && L0.PRIORITET.inclu
   ok(F2 && F2.personer.length === 10 && F2.personer[0].oppgave === 'riving' && L0.byggelag(L2) === 2, 'folket lagres med leiren («riksbrudd-k2»)');
   const gammel = L0.fraJSON(JSON.stringify({ versjon: 2, bygg: [], neste: 1 })); ok(gammel && !gammel.folk && L0.byggelag(gammel) === 1, 'gammel leir uten folk: lastes, ett byggelag');
   ok(F0.fraJSON({ personer: [{ id: 3, navn: 'Ola Test', oppgave: 'ukjent' }] }).personer[0].oppgave === 'fri', 'ukjent oppgave i lagringen blir «fri»'); }
+// TOM GJENG (feiljakt 12. nov): uten mat dør eller går alle – spillet skal ikke låse seg, og det varsles i god tid
+{ const L = L0.ny(), F = F0.ny(123); L.folk = F; const H = døgn(F, L, 16);
+  ok(F.personer.length === 0, 'uten mat i 16 døgn: gjengen er tom');
+  ok(H.some(t => /under ett døgn/.test(t)) && H.some(t => /tom for mat/.test(t)) && H.filter(t => /sulter fortsatt/.test(t)).length >= 3, 'maten: varsel før den er tom, når den er tom, og påminnelser mens folk sulter');
+  ok(H.some(t => /farlig lav/.test(t)) && H.some(t => /Gjengen er tom/.test(t)), 'varsel om farlig lav moral (halvveis) og «gjengen er tom»');
+  { const L3 = L0.ny(), F3 = F0.ny(5); F3.personer.length = 3; F3.mat = 100; F3.moral = 10; F3.misnøye = F0.R.gåTid - 30; const H3 = F0.steg(F3, L3, 60, { årstid: 'sommer' }).hendelser;
+    ok(F3.personer.length === 2 && H3.some(t => /^Bare 2 igjen/.test(t)), 'når gjengen blir færre enn tre: «Bare 2 igjen …»'); }
+  ok(H.filter(t => /Gjengen er tom/.test(t)).length === 1, '«gjengen er tom» meldes én gang');
+  døgn(F, L, 2); ok(F.moral >= F0.R.nødMoral - 1, 'tom gjeng: moralen henter seg inn (' + Math.round(F.moral) + ')');
+  ok(F0.kanRekruttere(F, L) === null && L0.plasser(L) === 0, 'tom gjeng: rekruttering er mulig uten seng');
+  const tomKasse = () => false, r1 = F0.rekrutter(F, L, tomKasse);
+  ok(r1.person && r1.pris === 0 && r1.nød && r1.person.oppgave === 'bygg' && L0.byggelag(L) === 1, 'første nye uten penger: gratis, går rett på «bygg» (ett byggelag igjen)');
+  const før = penger, r2 = F0.rekrutter(F, L, betal), r3 = F0.rekrutter(F, L, betal);
+  ok(r2.person && r3.person && før - penger === 2 * F0.R.rekruttPris && F.personer.length === 3, 'nummer to og tre: vanlig pris, fortsatt uten seng');
+  const r4 = F0.rekrutter(F, L, betal); ok(r4.feil && /seng/.test(r4.feil) && F0.kanRekruttere(F, L), 'fra tre personer gjelder kravet om ledig seng igjen');
+  // brakken blir ferdig med det ene byggelaget, og gjengen overlever med mat
+  F0.kjøpMat(F, 200, betal); const b = (fyll(L), L0.bygg(L, { type: 'brakke', x: 0, y: 0 }, betal).bygg);
+  for (let i = 0; i < 48; i++) { L0.steg(L, 60); F0.steg(F, L, 60, { årstid: 'sommer' }); }
+  ok(b.igjen === 0 && F.personer.length === 3 && F.moral > 40 && !F0.kanRekruttere(F, L), 'gjengen bygger brakke igjen og kan rekruttere videre (moral ' + Math.round(F.moral) + ')');
+  // en gammel lagring med tom gjeng og moral 5 (låst før rettelsen) kommer også løs
+  const G = F0.fraJSON({ personer: [], moral: 5, mål: 5, mat: 0, neste: 11, frø: 7 }); ok(F0.rekrutter(G, L0.ny(), tomKasse).person && G.moral >= F0.R.nødMoral, 'gammel lagring med tom gjeng og moral 5: kan rekruttere'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for folk.js er ok');
 process.exit(feil ? 1 : 0);

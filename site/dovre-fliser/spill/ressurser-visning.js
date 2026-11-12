@@ -78,7 +78,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   async function skogAndel(x, y, r) {
     const v = await lagVindu([x - r - 40, y - r - 40, x + r + 40, y + r + 40], false, 9); let n = 0, s = 0;
     for (let dy = -r; dy <= r; dy += 4) for (let dx = -r; dx <= r; dx += 4) { if (dx * dx + dy * dy > r * r) continue; n++; const X = x + dx, Y = y + dy;
-      if (R.hogd.some(f => Math.hypot(X - f.x, Y - f.y) < f.r) || R.jobber.some(j => j.type === 'hogst' && Math.hypot(X - j.x, Y - j.y) < j.r)) continue;
+      if (!RS.ledigSkog(R, X, Y, hash(X, Y))) continue;
       const [i, j] = Terreng.rute(v, X, Y); if (i >= 0 && j >= 0 && i < v.w && j < v.h && v.K[j * v.w + i] === 1) s++; }
     return n ? s / n : 0;
   }

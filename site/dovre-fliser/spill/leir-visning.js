@@ -95,7 +95,8 @@
     for (const e of ENHETER) { if (e.side === 'blå' || !levende(e)) continue;
       for (const b of L.bygg.slice()) { if (!LB.ferdig(b) || Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
         const r = LB.skade(L, b.id, .08 * dt / 60);
-        if (r === 'ødelagt') { logg(`${LB.BYGG[b.type].navn} er ødelagt av ${e.navn}!`); bygg3dPåNytt(); lagre(); }
+        if (r === 'ødelagt') { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L));
+          logg(`${LB.BYGG[b.type].navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l drivstoff gikk tapt.` : '')); bygg3dPåNytt(); lagre(); }
         else if (!skadeMeldt.has(b.id)) { skadeMeldt.add(b.id); logg(`${e.navn} skader ${LB.BYGG[b.type].navn.toLowerCase()} i leiren!`); } } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
     if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); if (meny) visMeny(); if (valgtBygg && !plassering) visByggPanel(); skitten = true; }
@@ -234,14 +235,18 @@
     const p = plassering; if (!p) return;
     if (p.mal) {
       if (p.x === null) { visBanner(`Trykk der midten av «${p.mal.navn}» skal være.`); skitten = true; return; }
-      p.deler = LB.fraMal(p.mal, p.x, p.y, p.ret).map(b => ({ ...b, feil: LB.kanBygge(L, b, {}) }));
+      // hvert bygg i malen sjekkes mot kartet (vann, hus, bratt grunn) slik som ved vanlig plassering – før ble malen lagt rett i vannet
+      const nøkkel = p.x + ',' + p.y + ',' + p.ret, deler = LB.fraMal(p.mal, p.x, p.y, p.ret); p.sjekket = null; p.feil = 'Sjekker kartet …'; visBanner(p.feil);
+      for (const b of deler) { const pk = LB.BYGG[b.type].linje ? LB.gjerdePunkter(b.punkter, b.lukket) : [...LB.hjørner(b), [b.x, b.y]]; b.kart = await kartFor(pk);
+        if (plassering !== p || nøkkel !== p.x + ',' + p.y + ',' + p.ret) return; b.feil = LB.kanBygge(L, b, b.kart); }
+      p.deler = deler; p.sjekket = nøkkel;
       const ok = p.deler.filter(b => !b.feil).length; p.feil = ok ? null : 'Ingenting får plass her.';
       visBanner(`«${p.mal.navn}»: ${ok} av ${p.deler.length} bygg får plass` + (ok < p.deler.length ? ' (de røde hoppes over)' : '') + '.', !!ok); skisse3d(); skitten = true; return;
     }
     const B = LB.BYGG[p.type];
     if (B.linje && p.punkter.length < 2) { visBanner(p.punkter.length ? 'Trykk der neste punkt skal være.' : 'Trykk der gjerdet skal begynne.'); skisse3d(); skitten = true; return; }
     juster(p); const b = sp(p);
-    const punkter = B.linje ? p.punkter : [...LB.hjørner(b), [b.x, b.y]], v = await kartFor(punkter);
+    const punkter = B.linje ? LB.gjerdePunkter(p.punkter, p.lukket) : [...LB.hjørner(b), [b.x, b.y]], v = await kartFor(punkter);
     if (plassering !== p) return;
     p.feil = LB.kanBygge(L, b, v, p.flytt, { planUnntatt: p.pid }); p.kart = v;
     const k = LB.kostnad(p.type, B.linje ? LB.lengde(p.punkter, p.lukket) : 0, bonus()); p.mat = p.flytt ? {} : k.mat; p.matPris = matPris(p.mat);
@@ -274,7 +279,8 @@
   KROKER.trykk.push(trykk); KROKER.trykk3d.push(trykk);
   function bekreft() {
     const p = plassering; if (!p || p.feil) return;
-    if (p.mal) { husk(); const r = LB.planMal(L, p.mal, p.x, p.y, p.ret);
+    if (p.mal) { if (p.sjekket !== p.x + ',' + p.y + ',' + p.ret) return; husk(); let nr = 0;
+      const r = LB.planMal(L, p.mal, p.x, p.y, p.ret, () => (p.deler[nr++] || {}).kart || {});
       if (!r.lagt.length) { angre.pop(); visBanner('Ingenting fikk plass her.'); return; }
       logg(`«${p.mal.navn}» lagt i planen: ${r.lagt.length} skisser${r.feil.length ? `, ${r.feil.length} fikk ikke plass` : ''}.`); return ferdigPlassert(p); }
     if (p.plan) { husk(); const r = p.pid ? LB.planFlytt(L, p.pid, { x: p.x, y: p.y, ret: p.ret }, p.kart || {}) : LB.planLegg(L, sp(p), p.kart || {});
@@ -311,8 +317,11 @@
     if (!B.linje && !B.del) { const k = knapp(`Flytt (${LB.kroner(Math.round(B.pris * LB.REGLER.flyttPris))})`, () => startPlassering(b.type, b.id)); k.disabled = b.igjen > 0 || !!b.arbeid; banner.appendChild(k);
       banner.appendChild(knapp('Kopier', () => startPlassering(b.type, null, { ret: b.ret, plan: planModus }), { title: 'Sett ut et likt bygg med samme retning' })); }
     banner.appendChild(knapp(`Riv (+${LB.kroner(Math.round(b.pris * (b.igjen > 0 ? LB.REGLER.rivUferdig : LB.REGLER.rivFerdig)))})`, () => {
-      if (!confirm(`Rive ${B.navn.toLowerCase()}?`)) return; const r = LB.riv(L, b.id); OppstartSpill.gi(r.penger);
-      logg(`${B.navn} er revet. ${LB.kroner(r.penger)} tilbake${r.uferdig ? ', og materialene' : ''}.`); valgtBygg = null; banner.classList.remove('på'); lagre(); bygg3dPåNytt(); skitten = true; }));
+      // drivstoff som ikke får plass i de andre tankene når denne rives, selges tilbake (Leir.riv) – si fra før og etter
+      const over = Math.max(0, L.drivstoff - LB.kapasitet({ bygg: L.bygg.filter(q => q !== b) })), liter = v => Math.round(v).toLocaleString('nb-NO');
+      if (!confirm(`Rive ${B.navn.toLowerCase()}?` + (over >= 1 ? ` ${liter(over)} l drivstoff får ikke plass i de andre tankene og selges tilbake for ${LB.kroner(Math.round(over * LB.DRIVSTOFF.prisPerLiter))}.` : ''))) return;
+      const r = LB.riv(L, b.id); OppstartSpill.gi(r.penger);
+      logg(`${B.navn} er revet. ${LB.kroner(r.bygg)} tilbake${r.uferdig ? ', og materialene' : ''}.` + (r.drivstoff >= 1 ? ` ${liter(r.drivstoff)} l drivstoff uten plass er solgt tilbake for ${LB.kroner(r.drivstoffPenger)}.` : '')); valgtBygg = null; banner.classList.remove('på'); lagre(); bygg3dPåNytt(); skitten = true; }));
     banner.appendChild(knapp('Lukk', () => { valgtBygg = null; banner.classList.remove('på'); skitten = true; }));
   }
 
@@ -371,7 +380,7 @@
     g.restore();
     const p = plassering;
     if (p && p.mal && p.deler) for (const d of p.deler) tegn1(d, true, !d.feil);
-    else if (p && (p.x !== null || (p.punkter && p.punkter.length))) {
+    else if (p && !p.mal && (p.x !== null || (p.punkter && p.punkter.length))) {
       tegn1(sp(p), true, !p.feil);
       // hjelpelinjene når bygget ligger på linje med naboen
       if (p.linjer && p.linjer.length) { g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 1.2; g.setLineDash([3, 3]);

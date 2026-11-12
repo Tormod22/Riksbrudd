@@ -55,6 +55,8 @@
     moralFart: 4,               // poeng per spilltime mot målet
     lavMoral: 25, gåTid: 1440,  // under 25 i et døgn: én forlater gjengen
     arbeidsfør: .4,
+    nød: 3,                     // færre enn tre i gjengen: nye kan alltid rekrutteres (ingen krav om seng eller moral), så spillet ikke låser seg
+    nødMoral: 50,               // en tom gjeng henter seg inn til dette, og de første nye starter ikke på bunnen
   };
   // Enkel, fast tilfeldighet (samme frø gir samme folk)
   function rng(frø) { let a = frø >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -128,7 +130,10 @@
   // dt i spillminutter. o: { årstid, mangler, ekstraSenger }. Gir { hendelser: [tekst], ... } og endrer F (og L: ved, drivstoff, stål, hp).
   function steg(F, L, dt, o = {}) {
     const H = [], d = dt / R.døgn, B = behov(F, L, o), n = B.n;
-    if (!n) { F.sist = { ...B, alleSeng: true }; return { hendelser: H, behov: B }; }
+    // tom gjeng: ingen sulter eller fryser, og moralen henter seg inn, så nye folk kan rekrutteres (spillet låser seg ikke)
+    if (!n) { const s0 = R.moralFart * dt / 60; F.mål = R.nødMoral; F.moral += Math.max(-s0, Math.min(s0, F.mål - F.moral)); F.misnøye = 0;
+      if (!F.sist.tom) H.push('Gjengen er tom! Rekrutter nye folk i Folk-panelet (de første tre trenger ikke seng).');
+      F.sist = { ...B, alleSeng: true, tom: true }; return { hendelser: H, behov: B }; }
     // senger: de som har vært lengst i gjengen får seng først
     F.personer.forEach((p, i) => { p.seng = i < B.senger; });
     // mat
@@ -151,7 +156,8 @@
       if (før >= R.arbeidsfør && p.helse < R.arbeidsfør) H.push(`${p.navn} er syk og kan ikke arbeide.`);
       if (før < R.arbeidsfør && p.helse >= R.arbeidsfør) H.push(`${p.navn} er frisk igjen.`);
     }
-    for (const p of F.personer.filter(q => q.helse <= 0)) { H.push(`${p.navn} er død.`); F.personer = F.personer.filter(q => q !== p); }
+    let færre = false;
+    for (const p of F.personer.filter(q => q.helse <= 0)) { H.push(`${p.navn} er død.`); F.personer = F.personer.filter(q => q !== p); færre = true; }
     // verkstedet: reparerer skadde bygg (de mest skadde først), ellers stål av skrap
     const vk = på(F, 'verksted').filter(arbeidsfør).slice(0, B.verksted * R.perVerksted).reduce((s, p) => s + personTempo(F, p, 'verksted'), 0);
     if (vk > 0) { const skadd = L.bygg.filter(b => LB.ferdig(b) && !b.arbeid && b.hp < 1).sort((a, b) => a.hp - b.hp)[0];
@@ -169,13 +175,21 @@
     F.mål = Math.max(5, Math.min(95, mål));
     const steg1 = R.moralFart * dt / 60; F.moral += Math.max(-steg1, Math.min(steg1, F.mål - F.moral));
     // lav moral et helt døgn: den minst lojale forlater gjengen
-    if (F.moral < R.lavMoral) { F.misnøye += dt;
-      if (F.misnøye >= R.gåTid && F.personer.length) { const p = F.personer.slice().sort((a, b) => a.lojal - b.lojal)[0]; F.personer = F.personer.filter(q => q !== p); F.misnøye = 0; F.borte++;
+    if (F.moral < R.lavMoral) { const førM = F.misnøye; F.misnøye += dt;
+      // varsel halvveis: det er tid til å gjøre noe før den første går
+      if (førM < R.gåTid / 2 && F.misnøye >= R.gåTid / 2 && F.personer.length) H.push(`Moralen er farlig lav (${Math.round(F.moral)}): noen forlater gjengen om ca. ${Math.round((R.gåTid - F.misnøye) / 60)} timer hvis det ikke blir bedre.`);
+      if (F.misnøye >= R.gåTid && F.personer.length) { færre = true; const p = F.personer.slice().sort((a, b) => a.lojal - b.lojal)[0]; F.personer = F.personer.filter(q => q !== p); F.misnøye = 0; F.borte++;
         H.push(`${p.navn} har forlatt gjengen (moralen er for lav).`); } }
     else F.misnøye = Math.max(0, F.misnøye - dt);
+    if (færre && F.personer.length > 0 && F.personer.length < R.nød) H.push(`Bare ${F.personer.length} igjen i gjengen. Rekrutter flere i Folk-panelet (ingen krav om seng når dere er færre enn tre).`);
+    // maten: varsel når det er under ett døgn igjen, når den er tom, og en påminnelse hvert halve døgn så lenge folk sulter
+    const liteMat = !sult && B.dager < 1;
+    if (liteMat && !F.sist.liteMat) H.push('Maten tar slutt om under ett døgn: kjøp mat i Folk-panelet eller bygg drivhus.');
     if (sult && !F.sist.sult) H.push('Leiren er tom for mat! Kjøp mat eller bygg drivhus.');
+    const sultTid = sult ? (F.sist.sultTid || 0) + dt : 0;
+    if (sult && F.sist.sult && Math.floor(sultTid / 720) > Math.floor((F.sist.sultTid || 0) / 720)) H.push('Folk sulter fortsatt og blir syke: kjøp mat i Folk-panelet.');
     if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller drivstoff, og bygg brakker.');
-    F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng };
+    F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, sultTid };
     return { hendelser: H, behov: B, sult, kald };
   }
   // ---------- mat og rekruttering ----------
@@ -183,11 +197,25 @@
     const pris = rasjoner * R.matPris; if (!betal(pris)) return { feil: `Ikke nok penger (${LB.kroner(pris)}).` };
     F.mat += rasjoner; return { rasjoner, pris };
   }
+  // Nødrekruttering: er gjengen nesten tom (færre enn R.nød), kan nye alltid bli med – uten seng, uansett moral, og gratis hvis kassa er tom.
+  // Ellers kunne en tom gjeng aldri bygges opp igjen (ingen byggelag -> ingen brakke -> ingen seng -> ingen rekruttering).
+  const nød = F => F.personer.length < R.nød;
+  // Hvorfor det ikke kan rekrutteres nå (null = det går)
+  function kanRekruttere(F, L, o = {}) {
+    if (nød(F)) return null;
+    const B = behov(F, L, o); if (B.senger <= B.n) return 'Ingen ledig seng: bygg en brakke først.';
+    if (F.moral < 40) return 'Moralen er for lav til at noen vil bli med.';
+    return null;
+  }
   function rekrutter(F, L, betal, o = {}) {
-    const B = behov(F, L, o); if (B.senger <= B.n) return { feil: 'Ingen ledig seng: bygg en brakke først.' };
-    if (F.moral < 40) return { feil: 'Moralen er for lav til at noen vil bli med.' };
-    if (!betal(R.rekruttPris)) return { feil: `Ikke nok penger (${LB.kroner(R.rekruttPris)}).` };
-    const r = rng(F.frø); const p = nyPerson(F, r); F.frø = Math.floor(r() * 4294967296); return { person: p, pris: R.rekruttPris };
+    const f = kanRekruttere(F, L, o); if (f) return { feil: f };
+    const iNød = nød(F), tom = !F.personer.length; let pris = R.rekruttPris;
+    if (!betal(pris)) { if (!iNød) return { feil: `Ikke nok penger (${LB.kroner(pris)}).` }; pris = 0; }
+    const r = rng(F.frø); const p = nyPerson(F, r); F.frø = Math.floor(r() * 4294967296);
+    // i nød: den nye går rett på «bygg» når ingen bygger, og en ny gjeng starter ikke med bunnmoral
+    if (iNød) { if (!arbeidere(F, 'bygg')) p.oppgave = 'bygg'; F.moral = Math.max(F.moral, R.nødMoral); F.misnøye = 0; }
+    if (tom) F.sist = { ...F.sist, tom: false };
+    return { person: p, pris, nød: iNød };
   }
   // ---------- forsvar ----------
   // Bemannede vakttårn (de første tårnene får vaktene) og sandsekkvollene som virker
@@ -214,7 +242,7 @@
     LB.folkLag = L => (L.folk && Array.isArray(L.folk.personer) ? byggelag(L.folk) : null);
     LB.folkTempo = L => (L.folk && Array.isArray(L.folk.personer) ? byggTempo(L.folk) : 1);
   }
-  const api = { OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, forsvar, fraJSON, moralFaktor };
+  const api = { OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
