@@ -184,7 +184,8 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   const hogdLokal = u => (x, y) => RS.erHogd(R, x + u.cx, y + u.cy, hash(x + u.cx, y + u.cy));
   const sisteU = [];
   const krok3d = async (u, d) => {
-    if (!sisteU.includes(u)) sisteU.unshift(u); sisteU.length = Math.min(sisteU.length, 4); u.stubber = []; const er = hogdLokal(u), stor = u.S + 60, nær = q => Math.abs(q.x - u.cx) < stor + (q.r || 60) && Math.abs(q.y - u.cy) < stor + (q.r || 60);
+    // bare det siste utsnittet huskes (testene slår det opp): fire gamle utsnitt holdt flere hundre MB i minnet (12. nov)
+    sisteU[0] = u; u.stubber = []; const er = hogdLokal(u), stor = u.S + 60, nær = q => Math.abs(q.x - u.cx) < stor + (q.r || 60) && Math.abs(q.y - u.cy) < stor + (q.r || 60);
     const felt = [...R.hogd, ...R.jobber.filter(j => j.type === 'hogst')].filter(nær);
     if (felt.length && u.trær) for (const k in u.trær) { const a = u.trær[k], ut = [];
       for (let q = 0; q < a.length; q += 5) { if (er(a[q], a[q + 1])) { if (u.stubber.length < 3 * (VW < 900 ? 1500 : 4000)) u.stubber.push(a[q], a[q + 1], a[q + 2]); continue; } for (let s = 0; s < 5; s++) ut.push(a[q + s]); }

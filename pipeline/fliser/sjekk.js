@@ -710,6 +710,21 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       return r; });
     const bkok = bk.linjer > 1000 && bk.bånd > 0 && (!NVE || (bk.kilde === 'release' && bk.kraftKilde === 'release')) && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
     console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås (kilde ${bk.kilde}/${bk.kraftKilde}, ${bk.kulvert} kulvertkutt), høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
+    // VAKT minne i 3D (12. nov): 3D slås av og på to ganger ved Dombås. Grafikkortet skal ikke ha flere geometrier eller teksturer etter
+    // andre gang enn etter første (før: + 14 geometrier og + 1–2 teksturer per gang, terrengnettet og småtingene ble aldri frigjort),
+    // instansnettene som tas ut av scenen skal være frigjort (dispose), det gamle utsnittet skal ikke huskes (fire gamle holdt flere
+    // hundre MB), og vannmasken skal ha samme form i alle modulene ({ W, d } – med to former kunne man gå på vannet).
+    const mn = await pg.evaluate(async () => {
+      const ferdig = async () => { while (R3.bygger || !R3.ut) await new Promise(r => setTimeout(r, 100)); await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }); };
+      const borte = new WeakSet(), od = THREE.InstancedMesh.prototype.dispose; THREE.InstancedMesh.prototype.dispose = function () { borte.add(this); return od.call(this); };
+      const les = () => ({ geo: R3.renderer.info.memory.geometries, tex: R3.renderer.info.memory.textures }), inst = () => { const l = []; R3.scene.traverse(o => { if (o.isInstancedMesh) l.push(o); }); return l; };
+      const r = { m: [], glemt: 0, gammelt: false }; R3.bane.avst = 300;
+      for (let i = 0; i < 2; i++) { const før = inst(), gml = R3.ut; await slå3d(false); await slå3d(true); await ferdig(); r.m.push(les());
+        const nå = new Set(inst()); r.glemt += før.filter(o => !nå.has(o) && !borte.has(o)).length; if (RessursSpill.sisteU() === gml) r.gammelt = true; }
+      THREE.InstancedMesh.prototype.dispose = od;
+      const u = R3.ut; r.vann = !u.vannData || !!(u.vannData.d && u.vannData.W); r.S = Math.round(u.S); return r; });
+    const mnok = mn.m[1].geo <= mn.m[0].geo && mn.m[1].tex <= mn.m[0].tex && mn.glemt === 0 && !mn.gammelt && mn.vann; if (!mnok) feil++;
+    console.log(`${mnok ? 'ok  ' : 'FEIL'} ${navn} minne i 3D: 3D av og på to ganger (utsnitt ${mn.S} m) – geometrier ${mn.m[0].geo} -> ${mn.m[1].geo}, teksturer ${mn.m[0].tex} -> ${mn.m[1].tex}, ${mn.glemt} instansnett ikke frigjort${mn.gammelt ? ', det gamle utsnittet huskes fortsatt' : ''}${mn.vann ? '' : ', vannmasken har feil form'}`);
     await pg.click('#v3d');
     const bk2 = await pg.evaluate(async () => { Object.assign(kam, { x: 193135, y: 6897627, m: 4 }); skitten = true; await new Promise(r => setTimeout(r, 400)); return window.BEKKER_STAT.tegnet2d; });
     const bk2ok = bk2 > 0; if (!bk2ok) feil++;

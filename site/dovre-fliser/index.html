@@ -48,7 +48,10 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 .menn button:focus-visible{ outline:2px solid var(--hover); }
 #panel .hint{ color:var(--hover); font-style:italic; margin-top:6px; }
 #panel .lukk{ position:absolute; right:4px; top:2px; background:none; border:0; color:var(--ink-dim); font-size:22px; cursor:pointer; width:40px; height:40px; }
-#feil{ position:fixed; left:50%; top:40%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--rule); padding:14px 18px; display:none; max-width:320px; }
+#feil{ position:fixed; left:50%; top:40%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--rule); padding:14px 44px 14px 18px; display:none; max-width:320px; z-index:6; }
+#feil .lukk{ position:absolute; right:2px; top:0; background:none; border:0; color:var(--ink-dim); font-size:22px; cursor:pointer; width:40px; height:40px; }
+#feil .gjør[hidden]{ display:none; }
+#feil .gjør{ display:block; margin-top:10px; background:#3a3024; border:1px solid var(--rule); color:var(--ink); padding:8px 12px; cursor:pointer; }
 @media (max-width:600px){ .stats{ gap:2px 10px; padding:6px 9px; } .stats b{ font-size:16px; } #logg{ width:160px; font-size:12.5px; } .menn{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -73,16 +76,32 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 </div>
 <div id="skala"><div id="skalaStrek"></div><span id="skalaTekst"></span></div>
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
-<div id="feil"></div>
+<div id="feil" role="alert"><span id="feilTekst"></span><button class="lukk" id="feilLukk" aria-label="Lukk meldingen">×</button><button class="gjør" id="feilKnapp" hidden></button></div>
 <script>
+// Meldingsboksen midt på skjermen: tekst, lukkeknapp og eventuelt en knapp som gjør noe (12. nov: boksen ble stående for alltid).
+// type sier hva meldingen gjelder, så den kan tas bort når akkurat det virker igjen: skjulMelding('nett') når kartdata kommer inn,
+// skjulMelding('3d') når 3D-utsnittet er bygget. Lukker spilleren en melding, vises ikke den samme teksten igjen før etter et minutt.
+const MELDING = { type: null, lukket: {} };
+function visMelding(tekst, valg) {
+  const f = document.getElementById('feil'), v = valg || {}; if (!f) return;
+  if (MELDING.lukket[tekst] && performance.now() - MELDING.lukket[tekst] < 60000) return;
+  MELDING.type = v.type || 'feil'; MELDING.tekst = tekst; document.getElementById('feilTekst').textContent = tekst;
+  const k = document.getElementById('feilKnapp'); k.hidden = !v.knapp; k.textContent = v.knapp || ''; k.onclick = v.vedTrykk ? () => { skjulMelding(); v.vedTrykk(); } : null;
+  document.getElementById('feilLukk').onclick = () => { MELDING.lukket[tekst] = performance.now(); skjulMelding(); };
+  f.style.display = 'block';
+}
+function skjulMelding(type) {
+  const f = document.getElementById('feil'); if (!f || (type && MELDING.type !== type)) return;
+  f.style.display = 'none'; MELDING.type = null;
+}
 // Vis feil på skjermen i stedet for en stille, svart side.
-(function () { const vis = t => { const f = document.getElementById('feil'); if (f && f.style.display !== 'block') { f.style.display = 'block'; f.textContent = 'Noe gikk galt: ' + t + ' – prøv å laste siden på nytt (Ctrl+F5).'; } };
+(function () { const vis = t => { const f = document.getElementById('feil'); if (f && f.style.display !== 'block') visMelding('Noe gikk galt: ' + t + ' – prøv å laste siden på nytt (Ctrl+F5).'); };
   window.addEventListener('error', e => { const t = e.target;   // skrifter som ikke lastes er ufarlige; skript og kode er det ikke
     if (t && t !== window && t.tagName !== 'SCRIPT') return; vis(e.message || 'kunne ikke laste ' + (t && t.src || 'et skript')); }, true);
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=9bf6383f46"></script>
+<script src="/dovre-fliser/kartflis.js?v=f4e35f0bfd"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script>
 'use strict';
@@ -110,41 +129,49 @@ const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], teg
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
 // Spør mellomstasjonen én gang ved oppstart etter manifestet (hvilke filer som har hvilke fliser). Svarer den ikke, brukes DATA.
-const MANIFEST_RELEASE = !KART_TAG ? Promise.resolve(null) : fetch(`/api/kart/${KART_TAG}/manifest.json/0/1048576`)
-  .then(r => r.ok ? r.json() : null).catch(() => null);
+// Tidsgrense (12. nov): svarte ikke mellomstasjonen, ventet oppstarten for alltid og kartet ble svart uten melding.
+const FRIST_MANIFEST = 8000;
+const hentManifest = tag => hentMedFrist(`/api/kart/${tag}/manifest.json/0/1048576`, FRIST_MANIFEST, 'json').then(s => s.data).catch(() => null);
+const MANIFEST_RELEASE = !KART_TAG ? Promise.resolve(null) : hentManifest(KART_TAG);
+// de andre manifestene spørres det etter samtidig (før: ett om gangen), så et kartlager som ikke svarer koster én tidsgrense, ikke fire
+const MANIFEST_HUS = HUS_TAG ? hentManifest(HUS_TAG) : null, MANIFEST_OMLAND = OMLAND_TAG && ER_NORGE ? hentManifest(OMLAND_TAG) : null, MANIFEST_UTVEG = UTVEG_TAG ? hentManifest(UTVEG_TAG) : null;
 const RELEASE = MANIFEST_RELEASE.then(m => !!m);
 // Kartflisene (kartflis.js) får vite hvor filene ligger og melder bytene og feilene tilbake hit.
 KF.kartTag = KART_TAG; KF.release = RELEASE; KF.data = DATA;
-KF.vedBytes = (n, kilde) => { STAT.byte += n; STAT.req++; if (kilde) STAT.kilde = kilde; tegnHud(); };
+KF.vedBytes = (n, kilde) => { STAT.byte += n; STAT.req++; if (kilde) STAT.kilde = kilde; tegnHud(); nettOk(); };
 KF.vedFeil = e => { console.error(e); visFeil(e); };
 // Lagene kan være delt i flere filer (hele Norge: sammen.py), hver med zoomområde og eventuelt en stripe av z6-kolonner.
 let OMRÅDE = DOVRE, LAGFILER = null, ÅRSTALL = 1987, NORGE_BLOKKER = null, KLAR_FERDIG = false;
 const KLAR = (async () => {
-  let m = await MANIFEST_RELEASE;
-  if (!m) { try { m = await (await fetch(DATA + 'manifest.json')).json(); } catch (e) { m = null; } }
+  let m = await MANIFEST_RELEASE; const mangler = [], fraLageret = !!m;
+  if (!m) { try { m = (await hentMedFrist(DATA + 'manifest.json', FRIST_MANIFEST, 'json')).data; } catch (e) { m = null; }
+    if (ER_NORGE) norgeMangler(); }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
   if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInn(OMRÅDE); }   // /norge åpner med hele landet
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
     document.getElementById('kilde').textContent = `Høyde: Kartverket DTM (CC BY 4.0) · Inneholder modifiserte Copernicus Sentinel-data ${m.år} · Arealtype: ESA WorldCover 2021 (CC BY 4.0) · Veg: NVDB per 1. juni ${m.år} · Bygg: matrikkelen`;
-    loggLinjer.length = 0; logg(`Dovre, sommeren ${m.år}. En fiendtlig patrulje er i området. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.`);
   }
   if (HUS_TAG) {   // byggomriss fra egen release; mangler den, brukes byggpunktene i vektorlaget
-    try { const r = await fetch(`/api/kart/${HUS_TAG}/manifest.json/0/1048576`);
-      if (r.ok) { const mh = await r.json(); filer.hus = mh.filer.hus.map(f => Object.assign({}, f, { tag: HUS_TAG }));
-        document.getElementById('kilde').textContent += ' · Byggomriss: © OpenStreetMap-bidragsytere (ODbL)'; } } catch (e) { /* uten omriss */ }
+    try { const mh = await MANIFEST_HUS;
+      if (mh) { filer.hus = mh.filer.hus.map(f => Object.assign({}, f, { tag: HUS_TAG }));
+        document.getElementById('kilde').textContent += ' · Byggomriss: © OpenStreetMap-bidragsytere (ODbL)'; } else mangler.push('byggene'); } catch (e) { mangler.push('byggene'); }
   }
-  if (OMLAND_TAG && ER_NORGE) {   // omlandet: kartet glir over i det mot kanten av Norge-blokkene
-    try { const r = await fetch(`/api/kart/${OMLAND_TAG}/manifest.json/0/1048576`);
-      if (r.ok) { const mo = await r.json(); for (const n of ['ohoyde', 'okart']) filer[n] = mo.filer[n].map(f => Object.assign({}, f, { tag: OMLAND_TAG }));
+  if (OMLAND_TAG && ER_NORGE && fraLageret) {   // omlandet: kartet glir over i det mot kanten av Norge-blokkene (ikke rundt Dovre-reserven)
+    try { const mo = await MANIFEST_OMLAND;
+      if (!mo) mangler.push('nabolandene');
+      if (mo) { for (const n of ['ohoyde', 'okart']) filer[n] = mo.filer[n].map(f => Object.assign({}, f, { tag: OMLAND_TAG }));
         NORGE_BLOKKER = new Set(mo.norge_blokker.map(([x, y]) => x + ',' + y));
-        document.getElementById('kilde').textContent += ' · Utenfor Norge: Copernicus DEM GLO-90 og ESA WorldCover'; lastVest(); } } catch (e) { /* uten omland */ }
+        document.getElementById('kilde').textContent += ' · Utenfor Norge: Copernicus DEM GLO-90 og ESA WorldCover'; lastVest(); } } catch (e) { mangler.push('nabolandene'); }
   }
   if (UTVEG_TAG) {   // jernbane (hele Norden) og veger i nabolandene
-    try { const r = await fetch(`/api/kart/${UTVEG_TAG}/manifest.json/0/1048576`);
-      if (r.ok) { const mu = await r.json(); filer.utveg = mu.filer.utveg.map(f => Object.assign({}, f, { tag: UTVEG_TAG }));
-        const k = document.getElementById('kilde'); if (!k.textContent.includes('OpenStreetMap')) k.textContent += ' · Jernbane og utenlandske veger: © OpenStreetMap-bidragsytere (ODbL)'; else k.textContent += ' · Jernbane og veger i nabolandene fra OpenStreetMap'; } } catch (e) { /* uten */ }
+    try { const mu = await MANIFEST_UTVEG;
+      if (!mu) mangler.push('jernbanen');
+      if (mu) { filer.utveg = mu.filer.utveg.map(f => Object.assign({}, f, { tag: UTVEG_TAG }));
+        const k = document.getElementById('kilde'); if (!k.textContent.includes('OpenStreetMap')) k.textContent += ' · Jernbane og utenlandske veger: © OpenStreetMap-bidragsytere (ODbL)'; else k.textContent += ' · Jernbane og veger i nabolandene fra OpenStreetMap'; } } catch (e) { mangler.push('jernbanen'); }
   }
+  // kartlag som ikke lot seg hente ved oppstart: si fra i stedet for å la dem mangle stille (resten av kartet virker)
+  if (mangler.length) logg('Fikk ikke hentet ' + mangler.join(', ').replace(/, ([^,]*)$/, ' og $1') + ' (kartlageret svarer ikke). Resten av kartet virker. Last siden på nytt for å prøve igjen.');
   LAGFILER = {};
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
   KF.lagfiler = LAGFILER; KF.norgeBlokker = NORGE_BLOKKER;
@@ -155,6 +182,19 @@ const KLAR = (async () => {
 })();
 KF.klar = KLAR;
 KLAR.then(hentInfra);
+KLAR.then(() => setTimeout(() => lastThree().catch(() => {}), 2500));
+// /norge uten kontakt med kartlageret (12. nov: siden viste da stille bare Dovre-piloten). Vi sier fra, viser Dovre imens og spør
+// kartlageret igjen etter 10 s, 20 s, 40 s … (høyst hvert minutt). Når det svarer, kan spilleren laste inn Norgeskartet med en knapp.
+function norgeMangler() {
+  visMelding('Får ikke hentet Norgeskartet – kartlageret svarer ikke. Viser Dovre-området imens og prøver igjen av seg selv.', { type: 'norge' });
+  let vent = 10000;
+  const prøv = async () => {
+    if (await hentManifest(KART_TAG)) { delete MELDING.lukket['Norgeskartet er klart.'];
+      visMelding('Norgeskartet er klart.', { type: 'norge', knapp: 'Last inn Norgeskartet', vedTrykk: () => location.reload() }); return; }
+    vent = Math.min(60000, vent * 2); setTimeout(prøv, vent);
+  };
+  setTimeout(prøv, vent);
+}
 
 const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, bygg: true, infra: true, sikt: true, taake: true };
 KF.vis = VIS;
@@ -176,12 +216,12 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=1f95e037d8');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=82b6f3aa5b');
     w.onmessage = ({ data: m }) => {
-      if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); return; }
+      if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
       const v = ARB_VENT.get(m.id); if (!v) return; ARB_VENT.delete(m.id);
-      if (m.feil) v.nei(new Error(m.feil)); else v.ok({ c: m.bm, E: m.E });
+      if (m.feil) v.nei(new Error(m.feil)); else v.ok({ c: m.bm, E: m.E, ufull: m.ufull });
     };
     w.onerror = e => { e.preventDefault(); console.error('kartflis-arbeider:', e.message); ARB = null;   // videre lages flisene her
       for (const v of ARB_VENT.values()) v.ok(null); ARB_VENT.clear(); skitten = true; };
@@ -209,11 +249,20 @@ function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.
   document.documentElement.style.setProperty('--topp', document.querySelector('.top').getBoundingClientRect().bottom + 'px'); }
 function passInn(b) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * 1.05; skitten = true; }
 const HENTET = new Set();   // fliser vi allerede har bedt om data til
+// Ufullstendige fliser (laget under et nettbrudd) prøves på nytt mens de er i bildet: kartet tegnes igjen hvert fjerde sekund så lenge noen
+// gjenstår, og når nettleseren sier at nettet er tilbake, begynner tellingen forfra.
+const FORSØK_MAKS = 8;
+setInterval(() => { if (på3d) return; for (const t of FERDIG.values()) if (t.ufull && t.forsøk < FORSØK_MAKS) { skitten = true; return; } }, 4000);
+window.addEventListener('online', () => { for (const t of FERDIG.values()) if (t.ufull) { t.forsøk = 0; t.igjen = 0; } skitten = true; });
 function kø(z, x, y, k) {
   if (!HENTET.has(k) && KLAR_FERDIG) { HENTET.add(k); if (HENTET.size > 2000) HENTET.delete(HENTET.keys().next().value); forhent(z, x, y); }   // nettet jobber mens køen venter
   if (VENTER.has(k) || aktive >= 6) return;
   VENTER.add(k); aktive++;
-  lagFlis(z, x, y).then(t => { FERDIG.set(k, t); if (FERDIG.size > 320) { const [gk, gt] = FERDIG.entries().next().value; FERDIG.delete(gk); if (gt.c.close) gt.c.close(); } })
+  lagFlis(z, x, y).then(t => { const gml = FERDIG.get(k);
+      // en flis som ble laget mens noe ikke lot seg hente (nettbrudd), vises som den er og lages på nytt: etter 4 s, 8 s, 16 s … (høyst hvert minutt)
+      if (t.ufull) { t.forsøk = (gml && gml.forsøk || 0) + 1; t.igjen = performance.now() + Math.min(60000, 4000 * 2 ** (t.forsøk - 1)); }
+      FERDIG.set(k, t); if (gml && gml !== t && gml.c.close) gml.c.close();
+      if (FERDIG.size > 320) { const [gk, gt] = FERDIG.entries().next().value; FERDIG.delete(gk); if (gt.c.close) gt.c.close(); } })
     .catch(e => { console.error(e); visFeil(e); })
     .finally(() => { VENTER.delete(k); aktive--; skitten = true; });
 }
@@ -232,7 +281,7 @@ function tegn() {
   ctx.imageSmoothingEnabled = true;
   for (const [x, y] of liste) {
     const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
-    if (t) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); continue; }
+    if (t) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); if (t.ufull && t.forsøk < FORSØK_MAKS && performance.now() > t.igjen) kø(z, x, y, k); continue; }
     kø(z, x, y, k);
     for (let d = 1; d <= 4; d++) { // vis en grovere flis i mellomtiden
       const f = 2 ** d, a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d));
@@ -266,7 +315,16 @@ function tegnHud() {
   document.getElementById('skalaStrek').style.width = (mål / r) + 'px';
   document.getElementById('skalaTekst').textContent = mål >= 1000 ? mål / 1000 + ' km' : mål + ' m';
 }
-function visFeil(e) { const f = document.getElementById('feil'); f.style.display = 'block'; f.textContent = 'Kunne ikke hente kartdata: ' + (e && e.message || e); }
+// Kartdata som ikke lot seg hente. Nettleserens egne feiltekster er på engelsk («Failed to fetch»): uten nett sier vi det på norsk.
+// Flisene det gjelder lages på nytt av seg selv (kø), og meldingen tas bort når hentingen virker igjen (nettOk).
+let nettFeilVed = 0;
+function utenNett(e) { return /failed to fetch|networkerror|load failed|tidsgrense/i.test(String(e && e.message || e)); }
+function visFeil(e) {
+  nettFeilVed = performance.now();
+  visMelding(utenNett(e) ? 'Får ikke hentet kartdata – ingen kontakt med nettet eller kartlageret. Kartet fylles ut av seg selv når forbindelsen er tilbake.'
+    : 'Får ikke hentet kartdata (' + (e && e.message || e) + '). Prøver igjen.', { type: 'nett' });
+}
+function nettOk() { if (MELDING.type === 'nett' && performance.now() - nettFeilVed > 3000) skjulMelding('nett'); }
 
 // ---------- infrastruktur (fase A): bruer, tunneler, ferjer, kraft, olje og tettsteder for hele Norge ----------
 // Én fil (infra.json, lages av pipeline/fliser/infra.py) med kildens egne id-er, så en spillserver senere kan holde
@@ -275,20 +333,25 @@ function visFeil(e) { const f = document.getElementById('feil'); f.style.display
 let INFRA = null;
 const INFRA_NAVN = { bru: 'Bru', tunnel: 'Tunnel', ferje: 'Ferjesamband', ferjekai: 'Ferjekai', kraft: 'Vannkraftverk', dam: 'Dam', magasin: 'Kraftmagasin',
   olje: 'Innretning', ror: 'Rørledning', felt: 'Olje- og gassfelt', tettsted: 'Tettsted' };
-async function hentInfra() {
+async function hentInfra(forsøk = 1) {
   if (!INFRA_TAG) return;
   try {
-    const r = await fetch(`/api/kart/${INFRA_TAG}/manifest.json/0/1048576`); if (!r.ok) return;
-    const f = (await r.json()).filer.infra[0], BIT = 4194304, biter = [];   // mellomstasjonen gir maks 4 MB per svar
-    for (let fra = 0; fra < f.byte; fra += BIT) biter.push(fetch(`/api/kart/${INFRA_TAG}/${f.fil}/${fra}/${Math.min(BIT, f.byte - fra)}`)
-      .then(s => { if (!s.ok) throw new Error('HTTP ' + s.status); return s.arrayBuffer(); }));
+    const mi = await hentManifest(INFRA_TAG); if (!mi) throw new Error('fikk ikke manifestet');
+    const f = mi.filer.infra[0], BIT = 4194304, biter = [];   // mellomstasjonen gir maks 4 MB per svar
+    for (let fra = 0; fra < f.byte; fra += BIT) biter.push(hentMedFrist(`/api/kart/${INFRA_TAG}/${f.fil}/${fra}/${Math.min(BIT, f.byte - fra)}`, 60000, 'arrayBuffer')
+      .then(s => { if (!s.r.ok) throw new Error('HTTP ' + s.r.status); return s.data; }));
     const deler = await Promise.all(biter), alt = new Uint8Array(f.byte); let p = 0;
     for (const b of deler) { alt.set(new Uint8Array(b), p); p += b.byteLength; }
     STAT.byte += f.byte; STAT.req += deler.length + 1;
     INFRA = lesInfra(JSON.parse(new TextDecoder().decode(alt)));
     const k = document.getElementById('kilde'); if (!k.textContent.includes('Infrastruktur')) k.textContent += ' · Infrastruktur: NVDB, NVE, Sokkeldirektoratet, SSB';
-    skitten = true;
-  } catch (e) { /* uten infrastruktur går resten som før */ }
+    skitten = true; if (forsøk > 1) logg('Infrastrukturen (bruer, tunneler, kraftverk og tettsteder) er hentet.');
+  } catch (e) {
+    // uten infrastruktur går resten som før, men vi sier fra og prøver igjen (etter ett og to minutter)
+    console.error(e);
+    if (forsøk === 1) logg('Fikk ikke hentet infrastrukturen (bruer, tunneler, kraftverk og tettsteder) – kartlageret svarer ikke. Prøver igjen om litt.');
+    if (forsøk < 3) setTimeout(() => hentInfra(forsøk + 1), 60000 * forsøk);
+  }
 }
 // Hvert objekt: [id, egenskaper ..., deler]; hver del er delta-kodet [x0, y0, dx, dy, ...] i meter (EPSG:25833).
 function lesInfra(d) {
@@ -837,9 +900,15 @@ function visPanel() {
 
 // ---------- 3D (three.js): et utsnitt av høydeflisene rundt kameraet, med kartet uten skygge som overflate ----------
 let R3 = null, på3d = false, siktVersjon = 0;
+// 3D-biblioteket hentes i bakgrunnen når kartet er klart (12. nov: før ble det hentet først ved trykk på 3D, så 3D virket ikke hvis nettet
+// falt ut etter at siden var åpnet). Én henting om gangen; feiler den, prøves det på nytt ved neste kall.
+let threeLaster = null;
 function lastThree() {
-  return window.THREE ? Promise.resolve() : new Promise((ok, nei) => { const sc = document.createElement('script');
-    sc.src = '/dovre-fliser/lib/three-r128.min.js'; sc.onload = ok; sc.onerror = () => nei(new Error('3D-biblioteket lastet ikke')); document.head.appendChild(sc); });
+  if (window.THREE) return Promise.resolve();
+  return threeLaster || (threeLaster = new Promise((ok, nei) => { const sc = document.createElement('script');
+    sc.src = '/dovre-fliser/lib/three-r128.min.js'; sc.onload = ok;
+    sc.onerror = () => { sc.remove(); threeLaster = null; nei(new Error('Fikk ikke hentet 3D-biblioteket (ingen kontakt med nettet?). Prøv 3D-knappen igjen om litt.')); };
+    document.head.appendChild(sc); }));
 }
 function bilin(v, X, Y) {
   const fx = (X - v.x0) / v.r - .5, fy = (v.y0 - Y) / v.r - .5, i = Math.max(0, Math.min(v.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(v.h - 2, Math.floor(fy))), a = fx - i, b = fy - j, k = j * v.w + i;
@@ -1682,6 +1751,10 @@ function hoyde3d(X, Y, u = R3.ut) {   // moh. fra 3D-utsnittet (u: et utsnitt so
 function init3d() {
   const c3 = document.getElementById('c3'), renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true });
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0xc4cdd2);
+  // Instansenes matriser og farger ligger i egne buffere på grafikkortet og frigjøres bare med dispose() på selve nettet. Modulene i
+  // spill/ tar nettene ut med scene.remove(...) når et nytt utsnitt settes inn; her frigjøres bufferne samtidig (12. nov: de ble liggende).
+  const taUt = scene.remove;
+  scene.remove = function (...o) { for (const m of o) if (m && m.traverse) m.traverse(c => { if (c.isInstancedMesh) c.dispose(); }); return taUt.apply(this, o); };
   const cam = new THREE.PerspectiveCamera(50, 1, 5, 80000);
   scene.fog = new THREE.Fog(0xc4cdd2, 4000, 9000);   // dis mot horisonten (luftperspektiv) skjuler kanten på utsnittet
   const himmelLys = new THREE.HemisphereLight(0xdbe6f0, 0x4a4434, .55), sol = new THREE.DirectionalLight(0xfff0d8, .95); scene.add(himmelLys, sol, sol.target);
@@ -1731,9 +1804,15 @@ function lys3d() {
   // lys3d: (R3, { e, dag, gull, sky, h, A }) etter at sol og himmel er satt (spill/natt3d.js: måne, glød rundt sola)
   for (const f of KROKER.lys3d) f(R3, { e, dag, gull, sky, h, A });
 }
+// Terrengnettet og kartteksturen tas ut av scenen og frigjøres på grafikkortet. Brukes når et nytt utsnitt settes inn og når 3D slås
+// på igjen (12. nov: der ble nettet bare tatt ut av scenen, og hvert bytte 2D -> 3D lot et nett og en tekstur på opptil 4096² ligge igjen).
+function frigjørTerreng(R) {
+  if (!R.mesh) return;
+  R.scene.remove(R.mesh); R.mesh.geometry.dispose(); R.mesh.material.dispose(); if (R.tex) R.tex.dispose(); R.mesh = null; R.tex = null;
+}
 function sett3d(u) {
   const R = R3;
-  if (R.mesh) { R.scene.remove(R.mesh); R.mesh.geometry.dispose(); R.mesh.material.dispose(); R.tex.dispose(); }
+  frigjørTerreng(R);
   // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
   // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
@@ -1746,7 +1825,11 @@ function sett3d(u) {
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
   const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: 0x8a96a0, shininess: 70 });   // lys per punkt; bare vannet glinser
   detaljIBakken(mat, 2 * u.S); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
-  for (const t of [...(R.treMesh || []), ...(R.småMesh || [])]) { R.scene.remove(t); t.material.dispose(); } R.treMesh = []; R.småMesh = [];   // geometrien (TREGEO) brukes om igjen
+  // Trærne, steinene og buskene deler geometri (TREGEO), som brukes om igjen. Småtingene (biler, flagg, gatelys) lager sin egen hver gang.
+  // dispose() på nettet frigjør instansenes matriser og farger på grafikkortet.
+  for (const t of R.treMesh || []) { R.scene.remove(t); t.material.dispose(); t.dispose(); }
+  for (const t of R.småMesh || []) { R.scene.remove(t); t.geometry.dispose(); t.material.dispose(); t.dispose(); }
+  R.treMesh = []; R.småMesh = []; R.lyktMat = null;
   const grupper = [];
   if (u.trær) grupper.push([u.trær.gran, .3, treGeo('gran'), treGeo('granEnkel')], [u.trær.løv, .5, treGeo('løv'), treGeo('løvEnkel')]);
   if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.6, treGeo('busk')]);
@@ -1829,10 +1912,24 @@ function kamera3d() {
   c.up.set(0, 0, 1); c.lookAt(b.x, b.y, z);
   R3.scene.fog.near = b.avst * .9 + u.S * .5; R3.scene.fog.far = b.avst + u.S * 1.2; c.aspect = VW / VH; c.near = Math.max(2, b.avst / 200); c.far = b.avst * 12 + 20000; c.updateProjectionMatrix();   // dis: luftperspektiv, kanten skjult
 }
+// Feiler byggingen (nettbrudd, en feil i en modul), prøver tegn3d igjen etter ventetiden i byggVent – før sto 3D fast på det forrige
+// bildet til 3D ble slått av og på (12. nov). Det forrige utsnittet blir stående så lenge. R3.byggFeil teller forsøkene på rad.
+// Bes det om et utsnitt mens et annet bygges (3D slått av og på igjen et annet sted), huskes ønsket i R3.neste: det bygges rett etterpå,
+// og det som var i arbeid settes ikke inn (før ble 3D stående på stedet der det først ble slått på).
 async function nytt3dUtsnitt(cx, cy, S) {
-  if (R3.bygger) return; R3.bygger = true;
-  try { const u = await bygg3d(cx, cy, S); if (på3d) sett3d(u); } catch (e) { console.error(e); visFeil(e); } finally { R3.bygger = false; }
+  if (R3.bygger) { R3.neste = [cx, cy, S]; return; }
+  R3.bygger = true; R3.ønsket = [cx, cy, S];
+  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) sett3d(u); R3.byggFeil = 0; skjulMelding('3d'); }
+  catch (e) {
+    console.error(e); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
+    const hvorfor = utenNett(e) ? 'ingen kontakt med nettet eller kartlageret' : (e && e.message || e), fast = R3.byggFeil >= 3;
+    if (på3d) visMelding(`Fikk ikke bygget 3D-utsnittet (${hvorfor}). ` + (fast ? 'Prøver fortsatt, men du kan gå tilbake til kartet.' : 'Prøver igjen om litt.'),
+      { type: '3d', knapp: fast ? 'Tilbake til kartet' : null, vedTrykk: () => slå3d(false) });
+  } finally { R3.bygger = false; }
+  if (R3.neste) { const n = R3.neste; R3.neste = null; if (på3d) await nytt3dUtsnitt(...n); }
 }
+// Ventetiden før neste forsøk etter en feil: 4 s, 8 s, 16 s … høyst 30 s
+function byggVent(R) { return !R.byggFeil || performance.now() - R.feilVed > Math.min(30000, 2000 * 2 ** R.byggFeil); }
 // Fordeler trærne på det detaljerte og det enkle nettet etter avstanden til kameraet (når kameraet har flyttet seg 15 m).
 // Ytelse (12. nov): bare trærne i synsfeltet (med god margin: synsvinkelen × 1,4) legges i nettene, og fordelingen gjøres også på nytt
 // når kameraet har dreid mer enn 8° – i førsteperson og lavt over bakken står de fleste trærne bak eller ved siden av kameraet.
@@ -1870,9 +1967,11 @@ function størrelse3d(R) {
   if (pr !== R.pr || VW !== R.prW || VH !== R.prH) { R.pr = pr; R.prW = VW; R.prH = VH; R.renderer.setPixelRatio(pr); R.renderer.setSize(VW, VH, false); }
 }
 function tegn3d() {
-  const R = R3; if (!R || !R.ut) return;
+  const R = R3; if (!R) return;
+  // uten utsnitt (det første feilet etter at 3D ble slått på): prøv det samme igjen
+  if (!R.ut) { if (!R.bygger && R.byggFeil && R.ønsket && byggVent(R)) nytt3dUtsnitt(...R.ønsket); return; }
   const b = R.bane, u = R.ut, S = utsnittS(b.avst);
-  if (!R.bygger && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
+  if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
   størrelse3d(R); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
@@ -1888,20 +1987,23 @@ function tegn3d() {
   if (klipp) g.restore();
   tegnHud();
 }
+let slå3dNr = 0;
 async function slå3d(på) {
-  const knapp = document.getElementById('v3d');
+  const knapp = document.getElementById('v3d'), mitt = ++slå3dNr;
   if (på) {
     try { await lastThree(); } catch (e) { logg(e.message); return; }
+    if (mitt !== slå3dNr) return;   // 3D ble slått av igjen mens biblioteket ble hentet
     if (!R3) init3d();
     på3d = true; knapp.classList.add('på'); knapp.setAttribute('aria-pressed', 'true');
     document.getElementById('c3').hidden = document.getElementById('c3o').hidden = false; cv.style.visibility = 'hidden';
     const S = utsnittS(kam.m * Math.max(VW, VH) * .6);
     R3.bane = { x: 0, y: 0, avst: Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
-    if (R3.ut) { R3.mesh && R3.scene.remove(R3.mesh); R3.ut = null; R3.mesh = null; }
-    logg('Bygger 3D …'); await nytt3dUtsnitt(kam.x, kam.y, S); if (på3d) logg('3D: dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
+    if (R3.ut) { frigjørTerreng(R3); R3.ut = null; }
+    R3.byggFeil = 0;
+    logg('Bygger 3D …'); await nytt3dUtsnitt(kam.x, kam.y, S); if (på3d && R3.ut) logg('3D: dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
   } else {
     if (R3 && R3.ut) { const b = R3.bane; kam.x = R3.ut.cx + b.x; kam.y = R3.ut.cy + b.y; kam.m = Math.max(.1, Math.min(60, b.avst / (VH * 1.1))); }
-    på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false');
+    på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false'); skjulMelding('3d'); if (R3) R3.neste = null;
     document.getElementById('c3').hidden = document.getElementById('c3o').hidden = true; cv.style.visibility = ''; skitten = true;
   }
 }
@@ -2036,16 +2138,16 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hjelp.js?v=7884a5e587"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=4cb95e78aa"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=f226ebbb15"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=f2be8b3ffa"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=9a66467a98"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=d121e828ab"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=dc44fd3716"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=dcaa4afc9e"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=7f94321d2c"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=6c90c01c75"></script>
-<script src="/dovre-fliser/spill/kyst3d.js?v=2a679a4467"></script>
+<script src="/dovre-fliser/spill/kyst3d.js?v=98f09c90f4"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
@@ -2069,7 +2171,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leir-visning.js?v=c6ac1c04d0"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=3a66727e65"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=577dbe0269"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=0d19f2243e"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=022bdac054"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=690ef82f5b"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=464724fd7d"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9fad675c80"></script>
@@ -2082,7 +2184,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/filtre.js?v=ea42b8b902"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=c48879fb11"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
-<script src="/dovre-fliser/spill/bane3d.js?v=d564330830"></script>
+<script src="/dovre-fliser/spill/bane3d.js?v=2516d12f6f"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=482b12147c"></script>

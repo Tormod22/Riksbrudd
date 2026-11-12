@@ -239,6 +239,7 @@
       const lag = (g, mat) => { const m = new THREE.InstancedMesh(g, mat, n); m.frustumCulled = false; m.count = 0; R.scene.add(m); liv.mesh.push(m); liv.bilMesh.push(m); return m; };
       liv.lys = { front: lag(front, new THREE.MeshBasicMaterial({ color: 0xb4b4ae })), bak: lag(bak, new THREE.MeshBasicMaterial({ color: 0x700e0a })),
         kjegle: lag(kg, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(kc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 })) };
+      liv.lys.kjegle.material.userData.egetKart = true;
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
     const gate = velgLinjer(u, v => v.by && 'RFK'.includes(v.k));
@@ -262,6 +263,7 @@
       gr.addColorStop(0, 'rgba(225,225,228,.55)'); gr.addColorStop(1, 'rgba(225,225,228,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       liv.røyk = { piper: valgt, alder: Array.from({ length: N }, () => rnd() * 10), punkter: new THREE.Points(geo, new THREE.PointsMaterial({ size: 3.2, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })) };
+      liv.røyk.punkter.material.userData.egetKart = true;
       liv.røyk.punkter.frustumCulled = false; R.scene.add(liv.røyk.punkter); liv.mesh.push(liv.røyk.punkter);
     }
     // vind i trærne: toppen svaier litt, hvert tre i sin egen takt
@@ -276,7 +278,8 @@
       m.material.needsUpdate = true;
     }
   }
-  function fjern(R) { if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
+  // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
+  function fjern(R) { if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) lagVeger(u, R); if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); });
 
   // ---------- hver ramme ----------

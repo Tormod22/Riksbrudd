@@ -79,7 +79,7 @@
   // ---------- hjelpere for utsnittet ----------
   const zLok = (u, x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX;
   const iVann = (u, x, y) => { if (!u.vann) return false; const W = u.vann.width, i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W);
-    if (i < 0 || j < 0 || i >= W || j >= W) return false; if (!u.vannData) u.vannData = u.vann.getContext('2d').getImageData(0, 0, W, W).data; return u.vannData[(j * W + i) * 4] > 127; };
+    if (i < 0 || j < 0 || i >= W || j >= W) return false; if (!u.vannData) u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; return u.vannData.d[(j * W + i) * 4] > 127; };
   // punkt s meter langs D (interpolert)
   function påD(D, s) {
     let i = 1; while (i < D.length - 1 && D[i].s < s) i++;

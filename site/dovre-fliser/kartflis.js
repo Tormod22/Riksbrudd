@@ -6,7 +6,18 @@ const KF = {
   klar: Promise.resolve(), lagfiler: null, norgeBlokker: null, vis: null,   // kartfilene, Norge-blokkene (omlandet), kartlagene som vises
   kartTag: null, release: Promise.resolve(false), data: '/dovre-fliser/data/',
   vedBytes(n, kilde) {}, vedFeil(e) { console.error(e); },
+  feil: 0,   // antall hentinger som har feilet: en flis som ble laget mens tallet steg, mangler noe og lages på nytt (ufull)
 };
+// Henting med tidsgrense (12. nov): et kartlager som ikke svarer, skal gi en feil vi kan vise og prøve igjen etter – ikke vente for alltid.
+// les: 'arrayBuffer' eller 'json'. Avbrytes hentingen utenfra (signal), kastes AbortError som før.
+async function hentMedFrist(url, ms, les, valg) {
+  const a = new AbortController(), ytre = valg && valg.signal, stopp = () => a.abort(); let forSent = false;
+  const t = setTimeout(() => { forSent = true; a.abort(); }, ms); if (ytre) ytre.addEventListener('abort', stopp);
+  try { const r = await fetch(url, Object.assign({}, valg, { signal: a.signal })); return { r, data: r.ok ? await r[les]() : null }; }
+  catch (e) { if (forSent) throw new Error('tidsgrense: kartlageret svarte ikke på ' + Math.round(ms / 1000) + ' s'); throw e; }
+  finally { clearTimeout(t); if (ytre) ytre.removeEventListener('abort', stopp); }
+}
+const FRIST_FLIS = 25000;
 // Kjedebutikkene (k i byggdataene, nummeret fra KJEDER i pipeline/fliser/bygninger.py) får oppdiktede navn og egne farger,
 // så man kjenner dem igjen fra virkeligheten uten å bruke de ekte merkene (brukeren 11. nov: «en Kiwi blir en grønn butikk som heter Pære»).
 // [navn, skiltfarge, tekstfarge]
@@ -33,14 +44,14 @@ class Kilde {
   async getBytes(off, len, signal) {
     if (this.tag || await KF.release) {   // GitHub-releasen via mellomstasjonen: byteområdet i adressen, så Vercel kan lagre hver bit
       try {
-        const r = await fetch(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, { signal });
-        if (r.ok) { const data = await r.arrayBuffer(); KF.vedBytes(data.byteLength, 'GitHub'); return { data }; }
+        const { r, data } = await hentMedFrist(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, FRIST_FLIS, 'arrayBuffer', { signal });
+        if (r.ok) { KF.vedBytes(data.byteLength, 'GitHub'); return { data }; }
         if (this.tag) throw new Error('HTTP ' + r.status + ' ' + this.fil);
       } catch (e) { if (e.name === 'AbortError' || this.tag) throw e; }
     }
-    const r = await fetch(this.url, { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal });
+    const svar = await hentMedFrist(this.url, FRIST_FLIS, 'arrayBuffer', { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal }), r = svar.r;
     if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status + ' ' + this.url);
-    let data = await r.arrayBuffer();
+    let data = svar.data;
     if (r.status === 200 && data.byteLength > len) data = data.slice(off, off + len); // server uten Range
     KF.vedBytes(data.byteLength, 'Vercel');
     return { data };   // ingen etag: kildene kan byttes underveis, og versjonen ligger i KART_TAG
@@ -143,10 +154,16 @@ function hentFlis(lag, z, x, y) {
   const k = lag + '/' + z + '/' + x + '/' + y;
   if (!RÅ.has(k)) {
     RÅ.set(k, KF.klar.then(() => { const f = filFor(lag, z, x); return f ? f.pm.getZxy(z, x, y) : null; })
-      .then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); KF.vedFeil(e); return null; }));
+      .then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); KF.feil++; rensLager(lag, z, x); KF.vedFeil(e); return null; }));
     if (RÅ.size > 900) RÅ.delete(RÅ.keys().next().value);
   }
   return RÅ.get(k);
+}
+// pmtiles husker også hentinger som feilet (innholdsfortegnelsene), så et kort nettbrudd kunne gjøre et kartlag tomt til siden ble
+// lastet på nytt. Etter en feil tas de mislykkede oppslagene ut av lageret, så neste forsøk henter på nytt.
+function rensLager(lag, z, x) {
+  const f = filFor(lag, z, x), c = f && f.pm && f.pm.cache && f.pm.cache.cache; if (!c || !c.forEach) return;
+  c.forEach((v, k) => { if (v && v.data && v.data.then) v.data.then(null, () => { if (c.get(k) === v) c.delete(k); }); });
 }
 // Beste tilgjengelige flis for (z,x,y): prøver z, så forelder for forelder ned til zmin.
 async function beste(lag, z, x, y, zmax, zmin) {
@@ -240,7 +257,9 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
   const VK = vektRutenett(minx, maxy, span(z)), hel = VK.every(v => v >= 1);   // hvor mye av Norge-kartet som skal med (1 = bare det)
+  const feilFør = KF.feil;
   const [k, h, tr, v, uv, hs, ok, oh] = await flisData(z, x, y, valg, hel);
+  const ufull = KF.feil !== feilFør;   // noe lot seg ikke hente mens flisen ble laget: den vises, men lages på nytt senere
   g.fillStyle = KF.norgeBlokker ? HAV_CSS : '#1a1710'; g.fillRect(0, 0, T, T);   // uten omland (Dovre-piloten): mørkt der data mangler
   let od = null, vann = null;   // omlandets farge under Norge-kartet; hvor mye av hvert punkt som er vann
   if (ok) { const sw = T / ok.f; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(ok.t.bm, ok.ix * sw, ok.iy * sw, sw, sw, 0, 0, T, T);
@@ -334,7 +353,7 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   if (v && valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   if (hs && hs.t.hus) husomriss(g, z, hs);
   if (hs && hs.t.punkt && z >= 14) bensin(g, z, hs);   // bensinstasjonene: pumpemerke i kjedens farge
-  return { c, E };
+  return { c, E, ufull };
 }
 
 // ---------- anlegg (OpenStreetMap) ----------

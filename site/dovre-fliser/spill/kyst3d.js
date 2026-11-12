@@ -12,7 +12,8 @@
   KROKER.bygg3d.push(async u => {
     u.kyst = null;
     if (u.S > 2200 || !window.Kyst || !u.vann) return;
-    const W = u.vann.width, d = u.vannData || (u.vannData = u.vann.getContext('2d').getImageData(0, 0, W, W).data);
+    // u.vannData har samme form i alle modulene: { W, d } (gange.js, vegetasjon3d.js, infra3d.js, bane3d.js)
+    const W = u.vann.width, d = (u.vannData || (u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data })).d;
     const iVann = (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 127; };
     const moh = (x, y) => hoyde3d(x + u.cx, y + u.cy, u);
     const sjø = (x, y) => iVann(x, y) && moh(x, y) < 1;

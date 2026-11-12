@@ -61,7 +61,8 @@
     if (u.S > 2200 || !VIS.bane || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.utveg) return;
     const z = 11, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), fl = [];
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('utveg', z, x, y).then(t => [x, y, t]));
-    const vann = u.vann && u.vann.getContext ? (() => { try { const W = u.vann.width; return { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { return null; } })() : null;
+    // vannmasken leses én gang per utsnitt og deles med de andre modulene (u.vannData = { W, d })
+    const vann = u.vann && u.vann.getContext ? (u.vannData && u.vannData.d ? u.vannData : (() => { try { const W = u.vann.width; return (u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }); } catch (e) { return null; } })()) : null;
     const iVann = (x, y) => { if (!vann) return false; const i = Math.floor((x + u.S) / (2 * u.S) * vann.W), j = Math.floor((u.S - y) / (2 * u.S) * vann.W);
       return i >= 0 && j >= 0 && i < vann.W && j < vann.W && vann.d[(j * vann.W + i) * 4] > 127; };
     const baner = [];
