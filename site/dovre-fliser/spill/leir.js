@@ -135,7 +135,7 @@
   }
   // ---------- utposter: byggelaget må reise ----------
   // Brukeren 12. nov: «Utposter er lov» – du kan bygge hvor som helst, men byggelaget må reise dit først, så det tar lengre tid jo
-  // lenger unna. Regelen: reisetiden regnes i luftlinje fra leirens midte (L.midt = { x, y }, satt av visningen). De første 300 m
+  // lenger unna. Regelen: reisetiden regnes i luftlinje fra leirens midte (L.midt med x og y, satt av visningen). De første 300 m
   // koster ingen tid, resten går i 10 km/t (6 min per km). Reisen kommer før arbeidet og opptar byggelaget. Arbeider et byggelag alt
   // innen 300 m fra stedet (en jobb der laget er kommet fram), trengs ingen ny reise – når laget kommer fram, gjelder det også de
   // andre jobbene på stedet (delene i et hus, flere bygg i samme utpost). Uten L.midt (testene, før spillet er startet): ingen reisetid.
