@@ -23,6 +23,19 @@
     etikett: g => { g = R.norm(Math.round(g)); if (g % 45 === 0) return NAVN8[g / 45]; return g % 15 === 0 ? String(g).padStart(3, '0') : null; },
     // en forskyvning i kartet (dx, dy meter) til minikartet: opp = kursen når kartet roterer, ellers nord
     tilSkjerm: (dx, dy, kurs, roter) => { const a = roter ? kurs / RAD : 0, c = Math.cos(a), s = Math.sin(a); return [dx * c - dy * s, -(dx * s + dy * c)]; },
+    // Avstandstekstene ved merkene på båndet skal ikke ligge oppå hverandre (12. nov: «27 km» og «245 km» ble lest som «27 245 km»
+    // når leiren og et lag lå i samme retning). merker: [{ x, w }] i viktighetsrekkefølge (x = merkets midte, w = tekstens bredde),
+    // opptatt: [[fra, til]] som alt er tatt (tavla med kursen i midten). Svar per merke: { x, side } der teksten begynner (side 1:
+    // til høyre for merket, venstrestilt) eller slutter (side −1: til venstre, høyrestilt), eller null når det ikke er plass.
+    avstandsplass: (merker, opptatt = [], luft = 4, rom = 9) => {
+      const tatt = opptatt.map(o => o.slice()), fri = (a, b) => !tatt.some(o => a < o[1] + luft && o[0] - luft < b);
+      // andre merker står i vegen for teksten – unntatt de som ligger i samme klynge som merket selv (innen 12 px)
+      const symbol = (i, a, b) => merker.some((m, j) => j !== i && Math.abs(m.x - merker[i].x) > 12 && a < m.x + 6 && m.x - 6 < b);
+      return merker.map((m, i) => {
+        for (const side of [1, -1]) { const a = side > 0 ? m.x + rom : m.x - rom - m.w, b = a + m.w;
+          if (fri(a, b) && !symbol(i, a, b)) { tatt.push([a, b]); return { x: side > 0 ? a : b, side }; } }
+        return null; });
+    },
     // tilbake fra minikartet (piksler fra midten, y ned) til kartet
     fraSkjerm: (px, py, kurs, roter) => { const a = roter ? kurs / RAD : 0, c = Math.cos(a), s = Math.sin(a); return [px * c - py * s, -(px * s + py * c)]; },
   };
@@ -153,12 +166,16 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
     g.globalAlpha = 1; g.restore();
     // merkene under båndet; utenfor båndet står de ved kanten med en pil
     g.font = '600 11px "Cormorant Garamond",Georgia,serif'; g.textBaseline = 'middle';
-    for (const e of merker(k)) {
-      const f = R.forskjell(k.kurs, e.peiling), ute = Math.abs(f) > halv * .9, x = ute ? (f < 0 ? W * .07 : W * .93) : W / 2 + f * ppg, y = BH + 8;
-      merke(g, e.type, e.side, x, y, 5);
-      if (ute) { g.fillStyle = PAPIR; g.textAlign = f < 0 ? 'left' : 'right'; g.fillText(f < 0 ? '◂' : '▸', f < 0 ? x + 8 : x - 8, y); }
-      else if (Math.abs(f * ppg) > 30) { g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = '#1a1710'; g.strokeText(km(e.avstand), x + 18, y); g.fillStyle = PAPIR; g.fillText(km(e.avstand), x + 18, y); }
+    // Avstanden står ved siden av merket; de nærmeste merkene får plass først, og en tekst som ikke får plass, sløyfes (R.avstandsplass).
+    const ms = merker(k).map(e => { const f = R.forskjell(k.kurs, e.peiling), ute = Math.abs(f) > halv * .9; return { e, f, ute, x: ute ? (f < 0 ? W * .07 : W * .93) : W / 2 + f * ppg, t: km(e.avstand) }; });
+    const inne = ms.filter(m => !m.ute).sort((a, b) => a.e.avstand - b.e.avstand); for (const m of inne) m.w = g.measureText(m.t).width;
+    const plass = R.avstandsplass(inne, [[W / 2 - 24, W / 2 + 24]]); kb.tekster = [];
+    for (const m of ms) { const y = BH + 8, i = inne.indexOf(m), p = i >= 0 ? plass[i] : null;
+      if (m.ute) { g.fillStyle = PAPIR; g.textAlign = m.f < 0 ? 'left' : 'right'; g.fillText(m.f < 0 ? '◂' : '▸', m.f < 0 ? m.x + 8 : m.x - 8, y); }
+      else if (p) { g.textAlign = p.side > 0 ? 'left' : 'right'; g.lineWidth = 3; g.strokeStyle = '#1a1710'; g.strokeText(m.t, p.x, y); g.fillStyle = PAPIR; g.fillText(m.t, p.x, y);
+        kb.tekster.push(p.side > 0 ? [p.x, p.x + m.w] : [p.x - m.w, p.x]); }
     }
+    for (const m of ms) merke(g, m.e.type, m.e.side, m.x, BH + 8, 5);
     // midten: strek og kursen i en liten tavle
     g.fillStyle = GULL; g.beginPath(); g.moveTo(W / 2 - 5, 0); g.lineTo(W / 2 + 5, 0); g.lineTo(W / 2, 6); g.closePath(); g.fill();
     g.strokeStyle = GULL; g.lineWidth = 1.4; g.beginPath(); g.moveTo(W / 2, 6); g.lineTo(W / 2, BH); g.stroke();
