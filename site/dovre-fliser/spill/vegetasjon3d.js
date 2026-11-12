@@ -242,11 +242,11 @@
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
     g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 2 ? 1 : 0)), 3)); g.setIndex(idx); return g;
   }
-  // Her kan en blomst, bregne eller sivtust stå: ikke i vann eller bekk, ikke i vegbanen eller på fortauet (nøyaktig avstand til
-  // vegene, u.vegNær), ikke i jernbanesporet (u.påBane fra bane3d.js) og ikke inntil husveggene (12. nov: blomster på fortauet og
+  // Her kan en blomst, bregne eller sivtust stå: ikke i vann eller bekk, ikke i vegbanen eller på fortauet (vegmasken u.påVeg og i
+  // tillegg nøyaktig avstand til vegene, u.vegNær), ikke i jernbanesporet (u.påBane fra bane3d.js) og ikke inntil husveggene (12. nov: blomster på fortauet og
   // helt inn til veggene, bregner mellom svillene).
   function fri(u, x, y) {
-    if (iVann(u, x, y) || (u.vegNær ? u.vegNær(x, y, .3) : u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
+    if (iVann(u, x, y) || (u.vegNær && u.vegNær(x, y, .3)) || (u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
     return !(u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y));
   }
   let vekst = null, vekstSenter = null, vekstNøkkel = '';

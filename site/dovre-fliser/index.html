@@ -564,7 +564,10 @@ function tegnInfra3d(g) {
 function brupunkt3(o, X, Y) {   // navnet står over dekket, ikke nede i dalen
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;
   const a = o.deler[0], h = Math.max(hoyde3d(a[0], a[1]), hoyde3d(a[a.length - 2], a[a.length - 1]), hoyde3d(X, Y));
-  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * R3.EX + 4).project(R3.cam);
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * R3.EX + 4);
+  // brunavn bak en ås eller et hus skjules som de andre navnene (12. nov: «Jori» og «Hindå Nordre» sto på husveggen)
+  if (bakÅs(v) || bakHus(v)) return null;
+  v.project(R3.cam);
   return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
 }
 // Trykk i 3D: nærmeste symbol, bru eller tettstedsnavn innen 22 punkter.
@@ -1761,7 +1764,7 @@ function gress3d() {
     const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
     // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
-    if (u.vegNær ? u.vegNær(x, y) : u.påVeg && u.påVeg(x, y)) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
+    if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set((lyng ? .6 : .4) + rnd() * .3, (lyng ? .6 : .4) + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
@@ -2258,7 +2261,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=39ab52fdcd"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=73cfdc3b03"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
