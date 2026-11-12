@@ -531,3 +531,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
   (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
   VAKT grensesnitt i sjekk.js.
+  VEGER I 3D, RUNDE 2 (12. nov, feiljakten: parallelle veger oppå hverandre, asfaltflak i kryssene, veger i tunnel – UFERDIG, se under):
+  NVDB gir gang- og sykkelveger samme kategori som vegen de ligger langs. Vegene i vektorflisene har nå vegtype (pipeline/fliser/
+  vegtype.py: g = 1 gang- og sykkelveg, t = 1 kanalisert veg, 2 rampe, 3 rundkjøring, 4 ferje); 03_veg_bygg.py, `02_fliser.py vektor`
+  (bare vektorlaget) og blokk.py skriver den. Dovre er bygget på nytt; HELE NORGE MÅ BYGGES PÅ NYTT («Bygg Norge») – til da gjetter
+  visningen (Veg.gjett). spill/veg.js (regler uten DOM, test_veg.js): klipp til flisen, skjøt til hele veger, utenTunnel (INFRA.tunnel),
+  høyder (flat vegbane på terrengnettet: nettHoyde i index.html), finnKryss/kryssFlate (stump per arm), striper/gangfelt, lykter.
+  liv3d.js: u.veger = bilvegene (w = halv bredde, t, åpen), u.gangveger = gang- og sykkelvegene, u.lys settes her (gatelys3d er reserve),
+  Liv3d.dekke(u, x, y) = vegbanen/brudekket (gange.js går oppå). infra3d: vegbru følger bilveg, gangbru gangveg; p[3] = 1 på bru.
+  IKKE FERDIG: etter-bildet ved E136 nord for Dombås viste fortsatt tre brede vegbånd (gangvegmerket når kanskje ikke 3D – sjekk
+  R3.ut.vegtype og R3.ut.gangveger i nettleseren), sjekk.js ble ikke kjørt ferdig, ingen VAKT i sjekk.js, 2D-kartet er uendret.
