@@ -490,3 +490,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   R3.hindre (stopper deg når du går; døra er åpen). leir-visning.js: delene tegnes/listes ikke der (jobbene samlet på én linje), LeirSpill.oppdater3d.
   VAKT i sjekk.js (2D: hytte 16 deler som jobber, rad, tak i lufta avvist, rom og senger, riving; 3D: brakke i scenen, 0 svever, vegg/dør i
   R3.hindre, ingen GL-feil). Bilder: scratchpad bs/bilde.js (PRE=bs/pre.js bygger en liten leir av deler).
+  FEILRETTING MEKANIKK (12. nov natt, feiljakten – funn i scratchpad feiljakt/mekanikk/funn.json): (1) tom gjeng låste spillet: folk.js –
+  færre enn R.nød = 3 personer kan alltid rekruttere (FolkRegler.kanRekruttere/nød: ingen krav om seng eller moral, gratis hvis kassa er tom,
+  den nye går på «bygg» når ingen bygger), steget for tom gjeng lar moralen hente seg inn (R.nødMoral 50), varsler i loggen (mat under ett
+  døgn, tom for mat, påminnelse hvert halve døgn, farlig lav moral halvveis, «Bare N igjen», «Gjengen er tom»). (2) Sengene i egenbygde rom
+  ble telt to ganger (Leir.plasser + ekstraSenger): folk-visning.js gir 0 ekstra når Leir.plasser.byggesett er satt. (3) Maler: prøv() i
+  leir-visning.js sjekker hvert bygg mot kartet (kartFor, asynkront: «Sjekker kartet …», p.sjekket) og planMal får kartet per bygg; tilMal/
+  fraMal tar ikke med byggesettdeler (del: true). (4) Gjerde: Leir.gjerdePunkter (punkt hver 8. m) brukes i kanBygge og i visningens
+  kartsjekk; gjerdet kan ikke gå gjennom egne bygg (porter og deler unntatt) eller hus. (5) Leir.riv: drivstoff som ikke får plass i resten
+  av tankene, selges tilbake til innkjøpspris (r.drivstoff, r.drivstoffPenger, r.bygg = byggets andel), og bekreftelsen sier det. (6) Radio:
+  Kontrollrom.RUTINE («Posisjon meldt. Alt rolig.») står bare i radiolista i kontrollrommet, ikke i loggen. (7) Ressurser.ledigSkog: et
+  stoppet hogstfelt sperrer bare den hogde andelen. (8) spill/lagring.js (regler øverst, test_lagring.js): «riksbrudd-verden» lagrer tid,
+  været (VaerSpill.S), egne lag (plass, menn/hp, ammo, radio, nedgravd) og kjøretøy (plass, antall, drivstoff, last) hvert 5. sekund og ved
+  pagehide; leses ved første «riksbrudd-spill» når et lagret spill fantes (bare for samme leir). Ordre i gang, fiendens lag, olje,
+  tettsteder og sprengt infrastruktur lagres IKKE ennå. oppstart-visning.js: lagret spill tas i bruk ved DOMContentLoaded (setTimeout(0)
+  kunne slå til mellom to skript, så leiren/kontrollrommet ikke hørte «riksbrudd-spill»). VAKT i sjekk.js («feilretting (mekanikk)»).
