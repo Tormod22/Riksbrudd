@@ -531,3 +531,22 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
   (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
   VAKT grensesnitt i sjekk.js.
+  BRUKERENS VALG ETTER FEILJAKTEN (12. nov, brukeren svarte på de fire «trenger svar» i feiljakt/mekanikk/funn.json; detaljer i
+  docs/plan-kollaps.md): (1) UTPOSTER ER LOV – du kan bygge hvor som helst, men byggelaget må reise dit: Leir.reise(L, x, y) regner fra
+  leirens midte (L.midt, settes av leir-visning.js ved start – uten den, som i testene, ingen reisetid): de første REGLER.reise.fri = 300 m
+  er fri, resten går i REGLER.reise.kmt = 10 km/t i luftlinje (Claudes tall). Jobben får `reise` (spillminutter; på bygget for ny bygging,
+  på b.arbeid for oppgradering/reparasjon/flytting) som telles ned i steg() før arbeidet – med dt, ikke med byggernes tempo – og opptar
+  byggelaget; steg() gir `framme`. Arbeider et lag alt innen 300 m (en jobb uten reise igjen), blir det ingen ny reise (påStedet), og når et
+  lag kommer fram, nulles reisen for alle jobbene på stedet (delene i byggesettet). Byggelagene er ikke egne figurer, så et annet lag kan
+  ta en jobb på stedet uten å ha reist selv. Visningen: Leir.reiseTekst i banneret før du bekrefter (også byggesettet og maler),
+  «byggelaget er på vei» i byggpanelet, jobblista og kartet, loggen når laget er framme. Hogst/riving har fortsatt 3 km. (2) RADIOMASTEN:
+  Leir.BYGG.radiomast.nivå.rekkevidde = 15/25/40 km = Kontrollrom.LEIR.nivå (test_kontrollrom.js sjekker at de er like). Feltradio når
+  så langt som leirens radio (8 km uten mast eller uten strøm), håndradio 3 km uansett (Claudes valg). Kontrollrom.forklaring() og
+  utenKontakt() gir tekstene i lagpanelet, radiolista, ordre-meldingen og byggpanelet (radioTekst i leir-visning.js). (3) BYGGEPLASSER
+  KAN SKADES: Leir.skad(L, id, mengde) gir { hp, ødelagt, byggeplass, mat } – en ødelagt byggeplass legger andelen ubrukte materialer
+  (igjen/totalt) tilbake i lageret, også over lagerplassen; oppgraderinger husker materialene sine (b.arbeid.mat). Leir.skade() svarer som
+  før. Fiendene i leir-visning.js skader nå alle bygg innen 120 m, også uferdige; delene i byggesettet meldes samlet. (4) DIESEL OG OLJE
+  er fortsatt to systemer: leiren sier «diesel» (Dieseltank – typen heter fortsatt 'drivstofftank', L.drivstoff og Leir.DRIVSTOFF som før),
+  kjøretøyene bruker olje (tonn) fra basen. Forklaringen står i Leir-menyen (#dieseltekst), byggpanelet for tank/aggregat, basepanelet,
+  kjøretøypanelet og hjelpen («Diesel og olje», «Utposter»). Skriv «diesel» om leirens drivstoff i nye tekster. VAKT i sjekk.js
+  («brukerens valg (regler)»); test_leir.js og test_kontrollrom.js. Bilder: scratchpad regler/bilde.js.
