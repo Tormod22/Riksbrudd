@@ -37,8 +37,13 @@
 
   // ---------- bølger i bakkeshaderen ----------
   const BU = {}; let bShader = null;
-  function bølgeShader(mat) {
+  // uniformene til bølgene (lages første gang de trengs). Fjernterrenget (spill/fjern3d.js) bruker himmelfargen og skummet på sjøen sin.
+  function bølgeU() {
     if (!BU.uBTid) Object.assign(BU, { uBTid: { value: 0 }, uBAmp: { value: .3 }, uBSkum: { value: 0 }, uBDir: { value: new THREE.Vector2(1, 0) }, uBHimmel: { value: new THREE.Color(.7, .78, .85) } });
+    return BU;
+  }
+  function bølgeShader(mat) {
+    bølgeU();
     const før = mat.onBeforeCompile, nøkkel = mat.customProgramCacheKey;
     mat.onBeforeCompile = (sh, rr) => { if (før) før(sh, rr); Object.assign(sh.uniforms, BU); bShader = sh;
       sh.vertexShader = 'varying vec2 vBP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vBP = position.xy;');
@@ -64,7 +69,8 @@
     vec2 bQ = vBP / 7.0 - bDrift * 0.05; float bN0 = texture2D(detalj, bQ).r;
     bG += vec2(texture2D(detalj, bQ + vec2(0.02, 0.0)).r - bN0, texture2D(detalj, bQ + vec2(0.0, 0.02)).r - bN0) * 2.2 * bA * (1.0 - smoothstep(40.0, 200.0, bAvst));
     vec3 bNV = normalize((viewMatrix * vec4(normalize(vec3(-bG, 1.0)), 0.0)).xyz);
-    float bVekt = smoothstep(0.03, 0.5, bVann);
+    // (sno fra bakkeshaderen: islagte innsjoer med sno har ingen bolger; sjoen faar aldri sno)
+    float bVekt = smoothstep(0.03, 0.5, bVann) * (1.0 - sno);
     normal = normalize(mix(normal, bNV, bVekt));
     // skum på bølgetoppene (friskt og mer) og brenninger langs land på havet
     // skumflekker: der bølgetoppen og en flekk i støyen faller sammen (brytes og drives av vinden), lenger ute striper langs vinden
@@ -243,7 +249,7 @@
     const f = Math.round(V.vind.fart), r = fra(V.vind.retning), t = `${f} m/s ${RETN[r]}`;
     if (t !== tekst) { tekst = t; el.textContent = t; el.title = `${styrke(V.vind.fart)} fra ${RETN_LANG[r]}`; }
   }, 1000);
-  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND,
+  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND, BU: bølgeU,
     sjekk: () => ({ bølger: !!bShader && !!BU.uBTid, amp: BU.uBAmp ? BU.uBAmp.value : 0, skum: BU.uBSkum ? BU.uBSkum.value : 0, fart: VIND.fart, modus: VIND.modus,
       partikler: VIND.partikler, tåke: VIND.tåke, hav: VIND.hav, havDotter: HAV.length, status: (document.getElementById('sVind') || {}).textContent || '' }) };
 })();

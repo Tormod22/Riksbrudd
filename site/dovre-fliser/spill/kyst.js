@@ -63,11 +63,14 @@
       }
     }
     // båter ute på sjøen (ingen land innen 40 m) og bøyer (land innen 25–90 m, ikke nærmere enn 20 m)
+    // Småbåtene holder seg nær kysten (feilretting 12. nov: 48 snekker og sjarker lå spredt 110 km til havs ved Troll A): det må være land
+    // innen LAND_NÆR meter – land inne i utsnittet; utenfor utsnittet vet vi ikke hva som er land.
+    const LAND_NÆR = 800, kystNær = (x, y) => { for (let r = 100; r <= LAND_NÆR; r += 100) for (const [dx, dy] of RETN) { const p = x + dx * r, q = y + dy * r; if (inne(p, q, 0) && land(p, q)) return true; } return false; };
     for (const [st2, k0] of [[150, 7], [90, 8]]) for (let Y = Math.ceil((v.cy - S) / st2) * st2; Y < v.cy + S; Y += st2) for (let X = Math.ceil((v.cx - S) / st2) * st2; X < v.cx + S; X += st2) {
       const x0 = X - v.cx, y0 = Y - v.cy, h = frø(X, Y, k0); if (h > (k0 === 7 ? .16 : .3)) continue;
       const x = x0 + (frø(X, Y, 11) - .5) * st2 * .6, y = y0 + (frø(X, Y, 12) - .5) * st2 * .6; if (!inne(x, y, 60) || !v.sjø(x, y)) continue;
       const nærLand = r => RETN.some(([dx, dy]) => land(x + dx * r, y + dy * r));
-      if (k0 === 7) { if (ut.båter.length >= T.båter || nærLand(20) || nærLand(40)) continue; const bt = båt(X + Y, true); bt.x = x; bt.y = y; bt.a = frø(X, Y, 13) * 6.283; ut.båter.push(bt); }
+      if (k0 === 7) { if (ut.båter.length >= T.båter || nærLand(20) || nærLand(40) || !kystNær(x, y)) continue; const bt = båt(X + Y, true); bt.x = x; bt.y = y; bt.a = frø(X, Y, 13) * 6.283; ut.båter.push(bt); }
       else { if (ut.bøyer.length >= T.bøyer || nærLand(20) || !(nærLand(45) || nærLand(90))) continue; ut.bøyer.push({ x, y, type: Math.floor(frø(X, Y, 14) * 3) }); }
     }
     return ut;

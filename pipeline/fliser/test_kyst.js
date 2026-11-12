@@ -33,6 +33,12 @@ sjekk(!tom.båter.length && !tom.naust.length && !tom.brygger.length && !tom.bø
 const v = kjør(KX + 288, KY - 192, false), glob = (l, cx, cy) => new Set(l.filter(o => Math.abs(o.x + cx - KX - 144) < 400 && Math.abs(o.y + cy - KY + 96) < 400).map(o => Math.round(o.x + cx) + ',' + Math.round(o.y + cy)));
 const a = glob(u.naust.concat(u.brygger), KX, KY), b = glob(v.naust.concat(v.brygger), KX + 288, KY - 192);
 sjekk(a.size > 0 && [...a].every(s => b.has(s)), `fast plassering når utsnittet flyttes (${a.size} naust/brygger i overlappet)`);
+// åpent hav (feilretting 12. nov: småbåter 110 km til havs ved Troll A): ingen båter uten land i nærheten, og båtene ute på sjøen
+// langs kysten ligger høyst 800 m fra land
+const hav = K.plasser({ S: 1500, cx: -114473, cy: 6776192, sjø: () => true, moh: () => 0, by: () => false });
+sjekk(hav.båter.length === 0 && hav.bøyer.length === 0, `åpent hav uten land i utsnittet: ingen småbåter (${hav.båter.length})`);
+const tilLand = b => { let best = Infinity; for (let a = 0; a < 6.283; a += .1) for (let r = 20; r <= 1200; r += 20) if (!sjøG(b.x + KX + Math.cos(a) * r, b.y + KY + Math.sin(a) * r)) { best = Math.min(best, r); break; } return best; };
+sjekk(u.båter.filter(b => b.fri).every(b => tilLand(b) <= 820), `båtene ute på sjøen ligger høyst 800 m fra land (lengst ${Math.max(...u.båter.filter(b => b.fri).map(tilLand))} m)`);
 // tak på antall (mobil færre)
 const m = kjør(KX, KY, true);
 sjekk(m.båter.length <= K.TAK.mobil.båter && m.båter.length <= u.båter.length && u.båter.length <= K.TAK.pc.båter, `tak på antall (PC ${u.båter.length}, mobil ${m.båter.length})`);

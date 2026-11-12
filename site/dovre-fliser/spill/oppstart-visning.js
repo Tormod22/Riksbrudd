@@ -168,6 +168,12 @@
     if (ny || egne.some(s => Math.hypot(s.x - L.x, s.y - L.y) > 20000)) {
       egne.forEach((s, i) => { const a = i / Math.max(1, egne.length) * 6.283; s.x = L.x + Math.cos(a) * 380; s.y = L.y + Math.sin(a) * 380; s.sti = null; s.siktSkitten = true; });
       kj.forEach((k, i) => { k.x = L.x + 160 + i * 45; k.y = L.y - 200; k.sti = null; });
+      påLand(L, egne, kj);
+    }
+    // utenfor Dovre-piloten (/norge): lagene heter ikke lenger «… Dombås», og motstanderne flytter til tettstedene rundt leiren
+    if (L.x < DOVRE[0] - 10000 || L.x > DOVRE[2] + 10000 || L.y < DOVRE[1] - 10000 || L.y > DOVRE[3] + 10000) {
+      for (const s of egne) s.navn = s.navn.replace(/, Dombås$/, '');
+      if (window.AI && AI.flytt) AI.flytt(L).catch(e => console.error(e));
     }
     visPenger(); visNyttKnapp();
     // andre moduler (leiren i K2) får vite at spillet er klart
@@ -175,6 +181,20 @@
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
       logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`); }
     else logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
+  }
+  // Ringen rundt leiren kan ligge i sjøen eller i en fjellvegg (feilretting 12. nov: leir på en holme ved Reine satte alle lagene og
+  // kjøretøyene i sjøen). Når terrenget rundt leiren er hentet, flyttes de til land som henger sammen med leiren, kjøretøyene helst til
+  // en veg (regelen: Oppstart.startplasser). Bare de som fortsatt står der ringen satte dem – et lagret spill (spill/lagring.js) kan
+  // ha satt dem tilbake der de sto i mellomtiden.
+  async function påLand(L, egne, kj) {
+    const før = egne.concat(kj).map(e => [e, e.x, e.y]);
+    try {
+      const v = await lagVindu([L.x - 1000, L.y - 1000, L.x + 1000, L.y + 1000], true), p = O.startplasser(L, egne.length, kj.length, v);
+      if (!S || S.leir !== L || før.some(([e, x, y]) => e.x !== x || e.y !== y)) return null;
+      egne.forEach((s, i) => { [s.x, s.y] = p.lag[i]; s.sti = null; s.siktSkitten = true; }); kj.forEach((k, i) => { [k.x, k.y] = p.kj[i]; k.sti = null; });
+      skitten = true; if (p.iVann) logg('Det er ikke land nok rundt leiren til alle lagene – noen står i vannet. Flytt dem inn på land.');
+      return p;
+    } catch (e) { console.error(e); return null; }
   }
   // bonusene: sikt (politi) og treff (soldat) for egne lag
   KROKER.sikt.push(s => (s.side === 'blå' ? O.bonus(S).sikt || 1 : 1));
@@ -227,7 +247,7 @@
   function betal(b) { if (!S || !(b >= 0) || S.penger < b) return false; S.penger -= b; lagre(); visPenger(); return true; }
   // gi(beløp): penger tilbake (for eksempel når et bygg rives)
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
-  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, gi, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
+  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
   S = les(); if (S && !S.ferdig) S = null;
   // Et lagret spill tas i bruk når ALLE skriptene på siden er kjørt (DOMContentLoaded). Før var det setTimeout(0), som kan slå til mellom
   // to skript når nettet er tregt – da gikk «riksbrudd-spill» ut før leiren, folket og kontrollrommet lyttet (feilretting 12. nov).

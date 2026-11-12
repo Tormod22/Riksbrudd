@@ -62,6 +62,42 @@
     if (k === 3) return 'Leiren kan ikke ligge i vann.';
     return null;
   }
+  // Startplassene rundt leiren (feilretting 12. nov: la du leiren på en holme, havnet alle lagene og kjøretøyene i sjøen).
+  // v = et vindu rundt leiren fra lagVindu(…, medVeg) (Terreng.nyttVindu: x0, y0, r, w, h, H høyde, K arealklasse – 3 vann, 255 utenfor –, V veg).
+  // Lagene vil stå i en ring (380 m) rundt leiren og kjøretøyene i en rekke øst for den, men bare på land som henger sammen med leiren
+  // (til fots: land eller veg, ikke opp skrenter brattere enn o.bratt), høyst o.maks meter unna. Kjøretøyene står helst på en veg på land.
+  // Hver får den nærmeste ledige ruta til ønsket sitt; er øya for liten, deler de rute (forskjøvet noen meter). Står leiren selv i vann,
+  // brukes landet nærmest leiren. Gir { lag: [[x, y] …], kj: [[x, y] …], iVann: antall som ikke fikk plass på land }.
+  function startplasser(L, nLag, nKj, v, o = {}) {
+    const R = o.radius != null ? o.radius : 380, MAKS = o.maks || 900, BRATT = o.bratt || .6, W = v.w;
+    const inne = (i, j) => i >= 0 && j >= 0 && i < W && j < v.h, midt = (i, j) => [v.x0 + (i + .5) * v.r, v.y0 - (j + .5) * v.r];
+    const land = (i, j) => { const k = j * W + i; return v.K[k] !== 3 && v.K[k] !== 255 && v.H[k] === v.H[k]; };
+    const veg = (i, j) => v.V[j * W + i] > 0, gang = (i, j) => inne(i, j) && (land(i, j) || veg(i, j));
+    const NABO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const helning = (i, j) => { const h = v.H[j * W + i]; let m = 0; for (const [a, b] of NABO) if (inne(i + a, j + b)) { const q = v.H[(j + b) * W + i + a]; if (q === q) m = Math.max(m, Math.abs(q - h) / v.r); } return m; };
+    const ci = Math.floor((L.x - v.x0) / v.r), cj = Math.floor((v.y0 - L.y) / v.r), n = Math.ceil(MAKS / v.r);
+    // start: leirens rute, ellers den nærmeste ruta med land
+    let start = gang(ci, cj) ? [ci, cj] : null;
+    if (!start) { let bd = Infinity; for (let j = cj - n; j <= cj + n; j++) for (let i = ci - n; i <= ci + n; i++) if (inne(i, j) && land(i, j)) { const d = (i - ci) ** 2 + (j - cj) ** 2; if (d < bd) { bd = d; start = [i, j]; } } }
+    const kand = [], sett = new Set(), kø = [];
+    if (start) { kø.push(start); sett.add(start[1] * W + start[0]); }
+    for (let q = 0; q < kø.length; q++) { const [i, j] = kø[q]; kand.push([i, j]);
+      for (const [a, b] of NABO) { const x = i + a, y = j + b, k = y * W + x;
+        if (!gang(x, y) || sett.has(k) || Math.abs(x - ci) > n || Math.abs(y - cj) > n) continue;
+        if (!veg(x, y) && !veg(i, j) && Math.abs(v.H[k] - v.H[j * W + i]) / v.r > BRATT) continue;
+        sett.add(k); kø.push([x, y]); } }
+    const brukt = new Map(), ut = { lag: [], kj: [], iVann: 0 };
+    // nærmeste rute til (tx, ty) som består ok(i, j); en rute som alt er tatt, teller som tre ruter lenger unna
+    const velg = (tx, ty, ok) => { let best = null, bd = Infinity;
+      for (const [i, j] of kand) { if (!ok(i, j)) continue; const [x, y] = midt(i, j), d = Math.hypot(x - tx, y - ty) + (brukt.get(j * W + i) || 0) * 3 * v.r; if (d < bd) { bd = d; best = [i, j]; } }
+      if (!best) return null; const k = best[1] * W + best[0], nr = brukt.get(k) || 0; brukt.set(k, nr + 1);
+      const [x, y] = midt(best[0], best[1]), a = nr * 2.4; return nr ? [x + Math.cos(a) * v.r * .3, y + Math.sin(a) * v.r * .3] : [x, y]; };
+    for (let i = 0; i < nLag; i++) { const a = i / Math.max(1, nLag) * 6.283, tx = L.x + Math.cos(a) * R, ty = L.y + Math.sin(a) * R;
+      const p = velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= BRATT) || velg(tx, ty, land); if (!p) ut.iVann++; ut.lag.push(p || [tx, ty]); }
+    for (let i = 0; i < nKj; i++) { const tx = L.x + 160 + i * 45, ty = L.y - 200;
+      const p = velg(tx, ty, (x, y) => veg(x, y) && land(x, y)) || velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= .25) || velg(tx, ty, land); if (!p) ut.iVann++; ut.kj.push(p || [tx, ty]); }
+    return ut;
+  }
   // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (100 mill. + eventuell bonus).
   function fullfør(S, leir) {
     const f = feil(S); if (f.length) return f;
@@ -141,7 +177,7 @@
     }
     g.restore();
   }
-  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
+  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, startplasser, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Oppstart = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

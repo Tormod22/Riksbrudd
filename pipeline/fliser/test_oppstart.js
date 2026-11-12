@@ -36,4 +36,28 @@ ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'por
 // VAKT (feiljakten 12. nov): symbolet og bokstavene i standardflagget har en egen farge, så de ikke forsvinner i et av feltene
 { const fl = O.standard().fraksjon.flagg;
   ok(!fl.farger.includes(fl.symbolfarge) && !fl.farger.includes(fl.bokstavfarge) && O.FARGER.includes(fl.symbolfarge), 'standardflagget: symbolet (' + fl.symbolfarge + ') synes mot alle feltene ' + fl.farger.join(' ')); }
+// startplassene rundt leiren (feilretting 12. nov: lagene og kjøretøyene sto i sjøen når leiren lå på en holme)
+{ const lagV = (land, veg) => { const w = 80, h = 80, r = 32, v = { x0: 0, y0: h * r, r, w, h, H: new Float32Array(w * h), K: new Uint8Array(w * h), V: new Uint8Array(w * h) };
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const x = (i + .5) * r, y = h * r - (j + .5) * r, k = j * w + i, l = land(x, y);
+      v.K[k] = l ? 2 : 3; v.H[k] = l ? 5 : NaN; v.V[k] = veg && veg(x, y) ? 3 : 0; } return v; };
+  const klasse = (v, x, y) => v.K[Math.floor((v.y0 - y) / v.r) * v.w + Math.floor((x - v.x0) / v.r)];
+  const L = { x: 1280, y: 1280 }, alle = p => p.lag.concat(p.kj);
+  // en holme (radius 120 m) i sjøen: ringen på 380 m ligger i vannet
+  const holme = lagV((x, y) => Math.hypot(x - L.x, y - L.y) < 120), ph = O.startplasser(L, 4, 4, holme);
+  ok(ph.iVann === 0 && alle(ph).every(([x, y]) => klasse(holme, x, y) !== 3), 'leir på en holme: alle fire lagene og de fire kjøretøyene står på land');
+  ok(alle(ph).every(([x, y]) => Math.hypot(x - L.x, y - L.y) < 130) && new Set(alle(ph).map(p => p.map(Math.round).join())).size === 8, 'holmen: alle står på holmen, og ingen står oppå hverandre');
+  // en kyst: sjø øst for x = 1400, en veg langs y = 1100 (også ut i sjøen, som en ferje)
+  const kyst = lagV(x => x < 1400, (x, y) => Math.abs(y - 1100) < 16), pk = O.startplasser(L, 4, 4, kyst);
+  ok(pk.iVann === 0 && alle(pk).every(([x, y]) => klasse(kyst, x, y) !== 3), 'leir ved kysten: ingen i sjøen');
+  ok(pk.kj.every(([x, y]) => Math.abs(y - 1100) < 16 && x < 1400), 'kjøretøyene står på vegen (på land, ikke på ferjestrekningen)');
+  ok(pk.lag.filter(([x, y]) => Math.abs(Math.hypot(x - L.x, y - L.y) - 380) < 40).length >= 2, 'lagene på landsiden står i ringen 380 m fra leiren');
+  // bare land: som før (ringen), og ingen forskyvning
+  const flat = lagV(() => true), pf = O.startplasser(L, 4, 4, flat);
+  ok(pf.lag.every(([x, y]) => Math.abs(Math.hypot(x - L.x, y - L.y) - 380) < 30), 'på flatt land står lagene i ringen som før');
+  // en skrent (20 m på én rute) skiller leiren fra resten: lagene blir på leirens side
+  const skrent = lagV(() => true); for (let j = 0; j < 80; j++) for (let i = 0; i < 80; i++) if (i >= 44) skrent.H[j * 80 + i] = 60;
+  const ps = O.startplasser(L, 4, 0, skrent); ok(ps.lag.every(([x]) => x < 44 * 32), 'lagene settes ikke opp på en skrent leiren ikke når til fots');
+  // bare sjø: ingen plass (teller hvor mange som står i vann)
+  const hav = lagV(() => false); ok(O.startplasser(L, 4, 4, hav).iVann === 8, 'bare sjø rundt leiren: meldes som 8 i vann');
+}
 process.exit(feil ? 1 : 0);
