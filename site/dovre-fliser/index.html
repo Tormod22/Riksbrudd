@@ -1759,9 +1759,9 @@ function gress3d() {
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), .75), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
     const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
-    // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke ute i vannet eller bekken (bakkekartet er for grovt
+    // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
-    if (u.vegNær ? u.vegNær(x, y) : u.påVeg && u.påVeg(x, y)) continue; if (iVann3d(u, x, y)) continue;
+    if (u.vegNær ? u.vegNær(x, y) : u.påVeg && u.påVeg(x, y)) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set((lyng ? .6 : .4) + rnd() * .3, (lyng ? .6 : .4) + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
@@ -2250,15 +2250,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=329283c7a5"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=65193504b0"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=9d12b1fe99"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=b0fac9429d"></script>
-<script src="/dovre-fliser/spill/vind3d.js?v=d16520c108"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=a3f99c8198"></script>
+<script src="/dovre-fliser/spill/vind3d.js?v=89b32d1382"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
-<script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=71d16cb624"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=39ab52fdcd"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
@@ -2270,7 +2270,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leir-visning.js?v=d2515dfb2e"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=9fd12e50fe"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=f8a3b97de0"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=690ef82f5b"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=744e1b0f15"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=5e119d5313"></script>
@@ -2282,7 +2282,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=0413d13579"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=ccc72042e9"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=1d0eeade34"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2935007d46"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
