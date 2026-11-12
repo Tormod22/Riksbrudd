@@ -24,6 +24,9 @@
 #oppstart .to>div{ flex:1 1 300px; min-width:0; }
 #oppstart .bilde{ position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .bilde{ order:-1; position:static; text-align:center; } #oppstart .bilde img{ width:140px; height:auto; } }
+#oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
+@media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:0; z-index:1; background:#16120c; text-align:center; padding:6px 0; border-bottom:1px solid var(--rule); }
+  #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
 #oppstart button.valg{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-height:40px; padding:4px 10px; }
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
 #oppstart button.farge{ width:34px; height:34px; min-height:0; padding:0; border:2px solid #0006; cursor:pointer; }
@@ -44,7 +47,7 @@
   document.head.appendChild(css);
 
   // ---------- pengene øverst ----------
-  const st = document.createElement('div'); st.innerHTML = '<b id="sPenger">–</b> <span>i kassa</span>'; st.hidden = true; document.querySelector('.stats').appendChild(st);
+  const st = document.createElement('div'); st.innerHTML = '<b id="sPenger">–</b> <span>i kassa</span>'; st.hidden = true; st.className = 'viktig'; document.querySelector('.stats').appendChild(st);
   const visPenger = () => { st.hidden = !S; if (S) document.getElementById('sPenger').textContent = O.kroner(S.penger); };
 
   // ---------- startskjermen ----------
@@ -79,7 +82,7 @@
   function flaggLerret(fl, w, h) { const c = el('canvas', { width: w, height: h }); O.tegnFlagg(c.getContext('2d'), fl, w, h); return c; }
 
   function vis(steg) {
-    ark.innerHTML = ''; bak.classList.add('på');
+    ark.innerHTML = ''; ark.scrollTop = 0; bak.classList.add('på');
     const k = utkast.karakter, fr = utkast.fraksjon, fl = fr.flagg, melding = el('div', { klasse: 'feil', 'aria-live': 'polite' });
     if (steg === 1) {
       ark.append(el('h2', {}, 'Riksbrudd – nytt spill'), el('div', { klasse: 'steg' }, 'Steg 1 av 3: din karakter. Norge har falt sammen. Du starter med ' + O.kroner(O.STARTPENGER) + ' og en håndfull folk.'));
@@ -122,7 +125,7 @@
         bokst.oninput = () => { fl.bokstaver = bokst.value.toUpperCase().replace(/[^\p{L}\p{N}]/gu, '').slice(0, 3); tegn(); };
         red.append(el('h3', {}, 'Bokstaver (høyst 3)'), bokst, fargerad(() => fl.bokstavfarge, f => { fl.bokstavfarge = f; }, 'Farge på bokstavene')); };
       lag();
-      ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, red), el('div', { style: 'flex:0 0 auto; position:sticky; top:0' }, el('h3', {}, 'Flagget'), stort)), melding,
+      ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, red), el('div', { klasse: 'flaggboks' }, el('h3', {}, 'Flagget'), stort)), melding,
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(1)), knapp('Neste: plass til leiren →', false, () => { const f = O.feil(utkast); if (f.length) { melding.textContent = f.join(' '); return; } vis(3); })));
     } else {
       ark.append(el('h2', {}, 'Plass til leiren'), el('div', { klasse: 'steg' }, 'Steg 3 av 3: trykk på kartet der leiren skal ligge. Hvor som helst i Norge – men ikke inne i et tettsted eller i vann. Basen og lagene dine flytter dit.'),
@@ -130,7 +133,7 @@
     }
   }
   // ---------- velge leirplass på kartet ----------
-  function startVelg() { bak.classList.remove('på'); velger = true; forslag = null; visBanner('Trykk på kartet der leiren skal ligge. Zoom og flytt kartet som vanlig.'); }
+  function startVelg() { bak.classList.remove('på'); if (window.visHjelp) visHjelp(false); velger = true; forslag = null; visBanner('Trykk på kartet der leiren skal ligge. Zoom og flytt kartet som vanlig.'); }
   function visBanner(tekst, kanBekrefte) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst));
     if (kanBekrefte) banner.append(knapp('Legg leiren her', false, bekreft, 'valg'));
@@ -149,8 +152,9 @@
     if (!forslag || !forslag.ok) return; const f = O.fullfør(utkast, forslag); if (f.length) { visBanner(f.join(' ')); return; }
     S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
   }
-  KROKER.trykk.push((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
-  KROKER.trykk3d.push((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
+  // først i rekka: mens du velger leirplass, skal et trykk der et lag eller kjøretøy står, gi leirforslag og ikke åpne panelet
+  KROKER.trykk.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
+  KROKER.trykk3d.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
 
   // ---------- valgene tas i bruk: fraksjonen tar over «blå», basen og lagene flytter til leiren ----------
   function bruk(ny) {

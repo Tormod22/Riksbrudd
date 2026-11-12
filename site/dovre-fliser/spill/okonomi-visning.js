@@ -15,7 +15,7 @@
     skitten = true; });
 
   // Teller øverst: oljen på basen
-  const stat = document.createElement('div'); stat.innerHTML = '<b id="sOlje">0</b> <span>t olje</span>'; stat.title = 'Olje på Hovedbase Dombås';
+  const stat = document.createElement('div'); stat.innerHTML = '<b id="sOlje">0</b> <span>t olje</span>'; stat.title = 'Olje på basen';
   document.querySelector('.stats').appendChild(stat);
   const visTeller = () => { document.getElementById('sOlje').textContent = Math.floor(BASER[0].beholdning).toLocaleString('nb-NO'); };
 
@@ -32,7 +32,7 @@
       skitten = true;
     }
     visTeller();
-    if (performance.now() - sistPanel > 1000) { sistPanel = performance.now();
+    if (performance.now() - sistPanel > 1000 && !pekerNede(document.getElementById('panel'))) { sistPanel = performance.now();
       if (valgtBase) visBase(valgtBase); else { const k = window.valgtKjoretoy && valgtKjoretoy(); if (k && k.oppdrag) visKjoretoy(k); } }
   });
   function ferdig(b, type) {

@@ -3,16 +3,16 @@
 (function () {
   const DELER = [
     ['Nytt spill', 'Første gang lager du karakteren din (navn, utseende, bakgrunn med bonus) og fraksjonen (navn og eget flagg), og du velger hvor leiren skal ligge. Dere starter med 100 millioner kr (øverst). «Nytt spill» i ☰ begynner på nytt.'],
-    ['Tiden', '1× er sanntid: ett minutt i spillet er ett minutt i virkeligheten. 10× og 60× går fortere, ❚❚ stopper tiden.'],
+    ['Tiden', '1× er sanntid: ett minutt i spillet er ett minutt i virkeligheten. 10×, 60× og 600× går fortere, ❚❚ stopper tiden.'],
     ['Lagene', 'Trykk på et lag og så «Marsjer» og et sted på kartet – ruten følger veger og terreng. Trykk på en soldat for å gjøre ham til lagfører. «Grav ned» gir halvparten så mange treff.'],
     ['Tåke', 'Du ser bare det lagene, stridsvognene, dronene og radaren ser. Resten ligger i tåke; «sist sett» viser hvor fienden var.'],
     ['Kjøretøy', 'Trykk på en kolonne og «Kjør til …». Kjøretøyene følger de ekte vegene (NVDB) og tar ferje. De bruker drivstoff og kan skades.'],
-    ['Olje', 'Olje er pengene. Velg lastebilkolonnen, trykk «Hent olje …» og en oljeterminal (for eksempel Nyhamna). Oljen kjøres til Hovedbase Dombås. Trykk på basen for å bygge nye enheter.'],
+    ['Olje', 'Olje betaler for nye enheter (kronene i kassa øverst går til leiren, materialer og folk). Velg lastebilkolonnen, trykk «Hent olje …» og en oljeterminal (for eksempel Nyhamna). Oljen kjøres til basen i leiren din. Trykk på basen for å bygge nye enheter.'],
     ['Forsyning', 'Lag bruker ammunisjon og kjøretøy drivstoff. Det fylles på ved basen, med «Forsyn …» fra en lastebil, og i egne tettsteder.'],
     ['Ingeniører', '«Spreng / sperr …» og så en bru, tunnel, ferjekai, et kraftverk eller en dam. «Spreng vegen her» lager et krater. «Reparer …» bygger opp igjen, «Legg miner her» legger et minefelt. Du kan også trykke på en bru og velge «Spreng med …». En sprengt dam gir flom nedover dalen.'],
     ['Tettsteder', 'Et lag som står 30 minutter i et tettsted uten fiender, tar det. Tettstedet gir olje, forsterker garnisonen og reparerer kjøretøy – mest når det har strøm fra et kraftverk i nærheten.'],
     ['Flere enheter', 'Stridsvogn (kanon), rakettartilleri («Ild …» og et mål 2–30 km unna), radarbil (ser bevegelse på åpen mark) og drone («Send drone …» på basen). Alt bygges for olje på basen.'],
-    ['Motstanderne', 'Du leder Riksrådet (blå). Kystalliansen (rød) og Folkefronten (grønn) tar tettsteder, henter forsyninger og angriper. «Motstandere» i ☰ stopper dem.'],
+    ['Motstanderne', 'Du leder fraksjonen du laget ved start (fargen fra flagget ditt). Kystalliansen (rød) og Folkefronten (grønn) tar tettsteder, henter forsyninger og angriper. «Motstandere» i ☰ stopper dem.'],
     ['Vær og årstid', 'Været skifter av seg selv: klart, skyet, regn, snø og tåke. I tåke ser lagene bare 30 % så langt, i snø 55 % og i regn 70 %. Under ☰ velger du årstid (sommer, høst, vinter, vår) og kan låse været. Om vinteren ligger snøen helt ned i dalen, om høsten blir bjørkene gule og røde. Været skifter gradvis over en time eller to, bakken blir våt i regnet og vinden driver regn, snø og skyer.'],
     ['Telefon', 'På telefon (og lave vinduer) er alt samlet øverst på én rad. Sveip på statuslinja for å se resten av den. Fartsknappen blar mellom 1×, 10×, 60× og 600×. Trykk på kildeteksten nederst for å se alle kildene.'],
     ['Grafikk', 'Går 3D hakkete, velg «Grafikk» i ☰: Auto (standard) senker selv oppløsningen og så detaljene når bildene tar for lang tid, og hever dem igjen når det går lett. Høy har alt, Middels har færre detaljerte trær, mindre gress og en mindre bakketekstur, Lav har lavest oppløsning, enkle trær langt ute og ikke gress eller blomster rundt deg.'],
@@ -55,7 +55,17 @@
   document.querySelector('.knapper').appendChild(knapp);
   x.onclick = () => vis(false); d.onclick = e => { if (e.target === d) vis(false); };
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && d.classList.contains('på')) vis(false); });
-  let sett = true; try { sett = localStorage.getItem('riksbrudd-hjelp') === '1'; localStorage.setItem('riksbrudd-hjelp', '1'); } catch (e) { /* privat vindu: vis ikke */ }
-  if (!sett && !navigator.webdriver) vis(true);
-  window.visHjelp = vis;
+  // Første gang vises veiledningen av seg selv – men aldri oppå startskjermen (feiljakten 12. nov: hjelpen lå over kartet da leirplassen
+  // skulle velges). Er et nytt spill på gang, venter den til spillet er klart (hendelsen «riksbrudd-spill» fra oppstart-visning.js).
+  const nyttSpillPåGang = () => { const o = window.OppstartSpill; return !!o && !(o.tilstand() && o.tilstand().ferdig); };
+  function første() {
+    let sett = true; try { sett = localStorage.getItem('riksbrudd-hjelp') === '1'; } catch (e) { /* privat vindu: vis ikke */ }
+    if (sett) return false;
+    if (nyttSpillPåGang()) { window.addEventListener('riksbrudd-spill', () => setTimeout(første, 400), { once: true }); return false; }
+    try { localStorage.setItem('riksbrudd-hjelp', '1'); } catch (e) { /* privat vindu */ }
+    vis(true); return true;
+  }
+  // etter at alle skriptene er lastet (oppstart-visning.js kommer etter denne fila)
+  if (!navigator.webdriver) window.addEventListener('load', () => setTimeout(første, 0));
+  window.visHjelp = vis; window.Hjelp = { første, vis };
 })();

@@ -145,7 +145,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
     // trærne forsvinner etter hvert: 3D ryddes for hver 5 % framdrift
     for (const j of R.jobber) if (j.type === 'hogst') { const f = Math.floor(RS.fram(j) * 20); if (sistFram.get(j.id) !== f) { sistFram.set(j.id, f); ryddHogst(); } }
     akk += dt; if (akk >= 10 || endret) { akk = 0; lagre(); }
-    if (performance.now() - sistTegn > 1000) { sistTegn = performance.now(); skitten = true; if (valgt) visJobb(valgt); oppdaterHauger(); }
+    if (performance.now() - sistTegn > 1000) { sistTegn = performance.now(); skitten = true; if (valgt && !pekerNede(document.getElementById('ressursvalg'))) visJobb(valgt); oppdaterHauger(); }
   });
   if (window.KJ_TEKST) KJ_TEKST.push(k => RS.bilTekst(k));
 

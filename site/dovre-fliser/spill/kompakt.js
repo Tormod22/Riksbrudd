@@ -15,6 +15,7 @@
 body.kort .top{ top:calc(5px + ${T}); left:calc(6px + ${L}); right:calc(6px + ${Rt}); flex-wrap:nowrap; gap:6px; align-items:flex-start; }
 body.kort .stats{ flex:1 1 auto; min-width:0; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; touch-action:pan-x; padding:3px 9px; gap:0 11px; mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent); -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent); }
 body.kort .stats b{ font-size:14.5px; } body.kort .stats span{ font-size:11.5px; }
+body.kort .stats > div:first-child{ order:-2; } body.kort .stats > div.viktig{ order:-1; }
 body.kort .stats .ikke-kort, body.kort #sAar{ display:none; } body.kort .stats::-webkit-scrollbar{ display:none; }
 body.kort .knapper{ flex:none; flex-wrap:nowrap; gap:3px; }
 body.kort .knapper button{ height:31px; min-width:31px; padding:0 7px; font-size:13.5px; }
