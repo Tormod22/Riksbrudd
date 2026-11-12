@@ -70,15 +70,32 @@
       if (a1 <= b0 || b1 <= a0) return false; }
     return true;
   }
+  // Punktene et gjerde sjekkes i: knekkpunktene og et punkt hver `steg` meter langs leddene (også det siste leddet i en lukket ring).
+  // Før ble bare knekkpunktene sjekket, så et gjerde kunne gå tvers over et vann eller gjennom et hus (feiljakt 12. nov).
+  function gjerdePunkter(P, lukket, steg = 8) {
+    const Q = lukket && P.length > 2 ? [...P, P[0]] : P, ut = [];
+    for (let i = 0; i < Q.length; i++) { ut.push([Q[i][0], Q[i][1]]); if (i + 1 >= Q.length) break;
+      const [ax, ay] = Q[i], [bx, by] = Q[i + 1], l = Math.hypot(bx - ax, by - ay), n = Math.floor(l / steg);
+      for (let k = 1; k <= n; k++) { const t = k * steg / l; if (t < 1 - 1e-9) ut.push([ax + (bx - ax) * t, ay + (by - ay) * t]); } }
+    return ut;
+  }
+  const iMangekant = (P, x, y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; };
+  const krysser = (a, b, c, d) => { const o = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0; };
+  // Går linjestykket a–b gjennom mangekanten P (et bygg)?
+  const linjeGjennom = (a, b, P) => iMangekant(P, a[0], a[1]) || iMangekant(P, b[0], b[1]) || P.some((c, i) => krysser(a, b, c, P[(i + 1) % P.length]));
   // Kan bygget stå her? v = { klasse(x, y) (3 = vann, 255 = utenfor kartet), iHus(x, y) -> true } (fra kartet). unntatt: id som flyttes.
   // Skissene i planen holder plassen (unntatt skissen som bygges eller flyttes, planUnntatt). Høyden i kartet gir bratt-sjekken.
   const BRATT = 3;
   function kanBygge(L, b, v = {}, unntatt = null, o = {}) {
     const B = BYGG[b.type]; if (!B) return 'Ukjent bygg.';
     if (B.linje) { if (!b.punkter || b.punkter.length < 2) return 'Gjerdet trenger minst to punkter.'; const l = lengde(b.punkter, b.lukket); if (l < 2) return 'Gjerdet er for kort.'; if (l > 3000) return 'Gjerdet er for langt (høyst 3 km om gangen).'; }
-    const P = hjørner(b), punkter = B.linje ? b.punkter : [...P, [b.x, b.y]];
+    const P = hjørner(b), punkter = B.linje ? gjerdePunkter(b.punkter, b.lukket) : [...P, [b.x, b.y]];
     for (const [x, y] of punkter) { const k = v.klasse ? v.klasse(x, y) : 2; if (k === 3) return 'Kan ikke bygge i vann.'; if (k === 255 || k === undefined) return 'Her finnes det ikke kart.'; }
-    if (!B.linje && v.iHus && punkter.some(([x, y]) => v.iHus(x, y))) return 'Det står et hus her.';
+    if (v.iHus && punkter.some(([x, y]) => v.iHus(x, y))) return B.linje ? 'Gjerdet går gjennom et hus.' : 'Det står et hus her.';
+    // gjerdet kan ikke gå gjennom egne bygg (porter står i gjerdet, og delene i byggesettet har sine egne regler)
+    if (B.linje) { const Q = b.lukket && b.punkter.length > 2 ? [...b.punkter, b.punkter[0]] : b.punkter;
+      for (const a of L.bygg) { const A = BYGG[a.type]; if (A.linje || A.port || A.del) continue; const H = hjørner(a);
+        for (let i = 1; i < Q.length; i++) if (linjeGjennom(Q[i - 1], Q[i], H)) return `Gjerdet går gjennom ${A.navn.toLowerCase()}.`; } }
     // delene i byggesettet (del: true) står inntil og oppå hverandre; plassene deres sjekkes i byggesett.js
     if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
@@ -126,7 +143,11 @@
     const b = finn(L, id); if (!b) return { feil: 'Finnes ikke.' };
     const uferdig = b.igjen > 0, penger = Math.round(b.pris * (uferdig ? REGLER.rivUferdig : REGLER.rivFerdig));
     if (uferdig && b.mat) for (const [k, v] of Object.entries(b.mat)) L.lager[k] = Math.min(lagerplass(L), (L.lager[k] || 0) + v);
-    L.bygg = L.bygg.filter(q => q !== b); return { penger, uferdig };
+    L.bygg = L.bygg.filter(q => q !== b);
+    // drivstoffet blir liggende i de andre tankene; det som ikke får plass, selges tilbake til innkjøpspris (før forsvant det uten varsel)
+    const over = Math.max(0, (L.drivstoff || 0) - kapasitet(L)), drivstoffPenger = Math.round(over * DRIVSTOFF.prisPerLiter);
+    if (over > 0) L.drivstoff -= over;
+    return { penger: penger + drivstoffPenger, uferdig, bygg: penger, drivstoff: over, drivstoffPenger };
   }
   // Flytt: koster 25 % av grunnprisen og 30 % av byggetiden; bygget virker ikke før det er flyttet
   function flytt(L, id, til, betal, bonus = {}, v = {}) {
@@ -243,12 +264,14 @@
   function tilMal(L, cx, cy, navn = 'Mal') {
     const del = b => { const q = { type: b.type, dx: Math.round((b.x - cx) * 10) / 10, dy: Math.round((b.y - cy) * 10) / 10, ret: +(b.ret || 0).toFixed(3) };
       if (b.punkter) { q.punkter = b.punkter.map(([x, y]) => [Math.round((x - cx) * 10) / 10, Math.round((y - cy) * 10) / 10]); q.lukket = !!b.lukket; } return q; };
-    return { versjon: 1, navn, bygg: [...L.bygg.filter(b => b.hp > 0), ...(L.plan || [])].map(del) };
+    // delene i byggesettet (del: true) er ikke med: de står i et fast rutenett og kan ikke settes ut et annet sted som vanlige bygg
+    // (før ble de usynlige deler som kostet penger, feiljakt 12. nov)
+    return { versjon: 1, navn, bygg: [...L.bygg.filter(b => b.hp > 0), ...(L.plan || [])].filter(b => !BYGG[b.type].del).map(del) };
   }
   // Byggene i en mal satt ut med midten i (x, y) og dreid `rot` radianer
   function fraMal(mal, x, y, rot = 0) {
     const c = Math.cos(rot), s = Math.sin(rot), p = ([u, w]) => [x + u * c - w * s, y + u * s + w * c];
-    return (mal && mal.bygg || []).filter(q => BYGG[q.type]).map(q => { const [bx, by] = p([q.dx, q.dy]), b = { type: q.type, x: bx, y: by, ret: (q.ret || 0) + rot };
+    return (mal && mal.bygg || []).filter(q => BYGG[q.type] && !BYGG[q.type].del).map(q => { const [bx, by] = p([q.dx, q.dy]), b = { type: q.type, x: bx, y: by, ret: (q.ret || 0) + rot };
       if (q.punkter) { b.punkter = q.punkter.map(p); b.lukket = !!q.lukket; b.x = b.punkter[0][0]; b.y = b.punkter[0][1]; } return b; });
   }
   // Legger malen inn i planen (det som ikke får plass, hoppes over). v(b) kan gi kartsjekken per bygg.
@@ -315,7 +338,7 @@
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
   const api = { leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
-    skade, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, lagerplass,
+    skade, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leir = api;

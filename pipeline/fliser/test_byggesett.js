@@ -60,4 +60,13 @@ ok(Hf.get('a').z0 === Hf.get('b').z0, 'to gulv inntil hverandre (uten vegger) f�
 const pal = [{ id: 'p', type: 'bs_palisade', a: 'x', i: 3, j: 0, n: 0 }], Hp = BS.høyder(O, pal, h).get('p'); ok(Math.abs(Hp.ender[1] - Hp.ender[0] - G * .2) < 1e-9, 'palisaden følger terrenget');
 // forsvar: på bakken, en vegg kan ikke stå i samme kant
 ok(/vegg/.test(BS.plassering(D, 'bs_palisade', BS.kantVed(O, O.ox + 1.2, O.oy + .1)).feil || ''), 'palisade der det står en vegg avvises');
+// FEILJAKT 12. nov: maler tar ikke med delene i byggesettet (de ble usynlige deler som kostet penger), og sengene telles én gang
+{ const M = LB.ny(), o = { ox: 0, oy: 0 };
+  for (const q of BS.husDeler('brakke', 0, 0, 0)) { const n = q.type.includes('tak') ? 1 : 0, m = BS.midt(o, { ...q, n }); for (const k of ['tre', 'betong', 'stål']) M.lager[k] = 60;
+    const r = LB.bygg(M, { type: q.type, x: m.x, y: m.y, ret: m.ret }, betal); r.bygg.bs = { i: q.i, j: q.j, a: q.a, n, r: q.r }; r.bygg.igjen = 0; }
+  for (const k of ['tre', 'betong', 'stål']) M.lager[k] = 60; LB.bygg(M, { type: 'container', x: 40, y: 0 }, betal).bygg.igjen = 0;
+  const mal = LB.tilMal(M, 0, 0, 'test'); ok(mal.bygg.length === 1 && mal.bygg[0].type === 'container', 'tilMal: bare vanlige bygg, ingen deler fra byggesettet');
+  const gammel = { versjon: 1, navn: 'gammel', bygg: [{ type: 'bs_vegg_tre', dx: 0, dy: 0, ret: 0 }, { type: 'container', dx: 5, dy: 0, ret: 0 }] };
+  ok(LB.fraMal(gammel, 100, 100).length === 1 && LB.planMal(LB.ny(), gammel, 100, 100).lagt.length === 1, 'gamle maler med deler: delene hoppes over når malen settes inn');
+  const rom = BS.rom(BS.fraLeir(M, LB)).reduce((s, r) => s + r.senger, 0); ok(rom === 8 && LB.plasser(M) === 8, 'sengene i et egenbygd rom er med i Leir.plasser én gang (8)'); }
 console.log(feil ? `${feil} FEIL` : 'alt ok'); process.exit(feil ? 1 : 0);

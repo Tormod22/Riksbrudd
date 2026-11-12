@@ -62,4 +62,13 @@ const leir = { x: 0, y: 0 };
     `lastebilen kjørte ${turer} turer på ${(t / 60).toFixed(1)} t, lager ${JSON.stringify(L.lager)} (huset ga ${JSON.stringify(j.mat)})`);
   ok(RS.bilTekst({ oppdrag: { type: 'ressurs', fase: 'laster' } }) === 'laster materialer', 'tekst i kjøretøypanelet'); }
 
+// FEILJAKT 12. nov: et stoppet hogstfelt sperrer bare den delen som faktisk er hogd
+{ const R = RS.ny(), j = RS.startHogst(R, { x: 500, y: 0, r: 35, skog: 1 }, leir).jobb;
+  ok(!RS.ledigSkog(R, 500, 0, .9) && RS.ledigSkog(R, 600, 0, .9), 'pågående hogstfelt: hele feltet er opptatt, utenfor er ledig');
+  RS.steg(R, j.arbeid * 60 * .1 / 2, { arbeidere: () => 2, tempo: () => 1, leir, leggInn: () => 0 }); RS.avbryt(R, j.id);
+  const a = R.hogd[0] && R.hogd[0].andel; ok(Math.abs(a - .1) < .01 && !RS.ledigSkog(R, 500, 0, .05) && RS.ledigSkog(R, 500, 0, .5), `stoppet etter ${Math.round(a * 100)} %: bare den hogde delen er sperret`);
+  let n = 0, ledig = 0; for (let i = 0; i < 2000; i++) { const h = (i * 0.618034) % 1; n++; if (RS.ledigSkog(R, 500, 0, h)) ledig++; }
+  ok(Math.abs(ledig / n - .9) < .02, `ca. 90 % av skogen i det stoppede feltet kan hogges på nytt (${Math.round(100 * ledig / n)} %)`);
+  R.hogd.push({ x: 0, y: 500, r: 20 }); ok(!RS.ledigSkog(R, 0, 500, .99), 'ferdig hogd felt: ingenting igjen'); }
+
 console.log(feil ? `${feil} FEIL` : 'Alle testene for materialer fra verden er ok.'); process.exit(feil ? 1 : 0);

@@ -20,4 +20,6 @@ ok(m.length === 4 && /Framme/.test(m[0]) && /2 menn/.test(m[1]) && /Under ild/.t
 m = K.meldinger({ x: 0, y: 0 }, { ute: 2 }, { ute: 2, underIld: true, fiender: [{ id: 7, navn: 'patrulje', x: 0, y: 900 }] }, sm, 103);
 ok(m.length === 0, 'samme fiende og «under ild» meldes ikke på nytt med en gang');
 m = K.meldinger({ x: 0, y: 0 }, { ute: 2 }, { ute: 2, fiender: [] }, sm, 120); ok(m.length === 1 && /Posisjon/.test(m[0]), 'posisjon meldes hvert kvarter når alt er rolig');
+// feiljakt 12. nov: rutinemeldingen er merket (K.RUTINE), så visningen kan holde den ute av loggen på kartet
+ok(m[0] === K.RUTINE && !K.meldinger({ x: 0, y: 0 }, { marsj: true, ute: 0 }, { marsj: false, ute: 1, fiender: [] }, {}, 200).includes(K.RUTINE), 'rutinemeldingen er K.RUTINE, og viktige meldinger er ikke det');
 process.exit(feil ? 1 : 0);
