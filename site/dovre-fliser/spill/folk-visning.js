@@ -12,8 +12,9 @@
   const spill = () => window.OppstartSpill && OppstartSpill.tilstand();
   const nf = (v, d = 0) => v.toLocaleString('nb-NO', { maximumFractionDigits: d });
   const årstid = () => (window.VAER && VAER.årstid) || 'sommer';
-  // senger i egenbygde rom (spill/byggesett.js, del 2), hvis de finnes
-  function ekstraSenger() { try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
+  // senger i egenbygde rom (spill/byggesett.js, del 2), hvis de finnes – men ikke når Leir.plasser allerede har dem med
+  // (byggesett.js legger rommene inn i Leir.plasser; før ble de telt to ganger)
+  function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return 0; try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
   const valg = () => ({ årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger() });
 
   // ---------- stil ----------
@@ -64,6 +65,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (FR.arbeidere(F, 'verksted') && !B.verksted) ut.push(B.ferdige('verksted') ? 'Verkstedet har ikke strøm.' : 'Folk på «verksted» trenger et verksted med strøm.');
     if (B.tårn > B.bemannedeTårn) ut.push(`${B.tårn - B.bemannedeTårn} vakttårn står ubemannet: sett flere på «vakt».`);
     if (!FR.arbeidere(F, 'bygg')) ut.push('Ingen på «bygg»: ingenting blir bygget.');
+    if (FR.nød(F)) ut.unshift(F.personer.length ? `Bare ${F.personer.length} igjen i gjengen: rekrutter flere (ingen krav om seng når dere er færre enn tre).` : 'Gjengen er tom: rekrutter nye folk (de første tre trenger ikke seng).');
     return ut;
   }
   function vis() {
@@ -79,7 +81,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const sh = F.personer.reduce((a, p) => a + p.helse, 0) / Math.max(1, n);
     const linjer = [`Senger: ${Math.min(n, B.senger)} av ${n}` + (B.senger > n ? ` (${B.senger - n} ledige)` : ''),
       `Mat: ${nf(F.mat)} rasjoner` + (B.dager === Infinity ? ' (drivhusene holder)' : ` (ca. ${nf(B.dager, 1)} døgn)`) + (B.drivhus ? ` · drivhus +${nf(B.drivhus, 1)}/døgn` : '') + (B.varmMat ? ' · varm mat' : ''),
-      `Varme: ${varme}`, `Helse: ${Math.round(sh * 100)} %` + (B.syke ? ` · ${B.syke} syke/skadet` : '') + (B.sykestue ? ' · sykestue' : ''),
+      `Varme: ${varme}`, `Helse: ${n ? Math.round(sh * 100) + ' %' : '–'}` + (B.syke ? ` · ${B.syke} syke/skadet` : '') + (B.sykestue ? ' · sykestue' : ''),
       `Vakttårn: ${B.bemannedeTårn} av ${B.tårn} bemannet` + (F.borte ? ` · ${F.borte} har forlatt gjengen` : '')];
     // lav skjerm (telefon): status som ett avsnitt og høyst to ting som mangler, så oppgavene synes uten å bla langt
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
@@ -87,8 +89,10 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
     if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
     const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(matN * FR.R.matPris)})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
-    const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg()); logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen.`); lagre(); vis(); }, { id: 'rekrutter' });
-    rek.disabled = B.senger <= n || F.moral < 40; if (rek.disabled) rek.title = B.senger <= n ? 'Ingen ledig seng' : 'Moralen er for lav';
+    const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg());
+      logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
+    // færre enn tre i gjengen: rekruttering er alltid mulig (FR.kanRekruttere), så spillet ikke låser seg
+    const hvorfor = FR.kanRekruttere(F, Lr, valg()); rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
     panel.append(el('div', { klasse: 'rad' }, kjøp, rek));
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));
