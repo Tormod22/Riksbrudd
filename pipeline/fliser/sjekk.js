@@ -718,7 +718,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
-      window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb }; return Vakt3d.sjekk(u); });
+      let gj = 0; if (u.påBane && u.gard) for (const B of u.gard.biter) for (let q = 0; q < B.length; q += 6) if (u.påBane(B[q], B[q + 1])) gj++;
+      window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb, gjerder: gj }; return Vakt3d.sjekk(u); });
     // VAKT materialer fra verden i 3D (spill/ressurser-visning.js): et hogstfelt (40 m) legges der skogen i Dombås-utsnittet over er tettest; etter
     // krok3d har feltet ingen trær, men stubber, og skog rundt; et revet hus (HUS_BORT) er borte fra hus3d, og ruinen lages
     const rs3 = await pg.evaluate(async () => { const u = RessursSpill.sisteU(193300, 6896300), ut = { inne: 0, rundt: 0 }; if (!u || !u.trær) return ut;
@@ -735,8 +736,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       ut.ruin = RessursSpill.ruinTrekanter(u); RessursSpill.sett(Ressurser.ny()); return ut; });
     const rs3ok = rs3.inne === 0 && rs3.rundt > 0 && rs3.stubber > 0 && rs3.hus === 1 && rs3.ruin > 50; if (!rs3ok) feil++;
     console.log(`${rs3ok ? 'ok  ' : 'FEIL'} ${navn} hogst og riving i 3D: trær i det hogde feltet ${rs3.inne}, rundt ${rs3.rundt}, stubber ${rs3.stubber}; hus igjen av to (ett revet) ${rs3.hus}, ruin ${rs3.ruin} trekanter`);
-    // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær på sporet
-    const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0)); if (!bok) feil++;
+    // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær eller gjerder på sporet
+    const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0 && bs.gjerder === 0)); if (!bok) feil++;
     console.log(`${bok ? 'ok  ' : 'FEIL'} ${navn} jernbane i 3D: ${JSON.stringify(bs)}`);
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
     console.log(`${rok ? 'ok  ' : 'FEIL'} ${navn} 3D uten rare ting: antall ${JSON.stringify(rart.antall)}, i hus ${JSON.stringify(rart.iHus)}, svever/begravd ${JSON.stringify(rart.svever)}${rok ? '' : ' ' + JSON.stringify(rart.eksempel)}`);
