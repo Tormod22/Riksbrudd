@@ -6,12 +6,14 @@ Lag (én .pmtiles per lag, alle i flisnettet i felles.py):
             z6–z11 fra 8 m-modellen for hele området, z12–z13 fra 2 m-modellen rundt Dombås.
   terreng – arealklasse per 32 m (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 255 ingen data), tapsfri WebP (R-kanalen).
   kart    – stil 1-fargelagt bakke uten skygge (klientene legger på skygge fra høyden), WebP (ikke AVIF: eldre iOS). z5–z9.
-  vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S, alle fra z10) z8–z13 og «bygg» (t = bygningstype) z11–z13.
+  vektor  – MVT (gzip): lag «veg» (k = E/R/F/K/P/S, alle fra z10; g = 1 gang- og sykkelveg, t = 1 kanalisert veg, 2 rampe,
+            3 rundkjøring, 4 ferje – se vegtype.py) z8–z13 og «bygg» (t = bygningstype) z11–z13.
 Klienten bruker nærmeste forelderflis når en flis mangler («overzoom»).
 Bruk: python3 02_fliser.py   -> site/dovre-fliser/data/*.pmtiles + manifest.json
+      python3 02_fliser.py vektor   -> bare vektor.pmtiles (trenger ikke arbeid/; manifestet beholder de andre lagene)
 Veger og bygg leses fra data/fliser/ (03_veg_bygg.py).
 """
-import os, io, json, gzip, numpy as np
+import os, io, sys, json, gzip, numpy as np
 from PIL import Image
 import pillow_avif  # noqa: F401 (AVIF i Pillow)
 from pyproj import Transformer
@@ -160,9 +162,9 @@ def lag_terreng_og_kart(hoyde9):
 def lag_vektor():
     # data/fliser/ fra 03_veg_bygg.py, allerede i EPSG:25833 og for hele området
     veger = json.load(open(os.path.join(ROT, 'data', 'fliser', 'veger.json')))
-    linjer, kat = [], []
+    linjer, kat, ekstra = [], [], []
     for v in veger:
-        if len(v['p']) >= 2: linjer.append(LineString(v['p'])); kat.append(v['c'])
+        if len(v['p']) >= 2: linjer.append(LineString(v['p'])); kat.append(v['c']); ekstra.append({k: v[k] for k in ('g', 't') if v.get(k)})
     IKKE_BYGD = {'IG', 'RA', 'GR', 'BR', 'BF'}   # bare tillatelse, eller revet/brent/flyttet
     bygg = [b for b in json.load(open(os.path.join(ROT, 'data', 'fliser', 'bygg.json'))) if b[3] not in IKKE_BYGD]
     punkt = [Point(b[0], b[1]) for b in bygg]
@@ -186,7 +188,7 @@ def lag_vektor():
                     if part.geom_type != 'LineString' or len(part.coords) < 2: continue
                     c = [q(X, Y) for X, Y in part.coords]
                     c = [p for k, p in enumerate(c) if k == 0 or p != c[k - 1]]
-                    if len(c) >= 2: vf.append({'geometry': LineString(c), 'properties': {'k': kat[i]}})
+                    if len(c) >= 2: vf.append({'geometry': LineString(c), 'properties': {'k': kat[i], **ekstra[i]}})
             if vf: lag.append({'name': 'veg', 'features': vf})
             if z >= 11:
                 bf = []
@@ -201,6 +203,11 @@ def lag_vektor():
 
 
 if __name__ == '__main__':
+    if sys.argv[1:] == ['vektor']:
+        # bare vegene og byggene på nytt: statistikken for de andre lagene står som den var
+        lag_vektor(); sti = os.path.join(UT, 'manifest.json'); man = json.load(open(sti))
+        man['statistikk'].update(json.loads(json.dumps(STAT)))
+        json.dump(man, open(sti, 'w'), ensure_ascii=False, indent=1); sys.exit()
     h9 = lag_hoyde()
     lag_terreng_og_kart(h9)
     lag_vektor()

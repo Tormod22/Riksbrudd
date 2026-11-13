@@ -1,12 +1,16 @@
 """Henter veger (NVDB API v4, Statens vegvesen, NLOD) og bygningspunkt (matrikkelen, Kartverket, CC BY 4.0)
 for hele flisområdet i EPSG:25833 og lagrer dem i data/fliser/ (i git, så 02_fliser.py kan kjøres uten nett).
 
-  veger.json: [{"c": "E"|"R"|"F"|"K"|"P"|"S", "p": [[x, y], ...]}]
+  veger.json: [{"c": "E"|"R"|"F"|"K"|"P"|"S", "p": [[x, y], ...], "g": 1, "t": 1–4}]
+              g = 1: for gående og syklende (gang- og sykkelveg, fortau, gangfelt …). NVDB gir dem samme vegkategori som vegen de
+              ligger langs; uten merket ble de tegnet som brede bilveger oppå hverandre (feiljakten 12. nov).
+              t = 1 kanalisert veg (svingefelt/trafikkøy i kryss), 2 rampe, 3 rundkjøring, 4 ferje. Se vegtype.py.
   bygg.json:  [[x, y, bygningstype, status], ...]
 Bruk: python3 03_veg_bygg.py  (deretter python3 02_fliser.py)
 """
 import os, re, json, urllib.request, urllib.parse
 from felles import CRS, DOVRE
+from vegtype import vegtype
 
 HER = os.path.dirname(os.path.abspath(__file__)); UT = os.path.join(HER, '..', '..', 'data', 'fliser'); os.makedirs(UT, exist_ok=True)
 
@@ -55,7 +59,7 @@ def veger():
             p = []
             for c in m.group(1).replace('(', '').replace(')', '').split(','):
                 xy = c.split(); p.append([round(float(xy[0]), 1), round(float(xy[1]), 1)])
-            if len(p) > 1: ut.append({'c': kat, 'p': p})
+            if len(p) > 1: ut.append({'c': kat, 'p': p, **vegtype(o)})
         nx = d['metadata'].get('neste')   # «neste»-lenken mangler /api/v4, så den bygges av startnøkkelen
         u = base + '&start=' + urllib.parse.quote(nx['start']) if nx and d['objekter'] else None
         print('veger', len(ut), flush=True)

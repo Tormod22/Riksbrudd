@@ -8,6 +8,18 @@ bruer og veger som kan sprenges, ingeniører, garnisoner i tettsteder, speidere/
 **Inspirasjon, ikke kopi:** vi tar sjangergrepene (forsyningslinjer, sprenging, tåke). Ikke navn, grafikk, lyd, kart eller tekst.
 Riksbrudd har sitt eget: det ekte Norge 2023, politiske fraksjoner, stil 1, og zoom fra hele landet til hver soldat.
 
+## Flere inspirasjonskilder (brukeren, 13. nov 2026)
+Brukeren nevnte to spill til som inspirasjon. Samme regel som for WarFront: **inspirasjon, ikke kopi** – ikke navn, figurer, grafikk,
+lyd, kart, tekst eller oppdrag. Opplysningene under er fra nettsøk 13. nov (spillene er ikke ute ennå), og brukeren har ikke sagt
+hvilke deler han liker best – spør før noe stort bygges på dette.
+- **Ebbtide** (sanntidsstrategi, zombier, ikke utgitt): du leder en hangarskipsgruppe og kjemper i en ekte by (Los Angeles). Omtalene
+  trekker fram at du veksler mellom et stort operasjonskart og direkte styring på bakken, og at tap, drepte og ødelagte bygg blir
+  stående i kampen (ingenting avgjøres «automatisk»). Likt det Riksbrudd alt har retning mot: kontrollrommet + ute i felten (K3),
+  ødeleggelse som varer (S5), en kollaps med pandemi (plan-kollaps.md).
+- **Eurovoid** (overlevelsesspill, tidlig utvikling, én utvikler): bygget på ekte kart over Norge (ca. 5000 km², hver veg, hvert hus og
+  hver skog), alene eller sammen med andre, med overlevende som går rundt i verden. Likt Riksbrudd: det ekte Norge i 3D som du går i
+  selv. Riksbrudd skiller seg ut ved at du leder en gjeng og en leir, ikke bare én overlevende.
+
 ## Hvorfor dette passer Norge
 - **Få veger, mange flaskehalser:** én E6, smale dalfører, lange tunneler, store bruer. Én sprengt bru kan kutte en landsdel.
 - **Ferjer** binder Vestlandet og Nord-Norge sammen. Den som holder ferjekaiene, styrer kysten.

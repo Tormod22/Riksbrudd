@@ -46,9 +46,11 @@
   // ---------- 3D: bakken, vegetasjonen og båndet ----------
   // Lages utenfor kroken: en funksjon laget inne i kroken holder på alt kroken bruker – også kartbildet px (67 MB ved 4096²), som da
   // ble liggende i minnet så lenge utsnittet levde (12. nov).
-  const lagIBekk = (m, W, S, cel) => (x, y) => { const i = Math.floor((x + S) / cel), j = Math.floor((S - y) / cel); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] === 1; };
+  const lagIBekk = (m, W, S, cel, min = 1) => (x, y) => { const i = Math.floor((x + S) / cel), j = Math.floor((S - y) / cel); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] >= min; };
+  // Elver som er minst så brede (m), vasser du ikke over når du går selv (u.iElv, gange.js): du må finne en bru.
+  const DYP_ELV = 5;
   KROKER.bygg3d.push(async (u, { px, TW }) => {
-    u.bekk = null; u.iBekk = null;
+    u.bekk = null; u.iBekk = null; u.iElv = null;
     const S = u.S, mpp = 2 * S / TW, mo = mpp <= 1.2 ? 1 : mpp <= 2.5 ? 2 : mpp <= 5 ? 3 : 4, bb = [u.cx - S, u.cy - S, u.cx + S, u.cy + S];
     const biter = await LAG.hent(bb, nivåer(mo)); STAT.biter = biter.length; if (!biter.length) return;
     STAT.linjer = biter.reduce((n, B) => n + B.linjer.length, 0); kreditér();
@@ -90,9 +92,11 @@
     const W = 2048, cel = 2 * S / W, m = new Uint8Array(W * W);
     for (const l of linjer) { const r = l.b / 2 + .9 + cel * .5, rc = Math.ceil(r / cel);
       for (const [x, y] of Bekker.punkter(l.P, cel)) { const ci = Math.floor((x - u.cx + S) / cel), cj = Math.floor((u.cy + S - y) / cel);
-        for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a = ci + di, b = cj + dj; if (a < 0 || b < 0 || a >= W || b >= W || (di * di + dj * dj) * cel * cel > r * r) continue; m[b * W + a] = 1; } } }
+        for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a = ci + di, b = cj + dj, d2 = (di * di + dj * dj) * cel * cel; if (a < 0 || b < 0 || a >= W || b >= W || d2 > r * r) continue;
+          // 2 = selve vannet i en bred elv, 1 = bekk eller bredden av elva
+          if (l.b >= DYP_ELV && d2 <= l.b * l.b / 4) m[b * W + a] = 2; else if (!m[b * W + a]) m[b * W + a] = 1; } } }
     const iBekk = lagIBekk(m, W, S, cel);
-    u.iBekk = iBekk;
+    u.iBekk = iBekk; u.iElv = lagIBekk(m, W, S, cel, 2);
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) { if (iBekk(data[k], data[k + 1])) { STAT.trærFjernet++; continue; } for (let q = 0; q < 5; q++) ut.push(data[k + q]); } return new Float32Array(ut); };
     STAT.trærFjernet = 0;
     u.iBekk = iBekk;

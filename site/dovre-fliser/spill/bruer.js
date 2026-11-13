@@ -31,7 +31,8 @@
   }
   // Brua langs vegen: begge endene av NVDB-brua (eller midten og lengden) projiseres på vegene i nærheten; den vegen som passer best gir
   // linjen og kategorien. linjer = [{ k, P }]. Uten treff: NVDB-geometrien (rett linje mellom endene).
-  function finnLinje(bru, linjer, lengdeData) {
+  // bareVeg: gi null (ikke NVDB-linjen) når ingen veg passer – da prøver visningen de andre vegene før den gir opp.
+  function finnLinje(bru, linjer, lengdeData, bareVeg) {
     const A = bru[0], B = bru[bru.length - 1], Ln = lengde(bru), en = bru.length < 2 || Ln < 1;
     let best = null;
     for (const v of linjer) {
@@ -51,19 +52,40 @@
       best.s0 = Math.max(0, Math.min(L, best.s0 - sn * ekstra)); best.s1 = Math.max(0, Math.min(L, best.s1 + sn * ekstra));
     }
     if (best && Math.abs(best.s1 - best.s0) >= 4) return { P: delLinje(best.v.P, best.s0, best.s1), k: best.v.k, veg: true };
-    if (en) return null;
+    if (en || bareVeg) return null;
     return { P: delLinje(bru, 0, Ln), k: null, veg: false };
+  }
+  // Der en veg krysser en elv uten at dataene har en bru (feiljakten 12. nov: «vegen krysser elva rett på vannet» ved Jora): strekk av
+  // vegens punkter P (ca. hver 2,5 m) som ligger i vann – våt(x, y) – og som ikke står i enden av vegen, er 2–maks meter lange og har
+  // vann på begge sider av vegen midt i strekket (ellers går vegen bare langs bredden). w = vegens halve bredde.
+  // Gir [{ i0, i1 }]: brua går fra punkt i0 til og med i1, «land» meter inn på land i hver ende.
+  function elvekryss(P, våt, w = 3, land = 5, maks = 70) {
+    const n = P.length, inne = P.map(p => våt(p[0], p[1])), ut = [];
+    for (let i = 0; i < n;) { if (!inne[i]) { i++; continue; } let j = i; while (j < n && inne[j]) j++;
+      if (i > 0 && j < n) { let L = 0; for (let k = i; k <= j; k++) L += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]);
+        const m = (i + j - 1) >> 1, a = P[Math.max(0, m - 1)], b = P[Math.min(n - 1, m + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l, r = w + 3;
+        if (L >= 2 && L <= maks && våt(P[m][0] + nx * r, P[m][1] + ny * r) && våt(P[m][0] - nx * r, P[m][1] - ny * r)) {
+          let i0 = i - 1, i1 = j, s = 0; while (i0 > 0 && s < land) { s += Math.hypot(P[i0][0] - P[i0 - 1][0], P[i0][1] - P[i0 - 1][1]); i0--; }
+          s = 0; while (i1 < n - 1 && s < land) { s += Math.hypot(P[i1 + 1][0] - P[i1][0], P[i1 + 1][1] - P[i1][1]); i1++; }
+          ut.push({ i0, i1 }); } }
+      i = j; }
+    return ut;
   }
   // Dekkets overkant langs brua: rett linje mellom endene (+ litt overhøyde på lange bruer), aldri nærmere terrenget enn «klaring» meter,
   // jevnet ut så dekket ikke får knekker der terrenget stikker opp. g = terrenghøyde per punkt, s = meter langs brua.
-  function profil(g, s, klaring = 1.1) {
+  // seil: ekstra høyde midt på brua (seilingshøyde for lange bruer over sjø – se seilingshøyde()).
+  function profil(g, s, klaring = 1.1, seil = 0) {
     // i endene ligger dekket i vegens høyde (0,15 m over terrenget, ingen trapp opp på brua); full klaring fra 6 m inn på brua
     const n = g.length, L = s[n - 1] || 1, K = i => .15 + (klaring - .15) * Math.min(1, s[i] / 6, (L - s[i]) / 6);
-    const zA = g[0] + .15, zB = g[n - 1] + .15, kam = L > 25 ? Math.min(2, L * .01) : 0;
+    const zA = g[0] + .15, zB = g[n - 1] + .15, kam = Math.max(L > 25 ? Math.min(2, L * .01) : 0, seil);
     let z = g.map((_, i) => { const f = s[i] / L; return Math.max(zA + (zB - zA) * f + kam * 4 * f * (1 - f), g[i] + K(i)); });
     for (let k = 0; k < 3; k++) z = z.map((v, i) => i === 0 || i === n - 1 ? v : Math.max(.25 * z[i - 1] + .5 * v + .25 * z[i + 1], g[i] + K(i)));
     return z;
   }
+  // Seilingshøyde (feiljakten 12. nov: «Tromsøbrua ligger nede ved vannet»): en bru på minst 120 m der over halvparten går over sjø
+  // (sjø = andelen av punktene som ligger i vann ved havnivå), løftes midt på: lengden / 45, høyst 40 m (stigning under 9 %).
+  // Gang- og sykkelbruer (type 1) løftes ikke.
+  const seilingshøyde = (L, sjø, type) => type !== 1 && L >= 120 && sjø > .5 ? Math.min(40, L / 45) : 0;
   // Brutype: 'plate' (kort platebru/kulvert), 'bjelke' (bjelkebru med søyler), 'bue' (betongbue under dekket over juv/dyp dal),
   // 'henge' (hengebru med tårn og kabler, de lengste spennene), 'fagverk' (jernbanebru i stål)
   function velgType({ lengde: L, klaring: K, type, bueMulig }) {
@@ -117,6 +139,6 @@
     for (let t = 0; t < 300; t += 2) if (v(t) && v(t + 2) && v(t + 4)) return t;
     return null;
   }
-  const API = { VEGBREDDE, projiser, lengde, delLinje, finnLinje, profil, velgType, søyler, stykker, GAP, bue, kaiRetning, vannkant };
+  const API = { VEGBREDDE, projiser, lengde, delLinje, finnLinje, elvekryss, seilingshøyde, profil, velgType, søyler, stykker, GAP, bue, kaiRetning, vannkant };
   if (typeof module !== 'undefined') module.exports = API; else rot.Bruer = API;
 })(typeof window !== 'undefined' ? window : globalThis);

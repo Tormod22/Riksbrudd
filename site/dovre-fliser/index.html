@@ -124,7 +124,7 @@ const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser
 const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
 if (PÅ_NORGE && !NORGE_TAG) location.replace('/kommuner-1986');   // til Norge-kartet er bygget: det gamle kommunekartet
 const ER_NORGE = PÅ_NORGE && !!NORGE_TAG;
-const KART_TAG_DOVRE = 'kart-26ddc7a5babc';   // settes av pipeline/fliser/versjon.py
+const KART_TAG_DOVRE = 'kart-b461a42bbe67';   // settes av pipeline/fliser/versjon.py
 const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
@@ -558,10 +558,20 @@ function bruer3d(u) {
   return pos.length ? { pos: new Float32Array(pos), kol: new Float32Array(kol), antall: n } : null;
 }
 // Symboler og navn over terrenget i 3D, med de samme reglene for hva som synes som i 2D (målestokken der objektet står).
+// Hvor navnet og trykkpunktet til en bru eller tunnel står i 3D: brua der modellen står (spill/infra3d.js kan ha flyttet den til
+// vegen: o.midt3), tunnelen ved den nærmeste portalen i utsnittet (midt i tunnelen svevde navnet over byen eller fjellet, 12. nov).
+function infraPunkt3(o) {
+  const a = o.deler[0], k = (a.length >> 2) << 1, u = R3.ut;
+  if (o.lag === 'bru' && o.midt3) return o.midt3;
+  if (o.lag === 'tunnel' && a.length >= 4) { const b = o.deler[o.deler.length - 1], kx = R3.cam.position.x + u.cx, ky = R3.cam.position.y + u.cy;
+    const ender = [[a[0], a[1]], [b[b.length - 2], b[b.length - 1]]].map(p => ({ p, d: Math.hypot(p[0] - kx, p[1] - ky), inne: Math.abs(p[0] - u.cx) < u.S && Math.abs(p[1] - u.cy) < u.S }));
+    ender.sort((p, q) => (q.inne - p.inne) || (p.d - q.d)); return ender[0].p; }
+  return [a[k], a[k + 1]];
+}
 function tegnInfra3d(g) {
   const u = R3.ut; if (!INFRA || !VIS.infra || !u || !u.infra) return;
   const etiketter = [], fonter = 'italic 12px "Cormorant Garamond",serif';
-  const midt = o => { const a = o.deler[0], k = (a.length >> 2) << 1; return [a[k], a[k + 1]]; };
+  const midt = infraPunkt3;
   for (const o of u.infra) {
     const [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' || o.lag === 'felt' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : midt(o);
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
@@ -591,7 +601,7 @@ function finnInfra3d(cx, cy) {
   let best = null, bd = 22;
   for (const o of u.infra) {
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
-    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : [a[k], a[k + 1]];
+    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : infraPunkt3(o);
     if (!VISES[o.lag](o, mPer3(X, Y))) continue;
     const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y); if (!q) continue;
     const d = Math.hypot(q[0] - cx, q[1] - cy) + (o.lag === 'tettsted' || o.lag === 'magasin' ? 8 : 0); if (d < bd) { bd = d; best = o; }
@@ -1082,7 +1092,8 @@ async function bygg3d(cx, cy, S) {
   u.vann = vannmaske(px, TW, H, N, steg);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
-  if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison) u.lys = await gatelys3d(u);
+  // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
+  if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison && !window.Veg) u.lys = await gatelys3d(u);
   ryddHus(u);
   const skog = await skogmaske(u, b);
   skogbunn(px, TW, skog); u.bunn = bunnkart(px, TW, skog);
@@ -1912,6 +1923,20 @@ function kjøretøy3d() {
     } }
   for (const m of R.kjMesh) { m.count = n; m.instanceMatrix.needsUpdate = true; }
 }
+// Terrengnettet slik det tegnes (sett3d): M punkter hver veg, tettest i midten. nettHoyde(u, x, y) gir høyden i selve nettet (lokale
+// meter fra midten, z som i 3D) – vegene legges på den, så bakken ikke stikker opp gjennom asfalten (hoyde3d er jevnere enn nettet).
+function nett3d(u) { const M = VW >= 900 ? 289 : 225, A = (M - 1) / (u.N - 1); return { M, gt: t => t * (A + (1 - A) * t * t) }; }
+function nettHoyde(u, x, y) {
+  if (!u.nett) { const { M, gt } = nett3d(u), X = new Float32Array(M), Z = new Float32Array(M * M);
+    for (let i = 0; i < M; i++) X[i] = u.S * gt(-1 + 2 * i / (M - 1));
+    for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) Z[j * M + i] = (hoyde3d(u.cx + X[i], u.cy - X[j], u) - u.h0) * R3.EX;
+    u.nett = { M, X, Z }; }
+  const { M, X, Z } = u.nett, finn = v => { let a = 0, b = M - 1; while (b - a > 1) { const m = (a + b) >> 1; if (X[m] <= v) a = m; else b = m; } return a; };
+  const i = finn(Math.max(-u.S, Math.min(u.S, x))), j = finn(Math.max(-u.S, Math.min(u.S, -y)));
+  const fx = Math.max(0, Math.min(1, (x - X[i]) / (X[i + 1] - X[i]))), fy = Math.max(0, Math.min(1, (-y - X[j]) / (X[j + 1] - X[j]))), k = j * M + i;
+  // rutens to trekanter som i PlaneGeometry: (a, b, d) og (b, c, d) med a oppe til venstre, b nede til venstre, c nede til høyre, d oppe til høyre
+  return fx + fy <= 1 ? Z[k] + (Z[k + 1] - Z[k]) * fx + (Z[k + M] - Z[k]) * fy : Z[k + M + 1] + (Z[k + M] - Z[k + M + 1]) * (1 - fx) + (Z[k + 1] - Z[k + M + 1]) * (1 - fy);
+}
 function hoyde3d(X, Y, u = R3.ut) {   // moh. fra 3D-utsnittet (u: et utsnitt som bygges, ellers det som vises)
   const fx = (X - (u.cx - u.S)) / u.steg, fy = ((u.cy + u.S) - Y) / u.steg, N = u.N;
   const i = Math.max(0, Math.min(N - 2, Math.floor(fx))), j = Math.max(0, Math.min(N - 2, Math.floor(fy))), a = Math.max(0, Math.min(1, fx - i)), b = Math.max(0, Math.min(1, fy - j)), k = j * N + i;
@@ -1985,7 +2010,7 @@ function sett3d(u) {
   // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
   // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
-  const M = VW >= 900 ? 289 : 225, A = (M - 1) / (u.N - 1), gt = t => t * (A + (1 - A) * t * t);
+  const { M, gt } = nett3d(u);
   const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv;
   for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
     pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); }
@@ -2348,14 +2373,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp.js?v=f1c4fa1012"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
-<script src="/dovre-fliser/spill/gange.js?v=e21f66a7d4"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=f226ebbb15"></script>
+<script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
+<script src="/dovre-fliser/spill/veg.js?v=c9f201d7da"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=7848d44557"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=a844b125ba"></script>
-<script src="/dovre-fliser/spill/bruer.js?v=dc44fd3716"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=7f94321d2c"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=e60e6d91e1"></script>
+<script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=10348fc15a"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>

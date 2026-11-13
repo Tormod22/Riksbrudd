@@ -49,4 +49,24 @@ sjekk(B.vannkant(0, 0, 1, 0, vann) === 42, 'vannkanten 42 m ut');
 sjekk(B.vannkant(60, 0, 1, 0, vann) === -18, 'kaien i vannet: vannkanten 18 m bak');
 sjekk(B.vannkant(0, 0, -1, 0, vann) === null, 'ingen vann den veien');
 
+// nødbru: en veg (punkt hver 2,5 m langs x-aksen) krysser en elv som er 20 m bred (x 100–120) og renner langs y
+const rett = []; for (let x = 0; x <= 300; x += 2.5) rett.push([x, 0]);
+const elv = (x, y) => x >= 100 && x <= 120;
+const kr = B.elvekryss(rett, elv, 3);
+sjekk(kr.length === 1 && rett[kr[0].i0][0] <= 95 && rett[kr[0].i0][0] >= 90 && rett[kr[0].i1][0] >= 125 && rett[kr[0].i1][0] <= 130, `vegen over elva får bru fra ${kr[0] && rett[kr[0].i0][0]} til ${kr[0] && rett[kr[0].i1][0]} m (elva 100–120)`);
+// vegen går langs bredden (vann bare på den ene siden): ingen bru
+sjekk(B.elvekryss(rett, (x, y) => x >= 100 && x <= 120 && y >= -1, 3).length === 0, 'veg langs bredden får ingen bru');
+// vegen ender i vannet (båtplass) eller går langt over vann (ferje): ingen bru
+sjekk(B.elvekryss(rett, (x, y) => x >= 280, 3).length === 0, 'veg som ender i vannet får ingen bru');
+sjekk(B.elvekryss(rett, (x, y) => x >= 100 && x <= 200, 3).length === 0, 'hundre meter over vann er ikke en nødbru (ferjesamband)');
+// to elver: to bruer
+sjekk(B.elvekryss(rett, (x, y) => (x >= 50 && x <= 56) || (x >= 200 && x <= 230), 3).length === 2, 'to elver gir to bruer');
+
+// seilingshøyde: lang bru over sjø løftes midt på, korte bruer, bruer over land og gangbruer ikke
+sjekk(Math.abs(B.seilingshøyde(1036, .9, 0) - 23) < .1 && B.seilingshøyde(3000, .9, 0) === 40, `Tromsøbrua (1036 m over sjø) får ${B.seilingshøyde(1036, .9, 0).toFixed(1)} m, aldri over 40 m`);
+sjekk(B.seilingshøyde(80, .9, 0) === 0 && B.seilingshøyde(500, .2, 0) === 0 && B.seilingshøyde(500, .9, 1) === 0, 'kort bru, bru over land og gangbru får ingen seilingshøyde');
+{ const s = [], g = []; for (let x = 0; x <= 1000; x += 10) { s.push(x); g.push(x < 50 || x > 950 ? 6 : 0); }
+  const z = B.profil(g, s, 1.1, 22), topp = Math.max(...z), stig = Math.max(...z.map((v, i) => i ? Math.abs(v - z[i - 1]) / 10 : 0));
+  sjekk(topp > 26 && topp < 30 && Math.abs(z[0] - 6.15) < .01 && stig < .1, `dekket med seilingshøyde: toppen ${topp.toFixed(1)} m, endene i vegens høyde, bratteste stigning ${(stig * 100).toFixed(1)} %`); }
+
 console.log(feil ? `${feil} FEIL` : 'alle testene for bruer og kaier er ok'); process.exit(feil ? 1 : 0);

@@ -122,7 +122,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       await pg.evaluate(() => { const b = INFRA.bru.find(o => o.e.navn === 'Jora bru') || INFRA.bru[0], a = b.deler[0]; kam.x = a[0]; kam.y = a[1]; kam.m = 1; window.testBru = b; });
       await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
       await pg.evaluate(() => { Object.assign(R3.bane, { x: window.testBru.deler[0][0] - R3.ut.cx, y: window.testBru.deler[0][1] - R3.ut.cy, avst: 500, pitch: .9 }); tegn3d(); });
-      const b3 = await pg.evaluate(() => { const b = window.testBru, a = b.deler[0], k = (a.length >> 2) << 1, q = brupunkt3(b, a[k], a[k + 1]), o = q && finnInfra3d(q[0], q[1]);
+      const b3 = await pg.evaluate(() => { const b = window.testBru, [bx, by] = infraPunkt3(b), q = brupunkt3(b, bx, by), o = q && finnInfra3d(q[0], q[1]);
         return { n: R3.ut.bru ? R3.ut.bru.antall : 0, mesh: !!R3.bruMesh || !!(R3.infra3d && R3.infra3d.length), treff: o ? o.e.navn : null, navn: b.e.navn }; });
       // vegetasjon (spill/vegetasjon3d.js): minst tre treslag i scenen ved Jora (elv, skog, myr), og ingen trær, blomster, bregner eller siv
       // i vannet (vannmasken) eller på vegen; kameraet ned til bakken (avst 80) så plantene rundt kameraet lages
@@ -149,7 +149,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           const søyler = ms.flatMap(m => m.søyler), svever = søyler.filter(s => s.bunn > z(s.x, s.y) + .05), dype = søyler.filter(s => !s.landkar && s.bunn < z(s.x, s.y) - 2.5);
           const mesh = (R3.infra3d || []).find(m => m.name === 'infra3d'), tri = mesh && R3.scene.children.includes(mesh) ? mesh.geometry.attributes.position.count / 3 : 0;
           return { ms, u, bruer: ms.length, søyler: søyler.filter(s => !s.landkar).length, landkar: søyler.filter(s => s.landkar).length, svever: svever.length, dype: dype.length, tri,
-            under: ms.filter(m => m.D.some(d => d.z < z(d.x, d.y) + (d.s > 6 && d.s < m.L - 6 ? .5 : .05))).map(m => m.navn), typer: [...new Set(ms.map(m => m.sort))].join('/'), løftet: ms.reduce((a, m) => a + (m.løftet || 0), 0) }; };
+            under: ms.filter(m => m.D.some(d => d.z < z(d.x, d.y) + (d.s > 6 && d.s < m.L - 6 ? .5 : .05))).map(m => m.navn), typer: [...new Set(ms.map(m => m.sort))].join('/'), løftet: ms.reduce((a, m) => a + (m.løftet || 0), 0),
+            // 13. nov: nødbruer der en veg krysser elva uten bru i dataene, «Jora bru» flyttet til vegen sin, du går oppå dekket (Liv3d.dekke)
+            // og den brede elva ved siden av brua stopper deg (u.iElv)
+            nød: ms.filter(m => m.nød).length, feilLinje: ms.filter(m => m.feilLinje).map(m => m.navn),
+            lange: ms.filter(m => m.L > 15).length, påDekke: ms.filter(m => { if (m.L <= 15) return false; const c = m.D[m.D.length >> 1], d = Liv3d.dekke(u, c.x, c.y); return d !== null && d - c.g > .8; }).length,
+            elv: !!u.iElv && ms.some(m => { const c = m.D[m.D.length >> 1], r = m.W / 2 + 6; return u.iElv(c.x + c.nx * r, c.y + c.ny * r) || u.iElv(c.x - c.nx * r, c.y - c.ny * r); }) }; };
         const a = sjekk(), m0 = a.ms.find(m => m.navn === window.testBru.e.navn && m.veg) || a.ms.find(m => m.veg) || a.ms[0];
         if (!m0) return { a, gap: null };
         // sprengt: modellene lages på nytt for utsnittet (uten å bygge 3D om igjen) med brua i INFRA_TILSTAND
@@ -162,9 +167,10 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         return { a: strip(a), navn: m0.navn, gap: m1 ? { stykker: m1.stykker.length, sprengt: m1.sprengt, iGap } : null, etter: !c.bruer.find(m => m.id === m0.id).sprengt };
       });
       const bvok = bv.a.bruer > 0 && bv.a.tri > 1000 && bv.a.søyler > 0 && bv.a.landkar >= 2 * bv.a.bruer && !bv.a.svever && !bv.a.dype && !bv.a.under.length && bv.a.løftet > 0 &&
-        bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter; if (!bvok) feil++;
+        bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter && bv.a.nød >= 1 && !bv.a.feilLinje.length && bv.a.påDekke === bv.a.lange && bv.a.elv; if (!bvok) feil++;
       console.log(`${bvok ? 'ok  ' : 'FEIL'} ${navn} bruer i 3D: ${bv.a.bruer} modeller (${bv.a.typer}, ${bv.a.tri} trekanter), ${bv.a.søyler} søyler og ${bv.a.landkar} landkar – ${bv.a.svever} svever, ${bv.a.dype} for dype; `
-        + `dekket under terrenget: ${bv.a.under.join(', ') || 'ingen'}; ${bv.a.løftet} vegpunkter løftet opp på dekket; sprengt «${bv.navn}»: ${bv.gap ? bv.gap.stykker + ' stykker, ' + bv.gap.iGap + ' vegpunkter i gapet' : 'ingen'}, hel igjen etterpå: ${bv.etter}`);
+        + `dekket under terrenget: ${bv.a.under.join(', ') || 'ingen'}; ${bv.a.løftet} vegpunkter løftet opp på dekket; sprengt «${bv.navn}»: ${bv.gap ? bv.gap.stykker + ' stykker, ' + bv.gap.iGap + ' vegpunkter i gapet' : 'ingen'}, hel igjen etterpå: ${bv.etter}; `
+        + `${bv.a.nød} nødbruer, vegbruer uten veg: ${bv.a.feilLinje.join(', ') || 'ingen'}, du går oppå dekket på ${bv.a.påDekke} av ${bv.a.lange}, elva stopper deg: ${bv.a.elv}`);
       await pg.click('#v3d');
       const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
       console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);
@@ -717,6 +723,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
     const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
+      // VAKT veger i 3D (spill/veg.js, 13. nov): gang- og sykkelvegene er skilt ut, bilvegene ligger ikke oppå hverandre (utenom kryssene),
+      // ingen gatelys står i en vegbane, og veger som krysser en elv uten bru i dataene har fått en nødbru
+      window.VEG_SJEKK = (() => { if (!window.Veg || !u.veger) return null;
+        const ru = Veg.rute(u.veger), kr = Veg.finnKryss(u.veger); let n = 0, dobbel = 0, iBane = 0;
+        u.veger.forEach((v, li) => { if (!Veg.vanlig(v) || !'ERFK'.includes(v.k)) return; const L = Veg.lengde(v.P); let d = 0;
+          for (let i = 1; i < v.P.length; i++) { d += Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1]); if (d < 15 || d > L - 15 || kr.nær(v.P[i][0], v.P[i][1], 12)) continue;
+            n++; if (ru.klaring(v.P[i][0], v.P[i][1], li) < v.w - .5) dobbel++; } });
+        if (u.lys) for (let q = 0; q < u.lys.length; q += 4) if (ru.klaring(u.lys[q], u.lys[q + 1], -1) < -.3) iBane++;
+        return { vegtype: !!u.vegtype, bil: u.veger.length, gang: (u.gangveger || []).length, punkter: n, dobbel, lykterIBanen: iBane, nødbruer: (u.bruer3d || []).filter(m => m.nød).length }; })();
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
       let gj = 0; if (u.påBane && u.gard) for (const B of u.gard.biter) for (let q = 0; q < B.length; q += 6) if (u.påBane(B[q], B[q + 1])) gj++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb, gjerder: gj }; return Vakt3d.sjekk(u); });
@@ -737,6 +752,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const rs3ok = rs3.inne === 0 && rs3.rundt > 0 && rs3.stubber > 0 && rs3.hus === 1 && rs3.ruin > 50; if (!rs3ok) feil++;
     console.log(`${rs3ok ? 'ok  ' : 'FEIL'} ${navn} hogst og riving i 3D: trær i det hogde feltet ${rs3.inne}, rundt ${rs3.rundt}, stubber ${rs3.stubber}; hus igjen av to (ett revet) ${rs3.hus}, ruin ${rs3.ruin} trekanter`);
     // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær eller gjerder på sporet
+    const vs = await pg.evaluate(() => window.VEG_SJEKK), vok = vs && vs.vegtype && vs.gang > 0 && vs.punkter > 200 && vs.dobbel <= vs.punkter * .02 && vs.lykterIBanen === 0; if (!vok) feil++;
+    console.log(`${vok ? 'ok  ' : 'FEIL'} ${navn} veger i 3D: ${JSON.stringify(vs)}`);
     const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0 && bs.gjerder === 0)); if (!bok) feil++;
     console.log(`${bok ? 'ok  ' : 'FEIL'} ${navn} jernbane i 3D: ${JSON.stringify(bs)}`);
     const sum = o => Object.values(o).reduce((a, b) => a + b, 0), rok = rart.antall.stein > 0 && sum(rart.iHus) <= 2 && sum(rart.svever) <= 2; if (!rok) feil++;
