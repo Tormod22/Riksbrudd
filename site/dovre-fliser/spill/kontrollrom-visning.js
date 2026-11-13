@@ -3,6 +3,8 @@
 // eller der du går selv i førsteperson. Står du ved et ferdig kontrollrom med strøm, kan du «Gå inn»: da får du kontrollrom-skjermen
 // (radio til venstre, feeds til høyre, kartet i midten) og ser lagene med radiokontakt der de er. Ute ser du lagene der de sist meldte
 // seg, og med nettbrett der de er (men fiender bare meldt). Radioen: håndradio/feltradio, leirens radio (mast eller ikke) og terrenget.
+// Radiomasten (brukeren 12. nov): nivå 1, 2 og 3 gir feltradioene 15, 25 og 40 km (8 km uten mast, håndradio 3 km). Rekkevidden står i
+// lagpanelet, i radiolista i kontrollrommet, i byggpanelet for masten (leir-visning.js) og i meldingen når en ordre ikke når fram.
 // Kroker: KROKER.innsyn/skjul/kanOrdre (index.html), KROKER.sim, KROKER.tegn, KROKER.lagKnapper/lagTekst, KROKER.ramme3d.
 // Lagres i nettleseren («riksbrudd-k3»): karakterens plass, nettbrettet og hvilke lag som har feltradio.
 (function () {
@@ -26,11 +28,21 @@
   KROKER.innsyn.push(s => !aktiv() || syn(s).fiender);
   KROKER.skjul.push(s => aktiv() && s.side === 'blå' && !s.karakter && !syn(s).live);
   KROKER.kanOrdre.push(s => { if (!aktiv() || s.karakter || nær(s) || lagInfo(s).kontakt) return true;
-    logg(`${s.navn}: ingen radiokontakt – ordren når ikke fram.`); return false; });
+    logg(`${s.navn}: ingen radiokontakt – ordren når ikke fram. ${stor(hvorfor(s))}.`); return false; });
 
   // ---------- radioen ----------
   // rekkevidden til den beste radiomasten med strøm (0 uten)
   function mast() { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'radiomast' && Leir.virker(b) && harStrøm(b)).reduce((m, b) => Math.max(m, Leir.effekt(b).rekkevidde), 0) : 0; }
+  const stor = t => t.charAt(0).toUpperCase() + t.slice(1);
+  // «12 km fra leiren – håndradioen når 3 km (kjøp feltradio)»
+  const hvorfor = s => { const S = spill(); return K.utenKontakt(s.radio || 'hånd', mast(), Math.hypot(s.x - S.leir.x, s.y - S.leir.y)); };
+  // leirens radio nå: «radiomast nivå 2 – feltradio 25 km, håndradio 3 km» (står øverst i radiolista og brukes av byggpanelet)
+  function radioStatus() {
+    const L = window.LeirSpill && LeirSpill.tilstand(), master = L ? L.bygg.filter(b => b.type === 'radiomast' && Leir.ferdig(b)) : [], m = mast();
+    const best = master.filter(b => Leir.virker(b) && harStrøm(b)).sort((a, b) => Leir.effekt(b).rekkevidde - Leir.effekt(a).rekkevidde)[0];
+    const hva = best ? `radiomast nivå ${best.nivå || 1}` : master.length ? 'radiomasten virker ikke (strøm eller skade)' : 'ingen radiomast';
+    return `${stor(hva)} – feltradio ${K.km(K.rekkevidde('felt', m))}, håndradio ${K.km(K.rekkevidde('hånd', m))}`;
+  }
   const høyde = (v, x, y) => { const [i, j] = Terreng.rute(v, x, y); const h = v.H[Math.max(0, Math.min(v.h - 1, j)) * v.w + Math.max(0, Math.min(v.w - 1, i))]; return h === h ? h : 0; };
   // Kontakt mellom laget og leiren: rekkevidden etter radioene, kortere når terrenget står i veien (profil i 128 m-ruter)
   async function sjekkKontakt(s) {
@@ -90,7 +102,7 @@
 
   // ---------- lagpanelet ----------
   KROKER.lagTekst.push(s => { if (!aktiv() || s.side !== 'blå') return null; if (s.karakter) return 'deg · ' + { kontrollrom: 'i kontrollrommet', nettbrett: `nettbrett ${(+T.nettbrett.batteri).toFixed(1).replace('.', ',')} t`, ute: 'ute' }[modus()];
-    const I = lagInfo(s); return `${K.RADIO[s.radio || 'hånd'].navn.toLowerCase()} · ${I.kontakt ? 'radiokontakt' : 'ingen radiokontakt'}`; });
+    const I = lagInfo(s); return `${K.RADIO[s.radio || 'hånd'].navn.toLowerCase()} ${K.km(K.rekkevidde(s.radio || 'hånd', mast()))} · ${I.kontakt ? 'radiokontakt' : 'ingen radiokontakt: ' + hvorfor(s)}`; });
   KROKER.lagKnapper.push((s, H) => {
     if (!aktiv()) return;
     if (s.karakter) {
@@ -98,7 +110,8 @@
       if (!T.nettbrett.har) H.appendChild(knapp(`Kjøp nettbrett (${Oppstart.kroner(R.nettbrett.pris)})`, false, () => { if (!OppstartSpill.betal(R.nettbrett.pris)) { logg('Ikke nok penger.'); return; } T.nettbrett = { har: true, batteri: R.nettbrett.timer }; lagre(); logg('Du har kjøpt et nettbrett: lagene med radiokontakt vises der de er, også når du er ute.'); visPanel(); visStatus(); }));
       return; }
     if ((s.radio || 'hånd') === 'hånd') H.appendChild(knapp(`Kjøp feltradio (${Oppstart.kroner(K.RADIO.felt.pris)})`, false, () => {
-      if (!OppstartSpill.betal(K.RADIO.felt.pris)) { logg('Ikke nok penger.'); return; } s.radio = 'felt'; T.radio[s.navn] = 'felt'; lagre(); kontaktAkk = 99; logg(`${s.navn} har fått feltradio (15 km).`); visPanel(); }));
+      if (!OppstartSpill.betal(K.RADIO.felt.pris)) { logg('Ikke nok penger.'); return; } s.radio = 'felt'; T.radio[s.navn] = 'felt'; lagre(); kontaktAkk = 99;
+      logg(`${s.navn} har fått feltradio: den når ${K.km(K.rekkevidde('felt', mast()))} nå. ${K.forklaring()}`); visPanel(); })).title = K.forklaring();
   });
 
   // ---------- kontrollrom-skjermen ----------
@@ -142,6 +155,8 @@ body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 
   }
   // radio og feeds tegnes på nytt hvert spillminutt: behold plassen du har bladd til
   function visRadio() { const I = venstre.querySelector('.innhold'), rulle = I.scrollTop; I.innerHTML = '';
+    // rekkevidden nå, og regelen bak (brukeren 12. nov: vis rekkevidden der radiokontakten forklares)
+    I.appendChild(el('div', { klasse: 'melding leir rekkevidde', title: K.forklaring() }, radioStatus() + '.'));
     for (const m of radiolog.slice(0, 40)) I.appendChild(el('div', { klasse: 'melding' + (m.leir ? ' leir' : '') }, `${klokkeslett(m.tid)} `, el('b', {}, m.fra), `: ${m.tekst}`));
     if (!radiolog.length) I.appendChild(el('div', {}, 'Ingen meldinger ennå.')); I.scrollTop = rulle; }
   function visFeeds() { const I = høyre.querySelector('.innhold'), rulle = I.scrollTop; I.innerHTML = '';
@@ -183,6 +198,6 @@ body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 
     kontaktAkk = 99; visStatus(); skitten = true;
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.KontrollromSpill = { start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport,
+  window.KontrollromSpill = { start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport, mast, radioStatus, hvorfor,
     av: v => { av = v !== false; skitten = true; }, lagre, NØKKEL };
 })();

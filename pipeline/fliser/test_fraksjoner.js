@@ -23,4 +23,12 @@ assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal
 assert(F.styrke(lag('A', 0, 0)) === 12 && F.styrke(lag('A', 0, 0), 0) < 3);
 assert(F.sympati('rød', F.FRAKSJONER.rød.akse) === 1 && F.sympati('rød', F.FRAKSJONER.grønn.akse) < .8);
 { const vm = require('vm'), k = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/fraksjoner.js'), 'utf8'), k); assert.equal(typeof k.Fraksjoner.velg, 'function'); }
+// startstedene rundt leiren (feilretting 12. nov: på /norge sto motstanderne bare på Dovre)
+{ const leir = { x: 0, y: 0 }, by = (navn, x, y) => ({ navn, x, y });
+  const st = F.startsteder(leir, [by('For nær', 2000, 0), by('Nord', 0, 9000), by('Nordnabo', 3000, 12000), by('Sør', 0, -20000), by('Langt', 80000, 0)]);
+  assert.equal(st.rød.navn, 'Nord', 'rød: nærmeste tettsted minst 6 km unna'); assert.equal(st.grønn.navn, 'Sør', 'grønn: i en annen retning enn rød');
+  const to = F.startsteder(leir, [by('Nord', 0, 9000), by('Nordøst', 9000, 15000)]); assert.equal(to.grønn.navn, 'Nordøst', 'grønn: ellers nærmeste som ligger 8 km fra rød');
+  const en = F.startsteder(leir, [by('Nord', 0, 9000)]); assert(en.rød.by && !en.grønn.by && Math.hypot(en.grønn.x, en.grønn.y) > 6000, 'ett tettsted: grønn får et punkt i terrenget');
+  const ingen = F.startsteder(leir, []); assert(!ingen.rød.by && !ingen.grønn.by && ingen.rød.x === -9000 && Math.hypot(ingen.rød.x - ingen.grønn.x, ingen.rød.y - ingen.grønn.y) > 8000, 'ingen tettsteder: to punkter i hver sin retning'); }
+console.log('ok – startsteder: nærmeste tettsteder i hver sin retning, ellers punkter i terrenget');
 console.log('ok – AI: ta tettsteder (store foran), garnison og videre, stell/forsyninger, angrip/trekk unna, slått ut trekker seg tilbake');

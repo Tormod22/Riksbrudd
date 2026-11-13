@@ -37,8 +37,13 @@
 
   // ---------- bølger i bakkeshaderen ----------
   const BU = {}; let bShader = null;
-  function bølgeShader(mat) {
+  // uniformene til bølgene (lages første gang de trengs). Fjernterrenget (spill/fjern3d.js) bruker himmelfargen og skummet på sjøen sin.
+  function bølgeU() {
     if (!BU.uBTid) Object.assign(BU, { uBTid: { value: 0 }, uBAmp: { value: .3 }, uBSkum: { value: 0 }, uBDir: { value: new THREE.Vector2(1, 0) }, uBHimmel: { value: new THREE.Color(.7, .78, .85) } });
+    return BU;
+  }
+  function bølgeShader(mat) {
+    bølgeU();
     const før = mat.onBeforeCompile, nøkkel = mat.customProgramCacheKey;
     mat.onBeforeCompile = (sh, rr) => { if (før) før(sh, rr); Object.assign(sh.uniforms, BU); bShader = sh;
       sh.vertexShader = 'varying vec2 vBP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vBP = position.xy;');
@@ -64,7 +69,8 @@
     vec2 bQ = vBP / 7.0 - bDrift * 0.05; float bN0 = texture2D(detalj, bQ).r;
     bG += vec2(texture2D(detalj, bQ + vec2(0.02, 0.0)).r - bN0, texture2D(detalj, bQ + vec2(0.0, 0.02)).r - bN0) * 2.2 * bA * (1.0 - smoothstep(40.0, 200.0, bAvst));
     vec3 bNV = normalize((viewMatrix * vec4(normalize(vec3(-bG, 1.0)), 0.0)).xyz);
-    float bVekt = smoothstep(0.03, 0.5, bVann);
+    // (sno fra bakkeshaderen: islagte innsjoer med sno har ingen bolger; sjoen faar aldri sno)
+    float bVekt = smoothstep(0.03, 0.5, bVann) * (1.0 - sno);
     normal = normalize(mix(normal, bNV, bVekt));
     // skum på bølgetoppene (friskt og mer) og brenninger langs land på havet
     // skumflekker: der bølgetoppen og en flekk i støyen faller sammen (brytes og drives av vinden), lenger ute striper langs vinden
@@ -92,6 +98,10 @@
       let f = 7; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
       for (let k = 0; k < 14; k++) { const x = n * (.25 + rnd() * .5), y = n * (.35 + rnd() * .3), r = n * (.12 + rnd() * .2), gr = g.createRadialGradient(x, y, 0, x, y, r);
         gr.addColorStop(0, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }
+      // kanten tones helt ut i alle retninger: flekkene over rakk ut over bildets venstre og høyre kant, så tåkedottene fikk rette,
+      // loddrette kanter og så ut som halvgjennomsiktige bokser (12. nov)
+      const ut = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); ut.addColorStop(0, 'rgba(0,0,0,1)'); ut.addColorStop(.55, 'rgba(0,0,0,1)'); ut.addColorStop(.8, 'rgba(0,0,0,.45)'); ut.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalCompositeOperation = 'destination-in'; g.fillStyle = ut; g.fillRect(0, 0, n, n); g.globalCompositeOperation = 'source-over';
     } else {
       // blad/fnugg: liten rund flekk med myk kant
       const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.55, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
@@ -158,7 +168,9 @@
   function tåke(R, dt) {
     const V = window.VAER, c = R.cam.position; if (!V) return;
     const lav = R.fot ? 1 : trinn(700, 150, R.bane ? R.bane.avst : 9999);
-    const styrke = Math.max(trinn(.6, .15, V.dis), (V.dalTåke || 0) * .6) * lav; VIND.tåke = 0;
+    // morgentåka ligger i dalene: over tregrensen tones den bort (i tåkevær er det tåke også til fjells)
+    const tg = window.Vegetasjon ? Vegetasjon.tregrense(R.ut.cy) : 1100, dal = (V.dalTåke || 0) * (1 - trinn(tg - 150, tg + 50, c.z / R.EX + R.ut.h0));
+    const styrke = Math.max(trinn(.6, .15, V.dis), dal * .6) * lav; VIND.tåke = 0;
     const fc = R.scene.fog ? R.scene.fog.color : null, m = typeof NATT !== 'undefined' && NATT ? NATT.mørke || 0 : 0, lys = .4 + .6 * (1 - m);
     if (styrke > .02) {
       if (!T) lagTåke(R);
@@ -198,8 +210,12 @@
     const l = (baseFog.r + baseFog.g + baseFog.b) / 3, g = Math.min(.92, l * 1.05 + .06), k = tf * .85;
     fc.setRGB(baseFog.r + (g - baseFog.r) * k, baseFog.g + (g - baseFog.g) * k, baseFog.b + (g * 1.01 - baseFog.b) * k); sistFog.r = fc.r; sistFog.g = fc.g; sistFog.b = fc.b;
     const km = R.kuppel.material; if (!km.transparent) { km.transparent = true; km.needsUpdate = true; }
-    km.opacity = 1 - tf * .9; if (R.skyer) R.skyer.material.opacity = 1 - tf;
-    if (R.scene.background && R.scene.background.isColor && tf > 0) R.scene.background.lerp(fc, tf);
+    // Himmelen går over i disens farge raskere enn disen tetner (o): i regn og storm er disen lysere enn himmelkuppelen og skyene,
+    // så terrenget i det fjerne sto som en hvit vegg med skarp åskam mot en mørkere himmel (12. nov). Nå er regnhimmelen jevnt grå
+    // som disen, og åsene glir over i den.
+    const o = trinn(0, .45, tf);
+    km.opacity = 1 - o * .9; if (R.skyer) R.skyer.material.opacity = 1 - o;
+    if (R.scene.background && R.scene.background.isColor && o > 0) R.scene.background.lerp(fc, o);
     // nede i tåka ser du ca. 120 m (oppe i lufta er tåka et lag under deg, der gjelder disen fra været)
     const lav = (R.fot ? 1 : trinn(450, 120, R.bane ? R.bane.avst : 9999)) * tf;
     if (lav > 0) { fog.far = fog.far + (Math.min(fog.far, 120) - fog.far) * lav; fog.near = Math.min(fog.near, fog.far * (.15 - .13 * lav)); }
@@ -243,7 +259,7 @@
     const f = Math.round(V.vind.fart), r = fra(V.vind.retning), t = `${f} m/s ${RETN[r]}`;
     if (t !== tekst) { tekst = t; el.textContent = t; el.title = `${styrke(V.vind.fart)} fra ${RETN_LANG[r]}`; }
   }, 1000);
-  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND,
+  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND, BU: bølgeU,
     sjekk: () => ({ bølger: !!bShader && !!BU.uBTid, amp: BU.uBAmp ? BU.uBAmp.value : 0, skum: BU.uBSkum ? BU.uBSkum.value : 0, fart: VIND.fart, modus: VIND.modus,
       partikler: VIND.partikler, tåke: VIND.tåke, hav: VIND.hav, havDotter: HAV.length, status: (document.getElementById('sVind') || {}).textContent || '' }) };
 })();

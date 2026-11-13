@@ -17,6 +17,49 @@
       const d = Math.hypot(x - cx, y - cy); if (d < bd && Garnison.inni(by, x, y)) { bd = d; best = [x, y]; } }
     INNE.set(by.e.id, best); return best;
   }
+  // /norge: leiren ligger et annet sted enn Dovre (feilretting 12. nov: nærmeste fiende sto 661 km fra en leir i Lofoten, og ingenting
+  // skjedde). Motstanderne flytter startstedene til de nærmeste tettstedene rundt leiren (regelen: Fraksjoner.startsteder), og lagene
+  // deres – og patruljen, som settes mellom Kystalliansen og leiren – settes ned på land der (Oppstart.startplasser).
+  // En avgrenset løsning: det er fortsatt bare to fraksjoner med to lag hver og én patrulje, nå i nærheten av leiren din.
+  const RETN = ['øst', 'nordøst', 'nord', 'nordvest', 'vest', 'sørvest', 'sør', 'sørøst'];
+  const retning = (dx, dy) => RETN[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
+  // n plasser på land rundt p (ring med radius r); null når det ikke finnes land der
+  async function påLand(p, n, r) {
+    const v = await lagVindu([p.x - 1600, p.y - 1600, p.x + 1600, p.y + 1600], false), pl = Oppstart.startplasser(p, n, 0, v, { radius: r, maks: 1500 });
+    return pl.iVann ? null : pl.lag;
+  }
+  let flyttNr = 0;
+  AI.flytt = async function (leir) {
+    const mitt = ++flyttNr, ut = {};
+    // tettstedene hentes for seg (infrastrukturen): vent på dem i opptil ett minutt
+    for (let i = 0; i < 120 && !(INFRA && INFRA.tettsted); i++) await new Promise(r => setTimeout(r, 500));
+    if (mitt !== flyttNr) return null;
+    const byer = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > leir.x - 50000 && b.bb[0] < leir.x + 50000 && b.bb[3] > leir.y - 50000 && b.bb[1] < leir.y + 50000)
+      .map(b => { const [x, y] = inne(b); return { x, y, navn: b.e.navn }; });
+    const st = F.startsteder(leir, byer);
+    for (const side of AI.sider) {
+      const m = st[side], lag = ENHETER.filter(e => e.side === side && e.ai); let pl = null;
+      // uten tettsted: prøv punktet, og ellers de sju andre retningene rundt leiren, til det finnes land
+      const d0 = Math.hypot(m.x - leir.x, m.y - leir.y), a0 = Math.atan2(m.y - leir.y, m.x - leir.x);
+      for (let k = 0; k < (m.by ? 1 : 8) && !pl; k++) { const p = k ? { x: leir.x + Math.cos(a0 + k * Math.PI / 4) * d0, y: leir.y + Math.sin(a0 + k * Math.PI / 4) * d0 } : m;
+        try { pl = await påLand(p, lag.length, 120); } catch (e) { console.error(e); } if (pl) { m.x = p.x; m.y = p.y; } }
+      if (mitt !== flyttNr) return null;
+      if (!pl) continue;   // bare sjø rundt: denne fraksjonen blir stående der den var
+      HJEM[side] = [m.x, m.y]; lag.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; s.ai.mål = null; });
+      ut[side] = { navn: m.navn, x: m.x, y: m.y, km: Math.round(Math.hypot(m.x - leir.x, m.y - leir.y) / 1000), retning: retning(m.x - leir.x, m.y - leir.y) };
+    }
+    // patruljen (rød, uten AI): på vegen fra Kystalliansen mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
+    const pat = ENHETER.filter(e => e.side === 'rød' && !e.ai);
+    if (ut.rød && pat.length) { const d = Math.hypot(ut.rød.x - leir.x, ut.rød.y - leir.y), t = Math.max(4000, Math.min(12000, d * .5)) / d; let pl = null;
+      for (const p of [{ x: leir.x + (ut.rød.x - leir.x) * t, y: leir.y + (ut.rød.y - leir.y) * t }, { x: ut.rød.x, y: ut.rød.y }]) { if (pl) break;
+        try { pl = await påLand(p, pat.length, p.x === ut.rød.x ? 260 : 60); } catch (e) { console.error(e); } }
+      if (mitt !== flyttNr) return null;
+      if (pl) pat.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; }); }
+    const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? 'i ' + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren`);
+    if (tekst.length) logg(tekst.join('. ') + '.');
+    skitten = true; return ut;
+  };
+  AI.hjem = () => ({ rød: HJEM.rød.slice(), grønn: HJEM.grønn.slice() });
   const byerRundt = (s, r) => ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > s.x - r && b.bb[0] < s.x + r && b.bb[3] > s.y - r && b.bb[1] < s.y + r);
   const eier = by => Garnison.tilstand(TETTSTEDER, by.e.id).eier;
 

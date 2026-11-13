@@ -88,6 +88,11 @@
       for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a2 = ci + di, b2 = cj + dj; if (a2 < 0 || b2 < 0 || a2 >= W || b2 >= W) continue; m[b2 * W + a2] = 1; } }
     const på = (x, y) => { const i = Math.floor((x + u.S) / celle), j = Math.floor((u.S - y) / celle); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] === 1; };
     u.påBane = på;
+    // gjerder og rundballer (spill/gard3d.js, som bygges før denne kroken) står ikke i sporet (feiljakten 12. nov: «gjerder går tvers
+    // over jernbanesporet»). En gjerdebit prøves i begge ender og på midten.
+    if (u.gard) { const sil2 = (data, n, treff) => { const ut = []; for (let k = 0; k < data.length; k += n) if (!treff(data, k)) for (let q = 0; q < n; q++) ut.push(data[k + q]); return new Float32Array(ut); };
+      u.gard.baller = sil2(u.gard.baller, 5, (d, k) => på(d[k], d[k + 1]));
+      u.gard.biter = u.gard.biter.map(b => sil2(b, 6, (d, k) => [0, .5, 1].some(f => på(d[k] + Math.cos(d[k + 3]) * d[k + 4] * f, d[k + 1] + Math.sin(d[k + 3]) * d[k + 4] * f)))); }
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!på(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.smått) { if (u.smått.stein) u.smått.stein = sil(u.smått.stein); if (u.smått.busk) u.smått.busk = sil(u.smått.busk); }

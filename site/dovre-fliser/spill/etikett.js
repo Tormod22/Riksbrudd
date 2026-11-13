@@ -4,7 +4,8 @@
 // Etikett.plass(x, y, bredde, retning) om hvor navnet skal stå. Er plassen tatt, flyttes navnet en linje om gangen
 // oppover (retning −1, navn over symbolet) eller nedover (retning 1, navn under symbolet) til det er ledig.
 (function (rot) {
-  const LINJE = 15, MAKS = 12, tatt = [];
+  const LINJE = 15, MAKS = 30, tatt = [];
+  // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
   const ramme = (x, y, w, h) => [x - w / 2 - 3, y - h + 3, w + 6, h];
   const kolliderer = r => tatt.some(q => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]);

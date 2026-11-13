@@ -541,3 +541,61 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Liv3d.dekke(u, x, y) = vegbanen/brudekket (gange.js går oppå). infra3d: vegbru følger bilveg, gangbru gangveg; p[3] = 1 på bru.
   IKKE FERDIG: etter-bildet ved E136 nord for Dombås viste fortsatt tre brede vegbånd (gangvegmerket når kanskje ikke 3D – sjekk
   R3.ut.vegtype og R3.ut.gangveger i nettleseren), sjekk.js ble ikke kjørt ferdig, ingen VAKT i sjekk.js, 2D-kartet er uendret.
+  SJØ, OMLAND OG 3D-START (12. nov dag, feilretting pakke «hav», brukeren: «Rett alle»): bakkeshaderen (detaljIBakken) leser vannmasken
+  (specularMap) én gang: rød = vann, grønn = flathet (normalens z fra høydegitteret, glattet – vannmaske(px, TW, H, N, steg)); berg i bratte
+  sider og snø bruker den (ikke nettets hjørnenormaler). De trekantete lyse flekkene i lia over Mannheller (nr. 7 i feiljakten) er IKKE
+  borte med dette – de kommer trolig fra skogmaske/skogbunn i bygg3d (32 m-rutene) og gjenstår. Sjø (vann under 1–3 moh.) får aldri snø; islagte
+  innsjøer har ikke bølger eller glans. VANN_GLANS (farge, skarphet, tak) er solglansen på vann – glansen flater ut mot et tak og brenner
+  ikke ut; spill/fjern3d.js bruker de samme tallene, HAVFARGE og himmelspeilingen (Vind3d.BU()) på sjøen i ringen (aVann), så havet ikke
+  har en firkantet kant. havnivå(): lyst strandberg de siste ca. 10 m mot sjøen (når høydegitteret har ruter ≤ 8 m). lagVindu(b, medVeg, ZV,
+  omland): omland = true fyller manglende høyde fra omlandet (fyllOmland – bare 3D: bygg3d og fjern3d; reglene bruker fortsatt bare Norge),
+  så Sverige/Finland har terreng i 3D (uten veger, hus og trær – gjenstår). start3d(): viser kartet over 60 km, åpner 3D ved valgt lag /
+  leiren / nærmeste egne lag (1300 m unna). Oppstart.startplasser (test_oppstart.js): lag og kjøretøy settes på land som henger sammen med
+  leiren (OppstartSpill.påLand, bare et nytt spill / når ringen ikke er rørt). Fraksjoner.startsteder + AI.flytt(leir) (fraksjoner-visning.js):
+  ligger leiren utenfor Dovre-piloten, flytter motstanderne og patruljen til de nærmeste tettstedene rundt leiren (AI.hjem()). Det er
+  fortsatt bare to fraksjoner med to lag hver – et opplegg for hele landet gjenstår. spill/kyst.js: småbåter ute på sjøen bare med land
+  innen 800 m. spill/olje3d.js (test_olje3d.js): plattformer og produksjonsskip fra INFRA.olje i 3D (Olje3d.sjekk()).
+  IKKE GJORT: ytelsen i byene (nr. 1 i feiljakten: 1,6–2,0 mill. trekanter i Bergen/Trondheim/Tromsø) – må måles per del (hus, gatetrær, gatelys) først.
+  NATUR-RETTINGER (12. nov, feiljakten, brukeren: «Rett alle»): fjernterrenget (spill/fjern3d.js) farges per punkt etter årstid og snøgrense
+  med samme regler som bakken (Fjern3d.farge, test_fjern3d.js; over tregrensen blir grønt til grått) og regnes på nytt når været endres.
+  Planter: Vegetasjon.vekst(rel) (glisnere over tregrensen, ingenting fra 1,35 ×), stedIHøyden, vegRute(u.veger) -> u.vegNær (nøyaktig
+  vegbredde med fortau; vegmasken u.påVeg er for grov i store utsnitt); fri(u, x, y) i vegetasjon3d.js = ikke vann, veg/fortau, spor
+  (u.påBane), inntil hus eller på grått i kartet; gress3d bruker iVann3d, u.vegNær, u.påBane og vekst. Navn i 3D: bakHus(v) (husomriss +
+  P.topp fra hus3d) i proj3 og brupunkt3. Buskene: treGeo('busk'/'buskEnkel') med detaljnivå i R3.treLOD (busk: true – ingen stubber ved
+  hogst), snø/høst via treVær(m, slag) i vaer-visning.js (også steinene). Tåke: tåkedottene i vind3d.js har kant som tones helt ut,
+  tåkebankene i natt3d.js er lavere, holdes over bakken (userData.bakke) og finnes bare under tregrensen; regnhimmelen går over i disens
+  farge (gråHimmel: o = trinn(0, .45, tf)). Bakken: flekkene hentes to ganger (17 m og 45 m, dreid) så de ikke står som rutenett, snø har
+  ingen glans, vannIBratt() tar vann bort fra bratt terreng før vannmasken, skogmaske() har myk, ujevn kant (skog.v) og ingen enslige
+  skogruter. Minikartet får snø (Kompass.snø). Butikkskilt: skiltMål holder skiltet under takskjegget. Gjenstår: trær i 22 kV-linjene.
+  KART OG GRENSESNITT PÅ /NORGE (12. nov, feiljakten runde 2, pakke «kart»): spill/kart2d.js (regler uten DOM, test_kart2d.js):
+  skalaMål (målestokken opp til 1000 km), navnepunkt (tettstedsnavnet står inne i tettbebyggelsen – navnP(o) i index.html, brukes i 2D,
+  3D og trykk), åpning (telefon i høydeformat: /norge åpner med Sør-Norge, «hele landet» viser fastlandet – passInnHele), erFyr (rundt
+  bygg i et tettsted blir ikke fyr). RIKSGRENSA: pipeline/fliser/riksgrense.py henter Riksgrense + avtalt avgrensningslinje i sjøen fra
+  Kartverkets WFS (wfs.geonorge.no svarer herfra) -> site/dovre-fliser/data/riksgrense.json (22 KB, én linje fra sør til nord, Norge til
+  venstre); spill/riksgrense.js (les, avstand med fortegn, iNorge; test_riksgrense.js med 41 kjente steder). RIKSGRENSE er en let i
+  index.html (bruk typeof). Leirvalget avviser steder utenfor grensa (Oppstart.gyldigLeir, v.iNorge) og gir Svalbard egen beskjed.
+  kartflis.js: grensevekt() toner Norge-kartet over i omlandet 0,3–3,5 km utenfor grensa (før: rette sømmer i satellittmosaikken inne i
+  Sverige); vektRutenett er 33 × 33; bakgrunnstråden laster spill/riksgrense.js (versjon.py merker den) og får grensa i init-meldingen.
+  Bekker: Bekker.klipp – linjene klippes mot vannmasken i 3D (ingen bekk oppå Nidelva), brede elvemidtlinjer i kartets vannfarge i 2D.
+  Kompass.avstandsplass: avstandstekstene ligger ikke oppå hverandre. Loggen har mørk bakgrunn og tones ut etter 30 s i 2D (hud.js).
+  hus3d: kirker med flatt tak får tårn med spir (ikke takhus). GJENSTÅR i pakken: se scratchpad feiljakt/norge/funn.json (nr. 20, 21,
+  22, 26, 29, 31, 32, 35) – bl.a. skriftene ligger fortsatt på Google Fonts, og striper i satellittmosaikken krever ny kartbygging.
+  BRUKERENS VALG ETTER FEILJAKTEN (12. nov, brukeren svarte på de fire «trenger svar» i feiljakt/mekanikk/funn.json; detaljer i
+  docs/plan-kollaps.md): (1) UTPOSTER ER LOV – du kan bygge hvor som helst, men byggelaget må reise dit: Leir.reise(L, x, y) regner fra
+  leirens midte (L.midt, settes av leir-visning.js ved start – uten den, som i testene, ingen reisetid): de første REGLER.reise.fri = 300 m
+  er fri, resten går i REGLER.reise.kmt = 10 km/t i luftlinje (Claudes tall). Jobben får `reise` (spillminutter; på bygget for ny bygging,
+  på b.arbeid for oppgradering/reparasjon/flytting) som telles ned i steg() før arbeidet – med dt, ikke med byggernes tempo – og opptar
+  byggelaget; steg() gir `framme`. Arbeider et lag alt innen 300 m (en jobb uten reise igjen), blir det ingen ny reise (påStedet), og når et
+  lag kommer fram, nulles reisen for alle jobbene på stedet (delene i byggesettet). Byggelagene er ikke egne figurer, så et annet lag kan
+  ta en jobb på stedet uten å ha reist selv. Visningen: Leir.reiseTekst i banneret før du bekrefter (også byggesettet og maler),
+  «byggelaget er på vei» i byggpanelet, jobblista og kartet, loggen når laget er framme. Hogst/riving har fortsatt 3 km. (2) RADIOMASTEN:
+  Leir.BYGG.radiomast.nivå.rekkevidde = 15/25/40 km = Kontrollrom.LEIR.nivå (test_kontrollrom.js sjekker at de er like). Feltradio når
+  så langt som leirens radio (8 km uten mast eller uten strøm), håndradio 3 km uansett (Claudes valg). Kontrollrom.forklaring() og
+  utenKontakt() gir tekstene i lagpanelet, radiolista, ordre-meldingen og byggpanelet (radioTekst i leir-visning.js). (3) BYGGEPLASSER
+  KAN SKADES: Leir.skad(L, id, mengde) gir { hp, ødelagt, byggeplass, mat } – en ødelagt byggeplass legger andelen ubrukte materialer
+  (igjen/totalt) tilbake i lageret, også over lagerplassen; oppgraderinger husker materialene sine (b.arbeid.mat). Leir.skade() svarer som
+  før. Fiendene i leir-visning.js skader nå alle bygg innen 120 m, også uferdige; delene i byggesettet meldes samlet. (4) DIESEL OG OLJE
+  er fortsatt to systemer: leiren sier «diesel» (Dieseltank – typen heter fortsatt 'drivstofftank', L.drivstoff og Leir.DRIVSTOFF som før),
+  kjøretøyene bruker olje (tonn) fra basen. Forklaringen står i Leir-menyen (#dieseltekst), byggpanelet for tank/aggregat, basepanelet,
+  kjøretøypanelet og hjelpen («Diesel og olje», «Utposter»). Skriv «diesel» om leirens drivstoff i nye tekster. VAKT i sjekk.js
+  («brukerens valg (regler)»); test_leir.js og test_kontrollrom.js. Bilder: scratchpad regler/bilde.js.

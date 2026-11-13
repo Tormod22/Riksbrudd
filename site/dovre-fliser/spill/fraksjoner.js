@@ -51,7 +51,20 @@
   }
   // Sympati 0–1 mellom en fraksjon og en folkemening på de samme tre aksene (1 = helt enig).
   const sympati = (side, akse) => 1 - Math.hypot(...FRAKSJONER[side].akse.map((a, i) => a - akse[i])) / Math.sqrt(3);
-  const api = { FRAKSJONER, REGLER, velg, styrke, slåttUt, sympati };
+  // Hvor motstanderne holder til når leiren ligger et annet sted enn Dovre (feilretting 12. nov: på /norge sto fienden bare på Dovre).
+  // leir: { x, y }; byer: [{ x, y, navn }] (tettstedene i nærheten). Kystalliansen (rød) får det nærmeste tettstedet 6–45 km fra leiren,
+  // Folkefronten (grønn) det nærmeste som ligger minst 8 km fra rødt og helst i en annen retning (over 60° fra rødt sett fra leiren).
+  // Finnes det ikke tettsteder, gis et punkt 9 km vest (rød) / sørøst (grønn) for leiren med by = null – visningen må finne land der.
+  function startsteder(leir, byer, o = {}) {
+    const MIN = o.min || 6000, MAKS = o.maks || 45000, d = b => Math.hypot(b.x - leir.x, b.y - leir.y), vinkel = b => Math.atan2(b.y - leir.y, b.x - leir.x);
+    const kand = (byer || []).filter(b => d(b) >= MIN && d(b) <= MAKS).sort((a, b) => d(a) - d(b));
+    const sted = (b, dx, dy) => (b ? { x: b.x, y: b.y, navn: b.navn, by: b } : { x: leir.x + dx, y: leir.y + dy, navn: null, by: null });
+    const rød = kand[0] || null, unna = b => b !== rød && Math.hypot(b.x - rød.x, b.y - rød.y) >= 8000;
+    const skille = b => { let v = Math.abs(vinkel(b) - vinkel(rød)); if (v > Math.PI) v = 2 * Math.PI - v; return v > Math.PI / 3; };
+    const grønn = rød ? kand.find(b => unna(b) && skille(b)) || kand.find(unna) || null : null;
+    return { rød: sted(rød, -9000, 0), grønn: sted(grønn, 6400, -6400) };
+  }
+  const api = { FRAKSJONER, REGLER, velg, styrke, slåttUt, sympati, startsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Fraksjoner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

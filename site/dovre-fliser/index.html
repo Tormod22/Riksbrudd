@@ -36,6 +36,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 #kilde{ position:fixed; left:12px; right:64px; bottom:calc(8px + env(safe-area-inset-bottom,0px)); font-size:12.5px; color:var(--ink-dim); font-style:italic; text-shadow:0 1px 2px #000; pointer-events:none; }
 .knapper button.på{ background:var(--rule); }
 #logg{ position:fixed; right:10px; top:calc(var(--topp,58px) + 6px); width:250px; font-size:13.5px; color:var(--ink-dim); text-shadow:0 1px 2px #000; pointer-events:none; line-height:1.35; }
+#logg div{ background:rgba(22,18,12,.6); padding:2px 7px; margin-bottom:2px; }
 #lagmeny{ position:fixed; right:10px; top:calc(var(--topp,58px) + 6px); background:var(--panel); border:1px solid var(--rule); padding:8px; display:none; flex-direction:column; gap:4px; z-index:5;
   box-sizing:border-box; max-height:calc(100% - var(--topp,58px) - 16px); overflow-y:auto; overscroll-behavior:contain; }
 #lagmeny.på{ display:flex; }
@@ -103,8 +104,10 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=3b2fc399d0"></script>
+<script src="/dovre-fliser/kartflis.js?v=d5eb66b17a"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
+<script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
+<script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
@@ -138,6 +141,10 @@ const MANIFEST_RELEASE = !KART_TAG ? Promise.resolve(null) : hentManifest(KART_T
 // de andre manifestene spørres det etter samtidig (før: ett om gangen), så et kartlager som ikke svarer koster én tidsgrense, ikke fire
 const MANIFEST_HUS = HUS_TAG ? hentManifest(HUS_TAG) : null, MANIFEST_OMLAND = OMLAND_TAG && ER_NORGE ? hentManifest(OMLAND_TAG) : null, MANIFEST_UTVEG = UTVEG_TAG ? hentManifest(UTVEG_TAG) : null;
 const RELEASE = MANIFEST_RELEASE.then(m => !!m);
+// Riksgrensa (data/riksgrense.json, Kartverket): /norge toner Norge-kartet over i omlandet ved grensa, og leiren kan ikke legges i utlandet.
+// Hentes samtidig med manifestene. Uten den virker alt som før (kartet tones bare mot blokkantene, leirvalget sjekker ikke grensa).
+let RIKSGRENSE = null;
+const RIKSGRENSE_DATA = ER_NORGE ? hentMedFrist(DATA + 'riksgrense.json', FRIST_MANIFEST, 'json').then(s => s.data).catch(() => null) : Promise.resolve(null);
 // Kartflisene (kartflis.js) får vite hvor filene ligger og melder bytene og feilene tilbake hit.
 KF.kartTag = KART_TAG; KF.release = RELEASE; KF.data = DATA;
 KF.vedBytes = (n, kilde) => { STAT.byte += n; STAT.req++; if (kilde) STAT.kilde = kilde; tegnHud(); nettOk(); };
@@ -149,7 +156,7 @@ const KLAR = (async () => {
   if (!m) { try { m = (await hentMedFrist(DATA + 'manifest.json', FRIST_MANIFEST, 'json')).data; } catch (e) { m = null; }
     if (ER_NORGE) norgeMangler(); }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
-  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInn(OMRÅDE); }   // /norge åpner med hele landet
+  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInnHele('åpning'); }   // /norge åpner med hele landet (telefon: Sør-Norge)
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
     document.getElementById('kilde').textContent = `Høyde: Kartverket DTM (CC BY 4.0) · Inneholder modifiserte Copernicus Sentinel-data ${m.år} · Arealtype: ESA WorldCover 2021 (CC BY 4.0) · Veg: NVDB per 1. juni ${m.år} · Bygg: matrikkelen`;
@@ -176,8 +183,10 @@ const KLAR = (async () => {
   if (mangler.length) logg('Fikk ikke hentet ' + mangler.join(', ').replace(/, ([^,]*)$/, ' og $1') + ' (kartlageret svarer ikke). Resten av kartet virker. Last siden på nytt for å prøve igjen.');
   LAGFILER = {};
   for (const [n, liste] of Object.entries(filer)) LAGFILER[n] = liste.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
-  KF.lagfiler = LAGFILER; KF.norgeBlokker = NORGE_BLOKKER;
-  startArbeider(filer, await RELEASE);   // bakgrunnstråden lager kartflisene fra nå av (der nettleseren kan)
+  const rg = NORGE_BLOKKER ? await RIKSGRENSE_DATA : null;
+  if (rg) { try { RIKSGRENSE = Riksgrense.les(rg); } catch (e) { RIKSGRENSE = null; } }
+  KF.lagfiler = LAGFILER; KF.norgeBlokker = NORGE_BLOKKER; KF.riksgrense = RIKSGRENSE;
+  startArbeider(filer, await RELEASE, RIKSGRENSE ? rg : null);   // bakgrunnstråden lager kartflisene fra nå av (der nettleseren kan)
   if (!ARB) for (const liste of Object.values(LAGFILER)) for (const f of liste) f.pm.getHeader().catch(() => {});   // innholdsfortegnelsene hentes med en gang, samtidig
   KLAR_FERDIG = true;
   skitten = true;
@@ -215,10 +224,10 @@ function tegnVest(vx0, vy1) {
 // Komponeringen (dekoding, høyde, skygge, vann, trær, hus …) er tung og gjorde draing og zooming hakkete. Tråden lager
 // flisene og sender ferdige bilder tilbake; siden tegner bare. Uten OffscreenCanvas (eldre Safari) lages de her som før.
 let ARB = null, arbId = 0; const ARB_VENT = new Map();
-function startArbeider(filer, release) {
+function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40a5f39be2');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=c4e83a15da');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -228,7 +237,7 @@ function startArbeider(filer, release) {
     w.onerror = e => { e.preventDefault(); console.error('kartflis-arbeider:', e.message); ARB = null;   // videre lages flisene her
       for (const v of ARB_VENT.values()) v.ok(null); ARB_VENT.clear(); skitten = true; };
     w.postMessage({ type: 'init', kartTag: KART_TAG, release, data: DATA, vis: { ...VIS },
-      norgeBlokker: NORGE_BLOKKER ? [...NORGE_BLOKKER] : null,
+      norgeBlokker: NORGE_BLOKKER ? [...NORGE_BLOKKER] : null, riksgrense,
       filer: Object.fromEntries(Object.entries(filer).map(([n, l]) => [n, l.map(f => ({ fil: f.fil, tag: f.tag || null, zmin: f.zmin, zmax: f.zmax, x6: f.x6 || null }))])) });
     ARB = w;
   } catch (e) { ARB = null; }
@@ -249,7 +258,10 @@ const FERDIG = new Map(), VENTER = new Set(); let aktive = 0, skitten = true;
 function niva() { return Math.max(ZMIN, Math.min(ZMAX, Math.round(Math.log2(G.res0 / (kam.m / dpr))))); }
 function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.clientWidth; VH = cv.clientHeight; cv.width = VW * dpr; cv.height = VH * dpr; skitten = true;
   document.documentElement.style.setProperty('--topp', document.querySelector('.top').getBoundingClientRect().bottom + 'px'); }
-function passInn(b) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * 1.05; skitten = true; }
+function passInn(b, luft = 1.05) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * luft; skitten = true; }
+// Hele området. På /norge med høy, smal skjerm (telefon) ble Norge liten og lå langs venstre kant: der åpner siden med Sør-Norge,
+// og «hele landet»-knappen viser fastlandet (Kart2d.åpning).
+function passInnHele(hva) { const å = ER_NORGE && OMRÅDE !== DOVRE ? Kart2d.åpning(OMRÅDE, VW, VH, hva) : { b: OMRÅDE, luft: 1.05 }; passInn(å.b, å.luft); }
 const HENTET = new Set();   // fliser vi allerede har bedt om data til
 // Ufullstendige fliser (laget under et nettbrudd) prøves på nytt mens de er i bildet: kartet tegnes igjen hvert fjerde sekund så lenge noen
 // gjenstår, og når nettleseren sier at nettet er tilbake, begynner tellingen forfra.
@@ -314,9 +326,9 @@ function tegnHud() {
   const h = på3d && R3 && R3.ut ? hoyde3d(R3.ut.cx + R3.bane.x, R3.ut.cy + R3.bane.y) : peker ? hoydeVed(peker[0], peker[1]) : hoydeVed(kam.x, kam.y);
   document.getElementById('sH').textContent = h == null ? '–' : Math.round(h);
   document.getElementById('skala').hidden = på3d;
-  const mål = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].find(m => m / r >= 70) || 20000;
+  const mål = Kart2d.skalaMål(r);   // helt opp til 1000 km (før stoppet den på 20 km: en strek på 13 punkter når hele landet vises)
   document.getElementById('skalaStrek').style.width = (mål / r) + 'px';
-  document.getElementById('skalaTekst').textContent = mål >= 1000 ? mål / 1000 + ' km' : mål + ' m';
+  document.getElementById('skalaTekst').textContent = Kart2d.skalaTekst(mål);
 }
 // Kartdata som ikke lot seg hente. Nettleserens egne feiltekster er på engelsk («Failed to fetch»): uten nett sier vi det på norsk.
 // Flisene det gjelder lages på nytt av seg selv (kø), og meldingen tas bort når hentingen virker igjen (nettOk).
@@ -389,6 +401,9 @@ const VISES = {
   bru: (o, m) => m < 25 || (o.e.lengde || 0) >= 100 && m < 120 || (o.e.lengde || 0) >= 500 && m < 800 || (o.e.lengde || 0) >= 1000,
 };
 const INFRA_REKKE = ['felt', 'tettsted', 'magasin', 'ror', 'ferje', 'tunnel', 'dam', 'bru', 'ferjekai', 'kraft', 'olje'];
+// Navnet på et tettsted står inne i tettbebyggelsen, lengst fra kanten (Kart2d.navnepunkt, regnes én gang per tettsted) – ikke midt i
+// rammen rundt flaten: «Oslo» sto ute i fjorden (12. nov). Brukes av 2D, 3D og trykk i 3D.
+const navnP = o => o.navnP || (o.navnP = Kart2d.navnepunkt(o.deler, o.bb));
 function tegnInfra(vx0, vy1) { if (INFRA && VIS.infra) tegnInfraPå(ctx, vx0, vy1, kam.m, VW, VH); }
 // Tegner infrastrukturen på en flate med øvre venstre hjørne (vx0, vy1), m meter per punkt og W × H punkter.
 // valg: { linjer, bruer, punkter, etiketter } (alle på som standard). 3D-overflaten tar linjene; bruer, punkter og navn tegnes i 3D for seg.
@@ -410,9 +425,9 @@ function tegnInfraPå(g, vx0, vy1, m, W, H, valg = {}) {
   // tettsteder: omrisset av tettbebyggelsen
   for (const o of synlige('tettsted')) {
     if (m < 600) { g.beginPath(); sti(o, true); g.fillStyle = 'rgba(231,220,195,.05)'; g.fill('evenodd'); g.strokeStyle = 'rgba(231,220,195,.28)'; g.lineWidth = 1; g.stroke(); }
-    const f = o.e.folk, stor = f >= 50000 ? 19 : f >= 10000 ? 16 : f >= 2000 ? 14 : 12.5, [a, b, c, d] = o.bb;
+    const f = o.e.folk, stor = f >= 50000 ? 19 : f >= 10000 ? 16 : f >= 2000 ? 14 : 12.5;
     if (f >= 50000 || f >= 10000 && m < 1500 || f >= 2000 && m < 300 || m < 80)
-      etikett((a + c) / 2, (b + d) / 2, o.e.navn, f >= 50000 ? 0 : f >= 10000 ? 1 : 4, `${f >= 10000 ? '600 ' : ''}${stor}px "IM Fell English",serif`, '#e7dcc3');
+      etikett(...navnP(o), o.e.navn, f >= 50000 ? 0 : f >= 10000 ? 1 : 4, `${f >= 10000 ? '600 ' : ''}${stor}px "IM Fell English",serif`, '#e7dcc3');
   }
   // regulerte magasin (blå flate med stiplet kant) og dammer (tykk lys strek)
   for (const o of synlige('magasin')) { g.beginPath(); sti(o, true); g.fillStyle = 'rgba(90,130,170,.2)'; g.fill('evenodd');
@@ -548,7 +563,7 @@ function tegnInfra3d(g) {
   const etiketter = [], fonter = 'italic 12px "Cormorant Garamond",serif';
   const midt = o => { const a = o.deler[0], k = (a.length >> 2) << 1; return [a[k], a[k + 1]]; };
   for (const o of u.infra) {
-    const [X, Y] = o.lag === 'tettsted' || o.lag === 'magasin' || o.lag === 'felt' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : midt(o);
+    const [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' || o.lag === 'felt' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : midt(o);
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
     const m = mPer3(X, Y); if (!VISES[o.lag](o, m)) continue;
     const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y); if (!q) continue; const [px, py] = q, e = o.e;
@@ -564,7 +579,10 @@ function tegnInfra3d(g) {
 function brupunkt3(o, X, Y) {   // navnet står over dekket, ikke nede i dalen
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;
   const a = o.deler[0], h = Math.max(hoyde3d(a[0], a[1]), hoyde3d(a[a.length - 2], a[a.length - 1]), hoyde3d(X, Y));
-  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * R3.EX + 4).project(R3.cam);
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * R3.EX + 4);
+  // brunavn bak en ås eller et hus skjules som de andre navnene (12. nov: «Jori» og «Hindå Nordre» sto på husveggen)
+  if (bakÅs(v) || bakHus(v)) return null;
+  v.project(R3.cam);
   return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
 }
 // Trykk i 3D: nærmeste symbol, bru eller tettstedsnavn innen 22 punkter.
@@ -573,7 +591,7 @@ function finnInfra3d(cx, cy) {
   let best = null, bd = 22;
   for (const o of u.infra) {
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
-    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' || o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : [a[k], a[k + 1]];
+    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : [a[k], a[k + 1]];
     if (!VISES[o.lag](o, mPer3(X, Y))) continue;
     const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y); if (!q) continue;
     const d = Math.hypot(q[0] - cx, q[1] - cy) + (o.lag === 'tettsted' || o.lag === 'magasin' ? 8 : 0); if (d < bd) { bd = d; best = o; }
@@ -642,7 +660,28 @@ const INFRA_KILDE = { bru: 'NVDB', tunnel: 'NVDB', ferje: 'NVDB', ferjekai: 'NVD
 // Reglene (marsj, sikt) regner på et rutenett med 32 m ruter (z9) som bygges av flisene rundt laget.
 // Ingen laster hele kartet: et vindu henter bare høyde-, terreng- og vegflisene det dekker.
 function flisområde(b, z) { const s = span(z); return [Math.floor((b[0] - G.x0) / s), Math.floor((G.y0 - b[3]) / s), Math.floor((b[2] - G.x0) / s), Math.floor((G.y0 - b[1]) / s)]; }
-async function lagVindu(b, medVeg, ZV = 9) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere)
+// Omlandets høyde (Copernicus, 64 m) der Kartverkets mangler – bare for 3D (feilretting 12. nov: Sverige og Finland var en flat sjø i 3D).
+// Bare i fliser ved eller utenfor kanten av Norge-blokkene (samme regel som kartet bruker for omlandets farger, vektRutenett i kartflis.js):
+// langs norskekysten ellers er manglende høyde hav. Omlandet har ingen høyde i havet, og et punkt fylles bare når alle de fire
+// nabopunktene i omlandet har høyde, så det ikke vokser land ut i sjøen. Feltet omland i vinduet teller punktene som ble fylt.
+async function fyllOmland(v, ZV, x0, y0, x1, y1) {
+  const T = G.T, jobber = []; v.omland = 0;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const ox = (x - x0) * T, oy = (y - y0) * T; let hull = false;
+    for (let j = 0; j < T && !hull; j++) for (let i = 0; i < T; i++) { const k = (oy + j) * v.w + ox + i; if (v.H[k] !== v.H[k]) { hull = true; break; } }
+    if (!hull || vektRutenett(G.x0 + x * span(ZV), G.y0 - y * span(ZV), span(ZV)).every(w => w >= 1)) continue;
+    jobber.push(beste('ohoyde', ZV, x, y, 8, 0).then(oh => {
+      if (!oh) return; const A = oh.t.a, W = oh.t.w, Hh = oh.t.h;
+      for (let j = 0; j < T; j++) for (let i = 0; i < T; i++) { const k = (oy + j) * v.w + ox + i; if (v.H[k] === v.H[k]) continue;
+        const sx = (oh.ix * T + i + .5) / oh.f + .5, sy = (oh.iy * T + j + .5) / oh.f + .5;
+        const a0 = Math.max(0, Math.min(W - 2, Math.floor(sx))), b0 = Math.max(0, Math.min(Hh - 2, Math.floor(sy))), fx = sx - a0, fy = sy - b0, q = b0 * W + a0;
+        const h = (A[q] * (1 - fx) + A[q + 1] * fx) * (1 - fy) + (A[q + W] * (1 - fx) + A[q + W + 1] * fx) * fy;
+        if (h === h) { v.H[k] = h; v.omland++; } }
+    }));
+  }
+  await Promise.all(jobber);
+}
+async function lagVindu(b, medVeg, ZV = 9, omland = false) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere). omland: bare 3D
   b = [Math.max(b[0], OMRÅDE[0]), Math.max(b[1], OMRÅDE[1]), Math.min(b[2], OMRÅDE[2] - 1), Math.min(b[3], OMRÅDE[3] - 1)];
   const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
   const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
@@ -658,6 +697,7 @@ async function lagVindu(b, medVeg, ZV = 9) {   // ZV: detaljnivå (9 = 32 m for 
       for (const o of f.veg.obj) for (const d of o.deler) linjer.push({ k: o.e.k, p: d.map(([a, c]) => [mx + a / e * sv, my - c / e * sv]) });
     })); }
   await Promise.all(jobber);
+  if (omland && NORGE_BLOKKER) await fyllOmland(v, ZV, x0, y0, x1, y1);
   if (medVeg) Terreng.leggInnVeger(v, linjer);
   return v;
 }
@@ -949,25 +989,42 @@ function detaljTekstur() {
   g.putImageData(im, 0, 0); DETALJ = new THREE.CanvasTexture(c); DETALJ.wrapS = DETALJ.wrapT = THREE.RepeatWrapping; DETALJ.anisotropy = 8;
   return DETALJ;
 }
+// Solglansen på vann (feilretting 12. nov: fjorden i Geiranger ble en helt hvit flate når sola sto lavt, og sundet i Tromsø hvite striper).
+// Glansen er smalere (shininess 150, før 70) og svakere, og den flater ut mot et tak i stedet for å brenne ut: vannet blir lyst og blankt
+// under sola, men aldri helt hvitt. Fjernterrenget (spill/fjern3d.js) bruker de samme tallene på sjøen, så havet ikke får en kant.
+const VANN_GLANS = { farge: 0x6c7882, skarphet: 150, tak: 'reflectedLight.directSpecular = 0.42 * (1.0 - exp(-reflectedLight.directSpecular / 0.42));' };
 // Vær og årstid i bakken (spill/vaer-visning.js setter verdiene): snø over snøgrensen på flatt nok terreng, høstfarger på grønt.
 const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 } };
 // Bakkens shader: korn og flekker nær kameraet, høstfarger, snø over snøgrensen, og berg i stedet for strukket kartbilde der det er bratt
 // (brukeren 12. nov: fjellveggene i Jotunheimen var utvasket og utstrukket)
+// Flekkene (flekk) styrer snøgrensen, berget og lysstyrken. De hentes to ganger fra samme tekstur, i ulik målestokk (17 m og 45 m) og
+// dreid 37° i forhold til hverandre: ett oppslag alene gjentok seg hver 17. meter og sto som et tydelig rutemønster i fjellsiden (12. nov).
+// Snø har ingen glans: islagte vann og vann i snøgrensen ble blendende hvite speil om vinteren (specularStrength dempes med snøen).
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
-      float korn = texture2D(detalj, vUv * detaljSkala).r, flekk = texture2D(detalj, vUv * detaljSkala * 0.19).g;
+      vec2 fUv = vUv * detaljSkala;
+      float korn = texture2D(detalj, fUv).r;
+      float flekk = clamp(0.5 + (texture2D(detalj, fUv * 0.19).g + texture2D(detalj, vec2(fUv.x * 0.8 - fUv.y * 0.6, fUv.x * 0.6 + fUv.y * 0.8) * 0.071 + vec2(0.37, 0.61)).g - 1.0) * 0.8, 0.0, 1.0);
+      // flatheten (normalens z) og vannet fra vannmasken (specularMap: r = vann, g = flathet, glattet – se vannmaske); uten maske fra nettet
+      float opp = vOpp, vannM = 0.0;
+      #ifdef USE_SPECULARMAP
+      vec4 maskeT = texture2D(specularMap, vUv); opp = maskeT.g; vannM = maskeT.r;
+      #endif
       float gronn = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronn * (0.55 + 0.45 * flekk));
-      float bratt = smoothstep(0.66, 0.42, vOpp + (flekk - 0.5) * 0.12);
+      float bratt = smoothstep(0.66, 0.42, opp + (flekk - 0.5) * 0.12);
       float lag = 0.5 + 0.5 * sin(vMoh * 0.11 + flekk * 5.0);
       vec3 berg = vec3(0.43, 0.41, 0.37) * mix(1.0, 0.72 + 0.4 * korn, detVekt) * (0.9 + 0.16 * mix(0.5, lag, 1.0 - smoothstep(600.0, 2500.0, detAvst)));
       diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, berg, 0.8), bratt);
-      float sno = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, vOpp + (korn - 0.5) * 0.15);
+      float sno = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, opp + (korn - 0.5) * 0.15);
+      // sjoen fryser ikke (feilretting 12. nov: havet ble hvitt om vinteren): vann paa havnivaa faar aldri sno. Innsjoer faar is med sno.
+      // Havnivaa som i bolgene (spill/vind3d.js): under 1 moh., toner ut til 3 moh.
+      sno *= 1.0 - vannM * (1.0 - smoothstep(1.0, 3.0, vMoh));
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96) * (0.94 + 0.08 * korn), sno);
       diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * korn) * (0.86 + 0.28 * flekk), detVekt * 0.85 * (1.0 - sno * 0.7));
       // helt nær (brukeren 12. nov: «bakken ser blurry ut på nært hold»): finere korn (ca. 0,7 m) og småstein/torver (ca. 0,8 m per rute) som ikke følger kartbildet,
@@ -982,7 +1039,10 @@ function detaljIBakken(mat, side) {
       vec3 naerF = diffuseColor.rgb * (0.8 + 0.4 * k2) * mix(0.72 + 0.46 * k3, (0.7 + 0.55 * k5) * (0.85 + 0.3 * k6), veg);
       naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
       diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));
-      }`);
+      }`)
+      // is med sno paa innsjoene glinser ikke
+      .replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno;')
+      .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n      ' + VANN_GLANS.tak);
   };
 }
 // Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
@@ -990,7 +1050,7 @@ const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
 async function bygg3d(cx, cy, S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
-  const grov = await lagVindu(b, false, Math.min(zD, 11)), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
+  const grov = await lagVindu(b, false, Math.min(zD, 11), true), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
   const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
@@ -1017,8 +1077,9 @@ async function bygg3d(cx, cy, S) {
   // /norge: der kartflisene ikke har noe (havet utenfor dataene) er bildet gjennomsiktig – det ble svart i 3D (Bergen). Fylles med havet.
   if (NORGE_BLOKKER) for (let q = 0; q < px.length; q += 4) if (px[q + 3] < 200) { const a = px[q + 3] / 255; px[q] = px[q] * a + 44 * (1 - a); px[q + 1] = px[q + 1] * a + 74 * (1 - a); px[q + 2] = px[q + 2] * a + 102 * (1 - a); px[q + 3] = 255; }
   // /norge: sjøen i satellittbildet er ofte grå (havna i Bergen ble mørk og ble ikke vann i 3D). Det som ligger på havnivå (under 0,3 m), blir hav.
-  if (NORGE_BLOKKER) havnivå(px, TW, H, N);
-  u.vann = vannmaske(px, TW);
+  if (NORGE_BLOKKER) havnivå(px, TW, H, N, steg);
+  vannIBratt(px, TW, H, N, steg);
+  u.vann = vannmaske(px, TW, H, N, steg);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
   // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
@@ -1030,13 +1091,29 @@ async function bygg3d(cx, cy, S) {
   naturfarger(px, TW); g.putImageData(new ImageData(px, TW, TW), 0, 0);
   return u;
 }
-// Punktene i teksturen der terrenget ligger på havnivå (bilineært i høydenettet), farges i havets farge med en myk kant (0,3–0,8 m)
-function havnivå(px, TW, H, N) {
-  const f = (N - 1) / TW;
+// Punktene i teksturen der terrenget ligger på havnivå (bilineært i høydenettet), farges i havets farge med en myk kant (0,3–0,8 m).
+// Strandkanten (feilretting 12. nov: ved Reinehalsen gled landet over i sjøen som en uskarp, mørk flekk – kartbildet har 16 m per punkt,
+// så de siste meterne mot sjøen er en blanding av land og hav): landet nærmere sjøen enn ca. 10 m og lavere enn 6 moh. farges som
+// lyst strandberg, sterkest i vannkanten, så det blir en tydelig strandlinje. Bare når høydegitteret er fint nok (rutene høyst 8 m).
+function havnivå(px, TW, H, N, steg) {
+  const f = (N - 1) / TW; let hav = false; for (let k = 0; k < N * N; k++) if (H[k] <= .8) { hav = true; break; }
+  if (!hav) return;
+  // avstanden til nærmeste havrute (i ruter, to gjennomløp fram og tilbake), bare nær sjøen
+  let D = null;
+  if (steg <= 8) { D = new Float32Array(N * N); const R2 = 1.414;
+    for (let k = 0; k < N * N; k++) D[k] = H[k] <= .3 ? 0 : 99;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * N + i; let d = D[k]; if (!d) continue;
+      if (i > 0) d = Math.min(d, D[k - 1] + 1); if (j > 0) { d = Math.min(d, D[k - N] + 1); if (i > 0) d = Math.min(d, D[k - N - 1] + R2); if (i < N - 1) d = Math.min(d, D[k - N + 1] + R2); } D[k] = d; }
+    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const k = j * N + i; let d = D[k]; if (!d) continue;
+      if (i < N - 1) d = Math.min(d, D[k + 1] + 1); if (j < N - 1) { d = Math.min(d, D[k + N] + 1); if (i < N - 1) d = Math.min(d, D[k + N + 1] + R2); if (i > 0) d = Math.min(d, D[k + N - 1] + R2); } D[k] = d; } }
   for (let j = 0; j < TW; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
-    for (let i = 0; i < TW; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0;
-      const h = (H[y0 * N + x0] * (1 - a) + H[y0 * N + x0 + 1] * a) * (1 - b) + (H[(y0 + 1) * N + x0] * (1 - a) + H[(y0 + 1) * N + x0 + 1] * a) * b;
-      if (h > .8) continue; const v = h <= .3 ? 1 : (.8 - h) / .5, q = (j * TW + i) * 4;
+    for (let i = 0; i < TW; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0, k = y0 * N + x0;
+      const h = (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b;
+      if (h > (D ? 6 : .8)) continue; const q = (j * TW + i) * 4;
+      if (D && h > .3) { const dm = ((D[k] * (1 - a) + D[k + 1] * a) * (1 - b) + (D[k + N] * (1 - a) + D[k + N + 1] * a) * b) * steg;
+        if (dm < 11) { const w = Math.min(1, (11 - dm) / 8) * (1 - Math.max(0, (h - 3) / 3)) * .78, n = .88 + .24 * (((i * 7919 + j * 104729) * 2654435761 >>> 0) / 4294967296);
+          if (w > 0) { px[q] += (150 * n - px[q]) * w; px[q + 1] += (143 * n - px[q + 1]) * w; px[q + 2] += (128 * n - px[q + 2]) * w; } } }
+      if (h > .8) continue; const v = h <= .3 ? 1 : (.8 - h) / .5;
       px[q] += (44 - px[q]) * v; px[q + 1] += (74 - px[q + 1]) * v; px[q + 2] += (102 - px[q + 2]) * v; px[q + 3] = 255; } }
 }
 // 3D-kartet i naturligere farger: litt mer metning og lys enn papirkartet, og vannet speiler himmelen (lysere blågrått).
@@ -1048,11 +1125,44 @@ function naturfarger(px, TW) {
     px[q] = R < 0 ? 0 : R > 255 ? 255 : R; px[q + 1] = G < 0 ? 0 : G > 255 ? 255 : G; px[q + 2] = B < 0 ? 0 : B > 255 ? 255 : B;
   }
 }
+// Vann ligger flatt. Kartets vannflater er grove ruter (32 m) som strekkes over terrengnettet: ved Snøhetta klatret tjernet under stupet
+// oppover fjellveggen som blå, blanke flater (12. nov). Vannpunkter der terrenget heller mer enn ca. 17° (30 %) males om til ur (grått
+// berg), med myk overgang fra 12°, før vannmasken lages – så blir det verken blått, blankt eller til hinder for den som går der.
+// Helningen regnes slik at ekte vann ikke rammes: langs hver akse teller bare en jevn skråning (den slakeste av de to sidene), ikke en
+// bunn med høyere terreng på begge sider (elv i et gjel) og ikke en strandkant (flatt på den ene siden, bratt på den andre).
+function vannIBratt(px, TW, H, N, steg) {
+  const f = (N - 1) / TW, h = (i, j) => H[Math.max(0, Math.min(N - 1, j)) * N + Math.max(0, Math.min(N - 1, i))];
+  const akse = (a, c, b) => (a >= c - .3 && b >= c - .3 ? 0 : Math.min(Math.abs(b - c), Math.abs(c - a)));
+  // helningen (stigningstall) i høydenettet, regnet én gang per punkt i nettet og bare der det trengs
+  const hell = new Float32Array(N * N).fill(-1), helning = (i, j) => { const k = j * N + i; if (hell[k] < 0) { const c = h(i, j); hell[k] = Math.hypot(akse(h(i - 1, j), c, h(i + 1, j)), akse(h(i, j - 1), c, h(i, j + 1))) / steg; } return hell[k]; };
+  let n = 0;
+  for (let y = 0; y < TW; y++) { const j = Math.min(N - 1, Math.round((y + .5) * f));
+    for (let x = 0; x < TW; x++) { const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (!(B > R + 18 && B > G + 4)) continue;
+      const s = helning(Math.min(N - 1, Math.round((x + .5) * f)), j); if (s < .21) continue;
+      const w = Math.min(1, (s - .21) / .09), l = 96 + ((x * 7 + y * 13) % 11); px[q] = R + (l + 8 - R) * w; px[q + 1] = G + (l + 4 - G) * w; px[q + 2] = B + (l - 6 - B) * w; n++; } }
+  return n;
+}
 // Glans: vann (blått i kartet) får sollys speilet, alt annet er matt. Halv oppløsning holder.
-function vannmaske(px, TW) {
-  const W = TW >> 1, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W);
+// Rød kanal = vann (alle som leser masken, bruker den). Grønn kanal = hvor flatt terrenget er (normalens z, 255 = flatt), glattet:
+// bakkeshaderen bruker den til berg i bratte sider og snø på flatt terreng (feilretting 12. nov: før kom helningen fra hjørnene i
+// terrengnettet, og flekkene med berg fikk sagtakkete, trekantete kanter – lia over Mannheller).
+function vannmaske(px, TW, H, N, steg) {
+  const W = TW >> 1, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W), d = im.data;
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const q = ((j * 2) * TW + i * 2) * 4, R = px[q], G = px[q + 1], B = px[q + 2], o = (j * W + i) * 4;
-    const v = B > R + 18 && B > G + 4 ? 255 : 0; im.data[o] = im.data[o + 1] = im.data[o + 2] = v; im.data[o + 3] = 255; }
+    const v = B > R + 18 && B > G + 4 ? 255 : 0; d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255; }
+  if (H) {
+    // flatheten i høydegitteret (N × N), glattet med naboene, og så strukket til maskens oppløsning
+    const F0 = new Float32Array(N * N), F = new Float32Array(N * N), k2 = 1 / (2 * steg);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * N + i, gx = (H[j * N + Math.min(N - 1, i + 1)] - H[j * N + Math.max(0, i - 1)]) * k2, gy = (H[Math.min(N - 1, j + 1) * N + i] - H[Math.max(0, j - 1) * N + i]) * k2;
+      F0[a] = 1 / Math.sqrt(1 + gx * gx + gy * gy); }
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { let s = 0, n = 0;
+      for (let b = Math.max(0, j - 1); b <= Math.min(N - 1, j + 1); b++) for (let a = Math.max(0, i - 1); a <= Math.min(N - 1, i + 1); a++) { s += F0[b * N + a]; n++; }
+      F[j * N + i] = s / n; }
+    const f = (N - 1) / W;
+    for (let j = 0; j < W; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
+      for (let i = 0; i < W; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0, k = y0 * N + x0;
+        d[(j * W + i) * 4 + 1] = 255 * ((F[k] * (1 - a) + F[k + 1] * a) * (1 - b) + (F[k + N] * (1 - a) + F[k + N + 1] * a) * b) + .5; } }
+  }
   g.putImageData(im, 0, 0); return c;
 }
 // Trær i 3D: gran (mørk, smal) og løvtre/furu (lysere, bredere) i skogrutene (terrengklasse skog, 32 m), 1–4 per rute med fast
@@ -1162,6 +1272,8 @@ async function hus3d(u) {
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
       omriss.push(P);
       const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
+      // takhøyden følger omrisset (bakHus: navn og merker bak huset skjules)
+      P.topp = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX + h;
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge og et skilt med navnet over døra
       const kj = o.e.k ? BUTIKKER[o.e.k] : null;
       const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
@@ -1184,7 +1296,7 @@ async function hus3d(u) {
         for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
           grunnmur(a, b, bunn); veggX(a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .93 : 1))); }
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
-        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], Math.min(bunn + 4.4, raft - .7), o.e.k]);
+        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], bunn + 4.4, o.e.k, raft - .15]);
         if (bs.gesims) gesims(P, raft, veggF);
         cur = B.mur; if (!lokk(P, raft - .03, rt.map(v => v * .7))) stat.utenTak++;
         const e = .3, hu = f.lu / 2 + e, hv = f.lv / 2 + e, p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
@@ -1208,7 +1320,10 @@ async function hus3d(u) {
         // helt rundt bygg: tank nær industri, fyrtårn nær havet (aldri to fyr innen 1,5 km), ellers et rundt bygg med flatt tak
         const D = (f.lu + f.lv) / 2, tank = t === 6 || t === 12 || IND.some(q => Math.hypot(q[0] - mx, q[1] - my) < 150);
         let hav = false; for (let k2 = 0; k2 < 8 && !hav; k2++) { const a = k2 * Math.PI / 4; if (hoyde3d(mx + Math.cos(a) * 80 + u.cx, my + Math.sin(a) * 80 + u.cy, u) < 2) hav = true; }
-        const fyr = !tank && hav && D <= 12 && !fyrer.some(q => Math.hypot(q[0] - mx, q[1] - my) < 1500);
+        // ikke i tettstedene: en rund paviljong i en bypark ved sjøen (Lille Lungegårdsvann i Bergen) ble fyrtårn (12. nov)
+        const iBy = hav && INFRA && INFRA.tettsted && window.Garnison ? INFRA.tettsted.some(by => by.bb[0] <= mx + u.cx && mx + u.cx <= by.bb[2] && by.bb[1] <= my + u.cy && my + u.cy <= by.bb[3] && Garnison.inni(by, mx + u.cx, my + u.cy)) : false;
+        const fyr = Kart2d.erFyr({ tank, hav, iBy, D, nærFyr: fyrer.some(q => Math.hypot(q[0] - mx, q[1] - my) < 1500) });
+        if (hav && !tank && D <= 12) stat.fyr = { fyr: (stat.fyr ? stat.fyr.fyr : 0) + (fyr ? 1 : 0), iBy: (stat.fyr ? stat.fyr.iBy : 0) + (iBy ? 1 : 0) };
         if (tank || fyr) {
           if (fyr) fyrer.push([mx, my]);
           const T1 = fyr ? Math.max(topp, bunn + 15) : topp, hvit = fyr ? [.95, .94, .92] : [.84, .85, .84], rød = [.75, .12, .1];
@@ -1235,7 +1350,7 @@ async function hus3d(u) {
         for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
           grunnmur(a, b, bunn); veggX(a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
-        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], Math.min(bunn + 4.2, raft - .6), o.e.k]);
+        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], bunn + 4.2, o.e.k, raft - .3]);
         cur = B.mur; lokk(P, raft, tak.map(v => v * .7)); stat.tak.deler = (stat.tak.deler || 0) + 1;
         if (d.rekt) for (const q of d.rekt) {
           const hu = q.lu / 2, hv = q.lv / 2, m = Math.min(q.lv * .42, 5, h * .55), p = (du, dv, zz) => [q.sx + q.ux * du + q.vx * dv, q.sy + q.uy * du + q.vy * dv, zz];
@@ -1260,7 +1375,7 @@ async function hus3d(u) {
         const st = STIL[kl] || STIL.hus; stat.tak.sal = (stat.tak.sal || 0) + 1;
         for (let j = 0; j < 4; j++) { grunnmur(A[j], A[(j + 1) % 4], bunn); veggX(A[j], A[(j + 1) % 4], bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
         dør(kl, A[0], A[1], bunn + 1, kl === 'låve' ? .5 : .38);
-        if (kj) skilt.push([A[0], A[1], Math.min(bunn + 4.2, raft - .6), o.e.k]);
+        if (kj) skilt.push([A[0], A[1], bunn + 4.2, o.e.k, raft - møne * .45 / hv - .1]);
         cur = B[st[0]];
         const M0 = p(-hu, 0, topp), M1 = p(hu, 0, topp), nv = Math.max(1, Math.round(f.lv / 3.2)), g0 = (raft - bunn - 1.5) / 3 - .2, g1 = (topp - bunn - 1.5) / 3 - .2;
         // gavlene, med kledning og loftsvindu
@@ -1300,7 +1415,7 @@ async function hus3d(u) {
           grunnmur([ax, ay], [bx, by], bunn); veggX([ax, ay], [bx, by], bunn + 1.5, topp, veggF.map(v => v * (j % 2 ? .92 : 1)));
         }
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
-        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], Math.min(bunn + 4.4, topp - .7), o.e.k]);
+        if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], bunn + 4.4, o.e.k, topp - .15]);
         if ((kl === 'industri' || kl === 'lager') && lengst > 30) for (let f2 = .2; f2 < .95; f2 += Math.max(.15, 14 / lengst)) dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, f2);
         if (kl === 'sykehus') {
           // rødt kors høyt på veggen og helikopterplass på taket
@@ -1323,6 +1438,14 @@ async function hus3d(u) {
           const p = (x, y) => [f.sx + f.ux * (q.du + x) + f.vx * (q.dv + y), f.sy + f.uy * (q.du + x) + f.vy * (q.dv + y)], K = [p(-q.w, -q.d), p(q.w, -q.d), p(q.w, q.d), p(-q.w, q.d)], c = q.mørk ? [.4, .39, .37] : [.66, .66, .64];
           for (let j = 0; j < 4; j++) firkant([K[j][0], K[j][1], topp], [K[(j + 1) % 4][0], K[(j + 1) % 4][1], topp], [K[(j + 1) % 4][0], K[(j + 1) % 4][1], topp + q.hh], [K[j][0], K[j][1], topp + q.hh], c.map(v => v * (j % 2 ? .88 : 1)));
           firkant(...K.map(k => [k[0], k[1], topp + q.hh]), c.map(v => v * .8));
+        } else if (kl === 'kirke') {
+          // Kirke der omrisset ikke ga saltak (Nidarosdomen ble en kloss med ventilasjonshus, 12. nov): tårn med spir på taket ved
+          // den ene enden, størrelsen etter kirken – og ingen takhus.
+          const tw = Math.min(f.lv * .45, Math.max(5, Math.sqrt(f.areal) * .22)), q = tw / 2, hu2 = f.lu / 2, pk = (du, dv) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv];
+          const tc = pk(-hu2 + q + 1, 0), tt = topp + tw * 1.3, H = [pk(-hu2 + 1, -q), pk(-hu2 + 1 + tw, -q), pk(-hu2 + 1 + tw, q), pk(-hu2 + 1, q)];
+          cur = B.kirke; for (let j = 0; j < 4; j++) vegg(H[j], H[(j + 1) % 4], topp - .3, tt, veggF, STIL.kirke);
+          cur = B.mur; for (let j = 0; j < 4; j++) tri([H[j][0], H[j][1], tt], [H[(j + 1) % 4][0], H[(j + 1) % 4][1], tt], [tc[0], tc[1], tt + tw * 2.4], tak.map(v => v * .8));
+          stat.kirketårn = (stat.kirketårn || 0) + 1;
         } else if (f.areal > 350 && kl !== 'uthus') {
           // ventilasjonshus og et lite trapperom på store flate tak
           const q = Math.min(3, Math.sqrt(f.areal) * .12), c0 = [f.sx, f.sy], bokser = [[0, 0, q * 1.6, q, 2.4], [f.lu * .22, 0, q, q * .8, 1.4], [-f.lu * .22, f.lv * .1, q * .9, q * .9, 1.1]];
@@ -1412,11 +1535,19 @@ function skiltTekstur(k) {
   while (g.measureText(navn).width > 470 && fs > 30) { fs -= 4; g.font = `bold ${fs}px sans-serif`; }
   g.fillText(navn, 256, 68); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return (SKILT_TEKSTUR[k] = t);
 }
+// Hvert skilt: [a, b, zc0, k, zTak] – veggen fra a til b, ønsket høyde for midten (ca. 3,3 m over bakken), kjeden og takskjegget
+// (underkanten av takutstikket eller toppen av veggen). Skiltet holdes helt under takskjegget og over døra: på lave bygg med saltak
+// stakk øvre halvdel opp bak takutstikket, så kjedenavnet var kuttet (12. nov). Er det trangt, blir skiltet mindre.
+function skiltMål(L, tegn, zc0, zTak) {
+  let w = Math.min(L * .75, 1.2 + tegn * .55), hh = w / 4;
+  const plass = Math.max(.45, zTak - .05 - (zc0 - 1)); if (hh > plass) { hh = plass; w = hh * 4; }
+  return { w, hh, zc: Math.min(zc0, zTak - .05 - hh / 2) };
+}
 function skilt3d(liste) {
   const per = {};
-  for (const [a, b, zc, k] of liste) { if (!BUTIKKER[k]) continue;
+  for (const [a, b, zc0, k, zTak] of liste) { if (!BUTIKKER[k]) continue;
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 3) continue;
-    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy * .12, ny = -ux * .12, w = Math.min(L * .75, 1.2 + BUTIKKER[k][0].length * .55), hh = w / 4;
+    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy * .12, ny = -ux * .12, { w, hh, zc } = skiltMål(L, BUTIKKER[k][0].length, zc0, zTak == null ? zc0 + 9 : zTak);
     const cx = (a[0] + b[0]) / 2 + nx, cy = (a[1] + b[1]) / 2 + ny, p1 = [cx - ux * w / 2, cy - uy * w / 2], p2 = [cx + ux * w / 2, cy + uy * w / 2];
     const q = per[k] || (per[k] = { pos: [], uv: [] });
     q.pos.push(p1[0], p1[1], zc - hh / 2, p2[0], p2[1], zc - hh / 2, p2[0], p2[1], zc + hh / 2, p1[0], p1[1], zc - hh / 2, p2[0], p2[1], zc + hh / 2, p1[0], p1[1], zc + hh / 2);
@@ -1476,19 +1607,35 @@ function vinduTekstur() {
 // Bakkekart (512 × 512) til gresset: fargen under og om det kan stå gress der (grønt/gult, ikke grått, blått eller hvitt).
 // Skogrutene (terrengklasse skog, 32 m) som maske for utsnittet: [W, Uint8Array] i 512 × 512.
 async function skogmaske(u, b) {
-  const kv = await lagVindu(b, false, 9), W = 512, m = new Uint8Array(W * W);
+  // Brukeren fant 12. nov mørke, skarpe firkanter på jordene («presenninger»): skogklassen ble lest rute for rute (32 m) uten utjevning,
+  // og en enslig skogrute midt på jordet ble malt som mørk skogbunn. Nå: skogandelen jevnes ut mellom rutene (bilineært), kanten får litt
+  // ujevnhet (fast støy), og en skogrute med færre enn to skogruter rundt seg (et par trær på jordet) regnes ikke som skogbunn.
+  // m = 1 der det er skog (som før), v = 0–255 for en myk overgang i skogbunn().
+  const kv = await lagVindu(b, false, 9), W = 512, m = new Uint8Array(W * W), v = new Uint8Array(W * W);
+  const er = (a, c) => a >= 0 && c >= 0 && a < kv.w && c < kv.h && kv.K[c * kv.w + a] === 1;
+  const A = new Float32Array(kv.w * kv.h);
+  for (let c = 0; c < kv.h; c++) for (let a = 0; a < kv.w; a++) { if (!er(a, c)) continue; let n = 0;
+    for (let dc = -1; dc <= 1; dc++) for (let da = -1; da <= 1; da++) if ((da || dc) && er(a + da, c + dc)) n++;
+    A[c * kv.w + a] = n >= 3 ? 1 : n === 2 ? .6 : 0; }
+  const hent = (a, c) => (a >= 0 && c >= 0 && a < kv.w && c < kv.h ? A[c * kv.w + a] : 0);
+  const støy = (X, Y) => { const s = Math.sin(X * .071 + Math.sin(Y * .053) * 1.9) * Math.sin(Y * .067 + Math.sin(X * .047) * 1.7) + .5 * Math.sin(X * .19 + Y * .13) * Math.sin(Y * .23 - X * .11); return s / 1.5; };
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const X = u.cx - u.S + (i + .5) / W * 2 * u.S, Y = u.cy + u.S - (j + .5) / W * 2 * u.S;
-    const a = Math.floor((X - kv.x0) / kv.r), c = Math.floor((kv.y0 - Y) / kv.r); if (a >= 0 && c >= 0 && a < kv.w && c < kv.h && kv.K[c * kv.w + a] === 1) m[j * W + i] = 1; }
-  return { W, m };
+    const fa = (X - kv.x0) / kv.r - .5, fc = (kv.y0 - Y) / kv.r - .5, a0 = Math.floor(fa), c0 = Math.floor(fc), ta = fa - a0, tc = fc - c0;
+    const w = (hent(a0, c0) * (1 - ta) + hent(a0 + 1, c0) * ta) * (1 - tc) + (hent(a0, c0 + 1) * (1 - ta) + hent(a0 + 1, c0 + 1) * ta) * tc;
+    if (w <= 0) continue; const k = Math.max(0, Math.min(1, (w + støy(X, Y) * .22 - .32) / .36)); v[j * W + i] = k * 255; if (k > .5) m[j * W + i] = 1; }
+  return { W, m, v };
 }
 // Skogbunnen: mørkere og brunere (mose, lyng, barnål) enn engene, med myke overganger, så skog og åpen mark skiller seg tydelig.
 function skogbunn(px, TW, skog) {
-  const W = skog.W, st = W / TW;
-  for (let y = 0; y < TW; y++) for (let x = 0; x < TW; x++) {
-    const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (B > R + 18 && B > G + 4) continue;
-    const i = Math.min(W - 1, Math.floor(x * st)), j = Math.min(W - 1, Math.floor(y * st)); if (!skog.m[j * W + i]) continue;
-    const l = (R + G + B) / 3; px[q] = l * .62 + 22; px[q + 1] = l * .7 + 26; px[q + 2] = l * .5 + 14;
-  }
+  const W = skog.W, st = W / TW, V = skog.v;
+  for (let y = 0; y < TW; y++) { const fy = Math.max(0, Math.min(W - 1.001, (y + .5) * st - .5)), j = Math.floor(fy), ty = fy - j, r0 = j * W, r1 = r0 + W;
+    for (let x = 0; x < TW; x++) {
+      const fx = Math.max(0, Math.min(W - 1.001, (x + .5) * st - .5)), i = Math.floor(fx), tx = fx - i;
+      const a = V[r0 + i], b = V[r0 + i + 1], c = V[r1 + i], d = V[r1 + i + 1]; if (!(a | b | c | d)) continue;
+      const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (B > R + 18 && B > G + 4) continue;
+      const w = ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) / 255, l = (R + G + B) / 3;
+      px[q] = R + (l * .62 + 22 - R) * w; px[q + 1] = G + (l * .7 + 26 - G) * w; px[q + 2] = B + (l * .5 + 14 - B) * w;
+    } }
 }
 function bunnkart(px, TW, skog) {
   const W = 512, st = TW / W, rgb = new Uint8Array(W * W * 3), gress = new Uint8Array(W * W);
@@ -1589,14 +1736,20 @@ function treGeo(type) {
     // flate sider (toNonIndexed i legg): hvert hjørne får sin farge, så hver flate får litt ulik tone
     g.computeVertexNormals(); legg(g, (x, y, z) => { const n = .5 + .5 * Math.sin(x * 9.1 + y * 7.3 + z * 5.7), m = .5 + .5 * Math.sin(x * 3.3 - y * 4.1); return z > .3 && m > .55 ? [.4 + .05 * n, .44 + .05 * n, .34] : [.34 + .06 * n, .34 + .05 * n, .33 + .04 * n]; });
   }
-  if (type === 'busk') {   // lav, ujevn busk (einer, dvergbjørk): skjev ikosaeder med klumpete omriss og flekkete grønt
-    let g = new THREE.IcosahedronGeometry(1, 0); const p = g.attributes.position, flytt = new Map();
-    for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 1.91; flytt.set(nøkkel, .72 + .32 * (.5 + .5 * Math.sin(h * 2.7 + 1))); }
-      const f = flytt.get(nøkkel); p.setXYZ(i, p.getX(i) * f, p.getY(i) * f, p.getZ(i) * f); }
-    const nr = new Float32Array(p.count * 3);
-    for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
-    g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, .62, .82); g.translate(0, .32, 0); g.rotateX(Math.PI / 2);
-    legg(g, (x, y, z) => { const n = .5 + .5 * Math.sin(x * 11.3 + y * 8.9 + z * 6.1); return z > .38 ? [.17 + .07 * n, .27 + .06 * n, .11 + .02 * n] : [.11 + .03 * n, .17 + .04 * n, .08]; });
+  // Busker (einer, dvergbjørk, vier): 0,5–1,1 m høye og omtrent dobbelt så brede. Brukeren fant 12. nov at de lå som 5–15 m brede, flate,
+  // mørkegrønne plater («presenninger») – én flattrykt klump skalert 1,6 i bredden. Nå: «busk» (nær kameraet) er fire ujevne klumper
+  // som står opp fra bakken, «buskEnkel» (lenger unna) én klump. Mørkt innerst og nederst, lysere og flekkete i toppen.
+  if (type === 'busk' || type === 'buskEnkel') {
+    const klump = (x, y, z, r, sx, sz, nr0) => { const g = new THREE.IcosahedronGeometry(r, 0), p = g.attributes.position, flytt = new Map();
+      for (let i = 0; i < p.count; i++) { const nøkkel = [p.getX(i), p.getY(i), p.getZ(i)].map(v => v.toFixed(3)).join(); if (!flytt.has(nøkkel)) { const h = flytt.size * 1.91 + nr0 * 2.3; flytt.set(nøkkel, .78 + .4 * (.5 + .5 * Math.sin(h * 2.7 + 1))); }
+        const f = flytt.get(nøkkel); p.setXYZ(i, p.getX(i) * f, p.getY(i) * f, p.getZ(i) * f); }
+      const nr = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
+      g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(sx, sz, sx); g.translate(x, z, -y); g.rotateX(Math.PI / 2);
+      legg(g, (px, py, pz) => { const n = .5 + .5 * Math.sin(px * 11.3 + py * 8.9 + pz * 6.1), t = Math.max(0, Math.min(1, pz / .9)), ute = Math.min(1, Math.hypot(px, py) / .7);
+        return [.09 + .1 * t + .03 * ute + .04 * n, .15 + .14 * t + .03 * ute + .05 * n, .07 + .05 * t + .01 * n]; }); };
+    if (type === 'busk') { klump(0, 0, .46, .5, .92, 1.02, 0); klump(.36, .1, .3, .36, 1, .95, 1); klump(-.3, .24, .32, .36, 1, .95, 2); klump(-.08, -.36, .28, .34, 1, .92, 3); }
+    else klump(0, 0, .38, .62, 1.05, .78, 0);
   }
   const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
   for (const g of deler) { pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
@@ -1670,6 +1823,14 @@ function samle(liste) {
   for (const g of ut) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); return g;
 }
+// Vann i utsnittet på et punkt (x, y relativt til midten): vannmasken (lest én gang, u.vannData – samme form som gange.js og
+// vegetasjon3d.js bruker) eller en bekk (u.iBekk fra bekker-visning.js).
+function iVann3d(u, x, y) {
+  if (u.iBekk && u.iBekk(x, y)) return true;
+  if (!u.vannData) { try { const W = u.vann.width; u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { u.vannData = { W: 0 }; } }
+  const D = u.vannData; if (!D.W) return false; const i = Math.floor((x + u.S) / (2 * u.S) * D.W), j = Math.floor((u.S - y) / (2 * u.S) * D.W);
+  return i >= 0 && j >= 0 && i < D.W && j < D.W && D.d[(j * D.W + i) * 4] > 127;
+}
 // Gress rundt kameraet når du er nær bakken: kryssede gresstuster (bilde med gjennomsiktighet) i bakkens farge, flyttes med deg.
 let GRESSTEX = null;
 function gressTekstur() {
@@ -1692,11 +1853,16 @@ function gress3d() {
   if (R.gressSenter && Math.hypot(c.x - R.gressSenter[0], c.y - R.gressSenter[1]) < 12) return;
   R.gressSenter = [c.x, c.y];
   const MAKS = Math.round(m.instanceMatrix.count * (window.KVAL ? KVAL.p.gress : 1)), RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
+  const tg = window.Vegetasjon ? Vegetasjon.tregrense(u.cy) : 1100;
   const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), .75), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
-    const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue; if (u.påVeg && u.påVeg(x, y)) continue;
-    const k = (j * W + i) * 3, lyng = type === 2, h = lyng ? .14 + rnd() * .16 : .18 + rnd() * .3, z = (hoyde3d(x + u.cx, y + u.cy) - u.h0) * R.EX - .05;
+    const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
+    // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
+    // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
+    if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
+    const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
+    const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set((lyng ? .6 : .4) + rnd() * .3, (lyng ? .6 : .4) + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
     if (lyng) col.setRGB(.13 + rnd() * .05, .2 + rnd() * .06, .08); else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); m.setColorAt(n, col); n++;
   }
@@ -1841,7 +2007,7 @@ function sett3d(u) {
   geo.computeVertexNormals();
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
-  const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: 0x8a96a0, shininess: 70 });   // lys per punkt; bare vannet glinser
+  const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: VANN_GLANS.farge, shininess: VANN_GLANS.skarphet });   // lys per punkt; bare vannet glinser
   detaljIBakken(mat, 2 * u.S); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   // Trærne, steinene og buskene deler geometri (TREGEO), som brukes om igjen. Småtingene (biler, flagg, gatelys) lager sin egen hver gang.
   // dispose() på nettet frigjør instansenes matriser og farger på grafikkortet.
@@ -1850,18 +2016,19 @@ function sett3d(u) {
   R.treMesh = []; R.småMesh = []; R.lyktMat = null;
   const grupper = [];
   if (u.trær) grupper.push([u.trær.gran, .3, treGeo('gran'), treGeo('granEnkel')], [u.trær.løv, .5, treGeo('løv'), treGeo('løvEnkel')]);
-  if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.6, treGeo('busk')]);
+  // buskene har detaljnivå som trærne (flere klumper nær kameraet, én lenger unna; bare de i synsfeltet tegnes)
+  if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.3, treGeo('busk'), treGeo('buskEnkel'), { senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true }]);
   R.treLOD = []; R.lodVed = null;
-  for (const [data, smal, geo, enkel] of grupper) {
+  for (const [data, smal, geo, enkel, valg] of grupper) {
     const n = data.length / 5; if (!n) continue;
     if (enkel) {
       // detaljnivå: trærne nær kameraet med alle greinene, resten som enkle former (trærne var 1,4 av 1,9 mill. trekanter, 11. nov).
       // Matrisene og fargene regnes én gang; lodTrær() fordeler dem på de to nettene når kameraet har flyttet seg.
       const M = new Float32Array(n * 16), C = new Float32Array(n * 3), d = new THREE.Object3D(), c = new THREE.Color();
-      for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - .3); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
+      for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (valg ? valg.senk : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
         d.matrix.toArray(M, k * 16); const f = .82 + v * .36; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
       const lag = g => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.count = 0; m.frustumCulled = false; R.scene.add(m); R.treMesh.push(m); return m; };
-      R.treLOD.push({ n, M, C, data, nær: lag(geo), fjern: lag(enkel) });
+      R.treLOD.push({ n, M, C, data, nær: lag(geo), fjern: lag(enkel), ...(valg || {}) });
       continue;
     }
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), d = new THREE.Object3D(), c = new THREE.Color();
@@ -1909,7 +2076,7 @@ function bak3d() {   // kart + tåke + siktfelt inn i overflaten
 function proj3(X, Y) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
   const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
-  if (bakÅs(v)) return null;
+  if (bakÅs(v) || bakHus(v)) return null;
   v.project(R3.cam);
   return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
 }
@@ -1918,6 +2085,24 @@ function bakÅs(v) {
   const u = R3.ut, c = R3.cam.position, d = Math.hypot(v.x - c.x, v.y - c.y); if (d < 40) return false;
   for (const t of [.07, .13, .2, .27, .33, .4, .47, .53, .6, .67, .73, .8, .87, .93, .97]) { const x = c.x + (v.x - c.x) * t, y = c.y + (v.y - c.y) * t, z = c.z + (v.z + 2 - c.z) * t;
     if ((hoyde3d(x + u.cx, y + u.cy) - u.h0) * R3.EX > z + 2) return true; }
+  return false;
+}
+// Navn og merker bak et hus skal heller ikke synes tvers gjennom veggene (12. nov: «Dombås» og «1. lastebilkolonne» sto som skilt på
+// husveggen når du gikk i gatene). Siktlinja fra kameraet prøves hver 2,5 m de første 300 m mot husomrissene (u.husRute, 20 m-ruter) og
+// takhøyden (P.topp fra hus3d). Huset merket selv står i, skjuler det ikke. Høyt over takene koster dette ingenting.
+function bakHus(v, u = R3.ut, c = R3.cam.position) {
+  const rute = u.husRute; if (!rute || !u.hus || !u.hus.omriss) return false;
+  const dx = v.x - c.x, dy = v.y - c.y, dz = v.z - c.z, d = Math.hypot(dx, dy); if (d < 3) return false;
+  if (u.hus.toppMaks === undefined) { let m = -1e9; for (const P of u.hus.omriss) if (P.topp > m) m = P.topp; u.hus.toppMaks = m; }
+  const maks = u.hus.toppMaks; if (c.z > maks && v.z > maks) return false;
+  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  let egen = null; for (const o of rute.get(Math.floor(v.x / 20) + ',' + Math.floor(v.y / 20)) || []) if (o.P && inni(o.P, v.x, v.y)) { egen = o.P; break; }
+  let ca = NaN, cb = NaN, liste = null;
+  for (let s2 = 2.5, slutt = Math.min(d - 1, 300); s2 < slutt; s2 += 2.5) {
+    const t = s2 / d, z = c.z + dz * t; if (z > maks) { if (dz >= 0) break; continue; }
+    const x = c.x + dx * t, y = c.y + dy * t, a = Math.floor(x / 20), b = Math.floor(y / 20); if (a !== ca || b !== cb) { ca = a; cb = b; liste = rute.get(a + ',' + b); }
+    if (liste) for (const o of liste) if (o.P && o.P !== egen && z < o.P.topp && inni(o.P, x, y)) return true;
+  }
   return false;
 }
 function mPer3(X, Y) { const u = R3.ut, c = R3.cam.position; return Math.hypot(X - u.cx - c.x, Y - u.cy - c.y, (hoyde3d(X, Y) - u.h0) * R3.EX - c.z) * 2 * Math.tan(25 * Math.PI / 180) / VH; }
@@ -2006,6 +2191,18 @@ function tegn3d() {
   if (klipp) g.restore();
   tegnHud();
 }
+// Hvor 3D skal åpne (feilretting 12. nov: «3D» rett fra åpningsbildet på /norge åpnet midt i Sverige, 9 km opp, og viste bare en grå flate).
+// Viser kartet mye mer enn 3D kan (over 60 km bredt – bare på /norge), har spilleren ikke valgt noe sted. Da åpner 3D ved det valgte
+// laget, ellers leiren, ellers det av dine lag som er nærmest midten av kartet, og loggen sier hvor. Ellers: midt i kartet som før.
+function start3d() {
+  if (!(kam.m * VW > 60000)) return null;
+  if (valgt && valgt.x === valgt.x && valgt.y === valgt.y && valgt.x != null) return { x: valgt.x, y: valgt.y, navn: valgt.navn || 'det valgte laget' };
+  const sp = window.OppstartSpill && OppstartSpill.tilstand(), L = sp && sp.leir;
+  if (L && L.x != null) return { x: L.x, y: L.y, navn: 'leiren' };
+  let best = null, bd = Infinity;
+  for (const e of ENHETER) if (e.side === 'blå' && levende(e)) { const d = Math.hypot(e.x - kam.x, e.y - kam.y); if (d < bd) { bd = d; best = e; } }
+  return best ? { x: best.x, y: best.y, navn: best.navn } : null;
+}
 let slå3dNr = 0;
 async function slå3d(på) {
   const knapp = document.getElementById('v3d'), mitt = ++slå3dNr;
@@ -2015,11 +2212,12 @@ async function slå3d(på) {
     if (!R3) init3d();
     på3d = true; knapp.classList.add('på'); knapp.setAttribute('aria-pressed', 'true');
     document.getElementById('c3').hidden = document.getElementById('c3o').hidden = false; cv.style.visibility = 'hidden';
-    const S = utsnittS(kam.m * Math.max(VW, VH) * .6);
-    R3.bane = { x: 0, y: 0, avst: Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
+    const mål = start3d(), S = utsnittS(mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
+    R3.bane = { x: 0, y: 0, avst: mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
     if (R3.ut) { frigjørTerreng(R3); R3.ut = null; }
     R3.byggFeil = 0;
-    logg('Bygger 3D …'); await nytt3dUtsnitt(kam.x, kam.y, S); if (på3d && R3.ut) logg('3D: dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
+    logg('Bygger 3D …'); await nytt3dUtsnitt(mål ? mål.x : kam.x, mål ? mål.y : kam.y, S);
+    if (på3d && R3.ut) logg((mål ? `3D åpnet ved ${mål.navn} – zoom inn i kartet først for å åpne 3D et annet sted. ` : '3D: ') + 'Dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
   } else {
     if (R3 && R3.ut) { const b = R3.bane; kam.x = R3.ut.cx + b.x; kam.y = R3.ut.cy + b.y; kam.m = Math.max(.1, Math.min(60, b.avst / (VH * 1.1))); }
     på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false'); skjulMelding('3d'); if (R3) R3.neste = null;
@@ -2097,7 +2295,7 @@ cv.addEventListener('pointerleave', () => { peker = null; tegnHud(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0016)), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
 document.getElementById('zi').onclick = () => { if (på3d && R3) R3.bane.avst = Math.max(60, R3.bane.avst / 1.6); else zoom(2); };
 document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = Math.min(20000, R3.bane.avst * 1.6); else zoom(.5); };
-document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInn(OMRÅDE); };
+document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInnHele('hele'); };
 document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
 const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
@@ -2121,7 +2319,8 @@ window.lukkPanel = () => { if (document.getElementById('panel').classList.contai
 window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) modus = null; else valgt = null; visPanel(); skitten = true; } });
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
-logg('Dovre, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås. Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
+// (/norge: motstanderne flytter til tettstedene rundt leiren din – AI.flytt i spill/fraksjoner-visning.js)
+logg((ER_NORGE ? 'Norge, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir.' : 'Dovre, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås.') + ' Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 // Ytelse (12. nov): står tida stille (pause) og kameraet har ikke rørt seg på et sekund, tegnes 3D bare fire ganger i sekundet
 // (vind, vann og lys går da tregere, men mobilen slipper å tegne det samme bildet 60 ganger i sekundet). Trykk og taster vekker den.
@@ -2142,12 +2341,12 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=26c7c160cb"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=006c1e002d"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=c03d688ed7"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=349ef35011"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=a400560b02"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
-<script src="/dovre-fliser/spill/okonomi-visning.js?v=3d24ffb64a"></script>
+<script src="/dovre-fliser/spill/okonomi-visning.js?v=6c371b476f"></script>
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
 <script src="/dovre-fliser/spill/forsyning-visning.js?v=ead7533791"></script>
 <script src="/dovre-fliser/spill/odeleggelse.js?v=f9e275fc03"></script>
@@ -2156,64 +2355,65 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=25c9069fdc"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=47ad30087c"></script>
-<script src="/dovre-fliser/spill/fraksjoner.js?v=ef5c6c8c82"></script>
-<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=9af72978dc"></script>
+<script src="/dovre-fliser/spill/fraksjoner.js?v=e21957af97"></script>
+<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=258a0cb8f8"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=864235ae6c"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=f1c4fa1012"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=809a82dbca"></script>
 <script src="/dovre-fliser/spill/veg.js?v=c9f201d7da"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=7848d44557"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
-<script src="/dovre-fliser/spill/bekker.js?v=f2be8b3ffa"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=d121e828ab"></script>
+<script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=a844b125ba"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=26a7536fd9"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=2aac11f29b"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
-<script src="/dovre-fliser/spill/kyst.js?v=6c90c01c75"></script>
+<script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
+<script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>
 <script src="/dovre-fliser/spill/kyst3d.js?v=98f09c90f4"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=329283c7a5"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=7e2c3b4be6"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=9d12b1fe99"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=b0fac9429d"></script>
-<script src="/dovre-fliser/spill/vind3d.js?v=d16520c108"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=a3f99c8198"></script>
+<script src="/dovre-fliser/spill/vind3d.js?v=f5ceac33c3"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
-<script src="/dovre-fliser/spill/vegetasjon.js?v=7a280e2517"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=71d16cb624"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=73cfdc3b03"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
-<script src="/dovre-fliser/spill/oppstart.js?v=922cd38f72"></script>
-<script src="/dovre-fliser/spill/leir.js?v=ee80ef5ec2"></script>
-<script src="/dovre-fliser/spill/folk.js?v=7f4b357c36"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=9f78c1c3ae"></script>
-<script src="/dovre-fliser/spill/kontrollrom.js?v=d8e4de759a"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=d2515dfb2e"></script>
-<script src="/dovre-fliser/spill/folk-visning.js?v=9fd12e50fe"></script>
+<script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
+<script src="/dovre-fliser/spill/leir.js?v=ea634fc8ba"></script>
+<script src="/dovre-fliser/spill/folk.js?v=dbf60ee478"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=10273c8e80"></script>
+<script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=59ee6eb78e"></script>
+<script src="/dovre-fliser/spill/folk-visning.js?v=b8c245ccd5"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=f8a3b97de0"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=690ef82f5b"></script>
-<script src="/dovre-fliser/spill/byggesett-visning.js?v=744e1b0f15"></script>
-<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=5e119d5313"></script>
+<script src="/dovre-fliser/spill/byggesett-visning.js?v=3f864055b7"></script>
+<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=55dc2e7d20"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=0e2c32289c"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=faf02f8e85"></script>
-<script src="/dovre-fliser/spill/gard3d.js?v=b22d87b179"></script>
+<script src="/dovre-fliser/spill/gard3d.js?v=ccff9cd549"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
-<script src="/dovre-fliser/spill/hud.js?v=0413d13579"></script>
+<script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=ccc72042e9"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=f4b0075779"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
-<script src="/dovre-fliser/spill/bane3d.js?v=2935007d46"></script>
+<script src="/dovre-fliser/spill/bane3d.js?v=a935633381"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=e91ff52dbf"></script>

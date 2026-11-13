@@ -85,7 +85,31 @@
   // Hvor tett det er med blomster på stedet (andel av forsøkene som blir en blomst)
   const STEDTETTHET = { eng: .55, veikant: .7, hei: .4, skog: .1 };
 
-  const api = { TRESLAG, REKKE, tregrense, vekter, treslag, åpenMark, BLOMSTER, BLOMSTREKKE, blomstring, blomst, STEDTETTHET };
+  // Hvor godt gress og blomster trives etter høyden (rel = moh / tregrensen): fullt opp til tregrensen, glisnere og lavere oppover i
+  // lavfjellet, og ingenting fra ca. 1,35 × tregrensen (ca. 1480 moh. på Dovre) – der er det stein, lav og snøleier
+  // (12. nov: frodig eng med geitrams lå i ura 1670 moh. ved Snøhetta).
+  function vekst(rel) { const t = klemme((rel - 1) / .35); return 1 - t * t * (3 - 2 * t); }
+  // Stedet blomstene velges etter: over tregrensen er det fjellhei (blåklokke, røsslyng) uansett hva kartet under viser
+  function stedIHøyden(sted, rel) { return rel > 1.05 ? 'hei' : sted; }
+  // Nøyaktig avstand til vegene: veger = [{ k (E/R/F/K/P/S), P: [[x, y, …], …], by (i tettsted: fortau) }] slik liv3d.js lager u.veger.
+  // Gir en funksjon (x, y, ekstra = 0) => true når punktet ligger i kjørebanen, på skulderen eller på fortauet (+ ekstra meter).
+  // Vegmasken u.påVeg er et rutenett over hele utsnittet (3,3 m per rute i et utsnitt på 3,4 km) – for grovt for blomster og gress,
+  // som sto på fortauet (12. nov). Vegbitene ligger i et rutenett på 8 m, så et oppslag bare ser på bitene like ved.
+  const VEGBREDDE = { E: 8, R: 7.5, F: 6.5, K: 5.5, P: 4, S: 3.5 };
+  function vegRute(veger) {
+    const C = 8, rute = new Map();
+    for (const v of veger || []) { const r = (VEGBREDDE[v.k] || 4) / 2 + (v.by ? 2.5 : .8);
+      for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i];
+        for (let cx = Math.floor((Math.min(a[0], b[0]) - r - 3) / C); cx <= Math.floor((Math.max(a[0], b[0]) + r + 3) / C); cx++)
+          for (let cy = Math.floor((Math.min(a[1], b[1]) - r - 3) / C); cy <= Math.floor((Math.max(a[1], b[1]) + r + 3) / C); cy++) {
+            const k = cx * 100003 + cy; let l = rute.get(k); if (!l) rute.set(k, (l = [])); l.push(a[0], a[1], b[0], b[1], r); } } }
+    return (x, y, ekstra = 0) => { const l = rute.get(Math.floor(x / C) * 100003 + Math.floor(y / C)); if (!l) return false;
+      for (let q = 0; q < l.length; q += 5) { const ax = l[q], ay = l[q + 1], vx = l[q + 2] - ax, vy = l[q + 3] - ay, t = klemme(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1));
+        if (Math.hypot(ax + vx * t - x, ay + vy * t - y) < l[q + 4] + Math.min(ekstra, 3)) return true; }
+      return false; };
+  }
+
+  const api = { TRESLAG, REKKE, tregrense, vekter, treslag, åpenMark, BLOMSTER, BLOMSTREKKE, blomstring, blomst, STEDTETTHET, vekst, stedIHøyden, vegRute, VEGBREDDE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vegetasjon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

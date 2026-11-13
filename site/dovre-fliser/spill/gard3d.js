@@ -114,7 +114,7 @@
     legg(d.biter[0], M.stolpe, new THREE.MeshLambertMaterial({ color: 0xffffff }), tre);
     legg(d.biter[0], M.netting, new THREE.MeshLambertMaterial({ color: 0xffffff, map: nettTekstur(), alphaTest: .5, side: THREE.DoubleSide }), () => [.75, .75, .72]);
     legg(d.biter[1], M.skigard, new THREE.MeshLambertMaterial({ color: 0xffffff }), () => [.47, .4, .32]);
-    legg(d.biter[2], M.stein, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), grå);
+    legg(d.biter[2], M.stein, new THREE.MeshLambertMaterial({ color: 0xffffff }), grå);
     sesong();
   });
   // rundballene står ute bare sommer og høst
