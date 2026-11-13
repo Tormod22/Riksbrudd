@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Riksbrudd – Dovre i fliser</title>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/logo/ikon-32.png"><link rel="apple-touch-icon" href="/logo/ikon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="/fonter/fonter.css" rel="stylesheet">
 <style>
 :root{ --bg:#1a1710; --ink:#e7dcc3; --ink-dim:#a69b82; --rule:#5b5140; --hover:#f0d79a; --panel:rgba(22,18,12,.94); color-scheme:dark; }
 html,body{ height:100%; margin:0; }
@@ -104,7 +103,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=d5eb66b17a"></script>
+<script src="/dovre-fliser/kartflis.js?v=b7c67d8d25"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -227,7 +226,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=c4e83a15da');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=89c42b38b6');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -486,7 +485,7 @@ function tegnEtiketter(g, etiketter, W, H) {
     g.font = e.font; const w = g.measureText(e.tekst).width + 6, h = 16, r = [e.x - w / 2, e.y - h / 2, w, h];
     if (tatt.some(q => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3])) continue;
     if (tatt.some(q => q.tekst === e.tekst && Math.hypot(q[0] + q[2] / 2 - e.x, q[1] + q[3] / 2 - e.y) < 250)) continue;   // samme navn (f.eks. hvert tunnelløp) bare én gang
-    r.tekst = e.tekst; tatt.push(r); g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(e.tekst, e.x, e.y); g.fillStyle = e.farge; g.fillText(e.tekst, e.x, e.y);
+    r.tekst = e.tekst; tatt.push(r); if (window.Etikett && Etikett.merk) Etikett.merk(r); g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(e.tekst, e.x, e.y); g.fillStyle = e.farge; g.fillText(e.tekst, e.x, e.y);
   }
 }
 // Symbolene (samme i 2D og 3D). Gir radien tilbake, så navnet kan stå over.
@@ -2351,7 +2350,7 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=006c1e002d"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=cc36a2f4dc"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=c03d688ed7"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=a400560b02"></script>
@@ -2376,7 +2375,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
 <script src="/dovre-fliser/spill/veg.js?v=c9f201d7da"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=7848d44557"></script>
-<script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=e60e6d91e1"></script>
@@ -2398,7 +2397,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=73cfdc3b03"></script>
-<script src="/dovre-fliser/spill/kraft.js?v=c4104755dc"></script>
+<script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
@@ -2416,14 +2415,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lagring.js?v=0e2c32289c"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
-<script src="/dovre-fliser/spill/dyr3d.js?v=faf02f8e85"></script>
+<script src="/dovre-fliser/spill/dyr3d.js?v=6f4ff8f1c3"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=ccff9cd549"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=f4b0075779"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
-<script src="/dovre-fliser/spill/bane3d.js?v=a935633381"></script>
+<script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=e91ff52dbf"></script>

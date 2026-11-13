@@ -5,7 +5,7 @@ Norges hovedveger herfra, så kartet har veger også når man zoomer ut.
 Lag:
   veg   k: 'E' motorveg/stamveg (motorway, trunk), 'R' primary, 'F' secondary, 'K' tertiary  (samme klasser og farger som NVDB)
         n: 1 = i Norge (visningen bruker NVDB der fra z8, og hopper over disse)
-  bane  t: 0 normalspor, 1 smalspor
+  bane  t: 0 normalspor, 1 smalspor; u: 1 = i tunnel (tegnes svakt i 2D, ikke i 3D)
 Hvilke vegklasser på hvilket nivå: se KLASSER. Linjene klippes til flisen (med litt margin) og forenkles etter nivået.
 
 Bruk: python3 utveg.py INN.osm.pbf UTMAPPE   (INN: allerede filtrert med osmium tags-filter, se .github/workflows/utveg.yml)
@@ -39,7 +39,8 @@ class Samler(osmium.SimpleHandler):
         t = w.tags; hw = t.get('highway'); rw = t.get('railway')
         if rw in ('rail', 'narrow_gauge'):
             if t.get('service') in ('yard', 'siding', 'spur', 'crossover') or t.get('usage') in ('industrial', 'military', 'test'): return
-            typ, kl, lenke = 'bane', 1 if rw == 'narrow_gauge' else 0, False
+            # klassen: 1 = smalspor, + 2 når sporet går i tunnel (feiljakten 12. nov: spor i tunnel ble tegnet oppå fjellet)
+            typ, kl, lenke = 'bane', (1 if rw == 'narrow_gauge' else 0) + (2 if t.get('tunnel') not in (None, 'no') else 0), False
         elif hw:
             base = hw[:-5] if hw.endswith('_link') else hw
             if base not in VEG: return
@@ -87,7 +88,7 @@ def fliser(linjer, n):
                     c = [(round((x - minx) * k), round((maxy - y) * k)) for x, y in d.coords]
                     c = [p for j, p in enumerate(c) if j == 0 or p != c[j - 1]]
                     if len(c) < 2: continue
-                    e = {'k': kl, 'n': int(n[i])} if typ == 'veg' else {'t': kl}
+                    e = {'k': kl, 'n': int(n[i])} if typ == 'veg' else ({'t': kl & 1, 'u': 1} if kl & 2 else {'t': kl})
                     lag[typ].append({'geometry': LineString(c), 'properties': e})
             lagliste = [{'name': nm, 'features': f} for nm, f in lag.items() if f]
             if lagliste:

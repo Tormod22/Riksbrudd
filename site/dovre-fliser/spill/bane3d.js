@@ -68,7 +68,8 @@
     const baner = [];
     for (const [x, y, t] of await Promise.all(fl)) {
       if (!t || !t.bane) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.bane.ext || 4096;
-      for (const o of t.bane.obj) for (const d of o.deler) {
+      // spor i tunnel (u = 1 i nyere data) tegnes ikke i 3D
+      for (const o of t.bane.obj) if (!o.e.u) for (const d of o.deler) {
         const P = Regler.tett(d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]))
           .filter(p => Math.abs(p[0]) < u.S - 6 && Math.abs(p[1]) < u.S - 6);
         if (P.length < 4) continue;

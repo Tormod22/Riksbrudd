@@ -1,0 +1,5 @@
+Skriftene i denne mappen:
+- IM Fell English (Igino Marini, The Fell Types) – SIL Open Font License 1.1
+- Cormorant Garamond (Christian Thalmann, Catharsis Fonts) – SIL Open Font License 1.1
+Lisensen: https://openfontlicense.org/open-font-license-official-text/
+Filene er de samme som Google Fonts leverer (latin og latin-ext), lagt her så siden ikke henter noe fra andre nettsteder.

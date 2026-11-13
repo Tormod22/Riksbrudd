@@ -4,12 +4,13 @@
 // Visningen ligger i spill/kraft3d.js (2D-strekene og 3D-mastene).
 (function (rot) {
   // h = masthøyde (m), faser = [tverrs (m), høyde (m)] der linene henger (under isolatorene), topp = toppliner (jordliner),
+  // 22 kV: beltet var 5 m (målt til stammen) og kronene sto inn i ledningene (feiljakten 12. nov) – nå 7,5 m.
   // belte = halv bredde på ryddebeltet i skogen (m), C = kjedelinjeparameter (m): nedheng = L² / (8 C), lys = flyvarsellys på toppen
   const TYPER = {
     portal: { navn: 'Portalmast i stål (300/420 kV)', h: 31, faser: [[-11, 21.5], [0, 21.5], [11, 21.5]], topp: [[-7.5, 31], [7.5, 31]], belte: 20, C: 1400, lys: true, dobbel: true },
     stål: { navn: 'Stålmast (132 kV)', h: 25, faser: [[-6.5, 15.5], [6.5, 15.5], [4.2, 20.5]], topp: [[0, 25]], belte: 15, C: 1200, lys: true },
     h66: { navn: 'H-mast i tre (66 kV)', h: 15, faser: [[-4, 13.2], [0, 13.2], [4, 13.2]], topp: [], belte: 12, C: 1000, lys: false },
-    h22: { navn: 'Trestolper i H-form (22 kV)', h: 10.4, faser: [[-1.7, 10.3], [0, 10.3], [1.7, 10.3]], topp: [], belte: 5, C: 520, lys: false },
+    h22: { navn: 'Trestolper i H-form (22 kV)', h: 10.4, faser: [[-1.7, 10.3], [0, 10.3], [1.7, 10.3]], topp: [], belte: 7.5, C: 520, lys: false },
   };
   function type(kv) { return kv >= 220 ? 'portal' : kv >= 110 ? 'stål' : kv >= 33 ? 'h66' : 'h22'; }
 

@@ -365,9 +365,13 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
     for (const pass of [0, 1]) {
       g.strokeStyle = pass ? '#d9cdb0' : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? w : w + (z <= 7 ? 1.4 : 2.2);
       if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
-      g.beginPath(); for (const o of uv.t.bane.obj) for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); }
+      // spor i tunnel (u = 1 i nyere data) tegnes for seg under, fra z10; lenger ute er de med i streken så banen ikke får hull
+      g.beginPath(); for (const o of uv.t.bane.obj) { if (o.e.u && z > 9) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } }
       g.stroke(); g.setLineDash([]);
     }
+    if (z > 9) { g.strokeStyle = 'rgba(20,15,9,.5)'; g.lineWidth = w; g.setLineDash([Math.max(3, 7 / r), Math.max(3, 7 / r)]);
+      g.beginPath(); for (const o of uv.t.bane.obj) { if (!o.e.u) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } }
+      g.stroke(); g.setLineDash([]); }
   }
   if (v && valg.bygg && !hs && v.t.bygg && z >= 11) bygg(g, z, v.t.bygg.obj.map(o => ({ t: o.e.t, p: P(o.deler[0][0]) })), veger);
   if (hs && hs.t.hus) husomriss(g, z, hs);

@@ -16,11 +16,14 @@
     for (let i = 0; i < MAKS && kolliderer(r); i++) { yy += (retning < 0 ? -1 : 1) * h; r = ramme(x, yy, w, h); }
     tatt.push(r); return yy;
   }
+  // merk(r): en ramme [x, y, bredde, høyde] som alt er tegnet av andre (navnene på infrastrukturen, tegnEtiketter i index.html), så
+  // navnene på lag, kjøretøy og olje ikke legges oppå dem (feiljakten 12. nov: «STURE», «MONGSTAD» og «500 t olje» i én klump)
+  function merk(r) { tatt.push([r[0], r[1], r[2], r[3]]); }
   // tekst(g, t, x, y, retning): måler teksten med skriften som er satt i g, og gir y-en den skal tegnes i
   function tekst(g, t, x, y, retning) { return plass(x, y, g.measureText(t).width, retning); }
   // overlapp(): antall par av navn som fortsatt ligger oppå hverandre i denne rammen (0 når alt fikk plass) – for vakten i sjekk.js
   function overlapp() { let n = 0; for (let i = 0; i < tatt.length; i++) for (let j = i + 1; j < tatt.length; j++) { const r = tatt[i], q = tatt[j];
     if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
-  const E = { nullstill, plass, tekst, antall: () => tatt.length, overlapp, LINJE, MAKS };
+  const E = { nullstill, plass, merk, tekst, antall: () => tatt.length, overlapp, LINJE, MAKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else rot.Etikett = E;
 })(typeof window !== 'undefined' ? window : globalThis);

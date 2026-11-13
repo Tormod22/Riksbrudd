@@ -19,4 +19,7 @@ ok(par === 0, 'fire kjøretøynavn tett i tett: ingen overlapper (' + navn.map(n
 E.nullstill(); ok(E.antall() === 0, 'nullstill tømmer lista');
 for (let i = 0; i < 40; i++) E.plass(0, 0, 50); ok(E.plass(0, 0, 50) >= -E.MAKS * E.LINJE, 'et navn flyttes høyst ' + E.MAKS + ' linjer');
 ok(E.overlapp() > 0, 'overlapp() teller navnene som ikke fikk plass (' + E.overlapp() + ' par)');
+// et navn som alt er tegnet (infrastrukturen) meldes inn med merk(): neste navn på samme sted flyttes unna
+E.nullstill(); E.merk([100 - 30, 200 - 8, 60, 16]); const yUnna = E.plass(100, 205, 50);
+ok(yUnna < 205 && E.overlapp() === 0, 'et lagnavn oppå et infrastrukturnavn flyttes unna (y ' + yUnna + ')');
 process.exit(feil ? 1 : 0);

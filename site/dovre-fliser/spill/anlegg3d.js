@@ -5,7 +5,7 @@
 (function () {
   let mesh = [];
   KROKER.bygg3d.push(async u => {
-    u.anlegg = null; if (u.S > 4200 || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.hus) return;
+    u.anlegg = null; u.flyplass = []; if (u.S > 4200 || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.hus) return;
     const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), mål = [], master = [], kurver = [], sett = new Set(), bensin = [];
     const fl = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]).catch(() => [x, y, null]));
     for (const [x, y, t] of await Promise.all(fl)) {
@@ -13,7 +13,11 @@
         for (const o of t.punkt.obj) { if (o.e.p !== 1 || !o.deler[0]) continue; const [a, b] = o.deler[0][0], X = minx + a * k - u.cx, Y = maxy - b * k - u.cy;
           if (Math.abs(X) < u.S - 30 && Math.abs(Y) < u.S - 30) bensin.push({ x: X, y: Y, k: o.e.k || 0 }); } }
       if (!t || !t.anlegg) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
-      for (const o of t.anlegg.obj) { const a = o.e.a; if (a !== 1 && a !== 3) continue;
+      for (const o of t.anlegg.obj) { const a = o.e.a;
+        // flyplassen (rullebane 7, taksebane 8, oppstillingsplass 9): omrissene tas vare på, så gjerder, rundballer og beitedyr ikke
+        // settes på gresset mellom banene (spill/dyr3d.js, feiljakten 12. nov: sauer og gårdsgjerder på Gardermoen)
+        if (a >= 7 && a <= 9) { for (const d of o.deler) if (d.length > 2) u.flyplass.push(d.map(([p, q]) => [minx + p * k - u.cx, maxy - q * k - u.cy])); continue; }
+        if (a !== 1 && a !== 3) continue;
         for (const d of o.deler) { if (d.length < 5) continue;
           const P = d.slice(0, -1).map(([p, q]) => [minx + p * k - u.cx, maxy - q * k - u.cy]), f = form(P);
           // samme bane kan ligge i to fliser: én gang per midtpunkt (avrundet til 2 m)

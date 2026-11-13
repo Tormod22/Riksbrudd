@@ -23,7 +23,19 @@
     for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
       for (let j = Math.max(0, Math.floor((u.S - y1 - 6) / celle)); j <= Math.min(W - 1, Math.floor((u.S - y0 + 6) / celle)); j++)
         for (let i = Math.max(0, Math.floor((x0 - 6 + u.S) / celle)); i <= Math.min(W - 1, Math.floor((x1 + 6 + u.S) / celle)); i++) m[j * W + i] = 3; }
+    // flyplassen: 120 m rundt rullebaner, taksebaner og oppstillingsplasser (u.flyplass fra spill/anlegg3d.js) er stengt
+    for (const P of u.flyplass || []) { const r = 120, rc = Math.ceil(r / celle);
+      for (let q = 1; q < P.length; q++) { const [ax, ay] = P[q - 1], [bx, by] = P[q], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 40));
+        for (let s = 0; s <= n; s++) { const ci = Math.floor((ax + (bx - ax) * s / n + u.S) / celle), cj = Math.floor((u.S - (ay + (by - ay) * s / n)) / celle);
+          for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= W || j >= W || di * di + dj * dj > rc * rc) continue; if (!m[j * W + i]) m[j * W + i] = 4; } } } }
     u.dyrMaske = { m, celle };
+    // tettstedene: ingen beitedyr, elg, rundballer eller gårdsgjerder inne i byen (feiljakten 12. nov: 99 sauer i Tromsø sentrum)
+    const byer = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted && window.Garnison ? INFRA.tettsted.filter(t => t.bb[2] > u.cx - u.S && t.bb[0] < u.cx + u.S && t.bb[3] > u.cy - u.S && t.bb[1] < u.cy + u.S) : [];
+    // svaret huskes i ruter på 16 m (lovlig() kalles for hvert dyr mens de går)
+    const NB = Math.ceil(2 * u.S / 16), byRute = new Uint8Array(NB * NB);
+    u.iBy = byer.length ? (x, y) => { const i = Math.floor((x + u.S) / 16), j = Math.floor((y + u.S) / 16); if (i < 0 || j < 0 || i >= NB || j >= NB) return false; const q = j * NB + i;
+      if (!byRute[q]) byRute[q] = byer.some(t => Garnison.inni(t, (i + .5) * 16 - u.S + u.cx, (j + .5) * 16 - u.S + u.cy)) ? 2 : 1;
+      return byRute[q] === 2; } : null;
     u.dyrRute = hindringer(u);
     const klasse = (X, Y) => { const i = Math.floor((X - kv.x0) / kv.r), j = Math.floor((kv.y0 - Y) / kv.r); return i < 0 || j < 0 || i >= kv.w || j >= kv.h ? 255 : kv.K[j * kv.w + i]; };
     const gårder = []; for (const P of (u.hus && u.hus.omriss) || []) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } gårder.push([x / P.length, y / P.length]); }
@@ -50,7 +62,7 @@
   function lovlig(u, x, y) {
     const M = u.dyrMaske; if (!M || Math.abs(x) > u.S * .96 || Math.abs(y) > u.S * .96) return false;
     const i = Math.floor((x + u.S) / M.celle), j = Math.floor((u.S - y) / M.celle); if (M.m[j * W + i]) return false;
-    if (hindring3d(x, y, u.dyrRute) || (u.iBekk && u.iBekk(x, y))) return false;
+    if (hindring3d(x, y, u.dyrRute) || (u.iBekk && u.iBekk(x, y)) || (u.iBy && u.iBy(x, y))) return false;
     const h = X => hoyde3d(X[0] + u.cx, X[1] + u.cy, u), h0 = h([x, y]);
     return Math.abs(h([x + 2, y]) - h0) < 1.5 && Math.abs(h([x, y + 2]) - h0) < 1.5;
   }
