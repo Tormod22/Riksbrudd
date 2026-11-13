@@ -1,7 +1,7 @@
 'use strict';
 // Bakgrunnstråd for kartflisene: samme kode som siden (kartflis.js), men komponeringen blokkerer ikke draing og zooming.
 // Siden sender 'init' (kartfilene) og så 'flis' (lag en flis) eller 'hent' (hent dataene på forhånd); svaret er et ImageBitmap.
-importScripts('/dovre-fliser/lib/pmtiles-4.3.0.js', '/dovre-fliser/kartflis.js?v=3b2fc399d0');
+importScripts('/dovre-fliser/lib/pmtiles-4.3.0.js', '/dovre-fliser/spill/riksgrense.js?v=7a24da0c27', '/dovre-fliser/kartflis.js?v=d5eb66b17a');
 let byte = 0, req = 0, kilde = '';
 KF.vedBytes = (n, k) => { byte += n; req++; if (k) kilde = k; };
 setInterval(() => { if (req) { postMessage({ type: 'bytes', n: byte, req, kilde }); byte = 0; req = 0; } }, 300);   // telleren på siden
@@ -11,6 +11,7 @@ onmessage = async ({ data: m }) => {
   if (m.type === 'init') {
     KF.kartTag = m.kartTag; KF.release = Promise.resolve(m.release); KF.data = m.data; KF.vis = m.vis;
     KF.norgeBlokker = m.norgeBlokker ? new Set(m.norgeBlokker) : null; KF.lagfiler = {};
+    KF.riksgrense = m.riksgrense ? Riksgrense.les(m.riksgrense) : null;
     for (const [n, l] of Object.entries(m.filer)) KF.lagfiler[n] = l.map(f => Object.assign({}, f, { pm: new pmtiles.PMTiles(new Kilde(f.fil, f.tag)) }));
     for (const l of Object.values(KF.lagfiler)) for (const f of l) f.pm.getHeader().catch(() => {});   // innholdsfortegnelsene med en gang
     klar(); return;

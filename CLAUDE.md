@@ -557,3 +557,16 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   farge (gråHimmel: o = trinn(0, .45, tf)). Bakken: flekkene hentes to ganger (17 m og 45 m, dreid) så de ikke står som rutenett, snø har
   ingen glans, vannIBratt() tar vann bort fra bratt terreng før vannmasken, skogmaske() har myk, ujevn kant (skog.v) og ingen enslige
   skogruter. Minikartet får snø (Kompass.snø). Butikkskilt: skiltMål holder skiltet under takskjegget. Gjenstår: trær i 22 kV-linjene.
+  KART OG GRENSESNITT PÅ /NORGE (12. nov, feiljakten runde 2, pakke «kart»): spill/kart2d.js (regler uten DOM, test_kart2d.js):
+  skalaMål (målestokken opp til 1000 km), navnepunkt (tettstedsnavnet står inne i tettbebyggelsen – navnP(o) i index.html, brukes i 2D,
+  3D og trykk), åpning (telefon i høydeformat: /norge åpner med Sør-Norge, «hele landet» viser fastlandet – passInnHele), erFyr (rundt
+  bygg i et tettsted blir ikke fyr). RIKSGRENSA: pipeline/fliser/riksgrense.py henter Riksgrense + avtalt avgrensningslinje i sjøen fra
+  Kartverkets WFS (wfs.geonorge.no svarer herfra) -> site/dovre-fliser/data/riksgrense.json (22 KB, én linje fra sør til nord, Norge til
+  venstre); spill/riksgrense.js (les, avstand med fortegn, iNorge; test_riksgrense.js med 41 kjente steder). RIKSGRENSE er en let i
+  index.html (bruk typeof). Leirvalget avviser steder utenfor grensa (Oppstart.gyldigLeir, v.iNorge) og gir Svalbard egen beskjed.
+  kartflis.js: grensevekt() toner Norge-kartet over i omlandet 0,3–3,5 km utenfor grensa (før: rette sømmer i satellittmosaikken inne i
+  Sverige); vektRutenett er 33 × 33; bakgrunnstråden laster spill/riksgrense.js (versjon.py merker den) og får grensa i init-meldingen.
+  Bekker: Bekker.klipp – linjene klippes mot vannmasken i 3D (ingen bekk oppå Nidelva), brede elvemidtlinjer i kartets vannfarge i 2D.
+  Kompass.avstandsplass: avstandstekstene ligger ikke oppå hverandre. Loggen har mørk bakgrunn og tones ut etter 30 s i 2D (hud.js).
+  hus3d: kirker med flatt tak får tårn med spir (ikke takhus). GJENSTÅR i pakken: se scratchpad feiljakt/norge/funn.json (nr. 20, 21,
+  22, 26, 29, 31, 32, 35) – bl.a. skriftene ligger fortsatt på Google Fonts, og striper i satellittmosaikken krever ny kartbygging.

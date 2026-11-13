@@ -21,6 +21,13 @@ const flat = Bekker.fall([[0, 0, 0], [2, 0, 0], [4, 0, .02], [6, 0, .04]]), brat
 ok(Bekker.skum(flat[1]) === 0, 'flat: ingen skum'); ok(Bekker.skum(bratt[1]) > .9, 'bratt (40 %): skum');
 ok(Math.abs(Bekker.avstand([[0, 0], [10, 0]], 5, 3) - 3) < 1e-9, 'avstand til linjen');
 
+// klipp: linjen deles der testen slår til (kulvert, elv som alt er vannflate i kartet); korte stumper tas bort
+{ const L = [[0, 0], [100, 0]], iVann = (x, y) => x > 30 && x < 60 || x > 66 && x < 90;
+  ok(Bekker.klipp(L, () => false) === null, 'klipp: ingenting kuttet gir null');
+  const k = Bekker.klipp(L, iVann, 2); ok(k.length === 3 && k[0][k[0].length - 1][0] === 30 && k[1][0][0] === 60 && k[2][0][0] === 90, 'klipp: bitene utenfor vannet står igjen');
+  ok(k.every(b => b.every(([x, y]) => !iVann(x, y))), 'klipp: ingen punkter i vannet');
+  const k2 = Bekker.klipp(L, iVann, 2, 8); ok(k2.length === 2 && k2[1][0][0] === 90, 'klipp: stumpen på 6 m mellom to vannflater tas bort');
+  ok(Bekker.klipp(L, () => true).length === 0, 'klipp: hele linjen i vannet gir ingen biter'); }
 // nettHøyde: samme trekanter som PlaneGeometry (a-b-d og b-c-d) i et nett som er tett i midten
 { const M = 5, A = .5, S = 100, g = t => t * (A + (1 - A) * t * t), z = [];
   for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) { const x = S * g(-1 + 2 * i / (M - 1)), y = S * g(1 - 2 * j / (M - 1)); z.push(x, y, 2 * x - 3 * y + 7); }

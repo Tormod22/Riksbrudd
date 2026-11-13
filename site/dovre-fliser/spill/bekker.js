@@ -4,6 +4,7 @@
 // Bekker.les(json) -> { linjer: [{ type, orden, navn, P: [[x, y], ...], bb: [x0, y0, x1, y1] }], rute }
 // Bekker.bredde(l): vannets bredde i meter (bekk etter orden, brede elver bredere).
 // Bekker.i(B, bb): linjene som berører et område. Bekker.punkter(P, steg): punkt minst hvert «steg» meter langs linjen.
+// Bekker.klipp(P, test, steg, minLengde): bitene av linjen der test(x, y) ikke slår til (kulvert, elv som alt er vannflate i kartet).
 // Bekker.fall(P3): helning per punkt (|dz| / meter) – brukes til skum der bekken er bratt.
 (function (rot) {
   const RUTE = 2000;
@@ -45,6 +46,15 @@
     for (let k = 0; k < P.length - 1; k++) { const [ax, ay] = P[k], [bx, by] = P[k + 1]; ut.push([ax * .75 + bx * .25, ay * .75 + by * .25], [ax * .25 + bx * .75, ay * .25 + by * .75]); }
     ut.push(P[P.length - 1].slice()); return ut;
   }
+  // Deler linjen der test(x, y) slår til (punkt hver «steg» m). Gir bitene som står igjen, eller null når ingenting ble kuttet.
+  // Biter kortere enn minLengde tas bort (små stumper mellom to vannflater). Brukes til kulvert under veg og til elver som
+  // kartet alt viser som vannflate (12. nov: midtlinjen lå som en smal stripe med steinkant midt i Nidelva).
+  function klipp(P, test, steg = 2, minLengde = 0) {
+    const ut = []; let bit = [], kutt = false;
+    const ferdig = () => { if (bit.length > 1) { let L = 0; for (let k = 1; k < bit.length; k++) L += Math.hypot(bit[k][0] - bit[k - 1][0], bit[k][1] - bit[k - 1][1]); if (L >= minLengde) ut.push(bit); } bit = []; };
+    for (const p of punkter(P, steg)) { if (test(p[0], p[1])) { kutt = true; ferdig(); } else bit.push(p); }
+    if (!kutt) return null; ferdig(); return ut;
+  }
   // helning per punkt over ca. ±2 punkter (P3: [x, y, z])
   function fall(P3) {
     const ut = new Float32Array(P3.length);
@@ -74,6 +84,6 @@
     const Z = (i, j) => z[(j * M + i) * 3 + 2], za = Z(ix, iy), zb = Z(ix, iy + 1), zc = Z(ix + 1, iy + 1), zd = Z(ix + 1, iy);
     return u + v <= 1 ? za + (zd - za) * u + (zb - za) * v : zc + (zb - zc) * (1 - u) + (zd - zc) * (1 - v);
   }
-  const Bekker = { nettHøyde, les, i, bredde, punkter, myk, fall, skum, avstand, RUTE };
+  const Bekker = { nettHøyde, les, i, bredde, punkter, myk, klipp, fall, skum, avstand, RUTE };
   if (typeof module !== 'undefined' && module.exports) module.exports = Bekker; else rot.Bekker = Bekker;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -21,6 +21,9 @@ if __name__ == '__main__':
     h_kf = hashlib.sha256(open(os.path.join(D, 'kartflis.js'), 'rb').read()).hexdigest()[:10]
     pa = os.path.join(D, 'kartflis-arbeider.js'); a_ = open(pa, encoding='utf-8').read()
     a_, n3 = re.subn(r'/dovre-fliser/kartflis\.js\?v=[0-9a-f]+', f'/dovre-fliser/kartflis.js?v={h_kf}', a_); assert n3 == 1, n3
+    for f in set(re.findall(r'/dovre-fliser/(spill/[a-z0-9_-]+\.js)\?v=', a_)):   # spillmoduler tråden laster (riksgrense.js)
+        h = hashlib.sha256(open(os.path.join(D, f), 'rb').read()).hexdigest()[:10]
+        a_ = re.sub(r'/dovre-fliser/' + re.escape(f) + r'\?v=[0-9a-f]+', f'/dovre-fliser/{f}?v={h}', a_)
     open(pa, 'w', encoding='utf-8').write(a_)
     for f in re.findall(r'/dovre-fliser/(kartflis(?:-arbeider)?\.js)\?v=', s):
         h = hashlib.sha256(open(os.path.join(D, f), 'rb').read()).hexdigest()[:10]
