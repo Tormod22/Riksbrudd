@@ -25,6 +25,8 @@
     tilSkjerm: (dx, dy, kurs, roter) => { const a = roter ? kurs / RAD : 0, c = Math.cos(a), s = Math.sin(a); return [dx * c - dy * s, -(dx * s + dy * c)]; },
     // tilbake fra minikartet (piksler fra midten, y ned) til kartet
     fraSkjerm: (px, py, kurs, roter) => { const a = roter ? kurs / RAD : 0, c = Math.cos(a), s = Math.sin(a); return [px * c - py * s, -(px * s + py * c)]; },
+    // hvor mye snø minikartet viser (0–1) når stedet ligger moh meter over havet og snøgrensen er sg: samme myke overgang som bakken i 3D
+    snø: (moh, sg) => { const t = Math.max(0, Math.min(1, (moh - (sg - 70)) / 140)); return t * t * (3 - 2 * t); },
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = R; return; }
 
@@ -174,7 +176,10 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
     const D = mk.clientWidth || 200, d = Math.min(2, window.devicePixelRatio || 1), nå = performance.now();
     // tegnes på nytt når kameraet har flyttet/snudd seg merkbart, ellers fire ganger i sekundet (lagene går)
     const r = k.fot ? 250 : Math.max(300, Math.min(k.u.S * .95, k.avst * 1.4)), cx = k.fot ? k.kx : k.mx, cy = k.fot ? k.ky : k.my;
-    const nk = [Math.round(cx / (r / 60)), Math.round(cy / (r / 60)), Math.round(k.kurs * 2), Math.round(r), roter, R3_.nøkkel, D].join('|');
+    // snø i minikartet: over snøgrensen (hele vinteren) er bakken hvit i 3D, men kartbildet under er sommerkartet (12. nov: minikartet
+    // var grønt og brunt midt på vinteren). Snøen legges oppå kartbildet når stedet midt i minikartet ligger over snøgrensen.
+    const VR = window.VAER, sg = VR && VR.snøgrense != null ? VR.snøgrense : 1e9, snø = R.snø(hoyde3d(cx, cy), sg);
+    const nk = [Math.round(cx / (r / 60)), Math.round(cy / (r / 60)), Math.round(k.kurs * 2), Math.round(r), roter, R3_.nøkkel, D, Math.round(snø * 10)].join('|');
     if (nk === mini.nøkkel && nå - mini.sist < 250) return; mini.nøkkel = nk; mini.sist = nå; mini.r = r; mini.cx = cx; mini.cy = cy; mini.kurs = k.kurs;
     if (mc.width !== D * d) { mc.width = mc.height = D * d; }
     const g = mc.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, D, D);
@@ -187,6 +192,16 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
       const sx = (cx - (u.cx - u.S)) / mpp, sy = ((u.cy + u.S) - cy) / mpp, sr = r * 1.45 / mpp;
       g.globalAlpha = .92; g.drawImage(T, sx - sr, sy - sr, sr * 2, sr * 2, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm); g.globalAlpha = 1;
       g.restore();
+      if (snø > .05) {
+        // fargene tas bort og det lyse blir hvitt: jorder og hei blir snø, veger og tak står igjen som grått, skogen som mørkere flekker.
+        // Kan ikke nettleseren blandingen, legges et hvitt slør over i stedet.
+        g.globalAlpha = snø; g.globalCompositeOperation = 'saturation';
+        if (g.globalCompositeOperation === 'saturation') { g.fillStyle = 'rgb(128,128,128)'; g.fillRect(0, 0, D, D); g.globalCompositeOperation = 'color-dodge'; }
+        if (g.globalCompositeOperation === 'color-dodge') { g.fillStyle = 'rgb(150,152,158)'; g.fillRect(0, 0, D, D); }
+        else { g.globalCompositeOperation = 'source-over'; g.globalAlpha = snø * .7; g.fillStyle = 'rgb(232,236,242)'; g.fillRect(0, 0, D, D); }
+        g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+      }
+      mini.snø = snø;
     }
     // mørk kant, som på en gammel radarskjerm
     const vg = g.createRadialGradient(M, M, RI * .55, M, M, RI); vg.addColorStop(0, 'rgba(14,11,7,0)'); vg.addColorStop(1, 'rgba(14,11,7,.55)'); g.fillStyle = vg; g.fillRect(0, 0, D, D);

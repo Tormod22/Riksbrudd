@@ -53,25 +53,36 @@
 
   // ---------- 3D: trær, gress, dis og nedbør ----------
   // Grantrærne får snø på greinene over snøgrensen, bjørkene høstfarger (hver sin tone) eller står nakne om vinteren.
-  function treVær(m, løv) {
+  // Buskene (einer, dvergbjørk) blir rødbrune om høsten og ligger som snødekte tuer med litt kvist om vinteren, og steinene får
+  // snø oppå (12. nov: buskene lå igjen som mørkegrønne flekker på snøen). slag: 'gran', 'løv', 'busk' eller 'stein'.
+  function treVær(m, slag) {
     const før = m.material.onBeforeCompile;
+    const farge = {
+      løv: `vec3 lovFarge = mix(vec3(0.95, 0.72, 0.18), vec3(0.85, 0.32, 0.1), step(0.7, vTFro)) * (0.75 + 0.35 * vTFro);
+        diffuseColor.rgb = mix(diffuseColor.rgb, lovFarge, uHostLov * (0.55 + 0.4 * vTFro));
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.37, 0.33), uNaken * 0.85);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNaken * 0.5);`,
+      busk: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.27, 0.1) * (0.7 + 0.5 * vTFro), uHostLov * step(0.45, vTFro) * 0.6);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.31, 0.28), uNaken * 0.7);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.35, 0.35, vTOpp) * 0.93);`,
+      stein: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(0.05, 0.6, vTOpp) * 0.92);`,
+      gran: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`,
+    }[slag];
     m.material.onBeforeCompile = (sh, r) => { if (før) før(sh, r); Object.assign(sh.uniforms, TRE_U, { uSnoGrense: VAER_U.uSnoGrense, uH0: VAER_U.uH0 });
       sh.vertexShader = 'uniform float uH0;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         vTOpp = objectNormal.z; vTMoh = instanceMatrix[3].z + uH0; vTFro = fract(sin(instanceMatrix[3].x * 12.9898 + instanceMatrix[3].y * 78.233) * 43758.5453);`);
       sh.fragmentShader = 'uniform float uSnoGrense;\nuniform float uHostLov;\nuniform float uNaken;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
         float tSno = smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);
-        ${løv ? `vec3 lovFarge = mix(vec3(0.95, 0.72, 0.18), vec3(0.85, 0.32, 0.1), step(0.7, vTFro)) * (0.75 + 0.35 * vTFro);
-        diffuseColor.rgb = mix(diffuseColor.rgb, lovFarge, uHostLov * (0.55 + 0.4 * vTFro));
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.37, 0.33), uNaken * 0.85);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNaken * 0.5);` : `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`}`);
+        ${farge}`);
     };
-    // samme funksjonstekst for gran og løv: egen nøkkel, ellers deler de program i three.js-hurtigbufferen
-    m.material.customProgramCacheKey = () => 'vær|' + løv + '|' + !!før;
+    // samme funksjonstekst for alle slagene: egen nøkkel, ellers deler de program i three.js-hurtigbufferen
+    m.material.customProgramCacheKey = () => 'vær|' + slag + '|' + !!før;
     m.material.needsUpdate = true;
   }
   KROKER.sett3d.push((u, R) => {
     VAER_U.uH0.value = u.h0;
-    for (const m of R.treMesh || []) if ([TREGEO.gran, TREGEO['løv'], TREGEO.granEnkel, TREGEO['løvEnkel']].includes(m.geometry)) treVær(m, m.geometry === TREGEO['løv'] || m.geometry === TREGEO['løvEnkel']);
+    const SLAG = new Map([[TREGEO.gran, 'gran'], [TREGEO.granEnkel, 'gran'], [TREGEO['løv'], 'løv'], [TREGEO['løvEnkel'], 'løv'], [TREGEO.busk, 'busk'], [TREGEO.buskEnkel, 'busk'], [TREGEO.stein, 'stein']]);
+    for (const m of R.treMesh || []) { const slag = SLAG.get(m.geometry); if (slag) treVær(m, slag); }
   });
 
   function lagFall(R) {

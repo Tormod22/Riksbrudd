@@ -98,6 +98,10 @@
       let f = 7; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
       for (let k = 0; k < 14; k++) { const x = n * (.25 + rnd() * .5), y = n * (.35 + rnd() * .3), r = n * (.12 + rnd() * .2), gr = g.createRadialGradient(x, y, 0, x, y, r);
         gr.addColorStop(0, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }
+      // kanten tones helt ut i alle retninger: flekkene over rakk ut over bildets venstre og høyre kant, så tåkedottene fikk rette,
+      // loddrette kanter og så ut som halvgjennomsiktige bokser (12. nov)
+      const ut = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); ut.addColorStop(0, 'rgba(0,0,0,1)'); ut.addColorStop(.55, 'rgba(0,0,0,1)'); ut.addColorStop(.8, 'rgba(0,0,0,.45)'); ut.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalCompositeOperation = 'destination-in'; g.fillStyle = ut; g.fillRect(0, 0, n, n); g.globalCompositeOperation = 'source-over';
     } else {
       // blad/fnugg: liten rund flekk med myk kant
       const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.55, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
@@ -164,7 +168,9 @@
   function tåke(R, dt) {
     const V = window.VAER, c = R.cam.position; if (!V) return;
     const lav = R.fot ? 1 : trinn(700, 150, R.bane ? R.bane.avst : 9999);
-    const styrke = Math.max(trinn(.6, .15, V.dis), (V.dalTåke || 0) * .6) * lav; VIND.tåke = 0;
+    // morgentåka ligger i dalene: over tregrensen tones den bort (i tåkevær er det tåke også til fjells)
+    const tg = window.Vegetasjon ? Vegetasjon.tregrense(R.ut.cy) : 1100, dal = (V.dalTåke || 0) * (1 - trinn(tg - 150, tg + 50, c.z / R.EX + R.ut.h0));
+    const styrke = Math.max(trinn(.6, .15, V.dis), dal * .6) * lav; VIND.tåke = 0;
     const fc = R.scene.fog ? R.scene.fog.color : null, m = typeof NATT !== 'undefined' && NATT ? NATT.mørke || 0 : 0, lys = .4 + .6 * (1 - m);
     if (styrke > .02) {
       if (!T) lagTåke(R);
@@ -204,8 +210,12 @@
     const l = (baseFog.r + baseFog.g + baseFog.b) / 3, g = Math.min(.92, l * 1.05 + .06), k = tf * .85;
     fc.setRGB(baseFog.r + (g - baseFog.r) * k, baseFog.g + (g - baseFog.g) * k, baseFog.b + (g * 1.01 - baseFog.b) * k); sistFog.r = fc.r; sistFog.g = fc.g; sistFog.b = fc.b;
     const km = R.kuppel.material; if (!km.transparent) { km.transparent = true; km.needsUpdate = true; }
-    km.opacity = 1 - tf * .9; if (R.skyer) R.skyer.material.opacity = 1 - tf;
-    if (R.scene.background && R.scene.background.isColor && tf > 0) R.scene.background.lerp(fc, tf);
+    // Himmelen går over i disens farge raskere enn disen tetner (o): i regn og storm er disen lysere enn himmelkuppelen og skyene,
+    // så terrenget i det fjerne sto som en hvit vegg med skarp åskam mot en mørkere himmel (12. nov). Nå er regnhimmelen jevnt grå
+    // som disen, og åsene glir over i den.
+    const o = trinn(0, .45, tf);
+    km.opacity = 1 - o * .9; if (R.skyer) R.skyer.material.opacity = 1 - o;
+    if (R.scene.background && R.scene.background.isColor && o > 0) R.scene.background.lerp(fc, o);
     // nede i tåka ser du ca. 120 m (oppe i lufta er tåka et lag under deg, der gjelder disen fra været)
     const lav = (R.fot ? 1 : trinn(450, 120, R.bane ? R.bane.avst : 9999)) * tf;
     if (lav > 0) { fog.far = fog.far + (Math.min(fog.far, 120) - fog.far) * lav; fog.near = Math.min(fog.near, fog.far * (.15 - .13 * lav)); }

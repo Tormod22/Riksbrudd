@@ -128,7 +128,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       // i vannet (vannmasken) eller på vegen; kameraet ned til bakken (avst 80) så plantene rundt kameraet lages
       await pg.evaluate(() => { R3.bane.avst = 80; R3.bane.pitch = .3; R3.lodVed = null; tegn3d(); tegn3d(); });
       const veg = await pg.evaluate(() => { const V3 = window.Vegetasjon3d, u = R3.ut; if (!V3) return null; const ut = V3.utvalg(4000), feil = [];
-        for (const [x, y, art] of ut) if (V3.iVann(x, y) || (u.påVeg && u.påVeg(x, y))) feil.push([Math.round(x), Math.round(y), art]);
+        // blomster, bregner og siv skal heller ikke stå på fortauet (nøyaktig vegbredde), i jernbanesporet eller inntil hus (V3.fri, 12. nov)
+        for (const [x, y, art] of ut) if (V3.iVann(x, y) || (u.påVeg && u.påVeg(x, y)) || (V3.fri && ['blomst', 'bregne', 'siv'].includes(art) && !V3.fri(x, y))) feil.push([Math.round(x), Math.round(y), art]);
         return { slag: V3.treslag(), antall: V3.antall(), n: ut.length, planter: ut.filter(q => ['blomst', 'bregne', 'siv'].includes(q[2])).length, feil: feil.slice(0, 5), nFeil: feil.length }; });
       const vegOk = veg && veg.slag.length >= 3 && veg.nFeil === 0 && veg.n > 100; if (!vegOk) feil++;
       console.log(`${vegOk ? 'ok  ' : 'FEIL'} ${navn} vegetasjon i 3D: treslag ${veg && veg.slag.join(', ')}; ${veg && veg.n} sjekket (${veg && veg.planter} planter), ${veg && veg.nFeil} i vann eller på veg ${veg && veg.nFeil ? JSON.stringify(veg.feil) : ''}`);

@@ -34,4 +34,21 @@ sjekk(hei.røsslyng > 500 && !hei.smørblomst, 'heia: mest røsslyng – ' + JSO
 sjekk(veg.geitrams > 100, 'langs vegen: geitrams – ' + JSON.stringify(veg));
 sjekk(vår.løvetann > 400 && !vår.prestekrage, 'våren: løvetann, ikke prestekrage');
 sjekk(V.BLOMSTREKKE.every(k => V.BLOMSTER[k].farge.length === 3), 'alle blomstene har farge');
+// høyden: full vekst opp til tregrensen, glisnere oppover, ingenting i ura høyt til fjells (12. nov: eng med geitrams 1670 moh. ved Snøhetta)
+sjekk(V.vekst(.6) === 1 && V.vekst(1) === 1 && V.vekst(1.17) > .3 && V.vekst(1.17) < .7 && V.vekst(1.35) === 0 && V.vekst(1669 / V.tregrense(6924288)) === 0,
+  'vekst: 1 under tregrensen, halvveis i lavfjellet, 0 fra 1,35 × tregrensen (Snøhetta 1669 moh.)');
+sjekk(V.stedIHøyden('eng', .8) === 'eng' && V.stedIHøyden('veikant', 1.2) === 'hei' && V.blomst(V.stedIHøyden('veikant', 1.2), 'sommer', .99) !== 'geitrams',
+  'over tregrensen: fjellhei (ingen geitrams) uansett hva kartet viser');
+// nøyaktig avstand til veg og fortau (12. nov: blomster på fortauet – vegmasken er for grov i store utsnitt)
+{ const P = []; for (let x = -50; x <= 50; x += 2.5) P.push([x, 0, 0]);
+  const by = V.vegRute([{ k: 'K', P, by: true }]), land = V.vegRute([{ k: 'K', P, by: false }]);
+  sjekk(by(0, 0) && by(10, 2.7) && by(-20, -4.6) && by(49, 5.1), 'tettsted: kjørebanen og fortauet (til 5,25 m fra midten) er veg');
+  sjekk(!by(0, 5.6) && !by(30, -7) && !by(0, 40) && !by(500, 500), 'tettsted: 5,6 m fra midten og lenger ut er ikke veg');
+  sjekk(land(0, 3.4) && !land(0, 3.8), 'utenfor tettsted: kjørebanen og skulderen (til 3,55 m)');
+  sjekk(by(0, 5.5, .3) && !by(0, 5.5), 'ekstra margin legges til');
+  let feilTreff = 0; for (let k = 0; k < 2000; k++) { const x = -48 + (k * 37 % 96), y = -9 + (k * 53 % 180) / 10, fasit = Math.abs(y) < 5.25; if (by(x, y) !== fasit) feilTreff++; }
+  sjekk(feilTreff === 0, 'vegRute stemmer med avstanden til midtlinja i 2000 punkter');
+  const skrå = V.vegRute([{ k: 'E', P: [[0, 0], [100, 100]], by: false }]);
+  sjekk(skrå(50, 50) && skrå(52, 47) && !skrå(60, 50) && !skrå(-10, -10), 'skrå veg med ett langt ledd');
+  sjekk(V.vegRute([])(0, 0) === false && V.vegRute(null)(0, 0) === false, 'ingen veger: aldri veg'); }
 console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);

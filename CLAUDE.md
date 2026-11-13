@@ -546,3 +546,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   fortsatt bare to fraksjoner med to lag hver – et opplegg for hele landet gjenstår. spill/kyst.js: småbåter ute på sjøen bare med land
   innen 800 m. spill/olje3d.js (test_olje3d.js): plattformer og produksjonsskip fra INFRA.olje i 3D (Olje3d.sjekk()).
   IKKE GJORT: ytelsen i byene (nr. 1 i feiljakten: 1,6–2,0 mill. trekanter i Bergen/Trondheim/Tromsø) – må måles per del (hus, gatetrær, gatelys) først.
+  NATUR-RETTINGER (12. nov, feiljakten, brukeren: «Rett alle»): fjernterrenget (spill/fjern3d.js) farges per punkt etter årstid og snøgrense
+  med samme regler som bakken (Fjern3d.farge, test_fjern3d.js; over tregrensen blir grønt til grått) og regnes på nytt når været endres.
+  Planter: Vegetasjon.vekst(rel) (glisnere over tregrensen, ingenting fra 1,35 ×), stedIHøyden, vegRute(u.veger) -> u.vegNær (nøyaktig
+  vegbredde med fortau; vegmasken u.påVeg er for grov i store utsnitt); fri(u, x, y) i vegetasjon3d.js = ikke vann, veg/fortau, spor
+  (u.påBane), inntil hus eller på grått i kartet; gress3d bruker iVann3d, u.vegNær, u.påBane og vekst. Navn i 3D: bakHus(v) (husomriss +
+  P.topp fra hus3d) i proj3 og brupunkt3. Buskene: treGeo('busk'/'buskEnkel') med detaljnivå i R3.treLOD (busk: true – ingen stubber ved
+  hogst), snø/høst via treVær(m, slag) i vaer-visning.js (også steinene). Tåke: tåkedottene i vind3d.js har kant som tones helt ut,
+  tåkebankene i natt3d.js er lavere, holdes over bakken (userData.bakke) og finnes bare under tregrensen; regnhimmelen går over i disens
+  farge (gråHimmel: o = trinn(0, .45, tf)). Bakken: flekkene hentes to ganger (17 m og 45 m, dreid) så de ikke står som rutenett, snø har
+  ingen glans, vannIBratt() tar vann bort fra bratt terreng før vannmasken, skogmaske() har myk, ujevn kant (skog.v) og ingen enslige
+  skogruter. Minikartet får snø (Kompass.snø). Butikkskilt: skiltMål holder skiltet under takskjegget. Gjenstår: trær i 22 kV-linjene.
