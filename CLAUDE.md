@@ -606,3 +606,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kjøretøyene bruker olje (tonn) fra basen. Forklaringen står i Leir-menyen (#dieseltekst), byggpanelet for tank/aggregat, basepanelet,
   kjøretøypanelet og hjelpen («Diesel og olje», «Utposter»). Skriv «diesel» om leirens drivstoff i nye tekster. VAKT i sjekk.js
   («brukerens valg (regler)»); test_leir.js og test_kontrollrom.js. Bilder: scratchpad regler/bilde.js.
+  SMÅFEIL 13. NOV (feiljakten, brukeren: «Rett alle»): skriftene ligger i site/fonter/ (IM Fell English og Cormorant Garamond, OFL; ingen
+  henting fra Google Fonts – fonter.css, lang hurtiglagring av .woff2 i vercel.json). Ryddebeltet under 22 kV er 7,5 m (kraft.js).
+  Flyplasser og tettsteder er stengt for beitedyr, elg, rundballer og gårdsgjerder: u.flyplass (anlegg a 7–9 fra spill/anlegg3d.js,
+  120 m rundt i dyremasken) og u.iBy (tettstedene, husket i ruter på 16 m) i Dyr3d.lovlig. Navnene på infrastrukturen meldes inn i
+  Etikett (Etikett.merk i tegnEtiketter), så lagnavn og oljetekst flytter seg unna. JERNBANE I TUNNEL: utveg.py gir bane-linjene
+  u = 1 i tunnel (release kart-utveg-abb9d613f42a, bygget 13. nov ved push av utveg.py til claude/hallo-ohbasy); kartflis.js tegner
+  dem svakt stiplet fra z10, bane3d.js hopper over dem. Gjerder og rundballer ryddes fra sporet i bane3d.js (u.gard).
+  INSPIRASJON (brukeren 13. nov): Ebbtide og Eurovoid i tillegg til WarFront – se docs/plan-spillmekanikk.md (inspirasjon, ikke kopi).
+  GJENSTÅR ETTER FEILJAKTEN: for mange trekanter i byene (2 mill. i Bergen), trekantete lyse flekker i lia ved Mannheller (årsak ikke
+  funnet), vann oppover fjellveggen på Snøhetta, jernbanesporet slutter brått i skrått terreng, vegen delvis begravd i skråninger
+  (ikke kontrollert på bilde etter Veg.høyder), og småting i 2D-kartet langt ute (Finnmark, kaier, Sverige). HELE NORGE mangler vegtype
+  i vektorflisene til «Bygg Norge» er kjørt (til da gjetter Veg.gjett).
