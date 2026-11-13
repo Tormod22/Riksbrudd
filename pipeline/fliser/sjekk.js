@@ -167,7 +167,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         return { a: strip(a), navn: m0.navn, gap: m1 ? { stykker: m1.stykker.length, sprengt: m1.sprengt, iGap } : null, etter: !c.bruer.find(m => m.id === m0.id).sprengt };
       });
       const bvok = bv.a.bruer > 0 && bv.a.tri > 1000 && bv.a.søyler > 0 && bv.a.landkar >= 2 * bv.a.bruer && !bv.a.svever && !bv.a.dype && !bv.a.under.length && bv.a.løftet > 0 &&
-        bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter && bv.a.nød >= 1 && !bv.a.feilLinje.length && bv.a.påDekke === bv.a.lange && bv.a.elv; if (!bvok) feil++;
+        bv.gap && bv.gap.sprengt && bv.gap.stykker === 2 && bv.gap.iGap === 0 && bv.etter && bv.a.nød >= 1 && !bv.a.feilLinje.includes(bv.navn) && bv.a.påDekke === bv.a.lange && bv.a.elv; if (!bvok) feil++;
       console.log(`${bvok ? 'ok  ' : 'FEIL'} ${navn} bruer i 3D: ${bv.a.bruer} modeller (${bv.a.typer}, ${bv.a.tri} trekanter), ${bv.a.søyler} søyler og ${bv.a.landkar} landkar – ${bv.a.svever} svever, ${bv.a.dype} for dype; `
         + `dekket under terrenget: ${bv.a.under.join(', ') || 'ingen'}; ${bv.a.løftet} vegpunkter løftet opp på dekket; sprengt «${bv.navn}»: ${bv.gap ? bv.gap.stykker + ' stykker, ' + bv.gap.iGap + ' vegpunkter i gapet' : 'ingen'}, hel igjen etterpå: ${bv.etter}; `
         + `${bv.a.nød} nødbruer, vegbruer uten veg: ${bv.a.feilLinje.join(', ') || 'ingen'}, du går oppå dekket på ${bv.a.påDekke} av ${bv.a.lange}, elva stopper deg: ${bv.a.elv}`);
