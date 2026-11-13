@@ -558,10 +558,20 @@ function bruer3d(u) {
   return pos.length ? { pos: new Float32Array(pos), kol: new Float32Array(kol), antall: n } : null;
 }
 // Symboler og navn over terrenget i 3D, med de samme reglene for hva som synes som i 2D (målestokken der objektet står).
+// Hvor navnet og trykkpunktet til en bru eller tunnel står i 3D: brua der modellen står (spill/infra3d.js kan ha flyttet den til
+// vegen: o.midt3), tunnelen ved den nærmeste portalen i utsnittet (midt i tunnelen svevde navnet over byen eller fjellet, 12. nov).
+function infraPunkt3(o) {
+  const a = o.deler[0], k = (a.length >> 2) << 1, u = R3.ut;
+  if (o.lag === 'bru' && o.midt3) return o.midt3;
+  if (o.lag === 'tunnel' && a.length >= 4) { const b = o.deler[o.deler.length - 1], kx = R3.cam.position.x + u.cx, ky = R3.cam.position.y + u.cy;
+    const ender = [[a[0], a[1]], [b[b.length - 2], b[b.length - 1]]].map(p => ({ p, d: Math.hypot(p[0] - kx, p[1] - ky), inne: Math.abs(p[0] - u.cx) < u.S && Math.abs(p[1] - u.cy) < u.S }));
+    ender.sort((p, q) => (q.inne - p.inne) || (p.d - q.d)); return ender[0].p; }
+  return [a[k], a[k + 1]];
+}
 function tegnInfra3d(g) {
   const u = R3.ut; if (!INFRA || !VIS.infra || !u || !u.infra) return;
   const etiketter = [], fonter = 'italic 12px "Cormorant Garamond",serif';
-  const midt = o => { const a = o.deler[0], k = (a.length >> 2) << 1; return [a[k], a[k + 1]]; };
+  const midt = infraPunkt3;
   for (const o of u.infra) {
     const [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' || o.lag === 'felt' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : midt(o);
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
@@ -591,7 +601,7 @@ function finnInfra3d(cx, cy) {
   let best = null, bd = 22;
   for (const o of u.infra) {
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
-    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : [a[k], a[k + 1]];
+    const a = o.deler[0], k = (a.length >> 2) << 1, [X, Y] = o.lag === 'tettsted' ? navnP(o) : o.lag === 'magasin' ? [(o.bb[0] + o.bb[2]) / 2, (o.bb[1] + o.bb[3]) / 2] : infraPunkt3(o);
     if (!VISES[o.lag](o, mPer3(X, Y))) continue;
     const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y); if (!q) continue;
     const d = Math.hypot(q[0] - cx, q[1] - cy) + (o.lag === 'tettsted' || o.lag === 'magasin' ? 8 : 0); if (d < bd) { bd = d; best = o; }
@@ -2363,15 +2373,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp.js?v=f1c4fa1012"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
-<script src="/dovre-fliser/spill/gange.js?v=809a82dbca"></script>
+<script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
 <script src="/dovre-fliser/spill/veg.js?v=c9f201d7da"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=7848d44557"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=789c0ee608"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=a844b125ba"></script>
-<script src="/dovre-fliser/spill/bruer.js?v=26a7536fd9"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=2aac11f29b"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=e60e6d91e1"></script>
+<script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=10348fc15a"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>

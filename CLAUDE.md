@@ -531,7 +531,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kjøretøy, base og leir ikke ligger oppå hverandre – bruk den for nye navn i kartet. Hjelpen vises første gang først når spillet er klart
   (Hjelp.første()), aldri oppå startskjermen. ☰ rulles (to kolonner på lav PC-skjerm). body.ikontrollrom når du er inne i kontrollrommet.
   VAKT grensesnitt i sjekk.js.
-  VEGER I 3D, RUNDE 2 (12. nov, feiljakten: parallelle veger oppå hverandre, asfaltflak i kryssene, veger i tunnel – UFERDIG, se under):
+  VEGER I 3D, RUNDE 2 (12.–13. nov, feiljakten: parallelle veger oppå hverandre, asfaltflak i kryssene, veger i tunnel):
   NVDB gir gang- og sykkelveger samme kategori som vegen de ligger langs. Vegene i vektorflisene har nå vegtype (pipeline/fliser/
   vegtype.py: g = 1 gang- og sykkelveg, t = 1 kanalisert veg, 2 rampe, 3 rundkjøring, 4 ferje); 03_veg_bygg.py, `02_fliser.py vektor`
   (bare vektorlaget) og blokk.py skriver den. Dovre er bygget på nytt; HELE NORGE MÅ BYGGES PÅ NYTT («Bygg Norge») – til da gjetter
@@ -539,8 +539,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   høyder (flat vegbane på terrengnettet: nettHoyde i index.html), finnKryss/kryssFlate (stump per arm), striper/gangfelt, lykter.
   liv3d.js: u.veger = bilvegene (w = halv bredde, t, åpen), u.gangveger = gang- og sykkelvegene, u.lys settes her (gatelys3d er reserve),
   Liv3d.dekke(u, x, y) = vegbanen/brudekket (gange.js går oppå). infra3d: vegbru følger bilveg, gangbru gangveg; p[3] = 1 på bru.
-  IKKE FERDIG: etter-bildet ved E136 nord for Dombås viste fortsatt tre brede vegbånd (gangvegmerket når kanskje ikke 3D – sjekk
-  R3.ut.vegtype og R3.ut.gangveger i nettleseren), sjekk.js ble ikke kjørt ferdig, ingen VAKT i sjekk.js, 2D-kartet er uendret.
+  Kontrollert 13. nov på bilder ved Dombås (én E-veg med smale gangveger ved siden av, rene kryss) – det første etter-bildet var tatt
+  før siste retting. VAKT i sjekk.js («veger i 3D»: vegtype i dataene, gangveger skilt ut, 0 bilveger oppå hverandre utenom kryssene,
+  0 gatelys i vegbanen). 2D-kartet er uendret (gangvegene tegnes fortsatt som veger der).
+  NØDBRUER (13. nov, feiljakten: «Jora bru står på land – vegen krysser elva rett på vannet»): Bruer.elvekryss(P, våt, w) finner strekk
+  der en veg krysser en elv (u.iBekk fra bekkedataene, eller vannflaten i kartet) uten bru i dataene: 2–70 m i vann, ikke i enden av
+  vegen, vann på begge sider av vegen. infra3d.js nødbruer(): strekket får en enkel bru (modellen har nød = true, navn «Bru», kan ikke
+  sprenges); en vegbru fra NVDB som ikke fant bilvegen sin (feilLinje) og står innen 80 m, flyttes dit med navn, id og tilstand
+  (o.midt3 på INFRA-objektet). infraPunkt3(o) i index.html: navn og trykkpunkt i 3D – brua der modellen står, tunnelen ved den
+  nærmeste portalen (midt i tunnelen svevde navnet over byen). Gjerder og rundballer ryddes fra jernbanesporet i bane3d.js.
   SJØ, OMLAND OG 3D-START (12. nov dag, feilretting pakke «hav», brukeren: «Rett alle»): bakkeshaderen (detaljIBakken) leser vannmasken
   (specularMap) én gang: rød = vann, grønn = flathet (normalens z fra høydegitteret, glattet – vannmaske(px, TW, H, N, steg)); berg i bratte
   sider og snø bruker den (ikke nettets hjørnenormaler). De trekantete lyse flekkene i lia over Mannheller (nr. 7 i feiljakten) er IKKE

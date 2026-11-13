@@ -100,9 +100,14 @@
   }
 
   // ---------- bruene ----------
-  function bruModell(u, o, del, linjer) {
-    const R = B(), bru = []; for (let i = 0; i < del.length; i += 2) bru.push([del[i] - u.cx, del[i + 1] - u.cy]);
-    const lin = o.e.type === 2 ? (bru.length > 1 ? { P: R.delLinje(bru, 0, R.lengde(bru)), k: null, veg: false } : null) : (R.finnLinje(bru, linjer.filter(l => o.e.type === 1 ? l.g : !l.g), o.e.lengde, true) || R.finnLinje(bru, linjer, o.e.lengde));
+  // lin0: linjen brua skal følge når den ikke kommer fra dataene (nødbruene)
+  function bruModell(u, o, del, linjer, lin0) {
+    const R = B(), bru = []; if (del) for (let i = 0; i < del.length; i += 2) bru.push([del[i] - u.cx, del[i + 1] - u.cy]);
+    // feilLinje: en vegbru som ikke fant noen bilveg ved geometrien sin (NVDB-geometrien ligger da ved siden av vegen) – se nødbruer()
+    let lin = lin0 || null, feilLinje = false;
+    if (!lin && o.e.type === 2) lin = bru.length > 1 ? { P: R.delLinje(bru, 0, R.lengde(bru)), k: null, veg: false } : null;
+    else if (!lin) { lin = R.finnLinje(bru, linjer.filter(l => o.e.type === 1 ? l.g : !l.g), o.e.lengde, true);
+      if (!lin) { lin = R.finnLinje(bru, linjer, o.e.lengde); feilLinje = o.e.type === 0; } }
     if (!lin || lin.P.length < 2) return null;
     if (lin.P.some(([x, y]) => Math.abs(x) > u.S - 12 || Math.abs(y) > u.S - 12)) return null;
     // punktene langs brua med retning, normal og terrenghøyde
@@ -113,15 +118,18 @@
     const L = s; if (L < 3) return null;
     const type = o.e.type, k = lin.k || (type === 1 ? 'G' : type === 2 ? 'J' : 'F');
     const kjør = type === 1 ? 1.5 : type === 2 ? 2.4 : R.VEGBREDDE[k] / 2, W = 2 * kjør + (type === 1 ? .8 : type === 2 ? 1.6 : 2.2);
-    const zt = R.profil(D.map(d => d.g), D.map(d => d.s), type === 2 ? 1.4 : 1.1); D.forEach((d, i) => { d.z = zt[i]; });
+    // lange bruer over sjø får seilingshøyde (sjø = vann ved havnivå under brua)
+    const seil = R.seilingshøyde(L, D.filter(d => iVann(u, d.x, d.y) && d.g / R3.EX + u.h0 < 1.5).length / D.length, type);
+    const zt = R.profil(D.map(d => d.g), D.map(d => d.s), type === 2 ? 1.4 : 1.1, seil); D.forEach((d, i) => { d.z = zt[i]; });
     const maksK = Math.max(...D.map(d => d.z - d.g));
     const tPlate = type === 2 ? .9 : .55, dBjelke = Math.max(.8, Math.min(2.2, L / 22)), zb = D.map(d => d.z - tPlate - dBjelke);
     const bue = R.bue(D.map(d => d.s), D.map(d => d.g), zb);
-    const sort = R.velgType({ lengde: L, klaring: maksK, type, bueMulig: !!bue });
+    // brutypen velges etter den naturlige klaringen (seilingshøyden gjør ikke en bjelkebru til hengebru)
+    const sort = R.velgType({ lengde: L, klaring: seil ? Math.max(3.1, maksK - seil) : maksK, type, bueMulig: !!bue });
     const sprengt = !!(window.INFRA_TILSTAND && INFRA_TILSTAND.has('bru:' + o.e.id));
     const bb = [Math.min(...D.map(d => d.x)) - W, Math.min(...D.map(d => d.y)) - W, Math.max(...D.map(d => d.x)) + W, Math.max(...D.map(d => d.y)) + W];
     return { id: o.e.id, navn: o.e.navn, type, k, veg: lin.veg, sort, D, L, W, kjør, tPlate, dBjelke: sort === 'plate' ? 0 : sort === 'henge' ? 1.2 : dBjelke, maksK, bue, sprengt,
-      stykker: R.stykker(L, sprengt), søyler: [], bb, P2: D.map(d => [d.x, d.y]), zPå: s2 => påD(D, s2).z };
+      stykker: R.stykker(L, sprengt), søyler: [], bb, P2: D.map(d => [d.x, d.y]), zPå: s2 => påD(D, s2).z, feilLinje, kilde: o };
   }
 
   function byggBru(u, m, G, T) {
@@ -334,10 +342,30 @@
 
   // ---------- krokene ----------
   // Bromodellene for utsnittet u. Med kopi = true endres ikke utsnittet: modellene og en løftet kopi av vegene gis tilbake (testene bruker det).
+  // Nødbruer: der en veg i utsnittet krysser en elv eller et smalt vann uten at dataene har en bru (Bruer.elvekryss). Elva er
+  // bekkedataene (u.iBekk fra bekker-visning.js – små bekker er alt lagt i kulvert under vegen) eller vannflaten i kartet (iVann).
+  // Lange strekk over vann er ferjesamband og tas bort i løftListe.
+  function nødbruer(u, ms) {
+    const R = B(), ut = [], våt = (x, y) => iVann(u, x, y) || !!(u.iBekk && u.iBekk(x, y));
+    const dekket = (x, y) => ms.concat(ut).some(m => { if (m.flyttet || x < m.bb[0] - 6 || x > m.bb[2] + 6 || y < m.bb[1] - 6 || y > m.bb[3] + 6) return false; const pr = R.projiser(m.P2, x, y); return pr.d < m.W / 2 + 4 && pr.s > -6 && pr.s < m.L + 6; });
+    for (const liste of [u.veger, u.gangveger]) for (const v of liste || []) { if (v.t === 5 || v.P.length < 4) continue;
+      for (const { i0, i1 } of R.elvekryss(v.P, våt, v.w || 3)) {
+        const P = v.P.slice(i0, i1 + 1).map(p => [p[0], p[1]]), mid = P[P.length >> 1]; if (dekket(mid[0], mid[1])) continue;
+        // En vegbru fra dataene som ikke fant bilvegen sin og står innen 80 m, er denne brua: den flyttes hit med navn, id og tilstand
+        // («Jora bru» sto på land ved gangbrua mens E136 lå rett på elva). Navnet og trykkpunktet i 3D følger med (o.midt3).
+        let gammel = null;
+        if (!v.g) for (const m of ms) { if (!m.feilLinje || m.flyttet) continue; const c = m.P2[m.P2.length >> 1], d = Math.hypot(c[0] - mid[0], c[1] - mid[1]); if (d < 80 && (!gammel || d < gammel.d)) gammel = { m, d }; }
+        const o = gammel ? gammel.m.kilde : { e: { id: 'nød:' + Math.round(mid[0] + u.cx) + ':' + Math.round(mid[1] + u.cy), navn: 'Bru', type: v.g ? 1 : 0, lengde: R.lengde(P) } };
+        const m = bruModell(u, o, null, null, { P, k: v.g ? null : v.k, veg: true }); if (!m) continue;
+        if (gammel) { gammel.m.flyttet = true; o.midt3 = [mid[0] + u.cx, mid[1] + u.cy]; } else m.nød = true;
+        ut.push(m); } }
+    return ut;
+  }
   async function modeller(u, kopi) {
     const bruer = u.infra.filter(o => o.lag === 'bru'), ms = [];
     const linjer = bruer.length ? await vegLinjer(u, bruer) : [];
     for (const o of bruer) for (const del of o.deler) { const m = bruModell(u, o, del, linjer); if (m) ms.push(m); }
+    if (u.veger) { const nye = nødbruer(u, ms); for (let i = ms.length - 1; i >= 0; i--) if (ms[i].flyttet) ms.splice(i, 1); for (const m of nye) ms.push(m); }
     if (!kopi) return ms;
     const k = { ...u, bruer3d: ms, gangveger: null, veger: u.veger ? u.veger.map(v => ({ ...v, P: v.P.map(p => p.slice()) })) : null }; løftVeger(k);
     return { bruer: ms, veger: k.veger };
