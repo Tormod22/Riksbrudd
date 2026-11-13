@@ -15,7 +15,9 @@
     skitten = true; });
 
   // Teller øverst: oljen på basen
-  const stat = document.createElement('div'); stat.innerHTML = '<b id="sOlje">0</b> <span>t olje</span>'; stat.title = 'Olje på basen';
+  // To slags drivstoff (brukeren 12. nov: behold begge, men forklar hva som er hva): olje i tonn her, leirens diesel i liter i Leir-menyen
+  const OLJE_TEKST = 'Olje (tonn) hentes med lastebil fra oljeterminalene. Den bygger nye enheter og fyller drivstoff og ammunisjon på kjøretøy og lag som står ved basen. Leirens diesel (liter, kjøpes for kroner i Leir-menyen) er noe annet: den driver aggregatene og kan ikke fylles på kjøretøy.';
+  const stat = document.createElement('div'); stat.innerHTML = '<b id="sOlje">0</b> <span>t olje</span>'; stat.title = 'Olje på basen. ' + OLJE_TEKST;
   document.querySelector('.stats').appendChild(stat);
   const visTeller = () => { document.getElementById('sOlje').textContent = Math.floor(BASER[0].beholdning).toLocaleString('nb-NO'); };
 
@@ -80,7 +82,7 @@
     for (const f of window.BASE_PANEL || []) f(b, H);   // andre moduler (S6: «Send drone …»)
     const M = document.getElementById('menn'); M.innerHTML = '';
     b.kø.forEach((j, i) => { const d = document.createElement('div'); d.textContent = `${i + 1}. ${R.navn[j.type]}: ${i === 0 ? Math.round(100 * (1 - j.igjen / j.total)) + ' % ferdig' : 'venter'}`; M.appendChild(d); });
-    document.getElementById('hint').textContent = b.beholdning < R.pris.lag ? 'Basen trenger olje. Velg lastebilkolonnen, trykk «Hent olje …» og så en oljeterminal.' : 'Olje brukes til å bygge nye enheter. Nye enheter stiller opp ved basen.';
+    document.getElementById('hint').textContent = (b.beholdning < R.pris.lag ? 'Basen trenger olje. Velg lastebilkolonnen, trykk «Hent olje …» og så en oljeterminal. ' : 'Nye enheter stiller opp ved basen. ') + OLJE_TEKST;
     P.classList.add('på');
   }
   window.visBase = visBase;

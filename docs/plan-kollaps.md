@@ -200,8 +200,8 @@ Bestemt av brukeren 11. nov:
   med radiokontakt der de er og fiendene de ser, og du har **feeds** (3D-bildet der laget står). Lag nærmere deg enn 500 m ser du alltid selv.
 - **Gå eller kjøre:** karakteren din er en figur på kartet («Navn (deg)»). Send den som et lag, eller gå selv i førsteperson med deg
   selv valgt. Ved kontrollrommet: «Gå inn i kontrollrommet» (knappen øverst eller i panelet), «Gå ut».
-- **Radioen:** rekkevidden er den korteste av lagets radio (håndradio 3 km, feltradio 15 km – kjøpes per lag for 1 mill. kr) og
-  leirens radio (8 km, eller 40 km med radiomast med strøm). Står terrenget i veien (høydeprofil mellom laget og leiren, med
+- **Radioen:** håndradio når 3 km. Feltradio (kjøpes per lag for 1 mill. kr) når så langt som leirens radio: 8 km uten radiomast,
+  og 15, 25 og 40 km med radiomast på nivå 1, 2 og 3 med strøm (brukeren 12. nov – før hadde nivå 2 og 3 ingen virkning). Står terrenget i veien (høydeprofil mellom laget og leiren, med
   jordkrumning), blir rekkevidden 35 %. Lag uten kontakt melder ingenting og kan ikke få ordrer (lag nær deg kan alltid).
 - **Skjermbilde:** kontrollrommet er et eget skjermbilde i 80-talls stil (grønn skrift, radio til venstre, feeds til høyre, kartet i midten).
 - Meldingene: «Framme», «N menn såret eller falt», «Under ild!», «Fiende sett: navn, ca. 800 m nordøst», «Posisjon meldt. Alt rolig»
@@ -218,11 +218,12 @@ Brukeren valgte alt: rive og flytte, bedre plassering, bedre gjerde og mer dybde
 - **Byggpanel:** trykk på et bygg. **Riv** gir 30 % tilbake (90 % og materialene hvis det ikke er ferdig). **Flytt** koster 25 % av
   prisen og 30 % av byggetiden, og bygget virker ikke imens. **Oppgrader** (nivå 2 for 60 %, nivå 3 for 100 % av prisen, halv
   byggetid): aggregat 20/35/50 kW, solceller 5/9/14 kW, brakke 8/14/20 senger, tank 5 000/10 000/20 000 l, lagertelt 100/200/300 og
-  container 40/70/100 i lager, radiomast 40/60/80 km, kameramast 300/500/800 m. **Reparer** (25 % av prisen og 30 % av tiden ganger skaden).
+  container 40/70/100 i lager, radiomast 15/25/40 km for feltradioene (endret 12. nov), kameramast 300/500/800 m. **Reparer** (25 % av prisen og 30 % av tiden ganger skaden).
 - **Byggelag og kø:** ett byggelag + ett per ferdig brakke. Resten venter i kø i den rekkefølgen de ble bestilt.
 - **Materialer:** tre (20 000 kr/m³), betong (30 000 kr/m³) og stål (60 000 kr/t) i tillegg til kroner. Grunnlageret tar 60 av hvert;
   lagertelt og containere gir mer. Mangler noe, kan du kjøpe det som mangler og bygge med én knapp.
 - **Skade:** fiendtlige lag innen 120 m av et bygg skader det 8 % per spilltime. Under halvt helt: halv effekt. Helt ødelagt: borte.
+  Også byggeplasser (under bygging eller i kø) skades; en ødelagt byggeplass gir de ubrukte materialene tilbake (12. nov, se under).
 - **Plassering:** skissen vises gjennomsiktig i 3D (grønn/rød), roter 15° om gangen, rutenett 2,5 m og 15° (av/på), nye bygg retter
   seg etter nærmeste bygg innen 60 m, trykk på nytt for å flytte skissen.
 - **Gjerde:** punkt for punkt, «Angre punkt», «Lukk ringen». I 3D følger gjerdet terrenget (stykker på 10 m). En port som settes
@@ -246,6 +247,32 @@ Brukeren 12. nov: «Bedre å plassere bygg å planlegge leiren». Claudes forsla
 
 Teknisk: leir.js (snapp, BRATT, planLegg/planFlytt/planFjern/planKostnad/byggPlan, tilMal/fraMal/planMal; L.plan lagres med leiren;
 test_leir.js) og leir-visning.js. Vakt i sjekk.js: to skisser (gratis), den andre 2 m inntil, angre/gjør om, mal, «Bygg hele planen».
+
+## Brukerens valg etter feiljakten – ferdig (12. nov 2026)
+
+Fire funn i feiljakten (mekanikk) var valg om hvordan spillet skal være. Brukeren svarte 12. nov, og dette er laget:
+- **Utposter er lov.** Du kan bygge hvor som helst, men byggelaget må reise dit fra leirens midte før arbeidet begynner. De første
+  300 m koster ingen tid, resten går i **10 km/t i luftlinje** (6 min per km: 5 km = ca. en halv time, 17,6 km = 1 t 44 min). Reisen
+  opptar byggelaget og går like fort uansett hvor flinke byggerne er. Arbeider et byggelag alt innen 300 m fra stedet, blir det
+  ingen ny reise, og når et lag kommer fram, gjelder det alle jobbene på stedet (delene i et hus, flere bygg i samme utpost).
+  Oppgradering, reparasjon og flytting i en utpost krever også reise. Reisetiden står i banneret før du bekrefter, i byggpanelet,
+  jobblista og loggen («Byggelaget er framme …»). Hogst og riving beholder grensen på 3 km. Tallene (300 m, 10 km/t) er Claudes valg.
+- **Radiomasten:** nivået forlenger lagenes radiorekkevidde – feltradio 15 km på nivå 1, 25 km på nivå 2, 40 km på nivå 3 (8 km uten
+  mast eller når masten er uten strøm). Håndradioen når 3 km uansett (Claudes valg: brukeren nevnte bare tallene for masten).
+  Rekkevidden står i byggpanelet for masten, i lagpanelet («feltradio 25 km · radiokontakt», eller hvorfor laget er uten kontakt og
+  hva som hjelper), øverst i radiolista i kontrollrommet og i hjelpen.
+- **Byggeplasser kan skades.** Bygg under bygging eller i kø skades av fiender innen 120 m som ferdige bygg (8 % per spilltime).
+  Blir byggeplassen ødelagt, kommer materialene som ikke var brukt, tilbake på lageret (andelen av arbeidet som gjensto – alt for et
+  bygg i kø; også når lageret er fullt). Pengene er tapt. Loggen sier fra, med hva som kom tilbake.
+- **To slags drivstoff, tydelig forklart.** Leirens **diesel** (liter, kjøpes for kroner; aggregat og fyring) og kjøretøyenes **olje**
+  (tonn, hentes til basen; bygger enheter og fyller drivstoff og ammunisjon) er fortsatt to systemer. Tekstene i leiren sier nå
+  «diesel» (Dieseltank, «Kjøp 500 l diesel», «Diesel til leiren»), og forklaringen står i Leir-menyen ved dieselen, i byggpanelet
+  for tank og aggregat, i basepanelet, i kjøretøypanelet og i hjelpen («Diesel og olje»).
+
+Teknisk: leir.js (REGLER.reise, reise/reiseFor/reiseTekst, skad, L.midt settes av visningen; jobbene har `reise` i spillminutter),
+kontrollrom.js (LEIR.nivå, leirRadio, forklaring, utenKontakt), leir-visning.js, kontrollrom-visning.js, hjelp.js, tekst i
+okonomi-visning.js og kjoretoy-visning.js, én linje i byggesett-visning.js. Tester: test_leir.js, test_kontrollrom.js; vakt i sjekk.js
+(«brukerens valg (regler)»). Gamle lagrede leirer lastes som før (uten reise; L.midt settes ved start).
 
 ## 12. Åpne spørsmål til brukeren
 

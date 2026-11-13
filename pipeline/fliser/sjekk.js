@@ -496,6 +496,40 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           r3.rutine = KS.radiolog()[0] && KS.radiolog()[0].tekst === Kontrollrom.RUTINE; r3.rutineILogg = loggLinjer.some(t => /Alt rolig/.test(t));
           r3.skjerm = document.getElementById('kontrollrom').classList.contains('på');
           r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);
+          // VAKT brukerens valg 12. nov (regler, se CLAUDE.md «BRUKERENS VALG»): (1) utposter er lov, men byggelaget må reise dit – reisetiden
+          // står i banneret før du bekrefter, i menyen og byggpanelet, og laget melder seg framme; (2) radiomastens nivå gir feltradioene
+          // 15, 25 og 40 km (8 km uten), og panelene sier det; (3) en byggeplass ødelegges av en fiende og gir de ubrukte materialene tilbake;
+          // (4) leirens diesel og kjøretøyenes olje er forklart i Leir-menyen, basepanelet, kjøretøypanelet og hjelpen
+          { const rg = {}, nyLogg = re => loggLinjer.some(t => re.test(t)), tekst = id => document.getElementById(id).textContent;
+            // utpost ca. 5 km nord for leiren: første sted der en container kan stå
+            LeirSpill.rutenett(false); LeirSpill.inntil(false); L.lager.stål = Math.max(L.lager.stål || 0, 5); let sted = null;
+            for (let i = 0; i < 14 && !sted; i++) { LeirSpill.startPlassering('container'); LeirSpill.trykk(LX + i * 90, LY + 5000 + i * 40); await LeirSpill.prøv(); const p = LeirSpill.plassering(); if (p && !p.feil) sted = p; else LeirSpill.avbryt(); }
+            if (sted) {
+              rg.banner = /Utpost \d+(,\d)? km fra leiren: byggelaget reiser \d+ min/.test(tekst('byggvalg')); const n0 = L.bygg.length; LeirSpill.bekreft(); const ub = L.bygg[L.bygg.length - 1];
+              rg.bestilt = L.bygg.length === n0 + 1 && ub.type === 'container'; rg.reise = Math.round(ub.reise || 0); rg.venta = Math.round(Leir.reise(L, ub.x, ub.y).full);
+              rg.logg = nyLogg(/Container bestilt: .* \+ \d+ min reise \(\d+(,\d)? km fra leiren\)/);
+              sim(.1); lk.click(); rg.meny = /Container bygges – byggelaget er på vei/.test(tekst('leirmeny')); lk.click();
+              LeirSpill.velg(ub.id); rg.panel = /byggelaget er på vei/.test(tekst('byggvalg')) && /utpost \d/.test(tekst('byggvalg')); LeirSpill.velg(null);
+              rg.påVei = ub.igjen === ub.totalt && ub.reise > 0 && ub.reise < Leir.reise(L, ub.x, ub.y).full;
+              ub.reise = .05; sim(.1); rg.framme = !(ub.reise > 0) && ub.igjen === ub.totalt && nyLogg(/Byggelaget er framme ved container/);
+              // en fiende ved byggeplassen: den ødelegges, og de 2 t stål som ikke var brukt, kommer tilbake
+              const fi = nyttLag('Vaktfiende', ub.x + 30, ub.y, 'rød'), stål0 = L.lager.stål; ENHETER.push(fi); ub.hp = .0001; sim(.1); ENHETER.splice(ENHETER.indexOf(fi), 1);
+              rg.ødelagt = !L.bygg.includes(ub) && nyLogg(/Byggeplassen for container er ødelagt av Vaktfiende! Materialene som ikke var brukt, er tilbake på lageret: 2 t stål/); rg.stål = Math.round((L.lager.stål - stål0) * 10) / 10; }
+            LeirSpill.rutenett(true); LeirSpill.inntil(true);
+            // radiomasten (lagt rett inn, med strøm fra aggregatet): rekkevidden for et lag med feltradio per nivå
+            L.drivstoff = Math.max(L.drivstoff, 150); rg.hvorfor = KS.hvorfor(A); A.radio = 'felt'; sim(.1); await KS.sjekkKontakt(A); rg.uten = KS.info(A).rekkevidde;
+            const mast = { id: 99998, type: 'radiomast', x: LX - 70, y: LY + 30, ret: 0, igjen: 0, totalt: 120, hp: 1, nivå: 1, arbeid: null, mat: {}, pris: 2e6 }; L.bygg.push(mast); rg.nivå = [];
+            for (const n of [1, 2, 3]) { mast.nivå = n; sim(.1); await KS.sjekkKontakt(A); rg.nivå.push(KS.info(A).rekkevidde); }
+            mast.nivå = 2; sim(.1); await KS.sjekkKontakt(A); valgt = A; visPanel(); rg.lagTekst = tekst('psub'); valgt = null; visPanel(); rg.status = KS.radioStatus();
+            LeirSpill.velg(mast.id); rg.mastPanel = tekst('byggvalg'); LeirSpill.velg(null);
+            L.bygg = L.bygg.filter(b => b !== mast); A.radio = undefined; sim(.1);
+            // de to slagene drivstoff
+            lk.click(); const dt = document.getElementById('dieseltekst'), kd = document.getElementById('kjopdiesel');
+            rg.diesel = !!dt && /olje \(tonn\) på basen/.test(dt.textContent) && !!kd && /diesel/.test(kd.textContent) && /Diesel til leiren/.test(tekst('leirmeny')); lk.click();
+            visBase(OLJE.BASER[0]); rg.base = /Leirens diesel/.test(tekst('hint')) && /Olje \(tonn\)/.test(tekst('hint'));
+            velgKjoretoy(KJORETOY[0]); rg.kj = /olje \(tonn\) fra basen/.test(tekst('hint')) && /Leirens diesel/.test(tekst('hint')); slippKjoretoy(); if (window.lukkPanel) lukkPanel();
+            const overskrifter = [...document.querySelectorAll('#hjelp h3')].map(h => h.textContent); rg.hjelp = ['Diesel og olje', 'Utposter'].every(t => overskrifter.includes(t));
+            r.regler = rg; }
           KS.av(); r3.avNøytral = !skjul(A) && KROKER.innsyn.every(f => f(A)); r.k3 = r3;
           // VAKT (feilretting 12. nov): verden lagres og leses inn igjen – klokka, laget (plass og helse) og kolonnen (plass)
           { const s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.ai), k = KJORETOY.find(q => q.side === 'blå'), t0 = tid, x0 = s.x, hp0 = s.menn[1].hp, kx = k.x;
@@ -522,6 +556,11 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           && lg.lagret && lg.lest && lg.tid && lg.lag && lg.kj;
         if (!fxok) { feil++; console.log(JSON.stringify(fx), JSON.stringify(lg)); }
         console.log(`${fxok ? 'ok  ' : 'FEIL'} ${navn} feilretting (mekanikk): ${fx.rom} senger i egenbygd rom telt én gang, mal uten byggesettdeler (${fx.malBygg} bygg) avvist i vann («${fx.malVann}»), gjerde over vann avvist («${fx.gjerde}»), tom gjeng kan rekruttere; klokka, lag og kolonne lagres og leses inn`);
+        const rg = k1.regler || {}, rgok = rg.banner && rg.bestilt && rg.reise > 20 && rg.reise === rg.venta && rg.logg && rg.meny && rg.panel && rg.påVei && rg.framme && rg.ødelagt && rg.stål === 2
+          && rg.uten === 8000 && (rg.nivå || []).join() === '15000,25000,40000' && /feltradio 25 km/.test(rg.lagTekst || '') && /nivå 2 – feltradio 25 km, håndradio 3 km/.test(rg.status || '')
+          && /Feltradioene når 25 km/.test(rg.mastPanel || '') && /nivå 3: 40 km/.test(rg.mastPanel || '') && /håndradioen når 3 km/.test(rg.hvorfor || '') && rg.diesel && rg.base && rg.kj && rg.hjelp;
+        if (!rgok) { feil++; console.log(JSON.stringify(rg)); }
+        console.log(`${rgok ? 'ok  ' : 'FEIL'} ${navn} brukerens valg (regler): utpost ${rg.venta} min reise i banneret, menyen og byggpanelet, laget kom fram; byggeplassen ødelagt av en fiende ga ${rg.stål} t stål tilbake; feltradio ${(rg.nivå || []).map(v => v / 1000).join('/')} km med mast nivå 1/2/3 (${rg.uten / 1000} km uten) og «${rg.status}»; diesel og olje forklart i Leir-menyen ${rg.diesel}, basen ${rg.base}, kjøretøyet ${rg.kj} og hjelpen ${rg.hjelp}`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
           && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral && k3.rutine && !k3.rutineILogg;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }

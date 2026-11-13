@@ -8,6 +8,9 @@
 // «Fortsett» setter ut flere av samme slag, tastene R/Q (roter), Enter (bygg) og Esc (avbryt). Planen: «Planlegg» gir gratis skisser
 // (blå) som holder plassen; trykk på en skisse for å bygge den nå, flytte, kopiere eller fjerne den; «Bygg hele planen», angre/gjør om
 // (Ctrl+Z/Ctrl+Y), og maler (leiren lagres rundt midten og settes inn et annet sted, også dreid). Malene lagres i «riksbrudd-maler».
+// Brukerens valg etter feiljakten (12. nov): utposter er lov, men byggelaget må reise dit (Leir.reise – reisetiden står i banneret før
+// du bekrefter, i byggpanelet og i jobblista); byggeplasser kan skades av fiender, og en ødelagt byggeplass gir de ubrukte materialene
+// tilbake (Leir.skad); radiomastens nivå og rekkevidde står i byggpanelet; leirens diesel forklares ved drivstoffet i menyen.
 // Kroker: KROKER.sim (bygging, strøm, skade), KROKER.trykk/trykk3d (plassering og byggpanel), KROKER.tegn (kartet), KROKER.bygg3d/sett3d (3D).
 (function () {
   const LB = Leir, NØKKEL = 'riksbrudd-k2', r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
@@ -39,6 +42,7 @@
 #byggvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
   border:1px solid var(--hover); padding:10px 14px; color:var(--ink); max-width:min(600px,94vw); text-align:center; }
 #byggvalg.på{ display:block; } #byggvalg button{ margin:6px 3px 0; } #byggvalg small{ color:var(--ink-dim); display:block; }
+#byggvalg small.forklar{ margin-top:3px; line-height:1.35; }
 body.kort #byggvalg{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); transform:none; max-width:none; bottom:calc(6px + env(safe-area-inset-bottom,0px));
   padding:6px 8px; font-size:13.5px; max-height:44vh; overflow-y:auto; }
 body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; }`;
@@ -88,19 +92,32 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const m = siste.mangler.size; document.getElementById('sStrom').textContent = `${kw(siste.prod)}/${kw(siste.behov)} kW` + (m ? ' ⚠' : '');
   }
   const HVA = { bygg: 'bygges', oppgrader: 'oppgraderes', flytt: 'flyttes', reparer: 'repareres' };
+  // Forklaringen av de to slagene drivstoff (Leir-menyen og byggpanelet for tank og aggregat). Kjøretøy- og basepanelet og hjelpen sier det samme.
+  const DIESEL = 'Leirens diesel (liter, kjøpes for kroner) driver aggregatene og fyrer i brakkene om vinteren. Kjøretøyene bruker den ikke: de fyller olje (tonn) på basen, eller får den kjørt ut med «Forsyn …».';
   const skadeMeldt = new Set();
   KROKER.sim.push(dt => {
     if (!L || !spill()) return;
     siste = LB.steg(L, dt, solNå());
     for (const b of siste.nyFerdig) { if (!LB.BYGG[b.type].del) logg(`${LB.BYGG[b.type].navn} er ferdig bygget.`); bygg3dPåNytt(); }
     for (const [b, hva] of siste.ferdigArbeid) { logg(`${LB.BYGG[b.type].navn} er ${{ oppgrader: `oppgradert til nivå ${b.nivå}`, flytt: 'flyttet', reparer: 'reparert' }[hva]}.`); bygg3dPåNytt(hva === 'flytt'); }
-    // fiender inne i leiren skader byggene: 8 % per spilltime per fiendtlig lag innen 120 m
+    // utposter: byggelaget er kommet fram og begynner arbeidet
+    for (const b of siste.framme || []) logg(`Byggelaget er framme ved ${LB.BYGG[b.type].del ? 'byggesettet' : LB.BYGG[b.type].navn.toLowerCase()} (${LB.kmTekst(LB.reise(L, b.x, b.y).meter)} fra leiren) og begynner arbeidet.`);
+    // fiender skader byggene: 8 % per spilltime per fiendtlig lag innen 120 m. Også byggeplassene (bygg under bygging eller i kø) kan
+    // skades (brukeren 12. nov); blir en byggeplass ødelagt, kommer materialene som ikke var brukt, tilbake på lageret (Leir.skad).
     for (const e of ENHETER) { if (e.side === 'blå' || !levende(e)) continue;
-      for (const b of L.bygg.slice()) { if (!LB.ferdig(b) || Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
-        const r = LB.skade(L, b.id, .08 * dt / 60);
-        if (r === 'ødelagt') { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L));
-          logg(`${LB.BYGG[b.type].navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l drivstoff gikk tapt.` : '')); bygg3dPåNytt(); lagre(); }
-        else if (!skadeMeldt.has(b.id)) { skadeMeldt.add(b.id); logg(`${e.navn} skader ${LB.BYGG[b.type].navn.toLowerCase()} i leiren!`); } } }
+      const deler = { n: 0, mat: {} };
+      for (const b of L.bygg.slice()) { if (Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
+        const B = LB.BYGG[b.type], navn = B.navn.toLowerCase(), r = LB.skad(L, b.id, .08 * dt / 60); if (!r) continue;
+        if (r.ødelagt) { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L)), mt = matTekst(r.mat);
+          // delene i byggesettet (ofte mange på én gang) meldes samlet under
+          if (B.del) { deler.n++; for (const [k, v] of Object.entries(r.mat)) deler.mat[k] = Math.round(((deler.mat[k] || 0) + v) * 10) / 10; }
+          else if (r.byggeplass) logg(`Byggeplassen for ${navn} er ødelagt av ${e.navn}! ` + (mt ? `Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : 'Alle materialene var brukt opp.'));
+          else logg(`${B.navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l diesel gikk tapt.` : '') + (mt ? ` Materialene til oppgraderingen som ikke var brukt, er tilbake på lageret: ${mt}.` : ''));
+          if (valgtBygg === b.id) { valgtBygg = null; banner.classList.remove('på'); }
+          bygg3dPåNytt(); lagre(); }
+        else { const nøkkel = B.del ? 'byggesett' : b.id; if (!skadeMeldt.has(nøkkel)) { skadeMeldt.add(nøkkel);
+          logg(B.del ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren!`); } } }
+      if (deler.n) { const mt = matTekst(deler.mat); logg(`${deler.n} ${deler.n === 1 ? 'del' : 'deler'} i byggesettet er ødelagt av ${e.navn}!` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '')); skitten = true; } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
     if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }
   });
@@ -115,11 +132,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       `Kassa: ${LB.kroner(S.penger)}`, el('br'),
       siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå', el('br'),
       siste.mangler.size ? el('span', { style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : 'Alle bygg har strøm', el('br'),
-      `Drivstoff: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l · Sengeplasser: ${LB.plasser(L)}`);
-    const kjøp = knapp(`Kjøp 500 l drivstoff (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
-      const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l drivstoff for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); });
-    kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en drivstofftank først';
-    const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp), kap ? '' : el('div', { klasse: 'igang' }, 'Drivstoff trenger en drivstofftank (i lista under).'));
+      `Diesel til leiren: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l · Sengeplasser: ${LB.plasser(L)}`);
+    const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
+      const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); }, { id: 'kjopdiesel' });
+    kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
+    // to slags drivstoff (brukeren 12. nov: behold begge, men si tydelig hva som er hva)
+    const dieselTekst = el('small', { id: 'dieseltekst', style: 'display:block; color:var(--ink-dim); font-size:12.5px; line-height:1.35; margin-top:4px' }, DIESEL);
+    const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp), kap ? '' : el('div', { klasse: 'igang' }, 'Dieselen trenger en dieseltank (i lista under).'), dieselTekst);
     // folket og oppgavene (spill/folk-visning.js)
     if (window.FolkSpill) hode.appendChild(FolkSpill.menyRad());
     // materialene: lager og kjøp
@@ -134,8 +153,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     hode.appendChild(el('h3', {}, L.folk ? `Byggelag: ${lag} (to på «bygg» = ett lag)` : `Byggelag: ${lag} (ett + ett per brakke)`));
     // delene i byggesettet (ofte mange) står samlet på én linje
     const del = J.filter(j => LB.BYGG[j.b.type].del), delAktive = J.slice(0, lag).filter(j => LB.BYGG[j.b.type].del).length;
-    J.forEach((j, i) => { if (!LB.BYGG[j.b.type].del) hode.appendChild(el('div', { klasse: 'igang' }, `${LB.BYGG[j.b.type].navn} ${HVA[j.hva]} – ` + (i < lag ? `${Math.round(LB.framdrift(j.b) * 100)} % (${tidTekst(j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen)} igjen)` : 'venter i kø'))); });
-    if (del.length) hode.appendChild(el('div', { klasse: 'igang' }, `Byggesettet: ${del.length} deler – ${delAktive} bygges nå, ${del.length - delAktive} i kø (${tidTekst(del.reduce((s, j) => s + (j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen), 0))} arbeid igjen)`));
+    J.forEach((j, i) => { if (!LB.BYGG[j.b.type].del) hode.appendChild(el('div', { klasse: 'igang' }, `${LB.BYGG[j.b.type].navn} ${HVA[j.hva]} – ` + (i >= lag ? 'venter i kø' + (j.reise > 0 ? ` (utpost: ${tidTekst(j.reise)} reise først)` : '')
+      : j.reise > 0 ? `byggelaget er på vei (${tidTekst(j.reise)} reise igjen)` : `${Math.round(LB.framdrift(j.b) * 100)} % (${tidTekst(j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen)} igjen)`))); });
+    const delReise = Math.max(0, ...J.slice(0, lag).filter(j => LB.BYGG[j.b.type].del).map(j => j.reise));
+    if (del.length) hode.appendChild(el('div', { klasse: 'igang' }, `Byggesettet: ${del.length} deler – ` + (delReise > 0 ? `byggelaget er på vei (${tidTekst(delReise)} reise igjen), ` : `${delAktive} bygges nå, `) + `${del.length - delAktive} i kø (${tidTekst(del.reduce((s, j) => s + (j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen), 0))} arbeid igjen)`));
     if (!J.length) hode.appendChild(el('div', { klasse: 'igang' }, 'Ingen jobber.'));
     // planen: gratis skisser, hva de koster, bygg alle, angre, maler
     const pk = LB.planKostnad(L, bonus()), mangler = matPris(pk.mat);
@@ -145,7 +166,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     hode.appendChild(rad(knapp(planModus ? 'Planlegging: på' : 'Planlegging: av', () => { planModus = !planModus; visMeny(); }, { id: 'planmodus' }),
       knapp('↶ Angre', () => angreEn(angre, gjørOm), { id: 'angre', ...(angre.length ? {} : { disabled: '' }) }), knapp('↷ Gjør om', () => angreEn(gjørOm, angre), gjørOm.length ? {} : { disabled: '' })));
     if (pk.antall) {
-      hode.appendChild(el('div', { klasse: 'igang' }, `Planen: ${pk.antall} bygg, ${LB.kroner(pk.pris)}, ${tidTekst(pk.timer * 60)} byggetid i alt` + (matTekst(pk.mat) ? ` · ${matTekst(pk.mat)}` : '') + (mangler ? ` (materialer mangler for ${LB.kroner(mangler)})` : '')));
+      const planReise = Math.max(0, ...L.plan.map(a => LB.reiseFor(L, a).min));
+      hode.appendChild(el('div', { klasse: 'igang' }, `Planen: ${pk.antall} bygg, ${LB.kroner(pk.pris)}, ${tidTekst(pk.timer * 60)} byggetid i alt` + (planReise > 0 ? ` + opptil ${tidTekst(planReise)} reise til utposten` : '') + (matTekst(pk.mat) ? ` · ${matTekst(pk.mat)}` : '') + (mangler ? ` (materialer mangler for ${LB.kroner(mangler)})` : '')));
       hode.appendChild(rad(knapp(`Bygg hele planen (${LB.kroner(pk.pris + mangler)})`, () => byggFraPlan(null, true), { id: 'byggplan' }),
         knapp('Tøm planen', () => { if (!confirm('Fjerne alle skissene i planen?')) return; husk(); L.plan = []; lagre(); bygg3dPåNytt(); skitten = true; visMeny(); })));
     }
@@ -165,7 +187,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
     menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
   }
-  const tidTekst = min => min >= 60 ? `${kw(min / 60)} t` : `${Math.ceil(min)} min`;
+  const tidTekst = LB.tidTekst;
 
   // ---------- plassering (nye bygg og flytting) ----------
   // ny: { type, ret, x, y, punkter (gjerde), lukket, flytt: id }
@@ -246,7 +268,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
         if (plassering !== p || nøkkel !== p.x + ',' + p.y + ',' + p.ret) return; b.feil = LB.kanBygge(L, b, b.kart); }
       p.deler = deler; p.sjekket = nøkkel;
       const ok = p.deler.filter(b => !b.feil).length; p.feil = ok ? null : 'Ingenting får plass her.';
-      visBanner(`«${p.mal.navn}»: ${ok} av ${p.deler.length} bygg får plass` + (ok < p.deler.length ? ' (de røde hoppes over)' : '') + '.', !!ok); skisse3d(); skitten = true; return;
+      const mr = LB.reise(L, p.x, p.y);
+      visBanner(`«${p.mal.navn}»: ${ok} av ${p.deler.length} bygg får plass` + (ok < p.deler.length ? ' (de røde hoppes over)' : '') + '.', !!ok, mr.full > 0 ? LB.reiseTekst(mr) + ' – når planen bygges.' : null); skisse3d(); skitten = true; return;
     }
     const B = LB.BYGG[p.type];
     if (B.linje && p.punkter.length < 2) { visBanner(p.punkter.length ? 'Trykk der neste punkt skal være.' : 'Trykk der gjerdet skal begynne.'); skisse3d(); skitten = true; return; }
@@ -256,10 +279,12 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     p.feil = LB.kanBygge(L, b, v, p.flytt, { planUnntatt: p.pid }); p.kart = v;
     const k = LB.kostnad(p.type, B.linje ? LB.lengde(p.punkter, p.lukket) : 0, bonus()); p.mat = p.flytt ? {} : k.mat; p.matPris = matPris(p.mat);
     const harMat = LB.harMat(L, p.mat), pris = p.flytt ? Math.round(B.pris * LB.REGLER.flyttPris) : k.pris;
-    const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60)}.`
-      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris)}, ferdig om ${tidTekst(k.timer * 60)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
+    // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter
+    const rs = LB.reiseFor(L, b, p.flytt); p.reise = rs;
+    const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
+      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris)}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
-    const ekstra = [plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? '' : ` – mangler for ${LB.kroner(p.matPris)}`) : null].filter(Boolean).join(' · ') || null;
+    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? '' : ` – mangler for ${LB.kroner(p.matPris)}`) : null].filter(Boolean).join(' · ') || null;
     visBanner(tekst, p.feil ? false : (harMat || p.plan) ? true : 'mat', ekstra); skisse3d(); skitten = true;
   }
   function trykk(X, Y) {
@@ -291,10 +316,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (p.plan) { husk(); const r = p.pid ? LB.planFlytt(L, p.pid, { x: p.x, y: p.y, ret: p.ret }, p.kart || {}) : LB.planLegg(L, sp(p), p.kart || {});
       if (r.feil) { angre.pop(); visBanner(r.feil); return; } if (!p.pid) logg(`${LB.BYGG[p.type].navn} lagt i planen.`); return ferdigPlassert(p); }
     if (p.flytt) { const r = LB.flytt(L, p.flytt, { x: p.x, y: p.y, ret: p.ret }, OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
-      logg(`${LB.BYGG[p.type].navn} flyttes: ${LB.kroner(r.pris)}.`); }
+      logg(`${LB.BYGG[p.type].navn} flyttes: ${LB.kroner(r.pris)}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); }
     else { const r = LB.bygg(L, sp(p), OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
       const kø = LB.jobber(L).length > LB.byggelag(L);
-      logg(`${LB.BYGG[p.type].navn} bestilt: ${LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
+      logg(`${LB.BYGG[p.type].navn} bestilt: ${LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
     ferdigPlassert(p);
   }
   // Etter et bygg eller en skisse: med «Fortsett» står samme bygg klart (samme retning), ellers er plasseringen ferdig
@@ -306,30 +331,47 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   }
 
   // ---------- byggpanelet (trykk på et bygg) ----------
+  // Radiomasten: hva nivået gir lagene nå og på de neste nivåene (reglene i spill/kontrollrom.js; brukeren 12. nov: 15, 25 og 40 km)
+  function radioTekst(b) {
+    const K = window.Kontrollrom, N = LB.BYGG.radiomast.nivå.rekkevidde, n = b.nivå || 1, km = LB.kmTekst, uten = K ? K.LEIR.uten : 8000, hånd = K ? K.RADIO.hånd.meter : 3000;
+    const strøm = !siste.mangler.has(b.id), virker = LB.virker(b) && strøm;
+    const nå = virker ? `Feltradioene når ${km(Math.max(uten, LB.effekt(b).rekkevidde))} med denne masten` + (b.hp < LB.REGLER.halvSkade ? ' (hardt skadet: halv rekkevidde)' : '')
+      : !LB.ferdig(b) ? `Når masten er ferdig, når feltradioene ${km(N[n - 1])}` : `Masten virker ikke nå (${strøm ? 'den flyttes' : 'uten strøm'}): feltradioene når bare ${km(uten)}`;
+    const neste = N.map((v, i) => (i >= n ? `nivå ${i + 1}: ${km(v)}` : null)).filter(Boolean).join(', ');
+    return `${nå}${neste ? ` (${neste})` : ' (høyeste nivå)'}. Uten mast: ${km(uten)}. Håndradio når ${km(hånd)} uansett.`;
+  }
   function visByggPanel() {
     const b = valgtBygg && LB.finn(L, valgtBygg); if (!b) { valgtBygg = null; banner.classList.remove('på'); return; }
     const B = LB.BYGG[b.type], e = LB.effekt(b), ok = LB.oppgraderKostnad(b, bonus()), rk = LB.reparerKostnad(b, bonus());
-    const status = b.igjen > 0 ? `bygges ${Math.round(LB.framdrift(b) * 100)} %` : b.arbeid ? `${HVA[b.arbeid.hva]} ${Math.round(LB.framdrift(b) * 100)} %` : siste.mangler.has(b.id) ? 'uten strøm' : 'i drift';
-    const verdier = [e.kw > 0 ? `gir ${kw(e.kw)} kW` : null, e.plasser ? `${e.plasser} senger` : null, B.nivå && B.nivå.liter ? `${LB.BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1].toLocaleString('nb-NO')} l` : null,
-      e.lager ? `lager +${e.lager}` : null, e.rekkevidde ? (e.rekkevidde >= 1000 ? `${e.rekkevidde / 1000} km radio` : `${e.rekkevidde} m`) : null].filter(Boolean).join(' · ');
-    const nøkkel = [b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus].join('|');
+    // jobben på bygget: i kø, byggelaget på vei til utposten, eller i arbeid
+    const J = LB.jobber(L), ji = J.findIndex(j => j.b === b), jobb = ji >= 0 ? J[ji] : null, kø = ji >= LB.byggelag(L), hva = jobb ? HVA[jobb.hva] : '';
+    const status = jobb ? (kø ? `${hva}: venter i kø` + (jobb.reise > 0 ? ` (så ${tidTekst(jobb.reise)} reise)` : '') : jobb.reise > 0 ? `${hva}: byggelaget er på vei, ${tidTekst(jobb.reise)} reise igjen` : `${hva} ${Math.round(LB.framdrift(b) * 100)} %`)
+      : siste.mangler.has(b.id) ? 'uten strøm' : 'i drift';
+    // utpost: nye jobber på bygget (oppgradering, reparasjon) krever at byggelaget reiser dit
+    const rs = LB.reise(L, b.x, b.y, b.id), reise = rs.min > 0 ? ` + ${tidTekst(rs.min)} reise` : '';
+    const verdier = [e.kw > 0 ? `gir ${kw(e.kw)} kW` : null, e.plasser ? `${e.plasser} senger` : null, B.nivå && B.nivå.liter ? `rommer ${LB.BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1].toLocaleString('nb-NO')} l diesel` : null,
+      e.lager ? `lager +${e.lager}` : null, e.rekkevidde && b.type !== 'radiomast' ? `${e.rekkevidde} m` : null, rs.full > 0 ? `utpost ${LB.kmTekst(rs.meter)} fra leiren` : null,
+      !LB.ferdig(b) ? 'byggeplass: kan skades av fiender' : null].filter(Boolean).join(' · ');
+    // radiomasten: hva nivået gir lagene (brukeren 12. nov), og de to slagene drivstoff ved tank og aggregat
+    const ekstra = b.type === 'radiomast' ? radioTekst(b) : b.type === 'drivstofftank' || b.type === 'aggregat' ? `Leiren har ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l diesel. ${DIESEL}` : '';
+    const nøkkel = [b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise].join('|');
     if (banner.firstChild && banner.firstChild.byggNøkkel === nøkkel && banner.classList.contains('på')) return;
     banner.innerHTML = ''; banner.classList.add('på');
-    banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '');
+    banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
     banner.firstChild.byggNøkkel = nøkkel;
-    if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());
+    if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)}${reise})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());
         if (r.feil && r.mangler && confirm(`${r.feil} Kjøpe det som mangler for ${LB.kroner(matPris(r.mangler))}?`) && kjøpManglende(r.mangler)) return k.onclick();
-        logg(r.feil || `${B.navn} oppgraderes til nivå ${r.til}.`); lagre(); visByggPanel(); });
+        logg(r.feil || `${B.navn} oppgraderes til nivå ${r.til}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); lagre(); visByggPanel(); });
       k.disabled = b.igjen > 0 || !!b.arbeid; banner.appendChild(k); }
-    if (rk) { const k = knapp(`Reparer (${LB.kroner(rk.pris)})`, () => { const r = LB.reparer(L, b.id, OppstartSpill.betal, bonus()); logg(r.feil || `${B.navn} repareres.`); lagre(); visByggPanel(); }); k.disabled = !!b.arbeid; banner.appendChild(k); }
+    if (rk) { const k = knapp(`Reparer (${LB.kroner(rk.pris)}${reise})`, () => { const r = LB.reparer(L, b.id, OppstartSpill.betal, bonus()); logg(r.feil || `${B.navn} repareres.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); lagre(); visByggPanel(); }); k.disabled = !!b.arbeid; banner.appendChild(k); }
     if (!B.linje && !B.del) { const k = knapp(`Flytt (${LB.kroner(Math.round(B.pris * LB.REGLER.flyttPris))})`, () => startPlassering(b.type, b.id)); k.disabled = b.igjen > 0 || !!b.arbeid; banner.appendChild(k);
       banner.appendChild(knapp('Kopier', () => startPlassering(b.type, null, { ret: b.ret, plan: planModus }), { title: 'Sett ut et likt bygg med samme retning' })); }
     banner.appendChild(knapp(`Riv (+${LB.kroner(Math.round(b.pris * (b.igjen > 0 ? LB.REGLER.rivUferdig : LB.REGLER.rivFerdig)))})`, () => {
       // drivstoff som ikke får plass i de andre tankene når denne rives, selges tilbake (Leir.riv) – si fra før og etter
       const over = Math.max(0, L.drivstoff - LB.kapasitet({ bygg: L.bygg.filter(q => q !== b) })), liter = v => Math.round(v).toLocaleString('nb-NO');
-      if (!confirm(`Rive ${B.navn.toLowerCase()}?` + (over >= 1 ? ` ${liter(over)} l drivstoff får ikke plass i de andre tankene og selges tilbake for ${LB.kroner(Math.round(over * LB.DRIVSTOFF.prisPerLiter))}.` : ''))) return;
+      if (!confirm(`Rive ${B.navn.toLowerCase()}?` + (over >= 1 ? ` ${liter(over)} l diesel får ikke plass i de andre tankene og selges tilbake for ${LB.kroner(Math.round(over * LB.DRIVSTOFF.prisPerLiter))}.` : ''))) return;
       const r = LB.riv(L, b.id); OppstartSpill.gi(r.penger);
-      logg(`${B.navn} er revet. ${LB.kroner(r.bygg)} tilbake${r.uferdig ? ', og materialene' : ''}.` + (r.drivstoff >= 1 ? ` ${liter(r.drivstoff)} l drivstoff uten plass er solgt tilbake for ${LB.kroner(r.drivstoffPenger)}.` : '')); valgtBygg = null; banner.classList.remove('på'); lagre(); bygg3dPåNytt(); skitten = true; }));
+      logg(`${B.navn} er revet. ${LB.kroner(r.bygg)} tilbake${r.uferdig ? ', og materialene' : ''}.` + (r.drivstoff >= 1 ? ` ${liter(r.drivstoff)} l diesel uten plass er solgt tilbake for ${LB.kroner(r.drivstoffPenger)}.` : '')); valgtBygg = null; banner.classList.remove('på'); lagre(); bygg3dPåNytt(); skitten = true; }));
     banner.appendChild(knapp('Lukk', () => { valgtBygg = null; banner.classList.remove('på'); skitten = true; }));
   }
 
@@ -338,7 +380,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const a = valgtPlan && LB.planFinn(L, valgtPlan); if (!a) { valgtPlan = null; banner.classList.remove('på'); return; }
     const B = LB.BYGG[a.type], k = LB.kostnad(a.type, B.linje ? LB.lengde(a.punkter, a.lukket) : 0, bonus()), mp = matPris(k.mat);
     banner.innerHTML = ''; banner.classList.add('på');
-    banner.append(el('div', {}, el('b', {}, `Planlagt ${B.navn.toLowerCase()}`), ` – ${LB.kroner(k.pris)}, ${tidTekst(k.timer * 60)}`), matTekst(k.mat) ? el('small', {}, `Materialer: ${matTekst(k.mat)}` + (mp ? ` – mangler for ${LB.kroner(mp)}` : '')) : '');
+    const rs = LB.reiseFor(L, a);
+    banner.append(el('div', {}, el('b', {}, `Planlagt ${B.navn.toLowerCase()}`), ` – ${LB.kroner(k.pris)}, ${tidTekst(k.timer * 60)}` + (rs.min > 0 ? ` + ${tidTekst(rs.min)} reise` : '')), rs.full > 0 ? el('small', {}, LB.reiseTekst(rs) + '.') : '',
+      matTekst(k.mat) ? el('small', {}, `Materialer: ${matTekst(k.mat)}` + (mp ? ` – mangler for ${LB.kroner(mp)}` : '')) : '');
     banner.appendChild(knapp(`Bygg nå (${LB.kroner(k.pris + mp)})`, () => { valgtPlan = null; banner.classList.remove('på'); byggFraPlan([a.pid], true); }, { id: 'byggskisse' }));
     if (!B.linje) banner.appendChild(knapp('Flytt', () => startPlassering(a.type, null, { pid: a.pid })));
     if (!B.linje) banner.appendChild(knapp('Kopier', () => startPlassering(a.type, null, { plan: true, ret: a.ret })));
@@ -374,7 +418,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       g.strokeStyle = b.id === valgtBygg ? '#f0d79a' : siste.mangler.has(b.id) || b.hp < .5 ? '#e0604a' : '#efe6cf'; g.lineWidth = b.id === valgtBygg ? 2.5 : 1.2; g.stroke();
       if (m < 1.2) { g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
         const J = LB.jobber(L), i = J.findIndex(j => j.b === b), kø = i >= LB.byggelag(L);
-        const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
+        const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : J[i].reise > 0 ? ' (laget på vei)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
         g.strokeText(t, sx(b.x), sy(b.y) + 4); g.fillText(t, sx(b.x), sy(b.y) + 4); }
       g.restore(); };
     for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) tegn1(b, false);
@@ -500,7 +544,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // ---------- start ----------
   function start() {
     const S = spill(); leirKnapp.hidden = !S; if (!S) return;
-    L = les() || LB.ny(); siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
+    L = les() || LB.ny();
+    // leirens midte: herfra reiser byggelagene til utpostene (Leir.reise). Gamle lagrede leirer får den her.
+    L.midt = { x: S.leir.x, y: S.leir.y };
+    siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
   window.LeirSpill = { start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },

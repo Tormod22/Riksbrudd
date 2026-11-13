@@ -15,6 +15,12 @@
  *  - for bratt grunn avvises (mer enn 3 m høydeforskjell under bygget, når v.høyde finnes);
  *  - planen: gratis skisser (L.plan) som holder plassen, kan flyttes og fjernes, og bygges én og én eller alle (byggPlan);
  *  - maler: tilMal() lagrer leiren (bygg + plan) rundt et midtpunkt, planMal() legger den inn i planen et annet sted, også rotert.
+ * Brukerens valg etter feiljakten (12. nov):
+ *  - utposter er lov: du kan bygge hvor som helst, men byggelaget må reise dit fra leirens midte (L.midt) før arbeidet begynner
+ *    (reise(): de første 300 m koster ingen tid, så 10 km/t i luftlinje; et lag som alt arbeider innen 300 m, reiser ikke på nytt);
+ *  - radiomasten: nivå 1, 2 og 3 gir feltradioene 15, 25 og 40 km (spill/kontrollrom.js);
+ *  - byggeplasser (bygg under bygging eller i kø) kan skades; blir en ødelagt, legges materialene som ikke var brukt, tilbake (skad());
+ *  - leirens diesel (liter, for kroner) er noe annet enn kjøretøyenes olje (tonn, fra basen): tekstene sier «diesel» i leiren.
  */
 (function (rot) {
   'use strict';
@@ -30,11 +36,11 @@
     container: { navn: 'Container', pris: 5e5, tid: .5, kw: 0, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { stål: 2 }, nivå: { lager: [40, 70, 100] }, tekst: 'Lite lager for materialer' },
     verksted: { navn: 'Verksted', pris: 7e6, tid: 3, kw: -4, modell: 'verksted', fot: [-6.3, 12, -7.3, 7.3], mat: { tre: 10, betong: 25, stål: 10 }, tekst: 'Reparerer kjøretøy' },
     sykestue: { navn: 'Sykestue', pris: 6e6, tid: 3, kw: -3, modell: 'sykestue', fot: [-3.9, 7.5, -5.9, 5.9], mat: { tre: 15, betong: 10, stål: 2 }, tekst: 'Stell av sårede' },
-    drivstofftank: { navn: 'Drivstofftank', pris: 3e6, tid: 1, kw: 0, modell: 'drivstofftank', fot: [-2.2, 3.7, -4, 4], mat: { stål: 6, betong: 3 }, nivå: { liter: [5000, 10000, 20000] }, tekst: 'Rommer drivstoff' },
-    aggregat: { navn: 'Aggregat', pris: 8e6, tid: 1, kw: 20, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { stål: 4 }, nivå: { kw: [20, 35, 50] }, tekst: 'Gir strøm, bruker drivstoff' },
+    drivstofftank: { navn: 'Dieseltank', pris: 3e6, tid: 1, kw: 0, modell: 'drivstofftank', fot: [-2.2, 3.7, -4, 4], mat: { stål: 6, betong: 3 }, nivå: { liter: [5000, 10000, 20000] }, tekst: 'Rommer leirens diesel (til aggregat og fyring – ikke til kjøretøyene)' },
+    aggregat: { navn: 'Aggregat', pris: 8e6, tid: 1, kw: 20, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { stål: 4 }, nivå: { kw: [20, 35, 50] }, tekst: 'Gir strøm, bruker diesel fra leirens tank' },
     solcelle: { navn: 'Solcellepaneler', pris: 3e6, tid: .5, kw: 5, modell: 'solcelle', fot: [-4, 4, -2, 2], mat: { stål: 2 }, sol: true, nivå: { kw: [5, 9, 14] }, tekst: 'Gir strøm i dagslys' },
     kameramast: { navn: 'Kameramast', pris: 5e5, tid: .5, kw: -.5, modell: 'kameramast', fot: [-.5, .5, -.5, .5], mat: { stål: 1 }, nivå: { rekkevidde: [300, 500, 800] }, tekst: 'Kamera (K4)' },
-    radiomast: { navn: 'Radiomast', pris: 2e6, tid: 2, kw: -1, modell: 'radiomast', fot: [-1, 1, -1, 1], mat: { stål: 5, betong: 2 }, nivå: { rekkevidde: [40000, 60000, 80000] }, tekst: 'Leirens radio når lenger' },
+    radiomast: { navn: 'Radiomast', pris: 2e6, tid: 2, kw: -1, modell: 'radiomast', fot: [-1, 1, -1, 1], mat: { stål: 5, betong: 2 }, nivå: { rekkevidde: [15000, 25000, 40000] }, tekst: 'Feltradioene når 15, 25 og 40 km (nivå 1–3) i stedet for 8 km' },
     drivhus: { navn: 'Drivhus', pris: 2.5e6, tid: 2, kw: -1, modell: 'drivhus', fot: [-3, 3, -5, 5], mat: { tre: 6, stål: 2 }, tekst: 'Dyrker mat' },
     helikopterplass: { navn: 'Helikopterplass', pris: 10e6, tid: 4, kw: 0, modell: 'helikopterplass', fot: [-10.9, 15.6, -10.9, 10.9], mat: { betong: 60 }, tekst: 'Landingsplass' },
     sandsekkvoll: { navn: 'Sandsekkvoll', pris: 2e5, tid: .5, kw: 0, modell: 'sandsekkvoll', fot: [-.3, .2, -4, 4], mat: {}, tekst: 'Dekning' },
@@ -43,8 +49,11 @@
   const GRUNNLAGER = 60;   // så mye av hvert materiale leiren kan ha uten lagertelt og containere
   // hvem får strøm først når det er for lite
   const PRIORITET = ['kontrollrom', 'radiomast', 'kameramast', 'sykestue', 'verksted', 'drivhus', 'brakke'];
+  // Leirens diesel (liter, kjøpes for kroner): driver aggregatene og fyrer om vinteren. Kjøretøyene bruker IKKE denne – de fylles med
+  // olje (tonn) på basen (spill/forsyning.js). Brukeren 12. nov: to systemer, men spillet skal si tydelig hva som er hva.
   const DRIVSTOFF = { prisPerLiter: 8000, literPerKWt: .3, iAggregat: 200 };   // 10 l = 80 000 kr (plan-kollaps.md); aggregatet har en liten egen tank
-  const REGLER = { rivFerdig: .3, rivUferdig: .9, flyttPris: .25, flyttTid: .3, oppgrader: [.6, 1], oppgraderTid: .5, reparerPris: .25, reparerTid: .3, halvSkade: .5 };
+  const REGLER = { rivFerdig: .3, rivUferdig: .9, flyttPris: .25, flyttTid: .3, oppgrader: [.6, 1], oppgraderTid: .5, reparerPris: .25, reparerTid: .3, halvSkade: .5,
+    reise: { fri: 300, kmt: 10 } };   // utposter: meter fra leirens midte uten reisetid, og byggelagets fart i km/t (luftlinje)
 
   function ny() { return { versjon: 2, bygg: [], neste: 1, nesteJobb: 1, drivstoff: 0, lager: { tre: 0, betong: 0, stål: 0 }, plan: [], nestePlan: 1 }; }
   const lengde = (P, lukket) => { let l = 0; const Q = lukket ? [...P, P[0]] : P; for (let i = 1; i < Q.length; i++) l += Math.hypot(Q[i][0] - Q[i - 1][0], Q[i][1] - Q[i - 1][1]); return l; };
@@ -124,25 +133,51 @@
     const pris = Math.round(m * MATERIALER[type].pris); if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
     L.lager[type] = (L.lager[type] || 0) + m; return { mengde: m, pris };
   }
+  // ---------- utposter: byggelaget må reise ----------
+  // Brukeren 12. nov: «Utposter er lov» – du kan bygge hvor som helst, men byggelaget må reise dit først, så det tar lengre tid jo
+  // lenger unna. Regelen: reisetiden regnes i luftlinje fra leirens midte (L.midt med x og y, satt av visningen). De første 300 m
+  // koster ingen tid, resten går i 10 km/t (6 min per km). Reisen kommer før arbeidet og opptar byggelaget. Arbeider et byggelag alt
+  // innen 300 m fra stedet (en jobb der laget er kommet fram), trengs ingen ny reise – når laget kommer fram, gjelder det også de
+  // andre jobbene på stedet (delene i et hus, flere bygg i samme utpost). Uten L.midt (testene, før spillet er startet): ingen reisetid.
+  // Gir { meter (fra leiren), min (spillminutter reise), full (reisen uten unntaket), påStedet }.
+  const jobbDel = j => (j.hva === 'bygg' ? j.b : j.b.arbeid);
+  function reise(L, x, y, unntatt = null) {
+    const m = L && L.midt; if (!m || !(x === x) || !(y === y)) return { meter: 0, min: 0, full: 0, påStedet: false };
+    const R = REGLER.reise, meter = Math.hypot(x - m.x, y - m.y), full = Math.max(0, meter - R.fri) / 1000 / R.kmt * 60;
+    const påStedet = full > 0 && jobber(L).some(j => j.b.id !== unntatt && !(jobbDel(j).reise > 0) && Math.hypot(j.b.x - x, j.b.y - y) <= R.fri);
+    return { meter, min: påStedet ? 0 : full, full, påStedet };
+  }
+  // Reisen for et bygg som skal settes opp (b: { type, x, y } eller gjerde med punkter): det første punktet gjelder for gjerdet
+  const reiseFor = (L, b, unntatt = null) => (b.punkter && b.punkter.length ? reise(L, b.punkter[0][0], b.punkter[0][1], unntatt) : reise(L, b.x, b.y, unntatt));
+  // Tekstene visningen bruker (plasseringsbanneret, byggpanelet, byggesettet): «52 min», «1,7 t», og forklaringen av reisen
+  const tidTekst = min => (min >= 60 ? (min / 60).toLocaleString('nb-NO', { maximumFractionDigits: 1 }) + ' t' : Math.ceil(min) + ' min');
+  const kmTekst = m => (m / 1000).toLocaleString('nb-NO', { maximumFractionDigits: 1 }) + ' km';
+  function reiseTekst(rs) {
+    if (!rs || !(rs.full > 0)) return '';
+    return rs.påStedet ? `Utpost ${kmTekst(rs.meter)} fra leiren: et byggelag arbeider alt her, så det blir ingen ny reise`
+      : `Utpost ${kmTekst(rs.meter)} fra leiren: byggelaget reiser ${tidTekst(rs.min)} før arbeidet begynner (${REGLER.reise.kmt} km/t)`;
+  }
   // ---------- bygge ----------
-  // Legger til et bygg og trekker penger og materialer (betal(beløp) -> true når det går). Gir { bygg } eller { feil }.
+  // Legger til et bygg og trekker penger og materialer (betal(beløp) -> true når det går). Gir { bygg, reise } eller { feil }.
   function bygg(L, b, betal, bonus = {}, v = {}, o = {}) {
     const f = kanBygge(L, b, v, null, o); if (f) return { feil: f };
     const B = BYGG[b.type], k = kostnad(b.type, B.linje ? lengde(b.punkter, b.lukket) : 0, bonus);
     if (!harMat(L, k.mat)) return { feil: `Mangler materialer: ${manglerTekst(L, k.mat)}.`, mangler: k.mat };
     if (!betal(k.pris)) return { feil: `Ikke nok penger (${kroner(k.pris)}).` };
-    trekk(L, k.mat);
+    trekk(L, k.mat); const rs = reiseFor(L, b);
     const ny = { id: L.neste++, type: b.type, x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, ret: +(b.ret || 0).toFixed(3), igjen: k.timer * 60, totalt: k.timer * 60,
       pris: k.pris, mat: k.mat, nivå: 1, hp: 1, nr: L.nesteJobb++, arbeid: null };
     if (b.punkter) { ny.punkter = b.punkter.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10]); ny.x = ny.punkter[0][0]; ny.y = ny.punkter[0][1]; ny.lukket = !!b.lukket; }
-    L.bygg.push(ny); return { bygg: ny };
+    if (rs.min > 0) ny.reise = rs.min;
+    L.bygg.push(ny); return { bygg: ny, reise: rs };
   }
   const finn = (L, id) => L.bygg.find(b => b.id === id);
   // Riv: gir tilbake { penger } (og materialene hvis bygget ikke var ferdig)
   function riv(L, id) {
     const b = finn(L, id); if (!b) return { feil: 'Finnes ikke.' };
     const uferdig = b.igjen > 0, penger = Math.round(b.pris * (uferdig ? REGLER.rivUferdig : REGLER.rivFerdig));
-    if (uferdig && b.mat) for (const [k, v] of Object.entries(b.mat)) L.lager[k] = Math.min(lagerplass(L), (L.lager[k] || 0) + v);
+    // (leggInn: så langt lagerplassen rekker, og lageret minker aldri – før kunne et overfullt lager bli kuttet ned her)
+    if (uferdig && b.mat) for (const [k, v] of Object.entries(b.mat)) leggInn(L, k, v);
     L.bygg = L.bygg.filter(q => q !== b);
     // drivstoffet blir liggende i de andre tankene; det som ikke får plass, selges tilbake til innkjøpspris (før forsvant det uten varsel)
     const over = Math.max(0, (L.drivstoff || 0) - kapasitet(L)), drivstoffPenger = Math.round(over * DRIVSTOFF.prisPerLiter);
@@ -155,7 +190,8 @@
     const f = kanBygge(L, { type: b.type, x: til.x, y: til.y, ret: til.ret }, v, b.id); if (f) return { feil: f };
     const B = BYGG[b.type], pris = Math.round(B.pris * REGLER.flyttPris); if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
     b.x = Math.round(til.x * 10) / 10; b.y = Math.round(til.y * 10) / 10; b.ret = +(til.ret || 0).toFixed(3);
-    const t = B.tid * REGLER.flyttTid / (bonus.bygg || 1) * 60; b.arbeid = { hva: 'flytt', igjen: t, totalt: t, nr: L.nesteJobb++ }; return { pris };
+    const t = B.tid * REGLER.flyttTid / (bonus.bygg || 1) * 60; b.arbeid = { hva: 'flytt', igjen: t, totalt: t, nr: L.nesteJobb++ };
+    const rs = reise(L, b.x, b.y, b.id); if (rs.min > 0) b.arbeid.reise = rs.min; return { pris, reise: rs };
   }
   const maksNivå = type => (BYGG[type].nivå ? Object.values(BYGG[type].nivå)[0].length : 1);
   function oppgraderKostnad(b, bonus = {}) {
@@ -168,18 +204,33 @@
     const k = oppgraderKostnad(b, bonus); if (!k) return { feil: 'Høyeste nivå.' };
     if (!harMat(L, k.mat)) return { feil: `Mangler materialer: ${manglerTekst(L, k.mat)}.`, mangler: k.mat };
     if (!betal(k.pris)) return { feil: `Ikke nok penger (${kroner(k.pris)}).` };
-    trekk(L, k.mat); b.pris += k.pris; b.arbeid = { hva: 'oppgrader', igjen: k.timer * 60, totalt: k.timer * 60, nr: L.nesteJobb++ }; return k;
+    // (materialene huskes på jobben: blir bygget ødelagt mens det oppgraderes, kommer de ubrukte tilbake)
+    trekk(L, k.mat); b.pris += k.pris; b.arbeid = { hva: 'oppgrader', igjen: k.timer * 60, totalt: k.timer * 60, nr: L.nesteJobb++, mat: k.mat };
+    const rs = reise(L, b.x, b.y, b.id); if (rs.min > 0) b.arbeid.reise = rs.min; return { ...k, reise: rs };
   }
-  function skade(L, id, mengde) {
+  // Skade fra fiender. Også byggeplasser (bygg under bygging eller i kø) kan skades (brukeren 12. nov). Blir en byggeplass ødelagt,
+  // legges materialene som ikke var brukt, tilbake i lageret: andelen av arbeidet som gjensto (alt for et bygg i kø eller der
+  // byggelaget ikke er kommet fram) – også når lageret er fullt, de ligger jo der. Pengene er tapt. Det samme gjelder materialene
+  // til en oppgradering som var i gang. Gir { hp, ødelagt, byggeplass, mat: { tre, betong, stål } som kom tilbake } (null: finnes ikke).
+  function skad(L, id, mengde) {
     const b = finn(L, id); if (!b) return null; b.hp = Math.max(0, b.hp - mengde);
-    if (b.hp <= 0) { L.bygg = L.bygg.filter(q => q !== b); return 'ødelagt'; } return b.hp;
+    if (b.hp > 0) return { hp: b.hp, ødelagt: false, byggeplass: b.igjen > 0, mat: {} };
+    const ut = { hp: 0, ødelagt: true, byggeplass: b.igjen > 0, mat: {} };
+    const gi = (mat, andel) => { for (const [k, v] of Object.entries(mat || {})) { const m = Math.round(v * Math.max(0, Math.min(1, andel)) * 10) / 10; if (!(m > 0) || !MATERIALER[k]) continue;
+      L.lager[k] = Math.round(((L.lager[k] || 0) + m) * 10) / 10; ut.mat[k] = Math.round(((ut.mat[k] || 0) + m) * 10) / 10; } };
+    if (b.igjen > 0) gi(b.mat, b.totalt > 0 ? b.igjen / b.totalt : 1);
+    else if (b.arbeid && b.arbeid.mat) gi(b.arbeid.mat, b.arbeid.totalt > 0 ? b.arbeid.igjen / b.arbeid.totalt : 1);
+    L.bygg = L.bygg.filter(q => q !== b); return ut;
   }
+  // (som før: 'ødelagt' eller hvor helt bygget er)
+  function skade(L, id, mengde) { const r = skad(L, id, mengde); return r ? (r.ødelagt ? 'ødelagt' : r.hp) : null; }
   function reparerKostnad(b, bonus = {}) { const B = BYGG[b.type], s = 1 - b.hp; if (s <= 0) return null; const grunn = B.linje ? b.pris : B.pris;
     return { pris: Math.round(grunn * REGLER.reparerPris * s), timer: (B.linje ? b.totalt / 60 : B.tid) * REGLER.reparerTid * s / (bonus.bygg || 1) }; }
   function reparer(L, id, betal, bonus = {}) {
     const b = finn(L, id); if (!b) return { feil: 'Finnes ikke.' }; if (b.arbeid) return { feil: 'Bygget er opptatt.' };
     const k = reparerKostnad(b, bonus); if (!k) return { feil: 'Bygget er helt.' }; if (!betal(k.pris)) return { feil: `Ikke nok penger (${kroner(k.pris)}).` };
-    b.arbeid = { hva: 'reparer', igjen: k.timer * 60, totalt: k.timer * 60, nr: L.nesteJobb++ }; return k;
+    b.arbeid = { hva: 'reparer', igjen: k.timer * 60, totalt: k.timer * 60, nr: L.nesteJobb++ };
+    const rs = reise(L, b.x, b.y, b.id); if (rs.min > 0) b.arbeid.reise = rs.min; return { ...k, reise: rs };
   }
   // ---------- porter i gjerdet ----------
   // Nærmeste gjerdeledd innen 8 m: porten festes midt på linja og snus langs den (portens y-akse langs gjerdet)
@@ -286,13 +337,19 @@
   // Jobbene i køen (ny bygging, oppgradering, flytting, reparasjon) i den rekkefølgen de ble bestilt
   function jobber(L) {
     const j = [];
-    for (const b of L.bygg) { if (b.igjen > 0) j.push({ b, nr: b.nr || b.id, hva: 'bygg' }); else if (b.arbeid) j.push({ b, nr: b.arbeid.nr, hva: b.arbeid.hva }); }
+    for (const b of L.bygg) { if (b.igjen > 0) j.push({ b, nr: b.nr || b.id, hva: 'bygg', reise: b.reise > 0 ? b.reise : 0 }); else if (b.arbeid) j.push({ b, nr: b.arbeid.nr, hva: b.arbeid.hva, reise: b.arbeid.reise > 0 ? b.arbeid.reise : 0 }); }
     return j.sort((a, c) => a.nr - c.nr);
   }
-  // Ett steg på dt spillminutter. sol: 0–1. Gir { prod, behov, mangler: Set av id-er uten strøm, liter, nyFerdig: [bygg], ferdigArbeid: [[bygg, hva]] }
+  // Ett steg på dt spillminutter. sol: 0–1. Gir { prod, behov, mangler: Set av id-er uten strøm, liter, nyFerdig: [bygg], ferdigArbeid: [[bygg, hva]],
+  // framme: [bygg] der byggelaget kom fram i dette steget }
   function steg(L, dt, sol = 1) {
-    const nyFerdig = [], ferdigArbeid = [], J = jobber(L), aktive = J.slice(0, byggelag(L)), fart = api.folkTempo ? api.folkTempo(L) : 1, db = dt * fart;
-    for (const { b, hva } of aktive) {
+    const nyFerdig = [], ferdigArbeid = [], framme = [], J = jobber(L), aktive = J.slice(0, byggelag(L)), fart = api.folkTempo ? api.folkTempo(L) : 1, db = dt * fart;
+    for (const j of aktive) {
+      const { b, hva } = j, del = jobbDel(j);
+      // utpost: byggelaget reiser først (reisen går like fort uansett hvor flinke byggerne er). Framme gjelder for alle jobbene på stedet.
+      if (del.reise > 0) { del.reise = Math.max(0, del.reise - dt); if (del.reise > 0) continue; delete del.reise; framme.push(b);
+        for (const q of J) { const d2 = jobbDel(q); if (q !== j && d2.reise > 0 && Math.hypot(q.b.x - b.x, q.b.y - b.y) <= REGLER.reise.fri) delete d2.reise; }
+        continue; }
       if (hva === 'bygg') { b.igjen = Math.max(0, b.igjen - db); if (b.igjen === 0) nyFerdig.push(b); }
       else { b.arbeid.igjen = Math.max(0, b.arbeid.igjen - db);
         if (b.arbeid.igjen === 0) { if (hva === 'oppgrader') b.nivå = (b.nivå || 1) + 1; if (hva === 'reparer') b.hp = 1; ferdigArbeid.push([b, hva]); b.arbeid = null; } }
@@ -307,14 +364,14 @@
     const liter = aggKW * DRIVSTOFF.literPerKWt * dt / 60; L.drivstoff = Math.max(0, L.drivstoff - liter);
     let igjen = solKW + aggKW; const mangler = new Set();
     for (const b of brukere) { const k = -BYGG[b.type].kw; if (igjen + 1e-9 >= k) igjen -= k; else mangler.add(b.id); }
-    return { prod: solKW + aggKW, kapasitet: solKW + aggMaks, behov, mangler, liter, nyFerdig, ferdigArbeid, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
+    return { prod: solKW + aggKW, kapasitet: solKW + aggMaks, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)
   const kapasitet = L => L.bygg.filter(ferdig).reduce((s, b) => s + (b.type === 'drivstofftank' ? BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1] : 0) + (b.type === 'aggregat' ? DRIVSTOFF.iAggregat : 0), 0);
   // Kjøp drivstoff: så mye som får plass, gir { liter, pris } eller { feil }
   function kjøpDrivstoff(L, liter, betal) {
-    const plass = Math.max(0, kapasitet(L) - L.drivstoff), l = Math.min(liter, Math.floor(plass)); if (l <= 0) return { feil: 'Ingen plass: bygg en drivstofftank (eller et aggregat).' };
+    const plass = Math.max(0, kapasitet(L) - L.drivstoff), l = Math.min(liter, Math.floor(plass)); if (l <= 0) return { feil: 'Ingen plass til mer diesel: bygg en dieseltank (eller et aggregat).' };
     const pris = l * DRIVSTOFF.prisPerLiter; if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
     L.drivstoff += l; return { liter: l, pris };
   }
@@ -338,7 +395,7 @@
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
   const api = { leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
-    skade, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, lagerplass,
+    skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leir = api;

@@ -83,8 +83,10 @@
     if (k.sti && !k.oppdrag) H.appendChild(knapp('Stopp', false, () => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); visKj(k); skitten = true; }));
     for (const f of window.KJ_PANEL) f(k, H);
     document.getElementById('menn').innerHTML = '';
+    // (to slags drivstoff, brukeren 12. nov: kjøretøyene går på olje fra basen, leirens diesel er noe annet – si det der drivstoffet står)
+    const drivstoff = ' Drivstoffet er olje (tonn) fra basen: det fylles når kolonnen står ved basen, eller kjøres ut med «Forsyn …» fra en lastebil. Leirens diesel (liter, i Leir-menyen) kan ikke brukes på kjøretøy.';
     document.getElementById('hint').textContent = kjørModus ? 'Trykk der kolonnen skal kjøre. Den følger vegene (NVDB), også ferjer. Lastebilene holder seg helst på hovedvegen.'
-      : graf ? 'Kolonnen kjører med vegens fartsgrense, høyst ' + T.maks + ' km/t. Ferje: 25 km/t og 15 min venting.' : 'Vegnettet lastes ned (25 MB) første gang et kjøretøy får en ordre.';
+      : (graf ? 'Kolonnen kjører med vegens fartsgrense, høyst ' + T.maks + ' km/t. Ferje: 25 km/t og 15 min venting.' : 'Vegnettet lastes ned (25 MB) første gang et kjøretøy får en ordre.') + drivstoff;
     P.classList.add('på');
   }
 
