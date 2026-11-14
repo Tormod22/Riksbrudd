@@ -667,6 +667,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       KVAL.bytt('høy'); await vent(1); return ut; });
     const kvok = kv.lav.nivå === 'lav' && kv.lav.pr <= .75 && kv.lav.tre < .5 && !kv.lav.gress && kv.auto === 'auto' && /Grafikk/.test(kv.knapp); if (!kvok) feil++;
     console.log(`${kvok ? 'ok  ' : 'FEIL'} ${navn} grafikk: lav gir pikseltetthet ${kv.lav.pr}, trær ×${kv.lav.tre}, gress ${kv.lav.gress}; knapp «${kv.knapp}»`);
+    // VAKT fremmede skript (14. nov): et skript fra et annet nettsted som ikke lar seg laste (satt inn av en nettleserutvidelse), gir ingen
+    // «Noe gikk galt»-melding; kommer det så gjentatte feil ved henting av kartdata, nevner meldingen nettstedet
+    const fs2 = await pg.evaluate(async () => { skjulMelding(); const sk = document.createElement('script'); sk.src = 'https://fremmed.invalid/vendor.min.js'; document.head.appendChild(sk);
+      await new Promise(r => { sk.onerror = r; setTimeout(r, 4000); }); await new Promise(r => setTimeout(r, 200));
+      const stille = document.getElementById('feil').style.display !== 'block', husket = FREMMEDE.has('fremmed.invalid');
+      for (let i = 0; i < 3; i++) visFeil(new Error('Failed to fetch (test)')); const tekst = document.getElementById('feilTekst').textContent;
+      sk.remove(); FREMMEDE.clear(); skjulMelding(); return { stille, husket, nevnt: /fremmed\.invalid/.test(tekst) && /privat vindu/.test(tekst) }; });
+    const fsok = fs2.stille && fs2.husket && fs2.nevnt; if (!fsok) feil++;
+    console.log(`${fsok ? 'ok  ' : 'FEIL'} ${navn} fremmede skript: ingen feilmelding for skriptet (${fs2.stille}), nettstedet husket (${fs2.husket}) og nevnt når kartdata ikke kommer (${fs2.nevnt})`);
     // VAKT kompakt skjerm (spill/kompakt.js, 12. nov, brukeren: «Dette er ikke god nok UI» om iPhone på tvers): på mobil én rad status,
     // kildeteksten på én linje og fartsknappene som én knapp; på PC som før
     const ko = await pg.evaluate(() => { const k = Kompakt.sjekk(), h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : -1; };

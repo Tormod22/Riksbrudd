@@ -98,8 +98,17 @@ function skjulMelding(type) {
 }
 // Vis feil på skjermen i stedet for en stille, svart side.
 (function () { const vis = t => { const f = document.getElementById('feil'); if (f && f.style.display !== 'block') visMelding('Noe gikk galt: ' + t + ' – prøv å laste siden på nytt (Ctrl+F5).'); };
+  // Skript som en nettleserutvidelse eller et annet program på maskinen setter inn i siden, er ikke spillets: spillet henter ingenting
+  // fra andre nettsteder (14. nov: brukeren fikk «kunne ikke laste https://static-lib.com/…/vendor.min.js»). Feil i slike skript meldes
+  // ikke som spillets; nettstedene huskes i FREMMEDE, og nevnes hvis kartdataene ikke lar seg hente (visFeil).
+  window.FREMMEDE = new Set();
+  const vår = u => { try { return !u || new URL(u, location.href).origin === location.origin; } catch (x) { return true; } };
+  const fremmed = u => { try { FREMMEDE.add(new URL(u, location.href).hostname); } catch (x) { /* ikke en adresse */ } console.warn('feil i et skript som ikke er spillets:', u); };
   window.addEventListener('error', e => { const t = e.target;   // skrifter som ikke lastes er ufarlige; skript og kode er det ikke
-    if (t && t !== window && t.tagName !== 'SCRIPT') return; vis(e.message || 'kunne ikke laste ' + (t && t.src || 'et skript')); }, true);
+    if (t && t !== window && t.tagName !== 'SCRIPT') return;
+    if (t && t !== window) { if (!vår(t.src)) return fremmed(t.src); }
+    else if ((e.filename && !vår(e.filename)) || e.message === 'Script error.') return fremmed(e.filename || '');
+    vis(e.message || 'kunne ikke laste ' + (t && t.src || 'et skript')); }, true);
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
@@ -339,7 +348,9 @@ function visFeil(e) {
   // halvt minutt) eller nettleseren selv sier at nettet er borte (14. nov: brukeren fikk meldingen midt i bildet for enkeltfeil).
   if (nettFeilTider.length < 3 && navigator.onLine !== false) return;
   // den tekniske årsaken står i klammer til slutt, så et skjermbilde av meldingen sier hva som skjedde
-  const hva = ' [' + String(e && e.message || e).slice(0, 110) + ']';
+  // skript fra andre nettsteder i siden (satt inn av en nettleserutvidelse eller et program på maskinen) kan være årsaken: si fra
+  for (const sk of document.scripts) { try { const u = new URL(sk.src, location.href); if (sk.src && u.origin !== location.origin) FREMMEDE.add(u.hostname); } catch (x) { /* ikke en adresse */ } }
+  const hva = ' [' + String(e && e.message || e).slice(0, 110) + ']' + (FREMMEDE.size ? ' En nettleserutvidelse eller et program på maskinen setter inn skript fra ' + [...FREMMEDE].filter(Boolean).slice(0, 3).join(', ') + ' i siden – det kan være årsaken. Prøv et privat vindu eller en annen nettleser.' : '');
   visMelding((utenNett(e) ? 'Får ikke hentet kartdata – ingen kontakt med nettet eller kartlageret. Kartet fylles ut av seg selv når forbindelsen er tilbake.'
     : 'Får ikke hentet kartdata. Prøver igjen.') + hva, { type: 'nett' });
 }
