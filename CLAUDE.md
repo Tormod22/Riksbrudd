@@ -628,3 +628,21 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   årsaken i klammer – be brukeren om et skjermbilde av den. VAKT: kartflis.js deler navnerom med index.html (vanlig skript): nye
   navn der må være unike («slipp» fantes fra før og stoppet hele siden; sjekk.js fanget det, node --check gjør det ikke).
   Tester: test_nett.js, test_kartlager.js. Hver publisering tømmer Vercels hurtigbuffer for /api/kart (alt hentes fra GitHub på nytt).
+  RUNDKJØRINGER OG KRYSS (14. nov, brukeren: «se på rundkjøringer og veikryss – ser de pene ut?»): spill/veg.js – rundkjøringer(linjer)
+  (merket t = 3 i dataene, ellers kjent igjen på formen: buer med radius 5–45 m rundt samme midtpunkt som dekker minst 300°; sirkel()
+  er minste kvadraters sirkel), gjett() merker dem i hele Norge (før: fortau, lykter og gangfelt inne i ringen), kanal() gjør
+  kanalisert veg uten et parallelt felt ved siden av til vanlig veg (lange stykker, og korte mellom to vanlige stykker – E6 gjennom
+  krysset på Dovre var en smal svart stripe), tynn() tar bort punkter på rette strekk (vegnettene 142 000 -> 77 000 trekanter ved
+  Dombås). liv3d.js: u.rundt (midt, radius, halv bredde), ringen og svingefeltene med hvite kantlinjer (teksturen «rampe»), brolagt
+  kant med kantstein rundt midtøya, vikelinjer på innkjøringene, fyllingene i egen jordfarget gruppe («fylling») i stedet for lys grus.
+  Kontrollert på bilder: Dombås, Dovre, Lillehammer, Åsane. VAKT: «veger i 3D» krever rundkjøringen i Dombås og 0 lykter i ringen.
+  HØYERE FPS (14. nov, brukeren: «finn flere måter å optimalisere for høyere FPS»). Målt med scratchpad fps/prof-scene.js (trekanter og
+  tegnekall per fil som la nettet i scenen, og tegnetid spart når kilden skjules) og fps/prof-piksel.js (pikseltetthet mot tid):
+  terrenget er nesten bare pikselkostnad (alle effektene i skyggeleggingen: ca. 700 ms per bilde med programvare-grafikk, enkel
+  lyssetting ca. 20 ms), resten av scenen er trekanter (ca. 400 ms uansett oppløsning). Tiltak: «enkel bakke» på Lav grafikk
+  (bakkeMateriale/enkelBakke/byttBakke i index.html, KVAL.p.bakke; KROKER.bakke = modulene som bygger på bakkens skyggelegging kobler
+  seg på igjen når nivået byttes: natt3d, vind3d), grovere terrengnett på Middels/Lav (KVAL.p.nett, u.nettM bestemmes én gang per
+  utsnitt), ruteNett/ruterSynlige i index.html (gjerder, rundballer, brøytestikker og rekkverkstolper i ruter på 160–200 m som bare
+  tegnes i synsfeltet og innen 380–900 m), enklere gjerder/steingjerder/rundballer (gard3d.js kasse(…, uten)). Dombås fra lufta:
+  640 000 -> 452 000 trekanter; Lav grafikk 1129 -> ca. 560 ms per bilde i testen. sjekk.js låser grafikken til Høy (automatikken
+  kunne gå ned underveis). IKKE GJORT: terrenget i ruter med klipping, husene og trærne i ruter, færre trekanter i byene.

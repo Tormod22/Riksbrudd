@@ -128,7 +128,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [], bakke: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1014,6 +1014,64 @@ const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value
 // Flekkene (flekk) styrer snøgrensen, berget og lysstyrken. De hentes to ganger fra samme tekstur, i ulik målestokk (17 m og 45 m) og
 // dreid 37° i forhold til hverandre: ett oppslag alene gjentok seg hver 17. meter og sto som et tydelig rutemønster i fjellsiden (12. nov).
 // Snø har ingen glans: islagte vann og vann i snøgrensen ble blendende hvite speil om vinteren (specularStrength dempes med snøen).
+// RUTER (14. nov): mange små ting (gjerdebiter, rundballer, brøytestikker, rekkverkstolper) ble tegnet hver ramme i hele utsnittet,
+// også 1,7 km unna og bak kameraet. ruteNett deler dem i ruter på «celle» meter; hver rute er ett InstancedMesh som bare tegnes når
+// ruta er i synsfeltet og nærmere enn «maks» meter (ruterSynlige, hver ramme).
+//   n: antall ting. sett(k, o, c): fyller o (THREE.Object3D: plass, retning, skala) og c (THREE.Color, hvit fra før) for ting nummer k.
+//   Gir { mesh: [nettene], av: false } – av = true skjuler alle (f.eks. etter årstid). Den som lager dem, fjerner dem fra scenen selv.
+function ruteNett(R, n, sett, geo, mat, valg) {
+  const v = Object.assign({ celle: 160, maks: 600 }, valg), o = new THREE.Object3D(), c = new THREE.Color(), ruter = new Map(), gruppe = { mesh: [], av: false }, P = new Float32Array(n * 3);
+  const les = k => { o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1); c.setRGB(1, 1, 1); sett(k, o, c); };
+  for (let k = 0; k < n; k++) { les(k); P[k * 3] = o.position.x; P[k * 3 + 1] = o.position.y; P[k * 3 + 2] = o.position.z;
+    const nk = Math.floor(o.position.x / v.celle) + ',' + Math.floor(o.position.y / v.celle); let r = ruter.get(nk); if (!r) ruter.set(nk, r = []); r.push(k); }
+  if (!R.ruter) R.ruter = [];
+  for (const liste of ruter.values()) { const m = new THREE.InstancedMesh(geo, mat, liste.length); let sx = 0, sy = 0, sz = 0, rad = 0;
+    m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(liste.length * 3), 3);
+    liste.forEach((k, i) => { les(k); o.updateMatrix(); m.setMatrixAt(i, o.matrix); m.setColorAt(i, c); sx += P[k * 3]; sy += P[k * 3 + 1]; sz += P[k * 3 + 2]; });
+    sx /= liste.length; sy /= liste.length; sz /= liste.length; for (const k of liste) rad = Math.max(rad, Math.hypot(P[k * 3] - sx, P[k * 3 + 1] - sy, P[k * 3 + 2] - sz));
+    m.frustumCulled = false; m.userData.rute = { kule: new THREE.Sphere(new THREE.Vector3(sx, sy, sz), rad + 4), maks: v.maks, gruppe };
+    R.scene.add(m); gruppe.mesh.push(m); R.ruter.push(m); }
+  return gruppe;
+}
+function ruterSynlige(R) {
+  if (!R.ruter || !R.ruter.length) return; const cam = R.cam, p = cam.position;
+  cam.updateMatrixWorld(); cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
+  if (!R.frustum) { R.frustum = new THREE.Frustum(); R.frustumM = new THREE.Matrix4(); }
+  R.frustum.setFromProjectionMatrix(R.frustumM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+  for (let i = R.ruter.length - 1; i >= 0; i--) { const m = R.ruter[i]; if (!m.parent) { R.ruter.splice(i, 1); continue; } const r = m.userData.rute;
+    m.visible = !r.gruppe.av && r.kule.center.distanceTo(p) - r.kule.radius < r.maks && R.frustum.intersectsSphere(r.kule); }
+}
+// Terrengets materiale. Høy og middels grafikk: lys per punkt og alle effektene (detaljIBakken under, bølger i vind3d.js, skyskygger og
+// våt bakke i natt3d.js). Lav grafikk («enkel bakke», 14. nov): lys per hjørne og bare kartbildet med snø og høstfarge. Målt med
+// programvare-grafikk (1400 × 900): terrenget alene ca. 700 ms per bilde med alle effektene, ca. 20 ms med enkel bakke.
+function bakkeMateriale(R, u, tex) {
+  if (window.KVAL && KVAL.p.bakke === 'enkel') { const mat = new THREE.MeshLambertMaterial({ map: tex }); enkelBakke(mat); return mat; }
+  // lys per punkt; bare vannet glinser
+  const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: VANN_GLANS.farge, shininess: VANN_GLANS.skarphet });
+  detaljIBakken(mat, 2 * u.S); return mat;
+}
+function enkelBakke(mat) {
+  mat.userData.enkel = true;
+  mat.onBeforeCompile = sh => { Object.assign(sh.uniforms, VAER_U);
+    // snøen regnes per hjørne: over snøgrensen, på flatt terreng, aldri på sjøen (havnivå)
+    sh.vertexShader = 'uniform float uH0;\nuniform float uSno;\nuniform float uSnoGrense;\nvarying float vSnoE;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+      float mohE = position.z + uH0;
+      vSnoE = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, mohE) * smoothstep(0.55, 0.8, objectNormal.z) * smoothstep(1.0, 3.0, mohE);`);
+    sh.fragmentShader = 'uniform float uHost;\nvarying float vSnoE;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      float gronnE = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronnE * 0.75);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96), vSnoE);`);
+  };
+  mat.customProgramCacheKey = () => 'enkel-bakke';
+}
+// Grafikknivået er byttet (spill/kvalitet.js): terrenget får materialet som hører til, og modulene som bygger på bakkens skyggelegging
+// (KROKER.bakke: bølger, skyskygger) kobler seg på igjen.
+function byttBakke() {
+  const R = R3; if (!R || !R.mesh || !R.ut || !R.tex) return;
+  const enkel = !!(window.KVAL && KVAL.p.bakke === 'enkel'); if (!!R.mesh.material.userData.enkel === enkel) return;
+  const gammel = R.mesh.material; R.mesh.material = bakkeMateriale(R, R.ut, R.tex); gammel.dispose();
+  for (const f of KROKER.bakke) f(R.ut, R);
+}
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
@@ -1929,7 +1987,12 @@ function kjøretøy3d() {
 }
 // Terrengnettet slik det tegnes (sett3d): M punkter hver veg, tettest i midten. nettHoyde(u, x, y) gir høyden i selve nettet (lokale
 // meter fra midten, z som i 3D) – vegene legges på den, så bakken ikke stikker opp gjennom asfalten (hoyde3d er jevnere enn nettet).
-function nett3d(u) { const M = VW >= 900 ? 289 : 225, A = (M - 1) / (u.N - 1); return { M, gt: t => t * (A + (1 - A) * t * t) }; }
+// Antall punkter per side: 289 på PC og 225 på mobil ved høy grafikk, færre på middels og lav (KVAL.p.nett). Tallet bestemmes én gang
+// per utsnitt (u.nettM), så vegene og bekkene som legges på nettet (nettHoyde) alltid bruker det samme nettet som tegnes.
+function nett3d(u) {
+  if (!u.nettM) u.nettM = Math.round((VW >= 900 ? 288 : 224) * (window.KVAL && KVAL.p.nett || 1) / 16) * 16 + 1;
+  const M = u.nettM, A = (M - 1) / (u.N - 1); return { M, gt: t => t * (A + (1 - A) * t * t) };
+}
 function nettHoyde(u, x, y) {
   if (!u.nett) { const { M, gt } = nett3d(u), X = new Float32Array(M), Z = new Float32Array(M * M);
     for (let i = 0; i < M; i++) X[i] = u.S * gt(-1 + 2 * i / (M - 1));
@@ -2021,8 +2084,7 @@ function sett3d(u) {
   geo.computeVertexNormals();
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
-  const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: VANN_GLANS.farge, shininess: VANN_GLANS.skarphet });   // lys per punkt; bare vannet glinser
-  detaljIBakken(mat, 2 * u.S); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
+  const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   // Trærne, steinene og buskene deler geometri (TREGEO), som brukes om igjen. Småtingene (biler, flagg, gatelys) lager sin egen hver gang.
   // dispose() på nettet frigjør instansenes matriser og farger på grafikkortet.
   for (const t of R.treMesh || []) { R.scene.remove(t); t.material.dispose(); t.dispose(); }
@@ -2191,7 +2253,7 @@ function tegn3d() {
   if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
-  størrelse3d(R); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
+  størrelse3d(R); kamera3d(); lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); ruterSynlige(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
   // bilde3d: (R3) => true når en krok har tegnet bildet selv (filtre/kameralinser i spill/filtre.js)
   if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
@@ -2375,11 +2437,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=f1c4fa1012"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=94dea17044"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
-<script src="/dovre-fliser/spill/veg.js?v=c9f201d7da"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=7848d44557"></script>
+<script src="/dovre-fliser/spill/veg.js?v=feb5298cfc"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=959081d046"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
@@ -2396,10 +2458,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=7e2c3b4be6"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=a3f99c8198"></script>
-<script src="/dovre-fliser/spill/vind3d.js?v=f5ceac33c3"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=eebfdb4b4c"></script>
+<script src="/dovre-fliser/spill/vind3d.js?v=0da028cbf2"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
-<script src="/dovre-fliser/spill/kvalitet.js?v=ff2f7d9396"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=4738501b70"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=73cfdc3b03"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
@@ -2421,7 +2483,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=6f4ff8f1c3"></script>
-<script src="/dovre-fliser/spill/gard3d.js?v=ccff9cd549"></script>
+<script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>

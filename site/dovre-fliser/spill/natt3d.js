@@ -180,10 +180,13 @@
   N.prøvShadere = R => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: vinduTekstur() })); vinduShader(m.material);
     m.position.copy(R.cam.position); R.scene.add(m); R.renderer.compile(R.scene, R.cam); R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); return true; };
   let tåkeTex = null, poolTex = null, glødTex = null;
+  // grafikknivået byttet: terrenget har fått nytt materiale (byttBakke i index.html)
+  if (KROKER.bakke) KROKER.bakke.push((u, R) => { if (!R.mesh.material.userData.enkel) bakkeShader(R.mesh.material); });
   KROKER.sett3d.push((u, R) => {
     if (!U.uStoy.value) { U.uStoy.value = støyTekstur(); U.uSkyFlytt.value = new THREE.Vector2(); U.uSentrum.value = new THREE.Vector2(); }
     U.uSentrum.value.set(((u.cx % 2400) + 2400) % 2400, ((u.cy % 2400) + 2400) % 2400);
-    bakkeShader(R.mesh.material);
+    // (enkel bakke på lav grafikk har ingen skyskygger eller våt bakke)
+    if (!R.mesh.material.userData.enkel) bakkeShader(R.mesh.material);
     // husene med vindusglass (ikke tak, dører, planker og lager)
     const medGlass = [typeof VINDU !== 'undefined' && VINDU, typeof TREKL !== 'undefined' && TREKL, ...['leil', 'kontor', 'butikk', 'kirke', 'glass', 'industri'].map(t => BYGGTEX[t]), ...(window.Byhus ? Object.values(Byhus.TEX) : [])].filter(Boolean);
     for (const m of R.husMesh || []) if (m.material.map && medGlass.includes(m.material.map)) vinduShader(m.material);

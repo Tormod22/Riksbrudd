@@ -74,6 +74,21 @@
     return P;
   }
 
+  // Færre punkter i vegnettene (14. nov: vegene var 142 000 av 640 000 trekanter ved Dombås – punkt hver 2,5 m også på rette strekk).
+  // Et punkt tas bort når det ligger på den rette linjen mellom naboene som blir stående: høyst tolXY meter til siden og tolZ meter i
+  // høyden, og aldri lengre biter enn «maks» meter. Punkter på en bru (p[3]) og skiftet til/fra bru beholdes. P = [[x, y, z, bru?]].
+  function tynn(P, tolXY = .06, tolZ = .05, maks = 12) {
+    const n = P.length; if (n < 3) return P; const ut = [P[0]]; let a = 0;
+    while (a < n - 1) { let j = a + 1;
+      // prøv å hoppe så langt som mulig fra a
+      for (let k = a + 2; k < n; k++) { const A = P[a], B = P[k], dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy); if (l > maks || l < 1e-6) break; let ok = !A[3] && !B[3];
+        for (let q = a + 1; q < k && ok; q++) { const p = P[q], t = ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / (l * l);
+          if (p[3] || Math.abs((p[0] - A[0]) * dy - (p[1] - A[1]) * dx) / l > tolXY || Math.abs(A[2] + (B[2] - A[2]) * t - p[2]) > tolZ) ok = false; }
+        if (!ok) break; j = k; }
+      ut.push(P[j]); a = j; }
+    return ut;
+  }
+
   // Rutenett over alle vegbitene: hvor langt er det fra et punkt til de andre vegene?
   // nærmest(x, y, r, filter(li)) -> { d, li, i, f } (bit i av linje li, f = 0–1 langs biten); klaring(x, y, egen, r) = minste
   // (avstand til midtlinjen − halv bredde) for alle andre linjer enn «egen»: under 0 = punktet ligger på en annen vegbane.
@@ -151,7 +166,71 @@
     // svingefelt: korte lenker mellom to kryss (minst tre bilvegender i hver ende, gangvegene ikke medregnet)
     const armer = n => n ? n.ender.filter(e => !linjer[e.i].g).length : 0;
     for (const i of bil) { const v = linjer[i]; if (v.g || L[i] >= 25) continue; if (armer(nodeAv[i][0]) >= 3 && armer(nodeAv[i][1]) >= 3) { v.t = 1; gjettet++; } }
+    // rundkjøringer kjennes igjen på formen (se rundkjøringer())
+    for (const rk of rundkjøringer(linjer)) for (const i of rk.linjer) if (linjer[i].t !== 3) { linjer[i].t = 3; linjer[i].g = 0; gjettet++; }
     return gjettet;
+  }
+
+  // ---------- rundkjøringer og kanaliserte veger ----------
+  // Sirkelen som passer best til punktene (minste kvadrater, Kåsa): { x, y, r, avvik } – avvik = største avstand fra et punkt til sirkelen.
+  function sirkel(P) {
+    const n = P.length; if (n < 3) return null; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; } mx /= n; my /= n;
+    let suu = 0, suv = 0, svv = 0, suuu = 0, svvv = 0, suvv = 0, svuu = 0;
+    for (const p of P) { const u = p[0] - mx, v = p[1] - my; suu += u * u; suv += u * v; svv += v * v; suuu += u * u * u; svvv += v * v * v; suvv += u * v * v; svuu += v * u * u; }
+    const det = suu * svv - suv * suv; if (Math.abs(det) < 1e-9) return null;
+    const a = (suuu + suvv) / 2, b = (svvv + svuu) / 2, uc = (a * svv - b * suv) / det, vc = (b * suu - a * suv) / det, r = Math.sqrt(uc * uc + vc * vc + (suu + svv) / n);
+    let avvik = 0; for (const p of P) avvik = Math.max(avvik, Math.abs(Math.hypot(p[0] - mx - uc, p[1] - my - vc) - r));
+    return { x: mx + uc, y: my + vc, r, avvik };
+  }
+  // Rundkjøringene blant bilvegene (linjer: skjøtet og jevnet). Er noen linjer merket som rundkjøring i dataene (t = 3), brukes bare
+  // de; ellers kjennes rundkjøringene igjen på formen: buer med radius 5–45 m rundt samme midtpunkt som til sammen dekker minst
+  // 300° av sirkelen (14. nov: i hele Norge, der dataene ikke har vegtype, fikk rundkjøringene fortau og lykter inne i ringen og
+  // gangfelt tvers over). Gir [{ x, y, r (midtlinjens radius), w (halv bredde), k, linjer: [nummer] }].
+  function rundkjøringer(linjer) {
+    const merket = linjer.some(v => v.t === 3), buer = [];
+    linjer.forEach((v, i) => { if (v.g || (merket ? v.t !== 3 : v.t === 2)) return; const L = lengde(v.P); if (!merket && (L < 6 || L > 290)) return;
+      const c = sirkel(v.P); if (!c || c.r < 5 || c.r > 45 || c.avvik > Math.max(1.2, c.r * .12)) return;
+      // en bue må svinge tydelig (minst 25°): en slak kurve i en vanlig veg er ikke en del av en rundkjøring
+      if (!merket && L / c.r < .45) return; buer.push({ i, c, L }); });
+    const grupper = [];
+    for (const b of buer) { let g = grupper.find(q => Math.hypot(q.x - b.c.x, q.y - b.c.y) < Math.max(3, q.r * .3) && Math.abs(q.r - b.c.r) < Math.max(2.5, q.r * .3));
+      if (!g) grupper.push(g = { x: b.c.x, y: b.c.y, r: b.c.r, L: 0, buer: [] });
+      // midtpunkt og radius: snitt vektet med lengden
+      g.x = (g.x * g.L + b.c.x * b.L) / (g.L + b.L); g.y = (g.y * g.L + b.c.y * b.L) / (g.L + b.L); g.r = (g.r * g.L + b.c.r * b.L) / (g.L + b.L); g.L += b.L; g.buer.push(b); }
+    const ut = [];
+    for (const g of grupper) {
+      // dekning: 24 sektorer rundt midtpunktet
+      const sett = new Set(); for (const b of g.buer) for (const p of linjer[b.i].P) sett.add(Math.floor((Math.atan2(p[1] - g.y, p[0] - g.x) + Math.PI) / (2 * Math.PI) * 24) % 24);
+      if (sett.size < 20 || g.L > 2 * Math.PI * g.r * 1.35) continue;
+      const v0 = linjer[g.buer[0].i]; ut.push({ x: g.x, y: g.y, r: g.r, w: Math.min(3.25, BREDDE[v0.k] / 2), k: v0.k, linjer: g.buer.map(b => b.i) });
+    }
+    return ut;
+  }
+  // Kanalisert veg (t = 1) er i NVDB både korte svingefelt rundt trafikkøyer og lange, gjennomgående vegstykker i store kryss. De
+  // lange uten en parallell tvilling (det andre kjørefeltet) er vanlig tofelts veg og skal ha full bredde og oppmerking (14. nov:
+  // E6 gjennom krysset på Dovre var en smal, svart stripe uten linjer i 200 m). Endrer linjene på stedet, gir antallet som ble vanlige.
+  function kanal(linjer) {
+    const bil = linjer.map((v, i) => i).filter(i => !linjer[i].g), ru = rute(bil.map(i => linjer[i])); let n = 0;
+    // andelen av linjen som har et parallelt kjørefelt av samme vegkategori ved siden av seg
+    const tvilling = (v, q) => { let par = 0, tot = 0;
+      for (let j = 1; j < v.P.length - 1; j++) { tot++; const dx = v.P[j + 1][0] - v.P[j - 1][0], dy = v.P[j + 1][1] - v.P[j - 1][1], dl = Math.hypot(dx, dy) || 1;
+        const b = ru.nærmest(v.P[j][0], v.P[j][1], 16, li => li !== q && linjer[bil[li]].k === v.k); if (!b) continue;
+        const o = linjer[bil[b.li]], a = o.P[b.i - 1], c = o.P[b.i], ol = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+        // tvillingen ligger ved siden av (ikke rett foran eller bak, som fortsettelsen av samme veg)
+        const qx = a[0] + (c[0] - a[0]) * b.f - v.P[j][0], qy = a[1] + (c[1] - a[1]) * b.f - v.P[j][1];
+        if (b.d > 1.5 && Math.abs(qx * dx + qy * dy) < .5 * b.d * dl && Math.abs(dx * (c[0] - a[0]) + dy * (c[1] - a[1])) > .85 * dl * ol) par++; }
+      return tot ? par / tot : 0; };
+    const alene = new Map(); bil.forEach((i, q) => { const v = linjer[i]; if (v.t === 1) alene.set(i, tvilling(v, q) < .4); });
+    // 1) lange stykker uten tvilling
+    for (const [i, a] of alene) if (a && lengde(linjer[i].P) >= 60) { linjer[i].t = 0; n++; }
+    // 2) korte stykker uten tvilling som i begge ender fortsetter i en vanlig veg av samme kategori (et kort mellomstykke i krysset)
+    for (let runde = 0; runde < 3; runde++) { let endret = 0;
+      const ender = []; for (const i of bil) { const v = linjer[i]; if (!v.t) ender.push([v.P[0], v.k], [v.P[v.P.length - 1], v.k]); }
+      const vanligVed = (p, k) => ender.some(([e, ek]) => ek === k && Math.hypot(e[0] - p[0], e[1] - p[1]) < 1.5);
+      for (const [i, a] of alene) { const v = linjer[i]; if (!a || v.t !== 1 || lengde(v.P) < 8) continue;
+        if (vanligVed(v.P[0], v.k) && vanligVed(v.P[v.P.length - 1], v.k)) { v.t = 0; n++; endret++; } }
+      if (!endret) break; }
+    return n;
   }
 
   // Vegbanens høyde langs linjen: flat på tvers og aldri under bakken – den høyeste av fem punkter på tvers (z(x, y) = terrenget slik
@@ -212,7 +291,8 @@
   // Før var flaten det konvekse skallet rundt alle armene: store svarte flak ut over gresset der veger møtes i spiss vinkel.
   // veger: som i finnKryss. Legger trekanter i ut = { pos, uv, idx }.
   function kryssFlate(n, veger, ut) {
-    for (const a of n.armer) { const P = veger[a.li].P, w = a.w + .12, r = a.j1 >= a.j0 ? 1 : -1, n0 = ut.pos.length / 3; let rader = 0;
+    for (const a of n.armer) { if (a.t === 3) continue;   // ringen i en rundkjøring har sin egen vegbane med kantlinjer
+      const P = veger[a.li].P, w = a.w + .12, r = a.j1 >= a.j0 ? 1 : -1, n0 = ut.pos.length / 3; let rader = 0;
       for (let j = a.j0; ; j += r) { const p = P[j], q = P[Math.min(P.length - 1, j + 1)], o = P[Math.max(0, j - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
         ut.pos.push(p[0] + nx * w, p[1] + ny * w, p[2] + .03, p[0] - nx * w, p[1] - ny * w, p[2] + .03); ut.uv.push((p[0] + nx * w) / 12, (p[1] + ny * w) / 12, (p[0] - nx * w) / 12, (p[1] - ny * w) / 12); rader++;
         if (j === a.j1) break; }
@@ -266,6 +346,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, rute, tunnel, utenTunnel, gjett, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

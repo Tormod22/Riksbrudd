@@ -70,4 +70,49 @@ sjekk(g.length > 200 && D.some(v => v.t === 1) && km(g) > 20, `veger.json: ${g.l
 const e6 = D.find(v => v.g && v.c === 'E' && V.lengde(v.p) > 900 && Math.hypot(v.p[0][0] - 193224, v.p[0][1] - 6894708) < 5);
 sjekk(!!e6, 'veger.json: den 909 m lange linjen langs E6 sør for Dombås er gang- og sykkelveg');
 
+// ---------- rundkjøringer og kanaliserte veger (14. nov) ----------
+{ // en rundkjøring med radius 15 m i (100, 200): fire buer mellom fire armer, punkt hver ~2,5 m
+  const bue = (v0, v1, cx = 100, cy = 200, r = 15) => { const P = [], n = Math.max(2, Math.round((v1 - v0) * r / 2.5)); for (let i = 0; i <= n; i++) { const v = v0 + (v1 - v0) * i / n; P.push([cx + r * Math.cos(v), cy + r * Math.sin(v)]); } return P; };
+  const rett = (x0, y0, x1, y1) => { const P = [], n = Math.round(Math.hypot(x1 - x0, y1 - y0) / 2.5); for (let i = 0; i <= n; i++) P.push([x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n]); return P; };
+  const ring = [0, 1, 2, 3].map(q => ({ k: 'F', g: 0, t: 0, P: bue(q * Math.PI / 2, (q + 1) * Math.PI / 2) }));
+  const armer = [[115, 200, 200, 200], [100, 215, 100, 300], [85, 200, 0, 200], [100, 185, 100, 100]].map(a => ({ k: 'F', g: 0, t: 0, P: rett(...a) }));
+  const c = V.sirkel(ring[0].P);
+  sjekk(c && Math.abs(c.x - 100) < .2 && Math.abs(c.y - 200) < .2 && Math.abs(c.r - 15) < .2 && c.avvik < .1, `sirkelen gjennom en kvart bue: midt (${c.x.toFixed(1)}, ${c.y.toFixed(1)}), radius ${c.r.toFixed(1)} m`);
+  const linjer = ring.concat(armer), R = V.rundkjøringer(linjer);
+  sjekk(R.length === 1 && Math.abs(R[0].x - 100) < .5 && Math.abs(R[0].r - 15) < .5 && R[0].linjer.length === 4 && R[0].linjer.every(i => i < 4), `rundkjøringen kjennes igjen på formen: ${R.length} funnet, radius ${R[0] && R[0].r.toFixed(1)} m, ${R[0] && R[0].linjer.length} buer (armene er ikke med)`);
+  // gjett merker ringen (t = 3): ingen fortau, lykter eller gangfelt i selve rundkjøringen
+  const kopi = linjer.map(v => ({ ...v })); V.gjett(kopi);
+  sjekk(kopi.slice(0, 4).every(v => v.t === 3) && kopi.slice(4).every(v => v.t !== 3), 'gjett: buene blir rundkjøring (t = 3), armene ikke');
+  // en slak kurve (radius 40 m, 30°), en halvsirkel alene og en vanlig rett veg er ikke rundkjøringer
+  sjekk(V.rundkjøringer([{ k: 'F', g: 0, t: 0, P: bue(0, .5, 0, 0, 40) }, { k: 'F', g: 0, t: 0, P: bue(0, Math.PI, 300, 0, 12) }, armer[0]]).length === 0, 'slak kurve, halvsirkel og rett veg er ikke rundkjøringer');
+  // med vegtype i dataene brukes bare de merkede linjene
+  const merket = linjer.map((v, i) => ({ ...v, t: i < 4 ? 3 : 0 })).concat([0, 1, 2, 3].map(q => ({ k: 'K', g: 0, t: 0, P: bue(q * Math.PI / 2, (q + 1) * Math.PI / 2, 500, 500, 10) })));
+  sjekk(V.rundkjøringer(merket).length === 1, 'med vegtype i dataene telles bare de merkede rundkjøringene');
+  // kryssflaten legger ingen stump langs ringen
+  const med3d = linjer.map((v, i) => ({ ...v, t: i < 4 ? 3 : 0, by: false, w: 3.25, P: v.P.map(p => [p[0], p[1], 0]) })), kr = V.finnKryss(med3d), flate = { pos: [], uv: [], idx: [] };
+  for (const n of kr) V.kryssFlate(n, med3d, flate);
+  let påRing = 0; for (let q = 0; q < flate.pos.length; q += 3) { const d = Math.hypot(flate.pos[q] - 100, flate.pos[q + 1] - 200); if (d < 11) påRing++; }
+  sjekk(kr.length === 4 && flate.idx.length > 0 && påRing === 0, `fire kryss rundt rundkjøringen, kryssflatene går ikke inn mot midtøya (${påRing} punkter innenfor 11 m)`);
+}
+{ // kanalisert veg: 200 m alene blir vanlig veg; to parallelle felt (8 m fra hverandre) og et kort svingefelt forblir kanalisert
+  const rett = (x0, y0, x1, y1) => { const P = [], n = Math.round(Math.hypot(x1 - x0, y1 - y0) / 2.5); for (let i = 0; i <= n; i++) P.push([x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n]); return P; };
+  const L = [{ k: 'E', g: 0, t: 1, P: rett(0, 0, 200, 0) }, { k: 'E', g: 0, t: 1, P: rett(0, 500, 200, 500) }, { k: 'E', g: 0, t: 1, P: rett(0, 508, 200, 508) }, { k: 'E', g: 0, t: 1, P: rett(0, 900, 30, 900) }];
+  const n = V.kanal(L);
+  sjekk(n === 1 && L[0].t === 0 && L[1].t === 1 && L[2].t === 1 && L[3].t === 1, `kanalisert veg: den lange uten tvilling blir vanlig veg (${n}), parallelle felt og korte svingefelt forblir`);
+}
+
+{ // tynn(): rett veg i jevn stigning beholder bare endene og et punkt hver 12. m; en sving og en kul beholder punktene sine
+  const rett = []; for (let x = 0; x <= 100; x += 2.5) rett.push([x, 0, x * .02]);
+  const t1 = V.tynn(rett);
+  sjekk(t1.length <= 11 && t1[0] === rett[0] && t1[t1.length - 1] === rett[rett.length - 1], `rett veg på 100 m: ${rett.length} punkter -> ${t1.length}`);
+  const sving = []; for (let a = 0; a <= Math.PI / 2 + 1e-9; a += 2.5 / 20) sving.push([20 * Math.cos(a), 20 * Math.sin(a), 0]);
+  const t2 = V.tynn(sving); let avvik = 0;
+  for (const p of sving) { let d = Infinity; for (let i = 1; i < t2.length; i++) { const A = t2[i - 1], B = t2[i], dx = B[0] - A[0], dy = B[1] - A[1], l2 = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / l2)); d = Math.min(d, Math.hypot(A[0] + dx * t - p[0], A[1] + dy * t - p[1])); } avvik = Math.max(avvik, d); }
+  sjekk(avvik <= .07 && t2.length >= sving.length * .5, `sving med radius 20 m: ${sving.length} -> ${t2.length} punkter, største avvik ${(avvik * 100).toFixed(1)} cm`);
+  const kul = rett.map(p => [p[0], 0, p[0] > 40 && p[0] < 60 ? .5 : 0]), t3 = V.tynn(kul);
+  sjekk(t3.some(p => p[2] === .5) && t3.filter(p => p[0] >= 37.5 && p[0] <= 62.5).length >= 4, `en kul i vegen beholdes (${t3.length} punkter)`);
+  const bru = rett.map(p => [p[0], 0, 0, p[0] >= 30 && p[0] <= 50 ? 1 : 0]), t4 = V.tynn(bru);
+  sjekk(t4.filter(p => p[3]).length === bru.filter(p => p[3]).length, 'punktene på brua beholdes');
+}
+
 console.log(feil ? `${feil} feil` : 'Alle testene gikk bra'); process.exit(feil ? 1 : 0);

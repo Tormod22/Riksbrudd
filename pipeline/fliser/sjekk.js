@@ -74,7 +74,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const pg = await kt.newPage(); const err = [];
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto(`http://localhost:${process.env.PORT || 8765}/dovre-fliser/`); await pg.waitForTimeout(3000);
-    await pg.evaluate(() => { if (window.AI) AI.på = false; if (window.VaerSpill) { Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); } });   // klart vær i testene (sikten ellers tilfeldig)   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
+    await pg.evaluate(() => { if (window.AI) AI.på = false; if (window.VaerSpill) { Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); } if (window.KVAL) KVAL.bytt('høy'); });   // klart vær i testene (sikten ellers tilfeldig)   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
       await pg.evaluate(([x, y, m]) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; peker = null; }, [x, y, m]);
       await pg.waitForFunction(() => VENTER.size === 0 && FERDIG.size > 0, null, { timeout: 20000 }); await pg.waitForTimeout(400);
@@ -662,7 +662,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // trærne og ingen gress/blomster; tilbake til auto etterpå
     const kv = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
       KVAL.bytt('lav'); await vent(3); const lav = { pr: R3.pr, nivå: KVAL.nivå, tre: KVAL.p.tre, gress: !!(R3.gressMesh && R3.gressMesh.visible) };
-      KVAL.bytt('auto'); await vent(2); return { lav, auto: KVAL.valg, knapp: (document.getElementById('vis-grafikk') || {}).textContent || '' }; });
+      KVAL.bytt('auto'); await vent(2); const ut = { lav, auto: KVAL.valg, knapp: (document.getElementById('vis-grafikk') || {}).textContent || '' };
+      // resten av testene kjører med høy grafikk (automatikken kan ellers gå ned et nivå underveis, og da måler ikke vaktene det samme hver gang)
+      KVAL.bytt('høy'); await vent(1); return ut; });
     const kvok = kv.lav.nivå === 'lav' && kv.lav.pr <= .75 && kv.lav.tre < .5 && !kv.lav.gress && kv.auto === 'auto' && /Grafikk/.test(kv.knapp); if (!kvok) feil++;
     console.log(`${kvok ? 'ok  ' : 'FEIL'} ${navn} grafikk: lav gir pikseltetthet ${kv.lav.pr}, trær ×${kv.lav.tre}, gress ${kv.lav.gress}; knapp «${kv.knapp}»`);
     // VAKT kompakt skjerm (spill/kompakt.js, 12. nov, brukeren: «Dette er ikke god nok UI» om iPhone på tvers): på mobil én rad status,
@@ -731,7 +733,10 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           for (let i = 1; i < v.P.length; i++) { d += Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1]); if (d < 15 || d > L - 15 || kr.nær(v.P[i][0], v.P[i][1], 12)) continue;
             n++; if (ru.klaring(v.P[i][0], v.P[i][1], li) < v.w - .5) dobbel++; } });
         if (u.lys) for (let q = 0; q < u.lys.length; q += 4) if (ru.klaring(u.lys[q], u.lys[q + 1], -1) < -.3) iBane++;
-        return { vegtype: !!u.vegtype, bil: u.veger.length, gang: (u.gangveger || []).length, punkter: n, dobbel, lykterIBanen: iBane, nødbruer: (u.bruer3d || []).filter(m => m.nød).length }; })();
+        // rundkjøringen i Dombås (14. nov): funnet, ringen er merket (t = 3), og ingen lykter står inne i ringen
+        const rk = (u.rundt || [])[0]; let iRing = 0; if (rk && u.lys) for (let q = 0; q < u.lys.length; q += 4) if (Math.hypot(u.lys[q] - rk.x, u.lys[q + 1] - rk.y) < rk.r + rk.w) iRing++;
+        return { vegtype: !!u.vegtype, bil: u.veger.length, gang: (u.gangveger || []).length, punkter: n, dobbel, lykterIBanen: iBane, nødbruer: (u.bruer3d || []).filter(m => m.nød).length,
+          rundkjøringer: (u.rundt || []).length, ringbiter: u.veger.filter(v => v.t === 3).length, lykterIRingen: iRing }; })();
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
       let gj = 0; if (u.påBane && u.gard) for (const B of u.gard.biter) for (let q = 0; q < B.length; q += 6) if (u.påBane(B[q], B[q + 1])) gj++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb, gjerder: gj }; return Vakt3d.sjekk(u); });
@@ -752,7 +757,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const rs3ok = rs3.inne === 0 && rs3.rundt > 0 && rs3.stubber > 0 && rs3.hus === 1 && rs3.ruin > 50; if (!rs3ok) feil++;
     console.log(`${rs3ok ? 'ok  ' : 'FEIL'} ${navn} hogst og riving i 3D: trær i det hogde feltet ${rs3.inne}, rundt ${rs3.rundt}, stubber ${rs3.stubber}; hus igjen av to (ett revet) ${rs3.hus}, ruin ${rs3.ruin} trekanter`);
     // VAKT jernbane i 3D (spill/bane3d.js): Dovrebanen/Raumabanen finnes i Dombås-utsnittet (når utveg-flisene er lastet), er elektrisk og har ingen trær eller gjerder på sporet
-    const vs = await pg.evaluate(() => window.VEG_SJEKK), vok = vs && vs.vegtype && vs.gang > 0 && vs.punkter > 200 && vs.dobbel <= vs.punkter * .02 && vs.lykterIBanen === 0; if (!vok) feil++;
+    const vs = await pg.evaluate(() => window.VEG_SJEKK), vok = vs && vs.vegtype && vs.gang > 0 && vs.punkter > 200 && vs.dobbel <= vs.punkter * .02 && vs.lykterIBanen === 0 && vs.rundkjøringer >= 1 && vs.ringbiter >= 3 && vs.lykterIRingen === 0; if (!vok) feil++;
     console.log(`${vok ? 'ok  ' : 'FEIL'} ${navn} veger i 3D: ${JSON.stringify(vs)}`);
     const bs = await pg.evaluate(() => window.BANE_SJEKK), bok = bs && (!bs.lag || (bs.n > 0 && bs.el > 0 && bs.trær === 0 && bs.gjerder === 0)); if (!bok) feil++;
     console.log(`${bok ? 'ok  ' : 'FEIL'} ${navn} jernbane i 3D: ${JSON.stringify(bs)}`);

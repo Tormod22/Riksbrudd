@@ -5,12 +5,15 @@
 //   pr      høyeste pikseltetthet [PC, mobil]       tre   detaljavstanden for trærne (faktor)
 //   gress   andel gresstuster rundt kameraet          blomster  blomster/bregner/siv rundt kameraet
 //   tekstur stor bakketekstur (4096) nær bakken       skumtopper og krusning i vannet (vann)
+//   nett    terrengnettets tetthet (1 = 289 × 289 punkter på PC; Middels 273, Lav 241 – ikke grovere: trær og hus står etter den ekte høyden) – gjelder fra neste utsnitt
+//   bakke   'enkel' på Lav: terrenget med lys per hjørne og uten effektene i skyggeleggingen (bakkeMateriale i index.html) – det
+//           klart tyngste i bildet på svake maskiner (målt 14. nov: 700 ms -> 20 ms per bilde med programvare-grafikk)
 // Reglene øverst uten DOM (Kvalitet.neste) – test: node pipeline/fliser/test_kvalitet.js.
 (function (rot) {
   const NIVÅ = {
     høy: { navn: 'Høy', pr: [1.5, 1.25], tre: 1, gress: 1, blomster: true, tekstur: true, vann: 1 },
-    middels: { navn: 'Middels', pr: [1, 1], tre: .6, gress: .5, blomster: true, tekstur: false, vann: 1 },
-    lav: { navn: 'Lav', pr: [.75, .75], tre: .35, gress: 0, blomster: false, tekstur: false, vann: 0 },
+    middels: { navn: 'Middels', pr: [1, 1], tre: .6, gress: .5, blomster: true, tekstur: false, vann: 1, nett: .92 },
+    lav: { navn: 'Lav', pr: [.75, .75], tre: .35, gress: 0, blomster: false, tekstur: false, vann: 0, bakke: 'enkel', nett: .83 },
   };
   const REKKE = ['høy', 'middels', 'lav'];
   // Auto: ms = snittid per bilde, skala = oppløsningsfaktoren (1 = full, 0,6 = laveste), nå/sist i sekunder.
@@ -42,6 +45,7 @@
     if (nivå === S.nivå) return; S.nivå = nivå; KVAL.v++; settKnapp();
     // trærne, gresset og blomstene fordeles på nytt i neste ramme; bakketeksturen følger med i neste utsnitt
     if (typeof R3 !== 'undefined' && R3) { R3.lodVed = null; R3.gressSenter = null; }
+    if (typeof byttBakke === 'function') byttBakke();
     if (typeof logg === 'function') logg('Grafikk: ' + NIVÅ[nivå].navn.toLowerCase() + (valg === 'auto' ? ' (automatisk – velg selv i ☰)' : '') + '.');
   }
   knapp.onclick = () => { const r = ['auto', ...REKKE]; valg = r[(r.indexOf(valg) + 1) % r.length]; try { localStorage.setItem('riksbrudd-grafikk', valg); } catch (e) { /* privat vindu */ }

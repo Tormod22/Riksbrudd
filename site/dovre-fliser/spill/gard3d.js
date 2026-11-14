@@ -68,17 +68,21 @@
     const n = ut.reduce((a, g) => a + g.attributes.position.count, 0), p = new Float32Array(n * 3), no = new Float32Array(n * 3); let o = 0;
     for (const g of ut) { p.set(g.attributes.position.array, o * 3); no.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; g.dispose(); }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(p, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(no, 3)); return geo; };
-  const kasse = (x, y, zz, sx, sy, sz, rx = 0) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (rx) g.rotateY(rx); g.translate(x, y, zz); return g; };
+  // uten: sidene som ikke synes og kan utelates (BoxGeometry-gruppene: 0 +x, 1 −x, 2 +y, 3 −y, 4 +z, 5 −z) – endene på en list, bunnen
+  // på en stolpe. Gjerdene var 75 000 trekanter ved Dombås (14. nov).
+  const kasse = (x, y, zz, sx, sy, sz, rx = 0, uten = null) => { let g = new THREE.BoxGeometry(sx, sy, sz);
+    if (uten) { const ix = g.index.array, ny = []; for (const gr of g.groups) if (!uten.includes(gr.materialIndex)) for (let q = gr.start; q < gr.start + gr.count; q++) ny.push(ix[q]); g.setIndex(ny); g.clearGroups(); }
+    if (rx) g.rotateY(rx); g.translate(x, y, zz); return g; };
   function modeller() {
-    const ball = new THREE.CylinderGeometry(.62, .62, 1.2, 12, 1); ball.rotateZ(Math.PI / 2); ball.translate(0, 0, .6);
+    const ball = new THREE.CylinderGeometry(.62, .62, 1.2, 8, 1); ball.rotateZ(Math.PI / 2); ball.translate(0, 0, .6);
     // stolpe ved starten av biten + to streng og netting (en tynn plate med rutemønster i fargen)
-    const stolpe = flett([kasse(0, 0, .6, .04, .11, 1.2), kasse(.5, 0, 1.08, 1, .025, .03), kasse(.5, 0, .25, 1, .025, .03)]);
+    const stolpe = flett([kasse(0, 0, .6, .04, .11, 1.2, 0, [5]), kasse(.5, 0, 1.08, 1, .025, .03, 0, [0, 1]), kasse(.5, 0, .25, 1, .025, .03, 0, [0, 1])]);
     // skigard: en staur (stående) og tre skrå skier mellom dem
-    const ski = [kasse(0, 0, .7, .035, .12, 1.4)];
-    for (let k = 0; k < 3; k++) ski.push(kasse(.17 + k * .33, 0, .7, .85, .045, .05, -1.15));
+    const ski = [kasse(0, 0, .7, .035, .12, 1.4, 0, [5])];
+    for (let k = 0; k < 3; k++) ski.push(kasse(.17 + k * .33, 0, .7, .85, .045, .05, -1.15, [0, 1]));
     const skigard = flett(ski);
-    // steingjerde: fire runde steiner i en lav rad (biten er ca. 2,9 m, så steinene er smale i x før skaleringen)
-    const st = []; for (let k = 0; k < 4; k++) { const g = new THREE.IcosahedronGeometry(1, 0); g.scale(.17, .38 + .06 * (k % 2), .3 + .05 * ((k * 2) % 3)); g.translate(.125 + k * .25, ((k * 7) % 3 - 1) * .06, .24); st.push(g); }
+    // steingjerde: fire kantete steiner (8 trekanter hver, før 20) i en lav rad (biten er ca. 2,9 m, så steinene er smale i x før skaleringen)
+    const st = []; for (let k = 0; k < 4; k++) { const g = new THREE.OctahedronGeometry(1, 0); g.rotateZ(k * 1.1); g.rotateX(.4 + k * .7); g.scale(.19, .4 + .06 * (k % 2), .32 + .05 * ((k * 2) % 3)); g.translate(.125 + k * .25, ((k * 7) % 3 - 1) * .06, .24); st.push(g); }
     const stein = flett(st);
     const netting = new THREE.PlaneGeometry(1, .85); netting.rotateX(Math.PI / 2); netting.translate(.5, 0, .58);
     return { ball, stolpe, skigard, stein, netting };
@@ -98,18 +102,19 @@
 
   KROKER.sett3d.push((u, Rr) => {
     fjern(Rr); if (u.S > 2200 || !u.gard) return;
-    const M = modeller(), o = new THREE.Object3D(), c = new THREE.Color(), d = u.gard; G = { u, mesh: [], ball: null };
-    // rundballene: hvit, grønn eller svart plast
+    const M = modeller(), d = u.gard; G = { u, mesh: [], ball: null };
+    // rundballene: hvit, grønn eller svart plast. Ballene og gjerdene ligger i ruter (ruteNett i index.html): bare rutene i synsfeltet
+    // og nær nok tegnes (før ble alle tegnet hver ramme i hele utsnittet)
     const nb = d.baller.length / 5;
-    if (nb) { const m = nett(M.ball, new THREE.MeshLambertMaterial({ color: 0xffffff }), nb), F = [[.9, .91, .88], [.28, .44, .27], [.1, .1, .1]];
-      for (let k = 0; k < nb; k++) { const q = k * 5; o.position.set(d.baller[q], d.baller[q + 1], d.baller[q + 2] - .08); o.rotation.set(0, 0, d.baller[q + 3]); o.scale.setScalar(1); o.updateMatrix(); m.setMatrixAt(k, o.matrix);
-        const f = F[d.baller[q + 4]], s = .94 + .06 * hash(k, nb, 3); c.setRGB(f[0] * s, f[1] * s, f[2] * s); m.setColorAt(k, c); }
-      Rr.scene.add(m); G.mesh.push(m); G.ball = m; }
+    if (nb) { const F = [[.9, .91, .88], [.28, .44, .27], [.1, .1, .1]];
+      G.ball = ruteNett(Rr, nb, (k, o2, c2) => { const q = k * 5; o2.position.set(d.baller[q], d.baller[q + 1], d.baller[q + 2] - .08); o2.rotation.set(0, 0, d.baller[q + 3]);
+        const f = F[d.baller[q + 4]], s = .94 + .06 * hash(k, nb, 3); c2.setRGB(f[0] * s, f[1] * s, f[2] * s); }, M.ball, new THREE.MeshLambertMaterial({ color: 0xffffff }), { celle: 200, maks: 900 });
+      G.mesh.push(...G.ball.mesh); }
     // gjerdebitene: posisjon, retning i planet, lengde (skalert i x) og helning
-    const legg = (data, geo, mat, farge) => { const n = data.length / 6; if (!n) return; const m = nett(geo, mat, n);
-      for (let k = 0; k < n; k++) { const q = k * 6; o.position.set(data[q], data[q + 1], data[q + 2] - .05); o.rotation.set(0, -data[q + 5], data[q + 3], 'ZYX'); o.scale.set(data[q + 4], 1, 1); o.updateMatrix(); m.setMatrixAt(k, o.matrix);
-        const f = farge(k), s = .85 + .3 * hash(k, n, 5); c.setRGB(f[0] * s, f[1] * s, f[2] * s); m.setColorAt(k, c); }
-      Rr.scene.add(m); G.mesh.push(m); };
+    const legg = (data, geo, mat, farge) => { const n = data.length / 6; if (!n) return;
+      const gr = ruteNett(Rr, n, (k, o2, c2) => { const q = k * 6; o2.position.set(data[q], data[q + 1], data[q + 2] - .05); o2.rotation.set(0, -data[q + 5], data[q + 3], 'ZYX'); o2.scale.set(data[q + 4], 1, 1);
+        const f = farge(k), s = .85 + .3 * hash(k, n, 5); c2.setRGB(f[0] * s, f[1] * s, f[2] * s); }, geo, mat, { celle: 160, maks: 550 });
+      G.mesh.push(...gr.mesh); };
     const tre = () => [.42, .33, .24], grå = () => [.5, .5, .48];
     legg(d.biter[0], M.stolpe, new THREE.MeshLambertMaterial({ color: 0xffffff }), tre);
     legg(d.biter[0], M.netting, new THREE.MeshLambertMaterial({ color: 0xffffff, map: nettTekstur(), alphaTest: .5, side: THREE.DoubleSide }), () => [.75, .75, .72]);
@@ -118,7 +123,7 @@
     sesong();
   });
   // rundballene står ute bare sommer og høst
-  function sesong() { if (!G || !G.ball) return; const å = (window.VAER && VAER.årstid) || 'sommer'; G.ball.visible = å === 'sommer' || å === 'høst'; }
+  function sesong() { if (!G || !G.ball) return; const å = (window.VAER && VAER.årstid) || 'sommer'; G.ball.av = !(å === 'sommer' || å === 'høst'); }
   KROKER.ramme3d.push(Rr => { if (G && G.u === Rr.ut) sesong(); });
 
   // for vakt og tester: punktene (x, y, z) per slag, og antall/trekanter i scenen

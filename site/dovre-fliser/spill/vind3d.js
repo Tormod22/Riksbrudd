@@ -223,6 +223,8 @@
   }
 
   // ---------- kroker ----------
+  // grafikknivået byttet: terrenget har fått nytt materiale (byttBakke i index.html); enkel bakke har ingen vannmaske og ingen bølger
+  if (KROKER.bakke) KROKER.bakke.push((u, R) => { if (R.mesh && R.mesh.material && R.mesh.material.specularMap) bølgeShader(R.mesh.material); });
   KROKER.sett3d.push((u, R) => {
     if (R.mesh && R.mesh.material && R.mesh.material.specularMap) bølgeShader(R.mesh.material);
     for (const s of HAV) { R.scene.remove(s); s.material.dispose(); } HAV = [];
