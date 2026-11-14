@@ -6,11 +6,13 @@ const D = path.join(__dirname, '..', '..', 'site', 'dovre-fliser');
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
 
 // modus: 'ok' (filene leses), 'brudd' (som uten nett), 'heng' (svarer aldri – bare avbrudd stopper den)
-let modus = 'ok', lager = 'ok', n502 = 0; const kall = [];
+let modus = 'ok', lager = 'ok', n502 = 0, samtidig = 0, maksSamtidig = 0; const kall = [];
 const svar = (data, status) => ({ ok: status === 200 || status === 206, status, arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), json: async () => JSON.parse(Buffer.from(data).toString()) });
 const falskFetch = (url, valg = {}) => new Promise((ja, nei) => {
   kall.push(url); const api = url.startsWith('/api/kart/'), m = api ? lager : modus;
   if (valg.signal) valg.signal.addEventListener('abort', () => { const e = new Error('avbrutt'); e.name = 'AbortError'; nei(e); });
+  // 'tell': svarer etter 15 ms og teller hvor mange hentinger som er i gang samtidig
+  if (m === 'tell' && !valg.telt) { samtidig++; maksSamtidig = Math.max(maksSamtidig, samtidig); return setTimeout(() => { samtidig--; falskFetch(url, Object.assign({}, valg, { telt: true })).then(ja, nei); }, 15); }
   if (m === 'heng') return;
   if (m === 'sent') { modus = 'ok'; return setTimeout(() => setImmediate(() => falskFetch(url, valg).then(ja, nei)), 10); }   // svaret kommer som en egen oppgave etter klokkene
   if (m === 'brudd') return nei(new TypeError('Failed to fetch'));
@@ -58,6 +60,14 @@ const T = ctx.T, KF = T.KF;
   lager = 'to502'; n502 = 0; kilder.length = 0;
   const b5 = await new T.Kilde('vektor.pmtiles').getBytes(0, 127);
   ok(b5.data.byteLength === 127 && kilder.pop() === 'GitHub' && n502 === 3, 'kartlageret svarer 502 to ganger: tredje forsøk gir biten (' + n502 + ' forsøk)');
+  // 14. nov: 80 hentinger bestilt på en gang – høyst 24 er i gang samtidig, og alle kommer
+  lager = 'tell'; samtidig = 0; maksSamtidig = 0; const K8 = new T.Kilde('vektor.pmtiles');
+  const alle = await Promise.all(Array.from({ length: 80 }, (_, i) => K8.getBytes(i * 10, 100).then(r => r.data.byteLength, () => -1)));
+  ok(alle.every(n => n === 100) && maksSamtidig <= 24 && maksSamtidig >= 20, '80 hentinger på en gang: høyst ' + maksSamtidig + ' samtidig, alle kom');
+  // en henting som avbrytes mens den venter på tur, gir plassen fra seg og kaster AbortError
+  { const ac = new AbortController(), venter = Array.from({ length: 30 }, (_, i) => K8.getBytes(i * 10, 100)); let e9 = null;
+    const p9 = K8.getBytes(5, 50, ac.signal).catch(e => { e9 = e; }); ac.abort(); await p9; const res9 = await Promise.all(venter.map(p => p.then(() => 1, () => 0)));
+    ok(e9 && e9.name === 'AbortError' && res9.every(Boolean), 'avbrutt i køen: AbortError, og de andre hentingene går videre'); }
   // hele Norge har ingen reservefil: feilen som meldes er den fra kartlageret, ikke «404» for reserven, og reserven prøves bare én gang
   lager = 'f502'; let e6 = null, e7 = null; const K6 = new T.Kilde('vektor-0.pmtiles');
   try { await K6.getBytes(0, 127); } catch (e) { e6 = e; }

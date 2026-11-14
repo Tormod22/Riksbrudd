@@ -103,7 +103,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=6bfd6db989"></script>
+<script src="/dovre-fliser/kartflis.js?v=c070789f37"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -226,7 +226,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=96c8016cef');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=12cbecd8ce');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -331,12 +331,17 @@ function tegnHud() {
 }
 // Kartdata som ikke lot seg hente. Nettleserens egne feiltekster er på engelsk («Failed to fetch»): uten nett sier vi det på norsk.
 // Flisene det gjelder lages på nytt av seg selv (kø), og meldingen tas bort når hentingen virker igjen (nettOk).
-let nettFeilVed = 0;
+let nettFeilVed = 0, nettFeilTider = [];
 function utenNett(e) { return /failed to fetch|networkerror|load failed|tidsgrense/i.test(String(e && e.message || e)); }
 function visFeil(e) {
-  nettFeilVed = performance.now();
-  visMelding(utenNett(e) ? 'Får ikke hentet kartdata – ingen kontakt med nettet eller kartlageret. Kartet fylles ut av seg selv når forbindelsen er tilbake.'
-    : 'Får ikke hentet kartdata (' + (e && e.message || e) + '). Prøver igjen.', { type: 'nett' });
+  const nå = performance.now(); nettFeilVed = nå; nettFeilTider.push(nå); nettFeilTider = nettFeilTider.filter(t => nå - t < 30000);
+  // En og annen kartbit som ikke kommer, hentes på nytt av seg selv. Meldingen vises først når det skjer igjen og igjen (tre på et
+  // halvt minutt) eller nettleseren selv sier at nettet er borte (14. nov: brukeren fikk meldingen midt i bildet for enkeltfeil).
+  if (nettFeilTider.length < 3 && navigator.onLine !== false) return;
+  // den tekniske årsaken står i klammer til slutt, så et skjermbilde av meldingen sier hva som skjedde
+  const hva = ' [' + String(e && e.message || e).slice(0, 110) + ']';
+  visMelding((utenNett(e) ? 'Får ikke hentet kartdata – ingen kontakt med nettet eller kartlageret. Kartet fylles ut av seg selv når forbindelsen er tilbake.'
+    : 'Får ikke hentet kartdata. Prøver igjen.') + hva, { type: 'nett' });
 }
 function nettOk() { if (MELDING.type === 'nett' && performance.now() - nettFeilVed > 3000) skjulMelding('nett'); }
 

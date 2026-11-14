@@ -21,7 +21,23 @@ async function hentMedFrist(url, ms, les, valg) {
   catch (e) { if (forSent) throw new Error('tidsgrense: kartlageret svarte ikke på ' + Math.round(ms / 1000) + ' s'); throw e; }
   finally { clearTimeout(t); if (ytre) ytre.removeEventListener('abort', stopp); }
 }
-const FRIST_FLIS = 25000;
+const FRIST_FLIS = 40000;
+// Høyst HENT_SAMTIDIG hentinger om gangen (per tråd). Uten grensen startet et 3D-utsnitt flere hundre hentinger samtidig: tidsgrensen
+// talte da også tiden de sto i kø i nettleseren (en eldre nettprotokoll slipper bare seks gjennom om gangen), og kartlageret måtte
+// starte over hundre funksjoner på en gang. Brukeren fikk «ingen kontakt med nettet eller kartlageret» igjen og igjen (14. nov).
+const HENT_SAMTIDIG = 24; let hentIGang = 0; const hentKø = [];
+function hentSlipp() { hentIGang--; const neste = hentKø.shift(); if (neste) neste(); }
+// hentTur(signal): løses når hentingen kan starte. Avbrytes ventingen utenfra, kastes AbortError (og plassen i køen gis fra seg).
+function hentTur(signal) {
+  if (hentIGang < HENT_SAMTIDIG) { hentIGang++; return Promise.resolve(); }
+  return new Promise((ja, nei) => {
+    const avbryt = () => { const i = hentKø.indexOf(start); if (i >= 0) hentKø.splice(i, 1); const e = new Error('avbrutt'); e.name = 'AbortError'; nei(e); };
+    const start = () => { if (signal) signal.removeEventListener('abort', avbryt); hentIGang++; ja(); };
+    if (signal) { if (signal.aborted) return avbryt(); signal.addEventListener('abort', avbryt, { once: true }); }
+    hentKø.push(start); });
+}
+// hentMedFrist når det er vår tur (fristen begynner først da)
+async function hentITur(url, ms, les, valg) { await hentTur(valg && valg.signal); try { return await hentMedFrist(url, ms, les, valg); } finally { hentSlipp(); } }
 // vent(ms, signal): en pause mellom to forsøk; avbrytes hentingen utenfra, kastes AbortError
 const vent = (ms, signal) => new Promise((ja, nei) => { const t = setTimeout(ja, ms);
   if (signal) signal.addEventListener('abort', () => { clearTimeout(t); const e = new Error('avbrutt'); e.name = 'AbortError'; nei(e); }, { once: true }); });
@@ -58,18 +74,18 @@ class Kilde {
       // Kartlageret kan svare 429/5xx eller miste forbindelsen i korte perioder (GitHub bak mellomstasjonen): opptil tre forsøk
       for (let forsøk = 0; forsøk < 3; forsøk++) {
         try {
-          const { r, data } = await hentMedFrist(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, FRIST_FLIS, 'arrayBuffer', { signal });
+          const { r, data } = await hentITur(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, FRIST_FLIS, 'arrayBuffer', { signal });
           if (r.ok) { KF.vedBytes(data.byteLength, 'GitHub'); return { data }; }
           fra = 'kartlageret svarte ' + r.status + ' for ' + this.fil;
           // 400 og 404 blir ikke bedre av et nytt forsøk
           if (r.status < 500 && r.status !== 429 && r.status !== 408) break;
-        } catch (e) { if (e.name === 'AbortError') throw e; fra = String(e && e.message || e); if (/tidsgrense/.test(fra)) break; }
+        } catch (e) { if (e.name === 'AbortError') throw e; fra = String(e && e.message || e) + ' (' + this.fil + ', forsøk ' + (forsøk + 1) + ')'; if (/tidsgrense/.test(fra)) break; }
         if (forsøk < 2) await vent(350 * 3 ** forsøk, signal);
       }
       if (this.tag) throw new Error(fra);
     }
     if (fra && UTEN_RESERVE.has(this.url)) throw new Error(fra);
-    const svar = await hentMedFrist(this.url, FRIST_FLIS, 'arrayBuffer', { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal }), r = svar.r;
+    const svar = await hentITur(this.url, FRIST_FLIS, 'arrayBuffer', { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal }), r = svar.r;
     // reserven finnes ikke (hele Norge ligger bare i kartlageret): husk det, og meld feilen fra kartlageret
     if (r.status === 404 && fra) { UTEN_RESERVE.add(this.url); throw new Error(fra); }
     if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status + ' ' + this.url);

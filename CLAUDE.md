@@ -618,3 +618,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   funnet), vann oppover fjellveggen på Snøhetta, jernbanesporet slutter brått i skrått terreng, vegen delvis begravd i skråninger
   (ikke kontrollert på bilde etter Veg.høyder), og småting i 2D-kartet langt ute (Finnmark, kaier, Sverige). HELE NORGE mangler vegtype
   i vektorflisene til «Bygg Norge» er kjørt (til da gjetter Veg.gjett).
+  KARTDATA SOM IKKE KOMMER (14. nov, brukeren på /norge etter publiseringen: «Får ikke hentet kartdata – ingen kontakt med nettet eller
+  kartlageret», flere ganger; ikke gjenskapt herfra – seks steder, tregt nett og eldre nettprotokoll ga 0 feil, og Vercel-loggen viste
+  ingen feil mot GitHub). Tiltak i kartflis.js: Kilde.getBytes prøver kartlageret tre ganger (429, 5xx, nettfeil), reservefila prøves
+  bare der den finnes (UTEN_RESERVE; hele Norge har ingen), høyst HENT_SAMTIDIG = 24 hentinger om gangen per tråd (hentTur/hentSlipp –
+  fristen FRIST_FLIS = 40 s starter først når hentingen starter), og feilteksten har filnavn og forsøk. site/api/kart.js prøver GitHub
+  tre ganger, lagrer aldri feil i hurtigbufferen og skriver «kart: …» i loggen (Vercel runtime logs, 1 time på gratisplanen).
+  visFeil (index.html) viser meldingen først ved tre feil på et halvt minutt (eller når nettleseren er frakoblet), med den tekniske
+  årsaken i klammer – be brukeren om et skjermbilde av den. VAKT: kartflis.js deler navnerom med index.html (vanlig skript): nye
+  navn der må være unike («slipp» fantes fra før og stoppet hele siden; sjekk.js fanget det, node --check gjør det ikke).
+  Tester: test_nett.js, test_kartlager.js. Hver publisering tømmer Vercels hurtigbuffer for /api/kart (alt hentes fra GitHub på nytt).
