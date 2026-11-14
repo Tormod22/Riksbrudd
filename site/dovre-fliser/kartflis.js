@@ -22,6 +22,11 @@ async function hentMedFrist(url, ms, les, valg) {
   finally { clearTimeout(t); if (ytre) ytre.removeEventListener('abort', stopp); }
 }
 const FRIST_FLIS = 25000;
+// vent(ms, signal): en pause mellom to forsøk; avbrytes hentingen utenfra, kastes AbortError
+const vent = (ms, signal) => new Promise((ja, nei) => { const t = setTimeout(ja, ms);
+  if (signal) signal.addEventListener('abort', () => { clearTimeout(t); const e = new Error('avbrutt'); e.name = 'AbortError'; nei(e); }, { once: true }); });
+// Reservefiler som ikke finnes på serveren: prøves ikke igjen
+const UTEN_RESERVE = new Set();
 // Kjedebutikkene (k i byggdataene, nummeret fra KJEDER i pipeline/fliser/bygninger.py) får oppdiktede navn og egne farger,
 // så man kjenner dem igjen fra virkeligheten uten å bruke de ekte merkene (brukeren 11. nov: «en Kiwi blir en grønn butikk som heter Pære»).
 // [navn, skiltfarge, tekstfarge]
@@ -46,14 +51,27 @@ class Kilde {
   constructor(fil, tag) { this.fil = fil; this.tag = tag || null; this.url = KF.data + fil; }   // tag: egen release (byggomriss)
   getKey() { return (this.tag || '') + this.url; }
   async getBytes(off, len, signal) {
+    // fra: hvorfor kartlageret ikke svarte – vises når reserven heller ikke finnes (14. nov: brukeren fikk «HTTP 404 …/vektor-0.pmtiles»
+    // på /norge; det var reservefila som ikke finnes, mens den egentlige feilen fra kartlageret ble borte)
+    let fra = null;
     if (this.tag || await KF.release) {   // GitHub-releasen via mellomstasjonen: byteområdet i adressen, så Vercel kan lagre hver bit
-      try {
-        const { r, data } = await hentMedFrist(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, FRIST_FLIS, 'arrayBuffer', { signal });
-        if (r.ok) { KF.vedBytes(data.byteLength, 'GitHub'); return { data }; }
-        if (this.tag) throw new Error('HTTP ' + r.status + ' ' + this.fil);
-      } catch (e) { if (e.name === 'AbortError' || this.tag) throw e; }
+      // Kartlageret kan svare 429/5xx eller miste forbindelsen i korte perioder (GitHub bak mellomstasjonen): opptil tre forsøk
+      for (let forsøk = 0; forsøk < 3; forsøk++) {
+        try {
+          const { r, data } = await hentMedFrist(`/api/kart/${this.tag || KF.kartTag}/${this.fil}/${off}/${len}`, FRIST_FLIS, 'arrayBuffer', { signal });
+          if (r.ok) { KF.vedBytes(data.byteLength, 'GitHub'); return { data }; }
+          fra = 'kartlageret svarte ' + r.status + ' for ' + this.fil;
+          // 400 og 404 blir ikke bedre av et nytt forsøk
+          if (r.status < 500 && r.status !== 429 && r.status !== 408) break;
+        } catch (e) { if (e.name === 'AbortError') throw e; fra = String(e && e.message || e); if (/tidsgrense/.test(fra)) break; }
+        if (forsøk < 2) await vent(350 * 3 ** forsøk, signal);
+      }
+      if (this.tag) throw new Error(fra);
     }
+    if (fra && UTEN_RESERVE.has(this.url)) throw new Error(fra);
     const svar = await hentMedFrist(this.url, FRIST_FLIS, 'arrayBuffer', { headers: { Range: `bytes=${off}-${off + len - 1}` }, signal }), r = svar.r;
+    // reserven finnes ikke (hele Norge ligger bare i kartlageret): husk det, og meld feilen fra kartlageret
+    if (r.status === 404 && fra) { UTEN_RESERVE.add(this.url); throw new Error(fra); }
     if (r.status !== 206 && r.status !== 200) throw new Error('HTTP ' + r.status + ' ' + this.url);
     let data = svar.data;
     if (r.status === 200 && data.byteLength > len) data = data.slice(off, off + len); // server uten Range

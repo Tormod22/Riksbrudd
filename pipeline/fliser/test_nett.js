@@ -6,7 +6,7 @@ const D = path.join(__dirname, '..', '..', 'site', 'dovre-fliser');
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
 
 // modus: 'ok' (filene leses), 'brudd' (som uten nett), 'heng' (svarer aldri – bare avbrudd stopper den)
-let modus = 'ok', lager = 'ok'; const kall = [];
+let modus = 'ok', lager = 'ok', n502 = 0; const kall = [];
 const svar = (data, status) => ({ ok: status === 200 || status === 206, status, arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), json: async () => JSON.parse(Buffer.from(data).toString()) });
 const falskFetch = (url, valg = {}) => new Promise((ja, nei) => {
   kall.push(url); const api = url.startsWith('/api/kart/'), m = api ? lager : modus;
@@ -14,6 +14,9 @@ const falskFetch = (url, valg = {}) => new Promise((ja, nei) => {
   if (m === 'heng') return;
   if (m === 'sent') { modus = 'ok'; return setTimeout(() => setImmediate(() => falskFetch(url, valg).then(ja, nei)), 10); }   // svaret kommer som en egen oppgave etter klokkene
   if (m === 'brudd') return nei(new TypeError('Failed to fetch'));
+  // 'f502': kartlageret svarer 502 hver gang; 'to502': 502 de to første gangene, så i orden
+  if (m === 'f502') return ja(svar(Buffer.from('{}'), 502));
+  if (m === 'to502') { if (++n502 <= 2) return ja(svar(Buffer.from('{}'), 502)); }
   let fil, fra, til;
   if (api) { const d = url.split('/'); fil = d[4]; fra = +d[5]; til = fra + +d[6] - 1; }
   else { fil = url.split('/').pop(); const r = /bytes=(\d+)-(\d+)/.exec(valg.headers.Range); fra = +r[1]; til = +r[2]; }
@@ -51,6 +54,17 @@ const T = ctx.T, KF = T.KF;
   ok(b.data.byteLength === 127 && kilder.pop() === 'Vercel', 'kartlageret nede: biten hentes fra Dovre-filene (reserve)');
   let e3 = null; try { await new T.Kilde('hus.pmtiles', 'kart-hus-test').getBytes(0, 127); } catch (e) { e3 = e; }
   ok(e3, 'et lag med egen release har ingen reserve: feilen meldes (' + (e3 && e3.message) + ')');
+  // 14. nov: kartlageret svarer 502 to ganger og så i orden – biten kommer fra kartlageret etter nye forsøk
+  lager = 'to502'; n502 = 0; kilder.length = 0;
+  const b5 = await new T.Kilde('vektor.pmtiles').getBytes(0, 127);
+  ok(b5.data.byteLength === 127 && kilder.pop() === 'GitHub' && n502 === 3, 'kartlageret svarer 502 to ganger: tredje forsøk gir biten (' + n502 + ' forsøk)');
+  // hele Norge har ingen reservefil: feilen som meldes er den fra kartlageret, ikke «404» for reserven, og reserven prøves bare én gang
+  lager = 'f502'; let e6 = null, e7 = null; const K6 = new T.Kilde('vektor-0.pmtiles');
+  try { await K6.getBytes(0, 127); } catch (e) { e6 = e; }
+  const førKall = kall.length; try { await K6.getBytes(0, 127); } catch (e) { e7 = e; }
+  const reserve = kall.slice(førKall).filter(u => !u.startsWith('/api/kart/')).length;
+  ok(e6 && /kartlageret svarte 502/.test(e6.message) && !/404/.test(e6.message), 'uten reservefil meldes feilen fra kartlageret (' + (e6 && e6.message) + ')');
+  ok(e7 && /kartlageret svarte 502/.test(e7.message) && reserve === 0, 'reservefila som ikke finnes, prøves ikke igjen (' + reserve + ' hentinger)');
   lager = 'ok';
 
   // 3) nettbrudd og tilbake: flisen kommer når nettet er tilbake (det mislykkede oppslaget i pmtiles tas ut)
