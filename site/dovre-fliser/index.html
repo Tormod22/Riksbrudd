@@ -749,6 +749,14 @@ const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [2108
 // ---------- tid: 1 spilltime = 60 s ved 1× ----------
 let tid = 0, tempo = 1; const TIME = 60;   // tid i spillminutter (TIME per spilltime); 1× = sanntid: 1 spillminutt = 1 minutt (brukeren 9. nov)
 function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
+// Patruljens neste punkt. Står patruljen langt fra Dovre (motstanderne flyttes til leiren, AI.flytt), går den samme runden rundt
+// stedet den står på; lag som AI-en styrer (s.ai), patruljerer ikke.
+function patruljeMål(fi, nr) {
+  if (fi.ai) return null;
+  const p0 = PATRULJE[0];
+  if (!fi.patruljeBase || Math.hypot(fi.x - fi.patruljeBase[0], fi.y - fi.patruljeBase[1]) > MARSJ_MAKS) fi.patruljeBase = Math.hypot(fi.x - p0[0], fi.y - p0[1]) > MARSJ_MAKS ? [fi.x, fi.y] : p0;
+  return [fi.patruljeBase[0] + PATRULJE[nr][0] - p0[0], fi.patruljeBase[1] + PATRULJE[nr][1] - p0[1]];
+}
 function sim(dt) {
   for (const f of KROKER.sim) f(dt);
   const før = tid; tid += dt; const fi = ENHETER[3];
@@ -756,7 +764,7 @@ function sim(dt) {
   if (!Terreng.slattUt(fi.menn)) {
     const fiende = ENHETER.find(b => b.side === 'blå' && levende(b) && Math.hypot(b.x - fi.x, b.y - fi.y) < 900 && ser(fi, b.x, b.y));
     if (fiende) { if (fi.sti) { fi.sti = null; fi.siktSkitten = true; } fi.roligTil = tid + 30; }   // stopper og tar kampen; patruljerer igjen etter 30 rolige minutter
-    else if (!fi.sti && !fi.planlegger && tid > (fi.roligTil || 0)) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; ordre(fi, ...PATRULJE[patruljeNr], true); }
+    else if (!fi.sti && !fi.planlegger && tid > (fi.roligTil || 0)) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; const pm = patruljeMål(fi, patruljeNr); if (pm) ordre(fi, pm[0], pm[1], true); }
   }
   for (const s of ENHETER) {
     if (!s.sti) continue;
@@ -808,9 +816,14 @@ function kamprunde() {
   skitten = true;
 }
 
+// MARSJ_MAKS: lengste marsj i én ordre (luftlinje). (15. nov, brukeren på iPhone: 3D ble stående på 50 % – kortet viste 5521 vegfliser
+// i kø. Fiendens patrulje var flyttet til leiren i Ryfylke og fikk marsjordre til patruljepunktene på Dovre, 350 km unna: ruteplanen
+// ba om kart for hele strekket, og alt annet ventet bak i køen.)
+const MARSJ_MAKS = 30000;
 async function ordre(s, X, Y, stille) {
-  s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
   const d = Math.hypot(X - s.x, Y - s.y), pad = Math.max(2500, d * .3);
+  if (d > MARSJ_MAKS) { if (!stille) logg(s.navn + ': for langt å gå i én marsj (over ' + MARSJ_MAKS / 1000 + ' km). Gi ordren i etapper.'); return; }
+  s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
   try {
     const v = await lagVindu([Math.min(s.x, X) - pad, Math.min(s.y, Y) - pad, Math.max(s.x, X) + pad, Math.max(s.y, Y) + pad], true);
     const r = Terreng.ruteTil(v, s.x, s.y, X, Y);

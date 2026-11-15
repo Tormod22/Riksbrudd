@@ -716,6 +716,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const usok = us.sommernatt > us.vinternatt + .08 && us.vinternatt >= .5 && us.sommerdag > us.sommernatt + .1 && us.uten === 0 && Math.abs(us.med) > .3 && us.snø && us.vissen;
     if (!usok) { feil++; console.log(JSON.stringify(us)); }
     console.log(`${usok ? 'ok  ' : 'FEIL'} ${navn} utseende 15. nov: himmellys sommernatt ${us.sommernatt.toFixed(2)}, vinternatt ${us.vinternatt.toFixed(2)}, sommerdag ${us.sommerdag.toFixed(2)}; «Gå» snur ${(Math.abs(us.med) * 57.3).toFixed(0)}° bort fra en vegg rett foran (uten vegg ${us.uten}); snø i bratte lier ${us.snø}`);
+    // VAKT lang marsj (15. nov, brukeren: 3D sto på 50 % fordi patruljen fikk marsjordre 350 km til Dovre og kartet for hele strekket
+    // fylte hentekøen): en ordre over MARSJ_MAKS bestiller ingen fliser, og en patrulje langt unna går runden der den står.
+    const lm = await pg.evaluate(async () => { const fi = ENHETER[3], før = { x: fi.x, y: fi.y, b: fi.patruljeBase, sti: fi.sti }, n0 = RÅ.size, v0 = Object.values(FLIS_VENTER).reduce((a, c) => a + c, 0);
+      fi.x -= 180000; fi.y -= 250000; fi.patruljeBase = null; const m = patruljeMål(fi, 1), nær = Math.hypot(m[0] - fi.x, m[1] - fi.y);
+      await ordre(fi, før.x, før.y, true); const ut = { nær, nye: RÅ.size - n0, venter: Object.values(FLIS_VENTER).reduce((a, c) => a + c, 0) - v0, planlegger: !!fi.planlegger, hjemme: null };
+      fi.x = før.x; fi.y = før.y; fi.patruljeBase = null; const h = patruljeMål(fi, 1); ut.hjemme = h[0] === PATRULJE[1][0] && h[1] === PATRULJE[1][1]; fi.patruljeBase = før.b; fi.sti = før.sti; return ut; });
+    const lmok = lm.nær < 8000 && lm.nye === 0 && lm.venter <= 0 && !lm.planlegger && lm.hjemme;
+    if (!lmok) { feil++; console.log(JSON.stringify(lm)); }
+    console.log(`${lmok ? 'ok  ' : 'FEIL'} ${navn} lang marsj: ordre over taket bestiller ${lm.nye} fliser, patruljen langt unna går ${Math.round(lm.nær)} m, hjemme som før`);
     // VAKT fremdriftskortet (15. nov, brukeren på iPhone: svart skjerm mens 3D bygges): 3D av og på – mens det første utsnittet bygges,
     // står kartet (3D-lerretet skjult) med kortet «Bygger 3D … %» som øker; når det er klart, vises 3D, kortet er borte og loggen sier
     // hvor lang tid det tok. Steinmønsteret i bakken (detaljTekstur) er laget.

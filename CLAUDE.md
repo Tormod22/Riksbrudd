@@ -753,3 +753,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   hentes, 0 i kø». Frister: bildelesing (dekodFrist: createImageBitmap 4 s per forsøk, <img> 8 s), fine høyder 6 s etter de grove
   (ellers brukes de grove), omlandet 6 s. BE BRUKEREN OM ET SKJERMBILDE AV KORTET hvis det stopper igjen – linja sier om det er nettet,
   lesingen eller noe annet.
+  RUNDE 4 – ÅRSAKEN (15. nov 18:09, brukerens skjermbilde av kortet: «venter på: grove høyder · fliser: vektor 5521 · nett: 24 hentes,
+  5431 i kø»): fiendens patrulje (ENHETER[3], uten AI) var flyttet til leiren i Ryfylke (AI.flytt), men PATRULJE-punktene ligger på
+  Dovre – ordre() ba om kart (lagVindu med veger) for 350 km, og høydene til 3D sto bakerst i hentekøen. Nå: MARSJ_MAKS = 30 km i
+  luftlinje per ordre (Claudes tall; lengre ordre avvises før noe hentes, spilleren får «gi ordren i etapper»), og patruljeMål(fi, nr)
+  lar patruljen gå runden rundt stedet den står når den er langt fra Dovre (fi.patruljeBase). VAKT «lang marsj» i sjekk.js.
+  Testene fanget det ikke fordi de ikke har en lagret leir utenfor Dovre.
