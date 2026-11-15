@@ -1020,6 +1020,11 @@ function detaljTekstur() {
 const VANN_GLANS = { farge: 0x6c7882, skarphet: 150, tak: 'reflectedLight.directSpecular = 0.42 * (1.0 - exp(-reflectedLight.directSpecular / 0.42));' };
 // Vær og årstid i bakken (spill/vaer-visning.js setter verdiene): snø over snøgrensen på flatt nok terreng, høstfarger på grønt.
 const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 } };
+// TÅKEBILDET (15. nov): tåka og siktfeltene ligger i et eget, lite bilde (R3.tåkeC, 1024 × 1024) som bakken legger oppå kartet i
+// skyggeleggeren (taakeKart). Før ble de tegnet inn i selve kartbildet (opptil 4096 × 4096), som så ble sendt til grafikkortet på nytt
+// hver gang et lag hadde flyttet seg – 64 MB per gang, flere ganger i sekundet på høy spillfart. Kartbildet sendes nå én gang per utsnitt.
+const TAAKE_U = { taakeKart: { value: null } };
+const TAAKE_GLSL = 'vec4 taakeT = texture2D(taakeKart, vUv); diffuseColor.rgb = diffuseColor.rgb * (1.0 - taakeT.a) + taakeT.rgb;';
 // Bakkens shader: korn og flekker nær kameraet, høstfarger, snø over snøgrensen, og berg i stedet for strukket kartbilde der det er bratt
 // (brukeren 12. nov: fjellveggene i Jotunheimen var utvasket og utstrukket)
 // Flekkene (flekk) styrer snøgrensen, berget og lysstyrken. De hentes to ganger fra samme tekstur, i ulik målestokk (17 m og 45 m) og
@@ -1137,12 +1142,13 @@ function delBakken(geo, u) {
 }
 function enkelBakke(mat) {
   mat.userData.enkel = true;
-  mat.onBeforeCompile = sh => { Object.assign(sh.uniforms, VAER_U);
+  mat.onBeforeCompile = sh => { Object.assign(sh.uniforms, VAER_U, TAAKE_U);
     // snøen regnes per hjørne: over snøgrensen, på flatt terreng, aldri på sjøen (havnivå)
     sh.vertexShader = 'uniform float uH0;\nuniform float uSno;\nuniform float uSnoGrense;\nvarying float vSnoE;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       float mohE = position.z + uH0;
       vSnoE = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, mohE) * smoothstep(0.55, 0.8, objectNormal.z) * smoothstep(1.0, 3.0, mohE);`);
-    sh.fragmentShader = 'uniform float uHost;\nvarying float vSnoE;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform float uHost;\nuniform sampler2D taakeKart;\nvarying float vSnoE;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      ${TAAKE_GLSL}
       float gronnE = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronnE * 0.75);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96), vSnoE);`);
@@ -1162,10 +1168,11 @@ function byttBakke() {
 }
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
-    sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U);
+    sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U, TAAKE_U);
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = 'uniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = 'uniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
+      ${TAAKE_GLSL}
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
       vec2 fUv = vUv * detaljSkala;
       float korn = texture2D(detalj, fUv).r;
@@ -2246,7 +2253,10 @@ function sett3d(u) {
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
   // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
   const geo = K.geo || kjørRett(terrengGeo(u, R));
-  R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
+  // kartbildet i bakken er utsnittets eget bilde (u.base) – tåka ligger i sitt eget bilde, se TAAKE_U
+  R.texC = u.base; const tex = new THREE.CanvasTexture(u.base); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
+  if (!R.tåkeC) { R.tåkeC = document.createElement('canvas'); R.tåkeC.width = R.tåkeC.height = 1024;
+    R.tåkeTex = new THREE.CanvasTexture(R.tåkeC); R.tåkeTex.generateMipmaps = false; R.tåkeTex.minFilter = THREE.LinearFilter; R.tåkeTex.premultiplyAlpha = true; TAAKE_U.taakeKart.value = R.tåkeTex; }
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
   const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   // rutene med vann for seg (bølger og glans bare der – se bakkeVariant)
@@ -2300,17 +2310,16 @@ function sett3d(u) {
   if (R.ut) { R.bane.x += R.ut.cx - u.cx; R.bane.y += R.ut.cy - u.cy; }
   R.ut = u; R.tex = tex; R.nøkkel = '';
 }
-function bak3d() {   // kart + tåke + siktfelt inn i overflaten
-  const u = R3.ut, g = R3.texC.getContext('2d'), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
+function bak3d() {   // tåke + siktfelt i tåkebildet (se TAAKE_U) – kartbildet selv røres ikke
+  const u = R3.ut, c = R3.tåkeC, g = c.getContext('2d'), TT = c.width, mpp = 2 * u.S / TT, X0 = u.cx - u.S, Y1 = u.cy + u.S;
   const rekt = k => [(k.x0 - X0) / mpp, (Y1 - k.y0) / mpp, k.w / mpp, k.h / mpp];
-  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.drawImage(u.base, 0, 0);
-  if (VIS.taake) { const t = R3.tåke || (R3.tåke = document.createElement('canvas')); t.width = t.height = TW; const tg = t.getContext('2d');
-    tg.fillStyle = 'rgba(14,11,7,.32)'; tg.fillRect(0, 0, TW, TW); tg.globalCompositeOperation = 'destination-out';
-    for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) tg.drawImage(s.sikt.c, ...rekt(s.sikt));
-    g.drawImage(t, 0, 0); }
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, TT, TT);
+  if (VIS.taake) { g.fillStyle = 'rgba(14,11,7,.32)'; g.fillRect(0, 0, TT, TT); g.globalCompositeOperation = 'destination-out';
+    for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) g.drawImage(s.sikt.c, ...rekt(s.sikt));
+    g.globalCompositeOperation = 'source-over'; }
   if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {
     g.globalAlpha = s.side === 'blå' ? (s === valgt ? .24 : .13) : .2; g.drawImage(s.sikt.c, ...rekt(s.sikt)); g.globalAlpha = 1; }
-  R3.tex.needsUpdate = true;
+  R3.tåkeTex.needsUpdate = true; R3.bakt = (R3.bakt || 0) + 1;
 }
 function proj3(X, Y) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
@@ -2661,7 +2670,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=f4b0075779"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>

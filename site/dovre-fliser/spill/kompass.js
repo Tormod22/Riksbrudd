@@ -207,7 +207,10 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
     if (TW && u.TW === TW) {
       g.save(); g.translate(M, M); if (roter) g.rotate(-k.kurs / RAD);
       const sx = (cx - (u.cx - u.S)) / mpp, sy = ((u.cy + u.S) - cy) / mpp, sr = r * 1.45 / mpp;
-      g.globalAlpha = .92; g.drawImage(T, sx - sr, sy - sr, sr * 2, sr * 2, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm); g.globalAlpha = 1;
+      g.globalAlpha = .92; g.drawImage(T, sx - sr, sy - sr, sr * 2, sr * 2, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm);
+      // tåka og siktfeltene ligger i sitt eget bilde (R3.tåkeC, se TAAKE_U i index.html)
+      const TC = R3_.tåkeC; if (TC) { const f = TC.width / TW; g.drawImage(TC, (sx - sr) * f, (sy - sr) * f, sr * 2 * f, sr * 2 * f, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm); }
+      g.globalAlpha = 1;
       g.restore();
       if (snø > .05) {
         // fargene tas bort og det lyse blir hvitt: jorder og hei blir snø, veger og tak står igjen som grått, skogen som mørkere flekker.

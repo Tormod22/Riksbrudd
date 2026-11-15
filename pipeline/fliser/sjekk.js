@@ -686,6 +686,19 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       && typeof bt.kort === 'string' && bt.kort.length > 0 && /Grafikkort/.test(bt.tittel);
     if (!btok) { feil++; console.log(JSON.stringify(bt)); }
     console.log(`${btok ? 'ok  ' : 'FEIL'} ${navn} billigere terreng: uten vann ${bt.før.grupper} grupper; kunstig vann gir ${bt.med.grupper} grupper (${bt.med.del && Math.round(100 * bt.med.del.vann / bt.med.alle)} % vannruter), vann i gruppe ${bt.iVann}, land i gruppe ${bt.påLand}, tørt land uten lys per punkt, vått land med, GL-feil ${bt.glFeil}; grafikkort «${bt.kort}»`);
+    // VAKT tåkebildet (15. nov): tåka og siktfeltene ligger i et eget, lite bilde (R3.tåkeC) som bakken legger oppå kartet – kartbildet i
+    // bakken (R3.tex, utsnittets eget bilde) sendes ikke til grafikkortet på nytt når sikten endrer seg (versjonen står stille mens
+    // tåkebildets versjon øker). Med tåka på er bildet dekket (alfa ca. 82 av 255 der ingen ser), med tåka av er det tomt.
+    const tb = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const t0 = VIS.taake, s0 = VIS.sikt, alfa = () => { const c = R3.tåkeC, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let maks = 0, sum = 0; for (let q = 3; q < d.length; q += 4 * 97) { if (d[q] > maks) maks = d[q]; sum += d[q]; } return { maks, snitt: sum / (d.length / (4 * 97)) }; };
+      VIS.taake = true; VIS.sikt = false; await vent(3); const kart0 = R3.tex.version, tåke0 = R3.tåkeTex.version, bakt0 = R3.bakt, på = alfa();
+      siktVersjon++; await vent(3); const kart1 = R3.tex.version, tåke1 = R3.tåkeTex.version, bakt1 = R3.bakt;
+      VIS.taake = false; await vent(3); const av = alfa();
+      VIS.taake = t0; VIS.sikt = s0; await vent(3);
+      return { på, av, kartSendt: kart1 - kart0, tåkeSendt: tåke1 - tåke0, bakt: bakt1 - bakt0, eget: R3.tex.image === R3.ut.base, størrelse: R3.tåkeC.width, uniform: TAAKE_U.taakeKart.value === R3.tåkeTex, gl: R3.renderer.getContext().getError() }; });
+    const tbok = tb.eget && tb.uniform && tb.størrelse === 1024 && tb.kartSendt === 0 && tb.tåkeSendt >= 1 && tb.bakt >= 1 && tb.på.maks >= 70 && tb.på.maks <= 95 && tb.på.snitt > 5 && tb.av.maks === 0 && tb.gl === 0;
+    if (!tbok) { feil++; console.log(JSON.stringify(tb)); }
+    console.log(`${tbok ? 'ok  ' : 'FEIL'} ${navn} tåkebildet: eget bilde på ${tb.størrelse} punkter; sikten endret: kartbildet sendt ${tb.kartSendt} ganger, tåkebildet ${tb.tåkeSendt}; tåke på alfa ${tb.på.maks} (snitt ${tb.på.snitt.toFixed(0)}), tåke av ${tb.av.maks}`);
     // VAKT måling av ytelse (spill/ytelse.js, 15. nov): knappen «Mål ytelse» finnes i ☰; en kort måling gir tabellen med hele bildet, halv
     // oppløsning (halvparten så mange punkter i bredden mens den måles) og en rad for bakken med trekanter; alt i scenen er satt tilbake
     // etterpå (ingen ting igjen på et skjult lag – det er feilen vakten skal finne), oppløsningen er som før, og boksen kan lukkes.
