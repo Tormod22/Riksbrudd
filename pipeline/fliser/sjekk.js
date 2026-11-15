@@ -78,6 +78,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     for (const [v, x, y, m, lo, hi] of VISNINGER) {
       await pg.evaluate(([x, y, m]) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; peker = null; }, [x, y, m]);
       await pg.waitForFunction(() => VENTER.size === 0 && FERDIG.size > 0, null, { timeout: 20000 }); await pg.waitForTimeout(400);
+      // (under full last kan flisene for det nye stedet ennå ikke være bestilt når køen leses tom: vent også på selve høyden, høyst 20 s)
+      await pg.waitForFunction(() => VENTER.size === 0 && hoydeVed(kam.x, kam.y) != null, null, { timeout: 20000 }).catch(() => {});
       const s = await pg.evaluate(() => ({ h: hoydeVed(kam.x, kam.y), kb: Math.round(STAT.byte / 1024), req: STAT.req, z: niva() }));
       const ok = s.h != null && s.h >= lo && s.h <= hi; if (!ok) feil++;
       console.log(`${ok ? 'ok  ' : 'FEIL'} ${navn} ${v}: ${s.h == null ? '–' : Math.round(s.h)} moh. (venter ${lo}–${hi}), z${s.z}, totalt ${s.kb} KB i ${s.req} hentinger`);
