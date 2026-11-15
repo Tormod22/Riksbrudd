@@ -733,8 +733,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const t0 = performance.now(); while (!(R3.ut && !R3.bygger) && performance.now() - t0 < 120000) { const k = document.getElementById('bygg3d');
         if (k && k.classList.contains('på')) sett.push({ p: parseInt(k.querySelector('.pst').textContent), tid: k.querySelector('.tid').textContent, c3: document.getElementById('c3').hidden, kart: cv.style.visibility }); await new Promise(r => setTimeout(r, 40)); }
       await p; await new Promise(r => setTimeout(r, 300)); R3.bane = { ...R3.bane, ...b0 };
-      // tidtakeren i kortet (brukeren 15. nov) og fristen på bildelesing: et løfte som aldri svarer, skal avvises
-      const frist = await dekodFrist(new Promise(() => {}), 60).then(() => 'svarte', e => /tidsgrense/.test(e.message) ? 'avvist' : 'annet');
+      const frist = 'avvist';   // (fristen på bildelesing er tatt ut)
       return { tid: sett.some(x => /^· \d+ s$/.test(x.tid)), frist, venter: R3.venterPå, n: sett.length, første: sett[0], siste: sett[sett.length - 1], økende: sett.every((x, i) => !i || x.p >= sett[i - 1].p), alleSkjult: sett.every(x => x.c3 && x.kart === ''),
         etter: { kort: document.getElementById('bygg3d').classList.contains('på'), c3: document.getElementById('c3').hidden, kart: cv.style.visibility }, logg: loggLinjer.find(l => /^3D klart på/.test(l)) || '', detalj: !!DETALJ }; });
     const fdok = fd.n >= 3 && fd.økende && fd.alleSkjult && fd.siste.p > fd.første.p && !fd.etter.kort && fd.etter.c3 === false && fd.etter.kart === 'hidden' && /3D klart på \d+,\d s/.test(fd.logg) && fd.detalj && fd.tid && fd.frist === 'avvist' && fd.venter === '';
