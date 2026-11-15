@@ -740,3 +740,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   mens det første utsnittet bygges, står kartet (visLag3d(false)) med kortet #bygg3d «Bygger 3D … 45 %» og Avbryt; framdrift(tekst,
   andel) settes i bygg3d (høyder, kartbildet per flis, hus, trær, krokene, klargjøring); sett3d viser 3D-lerretet (visLag3d(true)).
   Loggen sier «3D klart på X s» – BE BRUKEREN OM DETTE TALLET. VAKT «fremdriftskortet» (fant at andre åpning viste svart 3D-lerret).
+  RUNDE 2 (15. nov 16:30, brukeren med skjermbilde: kortet sto på «Henter høydene … 5 %», «Den bruker alt for lang tid»). Målt med tregt
+  nett (CDP: 150 ms forsinkelse, 20 Mbit/s; scratchpad hakk/treg.js, LOKAL=<port> bruker dev.py): 6,9 s -> 5,3–5,6 s. (1) forhent3d():
+  terreng/høyde z9, hus z13 og vektor z13 bes om med en gang (hentFlis husker dem); (2) høydene (lagVindu grov og fin) og kartbildet
+  hentes og lages samtidig (Promise høyder, ventes på etter flisene); (3) pustTid() = 50 ms så lenge 3D ikke vises ennå. Kartdataene er
+  nå hentet etter ca. 1,6 s. Resten er første tegning (programmer, teksturer) – kan ikke måles riktig med programvare-grafikk.
+  NB: hver publisering tømmer Vercels lager for /api/kart, så første åpning rett etter en publisering henter alt fra GitHub.

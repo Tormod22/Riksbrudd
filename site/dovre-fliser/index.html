@@ -1243,21 +1243,26 @@ const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
 async function bygg3d(cx, cy, S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
-  framdrift('henter høydene', .05);
-  const grov = await lagVindu(b, false, Math.min(zD, 11), true), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
-  const H = new Float32Array(N * N);
-  // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
-  for (let j = 0; j < N; j++) { if ((j & 15) === 0 && børPuste()) await pust();
-    for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; } }   // hav
+  // (15. nov, brukeren på iPhone 5G: «bruker alt for lang tid». Med tregt nett (150 ms forsinkelse) tok den første byggingen 9,3 s, mye
+  // av det i hentinger som ventet på hverandre. Nå: alt byggingen trenger av kartdata bes om med en gang (forhent3d), og høydene og
+  // kartbildet hentes og lages samtidig.)
+  forhent3d(cx, cy, S, b);
+  framdrift('henter høydene og kartet', .05);
+  const høyder = Promise.all([lagVindu(b, false, Math.min(zD, 11), true), zD > 11 ? lagVindu(b, false, zD) : null]);
+  høyder.catch(() => {});   // (feil kommer fram der høydene ventes på under – dette hindrer en melding om «ubehandlet feil» før det)   // 2 m der den finnes (Dombås), ellers 8 m
   const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
-  framdrift('tegner kartet', .15); const flisAlle = kø.length || 1; let flisFerdig = 0;
-  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); framdrift('tegner kartet', .15 + .35 * ++flisFerdig / flisAlle);
+  framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
+  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); framdrift('henter høydene og kartet', .1 + .4 * ++flisFerdig / flisAlle);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
+  const [grov, fin] = await høyder, H = new Float32Array(N * N);
+  // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
+  for (let j = 0; j < N; j++) { if ((j & 15) === 0 && børPuste()) await pust();
+    for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; } }   // hav
   if (INFRA && VIS.infra) tegnInfraPå(g, cx - S, cy + S, mpp, TW, TW, { bruer: false, punkter: false, etiketter: false });   // tunneler, ferjer, dammer … i overflaten
   const u = { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2], hus: null };
   u.infra = infraI(u); if (VIS.infra) u.bru = bruer3d(u);
@@ -1388,7 +1393,9 @@ async function vannmaske(px, TW, H, N, steg) {
 // mellom to bilder, 8–16 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
 const pusterom = () => new Promise(r => { let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
 let sistPust = 0, pustAntall = 0;
-const pustTid = () => { const snitt = typeof R3 !== 'undefined' && R3 && på3d && R3.rammeSnitt ? R3.rammeSnitt : 16.7; return Math.max(8, Math.min(16, snitt * .6)); };
+// (15. nov: ved første åpning av 3D står bare kartet og fremdriftskortet på skjermen – da jobbes det i biter på 50 ms; med de korte
+// bitene gikk ca. 0,8 s bare til å vente på neste bilde)
+const pustTid = () => { if (typeof R3 !== 'undefined' && R3 && på3d && !R3.ut) return 50; const snitt = typeof R3 !== 'undefined' && R3 && på3d && R3.rammeSnitt ? R3.rammeSnitt : 16.7; return Math.max(8, Math.min(16, snitt * .6)); };
 const børPuste = () => performance.now() - sistPust > pustTid() && !document.hidden;
 async function pust() { if (!børPuste()) return; pustAntall++; await pusterom(); sistPust = performance.now(); }
 // En tung jobb på kartbildet, noen rader om gangen: f(rad0, rad1) for hele bildet med pust mellom.
@@ -2316,6 +2323,20 @@ async function forbered3d(u) {
   await pusterom(); K.tex = new THREE.CanvasTexture(u.base); K.tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy(); R.renderer.initTexture(K.tex);
   await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex);
   await pusterom();
+}
+// FORHENTING (15. nov): ber om kartdataene byggingen og modulene trenger senere – terrengklassene og høydene i 32 m (trær, skogbunn, dyr,
+// planter), husene og vegene (z13) – med en gang, så de hentes mens høydene og kartbildet lages. hentFlis husker svarene (RÅ, høyst 900),
+// så de senere kallene får de samme. Bare når antallet er rimelig (høyst 160 biter per lag).
+function forhent3d(cx, cy, S, b) {
+  const be = (lag, z, bb) => { const c = [Math.max(bb[0], OMRÅDE[0]), Math.max(bb[1], OMRÅDE[1]), Math.min(bb[2], OMRÅDE[2] - 1), Math.min(bb[3], OMRÅDE[3] - 1)];
+    if (c[0] > c[2] || c[1] > c[3]) return; const [x0, y0, x1, y1] = flisområde(c, z); if ((x1 - x0 + 1) * (y1 - y0 + 1) > 160) return;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) hentFlis(lag, z, x, y).catch(() => {}); };
+  try {
+    be('hoyde', 9, b); be('terreng', 9, b);
+    const u = [cx - S, cy - S, cx + S, cy + S];
+    if (S <= 3200 && VIS.bygg && LAGFILER && LAGFILER.hus) be('hus', 13, u);
+    if (S <= 2200 && VIS.veg) be('vektor', 13, u);
+  } catch (e) { console.warn('forhenting:', e); }
 }
 // FORVARMING (15. nov, brukeren på iPhone: «bruker alt for lang tid på å bygge 3D» første gang). Målt på testmaskinen: etter at det
 // første utsnittet er bygget, går ca. 2 s til at grafikkortet lager skyggeprogrammene, og bakkens program er det klart største. Mens
