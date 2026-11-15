@@ -725,3 +725,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   deler dem etter om et nytt område ble satt inn (R3.settNr), bygget (R3.bygger) eller ellers (Ytelse.hakkTekst, test_ytelse.js).
   Brukes til å se hakk som kommer fra grafikkortet (teksturopplasting, nye skyggeprogrammer) – de kan ikke måles på testmaskinen.
   BE BRUKEREN OM DENNE RAPPORTEN hvis han fortsatt opplever hakk.
+  KARTBILDET SENDES PÅ FORHÅND (15. nov): forbered3d lager teksturene for kartbildet og vannmasken (K.tex, K.vannTex) og sender dem
+  til grafikkortet med renderer.initTexture, hver i sitt bilde, før byttet; sett3d bruker dem. Et forberedt utsnitt som ikke settes
+  inn, frigjøres med kastForberedt(u). Virkningen kan ikke måles på testmaskinen (se «Mål hakk»). Stresstest: scratchpad
+  hakk/stress.js (flytting tett på hverandre, 3D av/på midt i en bygging, zoom, grafikknivå, gange – 0 feil) og hakk/lekk.js
+  (teksturer og geometrier øker ikke).

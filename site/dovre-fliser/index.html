@@ -2289,7 +2289,16 @@ async function forbered3d(u) {
   await pust(); K.hindre = hindringer(u); await pust();
   u.klar = K;
   for (const f of KROKER.forbered3d) { await pust(); await f(u, R); }
-  await pust();
+  // Kartbildet og vannmasken sendes til grafikkortet her – hver i sitt bilde, og ikke i samme bilde som byttet. Opplastingen av et
+  // kartbilde på opptil 4096 × 4096 er det tyngste grafikkortet gjør ved et bytte (kan ikke måles på testmaskinen – se «Mål hakk»).
+  await pusterom(); K.tex = new THREE.CanvasTexture(u.base); K.tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy(); R.renderer.initTexture(K.tex);
+  await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex);
+  await pusterom();
+}
+// Et forberedt utsnitt som likevel ikke ble satt inn (3D slått av, eller et nytt utsnitt ble bedt om imens): frigjør det som ble laget.
+function kastForberedt(u) {
+  const K = u && u.klar; if (!K) return; u.klar = null;
+  for (const t of [K.tex, K.vannTex]) if (t) t.dispose(); if (K.geo) K.geo.dispose(); for (const g of Object.values(K.hus || {})) g.dispose();
 }
 const BUSKVALG = () => ({ senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true });
 function sett3d(u) {
@@ -2300,10 +2309,10 @@ function sett3d(u) {
   // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
   const geo = K.geo || kjørRett(terrengGeo(u, R));
   // kartbildet i bakken er utsnittets eget bilde (u.base) – tåka ligger i sitt eget bilde, se TAAKE_U
-  R.texC = u.base; const tex = new THREE.CanvasTexture(u.base); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
+  R.texC = u.base; const tex = K.tex || new THREE.CanvasTexture(u.base); if (!K.tex) tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (!R.tåkeC) { R.tåkeC = document.createElement('canvas'); R.tåkeC.width = R.tåkeC.height = 1024;
     R.tåkeTex = new THREE.CanvasTexture(R.tåkeC); R.tåkeTex.generateMipmaps = false; R.tåkeTex.minFilter = THREE.LinearFilter; R.tåkeTex.premultiplyAlpha = true; TAAKE_U.taakeKart.value = R.tåkeTex; }
-  if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
+  if (R.vannTex) R.vannTex.dispose(); R.vannTex = K.vannTex || new THREE.CanvasTexture(u.vann);
   const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   // rutene med vann for seg (bølger og glans bare der – se bakkeVariant)
   R.bakkeDel = K.geo ? K.del : delBakken(geo, u); R.bakkeSett = null;
@@ -2416,7 +2425,7 @@ function kamera3d() {
 async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) { R3.neste = [cx, cy, S]; return; }
   R3.bygger = true; R3.ønsket = [cx, cy, S];
-  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { await forbered3d(u); if (på3d && !R3.neste) sett3d(u); } R3.byggFeil = 0; skjulMelding('3d'); }
+  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { await forbered3d(u); if (på3d && !R3.neste) sett3d(u); else kastForberedt(u); } R3.byggFeil = 0; skjulMelding('3d'); }
   catch (e) {
     console.error(e); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
     const hvorfor = utenNett(e) ? 'ingen kontakt med nettet eller kartlageret' : (e && e.message || e), fast = R3.byggFeil >= 3;
