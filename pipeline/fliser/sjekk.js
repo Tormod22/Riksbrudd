@@ -722,11 +722,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const fd = await pg.evaluate(async () => { const b0 = { ...R3.bane }; slå3d(false); await new Promise(r => setTimeout(r, 300)); const p = slå3d(true); const sett = [];
       while (R3.ut && !R3.bygger) await new Promise(r => setTimeout(r, 5));
       const t0 = performance.now(); while (!(R3.ut && !R3.bygger) && performance.now() - t0 < 120000) { const k = document.getElementById('bygg3d');
-        if (k && k.classList.contains('på')) sett.push({ p: parseInt(k.querySelector('.pst').textContent), c3: document.getElementById('c3').hidden, kart: cv.style.visibility }); await new Promise(r => setTimeout(r, 40)); }
+        if (k && k.classList.contains('på')) sett.push({ p: parseInt(k.querySelector('.pst').textContent), tid: k.querySelector('.tid').textContent, c3: document.getElementById('c3').hidden, kart: cv.style.visibility }); await new Promise(r => setTimeout(r, 40)); }
       await p; await new Promise(r => setTimeout(r, 300)); R3.bane = { ...R3.bane, ...b0 };
-      return { n: sett.length, første: sett[0], siste: sett[sett.length - 1], økende: sett.every((x, i) => !i || x.p >= sett[i - 1].p), alleSkjult: sett.every(x => x.c3 && x.kart === ''),
+      // tidtakeren i kortet (brukeren 15. nov) og fristen på bildelesing: et løfte som aldri svarer, skal avvises
+      const frist = await dekodFrist(new Promise(() => {}), 60).then(() => 'svarte', e => /tidsgrense/.test(e.message) ? 'avvist' : 'annet');
+      return { tid: sett.some(x => /^· \d+ s$/.test(x.tid)), frist, venter: R3.venterPå, n: sett.length, første: sett[0], siste: sett[sett.length - 1], økende: sett.every((x, i) => !i || x.p >= sett[i - 1].p), alleSkjult: sett.every(x => x.c3 && x.kart === ''),
         etter: { kort: document.getElementById('bygg3d').classList.contains('på'), c3: document.getElementById('c3').hidden, kart: cv.style.visibility }, logg: loggLinjer.find(l => /^3D klart på/.test(l)) || '', detalj: !!DETALJ }; });
-    const fdok = fd.n >= 3 && fd.økende && fd.alleSkjult && fd.siste.p > fd.første.p && !fd.etter.kort && fd.etter.c3 === false && fd.etter.kart === 'hidden' && /3D klart på \d+,\d s/.test(fd.logg) && fd.detalj;
+    const fdok = fd.n >= 3 && fd.økende && fd.alleSkjult && fd.siste.p > fd.første.p && !fd.etter.kort && fd.etter.c3 === false && fd.etter.kart === 'hidden' && /3D klart på \d+,\d s/.test(fd.logg) && fd.detalj && fd.tid && fd.frist === 'avvist' && fd.venter === '';
     if (!fdok) { feil++; console.log(JSON.stringify(fd)); }
     console.log(`${fdok ? 'ok  ' : 'FEIL'} ${navn} fremdriftskortet: ${fd.n} avlesninger fra ${fd.første && fd.første.p} % til ${fd.siste && fd.siste.p} %, kartet synlig og 3D skjult underveis, så 3D vist og kortet borte; «${fd.logg}»`);
     // VAKT måling av ytelse (spill/ytelse.js, 15. nov): knappen «Mål ytelse» finnes i ☰; en kort måling gir tabellen med hele bildet, halv

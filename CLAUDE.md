@@ -746,3 +746,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   hentes og lages samtidig (Promise høyder, ventes på etter flisene); (3) pustTid() = 50 ms så lenge 3D ikke vises ennå. Kartdataene er
   nå hentet etter ca. 1,6 s. Resten er første tegning (programmer, teksturer) – kan ikke måles riktig med programvare-grafikk.
   NB: hver publisering tømmer Vercels lager for /api/kart, så første åpning rett etter en publisering henter alt fra GitHub.
+  RUNDE 3 (15. nov 17:35, brukeren med skjermbilde: kortet sto på «Henter høydene og kartet … 50 %» – «Det stopper her», og ba om en
+  tidteller i kortet). 50 % = kartbildet er ferdig (bakgrunnstråden), byggingen venter på høydene (lagVindu på siden). IKKE GJENSKAPT
+  herfra (tregt nett, uten OffscreenCanvas: 3–4 s). Tiltak: kortet viser «· 12 s» og en diagnoselinje (.nett): «venter på: grove høyder,
+  fine høyder» (R3.venterPå), «fliser: hoyde 5, hus 16» (FLIS_VENTER i kartflis.js = bestilt og ikke ferdig lest, per lag) og «nett: 6
+  hentes, 0 i kø». Frister: bildelesing (dekodFrist: createImageBitmap 4 s per forsøk, <img> 8 s), fine høyder 6 s etter de grove
+  (ellers brukes de grove), omlandet 6 s. BE BRUKEREN OM ET SKJERMBILDE AV KORTET hvis det stopper igjen – linja sier om det er nettet,
+  lesingen eller noe annet.

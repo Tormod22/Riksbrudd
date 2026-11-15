@@ -107,13 +107,18 @@ function filFor(lag, z, x) {
 // Tegneflate i bakgrunnen: OffscreenCanvas der den har 2D (Safari fra 16.4), ellers et vanlig canvas.
 const HAR_OFFSCREEN = (() => { try { return typeof OffscreenCanvas !== 'undefined' && !!new OffscreenCanvas(1, 1).getContext('2d'); } catch (e) { return false; } })();
 const lerret = (w, h) => HAR_OFFSCREEN ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+// dekodFrist(løfte, ms): løftet, men det avvises hvis det ikke er avgjort innen fristen
+const dekodFrist = (løfte, ms) => new Promise((ja, nei) => { const t = setTimeout(() => nei(new Error('tidsgrense: bildet ble ikke lest på ' + ms / 1000 + ' s')), ms);
+  løfte.then(v => { clearTimeout(t); ja(v); }, e => { clearTimeout(t); nei(e); }); });
 // Leser et bilde. createImageBitmap med valg feiler i eldre Safari – da brukes et vanlig <img>.
 async function bilde(data, type) {
   const blob = new Blob([data], { type });
-  try { return await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); } catch (e) { /* prøv neste */ }
-  try { return await createImageBitmap(blob); } catch (e) { /* prøv neste */ }
+  // (15. nov, brukeren på iPhone: byggingen av 3D ble stående og vente på høydene. Bildelesingen har ingen egen tidsgrense i
+  // nettleseren, så hvert forsøk får nå en frist – svarer det ikke, prøves neste måte.)
+  try { return await dekodFrist(createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }), 4000); } catch (e) { /* prøv neste */ }
+  try { return await dekodFrist(createImageBitmap(blob), 4000); } catch (e) { /* prøv neste */ }
   const url = URL.createObjectURL(blob);
-  try { const im = new Image(); im.src = url; await im.decode(); const c = Object.assign(document.createElement('canvas'), { width: im.naturalWidth, height: im.naturalHeight }); c.getContext('2d').drawImage(im, 0, 0); return c; }
+  try { const im = new Image(); im.src = url; await dekodFrist(im.decode(), 8000); const c = Object.assign(document.createElement('canvas'), { width: im.naturalWidth, height: im.naturalHeight }); c.getContext('2d').drawImage(im, 0, 0); return c; }
   finally { URL.revokeObjectURL(url); }
 }
 async function piksler(data, type) {
@@ -188,11 +193,15 @@ function mvt(b) {
 
 // ---------- flis-hurtigminne ----------
 const RÅ = new Map();
+const FLIS_VENTER = {};
 function hentFlis(lag, z, x, y) {
   const k = lag + '/' + z + '/' + x + '/' + y;
   if (!RÅ.has(k)) {
+    // FLIS_VENTER teller fliser som er bestilt og ikke ferdig lest, per lag (vises i fremdriftskortet for 3D)
+    FLIS_VENTER[lag] = (FLIS_VENTER[lag] || 0) + 1; const ferdigFlis = () => { FLIS_VENTER[lag]--; };
     RÅ.set(k, KF.klar.then(() => { const f = filFor(lag, z, x); return f ? f.pm.getZxy(z, x, y) : null; })
       .then(r => r ? DEKOD[lag](r.data, z) : null).catch(e => { console.error(e); RÅ.delete(k); KF.feil++; rensLager(lag, z, x); KF.vedFeil(e); return null; }));
+    RÅ.get(k).then(ferdigFlis, ferdigFlis);
     if (RÅ.size > 900) RÅ.delete(RÅ.keys().next().value);
   }
   return RÅ.get(k);

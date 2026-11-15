@@ -115,7 +115,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=c070789f37"></script>
+<script src="/dovre-fliser/kartflis.js?v=bdf4c36398"></script>
 <script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -238,7 +238,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=12cbecd8ce');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=a8cc4e5e7e');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -725,7 +725,8 @@ async function lagVindu(b, medVeg, ZV = 9, omland = false) {   // ZV: detaljniv�
       for (const o of f.veg.obj) for (const d of o.deler) linjer.push({ k: o.e.k, p: d.map(([a, c]) => [mx + a / e * sv, my - c / e * sv]) });
     })); }
   await Promise.all(jobber);
-  if (omland && NORGE_BLOKKER) await fyllOmland(v, ZV, x0, y0, x1, y1);
+  // (omlandet trengs bare utenfor Norge; svarer det ikke på 6 s, bygges utsnittet uten)
+  if (omland && NORGE_BLOKKER) await Promise.race([fyllOmland(v, ZV, x0, y0, x1, y1), new Promise(ja => setTimeout(ja, 6000))]);
   if (medVeg) Terreng.leggInnVeger(v, linjer);
   return v;
 }
@@ -1248,7 +1249,15 @@ async function bygg3d(cx, cy, S) {
   // kartbildet hentes og lages samtidig.)
   forhent3d(cx, cy, S, b);
   framdrift('henter høydene og kartet', .05);
-  const høyder = Promise.all([lagVindu(b, false, Math.min(zD, 11), true), zD > 11 ? lagVindu(b, false, zD) : null]);
+  // (15. nov, brukeren på iPhone: kortet ble stående på 50 % og vente på høydene. R3.venterPå sier i kortet hva som mangler. De fine
+  // høydene (2 m, finnes bare noen steder) får en frist – kommer de ikke, brukes de grove; omlandet har sin frist i lagVindu.)
+  const mangler = new Set(['grove høyder']); R3.venterPå = '';
+  const visVent = () => { R3.venterPå = [...mangler].join(', '); };
+  const grovL = lagVindu(b, false, Math.min(zD, 11), true).then(v => { mangler.delete('grove høyder'); visVent(); return v; });
+  let finL = null;
+  if (zD > 11) { mangler.add('fine høyder'); const ekte = lagVindu(b, false, zD); ekte.catch(() => {});
+    finL = Promise.race([ekte, grovL.then(() => new Promise(ja => setTimeout(() => ja(null), 6000)))]).then(v => { mangler.delete('fine høyder'); visVent(); return v; }); }
+  const høyder = Promise.all([grovL, finL]);
   høyder.catch(() => {});   // (feil kommer fram der høydene ventes på under – dette hindrer en melding om «ubehandlet feil» før det)   // 2 m der den finnes (Dombås), ellers 8 m
   const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
@@ -1259,7 +1268,8 @@ async function bygg3d(cx, cy, S) {
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
   await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); framdrift('henter høydene og kartet', .1 + .4 * ++flisFerdig / flisAlle);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
-  const [grov, fin] = await høyder, H = new Float32Array(N * N);
+  visVent();
+  const [grov, fin] = await høyder, H = new Float32Array(N * N); R3.venterPå = '';
   // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
   for (let j = 0; j < N; j++) { if ((j & 15) === 0 && børPuste()) await pust();
     for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; } }   // hav
@@ -2618,8 +2628,14 @@ function framdrift(tekst, andel) {
   let k = document.getElementById('bygg3d');
   if (tekst == null || !på3d || (R3 && R3.ut)) { if (k) k.classList.remove('på'); return; }
   if (!k) { k = document.createElement('div'); k.id = 'bygg3d'; k.setAttribute('role', 'status');
-    k.innerHTML = '<div class="rad"><span>Bygger 3D … <b class="pst">0 %</b></span><button type="button">Avbryt</button></div><div class="linje"><i></i></div><small class="hva"></small>';
+    k.innerHTML = '<div class="rad"><span>Bygger 3D … <b class="pst">0 %</b> <span class="tid"></span></span><button type="button">Avbryt</button></div><div class="linje"><i></i></div><small class="hva"></small><br><small class="nett"></small>';
+    // tidtakeren og hentingene (brukeren 15. nov: «legg en liten tidteller på denne skjermen» – så et skjermbilde sier hvor lenge det har lastet)
+    k.start = performance.now(); k.ur = setInterval(() => { if (!k.classList.contains('på')) return; const s = (performance.now() - k.start) / 1000;
+      k.querySelector('.tid').textContent = '· ' + s.toFixed(0) + ' s';
+      const n = typeof hentIGang !== 'undefined' ? hentIGang + hentKø.length : 0; const fl = typeof FLIS_VENTER !== 'undefined' ? Object.keys(FLIS_VENTER).filter(l => FLIS_VENTER[l] > 0).map(l => l + ' ' + FLIS_VENTER[l]).join(', ') : '';
+      k.querySelector('.nett').textContent = [R3 && R3.venterPå ? 'venter på: ' + R3.venterPå : '', fl ? 'fliser: ' + fl : '', n ? `nett: ${hentIGang} hentes, ${hentKø.length} i kø` : ''].filter(Boolean).join(' · '); }, 250);
     k.querySelector('button').onclick = () => { slå3d(false); logg('3D avbrutt.'); }; document.body.appendChild(k); }
+  if (!k.classList.contains('på')) k.start = performance.now();
   k.classList.add('på'); const p = Math.round(Math.max(0, Math.min(1, andel || 0)) * 100);
   k.querySelector('.pst').textContent = p + ' %'; k.querySelector('i').style.width = p + '%'; k.querySelector('.hva').textContent = tekst[0].toUpperCase() + tekst.slice(1) + ' …';
 }
