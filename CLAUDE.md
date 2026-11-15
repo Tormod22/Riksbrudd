@@ -667,3 +667,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tittelen på Grafikk-knappen). Programvare-grafikk (SwiftShader, llvmpipe, Microsoft Basic Render Driver): melding om å slå på
   maskinvareakselerasjon, og Auto starter på Lav – ikke i testene (navigator.webdriver). Brukeren har meldt 9 bilder i sekundet;
   be om navnet på grafikkortet. VAKT i sjekk.js («billigere terreng»). Verktøy: scratchpad fps/del-test.js, ab-bilde.js, finn-vann.js.
+  MÅLING PÅ SPILLERENS MASKIN (15. nov): brukeren har Intel(R) Iris(R) Xe Graphics (innebygd grafikk i en bærbar, Edge på Windows) –
+  altså ikke programvare-grafikk. Testmaskinens tall sier lite om hans maskin, så spill/ytelse.js (reglene øverst uten DOM,
+  test_ytelse.js) gir «Mål ytelse» i ☰ (bare i 3D): hele bildet, halv oppløsning (R3.målPr) og uten én og én del – bakken, trærne,
+  husene og de største av resten etter kilden (userData.kilde = fila i spill/ som la tingen i scenen; scene.add pakkes inn ved første
+  bygg3d og leser stakken). Delene skjules med lag (layers), ikke visible. Mens det måles (R3.måler): alle bilder tegnes
+  (trengerTegning3d), oppløsning og grafikknivå står stille, og index.html måler R3.løkkeTid (hele spilløkka) og R3.tegneTid (three.js).
+  Én oppvarmingsrunde som ikke teller; «sparer ms» regnes mot snittet av hele bildet først og sist (Ytelse.grunnlag). Tabellen kan
+  kopieres som tekst. BE BRUKEREN OM TABELLEN før mer optimalisering – den sier om det er prosessoren, punktene på skjermen eller
+  tingene i bildet. Testserveren har ingen hus (husdataene ligger i kartlageret), så «Uten husene» mangler lokalt. VAKT i sjekk.js
+  («måling av ytelse»). Prøvekjøring: scratchpad ytelse/prov.js.

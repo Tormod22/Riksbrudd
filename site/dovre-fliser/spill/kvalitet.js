@@ -75,7 +75,8 @@
     if (typeof visMelding === 'function') visMelding('Nettleseren tegner 3D uten grafikkortet, og da går det tregt uansett innstilling i spillet. Slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt.', { type: 'grafikk' });
   });
   KROKER.ramme3d.push(R => {
-    if (valg !== 'auto' || R.rammeSnitt == null) return;
+    // (R.måler: spill/ytelse.js måler – da står nivået stille)
+    if (valg !== 'auto' || R.rammeSnitt == null || R.måler) return;
     const nå = performance.now() / 1000; if (!S.start) S.start = nå;
     // de første sekundene etter at 3D er åpnet bygges alt: ikke mål da
     if (nå - S.start < 6 || R.bygger) return;

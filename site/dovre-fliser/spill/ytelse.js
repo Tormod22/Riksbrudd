@@ -1,0 +1,159 @@
+'use strict';
+// MÅLING AV YTELSE (15. nov, brukeren har Intel Iris Xe og meldte 9 bilder i sekundet). Testmaskinen tegner uten grafikkort, så tallene
+// derfra sier lite om en ekte maskin. «Mål ytelse» i ☰ (bare i 3D) måler derfor på spillerens egen maskin hva som koster tid i bildet:
+// hele bildet, med halv oppløsning (koster punktene på skjermen eller tingene i bildet?), og uten én og én del (bakken, trærne, husene
+// og de største av resten, etter hvilken fil i spill/ som la tingen inn i scenen). Tiden er medianen av avstanden mellom bildene, og
+// «spillets regning» er tiden spilløkka selv bruker (R3.løkkeTid/tegneTid fra index.html) – resten er grafikkortet.
+// Mens det måles (R3.måler): alle bilder tegnes, oppløsningen og grafikknivået står stille. Delene skjules med lag (layers), ikke med
+// visible – flere deler styrer visible selv hver ramme. Resultatet vises som tekst som kan kopieres eller tas bilde av.
+// Reglene øverst uten DOM (median, kilde, nettleser, tabell, vurdering) – test: node pipeline/fliser/test_ytelse.js.
+(function (rot) {
+  const NAVN = { bakke: 'bakken', trær: 'trær og busker', hus: 'husene', smått: 'biler, flagg og gatelys', liv3d: 'veger, trafikk og folk',
+    vegetasjon3d: 'blomster, bregner og siv', gard3d: 'gjerder og rundballer', kraft3d: 'kraftledninger', infra3d: 'bruer og ferjekaier',
+    bane3d: 'jernbane', gate3d: 'gatemøbler', dyr3d: 'dyr', kyst3d: 'båter, brygger og naust', ferje3d: 'ferjer', natt3d: 'stjerner, måne og nattlys',
+    vind3d: 'vind og tåke', 'vaer-visning': 'regn og snø', fjern3d: 'fjernterrenget', byhus: 'gatetrær', anlegg3d: 'idrettsanlegg og bensin',
+    portal3d: 'tunnelportaler', olje3d: 'oljeplattformer', 'bekker-visning': 'bekker', 'leir-visning': 'leiren', 'byggesett-visning': 'byggesettet',
+    'ressurser-visning': 'hogst og ruiner', index: 'gress, soldater og himmel', annet: 'alt det andre' };
+  const median = L => { if (!L.length) return 0; const s = [...L].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  // Hvilken fil i spill/ la tingen inn i scenen? Første fil i stakken som ikke er denne; uten treff er det index.html.
+  function kilde(stakk) { const re = /\/spill\/([\w-]+)\.js/g; let m; while ((m = re.exec(stakk || ''))) if (m[1] !== 'ytelse') return m[1]; return 'index'; }
+  function nettleser(ua) {
+    ua = ua || ''; const v = re => { const m = re.exec(ua); return m ? m[1] : ''; };
+    const navn = /Edg\//.test(ua) ? 'Edge ' + v(/Edg\/(\d+)/) : /OPR\//.test(ua) ? 'Opera ' + v(/OPR\/(\d+)/) : /Firefox\//.test(ua) ? 'Firefox ' + v(/Firefox\/(\d+)/)
+      : /Chrome\//.test(ua) ? 'Chrome ' + v(/Chrome\/(\d+)/) : /Safari\//.test(ua) ? 'Safari ' + v(/Version\/(\d+)/) : 'ukjent nettleser';
+    const os = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'ukjent system';
+    return navn.trim() + ' på ' + os;
+  }
+  const des = (n, d = 1) => (Math.round(n * 10 ** d) / 10 ** d).toFixed(d).replace('.', ',');
+  const hel = n => String(Math.round(n)).replace(/\B(?=(\d{3})+$)/g, ' ');
+  // Det de andre målingene sammenlignes med: snittet av hele bildet først og sist (maskinen blir gjerne litt raskere underveis).
+  function grunnlag(r) { const alt = r.rader[0], slutt = r.rader.find(x => x.slutt); return alt ? (slutt && slutt.ms > 0 ? (alt.ms + slutt.ms) / 2 : alt.ms) : 0; }
+  // Tabellen som tekst. r = { hode: [linjer], rader: [{ navn, ms, tri, kall }], js, tegn } der første rad er hele bildet.
+  // «sparer ms» er grunnlaget minus målingen.
+  function tabell(r) {
+    const alt = r.rader[0], grunn = grunnlag(r), L = [...(r.hode || []), ''], k = (t, n) => String(t).padStart(n);
+    L.push('Måling'.padEnd(36) + k('ms/bilde', 9) + k('bilder/s', 10) + k('sparer ms', 11) + k('trekanter', 12) + k('kall', 7));
+    r.rader.forEach((x, i) => {
+      const spart = i && !x.slutt ? des(grunn - x.ms) : '';
+      L.push(x.navn.padEnd(36).slice(0, 36) + k(des(x.ms), 9) + k(x.ms > 0 ? des(1000 / x.ms) : '–', 10) + k(spart, 11) + k(x.tri != null ? hel(x.tri) : '', 12) + k(x.kall != null ? hel(x.kall) : '', 7));
+      if (!i) L.push('  av dette spillets regning'.padEnd(36) + k(des(r.js || 0), 9) + '   (three.js: ' + des(r.tegn || 0) + ' ms)');
+    });
+    return L.join('\n');
+  }
+  // Kort vurdering i klartekst: prosessoren, punktene på skjermen eller tingene i bildet – og den største enkeltposten.
+  function vurdering(r) {
+    const alt = r.rader[0], halv = r.rader.find(x => x.halv), deler = r.rader.filter(x => x.del), ut = [], g = grunnlag(r);
+    if (!alt || !(g > 0)) return ut;
+    if (g < 18) ut.push('Bildet går så fort skjermen tillater (ca. 60 bilder i sekundet) – målingen sier lite da.');
+    else if ((r.js || 0) > .6 * g) ut.push('Mest tid går i spillets egen regning (prosessoren), ikke i grafikkortet.');
+    else if (halv && g - halv.ms > .35 * g) ut.push('Antall punkter på skjermen betyr mest: lavere oppløsning hjelper.');
+    else ut.push('Mengden ting i bildet betyr mest (trekanter og tegnekall), ikke oppløsningen.');
+    const størst = deler.slice().sort((a, b) => a.ms - b.ms)[0];
+    if (størst && g - størst.ms > .08 * g) ut.push('Størst enkeltpost: ' + størst.navn.replace(/^Uten /, '') + ' (' + des(g - størst.ms) + ' ms av ' + des(g) + ').');
+    return ut;
+  }
+  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel };
+  if (typeof module !== 'undefined') { module.exports = Ytelse; return; }
+  rot.Ytelse = Ytelse;
+
+  // ---------- i nettleseren ----------
+  // Alt som legges i scenen merkes med fila det kom fra (userData.kilde). Kobles på første gang et utsnitt bygges.
+  KROKER.bygg3d.push(() => {
+    const R = typeof R3 !== 'undefined' && R3; if (!R || !R.scene || R.scene.userData.kildeMerket) return; R.scene.userData.kildeMerket = true;
+    const leggTil = R.scene.add;
+    R.scene.add = function (...o) { let k = null; for (const m of o) if (m && m.userData && !m.userData.kilde) { if (k == null) k = kilde(new Error().stack); m.userData.kilde = k; } return leggTil.apply(this, o); };
+  });
+  const tegnes = o => o.isMesh || o.isPoints || o.isLine || o.isSprite;
+  function trekanter(o) {
+    const g = o.geometry; if (!g || !o.isMesh) return 0;
+    const n = g.index ? g.index.count : g.attributes.position ? g.attributes.position.count : 0, r = g.drawRange;
+    return Math.min(n, r && r.count !== Infinity ? r.count : n) / 3 * (o.isInstancedMesh ? o.count : 1);
+  }
+  // Tingene i scenen i grupper: bakken, trærne, husene, småtingene, og resten etter kilden (de største for seg, de andre samlet)
+  function samle(R, maks) {
+    const trær = new Set([...(R.treMesh || []), ...(R.treLOD || []).flatMap(l => [l.nær, l.fjern])]), hus = new Set(R.husMesh || []), små = new Set(R.småMesh || []), G = new Map();
+    const legg = (n, o) => { let g = G.get(n); if (!g) G.set(n, g = { navn: n, ting: [], tri: 0 }); g.ting.push(o); g.tri += trekanter(o); };
+    R.scene.traverse(o => {
+      if (!tegnes(o) || o.layers.mask !== 1) return;
+      for (let p = o; p; p = p.parent) if (!p.visible) return;
+      let k = null; for (let p = o; p && !k; p = p.parent) k = p.userData && p.userData.kilde;
+      legg(o === R.mesh ? 'bakke' : trær.has(o) ? 'trær' : hus.has(o) ? 'hus' : små.has(o) ? 'smått' : k || 'index', o);
+    });
+    const faste = ['bakke', 'trær', 'hus'].map(n => G.get(n)).filter(Boolean), andre = [...G.values()].filter(g => !faste.includes(g)).sort((a, b) => b.tri - a.tri);
+    const ut = [...faste, ...andre.slice(0, maks)], rest = andre.slice(maks);
+    if (rest.length) ut.push({ navn: 'annet', ting: rest.flatMap(g => g.ting), tri: rest.reduce((s, g) => s + g.tri, 0) });
+    return ut;
+  }
+  let boks = null, pre = null, knapp = null, sist = null;
+  function lagBoks() {
+    if (boks) return;
+    const css = document.createElement('style');
+    css.textContent = `#ytelse{ position:fixed; inset:0; z-index:9; display:none; align-items:center; justify-content:center; background:rgba(10,8,5,.55); padding:12px; }
+#ytelse.på{ display:flex; }
+#ytelse .ark{ background:var(--panel); border:1px solid var(--rule); max-width:860px; width:100%; max-height:88vh; overflow:auto; padding:12px 16px; color:var(--ink); }
+#ytelse pre{ margin:8px 0; font:12px/1.35 ui-monospace,Consolas,Menlo,monospace; white-space:pre; overflow-x:auto; }
+#ytelse p{ margin:4px 0; font-size:15px; }
+#ytelse button{ margin-right:8px; min-height:36px; padding:0 14px; }`;
+    document.head.appendChild(css);
+    boks = document.createElement('div'); boks.id = 'ytelse'; boks.setAttribute('role', 'dialog'); boks.setAttribute('aria-label', 'Måling av ytelse');
+    const ark = document.createElement('div'); ark.className = 'ark'; const p = document.createElement('p'); p.id = 'ytelseTekst';
+    pre = document.createElement('pre'); const kop = document.createElement('button'), lukk = document.createElement('button');
+    kop.textContent = 'Kopier teksten'; lukk.textContent = 'Lukk'; lukk.id = 'ytelseLukk';
+    kop.onclick = async () => { try { await navigator.clipboard.writeText(pre.textContent); kop.textContent = 'Kopiert'; } catch (e) { const s = getSelection(), r = document.createRange(); r.selectNodeContents(pre); s.removeAllRanges(); s.addRange(r); kop.textContent = 'Merket – trykk Ctrl+C'; } };
+    lukk.onclick = () => boks.classList.remove('på');
+    ark.append(p, pre, kop, lukk); boks.appendChild(ark); document.body.appendChild(boks);
+  }
+  const vis = (overskrift, tekst) => { lagBoks(); document.getElementById('ytelseTekst').textContent = overskrift; pre.textContent = tekst; boks.classList.add('på'); };
+
+  // Selve målingen. valg: { rammer, vent, kilder, tak (ms per måling) } – testene bruker få rammer.
+  async function mål(valg) {
+    const R = typeof R3 !== 'undefined' && R3, v = Object.assign({ rammer: 20, vent: 5, kilder: 7, tak: 9000 }, valg || {});
+    if (!R || !på3d || !R.ut || R.bygger || R.måler) return null;
+    const ramme = () => new Promise(r => requestAnimationFrame(r)), skala0 = R.skala, snitt0 = R.rammeSnitt, skjult = [];
+    const skjul = (L, av) => { for (const o of L) o.traverse(c => { c.layers.set(av ? 1 : 0); }); if (av) skjult.push(L); };
+    R.måler = true;
+    try {
+      const ett = async () => {
+        for (let i = 0; i < v.vent; i++) await ramme();
+        const dt = [], js = [], tg = []; let t = await ramme(); const t0 = performance.now();
+        for (let i = 0; i < v.rammer && (i < 2 || performance.now() - t0 < v.tak); i++) { const n = await ramme(); dt.push(n - t); t = n; js.push(R.løkkeTid || 0); tg.push(R.tegneTid || 0); }
+        const inf = R.renderer.info.render; return { ms: median(dt), js: median(js), tegn: median(tg), tri: inf.triangles, kall: inf.calls };
+      };
+      const grupper = samle(R, v.kilder), antall = grupper.length + 4; let nr = 0;
+      const steg = t => { nr++; if (knapp) knapp.textContent = `Måler ${nr} av ${antall} …`; if (!v.stille) vis(`Måler ${nr} av ${antall}: ${t} – la musa ligge i ro.`, ''); };
+      // første måling er alltid treg (programmer og teksturer tas i bruk): en runde som ikke teller
+      steg('varmer opp'); await ett();
+      steg('hele bildet'); const alt = await ett();
+      const rader = [{ navn: 'Hele bildet', ms: alt.ms, tri: alt.tri, kall: alt.kall }];
+      steg('halv oppløsning'); R.målPr = .5; const halv = await ett(); R.målPr = null; rader.push({ navn: 'Med halv oppløsning', ms: halv.ms, halv: true });
+      for (const g of grupper) {
+        const navn = NAVN[g.navn] || g.navn; steg('uten ' + navn);
+        skjul(g.ting, true); const m = await ett(); skjul(g.ting, false);
+        rader.push({ navn: 'Uten ' + navn, ms: m.ms, tri: Math.max(0, alt.tri - m.tri), kall: Math.max(0, alt.kall - m.kall), del: g.navn });
+      }
+      steg('hele bildet igjen'); const slutt = await ett(); rader.push({ navn: 'Hele bildet (til slutt)', ms: slutt.ms, slutt: true });
+      const gl = R.renderer.getContext(), c = R.renderer.domElement, kp = R.cam.position, u = R.ut;
+      const over = typeof hoyde3d === 'function' ? kp.z - (hoyde3d(u.cx + kp.x, u.cy + kp.y) - u.h0) * R.EX : kp.z, vær = (document.getElementById('sVaer') || {}).textContent || '';
+      const K = window.KVAL, hode = ['RIKSBRUDD – MÅLING AV YTELSE',
+        'Grafikkort: ' + (K && K.kort != null && window.Kvalitet ? Kvalitet.kortNavn(K.kort) : 'ukjent'),
+        `Nettleser: ${nettleser(navigator.userAgent)} – skjerm ${screen.width} × ${screen.height}, forstørrelse ${des(window.devicePixelRatio || 1, 2)}`,
+        `Bilde: ${c.width} × ${c.height} punkter, kantutjevning ${gl.getParameter(gl.SAMPLES) || 0}×, grafikk ${K ? (K.valg === 'auto' ? 'auto (' + K.nivå + ')' : K.nivå) : '?'}, oppløsning ${Math.round((skala0 || 1) * 100)} %`,
+        `Sted: ${Math.round(u.cx + kp.x)} ${Math.round(u.cy + kp.y)}, kamera ${Math.round(over)} m over bakken${R.fot ? ' (går)' : ''}, utsnitt ${des(2 * u.S / 1000)} km${vær ? ', ' + vær.trim() : ''}`];
+      const r = { hode, rader, js: alt.js, tegn: alt.tegn }; r.vurdering = vurdering(r); r.tekst = tabell(r) + (r.vurdering.length ? '\n\n' + r.vurdering.join('\n') : '');
+      sist = r; if (!v.stille) vis('Ferdig. Kopier teksten eller ta et skjermbilde, og send det.', r.tekst);
+      return r;
+    } finally {
+      for (const L of skjult) for (const o of L) o.traverse(c => { c.layers.set(0); });
+      R.målPr = null; R.måler = false; R.skala = skala0; R.rammeSnitt = snitt0; R.skalaVed = performance.now();
+      if (knapp) knapp.textContent = 'Mål ytelse';
+    }
+  }
+  knapp = document.createElement('button'); knapp.id = 'vis-ytelse'; knapp.textContent = 'Mål ytelse'; knapp.title = 'Måler hva som koster tid i 3D-bildet på denne maskinen (ca. et halvt minutt)';
+  knapp.onclick = async () => {
+    if (typeof på3d === 'undefined' || !på3d || !R3 || !R3.ut) { vis('Åpne 3D først (knappen «3D»), gå dit det hakker, og trykk «Mål ytelse» igjen.', ''); return; }
+    if (R3.bygger) { vis('3D bygges ennå – vent til bildet er ferdig og trykk «Mål ytelse» igjen.', ''); return; }
+    try { await mål(); } catch (e) { vis('Målingen stoppet: ' + (e && e.message || e), ''); }
+  };
+  const lm = document.getElementById('lagmeny'); if (lm) lm.appendChild(knapp);
+  Ytelse.mål = mål; Ytelse.samle = samle; Ytelse.siste = () => sist; Ytelse.lukk = () => { if (boks) boks.classList.remove('på'); };
+})(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -686,6 +686,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       && typeof bt.kort === 'string' && bt.kort.length > 0 && /Grafikkort/.test(bt.tittel);
     if (!btok) { feil++; console.log(JSON.stringify(bt)); }
     console.log(`${btok ? 'ok  ' : 'FEIL'} ${navn} billigere terreng: uten vann ${bt.før.grupper} grupper; kunstig vann gir ${bt.med.grupper} grupper (${bt.med.del && Math.round(100 * bt.med.del.vann / bt.med.alle)} % vannruter), vann i gruppe ${bt.iVann}, land i gruppe ${bt.påLand}, tørt land uten lys per punkt, vått land med, GL-feil ${bt.glFeil}; grafikkort «${bt.kort}»`);
+    // VAKT måling av ytelse (spill/ytelse.js, 15. nov): knappen «Mål ytelse» finnes i ☰; en kort måling gir tabellen med hele bildet, halv
+    // oppløsning (halvparten så mange punkter i bredden mens den måles) og en rad for bakken med trekanter; alt i scenen er satt tilbake
+    // etterpå (ingen ting igjen på et skjult lag – det er feilen vakten skal finne), oppløsningen er som før, og boksen kan lukkes.
+    const ytm = await pg.evaluate(async () => { const c = R3.renderer.domElement, før = { pr: R3.pr, bredde: c.width }; let halvBredde = 0;
+      const følg = setInterval(() => { if (R3.målPr) halvBredde = c.width; }, 30);
+      const r = await Ytelse.mål({ rammer: 2, vent: 1, kilder: 2 }); clearInterval(følg);
+      await new Promise(q => requestAnimationFrame(() => requestAnimationFrame(q)));
+      let skjult = 0, kilder = 0; R3.scene.traverse(o => { if (o.layers.mask !== 1) skjult++; if (o.userData && o.userData.kilde && o.userData.kilde !== 'index') kilder++; });
+      const boks = document.getElementById('ytelse'), åpen = !!boks && boks.classList.contains('på'); document.getElementById('ytelseLukk').click();
+      return { rader: r ? r.rader.map(x => ({ navn: x.navn, ms: x.ms, tri: x.tri, del: x.del })) : [], tekst: r ? r.tekst : '', skjult, kilder, måler: !!R3.måler, målPr: R3.målPr || 0, før, etter: { pr: R3.pr, bredde: c.width }, halvBredde,
+        åpen, lukket: !boks.classList.contains('på'), knapp: (document.getElementById('vis-ytelse') || {}).textContent || '' }; });
+    const ytmBakke = ytm.rader.find(x => x.del === 'bakke'), ytmok = ytm.rader.length >= 5 && ytm.rader[0].navn === 'Hele bildet' && ytm.rader[0].ms > 0 && ytm.rader[0].tri > 1000 && ytm.rader[1].navn === 'Med halv oppløsning'
+      && !!ytmBakke && ytmBakke.tri > 1000 && /Grafikkort: /.test(ytm.tekst) && /ms\/bilde/.test(ytm.tekst) && ytm.skjult === 0 && ytm.kilder > 0 && !ytm.måler && !ytm.målPr && ytm.etter.pr === ytm.før.pr && ytm.etter.bredde === ytm.før.bredde
+      && ytm.halvBredde > 0 && ytm.halvBredde < .7 * ytm.før.bredde && ytm.åpen && ytm.lukket && ytm.knapp === 'Mål ytelse';
+    if (!ytmok) { feil++; console.log(JSON.stringify(ytm)); }
+    console.log(`${ytmok ? 'ok  ' : 'FEIL'} ${navn} måling av ytelse: ${ytm.rader.length} målinger (hele bildet ${ytm.rader[0] ? Math.round(ytm.rader[0].ms) : '?'} ms, bakken ${ytmBakke ? ytmBakke.tri : '?'} trekanter), halv oppløsning ${ytm.halvBredde} av ${ytm.før.bredde} punkter i bredden, ${ytm.skjult} ting igjen på skjult lag, ${ytm.kilder} ting merket med kilde, boksen åpnet og lukket`);
     // VAKT grafikk (spill/kvalitet.js, 12. nov, brukeren: «spillet går alt for hakkete»): «Lav» gir lavere pikseltetthet, kortere detaljavstand for
     // trærne og ingen gress/blomster; tilbake til auto etterpå
     const kv = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
