@@ -14,13 +14,23 @@
   function ny() { return new Map(); }   // tettsted-id -> { eier, inntar: { side, sek } | null }
   const tilstand = (S, id) => S.get(id) || { eier: null, inntar: null };
   // Punkt i tettstedets omriss (alle deler, partall/oddetall).
+  // (15. nov, ytelse: store tettsteder har tusenvis av kanter, og 3D spør for hvert tiende meter veg. Kantene legges derfor én gang i
+  // vannrette bånd – bare kantene i punktets bånd kan krysse strålen, så svaret er det samme som før.)
+  function bånd(by) {
+    const y0 = by.bb[1], n = Math.max(1, Math.min(512, Math.ceil((by.bb[3] - y0) / 40))), h = (by.bb[3] - y0) / n || 1, L = Array.from({ length: n }, () => []);
+    for (const a of by.deler) for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) {
+      const xi = a[i], yi = a[i + 1], xj = a[j], yj = a[j + 1]; if (yi === yj) continue;
+      const b0 = Math.max(0, Math.min(n - 1, Math.floor((Math.min(yi, yj) - y0) / h))), b1 = Math.max(0, Math.min(n - 1, Math.floor((Math.max(yi, yj) - y0) / h)));
+      for (let b = b0; b <= b1; b++) L[b].push(xi, yi, xj, yj);
+    }
+    return { y0, h, n, L };
+  }
   function inni(by, x, y) {
     if (x < by.bb[0] || x > by.bb[2] || y < by.bb[1] || y > by.bb[3]) return false;
+    const B = by.bånd || (by.bånd = bånd(by)), l = B.L[Math.max(0, Math.min(B.n - 1, Math.floor((y - B.y0) / B.h)))];
     let inn = false;
-    for (const a of by.deler) for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) {
-      const xi = a[i], yi = a[i + 1], xj = a[j], yj = a[j + 1];
-      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn;
-    }
+    for (let q = 0; q < l.length; q += 4) { const xi = l[q], yi = l[q + 1], xj = l[q + 2], yj = l[q + 3];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; }
     return inn;
   }
   const kanHolde = s => s.menn.some(m => m.hp > 0) && s.menn.filter(m => m.hp < 1).length < 6;

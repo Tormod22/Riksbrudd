@@ -29,4 +29,22 @@ assert(G.inni(by, 500, 500) && !G.inni(by, 1000, 1000) && !G.inni(by, 2500, 500)
 { assert(Math.abs(G.produksjon(3000, 3600, true) - 3) < 1e-9); assert(Math.abs(G.produksjon(3000, 3600, false) - 3 * R.strøm.uten) < 1e-9);
   assert(G.harStrøm(by, [{ x: 30000, y: 0, hel: true }])); assert(!G.harStrøm(by, [{ x: 30000, y: 0, hel: false }]), 'sabotert'); assert(!G.harStrøm(by, [{ x: 60000, y: 0, hel: true }]), 'for langt'); }
 { const vm = require('vm'), k = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/garnison.js'), 'utf8'), k); assert.equal(typeof k.Garnison.steg, 'function'); }
+// inni() med kantene i bånd (15. nov) gir samme svar som den enkle utgaven (alle kantene), også for flate med hull, flere deler og
+// punkter på båndgrensene. Selvtest: en feil lagt inn i fasiten (ett punkt snudd) blir oppdaget.
+{ let f = 12345; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+  const enkel = (by, x, y) => { if (x < by.bb[0] || x > by.bb[2] || y < by.bb[1] || y > by.bb[3]) return false; let inn = false;
+    for (const a of by.deler) for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) { const xi = a[i], yi = a[i + 1], xj = a[j], yj = a[j + 1]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; }
+    return inn; };
+  let sjekket = 0, ulike = 0, inne = 0;
+  for (let t = 0; t < 40; t++) {
+    const deler = [], antall = 1 + Math.floor(rnd() * 3); let bb = [Infinity, Infinity, -Infinity, -Infinity];
+    for (let d = 0; d < antall; d++) { const cx = rnd() * 4000, cy = rnd() * 4000, r = 200 + rnd() * 1500, n = 5 + Math.floor(rnd() * 400), a = [];
+      for (let i = 0; i < n; i++) { const v = i / n * 2 * Math.PI, rr = r * (.5 + rnd() * .8); a.push(cx + Math.cos(v) * rr, cy + Math.sin(v) * rr); }
+      deler.push(a); for (let i = 0; i < a.length; i += 2) bb = [Math.min(bb[0], a[i]), Math.min(bb[1], a[i + 1]), Math.max(bb[2], a[i]), Math.max(bb[3], a[i + 1])]; }
+    const by = { bb, deler }, h = (bb[3] - bb[1]) / Math.max(1, Math.min(512, Math.ceil((bb[3] - bb[1]) / 40)));
+    for (let k = 0; k < 600; k++) { const x = bb[0] - 50 + rnd() * (bb[2] - bb[0] + 100), y = k % 7 === 0 ? bb[1] + Math.floor(rnd() * 30) * h : bb[1] - 50 + rnd() * (bb[3] - bb[1] + 100);
+      const a = G.inni(by, x, y), b = enkel(by, x, y); sjekket++; if (a !== b) ulike++; if (a) inne++; }
+  }
+  assert.equal(ulike, 0, 'inni() med bånd avviker fra den enkle utgaven'); assert(inne > sjekket * .1 && inne < sjekket * .9, 'testen må ha punkter både inne og ute');
+  console.log(`ok – inni() med bånd: ${sjekket} punkter mot den enkle utgaven, ${ulike} ulike (${inne} inne)`); }
 console.log('ok – inntak (30 min alene), strid, fienden tar over, slått ut lag holder ikke, forsterkning (sårede først), produksjon og strøm');

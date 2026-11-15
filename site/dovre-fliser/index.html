@@ -137,7 +137,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [], bakke: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], forbered3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [], bakke: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -1215,7 +1215,9 @@ async function bygg3d(cx, cy, S) {
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
   const grov = await lagVindu(b, false, Math.min(zD, 11), true), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; }   // hav
+  // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
+  for (let j = 0; j < N; j++) { if ((j & 15) === 0 && børPuste()) await pust();
+    for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; } }   // hav
   const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
@@ -1236,40 +1238,38 @@ async function bygg3d(cx, cy, S) {
     g.restore();
   }
   if (S <= 3200 && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
-  const px = g.getImageData(0, 0, TW, TW).data;   // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus)
+  // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus). Leses og behandles noen rader om gangen (pust).
+  await pust(); const px = new Uint8ClampedArray(TW * TW * 4);
+  await iStriper(TW, (y0, y1) => px.set(g.getImageData(0, y0, TW, y1 - y0).data, y0 * TW * 4), 256);
   // /norge: der kartflisene ikke har noe (havet utenfor dataene) er bildet gjennomsiktig – det ble svart i 3D (Bergen). Fylles med havet.
-  if (NORGE_BLOKKER) for (let q = 0; q < px.length; q += 4) if (px[q + 3] < 200) { const a = px[q + 3] / 255; px[q] = px[q] * a + 44 * (1 - a); px[q + 1] = px[q + 1] * a + 74 * (1 - a); px[q + 2] = px[q + 2] * a + 102 * (1 - a); px[q + 3] = 255; }
+  if (NORGE_BLOKKER) await iStriper(TW, (y0, y1) => { for (let q = y0 * TW * 4, q1 = y1 * TW * 4; q < q1; q += 4) if (px[q + 3] < 200) { const a = px[q + 3] / 255; px[q] = px[q] * a + 44 * (1 - a); px[q + 1] = px[q + 1] * a + 74 * (1 - a); px[q + 2] = px[q + 2] * a + 102 * (1 - a); px[q + 3] = 255; } });
   // /norge: sjøen i satellittbildet er ofte grå (havna i Bergen ble mørk og ble ikke vann i 3D). Det som ligger på havnivå (under 0,3 m), blir hav.
-  if (NORGE_BLOKKER) havnivå(px, TW, H, N, steg);
-  vannIBratt(px, TW, H, N, steg);
-  u.vann = vannmaske(px, TW, H, N, steg); u.harVann = !!u.vann.harVann;
+  if (NORGE_BLOKKER) { const st = {}; await iStriper(TW, (y0, y1) => havnivå(px, TW, H, N, steg, y0, y1, st)); }
+  { const st = {}; await iStriper(TW, (y0, y1) => vannIBratt(px, TW, H, N, steg, y0, y1, st)); }
+  u.vann = await vannmaske(px, TW, H, N, steg); u.harVann = !!u.vann.harVann;
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
   // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison && !window.Veg) u.lys = await gatelys3d(u);
-  ryddHus(u);
-  const skog = await skogmaske(u, b);
-  skogbunn(px, TW, skog); u.bunn = bunnkart(px, TW, skog);
-  for (const f of KROKER.bygg3d) await f(u, { px, TW, skog });
-  naturfarger(px, TW); g.putImageData(new ImageData(px, TW, TW), 0, 0);
+  await pust(); await ryddHus(u); await pust();
+  const skog = await skogmaske(u, b); await pust();
+  await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1)); u.bunn = bunnkart(px, TW, skog);
+  for (const f of KROKER.bygg3d) { await pust(); await f(u, { px, TW, skog }); }
+  await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
+  await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
+  await pust();
   return u;
 }
 // Punktene i teksturen der terrenget ligger på havnivå (bilineært i høydenettet), farges i havets farge med en myk kant (0,3–0,8 m).
 // Strandkanten (feilretting 12. nov: ved Reinehalsen gled landet over i sjøen som en uskarp, mørk flekk – kartbildet har 16 m per punkt,
 // så de siste meterne mot sjøen er en blanding av land og hav): landet nærmere sjøen enn ca. 10 m og lavere enn 6 moh. farges som
 // lyst strandberg, sterkest i vannkanten, så det blir en tydelig strandlinje. Bare når høydegitteret er fint nok (rutene høyst 8 m).
-function havnivå(px, TW, H, N, steg) {
-  const f = (N - 1) / TW; let hav = false; for (let k = 0; k < N * N; k++) if (H[k] <= .8) { hav = true; break; }
-  if (!hav) return;
-  // avstanden til nærmeste havrute (i ruter, to gjennomløp fram og tilbake), bare nær sjøen
-  let D = null;
-  if (steg <= 8) { D = new Float32Array(N * N); const R2 = 1.414;
-    for (let k = 0; k < N * N; k++) D[k] = H[k] <= .3 ? 0 : 99;
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * N + i; let d = D[k]; if (!d) continue;
-      if (i > 0) d = Math.min(d, D[k - 1] + 1); if (j > 0) { d = Math.min(d, D[k - N] + 1); if (i > 0) d = Math.min(d, D[k - N - 1] + R2); if (i < N - 1) d = Math.min(d, D[k - N + 1] + R2); } D[k] = d; }
-    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const k = j * N + i; let d = D[k]; if (!d) continue;
-      if (i < N - 1) d = Math.min(d, D[k + 1] + 1); if (j < N - 1) { d = Math.min(d, D[k + N] + 1); if (i < N - 1) d = Math.min(d, D[k + N + 1] + R2); if (i > 0) d = Math.min(d, D[k + N - 1] + R2); } D[k] = d; } }
-  for (let j = 0; j < TW; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
+function havnivå(px, TW, H, N, steg, rad0 = 0, rad1 = TW, st = {}) {
+  const f = (N - 1) / TW;
+  if (st.hav === undefined) { st.hav = false; for (let k = 0; k < N * N; k++) if (H[k] <= .8) { st.hav = true; break; } st.D = st.hav ? havAvstand(H, N, steg) : null; }
+  if (!st.hav) return false;
+  const D = st.D;
+  for (let j = rad0; j < rad1; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
     for (let i = 0; i < TW; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0, k = y0 * N + x0;
       const h = (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b;
       if (h > (D ? 6 : .8)) continue; const q = (j * TW + i) * 4;
@@ -1278,10 +1278,22 @@ function havnivå(px, TW, H, N, steg) {
           if (w > 0) { px[q] += (150 * n - px[q]) * w; px[q + 1] += (143 * n - px[q + 1]) * w; px[q + 2] += (128 * n - px[q + 2]) * w; } } }
       if (h > .8) continue; const v = h <= .3 ? 1 : (.8 - h) / .5;
       px[q] += (44 - px[q]) * v; px[q + 1] += (74 - px[q + 1]) * v; px[q + 2] += (102 - px[q + 2]) * v; px[q + 3] = 255; } }
+  return true;
+}
+// avstanden til nærmeste havrute (i ruter, to gjennomløp fram og tilbake), bare nær sjøen; null når høydegitteret er for grovt
+function havAvstand(H, N, steg) {
+  let D = null;
+  if (steg <= 8) { D = new Float32Array(N * N); const R2 = 1.414;
+    for (let k = 0; k < N * N; k++) D[k] = H[k] <= .3 ? 0 : 99;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * N + i; let d = D[k]; if (!d) continue;
+      if (i > 0) d = Math.min(d, D[k - 1] + 1); if (j > 0) { d = Math.min(d, D[k - N] + 1); if (i > 0) d = Math.min(d, D[k - N - 1] + R2); if (i < N - 1) d = Math.min(d, D[k - N + 1] + R2); } D[k] = d; }
+    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const k = j * N + i; let d = D[k]; if (!d) continue;
+      if (i < N - 1) d = Math.min(d, D[k + 1] + 1); if (j < N - 1) { d = Math.min(d, D[k + N] + 1); if (i < N - 1) d = Math.min(d, D[k + N + 1] + R2); if (i > 0) d = Math.min(d, D[k + N - 1] + R2); } D[k] = d; } }
+  return D;
 }
 // 3D-kartet i naturligere farger: litt mer metning og lys enn papirkartet, og vannet speiler himmelen (lysere blågrått).
-function naturfarger(px, TW) {
-  for (let q = 0; q < TW * TW * 4; q += 4) {
+function naturfarger(px, TW, rad0 = 0, rad1 = TW) {
+  for (let q = rad0 * TW * 4, q1 = rad1 * TW * 4; q < q1; q += 4) {
     let R = px[q], G = px[q + 1], B = px[q + 2];
     if (B > R + 18 && B > G + 4) { R = R * .45 + 92 * .55; G = G * .45 + 126 * .55; B = B * .45 + 152 * .55; }
     else { const l = .3 * R + .59 * G + .11 * B; R = (l + (R - l) * 1.15) * 1.1; G = (l + (G - l) * 1.18) * 1.12; B = (l + (B - l) * 1.15) * 1.1; }
@@ -1293,13 +1305,13 @@ function naturfarger(px, TW) {
 // berg), med myk overgang fra 12°, før vannmasken lages – så blir det verken blått, blankt eller til hinder for den som går der.
 // Helningen regnes slik at ekte vann ikke rammes: langs hver akse teller bare en jevn skråning (den slakeste av de to sidene), ikke en
 // bunn med høyere terreng på begge sider (elv i et gjel) og ikke en strandkant (flatt på den ene siden, bratt på den andre).
-function vannIBratt(px, TW, H, N, steg) {
+function vannIBratt(px, TW, H, N, steg, rad0 = 0, rad1 = TW, st = {}) {
   const f = (N - 1) / TW, h = (i, j) => H[Math.max(0, Math.min(N - 1, j)) * N + Math.max(0, Math.min(N - 1, i))];
   const akse = (a, c, b) => (a >= c - .3 && b >= c - .3 ? 0 : Math.min(Math.abs(b - c), Math.abs(c - a)));
   // helningen (stigningstall) i høydenettet, regnet én gang per punkt i nettet og bare der det trengs
-  const hell = new Float32Array(N * N).fill(-1), helning = (i, j) => { const k = j * N + i; if (hell[k] < 0) { const c = h(i, j); hell[k] = Math.hypot(akse(h(i - 1, j), c, h(i + 1, j)), akse(h(i, j - 1), c, h(i, j + 1))) / steg; } return hell[k]; };
+  const hell = st.hell || (st.hell = new Float32Array(N * N).fill(-1)), helning = (i, j) => { const k = j * N + i; if (hell[k] < 0) { const c = h(i, j); hell[k] = Math.hypot(akse(h(i - 1, j), c, h(i + 1, j)), akse(h(i, j - 1), c, h(i, j + 1))) / steg; } return hell[k]; };
   let n = 0;
-  for (let y = 0; y < TW; y++) { const j = Math.min(N - 1, Math.round((y + .5) * f));
+  for (let y = rad0; y < rad1; y++) { const j = Math.min(N - 1, Math.round((y + .5) * f));
     for (let x = 0; x < TW; x++) { const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (!(B > R + 18 && B > G + 4)) continue;
       const s = helning(Math.min(N - 1, Math.round((x + .5) * f)), j); if (s < .21) continue;
       const w = Math.min(1, (s - .21) / .09), l = 96 + ((x * 7 + y * 13) % 11); px[q] = R + (l + 8 - R) * w; px[q + 1] = G + (l + 4 - G) * w; px[q + 2] = B + (l - 6 - B) * w; n++; } }
@@ -1309,10 +1321,11 @@ function vannIBratt(px, TW, H, N, steg) {
 // Rød kanal = vann (alle som leser masken, bruker den). Grønn kanal = hvor flatt terrenget er (normalens z, 255 = flatt), glattet:
 // bakkeshaderen bruker den til berg i bratte sider og snø på flatt terreng (feilretting 12. nov: før kom helningen fra hjørnene i
 // terrengnettet, og flekkene med berg fikk sagtakkete, trekantete kanter – lia over Mannheller).
-function vannmaske(px, TW, H, N, steg) {
+async function vannmaske(px, TW, H, N, steg) {
   const W = TW >> 1, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W), d = im.data; let harVann = false;
-  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const q = ((j * 2) * TW + i * 2) * 4, R = px[q], G = px[q + 1], B = px[q + 2], o = (j * W + i) * 4;
-    const v = B > R + 18 && B > G + 4 ? 255 : 0; d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255; if (v) harVann = true; }
+  for (let j = 0; j < W; j++) { if ((j & 63) === 0 && børPuste()) await pust();
+    for (let i = 0; i < W; i++) { const q = ((j * 2) * TW + i * 2) * 4, R = px[q], G = px[q + 1], B = px[q + 2], o = (j * W + i) * 4;
+      const v = B > R + 18 && B > G + 4 ? 255 : 0; d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255; if (v) harVann = true; } }
   if (H) {
     // flatheten i høydegitteret (N × N), glattet med naboene, og så strukket til maskens oppløsning
     const F0 = new Float32Array(N * N), F = new Float32Array(N * N), k2 = 1 / (2 * steg);
@@ -1321,8 +1334,8 @@ function vannmaske(px, TW, H, N, steg) {
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { let s = 0, n = 0;
       for (let b = Math.max(0, j - 1); b <= Math.min(N - 1, j + 1); b++) for (let a = Math.max(0, i - 1); a <= Math.min(N - 1, i + 1); a++) { s += F0[b * N + a]; n++; }
       F[j * N + i] = s / n; }
-    const f = (N - 1) / W;
-    for (let j = 0; j < W; j++) { const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
+    const f = (N - 1) / W; await pust();
+    for (let j = 0; j < W; j++) { if ((j & 63) === 0 && børPuste()) await pust(); const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
       for (let i = 0; i < W; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0, k = y0 * N + x0;
         d[(j * W + i) * 4 + 1] = 255 * ((F[k] * (1 - a) + F[k + 1] * a) * (1 - b) + (F[k + N] * (1 - a) + F[k + N + 1] * a) * b) + .5; } }
   }
@@ -1332,7 +1345,22 @@ function vannmaske(px, TW, H, N, steg) {
 // Trær i 3D: gran (mørk, smal) og løvtre/furu (lysere, bredere) i skogrutene (terrengklasse skog, 32 m), 1–4 per rute med fast
 // tilfeldighet, ikke der kartet under er veg, hus eller vann. Mindre og glissent mot tregrensen. Høyde i meter (ikke overdrevet).
 // Gi nettleseren pusterom under tunge byggejobber, så kartet og 3D fortsetter å tegne (ikke hakking når et nytt utsnitt bygges)
-const pusterom = () => new Promise(r => setTimeout(r, 0));
+// PUSTEROM (15. nov, målt: da et nytt 3D-utsnitt ble bygget, sto hovedtråden 0,3–0,7 s i ett strekk to ganger, og bildet frøs så lenge).
+// Byggingen gjøres nå i små biter, én bit per bilde: pusterom() venter til neste bilde er på vei (requestAnimationFrame – spilløkka
+// kjører først, så biten, så tegnes bildet), med en tidsgrense så ingenting stopper om bilder ikke tegnes. Prøvd og forkastet (målt):
+// en meldingskanal (Chrome tar flere meldinger i samme oppgave i opptil 50 ms) og scheduler.yield() (fortsetter før bildet tegnes –
+// bare ni bilder i sekundet mens det bygges). pust() tar pusterom bare når biten har vart lenger enn pustTid() – ca. 60 % av tiden
+// mellom to bilder, 8–24 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
+const pusterom = () => new Promise(r => { let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
+let sistPust = 0, pustAntall = 0;
+const pustTid = () => { const snitt = typeof R3 !== 'undefined' && R3 && på3d && R3.rammeSnitt ? R3.rammeSnitt : 16.7; return Math.max(8, Math.min(24, snitt * .6)); };
+const børPuste = () => performance.now() - sistPust > pustTid() && !document.hidden;
+async function pust() { if (!børPuste()) return; pustAntall++; await pusterom(); sistPust = performance.now(); }
+// En tung jobb på kartbildet, noen rader om gangen: f(rad0, rad1) for hele bildet med pust mellom.
+async function iStriper(TW, f, høyde = 64) { for (let y = 0; y < TW; y += høyde) { f(y, Math.min(TW, y + høyde)); await pust(); } }
+// En jobb skrevet som generator (yield mellom stegene): kjørAsynk tar pust mellom stegene, kjørRett gjør alt i ett.
+async function kjørAsynk(it) { let r; while (!(r = it.next()).done) if (børPuste()) await pust(); return r.value; }
+function kjørRett(it) { let r; while (!(r = it.next()).done); return r.value; }
 async function trær3d(u, px, b) {
   const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
   const skog = []; for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) if (kv.K[j * kv.w + i] === 1) {
@@ -1341,7 +1369,7 @@ async function trær3d(u, px, b) {
   const gran = [], løv = [], hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
   let arb = 0;
   for (const [X, Y, frø] of skog) for (let k = 0; k < per; k++) {
-    if ((++arb & 4095) === 0) await pusterom();
+    if ((++arb & 255) === 0 && børPuste()) await pust();
     const a = hash(frø * 4 + k), c = hash(frø * 4 + k + 1e6), d = hash(frø * 4 + k + 2e6), x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r;
     const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
     if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
@@ -1426,7 +1454,7 @@ async function hus3d(u) {
     for (const o of t.hus.obj) {
       // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil; pusterom for nettleseren hvert 256. bygg
       if (sett.has(o.e.i) || sett.size > 30000 || (window.HUS_BORT && HUS_BORT.has(o.e.i))) continue;   // HUS_BORT: revet (spill/ressurser-visning.js)
-      if ((sett.size & 255) === 255) await pusterom();
+      if ((sett.size & 15) === 15 && børPuste()) await pust();
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
       let P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);
@@ -1781,18 +1809,20 @@ async function skogmaske(u, b) {
   for (let c = 0; c < kv.h; c++) for (let a = 0; a < kv.w; a++) { if (!er(a, c)) continue; let n = 0;
     for (let dc = -1; dc <= 1; dc++) for (let da = -1; da <= 1; da++) if ((da || dc) && er(a + da, c + dc)) n++;
     A[c * kv.w + a] = n >= 3 ? 1 : n === 2 ? .6 : 0; }
+  await pust();
   const hent = (a, c) => (a >= 0 && c >= 0 && a < kv.w && c < kv.h ? A[c * kv.w + a] : 0);
   const støy = (X, Y) => { const s = Math.sin(X * .071 + Math.sin(Y * .053) * 1.9) * Math.sin(Y * .067 + Math.sin(X * .047) * 1.7) + .5 * Math.sin(X * .19 + Y * .13) * Math.sin(Y * .23 - X * .11); return s / 1.5; };
-  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) { const X = u.cx - u.S + (i + .5) / W * 2 * u.S, Y = u.cy + u.S - (j + .5) / W * 2 * u.S;
+  for (let j = 0; j < W; j++) { if ((j & 15) === 0 && børPuste()) await pust();
+   for (let i = 0; i < W; i++) { const X = u.cx - u.S + (i + .5) / W * 2 * u.S, Y = u.cy + u.S - (j + .5) / W * 2 * u.S;
     const fa = (X - kv.x0) / kv.r - .5, fc = (kv.y0 - Y) / kv.r - .5, a0 = Math.floor(fa), c0 = Math.floor(fc), ta = fa - a0, tc = fc - c0;
     const w = (hent(a0, c0) * (1 - ta) + hent(a0 + 1, c0) * ta) * (1 - tc) + (hent(a0, c0 + 1) * (1 - ta) + hent(a0 + 1, c0 + 1) * ta) * tc;
-    if (w <= 0) continue; const k = Math.max(0, Math.min(1, (w + støy(X, Y) * .22 - .32) / .36)); v[j * W + i] = k * 255; if (k > .5) m[j * W + i] = 1; }
+    if (w <= 0) continue; const k = Math.max(0, Math.min(1, (w + støy(X, Y) * .22 - .32) / .36)); v[j * W + i] = k * 255; if (k > .5) m[j * W + i] = 1; } }
   return { W, m, v };
 }
 // Skogbunnen: mørkere og brunere (mose, lyng, barnål) enn engene, med myke overganger, så skog og åpen mark skiller seg tydelig.
-function skogbunn(px, TW, skog) {
+function skogbunn(px, TW, skog, rad0 = 0, rad1 = TW) {
   const W = skog.W, st = W / TW, V = skog.v;
-  for (let y = 0; y < TW; y++) { const fy = Math.max(0, Math.min(W - 1.001, (y + .5) * st - .5)), j = Math.floor(fy), ty = fy - j, r0 = j * W, r1 = r0 + W;
+  for (let y = rad0; y < rad1; y++) { const fy = Math.max(0, Math.min(W - 1.001, (y + .5) * st - .5)), j = Math.floor(fy), ty = fy - j, r0 = j * W, r1 = r0 + W;
     for (let x = 0; x < TW; x++) {
       const fx = Math.max(0, Math.min(W - 1.001, (x + .5) * st - .5)), i = Math.floor(fx), tx = fx - i;
       const a = V[r0 + i], b = V[r0 + i + 1], c = V[r1 + i], d = V[r1 + i + 1]; if (!(a | b | c | d)) continue;
@@ -1928,15 +1958,17 @@ function hindringer(u) {
   return rute;
 }
 // Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
-function ryddHus(u) {
+async function ryddHus(u) {
   if (!u.hus || !u.hus.omriss) return;
-  const rens = (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
-    for (let k = 0; k < data.length; k += steg) if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]);
+  // (med pust underveis: i byene er det mange ting å sjekke mot mange hus)
+  const rens = async (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
+    for (let k = 0; k < data.length; k += steg) { if ((k & 1023) < steg && børPuste()) await pust();
+      if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]); }
     return ut.length === data.length ? data : Array.isArray(data) ? ut : new Float32Array(ut); };
-  if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = rens(u.trær[art], 5);
-  if (u.smått) { u.smått.stein = rens(u.smått.stein, 5); u.smått.busk = rens(u.smått.busk, 5); }
+  if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = await rens(u.trær[art], 5);
+  if (u.smått) { u.smått.stein = await rens(u.smått.stein, 5); u.smått.busk = await rens(u.smått.busk, 5); }
   if (!u.husRute) u.husRute = hindringer({ hus: u.hus });
-  u.hus.biler = rens(u.hus.biler, 5, true); u.hus.flagg = rens(u.hus.flagg, 4); if (u.lys) u.lys = rens(u.lys, 4);
+  u.hus.biler = await rens(u.hus.biler, 5, true); u.hus.flagg = await rens(u.hus.flagg, 4); if (u.lys) u.lys = await rens(u.lys, 4);
 }
 // Steiner og busker skal ikke stå i eller helt inntil hus (x, y relativt til utsnittets midte). Rutenettet lages én gang per utsnitt.
 function nærHus(u, x, y) {
@@ -2169,22 +2201,56 @@ function frigjørTerreng(R) {
   R.scene.remove(R.mesh); R.mesh.geometry.dispose();
   R.bakkeVar = null; R.bakkeSett = null; R.bakkeDel = null; if (R.tex) R.tex.dispose(); R.mesh = null; R.tex = null;
 }
+// Terrengnettet for et utsnitt (se sett3d). Generator: kan lages i små biter på forhånd (forbered3d).
+function* terrengGeo(u, R) {
+  const { M, gt } = nett3d(u);
+  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv; yield;
+  for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
+    pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); if ((k & 2047) === 2047) yield; }
+  yield; geo.computeVertexNormals(); yield;
+  return geo;
+}
+// Plassen (matrisene) og fargene til trærne, steinene eller buskene i en liste [x, y, z, h, v, …]. lod: nettene med detaljnivå.
+function* treMatriser(data, smal, valg, lod) {
+  const n = data.length / 5, M = new Float32Array(n * 16), C = new Float32Array(n * 3), d = new THREE.Object3D();
+  for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (lod ? (valg ? valg.senk : .3) : (smal === 1 ? h * .3 : .3))); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
+    // lys og fargetone varierer litt fra tre til tre; steiner står litt nedsunket
+    d.matrix.toArray(M, k * 16); const f = .82 + v * .36; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); if ((k & 1023) === 1023) yield; }
+  return { M, C };
+}
+function husGeometri(d) {
+  const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(d.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(d.kol, 3));
+  hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); hg.computeVertexNormals(); return hg;
+}
+// FORBEREDELSE (15. nov, målt i Bergen: selve byttet av utsnitt holdt hovedtråden 0,35–0,55 s, og bildet sto stille så lenge). Det tunge
+// lages her på forhånd, i små biter med pust mellom: terrengnettet med delingen i land og vann, trærnes plass, husnettene, hindringene
+// og modulenes egne ting (KROKER.forbered3d, f.eks. vegene i spill/liv3d.js). sett3d() bytter så inn det ferdige (u.klar) – og lager
+// det selv hvis det ikke er forberedt.
+async function forbered3d(u) {
+  const R = R3, K = {}; if (!R) return;
+  K.geo = await kjørAsynk(terrengGeo(u, R)); K.del = delBakken(K.geo, u); await pust();
+  K.tre = new Map();
+  for (const [data, smal, valg, lod] of [[u.trær && u.trær.gran, .3, null, true], [u.trær && u.trær.løv, .5, null, true], [u.smått && u.smått.stein, 1, null, false], [u.smått && u.smått.busk, 1.3, BUSKVALG(), true]])
+    if (data && data.length) K.tre.set(data, await kjørAsynk(treMatriser(data, smal, valg, lod)));
+  if (u.hus) { K.hus = {}; for (const [n, d] of Object.entries(u.hus.deler)) { await pust(); K.hus[n] = husGeometri(d); } }
+  await pust(); K.hindre = hindringer(u); await pust();
+  u.klar = K;
+  for (const f of KROKER.forbered3d) { await pust(); await f(u, R); }
+  await pust();
+}
+const BUSKVALG = () => ({ senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true });
 function sett3d(u) {
-  const R = R3;
+  const R = R3, K = u.klar || {}; u.klar = null; R.forberedt = !!K.geo;
   frigjørTerreng(R);
   // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
   // A = (M − 1)/(N − 1) gir samme avstand mellom punktene i midten som før. Ca. 60 % færre trekanter. Høyden hentes med hoyde3d.
-  const { M, gt } = nett3d(u);
-  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv;
-  for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
-    pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); }
-  geo.computeVertexNormals();
+  const geo = K.geo || kjørRett(terrengGeo(u, R));
   R.texC.width = R.texC.height = u.TW; const tex = new THREE.CanvasTexture(R.texC); tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy();
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = new THREE.CanvasTexture(u.vann);
   const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
   // rutene med vann for seg (bølger og glans bare der – se bakkeVariant)
-  R.bakkeDel = delBakken(geo, u); R.bakkeSett = null;
+  R.bakkeDel = K.geo ? K.del : delBakken(geo, u); R.bakkeSett = null;
   // Trærne, steinene og buskene deler geometri (TREGEO), som brukes om igjen. Småtingene (biler, flagg, gatelys) lager sin egen hver gang.
   // dispose() på nettet frigjør instansenes matriser og farger på grafikkortet.
   for (const t of R.treMesh || []) { R.scene.remove(t); t.material.dispose(); t.dispose(); }
@@ -2193,23 +2259,20 @@ function sett3d(u) {
   const grupper = [];
   if (u.trær) grupper.push([u.trær.gran, .3, treGeo('gran'), treGeo('granEnkel')], [u.trær.løv, .5, treGeo('løv'), treGeo('løvEnkel')]);
   // buskene har detaljnivå som trærne (flere klumper nær kameraet, én lenger unna; bare de i synsfeltet tegnes)
-  if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.3, treGeo('busk'), treGeo('buskEnkel'), { senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true }]);
+  if (u.smått) grupper.push([u.smått.stein, 1, treGeo('stein')], [u.smått.busk, 1.3, treGeo('busk'), treGeo('buskEnkel'), BUSKVALG()]);
   R.treLOD = []; R.lodVed = null;
   for (const [data, smal, geo, enkel, valg] of grupper) {
     const n = data.length / 5; if (!n) continue;
     if (enkel) {
       // detaljnivå: trærne nær kameraet med alle greinene, resten som enkle former (trærne var 1,4 av 1,9 mill. trekanter, 11. nov).
       // Matrisene og fargene regnes én gang; lodTrær() fordeler dem på de to nettene når kameraet har flyttet seg.
-      const M = new Float32Array(n * 16), C = new Float32Array(n * 3), d = new THREE.Object3D(), c = new THREE.Color();
-      for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (valg ? valg.senk : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();
-        d.matrix.toArray(M, k * 16); const f = .82 + v * .36; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
+      const { M, C } = (K.tre && K.tre.get(data)) || kjørRett(treMatriser(data, smal, valg, true));
       const lag = g => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.count = 0; m.frustumCulled = false; R.scene.add(m); R.treMesh.push(m); return m; };
       R.treLOD.push({ n, M, C, data, nær: lag(geo), fjern: lag(enkel), ...(valg || {}) });
       continue;
     }
-    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), d = new THREE.Object3D(), c = new THREE.Color();
-    for (let k = 0; k < n; k++) { const [x, y, z, h, v] = data.subarray(k * 5, k * 5 + 5); d.position.set(x, y, z - (smal === 1 ? h * .3 : .3)); d.scale.set(h * smal, h * smal, h); d.rotation.set((v - .5) * .08, 0, v * 6.283); d.updateMatrix();   // steiner står litt nedsunket
-      mesh.setMatrixAt(k, d.matrix); const f = .82 + v * .36; c.setRGB(f * (.96 + v * .08), f, f * (1.04 - v * .08)); mesh.setColorAt(k, c); }   // lys og fargetone varierer litt fra tre til tre
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), n), mc = (K.tre && K.tre.get(data)) || kjørRett(treMatriser(data, smal, valg, false));
+    mesh.instanceMatrix.array.set(mc.M); mesh.instanceColor = new THREE.InstancedBufferAttribute(mc.C, 3);
     mesh.frustumCulled = false; R.scene.add(mesh); R.treMesh.push(mesh);   // instansene ligger over hele utsnittet
   }
   for (const m of R.husMesh || []) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } R.husMesh = [];
@@ -2222,8 +2285,7 @@ function sett3d(u) {
     const tekstur = { mur: vinduTekstur, tre: treTekstur, tak: takTekstur, leil: () => byggTekstur('leil'), kontor: () => byggTekstur('kontor'), lager: () => byggTekstur('lager'), glass: () => byggTekstur('glass'), industri: () => byggTekstur('industri'), planke: () => byggTekstur('planke'), butikk: () => byggTekstur('butikk'), kirke: () => byggTekstur('kirke'), dør: () => byggTekstur('dør') };
     for (const [n, d] of Object.entries(u.hus.deler)) {
       if (!tekstur[n]) tekstur[n] = () => Byhus.tekstur(n);
-      const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(d.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(d.kol, 3));
-      hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); hg.computeVertexNormals();
+      const hg = (K.hus && K.hus[n]) || husGeometri(d);
       const m = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, map: tekstur[n]() })); R.scene.add(m); R.husMesh.push(m);
     }
     if (u.hus.skilt && u.hus.skilt.length) for (const m of skilt3d(u.hus.skilt)) { R.scene.add(m); R.husMesh.push(m); }
@@ -2231,7 +2293,7 @@ function sett3d(u) {
     if (u.hus.biler.length) småting(R, 'bil', u.hus.biler);
   }
   if (u.lys) småting(R, 'lykt', u.lys);
-  R.hindre = hindringer(u);
+  R.hindre = K.hindre || hindringer(u);
   for (const f of KROKER.sett3d) f(u, R);
   hjørnelys(R.mesh.material); R.bakkeVar = R.mesh.material.userData.enkel ? null : { ngv: R.mesh.material };
   R.gressSenter = null;
@@ -2299,7 +2361,7 @@ function kamera3d() {
 async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) { R3.neste = [cx, cy, S]; return; }
   R3.bygger = true; R3.ønsket = [cx, cy, S];
-  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) sett3d(u); R3.byggFeil = 0; skjulMelding('3d'); }
+  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { await forbered3d(u); if (på3d && !R3.neste) sett3d(u); } R3.byggFeil = 0; skjulMelding('3d'); }
   catch (e) {
     console.error(e); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
     const hvorfor = utenNett(e) ? 'ingen kontakt med nettet eller kartlageret' : (e && e.message || e), fast = R3.byggFeil >= 3;
@@ -2540,7 +2602,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/enheter.js?v=7f0b842503"></script>
 <script src="/dovre-fliser/spill/enheter-visning.js?v=42546c64ff"></script>
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
-<script src="/dovre-fliser/spill/garnison.js?v=25c9069fdc"></script>
+<script src="/dovre-fliser/spill/garnison.js?v=1d37b93e82"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=47ad30087c"></script>
 <script src="/dovre-fliser/spill/fraksjoner.js?v=e21957af97"></script>
 <script src="/dovre-fliser/spill/fraksjoner-visning.js?v=258a0cb8f8"></script>
@@ -2551,12 +2613,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hjelp.js?v=8e177bfb4a"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
-<script src="/dovre-fliser/spill/veg.js?v=feb5298cfc"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=959081d046"></script>
+<script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=3da6a1f94f"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=e60e6d91e1"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=31fdab0098"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=10348fc15a"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
@@ -2574,7 +2636,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=3be9c3f6e9"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=73cfdc3b03"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=a1c25c7d36"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
@@ -2594,7 +2656,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=d045a93c7a"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
-<script src="/dovre-fliser/spill/dyr3d.js?v=6f4ff8f1c3"></script>
+<script src="/dovre-fliser/spill/dyr3d.js?v=c198d9e51c"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>

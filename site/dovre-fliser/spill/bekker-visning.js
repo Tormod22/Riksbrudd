@@ -84,8 +84,8 @@
     for (const l of linjer) {
       // samme myke linje som vannbåndet, så malingen ligger rett under båndet
       const P = Bekker.punkter(Bekker.myk(l.P), Math.max(mpp * 1.5, 1));
-      for (const [x, y] of P) { if ((++arb & 8191) === 0) await pusterom(); stemple(x, y, l.b / 2 + .9, VÅT, .35); }
-      for (const [x, y] of P) stemple(x, y, l.b * .4, VANN, 1);
+      for (const [x, y] of P) { if ((++arb & 255) === 0 && børPuste()) await pust(); stemple(x, y, l.b / 2 + .9, VÅT, .35); }
+      for (const [x, y] of P) { if ((++arb & 255) === 0 && børPuste()) await pust(); stemple(x, y, l.b * .4, VANN, 1); }
     }
     STAT.maling3d = linjer.length;
     // maske (2048²): ingen trær, busker eller gress i bekken og helt på kanten

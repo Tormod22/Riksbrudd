@@ -677,3 +677,27 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kopieres som tekst. BE BRUKEREN OM TABELLEN før mer optimalisering – den sier om det er prosessoren, punktene på skjermen eller
   tingene i bildet. Testserveren har ingen hus (husdataene ligger i kartlageret), så «Uten husene» mangler lokalt. VAKT i sjekk.js
   («måling av ytelse»). Prøvekjøring: scratchpad ytelse/prov.js.
+  BRUKERENS MÅLING (15. nov, /norge ved 15607 6622779, Høy grafikk, 1920 × 838 punkter): 16,7 ms per bilde = 60 bilder i sekundet
+  (skjermens tak), spillets regning 4 ms, 576 000 trekanter, 151 tegnekall. Jevn bildefart er altså ikke problemet der – det som
+  merkes, er HAKK når et nytt område lastes. Brukeren ba så om arbeid med ytelse, småfeil og utseende fram til kl. 11.
+  HAKK VED NYTT UTSNITT (15. nov). Målt med scratchpad hakk/hakk2.js og hakk/pust.js (ekte kartdata via dev.py, tegningen slått av –
+  programvare-grafikken fyller ellers hovedtråden –, lange oppgaver fra PerformanceObserver og pausene mellom bilder): hovedtråden sto
+  0,4–0,6 s i ett strekk på landet og 0,7 s i Bergen, to ganger per utsnitt. Nå: ca. 0,06 s på landet og 0,10–0,15 s i Bergen.
+  (1) PUST: pust()/børPuste()/iStriper()/kjørAsynk() i index.html – byggingen gjøres i biter, én bit per bilde. pusterom() venter på
+  neste bilde (requestAnimationFrame med tidsgrense). FORKASTET ETTER MÅLING: meldingskanal (Chrome tar flere meldinger i én oppgave i
+  opptil 50 ms) og scheduler.yield() (fortsetter før bildet tegnes: ni bilder i sekundet under bygging). Bitens lengde: pustTid() =
+  60 % av tiden mellom bildene, 8–24 ms. Aldri pust i skjult fane. Nye tunge løkker i bygg3d-kroker (alle er async) skal ha
+  `if (børPuste()) await pust();` – ikke `await pusterom()` etter antall (det venter et helt bilde hver gang).
+  (2) Pikselarbeidet i bygg3d går noen rader om gangen: getImageData/putImageData i striper, naturfarger/skogbunn/vannIBratt/havnivå
+  med radområde (rad0, rad1, og tilstand i st der noe regnes én gang), vannmaske/skogmaske/ryddHus er async.
+  (3) FORBEREDELSE: forbered3d(u) lager det tunge i byttet på forhånd – terrengnettet (terrengGeo) med delBakken, trærnes plass
+  (treMatriser), husnettene (husGeometri), hindringene – i u.klar, og kaller KROKER.forbered3d (ny; liv3d.js lager vegnettene der:
+  byggVeger er en generator, settVeger legger dem i scenen). sett3d(u) bytter inn det ferdige og lager alt selv når u.klar mangler
+  (R3.forberedt sier hva som skjedde). I Bergen gikk sett3d fra 340–535 ms til 35–93 ms. Nye tunge ting i en sett3d-krok bør
+  forberedes på samme måte (generator + kjørAsynk i forbered3d-kroken, kjørRett som reserve).
+  (4) Raskere oppslag med samme svar: Veg.rute – gå() hopper over ruter utenfor søkeradien (klaring: radien + bredeste veg);
+  kryss.nær med tallnøkler; Garnison.inni med kantene i vannrette bånd (by.bånd, test mot den enkle utgaven i test_garnison.js);
+  Veg.gjettSteg (generator); iBy i liv3d husker svaret i ruter på 4 m.
+  GJENSTÅR (enkeltsteg på 50–150 ms i byene): vegetasjon3d-kroken (vegRute, vannAvstand), liv3d (høyder/utenTunnel for én lang veg,
+  lykter), kraft3d, kyst3d (plasser), infra3d (løftVeger). Teksturopplastingen (4096²) og nye skyggeprogrammer skjer på grafikkortet
+  og kan ikke måles her. VAKT i sjekk.js («bygging i biter»: forberedt og uforberedt bytte gir like utsnitt, og det tas pust).

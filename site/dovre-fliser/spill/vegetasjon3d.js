@@ -50,7 +50,7 @@
     let arb = 0;
     for (const kilde of ['gran', 'løv']) { const d = u.trær[kilde];
       for (let k = 0; k < d.length; k += 5) {
-        if ((++arb & 4095) === 0) await pusterom();
+        if ((++arb & 63) === 0 && børPuste()) await pust();
         const x = d[k], y = d[k + 1], X = x + u.cx, Y = y + u.cy; if (iVann(u, x, y)) continue;   // aldri i vannet (vannmasken)
         const [myr, hei] = rundt(X, Y);
         const art = V.treslag({ moh: d[k + 2] / R3.EX + u.h0, tg, helning: helning(X, Y), vann: vann(x, y), myr, hei }, hash((Math.round(X * 4) * 73856093) ^ (Math.round(Y * 4) * 19349663)));
@@ -77,7 +77,7 @@
     for (const k of V.REKKE) u.trær[k] = new Float32Array(ut[k]);
     // til blomstene: sted (0 ingen, 1 eng, 2 hei, 3 skog, 4 veikant) og om det er nær vann (siv), 512 × 512
     const W = 512, sted = new Uint8Array(W * W), nærVann = new Uint8Array(W * W), B = u.bunn, c = 2 * u.S / W;
-    for (let j = 0; j < W; j++) { if ((j & 63) === 0) await pusterom();
+    for (let j = 0; j < W; j++) { if ((j & 7) === 0 && børPuste()) await pust();
       for (let i = 0; i < W; i++) {
         const x = -u.S + (i + .5) * c, y = u.S - (j + .5) * c, k = j * W + i, g = B ? B.gress[Math.floor(j * B.W / W) * B.W + Math.floor(i * B.W / W)] : 0, K = klasse(x + u.cx, y + u.cy);
         const dv = vann(x, y); if (dv < 14 && !iVann(u, x, y)) nærVann[k] = 1;

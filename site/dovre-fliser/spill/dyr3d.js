@@ -13,12 +13,13 @@
     if (u.S > 2200) return;
     const b = [u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], kv = await lagVindu(b, false, 9);
     const m = new Uint8Array(W * W), celle = 2 * u.S / W, st = TW / W;
-    for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+    for (let j = 0; j < W; j++) { if ((j & 15) === 0 && børPuste()) await pust();
+     for (let i = 0; i < W; i++) {
       const q = (Math.floor((j + .5) * st) * TW + Math.floor((i + .5) * st)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
       const vann = B > R + 18 && B > G + 4, grå = Math.abs(R - G) + Math.abs(G - B) < 14 && .3 * R + .59 * G + .11 * B < 120;
       if (vann || grå) m[j * W + i] = 1;
       else if (u.påVeg && u.påVeg(-u.S + (i + .5) * celle, u.S - (j + .5) * celle)) m[j * W + i] = 2;
-    }
+     } }
     // tunet rundt husene (omrisset + 6 m) er stengt for dyrene, så de ikke står inntil veggene
     for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
       for (let j = Math.max(0, Math.floor((u.S - y1 - 6) / celle)); j <= Math.min(W - 1, Math.floor((u.S - y0 + 6) / celle)); j++)

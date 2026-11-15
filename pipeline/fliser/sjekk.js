@@ -902,6 +902,26 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       return r; });
     const bkok = bk.linjer > 1000 && bk.bånd > 0 && (!NVE || (bk.kilde === 'release' && bk.kraftKilde === 'release')) && bk.iScene && bk.n > 20 && bk.maks < 1 && bk.min > -.3; if (!bkok) feil++;
     console.log(`${bkok ? 'ok  ' : 'FEIL'} ${navn} bekker 3D: ${bk.linjer} lastet, ${bk.bånd} vannbånd (${bk.tri} trekanter) ved Dombås (kilde ${bk.kilde}/${bk.kraftKilde}, ${bk.kulvert} kulvertkutt), høyde over terrenget ${bk.min.toFixed(2)}–${bk.maks.toFixed(2)} m (${bk.n} punkt)`);
+    // VAKT bygging i biter (15. nov, brukeren fikk hakk når et nytt område lastet: hovedtråden sto 0,3–0,7 s i ett strekk). Et nytt
+    // utsnitt bygges nå i små biter med pust mellom (pust/iStriper/kjørAsynk i index.html), og det tunge i selve byttet lages på
+    // forhånd (forbered3d: terrengnettet, trærnes plass, husnettene, hindringene og vegene fra liv3d.js). Vakten: utsnittet på skjermen
+    // er satt inn fra det forberedte; det ble tatt mange pust under en bygging; og samme utsnitt bygget UTEN forberedelsen (sett3d
+    // lager alt selv) gir de samme tallene – terrengnett, trær, hus, veger og vegnett. (Uten forberedelsen er feilen lagt inn med
+    // vilje: stemmer tallene ikke, har forberedelsen mistet eller lagt til noe.)
+    const bib = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const stat = () => { const k = {}; R3.scene.traverse(o => { if (o.isMesh || o.isLine || o.isPoints) { const s = (o.userData && o.userData.kilde) || 'index'; k[s] = (k[s] || 0) + 1; } });
+        return { terreng: R3.mesh.geometry.index.count, trær: (R3.treLOD || []).reduce((s, l) => s + l.n, 0), hus: (R3.husMesh || []).length, liv: k.liv3d || 0, veger: (R3.ut.veger || []).length, hindre: R3.hindre ? Object.keys(R3.hindre).length : -1 }; };
+      // (utsnittet ved Dombås fra bekkevakten over: nært, med trær, hus og veger)
+      const u0 = R3.ut, a = stat(), forberedt = R3.forberedt, p0 = pustAntall;
+      const u2 = await bygg3d(u0.cx, u0.cy, u0.S), pust = pustAntall - p0, utenKlar = !u2.klar; sett3d(u2); await vent(3);
+      const b = stat(), uten = R3.forberedt === false, gl = R3.renderer.getContext().getError();
+      // og tilbake gjennom den vanlige vegen (med forberedelsen), så resten av testene står på et forberedt utsnitt
+      await nytt3dUtsnitt(u0.cx, u0.cy, u0.S); await vent(3); const c = stat();
+      return { a, b, c, forberedt, uten, utenKlar, pust, igjen: R3.forberedt, gl }; });
+    const like = (x, y) => ['terreng', 'trær', 'hus', 'liv', 'veger', 'hindre'].every(k => x[k] === y[k]);
+    const bibok = bib.forberedt === true && bib.uten && bib.utenKlar && bib.igjen === true && bib.pust > 10 && like(bib.a, bib.b) && like(bib.a, bib.c) && bib.a.terreng > 1000 && bib.a.trær > 0 && bib.a.liv > 0 && bib.gl === 0;
+    if (!bibok) { feil++; console.log(JSON.stringify(bib)); }
+    console.log(`${bibok ? 'ok  ' : 'FEIL'} ${navn} bygging i biter: ${bib.pust} pust under en bygging; forberedt og uforberedt bytte gir like utsnitt (terreng ${bib.a.terreng}, trær ${bib.a.trær}, hus ${bib.a.hus}, veger ${bib.a.veger}, vegnett ${bib.a.liv})`);
     // VAKT minne i 3D (12. nov): 3D slås av og på to ganger ved Dombås. Grafikkortet skal ikke ha flere geometrier eller teksturer etter
     // andre gang enn etter første (før: + 14 geometrier og + 1–2 teksturer per gang, terrengnettet og småtingene ble aldri frigjort),
     // instansnettene som tas ut av scenen skal være frigjort (dispose), det gamle utsnittet skal ikke huskes (fire gamle holdt flere

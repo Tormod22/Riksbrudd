@@ -92,18 +92,22 @@
   // Rutenett over alle vegbitene: hvor langt er det fra et punkt til de andre vegene?
   // nærmest(x, y, r, filter(li)) -> { d, li, i, f } (bit i av linje li, f = 0–1 langs biten); klaring(x, y, egen, r) = minste
   // (avstand til midtlinjen − halv bredde) for alle andre linjer enn «egen»: under 0 = punktet ligger på en annen vegbane.
+  // (15. nov, ytelse: gå() hopper over ruter som ligger lenger unna enn søkeradien – i byene var dette oppslaget det tyngste i
+  // vegbyggingen. Svarene er de samme: klaring() tar med alt som kan gi en klaring under søkeradien, og mer brukes den ikke til.)
   function rute(linjer, C = 12) {
-    const R = new Map();
+    const R = new Map(); let wMaks = 0; for (const v of linjer) if (v.w > wMaks) wMaks = v.w;
     linjer.forEach((v, li) => { for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i];
       for (let x = Math.floor(Math.min(a[0], b[0]) / C); x <= Math.floor(Math.max(a[0], b[0]) / C); x++)
         for (let y = Math.floor(Math.min(a[1], b[1]) / C); y <= Math.floor(Math.max(a[1], b[1]) / C); y++) { const k = x * 65536 + y; let l = R.get(k); if (!l) R.set(k, l = []); l.push(li, i); } } });
-    const gå = (x, y, r, f) => { const n = Math.ceil(r / C), cx = Math.floor(x / C), cy = Math.floor(y / C);
-      for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) { const l = R.get((cx + i) * 65536 + cy + j); if (!l) continue;
+    const gå = (x, y, r, f, rs = r) => { const n = Math.ceil(r / C), cx = Math.floor(x / C), cy = Math.floor(y / C), rs2 = rs * rs;
+      for (let j = -n; j <= n; j++) { const y0 = (cy + j) * C, dy0 = y < y0 ? y0 - y : y > y0 + C ? y - y0 - C : 0;
+       for (let i = -n; i <= n; i++) { const x0 = (cx + i) * C, dx0 = x < x0 ? x0 - x : x > x0 + C ? x - x0 - C : 0; if (dx0 * dx0 + dy0 * dy0 > rs2) continue;
+        const l = R.get((cx + i) * 65536 + cy + j); if (!l) continue;
         for (let q = 0; q < l.length; q += 2) { const li = l[q], pi = l[q + 1], a = linjer[li].P[pi - 1], b = linjer[li].P[pi], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1;
-          const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)); f(Math.hypot(a[0] + dx * t - x, a[1] + dy * t - y), li, pi, t); } } };
+          const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)); f(Math.hypot(a[0] + dx * t - x, a[1] + dy * t - y), li, pi, t); } } } };
     return {
       nærmest(x, y, r, filter) { let best = null; gå(x, y, r, (d, li, i, f) => { if (d <= r && (!best || d < best.d) && (!filter || filter(li))) best = { d, li, i, f }; }); return best; },
-      klaring(x, y, egen, r = 16) { let m = Infinity; gå(x, y, r, (d, li) => { if (li !== egen && d - linjer[li].w < m) m = d - linjer[li].w; }); return m; },
+      klaring(x, y, egen, r = 16) { let m = Infinity; gå(x, y, r, (d, li) => { if (li !== egen && d - linjer[li].w < m) m = d - linjer[li].w; }, r + wMaks); return m; },
     };
   }
 
@@ -138,7 +142,9 @@
   //     parallelt så tett at vegbanene overlapper, er den som hører til det korteste strøket en gang- og sykkelveg (riksvegen går
   //     gjennom hele utsnittet, gangvegen begynner og slutter). (b) Korte lenker (under 25 m) mellom to kryss er svingefelt.
   // linjer: skjøtet og jevnet (punkt hver ~2,5 m). Endrer linjene på stedet og gir antallet som ble gjettet.
-  function gjett(linjer) {
+  function gjett(linjer) { const it = gjettSteg(linjer); let r; while (!(r = it.next()).done); return r.value; }
+  // (generator: yield mellom linjene, så 3D kan gjøre dette i små biter – i Bergen tok det 0,07–0,19 s i ett strekk)
+  function* gjettSteg(linjer) {
     const bil = linjer.map((v, i) => i).filter(i => vanlig(linjer[i]) && 'ERFK'.includes(linjer[i].k)), L = linjer.map(v => lengde(v.P));
     const C = 2, rut = new Map(), noder = [];
     const node = p => { const cx = Math.floor(p[0] / C), cy = Math.floor(p[1] / C);
@@ -157,8 +163,8 @@
     const SL = new Map(); for (const i of bil) { const s = finn(i); SL.set(s, (SL.get(s) || 0) + L[i]); }
     const ru = rute(bil.map(i => linjer[i])), bilNr = new Map(bil.map((i, q) => [q, i]));
     let gjettet = 0;
-    for (const i of bil) { const v = linjer[i], P = v.P, w = halv(v), s = finn(i); if (L[i] < 8) continue; let n = 0, tot = 0;
-      for (let q = 1; q < P.length - 1; q++) { tot++; const dx = P[q + 1][0] - P[q - 1][0], dy = P[q + 1][1] - P[q - 1][1], dl = Math.hypot(dx, dy) || 1;
+    for (const i of bil) { const v = linjer[i], P = v.P, w = halv(v), s = finn(i); if (L[i] < 8) continue; let n = 0, tot = 0; yield;
+      for (let q = 1; q < P.length - 1; q++) { tot++; if ((q & 63) === 63) yield; const dx = P[q + 1][0] - P[q - 1][0], dy = P[q + 1][1] - P[q - 1][1], dl = Math.hypot(dx, dy) || 1;
         const b = ru.nærmest(P[q][0], P[q][1], w + 5, li => { const j = bilNr.get(li); return j !== i && finn(j) !== s && SL.get(finn(j)) > SL.get(s); });
         if (!b) continue; const o = linjer[bilNr.get(b.li)], a = o.P[b.i - 1], c = o.P[b.i], ol = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
         if (b.d < w + halv(o) + 1 && Math.abs(dx * (c[0] - a[0]) + dy * (c[1] - a[1])) > .85 * dl * ol) n++; }
@@ -276,9 +282,12 @@
       if (!armer.some(a => armer.some(b => Math.abs(a.dx * b.dy - a.dy * b.dx) > .42))) continue;
       ut.push({ x: n.x, y: n.y, z, d, armer, by: armer.some(a => a.by) });
     }
-    const kr = new Map(); for (const n of ut) { const k = nk(n.x, n.y); if (!kr.has(k)) kr.set(k, []); kr.get(k).push(n); }
+    // rutenett med tallnøkler (15. nov: nær() kalles for hvert punkt på hver veg – tekstnøkler var merkbart tregere i byene)
+    const kr = new Map(), tk = (a, b) => a * 65536 + b; for (const n of ut) { const k = tk(Math.floor(n.x / C), Math.floor(n.y / C)); if (!kr.has(k)) kr.set(k, []); kr.get(k).push(n); }
     // nær(x, y, ekstra, unntatt): ligger punktet innenfor et kryss (+ ekstra meter)? «unntatt» er et kryss som ikke teller.
-    ut.nær = (x, y, ekstra, unntatt) => { for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) for (const n of kr.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) if (n !== unntatt && Math.hypot(n.x - x, n.y - y) < n.d + ekstra) return true; return false; };
+    ut.nær = (x, y, ekstra, unntatt) => { const cx = Math.floor(x / C), cy = Math.floor(y / C);
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { const l = kr.get(tk(cx + i, cy + j)); if (l) for (const n of l) if (n !== unntatt && Math.hypot(n.x - x, n.y - y) < n.d + ekstra) return true; }
+      return false; };
     return ut;
   }
   // Delene av linjen som ikke ligger i et kryss
@@ -346,6 +355,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);
