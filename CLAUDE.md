@@ -783,3 +783,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   utenfra (du går gjennom den), runde bygg (tank, fyr) har ikke interiør, bygg i bratt terreng får høy trapp, byggene i leiren
   (leir.js/byggesett) er ikke med. Rom, mål og møbler er Claudes forslag. VAKT «interiør» i sjekk.js (prøvehus lagt inn i utsnittet).
   Bilder: scratchpad inne/inne.js (KL=hus|låve|butikk …, ekte husdata via dev.py; tiden spoles for å gå inn).
+  INTERIØR, UTSEENDE (15. nov sent, brukeren: «det må se mye bedre ut»): interior3d.js er skrevet om. Ett nett per bygg med åtte
+  stoffer (STOFFER: glatt, parkett, flis, betong, malt, panel, tre, tøy – mønstrene tegnes i koden, METER = hvor mange meter
+  mønsteret dekker) og fire små nett: vinduene (bilde av utsikt), skygge (gjennomsiktig), lampelys og dagslys (additive flekker på
+  gulvet). romStil(pl, r, nr): gulv og vegg per rom (parkett i en tone per bygg, fliser på bad, teppe på kontor, betong i haller,
+  panel i hytter/låver, veggfarge per rom). Veggene er mørkere nede og i hjørnene (hjørnefarger), har gulvlist, og deles der
+  skilleveggene møter ytterveggen. Dørene mellom rommene har karm, overstykke og et åpent dørblad (Interior.plan gir nå retning og
+  bredde per døråpning: [x, y, dx, dy, w]); inngangen har karm, dørmatte, en mørk åpning og åpent dørblad utenfra. Vinduer med
+  karm, sprosser, vinduspost og gardiner; taklamper (lysrør i haller); skygge under møblene og langs veggene; teppe under
+  salongbordet; bilder på skilleveggene. Møblene (deler(m)) har flere deler og egne stoffer, runde deler som åttekanter.
+  Hvitmalt tre tegnes uten årer. Ca. 5000 trekanter for et lite hus. Lyset følger NATT.mørke (lampene sterkere om natta).

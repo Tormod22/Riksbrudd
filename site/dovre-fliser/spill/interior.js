@@ -69,7 +69,8 @@
       let d0 = null, d1 = null;
       if (L) { const len = L[1] - L[0];
         if (len < DØRÅPNING + .6) { d0 = L[0]; d1 = L[1]; } else { const m = L[0] + .3 + DØRÅPNING / 2 + tilf() * (len - .6 - DØRÅPNING); d0 = m - DØRÅPNING / 2; d1 = m + DØRÅPNING / 2; }
-        const m = (d0 + d1) / 2; åpninger.push(pkt(m)); dører.push(tilXY(...pkt(m))); }
+        // døråpningen: midten, veggens retning og bredden
+        const m = (d0 + d1) / 2, ret = langsU ? tilXY(1, 0) : tilXY(0, 1); åpninger.push(pkt(m)); dører.push([...tilXY(...pkt(m)), ret[0], ret[1], d1 - d0]); }
       const legg = (p, q) => { if (q - p < .15) return; const A = tilXY(...pkt(p)), B = tilXY(...pkt(q)); vegger.push({ ax: A[0], ay: A[1], bx: B[0], by: B[1] }); };
       for (const s of biter) { if (d0 === null || d1 <= s[0] || d0 >= s[1]) legg(s[0], s[1]); else { legg(s[0], d0); legg(d1, s[1]); } }
     };
