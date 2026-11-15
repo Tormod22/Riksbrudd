@@ -110,13 +110,16 @@ const lerret = (w, h) => HAR_OFFSCREEN ? new OffscreenCanvas(w, h) : Object.assi
 // dekodFrist(løfte, ms): løftet, men det avvises hvis det ikke er avgjort innen fristen
 const dekodFrist = (løfte, ms) => new Promise((ja, nei) => { const t = setTimeout(() => nei(new Error('tidsgrense: bildet ble ikke lest på ' + ms / 1000 + ' s')), ms);
   løfte.then(v => { clearTimeout(t); ja(v); }, e => { clearTimeout(t); nei(e); }); });
+// (15 s: med 4 s slo fristen til på en treg maskin under full last, og bakgrunnstråden har ikke <img> å falle tilbake på)
+const DEKOD_FRIST = 15000;
 // Leser et bilde. createImageBitmap med valg feiler i eldre Safari – da brukes et vanlig <img>.
 async function bilde(data, type) {
   const blob = new Blob([data], { type });
   // (15. nov, brukeren på iPhone: byggingen av 3D ble stående og vente på høydene. Bildelesingen har ingen egen tidsgrense i
   // nettleseren, så hvert forsøk får nå en frist – svarer det ikke, prøves neste måte.)
-  try { return await dekodFrist(createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }), 4000); } catch (e) { /* prøv neste */ }
-  try { return await dekodFrist(createImageBitmap(blob), 4000); } catch (e) { /* prøv neste */ }
+  try { return await dekodFrist(createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }), DEKOD_FRIST); } catch (e) { /* prøv neste */ }
+  try { return await dekodFrist(createImageBitmap(blob), DEKOD_FRIST); } catch (e) { /* prøv neste */ }
+  if (typeof Image === 'undefined') throw new Error('bildet kunne ikke leses (bakgrunnstråden)');
   const url = URL.createObjectURL(blob);
   try { const im = new Image(); im.src = url; await dekodFrist(im.decode(), 8000); const c = Object.assign(document.createElement('canvas'), { width: im.naturalWidth, height: im.naturalHeight }); c.getContext('2d').drawImage(im, 0, 0); return c; }
   finally { URL.revokeObjectURL(url); }

@@ -750,7 +750,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tidteller i kortet). 50 % = kartbildet er ferdig (bakgrunnstråden), byggingen venter på høydene (lagVindu på siden). IKKE GJENSKAPT
   herfra (tregt nett, uten OffscreenCanvas: 3–4 s). Tiltak: kortet viser «· 12 s» og en diagnoselinje (.nett): «venter på: grove høyder,
   fine høyder» (R3.venterPå), «fliser: hoyde 5, hus 16» (FLIS_VENTER i kartflis.js = bestilt og ikke ferdig lest, per lag) og «nett: 6
-  hentes, 0 i kø». Frister: bildelesing (dekodFrist: createImageBitmap 4 s per forsøk, <img> 8 s), fine høyder 6 s etter de grove
+  hentes, 0 i kø». Frister: bildelesing (dekodFrist: createImageBitmap DEKOD_FRIST = 15 s per forsøk – 4 s slo feil under last i sjekk.js –, <img> 8 s), fine høyder 6 s etter de grove
   (ellers brukes de grove), omlandet 6 s. BE BRUKEREN OM ET SKJERMBILDE AV KORTET hvis det stopper igjen – linja sier om det er nettet,
   lesingen eller noe annet.
   RUNDE 4 – ÅRSAKEN (15. nov 18:09, brukerens skjermbilde av kortet: «venter på: grove høyder · fliser: vektor 5521 · nett: 24 hentes,
