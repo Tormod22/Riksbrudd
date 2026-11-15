@@ -20,7 +20,7 @@
     const byer = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted && window.Garnison ? INFRA.tettsted.filter(t => t.bb[2] > u.cx - u.S && t.bb[0] < u.cx + u.S && t.bb[3] > u.cy - u.S && t.bb[1] < u.cy + u.S) : [];
     const kaier = (u.kaier3d || []).map(k => k.Q);
     const hinder = (x, y) => (u.hus && u.hus.omriss && nærHus(u, x, y)) || (u.påVeg && u.påVeg(x, y)) || kaier.some(q => Math.hypot(q[0] - x, q[1] - y) < 90);
-    const k = Kyst.plasser({ S: u.S, cx: u.cx, cy: u.cy, mobil: tak(), sjø, moh, hinder, by: (x, y) => byer.some(b => Garnison.inni(b, x + u.cx, y + u.cy)) });
+    await pust(); const k = Kyst.plasser({ S: u.S, cx: u.cx, cy: u.cy, mobil: tak(), sjø, moh, hinder, by: (x, y) => byer.some(b => Garnison.inni(b, x + u.cx, y + u.cy)) });
     // ikke båter oppå ferjekaiene
     k.båter = k.båter.filter(b => !kaier.some(q => Math.hypot(q[0] - b.x, q[1] - b.y) < 90));
     const zs = (x, y) => (Math.min(.3, moh(x, y)) - u.h0) * R3.EX;

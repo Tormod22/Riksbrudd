@@ -686,7 +686,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (1) PUST: pust()/børPuste()/iStriper()/kjørAsynk() i index.html – byggingen gjøres i biter, én bit per bilde. pusterom() venter på
   neste bilde (requestAnimationFrame med tidsgrense). FORKASTET ETTER MÅLING: meldingskanal (Chrome tar flere meldinger i én oppgave i
   opptil 50 ms) og scheduler.yield() (fortsetter før bildet tegnes: ni bilder i sekundet under bygging). Bitens lengde: pustTid() =
-  60 % av tiden mellom bildene, 8–24 ms. Aldri pust i skjult fane. Nye tunge løkker i bygg3d-kroker (alle er async) skal ha
+  60 % av tiden mellom bildene, 8–16 ms. Aldri pust i skjult fane. Nye tunge løkker i bygg3d-kroker (alle er async) skal ha
   `if (børPuste()) await pust();` – ikke `await pusterom()` etter antall (det venter et helt bilde hver gang).
   (2) Pikselarbeidet i bygg3d går noen rader om gangen: getImageData/putImageData i striper, naturfarger/skogbunn/vannIBratt/havnivå
   med radområde (rad0, rad1, og tilstand i st der noe regnes én gang), vannmaske/skogmaske/ryddHus er async.

@@ -38,7 +38,7 @@
   // ---------- bygg3d: treslag ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
     // nøyaktig avstand til vegene og fortauene (for blomster og gress – vegmasken u.påVeg er for grov i store utsnitt)
-    u.vegNær = u.veger && u.veger.length ? V.vegRute(u.veger) : null;
+    u.vegNær = u.veger && u.veger.length ? V.vegRute(u.veger) : null; await pust();
     // bryteren VEG_AV på window slår dette av: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
     if (!u.trær || !u.trær.gran || window.VEG_AV) return;
     const kv = await lagVindu([u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], false, 9);
@@ -46,7 +46,7 @@
     // andel myr og hei i de ni rutene rundt (ca. 100 × 100 m)
     const rundt = (X, Y) => { let myr = 0, hei = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const k = klasse(X + a * kv.r, Y + b * kv.r); if (k === 6) myr++; else if (k === 2 || k === 0) hei++; } return [myr / 9, hei / 9]; };
     const helning = (X, Y) => { const dx = hoyde3d(X + 6, Y, u) - hoyde3d(X - 6, Y, u), dy = hoyde3d(X, Y + 6, u) - hoyde3d(X, Y - 6, u); return Math.atan(Math.hypot(dx, dy) / 12) * 180 / Math.PI; };
-    const vann = vannAvstand(u), tg = V.tregrense(u.cy), ut = {}; for (const k of V.REKKE) ut[k] = [];
+    await pust(); const vann = vannAvstand(u), tg = V.tregrense(u.cy), ut = {}; for (const k of V.REKKE) ut[k] = []; await pust();
     let arb = 0;
     for (const kilde of ['gran', 'løv']) { const d = u.trær[kilde];
       for (let k = 0; k < d.length; k += 5) {

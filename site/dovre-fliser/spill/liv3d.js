@@ -76,8 +76,8 @@
     if (u.bunn) { const B = u.bunn; for (let j = 0; j < B.W; j++) for (let i = 0; i < B.W; i++) { const x = -u.S + (i + .5) / B.W * 2 * u.S, y = u.S - (j + .5) / B.W * 2 * u.S; if (påVeg(x, y)) B.gress[j * B.W + i] = 0; } }
     // gatelysene følger de ferdige vegene: aldri i en vegbane, på en gangveg, i et kryss, i et hus eller i vann
     u.lys = null;
-    if (byer.length) { const ru = Veg.rute(alle), nr = new Map(alle.map((v, i) => [v, i])), vann = window.Infra3d && Infra3d.iVann;
-      const L = Veg.lykter(veger, { ru, nr: v => nr.get(v), kryss: Veg.finnKryss(veger), ok: (x, y) => !(u.hus && u.hus.omriss && nærHus(u, x, y)) && !(vann && vann(u, x, y)) }), ut = [];
+    if (byer.length) { await pust(); const kryssL = Veg.finnKryss(veger); await pust(); const ru = Veg.rute(alle), nr = new Map(alle.map((v, i) => [v, i])), vann = window.Infra3d && Infra3d.iVann;
+      await pust(); const L = Veg.lykter(veger, { ru, nr: v => nr.get(v), kryss: kryssL, ok: (x, y) => !(u.hus && u.hus.omriss && nærHus(u, x, y)) && !(vann && vann(u, x, y)) }), ut = [];
       for (let q = 0; q < L.length; q += 3) ut.push(L[q], L[q + 1], zf(L[q], L[q + 1]), L[q + 2]);
       if (ut.length) u.lys = new Float32Array(ut); }
   });

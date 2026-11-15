@@ -70,7 +70,7 @@
     const S3 = Math.min(u.S, 3000), [b0, b1] = await Promise.all([LAG.hent([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], [0]), LAG.hent([u.cx - S3, u.cy - S3, u.cx + S3, u.cy + S3], [1])]);
     const KD = samle([...new Set(b0.concat(b1))]); sist = { linjer: KD.linjer.length }; if (!KD.linjer.length && !KD.trafo.length) return; kreditt();
     const z = (X, Y) => (hoyde3d(X, Y, u) - u.h0) * R3.EX, mob = VW < 900;
-    const ut = K.utsnitt(KD.linjer, u.cx, u.cy, u.S, z, mob ? 1600 : 4000);
+    await pust(); const ut = K.utsnitt(KD.linjer, u.cx, u.cy, u.S, z, mob ? 1600 : 4000); await pust();
     ut.trafo = KD.trafo.filter(([X, Y]) => Math.abs(X - u.cx) < u.S - 40 && Math.abs(Y - u.cy) < u.S - 40).map(([X, Y, kv]) => ({ x: X - u.cx, y: Y - u.cy, kv }));
     // trafostasjonen: NVEs punkt ligger ofte i stasjonshallen (et bygg i dataene) – flytt gården (høyst ca. 45 m) dit den får plass utenfor bygg og veg
     for (const t of ut.trafo) {

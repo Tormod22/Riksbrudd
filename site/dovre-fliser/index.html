@@ -1363,10 +1363,10 @@ async function vannmaske(px, TW, H, N, steg) {
 // kjører først, så biten, så tegnes bildet), med en tidsgrense så ingenting stopper om bilder ikke tegnes. Prøvd og forkastet (målt):
 // en meldingskanal (Chrome tar flere meldinger i samme oppgave i opptil 50 ms) og scheduler.yield() (fortsetter før bildet tegnes –
 // bare ni bilder i sekundet mens det bygges). pust() tar pusterom bare når biten har vart lenger enn pustTid() – ca. 60 % av tiden
-// mellom to bilder, 8–24 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
+// mellom to bilder, 8–16 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
 const pusterom = () => new Promise(r => { let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
 let sistPust = 0, pustAntall = 0;
-const pustTid = () => { const snitt = typeof R3 !== 'undefined' && R3 && på3d && R3.rammeSnitt ? R3.rammeSnitt : 16.7; return Math.max(8, Math.min(24, snitt * .6)); };
+const pustTid = () => { const snitt = typeof R3 !== 'undefined' && R3 && på3d && R3.rammeSnitt ? R3.rammeSnitt : 16.7; return Math.max(8, Math.min(16, snitt * .6)); };
 const børPuste = () => performance.now() - sistPust > pustTid() && !document.hidden;
 async function pust() { if (!børPuste()) return; pustAntall++; await pusterom(); sistPust = performance.now(); }
 // En tung jobb på kartbildet, noen rader om gangen: f(rad0, rad1) for hele bildet med pust mellom.
@@ -2682,17 +2682,17 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=1e2efdd157"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=577112574b"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=cb88bf4410"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=31fdab0098"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=10348fc15a"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=0e451e1055"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>
-<script src="/dovre-fliser/spill/kyst3d.js?v=98f09c90f4"></script>
+<script src="/dovre-fliser/spill/kyst3d.js?v=32592143bd"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
@@ -2704,9 +2704,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1cfb246aa4"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=3be9c3f6e9"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=a1c25c7d36"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=859f7172c9"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
-<script src="/dovre-fliser/spill/kraft3d.js?v=d37be63ee9"></script>
+<script src="/dovre-fliser/spill/kraft3d.js?v=f4fafad5ff"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
 <script src="/dovre-fliser/spill/leir.js?v=ea634fc8ba"></script>
@@ -2724,7 +2724,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=face62cf9b"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
-<script src="/dovre-fliser/spill/dyr3d.js?v=c198d9e51c"></script>
+<script src="/dovre-fliser/spill/dyr3d.js?v=a6d8beb636"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>

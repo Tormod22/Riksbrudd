@@ -374,8 +374,8 @@
     u.bruer3d = []; u.kaier3d = [];
     if (!window.Bruer || !INFRA || !VIS.infra || !u.infra) return;
     u.bruer3d = await modeller(u, false);
-    løftVeger(u); ryddTrær(u);
-    for (const o of u.infra) if (o.lag === 'ferjekai') { const k = kaiModell(u, o); if (k) u.kaier3d.push(k); }
+    await pust(); løftVeger(u); await pust(); ryddTrær(u); await pust();
+    for (const o of u.infra) if (o.lag === 'ferjekai') { const k = kaiModell(u, o); if (k) u.kaier3d.push(k); if (børPuste()) await pust(); }
   });
   let mesh = [];
   KROKER.sett3d.push((u, R) => {
