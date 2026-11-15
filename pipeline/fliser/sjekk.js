@@ -901,6 +901,30 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const hfas = hs.s ? Object.keys(hs.s.fasader) : [], hok = hs.s && hs.s.bygg >= 50 && (hs.s.tak.valm || 0) + (hs.s.tak.mansard || 0) > 0 && hs.s.utenTak === 0 && hfas.length >= 5 && hfas.some(n => ['murgard', 'tegl', 'funkis', 'plate'].includes(n)) && Object.values(hs.glass).every(v => v >= 3);
     if (!hok) feil++;
     console.log(`${hok ? 'ok  ' : 'FEIL'} ${navn} byhus: ${hs.s && hs.s.bygg} bygg, uten tak ${hs.s && hs.s.utenTak}, fasader ${JSON.stringify(hs.s && hs.s.fasader)}, tak ${JSON.stringify(hs.s && hs.s.tak)}, glass i teksturene (%) ${JSON.stringify(hs.glass)}`);
+    // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
+    // et prøvehus (10 × 8 m, dør midt på sørveggen) legges i utsnittet. Når du går, får det interiør med flere rom og møbler; du kan
+    // gå inn gjennom døra og står da på gulvet, ytterveggen stopper deg ved siden av døra, og alt ryddes bort når du flyr opp.
+    const inn = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = R3.ut, R = R3, gl = R.renderer.getContext();
+      const x0 = 40, y0 = 60, P = [[x0, y0], [x0 + 10, y0], [x0 + 10, y0 + 8], [x0, y0 + 8]]; P.bygg = { i: 4242, t: 0, h: 6, kl: 'hus' };
+      P.dør = { x: x0 + 5, y: y0, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(u.cx + x0 + 5, u.cy + y0 + 4, u) - u.h0) * R.EX };
+      const husFør = u.hus, o = { P }, nøkler = []; if (!u.hus) u.hus = { omriss: [] };
+      for (let a = Math.floor(x0 / 20); a <= Math.floor((x0 + 10) / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor((y0 + 8) / 20); c++) { const k = a + ',' + c; if (!R.hindre.has(k)) R.hindre.set(k, []); R.hindre.get(k).push(o); nøkler.push(k); }
+      const g0 = R.renderer.info.memory.geometries, ut = { utenGå: (Interior3d.oppdater(true), Interior3d.antall()) };
+      Gange.start(); const sett = (x, y, a) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); k.x = x; k.y = y; k.vx = k.vy = 0; k.z = (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX; R.fot.a = a; R.fot.pitch = 0; };
+      sett(x0 + 5, y0 - 5, 0); for (let i = 0; i < 12; i++) Interior3d.oppdater(true);
+      const pl = P.inne; ut.plan = !!pl; if (pl) { ut.rom = pl.rom.length; ut.møbler = pl.møbler.length; ut.gulv = pl.gulv; ut.trekanter = Interior3d.sjekk().find(q => q.rom === pl.rom.length).trekanter;
+        ut.vegg = hindring3d(x0 + 8, y0) && hindring3d(x0, y0 + 4) && !hindring3d(x0 + 5, y0) && !hindring3d(x0 + 5, y0 + .7);
+        // gå inn (W holdes, tiden spoles) – og gå mot veggen ved siden av døra
+        const ekte = performance.now.bind(performance); let t = ekte(); performance.now = () => (t += 25);
+        try { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' })); for (let i = 0; i < 400; i++) Gange.kamera(R); const k = Gange.kropp(); ut.inne = !!Interior3d.inne(k.x, k.y); ut.påGulv = Math.abs(k.z - pl.gulv) < .02; ut.y = k.y - y0;
+          sett(x0 + 8, y0 - 4, 0); for (let i = 0; i < 400; i++) Gange.kamera(R); ut.stoppet = Gange.kropp().y < y0; }
+        finally { performance.now = ekte; window.dispatchEvent(new KeyboardEvent('keyup', { key: 'w' })); } }
+      R.renderer.render(R.scene, R.cam); ut.gl = gl.getError();
+      Gange.stopp(); Interior3d.oppdater(true); ut.etter = Interior3d.antall(); ut.ryddet = !P.inne; ut.geo = R.renderer.info.memory.geometries - g0;
+      for (const k of nøkler) { const L = R.hindre.get(k), i = L.indexOf(o); if (i >= 0) L.splice(i, 1); } u.hus = husFør; return ut; });
+    const innok = inn.utenGå === 0 && inn.plan && inn.rom >= 4 && inn.møbler >= 8 && inn.vegg && inn.inne && inn.påGulv && inn.y > 1 && inn.stoppet && inn.gl === 0 && inn.etter === 0 && inn.ryddet && inn.geo === 0 && inn.trekanter < 6000;
+    if (!innok) { feil++; console.log(JSON.stringify(inn)); }
+    console.log(`${innok ? 'ok  ' : 'FEIL'} ${navn} interiør: prøvehuset fikk ${inn.rom} rom og ${inn.møbler} møbler (${inn.trekanter} trekanter), du går inn gjennom døra og står på gulvet, veggen stopper deg, ryddet bort etterpå`);
     // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
     // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
     const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));

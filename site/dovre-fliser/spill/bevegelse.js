@@ -41,7 +41,8 @@
     const fritt = (x, y) => {
       if (verden.vann && verden.vann(x, y)) return false;
       for (const [ox, oy] of [[0, 0], [R.radius, 0], [-R.radius, 0], [0, R.radius], [0, -R.radius]]) if (verden.hindring && verden.hindring(x + ox, y + oy)) return false;
-      if (s.bakke) { const d = Math.hypot(x - s.x, y - s.y); if (d > 1e-6 && (verden.høyde(x, y) - h0) / d > R.bratt) return false; }
+      // (verden.trapp(x, y): trapper og ramper er aldri for bratte – inngangen til et hus, spill/interior3d.js)
+      if (s.bakke && !(verden.trapp && verden.trapp(x, y))) { const d = Math.hypot(x - s.x, y - s.y); if (d > 1e-6 && (verden.høyde(x, y) - h0) / d > R.bratt) return false; }
       return true; };
     const nx = s.x + s.vx * dt, ny = s.y + s.vy * dt;
     if (!fritt(s.x, s.y) || fritt(nx, ny)) { s.x = nx; s.y = ny; }

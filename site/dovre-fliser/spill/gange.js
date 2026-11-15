@@ -76,8 +76,11 @@
     // brede elver (u.iElv fra bekker-visning.js) stopper deg som annet vann – bekkene vasser du over
     // vegbanen og brudekkene (Liv3d.dekke) går du oppå når de ligger høyst 1,6 m over føttene dine (ellers går du under brua)
     const vann = vannVed(u), dekke = (x, y) => { const d = window.Liv3d && Liv3d.dekke ? Liv3d.dekke(u, x, y) : null; return d !== null && d - kropp.z < 1.6 ? d : null; };
-    const verden = { høyde: (x, y) => { const t = (hoyde3d(u.cx + x, u.cy + y) - u.h0) * R.EX, d = dekke(x, y); return d !== null && d > t ? d : t; },
-      hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && dekke(x, y) === null };
+    // inne i et bygg (spill/interior3d.js) står du på gulvet, og foran døra går en trapp opp til det
+    const terr = (x, y) => (hoyde3d(u.cx + x, u.cy + y) - u.h0) * R.EX, gulv = (x, y) => window.Interior3d ? Interior3d.høyde(x, y, terr) : null;
+    const verden = { høyde: (x, y) => { const g = gulv(x, y); if (g !== null) return g; const t = terr(x, y), d = dekke(x, y); return d !== null && d > t ? d : t; },
+      trapp: (x, y) => !!window.Interior3d && Interior3d.påTrapp(x, y),
+      hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => gulv(x, y) === null && (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && dekke(x, y) === null };
     const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk }, dt, verden);
     hoppVent = false;
     b.x = kropp.x; b.y = kropp.y;

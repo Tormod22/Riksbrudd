@@ -766,3 +766,20 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   lerret/sending av kartbildet til grafikkortet; IKKE bekreftet). Derfor: «Mål hakk» har nå «Hvor i koden» – pusterom() husker
   stedet pusten ble tatt (Ytelse.stedFraStakk, bare mens R3.måler), og hver pause får «forrige pust → denne pusten» (fil:linje),
   eller «uten pust (trinn)» med R3.steg fra framdrift(). BE BRUKEREN OM NY RAPPORT før noe endres i byggingen.
+  INTERIØR (15. nov kveld, brukeren: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»): spill/interior.js (regler uten
+  DOM, test_interior.js: 504 prøvebygg av alle 14 klasser i tre former – alle rom nås, ingen møbler i vegger/døråpninger) +
+  spill/interior3d.js. Interior.plan(P, { i, kl, h, dør }) – samme bygg gir samme plan: rommene deles langs byggets lengste side
+  (KLASSE: største rom og minste side per klasse; butikk/industri/lager/låve/kirke/hangar/terminal er haller, noen med bakrom), hver
+  skillevegg får én døråpning der det er rom på begge sider, veggene klippes mot omrisset, rollene (stue, kjøkken, soverom, bad, gang,
+  kontor, klasserom, sykerom, butikk, lager, verksted, låve, garasje, bod, kirke …) gir møblene (MØBLER: mål og om de sperrer).
+  Store møbler holder gangveiene fri (fra hver åpning til rommets midte), og i rom som omrisset skjærer av, sperrer ikke møblene.
+  Interior.blokkert (yttervegger unntatt inngangen, skillevegger, store møbler), Interior.høyde (gulvet inne, trapp foran døra),
+  påTrapp. hus3d legger døra og klassen på omrisset (P.dør = første dør, P.bygg = { i, t, h, kl }); interior3d.js (KROKER.ramme3d,
+  bare når du går): nærmeste bygg innen 30 m uten interiør får ett (ett per kvarte sekund, høyst 10, bort over 50 m) – gulv over
+  det høyeste terrenget under bygget, himling, innervegger, vinduer som lyse flater, åpent dørblad, trapp, møbler av kasser
+  (deler(m)), ett nett med hjørnefarger (ca. 500–5000 trekanter per bygg). P.inne = planen: hindring3d bruker den (ikke med eget
+  rutenett), gange.js bruker Interior3d.høyde/påTrapp (verden.trapp i bevegelse.js: trapper er aldri «for bratte»). gress3d setter
+  ikke gress inne i hus. BEGRENSNINGER (sagt til brukeren): bare første etasje, vinduene er ikke gjennomsiktige, døra ser lukket ut
+  utenfra (du går gjennom den), runde bygg (tank, fyr) har ikke interiør, bygg i bratt terreng får høy trapp, byggene i leiren
+  (leir.js/byggesett) er ikke med. Rom, mål og møbler er Claudes forslag. VAKT «interiør» i sjekk.js (prøvehus lagt inn i utsnittet).
+  Bilder: scratchpad inne/inne.js (KL=hus|låve|butikk …, ekte husdata via dev.py; tiden spoles for å gå inn).

@@ -1474,8 +1474,11 @@ async function hus3d(u) {
   const veggKl = (kl, a, b, z0, z1, farge) => { if (kl === 'butikk') { vegg(a, b, z0, Math.min(z1, z0 + 4), farge, STIL.butikk); if (z1 > z0 + 4.5) vegg(a, b, z0 + 4, z1, farge, STIL.kontor); } else vegg(a, b, z0, z1, farge, STIL[kl]); };
   // dør eller port midt på en vegg (litt foran veggen); type: 0 husdør, 1 garasjeport, 2 industriport, 3 butikkdør (ruter i dørteksturen)
   const DØR = { hus: [0, 1, 2.1], hytte: [0, 1, 2], leil: [3, 1.8, 2.3], kontor: [3, 2, 2.4], skole: [3, 2.2, 2.4], industri: [2, 4.5, 4.5], låve: [1, 3, 3.2], uthus: [1, 2.6, 2.2], butikk: [3, 2.2, 2.4], kirke: [0, 1.6, 2.6], lager: [2, 4, 4.2], sykehus: [3, 3, 2.6], hangar: [2, 20, 9], terminal: [3, 3, 2.8] };
+  // (den første døra huskes på omrisset – P.dør – så interiøret, spill/interior3d.js, vet hvor inngangen er)
+  let husP = null;
   const dør = (kl, a, b, z0, f = .5) => { const [r, w0, hh] = DØR[kl], L = Math.hypot(b[0] - a[0], b[1] - a[1]), w = Math.min(w0, L * .6); if (L < 2) return;
     const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy * .04, ny = -ux * .04, cx = a[0] + (b[0] - a[0]) * f + nx, cy = a[1] + (b[1] - a[1]) * f + ny, før = cur; cur = B.dør;
+    if (husP && !husP.dør) husP.dør = { x: cx - nx, y: cy - ny, ux, uy, w, hh, z0 };
     const p1 = [cx - ux * w / 2, cy - uy * w / 2], p2 = [cx + ux * w / 2, cy + uy * w / 2], u0 = r / 6 + .003, u1 = (r + 1) / 6 - .003;
     firkant([p1[0], p1[1], z0], [p2[0], p2[1], z0], [p2[0], p2[1], z0 + hh], [p1[0], p1[1], z0 + hh], [1, 1, 1], [[u0, 0], [u1, 0], [u1, 1], [u0, 1]]); cur = før; };
   // Byhus (spill/byhus.js): fasader i byene. Veggen deles i butikkfront i 1. etasje (bare mot gata) og hele etasjer over.
@@ -1529,7 +1532,7 @@ async function hus3d(u) {
       if (areal < 0) P.reverse();   // alle omriss mot klokka, så veggene vender utover og taket opp
       let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; } mx /= P.length; my /= P.length;
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
-      omriss.push(P);
+      omriss.push(P); husP = P;
       const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
       // takhøyden følger omrisset (bakHus: navn og merker bak huset skjules)
       P.topp = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX + h;
@@ -1542,6 +1545,7 @@ async function hus3d(u) {
       // Store bygg uten type («building=yes») i tett bebyggelse er bygårder/kontorbygg, ikke småhus.
       const tettI = TETT.get(i) || 0; let kl = klasse(t, f.areal, h);
       if (kl === 'hus' && t === 5 && tettI >= 15 && (h >= 9 || f.areal > 500)) kl = h > 14 || f.areal > 1200 ? 'kontor' : 'leil';
+      P.bygg = { i, t, h, kl };
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
       if (bs) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge (i bygårder bare butikkfronten) og et skilt over døra
@@ -2081,7 +2085,9 @@ function hindring3d(x, y, egen) {
   const rute = egen || (R3 && R3.hindre); if (!rute) return false;
   const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
   for (const o of rute.get(Math.floor(x / 20) + ',' + Math.floor(y / 20)) || []) {
-    if (o.P) { for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
+    // bygg med interiør (o.P.inne fra spill/interior3d.js): veggene, døråpningen og møblene avgjør
+    if (o.P && o.P.inne && !egen) { if (Interior.blokkert(o.P.inne, x, y)) return true; }
+    else if (o.P) { for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
     else if (Math.hypot(o.x - x, o.y - y) < .55) return true;
   }
   return false;
@@ -2158,6 +2164,8 @@ function gress3d() {
     // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
     if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
+    // ikke inne i husene (det vokste gress opp gjennom gulvet da husene fikk interiør)
+    if (u.husRute && hindring3d(x, y, u.husRute)) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
@@ -2796,9 +2804,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=0661e14fcc"></script>
-<script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
-<script src="/dovre-fliser/spill/gange.js?v=1e2efdd157"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=bf7e150495"></script>
+<script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
+<script src="/dovre-fliser/spill/gange.js?v=fc85f2f379"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=cb88bf4410"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
@@ -2845,6 +2853,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dyr3d.js?v=a6d8beb636"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
+<script src="/dovre-fliser/spill/interior.js?v=060d73e9c8"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=8e041ea09d"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
