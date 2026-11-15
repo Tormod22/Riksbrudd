@@ -759,3 +759,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   luftlinje per ordre (Claudes tall; lengre ordre avvises før noe hentes, spilleren får «gi ordren i etapper»), og patruljeMål(fi, nr)
   lar patruljen gå runden rundt stedet den står når den er langt fra Dovre (fi.patruljeBase). VAKT «lang marsj» i sjekk.js.
   Testene fanget det ikke fordi de ikke har en lagret leir utenfor Dovre.
+  BRUKERENS MÅLINGER PÅ IPHONE (15. nov kveld, Apple GPU, Safari 26, 502 × 1015 punkter): «Mål ytelse» – 7,8 ms per bilde, skjermens
+  tak 59 bilder/s, én tegning 1,6–4 ms (telefonen ble tregere underveis, så «sparer ms» var upålitelig). Bildefarten er altså ikke
+  problemet. «Mål hakk» (utsnitt 9,7 km, flyr rundt): 25 pauser over 50 ms på 20 s, sum 6,4 s; 16 av dem «bygging» på 300–380 ms,
+  6 «bytte» (lengste 201 ms). På testmaskinen er de lengste bitene 60–80 ms – noe er altså tregt i Safari (gjetning: lesing fra
+  lerret/sending av kartbildet til grafikkortet; IKKE bekreftet). Derfor: «Mål hakk» har nå «Hvor i koden» – pusterom() husker
+  stedet pusten ble tatt (Ytelse.stedFraStakk, bare mens R3.måler), og hver pause får «forrige pust → denne pusten» (fil:linje),
+  eller «uten pust (trinn)» med R3.steg fra framdrift(). BE BRUKEREN OM NY RAPPORT før noe endres i byggingen.

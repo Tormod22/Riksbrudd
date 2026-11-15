@@ -1414,7 +1414,9 @@ async function vannmaske(px, TW, H, N, steg) {
 // en meldingskanal (Chrome tar flere meldinger i samme oppgave i opptil 50 ms) og scheduler.yield() (fortsetter før bildet tegnes –
 // bare ni bilder i sekundet mens det bygges). pust() tar pusterom bare når biten har vart lenger enn pustTid() – ca. 60 % av tiden
 // mellom to bilder, 8–16 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
-const pusterom = () => new Promise(r => { let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
+// (Mens «Mål hakk» går, huskes hvor i koden pusten ble tatt – R3.pustSted/pustFør/pustNr –, så rapporten sier hvilken bit som var lang.)
+const pusterom = () => new Promise(r => { if (typeof R3 !== 'undefined' && R3 && R3.måler && window.Ytelse) { R3.pustFør = R3.pustSted; R3.pustSted = Ytelse.stedFraStakk(new Error().stack); R3.pustNr = (R3.pustNr || 0) + 1; }
+  let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
 let sistPust = 0, pustAntall = 0;
 // (15. nov: ved første åpning av 3D står bare kartet og fremdriftskortet på skjermen – da jobbes det i biter på 50 ms; med de korte
 // bitene gikk ca. 0,8 s bare til å vente på neste bilde)
@@ -2638,6 +2640,7 @@ function visLag3d(vis) { document.getElementById('c3').hidden = document.getElem
 // FREMDRIFT (15. nov): kortet «Bygger 3D … 45 %» over kartet mens det første utsnittet bygges, med Avbryt. framdrift(tekst, andel) –
 // bare når 3D ikke vises ennå (de senere utsnittene bygges i bakgrunnen mens det forrige står); framdrift(null) skjuler kortet.
 function framdrift(tekst, andel) {
+  if (typeof R3 !== 'undefined' && R3) R3.steg = tekst || '';
   let k = document.getElementById('bygg3d');
   if (tekst == null || !på3d || (R3 && R3.ut)) { if (k) k.classList.remove('på'); return; }
   if (!k) { k = document.createElement('div'); k.id = 'bygg3d'; k.setAttribute('role', 'status');
@@ -2837,7 +2840,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=55dc2e7d20"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=0e2c32289c"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=face62cf9b"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=a6d8beb636"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>

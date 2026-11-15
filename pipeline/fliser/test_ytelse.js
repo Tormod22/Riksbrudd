@@ -36,5 +36,10 @@ ok(!Y.nokTegninger(16.7, 2, 16.7) && !Y.nokTegninger(16.7, 4, 50) && Y.nokTegnin
 const ht = Y.hakkTekst(['RIKSBRUDD – MÅLING AV HAKK (20 s)'], [{ dt: 96, hva: 'bygging' }, { dt: 212, hva: 'bytte' }, { dt: 55, hva: 'ellers' }, { dt: 71, hva: 'bygging' }], 1100, 20).split('\n');
 ok(ht[0] === 'RIKSBRUDD – MÅLING AV HAKK (20 s)' && /Bilder: 1 100 på 20 s \(55 per sekund i snitt\)/.test(ht[2]) && /Pauser over 50 ms: 4 – den lengste 212 ms \(sum 434 ms\)/.test(ht[3]), 'hakk: antall bilder, antall pauser, den lengste og summen');
 ok(/da et nytt område ble satt inn: 1 \(lengste 212 ms\)/.test(ht[4]) && /mens et nytt område ble bygget: 2 \(lengste 96 ms\)/.test(ht[5]) && /ellers: 1 \(lengste 55 ms\)/.test(ht[6]) && /^De lengste: 212 ms \(bytte\), 96 ms \(bygging\), 71 ms \(bygging\), 55 ms \(ellers\)$/.test(ht[7]), 'hakk: pausene delt etter hva som skjedde, lengst først');
+// hakk: stedet i koden, i Chrome- og Safari-form, og summen per sted
+ok(Y.stedFraStakk('Error\n    at pusterom (http://x/norge:1417:60)\n    at pust (http://x/norge:1423:70)\n    at async Object.f (http://x/dovre-fliser/spill/liv3d.js?v=ab12:88:13)') === 'liv3d.js:88 Object.f', 'hakk: sted fra Chrome-stakk: ' + Y.stedFraStakk('Error\n    at pusterom (http://x/norge:1417:60)\n    at pust (http://x/norge:1423:70)\n    at async Object.f (http://x/dovre-fliser/spill/liv3d.js?v=ab12:88:13)'));
+ok(Y.stedFraStakk('pusterom@https://x/norge:1417:60\npust@https://x/norge:1423:70\nbygg3d@https://x/norge:1290:33') === 'norge:1290 bygg3d', 'hakk: sted fra Safari-stakk: ' + Y.stedFraStakk('pusterom@https://x/norge:1417:60\npust@https://x/norge:1423:70\nbygg3d@https://x/norge:1290:33'));
+{ const t = Y.hakkTekst([], [{ dt: 300, hva: 'bygging', sted: 'a → b' }, { dt: 200, hva: 'bygging', sted: 'a → b' }, { dt: 90, hva: 'bygging', sted: 'c → d' }], 800, 20);
+  ok(/Hvor i koden/.test(t) && /  500 ms, 2, 300 ms: a → b\n  90 ms, 1, 90 ms: c → d/.test(t), 'hakk: summen per sted, tyngst først'); }
 ok(/Ingen pauser over 50 ms/.test(Y.hakkTekst([], [], 1200, 20)), 'hakk: uten pauser sier rapporten at bildet gikk jevnt');
 process.exit(feil ? 1 : 0);
