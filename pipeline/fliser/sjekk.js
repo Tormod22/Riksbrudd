@@ -699,6 +699,23 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const tbok = tb.eget && tb.uniform && tb.størrelse === 1024 && tb.kartSendt === 0 && tb.tåkeSendt >= 1 && tb.bakt >= 1 && tb.på.maks >= 70 && tb.på.maks <= 95 && tb.på.snitt > 5 && tb.av.maks === 0 && tb.gl === 0;
     if (!tbok) { feil++; console.log(JSON.stringify(tb)); }
     console.log(`${tbok ? 'ok  ' : 'FEIL'} ${navn} tåkebildet: eget bilde på ${tb.størrelse} punkter; sikten endret: kartbildet sendt ${tb.kartSendt} ganger, tåkebildet ${tb.tåkeSendt}; tåke på alfa ${tb.på.maks} (snitt ${tb.på.snitt.toFixed(0)}), tåke av ${tb.av.maks}`);
+    // VAKT utseende 15. nov: (1) tussmørke – sommernatta (sola 6° under horisonten) har mer himmellys enn vinternatta, som ikke er
+    // mørkere enn 0,5; (2) «Gå» starter med blikket mot åpent lende: Gange.åpenRetning snur bort fra en hindring rett foran (prøvd med en
+    // kunstig vegg i R3.hindre – uten veggen beholdes kursen, det er feilen lagt inn med vilje); (3) snøen ligger også i bratte lier:
+    // skyggeleggeren har den nye grensen, og fjernterrenget bruker den samme.
+    const us = await pg.evaluate(async () => { const t0 = tid, S = VaerSpill.S, å0 = S.årstid, lys = (årstid, time) => { Vaer.settÅrstid(S, årstid, tid); VaerSpill.straks(); tid = ((time - 6 + 24) % 24) * 60; R3.lysTid = null; lys3d(); return R3.himmelLys.intensity; };
+      const sommernatt = lys('sommer', .5), vinternatt = lys('vinter', .5), sommerdag = lys('sommer', 13);
+      Vaer.settÅrstid(S, å0, t0); VaerSpill.straks(); tid = t0; R3.lysTid = null; lys3d();
+      // en kunstig vegg 3 m rett foran (mot nord fra midten av utsnittet): hindring3d slår til der
+      const ekte = window.hindring3d, x0 = 12345, y0 = -2345; let uten, med;
+      window.hindring3d = () => false; uten = Gange.åpenRetning(x0, y0, 0);
+      window.hindring3d = (x, y) => Math.abs(x - x0) < 4 && y > y0 + 2.5 && y < y0 + 4; med = Gange.åpenRetning(x0, y0, 0);
+      window.hindring3d = ekte;
+      const frag = [].concat(R3.mesh.material).map(m => { const p = R3.renderer.properties.get(m), pr = p && (p.currentProgram || p.program); return pr ? R3.renderer.getContext().getShaderSource(pr.fragmentShader) || '' : ''; }).join('');
+      return { sommernatt, vinternatt, sommerdag, uten, med, snø: /smoothstep\(0\.36, 0\.62, opp/.test(frag), vissen: /snoH \* gronn/.test(frag) }; });
+    const usok = us.sommernatt > us.vinternatt + .08 && us.vinternatt >= .5 && us.sommerdag > us.sommernatt + .1 && us.uten === 0 && Math.abs(us.med) > .3 && us.snø && us.vissen;
+    if (!usok) { feil++; console.log(JSON.stringify(us)); }
+    console.log(`${usok ? 'ok  ' : 'FEIL'} ${navn} utseende 15. nov: himmellys sommernatt ${us.sommernatt.toFixed(2)}, vinternatt ${us.vinternatt.toFixed(2)}, sommerdag ${us.sommerdag.toFixed(2)}; «Gå» snur ${(Math.abs(us.med) * 57.3).toFixed(0)}° bort fra en vegg rett foran (uten vegg ${us.uten}); snø i bratte lier ${us.snø}`);
     // VAKT måling av ytelse (spill/ytelse.js, 15. nov): knappen «Mål ytelse» finnes i ☰; en kort måling gir tabellen med hele bildet, halv
     // oppløsning (halvparten så mange punkter i bredden mens den måles) og en rad for bakken med trekanter; alt i scenen er satt tilbake
     // etterpå (ingen ting igjen på et skjult lag – det er feilen vakten skal finne), oppløsningen er som før, og boksen kan lukkes.

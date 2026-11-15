@@ -18,7 +18,7 @@
     let f = (FARGE[K] || FARGE[2]).slice();
     if (K === 1 || K === 2 || K === 5 || K === 6) { const t = glatt(tg + 150, tg + 500, moh) * (K === 1 ? 1 : .85); f = f.map((v, i) => v + (BERG[i] - v) * t); }
     if (V.høst) { const t = V.høst * klem((f[1] - Math.max(f[0], f[2])) * 7) * (K === 1 ? .45 : .75); f = [f[0] + (f[0] * .45 + .04) * t, f[1], f[2] - f[2] * .5 * t]; }
-    if (!sjø) { const s = glatt(V.snøgrense - 70, V.snøgrense + 70, moh) * glatt(.3, .6, opp) * (K === 1 ? .8 : 1); f = f.map((v, i) => v + (SNO[i] - v) * s); }
+    if (!sjø) { const s = glatt(V.snøgrense - 70, V.snøgrense + 70, moh) * glatt(.36, .62, opp) * (K === 1 ? .8 : 1); f = f.map((v, i) => v + (SNO[i] - v) * s); }
     return f;
   }
   if (typeof module !== 'undefined' && module.exports) { module.exports = { farge, FARGE }; return; }

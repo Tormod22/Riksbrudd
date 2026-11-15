@@ -711,3 +711,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tallene deles på antallet («ms/tegn.»). Prøvd med oppgitt takt (valg.takt): 202 ms per tegning mot 200 ms målt direkte.
   KJENTE FEIL SETT PÅ NYTT 15. nov: de lyse trekantflekkene ved Mannheller er borte (myke bergflater nå). Jernbanen ved Dombås
   stasjon mangler fortsatt i 3D (ikke rettet).
+  UTSEENDE 15. nov (bilder fra /norge med ekte data, scratchpad norge/norge3d.js – nå med «info» som skriver tall):
+  SKOG: kroneflekker i skogbunnen (kroneflis(), KRONEMØRKE, i skogbunn() med kart = { mpp, X0, Y1 }; bare når kartbildet er finere enn
+  1,7 m per punkt) og en myk skygge under hvert tre og hver busk (treskygger(), tegnet etter bygg3d-krokene, u.skygger = antall).
+  Ingen nye trekanter. VINTER: snøen ligger også i bratte lier (flathet 0,36–0,62 i detaljIBakken og enkelBakke, samme i fjern3d.js;
+  før 0,55–0,8, så alt brattere enn ca. 45° var sommergrønt), og der den ikke ligger er gress og lyng vissent (snoH · gronn).
+  NATT: tussmørke i lys3d – med sola 4–14° under horisonten gir himmelen fortsatt lys (dagL; sommernatta 0,67 mot 0,44 før), og
+  natta ellers 0,5 (før 0,42). GRESS I BYEN: i tettstedene (u.iBy) settes gresstuster bare der bakken er tydelig grønn og ikke
+  inntil hus (det vokste gress på brosteinen på Bryggen). GÅ: Gange.åpenRetning – «Gå» starter med blikket mot åpent lende (minst
+  12 m fri sikt nærmest kursen du hadde), ikke med nesa i en vegg. VAKT «utseende 15. nov».

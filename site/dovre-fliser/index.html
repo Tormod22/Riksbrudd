@@ -1146,7 +1146,7 @@ function enkelBakke(mat) {
     // snøen regnes per hjørne: over snøgrensen, på flatt terreng, aldri på sjøen (havnivå)
     sh.vertexShader = 'uniform float uH0;\nuniform float uSno;\nuniform float uSnoGrense;\nvarying float vSnoE;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       float mohE = position.z + uH0;
-      vSnoE = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, mohE) * smoothstep(0.55, 0.8, objectNormal.z) * smoothstep(1.0, 3.0, mohE);`);
+      vSnoE = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, mohE) * smoothstep(0.36, 0.62, objectNormal.z) * smoothstep(1.0, 3.0, mohE);`);
     sh.fragmentShader = 'uniform float uHost;\nuniform sampler2D taakeKart;\nvarying float vSnoE;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       ${TAAKE_GLSL}
       float gronnE = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
@@ -1188,7 +1188,12 @@ function detaljIBakken(mat, side) {
       float lag = 0.5 + 0.5 * sin(vMoh * 0.11 + flekk * 5.0);
       vec3 berg = vec3(0.43, 0.41, 0.37) * mix(1.0, 0.72 + 0.4 * korn, detVekt) * (0.9 + 0.16 * mix(0.5, lag, 1.0 - smoothstep(600.0, 2500.0, detAvst)));
       diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, berg, 0.8), bratt);
-      float sno = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0) * smoothstep(0.55, 0.8, opp + (korn - 0.5) * 0.15);
+      // (15. nov: snoen ligger ogsaa i bratte lier – foer var alt brattere enn ca. 45 grader sommergront midt paa vinteren – og der den
+      // ikke ligger, i stup, er gress og lyng vissent brungult)
+      float snoH = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0);
+      float lumV = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lumV * 1.12 + 0.02, lumV * 0.98, lumV * 0.66), snoH * gronn * 0.8);
+      float sno = snoH * smoothstep(0.36, 0.62, opp + (korn - 0.5) * 0.15);
       // sjoen fryser ikke (feilretting 12. nov: havet ble hvitt om vinteren): vann paa havnivaa faar aldri sno. Innsjoer faar is med sno.
       // Havnivaa som i bolgene (spill/vind3d.js): under 1 moh., toner ut til 3 moh.
       sno *= 1.0 - vannM * (1.0 - smoothstep(1.0, 3.0, vMoh));
@@ -2101,6 +2106,9 @@ function gress3d() {
     if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
+    // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
+    // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
+    if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
     d.position.set(x, y, z); d.rotation.set(0, 0, rnd() * 3.14); d.scale.set((lyng ? .6 : .4) + rnd() * .3, (lyng ? .6 : .4) + rnd() * .3, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix);
     if (lyng) col.setRGB(.13 + rnd() * .05, .2 + rnd() * .06, .08); else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); m.setColorAt(n, col); n++;
   }
@@ -2219,9 +2227,12 @@ function lys3d() {
   R3.sol.position.set(Math.sin(A) * Math.cos(er) * 1000, Math.cos(A) * Math.cos(er) * 1000, Math.sin(er) * 1000);
   const dt0 = Math.max(0, Math.min(1, (e + 8) / 16)), dag = dt0 * dt0 * (3 - 2 * dt0), gull = Math.max(0, 1 - Math.abs(e - 2) / 11) * .45;   // dag: myk overgang fra 8° under til 8° over horisonten; gull: lavt sollys morgen/kveld
   R3.sol.intensity = (.12 + .78 * dag) * (1 - .78 * sky); R3.sol.color.setRGB(1, .95 - .2 * gull, .88 - .35 * gull);
-  R3.himmelLys.intensity = (.42 + .43 * dag) * (1 + .25 * sky); R3.himmelLys.color.setRGB(...blandFarge(blandFarge([.42, .5, .72], [.86, .9, .94], dag), [.8, .82, .84], sky));
-  const grå = [.62, .65, .68].map(v => v * (.25 + .75 * dag));
-  const horisont = blandFarge(blandFarge(blandFarge([.16, .2, .3], [.72, .79, .86], dag), [.9, .66, .45], gull * (1 - sky)), grå, sky), senit = blandFarge(blandFarge([.05, .08, .16], [.3, .5, .78], dag), grå.map(v => v * .85), sky), bakke = horisont.map(v => v * .75);
+  // TUSSMØRKE (15. nov, utseende: sommernatta var nesten svart): med sola 4–14° under horisonten er det fortsatt lys i himmelen – de
+  // lyse sommernettene. dagL brukes for himmellyset og himmelfargen (ikke for sola); natta ellers er også litt lysere (0,5 mot 0,42).
+  const tu0 = Math.max(0, Math.min(1, (e + 14) / 10)), dagL = Math.max(dag, tu0 * tu0 * (3 - 2 * tu0) * .55);
+  R3.himmelLys.intensity = (.5 + .35 * dagL) * (1 + .25 * sky); R3.himmelLys.color.setRGB(...blandFarge(blandFarge([.42, .5, .72], [.86, .9, .94], dagL), [.8, .82, .84], sky));
+  const grå = [.62, .65, .68].map(v => v * (.25 + .75 * dagL));
+  const horisont = blandFarge(blandFarge(blandFarge([.16, .2, .3], [.72, .79, .86], dagL), [.9, .66, .45], gull * (1 - sky)), grå, sky), senit = blandFarge(blandFarge([.05, .08, .16], [.3, .5, .78], dagL), grå.map(v => v * .85), sky), bakke = horisont.map(v => v * .75);
   const pos = R3.kuppel.geometry.attributes.position, kol = R3.kuppel.geometry.attributes.color;
   for (let k = 0; k < pos.count; k++) { const z = pos.getZ(k), c = z < 0 ? blandFarge(horisont, bakke, Math.min(1, -z * 4)) : blandFarge(horisont, senit, Math.pow(z, .55)); kol.setXYZ(k, ...c); }
   kol.needsUpdate = true; R3.scene.fog.color.setRGB(...horisont); R3.scene.background.setRGB(...horisont);
@@ -2660,7 +2671,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp.js?v=8e177bfb4a"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
-<script src="/dovre-fliser/spill/gange.js?v=ba2615f416"></script>
+<script src="/dovre-fliser/spill/gange.js?v=1e2efdd157"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=3da6a1f94f"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
@@ -2676,7 +2687,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=7e2c3b4be6"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=7628d04568"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=eebfdb4b4c"></script>
