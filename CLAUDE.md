@@ -730,3 +730,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   inn, frigjøres med kastForberedt(u). Virkningen kan ikke måles på testmaskinen (se «Mål hakk»). Stresstest: scratchpad
   hakk/stress.js (flytting tett på hverandre, 3D av/på midt i en bygging, zoom, grafikknivå, gange – 0 feil) og hakk/lekk.js
   (teksturer og geometrier øker ikke).
+  FØRSTE 3D-ÅPNING (15. nov ettermiddag, brukeren på iPhone 5G: «Bare jeg først trykker 3D, bruker den alt for lang tid på å bygge 3D»;
+  skjermbildet viste en svart skjerm med «Bygger 3D …» to ganger – andre trykk på 3D avbryter og starter på nytt). Målt (mobilstørrelse,
+  ekte data): ca. 3,5 s til innsetting – også før nattens endringer (ingen forverring). (1) detaljTekstur(): steinmønsteret (Voronoi)
+  prøvde alle 90 steiner × 9 kopier per punkt – 905 ms første gang; nå rutenett på 32 punkter med ringsøk, 71 ms, likt punkt for punkt
+  (scratchpad hakk/detalj-lik.js). (2) forvarmBakke(R): første gang 3D slås på lages bakkens program for land (fra lufta og nær) på en
+  prøveflate mens byggingen venter på kartdata; materialene holdes i R.bakkeHold, og programnøkkelen er den samme (sjekket – det ekte
+  bakkematerialet får samme program). SwiftShader kompilerer først ved tegning, så gevinsten kan ikke måles her. (3) FREMDRIFTSKORTET:
+  mens det første utsnittet bygges, står kartet (visLag3d(false)) med kortet #bygg3d «Bygger 3D … 45 %» og Avbryt; framdrift(tekst,
+  andel) settes i bygg3d (høyder, kartbildet per flis, hus, trær, krokene, klargjøring); sett3d viser 3D-lerretet (visLag3d(true)).
+  Loggen sier «3D klart på X s» – BE BRUKEREN OM DETTE TALLET. VAKT «fremdriftskortet» (fant at andre åpning viste svart 3D-lerret).

@@ -716,6 +716,19 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const usok = us.sommernatt > us.vinternatt + .08 && us.vinternatt >= .5 && us.sommerdag > us.sommernatt + .1 && us.uten === 0 && Math.abs(us.med) > .3 && us.snø && us.vissen;
     if (!usok) { feil++; console.log(JSON.stringify(us)); }
     console.log(`${usok ? 'ok  ' : 'FEIL'} ${navn} utseende 15. nov: himmellys sommernatt ${us.sommernatt.toFixed(2)}, vinternatt ${us.vinternatt.toFixed(2)}, sommerdag ${us.sommerdag.toFixed(2)}; «Gå» snur ${(Math.abs(us.med) * 57.3).toFixed(0)}° bort fra en vegg rett foran (uten vegg ${us.uten}); snø i bratte lier ${us.snø}`);
+    // VAKT fremdriftskortet (15. nov, brukeren på iPhone: svart skjerm mens 3D bygges): 3D av og på – mens det første utsnittet bygges,
+    // står kartet (3D-lerretet skjult) med kortet «Bygger 3D … %» som øker; når det er klart, vises 3D, kortet er borte og loggen sier
+    // hvor lang tid det tok. Steinmønsteret i bakken (detaljTekstur) er laget.
+    const fd = await pg.evaluate(async () => { const b0 = { ...R3.bane }; slå3d(false); await new Promise(r => setTimeout(r, 300)); const p = slå3d(true); const sett = [];
+      while (R3.ut && !R3.bygger) await new Promise(r => setTimeout(r, 5));
+      const t0 = performance.now(); while (!(R3.ut && !R3.bygger) && performance.now() - t0 < 120000) { const k = document.getElementById('bygg3d');
+        if (k && k.classList.contains('på')) sett.push({ p: parseInt(k.querySelector('.pst').textContent), c3: document.getElementById('c3').hidden, kart: cv.style.visibility }); await new Promise(r => setTimeout(r, 40)); }
+      await p; await new Promise(r => setTimeout(r, 300)); R3.bane = { ...R3.bane, ...b0 };
+      return { n: sett.length, første: sett[0], siste: sett[sett.length - 1], økende: sett.every((x, i) => !i || x.p >= sett[i - 1].p), alleSkjult: sett.every(x => x.c3 && x.kart === ''),
+        etter: { kort: document.getElementById('bygg3d').classList.contains('på'), c3: document.getElementById('c3').hidden, kart: cv.style.visibility }, logg: loggLinjer.find(l => /^3D klart på/.test(l)) || '', detalj: !!DETALJ }; });
+    const fdok = fd.n >= 3 && fd.økende && fd.alleSkjult && fd.siste.p > fd.første.p && !fd.etter.kort && fd.etter.c3 === false && fd.etter.kart === 'hidden' && /3D klart på \d+,\d s/.test(fd.logg) && fd.detalj;
+    if (!fdok) { feil++; console.log(JSON.stringify(fd)); }
+    console.log(`${fdok ? 'ok  ' : 'FEIL'} ${navn} fremdriftskortet: ${fd.n} avlesninger fra ${fd.første && fd.første.p} % til ${fd.siste && fd.siste.p} %, kartet synlig og 3D skjult underveis, så 3D vist og kortet borte; «${fd.logg}»`);
     // VAKT måling av ytelse (spill/ytelse.js, 15. nov): knappen «Mål ytelse» finnes i ☰; en kort måling gir tabellen med hele bildet, halv
     // oppløsning (halvparten så mange punkter i bredden mens den måles) og en rad for bakken med trekanter; alt i scenen er satt tilbake
     // etterpå (ingen ting igjen på et skjult lag – det er feilen vakten skal finne), oppløsningen er som før, og boksen kan lukkes.

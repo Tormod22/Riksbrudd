@@ -51,6 +51,9 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 #panel .hint{ color:var(--hover); font-style:italic; margin-top:6px; }
 #panel .lukk{ position:absolute; right:4px; top:2px; background:none; border:0; color:var(--ink-dim); font-size:22px; cursor:pointer; width:40px; height:40px; }
 #feil{ position:fixed; left:50%; top:40%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--rule); padding:14px 44px 14px 18px; display:none; max-width:320px; z-index:6; }
+#bygg3d{ position:fixed; left:50%; top:52%; transform:translate(-50%,-50%); background:var(--panel); border:1px solid var(--rule); padding:12px 16px; width:min(320px, calc(100% - 32px)); z-index:6; display:none; color:var(--ink); }
+#bygg3d.på{ display:block; } #bygg3d .linje{ height:6px; background:rgba(0,0,0,.35); border:1px solid var(--rule); margin:8px 0 10px; } #bygg3d .linje i{ display:block; height:100%; width:0; background:var(--ink-dim); transition:width .25s; }
+#bygg3d .rad{ display:flex; justify-content:space-between; align-items:center; gap:10px; } #bygg3d button{ min-height:36px; padding:0 14px; }
 #feil .lukk{ position:absolute; right:2px; top:0; background:none; border:0; color:var(--ink-dim); font-size:22px; cursor:pointer; width:40px; height:40px; }
 #feil .gjør[hidden]{ display:none; }
 #feil .gjør{ display:block; margin-top:10px; background:#3a3024; border:1px solid var(--rule); color:var(--ink); padding:8px 12px; cursor:pointer; }
@@ -1002,9 +1005,24 @@ function detaljTekstur() {
   const fin = new Float32Array(W * W).map(rnd), grov = new Float32Array(16 * 16).map(rnd);
   // småstein: Voronoi-celler (sømløse) – lys midt i steinen, mørk fuge mellom, og ulik lysstyrke per stein
   const P = Array.from({ length: 90 }, () => [rnd() * W, rnd() * W, .55 + .45 * rnd()]);
-  const stein = (i, j) => { let d1 = 1e9, d2 = 1e9, l = 0;
-    for (const [px, py, v] of P) for (const ox of [-W, 0, W]) for (const oy of [-W, 0, W]) { const d = Math.hypot(i - px - ox, j - py - oy); if (d < d1) { d2 = d1; d1 = d; l = v; } else if (d < d2) d2 = d; }
+  // (15. nov, ytelse: før ble alle 90 steinene i ni kopier prøvd for hvert punkt – nesten 1 s første gang 3D åpnes på testmaskinen. Nå
+  // ligger kopiene i et rutenett på 32 punkter, og bare rutene nærmest prøves: ringene rundt punktets rute gås gjennom til den nest
+  // nærmeste steinen er nærmere enn neste ring kan være. Samme svar som før, i samme rekkefølge.)
+  const C = 32, NC = W / C + 2, rute = Array.from({ length: NC * NC }, () => []);
+  P.forEach(([px, py, v], n) => { for (const ox of [-W, 0, W]) for (const oy of [-W, 0, W]) { const x = px + ox, y = py + oy, ci = Math.floor(x / C) + 1, cj = Math.floor(y / C) + 1;
+    if (ci >= 0 && cj >= 0 && ci < NC && cj < NC) rute[cj * NC + ci].push(x, y, v, n * 9 + (ox / W + 1) * 3 + (oy / W + 1)); } });
+  for (const r of rute) { const k = []; for (let q = 0; q < r.length; q += 4) k.push(r.slice(q, q + 4)); k.sort((a, b) => a[3] - b[3]); r.length = 0; for (const e of k) r.push(...e); }
+  const stein = (i, j) => { let d1 = 1e9, d2 = 1e9, l = 0, n1 = -1; const ci = Math.floor(i / C) + 1, cj = Math.floor(j / C) + 1; const kand = [];
+    for (let ring = 0; ring < NC; ring++) {
+      for (let b = cj - ring; b <= cj + ring; b++) for (let a = ci - ring; a <= ci + ring; a++) { if (Math.max(Math.abs(a - ci), Math.abs(b - cj)) !== ring || a < 0 || b < 0 || a >= NC || b >= NC) continue;
+        const r = rute[b * NC + a]; for (let q = 0; q < r.length; q += 4) kand.push(r[q + 3], Math.hypot(i - r[q], j - r[q + 1]), r[q + 2]); }
+      if (d2Ok(kand, ring)) break; }
+    // samme rekkefølge som før (stein for stein, kopi for kopi), så likt avstand gir samme valg
+    const ord = []; for (let q = 0; q < kand.length; q += 3) ord.push(q); ord.sort((x, y) => kand[x] - kand[y]);
+    for (const q of ord) { const d = kand[q + 1]; if (d < d1) { d2 = d1; d1 = d; l = kand[q + 2]; } else if (d < d2) d2 = d; }
     const kant = Math.min(1, (d2 - d1) / 3.5); return Math.max(0, Math.min(1, l * (.35 + .65 * kant) * (1.05 - .25 * d1 / 22))); };
+  // ferdig når de to nærmeste kandidatene er nærmere enn det noe utenfor ringene kan være (ring · C)
+  function d2Ok(kand, ring) { let a = 1e9, b = 1e9; for (let q = 1; q < kand.length; q += 3) { const d = kand[q]; if (d < a) { b = a; a = d; } else if (d < b) b = d; } return b <= ring * C; }
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
     let a = 0; for (const [di, dj] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]]) a += fin[((j + dj + W) % W) * W + (i + di + W) % W]; a /= 5;   // litt utjevnet korn
     const u = i / 16, v = j / 16, i0 = Math.floor(u), j0 = Math.floor(v), fu = u - i0, fv = v - j0, s2 = t => t * t * (3 - 2 * t), q = (x, y) => grov[(y % 16) * 16 + x % 16];
@@ -1225,6 +1243,7 @@ const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
 async function bygg3d(cx, cy, S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
+  framdrift('henter høydene', .05);
   const grov = await lagVindu(b, false, Math.min(zD, 11), true), fin = zD > 11 ? await lagVindu(b, false, zD) : null;   // 2 m der den finnes (Dombås), ellers 8 m
   const H = new Float32Array(N * N);
   // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
@@ -1236,7 +1255,8 @@ async function bygg3d(cx, cy, S) {
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
-  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg);
+  framdrift('tegner kartet', .15); const flisAlle = kø.length || 1; let flisFerdig = 0;
+  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); framdrift('tegner kartet', .15 + .35 * ++flisFerdig / flisAlle);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
   if (INFRA && VIS.infra) tegnInfraPå(g, cx - S, cy + S, mpp, TW, TW, { bruer: false, punkter: false, etiketter: false });   // tunneler, ferjer, dammer … i overflaten
   const u = { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2], hus: null };
@@ -1249,6 +1269,7 @@ async function bygg3d(cx, cy, S) {
       g.stroke(); }
     g.restore();
   }
+  framdrift('reiser husene', .5);
   if (S <= 3200 && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
   // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus). Leses og behandles noen rader om gangen (pust).
   await pust(); const px = new Uint8ClampedArray(TW * TW * 4);
@@ -1259,6 +1280,7 @@ async function bygg3d(cx, cy, S) {
   if (NORGE_BLOKKER) { const st = {}; await iStriper(TW, (y0, y1) => havnivå(px, TW, H, N, steg, y0, y1, st)); }
   { const st = {}; await iStriper(TW, (y0, y1) => vannIBratt(px, TW, H, N, steg, y0, y1, st)); }
   u.vann = await vannmaske(px, TW, H, N, steg); u.harVann = !!u.vann.harVann;
+  framdrift('planter trærne', .6);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
   // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
@@ -1266,7 +1288,7 @@ async function bygg3d(cx, cy, S) {
   await pust(); await ryddHus(u); await pust();
   const skog = await skogmaske(u, b); await pust();
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
-  for (const f of KROKER.bygg3d) { await pust(); await f(u, { px, TW, skog }); }
+  { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
   u.skygger = await treskygger(px, TW, u);
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
@@ -2295,6 +2317,30 @@ async function forbered3d(u) {
   await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex);
   await pusterom();
 }
+// FORVARMING (15. nov, brukeren på iPhone: «bruker alt for lang tid på å bygge 3D» første gang). Målt på testmaskinen: etter at det
+// første utsnittet er bygget, går ca. 2 s til at grafikkortet lager skyggeprogrammene, og bakkens program er det klart største. Mens
+// byggingen venter på kartdata (ca. 1,4 s av den første byggingen), står maskinen ellers ledig – da lages bakkens program for land, både
+// sett fra lufta og nær bakken (kameraet kan stå lavt over en fjellside), på en liten prøveflate, ett program om gangen med pust mellom.
+// Materialene holdes (R.bakkeHold), så three.js bruker programmene om igjen (samme programnøkkel – sjekket med programmenes cacheKey).
+async function forvarmBakke(R) {
+  if (!R || R.varmet || R.mesh || (window.KVAL && KVAL.p.bakke === 'enkel')) return; R.varmet = true;
+  for (const nær of [false, true]) { if (R.mesh) return; forvarmEn(R, nær); await pusterom(); }
+}
+function forvarmEn(R, nær) {
+  const c = document.createElement('canvas'); c.width = c.height = 2; const tex = new THREE.CanvasTexture(c), vann = new THREE.CanvasTexture(c);
+  const prøve = new THREE.Mesh(new THREE.PlaneGeometry(1, 1)), før = { mesh: R.mesh, tex: R.tex, vannTex: R.vannTex, bakkeVar: R.bakkeVar };
+  let mat = null;
+  try {
+    R.mesh = prøve; R.tex = tex; R.vannTex = vann; R.bakkeVar = {};
+    mat = bakkeVariant(R, { S: 1000, harVann: true }, nær, false, true);
+    prøve.material = mat; prøve.position.copy(R.cam.position); prøve.frustumCulled = false;
+    const sc = new THREE.Scene(); for (const o of R.scene.children) if (o.isLight) sc.add(o.clone()); sc.fog = R.scene.fog; sc.add(prøve);
+    R.renderer.compile(sc, R.cam);
+  } catch (e) { console.warn('forvarming:', e); }
+  finally { R.mesh = før.mesh; R.tex = før.tex; R.vannTex = før.vannTex; R.bakkeVar = før.bakkeVar; }
+  if (mat) { mat.map = null; mat.specularMap = null; R.bakkeHold = (R.bakkeHold || []).concat(mat); }
+  prøve.geometry.dispose(); tex.dispose(); vann.dispose();
+}
 // Et forberedt utsnitt som likevel ikke ble satt inn (3D slått av, eller et nytt utsnitt ble bedt om imens): frigjør det som ble laget.
 function kastForberedt(u) {
   const K = u && u.klar; if (!K) return; u.klar = null;
@@ -2364,6 +2410,7 @@ function sett3d(u) {
   R.gressSenter = null;
   if (R.ut) { R.bane.x += R.ut.cx - u.cx; R.bane.y += R.ut.cy - u.cy; }
   R.ut = u; R.tex = tex; R.nøkkel = '';
+  if (på3d) visLag3d(true);
 }
 function bak3d() {   // tåke + siktfelt i tåkebildet (se TAAKE_U) – kartbildet selv røres ikke
   const u = R3.ut, c = R3.tåkeC, g = c.getContext('2d'), TT = c.width, mpp = 2 * u.S / TT, X0 = u.cx - u.S, Y1 = u.cy + u.S;
@@ -2425,9 +2472,9 @@ function kamera3d() {
 async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) { R3.neste = [cx, cy, S]; return; }
   R3.bygger = true; R3.ønsket = [cx, cy, S];
-  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { await forbered3d(u); if (på3d && !R3.neste) sett3d(u); else kastForberedt(u); } R3.byggFeil = 0; skjulMelding('3d'); }
+  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { framdrift('gjør klar', .92); await forbered3d(u); if (på3d && !R3.neste) sett3d(u); else kastForberedt(u); } R3.byggFeil = 0; skjulMelding('3d'); }
   catch (e) {
-    console.error(e); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
+    console.error(e); framdrift(null); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
     const hvorfor = utenNett(e) ? 'ingen kontakt med nettet eller kartlageret' : (e && e.message || e), fast = R3.byggFeil >= 3;
     if (på3d) visMelding(`Fikk ikke bygget 3D-utsnittet (${hvorfor}). ` + (fast ? 'Prøver fortsatt, men du kan gå tilbake til kartet.' : 'Prøver igjen om litt.'),
       { type: '3d', knapp: fast ? 'Tilbake til kartet' : null, vedTrykk: () => slå3d(false) });
@@ -2524,18 +2571,36 @@ async function slå3d(på) {
     if (mitt !== slå3dNr) return;   // 3D ble slått av igjen mens biblioteket ble hentet
     if (!R3) init3d();
     på3d = true; knapp.classList.add('på'); knapp.setAttribute('aria-pressed', 'true');
-    document.getElementById('c3').hidden = document.getElementById('c3o').hidden = false; cv.style.visibility = 'hidden';
-    const mål = start3d(), S = utsnittS(mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
+    // kartet står til 3D er klart (brukeren 15. nov på iPhone: bare en svart skjerm mens 3D ble bygget) – se visLag3d og framdrift
+    // (utsnittet bygges alltid på nytt når 3D slås på – se under – så kartet står til det er klart)
+    visLag3d(false); framdrift('starter', 0);
+    const tStart = performance.now(), mål = start3d(), S = utsnittS(mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
     R3.bane = { x: 0, y: 0, avst: mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
     if (R3.ut) { frigjørTerreng(R3); R3.ut = null; }
-    R3.byggFeil = 0;
+    R3.byggFeil = 0; framdrift('starter', 0);
+    // bakkens skyggeprogram lages mens byggingen venter på kartdata (se forvarmBakke)
+    setTimeout(() => forvarmBakke(R3), 30);
     logg('Bygger 3D …'); await nytt3dUtsnitt(mål ? mål.x : kam.x, mål ? mål.y : kam.y, S);
+    framdrift(null); if (på3d && R3.ut) logg(`3D klart på ${((performance.now() - tStart) / 1000).toFixed(1).replace('.', ',')} s.`);
     if (på3d && R3.ut) logg((mål ? `3D åpnet ved ${mål.navn} – zoom inn i kartet først for å åpne 3D et annet sted. ` : '3D: ') + 'Dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
   } else {
     if (R3 && R3.ut) { const b = R3.bane; kam.x = R3.ut.cx + b.x; kam.y = R3.ut.cy + b.y; kam.m = Math.max(.1, Math.min(60, b.avst / (VH * 1.1))); }
     på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false'); skjulMelding('3d'); if (R3) R3.neste = null;
-    document.getElementById('c3').hidden = document.getElementById('c3o').hidden = true; cv.style.visibility = ''; skitten = true;
+    framdrift(null); visLag3d(false); skitten = true;
   }
+}
+// 3D-lerretene eller kartet (2D) på skjermen
+function visLag3d(vis) { document.getElementById('c3').hidden = document.getElementById('c3o').hidden = !vis; cv.style.visibility = vis ? 'hidden' : ''; if (!vis) skitten = true; }
+// FREMDRIFT (15. nov): kortet «Bygger 3D … 45 %» over kartet mens det første utsnittet bygges, med Avbryt. framdrift(tekst, andel) –
+// bare når 3D ikke vises ennå (de senere utsnittene bygges i bakgrunnen mens det forrige står); framdrift(null) skjuler kortet.
+function framdrift(tekst, andel) {
+  let k = document.getElementById('bygg3d');
+  if (tekst == null || !på3d || (R3 && R3.ut)) { if (k) k.classList.remove('på'); return; }
+  if (!k) { k = document.createElement('div'); k.id = 'bygg3d'; k.setAttribute('role', 'status');
+    k.innerHTML = '<div class="rad"><span>Bygger 3D … <b class="pst">0 %</b></span><button type="button">Avbryt</button></div><div class="linje"><i></i></div><small class="hva"></small>';
+    k.querySelector('button').onclick = () => { slå3d(false); logg('3D avbrutt.'); }; document.body.appendChild(k); }
+  k.classList.add('på'); const p = Math.round(Math.max(0, Math.min(1, andel || 0)) * 100);
+  k.querySelector('.pst').textContent = p + ' %'; k.querySelector('i').style.width = p + '%'; k.querySelector('.hva').textContent = tekst[0].toUpperCase() + tekst.slice(1) + ' …';
 }
 // styring i 3D
 (function () {
