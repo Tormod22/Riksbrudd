@@ -23,4 +23,13 @@ ok(v.length === 2 && /Mengden ting/.test(v[0]) && /trær og busker \(46,0 ms av 
 ok(/punkter på skjermen/.test(Y.vurdering({ js: 10, rader: [rad('Hele bildet', 100), rad('Med halv oppløsning', 50, { halv: true })] })[0]), 'vurdering: halv oppløsning som halverer tiden = punktene betyr mest');
 ok(/prosessoren/.test(Y.vurdering({ js: 70, rader: [rad('Hele bildet', 100), rad('Med halv oppløsning', 95, { halv: true })] })[0]), 'vurdering: mest tid i spillets egen regning = prosessoren');
 ok(/så fort skjermen tillater/.test(Y.vurdering({ js: 3, rader: [rad('Hele bildet', 16.7)] })[0]) && Y.vurdering({ rader: [rad('Hele bildet', 0)] }).length === 0, 'vurdering: 60 bilder i sekundet sier lite, og uten måling ingen vurdering');
+// skjermens tak: med flere tegninger per bilde står det i tabellen, overskriften sier «per tegning», og vurderingen sier hva maskinen klarer
+const rk = { hode: ['RIKSBRUDD'], js: 4, tegn: 1.7, ganger: 16, skjerm: 16.7,
+  rader: [rad('Hele bildet', 6), rad('Med halv oppløsning', 5.5, { halv: true, tri: null, kall: null }), rad('Uten bakken', 5, { del: 'bakke' }), rad('Uten trær og busker', 3.5, { del: 'trær' }), rad('Hele bildet (til slutt)', 6.2, { slutt: true, tri: null, kall: null })] };
+const tk = Y.tabell(rk), vk = Y.vurdering(rk);
+ok(/høyst 60 bilder i sekundet/.test(tk) && /tegnet 16 ganger per bilde/.test(tk) && /ms\/tegn\./.test(tk) && !/ms\/bilde/.test(tk), 'skjermens tak: tabellen sier at bildet er tegnet flere ganger og at tallene gjelder én tegning');
+ok(/Maskinen lager et bilde på 8,4 ms – nok til ca. 119 bilder i sekundet her, mens skjermen viser 60/.test(vk[0]) && /Mengden ting/.test(vk[1]) && /trær og busker \(2,6 ms av 6,1\)/.test(vk[2]), 'skjermens tak: vurderingen sier hva maskinen klarer og hva som koster mest: ' + vk[0]);
+ok(!/så fort skjermen tillater/.test(vk.join(' ')), 'skjermens tak: «målingen sier lite» sies ikke når bildet er tegnet flere ganger');
+ok(Y.erTak(16.7, 16.7) && Y.erTak(16.7, 18.5) && !Y.erTak(16.7, 20) && !Y.erTak(16.7, 240) && Y.erTak(8.3, 8.4) && !Y.erTak(0, 5), 'skjermens tak: bildet ligger på takten når det tar høyst 15 % mer (60 og 120 bilder i sekundet), ikke ellers');
+ok(!Y.nokTegninger(16.7, 2, 16.7) && !Y.nokTegninger(16.7, 4, 50) && Y.nokTegninger(16.7, 8, 66.8) && Y.nokTegninger(16.7, 64, 16.7), 'nok tegninger når bildet tar minst fire takter, eller ved 64');
 process.exit(feil ? 1 : 0);

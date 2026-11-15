@@ -701,3 +701,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   GJENSTÅR (enkeltsteg på 50–150 ms i byene): vegetasjon3d-kroken (vegRute, vannAvstand), liv3d (høyder/utenTunnel for én lang veg,
   lykter), kraft3d, kyst3d (plasser), infra3d (løftVeger). Teksturopplastingen (4096²) og nye skyggeprogrammer skjer på grafikkortet
   og kan ikke måles her. VAKT i sjekk.js («bygging i biter»: forberedt og uforberedt bytte gir like utsnitt, og det tas pust).
+  TÅKEBILDET (15. nov): tåka og siktfeltene ligger i R3.tåkeC (1024 × 1024, R3.tåkeTex, forhåndsmultiplisert alfa) som bakkens
+  skyggelegger legger oppå kartet (TAAKE_U/TAAKE_GLSL i detaljIBakken og enkelBakke). bak3d() tegner bare tåkebildet. Kartbildet i
+  bakken er utsnittets eget bilde (R3.texC = u.base – ingen kopi) og sendes til grafikkortet én gang per utsnitt; før ble hele
+  kartbildet (opptil 4096², 64 MB) tegnet og sendt på nytt hver gang et lag hadde flyttet seg. Minikartet (kompass.js) tegner
+  tåkebildet oppå kartet. Likt bilde før og etter (snittforskjell 0,2 av 255). VAKT «tåkebildet».
+  MÅLEKNAPPEN VED SKJERMENS TAK (15. nov): Ytelse.mål måler først skjermens takt uten å tegne (R3.målGanger = 0). Ligger bildet
+  på takten (Ytelse.erTak), tegnes bildet 2, 4, 8 … ganger per bilde til det tar minst fire takter (Ytelse.nokTegninger), og
+  tallene deles på antallet («ms/tegn.»). Prøvd med oppgitt takt (valg.takt): 202 ms per tegning mot 200 ms målt direkte.
+  KJENTE FEIL SETT PÅ NYTT 15. nov: de lyse trekantflekkene ved Mannheller er borte (myke bergflater nå). Jernbanen ved Dombås
+  stasjon mangler fortsatt i 3D (ikke rettet).

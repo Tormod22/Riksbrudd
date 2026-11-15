@@ -6,6 +6,10 @@
 // «spillets regning» er tiden spilløkka selv bruker (R3.løkkeTid/tegneTid fra index.html) – resten er grafikkortet.
 // Mens det måles (R3.måler): alle bilder tegnes, oppløsningen og grafikknivået står stille. Delene skjules med lag (layers), ikke med
 // visible – flere deler styrer visible selv hver ramme. Resultatet vises som tekst som kan kopieres eller tas bilde av.
+// SKJERMENS TAK (brukerens første måling viste 16,7 ms på alle radene: skjermen viser høyst 60 bilder i sekundet, så målingen sa
+// ingenting): først måles skjermens takt uten å tegne (R3.målGanger = 0). Ligger bildet på takten (erTak), har maskinen kraft til
+// overs: da tegnes bildet flere ganger per bilde (2, 4, 8 … til bildet tar minst fire takter – nokTegninger), og tallene deles på
+// antallet – «ms per tegning».
 // Reglene øverst uten DOM (median, kilde, nettleser, tabell, vurdering) – test: node pipeline/fliser/test_ytelse.js.
 (function (rot) {
   const NAVN = { bakke: 'bakken', trær: 'trær og busker', hus: 'husene', smått: 'biler, flagg og gatelys', liv3d: 'veger, trafikk og folk',
@@ -32,7 +36,8 @@
   // «sparer ms» er grunnlaget minus målingen.
   function tabell(r) {
     const alt = r.rader[0], grunn = grunnlag(r), L = [...(r.hode || []), ''], k = (t, n) => String(t).padStart(n);
-    L.push('Måling'.padEnd(36) + k('ms/bilde', 9) + k('bilder/s', 10) + k('sparer ms', 11) + k('trekanter', 12) + k('kall', 7));
+    if (r.ganger > 1) L.push(`Skjermen viser høyst ${des(1000 / r.skjerm, 0)} bilder i sekundet, og maskinen har kraft til overs. For å måle er bildet`, `tegnet ${r.ganger} ganger per bilde – tallene under gjelder én tegning.`, '');
+    L.push('Måling'.padEnd(36) + k(r.ganger > 1 ? 'ms/tegn.' : 'ms/bilde', 9) + k('bilder/s', 10) + k('sparer ms', 11) + k('trekanter', 12) + k('kall', 7));
     r.rader.forEach((x, i) => {
       const spart = i && !x.slutt ? des(grunn - x.ms) : '';
       L.push(x.navn.padEnd(36).slice(0, 36) + k(des(x.ms), 9) + k(x.ms > 0 ? des(1000 / x.ms) : '–', 10) + k(spart, 11) + k(x.tri != null ? hel(x.tri) : '', 12) + k(x.kall != null ? hel(x.kall) : '', 7));
@@ -42,17 +47,24 @@
   }
   // Kort vurdering i klartekst: prosessoren, punktene på skjermen eller tingene i bildet – og den største enkeltposten.
   function vurdering(r) {
-    const alt = r.rader[0], halv = r.rader.find(x => x.halv), deler = r.rader.filter(x => x.del), ut = [], g = grunnlag(r);
+    const alt = r.rader[0], halv = r.rader.find(x => x.halv), deler = r.rader.filter(x => x.del), ut = [], g = grunnlag(r), flere = r.ganger > 1;
     if (!alt || !(g > 0)) return ut;
-    if (g < 18) ut.push('Bildet går så fort skjermen tillater (ca. 60 bilder i sekundet) – målingen sier lite da.');
-    else if ((r.js || 0) > .6 * g) ut.push('Mest tid går i spillets egen regning (prosessoren), ikke i grafikkortet.');
+    // ett helt bilde: med flere tegninger per bilde er g bare tegningen – resten av spillets regning kommer i tillegg
+    const helt = flere ? g + Math.max(0, (r.js || 0) - (r.tegn || 0)) : g;
+    if (flere) ut.push(`Maskinen lager et bilde på ${des(helt)} ms – nok til ca. ${des(1000 / helt, 0)} bilder i sekundet her, mens skjermen viser ${des(1000 / r.skjerm, 0)}.`);
+    if (!flere && g < 18) ut.push('Bildet går så fort skjermen tillater (ca. 60 bilder i sekundet) – målingen sier lite da.');
+    else if ((r.js || 0) > .6 * helt) ut.push('Mest tid går i spillets egen regning (prosessoren), ikke i grafikkortet.');
     else if (halv && g - halv.ms > .35 * g) ut.push('Antall punkter på skjermen betyr mest: lavere oppløsning hjelper.');
     else ut.push('Mengden ting i bildet betyr mest (trekanter og tegnekall), ikke oppløsningen.');
     const størst = deler.slice().sort((a, b) => a.ms - b.ms)[0];
     if (størst && g - størst.ms > .08 * g) ut.push('Størst enkeltpost: ' + størst.navn.replace(/^Uten /, '') + ' (' + des(g - størst.ms) + ' ms av ' + des(g) + ').');
     return ut;
   }
-  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel };
+  // Skjermens tak: bildet ligger på takten når det tar høyst 15 % mer enn takten (tiden mellom bildene uten tegning).
+  const erTak = (takt, ms) => takt > 0 && ms <= 1.15 * takt;
+  // Nok tegninger per bilde: bildet tar minst fire takter (da er avrundingen til hele takter høyst en firedel), eller 64 er nådd.
+  const nokTegninger = (takt, ganger, rammetid) => rammetid >= 4 * takt || ganger >= 64;
+  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel, erTak, nokTegninger };
   if (typeof module !== 'undefined') { module.exports = Ytelse; return; }
   rot.Ytelse = Ytelse;
 
@@ -113,17 +125,25 @@
     const skjul = (L, av) => { for (const o of L) o.traverse(c => { c.layers.set(av ? 1 : 0); }); if (av) skjult.push(L); };
     R.måler = true;
     try {
-      const ett = async () => {
+      let ganger = 1;
+      // én måling: medianen av tiden mellom bildene, delt på antall tegninger per bilde (ganger)
+      const ett = async (antall = v.rammer) => {
         for (let i = 0; i < v.vent; i++) await ramme();
         const dt = [], js = [], tg = []; let t = await ramme(); const t0 = performance.now();
-        for (let i = 0; i < v.rammer && (i < 2 || performance.now() - t0 < v.tak); i++) { const n = await ramme(); dt.push(n - t); t = n; js.push(R.løkkeTid || 0); tg.push(R.tegneTid || 0); }
-        const inf = R.renderer.info.render; return { ms: median(dt), js: median(js), tegn: median(tg), tri: inf.triangles, kall: inf.calls };
+        for (let i = 0; i < antall && (i < 2 || performance.now() - t0 < v.tak); i++) { const n = await ramme(); dt.push(n - t); t = n; js.push(R.løkkeTid || 0); tg.push(R.tegneTid || 0); }
+        const inf = R.renderer.info.render, tegn = median(tg) / ganger;
+        return { ms: median(dt) / ganger, js: Math.max(0, median(js) - median(tg)) + tegn, tegn, tri: inf.triangles, kall: inf.calls };
       };
-      const grupper = samle(R, v.kilder), antall = grupper.length + 4; let nr = 0;
+      const grupper = samle(R, v.kilder), antall = grupper.length + 5; let nr = 0;
       const steg = t => { nr++; if (knapp) knapp.textContent = `Måler ${nr} av ${antall} …`; if (!v.stille) vis(`Måler ${nr} av ${antall}: ${t} – la musa ligge i ro.`, ''); };
       // første måling er alltid treg (programmer og teksturer tas i bruk): en runde som ikke teller
       steg('varmer opp'); await ett();
-      steg('hele bildet'); const alt = await ett();
+      // skjermens takt: tiden mellom bildene når ingenting tegnes (v.takt: testene kan oppgi den)
+      steg('skjermens takt'); R.målGanger = 0; const skjerm = v.takt || (await ett(Math.min(10, v.rammer))).ms; R.målGanger = null;
+      steg('hele bildet'); let alt = await ett();
+      if (v.flere !== false && erTak(skjerm, alt.ms)) { let m = alt;
+        while (!nokTegninger(skjerm, ganger, m.ms * ganger)) { ganger *= 2; R.målGanger = ganger; m = await ett(Math.min(8, v.rammer)); }
+        if (ganger > 1) alt = await ett(); }
       const rader = [{ navn: 'Hele bildet', ms: alt.ms, tri: alt.tri, kall: alt.kall }];
       steg('halv oppløsning'); R.målPr = .5; const halv = await ett(); R.målPr = null; rader.push({ navn: 'Med halv oppløsning', ms: halv.ms, halv: true });
       for (const g of grupper) {
@@ -139,12 +159,12 @@
         `Nettleser: ${nettleser(navigator.userAgent)} – skjerm ${screen.width} × ${screen.height}, forstørrelse ${des(window.devicePixelRatio || 1, 2)}`,
         `Bilde: ${c.width} × ${c.height} punkter, kantutjevning ${gl.getParameter(gl.SAMPLES) || 0}×, grafikk ${K ? (K.valg === 'auto' ? 'auto (' + K.nivå + ')' : K.nivå) : '?'}, oppløsning ${Math.round((skala0 || 1) * 100)} %`,
         `Sted: ${Math.round(u.cx + kp.x)} ${Math.round(u.cy + kp.y)}, kamera ${Math.round(over)} m over bakken${R.fot ? ' (går)' : ''}, utsnitt ${des(2 * u.S / 1000)} km${vær ? ', ' + vær.trim() : ''}`];
-      const r = { hode, rader, js: alt.js, tegn: alt.tegn }; r.vurdering = vurdering(r); r.tekst = tabell(r) + (r.vurdering.length ? '\n\n' + r.vurdering.join('\n') : '');
+      const r = { hode, rader, js: alt.js, tegn: alt.tegn, ganger, skjerm }; r.vurdering = vurdering(r); r.tekst = tabell(r) + (r.vurdering.length ? '\n\n' + r.vurdering.join('\n') : '');
       sist = r; if (!v.stille) vis('Ferdig. Kopier teksten eller ta et skjermbilde, og send det.', r.tekst);
       return r;
     } finally {
       for (const L of skjult) for (const o of L) o.traverse(c => { c.layers.set(0); });
-      R.målPr = null; R.måler = false; R.skala = skala0; R.rammeSnitt = snitt0; R.skalaVed = performance.now();
+      R.målPr = null; R.målGanger = null; R.måler = false; R.skala = skala0; R.rammeSnitt = snitt0; R.skalaVed = performance.now();
       if (knapp) knapp.textContent = 'Mål ytelse';
     }
   }

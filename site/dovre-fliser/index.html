@@ -2432,7 +2432,11 @@ function tegn3d() {
   lodTrær(R); lys3d(); kjøretøy3d(); soldater3d(); gress3d(); for (const f of KROKER.ramme3d) f(R); ruterSynlige(R); R.kuppel.position.copy(R.cam.position); R.kuppel.scale.setScalar(R.cam.far * .9); R.skyer.rotation.z = R.skyVri != null ? R.skyVri : tid * .0015;   // skyene driver sakte
   // bilde3d: (R3) => true når en krok har tegnet bildet selv (filtre/kameralinser i spill/filtre.js)
   const tTegn = R.måler ? performance.now() : 0;
-  if (!KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
+  // (spill/ytelse.js: målGanger 0 = ikke tegn (måler skjermens takt); over 1 = tegn bildet flere ganger for å måle hva det koster
+  // når maskinen når skjermens tak)
+  const gangerT = R.målGanger == null ? 1 : R.målGanger;
+  if (gangerT > 0 && !KROKER.bilde3d.some(f => f(R))) R.renderer.render(R.scene, R.cam);
+  for (let k = 1; k < gangerT; k++) R.renderer.render(R.scene, R.cam);
   if (tTegn) R.tegneTid = performance.now() - tTegn;
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2663,7 +2667,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=55dc2e7d20"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=0e2c32289c"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=d045a93c7a"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=6a9ab62cf1"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=c198d9e51c"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
