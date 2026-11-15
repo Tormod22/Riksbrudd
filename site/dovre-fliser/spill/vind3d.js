@@ -50,7 +50,8 @@
       sh.fragmentShader = 'uniform float uBTid;\nuniform float uBAmp;\nuniform float uBSkum;\nuniform vec2 uBDir;\nuniform vec3 uBHimmel;\nvarying vec2 vBP;\n' + sh.fragmentShader
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 #ifdef USE_SPECULARMAP
-  float bVann = texture2D(specularMap, vUv).r;
+  // vannM er vannmasken som bakkeshaderen alt har slått opp
+  float bVann = vannM;
   if (bVann > 0.03) {
     float bAvst = length(vViewPosition), bHav = 1.0 - smoothstep(1.0, 3.0, vMoh), bA = uBAmp * mix(0.45, 1.0, bHav);
     vec2 d1 = uBDir, d2 = vec2(d1.x * 0.88 - d1.y * 0.47, d1.x * 0.47 + d1.y * 0.88), d3 = vec2(d1.x * 0.82 + d1.y * 0.57, d1.y * 0.82 - d1.x * 0.57);
@@ -224,9 +225,12 @@
 
   // ---------- kroker ----------
   // grafikknivået byttet: terrenget har fått nytt materiale (byttBakke i index.html); enkel bakke har ingen vannmaske og ingen bølger
-  if (KROKER.bakke) KROKER.bakke.push((u, R) => { if (R.mesh && R.mesh.material && R.mesh.material.specularMap) bølgeShader(R.mesh.material); });
+  // Bølgene er bare med i skyggeleggeren for rutene i terrengnettet som har vann (varianten for land er merket med land i userData, se bakkeVariant
+  // i index.html): målt 15. nov ble bølgekoden regnet ut for hvert punkt også på land (en betingelse i koden hopper ikke over den).
+  const medBølger = (u, R) => { const m = R.mesh && R.mesh.material; if (m && !Array.isArray(m) && m.specularMap && !m.userData.land) bølgeShader(m); else bølgeU(); };
+  if (KROKER.bakke) KROKER.bakke.push(medBølger);
   KROKER.sett3d.push((u, R) => {
-    if (R.mesh && R.mesh.material && R.mesh.material.specularMap) bølgeShader(R.mesh.material);
+    medBølger(u, R);
     for (const s of HAV) { R.scene.remove(s); s.material.dispose(); } HAV = [];
     // havtåka: punkter i sjøen (vannmasken og terreng under 1 moh.), spredt utover utsnittet
     if (!u.vann || !u.vann.getContext) return;
@@ -261,7 +265,17 @@
     const f = Math.round(V.vind.fart), r = fra(V.vind.retning), t = `${f} m/s ${RETN[r]}`;
     if (t !== tekst) { tekst = t; el.textContent = t; el.title = `${styrke(V.vind.fart)} fra ${RETN_LANG[r]}`; }
   }, 1000);
-  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND, BU: bølgeU,
+  // For testene: bølgeskyggeleggeren kompileres på en liten prøveflate. Utsnittet i testen har kanskje ikke vann, og da er bølgene ikke
+  // med i bakkens program (se medBølger). Gir true når programmet lot seg kompilere uten feil.
+  function prøvShader(R) {
+    if (!R || !R.mesh || !R.tex || !R.ut || typeof detaljIBakken !== 'function') return false;
+    const mat = new THREE.MeshPhongMaterial({ map: R.tex, specularMap: R.vannTex }); mat.defines = { BAKKE_NAER: '' }; detaljIBakken(mat, 2 * R.ut.S); bølgeShader(mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); m.position.copy(R.cam.position); m.frustumCulled = false; R.scene.add(m);
+    const gl = R.renderer.getContext(); gl.getError(); R.renderer.compile(R.scene, R.cam);
+    const p = R.renderer.properties.get(mat), prog = p && (p.currentProgram || p.program), ok = gl.getError() === 0 && !!prog && !(prog.diagnostics && prog.diagnostics.runnable === false);
+    R.scene.remove(m); m.geometry.dispose(); mat.dispose(); return ok;
+  }
+  window.Vind3d = { U, DEKL, prosjekt, styrke, fra, kast, VIND, BU: bølgeU, prøvShader,
     sjekk: () => ({ bølger: !!bShader && !!BU.uBTid, amp: BU.uBAmp ? BU.uBAmp.value : 0, skum: BU.uBSkum ? BU.uBSkum.value : 0, fart: VIND.fart, modus: VIND.modus,
       partikler: VIND.partikler, tåke: VIND.tåke, hav: VIND.hav, havDotter: HAV.length, status: (document.getElementById('sVind') || {}).textContent || '' }) };
 })();

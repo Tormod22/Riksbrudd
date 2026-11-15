@@ -653,11 +653,39 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT bølger, vind og tåke (spill/vind3d.js, 12. nov): i storm har bakkeshaderen bølger med skum, trærne svaier mer, statuslinja viser
     // vinden og det tegnes uten GL-feil; i tåke blir himmelen grå. Klart vær igjen etterpå.
     const vi = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
-      Vaer.låsVær(VaerSpill.S, 'storm'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); await new Promise(r => setTimeout(r, 1200)); await vent(2); const st = Vind3d.sjekk(), k = Vind3d.U().uVindK.value;
+      Vaer.låsVær(VaerSpill.S, 'storm'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); await new Promise(r => setTimeout(r, 1200)); await vent(2);
+      // (15. nov: bølgene er bare med i bakkens program når utsnittet har vann – prøv skyggeleggeren på en egen flate)
+      const prøv = Vind3d.prøvShader ? Vind3d.prøvShader(R3) : true, st = Vind3d.sjekk(), k = Vind3d.U().uVindK.value;
       Vaer.låsVær(VaerSpill.S, 'tåke'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); const tå = Vind3d.VIND.grå || 0;
-      Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, k, tå, glFeil: gl.getError() }; });
-    const viok = vi.bølger && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
-    console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
+      Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); VaerSpill.straks(); await vent(2); return { ...st, prøv, k, tå, glFeil: gl.getError() }; });
+    const viok = vi.bølger && vi.prøv && vi.amp > .8 && vi.skum > 0 && vi.k > 2 && /m\/s/.test(vi.status) && vi.tå > .5 && vi.glFeil === 0; if (!viok) feil++;
+    console.log(`${viok ? 'ok  ' : 'FEIL'} ${navn} bølger, vind og tåke: storm ${vi.fart.toFixed(1)} m/s, bølger ${vi.bølger} (skyggeleggeren kompilerer: ${vi.prøv}; høyde ×${vi.amp.toFixed(2)}, skum ${vi.skum.toFixed(2)}), trær ×${vi.k.toFixed(2)}, status «${vi.status}», tåke grå himmel ${vi.tå.toFixed(2)}, GL-feil ${vi.glFeil}`);
+    // VAKT billigere terreng (15. nov, brukeren: «begynn med punkt 1»): terrengnettet er delt i ruter med vann og ruter med bare land, og bare
+    // vannrutene tegnes med bølger og glans (delBakken/bakkeVariant/bakkeNå i index.html). Kunstig vann i det nordvestre hjørnet av
+    // vannmasken (feilen lagt inn med vilje – uten den har Dombås-utsnittet én gruppe): to grupper, ruta midt i vannet ligger i vanngruppen og
+    // ruta på land i landgruppen, begge programmene kompilerer og tegnes uten GL-feil, tørt land har ikke lys per punkt, våt bakke har det.
+    // Tilbake til det ekte utsnittet etterpå. Grafikkortets navn er lest (spill/kvalitet.js).
+    const bt = await pg.evaluate(async () => { const gl = R3.renderer.getContext(); gl.getError(); const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+      const u = R3.ut, geo = R3.mesh.geometry, r = {}; await vent(2);
+      const beskriv = () => [].concat(R3.mesh.material).map(m => ({ land: !!m.userData.land, matt: !!m.userData.utenGlans }));
+      r.før = { del: R3.bakkeDel, grupper: geo.groups.length, mat: beskriv() };
+      const D0 = u.vannData, hv0 = u.harVann, W = D0 && D0.W ? D0.W : 256, d = new Uint8ClampedArray(W * W * 4);
+      for (let j = 0; j < W / 2; j++) for (let i = 0; i < W / 2; i++) d[(j * W + i) * 4] = 255;
+      u.vannData = { W, d }; u.harVann = true; R3.bakkeDel = delBakken(geo, u); R3.bakkeSett = null; await vent(3);
+      r.med = { del: R3.bakkeDel, grupper: geo.groups.length, mat: beskriv(), liste: Array.isArray(R3.mesh.material), alle: geo.index.count };
+      const ray = new THREE.Raycaster(), gruppe = (x, y) => { ray.set(new THREE.Vector3(x, y, 9000), new THREE.Vector3(0, 0, -1)); const h = ray.intersectObject(R3.mesh)[0]; return h && h.face ? h.face.materialIndex : -1; };
+      r.iVann = gruppe(-u.S * .5, u.S * .5); r.påLand = gruppe(u.S * .5, -u.S * .5);
+      r.prog = [].concat(R3.mesh.material).map(m => { const p = R3.renderer.properties.get(m), pr = p && (p.currentProgram || p.program); return !!pr && !(pr.diagnostics && pr.diagnostics.runnable === false); });
+      VaerSpill.S.våt = 1; VaerSpill.oppdater(); VaerSpill.straks(); await vent(3); r.våt = beskriv(); VaerSpill.S.våt = 0; VaerSpill.oppdater(); VaerSpill.straks(); await vent(2);
+      u.vannData = D0; u.harVann = hv0; R3.bakkeDel = delBakken(geo, u); R3.bakkeSett = null; await vent(3);
+      r.etter = { del: R3.bakkeDel, grupper: geo.groups.length, mat: beskriv() }; r.glFeil = gl.getError();
+      r.kort = KVAL.kort; r.tittel = (document.getElementById('vis-grafikk') || {}).title || ''; return r; });
+    const btok = !!(bt.før.del && bt.med.del) && bt.med.grupper === 2 && bt.med.liste && bt.med.del.vann > bt.før.del.vann && bt.med.del.land > 0 && bt.med.del.land + bt.med.del.vann === bt.med.alle
+      && bt.med.del.vann > .2 * bt.med.alle && bt.med.del.vann < .45 * bt.med.alle && bt.iVann === 1 && bt.påLand === 0 && bt.med.mat.length === 2 && bt.med.mat[0].land && bt.med.mat[0].matt && !bt.med.mat[1].land && !bt.med.mat[1].matt
+      && bt.prog.length === 2 && bt.prog.every(Boolean) && bt.våt[0].land && !bt.våt[0].matt && bt.etter.grupper === bt.før.grupper && bt.etter.del.vann === bt.før.del.vann && bt.glFeil === 0
+      && typeof bt.kort === 'string' && bt.kort.length > 0 && /Grafikkort/.test(bt.tittel);
+    if (!btok) { feil++; console.log(JSON.stringify(bt)); }
+    console.log(`${btok ? 'ok  ' : 'FEIL'} ${navn} billigere terreng: uten vann ${bt.før.grupper} grupper; kunstig vann gir ${bt.med.grupper} grupper (${bt.med.del && Math.round(100 * bt.med.del.vann / bt.med.alle)} % vannruter), vann i gruppe ${bt.iVann}, land i gruppe ${bt.påLand}, tørt land uten lys per punkt, vått land med, GL-feil ${bt.glFeil}; grafikkort «${bt.kort}»`);
     // VAKT grafikk (spill/kvalitet.js, 12. nov, brukeren: «spillet går alt for hakkete»): «Lav» gir lavere pikseltetthet, kortere detaljavstand for
     // trærne og ingen gress/blomster; tilbake til auto etterpå
     const kv = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });

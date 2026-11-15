@@ -7,7 +7,11 @@
 //   tekstur stor bakketekstur (4096) nær bakken       skumtopper og krusning i vannet (vann)
 //   nett    terrengnettets tetthet (1 = 289 × 289 punkter på PC; Middels 273, Lav 241 – ikke grovere: trær og hus står etter den ekte høyden) – gjelder fra neste utsnitt
 //   bakke   'enkel' på Lav: terrenget med lys per hjørne og uten effektene i skyggeleggingen (bakkeMateriale i index.html) – det
-//           klart tyngste i bildet på svake maskiner (målt 14. nov: 700 ms -> 20 ms per bilde med programvare-grafikk)
+//           klart tyngste i bildet på svake maskiner (målt 15. nov med programvare-grafikk, terrenget alene: ca. 400 ms per bilde
+//           med alt, ca. 190 ms med kartbildet og lys per hjørne; tallene fra 14. nov – 700 og 20 ms – var feilmålt)
+// GRAFIKKORTET (15. nov): første gang 3D tegner, leses navnet på grafikkortet (KVAL.kort, i loggen og på Grafikk-knappen). Tegner
+// nettleseren uten grafikkort (programvare-grafikk: SwiftShader, llvmpipe, Microsoft Basic Render Driver), går det tregt uansett
+// innstilling: spilleren får beskjed om å slå på maskinvareakselerasjon, og Auto starter på Lav. (Ikke i testene: navigator.webdriver.)
 // Reglene øverst uten DOM (Kvalitet.neste) – test: node pipeline/fliser/test_kvalitet.js.
 (function (rot) {
   const NIVÅ = {
@@ -30,7 +34,15 @@
     } else s.lett = null;
     return s.nivå;
   }
-  const Kvalitet = { NIVÅ, REKKE, neste };
+  // Er navnet nettleseren oppgir en programvare-tegner (ikke et grafikkort)?
+  const programvare = navn => /swiftshader|llvmpipe|softpipe|software|basic render|warp/i.test(navn || '');
+  // Kort, lesbart navn: «ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)» -> «Intel(R) UHD Graphics 620»
+  function kortNavn(navn) {
+    let t = String(navn || '').trim(); const m = /^ANGLE \((.*)\)$/.exec(t);
+    if (m) { const d = m[1].split(','); t = (d.length >= 2 ? d[1] : d[0]).trim(); }
+    return t.replace(/\s*(Direct3D|OpenGL|vs_\d|ps_\d|D3D\d+).*$/i, '').replace(/\(0x[0-9a-f]+\)/ig, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'ukjent';
+  }
+  const Kvalitet = { NIVÅ, REKKE, neste, programvare, kortNavn };
   if (typeof module !== 'undefined') { module.exports = Kvalitet; return; }
   rot.Kvalitet = Kvalitet;
 
@@ -40,7 +52,7 @@
   // KVAL: det andre deler av spillet leser (index.html: størrelse3d, lodTrær, gress3d, bygg3d; vegetasjon3d.js; vind3d.js)
   const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { return NIVÅ[S.nivå]; } };
   const knapp = document.createElement('button'); knapp.id = 'vis-grafikk';
-  const settKnapp = () => { knapp.textContent = 'Grafikk: ' + (valg === 'auto' ? 'auto (' + NIVÅ[S.nivå].navn.toLowerCase() + ')' : NIVÅ[valg].navn); knapp.title = 'Lavere grafikk gir jevnere bilde på svake maskiner'; };
+  const settKnapp = () => { knapp.textContent = 'Grafikk: ' + (valg === 'auto' ? 'auto (' + NIVÅ[S.nivå].navn.toLowerCase() + ')' : NIVÅ[valg].navn); knapp.title = 'Lavere grafikk gir jevnere bilde på svake maskiner' + (KVAL.kort ? '. Grafikkort: ' + kortNavn(KVAL.kort) : ''); };
   function bytt(nivå) {
     if (nivå === S.nivå) return; S.nivå = nivå; KVAL.v++; settKnapp();
     // trærne, gresset og blomstene fordeles på nytt i neste ramme; bakketeksturen følger med i neste utsnitt
@@ -51,6 +63,17 @@
   knapp.onclick = () => { const r = ['auto', ...REKKE]; valg = r[(r.indexOf(valg) + 1) % r.length]; try { localStorage.setItem('riksbrudd-grafikk', valg); } catch (e) { /* privat vindu */ }
     if (valg === 'auto') { S.endret = performance.now() / 1000; S.lett = null; S.forTungt = null; settKnapp(); } else bytt(valg); settKnapp(); };
   settKnapp(); const lm = document.getElementById('lagmeny'); if (lm) lm.appendChild(knapp);
+  // Første bilde i 3D: hvilket grafikkort tegner nettleseren med?
+  KVAL.kort = null; KVAL.programvare = false;
+  KROKER.ramme3d.push(R => {
+    if (KVAL.kort != null || !R.renderer) return;
+    let navn = ''; try { const gl = R.renderer.getContext(), e = gl.getExtension('WEBGL_debug_renderer_info'); navn = String((e && gl.getParameter(e.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || ''); } catch (err) { /* ukjent */ }
+    KVAL.kort = navn; KVAL.programvare = programvare(navn); settKnapp();
+    if (typeof logg === 'function') logg('Grafikkort: ' + kortNavn(navn) + (KVAL.programvare ? ' (programvare – ikke et grafikkort)' : '') + '.');
+    if (!KVAL.programvare || navigator.webdriver) return;
+    if (valg === 'auto') bytt('lav');
+    if (typeof visMelding === 'function') visMelding('Nettleseren tegner 3D uten grafikkortet, og da går det tregt uansett innstilling i spillet. Slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt.', { type: 'grafikk' });
+  });
   KROKER.ramme3d.push(R => {
     if (valg !== 'auto' || R.rammeSnitt == null) return;
     const nå = performance.now() / 1000; if (!S.start) S.start = nå;

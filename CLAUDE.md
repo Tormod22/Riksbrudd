@@ -638,11 +638,32 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Kontrollert på bilder: Dombås, Dovre, Lillehammer, Åsane. VAKT: «veger i 3D» krever rundkjøringen i Dombås og 0 lykter i ringen.
   HØYERE FPS (14. nov, brukeren: «finn flere måter å optimalisere for høyere FPS»). Målt med scratchpad fps/prof-scene.js (trekanter og
   tegnekall per fil som la nettet i scenen, og tegnetid spart når kilden skjules) og fps/prof-piksel.js (pikseltetthet mot tid):
-  terrenget er nesten bare pikselkostnad (alle effektene i skyggeleggingen: ca. 700 ms per bilde med programvare-grafikk, enkel
-  lyssetting ca. 20 ms), resten av scenen er trekanter (ca. 400 ms uansett oppløsning). Tiltak: «enkel bakke» på Lav grafikk
+  terrenget er nesten bare pikselkostnad (tallene fra 14. nov – 700 ms med alle effektene, 20 ms med enkel lyssetting – var FEILMÅLT,
+  se BILLIGERE TERRENG under), resten av scenen er trekanter (ca. 400 ms uansett oppløsning). Tiltak: «enkel bakke» på Lav grafikk
   (bakkeMateriale/enkelBakke/byttBakke i index.html, KVAL.p.bakke; KROKER.bakke = modulene som bygger på bakkens skyggelegging kobler
   seg på igjen når nivået byttes: natt3d, vind3d), grovere terrengnett på Middels/Lav (KVAL.p.nett, u.nettM bestemmes én gang per
   utsnitt), ruteNett/ruterSynlige i index.html (gjerder, rundballer, brøytestikker og rekkverkstolper i ruter på 160–200 m som bare
   tegnes i synsfeltet og innen 380–900 m), enklere gjerder/steingjerder/rundballer (gard3d.js kasse(…, uten)). Dombås fra lufta:
   640 000 -> 452 000 trekanter; Lav grafikk 1129 -> ca. 560 ms per bilde i testen. sjekk.js låser grafikken til Høy (automatikken
   kunne gå ned underveis). IKKE GJORT: terrenget i ruter med klipping, husene og trærne i ruter, færre trekanter i byene.
+  BILLIGERE TERRENG (15. nov, brukeren etter «se på nettet hvordan pene spill kjører så smooth»: «begynn med punkt 1» = dyre effekter
+  bare der de trengs). MÅLEFELLE: med tempo = 0 og kameraet i ro tegner spillet bare fire bilder i sekundet (trengerTegning3d), så
+  alt under 250 ms per bilde ble feilmålt 14. nov – målingene setter nå tempo = 1 og måler variantene etter tur i flere runder
+  (scratchpad fps/prof-ab.js; første runde er alltid treg og regnes ikke). FUNN (programvare-grafikk, trolig også ANGLE/Direct3D på
+  Windows, som flater ut betingelser med teksturoppslag): en betingelse i skyggeleggeren hopper ikke over koden bak den – bølger,
+  glans og nærdetaljer ble regnet ut for hvert punkt på skjermen. Derfor egne programmer der koden ikke er med (index.html):
+  bakkeVariant(R, u, nær, glans, land) – nær = BAKKE_NAER (nærdetaljene, bare når kameraet er under 160 m over bakken, nærmere enn
+  200 m eller du går), glans = lys per punkt (ellers hjørnelys(): lys per hjørne som Lambert, likt bilde), land = uten bølger
+  (userData.land; vind3d.js medBølger hopper over). delBakken(geo, u) deler terrengnettet i ruter med vann (vannmasken, grov maske
+  med en rutes margin) og ruter med bare land: to grupper i geometrien, og bakkeNå() gir materialet [land, vann] (eller ett når
+  utsnittet bare har det ene). Land får glans bare når bakken er våt (VAER.våt). R.mesh.material kan altså være en LISTE – bruk
+  bakkeErEnkel(R) og [].concat(R.mesh.material); krokene i KROKER.sett3d/KROKER.bakke får alltid ett materiale. Stråletreff mot
+  R.mesh virker som før (face.materialIndex: 0 land, 1 vann). Målt (terrenget alene, 1400 × 900): Dombås fra lufta ca. 405 -> 275 ms
+  (−32 %), fjellvann fra lufta ca. 440 -> 330 (−25 %), Dombås lavt ca. 410 -> 330 (−20 %); bare kartbildet er ca. 160–190 ms, og
+  resten er utseendet (berg i bratte sider, flekker, snø). Hele scenen ved Dombås fra lufta: ca. −20 %. Bildene er like før og etter
+  (tørt: snittforskjell 0,3 av 255; regn: likt i samme side og øyeblikk – to kjøringer har skyskyggene på ulikt sted). IKKE VERDT
+  DET (målt): å tegne bakken sist (ingen forskjell), skyskygge/våt bakke som egne varianter (ingen forskjell).
+  GRAFIKKORTET (15. nov): spill/kvalitet.js leser navnet ved første bilde i 3D (KVAL.kort, Kvalitet.programvare/kortNavn, i loggen og i
+  tittelen på Grafikk-knappen). Programvare-grafikk (SwiftShader, llvmpipe, Microsoft Basic Render Driver): melding om å slå på
+  maskinvareakselerasjon, og Auto starter på Lav – ikke i testene (navigator.webdriver). Brukeren har meldt 9 bilder i sekundet;
+  be om navnet på grafikkortet. VAKT i sjekk.js («billigere terreng»). Verktøy: scratchpad fps/del-test.js, ab-bilde.js, finn-vann.js.

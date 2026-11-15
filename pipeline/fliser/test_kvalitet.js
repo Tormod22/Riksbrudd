@@ -12,4 +12,8 @@ s = { nivå: 'høy' }; K.neste(s, 30, .6, 10); s.nivå = 'middels'; let m = 'mid
 for (let t = 51; t <= 120; t++) m = s.nivå = K.neste(s, 16.7, 1, t); ok(m === 'høy', 'etter et minutt kan det prøves igjen');
 ok(K.REKKE.every(k => K.NIVÅ[k].pr[0] > 0 && K.NIVÅ[k].tre > 0), 'alle nivåene har pikseltetthet og trær');
 ok(K.NIVÅ.lav.pr[0] < K.NIVÅ.middels.pr[0] && K.NIVÅ.middels.pr[0] < K.NIVÅ.høy.pr[0], 'lavere nivå = færre piksler');
+// grafikkortet: programvare-tegnere kjennes igjen, ekte grafikkort gjør ikke; navnet kortes ned
+ok(K.programvare('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)') && K.programvare('llvmpipe (LLVM 15.0.7, 256 bits)') && K.programvare('ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)'), 'programvare-grafikk kjennes igjen (SwiftShader, llvmpipe, Basic Render Driver)');
+ok(!K.programvare('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)') && !K.programvare('ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 (0x00001F99) Direct3D11 vs_5_0 ps_5_0, D3D11)') && !K.programvare('Apple GPU') && !K.programvare(''), 'ekte grafikkort (Intel, NVIDIA, Apple) og ukjent navn er ikke programvare');
+ok(K.kortNavn('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)') === 'Intel(R) UHD Graphics 620' && K.kortNavn('ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 (0x00001F99) Direct3D11 vs_5_0 ps_5_0, D3D11)') === 'NVIDIA GeForce GTX 1650' && K.kortNavn('Apple GPU') === 'Apple GPU' && K.kortNavn('') === 'ukjent', 'navnet på grafikkortet kortes ned: ' + K.kortNavn('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)'));
 process.exit(feil ? 1 : 0);
