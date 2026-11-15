@@ -731,7 +731,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       && !!ytmBakke && ytmBakke.tri > 1000 && /Grafikkort: /.test(ytm.tekst) && /ms\/bilde/.test(ytm.tekst) && ytm.skjult === 0 && ytm.kilder > 0 && !ytm.måler && !ytm.målPr && ytm.etter.pr === ytm.før.pr && ytm.etter.bredde === ytm.før.bredde
       && ytm.halvBredde > 0 && ytm.halvBredde < .7 * ytm.før.bredde && ytm.åpen && ytm.lukket && ytm.knapp === 'Mål ytelse';
     if (!ytmok) { feil++; console.log(JSON.stringify(ytm)); }
+
     console.log(`${ytmok ? 'ok  ' : 'FEIL'} ${navn} måling av ytelse: ${ytm.rader.length} målinger (hele bildet ${ytm.rader[0] ? Math.round(ytm.rader[0].ms) : '?'} ms, bakken ${ytmBakke ? ytmBakke.tri : '?'} trekanter), halv oppløsning ${ytm.halvBredde} av ${ytm.før.bredde} punkter i bredden, ${ytm.skjult} ting igjen på skjult lag, ${ytm.kilder} ting merket med kilde, boksen åpnet og lukket`);
+    // «Mål hakk» (15. nov): pausene mellom bildene over en kort stund; rapporten har overskrift og antall bilder, og alt er som før etterpå
+    const hk = await pg.evaluate(async () => { const r = await Ytelse.målHakk({ sek: 1.5, stille: true }); return { bilder: r ? r.bilder : 0, pauser: r ? r.pauser.length : -1, tekst: r ? r.tekst : '', måler: !!R3.måler, knapp: (document.getElementById('vis-hakk') || {}).textContent || '' }; });
+    const hkok = hk.bilder >= 1 && hk.pauser >= 0 && /MÅLING AV HAKK/.test(hk.tekst) && /Bilder: /.test(hk.tekst) && !hk.måler && hk.knapp === 'Mål hakk';
+    if (!hkok) { feil++; console.log(JSON.stringify(hk)); }
+    console.log(`${hkok ? 'ok  ' : 'FEIL'} ${navn} måling av hakk: ${hk.bilder} bilder, ${hk.pauser} pauser over 50 ms, knappen «${hk.knapp}»`);
     // VAKT grafikk (spill/kvalitet.js, 12. nov, brukeren: «spillet går alt for hakkete»): «Lav» gir lavere pikseltetthet, kortere detaljavstand for
     // trærne og ingen gress/blomster; tilbake til auto etterpå
     const kv = await pg.evaluate(async () => { const vent = n => new Promise(r => { let k = 0; const f = () => (++k > n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });

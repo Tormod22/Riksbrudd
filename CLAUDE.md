@@ -720,3 +720,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   natta ellers 0,5 (før 0,42). GRESS I BYEN: i tettstedene (u.iBy) settes gresstuster bare der bakken er tydelig grønn og ikke
   inntil hus (det vokste gress på brosteinen på Bryggen). GÅ: Gange.åpenRetning – «Gå» starter med blikket mot åpent lende (minst
   12 m fri sikt nærmest kursen du hadde), ikke med nesa i en vegg. VAKT «utseende 15. nov».
+  Skråkanten bak fortauet er grå i tettstedene (gruppen «bykant» i liv3d.js; den var gressgrønn midt i Oslo).
+  MÅL HAKK (15. nov): Ytelse.målHakk – knappen «Mål hakk» i ☰ måler i 20 s pausene mellom bildene mens spilleren flyr rundt, og
+  deler dem etter om et nytt område ble satt inn (R3.settNr), bygget (R3.bygger) eller ellers (Ytelse.hakkTekst, test_ytelse.js).
+  Brukes til å se hakk som kommer fra grafikkortet (teksturopplasting, nye skyggeprogrammer) – de kan ikke måles på testmaskinen.
+  BE BRUKEREN OM DENNE RAPPORTEN hvis han fortsatt opplever hakk.

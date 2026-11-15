@@ -64,7 +64,18 @@
   const erTak = (takt, ms) => takt > 0 && ms <= 1.15 * takt;
   // Nok tegninger per bilde: bildet tar minst fire takter (da er avrundingen til hele takter høyst en firedel), eller 64 er nådd.
   const nokTegninger = (takt, ganger, rammetid) => rammetid >= 4 * takt || ganger >= 64;
-  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel, erTak, nokTegninger };
+  // HAKK: oppsummering av pausene mellom bildene. pauser = [{ dt (ms), hva: 'bytte' | 'bygging' | 'ellers' }], bilder = antall bilder,
+  // sek = hvor lenge det ble målt. Gir linjene til rapporten.
+  const HVA = { bytte: 'da et nytt område ble satt inn', bygging: 'mens et nytt område ble bygget', ellers: 'ellers' };
+  function hakkTekst(hode, pauser, bilder, sek) {
+    const L = [...(hode || []), '', `Bilder: ${hel(bilder)} på ${des(sek, 0)} s (${des(bilder / Math.max(1, sek), 0)} per sekund i snitt)`], P = pauser.slice().sort((a, b) => b.dt - a.dt);
+    if (!P.length) { L.push('Ingen pauser over 50 ms – bildet gikk jevnt hele tiden.'); return L.join('\n'); }
+    L.push(`Pauser over 50 ms: ${P.length} – den lengste ${des(P[0].dt, 0)} ms (sum ${des(P.reduce((s, p) => s + p.dt, 0), 0)} ms)`);
+    for (const k of ['bytte', 'bygging', 'ellers']) { const G = P.filter(p => p.hva === k); if (G.length) L.push(`  ${HVA[k]}: ${G.length} (lengste ${des(G[0].dt, 0)} ms)`); }
+    L.push('De lengste: ' + P.slice(0, 10).map(p => `${des(p.dt, 0)} ms (${p.hva})`).join(', '));
+    return L.join('\n');
+  }
+  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel, erTak, nokTegninger, hakkTekst };
   if (typeof module !== 'undefined') { module.exports = Ytelse; return; }
   rot.Ytelse = Ytelse;
 
@@ -174,6 +185,35 @@
     if (R3.bygger) { vis('3D bygges ennå – vent til bildet er ferdig og trykk «Mål ytelse» igjen.', ''); return; }
     try { await mål(); } catch (e) { vis('Målingen stoppet: ' + (e && e.message || e), ''); }
   };
-  const lm = document.getElementById('lagmeny'); if (lm) lm.appendChild(knapp);
-  Ytelse.mål = mål; Ytelse.samle = samle; Ytelse.siste = () => sist; Ytelse.lukk = () => { if (boks) boks.classList.remove('på'); };
+  // MÅLING AV HAKK (15. nov): pausene mellom bildene mens spilleren flyr rundt som vanlig. Forteller om bildet stopper opp når et
+  // nytt område bygges eller settes inn (R3.bygger, R3.settNr) – også det grafikkortet bruker tid på, som ikke kan måles på testmaskinen.
+  let hakkKnapp = null;
+  async function målHakk(valg) {
+    const R = typeof R3 !== 'undefined' && R3, v = Object.assign({ sek: 20 }, valg || {});
+    if (!R || !på3d || !R.ut || R.måler) return null;
+    R.måler = true; const pauser = [], t0 = performance.now(); let sistT = t0, bilder = 0, sett0 = R.settNr || 0, bygget = !!R.bygger;
+    try {
+      while (performance.now() - t0 < v.sek * 1000) {
+        await new Promise(r => requestAnimationFrame(r)); const nå = performance.now(), dt = nå - sistT; sistT = nå; bilder++;
+        if (dt > 50) pauser.push({ dt, ved: (nå - t0) / 1000, hva: (R.settNr || 0) !== sett0 ? 'bytte' : bygget || R.bygger ? 'bygging' : 'ellers' });
+        sett0 = R.settNr || 0; bygget = !!R.bygger;
+        if (hakkKnapp) hakkKnapp.textContent = `Måler hakk … ${Math.max(0, Math.ceil(v.sek - (nå - t0) / 1000))} s`;
+      }
+      const gl = R.renderer.getContext(), c = R.renderer.domElement, K = window.KVAL;
+      const hode = [`RIKSBRUDD – MÅLING AV HAKK (${des(v.sek, 0)} s)`, 'Grafikkort: ' + (K && K.kort != null && window.Kvalitet ? Kvalitet.kortNavn(K.kort) : 'ukjent'),
+        `Nettleser: ${nettleser(navigator.userAgent)} – bilde ${c.width} × ${c.height} punkter, kantutjevning ${gl.getParameter(gl.SAMPLES) || 0}×, grafikk ${K ? (K.valg === 'auto' ? 'auto (' + K.nivå + ')' : K.nivå) : '?'}`,
+        `Sted: ${Math.round(R.ut.cx + R.cam.position.x)} ${Math.round(R.ut.cy + R.cam.position.y)}${R.fot ? ' (går)' : ''}, utsnitt ${des(2 * R.ut.S / 1000)} km`];
+      const r = { pauser, bilder, sek: (performance.now() - t0) / 1000, tekst: hakkTekst(hode, pauser, bilder, (performance.now() - t0) / 1000) };
+      sist = r; if (!v.stille) vis('Ferdig. Kopier teksten eller ta et skjermbilde, og send det.', r.tekst);
+      return r;
+    } finally { R.måler = false; if (hakkKnapp) hakkKnapp.textContent = 'Mål hakk'; }
+  }
+  hakkKnapp = document.createElement('button'); hakkKnapp.id = 'vis-hakk'; hakkKnapp.textContent = 'Mål hakk'; hakkKnapp.title = 'Måler i 20 sekunder om bildet stopper opp mens du flyr rundt – fly langt nok til at nye områder lastes';
+  hakkKnapp.onclick = async () => {
+    if (typeof på3d === 'undefined' || !på3d || !R3 || !R3.ut) { vis('Åpne 3D først (knappen «3D») og trykk «Mål hakk» igjen.', ''); return; }
+    if (typeof logg === 'function') logg('Måler hakk i 20 sekunder – fly rundt som vanlig, gjerne langt.');
+    try { await målHakk(); } catch (e) { vis('Målingen stoppet: ' + (e && e.message || e), ''); }
+  };
+  const lm = document.getElementById('lagmeny'); if (lm) { lm.appendChild(knapp); lm.appendChild(hakkKnapp); }
+  Ytelse.målHakk = målHakk; Ytelse.mål = mål; Ytelse.samle = samle; Ytelse.siste = () => sist; Ytelse.lukk = () => { if (boks) boks.classList.remove('på'); };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

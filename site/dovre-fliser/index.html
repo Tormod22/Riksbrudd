@@ -2293,7 +2293,7 @@ async function forbered3d(u) {
 }
 const BUSKVALG = () => ({ senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true });
 function sett3d(u) {
-  const R = R3, K = u.klar || {}; u.klar = null; R.forberedt = !!K.geo;
+  const R = R3, K = u.klar || {}; u.klar = null; R.forberedt = !!K.geo; R.settNr = (R.settNr || 0) + 1;
   frigjørTerreng(R);
   // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
@@ -2669,11 +2669,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=8e177bfb4a"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=0661e14fcc"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=70f7473b86"></script>
 <script src="/dovre-fliser/spill/gange.js?v=1e2efdd157"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=3da6a1f94f"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=577112574b"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
@@ -2713,7 +2713,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=55dc2e7d20"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=0e2c32289c"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=6a9ab62cf1"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=face62cf9b"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=c198d9e51c"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>

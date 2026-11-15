@@ -88,7 +88,7 @@
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? [78, 70, 68] : type === 'fylling' ? [86, 88, 62] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? [78, 70, 68] : type === 'fylling' ? [86, 88, 62] : type === 'bykant' ? [112, 109, 103] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
     g.putImageData(im, 0, 0); g.scale(2, 2);
@@ -147,7 +147,7 @@
   // inn i scenen. I Bergen tok dette 0,2–0,3 s midt i byttet, og bildet sto stille så lenge.
   function* byggVeger(u) {
     const ut = { nett: [], ruter: [] };
-    const grupper = { fylling: tom(), skulder: tom(), gs: tom(), grus: tom(), kommunal: tom(), asfalt: tom(), rampe: tom(), kryss: tom(), fortau: tom() };
+    const grupper = { fylling: tom(), bykant: tom(), skulder: tom(), gs: tom(), grus: tom(), kommunal: tom(), asfalt: tom(), rampe: tom(), kryss: tom(), fortau: tom() };
     const gang = u.gangveger || [], alle = u.veger.concat(gang), ru = Veg.rute(alle), zf = (x, y) => nettHoyde(u, x, y);
     const kryss = Veg.finnKryss(u.veger); u.kryss = kryss; u.vegRute = { ru, alle };
     for (let li = 0; li < u.veger.length; li++) { const v = u.veger[li]; yield;
@@ -163,7 +163,9 @@
           if ((i & 31) === 31) yield;
           if (kryss.nær(p[0], p[1], 2.2) || ru.klaring(x, y, li, 10) < 1.1) { if (b.length > 1) biter.push(b); b = []; } else b.push(p); }
         if (b.length > 1) biter.push(b);
-        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), .15, grupper.fortau, true); kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true, grupper.fylling); }
+        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), .15, grupper.fortau, true);
+          // skråkanten bak fortauet er grå i tettstedene (15. nov: den var gressgrønn midt i Oslo sentrum)
+          kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true, grupper.bykant); }
       } else { const Pt = Veg.tynn(v.P, .06, .05, 7.5); for (const sd of [1, -1]) kant(Pt, sd, w, .8, -.04, grupper.skulder, zf, false, grupper.fylling); }
     }
     // gang- og sykkelvegene: smal asfalt uten oppmerking (gangfeltene, t = 5, er striper og ikke asfalt)
@@ -178,7 +180,7 @@
       bånd(C, 0, ap, .12, grupper.fortau, true); }
     yield* vegutstyr(u, ut, kryss, ru);
     // rekkefølgen når flater ligger oppå hverandre: skulder nederst, så gangveg, grus, kommunal veg, asfalt, svingefelt og fortau øverst
-    const OFF = { fylling: -1.5, skulder: -2, gs: -3, grus: -3.5, kommunal: -4, asfalt: -5, rampe: -5, kryss: -6, fortau: -7 };
+    const OFF = { fylling: -1.5, bykant: -1.5, skulder: -2, gs: -3, grus: -3.5, kommunal: -4, asfalt: -5, rampe: -5, kryss: -6, fortau: -7 };
     for (const [type, g] of Object.entries(grupper)) { yield; const m = nett(g, type, OFF[type]); if (m) ut.nett.push(m); }
     // kryssene: asfalt uten oppmerking langs hver arm (grusveger møtes på grus), og fotgjengerfeltene som hvite striper
     const flate = tom(), grusflate = tom(), felt = { pos: [], idx: [] };

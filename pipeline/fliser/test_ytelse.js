@@ -32,4 +32,9 @@ ok(/Maskinen lager et bilde på 8,4 ms – nok til ca. 119 bilder i sekundet her
 ok(!/så fort skjermen tillater/.test(vk.join(' ')), 'skjermens tak: «målingen sier lite» sies ikke når bildet er tegnet flere ganger');
 ok(Y.erTak(16.7, 16.7) && Y.erTak(16.7, 18.5) && !Y.erTak(16.7, 20) && !Y.erTak(16.7, 240) && Y.erTak(8.3, 8.4) && !Y.erTak(0, 5), 'skjermens tak: bildet ligger på takten når det tar høyst 15 % mer (60 og 120 bilder i sekundet), ikke ellers');
 ok(!Y.nokTegninger(16.7, 2, 16.7) && !Y.nokTegninger(16.7, 4, 50) && Y.nokTegninger(16.7, 8, 66.8) && Y.nokTegninger(16.7, 64, 16.7), 'nok tegninger når bildet tar minst fire takter, eller ved 64');
+// hakk: oppsummeringen teller pausene, sorterer dem og deler dem etter hva som skjedde
+const ht = Y.hakkTekst(['RIKSBRUDD – MÅLING AV HAKK (20 s)'], [{ dt: 96, hva: 'bygging' }, { dt: 212, hva: 'bytte' }, { dt: 55, hva: 'ellers' }, { dt: 71, hva: 'bygging' }], 1100, 20).split('\n');
+ok(ht[0] === 'RIKSBRUDD – MÅLING AV HAKK (20 s)' && /Bilder: 1 100 på 20 s \(55 per sekund i snitt\)/.test(ht[2]) && /Pauser over 50 ms: 4 – den lengste 212 ms \(sum 434 ms\)/.test(ht[3]), 'hakk: antall bilder, antall pauser, den lengste og summen');
+ok(/da et nytt område ble satt inn: 1 \(lengste 212 ms\)/.test(ht[4]) && /mens et nytt område ble bygget: 2 \(lengste 96 ms\)/.test(ht[5]) && /ellers: 1 \(lengste 55 ms\)/.test(ht[6]) && /^De lengste: 212 ms \(bytte\), 96 ms \(bygging\), 71 ms \(bygging\), 55 ms \(ellers\)$/.test(ht[7]), 'hakk: pausene delt etter hva som skjedde, lengst først');
+ok(/Ingen pauser over 50 ms/.test(Y.hakkTekst([], [], 1200, 20)), 'hakk: uten pauser sier rapporten at bildet gikk jevnt');
 process.exit(feil ? 1 : 0);
