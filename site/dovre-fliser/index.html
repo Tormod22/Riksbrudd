@@ -1260,8 +1260,9 @@ async function bygg3d(cx, cy, S) {
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison && !window.Veg) u.lys = await gatelys3d(u);
   await pust(); await ryddHus(u); await pust();
   const skog = await skogmaske(u, b); await pust();
-  await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1)); u.bunn = bunnkart(px, TW, skog);
+  { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   for (const f of KROKER.bygg3d) { await pust(); await f(u, { px, TW, skog }); }
+  u.skygger = await treskygger(px, TW, u);
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
@@ -1827,16 +1828,50 @@ async function skogmaske(u, b) {
   return { W, m, v };
 }
 // Skogbunnen: mørkere og brunere (mose, lyng, barnål) enn engene, med myke overganger, så skog og åpen mark skiller seg tydelig.
-function skogbunn(px, TW, skog, rad0 = 0, rad1 = TW) {
-  const W = skog.W, st = W / TW, V = skog.v;
+// KRONEFLEKKER (15. nov, utseende: skogen så glissen ut ovenfra – trærne sto spredt på en glatt, grønn flate). Skogbunnen får mørkere,
+// runde flekker som skyggen under en trekrone (tett i tett, 2–3,6 m i radius), så rommet mellom 3D-trærne leses som skog. Flekkene
+// ligger fast i kartets meter (kart: { mpp, X0, Y1 }), hentes fra en ferdig flis på 48 m to ganger i ulik målestokk så mønsteret
+// ikke gjentar seg synlig, og er bare med når kartbildet er fint nok (høyst 1,7 m per punkt). Koster ingen trekanter.
+let KRONEFLIS = null;
+function kroneflis() {
+  if (KRONEFLIS) return KRONEFLIS;
+  const N = 256, M = 48, t = new Float32Array(N * N), s = N / M; let f = 20231115; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 52; k++) { const cx = rnd() * N, cy = rnd() * N, r = (2 + rnd() * 1.6) * s, styrke = .65 + rnd() * .35, r0 = Math.ceil(r);
+    for (let dy = -r0; dy <= r0; dy++) for (let dx = -r0; dx <= r0; dx++) { const d = Math.hypot(dx, dy) / r; if (d >= 1) continue;
+      const v = styrke * (1 - d * d) * (1 - d * d), q = (((Math.round(cy) + dy) % N + N) % N) * N + ((Math.round(cx) + dx) % N + N) % N; if (v > t[q]) t[q] = v; } }
+  return (KRONEFLIS = t);
+}
+function skogbunn(px, TW, skog, rad0 = 0, rad1 = TW, kart = null) {
+  const W = skog.W, st = W / TW, V = skog.v, K = kart && kart.mpp <= 1.7 ? kroneflis() : null, mpp = kart ? kart.mpp : 1, fa = 256 / 48, fb = 256 / 37;
   for (let y = rad0; y < rad1; y++) { const fy = Math.max(0, Math.min(W - 1.001, (y + .5) * st - .5)), j = Math.floor(fy), ty = fy - j, r0 = j * W, r1 = r0 + W;
+    const Ym = K ? kart.Y1 - (y + .5) * mpp : 0, ya = K ? (Math.floor(Ym * fa) & 255) * 256 : 0, yb = K ? (Math.floor(Ym * fb + 91) & 255) * 256 : 0;
     for (let x = 0; x < TW; x++) {
       const fx = Math.max(0, Math.min(W - 1.001, (x + .5) * st - .5)), i = Math.floor(fx), tx = fx - i;
       const a = V[r0 + i], b = V[r0 + i + 1], c = V[r1 + i], d = V[r1 + i + 1]; if (!(a | b | c | d)) continue;
       const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (B > R + 18 && B > G + 4) continue;
       const w = ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) / 255, l = (R + G + B) / 3;
-      px[q] = R + (l * .62 + 22 - R) * w; px[q + 1] = G + (l * .7 + 26 - G) * w; px[q + 2] = B + (l * .5 + 14 - B) * w;
+      let r = R + (l * .62 + 22 - R) * w, g = G + (l * .7 + 26 - G) * w, bl = B + (l * .5 + 14 - B) * w;
+      if (K) { const Xm = kart.X0 + (x + .5) * mpp, k1 = K[ya + (Math.floor(Xm * fa) & 255)], k2 = K[yb + (Math.floor(Xm * fb + 37) & 255)], m = 1 - KRONEMØRKE * w * (k1 > k2 ? k1 : k2);
+        r *= m; g *= m * 1.02; bl *= m; }
+      px[q] = r; px[q + 1] = g; px[q + 2] = bl;
     } }
+}
+const KRONEMØRKE = .3;
+// TRESKYGGER (15. nov): en myk, mørk flekk i bakken under hvert tre og hver busk, så de står i bakken og ikke oppå den. Tegnes etter
+// at alle krokene har ryddet trærne (hus, veger, kraftgater, hogst), rett i kartbildet. Radien følger trehøyden.
+async function treskygger(px, TW, u) {
+  const mpp = 2 * u.S / TW; if (mpp > 2.4) return 0;
+  let n = 0;
+  const mal = (data, faktor, styrke) => { if (!data) return;
+    for (let k = 0; k < data.length; k += 5) { const h = data[k + 3], r = Math.max(1.1, Math.min(4.6, h * faktor)) / mpp, cx = (data[k] + u.S) / mpp, cy = (u.S - data[k + 1]) / mpp, r0 = Math.ceil(r);
+      for (let dy = -r0; dy <= r0; dy++) { const y = Math.round(cy) + dy; if (y < 0 || y >= TW) continue;
+        for (let dx = -r0; dx <= r0; dx++) { const x = Math.round(cx) + dx; if (x < 0 || x >= TW) continue; const d2 = (dx * dx + dy * dy) / (r * r); if (d2 >= 1) continue;
+          const q = (y * TW + x) * 4, R = px[q], G = px[q + 1], B = px[q + 2]; if (B > R + 18 && B > G + 4) continue;   // ikke på vann
+          const m = 1 - styrke * (1 - d2) * (1 - d2); px[q] = R * m; px[q + 1] = G * m; px[q + 2] = B * m; } }
+      n++; } };
+  for (const art of Object.keys(u.trær || {})) { mal(u.trær[art], art === 'einer' ? .5 : .24, art === 'einer' ? .22 : .36); await pust(); }
+  if (u.smått) { mal(u.smått.busk, .9, .22); await pust(); }
+  return n;
 }
 function bunnkart(px, TW, skog) {
   const W = 512, st = TW / W, rgb = new Uint8Array(W * W * 3), gress = new Uint8Array(W * W);
