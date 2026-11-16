@@ -38,8 +38,15 @@ body.kort #letknapp{ bottom:calc(150px + env(safe-area-inset-bottom,0px)); font-
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
     logg(f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' Resten fikk ikke plass (lageret eller tankene er fulle).' : ''));
+    // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
+    let person = null;
+    if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {
+      const r = FolkRegler.rekrutter(FolkSpill.tilstand(), LeirSpill.tilstand(), () => true);
+      if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (LeirSpill.lagre) LeirSpill.lagre(); }
+      else logg('Du møtte en overlevende, men leiren har ingen ledig seng – vedkommende ble igjen.');
+    }
     if (window.MaalSpill) MaalSpill.sjekk(false);
-    return { f, fikk };
+    return { f, fikk, person };
   }
   function ramme(R) {
     const her = R.fot && window.Interior3d ? Interior3d.inne(R.bane.x, R.bane.y) : null; visLapp(her);

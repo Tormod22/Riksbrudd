@@ -11,5 +11,8 @@ ok(hus.tomme > .25 && hus.tomme < .45 && snitt('kirke', 300, 'mat').tomme > .6, 
 ok(L.funn('lager', 100000, 5).tre <= 6 * 6 + .1 && L.funn('hus', 1, 9).mat <= 9, 'store bygg gir høyst seks ganger et vanlig, små gir lite');
 ok(L.tid(40) === 5 && L.tid(5000) === 15 && L.tid(0) === 4, 'letetiden er 4–15 sekunder etter størrelsen');
 ok(L.tekst({ tomt: true }) === 'Huset var tomt – noen har vært her før.' && L.tekst({ mat: 12, tre: 1.5, betong: 0, stål: 0, diesel: 0, penger: 25000 }) === 'Du fant 12 rasjoner, 1,5 m³ tre og 25 000 kr.' && L.tekst({ mat: 1 }) === 'Du fant 1 rasjon.', 'teksten: ' + L.tekst({ mat: 12, tre: 1.5, penger: 25000 }));
+{ let n = 0, k = 0, b = 0; for (let i = 0; i < 4000; i++) { if (L.funn('hus', 100, i).person) n++; if (L.funn('kirke', 300, i).person) k++; if (L.funn('butikk', 300, i).person) b++; }
+  ok(n / 4000 > .04 && n / 4000 < .08 && k / 4000 > .11 && b === 0, `overlevende i ca. ${Math.round(n / 40)} % av boligene og ${Math.round(k / 40)} % av kirkene, ingen i butikker`);
+  ok(L.tekst({ tomt: true, person: true }) === 'Huset var tømt for alt av verdi.', 'tomt hus med en overlevende får egen tekst'); }
 ok(L.funn('ukjent', 100, 4) && typeof L.funn('ukjent', 100, 4).mat === 'number', 'ukjent klasse regnes som bolig');
 console.log(feil ? feil + ' FEIL' : 'alle letetestene ok'); process.exit(feil ? 1 : 0);
