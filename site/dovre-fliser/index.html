@@ -2176,6 +2176,7 @@ function gress3d() {
     if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
     // ikke inne i husene (det vokste gress opp gjennom gulvet da husene fikk interiør)
     if (u.husRute && hindring3d(x, y, u.husRute)) continue;
+    if (window.Interior3d && Interior3d.iLeirbygg(x, y)) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .14 + rnd() * .16 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
@@ -2489,6 +2490,8 @@ function bak3d() {   // tåke + siktfelt i tåkebildet (se TAAKE_U) – kartbild
 }
 function proj3(X, Y) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
+  // inne i et hus (spill/interior3d.js) vises ingen navn og merker fra kartet – de sto tvers gjennom veggene
+  if (R3.fot && window.Interior3d && Interior3d.inne(R3.bane.x, R3.bane.y)) return null;
   const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
   if (bakÅs(v) || bakHus(v)) return null;
   v.project(R3.cam);
@@ -2817,7 +2820,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=e8c4b2d5e1"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=462adc1682"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=fc85f2f379"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -2843,7 +2846,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=3be9c3f6e9"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=859f7172c9"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=d29d05d1e8"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=f4fafad5ff"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
@@ -2866,8 +2869,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dyr3d.js?v=a6d8beb636"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
-<script src="/dovre-fliser/spill/interior.js?v=1f0f172569"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=f3666a5717"></script>
+<script src="/dovre-fliser/spill/interior.js?v=a8f9cf468f"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=198f856141"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
@@ -2876,7 +2879,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/leting.js?v=7d0e944ad5"></script>
-<script src="/dovre-fliser/spill/leting-visning.js?v=958071fcbc"></script>
+<script src="/dovre-fliser/spill/leting-visning.js?v=b6c22a768b"></script>
 <script src="/dovre-fliser/spill/maal.js?v=ab171189c4"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=b0ce7f875d"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=df7b52ade5"></script>

@@ -20,10 +20,10 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   const knapp = document.createElement('button'); knapp.id = 'letknapp'; knapp.type = 'button'; knapp.innerHTML = '<i></i><span></span>'; document.body.appendChild(knapp);
   // merkelappen under knappen: hva slags bygg du står i, og om det er gjennomsøkt
   const lapp = document.createElement('div'); lapp.id = 'innelapp'; document.body.appendChild(lapp);
-  const NAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Leilighetsbygg', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Garasje eller uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal' };
+  const NAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Leilighetsbygg', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Garasje eller uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal', brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet' };
   let funnTil = 0;
   const visFunn = t => { lapp.textContent = t; lapp.classList.add('på', 'funn'); funnTil = performance.now() + 5000; };
-  const visLapp = P => { if (performance.now() < funnTil) return; lapp.classList.remove('funn'); if (!P || !P.bygg) { lapp.classList.remove('på'); return; } const t = (NAVN[P.bygg.kl] || 'Bygg') + (klar ? (lett.has(P.bygg.i) ? ' · gjennomsøkt' : ' · ikke gjennomsøkt') : ''); if (lapp.textContent !== t) lapp.textContent = t; lapp.classList.add('på'); };
+  const visLapp = P => { if (performance.now() < funnTil) return; lapp.classList.remove('funn'); if (!P || !P.bygg) { lapp.classList.remove('på'); return; } const t = P.leir ? (P.leir === 'sykestue' ? 'Sykestua' : NAVN[P.bygg.kl] || 'Leiren') : (NAVN[P.bygg.kl] || 'Bygg') + (klar ? (lett.has(P.bygg.i) ? ' · gjennomsøkt' : ' · ikke gjennomsøkt') : ''); if (lapp.textContent !== t) lapp.textContent = t; lapp.classList.add('på'); };
   const tekst = t => { const s = knapp.querySelector('span'); if (s.textContent !== t) s.textContent = t; }, fyll = a => { knapp.querySelector('i').style.width = Math.round(a * 100) + '%'; };
   const arealAv = P => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; };
   // Det som ble funnet, legges til leiren. Gir det som faktisk kom med (lageret og tankene har tak).
@@ -62,14 +62,14 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   function ramme(R) {
     const her = R.fot && window.Interior3d ? Interior3d.inne(R.bane.x, R.bane.y) : null; visLapp(her);
     const P = klar ? her : null;
-    if (!P || !P.bygg || lett.has(P.bygg.i)) { if (jobb) jobb = null; knapp.classList.remove('på'); return; }
+    if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) { if (jobb) jobb = null; knapp.classList.remove('på'); return; }
     knapp.classList.add('på');
     if (!jobb || jobb.P !== P) { if (jobb) jobb = null; tekst('Let gjennom huset'); fyll(0); return; }
     const a = (performance.now() - jobb.start) / (jobb.sek * 1000);
     if (a >= 1) { jobb = null; knapp.classList.remove('på'); ferdig(P); return; }
     tekst('Leter … ' + Math.ceil(jobb.sek * (1 - a)) + ' s'); fyll(a);
   }
-  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (!P || !P.bygg || lett.has(P.bygg.i)) return;
+  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) return;
     jobb = { P, start: performance.now(), sek: Leting.tid(arealAv(P)) }; });
   // E på tastaturet gjør det samme som knappen
   window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });

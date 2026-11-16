@@ -246,6 +246,8 @@
   // tillegg nøyaktig avstand til vegene, u.vegNær), ikke i jernbanesporet (u.påBane fra bane3d.js) og ikke inntil husveggene (12. nov: blomster på fortauet og
   // helt inn til veggene, bregner mellom svillene).
   function fri(u, x, y) {
+    // ikke inne i leirens egne bygg (spill/interior3d.js)
+    if (window.Interior3d && Interior3d.iLeirbygg(x, y)) return false;
     if (iVann(u, x, y) || (u.vegNær && u.vegNær(x, y, .3)) || (u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
     return !(u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y));
   }

@@ -1,7 +1,7 @@
 // Leting i hus (site/dovre-fliser/spill/leting.js)
 const L = require('../../site/dovre-fliser/spill/leting.js'), I = require('../../site/dovre-fliser/spill/interior.js');
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
-ok(Object.keys(I.KLASSE).every(k => L.KLASSER[k]), 'alle byggklassene i interiøret har funn');
+ok(Object.keys(I.KLASSE).every(k => I.KLASSE[k].leir || L.KLASSER[k]), 'alle byggklassene fra kartet har funn (leirens egne bygg letes det ikke i)');
 ok(JSON.stringify(L.funn('butikk', 400, 77)) === JSON.stringify(L.funn('butikk', 400, 77)), 'samme bygg gir samme funn');
 const snitt = (kl, A, slag) => { let s = 0, tomme = 0; for (let i = 0; i < 2000; i++) { const f = L.funn(kl, A, i * 7 + 3); s += f[slag]; if (f.tomt) tomme++; } return { s: s / 2000, tomme: tomme / 2000 }; };
 const but = snitt('butikk', 400, 'mat'), hus = snitt('hus', 120, 'mat'), ind = snitt('industri', 800, 'stål'), kir = snitt('kirke', 300, 'mat');

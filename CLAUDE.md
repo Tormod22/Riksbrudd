@@ -845,3 +845,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   og inngangsmerket i 3D sier «Inngang ✓». Meldingen etter en leting sier hva som ble igjen og hvorfor (ingen tank / fullt lager).
   HELE FLYTEN er prøvd på /norge med ekte data (scratchpad inne/flyt.js: nytt spill ved 15607 6622779, 3D, Gå, seks bygg –
   alle ble gått inn i og gjennomsøkt, funnet lå i leiren, 0 feil).
+  (22) INTERIØR I LEIRENS BYGG (16. nov: «alle bygg» gjelder også leiren): LEIRBYGG i interior3d.js – brakke, kontrollrom,
+  sykestue og kjøkken (kroppen av modellen, døra der modellen har sin, grunnmurens høyde). Hvert ferdige bygg får et omriss P med
+  P.leir, P.gulvFast, P.veggTopp, P.dør og P.bygg (i = 9 000 000 + byggets id) og legges i R.hindre (leirbygg(R, u), synkes når
+  byggene eller utsnittet endres) – byggene stopper deg altså nå når du går mot veggen. Nye klasser i Interior.KLASSE (leir: true):
+  brakke (køyesenger, ovn), kontrollrom (kartbord, pulter, radio, tavle), storkjøkken (benk, komfyrer, langbord); sykestua bruker
+  «sykehus». Modellene i modeller.js tegnes bare utenfra (FrontSide), så veggene er borte sett innenfra. Ingen leting i leirens
+  bygg. Interior3d.iLeirbygg(x, y): gress3d og vegetasjon3d setter ikke planter der. Navn og merker fra kartet (proj3) vises
+  ikke mens du står inne i et hus. IKKE MED: verksted, lagertelt, container, drivhus og byggesettets egne hus.
+  VAKT «interiør i leirens bygg». Bilder: scratchpad inne/leir.js.

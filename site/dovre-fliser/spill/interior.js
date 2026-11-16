@@ -20,6 +20,8 @@
     butikk: { hall: true, bakrom: .2, tak: 3.4 }, industri: { hall: true, bakrom: .18, tak: 0 }, lager: { hall: true, bakrom: .12, tak: 0 },
     låve: { hall: true, tak: 0 }, uthus: { hall: true, tak: 2.3 }, kirke: { hall: true, tak: 0 }, hangar: { hall: true, tak: 0 },
     terminal: { hall: true, bakrom: .15, tak: 0 },
+    // byggene i spillerens egen leir (spill/interior3d.js LEIRBYGG) – ikke bygg fra kartet
+    brakke: { hall: true, tak: 2.5, leir: true }, kontrollrom: { hall: true, tak: 2.6, leir: true }, storkjøkken: { hall: true, tak: 2.5, leir: true },
   };
   // møbler: [bredde langs veggen, dybde, høyde, sperrer (du kan ikke gå gjennom)]
   const MØBLER = {
@@ -38,6 +40,7 @@
     bil: [1.8, 4.3, 1.45, 1], vedstabel: [1.8, .45, 1.1, 1], hylle: [1.2, .4, 1.8, 1],
     kirkebenk: [3, .5, .9, 1], alter: [2, .8, 1, 1], prekestol: [.9, .9, 1.4, 1],
     fly: [9, 7, 2.6, 1], verktøyvogn: [.9, .5, .9, 1], seterad: [2.4, .6, .85, 1],
+    køyeseng: [.95, 2.05, 1.75, 1], ovn: [.6, .6, 1, 1], kartbord: [2.4, 1.4, .9, 1], radio: [1.2, .5, 1.3, 1], langbord: [2.6, .9, .75, 1],
   };
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   function inni(P, X, Y) { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; }
@@ -138,6 +141,7 @@
     else if (kl === 'kirke') innRom.rolle = 'kirke';
     else if (kl === 'hangar') innRom.rolle = 'hangar';
     else if (kl === 'terminal') { innRom.rolle = 'terminal'; for (const r of andre) r.rolle = 'kontor'; }
+    else if (kl === 'brakke' || kl === 'kontrollrom' || kl === 'storkjøkken') innRom.rolle = kl;
   }
 
   // Møblene. Et møbel står med ryggen mot en romvegg (side 0: v0, 1: u1, 2: v1, 3: u0) eller fritt i rommet; a = retningen
@@ -225,6 +229,12 @@
           rutenett(r, 'kirkebenk', { b: bb, du: iU ? 1.25 : bb + 1.4, dv: iU ? bb + 1.4 : 1.25, mU: iU ? 3.5 : 1, mV: iU ? 1 : 3.5, langsU: !iU, snu: fjern === 1 || fjern === 2, maks: 44, fri: .9,
             hopp: (a, b) => Math.abs((iU ? b : a) - midt) < .75 }); etSted(r, 'prekestol', { fri: .6 }, [fjern]); break; }
         case 'hangar': { if (lu > 14 && lv > 12) prøv(r, 'fly', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { fri: 2 }); for (let k = 0; k < 4; k++) etSted(r, k % 2 ? 'verktøyvogn' : 'arbeidsbenk'); break; }
+        // leirens bygg: brakka har køyesenger langs langveggene, kontrollrommet kartbord og radio, kjøkkenet benker og langbord
+        case 'brakke': { for (let k = 0; k < Math.min(12, Math.floor(A / 6)); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
+        case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
+          for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); break; }
+        case 'storkjøkken': { etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(lu, lv) - 2) }, lang); etSted(r, 'komfyr'); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); etSted(r, 'kjøleskap'); etSted(r, 'hylle');
+          rutenett(r, 'langbord', { du: lu >= lv ? 3.4 : 2.4, dv: lu >= lv ? 2.4 : 3.4, mU: 1.6, mV: 1.6, langsU: lu >= lv, maks: 3, fri: 1.2 }); break; }
         case 'terminal': { rutenett(r, 'seterad', { du: lu >= lv ? 3.4 : 2.2, dv: lu >= lv ? 2.2 : 3.4, mU: 3, mV: 3, langsU: lu >= lv, maks: 30, fri: 2 }); etSted(r, 'skranke'); etSted(r, 'skranke'); break; }
       }
     }
