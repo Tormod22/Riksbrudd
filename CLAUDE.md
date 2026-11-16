@@ -841,3 +841,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (KROKER.tegn3d). Et nytt spill uten nådde mål får et tips i loggen om Leir-menyen (ikke i testene).
   (20) FOTOMODUS: spill/foto.js – «Fotomodus» i ☰ (tast U) setter body.foto, som skjuler alt utenom lerretene; #fotoav, Esc eller U
   henter menyene tilbake. Navnene i 3D (overlegget c3o) skjules også; lagsymbolene i 2D tegnes i kartet og står.
+  (21) GJENNOMSØKTE HUS: LeteSpill.lett() er en Map (byggets nummer -> [x, y] i kartet); 2D viser en hake på dem når kam.m ≤ 4,
+  og inngangsmerket i 3D sier «Inngang ✓». Meldingen etter en leting sier hva som ble igjen og hvorfor (ingen tank / fullt lager).
+  HELE FLYTEN er prøvd på /norge med ekte data (scratchpad inne/flyt.js: nytt spill ved 15607 6622779, 3D, Gå, seks bygg –
+  alle ble gått inn i og gjennomsøkt, funnet lå i leiren, 0 feil).

@@ -4,10 +4,11 @@
 // lageret (så langt det er plass), diesel til tankene (så langt det er plass) og penger til kassa. Byggene du har lett i,
 // huskes per leir (localStorage «riksbrudd-leting»). På smale skjermer står knappen over styrespaken (den lå delvis oppå den). Lastes etter interior3d.js, leir-visning.js og folk-visning.js.
 (function () {
-  const NØKKEL = 'riksbrudd-leting'; let lett = new Set(), leirId = '', klar = false, jobb = null;
+  // lett: byggets nummer -> [x, y] i kartet (til merket i 2D); eldre lagringer har bare numrene
+  const NØKKEL = 'riksbrudd-leting'; let lett = new Map(), leirId = '', klar = false, jobb = null;
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
-  const les = () => { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); lett = new Set(d && d.leir === leirId ? d.hus : []); } catch (e) { lett = new Set(); } };
-  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, hus: [...lett].slice(-4000) })); } catch (e) { /* fullt eller sperret */ } };
+  const les = () => { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); lett = new Map((d && d.leir === leirId ? d.hus : []).map(h => Array.isArray(h) ? [h[0], [h[1], h[2]]] : [h, null])); } catch (e) { lett = new Map(); } };
+  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, hus: [...lett].slice(-4000).map(([i, p]) => p ? [i, Math.round(p[0]), Math.round(p[1])] : i) })); } catch (e) { /* fullt eller sperret */ } };
   const css = document.createElement('style');
   css.textContent = `#letknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:210px; min-height:44px; padding:6px 18px;
   background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; overflow:hidden; }
@@ -41,7 +42,8 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
       else d.push(`${tall(rest)} ${m === 'stål' ? 't' : 'm³'} ${m} ble igjen (lageret er fullt)`); }
     return d.length ? d.join(', ').replace(/^./, c => c.toUpperCase()) + '.' : ''; }
   function ferdig(P) {
-    const f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i), fikk = ta(f); lett.add(P.bygg.i); lagre();
+    const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
+    const f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i), fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
     const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) : '');
@@ -72,8 +74,13 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   // E på tastaturet gjør det samme som knappen
   window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });
   KROKER.ramme3d.push(ramme);
+  // 2D: et lite merke på husene du har lett gjennom (når kartet er nært nok til å se husene)
+  KROKER.tegn.push((g, vx0, vy1) => { if (!klar || !lett.size || kam.m > 4) return; g.save(); g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const p of lett.values()) { if (!p) continue; const [x, y] = tilSkjerm(p[0], p[1], vx0, vy1); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
+      g.fillStyle = 'rgba(22,18,12,.78)'; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); g.strokeStyle = '#9fc46a'; g.lineWidth = 1; g.stroke(); g.fillStyle = '#9fc46a'; g.fillText('✓', x, y + .5); }
+    g.restore(); });
   setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); } }, 500);
   function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.LeteSpill = { start, ferdig, ta, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Set(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
+  window.LeteSpill = { start, ferdig, ta, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
 })();

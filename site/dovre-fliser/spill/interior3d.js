@@ -409,12 +409,13 @@
     aktive.set(best, o); best.inne = o.plan;
   }
   KROKER.ramme3d.push(R => oppdater(R));
-  // INNGANGENE: når du går ute, får dørene på de nærmeste byggene (innen 28 m) et lite merke «Inngang», så du ser hvor du går inn
+  // INNGANGENE: når du går ute, får dørene på de nærmeste byggene (innen 28 m) et lite merke «Inngang» (med hake når huset er gjennomsøkt), så du ser hvor du går inn
   KROKER.tegn3d.push((g, proj3) => { const R = r3(); if (!R || !R.fot || !R.ut || !aktive.size) return; const x = R.bane.x, y = R.bane.y; if (inne(x, y)) return;
-    const L = []; for (const [, o] of aktive) { const I = o.plan.inngang, d = Math.hypot(I.x - x, I.y - y); if (d < 28 && d > 1.5) L.push([d, I]); }
+    const sett = window.LeteSpill ? LeteSpill.lett() : null;
+    const L = []; for (const [P, o] of aktive) { const I = o.plan.inngang, d = Math.hypot(I.x - x, I.y - y); if (d < 28 && d > 1.5) L.push([d, I, !!(sett && P.bygg && sett.has(P.bygg.i))]); }
     L.sort((a, b) => a[0] - b[0]); g.save(); g.font = '600 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    for (const [d, I] of L.slice(0, 3)) { const p = proj3(R.ut.cx + I.x + I.nx * .7, R.ut.cy + I.y + I.ny * .7); if (!p) continue;
-      const py = p[1] - Math.min(120, 900 / Math.max(3, d)), t = 'Inngang', w = g.measureText(t).width + 14; g.globalAlpha = d < 6 ? .95 : .78;
+    for (const [d, I, lett] of L.slice(0, 3)) { const p = proj3(R.ut.cx + I.x + I.nx * .7, R.ut.cy + I.y + I.ny * .7); if (!p) continue;
+      const py = p[1] - Math.min(120, 900 / Math.max(3, d)), t = lett ? 'Inngang ✓' : 'Inngang', w = g.measureText(t).width + 14; g.globalAlpha = d < 6 ? .95 : .78;
       g.fillStyle = 'rgba(28,23,15,.85)'; g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.beginPath(); g.rect(p[0] - w / 2, py - 9, w, 18); g.fill(); g.stroke();
       g.beginPath(); g.moveTo(p[0] - 5, py + 9); g.lineTo(p[0], py + 15); g.lineTo(p[0] + 5, py + 9); g.closePath(); g.fillStyle = '#c9b26a'; g.fill();
       g.fillStyle = '#f0e2b0'; g.fillText(t, p[0], py + .5); }
