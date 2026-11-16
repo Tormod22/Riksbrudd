@@ -903,6 +903,17 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const hfas = hs.s ? Object.keys(hs.s.fasader) : [], hok = hs.s && hs.s.bygg >= 50 && (hs.s.tak.valm || 0) + (hs.s.tak.mansard || 0) > 0 && hs.s.utenTak === 0 && hfas.length >= 5 && hfas.some(n => ['murgard', 'tegl', 'funkis', 'plate'].includes(n)) && Object.values(hs.glass).every(v => v >= 3);
     if (!hok) feil++;
     console.log(`${hok ? 'ok  ' : 'FEIL'} ${navn} byhus: ${hs.s && hs.s.bygg} bygg, uten tak ${hs.s && hs.s.utenTak}, fasader ${JSON.stringify(hs.s && hs.s.fasader)}, tak ${JSON.stringify(hs.s && hs.s.tak)}, glass i teksturene (%) ${JSON.stringify(hs.glass)}`);
+    // VAKT ☰-menyen (spill/meny.js, brukeren 16. nov: «forbedre menyene»): knappene står i grupper med overskrift, av/på-knappene er
+    // brytere som virker, valgene har samme tekst som før («Navn: verdi»), og menyen lukkes med Esc.
+    const mny = await pg.evaluate(async () => { const m = document.getElementById('lagmeny'), åpner = document.getElementById('meny'); if (!m.classList.contains('på')) åpner.click();
+      const alle = [...m.querySelectorAll('button')].filter(b => !b.closest('.mtopp')), sk = [...m.querySelectorAll('section button.bryter')].find(b => b.textContent === 'Skygge'), før = VIS.skygge;
+      sk.click(); const av = sk.classList.contains('av') && VIS.skygge === !før; sk.click();
+      const ut = { grupper: m.querySelectorAll('section h3').length, løse: alle.filter(b => !b.closest('section') && !b.classList.contains('fare')).length, brytere: m.querySelectorAll('button.bryter').length,
+        valg: [...m.querySelectorAll('button.valg')].map(b => b.textContent), bryter: av && VIS.skygge === før, bredde: m.getBoundingClientRect().right <= innerWidth + 1 };
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); ut.lukket = !m.classList.contains('på'); return ut; });
+    const mnyok = mny.grupper >= 4 && mny.løse === 0 && mny.brytere >= 10 && mny.valg.length >= 3 && mny.valg.every(t => /^[^:]+: .+/.test(t)) && mny.bryter && mny.bredde && mny.lukket;
+    if (!mnyok) { feil++; console.log(JSON.stringify(mny)); }
+    console.log(`${mnyok ? 'ok  ' : 'FEIL'} ${navn} ☰-menyen: ${mny.grupper} grupper, ${mny.brytere} brytere, ${mny.valg.length} valg («${mny.valg[0]}»), bryteren virker, Esc lukker`);
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
     // et prøvehus (10 × 8 m, dør midt på sørveggen) legges i utsnittet. Når du går, får det interiør med flere rom og møbler; du kan
     // gå inn gjennom døra og står da på gulvet, ytterveggen stopper deg ved siden av døra, og alt ryddes bort når du flyr opp.
