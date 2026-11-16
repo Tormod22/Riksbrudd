@@ -86,10 +86,10 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   // E på tastaturet gjør det samme som knappen
   window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });
   KROKER.ramme3d.push(ramme);
-  // 2D: et lite merke på husene du har lett gjennom (når kartet er nært nok til å se husene)
+  // 2D: et lite merke på husene du har lett gjennom (når kartet er nært nok til å se husene); gult + der noe ligger igjen
   KROKER.tegn.push((g, vx0, vy1) => { if (!klar || !lett.size || kam.m > 4) return; g.save(); g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const p of lett.values()) { if (!p) continue; const [x, y] = tilSkjerm(p[0], p[1], vx0, vy1); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
-      g.fillStyle = 'rgba(22,18,12,.78)'; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); g.strokeStyle = '#9fc46a'; g.lineWidth = 1; g.stroke(); g.fillStyle = '#9fc46a'; g.fillText('✓', x, y + .5); }
+      g.fillStyle = 'rgba(22,18,12,.78)'; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); const f = p[2] ? '#e0b24a' : '#9fc46a'; g.strokeStyle = f; g.lineWidth = 1; g.stroke(); g.fillStyle = f; g.fillText(p[2] ? '+' : '✓', x, y + .5); }
     g.restore(); });
   setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); } }, 500);
   function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; }
