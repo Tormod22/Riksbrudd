@@ -213,7 +213,7 @@
   }
   KROKER.tegn.push((g, vx0, vy1) => {
     if (forslag) { const [x, y] = tilSkjerm(forslag.x, forslag.y, vx0, vy1); tegnLeir(g, x, y, forslag.ok, forslag.ok ? 'Leiren her?' : null); }
-    else if (S && S.leir) { const [x, y] = tilSkjerm(S.leir.x, S.leir.y, vx0, vy1); if (x > -60 && y > -60 && x < VW + 60 && y < VH + 60) tegnLeir(g, x, y, true, S.fraksjon.navn); }
+    else if (S && S.leir) { const [x, y] = tilSkjerm(S.leir.x, S.leir.y, vx0, vy1); if (x > -60 && y > -60 && x < VW + 60 && y < VH + 60) tegnLeir(g, x, y, true, S.fraksjon.navn + (typeof leirTillegg === 'function' ? leirTillegg() : '')); }
   });
   KROKER.tegn3d.push((g, proj3) => {
     if (!S || !S.leir) return; const p = proj3(S.leir.x, S.leir.y); if (!p) return;

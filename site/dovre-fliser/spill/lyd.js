@@ -58,6 +58,7 @@
     kanal('innsjø', 'bandpass', 700, 1.2); kanal('regn', 'highpass', 1800, .3); kanal('regnLav', 'lowpass', 900, .4); kanal('by', 'lowpass', 160, .6, true);
   }
   // korte lyder: støyslag (fottrinn, torden) og fløytetoner (fugler, måker)
+  let sistInne = null;
   function slag(t0, varighet, type, frekv, Q, styrke, brunt, opp) {
     const k = ac.createBufferSource(); k.buffer = brunt ? brun : støy; const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = frekv; f.Q.value = Q;
     const g = ac.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(styrke, t0 + (opp || .006)); g.gain.exponentialRampToValueAtTime(.0005, t0 + varighet);
@@ -140,6 +141,8 @@
         const inne = window.Interior3d && Interior3d.inne(x, y);
         const und = inne ? 'gulv' : V.årstid === 'vinter' || (V.snøgrense != null && V.snøgrense < c.z + u.h0) ? 'snø' : u.påVeg && u.påVeg(x, y) ? (u.vegType ? u.vegType(x, y) : 'grus') : 'gress';
         fottrinn(nå + .01, und, Math.min(1, .5 + fart * .1)); NV.sisteSkritt = und; } } else steg = .7; }
+    // døra: en liten knirk og et dunk når du går inn i eller ut av et hus
+    { const inneNå = !!(R.fot && window.Interior3d && Interior3d.inne(c.x, c.y)); if (sistInne !== null && inneNå !== sistInne) { tone(nå + .01, .22, 420, 300, .035, 'triangle'); slag(nå + .2, .12, 'lowpass', 260, 1.4, .3, true); NV.dør = (NV.dør || 0) + 1; } sistInne = R.fot ? inneNå : null; }
     sistPos = { x: c.x, y: c.y };
   });
   // 2D: lyden tones ned (spillet viser kartet), og den hviler når fanen er skjult

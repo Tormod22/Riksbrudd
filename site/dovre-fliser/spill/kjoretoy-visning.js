@@ -156,6 +156,7 @@
     navn(g, k, x, y - 16);
   }
   function navn(g, k, x, y) {
+    if (typeof navnSynlig === 'function' && !navnSynlig(k)) return;
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
     if (window.Etikett) y = Etikett.tekst(g, k.navn, x, y, -1);   // ikke oppå navnet til et annet kjøretøy eller lag
     g.strokeText(k.navn, x, y); g.fillStyle = '#e7dcc3'; g.fillText(k.navn, x, y);

@@ -921,6 +921,7 @@ function tegnLag(g, proj, mPer) {
       g.beginPath(); g.rect(px - r, py - r * .7, r * 2, r * 1.4); g.fill(); g.stroke();
       g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - r, py - r * .7); g.lineTo(px + r, py + r * .7); g.moveTo(px + r, py - r * .7); g.lineTo(px - r, py + r * .7); g.stroke();
     }
+    if (!navnSynlig(s)) continue;
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
     const ty0 = py - (m < 1.6 ? Math.max(14, 30 / m) : 16), ty = window.Etikett ? Etikett.tekst(g, s.navn, px, ty0, -1) : ty0; g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
   }
@@ -937,6 +938,14 @@ function tegnTåke() {
   for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s) && !KROKER.skjul.some(f => f(s))) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); g.drawImage(s.sikt.c, sx, sy, s.sikt.w / kam.m, s.sikt.h / kam.m); }
   g.globalCompositeOperation = 'source-over'; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tåkeC, 0, 0); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+// NAVN I KARTET LANGT UTE (16. nov: ved start sto ni navn i en stabel over leiren). Når kartet er zoomet ut (over 14 m per punkt),
+// skrives ikke navnet på egne lag og kjøretøy som står ved leiren (innen 2,5 km) – leirens navn får i stedet «· 5 lag, 4 kjøretøy».
+// Det valgte laget, og alt som er ute på oppdrag, har navnet sitt som før.
+const NAVN_UTE = 14, NAVN_RADIUS = 2500;
+function vedLeiren(o) { const S = window.OppstartSpill && OppstartSpill.tilstand(); return !!(S && S.leir) && Math.hypot(o.x - S.leir.x, o.y - S.leir.y) < NAVN_RADIUS; }
+function navnSynlig(o) { return !(kam.m > NAVN_UTE && o !== valgt && o.side === 'blå' && vedLeiren(o)); }
+function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER.filter(e => e.side === 'blå' && e !== valgt && levende(e) && vedLeiren(e)).length, kj = (window.KJORETOY || []).filter(k => k.side === 'blå' && k !== valgt && vedLeiren(k)).length;
+  return lag || kj ? ' · ' + [lag ? lag + ' lag' : '', kj ? kj + ' kjøretøy' : ''].filter(Boolean).join(', ') : ''; }
 function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 
 function trykkPå(cx, cy) {
@@ -2787,7 +2796,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/etikett.js?v=cc36a2f4dc"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=c03d688ed7"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=a400560b02"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=949e3ce012"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=6c371b476f"></script>
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
@@ -2827,7 +2836,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=eebfdb4b4c"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
-<script src="/dovre-fliser/spill/lyd.js?v=4e0c5d6821"></script>
+<script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=3be9c3f6e9"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=859f7172c9"></script>
@@ -2837,7 +2846,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
 <script src="/dovre-fliser/spill/leir.js?v=ea634fc8ba"></script>
 <script src="/dovre-fliser/spill/folk.js?v=dbf60ee478"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=10273c8e80"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=126bde7fdc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=dd6c2e80f7"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=b8c245ccd5"></script>
@@ -2863,11 +2872,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/leting.js?v=7d0e944ad5"></script>
-<script src="/dovre-fliser/spill/leting-visning.js?v=ac0d18bccd"></script>
+<script src="/dovre-fliser/spill/leting-visning.js?v=5dee3a2019"></script>
 <script src="/dovre-fliser/spill/maal.js?v=ab171189c4"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=b3995d7c04"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=df7b52ade5"></script>
-<script src="/dovre-fliser/spill/panelpynt.js?v=01b318747d"></script>
+<script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/meny.js?v=ab654166f5"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=e91ff52dbf"></script>
 <script src="/dovre-fliser/spill/taster.js?v=3c8f162307"></script>

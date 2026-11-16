@@ -34,5 +34,14 @@
   }
   new MutationObserver(pynt).observe(sub, { childList: true, characterData: true, subtree: true });
   new MutationObserver(pynt).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  // STATUSLINJA øverst: tallene for folk, kassa og strøm kan trykkes på (på telefon finnes det ingen hjelpetekst å holde over):
+  // folk åpner Folk, kassa åpner Leir-menyen på Lager (der pengene brukes), strøm åpner Leir-menyen på Bygg.
+  const stats = document.querySelector('.stats');
+  if (stats) { const css2 = document.createElement('style'); css2.textContent = '.stats>div.trykk{ cursor:pointer; } .stats>div.trykk:hover b{ text-decoration:underline; text-decoration-thickness:1px; }'; document.head.appendChild(css2);
+    const MÅL = { sFolk: () => { if (window.FolkSpill) FolkSpill.åpne(true); }, sPenger: () => åpneLeir('lager'), sStrom: () => åpneLeir('bygg') };
+    const åpneLeir = fane => { const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (!m || !lk || !window.LeirSpill || !LeirSpill.tilstand()) return; if (!m.classList.contains('på')) lk.click(); if (LeirSpill.fane) LeirSpill.fane(fane); };
+    const merk = () => { for (const id of Object.keys(MÅL)) { const b = document.getElementById(id); if (b && b.parentNode && !b.parentNode.classList.contains('trykk')) { b.parentNode.classList.add('trykk'); b.parentNode.setAttribute('role', 'button'); } } };
+    merk(); window.addEventListener('riksbrudd-spill', () => setTimeout(merk, 300));
+    stats.addEventListener('click', e => { const d = e.target.closest && e.target.closest('.stats>div'); if (!d) return; for (const [id, f] of Object.entries(MÅL)) if (d.querySelector('#' + id)) { f(); return; } }); }
   window.Panelpynt = { pynt };
 })();
