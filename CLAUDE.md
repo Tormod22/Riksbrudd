@@ -793,3 +793,23 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   karm, sprosser, vinduspost og gardiner; taklamper (lysrør i haller); skygge under møblene og langs veggene; teppe under
   salongbordet; bilder på skilleveggene. Møblene (deler(m)) har flere deler og egne stoffer, runde deler som åttekanter.
   Hvitmalt tre tegnes uten årer. Ca. 5000 trekanter for et lite hus. Lyset følger NATT.mørke (lampene sterkere om natta).
+  NATTARBEID 16. NOV (brukeren: «fortsett og utbedre fram til 07:50 – flere funksjoner og forbedre det som er, f.eks. menyene»):
+  (1) ☰-MENYEN: spill/meny.js (lastes etter alle moduler med knapper i menyen) flytter knappene i #lagmeny inn i grupper (GRUPPER:
+  Kartet, Oversikt, Vær og årstid, Bilde og lyd, Måling; ukjente havner under «Annet», «Nytt spill» nederst), av/på-knappene
+  (klassen «av» som før) får en bryter, valgene («Navn: verdi») vises med navnet til venstre og verdien til høyre – kolonet står
+  igjen skjult, så textContent er uendret –, Esc og trykk utenfor lukker. En ny knapp i menyen: legg navnet inn i GRUPPER.
+  (2) LEIR-MENYEN (leir-visning.js visMeny): status som fire fliser (.flis), fanene Bygg / Lager / Plan / Mål (variabelen fane,
+  LeirSpill.fane(id)); alt ligger fortsatt i siden, og det som ikke hører til fanen, er skjult (data-fane, hidden). Fanen bestemmes
+  av overskriften (h3) foran: «Materialer …» = lager, «Byggelag» og «Byggesett» = bygg, «Planlegg …» = plan, «Mål» = mål; det som
+  har klassen «fast», står alltid over fanene. LEIR_MENY-tillegg uten kjent overskrift følger fanen foran seg.
+  (3) MÅL: spill/maal.js (regler, test_maal.js) + maal-visning.js – 14 mål i fire kapitler (Få leiren i gang, Få oversikt, Lev av
+  landet, Ut i verden), lest fra et øyeblikksbilde hvert annet sekund (MaalSpill.bilde), huskes per leir («riksbrudd-maal»),
+  «Neste mål» over fanene, melding i loggen. Målene er Claudes forslag.
+  (4) PANELET nede til venstre: spill/panelpynt.js gjør statuslinja (#psub, «a · b · c») om til brikker (skilletegnene står igjen
+  skjult) og gir et valgt lag målere for styrke og ammunisjon (#pmaal).
+  (5) LETING I HUS: spill/leting.js (regler, test_leting.js: Leting.funn(kl, areal, i) – mat, tre, betong, stål, diesel, penger
+  eller tomt, fast per bygg) + leting-visning.js: inne i et bygg (Interior3d.inne) kommer #letknapp «Let gjennom huset» (E),
+  4–15 s, funnet legges i leiren (FolkSpill mat, Leir.leggInn, L.drivstoff opp til tankene, OppstartSpill.gi), huskes per leir
+  («riksbrudd-leting»). Mengdene er Claudes forslag. VAKTER i sjekk.js: «☰-menyen», «Leir-menyen og målene», «leting i hus».
+  KONTROLL I KOPI: scratchpad snapsjekk.sh <navn> <port> [profil] kopierer site/ og pipeline/ og kjører sjekk.js der, så
+  arbeidstreet kan endres imens. PC-profilen alene tar nå over ti minutter.

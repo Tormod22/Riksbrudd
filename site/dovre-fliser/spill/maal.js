@@ -2,7 +2,7 @@
  * Brukeren 16. nov: «legg til flere funksjoner og forbedre det som allerede er … om noe er uklart». En kort liste over hva du kan
  * gjøre nå, i fire kapitler, så en ny spiller ser hva som er neste steg. Hvert mål leser et øyeblikksbilde T av spillet
  * (laget av spill/maal-visning.js): bygg (ferdige bygg per type), strøm, diesel, folk, tre (m³ på lager), hogd, revet,
- * tettsteder (dine), i3d, går, inne. Et mål som er nådd, forblir nådd (ferdige = Set med id-er).
+ * tettsteder (dine), går, inne, lett (antall hus du har lett gjennom). Et mål som er nådd, forblir nådd (ferdige = Set med id-er).
  * Målene og rekkefølgen er Claudes forslag.
  */
 (function (rot) {
@@ -28,6 +28,7 @@
     { navn: 'Ut i verden', mål: [
       { id: 'gå', tekst: 'Gå selv i 3D', hjelp: 'Trykk «3D» og så «Gå».', ferdig: T => !!T.går },
       { id: 'inne', tekst: 'Gå inn i et hus', hjelp: 'Gå rett mot døra. Inne er det rom og møbler etter hva slags bygg det er.', ferdig: T => !!T.inne },
+      { id: 'let', tekst: 'Let gjennom et hus', hjelp: 'Inne i et bygg: trykk «Let gjennom huset» (eller E). Butikker har mat, verksteder materialer.', ferdig: T => T.lett > 0 },
       { id: 'tettsted', tekst: 'Ta kontroll over et tettsted', hjelp: 'Flytt et lag inn i tettstedet og hold det til det er ditt.', ferdig: T => T.tettsteder > 0 },
     ] },
   ];

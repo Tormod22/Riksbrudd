@@ -15,7 +15,7 @@
     const går = !!(R3_ && R3_.fot && typeof på3d !== 'undefined' && på3d);
     return { bygg, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
       hogd: R && R.hogd ? R.hogd.filter(h => !(h.andel < 1)).length : 0, revet: R && R.revet ? R.revet.length : 0, tettsteder, går,
-      inne: går && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y)) };
+      inne: går && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y)), lett: window.LeteSpill ? LeteSpill.antall() : 0 };
   }
   function sjekk(stille) {
     const T = bilde(); if (!T) return [];

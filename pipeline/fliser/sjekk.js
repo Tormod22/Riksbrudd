@@ -927,7 +927,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const tre = L.lager.tre; L.lager.tre = 25; const nye = MaalSpill.sjekk(true); L.lager.tre = tre; LeirSpill.fane('mål'); ut.nye = nye.join(); ut.haket = synlig('.maal.ok'); ut.kort = MaalSpill.kort();
       ut.husket = JSON.parse(localStorage.getItem('riksbrudd-maal')).ferdige.join(); MaalSpill.nullstill(); LeirSpill.fane('bygg'); lk.click(); return ut; });
     const leirmok = !leirm.uten && leirm.fliser === 4 && leirm.faner.length === 4 && /^Mål/.test(leirm.faner[3]) && leirm.bygg > 5 && leirm.matIBygg === 0 && leirm.over && leirm.lager.bygg === 0 && leirm.lager.mat >= 3 && leirm.lager.diesel === 1
-      && leirm.mål.kap === 4 && leirm.mål.mål === 13 && leirm.mål.bygg === 0 && leirm.nye.split(',').includes('lager') && leirm.haket === leirm.nye.split(',').length && leirm.kort === leirm.haket + '/13' && leirm.husket === leirm.nye;
+      && leirm.mål.kap === 4 && leirm.mål.mål === 14 && leirm.mål.bygg === 0 && leirm.nye.split(',').includes('lager') && leirm.haket === leirm.nye.split(',').length && leirm.kort === leirm.haket + '/14' && leirm.husket === leirm.nye;
     if (!leirmok) { feil++; console.log(JSON.stringify(leirm)); }
     console.log(`${leirmok ? 'ok  ' : 'FEIL'} ${navn} Leir-menyen og målene: fanene ${(leirm.faner || []).join(' | ')}, hver viser sitt, «Neste mål» over fanene, et nådd mål hakes av og huskes`);
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
@@ -948,10 +948,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         try { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' })); for (let i = 0; i < 400; i++) Gange.kamera(R); const k = Gange.kropp(); ut.inne = !!Interior3d.inne(k.x, k.y); ut.påGulv = Math.abs(k.z - pl.gulv) < .02; ut.y = k.y - y0;
           sett(x0 + 8, y0 - 4, 0); for (let i = 0; i < 400; i++) Gange.kamera(R); ut.stoppet = Gange.kropp().y < y0; }
         finally { performance.now = ekte; window.dispatchEvent(new KeyboardEvent('keyup', { key: 'w' })); } }
+      // LETING (spill/leting.js): inne i prøvehuset kommer knappen; etter letingen er huset gjennomsøkt, funnet ligger i leiren og
+      // knappen er borte. (Bare når et spill er startet, så det finnes en leir å legge funnet i.)
+      if (pl && window.LeirSpill && LeirSpill.tilstand()) { const Ll = LeirSpill.tilstand(), F = window.FolkSpill && FolkSpill.tilstand(), kn = document.getElementById('letknapp');
+        LeteSpill.start(); LeteSpill.nullstill(); sett(x0 + 5, y0 + 3, 0); for (let i = 0; i < 3; i++) KROKER.ramme3d.forEach(f => f(R));
+        const før = { mat: F ? F.mat : 0, tre: Ll.lager.tre || 0, d: Ll.drivstoff || 0 }, venter = Leting.funn('hus', 80, 4242);
+        ut.let = { knapp: kn.classList.contains('på'), tekst: kn.textContent }; kn.click(); KROKER.ramme3d.forEach(f => f(R)); ut.let.leter = /Leter/.test(kn.textContent);
+        LeteSpill.spol(); KROKER.ramme3d.forEach(f => f(R)); KROKER.ramme3d.forEach(f => f(R));
+        ut.let.antall = LeteSpill.antall(); ut.let.borte = !kn.classList.contains('på'); ut.let.mat = (F ? F.mat : 0) - før.mat; ut.let.venter = venter; ut.let.logg = loggLinjer.find(l => /^Du fant|^Huset var tomt/.test(l)) || '';
+        LeteSpill.nullstill(); }
       R.renderer.render(R.scene, R.cam); ut.gl = gl.getError();
       Gange.stopp(); Interior3d.oppdater(true); ut.etter = Interior3d.antall(); ut.ryddet = !P.inne; ut.geo = R.renderer.info.memory.geometries - g0;
       for (const k of nøkler) { const L = R.hindre.get(k), i = L.indexOf(o); if (i >= 0) L.splice(i, 1); } u.hus = husFør; return ut; });
     const innok = inn.utenGå === 0 && inn.plan && inn.rom >= 4 && inn.møbler >= 8 && inn.vegg && inn.inne && inn.påGulv && inn.y > 1 && inn.stoppet && inn.gl === 0 && inn.etter === 0 && inn.ryddet && inn.geo === 0 && inn.trekanter < 6000;
+    const letok = !inn.let || (inn.let.knapp && /Let gjennom huset/.test(inn.let.tekst) && inn.let.leter && inn.let.antall === 1 && inn.let.borte && !!inn.let.logg && Math.abs(inn.let.mat - inn.let.venter.mat) < 1e-6);
+    if (!letok) { feil++; console.log(JSON.stringify(inn.let)); }
+    console.log(`${letok ? 'ok  ' : 'FEIL'} ${navn} leting i hus: ${inn.let ? `knappen kom inne i huset, letingen ga «${inn.let.logg}», huset er gjennomsøkt og knappen borte` : 'ikke prøvd (ingen leir i testen)'}`);
     if (!innok) { feil++; console.log(JSON.stringify(inn)); }
     console.log(`${innok ? 'ok  ' : 'FEIL'} ${navn} interiør: prøvehuset fikk ${inn.rom} rom og ${inn.møbler} møbler (${inn.trekanter} trekanter), du går inn gjennom døra og står på gulvet, veggen stopper deg, ryddet bort etterpå`);
     // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
