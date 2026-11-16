@@ -861,4 +861,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (23) DET SOM BLE IGJEN: materialer og diesel som ikke fikk plass etter en leting, ligger igjen i huset (tredje ledd i
   LeteSpill.lett(): [x, y, { tre, betong, stål, diesel }], lagres). Inne i huset kommer «Hent det som ligger igjen» bare når noe
   av det får plass (plassTil); hent(P) tar det uten ny leting. Merkelappen sier «noe ligger igjen». VAKT «det som ble igjen».
+  BYGGEVISNING I 2D (16. nov, brukeren: «gjør 2D-kameravisningen enda bedre når du bygger»): spill/byggevisning.js (reglene øverst
+  uten DOM: rutesteg, ramme, meter, lengde; test_byggevisning.js). BYGGEVISNING.på() = 2D og plassering/planmodus/byggesett åpent.
+  index.html bytter da tegnerekkefølgen: alle tegnekroker uten f.bygg og lagene først, så BYGGEVISNING.under (mørkt slør, rutenett
+  fra leirens midte 2,5/10/50 m, sirkelen «uten reisetid innen 300 m»), så krokene med f.bygg = true (leir-visning.js og
+  byggesett-visning.js) og BYGGEVISNING.over (mål på to sider av skissen, pil på forsiden = +x i modellen, stiplet strek og avstand
+  til nærmeste nabo, «x m fra leiren» utenfor 300 m, gjerdets lengde, rekkevidde RING for vakttårn/sykestue/sandsekkvoll/kameramast –
+  også for dem som alt står). Kameraet: gåInn() når byggingen begynner og du er lenger ute enn 0,8 m per punkt eller leiren er
+  utenfor bildet (0,45 s, et trykk avbryter); visSkisse() flytter kartet når skissen havner under banneret (#byggvalg) eller utenfor
+  bildet (fri() = det frie feltet). I testene (navigator.webdriver) bare med BYGGEVISNING.test = true. body.bygger2d; på små skjermer
+  skjules loggen mens du bygger. leir-visning.js tegn1: skygge under byggene, møne, lyst merke på forsiden, navn via Etikett.
+  LeirSpill.prøv() tar ingen koordinater – bruk LeirSpill.trykk(x, y). VAKT «byggevisning i 2D».
   VAKT «interiør i leirens bygg». Bilder: scratchpad inne/leir.js.

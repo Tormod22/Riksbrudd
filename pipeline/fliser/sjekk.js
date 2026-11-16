@@ -435,6 +435,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             const gratis = OppstartSpill.tilstand().penger === pen0, før = L.bygg.length, nb = LeirSpill.byggFraPlan(null, true);
             r.k2.plan = { gap, linjer, n: [n1, n2, n3], gratis, bygget: nb, tom: L.plan.length === 0, flere: L.bygg.length - før, malBygg: mal && mal.bygg.length, malOk };
             LeirSpill.planModus(false); LeirSpill.rutenett(true); try { localStorage.removeItem('riksbrudd-maler'); } catch (e) { /* privat */ } }
+          // VAKT byggevisning i 2D (spill/byggevisning.js, brukeren 16. nov): når du begynner å bygge langt ute, går kameraet inn på leiren,
+          // siden får klassen bygger2d, en skisse utenfor bildet hentes inn i det frie feltet, og alt slås av når du avbryter.
+          if (window.BYGGEVISNING) { const bv = {}, vent = ms => new Promise(q => setTimeout(q, ms)), k0 = { x: kam.x, y: kam.y, m: kam.m }, SL = OppstartSpill.tilstand().leir;
+            LeirSpill.avbryt(); await vent(400); BYGGEVISNING.test = true; kam.x = SL.x; kam.y = SL.y; kam.m = 3; LeirSpill.startPlassering('brakke'); await vent(1000);
+            bv.på = BYGGEVISNING.på(); bv.klasse = document.body.classList.contains('bygger2d'); bv.m = kam.m; bv.iBildet = Math.abs(kam.x - SL.x) < VW * kam.m / 2 && Math.abs(kam.y - SL.y) < VH * kam.m / 2;
+            LeirSpill.trykk(SL.x + 30, SL.y + 20); await LeirSpill.prøv(); kam.x += VW * kam.m; skitten = true; await vent(900);
+            const pp = LeirSpill.plassering(), F = BYGGEVISNING.fri(), px = (pp.x - (kam.x - VW * kam.m / 2)) / kam.m, py = ((kam.y + VH * kam.m / 2) - pp.y) / kam.m; bv.synlig = px >= F.x0 && px <= F.x1 && py >= F.y0 && py <= F.y1;
+            LeirSpill.avbryt(); await vent(400); bv.av = !BYGGEVISNING.på() && !document.body.classList.contains('bygger2d'); BYGGEVISNING.test = false; Object.assign(kam, k0); skitten = true; r.k2.bv = bv; }
           // VAKT byggesett (12. nov): åpnes fra Leir-menyen, en hytte (16 deler) som jobber for byggelagene, rad med vegger, tak i lufta avvises,
           // ferdig hytte = rom med dør og senger (Leir.plasser), riving gir penger tilbake, verktøylinja passer på skjermen
           { const lk = document.getElementById('leirknapp'); lk.click(); const knappBs = document.getElementById('bs-apne'); if (knappBs) knappBs.click();
@@ -552,6 +560,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
         const rs = k1.res || {}, rsok = rs.panel && rs.tre > 0 && rs.betong > 0 && rs.hogd === 1 && rs.hogdHer && rs.revet && rs.jobber === 0 && rs.del && rs.lagret; if (!rsok) feil++;
         console.log(`${rsok ? 'ok  ' : 'FEIL'} ${navn} materialer fra verden: panelet viser utbytte og kjøpspris ${rs.panel}, hogst og riving ga ${rs.tre} m³ tre og ${rs.betong} m³ betong, hogd felt huskes ${rs.hogdHer}, revet hus borte ${rs.revet}, menyen har delen ${rs.del}, lagret ${rs.lagret}`);
+        { const bv = k2.bv || {}, bvok = bv.på && bv.klasse && bv.m <= .61 && bv.iBildet && bv.synlig && bv.av; if (!bvok) { feil++; console.log(JSON.stringify(bv)); }
+          console.log(`${bvok ? 'ok  ' : 'FEIL'} ${navn} byggevisning i 2D: kameraet gikk inn til ${(bv.m || 0).toFixed(2)} m per punkt med leiren i bildet, skissen ble hentet inn i det frie feltet, av igjen etter avbryt`); }
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
         const bs = k2.bs || {}, bsok = bs.åpen && bs.hytte === 16 && bs.bygget === 16 && bs.jobber === 16 && /vegger/.test(bs.lufttak || '') && bs.rad === 3 && bs.rom === 1 && bs.dør === 1 && bs.senger === 2
           && bs.revet === 1 && bs.tilbake > 0 && bs.passer && bs.lukket; if (!bsok) { feil++; console.log(JSON.stringify(bs)); }

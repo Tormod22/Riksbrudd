@@ -1,0 +1,113 @@
+/* Riksbrudd – BYGGEVISNING i 2D (16. nov, brukeren: «gjør 2D-kameravisningen enda bedre når du bygger»).
+ * Mens du plasserer et bygg, planlegger eller har byggesettet åpent i 2D-kartet:
+ *  - kartet, lagene og navnene dempes (et mørkt slør), og byggene tegnes oppå – tegnerekkefølgen byttes i index.html (f.bygg = true
+ *    på tegnekrokene som hører til byggingen);
+ *  - rutenett fra leirens midte (2,5 m helt nær, ellers 10 m eller 50 m) og sirkelen for «fri reise» (Leir.REGLER.reise.fri);
+ *  - skissen får mål på sidene, en pil på forsiden (døra), avstand til nærmeste nabo og til leiren, og gjerder får lengden;
+ *  - bygg med rekkevidde (RING) viser sirkelen – også de som alt står, så du ser hva som er dekket;
+ *  - kameraet går selv inn på leiren når du begynner å bygge og er zoomet for langt ut (eller leiren er utenfor bildet).
+ * Reglene (ramme, rutesteg, tekster) ligger øverst uten DOM og testes i pipeline/fliser/test_byggevisning.js.
+ */
+(function (rot) {
+  'use strict';
+  // rekkevidde i meter og hva den betyr (tallene står i folk.js og leir.js; kameramasten bruker nivået sitt)
+  const RING = { vakttårn: [150, 'vaktene dekker'], sykestue: [150, 'sårede leges'], sandsekkvoll: [15, 'dekning'], kameramast: [300, 'kamera'] };
+  // rutenettets steg i meter etter målestokken (meter per punkt): 2,5 m helt nær, så 10 m og 50 m; ingen ruter langt ute
+  const rutesteg = m => (m <= .18 ? 2.5 : m <= .7 ? 10 : m <= 3 ? 50 : 0);
+  // Kameraet for bygging: rammen rundt leirens midte og byggene (+ luft), aldri nærmere enn 0,2 og aldri lenger ute enn 0,6 m per punkt.
+  // Gir null når kameraet alt er bra (nær nok og leiren i bildet).
+  function ramme(kam, VW, VH, leir, bygg, luft = 45, friH = VH - 200) {
+    let x0 = leir.x - luft, x1 = leir.x + luft, y0 = leir.y - luft, y1 = leir.y + luft;
+    for (const b of bygg) { if (Math.hypot(b.x - leir.x, b.y - leir.y) > 400) continue; x0 = Math.min(x0, b.x - luft); x1 = Math.max(x1, b.x + luft); y0 = Math.min(y0, b.y - luft); y1 = Math.max(y1, b.y + luft); }
+    const iBildet = Math.abs(leir.x - kam.x) < VW * kam.m / 2 && Math.abs(leir.y - kam.y) < VH * kam.m / 2;
+    if (iBildet && kam.m <= .8) return null;
+    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, m: Math.max(.2, Math.min(.6, Math.max((x1 - x0) / VW, (y1 - y0) / Math.max(120, friH)))) };
+  }
+  const meter = v => (v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + ' km' : v >= 100 ? Math.round(v) + ' m' : String(Math.round(v * 10) / 10).replace('.', ',') + ' m');
+  const lengde = P => { let s = 0; for (let i = 1; i < P.length; i++) s += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); return s; };
+  const api = { RING, rutesteg, ramme, meter, lengde };
+  if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
+
+  // ---------- visningen ----------
+  const LB = rot.Leir; let forrige = false, anim = null;
+  const bsÅpen = () => !!(rot.Byggesett && Byggesett.tilstand && Byggesett.tilstand().åpen);
+  const på = () => typeof på3d !== 'undefined' && !på3d && !!rot.LeirSpill && !!LeirSpill.tilstand() && (!!LeirSpill.plassering() || !!LeirSpill.planModus() || bsÅpen());
+  const leir = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
+  // kameraet glir inn på leiren (0,45 s); et trykk eller rullehjulet avbryter
+  function gåInn() { const S = leir(), L = LeirSpill.tilstand(); if (!S) return false; // det frie feltet: mellom knappene øverst og banneret nederst (banneret vokser når skissen er satt – regn med en tredel på telefon)
+    const F = fri(), y1 = Math.min(F.y1, VH * (document.body.classList.contains('kort') ? .62 : .8)), mål = ramme(kam, VW, VH, S, L.bygg.filter(b => b.x !== undefined), 30, y1 - F.y0); if (!mål) return false;
+    mål.y += ((F.y0 + y1) / 2 - VH / 2) * mål.m;
+    const fra = { x: kam.x, y: kam.y, m: kam.m }, t0 = performance.now(); anim = { mål };
+    const steg = () => { if (!anim || anim.mål !== mål) return; const a = Math.min(1, (performance.now() - t0) / 450), e = 1 - Math.pow(1 - a, 3);
+      kam.x = fra.x + (mål.x - fra.x) * e; kam.y = fra.y + (mål.y - fra.y) * e; kam.m = Math.exp(Math.log(fra.m) + (Math.log(mål.m) - Math.log(fra.m)) * e); skitten = true;
+      if (a < 1) requestAnimationFrame(steg); else anim = null; };
+    requestAnimationFrame(steg); return true; }
+  // SKISSEN SKAL SYNES: ligger den under banneret nederst (telefon) eller utenfor bildet, flyttes kartet så den står i det frie feltet
+  function fri() { const b = document.getElementById('byggvalg'), r = b && b.offsetHeight ? b.getBoundingClientRect() : null, topp = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topp')) || 58) + 50;
+    return { y0: topp, y1: r && r.top > topp + 80 ? r.top - 30 : VH - 40, x0: 30, x1: VW - 30 }; }
+  function visSkisse() { const p = LeirSpill.plassering(); if (!p || p.mal || p.x === null || p.x === undefined || anim) return false;
+    const F = fri(), x = (p.x - (kam.x - VW * kam.m / 2)) / kam.m, y = ((kam.y + VH * kam.m / 2) - p.y) / kam.m; if (x >= F.x0 && x <= F.x1 && y >= F.y0 && y <= F.y1) return false;
+    const tx = Math.max(F.x0 + 40, Math.min(F.x1 - 40, x)), ty = Math.max(F.y0 + 40, Math.min(F.y1 - 40, y)), mål = { x: kam.x + (x - tx) * kam.m, y: kam.y - (y - ty) * kam.m, m: kam.m };
+    const fra = { x: kam.x, y: kam.y }, t0 = performance.now(); anim = { mål };
+    const steg = () => { if (!anim || anim.mål !== mål) return; const a = Math.min(1, (performance.now() - t0) / 300), e = 1 - Math.pow(1 - a, 3); kam.x = fra.x + (mål.x - fra.x) * e; kam.y = fra.y + (mål.y - fra.y) * e; skitten = true; if (a < 1) requestAnimationFrame(steg); else anim = null; };
+    requestAnimationFrame(steg); return true; }
+  let pekerNede = false;
+  for (const h of ['pointerdown', 'wheel', 'touchstart']) window.addEventListener(h, () => { anim = null; if (h !== 'wheel') pekerNede = true; }, { passive: true, capture: true });
+  for (const h of ['pointerup', 'pointercancel', 'touchend', 'touchcancel']) window.addEventListener(h, () => { pekerNede = false; }, { passive: true, capture: true });
+  // på små skjermer tar loggen og banneret mye plass: loggen skjules mens du bygger, og knappene i banneret er mindre
+  { const css = document.createElement('style'); css.textContent = 'body.bygger2d.kort #logg{ display:none; } body.bygger2d.kort #byggvalg button{ padding:5px 9px; font-size:14px; min-height:36px; }'; document.head.appendChild(css); }
+  // Overgangen til bygging. I de automatiske testene flyttes ikke kameraet av seg selv; vakten slår det på med test-bryteren.
+  setInterval(() => { const nå = på(); if (nå !== forrige) { forrige = nå; document.body.classList.toggle('bygger2d', nå); skitten = true; if (nå && (!navigator.webdriver || api.test)) gåInn(); }
+    if (nå && !pekerNede && (!navigator.webdriver || api.test)) visSkisse(); }, 150);
+
+  const skrift = (g, t, x, y, farge = '#f0e2b0') => { g.font = '11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8;
+    g.fillStyle = 'rgba(16,14,10,.82)'; g.fillRect(x - w / 2, y - 8, w, 16); g.fillStyle = farge; g.fillText(t, x, y + .5); g.textBaseline = 'alphabetic'; };
+
+  // UNDER byggene: sløret, rutenettet og sirkelen for fri reise
+  function under(g, vx0, vy1) {
+    const m = kam.m, S = leir(), sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    g.save(); g.fillStyle = 'rgba(12,16,20,.42)'; g.fillRect(0, 0, VW, VH);
+    const steg = rutesteg(m);
+    if (S && steg) { const gx0 = vx0, gx1 = vx0 + VW * m, gy1 = vy1, gy0 = vy1 - VH * m, i0 = Math.ceil((gx0 - S.x) / steg), i1 = Math.floor((gx1 - S.x) / steg), j0 = Math.ceil((gy0 - S.y) / steg), j1 = Math.floor((gy1 - S.y) / steg);
+      if (i1 - i0 < 400 && j1 - j0 < 400) { g.lineWidth = 1;
+        for (const sterk of [false, true]) { g.strokeStyle = sterk ? 'rgba(240,226,176,.16)' : 'rgba(240,226,176,.07)'; g.beginPath();
+          for (let i = i0; i <= i1; i++) if ((i % 5 === 0) === sterk) { const x = Math.round(sx(S.x + i * steg)) + .5; g.moveTo(x, 0); g.lineTo(x, VH); }
+          for (let j = j0; j <= j1; j++) if ((j % 5 === 0) === sterk) { const y = Math.round(sy(S.y + j * steg)) + .5; g.moveTo(0, y); g.lineTo(VW, y); }
+          g.stroke(); } } }
+    if (S && LB.REGLER && LB.REGLER.reise) { const r = LB.REGLER.reise.fri / m, x = sx(S.x), y = sy(S.y);
+      if (r > 30 && r < 6000 && x > -r && y > -r && x < VW + r && y < VH + r) { g.strokeStyle = 'rgba(240,215,154,.4)'; g.lineWidth = 1.2; g.setLineDash([8, 6]); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.setLineDash([]);
+        const ty = y - r; if (ty > 60 && ty < VH - 20) skrift(g, `uten reisetid innen ${LB.REGLER.reise.fri} m`, x, ty, 'rgba(240,215,154,.85)'); } }
+    g.restore();
+  }
+
+  // OPPÅ byggene: rekkevidder, mål, forside, avstander
+  function over(g, vx0, vy1) {
+    const m = kam.m, L = LeirSpill.tilstand(), p = LeirSpill.plassering(), S = leir(), sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; if (!L) return;
+    g.save();
+    const ring = (b, sterk) => { const R0 = RING[b.type]; if (!R0) return; let r = R0[0]; if (b.type === 'kameramast' && b.id !== undefined) r = LB.effekt(b).rekkevidde || r; const x = sx(b.x), y = sy(b.y), rp = r / m; if (rp < 6 || x < -rp || y < -rp || x > VW + rp || y > VH + rp) return;
+      g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = sterk ? 'rgba(127,209,122,.10)' : 'rgba(127,209,122,.05)'; g.fill(); g.strokeStyle = sterk ? 'rgba(127,209,122,.85)' : 'rgba(127,209,122,.4)'; g.lineWidth = sterk ? 1.6 : 1; g.setLineDash(sterk ? [] : [4, 4]); g.stroke(); g.setLineDash([]);
+      if (sterk && rp > 40) skrift(g, `${R0[1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); };
+    const type = p && !p.mal ? p.type : null;
+    if (type && RING[type]) for (const b of L.bygg) if (b.type === type && b.id !== p.flytt) ring(b, false);
+    if (p && !p.mal) { const B = LB.BYGG[p.type];
+      if (B.linje) { const P = p.punkter || []; if (P.length > 1) { const q = P[P.length - 1]; skrift(g, `${B.navn.toLowerCase()} ${meter(lengde(p.lukket ? [...P, P[0]] : P))}`, sx(q[0]), sy(q[1]) - 16); } }
+      else if (p.x !== null && p.x !== undefined) { const b = { type: p.type, x: p.x, y: p.y, ret: p.ret || 0 }, H = LB.hjørner(b).map(([x, y]) => [sx(x), sy(y)]), c = Math.cos(b.ret), s = Math.sin(b.ret), [x0, x1, y0, y1] = B.fot;
+        ring(b, true);
+        // mål på to sider (utenfor skissen), når bygget er stort nok på skjermen
+        if ((x1 - x0) / m > 26 || (y1 - y0) / m > 26) { const mx = sx(p.x), my = sy(p.y), ut = (a, q, t) => { const ex = (a[0] + q[0]) / 2, ey = (a[1] + q[1]) / 2, d = Math.hypot(ex - mx, ey - my) || 1; skrift(g, t, ex + (ex - mx) / d * 14, ey + (ey - my) / d * 14); };
+          ut(H[0], H[1], meter(x1 - x0)); ut(H[3], H[0], meter(y1 - y0)); }
+        // forsiden (+x i modellen, der døra er): en liten pil ut fra veggen
+        { const fx = p.x + c * x1, fy = p.y + s * x1, ax = sx(fx), ay = sy(fy), ux = c, uy = -s, l = Math.max(10, Math.min(22, 3 / m));
+          g.strokeStyle = g.fillStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + ux * l, ay + uy * l); g.stroke();
+          g.beginPath(); g.moveTo(ax + ux * (l + 6), ay + uy * (l + 6)); g.lineTo(ax + ux * l - uy * 4.5, ay + uy * l + ux * 4.5); g.lineTo(ax + ux * l + uy * 4.5, ay + uy * l - ux * 4.5); g.closePath(); g.fill(); }
+        // avstand til nærmeste nabo: stiplet strek mellom midtpunktene med avstanden mellom veggene
+        if (p.nabo && p.avstand !== null && p.avstand !== undefined && p.nabo.x !== undefined) { const nx = sx(p.nabo.x), ny = sy(p.nabo.y), mx = sx(p.x), my = sy(p.y);
+          g.strokeStyle = 'rgba(240,215,154,.7)'; g.lineWidth = 1; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(mx, my); g.lineTo(nx, ny); g.stroke(); g.setLineDash([]);
+          if (Math.hypot(nx - mx, ny - my) > 50) skrift(g, meter(p.avstand), (mx + nx) / 2, (my + ny) / 2); }
+        // langt fra leiren: avstanden (byggelaget må reise)
+        if (S) { const d = Math.hypot(p.x - S.x, p.y - S.y); if (LB.REGLER && d > LB.REGLER.reise.fri) skrift(g, `${meter(d)} fra leiren`, sx(p.x), Math.max(...H.map(h => h[1])) + 16, '#e8c27a'); } } }
+    g.restore();
+  }
+  api.på = på; api.under = under; api.over = over; api.gåInn = gåInn; api.visSkisse = visSkisse; api.fri = fri; api.anim = () => !!anim;
+  rot.BYGGEVISNING = api;
+})(typeof window !== 'undefined' ? window : globalThis);

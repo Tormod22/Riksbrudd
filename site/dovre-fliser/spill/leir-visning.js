@@ -451,12 +451,21 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
         linje(LB.gjerdeLedd(L, b), b.id === valgtBygg ? '#f0d79a' : LB.ferdig(b) ? '#cfc6b0' : 'rgba(207,198,176,.5)', !LB.ferdig(b)); return; }
       const P = LB.hjørner(b).map(([x, y]) => [sx(x), sy(y)]); if (P.every(([x, y]) => x < -50 || y < -50 || x > VW + 50 || y > VH + 50)) return;
       g.save(); g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath();
-      g.fillStyle = skisse ? (ok ? 'rgba(110,200,105,.45)' : 'rgba(224,96,74,.45)') : farge(); g.globalAlpha = skisse ? 1 : LB.virker(b) ? .85 : .35 + .5 * LB.framdrift(b); g.fill(); g.globalAlpha = 1;
+      g.fillStyle = skisse ? (ok ? 'rgba(110,200,105,.45)' : 'rgba(224,96,74,.45)') : farge(); g.globalAlpha = skisse ? 1 : LB.virker(b) ? .85 : .35 + .5 * LB.framdrift(b);
+      // (en myk skygge under bygget, så det løfter seg fra kartet)
+      if (!skisse && m < 1.5) { g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 7; g.shadowOffsetX = 2; g.shadowOffsetY = 3; } g.fill(); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; g.globalAlpha = 1;
       g.strokeStyle = b.id === valgtBygg ? '#f0d79a' : siste.mangler.has(b.id) || b.hp < .5 ? '#e0604a' : '#efe6cf'; g.lineWidth = b.id === valgtBygg ? 2.5 : 1.2; g.stroke();
-      if (m < 1.2) { g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
+      // møne langs lengste side og et lyst merke på forsiden (+x i modellen, der døra er) når bygget er stort nok på skjermen
+      if (!skisse && m < .8) { const mid = (a, c) => [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], l01 = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), l12 = Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]);
+        if (Math.min(l01, l12) > 9) { const [a, c] = l01 >= l12 ? [mid(P[0], P[3]), mid(P[1], P[2])] : [mid(P[0], P[1]), mid(P[3], P[2])];
+          g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0] + (c[0] - a[0]) * .12, a[1] + (c[1] - a[1]) * .12); g.lineTo(a[0] + (c[0] - a[0]) * .88, a[1] + (c[1] - a[1]) * .88); g.stroke();
+          const f = mid(P[1], P[2]), t = [(P[2][0] - P[1][0]) / (l12 || 1), (P[2][1] - P[1][1]) / (l12 || 1)], w = Math.min(5, l12 * .22);
+          g.strokeStyle = '#f0d79a'; g.lineWidth = 3; g.beginPath(); g.moveTo(f[0] - t[0] * w, f[1] - t[1] * w); g.lineTo(f[0] + t[0] * w, f[1] + t[1] * w); g.stroke(); } }
+      // (skissen har ikke navn i byggevisningen: der står målene rundt den, og navnet står i banneret)
+      if (m < 1.2 && !(skisse && window.BYGGEVISNING && BYGGEVISNING.på())) { g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
         const J = LB.jobber(L), i = J.findIndex(j => j.b === b), kø = i >= LB.byggelag(L);
         const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : J[i].reise > 0 ? ' (laget på vei)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
-        g.strokeText(t, sx(b.x), sy(b.y) + 4); g.fillText(t, sx(b.x), sy(b.y) + 4); }
+        const ty = window.Etikett ? Etikett.tekst(g, t, sx(b.x), sy(b.y) + 4, 1) : sy(b.y) + 4; g.strokeText(t, sx(b.x), ty); g.fillText(t, sx(b.x), ty); }
       g.restore(); };
     for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) tegn1(b, false);
     // planen: blå stiplede omriss med navnet
@@ -476,6 +485,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
         for (const [x0, y0, x1, y1] of p.linjer) { g.beginPath(); g.moveTo(sx(x0), sy(y0)); g.lineTo(sx(x1), sy(y1)); g.stroke(); } g.restore(); }
     }
   });
+
+  KROKER.tegn[KROKER.tegn.length - 1].bygg = true;   // tegnes øverst i byggevisningen (spill/byggevisning.js)
 
   // ---------- 3D ----------
   // egne enkle modeller (vertex-farger, origo midt på bunnen, fronten mot +x) for byggene som ikke finnes i spill/modeller.js

@@ -315,8 +315,13 @@ function tegn() {
   }
   if (window.Etikett) Etikett.nullstill();   // navnene på lag, kjøretøy, base og leir får hver sin plass (spill/etikett.js)
   tegnInfra(vx0, vy1);
-  for (const f of KROKER.tegn) f(ctx, vx0, vy1);
-  tegnEnheter(vx0, vy1);
+  // BYGGEVISNING (spill/byggevisning.js): mens du bygger i 2D, dempes kartet, lagene og navnene, og byggene tegnes øverst
+  if (window.BYGGEVISNING && BYGGEVISNING.på()) {
+    for (const f of KROKER.tegn) if (!f.bygg) f(ctx, vx0, vy1);
+    tegnEnheter(vx0, vy1); BYGGEVISNING.under(ctx, vx0, vy1);
+    for (const f of KROKER.tegn) if (f.bygg) f(ctx, vx0, vy1);
+    BYGGEVISNING.over(ctx, vx0, vy1);
+  } else { for (const f of KROKER.tegn) f(ctx, vx0, vy1); tegnEnheter(vx0, vy1); }
   tegnHud();
 }
 
@@ -2820,7 +2825,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=fa6a1812a9"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=cf08f94dc5"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=fc85f2f379"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -2855,12 +2860,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folk.js?v=dbf60ee478"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=126bde7fdc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=2c8e98c635"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=1db8d6fbe1"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=b8c245ccd5"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=690ef82f5b"></script>
-<script src="/dovre-fliser/spill/byggesett-visning.js?v=3f864055b7"></script>
+<script src="/dovre-fliser/spill/byggesett-visning.js?v=3f389a51f6"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=215fbbfae7"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=011b3c1db5"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=1f7dc97448"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>

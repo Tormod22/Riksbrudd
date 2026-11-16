@@ -253,6 +253,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     for (const q of forslag) tegnDel(q.d, V.fane === 'riv' ? 'rgba(224,96,74,.75)' : q.feil ? 'rgba(224,96,74,.6)' : 'rgba(110,200,105,.62)');
     if (V.åpen && A) { g.save(); g.fillStyle = '#f0d79a'; for (const p of [A, B].filter(Boolean)) { g.beginPath(); g.arc(sx(p[0]), sy(p[1]), 4, 0, 6.283); g.fill(); } g.restore(); }
   });
+  KROKER.tegn[KROKER.tegn.length - 1].bygg = true;   // tegnes øverst i byggevisningen (spill/byggevisning.js)
 
   // ---------- 3D ----------
   // Teksturene lages i koden (lysstyrke; fargen kommer fra hjørnefargene, bortsett fra murstein)
