@@ -35,11 +35,16 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     if (LeirSpill.lagre) LeirSpill.lagre();
     return fikk;
   }
+  // Det som ikke fikk plass, sagt rett ut: hva som ble igjen, og hvorfor
+  function igjen(f, fikk, mistet) { const L = window.LeirSpill && LeirSpill.tilstand(), tall = v => String(Math.round(v * 10) / 10).replace('.', ','), d = [];
+    for (const m of mistet) { const rest = f[m] - (fikk[m] || 0); if (m === 'diesel') d.push(`${Math.round(rest)} l diesel ble igjen (${L && Leir.kapasitet(L) > 0 ? 'tankene er fulle' : 'dere har ingen dieseltank'})`);
+      else d.push(`${tall(rest)} ${m === 'stål' ? 't' : 'm³'} ${m} ble igjen (lageret er fullt)`); }
+    return d.length ? d.join(', ').replace(/^./, c => c.toUpperCase()) + '.' : ''; }
   function ferdig(P) {
     const f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i), fikk = ta(f); lett.add(P.bygg.i); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
-    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' Resten fikk ikke plass (lageret eller tankene er fulle).' : '');
+    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     logg(melding); visFunn(melding);
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
