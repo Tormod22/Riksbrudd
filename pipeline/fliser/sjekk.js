@@ -927,7 +927,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const tre = L.lager.tre; L.lager.tre = 25; const nye = MaalSpill.sjekk(true); L.lager.tre = tre; LeirSpill.fane('mål'); ut.nye = nye.join(); ut.haket = synlig('.maal.ok'); ut.kort = MaalSpill.kort();
       ut.husket = JSON.parse(localStorage.getItem('riksbrudd-maal')).ferdige.join(); MaalSpill.nullstill(); LeirSpill.fane('bygg'); lk.click(); return ut; });
     const leirmok = !leirm.uten && leirm.fliser === 4 && leirm.faner.length === 4 && /^Mål/.test(leirm.faner[3]) && leirm.bygg > 5 && leirm.matIBygg === 0 && leirm.over && leirm.lager.bygg === 0 && leirm.lager.mat >= 3 && leirm.lager.diesel === 1
-      && leirm.mål.kap === 4 && leirm.mål.mål === 13 && leirm.mål.bygg === 0 && leirm.nye === 'lager' && leirm.haket === 1 && /^1\/13/.test(leirm.kort) && leirm.husket === 'lager';
+      && leirm.mål.kap === 4 && leirm.mål.mål === 13 && leirm.mål.bygg === 0 && leirm.nye.split(',').includes('lager') && leirm.haket === leirm.nye.split(',').length && leirm.kort === leirm.haket + '/13' && leirm.husket === leirm.nye;
     if (!leirmok) { feil++; console.log(JSON.stringify(leirm)); }
     console.log(`${leirmok ? 'ok  ' : 'FEIL'} ${navn} Leir-menyen og målene: fanene ${(leirm.faner || []).join(' | ')}, hver viser sitt, «Neste mål» over fanene, et nådd mål hakes av og huskes`);
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
