@@ -29,7 +29,13 @@
 #leirmeny .hode{ padding:10px 12px 6px; border-bottom:1px solid var(--rule); flex:0 0 auto; }
 #leirmeny h2{ margin:0; font-family:"IM Fell English",serif; font-weight:400; font-size:22px; }
 #leirmeny h3{ margin:8px 0 2px; font-size:14px; color:var(--hover); font-weight:600; }
-#leirmeny .status{ font-size:14px; color:var(--ink-dim); margin-top:4px; line-height:1.45; }
+#leirmeny .status{ font-size:14px; color:var(--ink-dim); margin-top:6px; line-height:1.3; display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+#leirmeny .flis{ background:#221c13; border:1px solid #3a3226; padding:4px 8px; min-width:0; } #leirmeny .flis small{ display:block; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; opacity:.8; }
+#leirmeny .flis b{ color:var(--ink); font-weight:600; font-size:15px; white-space:nowrap; } #leirmeny .flis.fare{ border-color:#8a4a3a; } #leirmeny .status .linje{ grid-column:1 / -1; font-size:13px; }
+#leirmeny .faner{ display:flex; gap:0; margin:8px -12px -6px; border-top:1px solid var(--rule); }
+#leirmeny .faner button{ flex:1; border:none; border-right:1px solid var(--rule); background:#1c1710; min-height:38px; color:var(--ink-dim); } #leirmeny .faner button:last-child{ border-right:none; }
+#leirmeny .faner button.på{ background:var(--panel); color:var(--ink); box-shadow:inset 0 -3px 0 #c9b26a; font-weight:600; }
+#leirmeny [hidden]{ display:none !important; }
 #leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
 #leirmeny .bygg div{ flex:1; min-width:0; } #leirmeny .bygg b{ font-weight:600; } #leirmeny .bygg small{ display:block; color:var(--ink-dim); font-size:12.5px; }
@@ -125,14 +131,19 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // ---------- menyen ----------
   // Menyen tegnes på nytt hvert sekund (strøm, kø): behold plassen du har bladd til (brukeren 11. nov: «lar meg ikke bla ned»)
   let menyNøkkel = '';
+  let fane = 'bygg';
   function visMeny() {
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
+    // status som fire små fliser (tall først, forklaringen i tittelen), og en rød linje når noe mangler strøm
+    const flis = (navn, verdi, tittel, fare) => el('div', { klasse: 'flis' + (fare ? ' fare' : ''), title: tittel || '' }, el('small', {}, navn + ': '), el('b', {}, verdi));
+    const strømTekst = siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå';
     const status = el('div', { klasse: 'status' },
-      `Kassa: ${LB.kroner(S.penger)}`, el('br'),
-      siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå', el('br'),
-      siste.mangler.size ? el('span', { style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : 'Alle bygg har strøm', el('br'),
-      `Diesel til leiren: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l · Sengeplasser: ${LB.plasser(L)}`);
+      flis('Kassa', LB.kroner(S.penger)),
+      flis('Strøm', siste.behov || siste.kapasitet ? `${kw(siste.prod)} av ${kw(siste.behov)} kW` : 'ikke i bruk', strømTekst, siste.mangler.size > 0),
+      flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
+      flis('Sengeplasser', String(LB.plasser(L))),
+      siste.mangler.size ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : el('div', { klasse: 'linje' }, siste.behov || siste.kapasitet ? 'Alle bygg har strøm' : ''));
     const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
       const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); }, { id: 'kjopdiesel' });
     kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
@@ -184,6 +195,19 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       liste.appendChild(el('div', { klasse: 'bygg' }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
     }
+    // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
+    // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
+    // Alt ligger fortsatt i siden; det som ikke hører til den valgte fanen, er bare skjult.
+    { let cur = 'lager'; const fast = n => n === status || n.tagName === 'H2' || (n.classList && n.classList.contains('lukk')) || (n.querySelector && n.querySelector('#folkknapp'));
+      const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : null;
+      for (const n of [...hode.childNodes]) { if (n.nodeType !== 1) continue; if (fast(n)) continue;
+        const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3'); if (h) cur = faneFor(h.textContent) || cur;
+        n.dataset.fane = cur; if (cur !== fane) n.hidden = true; }
+      liste.dataset.fane = 'bygg'; liste.hidden = fane !== 'bygg';
+      const J2 = LB.jobber(L).length, bar = el('div', { klasse: 'faner', role: 'tablist' });
+      for (const [id, navn] of [['bygg', J2 ? `Bygg (${J2})` : 'Bygg'], ['lager', 'Lager'], ['plan', L.plan.length ? `Plan (${L.plan.length})` : 'Plan']])
+        bar.appendChild(knapp(navn, () => { fane = id; menyEl.scrollTop = 0; visMeny(); }, { klasse: id === fane ? 'på' : '', role: 'tab', 'aria-selected': String(id === fane), 'data-fane-knapp': id }));
+      const folk = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); (folk || status).after(bar); }
     const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
     menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
   }
