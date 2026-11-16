@@ -68,6 +68,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
       if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (LeirSpill.lagre) LeirSpill.lagre(); }
       else logg('Du møtte en overlevende, men leiren har ingen ledig seng – vedkommende ble igjen.');
     }
+    if (window.OverlevSpill) OverlevSpill.øk('leting', 14);
     if (window.MaalSpill) MaalSpill.sjekk(false);
     return { f, fikk, person };
   }
@@ -83,7 +84,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     tekst('Leter … ' + Math.ceil(jobb.sek * (1 - a)) + ' s'); fyll(a);
   }
   knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (P && P.bygg && !P.leir && lett.has(P.bygg.i)) { if (plassTil(restAv(P))) hent(P); return; } if (!P || !P.bygg || P.leir) return;
-    jobb = { P, start: performance.now(), sek: Leting.tid(arealAv(P)) }; });
+    jobb = { P, start: performance.now(), sek: Leting.tid(arealAv(P)) * (window.OverlevSpill ? OverlevSpill.letetid() : 1) }; });
   // E på tastaturet gjør det samme som knappen
   window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });
   KROKER.ramme3d.push(ramme);

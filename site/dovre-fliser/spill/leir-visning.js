@@ -193,7 +193,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     // andre deler kan legge til sitt eget i menyen (LEIR_MENY: (hode, { el, knapp }) => void): materialer fra verden, byggesettet
     for (const f of window.LEIR_MENY || []) try { f(hode, { el, knapp }); } catch (e) { console.error(e); }
     // byggene i grupper (16. nov: lista var 17 bygg uten inndeling); et bygg som ikke står i noen gruppe, havner under «Annet»
-    const liste = el('div', { klasse: 'liste' }), GR = [['Bo og leve', ['brakke', 'kjøkken', 'drivhus', 'sykestue']], ['Strøm og diesel', ['drivstofftank', 'aggregat', 'solcelle']],
+    const liste = el('div', { klasse: 'liste' }), GR = [['Bo og leve', ['brakke', 'kjøkken', 'drivhus', 'sykestue'].concat(LB.BYGG.brønn ? ['brønn'] : [])], ['Strøm og diesel', ['drivstofftank', 'aggregat', 'solcelle']],
       ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']], ['Veger', ['veg']]];
     const iGruppe = new Set(GR.flatMap(g => g[1])), rekke = [...GR.flatMap(([navn, ider]) => ider.filter(id => LB.BYGG[id] && !LB.BYGG[id].del).map((id, n) => [id, n ? null : navn])),
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
@@ -508,6 +508,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       for (const [x, y] of [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]]) boks(d, x, y, .3, .08, .08, H, [.75, .2, .15]);
       for (let z = 2; z < H; z += 3) { boks(d, 0, -.5, z, 1, .06, .06, [.8, .8, .78]); boks(d, 0, .5, z, 1, .06, .06, [.8, .8, .78]); boks(d, -.5, 0, z, .06, 1, .06, [.8, .8, .78]); boks(d, .5, 0, z, .06, 1, .06, [.8, .8, .78]); }
       boks(d, 0, 0, H + .3, .08, .08, 4, [.3, .3, .3]); return d; },
+    brønn: () => { const d = [], st = [.5, .49, .46], tre = [.45, .33, .2]; boks(d, 0, 0, 0, 2.6, 2.6, .25, [.42, .41, .39]); for (const [x, y, sx, sy] of [[0, .9, 2, .3], [0, -.9, 2, .3], [.9, 0, .3, 1.5], [-.9, 0, .3, 1.5]]) boks(d, x, y, .25, sx, sy, .8, st);
+      boks(d, 0, 0, .3, 1.4, 1.4, .1, [.12, .2, .28]); for (const y of [-.95, .95]) boks(d, 0, y, 1.05, .14, .14, 1.4, tre); boks(d, 0, 0, 2.3, .14, 2.1, .12, tre); boks(d, 0, 0, 2.45, 1.8, 2.5, .1, [.35, .2, .15]); boks(d, 0, 0, 1.5, .3, .3, .35, [.3, .3, .32]); return d; },
     drivhus: () => { const d = [], ramme = [.82, .84, .82], glass = [.62, .78, .74]; boks(d, 0, 0, 0, 6, 10, .3, [.45, .43, .4]); boks(d, 0, 0, .3, 5.8, 9.8, 2.4, glass);
       for (const sd of [-1, 1]) { const g = new THREE.BoxGeometry(3.3, 9.8, .06).toNonIndexed(); g.rotateY(sd * .55); g.translate(sd * 1.4, 0, 3.4); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let i = 0; i < n; i++) f.set(glass.map(v => v * 1.08), i * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }
       for (let y = -4.8; y <= 4.9; y += 1.6) boks(d, 0, y, .3, 6, .08, 2.5, ramme); return d; },

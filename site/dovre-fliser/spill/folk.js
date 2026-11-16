@@ -172,7 +172,7 @@
       + Math.min(10, 40 * fri) - (fri < .1 ? 5 : 0)
       + (B.sykestue ? 3 : 0)
       - (F.personer.reduce((s, p) => s + p.helse, 0) / Math.max(1, F.personer.length) < .6 ? 10 : 0);
-    F.mål = Math.max(5, Math.min(95, mål));
+    F.mål = Math.max(5, Math.min(95, mål + (o.moralTillegg || 0)));   // moralTillegg: f.eks. uten vann (spill/overlev.js)
     const steg1 = R.moralFart * dt / 60; F.moral += Math.max(-steg1, Math.min(steg1, F.mål - F.moral));
     // lav moral et helt døgn: den minst lojale forlater gjengen
     if (F.moral < R.lavMoral) { const førM = F.misnøye; F.misnøye += dt;

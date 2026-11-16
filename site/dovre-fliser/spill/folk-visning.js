@@ -15,7 +15,7 @@
   // senger i egenbygde rom (spill/byggesett.js, del 2), hvis de finnes – men ikke når Leir.plasser allerede har dem med
   // (byggesett.js legger rommene inn i Leir.plasser; før ble de telt to ganger)
   function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return 0; try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
-  const valg = () => ({ årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger() });
+  const valg = () => ({ årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: window.OverlevSpill ? OverlevSpill.moralTillegg() : 0 });
 
   // ---------- stil ----------
   const css = document.createElement('style');

@@ -66,7 +66,7 @@
     sikter: (avst, vinkelFeil) => avst <= 350 && Math.abs(vinkelFeil) <= Math.atan2(3, Math.max(1, avst)) + .012,
     sjanse: avst => klem(1.1 - avst / 350, .15, .95),
     // skaden du tar per sekund fra fiender: [{ avst, menn }], mindre i kjøretøy og inne i hus
-    skade(fiender, dekning) { let s = 0; for (const f of fiender) if (f.avst < Kamp.HELSE.fiendeRekkevidde) s += f.menn * Kamp.HELSE.skadePerMann * (1 - f.avst / Kamp.HELSE.fiendeRekkevidde); return s * (dekning === 'hus' ? .3 : dekning === 'kjøretøy' ? .45 : 1); },
+    skade(fiender, dekning) { let s = 0; for (const f of fiender) if (f.avst < Kamp.HELSE.fiendeRekkevidde) s += f.menn * Kamp.HELSE.skadePerMann * (1 - f.avst / Kamp.HELSE.fiendeRekkevidde); return s * (dekning === 'tilflukt' ? .08 : dekning === 'hus' ? .3 : dekning === 'kjøretøy' ? .45 : 1); },
   };
 
   // ---------- HENDELSER i gjengen: små valg som betyr noe ----------

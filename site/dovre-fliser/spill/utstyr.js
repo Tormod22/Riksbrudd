@@ -20,15 +20,16 @@
     ahagl: { navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, pris: 600, pakke: 12 }, a762: { navn: '7,62 mm', enhet: 'skudd', vekt: .025, pris: 900, pakke: 10 },
     forbinding: { navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, pris: 50000, pakke: 1, helse: 45 }, rasjon: { navn: 'Feltrasjon', enhet: 'stk.', vekt: .6, pris: 3000, pakke: 1, helse: 10 },
   };
-  const MAKS_VEKT = 35, MAKS_VÅPEN = 4;
+  const GRUNNVEKT = 35, MAKS_VÅPEN = 4;   // api.ekstraVekt (styrke, spill/overlev.js) legges til grunnvekta
+  const maks = () => GRUNNVEKT + ((typeof api !== 'undefined' && api.ekstraVekt) || 0);
   const ny = () => ({ våpen: [{ id: 'gevær', mag: 30 }, { id: 'pistol', mag: 15 }], aktiv: 0, ting: { a556: 90, a9: 30, forbinding: 1 } });
   const vekt = I => Math.round((I.våpen.reduce((s, v) => s + VÅPEN[v.id].vekt, 0) + Object.entries(I.ting).reduce((s, [id, n]) => s + (TING[id] ? TING[id].vekt * n : 0), 0)) * 100) / 100;
   // så mange av en ting du får plass til (etter vekt)
-  const plassTil = (I, id) => (TING[id] ? Math.max(0, Math.floor((MAKS_VEKT - vekt(I) + 1e-9) / TING[id].vekt)) : 0);
+  const plassTil = (I, id) => (TING[id] ? Math.max(0, Math.floor((maks() - vekt(I) + 1e-9) / TING[id].vekt)) : 0);
   function leggTil(I, id, n) { if (!TING[id] || !(n > 0)) return 0; const t = Math.min(Math.floor(n), plassTil(I, id)); if (t > 0) I.ting[id] = (I.ting[id] || 0) + t; return t; }
   function taUt(I, id, n) { const t = Math.min(n, I.ting[id] || 0); if (t > 0) { I.ting[id] -= t; if (!I.ting[id]) delete I.ting[id]; } return t; }
   // et våpen til: høyst fire, og vekta må gå. Gir null eller en grunn.
-  function nyttVåpen(I, id) { const V = VÅPEN[id]; if (!V) return 'Ukjent våpen.'; if (I.våpen.length >= MAKS_VÅPEN) return `Du bærer alt ${MAKS_VÅPEN} våpen. Kast ett først.`; if (vekt(I) + V.vekt > MAKS_VEKT + 1e-9) return 'Sekken er for tung.'; I.våpen.push({ id, mag: V.magasin }); return null; }
+  function nyttVåpen(I, id) { const V = VÅPEN[id]; if (!V) return 'Ukjent våpen.'; if (I.våpen.length >= MAKS_VÅPEN) return `Du bærer alt ${MAKS_VÅPEN} våpen. Kast ett først.`; if (vekt(I) + V.vekt > maks() + 1e-9) return 'Sekken er for tung.'; I.våpen.push({ id, mag: V.magasin }); return null; }
   // kast et våpen: skuddene i magasinet legges tilbake i sekken hvis det er plass; du beholder alltid minst ett våpen
   function kastVåpen(I, nr) { if (I.våpen.length <= 1 || !I.våpen[nr]) return false; const v = I.våpen.splice(nr, 1)[0]; leggTil(I, VÅPEN[v.id].ammo, v.mag); I.aktiv = klem(I.aktiv > nr ? I.aktiv - 1 : I.aktiv, 0, I.våpen.length - 1); return true; }
   const aktivt = I => { const v = I.våpen[klem(I.aktiv, 0, I.våpen.length - 1)]; return { v, def: VÅPEN[v.id], reserve: I.ting[VÅPEN[v.id].ammo] || 0 }; };
@@ -46,7 +47,7 @@
     if (t < .3) return { ting: 'forbinding', n: 1 }; const a = ['a556', 'a9', 'ahagl', 'a762'][Math.floor(r() * 4)]; return { ting: a, n: Math.round(TING[a].pakke * (.5 + r())) }; }
   const fra = d => { const I = ny(); if (!d || !Array.isArray(d.våpen)) return I; const v = d.våpen.filter(q => q && VÅPEN[q.id]).slice(0, MAKS_VÅPEN).map(q => ({ id: q.id, mag: klem(q.mag | 0, 0, VÅPEN[q.id].magasin) })); if (!v.length) return I;
     const ting = {}; for (const [id, n] of Object.entries(d.ting || {})) if (TING[id] && n > 0) ting[id] = Math.floor(n); return { våpen: v, aktiv: klem(d.aktiv | 0, 0, v.length - 1), ting }; };
-  const api = { VÅPEN, TING, MAKS_VEKT, MAKS_VÅPEN, ny, fra, vekt, plassTil, leggTil, taUt, nyttVåpen, kastVåpen, aktivt, lad, sikter, sjanse, bruk, funn };
+  const api = { VÅPEN, TING, MAKS_VEKT: GRUNNVEKT, ekstraVekt: 0, maks, MAKS_VÅPEN, ny, fra, vekt, plassTil, leggTil, taUt, nyttVåpen, kastVåpen, aktivt, lad, sikter, sjanse, bruk, funn };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Utstyr = api;
 
@@ -76,11 +77,12 @@
   function velg(n) { if (!I.våpen[n] || n === I.aktiv) return false; I.aktiv = n; lagre(); vis(); if (rot.SpilletSpill && SpilletSpill.K) SpilletSpill.K().lader = performance.now() + 500; return true; }
   function helbred(id) { const K = rot.SpilletSpill && SpilletSpill.K && SpilletSpill.K(); if (K && K.hp >= 99.5 && id === 'forbinding') { logg('Du er ikke skadet.'); return false; } const h = bruk(I, id); if (!h) return false; if (K) K.hp = Math.min(100, K.hp + h); lagre(); vis(); logg(`${TING[id].navn} brukt${K ? `: helsa er ${Math.round(K.hp)} %` : ''}.`); return true; }
   function fyll(p) { const A = aktivt(I), v = vekt(I);
-    p.append(knapp('×', () => åpne(false), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Sekken'), el('div', {}, `${kg(v)} av ${MAKS_VEKT} kg`), el('div', { klasse: 'vekt' }, el('i', { style: `width:${Math.min(100, v / MAKS_VEKT * 100)}%` })), el('h3', {}, `Våpen (${I.våpen.length} av ${MAKS_VÅPEN})`));
+    p.append(knapp('×', () => åpne(false), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Sekken'), el('div', {}, `${kg(v)} av ${maks()} kg`), el('div', { klasse: 'vekt' }, el('i', { style: `width:${Math.min(100, v / maks() * 100)}%` })), el('h3', {}, `Våpen (${I.våpen.length} av ${MAKS_VÅPEN})`));
     I.våpen.forEach((w, n) => { const V = VÅPEN[w.id]; p.append(el('div', { klasse: 'rad' + (n === I.aktiv ? ' aktiv' : '') }, el('div', {}, el('b', {}, `${n + 1}. ${V.navn}`), el('small', {}, `${w.mag} av ${V.magasin} i magasinet · ${I.ting[V.ammo] || 0} ${TING[V.ammo].navn} i sekken · ${kg(V.vekt)}`)),
       n === I.aktiv ? el('span', {}, 'framme') : knapp('Ta fram', () => velg(n)), (() => { const b = knapp('Kast', () => { if (kastVåpen(I, n)) { lagre(); vis(); } }); b.disabled = I.våpen.length <= 1; return b; })())); });
     p.append(el('h3', {}, 'I sekken')); const T = Object.entries(I.ting); if (!T.length) p.append(el('small', {}, 'Tom.'));
     for (const [id, n] of T) { const D = TING[id]; p.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, D.navn), el('small', {}, `${n} ${D.enhet} · ${kg(D.vekt * n)}`)), D.helse ? knapp('Bruk', () => helbred(id)) : '', knapp('Kast', () => { taUt(I, id, D.pakke); lagre(); vis(); }))); }
+    if (rot.OverlevSpill && OverlevSpill.klar()) OverlevSpill.fyllSekk(p, el);
     p.append(el('small', {}, 'Utstyr kjøper du i Leir-menyen (fanen Lager), og du finner det i husene. Tastene 1–4 bytter våpen, R lader.')); }
   function vis() { bytt.textContent = klar ? aktivt(I).def.navn : ''; if (!åpen) return; const ny2 = el('div'); fyll(ny2); if (ny2.innerHTML === sistHtml && panel.firstChild) return; sistHtml = ny2.innerHTML; panel.innerHTML = ''; panel.append(...ny2.childNodes); }
   function åpne(v) { åpen = !!v && klar; panel.classList.toggle('på', åpen); sekkKnapp.classList.toggle('på', åpen); sistHtml = ''; vis(); }
@@ -90,10 +92,10 @@
   setInterval(() => { const g = går(); sekkKnapp.hidden = !g; if (!g && åpen && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); bytt.classList.toggle('på', g && VW < 900 && !(rot.KjorSpill && KjorSpill.fører())); if (åpen) vis(); }, 500);
   // kjøp: våpen og pakker legges rett i sekken (så langt vekta rekker)
   function kjøp(id) { const V = VÅPEN[id], T = TING[id];
-    if (V) { if (I.våpen.length >= MAKS_VÅPEN) return logg(`Du bærer alt ${MAKS_VÅPEN} våpen. Kast ett i sekken først.`); if (vekt(I) + V.vekt > MAKS_VEKT) return logg('Sekken er for tung.'); if (!OppstartSpill.betal(V.pris)) return logg(`Ikke nok penger (${kr(V.pris)}).`); nyttVåpen(I, id); logg(`${V.navn} kjøpt.`); }
+    if (V) { if (I.våpen.length >= MAKS_VÅPEN) return logg(`Du bærer alt ${MAKS_VÅPEN} våpen. Kast ett i sekken først.`); if (vekt(I) + V.vekt > maks()) return logg('Sekken er for tung.'); if (!OppstartSpill.betal(V.pris)) return logg(`Ikke nok penger (${kr(V.pris)}).`); nyttVåpen(I, id); logg(`${V.navn} kjøpt.`); }
     else if (T) { const n = Math.min(T.pakke, plassTil(I, id)); if (!n) return logg('Sekken er for tung.'); if (!OppstartSpill.betal(T.pris * n)) return logg(`Ikke nok penger (${kr(T.pris * n)}).`); leggTil(I, id, n); logg(`${n} ${T.navn.toLowerCase()} kjøpt.`); }
     lagre(); vis(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }
-  (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e, knapp: kn }) => { if (!klar) return; hode.append(e('h3', {}, 'Materialer: våpen og utstyr'), e('small', {}, `Det du kjøper, legges i sekken din (${kg(vekt(I))} av ${MAKS_VEKT} kg, ${I.våpen.length} av ${MAKS_VÅPEN} våpen).`));
+  (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e, knapp: kn }) => { if (!klar) return; hode.append(e('h3', {}, 'Materialer: våpen og utstyr'), e('small', {}, `Det du kjøper, legges i sekken din (${kg(vekt(I))} av ${maks()} kg, ${I.våpen.length} av ${MAKS_VÅPEN} våpen).`));
     for (const [id, V] of Object.entries(VÅPEN)) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, V.navn), e('small', {}, `${V.tekst} · ${kg(V.vekt)}${I.våpen.some(w => w.id === id) ? ' · du har' : ''}`)), kn(`Kjøp ${kr(V.pris)}`, () => kjøp(id), { 'data-utstyr': id })));
     for (const [id, T] of Object.entries(TING)) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, T.navn), e('small', {}, `${T.pakke} ${T.enhet} · du har ${I.ting[id] || 0}`)), kn(`Kjøp ${kr(T.pris * T.pakke)}`, () => kjøp(id), { 'data-utstyr': id })));
     hode.append(kn('Åpne sekken', () => åpne(true), { id: 'apnesekk' })); });

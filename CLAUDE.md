@@ -914,6 +914,17 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   panelet #sekk (knappen «Sekk» / tast I når du går), tastene 1–4 og #byttvapen på telefon, kjøp i Leir-menyen («Materialer: våpen og
   utstyr» = fanen Lager), fantIHus(kl, i) kalles fra leting-visning.js. Kampen i spillet-visning.js bruker våpenet du har framme
   (A() = UtstyrSpill.aktivt(); K.mag/K.res er lese-/skrivefelt mot våpenet og sekken). Tallene er Claudes.
+  OVERLEVELSE (16. nov sent, brukeren etter Project Zomboid: «utarbeid 3 og en versjon av 4 og 5»): spill/overlev.js (reglene øverst:
+  Overlev.Ferdigheter/Tilflukt/Forfall; test_overlev.js; OverlevSpill nederst). (3) FERDIGHETER skyting/styrke/utholdenhet/leting,
+  nivå 0–10 (kreves(n) = 40·n^1,5), lagret per leir («riksbrudd-ferdigheter»): skyting ×(1 + 4 % per nivå) på treffsjansen
+  (spillet-visning.js), styrke +2 kg per nivå (Utstyr.ekstraVekt -> Utstyr.maks()), utholdenhet +8 % løpetid (Bevegelse.REGLER.løpTid),
+  leting −6 % letetid (leting-visning.js). Vises nederst i sekken (OverlevSpill.fyllSekk). (4) TILFLUKT: «Sikre huset» inne i et hus
+  (#sikreknapp, 3 m³ tre fra leirens lager, høyst 6, «riksbrudd-tilflukt»): dekning 'tilflukt' = 8 % skade (Kamp.skade), «Hvil her»
+  +60 helse hvert 90. sekund, husmerke i kartet. Ingen planker i 3D ennå. (5) FORFALL («riksbrudd-forfall»): strømnettet gir 5 kW
+  (Leir.nettKW-kroken i Leir.steg) i 3–5 døgn eller 30–42 ekte minutter, vannverket 6–9 døgn / 55–75 minutter; uten brønn
+  (nytt bygg Leir.BYGG.brønn, lagt inn av overlev.js) gir det −15 på moralmålet (o.moralTillegg i FolkRegler.steg). I testene skjer
+  forfallet ikke av seg selv (OverlevSpill.test). Tallene er Claudes. Zomboid-punktene 1 (behov hos figuren) og 2 (lyd som lokker
+  fiender) er IKKE laget – brukeren valgte 3, 4 og 5.
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert

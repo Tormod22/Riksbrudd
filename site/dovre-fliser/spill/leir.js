@@ -363,11 +363,13 @@
     const behov = brukere.reduce((s, b) => s - BYGG[b.type].kw, 0), tank = kapasitet(L);
     L.drivstoff = Math.min(L.drivstoff, tank);
     // aggregatene dekker det sola ikke klarer, så lenge det er drivstoff
-    const aggMaks = L.drivstoff > 0 ? agg.reduce((s, b) => s + effekt(b).kw, 0) : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW));
+    // strømnettet (spill/overlev.js: virker de første døgnene) dekker litt før aggregatene må gå
+    const nett = api.nettKW ? api.nettKW(L) : 0;
+    const aggMaks = L.drivstoff > 0 ? agg.reduce((s, b) => s + effekt(b).kw, 0) : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW - nett));
     const liter = aggKW * DRIVSTOFF.literPerKWt * dt / 60; L.drivstoff = Math.max(0, L.drivstoff - liter);
-    let igjen = solKW + aggKW; const mangler = new Set();
+    let igjen = solKW + aggKW + nett; const mangler = new Set();
     for (const b of brukere) { const k = -BYGG[b.type].kw; if (igjen + 1e-9 >= k) igjen -= k; else mangler.add(b.id); }
-    return { prod: solKW + aggKW, kapasitet: solKW + aggMaks, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
+    return { nett, prod: solKW + aggKW + nett, kapasitet: solKW + aggMaks + nett, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)
