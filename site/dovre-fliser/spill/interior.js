@@ -233,7 +233,7 @@
         case 'hangar': { if (lu > 14 && lv > 12) prøv(r, 'fly', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { fri: 2 }); for (let k = 0; k < 4; k++) etSted(r, k % 2 ? 'verktøyvogn' : 'arbeidsbenk'); break; }
         // leirens bygg: brakka har køyesenger langs langveggene, kontrollrommet kartbord og radio, kjøkkenet benker og langbord
         // drivhus: plantebed i rekker langs huset med gang mellom, vanntønne ved døra
-        case 'drivhus': { const satt = rutenett(r, 'plantebed', { du: lu >= lv ? 3.1 : 1.9, dv: lu >= lv ? 1.9 : 3.1, mU: .9, mV: .9, langsU: lu >= lv, fri: 1.1, maks: 16 });
+        case 'drivhus': { const satt = rutenett(r, 'plantebed', { du: lu >= lv ? 2.9 : 1.75, dv: lu >= lv ? 1.75 : 2.9, mU: .7, mV: .6, langsU: lu >= lv, fri: .8, maks: 16 });
           if (!satt.length) for (let k = 0; k < Math.min(6, Math.floor(A / 6)); k++) etSted(r, 'plantebed', { fri: .8 }, lang); etSted(r, 'tønne'); break; }
         case 'brakke': { for (let k = 0; k < Math.min(12, Math.floor(A / 6)); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
         case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
