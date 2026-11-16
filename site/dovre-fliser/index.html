@@ -2766,8 +2766,15 @@ for (const n of Object.keys(NAVN)) {
   lk.appendChild(b);
 }
 document.getElementById('meny').onclick = function () { const på = lk.classList.toggle('på'); this.setAttribute('aria-expanded', String(på)); this.classList.toggle('på', på); };
-[['sp0', 0], ['sp1', 1], ['sp2', 10], ['sp3', 60], ['sp4', 600]].forEach(([id, v]) => { document.getElementById(id).onclick = () => { tempo = v;
-  for (const b of document.querySelectorAll('[id^=sp]')) b.classList.toggle('på', b.id === id); }; });
+// PAUSE (brukeren 16. nov: «når en trykker pause går det ikke an å starte igjen på telefonen» – der vises bare den valgte
+// fartsknappen, og i pause var ingen valgt): pauseknappen en gang til går videre i farten du hadde, knappen viser ▶ i pause,
+// og farten du hadde står igjen som knapp (klassen «sist») så den også kan trykkes.
+let fartFør = 'sp1';
+[['sp0', 0], ['sp1', 1], ['sp2', 10], ['sp3', 60], ['sp4', 600]].forEach(([id, v]) => { document.getElementById(id).onclick = () => {
+  if (id === 'sp0' && tempo === 0) { document.getElementById(fartFør).click(); return; }
+  if (id !== 'sp0') fartFør = id; tempo = v;
+  for (const b of document.querySelectorAll('[id^=sp]')) { b.classList.toggle('på', b.id === id); b.classList.toggle('sist', tempo === 0 && b.id === fartFør); }
+  const p0 = document.getElementById('sp0'); p0.textContent = tempo === 0 ? '▶' : '❚❚'; p0.setAttribute('aria-label', tempo === 0 ? 'Fortsett' : 'Pause'); p0.title = tempo === 0 ? 'Fortsett (P)' : 'Pause (P)'; }; });
 document.getElementById('lukk').onclick = () => { valgt = null; modus = null; visPanel(); skitten = true; };
 // lukkPanel(): menyer som åpnes over panelet nede til venstre (Leir, Folk, byggesettet) lukker det, så ikke to paneler ligger oppå hverandre
 window.lukkPanel = () => { if (document.getElementById('panel').classList.contains('på')) document.getElementById('lukk').click(); };
@@ -2825,9 +2832,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=1fa9beefe8"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=34ac9fb25e"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
-<script src="/dovre-fliser/spill/gange.js?v=fc85f2f379"></script>
+<script src="/dovre-fliser/spill/gange.js?v=f9caab51b4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=cb88bf4410"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
@@ -2856,12 +2863,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kraft3d.js?v=f4fafad5ff"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
-<script src="/dovre-fliser/spill/leir.js?v=592bb19735"></script>
+<script src="/dovre-fliser/spill/leir.js?v=2ff81964e2"></script>
 <script src="/dovre-fliser/spill/folk.js?v=dbf60ee478"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=126bde7fdc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=560ce40015"></script>
-<script src="/dovre-fliser/spill/folk-visning.js?v=b8c245ccd5"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=67e70ad23f"></script>
+<script src="/dovre-fliser/spill/folk-visning.js?v=dec1230ede"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=690ef82f5b"></script>
@@ -2886,13 +2893,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/leting.js?v=7d0e944ad5"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=4ca194c151"></script>
+<script src="/dovre-fliser/spill/kjor.js?v=efc85b02b5"></script>
 <script src="/dovre-fliser/spill/maal.js?v=ab171189c4"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=b0ce7f875d"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=df7b52ade5"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/meny.js?v=d59b0222a6"></script>
-<script src="/dovre-fliser/spill/kompakt.js?v=e91ff52dbf"></script>
-<script src="/dovre-fliser/spill/taster.js?v=3c8f162307"></script>
+<script src="/dovre-fliser/spill/kompakt.js?v=1992a8052d"></script>
+<script src="/dovre-fliser/spill/taster.js?v=cb98411f05"></script>
 </body>
 </html>

@@ -194,7 +194,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     for (const f of window.LEIR_MENY || []) try { f(hode, { el, knapp }); } catch (e) { console.error(e); }
     // byggene i grupper (16. nov: lista var 17 bygg uten inndeling); et bygg som ikke står i noen gruppe, havner under «Annet»
     const liste = el('div', { klasse: 'liste' }), GR = [['Bo og leve', ['brakke', 'kjøkken', 'drivhus', 'sykestue']], ['Strøm og diesel', ['drivstofftank', 'aggregat', 'solcelle']],
-      ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']]];
+      ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']], ['Veger', ['veg']]];
     const iGruppe = new Set(GR.flatMap(g => g[1])), rekke = [...GR.flatMap(([navn, ider]) => ider.filter(id => LB.BYGG[id] && !LB.BYGG[id].del).map((id, n) => [id, n ? null : navn])),
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
     for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
@@ -235,7 +235,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (o.pid) { const a = LB.planFinn(L, o.pid); plassering.ret = a.ret; plassering.retSatt = true; }
     if (o.ret !== undefined) { plassering.ret = o.ret; plassering.retSatt = true; }
     meny = false; menyEl.classList.remove('på'); leirKnapp.classList.remove('på');
-    visBanner(LB.BYGG[type].linje ? 'Trykk der gjerdet skal begynne, og så punkt for punkt.' : `Trykk der ${LB.BYGG[type].navn.toLowerCase()} skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
+    visBanner(LB.BYGG[type].linje ? `Trykk der ${LB.BYGG[type].veg ? 'vegen' : 'gjerdet'} skal begynne, og så punkt for punkt.` : `Trykk der ${LB.BYGG[type].navn.toLowerCase()} skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
   }
   // En mal settes inn i planen: trykk der midten skal være, roter, «Legg i planen»
   function startMal(i) {
@@ -249,7 +249,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const p = plassering;
     if (p && p.type && LB.BYGG[p.type].linje) {
       const a = knapp('Angre punkt', () => { p.punkter.pop(); prøv(); }); a.disabled = !p.punkter.length;
-      const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3;
+      const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;
       banner.append(a, r);
     } else if (p && p.x !== null) {
       banner.append(knapp('⟲ 15°', () => roter(1)), knapp('⟳ 15°', () => roter(-1)));
@@ -309,7 +309,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       visBanner(`«${p.mal.navn}»: ${ok} av ${p.deler.length} bygg får plass` + (ok < p.deler.length ? ' (de røde hoppes over)' : '') + '.', !!ok, mr.full > 0 ? LB.reiseTekst(mr) + ' – når planen bygges.' : null); skisse3d(); skitten = true; return;
     }
     const B = LB.BYGG[p.type];
-    if (B.linje && p.punkter.length < 2) { visBanner(p.punkter.length ? 'Trykk der neste punkt skal være.' : 'Trykk der gjerdet skal begynne.'); skisse3d(); skitten = true; return; }
+    if (B.linje && p.punkter.length < 2) { visBanner(p.punkter.length ? 'Trykk der neste punkt skal være.' : `Trykk der ${B.veg ? 'vegen' : 'gjerdet'} skal begynne.`); skisse3d(); skitten = true; return; }
     juster(p); const b = sp(p);
     const punkter = B.linje ? LB.gjerdePunkter(p.punkter, p.lukket) : [...LB.hjørner(b), [b.x, b.y]], v = await kartFor(punkter);
     if (plassering !== p) return;
@@ -392,11 +392,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       !LB.ferdig(b) ? 'byggeplass: kan skades av fiender' : null].filter(Boolean).join(' · ');
     // radiomasten: hva nivået gir lagene (brukeren 12. nov), og de to slagene drivstoff ved tank og aggregat
     const ekstra = b.type === 'radiomast' ? radioTekst(b) : b.type === 'drivstofftank' || b.type === 'aggregat' ? `Leiren har ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l diesel. ${DIESEL}` : '';
-    const nøkkel = [b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise].join('|');
+    const nøkkel = [ji, b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise].join('|');
     if (banner.firstChild && banner.firstChild.byggNøkkel === nøkkel && banner.classList.contains('på')) return;
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
     banner.firstChild.byggNøkkel = nøkkel;
+    // delegere: denne jobben først (byggelagene tar køen i rekkefølge)
+    if (jobb && ji > 0) banner.appendChild(knapp('Bygg dette først', () => { LB.prioriter(L, b.id); logg(`${B.navn}: byggelaget tar denne jobben først.`); lagre(); visByggPanel(); if (meny) visMeny(); skitten = true; }, { id: 'byggforst' }));
     if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)}${reise})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());
         if (r.feil && r.mangler && confirm(`${r.feil} Kjøpe det som mangler for ${LB.kroner(matPris(r.mangler))}?`) && kjøpManglende(r.mangler)) return k.onclick();
         logg(r.feil || `${B.navn} oppgraderes til nivå ${r.til}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); lagre(); visByggPanel(); });
@@ -446,6 +448,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       for (const [a, b] of ledd) { g.beginPath(); g.moveTo(sx(a[0]), sy(a[1])); g.lineTo(sx(b[0]), sy(b[1])); g.stroke(); } g.restore(); };
     const tegn1 = (b, skisse, ok) => {
       const B = LB.BYGG[b.type];
+      if (B.veg) { if (!b.punkter || !b.punkter.length) return; const w = Math.max(2.5, B.bredde / m), strek = (farge2, bredde, stipl) => { g.save(); g.strokeStyle = farge2; g.lineWidth = bredde; g.lineJoin = g.lineCap = 'round'; if (stipl) g.setLineDash(stipl);
+          g.beginPath(); b.punkter.forEach(([x, y], i) => (i ? g.lineTo(sx(x), sy(y)) : g.moveTo(sx(x), sy(y)))); g.stroke(); g.restore(); };
+        if (skisse) { strek(ok ? 'rgba(110,200,105,.55)' : 'rgba(224,96,74,.55)', w); for (const q of b.punkter) { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(q[0]), sy(q[1]), 4, 0, 6.283); g.fill(); } return; }
+        const fer = LB.ferdig(b); strek(b.id === valgtBygg ? '#f0d79a' : 'rgba(60,50,36,.9)', w + 2); strek(fer ? '#a89878' : 'rgba(168,152,120,.45)', w, fer ? null : [8, 6]); return; }
       if (B.linje) { if (!b.punkter || !b.punkter.length) return;
         if (skisse) { const P = b.lukket ? [...b.punkter, b.punkter[0]] : b.punkter, ledd = []; for (let i = 1; i < P.length; i++) ledd.push([P[i - 1], P[i]]);
           linje(ledd, ok ? '#7fd17a' : '#e0604a', true); for (const q of b.punkter) { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(q[0]), sy(q[1]), 4, 0, 6.283); g.fill(); } return; }
@@ -514,7 +520,20 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return M[B.modell] ? M[B.modell]() : null;
   }
   // Gjerdet i 3D: et stykke per 10 m som står på bakken og heller med terrenget, med åpninger der portene står
+  // VEGEN I 3D: et bånd som følger terrenget (punkt hver 3. m, mykere hjørner), lysere i midten, bare så langt den er bygget
+  function vegLinje(P) { let Q = P.map(p => p.slice()); if (Q.length > 2) { const N = [Q[0]]; for (let i = 0; i < Q.length - 1; i++) { const a = Q[i], c = Q[i + 1]; if (i) N.push([a[0] * .78 + c[0] * .22, a[1] * .78 + c[1] * .22]); if (i < Q.length - 2) N.push([a[0] * .22 + c[0] * .78, a[1] * .22 + c[1] * .78]); } N.push(Q[Q.length - 1]); Q = N; }
+    const ut = []; for (let i = 1; i < Q.length; i++) { const a = Q[i - 1], c = Q[i], l = Math.hypot(c[0] - a[0], c[1] - a[1]), n = Math.max(1, Math.ceil(l / 3)); for (let k = i === 1 ? 0 : 1; k <= n; k++) ut.push([a[0] + (c[0] - a[0]) * k / n, a[1] + (c[1] - a[1]) * k / n]); } return ut; }
+  function veg3d(b, u, R, mat) {
+    const B = LB.BYGG[b.type]; let Q = vegLinje(b.punkter || []); if (Q.length < 2) return []; const andel = b.igjen > 0 && b.id >= 0 ? Math.max(.03, LB.framdrift(b)) : 1; Q = Q.slice(0, Math.max(2, Math.ceil(Q.length * andel)));
+    const pos = [], col = [], idx = [], w = B.bredde / 2, kant = [.42, .38, .31], midt = [.6, .55, .45]; let n = 0;
+    for (let i = 0; i < Q.length; i++) { const [x, y] = Q[i]; if (Math.abs(x - u.cx) > u.S - 5 || Math.abs(y - u.cy) > u.S - 5) { n = 0; continue; }
+      const a = Q[Math.max(0, i - 1)], c = Q[Math.min(Q.length - 1, i + 1)], l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, nx = -(c[1] - a[1]) / l, ny = (c[0] - a[0]) / l, z = (hoyde3d(x, y, u) - u.h0) * R.EX + .12;
+      for (const [t, f] of [[-1, kant], [0, midt], [1, kant]]) { const px = x + nx * w * t, py = y + ny * w * t; pos.push(px - u.cx, py - u.cy, t ? Math.max(z - .25, Math.min(z, (hoyde3d(px, py, u) - u.h0) * R.EX + .1)) : z); col.push(...f); }
+      const o = pos.length / 3 - 3; if (n) idx.push(o - 3, o, o - 2, o, o + 1, o - 2, o - 2, o + 1, o - 1, o + 1, o + 2, o - 1); n++; }
+    if (!idx.length) return []; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat); m.userData.id = b.id; m.renderOrder = 1; return [m]; }
   function gjerde3d(b, u, R, mat) {
+    if (LB.BYGG[b.type].veg) return veg3d(b, u, R, mat);
     const ut = [];
     for (const [a, c] of LB.gjerdeLedd(L, b)) { const l = Math.hypot(c[0] - a[0], c[1] - a[1]), n = Math.max(1, Math.ceil(l / 10)), ret = Math.atan2(c[1] - a[1], c[0] - a[0]);
       for (let i = 0; i < n; i++) { const x0 = a[0] + (c[0] - a[0]) * i / n, y0 = a[1] + (c[1] - a[1]) * i / n, x1 = a[0] + (c[0] - a[0]) * (i + 1) / n, y1 = a[1] + (c[1] - a[1]) * (i + 1) / n;
@@ -567,7 +586,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       return [[f[0] - 5, f[2] - 5], [f[1] + 5, f[2] - 5], [f[1] + 5, f[3] + 5], [f[0] - 5, f[3] + 5]].map(([a, d]) => [b.x - u.cx + a * c - d * s, b.y - u.cy + a * s + d * c]); });
     // og en ryddet plass på 30 m rundt midten av leiren (der flagget står)
     const S = spill(), lx = S && S.leir ? S.leir.x - u.cx : 1e9, ly = S && S.leir ? S.leir.y - u.cy : 1e9;
-    return (x, y) => Math.hypot(x - lx, y - ly) < 30 || P.some(Q => pip(Q, x, y));
+    const harVeg = !!L && L.bygg.some(b => LB.BYGG[b.type].veg);
+    return (x, y) => Math.hypot(x - lx, y - ly) < 30 || P.some(Q => pip(Q, x, y)) || (harVeg && LB.vegAvstand(L, x + u.cx, y + u.cy, false) < LB.BYGG.veg.bredde / 2 + 1.5);
   }
   KROKER.bygg3d.push(async u => {
     if (!L || !spill()) return; const inni = innenfor(u);
@@ -588,7 +608,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // når et bygg settes opp, flyttes eller blir ferdig: bare leirens nett lages på nytt (og trærne der ryddes)
   function bygg3dPåNytt(nytt) { const R = r3(); if (!R || !R.ut || !window.THREE) return; lagLeir3d(R.ut, R); if (nytt) ryddTrær(R); }
   // byggene vokser mens de bygges (oppdateres hvert sekund)
-  setInterval(() => { const R = r3(); if (!R || !L) return; for (const m of mesh) { const b = L.bygg.find(q => q.id === m.userData.id); if (b && b.igjen > 0) m.scale.z = Math.max(.08, LB.framdrift(b)); } }, 1000);
+  setInterval(() => { const R = r3(); if (!R || !L) return; for (const m of mesh) { const b = L.bygg.find(q => q.id === m.userData.id); if (b && b.igjen > 0 && !LB.BYGG[b.type].veg) m.scale.z = Math.max(.08, LB.framdrift(b)); } }, 1000);
 
   // ---------- start ----------
   function start() {
@@ -598,7 +618,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     L.midt = { x: S.leir.x, y: S.leir.y };
     siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
-  window.LeirSpill = { fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
+  window.LeirSpill = { påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },
     angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };
   // K1 sier fra når spillet er klart (lagret spill lest inn, eller ny leir satt opp)

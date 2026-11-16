@@ -19,7 +19,8 @@ body.kort .stats > div:first-child{ order:-2; } body.kort .stats > div.viktig{ o
 body.kort .stats .ikke-kort, body.kort #sAar{ display:none; } body.kort .stats::-webkit-scrollbar{ display:none; }
 body.kort .knapper{ flex:none; flex-wrap:nowrap; gap:3px; }
 body.kort .knapper button{ height:31px; min-width:31px; padding:0 7px; font-size:13.5px; }
-body.kort .knapper #sp1:not(.på), body.kort .knapper #sp2:not(.på), body.kort .knapper #sp3:not(.på), body.kort .knapper #sp4:not(.på){ display:none; }
+body.kort .knapper #sp1:not(.på):not(.sist), body.kort .knapper #sp2:not(.på):not(.sist), body.kort .knapper #sp3:not(.på):not(.sist), body.kort .knapper #sp4:not(.på):not(.sist){ display:none; }
+body.kort .knapper .sist{ opacity:.6; }
 body.kort #kompass{ top:calc(var(--topp,44px) + 3px); }
 body.kort #minikart{ right:calc(8px + ${Rt}); left:auto; top:calc(var(--topp,44px) + 8px); bottom:auto; width:104px; height:104px; }
 body.kort #minikart button{ width:26px; height:26px; right:-5px; top:-5px; font-size:11px; }

@@ -14,8 +14,7 @@
     const st = el('oppstart'); if (st && st.classList.contains('på')) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key, T = TASTER[k]; if (!T) return;
     if (går() && !T[2]) return;
-    // mellom pause og fart: P en gang til setter farten tilbake til 1×
-    let b = el(T[0]); if (k === 'p' && b && b.classList.contains('på')) b = el('sp1');
+    let b = el(T[0]);   // (pauseknappen går selv videre i farten du hadde når den trykkes i pause)
     // (fartsknappene er slått sammen til én på smale skjermer, men virker like fullt)
     if (!b || (!/^sp\d$/.test(b.id) && !synlig(b))) return; e.preventDefault(); b.click();
   });

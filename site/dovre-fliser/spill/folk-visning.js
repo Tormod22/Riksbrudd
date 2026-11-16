@@ -39,7 +39,7 @@
 #folkmeny .opp span.n{ text-align:center; font-size:16px; font-weight:600; }
 #folkmeny .opp button{ min-height:38px; padding:0; font-size:19px; }
 #folkmeny .person{ font-size:13px; padding:3px 0; border-bottom:1px solid #2e281e; line-height:1.3; } #folkmeny .person small{ color:var(--ink-dim); }
-#folkmeny .person.syk{ color:#e8a46a; }
+#folkmeny .person.syk{ color:#e8a46a; } #folkmeny .person select{ background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; font-size:13px; min-height:30px; margin:0 4px; }
 body.kort #folkmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); left:calc(8px + env(safe-area-inset-left,0px)); padding:8px 10px 10px; }
 body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-height:34px; } body.kort #folkmeny .opp{ grid-template-columns:1fr 36px 24px 36px; }`;
   document.head.appendChild(css);
@@ -114,7 +114,10 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     panel.append(el('div', { klasse: 'rad' }, knapp(visFolk ? `Skjul folkene` : `Vis folkene (${n})`, () => { visFolk = !visFolk; vis(); }, { id: 'visfolk' })));
     if (visFolk) for (const p of F.personer) {
       const best = Object.entries(p.ferd).sort((a, b) => b[1] - a[1])[0];
-      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør ? ' syk' : '') }, `${p.navn}, ${p.alder} – ${FR.OPPGAVE[p.oppgave].navn.toLowerCase()}`,
+      // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
+      const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
+      velg.onchange = () => { FR.sett(F, p.id, velg.value); endret(); };
+      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør ? ' syk' : '') }, el('span', {}, `${p.navn}, ${p.alder} `), velg,
         el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}`)));
     }
   }
@@ -140,7 +143,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); akk = 0;
       for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre(); }
     soldater(dt); vakter();
-    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel))) vis(); forsvarNå = null; }
+    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
   });
   // sykestua med folk på «stell» leger sårede soldater i egne lag innen 150 m (fra 50 % til helt på ca. 5 timer)
   function soldater(dt) {

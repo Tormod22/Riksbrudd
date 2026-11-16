@@ -873,6 +873,22 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   skjules loggen mens du bygger. leir-visning.js tegn1: skygge under byggene, møne, lyst merke på forsiden, navn via Etikett.
   Med byggesettet åpent følger rutenettet byggesettets ruter (2,4 m fra L.byggesett), og kartet flytter seg også for forslaget der
   (skissepunkt: midten av Byggesett.forslag(), q.d).
+  KJØRING, VEG, PAUSE OG DELEGERING (16. nov kveld, brukeren: «gjør det mulig å bygge veier, delegere arbeidere, pausen kan ikke
+  startes igjen på telefonen, kjørbare helikopter og biler»):
+  PAUSE: fartsknappene i index.html – sp0 i pause klikker farten du hadde (fartFør), viser ▶, og den farten får klassen «sist» så
+  den står synlig på små skjermer (kompakt.js skjulte alle fartsknappene i pause). VAKT «pause».
+  KJØRING: spill/kjor.js (reglene øverst: Kjor.bilSteg/heliSteg, test_kjor.js; visningen KjorSpill nederst). En feltbil og et
+  helikopter per leir («riksbrudd-kjor», i kartets meter X/Y; helikopteret på helikopterplassen hvis den finnes, ellers flyttes begge
+  til et fritt sted første gang de er i utsnittet). Gange.settFører(fn, [huk, hopp]) lar en fører ta over rammen i Gange.kamera
+  (inn: fram, side, opp, ned, dt); F / #kjorknapp setter deg inn (innen 8 m) og ut (bilen må stå, helikopteret må ha landet).
+  Kameraet ligger bak kjøretøyet og glir tilbake to sekunder etter at du har sett deg rundt. Helikopteret setter R3.bane.avst = 2400
+  (større utsnitt); ved kanten av utsnittet bremses kjøretøyet («Venter på kartet lenger fram …»). Bilen går 27 m/s på veg
+  (u.påVeg, Liv3d.dekke, LeirSpill.påEgenVeg) og 11 m/s i terrenget. Tallene er Claudes. gange.js: kroppen flyttes med når utsnittet
+  byttes (kroppU), og dt er aldri negativ. VAKT «kjørbare biler og helikopter». Ingen motorlyd og ingen skade ennå.
+  VEG: Leir.BYGG.veg (linje som gjerdet, veg: true, 5 m bred, 6000 kr/m – Claudes tall), Leir.vegAvstand/påVeg (bare ferdig veg),
+  2D som bredt bånd, 3D veg3d i leir-visning.js (bånd hver 3. m, bare så langt den er bygget), trær ryddes langs vegen (innenfor).
+  DELEGERING («deiligere arbeidere» lest som «delegere arbeidere» – Claudes tolkning, sagt til brukeren): Leir.prioriter(L, id)
+  («Bygg dette først» i byggpanelet) og en nedtrekksliste per person i Folk («Vis folkene», FolkRegler.sett). VAKT «grusveg og delegering».
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert

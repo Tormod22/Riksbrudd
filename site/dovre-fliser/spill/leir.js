@@ -31,6 +31,8 @@
     brakke: { navn: 'Brakke', pris: 4e6, tid: 2, kw: -1, modell: 'brakke', fot: [-3.4, 4.2, -6.4, 6.4], mat: { tre: 25, betong: 5 }, nivå: { plasser: [8, 14, 20] }, tekst: 'Sengeplasser og ett byggelag til' },
     vakttårn: { navn: 'Vakttårn', pris: 5e6, tid: 1, kw: 0, modell: 'vakttårn', fot: [-1.6, 1.6, -1.9, 1.6], mat: { tre: 12, stål: 1 }, tekst: 'Utsikt og lyskaster' },
     port: { navn: 'Port med vaktbu', pris: 1.5e6, tid: 1, kw: 0, modell: 'port', fot: [-2.3, 2.3, -7.1, 3.9], mat: { stål: 3, betong: 2 }, port: true, tekst: 'Settes i gjerdet og lager en åpning' },
+    // VEG (brukeren 16. nov: «gjør det mulig å bygge veier»): grusveg punkt for punkt som gjerdet. Feltbilen kjører fort på den.
+    veg: { navn: 'Grusveg', prisPerMeter: 6000, tidPerMeter: .008, kw: 0, modell: 'veg', linje: true, veg: true, bredde: 5, matPerMeter: {}, tekst: 'Trykk punkt for punkt. Bilen kjører fort på veg, og skogen ryddes' },
     gjerde: { navn: 'Gjerde', prisPerMeter: 50000, tidPerMeter: .02, kw: 0, modell: 'gjerde', linje: true, matPerMeter: { stål: .02 }, tekst: 'Trykk punkt for punkt; «Lukk ringen» for et gjerde rundt' },
     lagertelt: { navn: 'Lagertelt', pris: 2e6, tid: 1, kw: 0, modell: 'lagertelt', fot: [-4.3, 4.3, -3.8, 3.8], mat: { tre: 4, stål: 1 }, nivå: { lager: [100, 200, 300] }, tekst: 'Lager for materialer' },
     container: { navn: 'Container', pris: 5e5, tid: .5, kw: 0, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { stål: 2 }, nivå: { lager: [40, 70, 100] }, tekst: 'Lite lager for materialer' },
@@ -101,11 +103,11 @@
     if (B.linje) { if (!b.punkter || b.punkter.length < 2) return 'Gjerdet trenger minst to punkter.'; const l = lengde(b.punkter, b.lukket); if (l < 2) return 'Gjerdet er for kort.'; if (l > 3000) return 'Gjerdet er for langt (høyst 3 km om gangen).'; }
     const P = hjørner(b), punkter = B.linje ? gjerdePunkter(b.punkter, b.lukket) : [...P, [b.x, b.y]];
     for (const [x, y] of punkter) { const k = v.klasse ? v.klasse(x, y) : 2; if (k === 3) return 'Kan ikke bygge i vann.'; if (k === 255 || k === undefined) return 'Her finnes det ikke kart.'; }
-    if (v.iHus && punkter.some(([x, y]) => v.iHus(x, y))) return B.linje ? 'Gjerdet går gjennom et hus.' : 'Det står et hus her.';
+    if (v.iHus && punkter.some(([x, y]) => v.iHus(x, y))) return B.linje ? `${B.veg ? 'Vegen' : 'Gjerdet'} går gjennom et hus.` : 'Det står et hus her.';
     // gjerdet kan ikke gå gjennom egne bygg (porter står i gjerdet, og delene i byggesettet har sine egne regler)
     if (B.linje) { const Q = b.lukket && b.punkter.length > 2 ? [...b.punkter, b.punkter[0]] : b.punkter;
       for (const a of L.bygg) { const A = BYGG[a.type]; if (A.linje || A.port || A.del) continue; const H = hjørner(a);
-        for (let i = 1; i < Q.length; i++) if (linjeGjennom(Q[i - 1], Q[i], H)) return `Gjerdet går gjennom ${A.navn.toLowerCase()}.`; } }
+        for (let i = 1; i < Q.length; i++) if (linjeGjennom(Q[i - 1], Q[i], H)) return `${B.veg ? 'Vegen' : 'Gjerdet'} går gjennom ${A.navn.toLowerCase()}.`; } }
     // delene i byggesettet (del: true) står inntil og oppå hverandre; plassene deres sjekkes i byggesett.js
     if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
@@ -237,14 +239,14 @@
   // Nærmeste gjerdeledd innen 8 m: porten festes midt på linja og snus langs den (portens y-akse langs gjerdet)
   function festTilGjerde(L, x, y) {
     let best = null;
-    for (const g of L.bygg) { if (!BYGG[g.type].linje) continue; const P = g.lukket ? [...g.punkter, g.punkter[0]] : g.punkter;
+    for (const g of L.bygg) { if (!BYGG[g.type].linje || BYGG[g.type].veg) continue; const P = g.lukket ? [...g.punkter, g.punkter[0]] : g.punkter;
       for (let i = 1; i < P.length; i++) { const [ax, ay] = P[i - 1], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2));
         const px = ax + dx * t, py = ay + dy * t, d = Math.hypot(x - px, y - py); if (d < 8 && (!best || d < best.d)) best = { d, x: px, y: py, ret: Math.atan2(dy, dx) - Math.PI / 2, gjerde: g.id }; } }
     return best;
   }
   // Leddene i et gjerde med åpninger der portene står: [[[x, y], [x, y]], ...]
   function gjerdeLedd(L, g) {
-    const P = g.lukket ? [...g.punkter, g.punkter[0]] : g.punkter, porter = L.bygg.filter(b => BYGG[b.type].port), ut = [];
+    const P = g.lukket ? [...g.punkter, g.punkter[0]] : g.punkter, porter = BYGG[g.type].veg ? [] : L.bygg.filter(b => BYGG[b.type].port), ut = [];
     for (let i = 1; i < P.length; i++) {
       const [ax, ay] = P[i - 1], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy); if (l < .3) continue; const ux = dx / l, uy = dy / l; let hull = [];
       for (const p of porter) { const s = (p.x - ax) * ux + (p.y - ay) * uy, d = Math.abs((p.x - ax) * -uy + (p.y - ay) * ux); if (d < 1.5 && s > -8 && s < l + 8) hull.push([s + BYGG.port.fot[2], s + BYGG.port.fot[3]]); }
@@ -396,12 +398,21 @@
       n.nesteJobb = Math.max(n.nesteJobb || 1, ...n.bygg.map(b => (b.nr || 0) + 1), ...n.bygg.map(b => (b.arbeid ? b.arbeid.nr + 1 : 1)));
       return n; } catch (e) { return null; }
   }
+  // DELEGERE (brukeren 16. nov): sett en jobb først i køen – byggelagene tar den først. Gir false når bygget ikke har noen jobb.
+  function prioriter(L, id) { const J = jobber(L), j = J.find(q => q.b.id === id); if (!j) return false; let nr = Math.min(...J.map(q => q.nr)) - 1; if (nr === 0) nr = -1;   // (0 leses som «ikke satt» i jobber())
+    if (j.hva === 'bygg') j.b.nr = nr; else j.b.arbeid.nr = nr; return true; }
+  // Avstanden fra (x, y) til nærmeste egne veg (ferdig hvis bareFerdig), eller Infinity. påVeg: innen halve bredden + en halv meter.
+  function vegAvstand(L, x, y, bareFerdig = true) { let best = Infinity;
+    for (const g of L.bygg) { const B = BYGG[g.type]; if (!B.veg || !g.punkter || (bareFerdig && !ferdig(g))) continue; const P = g.punkter;
+      for (let i = 1; i < P.length; i++) { const [ax, ay] = P[i - 1], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), d = Math.hypot(x - ax - dx * t, y - ay - dy * t); if (d < best) best = d; } }
+    return best; }
+  const påVeg = (L, x, y) => vegAvstand(L, x, y) <= BYGG.veg.bredde / 2 + .5;
   // Legger materialer fra verden (hogst, riving) i lageret, så langt lagerplassen rekker. Gir det som ble lagt inn.
   function leggInn(L, type, mengde) {
     if (!MATERIALER[type] || !(mengde > 0)) return 0;
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
-  const api = { leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

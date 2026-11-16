@@ -192,4 +192,16 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   const r = L0.selgMateriale(L, 'tre', 10, gi); ok(r.mengde === 10 && r.pris === 10 * L0.MATERIALER.tre.pris * L0.REGLER.salg && kasse === r.pris && L.lager.tre === 4, 'salg: 10 m³ tre gir halv innkjøpspris');
   const r2 = L0.selgMateriale(L, 'tre', 10, gi); ok(r2.mengde === 4 && L.lager.tre === 0, 'salg: ikke mer enn det som finnes');
   ok(!!L0.selgMateriale(L, 'tre', 10, gi).feil && !!L0.selgMateriale(L, 'gull', 1, gi).feil, 'salg: tomt lager og ukjent materiale gir feil'); }
+// ---- grusveg (16. nov): bygges punkt for punkt som gjerdet, koster per meter, og påVeg gjelder bare ferdig veg
+{ const L0 = require('../../site/dovre-fliser/spill/leir.js'), L = L0.ny(), k = L0.kostnad('veg', 100);
+  ok(L0.BYGG.veg.linje && L0.BYGG.veg.veg && k.pris === 100 * L0.BYGG.veg.prisPerMeter && k.timer > 0, `grusveg: 100 m koster ${k.pris} kr`);
+  L.bygg.push({ id: 1, type: 'veg', punkter: [[0, 0], [100, 0], [100, 80]], igjen: 5, totalt: 10, hp: 1, nivå: 1 });
+  ok(!L0.påVeg(L, 50, 1) && L0.vegAvstand(L, 50, 1, false) === 1, 'uferdig veg teller ikke som veg');
+  L.bygg[0].igjen = 0; ok(L0.påVeg(L, 50, 2) && L0.påVeg(L, 101, 40) && !L0.påVeg(L, 50, 6) && L0.vegAvstand(L, 0, 300) > 200, 'ferdig veg: på vegen innen halve bredden');
+  L.bygg.push({ id: 2, type: 'port', x: 50, y: 0, ret: 0, igjen: 0, totalt: 1, hp: 1, nivå: 1 });
+  ok(L0.gjerdeLedd(L, L.bygg[0]).length === 2 && L0.festTilGjerde(L, 50, 1) === null, 'porter lager ikke hull i vegen og festes ikke til den'); }
+// ---- delegere (16. nov): en jobb settes først i køen
+{ const L0 = require('../../site/dovre-fliser/spill/leir.js'), L = L0.ny();
+  L.bygg.push({ id: 1, type: 'brakke', x: 0, y: 0, igjen: 5, totalt: 10, nr: 1, hp: 1, nivå: 1 }, { id: 2, type: 'aggregat', x: 30, y: 0, igjen: 5, totalt: 10, nr: 2, hp: 1, nivå: 1 }, { id: 3, type: 'brakke', x: 60, y: 0, igjen: 0, totalt: 10, hp: 1, nivå: 1 });
+  ok(L0.jobber(L)[0].b.id === 1 && L0.prioriter(L, 2) && L0.jobber(L)[0].b.id === 2 && !L0.prioriter(L, 3), '«Bygg dette først» flytter jobben først i køen; ferdige bygg har ingen jobb'); }
 process.exit(feil ? 1 : 0);

@@ -452,6 +452,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             // Q på et valgt bygg plukker det opp: ny skisse av samme type og retning
             { const b0 = LeirSpill.tilstand().bygg.find(b => !Leir.BYGG[b.type].linje && !Leir.BYGG[b.type].del); if (b0) { LeirSpill.velg(b0.id); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q', bubbles: true, cancelable: true })); const q2 = LeirSpill.plassering(); bv.plukk = !!q2 && q2.type === b0.type && q2.ret === (b0.ret || 0); LeirSpill.avbryt(); await vent(300); if (window.lukkPanel) lukkPanel(); } else bv.plukk = true; }
             BYGGEVISNING.test = false; Object.assign(kam, k0); skitten = true; r.k2.bv = bv; }
+          // VAKT grusveg og delegering (brukeren 16. nov): en veg legges punkt for punkt og blir et bygg med punkter; når den er ferdig,
+          // er den «egen veg» (bilen kjører fort der); «Bygg dette først» flytter en jobb fremst i køen.
+          { const vg = {}, SL = OppstartSpill.tilstand().leir, Lv = LeirSpill.tilstand(), før = Lv.bygg.length; LeirSpill.avbryt(); LeirSpill.startPlassering('veg');
+            vg.banner = document.getElementById('byggvalg').textContent; LeirSpill.trykk(SL.x + 60, SL.y + 80); LeirSpill.trykk(SL.x + 140, SL.y + 80); LeirSpill.trykk(SL.x + 140, SL.y + 150); await LeirSpill.prøv();
+            const pv = LeirSpill.plassering(); vg.feil = pv && pv.feil; await LeirSpill.bekreft(); const veg = Lv.bygg.find(b => b.type === 'veg'); vg.bygget = Lv.bygg.length === før + 1 && !!veg && veg.punkter.length === 3;
+            if (veg) { vg.uferdig = !LeirSpill.påEgenVeg(SL.x + 100, SL.y + 80); const ig = veg.igjen; veg.igjen = 0; vg.ferdig = LeirSpill.påEgenVeg(SL.x + 100, SL.y + 81) && !LeirSpill.påEgenVeg(SL.x + 100, SL.y + 90); veg.igjen = ig;
+              const J = Leir.jobber(Lv); vg.sist = J.length > 1 ? J[J.length - 1].b.id : null; if (vg.sist !== null) { Leir.prioriter(Lv, vg.sist); vg.først = Leir.jobber(Lv)[0].b.id === vg.sist; } else vg.først = true;
+              Lv.bygg.splice(Lv.bygg.indexOf(veg), 1); }
+            LeirSpill.avbryt(); r.k2.vg = vg; }
           // VAKT byggesett (12. nov): åpnes fra Leir-menyen, en hytte (16 deler) som jobber for byggelagene, rad med vegger, tak i lufta avvises,
           // ferdig hytte = rom med dør og senger (Leir.plasser), riving gir penger tilbake, verktøylinja passer på skjermen
           { const lk = document.getElementById('leirknapp'); lk.click(); const knappBs = document.getElementById('bs-apne'); if (knappBs) knappBs.click();
@@ -571,6 +580,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         console.log(`${rsok ? 'ok  ' : 'FEIL'} ${navn} materialer fra verden: panelet viser utbytte og kjøpspris ${rs.panel}, hogst og riving ga ${rs.tre} m³ tre og ${rs.betong} m³ betong, hogd felt huskes ${rs.hogdHer}, revet hus borte ${rs.revet}, menyen har delen ${rs.del}, lagret ${rs.lagret}`);
         { const bv = k2.bv || {}, bvok = bv.på && bv.klasse && bv.m <= .61 && bv.iBildet && bv.svever && bv.fast && bv.dyttet && bv.plukk && bv.synlig && bv.av; if (!bvok) { feil++; console.log(JSON.stringify(bv)); }
           console.log(`${bvok ? 'ok  ' : 'FEIL'} ${navn} byggevisning i 2D: kameraet gikk inn til ${(bv.m || 0).toFixed(2)} m per punkt med leiren i bildet, skissen fulgte musa til trykket og sto så fast, piltasten dyttet den, Q plukket opp et bygg, skissen ble hentet inn i det frie feltet, av igjen etter avbryt`); }
+        { const vg = k2.vg || {}, vgok = /vegen/.test(vg.banner || '') && !vg.feil && vg.bygget && vg.uferdig && vg.ferdig && vg.først; if (!vgok) { feil++; console.log(JSON.stringify(vg)); }
+          console.log(`${vgok ? 'ok  ' : 'FEIL'} ${navn} grusveg og delegering: vegen ble lagt med tre punkter, teller som veg først når den er ferdig, og «Bygg dette først» flytter jobben fremst`); }
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
         const bs = k2.bs || {}, bsok = bs.åpen && bs.hytte === 16 && bs.bygget === 16 && bs.jobber === 16 && /vegger/.test(bs.lufttak || '') && bs.rad === 3 && bs.rom === 1 && bs.dør === 1 && bs.senger === 2
           && bs.revet === 1 && bs.tilbake > 0 && bs.passer && bs.lukket; if (!bsok) { feil++; console.log(JSON.stringify(bs)); }
@@ -805,6 +816,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const ko = await pg.evaluate(() => { const k = Kompakt.sjekk(), h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : -1; };
       const synlige = ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => { const e = document.getElementById(id); return e && e.offsetParent !== null; }).length;
       return { kort: k.kort, stats: h('.stats'), kilde: h('#kilde'), fart: synlige, mobil: VW < 900 }; });
+    // VAKT pause (brukeren 16. nov: pausen kunne ikke oppheves på telefon): pause skjuler ikke farten du hadde, viser ▶,
+    // og både pauseknappen og fartsknappen starter spillet igjen i samme fart.
+    const pa = await pg.evaluate(() => { const t0 = tempo, sp = id => document.getElementById(id), syn = () => ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => sp(id).offsetParent !== null);
+      sp('sp2').click(); const ut = { fart: tempo }; sp('sp0').click(); ut.pause = tempo; ut.tegn = sp('sp0').textContent; ut.synlig = syn().join();
+      sp('sp0').click(); ut.videre = tempo; sp('sp0').click(); sp('sp2').click(); ut.knapp = tempo; ut.tegn2 = sp('sp0').textContent;
+      sp(t0 === 0 ? 'sp0' : t0 === 10 ? 'sp2' : t0 === 60 ? 'sp3' : t0 === 600 ? 'sp4' : 'sp1').click(); if (t0 !== 0 && tempo === 0) sp('sp0').click(); return ut; });
+    const paok = pa.fart === 10 && pa.pause === 0 && pa.tegn === '▶' && /sp2/.test(pa.synlig) && pa.videre === 10 && pa.knapp === 10 && pa.tegn2 === '❚❚';
+    if (!paok) { feil++; console.log(JSON.stringify(pa)); }
+    console.log(`${paok ? 'ok  ' : 'FEIL'} ${navn} pause: i pause vises ▶ og farten du hadde (${pa.synlig}); pauseknappen og fartsknappen starter igjen i 10×`);
     const kook = ko.mobil ? (ko.kort && ko.stats > 0 && ko.stats < 34 && ko.kilde < 22 && ko.fart === 1) : (!ko.kort && ko.fart === 4); if (!kook) feil++;
     console.log(`${kook ? 'ok  ' : 'FEIL'} ${navn} kompakt skjerm: ${ko.kort ? 'kompakt' : 'vanlig'}, statuslinja ${ko.stats} px, kildeteksten ${ko.kilde} px, ${ko.fart} fartsknapp(er) synlig`);
     // VAKT lyd (spill/lyd.js, 12. nov): lydmotoren starter (8 kanaler) og regner ut nivåer i 3D uten feil; ☰ har «Lyd»
@@ -938,7 +958,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const ut = {}, t0 = tempo; if (på('lagmeny')) document.getElementById('meny').click();
       tast('m'); ut.åpen = på('lagmeny'); tast('m'); ut.lukket = !på('lagmeny');
       tast('h'); ut.hjelp = på('hjelp'); tast('h'); ut.hjelpLukket = !på('hjelp');
-      tempo = 1; document.getElementById('sp1').click(); tast('p'); ut.pause = tempo === 0; tast('p'); ut.igjen = tempo === 1;
+      tempo = 1; document.getElementById('sp1').click(); const tFør = tempo; tast('p'); ut.pause = tempo === 0; tast('p'); ut.igjen = tempo === tFør && tFør > 0;
       const felt = document.createElement('input'); document.body.appendChild(felt); felt.focus(); tast('m', felt); ut.felt = !på('lagmeny'); felt.remove();
       ut.tittel = /tast M/.test(document.getElementById('meny').title); tempo = t0; return ut; });
     const tstok = tst.åpen && tst.lukket && tst.hjelp && tst.hjelpLukket && tst.pause && tst.igjen && tst.felt && tst.tittel;
@@ -1014,6 +1034,21 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const lbok = !lb.uten && lb.registrert && lb.plan && lb.senger >= 4 && lb.vegg && lb.inne && lb.gulv && !lb.let && (lb.lapp === 'Brakka' || /^Du fant|^Huset var/.test(lb.lapp)) && lb.gress && lb.borte;
     if (!lbok) { feil++; console.log(JSON.stringify(lb)); }
     console.log(`${lbok ? 'ok  ' : 'FEIL'} ${navn} interiør i leirens bygg: brakka er registrert, veggen stopper deg, ${lb.senger} køyesenger inne, du står på gulvet, ingen leting der, borte når bygget fjernes`);
+    // VAKT kjørbare biler og helikopter (spill/kjor.js, brukeren 16. nov): feltbilen og helikopteret står fritt ved leiren, knappen
+    // kommer når du går bort til dem, F setter deg inn, bilen kjører og bremser, helikopteret letter og lander, og plassen lagres.
+    const kj = await pg.evaluate(async () => { if (!window.KjorSpill || !KjorSpill.liste().length) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      const R = R3, u = R.ut, K = KjorSpill.liste(), ut = {}, tast = (k, ned) => window.dispatchEvent(new KeyboardEvent(ned ? 'keydown' : 'keyup', { key: k }));
+      for (const k of K) { k.X = u.cx + (k.type === 'bil' ? 60 : 90); k.Y = u.cy - 200; k.ny = true; k.alt = null; } Gange.start(); KROKER.ramme3d.forEach(f => f(R));
+      ut.fritt = K.every(k => !hindring3d(k.X - u.cx, k.Y - u.cy)); const sett = (x, y) => { R.bane.x = x; R.bane.y = y; const kr = Gange.kropp(); kr.x = x; kr.y = y; kr.vx = kr.vy = 0; };
+      const ekte = performance.now.bind(performance); let t = ekte(); const kjør = (taster, n) => { performance.now = () => (t += 33); try { for (const k of taster) tast(k, true); for (let i = 0; i < n; i++) { Gange.kamera(R); KROKER.ramme3d.forEach(f => f(R)); } for (const k of taster) tast(k, false); } finally { performance.now = ekte; } };
+      const b = K[0], h = K[1]; sett(b.X - u.cx - 3, b.Y - u.cy); KROKER.ramme3d.forEach(f => f(R)); ut.knapp = document.getElementById('kjorknapp').textContent; tast('f', true); ut.iBil = KjorSpill.fører() === b;
+      const x0 = b.X, y0 = b.Y; kjør(['w'], 90); ut.kjørte = Math.hypot(b.X - x0, b.Y - y0); ut.fart = b.v; kjør([' '], 90); ut.stoppet = Math.abs(b.v) < .5; tast('f', true); ut.ute = !KjorSpill.fører() && !!R.fot;
+      sett(h.X - u.cx + 3, h.Y - u.cy); KROKER.ramme3d.forEach(f => f(R)); tast('f', true); ut.iHeli = KjorSpill.fører() === h; kjør([' '], 150); ut.over = h.over; tast('f', true); ut.måLande = KjorSpill.fører() === h;
+      kjør(['c'], 400); ut.landet = h.over < .3; tast('f', true); ut.ute2 = !KjorSpill.fører(); ut.lagret = (JSON.parse(localStorage.getItem('riksbrudd-kjor') || '{}').k || []).length;
+      Gange.stopp(); return ut; });
+    const kjok = !kj.uten && kj.fritt && /feltbilen/.test(kj.knapp) && kj.iBil && kj.kjørte > 15 && kj.fart <= 27.01 && kj.stoppet && kj.ute && kj.iHeli && kj.over > 10 && kj.måLande && kj.landet && kj.ute2 && kj.lagret === 2;
+    if (!kjok) { feil++; console.log(JSON.stringify(kj)); }
+    console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjørbare biler og helikopter: bilen kjørte ${(kj.kjørte || 0).toFixed(0)} m og stoppet, helikopteret steg til ${(kj.over || 0).toFixed(0)} m, landet, og du må lande før du går ut`);
     // VAKT det som ble igjen etter en leting: ligger i huset til lageret har plass, og hentes da uten ny leting.
     const rs = await pg.evaluate(() => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !window.LeteSpill || !LeteSpill.hent) return { uten: true };
       const lett = LeteSpill.lett(), i = 7654321, P = { bygg: { i } }, før = L.lager.tre || 0, ut = {}; lett.set(i, [0, 0, { tre: 2 }]);
