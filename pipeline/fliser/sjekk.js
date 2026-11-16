@@ -995,6 +995,20 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const lbok = !lb.uten && lb.registrert && lb.plan && lb.senger >= 4 && lb.vegg && lb.inne && lb.gulv && !lb.let && (lb.lapp === 'Brakka' || /^Du fant|^Huset var/.test(lb.lapp)) && lb.gress && lb.borte;
     if (!lbok) { feil++; console.log(JSON.stringify(lb)); }
     console.log(`${lbok ? 'ok  ' : 'FEIL'} ${navn} interiør i leirens bygg: brakka er registrert, veggen stopper deg, ${lb.senger} køyesenger inne, du står på gulvet, ingen leting der, borte når bygget fjernes`);
+    // VAKT drivhus (modellen har spanter tvers gjennom): plantebed inne, og modellen i scenen skjules bare mens du står inne i huset.
+    const dh = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true };
+      const u = R3.ut, R = R3, dr = { id: L.neste++, type: 'drivhus', x: u.cx + 150, y: u.cy - 60, ret: .2, igjen: 0, totalt: 60, pris: 0, mat: {}, nivå: 1, hp: 1, nr: L.nesteJobb++, arbeid: null }; L.bygg.push(dr);
+      const dukke = new THREE.Object3D(); dukke.userData.id = dr.id; R.scene.add(dukke);
+      Gange.start(); const sett = (x, y) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); k.x = x; k.y = y; k.vx = k.vy = 0; };
+      Interior3d.oppdater(true); const e = Interior3d.egne().find(q => q.P.bygg.i === 9000000 + dr.id), ut = { registrert: !!e };
+      if (e) { const P = e.P, D = P.dør; sett(D.x + D.uy * 5, D.y - D.ux * 5); for (let i = 0; i < 12; i++) Interior3d.oppdater(true); ut.plan = !!P.inne;
+        if (P.inne) { ut.bed = P.inne.møbler.filter(m => m.type === 'plantebed').length; const I = P.inne.inngang; ut.uteFør = dukke.visible;
+          sett(I.inn[0] - I.nx, I.inn[1] - I.ny); Interior3d.oppdater(true); ut.inne = Interior3d.inne(R.bane.x, R.bane.y) === P; ut.skjult = !dukke.visible;
+          sett(I.x + I.nx * 4, I.y + I.ny * 4); Interior3d.oppdater(true); ut.uteEtter = dukke.visible; } }
+      Gange.stopp(); R.scene.remove(dukke); L.bygg.splice(L.bygg.indexOf(dr), 1); Interior3d.oppdater(true); return ut; });
+    const dhok = !dh.uten && dh.registrert && dh.plan && dh.bed >= 2 && dh.uteFør && dh.inne && dh.skjult && dh.uteEtter;
+    if (!dhok) { feil++; console.log(JSON.stringify(dh)); }
+    console.log(`${dhok ? 'ok  ' : 'FEIL'} ${navn} drivhus: ${dh.bed} plantebed inne, modellen skjult bare mens du står inne`);
     // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
     // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
     const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));
