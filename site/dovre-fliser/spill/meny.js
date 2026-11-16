@@ -11,10 +11,10 @@
     ['Kartet', 'Hva som tegnes i kartet og i 3D', ['Skygge', 'Høydekurver', 'Trær', 'Veger', 'Jernbane', 'Bygg', 'Infrastruktur', 'Kraftledninger']],
     ['Oversikt', 'Hjelp til å lese situasjonen', ['Siktfelt', 'Tåke', 'Motstandere', 'Kompass', 'Minikart']],
     ['Vær og årstid', 'Automatisk, eller lås et vær', ['Årstid', 'Vær']],
-    ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd']],
+    ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
     ['Måling', 'Tall du kan sende hvis noe går tregt', ['FPS-teller', 'Mål ytelse', 'Mål hakk']],
   ];
-  const HANDLING = ['Mål ytelse', 'Mål hakk', 'Måler'], FARE = ['Nytt spill'];
+  const HANDLING = ['Mål ytelse', 'Mål hakk', 'Måler', 'Fotomodus'], FARE = ['Nytt spill'];
   const css = document.createElement('style');
   css.textContent = `#lagmeny.på{ display:block; width:min(430px, calc(100vw - 20px)); padding:10px 12px 12px; }
 #lagmeny .mtopp{ display:flex; justify-content:space-between; align-items:baseline; margin:0 0 6px; }

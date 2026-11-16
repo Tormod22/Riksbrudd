@@ -839,3 +839,5 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   MARKEDET (K5 i plan-kollaps.md: priser som flytter seg, inflasjon) er IKKE laget – det har åpne spørsmål til brukeren.
   (19) INNGANGSMERKE: interior3d.js tegner «Inngang» over dørene til de tre nærmeste byggene (innen 28 m) når du går ute
   (KROKER.tegn3d). Et nytt spill uten nådde mål får et tips i loggen om Leir-menyen (ikke i testene).
+  (20) FOTOMODUS: spill/foto.js – «Fotomodus» i ☰ (tast U) setter body.foto, som skjuler alt utenom lerretene; #fotoav, Esc eller U
+  henter menyene tilbake. Navnene i 3D (overlegget c3o) skjules også; lagsymbolene i 2D tegnes i kartet og står.
