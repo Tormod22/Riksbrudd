@@ -1049,6 +1049,28 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const kjok = !kj.uten && kj.fritt && /feltbilen/.test(kj.knapp) && kj.iBil && kj.kjørte > 15 && kj.fart <= 27.01 && kj.stoppet && kj.ute && kj.iHeli && kj.over > 10 && kj.måLande && kj.landet && kj.ute2 && kj.lagret === 2;
     if (!kjok) { feil++; console.log(JSON.stringify(kj)); }
     console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjørbare biler og helikopter: bilen kjørte ${(kj.kjørte || 0).toFixed(0)} m og stoppet, helikopteret steg til ${(kj.over || 0).toFixed(0)} m, landet, og du må lande før du går ut`);
+    // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
+    // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
+    const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      const ut = {}, vent = ms => new Promise(q => setTimeout(q, ms)), S = OppstartSpill.tilstand(), leir = S.leir, p0 = S.penger, t0 = tempo, F = FolkSpill.tilstand(), mor0 = F.moral, mat0 = F.mat, n0 = F.personer.length, tre0 = Leir.MATERIALER.tre.pris, salg0 = Leir.REGLER.salg, diesel0 = Leir.DRIVSTOFF.prisPerLiter, matpris0 = FolkRegler.R.matPris;
+      ut.stille = !SS.T().aktiv && SS.O().liste.length === 0 && !SS.H().åpen && Leir.REGLER.salg === .5; SS.test = true; tempo = 1;
+      SS.markedNå(); ut.marked = Leir.REGLER.salg === .8 && Leir.MATERIALER.tre.pris % 100 === 0 && SS.M().dag >= 1;
+      await SS.fyllOppdrag(); await vent(1200); ut.oppdrag = SS.O().liste.length; const o = SS.O().liste[0];
+      if (o) { SS.ta(o.id); ut.post = o.type !== 'post' || ENHETER.some(e => e.post === o.id); const lag = ENHETER.find(e => e.side === 'blå' && levende(e)), x0 = lag.x, y0 = lag.y, pf = S.penger; if (o.type === 'post') ENHETER.filter(q => q.post === o.id).forEach(e => e.menn.forEach(m => { m.hp = 0; })); else { lag.x = o.x + 10; lag.y = o.y; } SS.oppdragSteg(); lag.x = x0; lag.y = y0; ut.fullført = SS.O().gjort >= 1 && S.penger > pf && !ENHETER.some(e => e.post === o.id); }
+      ut.angrep = await SS.angrep(); await vent(300); const rø = ENHETER.filter(e => e.raid); ut.røvere = rø.length; ut.unna = rø.every(e => Math.hypot(e.x - leir.x, e.y - leir.y) > 1300); const pa = S.penger; rø.forEach(e => e.menn.forEach(m => { m.hp = 0; })); SS.angrepSteg(); ut.seier = S.penger > pa && !SS.T().aktiv && !ENHETER.some(e => e.raid);
+      ut.hendelse = SS.hendelse(); const kn = [...document.querySelectorAll('#hendelse button')]; ut.valg = kn.length; const kb = kn.find(b => !b.disabled); if (kb) kb.click(); ut.lukket = !SS.H().åpen && !document.getElementById('hendelse').classList.contains('på');
+      const u = SS.minLenke(), v0 = SS.V().length, d = SS.leggTilVenn(u); ut.venn = !!d && SS.V().length === v0 + 1 && /#venn=[A-Za-z0-9_-]+$/.test(u); SS.V().splice(0, 1); try { localStorage.removeItem('riksbrudd-venner'); } catch (e) { /* ok */ }
+      // kamp: en røver 50 m rett fram blir truffet, bom når du sikter et annet sted, og du tar skade når de er nær
+      Gange.start(); await vent(300); const U = R3.ut, a = R3.fot.a, fx = -Math.sin(a), fy = Math.cos(a), e = nyttLag('Røvere vakt', U.cx + R3.bane.x + fx * 50, U.cy + R3.bane.y + fy * 50, 'rød'); ENHETER.push(e); const K = SS.K();
+      R3.fot.a = a + 1.3; let l0 = e.menn.reduce((s, m) => s + m.hp, 0); for (let i = 0; i < 8; i++) { K.sist = 0; SS.skyt(); } ut.bom = e.menn.reduce((s, m) => s + m.hp, 0) === l0; R3.fot.a = a; K.mag = 30; K.lader = 0; for (let i = 0; i < 25; i++) { K.sist = 0; SS.skyt(); } ut.treff = e.menn.reduce((s, m) => s + m.hp, 0) < l0; ut.mag = K.mag;
+      e.menn.forEach(m => { m.hp = 1; }); const hp0 = K.hp; SS.kampSteg(); ut.skade = K.hp < hp0; ENHETER.splice(ENHETER.indexOf(e), 1); K.hp = 100; K.mag = 30; K.res = 120; Gange.stopp();
+      // tilbake som før
+      SS.test = false; tempo = t0; Leir.MATERIALER.tre.pris = tre0; Leir.REGLER.salg = salg0; Leir.DRIVSTOFF.prisPerLiter = diesel0; FolkRegler.R.matPris = matpris0; Leir.MATERIALER.betong.pris = 30000; Leir.MATERIALER.stål.pris = 60000; S.penger = p0; F.moral = mor0; F.mat = mat0; F.personer.length = Math.min(F.personer.length, n0);
+      SS.O().liste.length = 0; SS.T().aktiv = 0; SS.T().nesteSpill = SS.T().nesteEkte = Infinity; SS.H().åpen = null; SS.H().nesteSpill = SS.H().nesteEkte = Infinity; for (const k of ['riksbrudd-trussel', 'riksbrudd-marked', 'riksbrudd-oppdrag', 'riksbrudd-hendelser']) try { localStorage.removeItem(k); } catch (e2) { /* ok */ }
+      return ut; });
+    const spok = !sp.uten && sp.stille && sp.marked && sp.oppdrag >= 1 && sp.post && sp.fullført && sp.angrep && sp.røvere >= 1 && sp.unna && sp.seier && sp.hendelse && sp.valg === 2 && sp.lukket && sp.venn && sp.bom && sp.treff && sp.mag < 30 && sp.skade;
+    if (!spok) { feil++; console.log(JSON.stringify(sp)); }
+    console.log(`${spok ? 'ok  ' : 'FEIL'} ${navn} angrep, marked, oppdrag, kamp, hendelser og venner: stille i testene, markedet flytter prisene, ${sp.oppdrag} oppdrag og ett fullført, ${sp.røvere} røverlag slått tilbake, en hendelse med to valg, vennelenke, treff og bom, skade når røverne er nær`);
     // VAKT det som ble igjen etter en leting: ligger i huset til lageret har plass, og hentes da uten ny leting.
     const rs = await pg.evaluate(() => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !window.LeteSpill || !LeteSpill.hent) return { uten: true };
       const lett = LeteSpill.lett(), i = 7654321, P = { bygg: { i } }, før = L.lager.tre || 0, ut = {}; lett.set(i, [0, 0, { tre: 2 }]);

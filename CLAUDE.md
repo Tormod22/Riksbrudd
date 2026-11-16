@@ -889,6 +889,22 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   2D som bredt bånd, 3D veg3d i leir-visning.js (bånd hver 3. m, bare så langt den er bygget), trær ryddes langs vegen (innenfor).
   DELEGERING («deiligere arbeidere» lest som «delegere arbeidere» – Claudes tolkning, sagt til brukeren): Leir.prioriter(L, id)
   («Bygg dette først» i byggpanelet) og en nedtrekksliste per person i Folk («Vis folkene», FolkRegler.sett). VAKT «grusveg og delegering».
+  «LAG ALLE 7» (16. nov sent, brukeren etter spørsmålet «hva mangler spillet?»): spill/spillet.js (regler uten DOM: Trussel, Marked,
+  Oppdrag, Kamp, Hendelser, Deling; test_spillet.js) + spill/spillet-visning.js (window.SpilletSpill). Alt lagres per leir
+  («riksbrudd-trussel», «-marked», «-oppdrag», «-hendelser»; venner i «riksbrudd-venner»). I TESTENE (navigator.webdriver) SKJER
+  INGENTING AV SEG SELV: SpilletSpill.test = true slår det på. «Ekte tid» = sekunder med spilling (1× er sanntid, så ting utløses av
+  spilltid ELLER ekte minutter, det som kommer først). Alle tall er Claudes forslag.
+  (1) ANGREP: røverlag (side «rød», e.raid = bølge) settes ut 1,4–2,2 km unna og får ordre mot leiren; bølgene vokser (1–6 lag);
+  slått tilbake = belønning og +5 moral. (2) MARKED: Marked.steg flytter prisene hvert døgn (eller hvert 10. ekte minutt) og skriver
+  dem inn i Leir.MATERIALER, Leir.DRIVSTOFF.prisPerLiter og FolkRegler.R.matPris; salg gir 80 % (Leir.REGLER.salg). (3) OPPDRAG: tre
+  ledige (hent, redd, post) i fanen Mål; «post» setter ut røverlag (e.post = id); framme = eget lag eller deg selv innen 60 m;
+  redningsoppdrag gir 1/3/6 personer etter til fots/feltbil/helikopter. (4) KJØRETØY: skade (KjorSpill.skad), reparasjon mot penger,
+  motorlyd (egen AudioContext). Lastebilene i KJORETOY kan IKKE kjøres ennå. (5) KAMP TIL FOTS: SpilletSpill.skyt() (PC: klikk med
+  låst mus, R lader; telefon #skytknapp), Kamp.sikter/sjanse, fiender innen 220 m gir skade (kampSteg hvert sekund), helse og
+  ammunisjon i tegn3d, slått ut = tilbake til leiren. (6) HENDELSER: kort #hendelse med to valg (Hendelser.LISTE), og folkene som
+  figurer i leiren i 3D (InstancedMesh, høyst 14). (7) VENNER: Deling.kode/les – leiren som lenke (#venn=…), vennens leir tegnes i
+  2D-kartet. Dette er IKKE flerspiller i sanntid (krever en tjener; sagt til brukeren). leir-visning.js: overskrifter som begynner
+  med «Mål» hører til fanen Mål. VAKT «angrep, marked, oppdrag, kamp, hendelser og venner».
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert
