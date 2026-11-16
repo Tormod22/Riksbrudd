@@ -936,11 +936,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       LeirSpill.fane('mål'); ut.mål = { kap: synlig('.maalkap'), mål: synlig('.maal'), bygg: synlig('.liste .bygg') };
       // et mål nås: 25 m³ tre på lageret
       const tre = L.lager.tre; L.lager.tre = 25; const nye = MaalSpill.sjekk(true); L.lager.tre = tre; LeirSpill.fane('mål'); ut.nye = nye.join(); ut.haket = synlig('.maal.ok'); ut.kort = MaalSpill.kort();
-      ut.husket = JSON.parse(localStorage.getItem('riksbrudd-maal')).ferdige.join(); MaalSpill.nullstill(); LeirSpill.fane('bygg'); lk.click(); return ut; });
+      ut.husket = JSON.parse(localStorage.getItem('riksbrudd-maal')).ferdige.join(); MaalSpill.nullstill();
+      // DAGBOKA (spill/dagbok.js): når et døgn er gått, kommer morgenrapporten i loggen og nederst i fanen Mål
+      const t0 = tid; DagbokSpill.start(); DagbokSpill.tilstand().dag = Dagbok.dag(tid); tid = t0 + 1440; sim(.001); tid = t0; LeirSpill.fane('mål');
+      ut.dagbok = { logg: loggLinjer.find(l => /Dag \d+: \d+ person/.test(l)) || '', iMeny: synlig('.dagbok') }; DagbokSpill.tilstand().dag = Dagbok.dag(tid);
+      LeirSpill.fane('bygg'); lk.click(); return ut; });
     const leirmok = !leirm.uten && leirm.fliser === 4 && leirm.faner.length === 4 && /^Mål/.test(leirm.faner[3]) && leirm.bygg > 5 && leirm.matIBygg === 0 && leirm.over && leirm.lager.bygg === 0 && leirm.lager.mat >= 3 && leirm.lager.diesel === 1
-      && leirm.mål.kap === 4 && leirm.mål.mål === 14 && leirm.mål.bygg === 0 && leirm.nye.split(',').includes('lager') && leirm.haket === leirm.nye.split(',').length && leirm.kort === leirm.haket + '/14' && leirm.husket === leirm.nye;
+      && leirm.mål.kap === 4 && leirm.mål.mål === 14 && leirm.mål.bygg === 0 && leirm.nye.split(',').includes('lager') && leirm.haket === leirm.nye.split(',').length && leirm.kort === leirm.haket + '/14' && leirm.husket === leirm.nye && !!leirm.dagbok.logg && leirm.dagbok.iMeny >= 1;
     if (!leirmok) { feil++; console.log(JSON.stringify(leirm)); }
-    console.log(`${leirmok ? 'ok  ' : 'FEIL'} ${navn} Leir-menyen og målene: fanene ${(leirm.faner || []).join(' | ')}, hver viser sitt, «Neste mål» over fanene, et nådd mål hakes av og huskes`);
+    console.log(`${leirmok ? 'ok  ' : 'FEIL'} ${navn} Leir-menyen og målene: fanene ${(leirm.faner || []).join(' | ')}, hver viser sitt, «Neste mål» over fanene, et nådd mål hakes av og huskes; dagboka: «${(leirm.dagbok || {}).logg || ''}»`);
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
     // et prøvehus (10 × 8 m, dør midt på sørveggen) legges i utsnittet. Når du går, får det interiør med flere rom og møbler; du kan
     // gå inn gjennom døra og står da på gulvet, ytterveggen stopper deg ved siden av døra, og alt ryddes bort når du flyr opp.

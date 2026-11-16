@@ -204,7 +204,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
     // Alt ligger fortsatt i siden; det som ikke hører til den valgte fanen, er bare skjult.
     { let cur = 'lager'; const fast = n => n === status || n.tagName === 'H2' || (n.classList && n.classList.contains('lukk')) || (n.querySelector && n.querySelector('#folkknapp')) || (n.classList && n.classList.contains('fast'));
-      const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : /^Mål$/.test(t) ? 'mål' : null;
+      const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : /^Mål$|^Dagbok$/.test(t) ? 'mål' : null;
       for (const n of [...hode.childNodes]) { if (n.nodeType !== 1) continue; if (fast(n)) continue;
         const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3'); if (h) cur = faneFor(h.textContent) || cur;
         n.dataset.fane = cur; if (cur !== fane) n.hidden = true; }

@@ -824,3 +824,6 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   FolkRegler.rekrutter når det er en ledig seng. (12) HURTIGTASTER: spill/taster.js (TASTER: 3, G, L, M, H, K, P, komma, punktum –
   trykker på knappene som finnes; ikke i tekstfelt eller på startskjermen; mens du går bare 3/G/L/M/H). VAKT «hurtigtaster».
   Flere mål som nås samtidig, meldes i én linje i loggen (loggen har bare seks linjer).
+  (13) DAGBOK: spill/dagbok.js (regler øverst, test_dagbok.js; visningen nederst i samme fil) – hver morgen (ny dag, Dagbok.dag(tid))
+  en rapport i loggen (folk, moral, mat i døgn, diesel og hvor lenge den rekker etter siste døgns forbruk, kassa og endringen,
+  mål), med varsler først. De sju siste står under «Dagbok» i fanen Mål; huskes per leir («riksbrudd-dagbok»).
