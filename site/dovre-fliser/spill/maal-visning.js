@@ -45,8 +45,13 @@
 #leirmeny .maal .hake{ flex:none; width:16px; text-align:center; color:var(--ink-dim); } #leirmeny .maal.ok{ color:var(--ink-dim); } #leirmeny .maal.ok .hake{ color:#9fc46a; }
 #leirmeny .maal small{ display:block; color:var(--ink-dim); font-size:12.5px; line-height:1.3; }`;
   document.head.appendChild(css);
-  function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; sjekk(true); }
+  // i statuslinja øverst: «3/14 mål» – trykk åpner Leir-menyen på fanen Mål
+  const st = document.createElement('div'); st.innerHTML = '<b id="sMaal">–</b> <span>mål</span>'; st.hidden = true; st.className = 'viktig'; st.style.cursor = 'pointer'; st.title = 'Mål: trykk for å se neste steg'; st.setAttribute('role', 'button');
+  const stats = document.querySelector('.stats'); if (stats) stats.appendChild(st);
+  st.addEventListener('click', () => { const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (m && lk && !m.classList.contains('på')) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); });
+  const visTeller = () => { const b = document.getElementById('sMaal'); if (!b) return; const t = kort(); if (b.textContent !== t) b.textContent = t; st.hidden = !klar; const s = Maal.stilling(ferdige); st.title = s.neste ? 'Neste mål: ' + s.neste.tekst : 'Alle målene er nådd'; };
+  function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; sjekk(true); visTeller(); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  setInterval(() => { if (klar && !document.hidden) sjekk(false); }, 2000);
+  setInterval(() => { if (klar && !document.hidden) { sjekk(false); visTeller(); } }, 2000);
   window.MaalSpill = { sjekk, bilde, kort, ferdige: () => ferdige, stilling: () => Maal.stilling(ferdige), start, nullstill: () => { ferdige = new Set(); lagre(); } };
 })();

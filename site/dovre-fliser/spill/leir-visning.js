@@ -32,6 +32,7 @@
 #leirmeny .status{ font-size:14px; color:var(--ink-dim); margin-top:6px; line-height:1.3; display:grid; grid-template-columns:1fr 1fr; gap:4px; }
 #leirmeny .flis{ background:#221c13; border:1px solid #3a3226; padding:4px 8px; min-width:0; } #leirmeny .flis small{ display:block; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; opacity:.8; }
 #leirmeny .flis b{ color:var(--ink); font-weight:600; font-size:15px; white-space:nowrap; } #leirmeny .flis.fare{ border-color:#8a4a3a; } #leirmeny .status .linje{ grid-column:1 / -1; font-size:13px; }
+#leirmeny .liste h4{ margin:10px 4px 2px; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); border-bottom:1px solid var(--rule); padding-bottom:3px; } #leirmeny .liste h4:first-child{ margin-top:2px; }
 #leirmeny .faner{ display:flex; gap:0; margin:8px -12px -6px; border-top:1px solid var(--rule); }
 #leirmeny .faner button{ flex:1; border:none; border-right:1px solid var(--rule); background:#1c1710; min-height:38px; color:var(--ink-dim); } #leirmeny .faner button:last-child{ border-right:none; }
 #leirmeny .faner button.på{ background:var(--panel); color:var(--ink); box-shadow:inset 0 -3px 0 #c9b26a; font-weight:600; }
@@ -187,9 +188,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       knapp('Sett inn', () => startMal(i)), knapp('Slett', () => { if (!confirm(`Slette malen «${m.navn}»?`)) return; const a = maler(); a.splice(i, 1); lagreMaler(a); visMeny(); }))));
     // andre deler kan legge til sitt eget i menyen (LEIR_MENY: (hode, { el, knapp }) => void): materialer fra verden, byggesettet
     for (const f of window.LEIR_MENY || []) try { f(hode, { el, knapp }); } catch (e) { console.error(e); }
-    const liste = el('div', { klasse: 'liste' });
-    for (const [id, B] of Object.entries(LB.BYGG)) {
-      if (B.del) continue;
+    // byggene i grupper (16. nov: lista var 17 bygg uten inndeling); et bygg som ikke står i noen gruppe, havner under «Annet»
+    const liste = el('div', { klasse: 'liste' }), GR = [['Bo og leve', ['brakke', 'kjøkken', 'drivhus', 'sykestue']], ['Strøm og diesel', ['drivstofftank', 'aggregat', 'solcelle']],
+      ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']]];
+    const iGruppe = new Set(GR.flatMap(g => g[1])), rekke = [...GR.flatMap(([navn, ider]) => ider.filter(id => LB.BYGG[id] && !LB.BYGG[id].del).map((id, n) => [id, n ? null : navn])),
+      ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
+    for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
+      if (gruppe) liste.appendChild(el('h4', {}, gruppe));
       const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
