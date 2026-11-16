@@ -44,7 +44,14 @@
 #hjelp.på{ display:flex; }
 #hjelp .ark{ background:var(--panel); border:1px solid var(--rule); max-width:600px; width:100%; max-height:82vh; overflow:auto; padding:16px 20px; color:var(--ink); }
 #hjelp h2{ margin:0 0 6px; font-family:"IM Fell English",serif; font-weight:400; font-size:24px; }
-#hjelp h3{ margin:12px 0 2px; font-size:15px; color:var(--hover); }
+#hjelp h3{ margin:0; font-size:15px; color:var(--hover); display:inline; font-weight:600; }
+#hjelp h4{ margin:14px 0 4px; font-size:12.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); border-bottom:1px solid var(--rule); padding-bottom:3px; }
+#hjelp details{ border-bottom:1px solid #3a3226; } #hjelp summary{ cursor:pointer; padding:7px 2px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+#hjelp summary::-webkit-details-marker{ display:none; } #hjelp summary::after{ content:'+'; color:var(--ink-dim); font-size:18px; line-height:1; } #hjelp details[open] summary::after{ content:'–'; }
+#hjelp details p{ padding:0 2px 9px; } #hjelp details[hidden], #hjelp section[hidden]{ display:none; }
+#hjelp .kort{ margin:6px 0 10px; padding:8px 10px 8px 30px; background:#221c13; border:1px solid #3a3226; line-height:1.4; font-size:15px; } #hjelp .kort li{ margin:2px 0; }
+#hjelp .sok{ width:100%; box-sizing:border-box; background:#1c1710; border:1px solid var(--rule); color:var(--ink); font:inherit; font-size:16px; padding:7px 10px; }
+#hjelp .ingen{ color:var(--ink-dim); padding:8px 2px; }
 #hjelp p{ margin:0; line-height:1.4; font-size:15px; }
 #hjelp .lukk{ float:right; background:none; border:none; color:var(--ink); font-size:24px; cursor:pointer; min-width:40px; height:40px; }`;
   document.head.appendChild(css);
@@ -52,7 +59,30 @@
   const ark = document.createElement('div'); ark.className = 'ark';
   const x = document.createElement('button'); x.className = 'lukk'; x.textContent = '×'; x.setAttribute('aria-label', 'Lukk'); ark.appendChild(x);
   const h = document.createElement('h2'); h.textContent = 'Slik spiller du'; ark.appendChild(h);
-  for (const [t, tekst] of DELER) { const a = document.createElement('h3'), p = document.createElement('p'); a.textContent = t; p.textContent = tekst; ark.append(a, p); }
+  // (16. nov, brukeren: «forbedre menyene»: hjelpen var 36 avsnitt etter hverandre.) Nå: kort oppskrift øverst, søkefelt, og
+  // emnene i grupper der hvert emne åpnes med et trykk. Et emne som ikke står i GRUPPER, havner under «Annet».
+  const GRUPPER = [['Kom i gang', ['Nytt spill', 'Mål', 'Tiden', 'Kartet', 'Telefon']],
+    ['Leiren', ['Leiren', 'Folk', 'Planlegge leiren', 'Byggesett', 'Materialer fra verden', 'Utposter', 'Diesel og olje', 'Kontrollrommet']],
+    ['Lag og strid', ['Lagene', 'Tåke', 'Kjøretøy', 'Forsyning', 'Olje', 'Ingeniører', 'Flere enheter', 'Tettsteder', 'Motstanderne']],
+    ['I 3D', ['Gå selv', 'Gå inn i husene', 'Let i husene', 'Kompass og minikart', 'Filter i 3D', 'Byer og butikker', 'Dyr', 'Ferjer og båter', 'Kraftledninger']],
+    ['Vær, lyd og bilde', ['Vær og årstid', 'Dag og natt', 'Bølger, vind og tåke', 'Lyd', 'Grafikk']]];
+  const kort = document.createElement('ol'); kort.className = 'kort';
+  for (const t of ['Åpne «Leir» og bygg det første: en brakke, en dieseltank og et aggregat. Øverst i menyen står neste mål.', 'Sett folkene i arbeid under «Folk» (bygg, hogst, vakt, kjøkken).',
+    'Trykk på et lag i kartet og velg «Marsjer» for å flytte det. Lagene ser bare et stykke rundt seg – resten ligger i tåke.', 'Trykk «3D» for å se landskapet, og «Gå» for å gå selv – også inn i husene, der du kan lete etter forsyninger.',
+    'Innstillingene ligger under ☰. Går bildet tregt, velg lavere «Grafikk» der.']) { const li = document.createElement('li'); li.textContent = t; kort.appendChild(li); }
+  const søk = document.createElement('input'); søk.type = 'search'; søk.placeholder = 'Søk i hjelpen …'; søk.setAttribute('aria-label', 'Søk i hjelpen'); søk.className = 'sok';
+  const ingen = document.createElement('p'); ingen.className = 'ingen'; ingen.textContent = 'Ingen emner passer med søket.'; ingen.hidden = true;
+  ark.append(kort, søk, ingen);
+  const emner = new Map(DELER.map(([t, tekst]) => [t, tekst])), brukt = new Set(), alle = [];
+  const gruppe = (navn, liste) => { if (!liste.length) return; const g = document.createElement('section'), o = document.createElement('h4'); o.textContent = navn; g.appendChild(o);
+    for (const t of liste) { const dt = document.createElement('details'), sm = document.createElement('summary'), a = document.createElement('h3'), p = document.createElement('p'); a.textContent = t; p.textContent = emner.get(t); sm.appendChild(a); dt.append(sm, p); g.appendChild(dt); alle.push({ dt, g, tekst: (t + ' ' + emner.get(t)).toLowerCase() }); }
+    ark.appendChild(g); };
+  for (const [navn, liste] of GRUPPER) { const L = liste.filter(t => emner.has(t)); for (const t of L) brukt.add(t); gruppe(navn, L); }
+  gruppe('Annet', DELER.map(d => d[0]).filter(t => !brukt.has(t)));
+  søk.addEventListener('input', () => { const q = søk.value.trim().toLowerCase(); let n = 0;
+    for (const e of alle) { const treff = !q || e.tekst.includes(q); e.dt.hidden = !treff; e.dt.open = !!q && treff; if (treff) n++; }
+    for (const g of ark.querySelectorAll('section')) g.hidden = ![...g.querySelectorAll('details')].some(dd => !dd.hidden);
+    ingen.hidden = n > 0; });
   d.appendChild(ark); document.body.appendChild(d);
   const vis = på => { d.classList.toggle('på', på); knapp.setAttribute('aria-expanded', String(på)); };
   const knapp = document.createElement('button'); knapp.id = 'hjelpknapp'; knapp.textContent = '?'; knapp.title = 'Slik spiller du'; knapp.setAttribute('aria-controls', 'hjelp'); knapp.setAttribute('aria-expanded', 'false');
