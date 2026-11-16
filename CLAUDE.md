@@ -858,4 +858,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   modellene deres har skiver tvers gjennom (ribber, spanter), så modellen skjules mens du står inne (skjul: true, modellSynlig).
   Beskjeden når du ikke kan gå inn i kontrollrommet sier hva som mangler (hvorforIkke i kontrollrom-visning.js).
   IKKE MED: byggesettets egne hus.
+  (23) DET SOM BLE IGJEN: materialer og diesel som ikke fikk plass etter en leting, ligger igjen i huset (tredje ledd i
+  LeteSpill.lett(): [x, y, { tre, betong, stål, diesel }], lagres). Inne i huset kommer «Hent det som ligger igjen» bare når noe
+  av det får plass (plassTil); hent(P) tar det uten ny leting. Merkelappen sier «noe ligger igjen». VAKT «det som ble igjen».
   VAKT «interiør i leirens bygg». Bilder: scratchpad inne/leir.js.

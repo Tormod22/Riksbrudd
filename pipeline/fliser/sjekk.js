@@ -995,6 +995,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const lbok = !lb.uten && lb.registrert && lb.plan && lb.senger >= 4 && lb.vegg && lb.inne && lb.gulv && !lb.let && (lb.lapp === 'Brakka' || /^Du fant|^Huset var/.test(lb.lapp)) && lb.gress && lb.borte;
     if (!lbok) { feil++; console.log(JSON.stringify(lb)); }
     console.log(`${lbok ? 'ok  ' : 'FEIL'} ${navn} interiør i leirens bygg: brakka er registrert, veggen stopper deg, ${lb.senger} køyesenger inne, du står på gulvet, ingen leting der, borte når bygget fjernes`);
+    // VAKT det som ble igjen etter en leting: ligger i huset til lageret har plass, og hentes da uten ny leting.
+    const rs = await pg.evaluate(() => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !window.LeteSpill || !LeteSpill.hent) return { uten: true };
+      const lett = LeteSpill.lett(), i = 7654321, P = { bygg: { i } }, før = L.lager.tre || 0, ut = {}; lett.set(i, [0, 0, { tre: 2 }]);
+      L.lager.tre = Leir.lagerplass(L); ut.fullt = !LeteSpill.plassTil(LeteSpill.restAv(P)); L.lager.tre = 0; ut.plass = LeteSpill.plassTil(LeteSpill.restAv(P));
+      const r = LeteSpill.hent(P); ut.fikk = r && r.fikk.tre; ut.tomt = !LeteSpill.restAv(P); ut.lager = L.lager.tre; ut.husket = lett.has(i);
+      L.lager.tre = før; lett.delete(i); return ut; });
+    const rsok = !rs.uten && rs.fullt && rs.plass && rs.fikk === 2 && rs.tomt && rs.lager === 2 && rs.husket;
+    if (!rsok) { feil++; console.log(JSON.stringify(rs)); }
+    console.log(`${rsok ? 'ok  ' : 'FEIL'} ${navn} det som ble igjen: venter når lageret er fullt, hentes (${rs.fikk} m³ tre) når det er plass, og huset er tomt etterpå`);
     // VAKT drivhus (modellen har spanter tvers gjennom): plantebed inne, og modellen i scenen skjules bare mens du står inne i huset.
     const dh = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true };
       const u = R3.ut, R = R3, dr = { id: L.neste++, type: 'drivhus', x: u.cx + 150, y: u.cy - 60, ret: .2, igjen: 0, totalt: 60, pris: 0, mat: {}, nivå: 1, hp: 1, nr: L.nesteJobb++, arbeid: null }; L.bygg.push(dr);

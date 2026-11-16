@@ -7,8 +7,8 @@
   // lett: byggets nummer -> [x, y] i kartet (til merket i 2D); eldre lagringer har bare numrene
   const NØKKEL = 'riksbrudd-leting'; let lett = new Map(), leirId = '', klar = false, jobb = null;
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
-  const les = () => { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); lett = new Map((d && d.leir === leirId ? d.hus : []).map(h => Array.isArray(h) ? [h[0], [h[1], h[2]]] : [h, null])); } catch (e) { lett = new Map(); } };
-  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, hus: [...lett].slice(-4000).map(([i, p]) => p ? [i, Math.round(p[0]), Math.round(p[1])] : i) })); } catch (e) { /* fullt eller sperret */ } };
+  const les = () => { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); lett = new Map((d && d.leir === leirId ? d.hus : []).map(h => Array.isArray(h) ? [h[0], h[3] ? [h[1], h[2], h[3]] : [h[1], h[2]]] : [h, null])); } catch (e) { lett = new Map(); } };
+  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, hus: [...lett].slice(-4000).map(([i, p]) => p ? (p[2] ? [i, Math.round(p[0]), Math.round(p[1]), p[2]] : [i, Math.round(p[0]), Math.round(p[1])]) : i) })); } catch (e) { /* fullt eller sperret */ } };
   const css = document.createElement('style');
   css.textContent = `#letknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:210px; min-height:44px; padding:6px 18px;
   background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; overflow:hidden; }
@@ -23,7 +23,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   const NAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Leilighetsbygg', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Garasje eller uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal', brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet' };
   let funnTil = 0;
   const visFunn = t => { lapp.textContent = t; lapp.classList.add('på', 'funn'); funnTil = performance.now() + 5000; };
-  const visLapp = P => { if (performance.now() < funnTil) return; lapp.classList.remove('funn'); if (!P || !P.bygg) { lapp.classList.remove('på'); return; } const t = P.leir ? ({ sykestue: 'Sykestua', verksted: 'Verkstedet', lagertelt: 'Lagerteltet', container: 'Containeren', drivhus: 'Drivhuset' }[P.leir] || NAVN[P.bygg.kl] || 'Leiren') : (NAVN[P.bygg.kl] || 'Bygg') + (klar ? (lett.has(P.bygg.i) ? ' · gjennomsøkt' : ' · ikke gjennomsøkt') : ''); if (lapp.textContent !== t) lapp.textContent = t; lapp.classList.add('på'); };
+  const visLapp = P => { if (performance.now() < funnTil) return; lapp.classList.remove('funn'); if (!P || !P.bygg) { lapp.classList.remove('på'); return; } const t = P.leir ? ({ sykestue: 'Sykestua', verksted: 'Verkstedet', lagertelt: 'Lagerteltet', container: 'Containeren', drivhus: 'Drivhuset' }[P.leir] || NAVN[P.bygg.kl] || 'Leiren') : (NAVN[P.bygg.kl] || 'Bygg') + (klar ? (lett.has(P.bygg.i) ? (restAv(P) ? ' · noe ligger igjen' : ' · gjennomsøkt') : ' · ikke gjennomsøkt') : ''); if (lapp.textContent !== t) lapp.textContent = t; lapp.classList.add('på'); };
   const tekst = t => { const s = knapp.querySelector('span'); if (s.textContent !== t) s.textContent = t; }, fyll = a => { knapp.querySelector('i').style.width = Math.round(a * 100) + '%'; };
   const arealAv = P => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; };
   // Det som ble funnet, legges til leiren. Gir det som faktisk kom med (lageret og tankene har tak).
@@ -41,12 +41,23 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     for (const m of mistet) { const rest = f[m] - (fikk[m] || 0); if (m === 'diesel') d.push(`${Math.round(rest)} l diesel ble igjen (${L && Leir.kapasitet(L) > 0 ? 'tankene er fulle' : 'dere har ingen dieseltank'})`);
       else d.push(`${tall(rest)} ${m === 'stål' ? 't' : 'm³'} ${m} ble igjen (lageret er fullt)`); }
     return d.length ? d.join(', ').replace(/^./, c => c.toUpperCase()) + '.' : ''; }
+  // DET SOM BLE IGJEN: materialer og diesel som ikke fikk plass, ligger igjen i huset (tredje ledd i lett). Når leiren har fått
+  // plass (dieseltank, lagertelt), kommer knappen «Hent det som ligger igjen» inne i huset – uten ny leting.
+  const restAv = P => { const p = P && P.bygg && lett.get(P.bygg.i); return p && p[2] ? p[2] : null; };
+  function plassTil(rest) { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !rest) return false;
+    if (rest.diesel > 0 && Leir.kapasitet(L) - (L.drivstoff || 0) >= 1) return true;
+    for (const m of ['tre', 'betong', 'stål']) if (rest[m] > 0 && Leir.lagerplass(L) - ((L.lager && L.lager[m]) || 0) >= .1) return true; return false; }
+  function hent(P) { const p = lett.get(P.bygg.i), rest = restAv(P); if (!rest) return null;
+    const fikk = ta(rest), ny = {}; for (const m of ['tre', 'betong', 'stål', 'diesel']) { const r = (rest[m] || 0) - (fikk[m] || 0); if (r > (m === 'diesel' ? .5 : .05)) ny[m] = Math.round(r * 10) / 10; }
+    if (Object.keys(ny).length) p[2] = ny; else p.length = 2; lagre();
+    const melding = Leting.tekst(fikk).replace(/^Du fant/, 'Du hentet') + (Object.keys(ny).length ? ' Noe ligger fortsatt igjen.' : ' Nå er huset tomt.'); logg(melding); visFunn(melding); return { fikk, rest: restAv(P) }; }
   function ferdig(P) {
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
     const f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i), fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
+    { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
-    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) : '');
+    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     logg(melding); visFunn(melding);
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
@@ -62,6 +73,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   function ramme(R) {
     const her = R.fot && window.Interior3d ? Interior3d.inne(R.bane.x, R.bane.y) : null; visLapp(her);
     const P = klar ? her : null;
+    if (P && P.bygg && !P.leir && lett.has(P.bygg.i) && plassTil(restAv(P))) { jobb = null; knapp.classList.add('på'); tekst('Hent det som ligger igjen'); fyll(0); return; }
     if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) { if (jobb) jobb = null; knapp.classList.remove('på'); return; }
     knapp.classList.add('på');
     if (!jobb || jobb.P !== P) { if (jobb) jobb = null; tekst('Let gjennom huset'); fyll(0); return; }
@@ -69,7 +81,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     if (a >= 1) { jobb = null; knapp.classList.remove('på'); ferdig(P); return; }
     tekst('Leter … ' + Math.ceil(jobb.sek * (1 - a)) + ' s'); fyll(a);
   }
-  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) return;
+  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (P && P.bygg && !P.leir && lett.has(P.bygg.i)) { if (plassTil(restAv(P))) hent(P); return; } if (!P || !P.bygg || P.leir) return;
     jobb = { P, start: performance.now(), sek: Leting.tid(arealAv(P)) }; });
   // E på tastaturet gjør det samme som knappen
   window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });
@@ -82,5 +94,5 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); } }, 500);
   function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.LeteSpill = { start, ferdig, ta, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
+  window.LeteSpill = { start, ferdig, ta, hent, restAv, plassTil, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
 })();
