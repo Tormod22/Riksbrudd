@@ -3,8 +3,10 @@
  * Det som lagres (localStorage «riksbrudd-verden»): klokka (tid i spillminutter), årstida og været, og for egne lag og kjøretøy
  * hvor de står og hvordan de har det (mennenes helse, ammunisjon, antall biler, drivstoff og last). Karakteren, leiren, folket og
  * materialjobbene lagres som før av sine egne deler (k1–k3, ressurser).
- * IKKE lagret ennå (gjenstår): marsj- og kjøreordre (lag og biler står stille etter omlasting), fiendens lag, olje på basen og
- * enheter i bestilling, erobrede tettsteder, sprengt infrastruktur, minefelt og droner.
+ * Fra 16. nov lagres også: hvem som eier tettstedene, sprengt og sperret infrastruktur (en reparasjon som var i gang, må
+ * startes på nytt) og oljen på basen.
+ * IKKE lagret ennå (gjenstår): marsj- og kjøreordre (lag og biler står stille etter omlasting), fiendens lag, enheter i
+ * bestilling på basen, minefelt og droner.
  */
 (function (rot) {
   'use strict';
@@ -44,7 +46,11 @@
   // o: { tid, vær (tilstanden fra spill/vaer.js), lag: [egne lag], kjøretøy: [egne kjøretøy], leir: { x, y } }
   function pakk(o) {
     return { versjon: VERSJON, leir: o.leir ? { x: Math.round(o.leir.x), y: Math.round(o.leir.y) } : null, tid: Math.max(0, tall(o.tid, 0)),
-      vær: o.vær ? JSON.parse(JSON.stringify(o.vær)) : null, lag: (o.lag || []).map(pakkLag), kjøretøy: (o.kjøretøy || []).map(pakkKj) };
+      vær: o.vær ? JSON.parse(JSON.stringify(o.vær)) : null, lag: (o.lag || []).map(pakkLag), kjøretøy: (o.kjøretøy || []).map(pakkKj),
+      // tettstedene som har en eier: [id, eier]; infrastrukturen som ikke er hel: nøklene («bru:123»); oljen på basen (tonn)
+      tettsteder: o.tettsteder ? [...o.tettsteder].filter(([, t]) => t && t.eier).map(([id, t]) => [id, t.eier]) : [],
+      infra: o.infra ? [...o.infra].filter(([, t]) => t && t.tilstand && t.tilstand !== 'hel').map(([k]) => k) : [],
+      olje: o.olje === undefined || o.olje === null ? null : Math.max(0, r1(tall(o.olje, 0))) };
   }
   // Leser lagringen. Ødelagt, ukjent versjon eller lagret for en annen leir (et annet spill) gir null.
   function fraJSON(t, leir) {
@@ -52,7 +58,10 @@
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
       return { versjon: VERSJON, leir: d.leir || null, tid: Math.max(0, tall(d.tid, 0)), vær: d.vær && typeof d.vær === 'object' ? d.vær : null,
         lag: (Array.isArray(d.lag) ? d.lag : []).filter(q => q && q.navn && Number.isFinite(q.x) && Number.isFinite(q.y)),
-        kjøretøy: (Array.isArray(d.kjøretøy) ? d.kjøretøy : []).filter(q => q && q.navn && q.type && Number.isFinite(q.x) && Number.isFinite(q.y)) };
+        kjøretøy: (Array.isArray(d.kjøretøy) ? d.kjøretøy : []).filter(q => q && q.navn && q.type && Number.isFinite(q.x) && Number.isFinite(q.y)),
+        tettsteder: (Array.isArray(d.tettsteder) ? d.tettsteder : []).filter(q => Array.isArray(q) && q[0] !== undefined && q[0] !== null && typeof q[1] === 'string' && q[1]),
+        infra: (Array.isArray(d.infra) ? d.infra : []).filter(k => typeof k === 'string' && /^[a-zæøå]+:.+/.test(k)),
+        olje: Number.isFinite(d.olje) && d.olje >= 0 ? d.olje : null };
     } catch (e) { return null; }
   }
   // Legger det lagrede tilbake i listene. finnes: lista (lag eller kjøretøy) som allerede står i spillet; lagNy(d) lager det som mangler
@@ -76,7 +85,8 @@
   const egneKj = () => (rot.KJORETOY || []).filter(k => k.side === 'blå');
   function lagre() {
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;
-    try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir }))); return true; } catch (e) { return false; }
+    try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir,
+      tettsteder: rot.TETTSTEDER || null, infra: rot.INFRA_TILSTAND || null, olje: rot.OLJE && OLJE.BASER[0] ? OLJE.BASER[0].beholdning : null }))); return true; } catch (e) { return false; }
   }
   function les() {
     const S = spill(); if (!S || !S.leir) return false; let d = null;
@@ -87,6 +97,10 @@
     settTilbake(d.lag, egneLag(), brukLag, q => { const s = q.ingeniør && rot.nyttIngeniørlag ? nyttIngeniørlag(q.navn, q.x, q.y) : nyttLag(q.navn, q.x, q.y, 'blå', !!q.speider); if (!ENHETER.includes(s)) ENHETER.push(s); return s; });
     settTilbake(d.kjøretøy, egneKj(), brukKj, q => { if (!rot.Kjoretoy || !Kjoretoy.TYPER[q.type] || !(q.antall >= 1)) return null;
       try { const k = Kjoretoy.ny({ navn: q.navn, type: q.type, antall: Math.min(40, Math.round(q.antall)), x: q.x, y: q.y, retning: q.retning || 0 }); KJORETOY.push(k); return k; } catch (e) { return null; } });
+    // tettstedene, den ødelagte infrastrukturen og oljen
+    if (rot.TETTSTEDER) for (const [id, eier] of d.tettsteder) TETTSTEDER.set(id, { eier, inntar: null });
+    if (rot.INFRA_TILSTAND) for (const k of d.infra) INFRA_TILSTAND.set(k, { tilstand: 'sprengt' });
+    if (d.olje !== null && rot.OLJE && OLJE.BASER[0]) OLJE.BASER[0].beholdning = d.olje;
     skitten = true; return true;
   }
   // etter K1 (og etter at kontrollrommet har satt inn karakteren): les verden inn én gang, og lagre fra da av

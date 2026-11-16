@@ -33,6 +33,13 @@ ok(nyeKj.length === 2 && nyeKj[1].navn === 'Lastebil 1' && nyeKj[1].retning === 
 { const L2 = [nyttLag('1. nye lag', 0, 0)], D2 = [{ navn: '1. nye lag', x: 1, y: 1 }, { navn: '1. nye lag', x: 2, y: 2 }];
   LG.settTilbake(D2, L2, LG.brukLag, q => { const s = nyttLag(q.navn, q.x, q.y); L2.push(s); return s; }); ok(L2.length === 2 && L2[0].x === 1 && L2[1].x === 2, 'to lag med samme navn: ett sted hver'); }
 // det som ikke skal leses: en annen leir (nytt spill), ukjent versjon, ødelagt tekst og ødelagte linjer
+// tettsteder, infrastruktur og olje (16. nov)
+{ const T = new Map([[101, { eier: 'blå', inntar: null }], [102, { eier: null, inntar: { side: 'rød', tid: 3 } }], ['x7', { eier: 'rød' }]]), IN = new Map([['bru:55', { tilstand: 'sprengt' }], ['tunnel:9', { tilstand: 'reparasjon' }], ['kraft:3', { tilstand: 'hel' }]]);
+  const t2 = JSON.stringify(LG.pakk({ tid: 1, lag: [], kjøretøy: [], leir, tettsteder: T, infra: IN, olje: 1234.56 })), d2 = LG.fraJSON(t2, leir);
+  ok(JSON.stringify(d2.tettsteder) === '[[101,"blå"],["x7","rød"]]', 'tettstedene med eier lagres (ikke de som bare er under inntak): ' + JSON.stringify(d2.tettsteder));
+  ok(d2.infra.join() === 'bru:55,tunnel:9' && d2.olje === 1234.6, 'sprengt og påbegynt reparert infrastruktur lagres som nøkler, oljen som tonn');
+  const gammel = LG.fraJSON(tekst, leir); ok(gammel.tettsteder.length === 0 && gammel.infra.length === 0 && gammel.olje === null, 'en eldre lagring uten disse feltene leses som før');
+  ok(LG.fraJSON(JSON.stringify({ versjon: 1, leir, tid: 1, tettsteder: [[1], 'x', [2, 5], [3, 'blå']], infra: [5, 'bru', 'bru:1'], olje: -4 }), leir).tettsteder.length === 1, 'ødelagte felt siles bort'); }
 ok(LG.fraJSON(tekst, { x: 1, y: 2 }) === null, 'lagring for en annen leir (et annet spill) brukes ikke');
 ok(LG.fraJSON('{"versjon":99}', leir) === null && LG.fraJSON('ødelagt', leir) === null && LG.fraJSON(null, leir) === null, 'ukjent versjon og ødelagt tekst gir null');
 { const d3 = LG.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 196400, y: 6898900 }, tid: -5, lag: [{ navn: 'x' }, null, { navn: 'ok', x: 1, y: 2, menn: [{ navn: 'A', hp: 7 }] }], kjøretøy: 'tull' }), leir);
