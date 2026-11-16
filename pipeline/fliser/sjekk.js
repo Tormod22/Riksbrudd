@@ -1045,10 +1045,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const x0 = b.X, y0 = b.Y; kjør(['w'], 90); ut.kjørte = Math.hypot(b.X - x0, b.Y - y0); ut.fart = b.v; kjør([' '], 90); ut.stoppet = Math.abs(b.v) < .5; tast('f', true); ut.ute = !KjorSpill.fører() && !!R.fot;
       sett(h.X - u.cx + 3, h.Y - u.cy); KROKER.ramme3d.forEach(f => f(R)); tast('f', true); ut.iHeli = KjorSpill.fører() === h; kjør([' '], 150); ut.over = h.over; tast('f', true); ut.måLande = KjorSpill.fører() === h;
       kjør(['c'], 400); ut.landet = h.over < .3; tast('f', true); ut.ute2 = !KjorSpill.fører(); ut.lagret = (JSON.parse(localStorage.getItem('riksbrudd-kjor') || '{}').k || []).length;
+      // egne kjøretøy (speiderbilen i KJORETOY) kan også kjøres: plassen skrives tilbake til kjøretøyet
+      { const kj = (window.KJORETOY || []).find(q => q.side === 'blå' && q.antall === 1 && !q.sti && !q.oppdrag); if (kj) { const gx = kj.x, gy = kj.y, gr = kj.retning; kj.x = u.cx + 30; kj.y = u.cy - 260; kj.retning = Math.PI / 2; sett(kj.x - u.cx - 3, kj.y - u.cy); KROKER.ramme3d.forEach(f => f(R));
+          ut.egenKnapp = document.getElementById('kjorknapp').textContent; tast('f', true); ut.iEgen = !!KjorSpill.fører() && KjorSpill.fører().kj === kj; const y0e = kj.y; kjør(['w'], 80); ut.egenKjørte = kj.y - y0e; kjør([' '], 90); tast('f', true); ut.egenUte = !KjorSpill.fører(); kj.x = gx; kj.y = gy; kj.retning = gr; } else ut.egenKnapp = null; }
       Gange.stopp(); return ut; });
-    const kjok = !kj.uten && kj.fritt && /feltbilen/.test(kj.knapp) && kj.iBil && kj.kjørte > 15 && kj.fart <= 27.01 && kj.stoppet && kj.ute && kj.iHeli && kj.over > 10 && kj.måLande && kj.landet && kj.ute2 && kj.lagret === 2;
+    const kjok = !kj.uten && kj.fritt && /feltbilen/.test(kj.knapp) && kj.iBil && kj.kjørte > 15 && kj.fart <= 27.01 && kj.stoppet && kj.ute && kj.iHeli && kj.over > 10 && kj.måLande && kj.landet && kj.ute2 && kj.lagret === 2 && (kj.egenKnapp === null || (kj.egenKnapp.includes('Sett deg inn i') && kj.iEgen && kj.egenKjørte > 10 && kj.egenUte));
     if (!kjok) { feil++; console.log(JSON.stringify(kj)); }
-    console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjørbare biler og helikopter: bilen kjørte ${(kj.kjørte || 0).toFixed(0)} m og stoppet, helikopteret steg til ${(kj.over || 0).toFixed(0)} m, landet, og du må lande før du går ut`);
+    console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjørbare biler og helikopter: bilen kjørte ${(kj.kjørte || 0).toFixed(0)} m og stoppet, helikopteret steg til ${(kj.over || 0).toFixed(0)} m, landet, og du må lande før du går ut; eget kjøretøy («${kj.egenKnapp || 'ingen'}») kjørte ${(kj.egenKjørte || 0).toFixed(0)} m`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

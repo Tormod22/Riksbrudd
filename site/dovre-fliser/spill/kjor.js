@@ -102,10 +102,16 @@
       k.X = u.cx + x; k.Y = u.cy + y; k.ny = false; }
     lagre(); return true; }
 
-  const fører = () => (i === null ? null : K[i]);
+  // EGNE KJØRETØY (lastebilkolonner, speiderbil, stridsvogn … i KJORETOY) kan også kjøres: «egen» er en stedfortreder som følger
+  // bilreglene og skriver plassen og retningen tilbake til kjøretøyet (resten av kolonnen følger rett bak). Ikke mens det har en ordre.
+  let egen = null;
+  const fører = () => egen || (i === null ? null : K[i]);
+  const egneNær = (R, bd) => { const u = R.ut; let best = null; for (const kj of rot.KJORETOY || []) { if (kj.side !== 'blå' || kj.sti || kj.oppdrag) continue; const d = Math.hypot(kj.x - u.cx - R.bane.x, kj.y - u.cy - R.bane.y); if (d < bd) { bd = d; best = kj; } } return best; };
+  function innEgen(kj) { const R = r3(); if (!R || !R.fot || fører()) return false; egen = { type: 'bil', kj, X: kj.x, Y: kj.y, a: kj.retning - Math.PI / 2, v: 0, vx: 0, vy: 0, vz: 0, rotor: 0, hp: 1, alt: null, over: 0, motor: true };
+    kamA = R.fot.a = egen.a; R.fot.pitch = -.18; kamTid = 0; Gange.settFører(ramme, ['Brems', 'Brems']); document.body.classList.add('kjorer'); logg(`Du kjører ${kj.navn}. ${VW < 900 ? 'Styrespaken gir gass og styrer.' : 'W gass, S brems og rygg, A/D styrer. F går ut.'}`); return true; }
   // SKADE OG REPARASJON: krasj og harde landinger sliter på kjøretøyet; under 15 % starter det ikke før det er reparert
   const REP = { bil: 4e5, heli: 2e6 }, repPris = k => Math.max(1e4, Math.round(REP[k.type] * (1 - k.hp) / 1e4) * 1e4);
-  function skad(k, d) { k.hp = Math.max(0, k.hp - d); if (k.hp < .15) { logg(`${NAVN[k.type]}${k.type === 'bil' ? 'en' : 'et'} er ødelagt og må repareres.`); if (k === fører() && (k.type === 'bil' || k.over < .5)) ut(true); } lagre(); }
+  function skad(k, d) { if (k.kj) return; k.hp = Math.max(0, k.hp - d); if (k.hp < .15) { logg(`${NAVN[k.type]}${k.type === 'bil' ? 'en' : 'et'} er ødelagt og må repareres.`); if (k === fører() && (k.type === 'bil' || k.over < .5)) ut(true); } lagre(); }
   function reparer(n) { const k = K[n]; if (!k || k.hp >= .995) return false; const p = repPris(k); if (!OppstartSpill.betal(p)) { logg(`Ikke nok penger til å reparere (${Math.round(p / 1000)} 000 kr).`); return false; } k.hp = 1; lagre(); logg(`${NAVN[k.type]}${k.type === 'bil' ? 'en' : 'et'} er reparert.`); return true; }
   // MOTORLYD: en enkel tone som følger farten (bil) eller rotoren (helikopter); følger ☰ «Lyd»
   let ac = null, osc = null, gain = null;
@@ -119,7 +125,7 @@
   function ut(tving) { const R = r3(), k = fører(); if (!k) return false;
     if (k.type === 'heli' && !tving && R && R.ut && k.alt !== null && k.over > .3) { if (performance.now() - melding > 2500) { melding = performance.now(); logg('Land helikopteret før du går ut.'); } return false; }
     if (k.type === 'bil' && !tving && Math.abs(k.v) > 2) { if (performance.now() - melding > 2500) { melding = performance.now(); logg('Stopp bilen før du går ut.'); } return false; }
-    k.motor = false; k.v = 0; k.vx = k.vy = 0; i = null; lyd(null); Gange.settFører(null); document.body.classList.remove('kjorer'); lagre();
+    k.motor = false; k.v = 0; k.vx = k.vy = 0; i = null; egen = null; lyd(null); Gange.settFører(null); document.body.classList.remove('kjorer'); lagre();
     if (R && R.fot && R.ut && !tving) { const u = R.ut, x = k.X - u.cx, y = k.Y - u.cy, [fx, fy] = fram(k.a), kr = Gange.kropp(); R.bane.avst = 1000;
       // ut på venstre side (eller der det er fritt)
       let px = x - fy * 2.4, py = y + fx * 2.4; for (const [sx, sy] of [[-fy, fx], [fy, -fx], [-fx, -fy], [fx, fy]]) { const qx = x + sx * 2.6, qy = y + sy * 2.6; if (!(typeof hindring3d === 'function' && hindring3d(qx, qy))) { px = qx; py = qy; break; } }
@@ -132,7 +138,7 @@
     const k = fører(), u = R.ut; if (!k || !u) return false; const V = verdenFor(R, u, k), dt = I.dt, f = R.fot, b = R.bane;
     let x = k.X - u.cx, y = k.Y - u.cy; x = Math.max(-u.S * .97, Math.min(u.S * .97, x)); y = Math.max(-u.S * .97, Math.min(u.S * .97, y));
     if (k.type === 'bil') { const s = { x, y, z: 0, a: k.a, v: k.v }, r = bilSteg(s, { gass: I.fram, sving: I.side, brems: I.opp || I.ned }, dt, V); Object.assign(k, { a: s.a, v: s.v }); x = s.x; y = s.y; k.z = s.z; k.over = 0;
-      if (r.krasj) { const far = Math.abs(k.v) * 5; skad(k, Math.min(.3, far * far * .0009 + .03)); if (performance.now() - melding > 1500) { melding = performance.now(); logg(`Du traff noe. Feltbilen: ${Math.round(k.hp * 100)} %.`); } } }
+      if (r.krasj) { const far = Math.abs(k.v) * 5; skad(k, Math.min(.3, far * far * .0009 + .03)); if (performance.now() - melding > 1500) { melding = performance.now(); logg(k.kj ? 'Du traff noe.' : `Du traff noe. Feltbilen: ${Math.round(k.hp * 100)} %.`); } } }
     else { if (k.alt === null) k.alt = hoyde3d(k.X, k.Y); const s = { x, y, z: (k.alt - u.h0) * R.EX, a: k.a, vx: k.vx, vy: k.vy, vz: k.vz, rotor: k.rotor, motor: true };
       const r = heliSteg(s, { fram: I.fram, gir: I.side, side: (sidelengs.e ? 1 : 0) - (sidelengs.q ? 1 : 0), opp: (I.opp ? 1 : 0) - (I.ned ? 1 : 0) }, dt, V);
       Object.assign(k, { a: s.a, vx: s.vx, vy: s.vy, vz: s.vz, rotor: s.rotor }); x = s.x; y = s.y; k.z = s.z; k.alt = s.z / R.EX + u.h0; k.over = r.over;
@@ -141,7 +147,7 @@
       const [fx, fy] = fram(k.a), vf = k.vx * fx + k.vy * fy, vs = k.vx * fy - k.vy * fx; k.helning += ((r.landet ? 0 : vf / HELI.maks * .22) - k.helning) * Math.min(1, dt * 3); k.rull += ((r.landet ? 0 : vs / HELI.side * .18) - k.rull) * Math.min(1, dt * 3); }
     // ved kanten av utsnittet (det neste er ikke bygget ennå): stopp opp i stedet for å stange i en usynlig vegg
     if (Math.abs(x) > u.S * .93 || Math.abs(y) > u.S * .93) { k.v = Math.min(k.v || 0, 3); k.vx *= .9; k.vy *= .9; if (performance.now() - melding > 5000) { melding = performance.now(); logg('Venter på kartet lenger fram …'); } }
-    k.X = u.cx + x; k.Y = u.cy + y; b.x = x; b.y = y; const kr = Gange.kropp(); if (kr) { kr.x = x; kr.y = y; kr.z = k.z; kr.fart = 0; kr.vx = kr.vy = 0; }
+    k.X = u.cx + x; k.Y = u.cy + y; b.x = x; b.y = y; if (k.kj) { k.kj.x = k.X; k.kj.y = k.Y; k.kj.retning = k.a + Math.PI / 2; k.kj.sti = null; skitten = true; } const kr = Gange.kropp(); if (kr) { kr.x = x; kr.y = y; kr.z = k.z; kr.fart = 0; kr.vx = kr.vy = 0; }
     // kameraet: bak kjøretøyet. Ser du deg rundt (mus/dra), står kameraet der i to sekunder før det glir tilbake bak
     if (Math.abs(f.a - kamA) > 1e-4) kamTid = performance.now(); const fart = k.type === 'bil' ? Math.abs(k.v) : Math.hypot(k.vx, k.vy);
     if (performance.now() - kamTid > 2000 && fart > 1) { let d = k.a - f.a; d = Math.atan2(Math.sin(d), Math.cos(d)); f.a += d * Math.min(1, dt * 2.2); } kamA = f.a;
@@ -154,7 +160,7 @@
   const sidelengs = { q: false, e: false };
   rot.addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (k === 'q' || k === 'e') sidelengs[k] = true;
     if (k !== 'f' || e.repeat || /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) return; const R = r3(); if (!R || !R.fot) return;
-    if (fører()) ut(); else { const n = nær(R); if (n !== null) inn(n); } e.preventDefault(); });
+    if (fører()) ut(); else { const n = nær(R); if (n !== null) inn(n); else { const kj = egneNær(R, 9); if (kj) innEgen(kj); } } e.preventDefault(); });
   rot.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (k === 'q' || k === 'e') sidelengs[k] = false; });
   // nærmeste kjøretøy innen 8 m av deg (når du går)
   function nær(R) { const u = R.ut; if (!u || !R.fot || fører()) return null; let best = null, bd = 8; K.forEach((k, n) => { const d = Math.hypot(k.X - u.cx - R.bane.x, k.Y - u.cy - R.bane.y); if (d < bd) { bd = d; best = n; } }); return best; }
@@ -166,7 +172,7 @@
 body.kort #kjorknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:170px; } body.kjorer #kjorknapp{ bottom:auto; top:calc(var(--topp,58px) + 112px); min-width:0; min-height:36px; padding:4px 14px; font-size:14px; }`;
   document.head.appendChild(css);
   const knapp = document.createElement('button'); knapp.id = 'kjorknapp'; knapp.type = 'button'; document.body.appendChild(knapp);
-  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot) return; if (fører()) ut(); else { const n = nær(R); if (n !== null) { if (K[n].hp < .15) reparer(n); else inn(n); } } });
+  knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot) return; if (fører()) ut(); else { const n = nær(R); if (n !== null) { if (K[n].hp < .15) reparer(n); else inn(n); } else { const kj = egneNær(R, 9); if (kj) innEgen(kj); } } });
 
   // hver ramme i 3D: modellene på plass, rotoren går rundt, knappen
   KROKER.ramme3d.push(R => { if (!klar || !R.ut || typeof THREE === 'undefined') return; const u = R.ut;
@@ -181,7 +187,7 @@ body.kort #kjorknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font
       if (k.type === 'bil') { const V = verdenFor(R, u, k), [fx, fy] = fram(k.a), zf = V.høyde(x + fx * 1.4, y + fy * 1.4), zb = V.høyde(x - fx * 1.4, y - fy * 1.4), zh = V.høyde(x + fy * .9, y - fx * .9), zv = V.høyde(x - fy * .9, y + fx * .9);
         m.rotation.y = -Math.atan2(zf - zb, 2.8); m.rotation.x = Math.atan2(zv - zh, 1.8); m.position.z = Math.max(z, (zf + zb) / 2); }
       if (k.ro) { k.ro.rotation.z += k.rotor * 38 * .016; k.hr.rotation.z += k.rotor * 60 * .016; } }
-    const n = nær(R), f = fører(), t = f ? (VW < 900 ? 'Gå ut' : 'Gå ut (F)') : n !== null && K[n].hp < .15 ? `Reparer ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'} (${Math.round(repPris(K[n]) / 1000)} 000 kr)` : n !== null ? `Sett deg inn i ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'}${VW < 900 ? '' : ' (F)'}` : '';
+    const n = nær(R), f = fører(), ek = !f && n === null && R.fot ? egneNær(R, 9) : null, t = ek ? `Sett deg inn i ${ek.navn}${VW < 900 ? '' : ' (F)'}` : f ? (VW < 900 ? 'Gå ut' : 'Gå ut (F)') : n !== null && K[n].hp < .15 ? `Reparer ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'} (${Math.round(repPris(K[n]) / 1000)} 000 kr)` : n !== null ? `Sett deg inn i ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'}${VW < 900 ? '' : ' (F)'}` : '';
     knapp.classList.toggle('på', !!t && !!R.fot); if (t && knapp.textContent !== t) knapp.textContent = t; });
   setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) knapp.classList.remove('på'); }, 500);
 
@@ -195,5 +201,5 @@ body.kort #kjorknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font
       g.fillStyle = 'rgba(22,18,12,.8)'; g.strokeStyle = '#d8c98a'; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); g.stroke(); g.fillStyle = '#d8c98a'; g.textBaseline = 'middle'; g.fillText(k.type === 'bil' ? 'B' : 'H', x, y + .5); g.textBaseline = 'alphabetic';
       if (kam.m < 1.2) { const t = NAVN[k.type], ty = rot.Etikett ? Etikett.tekst(g, t, x, y + 20, 1) : y + 20; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); } }
     g.restore(); });
-  rot.KjorSpill = { reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
+  rot.KjorSpill = { innEgen, egneNær: () => (r3() && R3.fot ? egneNær(R3, 9) : null), reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
 })(typeof window !== 'undefined' ? window : globalThis);

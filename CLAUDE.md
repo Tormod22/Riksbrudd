@@ -899,7 +899,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   dem inn i Leir.MATERIALER, Leir.DRIVSTOFF.prisPerLiter og FolkRegler.R.matPris; salg gir 80 % (Leir.REGLER.salg). (3) OPPDRAG: tre
   ledige (hent, redd, post) i fanen Mål; «post» setter ut røverlag (e.post = id); framme = eget lag eller deg selv innen 60 m;
   redningsoppdrag gir 1/3/6 personer etter til fots/feltbil/helikopter. (4) KJØRETØY: skade (KjorSpill.skad), reparasjon mot penger,
-  motorlyd (egen AudioContext). Lastebilene i KJORETOY kan IKKE kjøres ennå. (5) KAMP TIL FOTS: SpilletSpill.skyt() (PC: klikk med
+  motorlyd (egen AudioContext). Egne kjøretøy i KJORETOY uten ordre kan kjøres (KjorSpill.innEgen: en stedfortreder med
+  bilreglene skriver x/y/retning tilbake; ingen skade på dem). (5) KAMP TIL FOTS: SpilletSpill.skyt() (PC: klikk med
   låst mus, R lader; telefon #skytknapp), Kamp.sikter/sjanse, fiender innen 220 m gir skade (kampSteg hvert sekund), helse og
   ammunisjon i tegn3d, slått ut = tilbake til leiren. (6) HENDELSER: kort #hendelse med to valg (Hendelser.LISTE), og folkene som
   figurer i leiren i 3D (InstancedMesh, høyst 14). (7) VENNER: Deling.kode/les – leiren som lenke (#venn=…), vennens leir tegnes i
