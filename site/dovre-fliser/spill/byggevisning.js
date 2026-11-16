@@ -23,6 +23,7 @@
     if (iBildet && kam.m <= .8) return null;
     return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, m: Math.max(.2, Math.min(.6, Math.max((x1 - x0) / VW, (y1 - y0) / Math.max(120, friH)))) };
   }
+  const tall = v => String(Math.round(v * 10) / 10).replace('.', ',');
   const meter = v => (v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + ' km' : v >= 100 ? Math.round(v) + ' m' : String(Math.round(v * 10) / 10).replace('.', ',') + ' m');
   const lengde = P => { let s = 0; for (let i = 1; i < P.length; i++) s += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); return s; };
   const api = { RING, rutesteg, ramme, meter, lengde };
@@ -71,6 +72,17 @@
       if (p.x !== null && p.x !== undefined && !p.svever) return; const nå = performance.now(); if (venter || nå - sist < 100) return; sist = nå;
       const r = cv.getBoundingClientRect(), X = kam.x + (e.clientX - r.left - VW / 2) * kam.m, Y = kam.y - (e.clientY - r.top - VH / 2) * kam.m;
       p.rx = p.x = X; p.ry = p.y = Y; p.svever = true; venter = true; Promise.resolve(LeirSpill.prøv()).catch(() => {}).then(() => { venter = false; }); }); }
+  // TASTER (etter mønster fra spill med gode byggesystemer): piltastene dytter skissen ett rutesteg (Shift: en halv meter),
+  // Shift+Enter bygger og fortsetter med samme bygg, og Q på et valgt bygg plukker det opp: samme type og retning som ny skisse.
+  window.addEventListener('keydown', e => {
+    if (typeof på3d === 'undefined' || på3d || !rot.LeirSpill || !LeirSpill.tilstand() || /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') || e.ctrlKey || e.metaKey || e.altKey) return;
+    const p = LeirSpill.plassering(), k = e.key, PIL = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+    if (p && PIL[k] && !p.mal && !LB.BYGG[p.type].linje && p.x !== null && p.x !== undefined) { const d = e.shiftKey ? .5 : 2.5;
+      p.rx = (p.svever || p.rx === undefined ? p.x : p.rx) + PIL[k][0] * d; p.ry = (p.svever || p.ry === undefined ? p.y : p.ry) + PIL[k][1] * d; p.x = p.rx; p.y = p.ry; p.svever = false; LeirSpill.prøv(); e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (p && k === 'Enter' && e.shiftKey) { const f = LeirSpill.fortsett(); LeirSpill.fortsett(true); Promise.resolve(LeirSpill.bekreft()).catch(() => {}).then(() => LeirSpill.fortsett(f)); e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (!p && (k === 'q' || k === 'Q')) { const id = LeirSpill.valgt(), b = id && LeirSpill.tilstand().bygg.find(q => q.id === id), B = b && LB.BYGG[b.type]; if (!b || B.linje || B.del) return;
+      LeirSpill.startPlassering(b.type, null, { ret: b.ret || 0 }); e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
   // Et valgt bygg med rekkevidde viser sirkelen sin også utenom byggingen
   KROKER.tegn.push((g, vx0, vy1) => { if (på() || !rot.LeirSpill || !LeirSpill.tilstand()) return; const id = LeirSpill.valgt(), b = id && LeirSpill.tilstand().bygg.find(q => q.id === id); if (!b || !RING[b.type]) return;
     const m = kam.m, r = (b.type === 'kameramast' ? LB.effekt(b).rekkevidde || RING[b.type][0] : RING[b.type][0]), x = (b.x - vx0) / m, y = (vy1 - b.y) / m, rp = r / m; if (rp < 8 || rp > 4000) return;
@@ -104,6 +116,12 @@
     const ring = (b, sterk) => { const R0 = RING[b.type]; if (!R0) return; let r = R0[0]; if (b.type === 'kameramast' && b.id !== undefined) r = LB.effekt(b).rekkevidde || r; const x = sx(b.x), y = sy(b.y), rp = r / m; if (rp < 6 || x < -rp || y < -rp || x > VW + rp || y > VH + rp) return;
       g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = sterk ? 'rgba(127,209,122,.10)' : 'rgba(127,209,122,.05)'; g.fill(); g.strokeStyle = sterk ? 'rgba(127,209,122,.85)' : 'rgba(127,209,122,.4)'; g.lineWidth = sterk ? 1.6 : 1; g.setLineDash(sterk ? [] : [4, 4]); g.stroke(); g.setLineDash([]);
       if (sterk && rp > 40) skrift(g, `${R0[1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); };
+    // nøkkeltall under navnet på hvert bygg når du er nær nok: strøm, senger, lager, diesel – og rødt når bygget står uten strøm
+    if (m < .45) { const uten = LeirSpill.siste() && LeirSpill.siste().mangler; g.font = '10px sans-serif'; g.textAlign = 'center';
+      for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (B.linje || B.del || !LB.ferdig(b)) continue; const x = sx(b.x), y = sy(b.y); if (x < 0 || y < 0 || x > VW || y > VH) continue;
+        const e = LB.effekt(b), d = []; if (uten && uten.has(b.id)) d.push('uten strøm'); else if (e.kw > 0) d.push('+' + tall(e.kw) + ' kW'); else if (e.kw < 0) d.push('−' + tall(-e.kw) + ' kW');
+        if (e.plasser) d.push(e.plasser + ' senger'); if (e.lager) d.push('lager ' + e.lager); if (e.liter) d.push(tall(e.liter) + ' l'); if (!d.length) continue;
+        const t = d.join(' · '); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, y + 18); g.fillText(t, x, y + 18); } }
     const type = p && !p.mal ? p.type : null;
     if (type && RING[type]) for (const b of L.bygg) if (b.type === type && b.id !== p.flytt) ring(b, false);
     if (p && !p.mal) { const B = LB.BYGG[p.type];
@@ -121,6 +139,8 @@
         if (p.nabo && p.avstand !== null && p.avstand !== undefined && p.nabo.x !== undefined) { const nx = sx(p.nabo.x), ny = sy(p.nabo.y), mx = sx(p.x), my = sy(p.y);
           g.strokeStyle = 'rgba(240,215,154,.7)'; g.lineWidth = 1; g.setLineDash([3, 4]); g.beginPath(); g.moveTo(mx, my); g.lineTo(nx, ny); g.stroke(); g.setLineDash([]);
           if (Math.hypot(nx - mx, ny - my) > 50) skrift(g, meter(p.avstand), (mx + nx) / 2, (my + ny) / 2); }
+        // hvorfor plassen ikke går, står ved skissen (rødt alene forklarer ingenting)
+        if (p.feil && p.feil !== 'Sjekker kartet …') skrift(g, p.feil, sx(p.x), Math.min(...H.map(h => h[1])) - 16, '#f0a090');
         // langt fra leiren: avstanden (byggelaget må reise)
         if (S) { const d = Math.hypot(p.x - S.x, p.y - S.y); if (LB.REGLER && d > LB.REGLER.reise.fri) skrift(g, `${meter(d)} fra leiren`, sx(p.x), Math.max(...H.map(h => h[1])) + 16, '#e8c27a'); } } }
     g.restore();

@@ -873,6 +873,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   skjules loggen mens du bygger. leir-visning.js tegn1: skygge under byggene, møne, lyst merke på forsiden, navn via Etikett.
   Med byggesettet åpent følger rutenettet byggesettets ruter (2,4 m fra L.byggesett), og kartet flytter seg også for forslaget der
   (skissepunkt: midten av Byggesett.forslag(), q.d).
+  INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
+  byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
+  alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert
+  bygg når m < 0,45 (kW, senger, lager, liter, «uten strøm»), piltastene dytter skissen 2,5 m (Shift 0,5 m), Shift+Enter bygger og
+  fortsetter, Q på et valgt bygg = ny skisse av samme type og retning (tastene i byggevisning.js, lytter i fangstfasen).
   Med mus følger skissen pekeren (p.svever) til første trykk setter den fast (leir-visning.js trykk); et valgt bygg med
   rekkevidde viser sirkelen også utenom byggingen.
   LeirSpill.prøv() tar ingen koordinater – bruk LeirSpill.trykk(x, y). VAKT «byggevisning i 2D».
