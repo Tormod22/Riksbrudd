@@ -438,7 +438,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           // VAKT byggevisning i 2D (spill/byggevisning.js, brukeren 16. nov): når du begynner å bygge langt ute, går kameraet inn på leiren,
           // siden får klassen bygger2d, en skisse utenfor bildet hentes inn i det frie feltet, og alt slås av når du avbryter.
           if (window.BYGGEVISNING) { const bv = {}, vent = ms => new Promise(q => setTimeout(q, ms)), k0 = { x: kam.x, y: kam.y, m: kam.m }, SL = OppstartSpill.tilstand().leir;
-            LeirSpill.avbryt(); await vent(400); BYGGEVISNING.test = true; kam.x = SL.x; kam.y = SL.y; kam.m = 3; LeirSpill.startPlassering('brakke'); await vent(1000);
+            LeirSpill.avbryt(); await vent(400); BYGGEVISNING.test = true; kam.x = SL.x; kam.y = SL.y; kam.m = 3; LeirSpill.startPlassering('brakke'); for (let q = 0; q < 40 && (kam.m > .61 || BYGGEVISNING.anim()); q++) await vent(200);
             bv.på = BYGGEVISNING.på(); bv.klasse = document.body.classList.contains('bygger2d'); bv.m = kam.m; bv.iBildet = Math.abs(kam.x - SL.x) < VW * kam.m / 2 && Math.abs(kam.y - SL.y) < VH * kam.m / 2;
             // med mus følger skissen pekeren til første trykk; etter trykket står den
             { const cv = document.getElementById('c'), rr = cv.getBoundingClientRect(), flytt = (dx, dy) => cv.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse', clientX: rr.left + VW / 2 + dx, clientY: rr.top + VH / 2 + dy, buttons: 0, bubbles: true }));
