@@ -53,7 +53,8 @@
   // olje (tonn) på basen (spill/forsyning.js). Brukeren 12. nov: to systemer, men spillet skal si tydelig hva som er hva.
   const DRIVSTOFF = { prisPerLiter: 8000, literPerKWt: .3, iAggregat: 200 };   // 10 l = 80 000 kr (plan-kollaps.md); aggregatet har en liten egen tank
   const REGLER = { rivFerdig: .3, rivUferdig: .9, flyttPris: .25, flyttTid: .3, oppgrader: [.6, 1], oppgraderTid: .5, reparerPris: .25, reparerTid: .3, halvSkade: .5,
-    reise: { fri: 300, kmt: 10 } };   // utposter: meter fra leirens midte uten reisetid, og byggelagets fart i km/t (luftlinje)
+    reise: { fri: 300, kmt: 10 },
+    salg: .5 };   // det du får for overskudd av materialer, som andel av innkjøpsprisen (Claudes tall, 16. nov)   // utposter: meter fra leirens midte uten reisetid, og byggelagets fart i km/t (luftlinje)
 
   function ny() { return { versjon: 2, bygg: [], neste: 1, nesteJobb: 1, drivstoff: 0, lager: { tre: 0, betong: 0, stål: 0 }, plan: [], nestePlan: 1 }; }
   const lengde = (P, lukket) => { let l = 0; const Q = lukket ? [...P, P[0]] : P; for (let i = 1; i < Q.length; i++) l += Math.hypot(Q[i][0] - Q[i - 1][0], Q[i][1] - Q[i - 1][1]); return l; };
@@ -370,6 +371,12 @@
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)
   const kapasitet = L => L.bygg.filter(ferdig).reduce((s, b) => s + (b.type === 'drivstofftank' ? BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1] : 0) + (b.type === 'aggregat' ? DRIVSTOFF.iAggregat : 0), 0);
   // Kjøp drivstoff: så mye som får plass, gir { liter, pris } eller { feil }
+  // Selg overskudd av et materiale: gir mengden som ble solgt og pengene (REGLER.salg av innkjøpsprisen). gi(kr) legger pengene i kassa.
+  function selgMateriale(L, type, mengde, gi) {
+    if (!MATERIALER[type]) return { feil: 'Ukjent materiale.' };
+    const m = Math.min(mengde, Math.floor((L.lager[type] || 0) * 10) / 10); if (!(m > 0)) return { feil: `Ingen ${MATERIALER[type].navn.toLowerCase()} å selge.` };
+    const pris = Math.round(m * MATERIALER[type].pris * REGLER.salg); L.lager[type] = Math.max(0, (L.lager[type] || 0) - m); if (gi) gi(pris); return { mengde: m, pris };
+  }
   function kjøpDrivstoff(L, liter, betal) {
     const plass = Math.max(0, kapasitet(L) - L.drivstoff), l = Math.min(liter, Math.floor(plass)); if (l <= 0) return { feil: 'Ingen plass til mer diesel: bygg en dieseltank (eller et aggregat).' };
     const pris = l * DRIVSTOFF.prisPerLiter; if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
@@ -395,7 +402,7 @@
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
   const api = { leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
-    skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, lagerplass,
+    skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leir = api;

@@ -46,6 +46,7 @@
 #leirmeny .igang{ font-size:13.5px; color:var(--ink); margin:2px 0 0; }
 #leirmeny .mat{ display:flex; align-items:center; gap:6px; font-size:13.5px; margin:3px 0; } #leirmeny .mat span{ flex:1; }
 #leirmeny .mat button{ min-height:34px; padding:2px 8px; font-size:13px; }
+#leirmeny .mat .fyll{ display:block; height:5px; margin-top:2px; background:#2a2318; border:1px solid #3a3226; max-width:150px; } #leirmeny .mat .fyll b{ display:block; height:100%; background:#8a7a4a; }
 #byggvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
   border:1px solid var(--hover); padding:10px 14px; color:var(--ink); max-width:min(600px,94vw); text-align:center; }
 #byggvalg.på{ display:block; } #byggvalg button{ margin:6px 3px 0; } #byggvalg small{ color:var(--ink-dim); display:block; }
@@ -158,7 +159,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     for (const [k, M] of Object.entries(LB.MATERIALER)) {
       const b = knapp(`+10 (${LB.kroner(10 * M.pris)})`, () => { const r = LB.kjøpMateriale(L, k, 10, OppstartSpill.betal); logg(r.feil || `Kjøpte ${String(r.mengde).replace('.', ',')} ${M.enhet} ${M.navn.toLowerCase()} for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); });
       b.disabled = (L.lager[k] || 0) >= plass;
-      hode.appendChild(el('div', { klasse: 'mat' }, el('span', {}, `${M.navn}: ${String(Math.round((L.lager[k] || 0) * 10) / 10).replace('.', ',')} ${M.enhet}`), b));
+      // selg overskudd (halv pris) og en måler for hvor fullt lageret er
+      const har = L.lager[k] || 0, selg = knapp(`Selg 10 (${LB.kroner(10 * M.pris * LB.REGLER.salg)})`, () => { const r = LB.selgMateriale(L, k, 10, OppstartSpill.gi); logg(r.feil || `Solgte ${String(r.mengde).replace('.', ',')} ${M.enhet} ${M.navn.toLowerCase()} for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); }, { klasse: 'selg' });
+      selg.disabled = har < .1; selg.title = 'Selg overskudd for halv pris';
+      hode.appendChild(el('div', { klasse: 'mat' }, el('span', {}, `${M.navn}: ${String(Math.round(har * 10) / 10).replace('.', ',')} ${M.enhet}`, el('i', { klasse: 'fyll' }, el('b', { style: `width:${Math.round(Math.min(1, har / Math.max(1, plass)) * 100)}%` }))), b, selg));
     }
     // byggelag og køen
     const J = LB.jobber(L), lag = LB.byggelag(L);

@@ -834,3 +834,6 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (17) INTERIØR, SMÅRETTINGER: hus3d setter P.veggTopp (der ytterveggen slutter under saltak) – himlingen holdes under den, minst
   1,95 m. Den mørke døråpningen sett utenfra er et eget lite nett (o.ytre, materialet «åpning») som skjules når du står inne i
   bygget, så du ser ut gjennom døra. ANDRE ETASJE er vurdert og droppet: boliger med saltak har vegger på ca. 2,7 m (resten er tak).
+  (18) SALG: Leir.selgMateriale(L, type, mengde, gi) – overskudd selges for REGLER.salg = 0,5 av innkjøpsprisen (Claudes tall);
+  «Selg 10» står ETTER «+10» i hver materialrad (sjekk.js bruker den første knappen), og raden har en måler for lageret.
+  MARKEDET (K5 i plan-kollaps.md: priser som flytter seg, inflasjon) er IKKE laget – det har åpne spørsmål til brukeren.

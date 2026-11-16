@@ -187,4 +187,9 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   // ---- diesel: tekstene i leiren sier «diesel» (kjøretøyene bruker olje fra basen)
   ok(L0.BYGG.drivstofftank.navn === 'Dieseltank' && /diesel/.test(L0.BYGG.drivstofftank.tekst) && /kjøretøy/.test(L0.BYGG.drivstofftank.tekst) && /diesel/.test(L0.BYGG.aggregat.tekst),
     'dieseltanken og aggregatet sier «diesel», og at den ikke er til kjøretøyene'); }
+// ---- salg av overskudd (16. nov): halv pris, ikke mer enn det som ligger på lageret
+{ const L0 = require('../../site/dovre-fliser/spill/leir.js'), L = L0.ny(); let kasse = 0; const gi = v => { kasse += v; }; L.lager.tre = 14;
+  const r = L0.selgMateriale(L, 'tre', 10, gi); ok(r.mengde === 10 && r.pris === 10 * L0.MATERIALER.tre.pris * L0.REGLER.salg && kasse === r.pris && L.lager.tre === 4, 'salg: 10 m³ tre gir halv innkjøpspris');
+  const r2 = L0.selgMateriale(L, 'tre', 10, gi); ok(r2.mengde === 4 && L.lager.tre === 0, 'salg: ikke mer enn det som finnes');
+  ok(!!L0.selgMateriale(L, 'tre', 10, gi).feil && !!L0.selgMateriale(L, 'gull', 1, gi).feil, 'salg: tomt lager og ukjent materiale gir feil'); }
 process.exit(feil ? 1 : 0);
