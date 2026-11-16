@@ -871,6 +871,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   utenfor bildet (0,45 s, et trykk avbryter); visSkisse() flytter kartet når skissen havner under banneret (#byggvalg) eller utenfor
   bildet (fri() = det frie feltet). I testene (navigator.webdriver) bare med BYGGEVISNING.test = true. body.bygger2d; på små skjermer
   skjules loggen mens du bygger. leir-visning.js tegn1: skygge under byggene, møne, lyst merke på forsiden, navn via Etikett.
+  Med byggesettet åpent følger rutenettet byggesettets ruter (2,4 m fra L.byggesett), og kartet flytter seg også for forslaget der
+  (skissepunkt: midten av Byggesett.forslag(), q.d).
   Med mus følger skissen pekeren (p.svever) til første trykk setter den fast (leir-visning.js trykk); et valgt bygg med
   rekkevidde viser sirkelen også utenom byggingen.
   LeirSpill.prøv() tar ingen koordinater – bruk LeirSpill.trykk(x, y). VAKT «byggevisning i 2D».

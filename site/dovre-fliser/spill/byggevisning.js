@@ -43,9 +43,13 @@
       if (a < 1) requestAnimationFrame(steg); else anim = null; };
     requestAnimationFrame(steg); return true; }
   // SKISSEN SKAL SYNES: ligger den under banneret nederst (telefon) eller utenfor bildet, flyttes kartet så den står i det frie feltet
-  function fri() { const b = document.getElementById('byggvalg'), r = b && b.offsetHeight ? b.getBoundingClientRect() : null, topp = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topp')) || 58) + 50;
+  function fri() { const b = [document.getElementById('byggvalg'), document.getElementById('byggesett')].find(q => q && q.offsetHeight), r = b ? b.getBoundingClientRect() : null, topp = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topp')) || 58) + 50;
     return { y0: topp, y1: r && r.top > topp + 80 ? r.top - 30 : VH - 40, x0: 30, x1: VW - 30 }; }
-  function visSkisse() { const p = LeirSpill.plassering(); if (!p || p.mal || p.svever || p.x === null || p.x === undefined || anim) return false;
+  function skissepunkt() { const p = LeirSpill.plassering(); if (p) return p.mal || p.svever || p.x === null || p.x === undefined ? null : p;
+    // byggesettet: midten av forslaget (delene som er pekt ut, men ikke bestilt)
+    if (!bsÅpen() || !rot.ByggesettRegler) return null; const F = Byggesett.forslag(), o = LeirSpill.tilstand().byggesett; if (!F || !F.length || !o) return null;
+    let x = 0, y = 0, n = 0; for (const f of F) { if (!f.d) continue; const q = ByggesettRegler.midt(o, f.d); if (q.x === q.x && q.y === q.y) { x += q.x; y += q.y; n++; } } return n ? { x: x / n, y: y / n } : null; }
+  function visSkisse() { const p = skissepunkt(); if (!p || anim || !(p.x === p.x && p.y === p.y)) return false;
     const F = fri(), x = (p.x - (kam.x - VW * kam.m / 2)) / kam.m, y = ((kam.y + VH * kam.m / 2) - p.y) / kam.m; if (x >= F.x0 && x <= F.x1 && y >= F.y0 && y <= F.y1) return false;
     const tx = Math.max(F.x0 + 40, Math.min(F.x1 - 40, x)), ty = Math.max(F.y0 + 40, Math.min(F.y1 - 40, y)), mål = { x: kam.x + (x - tx) * kam.m, y: kam.y - (y - ty) * kam.m, m: kam.m };
     const fra = { x: kam.x, y: kam.y }, t0 = performance.now(); anim = { mål };
@@ -79,12 +83,13 @@
   function under(g, vx0, vy1) {
     const m = kam.m, S = leir(), sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
     g.save(); g.fillStyle = 'rgba(12,16,20,.42)'; g.fillRect(0, 0, VW, VH);
-    const steg = rutesteg(m);
-    if (S && steg) { const gx0 = vx0, gx1 = vx0 + VW * m, gy1 = vy1, gy0 = vy1 - VH * m, i0 = Math.ceil((gx0 - S.x) / steg), i1 = Math.floor((gx1 - S.x) / steg), j0 = Math.ceil((gy0 - S.y) / steg), j1 = Math.floor((gy1 - S.y) / steg);
+    // byggesettet har sitt eget rutenett (2,4 m fra L.byggesett): da vises det, så rutene stemmer med veggene
+    const bs = bsÅpen() && LeirSpill.tilstand().byggesett, O = bs ? { x: bs.ox, y: bs.oy } : S, steg = rutesteg(m) * (bs ? .96 : 1);
+    if (O && steg) { const gx0 = vx0, gx1 = vx0 + VW * m, gy1 = vy1, gy0 = vy1 - VH * m, i0 = Math.ceil((gx0 - O.x) / steg), i1 = Math.floor((gx1 - O.x) / steg), j0 = Math.ceil((gy0 - O.y) / steg), j1 = Math.floor((gy1 - O.y) / steg);
       if (i1 - i0 < 400 && j1 - j0 < 400) { g.lineWidth = 1;
-        for (const sterk of [false, true]) { g.strokeStyle = sterk ? 'rgba(240,226,176,.16)' : 'rgba(240,226,176,.07)'; g.beginPath();
-          for (let i = i0; i <= i1; i++) if ((i % 5 === 0) === sterk) { const x = Math.round(sx(S.x + i * steg)) + .5; g.moveTo(x, 0); g.lineTo(x, VH); }
-          for (let j = j0; j <= j1; j++) if ((j % 5 === 0) === sterk) { const y = Math.round(sy(S.y + j * steg)) + .5; g.moveTo(0, y); g.lineTo(VW, y); }
+        for (const sterk of [false, true]) { g.strokeStyle = sterk ? 'rgba(240,226,176,.15)' : 'rgba(240,226,176,.055)'; g.beginPath();
+          for (let i = i0; i <= i1; i++) if ((i % 5 === 0) === sterk) { const x = Math.round(sx(O.x + i * steg)) + .5; g.moveTo(x, 0); g.lineTo(x, VH); }
+          for (let j = j0; j <= j1; j++) if ((j % 5 === 0) === sterk) { const y = Math.round(sy(O.y + j * steg)) + .5; g.moveTo(0, y); g.lineTo(VW, y); }
           g.stroke(); } } }
     if (S && LB.REGLER && LB.REGLER.reise) { const r = LB.REGLER.reise.fri / m, x = sx(S.x), y = sy(S.y);
       if (r > 30 && r < 6000 && x > -r && y > -r && x < VW + r && y < VH + r) { g.strokeStyle = 'rgba(240,215,154,.4)'; g.lineWidth = 1.2; g.setLineDash([8, 6]); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.setLineDash([]);
