@@ -2,7 +2,7 @@
 // Leting i hus (reglene i spill/leting.js): når du går inne i et bygg som ikke er gjennomsøkt, kommer knappen «Let gjennom
 // huset» nederst. Letingen tar noen sekunder mens du blir inne. Det du finner, går til leiren: mat til folket, materialer til
 // lageret (så langt det er plass), diesel til tankene (så langt det er plass) og penger til kassa. Byggene du har lett i,
-// huskes per leir (localStorage «riksbrudd-leting»). Lastes etter interior3d.js, leir-visning.js og folk-visning.js.
+// huskes per leir (localStorage «riksbrudd-leting»). På smale skjermer står knappen over styrespaken (den lå delvis oppå den). Lastes etter interior3d.js, leir-visning.js og folk-visning.js.
 (function () {
   const NØKKEL = 'riksbrudd-leting'; let lett = new Set(), leirId = '', klar = false, jobb = null;
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
@@ -13,8 +13,8 @@
   background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; overflow:hidden; }
 #letknapp.på{ display:block; } #letknapp i{ position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(201,178,106,.28); pointer-events:none; } #letknapp span{ position:relative; }
 #innelapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; padding:2px 12px; background:rgba(22,18,12,.78); color:var(--ink-dim); font-size:14px; white-space:nowrap; pointer-events:none; }
-#innelapp.på{ display:block; } #innelapp.funn{ color:#f0e2b0; background:rgba(28,23,15,.94); border:1px solid #c9b26a; font-size:16px; padding:6px 16px; white-space:normal; max-width:min(520px, 86vw); text-align:center; } body.kort #innelapp{ bottom:calc(122px + env(safe-area-inset-bottom,0px)); font-size:13px; }
-body.kort #letknapp{ bottom:calc(150px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:180px; }`;
+#innelapp.på{ display:block; } #innelapp.funn{ color:#f0e2b0; background:rgba(28,23,15,.94); border:1px solid #c9b26a; font-size:16px; padding:6px 16px; white-space:normal; max-width:min(520px, 86vw); text-align:center; } body.kort #innelapp{ bottom:calc(196px + env(safe-area-inset-bottom,0px)); font-size:13px; }
+body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:180px; }`;
   document.head.appendChild(css);
   const knapp = document.createElement('button'); knapp.id = 'letknapp'; knapp.type = 'button'; knapp.innerHTML = '<i></i><span></span>'; document.body.appendChild(knapp);
   // merkelappen under knappen: hva slags bygg du står i, og om det er gjennomsøkt
