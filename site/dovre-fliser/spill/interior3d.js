@@ -230,7 +230,7 @@
     let maks = -Infinity, mx = 0, my = 0; for (const [x, y] of P) { maks = Math.max(maks, terr(x, y)); mx += x; my += y; } maks = Math.max(maks, terr(mx / P.length, my / P.length));
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
-    const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = P.gulvFast !== undefined ? P.gulvFast : Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
+    const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = P.gulvFast !== undefined ? Math.max(P.gulvFast, maks + .06) : Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
     pl.trapp = Math.max(1.5, Math.min(6, (pl.gulv - ute0) / .6)); const ute = terr(I.x + I.nx * pl.trapp, I.y + I.ny * pl.trapp);
     // himlingen holder seg under der ytterveggen slutter (ellers stikker rommet ut gjennom taket når gulvet er løftet i en skråning)
     { const topp = P.veggTopp !== undefined ? P.veggTopp : P.topp; if (topp !== undefined && topp === topp) pl.tak = Math.max(1.95, Math.min(pl.tak, topp - pl.gulv - .06)); }
@@ -399,13 +399,16 @@
   function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); }
   const avstand = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, Interior.avstSeg(x, y, a[0], a[1], b[0], b[1])); } return Interior.inni(P, x, y) ? 0 : d; };
 
-  // LEIRENS EGNE BYGG (16. nov: «alle bygg skal ha interiør» gjelder også leiren): brakka, kontrollrommet, sykestua og kjøkkenet.
+  // LEIRENS EGNE BYGG (16. nov: «alle bygg skal ha interiør» gjelder også leiren): brakka, kontrollrommet, sykestua, kjøkkenet,
+  // verkstedet og lagerteltet.
   // Modellene (spill/modeller.js) tegnes bare utenfra, så veggene er borte sett innenfra. Her får hvert ferdige bygg et omriss
   // (kroppen av modellen, uten trapp og utstikk), en dør der modellen har sin, og et fast gulv oppå grunnmuren. Omrisset legges i
   // R.hindre, så byggene også stopper deg når du går mot veggen.
   // per type: kroppen i modellens akser [x0, x1, y0, y1], døra (midt, på +x-veggen), bredden, grunnmurens høyde og vegghøyden
   const LEIRBYGG = { brakke: { kl: 'brakke', r: [-3, 3, -6, 6], dør: [3, 0], w: 1, s: .45, H: 2.6 }, kontrollrom: { kl: 'kontrollrom', r: [-4.5, 4.5, -6, 6], dør: [4.5, 0], w: 1.2, s: .4, H: 2.7 },
-    sykestue: { kl: 'sykehus', r: [-3.5, 3.5, -5.5, 5.5], dør: [3.5, .4], w: 1.4, s: .45, H: 2.8 }, kjøkken: { kl: 'storkjøkken', r: [-3.2, 2.4, -4.2, 4.2], dør: [2.4, -1.3], w: 1, s: .25, H: 2.6 } };
+    sykestue: { kl: 'sykehus', r: [-3.5, 3.5, -5.5, 5.5], dør: [3.5, .4], w: 1.4, s: .45, H: 2.8 }, kjøkken: { kl: 'storkjøkken', r: [-3.2, 2.4, -4.2, 4.2], dør: [2.4, -1.3], w: 1, s: .25, H: 2.6 },
+    // verkstedet har sidedøra på +y-veggen (portene er stengt), lagerteltet åpningen i +x-enden (teltduken skrår, så rommet er litt smalere)
+    verksted: { kl: 'industri', r: [-6, 6, -7, 7], dør: [4, 7], side: 'y+', w: 1, s: .15, H: 5.3 }, lagertelt: { kl: 'lager', r: [-4, 4, -2.25, 2.25], dør: [4, 0], w: 1.7, s: 0, H: 1.9 } };
   let egne = [], egneNøkkel = '', egneHindre = null;
   function leirbygg(R, u) {
     const L = window.LeirSpill && LeirSpill.tilstand(), liste = L && window.Leir ? L.bygg.filter(b => LEIRBYGG[b.type] && Leir.ferdig(b)) : [];
@@ -416,7 +419,7 @@
     for (const b of liste) { const T = LEIRBYGG[b.type], k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), X = b.x - u.cx, Y = b.y - u.cy; if (Math.abs(X) > u.S - 20 || Math.abs(Y) > u.S - 20) continue;
       const pk = (lx, ly) => [X + (lx * c - ly * s) * k, Y + (lx * s + ly * c) * k], [x0, x1, y0, y1] = T.r, P = [pk(x0, y0), pk(x1, y0), pk(x1, y1), pk(x0, y1)], z = (hoyde3d(b.x, b.y, u) - u.h0) * R.EX - .05, d = pk(T.dør[0], T.dør[1]);
       P.gulvFast = z + T.s * k + .03; P.veggTopp = P.topp = z + (T.s + T.H) * k; P.leir = b.type; P.bygg = { i: 9000000 + b.id, t: -1, h: T.H, kl: T.kl };
-      P.dør = { x: d[0], y: d[1], ux: -s, uy: c, w: T.w, hh: 2.05, z0: P.gulvFast };
+      P.dør = T.side === 'y+' ? { x: d[0], y: d[1], ux: -c, uy: -s, w: T.w, hh: 2.05, z0: P.gulvFast } : { x: d[0], y: d[1], ux: -s, uy: c, w: T.w, hh: 2.05, z0: P.gulvFast };
       const o = { P }, nøkler = []; let ax = Infinity, ay = Infinity, bx = -Infinity, by = -Infinity; for (const p of P) { ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]); ay = Math.min(ay, p[1]); by = Math.max(by, p[1]); }
       for (let a = Math.floor(ax / 20); a <= Math.floor(bx / 20); a++) for (let q = Math.floor(ay / 20); q <= Math.floor(by / 20); q++) { const kk = a + ',' + q; if (!R.hindre.has(kk)) R.hindre.set(kk, []); R.hindre.get(kk).push(o); nøkler.push(kk); }
       egne.push({ P, o, nøkler }); }
