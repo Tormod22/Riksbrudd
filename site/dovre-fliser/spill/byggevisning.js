@@ -45,7 +45,7 @@
   // SKISSEN SKAL SYNES: ligger den under banneret nederst (telefon) eller utenfor bildet, flyttes kartet så den står i det frie feltet
   function fri() { const b = document.getElementById('byggvalg'), r = b && b.offsetHeight ? b.getBoundingClientRect() : null, topp = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topp')) || 58) + 50;
     return { y0: topp, y1: r && r.top > topp + 80 ? r.top - 30 : VH - 40, x0: 30, x1: VW - 30 }; }
-  function visSkisse() { const p = LeirSpill.plassering(); if (!p || p.mal || p.x === null || p.x === undefined || anim) return false;
+  function visSkisse() { const p = LeirSpill.plassering(); if (!p || p.mal || p.svever || p.x === null || p.x === undefined || anim) return false;
     const F = fri(), x = (p.x - (kam.x - VW * kam.m / 2)) / kam.m, y = ((kam.y + VH * kam.m / 2) - p.y) / kam.m; if (x >= F.x0 && x <= F.x1 && y >= F.y0 && y <= F.y1) return false;
     const tx = Math.max(F.x0 + 40, Math.min(F.x1 - 40, x)), ty = Math.max(F.y0 + 40, Math.min(F.y1 - 40, y)), mål = { x: kam.x + (x - tx) * kam.m, y: kam.y - (y - ty) * kam.m, m: kam.m };
     const fra = { x: kam.x, y: kam.y }, t0 = performance.now(); anim = { mål };
@@ -59,6 +59,18 @@
   // Overgangen til bygging. I de automatiske testene flyttes ikke kameraet av seg selv; vakten slår det på med test-bryteren.
   setInterval(() => { const nå = på(); if (nå !== forrige) { forrige = nå; document.body.classList.toggle('bygger2d', nå); skitten = true; if (nå && (!navigator.webdriver || api.test)) gåInn(); }
     if (nå && !pekerNede && (!navigator.webdriver || api.test)) visSkisse(); }, 150);
+
+  // MED MUS: skissen følger pekeren til første trykk setter den fast (da ser du omrisset og om plassen er lovlig før du trykker).
+  // Bare vanlige bygg (ikke gjerder og maler), ikke mens du drar kartet, og høyst ti ganger i sekundet.
+  { const cv = document.getElementById('c'); let sist = 0, venter = false;
+    if (cv) cv.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons || !på()) return; const p = LeirSpill.plassering(); if (!p || p.mal || LB.BYGG[p.type].linje) return;
+      if (p.x !== null && p.x !== undefined && !p.svever) return; const nå = performance.now(); if (venter || nå - sist < 100) return; sist = nå;
+      const r = cv.getBoundingClientRect(), X = kam.x + (e.clientX - r.left - VW / 2) * kam.m, Y = kam.y - (e.clientY - r.top - VH / 2) * kam.m;
+      p.rx = p.x = X; p.ry = p.y = Y; p.svever = true; venter = true; Promise.resolve(LeirSpill.prøv()).catch(() => {}).then(() => { venter = false; }); }); }
+  // Et valgt bygg med rekkevidde viser sirkelen sin også utenom byggingen
+  KROKER.tegn.push((g, vx0, vy1) => { if (på() || !rot.LeirSpill || !LeirSpill.tilstand()) return; const id = LeirSpill.valgt(), b = id && LeirSpill.tilstand().bygg.find(q => q.id === id); if (!b || !RING[b.type]) return;
+    const m = kam.m, r = (b.type === 'kameramast' ? LB.effekt(b).rekkevidde || RING[b.type][0] : RING[b.type][0]), x = (b.x - vx0) / m, y = (vy1 - b.y) / m, rp = r / m; if (rp < 8 || rp > 4000) return;
+    g.save(); g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = 'rgba(127,209,122,.07)'; g.fill(); g.strokeStyle = 'rgba(127,209,122,.8)'; g.lineWidth = 1.4; g.stroke(); if (rp > 40) skrift(g, `${RING[b.type][1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); g.restore(); });
 
   const skrift = (g, t, x, y, farge = '#f0e2b0') => { g.font = '11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8;
     g.fillStyle = 'rgba(16,14,10,.82)'; g.fillRect(x - w / 2, y - 8, w, 16); g.fillStyle = farge; g.fillText(t, x, y + .5); g.textBaseline = 'alphabetic'; };

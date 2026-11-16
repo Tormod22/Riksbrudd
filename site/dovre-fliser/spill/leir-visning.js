@@ -327,6 +327,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function trykk(X, Y) {
     if (plassering) {
       const p = plassering; if (!p.mal && LB.BYGG[p.type].linje) p.punkter.push([X, Y]); else { p.rx = X; p.ry = Y; p.x = X; p.y = Y; }
+      p.svever = false;   // et trykk setter skissen fast (byggevisning.js lar den følge musa til da)
       prøv(); return true;
     }
     if (!L) return false;
