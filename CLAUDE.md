@@ -813,3 +813,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   («riksbrudd-leting»). Mengdene er Claudes forslag. VAKTER i sjekk.js: «☰-menyen», «Leir-menyen og målene», «leting i hus».
   KONTROLL I KOPI: scratchpad snapsjekk.sh <navn> <port> [profil] kopierer site/ og pipeline/ og kjører sjekk.js der, så
   arbeidstreet kan endres imens. PC-profilen alene tar nå over ti minutter.
+  (6) LYD INNE: Lyd.nivåer(t.inne) demper vind, hav, by og fugler inne i et hus, fottrinn «gulv». #innelapp viser byggtypen og
+  om huset er gjennomsøkt. (7) LAGRING: «riksbrudd-verden» har nå også tettsteder (eier), infra (nøklene som ikke er hele) og olje.
+  (8) HJELPEN: kort oppskrift, søkefelt, emnene i grupper som <details> (GRUPPER i hjelp.js; nye emner må inn der, ellers «Annet»).
+  (9) Bygglista i Leir-menyen står i grupper (GR i visMeny); måltelleren #sMaal i statuslinja åpner fanen Mål.
+  (10) EKTE VINDUER: innerveggen har hull der vinduene er, og mens du står inne i et bygg, settes husmaterialene (R.husMesh) til
+  THREE.FrontSide (husSide i interior3d.js) – ytterveggen rundt deg tegnes da ikke innenfra, og du ser landskapet og nabohusene
+  gjennom vinduene og døra. Ute er de DoubleSide som før. Glasset er en svak, gjennomsiktig hinne (materialet «vindu»).

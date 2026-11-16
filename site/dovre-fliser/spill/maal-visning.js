@@ -21,7 +21,9 @@
     const T = bilde(); if (!T) return [];
     const nye = Maal.vurder(T, ferdige); if (!nye.length) return nye;
     lagre();
-    if (!stille) for (const id of nye) { const s = Maal.stilling(ferdige); logg(`Mål nådd: ${Maal.finn(id).tekst.toLowerCase()}.` + (id === nye[nye.length - 1] ? (s.neste ? ` Neste: ${s.neste.tekst.toLowerCase()}.` : ' Alle målene er nådd.') : '')); }
+    // én melding, også når flere mål nås samtidig (ellers skyver de alt annet ut av loggen)
+    if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => Maal.finn(id).tekst.toLowerCase());
+      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${s.neste.tekst.toLowerCase()}.` : ' Alle målene er nådd.')); }
     return nye;
   }
   const kort = () => { const s = Maal.stilling(ferdige); return s.kapittel < 0 ? '✓' : `${s.totalt}/${s.alle}`; };

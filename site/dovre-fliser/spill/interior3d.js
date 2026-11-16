@@ -5,10 +5,10 @@
 // hus3d i index.html legger døra og klassen på omrisset, og her får omrisset planen sin («inne»), som hindring3d bruker for
 // vegger, døråpning og møbler. Gulvet og trappa foran døra hentes av gange.js herfra.
 // UTSEENDET: gulv per rom (parkett, fliser, betong, teppe), malte vegger eller panel i rommets farge med mørkere hjørner og
-// gulvlist, dørkarmer med overstykke og åpent dørblad, vinduer med utsikt, karm, vinduspost og gardiner, taklamper med lys på
+// gulvlist, dørkarmer med overstykke og åpent dørblad, vinduer du ser ut av, med karm, vinduspost og gardiner, taklamper med lys på
 // gulvet, dagslys innenfor vinduene, myke skygger under møblene og langs veggene, tepper og bilder på veggene.
 // Alle mønstrene tegnes i koden (ingen bildefiler). Ett nett per bygg med åtte stoffer, pluss fire små nett for lys og skygge.
-// Bare første etasje. Du ser ikke ut gjennom vinduene (utsikten er et bilde).
+// Bare første etasje. Vinduene er ekte hull: du ser landskapet utenfor (ytterveggene tegnes bare utenfra mens du er inne).
 (function () {
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
   const NÆR = 30, BORT = 50, MAKS = 10;
@@ -57,7 +57,7 @@
     if (M) return M;
     const tex = (navn, n, gjenta) => { const t = new THREE.CanvasTexture(lerret(n, MØNSTER[navn])); if (gjenta) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
     M = { hoved: STOFFER.map(n => new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0x201e1b, map: n === 'glatt' ? null : tex(n, 256, true) })),
-      vindu: new THREE.MeshBasicMaterial({ map: tex('utsikt', 128), side: THREE.DoubleSide, fog: false }),
+      vindu: new THREE.MeshBasicMaterial({ color: 0xdfeaf2, transparent: true, opacity: .1, depthWrite: false, side: THREE.DoubleSide, fog: false }),
       skygge: new THREE.MeshBasicMaterial({ map: tex('skygge', 64), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
       lampe: new THREE.MeshBasicMaterial({ map: tex('glød', 64), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x6a5a3a }),
       dag: new THREE.MeshBasicMaterial({ map: M_GLØD(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x404040 }) };
@@ -282,14 +282,21 @@
       const td = (I.x - a[0]) * ex + (I.y - a[1]) * ey, avD = Math.abs((I.x - a[0]) * ey - (I.y - a[1]) * ex), harDør = avD < .05 && td > 0 && td < L && Math.abs(ex * I.ux + ey * I.uy) > .99;
       const p0 = harDør ? Math.max(0, td - I.w / 2) : -1, q0 = harDør ? Math.min(L, td + I.w / 2) : -1;
       const T = [0, L]; for (const h of ender) { const t = (h[0] - a[0]) * ex + (h[1] - a[1]) * ey, av = Math.abs((h[0] - a[0]) * ey - (h[1] - a[1]) * ex); if (av < .25 && t > .3 && t < L - .3) T.push(t); }
-      if (harDør) T.push(p0, q0); T.sort((x, y) => x - y);
+      if (harDør) T.push(p0, q0);
+      // vinduene på denne veggen (EKTE HULL: ytterveggen tegnes ikke innenfra mens du er inne, så du ser ut – se oppdater())
+      const kirke = kl === 'kirke', butikk = kl === 'butikk' || kl === 'terminal', vz0 = kirke ? 1.2 : butikk ? .5 : .9, vz1 = Math.min(tak - .25, kirke ? 4.5 : butikk ? 2.6 : 2.1), bw = butikk ? 2 : 1.1, vinduer = [];
+      if (!UTEN_VINDU[kl] && L >= 2.6) { const n = Math.max(1, Math.floor(L / 3.2));
+        for (let j = 0; j < n; j++) { const t = L * (j + .5) / n; if (harDør && Math.abs(t - td) < I.w / 2 + bw / 2 + .35) continue;
+          const X = a[0] + ex * t, Y = a[1] + ey * t; if (ender.some(h => Math.hypot(h[0] - X, h[1] - Y) < bw / 2 + .3)) continue; vinduer.push(t); T.push(t - bw / 2, t + bw / 2); } }
+      T.sort((x, y) => x - y);
       for (let k = 0; k < T.length - 1; k++) { const t0 = T[k], t1 = T[k + 1]; if (t1 - t0 < .03) continue; const A0 = pt(t0, .03), B0 = pt(t1, .03), mid = pt((t0 + t1) / 2, .4), S = stilVed(mid[0], mid[1]), iDør = harDør && t0 >= p0 - .01 && t1 <= q0 + .01;
-        const hj0 = !(harDør && Math.abs(t0 - q0) < .01), hj1 = !(harDør && Math.abs(t1 - p0) < .01);
+        const iVindu = vinduer.some(t => t0 >= t - bw / 2 - .01 && t1 <= t + bw / 2 + .01), vkant = t => vinduer.some(v => Math.abs(t - (v - bw / 2)) < .01 || Math.abs(t - (v + bw / 2)) < .01);
+        const hj0 = !(harDør && Math.abs(t0 - q0) < .01) && !vkant(t0), hj1 = !(harDør && Math.abs(t1 - p0) < .01) && !vkant(t1);
         if (iDør) veggflate(A0[0], A0[1], B0[0], B0[1], dørH, tak, S.vegg, false, false, false);
+        else if (iVindu) { veggflate(A0[0], A0[1], B0[0], B0[1], 0, vz0, S.vegg, false, false, true); veggflate(A0[0], A0[1], B0[0], B0[1], vz1, tak, S.vegg, false, false, false); veggskygge(A0[0], A0[1], B0[0], B0[1], nx, ny); }
         else { veggflate(A0[0], A0[1], B0[0], B0[1], 0, tak, S.vegg, hj0, hj1, true); veggskygge(A0[0], A0[1], B0[0], B0[1], nx, ny); } }
       if (harDør) {
         // døråpningen: dagen utenfor (innenfra), en mørk åpning og et åpent dørblad (utenfra), karm rundt
-        const u0 = pt(p0, .015), u1 = pt(q0, .015); fk(V, [u0[0], u0[1], g0], [u1[0], u1[1], g0], [u1[0], u1[1], g0 + dørH], [u0[0], u0[1], g0 + dørH], null, [[.1, .3], [.9, .3], [.9, 1], [.1, 1]]);
         const y0 = pt(p0, -.07), y1 = pt(q0, -.07), ms = [.1, .09, .08]; fk(G[0], [y0[0], y0[1], g0], [y1[0], y1[1], g0], [y1[0], y1[1], g0 + dørH], [y0[0], y0[1], g0 + dørH], [ms, ms, mørk(ms, 1.6), mørk(ms, 1.6)], UV0);
         const va = Math.atan2(ey, ex);
         for (const t of [p0, q0]) { const c = pt(t, .0); kasse(c[0], c[1], va, [-.05, .05, -.1, .1, 0, dørH, HVIT, 'tre']); } { const c = pt(td, 0); kasse(c[0], c[1], va, [-I.w / 2, I.w / 2, -.1, .1, dørH, dørH + .08, HVIT, 'tre']); }
@@ -298,12 +305,11 @@
         // dørmatte
         const dm = pt(td, .55); kasse(dm[0], dm[1], va, [-.4, .4, -.25, .25, .003, .02, [.3, .26, .2], 'tøy']);
       }
-      if (UTEN_VINDU[kl] || L < 2.6) continue;
-      const n = Math.max(1, Math.floor(L / 3.2)), kirke = kl === 'kirke', butikk = kl === 'butikk' || kl === 'terminal', z0 = kirke ? 1.2 : butikk ? .5 : .9, z1 = Math.min(tak - .25, kirke ? 4.5 : butikk ? 2.6 : 2.1), bw = butikk ? 2 : 1.1;
-      for (let j = 0; j < n; j++) { const t = L * (j + .5) / n; if (harDør && Math.abs(t - td) < I.w / 2 + bw / 2 + .35) continue;
-        const X = a[0] + ex * t, Y = a[1] + ey * t; if (ender.some(h => Math.hypot(h[0] - X, h[1] - Y) < bw / 2 + .3)) continue;
-        const w0 = pt(t - bw / 2, .045), w1 = pt(t + bw / 2, .045), o = hash(pl.i, i * 31 + j) * .4;
-        fk(V, [w0[0], w0[1], g0 + z0], [w1[0], w1[1], g0 + z0], [w1[0], w1[1], g0 + z1], [w0[0], w0[1], g0 + z1], null, [[o, .12], [o + .6, .12], [o + .6, .98], [o, .98]]);
+      const z0 = vz0, z1 = vz1;
+      for (const t of vinduer) {
+        // glasset: en svak, lys hinne (ingen bilde – du ser det som faktisk er utenfor)
+        const w0 = pt(t - bw / 2, .02), w1 = pt(t + bw / 2, .02);
+        fk(V, [w0[0], w0[1], g0 + z0], [w1[0], w1[1], g0 + z0], [w1[0], w1[1], g0 + z1], [w0[0], w0[1], g0 + z1], null, UV0);
         // karm, sprosser og vinduspost
         const va = Math.atan2(ey, ex), c = pt(t, .06), kb = bw / 2;
         for (const [x0, x1, q0z, q1z] of [[-kb - .06, kb + .06, z0 - .06, z0], [-kb - .06, kb + .06, z1, z1 + .06], [-kb - .06, -kb, z0, z1], [kb, kb + .06, z0, z1], [-.02, .02, z0, z1]]) kasse(c[0], c[1], va, [x0, x1, -.015, .02, q0z, q1z, HVIT, 'tre']);
@@ -370,8 +376,9 @@
     for (const m of nett) R.scene.add(m);
     return { plan: pl, nett, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
   }
+  function husSide(R, side) { for (const m of R.husMesh || []) for (const mat of [].concat(m.material)) if (mat && mat.side !== side) { mat.side = side; mat.needsUpdate = true; } }
   function fjern(R, P) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) { R.scene.remove(m); m.geometry.dispose(); } delete P.inne; aktive.delete(P); }
-  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; }
+  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); }
   const avstand = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, Interior.avstSeg(x, y, a[0], a[1], b[0], b[1])); } return Interior.inni(P, x, y) ? 0 : d; };
 
   function oppdater(R, tving) {
@@ -383,7 +390,10 @@
     for (const [P] of [...aktive]) if (avstand(P, x, y) > BORT) fjern(R, P);
     // lyset følger dagen: utsikten og dagslyset på gulvet etter himmelen, lampene sterkere når det er mørkt
     if (M) { const mørke = window.NATT && typeof NATT.mørke === 'number' ? Math.max(0, Math.min(1, NATT.mørke)) : 0, dag = 1 - mørke;
-      if (R.scene.fog) M.vindu.color.copy(R.scene.fog.color).lerp(new THREE.Color(1, 1, 1), .35 * dag + .05); M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
+      M.vindu.opacity = .06 + .1 * mørke; M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
+    // EKTE VINDUER: mens du står inne i et bygg, tegnes husenes yttervegger bare fra utsiden. Da er veggen rundt deg borte sett
+    // innenfra, og gjennom hullene i innerveggen ser du landskapet og nabohusene som de er. Ute tegnes veggene fra begge sider som før.
+    husSide(R, inne(x, y) ? THREE.FrontSide : THREE.DoubleSide);
     // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer())
     let best = null, bd = NÆR; const sett = new Set();
     for (let a = Math.floor((x - NÆR) / 20); a <= Math.floor((x + NÆR) / 20); a++) for (let c = Math.floor((y - NÆR) / 20); c <= Math.floor((y + NÆR) / 20); c++)
@@ -398,7 +408,7 @@
   // Høyden du står på inne og på trappa foran døra (ellers null)
   function høyde(x, y, terreng) { for (const [, o] of aktive) { const h = Interior.høyde(o.plan, x, y, terreng); if (h !== null) return h; } return null; }
   const påTrapp = (x, y) => { for (const [, o] of aktive) if (Interior.påTrapp(o.plan, x, y)) return true; return false; };
-  const inne = (x, y) => { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; };
+  function inne(x, y) { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; }
   window.Interior3d = { høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
     // til vakten: alle interiørene nå – rom, møbler, trekanter, stoffer i bruk, og om inngangen er fri
     sjekk: () => [...aktive.values()].map(o => ({ kl: o.plan.kl, rom: o.plan.rom.length, møbler: o.plan.møbler.length, trekanter: o.trekanter, nett: o.nett.length, stoffer: o.nett[0].geometry.groups.length, gulv: o.plan.gulv, inngang: o.plan.inngang,
