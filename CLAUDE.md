@@ -820,3 +820,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (10) EKTE VINDUER: innerveggen har hull der vinduene er, og mens du står inne i et bygg, settes husmaterialene (R.husMesh) til
   THREE.FrontSide (husSide i interior3d.js) – ytterveggen rundt deg tegnes da ikke innenfra, og du ser landskapet og nabohusene
   gjennom vinduene og døra. Ute er de DoubleSide som før. Glasset er en svak, gjennomsiktig hinne (materialet «vindu»).
+  (11) OVERLEVENDE: Leting.funn(...).person (OVERLEVENDE per klasse) – leting-visning.js rekrutterer gratis med
+  FolkRegler.rekrutter når det er en ledig seng. (12) HURTIGTASTER: spill/taster.js (TASTER: 3, G, L, M, H, K, P, komma, punktum –
+  trykker på knappene som finnes; ikke i tekstfelt eller på startskjermen; mens du går bare 3/G/L/M/H). VAKT «hurtigtaster».
+  Flere mål som nås samtidig, meldes i én linje i loggen (loggen har bare seks linjer).

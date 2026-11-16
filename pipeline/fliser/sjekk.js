@@ -914,6 +914,17 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const mnyok = mny.grupper >= 4 && mny.løse === 0 && mny.brytere >= 10 && mny.valg.length >= 3 && mny.valg.every(t => /^[^:]+: .+/.test(t)) && mny.bryter && mny.bredde && mny.lukket;
     if (!mnyok) { feil++; console.log(JSON.stringify(mny)); }
     console.log(`${mnyok ? 'ok  ' : 'FEIL'} ${navn} ☰-menyen: ${mny.grupper} grupper, ${mny.brytere} brytere, ${mny.valg.length} valg («${mny.valg[0]}»), bryteren virker, Esc lukker`);
+    // VAKT hurtigtaster (spill/taster.js): M åpner og lukker ☰, H hjelpen, P pause og tilbake – ikke mens du skriver i et felt
+    const tst = await pg.evaluate(async () => { const tast = (k, mål) => (mål || window).dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })), på = id => document.getElementById(id).classList.contains('på');
+      const ut = {}, t0 = tempo; if (på('lagmeny')) document.getElementById('meny').click();
+      tast('m'); ut.åpen = på('lagmeny'); tast('m'); ut.lukket = !på('lagmeny');
+      tast('h'); ut.hjelp = på('hjelp'); tast('h'); ut.hjelpLukket = !på('hjelp');
+      tempo = 1; document.getElementById('sp1').click(); tast('p'); ut.pause = tempo === 0; tast('p'); ut.igjen = tempo === 1;
+      const felt = document.createElement('input'); document.body.appendChild(felt); felt.focus(); tast('m', felt); ut.felt = !på('lagmeny'); felt.remove();
+      ut.tittel = /tast M/.test(document.getElementById('meny').title); tempo = t0; return ut; });
+    const tstok = tst.åpen && tst.lukket && tst.hjelp && tst.hjelpLukket && tst.pause && tst.igjen && tst.felt && tst.tittel;
+    if (!tstok) { feil++; console.log(JSON.stringify(tst)); }
+    console.log(`${tstok ? 'ok  ' : 'FEIL'} ${navn} hurtigtaster: M åpner og lukker innstillingene, H hjelpen, P pause og videre, ikke i tekstfelt, tasten står i hjelpeteksten`);
     // VAKT Leir-menyen og målene (leir-visning.js, spill/maal.js; brukeren 16. nov): status som fliser, fanene Bygg/Lager/Plan/Mål
     // viser bare sitt eget, «Neste mål» står over fanene, og et mål som nås, hakes av og huskes.
     const leirm = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true };
