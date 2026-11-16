@@ -155,6 +155,10 @@
       case 'kjøledisk': k(-b, b, -d, d, 0, .7, HVIT); k(-b, b, -d, -d + .08, .7, h, HVIT); k(-b, b, -d, d, h - .05, h, HVIT); k(-b + .04, b - .04, -d + .08, d - .04, .7, .78, [.8, .9, .94]);
         for (let i = 0; i < 6; i++) k(-b + .1 + i * (m.b - .2) / 6, -b + .1 + (i + .8) * (m.b - .2) / 6, -d + .12, d - .1, .78, .92 + (i % 2) * .08, TØY[(i * 3 + 1) % TØY.length]);
         k(-b + .02, b - .02, d - .03, d - .015, .78, h - .05, [.78, .88, .92]); break;
+      // plantebed: karm av planker, jord, og planter i ulik høyde (fast per bed)
+      case 'plantebed': k(-b, b, -d, d, 0, h * .8, LYST_TRE); k(-b + .05, b - .05, -d + .05, d - .05, h * .8, h * .86, [.24, .17, .11]);
+        for (let i = 0; i < 9; i++) { const px = -b + .2 + (i % 5) * (2 * b - .4) / 4, py = (i < 5 ? -1 : 1) * d * .42, ph = .12 + ((m.f * 7 + i * .37) % 1) * .45;
+          k(px - .11, px + .11, py - .11, py + .11, h * .86, h * .86 + ph, i % 4 === 3 ? [.42, .6, .2] : [.2, .5, .18], 'tøy'); } break;
       case 'pall': for (const x of [-b, -.05, b - .1]) t(x, x + .1, -d, d, 0, .1, LYST_TRE); t(-b, b, -d, d, .1, .14, LYST_TRE); { const hh = h * (.6 + m.f * .4);
         k(-b + .03, b - .03, -d + .03, d - .03, .14, hh, [.74, .6, .42], 'tøy'); k(-b + .02, b - .02, -d + .02, d - .02, hh * .45, hh * .5, [.86, .88, .9]); } break;
       case 'maskin': k(-b, b, -d, d, 0, h * .5, [.2, .4, .34]); k(-b * .65, b * .2, -d * .7, d * .5, h * .5, h, [.26, .48, .4]); k(b * .35, b * .92, -d * .35, d * .35, h * .5, h * .82, [.86, .7, .1]);
@@ -211,6 +215,7 @@
       case 'kirke': S.gulv = ['parkett', [.46, .32, .22]]; S.vegg = ['malt', [.95, .93, .87]]; S.lampe = 2; break;
       case 'brakke': S.gulv = ['parkett', [.62, .52, .38]]; S.vegg = ['panel', [.78, .76, .62]]; break;
       case 'kontrollrom': S.gulv = ['betong', [.5, .54, .56]]; S.vegg = ['malt', [.86, .88, .86]]; S.lampe = 2; break;
+      case 'drivhus': S.gulv = ['betong', [.5, .46, .4]]; S.vegg = ['malt', [.86, .92, .9]]; break;
       case 'storkjøkken': S.gulv = ['flis', [.8, .78, .72]]; S.vegg = ['malt', [.95, .93, .86]]; break;
       case 'gang': if (kl === 'skole') { S.gulv = ['betong', [.66, .72, .62]]; S.vegg = ['malt', [.95, .92, .8]]; } break;
     }
@@ -394,9 +399,11 @@
     for (const m of nett) R.scene.add(m);
     return { plan: pl, nett, ytre, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
   }
+  let skjultId = -1;
+  function modellSynlig(R, id) { if (id === skjultId && id < 0) return; for (const m of R.scene.children) if (m.userData && !m.userData.plan && (m.userData.id === skjultId || m.userData.id === id)) m.visible = m.userData.id !== id; skjultId = id; }
   function husSide(R, side) { for (const m of R.husMesh || []) for (const mat of [].concat(m.material)) if (mat && mat.side !== side) { mat.side = side; mat.needsUpdate = true; } }
   function fjern(R, P) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) { R.scene.remove(m); m.geometry.dispose(); } delete P.inne; aktive.delete(P); }
-  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); }
+  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); if (R.scene) modellSynlig(R, -1); }
   const avstand = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, Interior.avstSeg(x, y, a[0], a[1], b[0], b[1])); } return Interior.inni(P, x, y) ? 0 : d; };
 
   // LEIRENS EGNE BYGG (16. nov: «alle bygg skal ha interiør» gjelder også leiren): brakka, kontrollrommet, sykestua, kjøkkenet,
@@ -408,7 +415,9 @@
   const LEIRBYGG = { brakke: { kl: 'brakke', r: [-3, 3, -6, 6], dør: [3, 0], w: 1, s: .45, H: 2.6 }, kontrollrom: { kl: 'kontrollrom', r: [-4.5, 4.5, -6, 6], dør: [4.5, 0], w: 1.2, s: .4, H: 2.7 },
     sykestue: { kl: 'sykehus', r: [-3.5, 3.5, -5.5, 5.5], dør: [3.5, .4], w: 1.4, s: .45, H: 2.8 }, kjøkken: { kl: 'storkjøkken', r: [-3.2, 2.4, -4.2, 4.2], dør: [2.4, -1.3], w: 1, s: .25, H: 2.6 },
     // verkstedet har sidedøra på +y-veggen (portene er stengt), lagerteltet åpningen i +x-enden (teltduken skrår, så rommet er litt smalere)
-    verksted: { kl: 'industri', r: [-6, 6, -7, 7], dør: [4, 7], side: 'y+', w: 1, s: .15, H: 5.3 }, lagertelt: { kl: 'lager', r: [-4, 4, -2.25, 2.25], dør: [4, 0], w: 1.7, s: 0, H: 1.9 } };
+    verksted: { kl: 'industri', r: [-6, 6, -7, 7], dør: [4, 7], side: 'y+', w: 1, s: .15, H: 5.3 }, lagertelt: { kl: 'lager', r: [-4, 4, -2.25, 2.25], dør: [4, 0], w: 1.7, s: 0, H: 1.9 },
+    // containeren har dørene i +x-enden, drivhuset får inngang i +y-gavlen
+    container: { kl: 'lager', r: [-3.03, 3.03, -1.22, 1.22], dør: [3.03, 0], w: 1.4, s: .16, H: 2.4, skjul: true }, drivhus: { kl: 'drivhus', r: [-2.9, 2.9, -4.9, 4.9], dør: [0, 4.9], side: 'y+', w: 1.1, s: .3, H: 2.4, skjul: true } };
   let egne = [], egneNøkkel = '', egneHindre = null;
   function leirbygg(R, u) {
     const L = window.LeirSpill && LeirSpill.tilstand(), liste = L && window.Leir ? L.bygg.filter(b => LEIRBYGG[b.type] && Leir.ferdig(b)) : [];
@@ -438,7 +447,9 @@
       M.vindu.opacity = .06 + .1 * mørke; M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
     // EKTE VINDUER: mens du står inne i et bygg, tegnes husenes yttervegger bare fra utsiden. Da er veggen rundt deg borte sett
     // innenfra, og gjennom hullene i innerveggen ser du landskapet og nabohusene som de er. Ute tegnes veggene fra begge sider som før.
-    { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) if (o.ytre) o.ytre.visible = P !== her; }
+    { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) if (o.ytre) o.ytre.visible = P !== her;
+      // modeller med skiver tvers gjennom (containerens ribber, drivhusets spanter) skjules mens du står inne i dem
+      modellSynlig(R, her && her.leir && LEIRBYGG[her.leir].skjul ? her.bygg.i - 9000000 : -1); }
     // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer())
     let best = null, bd = NÆR; const sett = new Set();
     for (let a = Math.floor((x - NÆR) / 20); a <= Math.floor((x + NÆR) / 20); a++) for (let c = Math.floor((y - NÆR) / 20); c <= Math.floor((y + NÆR) / 20); c++)

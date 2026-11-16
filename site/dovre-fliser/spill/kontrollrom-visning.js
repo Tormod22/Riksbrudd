@@ -20,6 +20,15 @@
   // ---------- hvor du er ----------
   const kontrollrom = () => { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'kontrollrom' && Leir.virker(b)) : []; };
   const harStrøm = b => !(window.LeirSpill && LeirSpill.siste().mangler.has(b.id));
+  // Hvorfor du ikke kan gå inn: si hva som mangler og hva du gjør med det
+  function hvorforIkke() {
+    const L = window.LeirSpill && LeirSpill.tilstand(), alle = L ? L.bygg.filter(b => b.type === 'kontrollrom') : [], ferdige = kontrollrom();
+    if (!alle.length) return 'Du har ikke noe kontrollrom ennå. Bygg ett fra Leir-menyen (fanen Bygg).';
+    if (!ferdige.length) return 'Kontrollrommet er ikke ferdig bygget ennå. Leir-menyen viser hvor langt byggelaget er kommet.';
+    if (!deg) return 'Du må stå ved kontrollrommet for å gå inn.';
+    const m = Math.min(...ferdige.map(b => Math.hypot(b.x - deg.x, b.y - deg.y)));
+    return `Du står ${m < 1000 ? Math.round(m / 10) * 10 + ' m' : (m / 1000).toFixed(1).replace('.', ',') + ' km'} fra kontrollrommet. Velg deg selv og gå dit for å gå inn.`;
+  }
   const vedKontrollrom = () => deg && kontrollrom().find(b => Math.hypot(b.x - deg.x, b.y - deg.y) <= R.inne + 12);
   const inneMedStrøm = () => { if (!inne) return false; const b = vedKontrollrom(); return !!b && harStrøm(b); };
   const modus = () => (aktiv() ? K.modus(inneMedStrøm(), T.nettbrett) : null);
@@ -171,7 +180,7 @@ body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 
     venstre.style.display = høyre.style.display = mørk ? 'none' : ''; if (!mørk) { visRadio(); visFeeds(); }
   }
   function gåInn() {
-    const b = vedKontrollrom(); if (!b) { logg('Du må stå ved et ferdig kontrollrom.'); return false; }
+    const b = vedKontrollrom(); if (!b) { logg(hvorforIkke()); return false; }
     inne = true; deg.x = b.x; deg.y = b.y; deg.sti = null; skjerm.classList.add('på'); visSkjerm(); visStatus(); lagre(); kontaktAkk = 99; skitten = true;
     if (!harStrøm(b)) logg('Kontrollrommet har ikke strøm: skjermene er mørke.'); return true;
   }

@@ -21,7 +21,7 @@
     låve: { hall: true, tak: 0 }, uthus: { hall: true, tak: 2.3 }, kirke: { hall: true, tak: 0 }, hangar: { hall: true, tak: 0 },
     terminal: { hall: true, bakrom: .15, tak: 0 },
     // byggene i spillerens egen leir (spill/interior3d.js LEIRBYGG) – ikke bygg fra kartet
-    brakke: { hall: true, tak: 2.5, leir: true }, kontrollrom: { hall: true, tak: 2.6, leir: true }, storkjøkken: { hall: true, tak: 2.5, leir: true },
+    brakke: { hall: true, tak: 2.5, leir: true }, kontrollrom: { hall: true, tak: 2.6, leir: true }, storkjøkken: { hall: true, tak: 2.5, leir: true }, drivhus: { hall: true, tak: 2.3, leir: true },
   };
   // møbler: [bredde langs veggen, dybde, høyde, sperrer (du kan ikke gå gjennom)]
   const MØBLER = {
@@ -35,7 +35,7 @@
     skolepult: [.65, .5, .72, 1], kateter: [1.5, .7, .76, 1], tavle: [2.6, .06, 1.2, 0],
     sykeseng: [.95, 2.05, .6, 1],
     reol: [2.4, .8, 1.8, 1], kasse: [1.6, .8, .95, 1], kjøledisk: [2.4, .9, 1.3, 1],
-    pall: [1.2, .8, 1.1, 1], pallereol: [2.8, 1.1, 4, 1], arbeidsbenk: [2, .7, .9, 1], maskin: [1.8, 1.2, 1.6, 1], tønne: [.6, .6, .9, 1],
+    plantebed: [2.6, 1, .55, 1], pall: [1.2, .8, 1.1, 1], pallereol: [2.8, 1.1, 4, 1], arbeidsbenk: [2, .7, .9, 1], maskin: [1.8, 1.2, 1.6, 1], tønne: [.6, .6, .9, 1],
     høyball: [1.3, 1.3, 1.2, 1], bås: [2.2, 2.6, 1.2, 1], traktor: [2, 3.6, 2.4, 1],
     bil: [1.8, 4.3, 1.45, 1], vedstabel: [1.8, .45, 1.1, 1], hylle: [1.2, .4, 1.8, 1],
     kirkebenk: [3, .5, .9, 1], alter: [2, .8, 1, 1], prekestol: [.9, .9, 1.4, 1],
@@ -141,7 +141,7 @@
     else if (kl === 'kirke') innRom.rolle = 'kirke';
     else if (kl === 'hangar') innRom.rolle = 'hangar';
     else if (kl === 'terminal') { innRom.rolle = 'terminal'; for (const r of andre) r.rolle = 'kontor'; }
-    else if (kl === 'brakke' || kl === 'kontrollrom' || kl === 'storkjøkken') innRom.rolle = kl;
+    else if (kl === 'brakke' || kl === 'kontrollrom' || kl === 'storkjøkken' || kl === 'drivhus') innRom.rolle = kl;
   }
 
   // Møblene. Et møbel står med ryggen mot en romvegg (side 0: v0, 1: u1, 2: v1, 3: u0) eller fritt i rommet; a = retningen
@@ -232,6 +232,9 @@
             hopp: (a, b) => Math.abs((iU ? b : a) - midt) < .75 }); etSted(r, 'prekestol', { fri: .6 }, [fjern]); break; }
         case 'hangar': { if (lu > 14 && lv > 12) prøv(r, 'fly', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { fri: 2 }); for (let k = 0; k < 4; k++) etSted(r, k % 2 ? 'verktøyvogn' : 'arbeidsbenk'); break; }
         // leirens bygg: brakka har køyesenger langs langveggene, kontrollrommet kartbord og radio, kjøkkenet benker og langbord
+        // drivhus: plantebed i rekker langs huset med gang mellom, vanntønne ved døra
+        case 'drivhus': { const satt = rutenett(r, 'plantebed', { du: lu >= lv ? 3.1 : 1.9, dv: lu >= lv ? 1.9 : 3.1, mU: .9, mV: .9, langsU: lu >= lv, fri: 1.1, maks: 16 });
+          if (!satt.length) for (let k = 0; k < Math.min(6, Math.floor(A / 6)); k++) etSted(r, 'plantebed', { fri: .8 }, lang); etSted(r, 'tønne'); break; }
         case 'brakke': { for (let k = 0; k < Math.min(12, Math.floor(A / 6)); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
         case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
           for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); break; }
