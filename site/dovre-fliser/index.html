@@ -1554,7 +1554,8 @@ async function hus3d(u) {
       // Store bygg uten type («building=yes») i tett bebyggelse er bygårder/kontorbygg, ikke småhus.
       const tettI = TETT.get(i) || 0; let kl = klasse(t, f.areal, h);
       if (kl === 'hus' && t === 5 && tettI >= 15 && (h >= 9 || f.areal > 500)) kl = h > 14 || f.areal > 1200 ? 'kontor' : 'leil';
-      P.bygg = { i, t, h, kl };
+      // (veggTopp: der ytterveggen slutter – taket begynner. Interiøret, spill/interior3d.js, holder himlingen under den.)
+      P.bygg = { i, t, h, kl }; P.veggTopp = undefined;
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
       if (bs) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge (i bygårder bare butikkfronten) og et skilt over døra
@@ -1564,7 +1565,7 @@ async function hus3d(u) {
       const veggX = (a, b, z0, z1, farge) => bs ? byVegg(bs, a, b, z0, z1, farge, gF, motGate) : veggKl(kl, a, b, z0, z1, farge);
       if (bs && bs.tak && enkel) {
         // eldre bygård i byen: vegger, gesims og valmtak eller mansard (med takvinduer) over rektangelet; lokk under så det aldri blir hull
-        const mans = bs.tak === 'mansard', raft = topp - (mans ? 1.2 : .8), rt = BY.byTak(i); let lengst = 0, lj = 0;
+        const mans = bs.tak === 'mansard', raft = topp - (mans ? 1.2 : .8), rt = BY.byTak(i); let lengst = 0, lj = 0; P.veggTopp = raft;
         for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
           grunnmur(a, b, bunn); veggX(a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .93 : 1))); }
         dør(kl, P[lj], P[(lj + 1) % P.length], bunn + 1, .5);
@@ -1617,7 +1618,7 @@ async function hus3d(u) {
         // tak med fall på et sammensatt omriss: vinkelrette hus deles i rektangler med hvert sitt saltak (kryssark, tilbygg),
         // andre får valmtak opp mot mønet langs hovedretningen. Felles raft, og under takene et lokk så det aldri blir hull.
         const st = STIL[kl] || STIL.hus, d = dTak, bred = d.rekt ? Math.max(...d.rekt.map(q => q.lv)) : f.lv;
-        const møne = Math.min(bred * .42, 5, h * .55), raft = topp - møne;
+        const møne = Math.min(bred * .42, 5, h * .55), raft = topp - møne; P.veggTopp = P.veggTopp === undefined ? raft : Math.min(P.veggTopp, raft);
         let lengst = 0, lj = 0;
         for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
           grunnmur(a, b, bunn); veggX(a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
@@ -1641,7 +1642,7 @@ async function hus3d(u) {
       }
       if (fall) {
         // Saltak på det rettvinklede omrisset: vegger opp til raftet, gavler i veggfargen og to takflater opp til mønet.
-        const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2;
+        const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2; P.veggTopp = raft;
         const p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
         const A = [p(-hu, -hv, bunn), p(hu, -hv, bunn), p(hu, hv, bunn), p(-hu, hv, bunn)], Ar = A.map(q => [q[0], q[1], raft]);
         const st = STIL[kl] || STIL.hus; stat.tak.sal = (stat.tak.sal || 0) + 1;
@@ -2863,7 +2864,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=1f0f172569"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=d2358cd169"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=19a7d12717"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>

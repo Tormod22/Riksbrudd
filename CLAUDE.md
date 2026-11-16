@@ -831,3 +831,6 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   lag og kjøretøy innen 2,5 km fra leiren (unntatt det valgte); leirens navn får «· 5 lag, 4 kjøretøy». (15) STATUSLINJA: folk,
   kassa og strøm kan trykkes (panelpynt.js) – åpner Folk / Leir-menyen. (16) Dørlyd når du går inn eller ut av et hus (lyd.js),
   og funnet fra en leting står midt på skjermen i fem sekunder (#innelapp.funn).
+  (17) INTERIØR, SMÅRETTINGER: hus3d setter P.veggTopp (der ytterveggen slutter under saltak) – himlingen holdes under den, minst
+  1,95 m. Den mørke døråpningen sett utenfra er et eget lite nett (o.ytre, materialet «åpning») som skjules når du står inne i
+  bygget, så du ser ut gjennom døra. ANDRE ETASJE er vurdert og droppet: boliger med saltak har vegger på ca. 2,7 m (resten er tak).

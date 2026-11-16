@@ -60,6 +60,7 @@
       vindu: new THREE.MeshBasicMaterial({ color: 0xdfeaf2, transparent: true, opacity: .1, depthWrite: false, side: THREE.DoubleSide, fog: false }),
       skygge: new THREE.MeshBasicMaterial({ map: tex('skygge', 64), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
       lampe: new THREE.MeshBasicMaterial({ map: tex('glød', 64), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x6a5a3a }),
+      åpning: new THREE.MeshBasicMaterial({ color: 0x15120e, side: THREE.DoubleSide }),
       dag: new THREE.MeshBasicMaterial({ map: M_GLØD(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x404040 }) };
     return M;
   }
@@ -217,9 +218,11 @@
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
     const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
     pl.trapp = Math.max(1.5, Math.min(6, (pl.gulv - ute0) / .6)); const ute = terr(I.x + I.nx * pl.trapp, I.y + I.ny * pl.trapp);
+    // himlingen holder seg under der ytterveggen slutter (ellers stikker rommet ut gjennom taket når gulvet er løftet i en skråning)
+    { const topp = P.veggTopp !== undefined ? P.veggTopp : P.topp; if (topp !== undefined && topp === topp) pl.tak = Math.max(1.95, Math.min(pl.tak, topp - pl.gulv - .06)); }
     const g0 = pl.gulv, tak = pl.tak, kl = pl.kl;
     // nettene: hovednettet i åtte stoffer, og de små for vinduer, skygge, lampelys og dagslys
-    const G = STOFFER.map(() => ({ pos: [], kol: [], uv: [] })), V = { pos: [], uv: [] }, SK = { pos: [], uv: [] }, LA = { pos: [], uv: [] }, DA = { pos: [], uv: [] };
+    const G = STOFFER.map(() => ({ pos: [], kol: [], uv: [] })), V = { pos: [], uv: [] }, SK = { pos: [], uv: [] }, LA = { pos: [], uv: [] }, DA = { pos: [], uv: [] }, YT = { pos: [], uv: [] };
     const tri = (g, a, b, c, fa, fb, fc, ta, tb, tc) => { g.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); if (g.kol) g.kol.push(fa[0], fa[1], fa[2], fb[0], fb[1], fb[2], fc[0], fc[1], fc[2]); g.uv.push(ta[0], ta[1], tb[0], tb[1], tc[0], tc[1]); };
     // firkant: f er én farge eller fire (en per hjørne), t er fire uv-par
     const fk = (g, a, b, c, d, f, t) => { const F = f && f.length === 4 && f[0].length ? f : [f, f, f, f]; tri(g, a, b, c, F[0], F[1], F[2], t[0], t[1], t[2]); tri(g, a, c, d, F[0], F[2], F[3], t[0], t[2], t[3]); };
@@ -297,7 +300,8 @@
         else { veggflate(A0[0], A0[1], B0[0], B0[1], 0, tak, S.vegg, hj0, hj1, true); veggskygge(A0[0], A0[1], B0[0], B0[1], nx, ny); } }
       if (harDør) {
         // døråpningen: dagen utenfor (innenfra), en mørk åpning og et åpent dørblad (utenfra), karm rundt
-        const y0 = pt(p0, -.07), y1 = pt(q0, -.07), ms = [.1, .09, .08]; fk(G[0], [y0[0], y0[1], g0], [y1[0], y1[1], g0], [y1[0], y1[1], g0 + dørH], [y0[0], y0[1], g0 + dørH], [ms, ms, mørk(ms, 1.6), mørk(ms, 1.6)], UV0);
+        // (den mørke åpningen ligger i et eget lite nett som bare vises når du står utenfor – innenfra ser du ut gjennom døra)
+        const y0 = pt(p0, -.07), y1 = pt(q0, -.07); fk(YT, [y0[0], y0[1], g0], [y1[0], y1[1], g0], [y1[0], y1[1], g0 + dørH], [y0[0], y0[1], g0 + dørH], null, UV0);
         const va = Math.atan2(ey, ex);
         for (const t of [p0, q0]) { const c = pt(t, .0); kasse(c[0], c[1], va, [-.05, .05, -.1, .1, 0, dørH, HVIT, 'tre']); } { const c = pt(td, 0); kasse(c[0], c[1], va, [-I.w / 2, I.w / 2, -.1, .1, dørH, dørH + .08, HVIT, 'tre']); }
         if (I.w < 2.4) { const h = pt(p0 + .05, .06), bw = Math.min(1, I.w) - .1; kasse(h[0], h[1], va + 1.75, [0, bw, -.022, .022, .01, dørH - .03, [.86, .84, .78], 'tre']); kasse(h[0], h[1], va + 1.75, [bw - .13, bw - .03, -.06, .06, 1, 1.03, STÅL]);
@@ -371,10 +375,10 @@
     const ST = stoffene(), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(kol, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     for (const [fra, antall, n] of grupper) geo.addGroup(fra, antall, n); geo.computeVertexNormals();
     const nett = [new THREE.Mesh(geo, ST.hoved)]; nett[0].userData.interior = true;
-    const lite = (d, mat, orden) => { if (!d.pos.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2)); const m = new THREE.Mesh(g, mat); m.renderOrder = orden; nett.push(m); };
-    lite(V, ST.vindu, 0); lite(SK, ST.skygge, 2); lite(LA, ST.lampe, 3); lite(DA, ST.dag, 3);
+    const lite = (d, mat, orden) => { if (!d.pos.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2)); const m = new THREE.Mesh(g, mat); m.renderOrder = orden; nett.push(m); return m; };
+    lite(V, ST.vindu, 0); lite(SK, ST.skygge, 2); lite(LA, ST.lampe, 3); lite(DA, ST.dag, 3); const ytre = lite(YT, ST.åpning, 0) || null;
     for (const m of nett) R.scene.add(m);
-    return { plan: pl, nett, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
+    return { plan: pl, nett, ytre, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
   }
   function husSide(R, side) { for (const m of R.husMesh || []) for (const mat of [].concat(m.material)) if (mat && mat.side !== side) { mat.side = side; mat.needsUpdate = true; } }
   function fjern(R, P) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) { R.scene.remove(m); m.geometry.dispose(); } delete P.inne; aktive.delete(P); }
@@ -393,7 +397,7 @@
       M.vindu.opacity = .06 + .1 * mørke; M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
     // EKTE VINDUER: mens du står inne i et bygg, tegnes husenes yttervegger bare fra utsiden. Da er veggen rundt deg borte sett
     // innenfra, og gjennom hullene i innerveggen ser du landskapet og nabohusene som de er. Ute tegnes veggene fra begge sider som før.
-    husSide(R, inne(x, y) ? THREE.FrontSide : THREE.DoubleSide);
+    { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) if (o.ytre) o.ytre.visible = P !== her; }
     // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer())
     let best = null, bd = NÆR; const sett = new Set();
     for (let a = Math.floor((x - NÆR) / 20); a <= Math.floor((x + NÆR) / 20); a++) for (let c = Math.floor((y - NÆR) / 20); c <= Math.floor((y + NÆR) / 20); c++)
