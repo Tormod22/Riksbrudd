@@ -2745,7 +2745,10 @@ cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBounding
 document.getElementById('zi').onclick = () => { if (på3d && R3) R3.bane.avst = Math.max(60, R3.bane.avst / 1.6); else zoom(2); };
 document.getElementById('zo').onclick = () => { if (på3d && R3) R3.bane.avst = Math.min(20000, R3.bane.avst * 1.6); else zoom(.5); };
 document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(false); passInnHele('hele'); };
-document.getElementById('dombas').onclick = async () => { if (på3d) await slå3d(false); passInn(DOMBAS); };
+// ◎: til leiren når du har en (16. nov: knappen gikk alltid til Dombås, også når leiren lå i Ryfylke), ellers Dombås som før
+document.getElementById('dombas').onclick = async () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); if (på3d) await slå3d(false);
+  if (S && S.leir) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = 3; skitten = true; } else passInn(DOMBAS); };
+window.addEventListener('riksbrudd-spill', () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } });
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
 const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
@@ -2814,7 +2817,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=231e6c5363"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=e8c4b2d5e1"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=fc85f2f379"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
