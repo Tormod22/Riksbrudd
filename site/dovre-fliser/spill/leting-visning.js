@@ -59,7 +59,8 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
     const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
-    logg(melding); visFunn(melding);
+    // våpen, ammunisjon og førstehjelp går i sekken din (spill/utstyr.js)
+    { const ekstra = !f.tomt && window.UtstyrSpill ? UtstyrSpill.fantIHus(P.bygg.kl, P.bygg.i) : ''; if (ekstra) { logg(melding); logg(ekstra); visFunn(melding + ' ' + ekstra); } else { logg(melding); visFunn(melding); } }
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
     let person = null;
     if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {

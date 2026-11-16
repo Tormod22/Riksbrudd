@@ -906,6 +906,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   figurer i leiren i 3D (InstancedMesh, høyst 14). (7) VENNER: Deling.kode/les – leiren som lenke (#venn=…), vennens leir tegnes i
   2D-kartet. Dette er IKKE flerspiller i sanntid (krever en tjener; sagt til brukeren). leir-visning.js: overskrifter som begynner
   med «Mål» hører til fanen Mål. VAKT «angrep, marked, oppdrag, kamp, hendelser og venner».
+  SKYTEVÅPEN OG SEKK (16. nov sent, brukeren: «legg også til skytevåpen og et inventory-system»): spill/utstyr.js (reglene øverst:
+  Utstyr.VÅPEN – pistol, mp, gevær, hagle (6 hagl), rifle (700 m) –, Utstyr.TING – fire slags ammunisjon, førstehjelp, feltrasjon –,
+  høyst 4 våpen og 35 kg, lad/sikter/sjanse/bruk/funn/fra; test_utstyr.js). UtstyrSpill: sekken per leir («riksbrudd-utstyr»),
+  panelet #sekk (knappen «Sekk» / tast I når du går), tastene 1–4 og #byttvapen på telefon, kjøp i Leir-menyen («Materialer: våpen og
+  utstyr» = fanen Lager), fantIHus(kl, i) kalles fra leting-visning.js. Kampen i spillet-visning.js bruker våpenet du har framme
+  (A() = UtstyrSpill.aktivt(); K.mag/K.res er lese-/skrivefelt mot våpenet og sekken). Tallene er Claudes.
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert
