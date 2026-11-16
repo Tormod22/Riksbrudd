@@ -852,5 +852,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   brakke (køyesenger, ovn), kontrollrom (kartbord, pulter, radio, tavle), storkjøkken (benk, komfyrer, langbord); sykestua bruker
   «sykehus». Modellene i modeller.js tegnes bare utenfra (FrontSide), så veggene er borte sett innenfra. Ingen leting i leirens
   bygg. Interior3d.iLeirbygg(x, y): gress3d og vegetasjon3d setter ikke planter der. Navn og merker fra kartet (proj3) vises
-  ikke mens du står inne i et hus. IKKE MED: verksted, lagertelt, container, drivhus og byggesettets egne hus.
+  ikke mens du står inne i et hus. Også verkstedet (døra på langsiden, side: 'y+') og
+  lagerteltet (klassen «lagerhall»: paller og hyller langs veggene når rutenettet ikke gir noe). Gulvet ligger alltid over
+  høyeste terreng under bygget (P.gulvFast er et minste), men aldri høyere enn 2 m under veggtoppen (i en bratt bakke stikker bakken da inn). IKKE MED: container, drivhus og byggesettets egne hus.
   VAKT «interiør i leirens bygg». Bilder: scratchpad inne/leir.js.

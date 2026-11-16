@@ -989,7 +989,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       Interior3d.oppdater(true); const e = Interior3d.egne().find(q => q.P.bygg.i === 9000000 + ny.id), ut = { registrert: !!e };
       if (e) { const P = e.P, D = P.dør, nx = D.uy, ny2 = -D.ux; sett(D.x + nx * 5, D.y + ny2 * 5, Math.atan2(nx, -ny2)); for (let i = 0; i < 12; i++) Interior3d.oppdater(true);
         ut.plan = !!P.inne; if (P.inne) { ut.senger = P.inne.møbler.filter(m => m.type === 'køyeseng').length; const I = P.inne.inngang; ut.vegg = hindring3d((P[0][0] + P[3][0]) / 2, (P[0][1] + P[3][1]) / 2) && !hindring3d(I.x, I.y);
-          sett(I.inn[0] - I.nx, I.inn[1] - I.ny, 0); KROKER.ramme3d.forEach(f => f(R)); ut.inne = Interior3d.inne(R.bane.x, R.bane.y) === P; ut.gulv = Math.abs(Interior3d.høyde(R.bane.x, R.bane.y, () => 0) - P.gulvFast) < 1e-6;
+          sett(I.inn[0] - I.nx, I.inn[1] - I.ny, 0); KROKER.ramme3d.forEach(f => f(R)); ut.inne = Interior3d.inne(R.bane.x, R.bane.y) === P; ut.gulv = !!P.inne && P.inne.gulv >= P.gulvFast - 1e-6 && P.inne.gulv <= P.veggTopp - 1.95 && Math.abs(Interior3d.høyde(R.bane.x, R.bane.y, () => 0) - P.inne.gulv) < 1e-6;
           ut.let = document.getElementById('letknapp').classList.contains('på'); ut.lapp = document.getElementById('innelapp').textContent; ut.gress = Interior3d.iLeirbygg(I.inn[0], I.inn[1]); } }
       Gange.stopp(); L.bygg.splice(L.bygg.indexOf(ny), 1); Interior3d.oppdater(true); ut.borte = !Interior3d.egne().some(q => q.P.bygg.i === 9000000 + ny.id); return ut; });
     const lbok = !lb.uten && lb.registrert && lb.plan && lb.senger >= 4 && lb.vegg && lb.inne && lb.gulv && !lb.let && (lb.lapp === 'Brakka' || /^Du fant|^Huset var/.test(lb.lapp)) && lb.gress && lb.borte;

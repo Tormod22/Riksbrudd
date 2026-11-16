@@ -230,7 +230,7 @@
     let maks = -Infinity, mx = 0, my = 0; for (const [x, y] of P) { maks = Math.max(maks, terr(x, y)); mx += x; my += y; } maks = Math.max(maks, terr(mx / P.length, my / P.length));
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
-    const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = P.gulvFast !== undefined ? Math.max(P.gulvFast, maks + .06) : Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
+    const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = P.gulvFast !== undefined ? Math.max(P.gulvFast, Math.min(maks + .06, (P.veggTopp || P.gulvFast + 2.6) - 2)) : Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
     pl.trapp = Math.max(1.5, Math.min(6, (pl.gulv - ute0) / .6)); const ute = terr(I.x + I.nx * pl.trapp, I.y + I.ny * pl.trapp);
     // himlingen holder seg under der ytterveggen slutter (ellers stikker rommet ut gjennom taket når gulvet er løftet i en skråning)
     { const topp = P.veggTopp !== undefined ? P.veggTopp : P.topp; if (topp !== undefined && topp === topp) pl.tak = Math.max(1.95, Math.min(pl.tak, topp - pl.gulv - .06)); }
