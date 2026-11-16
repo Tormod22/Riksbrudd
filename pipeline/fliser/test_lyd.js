@@ -16,4 +16,7 @@ ok(N({ regn: 1 }).regn > .9 && N({}).regn === 0, 'regnlyd etter regnmengden');
 ok(N({ by: 1 }).by > N({ by: 1, mørke: 1 }).by, 'mer bylyd om dagen enn om natta');
 ok(L.skritt(0) === 0 && L.skritt(1.7) > 1.5 && L.skritt(5.5) > L.skritt(1.7), 'fottrinn i takt med farten');
 for (const o of [{}, { vind: 30, høyde: 5000 }, { hav: 1, innsjø: 1, regn: 1, by: 1, skog: 1 }]) { const n = N(o); ok(Object.values(n).every(v => v >= 0 && v <= 1.0001), 'alle nivåer mellom 0 og 1: ' + JSON.stringify(o)); }
+// inne i et hus: vind, hav, by og fugler er dempet, regnet høres fortsatt (på taket)
+{ const u = N({ vind: 9, hav: .8, regn: .7, by: .6, skog: .5 }), i = N({ vind: 9, hav: .8, regn: .7, by: .6, skog: .5, inne: true });
+  ok(i.vind < u.vind * .3 && i.hav < u.hav * .3 && i.by < u.by * .3 && i.regn > u.regn * .5 && i.regn < u.regn, 'inne i et hus er vind, hav og by dempet, regnet høres på taket'); }
 process.exit(feil ? 1 : 0);

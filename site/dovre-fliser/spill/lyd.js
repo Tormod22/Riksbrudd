@@ -12,15 +12,17 @@
     const oppe = trinn(20, 400, t.høyde || 0), stille = 1 - Math.max(t.regn || 0, (t.snø || 0) * .6);
     const v = t.vind || 0, vind = Math.min(1, .05 + trinn(.5, 16, v) * .8 + oppe * .2);
     const vinter = t.årstid === 'vinter', dag = 1 - trinn(.25, .7, t.mørke || 0);
+    // inne i et hus (t.inne, spill/interior3d.js) er alt utenfra dempet; regnet høres på taket
+    const ute = t.inne ? .25 : 1;
     return {
-      vind, plyst: trinn(10, 20, v) * (.6 + .4 * oppe),
+      vind: vind * ute, plyst: trinn(10, 20, v) * (.6 + .4 * oppe),
       // bølger: høres bare nær sjøen og lavt, sterkere når det blåser
-      hav: (t.hav || 0) * (1 - trinn(60, 400, t.høyde || 0)) * (.35 + .65 * trinn(1, 14, v)),
-      innsjø: (t.innsjø || 0) * (1 - trinn(30, 200, t.høyde || 0)) * (.25 + .35 * trinn(1, 10, v)),
-      regn: (t.regn || 0) * (1 - oppe * .5), by: (t.by || 0) * (1 - oppe) * (.5 + .5 * dag),
+      hav: ute * (t.hav || 0) * (1 - trinn(60, 400, t.høyde || 0)) * (.35 + .65 * trinn(1, 14, v)),
+      innsjø: ute * (t.innsjø || 0) * (1 - trinn(30, 200, t.høyde || 0)) * (.25 + .35 * trinn(1, 10, v)),
+      regn: (t.inne ? .6 : 1) * (t.regn || 0) * (1 - oppe * .5), by: ute * (t.by || 0) * (1 - oppe) * (.5 + .5 * dag),
       // fugler: om dagen, ikke om vinteren, ikke i regn/sterk vind, mest i skog og kratt
-      fugler: vinter ? 0 : dag * stille * (1 - trinn(8, 14, v)) * (1 - oppe) * (.25 + .75 * Math.max(t.skog || 0, (1 - (t.by || 0)) * .4)) * (t.årstid === 'høst' ? .4 : 1),
-      måker: dag * (t.hav || 0) * (1 - oppe) * (1 - trinn(10, 16, v)) * (vinter ? .5 : 1),
+      fugler: vinter ? 0 : (t.inne ? .12 : 1) * dag * stille * (1 - trinn(8, 14, v)) * (1 - oppe) * (.25 + .75 * Math.max(t.skog || 0, (1 - (t.by || 0)) * .4)) * (t.årstid === 'høst' ? .4 : 1),
+      måker: ute * dag * (t.hav || 0) * (1 - oppe) * (1 - trinn(10, 16, v)) * (vinter ? .5 : 1),
     };
   }
   // fottrinn: underlaget gir lyden; takten etter farten (gå ca. 1,8 skritt/s, løp ca. 2,8)
@@ -83,6 +85,8 @@
     if (und === 'grus') { slag(t0, .11, 'bandpass', 2600 + Math.random() * 900, .9, s * .55); slag(t0 + .02, .08, 'highpass', 4500, .5, s * .25); }
     else if (und === 'snø') { slag(t0, .16, 'bandpass', 1500 + Math.random() * 400, 2.5, s * .5); }
     else if (und === 'asfalt') slag(t0, .07, 'lowpass', 900, .7, s * .55);
+    // gulv inne: en dump lyd med litt klang, og et lite klikk fra hælen
+    else if (und === 'gulv') { slag(t0, .1, 'lowpass', 340 + Math.random() * 120, 1.6, s * .6); slag(t0 + .01, .03, 'bandpass', 1900, 1.2, s * .12); }
     else slag(t0, .13, 'lowpass', 650 + Math.random() * 300, .6, s * .45);
   }
 
@@ -117,7 +121,7 @@
     const V = window.VAER || {}, VI = window.Vind3d ? Vind3d.VIND : { fart: 3 }, c = R.cam.position, u = R.ut;
     if (t - sistMål > .5) { sistMål = t; om = omgivelser(R); }
     const høyde = c.z - ((hoyde3d(c.x + u.cx, c.y + u.cy, u) - u.h0) * R.EX);
-    const N = nivåer({ vind: VI.fart, høyde, hav: om.hav, innsjø: om.innsjø, regn: V.regn || 0, snø: V.snø || 0, mørke: window.NATT ? NATT.mørke : 0, årstid: V.årstid, skog: om.skog, by: om.by });
+    const N = nivåer({ vind: VI.fart, høyde, hav: om.hav, innsjø: om.innsjø, regn: V.regn || 0, snø: V.snø || 0, mørke: window.NATT ? NATT.mørke : 0, årstid: V.årstid, skog: om.skog, by: om.by, inne: !!(R.fot && window.Interior3d && Interior3d.inne(c.x, c.y)) });
     Object.assign(NV, N, { omgivelser: om, høyde });
     const sett = (k, v, tid) => kan[k].g.gain.setTargetAtTime(v, nå, tid || .4);
     sett('vind', N.vind * .32); kan.vind.f.frequency.setTargetAtTime(280 + 500 * Math.min(1, (VI.fart || 0) / 16) * (VI.kast || 1), nå, .6);
@@ -133,7 +137,8 @@
     // fottrinn når du går
     if (R.fot && sistPos) { const fart = Math.hypot(c.x - sistPos.x, c.y - sistPos.y) / Math.max(.001, dt), takt = skritt(fart);
       if (takt) { steg += dt * takt; if (steg >= 1) { steg -= 1; const x = c.x, y = c.y;
-        const und = V.årstid === 'vinter' || (V.snøgrense != null && V.snøgrense < c.z + u.h0) ? 'snø' : u.påVeg && u.påVeg(x, y) ? (u.vegType ? u.vegType(x, y) : 'grus') : 'gress';
+        const inne = window.Interior3d && Interior3d.inne(x, y);
+        const und = inne ? 'gulv' : V.årstid === 'vinter' || (V.snøgrense != null && V.snøgrense < c.z + u.h0) ? 'snø' : u.påVeg && u.påVeg(x, y) ? (u.vegType ? u.vegType(x, y) : 'grus') : 'gress';
         fottrinn(nå + .01, und, Math.min(1, .5 + fart * .1)); NV.sisteSkritt = und; } } else steg = .7; }
     sistPos = { x: c.x, y: c.y };
   });
