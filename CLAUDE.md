@@ -614,6 +614,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   u = 1 i tunnel (release kart-utveg-abb9d613f42a, bygget 13. nov ved push av utveg.py til claude/hallo-ohbasy); kartflis.js tegner
   dem svakt stiplet fra z10, bane3d.js hopper over dem. Gjerder og rundballer ryddes fra sporet i bane3d.js (u.gard).
   INSPIRASJON (brukeren 13. nov): Ebbtide og Eurovoid i tillegg til WarFront – se docs/plan-spillmekanikk.md (inspirasjon, ikke kopi).
+  Project Zomboid kom til 16. nov (behov hos figuren, ferdigheter, lyd som lokker fiender, strøm/vann som svikter, barrikader) –
+  bare notert, ikke bygget; brukeren har ikke valgt hva som skal inn.
   GJENSTÅR ETTER FEILJAKTEN: for mange trekanter i byene (2 mill. i Bergen), trekantete lyse flekker i lia ved Mannheller (årsak ikke
   funnet), vann oppover fjellveggen på Snøhetta, jernbanesporet slutter brått i skrått terreng, vegen delvis begravd i skråninger
   (ikke kontrollert på bilde etter Veg.høyder), og småting i 2D-kartet langt ute (Finnmark, kaier, Sverige). HELE NORGE mangler vegtype

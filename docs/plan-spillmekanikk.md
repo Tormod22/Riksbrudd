@@ -19,6 +19,10 @@ hvilke deler han liker best – spør før noe stort bygges på dette.
 - **Eurovoid** (overlevelsesspill, tidlig utvikling, én utvikler): bygget på ekte kart over Norge (ca. 5000 km², hver veg, hvert hus og
   hver skog), alene eller sammen med andre, med overlevende som går rundt i verden. Likt Riksbrudd: det ekte Norge i 3D som du går i
   selv. Riksbrudd skiller seg ut ved at du leder en gjeng og en leir, ikke bare én overlevende.
+- **Project Zomboid** (overlevelsesspill; brukeren 16. nov: «også en inspirasjon»): det som passer her, er behov hos din egen
+  figur (sult, tørst, tretthet, skader som må stelles), ferdigheter som vokser med bruk, bæreevne og hva du har på deg, lyd som
+  lokker fiender (skudd og motor høres), strøm og vann som blir borte etter hvert, og at hus må sikres (barrikader). Inspirasjon,
+  ikke kopi: ingen navn, figurer, kart eller utseende derfra, og fiendene her er røvere og rivaler, ikke zombier.
 
 ## Hvorfor dette passer Norge
 - **Få veger, mange flaskehalser:** én E6, smale dalfører, lange tunneler, store bruer. Én sprengt bru kan kutte en landsdel.
