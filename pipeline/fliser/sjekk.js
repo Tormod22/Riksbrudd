@@ -914,6 +914,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const mnyok = mny.grupper >= 4 && mny.løse === 0 && mny.brytere >= 10 && mny.valg.length >= 3 && mny.valg.every(t => /^[^:]+: .+/.test(t)) && mny.bryter && mny.bredde && mny.lukket;
     if (!mnyok) { feil++; console.log(JSON.stringify(mny)); }
     console.log(`${mnyok ? 'ok  ' : 'FEIL'} ${navn} ☰-menyen: ${mny.grupper} grupper, ${mny.brytere} brytere, ${mny.valg.length} valg («${mny.valg[0]}»), bryteren virker, Esc lukker`);
+    // VAKT Leir-menyen og målene (leir-visning.js, spill/maal.js; brukeren 16. nov): status som fliser, fanene Bygg/Lager/Plan/Mål
+    // viser bare sitt eget, «Neste mål» står over fanene, og et mål som nås, hakes av og huskes.
+    const leirm = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true };
+      const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (!m.classList.contains('på')) lk.click();
+      MaalSpill.start(); MaalSpill.nullstill(); LeirSpill.fane('bygg'); const synlig = sel => [...m.querySelectorAll(sel)].filter(e => e.offsetParent !== null).length;
+      const ut = { fliser: m.querySelectorAll('.status .flis').length, faner: [...m.querySelectorAll('.faner button')].map(b => b.textContent), bygg: synlig('.liste .bygg'), matIBygg: synlig('.mat span') };
+      ut.over = !!m.querySelector('.nestemaal') && !!(m.querySelector('.nestemaal').compareDocumentPosition(m.querySelector('.faner')) & Node.DOCUMENT_POSITION_FOLLOWING);
+      LeirSpill.fane('lager'); ut.lager = { bygg: synlig('.liste .bygg'), mat: synlig('.mat span'), diesel: synlig('#kjopdiesel') };
+      LeirSpill.fane('mål'); ut.mål = { kap: synlig('.maalkap'), mål: synlig('.maal'), bygg: synlig('.liste .bygg') };
+      // et mål nås: 25 m³ tre på lageret
+      const tre = L.lager.tre; L.lager.tre = 25; const nye = MaalSpill.sjekk(true); L.lager.tre = tre; LeirSpill.fane('mål'); ut.nye = nye.join(); ut.haket = synlig('.maal.ok'); ut.kort = MaalSpill.kort();
+      ut.husket = JSON.parse(localStorage.getItem('riksbrudd-maal')).ferdige.join(); MaalSpill.nullstill(); LeirSpill.fane('bygg'); lk.click(); return ut; });
+    const leirmok = !leirm.uten && leirm.fliser === 4 && leirm.faner.length === 4 && /^Mål/.test(leirm.faner[3]) && leirm.bygg > 5 && leirm.matIBygg === 0 && leirm.over && leirm.lager.bygg === 0 && leirm.lager.mat >= 3 && leirm.lager.diesel === 1
+      && leirm.mål.kap === 4 && leirm.mål.mål === 13 && leirm.mål.bygg === 0 && leirm.nye === 'lager' && leirm.haket === 1 && /^1\/13/.test(leirm.kort) && leirm.husket === 'lager';
+    if (!leirmok) { feil++; console.log(JSON.stringify(leirm)); }
+    console.log(`${leirmok ? 'ok  ' : 'FEIL'} ${navn} Leir-menyen og målene: fanene ${(leirm.faner || []).join(' | ')}, hver viser sitt, «Neste mål» over fanene, et nådd mål hakes av og huskes`);
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
     // et prøvehus (10 × 8 m, dør midt på sørveggen) legges i utsnittet. Når du går, får det interiør med flere rom og møbler; du kan
     // gå inn gjennom døra og står da på gulvet, ytterveggen stopper deg ved siden av døra, og alt ryddes bort når du flyr opp.

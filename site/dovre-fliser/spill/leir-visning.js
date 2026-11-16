@@ -198,16 +198,20 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
     // Alt ligger fortsatt i siden; det som ikke hører til den valgte fanen, er bare skjult.
-    { let cur = 'lager'; const fast = n => n === status || n.tagName === 'H2' || (n.classList && n.classList.contains('lukk')) || (n.querySelector && n.querySelector('#folkknapp'));
-      const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : null;
+    { let cur = 'lager'; const fast = n => n === status || n.tagName === 'H2' || (n.classList && n.classList.contains('lukk')) || (n.querySelector && n.querySelector('#folkknapp')) || (n.classList && n.classList.contains('fast'));
+      const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : /^Mål$/.test(t) ? 'mål' : null;
       for (const n of [...hode.childNodes]) { if (n.nodeType !== 1) continue; if (fast(n)) continue;
         const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3'); if (h) cur = faneFor(h.textContent) || cur;
         n.dataset.fane = cur; if (cur !== fane) n.hidden = true; }
       liste.dataset.fane = 'bygg'; liste.hidden = fane !== 'bygg';
       const J2 = LB.jobber(L).length, bar = el('div', { klasse: 'faner', role: 'tablist' });
-      for (const [id, navn] of [['bygg', J2 ? `Bygg (${J2})` : 'Bygg'], ['lager', 'Lager'], ['plan', L.plan.length ? `Plan (${L.plan.length})` : 'Plan']])
+      for (const [id, navn] of [['bygg', J2 ? `Bygg (${J2})` : 'Bygg'], ['lager', 'Lager'], ['plan', L.plan.length ? `Plan (${L.plan.length})` : 'Plan'], ...(window.MaalSpill && hode.querySelector('.nestemaal') ? [['mål', `Mål ${MaalSpill.kort()}`]] : [])])
         bar.appendChild(knapp(navn, () => { fane = id; menyEl.scrollTop = 0; visMeny(); }, { klasse: id === fane ? 'på' : '', role: 'tab', 'aria-selected': String(id === fane), 'data-fane-knapp': id }));
-      const folk = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); (folk || status).after(bar); }
+      const folk = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); (folk || status).after(bar);
+      // «Neste mål» (spill/maal-visning.js) står rett over fanene
+      const nm = hode.querySelector('.nestemaal'); if (nm) bar.before(nm);
+      // det som hører til en fane og sto over fanene (dieselkjøpet), flyttes ned under dem
+      let etter = bar; for (const n of [...hode.children]) { if (n === bar) break; if (n.dataset && n.dataset.fane) { etter.after(n); etter = n; } } }
     const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
     menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
   }
@@ -573,7 +577,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     L.midt = { x: S.leir.x, y: S.leir.y };
     siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
-  window.LeirSpill = { start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
+  window.LeirSpill = { fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },
     angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };
   // K1 sier fra når spillet er klart (lagret spill lest inn, eller ny leir satt opp)
