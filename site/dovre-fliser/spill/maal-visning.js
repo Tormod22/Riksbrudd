@@ -52,7 +52,9 @@
   const stats = document.querySelector('.stats'); if (stats) stats.appendChild(st);
   st.addEventListener('click', () => { const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (m && lk && !m.classList.contains('på')) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); });
   const visTeller = () => { const b = document.getElementById('sMaal'); if (!b) return; const t = kort(); if (b.textContent !== t) b.textContent = t; st.hidden = !klar; const s = Maal.stilling(ferdige); st.title = s.neste ? 'Neste mål: ' + s.neste.tekst : 'Alle målene er nådd'; };
-  function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; sjekk(true); visTeller(); }
+  function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; sjekk(true); visTeller();
+    // et nytt spill: si hvor en begynner (ikke i testene, der loggen leses)
+    if (!ferdige.size && !navigator.webdriver) setTimeout(() => logg('Tips: åpne «Leir» – øverst står neste mål, og fanen «Mål» viser hele lista.'), 1500); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setInterval(() => { if (klar && !document.hidden) { sjekk(false); visTeller(); } }, 2000);
   window.MaalSpill = { sjekk, bilde, kort, ferdige: () => ferdige, stilling: () => Maal.stilling(ferdige), start, nullstill: () => { ferdige = new Set(); lagre(); } };

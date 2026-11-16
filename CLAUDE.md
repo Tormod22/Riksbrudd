@@ -837,3 +837,5 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (18) SALG: Leir.selgMateriale(L, type, mengde, gi) – overskudd selges for REGLER.salg = 0,5 av innkjøpsprisen (Claudes tall);
   «Selg 10» står ETTER «+10» i hver materialrad (sjekk.js bruker den første knappen), og raden har en måler for lageret.
   MARKEDET (K5 i plan-kollaps.md: priser som flytter seg, inflasjon) er IKKE laget – det har åpne spørsmål til brukeren.
+  (19) INNGANGSMERKE: interior3d.js tegner «Inngang» over dørene til de tre nærmeste byggene (innen 28 m) når du går ute
+  (KROKER.tegn3d). Et nytt spill uten nådde mål får et tips i loggen om Leir-menyen (ikke i testene).
