@@ -67,7 +67,7 @@
 #sekk .rad{ display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #2e281e; } #sekk .rad > div{ flex:1; min-width:0; } #sekk .rad small{ display:block; color:var(--ink-dim,#a99); } #sekk .rad.aktiv b{ color:#f0d79a; }
 #sekk button, #leirmeny .utstyr button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 9px; font:inherit; font-size:13px; cursor:pointer; } #sekk button:disabled{ opacity:.45; }
 #sekk .lukk{ float:right; min-width:34px; } #sekk .vekt{ height:6px; background:#2e281e; margin:4px 0 2px; } #sekk .vekt i{ display:block; height:100%; background:#c9b26a; }
-#byttvapen{ position:fixed; right:14px; bottom:calc(208px + env(safe-area-inset-bottom,0px)); z-index:5; display:none; min-height:36px; padding:4px 10px; background:rgba(20,16,10,.7); border:1px solid rgba(231,220,195,.6); color:#e7dcc3; font:600 12px sans-serif; } #byttvapen.på{ display:block; }
+#byttvapen{ position:fixed; right:78px; bottom:calc(208px + env(safe-area-inset-bottom,0px)); z-index:5; display:none; min-height:36px; padding:4px 10px; background:rgba(20,16,10,.7); border:1px solid rgba(231,220,195,.6); color:#e7dcc3; font:600 12px sans-serif; } #byttvapen.på{ display:block; }
 #leirmeny .utstyr{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:3px 0; font-size:14px; } #leirmeny .utstyr small{ display:block; color:var(--ink-dim,#a99); }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'sekk', role: 'dialog', 'aria-label': 'Sekken' }); document.body.appendChild(panel);
