@@ -21,7 +21,7 @@
 
   function opprett(ider, navnet, bevId, kjøretøy, o = {}) { const F = folk(), L = leir(); if (!F || !L) return { feil: 'Ingen leir.' }; const P = F.personer.filter(p => ider.includes(p.id)), r = TR.opprett(P, navnet); if (r.feil) return r;
     const k = kjøretøy || null; if (k && TR.plass(k) < r.menn.length) return { feil: `Det er bare plass til ${TR.plass(k)} i ${k.navn}.` };
-    // våpen mann for mann (o.våpen = { id: våpen }) og utstyr (o.utstyr = [id-er]) betales samlet; ellers en ferdig bevæpning som før
+    // våpen valgt mann for mann og utstyr til troppen betales samlet – ellers en ferdig bevæpning som før
     const egen = o.våpen && Object.keys(o.våpen).length > 0, ut = (o.utstyr || []).filter(u => TR.UTSTYR[u]), sum = TR.pris(egen ? P.map(q => o.våpen[q.id] || 'rifle') : [], ut);
     const B = !egen && window.Strid && Strid.BEVÆPNING[bevId], alt = sum + (B && B.pris > 0 ? B.pris : 0); if (alt > 0 && !(window.OppstartSpill && OppstartSpill.betal(alt))) return { feil: `Ikke råd til våpnene og utstyret (${alt.toLocaleString('nb-NO')} kr).` };
     F.personer = F.personer.filter(p => !ider.includes(p.id)); const v = Math.random() * 6.283, s = nyttLag(r.navn, k ? k.x : L.x + Math.cos(v) * 25, k ? k.y : L.y + Math.sin(v) * 25, 'blå'); s.menn = r.menn; s.leder = 0; s.fraFolk = true;
