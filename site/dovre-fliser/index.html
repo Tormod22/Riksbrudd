@@ -140,7 +140,7 @@ const KART_TAG = ER_NORGE ? NORGE_TAG : KART_TAG_DOVRE;
 const ZMIN = 0, ZMAX = 17;
 // Kroker for spillmodulene i spill/ (docs/plan-funksjoner.md): kartet og spillet kan utvikles hver for seg.
 // bygg3d: async (u, { px, TW, skog }) mens 3D-utsnittet bygges; sett3d: (u, R3) når det vises; ramme3d: (R3, dt) hver ramme i 3D
-const KROKER = { sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], forbered3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [], bakke: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
+const KROKER = { siktlys: [], sikt: [], trykk3d: [], innsyn: [], skjul: [], kanOrdre: [], tegn: [], sim: [], trykk: [], tegn3d: [], ild: [], lagTekst: [], lagKnapper: [], info: [], ser: [], tåke: [], ødelagt: [], bygg3d: [], forbered3d: [], sett3d: [], ramme3d: [], bilde3d: [], lys3d: [], bakke: [] };   // ødelagt: (objekt, 'ødelegg'|'reparer') når ingeniørene er ferdige (S5)   // ser: fiende => true når noe annet enn lagene ser den (S6 drone/radar); tåke: (g) tegner hull i tåka (meter: X, Y -> skjerm via vx0, vy1)   // lagKnapper: (lag, H) => knapper i lagpanelet; info: (objekt, H) => knapper i infrastrukturpanelet (S5)   // ild: (skytter, mål) => faktor 0–1 (S4 ammunisjon); lagTekst: lag => tekst i panelet   // tegn3d: (g, proj3, mPer3) i 3D-overlegget
 
 // ---------- henting med telling av byte ----------
 const STAT = { byte: 0, req: 0, kilde: '' };
@@ -867,6 +867,8 @@ async function oppdaterSikt(s) {
 }
 
 // ---------- tegning av lagene ----------
+// Siktfeltet lyser i kartet for egne lag som lever og har radiokontakt, og for andre sider bare når tåka er slått av
+function siktLyser(s) { return s.side === 'blå' ? levende(s) && !KROKER.skjul.some(f => f(s)) : !VIS.taake; }
 let valgt = null, modus = null;
 function tilSkjerm(X, Y, vx0, vy1) { return [(X - vx0) / kam.m, (vy1 - Y) / kam.m]; }
 // Tegner lagene, skudd og «sist sett» med en projeksjon: i 2D rett ned, i 3D gjennom kameraet.
@@ -875,11 +877,14 @@ function tegnEnheter(vx0, vy1) {
   const proj = (X, Y) => tilSkjerm(X, Y, vx0, vy1);
   if (VIS.taake) tegnTåke(vx0, vy1);
   const m = kam.m;
-  if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {
+  // (17. nov, brukeren: «det vises bare hva de ser når jeg trykker på dem – det skal vises hele veien så lenge de er innen
+  // radiorekkevidde, det samme gjelder kameraene»): det lyse feltet tegnes for alle egne lag du har kontakt med (siktLyser), ikke
+  // bare det valgte, og for kameraene (KROKER.siktlys, spill/kamera-visning.js). Det valgte laget er litt lysere.
+  if (VIS.sikt) { for (const s of ENHETER) if (s.sikt && siktLyser(s)) {
     const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1);
-    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .24 : .13) : .2; ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .17) : .2; ctx.imageSmoothingEnabled = true;
     ctx.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); ctx.globalAlpha = 1;
-  }
+  } for (const f of KROKER.siktlys) f(ctx, vx0, vy1, m); }
   tegnLag(ctx, proj, () => kam.m);
 }
 // Fargene per side (fraksjonene i spill/fraksjoner.js; reserve: blå/rød).
@@ -2494,9 +2499,11 @@ function bak3d() {   // tåke + siktfelt i tåkebildet (se TAAKE_U) – kartbild
   g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, TT, TT);
   if (VIS.taake) { g.fillStyle = 'rgba(14,11,7,.32)'; g.fillRect(0, 0, TT, TT); g.globalCompositeOperation = 'destination-out';
     for (const s of ENHETER) if (s.side === 'blå' && s.sikt && levende(s)) g.drawImage(s.sikt.c, ...rekt(s.sikt));
+    for (const f of KROKER.tåke) if (f.fritt) f(g, X0, Y1, mpp);
     g.globalCompositeOperation = 'source-over'; }
-  if (VIS.sikt) for (const s of ENHETER) if (s.sikt && (s.side === 'blå' ? !VIS.taake || s === valgt : !VIS.taake)) {
-    g.globalAlpha = s.side === 'blå' ? (s === valgt ? .24 : .13) : .2; g.drawImage(s.sikt.c, ...rekt(s.sikt)); g.globalAlpha = 1; }
+  if (VIS.sikt) { for (const s of ENHETER) if (s.sikt && siktLyser(s)) {
+    g.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .17) : .2; g.drawImage(s.sikt.c, ...rekt(s.sikt)); g.globalAlpha = 1; }
+    for (const f of KROKER.siktlys) f(g, X0, Y1, mpp); }
   R3.tåkeTex.needsUpdate = true; R3.bakt = (R3.bakt || 0) + 1;
 }
 function proj3(X, Y) {
@@ -2603,7 +2610,7 @@ function tegn3d() {
   if (!R.ut) { if (!R.bygger && R.byggFeil && R.ønsket && byggVent(R)) nytt3dUtsnitt(...R.ønsket); return; }
   const b = R.bane, u = R.ut, S = utsnittS(b.avst);
   if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
-  const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '');
+  const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '') + '|' + (window.KAMERA_NOKKEL || '') + '|' + ENHETER.reduce((n, e) => n + (e.side === 'blå' && siktLyser(e) ? 1 : 0), 0);
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
   størrelse3d(R); kamera3d();
   // bakkens materiale: varianten som passer kameraet og været akkurat nå (se bakkeVariant)
@@ -2882,6 +2889,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=3f389a51f6"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=634b1b3f1c"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=011b3c1db5"></script>
+<script src="/dovre-fliser/spill/kamera-visning.js?v=7fb7754937"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=1f7dc97448"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>

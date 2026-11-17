@@ -993,3 +993,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   «riksbrudd-strategi» husker hva som er meldt per leir. Tallene er Claudes forslag. Dovre-siden har bare Dombås som tettsted –
   prøv på /norge (scratchpad gj/krig.js). VAKT «krigskartet» i sjekk.js (fire prøvetettsteder legges inn og tas bort).
   IKKE GJORT: AI-en er fortsatt to motstandere med få lag, marsjer tar timer i sanntid, og vinner du, skjer ikke noe mer.
+  SIKTFELT HELE TIDEN OG KAMERAER (17. nov, brukeren med skjermbilder: «det vises bare hva de ser når jeg trykker på dem. Det skal vises
+  hele veien så lenge de er innen radiorekkevidde. Det samme gjelder kameraene»): siktLyser(s) i index.html – det lyse siktfeltet tegnes
+  for alle egne, levende lag du har kontakt med (KROKER.skjul = uten radiokontakt), ikke bare det valgte (det valgte er litt lysere);
+  både i 2D (tegnEnheter) og i tåkebildet til 3D (bak3d). spill/kamera-visning.js (KameraSpill): ferdig kameramast med strøm åpner tåka
+  (KROKER.tåke med f.fritt = true: kroken tar m = meter per punkt og brukes også i 3D), lyser (ny KROKER.siktlys(g, vx0, vy1, m)) og
+  ser fiender innen 300/500/800 m (KROKER.ser). Feltet er en sirkel – ikke terrengsikt. VAKT «siktfelt hele tiden og kameraer».

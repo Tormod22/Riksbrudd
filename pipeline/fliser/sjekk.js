@@ -1099,6 +1099,21 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const krigok = !krig.uten && krig.byer === 4 && krig.fronter >= 1 && krig.trekk.length === 3 && krig.andel > 0 && krig.åpen && krig.zoom && krig.i2d && krig.stolper === 3 && krig.rader >= 3 && krig.velg && krig.sendKnapp && !krig.tegnFeil && krig.sendt === true && krig.marsjerer === true && krig.lukket;
     if (!krigok) { feil++; console.log(JSON.stringify(krig)); }
     console.log(`${krigok ? 'ok  ' : 'FEIL'} ${navn} krigskartet: ${krig.byer} prøvetettsteder, ${krig.fronter} front, neste trekk ${(krig.trekk || []).join(', ')}, panelet åpner og lukker, laget fikk ordre: ${krig.marsjerer}`);
+    // VAKT siktfelt hele tiden og kameraer (brukeren 17. nov: «det vises bare hva de ser når jeg trykker på dem»): egne lag med kontakt
+    // lyser uten å være valgt, et lag uten kontakt (KROKER.skjul) lyser ikke, og en kameramast med strøm åpner tåka og ser fiender.
+    const sl = await pg.evaluate(() => { if (!window.KameraSpill || typeof siktLyser !== 'function') return { uten: true }; const ut = {}, blå = ENHETER.find(e => e.side === 'blå' && !e.karakter && levende(e)), før = valgt; valgt = null;
+      ut.lyser = siktLyser(blå); const sperre = s => s === blå; KROKER.skjul.push(sperre); ut.utenKontakt = siktLyser(blå); KROKER.skjul.splice(KROKER.skjul.indexOf(sperre), 1); valgt = før;
+      const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return Object.assign(ut, { utenLeir: true });
+      const b = { id: L.neste++, type: 'kameramast', x: blå.x + 5000, y: blå.y + 5000, ret: 0, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 1, hp: 1 }; L.bygg.push(b);
+      const fi = nyttLag('Vaktfiende', b.x + 200, b.y, 'rød'), langt = nyttLag('Vaktfiende 2', b.x + 900, b.y, 'rød'); ENHETER.push(fi, langt);
+      try { const K = KameraSpill.kameraer(); ut.kamera = K.length; ut.r = K[0] && K[0].r; ut.ser = synlig(fi); ut.serIkke = synlig(langt); ut.kroker = KROKER.siktlys.length;
+        const g = document.createElement('canvas').getContext('2d'); let f = ''; try { for (const q of KROKER.siktlys) q(g, b.x - 500, b.y + 500, 10); for (const q of KROKER.tåke) if (q.fritt) q(g, b.x - 500, b.y + 500, 10); } catch (e) { f = e.message; } ut.tegnFeil = f;
+        b.av = true; ut.avslått = KameraSpill.kameraer().length; }
+      finally { L.bygg.splice(L.bygg.indexOf(b), 1); ENHETER.splice(ENHETER.indexOf(fi), 1); ENHETER.splice(ENHETER.indexOf(langt), 1); KameraSpill.kameraer(); }
+      return ut; });
+    const slok = !sl.uten && sl.lyser === true && sl.utenKontakt === false && (sl.utenLeir || (sl.kamera === 1 && sl.r === 300 && sl.ser === true && sl.serIkke === false && sl.kroker >= 1 && !sl.tegnFeil && sl.avslått === 0));
+    if (!slok) { feil++; console.log(JSON.stringify(sl)); }
+    console.log(`${slok ? 'ok  ' : 'FEIL'} ${navn} siktfelt hele tiden og kameraer: lag med kontakt lyser ${sl.lyser}, uten kontakt ${sl.utenKontakt}, kamera ${sl.kamera} (${sl.r} m) ser fiende ${sl.ser}, ikke 900 m unna ${sl.serIkke === false}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
