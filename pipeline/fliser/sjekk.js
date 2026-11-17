@@ -1140,6 +1140,18 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const rmok = !rm.uten && (rm.r === 25000 || rm.r === 8000) && rm.av === 8000 && rm.inn === true && rm.passer && rm.zoom && rm.ut === false && rm.tilbake;
     if (!rmok) { feil++; console.log(JSON.stringify(rm)); }
     console.log(`${rmok ? 'ok  ' : 'FEIL'} ${navn} radiomastens rekkevidde: ${rm.r / 1000} km (avslått ${rm.av / 1000} km), «Vis rekkevidden» får plass til sirkelen: ${rm.passer}, tilbake: ${rm.tilbake}`);
+    // VAKT karakteren din (spill/karakter.js, brukeren 17. nov: «gjøre spillerens egen karakter mer detaljert»): figuren i 3D er din egen
+    // (ikke en soldat), «Utenfra» flytter kameraet bak deg og skjuler våpenet i hånda, behovene går ut over treffet, og karakterarket viser dem.
+    const kar = await pg.evaluate(async () => { if (!window.KarakterSpill || !KarakterSpill.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const R = R3, ut = {}, vent = ms => new Promise(r => setTimeout(r, ms));
+      const var3 = KarakterSpill.tredje(), gikk = !!R.fot; if (!gikk) Gange.start(); KarakterSpill.settTredje(false); kamera3d(); KROKER.ramme3d.forEach(f => f(R)); const F = KarakterSpill.figur(); ut.figur = !!F; ut.trekanter = 0; if (F) F.g.traverse(m => { if (m.geometry) ut.trekanter += m.geometry.attributes.position.count / 3; });
+      ut.første = F && !F.g.visible && !window.TREDJE; const øye = R.cam.position.clone();
+      KarakterSpill.settTredje(true); kamera3d(); KROKER.ramme3d.forEach(f => f(R)); ut.tredje = F && F.g.visible && window.TREDJE === true; ut.bak = R.cam.position.distanceTo(øye); const k = Gange.kropp(); ut.vedDeg = F ? Math.hypot(F.g.position.x - k.x, F.g.position.y - k.y) : -1;
+      const T = KarakterSpill.T(), før = { ...T.behov }; ut.treff0 = KarakterSpill.treff(); T.behov.tørst = 5; ut.treff1 = KarakterSpill.treff(); ut.varsel = KarakterSpill.varsler().map(v => v.id).join(',');
+      KarakterSpill.åpne(); await vent(100); ut.målere = document.querySelectorAll('#karakterark .m').length; ut.rød = !!document.querySelector('#karakterark .m.lite, #karakterark .m.tomt'); ut.portrett = !!document.querySelector('#karakterark .hode img'); KarakterSpill.lukk();
+      Object.assign(T.behov, før); KarakterSpill.settTredje(var3); if (!gikk) Gange.stopp(); KROKER.ramme3d.forEach(f => f(R)); return ut; });
+    const karok = !kar.uten && kar.figur && kar.trekanter > 500 && kar.trekanter < 3000 && kar.første && kar.tredje && kar.bak > 1 && kar.vedDeg < .5 && kar.treff0 === 1 && kar.treff1 < 1 && kar.varsel === 'tørst' && kar.målere >= 4 && kar.rød && kar.portrett;
+    if (!karok) { feil++; console.log(JSON.stringify(kar)); }
+    console.log(`${karok ? 'ok  ' : 'FEIL'} ${navn} karakteren din: egen figur (${Math.round(kar.trekanter || 0)} trekanter), tredjeperson flytter kameraet ${(kar.bak || 0).toFixed(1)} m bak, tørst gir treff ×${(kar.treff1 || 0).toFixed(2)}, arket har ${kar.målere} målere`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

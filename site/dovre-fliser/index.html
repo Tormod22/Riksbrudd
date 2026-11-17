@@ -2224,6 +2224,8 @@ function soldater3d() {
   };
   for (const s of ENHETER) {
     if (Math.abs(s.x - u.cx) > u.S + 100 || Math.abs(s.y - u.cy) > u.S + 100 || (VIS.taake && !synlig(s))) continue;
+    // karakteren din har sin egen figur (spill/karakter.js) og tegnes ikke som en soldat
+    if (s.karakter && window.KarakterSpill && KarakterSpill.figur()) continue;
     const ca = Math.cos(s.retning), sa = Math.sin(s.retning), farge = rgb(sidefarge(s.side, 'lys')).map(x => x * .8), lev = s.menn.filter(q => q.hp > 0);
     s.menn.filter(q => q.hp <= 0).forEach((q, k) => sett(s.x - (k + 1) * 2.5 * ca + 6 * sa, s.y - (k + 1) * 2.5 * sa - 6 * ca, s.retning + k, true, false, farge, 0));
     lev.forEach((q, k) => { let fx, fy; if (s.sti) { fx = -k * 4; fy = (k % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((k + 1) / 2), side = k % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
@@ -2845,7 +2847,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=a10c102ed9"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=132dd76718"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=f9caab51b4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -2915,13 +2917,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dagbok.js?v=df7b52ade5"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=f0cad9052e"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=22ab76fc92"></script>
-<script src="/dovre-fliser/spill/spillet-visning.js?v=d082c232a5"></script>
+<script src="/dovre-fliser/spill/spillet-visning.js?v=a759c059da"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=34d8fb2d55"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=e42116a78a"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=107dad7209"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=29b20faae6"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=901f20e54e"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
+<script src="/dovre-fliser/spill/karakter.js?v=627a2b812b"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=1fbadf5e33"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=630a58f880"></script>
 <script src="/dovre-fliser/spill/strategi-visning.js?v=d1603723df"></script>

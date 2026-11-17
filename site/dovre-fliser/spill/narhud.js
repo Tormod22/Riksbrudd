@@ -89,7 +89,7 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
   KROKER.ramme3d.push(R => { if (typeof THREE === 'undefined' || !R.cam) return; const U = window.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill : null, SS = window.SpilletSpill, K = SS && SS.K ? SS.K() : null, går = !!R.fot && !(window.KjorSpill && KjorSpill.fører());
     if (!vm) { if (!U || !går) return; if (!R.cam.parent) R.scene.add(R.cam); vm = { g: new THREE.Group(), id: '', mesh: null, mat: new THREE.MeshLambertMaterial({ vertexColors: true }) }; R.cam.add(vm.g); }
     if (vm.g.parent !== R.cam) { if (!R.cam.parent) R.scene.add(R.cam); R.cam.add(vm.g); }
-    vm.g.visible = går && !!U && !document.body.classList.contains('foto'); if (!vm.g.visible) return;
+    vm.g.visible = går && !!U && !document.body.classList.contains('foto') && !window.TREDJE; if (!vm.g.visible) return;
     const id = U.aktivt().v.id; if (id !== vm.id) { if (vm.mesh) { vm.g.remove(vm.mesh); vm.mesh.geometry.dispose(); } const geo = vmGeo(id); vm.id = id; vm.mesh = geo ? new THREE.Mesh(geo, vm.mat) : null; if (vm.mesh) { vm.mesh.frustumCulled = false; vm.mesh.renderOrder = 5; vm.g.add(vm.mesh); } vm.bytte = performance.now(); }
     const nå = performance.now(), kr = window.Gange && Gange.kropp && Gange.kropp(), fart = kr ? Math.min(6, kr.fart || 0) : 0, rek = K ? Math.max(0, 1 - (nå - K.sist) / 130) : 0, lader = K && nå < K.lader ? 1 : 0, opp = Math.min(1, (nå - (vm.bytte || 0)) / 250), smal = VW < 700 ? .8 : 1;
     vm.ned = (vm.ned || 0) + ((lader ? 1 : 0) - (vm.ned || 0)) * .15;
@@ -106,6 +106,8 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
     if (SS && SS.O()) for (const o of SS.O().liste) if (o.tatt) ut.push({ i: 'oppdrag', k: '', t: Spillet.Oppdrag.TYPER[o.type].navn, s: `${meter(o.meter)} mot ${o.retning}`, f: () => gåTil(o.x, o.y, 4) || logg(`Oppdraget ligger ${meter(o.meter)} mot ${o.retning} for leiren.`) });
     const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste(), uten = s && s.mangler ? s.mangler.size - (s.avslått || 0) : 0, åpneLeir = fane => { if (window.LeirSpill) { const m = $('leirmeny'); if (m && !m.classList.contains('på')) $('leirknapp').click(); LeirSpill.fane(fane); } };
     if (L && uten > 0) ut.push({ i: 'strom', k: 'fare', t: `${uten} bygg uten strøm`, s: 'se strømmen', f: () => åpneLeir('bygg') });
+    // karakteren din: tørst, sulten eller trøtt (spill/karakter.js)
+    if (window.KarakterSpill && KarakterSpill.klar()) for (const v of KarakterSpill.varsler()) ut.push({ i: v.id === 'søvn' ? 'seng' : v.id === 'sult' ? 'mat' : 'vann', k: 'fare', t: 'Du er ' + v.tekst, s: v.råd.toLowerCase().replace(/\.$/, ''), f: () => KarakterSpill.åpne() });
     // tom eller snart tom for diesel (bare når du har aggregat som trenger den)
     if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, rekker = s.agg > 0 && d > 0 ? Leir.dieselTimer(L, s.agg) : Infinity;
       if (d <= 0) ut.push({ i: 'tank', k: 'fare', t: 'Tom for diesel', s: 'aggregatene står – kjøp diesel', f: () => åpneLeir('lager') }); else if (rekker < 6) ut.push({ i: 'tank', k: '', t: 'Lite diesel', s: `rekker ${rekker >= 1 ? Math.round(rekker) + ' t' : Math.max(1, Math.round(rekker * 60)) + ' min'}`, f: () => åpneLeir('lager') }); }

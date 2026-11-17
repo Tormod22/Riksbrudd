@@ -1011,3 +1011,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (BYGGEVISNING.radioRekkevidde(b): nivåets 15/25/40 km når masten virker og har strøm, ellers 8 km i oransje) og håndradioens 3 km
   stiplet. Sirkelen er større enn skjermen inne i leiren, så byggpanelet har «Vis rekkevidden (15 km)» (#visradio,
   BYGGEVISNING.visRekkevidde: zoomer ut rundt masten; samme knapp = «Tilbake til leiren»). VAKT «radiomastens rekkevidde».
+  KARAKTEREN DIN (17. nov, brukeren: «gjøre spillerens egen karakter mer detaljert» – valgte «begge deler»: utseendet i 3D og karakterark):
+  spill/karakter.js (reglene øverst: Karakter.BEHOV/steg/fyll/virkning/ord/utseende, test_karakter.js; KarakterSpill nederst).
+  FIGUREN: Karakter.utseende(portrett) leser hud, hårfarge, hårfasong (snau/kort/langt/krøll, hale), skjegg, hodeplagg, briller og
+  jakkefarge fra portrettet (spill/portrett-motor.js); byggFigur lager en egen gruppe (kropp + to bein + to armer som svinger, sekk med
+  sovepose, våpen over ryggen, ca. 1500 trekanter, ett materiale – ingen egne lys). soldater3d hopper over s.karakter når figuren finnes.
+  Sett ovenfra står figuren der karakterlaget står. TREDJEPERSON: knappen «Utenfra» (#tredjeknapp, tast V, bare når du går;
+  «riksbrudd-tredje») – ramme3d-kroken flytter kameraet 4,2 m bak øynene (kortere ved vegger, aldri under bakken) og setter
+  window.TREDJE (narhud.js skjuler da våpenet i hånda); inne i hus er det alltid førsteperson. BEHOV (Zomboid-punkt 1, nå laget):
+  tørst tom etter 24 spilltimer, sult 48, søvn 36; under 25 treff ned til ×0,7 (KarakterSpill.treff() i spillet-visning.js) og
+  løpetid ned til ×0,6 (Bevegelse.REGLER.løpTid ganges oppå det overlev.js setter), på 0 tærer det 4 helse per time (aldri under 5).
+  Innen 150 m fra leiren: drikker (hvis vannverket virker eller dere har brønn), spiser én rasjon av leirens mat og hviler (når leiren
+  har senger); ute: «Spis feltrasjon» (+50), drikk ved vann (Gange.vannVed 2,5 m unna), hvil i tilflukt. Synker ikke av seg selv i
+  testene (KarakterSpill.test). KARAKTERARKET: knappen «Deg» (#karakterknapp, tast O) -> #karakterark (portrett, bakgrunn, helse og
+  behov som målere, ferdigheter, våpen og vekt, dager/gått/hus). Varsler «Du er veldig tørst» i narhud.js. Lagres per leir
+  («riksbrudd-karakter»). Tallene er Claudes forslag. VAKT «karakteren din».
