@@ -271,7 +271,11 @@
     if (veg.length) {
       const hjul = []; for (const [x, y] of [[1.35, .82], [1.35, -.82], [-1.35, .82], [-1.35, -.82]]) { const g = new THREE.CylinderGeometry(.33, .33, .22, 10); g.translate(x, y, .33); hjul.push(g); }
       liv.bilMesh = instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], mob ? 12 : 32);
-      liv.biler = Array.from({ length: mob ? 12 : 32 }, () => { const v = veg[Math.floor(rnd() * veg.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: (v.k === 'K' ? 8 : 13) + rnd() * 5, farge: BILFARGER[Math.floor(rnd() * BILFARGER.length)] }; });
+      // (17. nov, brukeren: «det er for mye biltrafikk på øde veier») antall biler følger vegene: mest i tettstedene, noe på riks- og
+      // europaveger, nesten ingenting på øde veger – og bilene velger veg etter samme vekt (tak som før: 32 PC / 12 mobil).
+      const vekt = veg.map(v => { const q = v.P && v.P[v.P.length >> 1], by = !!(q && u.iBy && u.iBy(q[0], q[1])); return v.L / 1000 * (by ? 4 : v.k === 'E' ? .5 : v.k === 'R' ? .3 : .06); }), sumV = vekt.reduce((a, b) => a + b, 0), nBil = Math.max(1, Math.min(mob ? 12 : 32, Math.round(sumV)));
+      const velgVeg = () => { let t = rnd() * sumV; for (let i = 0; i < veg.length; i++) { t -= vekt[i]; if (t <= 0) return veg[i]; } return veg[veg.length - 1]; }; liv.bilTak = nBil;
+      liv.biler = Array.from({ length: nBil }, () => { const v = velgVeg(); return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: (v.k === 'K' ? 8 : 13) + rnd() * 5, farge: BILFARGER[Math.floor(rnd() * BILFARGER.length)] }; });
       liv.biler.forEach((b, k) => { liv.bilMesh[0].setColorAt(k, new THREE.Color(...b.farge)); });
       // frontlys og baklys (lyser om kvelden, spill/natt3d.js gir mørket) og lyskjegler på vegen foran bilen
       const n = liv.biler.length, front = samle([kasse(2.21, .6, .5, .05, .32, .13), kasse(2.21, -.6, .5, .05, .32, .13)]), bak = samle([kasse(-2.21, .62, .55, .05, .28, .12), kasse(-2.21, -.62, .55, .05, .28, .12)]);

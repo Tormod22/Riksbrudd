@@ -387,7 +387,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       : siste.mangler.has(b.id) ? 'uten strøm' : 'i drift';
     // utpost: nye jobber på bygget (oppgradering, reparasjon) krever at byggelaget reiser dit
     const rs = LB.reise(L, b.x, b.y, b.id), reise = rs.min > 0 ? ` + ${tidTekst(rs.min)} reise` : '';
-    const verdier = [e.kw > 0 ? `gir ${kw(e.kw)} kW` : null, e.plasser ? `${e.plasser} senger` : null, B.nivå && B.nivå.liter ? `rommer ${LB.BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1].toLocaleString('nb-NO')} l diesel` : null,
+    const verdier = [e.kw > 0 ? `gir ${kw(e.kw)} kW` : null, e.plasser ? `${e.plasser} senger` + (b.hp < LB.REGLER.halvSkade && B.nivå && B.nivå.plasser ? ` (hardt skadet: halvparten av ${B.nivå.plasser[(b.nivå || 1) - 1]} – reparer bygget)` : '') : null, B.nivå && B.nivå.liter ? `rommer ${LB.BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1].toLocaleString('nb-NO')} l diesel` : null,
       e.lager ? `lager +${e.lager}` : null, e.rekkevidde && b.type !== 'radiomast' ? `${e.rekkevidde} m` : null, rs.full > 0 ? `utpost ${LB.kmTekst(rs.meter)} fra leiren` : null,
       !LB.ferdig(b) ? 'byggeplass: kan skades av fiender' : null].filter(Boolean).join(' · ');
     // radiomasten: hva nivået gir lagene (brukeren 12. nov), og de to slagene drivstoff ved tank og aggregat

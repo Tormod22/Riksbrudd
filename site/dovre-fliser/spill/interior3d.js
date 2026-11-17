@@ -274,7 +274,7 @@
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, w = Math.min(D.w, L * .7), t = Math.max(w / 2 + .1, Math.min(L - w / 2 - .1, (D.x - a[0]) * ex + (D.y - a[1]) * ey)), x = a[0] + ex * t, y = a[1] + ey * t, av = Math.hypot(x - D.x, y - D.y);
       if (!best || av < best.av) best = { av, x, y, ux: ex, uy: ey, w }; }
     if (!best) return null;
-    const pl = Interior.plan(P, { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best }), I = pl.inngang, A = pl.akse;
+    const pl = Interior.plan(P, { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger }), I = pl.inngang, A = pl.akse;
     let maks = -Infinity, mx = 0, my = 0; for (const [x, y] of P) { maks = Math.max(maks, terr(x, y)); mx += x; my += y; } maks = Math.max(maks, terr(mx / P.length, my / P.length));
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
@@ -496,7 +496,7 @@
     egne = []; egneNøkkel = nøkkel; egneHindre = R.hindre;
     for (const b of liste) { const T = LEIRBYGG[b.type], k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), X = b.x - u.cx, Y = b.y - u.cy; if (Math.abs(X) > u.S - 20 || Math.abs(Y) > u.S - 20) continue;
       const pk = (lx, ly) => [X + (lx * c - ly * s) * k, Y + (lx * s + ly * c) * k], [x0, x1, y0, y1] = T.r, P = [pk(x0, y0), pk(x1, y0), pk(x1, y1), pk(x0, y1)], z = (hoyde3d(b.x, b.y, u) - u.h0) * R.EX - .05, d = pk(T.dør[0], T.dør[1]);
-      P.gulvFast = z + T.s * k + .03; P.veggTopp = P.topp = z + (T.s + T.H) * k; P.leir = b.type; P.bygg = { i: 9000000 + b.id, t: -1, h: T.H, kl: T.kl };
+      P.gulvFast = z + T.s * k + .03; P.veggTopp = P.topp = z + (T.s + T.H) * k; P.leir = b.type; P.bygg = { i: 9000000 + b.id, t: -1, h: T.H, kl: T.kl, senger: b.type === 'brakke' && window.Leir && Leir.BYGG.brakke.nivå ? Leir.BYGG.brakke.nivå.plasser[(b.nivå || 1) - 1] : 0 };
       P.dør = T.side === 'y+' ? { x: d[0], y: d[1], ux: -c, uy: -s, w: T.w, hh: 2.05, z0: P.gulvFast } : { x: d[0], y: d[1], ux: -s, uy: c, w: T.w, hh: 2.05, z0: P.gulvFast };
       const o = { P }, nøkler = []; let ax = Infinity, ay = Infinity, bx = -Infinity, by = -Infinity; for (const p of P) { ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]); ay = Math.min(ay, p[1]); by = Math.max(by, p[1]); }
       for (let a = Math.floor(ax / 20); a <= Math.floor(bx / 20); a++) for (let q = Math.floor(ay / 20); q <= Math.floor(by / 20); q++) { const kk = a + ',' + q; if (!R.hindre.has(kk)) R.hindre.set(kk, []); R.hindre.get(kk).push(o); nøkler.push(kk); }

@@ -10,6 +10,8 @@
   const går = () => typeof R3 !== 'undefined' && R3 && R3.fot;
   window.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    // UTVIKLING (17. nov, brukeren: «om jeg trykker på y, får jeg 100 millioner kr – bare nå under utviklingen for testing»). TA UT FØR SPILLET ER FERDIG.
+    if ((e.key === 'y' || e.key === 'Y') && window.OppstartSpill && OppstartSpill.tilstand() && OppstartSpill.gi) { const tt = e.target, tg = tt && tt.tagName; if (tg !== 'INPUT' && tg !== 'TEXTAREA' && tg !== 'SELECT') { const so = document.getElementById('oppstart'); if (!(so && so.classList.contains('på'))) { OppstartSpill.gi(100e6); logg('Testing: +100 millioner kr (tasten Y).'); return; } } }
     const t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
     const st = el('oppstart'); if (st && st.classList.contains('på')) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key, T = TASTER[k]; if (!T) return;

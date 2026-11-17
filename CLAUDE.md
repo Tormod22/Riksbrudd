@@ -1064,3 +1064,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   framme. LEIRVAKTA: folk på «vakt» (2–12) blir et eget lag (s.leirvakt, lagres ikke; sårede får lav helse i Folk etterpå). Når angrepet
   er over (aktiv -> 0): ForsvarSpill.opphev(true) – reglene tilbake, Leirvakta bort, rapport i loggen (Forsvar.rapport). Kartet: rød pil
   fra røverne mot leiren, merker i stillingene. «Øv: sett lagene i stilling» virker uten angrep. Tallene er Claudes. VAKT «forsvar av leiren».
+  SMÅTING 17. NOV KVELD (brukeren, mens forsvaret ble laget): (1) BRAKKA: interiøret har like mange køyesenger som bygget har plasser
+  (to per køyeseng; P.bygg.senger -> Interior.plan info.senger); byggpanelet sier «hardt skadet: halvparten av 8 – reparer bygget»
+  (det var derfor brukeren så «4»). (2) TASTEN Y gir 100 mill. kr (taster.js) – BARE FOR TESTING, TA UT FØR SPILLET ER FERDIG.
+  (3) BILTRAFIKKEN (liv3d.js): antall biler følger vegene (tettsted × 4 per km, E × 0,5, R × 0,3, resten × 0,06; minst 1, tak 32/12),
+  og bilene velger veg etter samme vekt. (4) «MÅL HAKK»: pusterom leser stakken utenfor Promise-funksjonen (rapporten sa bare
+  «norge:1438 → norge:1438»). BRUKERENS RAPPORT 17. nov (Intel Iris Xe, Edge, 1728 × 972, utsnitt 7,3 km): 27 pauser over 50 ms på 20 s,
+  lengste 407 ms; 911 ms i 5 pauser «uten pust (henter høydene og kartet)», 205 ms «uten pust (gjør klar)» – der bør det letes først.
+  IKKE GJORT, BRUKEREN HAR BEDT OM (17. nov): pen og praktisk bygging i bratt terreng; alle steder med kaier i kartet (lest som «plasser»,
+  ikke «klasser»); trær på samme sted i 2D og 3D; lage troppene selv av folk og kjøretøy; folk i kontrollrommet som ser gjennom
+  kameraene (bevegelsesvarsling, dyr/vær/folk, historikk over hvor tropper har vært, gå inn i kameraet i 3D); mindre hakk.

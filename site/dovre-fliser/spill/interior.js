@@ -116,6 +116,7 @@
       else ytre.push({ ax: a[0], ay: a[1], bx: b[0], by: b[1] }); }
     const pl = { P, kl, i: frø, areal, bb: [x0, y0, x1, y1], akse: { ux, uy, vx, vy }, rom, vegger, ytre, dører, møbler: [],
       inngang: { x: d.x, y: d.y, nx, ny, ux: d.ux, uy: d.uy, w, inn }, tak: K.tak || Math.max(2.4, Math.min(7, (info.h || 6) - .6)), gulv: 0 };
+    pl.senger = info.senger;   // brakka i leiren: så mange sengeplasser bygget har (to per køyeseng)
     møbler(pl, tilXY, åpninger, tilf);
     for (const r of rom) delete r.veier;
     return pl;
@@ -235,7 +236,7 @@
         // drivhus: plantebed i rekker langs huset med gang mellom, vanntønne ved døra
         case 'drivhus': { const satt = rutenett(r, 'plantebed', { du: lu >= lv ? 2.9 : 1.75, dv: lu >= lv ? 1.75 : 2.9, mU: .7, mV: .6, langsU: lu >= lv, fri: .8, maks: 16 });
           if (!satt.length) for (let k = 0; k < Math.min(6, Math.floor(A / 6)); k++) etSted(r, 'plantebed', { fri: .8 }, lang); etSted(r, 'tønne'); break; }
-        case 'brakke': { for (let k = 0; k < Math.min(12, Math.floor(A / 6)); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
+        case 'brakke': { for (let k = 0; k < (pl.senger ? Math.ceil(pl.senger / 2) : Math.min(12, Math.floor(A / 6))); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
         case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
           for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); break; }
         case 'storkjøkken': { etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(lu, lv) - 2) }, lang); etSted(r, 'komfyr'); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); etSted(r, 'kjøleskap'); etSted(r, 'hylle');

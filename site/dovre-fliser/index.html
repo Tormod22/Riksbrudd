@@ -1435,8 +1435,11 @@ async function vannmaske(px, TW, H, N, steg) {
 // bare ni bilder i sekundet mens det bygges). pust() tar pusterom bare når biten har vart lenger enn pustTid() – ca. 60 % av tiden
 // mellom to bilder, 8–16 ms – og aldri i en skjult fane (der tegnes ingenting). I tette løkker: if (børPuste()) await pust();
 // (Mens «Mål hakk» går, huskes hvor i koden pusten ble tatt – R3.pustSted/pustFør/pustNr –, så rapporten sier hvilken bit som var lang.)
-const pusterom = () => new Promise(r => { if (typeof R3 !== 'undefined' && R3 && R3.måler && window.Ytelse) { R3.pustFør = R3.pustSted; R3.pustSted = Ytelse.stedFraStakk(new Error().stack); R3.pustNr = (R3.pustNr || 0) + 1; }
-  let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); });
+// (17. nov: brukerens rapport sa bare «norge:1438 → norge:1438» – stakken ble lest inne i Promise-funksjonen, som er uten navn, så
+// stedet ble pusterom selv. Nå leses den i pusterom, og de navnløse linjene hoppes over av Ytelse.stedFraStakk.)
+const pusterom = () => { if (typeof R3 !== 'undefined' && R3 && R3.måler && window.Ytelse) { R3.pustFør = R3.pustSted; R3.pustSted = Ytelse.stedFraStakk(new Error().stack); R3.pustNr = (R3.pustNr || 0) + 1; }
+  return new Promise(r => {
+  let ferdig = false; const f = () => { if (!ferdig) { ferdig = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 150); }); };
 let sistPust = 0, pustAntall = 0;
 // (15. nov: ved første åpning av 3D står bare kartet og fremdriftskortet på skjermen – da jobbes det i biter på 50 ms; med de korte
 // bitene gikk ca. 0,8 s bare til å vente på neste bilde)
@@ -2851,7 +2854,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=f9caab51b4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=cb88bf4410"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=e9a7bd7214"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
@@ -2882,7 +2885,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folk.js?v=c0e4a610dd"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=ad164940cf"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=50b6d24bc1"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=df505baedf"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=92c02009ce"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=cf41946e0f"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
@@ -2899,8 +2902,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dyr3d.js?v=a6d8beb636"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
-<script src="/dovre-fliser/spill/interior.js?v=e6a4569c3c"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=08f34c3feb"></script>
+<script src="/dovre-fliser/spill/interior.js?v=e4c7eb43c3"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=53d66a706f"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
@@ -2936,6 +2939,6 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
-<script src="/dovre-fliser/spill/taster.js?v=cb98411f05"></script>
+<script src="/dovre-fliser/spill/taster.js?v=a4c00d1b08"></script>
 </body>
 </html>
