@@ -2198,11 +2198,16 @@ function gress3d() {
 function soldater3d() {
   const R = R3, u = R.ut; if (!u) return;
   if (!R.solMesh) { const MAKS = 600, lag = (g, farge) => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial(farge ? { color: farge } : {}), MAKS); if (!farge) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3), 3); m.frustumCulled = false; m.count = 0; R.scene.add(m); return m; };
-    const bein = samle([(() => { const g = new THREE.BoxGeometry(.15, .17, .85); g.translate(0, .1, .425); return g; })(), (() => { const g = new THREE.BoxGeometry(.15, .17, .85); g.translate(0, -.1, .425); return g; })()]);
-    const kropp = new THREE.BoxGeometry(.28, .44, .62); kropp.translate(0, 0, 1.16);
-    const hode = new THREE.SphereGeometry(.11, 10, 8); hode.translate(.01, 0, 1.6);
-    const hjelm = new THREE.SphereGeometry(.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2); hjelm.rotateX(Math.PI / 2); hjelm.translate(.01, 0, 1.63);
-    const gevær = new THREE.BoxGeometry(.9, .05, .07); gevær.rotateY(-.5); gevær.translate(.22, -.2, 1.18);
+    // (17. nov: «gjør alt mer detaljert») figuren har lår og legger, støvler, armer som holder geværet, hender, hals, hjelm med
+    // kant, sekk, belte og lommer på brystet. Fortsatt fem nett: bukse, jakke (sidens farge), hud, hjelm og sekk (mørkere), mørkt utstyr.
+    const bx = (sx, sy, sz, x, y, z, ry, rz) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x, y, z); return g; };
+    const bein = samle([bx(.17, .16, .44, 0, .1, .66), bx(.17, .16, .44, 0, -.1, .66), bx(.14, .14, .4, -.01, .1, .28), bx(.14, .14, .4, -.01, -.1, .28), bx(.2, .4, .14, 0, 0, .9), bx(.04, .15, .12, .09, .1, .5), bx(.04, .15, .12, .09, -.1, .5)]);
+    const kropp = samle([bx(.26, .42, .36, 0, 0, 1.3), bx(.23, .36, .28, 0, 0, 1.02), bx(.12, .12, .3, .0, .27, 1.3, 0, 0), bx(.12, .12, .3, 0, -.27, 1.3), bx(.3, .1, .1, .16, .22, 1.16, 0, -.5), bx(.34, .1, .1, .17, -.2, 1.18, 0, .35), bx(.14, .2, .06, 0, 0, 1.5)]);
+    const hode = samle([(() => { const g = new THREE.SphereGeometry(.105, 10, 8); g.scale(1, .92, 1.1); g.translate(.01, 0, 1.62); return g; })(), bx(.09, .09, .1, 0, 0, 1.5), bx(.07, .07, .07, .31, .1, 1.13), bx(.07, .07, .07, .33, -.08, 1.2), bx(.03, .05, .03, .115, 0, 1.6)]);
+    const hjelm = samle([(() => { const g = new THREE.SphereGeometry(.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2); g.rotateX(Math.PI / 2); g.scale(1.08, 1, 1); g.translate(0, 0, 1.635); return g; })(), bx(.3, .28, .025, 0, 0, 1.635), bx(.16, .32, .42, -.21, 0, 1.24), bx(.1, .26, .14, -.2, 0, 1.52), bx(.07, .12, .16, -.3, 0, 1.2)]);
+    const gevær = samle([bx(.5, .05, .09, .3, -.04, 1.2, -.12, .18), bx(.34, .035, .035, .68, .03, 1.25, -.12, .18), bx(.26, .05, .13, -.02, -.1, 1.14, -.12, .18), bx(.07, .04, .2, .3, -.04, 1.08, .25, .18), bx(.05, .03, .06, .34, -.03, 1.27, -.12, .18), bx(.04, .03, .05, .8, .05, 1.29, -.12, .18),
+      bx(.28, .13, .13, .04, .1, .065), bx(.28, .13, .13, .04, -.1, .065), bx(.15, .14, .12, -.01, .1, .14), bx(.15, .14, .12, -.01, -.1, .14),
+      bx(.25, .44, .06, 0, 0, .95), bx(.07, .11, .14, .15, .12, 1.12), bx(.07, .11, .14, .15, 0, 1.12), bx(.07, .1, .12, .13, -.16, .98), bx(.06, .08, .16, -.02, .24, .98), bx(.02, .3, .03, .08, 0, 1.52)]);
     R.solMesh = [lag(bein, 0x2f3424), lag(kropp), lag(hode, 0xc9a07e), lag(hjelm), lag(gevær, 0x1d1d1a)]; }
   const [bein, kropp, hode, hjelm, gevær] = R.solMesh, d = new THREE.Object3D(), c = new THREE.Color(), nå = performance.now() / 1000; let n = 0;
   const rgb = hex => { const v = parseInt(hex.slice(1), 16); return [(v >> 16) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255]; };
@@ -2221,22 +2226,22 @@ function soldater3d() {
   }
   for (const m of R.solMesh) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
 }
-// Kjøretøyene i 3D: kasse + førerhus (lastebil, radar, artilleri), lav kasse + tårn (stridsvogn), oppdateres hver ramme.
+// Kjøretøyene i 3D: hver type har sin egen modell (spill/kjoretoy3d.js: lastebil, speiderbil, stridsvogn, rakettartilleri, radar),
+// tegnet som instanser – ett nett per type. Andre sider enn din egen får et skjær av sidens farge. Bilen følger helningen i bakken.
 function kjøretøy3d() {
-  const R = R3, u = R.ut; if (!u || !window.KJORETOY || !window.Kjoretoy) return;
-  if (!R.kjMesh) { const MAKS = 400, lag = farge => { const g = new THREE.BoxGeometry(1, 1, 1); g.translate(0, 0, .5); const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: farge }), MAKS); m.frustumCulled = false; m.count = 0; R.scene.add(m); return m; };
-    R.kjMesh = [lag(0x4b5532), lag(0x5d6a40), lag(0x23271b)]; }   // kasse, førerhus/tårn, hjul/belter
-  const [kasse, hus, hjul] = R.kjMesh, d = new THREE.Object3D(); let n = 0;
-  const sett = (m, k, x, y, z, v, lx, ly, lz, sx, sy, sz) => { const c = Math.cos(v), s = Math.sin(v); d.position.set(x + c * lx - s * ly, y + s * lx + c * ly, z + lz); d.rotation.set(0, 0, v); d.scale.set(sx, sy, sz); d.updateMatrix(); m.setMatrixAt(k, d.matrix); };
-  for (const k of KJORETOY) { const T = Kjoretoy.TYPER[k.type]; if (!T) continue;
-    for (let i = 0; i < k.antall && n < 399; i++) {
+  const R = R3, u = R.ut; if (!u || !window.KJORETOY || !window.Kjoretoy || !window.Kjoretoy3d) return;
+  if (!R.kjMesh) R.kjMesh = {};
+  const d = new THREE.Object3D(), c = new THREE.Color(), n = {}, MAKS = 200;
+  const nett = type => { if (!R.kjMesh[type]) { const m = new THREE.InstancedMesh(Kjoretoy3d.modell(type), new THREE.MeshLambertMaterial({ vertexColors: true }), MAKS);
+    m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3).fill(1), 3); m.frustumCulled = false; m.count = 0; R.scene.add(m); R.kjMesh[type] = m; } return R.kjMesh[type]; };
+  const zVed = (X, Y) => (hoyde3d(X, Y) - u.h0) * R.EX;
+  for (const k of KJORETOY) { const T = Kjoretoy.TYPER[k.type]; if (!T) continue; const m = nett(k.type), egen = k.side === 'blå';
+    if (!egen) { const v = parseInt(sidefarge(k.side, 'lys').slice(1), 16); c.setRGB(.6 + .5 * (v >> 16) / 255, .6 + .5 * ((v >> 8) & 255) / 255, .6 + .5 * (v & 255) / 255); } else c.setRGB(1, 1, 1);
+    for (let i = 0; i < k.antall; i++) { const nr = n[k.type] || 0; if (nr >= MAKS) break;
       const p = Kjoretoy.posisjon(k, i * T.avstand); if (Math.abs(p.x - u.cx) > u.S || Math.abs(p.y - u.cy) > u.S) continue;
-      const x = p.x - u.cx, y = p.y - u.cy, z = (hoyde3d(p.x, p.y) - u.h0) * R.EX, v = p.retning, L = T.lengde, B = T.bredde;
-      if (k.type === 'stridsvogn') { sett(kasse, n, x, y, z, v, 0, 0, .45, L, B * .78, 1.1); sett(hus, n, x, y, z, v, -L * .05, 0, 1.55, L * .42, B * .55, .75); sett(hjul, n, x, y, z, v, 0, 0, 0, L * .96, B, .7); }
-      else { const høy = k.type === 'speiderbil' ? 1.6 : 2.6; sett(kasse, n, x, y, z, v, -L * .13, 0, .9, L * .72, B, høy); sett(hus, n, x, y, z, v, L * .37, 0, .9, L * .24, B * .96, høy * .8); sett(hjul, n, x, y, z, v, 0, 0, .05, L * .9, B * .92, .85); }
-      n++;
-    } }
-  for (const m of R.kjMesh) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+      const v = p.retning, cv = Math.cos(v), sv = Math.sin(v), h = T.lengde * .35, zf = zVed(p.x + cv * h, p.y + sv * h), zb = zVed(p.x - cv * h, p.y - sv * h);
+      d.position.set(p.x - u.cx, p.y - u.cy, (zf + zb) / 2); d.rotation.set(0, -Math.atan2(zf - zb, 2 * h), v, 'ZYX'); d.updateMatrix(); m.setMatrixAt(nr, d.matrix); m.setColorAt(nr, c); n[k.type] = nr + 1; } }
+  for (const type in R.kjMesh) { const m = R.kjMesh[type]; m.count = n[type] || 0; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
 }
 // Terrengnettet slik det tegnes (sett3d): M punkter hver veg, tettest i midten. nettHoyde(u, x, y) gir høyden i selve nettet (lokale
 // meter fra midten, z som i 3D) – vegene legges på den, så bakken ikke stikker opp gjennom asfalten (hoyde3d er jevnere enn nettet).
@@ -2885,7 +2890,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=e6a4569c3c"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=88dad3ec38"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=08f34c3feb"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
@@ -2895,6 +2900,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
 <script src="/dovre-fliser/spill/leting.js?v=7d0e944ad5"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=4ee783c4c4"></script>
+<script src="/dovre-fliser/spill/kjoretoy3d.js?v=70bec8641d"></script>
 <script src="/dovre-fliser/spill/kjor.js?v=950538b7c9"></script>
 <script src="/dovre-fliser/spill/maal.js?v=ab171189c4"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=b0ce7f875d"></script>
@@ -2903,8 +2909,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/utstyr.js?v=22ab76fc92"></script>
 <script src="/dovre-fliser/spill/spillet-visning.js?v=d082c232a5"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=34d8fb2d55"></script>
-<script src="/dovre-fliser/spill/folk3d.js?v=d6b570a754"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=e2b159db95"></script>
+<script src="/dovre-fliser/spill/folk3d.js?v=e42116a78a"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=014ec8eeb7"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=901f20e54e"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>

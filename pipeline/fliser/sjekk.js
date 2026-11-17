@@ -1069,6 +1069,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const kjok = !kj.uten && kj.fritt && /feltbilen/.test(kj.knapp) && kj.iBil && kj.kjørte > 15 && kj.fart <= 27.01 && kj.stoppet && kj.ute && kj.iHeli && kj.over > 10 && kj.måLande && kj.landet && kj.ute2 && kj.lagret === 2 && (kj.egenKnapp === null || (kj.egenKnapp.includes('Sett deg inn i') && kj.iEgen && kj.egenKjørte > 10 && kj.egenUte));
     if (!kjok) { feil++; console.log(JSON.stringify(kj)); }
     console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjørbare biler og helikopter: bilen kjørte ${(kj.kjørte || 0).toFixed(0)} m og stoppet, helikopteret steg til ${(kj.over || 0).toFixed(0)} m, landet, og du må lande før du går ut; eget kjøretøy («${kj.egenKnapp || 'ingen'}») kjørte ${(kj.egenKjørte || 0).toFixed(0)} m`);
+    // VAKT detaljerte kjøretøy og soldater (spill/kjoretoy3d.js, brukeren 17. nov: «gjør alt mer detaljert»): hver kjøretøytype har
+    // sin egen modell (ikke tre klosser), kjøretøyene i utsnittet tegnes med den, og soldatfiguren har mer enn kropp og bein.
+    const det = await pg.evaluate(() => { const R = R3, u = R.ut, ut = { typer: {}, tegnet: 0, soldat: 0 }; if (!window.Kjoretoy3d) return { uten: true };
+      for (const t of Object.keys(Kjoretoy.TYPER)) ut.typer[t] = Kjoretoy3d.trekanter(t);
+      const k = Kjoretoy.ny({ navn: 'Vakt', type: 'stridsvogn', antall: 2, x: u.cx + 40, y: u.cy - 300 }); KJORETOY.push(k); kjøretøy3d(); soldater3d(); ut.tegnet = R.kjMesh.stridsvogn ? R.kjMesh.stridsvogn.count : 0; KJORETOY.splice(KJORETOY.indexOf(k), 1); kjøretøy3d();
+      ut.etter = R.kjMesh.stridsvogn.count; ut.soldat = (R.solMesh || []).reduce((a, m) => a + (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3, 0); return ut; });
+    const detok = !det.uten && Object.keys(det.typer).length >= 5 && Object.values(det.typer).every(n => n > 400 && n < 6000) && det.tegnet >= 2 && det.etter === det.tegnet - 2 && det.soldat > 400;
+    if (!detok) { feil++; console.log(JSON.stringify(det)); }
+    console.log(`${detok ? 'ok  ' : 'FEIL'} ${navn} detaljerte kjøretøy og soldater: ${Object.entries(det.typer || {}).map(([t, n]) => t + ' ' + n).join(', ')} trekanter, soldaten ${Math.round(det.soldat || 0)}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

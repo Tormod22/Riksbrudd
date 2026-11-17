@@ -19,6 +19,14 @@
     boks(fast, 0, 0, .8, .27, .45, .06, [.16, .13, .1]); boks(fast, .13, 0, .81, .03, .08, .05, [.6, .55, .4]);                                           // belte og spenne
     boks(bein, 0, 0, -.82, .17, .17, .82, hv); boks(bein, .04, 0, -.86, .27, .18, .12, [.3, .3, .3]);                                                       // bukse og støvel (mørkere)
     boks(arm, 0, 0, -.56, .12, .12, .56, hv); boks(arm, .01, 0, -.66, .1, .1, .1, [.35, .3, .28]);                                                          // erme og hanske
+    // (17. nov: «gjør alt mer detaljert») øyne, bryn, ører og munn, glidelås, brystlommer, skulderklaffer, mansjetter, knelapper og såler
+    const mørk = [.12, .1, .09], dus = [.72, .72, .72];
+    for (const sy of [-1, 1]) { boks(fast, .112, sy * .05, 1.64, .012, .035, .022, [.95, .95, .93]); boks(fast, .118, sy * .05, 1.645, .008, .016, .016, [.15, .2, .25]); boks(fast, .112, sy * .05, 1.672, .014, .05, .012, [.22, .17, .12]);
+      boks(fast, .0, sy * .105, 1.6, .05, .02, .07, [.8, .62, .5]); boks(jakke, .132, sy * .11, 1.18, .012, .13, .12, dus); boks(jakke, .14, sy * .11, 1.28, .012, .14, .025, [.62, .62, .62]);
+      boks(jakke, 0, sy * .19, 1.42, .14, .1, .025, dus); boks(jakke, .1, sy * .07, 1.4, .06, .09, .07, [.9, .9, .9]); }
+    boks(fast, .112, 0, 1.565, .012, .07, .012, [.6, .36, .32]); boks(jakke, .134, 0, .9, .01, .02, .5, [.5, .5, .5]); boks(jakke, -.135, 0, 1.0, .012, .3, .34, [.86, .86, .86]);
+    boks(bein, .09, 0, -.46, .02, .15, .14, dus); boks(bein, .05, 0, -.87, .3, .19, .03, mørk); boks(bein, -.085, 0, -.3, .012, .12, .12, dus);
+    boks(arm, 0, 0, -.57, .13, .13, .04, dus); boks(arm, .065, 0, -.2, .012, .08, .08, [.8, .8, .8]); boks(arm, .05, .03, -.7, .05, .03, .05, [.32, .27, .25]);
     return { jakke: MODELLER.samle(jakke), fast: MODELLER.samle(fast), bein: MODELLER.samle(bein), arm: MODELLER.samle(arm) }; }
   function lag(R) { const G = deler(), mat = new THREE.MeshLambertMaterial({ vertexColors: true }), mk = (g, n) => { const m = new THREE.InstancedMesh(g, mat, n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3); m.frustumCulled = false; m.count = 0; m.userData.kilde = 'folk3d.js'; R.scene.add(m); return m; };
     nett = { jakke: mk(G.jakke, MAKS), fast: mk(G.fast, MAKS), bein: mk(G.bein, MAKS * 2), arm: mk(G.arm, MAKS * 2), scene: R.scene };

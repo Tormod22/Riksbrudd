@@ -971,3 +971,10 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   rekkevidde viser sirkelen også utenom byggingen.
   LeirSpill.prøv() tar ingen koordinater – bruk LeirSpill.trykk(x, y). VAKT «byggevisning i 2D».
   VAKT «interiør i leirens bygg». Bilder: scratchpad inne/leir.js.
+  MER DETALJERT (17. nov, brukeren: «forbedre mer, gjør alt mer detaljert»): spill/kjoretoy3d.js – kolonnenes kjøretøy er egne modeller i
+  ekte mål (lastebil med kalesje på bøyler, speiderbil med veltebøyle og maskingevær, stridsvogn med belter/løpehjul/tårn/kanon,
+  rakettartilleri med rørpakke, radarbil med mast og antenne); kjøretøy3d() i index.html tegner ett instansnett per type (R3.kjMesh er
+  nå et objekt per type), følger bakkens helning, og andre sider får et skjær av sidefargen. soldater3d: figuren har lår/legger, støvler,
+  armer, hender, hjelmkant, sekk, belte og lommer (fortsatt fem nett). narhud.js vmGeo: våpenet i hånda med rundt løp, munningsbrems,
+  sikter, buet magasin, avtrekkerbøyle, kikkert på ringer, pumpe på hagla, hanske med fingre. interior3d.js «maskin»: dreiebenk,
+  søyleboremaskin eller kompressor (m.f velger). VAKT i sjekk.js: «detaljerte kjøretøy og soldater» (hver type 400–6000 trekanter).
