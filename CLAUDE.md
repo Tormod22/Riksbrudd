@@ -1074,3 +1074,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   IKKE GJORT, BRUKEREN HAR BEDT OM (17. nov): pen og praktisk bygging i bratt terreng; alle steder med kaier i kartet (lest som «plasser»,
   ikke «klasser»); trær på samme sted i 2D og 3D; lage troppene selv av folk og kjøretøy; folk i kontrollrommet som ser gjennom
   kameraene (bevegelsesvarsling, dyr/vær/folk, historikk over hvor tropper har vært, gå inn i kameraet i 3D); mindre hakk.
+  BYGG I SKRÅNING (17. nov, brukeren: «en lur måte å få det til å ikke være helt upraktisk og stygt å bygge hvor det er litt bratt»):
+  Leir.BRATT = 8 m (før 3; store bygg 35 % av diagonalen) og Leir.grunn(b, høyde) = { topp, bunn, forskjell } under byggets hjørner og
+  midte. leir-visning.js: grunn3d(b, u, R) (LeirSpill.grunn3d) – bygget står på toppen (før: midtens høyde, så oversiden ble gravd ned),
+  og grunnmur() legger en steinmur med sokkelkant under hele fotavtrykket ned til bunnen − 0,6 m når forskjellen er over 0,35 m
+  (userData.grunnmur, samme id som bygget). interior3d.js bruker samme topp for gulvet. VAKT «bygg i skråning». IKKE GJORT: ekstra
+  pris/tid for grunnmuren, trapp ned fra høye dører utenom den interiøret alt har, og planering av bakken rundt.

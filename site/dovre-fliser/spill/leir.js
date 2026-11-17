@@ -99,7 +99,10 @@
   const linjeGjennom = (a, b, P) => iMangekant(P, a[0], a[1]) || iMangekant(P, b[0], b[1]) || P.some((c, i) => krysser(a, b, c, P[(i + 1) % P.length]));
   // Kan bygget stå her? v = { klasse(x, y) (3 = vann, 255 = utenfor kartet), iHus(x, y) -> true } (fra kartet). unntatt: id som flyttes.
   // Skissene i planen holder plassen (unntatt skissen som bygges eller flyttes, planUnntatt). Høyden i kartet gir bratt-sjekken.
-  const BRATT = 3;
+  // (17. nov, brukeren: «det må ikke være helt upraktisk og stygt å bygge hvor det er litt bratt») Bygg i skråning står på en
+  // GRUNNMUR: bygget legges i høyde med det høyeste punktet under seg, og muren fyller ned til bakken. Derfor tåler byggingen nå
+  // 8 m høydeforskjell (før 3 m). grunn(b, høyde) gir topp, bunn og forskjell for et bygg.
+  const BRATT = 8;
   function kanBygge(L, b, v = {}, unntatt = null, o = {}) {
     const B = BYGG[b.type]; if (!B) return 'Ukjent bygg.';
     if (B.linje) { if (!b.punkter || b.punkter.length < 2) return 'Gjerdet trenger minst to punkter.'; const l = lengde(b.punkter, b.lukket); if (l < 2) return 'Gjerdet er for kort.'; if (l > 3000) return 'Gjerdet er for langt (høyst 3 km om gangen).'; }
@@ -115,7 +118,7 @@
     if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje && v.høyde) { const h = P.map(([x, y]) => v.høyde(x, y)).filter(z => z !== null && z !== undefined && z === z);
       // store bygg tåler litt mer høydeforskjell (planering): 3 m, eller 18 % av diagonalen
-      const diag = Math.hypot(P[2][0] - P[0][0], P[2][1] - P[0][1]), grense = Math.max(BRATT, .18 * diag), d = h.length > 1 ? Math.max(...h) - Math.min(...h) : 0;
+      const diag = Math.hypot(P[2][0] - P[0][0], P[2][1] - P[0][1]), grense = Math.max(BRATT, .35 * diag), d = h.length > 1 ? Math.max(...h) - Math.min(...h) : 0;
       if (d > grense) return `For bratt her (${Math.round(d)} m høydeforskjell under bygget).`; }
     return null;
   }
@@ -428,7 +431,8 @@
     if (!MATERIALER[type] || !(mengde > 0)) return 0;
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
-  const api = { bryter, dieselTimer, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  function grunn(b, høyde) { const z = [...hjørner(b), [b.x, b.y]].map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); if (!z.length) return { topp: 0, bunn: 0, forskjell: 0 }; const topp = Math.max(...z), bunn = Math.min(...z); return { topp, bunn, forskjell: topp - bunn }; }
+  const api = { grunn, hjørner, bryter, dieselTimer, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -495,7 +495,7 @@
     for (const e of egne) { fjern(R, e.P); if (egneHindre) for (const k of e.nøkler) { const A = egneHindre.get(k), i = A ? A.indexOf(e.o) : -1; if (i >= 0) A.splice(i, 1); } }
     egne = []; egneNøkkel = nøkkel; egneHindre = R.hindre;
     for (const b of liste) { const T = LEIRBYGG[b.type], k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), X = b.x - u.cx, Y = b.y - u.cy; if (Math.abs(X) > u.S - 20 || Math.abs(Y) > u.S - 20) continue;
-      const pk = (lx, ly) => [X + (lx * c - ly * s) * k, Y + (lx * s + ly * c) * k], [x0, x1, y0, y1] = T.r, P = [pk(x0, y0), pk(x1, y0), pk(x1, y1), pk(x0, y1)], z = (hoyde3d(b.x, b.y, u) - u.h0) * R.EX - .05, d = pk(T.dør[0], T.dør[1]);
+      const pk = (lx, ly) => [X + (lx * c - ly * s) * k, Y + (lx * s + ly * c) * k], [x0, x1, y0, y1] = T.r, P = [pk(x0, y0), pk(x1, y0), pk(x1, y1), pk(x0, y1)], z = (window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b, u, R).topp : (hoyde3d(b.x, b.y, u) - u.h0) * R.EX) - .05, d = pk(T.dør[0], T.dør[1]);
       P.gulvFast = z + T.s * k + .03; P.veggTopp = P.topp = z + (T.s + T.H) * k; P.leir = b.type; P.bygg = { i: 9000000 + b.id, t: -1, h: T.H, kl: T.kl, senger: b.type === 'brakke' && window.Leir && Leir.BYGG.brakke.nivå ? Leir.BYGG.brakke.nivå.plasser[(b.nivå || 1) - 1] : 0 };
       P.dør = T.side === 'y+' ? { x: d[0], y: d[1], ux: -c, uy: -s, w: T.w, hh: 2.05, z0: P.gulvFast } : { x: d[0], y: d[1], ux: -s, uy: c, w: T.w, hh: 2.05, z0: P.gulvFast };
       const o = { P }, nøkler = []; let ax = Infinity, ay = Infinity, bx = -Infinity, by = -Infinity; for (const p of P) { ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]); ay = Math.min(ay, p[1]); by = Math.max(by, p[1]); }

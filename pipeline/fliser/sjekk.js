@@ -1197,6 +1197,19 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const fsvok = !fsv.uten && fsv.punkter === 6 && fsv.sum >= 0 && fsv.alarm && fsv.knapp && fsv.lag >= 1 && fsv.vakt === 4 && fsv.satt && fsv.regel && fsv.motØst && fsv.vaktLag && fsv.opphevKnapp && fsv.meny === 6 && fsv.etter && fsv.rapport && fsv.ryddet;
     if (!fsvok) { feil++; console.log(JSON.stringify(fsv)); }
     console.log(`${fsvok ? 'ok  ' : 'FEIL'} ${navn} forsvar av leiren: beredskap ${fsv.sum} av 100, alarm ${fsv.alarm}, ${fsv.lag} lag i stilling mot fienden, Leirvakta ${fsv.vakt} mann, alt tilbake etterpå: ${fsv.etter}`);
+    // VAKT bygg i skråning (brukeren 17. nov: «ikke upraktisk og stygt å bygge hvor det er litt bratt»): et bygg på en skråning med flere
+    // meters høydeforskjell godkjennes, står i høyde med det høyeste punktet under seg, og får grunnmur ned til bakken.
+    const grm = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !LeirSpill.grunn3d || !Leir.grunn) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const R = R3, u = R.ut, ut = {};
+      let best = null; for (let dx = -400; dx <= 400; dx += 20) for (let dy = -400; dy <= 400; dy += 20) { const b = { type: 'brakke', x: u.cx + dx, y: u.cy + dy, ret: 0 }, G = Leir.grunn(b, (x, y) => hoyde3d(x, y, u)); if (G.forskjell > 2 && G.forskjell < 7.5 && (!best || G.forskjell > best.G.forskjell)) best = { b, G }; }
+      if (!best) return { flatt: true }; ut.forskjell = best.G.forskjell; ut.lov = Leir.kanBygge(L, best.b, { høyde: (x, y) => hoyde3d(x, y, u) }) === null || !/bratt/.test(Leir.kanBygge(L, best.b, { høyde: (x, y) => hoyde3d(x, y, u) }) || '');
+      const b = { id: L.neste++, ...best.b, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 1, hp: 1 }; L.bygg.push(b);
+      try { LeirSpill.oppdater3d(); const M = R.scene.children.filter(m => m.userData && m.userData.id === b.id), gm = M.find(m => m.userData.grunnmur), hus = M.find(m => !m.userData.grunnmur); ut.mur = !!gm; ut.hus = !!hus;
+        const G3 = LeirSpill.grunn3d(b, u, R); ut.påTopp = hus ? Math.abs(hus.position.z - (G3.topp - .05)) < .01 : false; if (gm) { gm.geometry.computeBoundingBox(); ut.ned = gm.position.z + gm.geometry.boundingBox.min.z <= G3.bunn; } }
+      finally { L.bygg.splice(L.bygg.indexOf(b), 1); LeirSpill.oppdater3d(); }
+      ut.ryddet = !R.scene.children.some(m => m.userData && m.userData.id === b.id); return ut; });
+    const grmok = !grm.uten && (grm.flatt || (grm.lov && grm.mur && grm.hus && grm.påTopp && grm.ned && grm.ryddet));
+    if (!grmok) { feil++; console.log(JSON.stringify(grm)); }
+    console.log(`${grmok ? 'ok  ' : 'FEIL'} ${navn} bygg i skråning: ${grm.flatt ? 'ingen skråning i utsnittet' : `${(grm.forskjell || 0).toFixed(1)} m høydeforskjell godkjent, grunnmur ${grm.mur}, bygget på toppen ${grm.påTopp}, muren når ned ${grm.ned}`}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

@@ -549,6 +549,14 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return ut;
   }
   let mesh = [], skisse = [];
+  // Grunnen under et bygg i 3D-utsnittets egne mål: topp = høyeste punkt under bygget, bunn = laveste.
+  function grunn3d(b, u, R) { const G = LB.grunn(b, (x, y) => (Math.abs(x - u.cx) > u.S || Math.abs(y - u.cy) > u.S ? null : (hoyde3d(x, y, u) - u.h0) * R.EX)); return G; }
+  // Grunnmuren: en mur i gråstein under hele bygget, fra byggets fot ned i bakken på den lave siden, med en lysere sokkelkant øverst
+  function grunnmur(b, G, mat, u) { const B = LB.BYGG[b.type]; if (!B.fot) return null; const k = 1 + ((b.nivå || 1) - 1) * .08, [x0, x1, y0, y1] = B.fot.map(v => v * k), w = x1 - x0 + .3, d = y1 - y0 + .3, h = G.forskjell + .6, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const farg = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) { const z = g.attributes.position.getZ(q), t = .82 + .18 * ((q * 7) % 5) / 5; f.set([c[0] * t * (z > 0 ? 1 : .8), c[1] * t * (z > 0 ? 1 : .8), c[2] * t * (z > 0 ? 1 : .8)], q * 3); } g.setAttribute('color', new THREE.BufferAttribute(f, 3)); return g; };
+    const mur = new THREE.BoxGeometry(w, d, h, Math.max(1, Math.round(w / 1.2)), Math.max(1, Math.round(d / 1.2)), Math.max(1, Math.round(h / .5))).toNonIndexed(); mur.translate(cx, cy, -h / 2 + .02); farg(mur, [.47, .46, .43]);
+    const kant = new THREE.BoxGeometry(w + .16, d + .16, .14).toNonIndexed(); kant.translate(cx, cy, -.05); farg(kant, [.62, .61, .58]);
+    const m = new THREE.Mesh(MODELLER.samle([mur, kant]), mat); m.position.set(b.x - u.cx, b.y - u.cy, G.topp - .05); m.rotation.z = b.ret || 0; return m; }
   function lagLeir3d(u, R) {
     for (const m of mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.userData.plan) m.material.dispose(); } mesh = [];
     if (!L || !window.MODELLER) return; const mat = MODELLER.materiale();
@@ -556,8 +564,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       if (LB.BYGG[b.type].linje) { for (const m of gjerde3d(b, u, R, mat)) { R.scene.add(m); mesh.push(m); } continue; }
       const x = b.x - u.cx, y = b.y - u.cy; if (Math.abs(x) > u.S - 5 || Math.abs(y) > u.S - 5) continue;
       let g; try { g = modell(b); } catch (e) { console.error(e); continue; } if (!g) continue;
-      const m = new THREE.Mesh(g, mat), z = (hoyde3d(b.x, b.y, u) - u.h0) * R.EX;
+      // bygget står i høyde med det høyeste punktet under seg (ingenting graves ned i bakken); i skråning fyller en grunnmur ned
+      const G = grunn3d(b, u, R), m = new THREE.Mesh(g, mat), z = G.topp;
       m.position.set(x, y, z - .05); m.rotation.z = b.ret || 0;
+      if (G.forskjell > .35 && !LB.BYGG[b.type].del) { const gm = grunnmur(b, G, mat, u); if (gm) { gm.userData.id = b.id; gm.userData.grunnmur = true; R.scene.add(gm); mesh.push(gm); } }
       // under bygging: reiser seg etter framdriften (minst en grunnmur); oppgradert: litt større
       m.scale.z = LB.ferdig(b) ? 1 : Math.max(.08, LB.framdrift(b)); const k = 1 + ((b.nivå || 1) - 1) * .08; m.scale.x = m.scale.y = k; m.scale.z *= k;
       m.userData.id = b.id; R.scene.add(m); mesh.push(m);
@@ -625,6 +635,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   }
   window.LeirSpill = { påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },
+    grunn3d,
     angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };
   // K1 sier fra når spillet er klart (lagret spill lest inn, eller ny leir satt opp)
   window.addEventListener('riksbrudd-spill', start);

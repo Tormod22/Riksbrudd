@@ -69,7 +69,9 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   const s5 = L0.snapp(Q, { type: 'brakke', x: 100 + 9 * Math.cos(.5), y: 100 + 9 * Math.sin(.5), ret: .5 });
   ok(Math.abs(Math.hypot(s5.x - 100, s5.y - 100) - 9.6) < 1e-6, 'snapp: dreid nabo gir 9,6 m mellom midtpunktene');
   // bratt grunn
-  const h = { høyde: (x, y) => x * .5 }; ok(/bratt/.test(L0.kanBygge(P, { type: 'kontrollrom', x: 50, y: 0, ret: 0 }, h)), 'for bratt: 5,5 m høydeforskjell avvises');
+  const h = { høyde: (x, y) => x * 1.2 }; ok(/bratt/.test(L0.kanBygge(P, { type: 'kontrollrom', x: 50, y: 0, ret: 0 }, h)), 'for bratt: over 8 m høydeforskjell avvises');
+  ok(L0.kanBygge(P, { type: 'kontrollrom', x: 50, y: 400, ret: 0 }, { høyde: (x, y) => x * .5 }) === null, 'skråning med 5,5 m forskjell går nå: bygget får grunnmur');
+  { const g = L0.grunn({ type: 'brakke', x: 0, y: 0, ret: 0 }, (x, y) => 100 + x * .5); ok(g.topp > g.bunn && Math.abs(g.forskjell - (g.topp - g.bunn)) < 1e-9 && g.topp >= 100, 'grunn(): toppen er det høyeste punktet under bygget'); }
   ok(L0.kanBygge(P, { type: 'kameramast', x: 50, y: 0, ret: 0 }, h) === null, 'liten mast i samme skråning er ok (0,5 m)');
   // planen: gratis, holder plassen, flyttes, fjernes, bygges
   const k0 = kr, p1 = L0.planLegg(P, { type: 'lagertelt', x: 40, y: 0, ret: 0 }).plan, p2 = L0.planLegg(P, { type: 'container', x: 60, y: 0, ret: 0 }).plan;
