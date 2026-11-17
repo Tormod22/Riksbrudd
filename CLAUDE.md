@@ -1096,3 +1096,16 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   lagpanelet. lagring.js lagrer m.person, fraFolk og ombord (kjøretøyets navn -> s.ombordNavn). STARTLAGENE FINNES FORTSATT – brukeren
   ba om å «måtte» lage troppene selv; å starte uten ferdige lag krever at mat/senger tunes (ikke gjort, sagt til brukeren).
   VAKT «egne tropper».
+  SPILLSKJERMEN (17. nov, brukeren med fire PC-bilder: «få til en bedre UI, dette ser ikke ut som et spill – se på nettet hvordan krigs-,
+  strategi-, city builder- og survival-spill med god UI gjør ting, legg planer og utfør»): spill/spillhud.js (lastes etter knapper.js).
+  body.spill = vindu minst 900 px bredt som ikke er «kort» (telefonen er uendret). (1) RESSURSLINJA: hver ting i .stats er en flis med
+  ikon og tall (ordene skjult, står i verktøytipset; data-s = id-en, rekkefølgen i REKKE: klokke, vær, kassa – størst –, diesel, tre,
+  betong, stål, strøm, olje, folk, mål, kontroll), fliser med bare «–» skjules (data-tom), og moh./MB lastet/FPS (data-teknisk) vises
+  bare med «Tekniske tall» i ☰ (body.teknisk, «riksbrudd-teknisk»). (2) KOMMANDOLINJA #kommando nederst i midten: Leir (L), Folk,
+  Tropper, Krig (T), Deg (O) – trykker på de vanlige knappene / FolkSpill.åpne / TropperSpill.åpne; #leirknapp, #krigknapp og
+  #karakterknapp er skjult oppe (taster.js regner dem som synlige i spillskjermen). Linja skjules mens du bygger (#byggvalg,
+  #byggesett), går (body.gaar – da står Deg oppe igjen med Sekk/Utenfra), på startskjermen og i fotomodus. (3) Farten som én gruppe,
+  like rammer på panelene, kildene som lappen «Kilder» (pek for hele teksten). FELLE: en knapp lagt rett i #lagmeny etter at meny.js
+  er lastet, får meny.js til å ordne seg i ring (siden henger) – legg den inn i en gruppe ved siden av en knapp som står der.
+  VAKT «spillskjermen». Bilder: scratchpad sp/hud.js. IKKE GJORT: byggemenyen som ikonrutenett nederst, verktøytips med forklaring
+  på flisene, minikart i 2D, og telefonen har ikke fått kommandolinja.

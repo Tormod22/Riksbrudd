@@ -6,7 +6,8 @@
   // tast -> [knappens id, hva den gjør, virker også mens du går]
   const TASTER = { '3': ['v3d', '3D av og på', true], g: ['gaaknapp', 'Gå selv', true], l: ['leirknapp', 'Leiren', true], m: ['meny', 'Innstillinger', true], h: ['hjelpknapp', 'Slik spiller du', true],
     k: ['kontrollknapp', 'Kontrollrommet', false], p: ['sp0', 'Pause', false], ',': ['sp1', 'Vanlig fart (1×)', false], '.': ['sp2', 'Raskere (10×)', false] };
-  const el = id => document.getElementById(id), synlig = b => !!b && !b.hidden && !b.disabled && b.offsetParent !== null;
+  // (i spillskjermen på PC – spill/spillhud.js – er Leir, Krig og Deg skjult oppe og står i kommandolinja nederst: de teller som synlige)
+  const el = id => document.getElementById(id), synlig = b => !!b && !b.hidden && !b.disabled && (b.offsetParent !== null || (document.body.classList.contains('spill') && /^(leirknapp|krigknapp|karakterknapp)$/.test(b.id)));
   const går = () => typeof R3 !== 'undefined' && R3 && R3.fot;
   window.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;

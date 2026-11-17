@@ -12,7 +12,7 @@
     ['Oversikt', 'Hjelp til å lese situasjonen', ['Siktfelt', 'Tåke', 'Motstandere', 'Kompass', 'Minikart']],
     ['Vær og årstid', 'Automatisk, eller lås et vær', ['Årstid', 'Vær']],
     ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
-    ['Måling', 'Tall du kan sende hvis noe går tregt', ['FPS-teller', 'Mål ytelse', 'Mål hakk']],
+    ['Måling', 'Tall du kan sende hvis noe går tregt', ['FPS-teller', 'Tekniske tall', 'Mål ytelse', 'Mål hakk']],
   ];
   const HANDLING = ['Mål ytelse', 'Mål hakk', 'Måler', 'Fotomodus'], FARE = ['Nytt spill'];
   const css = document.createElement('style');

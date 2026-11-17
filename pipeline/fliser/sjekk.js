@@ -1182,6 +1182,17 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const knpok = !knp.uten && knp.ikon && knp.skjult && knp.meny && knp.rader === 3 && !knp.ark0 && knp.sekk && knp.lukket && knp.enRad;
     if (!knpok) { feil++; console.log(JSON.stringify(knp)); }
     console.log(`${knpok ? 'ok  ' : 'FEIL'} ${navn} knapperaden: ikoner ${knp.ikon}, Sekk og Utenfra samlet under Deg (${knp.rader} valg), ${knp.antall} knapper på én rad: ${knp.enRad}`);
+    // VAKT spillskjermen (spill/spillhud.js, brukeren 17. nov: «få til en bedre UI, dette ser ikke ut som et spill»): på PC står
+    // ressursene som fliser uten ord og de tekniske tallene er skjult, kommandolinja nederst åpner Leir-menyen, og telefonen er som før.
+    const shd = await pg.evaluate(async () => { if (!window.SpillHud) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id); if (R3.fot) Gange.stopp(); slå3d(false); await vent(600); SpillHud.oppdater();
+      ut.aktiv = SpillHud.aktiv(); ut.bred = innerWidth >= 900 && !document.body.classList.contains('kort'); if (!ut.aktiv) { ut.bar = getComputedStyle($('kommando')).display; return ut; }
+      ut.kn = SpillHud.knapper(); ut.bar = getComputedStyle($('kommando')).display; ut.ord = [...document.querySelectorAll('.stats > div > span:not([id])')].filter(q => q.offsetParent).length;
+      ut.teknisk = ['sH', 'sKB'].filter(id => $(id) && $(id).offsetParent).length; ut.kassa = !!($('sPenger') && $('sPenger').offsetParent);
+      const før = $('leirmeny').classList.contains('på'); document.querySelector('#kommando [data-k=leir]').click(); await vent(300); ut.leir = $('leirmeny').classList.contains('på') !== før; ut.merket = document.querySelector('#kommando [data-k=leir]').classList.contains('på') === !før;
+      document.querySelector('#kommando [data-k=leir]').click(); await vent(200); ut.igjen = $('leirmeny').classList.contains('på') === før; return ut; });
+    const shdok = !shd.uten && shd.aktiv === shd.bred && (shd.aktiv ? shd.bar === 'flex' && shd.kn.includes('leir') && shd.ord === 0 && shd.teknisk === 0 && shd.kassa && shd.leir && shd.merket && shd.igjen : shd.bar === 'none');
+    if (!shdok) { feil++; console.log(JSON.stringify(shd)); }
+    console.log(`${shdok ? 'ok  ' : 'FEIL'} ${navn} spillskjermen: ${shd.aktiv ? `fliser uten ord, tekniske tall skjult, kommandolinja (${(shd.kn || []).join(', ')}) åpner Leir-menyen` : 'ikke i bruk på liten skjerm'}`);
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.
