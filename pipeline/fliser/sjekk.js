@@ -1223,6 +1223,21 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const tre2ok = !tre2.uten && (tre2.utenTrær || (tre2.antall > 20 && tre2.feil <= tre2.antall * .12 && tre2.ikkeEkte === 0));
     if (!tre2ok) { feil++; console.log(JSON.stringify(tre2)); }
     console.log(`${tre2ok ? 'ok  ' : 'FEIL'} ${navn} trærne står likt i 2D og 3D: ${tre2.antall || 0} trær prøvd, ${tre2.feil || 0} utenfor kartets treplasser (einer, vier og gatetrær), ${tre2.ikkeEkte || 0} som kartet ikke tegner som tre`);
+    // VAKT egne tropper (spill/tropper.js, brukeren 17. nov: «selv måtte lage troppene med å velge folk og evt. kjøretøy»): tre fra leiren
+    // blir en tropp med lagfører, de er ute av Folk, troppen går om bord i speiderbilen og følger den, og oppløst ved leiren kommer de hjem.
+    const trp = await pg.evaluate(async () => { if (!window.TropperSpill || !window.FolkSpill || !FolkSpill.tilstand()) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), F = FolkSpill.tilstand(), S = OppstartSpill.tilstand().leir, n0 = F.personer.length, lag0 = ENHETER.length;
+      F.personer.forEach(p => { p.helse = 1; }); const ider = F.personer.slice(0, 3).map(p => p.id), navn = F.personer.slice(0, 3).map(p => p.navn), bil = KJORETOY.find(k => k.side === 'blå' && k.type === 'speiderbil'), før = bil && { x: bil.x, y: bil.y, sti: bil.sti };
+      if (bil) { bil.x = S.x + 20; bil.y = S.y + 20; bil.sti = null; }
+      const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (!m.classList.contains('på')) lk.click(); LeirSpill.fane('bygg'); await vent(200); ut.knapp = !!document.getElementById('nytropp'); document.getElementById('nytropp').click(); await vent(100); ut.panel = document.getElementById('tropppanel').classList.contains('på') && document.querySelectorAll('#tropppanel .p').length >= 3; TropperSpill.lukk(); lk.click();
+      const r = TropperSpill.opprett(ider, 'Vakttropp', 'standard', bil || null); ut.feil = r.feil || null; const s = r.lag;
+      try { ut.menn = s ? s.menn.length : 0; ut.leder = s && s.menn[0].rolle === 'lagfører' && navn.includes(s.menn[0].navn); ut.uteAvFolk = F.personer.length === n0 - 3 && !F.personer.some(p => navn.includes(p.navn)); ut.iKartet = ENHETER.includes(s) && s.fraFolk === true;
+        if (bil) { ut.ombord = s.ombord === bil; bil.x += 400; bil.y += 100; sim(.05); ut.følger = Math.hypot(s.x - bil.x, s.y - bil.y) < 3; ut.ingenOrdre = KROKER.kanOrdre.every(f => f(s)) === false; bil.x = S.x + 20; bil.y = S.y + 20; sim(.05); TropperSpill.gåAv(s); ut.av = !s.ombord; }
+        s.menn[2].hp = 0; const o = TropperSpill.oppløs(s); ut.hjem = o.hjem; ut.tilbake = F.personer.length === n0 - 1 && !ENHETER.includes(s); }
+      finally { if (s && ENHETER.includes(s)) ENHETER.splice(ENHETER.indexOf(s), 1); if (bil && før) { bil.x = før.x; bil.y = før.y; bil.sti = før.sti; } }
+      ut.lag = ENHETER.length === lag0; return ut; });
+    const trpok = !trp.uten && trp.knapp && trp.panel && !trp.feil && trp.menn === 3 && trp.leder && trp.uteAvFolk && trp.iKartet && (trp.ombord === undefined || (trp.ombord && trp.følger && trp.ingenOrdre && trp.av)) && trp.hjem === 2 && trp.tilbake && trp.lag;
+    if (!trpok) { feil++; console.log(JSON.stringify(trp)); }
+    console.log(`${trpok ? 'ok  ' : 'FEIL'} ${navn} egne tropper: ${trp.menn} fra leiren ble en tropp, om bord i speiderbilen ${trp.ombord} og følger den ${trp.følger}, oppløst: ${trp.hjem} kom hjem (én falt)`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

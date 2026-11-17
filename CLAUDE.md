@@ -1086,3 +1086,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kratt (langt ute som før: jevn skogtekstur). trær3d() i index.html går over samme gitter (hash/vri/treVed er globale fra kartflis.js)
   med klassene fra lagVindu(z9), og tynner bare trær lenger enn 600 m fra midten når taket (40 000 PC / 18 000 mobil) er nådd
   (u.treTall). Einer/vier (vegetasjon3d) og gatetrær (byhus) står fortsatt bare i 3D. VAKT «trærne står likt i 2D og 3D».
+  EGNE TROPPER (17. nov, brukeren: «jeg skal selv måtte lage troppene med å velge folk og evt. kjøretøy»): spill/tropper.js (regler uten
+  DOM, test_tropper.js) + tropper-visning.js (window.TropperSpill). «Tropper» i Leir-menyen (fanen Bygg): «Lag ny tropp» (#nytropp) ->
+  #tropppanel: 2–12 arbeidsføre fra FolkSpill.tilstand().personer, navn, bevæpning (Strid.VALGBARE) og et ledig kjøretøy innen 300 m.
+  Tropper.opprett: best på vakt = lagfører, best på stell = sanitet (fra fire), mennene bærer persondataene (m.person); personene tas ut
+  av F.personer, laget får s.fraFolk. «Oppløs» innen 300 m fra leiren: Tropper.oppløs gir de levende tilbake som «fri» (sårede helse
+  0,35; soldater uten persondata – startlagene – får en enkel personpost). OM BORD: s.ombord = kjøretøyet (speiderbil 4, lastebil 12 per
+  bil; innen 60 m; ett lag per kjøretøy); KROKER.sim flytter laget med kjøretøyet, KROKER.kanOrdre nekter ordre til laget, «Gå av» i
+  lagpanelet. lagring.js lagrer m.person, fraFolk og ombord (kjøretøyets navn -> s.ombordNavn). STARTLAGENE FINNES FORTSATT – brukeren
+  ba om å «måtte» lage troppene selv; å starte uten ferdige lag krever at mat/senger tunes (ikke gjort, sagt til brukeren).
+  VAKT «egne tropper».
