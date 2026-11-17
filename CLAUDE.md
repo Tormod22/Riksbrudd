@@ -946,6 +946,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   det); (4) strømflisa sa «5 av 0 kW» – nå «bruker 0 av 5 kW», og statuslinja viser forbruk/kapasitet; (5) lange loggmeldinger på
   telefon kuttes til tre linjer. IKKE RETTET: knappene øverst er fortsatt tekst (3D, Gå, Leir, Sekk), Folk-panelet er tett, og
   loggen dekker fortsatt litt av kartet på telefon. VAKT «ikoner».
+  INTERIØR, RUNDE 3 (17. nov, brukeren: «forbedre innsiden av bygg enda mer»; bildene viste rene, men tomme rom): interior3d.js –
+  SMÅTING på møblene (sist i deler(m), fast per møbel via m.f: tallerkener og kopper på spisebord, bøker/kopp på salongbord, ark, bøker
+  og lampe på pulter, kjeler/krukker/skjærefjøl på kjøkkenbenken, lampe på nattbord, verktøy på arbeidsbenk, kasseapparat på skranken,
+  speil over vasken, sko i skohylla), FORLATT (i bygg(), ikke i leiren: ark og esker på gulvet og mørke flekker, fast per bygg og rom
+  via hash(pl.i, 700 + …), plassert med Interior.blokkert så de ikke står i møbler), sko og veske innenfor døra i boliger, radiator
+  under vinduene, taklist langs ytterveggene, takbjelker i hytter/låver/uthus, og FORSYNINGSKASSA: et eget lite nett (o.funn) innenfor
+  døra i hus som kan gjennomsøkes – skjules i oppdater() når LeteSpill.lett() har huset (Interior3d.funn(P)). Ingenting av dette
+  sperrer deg. Vakten tåler nå 9000 trekanter per hus (prøvehuset 6264). IKKE GJORT: bilder på ytterveggene, veltede møbler,
+  andre etasje. Bildeskriptet inne/inne.js kommer ikke inn i bygg som ligger i kanten av utsnittet (hytta 790 m unna ga utebilder).
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert

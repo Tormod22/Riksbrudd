@@ -195,6 +195,33 @@
         for (const x of [-b * .5, 0, b * .5]) k(x - .1, x + .1, -.1, .1, h, h + .015, HVIT, 'glatt', true); break;
       default: k(-b, b, -d, d, 0, h, GRÅ);
     }
+    // SMÅTING (17. nov, brukeren: «forbedre innsiden av bygg enda mer»): ting som står på bord og benker – tallerkener, kopper, bøker,
+    // ark, kjeler, lamper. Fast per møbel (m.f), så samme hus ser likt ut hver gang. De sperrer ikke og er bare klosser i samme nett.
+    { const r = n => { const v = Math.sin((m.f + 1.3) * (n + 1) * 91.7) * 43758.5; return v - Math.floor(v); }, hv = [.95, .95, .93];
+      const tallerken = (x, y) => k(x - .11, x + .11, y - .11, y + .11, h, h + .015, hv, 'glatt', true), kopp = (x, y, c = [.82, .3, .25]) => k(x - .04, x + .04, y - .04, y + .04, h, h + .09, c, 'glatt', true);
+      const bok = (x, y, n = 1) => { for (let q = 0; q < n; q++) k(x - .1 + q * .01, x + .1 + q * .01, y - .07, y + .07, h + q * .03, h + q * .03 + .028, TØY[Math.floor(r(20 + q) * TØY.length)]); }, ark = (x, y) => k(x - .105, x + .105, y - .15, y + .15, h, h + .004, hv);
+      const lampe = (x, y, c = [.95, .86, .55]) => { k(x - .05, x + .05, y - .05, y + .05, h, h + .03, MØRK, 'glatt', true); k(x - .012, x + .012, y - .012, y + .012, h + .03, h + .26, MØRK); k(x - .1, x + .1, y - .1, y + .1, h + .24, h + .4, c, 'tøy', true); };
+      switch (m.type) {
+        case 'spisebord': case 'langbord': { const n = Math.max(2, Math.min(8, Math.round(m.b / .7))); for (let q = 0; q < n; q++) { const x = -b + (q + .5) * m.b / n; for (const sy of [-1, 1]) if (r(q * 2 + sy + 9) < .6) { tallerken(x, sy * (d - .2)); if (r(q + sy + 30) < .5) kopp(x + .16, sy * (d - .22)); } }
+          if (r(50) < .6) { k(-.08, .08, -.08, .08, h, h + .13, [.3, .5, .62], 'glatt', true); k(-.02, .02, -.02, .02, h + .13, h + .3, [.3, .55, .25]); } break; }
+        case 'salongbord': if (r(1) < .8) bok(-b * .4, 0, 1 + Math.floor(r(2) * 3)); if (r(3) < .6) kopp(b * .4, d * .3); if (r(4) < .5) k(b * .1, b * .1 + .15, -d * .5, -d * .5 + .045, h, h + .02, MØRK); break;
+        case 'pult': case 'kateter': ark(-b * .3, 0); if (r(1) < .7) ark(-b * .3 + .2, .05); if (r(2) < .7) kopp(b * .5, -d * .45, [.2, .35, .6]); if (r(3) < .6) bok(b * .15, d * .35, 2); if (r(4) < .55) lampe(-b * .75, -d * .5); break;
+        case 'skolepult': if (r(1) < .6) ark(0, d * .3); if (r(2) < .4) bok(b * .4, d * .4, 1); break;
+        case 'kjøkkenbenk': { let x = -b + .2; for (let q = 0; q < 6 && x < b - .15; q++) { const v = r(q + 3);
+            if (v < .25) { k(x - .09, x + .09, -d + .12, -d + .3, h, h + .16, [.75, .76, .78], 'glatt', true); k(x - .11, x + .11, -d + .19, -d + .23, h + .1, h + .13, MØRK); }          // kjele
+            else if (v < .45) k(x - .16, x + .16, -d + .1, -d + .34, h, h + .02, [.7, .52, .32], 'tre');                                                                  // skjærefjøl
+            else if (v < .65) for (let j = 0; j < 3; j++) k(x - .12 + j * .09, x - .05 + j * .09, -d + .08, -d + .15, h, h + .11 + j * .03, [.8, .7 - j * .15, .3 + j * .1], 'glatt', true);   // krukker
+            else if (v < .78) { k(x - .1, x + .1, -d + .08, -d + .26, h, h + .2, hv); k(x - .07, x + .07, -d + .26, -d + .27, h + .04, h + .16, MØRK); }                   // brødrister/mikro
+            x += .35 + r(q + 12) * .5; } break; }
+        case 'komfyr': if (r(1) < .6) { k(-b * .4 - .1, -b * .4 + .1, -.02, .18, h, h + .12, [.2, .2, .22], 'glatt', true); k(-b * .4 + .1, -b * .4 + .26, .06, .1, h + .08, h + .1, MØRK); } break;
+        case 'nattbord': if (r(1) < .75) lampe(0, -d * .2, [.9, .8, .6]); if (r(2) < .5) bok(b * .3, d * .4, 1); break;
+        case 'tvbenk': if (r(1) < .7) k(b * .5, b * .5 + .22, -.12, .1, h, h + .06, MØRK); if (r(2) < .5) bok(-b * .75, 0, 2); break;
+        case 'arbeidsbenk': k(-b * .7, -b * .7 + .34, -d * .3, -d * .3 + .18, h, h + .16, [.72, .14, .12]); for (let q = 0; q < 4; q++) if (r(q + 5) < .7) k(-b * .2 + q * .28, -b * .2 + q * .28 + .22, d * .2 - q * .05, d * .2 - q * .05 + .035, h, h + .025, q % 2 ? STÅL : MØRK); if (r(11) < .6) kopp(b * .8, -d * .4, [.9, .8, .2]); break;
+        case 'skranke': k(-b * .3, -b * .3 + .32, -d * .3, d * .2, h, h + .2, MØRK); k(-b * .3 + .04, -b * .3 + .28, d * .2, d * .2 + .02, h + .2, h + .42, [.15, .2, .25]); if (r(1) < .7) ark(b * .4, 0); break;
+        case 'vask': k(-b * .8, b * .8, -d - .005, -d + .015, 1.25, 1.85, [.72, .84, .9]); k(-b * .85, b * .85, -d - .006, -d + .01, 1.22, 1.88, hv); k(b * .5, b * .5 + .06, -d * .5, -d * .5 + .06, h, h + .12, [.3, .6, .5], 'glatt', true); break;
+        case 'toalett': k(-b - .16, -b - .04, -d + .02, -d + .12, .6, .72, hv, 'glatt', true); break;
+        case 'skohylle': for (let q = 0; q < 3; q++) if (r(q) < .8) for (const dy of [-.07, .07]) k(-b + .1 + q * .28, -b + .19 + q * .28, dy - .05 + d * .1, dy + .05 + d * .1, .19, .28, q % 2 ? [.3, .2, .14] : MØRK); break;
+      } }
     return K;
   }
 
@@ -301,6 +328,8 @@
     const dørH = Math.min(tak - .1, Math.max(2, D.hh || 2.1)), ender = pl.vegger.flatMap(v => [[v.ax, v.ay], [v.bx, v.by]]), dagslys = kl !== 'låve';
     for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, nx = -ey, ny = ex, pt = (t, inn) => [a[0] + ex * t + nx * inn, a[1] + ey * t + ny * inn];
+      // taklist langs ytterveggene i boliger, kontorer og hytter (gir rommene en avslutning mot taket)
+      if (/^(hus|leil|kontor|hytte|skole|sykehus)$/.test(kl) && L > .6) { const tm = pt(L / 2, .055); kasse(tm[0], tm[1], Math.atan2(ey, ex), [-L / 2 + .03, L / 2 - .03, -.025, .025, tak - .07, tak - .002, [.96, .96, .94]]); }
       const td = (I.x - a[0]) * ex + (I.y - a[1]) * ey, avD = Math.abs((I.x - a[0]) * ey - (I.y - a[1]) * ex), harDør = avD < .05 && td > 0 && td < L && Math.abs(ex * I.ux + ey * I.uy) > .99;
       const p0 = harDør ? Math.max(0, td - I.w / 2) : -1, q0 = harDør ? Math.min(L, td + I.w / 2) : -1;
       const T = [0, L]; for (const h of ender) { const t = (h[0] - a[0]) * ex + (h[1] - a[1]) * ey, av = Math.abs((h[0] - a[0]) * ey - (h[1] - a[1]) * ex); if (av < .25 && t > .3 && t < L - .3) T.push(t); }
@@ -327,6 +356,8 @@
           const hu = pt(q0 - .05, -.09); kasse(hu[0], hu[1], va + Math.PI - 1.9, [0, bw, -.022, .022, D.z0 - g0, D.z0 - g0 + dørH - .03, [.5, .36, .24], 'tre']); }
         // dørmatte
         const dm = pt(td, .55); kasse(dm[0], dm[1], va, [-.4, .4, -.25, .25, .003, .02, [.3, .26, .2], 'tøy']);
+        if (!P.leir && /^(hus|leil|hytte)$/.test(kl)) { const sk = pt(td + I.w / 2 + .25, .28); for (const dx of [-.07, .07]) kasse(sk[0], sk[1], va + hash(pl.i, 61) * .5, [dx - .05, dx + .05, -.13, .13, 0, .09, hash(pl.i, 62) > .5 ? [.25, .17, .12] : MØRK]);
+          if (hash(pl.i, 63) < .6) { const vk = pt(td - I.w / 2 - .3, .3); kasse(vk[0], vk[1], va, [-.2, .2, -.1, .1, 0, .3, TØY[Math.floor(hash(pl.i, 64) * TØY.length)], 'tøy']); kasse(vk[0], vk[1], va, [-.12, .12, -.02, .02, .3, .42, MØRK]); } }
       }
       const z0 = vz0, z1 = vz1;
       for (const t of vinduer) {
@@ -343,6 +374,9 @@
         if (!butikk && !kirke && rolle !== 'bad' && S.vegg[0] === 'malt' && kl !== 'skole' && kl !== 'sykehus') { const gf = TØY[Math.floor(hash(pl.i, 91 + pl.rom.indexOf(romVed(pt(t, .5)[0], pt(t, .5)[1]))) * TØY.length)].map(v => Math.min(1, v * 1.25 + .1)), gc = pt(t, .1);
           for (const sx of [-1, 1]) for (let q = 0; q < 3; q++) kasse(gc[0], gc[1], va, [sx * (kb + .16) - (sx > 0 ? .1 * (q + 1) : -.1 * q), sx * (kb + .16) - (sx > 0 ? .1 * q : -.1 * (q + 1)), q % 2 ? .0 : .025, q % 2 ? .03 : .055, z0 - .25, z1 + .14, mørk(gf, q % 2 ? .9 : 1), 'tøy']);
           kasse(gc[0], gc[1], va, [-kb - .3, kb + .3, .02, .045, z1 + .14, z1 + .165, MØRK]); }
+        // radiator under vinduet i boliger, kontorer, skoler og sykehus (ikke på badet)
+        if (z0 >= .8 && !butikk && !kirke && rolle !== 'bad' && /^(hus|leil|kontor|skole|sykehus|hytte)$/.test(kl)) { const rc = pt(t, .1), rb = Math.min(kb * .85, .5);
+          kasse(rc[0], rc[1], va, [-rb, rb, -.03, .04, .14, z0 - .2, [.93, .93, .91]]); for (let q = -rb + .06; q < rb; q += .09) kasse(rc[0], rc[1], va, [q, q + .02, .04, .05, .16, z0 - .22, [.78, .78, .77]]); }
         if (dagslys) { const dc = pt(t, 1.05); flekk(DA, dc[0], dc[1], va, bw / 2 + .5, 1.15, .022); }
       }
     }
@@ -380,6 +414,17 @@
       if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger') blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
       if (m.type === 'salongbord') { const tf = TØY[Math.floor(hash(pl.i, 41) * TØY.length)], tw = Math.min(1.1, m.b / 2 + .5), td2 = .8;
         kasse(m.x, m.y, m.a, [-tw, tw, -td2, td2, .004, .014, tf, 'tøy']); kasse(m.x, m.y, m.a, [-tw + .12, tw - .12, -td2 + .12, td2 - .12, .014, .017, mørk(tf, 1.25), 'tøy']); } }
+    // FORLATT (17. nov): spor etter at folk dro – ark og esker på gulvet og en mørk flekk her og der. Fast per bygg og rom; ikke i leiren din.
+    if (!P.leir) pl.rom.forEach((r, n) => { if (r.andel < .6 || r.areal < 5) return; const rh = q => hash(pl.i, 700 + n * 17 + q);
+      const punkt = q => { for (let f = 0; f < 6; f++) { const pu = r.u0 + .5 + rh(q * 7 + f) * Math.max(.1, r.u1 - r.u0 - 1), pv = r.v0 + .5 + rh(q * 7 + f + 3) * Math.max(.1, r.v1 - r.v0 - 1), x = pu * A.ux + pv * A.vx, y = pu * A.uy + pv * A.vy; if (Interior.inni(P, x, y) && Interior.avstKant(P, x, y) > .4 && !Interior.blokkert(pl, x, y)) return [x, y]; } return null; };
+      const papir = /kontor|klasserom|stue|gang|resepsjon|butikk/.test(r.rolle) ? 2 + Math.floor(rh(1) * 4) : rh(1) < .4 ? 1 : 0;
+      for (let q = 0; q < papir; q++) { const p = punkt(q); if (p) kasse(p[0], p[1], rh(40 + q) * 6.28, [-.105, .105, -.15, .15, .003, .006, [.93, .92, .88]]); }
+      if (rh(2) < .5) { const p = punkt(11); if (p) blob(p[0], p[1], rh(3) * 6.28, .5 + rh(4) * .6, .35 + rh(5) * .5, .008); }
+      const esker = /stue|soverom|bod|lager|kontor|garasje|verksted/.test(r.rolle) ? Math.floor(rh(6) * 3) : 0;
+      for (let q = 0; q < esker; q++) { const p = punkt(20 + q); if (!p) continue; const e = .2 + rh(60 + q) * .15, v = rh(50 + q) * 6.28; kasse(p[0], p[1], v, [-e, e, -e * .8, e * .8, 0, e * 1.3, [.66, .52, .36], 'tøy']); kasse(p[0], p[1], v, [-e, e, -.025, .025, e * 1.3, e * 1.3 + .004, [.82, .72, .52]]); blob(p[0], p[1], v, e + .12, e * .8 + .12); } });
+    // takbjelker i hytter, låver og uthus (rom som er hele firkanter)
+    if (/^(hytte|låve|uthus)$/.test(kl)) for (const r of pl.rom) { if (r.andel < .97) continue; const lv = r.v1 - r.v0, vb = Math.atan2(A.vy, A.vx);
+      for (let pu = r.u0 + .8; pu < r.u1 - .4; pu += 1.5) { const pv = (r.v0 + r.v1) / 2; kasse(pu * A.ux + pv * A.vx, pu * A.uy + pv * A.vy, vb, [-lv / 2 + .04, lv / 2 - .04, -.06, .06, tak - .17, tak - .005, [.36, .26, .17], 'tre']); } }
     // taklamper: én midt i hvert rom (haller: lysrør i rekker), med varmt lys på gulvet under
     for (const r of pl.rom) { if (r.andel < .5) continue; const S = stiler.get(r), lu = r.u1 - r.u0, lv = r.v1 - r.v0, sted = [];
       if (S.lampe === 2) { for (let pu = r.u0 + 3; pu < r.u1 - 1.5; pu += 6) for (let pv = r.v0 + 3; pv < r.v1 - 1.5; pv += 6) sted.push([pu, pv]); if (!sted.length) sted.push([(r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2]); }
@@ -396,12 +441,20 @@
     const nett = [new THREE.Mesh(geo, ST.hoved)]; nett[0].userData.interior = true;
     const lite = (d, mat, orden) => { if (!d.pos.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2)); const m = new THREE.Mesh(g, mat); m.renderOrder = orden; nett.push(m); return m; };
     lite(V, ST.vindu, 0); lite(SK, ST.skygge, 2); lite(LA, ST.lampe, 3); lite(DA, ST.dag, 3); const ytre = lite(YT, ST.åpning, 0) || null;
+    // FORSYNINGSKASSA: i hus som kan gjennomsøkes, står en kasse innenfor døra til huset er gjennomsøkt (o.funn skjules da i oppdater())
+    let funn = null;
+    if (!P.leir && window.MODELLER) { const d = [], b3 = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }, gr = [.3, .36, .24];
+      b3(0, 0, 0, .62, .4, .3, gr); b3(0, 0, .3, .66, .44, .05, [.24, .29, .19]); for (const sx of [-.24, .24]) b3(sx, 0, .02, .05, .42, .3, [.18, .2, .15]); b3(0, .205, .12, .22, .01, .1, [.85, .8, .6]); for (const sx of [-.33, .33]) b3(sx, 0, .16, .03, .16, .03, [.12, .12, .12]);
+      b3(.5, .1, 0, .2, .2, .22, [.66, .52, .36]); b3(-.48, -.05, 0, .12, .12, .16, [.75, .76, .78]);
+      const side = hash(pl.i, 77) > .5 ? 1 : -1, fx = I.inn[0] - I.nx * 1.1 + I.ny * side * .9, fy = I.inn[1] - I.ny * 1.1 - I.nx * side * .9, ok = Interior.inni(P, fx, fy) && Interior.avstKant(P, fx, fy) > .35, x = ok ? fx : I.inn[0] - I.nx * .9, y = ok ? fy : I.inn[1] - I.ny * .9;
+      if (!STfunn) STfunn = new THREE.MeshLambertMaterial({ vertexColors: true }); funn = new THREE.Mesh(MODELLER.samle(d), STfunn); funn.position.set(x, y, g0); funn.rotation.z = hash(pl.i, 78) * 6.28; nett.push(funn); }
     for (const m of nett) R.scene.add(m);
-    return { plan: pl, nett, ytre, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
+    return { plan: pl, nett, ytre, funn, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
   }
   let skjultId = -1;
   function modellSynlig(R, id) { if (id === skjultId && id < 0) return; for (const m of R.scene.children) if (m.userData && !m.userData.plan && (m.userData.id === skjultId || m.userData.id === id)) m.visible = m.userData.id !== id; skjultId = id; }
   function husSide(R, side) { for (const m of R.husMesh || []) for (const mat of [].concat(m.material)) if (mat && mat.side !== side) { mat.side = side; mat.needsUpdate = true; } }
+  let STfunn = null;
   function fjern(R, P) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) { R.scene.remove(m); m.geometry.dispose(); } delete P.inne; aktive.delete(P); }
   function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); if (R.scene) modellSynlig(R, -1); }
   const avstand = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, Interior.avstSeg(x, y, a[0], a[1], b[0], b[1])); } return Interior.inni(P, x, y) ? 0 : d; };
@@ -447,7 +500,7 @@
       M.vindu.opacity = .06 + .1 * mørke; M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
     // EKTE VINDUER: mens du står inne i et bygg, tegnes husenes yttervegger bare fra utsiden. Da er veggen rundt deg borte sett
     // innenfra, og gjennom hullene i innerveggen ser du landskapet og nabohusene som de er. Ute tegnes veggene fra begge sider som før.
-    { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) if (o.ytre) o.ytre.visible = P !== her;
+    { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) { if (o.ytre) o.ytre.visible = P !== her; if (o.funn) o.funn.visible = !(window.LeteSpill && P.bygg && LeteSpill.lett().has(P.bygg.i)); }
       // modeller med skiver tvers gjennom (containerens ribber, drivhusets spanter) skjules mens du står inne i dem
       modellSynlig(R, her && her.leir && LEIRBYGG[her.leir].skjul ? her.bygg.i - 9000000 : -1); }
     // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer())
@@ -476,7 +529,7 @@
   function høyde(x, y, terreng) { for (const [, o] of aktive) { const h = Interior.høyde(o.plan, x, y, terreng); if (h !== null) return h; } return null; }
   const påTrapp = (x, y) => { for (const [, o] of aktive) if (Interior.påTrapp(o.plan, x, y)) return true; return false; };
   function inne(x, y) { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; }
-  window.Interior3d = { LEIRBYGG, egne: () => egne,
+  window.Interior3d = { funn: P => { const o = aktive.get(P); return o && o.funn ? o.funn.visible : null; }, LEIRBYGG, egne: () => egne,
     // sant når (x, y) ligger inne i (eller en halv meter fra) et av leirens bygg – gress og blomster settes ikke der
     iLeirbygg: (x, y) => { for (const e of egne) { const P = e.P; if (Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) return true; } return false; }, høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
     // til vakten: alle interiørene nå – rom, møbler, trekanter, stoffer i bruk, og om inngangen er fri

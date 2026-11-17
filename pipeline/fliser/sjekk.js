@@ -1002,7 +1002,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const g0 = R.renderer.info.memory.geometries, ut = { utenGå: (Interior3d.oppdater(true), Interior3d.antall()) };
       Gange.start(); const sett = (x, y, a) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); k.x = x; k.y = y; k.vx = k.vy = 0; k.z = (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX; R.fot.a = a; R.fot.pitch = 0; };
       sett(x0 + 5, y0 - 5, 0); for (let i = 0; i < 12; i++) Interior3d.oppdater(true);
-      const pl = P.inne; ut.plan = !!pl; if (pl) { ut.rom = pl.rom.length; ut.møbler = pl.møbler.length; ut.gulv = pl.gulv; ut.trekanter = Interior3d.sjekk().find(q => q.rom === pl.rom.length).trekanter;
+      const pl = P.inne; ut.plan = !!pl; if (pl) { ut.rom = pl.rom.length; ut.møbler = pl.møbler.length; ut.gulv = pl.gulv; if (window.LeteSpill) { const lt = LeteSpill.lett(), hadde = lt.has(P.bygg.i); lt.delete(P.bygg.i); Interior3d.oppdater(true); ut.kasse = Interior3d.funn(P) === true; lt.set(P.bygg.i, null); Interior3d.oppdater(true); ut.kasseBorte = Interior3d.funn(P) === false; if (!hadde) lt.delete(P.bygg.i); Interior3d.oppdater(true); } else ut.kasse = ut.kasseBorte = true; ut.trekanter = Interior3d.sjekk().find(q => q.rom === pl.rom.length).trekanter;
         ut.vegg = hindring3d(x0 + 8, y0) && hindring3d(x0, y0 + 4) && !hindring3d(x0 + 5, y0) && !hindring3d(x0 + 5, y0 + .7);
         // gå inn (W holdes, tiden spoles) – og gå mot veggen ved siden av døra
         const ekte = performance.now.bind(performance); let t = ekte(); performance.now = () => (t += 25);
@@ -1021,7 +1021,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       R.renderer.render(R.scene, R.cam); ut.gl = gl.getError();
       Gange.stopp(); Interior3d.oppdater(true); ut.etter = Interior3d.antall(); ut.ryddet = !P.inne; ut.geo = R.renderer.info.memory.geometries - g0;
       for (const k of nøkler) { const L = R.hindre.get(k), i = L.indexOf(o); if (i >= 0) L.splice(i, 1); } u.hus = husFør; return ut; });
-    const innok = inn.utenGå === 0 && inn.plan && inn.rom >= 4 && inn.møbler >= 8 && inn.vegg && inn.inne && inn.påGulv && inn.y > 1 && inn.stoppet && inn.gl === 0 && inn.etter === 0 && inn.ryddet && inn.geo === 0 && inn.trekanter < 6000;
+    const innok = inn.utenGå === 0 && inn.plan && inn.rom >= 4 && inn.møbler >= 8 && inn.vegg && inn.inne && inn.påGulv && inn.y > 1 && inn.stoppet && inn.gl === 0 && inn.etter === 0 && inn.ryddet && inn.geo === 0 && inn.trekanter < 9000 && inn.kasse && inn.kasseBorte;
     const letok = !inn.let || (inn.let.knapp && /Let gjennom huset/.test(inn.let.tekst) && inn.let.leter && inn.let.antall === 1 && inn.let.borte && !!inn.let.logg && Math.abs(inn.let.mat - inn.let.venter.mat) < 1e-6);
     if (!letok) { feil++; console.log(JSON.stringify(inn.let)); }
     console.log(`${letok ? 'ok  ' : 'FEIL'} ${navn} leting i hus: ${inn.let ? `knappen kom inne i huset, letingen ga «${inn.let.logg}», huset er gjennomsøkt og knappen borte` : 'ikke prøvd (ingen leir i testen)'}`);
