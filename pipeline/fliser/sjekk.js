@@ -1114,6 +1114,22 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const slok = !sl.uten && sl.lyser === true && sl.utenKontakt === false && (sl.utenLeir || (sl.kamera === 1 && sl.r === 300 && sl.ser === true && sl.serIkke === false && sl.kroker >= 1 && !sl.tegnFeil && sl.avslått === 0));
     if (!slok) { feil++; console.log(JSON.stringify(sl)); }
     console.log(`${slok ? 'ok  ' : 'FEIL'} ${navn} siktfelt hele tiden og kameraer: lag med kontakt lyser ${sl.lyser}, uten kontakt ${sl.utenKontakt}, kamera ${sl.kamera} (${sl.r} m) ser fiende ${sl.ser}, ikke 900 m unna ${sl.serIkke === false}`);
+    // VAKT lageroversikten (spill/lager-visning.js, brukeren 17. nov: «lettere å ha oversikt over om man har diesel, andre materialer og
+    // hvor mye en kan ha»): statuslinja viser «har/plass» for diesel og materialene, tom diesel med aggregat er rød, fullt lager gult,
+    // og fanen Lager har oversikten med en stolpe per ting.
+    const lg = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!window.LagerSpill || !L) return { uten: true }; const ut = {}, før = { d: L.drivstoff, lager: { ...L.lager } }, nye = [];
+      for (const t of ['aggregat', 'drivstofftank']) { const b = { id: L.neste++, type: t, x: L.midt ? L.midt.x + 3000 : 3000, y: 3000, ret: 0, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 1, hp: 1 }; L.bygg.push(b); nye.push(b); }
+      try { L.drivstoff = 0; L.lager.tre = 5; L.lager.betong = Leir.lagerplass(L); LeirSpill.oppdater3d && 0; const s0 = LeirSpill.siste(); ut.aggInst = s0 && s0.aggInst; await new Promise(r => setTimeout(r, 1300)); LagerSpill.oppdater();
+        const S = LagerSpill.stilling(), finn = id => S.find(t => t.id === id); ut.diesel = finn('diesel').tilstand; ut.plass = finn('diesel').plass; ut.betong = finn('betong').tilstand; ut.tre = finn('tre').tilstand;
+        ut.tekst = document.getElementById('sDiesel').textContent; ut.rød = document.getElementById('sDiesel').parentNode.classList.contains('tomt'); ut.treTekst = document.getElementById('sTre').textContent; ut.gul = document.getElementById('sBetong').parentNode.classList.contains('fullt');
+        const m = document.getElementById('leirmeny'); if (!m.classList.contains('på')) document.getElementById('leirknapp').click(); LeirSpill.fane('lager'); await new Promise(r => setTimeout(r, 300));
+        ut.rader = m.querySelectorAll('.oversikt .ting').length; ut.radRød = !!m.querySelector('.oversikt .ting.tomt[data-ting="diesel"]'); ut.synlig = !!m.querySelector('.oversikt') && !m.querySelector('.oversikt').hidden;
+        L.drivstoff = 100; LagerSpill.oppdater(); ut.etter = document.getElementById('sDiesel').parentNode.classList.contains('tomt'); document.getElementById('leirknapp').click(); }
+      finally { for (const b of nye) L.bygg.splice(L.bygg.indexOf(b), 1); L.drivstoff = før.d; L.lager = før.lager; LagerSpill.oppdater(); }
+      return ut; });
+    const lgok = !lg.uten && lg.diesel === 'tomt' && lg.plass > 0 && lg.betong === 'fullt' && lg.tre === '' && /^0\//.test(lg.tekst) && lg.rød && /^5\//.test(lg.treTekst) && lg.gul && lg.rader >= 4 && lg.radRød && lg.synlig && lg.etter === false;
+    if (!lgok) { feil++; console.log(JSON.stringify(lg)); }
+    console.log(`${lgok ? 'ok  ' : 'FEIL'} ${navn} lageroversikten: statuslinja «${lg.tekst}» (rød ${lg.rød}), tre «${lg.treTekst}», fullt betonglager gult ${lg.gul}, ${lg.rader} stolper i fanen Lager`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

@@ -999,3 +999,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   både i 2D (tegnEnheter) og i tåkebildet til 3D (bak3d). spill/kamera-visning.js (KameraSpill): ferdig kameramast med strøm åpner tåka
   (KROKER.tåke med f.fritt = true: kroken tar m = meter per punkt og brukes også i 3D), lyser (ny KROKER.siktlys(g, vx0, vy1, m)) og
   ser fiender innen 300/500/800 m (KROKER.ser). Feltet er en sirkel – ikke terrengsikt. VAKT «siktfelt hele tiden og kameraer».
+  STRØM OG LAGER (17. nov, brukeren med skjermbilder: «det står 0 av 0 aggregat når jeg har 2» og «lettere å ha oversikt over om man har
+  diesel, andre materialer og hvor mye en kan ha»): Leir.steg gir aggInst (det aggregatene kan gi, også uten diesel) og aggAntall;
+  strom-visning.js viser «aggregat 0 av 40 (2 stk)» og linja #aggtom «2 aggregat står: tom for diesel» med «Kjøp 500 l». Tallet for bygg
+  uten strøm i Leir-menyen teller ikke avslåtte bygg (som varselet). spill/lager-visning.js (LagerSpill.stilling(): diesel, tre, betong,
+  stål, mat med har, plass, tilstand tomt/lite/fullt/null og merknad): statuslinja har #sDiesel, #sTre, #sBetong, #sStaal som «har/plass»
+  (rødt = tom diesel med aggregat, gult = under 6 t diesel eller fullt lager; egne ikoner tommer/betong/staal; trykk = fanen Lager),
+  «Oversikt» i fanen Lager (LEIR_MENY.unshift – står rett under materiallista), flisa «Diesel til leiren» rød når tom, og varslene
+  «Tom for diesel» / «Lite diesel» i narhud.js. VAKT «lageroversikten».
