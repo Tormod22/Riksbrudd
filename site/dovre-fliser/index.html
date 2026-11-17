@@ -115,7 +115,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=791a68c6a8"></script>
+<script src="/dovre-fliser/kartflis.js?v=fa72518ab0"></script>
 <script src="/dovre-fliser/terreng.js?v=a7c00fd4ce"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -238,7 +238,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=fd40a04e01');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=e3b78c3c9a');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1451,22 +1451,26 @@ async function iStriper(TW, f, høyde = 64) { for (let y = 0; y < TW; y += høyd
 // En jobb skrevet som generator (yield mellom stegene): kjørAsynk tar pust mellom stegene, kjørRett gjør alt i ett.
 async function kjørAsynk(it) { let r; while (!(r = it.next()).done) if (børPuste()) await pust(); return r.value; }
 function kjørRett(it) { let r; while (!(r = it.next()).done); return r.value; }
+// Trærne i 3D står der kartet har dem: samme regel som 2D (treVed i kartflis.js – et fast 5 m-gitter i verden, de «ekte» trærne).
+// (17. nov, brukeren: trærne sto ikke likt i 2D og 3D.) Blir det flere enn taket (store utsnitt), tynnes de som står lenger enn
+// 600 m fra midten – nær deg står alltid alle.
 async function trær3d(u, px, b) {
   const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S;
-  const skog = []; for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) if (kv.K[j * kv.w + i] === 1) {
-    const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) < u.S && Math.abs(Y - u.cy) < u.S) skog.push([X, Y, i * 7919 + j * 104729]); }
-  const MAKS = VW < 700 ? 18000 : 40000, per = Math.max(1, Math.min(4, Math.floor(MAKS / Math.max(1, skog.length))));
-  const gran = [], løv = [], hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
-  let arb = 0;
-  for (const [X, Y, frø] of skog) for (let k = 0; k < per; k++) {
-    if ((++arb & 255) === 0 && børPuste()) await pust();
-    const a = hash(frø * 4 + k), c = hash(frø * 4 + k + 1e6), d = hash(frø * 4 + k + 2e6), x = X + (a - .5) * kv.r, y = Y + (c - .5) * kv.r;
-    const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
-    if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
-    const moh = hoyde3d(x, y, u), fjell = Math.max(0, Math.min(1, (moh - 900) / 250)); if (d < fjell * .6) continue;   // glisnere mot tregrensen
-    const h = (1 - fjell * .55) * (8 + d * 12), z = (moh - u.h0) * R3.EX;
-    (d < .7 && moh < 1050 ? gran : løv).push(x - u.cx, y - u.cy, z, h, d);
-  }
+  const klasse = (X, Y) => { const i = Math.floor((X - kv.x0) / kv.r), j = Math.floor((kv.y0 - Y) / kv.r); return i < 0 || j < 0 || i >= kv.w || j >= kv.h ? 255 : kv.K[j * kv.w + i]; };
+  const MAKS = VW < 700 ? 18000 : 40000, NÆR = 600, S5 = TRE_RUTE, i0 = Math.floor((u.cx - u.S) / S5), i1 = Math.ceil((u.cx + u.S) / S5), j0 = Math.floor((u.cy - u.S) / S5), j1 = Math.ceil((u.cy + u.S) / S5);
+  const nær = [], fjern = []; let arb = 0;
+  for (let j = j0; j <= j1; j++) { if ((++arb & 7) === 0 && børPuste()) await pust();
+    for (let i = i0; i <= i1; i++) {
+      if (hash(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue; const x = t.X, y = t.Y; if (Math.abs(x - u.cx) >= u.S - 1 || Math.abs(y - u.cy) >= u.S - 1) continue;
+      const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
+      if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
+      const moh = hoyde3d(x, y, u); if (!treIHøyden(t.d, moh)) continue;
+      const fjell = Math.max(0, Math.min(1, (moh - 900) / 250)), d = t.d, h = (1 - fjell * .55) * (8 + d * 12), z = (moh - u.h0) * R3.EX, ty = t.k === 1 && hash(i, j, 5) >= .15 && moh < 880 ? 0 : 1;
+      (Math.hypot(x - u.cx, y - u.cy) <= NÆR ? nær : fjern).push([x - u.cx, y - u.cy, z, h, d, ty, hash(i, j, 8)]); } }
+  // over taket: de fjerne tynnes jevnt (etter treets eget tall, så det er de samme som blir borte hver gang)
+  const plass = Math.max(0, MAKS - nær.length), andel = fjern.length > plass ? plass / fjern.length : 1, gran = [], løv = [];
+  for (const L of [nær, fjern]) for (const t of L) { if (L === fjern && t[6] >= andel) continue; (t[5] === 0 ? gran : løv).push(t[0], t[1], t[2], t[3], t[4]); }
+  u.treTall = { nær: nær.length, fjern: fjern.length, andel };
   return { gran: new Float32Array(gran), løv: new Float32Array(løv) };
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.

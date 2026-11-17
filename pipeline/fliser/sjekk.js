@@ -337,6 +337,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         await pg.locator('#handl button', { hasText: 'Legg miner' }).click();
         const fa = await pg.evaluate(async () => { const l = ENHETER[1], s = ENHETER.find(s => s.ingeniør), f = ENHETER[3];
           for (let i = 0; i < 700; i++) sim(.1);
+          // (17. nov: blir laget beskutt mens det graver, mister det folk og bruker litt lenger tid – vent til det er ferdig)
+          for (let i = 0; i < 600 && !l.nedgravd; i++) sim(.1);
           const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
           f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
           await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
@@ -1210,6 +1212,17 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const grmok = !grm.uten && (grm.flatt || (grm.lov && grm.mur && grm.hus && grm.påTopp && grm.ned && grm.ryddet));
     if (!grmok) { feil++; console.log(JSON.stringify(grm)); }
     console.log(`${grmok ? 'ok  ' : 'FEIL'} ${navn} bygg i skråning: ${grm.flatt ? 'ingen skråning i utsnittet' : `${(grm.forskjell || 0).toFixed(1)} m høydeforskjell godkjent, grunnmur ${grm.mur}, bygget på toppen ${grm.påTopp}, muren når ned ${grm.ned}`}`);
+    // VAKT trærne står likt i 2D og 3D (brukeren 17. nov): hvert tre i 3D-utsnittet står på en plass fra kartets regel (treVed i
+    // kartflis.js: 5 m-gitteret, «ekte» trær), og nær midten er ingen tynnet bort.
+    const tre2 = await pg.evaluate(async () => { if (typeof treVed !== 'function' || typeof TRE_RUTE === 'undefined') return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = R3.ut, ut = { antall: 0, feil: 0, ikkeEkte: 0 };
+      if (!u || !u.trær) return { utenTrær: true }; const sett = new Set();
+      for (const k of Object.keys(u.trær)) { const A = u.trær[k]; if (!A || !A.length) continue; for (let q = 0; q + 4 < A.length; q += 5 * Math.max(1, Math.floor(A.length / 5 / 400))) { const X = A[q] + u.cx, Y = A[q + 1] + u.cy, i = Math.floor(X / TRE_RUTE), j = Math.floor(Y / TRE_RUTE);
+          ut.antall++; const gx = (i + hash(i, j, 1)) * TRE_RUTE, gy = (j + hash(i, j, 2)) * TRE_RUTE; if (Math.abs(gx - X) > .02 || Math.abs(gy - Y) > .02) { ut.feil++; continue; } if (hash(i, j, 7) >= TRE_TETT) ut.ikkeEkte++; sett.add(i + ',' + j); } }
+      ut.like = sett.size; ut.tall = u.treTall || null; return ut; });
+    // (trær som vegetasjon3d/byhus setter i tillegg – einer, vier, gatetrær – står ikke på gitteret; de er få)
+    const tre2ok = !tre2.uten && (tre2.utenTrær || (tre2.antall > 20 && tre2.feil <= tre2.antall * .12 && tre2.ikkeEkte === 0));
+    if (!tre2ok) { feil++; console.log(JSON.stringify(tre2)); }
+    console.log(`${tre2ok ? 'ok  ' : 'FEIL'} ${navn} trærne står likt i 2D og 3D: ${tre2.antall || 0} trær prøvd, ${tre2.feil || 0} utenfor kartets treplasser (einer, vier og gatetrær), ${tre2.ikkeEkte || 0} som kartet ikke tegner som tre`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));

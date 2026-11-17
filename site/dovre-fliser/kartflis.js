@@ -737,25 +737,38 @@ function koter(g, E, N, z) {
 }
 
 // Trær på et fast 5 m-gitter i verden: samme tre på samme sted på alle zoomnivåer og hos alle spillere.
+// (17. nov, brukeren: «trær fra 3D og 2D er ikke likt plassert – problematisk om man ønsker å hogge ned trær, eller i kamp».)
+// treVed(i, j, klasse) er NÅ DEN ENE REGELEN for hvor det står et tre, brukt både av kartet her og av 3D (trær3d i index.html).
+// Hver gitterrute (i, j) har høyst ett tre. «ekte» = treet finnes også i 3D (en fast andel, TRE_TETT, valgt av ruta selv); resten
+// tegnes bare som svak undervegetasjon i kartet. klasse(X, Y) gir terrengklassen (1 = skog). Gir null der det ikke står noe.
+const TRE_RUTE = 5, TRE_TETT = .3, TRE_SANNS = { 1: .62, 2: .05, 5: .015, 6: .04, 7: .03 };
+function treVed(i, j, klasse) {
+  const X = (i + hash(i, j, 1)) * TRE_RUTE, Y = (j + hash(i, j, 2)) * TRE_RUTE, v = vri(X, Y), k = klasse(X + v[0] + (hash(i, j, 9) - .5) * 8, Y + v[1] + (hash(i, j, 10) - .5) * 8), p = TRE_SANNS[k] || 0;
+  if (!p) return null; const t = hash(i, j, 3); if (t >= p) return null;
+  return { X, Y, k, t: t / p, ekte: hash(i, j, 7) < TRE_TETT, d: hash(i, j, 4) };
+}
+// Treet står ikke over tregrensen: glisnere fra 900 moh. (samme regel i 2D og 3D)
+function treIHøyden(d, moh) { const fjell = Math.max(0, Math.min(1, (moh - 900) / 250)); return d >= fjell * .6; }
 function traer(g, z, x, y, tr, E, N, VK) {
-  const T = G.T, r = res(z), S = 5, minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
+  const T = G.T, r = res(z), S = TRE_RUTE, minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
   const zt = tr.zz, rt = res(zt), tx0 = G.x0 + (x >> (z - zt)) * span(zt), ty0 = G.y0 - (y >> (z - zt)) * span(zt), A = tr.t.a;
   const klasse = (X, Y) => { const px = Math.floor((X - tx0) / rt), py = Math.floor((ty0 - Y) / rt);
     return A[Math.max(0, Math.min(T - 1, py)) * T + Math.max(0, Math.min(T - 1, px))]; };
   const i0 = Math.floor((minx - 6) / S), i1 = Math.ceil((minx + span(z) + 6) / S), j0 = Math.floor((maxy - span(z) - 6) / S), j1 = Math.ceil((maxy + 6) / S);
-  const SANNS = { 1: .62, 2: .05, 5: .015, 6: .04, 7: .03 }, liten = z <= 12;
-  const skygge = [], kroner = [];
+  const liten = z <= 12, skygge = [], kroner = [], kratt = [];
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-    const X = (i + hash(i, j, 1)) * S, Y = (j + hash(i, j, 2)) * S;
-    const [dx, dy] = vri(X, Y), k = klasse(X + dx + (hash(i, j, 9) - .5) * 8, Y + dy + (hash(i, j, 10) - .5) * 8);
-    let p = SANNS[k] || 0; if (VK) p *= vektVed(VK, (X - minx) / span(z), (maxy - Y) / span(z)); if (!p || hash(i, j, 3) >= p) continue;
+    const t = treVed(i, j, klasse); if (!t) continue; const X = t.X, Y = t.Y, k = t.k;
+    if (VK && t.t >= vektVed(VK, (X - minx) / span(z), (maxy - Y) / span(z))) continue;
     const px = (X - minx) / r, py = (maxy - Y) / r;
     if (px < -12 || py < -12 || px > T + 12 || py > T + 12) continue;
     let hoy = 0; if (E) { const ix = Math.max(0, Math.min(N - 1, Math.round(px) + 1)), iy = Math.max(0, Math.min(N - 1, Math.round(py) + 1)); hoy = E[iy * N + ix]; }
-    const bjork = k !== 1 || hoy > 880 || hash(i, j, 5) < .15, rad = (bjork ? 1.4 : 1.6) + 2.2 * hash(i, j, 4);
-    kroner.push([px, py, Math.max(liten ? .55 : .8, rad / r), bjork, hash(i, j, 6)]);
+    const bjork = k !== 1 || hoy > 880 || hash(i, j, 5) < .15;
+    // langt ute tegnes alle som en jevn skogtekstur; nær tegnes de ekte trærne (de som står i 3D) store, resten som svakt kratt
+    if (liten) { kroner.push([px, py, Math.max(.55, ((bjork ? 1.4 : 1.6) + 2.2 * t.d) / r), bjork, hash(i, j, 6)]); continue; }
+    if (t.ekte && treIHøyden(t.d, hoy)) kroner.push([px, py, Math.max(1, ((bjork ? 2.4 : 2.7) + 2.4 * t.d) / r), bjork, hash(i, j, 6)]); else kratt.push([px, py, Math.max(.7, (1.1 + 1.2 * t.d) / r), bjork]);
   }
   if (liten) { g.fillStyle = 'rgba(22,30,14,.55)'; for (const [px, py, rr] of kroner) g.fillRect(px - rr / 2, py - rr / 2, rr, rr); return; }
+  g.fillStyle = 'rgba(30,42,22,.34)'; g.beginPath(); for (const [px, py, rr] of kratt) { g.moveTo(px + rr, py); g.arc(px, py, rr, 0, 6.283); } g.fill();
   g.fillStyle = 'rgba(8,10,4,.4)'; g.beginPath();
   for (const [px, py, rr] of kroner) { g.moveTo(px + rr * 1.5, py + rr * .6); g.arc(px + rr * .6, py + rr * .6, rr, 0, 6.283); } g.fill();
   for (const [px, py, rr, bjork, u] of kroner) {

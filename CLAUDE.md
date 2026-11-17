@@ -1080,3 +1080,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   og grunnmur() legger en steinmur med sokkelkant under hele fotavtrykket ned til bunnen − 0,6 m når forskjellen er over 0,35 m
   (userData.grunnmur, samme id som bygget). interior3d.js bruker samme topp for gulvet. VAKT «bygg i skråning». IKKE GJORT: ekstra
   pris/tid for grunnmuren, trapp ned fra høye dører utenom den interiøret alt har, og planering av bakken rundt.
+  TRÆR LIKT I 2D OG 3D (17. nov, brukeren: «trær fra 3D og 2D er ikke likt plassert – problematisk for hogst og kamp»): kartflis.js har
+  NÅ DEN ENE REGELEN treVed(i, j, klasse) på det faste 5 m-gitteret (TRE_RUTE, TRE_SANNS per terrengklasse, TRE_TETT = 0,3 = andelen
+  «ekte» trær som også står i 3D, treIHøyden for tregrensen). traer() i kartet tegner de ekte trærne store fra z13 og resten som svakt
+  kratt (langt ute som før: jevn skogtekstur). trær3d() i index.html går over samme gitter (hash/vri/treVed er globale fra kartflis.js)
+  med klassene fra lagVindu(z9), og tynner bare trær lenger enn 600 m fra midten når taket (40 000 PC / 18 000 mobil) er nådd
+  (u.treTall). Einer/vier (vegetasjon3d) og gatetrær (byhus) står fortsatt bare i 3D. VAKT «trærne står likt i 2D og 3D».
