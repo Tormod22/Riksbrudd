@@ -827,14 +827,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${ikok ? 'ok  ' : 'FEIL'} ${navn} ikoner: ${ik.antall} ikoner, statuslinja og alle byggene har sitt, teksten står som før`);
     // VAKT samlet utseende (spill/tema.js, brukeren 17. nov: «ennå ikke bra nok UI»): på telefon viser loggen bare siste melding til du
     // trykker på den, og statuslinja har ikon i stedet for ord; overskriftene i Leir-menyen har ikke lenger forstavelser som «Byggelag:».
-    const tm = await pg.evaluate(async () => { if (!window.Tema) return { uten: true }; const kort = document.body.classList.contains('kort'), L = document.getElementById('logg'), syn = () => [...L.children].filter(d => d.offsetParent !== null).length, ut = { kort };
+    const tm = await pg.evaluate(async () => { if (!window.Tema) return { uten: true }; const kort = document.body.classList.contains('kort'), L = document.getElementById('logg'), syn = () => [...L.children].filter(d => d.offsetParent !== null).length, ut = { kort, spill: document.body.classList.contains('spill') };
       logg('Prøve en'); logg('Prøve to'); await new Promise(r => setTimeout(r, 60)); ut.en = syn(); if (kort) { L.click(); await new Promise(r => setTimeout(r, 60)); ut.flere = syn(); L.click(); }
       const ord = [...document.querySelectorAll('.stats > div > span:not([id])')].filter(e => e.offsetParent !== null).length; ut.ord = ord;
       const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (m && lk && !lk.hidden) { if (!m.classList.contains('på')) lk.click(); await new Promise(r => setTimeout(r, 200)); ut.h3 = [...m.querySelectorAll('h3')].map(h => h.textContent).filter(t => /^(Byggelag|Materialer|Mål): \S/.test(t) && !/^Byggelag: \d/.test(t)).join(); lk.click(); } else ut.h3 = '';
       return ut; });
-    const tmok = !tm.uten && tm.h3 === '' && (tm.kort ? tm.en === 1 && tm.flere >= 2 && tm.ord === 0 : tm.en >= 2 && tm.ord > 0);
+    const tmok = !tm.uten && tm.h3 === '' && (tm.kort ? tm.en === 1 && tm.flere >= 2 && tm.ord === 0 : tm.en >= 2 && (tm.spill ? tm.ord === 0 : tm.ord > 0));
     if (!tmok) { feil++; console.log(JSON.stringify(tm)); }
-    console.log(`${tmok ? 'ok  ' : 'FEIL'} ${navn} samlet utseende: ${tm.kort ? `loggen viser ${tm.en} melding og ${tm.flere} når du trykker, statuslinja uten ord` : `loggen viser ${tm.en} meldinger, statuslinja med ord`}, rene overskrifter i Leir-menyen`);
+    console.log(`${tmok ? 'ok  ' : 'FEIL'} ${navn} samlet utseende: ${tm.kort ? `loggen viser ${tm.en} melding og ${tm.flere} når du trykker, statuslinja uten ord` : `loggen viser ${tm.en} meldinger, statuslinja ${tm.spill ? 'som fliser uten ord (spillskjermen)' : 'med ord'}`}, rene overskrifter i Leir-menyen`);
     // VAKT pause (brukeren 16. nov: pausen kunne ikke oppheves på telefon): pause skjuler ikke farten du hadde, viser ▶,
     // og både pauseknappen og fartsknappen starter spillet igjen i samme fart.
     const pa = await pg.evaluate(() => { const t0 = tempo, sp = id => document.getElementById(id), syn = () => ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => sp(id).offsetParent !== null);
@@ -1193,6 +1193,24 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const shdok = !shd.uten && shd.aktiv === shd.bred && (shd.aktiv ? shd.bar === 'flex' && shd.kn.includes('leir') && shd.ord === 0 && shd.teknisk === 0 && shd.kassa && shd.leir && shd.merket && shd.igjen : shd.bar === 'none');
     if (!shdok) { feil++; console.log(JSON.stringify(shd)); }
     console.log(`${shdok ? 'ok  ' : 'FEIL'} ${navn} spillskjermen: ${shd.aktiv ? `fliser uten ord, tekniske tall skjult, kommandolinja (${(shd.kn || []).join(', ')}) åpner Leir-menyen` : 'ikke i bruk på liten skjerm'}`);
+    // VAKT kameravakta (spill/kameravakt.js, brukeren 17. nov: «folk som jobber i kontrollrommet med å se gjennom kameraene»): uten
+    // folk på overvåking blir klippene liggende og fienden vises ikke; med folk blir den meldt og vist; fast opptak lagrer spor.
+    const kvt = await pg.evaluate(async () => { if (!window.KameravaktSpill || !window.FolkSpill || !FolkSpill.tilstand()) return { uten: true }; const ut = {}, L = LeirSpill.tilstand(), F = FolkSpill.tilstand(), S = OppstartSpill.tilstand().leir;
+      const sett = (type, dx, dy, nivå) => { const b = { id: L.neste++, type, x: S.x + 7000 + dx, y: S.y + 7000 + dy, ret: 0, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå, hp: 1 }; L.bygg.push(b); return b; };
+      const nye = [sett('kameramast', 0, 0, 1), sett('kameramast', 2000, 0, 2), sett('kameramast', 4000, 0, 3)], fi = [0, 2000, 4000].map((dx, i) => nyttLag('Kamfiende ' + i, S.x + 7000 + dx + 100, S.y + 7000, 'rød')); ENHETER.push(...fi);
+      const førFolk = F.personer.map(p => p.oppgave), K0 = KameravaktSpill.K(), V = window.Kameravakt; KameravaktSpill.test = true; KameravaktSpill.nullstill();
+      try { const C = KameraSpill.kameraer().filter(c => nye.some(b => b.id === c.id)); ut.kam = C.length; const K = KameravaktSpill.K(), fiender = fi.map(e => ({ id: e.navn, x: e.x, y: e.y, antall: 3, side: 'rød' }));
+        for (let t = 0; t < 12; t++) V.steg(K, C, fiender, tid + t, 1, { tempo: 0, rng: () => .99 });
+        ut.usett = C.map(c => KameravaktSpill.ser({ ...c })); ut.venter = KameravaktSpill.venter(); ut.synlig0 = fi.map(e => synlig(e));
+        for (let t = 12; t < 30; t++) V.steg(K, C, fiender, tid + t, 1, { tempo: 1, rng: () => .99 });
+        ut.sett = C.map(c => KameravaktSpill.ser({ ...c })); ut.synlig1 = fi.map(e => synlig(e)); ut.spor = V.spor(K).length; ut.oppgave = FolkRegler.OPPGAVER.includes('overvåking');
+        const m = document.createElement('div'); let f = ''; try { for (const q of window.LEIR_MENY) q(m, { el: (t, a = {}, ...b) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) if (k === 'klasse') e.className = v; else e.setAttribute(k, v); e.append(...b); return e; }, knapp: (t, fn, a = {}) => { const b = document.createElement('button'); b.textContent = t; for (const [k, v] of Object.entries(a)) b.setAttribute(k, v); return b; } }); } catch (e) { f = e.message; }
+        ut.menyFeil = f; ut.meny = !!m.querySelector('.kamvakt'); ut.knapper = m.querySelectorAll('.kamvakt [data-kam]').length;
+      } finally { for (const b of nye) L.bygg.splice(L.bygg.indexOf(b), 1); for (const e of fi) ENHETER.splice(ENHETER.indexOf(e), 1); F.personer.forEach((p, i) => { p.oppgave = førFolk[i]; }); KameravaktSpill.nullstill(); KameravaktSpill.test = false; KameraSpill.kameraer(); }
+      return ut; });
+    const kvtok = !kvt.uten && kvt.kam === 3 && String(kvt.usett) === 'false,false,true' && kvt.venter >= 2 && String(kvt.synlig0) === 'false,false,true' && String(kvt.sett) === 'true,true,true' && String(kvt.synlig1) === 'true,true,true' && kvt.spor >= 2 && kvt.oppgave && !kvt.menyFeil && kvt.meny && kvt.knapper >= 3;
+    if (!kvtok) { feil++; console.log(JSON.stringify(kvt)); }
+    console.log(`${kvtok ? 'ok  ' : 'FEIL'} ${navn} kameravakta: usett klipp skjuler fienden (${kvt.usett}), sett gjennom viser den (${kvt.sett}), ${kvt.spor} spor, ${kvt.venter} klipp ventet, «Kameravakt» i Leir-menyen med ${kvt.knapper} kameraer`);
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.

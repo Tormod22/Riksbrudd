@@ -14,7 +14,7 @@ ok(F.personer.length === 10 && navn.size === 10, 'ti personer med ulike navn: ' 
 ok(F0.arbeidere(F, 'bygg') === 4 && F0.arbeidere(F, 'kjøkken') === 1 && F0.arbeidere(F, 'vakt') === 1 && F0.arbeidere(F, 'fri') === 2, 'start: 4 bygg, 1 kjøkken, 1 vakt, 2 fri');
 ok(F.personer.find(p => p.oppgave === 'kjøkken').yrke === 'kokk' && F.personer.find(p => p.oppgave === 'vakt').yrke === 'tidligere soldat', 'kokken på kjøkkenet, soldaten på vakt');
 ok(JSON.stringify(F0.ny()) === JSON.stringify(F0.ny()), 'samme frø gir samme folk');
-ok(F0.OPPGAVER.join() === 'bygg,hogst,riving,frakt,vakt,kjøkken,stell,verksted,fri', 'oppgavene i avtalt rekkefølge');
+ok(F0.OPPGAVER.join() === 'bygg,hogst,riving,frakt,vakt,overvåking,kjøkken,stell,verksted,fri', 'oppgavene i avtalt rekkefølge');
 // byggelag: to personer = ett lag, og de ersatter «ett + ett per brakke» i leir.js
 const L = L0.ny(); fyll(L);
 ok(L0.byggelag(L) === 1, 'leir uten folk: ett byggelag som før');

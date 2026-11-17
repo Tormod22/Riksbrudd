@@ -13,13 +13,14 @@
 (function (rot) {
   'use strict';
   const LB = typeof module !== 'undefined' && module.exports ? require('./leir.js') : rot.Leir;
-  const OPPGAVER = ['bygg', 'hogst', 'riving', 'frakt', 'vakt', 'kjøkken', 'stell', 'verksted', 'fri'];
+  const OPPGAVER = ['bygg', 'hogst', 'riving', 'frakt', 'vakt', 'overvåking', 'kjøkken', 'stell', 'verksted', 'fri'];
   const OPPGAVE = {
     bygg: { navn: 'Bygg', tekst: 'Byggelag: to personer = ett lag' },
     hogst: { navn: 'Hogst', tekst: 'Feller trær og gir tre' },
     riving: { navn: 'Riving', tekst: 'River forlatte hus for materialer' },
     frakt: { navn: 'Frakt', tekst: 'Bærer materialer til leiren' },
     vakt: { navn: 'Vakt', tekst: 'Bemanner vakttårnene og melder fiender' },
+    overvåking: { navn: 'Overvåking', tekst: 'Ser gjennom klippene fra kameraene (trenger kontrollrom)' },
     kjøkken: { navn: 'Kjøkken', tekst: 'Lager mat: mindre svinn, bedre moral' },
     stell: { navn: 'Stell', tekst: 'Pleier syke og sårede (best med sykestue)' },
     verksted: { navn: 'Verksted', tekst: 'Reparerer bygg og lager stål (trenger verksted)' },
@@ -29,7 +30,7 @@
   const YRKER = [
     { navn: 'snekker', f: { bygg: 1.4, riving: 1.1 } }, { navn: 'tømrer', f: { bygg: 1.35, hogst: 1.1 } }, { navn: 'skogsarbeider', f: { hogst: 1.45, frakt: 1.1 } },
     { navn: 'anleggsarbeider', f: { riving: 1.4, bygg: 1.15 } }, { navn: 'sjåfør', f: { frakt: 1.4, verksted: 1.05 } }, { navn: 'tidligere soldat', f: { vakt: 1.45, frakt: 1.05 } },
-    { navn: 'vekter', f: { vakt: 1.3 } }, { navn: 'kokk', f: { kjøkken: 1.45 } }, { navn: 'sykepleier', f: { stell: 1.45, kjøkken: 1.05 } },
+    { navn: 'vekter', f: { vakt: 1.3, overvåking: 1.3 } }, { navn: 'kokk', f: { kjøkken: 1.45 } }, { navn: 'sykepleier', f: { stell: 1.45, kjøkken: 1.05 } },
     { navn: 'helsefagarbeider', f: { stell: 1.3 } }, { navn: 'bilmekaniker', f: { verksted: 1.45, frakt: 1.1 } }, { navn: 'sveiser', f: { verksted: 1.35, bygg: 1.1 } },
     { navn: 'bonde', f: { hogst: 1.2, kjøkken: 1.15, bygg: 1.05 } }, { navn: 'elektriker', f: { verksted: 1.25, bygg: 1.1 } }, { navn: 'lærer', f: { stell: 1.1, kjøkken: 1.05 } },
     { navn: 'student', f: {} },

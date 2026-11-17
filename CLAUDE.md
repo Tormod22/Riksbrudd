@@ -1109,3 +1109,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   er lastet, får meny.js til å ordne seg i ring (siden henger) – legg den inn i en gruppe ved siden av en knapp som står der.
   VAKT «spillskjermen». Bilder: scratchpad sp/hud.js. IKKE GJORT: byggemenyen som ikonrutenett nederst, verktøytips med forklaring
   på flisene, minikart i 2D, og telefonen har ikke fått kommandolinja.
+  KAMERAVAKTA (17. nov, brukeren: «folk som jobber i kontrollrommet med å se gjennom kameraene – historisk data på hvor tropper har vært,
+  forskjellige level på kameraene, noen som bare filmer når de merker bevegelse; da sjekker en i kontrollrommet om det er været, et dyr
+  eller folk; er det folk, varsler den, og da kan du gå inn i kameraet og se hva det ser i 3D»): spill/kameravakt.js (regler uten DOM,
+  test_kameravakt.js) + kameravakt-visning.js (window.KameravaktSpill, lastes rett før meny.js). Mastens NIVÅ er typen
+  (Kameravakt.TYPER): 1 bevegelseskamera (klipp av folk, dyr og vær; 6 min å se gjennom), 2 fast opptak (4 min; lagrer SPOR av dem som
+  går forbi, punkt hvert 2. min, 48 timer), 3 smart (varsler selv straks, ingen falske klipp). Ny oppgave for folk: «overvåking»
+  (Folk.OPPGAVER, mellom vakt og kjøkken) – krever et kontrollrom som virker. Kameraets KROKER.ser (kamera-visning.js) spør nå
+  KameravaktSpill.ser(c): fienden vises bare når et klipp er sett og bekreftet (K.sett[kamera] 20 min, forlenges mens noen følger med),
+  eller kameraet er smart. Tåka og det lyse feltet er som før. Varsel i loggen, rødt merke i kartet i ett minutt, påminnelse når tre
+  klipp ligger usett. «Kameravakt» i Leir-menyen (fanen Bygg): tall, − / + folk på overvåking, «Se gjennom» per kamera
+  (seGjennom: 3D, Gange med en fører som holder kameraet 9,2 m oppe i masta, blikket mot siste klipp, VHS-filter når ingen filter
+  er valgt, #kamlapp/#kamut, Esc/F går ut; body.ikamera), siste seks klipp og «Vis sporene i kartet». Lagres per leir
+  («riksbrudd-kameravakt»). I testene (navigator.webdriver) virker kameraene som før til KameravaktSpill.test = true.
+  Tallene er Claudes forslag. VAKT «kameravakta». IKKE GJORT: operatørene vises ikke som figurer i kontrollrommet, kameraet ser
+  fortsatt i en sirkel (ikke terrengsikt), og sporene gjelder bare det kameraene ser (ikke det lagene dine ser).
