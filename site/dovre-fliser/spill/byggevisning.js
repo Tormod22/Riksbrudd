@@ -11,7 +11,11 @@
 (function (rot) {
   'use strict';
   // rekkevidde i meter og hva den betyr (tallene står i folk.js og leir.js; kameramasten bruker nivået sitt)
-  const RING = { vakttårn: [150, 'vaktene dekker'], sykestue: [150, 'sårede leges'], sandsekkvoll: [15, 'dekning'], kameramast: [300, 'kamera'] };
+  const RING = { vakttårn: [150, 'vaktene dekker'], sykestue: [150, 'sårede leges'], sandsekkvoll: [15, 'dekning'], kameramast: [300, 'kamera'], radiomast: [15000, 'feltradio'] };
+  // (17. nov, brukeren: «når en trykker på radiomasten, bør det gå an å se rekkevidden visuelt») radiomastens sirkel er så langt
+  // feltradioene når: mastens nivå (15/25/40 km) når den virker og har strøm, ellers leirens radio uten mast (8 km).
+  function radioRekkevidde(b) { const K = rot.Kontrollrom, uten = K ? K.LEIR.uten : 8000, s = rot.LeirSpill && LeirSpill.siste && LeirSpill.siste(), strøm = !(s && s.mangler && s.mangler.has(b.id));
+    return LB.virker(b) && strøm && !b.av ? Math.max(uten, LB.effekt(b).rekkevidde || 0) : uten; }
   // rutenettets steg i meter etter målestokken (meter per punkt): 2,5 m helt nær, så 10 m og 50 m; ingen ruter langt ute
   const rutesteg = m => (m <= .18 ? 2.5 : m <= .7 ? 10 : m <= 3 ? 50 : 0);
   // Kameraet for bygging: rammen rundt leirens midte og byggene (+ luft), aldri nærmere enn 0,2 og aldri lenger ute enn 0,6 m per punkt.
@@ -85,9 +89,18 @@
   }, true);
   // Et valgt bygg med rekkevidde viser sirkelen sin også utenom byggingen
   KROKER.tegn.push((g, vx0, vy1) => { if (på() || !rot.LeirSpill || !LeirSpill.tilstand()) return; const id = LeirSpill.valgt(), b = id && LeirSpill.tilstand().bygg.find(q => q.id === id); if (!b || !RING[b.type]) return;
-    const m = kam.m, r = (b.type === 'kameramast' ? LB.effekt(b).rekkevidde || RING[b.type][0] : RING[b.type][0]), x = (b.x - vx0) / m, y = (vy1 - b.y) / m, rp = r / m; if (rp < 8 || rp > 4000) return;
+    const radio = b.type === 'radiomast', m = kam.m, r = radio ? radioRekkevidde(b) : (b.type === 'kameramast' ? LB.effekt(b).rekkevidde || RING[b.type][0] : RING[b.type][0]), x = (b.x - vx0) / m, y = (vy1 - b.y) / m, rp = r / m; if (rp < 8 || (!radio && rp > 4000)) return;
+    if (radio) { g.save(); const K = rot.Kontrollrom, hånd = K ? K.RADIO.hånd.meter : 3000, full = r > (K ? K.LEIR.uten : 8000), farge = full ? '127,209,122' : '232,164,106', inne = Math.hypot(VW / 2 - x, VH / 2 - y) + Math.hypot(VW, VH) / 2 < rp;
+      // sirkelen er større enn skjermen når du står inne i leiren: da tegnes den ikke (knappen «Vis rekkevidden» i byggpanelet zoomer ut)
+      if (!inne) { g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = `rgba(${farge},.06)`; g.fill(); g.strokeStyle = `rgba(${farge},.9)`; g.lineWidth = 2; g.stroke(); skrift(g, `feltradio ${meter(r)}` + (full ? '' : ' (masten virker ikke)'), x, Math.max(120, y - rp), full ? '#bfe6b4' : '#f0c8a0'); }
+      const hp = hånd / m; if (hp > 8 && hp < 6000) { g.beginPath(); g.arc(x, y, hp, 0, 6.283); g.setLineDash([6, 6]); g.strokeStyle = 'rgba(231,220,195,.7)'; g.lineWidth = 1.2; g.stroke(); g.setLineDash([]); if (hp > 40 && y - hp > 100) skrift(g, `håndradio ${meter(hånd)}`, x, y - hp); }
+      g.restore(); return; }
     g.save(); g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = 'rgba(127,209,122,.07)'; g.fill(); g.strokeStyle = 'rgba(127,209,122,.8)'; g.lineWidth = 1.4; g.stroke(); if (rp > 40) skrift(g, `${RING[b.type][1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); g.restore(); });
 
+  let førRadio = null;
+  // «Vis rekkevidden»: zoom ut så hele sirkelen synes rundt masten; samme knapp går tilbake dit du var
+  function visRekkevidde(b) { if (førRadio) { kam.x = førRadio.x; kam.y = førRadio.y; kam.m = førRadio.m; førRadio = null; skitten = true; return false; }
+    førRadio = { x: kam.x, y: kam.y, m: kam.m }; const r = radioRekkevidde(b); kam.x = b.x; kam.y = b.y; kam.m = r * 2.35 / Math.max(200, Math.min(VW, VH - 160)); skitten = true; return true; }
   const skrift = (g, t, x, y, farge = '#f0e2b0') => { g.font = '11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8;
     g.fillStyle = 'rgba(16,14,10,.82)'; g.fillRect(x - w / 2, y - 8, w, 16); g.fillStyle = farge; g.fillText(t, x, y + .5); g.textBaseline = 'alphabetic'; };
 
@@ -145,6 +158,6 @@
         if (S) { const d = Math.hypot(p.x - S.x, p.y - S.y); if (LB.REGLER && d > LB.REGLER.reise.fri) skrift(g, `${meter(d)} fra leiren`, sx(p.x), Math.max(...H.map(h => h[1])) + 16, '#e8c27a'); } } }
     g.restore();
   }
-  api.på = på; api.under = under; api.over = over; api.gåInn = gåInn; api.visSkisse = visSkisse; api.fri = fri; api.anim = () => !!anim;
+  api.på = på; api.under = under; api.over = over; api.gåInn = gåInn; api.visSkisse = visSkisse; api.fri = fri; api.anim = () => !!anim; api.visRekkevidde = visRekkevidde; api.radioRekkevidde = radioRekkevidde; api.radioZoom = () => !!førRadio;
   rot.BYGGEVISNING = api;
 })(typeof window !== 'undefined' ? window : globalThis);

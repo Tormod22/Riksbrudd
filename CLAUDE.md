@@ -1007,3 +1007,7 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (rødt = tom diesel med aggregat, gult = under 6 t diesel eller fullt lager; egne ikoner tommer/betong/staal; trykk = fanen Lager),
   «Oversikt» i fanen Lager (LEIR_MENY.unshift – står rett under materiallista), flisa «Diesel til leiren» rød når tom, og varslene
   «Tom for diesel» / «Lite diesel» i narhud.js. VAKT «lageroversikten».
+  RADIOMASTENS REKKEVIDDE (17. nov, brukeren): byggevisning.js – RING.radiomast; et valgt radiomast-bygg tegner feltradioenes sirkel
+  (BYGGEVISNING.radioRekkevidde(b): nivåets 15/25/40 km når masten virker og har strøm, ellers 8 km i oransje) og håndradioens 3 km
+  stiplet. Sirkelen er større enn skjermen inne i leiren, så byggpanelet har «Vis rekkevidden (15 km)» (#visradio,
+  BYGGEVISNING.visRekkevidde: zoomer ut rundt masten; samme knapp = «Tilbake til leiren»). VAKT «radiomastens rekkevidde».

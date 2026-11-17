@@ -392,11 +392,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       !LB.ferdig(b) ? 'byggeplass: kan skades av fiender' : null].filter(Boolean).join(' · ');
     // radiomasten: hva nivået gir lagene (brukeren 12. nov), og de to slagene drivstoff ved tank og aggregat
     const ekstra = b.type === 'radiomast' ? radioTekst(b) : b.type === 'drivstofftank' || b.type === 'aggregat' ? `Leiren har ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l diesel. ${DIESEL}` : '';
-    const nøkkel = [ji, b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise].join('|');
+    const nøkkel = [ji, b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise, window.BYGGEVISNING && BYGGEVISNING.radioZoom ? BYGGEVISNING.radioZoom() : ''].join('|');
     if (banner.firstChild && banner.firstChild.byggNøkkel === nøkkel && banner.classList.contains('på')) return;
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
     banner.firstChild.byggNøkkel = nøkkel;
+    // radiomasten: se hvor langt feltradioene når (sirkelen tegnes av byggevisning.js så lenge masten er valgt)
+    if (b.type === 'radiomast' && window.BYGGEVISNING && BYGGEVISNING.visRekkevidde) banner.appendChild(knapp(BYGGEVISNING.radioZoom() ? 'Tilbake til leiren' : `Vis rekkevidden (${LB.kmTekst(BYGGEVISNING.radioRekkevidde(b))})`, () => { BYGGEVISNING.visRekkevidde(b); visByggPanel(); }, { id: 'visradio' }));
     // delegere: denne jobben først (byggelagene tar køen i rekkefølge)
     if (jobb && ji > 0) banner.appendChild(knapp('Bygg dette først', () => { LB.prioriter(L, b.id); logg(`${B.navn}: byggelaget tar denne jobben først.`); lagre(); visByggPanel(); if (meny) visMeny(); skitten = true; }, { id: 'byggforst' }));
     if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)}${reise})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());

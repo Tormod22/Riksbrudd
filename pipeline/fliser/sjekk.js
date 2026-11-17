@@ -1130,6 +1130,16 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const lgok = !lg.uten && lg.diesel === 'tomt' && lg.plass > 0 && lg.betong === 'fullt' && lg.tre === '' && /^0\//.test(lg.tekst) && lg.rød && /^5\//.test(lg.treTekst) && lg.gul && lg.rader >= 4 && lg.radRød && lg.synlig && lg.etter === false;
     if (!lgok) { feil++; console.log(JSON.stringify(lg)); }
     console.log(`${lgok ? 'ok  ' : 'FEIL'} ${navn} lageroversikten: statuslinja «${lg.tekst}» (rød ${lg.rød}), tre «${lg.treTekst}», fullt betonglager gult ${lg.gul}, ${lg.rader} stolper i fanen Lager`);
+    // VAKT radiomastens rekkevidde (brukeren 17. nov: «når en trykker på radiomasten, bør det gå an å se rekkevidden visuelt»):
+    // en mast uten strøm gir 8 km, knappen «Vis rekkevidden» zoomer ut så hele sirkelen får plass, og samme knapp går tilbake.
+    const rm = await pg.evaluate(() => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !window.BYGGEVISNING || !BYGGEVISNING.visRekkevidde) return { uten: true };
+      const b = { id: L.neste++, type: 'radiomast', x: kam.x, y: kam.y, ret: 0, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 2, hp: 1 }, ut = {}, m0 = kam.m, x0 = kam.x, y0 = kam.y; L.bygg.push(b);
+      try { ut.r = BYGGEVISNING.radioRekkevidde(b); b.av = true; ut.av = BYGGEVISNING.radioRekkevidde(b); delete b.av; ut.inn = BYGGEVISNING.visRekkevidde(b); ut.passer = ut.r / kam.m < Math.min(VW, VH) / 2; ut.zoom = BYGGEVISNING.radioZoom();
+        ut.ut = BYGGEVISNING.visRekkevidde(b); ut.tilbake = kam.m === m0 && kam.x === x0 && kam.y === y0; } finally { L.bygg.splice(L.bygg.indexOf(b), 1); }
+      return ut; });
+    const rmok = !rm.uten && (rm.r === 25000 || rm.r === 8000) && rm.av === 8000 && rm.inn === true && rm.passer && rm.zoom && rm.ut === false && rm.tilbake;
+    if (!rmok) { feil++; console.log(JSON.stringify(rm)); }
+    console.log(`${rmok ? 'ok  ' : 'FEIL'} ${navn} radiomastens rekkevidde: ${rm.r / 1000} km (avslått ${rm.av / 1000} km), «Vis rekkevidden» får plass til sirkelen: ${rm.passer}, tilbake: ${rm.tilbake}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
