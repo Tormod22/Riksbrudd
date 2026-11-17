@@ -1,0 +1,40 @@
+# Kaier, brygger, småbåthavner, havner og ferjeterminaler i hele Norge fra OpenStreetMap
+# (© OpenStreetMap-bidragsytere, ODbL) -> release kart-kaier-<hash>. Tas i bruk med pipeline/fliser/bruk_kaier.py.
+name: Bygg kaier
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/hallo-ohbasy, claude/nattfiks]
+    paths: [pipeline/fliser/kaier.py, .github/workflows/kaier.yml]
+permissions:
+  contents: write
+concurrency: { group: kaier, cancel-in-progress: false }
+jobs:
+  kaier:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+      - run: pip install -q -r pipeline/fliser/krav.txt osmium
+      - run: python3 pipeline/fliser/test_kaier.py
+      - name: Last ned Norge og filtrer (bare kaier og havner)
+        run: |
+          curl -fL --retry 5 -o norge.osm.pbf https://download.geofabrik.de/europe/norway-latest.osm.pbf \
+            || curl -fL --retry 5 -o norge.osm.pbf https://download.openstreetmap.fr/extracts/europe/norway-latest.osm.pbf
+          osmium tags-filter norge.osm.pbf nw/man_made=pier,quay nw/leisure=marina nw/harbour=yes nw/landuse=harbour,port nw/industrial=port nw/seamark:type=harbour nw/amenity=ferry_terminal -o kai.osm.pbf
+          rm norge.osm.pbf; ls -la kai.osm.pbf
+      - name: Lag kaier.json
+        working-directory: pipeline/fliser
+        run: python3 kaier.py ../../kai.osm.pbf ../../kaier
+      - name: Last opp release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        working-directory: kaier
+        run: |
+          TAG=$(cat tag.txt)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "Kaier $TAG" \
+            --notes "Kaier, brygger og havner fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL). Lages av .github/workflows/kaier.yml."
+          gh release upload "$TAG" kaier.json manifest.json --clobber
+          echo "### Ferdig: $TAG" >> "$GITHUB_STEP_SUMMARY"; cat manifest.json >> "$GITHUB_STEP_SUMMARY"

@@ -8,7 +8,7 @@
   const meny = document.getElementById('lagmeny'), åpner = document.getElementById('meny'); if (!meny || !åpner) return;
   // gruppe: [overskrift, forklaring, navnene knappene begynner med – i den rekkefølgen de skal stå]
   const GRUPPER = [
-    ['Kartet', 'Hva som tegnes i kartet og i 3D', ['Skygge', 'Høydekurver', 'Trær', 'Veger', 'Jernbane', 'Bygg', 'Infrastruktur', 'Kraftledninger']],
+    ['Kartet', 'Hva som tegnes i kartet og i 3D', ['Skygge', 'Høydekurver', 'Trær', 'Veger', 'Jernbane', 'Bygg', 'Infrastruktur', 'Kraftledninger', 'Kaier']],
     ['Oversikt', 'Hjelp til å lese situasjonen', ['Siktfelt', 'Tåke', 'Motstandere', 'Kompass', 'Minikart']],
     ['Vær og årstid', 'Automatisk, eller lås et vær', ['Årstid', 'Vær']],
     ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
