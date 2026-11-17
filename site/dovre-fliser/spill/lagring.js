@@ -83,7 +83,7 @@
   const spill = () => rot.OppstartSpill && OppstartSpill.tilstand();
   // et lagret spill fantes da siden ble lastet: da leses verden inn igjen ved første «riksbrudd-spill» (ikke når et nytt spill settes opp)
   let fortsetter = !!spill(), aktiv = false, sist = 0, av = false;
-  const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.ai && !s.karakter);
+  const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.ai && !s.karakter && !s.leirvakt);   // leirvakta (spill/forsvar.js) finnes bare mens angrepet varer
   const egneKj = () => (rot.KJORETOY || []).filter(k => k.side === 'blå');
   function lagre() {
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;

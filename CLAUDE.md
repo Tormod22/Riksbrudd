@@ -1054,3 +1054,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   KNAPPERADEN (17. nov, brukeren: «utfør nummer 5»): spill/knapper.js (lastes etter tema.js) – Gå, Leir, Krig og Deg har ikon
   (data-kn; på telefon bare ikonet, ordet står igjen i knappen med font-size 0), #sekkknapp og #tredjeknapp er skjult i raden og nås
   fra menyen #degmeny under Deg (bare når du går; ellers åpner Deg karakterarket direkte). Knapper.merk()/åpen(). VAKT «knapperaden».
+  FORSVAR AV LEIREN (17. nov, brukeren: «vi trenger et bedre system for kriging og angrep – hvordan skal jeg forsvare leiren fra et angrep
+  på en god måte»): spill/forsvar.js (regler uten DOM, test_forsvar.js) + forsvar-visning.js (window.ForsvarSpill). BEREDSKAP 0–100
+  (Forsvar.beredskap: lag hjemme mot ventet bølge 35, bemannet vakttårn 15, sandsekkvoller 15, varsling 15, folk på vakt 10, ammunisjon 10)
+  under «Forsvar» i Leir-menyen (fanen Bygg) med det viktigste rådet. ALARMEN #alarm når SpilletSpill.T().aktiv: antall, retning, og
+  avstand/ankomst bare når noen ser røverne. «Forsvar leiren» (#forsvarknapp, ForsvarSpill.sett): lag innen 3 km får stillinger fra
+  Forsvar.stillinger (bak voller innen ±72° av fiendens retning, ellers en bue 75 m ut med 34 m mellom) via Forsvar.fordel (vollene til de
+  nærmeste lagene), s.forsvar = plassen, stridsreglene byttes til «kjemp, aldri retrett» (s.stridFør huskes), og de graver seg ned når de er
+  framme. LEIRVAKTA: folk på «vakt» (2–12) blir et eget lag (s.leirvakt, lagres ikke; sårede får lav helse i Folk etterpå). Når angrepet
+  er over (aktiv -> 0): ForsvarSpill.opphev(true) – reglene tilbake, Leirvakta bort, rapport i loggen (Forsvar.rapport). Kartet: rød pil
+  fra røverne mot leiren, merker i stillingene. «Øv: sett lagene i stilling» virker uten angrep. Tallene er Claudes. VAKT «forsvar av leiren».

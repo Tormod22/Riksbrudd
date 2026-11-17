@@ -1180,6 +1180,23 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const knpok = !knp.uten && knp.ikon && knp.skjult && knp.meny && knp.rader === 3 && !knp.ark0 && knp.sekk && knp.lukket && knp.enRad;
     if (!knpok) { feil++; console.log(JSON.stringify(knp)); }
     console.log(`${knpok ? 'ok  ' : 'FEIL'} ${navn} knapperaden: ikoner ${knp.ikon}, Sekk og Utenfra samlet under Deg (${knp.rader} valg), ${knp.antall} knapper på én rad: ${knp.enRad}`);
+    // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
+    // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
+    // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.
+    const fsv = await pg.evaluate(async () => { if (!window.ForsvarSpill || !window.SpilletSpill || !SpilletSpill.klar()) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), S = OppstartSpill.tilstand().leir, T = SpilletSpill.T(), F = FolkSpill.tilstand();
+      const før = { aktiv: T.aktiv, opp: F.personer.map(p => p.oppgave), pos: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.x, e.y, e.sti]), strid: ENHETER.filter(e => e.side === 'blå' && !e.karakter).map(e => [e, e.strid ? { ...e.strid } : null]) }, antall = ENHETER.length;
+      const B = ForsvarSpill.beredskap(); ut.sum = B.sum; ut.punkter = B.punkter.length; F.personer.slice(0, 4).forEach(p => { p.oppgave = 'vakt'; p.helse = 1; }); await vent(1200);
+      const lag = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)); lag.forEach((e, i) => { e.x = S.x + 200 + i * 30; e.y = S.y - 150; e.sti = null; });
+      const rv = nyttLag('Røvere 8.1', S.x + 1200, S.y, 'rød'); rv.raid = 8; ENHETER.push(rv); T.aktiv = 8; const ser = e => e === rv; KROKER.ser.push(ser);
+      try { ForsvarSpill.vis(); const al = document.getElementById('alarm'); ut.alarm = al.classList.contains('på') && /Angrep/.test(al.textContent) && /unna/.test(al.textContent); ut.knapp = !!document.getElementById('forsvarknapp');
+        const r = ForsvarSpill.sett(false); ut.lag = r.lag; ut.vakt = r.vakt; ut.satt = ForsvarSpill.erSatt(); ut.regel = lag.every(e => e.strid && e.strid.underlegen === 'kjemp' && e.forsvar); ut.motØst = lag.every(e => e.forsvar.x > S.x); ut.vaktLag = ENHETER.some(e => e.leirvakt);
+        ut.opphevKnapp = (ForsvarSpill.vis(), !!document.getElementById('opphevknapp')); const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (!m.classList.contains('på')) lk.click(); LeirSpill.fane('bygg'); await vent(200); ut.meny = document.querySelectorAll('#leirmeny .forsvar .p').length; lk.click();
+        for (let i = 0; i < 40 && lag.some(e => e.planlegger); i++) await vent(100); ForsvarSpill.opphev(true); ut.etter = !ForsvarSpill.erSatt() && !ENHETER.some(e => e.leirvakt) && lag.every(e => !e.forsvar && !e.stridFør); ut.rapport = /Etter angrepet/.test(loggLinjer[0] || ''); }
+      finally { KROKER.ser.splice(KROKER.ser.indexOf(ser), 1); const i = ENHETER.indexOf(rv); if (i >= 0) ENHETER.splice(i, 1); T.aktiv = før.aktiv; F.personer.forEach((p, k) => { p.oppgave = før.opp[k]; }); for (const [e, x, y, sti] of før.pos) { e.x = x; e.y = y; e.sti = null; e.siktSkitten = true; delete e.graver; } for (const [e, st] of før.strid) { e.strid = st; delete e.bevSatt; } if (ForsvarSpill.erSatt()) ForsvarSpill.opphev(false); ForsvarSpill.vis(); }
+      ut.ryddet = ENHETER.length === antall; return ut; });
+    const fsvok = !fsv.uten && fsv.punkter === 6 && fsv.sum >= 0 && fsv.alarm && fsv.knapp && fsv.lag >= 1 && fsv.vakt === 4 && fsv.satt && fsv.regel && fsv.motØst && fsv.vaktLag && fsv.opphevKnapp && fsv.meny === 6 && fsv.etter && fsv.rapport && fsv.ryddet;
+    if (!fsvok) { feil++; console.log(JSON.stringify(fsv)); }
+    console.log(`${fsvok ? 'ok  ' : 'FEIL'} ${navn} forsvar av leiren: beredskap ${fsv.sum} av 100, alarm ${fsv.alarm}, ${fsv.lag} lag i stilling mot fienden, Leirvakta ${fsv.vakt} mann, alt tilbake etterpå: ${fsv.etter}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
