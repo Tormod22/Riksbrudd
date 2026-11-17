@@ -1,0 +1,165 @@
+'use strict';
+/* Riksbrudd – KRIGSKARTET (17. nov, brukeren: «vi må få frem strategielementet mye bedre»). Reglene: spill/strategi.js.
+ * Knappen «Krig» (tast T) viser hele området krigen står om: tettstedene som merker i eierens farge med området de rår over,
+ * frontene mellom sidene, lagene dine med ordrene sine – og et panel med STILLINGEN (hvor stor del av folket hver side holder,
+ * og streken for seier), NESTE TREKK (de tre beste målene er også nummerert i kartet, med «Send» som gir nærmeste ledige lag ordre),
+ * TRUSLENE mot det du holder, og LAGENE dine. Trykk på et tettsted i krigskartet for å se det og sende et lag dit.
+ * Zoomet ut ser du fargene også utenom krigskartet. Statuslinja viser andelen din hele tiden. Seier ved 60 % – og taper du løpet,
+ * får du vite det. window.StrategiSpill. I testene (navigator.webdriver) kommer ikke kortene av seg selv (StrategiSpill.test).
+ */
+(function () {
+  const S = window.Strategi, G = window.Garnison; if (!S || !G) return;
+  const NØKKEL = 'riksbrudd-strategi', auto = () => !navigator.webdriver || api.test;
+  let åpen = false, valgtBy = null, førKam = null, byer = [], byNøkkel = '', sist = '', meldt = { leir: '', vunnet: false, tapt: false, fare: {} };
+  const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
+  const knapp = (tekst, fn, a = {}) => { const b = el('button', a, tekst); b.onclick = fn; return b; };
+  const tall = v => Math.round(v).toLocaleString('nb-NO'), km = v => (v < 10 ? String(Math.round(v * 10) / 10).replace('.', ',') : String(Math.round(v))) + ' km';
+  const fraksjon = side => (window.Fraksjoner && Fraksjoner.FRAKSJONER[side]) || { navn: side, eieform: side };
+  const navn = side => (side === 'blå' ? 'Du' : fraksjon(side).navn);
+  const leir = () => { const T = window.OppstartSpill && OppstartSpill.tilstand(); if (T && T.leir) return T.leir; const b = window.OLJE && OLJE.BASER[0]; if (b) return { x: b.x, y: b.y }; const s = ENHETER.find(e => e.side === 'blå'); return s ? { x: s.x, y: s.y } : null; };
+  const eierAv = id => G.tilstand(TETTSTEDER, id).eier;
+  const punkt = by => { let p = null; try { if (typeof navnP === 'function') p = navnP(by); } catch (e) { p = null; } return p && isFinite(p[0]) ? [p[0], p[1]] : [(by.bb[0] + by.bb[2]) / 2, (by.bb[1] + by.bb[3]) / 2]; };
+  function område() { const L = leir(), alle = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted; if (!L || !alle) return [];
+    const k = Math.round(L.x) + ',' + Math.round(L.y) + ',' + alle.length; if (k === byNøkkel) return byer; byNøkkel = k;
+    byer = S.område(L, alle.map(by => { const [x, y] = punkt(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk || 0, ref: by }; })); return byer; }
+  const egneLag = () => ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e));
+  const fiender = () => ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).map(e => ({ x: e.x, y: e.y, navn: e.navn, side: e.side, styrke: window.Fraksjoner ? Fraksjoner.styrke(e) : 8 }));
+  const garnison = id => { const b = byer.find(q => q.id === id); return b ? G.lagI(b.ref, egneLag()).length : 0; };
+  const iBy = s => byer.find(b => G.inni(b.ref, s.x, s.y));
+  // lagene som kan sendes: uten ordre, og ikke eneste garnison i et eget tettsted (det skal holdes)
+  function ledige() { return egneLag().filter(s => !s.sti && !s.planlegger).map(s => { const b = iBy(s); return { x: s.x, y: s.y, navn: s.navn, lag: s, holder: !!(b && eierAv(b.id) === 'blå' && G.lagI(b.ref, egneLag()).length === 1) }; }); }
+  function bilde() { const B = område(); if (!B.length) return null; const st = S.stilling(B, eierAv), led = ledige(), fri = led.filter(l => !l.holder), fi = fiender();
+    return { byer: B, st, ut: S.utfall(st), trekk: S.trekk('blå', B, eierAv, fri.length ? fri : led, fi), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
+
+  // ---------- ordre ----------
+  function send(by, lag) { const T = bilde(); if (!T) return false; const t = T.trekk.find(q => q.by.id === by.id);
+    const s = lag || (t && t.lag && t.lag.lag); if (!s) { logg('Ingen ledige lag å sende. Lag som marsjerer, må komme fram først.'); return false; }
+    if (Math.hypot(s.x - by.x, s.y - by.y) > S.REGLER.marsj) { logg(`${by.navn} ligger over ${S.REGLER.marsj / 1000} km fra ${s.navn}. Ta et tettsted på vegen først.`); return false; }
+    if (!KROKER.kanOrdre.every(f => f(s))) return false;
+    ordre(s, by.x, by.y); logg(`${s.navn} sendes mot ${by.navn}` + (t && t.forsvar > 0 ? ' – tettstedet er forsvart.' : '.')); valgtBy = by; vis(true); skitten = true; return true; }
+
+  // ---------- panelet ----------
+  const css = document.createElement('style');
+  css.textContent = `#krig{ position:fixed; left:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(350px,94vw); max-height:calc(100vh - var(--topp,58px) - 130px); overflow:auto; padding:10px 12px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
+#krig.på{ display:block; } #krig h2{ margin:0 26px 2px 0; font-size:19px; } #krig h3{ margin:12px 0 3px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
+#krig .lukk{ position:absolute; right:6px; top:4px; background:none; border:0; color:inherit; font-size:22px; min-width:34px; min-height:34px; cursor:pointer; }
+#krig .maal{ color:var(--ink-dim,#a99); font-size:13px; margin-bottom:6px; } #krig .maal b{ color:var(--ink,#e7dcc3); }
+#krig .side{ margin:5px 0; } #krig .side .n{ display:flex; justify-content:space-between; gap:8px; font-size:13.5px; } #krig .side .n small{ color:var(--ink-dim,#a99); }
+#krig .stolpe{ position:relative; height:11px; background:#2e281e; margin-top:2px; } #krig .stolpe i{ display:block; height:100%; } #krig .stolpe u{ position:absolute; top:-2px; bottom:-2px; width:2px; background:#e7dcc3; opacity:.8; }
+#krig .rad{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid #2e281e; } #krig .rad small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; } #krig .rad .nr{ display:inline-block; width:19px; height:19px; line-height:19px; margin-right:6px; border-radius:50%; background:#c9b26a; color:#1c170f; text-align:center; font-size:12.5px; font-weight:700; }
+#krig .rad.fare b{ color:#e8a46a; } #krig .by{ border:1px solid #c9b26a; padding:7px 9px; margin:6px 0 2px; background:#221c12; } #krig .by .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+#krig button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; } #krig button.hoved{ border-color:#c9b26a; } #krig button:disabled{ opacity:.45; }
+#krig .tips{ margin-top:10px; color:var(--ink-dim,#a99); font-size:12.5px; }
+body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:44vh; border-width:1px 0 0; }
+#krigkort{ position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(10,8,5,.72); } #krigkort.på{ display:flex; }
+#krigkort div{ width:min(430px,90vw); padding:18px 20px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); text-align:center; } #krigkort h2{ margin:0 0 8px; font-size:26px; } #krigkort p{ margin:0 0 14px; }
+#krigkort button{ background:#2a2318; border:1px solid #c9b26a; color:inherit; min-height:40px; padding:4px 18px; font:inherit; cursor:pointer; }
+#sKrigBoks{ cursor:pointer; }`;
+  document.head.appendChild(css);
+  const panel = el('div', { id: 'krig', role: 'dialog', 'aria-label': 'Krigskartet' }); document.body.appendChild(panel);
+  const kort = el('div', { id: 'krigkort', role: 'alertdialog' }); document.body.appendChild(kort);
+  const kn = knapp('Krig', () => (åpen ? lukk() : åpne()), { id: 'krigknapp', title: 'Krigskartet: hvem holder hva, fronter og neste trekk (T)', 'aria-pressed': 'false' }); kn.hidden = true;
+  const rad = document.querySelector('.knapper'); if (rad) rad.insertBefore(kn, document.getElementById('meny'));
+  const stat = el('div', { id: 'sKrigBoks', title: 'Din andel av folket i området. Trykk for krigskartet.' }, el('b', { id: 'sKrig' }, '–'), ' ', el('span', {}, 'kontroll')); stat.hidden = true; stat.onclick = () => åpne();
+  const stats = document.querySelector('.stats'); if (stats) stats.appendChild(stat);
+
+  function statusTekst(s) { const b = iBy(s); if (s.planlegger) return 'planlegger rute'; if (s.sti) { const m = s.sti[s.sti.length - 1], mål = byer.find(q => G.inni(q.ref, m[0], m[1])); return 'marsjerer' + (mål ? ' mot ' + mål.navn : ''); }
+    if (b) { const t = G.tilstand(TETTSTEDER, b.id); return t.eier === 'blå' ? 'garnison i ' + b.navn : t.inntar && t.inntar.side === 'blå' ? `tar ${b.navn} (${Math.round(100 * t.inntar.sek / G.REGLER.innta)} %)` : 'i ' + b.navn; } return 'ledig'; }
+  function bygg(T) { const f = document.createDocumentFragment(), R = S.REGLER, st = T.st;
+    f.append(knapp('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk krigskartet' }), el('h2', {}, 'Krigskartet'));
+    f.append(el('div', { klasse: 'maal' }, 'Mål: hold ', el('b', {}, S.prosent(R.seier) + ' %'), ` av folket i de ${st.byer} tettstedene i området (${Math.round(T.byer.radius / 1000)} km rundt leiren). Du har `, el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), '.'));
+    for (const side of ['blå', 'rød', 'grønn']) { const m = st.sider[side]; if (!m) continue;
+      f.append(el('div', { klasse: 'side', 'data-side': side }, el('div', { klasse: 'n' }, el('b', {}, side === 'blå' ? fraksjon('blå').navn + ' (du)' : fraksjon(side).navn), el('small', {}, `${m.byer} tettsted${m.byer === 1 ? '' : 'er'} · ${S.prosent(m.andel)} %`)),
+        el('div', { klasse: 'stolpe' }, el('i', { style: `width:${Math.min(100, m.andel * 100)}%; background:${sidefarge(side, 'lys')}` }), el('u', { style: `left:${R.seier * 100}%` })))); }
+    f.append(el('div', { klasse: 'side' }, el('div', { klasse: 'n' }, el('span', {}, 'Ingen (nøytralt)'), el('small', {}, `${st.nøytral.byer} tettsted${st.nøytral.byer === 1 ? '' : 'er'} · ${S.prosent(st.nøytral.andel)} %`))));
+    // valgt tettsted
+    if (valgtBy) { const b = valgtBy, e = eierAv(b.id), t = T.trekk.find(q => q.by.id === b.id), g = garnison(b.id), strøm = true, olje = G.rate(b.folk, G.REGLER.produksjon, strøm), fs = G.rate(b.folk, G.REGLER.forsterkning, strøm);
+      const boks = el('div', { klasse: 'by' }, el('b', {}, b.navn), el('small', {}, ` ${tall(b.folk)} innbyggere · ${e === 'blå' ? 'ditt' : e ? fraksjon(e).eieform : 'nøytralt'}`),
+        el('div', {}, e === 'blå' ? (g ? `Garnison: ${g} lag.` : 'Ingen garnison – et fiendtlig lag kan ta det.') : `Gir ${nf.format(Math.round(olje * 10) / 10)} t olje i timen og ${nf.format(Math.round(fs * 10) / 10)} mann i timen til garnisonen.` + (t && t.forsvar > 0 ? ' Fienden er sett her.' : '')));
+      const k = el('div', { klasse: 'kn' });
+      if (e !== 'blå' && t) k.append(knapp(t.lag ? `Send ${t.lag.navn} (${km(t.km)})` : 'Ingen ledige lag', () => send(b), Object.assign({ klasse: 'hoved', 'data-send': b.id }, t.lag && t.innen ? {} : { disabled: '' })));
+      if (e === 'blå' && !g) { const l = T.ledige.filter(q => !q.holder).sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0]; if (l) k.append(knapp(`Send ${l.navn} som garnison`, () => send(b, l.lag), { klasse: 'hoved' })); }
+      k.append(knapp('Gå dit i kartet', () => { kam.x = b.x; kam.y = b.y; kam.m = Math.min(kam.m, 12); skitten = true; }), knapp('Fjern valget', () => { valgtBy = null; vis(true); skitten = true; }));
+      boks.append(k); f.append(boks); }
+    // neste trekk
+    f.append(el('h3', {}, 'Neste trekk'));
+    const topp = T.trekk.slice(0, 4); if (!topp.length) f.append(el('div', { klasse: 'tips' }, 'Du holder alle tettstedene i området.'));
+    topp.forEach((t, i) => f.append(el('div', { klasse: 'rad', 'data-trekk': t.by.id }, el('div', {}, i < 3 ? el('span', { klasse: 'nr' }, String(i + 1)) : '', el('b', {}, t.by.navn),
+      el('small', {}, `${t.eier ? fraksjon(t.eier).eieform : 'nøytralt'}${t.forsvar > 0 ? ', forsvart' : ''} · ${tall(t.by.folk)} innb.` + (t.lag ? ` · ${km(t.km)} fra ${t.lag.navn}` : ''))),
+      knapp(t.lag && t.innen ? 'Send' : t.lag ? 'For langt' : 'Ingen lag', () => send(t.by), Object.assign({ 'data-send': t.by.id }, t.lag && t.innen ? { klasse: 'hoved' } : { disabled: '' })))));
+    // trusler
+    if (T.trusler.length) { f.append(el('h3', {}, 'Trusler'));
+      for (const t of T.trusler.slice(0, 4)) f.append(el('div', { klasse: 'rad fare' }, el('div', {}, el('b', {}, t.by.navn), el('small', {}, (t.fiende ? `${t.fiende.navn} ${km(t.km)} unna` : '') + (t.fiende && !t.garnison ? ' · ' : '') + (t.garnison ? '' : 'ingen garnison'))),
+        knapp('Vis', () => { valgtBy = t.by; kam.x = t.by.x; kam.y = t.by.y; vis(true); skitten = true; }))); }
+    // lagene
+    f.append(el('h3', {}, 'Lagene dine'));
+    const lag = egneLag(); if (!lag.length) f.append(el('div', { klasse: 'tips' }, 'Du har ingen lag. Tettsteder du holder, og basen, gir nye.'));
+    for (const s of lag) f.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, s.navn), el('small', {}, `${s.menn.filter(m => m.hp >= 1).length} av ${s.menn.length} friske · ${statusTekst(s)}`)),
+      knapp('Velg', () => { valgt = s; kam.x = s.x; kam.y = s.y; visPanel(); skitten = true; })));
+    f.append(el('div', { klasse: 'tips' }, `Et lag som står ${G.REGLER.innta / 60} minutter i et tettsted uten fiender, tar det. La et lag stå igjen som garnison. Fargene i kartet viser hvem som rår hvor; stiplede streker er fronter. Trykk på et tettsted for å sende et lag dit. En marsj tar timer – sett farten til 60× eller 600× mens lagene går.`));
+    return f; }
+  function vis(tving) { if (!åpen) return; const T = bilde(); if (!T) { panel.textContent = 'Kartdataene for tettstedene er ikke lastet ennå.'; return; }
+    if (!tving && window.pekerNede && pekerNede(panel)) return;
+    const ny = el('div'); ny.append(bygg(T)); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }
+  function åpne() { const L = leir(); if (!L) return; if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
+    if (window.lukkPanel) lukkPanel(); åpen = true; panel.classList.add('på'); document.body.classList.add('krig'); kn.classList.add('på'); kn.setAttribute('aria-pressed', 'true');
+    førKam = { x: kam.x, y: kam.y, m: kam.m }; const smal = document.body.classList.contains('smal') || document.body.classList.contains('kort');
+    kam.x = L.x; const rr = område().radius || S.REGLER.radius, pb = smal ? 0 : Math.min(370, VW * .4);
+    // hele området skal være synlig i det frie feltet: til høyre for panelet på PC, over panelet på telefon
+    kam.m = smal ? rr * 2.3 / Math.max(200, Math.min(VW, VH * .5)) : rr * 2.3 / Math.max(200, Math.min(VW - pb, VH - 120)); kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : -20 * kam.m); sist = ''; vis(true); skitten = true; }
+  function lukk() { if (!åpen) return; åpen = false; valgtBy = null; panel.classList.remove('på'); document.body.classList.remove('krig'); kn.classList.remove('på'); kn.setAttribute('aria-pressed', 'false');
+    if (førKam) { kam.x = førKam.x; kam.y = førKam.y; kam.m = førKam.m; førKam = null; } skitten = true; }
+  window.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 'Escape' && åpen) { lukk(); return; } if ((e.key === 't' || e.key === 'T') && !kn.hidden && !(typeof R3 !== 'undefined' && R3 && R3.fot)) { const st = document.getElementById('oppstart'); if (st && st.classList.contains('på')) return; kn.click(); } });
+
+  // trykk i krigskartet: et tettsted velges (merket er lite, så treffet er romslig)
+  KROKER.trykk.unshift((X, Y) => { if (!åpen) return false; let best = null, bd = Math.max(18 * kam.m, 300); for (const b of område()) { const d = Math.hypot(b.x - X, b.y - Y); if (d < bd) { bd = d; best = b; } }
+    if (!best) return false; valgtBy = best; vis(true); skitten = true; return true; });
+
+  // ---------- kartet ----------
+  const tegn = (g, vx0, vy1) => { const m = kam.m, ute = m >= 18; if (!åpen && !ute) return; const B = område(); if (!B.length) return;
+    const sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, inn = (x, y, r) => x > -r && y > -r && x < VW + r && y < VH + r; g.save();
+    if (åpen) { g.fillStyle = 'rgba(12,10,6,.3)'; g.fillRect(0, 0, VW, VH); }
+    // området hver side rår over
+    for (const b of B) { const e = eierAv(b.id); if (!e) continue; const x = sx(b.x), y = sy(b.y), r = S.rekkevidde(b.folk) / m; if (r < 4 || !inn(x, y, r)) continue;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r), c = sidefarge(e, 'lys'); g.globalAlpha = åpen ? .62 : .4; gr.addColorStop(0, c); gr.addColorStop(.7, c); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+      g.globalAlpha = åpen ? .8 : .5; g.strokeStyle = sidefarge(e, 'sti'); g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, r * .82, 0, 6.283); g.stroke(); }
+    g.globalAlpha = 1;
+    if (åpen) { const L = leir(); if (L) { g.strokeStyle = 'rgba(231,220,195,.55)'; g.lineWidth = 1.5; g.setLineDash([10, 8]); g.beginPath(); g.arc(sx(L.x), sy(L.y), (B.radius || S.REGLER.radius) / m, 0, 6.283); g.stroke(); g.setLineDash([]); } }
+    // frontene
+    for (const f of S.fronter(B, eierAv)) { const ax = sx(f.a.x), ay = sy(f.a.y), bx = sx(f.b.x), by = sy(f.b.y), mx = (ax + bx) / 2, my = (ay + by) / 2; if (!inn(mx, my, 400)) continue;
+      g.strokeStyle = f.egen ? 'rgba(240,200,120,.95)' : 'rgba(231,220,195,.6)'; g.lineWidth = f.egen ? 2.5 : 1.5; g.setLineDash([7, 6]); g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]);
+      g.lineWidth = 2.5; g.beginPath(); g.moveTo(mx - 5, my - 5); g.lineTo(mx + 5, my + 5); g.moveTo(mx + 5, my - 5); g.lineTo(mx - 5, my + 5); g.stroke(); }
+    // egne lags ordre
+    if (åpen) for (const s of egneLag()) { const x = sx(s.x), y = sy(s.y); if (s.sti) { const e = s.sti[s.sti.length - 1]; g.strokeStyle = sidefarge('blå', 'sti'); g.lineWidth = 2; g.setLineDash([4, 5]); g.beginPath(); g.moveTo(x, y); g.lineTo(sx(e[0]), sy(e[1])); g.stroke(); g.setLineDash([]); }
+      g.fillStyle = sidefarge('blå', 'lys'); g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.5; g.beginPath(); g.rect(x - 5, y - 4, 10, 8); g.fill(); g.stroke(); }
+    // tettstedene som merker
+    const T = åpen ? bilde() : null, topp = T ? T.trekk.slice(0, 3).map(t => t.by.id) : [];
+    g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'top';
+    B.forEach((b, i) => { const e = eierAv(b.id); if (!åpen && !e) return; const x = sx(b.x), y = sy(b.y); if (!inn(x, y, 30)) return; const r = Math.max(4, Math.min(13, 3 + Math.sqrt(b.folk) / 14));
+      g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1.2; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke();
+      if (valgtBy && valgtBy.id === b.id) { g.strokeStyle = '#f0c878'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, r + 5, 0, 6.283); g.stroke(); }
+      const nr = topp.indexOf(b.id); if (nr >= 0) { g.fillStyle = '#c9b26a'; g.beginPath(); g.arc(x + r + 5, y - r - 5, 8, 0, 6.283); g.fill(); g.fillStyle = '#1c170f'; g.font = '700 12px Georgia, serif'; g.textBaseline = 'middle'; g.fillText(String(nr + 1), x + r + 5, y - r - 4.5); g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textBaseline = 'top'; }
+      if (åpen && (i < 14 || e || nr >= 0 || m < 40)) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(b.navn, x, y + r + 2); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, y + r + 2); } });
+    // fiender du vet om
+    if (åpen && T) for (const f of T.fiender) { const x = sx(f.x), y = sy(f.y); g.fillStyle = sidefarge(f.side, 'lys'); g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 6, y); g.lineTo(x, y + 6); g.lineTo(x - 6, y); g.closePath(); g.fill(); g.stroke(); }
+    g.restore(); };
+  KROKER.tegn.push(tegn);
+
+  // ---------- jevnlig: statuslinja, panelet, seier og fare ----------
+  const les = id => { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); meldt = d && d.leir === id ? d : { leir: id, vunnet: false, tapt: false, fare: {} }; } catch (e) { meldt = { leir: id, vunnet: false, tapt: false, fare: {} }; } };
+  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify(meldt)); } catch (e) { /* fullt eller sperret */ } };
+  function visKort(tittel, tekst) { const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst), knapp('Fortsett', () => kort.classList.remove('på'))); kort.replaceChildren(d); kort.classList.add('på'); if (typeof tempo !== 'undefined' && document.getElementById('sp0') && tempo > 0) document.getElementById('sp0').click(); }
+  function takt() { const T = bilde(); kn.hidden = stat.hidden = !T; if (!T) return; const L = leir(), id = Math.round(L.x) + ',' + Math.round(L.y); if (meldt.leir !== id) les(id);
+    const a = T.st.sider.blå.andel; document.getElementById('sKrig').textContent = S.prosent(a) + ' %' + (T.ut.fare.length ? ' ⚠' : '');
+    vis(false); if (!auto()) return; const R = S.REGLER;
+    for (const s of T.ut.fare) if (!meldt.fare[s]) { meldt.fare[s] = true; lagre(); logg(`${fraksjon(s).navn} holder nå ${S.prosent(T.st.sider[s].andel)} % av folket i området – de vinner ved ${S.prosent(R.seier)} %. Åpne krigskartet (Krig).`); }
+    for (const s of Object.keys(meldt.fare)) if (!T.ut.fare.includes(s) && T.st.sider[s] && T.st.sider[s].andel < R.fare - .05) { delete meldt.fare[s]; lagre(); }
+    if (T.ut.vinner === 'blå' && !meldt.vunnet) { meldt.vunnet = true; lagre(); visKort('Området er ditt', `${fraksjon('blå').navn} holder ${S.prosent(a)} % av folket i området. Du har vunnet denne krigen – men motstanderne finnes fortsatt, og du kan spille videre.`); }
+    else if (T.ut.vinner && T.ut.vinner !== 'blå' && !meldt.tapt) { meldt.tapt = true; lagre(); visKort(`${fraksjon(T.ut.vinner).navn} har overtaket`, `De holder ${S.prosent(T.st.sider[T.ut.vinner].andel)} % av folket i området. Ta tettsteder tilbake for å snu krigen.`); }
+    else if (T.ut.vinner !== 'blå' && meldt.vunnet && a < R.seier - .08) { meldt.vunnet = false; lagre(); } }
+  setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
+  const api = { test: false, åpne, lukk, erÅpen: () => åpen, bilde, send, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  window.StrategiSpill = api;
+})();

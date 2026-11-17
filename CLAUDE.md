@@ -978,3 +978,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   armer, hender, hjelmkant, sekk, belte og lommer (fortsatt fem nett). narhud.js vmGeo: våpenet i hånda med rundt løp, munningsbrems,
   sikter, buet magasin, avtrekkerbøyle, kikkert på ringer, pumpe på hagla, hanske med fingre. interior3d.js «maskin»: dreiebenk,
   søyleboremaskin eller kompressor (m.f velger). VAKT i sjekk.js: «detaljerte kjøretøy og soldater» (hver type 400–6000 trekanter).
+  KRIGSKARTET (17. nov, brukeren: «vi må få frem strategielementet mye bedre»): spill/strategi.js (regler uten DOM, test_strategi.js) +
+  strategi-visning.js (window.StrategiSpill). Spillet hadde tettsteder, motstandere og forsyning, men viste aldri krigen som helhet og
+  hadde ikke noe mål. OMRÅDET = tettstedene innen 45 km fra leiren, og alltid minst de 8 nærmeste (høyst 150 km; lista har .radius).
+  STILLINGEN = andel av folket i området per side; SEIER ved 60 % (også for motstanderne; ikke med færre enn 3 tettsteder), varsel når
+  en motstander passerer 45 %. Knappen «Krig» (tast T, #krigknapp) åpner panelet #krig (bunnark på telefon), går til 2D, zoomer ut så
+  hele området synes ved siden av panelet (lukk = tilbake der du var), og tegner (KROKER.tegn): slør, området hver side rår over
+  (Strategi.rekkevidde(folk)), tettstedene som merker etter folketall, fronter (stiplet, kryss på midten; nærmeste tettsted med annen
+  eier innen 20 km), egne lag med ordre, kjente fiender, og tallene 1–3 på de beste målene. Panelet: stolper med seiersstrek, valgt
+  tettsted (trykk i kartet: KROKER.trykk først i lista når krigskartet er åpent), NESTE TREKK (Strategi.trekk: folk, avstand, nøytralt
+  foran forsvart; «Send» = StrategiSpill.send -> ordre() til nærmeste ledige lag som ikke er eneste garnison, høyst 30 km), TRUSLER
+  (uten garnison / fiende innen 6 km) og lagene. Zoomet ut (kam.m ≥ 18) vises fargene og frontene også ellers. #sKrig i statuslinja
+  = din andel. Kortene (seier / motstander har overtaket) og varslene kommer ikke av seg selv i testene (StrategiSpill.test);
+  «riksbrudd-strategi» husker hva som er meldt per leir. Tallene er Claudes forslag. Dovre-siden har bare Dombås som tettsted –
+  prøv på /norge (scratchpad gj/krig.js). VAKT «krigskartet» i sjekk.js (fire prøvetettsteder legges inn og tas bort).
+  IKKE GJORT: AI-en er fortsatt to motstandere med få lag, marsjer tar timer i sanntid, og vinner du, skjer ikke noe mer.

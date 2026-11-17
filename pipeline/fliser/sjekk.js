@@ -1078,6 +1078,27 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const detok = !det.uten && Object.keys(det.typer).length >= 5 && Object.values(det.typer).every(n => n > 400 && n < 6000) && det.tegnet >= 2 && det.etter === det.tegnet - 2 && det.soldat > 400;
     if (!detok) { feil++; console.log(JSON.stringify(det)); }
     console.log(`${detok ? 'ok  ' : 'FEIL'} ${navn} detaljerte kjøretøy og soldater: ${Object.entries(det.typer || {}).map(([t, n]) => t + ' ' + n).join(', ')} trekanter, soldaten ${Math.round(det.soldat || 0)}`);
+    // VAKT krigskartet (spill/strategi.js, brukeren 17. nov: «få frem strategielementet mye bedre»): med fire prøvetettsteder rundt
+    // leiren gir krigskartet stilling, neste trekk og fronter, panelet åpner og zoomer ut, «Send» gir et lag ordre, og alt ryddes bort.
+    const krig = await pg.evaluate(async () => { if (!window.StrategiSpill || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return { uten: true };
+      const blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)), L = (window.OppstartSpill && OppstartSpill.tilstand() && OppstartSpill.tilstand().leir) || (window.OLJE && OLJE.BASER[0]) || blå[0], ut = {};
+      const lag = (id, dx, dy, folk) => { const x = L.x + dx, y = L.y + dy, r = 300; return { lag: 'tettsted', e: { id, navn: 'Prøve ' + id, folk }, bb: [x - r, y - r, x + r, y + r], deler: [[x - r, y - r, x + r, y - r, x + r, y + r, x - r, y + r]] }; };
+      const ny = [lag('vk1', 2000, 0, 4000), lag('vk2', 9000, 0, 3000), lag('vk3', 0, 12000, 2000), lag('vk4', -14000, 0, 1000)]; INFRA.tettsted.push(...ny);
+      TETTSTEDER.set('vk1', { eier: 'blå', inntar: null }); TETTSTEDER.set('vk2', { eier: 'rød', inntar: null });
+      const var3d = på3d; let mÅpen = 0;
+      try { const T = StrategiSpill.bilde(); ut.byer = T.byer.filter(b => /^vk/.test(b.id)).length; ut.fronter = T.fronter.filter(f => /^vk/.test(f.a.id) && /^vk/.test(f.b.id)).length; ut.trekk = T.trekk.filter(t => /^vk/.test(t.by.id)).map(t => t.by.id);
+        ut.andel = T.st.sider.blå.andel; StrategiSpill.åpne(); ut.åpen = document.getElementById('krig').classList.contains('på') && document.body.classList.contains('krig'); ut.zoom = kam.m > 20; mÅpen = kam.m; ut.i2d = !på3d;
+        ut.stolper = document.querySelectorAll('#krig .side .stolpe').length; ut.rader = document.querySelectorAll('#krig [data-trekk]').length; ut.velg = StrategiSpill.velg('vk3'); ut.sendKnapp = !!document.querySelector('#krig .by [data-send="vk3"]');
+        const g = document.createElement('canvas').getContext('2d'); let tegnFeil = ''; try { StrategiSpill.tegn(g, kam.x - 1000, kam.y + 1000); } catch (e) { tegnFeil = e.message; } ut.tegnFeil = tegnFeil;
+        const s = blå.find(q => !q.sti), før = s && s.sti; ut.sendt = s ? StrategiSpill.send(T.byer.find(b => b.id === 'vk3'), s) : null; await new Promise(r => setTimeout(r, 2500)); ut.marsjerer = s ? !!s.sti : null; if (s) { s.sti = før || null; s.siktSkitten = true; }
+        StrategiSpill.lukk(); ut.lukket = !document.getElementById('krig').classList.contains('på') && kam.m < mÅpen; ut.status = document.getElementById('sKrig').textContent;
+      } finally { for (const b of ny) { INFRA.tettsted.splice(INFRA.tettsted.indexOf(b), 1); TETTSTEDER.delete(b.e.id); } StrategiSpill.takt();
+        // krigskartet går til 2D: sett 3D på igjen for vaktene som kommer etter
+        if (var3d) { await slå3d(true); const t0 = performance.now(); while ((!R3 || !R3.ut || R3.bygger) && performance.now() - t0 < 120000) await new Promise(r => setTimeout(r, 200)); } }
+      return ut; });
+    const krigok = !krig.uten && krig.byer === 4 && krig.fronter >= 1 && krig.trekk.length === 3 && krig.andel > 0 && krig.åpen && krig.zoom && krig.i2d && krig.stolper === 3 && krig.rader >= 3 && krig.velg && krig.sendKnapp && !krig.tegnFeil && krig.sendt === true && krig.marsjerer === true && krig.lukket;
+    if (!krigok) { feil++; console.log(JSON.stringify(krig)); }
+    console.log(`${krigok ? 'ok  ' : 'FEIL'} ${navn} krigskartet: ${krig.byer} prøvetettsteder, ${krig.fronter} front, neste trekk ${(krig.trekk || []).join(', ')}, panelet åpner og lukker, laget fikk ordre: ${krig.marsjerer}`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
