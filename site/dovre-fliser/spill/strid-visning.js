@@ -34,6 +34,24 @@
     if (!fi) return null; regel(fi); const hf = S.høydeRett(dh(s, fi)), of = S.oppdagelse(kontakt(s, fi), tid), vår = S.kraft(s.menn, d, forholdF(s, fi), hf * of, Terreng.treffsjanse), deres = S.kraft(fi.menn, d, forholdF(fi, s), S.høydeRett(dh(fi, s)) * S.oppdagelse(kontakt(fi, s), tid), Terreng.treffsjanse);
     return { fi, d, vår, deres, forhold: S.forhold(vår, deres), høyde: dh(s, fi), høydeF: S.høyde(dh(s, fi)), oppdag: of, ute: Terreng.uteAvKamp(s.menn), rekkevidde: rekkevidde(s) }; }
 
+  // EGET INITIATIV (Strid.tiltak): hente ammunisjon, komme et lag under ild til hjelp, eller flytte seg til høyere terreng like ved
+  const leirPos = () => { const O = window.OppstartSpill && OppstartSpill.tilstand(); return O && O.leir ? O.leir : null; };
+  // der ammunisjonen fylles: leiren, eller et tettsted vi holder
+  function forsyningssted(s) { const L = leirPos(); let best = L ? { x: L.x, y: L.y, navn: 'leiren', d: Math.hypot(L.x - s.x, L.y - s.y) } : null;
+    if (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted && window.Garnison && typeof TETTSTEDER !== 'undefined') for (const b of INFRA.tettsted) { if (b.bb[2] < s.x - 30000 || b.bb[0] > s.x + 30000 || b.bb[3] < s.y - 30000 || b.bb[1] > s.y + 30000) continue; if (Garnison.tilstand(TETTSTEDER, b.e.id).eier !== 'blå') continue;
+      const x = (b.bb[0] + b.bb[2]) / 2, y = (b.bb[1] + b.bb[3]) / 2, d = Math.hypot(x - s.x, y - s.y); if (!best || d < best.d) best = { x, y, navn: b.e.navn, d }; }
+    return best; }
+  function høyereNær(s) { const h0 = hoydeVed(s.x, s.y); if (!isFinite(h0)) return null; let best = null; for (const r of [70, S.INITIATIV.søk]) for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r, h = hoydeVed(x, y); if (isFinite(h) && (!best || h > best.h)) best = { x, y, h }; }
+    return best ? { ...best, vinn: best.h - h0 } : null; }
+  function initiativ(s, v) { const r = regel(s); if (s.sti && r.forsyn !== 'ja') return; if (s.nedgravd || s.ombord || s.forsvar || s.leirvakt) return; if (!KROKER.kanOrdre.every(f => f(s))) return;
+    const amm = window.Forsyning ? Forsyning.ammo(s) : 1, sted = amm < S.INITIATIV.ammo ? forsyningssted(s) : null, hø = v && !s.sti ? høyereNær(s) : null;
+    let venn = null; if (!v && !s.sti && r.støtte === 'ja') for (const e of egne()) { if (e === s || !beskutt(e)) continue; const d = Math.hypot(e.x - s.x, e.y - s.y); if (d <= S.INITIATIV.støtte && (!venn || d < venn.d)) venn = { e, d }; }
+    const t = S.tiltak(r, { stille: !s.sti, fiende: v ? v.d : null, beskutt: beskutt(s), høyde: hø ? hø.vinn : 0, venn: venn ? venn.d : null, ammo: amm, hjemme: !sted || sted.d < 250 || (s.initiativ === 'forsyn' && !!s.sti) });
+    if (!t) return null; s.stridSist = tid; s.initiativ = t.hva;
+    if (t.hva === 'forsyn') { ordre(s, sted.x, sted.y, true); logg(`${s.navn} går til ${sted.navn} etter ammunisjon: ${t.grunn}.`); }
+    else if (t.hva === 'støtte') { const a = Math.atan2(s.y - venn.e.y, s.x - venn.e.x); ordre(s, venn.e.x + Math.cos(a) * 180, venn.e.y + Math.sin(a) * 180, true); logg(`${s.navn} kommer ${venn.e.navn} til hjelp.`); }
+    else { ordre(s, hø.x, hø.y, true); logg(`${s.navn} flytter seg til høyere terreng: ${t.grunn}.`); }
+    if (valgt === s) visPanel(); return t; }
   let akk = 0;
   KROKER.sim.push(dt => { akk += dt; if (akk < 1) return; akk = 0;   // hvert spillminutt
     for (const k of SKUDD) if (k.b) k.b.beskuttTid = tid;
@@ -42,7 +60,7 @@
           if (a.side === 'blå' && !a.karakter && auto() && !SETT.has(nøkkel(b, a))) logg(`${a.navn} har oppdaget ${b.navn} (${Math.round(d)} m) uten å bli sett.`); } } }
     if (!auto()) return;
     for (const s of egne()) { if (s.planlegger || tid - (s.stridSist === undefined ? -99 : s.stridSist) < 15) continue; const v = vurdering(s), r = S.reaksjon(regel(s), v ? { forhold: v.forhold, ute: v.ute, avstand: v.d, beskutt: beskutt(s), rekkevidde: v.rekkevidde } : { ute: Terreng.uteAvKamp(s.menn), forhold: 1 });
-      if (!r || (!v && !beskutt(s))) continue; s.stridSist = tid;
+      if (!r || (!v && !beskutt(s))) { initiativ(s, v); continue; } s.stridSist = tid;
       if (r.hva === 'fram') { if (s.sti || !KROKER.kanOrdre.every(f => f(s))) continue; const a = Math.atan2(s.y - v.fi.y, s.x - v.fi.x), q = v.rekkevidde * .45; ordre(s, v.fi.x + Math.cos(a) * q, v.fi.y + Math.sin(a) * q, true); logg(`${s.navn} rykker fram mot ${v.fi.navn}: ${r.grunn}.`); }
       else { const fx = v ? v.fi.x : s.x + 1, fy = v ? v.fi.y : s.y, a = Math.atan2(s.y - fy, s.x - fx); ordre(s, s.x + Math.cos(a) * 1500, s.y + Math.sin(a) * 1500, true); logg(`${s.navn} ${r.hva === 'unngå' ? 'trekker unna' : 'trekker seg tilbake'}: ${r.grunn}.`); }
       if (valgt === s) visPanel(); } });
@@ -92,5 +110,6 @@ body.smal #stridpanel, body.kort #stridpanel{ left:0; right:0; top:auto; bottom:
   KROKER.lagTekst.push(s => { if (s.karakter) return null; const r = regel(s); if (s.side !== 'blå') return 'bevæpning: ' + S.BEVÆPNING[r.bev].navn.toLowerCase();
     const h = S.holdningFor(r), v = vurdering(s); return `${h ? S.HOLDNING[h].navn.toLowerCase() : 'egne regler'}, ${S.BEVÆPNING[r.bev].navn.toLowerCase()}` + (v ? ` · ${S.forholdTekst(v.forhold)} mot ${v.fi.navn}` : ''); });
   Object.assign(api, { regel, sett, velgBev, vurdering, faktor, kontakt, åpne, lukk, mal: () => mal, SETT, beskutt });
+  Object.assign(api, { initiativ, høyereNær, forsyningssted });
   window.StridSpill = api;
 })();

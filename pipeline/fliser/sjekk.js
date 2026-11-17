@@ -338,7 +338,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         const fa = await pg.evaluate(async () => { const l = ENHETER[1], s = ENHETER.find(s => s.ingeniør), f = ENHETER[3];
           for (let i = 0; i < 700; i++) sim(.1);
           // (17. nov: blir laget beskutt mens det graver, mister det folk og bruker litt lenger tid – vent til det er ferdig)
-          for (let i = 0; i < 600 && !l.nedgravd; i++) sim(.1);
+          for (let i = 0; i < 4000 && !l.nedgravd; i++) sim(.1);
           const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
           f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
           await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
@@ -1224,6 +1224,24 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const kaiok = !kai.uten && kai.nær === 3 && kai.middels === 2 && kai.langt === 1 && kai.borte === 0 && kai.trykk === true && kai.logg && kai.bom === false && kai.knapp && kai.av === 0;
     if (!kaiok) { feil++; console.log(JSON.stringify(kai)); }
     console.log(`${kaiok ? 'ok  ' : 'FEIL'} ${navn} kaier: ${kai.nær} merker nær, ${kai.middels} på 40 m/punkt, ${kai.langt} langt ute, trykk gir navn og kailengde: ${kai.logg}, av i ☰: ${kai.av === 0}`);
+    // VAKT bedre AI og troppebygger (brukeren 17. nov: «forbedre fiendens AI, spillerens egen AI for tropper og systemet for å lage
+    // egne tropper, hvor han velger folk og utstyr»): forslaget «Speidertropp» gir fire med kikkert og feltradio, våpnene følger
+    // valget mann for mann, kikkerten gir lengre sikt, et lag med lite ammunisjon går selv etter mer, og fiendens AI har minne.
+    const bai = await pg.evaluate(async () => { if (!window.TropperSpill || !TropperSpill.brukMal || !window.StridSpill || !StridSpill.initiativ) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), O = OppstartSpill.tilstand(), F = FolkSpill.tilstand(), p0 = O.penger, n0 = F.personer.length;
+      TropperSpill.åpne(); await vent(200); ut.maler = document.querySelectorAll('#tropppanel [data-mal]').length; document.querySelector('#tropppanel [data-mal=speider]').click(); await vent(200);
+      const v = TropperSpill.valg(); ut.valgt = v.valgte.length; ut.utstyr = v.utstyr.join(); ut.sum = /Pris: [\d\s\u00a0]+kr/.test(document.getElementById('troppsum').textContent); ut.kraft = !!document.getElementById('troppkraft');
+      const pris = Tropper.pris(v.valgte.map(id => v.våpen[id] || 'rifle'), v.utstyr); document.getElementById('troppopprett').click(); await vent(300);
+      const s = ENHETER.find(e => e.fraFolk && e.utstyr && e.utstyr.kikkert); ut.lag = !!s; ut.betalt = p0 - O.penger === pris; ut.folk = n0 - F.personer.length;
+      if (s) { ut.våpen = s.menn.some(m => (m.våpen || m.rolle) === 'presisjonsrifle'); ut.radio = s.radio === 'felt'; ut.sikt = KROKER.sikt.reduce((a, f) => a * (f(s) || 1), 1) >= 1.2; ut.bev = s.strid && s.strid.bev;
+        // eget initiativ: lite ammunisjon og valget «hent selv» -> går mot leiren
+        const x0 = s.x, y0 = s.y, r0 = { ...s.strid }, om = s.ombord; s.ombord = null; s.x += 1500; s.strid = { ...s.strid, forsyn: 'ja' }; s.ammo = .1; const t = StridSpill.initiativ(s, null); ut.forsyn = t && t.hva; s.strid = { ...r0, forsyn: 'nei' }; s.initiativ = null; ut.ikke = StridSpill.initiativ(s, null) || null;
+        s.ammo = 1; s.sti = null; s.planlegger = false; s.x = x0; s.y = y0; s.strid = r0; s.ombord = om; await vent(300); s.sti = null; s.x = x0; s.y = y0;
+        const r = TropperSpill.oppløs(s); ut.hjem = r.hjem; }
+      O.penger = p0; TropperSpill.lukk(); ut.folkEtter = F.personer.length - n0; ut.regler = Object.keys(Strid.VALG).length;
+      ut.minne = !!(window.AI && AI.minne && AI.minne.rød && AI.minne.grønn); ut.tak = Fraksjoner.lagTak(4); const p = Fraksjoner.angrepspunkt({ x: kam.x - 2000, y: kam.y }, { x: kam.x, y: kam.y }, (x, y) => hoydeVed(x, y)); ut.punkt = isFinite(p.x) && isFinite(p.y); return ut; });
+    const baiok = !bai.uten && bai.maler === 4 && bai.valgt === 4 && bai.utstyr === 'kikkert,feltradio' && bai.sum && bai.kraft && bai.lag && bai.betalt && bai.folk === 4 && bai.våpen && bai.radio && bai.sikt && bai.bev === 'egen' && bai.forsyn === 'forsyn' && bai.ikke === null && bai.hjem === 4 && bai.folkEtter === 0 && bai.regler === 7 && bai.minne && bai.tak === 5 && bai.punkt;
+    if (!baiok) { feil++; console.log(JSON.stringify(bai)); }
+    console.log(`${baiok ? 'ok  ' : 'FEIL'} ${navn} bedre AI og troppebygger: ${bai.maler} forslag, Speidertropp ${bai.valgt} med ${bai.utstyr}, våpen mann for mann ${bai.våpen}, feltradio ${bai.radio}, kikkert gir sikt ${bai.sikt}, lite ammunisjon -> ${bai.forsyn}, ${bai.regler} stridsvalg, fiendens minne ${bai.minne}`);
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.

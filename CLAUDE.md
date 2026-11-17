@@ -1136,3 +1136,26 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   «Kaier» i ☰ («riksbrudd-kaier»). window.KaierSpill (data, nær, settData). VAKT «kaier» (prøvedata). IKKE GJORT: kaiene gir ingen
   fordel ennå (ingen båter/forsyning sjøveien), ingen egne 3D-modeller utover det kyst3d og ferjekaiene alt lager, og de vises ikke
   i leirvalget ved oppstart.
+  BEDRE AI OG TROPPEBYGGER (17. nov, brukeren: «enda flere måter å forbedre både fiendens AI og spillerens egen AI for tropper, og
+  systemet spilleren bruker for å lage sine egne tropper, hvor han velger folk og utstyr»). Alle tallene er Claudes forslag.
+  FIENDEN (spill/fraksjoner.js velg, test_fraksjoner.js): nye valg 'samle' (underlegen alene: gå mot en venn innen 5 km), 'støtt' (en
+  venn under ild innen 5 km – v.hjelp), 'jakt' (der fienden sist ble sett – v.minne, 120 min, 6 km), 'leir' (spillerens leir når
+  fraksjonen har funnet den – v.leir), samlet angrep (venner innen 1,5 km teller med), bakhold for de forsiktige i skog (v.iSkog),
+  v.opptatt (ikke samme tettsted som en venn), b.tapt (tapte tettsteder ×2,5 nærmere), stil per side (R.stil: rød overtak 0,7,
+  grønn 1,0), Fraksjoner.lagTak(byer) (3 + et halvt lag per tettsted, høyst 6) og Fraksjoner.angrepspunkt (høyeste punkt på en ring
+  280 m rundt målet, 110 m for leiren; 4 m høyde veier opp 100 m ekstra marsj). fraksjoner-visning.js: AI.minne[side] = { sist, hatt,
+  leir } (leiren er funnet når et lag har vært innen 2 km), s.ai.målBy. IKKE lagret mellom økter.
+  EGNE LAG (spill/strid.js, test_strid.js): tre nye stridsvalg – dekning (ja fra start: flytt til terreng minst 8 m høyere innen
+  150 m når fienden er 150–1200 m unna), støtte (kom et eget lag under ild til hjelp innen 1,5 km), forsyn (gå til leiren eller et
+  tettsted dere holder når ammunisjonen er under 25 %); Strid.tiltak(r, t), Strid.INITIATIV. strid-visning.js initiativ(s, v) kjøres
+  hvert spillminutt når reaksjonsreglene ikke slår til (høyst hvert 15. min; ikke nedgravd, om bord, i forsvarsstilling eller uten
+  radiokontakt; ikke av seg selv i testene). Panelet lager valgene selv av Strid.VALG (nå sju).
+  TROPPEBYGGEREN (spill/tropper.js, test_tropper.js): Tropper.VÅPEN (pris per våpen), UTSTYR (kikkert sikt ×1,2 via KROKER.sikt;
+  ammo: halve forbruket; sanitet: Tropper.pleie – en såret kampklar hver 6. time når troppen har en frisk sanitet; feltradio via
+  KontrollromSpill.girRadio), MALER (speider, storm, vakt, støtte), foreslå (best i strid, fri/vakt foran, syke sist), pris, mister,
+  utrust (m.valgt per mann). Strid.BEVÆPNING.egen bruker m.valgt (bevæpn sender mannen som tredje ledd). tropper-visning.js:
+  forslagene (#tropppanel [data-mal]), våpenvalg per valgt person ([data-vapen]), «Velg de best egnede», utstyr ([data-utstyr]),
+  oppsummering #troppsum (pris, ildkraft i prosent av et vanlig lag på 100/400/800 m, hva leiren mister). TropperSpill.opprett(ider,
+  navn, bev, kjøretøy, { våpen, utstyr }), brukMal, valg(). lagring.js lagrer m.valgt og s.utstyr. VAKT «bedre AI og troppebygger».
+  IKKE GJORT: erfaring (veteraner som treffer bedre), bytte våpen/utstyr på en tropp som alt finnes, formasjoner, og at fienden
+  bruker kjøretøy eller bygger egne stillinger.

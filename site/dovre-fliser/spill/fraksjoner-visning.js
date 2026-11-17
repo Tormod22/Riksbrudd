@@ -63,6 +63,8 @@
   const byerRundt = (s, r) => ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > s.x - r && b.bb[0] < s.x + r && b.bb[3] > s.y - r && b.bb[1] < s.y + r);
   const eier = by => Garnison.tilstand(TETTSTEDER, by.e.id).eier;
 
+  const MINNE = { rød: { sist: null, hatt: new Set(), leir: false }, grønn: { sist: null, hatt: new Set(), leir: false } }, leir = () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
+  AI.minne = MINNE;
   let akk = 0;
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return; const sek = akk; akk = 0;   // ett steg per spillminutt
@@ -76,9 +78,23 @@
       const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y) }; });
       const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
         .concat(KJORETOY.filter(k => k.side !== s.side && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
-      const v = F.velg(s, { side: s.side, byer, fiender, venner: ENHETER.filter(e => e.side === s.side && e.ai), hjem: HJEM[s.side], ammo: Forsyning.ammo(s) });
+      // BEDRE AI (17. nov): det fraksjonen husker og vet – hvor den sist så en fiende, hvilke tettsteder den har mistet, hvem av
+      // vennene som blir beskutt, hva de andre lagene alt går mot, og hvor spillerens leir er når et lag har vært nær nok til å se den
+      const M = MINNE[s.side], venner = ENHETER.filter(e => e.side === s.side && e.ai && levende(e)), L = leir();
+      for (const b of byer) { if (b.eier === s.side) M.hatt.add(b.id); else if (M.hatt.has(b.id)) b.tapt = true; }
+      const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      if (sett) M.sist = { x: sett.x, y: sett.y, navn: sett.navn, styrke: F.styrke(sett, Forsyning.ammo(sett)), t: tid };
+      if (M.sist && Math.hypot(M.sist.x - s.x, M.sist.y - s.y) < 250 && !sett) M.sist = null;   // vi er der, og ingen er her lenger
+      if (L && !M.leir && Math.hypot(L.x - s.x, L.y - s.y) < 2000) { M.leir = true; if (synlig(s)) logg(`${F.FRAKSJONER[s.side].navn} har funnet leiren din.`); }
+      const opptatt = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) opptatt.set(f.ai.målBy, f);
+      const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
+      const v = F.velg(s, { side: s.side, byer, fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
+        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+      s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : null;
+      // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
+      if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }
       const ny = v.hva !== s.ai.hva; s.ai.hva = v.hva; s.ai.tekst = v.tekst;
-      if (ny && synlig(s) && (v.hva === 'angrip' || v.hva === 'trekk')) logg(`${s.navn} ${v.tekst}.`);
+      if (ny && synlig(s) && ['angrip', 'trekk', 'samle', 'støtt', 'leir'].includes(v.hva)) logg(`${s.navn} ${v.tekst}.`);
       if (v.hva === 'hold') { if (s.sti) { s.sti = null; s.siktSkitten = true; } s.ai.mål = null; continue; }
       const m = s.ai.mål; if (s.sti && m && Math.hypot(m[0] - v.x, m[1] - v.y) < 300) continue;   // allerede på veg dit
       if (Math.hypot(v.x - s.x, v.y - s.y) < 150) continue;
@@ -87,7 +103,7 @@
     // forsterkninger: nytt lag ved startstedet (eller i et eget tettsted) hver 6. spilltime når fraksjonen har få lag igjen
     for (const side of AI.sider) {
       sist[side] += sek; if (sist[side] < R.forsterkning.hver) continue;
-      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); if (lag.length >= R.forsterkning.maks) continue;
+      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; if (lag.length >= F.lagTak(holder)) continue;
       sist[side] = 0; const egen = ((INFRA && INFRA.tettsted) || []).find(b => eier(b) === side), [x, y] = egen ? inne(egen) : HJEM[side], s = nytt(side, x, y);
       if (synlig(s)) logg(`${F.FRAKSJONER[side].navn} har fått forsterkninger: ${s.navn}.`);
     }

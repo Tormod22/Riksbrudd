@@ -15,8 +15,8 @@
   const r1 = v => Math.round(v * 10) / 10;
   // ---------- lagene ----------
   function pakkLag(s) {
-    const d = { navn: s.navn, x: r1(s.x), y: r1(s.y), leder: s.leder || 0, menn: s.menn.map(m => (m.person ? { navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy, person: m.person } : { navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy })) };
-    if (s.fraFolk) d.fraFolk = true; if (s.ombord && s.ombord.navn) d.ombord = s.ombord.navn;   // egne tropper (spill/tropper.js)
+    const d = { navn: s.navn, x: r1(s.x), y: r1(s.y), leder: s.leder || 0, menn: s.menn.map(m => Object.assign({ navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy }, m.person ? { person: m.person } : {}, m.valgt ? { valgt: m.valgt } : {})) };
+    if (s.fraFolk) d.fraFolk = true; if (s.utstyr) d.utstyr = s.utstyr; if (s.ombord && s.ombord.navn) d.ombord = s.ombord.navn;   // egne tropper (spill/tropper.js)
     if (s.speider) d.speider = true; if (s.ingeniør) d.ingeniør = true; if (s.nedgravd) d.nedgravd = true;
     if (s.radio) d.radio = s.radio; if (s.ammo !== undefined) d.ammo = +(+s.ammo).toFixed(3);
     if (s.strid) d.strid = s.strid;   // stridsreglene og bevæpningen (spill/strid.js)
@@ -25,8 +25,8 @@
   // Setter laget slik det ble lagret. Laget står stille (ordren er ikke lagret), og sikten regnes på nytt.
   function brukLag(s, d) {
     s.x = tall(d.x, s.x); s.y = tall(d.y, s.y); s.sti = null; s.steg = null; s.seg = 0; s.prog = 0; s.timerIgjen = 0; s.siktSkitten = true;
-    if (Array.isArray(d.menn) && d.menn.length) s.menn = d.menn.filter(m => m && m.navn).map(m => ({ navn: String(m.navn), rolle: String(m.rolle || 'rifle'), hp: mellom(tall(m.hp, 1), 0, 1), loy: tall(m.loy, .8), ...(m.person && typeof m.person === 'object' ? { person: m.person } : {}) }));
-    if (d.fraFolk) s.fraFolk = true; if (d.ombord) s.ombordNavn = String(d.ombord);
+    if (Array.isArray(d.menn) && d.menn.length) s.menn = d.menn.filter(m => m && m.navn).map(m => ({ navn: String(m.navn), rolle: String(m.rolle || 'rifle'), hp: mellom(tall(m.hp, 1), 0, 1), loy: tall(m.loy, .8), ...(m.person && typeof m.person === 'object' ? { person: m.person } : {}), ...(typeof m.valgt === 'string' ? { valgt: m.valgt } : {}) }));
+    if (d.fraFolk) s.fraFolk = true; if (d.utstyr && typeof d.utstyr === 'object') s.utstyr = d.utstyr; if (d.ombord) s.ombordNavn = String(d.ombord);
     s.leder = mellom(Math.round(tall(d.leder, 0)), 0, Math.max(0, s.menn.length - 1));
     if (d.ammo !== undefined) s.ammo = mellom(tall(d.ammo, 1), 0, 1);
     if (d.radio) s.radio = d.radio; if (d.nedgravd) s.nedgravd = true;

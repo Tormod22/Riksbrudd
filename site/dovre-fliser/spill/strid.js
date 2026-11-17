@@ -19,10 +19,12 @@
     nærstrid: { navn: 'Nærstrid', kort: 'maskinpistoler og hagler', pris: 200000, våpen: (rolle, i) => (rolle === 'maskingevær' ? null : i % 4 === 3 ? 'hagle' : 'maskinpistol'), tekst: 'Dobbelt så farlig under 150 m, men når ikke lenger enn 300 m. Best i skog og tettsteder.' },
     avstand: { navn: 'Avstand', kort: 'seks presisjonsrifler og rifler', pris: 400000, våpen: (rolle, i) => (i % 2 === 0 ? 'presisjonsrifle' : 'rifle'), tekst: 'Når 1100 m og treffer klart best over 400 m. Ingen maskingevær, så ikke sterkere enn standard helt nært.' },
     tung: { navn: 'Tung', kort: 'fire maskingevær og rifler', pris: 600000, våpen: (rolle, i) => (i % 3 === 2 ? 'maskingevær' : null), tekst: 'Mest ildkraft på alle hold opp til 900 m. Dyrest.' },
+    // våpen valgt mann for mann i troppebyggeren (spill/tropper.js): m.valgt, ellers rollens våpen
+    egen: { navn: 'Egen sammensetning', kort: 'våpen valgt mann for mann', pris: 0, våpen: (rolle, i, m) => (m && m.valgt) || null, tekst: 'Satt sammen i troppebyggeren.' },
     lett: { navn: 'Lett', kort: 'pistoler, hagler og noen rifler', pris: 0, våpen: (rolle, i) => (i % 3 === 0 ? 'rifle' : i % 3 === 1 ? 'hagle' : 'pistol'), tekst: 'Det røvere har. Farlig helt nært, ufarlig på avstand.' },
   };
   const VALGBARE = ['standard', 'nærstrid', 'avstand', 'tung'];
-  function bevæpn(menn, id) { const B = BEVÆPNING[id] || BEVÆPNING.standard; menn.forEach((m, i) => { const v = B.våpen(m.rolle, i); if (v) m.våpen = v; else delete m.våpen; }); return menn; }
+  function bevæpn(menn, id) { const B = BEVÆPNING[id] || BEVÆPNING.standard; menn.forEach((m, i) => { const v = B.våpen(m.rolle, i, m); if (v) m.våpen = v; else delete m.våpen; }); return menn; }
   // Høyde: dh = hvor mange meter skytteren står over målet. +10 m gir litt, +80 m gir mest; oppover skyter du dårligere.
   const HØYDE = { fra: 10, full: 80, maks: 1.6, ned: .7 };
   const høyde = dh => (dh >= HØYDE.fra ? 1 + (HØYDE.maks - 1) * Math.min(1, (dh - HØYDE.fra) / (HØYDE.full - HØYDE.fra)) : dh <= -HØYDE.fra ? 1 - (1 - HØYDE.ned) * Math.min(1, (-dh - HØYDE.fra) / (HØYDE.full - HØYDE.fra)) : 1);
@@ -44,7 +46,21 @@
     underlegen: { navn: 'Når vi er underlegne', valg: { kjemp: 'Kjemp likevel', trekk: 'Trekk oss tilbake', unngå: 'Unngå kontakt – trekk unna før kampen' } },
     tap: { navn: 'Tap før retrett', valg: { 0: 'Aldri – kjemp til siste mann', 3: 'Tre ute av kamp', 5: 'Fem ute av kamp' } },
     fram: { navn: 'Når vi har overtaket', valg: { nei: 'Hold stillingen', ja: 'Rykk fram mot fienden' } },
+    // EGET INITIATIV (17. nov, brukeren: «forbedre spillerens egen AI for tropper»): det laget gjør uten ordre
+    dekning: { navn: 'Når fienden er nær', valg: { ja: 'Søk høyere terreng i nærheten', nei: 'Bli stående der vi står' } },
+    støtte: { navn: 'Lag under ild i nærheten', valg: { nei: 'Bli på plassen vår', ja: 'Kom dem til hjelp (innen 1,5 km)' } },
+    forsyn: { navn: 'Lite ammunisjon', valg: { nei: 'Vent på ordre', ja: 'Gå og hent selv (under 25 %)' } },
   };
+  const INITIATIV = { dekning: 1200, høyde: 8, søk: 150, støtte: 1500, ammo: .25 };
+  // Det laget gjør på eget initiativ når stridsreglene ellers ikke sier noe. t: { stille (står uten ordre), fiende (meter til nærmeste
+  // fiende laget ser, eller null), beskutt, høyde (meter laget kan vinne innen INITIATIV.søk), venn (meter til et eget lag under ild,
+  // eller null), ammo (0–1), hjemme (står der ammunisjonen fylles) }. Gir { hva: 'forsyn' | 'støtte' | 'dekning', grunn } eller null.
+  function tiltak(r, t) { const I = INITIATIV;
+    if (r.forsyn === 'ja' && t.ammo !== undefined && t.ammo < I.ammo && !t.beskutt && !t.hjemme && (t.fiende === null || t.fiende === undefined || t.fiende > 600)) return { hva: 'forsyn', grunn: `${Math.round(t.ammo * 100)} % ammunisjon igjen` };
+    if (!t.stille) return null;
+    if (r.støtte === 'ja' && t.venn !== null && t.venn !== undefined && t.venn <= I.støtte && t.venn > 200 && (t.fiende === null || t.fiende === undefined) && !(t.ammo < I.ammo)) return { hva: 'støtte', grunn: 'et lag i nærheten blir beskutt' };
+    if (r.dekning === 'ja' && t.fiende !== null && t.fiende !== undefined && t.fiende <= I.dekning && t.fiende > 150 && t.høyde >= I.høyde) return { hva: 'dekning', grunn: `${Math.round(t.høyde)} m høyere terreng like ved` };
+    return null; }
   const HOLDNING = {
     aggressiv: { navn: 'Aggressiv', tekst: 'Skyter på alt, kjemper også som underlegne og rykker fram.', regel: { ild: 'fri', underlegen: 'kjemp', tap: 0, fram: 'ja' } },
     balansert: { navn: 'Balansert', tekst: 'Skyter på alt, men trekker seg når det ser ut til å gå galt.', regel: { ild: 'fri', underlegen: 'trekk', tap: 5, fram: 'nei' } },
@@ -52,7 +68,7 @@
     bakhold: { navn: 'Bakhold', tekst: 'Ligger stille og venter til fienden er innen 200 m.', regel: { ild: 'nær', underlegen: 'trekk', tap: 5, fram: 'nei' } },
   };
   const GRENSE = { underlegen: .7, overtak: 1.3, nær: 200, unngå: 1200 };
-  const standard = () => ({ ...HOLDNING.balansert.regel, bev: 'standard' });
+  const standard = () => ({ ...HOLDNING.balansert.regel, dekning: 'ja', støtte: 'nei', forsyn: 'nei', bev: 'standard' });
   const ren = r => { const s = standard(), u = { ...s, ...(r || {}) }; for (const k of Object.keys(VALG)) if (!(String(u[k]) in VALG[k].valg)) u[k] = s[k]; u.tap = +u.tap; if (!BEVÆPNING[u.bev]) u.bev = 'standard'; return u; };
   const holdningFor = r => Object.keys(HOLDNING).find(id => Object.entries(HOLDNING[id].regel).every(([k, v]) => String(r[k]) === String(v))) || null;
   // Får laget skyte? t: { avstand, beskutt }
@@ -66,7 +82,7 @@
     if (r.fram === 'ja' && t.forhold >= GRENSE.overtak && t.avstand > (t.rekkevidde || 600) * .5) return { hva: 'fram', grunn: `laget har ${forholdTekst(t.forhold)}` };
     return null;
   }
-  const api = { VÅPEN, BEVÆPNING, VALGBARE, bevæpn, HØYDE, høyde, høydeRett, OPPDAG, oppdagelse, oppdagetTekst, kraft, forhold, forholdTekst, VALG, HOLDNING, GRENSE, standard, ren, holdningFor, ildLov, reaksjon };
+  const api = { VÅPEN, BEVÆPNING, VALGBARE, bevæpn, HØYDE, høyde, høydeRett, OPPDAG, oppdagelse, oppdagetTekst, kraft, forhold, forholdTekst, VALG, HOLDNING, GRENSE, INITIATIV, tiltak, standard, ren, holdningFor, ildLov, reaksjon };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Strid = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

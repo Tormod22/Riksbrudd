@@ -207,6 +207,6 @@ body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 
     kontaktAkk = 99; visStatus(); skitten = true;
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.KontrollromSpill = { start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport, mast, radioStatus, hvorfor,
+  window.KontrollromSpill = { girRadio: (s, t) => { s.radio = t; T.radio[s.navn] = t; lagre(); }, start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport, mast, radioStatus, hvorfor,
     av: v => { av = v !== false; skitten = true; }, lagre, NØKKEL };
 })();

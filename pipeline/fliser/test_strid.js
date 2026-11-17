@@ -22,4 +22,13 @@ assert.strictEqual(S.reaksjon(bal, { forhold: .4, ute: 0, avstand: 300, beskutt:
 assert.strictEqual(S.reaksjon(S.HOLDNING.aggressiv.regel, { forhold: .2, ute: 9, avstand: 300, beskutt: true }), null, 'aggressiv kjemper uansett'); assert.strictEqual(S.reaksjon(S.HOLDNING.aggressiv.regel, { forhold: 2, ute: 0, avstand: 700, rekkevidde: 900 }).hva, 'fram');
 assert.strictEqual(S.reaksjon(S.HOLDNING.forsiktig.regel, { forhold: .5, ute: 0, avstand: 1000, beskutt: false }).hva, 'unngå'); assert.strictEqual(S.reaksjon(bal, { forhold: 3, ute: 5, avstand: 300 }).hva, 'trekk', 'fem ute: retrett selv med overtak');
 assert.strictEqual(S.reaksjon(bal, { forhold: 1, ute: 0 }), null, 'ingen fiende i sikte: ingenting');
+// EGET INITIATIV (17. nov): hente ammunisjon, hjelpe et lag under ild, søke høyere terreng
+{ const T = S.tiltak, st = S.standard(), alt = { ...st, støtte: 'ja', forsyn: 'ja' }, ro = { stille: true, fiende: null, beskutt: false, høyde: 0, venn: null, ammo: 1, hjemme: false };
+  assert.ok(st.dekning === 'ja' && st.støtte === 'nei' && st.forsyn === 'nei' && S.ren({}).dekning === 'ja' && S.ren({ dekning: 'tull' }).dekning === 'ja', 'standardene');
+  assert.strictEqual(T(st, ro), null, 'ro: ingenting'); assert.strictEqual(T(alt, { ...ro, ammo: .2 }).hva, 'forsyn', 'henter ammunisjon'); assert.strictEqual(T(st, { ...ro, ammo: .2 }), null, 'ikke uten at det er valgt');
+  assert.strictEqual(T(alt, { ...ro, ammo: .2, beskutt: true }), null, 'ikke under ild'); assert.strictEqual(T(alt, { ...ro, ammo: .2, hjemme: true }), null, 'ikke når vi alt er der'); assert.strictEqual(T(alt, { ...ro, ammo: .2, stille: false }).hva, 'forsyn', 'også på marsj');
+  assert.strictEqual(T(alt, { ...ro, venn: 900 }).hva, 'støtte', 'hjelper et lag under ild'); assert.strictEqual(T(alt, { ...ro, venn: 2500 }), null, 'for langt unna'); assert.strictEqual(T(alt, { ...ro, venn: 900, fiende: 500 }), null, 'har egen fiende'); assert.strictEqual(T(st, { ...ro, venn: 900 }), null, 'ikke valgt');
+  assert.strictEqual(T(st, { ...ro, fiende: 800, høyde: 15 }).hva, 'dekning', 'søker høyde'); assert.strictEqual(T(st, { ...ro, fiende: 800, høyde: 3 }), null, 'for lite å vinne'); assert.strictEqual(T(st, { ...ro, fiende: 100, høyde: 15 }), null, 'fienden er for nær');
+  assert.strictEqual(T({ ...st, dekning: 'nei' }, { ...ro, fiende: 800, høyde: 15 }), null, 'avslått'); assert.strictEqual(T(st, { ...ro, fiende: 800, høyde: 15, stille: false }), null, 'ikke på marsj');
+  assert.ok(S.holdningFor(st) === 'balansert', 'holdningen kjennes igjen selv med de nye valgene'); }
 console.log('ok   strid: høyde, oppdagelse, bevæpning, styrkeforhold og stridsregler');
