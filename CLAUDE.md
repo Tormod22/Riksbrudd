@@ -955,6 +955,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   døra i hus som kan gjennomsøkes – skjules i oppdater() når LeteSpill.lett() har huset (Interior3d.funn(P)). Ingenting av dette
   sperrer deg. Vakten tåler nå 9000 trekanter per hus (prøvehuset 6264). IKKE GJORT: bilder på ytterveggene, veltede møbler,
   andre etasje. Bildeskriptet inne/inne.js kommer ikke inn i bygg som ligger i kanten av utsnittet (hytta 790 m unna ga utebilder).
+  SAMLET UTSEENDE (17. nov, brukeren: «spillet har ennå ikke bra nok UI»; bilder fra telefon viste hvorfor): spill/tema.js (lastes
+  sist): felles finpuss (myke hjørner og skygge på panelene, trykk-respons på alle knapper, like overskrifter, samme skrift på
+  knappene i 3D), på små skjermer statuslinja uten ordene (ikonene sier hva tallene er) og LOGGEN SOM ÉN LINJE med siste melding som
+  tones bort etter 7 s – trykk viser de siste (klassen «åpen», lukker seg selv). Overskrifter fra LEIR_MENY-tillegg velger fane med
+  data-fane på h3 («bygg», «lager», «mål») – IKKE lenger forstavelser som «Byggelag: strøm» eller «Mål: oppdrag». Navn på leir, bygg
+  og venner i kartet tegnes i Cormorant Garamond som resten. Folk-panelets status er brikker (.status.brikker). VAKT «samlet utseende».
+  Fortsatt svakt: knappene øverst er tekst, og Leir-menyen er lang å bla i.
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert

@@ -823,6 +823,16 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const ikok = !ik.uten && ik.klokke && ik.tekst && ik.bygg === '' && ik.maske && ik.antall >= 35;
     if (!ikok) { feil++; console.log(JSON.stringify(ik)); }
     console.log(`${ikok ? 'ok  ' : 'FEIL'} ${navn} ikoner: ${ik.antall} ikoner, statuslinja og alle byggene har sitt, teksten står som før`);
+    // VAKT samlet utseende (spill/tema.js, brukeren 17. nov: «ennå ikke bra nok UI»): på telefon viser loggen bare siste melding til du
+    // trykker på den, og statuslinja har ikon i stedet for ord; overskriftene i Leir-menyen har ikke lenger forstavelser som «Byggelag:».
+    const tm = await pg.evaluate(async () => { if (!window.Tema) return { uten: true }; const kort = document.body.classList.contains('kort'), L = document.getElementById('logg'), syn = () => [...L.children].filter(d => d.offsetParent !== null).length, ut = { kort };
+      logg('Prøve en'); logg('Prøve to'); await new Promise(r => setTimeout(r, 60)); ut.en = syn(); if (kort) { L.click(); await new Promise(r => setTimeout(r, 60)); ut.flere = syn(); L.click(); }
+      const ord = [...document.querySelectorAll('.stats > div > span:not([id])')].filter(e => e.offsetParent !== null).length; ut.ord = ord;
+      const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (m && lk && !lk.hidden) { if (!m.classList.contains('på')) lk.click(); await new Promise(r => setTimeout(r, 200)); ut.h3 = [...m.querySelectorAll('h3')].map(h => h.textContent).filter(t => /^(Byggelag|Materialer|Mål): \S/.test(t) && !/^Byggelag: \d/.test(t)).join(); lk.click(); } else ut.h3 = '';
+      return ut; });
+    const tmok = !tm.uten && tm.h3 === '' && (tm.kort ? tm.en === 1 && tm.flere >= 2 && tm.ord === 0 : tm.en >= 2 && tm.ord > 0);
+    if (!tmok) { feil++; console.log(JSON.stringify(tm)); }
+    console.log(`${tmok ? 'ok  ' : 'FEIL'} ${navn} samlet utseende: ${tm.kort ? `loggen viser ${tm.en} melding og ${tm.flere} når du trykker, statuslinja uten ord` : `loggen viser ${tm.en} meldinger, statuslinja med ord`}, rene overskrifter i Leir-menyen`);
     // VAKT pause (brukeren 16. nov: pausen kunne ikke oppheves på telefon): pause skjuler ikke farten du hadde, viser ▶,
     // og både pauseknappen og fartsknappen starter spillet igjen i samme fart.
     const pa = await pg.evaluate(() => { const t0 = tempo, sp = id => document.getElementById(id), syn = () => ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => sp(id).offsetParent !== null);

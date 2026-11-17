@@ -210,7 +210,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     { let cur = 'lager'; const fast = n => n === status || n.tagName === 'H2' || (n.classList && n.classList.contains('lukk')) || (n.querySelector && n.querySelector('#folkknapp')) || (n.classList && n.classList.contains('fast'));
       const faneFor = t => /^Materialer/.test(t) ? 'lager' : /^Byggelag/.test(t) ? 'bygg' : /^Planlegg/.test(t) ? 'plan' : /yggesett/.test(t) ? 'bygg' : /^Mål|^Dagbok$/.test(t) ? 'mål' : null;
       for (const n of [...hode.childNodes]) { if (n.nodeType !== 1) continue; if (fast(n)) continue;
-        const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3'); if (h) cur = faneFor(h.textContent) || cur;
+        const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3'); if (h) cur = h.dataset.fane || faneFor(h.textContent) || cur;
         n.dataset.fane = cur; if (cur !== fane) n.hidden = true; }
       liste.dataset.fane = 'bygg'; liste.hidden = fane !== 'bygg';
       const J2 = LB.jobber(L).length, bar = el('div', { klasse: 'faner', role: 'tablist' });
@@ -469,7 +469,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
           const f = mid(P[1], P[2]), t = [(P[2][0] - P[1][0]) / (l12 || 1), (P[2][1] - P[1][1]) / (l12 || 1)], w = Math.min(5, l12 * .22);
           g.strokeStyle = '#f0d79a'; g.lineWidth = 3; g.beginPath(); g.moveTo(f[0] - t[0] * w, f[1] - t[1] * w); g.lineTo(f[0] + t[0] * w, f[1] + t[1] * w); g.stroke(); } }
       // (skissen har ikke navn i byggevisningen: der står målene rundt den, og navnet står i banneret)
-      if (m < 1.2 && !(skisse && window.BYGGEVISNING && BYGGEVISNING.på())) { g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
+      if (m < 1.2 && !(skisse && window.BYGGEVISNING && BYGGEVISNING.på())) { g.font = '600 14px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
         const J = LB.jobber(L), i = J.findIndex(j => j.b === b), kø = i >= LB.byggelag(L);
         const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : J[i].reise > 0 ? ' (laget på vei)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
         const ty = window.Etikett ? Etikett.tekst(g, t, sx(b.x), sy(b.y) + 4, 1) : sy(b.y) + 4; g.strokeText(t, sx(b.x), ty); g.fillText(t, sx(b.x), ty); }

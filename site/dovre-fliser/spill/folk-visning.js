@@ -91,7 +91,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       `Vakttårn: ${B.bemannedeTårn} av ${B.tårn} bemannet` + (F.borte ? ` · ${F.borte} har forlatt gjengen` : '')];
     // lav skjerm (telefon): status som ett avsnitt og høyst to ting som mangler, så oppgavene synes uten å bla langt
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
-    panel.append(kort ? el('div', { klasse: 'status' }, linjer.join(' · ')) : el('div', { klasse: 'status' }, ...linjer.flatMap((t, i) => (i ? [el('br'), t] : [t]))));
+    panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
     for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
     if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
     const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(matN * FR.R.matPris)})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });

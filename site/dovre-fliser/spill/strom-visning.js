@@ -14,7 +14,7 @@
   document.head.appendChild(css);
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el, knapp }) => { const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste(); if (!L || !s || s.behov === undefined) return;
     const boks = el('div', { klasse: 'strom' }), sol = s.sol || 0, nett = s.nett || 0, bat = Math.max(0, s.batKW || 0), agg = s.agg || 0, sum = Math.max(s.behov, sol + nett + bat + agg, .001), m = s.mangler ? s.mangler.size - (s.avslått || 0) : 0;
-    hode.append(el('h3', {}, 'Byggelag: strøm'));
+    hode.append(el('h3', { 'data-fane': 'bygg' }, 'Strøm'));
     boks.append(el('div', {}, `Forbruk ${tall(s.behov)} kW` + (m > 0 ? ` – ${m} bygg mangler strøm` : s.behov > 0 ? ' – alt har strøm' : '')));
     const linje = el('div', { klasse: 'linje' }); for (const [k, v] of [['sol', sol], ['nett', nett], ['bat', bat], ['agg', agg]]) if (v > 0) linje.append(el('i', { klasse: k, style: `width:${Math.min(100, v / sum * 100)}%` })); boks.append(linje);
     boks.append(el('div', { klasse: 'tegn' }, el('span', {}, el('b', { klasse: 'sol' }), `sol ${tall(sol)}`), el('span', {}, el('b', { klasse: 'nett' }), `strømnettet ${tall(nett)}`), el('span', {}, el('b', { klasse: 'bat' }), `batteri ${tall(bat)}`), el('span', {}, el('b', { klasse: 'agg' }), `aggregat ${tall(agg)} av ${tall(s.aggMaks || 0)}`)));

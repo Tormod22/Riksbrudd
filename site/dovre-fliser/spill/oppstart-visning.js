@@ -210,7 +210,7 @@
     const f = flaggBilde(); if (f && ok !== false && !forslag) { g.drawImage(f, x + 1, y - 38, 30, 20); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.strokeRect(x + 1, y - 38, 30, 20); }
     else { g.fillStyle = ok ? '#e0b53a' : '#c8102e'; g.fillRect(x + 1, y - 38, 24, 16); }
     g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(x, y, 7, 3, 0, 0, 6.283); g.fill();
-    if (navn) { g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, navn, x, y + 16, 1) : y + 16; g.strokeText(navn, x, ny); g.fillStyle = '#f2ead6'; g.fillText(navn, x, ny); }
+    if (navn) { g.font = '600 15px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, navn, x, y + 16, 1) : y + 16; g.strokeText(navn, x, ny); g.fillStyle = '#f2ead6'; g.fillText(navn, x, ny); }
     g.restore();
   }
   KROKER.tegn.push((g, vx0, vy1) => {

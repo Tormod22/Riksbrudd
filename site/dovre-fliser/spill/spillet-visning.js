@@ -142,7 +142,7 @@
     for (const v of V) { const d = v.d, x = (d.x - vx0) / m, y = (vy1 - d.y) / m; if (x < -200 || y < -200 || x > VW + 200 || y > VH + 200) continue;
       if (m < 3 && LB) for (const b of d.bygg) { const P = LB.hjørner(b); g.beginPath(); P.forEach(([px, py], i) => (i ? g.lineTo((px - vx0) / m, (vy1 - py) / m) : g.moveTo((px - vx0) / m, (vy1 - py) / m))); g.closePath(); g.globalAlpha = .7; g.fillStyle = d.farge; g.fill(); g.globalAlpha = 1; g.strokeStyle = '#efe6cf'; g.lineWidth = 1; g.stroke(); }
       g.fillStyle = d.farge; g.strokeStyle = '#efe6cf'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y - 16); g.lineTo(x + 13, y - 11); g.lineTo(x, y - 6); g.closePath(); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x, y - 16); g.lineTo(x, y + 3); g.stroke();
-      g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; const t = d.navn + ' (venn)', ty = window.Etikett ? Etikett.tekst(g, t, x, y + 17, 1) : y + 17; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); }
+      g.font = '600 14px "Cormorant Garamond", serif'; g.textAlign = 'center'; const t = d.navn + ' (venn)', ty = window.Etikett ? Etikett.tekst(g, t, x, y + 17, 1) : y + 17; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); }
     g.restore(); });
 
   // ================= KARTET: oppdragene =================
@@ -159,17 +159,17 @@
   // ================= LEIR-MENYEN =================
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar) return;
     // markedet (i fanen Lager: overskriften begynner med «Materialer»)
-    if (M && GRUNN) { hode.append(e('h3', {}, 'Materialer: markedet i dag')); const NAVN = { tre: 'Tre (m³)', betong: 'Betong (m³)', stål: 'Stål (t)', diesel: 'Diesel (liter)', mat: 'Mat (rasjon)' };
+    if (M && GRUNN) { hode.append(e('h3', { 'data-fane': 'lager' }, 'Markedet i dag')); const NAVN = { tre: 'Tre (m³)', betong: 'Betong (m³)', stål: 'Stål (t)', diesel: 'Diesel (liter)', mat: 'Mat (rasjon)' };
       for (const v of Marked.VARER) { const en = Marked.endring(M, v); hode.append(e('div', { klasse: 'markedrad' }, e('span', {}, NAVN[v]), e('span', { klasse: en > 1 ? 'opp' : en < -1 ? 'ned' : '' }, `${kr(Marked.pris(M, v, GRUNN[v]))} ${en > 1 ? '↑' : en < -1 ? '↓' : '→'} ${en > 0 ? '+' : ''}${en} %`))); }
       hode.append(e('small', {}, `Prisene flytter seg hver dag. Du får ${Math.round(Marked.SALG * 100)} % av dagens pris når du selger – kjøp billig og selg dyrt.`)); }
     // oppdrag og trussel står ØVERST i fanen Mål (flyttes foran overskriften «Mål» til slutt), vennene nederst
-    const første = hode.childNodes.length; hode.append(e('h3', {}, 'Mål: oppdrag'));
+    const første = hode.childNodes.length; hode.append(e('h3', { 'data-fane': 'mål' }, 'Oppdrag'));
     if (O) { if (!O.liste.length) hode.append(e('small', {}, 'Ingen oppdrag akkurat nå – nye kommer snart.'));
       for (const o of O.liste) { const T = Oppdrag.TYPER[o.type], rad = e('div', { klasse: 'oppdrag' + (o.tatt ? ' tatt' : ''), 'data-ikon': o.type === 'hent' ? 'kasse' : o.type === 'redd' ? 'folk' : 'sikte' }, e('b', {}, T.navn), e('small', {}, `${meter(o.meter)} mot ${o.retning} · gir ${Oppdrag.belønning(o.gir)} · frist om ${tidTekst(o.frist - tid)}`), e('small', {}, T.tekst));
         if (!o.tatt) rad.append(knapp('Ta oppdraget', () => ta(o.id))); rad.append(knapp('Vis i kartet', () => { if (typeof på3d !== 'undefined' && på3d) return logg(`Oppdraget ligger ${meter(o.meter)} mot ${o.retning} for leiren.`); kam.x = o.x; kam.y = o.y; kam.m = Math.min(kam.m, 4); skitten = true; })); hode.append(rad); } }
-    if (T) hode.append(e('h3', {}, 'Mål: trusselen'), e('small', {}, T.aktiv ? `Bølge ${T.aktiv} angriper nå: ${ENHETER.filter(q => q.raid === T.aktiv && levende(q)).length} røverlag igjen.` : `${T.bølge} angrep slått tilbake. Røverne kommer tilbake – neste bølge har ${Trussel.lag(T.bølge + 1)} lag. Vakttårn, sandsekker og lag ved leiren hjelper.`));
+    if (T) hode.append(e('h3', { 'data-fane': 'mål' }, 'Trusselen'), e('small', {}, T.aktiv ? `Bølge ${T.aktiv} angriper nå: ${ENHETER.filter(q => q.raid === T.aktiv && levende(q)).length} røverlag igjen.` : `${T.bølge} angrep slått tilbake. Røverne kommer tilbake – neste bølge har ${Trussel.lag(T.bølge + 1)} lag. Vakttårn, sandsekker og lag ved leiren hjelper.`));
     { const mine = [...hode.childNodes].slice(første), h = [...hode.querySelectorAll('h3')].find(q => q.textContent === 'Mål'); let topp = h; while (topp && topp.parentNode !== hode) topp = topp.parentNode; if (topp) for (const n of mine) hode.insertBefore(n, topp); }
-    hode.append(e('h3', {}, 'Mål: venner'), e('small', {}, 'Del leiren din med en lenke. Vennens leir vises i kartet ditt (ikke direkte samspill ennå).'));
+    hode.append(e('h3', { 'data-fane': 'mål' }, 'Venner'), e('small', {}, 'Del leiren din med en lenke. Vennens leir vises i kartet ditt (ikke direkte samspill ennå).'));
     hode.append(knapp('Kopier lenke til leiren min', () => { const u = minLenke(); if (!u) return; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => logg('Lenken er kopiert. Send den til en venn.'), () => prompt('Kopier lenken og send den til en venn:', u)); }, { id: 'dellenke' }),
       knapp('Legg til en venn', () => { const t = prompt('Lim inn lenken du fikk fra vennen din:'); if (!t) return; const d = leggTilVenn(t); logg(d ? `${d.navn} er lagt til som venn.` : 'Fant ingen leir i den lenken.'); meny(); }, { id: 'leggtilvenn' }));
     for (const v of V) hode.append(e('div', { klasse: 'oppdrag' }, e('b', {}, v.d.navn), e('small', {}, `${v.d.bygg.length} bygg`), knapp('Vis i kartet', () => { kam.x = v.d.x; kam.y = v.d.y; kam.m = Math.min(kam.m, 1); skitten = true; }), knapp('Fjern', () => { V = V.filter(q => q !== v); skrivV(); skitten = true; meny(); })));
