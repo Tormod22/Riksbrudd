@@ -52,5 +52,5 @@
   // ---------- av/på i ☰ ----------
   const meny = document.getElementById('lagmeny'); if (meny) { const b = document.createElement('button'); b.id = 'vis-kaier'; b.textContent = 'Kaier'; const sett = () => { b.classList.toggle('av', !vis); b.setAttribute('aria-pressed', String(vis)); };
     b.onclick = () => { vis = !vis; try { localStorage.setItem('riksbrudd-kaier', vis ? '1' : '0'); } catch (e) { /* sperret */ } sett(); skitten = true; }; sett(); meny.appendChild(b); }
-  rot.KaierSpill = { data: () => K, tag: KAIER_TAG, hent, settData: o => { K = o ? les(o) : null; valgtKai = -1; skitten = true; return K; }, nær: (x, y, r) => (K ? nær(K, x, y, r) : null), tekst: i => (K ? tekst(K, i) : ''), vis: v => { if (v !== undefined) { vis = !!v; skitten = true; } return vis; } };
+  rot.KaierSpill = { data: () => K, tag: KAIER_TAG, hent, settData: o => { K = o && o.d ? les(o) : o || null; valgtKai = -1; skitten = true; return K; }, nær: (x, y, r) => (K ? nær(K, x, y, r) : null), tekst: i => (K ? tekst(K, i) : ''), vis: v => { if (v !== undefined) { vis = !!v; skitten = true; } return vis; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

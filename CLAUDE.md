@@ -1124,3 +1124,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   («riksbrudd-kameravakt»). I testene (navigator.webdriver) virker kameraene som før til KameravaktSpill.test = true.
   Tallene er Claudes forslag. VAKT «kameravakta». IKKE GJORT: operatørene vises ikke som figurer i kontrollrommet, kameraet ser
   fortsatt i en sirkel (ikke terrengsikt), og sporene gjelder bare det kameraene ser (ikke det lagene dine ser).
+  KAIER I HELE NORGE (17. nov, brukeren: «kan vi få med alle plasser hvor det er kaier, da det senere kan være et strategisk område å
+  plassere leiren»): pipeline/fliser/kaier.py (OpenStreetMap, ODbL; test_kaier.py) – man_made=pier/quay (t 1), leisure=marina (2),
+  harbour/landuse=harbour|port/industrial=port (3), amenity=ferry_terminal (4); alt i samme rute på 120 m slås sammen (høyeste type,
+  samlet kailengde, navn), steder med bare småbrygger under 15 m faller bort -> kaier.json (delta-kodet, sortert på x) via
+  .github/workflows/kaier.yml (push av kaier.py/kaier.yml på claude/nattfiks eller claude/hallo-ohbasy, noen minutter) -> release
+  kart-kaier-<hash>; bruk_kaier.py setter KAIER_TAG i spill/kaier.js (kjør versjon.py). site/api/kart.js slipper kart-kaier-.
+  spill/kaier.js (reglene øverst uten DOM: les, iBoks, nær, vises(t, l, m), størrelse; test_kaier.js; lastes før meny.js): ankermerker
+  i 2D etter målestokken (havner og ferjeterminaler fra 160 m per punkt, småbåthavner og lange kaier fra 70, småkaier fra 11), navn
+  nær, trykk på et merke skriver navn, kailengde, størrelse (liten/middels/stor – Claudes inndeling) og avstand til leiren i loggen,
+  «Kaier» i ☰ («riksbrudd-kaier»). window.KaierSpill (data, nær, settData). VAKT «kaier» (prøvedata). IKKE GJORT: kaiene gir ingen
+  fordel ennå (ingen båter/forsyning sjøveien), ingen egne 3D-modeller utover det kyst3d og ferjekaiene alt lager, og de vises ikke
+  i leirvalget ved oppstart.

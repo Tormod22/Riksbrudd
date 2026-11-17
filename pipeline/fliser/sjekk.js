@@ -1211,6 +1211,19 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const kvtok = !kvt.uten && kvt.kam === 3 && String(kvt.usett) === 'false,false,true' && kvt.venter >= 2 && String(kvt.synlig0) === 'false,false,true' && String(kvt.sett) === 'true,true,true' && String(kvt.synlig1) === 'true,true,true' && kvt.spor >= 2 && kvt.oppgave && !kvt.menyFeil && kvt.meny && kvt.knapper >= 3;
     if (!kvtok) { feil++; console.log(JSON.stringify(kvt)); }
     console.log(`${kvtok ? 'ok  ' : 'FEIL'} ${navn} kameravakta: usett klipp skjuler fienden (${kvt.usett}), sett gjennom viser den (${kvt.sett}), ${kvt.spor} spor, ${kvt.venter} klipp ventet, «Kameravakt» i Leir-menyen med ${kvt.knapper} kameraer`);
+    // VAKT kaier (spill/kaier.js, brukeren 17. nov: «alle plasser hvor det er kaier»): prøvedata tegnes i kartet etter målestokken,
+    // trykk på et merke gir navnet og avstanden i loggen, og «Kaier» i ☰ slår dem av.
+    const kai = await pg.evaluate(async () => { if (!window.KaierSpill || !window.Kaier) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), før = KaierSpill.data(), k0 = { x: kam.x, y: kam.y, m: kam.m }, v0 = KaierSpill.vis();
+      if (typeof på3d !== 'undefined' && på3d) { if (R3.fot) Gange.stopp(); await slå3d(false); await vent(500); }
+      const X = Math.round(kam.x), Y = Math.round(kam.y); KaierSpill.settData({ n: 3, navn: ['Prøvekaia'], d: [X - 400, Y, 1, 20, 0, 400, 0, 3, 180, 1, 300, 100, 2, 0, 0] }); KaierSpill.vis(true);
+      const tell = m => { kam.m = m; const g = document.createElement('canvas').getContext('2d'); let n = 0; const ark = g.arc.bind(g); g.arc = (...a) => { n++; return ark(...a); }; let f = ''; try { for (const q of KROKER.tegn) if (String(q).includes('valgtKai')) q(g, kam.x - VW * m / 2, kam.y + VH * m / 2); } catch (e) { f = e.message; } return f || n; };
+      ut.nær = tell(2); ut.middels = tell(40); ut.langt = tell(120); ut.borte = tell(300); kam.m = 2;
+      const l0 = document.getElementById('logg').textContent; const tok = KROKER.trykk.filter(q => String(q).includes('valgtKai'))[0]; ut.trykk = tok(X, Y); await vent(80); ut.logg = /Prøvekaia \(havn\), 180 m kai/.test(document.getElementById('logg').textContent) && document.getElementById('logg').textContent !== l0; ut.bom = tok(X + 5000, Y + 5000);
+      const b = document.getElementById('vis-kaier'); ut.knapp = !!b; if (b) { b.click(); ut.av = tell(2); b.click(); }
+      KaierSpill.settData(før); KaierSpill.vis(v0); Object.assign(kam, k0); skitten = true; return ut; });
+    const kaiok = !kai.uten && kai.nær === 3 && kai.middels === 2 && kai.langt === 1 && kai.borte === 0 && kai.trykk === true && kai.logg && kai.bom === false && kai.knapp && kai.av === 0;
+    if (!kaiok) { feil++; console.log(JSON.stringify(kai)); }
+    console.log(`${kaiok ? 'ok  ' : 'FEIL'} ${navn} kaier: ${kai.nær} merker nær, ${kai.middels} på 40 m/punkt, ${kai.langt} langt ute, trykk gir navn og kailengde: ${kai.logg}, av i ☰: ${kai.av === 0}`);
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.
