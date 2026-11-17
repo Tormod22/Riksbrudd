@@ -26,7 +26,7 @@
   rot.Kaier = api;
 
   // ---------- visningen ----------
-  const KAIER_TAG = '';
+  const KAIER_TAG = 'kart-kaier-c1e697d7cce4';
   let K = null, henter = false, vis = true, valgtKai = -1;
   try { vis = localStorage.getItem('riksbrudd-kaier') !== '0'; } catch (e) { vis = true; }
   async function hent(forsøk = 1) { if (!KAIER_TAG || K || henter) return; henter = true;
