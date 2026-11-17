@@ -97,7 +97,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   const kw = v => v.toLocaleString('nb-NO', { maximumFractionDigits: 1 });
   function visStatus() {
     st.hidden = !L || !L.bygg.length; if (st.hidden) return;
-    const m = siste.mangler.size; document.getElementById('sStrom').textContent = `${kw(siste.prod)}/${kw(siste.behov)} kW` + (siste.batKap > 0 ? ` · ${Math.round(siste.batteri / siste.batKap * 100)} % batteri` : '') + (m - (siste.avslått || 0) > 0 ? ' ⚠' : '');
+    const m = siste.mangler.size; document.getElementById('sStrom').textContent = `${kw(siste.behov)}/${kw(Math.max(siste.kapasitet, siste.prod))} kW` + (siste.batKap > 0 ? ` · ${Math.round(siste.batteri / siste.batKap * 100)} % batteri` : '') + (m - (siste.avslått || 0) > 0 ? ' ⚠' : '');
   }
   const HVA = { bygg: 'bygges', oppgrader: 'oppgraderes', flytt: 'flyttes', reparer: 'repareres' };
   // Forklaringen av de to slagene drivstoff (Leir-menyen og byggpanelet for tank og aggregat). Kjøretøy- og basepanelet og hjelpen sier det samme.
@@ -142,7 +142,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const strømTekst = siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå';
     const status = el('div', { klasse: 'status' },
       flis('Kassa', LB.kroner(S.penger)),
-      flis('Strøm', siste.behov || siste.kapasitet ? `${kw(siste.prod)} av ${kw(siste.behov)} kW` : 'ikke i bruk', strømTekst, siste.mangler.size > 0),
+      flis('Strøm', siste.behov || siste.kapasitet ? `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : 'ikke i bruk', strømTekst, siste.mangler.size - (siste.avslått || 0) > 0),
       flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
       flis('Sengeplasser', String(LB.plasser(L))),
       siste.mangler.size ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : el('div', { klasse: 'linje' }, siste.behov || siste.kapasitet ? 'Alle bygg har strøm' : ''));
@@ -202,7 +202,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
-      liste.appendChild(el('div', { klasse: 'bygg' }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
+      liste.appendChild(el('div', { klasse: 'bygg', 'data-type': id }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).

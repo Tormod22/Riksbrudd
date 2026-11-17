@@ -29,7 +29,7 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
   document.head.appendChild(css);
   // ---------- skjermbildet når du går eller kjører ----------
   const hud = el('div', { id: 'nhud' }), hp = el('i'), hpTall = el('b', {}, '100'), hpStrek = el('div', { klasse: 'strek' }, hp), pust = el('i'), kjHp = el('i');
-  const helse = el('div', { klasse: 'boks helse' }, el('div', { klasse: 'rad' }, el('span', {}, '✚'), hpStrek, hpTall), el('div', { klasse: 'strek puste' }, pust));
+  const helse = el('div', { klasse: 'boks helse' }, el('div', { klasse: 'rad' }, el('span', { 'data-ikon': 'hjerte' }), hpStrek, hpTall), el('div', { klasse: 'strek puste' }, pust));
   const vNavn = el('small'), vTall = el('b'), vRes = el('span'), vHint = el('em'), vTil = el('div', { klasse: 'strek tilstand' }, kjHp), vapen = el('div', { klasse: 'boks vapen' }, vNavn, vTall, vRes, vHint, vTil), felt = el('div', { klasse: 'boks felt' });
   hud.append(helse, vapen, felt); document.body.appendChild(hud);
   const sett = (e, t) => { if (e.textContent !== t) e.textContent = t; };
@@ -76,18 +76,18 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
   function gåTil(x, y, m) { if (typeof på3d !== 'undefined' && på3d) return false; kam.x = x; kam.y = y; kam.m = Math.min(kam.m, m || 3); skitten = true; return true; }
   function brikker() { const ut = [], S = window.OppstartSpill && OppstartSpill.tilstand(), leir = S && S.leir; if (!leir) return ut; const SS = window.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill : null;
     if (SS && SS.T() && SS.T().aktiv) { const lag = ENHETER.filter(e => e.raid === SS.T().aktiv && levende(e)); if (lag.length) { const d = Math.min(...lag.map(e => Math.hypot(e.x - leir.x, e.y - leir.y))), nær = lag.reduce((a, e) => (Math.hypot(e.x - leir.x, e.y - leir.y) < Math.hypot(a.x - leir.x, a.y - leir.y) ? e : a));
-        ut.push({ k: 'fare', t: `Angrep: ${lag.length} røverlag`, s: `${meter(d)} fra leiren`, f: () => gåTil(nær.x, nær.y, 4) || logg(`Røverne er ${meter(d)} fra leiren.`) }); } }
-    if (SS && SS.O()) for (const o of SS.O().liste) if (o.tatt) ut.push({ k: '', t: Spillet.Oppdrag.TYPER[o.type].navn, s: `${meter(o.meter)} mot ${o.retning}`, f: () => gåTil(o.x, o.y, 4) || logg(`Oppdraget ligger ${meter(o.meter)} mot ${o.retning} for leiren.`) });
+        ut.push({ i: 'varsel', k: 'fare', t: `Angrep: ${lag.length} røverlag`, s: `${meter(d)} fra leiren`, f: () => gåTil(nær.x, nær.y, 4) || logg(`Røverne er ${meter(d)} fra leiren.`) }); } }
+    if (SS && SS.O()) for (const o of SS.O().liste) if (o.tatt) ut.push({ i: 'oppdrag', k: '', t: Spillet.Oppdrag.TYPER[o.type].navn, s: `${meter(o.meter)} mot ${o.retning}`, f: () => gåTil(o.x, o.y, 4) || logg(`Oppdraget ligger ${meter(o.meter)} mot ${o.retning} for leiren.`) });
     const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste(), uten = s && s.mangler ? s.mangler.size - (s.avslått || 0) : 0, åpneLeir = fane => { if (window.LeirSpill) { const m = $('leirmeny'); if (m && !m.classList.contains('på')) $('leirknapp').click(); LeirSpill.fane(fane); } };
-    if (L && uten > 0) ut.push({ k: 'fare', t: `${uten} bygg uten strøm`, s: 'se strømmen', f: () => åpneLeir('bygg') });
+    if (L && uten > 0) ut.push({ i: 'strom', k: 'fare', t: `${uten} bygg uten strøm`, s: 'se strømmen', f: () => åpneLeir('bygg') });
     const OS = window.OverlevSpill && OverlevSpill.klar && OverlevSpill.klar() ? OverlevSpill : null, D = OS && OS.D();
-    if (D && !navigator.webdriver) { if (D.strøm.varslet && !D.strøm.nede) ut.push({ k: '', t: 'Strømnettet svikter snart', s: 'bygg aggregat eller solceller', f: () => åpneLeir('bygg') }); if (D.vann.varslet && !D.vann.nede && !OS.brønner()) ut.push({ k: '', t: 'Vannet svikter snart', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); if (D.vann.nede && !OS.brønner()) ut.push({ k: 'fare', t: 'Leiren mangler vann', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); }
+    if (D && !navigator.webdriver) { if (D.strøm.varslet && !D.strøm.nede) ut.push({ i: 'strom', k: '', t: 'Strømnettet svikter snart', s: 'bygg aggregat eller solceller', f: () => åpneLeir('bygg') }); if (D.vann.varslet && !D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: '', t: 'Vannet svikter snart', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); if (D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: 'fare', t: 'Leiren mangler vann', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); }
     const F = window.FolkSpill && FolkSpill.tilstand(); if (F && F.personer.length && L && window.FolkRegler) { let B = null; try { B = FolkRegler.behov(F, L, FolkSpill.valg()); } catch (e) { B = null; }
-      if (B && B.dager < 1.5) ut.push({ k: 'fare', t: B.dager < .2 ? 'Tom for mat' : 'Lite mat', s: B.dager < .2 ? 'kjøp eller hent mat' : `rekker ${Math.max(1, Math.round(B.dager * 24))} t`, f: () => window.FolkSpill && FolkSpill.åpne(true) }); if (F.moral < 30) ut.push({ k: 'fare', t: 'Lav moral', s: `${Math.round(F.moral)} av 100`, f: () => window.FolkSpill && FolkSpill.åpne(true) }); }
+      if (B && B.dager < 1.5) ut.push({ i: 'mat', k: 'fare', t: B.dager < .2 ? 'Tom for mat' : 'Lite mat', s: B.dager < .2 ? 'kjøp eller hent mat' : `rekker ${Math.max(1, Math.round(B.dager * 24))} t`, f: () => window.FolkSpill && FolkSpill.åpne(true) }); if (F.moral < 30) ut.push({ i: 'folk', k: 'fare', t: 'Lav moral', s: `${Math.round(F.moral)} av 100`, f: () => window.FolkSpill && FolkSpill.åpne(true) }); }
     return ut.slice(0, 5); }
   function tegnVarsler() { { const åpen = ['leirmeny', 'folkmeny', 'hjelp', 'lagmeny'].some(id => $(id) && $(id).classList.contains('på')) && VW < 1500; varsler.style.display = åpen ? 'none' : ''; }
     if ($('oppstart') && $('oppstart').classList.contains('på')) { if (brikkeNøkkel) { varsler.innerHTML = ''; brikkeNøkkel = ''; } return; } const B = brikker(), nøkkel = B.map(b => b.k + b.t + b.s).join('|'); if (nøkkel === brikkeNøkkel) return; if (window.pekerNede && pekerNede(varsler)) return; brikkeNøkkel = nøkkel; varsler.innerHTML = '';
-    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f; varsler.appendChild(k); } }
+    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f; varsler.appendChild(k); } }
   setInterval(tegnVarsler, 1000);
   window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm };
 })();

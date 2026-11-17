@@ -152,6 +152,8 @@
   function bekreft() {
     if (!forslag || !forslag.ok) return; const f = O.fullfør(utkast, forslag); if (f.length) { visBanner(f.join(' ')); return; }
     S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
+    // (17. nov) kartet går inn på leiren når den er lagt – før sto det igjen på hele landsdelen, og du så ikke leiren din
+    if (typeof på3d === 'undefined' || !på3d) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, 3); skitten = true; }
   }
   // først i rekka: mens du velger leirplass, skal et trykk der et lag eller kjøretøy står, gi leirforslag og ikke åpne panelet
   KROKER.trykk.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });

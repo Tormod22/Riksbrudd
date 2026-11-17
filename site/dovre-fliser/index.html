@@ -418,8 +418,9 @@ const VISES = {
   tettsted: (o, m) => m < 600 || o.e.folk >= 5000 && m < 2500 || o.e.folk >= 50000,
   magasin: (o, m) => m < 250 || (o.e.volum_mm3 || 0) >= 100 && m < 1200,
   dam: (o, m) => m < 60,
-  kraft: (o, m) => m < 250 || (o.e.mw || 0) >= 50 && m < 1500 || (o.e.mw || 0) >= 300,
-  ferje: (o, m) => m < 1500, ferjekai: (o, m) => m < 200,
+  // (17. nov: kartet var fullt av kraftverk-merker langt ute – nå bare de store når du ser et stort område)
+  kraft: (o, m) => m < 120 || (o.e.mw || 0) >= 100 && m < 400 || (o.e.mw || 0) >= 500 && m < 1500,
+  ferje: (o, m) => m < 500, ferjekai: (o, m) => m < 200,
   tunnel: (o, m) => m < 60 || (o.e.lengde || 0) >= 2000 && m < 600 || (o.e.lengde || 0) >= 7000,
   bru: (o, m) => m < 25 || (o.e.lengde || 0) >= 100 && m < 120 || (o.e.lengde || 0) >= 500 && m < 800 || (o.e.lengde || 0) >= 1000,
 };
@@ -2865,9 +2866,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
 <script src="/dovre-fliser/spill/leir.js?v=0e6d8783cd"></script>
 <script src="/dovre-fliser/spill/folk.js?v=c0e4a610dd"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=126bde7fdc"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=e378c9684b"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=d13e9e753b"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=2d5fba2630"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=c1a75d6eb9"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=a548382ff9"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
@@ -2900,14 +2901,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dagbok.js?v=df7b52ade5"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=f0cad9052e"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=8b1fcff180"></script>
-<script src="/dovre-fliser/spill/spillet-visning.js?v=081fe52d93"></script>
+<script src="/dovre-fliser/spill/spillet-visning.js?v=f40e72ecce"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=fd836f9c88"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=d6b570a754"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=5f315ea6c4"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=e2b159db95"></script>
+<script src="/dovre-fliser/spill/ikoner.js?v=901f20e54e"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/meny.js?v=d59b0222a6"></script>
-<script src="/dovre-fliser/spill/kompakt.js?v=1992a8052d"></script>
+<script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/taster.js?v=cb98411f05"></script>
 </body>
 </html>

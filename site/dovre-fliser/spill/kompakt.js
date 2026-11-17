@@ -27,6 +27,7 @@ body.kort #minikart button{ width:26px; height:26px; right:-5px; top:-5px; font-
 body.kort #logg{ left:calc(10px + ${L}); right:auto; top:calc(var(--topp,44px) + 8px); width:min(300px,34vw); font-size:12px; line-height:1.3; }
 body.kort.kompass3d #logg{ top:calc(var(--topp,44px) + 62px); }
 body.kort #logg div:nth-child(n+4){ display:none; }
+body.kort #logg div{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
 body.kort .ctl{ right:calc(8px + ${Rt}); bottom:calc(8px + ${B}); gap:4px; }
 body.kort .ctl button{ width:36px; height:36px; font-size:17px; }
 body.kort #gangeknapper{ right:calc(54px + ${Rt}); bottom:calc(10px + ${B}); gap:8px; }

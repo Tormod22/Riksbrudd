@@ -816,6 +816,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const ko = await pg.evaluate(() => { const k = Kompakt.sjekk(), h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : -1; };
       const synlige = ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => { const e = document.getElementById(id); return e && e.offsetParent !== null; }).length;
       return { kort: k.kort, stats: h('.stats'), kilde: h('#kilde'), fart: synlige, mobil: VW < 900 }; });
+    // VAKT ikoner (spill/ikoner.js, brukeren 17. nov: «har spillet gode ikoner?»): statuslinja har ikon på klokka og kassa, alle byggene
+    // har et ikon som finnes, og ikonet tegnes (masken er satt) uten at teksten endres.
+    const ik = await pg.evaluate(() => { if (!window.Ikoner) return { uten: true }; Ikoner.merk(); const d = document.getElementById('sDag').closest('.stats > div'), ut = { klokke: d.dataset.ikon === 'klokke', tekst: /\d/.test(document.getElementById('sDag').textContent) };
+      ut.bygg = Object.keys(Leir.BYGG).filter(t => !Leir.BYGG[t].del && !(Ikoner.BYGG[t] && Ikoner.har(Ikoner.BYGG[t]))).join(); ut.maske = /url\(/.test(getComputedStyle(d, '::before').webkitMaskImage || getComputedStyle(d, '::before').maskImage || ''); ut.antall = Ikoner.navn().length; return ut; });
+    const ikok = !ik.uten && ik.klokke && ik.tekst && ik.bygg === '' && ik.maske && ik.antall >= 35;
+    if (!ikok) { feil++; console.log(JSON.stringify(ik)); }
+    console.log(`${ikok ? 'ok  ' : 'FEIL'} ${navn} ikoner: ${ik.antall} ikoner, statuslinja og alle byggene har sitt, teksten står som før`);
     // VAKT pause (brukeren 16. nov: pausen kunne ikke oppheves på telefon): pause skjuler ikke farten du hadde, viser ▶,
     // og både pauseknappen og fartsknappen starter spillet igjen i samme fart.
     const pa = await pg.evaluate(() => { const t0 = tempo, sp = id => document.getElementById(id), syn = () => ['sp1', 'sp2', 'sp3', 'sp4'].filter(id => sp(id).offsetParent !== null);

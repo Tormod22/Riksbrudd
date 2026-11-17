@@ -938,6 +938,14 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   og nett og tapper før aggregatene; Leir.bryter(L, id) (b.av: bruker ikke strøm og står i «mangler»), Leir.dieselTimer;
   steg gir agg, aggMaks, batteri, batKap, batKW, avslått, nett. spill/strom-visning.js: «Byggelag: strøm» i fanen Bygg (kilder som
   stolpe, batteri, hvor lenge det rekker, bryter per bygg i PRIORITET-rekkefølge). Tallene er Claudes.
+  GJENNOMGANG MED BILDER (17. nov, brukeren: «ta bilder fra spillet – er alt bra? gode ikoner? gir ting mening?»; scratchpad gj/gj.js
+  tar 17 steg som ny spiller på /norge, MOBIL=1 for telefon). Funn som ble rettet: (1) kartet sto igjen på hele landsdelen etter at
+  leiren var lagt – OppstartSpill.bekreft går nå inn på leiren (kam.m ≤ 3); (2) for mange kraftverk-merker langt ute (VISES.kraft og
+  ferje strammet inn); (3) nesten ingen ikoner – spill/ikoner.js: ca. 40 egne strekikoner som CSS-maske via data-ikon (statuslinja,
+  fanene og flisene i Leir-menyen, byggelista via data-type, varsler, oppdrag, helsa); nye bygg må inn i Ikoner.BYGG (vakten krever
+  det); (4) strømflisa sa «5 av 0 kW» – nå «bruker 0 av 5 kW», og statuslinja viser forbruk/kapasitet; (5) lange loggmeldinger på
+  telefon kuttes til tre linjer. IKKE RETTET: knappene øverst er fortsatt tekst (3D, Gå, Leir, Sekk), Folk-panelet er tett, og
+  loggen dekker fortsatt litt av kartet på telefon. VAKT «ikoner».
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert
