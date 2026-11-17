@@ -31,6 +31,8 @@
     brakke: { navn: 'Brakke', pris: 4e6, tid: 2, kw: -1, modell: 'brakke', fot: [-3.4, 4.2, -6.4, 6.4], mat: { tre: 25, betong: 5 }, nivå: { plasser: [8, 14, 20] }, tekst: 'Sengeplasser og ett byggelag til' },
     vakttårn: { navn: 'Vakttårn', pris: 5e6, tid: 1, kw: 0, modell: 'vakttårn', fot: [-1.6, 1.6, -1.9, 1.6], mat: { tre: 12, stål: 1 }, tekst: 'Utsikt og lyskaster' },
     port: { navn: 'Port med vaktbu', pris: 1.5e6, tid: 1, kw: 0, modell: 'port', fot: [-2.3, 2.3, -7.1, 3.9], mat: { stål: 3, betong: 2 }, port: true, tekst: 'Settes i gjerdet og lager en åpning' },
+    // BATTERI (brukeren 16. nov: «bedre system for strøm»): lagrer overskudd fra sol og nett og gir det tilbake når det trengs
+    batteri: { navn: 'Batteribank', pris: 3e6, tid: 1.5, kw: 0, modell: 'batteri', fot: [-2, 2, -1.2, 1.2], mat: { stål: 2, betong: 1 }, nivå: { kwt: [40, 80, 160] }, tekst: 'Lagrer strøm: sol om dagen, lys om natta' },
     // VEG (brukeren 16. nov: «gjør det mulig å bygge veier»): grusveg punkt for punkt som gjerdet. Feltbilen kjører fort på den.
     veg: { navn: 'Grusveg', prisPerMeter: 6000, tidPerMeter: .008, kw: 0, modell: 'veg', linje: true, veg: true, bredde: 5, matPerMeter: {}, tekst: 'Trykk punkt for punkt. Bilen kjører fort på veg, og skogen ryddes' },
     gjerde: { navn: 'Gjerde', prisPerMeter: 50000, tidPerMeter: .02, kw: 0, modell: 'gjerde', linje: true, matPerMeter: { stål: .02 }, tekst: 'Trykk punkt for punkt; «Lukk ringen» for et gjerde rundt' },
@@ -124,7 +126,7 @@
   function effekt(b) {
     const B = BYGG[b.type], n = (b.nivå || 1) - 1, f = virker(b) ? (b.hp < REGLER.halvSkade ? .5 : 1) : 0, N = B.nivå || {};
     const v = k => (N[k] ? N[k][n] : B[k] || 0) * f;
-    return { kw: B.kw > 0 ? v('kw') : B.kw < 0 && virker(b) ? B.kw : 0, plasser: v('plasser'), liter: v('liter'), lager: v('lager'), rekkevidde: v('rekkevidde') };
+    return { kw: B.kw > 0 ? v('kw') : B.kw < 0 && virker(b) ? B.kw : 0, plasser: v('plasser'), liter: v('liter'), lager: v('lager'), rekkevidde: v('rekkevidde'), kwt: v('kwt') };
   }
   const lagerplass = L => GRUNNLAGER + L.bygg.reduce((s, b) => s + effekt(b).lager, 0);
   const harMat = (L, mat) => Object.entries(mat).every(([k, v]) => (L.lager[k] || 0) + 1e-9 >= v);
@@ -359,17 +361,25 @@
     }
     const klare = L.bygg.filter(virker), agg = klare.filter(b => b.type === 'aggregat'), sc = klare.filter(b => b.type === 'solcelle');
     const solKW = sc.reduce((s, b) => s + effekt(b).kw, 0) * Math.max(0, Math.min(1, sol));
-    const brukere = klare.filter(b => BYGG[b.type].kw < 0).sort((a, b) => PRIORITET.indexOf(a.type) - PRIORITET.indexOf(b.type));
+    // BRYTERE: et bygg som er slått av (b.av), bruker ikke strøm og virker ikke (det står i «mangler» som de uten strøm)
+    const avslått = klare.filter(b => BYGG[b.type].kw < 0 && b.av);
+    const brukere = klare.filter(b => BYGG[b.type].kw < 0 && !b.av).sort((a, b) => PRIORITET.indexOf(a.type) - PRIORITET.indexOf(b.type));
     const behov = brukere.reduce((s, b) => s - BYGG[b.type].kw, 0), tank = kapasitet(L);
     L.drivstoff = Math.min(L.drivstoff, tank);
     // aggregatene dekker det sola ikke klarer, så lenge det er drivstoff
     // strømnettet (spill/overlev.js: virker de første døgnene) dekker litt før aggregatene må gå
     const nett = api.nettKW ? api.nettKW(L) : 0;
-    const aggMaks = L.drivstoff > 0 ? agg.reduce((s, b) => s + effekt(b).kw, 0) : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW - nett));
+    // BATTERIET: overskudd fra sol og nett lader det, underskudd tappes derfra før aggregatene må gå (dt i spillminutter -> kWt)
+    const batKap = klare.reduce((s, b) => s + effekt(b).kwt, 0); L.batteri = Math.max(0, Math.min(batKap, L.batteri || 0));
+    const fritt = solKW + nett - behov; let batKW = 0;
+    if (fritt > 0) { const inn = Math.min(fritt, batKap > 0 ? (batKap - L.batteri) * 60 / dt : 0); L.batteri += inn * dt / 60; batKW = -inn; }
+    else if (fritt < 0 && L.batteri > 0) { batKW = Math.min(-fritt, L.batteri * 60 / dt); L.batteri = Math.max(0, L.batteri - batKW * dt / 60); }
+    const batUt = Math.max(0, batKW);
+    const aggMaks = L.drivstoff > 0 ? agg.reduce((s, b) => s + effekt(b).kw, 0) : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW - nett - batUt));
     const liter = aggKW * DRIVSTOFF.literPerKWt * dt / 60; L.drivstoff = Math.max(0, L.drivstoff - liter);
-    let igjen = solKW + aggKW + nett; const mangler = new Set();
+    let igjen = solKW + aggKW + nett + batUt; const mangler = new Set(avslått.map(b => b.id));
     for (const b of brukere) { const k = -BYGG[b.type].kw; if (igjen + 1e-9 >= k) igjen -= k; else mangler.add(b.id); }
-    return { nett, prod: solKW + aggKW + nett, kapasitet: solKW + aggMaks + nett, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
+    return { agg: aggKW, aggMaks, batteri: L.batteri, batKap, batKW, avslått: avslått.length, nett, prod: solKW + aggKW + nett + batUt, kapasitet: solKW + aggMaks + nett + batUt, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)
@@ -400,6 +410,10 @@
       n.nesteJobb = Math.max(n.nesteJobb || 1, ...n.bygg.map(b => (b.nr || 0) + 1), ...n.bygg.map(b => (b.arbeid ? b.arbeid.nr + 1 : 1)));
       return n; } catch (e) { return null; }
   }
+  // Slå et bygg som bruker strøm av eller på. Gir den nye tilstanden (true = av), eller null når bygget ikke bruker strøm.
+  function bryter(L, id, av) { const b = finn(L, id); if (!b || !(BYGG[b.type].kw < 0)) return null; b.av = av === undefined ? !b.av : !!av; if (!b.av) delete b.av; return !!b.av; }
+  // Hvor lenge dieselen rekker med dagens forbruk i aggregatene (spilltimer), eller Infinity
+  const dieselTimer = (L, aggKW) => (aggKW > 0 ? L.drivstoff / (aggKW * DRIVSTOFF.literPerKWt) : Infinity);
   // DELEGERE (brukeren 16. nov): sett en jobb først i køen – byggelagene tar den først. Gir false når bygget ikke har noen jobb.
   function prioriter(L, id) { const J = jobber(L), j = J.find(q => q.b.id === id); if (!j) return false; let nr = Math.min(...J.map(q => q.nr)) - 1; if (nr === 0) nr = -1;   // (0 leses som «ikke satt» i jobber())
     if (j.hva === 'bygg') j.b.nr = nr; else j.b.arbeid.nr = nr; return true; }
@@ -414,7 +428,7 @@
     if (!MATERIALER[type] || !(mengde > 0)) return 0;
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
-  const api = { prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { bryter, dieselTimer, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

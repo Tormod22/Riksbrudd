@@ -67,24 +67,67 @@
   rot.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
 
   // --- modellene (fronten mot +x, origo midt på bunnen), hjørnefarger ---
-  function boks(d, x, y, z, sx, sy, sz, c, rz) { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); if (rz) g.rotateZ(rz); g.translate(x, y, z + sz / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }
-  function hjul(d, x, y, r) { const g = new THREE.CylinderGeometry(r, r, .28, 10).toNonIndexed(); g.translate(x, y, r); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set([.09, .09, .1], q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }
+  // (16. nov: «mer detaljerte 3D-modeller, typ helikopter») Byggeklosser: boks (kan vris om z og vippes om y), rør langs en akse, hjul med felg
+  const farg = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); return g; };
+  function boks(d, x, y, z, sx, sy, sz, c, rz, ry) { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x, y, z + sz / 2); d.push(farg(g, c)); }
+  function rør(d, x, y, z, r, l, akse, c, seg, r2) { const g = new THREE.CylinderGeometry(r2 === undefined ? r : r2, r, l, seg || 8).toNonIndexed(); if (akse === 'x') g.rotateZ(-Math.PI / 2); else if (akse === 'z') g.rotateX(Math.PI / 2); g.translate(x, y, z); d.push(farg(g, c)); }
+  function hjul(d, x, y, r) { const g = new THREE.CylinderGeometry(r, r, .3, 14).toNonIndexed(); g.translate(x, y, r); d.push(farg(g, [.08, .08, .09])); const f = new THREE.CylinderGeometry(r * .55, r * .55, .32, 10).toNonIndexed(); f.translate(x, y, r); d.push(farg(f, [.33, .35, .33])); }
   const ett = d => MODELLER.samle(d);
-  function bilModell() { const d = [], o = [.3, .36, .24], m = [.22, .27, .18], gl = [.5, .62, .68];
-    boks(d, 0, 0, .45, 4.1, 1.8, .7, o); boks(d, -.35, 0, 1.15, 2.2, 1.7, .75, m); boks(d, .78, 0, 1.2, .06, 1.5, .55, gl); boks(d, -1.48, 0, 1.2, .06, 1.5, .5, gl);
-    for (const sy of [-1, 1]) { boks(d, -.35, sy * .86, 1.25, 1.7, .04, .45, gl); boks(d, 2.06, sy * .6, .78, .06, .3, .2, [.95, .93, .8]); boks(d, -2.06, sy * .65, .8, .06, .25, .18, [.75, .1, .08]); }
-    boks(d, 2.1, 0, .4, .12, 1.9, .25, [.12, .12, .12]); boks(d, -2.1, 0, .4, .12, 1.9, .25, [.12, .12, .12]); boks(d, -2.2, 0, .95, .25, .7, .7, [.1, .1, .1]);
-    for (const sx of [-1.3, 1.35]) for (const sy of [-.86, .86]) hjul(d, sx, sy, .42); return ett(d); }
-  function heliModell() { const d = [], o = [.27, .33, .24], m = [.18, .22, .16], gl = [.45, .6, .68];
-    boks(d, .3, 0, .75, 4.4, 1.9, 1.7, o); boks(d, 2.3, 0, .85, 1.1, 1.6, 1.2, gl); boks(d, 2.75, 0, .8, .5, 1.1, .7, o); boks(d, .2, 0, 2.45, 1.6, .9, .45, m);
-    boks(d, -4.2, 0, 1.75, 5.2, .42, .5, o); boks(d, -6.7, 0, 2.1, .9, .12, 1.5, m); boks(d, -6.5, 0, 1.9, .6, 1.5, .08, m);
-    for (const sy of [-1, 1]) { boks(d, .3, sy * 1.15, 0, 3.6, .14, .14, [.12, .12, .12]); for (const sx of [-.8, 1.4]) boks(d, sx, sy * 1.05, .1, .1, .1, .7, [.12, .12, .12]); boks(d, 1.2, sy * .96, 1.5, 1.2, .04, .7, gl); }
-    boks(d, .2, 0, 2.9, .22, .22, .35, [.1, .1, .1]); return ett(d); }
-  function rotorModell(r, b) { const d = []; boks(d, 0, 0, 0, r * 2, b, .05, [.08, .08, .09]); boks(d, 0, 0, 0, b, r * 2, .05, [.08, .08, .09]); return ett(d); }
+  // FELTBILEN: ramme, panser, førerhus med skrå frontrute, skjermer over hjulene, støtfangere, grill, lykter, reservehjul, takbøyle, speil
+  function bilModell() { const d = [], o = [.3, .36, .24], m = [.22, .27, .18], sv = [.1, .1, .11], gl = [.5, .63, .7], lys = [.96, .94, .8];
+    boks(d, 0, 0, .42, 4.1, 1.72, .5, o); boks(d, 0, 0, .34, 3.6, 1.3, .12, sv);                                     // karosseri og ramme
+    boks(d, 1.38, 0, .92, 1.3, 1.6, .28, o); boks(d, 1.38, 0, 1.2, 1.0, .5, .04, m);                                  // panser med luftinntak
+    boks(d, -.5, 0, .92, 2.4, 1.72, .32, o);                                                                           // kasse rundt førerhuset
+    boks(d, -.62, 0, 1.24, 1.9, 1.62, .62, m); boks(d, -.62, 0, 1.86, 2.0, 1.7, .07, o);                               // førerhus og tak
+    boks(d, .5, 0, 1.22, .06, 1.5, .66, gl, 0, -.38); boks(d, -1.6, 0, 1.3, .05, 1.4, .46, gl);                        // frontrute (skrå) og bakrute
+    for (const sy of [-1, 1]) { boks(d, -.25, sy * .82, 1.32, .8, .04, .44, gl); boks(d, -1.05, sy * .82, 1.32, .62, .04, .44, gl);   // sideruter
+      boks(d, -.66, sy * .87, .98, .04, .03, .86, sv);                                                                 // dørsprekk
+      for (const sx of [1.35, -1.3]) { boks(d, sx, sy * .84, .82, 1.1, .2, .1, sv); boks(d, sx - .5, sy * .84, .5, .1, .2, .36, sv); boks(d, sx + .5, sy * .84, .5, .1, .2, .36, sv); }   // skjermer
+      boks(d, 2.07, sy * .58, .74, .06, .3, .22, lys); boks(d, 2.07, sy * .22, .76, .05, .14, .14, [.9, .55, .1]);     // hovedlys og blinklys
+      boks(d, -2.07, sy * .66, .78, .06, .2, .26, [.75, .1, .08]);                                                     // baklys
+      boks(d, .62, sy * .95, 1.32, .12, .06, .2, sv); boks(d, .6, sy * 1.02, 1.36, .05, .16, .22, m);                   // speil
+      boks(d, .1, sy * .8, 1.93, .06, .06, .3, sv); boks(d, -1.5, sy * .8, 1.93, .06, .06, .3, sv); boks(d, -.7, sy * .8, 2.2, 1.7, .05, .05, sv); }   // takbøyle
+    boks(d, -.7, 0, 2.2, .05, 1.65, .05, sv); boks(d, .1, 0, 2.2, .05, 1.65, .05, sv); boks(d, -1.5, 0, 2.2, .05, 1.65, .05, sv);
+    for (let q = -3; q <= 3; q++) boks(d, 2.06, q * .09, .82, .04, .04, .3, sv);                                       // grill
+    boks(d, 2.14, 0, .36, .14, 1.86, .2, sv); boks(d, -2.14, 0, .36, .14, 1.86, .2, sv); boks(d, 2.24, 0, .5, .06, .9, .3, sv);   // støtfangere og kufanger
+    rør(d, -2.2, 0, 1.05, .36, .26, 'x', [.08, .08, .09], 12); rør(d, -2.34, 0, 1.05, .2, .04, 'x', [.33, .35, .33], 10);   // reservehjul
+    boks(d, -1.75, -.6, 1.0, .16, .34, .46, [.36, .12, .1]); rør(d, -1.2, .7, 2.6, .012, 1.4, 'z', sv, 4);              // bensinkanne og antenne
+    for (const sx of [-1.3, 1.35]) for (const sy of [-.86, .86]) hjul(d, sx, sy, .44); return ett(d); }
+  // HELIKOPTERET: avrundet skrog i trinn, nese med glass, motor på taket med eksosrør, halebom som smalner, halefinne og stabilisator,
+  // meier på stag, dører, lanterner og antenner. Rotorene er egne nett (rotorModell) og går rundt.
+  function heliModell() { const d = [], o = [.27, .33, .24], m = [.18, .22, .16], sv = [.1, .1, .11], gl = [.42, .58, .68], gl2 = [.3, .44, .54];
+    boks(d, .3, 0, .78, 4.2, 1.9, 1.5, o); boks(d, .3, 0, .62, 3.9, 1.5, .2, m); boks(d, .3, 0, 2.26, 3.4, 1.5, .16, o);   // kabin, buk og tak
+    for (const sy of [-1, 1]) { boks(d, .3, sy * .98, .95, 3.9, .1, 1.1, o);                                            // litt bredere midtparti
+      boks(d, 1.3, sy * 1.04, 1.4, 1.0, .04, .62, gl); boks(d, .1, sy * 1.04, 1.4, 1.0, .04, .62, gl); boks(d, -1.0, sy * 1.04, 1.45, .7, .04, .5, gl2);   // vinduer
+      boks(d, .7, sy * 1.045, .9, .04, .03, 1.2, sv); boks(d, -.45, sy * 1.045, .9, .04, .03, 1.2, sv); boks(d, .1, sy * 1.06, 1.1, .2, .04, .05, sv);   // dørsprekker og håndtak
+      // meier: langt rør med oppbøyd tupp, på to skrå stag
+      rør(d, .35, sy * 1.25, .1, .07, 3.9, 'x', sv); boks(d, 2.38, sy * 1.25, .1, .5, .12, .1, sv, 0, -.5);
+      for (const sx of [-.8, 1.4]) boks(d, sx, sy * 1.12, .12, .1, .1, .74, sv, 0, 0), boks(d, sx, sy * 1.0, .62, .1, .34, .08, sv);
+      boks(d, .5, sy * 1.1, 1.0, .1, .06, .1, sy < 0 ? [.1, .75, .2] : [.85, .1, .08]);                                 // lanterner: grønn styrbord, rød babord
+      rør(d, -1.25, sy * .62, 2.5, .13, .9, 'x', [.2, .2, .21], 8); }                                                    // eksosrør
+    // nesa i tre trinn, med frontruter
+    boks(d, 2.75, 0, .8, 1.0, 1.7, 1.2, o); boks(d, 3.45, 0, .82, .6, 1.3, .9, o); boks(d, 3.85, 0, .9, .3, .8, .55, m);
+    boks(d, 2.95, 0, 1.75, 1.2, 1.5, .06, gl, 0, .62); boks(d, 2.5, 0, 2.0, .5, 1.6, .28, gl); boks(d, 3.3, 0, 1.08, .06, 1.2, .5, gl2, 0, -.2);
+    for (const sy of [-1, 1]) boks(d, 2.6, sy * .86, 1.42, .9, .04, .6, gl);
+    // motorhus, rotormast og nav
+    boks(d, -.2, 0, 2.42, 2.4, 1.0, .5, m); boks(d, .9, 0, 2.42, .5, .8, .34, o, 0, .5); boks(d, -1.5, 0, 2.42, .4, .7, .36, sv);
+    rør(d, .2, 0, 3.08, .1, .4, 'z', sv, 8); rør(d, .2, 0, 3.26, .22, .1, 'z', [.3, .3, .32], 10);
+    // halebom som smalner, med drivaksel på toppen, finne, stabilisator og halestøtte
+    boks(d, -2.7, 0, 1.55, 1.8, .6, .7, o); boks(d, -4.3, 0, 1.68, 1.6, .44, .5, o); boks(d, -5.8, 0, 1.78, 1.5, .32, .36, o); rør(d, -4.4, 0, 2.3, .05, 4.6, 'x', sv, 6);
+    boks(d, -6.75, 0, 2.0, 1.0, .1, 1.5, m, 0, .45); boks(d, -6.35, 0, 1.55, .5, .1, .5, m, 0, -.5); boks(d, -5.9, 0, 1.85, .5, 1.9, .07, m);
+    for (const sy of [-1, 1]) boks(d, -5.9, sy * .95, 1.7, .5, .06, .4, m);
+    boks(d, -6.5, 0, 1.2, .08, .08, .5, sv, 0, .5); boks(d, -6.95, 0, 3.05, .1, .1, .1, [.95, .95, .9]); boks(d, -6.75, 0, 2.6, .22, .2, .22, sv);   // halestøtte, hvit lanterne, girhus
+    rør(d, 1.3, 0, 2.75, .012, .7, 'z', sv, 4); rør(d, -2.6, 0, 2.55, .012, .6, 'z', sv, 4); boks(d, 1.6, 0, .48, .5, .5, .1, sv);   // antenner og lyskaster
+    boks(d, -3.2, .31, 1.75, 1.2, .01, .16, [.8, .78, .7]); boks(d, -3.2, -.31, 1.75, 1.2, .01, .16, [.8, .78, .7]);   // lys stripe på bommen
+    return ett(d); }
+  // rotor: n blader som smalner utover, med feste ved navet
+  function rotorModell(r, b, n = 4) { const d = [], sv = [.07, .07, .08]; for (let q = 0; q < n; q++) { const v = q * 2 * Math.PI / n, c = Math.cos(v), s = Math.sin(v);
+      boks(d, c * r * .3, s * r * .3, 0, r * .52, b * 1.15, .05, sv, v); boks(d, c * r * .76, s * r * .76, 0, r * .46, b * .8, .04, sv, v); boks(d, c * r * .985, s * r * .985, 0, r * .03, b * .8, .045, [.85, .7, .1], v); }
+    rør(d, 0, 0, .03, b * 1.1, .12, 'z', [.3, .3, .32], 10); return ett(d); }
   let mat = null;
   function modell(R, k) { if (k.m && k.m.parent === R.scene) return k.m; if (!mat) mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     const g = new THREE.Group(), kropp = new THREE.Mesh(k.type === 'bil' ? bilModell() : heliModell(), mat); g.add(kropp); g.userData.kilde = 'kjor.js';
-    if (k.type === 'heli') { const ro = new THREE.Mesh(rotorModell(5.4, .34), mat); ro.position.set(.2, 0, 3.28); g.add(ro); k.ro = ro; const hr = new THREE.Mesh(rotorModell(.95, .16), mat); hr.rotation.x = Math.PI / 2; hr.position.set(-6.7, .3, 2.6); g.add(hr); k.hr = hr; }
+    if (k.type === 'heli') { const ro = new THREE.Mesh(rotorModell(5.6, .36, 4), mat); ro.position.set(.2, 0, 3.32); g.add(ro); k.ro = ro; const hr = new THREE.Mesh(rotorModell(.95, .16, 2), mat); hr.rotation.x = Math.PI / 2; hr.position.set(-6.7, .3, 2.6); g.add(hr); k.hr = hr; }
     g.rotation.order = 'ZYX'; R.scene.add(g); k.m = g; return g; }
 
   // --- verden slik reglene ser den, i utsnittets meter ---
@@ -192,7 +235,7 @@ body.kort #kjorknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font
   setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) knapp.classList.remove('på'); }, 500);
 
   // farten, høyden og rotoren nederst i bildet
-  KROKER.tegn3d.push(g => { const k = fører(); if (!k) return; g.save(); g.font = '600 15px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.fillStyle = '#f0e2b0';
+  KROKER.tegn3d.push(g => { const k = fører(); if (!k || window.NarHud) return; g.save(); g.font = '600 15px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.fillStyle = '#f0e2b0';
     const fart = k.type === 'bil' ? Math.abs(k.v) : Math.hypot(k.vx, k.vy), t = k.type === 'bil' ? `${Math.round(fart * 3.6)} km/t${k.v < -.3 ? ' · rygger' : ''}` : k.rotor < .9 ? `Rotoren spoler opp … ${Math.round(k.rotor / .9 * 100)} %` : `${Math.round(fart * 3.6)} km/t · ${Math.round(Math.max(0, k.over || 0))} m over bakken`;
     const y = VH - (VW < 900 ? 190 : 46); g.strokeText(t, VW / 2, y); g.fillText(t, VW / 2, y); g.restore(); });
   // 2D-kartet: et lite merke der kjøretøyene står

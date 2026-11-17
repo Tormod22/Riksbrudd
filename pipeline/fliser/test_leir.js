@@ -204,4 +204,13 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
 { const L0 = require('../../site/dovre-fliser/spill/leir.js'), L = L0.ny();
   L.bygg.push({ id: 1, type: 'brakke', x: 0, y: 0, igjen: 5, totalt: 10, nr: 1, hp: 1, nivå: 1 }, { id: 2, type: 'aggregat', x: 30, y: 0, igjen: 5, totalt: 10, nr: 2, hp: 1, nivå: 1 }, { id: 3, type: 'brakke', x: 60, y: 0, igjen: 0, totalt: 10, hp: 1, nivå: 1 });
   ok(L0.jobber(L)[0].b.id === 1 && L0.prioriter(L, 2) && L0.jobber(L)[0].b.id === 2 && !L0.prioriter(L, 3), '«Bygg dette først» flytter jobben først i køen; ferdige bygg har ingen jobb'); }
+// ---- bedre strøm (16. nov): batteri lades av overskudd og tappes før aggregatet, brytere slår bygg av
+{ const L0 = require('../../site/dovre-fliser/spill/leir.js'), L = L0.ny(), b = (id, type, x) => ({ id, type, x, y: 0, ret: 0, igjen: 0, totalt: 1, hp: 1, nivå: 1, nr: id, arbeid: null, mat: {} });
+  L.bygg.push(b(1, 'solcelle', 0), b(2, 'batteri', 30), b(3, 'kontrollrom', 60), b(4, 'sykestue', 90), b(5, 'solcelle', 120), b(6, 'solcelle', 150)); const sol = 3 * L0.effekt(L.bygg[0]).kw, bruk = -L0.BYGG.kontrollrom.kw - L0.BYGG.sykestue.kw;
+  let s = L0.steg(L, 60, 1); ok(sol > bruk && Math.abs(s.batteri - (sol - bruk)) < 1e-6 && s.batKW < 0, `sol ${sol} kW mot forbruk ${bruk} kW: overskuddet lader batteriet (${s.batteri.toFixed(1)} kWt)`); ok(s.batKap === 40 && s.mangler.size === 0, 'batteribanken rommer 40 kWt');
+  L.batteri = 20; s = L0.steg(L, 60, 0); ok(s.batKW > 0 && s.mangler.size === 0 && Math.abs(L.batteri - (20 - bruk)) < 1e-6 && s.agg === 0, 'om natta tappes batteriet, og ingen mangler strøm');
+  L.batteri = 0; s = L0.steg(L, 60, 0); ok(s.mangler.size === 2 && s.batKW === 0, 'tomt batteri uten sol: byggene mangler strøm');
+  ok(L0.bryter(L, 4) === true && L0.bryter(L, 1) === null, 'bryter: bare bygg som bruker strøm kan slås av'); L.batteri = 1; s = L0.steg(L, 60, 0);
+  ok(s.mangler.has(4) && s.avslått === 1 && s.behov === -L0.BYGG.kontrollrom.kw, 'et avslått bygg bruker ikke strøm og virker ikke'); ok(L0.bryter(L, 4) === false && !('av' in L.bygg[3]), 'på igjen');
+  L.batteri = 999; L0.steg(L, 1, 0); ok(L.batteri <= 40, 'batteriet holder aldri mer enn det rommer'); L.drivstoff = 60; ok(L0.dieselTimer(L, 10) === 60 / (10 * L0.DRIVSTOFF.literPerKWt) && L0.dieselTimer(L, 0) === Infinity, 'dieselen rekker så og så lenge'); }
 process.exit(feil ? 1 : 0);

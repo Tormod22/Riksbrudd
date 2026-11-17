@@ -103,8 +103,10 @@
   window.addEventListener('keydown', e => { if ((e.key === 'r' || e.key === 'R') && deg() && !(window.LeirSpill && LeirSpill.plassering())) lad(); });
   KROKER.tegn3d.push(g => { if (!klar || !deg()) return; const nå = performance.now(), x = VW / 2, y = VH - (VW < 900 ? 214 : 70); g.save();
     // helse og ammunisjon nederst, treffmerke i siktet, rød kant når du blir truffet
+    if (!window.NarHud) {   // (helse og ammunisjon vises av spill/narhud.js når den er lastet)
     g.fillStyle = 'rgba(20,16,10,.6)'; g.fillRect(x - 81, y - 1, 162, 8); g.fillStyle = K.hp > 40 ? '#9fc46a' : '#e0604a'; g.fillRect(x - 80, y, 160 * Math.max(0, K.hp) / Kamp.HELSE.maks, 6);
     if (!(window.KjorSpill && KjorSpill.fører())) { g.font = '600 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.fillStyle = '#f0e2b0'; const t = nå < K.lader ? 'Lader …' : `${A().def.navn}  ${K.mag} / ${K.res}${VW < 900 ? '' : '  ·  klikk: skyt  ·  R: lad  ·  I: sekk'}`; g.strokeText(t, x, y - 8); g.fillText(t, x, y - 8); }
+    }
     if (nå - K.treff < 220) { g.strokeStyle = '#ffd27a'; g.lineWidth = 2; const cx = VW / 2, cy = VH / 2; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(cx + a * 5, cy + b * 5); g.lineTo(cx + a * 11, cy + b * 11); g.stroke(); } }
     if (nå - K.skadd < 900) { const v = (1 - (nå - K.skadd) / 900) * .35; g.strokeStyle = `rgba(224,60,40,${v})`; g.lineWidth = 26; g.strokeRect(0, 0, VW, VH); }
     g.restore(); });
@@ -127,22 +129,7 @@
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
   function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }
 
-  // FOLK I LEIREN (3D): små figurer som går mellom byggene – én per person, høyst 14
-  let figurer = null, figMesh = null;
-  function figurGeo() { const d = [], b = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); };
-    b(0, -.1, 0, .16, .14, .82, [.2, .2, .22]); b(0, .1, 0, .16, .14, .82, [.2, .2, .22]); b(0, 0, .82, .24, .42, .6, [1, 1, 1]); b(0, 0, 1.44, .2, .2, .24, [.85, .68, .55]); b(0, 0, 1.62, .22, .22, .08, [.25, .2, .15]); return MODELLER.samle(d); }
-  const JAKKER = [[.35, .42, .3], [.5, .32, .22], [.25, .33, .45], [.55, .5, .35], [.4, .25, .25], [.3, .3, .32], [.6, .45, .2]];
-  KROKER.ramme3d.push(Q => { if (!klar || !Q.ut || typeof THREE === 'undefined' || !window.MODELLER) return; const f = F(), leir = S() && S().leir, u = Q.ut; if (!f || !leir) return;
-    const n = Math.min(14, f.personer.length), nær = Math.abs(leir.x - u.cx) < u.S - 60 && Math.abs(leir.y - u.cy) < u.S - 60;
-    if (!figMesh || figMesh.parent !== Q.scene) { if (figMesh) figMesh.geometry.dispose(); figMesh = new THREE.InstancedMesh(figurGeo(), new THREE.MeshLambertMaterial({ vertexColors: true }), 14); figMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(14 * 3).fill(1), 3); figMesh.frustumCulled = false; figMesh.userData.kilde = 'spillet-visning.js'; Q.scene.add(figMesh); }
-    figMesh.visible = nær && n > 0; if (!figMesh.visible) return;
-    if (!figurer || figurer.length !== n) { figurer = []; for (let i = 0; i < n; i++) figurer.push({ x: leir.x + (Math.random() - .5) * 40, y: leir.y + (Math.random() - .5) * 40, tx: 0, ty: 0, vent: 0, a: 0 }); const c = new THREE.Color(); for (let i = 0; i < n; i++) { const j = JAKKER[i % JAKKER.length]; c.setRGB(j[0], j[1], j[2]); figMesh.setColorAt(i, c); } figMesh.instanceColor.needsUpdate = true; }
-    const l = L(), bygg = l ? l.bygg.filter(b => b.x !== undefined && !LB.BYGG[b.type].del && Math.hypot(b.x - leir.x, b.y - leir.y) < 150) : [], o = new THREE.Object3D(), dt = tempo > 0 ? .016 : 0; figMesh.count = n;
-    figurer.forEach((p, i) => { if (p.vent > 0) p.vent -= dt; else { const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
-        if (!p.tx || d < .6) { const b = bygg.length && Math.random() < .75 ? bygg[Math.floor(Math.random() * bygg.length)] : null, v = Math.random() * 6.283, r = b ? 7 + Math.random() * 5 : Math.random() * 30; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.vent = 2 + Math.random() * 14; }
-        else { const nx = p.x + dx / d * 1.2 * dt, ny = p.y + dy / d * 1.2 * dt; if (typeof hindring3d === 'function' && hindring3d(nx - u.cx, ny - u.cy)) { p.tx = 0; } else { p.x = nx; p.y = ny; p.a = Math.atan2(dy, dx); } } }
-      o.position.set(p.x - u.cx, p.y - u.cy, (hoyde3d(p.x, p.y) - u.h0) * Q.EX); o.rotation.set(0, 0, p.a); o.updateMatrix(); figMesh.setMatrixAt(i, o.matrix); });
-    figMesh.instanceMatrix.needsUpdate = true; });
+  // (folkene som figurer i leiren ligger i spill/folk3d.js)
 
   // ================= VENNER =================
   let V = []; const lesV = () => { try { V = JSON.parse(localStorage.getItem('riksbrudd-venner') || '[]').filter(q => q && q.kode); } catch (e) { V = []; } for (const v of V) v.d = Deling.les(v.kode, t => !!(LB && LB.BYGG[t] && !LB.BYGG[t].linje)); V = V.filter(v => v.d); };

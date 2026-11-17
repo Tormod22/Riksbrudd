@@ -925,6 +925,19 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   (nytt bygg Leir.BYGG.brønn, lagt inn av overlev.js) gir det −15 på moralmålet (o.moralTillegg i FolkRegler.steg). I testene skjer
   forfallet ikke av seg selv (OverlevSpill.test). Tallene er Claudes. Zomboid-punktene 1 (behov hos figuren) og 2 (lyd som lokker
   fiender) er IKKE laget – brukeren valgte 3, 4 og 5.
+  SKJERMBILDE, FIGURER, MODELLER OG STRØM (17. nov, brukeren: «mer detaljerte karakterer, bedre UI – se på nettet –, mer detaljerte
+  3D-modeller typ helikopter, bedre system for strøm»):
+  spill/narhud.js (window.NarHud): #nhud når du går (helse/utholdenhet nede til venstre, våpen/ammunisjon nede til høyre, våpenfelt
+  1–4, tones ned i ro – rådet fra nettet: lite på skjermen, faste hjørner, vis det bare når det trengs), farten og tilstanden i
+  kjøretøy, VÅPENET I HÅNDA (en gruppe på kameraet – R.cam legges i scenen –, rekyl og lading; ALDRI et eget lys der: flere lys gir
+  nye skyggeprogrammer for hele scenen), og #varsler (brikker øverst til venstre i kartet: angrep, oppdrag, uten strøm, strøm/vann
+  svikter, mat, moral; trykk = dit det gjelder; skjult når en meny er åpen). De gamle tallene i lerretet (spillet-visning.js, kjor.js)
+  tegnes bare når NarHud mangler. spill/folk3d.js: folkene i leiren med hode, hår, belte og armer/bein som svinger (fire instansnett,
+  høyst 14). kjor.js: nye modeller (bilModell, heliModell med nese i trinn, motorhus, eksos, meier på stag, halefinne, lanterner;
+  rotorModell(r, b, n) med fire blader). STRØM: Leir.BYGG.batteri (40/80/160 kWt, L.batteri), Leir.steg lader av overskudd fra sol
+  og nett og tapper før aggregatene; Leir.bryter(L, id) (b.av: bruker ikke strøm og står i «mangler»), Leir.dieselTimer;
+  steg gir agg, aggMaks, batteri, batKap, batKW, avslått, nett. spill/strom-visning.js: «Byggelag: strøm» i fanen Bygg (kilder som
+  stolpe, batteri, hvor lenge det rekker, bryter per bygg i PRIORITET-rekkefølge). Tallene er Claudes.
   INSPIRASJON FRA ANDRE SPILL (16. nov, brukeren: «se etter inspirasjon på nettet etter spill som har fått ros for gode
   byggesystemer» – Factorio: kopier/lim, pipette og bygg-i-rekke; Prison Architect: planlegg før du bruker penger; Manor Lords: tall for
   alt på et tastetrykk; råd om skisser: rødt alene forklarer ingenting): årsaken står ved skissen (p.feil), nøkkeltall under hvert
