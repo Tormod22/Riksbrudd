@@ -134,7 +134,7 @@
   // Én runde fra ett lag mot ett annet. menn: [{ rolle, hp }]. rng: () => [0, 1). Returnerer antall treff.
   function ildrunde(menn, avstand, f, rng) {
     let treff = 0;
-    for (const m of menn) if (m.hp >= 1 && rng() < treffsjanse(m.rolle, avstand, f)) treff++;
+    for (const m of menn) if (m.hp >= 1 && rng() < treffsjanse(m.våpen || m.rolle, avstand, f)) treff++;   // m.våpen: lagets bevæpning (spill/strid.js)
     return treff;
   }
   // Fordeler treff på levende menn: halvparten faller, halvparten blir såret. Returnerer hva som skjedde.

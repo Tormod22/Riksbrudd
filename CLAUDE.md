@@ -1036,3 +1036,21 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   holder det) eller i høyre hånd (pistol). Gangen: lår og kne bøyer, kroppen duver og lener seg når du løper, huk bøyer hofte og kne,
   hodet følger blikket. Ca. 2800 trekanter (én figur). Karakterarket viser alder og opphav fra portrettet og «tom om 5 t» per behov.
   Bilder: scratchpad sp/kar2.js (nærbilder; NB.vri snur figuren mot kameraet).
+  STRIDSREGLER (17. nov, brukeren: «definere på forhånd hvordan troppene skal reagere i møte med fiender – skal de angripe når de vet at de
+  kanskje taper? High ground skal gi en fordel, samt om du blir oppdaget eller oppdager dem først, og hvilket våpen troppene mine har, og
+  fienden. Dette bør jeg kunne endre på»): spill/strid.js (regler uten DOM, test_strid.js) + strid-visning.js (window.StridSpill).
+  s.strid = { ild: fri|besvar|nær, underlegen: kjemp|trekk|unngå, tap: 0|3|5, fram: nei|ja, bev } per lag (Strid.ren; fire HOLDNINGER:
+  aggressiv, balansert = standard, forsiktig, bakhold; «riksbrudd-strid» = malen for nye lag; lagres med laget i lagring.js).
+  BEVÆPNING (Strid.BEVÆPNING: standard, nærstrid 200 000 kr, avstand 400 000, tung 600 000, lett = røvere): Strid.bevæpn setter m.våpen
+  per mann, og Terreng.ildrunde/kamprunde bruker m.våpen || m.rolle (nye våpen i Terreng.VÅPEN: maskinpistol, hagle, pistol,
+  presisjonsrifle 1100 m; kamprundens grense er 1150 m). Fienden: røvere (raid/post) lett, rød standard, grønn avstand. KROKER.ild-kroken
+  gir Strid.høydeRett(dh) (fra 10 m, opptil ×1,6 ved 80 m, ×0,7 oppover; Terrengs gamle ×1,2 deles ut) × Strid.oppdagelse (SETT = hvem
+  så hvem når: bakhold ×1,6, først ×1,35 i 15 min, overrasket ×0,6) og 0 når reglene forbyr ild (Strid.ildLov). Hvert spillminutt:
+  StridSpill.vurdering(s) (nærmeste fiende laget ser, Strid.kraft = forventede treff per runde for begge sider -> forhold) og
+  Strid.reaksjon -> ordre() bort fra fienden (trekk/unngå) eller nærmere (fram), høyst hvert 15. min; ikke av seg selv i testene
+  (StridSpill.test). Panelet #stridpanel fra «Stridsregler» i lagpanelet (KROKER.lagKnapper): holdninger, fire valg, bevæpning,
+  «Slik står det nå» og «Bruk på alle lag». Lagpanelets statuslinje viser holdning, bevæpning og styrkeforhold; fiendelag viser sin
+  bevæpning. Alle tallene er Claudes forslag. VAKT «stridsregler».
+  KNAPPERADEN (17. nov, brukeren: «utfør nummer 5»): spill/knapper.js (lastes etter tema.js) – Gå, Leir, Krig og Deg har ikon
+  (data-kn; på telefon bare ikonet, ordet står igjen i knappen med font-size 0), #sekkknapp og #tredjeknapp er skjult i raden og nås
+  fra menyen #degmeny under Deg (bare når du går; ellers åpner Deg karakterarket direkte). Knapper.merk()/åpen(). VAKT «knapperaden».

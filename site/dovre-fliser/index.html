@@ -116,7 +116,7 @@ function skjulMelding(type) {
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/kartflis.js?v=791a68c6a8"></script>
-<script src="/dovre-fliser/terreng.js?v=53a82fcbe2"></script>
+<script src="/dovre-fliser/terreng.js?v=a7c00fd4ce"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script>
@@ -798,9 +798,9 @@ function kamprunde() {
     a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
     if (!Terreng.slattUt(a.menn)) for (const b of ENHETER) {
       if (a.side === b.side || !levende(b)) continue;
-      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 900 || !ser(a, b.x, b.y)) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || !ser(a, b.x, b.y)) continue;
       const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
-      if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.rolle, d, f) > 0)) continue;   // ingen når fram
+      if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.våpen || m.rolle, d, f) > 0)) continue;   // ingen når fram
       const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)
       let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
       if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
@@ -2847,7 +2847,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=132dd76718"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=50c024b1f4"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=f9caab51b4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -2892,7 +2892,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggevisning.js?v=9925e7834a"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=011b3c1db5"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=7fb7754937"></script>
-<script src="/dovre-fliser/spill/lagring.js?v=1f7dc97448"></script>
+<script src="/dovre-fliser/spill/lagring.js?v=67efda4d9d"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
@@ -2924,6 +2924,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ikoner.js?v=901f20e54e"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
+<script src="/dovre-fliser/spill/strid.js?v=5c3e4cec8a"></script>
+<script src="/dovre-fliser/spill/strid-visning.js?v=a048f24c0e"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=32d05e6169"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=1fbadf5e33"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=630a58f880"></script>
@@ -2931,6 +2933,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/meny.js?v=d59b0222a6"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
+<script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/taster.js?v=cb98411f05"></script>
 </body>
 </html>

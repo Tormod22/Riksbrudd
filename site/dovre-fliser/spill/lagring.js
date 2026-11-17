@@ -18,6 +18,7 @@
     const d = { navn: s.navn, x: r1(s.x), y: r1(s.y), leder: s.leder || 0, menn: s.menn.map(m => ({ navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy })) };
     if (s.speider) d.speider = true; if (s.ingeniør) d.ingeniør = true; if (s.nedgravd) d.nedgravd = true;
     if (s.radio) d.radio = s.radio; if (s.ammo !== undefined) d.ammo = +(+s.ammo).toFixed(3);
+    if (s.strid) d.strid = s.strid;   // stridsreglene og bevæpningen (spill/strid.js)
     return d;
   }
   // Setter laget slik det ble lagret. Laget står stille (ordren er ikke lagret), og sikten regnes på nytt.
@@ -27,6 +28,7 @@
     s.leder = mellom(Math.round(tall(d.leder, 0)), 0, Math.max(0, s.menn.length - 1));
     if (d.ammo !== undefined) s.ammo = mellom(tall(d.ammo, 1), 0, 1);
     if (d.radio) s.radio = d.radio; if (d.nedgravd) s.nedgravd = true;
+    if (d.strid && typeof d.strid === 'object') { s.strid = d.strid; delete s.bevSatt; }
     return s;
   }
   // ---------- kjøretøyene ----------
