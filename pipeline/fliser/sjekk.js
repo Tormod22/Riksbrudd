@@ -589,7 +589,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           && bs.revet === 1 && bs.tilbake > 0 && bs.passer && bs.lukket; if (!bsok) { feil++; console.log(JSON.stringify(bs)); }
         console.log(`${bsok ? 'ok  ' : 'FEIL'} ${navn} byggesett: åpnes fra Leir-menyen, hytte ${bs.bygget} deler som ${bs.jobber} jobber, tak i lufta avvist, rad med ${bs.rad} vegger, ferdig hytte = ${bs.rom} rom med dør og ${bs.senger} senger, revet vegg ga ${bs.tilbake} kr`);
         console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
-        const fo = k1.folk || {}, fook = fo.antall === 10 && fo.bygg === 4 && fo.lag === 2 && fo.lagret && fo.åpen && fo.rader === 9 && fo.pluss === 1 && fo.minus === 0 && fo.ingenLag === 0 && fo.innenfor && fo.sikt === 1.25 && fo.kjøkken;
+        const fo = k1.folk || {}, fook = fo.antall === 10 && fo.bygg === 4 && fo.lag === 2 && fo.lagret && fo.åpen && fo.rader === 10 && fo.pluss === 1 && fo.minus === 0 && fo.ingenLag === 0 && fo.innenfor && fo.sikt === 1.25 && fo.kjøkken;
         if (!fook) { feil++; console.log(JSON.stringify(fo)); }
         console.log(`${fook ? 'ok  ' : 'FEIL'} ${navn} folk: ${fo.antall} personer, ${fo.bygg} på bygg = ${fo.lag} byggelag (0 uten byggere), lagret i leiren, panelet fra Leir-menyen (${fo.rader} oppgaver, + og − virker, innenfor skjermen, ${fo.mangler} ting mangler), bemannet vakttårn gir sikt ×${fo.sikt}, kjøkken finnes`);
         const fx = k1.fiks || {}, lg = k1.lagring || {}, fxok = fx.rom > 0 && fx.senger === 0 && fx.malDeler === 0 && fx.malBygg > 2 && fx.malVann && fx.malRøde > 0 && /vann/.test(fx.gjerde || '') && fx.tom === null && /seng|Moralen/.test(fx.full || '')
@@ -1184,12 +1184,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${knpok ? 'ok  ' : 'FEIL'} ${navn} knapperaden: ikoner ${knp.ikon}, Sekk og Utenfra samlet under Deg (${knp.rader} valg), ${knp.antall} knapper på én rad: ${knp.enRad}`);
     // VAKT spillskjermen (spill/spillhud.js, brukeren 17. nov: «få til en bedre UI, dette ser ikke ut som et spill»): på PC står
     // ressursene som fliser uten ord og de tekniske tallene er skjult, kommandolinja nederst åpner Leir-menyen, og telefonen er som før.
-    const shd = await pg.evaluate(async () => { if (!window.SpillHud) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id); if (R3.fot) Gange.stopp(); slå3d(false); await vent(600); SpillHud.oppdater();
-      ut.aktiv = SpillHud.aktiv(); ut.bred = innerWidth >= 900 && !document.body.classList.contains('kort'); if (!ut.aktiv) { ut.bar = getComputedStyle($('kommando')).display; return ut; }
+    const shd = await pg.evaluate(async () => { if (!window.SpillHud) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id); const var3d = typeof på3d !== 'undefined' && på3d, tilbake = async () => { if (var3d) { await slå3d(true); for (let i = 0; i < 1200 && !(R3 && R3.ut && !R3.bygger); i++) await vent(100); } }; if (R3 && R3.fot) Gange.stopp(); if (var3d) await slå3d(false); await vent(600); SpillHud.oppdater();
+      ut.aktiv = SpillHud.aktiv(); ut.bred = innerWidth >= 900 && !document.body.classList.contains('kort'); if (!ut.aktiv) { ut.bar = getComputedStyle($('kommando')).display; await tilbake(); return ut; }
       ut.kn = SpillHud.knapper(); ut.bar = getComputedStyle($('kommando')).display; ut.ord = [...document.querySelectorAll('.stats > div > span:not([id])')].filter(q => q.offsetParent).length;
       ut.teknisk = ['sH', 'sKB'].filter(id => $(id) && $(id).offsetParent).length; ut.kassa = !!($('sPenger') && $('sPenger').offsetParent);
       const før = $('leirmeny').classList.contains('på'); document.querySelector('#kommando [data-k=leir]').click(); await vent(300); ut.leir = $('leirmeny').classList.contains('på') !== før; ut.merket = document.querySelector('#kommando [data-k=leir]').classList.contains('på') === !før;
-      document.querySelector('#kommando [data-k=leir]').click(); await vent(200); ut.igjen = $('leirmeny').classList.contains('på') === før; return ut; });
+      document.querySelector('#kommando [data-k=leir]').click(); await vent(200); ut.igjen = $('leirmeny').classList.contains('på') === før; await tilbake(); return ut; });
     const shdok = !shd.uten && shd.aktiv === shd.bred && (shd.aktiv ? shd.bar === 'flex' && shd.kn.includes('leir') && shd.ord === 0 && shd.teknisk === 0 && shd.kassa && shd.leir && shd.merket && shd.igjen : shd.bar === 'none');
     if (!shdok) { feil++; console.log(JSON.stringify(shd)); }
     console.log(`${shdok ? 'ok  ' : 'FEIL'} ${navn} spillskjermen: ${shd.aktiv ? `fliser uten ord, tekniske tall skjult, kommandolinja (${(shd.kn || []).join(', ')}) åpner Leir-menyen` : 'ikke i bruk på liten skjerm'}`);
@@ -1214,13 +1214,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT kaier (spill/kaier.js, brukeren 17. nov: «alle plasser hvor det er kaier»): prøvedata tegnes i kartet etter målestokken,
     // trykk på et merke gir navnet og avstanden i loggen, og «Kaier» i ☰ slår dem av.
     const kai = await pg.evaluate(async () => { if (!window.KaierSpill || !window.Kaier) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), før = KaierSpill.data(), k0 = { x: kam.x, y: kam.y, m: kam.m }, v0 = KaierSpill.vis();
-      if (typeof på3d !== 'undefined' && på3d) { if (R3.fot) Gange.stopp(); await slå3d(false); await vent(500); }
+      const var3d = typeof på3d !== 'undefined' && på3d; if (var3d) { if (R3.fot) Gange.stopp(); await slå3d(false); await vent(500); }
       const X = Math.round(kam.x), Y = Math.round(kam.y); KaierSpill.settData({ n: 3, navn: ['Prøvekaia'], d: [X - 400, Y, 1, 20, 0, 400, 0, 3, 180, 1, 300, 100, 2, 0, 0] }); KaierSpill.vis(true);
       const tell = m => { kam.m = m; const g = document.createElement('canvas').getContext('2d'); let n = 0; const ark = g.arc.bind(g); g.arc = (...a) => { n++; return ark(...a); }; let f = ''; try { for (const q of KROKER.tegn) if (String(q).includes('valgtKai')) q(g, kam.x - VW * m / 2, kam.y + VH * m / 2); } catch (e) { f = e.message; } return f || n; };
       ut.nær = tell(2); ut.middels = tell(40); ut.langt = tell(120); ut.borte = tell(300); kam.m = 2;
       const l0 = document.getElementById('logg').textContent; const tok = KROKER.trykk.filter(q => String(q).includes('valgtKai'))[0]; ut.trykk = tok(X, Y); await vent(80); ut.logg = /Prøvekaia \(havn\), 180 m kai/.test(document.getElementById('logg').textContent) && document.getElementById('logg').textContent !== l0; ut.bom = tok(X + 5000, Y + 5000);
       const b = document.getElementById('vis-kaier'); ut.knapp = !!b; if (b) { b.click(); ut.av = tell(2); b.click(); }
-      KaierSpill.settData(før); KaierSpill.vis(v0); Object.assign(kam, k0); skitten = true; return ut; });
+      KaierSpill.settData(før); KaierSpill.vis(v0); Object.assign(kam, k0); skitten = true; if (var3d) { await slå3d(true); for (let i = 0; i < 1200 && !(R3 && R3.ut && !R3.bygger); i++) await vent(100); } return ut; });
     const kaiok = !kai.uten && kai.nær === 3 && kai.middels === 2 && kai.langt === 1 && kai.borte === 0 && kai.trykk === true && kai.logg && kai.bom === false && kai.knapp && kai.av === 0;
     if (!kaiok) { feil++; console.log(JSON.stringify(kai)); }
     console.log(`${kaiok ? 'ok  ' : 'FEIL'} ${navn} kaier: ${kai.nær} merker nær, ${kai.middels} på 40 m/punkt, ${kai.langt} langt ute, trykk gir navn og kailengde: ${kai.logg}, av i ☰: ${kai.av === 0}`);
