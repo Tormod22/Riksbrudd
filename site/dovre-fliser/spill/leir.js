@@ -375,11 +375,11 @@
     if (fritt > 0) { const inn = Math.min(fritt, batKap > 0 ? (batKap - L.batteri) * 60 / dt : 0); L.batteri += inn * dt / 60; batKW = -inn; }
     else if (fritt < 0 && L.batteri > 0) { batKW = Math.min(-fritt, L.batteri * 60 / dt); L.batteri = Math.max(0, L.batteri - batKW * dt / 60); }
     const batUt = Math.max(0, batKW);
-    const aggMaks = L.drivstoff > 0 ? agg.reduce((s, b) => s + effekt(b).kw, 0) : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW - nett - batUt));
+    const aggInst = agg.reduce((s, b) => s + effekt(b).kw, 0), aggMaks = L.drivstoff > 0 ? aggInst : 0, aggKW = Math.min(aggMaks, Math.max(0, behov - solKW - nett - batUt));
     const liter = aggKW * DRIVSTOFF.literPerKWt * dt / 60; L.drivstoff = Math.max(0, L.drivstoff - liter);
     let igjen = solKW + aggKW + nett + batUt; const mangler = new Set(avslått.map(b => b.id));
     for (const b of brukere) { const k = -BYGG[b.type].kw; if (igjen + 1e-9 >= k) igjen -= k; else mangler.add(b.id); }
-    return { agg: aggKW, aggMaks, batteri: L.batteri, batKap, batKW, avslått: avslått.length, nett, prod: solKW + aggKW + nett + batUt, kapasitet: solKW + aggMaks + nett + batUt, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
+    return { agg: aggKW, aggMaks, aggInst, aggAntall: agg.length, batteri: L.batteri, batKap, batKW, avslått: avslått.length, nett, prod: solKW + aggKW + nett + batUt, kapasitet: solKW + aggMaks + nett + batUt, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)

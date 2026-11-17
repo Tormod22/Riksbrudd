@@ -32,6 +32,7 @@ const ok2 = L0.oppgrader(L, agg.id, betal); for (let i = 0; i < 31; i++) L0.steg
 ok(ok2.pris === 4.8e6 && agg.nivå === 2 && L0.effekt(agg).kw === 35, 'oppgradert til nivå 2 for 4,8 mill. kr: 35 kW');
 ok(L0.oppgrader(L, L.bygg[0].id, betal).feil === 'Høyeste nivå.', 'kontrollrommet har bare ett nivå');
 // strøm og drivstoff
+{ const f = L.drivstoff; L.drivstoff = 0; const t = L0.steg(L, 0); ok(t.aggMaks === 0 && t.aggInst >= 20 && t.aggAntall === 1, 'tom for diesel: aggregatet gir 0, men står oppført med det det kan gi'); L.drivstoff = f; }
 L0.kjøpDrivstoff(L, 1000, betal); s = L0.steg(L, 1); ok(s.behov === 9 && s.mangler.size === 0 && L.drivstoff > 0, 'kontrollrom + brakke (9 kW) får strøm fra aggregatet');
 // skade og reparasjon: under halvt helt gir halv effekt
 L0.skade(L, agg.id, .6); ok(Math.abs(L0.effekt(agg).kw - 17.5) < 1e-9, 'aggregatet 40 % helt: halv effekt (17,5 kW)');

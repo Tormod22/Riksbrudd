@@ -17,9 +17,12 @@
     hode.append(el('h3', { 'data-fane': 'bygg' }, 'Strøm'));
     boks.append(el('div', {}, `Forbruk ${tall(s.behov)} kW` + (m > 0 ? ` – ${m} bygg mangler strøm` : s.behov > 0 ? ' – alt har strøm' : '')));
     const linje = el('div', { klasse: 'linje' }); for (const [k, v] of [['sol', sol], ['nett', nett], ['bat', bat], ['agg', agg]]) if (v > 0) linje.append(el('i', { klasse: k, style: `width:${Math.min(100, v / sum * 100)}%` })); boks.append(linje);
-    boks.append(el('div', { klasse: 'tegn' }, el('span', {}, el('b', { klasse: 'sol' }), `sol ${tall(sol)}`), el('span', {}, el('b', { klasse: 'nett' }), `strømnettet ${tall(nett)}`), el('span', {}, el('b', { klasse: 'bat' }), `batteri ${tall(bat)}`), el('span', {}, el('b', { klasse: 'agg' }), `aggregat ${tall(agg)} av ${tall(s.aggMaks || 0)}`)));
+    boks.append(el('div', { klasse: 'tegn' }, el('span', {}, el('b', { klasse: 'sol' }), `sol ${tall(sol)}`), el('span', {}, el('b', { klasse: 'nett' }), `strømnettet ${tall(nett)}`), el('span', {}, el('b', { klasse: 'bat' }), `batteri ${tall(bat)}`), el('span', {}, el('b', { klasse: 'agg' }), `aggregat ${tall(agg)} av ${tall(s.aggInst === undefined ? s.aggMaks || 0 : s.aggInst)}` + (s.aggAntall ? ` (${s.aggAntall} stk)` : ''))));
+    // (17. nov, brukeren: «det står 0 av 0 aggregat når jeg egentlig har 2») aggregatene står når dieselen er tom – si det, med knapp
+    if (s.aggInst > 0 && !(L.drivstoff > 0)) boks.append(el('div', { klasse: 'bruker uten', id: 'aggtom' }, el('div', {}, el('b', {}, `${s.aggAntall} aggregat står: tom for diesel`), el('small', {}, `De kan gi ${tall(s.aggInst)} kW når tanken har diesel.`)),
+      knapp('Kjøp 500 l', () => { const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { id: 'aggkjop' })));
     if (s.batKap > 0) boks.append(el('div', {}, `Batteri: ${tall(s.batteri)} av ${tall(s.batKap)} kWt` + (s.batKW < -.05 ? ` (lader ${tall(-s.batKW)} kW)` : s.batKW > .05 ? ` (tappes ${tall(s.batKW)} kW – rekker ${timer(s.batteri / s.batKW)})` : '')), el('div', { klasse: 'linje' }, el('i', { klasse: 'bat', style: `width:${Math.min(100, s.batteri / s.batKap * 100)}%` })));
-    else boks.append(el('small', {}, 'Ingen batteribank: overskudd fra sol og nett går tapt. En batteribank lagrer det til natta.'));
+    else boks.append(el('small', {}, 'Ingen batteribank: overskudd fra sol og nett går tapt. En batteribank lagrer det til natta. '));
     if (agg > 0) boks.append(el('div', {}, `Aggregatene bruker diesel: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l rekker ${timer(LB.dieselTimer(L, agg))}.`));
     // brukerne i den rekkefølgen de får strøm, med bryter
     const brukere = L.bygg.filter(b => LB.BYGG[b.type].kw < 0 && LB.virker(b)).sort((a, b) => LB.PRIORITET.indexOf(a.type) - LB.PRIORITET.indexOf(b.type));

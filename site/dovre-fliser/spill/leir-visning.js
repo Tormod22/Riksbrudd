@@ -145,7 +145,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       flis('Strøm', siste.behov || siste.kapasitet ? `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : 'ikke i bruk', strømTekst, siste.mangler.size - (siste.avslått || 0) > 0),
       flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
       flis('Sengeplasser', String(LB.plasser(L))),
-      siste.mangler.size ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size} bygg mangler strøm`) : el('div', { klasse: 'linje' }, siste.behov || siste.kapasitet ? 'Alle bygg har strøm' : ''));
+      siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, siste.behov || siste.kapasitet ? 'Alle bygg har strøm' : ''));
     const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
       const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); }, { id: 'kjopdiesel' });
     kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
