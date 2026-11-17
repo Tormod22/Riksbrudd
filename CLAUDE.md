@@ -1159,3 +1159,31 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   navn, bev, kjøretøy, { våpen, utstyr }), brukMal, valg(). lagring.js lagrer m.valgt og s.utstyr. VAKT «bedre AI og troppebygger».
   IKKE GJORT: erfaring (veteraner som treffer bedre), bytte våpen/utstyr på en tropp som alt finnes, formasjoner, og at fienden
   bruker kjøretøy eller bygger egne stillinger.
+  ERFARING, FORMASJONER, UTSTYRSBYTTE, FIENDENS KJØRETØY OG STILLINGER (17. nov, brukeren ba om alle fire). Tallene er Claudes forslag.
+  spill/formasjon.js (regler, test_formasjon.js) + formasjon-visning.js: FORMASJON per lag (s.formasjon: kile, linje ild ×1,15/tar ×1,1,
+  spredt ild ×0,9/tar ×0,75, kolonne ild ×0,8/tar ×1,15) – knappen «Formasjon: …» i lagpanelet (#formknapp) blar; FORMPLASS(s, n) i
+  index.html plasserer mennene i 2D og 3D (på marsj alltid kolonne, men ildfaktoren følger den valgte formasjonen); fiendens lag går
+  i linje ved angrep og spredt når de holder. ERFARING: m.erf = minutter i kamp (lag som skyter eller blir beskutt, hvert spillminutt;
+  sårede halvparten), nivå erfaren 30 / veteran 120 / elite 360 med treff ×1,08 / 1,18 / 1,28 (lagets snitt, i KROKER.ild);
+  følger personen (Tropper.opprett/oppløs: p.erf). lagring.js lagrer m.erf og s.formasjon.
+  UTSTYRSBYTTE: «Våpen og utstyr» i lagpanelet (#utstyrknapp) når laget står innen 300 m fra leiren -> #tropppanel i endre-modus
+  (TropperSpill.endre/settEndring/endrePris/brukEndring): våpen mann for mann ([data-mann]) og utstyr; betaler bare det nye.
+  FIENDEN: hver fraksjon har en lastebil (AI.biler[side], KJORETOY med side rød/grønn). Fraksjoner.kjør/gåAv: laget går om bord
+  (s.ombord, flyttes av kroken i tropper-visning.js) når målet er over 3 km unna og bilen står innen 200 m, og går av når bilen er
+  framme eller en fiende ses innen 800 m. Bare når vegnettet er lastet (på PC hentes det for dette, ikke i testene). Fiendens
+  kjøretøy vises bare der du ser dem (kjoretoySes i kjoretoy-visning.js, også 3D) og kan ikke gis ordre. STILLINGER (window.STILLINGER):
+  en garnison som har holdt et tettsted i 120 min, bygger en stilling (høyst 4 per fraksjon, 300 m mellom) – eierens lag innen
+  25 m tar treff ×0,6 (Fraksjoner.stillingVern i KROKER.ild); du ser den når et lag har sett stedet, og et eget lag som står i en
+  forlatt stilling, river den. Stillingene og fiendens minne lagres IKKE mellom økter; stillingene har ingen 3D-modell.
+  VAKT «formasjoner, erfaring og utstyr».
+  ROGALAND (17. nov, brukeren: «lag et kart av bare Rogaland fylke, da det per nå er mer praktisk å spille på et litt mindre kart»):
+  /rogaland (vercel.json rewrite til /dovre-fliser som /norge; PÅ_NORGE gjelder begge, PÅ_OMRÅDE = 'rogaland'). pipeline/fliser/
+  fylke.py henter fylkesgrensa med sjøområdet fra Kartverkets WFS (app:Fylke, nummer 11) -> site/dovre-fliser/data/rogaland.json
+  (491 punkter, 4 KB). spill/omraade.js (reglene øverst: les, inni, tilGrensa; test_omraade.js med kjente steder): window.SPILLOMRÅDE,
+  OMRÅDE_OK(x, y); kartet åpner på fylket (passInnHele), alt utenfor er mørklagt med stiplet grense (KROKER.tegn), leiren må ligge
+  innenfor (oppstart-visning.js prøvLeir), ordre() nekter mål utenfor, og motstandernes startsteder/mål (fraksjoner-visning.js) og
+  krigskartets tettsteder (strategi-visning.js) bruker bare tettstedene innenfor. EGET LAGRET SPILL: på /rogaland får alle
+  «riksbrudd-…»-nøklene endingen «@rogaland» (Storage.prototype pakkes inn øverst i index.html). Flere fylker: kjør fylke.py med
+  nummeret, legg stien inn i regexene (PÅ_NORGE, PÅ_OMRÅDE) og vercel.json. IKKE GJORT: mørkleggingen finnes ikke i 3D, kjøretøy kan
+  kjøre ut av fylket, og kartdataene er de samme som for hele landet (ingenting lastes raskere – men alt spillet gjør, er nærmere).
+  Lokal prøve: scratchpad gj/rog.js (dev.py sender /rogaland til /dovre-fliser).

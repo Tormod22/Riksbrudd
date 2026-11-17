@@ -20,8 +20,8 @@
   const eierAv = id => G.tilstand(TETTSTEDER, id).eier;
   const punkt = by => { let p = null; try { if (typeof navnP === 'function') p = navnP(by); } catch (e) { p = null; } return p && isFinite(p[0]) ? [p[0], p[1]] : [(by.bb[0] + by.bb[2]) / 2, (by.bb[1] + by.bb[3]) / 2]; };
   function område() { const L = leir(), alle = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted; if (!L || !alle) return [];
-    const k = Math.round(L.x) + ',' + Math.round(L.y) + ',' + alle.length; if (k === byNøkkel) return byer; byNøkkel = k;
-    byer = S.område(L, alle.map(by => { const [x, y] = punkt(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk || 0, ref: by }; })); return byer; }
+    const k = Math.round(L.x) + ',' + Math.round(L.y) + ',' + alle.length + (window.SPILLOMRÅDE ? 'o' : ''); if (k === byNøkkel) return byer; byNøkkel = k;
+    byer = S.område(L, alle.map(by => { const [x, y] = punkt(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk || 0, ref: by }; }).filter(b => !window.OMRÅDE_OK || OMRÅDE_OK(b.x, b.y))); return byer; }
   const egneLag = () => ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e));
   const fiender = () => ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).map(e => ({ x: e.x, y: e.y, navn: e.navn, side: e.side, styrke: window.Fraksjoner ? Fraksjoner.styrke(e) : 8 }));
   const garnison = id => { const b = byer.find(q => q.id === id); return b ? G.lagI(b.ref, egneLag()).length : 0; };

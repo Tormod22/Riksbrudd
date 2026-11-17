@@ -29,6 +29,9 @@
     tapt: 2.5,             // et tettsted fraksjonen har mistet, teller så mye «nærmere» (vil ta det tilbake)
     leirVekt: 4000,        // spillerens leir teller som et tettsted med så mange innbyggere når fraksjonen vet hvor den er
     stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Kystalliansen tar sjanser, Folkefronten gjør det ikke
+    // KJØRETØY OG STILLINGER (17. nov, brukeren: «at fienden bruker kjøretøy eller bygger egne stillinger»)
+    bil: { langt: 3000, nær: 200, av: 800 },        // kjør når målet er over 3 km unna og lastebilen står innen 200 m; gå av når en fiende ses innen 800 m
+    stilling: { etter: 120, avstand: 300, vern: .6, radius: 25, maks: 4 },   // garnison i 120 min bygger en stilling (treff ×0,6 innen 25 m); høyst 4 per fraksjon
     lagPerBy: .5, lagMaks: 6,   // forsterkninger: taket vokser med et halvt lag per tettsted fraksjonen holder (høyst 6)
   };
   const ute = s => s.menn.filter(m => m.hp < 1).length;
@@ -104,7 +107,15 @@
     for (let i = 0; i < 12; i++) { const a = a0 + i * Math.PI / 6, x = mål.x + Math.cos(a) * radius, y = mål.y + Math.sin(a) * radius, h = høyde(x, y); if (!isFinite(h) || h === null) continue;
       const ekstra = Math.hypot(x - s.x, y - s.y) - (d0 - radius), poeng = (isFinite(hm) ? h - hm : 0) - Math.max(0, ekstra) * .04; if (!best || poeng > best.poeng) best = { x, y, h, poeng, vinn: isFinite(hm) ? h - hm : 0 }; }
     return best || { x: mål.x + Math.cos(a0) * radius, y: mål.y + Math.sin(a0) * radius, h: null, vinn: 0 }; }
-  const api = { FRAKSJONER, REGLER, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
+  // Skal laget kjøre? d = meter til målet, bil = meter til en ledig lastebil (null = ingen), hva = det AI-en valgte.
+  const kjør = (hva, d, bil) => ['ta', 'leir', 'støtt', 'jakt', 'samle', 'forsyn', 'trekk'].includes(hva) && d > REGLER.bil.langt && bil !== null && bil !== undefined && bil <= REGLER.bil.nær;
+  // Skal laget gå av? framme = kjøretøyet står, fiende = meter til nærmeste fiende laget ser (null = ingen)
+  const gåAv = (framme, fiende) => !!framme || (fiende !== null && fiende !== undefined && fiende <= REGLER.bil.av);
+  // Skal garnisonen bygge en stilling? holdt = minutter laget har holdt stedet, nærmeste = meter til nærmeste egne stilling, antall = fraksjonens stillinger
+  const byggStilling = (holdt, nærmeste, antall) => holdt >= REGLER.stilling.etter && antall < REGLER.stilling.maks && !(nærmeste < REGLER.stilling.avstand);
+  // Vernet et lag har av stillingene: lag = { x, y, side }, stillinger = [{ x, y, side }]
+  const stillingVern = (lag, stillinger) => ((stillinger || []).some(q => q.side === lag.side && Math.hypot(q.x - lag.x, q.y - lag.y) <= REGLER.stilling.radius) ? REGLER.stilling.vern : 1);
+  const api = { FRAKSJONER, REGLER, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Fraksjoner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

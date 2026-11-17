@@ -1242,6 +1242,28 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const baiok = !bai.uten && bai.maler === 4 && bai.valgt === 4 && bai.utstyr === 'kikkert,feltradio' && bai.sum && bai.kraft && bai.lag && bai.betalt && bai.folk === 4 && bai.våpen && bai.radio && bai.sikt && bai.bev === 'egen' && bai.forsyn === 'forsyn' && bai.ikke === null && bai.hjem === 4 && bai.folkEtter === 0 && bai.regler === 7 && bai.minne && bai.tak === 5 && bai.punkt;
     if (!baiok) { feil++; console.log(JSON.stringify(bai)); }
     console.log(`${baiok ? 'ok  ' : 'FEIL'} ${navn} bedre AI og troppebygger: ${bai.maler} forslag, Speidertropp ${bai.valgt} med ${bai.utstyr}, våpen mann for mann ${bai.våpen}, feltradio ${bai.radio}, kikkert gir sikt ${bai.sikt}, lite ammunisjon -> ${bai.forsyn}, ${bai.regler} stridsvalg, fiendens minne ${bai.minne}`);
+    // VAKT formasjoner, erfaring, utstyrsbytte og fiendens kjøretøy og stillinger (brukeren 17. nov): formasjonen flytter mennene og
+    // teller i ildkamp, veteraner treffer bedre, et lag ved leiren kan bytte våpen, fiendens lastebil er skjult i tåka og kan ikke
+    // styres, og en stilling gir eierens lag vern.
+    const frm = await pg.evaluate(async () => { if (!window.Formasjon || !window.FormasjonSpill || !window.TropperSpill || !TropperSpill.endre) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), O = OppstartSpill.tilstand(), p0 = O.penger;
+      const s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && levende(e)), fi = nyttLag('Formfiende', s.x + 300, s.y, 'rød'); ENHETER.push(fi); const f0 = s.formasjon, erf0 = s.menn.map(m => m.erf), x0 = s.x, y0 = s.y, L = O.leir;
+      try { const ild = () => KROKER.ild.reduce((a, q) => a * (q(s, fi) === undefined ? 1 : q(s, fi)), 1), sti0 = s.sti; s.sti = null;
+        FormasjonSpill.sett(s, 'kile'); const k = ild(), pk = FORMPLASS(s, 5); FormasjonSpill.sett(s, 'linje'); const l = ild(), pl = FORMPLASS(s, 5); ut.linje = k > 0 ? +(l / k).toFixed(3) : (l === k ? 1.15 : 0); ut.flyttet = pk.join() !== pl.join();
+        FormasjonSpill.sett(fi, 'spredt'); const sp = ild(); ut.spredt = l > 0 ? +(sp / l).toFixed(3) : .75; FormasjonSpill.sett(fi, 'kile'); FormasjonSpill.sett(s, 'kile');
+        const før = ild(); s.menn.forEach(m => { if (m.hp >= 1) m.erf = 130; }); const etter = ild(); ut.veteran = før > 0 ? +(etter / før).toFixed(3) : 1.18; ut.tekst = /veteran/.test(KROKER.lagTekst.map(h => h(s)).filter(Boolean).join(' '));
+        valgt = s; visPanel(); ut.knapp = !!document.getElementById('formknapp'); if (ut.knapp) { document.getElementById('formknapp').click(); ut.bladde = s.formasjon === 'linje'; }
+        // bytte våpen ved leiren
+        s.x = L.x + 20; s.y = L.y + 20; visPanel(); ut.utstyrknapp = !!document.getElementById('utstyrknapp'); ut.åpnet = TropperSpill.endre(s); await vent(150); ut.rader = document.querySelectorAll('#tropppanel [data-mann]').length;
+        const v0 = s.menn[1].valgt, u0 = s.utstyr, b0 = s.strid ? { ...s.strid } : null; TropperSpill.settEndring(1, 'presisjonsrifle'); ut.pris = TropperSpill.endrePris(); const r = TropperSpill.brukEndring(s); ut.byttet = !r.feil && (s.menn[1].våpen || s.menn[1].rolle) === 'presisjonsrifle' && p0 - O.penger === 80000;
+        if (v0) s.menn[1].valgt = v0; else delete s.menn[1].valgt; s.utstyr = u0; if (!u0) delete s.utstyr; if (b0) { s.strid = b0; s.bevSatt = null; StridSpill.regel(s); } TropperSpill.lukk(); s.sti = sti0;
+        // fiendens lastebil og stillinger
+        const k2 = window.AI && AI.biler && AI.biler.rød; ut.bil = !!k2 && KJORETOY.includes(k2); if (k2) { const kx = k2.x, ky = k2.y; k2.x = s.x + 60000; k2.y = s.y; ut.skjult = !kjoretoySes(k2); k2.x = s.x + 50; k2.y = s.y; ut.sett = kjoretoySes(k2); k2.x = kx; k2.y = ky; }
+        STILLINGER.push({ x: fi.x, y: fi.y, side: 'rød', kjent: true }); ut.vern = Fraksjoner.stillingVern(fi, STILLINGER); ut.ikkeOss = Fraksjoner.stillingVern({ x: fi.x, y: fi.y, side: 'blå' }, STILLINGER); STILLINGER.length = 0;
+      } finally { s.menn.forEach((m, i) => { if (erf0[i] === undefined) delete m.erf; else m.erf = erf0[i]; }); s.formasjon = f0; if (!f0) delete s.formasjon; s.x = x0; s.y = y0; ENHETER.splice(ENHETER.indexOf(fi), 1); O.penger = p0; valgt = null; if (window.lukkPanel) lukkPanel(); skitten = true; }
+      return ut; });
+    const frmok = !frm.uten && Math.abs(frm.linje - 1.15) < .01 && frm.flyttet && Math.abs(frm.spredt - .75) < .01 && Math.abs(frm.veteran - 1.18) < .01 && frm.tekst && frm.knapp && frm.bladde && frm.utstyrknapp && frm.åpnet && frm.rader >= 2 && frm.pris === 80000 && frm.byttet && frm.bil && frm.skjult && frm.sett && frm.vern === .6 && frm.ikkeOss === 1;
+    if (!frmok) { feil++; console.log(JSON.stringify(frm)); }
+    console.log(`${frmok ? 'ok  ' : 'FEIL'} ${navn} formasjoner, erfaring og utstyr: linje ×${frm.linje}, mot spredt ×${frm.spredt}, veteraner ×${frm.veteran}, knappen blar ${frm.bladde}, våpenbytte ved leiren ${frm.byttet} (${frm.pris} kr), fiendens lastebil skjult i tåka ${frm.skjult}, stilling ×${frm.vern}`);
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.

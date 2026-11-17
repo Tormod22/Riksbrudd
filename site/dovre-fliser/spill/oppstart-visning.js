@@ -144,7 +144,9 @@
   const iTettsted = (x, y) => { const by = ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []).find(b => b.bb[0] <= x && x <= b.bb[2] && b.bb[1] <= y && y <= b.bb[3] && window.Garnison && Garnison.inni(b, x, y)); return by ? by.e.navn : null; };
   async function prøvLeir(x, y) {
     const rg = typeof RIKSGRENSE !== 'undefined' && RIKSGRENSE && window.Riksgrense ? RIKSGRENSE : null;   // RIKSGRENSE er en let i index.html
-    const kl = await klasseVed(x, y), grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
+    const kl = await klasseVed(x, y); let grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
+    // et mindre spillkart (/rogaland): leiren må ligge innenfor
+    if (!grunn && window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, x, y)) grunn = `Leiren må ligge i ${SPILLOMRÅDE.navn}. Dette er utenfor spillkartet.`;
     forslag = { x, y, ok: !grunn }; skitten = true;
     let h = null; try { h = hoydeVed(x, y); } catch (e) { /* ingen høyde her */ }
     visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?'), !grunn); return grunn;

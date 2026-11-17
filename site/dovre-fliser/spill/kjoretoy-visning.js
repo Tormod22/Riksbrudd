@@ -9,6 +9,9 @@
   const KJ = [Kjoretoy.ny({ navn: '1. lastebilkolonne', type: 'lastebil', antall: 4, x: 193212, y: 6896374, retning: -1.2 }),
     Kjoretoy.ny({ navn: 'Speiderbil 1', type: 'speiderbil', antall: 1, x: 193520, y: 6896780, retning: -1.2 })];
   window.KJORETOY = KJ;
+  // fiendens kjøretøy (spill/fraksjoner-visning.js) vises bare der du ser dem, som lagene deres
+  const ses = k => k.side === 'blå' || (typeof synlig === 'function' && synlig(k));
+  window.kjoretoySes = ses;
   // Andre moduler (S3 økonomi) kan legge knapper og linjer i panelet og ta over kjøringen for kolonner med oppdrag.
   window.KJ_PANEL = []; window.KJ_TEKST = [];   // (k, knapperad) => void  og  k => tekst eller null
 
@@ -49,16 +52,16 @@
 
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
-    for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
+    for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { if (k.side === 'blå') logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
     if (valgtKj && performance.now() - sistPanel > 1000 && !pekerNede(document.getElementById('panel'))) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
 
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------
   KROKER.trykk.push((X, Y) => {
     if (modus === 'marsj' && valgt) return false;   // lagets marsjordre går foran
-    if (valgtKj && kjørModus) { kjørModus = false; kjørTil(valgtKj, X, Y); visKj(valgtKj); return true; }
+    if (valgtKj && kjørModus) { kjørModus = false; if (valgtKj.side === 'blå') kjørTil(valgtKj, X, Y); visKj(valgtKj); return true; }
     let best = null, bd = 22;
-    for (const k of KJ) for (let i = 0; i < k.antall; i++) {
+    for (const k of KJ) if (ses(k)) for (let i = 0; i < k.antall; i++) {
       const p = Kjoretoy.posisjon(k, i * Kjoretoy.TYPER[k.type].avstand), d = Math.hypot(p.x - X, p.y - Y) / kam.m;
       if (d < bd) { bd = d; best = k; }
     }
@@ -79,6 +82,7 @@
       s.tilstand === 'venter på ferja' ? `venter på ferja (${tidTekst(s.ventIgjen)}), ${nf.format(s.meter / 1000)} km igjen` : s.tilstand,
       ...window.KJ_TEKST.map(f => f(k)).filter(Boolean)].join(' · ');
     const H = document.getElementById('handl'); H.innerHTML = '';
+    if (k.side !== 'blå') { H.appendChild(knapp('Lukk', false, () => { valgtKj = null; kjørModus = false; if (window.lukkPanel) lukkPanel(); skitten = true; })); P.classList.add('på'); return; }
     H.appendChild(knapp(kjørModus ? 'Velg mål på kartet …' : 'Kjør til …', kjørModus, () => { kjørModus = !kjørModus; if (kjørModus) lastVegnett(); visKj(k); }));
     if (k.sti && !k.oppdrag) H.appendChild(knapp('Stopp', false, () => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); visKj(k); skitten = true; }));
     for (const f of window.KJ_PANEL) f(k, H);
@@ -94,7 +98,7 @@
   KROKER.tegn.push((g, vx0, vy1) => {
     if (valgtKj && !document.getElementById('panel').classList.contains('på')) { valgtKj = null; kjørModus = false; }   // panelet lukket
     const m = kam.m, S = (X, Y) => [(X - vx0) / m, (vy1 - Y) / m];
-    for (const k of KJ) {
+    for (const k of KJ) { if (!ses(k)) continue;
       const T = Kjoretoy.TYPER[k.type], [lx, ly] = S(k.x, k.y);
       if (k.sti && (k === valgtKj || m < 40)) tegnSti(g, k, S);
       if (lx < -300 || ly < -300 || lx > VW + 300 || ly > VH + 300) continue;
@@ -164,7 +168,7 @@
 
   // ---------- 3D: symbolet over terrenget ----------
   KROKER.tegn3d.push((g, proj, mPer) => {
-    for (const k of KJ) { const q = proj(k.x, k.y); if (!q) continue;
+    for (const k of KJ) { if (!ses(k)) continue; const q = proj(k.x, k.y); if (!q) continue;
       if (mPer(k.x, k.y) < 1.5) for (let i = 0; i < k.antall; i++) { const p = Kjoretoy.posisjon(k, i * Kjoretoy.TYPER[k.type].avstand), s = proj(p.x, p.y);
         if (s) { g.fillStyle = '#4c5634'; g.strokeStyle = '#1a1710'; g.lineWidth = 1; g.beginPath(); g.arc(s[0], s[1], 4, 0, 6.283); g.fill(); g.stroke(); } }
       symbol(g, k, q[0], q[1] - 18, k === valgtKj); }

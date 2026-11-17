@@ -9,6 +9,10 @@
   {
    "source": "/norge",
    "destination": "/dovre-fliser"
+  },
+  {
+   "source": "/rogaland",
+   "destination": "/dovre-fliser"
   }
  ],
  "headers": [

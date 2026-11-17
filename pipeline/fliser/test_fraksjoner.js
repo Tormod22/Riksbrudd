@@ -52,5 +52,11 @@ assert.deepEqual([F.lagTak(0), F.lagTak(2), F.lagTak(5), F.lagTak(40)], [3, 4, 5
 { const h = (x, y) => (x > 1000 ? 100 : 0) + (y > 200 ? 50 : 0), p = F.angrepspunkt({ x: 0, y: 0 }, { x: 1000, y: 0 }, h); assert(p.x > 1000 && p.vinn >= 100, 'går rundt til det høye terrenget: ' + JSON.stringify(p));
   const flat = F.angrepspunkt({ x: 0, y: 0 }, { x: 1000, y: 0 }, () => 10); assert(Math.abs(flat.x - 720) < 1 && Math.abs(flat.y) < 1, 'flatt: korteste veg'); assert(F.angrepspunkt({ x: 900, y: 0 }, { x: 1000, y: 0 }, () => 0).x === 900, 'alt nær nok: bli stående');
   assert(isFinite(F.angrepspunkt({ x: 0, y: 0 }, { x: 1000, y: 0 }, () => NaN).x), 'ukjent høyde gir likevel et punkt'); }
+// KJØRETØY OG STILLINGER (17. nov)
+assert(F.kjør('ta', 5000, 100) && !F.kjør('ta', 2000, 100) && !F.kjør('ta', 5000, 400) && !F.kjør('ta', 5000, null) && !F.kjør('angrip', 5000, 100) && !F.kjør('hold', 5000, 100), 'kjører bare langt, med bilen like ved, og ikke til angrep');
+assert(F.gåAv(true, null) && F.gåAv(false, 500) && !F.gåAv(false, 1500) && !F.gåAv(false, null), 'går av når bilen er framme eller en fiende er nær');
+assert(F.byggStilling(120, Infinity, 0) && !F.byggStilling(60, Infinity, 0) && !F.byggStilling(120, 100, 1) && !F.byggStilling(120, Infinity, 4) && F.byggStilling(120, 900, 2), 'stilling etter to timer, ikke for tett og høyst fire');
+{ const st = [{ x: 0, y: 0, side: 'rød' }]; assert(F.stillingVern({ x: 10, y: 10, side: 'rød' }, st) === .6 && F.stillingVern({ x: 10, y: 10, side: 'blå' }, st) === 1 && F.stillingVern({ x: 100, y: 0, side: 'rød' }, st) === 1 && F.stillingVern({ x: 0, y: 0, side: 'rød' }, []) === 1, 'vernet gjelder bare eierens lag i stillingen'); }
+console.log('ok – fiendens kjøretøy og stillinger');
 console.log('ok – bedre AI: samlet angrep, samling, hjelp, jakt, bakhold, opptatte og tapte tettsteder, leiren, lagtak og angrepspunkt');
 console.log('ok – AI: ta tettsteder (store foran), garnison og videre, stell/forsyninger, angrip/trekk unna, slått ut trekker seg tilbake');

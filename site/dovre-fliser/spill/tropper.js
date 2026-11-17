@@ -12,12 +12,12 @@
   // Setter sammen mannskapet: den beste på vakt leder, den beste på stell blir sanitet (fra fire og oppover), resten etter vaktferdighet.
   function opprett(personer, navn) { const P = (personer || []).filter(p => p && p.navn); if (P.length < R.min) return { feil: `En tropp trenger minst ${R.min} personer.` }; if (P.length > R.maks) return { feil: `En tropp kan ha høyst ${R.maks} personer.` };
     const etter = P.slice().sort((a, b) => vakt(b) - vakt(a)), san = P.length >= 4 ? etter.slice(1).sort((a, b) => stell(b) - stell(a))[0] : null, rest = etter.filter(p => p !== san), roller = ROLLER.filter(r => r !== 'sanitet').slice(0, rest.length);
-    const menn = rest.map((p, i) => ({ navn: p.navn, rolle: roller[i] || 'rifle', hp: p.helse >= .99 ? 1 : p.helse >= .4 ? .5 : .5, loy: p.lojal === undefined ? .7 : p.lojal, person: { ...p, ferd: { ...(p.ferd || {}) } } }));
-    if (san) menn.splice(Math.min(3, menn.length), 0, { navn: san.navn, rolle: 'sanitet', hp: san.helse >= .99 ? 1 : .5, loy: san.lojal === undefined ? .7 : san.lojal, person: { ...san, ferd: { ...(san.ferd || {}) } } });
+    const menn = rest.map((p, i) => ({ navn: p.navn, rolle: roller[i] || 'rifle', hp: p.helse >= .99 ? 1 : p.helse >= .4 ? .5 : .5, loy: p.lojal === undefined ? .7 : p.lojal, erf: p.erf || 0, person: { ...p, ferd: { ...(p.ferd || {}) } } }));
+    if (san) menn.splice(Math.min(3, menn.length), 0, { navn: san.navn, rolle: 'sanitet', hp: san.helse >= .99 ? 1 : .5, loy: san.lojal === undefined ? .7 : san.lojal, erf: san.erf || 0, person: { ...san, ferd: { ...(san.ferd || {}) } } });
     return { navn: String(navn || 'Tropp').slice(0, 30), menn, leder: 0 }; }
   // Oppløser: de som lever, blir personer igjen (sårede med lav helse). oppgaver: lista over oppgaver i leiren (for dem uten persondata).
   function oppløs(lag, oppgaver = []) { const ut = []; for (const m of lag.menn) { if (!(m.hp > 0)) continue; const p = m.person ? { ...m.person, ferd: { ...(m.person.ferd || {}) } } : { navn: m.navn, alder: 30, yrke: 'soldat', ferd: { vakt: 1.2 }, lojal: m.loy === undefined ? .7 : m.loy, seng: false };
-      for (const o of oppgaver) if (o !== 'fri' && !p.ferd[o]) p.ferd[o] = .9; p.oppgave = 'fri'; p.helse = m.hp >= 1 ? Math.max(.6, p.helse === undefined ? 1 : p.helse) : .35; delete p.id; ut.push(p); } return ut; }
+      for (const o of oppgaver) if (o !== 'fri' && !p.ferd[o]) p.ferd[o] = .9; if (m.erf > 0) p.erf = Math.round(m.erf * 10) / 10; p.oppgave = 'fri'; p.helse = m.hp >= 1 ? Math.max(.6, p.helse === undefined ? 1 : p.helse) : .35; delete p.id; ut.push(p); } return ut; }
   // ---------- FOLK OG UTSTYR (17. nov, brukeren: «forbedre systemet spilleren bruker for å lage sine egne tropper, hvor han velger folk
   // og utstyr»). Våpen velges mann for mann, troppen kan få utstyr, og det finnes ferdige forslag. Alle tallene er Claudes forslag.
   const VÅPEN = {   // kr per våpen; riflen og pistolen har leiren fra før

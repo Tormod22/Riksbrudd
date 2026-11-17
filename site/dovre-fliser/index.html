@@ -83,6 +83,13 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
 <div id="feil" role="alert"><span id="feilTekst"></span><button class="lukk" id="feilLukk" aria-label="Lukk meldingen">×</button><button class="gjør" id="feilKnapp" hidden></button></div>
 <script>
+// Et mindre spillkart (/rogaland, spill/omraade.js) har sitt eget lagrede spill: nøklene «riksbrudd-…» får en egen ending der,
+// så leiren på /norge og leiren på /rogaland ikke går oppå hverandre.
+const PÅ_OMRÅDE = /^\/rogaland\/?$/.test(location.pathname) ? 'rogaland' : null;
+if (PÅ_OMRÅDE) try { const P = Storage.prototype, e = '@' + PÅ_OMRÅDE, om = k => (typeof k === 'string' && /^riksbrudd-/.test(k) && !k.endsWith(e) ? k + e : k);
+  for (const n of ['getItem', 'setItem', 'removeItem']) { const f = P[n]; P[n] = function (k, ...r) { return f.call(this, this === window.localStorage ? om(k) : k, ...r); }; } } catch (e) { /* uten lagring */ }
+</script>
+<script>
 // Meldingsboksen midt på skjermen: tekst, lukkeknapp og eventuelt en knapp som gjør noe (12. nov: boksen ble stående for alltid).
 // type sier hva meldingen gjelder, så den kan tas bort når akkurat det virker igjen: skjulMelding('nett') når kartdata kommer inn,
 // skjulMelding('3d') når 3D-utsnittet er bygget. Lukker spilleren en melding, vises ikke den samme teksten igjen før etter et minutt.
@@ -132,7 +139,7 @@ const OMLAND_TAG = 'kart-omland-e1becd1b04bf';   // Sverige, Finland, Danmark, K
 const UTVEG_TAG = 'kart-utveg-abb9d613f42a';   // jernbane og veger i nabolandene (pipeline/fliser/utveg.py, OpenStreetMap), settes av bruk_utveg.py
 const INFRA_TAG = 'kart-infra-2023-7bd50584c2a7';   // bruer, tunneler, ferjer, kraft, olje, tettsteder (pipeline/fliser/infra.py), settes av bruk_infra.py     // byggomriss for hele Norge (OpenStreetMap), settes av pipeline/fliser/bruk_hus.py
 const NORGE_TAG = 'kart-norge-2023-382cb2836015';   // settes av pipeline/fliser/bruk_norge.py når en ny Norge-versjon er bygget
-const PÅ_NORGE = /^\/norge\/?$/.test(location.pathname);
+const PÅ_NORGE = /^\/(norge|rogaland)\/?$/.test(location.pathname);
 if (PÅ_NORGE && !NORGE_TAG) location.replace('/kommuner-1986');   // til Norge-kartet er bygget: det gamle kommunekartet
 const ER_NORGE = PÅ_NORGE && !!NORGE_TAG;
 const KART_TAG_DOVRE = 'kart-b461a42bbe67';   // settes av pipeline/fliser/versjon.py
@@ -167,7 +174,8 @@ const KLAR = (async () => {
   if (!m) { try { m = (await hentMedFrist(DATA + 'manifest.json', FRIST_MANIFEST, 'json')).data; } catch (e) { m = null; }
     if (ER_NORGE) norgeMangler(); }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
-  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInnHele('åpning'); }   // /norge åpner med hele landet (telefon: Sør-Norge)
+  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInnHele('åpning'); }
+  // (et mindre spillkart – /rogaland – åpner på sitt eget område, se passInnHele)   // /norge åpner med hele landet (telefon: Sør-Norge)
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
     document.getElementById('kilde').textContent = `Høyde: Kartverket DTM (CC BY 4.0) · Inneholder modifiserte Copernicus Sentinel-data ${m.år} · Arealtype: ESA WorldCover 2021 (CC BY 4.0) · Veg: NVDB per 1. juni ${m.år} · Bygg: matrikkelen`;
@@ -272,7 +280,7 @@ function storrelse() { dpr = Math.min(2, window.devicePixelRatio || 1); VW = cv.
 function passInn(b, luft = 1.05) { kam.x = (b[0] + b[2]) / 2; kam.y = (b[1] + b[3]) / 2; kam.m = Math.max((b[2] - b[0]) / VW, (b[3] - b[1]) / (VH - 80)) * luft; skitten = true; }
 // Hele området. På /norge med høy, smal skjerm (telefon) ble Norge liten og lå langs venstre kant: der åpner siden med Sør-Norge,
 // og «hele landet»-knappen viser fastlandet (Kart2d.åpning).
-function passInnHele(hva) { const å = ER_NORGE && OMRÅDE !== DOVRE ? Kart2d.åpning(OMRÅDE, VW, VH, hva) : { b: OMRÅDE, luft: 1.05 }; passInn(å.b, å.luft); }
+function passInnHele(hva) { if (window.SPILLOMRÅDE) { passInn(SPILLOMRÅDE.bb, 1.04); return; } const å = ER_NORGE && OMRÅDE !== DOVRE ? Kart2d.åpning(OMRÅDE, VW, VH, hva) : { b: OMRÅDE, luft: 1.05 }; passInn(å.b, å.luft); }
 const HENTET = new Set();   // fliser vi allerede har bedt om data til
 // Ufullstendige fliser (laget under et nettbrudd) prøves på nytt mens de er i bildet: kartet tegnes igjen hvert fjerde sekund så lenge noen
 // gjenstår, og når nettleseren sier at nettet er tilbake, begynner tellingen forfra.
@@ -789,6 +797,8 @@ function sim(dt) {
 // ---------- kamp og tåke ----------
 const KRNG = Terreng.frø(1987), SKUDD = [];
 const levende = s => s.menn.some(m => m.hp > 0);
+// hvor mann nr. n står i laget: [fram, side] i meter (spill/formasjon.js; kile når modulen mangler, kolonne på marsj)
+const FORMPLASS = (s, n) => (window.Formasjon ? Formasjon.plass(s.formasjon, n, !!s.sti) : s.sti ? [-n * 4, (n % 2 ? 1 : -1) * 1.2] : [-Math.floor((n + 1) / 2) * 4, (n % 2 ? 1 : -1) * Math.floor((n + 1) / 2) * 4]);
 function ser(s, X, Y) { const v = s.sikt; if (!v) return false; const i = Math.floor((X - v.x0) / v.r), j = Math.floor((v.y0 - Y) / v.r);
   return i >= 0 && j >= 0 && i < v.mw && j < v.mh && v.m[j * v.mw + i] === 1; }
 // KROKER.innsyn (K3): om det et eget lag ser, når fram til deg nå (radiokontakt og hvor du er)
@@ -827,6 +837,8 @@ function kamprunde() {
 // ba om kart for hele strekket, og alt annet ventet bak i køen.)
 const MARSJ_MAKS = 30000;
 async function ordre(s, X, Y, stille) {
+  // et mindre spillkart (/rogaland, spill/omraade.js): ingen marsj ut av området
+  if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { if (!stille) logg(s.navn + ': det ligger utenfor spillkartet.'); return; }
   const d = Math.hypot(X - s.x, Y - s.y), pad = Math.max(2500, d * .3);
   if (d > MARSJ_MAKS) { if (!stille) logg(s.navn + ': for langt å gå i én marsj (over ' + MARSJ_MAKS / 1000 + ' km). Gi ordren i etapper.'); return; }
   s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
@@ -921,7 +933,7 @@ function tegnLag(g, proj, mPer) {
       s.menn.filter(q => q.hp <= 0).forEach((q, n) => { const X = s.x - (n + 1) * 2.5 * ca + 6 * sa, Y = s.y - (n + 1) * 2.5 * sa - 6 * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2;
         g.strokeStyle = 'rgba(40,30,20,.85)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(a - r, b - r); g.lineTo(a + r, b + r); g.moveTo(a + r, b - r); g.lineTo(a - r, b + r); g.stroke(); });
       levende.forEach((q, n) => {
-        let fx, fy; if (s.sti) { fx = -n * 4; fy = (n % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((n + 1) / 2), side = n % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
+        const [fx, fy] = FORMPLASS(s, n);
         const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2, leder = s.menn.indexOf(q) === s.leder;
         g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
         g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
@@ -2235,7 +2247,7 @@ function soldater3d() {
     if (s.karakter && window.KarakterSpill && KarakterSpill.figur()) continue;
     const ca = Math.cos(s.retning), sa = Math.sin(s.retning), farge = rgb(sidefarge(s.side, 'lys')).map(x => x * .8), lev = s.menn.filter(q => q.hp > 0);
     s.menn.filter(q => q.hp <= 0).forEach((q, k) => sett(s.x - (k + 1) * 2.5 * ca + 6 * sa, s.y - (k + 1) * 2.5 * sa - 6 * ca, s.retning + k, true, false, farge, 0));
-    lev.forEach((q, k) => { let fx, fy; if (s.sti) { fx = -k * 4; fy = (k % 2 ? 1 : -1) * 1.2; } else { const rad = Math.floor((k + 1) / 2), side = k % 2 ? 1 : -1; fx = -rad * 4; fy = side * rad * 4; }
+    lev.forEach((q, k) => { const [fx, fy] = FORMPLASS(s, k);
       sett(s.x + fx * ca - fy * sa, s.y + fx * sa + fy * ca, s.retning, false, q.hp < 1, farge, s.sti ? Math.abs(Math.sin(nå * 6 + k)) * .05 : 0); });
   }
   for (const m of R.solMesh) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
@@ -2249,7 +2261,7 @@ function kjøretøy3d() {
   const nett = type => { if (!R.kjMesh[type]) { const m = new THREE.InstancedMesh(Kjoretoy3d.modell(type), new THREE.MeshLambertMaterial({ vertexColors: true }), MAKS);
     m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3).fill(1), 3); m.frustumCulled = false; m.count = 0; R.scene.add(m); R.kjMesh[type] = m; } return R.kjMesh[type]; };
   const zVed = (X, Y) => (hoyde3d(X, Y) - u.h0) * R.EX;
-  for (const k of KJORETOY) { const T = Kjoretoy.TYPER[k.type]; if (!T) continue; const m = nett(k.type), egen = k.side === 'blå';
+  for (const k of KJORETOY) { const T = Kjoretoy.TYPER[k.type]; if (!T) continue; if (k.side !== 'blå' && !synlig(k)) continue; const m = nett(k.type), egen = k.side === 'blå';
     if (!egen) { const v = parseInt(sidefarge(k.side, 'lys').slice(1), 16); c.setRGB(.6 + .5 * (v >> 16) / 255, .6 + .5 * ((v >> 8) & 255) / 255, .6 + .5 * (v & 255) / 255); } else c.setRGB(1, 1, 1);
     for (let i = 0; i < k.antall; i++) { const nr = n[k.type] || 0; if (nr >= MAKS) break;
       const p = Kjoretoy.posisjon(k, i * T.avstand); if (Math.abs(p.x - u.cx) > u.S || Math.abs(p.y - u.cy) > u.S) continue;
@@ -2809,7 +2821,7 @@ window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) m
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
 // (/norge: motstanderne flytter til tettstedene rundt leiren din – AI.flytt i spill/fraksjoner-visning.js)
-logg((ER_NORGE ? 'Norge, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir.' : 'Dovre, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås.') + ' Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
+logg((PÅ_OMRÅDE ? 'Rogaland, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir. Spillet holder seg innenfor fylket.' : ER_NORGE ? 'Norge, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir.' : 'Dovre, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås.') + ' Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 // Ytelse (12. nov): står tida stille (pause) og kameraet har ikke rørt seg på et sekund, tegnes 3D bare fire ganger i sekundet
 // (vind, vann og lys går da tregere, men mobilen slipper å tegne det samme bildet 60 ganger i sekundet). Trykk og taster vekker den.
@@ -2837,7 +2849,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/etikett.js?v=cc36a2f4dc"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=c03d688ed7"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=949e3ce012"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=1fa15d4f51"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=6c371b476f"></script>
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
@@ -2848,13 +2860,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=1d37b93e82"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=47ad30087c"></script>
-<script src="/dovre-fliser/spill/fraksjoner.js?v=614bceac23"></script>
-<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=b13b9cbe03"></script>
+<script src="/dovre-fliser/spill/fraksjoner.js?v=83e714eb09"></script>
+<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=1eaadd736f"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=bdea980baa"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=a207d2ef80"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=4c7bb82a69"></script>
 <script src="/dovre-fliser/spill/gange.js?v=f9caab51b4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -2887,7 +2899,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart.js?v=1e565513cf"></script>
 <script src="/dovre-fliser/spill/leir.js?v=5fe1753068"></script>
 <script src="/dovre-fliser/spill/folk.js?v=37409cd6ab"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=ad164940cf"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=4e198d96c2"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=8251d54bf0"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=92c02009ce"></script>
@@ -2899,7 +2911,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggevisning.js?v=9925e7834a"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=5cf4c81c55"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
-<script src="/dovre-fliser/spill/lagring.js?v=03f646e9a7"></script>
+<script src="/dovre-fliser/spill/lagring.js?v=5815ba23b4"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
@@ -2935,12 +2947,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/strid-visning.js?v=30785e70c2"></script>
 <script src="/dovre-fliser/spill/forsvar.js?v=1863a78401"></script>
 <script src="/dovre-fliser/spill/forsvar-visning.js?v=c17211d07f"></script>
-<script src="/dovre-fliser/spill/tropper.js?v=f8fd832b48"></script>
-<script src="/dovre-fliser/spill/tropper-visning.js?v=324b7ae527"></script>
+<script src="/dovre-fliser/spill/tropper.js?v=eba3d37990"></script>
+<script src="/dovre-fliser/spill/tropper-visning.js?v=d0314ad484"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=32d05e6169"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=1fbadf5e33"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=630a58f880"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=d1603723df"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=e63ffd6889"></script>
+<script src="/dovre-fliser/spill/omraade.js?v=3b1ebac80c"></script>
+<script src="/dovre-fliser/spill/formasjon.js?v=919f758676"></script>
+<script src="/dovre-fliser/spill/formasjon-visning.js?v=3220bb9b4d"></script>
 <script src="/dovre-fliser/spill/kaier.js?v=7205ff7575"></script>
 <script src="/dovre-fliser/spill/kameravakt.js?v=d6903e035e"></script>
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
