@@ -1026,3 +1026,13 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   testene (KarakterSpill.test). KARAKTERARKET: knappen «Deg» (#karakterknapp, tast O) -> #karakterark (portrett, bakgrunn, helse og
   behov som målere, ferdigheter, våpen og vekt, dager/gått/hus). Varsler «Du er veldig tørst» i narhud.js. Lagres per leir
   («riksbrudd-karakter»). Tallene er Claudes forslag. VAKT «karakteren din».
+  KARAKTEREN, ENDA MER DETALJERT (17. nov, brukeren: «enda mer detaljert»): byggFigur i karakter.js er bygget om – ledd som grupper
+  (hofte -> kne, skulder -> albue, nakke), rundt hode med kjeve, ører, øyne i portrettets øyefarge, bryn, nese, munn, fregner/arr,
+  briller (runde/firkantede), seks skjeggtyper, frisyrer (snau, kort, langt, krøll, afro, lugg, topp, hale; grått hår etter grayAmount),
+  fire hodeplagg (barett, strikkelue, offiserslue, skyggelue), klær etter portrettets plagg (Karakter.utseende().klær: uniform med
+  lommer/skulderklaffer/knapper, dress med skjorte og slips, genser/høyhals, skjorte med oppbrettede ermer, frakk, jakke), smalere
+  skuldre for kvinner, belte med lommer, feltflaske og kniv, sekk med remmer, sovepose og liggeunderlag, knelapper, snøring, klokke,
+  fingre, og en myk skygge under føttene. Våpenet du har framme (våpenDeler(id), settVåpen) ligger i hendene (langt våpen, armene
+  holder det) eller i høyre hånd (pistol). Gangen: lår og kne bøyer, kroppen duver og lener seg når du løper, huk bøyer hofte og kne,
+  hodet følger blikket. Ca. 2800 trekanter (én figur). Karakterarket viser alder og opphav fra portrettet og «tom om 5 t» per behov.
+  Bilder: scratchpad sp/kar2.js (nærbilder; NB.vri snur figuren mot kameraet).
