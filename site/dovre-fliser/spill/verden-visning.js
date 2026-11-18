@@ -186,7 +186,27 @@
     const L = W.brannListe(V.brann); BRANNER.length = 0; BRENT.length = 0; for (const c of L.brenner) BRANNER.push(c); for (const c of L.brent) BRENT.push(c);
     try { window.dispatchEvent(new Event('riksbrudd-brann')); } catch (e) { /* eldre nettleser */ }
   }
-  const brennbar = (x, y) => { const p = punkt(x, y), v = vær(); if (!p || p.h == null) return 0; if (v && p.h > v.snøgrense) return 0; return R.brennbar[p.k] || 0; };
+  // BRANN I LEIREN (balansen 18. nov, Claudes forslag; gjennomspillingen: én sabotasje og en skuddveksling i tørt vær, og brannen tok
+  // vakttårn, brakke, dieseltank og kontrollrom på en time). LEIRBRANN.grus: inne i leiren (innen grusR m fra midten) er det grusplass,
+  // og brannen sprer seg bare med denne andelen; folk hjemme på «vakt» eller «bygg» slokker ruter innen slokkR m – hver person
+  // slokker med sjansen perPerson per 10 spillminutter (høyst maks); byggene tar skade bygg (andel av full helse) per 30 min.
+  const LEIRBRANN = { grusR: 70, grus: .25, slokkR: 150, perPerson: .12, maks: .7, bygg: .12 };
+  const iLeiren = (x, y, r) => { const l = leir(); return !!l && Math.hypot(x - l.x, y - l.y) < r; };
+  const brennbar = (x, y) => { const p = punkt(x, y), v = vær(); if (!p || p.h == null) return 0; if (v && p.h > v.snøgrense) return 0; return (R.brennbar[p.k] || 0) * (iLeiren(x, y, LEIRBRANN.grusR) ? LEIRBRANN.grus : 1); };
+  const slokkere = () => { const F = window.FolkSpill && FolkSpill.tilstand(); return F && F.personer ? F.personer.filter(p => (p.oppgave === 'vakt' || p.oppgave === 'bygg') && !(p.helse < .4) && !p.syk).length : 0; };
+  let leirBrannMeldt = false;
+  // folk hjemme slokker; første rute som brenner i leiren varsles og stopper spolingen
+  function slokkILeiren(dt) {
+    const l = leir(), C = V.brann.celler; if (!l || !C) return 0; const r = R.brann.rute; let ute = 0, iLeir = 0;
+    const p = 1 - Math.pow(1 - Math.min(LEIRBRANN.maks, LEIRBRANN.perPerson * slokkere()), dt / 10);
+    for (const k of Object.keys(C)) { const [i, j] = k.split(',').map(Number), x = (i + .5) * r, y = (j + .5) * r; if (Math.hypot(x - l.x, y - l.y) >= LEIRBRANN.slokkR) continue;
+      iLeir++; if (Math.random() < p) { delete C[k]; V.brann.brent[k] = Math.round(tid); ute++; } }
+    if (iLeir && !leirBrannMeldt) { leirBrannMeldt = true; const n = slokkere();
+      logg(`Brann i leiren! ${n ? `${n} på vakt og bygg prøver å slokke.` : 'Ingen er hjemme på vakt eller bygg til å slokke – sett folk på det under Folk.'}`);
+      try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'brann', tekst: 'brann i leiren' } })); } catch (e) { /* eldre nettleser */ } }
+    if (!iLeir && leirBrannMeldt) { leirBrannMeldt = false; logg('Brannen i leiren er slukket.'); }
+    return ute;
+  }
   // Tenn på ved (x, y). Gir { ok } eller { feil }. tving = også når det er for vått til at den sprer seg.
   async function tenn(x, y, hvem, tving) {
     const v = vær(), fare = v ? W.brannfare(V, v) : 0; if (!tving && fare <= 0) return { feil: 'Det er for vått til at det tar fyr.' };
@@ -197,13 +217,13 @@
   function brannSteg(v, dt) {
     if (!BRANNER.length && !Object.keys(V.brann.celler).length) return;
     // snøvær slokker som regn
-    const r = W.brannSteg(V.brann, tid, dt, { ...v, regn: Math.max(v.regn || 0, v.snø || 0) }, W.brannfare(V, v), brennbar); if (r.nye || r.ut) { brannLister(); skitten = true; endret(); }
+    const r = W.brannSteg(V.brann, tid, dt, { ...v, regn: Math.max(v.regn || 0, v.snø || 0) }, W.brannfare(V, v), brennbar); r.ut += slokkILeiren(dt); if (r.nye || r.ut) { brannLister(); skitten = true; endret(); }
     if (r.ut && !Object.keys(V.brann.celler).length) logg(`Brannen har sloknet. ${tall(BRENT.length * R.brann.rute * R.brann.rute / 1e4)} dekar er brent.`);
   }
   function brannSkade() {
     for (const s of ENHETER) { if (!levende(s) || !W.brenner(V.brann, s.x, s.y)) continue; const ut = Terreng.fordelTreff(s.menn, R.brann.treff, rng); s.siktSkitten = true;
       if (s.side === 'blå') logg(`${s.navn} står i brannen: ${ut.map(([m, t]) => `${m.navn} ${t}`).join(', ')}. Få dem ut!`); if (valgt === s) visPanel(); }
-    const L = LL(); if (L && window.Leir) for (const b of L.bygg.slice()) { if (!(b.hp > 0) || !W.brenner(V.brann, b.x, b.y)) continue; const r = Leir.skad(L, b.id, Math.max(1, b.hp * R.brann.bygg)); logg(`Brannen tar ${(Leir.BYGG[b.type] || {}).navn || 'et bygg'} i leiren${r && r.ødelagt ? ' – det er ødelagt' : ''}.`); }
+    const L = LL(); if (L && window.Leir) for (const b of L.bygg.slice()) { if (!(b.hp > 0) || !W.brenner(V.brann, b.x, b.y)) continue; const r = Leir.skad(L, b.id, LEIRBRANN.bygg), navn = (Leir.BYGG[b.type] || {}).navn || 'Et bygg'; logg(r && r.ødelagt ? `Brannen har ødelagt ${navn.toLowerCase()} i leiren.` : `Brannen skader ${navn.toLowerCase()} i leiren (${Math.round((r ? r.hp : 0) * 100)} % igjen) – folk på vakt og bygg slokker.`); }
   }
 
   // ---------- 36 funn ----------

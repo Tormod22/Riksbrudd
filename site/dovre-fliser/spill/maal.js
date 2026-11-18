@@ -13,6 +13,8 @@
       { id: 'brakke', tekst: 'Bygg en brakke', hjelp: 'Leir → Bygg → Brakke. Folkene sover i telt til de får senger.', ferdig: T => b(T, 'brakke') > 0 },
       { id: 'tank', tekst: 'Bygg en dieseltank og kjøp diesel', hjelp: 'Leir → Bygg → Dieseltank, så Leir → Lager → «Kjøp 500 l diesel».', ferdig: T => b(T, 'drivstofftank') > 0 && T.diesel > 0 },
       { id: 'strøm', tekst: 'Få strøm: bygg et aggregat eller solceller', hjelp: 'Aggregatet bruker diesel, solcellene gir mindre, men er gratis i drift.', ferdig: T => !!T.strøm },
+      // (balansen 18. nov) maten: folk spiser én rasjon hver per døgn, og startmaten varer bare noen døgn
+      { id: 'mat', tekst: 'Ha mat til tre døgn', hjelp: 'Folk spiser én rasjon hver per døgn. Kjøp mat i Folk-panelet, send et lag på jakt, fisk med båt eller så en åker – eller bygg drivhus.', ferdig: T => T.matDøgn >= 3 },
       { id: 'lager', tekst: 'Ha 20 m³ tre på lager', hjelp: 'Kjøp under Leir → Lager, eller hogg skog (samme fane).', ferdig: T => T.tre >= 20 },
     ] },
     { navn: 'Få oversikt', mål: [

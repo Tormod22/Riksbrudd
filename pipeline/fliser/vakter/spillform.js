@@ -63,7 +63,7 @@ module.exports = { navn: 'spillform: flyt, scenarier, seier og tap', kjør: asyn
       // ---- ukas oppdrag ----
       const o = ScenarioSpill.uke(); ScenarioSpill.ukeStart(); const us = ScenarioSpill.ukeStatus(); ut.uke = !!o.tekst && !!us && !us.ferdig && /RB-/.test(ScenarioSpill.ukeDel()) && /gyldig/.test(ScenarioSpill.ukeSammenlign('tull')); ScenarioSpill.ukeAvbryt();
       // ---- krigsmål og seierskortet ----
-      ut.maal = Maal.ALLE.length === 18 && MaalSpill.stilling().alle === (MaalSpill.stilling().krigÅpen ? 18 : 14);
+      ut.maal = Maal.ALLE.length === 19 && MaalSpill.stilling().alle === (MaalSpill.stilling().krigÅpen ? 19 : 15);
       StrategiSpill.seierKort(.62); const kort = document.getElementById('krigkort'); ut.seier = kort.classList.contains('på') && kort.querySelectorAll('button').length >= 3 && /Større region/.test(kort.textContent); kort.classList.remove('på');
       ut.venner = typeof SpilletSpill.venner === 'function' && Array.isArray(SpilletSpill.minStilling().byer);
     } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 400); }

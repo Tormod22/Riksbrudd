@@ -105,6 +105,7 @@
   const hash = t => { let h = 2166136261; for (const c of String(t)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
   const væremåte = navn => VÆREMÅTER[VM[hash(navn) % VM.length]];
   // ---------- røverne varierer ----------
+  const SABOTASJE_FRA = { bølge: 4, dag: 4 };
   // bølge 1 er alltid et vanlig angrep; siden går det på rundgang, men om natta kommer de alltid rett på (i mørket).
   const VARIANTER = {
     rett: { navn: 'rett på', tekst: '' }, to: { navn: 'fra to kanter', tekst: 'Røverne kommer fra to kanter!' },
@@ -112,9 +113,12 @@
     sabotasje: { navn: 'sabotasje', tekst: 'Noen av røverne er ute etter å ødelegge i leiren, ikke å slåss.' },
   };
   // antall: hvor mange røverlag bølgen har – «fra to kanter» krever minst to (ellers sabotasje).
-  function røverVariant(bølge, time, antall) {
+  // dag: spilldøgnet fra 0 (balansen 18. nov, Claudes forslag): med dag kommer sabotørene tidligst i bølge 4 og fra dag 5
+  // (SABOTASJE_FRA) – i gjennomspillingen veltet en sabotør i bølge 3 hele leiren på dag 4. Uten dag som før.
+  function røverVariant(bølge, time, antall, dag) {
     if (bølge <= 1) return 'rett'; const natta = natt(time) > .5; let r = ['to', 'sabotasje', 'natt', 'rett'][(bølge - 2) % 4];
     if (r === 'to' && antall !== undefined && antall < 2) r = 'sabotasje';
+    if (r === 'sabotasje' && dag !== undefined && (bølge < SABOTASJE_FRA.bølge || dag < SABOTASJE_FRA.dag)) r = 'rett';
     return r === 'natt' && natta ? 'rett' : r;
   }
   // ---------- natt ----------
@@ -174,7 +178,7 @@
   }
   const alder = min => (min < 1 ? 'nå' : min < 60 ? `${Math.round(min)} min siden` : `${Math.round(min / 60)} t siden`);
 
-  const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, natt, nattSikt, klokkeTime,
+  const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
     røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
