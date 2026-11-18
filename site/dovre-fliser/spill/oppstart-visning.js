@@ -128,7 +128,19 @@
       ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, red), el('div', { klasse: 'flaggboks' }, el('h3', {}, 'Flagget'), stort)), melding,
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(1)), knapp('Neste: plass til leiren →', false, () => { const f = O.feil(utkast); if (f.length) { melding.textContent = f.join(' '); return; } vis(3); })));
     } else {
-      ark.append(el('h2', {}, 'Plass til leiren'), el('div', { klasse: 'steg' }, 'Steg 3 av 3: trykk på kartet der leiren skal ligge. Hvor som helst i Norge – men ikke inne i et tettsted eller i vann. Basen og lagene dine flytter dit.'),
+      // spillformen (spill/scenario.js): vanskelighetsgrad, utfordringer og scenario velges her, før leiren
+      const SC = window.Scenario, rg = utkast.regler || (utkast.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: null }), form = el('div', { id: 'formvalg' });
+      const lagForm = () => { form.innerHTML = ''; if (!SC) return;
+        form.append(el('h3', {}, 'Vanskelighetsgrad'));
+        const v = el('div', { klasse: 'bakgrunn' }); for (const [id, V] of Object.entries(SC.REGLER.vanskelighet)) { const kn = knapp('', rg.vanskelighet === id, () => { rg.vanskelighet = id; lagForm(); }); kn.dataset.vansk = id; kn.append(el('b', {}, V.navn), el('small', {}, V.tekst)); v.appendChild(kn); } form.append(v);
+        form.append(el('h3', {}, 'Scenario (mål med tidsfrist)'));
+        const sc = el('div', { klasse: 'bakgrunn' }), fritt = knapp('', !rg.scenario, () => { rg.scenario = null; lagForm(); }); fritt.append(el('b', {}, 'Fritt spill'), el('small', {}, 'Ingen frist. Vinn regionen når du vil.')); sc.appendChild(fritt);
+        for (const [id, S2] of Object.entries(SC.SCENARIER)) { const kn = knapp('', rg.scenario === id, () => { rg.scenario = id; lagForm(); }); kn.dataset.scenario = id; kn.append(el('b', {}, S2.navn), el('small', {}, S2.tekst)); sc.appendChild(kn); } form.append(sc);
+        form.append(el('h3', {}, 'Utfordringer (valgfritt – gjør spillet vanskeligere)'));
+        const u = el('div', { klasse: 'bakgrunn' }); for (const [id, U] of Object.entries(SC.REGLER.utfordringer)) { const på = rg.utfordringer.includes(id), kn = knapp('', på, () => { if (på) rg.utfordringer = rg.utfordringer.filter(q => q !== id); else rg.utfordringer.push(id); lagForm(); }); kn.dataset.utfordring = id; kn.setAttribute('aria-pressed', String(på)); kn.append(el('b', {}, (på ? '☑ ' : '☐ ') + U.navn), el('small', {}, U.tekst)); u.appendChild(kn); } form.append(u);
+        form.append(el('div', { klasse: 'steg' }, 'Du starter med ' + O.kroner(Math.round((O.STARTPENGER + (O.BAKGRUNNER[k.bakgrunn].bonus.penger || 0)) * SC.regler(rg).faktor.penger)) + ', ti personer og et lite vaktlag. Troppene lager du selv av folkene dine (Leir → Tropper).')); };
+      lagForm();
+      ark.append(el('h2', {}, 'Spillform og plass til leiren'), el('div', { klasse: 'steg' }, 'Steg 3 av 3: velg hvordan du vil spille, og trykk så på kartet der leiren skal ligge. Hvor som helst i Norge – men ikke inne i et tettsted eller i vann.'), form,
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(2)), knapp('Velg på kartet', false, startVelg)));
     }
   }
@@ -152,7 +164,10 @@
     visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?'), !grunn); return grunn;
   }
   function bekreft() {
-    if (!forslag || !forslag.ok) return; const f = O.fullfør(utkast, forslag); if (f.length) { visBanner(f.join(' ')); return; }
+    if (!forslag || !forslag.ok) return;
+    // nye spill starter uten ferdige lag (brukeren 17. nov: «jeg skal selv måtte lage troppene») – i testene som før, til OppstartSpill.test er satt
+    utkast.utenLag = !navigator.webdriver || window.OppstartSpill.test === true;
+    const f = O.fullfør(utkast, forslag, window.Scenario ? Scenario.regler(utkast.regler).faktor.penger : 1); if (f.length) { visBanner(f.join(' ')); return; }
     S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
     // (17. nov) kartet går inn på leiren når den er lagt – før sto det igjen på hele landsdelen, og du så ikke leiren din
     if (typeof på3d === 'undefined' || !på3d) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, 3); skitten = true; }
@@ -162,7 +177,17 @@
   KROKER.trykk3d.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
 
   // ---------- valgene tas i bruk: fraksjonen tar over «blå», basen og lagene flytter til leiren ----------
+  // START UTEN FERDIGE LAG (natt 18. nov): et nytt spill har bare deg, de ti personene og et lite vaktlag (4 mann av 1. lag) – resten av
+  // startlagene tas ut av ENHETER. Når et slikt spill lastes inn igjen, tas alle startlagene ut, og spill/lagring.js setter inn de lagrede.
+  let startlagBorte = false;
+  function fjernStartlag(ny) {
+    if (startlagBorte) return; startlagBorte = true;
+    const start = ENHETER.filter(s => s.side === 'blå' && !s.karakter && !s.fraFolk && !s.leirvakt && !s.ai), n = window.Scenario ? Scenario.REGLER.vaktlag : 4;
+    start.forEach((s, i) => { if (ny && i === 0) { s.menn = s.menn.slice(0, n); s.leder = 0; s.navn = 'Vaktlaget'; s.speider = false; return; }
+      const k = ENHETER.indexOf(s); if (k >= 0) ENHETER.splice(k, 1); if (valgt === s) { valgt = null; visPanel(); } });
+  }
   function bruk(ny) {
+    if (S.utenLag) fjernStartlag(ny);
     const fl = S.fraksjon.flagg, farge = O.hovedfarge(fl), lys = O.nyanse(farge, 1.35), n = parseInt(lys.slice(1), 16);
     flaggC = null;
     if (window.Fraksjoner) { const navn = S.fraksjon.navn; Object.assign(Fraksjoner.FRAKSJONER.blå, { navn, eieform: /[sxz]$/i.test(navn) ? navn + "'" : navn + 's', farge, lys, sti: `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.9)` }); }
@@ -184,7 +209,8 @@
     // andre moduler (leiren i K2) får vite at spillet er klart
     window.dispatchEvent(new Event('riksbrudd-spill'));
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
-      logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`); }
+      logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`);
+      if (S.utenLag) logg('Du har ingen ferdige lag – bare Vaktlaget (4 mann). Lag troppene selv av folkene dine: Leir → Tropper → «Lag ny tropp».'); }
     else logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
   }
   // Ringen rundt leiren kan ligge i sjøen eller i en fjellvegg (feilretting 12. nov: leir på en holme ved Reine satte alle lagene og
@@ -252,7 +278,7 @@
   function betal(b) { if (!S || !(b >= 0) || S.penger < b) return false; S.penger -= b; lagre(); visPenger(); return true; }
   // gi(beløp): penger tilbake (for eksempel når et bygg rives)
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
-  window.OppstartSpill = { nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
+  window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
   S = les(); if (S && !S.ferdig) S = null;
   // Et lagret spill tas i bruk når ALLE skriptene på siden er kjørt (DOMContentLoaded). Før var det setTimeout(0), som kan slå til mellom
   // to skript når nettet er tregt – da gikk «riksbrudd-spill» ut før leiren, folket og kontrollrommet lyttet (feilretting 12. nov).

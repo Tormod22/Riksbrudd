@@ -2,7 +2,7 @@
  * Brukeren 16. nov: «legg til flere funksjoner og forbedre det som allerede er … om noe er uklart». En kort liste over hva du kan
  * gjøre nå, i fire kapitler, så en ny spiller ser hva som er neste steg. Hvert mål leser et øyeblikksbilde T av spillet
  * (laget av spill/maal-visning.js): bygg (ferdige bygg per type), strøm, diesel, folk, tre (m³ på lager), hogd, revet,
- * tettsteder (dine), går, inne, lett (antall hus du har lett gjennom). Et mål som er nådd, forblir nådd (ferdige = Set med id-er).
+ * tettsteder (dine), går, inne, lett (antall hus du har lett gjennom), garnison, andel og vunnet (krigen, se kapittel 5). Et mål som er nådd, forblir nådd (ferdige = Set med id-er).
  * Målene og rekkefølgen er Claudes forslag.
  */
 (function (rot) {
@@ -31,18 +31,29 @@
       { id: 'let', tekst: 'Let gjennom et hus', hjelp: 'Inne i et bygg: trykk «Let gjennom huset» (eller E). Butikker har mat, verksteder materialer.', ferdig: T => T.lett > 0 },
       { id: 'tettsted', tekst: 'Ta kontroll over et tettsted', hjelp: 'Flytt et lag inn i tettstedet og hold det til det er ditt.', ferdig: T => T.tettsteder > 0 },
     ] },
+    // KRIGEN (natt 18. nov): etter de fire første kapitlene handler målene om krigskartet (spill/strategi.js). T.tettsteder = tettsteder
+    // du holder, T.garnison = egne tettsteder med et lag i, T.andel = din del av folket i området (0–1), T.vunnet = regionen er din.
+    // Kapittelet åpner først når de fire første er nådd (krig: true): til da telles og vises bare de 14 første målene.
+    { navn: 'Krigen om regionen', krig: true, mål: [
+      { id: 'krig1', tekst: 'Hold et tettsted med et lag i garnison', hjelp: 'La et lag stå i tettstedet du har tatt. Uten garnison tar fienden det tilbake. Åpne «Krig» for oversikt.', ferdig: T => T.garnison > 0 },
+      { id: 'krig3', tekst: 'Hold tre tettsteder samtidig', hjelp: 'Krig → «Neste trekk» foreslår de beste målene. Send lag med «Send».', ferdig: T => T.tettsteder >= 3 },
+      { id: 'krig30', tekst: 'Hold 30 % av folket i området', hjelp: 'Store tettsteder teller mest. Stolpene i krigskartet viser stillingen.', ferdig: T => T.andel >= .3 },
+      { id: 'krigseier', tekst: 'Vinn regionen: 60 % av folket', hjelp: 'Når du har vunnet, kan du velge en større region eller en sterkere motstander.', ferdig: T => !!T.vunnet || T.andel >= .6 },
+    ] },
   ];
-  const ALLE = KAPITLER.flatMap(k => k.mål);
+  const ALLE = KAPITLER.flatMap(k => k.mål), GRUNN = KAPITLER.filter(k => !k.krig).flatMap(k => k.mål), KRIG = new Set(KAPITLER.filter(k => k.krig).flatMap(k => k.mål.map(m => m.id)));
+  // er krigskapittelet åpnet (alle de første målene nådd)?
+  const krigÅpen = ferdige => GRUNN.every(m => ferdige.has(m.id));
   // Hva som er nådd nå: nye = id-ene som ble nådd i denne runden; ferdige oppdateres
-  function vurder(T, ferdige) { const nye = []; for (const m of ALLE) { if (ferdige.has(m.id)) continue; let ok = false; try { ok = !!m.ferdig(T); } catch (e) { ok = false; } if (ok) { ferdige.add(m.id); nye.push(m.id); } } return nye; }
+  function vurder(T, ferdige) { const nye = []; const åpen = krigÅpen(ferdige); for (const m of ALLE) { if (ferdige.has(m.id) || (KRIG.has(m.id) && !åpen)) continue; let ok = false; try { ok = !!m.ferdig(T); } catch (e) { ok = false; } if (ok) { ferdige.add(m.id); nye.push(m.id); } } return nye; }
   // Stillingen: kapittelet du er i (det første med noe ugjort), neste mål, antall
   function stilling(ferdige) {
-    const ki = KAPITLER.findIndex(k => k.mål.some(m => !ferdige.has(m.id))), k = ki < 0 ? null : KAPITLER[ki];
-    return { kapittel: ki, navn: k ? k.navn : 'Alle målene er nådd', neste: k ? k.mål.find(m => !ferdige.has(m.id)) : null,
-      gjort: k ? k.mål.filter(m => ferdige.has(m.id)).length : ALLE.length, av: k ? k.mål.length : ALLE.length, totalt: ALLE.filter(m => ferdige.has(m.id)).length, alle: ALLE.length };
+    const ki = KAPITLER.findIndex(k => k.mål.some(m => !ferdige.has(m.id))), k = ki < 0 ? null : KAPITLER[ki], åpen = krigÅpen(ferdige), med = åpen ? ALLE : GRUNN;
+    return { kapittel: ki, navn: k ? k.navn : 'Alle målene er nådd', neste: k ? k.mål.find(m => !ferdige.has(m.id)) : null, krigÅpen: åpen,
+      gjort: k ? k.mål.filter(m => ferdige.has(m.id)).length : ALLE.length, av: k ? k.mål.length : ALLE.length, totalt: med.filter(m => ferdige.has(m.id)).length, alle: med.length };
   }
   const finn = id => ALLE.find(m => m.id === id);
-  const api = { KAPITLER, ALLE, vurder, stilling, finn };
+  const api = { KAPITLER, ALLE, GRUNN, krigÅpen, vurder, stilling, finn };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Maal = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

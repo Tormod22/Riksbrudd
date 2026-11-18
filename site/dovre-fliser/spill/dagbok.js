@@ -47,5 +47,7 @@
     for (const t of S.liste) hode.appendChild(el('div', { klasse: 'dagbok' }, t)); });
   const css = document.createElement('style'); css.textContent = '#leirmeny .dagbok{ font-size:13.5px; color:var(--ink-dim); line-height:1.35; padding:5px 0; border-bottom:1px solid #3a3226; }'; document.head.appendChild(css);
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  rot.DagbokSpill = { start, nå, tilstand: () => S };
+  // noter(tekst): en linje i dagboka utenom morgenrapporten (seier, tap av leiren, scenarier)
+  function noter(tekst) { if (!klar || !S) return false; S.liste.unshift(`Dag ${dag(tid)}: ${tekst}`); S.liste.length = Math.min(S.liste.length, 7); lagre(); return true; }
+  rot.DagbokSpill = { start, nå, noter, tilstand: () => S };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
