@@ -53,7 +53,9 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     const melding = Leting.tekst(fikk).replace(/^Du fant/, 'Du hentet') + (Object.keys(ny).length ? ' Noe ligger fortsatt igjen.' : ' Nå er huset tomt.'); logg(melding); visFunn(melding); return { fikk, rest: restAv(P) }; }
   function ferdig(P) {
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
-    const f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i), fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
+    // (balansen 18. nov, Claudes forslag) det første huset du leter i, er aldri tomt: fire rasjoner og 20 000 kr når det ellers var tomt
+    let f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i); if (f.tomt && !lett.size && !navigator.webdriver) f = { ...f, tomt: false, mat: 4, penger: 20000 };
+    const fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;

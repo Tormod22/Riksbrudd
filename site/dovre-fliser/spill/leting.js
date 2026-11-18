@@ -16,7 +16,8 @@
     leil: { tomt: .3, ting: [['mat', .8, 4, 12], ['penger', .4, 10000, 80000]] },
     uthus: { tomt: .35, ting: [['diesel', .5, 10, 40], ['tre', .5, .5, 2.5], ['stål', .3, .1, .5]] },
     låve: { tomt: .25, ting: [['tre', .7, 1, 4], ['diesel', .4, 15, 60], ['mat', .4, 3, 12], ['stål', .3, .2, .8]] },
-    butikk: { tomt: .2, ting: [['mat', 1, 25, 70], ['penger', .3, 10000, 100000]] },
+    // (balansen 18. nov) en butikk har fulle hyller i 3D – den er aldri tom (før 20 %)
+    butikk: { tomt: 0, ting: [['mat', 1, 25, 70], ['penger', .3, 10000, 100000]] },
     kontor: { tomt: .4, ting: [['penger', .5, 10000, 120000], ['mat', .4, 2, 8]] },
     skole: { tomt: .4, ting: [['mat', .6, 6, 20], ['tre', .3, .5, 2]] },
     sykehus: { tomt: .3, ting: [['mat', .7, 10, 30], ['penger', .3, 20000, 100000]] },
