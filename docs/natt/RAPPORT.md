@@ -109,3 +109,22 @@ Sju hjelpere på Opus, hver i sin pakke. Detaljene står under «Runde 4» i `do
   - Krig-vakta feilet når fiendelaget tilfeldig fikk en «forsiktig» fører.
   - Folk-vakta målte vakta i tårnet fra midten av tårnet, ikke fra grunnen.
 - Skjermbilder av tegnforklaringen og byggelista er sett på PC (1400 px) og telefon (390 px), uten feil på siden.
+
+# Lut og sekk (18. nov kveld)
+Brukeren ville finne lut i husene (brunost, matgreier, saft, rifle, ammunisjon …) og ha et inventarsystem som i Project Zomboid.
+Laget av én hjelper på grenen `claude/natt18-karakter`, flettet inn i `claude/nattfiks`. Detaljer: `docs/natt/lut.md`.
+
+## Gjort
+- **Beholdere i husene:** kjøleskap, kjøkkenskap, garderobe, nattbord, reol, pall, verktøybenk osv. lages av møblene i interiøret.
+  Innholdet er fast per møbel og avhenger av hva slags bygg det er (våpen oftest i hytter, medisin på sykehus, mat i butikker).
+- **Lutpanelet:** det du bærer til venstre, beholderne og gulvet til høyre. Like ting stables. Telefon: trykk og trykk. Mus: dra og slipp,
+  dobbeltklikk, høyreklikk for valg. «Ta alt» og «Legg alt».
+- **Vekt og plass:** lommer + sekk på ryggen (fire sekker). Tung last gjør deg tregere og fortere sliten; svært tung last stopper løpingen.
+- **Handlinger:** spis, drikk, utstyr, ta på, lad, bruk, legg fra deg, flytt, gi til leiren.
+- **Ferskhet:** fersk mat blir gammel og råtten; kjøleskap hjelper bare med strøm.
+- **3D:** tingene står på benker og bord, våpen ved garderoben, haug på gulvet der du legger fra deg.
+
+## Står igjen
+- Lommelykt, batterier, sovepose og feltflaske har ingen virkning ennå.
+- Ingen sekk i sekk. Det som ligger inne i kjøleskap og reoler, synes ikke i 3D.
+- Fiender leter ikke i hus, og husene fylles ikke på igjen.

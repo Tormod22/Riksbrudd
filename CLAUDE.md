@@ -1269,3 +1269,18 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   viser det gamle bildet; tegn til et eget mål (WebGLRenderTarget + readRenderTargetPixels) for sammenligninger (syn/diag10.js).
   Ekstra byggetid: ca. 0,25 s (2048²) / 0,6 s (4096²) i biter med pust. Ikke gjort: hakkete strandkanter (vannflatene er 32 m-ruter),
   steinmønster nær bakken på heia (heia er snaufjell i arealklassene).
+  LUT OG SEKK (18. nov kveld, brukeren: «finne lut inni hus … brunost, matgreier, saft, rifle, ammunisjon» og «inventarsystemet til
+  Project Zomboid» – inspirasjon, ikke kopi). spill/lut.js (regler uten DOM, test_lut.js; alle tall Claudes forslag i REGLER, GJENSTANDER,
+  BEHOLDERE, KLASSER) + spill/lut-visning.js (window.LutSpill). Beholdere lages av møblene i interiøret (kjøleskap, kjøkkenskap, garderobe,
+  nattbord, reol, pall, verktøybenk …), innholdet fast per møbel (hash av bygg + møbel), lut etter byggklasse (våpen i ca. 27 % av hyttenes
+  første garderobe, 16 % boliger, aldri sykehus; medisin ×3 på sykehus; ransakede bygg lite). Knappen «Åpne kjøleskapet (E)» over «Sikre
+  huset»; lutpanelet: det du bærer til venstre, faner per beholder + «Gulvet» til høyre, stabling, trykk-velg/trykk-flytt (telefon), dra og
+  slipp / dobbeltklikk / høyreklikk-valg (mus), «Ta alt»/«Legg alt»; det du legger igjen lagres per leir («riksbrudd-lut»). Vekt og plass:
+  lommer 5 kg + sekk på ryggen (handlenett 7, skolesekk 12, tursekk 22, militærsekk 30 kg); over bæreevnen (22 kg + styrke) går du tregere
+  (gange.js × LutSpill.fart()) og blir fortere sliten (karakter.js × LutSpill.løp()), ved 1,5× kan du ikke løpe. Hånd/rygg/belte 1–4 (beltet
+  = de gamle våpenplassene; kampen urørt). Jaktrifle (ny, 7,62 mm, kan ikke kjøpes). Ferskhet: fersk mat blir gammel og råtten (−12 helse),
+  kjøleskap hjelper bare med strøm (overlev.js). «Let gjennom huset» gir fortsatt det tunge (materialer, diesel, penger, matkartonger til
+  leiren); våpen og ammo kommer fra skapene. 3D: ting på benker/bord/nattbord/hyller, våpen ved garderoben, hauger på gulvet, forsvinner når
+  de tas. utstyr.js: Utstyr.krok (maks, vekt, plassTil, våpenOk), window.SEKK_TILLEGG. VAKT: vakter/lut.js. Notat docs/natt/lut.md.
+  Ikke gjort: lommelykt/batterier/sovepose/feltflaske uten virkning, sekk i sekk, innholdet i kjøleskap/reoler synes ikke i 3D, fiender
+  leter ikke i hus, husene fylles ikke på igjen.
