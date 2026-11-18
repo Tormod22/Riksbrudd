@@ -81,7 +81,8 @@ klippet ut av sjekk.js, med effektene PÅ). Bilder: scratchpad `natt/lys/f-pc-*.
   var på i min kjøring (vakta leser `kn[kn.length - 1]` uten å sjekke). Trolig ikke lys (vakta rører ikke 3D-bildet); IKKE undersøkt
   til bunns – prøv ui-vakta på mobil med 3D av.
 - 3D-vaktene fra sjekk.js med effektene PÅ (Høy, PC): «billigere terreng», «tåkebildet», «utseende 15. nov» og «filtre i 3D» grønne.
-  «bygging i biter» og «minne i 3D»: se rapporten (kjørte da fristen kom).
+  «bygging i biter» og «minne i 3D» ble IKKE ferdige før fristen (en bygging uten forberedelse med tegning i hvert bilde tar
+  mange minutter med programvare-grafikk) – de er ikke prøvd med effektene på.
 
 ### Kjent etter ferdigstillingen
 - Nakne løvtrær kaster nå tynn skygge, men de fjerne, enkle løvtrærne (lodTrær) er klumper og kaster klumpskygge om vinteren.
