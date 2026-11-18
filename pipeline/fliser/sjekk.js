@@ -343,13 +343,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           for (let i = 0; i < 700; i++) sim(.1);
           // (17. nov: blir laget beskutt mens det graver, mister det folk og bruker litt lenger tid – vent til det er ferdig)
           let hvem = '', _sti = l.sti; Object.defineProperty(l, 'sti', { configurable: true, enumerable: true, get() { return _sti; }, set(v) { if (v && !hvem) hvem = String(new Error().stack).split('\n').slice(1, 5).map(q => q.trim().slice(0, 90)).join(' | '); _sti = v; } });
-          for (let i = 0; i < 4000 && !l.nedgravd; i++) sim(.1);
+          const mål0 = { tid, graver: l.graver, lever: levende(l), ombord: !!l.ombord, sti: !!l.sti, plan: !!l.planlegger }; let kast = 0, steg = 0, kastTekst = '';
+          for (let i = 0; i < 4000 && !l.nedgravd; i++) { steg++; try { sim(.1); } catch (e) { kast++; kastTekst = String(e && e.message).slice(0, 160) + ' @ ' + String(e && e.stack).split('\n').slice(1, 3).join(' | ').slice(0, 220); } }
+          const mål = { steg, kast, kastTekst, min: Math.round(tid - mål0.tid), fra: mål0, graver: l.graver, lever: levende(l), ombord: !!l.ombord, sti: !!l.sti, id: ENHETER.indexOf(l), navn: l.navn };
           { const v = _sti; delete l.sti; l.sti = v; }
           const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
           f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
           await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
           Feltarbeid.REGLER.mine.sjanse = sj; const treff = f.menn.filter(m => m.hp < 1).length; f.sti = null; MINEFELT.length = 0;
-          return { nedgravd, tekst, vern, felt, treff, hvem, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
+          return { nedgravd, tekst, vern, felt, treff, hvem, mål, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
         const faok = fa.nedgravd && /nedgravd/.test(fa.tekst) && fa.vern === .5 && fa.felt === 1 && fa.treff > 0; if (!faok) { feil++; console.log(JSON.stringify(fa)); }
         console.log(`${faok ? 'ok  ' : 'FEIL'} ${navn} feltarbeid: 2. lag nedgravd (${fa.tekst}), vern ×${fa.vern}; minefelt lagt: ${fa.felt}, patruljen gikk på en mine: ${fa.treff} treff`);
         // S5 del 3: ingeniørene sprenger en dam -> flom nedover dalen, et lag i flomfeltet får tap, vannet trekker seg tilbake etter 12 t
