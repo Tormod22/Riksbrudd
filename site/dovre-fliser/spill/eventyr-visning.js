@@ -287,6 +287,13 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     if (iTilflukt()) d.push(['knapp', 'Tilflukt: sov og lager', 'tilflukt', '']);
     d.push(['knapp', `Lag noe${pc ? ' (B)' : ''}`, 'lag', '']);
     return d; }
+  // skadene dine som brikker i #varsler (spill/narhud.js leser window.VARSEL_TILLEGG); trykk = karakterarket
+  (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
+    if (!klar) return []; const t = ting() || {};
+    return Object.entries(T.skader).map(([id, q]) => { const D = E.Skader.LISTE[id]; if (!D) return null;
+      return { i: 'hjerte', k: q.behandlet ? '' : 'fare', t: D.navn, s: q.behandlet ? 'behandlet – gror' : t[D.kur] > 0 ? `bruk ${D.kur === 'spjelk' ? 'spjelka' : 'førstehjelp'} (i sekken)` : `trenger ${D.kurTekst.replace(/ \(.*\)$/, '')}`,
+        f: () => { if (rot.KarakterSpill) KarakterSpill.åpne(); } }; }).filter(Boolean);
+  });
   const GJØR = { ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
   function oppdater() { const vis = klar && går() && !sover; rad.classList.toggle('på', vis);
     if (vis && !(rot.pekerNede && pekerNede(rad))) { const d = radInnhold(), n = JSON.stringify(d); if (n !== sistRad) { sistRad = n; rad.replaceChildren(...d.map(([type, tekst, gjør, kl]) => type === 'lapp' ? el('div', { klasse: 'lapp ' + kl }, tekst) : knapp(tekst, () => { GJØR[gjør](); oppdater(); }, { klasse: kl, 'data-ev': gjør }))); } }

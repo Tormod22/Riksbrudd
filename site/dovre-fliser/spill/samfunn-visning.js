@@ -277,6 +277,18 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
       e2('div', { klasse: 'mat' }, k2('Samfunn ›', () => åpne(true), { id: 'samfunnknapp' })));
   });
 
+  // ---------- varselbrikkene øverst til venstre (spill/narhud.js leser window.VARSEL_TILLEGG) ----------
+  // Claudes forslag: fra så mange syke heter det «utbrudd», og etter så mange døgn blir de ugravlagte en fare for moralen
+  const UTBRUDD_SYKE = 3, DØDE_FARE = 1;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => {
+    const f = F(); if (!S || !f || !auto()) return [];
+    const ut = [], voksne = SR.sykeI(f).length, avh = S.avhengige.filter(a => a.syk).length, n = voksne + avh;
+    if (n) ut.push({ i: 'kors', k: 'fare', t: n >= UTBRUDD_SYKE ? 'Utbrudd av Grålungen' : 'Grålungen i leiren', s: `${n} syke` + (avh ? ` (${avh} barn/gamle)` : '') + (S.karantene ? ' · i karantene' : ' · ingen karantene'), f: () => åpne(true) });
+    if (S.døde.length) { const eldst = Math.min(...S.døde.map(d => d.tid || 0)), døgn = ((S.klokke || 0) - eldst) / SR.REGLER.døgn;
+      ut.push({ i: 'folk', k: døgn >= DØDE_FARE ? 'fare' : '', t: `${S.døde.length} ${S.døde.length === 1 ? 'død venter' : 'døde venter'} på begravelse`, s: 'ta farvel i Samfunn', f: () => åpne(true) }); }
+    return ut;
+  });
+
   // ---------- start ----------
   function start() {
     const sp = spill(); if (!sp || !sp.leir) { S = null; return; }
