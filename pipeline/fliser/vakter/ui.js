@@ -23,7 +23,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
     const lagret = localStorage.getItem('riksbrudd-opplaering'), av0 = localStorage.getItem('riksbrudd-opplaering-av'), var3d = typeof på3d !== 'undefined' && på3d;
     if (OpplaeringSpill.av()) OpplaeringSpill.slå(true); OpplaeringSpill.test = true; OpplaeringSpill.nullstill(); await vent(60);
     const s0 = Opplaering.neste(OpplaeringSpill.tilstand()); ut.steg = s0 && s0.id; krev(!!s0, 'opplæringen har ingen steg');
-    const dekket = ['panel', 'stridpanel', 'byggvalg', 'oppstart', 'hendelse'].some(id => $(id) && $(id).getClientRects().length && (id !== 'oppstart' || $(id).classList.contains('på')));
+    SpillHud.oppdater(); const dekket = ['gaar', 'ikontrollrom', 'ikamera', 'foto'].some(k => document.body.classList.contains(k)) || ['panel', 'stridpanel', 'byggvalg', 'oppstart', 'hendelse'].some(id => $(id) && $(id).getClientRects().length && (id !== 'oppstart' || $(id).classList.contains('på')));
     if (!dekket) krev(OpplaeringSpill.vises() && /Opplæring/.test($('opplaering').textContent), 'opplæringsruta vises ikke');
     const hoppet = OpplaeringSpill.hopp(), s1 = Opplaering.neste(OpplaeringSpill.tilstand()); krev(hoppet === (s0 && s0.id) && s1 && s1.id !== s0.id, '«Hopp over» går ikke videre');
     OpplaeringSpill.slå(false); await vent(30); krev(!OpplaeringSpill.vises() && localStorage.getItem('riksbrudd-opplaering-av') === '1', '«Slå av» virker ikke');
@@ -37,7 +37,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
     krev(Merker.form('eget') !== Merker.form('fiende') && Merker.form('fiende') !== Merker.form('nøytral'), 'merkene har ikke ulike former');
     // færre infrastrukturmerker: en liten bru langt unna vises ikke på 20 m per punkt, men gjør det med «alle» og helt nær
     if (typeof INFRA_FOKUS !== 'undefined') { const t0 = INFRA_FOKUS.test, a0 = INFRA_FOKUS.alt, bru = { e: { lengde: 40, id: -77 }, bb: [-9e6, -9e6, -9e6 + 40, -9e6 + 10] }; INFRA_FOKUS.test = true; INFRA_FOKUS.alt = false;
-      const skjult = !VISES.bru(bru, 20), nær = VISES.bru(bru, 4), stor = VISES.bru({ e: { lengde: 900, id: -78 }, bb: bru.bb }, 20); INFRA_FOKUS.alt = true; const alle = VISES.bru(bru, 20); INFRA_FOKUS.test = false; INFRA_FOKUS.alt = false; const iTest = VISES.bru(bru, 20); INFRA_FOKUS.test = t0; INFRA_FOKUS.alt = a0;
+      const skjult = !VISES.bru(bru, 20), nær = VISES.bru(bru, 2), stor = VISES.bru({ e: { lengde: 900, id: -78 }, bb: bru.bb }, 20); INFRA_FOKUS.alt = true; const alle = VISES.bru(bru, 20); INFRA_FOKUS.test = false; INFRA_FOKUS.alt = false; const iTest = VISES.bru(bru, 20); INFRA_FOKUS.test = t0; INFRA_FOKUS.alt = a0;
       ut.infra = { skjult, nær, stor, alle, iTest }; krev(skjult && nær && stor && alle && iTest, 'reglene for færre merker stemmer ikke'); }
     ut.var3d = var3d; return ut; });
   const ok = d.feil.length === 0;

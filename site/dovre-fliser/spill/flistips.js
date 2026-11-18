@@ -57,7 +57,10 @@
   function skjul() { boks.classList.remove('på'); viser = null; clearTimeout(lukk); }
   const mål = e => e.target && e.target.closest ? e.target.closest('[data-tips], .stats > div') : null;
   document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const d = mål(e); if (d && d !== viser) vis(d); else if (!d && viser) skjul(); });
-  document.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') { skjul(); return; } const d = mål(e); if (!d) { skjul(); return; } if (vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, true);
+  // telefon: ruta kommer ved et TRYKK (ikke når du sveiper raden bortover), og står i noen sekunder
+  let finger = false;
+  document.addEventListener('pointerdown', e => { finger = e.pointerType === 'touch'; if (!finger || !mål(e)) skjul(); }, true);
+  document.addEventListener('click', e => { if (!finger) return; const d = mål(e); if (d && vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, true);
   window.addEventListener('blur', skjul);
   // titlene ryddes jevnlig (andre deler setter dem på nytt hvert sekund), og ruta følger med mens den står oppe
   setInterval(() => { for (const d of document.querySelectorAll('.stats > div[title]')) if (FORKLAR[d.dataset.s || ((d.querySelector('b[id]') || {}).id)]) taTittel(d); if (viser && !viser.isConnected) skjul(); }, 700);

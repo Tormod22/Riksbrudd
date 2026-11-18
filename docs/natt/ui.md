@@ -39,7 +39,7 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
 - **Våpenruta** flyttet fra minikartet (`#nhud .vapen` right 282 px), `#panel` smalere/høyere så det ikke ligger under kommandolinja.
 
 ## Fellesfiler som er endret
-- `site/dovre-fliser/index.html`: (1) fire skript-tagger rett før spillhud.js (merker, tegninger, flistips, opplaering, minikart2d);
+- `site/dovre-fliser/index.html`: (1) fem skript-tagger rett før spillhud.js (merker, tegninger, flistips, opplaering, minikart2d);
   (2) `INFRA_FOKUS`/`infraViktig` rett etter `INFRA_REKKE`; (3) luft i `tegnEtiketter`; (4) `tegnLag`: lagsymbol og «sist sett» via
   Merker; (5) `symKai` via Merker.
 - `site/dovre-fliser/kartflis.js`: VEG-fargene, KARTLYS_* og skyggeløkka i `komponer`.

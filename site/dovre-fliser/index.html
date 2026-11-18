@@ -438,7 +438,7 @@ const INFRA_REKKE = ['felt', 'tettsted', 'magasin', 'ror', 'ferje', 'tunnel', 'd
 // laget eller kjøretøyet du har valgt (eller dit det er på vei), nær leiren, de er sprengt/skadet, eller krigskartet er åpent.
 // «Alle merker» i ☰ (INFRA_FOKUS.alt) viser alt som før. I testene (navigator.webdriver) er alt som før til INFRA_FOKUS.test = true.
 // Tallene er Claudes forslag.
-const INFRA_FOKUS = { alt: false, test: false, nær: { bru: 8, tunnel: 10, kraft: 22, ferjekai: 35, dam: 15 }, stor: { bru: o => (o.e.lengde || 0) >= 500, tunnel: o => (o.e.lengde || 0) >= 3000, kraft: o => (o.e.mw || 0) >= 100, ferjekai: () => false, dam: () => false },
+const INFRA_FOKUS = { alt: false, test: false, nær: { bru: 3, tunnel: 4, kraft: 12, ferjekai: 8, dam: 8 }, stor: { bru: o => (o.e.lengde || 0) >= 500, tunnel: o => (o.e.lengde || 0) >= 3000, kraft: o => (o.e.mw || 0) >= 100, ferjekai: () => false, dam: () => false },
   rundtValgt: 2500, rundtLeir: { kraft: 3000, ferjekai: 3000, bru: 1200, tunnel: 1200, dam: 1200 } };
 try { INFRA_FOKUS.alt = localStorage.getItem('riksbrudd-allemerker') === '1'; } catch (e) { INFRA_FOKUS.alt = false; }
 function infraViktig(lag, o, m) {
@@ -450,6 +450,17 @@ function infraViktig(lag, o, m) {
   if (valgt && typeof valgt.x === 'number') { const r = INFRA_FOKUS.rundtValgt; if (nær(valgt.x, valgt.y, r)) return true; const sti = valgt.sti; if (sti && sti.length) { const e = sti[sti.length - 1]; if (e && nær(e[0] !== undefined ? e[0] : e.x, e[1] !== undefined ? e[1] : e.y, r)) return true; } }
   const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (S && S.leir && nær(S.leir.x, S.leir.y, INFRA_FOKUS.rundtLeir[lag])) return true;
   return false;
+}
+// Kaiene (spill/kaier.js spør her): helt nær, store havner et stykke ut, nær valgt lag/kjøretøy, nær leiren (5 km) – og alle mens du
+// velger leir på startskjermen (en kai kan være grunnen til å legge leiren der) eller har krigskartet åpent.
+function KAI_VIKTIG(x, y, t, l, m) {
+  if (INFRA_FOKUS.alt || (navigator.webdriver && !INFRA_FOKUS.test)) return true;
+  if (m < (t >= 2 ? 8 : 4) || (t === 3 && m < 25)) return true;
+  const st = document.getElementById('oppstart'); if (st && st.classList.contains('på')) return true;
+  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return true;
+  if (valgt && typeof valgt.x === 'number' && Math.hypot(valgt.x - x, valgt.y - y) < INFRA_FOKUS.rundtValgt) return true;
+  const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (!S || !S.leir) return true;   // ingen leir ennå: du velger sted
+  return Math.hypot(S.leir.x - x, S.leir.y - y) < 5000;
 }
 for (const lag of ['bru', 'tunnel', 'kraft', 'ferjekai', 'dam']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && infraViktig(lag, o, m); }
 // Navnet på et tettsted står inne i tettbebyggelsen, lengst fra kanten (Kart2d.navnepunkt, regnes én gang per tettsted) – ikke midt i
@@ -2979,7 +2990,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/omraade.js?v=3b1ebac80c"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=919f758676"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=3220bb9b4d"></script>
-<script src="/dovre-fliser/spill/kaier.js?v=7205ff7575"></script>
+<script src="/dovre-fliser/spill/kaier.js?v=fc7262a48f"></script>
 <script src="/dovre-fliser/spill/kameravakt.js?v=d6903e035e"></script>
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
 <script src="/dovre-fliser/spill/meny.js?v=9b4e940c42"></script>
@@ -2988,7 +2999,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/merker.js?v=e007fd169f"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=8b820fd1b7"></script>
-<script src="/dovre-fliser/spill/flistips.js?v=0edb043a66"></script>
+<script src="/dovre-fliser/spill/flistips.js?v=6ed87893fa"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=fc65e32c9e"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/spillhud.js?v=f5d6b7cdfd"></script>
