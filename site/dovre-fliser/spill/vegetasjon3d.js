@@ -111,26 +111,33 @@
       g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(sx, sz, sx); g.translate(x, z, -y); g.rotateX(Math.PI / 2);
       legg(g, (a, b, zz) => farge(Math.max(0, Math.min(1, (zz - z + r * sz) / (2 * r * sz))), a, b, zz)); };
     const blad = (m, l) => (t, a, b, z) => { const n = .5 + .5 * Math.sin(a * 41 + b * 29 + z * 17); return [m[0] + (l[0] - m[0]) * t + .025 * n, m[1] + (l[1] - m[1]) * t + .03 * n, m[2] + (l[2] - m[2]) * t]; };
+    // krone med blader (18. nov): en mørk kjerne (den første klumpen, litt krympet) og en klase kort med bladtekstur rundt hver
+    // klump (TreDeler i index.html) – rundere og luftigere enn bare klumper, og færre trekanter. ant = kort per klump.
+    const krone = (liste, f, sx, sz, felt = 'blad', ant = 4, st = 1.75) => {
+      let mx = 0, my = 0, mz = 0; for (const [x, y, z] of liste) { mx += x; my += y; mz += z; } const midt = [mx / liste.length, my / liste.length, mz / liste.length - .05];
+      const [x0, y0, z0, r0] = liste[0]; klump(x0, y0, z0, r0 * .78, (t, a, b, z) => f(t, a, b, z).map(v => v * .6), sx, sz);
+      for (const [x, y, z, r] of liste) TreDeler.klase(deler, [x, y, z], r, ant, felt, (a, b, zz) => f(Math.max(0, Math.min(1, (zz - z + r * sz) / (2 * r * sz))), a, b, zz), x * 3.1 + y * 7.7 + z, midt, sx, sz, st);
+    };
     const fin = !mob();
     if (art === 'furu') {
       // høy, rett stamme: gråbrun nede, rødoransje oppover; flat, mørk krone høyt oppe
       stamme(.024, .013, .8, z => z < .3 ? [.31, .26, .22] : [.48, .34, .25], 0, 0, 0, 0, 6);
       const f = blad([.08, .15, .1], [.18, .27, .15]);
-      for (const [x, y, z, r] of fin ? [[0, 0, .86, .15], [.13, .05, .78, .12], [-.12, -.07, .8, .12], [.05, -.14, .7, .11], [-.05, .12, .93, .1], [.1, .12, .64, .09], [-.1, .02, .7, .09]] : [[0, 0, .84, .17], [.13, .05, .74, .13], [-.12, -.08, .77, .12]]) klump(x, y, z, r, f, 1.05, .92);
+      krone(fin ? [[0, 0, .86, .15], [.13, .05, .78, .12], [-.12, -.07, .8, .12], [.05, -.14, .7, .11], [-.05, .12, .93, .1], [.1, .12, .64, .09], [-.1, .02, .7, .09]] : [[0, 0, .84, .17], [.13, .05, .74, .13], [-.12, -.08, .77, .12]], f, 1.05, .92, 'bar', 3, 2.1);
     } else if (art === 'furuEnkel') {
       stamme(.026, .016, .76, () => [.46, .33, .24]); klump(0, 0, .82, .2, blad([.08, .15, .1], [.16, .25, .14]), 1, .8);
     } else if (art === 'osp') {
       // lys, grågrønn stamme, rund og litt høy krone i friskt grønt
       stamme(.03, .018, .72, () => [.63, .63, .59]);
       const f = blad([.24, .38, .1], [.38, .52, .16]);
-      for (const [x, y, z, r] of fin ? [[0, 0, .72, .2], [0, 0, .88, .15], [.11, .08, .62, .15], [-.11, -.06, .64, .15], [.06, -.11, .78, .14], [-.06, .1, .8, .13]] : [[0, 0, .72, .22], [0, 0, .88, .16], [.1, .05, .62, .16]]) klump(x, y, z, r, f, 1, 1.15);
+      krone(fin ? [[0, 0, .72, .2], [0, 0, .88, .15], [.11, .08, .62, .15], [-.11, -.06, .64, .15], [.06, -.11, .78, .14], [-.06, .1, .8, .13]] : [[0, 0, .72, .22], [0, 0, .88, .16], [.1, .05, .62, .16]], f, 1, 1.15);
     } else if (art === 'ospEnkel') {
       stamme(.03, .02, .6, () => [.63, .63, .59]); klump(0, 0, .72, .22, blad([.26, .4, .11], [.36, .5, .15]), 1, 1.35);
     } else if (art === 'rogn') {
       // kort, grå stamme, bred rund krone og klaser av røde bær ute i kronen
       stamme(.045, .025, .45, () => [.42, .4, .37]); stamme(.025, .015, .3, () => [.42, .4, .37], .02, 0, .5, 1);
       const f = blad([.16, .28, .09], [.28, .4, .14]);
-      for (const [x, y, z, r] of fin ? [[0, 0, .64, .25], [.2, .1, .56, .2], [-.2, -.1, .57, .2], [.08, -.2, .6, .19], [-.08, .2, .68, .18]] : [[0, 0, .62, .28], [.18, .08, .55, .2], [-.18, -.1, .56, .2]]) klump(x, y, z, r, f, 1, .9);
+      krone(fin ? [[0, 0, .64, .25], [.2, .1, .56, .2], [-.2, -.1, .57, .2], [.08, -.2, .6, .19], [-.08, .2, .68, .18]] : [[0, 0, .62, .28], [.18, .08, .55, .2], [-.18, -.1, .56, .2]], f, 1, .9);
       if (fin) for (let k = 0; k < 6; k++) { const a = k * 2.4, rr = .3 + .04 * (k % 2), g = new THREE.OctahedronGeometry(.034); g.translate(Math.cos(a) * rr, .5 + .05 * (k % 3), -Math.sin(a) * rr); g.rotateX(Math.PI / 2); legg(g, () => [.86, .14, .07]); }
     } else if (art === 'rognEnkel') {
       stamme(.04, .03, .45, () => [.42, .4, .37]); klump(0, 0, .6, .3, blad([.17, .29, .09], [.27, .39, .14]), 1, .85);
@@ -138,15 +145,14 @@
       // krokete og lav: tre hvite stammer som heller ut, små klumper med blader
       for (const [v, r] of [[.38, .3], [-.32, 1.8], [.18, 3.9]]) stamme(.026, .014, .6, z => z < .15 ? [.36, .33, .3] : [.7, .68, .64], 0, 0, v, r);
       const f = blad([.17, .28, .09], [.3, .42, .14]);
-      for (const [x, y, z, r] of fin ? [[.2, -.06, .6, .21], [-.17, .08, .56, .2], [.04, .1, .76, .19], [-.02, -.14, .5, .18]] : [[.15, 0, .58, .2], [-.14, .06, .55, .18], [0, 0, .76, .16]]) klump(x, y, z, r, f, 1, .8);
+      krone(fin ? [[.2, -.06, .6, .21], [-.17, .08, .56, .2], [.04, .1, .76, .19], [-.02, -.14, .5, .18]] : [[.15, 0, .58, .2], [-.14, .06, .55, .18], [0, 0, .76, .16]], f, 1, .8);
     } else if (art === 'fjellbjørkEnkel') {
       stamme(.035, .02, .5, () => [.8, .78, .74]); klump(0, 0, .6, .3, blad([.18, .29, .1], [.28, .4, .14]), 1, .7);
     } else if (art === 'selje') {
       // busk med flere stammer fra roten og en bred, grågrønn krone (selje, vier)
       for (let k = 0; k < 4; k++) stamme(.03, .015, .55, () => [.42, .38, .32], 0, 0, .42, k * 1.57 + .4);
       const f = blad([.24, .32, .18], [.38, .46, .27]);
-      for (let k = 0; k < (fin ? 6 : 4); k++) { const a = k * 6.283 / (fin ? 6 : 4), rr = .22; klump(Math.cos(a) * rr, Math.sin(a) * rr, .45 + .12 * (k % 2), .2, f, 1, .85); }
-      klump(0, 0, .66, .2, f, 1, .8);
+      { const L = [[0, 0, .6, .22]]; for (let k = 0; k < (fin ? 6 : 4); k++) { const a = k * 6.283 / (fin ? 6 : 4), rr = .22; L.push([Math.cos(a) * rr, Math.sin(a) * rr, .45 + .12 * (k % 2), .2]); } krone(L, f, 1, .85, 'blad', 3); }
     } else if (art === 'seljeEnkel') {
       klump(0, 0, .45, .4, blad([.25, .33, .19], [.36, .44, .26]), 1, .75);
     } else if (art === 'einer') {
@@ -159,9 +165,7 @@
     } else if (art === 'einerEnkel') {
       const g = new THREE.ConeGeometry(.17, 1, 5, 1, true); g.translate(0, .5, 0); g.rotateX(Math.PI / 2); legg(g, z => [.1, .18, .12]);
     }
-    const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-    for (const g of deler) { if (!g.attributes.normal) g.computeVertexNormals(); pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    const geo = TreDeler.samle(deler);
     geo.userData.treslag = art;
     return (GEO[art] = geo);
   }
@@ -201,7 +205,7 @@
       for (let k = 0; k < n; k++) { const x = data[k * 5], y = data[k * 5 + 1], z = data[k * 5 + 2], h = data[k * 5 + 3], v = data[k * 5 + 4], b = h * (.85 + .3 * ((v * 13.7) % 1));
         d.position.set(x, y, z - (art === 'einer' ? .1 : .25)); d.scale.set(b, b, h); d.rotation.set((v - .5) * skjev, ((v * 7.3) % 1 - .5) * skjev, v * 6.283); d.updateMatrix();
         d.matrix.toArray(M, k * 16); const f = .84 + v * .32; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
-      const lag = (geo, enkel) => { const m = new THREE.InstancedMesh(geo, treMateriale(art, enkel), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+      const lag = (geo, enkel) => { const m = new THREE.InstancedMesh(geo, TreDeler.materiale(treMateriale(art, enkel), geo), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
         m.count = 0; m.frustumCulled = false; m.userData.treslag = art; R.scene.add(m); R.treMesh.push(m); return m; };
       // små treslag (einer, rogn, fjellbjørk, selje) med alle detaljene bare nær kameraet (lodTrær leser G2)
       const G2 = ['einer', 'rogn', 'fjellbjørk', 'selje'].includes(art) ? (mob() ? 80 : 130) ** 2 : undefined;

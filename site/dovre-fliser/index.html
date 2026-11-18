@@ -2034,6 +2034,73 @@ async function smått3d(u, px, b) {
 }
 // Tre-modeller (høyde 1, z opp, foten i 0), med farger i hjørnene: gran = stamme + tre lag grener, mørkt innerst og nederst,
 // lysere tupper; løvtre = lys stamme + krone av tre runde klumper. Brukes som instanser (trær3d gir plass og høyde).
+// BEDRE TRÆR (18. nov, nattarbeidet «natur»): kronene er ikke lenger kantete klumper, men en mørk kjerne med mange små «kort»
+// (to trekanter) rundt, hvert med en klase av blader eller nåler fra bladteksturen. Teksturen brukes bare som gjennomsiktighet
+// (alphaMap med alphaTest – ikke blanding, så ingenting må sorteres); fargene ligger fortsatt i hjørnene, så høstfarger, snø og
+// vind virker som før. Kortenes normaler peker ut fra kronens midte: hele krona lyses som en rund form. Granens lag av greiner har
+// en frynset, hengende kant fra samme tekstur. Færre trekanter enn før (bjørk ca. 110 mot 150, gran ca. 150 mot 130).
+const TreDeler = {
+  tex: null,
+  // feltene i bildet: [u0, v0, u1, v1]
+  FELT: { blad: [.02, .52, .48, .98], frynse: [.5, .5, 1, 1], bar: [.02, .02, .48, .48], tett: [.7, .2, .8, .3] },
+  tekstur() {
+    if (this.tex) return this.tex;
+    const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); let f = 20261118;
+    const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
+    g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+    // oppe til venstre: en klase løv (små blader tettest i midten)
+    for (let i = 0; i < 150; i++) { const a = rnd() * 6.283, r = 54 * Math.pow(rnd(), .7), x = 64 + Math.cos(a) * r, y = 64 + Math.sin(a) * r;
+      g.beginPath(); g.ellipse(x, y, 5 + rnd() * 4, 3 + rnd() * 2.5, rnd() * 3.14, 0, 6.283); g.fill(); }
+    g.beginPath(); g.arc(64, 64, 22, 0, 6.283); g.fill();
+    // oppe til høyre: tett øverst, hengende tagger nederst (kanten på granens greinlag); går i ett når den speiles sideveis
+    g.fillRect(128, 0, 128, 58);
+    for (let i = 0; i < 13; i++) { const x = 128 + (i + .5) * 128 / 13 + (rnd() - .5) * 5, b = 7 + rnd() * 4, l = 30 + rnd() * 34;
+      g.beginPath(); g.moveTo(x - b, 56); g.lineTo(x + b, 56); g.lineTo(x + (rnd() - .5) * 6, 56 + l); g.fill(); }
+    // nede til venstre: en dusk med bar (greiner i vifte med nåler)
+    for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + (i - 4) * .33 + (rnd() - .5) * .1, l = 78 + rnd() * 30, x1 = 64 + Math.cos(a) * l, y1 = 246 + Math.sin(a) * l;
+      g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(64, 246); g.lineTo(x1, y1); g.stroke();
+      g.lineWidth = 3.5; for (let k = 2; k < 12; k++) { const t = k / 12, x = 64 + (x1 - 64) * t, y = 246 + (y1 - 246) * t, n = 9 + 7 * (1 - t);
+        for (const s of [-1, 1]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a + s * .9) * n, y + Math.sin(a + s * .9) * n); g.stroke(); } } }
+    g.beginPath(); g.arc(64, 222, 26, 0, 6.283); g.fill();
+    // nede til høyre: helt tett (stammer og kjerner)
+    g.fillRect(132, 132, 124, 124);
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 2; return (this.tex = t);
+  },
+  // Ett kort: midt c, retning n (enhetsvektor ut fra krona), bredde b, høyde h, vridd v i sitt eget plan. midt = kronens midte
+  // (for normalene), farge(x, y, z) gir fargen i hvert hjørne.
+  kort(c, n, b, h, v, felt, farge, midt) {
+    let ax = [-n[1], n[0], 0]; const l = Math.hypot(ax[0], ax[1]); ax = l < 1e-3 ? [1, 0, 0] : [ax[0] / l, ax[1] / l, 0];
+    const ay0 = [n[1] * ax[2] - n[2] * ax[1], n[2] * ax[0] - n[0] * ax[2], n[0] * ax[1] - n[1] * ax[0]], cv = Math.cos(v), sv = Math.sin(v);
+    const A = [0, 1, 2].map(i => ax[i] * cv + ay0[i] * sv), B = [0, 1, 2].map(i => -ax[i] * sv + ay0[i] * cv), F = this.FELT[felt];
+    const hj = [[-1, -1, F[0], F[1]], [1, -1, F[2], F[1]], [1, 1, F[2], F[3]], [-1, 1, F[0], F[3]]].map(([s, t, uu, vv]) => {
+      const p = [0, 1, 2].map(i => c[i] + A[i] * s * b / 2 + B[i] * t * h / 2), d = [0, 1, 2].map(i => p[i] - midt[i]), dl = Math.hypot(d[0], d[1], d[2]) || 1;
+      const nn = [0, 1, 2].map(i => .65 * d[i] / dl + .35 * n[i]), nl = Math.hypot(nn[0], nn[1], nn[2]) || 1; return { p, n: nn.map(x => x / nl), k: farge(p[0], p[1], p[2]), uv: [uu, vv] }; });
+    const pos = [], nor = [], kol = [], uv = []; for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...hj[i].p); nor.push(...hj[i].n); kol.push(...hj[i].k); uv.push(...hj[i].uv); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nor), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3)); g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2)); g.userData.uvBlad = true; return g;
+  },
+  // En klase kort jevnt rundt en klump (midt c, radius r, strukket sx bortover og sz oppover) – ikke rett under
+  klase(deler, c, r, ant, felt, farge, frø, midt, sx = 1, sz = 1, st = 1.75) {
+    const h = i => { const x = Math.sin(i * 12.9898 + frø * 78.233) * 43758.5453; return x - Math.floor(x); };
+    for (let i = 0; i < ant; i++) { const t = (i + .5) / ant, zz = 1 - 1.5 * t, rr = Math.sqrt(Math.max(0, 1 - zz * zz)), a = i * 2.39996 + frø * 6.283;
+      const n0 = [rr * Math.cos(a) + .3 * (h(i) - .5), rr * Math.sin(a) + .3 * (h(i + 40) - .5), zz + .3 * (h(i + 80) - .5)], l = Math.hypot(n0[0], n0[1], n0[2]) || 1, n = n0.map(x => x / l);
+      const p = [c[0] + n[0] * r * .5 * sx, c[1] + n[1] * r * .5 * sx, c[2] + n[2] * r * .5 * sz], s = r * st * (.85 + .3 * h(i + 120));
+      deler.push(this.kort(p, n, s * sx, s * (sx + sz) / 2, h(i + 160) * 6.283, felt, farge, midt || c)); }
+  },
+  // uv for deler uten egen: et tett punkt i teksturen
+  uv(g) { if (g.userData.uvBlad && g.attributes.uv) return g.attributes.uv.array; const n = g.attributes.position.count, a = new Float32Array(n * 2); for (let i = 0; i < n; i++) { a[i * 2] = .75; a[i * 2 + 1] = .25; } return a; },
+  // slå sammen delene til ett nett (plass, farge, normal og uv); blad = true når noen av delene bruker bladteksturen
+  samle(deler) {
+    const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2); let o = 0, blad = false;
+    for (const g of deler) { if (!g.attributes.normal) g.computeVertexNormals(); pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); uv.set(this.uv(g), o * 2);
+      if (g.userData.uvBlad) blad = true; o += g.attributes.position.count; g.dispose(); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    if (blad) { geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.userData.blad = true; }
+    return geo;
+  },
+  // materialet til et tre: med bladtekstur når nettet har kort (begge sider tegnes – kortene ses fra baksiden gjennom krona)
+  materiale(m, geo) { if (geo && geo.userData.blad) { m.alphaMap = this.tekstur(); m.alphaTest = .4; m.side = THREE.DoubleSide; } return m; },
+};
 const TREGEO = {};
 function treGeo(type) {
   if (TREGEO[type]) return TREGEO[type];
@@ -2043,25 +2110,30 @@ function treGeo(type) {
   const stamme = (r0, r1, h, farge) => { const g = new THREE.CylinderGeometry(r1, r0, h, 5, 1, true); g.translate(0, h / 2, 0); g.rotateX(Math.PI / 2); legg(g, () => farge); };
   if (type === 'gran') {
     stamme(.07, .04, .3, [.22, .16, .1]);
-    // fem lag grener; nederste kant er taggete (grener som stikker ut) og henger litt ned
-    const fin = VW >= 700, seg = fin ? 12 : 9;
-    for (const [z0, z1, r] of fin ? [[.1, .44, 1], [.26, .58, .84], [.42, .72, .66], [.57, .86, .48], [.72, 1, .3]] : [[.12, .62, 1], [.38, .84, .74], [.62, 1, .46]]) {
-      const g = new THREE.ConeGeometry(r, z1 - z0, seg, 1, true), p = g.attributes.position;
-      for (let i = 0; i < p.count; i++) { if (p.getY(i) > 0) continue; const v = Math.atan2(p.getZ(i), p.getX(i)), k = .78 + .3 * Math.abs(Math.sin(v * seg / 2));
-        p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); p.setY(i, p.getY(i) - .04 * (k - .78)); }
-      g.computeVertexNormals(); g.translate(0, (z0 + z1) / 2, 0); g.rotateX(Math.PI / 2);
-      legg(g, (x, y, z) => { const ute = Math.min(1, Math.hypot(x, y) / r), t = (z - z0) / (z1 - z0), n = .5 + .5 * Math.sin(x * 37 + y * 23 + z * 51); return [.06 + .05 * t + .03 * ute + .015 * n, .14 + .08 * t + .04 * ute + .02 * n, .07 + .04 * t]; });
+    // fem lag greiner som henger: kanten nederst er frynset (bladteksturen) og taggete, og siger ned mellom greinene
+    const fin = VW >= 700, seg = fin ? 12 : 8;
+    for (const [z0, z1, r] of fin ? [[.08, .46, 1], [.25, .6, .84], [.42, .74, .66], [.57, .87, .48], [.72, 1, .3]] : [[.1, .62, 1], [.38, .84, .74], [.62, 1, .46]]) {
+      const g = new THREE.ConeGeometry(r, z1 - z0, seg, 1, true).toNonIndexed(), p = g.attributes.position, uv = g.attributes.uv;
+      for (let i = 0; i < p.count; i++) { const m = uv.getX(i) * seg / 2, tri = 1 - Math.abs((m % 2) - 1); uv.setXY(i, .5 + .5 * Math.min(1, Math.max(0, tri)), .5 + .5 * (.06 + .94 * uv.getY(i)));
+        if (p.getY(i) > 0) continue; const v = Math.atan2(p.getZ(i), p.getX(i)), k = .8 + .32 * Math.abs(Math.sin(v * seg / 2));
+        p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); p.setY(i, p.getY(i) - .1 * (k - .8) - .02); }
+      g.computeVertexNormals(); g.translate(0, (z0 + z1) / 2, 0); g.rotateX(Math.PI / 2); g.userData.uvBlad = true;
+      legg(g, (x, y, z) => { const ute = Math.min(1, Math.hypot(x, y) / r), t = Math.max(0, (z - z0) / (z1 - z0)), n = .5 + .5 * Math.sin(x * 37 + y * 23 + z * 51); return [.05 + .04 * t + .05 * ute + .015 * n, .12 + .07 * t + .08 * ute + .02 * n, .06 + .04 * t + .02 * ute]; });
     }
+    // enkelte greiner som stikker ut av formen (bar-dusker), så omrisset ikke blir en ren kjegle
+    if (fin) for (let i = 0; i < 7; i++) { const a = i * 2.39996 + .4, z = .16 + i * .1, r = (1 - z) * .95 + .08, n = [Math.cos(a) * .35, Math.sin(a) * .35, .93];
+      deler.push(TreDeler.kort([Math.cos(a) * r * .8, Math.sin(a) * r * .8, z], n, .5 * (1.15 - z), .62 * (1.15 - z), Math.PI, 'bar', (x, y, zz) => { const ute = Math.min(1, Math.hypot(x, y) / Math.max(.1, r)); return [.06 + .06 * ute, .14 + .1 * ute, .07 + .03 * ute]; }, [0, 0, z - .3])); }
   } else if (type === 'løv') {
-    stamme(.05, .03, .55, [.78, .76, .7]);
-    const klumper = VW >= 700 ? [[0, 0, .74, .3], [.24, .12, .58, .27], [-.22, -.16, .6, .26], [.05, -.25, .64, .24], [-.12, .22, .68, .23], [.18, -.08, .82, .2], [-.05, .05, .9, .18]] : [[0, 0, .7, .34], [.24, .12, .56, .28], [-.22, -.16, .58, .27], [.05, -.25, .62, .25]];
-    for (const [x, y, z, r] of klumper) {
-      let g = new THREE.IcosahedronGeometry(r, 0);   // polyedre er alt uten indeks
-      const p = g.attributes.position, nr = new Float32Array(p.count * 3);
+    // bjørk: lys stamme med mørke merker og en luftig, litt høy krone
+    { const g = new THREE.CylinderGeometry(.03, .055, .62, 6, 4, true); g.translate(0, .31, 0); g.rotateX(Math.PI / 2);
+      legg(g, (x, y, z) => { const m = Math.sin(z * 43 + x * 60) > .55 || z < .05; return m ? [.25, .23, .2] : [.84, .82, .76]; }); }
+    const fin = VW >= 700, midt = [0, 0, .7];
+    const farge = (px, py, pz) => { const t = Math.max(0, Math.min(1, (pz - .38) / .58)), ute = Math.min(1, Math.hypot(px, py) / .36), n = .5 + .5 * Math.sin(px * 41 + py * 29 + pz * 17); return [.12 + .15 * t + .04 * ute + .03 * n, .22 + .17 * t + .05 * ute + .03 * n, .07 + .05 * t]; };
+    { const g = new THREE.IcosahedronGeometry(.2, 0), p = g.attributes.position, nr = new Float32Array(p.count * 3);
       for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)) || 1; nr[i * 3] = p.getX(i) / l; nr[i * 3 + 1] = p.getY(i) / l; nr[i * 3 + 2] = p.getZ(i) / l; }
-      g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, .95, 1); g.translate(x, z, y); g.rotateX(Math.PI / 2);   // runde normaler: myk krone
-      legg(g, (px, py, pz) => { const t = Math.max(0, Math.min(1, (pz - z + r) / (2 * r))), n = .5 + .5 * Math.sin(px * 41 + py * 29 + pz * 17); return [.17 + .14 * t + .03 * n, .27 + .14 * t + .03 * n, .09 + .05 * t]; });
-    }
+      g.setAttribute('normal', new THREE.BufferAttribute(nr, 3)); g.scale(1, 1.25, 1); g.translate(0, .7, 0); g.rotateX(Math.PI / 2); legg(g, (px, py, pz) => { const k = farge(px, py, pz); return [k[0] * .62, k[1] * .62, k[2] * .62]; }); }
+    for (const [x, y, z, r, ant] of fin ? [[0, 0, .76, .27, 7], [.2, .1, .58, .22, 5], [-.19, -.14, .6, .22, 5], [.04, -.22, .66, .2, 4], [-.1, .2, .7, .2, 4], [0, 0, .92, .17, 4]] : [[0, 0, .74, .3, 6], [.2, .1, .58, .24, 4], [-.2, -.14, .6, .24, 4]])
+      TreDeler.klase(deler, [x, y, z], r, ant, 'blad', farge, x * 3 + y * 7 + z, midt, 1, 1.05, 2.15);
   }
   // enkle trær for det som er langt unna (detaljnivå): gran som én kjegle, bjørk som én klump på en stamme
   if (type === 'granEnkel') { const g = new THREE.ConeGeometry(.72, .96, 6, 1, true); g.translate(0, .5, 0); g.rotateX(Math.PI / 2);
@@ -2090,9 +2162,7 @@ function treGeo(type) {
     if (type === 'busk') { klump(0, 0, .46, .5, .92, 1.02, 0); klump(.36, .1, .3, .36, 1, .95, 1); klump(-.3, .24, .32, .36, 1, .95, 2); klump(-.08, -.36, .28, .34, 1, .92, 3); }
     else klump(0, 0, .38, .62, 1.05, .78, 0);
   }
-  const n = deler.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), kol = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-  for (const g of deler) { pos.set(g.attributes.position.array, o * 3); kol.set(g.attributes.color.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));   // delenes egne (myke) normaler
+  const geo = TreDeler.samle(deler);
   return (TREGEO[type] = geo);
 }
 // Hindringer når du går: husomrissene og trestammene i et rutenett (20 m). hindring3d(x, y) = true når du ikke kan stå der.
@@ -2480,7 +2550,7 @@ function sett3d(u) {
       // detaljnivå: trærne nær kameraet med alle greinene, resten som enkle former (trærne var 1,4 av 1,9 mill. trekanter, 11. nov).
       // Matrisene og fargene regnes én gang; lodTrær() fordeler dem på de to nettene når kameraet har flyttet seg.
       const { M, C } = (K.tre && K.tre.get(data)) || kjørRett(treMatriser(data, smal, valg, true));
-      const lag = g => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.count = 0; m.frustumCulled = false; R.scene.add(m); R.treMesh.push(m); return m; };
+      const lag = g => { const m = new THREE.InstancedMesh(g, TreDeler.materiale(new THREE.MeshLambertMaterial({ vertexColors: true }), g), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.count = 0; m.frustumCulled = false; R.scene.add(m); R.treMesh.push(m); return m; };
       R.treLOD.push({ n, M, C, data, nær: lag(geo), fjern: lag(enkel), ...(valg || {}) });
       continue;
     }
