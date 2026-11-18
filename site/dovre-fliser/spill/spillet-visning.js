@@ -81,20 +81,25 @@
   function smell() { try { if (localStorage.getItem('riksbrudd-lyd') === 'av') return; lydK = lydK || new (window.AudioContext || window.webkitAudioContext)(); const n = lydK.sampleRate * .12, b = lydK.createBuffer(1, n, lydK.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); const s = lydK.createBufferSource(), g = lydK.createGain(); g.gain.value = .25; s.buffer = b; s.connect(g).connect(lydK.destination); s.start(); } catch (e) { /* ingen lyd */ } }
   function lad() { const nå = performance.now(), a = A(); if (K.lader > nå || a.v.mag === a.def.magasin || !a.reserve) return; K.lader = nå + a.def.lade * 1000; const v = a.v; setTimeout(() => { if (U()) U().lad(v); else { const t = Math.min(a.def.magasin - v.mag, reserveV.res); v.mag += t; reserveV.res -= t; } }, a.def.lade * 1000); }
   function skyt() { const Q = r3(), d = deg(), nå = performance.now(); if (!Q || !d || (window.KjorSpill && KjorSpill.fører()) || nå < K.lader || nå - K.sist < A().def.takt * 1000) return false; if (!K.mag) { lad(); return false; } const W = A().def;
-    K.sist = nå; K.mag--; smell(); const a = Q.fot.a, fx = -Math.sin(a), fy = Math.cos(a);
+    K.sist = nå; K.mag--; if (!W.stille) smell(); if (window.EventyrSpill && EventyrSpill.skudd) EventyrSpill.skudd(W); const a = Q.fot.a, fx = -Math.sin(a), fy = Math.cos(a);
     if (typeof SKUDD !== 'undefined') SKUDD.push({ a: { x: d.x, y: d.y, side: 'blå' }, b: { x: d.x + fx * 80, y: d.y + fy * 80, side: 'blå' }, til: nå + 1400 });
-    const sikt = (avst, v) => (window.Utstyr && W.rekkevidde ? Utstyr.sikter(W, avst, v) : Kamp.sikter(avst, v)), sj = avst => Math.min(.97, (window.Utstyr ? Utstyr.sjanse(W, avst) : Kamp.sjanse(avst)) * (window.OverlevSpill ? OverlevSpill.treff() : 1) * (window.KarakterSpill ? KarakterSpill.treff() : 1));
+    const sikt = (avst, v) => (window.Utstyr && W.rekkevidde ? Utstyr.sikter(W, avst, v) : Kamp.sikter(avst, v)), sj = avst => Math.min(.97, (window.Utstyr ? Utstyr.sjanse(W, avst) : Kamp.sjanse(avst)) * (window.OverlevSpill ? OverlevSpill.treff() : 1) * (window.KarakterSpill ? KarakterSpill.treff() : 1) * (window.EventyrSpill && EventyrSpill.treff ? EventyrSpill.treff() : 1));
     let best = null, bd = Infinity; for (const e of fiender()) { const dx = e.x - d.x, dy = e.y - d.y, avst = Math.hypot(dx, dy), v = Math.atan2(fx * dy - fy * dx, fx * dx + fy * dy); if (sikt(avst, v) && avst < bd) { bd = avst; best = e; } }
     // hvert hagl (ett for de fleste våpen, seks for hagla) kan treffe en mann
     // ferdigheten Skyting vokser når du skyter mot en fiende, mest når du treffer (spill/overlev.js)
     if (best && window.OverlevSpill) OverlevSpill.øk('skyting', 1);
-    if (best) for (let h = 0; h < (W.hagl || 1); h++) if (Math.random() < sj(bd)) { const m = best.menn.find(q => q.hp > 0); if (m) { m.hp = m.hp - W.skade < .05 ? 0 : m.hp - W.skade; K.treff = nå; if (window.OverlevSpill) OverlevSpill.øk('skyting', 2); if (!levende(best)) logg(`${best.navn} er slått ut.`); skitten = true; } }
+    if (best) for (let h = 0; h < (W.hagl || 1); h++) if (Math.random() < sj(bd)) { const m = best.menn.find(q => q.hp > 0); if (m) { const sk = W.skade * (window.EventyrSpill && EventyrSpill.hodeskudd && EventyrSpill.hodeskudd() ? 2 : 1); m.hp = m.hp - sk < .05 ? 0 : m.hp - sk; if (!m.hp && window.EventyrSpill && EventyrSpill.felt) EventyrSpill.felt(); K.treff = nå; if (window.OverlevSpill) OverlevSpill.øk('skyting', 2); if (!levende(best)) { logg(`${best.navn} er slått ut.`); } skitten = true; } }
     if (!K.mag) lad(); return true; }
-  function slåttUt() { K.hp = 60; K.mag = A().def.magasin; K.res = Math.max(K.res, A().def.magasin * 2); const f = F(); if (f) f.moral = Math.max(0, f.moral - 5); if (window.KjorSpill && KjorSpill.fører()) KjorSpill.ut(true); if (window.Gange) Gange.stopp();
+  function slåttUt() {
+    // et tilfluktssted i nærheten: du våkner der i stedet for i leiren (spill/eventyr-visning.js)
+    if (window.EventyrSpill && EventyrSpill.slåttUt && EventyrSpill.slåttUt(K)) return;
+    K.hp = 60; K.mag = A().def.magasin; K.res = Math.max(K.res, A().def.magasin * 2); const f = F(); if (f) f.moral = Math.max(0, f.moral - 5); if (window.KjorSpill && KjorSpill.fører()) KjorSpill.ut(true); if (window.Gange) Gange.stopp();
     const Q = r3(), leir = S() && S().leir; if (Q && Q.ut && leir) { Q.bane.x = leir.x - Q.ut.cx; Q.bane.y = leir.y - Q.ut.cy; } varsel('Du ble såret og båret tilbake til leiren. Gjengen mistet litt mot.'); }
-  function kampSteg() { const d = deg(); if (!d) { K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile * 3); return; } const nær = fiender().map(e => ({ avst: Math.hypot(e.x - d.x, e.y - d.y), menn: e.menn.filter(m => m.hp > 0).length })).filter(q => q.avst < 300);
+  function kampSteg() { const d = deg(); if (!d) { K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile * 3); return; } // dekning og sniking (spill/eventyr-visning.js): faktor per fiende – 0 når de ikke har oppdaget deg, mindre når du ligger eller står bak en vegg
+    const EV = window.EventyrSpill && EventyrSpill.fiendeFaktor ? EventyrSpill : null;
+    const nær = fiender().map(e => ({ avst: Math.hypot(e.x - d.x, e.y - d.y), menn: e.menn.filter(m => m.hp > 0).length * (EV ? EV.fiendeFaktor(d, e) : 1) })).filter(q => q.avst < 300);
     const dek = window.KjorSpill && KjorSpill.fører() ? 'kjøretøy' : window.OverlevSpill && OverlevSpill.iTilflukt() ? 'tilflukt' : window.Interior3d && Interior3d.inne(r3().bane.x, r3().bane.y) ? 'hus' : null, s = Kamp.skade(nær, dek);
-    if (s > 0) { K.hp -= s; K.skadd = performance.now(); if (K.hp <= 0) slåttUt(); } else if (!nær.length) K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile); }
+    if (s > 0) { K.hp -= s; K.skadd = performance.now(); if (EV && EV.truffet) EV.truffet(s); if (K.hp <= 0) slåttUt(); } else if (!nær.length) K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile); }
   const skytKnapp = el('button', { id: 'skytknapp', type: 'button' }, 'Skyt'); document.body.appendChild(skytKnapp); let holder = null;
   skytKnapp.addEventListener('pointerdown', e => { e.preventDefault(); skyt(); holder = setInterval(skyt, 150); });
   for (const t of ['pointerup', 'pointercancel', 'pointerleave']) skytKnapp.addEventListener(t, () => { clearInterval(holder); holder = null; });
