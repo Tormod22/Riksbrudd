@@ -142,7 +142,9 @@ lagreKratere, mineKrater, salve, lyng).
   (midten eller et hjørne) tar 25 % av stykkets hp per 30 min; et nedbrent stykke forsvinner (Leir.skad), og avlinga der er tapt.
 - Prøvd (Dovre): plassert 260 m vest for leiren, 5 mål, brennbar 0,9, tent på i åkeren → 75 % og 50 % igjen etter to halvtimer, 2D og 3D
   sett på bilde.
-- Svakhet: Leir.kanBygge vet ikke om veger og bekker, så en åker kan legges over en veg.
+- Leir.kanBygge ser bare på hjørnene og midten; for åkeren pakkes den inn (verden-visning.js) og sjekker også et rutenett på 5 × 9 punkter
+  inne på jordet for vann, tettbebyggelse og hus («Åkeren kan ikke ligge i tettbebyggelse.»). Prøvd i vakta med et kunstig kart.
+- Svakhet: veger og bekker sjekkes ikke (kartet som plasseringen får, har dem ikke), så en åker kan legges over en veg.
 
 ### 5. Funn
 - Et funn i tettbebyggelse (klasse 7), vann eller utenfor kartet flyttes til nærmeste åpne sted (`Verden.funnKandidater`: ringer hver
@@ -175,8 +177,9 @@ lagreKratere, mineKrater, salve, lyng).
 - **Brent mark**: lyse jorder og plener i kartbildet sto lyse midt i det brente (den svidde bakken ganget bakken med en mørk farge). Nå
   blandes bakken mot aske (`Effekter.REGLER.aske`: farge og dekning 0,74 der det har brent helt; hjørnefarger med alfa, vanlig blanding).
   Sett på bilde ved leiren på Dovre (svarte trær og askebakke, ingen GL-feil).
-- **Lyngen**: prøvd at materialet kompilerer (programnøkkel «gress-vind-true-lyng», gl.getError() = 0) og at tustene tegnes ovenfra.
-  Ikke sammenlignet før/etter på bilde.
+- **Lyngen**: prøvd at materialet kompilerer (programnøkkel «gress-vind-true-lyng1.6», gl.getError() = 0). Før/etter fra 60 m rett ovenfra
+  i skogen ved leiren (Høy grafikk, 12 000 tuster, alle lyng): bakken med tustene ble litt lysere (snitt 35,7 → 37,0 av 255; 12 % av
+  punktene endret) – virkningen er liten fra den høyden. Bilde: scratchpad natt/verden4/i3-lyng-sammen.png (venstre før, høyre etter).
 
 ### Prøvd i nettleser (runde 4, maskinen var svært tungt lastet – 3D-bildene er tatt i 1000 × 620)
 - Vakta (`pipeline/fliser/vakter/verden.js`) på Dovre-testsiden: PC og mobil, ok, under 1 s.

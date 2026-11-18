@@ -26,6 +26,15 @@
   if (window.Leir && !Leir.BYGG.åker) Leir.BYGG.åker = { navn: `Åker (${ÅB.mål} mål)`, pris: R.åker.rydd * ÅB.mål / R.åker.ryddMål, tid: ÅB.tid, kw: 0, modell: 'åker', fot: [-ÅB.bredde / 2, ÅB.bredde / 2, -ÅB.lengde / 2, ÅB.lengde / 2], mat: {}, åker: true,
     tekst: 'Pløyd jord: så om våren og høst om høsten (panelet «Verden»). Tørt korn brenner lett.' };
   if (window.Ikoner && Ikoner.BYGG && !Ikoner.BYGG.åker) Ikoner.BYGG.åker = 'blad';
+  // Leir.kanBygge ser bare på hjørnene og midten: åkeren er så stor at den sjekkes i et rutenett (5 × 9 punkter) for vann, tettbebyggelse
+  // og hus inne på jordet (pakket inn her, leir.js er ikke endret)
+  if (window.Leir && !Leir.kanBygge.verden) { const før = Leir.kanBygge;
+    const ny = function (L, b, v = {}, ...rest) { const f = før.call(this, L, b, v, ...rest); if (f || !b || b.type !== 'åker' || !v || !v.klasse) return f;
+      const fot = Leir.BYGG.åker.fot, c = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0);
+      for (let j = 0; j <= 8; j++) for (let i = 0; i <= 4; i++) { const lx = fot[0] + (fot[1] - fot[0]) * i / 4, ly = fot[2] + (fot[3] - fot[2]) * j / 8, x = b.x + lx * c - ly * sn, y = b.y + lx * sn + ly * c, k = v.klasse(x, y);
+        if (k === 3) return 'Åkeren kan ikke ligge i vann.'; if (k === 7) return 'Åkeren kan ikke ligge i tettbebyggelse.'; if (v.iHus && v.iHus(x, y)) return 'Det står et hus der åkeren skal ligge.'; }
+      return f; };
+    ny.verden = true; Leir.kanBygge = ny; }
   const BRANNER = window.BRANNER = [], BRENT = window.BRENT = [];
   window.VERDEN_SONER = () => V.soner.map(s => ({ type: s.type, x: s.x, y: s.y, r: s.r, til: s.til }));
   // (runde 4) er (x, y) i en sone? Flommer følger dalen (flomfeltet), så sirkelen over er bare en grov ramme rundt dem.

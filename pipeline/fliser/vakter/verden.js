@@ -57,7 +57,10 @@ module.exports = { navn: 'verden (vinter, snøstengte veger, flom i flomfeltet, 
       krev(!!(window.Dyr3d && Dyr3d.settFelte && Dyr3d.felte), 'felte dyr huskes ikke (Dyr3d.settFelte)');
       if (L && Leir.BYGG.åker) { const å0 = JSON.stringify(V.åker), b = { id: -7707, type: 'åker', x: l.x + 900, y: l.y + 900, ret: 0, igjen: 0, hp: 1, nivå: 1 }; L.bygg.push(b);
         try { const m0 = V.åker.mål; VS.syncÅker(); ut.åkerBygg = V.åker.mål - m0; krev(ut.åkerBygg === Verden.REGLER.åkerBygg.mål, 'åkerstykket teller ikke: ' + ut.åkerBygg); krev(VS.åkerVed(b.x + 10, b.y + 40) === b && !VS.åkerVed(b.x + 40, b.y), 'åkerstykket ligger feil');
-          krev(!!(window.Ikoner && Ikoner.BYGG.åker), 'åkeren mangler ikon'); }
+          krev(!!(window.Ikoner && Ikoner.BYGG.åker), 'åkeren mangler ikon');
+          // åkeren sjekkes inne på jordet: tettbebyggelse midt på gir feil, åpen mark gir ingen
+          const X = l.x + 5000, Y = l.y + 5000, kb = k => Leir.kanBygge(L, { type: 'åker', x: X, y: Y, ret: 0 }, { klasse: (x, y) => (Math.abs(x - X) < 1 && Math.abs(y - (Y + 25)) < 1 ? k : 2) });
+          ut.åkerTett = kb(7); krev(/tettbebyggelse/.test(ut.åkerTett || '') && kb(2) == null && /vann/.test(kb(3) || ''), 'åkeren sjekkes ikke inne på jordet: ' + ut.åkerTett + ' / ' + kb(2)); }
         finally { L.bygg.splice(L.bygg.indexOf(b), 1); Object.assign(V.åker, JSON.parse(å0)); } }
       else krev(false, 'Leir.BYGG.åker mangler');
       { const f = Verden.funnNær(l.x, l.y, 20000)[0]; if (f) { const r = await Promise.race([VS.plasserFunn(f), new Promise(q => setTimeout(() => q('tid'), 6000))]); ut.funnSted = r; krev(r === true || Array.isArray(r) || r === 'tid', 'funnet fikk ikke et sted: ' + JSON.stringify(r)); } }
