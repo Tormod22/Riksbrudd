@@ -104,4 +104,10 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
   const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
     nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; kjør(); } };
   rot.OpplaeringSpill = API;
+  // (balansen 18. nov) steget «Gå i 3D»: Gå setter deg ved karakteren din i leiren (Gange starter ved det valgte laget). Før startet du
+  // der kameraet så, ofte et stykke fra leiren. Lytter i fangstfasen, så valget er gjort før gange.js får trykket.
+  document.addEventListener('click', e => { const k = e.target && e.target.closest && e.target.closest('#gaaknapp'); if (!k || av || !T) return;
+    const s = Opplaering.neste(T); if (!s || s.id !== 'gaa' || (typeof R3 !== 'undefined' && R3 && R3.fot)) return;
+    const meg = typeof ENHETER !== 'undefined' ? ENHETER.find(q => q.karakter && q.side === 'blå') : null;
+    if (meg && typeof valgt !== 'undefined' && valgt !== meg) valgt = meg; }, true);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

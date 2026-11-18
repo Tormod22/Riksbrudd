@@ -11,13 +11,26 @@
 
   // ---------- TRUSSEL: røvere angriper leiren i bølger som vokser ----------
   const Trussel = {
-    // antall lag i bølge nr (1, 1, 2, 2, 3 … høyst 6)
-    lag: nr => klem(1 + Math.floor((nr - 1) / 2), 1, 6),
+    // BALANSEN (gjennomspillingen 18. nov: 4 røverlag på dag 7 mot ti personer, og 3–7 mill. kr i bytte per bølge – angrep var
+    // hovedinntekten). Alle tallene er Claudes forslag:
+    //  - bølgene vokser saktere (1, 1, 1, 2, 2, 2, 3 … høyst 6) og aldri over det spilleren kan møte (lagFor)
+    //  - første bølge tidligst etter 24 spilltimer / 30 minutter spilling, siden 16–26 timer / 16–28 minutter mellom
+    //  - byttet dekker skadene, ikke mer: 300 000 kr + 150 000 per bølge, høyst 1,5 mill.
+    //  - og aldri over det dagen tilsier: ett lag de tre første døgnene, så ett til hvert tredje døgn (dagerPerLag)
+    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
+    // antall lag i bølge nr (1, 1, 1, 2, 2, 2, 3 … høyst 6)
+    lag: nr => klem(1 + Math.floor((nr - 1) / Trussel.BALANSE.perLag), 1, 6),
+    // … men ikke flere enn spilleren kan møte: ett røverlag per åtte soldater (minst ett), og ett til når han har stridsvogn eller
+    // rakettartilleri. o: { soldater, tunge (antall tunge kjøretøy), dag (spilldøgn fra 0; uten dag gjelder ikke dagtaket),
+    // faktor (vanskelighetsgraden: lett 0,6 – hard 1,5) }
+    lagFor: (nr, o = {}) => { const B = Trussel.BALANSE, tak = Math.max(1, Math.ceil((o.soldater || 0) / B.mennPerLag)) + (o.tunge > 0 ? 1 : 0),
+        dagTak = o.dag >= 0 ? 1 + Math.floor(o.dag / B.dagerPerLag) : 6;
+      return Math.max(1, Math.round(Math.min(Trussel.lag(nr), tak, dagTak) * (o.faktor || 1))); },
     // ventetiden til neste bølge: spillminutter og ekte minutter med spilling (det som kommer først, gjelder)
-    vent: nr => ({ spill: klem(20 - nr, 10, 20) * 60, ekte: klem(26 - nr * 2, 12, 26) }),
+    vent: nr => ({ spill: klem(27 - nr, 16, 26) * 60, ekte: klem(30 - nr * 2, 16, 28) }),
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
     start: (leir, r1, r2) => { const v = r1 * 6.2832, d = 1400 + r2 * 800; return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
-    belønning: nr => 2e6 + 1e6 * nr,
+    belønning: nr => Math.min(Trussel.BALANSE.bytte.tak, Trussel.BALANSE.bytte.fast + Trussel.BALANSE.bytte.perBølge * nr),
     // NÅR ER BØLGEN OVER? (18. nov: røvere som var slått, trakk seg 3,9 km unna og ble stående – bølgen var «aktiv» for alltid, og det
     // kom aldri nye.) Et lag kan kjempe når det lever og ikke er slått ut. Bølgen er over når ingen kan kjempe ('slått'), eller når de
     // som kan, har holdt seg mer enn «borte» meter fra leiren i «borteMin» spillminutter ('unna'). Lag som venter på mørket (venter),
@@ -40,7 +53,7 @@
     endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
     // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
     // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
-    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 40, fyll: 10 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
+    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 60, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
     ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner' },
     // kjøpsprisen på tre, betong og stål er 1,5 × markedsprisen (frakt og mellommenn), så hogst og riving lønner seg klart
     PÅSLAG: 1.5,
