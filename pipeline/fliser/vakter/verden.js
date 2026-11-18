@@ -76,5 +76,5 @@ module.exports = { navn: 'verden (vinter, snøstengte veger, flom i flomfeltet, 
     Vaer.settÅrstid(VaerSpill.S, før.årstid, tid); Vaer.låsVær(VaerSpill.S, før.låst || 'auto'); if (!før.låst) VaerSpill.S.vær = før.vær; VaerSpill.straks(); VS.lagre(); VS.vis(før.åpen); skitten = true;
     return ut;
   });
-  return { ok: !d.feil.length, tekst: d.feil.length ? d.feil.join('; ') : `vinterføre, is, brann (${d.brann} ruter), flom, funn, åker (${d.avling} rasjoner), radio og panel virker`, data: d };
+  return { ok: !d.feil.length, tekst: d.feil.length ? d.feil.join('; ') : `vinterføre, snøstengte veger (${d.snøGrense} moh.), fiendens lag fryser (${d.fiendeFryser}), is, brann (${d.brann} ruter), flom (flomfelt ${d.flomfelt} ruter), funn (sted ${JSON.stringify(d.funnSted)}), åker som bygg (${d.åkerBygg} mål) og avling (${d.avling} rasjoner), radio og panel virker`, data: d };
 } };

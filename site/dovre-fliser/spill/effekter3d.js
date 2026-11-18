@@ -304,9 +304,15 @@
         if (brentVed(lokal, mx, my) < .3) continue; ant++;
         // mot klokka sett ovenfra, og litt større enn huset
         const P = (areal < 0 ? P0.slice().reverse() : P0).map(p => { const dx = p[0] - mx, dy = p[1] - my, l = Math.hypot(dx, dy) || 1; return [p[0] + dx / l * .25, p[1] + dy / l * .25]; });
-        let zb = Infinity; for (const p of P) zb = Math.min(zb, zVed(R, p[0], p[1])); zb -= .3; const zt = P0.topp + .3;
+        let zb = Infinity; for (const p of P) zb = Math.min(zb, zVed(R, p[0], p[1])); zb -= .3;
+        // (runde 4, sett på ekte hus på /rogaland) skallet følger taket: veggene opp til der taket begynner (P0.veggTopp fra hus3d), og et
+        // tak med møne langs den lengste siden opp til P0.topp – før var det et flatt lokk på toppen, som la en mørk flekk i lufta over
+        // saltakene og på bakken bak husene. Flate tak (uten veggTopp) får et flatt lokk som før.
+        const zv = (Number.isFinite(P0.veggTopp) ? Math.min(P0.veggTopp, P0.topp) : P0.topp) + .25, zt = P0.topp + .3, ms = sotMøne(P, mx, my);
         for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length];
-          pos.push(a[0], a[1], zb, b[0], b[1], zb, b[0], b[1], zt, a[0], a[1], zb, b[0], b[1], zt, a[0], a[1], zt, mx, my, zt, a[0], a[1], zt, b[0], b[1], zt); } }
+          pos.push(a[0], a[1], zb, b[0], b[1], zb, b[0], b[1], zv, a[0], a[1], zb, b[0], b[1], zv, a[0], a[1], zv);
+          if (zt - zv < .2) { pos.push(mx, my, zv, a[0], a[1], zv, b[0], b[1], zv); continue; }
+          const ra = ms(a), rb = ms(b); pos.push(a[0], a[1], zv, b[0], b[1], zv, rb[0], rb[1], zt); if (Math.hypot(ra[0] - rb[0], ra[1] - rb[1]) > .05) pos.push(a[0], a[1], zv, rb[0], rb[1], zt, ra[0], ra[1], zt); } }
       if (pos.length) { if (!R.effSotMat) R.effSotMat = new THREE.MeshBasicMaterial({ color: 0x4a4541, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
         const m = new THREE.Mesh(g, R.effSotMat); m.renderOrder = 4; m.frustumCulled = false; m.userData.sot = ant; R.scene.add(m); R.effBrent.push(m); } }
@@ -317,6 +323,13 @@
         // (rødt holdes lavest: «blad = grønnere enn rødt» i høstfargene skal fortsatt gjelde)
         t.C[k * 3] *= f * .9; t.C[k * 3 + 1] *= f * .78; t.C[k * 3 + 2] *= f * .7; } }
     R.lodVed = null;
+  }
+  // Mønet for sotlaget: linja gjennom midten langs husets lengste side, fra ende til ende av omrisset. Gir en funksjon som legger et
+  // punkt på omrisset vinkelrett inn på mønet (et punkt på en gavl havner i mønets ende, så gavlen blir en loddrett trekant).
+  function sotMøne(P, mx, my) {
+    let lx = 1, ly = 0, best = -1; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > best) { best = l; lx = (b[0] - a[0]) / (l || 1); ly = (b[1] - a[1]) / (l || 1); } }
+    let t0 = Infinity, t1 = -Infinity; for (const p of P) { const t = (p[0] - mx) * lx + (p[1] - my) * ly; t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
+    return p => { const t = Math.max(t0, Math.min(t1, (p[0] - mx) * lx + (p[1] - my) * ly)); return [mx + lx * t, my + ly * t]; };
   }
   // der det brenner: flammer og røyk (noen få av rutene per gang, tilfeldig valgt blant dem nær kameraet)
   function stegBrann(R, dt) {
