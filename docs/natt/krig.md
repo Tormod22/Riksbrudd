@@ -224,3 +224,21 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
 - `site/dovre-fliser/index.html`, `kamprunde()`: `ammo0 = a.ammo` før krokene, og `if (ildf <= 0) { a.ammo = ammo0; continue; }` (+ kommentar).
 - `site/dovre-fliser/spill/kontrollrom-visning.js`, `rapport()`: `hvile`-hjelper og `fiender: fiender.filter(f => !hvile(f))` i `nå` (+ kommentar).
 - `pipeline/fliser/test_terreng.js`: ny blokk 5b (brekken).
+
+## Runde 4, del 3: «det røde laget skjøt aldri tilbake» (funnet fra pakka «folk», docs/natt/folk.md punkt 9)
+- GJENSKAPT (scratchpad natt/krig/p10.js, samme oppsett: Dovre, AI av, «1. lag, Dombås» 100 m fra leiren, nytt rødt lag 360 m unna,
+  tempo 60 i 25 s), skudd talt per skytter: «Stridsvogn 1 -> Prøvefiende» 4–5, ellers ingen. Det blå laget og det røde laget skjøt ikke
+  på hverandre i det hele tatt: begge sto i skog (terrengklasse 1, trærne er 8 m høye i siktfeltet), og på 360 m så ingen av dem den andre
+  (`ser` usann begge veger – likt, så ingen feil der). Alle tapene til det røde kom fra stridsvogna i leiren, som skyter på alt som er
+  `synlig()` for deg – også det vaktene i leiren melder (KROKER.ser, 400–800 m) – uten å se målet selv. Det røde laget kunne ikke svare:
+  lag skyter bare mot kjøretøy de ser (`motKjøretøy`, enheter-visning.js). Skytterens bonus i folk-prøven virket altså ikke på
+  utfallet (kanonen bruker ikke KROKER.ild) – forskjellen der var tilfeldig.
+- EKTE FEIL i spillet, ikke bare oppsettet: røvere (side «rød», e.raid) som kommer gjennom skogen mot leiren, blir skutt av stridsvogna
+  så snart vaktene melder dem, og kan ikke svare før de selv ser vogna.
+- RETTET (enheter-visning.js, `motKjøretøy`, én betingelse med kommentar): et kjøretøy som skyter på laget (`k.skyterPå === a`), røper seg,
+  og laget svarer innen 600 m selv om det ikke ser det. Etter: «Stridsvogn 1 -> Prøvefiende» 5 og «Prøvefiende -> Stridsvogn 1» 5.
+  `motKjøretøy` er lagt til i `window.S6` (for vakta).
+- VAKT (vakter/krig.js, del «RUNDE 4»): et rødt lag uten siktfelt og en blå stridsvogn 300 m unna – uten at vogna skyter på laget, skyter
+  laget ikke; når vogna skyter på det, svarer det. Prøvd med feilen lagt inn igjen med vilje: vakta gir «svarer kjøretøy som skyter false».
+- IKKE ENDRET (designvalg, bør vurderes): stridsvogna skyter fortsatt på mål den selv ikke ser, så lenge du vet om dem (vakter, kameraer,
+  droner). Et blått lag som står og ser på, deltar ikke – det trenger egen sikt.
