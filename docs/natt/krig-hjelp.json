@@ -16,7 +16,7 @@
   ],
   [
     "Fanger og avhør",
-    "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål kan du avhøre dem (da får du vite hvor lagene deres står) eller sette dem fri.",
+    "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål → Fanger kan du avhøre dem (da får du vite hvor lagene deres står), bytte dem, sette dem i arbeid, gi dem god behandling eller sette dem fri.",
     "Lag og strid"
   ],
   [
@@ -78,5 +78,35 @@
     "Når angrepet er over",
     "Et angrep er slått tilbake når røverne er slått ut, eller når de har trukket seg unna og holdt seg over 2,5 km fra leiren i en halv time. Da får dere belønningen, og neste bølge kommer senere.",
     "Leiren"
+  ],
+  [
+    "Dekning bak leirens bygg",
+    "Et lag som står stille inntil et ferdig bygg i leiren, tar mye færre treff når bygget står mellom laget og fienden. Brakker, verksted og containere gir best dekning, telt og drivhus mindre. Sandsekkvollen har sin egen dekning.",
+    "Leiren"
+  ],
+  [
+    "Bytte fanger",
+    "Under Leir → Mål → Fanger: «Bytt» gir penger fra motstanderen (150 000 kr per fange). Har motstanderen tatt noen av dine, kan du bytte én mot én – de som kommer hjem, står som «fri» i Folk.",
+    "Lag og strid"
+  ],
+  [
+    "Fanger i arbeid",
+    "«Arbeid» setter fangene på bygg, hogst, riving eller frakt. En fange er en halv arbeider, men bare der minst én av dine arbeider. Fanger i arbeid kan rømme – mest når få vokter dem (folk på vakt og soldater ved leiren). De som rømmer, vet hvor leiren ligger.",
+    "Leiren"
+  ],
+  [
+    "Fanger som blir med",
+    "Gi fangene god behandling (én rasjon per fange per døgn). Etter tre døgn kan du spørre om de vil bli med i gjengen – flere sier ja når moralen er god. De trenger en ledig seng. Noen få kan være forrædere.",
+    "Leiren"
+  ],
+  [
+    "Krigen lagres",
+    "Røyk og lysraketter som brenner, helikopteret på tur og kjøreordrene for kjøretøyene dine er med når du kommer tilbake til spillet. Det samme er fiendens stillinger og det motstanderne vet om deg.",
+    "Kom i gang"
+  ],
+  [
+    "Krigen i 3D",
+    "Fiendens stillinger du har sett, står som ringer av sandsekker. Helikopteret flyr ut når det henter eller frakter et lag, og stedene der fiendens lag sist ble meldt, har et merke med «?».",
+    "I 3D"
   ]
 ]

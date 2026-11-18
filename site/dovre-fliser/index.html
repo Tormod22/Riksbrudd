@@ -844,6 +844,8 @@ function kamprunde() {
     a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
     if (!Terreng.slattUt(a.menn)) for (const b of ENHETER) {
       if (a.side === b.side || !levende(b)) continue;
+      // våpenhvile (spill/krig-visning.js, AI.hvile): ingen ild, og ingen krok kalles – Forsyning.skyt brukte ellers ammunisjon uten skudd
+      if (window.AI && AI.hvile && AI.hvile(a.side, b.side)) continue;
       // HERJER (spill/leir-visning.js): fiender som står inne i leiren og ødelegger bygg. De høres og ses av alle innen 300 m, selv om
       // en bakketopp står i veien – ellers kunne et røverlag rasere hele leiren mens egne lag sto 75 m unna uten å løsne skudd.
       const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || (!ser(a, b.x, b.y) && !(d < 300 && window.HERJER && (HERJER.has(a) || HERJER.has(b))))) continue;
@@ -3127,7 +3129,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=7b7c53027e"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=9bcbd8478d"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=c56e4c4938"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=4574ac903d"></script>
 <script src="/dovre-fliser/spill/veg.js?v=af17d48078"></script>
@@ -3143,7 +3145,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kyst.js?v=d9d23409d2"></script>
 <script src="/dovre-fliser/spill/kyst3d.js?v=32592143bd"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
-<script src="/dovre-fliser/spill/ferje3d.js?v=ab063b509f"></script>
+<script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/fjern3d.js?v=7628d04568"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
@@ -3157,10 +3159,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=f4fafad5ff"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
-<script src="/dovre-fliser/spill/oppstart.js?v=9c1b411ff7"></script>
+<script src="/dovre-fliser/spill/oppstart.js?v=01cf962b4b"></script>
 <script src="/dovre-fliser/spill/leir.js?v=0a4a249693"></script>
 <script src="/dovre-fliser/spill/folk.js?v=36b2b3ba41"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=17350781d3"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=89c9c0d40a"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=a38f7d1a58"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=97a5c23c7c"></script>
@@ -3213,23 +3215,23 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/karakter.js?v=cbb0f6973b"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=1fbadf5e33"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=630a58f880"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=20c5e3d93c"></script>
-<script src="/dovre-fliser/spill/region.js?v=cd509c7e64"></script>
-<script src="/dovre-fliser/spill/region-visning.js?v=a8b275ce39"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=7a6d2e1f65"></script>
+<script src="/dovre-fliser/spill/region.js?v=421e0ffcf2"></script>
+<script src="/dovre-fliser/spill/region-visning.js?v=dd960281b8"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
 <script src="/dovre-fliser/spill/samfunn.js?v=2f6c667e24"></script>
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=36dba41f7e"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=bb808bd838"></script>
-<script src="/dovre-fliser/spill/krig.js?v=de15252ca5"></script>
-<script src="/dovre-fliser/spill/krig-visning.js?v=b64da6f954"></script>
-<script src="/dovre-fliser/spill/krig3d.js?v=2ded9433c5"></script>
-<script src="/dovre-fliser/spill/kaier.js?v=25d49f01b7"></script>
+<script src="/dovre-fliser/spill/krig.js?v=0d3788d1ec"></script>
+<script src="/dovre-fliser/spill/krig-visning.js?v=bef4875e38"></script>
+<script src="/dovre-fliser/spill/krig3d.js?v=964d2c76f5"></script>
+<script src="/dovre-fliser/spill/kaier.js?v=bcd6f795c1"></script>
 <script src="/dovre-fliser/spill/verden.js?v=63902ec403"></script>
 <script src="/dovre-fliser/spill/verden-visning.js?v=a67d152c12"></script>
 <script src="/dovre-fliser/spill/kameravakt.js?v=d6903e035e"></script>
-<script src="/dovre-fliser/spill/sjo.js?v=73856bc159"></script>
-<script src="/dovre-fliser/spill/sjo-visning.js?v=a3755ad4e4"></script>
+<script src="/dovre-fliser/spill/sjo.js?v=fa150bf24d"></script>
+<script src="/dovre-fliser/spill/sjo-visning.js?v=097fe7af61"></script>
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=f68f153dd0"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=52c5507830"></script>

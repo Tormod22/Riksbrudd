@@ -163,7 +163,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (!grunn && window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, x, y)) grunn = `Leiren må ligge i ${SPILLOMRÅDE.navn}. Dette er utenfor spillkartet.`;
     forslag = { x, y, ok: !grunn }; skitten = true;
     let h = null; try { h = hoydeVed(x, y); } catch (e) { /* ingen høyde her */ }
-    visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?'), !grunn); return grunn;
+    // (18. nov, runde 4) andre moduler kan si noe om stedet: window.LEIRVALG_TILLEGG = [(x, y) => tekst] (kaier.js: nærmeste kai)
+    const til = grunn ? '' : (window.LEIRVALG_TILLEGG || []).map(f => { try { return f(x, y) || ''; } catch (e) { return ''; } }).filter(Boolean).join(' ');
+    visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?') + (til ? ' ' + til : ''), !grunn); return grunn;
   }
   function bekreft() {
     if (!forslag || !forslag.ok) return;

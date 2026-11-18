@@ -33,5 +33,20 @@
   "Kjøretøy på lekter og ferje",
   "En lekter tar to kjøretøy og en ferje seks. Kjør kjøretøyet bort til båten mens den ligger ved kai, velg båten og trykk «Kjør om bord». Lag som sitter i kjøretøyet, følger med. Ved neste kai: «Kjør i land».",
   "Lag og strid"
+ ],
+ [
+  "Bord eller senk fiendens båter",
+  "Fiendens forsyningsbåter (og båter med soldater) kan stoppes på tre måter: miner og vrak som før, ild – et lag innen 450 m som ser båten, skyter på den til den synker – eller bording: velg en egen båt med et lag om bord og trykk «Bord den» under «Fiendens forsyningsbåter». Båten jager forsyningsbåten, og når den er innen 60 m, tas lasten. Garnisonen som skulle hatt forsyningene, er avskåret og treffer dårligere.",
+  "Lag og strid"
+ ],
+ [
+  "Fienden bruker sjøen",
+  "Fiendens lag kan også ta båt: står de ved en kai og skal til et sted der sjøvegen er mye kortere enn vegen, går de om bord i en sjark og går i land ved kaia nær målet. Senk båten underveis, så mister de halvparten av mennene.",
+  "Lag og strid"
+ ],
+ [
+  "Kaier i 3D og ved oppstart",
+  "I 3D kan du trykke på en egen båt eller nær en kai for å åpne sjøpanelet, og gi båten et mål på samme måte som i kartet. Når du velger leirplass ved oppstart, sier startskjermen hvor nærmeste kai er og hvor stor den er – det avgjør hvilke båter leiren kan få. Tar du en ferje, går ikke ruteferja der lenger.",
+  "I 3D"
  ]
 ]

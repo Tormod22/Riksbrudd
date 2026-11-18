@@ -21,7 +21,17 @@
   const navn = (K, i) => (K.ni[i] ? K.navn[K.ni[i] - 1] : ''), tekst = (K, i) => { const n = navn(K, i), t = NAVN[K.t[i]] || 'Kai'; return (n ? `${n} (${t.toLowerCase()})` : t) + (K.l[i] > 0 ? `, ${K.l[i]} m kai` : ''); };
   // Hvor god er kaien for en leir? Større fartøy trenger lang kai: 'liten' (småbåter), 'middels' (sjark, lekter), 'stor' (lasteskip, ferje).
   const størrelse = (t, l) => (t >= 3 || l >= 150 ? 'stor' : t === 2 || l >= 50 ? 'middels' : 'liten');
-  const api = { NAVN, les, fra, iBoks, nær, vises, navn, tekst, størrelse };
+  // Tekst for leirvalget (runde 4): nærmeste kai innen 10 km og størrelsen, og nærmeste store kai hvis den nærmeste er mindre.
+  // Innen 3 km (Sjo.REGLER.leirKai) er kaia leirens egen: der kan båter kjøpes og losse rett inn i leiren. Avstandene er Claudes forslag.
+  const LEIRVALG = { søk: 10000, leirKai: 3000 };
+  const kmTekst = d => (d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(d < 10000 ? 1 : 0).replace('.', ',') + ' km');
+  const BÅTER = { liten: 'småbåt og sjark', middels: 'småbåt, sjark og lekter', stor: 'alle båter, også lekter og ferje' };
+  function leirTekst(K, x, y) { if (!K || !K.n) return '';
+    const f = nær(K, x, y, LEIRVALG.søk); if (!f) return 'Ingen kai innen 10 km – leiren får ingen båter.';
+    const st = størrelse(K.t[f.i], K.l[f.i]), n = navn(K, f.i), ut = [`Nærmeste kai: ${n ? n + ', ' : ''}${st} (${kmTekst(f.d)})${f.d <= LEIRVALG.leirKai ? ` – leirens egen kai: ${BÅTER[st]}` : ' – for langt til å være leirens kai (over 3 km)'}.`];
+    if (st !== 'stor') { const s = nær(K, x, y, LEIRVALG.søk, i => størrelse(K.t[i], K.l[i]) === 'stor'); if (s) ut.push(`Stor kai ${kmTekst(s.d)} unna.`); }
+    return ut.join(' '); }
+  const api = { NAVN, les, fra, iBoks, nær, vises, navn, tekst, størrelse, leirTekst, LEIRVALG };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Kaier = api;
 
@@ -57,6 +67,10 @@
     if (rot.SjoSpill && SjoSpill.kai(f.i)) return true;
     const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir, d = L ? Math.hypot(K.x[f.i] - L.x, K.y[f.i] - L.y) : null, st = størrelse(K.t[f.i], K.l[f.i]);
     logg(`${tekst(K, f.i)}. ${st === 'stor' ? 'Stor nok for lasteskip og ferjer.' : st === 'middels' ? 'Passer for sjarker og lektere.' : 'Bare for småbåter.'}${d !== null ? ` ${d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(d < 10000 ? 1 : 0).replace('.', ',') + ' km'} fra leiren.` : ''}`); return true; });
+  // ---------- leirvalget ved oppstart (runde 4) ----------
+  // Startskjermen (oppstart-visning.js, window.LEIRVALG_TILLEGG) sier hvor nærmeste kai er og hvor stor den er – kaia avgjør hvilke båter
+  // leiren kan få (spill/sjo.js) – og om det finnes en stor kai innen leirens rekkevidde.
+  (rot.LEIRVALG_TILLEGG = rot.LEIRVALG_TILLEGG || []).push((x, y) => leirTekst(K, x, y));
   // ---------- av/på i ☰ ----------
   const meny = document.getElementById('lagmeny'); if (meny) { const b = document.createElement('button'); b.id = 'vis-kaier'; b.textContent = 'Kaier'; const sett = () => { b.classList.toggle('av', !vis); b.setAttribute('aria-pressed', String(vis)); };
     b.onclick = () => { vis = !vis; try { localStorage.setItem('riksbrudd-kaier', vis ? '1' : '0'); } catch (e) { /* sperret */ } sett(); skitten = true; }; sett(); meny.appendChild(b); }

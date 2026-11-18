@@ -50,4 +50,17 @@ ok(S.nivå(5000).zv === 9 && S.nivå(30000).zv === 8 && S.nivå(100000).zv === 7
   ok(S.TYPER.lekter.kj === 2 && S.TYPER.ferje.kj === 6 && S.TYPER.sjark.kj === 0, 'kjøretøyplasser'); F.fiskere = 4; F.båter.push({ id: 1, type: 'lekter', navn: 'L', x: 0, y: 0, kai: 1, mål: -1, last: S.tomLast(), kj: ['Bil 1'] }); const G = S.fraJSON(JSON.parse(JSON.stringify(S.tilJSON(F)))); ok(G.fiskere === 4 && G.båter[0].kj[0] === 'Bil 1', 'fiskere og kjøretøy om bord lagres'); }
 // stort kart: tid
 { const w = 1600, h = 1600, V = { x0: 0, y0: h * 128, r: 128, w, h, K: new Uint8Array(w * h).fill(3) }; for (let j = 100; j < 1500; j++) for (let i = 790; i < 810; i++) V.K[j * w + i] = 1; const t0 = Date.now(), R = S.rute(V, 1000, 100000, 200000, 100000); ok(R.sti && Date.now() - t0 < 4000, 'stort kart på under 4 s (' + (Date.now() - t0) + ' ms)'); }
+// (runde 4) fiendens båter: ild, bording, AI som tar båt, middels havn
+{ const F = S.REGLER.fiendeBåt, b = { type: 'frakt', x: 0, y: 0 };
+  ok(S.skadBåt(b, [], 1) === null && b.hp === F.hp, 'ingen skyttere: ingen skade, full helse');
+  ok(S.skadBåt(b, [{ menn: 6, faktor: 0.3 }], 1) === 'truffet' && Math.abs(b.hp - (F.hp - 6 * F.skade * 0.3)) < 1e-9, 'seks mann med treff ×0,3 (om bord) gir ' + (6 * F.skade * 0.3).toFixed(1) + ' skade per minutt');
+  let n = 0; while (S.skadBåt(b, [{ menn: 6, faktor: 0.3 }], 1) !== 'senket' && n < 1000) n++; ok(b.hp === 0 && n > 5 && n < 40, `senket etter ${n + 2} spillminutter`);
+  ok(S.skadBåt({ type: 'frakt' }, [{ menn: 6, faktor: 0 }], 5) === null, 'stridsreglene sier nei (faktor 0): ingen skade');
+  const q = { x: 0, y: 0 }, f = { type: 'frakt', x: 50, y: 20 };
+  ok(S.kanBorde(q, 1, f) && !S.kanBorde(q, 0, f) && !S.kanBorde(q, 1, { ...f, x: 200 }) && !S.kanBorde(q, 1, { ...f, ai: true }) && !S.kanBorde(q, 1, { ...f, type: 'sjark' }), 'bording: lag om bord og innen ' + F.bord + ' m, bare forsyningsbåter');
+  const båt = S.nyBåt(S.ny(), 'småbåt', 0, 0), haug = S.fraktLast(), fikk = S.lastOm(båt, haug); ok(S.lastVekt(båt.last) <= S.TYPER.småbåt.last + 1e-9 && S.lastVekt(fikk) > 0 && S.lastVekt(haug) > 0, 'en småbåt tar bare en del av lasten');
+  ok(S.aiTarBåt(30000, 8000) && !S.aiTarBåt(12000, 8000) && !S.aiTarBåt(14000, 8000), 'AI tar båt når vegen er mye lengre enn sjøvegen');
+  ok(Math.abs(S.igjenAvSti([[0, 0], [100, 0], [100, 100]], 0, 50, 0) - 150) < 1e-9 && S.igjenAvSti(null, 0, 0, 0) === 0, 'igjen av marsjruta');
+  const T = S.ny(); S.havnSteg(T, [{ id: 1, folk: 500 }, { id: 2, folk: 500, størrelse: 'middels' }], 7 * 1440);
+  ok(Math.abs(T.havner[2].rasjoner - T.havner[1].rasjoner * S.REGLER.middelsHavn) < 1e-9 && T.havner[2].rasjoner > 0, 'middels kai gir ' + Math.round(S.REGLER.middelsHavn * 100) + ' % av en stor havn'); }
 console.log(feil ? feil + ' feil' : 'test_sjo: alt i orden'); process.exit(feil ? 1 : 0);

@@ -2,7 +2,7 @@
 // «Slik spiller du»: ?-knappen øverst åpner en kort veiledning til alt i spillet. Vises av seg selv første gang (ikke i testene).
 (function () {
   const DELER = [
-    ['Nytt spill', 'Første gang lager du karakteren din (navn, utseende, bakgrunn med bonus) og fraksjonen (navn og eget flagg), og du velger hvor leiren skal ligge. Dere starter med 100 millioner kr (øverst). «Nytt spill» i ☰ begynner på nytt.'],
+    ['Nytt spill', 'Første gang lager du karakteren din (navn, utseende, bakgrunn med bonus) og fraksjonen (navn og eget flagg), og du velger hvor leiren skal ligge. Dere starter med 40 millioner kr (øverst; «Lett» gir mer, «Hard» mindre) og ti personer – troppene lager du selv av folkene (Leir → Tropper). «Nytt spill» i ☰ begynner på nytt.'],
     ['Tiden', '1× er sanntid: ett minutt i spillet er ett minutt i virkeligheten. 10×, 60× og 600× går fortere, ❚❚ stopper tiden, og samme knapp (da ▶) starter den igjen i farten du hadde. Spillet lagres i nettleseren av seg selv: klokka, årstida og været, leiren og folket, og hvor lagene og kjøretøyene dine står og hvordan de har det. Ordre som var i gang, og fiendens lag, lagres ikke ennå.'],
     ['Lagene', 'Trykk på et lag og så «Marsjer» og et sted på kartet – ruten følger veger og terreng. Trykk på en soldat for å gjøre ham til lagfører. «Grav ned» gir halvparten så mange treff.'],
     ['Tåke', 'Du ser bare det lagene, stridsvognene, dronene og radaren ser. Resten ligger i tåke; «sist sett» viser hvor fienden var.'],
