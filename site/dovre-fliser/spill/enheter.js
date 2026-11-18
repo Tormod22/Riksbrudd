@@ -21,6 +21,12 @@
     // innen stillingRadius fra nedslaget og er farlig for kjøretøy, men kan ikke skyte nær seg selv.
     roller: { stridsvogn: { dekkFaktor: 1.8, stillingSjanse: .5, kjøretøy: [2, .35], tekst: 'mot stillinger og kjøretøy' },
       rakettartilleri: { stillingRadius: 100, tekst: 'mot stillinger og kolonner langt unna' } },
+    // EGEN SIKT (19. nov, Claudes forslag): kanonen skyter bare på mål vogna selv ser (siktfeltet fra tårnet, øyne 3 m oppe, sikt-radien
+    // over), eller som et eget lag innen nabo meter fra vogna ser. Det vaktene, kameraene, dronene og radaren melder, kan vogna kjøre mot,
+    // men ikke skyte på (meldt = treffaktor for et mål som bare er meldt: 0 = ingen skudd). Siktfeltet regnes på nytt når vogna har flyttet
+    // seg flytt meter; har den flyttet seg mer enn gammel meter siden sist, brukes den gamle regelen (sirkel, ikke inn i skog) til det nye er klart.
+    // Et lag inne i skogen ser vogna bare innen skog meter. minnes: spillminutter mellom hver melding om et mål vogna ikke ser.
+    egenSikt: { øyne: 3, nabo: 150, meldt: 0, flytt: 40, gammel: 200, minnes: 30, skog: 150 },
     styrke: { stridsvogn: 30, speiderbil: 3, lastebil: 1, rakettartilleri: 1, radar: 1 },   // hvor farlig kjøretøyet er for et lag (AI-en)
   };
   // Kjøretøytypene for spill/kjoretoy.js (legges inn i Kjoretoy.TYPER av visningen eller testen).
@@ -39,6 +45,18 @@
     skyt(R.kanon, R.rekkevidde); skyt(R.mg, R.mgRekkevidde);
     return treff;
   }
+
+  // Kan stridsvogna skyte på målet? selv: vogna ser det selv; nabo: et eget lag rett ved vogna ser det; meldt: noen andre har meldt
+  // det (vakter, kameraer, droner, radar). Gir treffaktoren (1 = full ild, REGLER.egenSikt.meldt for et mål som bare er meldt).
+  function kanonFaktor(selv, nabo, meldt) { return selv || nabo ? 1 : meldt ? REGLER.egenSikt.meldt : 0; }
+  // Nærmeste mål innen rekkevidden som vogna kan skyte på. mål: [{ x, y, ... }]; faktor(b) = kanonFaktor for b. Gir { mål, avstand, faktor } eller null.
+  function velgKanonmål(k, mål, faktor, rekkevidde = REGLER.stridsvogn.rekkevidde) {
+    let best = null, bd = rekkevidde, bf = 0;
+    for (const b of mål) { const d = Math.hypot(b.x - k.x, b.y - k.y); if (d >= bd) continue; const f = faktor(b); if (!(f > 0)) continue; best = b; bd = d; bf = f; }
+    return best ? { mål: best, avstand: bd, faktor: bf } : null;
+  }
+  // Treff ganget med en faktor under 1: hvert treff står med sannsynlighet f.
+  function tynn(treff, f, rng) { if (f >= 1) return treff; let t = 0; for (let i = 0; i < treff; i++) if (rng() < f) t++; return t; }
 
   // Stridsvogn mot et kjøretøy: treff i én kamprunde (bare kanonen).
   function kanonMotKj(avstand, f, rng) {
@@ -109,7 +127,7 @@
     if (kj.antall <= 0) kj.skade = 0;
     return { ødelagt, borte: kj.antall <= 0 };
   }
-  const api = { REGLER, KJORETOY, skad, kanonrunde, kanonMotKj, rivStillinger, avfyr, nedslag, nedslagKj, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
+  const api = { REGLER, KJORETOY, skad, kanonrunde, kanonMotKj, kanonFaktor, velgKanonmål, tynn, rivStillinger, avfyr, nedslag, nedslagKj, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Enheter = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

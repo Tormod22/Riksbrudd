@@ -48,7 +48,14 @@ finally { fs.rmSync(dir, { recursive: true, force: true }); }
 Object.assign(K.TYPER, E.KJORETOY); const g = les(data);
 for (const type of Object.keys(E.KJORETOY)) { const kj = K.ny({ navn: type, type, x: 0, y: 0 }), r = K.planlegg(kj, g, [2000, 0]); assert(!r.feil && r.sekunder > 0, type); }
 { const vm = require('vm'), k = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/enheter.js'), 'utf8'), k); assert.equal(typeof k.Enheter.avfyr, 'function'); }
-console.log('ok – stridsvogn (avstand, skog, marsj), artilleri (i ro, rekkevidde, ladetid, spredning, egne i nærheten), radar, drone, nye kjøretøy på vegnettet');
+// EGEN SIKT (19. nov): kanonen skyter bare på det vogna selv eller et lag rett ved ser; det som bare er meldt, gir ingen skudd
+{ assert.equal(E.kanonFaktor(true, false, true), 1); assert.equal(E.kanonFaktor(false, true, false), 1); assert.equal(E.kanonFaktor(false, false, true), E.REGLER.egenSikt.meldt);
+  assert.equal(E.kanonFaktor(false, false, false), 0); assert.equal(E.REGLER.egenSikt.meldt, 0, 'meldte mål gir ingen skudd');
+  const k = { x: 0, y: 0 }, mål = [{ x: 300, y: 0, ser: false }, { x: 900, y: 0, ser: true }, { x: 2500, y: 0, ser: true }];
+  const v = E.velgKanonmål(k, mål, b => (b.ser ? 1 : 0)); assert.equal(v.mål, mål[1], 'det nærmeste vogna ser, ikke det nærmeste som er meldt'); assert.equal(v.avstand, 900);
+  assert.equal(E.velgKanonmål(k, mål, () => 0), null, 'ingen mål når ingen ses'); assert.equal(E.velgKanonmål(k, [mål[2]], () => 1), null, 'utenfor rekkevidden');
+  let t = 0; for (let i = 0; i < 1000; i++) t += E.tynn(4, .25, rng); assert(t > 800 && t < 1200, 'tynn gir en firedel'); assert.equal(E.tynn(3, 1, rng), 3); assert.equal(E.tynn(3, 0, rng), 0); }
+console.log('ok – stridsvogn (avstand, skog, marsj), egen sikt (meldte mål gir ikke skudd), artilleri (i ro, rekkevidde, ladetid, spredning, egne i nærheten), radar, drone, nye kjøretøy på vegnettet');
 if (process.argv[2]) {   // ekte vegnett: stridsvogna kjører Dombås–Otta saktere enn lastebilen
   const ekte = les(fs.readFileSync(process.argv[2]));
   const tid = type => K.planlegg(K.ny({ navn: type, type, x: 193233, y: 6896398 }), ekte, [212021, 6860888]).sekunder;

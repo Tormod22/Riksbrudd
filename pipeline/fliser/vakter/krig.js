@@ -101,10 +101,35 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     }
     return ut;
   });
-  Object.assign(d, { r4: d4 });
+  // RUNDE 5 (18.–19. nov kveld): stridsvogna skyter bare på det den selv eller et eget lag rett ved ser – ikke på det dronen melder
+  const d5 = await pg.evaluate(async () => {
+    const ut = {}, K = KJORETOY.find(k => k.side === 'blå' && k.type === 'stridsvogn');
+    if (!K || !window.S6 || !S6.vognSikt || !window.Enheter || !Enheter.velgKanonmål) return { uten: true };
+    const k0 = { x: K.x, y: K.y, sti: K.sti, skyterPå: K.skyterPå, meldtSett: K.meldtSett }, tempo0 = tempo, dr0 = DRONER.length, lag = [];
+    try {
+      tempo = 0; K.sti = null; await S6.vognSikt(K); let p = null;
+      for (let r = 300; r <= 1150 && !p; r += 50) for (let a = 0; a < 6.28 && !p; a += .2) { const x = K.x + Math.cos(a) * r, y = K.y + Math.sin(a) * r; if (!vognSer(K, x, y, null)) p = [x, y]; }
+      ut.skjult = !!p;
+      if (p) { const b = nyttLag('Vakt5 rød', p[0], p[1], 'rød'); b.her = { k: 2, h: 0 }; ENHETER.push(b); lag.push(b);
+        // de andre fiendene langt unna mens vogna prøves (de flyttes tilbake i finally)
+        for (const e of ENHETER) if (e !== b && e.side !== 'blå' && Math.hypot(e.x - K.x, e.y - K.y) < 2500) { lag.push({ flyttet: e, x: e.x, y: e.y }); e.x += 60000; }
+        DRONER.push({ navn: 'Vakt5-drone', x: p[0], y: p[1], mål: p.slice(), igjen: 7200, retning: 0, fase: 'over målet' });
+        ut.meldt = synlig(b); let n0 = SKUDD.length; for (let i = 0; i < 3; i++) S6.kanon(K); ut.skuddMeldt = SKUDD.slice(n0).filter(q => q.a === K && q.b === b).length;
+        // et eget lag rett ved vogna som ser målet
+        const a = nyttLag('Vakt5 blå', K.x + 60, K.y, 'blå'); ENHETER.push(a); lag.push(a); a.sikt = { x0: K.x - 5000, y0: K.y + 5000, mw: 1, mh: 1, r: 1e5, m: new Uint8Array([1]) };
+        n0 = SKUDD.length; S6.kanon(K); ut.skuddNabo = SKUDD.slice(n0).filter(q => q.a === K && q.b === b).length; }
+    } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
+    finally {
+      for (const q of lag) { if (q.flyttet) { q.flyttet.x = q.x; q.flyttet.y = q.y; } else if (ENHETER.includes(q)) ENHETER.splice(ENHETER.indexOf(q), 1); }
+      for (let i = DRONER.length - 1; i >= dr0; i--) if (DRONER[i].navn === 'Vakt5-drone') DRONER.splice(i, 1);
+      Object.assign(K, k0); tempo = tempo0; skitten = true; }
+    return ut; });
+  Object.assign(d, { r4: d4, r5: d5 });
   const ok4 = !d4.feil && d4.dekning < .7 && Math.abs(d4.dekningAv - 1) < 1e-9 && d4.dekningTekst && d4.bytt && (d4.byttEgne === undefined || (d4.byttEgne && d4.arbeid && d4.ikkeEnnå && d4.spør && d4.forslag)) && d4.lagring && d4.krig3d && d4.ryddet && (d4.svarer === undefined || (d4.svarer && d4.ikkeUtenGrunn));
   const ok = !d.feil && d.flanke > 1.4 && Math.abs(d.av - 1) < 1e-9 && d.snudd && d.fart < .9 && d.natt < .6 && d.nattsikt > 1.5 && d.røyk < .5 && d.gaSeg && d.levert && d.avhør && d.etter && d.avhørt && d.meny
     && (d.fred === undefined || (d.fred && d.fredIld && d.brutt)) && /fører: .+\(.+\)/.test(d.fører) && d.knapp && d.panel >= 6 && d.lagret && d.ryddet && d.hus < .75 && d.holdt && d.egetGaSeg && d.krig3d && d.stridsvalg && (d.bølgeOver === undefined || (d.bølgeVenter && d.bølgeOver));
   const tekst4 = ` · RUNDE 4: dekning bak egen brakke ×${(d4.dekning || 0).toFixed(2)}, bytte ${!!d4.bytt}/${d4.byttEgne}, fanger i arbeid ${d4.arbeid}, rekruttering ${d4.spør}, forslag om bytte ${d4.forslag}, svarer kjøretøy som skyter ${d4.svarer}, lagring ${d4.lagring}${d4.feil ? ' FEIL ' + d4.feil : ''}`;
-  return { ok: ok && ok4, tekst: tekst4.slice(3) + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
+  const ok5 = d5.uten || (!d5.feil && (!d5.skjult || (d5.meldt && d5.skuddMeldt === 0 && d5.skuddNabo > 0)));
+  const tekst5 = ` · RUNDE 5: stridsvogna skyter på et meldt mål den ikke ser: ${d5.skuddMeldt === 0 ? 'nei' : d5.skuddMeldt} (meldt: ${d5.meldt}), med et eget lag ved som ser det: ${d5.skuddNabo}${d5.skjult === false ? ' (fant ikke skjult punkt)' : ''}${d5.feil ? ' FEIL ' + d5.feil : ''}`;
+  return { ok: ok && ok4 && ok5, tekst: tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
 } };

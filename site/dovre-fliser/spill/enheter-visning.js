@@ -13,11 +13,47 @@
   const av = t => KJORETOY.filter(k => k.type === t && k.side === 'blå');
   const kmTekst = m => nf.format(Math.round(m / 100) / 10) + ' km';
   // Ser noen av våre punktet? (lagenes siktfelt, dronene og radaren) – observert ild treffer bedre.
-  const observert = (X, Y) => ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, X, Y)) || DRONER.some(d => E.droneSer(d, X, Y));
+  // (19. nov) Artilleriet skyter på et punkt, ikke på et mål det ser selv, så en observatør er greit – men observasjonen må nå fram:
+  // laget må ha radiokontakt (KROKER.innsyn, som for det du ser på kartet). Vaktene og kameraene i leiren er ikke observatører.
+  const observert = (X, Y) => ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, X, Y) && KROKER.innsyn.every(f => f(s))) || DRONER.some(d => E.droneSer(d, X, Y));
+
+  // ---------- stridsvognas egen sikt (19. nov) ----------
+  // Før skjøt vogna på alt du visste om (synlig(): også det vaktene, kameraene og dronene meldte), selv bak en ås eller i skogen.
+  // Nå: siktfeltet fra tårnet (Terreng.siktfelt, øyne 3 m), regnet i bakgrunnen når vogna har flyttet seg; til det er klart, den gamle
+  // regelen (sirkel på 1,2 km, ikke inn i skog). Siktfeltet ligger utenfor kjøretøyet (WeakMap), så det ikke lagres.
+  const RS = R.egenSikt, VSIKT = new WeakMap();
+  async function vognSikt(k) {
+    const o = VSIKT.get(k) || {}; VSIKT.set(k, o); o.jobb = true; o.bedt = performance.now();
+    try {
+      const X = k.x, Y = k.y, r = R.stridsvogn.sikt, v = await lagVindu([X - r - 100, Y - r - 100, X + r + 100, Y + r + 100], false), m = Terreng.siktfelt(v, X, Y, r, RS.øyne);
+      const [oi, oj] = Terreng.rute(v, X, Y), Rc = Math.ceil(r / v.r) + 1, i0 = Math.max(0, oi - Rc), j0 = Math.max(0, oj - Rc), i1 = Math.min(v.w - 1, oi + Rc), j1 = Math.min(v.h - 1, oj + Rc), w = i1 - i0 + 1, h = j1 - j0 + 1;
+      const mk = new Uint8Array(w * h); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) mk[j * w + i] = m[(j0 + j) * v.w + i0 + i];
+      o.sikt = { x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, m: mk, mw: w, mh: h, r: v.r }; o.ved = [X, Y];
+    } catch (e) { console.error(e); } finally { o.jobb = false; }
+  }
+  // Ser vogna punktet selv? true/false, eller null når siktfeltet ikke er regnet her ennå (da gjelder den gamle sirkelen)
+  // (et lag inne i skogen ser vogna bare på nært hold, RS.skog meter – som før, da hele skogen var skjult for den)
+  function vognSer(k, X, Y, e) {
+    const d = Math.hypot(k.x - X, k.y - Y); if (d > R.stridsvogn.sikt) return false;
+    if (e && e.her && e.her.k === 1 && d > RS.skog) return false;
+    const o = VSIKT.get(k);
+    if (o && o.sikt && Math.hypot(k.x - o.ved[0], k.y - o.ved[1]) <= RS.gammel) return ser({ sikt: o.sikt }, X, Y);
+    return true;
+  }
+  // Et eget lag rett ved vogna (RS.nabo) som ser punktet – det kan vise vogna målet
+  const naboSer = (k, X, Y) => ENHETER.some(s => s.side === k.side && levende(s) && !s.ombord && Math.hypot(s.x - k.x, s.y - k.y) <= RS.nabo && ser(s, X, Y));
+  const kanonF = (k, b) => E.kanonFaktor(vognSer(k, b.x, b.y, b), naboSer(k, b.x, b.y), synlig(b));
+  window.vognSer = vognSer;
+  KROKER.sim.push(() => {
+    const nå = performance.now();
+    for (const k of KJORETOY) { if (k.type !== 'stridsvogn') continue; const o = VSIKT.get(k);
+      if (o && (o.jobb || nå - o.bedt < 1500)) continue;
+      if (!o || !o.ved || Math.hypot(k.x - o.ved[0], k.y - o.ved[1]) > RS.flytt) vognSikt(k); }
+  });
 
   // ---------- hva dronene og radaren ser ----------
   KROKER.ser.push(e => DRONER.some(d => E.droneSer(d, e.x, e.y)) || av('radar').some(r => E.radarSer(r, e))
-    || av('stridsvogn').some(k => Math.hypot(k.x - e.x, k.y - e.y) <= R.stridsvogn.sikt && !(e.her && e.her.k === 1)));
+    || av('stridsvogn').some(k => vognSer(k, e.x, e.y, e)));
   KROKER.tåke.push((g, vx0, vy1) => {
     const m = kam.m; g.fillStyle = '#000';
     for (const d of DRONER) { if (d.fase === 'tom') continue; g.beginPath(); g.arc((d.x - vx0) / m, (vy1 - d.y) / m, R.drone.sikt / m, 0, 6.283); g.fill(); }
@@ -44,13 +80,15 @@
     if (valgt === b) visPanel(); skitten = true;
   }
   function kanon(k) {
-    let best = null, bd = R.stridsvogn.rekkevidde;
-    for (const b of ENHETER) { if (b.side === k.side || !levende(b) || Terreng.slattUt(b.menn) || !synlig(b)) continue; const d = Math.hypot(b.x - k.x, b.y - k.y); if (d < bd) { bd = d; best = b; } }
+    // (19. nov) bare mål vogna selv ser, eller som et eget lag rett ved ser – det andre har meldt, gir ikke skudd (kanonF)
+    const lag = ENHETER.filter(b => b.side !== k.side && levende(b) && !Terreng.slattUt(b.menn) && !(window.AI && AI.hvile && AI.hvile(k.side, b.side)));
+    const valg = E.velgKanonmål(k, lag, b => kanonF(k, b));
+    let best = valg && valg.mål, bd = valg ? valg.avstand : R.stridsvogn.rekkevidde;
     // ROLLER (18. nov): ingen lag i sikte – da skyter kanonen på fiendens kjøretøy
-    if (!best) { let kj = null, kd = R.stridsvogn.rekkevidde; for (const q of KJORETOY) { if (q.side === k.side || !(window.kjoretoySes ? kjoretoySes(q) : observert(q.x, q.y))) continue; const d = Math.hypot(q.x - k.x, q.y - k.y); if (d < kd) { kd = d; kj = q; } }
-      if (kj) { const t = E.kanonMotKj(kd, { skytterPåMarsj: !!k.sti, målPåMarsj: !!kj.sti }, rng); if (k.skyterPå !== kj) logg(`${k.navn} skyter mot ${kj.navn} (${Math.round(kd)} m).`); k.skyterPå = kj; SKUDD.push({ a: k, b: kj, til: performance.now() + 1400 }); if (t) skadKj(kj, t, true, k.navn); return; }
-      k.skyterPå = null; return; }
-    let treff = E.kanonrunde(bd, { målISkog: !!best.her && best.her.k === 1, skytterPåMarsj: !!k.sti }, rng);
+    if (!best) { const kv = E.velgKanonmål(k, KJORETOY.filter(q => q.side !== k.side), q => kanonF(k, q)), kj = kv && kv.mål, kd = kv && kv.avstand;
+      if (kj) { const t = E.tynn(E.kanonMotKj(kd, { skytterPåMarsj: !!k.sti, målPåMarsj: !!kj.sti }, rng), kv.faktor, rng); if (k.skyterPå !== kj) logg(`${k.navn} skyter mot ${kj.navn} (${Math.round(kd)} m).`); k.skyterPå = kj; SKUDD.push({ a: k, b: kj, til: performance.now() + 1400 }); if (t) skadKj(kj, t, true, k.navn); return; }
+      k.skyterPå = null; meldtUtenSikt(k, lag); return; }
+    let treff = E.tynn(E.kanonrunde(bd, { målISkog: !!best.her && best.her.k === 1, skytterPåMarsj: !!k.sti }, rng), valg.faktor, rng);
     // ROLLER (18. nov): kanonen knekker stillinger – et mål i skyttergrav eller stilling tar flere treff, og stillingen kan rives
     { const RS = R.roller.stridsvogn, ST = window.STILLINGER || [], iSt = ST.some(q => q.side === best.side && Math.hypot(q.x - best.x, q.y - best.y) <= 25);
       if ((best.nedgravd || iSt) && (!window.KrigSpill || KrigSpill.auto())) { let t = treff; for (let i = 0; i < treff; i++) if (rng() < RS.dekkFaktor - 1) t++; treff = t;
@@ -58,6 +96,15 @@
     if (k.skyterPå !== best) logg(`${k.navn} skyter mot ${best.navn} (${Math.round(bd)} m).`); k.skyterPå = best;
     SKUDD.push({ a: k, b: best, til: performance.now() + 1400 });
     if (treff) { if (synlig(best)) logg(`${best.navn}: ${treff} treff fra ${k.navn}.`); treffPå(best, treff); }
+  }
+  // Et fiendelag du vet om innen rekkevidden, men som vogna ikke ser: si fra én gang per lag (RS.minnes spillminutter), så spilleren
+  // skjønner hvorfor den ikke skyter og kan kjøre nærmere eller sende et lag dit.
+  function meldtUtenSikt(k, lag) {
+    if (k.side !== 'blå') return; let b = null, bd = R.stridsvogn.rekkevidde;
+    for (const q of lag) { const d = Math.hypot(q.x - k.x, q.y - k.y); if (d < bd && synlig(q)) { bd = d; b = q; } }
+    if (!b) return; k.meldtSett = k.meldtSett || {}; const n = k.meldtSett[b.navn];
+    if (n !== undefined && tid - n < RS.minnes) return; k.meldtSett[b.navn] = tid;
+    logg(`${k.navn}: ${b.navn} er meldt ${Math.round(bd)} m unna, men vogna ser dem ikke selv – kjør nærmere eller send et lag dit.`);
   }
   // Lag som ikke skjøt mot et annet lag sist runde, skyter mot kjøretøy fra en annen side som de ser innen 600 m.
   function motKjøretøy() {
@@ -127,7 +174,7 @@
     SALVER.push(r.salve); logg(`${k.navn} skyter en salve mot målet ${kmTekst(Math.hypot(X - k.x, Y - k.y))} unna (${obs ? 'observert' : 'ingen ser målet – stor spredning'}). Nedslag om ${R.artilleri.flytid} s.`);
     skitten = true; return r.salve;
   }
-  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon, motKjøretøy };   // for sjekk.js
+  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon, motKjøretøy, vognSer, naboSer, kanonF, vognSikt };   // for sjekk.js
   KROKER.trykk.unshift((X, Y) => {
     if (ildModus) { const k = ildModus; ildModus = null; ild(k, X, Y); visKjoretoy(k); return true; }
     if (droneModus) { const b = droneModus; droneModus = null; sendDrone(b, X, Y); if (window.visBase) visBase(b); return true; }
