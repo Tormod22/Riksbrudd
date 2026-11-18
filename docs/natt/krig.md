@@ -288,6 +288,9 @@ vakt.js / vakt2.js kjører vakta på PC og mobil, vakt2.js med infrastrukturen s
   (`VEG_TLF.test`). (c) Bitene pakkes ut rett fra en Blob (før ble de kopiert sammen først: 25 MB ekstra på toppen – gjelder også PC).
 - Prøvd (p2.js, telefonprofil): et rødt lag 9 km fra Dombås med lastebilen ved seg – vegnettet ble hentet (2,6–4,2 s fra lokal kopi), laget satte seg
   i bilen og kjørte til Dombås, 0 sidefeil. Spillet var klart etter 11–12 s både før og etter (ingenting nytt lastes ved oppstart).
+- Prøvd ende til ende på /rogaland med ekte data (p8.js, telefon 390 × 844, AI på, 600×, `VEG_TLF.test = true`): etter ca. 20 s hentet telefonen
+  vegnettet selv (483 242 lenker rundt Ryfylke), og etter ca. 55 s satt Kystalliansens 3. lag og Folkefrontens 3. lag i hver sin lastebil og kjørte
+  (mot Vikedal 20 km og Sand 18 km). 0 sidefeil. Bilde: `natt5/krig/fiende-kjorer-390x844.png`.
 - Spillerens egne kjøreordre på telefon bruker samme utsnitt; et mål utenfor gir «på telefon er bare vegene i området rundt leiren lastet (ca. 150 km
   hver veg) – velg et mål nærmere». PC og testene: hele landet som før.
 
