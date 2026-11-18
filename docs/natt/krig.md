@@ -181,3 +181,13 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
 - 3D: ingen figurer i stillingene; etterretningsmerket er i overlegget (ikke i scenen); trær ryddes i ringen, men ikke busker fra
   vegetasjon3d som ikke ligger i R.treMesh/R.småMesh.
 - Bygdevernet faller fort mot fulle lag (8 mann på under 50 min mot 24) – tallene i `Krig.REGLER.vern` er ikke endret.
+
+## Runde 4, del 2 (18. nov dag)
+### 1. Sikten er lik begge veger (terreng.js)
+- `Terreng.siktfelt(v, X, Y, radius, oyne = 2, mål = 1.8)`: målet i en rute er en person 1,8 m over bakken (`MÅL_HØYDE`, Claudes
+  forslag); den som ser, har fortsatt øynene 2 m oppe. Før ble bakken prøvd: på brekken ved Dovre (1118 -> 1127 moh. på 250 m) så laget
+  på flata laget nedenfor, men ikke omvendt. Ingen andre endringer i terreng.js (to linjer + kommentar).
+- test_terreng.js (5b): brekkprofilen fra Dovre i 18 plasseringer – 0 skjeve nå, 3 skjeve med bakken som mål (mål = 0, testen finner feilen),
+  og en person bak en 60 m rygg synes fortsatt ikke. Alle regeltestene (alle pipeline/fliser/test_*.js) går som før – ingen eksisterende
+  test endret svar. I nettleser: de to lagene på brekken ser nå hverandre begge veger.
+- Virkning i spillet: det lyse siktfeltet viser nå der en person ville synes (litt større i kupert terreng, likt på flatt).
