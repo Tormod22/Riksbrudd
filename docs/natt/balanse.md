@@ -283,3 +283,32 @@ Første valg på alle kort. Hvert døgn får inntil 6–7,5 minutter ekte tid (s
 Fredstiden for motstanderne i `fraksjoner-visning.js` er satt fra 4 til **7 døgn på «Vanlig»** (7 / fiendens faktor, 4–10: Lett ca. 9,
 Hard ca. 5), etter forslaget over (kjøring 7 og 8 falt for Kystalliansen på dag 5–6). Ett døgn før den slutter, kommer et varsel i
 loggen («Motstanderne samler seg …»). Claudes forslag – ikke spilt gjennom på nytt.
+
+## Runde 5 (18.–19. nov kveld)
+
+Utgangspunktet: det som ble publisert kl. 22:45 (`claude/nattfiks`): fredstid 7 døgn på Vanlig, røvere som tar bytte og flykter,
+lagene hjemme forsvarer, reparasjon mellom bølgene, lut og sekk. **Alle tallene er Claudes forslag.**
+
+### Feil: last på nytt midt i et angrep fjernet røverne (rettet)
+- Ny fil `spill/trussel-lagring.js` (regler øverst uten DOM, `test_trussel_lagring.js`; visningen `window.TrusselLagringSpill`), lastet
+  rett etter `forsvar-visning.js`. Lagrer hvert femte sekund og ved `pagehide`/skjult fane i `riksbrudd-angrep` = `{ leir: 'x,y', d }`
+  (per leir, som resten): bølgen (`aktiv`), klokka, og hvert røverlag med det `Lagring.pakkLag` tar med (sted, menn og helse, ammunisjon,
+  målet for marsjen) + `raid`, `fra`, `inne`, `trekker`/`flykter`, `trekkerFra`, `bytte`, `venterNatt`. Lag som går bort fra en bølge
+  som er over (raid < 0), kommer også med. Egne lag i forsvar får tilbake stridsreglene fra før forsvaret og plassen (`stridFør`,
+  `forsvar` – lagring.js tar dem ikke med), og reglene settes tilbake når bølgen er over (`etterBølgen`).
+- Lagringen leses bare for samme bølge, ikke når den er eldre enn to spilldøgn (`REGLER.maksAlder`) eller lagret mer enn to spilltimer
+  «etter» klokka (`REGLER.framtid` – et nytt spill på samme sted). Røverne står stille og får ordren på nytt etter 1,5 s (de som trakk
+  seg ut eller flyktet: samme vei ut). Loggen (ekte spill): «Angrepet fortsetter: ett røverlag i bølge N er fortsatt ved leiren.»
+- **Fellesfil:** `spillet-visning.js` start() – én linje før den gamle: `if (avbrutt && TrusselLagringSpill.tilbake(avbrutt) > 0)` beholder
+  bølgen (T.aktiv), ellers som før (samme bølge på nytt om 20 spillminutter).
+
+### Feil: hjelpen og opplæringen kom samtidig første gang
+- Rettet alt i runde 4 av pakka «telefon2» i `hjelp.js` (første(): åpnes ikke av seg selv mens opplæringen går og ikke er ferdig;
+  opplæringen har «Les mer i hjelpen»). Prøvd på nytt her i et ekte spill (webdriver av, tomt minne) – se under. Vakta sjekker det nå.
+
+### Døgnoppgjøret om morgenen (nytt)
+- Dagboka (`dagbok.js`) fantes: folk, moral, mat, diesel og kassa kl. 06. Den sa ikke hva som hendte. Ny fil `spill/forsvar-oppgjor.js`
+  (regler øverst, `test_forsvar_oppgjor.js`; `window.OppgjorSpill`): rett etter dagbokas rapport en linje «Siste døgn: Bølge 3 slått
+  tilbake. 2 nye sårede, 1 falt. Brakke ødelagt. 1 bygg skadet. 2 hus gjennomsøkt. 1 har dratt.» (eller «Et rolig døgn»). Maten står i
+  dagbokas linje rett over (og i oppgjøret bare når dagboka mangler). Bildet fra i går lagres i `riksbrudd-oppgjor` per leir.
+  Ikke i testene (OppgjorSpill.test).

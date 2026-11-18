@@ -32,10 +32,14 @@
     if (b && b.lager && typeof b.lager === 'object') for (const [k, v] of Object.entries(b.lager)) if (/^[a-zæøå]+$/.test(k) && tall(v, 0) > 0) ut.lager[k] = r1(tall(v, 0));
     return ut;
   }
-  // o: { aktiv (bølgen som pågår, 0 = ingen), tid, lag: [røverlagene – også de som går bort fra en bølge som er over] }
+  // o: { aktiv (bølgen som pågår, 0 = ingen), tid, lag: [røverlagene – også de som går bort fra en bølge som er over],
+  //      egne: [egne lag i forsvar – stridsreglene de hadde før forsvaret (stridFør) og plassen (forsvar), som lagring.js ikke tar med] }
   function pakk(o) {
     return { versjon: VERSJON, aktiv: Math.max(0, Math.round(tall(o.aktiv, 0))), tid: Math.max(0, Math.round(tall(o.tid, 0))),
-      lag: (o.lag || []).filter(e => e && e.navn && Array.isArray(e.menn) && Number.isFinite(e.x) && Number.isFinite(e.y)).map(pakkEn) };
+      lag: (o.lag || []).filter(e => e && e.navn && Array.isArray(e.menn) && Number.isFinite(e.x) && Number.isFinite(e.y)).map(pakkEn),
+      egne: (o.egne || []).filter(s => s && s.navn && (s.stridFør || s.forsvar)).map(s => Object.assign({ navn: s.navn },
+        s.stridFør && typeof s.stridFør === 'object' ? { stridFør: { ...s.stridFør } } : {},
+        s.forsvar && Number.isFinite(s.forsvar.x) && Number.isFinite(s.forsvar.y) ? { forsvar: { ...s.forsvar, x: r1(s.forsvar.x), y: r1(s.forsvar.y) } } : {})) };
   }
   // Leser lagringen for bølgen «aktiv». Ødelagt, ukjent versjon, en annen bølge, eller eldre enn REGLER.maksAlder (o.tid = klokka nå)
   // gir null. Lagene som hører til bølgen (raid === aktiv), og de som gikk bort fra en eldre bølge (raid < 0), kommer med.
@@ -45,7 +49,9 @@
       const lag = (Array.isArray(d.lag) ? d.lag : []).filter(q => q && typeof q.navn === 'string' && q.navn && Number.isFinite(q.x) && Number.isFinite(q.y) && Array.isArray(q.menn) && q.menn.length
         && Number.isFinite(q.raid) && (q.raid === aktiv || q.raid < 0) && typeof q.side === 'string' && q.side !== 'blå');
       if (!lag.some(q => q.raid === aktiv)) return null;
-      return { aktiv, tid: tall(d.tid, 0), lag };
+      const egne = (Array.isArray(d.egne) ? d.egne : []).filter(q => q && typeof q.navn === 'string' && q.navn && (q.stridFør === undefined || (q.stridFør && typeof q.stridFør === 'object'))
+        && (q.forsvar === undefined || (q.forsvar && Number.isFinite(q.forsvar.x) && Number.isFinite(q.forsvar.y))));
+      return { aktiv, tid: tall(d.tid, 0), lag, egne };
     } catch (e) { return null; }
   }
   // Setter et nytt lag (fra nyttLag) slik det ble lagret. Står stille til det får ordren på nytt (målLagret = målet for marsjen).
@@ -68,20 +74,27 @@
   const spill = () => rot.OppstartSpill && OppstartSpill.tilstand();
   const leirId = () => { const S = spill(); return S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : null; };
   const T = () => (rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null);
-  let sist = 0, gjenopprettet = 0;
+  let sist = 0, gjenopprettet = 0, bølgeTilbake = 0;
+  const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.karakter && !s.leirvakt && Array.isArray(s.menn));
   function lagre() {
     const id = leirId(), t = T(); if (!id || !t) return false;
-    const lag = ENHETER.filter(e => e.raid && e.side !== 'blå');
-    try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, d: pakk({ aktiv: t.aktiv || 0, tid, lag }) })); return true; } catch (e) { return false; }
+    const lag = ENHETER.filter(e => e.raid && e.side !== 'blå'), egne = t.aktiv ? egneLag().filter(s => s.stridFør || s.forsvar) : [];
+    try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, d: pakk({ aktiv: t.aktiv || 0, tid, lag, egne }) })); return true; } catch (e) { return false; }
   }
   function lesLagret() { try { const o = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); return o && o.leir === leirId() ? o.d : null; } catch (e) { return null; } }
-  // tilbake(aktiv): legger røverlagene i bølgen «aktiv» tilbake i ENHETER. Gir antallet lag i bølgen som kom tilbake (0 = ingenting lagret).
-  function tilbake(aktiv) {
+  // tilbake(aktiv, tving): legger røverlagene i bølgen «aktiv» tilbake i ENHETER. Gir antallet lag i bølgen som kom tilbake (0 = ingenting
+  // lagret). I testene (navigator.webdriver) som før – ingen røvere tilbake – med mindre TrusselLagringSpill.test (eller
+  // window.TRUSSEL_LAGRING_TEST = true før skriptene lastes, for omlastingsprøven) eller tving.
+  function tilbake(aktiv, tving) {
+    if (navigator.webdriver && !ut.test && !tving) return 0;
     const d = fraJSON(lesLagret(), aktiv, { tid: typeof tid === 'number' ? tid : undefined }); if (!d) return 0;
     const nye = [];
     for (const q of d.lag) { if (ENHETER.some(e => e.navn === q.navn && e.raid)) continue;
       const s = nyttLag(q.navn, q.x, q.y, q.side); brukEn(s, q); ENHETER.push(s); nye.push(s); }
     const n = nye.filter(s => s.raid === aktiv).length; gjenopprettet = n;
+    // egne lag i forsvar: stridsreglene fra før forsvaret og plassen (lagring.js har alt lagt lagene tilbake). ForsvarSpill vet ikke
+    // etter omlastingen at forsvaret var satt, så reglene settes tilbake her når bølgen er over (se KROKER.sim under).
+    if (n) { for (const q of d.egne) { const s = egneLag().find(e => e.navn === q.navn); if (!s) continue; if (q.stridFør && !s.stridFør) s.stridFør = q.stridFør; if (q.forsvar) s.forsvar = q.forsvar; } bølgeTilbake = aktiv; }
     // ordren på nytt når kartet rundt er lastet: de som trakk seg ut eller flyktet, går samme vei ut; de andre fortsetter mot leiren
     setTimeout(() => { const S = spill(); if (!S || !S.leir) return;
       for (const s of nye) { if (!ENHETER.includes(s) || !levende(s)) continue; const m = s.målLagret; delete s.målLagret;
@@ -91,9 +104,13 @@
     if (n && !navigator.webdriver) logg(`Angrepet fortsetter: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} i bølge ${aktiv} er fortsatt ved leiren.`);
     skitten = true; return n;
   }
+  // bølgen som kom tilbake, er over: egne lag får stridsreglene fra før forsvaret og går ut av forsvarsstillingen
+  function etterBølgen() { const t = T(); if (!bølgeTilbake || !t || t.aktiv === bølgeTilbake) return false; bølgeTilbake = 0;
+    if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) return false;
+    for (const s of egneLag()) { if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; } return true; }
   // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes
-  KROKER.sim.push(() => { const nå = performance.now(); if (nå - sist < REGLER.hverMs) return; sist = nå; lagre(); });
+  KROKER.sim.push(() => { etterBølgen(); const nå = performance.now(); if (nå - sist < REGLER.hverMs) return; sist = nå; lagre(); });
   rot.addEventListener('pagehide', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  rot.TrusselLagringSpill = { NØKKEL, lagre, tilbake, lesLagret, gjenopprettet: () => gjenopprettet };
+  const ut = rot.TrusselLagringSpill = { test: rot.TRUSSEL_LAGRING_TEST === true, NØKKEL, lagre, tilbake, lesLagret, etterBølgen, gjenopprettet: () => gjenopprettet };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

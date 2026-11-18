@@ -58,17 +58,27 @@ async function runde5(pg) {
       if (!TL.lagre()) feil.push('lagringen av angrepet feilet');
       // «siden lastes på nytt»: lagene borte, så tilbake
       ENHETER.splice(ENHETER.indexOf(a), 1); ENHETER.splice(ENHETER.indexOf(b), 1);
-      d.tilbake = TL.tilbake(nr);
+      d.tilbake = TL.tilbake(nr, true);
       const a2 = ENHETER.find(e => e.navn === a.navn && e.raid === nr), b2 = ENHETER.find(e => e.navn === b.navn && e.raid === nr);
       if (d.tilbake !== 2 || !a2 || !b2) feil.push(`røverlagene kom ikke tilbake (${d.tilbake})`);
       else { if (Math.abs(a2.x - a.x) > 1 || a2.inne !== 33 || a2.menn[1].hp !== .25 || a2.menn[2].hp !== 0 || !a2.fra) feil.push('røverlaget kom tilbake, men ikke som det var');
         if (!b2.trekker || !b2.bytte || b2.bytte.penger !== 77000) feil.push('byttet og «trekker seg ut» ble borte'); }
       // en annen bølge (eller ingen) gir ingenting tilbake
-      if (TL.tilbake(nr + 1) !== 0) feil.push('lagringen ga røvere til feil bølge');
+      if (TL.tilbake(nr + 1, true) !== 0 || TL.tilbake(nr) !== 0) feil.push('lagringen ga røvere til feil bølge (eller i testene uten test-bryteren)');
       // døgnoppgjøret: et bilde, og teksten etter en bølge som ble slått tilbake
       if (!OS || !window.Oppgjor) feil.push('døgnoppgjøret mangler');
       else { const bi = OS.bilde(); const t = Oppgjor.tekst({ ...bi, bølge: 0, aktiv: 0 }, { ...bi, bølge: 1, aktiv: 0 }); d.oppgjør = t && t.tekst;
         if (!bi || !Array.isArray(bi.bygg) || !/Bølge 1 slått tilbake/.test(d.oppgjør || '')) feil.push('døgnoppgjøret sier ikke at bølgen ble slått tilbake'); }
+      // lagene hjemme fyller ammunisjon fra kassa (basen uten olje) og de sårede hviler – mellom angrepene
+      const HS = window.HjemmeSpill, s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && !e.ombord && Array.isArray(e.menn) && e.menn.length >= 2 && levende(e));
+      if (!HS || !window.Hjemme) feil.push('HjemmeSpill mangler');
+      else if (s) { T0.aktiv = 0; for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1); const fiendeR = Hjemme.REGLER.fiende; Hjemme.REGLER.fiende = 0; const fx = [s.x, s.y, s.sti, s.planlegger, s.ammo, s.menn.map(m => m.hp)], B = window.OLJE && OLJE.BASER[0], olje = B ? B.beholdning : 0, p0 = OppstartSpill.tilstand().penger, test = HS.test;
+        if (p0 < 2e6) OppstartSpill.gi(2e6); const p1 = OppstartSpill.tilstand().penger;
+        try { s.x = L.x + 30; s.y = L.y + 10; s.sti = null; s.planlegger = false; s.ammo = .5; s.menn[0].hp = .5; if (B) B.beholdning = 0; HS.test = true; HS.steg(60);
+          d.hjemme = { ammo: Math.round(s.ammo * 100), hp: Math.round(s.menn[0].hp * 100), kr: p1 - OppstartSpill.tilstand().penger };
+          if (!(s.ammo > .7 && s.ammo < 1 && d.hjemme.kr > 0)) feil.push('laget hjemme fikk ikke ammunisjon for penger'); if (!(s.menn[0].hp > .5)) feil.push('den sårede hvilte ikke'); }
+        finally { HS.test = test; Hjemme.REGLER.fiende = fiendeR; if (B) B.beholdning = olje; [s.x, s.y, s.sti, s.planlegger] = fx; if (fx[4] === undefined) delete s.ammo; else s.ammo = fx[4]; s.menn.forEach((m, i) => { m.hp = fx[5][i]; });
+          const diff = p0 - OppstartSpill.tilstand().penger; if (diff > 0) OppstartSpill.gi(diff); else if (diff < 0) OppstartSpill.betal(-diff); s.siktSkitten = true; } }
       // hjelpen åpnes ikke av seg selv mens opplæringen går (første gang)
       if (window.Hjelp && window.OpplaeringSpill) { localStorage.removeItem('riksbrudd-hjelp'); OpplaeringSpill.test = true; const av = OpplaeringSpill.av(); if (av) OpplaeringSpill.slå(true);
         const ferdig = window.Opplaering && Opplaering.ferdig(OpplaeringSpill.tilstand()); d.hjelpFørst = Hjelp.første(); if (d.hjelpFørst && !ferdig) feil.push('hjelpen åpnet seg selv mens opplæringen går'); if (av) OpplaeringSpill.slå(false); }
@@ -85,7 +95,7 @@ async function runde5(pg) {
   });
   // ordrene til røverne som kom tilbake, sendes etter 1,5 s – lagene er alt fjernet, men vent så ingenting henger igjen
   await pg.waitForTimeout(1700);
-  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 5: ' + r.feil.join('; ') : 'runde 5: angrepet lagres og kommer tilbake, døgnoppgjøret og opplæringen før hjelpen ok', data: r.d };
+  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 5: ' + r.feil.join('; ') : `runde 5: angrepet lagres og kommer tilbake, ammunisjon og hvile hjemme (${r.d.hjemme ? r.d.hjemme.kr + ' kr' : '–'}), døgnoppgjøret og opplæringen før hjelpen ok`, data: r.d };
 }
 
 // (runde 4, 18. nov) røvere som har herjet trekker seg ut med byttet, lagene hjemme går mot røvere i leiren, byggelagene reparerer og

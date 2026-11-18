@@ -5,7 +5,8 @@ const lag = (navn, raid, x, y, ekstra = {}) => Object.assign({ navn, side: 'rød
 const a = lag('Røvere 3.1', 3, 1000.04, 2000.06, { fra: { x: 2400, y: 1900 }, inne: 47.26, bytte: null });
 const b = lag('Røvere 3.2', 3, 1100, 2100, { trekker: true, trekkerFra: 1234.4, bytte: { penger: 400000, lager: { tre: 2.5, betong: 0, stål: 1 }, diesel: 30, mat: 6 } });
 const c = lag('Røvere 2.1', -2, 3000, 2500, { trekker: true });
-const d = TL.pakk({ aktiv: 3, tid: 4321.7, lag: [a, b, c, { navn: 'uten menn' }] });
+const egen = { navn: 'Tropp 1', stridFør: { ild: 'fri', underlegen: 'trekk', tap: 3, fram: 'nei', bev: 'standard' }, forsvar: { x: 10.04, y: 20, voll: 3 } };
+const d = TL.pakk({ aktiv: 3, tid: 4321.7, lag: [a, b, c, { navn: 'uten menn' }], egne: [egen, { navn: 'Tropp 2' }] });
 ok(d.versjon === TL.VERSJON && d.aktiv === 3 && d.tid === 4322, 'versjon, bølge og tid');
 ok(d.lag.length === 3, 'tre lag (laget uten menn er tatt ut)');
 ok(d.lag[0].inne === 47.3 && d.lag[0].fra.x === 2400 && d.lag[0].x === 1000 && d.lag[0].menn.length === 3, 'sted, tid inne, der de kom fra og mennene');
@@ -14,6 +15,7 @@ ok(d.lag[1].trekker && d.lag[1].trekkerFra === 1234 && d.lag[1].bytte.penger ===
 const tekst = JSON.stringify(d);
 const r = TL.fraJSON(tekst, 3, { tid: 4400 });
 ok(r && r.lag.length === 3, 'leses tilbake for samme bølge');
+ok(r.egne.length === 1 && r.egne[0].stridFør.underlegen === 'trekk' && r.egne[0].forsvar.x === 10 && r.egne[0].forsvar.voll === 3, 'egne lag i forsvar: reglene fra før og plassen');
 ok(TL.fraJSON(tekst, 4, { tid: 4400 }) === null, 'en annen bølge gir null');
 ok(TL.fraJSON(tekst, 0) === null, 'ingen bølge gir null');
 ok(TL.fraJSON(tekst, 3, { tid: 4322 + 3 * 1440 }) === null, 'for gammelt (tre døgn) gir null');
