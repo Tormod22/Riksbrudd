@@ -111,6 +111,8 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
       // på vei dit vi sendte laget, og målet har ikke flyttet seg mye; eller står alt nær nok; eller fikk ordre for under 4 s siden
       if (s.sti && s.motMål && Math.hypot(s.motMål.x - q.mål.x, s.motMål.y - q.mål.y) < R.mot.ny) continue;
       if (!s.sti && q.meter <= R.mot.avstand + R.mot.nær) continue;
+      // står laget stille og skyter alt (kjøring 6b: lagene flyttet seg hele tiden etter røverne og traff dårlig på marsj)
+      if (!s.sti && s.skyterPå && s.skyterPå.size && q.meter <= R.mot.skyter) continue;
       if (performance.now() - (s.motTid || 0) < 4000 || !kanStille(s)) continue;
       s.motHerjer = q.fi.navn; s.motMål = q.mål; s.motTid = performance.now(); ordre(s, q.mål.x, q.mål.y, true); navn.push(s.navn); }
     if (navn.length && !motMeldt) { motMeldt = true; logg(`Røverne er inne i leiren! ${navn.join(', ')} går mot dem.`); } }

@@ -41,10 +41,11 @@
   // Kjøring 4: røverne sto et døgn inne i leiren og ødela bygg etter bygg mens lagene ble stående i stillingene sine, og byggene ble
   // aldri reparert. Tallene er Claudes forslag:
   //  mot.inne: røvere nærmere leirens midte enn dette er «inne i leiren»; mot.avstand: lagene går hit (meter fra røverne, på sin egen
-  //  side); mot.ny: målet må ha flyttet seg så langt før et lag på vei får ny ordre; mot.nær: et lag som står innen avstand + nær, blir stående. rep.under: byggelagene reparerer bygg under denne helsen
+  //  side); mot.ny: målet må ha flyttet seg så langt før et lag på vei får ny ordre; mot.nær: et lag som står innen avstand + nær, blir stående; mot.skyter: et lag som
+  //  står stille og skyter, blir stående så lenge røveren er innenfor dette. rep.under: byggelagene reparerer bygg under denne helsen
   //  av seg selv; rep.reserve: så mye blir alltid igjen i kassa; rep.varsel: bygg under denne helsen teller som skadet i varselet.
   // (kjøring 5: på 50 m sto lagene i skogen uten å se røverne midt i leiren og løsnet ikke et skudd – nå 25 m)
-  R.mot = { inne: 150, avstand: 25, ny: 40, nær: 30 };
+  R.mot = { inne: 150, avstand: 25, ny: 40, nær: 30, skyter: 120 };
   R.rep = { under: .95, reserve: 3e5, varsel: .98 };
   // HJEM IGJEN (kjøring 6: lagene «trakk seg tilbake» 1,5 km etter stridsreglene sine, ble stående der i døgn, og var ikke hjemme
   // da neste bølge kom). Et lag som trakk seg tilbake av seg selv, går hjem når det har gått «vent» spillminutter, står mer enn «fra» m

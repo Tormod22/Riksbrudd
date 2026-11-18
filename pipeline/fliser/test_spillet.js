@@ -9,8 +9,8 @@ let frø = 7; const rng = () => (frø = (frø * 16807) % 2147483647) / 214748364
   ok(Trussel.ferdig([l(true, false, 3000)], 0) === 'trekker' && Trussel.ferdig([l(true, false, 3000)], 29) === 'trekker' && Trussel.ferdig([l(true, false, 3000), l(true, true, 100)], 30) === 'unna', 'angrep: over når de som kan kjempe, har vært over 2,5 km unna i 30 spillminutter');
   ok(Trussel.ferdig([l(true, false, 3000, true)], 99) === null, 'angrep: røvere som venter på mørket, teller ikke som unna'); }
 // (runde 4) røvere som har herjet i leiren, trekker seg med byttet – bølgen er over uten belønning
-ok(!Trussel.herjet({ inne: 59 }) && Trussel.herjet({ inne: 60 }) && !Trussel.herjet({}), 'herjing: et røverlag trekker seg etter en spilltime inne i leiren');
-{ const m = (ute, n) => Array.from({ length: n }, (_, i) => ({ hp: i < ute ? 0 : 1 })); ok(!Trussel.brutt(m(2, 6)) && Trussel.brutt(m(3, 6)) && !Trussel.brutt(m(4, 9)) && Trussel.brutt(m(5, 9)) && !Trussel.brutt([]), 'røverne gir opp når halvparten er falt eller såret'); }
+ok(!Trussel.herjet({ inne: 89 }) && Trussel.herjet({ inne: 90 }) && !Trussel.herjet({}), 'herjing: et røverlag trekker seg etter halvannen spilltime inne i leiren');
+{ const m = (ute, n) => Array.from({ length: n }, (_, i) => ({ hp: i < ute ? 0 : 1 })); ok(!Trussel.brutt(m(1, 6)) && Trussel.brutt(m(2, 6)) && !Trussel.brutt(m(2, 9)) && Trussel.brutt(m(3, 9)) && Trussel.brutt(m(4, 12)) && !Trussel.brutt([]), 'røverne gir opp når en tredel er falt eller såret'); }
 ok(Trussel.ferdig([{ lever: true, slåttUt: false, avstand: 50, trekker: true }], 0) === 'herjet' && Trussel.ferdig([{ lever: true, slåttUt: false, avstand: 50, trekker: true }, { lever: true, slåttUt: true, avstand: 80 }], 0) === 'herjet', 'herjing: bølgen er over når alle som kan kjempe, har trukket seg med byttet');
 ok(Trussel.ferdig([{ lever: true, slåttUt: false, avstand: 50, trekker: true }, { lever: true, slåttUt: false, avstand: 80 }], 0) === null, 'herjing: ikke over mens et annet røverlag fortsatt kjemper');
 { const b = Trussel.bytte({ penger: 2.5e6, lager: { tre: 10, betong: 0, stål: 3 }, diesel: 400, mat: 40 }), b2 = Trussel.bytte({ penger: 40e6 });

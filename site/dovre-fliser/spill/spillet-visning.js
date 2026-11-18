@@ -69,8 +69,8 @@
   function angrepSteg() { if (!T.aktiv) { if (auto() && (tid >= T.nesteSpill || ekte >= T.nesteEkte)) { T.nesteSpill = T.nesteEkte = Infinity; angrep(); } return; }
     const lag = ENHETER.filter(e => e.raid === T.aktiv), leir = S().leir;
     if (auto()) for (const e of lag) { if (e.trekker || e.flykter || !levende(e) || Terreng.slattUt(e.menn)) continue;
-      // halvparten ute: røverne gir opp og flykter (bølgen kan da bli slått tilbake); ellers: har de herjet lenge nok, tar de byttet
-      if (Trussel.brutt(e.menn)) { e.flykter = true; e.trekkerFra = tid; e.venterNatt = false; bort(e); if (synlig(e)) logg(`${e.navn} gir opp og flykter – halvparten av dem er falt eller såret.`); }
+      // en tredel ute (Trussel.brutt): røverne gir opp og flykter (bølgen kan da bli slått tilbake); ellers: har de herjet lenge nok, tar de byttet
+      if (Trussel.brutt(e.menn)) { e.flykter = true; e.trekkerFra = tid; e.venterNatt = false; bort(e); if (synlig(e)) logg(`${e.navn} gir opp og flykter – for mange av dem er falt eller såret.`); }
       else if (Trussel.herjet(e)) trekkUt(e); }
     // (18. nov) bølgen er over når røverne er slått ut ELLER har holdt seg unna leiren en halv spilltime (Trussel.ferdig)
     // (runde 4) … eller når de som er igjen, har trukket seg ut med byttet ('herjet': ingen belønning)
