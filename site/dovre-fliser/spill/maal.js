@@ -16,7 +16,7 @@
       { id: 'lager', tekst: 'Ha 20 m³ tre på lager', hjelp: 'Kjøp under Leir → Lager, eller hogg skog (samme fane).', ferdig: T => T.tre >= 20 },
     ] },
     { navn: 'Få oversikt', mål: [
-      { id: 'kontrollrom', tekst: 'Bygg kontrollrommet', hjelp: 'Kartet, kameraene og radioen. Uten det ser du bare det du selv ser.', ferdig: T => b(T, 'kontrollrom') > 0 },
+      { id: 'kontrollrom', tekst: 'Bygg kontrollrommet', hjelp: 'Kartet, kameraene og radioen. Det er dyrt (15 mill. kr) og kan vente til leiren står og du har en tropp og et vakttårn.', ferdig: T => b(T, 'kontrollrom') > 0 },
       { id: 'radiomast', tekst: 'Bygg en radiomast', hjelp: 'Lagene må ha radiokontakt for å ta imot ordre: 15 km med mast, 8 km uten.', ferdig: T => b(T, 'radiomast') > 0 },
       { id: 'vakttårn', tekst: 'Bygg et vakttårn', hjelp: 'Sett en person på «Vakt» under Folk, så melder tårnet fiender nær leiren.', ferdig: T => b(T, 'vakttårn') > 0 },
     ] },

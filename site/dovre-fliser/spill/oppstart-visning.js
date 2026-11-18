@@ -169,6 +169,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (!forslag || !forslag.ok) return;
     // nye spill starter uten ferdige lag (brukeren 17. nov: «jeg skal selv måtte lage troppene») – i testene som før, til OppstartSpill.test er satt
     utkast.utenLag = !navigator.webdriver || window.OppstartSpill.test === true;
+    // lett start (balansen 18. nov, Claudes forslag): nye spill har bare lastebil og speiderbil – stridsvogna og rakettartilleriet
+    // bar forsvaret alene de første døgnene. De kan bygges på basen for olje senere.
+    utkast.lettStart = utkast.utenLag;
     const f = O.fullfør(utkast, forslag, window.Scenario ? Scenario.regler(utkast.regler).faktor.penger : 1); if (f.length) { visBanner(f.join(' ')); return; }
     S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
     // (17. nov) kartet går inn på leiren når den er lagt – før sto det igjen på hele landsdelen, og du så ikke leiren din
@@ -188,8 +191,14 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     start.forEach((s, i) => { if (ny && i === 0) { s.menn = s.menn.slice(0, n); s.leder = 0; s.navn = 'Vaktlaget'; s.speider = false; return; }
       const k = ENHETER.indexOf(s); if (k >= 0) ENHETER.splice(k, 1); if (valgt === s) { valgt = null; visPanel(); } });
   }
+  let tungeBorte = false;
+  function fjernTunge() {
+    if (tungeBorte || !window.KJORETOY) return; tungeBorte = true;
+    for (const k of KJORETOY.filter(q => q.side === 'blå' && (q.type === 'stridsvogn' || q.type === 'rakettartilleri'))) KJORETOY.splice(KJORETOY.indexOf(k), 1);
+  }
   function bruk(ny) {
     if (S.utenLag) fjernStartlag(ny);
+    if (S.lettStart) fjernTunge();
     const fl = S.fraksjon.flagg, farge = O.hovedfarge(fl), lys = O.nyanse(farge, 1.35), n = parseInt(lys.slice(1), 16);
     flaggC = null;
     if (window.Fraksjoner) { const navn = S.fraksjon.navn; Object.assign(Fraksjoner.FRAKSJONER.blå, { navn, eieform: /[sxz]$/i.test(navn) ? navn + "'" : navn + 's', farge, lys, sti: `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.9)` }); }
@@ -212,7 +221,8 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     window.dispatchEvent(new Event('riksbrudd-spill'));
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
       logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`);
-      if (S.utenLag) logg('Du har ingen ferdige lag – bare Vaktlaget (4 mann). Lag troppene selv av folkene dine: Leir → Tropper → «Lag ny tropp».'); }
+      if (S.utenLag) logg('Du har ingen ferdige lag – bare Vaktlaget (4 mann). Lag troppene selv av folkene dine: Leir → Tropper → «Lag ny tropp».');
+      if (S.lettStart) logg('Råd: bygg brakke, dieseltank og aggregat først, så en tropp og et vakttårn. Kontrollrommet (15 mill. kr) kan vente.'); }
     else { logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
       // Et lagret spill åpnet før med hele landet i bildet (200 km-målestokk), og leiren var en prikk. Nå står kartet over leiren.
       // Ikke i testene (kontrollskriptet regner med startbildet), og ikke når adressen selv sier hvor kartet skal stå.
