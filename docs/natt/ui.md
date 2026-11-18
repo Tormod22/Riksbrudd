@@ -95,3 +95,16 @@ Fortsatt svakt: båtene bruker ikke merkesettet (de tegnes som skrog); krigskart
 lagpanelet nede til venstre har fått svært mange knapper fra flere pakker; byggekortene gjør fanen Bygg lang (ca. 3000 punkter);
 kortene i midten (hendelse, samfunnskort, «Lag noe») kan ligge oppå hverandre; drikk/spis-, hund-, snike- og skaderadene er ikke sett
 med alle framme samtidig (bare «Lag noe» og «Legg deg» lot seg vise i prøven).
+
+# Runde 3 – feil fra det samlede kontrollskriptet og det som så dårlig ut
+
+- **«Leir-menyen og målene» (matIBygg)**: romraden i byggesettet (`byggesett-visning.js`, «Rom 12 m²: …») brukte `.mat` + `span` i fanen
+  Bygg. Teksten er nå et `em` (samme utseende), så bare materialradene i Lager treffer `.mat span`.
+- **«folk» (innenfor skjermen på telefon)**: innglidningen i tema.js flyttet panelet 14 punkter til venstre i første bilde, og
+  kontrollen måler straks. Panelene tones nå bare inn (ingen forskyvning) – også i paneler.js.
+- **Lagpanelet** (`spill/panelpynt.js`): for et eget lag står ordre- og stridsknappene framme (Marsjer, Stopp, Lag, Grav ned, Gå av …,
+  Stridsregler, Formasjon, Tiltak), resten bak «Mer (n) ▾» (huskes i «riksbrudd-lagmer»). En knapp som er slått på, står framme.
+  I testene skjules ingenting (kontrollen trykker etter tekst) før `window.LAGKNAPPER_TEST = true`.
+- **Kort i midten**: mens et kort med valg står oppe (hendelse, samfunnskort, spillformkort, flytkort, krigskort – `window.Kortkø`
+  sørger for ett om gangen), viker personkortet og «Lag noe»/tilflukt (`body.kortoppe`) og kommer tilbake når kortet er besvart.
+- **Krigskartet** viser bare havner og ferjeterminaler av kaimerkene (`KAI_VIKTIG` i index.html).

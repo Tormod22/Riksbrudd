@@ -85,7 +85,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (R.length) hode.appendChild(e2('div', { klasse: 'igang' }, `${R.length} rom: ` + R.map(r => `${r.navn.toLowerCase()} ${String(r.areal).replace('.', ',')} m²${r.senger ? ` (${r.senger} senger)` : ''}`).join(', ') + (senger ? '' : '')));
     // ROMTYPER: velg hva hvert lukkede rom med dør skal brukes til (soverom, kjøkken, lager, verksted)
     for (const r of R.filter(q => q.brukbart)) { const B = BS.ROMBRUK[r.bruk];
-      hode.appendChild(e2('div', { klasse: 'mat' }, e2('span', {}, `Rom ${String(r.areal).replace('.', ',')} m²: `), k2(`${B.navn} ›`, () => byttBruk(r.nøkkel), { 'data-rom': r.nøkkel, title: 'Bytt hva rommet brukes til' }),
+      hode.appendChild(e2('div', { klasse: 'mat' }, e2('em', { style: 'flex:1;font-style:normal' }, `Rom ${String(r.areal).replace('.', ',')} m²: `), k2(`${B.navn} ›`, () => byttBruk(r.nøkkel), { 'data-rom': r.nøkkel, title: 'Bytt hva rommet brukes til' }),
         e2('small', {}, ' ' + (r.bruk === 'soverom' ? `${r.senger} senger` : r.bruk === 'lager' ? `+${String(r.lager).replace('.', ',')} m³ lagerplass` : r.virker ? B.tekst : `for lite: trenger ${B.min} m²`)))); }
     hode.appendChild(e2('div', { klasse: 'mat' }, k2('Åpne byggesettet', åpne, { id: 'bs-apne' })));
   });

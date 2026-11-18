@@ -26,7 +26,8 @@ body.kort #logg:not(.åpen) div:nth-child(n+2){ display:none; } body.kort #logg.
 body.kort #logg.stille:not(.åpen){ opacity:0; pointer-events:none; }
 body.kort #logg div{ padding-bottom:0; border-bottom:4px solid transparent; } body.kort #logg div[data-slag="varsel"]{ border-left-color:#c8553a; }
 /* 18. nov – OVERGANGER (respekterer «redusert bevegelse»): panelene glir inn når de åpnes, kortene i menyene svarer på pekeren */
-@keyframes panelinn{ from{ opacity:0; translate:-14px 0; } } @keyframes panelopp{ from{ opacity:0; translate:0 14px; } } @keyframes panelned{ from{ opacity:0; translate:0 -8px; } }
+/* (panelene tones bare inn – en forskyvning flyttet dem et øyeblikk utenfor skjermen på telefon, og kontrollen måler straks) */
+@keyframes panelinn{ from{ opacity:0; } } @keyframes panelopp{ from{ opacity:0; } } @keyframes panelned{ from{ opacity:0; } }
 #leirmeny.på, #folkmeny.på, #tropppanel.på, #stridpanel.på, #sekk.på{ animation:panelinn .18s ease-out; } #lagmeny.på, #degmeny.på{ animation:panelned .14s ease-out; } #hendelse.på, #alarm.på{ animation:panelopp .22s ease-out; }
 #varsler > *{ animation:panelned .2s ease-out; } #leirmeny .flis, #leirmeny .faner button{ transition:border-color .12s, background-color .12s, transform .1s; } #leirmeny .flis:hover{ border-color:#c9b26a; }
 #kommando button, #mkom button{ transition:transform .08s, border-color .12s, background .12s; } #mkom button:active{ transform:scale(.94); }
