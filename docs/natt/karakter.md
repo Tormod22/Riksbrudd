@@ -21,8 +21,8 @@ Målet: det å gå rundt som deg selv skal være et lite overlevelsesspill med m
    beskjed i loggen når du blir tørst/sulten, og om flaska er tom. «Pakk for tur» i karakterarket (i leiren): full flaske og opptil
    tre rasjoner fra leirens mat. En ny sekk starter med to rasjoner.
    **Feil rettet:** «Spis feltrasjon» i karakterarket virket aldri (koden lette etter `feltrasjon`, sekken kaller den `rasjon`).
-2. **Tilflukter har et formål.** I et sikret hus: knappen «Tilflukt: sov og lager» -> panel med **Sov** (8 s mørk skjerm, +80 søvn,
-   +40 helse; ikke mens fienden har sett deg), **lager** (legg igjen / ta med ting og våpen, 60 kg per tilflukt), og valget
+2. **Tilflukter har et formål.** I et sikret hus: knappen «Tilflukt: sov og lager» -> panel med **Sov** (klokka spoles i 600× til du har sovet 6 spilltimer – høyst 45 ekte sekunder; +80 søvn,
+   +40 helse for en hel natt, en andel hvis du vekkes; du vekkes av fiender innen 300 m, skade, angrep på leiren, eller et trykk på skjermen), **lager** (legg igjen / ta med ting og våpen, 60 kg per tilflukt), og valget
    **«Våkner her hvis du blir slått ut»**: blir du slått ut innen 1500 m fra en tilflukt (og den ligger i 3D-utsnittet), våkner du
    der med 45 helse i stedet for i leiren (ingen straff på moralen).
 3. **Dekning.** Ny stilling **ligg** (Z på PC; på telefon blar Huk-knappen Huk -> Ligg -> Reis deg; kryper 0,4 m/s, øyehøyde
@@ -73,12 +73,27 @@ Tester oppdatert: `test_overlev.js` (styrke 10 = 30 kg), `test_utstyr.js` (start
 Bare `site/dovre-fliser/index.html`: to skript-tagger rett før `spill/meny.js` (+ versjonsmerkene fra `versjon.py`).
 
 ## Ikke gjort / svakheter
-- Å sove flytter ikke klokka (tiden hopper ikke; bare en mørk skjerm i 8 s).
 - Hunden er en enkel kloss-figur uten gange-animasjon; den trenger ikke mat og kan ikke skades.
 - Veggdekningen bruker hindringene i 3D (hus og trestammer) – terreng (en bakketopp) teller ikke.
 - Sløret gjelder bare 2D (ikke 3D eller minikartet), og det skjuler ingenting (det demper bare). Det dekker 128 × 128 km rundt
   leiren; utenfor er alt «uoppdaget».
-- Tilfluktslageret og «våkn opp i tilflukten» er prøvd med en kunstig tilflukt (testsiden har ingen hus-data), ikke i et ekte hus.
-- Kulde bruker bare årstid og nedbør (ingen temperatur per sted).
 - Historiens kapitler er korte (tre per bakgrunn), og teksten er Claudes.
 - narhud.js (pakka «ui») viser ikke skadene; de står som lapper i raden til venstre.
+
+## Runde 2 (etter sammenfletting med claude/nattfiks)
+- **Ekte hus på /rogaland** (leir 15607, 6622779, dev.py): fem bygg gått inn i og gjennomsøkt – delene kom i sekken og i funnteksten,
+  «Trent øye» sto på leteknappen («trolig trevirke og diesel», «ser tomt ut»), huset ble sikret, lageret tok imot og ga tilbake
+  ammunisjon og et våpen, søvnen spolte klokka og satte farten tilbake, og «slått ut 120 m unna» satte meg på gulvet inne i
+  tilflukten. RETTET: uten interiør lastet er huset en massiv kloss – `slåttUt` bygger nå interiøret straks (Interior3d.oppdater)
+  og flytter deg til et fritt sted på gulvet. Ingen av de fem husene hadde hund (5 % sjanse), så hund-i-hus er ikke sett i ekte hus.
+- **Søvn og klokka:** se over. På en treg maskin rekker ikke spolingen seks timer; etter 45 s regnes natta som ferdig likevel.
+- **Koblinger:** kulde – under −8 °C der du står (værets temperatur, −0,6 °C per 100 m over leiren, som i verden.js) er sjansen for
+  å bli syk tre ganger så stor, uansett årstid. Jakt – `EventyrSpill.felteDyr(rasjoner, navn, avst)` kalles fra verden-visning.js:
+  lenger enn 500 m fra leiren legges kjøttet i sekken (det som får plass; resten blir liggende), nærmere går alt til leiren som før.
+  Sniking – mørket hentes fra NATT.mørke (3D) eller Krig.natt (klokka); fiender med nattsikt (`e.nattsikt` / `e.utstyr.nattsikt`,
+  f.eks. røvere som ventet på mørket) ser deg som om det var dag.
+- **Raden til venstre** har en fast linje «Flaske 3/4 · rasjoner 2», og lapper for skader og hund. Sett på bilde på PC 1280 og
+  telefon 390: ligger ikke oppå minikart, våpenrute, styrespak eller Huk/Hopp.
+- **Fellesfil/andres fil endret i runde 2:** `spill/verden-visning.js` (pakka «verden»), én linje i jaktløkka: spør
+  `EventyrSpill.felteDyr` før kjøttet legges i leiren.
+- Ikke gjort: fanger og brann er ikke koblet til karakteren; soving er ikke prøvd mens et angrep faktisk starter (bare koden for vekking).

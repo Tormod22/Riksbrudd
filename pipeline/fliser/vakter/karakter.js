@@ -36,6 +36,9 @@ module.exports = {
         // historien: nå målet -> belønning og neste kapittel
         T.hist = E.Historie.ny(); const bg = OppstartSpill.tilstand().karakter.bakgrunn, kap = E.Historie.kapittel(bg, T.hist), slag = kap.mål.slag;
         if (['gått', 'felt', 'laget', 'fangst', 'sovet'].includes(slag)) { T.tellere[slag] = kap.mål.n + 1; const k = S.historieSteg(); krev(k && k.tittel === kap.tittel && T.hist.kap === 1, 'kapittelet ble ikke fullført'); d.kapittel = kap.tittel; } else d.kapittel = '(hoppet over: ' + slag + ')';
+        // søvn (straks i testene: klokka røres ikke) og kjøtt fra jakt (nær leiren tar leiren det)
+        { const s0 = T.tellere.sovet, t0 = tid; B.søvn = 10; S.sovNå(true); krev(B.søvn === 90 && T.tellere.sovet === s0 + 1 && tid === t0, 'søvnen ga ikke +80'); }
+        d.kjøttNær = S.felteDyr(10, 'sau', 50); krev(d.går ? true : d.kjøttNær === false, 'kjøttet skal gå til leiren når du ikke går selv');
         // hunden
         T.hund = null; krev(S.fåHund('Vakt') && T.hund && T.hund.navn, 'hunden kom ikke');
         // kartsløret: leiren er oppdaget, langt unna er det ikke

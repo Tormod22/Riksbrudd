@@ -58,4 +58,8 @@ let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); i
 // tilfluktslageret
 { const L = E.Lager.ny(), sekk = { a9: 40, rasjon: 2 }; ok(E.Lager.flytt(sekk, L.ting, 'a9', 30) === 30 && sekk.a9 === 10 && L.ting.a9 === 30 && E.Lager.flytt(sekk, L.ting, 'rasjon', 5) === 2 && !sekk.rasjon && E.Lager.flytt(sekk, L.ting, 'x', 1) === 0, 'flytt mellom sekk og lager');
   L.våpen.push({ id: 'pistol' }); ok(Math.abs(E.Lager.vekt(L, { a9: { vekt: .01 }, rasjon: { vekt: .5 } }, { pistol: { vekt: 1 } }) - 2.3) < 1e-9, 'lagerets vekt'); }
+// runde 2: frost, søvn i andeler, kjøtt i sekken
+ok(E.Skader.kulde(1, false, false, -12) === 3 * R.skade.kuldePerTime && E.Skader.kulde(1, false, false, 2) === 0 && E.Skader.kulde(1, true, false, -12) === 3 * E.Skader.kulde(1, true, false, 0), 'under −8 °C er kulda farlig uansett årstid (tre ganger sjansen)');
+ok(E.Tur.søvn(1).søvn === R.tilflukt.sovSøvn && E.Tur.søvn(.5).helse === R.tilflukt.sovHelse / 2 && E.Tur.søvn(-1).søvn === 0, 'avbrutt søvn gir en andel');
+{ const k = E.Tur.kjøtt(25, 10), a = E.Tur.kjøtt(5, 10), n = E.Tur.kjøtt(5, -2); ok(k.med === 10 && k.igjen === 15 && a.med === 5 && a.igjen === 0 && n.med === 0 && n.igjen === 5, 'kjøtt: det som får plass i sekken, resten blir liggende'); }
 console.log(feil ? feil + ' feil' : 'alle eventyrtestene ok'); process.exit(feil ? 1 : 0);
