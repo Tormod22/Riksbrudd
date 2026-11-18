@@ -10,7 +10,8 @@ module.exports = {
       if (!window.LutSpill || !LutSpill.klar() || !window.UtstyrSpill || !UtstyrSpill.klar() || !window.KarakterSpill || !KarakterSpill.klar()) { d.feil.push('LutSpill, sekken eller karakteren er ikke klar'); return d; }
       const LS = LutSpill, I = UtstyrSpill.tilstand(), B = KarakterSpill.T().behov, K = SpilletSpill.K();
       const før = { I: JSON.stringify(I), S: JSON.stringify(LS.S()), B: { ...B }, hp: K.hp, tid, lagret: {}, ekstra: Utstyr.ekstraVekt };
-      for (const k of ['riksbrudd-lut', 'riksbrudd-utstyr', 'riksbrudd-karakter']) før.lagret[k] = localStorage.getItem(k);
+      for (const k of ['riksbrudd-lut', 'riksbrudd-utstyr', 'riksbrudd-karakter', 'riksbrudd-mobler']) før.lagret[k] = localStorage.getItem(k);
+      const mFør = window.MoblerSpill && MoblerSpill.klar() ? JSON.stringify({ F: MoblerSpill.F(), b: MoblerSpill.bæres() }) : null;
       // i 3D: vent litt hvis et utsnitt bygges (en tidligere vakt kan ha flyttet kameraet)
       for (let q = 0; q < 60 && typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.bygger; q++) await new Promise(r => setTimeout(r, 200));
       const i3d = typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.ut && !R3.bygger; d.i3d = !!i3d;
@@ -83,17 +84,44 @@ module.exports = {
           krev(fri > 2 && tung < fri * .8, `tung last gjorde deg ikke tregere (${d.gått.join(' mot ')} m)`);
           // Tab lukker panelet
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); krev(!pn.classList.contains('på'), 'Tab lukket ikke panelet');
+          // MØBLER (runde 5, brukeren: «Flyttbare møbler og alt»): kjøleskapet med brunost plukkes opp, bæres (ingen løping eller skyting),
+          // settes ned et annet sted i huset (sperrer der), innholdet følger med, det lagres og står der når huset bygges på nytt
+          if (window.MoblerSpill && MoblerSpill.klar() && P.inne) { const x0 = P[0][0], y0 = P[0][1], u = R3.ut;
+            const sett = (x, y, a) => { R3.bane.x = x; R3.bane.y = y; const k = Gange.kropp(); k.x = x; k.y = y; k.vx = k.vy = 0; k.z = P.inne.gulv; R3.fot.a = a; R3.fot.pitch = -.3; };
+            const MS = MoblerSpill, pl = () => P.inne, kj = pl().møbler.find(m => m.type === 'kjøleskap'), nk = kj && kj.nk;
+            krev(!!nk, 'kjøleskapet har ingen møbelnøkkel');
+            if (nk) { LS.endretInnhold({ nk, B: { t: { brunost: 2 }, d: { brunost: [[0, tid], [0, tid]] } } }); I.ting = I.ting || {}; for (const k of Object.keys(I.ting)) delete I.ting[k];
+              const tungt = { nk, B: { t: { verktøy: 6 }, d: {} } }; LS.endretInnhold(tungt); krev(!MS.plukkOpp({ m: kj, P }) && pl().møbler.some(m => m.nk === nk), 'et kjøleskap med 27 kg i ble plukket opp (skal tømmes først)');
+              LS.endretInnhold({ nk, B: { t: { brunost: 2 }, d: { brunost: [[0, tid], [0, tid]] } } });
+              krev(MS.plukkOpp({ m: kj, P }) && MS.bærer() && !pl().møbler.some(m => m.nk === nk), 'kjøleskapet ble ikke plukket opp (står igjen i planen)');
+              d.møbelFart = Math.round(LS.fart() * 100) / 100; krev(!LS.kanLøpe() && LS.fart() < 1 && MS.stor(), 'med kjøleskapet i armene kan du løpe / går like fort');
+              const K0 = { mag: K.mag, sist: K.sist, lader: K.lader }; K.lader = 0; K.sist = 0; krev(SpilletSpill.skyt() === false, 'du kan skyte mens du bærer kjøleskapet'); Object.assign(K, K0);
+              // en ledig plass minst 1,5 m fra der det sto, og stå slik at spøkelset havner der
+              const b = MS.bæres(); let mål = null;
+              for (let x = x0 + .5; x < x0 + 9.5 && !mål; x += .25) for (let y = y0 + .5; y < y0 + 7.5 && !mål; y += .25) { if (Math.hypot(x - kj.x, y - kj.y) < 1.5) continue; const q = { type: b.type, x, y, a: 0, b: b.b, d: b.d };
+                if (!Mobler.kanSettes(pl(), q, Interior, nk).ok) continue; const g = Mobler.foran(0, 0, 0, b, 0, 0), px = x, py = y - g.y; if (!Interior.blokkert(pl(), px, py) && Interior.inni(P, px, py)) mål = [px, py, x, y]; }
+              krev(!!mål, 'fant ingen ledig plass til kjøleskapet');
+              if (mål) { b.k = 0; sett(mål[0], mål[1], 0); for (let q = 0; q < 4; q++) { KROKER.ramme3d.forEach(f => f(R3)); await new Promise(r => setTimeout(r, 130)); }
+                d.spøkelse = !!MS.spøkelse() && MS.spøkelse().parent === R3.scene; krev(d.spøkelse && b.mål && b.mål.ok, 'spøkelset står ikke grønt i scenen (' + (b.mål ? b.mål.grunn : 'ingen plass') + ')');
+                krev(MS.settNed() && !MS.bærer() && !MS.spøkelse(), 'kjøleskapet ble ikke satt ned');
+                const ny = pl().møbler.find(m => m.nk === nk); krev(!!ny && Math.abs(ny.x - mål[2]) < .05 && Math.abs(ny.y - mål[3]) < .05, 'kjøleskapet står ikke der det ble satt');
+                if (ny) { krev(Interior.blokkert(pl(), ny.x, ny.y), 'det nye stedet sperrer ikke når du går');
+                  sett(mål[0], mål[1], 0); const bh = LS.beholdere().find(q => q.nk === nk); krev(!!bh && bh.B.t.brunost === 2, 'innholdet (brunosten) fulgte ikke med kjøleskapet');
+                  const lag = JSON.parse(localStorage.getItem('riksbrudd-mobler') || '{}'); krev(!!(lag.F && lag.F[nk] && lag.F[nk].i === P.bygg.i), 'flyttet er ikke lagret');
+                  Interior3d.bygOm(P.bygg.i); const igjen = P.inne.møbler.find(m => m.nk === nk); krev(!!igjen && Math.abs(igjen.x - ny.x) < .01, 'bygget på nytt: kjøleskapet står ikke der det ble satt');
+                  d.møbel = `kjøleskap ${kj.x.toFixed(1)},${kj.y.toFixed(1)} -> ${ny.x.toFixed(1)},${ny.y.toFixed(1)}`; } } } }
         }
       } catch (e) { d.feil.push('unntak: ' + e.message); }
       // sett alt tilbake
       LS.åpne(false); tid = før.tid;
       const I0 = JSON.parse(før.I); I.våpen.length = 0; I.våpen.push(...I0.våpen); I.aktiv = I0.aktiv; for (const k of Object.keys(I.ting)) delete I.ting[k]; Object.assign(I.ting, I0.ting);
       LS.settS(JSON.parse(før.S)); Object.assign(B, før.B); K.hp = før.hp; Utstyr.ekstraVekt = før.ekstra;
+      if (mFør) { const q = JSON.parse(mFør); MoblerSpill.settTilstand(q.F, q.b); }
       if (P) { const R = R3; for (const k of nøkler) { const A = R.hindre.get(k), q = A ? A.indexOf(o) : -1; if (q >= 0) A.splice(q, 1); } R.ut.hus = husFør; if (!gikk) Gange.stopp(); Interior3d.oppdater(true); }
       LS.lagreNå(); for (const [k, v] of Object.entries(før.lagret)) { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }
       UtstyrSpill.vis(); return d;
     });
     const ok = !data.feil.length;
-    return { ok, tekst: ok ? `${data.i3d ? `«${data.knapp}» i prøvehuset, panelet med ${(data.beholdere || []).join(' og ')}, trykk-flytt, valg (${(data.valg || []).slice(0, 3).join(', ')} …), gått ${(data.gått || []).join(' mot ')} m lett/tungt` : 'uten 3D (bare reglene)'}; brunost mettet, råtten melk −12 helse, jaktrifle i beltet og ladet, melka råtten etter ti døgn, sekken full, tungt ${data.vekt ? data.vekt.tungt.fart.toFixed(2) : '?'} / svært tungt uten løping (${profil})` : data.feil.join('; '), data };
+    return { ok, tekst: ok ? `${data.i3d ? `«${data.knapp}» i prøvehuset, panelet med ${(data.beholdere || []).join(' og ')}, trykk-flytt, valg (${(data.valg || []).slice(0, 3).join(', ')} …), gått ${(data.gått || []).join(' mot ')} m lett/tungt${data.møbel ? `, møbel flyttet (${data.møbel}, fart ${data.møbelFart} i armene)` : ''}` : 'uten 3D (bare reglene)'}; brunost mettet, råtten melk −12 helse, jaktrifle i beltet og ladet, melka råtten etter ti døgn, sekken full, tungt ${data.vekt ? data.vekt.tungt.fart.toFixed(2) : '?'} / svært tungt uten løping (${profil})` : data.feil.join('; '), data };
   },
 };
