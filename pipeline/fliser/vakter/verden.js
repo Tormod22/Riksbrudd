@@ -36,7 +36,8 @@ module.exports = { navn: 'verden (vinter, flom, brann, jakt, åker, funn, radio,
       const f = Verden.funnNær(l.x, l.y, 30000).find(q => !Verden.innhold(q).hendelse); krev(!!f, 'ingen funn innen 30 km');
       if (f) { const i = VS.undersøk(null, f); ut.funn = i && i.tekst; krev(i && V.funn.tatt[f.id] === 1 && VS.undersøk(null, f) === null, 'funnet kan tas to ganger'); }
       // åker: rydd, så om våren, høst om høsten
-      S.penger = Math.max(S.penger, 5e6); const p0 = S.penger, r1 = VS.ryddÅker(); krev(r1.ok && S.penger < p0 && V.åker.mål === Verden.REGLER.åker.ryddMål, 'åkeren ble ikke ryddet');
+      S.penger = Math.max(S.penger, 5e6); const p0 = S.penger, r1 = await VS.ryddÅker(); krev(r1.ok && S.penger < p0 && V.åker.mål === Verden.REGLER.åker.ryddMål && V.åker.x != null && Math.hypot(V.åker.x - l.x, V.åker.y - l.y) < 600, 'åkeren ble ikke ryddet (eller fikk ikke plass ved leiren)');
+      const af = VS.åkerFolk(); ut.åkerFolk = af; krev(af.behov === 1 && af.andel >= 0 && af.andel <= 1, 'åkerens folk stemmer ikke');
       krev(VS.så().feil, 'det gikk an å så om sommeren'); settÅr('vår'); krev(VS.så().ok && V.åker.sådd, 'det gikk ikke an å så om våren');
       V.åker.grodd = Verden.REGLER.åker.modning; const m0 = F ? F.mat : 0, h = Verden.åkerSteg(V, .01, 'høst'); ut.avling = h.mat; krev(h.mat === V.åker.mål * Verden.REGLER.åker.perMål, 'avlinga stemmer ikke');
       // jaktlag: et lag i skogen får kjøtt etter jakta

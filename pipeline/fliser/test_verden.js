@@ -47,6 +47,8 @@ V.åkerSteg(S, 2, 'vår'); V.åkerSteg(S, 2, 'sommer'); const h = V.åkerSteg(S,
 assert.deepStrictEqual(V.åkerSteg(S, 1, 'høst'), {}, 'bare én avling');
 V.så(S, 'vår'); V.åkerSteg(S, 1, 'vår'); assert.ok(V.åkerSteg(S, 1, 'høst').mat < R.åker.ryddMål * R.åker.perMål, 'umoden avling gir mindre');
 V.så(S, 'vår'); assert.ok(V.åkerSteg(S, 1, 'vinter').tapt);
+V.så(S, 'vår'); V.åkerSteg(S, 4, 'sommer', .5); assert.strictEqual(S.åker.grodd, 2, 'halvparten av folkene: halv vekst'); V.åkerSteg(S, 1, 'høst');
+assert.strictEqual(V.åkerBehov(20), 1); assert.strictEqual(V.åkerBehov(100), 3); assert.ok(Math.abs(V.åkerSide(20) - 141.42) < .01);
 for (let i = 0; i < 20; i++) V.ryddÅker(S); assert.ok(S.åker.mål <= R.åker.maks);
 
 // 35 brann
@@ -77,6 +79,7 @@ assert.strictEqual(S.radio.liste.length, R.radio.liste); assert.strictEqual(S.ra
 assert.ok(V.erStasjon('Dombås') && V.erStasjon('dombås') && !V.erStasjon('Geiranger'));
 const a = { id: 1, navn: 'Dombås', x: 0, y: 0, eier: 'blå' }, b = { id: 2, navn: 'Otta', x: 30000, y: -30000, eier: 'blå' };
 assert.ok(V.togPlan(a, { ...b, eier: 'rød' }).feil); assert.ok(V.togPlan(a, { ...b, navn: 'Geiranger' }).feil); assert.ok(V.togPlan(a, a).feil);
+assert.ok(V.togPlan({ ...a, stasjon: false }, b).feil, 'kartet sier ingen spor'); assert.ok(!V.togPlan(a, { ...b, navn: 'Geiranger', stasjon: true }).feil, 'kartet sier spor');
 const p = V.togPlan(a, b); assert.ok(p.km > 42 && p.km < 43 && p.pris > 0 && p.stål > 0);
 S = V.ny(); const st = V.togStart(S, a, b, 0); assert.ok(st.s && V.togStart(S, b, a, 0).feil);
 assert.strictEqual(V.togSteg(S, 10, () => 'blå').length, 0);
