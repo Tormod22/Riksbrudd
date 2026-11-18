@@ -40,13 +40,15 @@
   function merke(g, x, y, t, r, valgt) { g.fillStyle = 'rgba(15,11,7,.82)'; g.strokeStyle = FARGE[t] || FARGE[1]; g.lineWidth = valgt ? 2.4 : 1.4; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke();
     // anker: stokk, tverrstang og bue
     const s = r * .58; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y - s); g.lineTo(x, y + s); g.moveTo(x - s * .55, y - s * .45); g.lineTo(x + s * .55, y - s * .45); g.moveTo(x - s, y + s * .15); g.quadraticCurveTo(x - s * .8, y + s, x, y + s); g.quadraticCurveTo(x + s * .8, y + s, x + s, y + s * .15); g.stroke(); }
+  // 18. nov (nattarbeid «ui»): færre merker som standard – index.html (KAI_VIKTIG) sier om kaien betyr noe for det du gjør nå
+  const viktig = (i, m) => typeof KAI_VIKTIG !== 'function' || KAI_VIKTIG(K.x[i], K.y[i], K.t[i], K.l[i], m);
   KROKER.tegn.push((g, vx0, vy1) => { if (!K || !vis) return; const m = kam.m; if (m >= 160) return; const x1 = vx0 + VW * m, y0 = vy1 - VH * m, I = iBoks(K, vx0 - 20 * m, x1 + 20 * m, y0 - 20 * m, vy1 + 20 * m);
     g.save(); g.font = '12.5px "Cormorant Garamond", serif'; g.textAlign = 'center'; let tegnet = 0;
-    for (const i of I) { const t = K.t[i]; if (!vises(t, K.l[i], m) && i !== valgtKai) continue; if (++tegnet > 600) break; const x = (K.x[i] - vx0) / m, y = (vy1 - K.y[i]) / m, r = t >= 3 ? 8 : t === 2 || K.l[i] >= 150 ? 7 : 5.5; merke(g, x, y, t, r, i === valgtKai);
+    for (const i of I) { const t = K.t[i]; if (!(vises(t, K.l[i], m) && viktig(i, m)) && i !== valgtKai) continue; if (++tegnet > 600) break; const x = (K.x[i] - vx0) / m, y = (vy1 - K.y[i]) / m, r = t >= 3 ? 8 : t === 2 || K.l[i] >= 150 ? 7 : 5.5; merke(g, x, y, t, r, i === valgtKai);
       const n = navn(K, i); if (n && (m < (t >= 3 ? 40 : 9) || i === valgtKai)) { const yt = window.Etikett ? Etikett.tekst(g, n, x, y + r + 12, 1) : y + r + 12; g.lineWidth = 3; g.strokeStyle = 'rgba(15,11,7,.85)'; g.strokeText(n, x, yt); g.fillStyle = FARGE[t] || FARGE[1]; g.fillText(n, x, yt); } }
     g.restore(); });
   // trykk på et merke: sist i lista, så lag, bygg og annet går foran
-  KROKER.trykk.push((X, Y) => { if (rot.SjoSpill && SjoSpill.trykk(X, Y)) return true; if (!K || !vis || kam.m >= 160) return false; const f = nær(K, X, Y, 13 * kam.m, i => vises(K.t[i], K.l[i], kam.m)); if (!f) { if (valgtKai >= 0) { valgtKai = -1; skitten = true; } return false; }
+  KROKER.trykk.push((X, Y) => { if (rot.SjoSpill && SjoSpill.trykk(X, Y)) return true; if (!K || !vis || kam.m >= 160) return false; const f = nær(K, X, Y, 13 * kam.m, i => vises(K.t[i], K.l[i], kam.m) && viktig(i, kam.m)); if (!f) { if (valgtKai >= 0) { valgtKai = -1; skitten = true; } return false; }
     valgtKai = f.i; skitten = true;
     // sjøen (spill/sjo-visning.js): en båt som venter på et mål, seiler hit; ellers åpnes kaia i sjøpanelet
     if (rot.SjoSpill && SjoSpill.kai(f.i)) return true;

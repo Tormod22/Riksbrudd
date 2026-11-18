@@ -39,6 +39,12 @@
 #leirmeny [hidden]{ display:none !important; }
 #leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
+#leirmeny .liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:7px; } #leirmeny .liste[hidden], #leirmeny .liste [hidden]{ display:none; } #leirmeny .liste h4{ grid-column:1 / -1; }
+#leirmeny .bygg.kort{ flex-direction:column; align-items:stretch; gap:3px; padding:6px 7px 7px; background:linear-gradient(180deg,#2c2416,#1a140b); border:1px solid #4a3d24; border-radius:4px; transition:border-color .12s, transform .12s; }
+#leirmeny .bygg.kort:hover{ border-color:#c9b26a; transform:translateY(-1px); } #leirmeny .bygg.kort .tegn{ width:100%; height:58px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.16), rgba(0,0,0,0) 70%); pointer-events:none; }
+#leirmeny .bygg.kort b{ display:block; font-size:14.5px; line-height:1.15; } #leirmeny .bygg.kort .pris{ color:#f0dc9a; font-size:13.5px; } #leirmeny .bygg.kort .kortlinje{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#leirmeny .bygg.kort .mer{ display:none; } #leirmeny .bygg.kort button{ width:100%; height:30px; margin-top:2px; } #leirmeny .bygg.kort button:disabled{ opacity:.45; }
+@media (prefers-reduced-motion:reduce){ #leirmeny .bygg.kort{ transition:none; } #leirmeny .bygg.kort:hover{ transform:none; } }
 #leirmeny .bygg div{ flex:1; min-width:0; } #leirmeny .bygg b{ font-weight:600; } #leirmeny .bygg small{ display:block; color:var(--ink-dim); font-size:12.5px; }
 #leirmeny button, #byggvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:40px; padding:4px 12px; cursor:pointer; font:inherit; }
 #leirmeny button:disabled, #byggvalg button:disabled{ opacity:.45; cursor:default; }
@@ -202,7 +208,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
-      liste.appendChild(el('div', { klasse: 'bygg', 'data-type': id }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
+      // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
+      const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
+      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.tekst}` }, tegn,
+        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris)), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).

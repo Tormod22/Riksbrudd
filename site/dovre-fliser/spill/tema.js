@@ -23,7 +23,14 @@ body.kort .stats > div > span:not([id]){ display:none; } body.kort .stats{ gap:2
 body.kort #logg{ pointer-events:auto; cursor:pointer; transition:opacity .5s; }
 body.kort #logg div{ background:rgba(18,15,10,.86); border-left:3px solid #c9b26a; border-radius:0 3px 3px 0; padding:4px 9px; margin-bottom:3px; -webkit-line-clamp:2; text-shadow:none; color:var(--ink,#e7dcc3); }
 body.kort #logg:not(.åpen) div:nth-child(n+2){ display:none; } body.kort #logg.åpen div{ display:block; -webkit-line-clamp:unset; } body.kort #logg.åpen div:nth-child(n+2){ border-left-color:#5a4f38; color:var(--ink-dim,#a99); }
-body.kort #logg.stille:not(.åpen){ opacity:0; pointer-events:none; }`;
+body.kort #logg.stille:not(.åpen){ opacity:0; pointer-events:none; }
+body.kort #logg div{ padding-bottom:0; border-bottom:4px solid transparent; } body.kort #logg div[data-slag="varsel"]{ border-left-color:#c8553a; }
+/* 18. nov – OVERGANGER (respekterer «redusert bevegelse»): panelene glir inn når de åpnes, kortene i menyene svarer på pekeren */
+@keyframes panelinn{ from{ opacity:0; translate:-14px 0; } } @keyframes panelopp{ from{ opacity:0; translate:0 14px; } } @keyframes panelned{ from{ opacity:0; translate:0 -8px; } }
+#leirmeny.på, #folkmeny.på, #tropppanel.på, #stridpanel.på, #sekk.på{ animation:panelinn .18s ease-out; } #lagmeny.på, #degmeny.på{ animation:panelned .14s ease-out; } #hendelse.på, #alarm.på{ animation:panelopp .22s ease-out; }
+#varsler > *{ animation:panelned .2s ease-out; } #leirmeny .flis, #leirmeny .faner button{ transition:border-color .12s, background-color .12s, transform .1s; } #leirmeny .flis:hover{ border-color:#c9b26a; }
+#kommando button, #mkom button{ transition:transform .08s, border-color .12s, background .12s; } #mkom button:active{ transform:scale(.94); }
+@media (prefers-reduced-motion:reduce){ #leirmeny.på, #folkmeny.på, #tropppanel.på, #stridpanel.på, #sekk.på, #lagmeny.på, #degmeny.på, #hendelse.på, #alarm.på, #varsler > *{ animation:none; } button{ transition:none; } button:not(:disabled):active{ transform:none; } }`;
   document.head.appendChild(css);
   // loggen på små skjermer: siste melding i noen sekunder; trykk viser de siste, og den lukker seg selv igjen
   const L = document.getElementById('logg'); let ro = 0, lukk = 0;

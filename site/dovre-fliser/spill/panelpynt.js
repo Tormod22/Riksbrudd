@@ -32,6 +32,11 @@
       maal.classList.add('på');
     } finally { jobber = false; }
   }
+  // PORTRETTER (18. nov): hver mann i laget får en liten tegning (spill/tegninger.js) – samme navn gir samme ansikt
+  const menn = document.getElementById('menn');
+  if (menn) { const css3 = document.createElement('style'); css3.textContent = '.menn button{ display:flex; align-items:center; gap:7px; min-width:0; } .menn button .portrett{ flex:none; width:28px; height:31px; border:1px solid #4a3d24; border-radius:3px; background:#241c10; } .menn button .navn{ min-width:0; color:inherit; font-size:inherit; display:block; }'; document.head.appendChild(css3);
+    const portrett = () => { if (!window.Tegninger) return; for (const b of menn.children) { if (b.querySelector('.portrett') || !b.firstChild || b.firstChild.nodeType !== 3) continue; const navn = b.firstChild.textContent, im = document.createElement('img'), boks = document.createElement('span'); im.className = 'portrett'; im.alt = ''; im.src = Tegninger.bilde(Tegninger.person(navn)); boks.className = 'navn'; while (b.firstChild) boks.appendChild(b.firstChild); b.append(im, boks); } };
+    new MutationObserver(portrett).observe(menn, { childList: true }); portrett(); }
   new MutationObserver(pynt).observe(sub, { childList: true, characterData: true, subtree: true });
   new MutationObserver(pynt).observe(panel, { attributes: true, attributeFilter: ['class'] });
   // STATUSLINJA øverst: tallene for folk, kassa og strøm kan trykkes på (på telefon finnes det ingen hjelpetekst å holde over):
