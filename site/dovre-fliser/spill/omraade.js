@@ -29,4 +29,9 @@
     g.strokeStyle = 'rgba(232,212,138,.75)'; g.lineWidth = 1.6; g.setLineDash([8, 6]); g.stroke(); g.restore(); });
   // ordre utenfor fylket stoppes (lagene holder seg på spillkartet)
   rot.OMRÅDE_OK = (x, y) => !rot.SPILLOMRÅDE || inni(rot.SPILLOMRÅDE, x, y);
+  // kjør selv (spill/kjor.js): bilen og helikopteret holdes innenfor fylket – ved grensa settes kjøretøyet tilbake dit det sist var inne
+  let sistInne = null, sistMeldt = 0;
+  KROKER.ramme3d.push(() => { const O = rot.SPILLOMRÅDE, k = O && rot.KjorSpill && KjorSpill.fører && KjorSpill.fører(); if (!k || typeof k.X !== 'number') { sistInne = null; return; }
+    if (inni(O, k.X, k.Y)) { sistInne = [k.X, k.Y]; return; } if (!sistInne) return;
+    k.X = sistInne[0]; k.Y = sistInne[1]; k.v = 0; k.vx = 0; k.vy = 0; if (performance.now() - sistMeldt > 5000) { sistMeldt = performance.now(); logg('Her slutter spillkartet. Snu.'); } });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

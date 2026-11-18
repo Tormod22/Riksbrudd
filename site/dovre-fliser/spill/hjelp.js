@@ -98,6 +98,8 @@
     ['Lag og strid', ['Lagene', 'Tåke', 'Kjøretøy', 'Forsyning', 'Olje', 'Ingeniører', 'Flere enheter', 'Tettsteder', 'Motstanderne']],
     ['I 3D', ['Gå selv', 'Kamp når du går selv', 'Våpen og sekken', 'Ferdigheter', 'Tilfluktssteder', 'Kjøre bil og helikopter', 'Gå inn i husene', 'Let i husene', 'Kompass og minikart', 'Filter i 3D', 'Fotomodus', 'Byer og butikker', 'Dyr', 'Ferjer og båter', 'Kraftledninger']],
     ['Vær, lyd og bilde', ['Vær og årstid', 'Dag og natt', 'Bølger, vind og tåke', 'Lyd', 'Grafikk']]];
+  // hjelpetekster fra pakkene (spill/hjelp-natt.js, laget av pipeline/fliser/samle_hjelp.py): et emne som finnes fra før, får ny tekst
+  for (const [t, tekst, g] of window.HJELP_TILLEGG || []) { const gammel = DELER.find(d => d[0] === t); if (gammel) gammel[1] = tekst; else { DELER.push([t, tekst]); (GRUPPER.find(q => q[0] === g) || GRUPPER[0])[1].push(t); } }
   const kort = document.createElement('ol'); kort.className = 'kort';
   for (const t of ['Åpne «Leir» og bygg det første: en brakke, en dieseltank og et aggregat. Øverst i menyen står neste mål.', 'Sett folkene i arbeid under «Folk» (bygg, hogst, vakt, kjøkken).',
     'Trykk på et lag i kartet og velg «Marsjer» for å flytte det. Lagene ser bare et stykke rundt seg – resten ligger i tåke.', 'Trykk «3D» for å se landskapet, og «Gå» for å gå selv – også inn i husene, der du kan lete etter forsyninger.',

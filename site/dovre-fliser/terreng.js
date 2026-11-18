@@ -16,6 +16,8 @@
   function fart(klasse, veg) {
     if (veg >= 2) return 5;
     if (veg === 1) return 4;
+    // islagt vann bærer etter lang kulde (spill/verden-visning.js setter fart.is = km/t, ellers 0)
+    if (klasse === 3 && fart.is) return fart.is;
     if (klasse === 3 || klasse === 255) return 0;          // vann (og utenfor kartet) er sperret uten veg
     return { 0: 2.2, 1: 2, 2: 3, 4: 1.5, 5: 3, 6: 1.8, 7: 3.5 }[klasse] || 3;   // tettbebyggelse: gjerder, hager, hus
   }

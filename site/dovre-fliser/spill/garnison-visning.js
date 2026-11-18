@@ -11,6 +11,8 @@
   const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
   const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
+  // for regionen (spill/region-visning.js): strømmen til et tettsted og kraftverkene
+  window.GarnisonSpill = { strømFor, kraft, byFor, byer };
 
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
@@ -27,7 +29,7 @@
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || !t.eier) continue;
       const strøm = strømFor(by);
       if (t.eier === 'blå' && b) b.beholdning += G.produksjon(by.e.folk, sek, strøm);
-      for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek, strøm, nyMann))
+      for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek * (t.eier !== 'blå' && window.RegionSpill && RegionSpill.fordel ? RegionSpill.fordel(t.eier).forsterk : 1), strøm, nyMann))
         if (s.side === 'blå') logg(hva === 'ny' ? `${m.navn} (${m.rolle}) er rekruttert i ${by.e.navn} og går inn i ${s.navn}.` : `${m.navn} (${s.navn}) er frisk igjen etter stell i ${by.e.navn}.`);
     }
     // verkstedene i egne tettsteder reparerer kjøretøy: 10 % skade per spilltime (uten strøm 4 %)

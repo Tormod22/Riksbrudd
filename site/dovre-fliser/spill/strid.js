@@ -50,6 +50,8 @@
     dekning: { navn: 'Når fienden er nær', valg: { ja: 'Søk høyere terreng i nærheten', nei: 'Bli stående der vi står' } },
     støtte: { navn: 'Lag under ild i nærheten', valg: { nei: 'Bli på plassen vår', ja: 'Kom dem til hjelp (innen 1,5 km)' } },
     forsyn: { navn: 'Lite ammunisjon', valg: { nei: 'Vent på ordre', ja: 'Gå og hent selv (under 25 %)' } },
+    // (18. nov, spill/krig-visning.js) et eget lag som er knust (seks ute av kamp) og har fiender på to kanter
+    overgi: { navn: 'Knust og omringet', valg: { nei: 'Aldri gi seg', ja: 'Gi seg heller enn å dø' } },
   };
   const INITIATIV = { dekning: 1200, høyde: 8, søk: 150, støtte: 1500, ammo: .25 };
   // Det laget gjør på eget initiativ når stridsreglene ellers ikke sier noe. t: { stille (står uten ordre), fiende (meter til nærmeste
@@ -68,7 +70,7 @@
     bakhold: { navn: 'Bakhold', tekst: 'Ligger stille og venter til fienden er innen 200 m.', regel: { ild: 'nær', underlegen: 'trekk', tap: 5, fram: 'nei' } },
   };
   const GRENSE = { underlegen: .7, overtak: 1.3, nær: 200, unngå: 1200 };
-  const standard = () => ({ ...HOLDNING.balansert.regel, dekning: 'ja', støtte: 'nei', forsyn: 'nei', bev: 'standard' });
+  const standard = () => ({ ...HOLDNING.balansert.regel, dekning: 'ja', støtte: 'nei', forsyn: 'nei', overgi: 'nei', bev: 'standard' });
   const ren = r => { const s = standard(), u = { ...s, ...(r || {}) }; for (const k of Object.keys(VALG)) if (!(String(u[k]) in VALG[k].valg)) u[k] = s[k]; u.tap = +u.tap; if (!BEVÆPNING[u.bev]) u.bev = 'standard'; return u; };
   const holdningFor = r => Object.keys(HOLDNING).find(id => Object.entries(HOLDNING[id].regel).every(([k, v]) => String(r[k]) === String(v))) || null;
   // Får laget skyte? t: { avstand, beskutt }

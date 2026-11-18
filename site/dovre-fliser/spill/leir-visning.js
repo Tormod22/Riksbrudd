@@ -39,6 +39,14 @@
 #leirmeny [hidden]{ display:none !important; }
 #leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
+#leirmeny h3.del{ cursor:pointer; position:relative; padding-right:24px; user-select:none; -webkit-user-select:none; } #leirmeny h3.del::after{ content:'▾'; position:absolute; right:4px; top:8px; font-size:13px; opacity:.8; } #leirmeny h3.del.lukket::after{ content:'▸'; }
+#leirmeny h3.del:hover{ color:#f0dc9a; } #leirmeny h3.del.lukket{ margin-bottom:0; opacity:.9; } #leirmeny .delboks.lukket > :not(h3):not(:has(h3)){ display:none; } #leirmeny .hale[hidden]{ display:none; } #leirmeny .hale{ border-bottom:0; padding-top:2px; } #leirmeny .hale:empty{ display:none; }
+#leirmeny .liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:7px; } #leirmeny .liste[hidden], #leirmeny .liste [hidden]{ display:none; } #leirmeny .liste h4{ grid-column:1 / -1; }
+#leirmeny .bygg.kort{ flex-direction:column; align-items:stretch; gap:3px; padding:6px 7px 7px; background:linear-gradient(180deg,#2c2416,#1a140b); border:1px solid #4a3d24; border-radius:4px; transition:border-color .12s, transform .12s; }
+#leirmeny .bygg.kort:hover{ border-color:#c9b26a; transform:translateY(-1px); } #leirmeny .bygg.kort .tegn{ width:100%; height:58px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.16), rgba(0,0,0,0) 70%); pointer-events:none; }
+#leirmeny .bygg.kort b{ display:block; font-size:14.5px; line-height:1.15; } #leirmeny .bygg.kort .pris{ color:#f0dc9a; font-size:13.5px; } #leirmeny .bygg.kort .kortlinje{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#leirmeny .bygg.kort .mer{ display:none; } #leirmeny .bygg.kort button{ width:100%; height:30px; margin-top:2px; } #leirmeny .bygg.kort button:disabled{ opacity:.45; }
+@media (prefers-reduced-motion:reduce){ #leirmeny .bygg.kort{ transition:none; } #leirmeny .bygg.kort:hover{ transform:none; } }
 #leirmeny .bygg div{ flex:1; min-width:0; } #leirmeny .bygg b{ font-weight:600; } #leirmeny .bygg small{ display:block; color:var(--ink-dim); font-size:12.5px; }
 #leirmeny button, #byggvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:40px; padding:4px 12px; cursor:pointer; font:inherit; }
 #leirmeny button:disabled, #byggvalg button:disabled{ opacity:.45; cursor:default; }
@@ -112,9 +120,11 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     for (const b of siste.framme || []) logg(`Byggelaget er framme ved ${LB.BYGG[b.type].del ? 'byggesettet' : LB.BYGG[b.type].navn.toLowerCase()} (${LB.kmTekst(LB.reise(L, b.x, b.y).meter)} fra leiren) og begynner arbeidet.`);
     // fiender skader byggene: 8 % per spilltime per fiendtlig lag innen 120 m. Også byggeplassene (bygg under bygging eller i kø) kan
     // skades (brukeren 12. nov); blir en byggeplass ødelagt, kommer materialene som ikke var brukt, tilbake på lageret (Leir.skad).
+    HERJER.clear();
     for (const e of ENHETER) { if (e.side === 'blå' || !levende(e)) continue;
       const deler = { n: 0, mat: {} };
       for (const b of L.bygg.slice()) { if (Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
+        HERJER.add(e);
         const B = LB.BYGG[b.type], navn = B.navn.toLowerCase(), r = LB.skad(L, b.id, .08 * dt / 60); if (!r) continue;
         if (r.ødelagt) { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L)), mt = matTekst(r.mat);
           // delene i byggesettet (ofte mange på én gang) meldes samlet under
@@ -134,6 +144,14 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // Menyen tegnes på nytt hvert sekund (strøm, kø): behold plassen du har bladd til (brukeren 11. nov: «lar meg ikke bla ned»)
   let menyNøkkel = '';
   let fane = 'bygg';
+  // delene i fanene: rekkefølge, og hvilke som er lagt sammen til du åpner dem (Claudes forslag)
+  const FANEREKKE = ['bygg', 'lager', 'plan', 'mål'], DELREKKE = { bygg: [/^Byggelag/, /^Strøm$/, /^Byggesett/, /^Forsvar/, /^Tropper/, /^Kameravakt/, /^Sjøen/, /^Strømnett/],
+    lager: [/^Materialer$/, /^Oversikt/, /^Materialer fra verden/, /^Markedet/, /^Region/, /^Sjø/, /^Våpen/], plan: [/^Planlegg/],
+    mål: [/^Oppdrag/, /^Mål$/, /^Trusselen/, /^Ukas|^Scenario/, /^Etterretning/, /^Vær og verden/, /^Samfunn/, /^Dagbok/, /^Venner/, /tid og flyt/, /spillform/, /^Opplæring/] };
+  const DEL_LUKKET = /^(Forsvar|Tropper|Strømnett|Byggesett|Kameravakt|Sjøen|Våpen og utstyr|Markedet|Venner|Etterretning|Vær og verden|Mål · |Opplæring|Region|Samfunn)/;
+  let DELVALG = {}; try { DELVALG = JSON.parse(localStorage.getItem('riksbrudd-leirdeler') || '{}') || {}; } catch (e) { DELVALG = {}; }
+  const delNøkkel = t => t.replace(/[\d(].*$/, '').replace(/[:·\s]+$/, '').trim() || t.trim();
+  const delLukket = k => (k in DELVALG ? !!DELVALG[k] : (!navigator.webdriver || window.LEIRDELER_TEST === true) && DEL_LUKKET.test(k));
   function visMeny() {
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
@@ -202,7 +220,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
-      liste.appendChild(el('div', { klasse: 'bygg', 'data-type': id }, el('div', {}, el('b', {}, B.navn), el('small', {}, pris + strøm + nv), el('small', {}, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', {}, B.tekst)), b));
+      // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
+      const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
+      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.tekst}` }, tegn,
+        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris)), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
@@ -221,8 +242,25 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const nm = hode.querySelector('.nestemaal'); if (nm) bar.before(nm);
       // det som hører til en fane og sto over fanene (dieselkjøpet), flyttes ned under dem
       let etter = bar; for (const n of [...hode.children]) { if (n === bar) break; if (n.dataset && n.dataset.fane) { etter.after(n); etter = n; } } }
-    const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
-    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
+    // DELER SOM KAN LEGGES SAMMEN, I FAST REKKEFØLGE (18. nov, runde 2: fanene hadde fått mange nye deler fra andre moduler – Bygg var
+    // nesten 4000 punkter høy). Hver overskrift (h3) åpner og lukker delen sin, og valget huskes («riksbrudd-leirdeler»). Delene
+    // sorteres etter DELREKKE per fane (ukjente sist, i den rekkefølgen de kom); i fanen Bygg står byggekortene rett under jobbene,
+    // og resten av delene under kortene (hale). I testene (navigator.webdriver) er alle deler åpne til noen lukker dem.
+    const hale = el('div', { klasse: 'hode hale' });
+    { const grupper = []; let g = null;
+      for (const n of [...hode.children]) { if (n === status || !n.dataset || !n.dataset.fane || (n.classList && (n.classList.contains('faner') || n.classList.contains('nestemaal')))) continue;
+        const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3');
+        if (h) { g = { nøkkel: delNøkkel(h.textContent), fane: n.dataset.fane, h, noder: [n], boks: n !== h }; grupper.push(g); } else if (g && g.fane === n.dataset.fane) g.noder.push(n); else g = null; }
+      const rang = q => { const R = DELREKKE[q.fane] || [], i = R.findIndex(re => re.test(q.nøkkel)); return i < 0 ? 50 : i; };
+      grupper.forEach((q, i) => { q.i = i; q.rang = rang(q); }); grupper.sort((a, b) => FANEREKKE.indexOf(a.fane) - FANEREKKE.indexOf(b.fane) || a.rang - b.rang || a.i - b.i);
+      for (const q of grupper) { const lukket = delLukket(q.nøkkel), til = q.fane === 'bygg' && q.rang > 0 ? hale : hode;
+        q.h.classList.add('del'); q.h.classList.toggle('lukket', lukket); q.h.setAttribute('role', 'button'); q.h.setAttribute('aria-expanded', String(!lukket)); q.h.tabIndex = 0; q.h.dataset.del = q.nøkkel;
+        q.h.onclick = () => { DELVALG[q.nøkkel] = !lukket; try { localStorage.setItem('riksbrudd-leirdeler', JSON.stringify(DELVALG)); } catch (e) { /* sperret */ } visMeny(); };
+        q.h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.h.onclick(); } };
+        for (const n of q.noder) { if (lukket) { if (n === q.h) { /* overskriften står */ } else if (q.boks && n === q.noder[0]) n.classList.add('delboks', 'lukket'); else n.hidden = true; } til.appendChild(n); } }
+      if (fane !== 'bygg') hale.hidden = true; }
+    const nøkkel = hode.innerHTML + liste.innerHTML + hale.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyEl.scrollTop = rulle;
   }
   const tidTekst = LB.tidTekst;
 
@@ -235,7 +273,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (o.pid) { const a = LB.planFinn(L, o.pid); plassering.ret = a.ret; plassering.retSatt = true; }
     if (o.ret !== undefined) { plassering.ret = o.ret; plassering.retSatt = true; }
     meny = false; menyEl.classList.remove('på'); leirKnapp.classList.remove('på');
-    visBanner(LB.BYGG[type].linje ? `Trykk der ${LB.BYGG[type].veg ? 'vegen' : 'gjerdet'} skal begynne, og så punkt for punkt.` : `Trykk der ${LB.BYGG[type].navn.toLowerCase()} skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
+    visBanner(LB.BYGG[type].linje ? `Trykk der ${LB.BYGG[type].veg ? 'vegen' : 'gjerdet'} skal begynne, og så punkt for punkt.` : `${LB.BYGG[type].navn}: trykk der bygget skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
   }
   // En mal settes inn i planen: trykk der midten skal være, roter, «Legg i planen»
   function startMal(i) {
@@ -259,7 +297,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (p && !p.mal && !p.flytt && !p.pid) banner.append(knapp(fortsett ? 'Fortsett: på' : 'Fortsett: av', () => { fortsett = !fortsett; prøv(); }, { title: 'Sett ut flere av samme slag etter hverandre' }));
     if (p && p.plan) { if (kan) banner.append(knapp(p.pid ? 'Flytt skissen hit' : 'Legg i planen', bekreft, { id: 'leggplan' })); }
     else {
-      if (kan) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
+      // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
+      if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
       if (kan === 'mat') banner.append(knapp(`Kjøp materialene (${LB.kroner(p.matPris)}) og bygg`, () => { if (kjøpManglende(p.mat)) bekreft(); }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
@@ -345,6 +384,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return null;
   }
   KROKER.trykk.push(trykk); KROKER.trykk3d.push(trykk);
+  // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
+  const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));
   function bekreft() {
     const p = plassering; if (!p || p.feil) return;
     if (p.mal) { if (p.sjekket !== p.x + ',' + p.y + ',' + p.ret) return; husk(); let nr = 0;
@@ -364,7 +405,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function ferdigPlassert(p) {
     lagre(); visStatus(); bygg3dPåNytt(!p.plan); skitten = true; if (meny) visMeny();
     if (fortsett && !p.mal && !p.flytt && !p.pid && !LB.BYGG[p.type].linje) { plassering = { ...p, x: null, y: null, rx: null, ry: null, feil: null, linjer: [], retSatt: true };
-      visBanner(`Trykk der neste ${LB.BYGG[p.type].navn.toLowerCase()} skal stå (Fortsett er på).`); skisse3d(); return; }
+      visBanner(`${LB.BYGG[p.type].navn}: trykk der neste skal stå (Fortsett er på).`); skisse3d(); return; }
     plassering = null; banner.classList.remove('på'); skisse3d();
   }
 

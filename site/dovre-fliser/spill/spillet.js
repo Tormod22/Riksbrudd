@@ -18,6 +18,13 @@
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
     start: (leir, r1, r2) => { const v = r1 * 6.2832, d = 1400 + r2 * 800; return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
     belønning: nr => 2e6 + 1e6 * nr,
+    // NÅR ER BØLGEN OVER? (18. nov: røvere som var slått, trakk seg 3,9 km unna og ble stående – bølgen var «aktiv» for alltid, og det
+    // kom aldri nye.) Et lag kan kjempe når det lever og ikke er slått ut. Bølgen er over når ingen kan kjempe ('slått'), eller når de
+    // som kan, har holdt seg mer enn «borte» meter fra leiren i «borteMin» spillminutter ('unna'). Lag som venter på mørket (venter),
+    // teller ikke som unna. lag: [{ lever, slåttUt, avstand, venter }], minutter: hvor lenge alle har vært unna. Tallene er Claudes forslag.
+    borte: 2500, borteMin: 30,
+    ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt); if (!k.length) return 'slått';
+      if (k.every(q => q.avstand > Trussel.borte && !q.venter)) return (minutter || 0) >= Trussel.borteMin ? 'unna' : 'trekker'; return null; },
     varsel: (nr, n, s) => `Varsel: ${n === 1 ? 'et røverlag' : n + ' røverlag'} er på vei mot leiren fra ${s.retning} (${(s.meter / 1000).toFixed(1).replace('.', ',')} km unna). Bølge ${nr}.`,
   };
 
@@ -27,10 +34,26 @@
     VARER, SALG: .8,
     ny: () => ({ f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, infl: 1, dag: 0 }),
     // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er 0,4 % per døgn
-    steg(M, rng) { M.før = { ...M.f }; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; return M; },
+    steg(M, rng) { M.før = { ...M.f }; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; Marked.fyll(M, 1); return M; },
     pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * M.f[vare] * M.infl / 100) * 100),
     // endringen siden i går i prosent (med inflasjonen)
     endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
+    // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
+    // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
+    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 40, fyll: 10 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
+    ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner' },
+    // kjøpsprisen på tre, betong og stål er 1,5 × markedsprisen (frakt og mellommenn), så hogst og riving lønner seg klart
+    PÅSLAG: 1.5,
+    kjøpspris: (M, vare, grunnpris, dyrt) => Math.round(Marked.pris(M, vare, grunnpris) * (dyrt && Marked.erMateriale(vare) ? Marked.PÅSLAG : 1) / 100) * 100,
+    erMateriale: vare => vare === 'tre' || vare === 'betong' || vare === 'stål',
+    // hyllene i et marked (gamle lagrede markeder får fulle hyller)
+    hyller(M) { if (!M.lager) M.lager = {}; for (const v of VARER) if (!(M.lager[v] >= 0)) M.lager[v] = Marked.LAGER[v].maks; return M.lager; },
+    // nye varer: døgn = hvor mange døgn som er gått
+    fyll(M, døgn = 1) { const H = Marked.hyller(M); for (const v of VARER) H[v] = Math.min(Marked.LAGER[v].maks, H[v] + Marked.LAGER[v].fyll * døgn); return M; },
+    // hvor mye av ønsket mengde du får kjøpt (mat og diesel i hele, resten i tideler)
+    kan(M, vare, mengde) { const h = Marked.hyller(M)[vare] || 0, m = Math.min(mengde, h); return Marked.erMateriale(vare) ? Math.floor(m * 10 + 1e-6) / 10 : Math.floor(m + 1e-6); },
+    ta(M, vare, mengde) { const H = Marked.hyller(M); H[vare] = Math.max(0, (H[vare] || 0) - mengde); return H[vare]; },
+    tomt: (vare) => `Markedet er tomt for ${vare === 'mat' ? 'mat' : vare} i dag. Det kommer mer i morgen – eller skaff det selv (hogst, riving, tettsteder).`,
     tekst(M) { const d = VARER.map(v => [v, Marked.endring(M, v)]).filter(q => Math.abs(q[1]) >= 5).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3);
       return d.length ? 'Markedet: ' + d.map(([v, e]) => `${v} ${e > 0 ? 'opp' : 'ned'} ${Math.abs(e)} %`).join(', ') + '.' : 'Markedet: små endringer i dag.'; },
   };
@@ -93,12 +116,16 @@
     fra: s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return typeof atob === 'function' ? decodeURIComponent(escape(atob(s))) : Buffer.from(s, 'base64').toString('utf8'); } };
   const Deling = {
     // koden: navn, farge, sted og byggene (type, plass i hele meter fra leiren, retning i grader); høyst 80 bygg
-    kode(navn, farge, leir, bygg) { const b = bygg.filter(q => q.x !== undefined).slice(0, 80).map(q => [q.type, Math.round(q.x - leir.x), Math.round(q.y - leir.y), Math.round((q.ret || 0) * 57.3)]);
-      return b64.til(JSON.stringify({ v: 1, n: String(navn).slice(0, 40), f: farge, x: Math.round(leir.x), y: Math.round(leir.y), b })); },
+    // (natt 18. nov) stilling = { byer: [tettsted-id …], andel (prosent av folket i området), dag }: det vennen holder i krigen – valgfritt
+    kode(navn, farge, leir, bygg, stilling) { const b = bygg.filter(q => q.x !== undefined).slice(0, 80).map(q => [q.type, Math.round(q.x - leir.x), Math.round(q.y - leir.y), Math.round((q.ret || 0) * 57.3)]);
+      const d = { v: 1, n: String(navn).slice(0, 40), f: farge, x: Math.round(leir.x), y: Math.round(leir.y), b };
+      if (stilling) d.s = { t: (stilling.byer || []).slice(0, 60).map(String), a: Math.max(0, Math.min(100, Math.round(stilling.andel || 0))), d: Math.max(1, Math.round(stilling.dag || 1)) };
+      return b64.til(JSON.stringify(d)); },
     // les en kode: gir { navn, farge, x, y, bygg } eller null når den ikke er gyldig
     les(kode, kjente) { try { const d = JSON.parse(b64.fra(String(kode).trim())); if (!d || d.v !== 1 || typeof d.x !== 'number' || typeof d.y !== 'number' || !Array.isArray(d.b)) return null;
       const bygg = d.b.filter(q => Array.isArray(q) && (!kjente || kjente(q[0])) && q.slice(1).every(t => typeof t === 'number' && Math.abs(t) < 5000)).slice(0, 80).map(q => ({ type: q[0], x: d.x + q[1], y: d.y + q[2], ret: q[3] / 57.3 }));
-      return { navn: String(d.n || 'Venn').slice(0, 40), farge: /^#[0-9a-f]{6}$/i.test(d.f) ? d.f : '#8fc2ef', x: d.x, y: d.y, bygg }; } catch (e) { return null; } },
+      const st = d.s && typeof d.s === 'object' && Array.isArray(d.s.t) ? { byer: d.s.t.filter(t => typeof t === 'string' || typeof t === 'number').slice(0, 60).map(String), andel: Math.max(0, Math.min(100, Math.round(+d.s.a || 0))), dag: Math.max(1, Math.round(+d.s.d || 1)) } : null;
+      return { navn: String(d.n || 'Venn').slice(0, 40), farge: /^#[0-9a-f]{6}$/i.test(d.f) ? d.f : '#8fc2ef', x: d.x, y: d.y, bygg, stilling: st }; } catch (e) { return null; } },
   };
 
   const api = { Trussel, Marked, Oppdrag, Kamp, Hendelser, Deling, retning };

@@ -57,8 +57,9 @@
   const iLeiren = () => { const S = spill(), p = sted(); return !!(S && S.leir && p && Math.hypot(p.x - S.leir.x, p.y - S.leir.y) <= K.R.nær); };
   const harVann = () => { const O = rot.OverlevSpill, D = O && O.D && O.D(); return !D || !D.vann.nede || (O.brønner && O.brønner() > 0); };
   const ting = () => (rot.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill.tilstand().ting : null);
-  function spisRasjon() { const t = ting(); if (!t || !(t.feltrasjon > 0)) { logg('Du har ingen feltrasjon i sekken.'); return false; } if (T.behov.sult > 95) { logg('Du er ikke sulten.'); return false; }
-    t.feltrasjon--; if (!t.feltrasjon) delete t.feltrasjon; K.fyll(T.behov, 'sult', K.R.rasjon); UtstyrSpill.lagre(); UtstyrSpill.vis(); lagre(); logg('Du spiser en feltrasjon.'); vis(true); return true; }
+  // (18. nov: rasjonen heter «rasjon» i sekken – før sto det «feltrasjon» her, så knappen virket aldri)
+  function spisRasjon() { const t = ting(); if (!t || !(t.rasjon > 0)) { logg('Du har ingen feltrasjon i sekken.'); return false; } if (T.behov.sult > 95) { logg('Du er ikke sulten.'); return false; }
+    t.rasjon--; if (!t.rasjon) delete t.rasjon; K.fyll(T.behov, 'sult', K.R.rasjon); UtstyrSpill.lagre(); UtstyrSpill.vis(); lagre(); logg('Du spiser en feltrasjon.'); vis(true); return true; }
 
   // hvert sekund: behovene synker med spilltiden, og fylles der det går
   function takt() { if (!klar || !T) return; const nå = typeof tid !== 'undefined' ? tid : 0; if (sistTid === null) sistTid = nå; const t = Math.max(0, Math.min(6, (nå - sistTid) / TIME)); sistTid = nå;
@@ -196,21 +197,23 @@ body.smal #karakterark, body.kort #karakterark{ left:0; right:0; top:auto; botto
     f.append(el('h3', {}, 'Tilstand')); if (SS) f.append(måler('Helse', SS.hp / 100, `${Math.round(SS.hp)} av 100`, SS.hp < 30 ? 'lite' : SS.hp < 60 ? 'greit' : ''));
     for (const [id, D] of Object.entries(K.BEHOV)) { const igjen = T.behov[id] / 100 * D.timer; f.append(måler(D.navn, T.behov[id] / 100, K.ord(id, T.behov[id]) + (T.behov[id] > 0 ? ` · tom om ${igjen >= 1 ? Math.round(igjen) + ' t' : Math.max(1, Math.round(igjen * 60)) + ' min'}` : ''), K.tilstand(T.behov[id]))); }
     if (V.treff < 1 || V.løp < 1 || V.skade > 0) f.append(el('div', { klasse: 'tips', style: 'color:#f0a88a' }, [V.treff < 1 ? `Du treffer ${Math.round((1 - V.treff) * 100)} % dårligere` : '', V.løp < 1 ? `løper ${Math.round((1 - V.løp) * 100)} % kortere` : '', V.skade > 0 ? 'og helsa tærer' : ''].filter(Boolean).join(', ') + '.'));
-    const t = ting(), rasjoner = t && t.feltrasjon ? t.feltrasjon : 0, knapper = el('div', {}); knapper.append(knapp(`Spis feltrasjon (${rasjoner} i sekken)`, spisRasjon, Object.assign({ id: 'spisrasjon' }, rasjoner > 0 ? {} : { disabled: '' })));
+    const t = ting(), rasjoner = t && t.rasjon ? t.rasjon : 0, knapper = el('div', {}); knapper.append(knapp(`Spis feltrasjon (${rasjoner} i sekken)`, spisRasjon, Object.assign({ id: 'spisrasjon' }, rasjoner > 0 ? {} : { disabled: '' })));
     if (rot.UtstyrSpill && UtstyrSpill.klar()) knapper.append(knapp('Åpne sekken', () => { lukk(); UtstyrSpill.åpne(true); })); f.append(knapper);
     const O = rot.OverlevSpill && OverlevSpill.klar && OverlevSpill.klar() ? OverlevSpill : null, FR = rot.Overlev && Overlev.Ferdigheter;
     if (O && FR) { f.append(el('h3', {}, 'Ferdigheter')); for (const [id, D] of Object.entries(FR.LISTE)) { const n = FR.nivå(O.F()[id]); f.append(måler(D.navn, n.andel, `nivå ${n.n}`, 'ferd')); } }
     if (rot.UtstyrSpill && UtstyrSpill.klar() && rot.Utstyr) { const I = UtstyrSpill.tilstand(); f.append(el('h3', {}, 'Du bærer'));
       I.våpen.forEach((v, i) => f.append(el('div', { klasse: 'rad' }, el('span', {}, (Utstyr.VÅPEN[v.id] || {}).navn || v.id, i === I.aktiv ? ' (i hånda)' : ''), el('small', {}, `${v.mag} i magasinet`))));
       let kg = null; try { kg = [Utstyr.vekt(I), Utstyr.maks()]; } catch (e) { kg = null; } if (kg && isFinite(kg[0])) f.append(måler('Vekt', kg[0] / kg[1], `${String(Math.round(kg[0] * 10) / 10).replace('.', ',')} av ${kg[1]} kg`, kg[0] > kg[1] * .9 ? 'lite' : 'ferd')); }
+    // tillegg fra andre moduler (spill/eventyr-visning.js: historie, skader, hund, håndverk, kart): window.KARAKTERARK.push((f, { el, knapp, måler }) => …)
+    for (const fn of rot.KARAKTERARK || []) { try { fn(f, { el, knapp, måler }); } catch (e) { console.error(e); } }
     f.append(el('h3', {}, 'Så langt')); const dag = Math.floor((typeof tid !== 'undefined' ? tid : 0) / (24 * TIME)) + 1, lett = rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0;
     for (const [a, b] of [['Dager', String(dag)], ['Gått til fots', T.gått >= 1000 ? `${String(Math.round(T.gått / 100) / 10).replace('.', ',')} km` : `${Math.round(T.gått)} m`], ['Hus gjennomsøkt', String(lett)]]) f.append(el('div', { klasse: 'rad' }, el('span', {}, a), el('small', {}, b)));
-    f.append(el('div', { klasse: 'tips' }, 'I leiren drikker, spiser og hviler du av deg selv. Ute: spis feltrasjoner, drikk ved et vann, og hvil i et hus du har sikret. Når du går, viser knappen «Utenfra» (V) deg selv i tredjeperson.'));
+    f.append(el('div', { klasse: 'tips' }, 'I leiren drikker, spiser og hviler du av deg selv. Ute blir du tørst og sulten av å gå: ta med vann i feltflaska og rasjoner, drikk ved et vann, og sov i et hus du har sikret. Når du går, viser knappen «Utenfra» (V) deg selv i tredjeperson.'));
     return f; }
   function vis(tving) { if (!åpen || !klar) return; if (!tving && rot.pekerNede && pekerNede(panel)) return; const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sistHtml) return; sistHtml = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }
   function åpne() { if (!klar) return; åpen = true; panel.classList.add('på'); kn.classList.add('på'); sistHtml = ''; vis(true); }
   function lukk() { åpen = false; panel.classList.remove('på'); kn.classList.remove('på'); }
   setInterval(() => { kn.hidden = !klar; tk.hidden = !(klar && går() && !fører()); }, 500);
-  Object.assign(ut, { start, åpne, lukk, erÅpen: () => åpen, T: () => T, klar: () => klar, treff: () => (klar && T ? K.virkning(T.behov).treff : 1), tredje: () => tredje, settTredje, figur: () => figur, spisRasjon, takt, lagre, varsler: () => (klar && T ? Object.keys(K.BEHOV).filter(k => T.behov[k] < K.R.lav).map(k => ({ id: k, tekst: K.ord(k, T.behov[k]), råd: K.BEHOV[k].råd })) : []) });
+  Object.assign(ut, { start, åpne, lukk, vis, iLeiren, sted, harVann, erÅpen: () => åpen, T: () => T, klar: () => klar, treff: () => (klar && T ? K.virkning(T.behov).treff : 1), tredje: () => tredje, settTredje, figur: () => figur, spisRasjon, takt, lagre, varsler: () => (klar && T ? Object.keys(K.BEHOV).filter(k => T.behov[k] < K.R.lav).map(k => ({ id: k, tekst: K.ord(k, T.behov[k]), råd: K.BEHOV[k].råd })) : []) });
   rot.KarakterSpill = ut;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

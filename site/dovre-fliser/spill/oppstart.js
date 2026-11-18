@@ -5,7 +5,11 @@
  */
 (function (rot) {
   'use strict';
-  const STARTPENGER = 100e6;
+  // Natt til 18. nov (gjennomgangen: «100 mill. kr er for mye, spilleren kan kjøpe seg ut av alt»): NYE spill starter med 40 mill. kr
+  // (Claudes forslag: kontrollrom 15 + aggregat 8 + brakke 4 + dieseltank 3 = 30, og 10 igjen til materialer, diesel og mat) –
+  // resten må komme fra tettstedene, oppdrag og det du finner. Lagrede spill beholder pengene sine (S.penger er lagret).
+  // I testene (Node og kontrollskriptet med navigator.webdriver) er beløpet 100 mill. som før.
+  const STARTPENGER = (typeof module !== 'undefined' && module.exports) || (typeof navigator !== 'undefined' && navigator.webdriver) ? 100e6 : 40e6;
   // bonus: treff (faktor på treff for egne lag), sikt (faktor på siktvidden), penger (ekstra ved start),
   // helse (sårede blir friske så mange ganger fortere), bygg (byggefart), mat (faktor på matpris)
   const BAKGRUNNER = {
@@ -39,6 +43,8 @@
       karakter: { navn: '', bakgrunn: 'soldat', portrett: portrett() },
       fraksjon: { navn: '', flagg: { mønster: 'loddrett', farger: ['#1d3557', '#f2efe6', '#8f2a24'], symbol: 'ulv', symbolfarge: '#e0b53a', bokstaver: '', bokstavfarge: '#e0b53a' } },
       penger: STARTPENGER, leir: null,
+      // spillformen (natt 18. nov, spill/scenario.js): vanskelighetsgrad, utfordringer og scenario; utenLag = start uten ferdige lag
+      regler: { vanskelighet: 'vanlig', utfordringer: [], scenario: null }, utenLag: false,
     };
   }
   const renTekst = (t, maks) => String(t || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, maks);
@@ -105,12 +111,13 @@
     return ut;
   }
   // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (100 mill. + eventuell bonus).
-  function fullfør(S, leir) {
+  // faktor: vanskelighetsgraden og utfordringene ganger startkassa (spill/scenario.js; 1 når den ikke er gitt)
+  function fullfør(S, leir, faktor) {
     const f = feil(S); if (f.length) return f;
     S.karakter.navn = renTekst(S.karakter.navn, 30); S.fraksjon.navn = renTekst(S.fraksjon.navn, 40); S.karakter.portrett = portrett(S.karakter.portrett, S.karakter.navn);
     S.fraksjon.flagg.bokstaver = (S.fraksjon.flagg.bokstaver || '').toUpperCase();
     S.leir = { x: Math.round(leir.x), y: Math.round(leir.y) };
-    S.penger = STARTPENGER + (BAKGRUNNER[S.karakter.bakgrunn].bonus.penger || 0); S.ferdig = true; return [];
+    S.penger = Math.round((STARTPENGER + (BAKGRUNNER[S.karakter.bakgrunn].bonus.penger || 0)) * (faktor > 0 ? faktor : 1)); S.ferdig = true; return [];
   }
   const bonus = S => (S && S.ferdig && BAKGRUNNER[S.karakter.bakgrunn] ? BAKGRUNNER[S.karakter.bakgrunn].bonus : {});
   // Kroner som tekst: «100 mill. kr», «2,5 mill. kr», «15 000 kr»

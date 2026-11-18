@@ -65,9 +65,11 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     let person = null;
     if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {
       const r = FolkRegler.rekrutter(FolkSpill.tilstand(), LeirSpill.tilstand(), () => true);
-      if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (LeirSpill.lagre) LeirSpill.lagre(); }
+      if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (window.SamfunnSpill && SamfunnSpill.funnet) SamfunnSpill.funnet(r.person); if (LeirSpill.lagre) LeirSpill.lagre(); }
       else logg('Du møtte en overlevende, men leiren har ingen ledig seng – vedkommende ble igjen.');
     }
+    // deler til håndverk og kanskje en hund (spill/eventyr-visning.js)
+    if (window.EventyrSpill && EventyrSpill.lettHus) { const t = EventyrSpill.lettHus(P.bygg.kl, P.bygg.i, f.tomt); if (t) { logg(t); visFunn(lapp.textContent + ' ' + t); } }
     if (window.OverlevSpill) OverlevSpill.øk('leting', 14);
     if (window.MaalSpill) MaalSpill.sjekk(false);
     return { f, fikk, person };
@@ -78,7 +80,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     if (P && P.bygg && !P.leir && lett.has(P.bygg.i) && plassTil(restAv(P))) { jobb = null; knapp.classList.add('på'); tekst('Hent det som ligger igjen'); fyll(0); return; }
     if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) { if (jobb) jobb = null; knapp.classList.remove('på'); return; }
     knapp.classList.add('på');
-    if (!jobb || jobb.P !== P) { if (jobb) jobb = null; tekst('Let gjennom huset'); fyll(0); return; }
+    if (!jobb || jobb.P !== P) { if (jobb) jobb = null; tekst('Let gjennom huset' + (window.EventyrSpill && EventyrSpill.trolig ? EventyrSpill.trolig(P.bygg.kl, arealAv(P), P.bygg.i) : '')); fyll(0); return; }
     const a = (performance.now() - jobb.start) / (jobb.sek * 1000);
     if (a >= 1) { jobb = null; knapp.classList.remove('på'); ferdig(P); return; }
     tekst('Leter … ' + Math.ceil(jobb.sek * (1 - a)) + ' s'); fyll(a);

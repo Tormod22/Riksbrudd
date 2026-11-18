@@ -58,6 +58,7 @@
     arbeidsfør: .4,
     nød: 3,                     // færre enn tre i gjengen: nye kan alltid rekrutteres (ingen krav om seng eller moral), så spillet ikke låser seg
     nødMoral: 50,               // en tom gjeng henter seg inn til dette, og de første nye starter ikke på bunnen
+    rasjonAvh: .6,              // barn og gamle (spill/samfunn.js) spiser litt mindre enn en voksen i arbeid
   };
   // Enkel, fast tilfeldighet (samme frø gir samme folk)
   function rng(frø) { let a = frø >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -83,12 +84,16 @@
       ledige.sort((a, b) => (o === 'fri' ? 0 : b.ferd[o] - a.ferd[o])); ledige.shift().oppgave = o; }
     return F;
   }
-  const arbeidsfør = p => p.helse >= R.arbeidsfør;
+  // i karantene (Grålungen) eller borte fra leiren (spill/samfunn.js): arbeider ikke
+  const arbeidsfør = p => p.helse >= R.arbeidsfør && !p.karantene && !p.borte;
   const på = (F, o) => F.personer.filter(p => p.oppgave === o);
   const arbeidere = (F, o) => på(F, o).filter(arbeidsfør).length;
   const moralFaktor = m => .55 + .6 * Math.max(0, Math.min(100, m)) / 100;
   // Tempo for én person på oppgaven: ferdighet × moral × søvn × helse
-  const personTempo = (F, p, o) => (o === 'fri' ? 1 : p.ferd[o] || 1) * moralFaktor(F.moral) * (p.seng || F.sist.alleSeng ? 1 : .85) * (.5 + .5 * Math.min(1, p.helse));
+  // F.tempoF: lover, hendelser og seremonier i leiren (spill/samfunn.js, settes i steg); p.trener: i opplæring (lærer eller elev);
+  // api.oppgaveF(o): faktor per oppgave utenfra (f.eks. frakt når vegene gror igjen, spill/overlev.js)
+  const personTempo = (F, p, o) => (o === 'fri' ? 1 : p.ferd[o] || 1) * moralFaktor(F.moral) * (p.seng || F.sist.alleSeng ? 1 : .85) * (.5 + .5 * Math.min(1, p.helse))
+    * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1);
   // Snittet for dem som er i arbeid på oppgaven (0 når ingen er der), 0–1,5
   function tempo(F, o) { const A = på(F, o).filter(arbeidsfør); if (!A.length) return 0; return Math.min(1.5, Math.max(0, A.reduce((s, p) => s + personTempo(F, p, o), 0) / A.length)); }
   // Byggelagene: to personer = ett lag; et lag med én person går halvt så fort (byggTempo)
@@ -116,27 +121,28 @@
   const årstidF = (å, v) => ({ vinter: v[0], vår: v[1], høst: v[1], sommer: v[2] }[å] ?? v[2]);
   // Hva leiren har for behovene nå. o: { årstid, mangler, ekstraSenger }
   function behov(F, L, o = {}) {
-    const n = F.personer.length, senger = LB.plasser(L) + (o.ekstraSenger || 0), kjøkken = iDrift(L, 'kjøkken', o.mangler).length;
+    // avh: barn og gamle (arbeider ikke, men spiser og trenger seng); ekstraKjøkken/ekstraVerksted: egenbygde rom (spill/byggesett.js)
+    const n = F.personer.length, avh = o.avhengige || 0, senger = LB.plasser(L) + (o.ekstraSenger || 0), kjøkken = iDrift(L, 'kjøkken', o.mangler).length + (o.ekstraKjøkken || 0);
     const kokker = på(F, 'kjøkken').filter(arbeidsfør).reduce((s, p) => s + personTempo(F, p, 'kjøkken'), 0);
-    const bemannet = n ? Math.min(1, kokker * R.perKokk / n) : 0, vinter = o.årstid === 'vinter';
+    const bemannet = n ? Math.min(1, kokker * R.perKokk / (n + avh)) : 0, vinter = o.årstid === 'vinter';
     const sesong = årstidF(o.årstid, [1, .5, 0]), fyring = sesong ? Math.ceil(n / R.varmeEnhet) * sesong : 0;
     const drivhus = iDrift(L, 'drivhus', o.mangler).length * R.drivhus * årstidF(o.årstid, [.3, .6, 1]);
-    const spiser = n * (vinter ? R.rasjonVinter : R.rasjon) * (bemannet > 0 ? 1 - (1 - R.kjøkkenSvinn) * bemannet : 1);
+    const spiser = (n + avh * R.rasjonAvh) * (vinter ? R.rasjonVinter : R.rasjon) * (bemannet > 0 ? 1 - (1 - R.kjøkkenSvinn) * bemannet : 1) * (o.matFaktor > 0 ? o.matFaktor : 1);
     const tårn = iDrift(L, 'vakttårn').length, vakter = arbeidere(F, 'vakt');
-    return { n, senger, utenSeng: Math.max(0, n - senger), kjøkken, bemannet, varmMat: kjøkken > 0 && bemannet > 0, fyring, ved: fyring * R.ved, drivstoff: fyring * R.drivstoff,
+    return { n, avh, senger, utenSeng: Math.max(0, n + avh - senger), kjøkken, bemannet, varmMat: kjøkken > 0 && bemannet > 0, fyring, ved: fyring * R.ved, drivstoff: fyring * R.drivstoff,
       drivhus, spiser, netto: drivhus - spiser, dager: spiser > drivhus ? F.mat / (spiser - drivhus) : Infinity, sykestue: iDrift(L, 'sykestue', o.mangler).length,
-      verksted: iDrift(L, 'verksted', o.mangler).length, tårn, ferdige: t => L.bygg.filter(b => b.type === t && LB.ferdig(b)).length, bemannedeTårn: Math.min(tårn, vakter), vakter, syke: F.personer.filter(p => p.helse < 1).length };
+      verksted: iDrift(L, 'verksted', o.mangler).length + (o.ekstraVerksted || 0), tårn, ferdige: t => L.bygg.filter(b => b.type === t && LB.ferdig(b)).length, bemannedeTårn: Math.min(tårn, vakter), vakter, syke: F.personer.filter(p => p.helse < 1).length };
   }
   // ---------- ett steg ----------
   // dt i spillminutter. o: { årstid, mangler, ekstraSenger }. Gir { hendelser: [tekst], ... } og endrer F (og L: ved, drivstoff, stål, hp).
   function steg(F, L, dt, o = {}) {
-    const H = [], d = dt / R.døgn, B = behov(F, L, o), n = B.n;
+    const H = [], d = dt / R.døgn, B = behov(F, L, o), n = B.n; F.tempoF = o.tempoFaktor > 0 ? o.tempoFaktor : 1;
     // tom gjeng: ingen sulter eller fryser, og moralen henter seg inn, så nye folk kan rekrutteres (spillet låser seg ikke)
     if (!n) { const s0 = R.moralFart * dt / 60; F.mål = R.nødMoral; F.moral += Math.max(-s0, Math.min(s0, F.mål - F.moral)); F.misnøye = 0;
       if (!F.sist.tom) H.push('Gjengen er tom! Rekrutter nye folk i Folk-panelet (de første tre trenger ikke seng).');
       F.sist = { ...B, alleSeng: true, tom: true }; return { hendelser: H, behov: B }; }
     // senger: de som har vært lengst i gjengen får seng først
-    F.personer.forEach((p, i) => { p.seng = i < B.senger; });
+    F.personer.forEach((p, i) => { p.seng = i < B.senger - B.avh; });
     // mat
     F.mat = Math.max(0, F.mat + (B.drivhus - B.spiser) * d); const sult = F.mat <= 0 && B.drivhus < B.spiser;
     // varme: ved fra lageret først, så drivstoff
@@ -158,7 +164,8 @@
       if (før < R.arbeidsfør && p.helse >= R.arbeidsfør) H.push(`${p.navn} er frisk igjen.`);
     }
     let færre = false;
-    for (const p of F.personer.filter(q => q.helse <= 0)) { H.push(`${p.navn} er død.`); F.personer = F.personer.filter(q => q !== p); færre = true; }
+    const døde = [];
+    for (const p of F.personer.filter(q => q.helse <= 0)) { H.push(`${p.navn} er død.`); døde.push(p); F.personer = F.personer.filter(q => q !== p); færre = true; }
     // verkstedet: reparerer skadde bygg (de mest skadde først), ellers stål av skrap
     const vk = på(F, 'verksted').filter(arbeidsfør).slice(0, B.verksted * R.perVerksted).reduce((s, p) => s + personTempo(F, p, 'verksted'), 0);
     if (vk > 0) { const skadd = L.bygg.filter(b => LB.ferdig(b) && !b.arbeid && b.hp < 1).sort((a, b) => a.hp - b.hp)[0];
@@ -166,7 +173,7 @@
       else { const m = R.verkstedStål * vk * d; if (LB.leggInn) LB.leggInn(L, 'stål', m); else L.lager.stål = Math.min(LB.lagerplass(L), (L.lager.stål || 0) + m); } }
     // moral: målet etter behovene, og moralen glir mot det
     const fri = på(F, 'fri').length / n, mål = 60
-      + (B.utenSeng ? -20 * B.utenSeng / n : 8)
+      + (B.utenSeng ? -20 * Math.min(1, B.utenSeng / n) : 8)
       + (sult ? -45 : F.mat < n ? -5 : 0)
       + (B.varmMat ? 8 * B.bemannet : 3 * B.bemannet)
       - 12 * kald
@@ -191,11 +198,12 @@
     if (sult && F.sist.sult && Math.floor(sultTid / 720) > Math.floor((F.sist.sultTid || 0) / 720)) H.push('Folk sulter fortsatt og blir syke: kjøp mat i Folk-panelet.');
     if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller kjøp diesel til leiren, og bygg brakker.');
     F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, sultTid };
-    return { hendelser: H, behov: B, sult, kald };
+    return { hendelser: H, behov: B, sult, kald, døde };
   }
   // ---------- mat og rekruttering ----------
-  function kjøpMat(F, rasjoner, betal) {
-    const pris = rasjoner * R.matPris; if (!betal(pris)) return { feil: `Ikke nok penger (${LB.kroner(pris)}).` };
+  // faktor: prisen stiger når butikkene er tomme (forfallet, spill/overlev.js)
+  function kjøpMat(F, rasjoner, betal, faktor = 1) {
+    const pris = Math.round(rasjoner * R.matPris * (faktor > 0 ? faktor : 1)); if (!betal(pris)) return { feil: `Ikke nok penger (${LB.kroner(pris)}).` };
     F.mat += rasjoner; return { rasjoner, pris };
   }
   // Nødrekruttering: er gjengen nesten tom (færre enn R.nød), kan nye alltid bli med – uten seng, uansett moral, og gratis hvis kassa er tom.
@@ -204,7 +212,7 @@
   // Hvorfor det ikke kan rekrutteres nå (null = det går)
   function kanRekruttere(F, L, o = {}) {
     if (nød(F)) return null;
-    const B = behov(F, L, o); if (B.senger <= B.n) return 'Ingen ledig seng: bygg en brakke først.';
+    const B = behov(F, L, o); if (B.senger <= B.n + B.avh) return 'Ingen ledig seng: bygg en brakke først.';
     if (F.moral < 40) return 'Moralen er for lav til at noen vil bli med.';
     return null;
   }
@@ -243,7 +251,7 @@
     LB.folkLag = L => (L.folk && Array.isArray(L.folk.personer) ? byggelag(L.folk) : null);
     LB.folkTempo = L => (L.folk && Array.isArray(L.folk.personer) ? byggTempo(L.folk) : 1);
   }
-  const api = { OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

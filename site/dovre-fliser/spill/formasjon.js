@@ -6,10 +6,10 @@
   'use strict';
   // ild: faktor på lagets egen ild; tar: faktor på treffene laget tar; bredde/dybde: meter mellom mennene
   const TYPER = {
-    kile: { navn: 'Kile', tekst: 'Allsidig: ingen fordel, ingen ulempe.', ild: 1, tar: 1 },
-    linje: { navn: 'Linje', tekst: 'Alle skyter framover: 15 % mer ild, men 10 % flere treff mot laget.', ild: 1.15, tar: 1.1 },
-    spredt: { navn: 'Spredt', tekst: 'Stor avstand mellom mennene: 25 % færre treff mot laget, 10 % mindre ild.', ild: .9, tar: .75 },
-    kolonne: { navn: 'Kolonne', tekst: 'På rekke, for marsj: 20 % mindre ild og 15 % flere treff mot laget.', ild: .8, tar: 1.15 },
+    kile: { navn: 'Kile', tekst: 'Allsidig: ingen fordel, ingen ulempe.', ild: 1, tar: 1, fart: 1 },
+    linje: { navn: 'Linje', tekst: 'Alle skyter framover: 15 % mer ild, men 10 % flere treff mot laget, og 15 % saktere marsj.', ild: 1.15, tar: 1.1, fart: .85 },
+    spredt: { navn: 'Spredt', tekst: 'Stor avstand mellom mennene: 25 % færre treff mot laget, 10 % mindre ild og 10 % saktere marsj.', ild: .9, tar: .75, fart: .9 },
+    kolonne: { navn: 'Kolonne', tekst: 'På rekke, for marsj: 10 % raskere (20 % på veg), men 20 % mindre ild og 15 % flere treff mot laget.', ild: .8, tar: 1.15, fart: 1.1, veg: 1.2 },
   };
   const REKKE = ['kile', 'linje', 'spredt', 'kolonne'];
   const type = id => TYPER[id] || TYPER.kile, neste = id => REKKE[(REKKE.indexOf(TYPER[id] ? id : 'kile') + 1) % REKKE.length];
@@ -23,6 +23,8 @@
   }
   // Faktoren i ildkamp når a skyter på b: a sin ild × det b tar. På marsj teller begge som kolonne.
   const ild = (a, b) => type(a && a.marsj ? 'kolonne' : a && a.id).ild * type(b && b.marsj ? 'kolonne' : b && b.id).tar;
+  // Marsjfarten (18. nov): kolonne er raskest, og enda raskere på veg; linje og spredt går saktere. Tallene er Claudes forslag.
+  const fart = (id, påVeg) => { const T = type(id); return påVeg && T.veg ? T.veg : T.fart || 1; };
   // ---------- erfaring ----------
   const ERFARING = { erfaren: 30, veteran: 120, elite: 360, bonus: [1, 1.08, 1.18, 1.28] }, NIVÅ = ['Rekrutt', 'Erfaren', 'Veteran', 'Elite'];
   const nivå = e => (e >= ERFARING.elite ? 3 : e >= ERFARING.veteran ? 2 : e >= ERFARING.erfaren ? 1 : 0);
@@ -31,8 +33,11 @@
   // ett minutt i kamp: alle som lever, lærer (sårede halvparten). Gir navnene på dem som gikk opp et nivå.
   function lær(menn, minutter = 1) { const opp = []; for (const m of menn || []) { if (!(m.hp > 0)) continue; const før = nivå(m.erf || 0); m.erf = (m.erf || 0) + minutter * (m.hp >= 1 ? 1 : .5); const nå = nivå(m.erf); if (nå > før) opp.push({ navn: m.navn, nivå: NIVÅ[nå] }); } return opp; }
   const erfTekst = menn => { const L = (menn || []).filter(m => m.hp > 0); if (!L.length) return ''; const t = [0, 0, 0, 0]; for (const m of L) t[nivå(m.erf || 0)]++; const d = []; for (let i = 3; i >= 1; i--) if (t[i]) d.push(`${t[i]} ${NIVÅ[i].toLowerCase()}`); return d.length ? d.join(', ') : 'rekrutter'; };
+  // Én ildrunde (18. nov): erfaringen telles per kamprunde laget skjøt eller ble beskutt, ikke per minutt på klokka –
+  // da går den like fort uansett spillfart. Én runde = RUNDE_MIN minutter erfaring (kamprunden varer fem spillminutter).
+  const RUNDE_MIN = 5, runde = menn => lær(menn, RUNDE_MIN);
   // erfaringen følger personen hjem: stridsferdigheten i leiren vokser litt med nivået
   const ferdighet = e => [0, .05, .12, .2][nivå(e || 0)];
-  const api = { TYPER, REKKE, type, neste, plass, ild, ERFARING, NIVÅ, nivå, erfFaktor, lær, erfTekst, ferdighet };
+  const api = { TYPER, REKKE, type, neste, plass, ild, fart, RUNDE_MIN, runde, ERFARING, NIVÅ, nivå, erfFaktor, lær, erfTekst, ferdighet };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Formasjon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

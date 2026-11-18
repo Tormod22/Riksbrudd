@@ -1,0 +1,52 @@
+[
+  [
+    "Penger og knapphet",
+    "Et nytt spill starter med 40 millioner kr (før 100). Det rekker til et kontrollrom, strøm og en brakke – resten må du skaffe: tettsteder gir skatt og varer, oppdrag og angrep du slår tilbake gir penger, og hogst, riving og leting i hus gir materialer uten å koste noe. Et spill du alt har lagret, beholder pengene sine.",
+    "Kom i gang"
+  ],
+  [
+    "Markedets hyller",
+    "Markedet har ikke alt hver dag. I fanen Lager («Markedet i dag») står det hvor mye som er på hylla av tre, betong, stål, diesel og mat. Kjøper du hylla tom, må du vente til det kommer mer neste døgn. Tre, betong og stål koster halvannen gang markedsprisen å kjøpe, og du får omtrent halve kjøpsprisen når du selger – så hogst og riving lønner seg klart.",
+    "Leiren"
+  ],
+  [
+    "Regionen: hva tettstedene gir",
+    "Hvert tettsted du holder, gir noe eget etter hva som ligger der: en bygd gir mat og tre, et industristed (kraftverk like ved) gir stål og betong, en by gir rekrutter og stål, en havn (ferjekai eller havn) gir mat og diesel, og en oljeby gir diesel. Alle betaler skatt i kroner. Åpne «Region» nederst (på telefon: Leir → Lager → «Åpne Region») for å se hva hvert tettsted gir per døgn. Krigskartet viser det samme for tettstedene du kan ta. Et døgn her er et spilldøgn eller ti minutter spilling.",
+    "Lag og strid"
+  ],
+  [
+    "Handelsruter",
+    "Varene må fram til leiren langs en rute – rett linje, gjerne via et annet tettsted du holder. Står det fiender nærmere enn 4 km fra ruta, er den truet og bare halvparten kommer fram. Nærmere enn 1,5 km er den stengt. Et eget lag ved ruta vokter den og gjør den ett hakk tryggere. Rutene tegnes i kartet (grønn, gul, rød) når Region eller krigskartet er åpent.",
+    "Lag og strid"
+  ],
+  [
+    "Skatt, lojalitet og opprør",
+    "For hvert tettsted velger du skatt: Støtte (du gir i stedet for å ta – koster penger, lojaliteten stiger fort), Lett, Vanlig eller Hard (mye mer nå, men lojaliteten faller). Lojale tettsteder gir mer. Faller lojaliteten til bunnen, blir det opprør: uten garnison blir tettstedet nøytralt igjen, med garnison holder du det, men det gir bare halvparten. En garnison og strøm løfter lojaliteten.",
+    "Lag og strid"
+  ],
+  [
+    "Strøm til tettstedene",
+    "Et tettsted får strøm fra et helt kraftverk innen 40 km. Uten strøm gir det bare 40 % og blir misfornøyd. Saboterer du et kraftverk for å ramme fienden, rammer du også dine egne tettsteder i nærheten – trykk på kraftverket for å se hvem det forsyner.",
+    "Lag og strid"
+  ],
+  [
+    "Gjenoppbygging",
+    "Reparerer et av ingeniørlagene dine en bru eller et kraftverk, stiger lojaliteten med 20 i tettstedene dine innen 15 km, og det nærmeste nøytrale tettstedet innen 10 km (uten fiender i) slutter seg til deg uten kamp.",
+    "Lag og strid"
+  ],
+  [
+    "Svartebørsen",
+    "Av og til kommer en selger til leiren med ting markedet ikke har: medisiner (seks sårede soldater blir kampklare, syke i leiren blir friske), nattsikt (lagene ser 40 % lenger om natta), tunge våpen (lagene treffer 15 % bedre) og smuglerdiesel. Det er dyrt, og han er borte neste døgn. Se «Region».",
+    "Leiren"
+  ],
+  [
+    "Olje og diesel kan veksles",
+    "Olje (tonn, på basen) går til nye enheter, kjøretøy og ammunisjon. Diesel (liter, i leiren) driver aggregatene. I «Region» kan du gjøre 10 tonn olje om til 100 liter diesel i feltraffineriet, eller blande 150 liter diesel til 10 tonn olje.",
+    "Leiren"
+  ],
+  [
+    "Motstandernes tettsteder",
+    "Også motstanderne har nytte av det de holder: industristeder, byer og oljebyer gir dem bedre våpen (treff +5 % for hvert, høyst +20 %), og bygder og havner gjør at garnisonene deres fylles opp raskere. «Region» viser hva hver motstander får. Tar du tettstedene, mister de fordelen.",
+    "Lag og strid"
+  ]
+]

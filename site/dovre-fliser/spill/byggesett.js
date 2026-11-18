@@ -179,7 +179,14 @@
   // ---------- lukkede rom ----------
   // Et rom: sammenhengende gulv i en etasje, vegger på alle kantene ut, og tak (eller gulvet over) over hver rute. Vegger inne deler rommet.
   // Bare ferdige deler teller (d.ferdig !== false). brukbart: dør i 1. etasje (2. etasje: trapp antas inne). senger: 1 per 8 m².
-  function rom(deler) {
+  // ROMTYPER (18. nov, Claudes forslag): et lukket rom med dør kan brukes til noe annet enn å sove i. typer = { nøkkel: bruk } (L.romBruk).
+  //  soverom: 1 seng per 8 m² (som før) · kjøkken: teller som et kjøkken for folket (minst 16 m²) · lager: + 0,6 m³ lagerplass per m²
+  //  verksted: teller som et verksted for folk på «verksted» (minst 16 m²)
+  const ROMBRUK = { soverom: { navn: 'Soverom', tekst: 'senger' }, kjøkken: { navn: 'Kjøkken', tekst: 'varm mat når noen står på «kjøkken»', min: 16 }, lager: { navn: 'Lager', tekst: 'mer lagerplass', m3: .6 },
+    verksted: { navn: 'Verksted', tekst: 'for folk på «verksted»', min: 16 } };
+  // det rommene gir til sammen: { senger, kjøkken, verksted, lager (m³) }
+  function romSum(R) { const u = { senger: 0, kjøkken: 0, verksted: 0, lager: 0 }; for (const r of R) { u.senger += r.senger; if (r.bruk === 'kjøkken' && r.virker) u.kjøkken++; if (r.bruk === 'verksted' && r.virker) u.verksted++; if (r.bruk === 'lager') u.lager += r.lager; } return u; }
+  function rom(deler, typer) {
     const D0 = deler.filter(d => d.ferdig !== false), M = indeks(D0), ut = [], sett = new Set();
     for (const g of D0) {
       if (DELER[g.type].kat !== 'gulv') continue; const e = g.n, s0 = `${g.i},${g.j},${e}`; if (sett.has(s0)) continue;
@@ -193,8 +200,12 @@
       if (!lukket || celler.length > 200) continue;
       const areal = celler.length * G * G, brukbart = dører + porter > 0 || e > 0;
       const cx = celler.reduce((s, c) => s + c[0] + .5, 0) / celler.length, cy = celler.reduce((s, c) => s + c[1] + .5, 0) / celler.length;
-      ut.push({ etasje: e, celler, ruter: celler.length, areal: Math.round(areal * 10) / 10, ci: cx, cj: cy, dører, vinduer, porter, brukbart,
-        senger: brukbart ? Math.floor(areal / SENG_M2) : 0, navn: brukbart ? (areal >= 2 * SENG_M2 ? 'Egenbygd brakke' : 'Bod') : 'Rom uten dør' });
+      // nøkkelen er rommets minste rute (fast så lenge rommet står), bruken velges av spilleren (soverom når ikke annet er valgt)
+      const c0 = celler.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])[0], nøkkel = `${e}:${c0[0]},${c0[1]}`, valgt = typer && ROMBRUK[typer[nøkkel]] ? typer[nøkkel] : 'soverom';
+      const bruk = brukbart ? valgt : 'soverom', B = ROMBRUK[bruk], virker = brukbart && (!B.min || areal >= B.min), sov = bruk === 'soverom';
+      ut.push({ etasje: e, celler, ruter: celler.length, areal: Math.round(areal * 10) / 10, ci: cx, cj: cy, dører, vinduer, porter, brukbart, nøkkel, bruk, virker,
+        lager: bruk === 'lager' ? Math.round(areal * B.m3 * 10) / 10 : 0,
+        senger: brukbart && sov ? Math.floor(areal / SENG_M2) : 0, navn: !brukbart ? 'Rom uten dør' : !sov ? `Egenbygd ${B.navn.toLowerCase()}` + (virker ? '' : ' (for lite)') : areal >= 2 * SENG_M2 ? 'Egenbygd brakke' : 'Bod' });
     }
     return ut;
   }
@@ -228,10 +239,12 @@
   const fraBygg = (b, LB) => (b && DELER[b.type] && b.bs ? { id: b.id, type: b.type, i: b.bs.i, j: b.bs.j, a: b.bs.a || null, n: b.bs.n || 0, r: b.bs.r, ferdig: LB ? LB.virker(b) : true, igjen: b.igjen } : null);
   const fraLeir = (L, LB) => (L ? L.bygg.map(b => fraBygg(b, LB)).filter(Boolean) : []);
   // Sengeplassene i leiren får med de egenbygde brakkene (Leir.plasser leser byggene; rommene legges til)
-  if (Leir && !Leir.plasser.byggesett) { const før = Leir.plasser; Leir.plasser = L => før(L) + rom(fraLeir(L, Leir)).reduce((s, r) => s + r.senger, 0); Leir.plasser.byggesett = true; }
+  if (Leir && !Leir.plasser.byggesett) { const før = Leir.plasser; Leir.plasser = L => før(L) + rom(fraLeir(L, Leir), L.romBruk).reduce((s, r) => s + r.senger, 0); Leir.plasser.byggesett = true; }
+  // rom brukt som lager gir lagerplass
+  if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => (L && L.romBruk && Object.keys(L.romBruk).length ? romSum(rom(fraLeir(L, Leir), L.romBruk)).lager : 0);
 
   const api = { G, H, ETASJER, SOKKEL, DELER, HUS, erDel, registrer, celle, midt, kantEnder, kantVed, hjørneVed, rad, nøkkel, indeks, støttet, plassering, forslag,
-    husDeler, husForslag, rom, høyder, fraBygg, fraLeir, KANT };
+    husDeler, husForslag, rom, ROMBRUK, romSum, høyder, fraBygg, fraLeir, KANT };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.ByggesettRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

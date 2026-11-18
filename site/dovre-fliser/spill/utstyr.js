@@ -20,9 +20,11 @@
     ahagl: { navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, pris: 600, pakke: 12 }, a762: { navn: '7,62 mm', enhet: 'skudd', vekt: .025, pris: 900, pakke: 10 },
     forbinding: { navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, pris: 50000, pakke: 1, helse: 45 }, rasjon: { navn: 'Feltrasjon', enhet: 'stk.', vekt: .6, pris: 3000, pakke: 1, helse: 10 },
   };
+  // (18. nov) Deler til håndverk, det du lager selv og vannet i feltflaska legges inn av spill/eventyr-visning.js (del: true = kan ikke
+  // kjøpes); armbrøsten (selges: false) lager du selv.
   const GRUNNVEKT = 35, MAKS_VÅPEN = 4;   // api.ekstraVekt (styrke, spill/overlev.js) legges til grunnvekta
   const maks = () => GRUNNVEKT + ((typeof api !== 'undefined' && api.ekstraVekt) || 0);
-  const ny = () => ({ våpen: [{ id: 'gevær', mag: 30 }, { id: 'pistol', mag: 15 }], aktiv: 0, ting: { a556: 90, a9: 30, forbinding: 1 } });
+  const ny = () => ({ våpen: [{ id: 'gevær', mag: 30 }, { id: 'pistol', mag: 15 }], aktiv: 0, ting: { a556: 90, a9: 30, forbinding: 1, rasjon: 2 } });
   const vekt = I => Math.round((I.våpen.reduce((s, v) => s + VÅPEN[v.id].vekt, 0) + Object.entries(I.ting).reduce((s, [id, n]) => s + (TING[id] ? TING[id].vekt * n : 0), 0)) * 100) / 100;
   // så mange av en ting du får plass til (etter vekt)
   const plassTil = (I, id) => (TING[id] ? Math.max(0, Math.floor((maks() - vekt(I) + 1e-9) / TING[id].vekt)) : 0);
@@ -81,7 +83,7 @@
     I.våpen.forEach((w, n) => { const V = VÅPEN[w.id]; p.append(el('div', { klasse: 'rad' + (n === I.aktiv ? ' aktiv' : '') }, el('div', {}, el('b', {}, `${n + 1}. ${V.navn}`), el('small', {}, `${w.mag} av ${V.magasin} i magasinet · ${I.ting[V.ammo] || 0} ${TING[V.ammo].navn} i sekken · ${kg(V.vekt)}`)),
       n === I.aktiv ? el('span', {}, 'framme') : knapp('Ta fram', () => velg(n)), (() => { const b = knapp('Kast', () => { if (kastVåpen(I, n)) { lagre(); vis(); } }); b.disabled = I.våpen.length <= 1; return b; })())); });
     p.append(el('h3', {}, 'I sekken')); const T = Object.entries(I.ting); if (!T.length) p.append(el('small', {}, 'Tom.'));
-    for (const [id, n] of T) { const D = TING[id]; p.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, D.navn), el('small', {}, `${n} ${D.enhet} · ${kg(D.vekt * n)}`)), D.helse ? knapp('Bruk', () => helbred(id)) : '', knapp('Kast', () => { taUt(I, id, D.pakke); lagre(); vis(); }))); }
+    for (const [id, n] of T) { const D = TING[id]; p.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, D.navn), el('small', {}, `${n} ${D.enhet} · ${kg(D.vekt * n)}`)), (() => { const ek = rot.EventyrSpill && EventyrSpill.sekkKnapp ? EventyrSpill.sekkKnapp(id) : null; return ek ? knapp(ek[0], ek[1]) : D.helse ? knapp('Bruk', () => helbred(id)) : ''; })(), knapp('Kast', () => { taUt(I, id, D.pakke || 1); lagre(); vis(); }))); }
     if (rot.OverlevSpill && OverlevSpill.klar()) OverlevSpill.fyllSekk(p, el);
     p.append(el('small', {}, 'Utstyr kjøper du i Leir-menyen (fanen Lager), og du finner det i husene. Tastene 1–4 bytter våpen, R lader.')); }
   function vis() { bytt.textContent = klar ? aktivt(I).def.navn : ''; if (!åpen) return; const ny2 = el('div'); fyll(ny2); if (ny2.innerHTML === sistHtml && panel.firstChild) return; sistHtml = ny2.innerHTML; panel.innerHTML = ''; panel.append(...ny2.childNodes); }
@@ -92,16 +94,17 @@
   setInterval(() => { const g = går(); sekkKnapp.hidden = !g; if (!g && åpen && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); bytt.classList.toggle('på', g && VW < 900 && !(rot.KjorSpill && KjorSpill.fører())); if (åpen) vis(); }, 500);
   // kjøp: våpen og pakker legges rett i sekken (så langt vekta rekker)
   function kjøp(id) { const V = VÅPEN[id], T = TING[id];
+    if ((V && V.selges === false) || (T && T.del)) return logg('Det kan ikke kjøpes.');
     if (V) { if (I.våpen.length >= MAKS_VÅPEN) return logg(`Du bærer alt ${MAKS_VÅPEN} våpen. Kast ett i sekken først.`); if (vekt(I) + V.vekt > maks()) return logg('Sekken er for tung.'); if (!OppstartSpill.betal(V.pris)) return logg(`Ikke nok penger (${kr(V.pris)}).`); nyttVåpen(I, id); logg(`${V.navn} kjøpt.`); }
     else if (T) { const n = Math.min(T.pakke, plassTil(I, id)); if (!n) return logg('Sekken er for tung.'); if (!OppstartSpill.betal(T.pris * n)) return logg(`Ikke nok penger (${kr(T.pris * n)}).`); leggTil(I, id, n); logg(`${n} ${T.navn.toLowerCase()} kjøpt.`); }
     lagre(); vis(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e, knapp: kn }) => { if (!klar) return; hode.append(e('h3', { 'data-fane': 'lager' }, 'Våpen og utstyr'), e('small', {}, `Det du kjøper, legges i sekken din (${kg(vekt(I))} av ${maks()} kg, ${I.våpen.length} av ${MAKS_VÅPEN} våpen).`));
-    for (const [id, V] of Object.entries(VÅPEN)) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, V.navn), e('small', {}, `${V.tekst} · ${kg(V.vekt)}${I.våpen.some(w => w.id === id) ? ' · du har' : ''}`)), kn(`Kjøp ${kr(V.pris)}`, () => kjøp(id), { 'data-utstyr': id })));
-    for (const [id, T] of Object.entries(TING)) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, T.navn), e('small', {}, `${T.pakke} ${T.enhet} · du har ${I.ting[id] || 0}`)), kn(`Kjøp ${kr(T.pris * T.pakke)}`, () => kjøp(id), { 'data-utstyr': id })));
+    for (const [id, V] of Object.entries(VÅPEN)) if (V.selges !== false) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, V.navn), e('small', {}, `${V.tekst} · ${kg(V.vekt)}${I.våpen.some(w => w.id === id) ? ' · du har' : ''}`)), kn(`Kjøp ${kr(V.pris)}`, () => kjøp(id), { 'data-utstyr': id })));
+    for (const [id, T] of Object.entries(TING)) if (!T.del) hode.append(e('div', { klasse: 'utstyr' }, e('div', {}, e('b', {}, T.navn), e('small', {}, `${T.pakke} ${T.enhet} · du har ${I.ting[id] || 0}`)), kn(`Kjøp ${kr(T.pris * T.pakke)}`, () => kjøp(id), { 'data-utstyr': id })));
     hode.append(kn('Åpne sekken', () => åpne(true), { id: 'apnesekk' })); });
   // funn i et hus du har lett gjennom (kalles fra leting-visning.js): gir teksten, eller '' når det ikke var noe
   function fantIHus(kl, i) { if (!klar) return ''; const f = funn(kl, i); if (!f) return '';
     if (f.våpen) { const g = nyttVåpen(I, f.våpen); lagre(); vis(); return g ? `Du fant også et våpen (${VÅPEN[f.våpen].navn.toLowerCase()}), men kunne ikke ta det med: ${g.toLowerCase()}` : `Du fant også et våpen: ${VÅPEN[f.våpen].navn.toLowerCase()}!`; }
     const n = leggTil(I, f.ting, f.n); lagre(); vis(); return n ? `I sekken: ${n} ${TING[f.ting].navn.toLowerCase()}.` : `Du fant ${TING[f.ting].navn.toLowerCase()}, men sekken er for tung.`; }
-  rot.UtstyrSpill = { start, tilstand: () => I, aktivt: () => aktivt(I), velg, lad: v => { const t = lad(I, v || aktivt(I).v); lagre(); vis(); return t; }, kjøp, åpne, erÅpen: () => åpen, helbred, fantIHus, lagre, vis, klar: () => klar };
+  rot.UtstyrSpill = { start, nyttVåpen: id => { const g = nyttVåpen(I, id); lagre(); vis(); return g; }, leggTil: (id, n) => { const t = leggTil(I, id, n); lagre(); vis(); return t; }, tilstand: () => I, aktivt: () => aktivt(I), velg, lad: v => { const t = lad(I, v || aktivt(I).v); lagre(); vis(); return t; }, kjøp, åpne, erÅpen: () => åpen, helbred, fantIHus, lagre, vis, klar: () => klar };
 })(typeof window !== 'undefined' ? window : globalThis);

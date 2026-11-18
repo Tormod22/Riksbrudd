@@ -15,16 +15,27 @@
     utholdenhet: { navn: 'Utholdenhet', gir: n => `løper ${n * 8} % lenger`, tekst: 'Vokser når du løper' },
     leting: { navn: 'Leting', gir: n => `leter ${n * 6} % fortere`, tekst: 'Vokser når du leter gjennom hus' },
   };
+  // (18. nov) FERDIGHETENE ÅPNER NOE NYTT ved nivå 3 og 6 (ikke bare prosenter). Virkningene ligger i spill/eventyr-visning.js. Claudes forslag.
+  const ÅPNER = {
+    skyting: [[3, 'stødig', 'Stødig hånd', 'du treffer 20 % oftere når du ligger eller står på huk'], [6, 'hodeskudd', 'Hodeskudd', 'hvert sjuende treff gjør dobbel skade']],
+    styrke: [[3, 'seig', 'Seig', 'fall skader deg sjeldnere, og et brukket bein gror dobbelt så fort'], [6, 'pakkesel', 'Pakkesel', 'du bærer 10 kg ekstra']],
+    utholdenhet: [[3, 'lett', 'Lett til beins', 'du blir ikke ekstra tørst av å løpe'], [6, 'stilleløp', 'Stille løp', 'fienden hører deg dårligere når du løper']],
+    leting: [[3, 'øye', 'Trent øye', 'du ser hva et hus trolig inneholder før du leter'], [6, 'finner', 'Finner alt', 'du finner dobbelt så mange deler til håndverk']],
+  };
   const MAKS_NIVÅ = 10, kreves = n => Math.round(40 * Math.pow(n, 1.5));   // poeng for å nå nivå n fra nivå n − 1
   const Ferdigheter = {
-    LISTE: FERDIGHETER, MAKS_NIVÅ, kreves,
+    LISTE: FERDIGHETER, MAKS_NIVÅ, kreves, ÅPNER,
+    // har du åpnet evnen (id fra ÅPNER)?
+    har(F, evne) { for (const [f, L] of Object.entries(ÅPNER)) for (const [n, id] of L) if (id === evne) return Ferdigheter.nivå(F[f]).n >= n; return false; },
+    // det som åpnes akkurat på nivå n: [id, navn, tekst] eller null
+    åpnes(f, n) { const q = (ÅPNER[f] || []).find(l => l[0] === n); return q ? q.slice(1) : null; },
     ny: () => ({ skyting: 0, styrke: 0, utholdenhet: 0, leting: 0 }),
     // nivået (0–10) og hvor langt du er mot det neste (0–1) fra poengene
     nivå(xp) { let n = 0, igjen = xp || 0; while (n < MAKS_NIVÅ && igjen >= kreves(n + 1)) { igjen -= kreves(n + 1); n++; } return { n, andel: n >= MAKS_NIVÅ ? 1 : igjen / kreves(n + 1) }; },
     // legg til poeng: gir det nye nivået når du gikk opp, ellers 0
     øk(F, id, p) { if (!FERDIGHETER[id] || !(p > 0)) return 0; const før = Ferdigheter.nivå(F[id]).n; F[id] = (F[id] || 0) + p; const nå = Ferdigheter.nivå(F[id]).n; return nå > før ? nå : 0; },
     // virkningene: faktor for treffsjanse, ekstra kg, faktor for løpetid, faktor for letetid
-    treff: F => 1 + .04 * Ferdigheter.nivå(F.skyting).n, kg: F => 2 * Ferdigheter.nivå(F.styrke).n, løp: F => 1 + .08 * Ferdigheter.nivå(F.utholdenhet).n, letetid: F => 1 - .06 * Ferdigheter.nivå(F.leting).n,
+    treff: F => 1 + .04 * Ferdigheter.nivå(F.skyting).n, kg: F => 2 * Ferdigheter.nivå(F.styrke).n + (Ferdigheter.nivå(F.styrke).n >= 6 ? 10 : 0), løp: F => 1 + .08 * Ferdigheter.nivå(F.utholdenhet).n, letetid: F => 1 - .06 * Ferdigheter.nivå(F.leting).n,
   };
   // ---------- (4) tilfluktssteder ----------
   const Tilflukt = { TRE: 3, MAKS: 6, DEKNING: .08, HVILE: 60, HVILE_VENT: 90,
@@ -37,8 +48,16 @@
     // når strømnettet og vannet svikter: i spilldøgn og i ekte minutter med spilling (det som kommer først, gjelder)
     ny: (tid, r1 = .5, r2 = .5) => ({ strøm: { spill: tid + (3 + r1 * 2) * 1440, ekte: (30 + r1 * 12) * 60, nede: false, varslet: false }, vann: { spill: tid + (6 + r2 * 3) * 1440, ekte: (55 + r2 * 20) * 60, nede: false, varslet: false } }),
     // ett steg: gir hendelsene som skal meldes ('strøm-varsel', 'strøm-nede', 'vann-varsel', 'vann-nede')
-    steg(S, tid, ekte) { const ut = []; for (const k of ['strøm', 'vann']) { const q = S[k]; if (q.nede) continue; const igjenSpill = q.spill - tid, igjenEkte = q.ekte - ekte;
+    steg(S, tid, ekte) { return Forfall.trinn(S, ['strøm', 'vann'], tid, ekte); },
+    trinn(S, nøkler, tid, ekte) { const ut = []; for (const k of nøkler) { const q = S[k]; if (!q || q.nede) continue; const igjenSpill = q.spill - tid, igjenEkte = q.ekte - ekte;
         if (igjenSpill <= 0 || igjenEkte <= 0) { q.nede = true; ut.push(k + '-nede'); } else if (!q.varslet && (igjenSpill <= 1440 || igjenEkte <= 480)) { q.varslet = true; ut.push(k + '-varsel'); } } return ut; },
+    // FLERE TRINN (18. nov, Claudes forslag): mobilnettet, butikkene og vegene. [døgn fra, døgn spenn, ekte minutter fra, spenn]
+    // mobil: uten egen radiomast faller moralen; butikk: kjøpt mat koster det dobbelte; veg: folk på «frakt» går 20 % saktere.
+    MER: { mobil: [4, 2, 40, 14], butikk: [8, 3, 75, 20], veg: [12, 4, 105, 25] }, MORAL_UTEN_MOBIL: -5, MAT_DYRERE: 2, FRAKT_TREGERE: .8,
+    nyMer(tid, ekte = 0, r = () => .5) { const ut = {}; for (const [k, [d0, d1, m0, m1]] of Object.entries(Forfall.MER)) { const v = r(); ut[k] = { spill: tid + (d0 + v * d1) * 1440, ekte: ekte + (m0 + v * m1) * 60, nede: false, varslet: false }; } return ut; },
+    stegMer: (S, tid, ekte) => (S && S.mer ? Forfall.trinn(S.mer, Object.keys(Forfall.MER), tid, ekte) : []),
+    nedeMer: (S, k) => !!(S && S.mer && S.mer[k] && S.mer[k].nede),
+    moralMer: (S, radiomaster) => (Forfall.nedeMer(S, 'mobil') && !radiomaster ? Forfall.MORAL_UTEN_MOBIL : 0),
     nettKW: S => (S && !S.strøm.nede ? Forfall.NETT_KW : 0),
     // moralen i leiren: uten vann fra vannverket og uten brønn faller den
     moral: (S, brønner) => (S && S.vann.nede && !brønner ? Forfall.MORAL_UTEN_VANN : 0),
@@ -59,15 +78,26 @@
   if (LB && !LB.BYGG.brønn) LB.BYGG.brønn = { navn: 'Brønn', pris: 1.5e6, tid: 1.5, kw: 0, modell: 'brønn', fot: [-1.5, 1.5, -1.5, 1.5], mat: { betong: 3, tre: 2 }, tekst: 'Vann til leiren når vannverket svikter' };
   // virkningene skrives inn der de andre delene leser dem
   function bruk() { if (rot.Utstyr) Utstyr.ekstraVekt = Ferdigheter.kg(F); if (rot.Bevegelse && Bevegelse.REGLER) { if (!bruk.løp0) bruk.løp0 = Bevegelse.REGLER.løpTid; Bevegelse.REGLER.løpTid = bruk.løp0 * Ferdigheter.løp(F); } }
-  function øk(id, p) { if (!klar) return; const n = Ferdigheter.øk(F, id, p); if (n) { bruk(); logg(`${FERDIGHETER[id].navn} er nå på nivå ${n}: du ${FERDIGHETER[id].gir(n)}.`); if (rot.UtstyrSpill) UtstyrSpill.vis(); } }
+  function øk(id, p) { if (!klar) return; const n = Ferdigheter.øk(F, id, p); if (n) { bruk(); logg(`${FERDIGHETER[id].navn} er nå på nivå ${n}: du ${FERDIGHETER[id].gir(n)}.`); { const å = Ferdigheter.åpnes(id, n); if (å) logg(`NY EVNE – ${å[1]}: ${å[2]}.`); } if (rot.UtstyrSpill) UtstyrSpill.vis(); } }
   function start() { const s = S0(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); F = { ...Ferdigheter.ny(), ...(les('riksbrudd-ferdigheter') || {}) }; T = (les('riksbrudd-tilflukt') || []).filter(q => q && typeof q.x === 'number');
-    const d = les('riksbrudd-forfall'); D = d && d.strøm && d.vann ? d : Forfall.ny(tid, Math.random(), Math.random()); ekte = d && d.ekteBrukt ? d.ekteBrukt : 0; if (LB) LB.nettKW = () => (auto() ? Forfall.nettKW(D) : 0); klar = true; bruk(); }
+    const d = les('riksbrudd-forfall'); D = d && d.strøm && d.vann ? d : Forfall.ny(tid, Math.random(), Math.random()); ekte = d && d.ekteBrukt ? d.ekteBrukt : 0; if (!D.mer) D.mer = Forfall.nyMer(tid, ekte, Math.random);
+    if (rot.FolkRegler) FolkRegler.oppgaveF = o => (o === 'frakt' && auto() && Forfall.nedeMer(D, 'veg') ? Forfall.FRAKT_TREGERE : 1); if (LB) LB.nettKW = () => (auto() ? Forfall.nettKW(D) : 0); klar = true; bruk(); }
   rot.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
+  const master = () => { const l = L(); return l && LB ? l.bygg.filter(b => b.type === 'radiomast' && LB.virker(b)).length : 0; };
+  const MER_TEKST = {
+    'mobil-varsel': () => 'Mobilen mister dekning stadig oftere. Mobilnettet holder ikke lenge – en radiomast i leiren gir folk nytt utenfra.',
+    'mobil-nede': () => (master() ? 'Mobilnettet er dødt. Radiomasten er nå leirens eneste kontakt med verden.' : 'Mobilnettet er dødt. Folk får ikke lenger kontakt med sine – moralen faller til dere bygger en radiomast.'),
+    'butikk-varsel': () => 'Hyllene i butikkene er snart tomme. Kjøp mat nå – snart koster den det dobbelte.',
+    'butikk-nede': () => 'Butikkene er tømt. Maten må kjøpes av omreisende handelsfolk til dobbel pris – drivhus lønner seg.',
+    'veg-varsel': () => 'Ingen brøyter eller rydder vegene lenger. Snart gror småvegene igjen.',
+    'veg-nede': () => 'Småvegene gror igjen og er fulle av vindfall: folk på «frakt» går saktere.',
+  };
   const brønner = () => { const l = L(); return l && LB ? l.bygg.filter(b => b.type === 'brønn' && LB.ferdig(b)).length : 0; };
   // hvert sekund: forfallet, og ferdighetene som vokser av å gå og løpe
   setInterval(() => { if (!klar || !S0() || !S0().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     if (auto() && tempo > 0 && D) for (const h of Forfall.steg(D, tid, ekte)) { const t = { 'strøm-varsel': 'Strømmen i området flimrer. Strømnettet holder ikke lenge til – sørg for aggregat eller solceller.', 'strøm-nede': 'Strømnettet er nede for godt. Leiren har bare sin egen strøm nå.',
         'vann-varsel': 'Vanntrykket faller. Vannverket svikter snart – bygg en brønn i leiren.', 'vann-nede': brønner() ? 'Vannverket har sviktet. Brønnen holder leiren med vann.' : 'Vannverket har sviktet, og leiren har ingen brønn. Folk må bære vann – moralen faller til dere bygger en.' }[h]; logg(t); lagre(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }
+    if (auto() && tempo > 0 && D) for (const h of Forfall.stegMer(D, tid, ekte)) { logg(MER_TEKST[h] ? MER_TEKST[h]() : h); lagre(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }
     const Q = r3(), kr = rot.Gange && Gange.kropp && Gange.kropp(); if (!Q || !Q.fot || !Q.ut || !kr || (rot.KjorSpill && KjorSpill.fører())) { sistPos = null; return; }
     const p = { x: Q.ut.cx + kr.x, y: Q.ut.cy + kr.y }, d = sistPos ? Math.hypot(p.x - sistPos.x, p.y - sistPos.y) : 0; sistPos = p; if (d < .3 || d > 12) return;
     if (kr.løper) øk('utholdenhet', d / 12); if (rot.Utstyr && rot.UtstyrSpill && UtstyrSpill.klar() && Utstyr.vekt(UtstyrSpill.tilstand()) > Utstyr.MAKS_VEKT * .5) øk('styrke', d / 15); }, 1000);
@@ -98,10 +128,13 @@
     for (const q of T) { const d = Math.hypot(q.x - Q.ut.cx - Q.bane.x, q.y - Q.ut.cy - Q.bane.y); if (d > 400 || d < 6) continue; const p = proj3(q.x, q.y); if (!p) continue; const t = `⌂ Tilfluktssted ${Math.round(d / 10) * 10} m`; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, p[0], p[1] - 26); g.fillStyle = '#cfe6b8'; g.fillText(t, p[0], p[1] - 26); }
     g.restore(); });
   // ferdighetene vises i sekken (utstyr.js spør OverlevSpill.fyllSekk), forfallet i Leir-menyen
-  function fyllSekk(p, el) { p.append(el('h3', {}, 'Ferdigheter')); for (const [id, D2] of Object.entries(FERDIGHETER)) { const n = Ferdigheter.nivå(F[id]); p.append(el('div', { klasse: 'ferd' }, el('b', {}, `${D2.navn} ${n.n}`), el('small', {}, n.n ? `Du ${D2.gir(n.n)}. ${D2.tekst}.` : D2.tekst + '.'), el('div', { klasse: 'strek' }, el('i', { style: `width:${Math.round(n.andel * 100)}%` })))); } }
+  function fyllSekk(p, el) { p.append(el('h3', {}, 'Ferdigheter')); for (const [id, D2] of Object.entries(FERDIGHETER)) { const n = Ferdigheter.nivå(F[id]); p.append(el('div', { klasse: 'ferd' }, el('b', {}, `${D2.navn} ${n.n}`), el('small', {}, n.n ? `Du ${D2.gir(n.n)}. ${D2.tekst}.` : D2.tekst + '.'), el('small', {}, (ÅPNER[id] || []).map(([nv, , navn, tekst]) => (n.n >= nv ? `✓ ${navn}: ${tekst}.` : `Nivå ${nv}: ${navn}.`)).join(' ')), el('div', { klasse: 'strek' }, el('i', { style: `width:${Math.round(n.andel * 100)}%` })))); } }
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e }) => { if (!klar || !D) return; const b = brønner();
-    hode.append(e('h3', { 'data-fane': 'bygg' }, 'Strømnett og vannverk'), e('small', {}, `Strømnettet: ${D.strøm.nede ? 'nede – leiren har bare egen strøm' : `gir ${Forfall.NETT_KW} kW, ${Forfall.igjen(D.strøm, tid, ekte)}`}. Vannverket: ${D.vann.nede ? (b ? 'nede – brønnen gir vann' : 'nede – bygg en brønn (moralen faller)') : `virker, ${Forfall.igjen(D.vann, tid, ekte)}${b ? ' (dere har brønn)' : ''}`}.`)); });
-  Object.assign(ut, { start, øk, sikre, hvil, giOpp, iTilflukt, fyllSekk, lagre, F: () => F, T: () => T, D: () => D, klar: () => klar, treff: () => (klar ? Ferdigheter.treff(F) : 1), letetid: () => (klar ? Ferdigheter.letetid(F) : 1),
-    moralTillegg: () => (klar && auto() ? Forfall.moral(D, brønner()) : 0), brønner, steg: () => (D ? Forfall.steg(D, tid, ekte) : []) });
+    const M = D.mer || {}, mt = (k, navn, følge) => (M[k] ? `${navn}: ${M[k].nede ? følge : Forfall.igjen(M[k], tid, ekte)}` : '');
+    hode.append(e('h3', { 'data-fane': 'bygg' }, 'Strømnett og vannverk'), e('small', {}, `Strømnettet: ${D.strøm.nede ? 'nede – leiren har bare egen strøm' : `gir ${Forfall.NETT_KW} kW, ${Forfall.igjen(D.strøm, tid, ekte)}`}. Vannverket: ${D.vann.nede ? (b ? 'nede – brønnen gir vann' : 'nede – bygg en brønn (moralen faller)') : `virker, ${Forfall.igjen(D.vann, tid, ekte)}${b ? ' (dere har brønn)' : ''}`}.`),
+      e('small', { id: 'forfall-mer', style: 'display:block;margin-top:3px' }, [mt('mobil', 'Mobilnettet', master() ? 'dødt – radiomasten holder kontakten' : 'dødt – bygg en radiomast (moralen faller)'), mt('butikk', 'Butikkene', 'tømt – kjøpt mat koster det dobbelte'), mt('veg', 'Småvegene', 'grodd igjen – frakt går saktere')].filter(Boolean).join('. ') + '.')); });
+  Object.assign(ut, { start, øk, har: evne => klar && Ferdigheter.har(F, evne), her, sikre, hvil, giOpp, iTilflukt, fyllSekk, lagre, F: () => F, T: () => T, D: () => D, klar: () => klar, treff: () => (klar ? Ferdigheter.treff(F) : 1), letetid: () => (klar ? Ferdigheter.letetid(F) : 1),
+    moralTillegg: () => (klar && auto() ? Forfall.moral(D, brønner()) + Forfall.moralMer(D, master()) : 0), brønner, master,
+    matFaktor: () => (klar && auto() && Forfall.nedeMer(D, 'butikk') ? Forfall.MAT_DYRERE : 1), stegMer: () => (D ? Forfall.stegMer(D, tid, ekte) : []), steg: () => (D ? Forfall.steg(D, tid, ekte) : []) });
   rot.OverlevSpill = ut;
 })(typeof window !== 'undefined' ? window : globalThis);

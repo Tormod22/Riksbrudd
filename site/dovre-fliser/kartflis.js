@@ -237,7 +237,13 @@ function stoy(X, Y, s, k) {
 function vri(X, Y) { return [(stoy(X, Y, 70, 21) - .5) * 44 + (stoy(X, Y, 17, 23) - .5) * 14, (stoy(X, Y, 70, 22) - .5) * 44 + (stoy(X, Y, 17, 24) - .5) * 14]; }
 
 // ---------- komponering av én skjermflis ----------
-const VEG = { E: [10, 2.4, '#caa060'], R: [9, 2.2, '#c39a5c'], F: [7, 1.8, '#bba982'], K: [5.5, 1.3, '#b2a68a'], P: [3.5, .9, '#a2967c'], S: [3, .8, '#a2967c'] };
+// (18. nov: litt lysere og litt bredere streker – vegene forsvant i det mørke kartet)
+const VEG = { E: [10, 2.6, '#e6bd6c'], R: [9, 2.3, '#dab066'], F: [7, 1.9, '#d0be94'], K: [5.5, 1.4, '#c4b89a'], P: [3.5, 1, '#b2a68a'], S: [3, .9, '#b2a68a'] };
+// LYSERE 2D-KART (18. nov, nattarbeid «ui»: «kartet er mørkt»): landet løftes med en gammakurve (mørk skog blir lysere, lyse flater
+// nesten urørt) og litt mer metning, og skyggesidene er ikke lenger nesten svarte (KARTLYS_SKYGGE = laveste lysfaktor, før 0,3).
+// Gjelder bare 2D-kartet (der skyggen tegnes); 3D-bakken lages uten skygge og er urørt. Tallene er Claudes forslag.
+const KARTLYS_GAMMA = .74, KARTLYS_SKYGGE = .46, KARTLYS_METNING = 1.12, KARTLYS_TABELL = new Uint8Array(256);
+for (let kl_i = 0; kl_i < 256; kl_i++) KARTLYS_TABELL[kl_i] = Math.round(255 * Math.pow(kl_i / 255, KARTLYS_GAMMA));
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 // Nær (fra z14, 1 m per punkt): vegen som den ser ut – asfalt med Statens vegvesens oppmerking, forenklet.
 // E-, riks- og fylkesveg: hvite kantlinjer og gul midtlinje; kommunal veg: bare gul midtlinje; privat veg og skogsbilveg: grus.
@@ -375,8 +381,11 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
         const i = (py + 1) * N + px + 1, gx = GX[i] * ve, gy = GY[i] * ve;
         if (gx !== gx || gy !== gy) continue;
         const n = Math.hypot(gx, gy, 1), s = Math.max(0, (-gx * Lx + gy * Ly + Lz) / n) / Lz, o = (py * T + px) * 4, wv = vann[py * T + px];
-        const f = (.3 + .7 * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
-        d[o] = Math.min(255, d[o] * f); d[o + 1] = Math.min(255, d[o + 1] * f); d[o + 2] = Math.min(255, d[o + 2] * f);
+        const f = (KARTLYS_SKYGGE + (1 - KARTLYS_SKYGGE) * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
+        // landet løftes (gamma) og får litt mer farge; vann beholder fargen sin
+        let lr = KARTLYS_TABELL[d[o]], lg = KARTLYS_TABELL[d[o + 1]], lb = KARTLYS_TABELL[d[o + 2]]; const gr = (lr + lg + lb) / 3;
+        lr = gr + (lr - gr) * KARTLYS_METNING; lg = gr + (lg - gr) * KARTLYS_METNING; lb = gr + (lb - gr) * KARTLYS_METNING;
+        d[o] = Math.max(0, Math.min(255, (d[o] * wv + lr * (1 - wv)) * f)); d[o + 1] = Math.max(0, Math.min(255, (d[o + 1] * wv + lg * (1 - wv)) * f)); d[o + 2] = Math.max(0, Math.min(255, (d[o + 2] * wv + lb * (1 - wv)) * f));
       }
       g.putImageData(im, 0, 0);
     }

@@ -21,4 +21,11 @@ const vegg = { høyde: () => 100, hindring: (x, y) => y > 2 }; s = B.ny(0, 0, 10
 ok(s.y < 2 && s.y > 1.5 && s.x > 2.5, 'går skrått mot en vegg: glir langs den (x = ' + s.x.toFixed(1) + ')');
 const vann = { høyde: () => 100, vann: (x, y) => y > 3 }; s = B.ny(0, 0, 100); kjør(s, { fram: 1 }, 4, vann); ok(s.y <= 3 && s.y > 2.5, 'stopper i vannkanten');
 const k = B.steg(B.ny(0, 0, 100), {}, 1 / 60, flatt); ok(Math.abs(k.kz - 101.7) < .05, 'øynene 1,7 m over bakken');
+// (18. nov) ligge, skadet fart og fall
+s = B.ny(0, 0, 100); let kl = kjør(s, { fram: 1, ligg: true, løp: true }, 3); ok(s.ligg && !s.løper && Math.abs(s.fart - .4) < .02 && Math.abs(kl.kz - 100.35) < .08, 'ligger: kryper 0,4 m/s med øynene 0,35 m over bakken');
+s = B.ny(0, 0, 100); B.steg(s, { hopp: true, ligg: true }, 1 / 60, flatt); ok(s.bakke, 'liggende hopper du ikke');
+s = B.ny(0, 0, 100); kjør(s, { fram: 1, løp: true, faktor: .5, ikkeLøp: true }, 3); ok(!s.løper && Math.abs(s.fart - .85) < .03, 'brukket bein: halv fart og ingen løping'); B.steg(s, { hopp: true, ikkeLøp: true }, 1 / 60, flatt); ok(s.bakke, '… og ingen hopp');
+const stup = { høyde: (x, y) => (y > 2 ? 90 : 100) }; s = B.ny(0, 0, 100); let landet = 0; for (let i = 0; i < 600; i++) { s.landet = 0; B.steg(s, { fram: 1 }, 1 / 60, stup); landet = Math.max(landet, s.landet); }
+ok(landet > 13 && landet < 15 && s.z === 90 && s.bakke, 'utfor et stup på 10 m: lander med ' + landet.toFixed(1) + ' m/s');
+s = B.ny(0, 0, 100); landet = 0; B.steg(s, { hopp: true }, 1 / 60, flatt); for (let i = 0; i < 120; i++) { s.landet = 0; B.steg(s, {}, 1 / 60, flatt); landet = Math.max(landet, s.landet); } ok(landet > 3.5 && landet < 5, 'et vanlig hopp lander med ' + landet.toFixed(1) + ' m/s (ufarlig)');
 process.exit(feil ? 1 : 0);

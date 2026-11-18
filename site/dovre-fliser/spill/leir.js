@@ -131,7 +131,8 @@
     const v = k => (N[k] ? N[k][n] : B[k] || 0) * f;
     return { kw: B.kw > 0 ? v('kw') : B.kw < 0 && virker(b) ? B.kw : 0, plasser: v('plasser'), liter: v('liter'), lager: v('lager'), rekkevidde: v('rekkevidde'), kwt: v('kwt') };
   }
-  const lagerplass = L => GRUNNLAGER + L.bygg.reduce((s, b) => s + effekt(b).lager, 0);
+  // lagerplass.ekstra: tillegg utenfra (egenbygde rom brukt som lager, spill/byggesett.js)
+  const lagerplass = L => GRUNNLAGER + L.bygg.reduce((s, b) => s + effekt(b).lager, 0) + (lagerplass.ekstra ? lagerplass.ekstra(L) || 0 : 0);
   const harMat = (L, mat) => Object.entries(mat).every(([k, v]) => (L.lager[k] || 0) + 1e-9 >= v);
   const trekk = (L, mat) => { for (const [k, v] of Object.entries(mat)) L.lager[k] = Math.max(0, (L.lager[k] || 0) - v); };
   const manglerTekst = (L, mat) => Object.entries(mat).filter(([k, v]) => (L.lager[k] || 0) < v).map(([k, v]) => `${Math.ceil((v - (L.lager[k] || 0)) * 10) / 10} ${MATERIALER[k].enhet} ${MATERIALER[k].navn.toLowerCase()}`).join(', ');

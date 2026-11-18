@@ -39,6 +39,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // kode inne i en kommentar (en //-kommentar midt på en linje har slukt kode tre ganger 10. nov – gyldig syntaks, men koden kjøres ikke)
     for (const f of [...filer.filter(f => !f.startsWith('index.html')), 'index.html']) fs.readFileSync(path.join(D, f), 'utf8').split('\n').forEach((l, n) => {
       const i = l.search(/(^|[^:'"`\\])\/\/ /); if (i < 0) return; const k = l.slice(i);
+      // (18. nov: bare kommentarer som står ETTER kode på linja – en hel kommentarlinje som forklarer «X.y = …» er ikke slukt kode)
+      if (/^\s*\/\//.test(l)) return;
       if (/\b\w+(\.\w+)+\([^)]*\)\s*;|\b\w+(\.\w+)+\s*=\s*[^=>\s]/.test(k)) dårlige.push(`${f}:${n + 1} (kode i kommentar: ${k.trim().slice(0, 60)})`); });
     if (dårlige.length) feil++; console.log(`${dårlige.length ? 'FEIL' : 'ok  '} syntaks i ${filer.length} skriptfiler` + (dårlige.length ? ': ' + dårlige.join(', ') : ''));
   }
@@ -333,7 +335,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         const kjok = kjS.ser && (kjS.skade > 0 || kjS.etter < kjS.før) && /under ild/.test(kjS.logg) && kjS.aiValg === 'trekk'; if (!kjok) { feil++; console.log(JSON.stringify(kjS)); }
         console.log(`${kjok ? 'ok  ' : 'FEIL'} ${navn} kjøretøy i kamp: patruljen ser kolonnen: ${kjS.ser}, etter 30 kamprunder ${kjS.etter} av ${kjS.før} lastebiler igjen (skade ${Math.round(100 * kjS.skade)} %); AI-laget mot stridsvogn: ${kjS.aiValg}`);
         // S5 del 2: «Grav ned» (knapp) gir vern, ingeniørene legger miner (knapp), patruljen går på en mine
-        const lag2 = await pg.evaluate(() => { const l = ENHETER[1], b = OLJE.BASER[0]; l.x = b.x + 600; l.y = b.y + 300; l.sti = null; l.nedgravd = false; l.graver = null; valgt = l; visPanel(); return true; });
+        const lag2 = await pg.evaluate(() => { const l = ENHETER[1], b = OLJE.BASER[0]; for (const m of l.menn) m.hp = 1;   // (18. nov: tidligere vakter kan ha drept laget – da graver det aldri)
+           l.x = b.x + 600; l.y = b.y + 300; l.sti = null; l.nedgravd = false; l.graver = null; valgt = l; visPanel(); return true; });
         await pg.locator('#handl button', { hasText: 'Grav ned' }).click();
         await pg.evaluate(() => { const s = ENHETER.find(s => s.ingeniør), l = ENHETER[1]; s.x = l.x + 2000; s.y = l.y; s.sti = null; valgt = s; visPanel(); });
         await pg.locator('#handl button', { hasText: 'Legg miner' }).click();
@@ -341,13 +344,15 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           for (let i = 0; i < 700; i++) sim(.1);
           // (17. nov: blir laget beskutt mens det graver, mister det folk og bruker litt lenger tid – vent til det er ferdig)
           let hvem = '', _sti = l.sti; Object.defineProperty(l, 'sti', { configurable: true, enumerable: true, get() { return _sti; }, set(v) { if (v && !hvem) hvem = String(new Error().stack).split('\n').slice(1, 5).map(q => q.trim().slice(0, 90)).join(' | '); _sti = v; } });
-          for (let i = 0; i < 4000 && !l.nedgravd; i++) sim(.1);
+          const mål0 = { tid, graver: l.graver, lever: levende(l), ombord: !!l.ombord, sti: !!l.sti, plan: !!l.planlegger }; let kast = 0, steg = 0, kastTekst = '';
+          for (let i = 0; i < 4000 && !l.nedgravd; i++) { steg++; try { sim(.1); } catch (e) { kast++; kastTekst = String(e && e.message).slice(0, 160) + ' @ ' + String(e && e.stack).split('\n').slice(1, 3).join(' | ').slice(0, 220); } }
+          const mål = { steg, kast, kastTekst, min: Math.round(tid - mål0.tid), fra: mål0, graver: l.graver, lever: levende(l), ombord: !!l.ombord, sti: !!l.sti, id: ENHETER.indexOf(l), navn: l.navn };
           { const v = _sti; delete l.sti; l.sti = v; }
           const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
           f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
           await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
           Feltarbeid.REGLER.mine.sjanse = sj; const treff = f.menn.filter(m => m.hp < 1).length; f.sti = null; MINEFELT.length = 0;
-          return { nedgravd, tekst, vern, felt, treff, hvem, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
+          return { nedgravd, tekst, vern, felt, treff, hvem, mål, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
         const faok = fa.nedgravd && /nedgravd/.test(fa.tekst) && fa.vern === .5 && fa.felt === 1 && fa.treff > 0; if (!faok) { feil++; console.log(JSON.stringify(fa)); }
         console.log(`${faok ? 'ok  ' : 'FEIL'} ${navn} feltarbeid: 2. lag nedgravd (${fa.tekst}), vern ×${fa.vern}; minefelt lagt: ${fa.felt}, patruljen gikk på en mine: ${fa.treff} treff`);
         // S5 del 3: ingeniørene sprenger en dam -> flom nedover dalen, et lag i flomfeltet får tap, vannet trekker seg tilbake etter 12 t
@@ -1173,7 +1178,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         s.menn.slice(0, 5).forEach(m => { m.hp = 0; }); s.beskuttTid = tid; delete s.stridSist; StridSpill.test = true; const t0 = tid, tp = tempo; tempo = 60; for (let i = 0; i < 60 && s.stridSist === undefined; i++) await vent(100); tempo = tp; StridSpill.test = false; ut.trakk = s.stridSist !== undefined; for (let i = 0; i < 40 && s.planlegger; i++) await vent(100); ut.marsj = !!s.sti || !!s.planlegger; }
       finally { StridSpill.test = false; KROKER.ser.splice(KROKER.ser.indexOf(serFi), 1); ENHETER.splice(ENHETER.indexOf(fi), 1); s.sti = null; s.menn = før.menn; s.her = før.her; s.strid = før.strid; delete s.bevSatt; s.beskuttTid = før.beskutt; s.stridSist = før.sist; StridSpill.SETT.clear(); if (før.penger !== null) OppstartSpill.tilstand().penger = før.penger; s.siktSkitten = true; valgt = null; if (window.lukkPanel) lukkPanel(); }
       return ut; });
-    const strok = !str.uten && str.jevn === 1 && str.høy * 1.2 > 1.3 && str.lav < .9 && Math.abs(str.bakhold - 1.6) < 1e-9 && str.bevFi === 'lett' && str.våpenFi === 12 && str.holdIld === 0 && str.nær && str.bev === 'nærstrid' && str.maskinpistoler >= 7 && str.betalt === 200000 && str.motFi && str.forhold > 0 && str.knapp && str.holdninger === 4 && str.valg === 7 && str.bevRader === 4 && str.nå && str.trakk;
+    const strok = !str.uten && str.jevn === 1 && str.høy * 1.2 > 1.3 && str.lav < .9 && Math.abs(str.bakhold - 1.6) < 1e-9 && str.bevFi === 'lett' && str.våpenFi === 12 && str.holdIld === 0 && str.nær && str.bev === 'nærstrid' && str.maskinpistoler >= 7 && str.betalt === 200000 && str.motFi && str.forhold > 0 && str.knapp && str.holdninger === 4 && str.valg === 8 && str.bevRader === 4 && str.nå && str.trakk;
     if (!strok) { feil++; console.log(JSON.stringify(str)); }
     console.log(`${strok ? 'ok  ' : 'FEIL'} ${navn} stridsregler: 60 m høyere ×${((str.høy || 0) * 1.2).toFixed(2)} med Terrengs del (nedenfra ×${(str.lav || 0).toFixed(2)}), bakhold ×${(str.bakhold || 0).toFixed(2)}, hold ilden ${str.holdIld}, fienden «${str.bevFi}», nærstrid ${str.maskinpistoler} maskinpistoler, underlegent lag trakk seg: ${str.trakk}`);
     // VAKT knapperaden (spill/knapper.js, brukeren 17. nov: «utfør nummer 5»): Gå, Leir, Krig og Deg har ikon, Sekk og Utenfra er samlet
@@ -1243,7 +1248,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         const r = TropperSpill.oppløs(s); ut.hjem = r.hjem; }
       O.penger = p0; TropperSpill.lukk(); ut.folkEtter = F.personer.length - n0; ut.regler = Object.keys(Strid.VALG).length;
       ut.minne = !!(window.AI && AI.minne && AI.minne.rød && AI.minne.grønn); ut.tak = Fraksjoner.lagTak(4); const p = Fraksjoner.angrepspunkt({ x: kam.x - 2000, y: kam.y }, { x: kam.x, y: kam.y }, (x, y) => hoydeVed(x, y)); ut.punkt = isFinite(p.x) && isFinite(p.y); return ut; });
-    const baiok = !bai.uten && bai.maler === 4 && bai.valgt === 4 && bai.utstyr === 'kikkert,feltradio' && bai.sum && bai.kraft && bai.lag && bai.betalt && bai.folk === 4 && bai.våpen && bai.radio && bai.sikt && bai.bev === 'egen' && bai.forsyn === 'forsyn' && bai.ikke === null && bai.hjem === 4 && bai.folkEtter === 0 && bai.regler === 7 && bai.minne && bai.tak === 5 && bai.punkt;
+    const baiok = !bai.uten && bai.maler === 4 && bai.valgt === 4 && bai.utstyr === 'kikkert,feltradio' && bai.sum && bai.kraft && bai.lag && bai.betalt && bai.folk === 4 && bai.våpen && bai.radio && bai.sikt && bai.bev === 'egen' && bai.forsyn === 'forsyn' && bai.ikke === null && bai.hjem === 4 && bai.folkEtter === 0 && bai.regler === 8 && bai.minne && bai.tak === 5 && bai.punkt;
     if (!baiok) { feil++; console.log(JSON.stringify(bai)); }
     console.log(`${baiok ? 'ok  ' : 'FEIL'} ${navn} bedre AI og troppebygger: ${bai.maler} forslag, Speidertropp ${bai.valgt} med ${bai.utstyr}, våpen mann for mann ${bai.våpen}, feltradio ${bai.radio}, kikkert gir sikt ${bai.sikt}, lite ammunisjon -> ${bai.forsyn}, ${bai.regler} stridsvalg, fiendens minne ${bai.minne}`);
     // VAKT formasjoner, erfaring, utstyrsbytte og fiendens kjøretøy og stillinger (brukeren 17. nov): formasjonen flytter mennene og

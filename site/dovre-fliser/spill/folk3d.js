@@ -9,6 +9,17 @@
   const JAKKER = [[.35, .42, .3], [.5, .32, .22], [.25, .33, .45], [.55, .5, .35], [.42, .25, .25], [.3, .3, .32], [.62, .46, .2], [.2, .36, .3], [.48, .44, .5]];
   const BUKSER = [[.2, .21, .25], [.26, .22, .17], [.16, .2, .16], [.3, .3, .32], [.18, .18, .2]];
   let nett = null, figurer = null, hjelp = null;
+  // PÅ PLASS (18. nov): folk holder seg ved bygget der oppgaven deres hører hjemme (vakta ved tårnet, kokken ved kjøkkenet,
+  // operatørene ved kontrollrommet, byggelaget ved byggeplassen). De som er syke i karantene, står ved sykestua eller brakka.
+  const ARBEIDSSTED = { vakt: ['vakttårn', 'port'], kjøkken: ['kjøkken'], stell: ['sykestue'], verksted: ['verksted'], overvåking: ['kontrollrom'], frakt: ['lagertelt', 'container'] };
+  // halve bredden av bygget (fra fotavtrykket), så folk står like utenfor veggen – også ved det smale vakttårnet
+  const halv = b => { const f = window.Leir && Leir.BYGG[b.type] && Leir.BYGG[b.type].fot; return f ? Math.max(1.5, Math.min(7, Math.max(Math.abs(f[0]), Math.abs(f[1]), Math.abs(f[2]), Math.abs(f[3])))) : 5; };
+  function arbeidssted(pers, bygg, i) {
+    if (!pers || !bygg.length) return null; let typer = ARBEIDSSTED[pers.oppgave];
+    if (pers.karantene) typer = ['sykestue', 'brakke'];
+    if (pers.oppgave === 'bygg' && !pers.karantene) { const u = bygg.filter(b => b.igjen > 0); return u.length ? u[i % u.length] : null; }
+    if (!typer) return null; const B = bygg.filter(b => typer.includes(b.type) && !(b.igjen > 0)); return B.length ? B[i % B.length] : null;
+  }
   const farg = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); return g; };
   const boks = (d, x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); d.push(farg(g, c)); };
   // figuren ser mot +x, føttene i origo. Lemmene har origo i leddet (hofta / skulderen) og henger nedover.
@@ -42,10 +53,11 @@
     nett.jakke.count = nett.fast.count = n; nett.bein.count = nett.arm.count = n * 2;
     figurer.forEach((p, i) => { let går = 0;
       if (p.vent > 0) p.vent -= dt; else { const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
-        if (!p.tx || d < .6) { const b = bygg.length && Math.random() < .75 ? bygg[Math.floor(Math.random() * bygg.length)] : null, v = Math.random() * 6.283, r = b ? 7 + Math.random() * 5 : Math.random() * 30; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.vent = 2 + Math.random() * 14; }
+        if (!p.tx || d < .6) { const jobb = arbeidssted(F.personer[i], bygg, i), hos = jobb && Math.random() < .85, b = hos ? jobb : bygg.length && Math.random() < .75 ? bygg[Math.floor(Math.random() * bygg.length)] : null, v = Math.random() * 6.283, r = hos ? halv(jobb) + 1 + Math.random() * 2 : b ? 7 + Math.random() * 5 : Math.random() * 30;
+          p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.vent = hos ? 8 + Math.random() * 30 : 2 + Math.random() * 14; p.hos = hos ? jobb.type : ''; }
         else { const nx = p.x + dx / d * 1.25 * dt, ny = p.y + dy / d * 1.25 * dt; if (typeof hindring3d === 'function' && hindring3d(nx - u.cx, ny - u.cy)) p.tx = 0; else { p.x = nx; p.y = ny; let da = Math.atan2(dy, dx) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 6); p.fase += 1.25 * dt * 4.2; går = 1; } } }
       p.går += (går - p.går) * Math.min(1, dt * 8 + (dt ? 0 : 1));
-      const sv = Math.sin(p.fase) * .6 * p.går; rot.position.set(p.x - u.cx, p.y - u.cy, (hoyde3d(p.x, p.y) - u.h0) * R.EX); rot.rotation.set(0, 0, p.a); rot.scale.setScalar(p.s);
+      const sv = Math.sin(p.fase) * .6 * p.går; rot.position.set(p.x - u.cx, p.y - u.cy, (hoyde3d(p.x, p.y) - u.h0) * R.EX); rot.rotation.set(0, 0, p.a); rot.scale.setScalar(F.personer[i] && F.personer[i].borte ? .001 : p.s);
       ledd[0].rotation.y = sv; ledd[1].rotation.y = -sv; ledd[2].rotation.y = -sv * .7; ledd[3].rotation.y = sv * .7; rot.updateMatrixWorld(true);
       nett.jakke.setMatrixAt(i, rot.matrixWorld); nett.fast.setMatrixAt(i, rot.matrixWorld); nett.bein.setMatrixAt(i * 2, ledd[0].matrixWorld); nett.bein.setMatrixAt(i * 2 + 1, ledd[1].matrixWorld); nett.arm.setMatrixAt(i * 2, ledd[2].matrixWorld); nett.arm.setMatrixAt(i * 2 + 1, ledd[3].matrixWorld); });
     for (const k of ['jakke', 'fast', 'bein', 'arm']) nett[k].instanceMatrix.needsUpdate = true; });

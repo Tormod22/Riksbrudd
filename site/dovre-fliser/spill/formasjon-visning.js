@@ -6,10 +6,15 @@
 (function () {
   const F = window.Formasjon; if (!F) return;
   KROKER.ild.push((a, b) => (a && b && Array.isArray(a.menn) && Array.isArray(b.menn) ? F.ild({ id: a.formasjon }, { id: b.formasjon }) * F.erfFaktor(a.menn) : 1));
+  // ERFARING (18. nov): hver ildrunde telles én gang per lag (før: hvert spillminutt det lå et skudd i lista – ved 60× gikk det
+  // mange ganger fortere enn ved 1×). Skuddene i SKUDD er merket når de er talt.
+  const talt = new WeakSet();
+  (KROKER.fart = KROKER.fart || []).push(s => (window.KrigSpill && !KrigSpill.auto() ? 1 : F.fart(s.formasjon, !!(s.her && s.her.veg))));
   let akk = 0;
-  KROKER.sim.push(dt => { akk += dt; if (akk < 1) return; akk = 0; const i = new Set();
-    for (const k of SKUDD) { if (k.a && Array.isArray(k.a.menn)) i.add(k.a); if (k.b && Array.isArray(k.b.menn)) i.add(k.b); }
-    for (const s of i) { const opp = F.lær(s.menn, 1); if (opp.length && s.side === 'blå' && !s.karakter) { logg(`${s.navn}: ${opp.length === 1 ? opp[0].navn + ' er nå ' + opp[0].nivå.toLowerCase() : opp.length + ' har fått mer erfaring'} (${F.erfTekst(s.menn)}).`); if (valgt === s) visPanel(); } }
+  KROKER.sim.push(dt => { const i = new Set();
+    for (const k of SKUDD) { if (talt.has(k)) continue; talt.add(k); if (k.a && Array.isArray(k.a.menn)) i.add(k.a); if (k.b && Array.isArray(k.b.menn)) i.add(k.b); }
+    for (const s of i) { const opp = F.runde(s.menn); if (opp.length && s.side === 'blå' && !s.karakter) { logg(`${s.navn}: ${opp.length === 1 ? opp[0].navn + ' er nå ' + opp[0].nivå.toLowerCase() : opp.length + ' har fått mer erfaring'} (${F.erfTekst(s.menn)}).`); if (valgt === s) visPanel(); } }
+    akk += dt; if (akk < 1) return; akk = 0;
     // fiendens lag: linje når de angriper, spredt når de holder en stilling, ellers kile
     for (const s of ENHETER) if (s.ai) { const f = s.ai.hva === 'angrip' || s.ai.hva === 'leir' ? 'linje' : s.ai.hva === 'hold' ? 'spredt' : 'kile'; if (s.formasjon !== f) { s.formasjon = f; skitten = true; } } });
   KROKER.lagTekst.push(s => { if (!Array.isArray(s.menn) || s.karakter) return null; const d = [], t = F.erfTekst(s.menn); if (s.formasjon && s.formasjon !== 'kile') d.push(F.type(s.formasjon).navn.toLowerCase()); if (t && t !== 'rekrutter') d.push(t + (s.side === 'blå' ? ` (treff ×${F.erfFaktor(s.menn).toFixed(2).replace('.', ',')})` : '')); return d.length ? d.join(' · ') : null; });

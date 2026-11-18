@@ -61,7 +61,11 @@
       løv: `vec3 lovFarge = mix(vec3(0.95, 0.72, 0.18), vec3(0.85, 0.32, 0.1), step(0.7, vTFro)) * (0.75 + 0.35 * vTFro);
         diffuseColor.rgb = mix(diffuseColor.rgb, lovFarge, uHostLov * (0.55 + 0.4 * vTFro));
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.37, 0.33), uNaken * 0.85);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNaken * 0.5);`,
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNaken * 0.5);
+        #ifdef USE_ALPHAMAP
+        // (18. nov, bladkort fra TreDeler i index.html) nakne trær om vinteren: det meste av løvet faller – bare noen dotter henger igjen
+        if (uNaken > 0.5 && vUv.x < 0.5 && vUv.y > 0.5 && fract(sin(dot(floor(vUv * 46.0), vec2(12.9898, 78.233))) * 43758.5453) > 0.22) discard;
+        #endif`,
       busk: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.27, 0.1) * (0.7 + 0.5 * vTFro), uHostLov * step(0.45, vTFro) * 0.6);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.31, 0.28), uNaken * 0.7);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.35, 0.35, vTOpp) * 0.93);`,
