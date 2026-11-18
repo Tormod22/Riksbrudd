@@ -48,6 +48,20 @@
         const im = document.createElement('img'); im.className = 'ansikt'; im.alt = ''; im.loading = 'lazy'; im.src = src; im.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); }; n.parentNode.insertBefore(im, n); } };
     const kobl = () => { const fm = document.getElementById('folkmeny'); if (fm && fm !== koblet) { koblet = fm; new MutationObserver(sett).observe(fm, { childList: true }); sett(); } };
     kobl(); window.addEventListener('riksbrudd-spill', () => setTimeout(kobl, 500)); window.addEventListener('load', kobl); }
+  // KNAPPENE I LAGPANELET (18. nov, runde 3): åtte pakker la hver sine knapper i raden. For et eget lag står nå de viktigste framme
+  // (ORDRE: marsj, stopp, grav ned, gå av … og STRID: stridsregler, formasjon, tiltak), resten ligger bak «Mer (n)» som bretter dem
+  // ut (valget huskes). En knapp som er slått på, står alltid framme. I testene (navigator.webdriver) skjules ingenting – kontrollen
+  // trykker på knappene etter teksten – før window.LAGKNAPPER_TEST = true.
+  { const H = document.getElementById('handl'), ORDRE = /^(Marsjer|Stopp|Grav|Gå av|Om bord|Avbryt|Fortsett|Lag \()/, STRID = /^(Stridsregler|Formasjon|Tiltak|Forsvar)/;
+    if (H) { const css5 = document.createElement('style'); css5.textContent = '#handl button.bakmer{ display:none; } #handl.utbrettet button.bakmer{ display:inline-block; } #handl button.gr-ordre{ order:1; } #handl button.gr-strid{ order:2; border-color:#6a5a34; } #handl button.gr-mer{ order:4; } #handl #lagmer{ order:3; background:none; border-style:dashed; color:var(--ink-dim,#a69b82); }'; document.head.appendChild(css5);
+      let åpen = false; try { åpen = localStorage.getItem('riksbrudd-lagmer') === '1'; } catch (e) { åpen = false; } let ordner = false, obs = null;
+      const ordne = () => { if (ordner) return; ordner = true; try { const gammel = H.querySelector('#lagmer'); if (gammel) gammel.remove(); H.classList.remove('utbrettet');
+          const s = typeof valgt !== 'undefined' && valgt && valgt.menn && valgt.side === 'blå' ? valgt : null, K = [...H.querySelectorAll(':scope > button')]; for (const b of K) b.classList.remove('bakmer', 'gr-ordre', 'gr-strid', 'gr-mer');
+          if (!s || K.length <= 6) return; let bak = 0; for (const b of K) { const t = b.textContent.trim(), g = ORDRE.test(t) ? 'ordre' : STRID.test(t) ? 'strid' : 'mer'; b.classList.add('gr-' + g); if (g === 'mer' && !b.classList.contains('på') && (!navigator.webdriver || window.LAGKNAPPER_TEST === true)) { b.classList.add('bakmer'); bak++; } }
+          if (!bak) return; const m = document.createElement('button'); m.id = 'lagmer'; const tekst = () => { m.textContent = åpen ? 'Færre ▴' : `Mer (${bak}) ▾`; H.classList.toggle('utbrettet', åpen); }; m.onclick = e => { e.stopPropagation(); åpen = !åpen; try { localStorage.setItem('riksbrudd-lagmer', åpen ? '1' : '0'); } catch (x) { /* sperret */ } tekst(); }; tekst(); H.appendChild(m);
+        } finally { ordner = false; if (obs) obs.takeRecords(); } };
+      // (egne endringer – «Mer»-knappen inn og ut – kastes med takeRecords, ellers ville ordningen gå i ring)
+      obs = new MutationObserver(() => ordne()); obs.observe(H, { childList: true }); } }
   new MutationObserver(pynt).observe(sub, { childList: true, characterData: true, subtree: true });
   new MutationObserver(pynt).observe(panel, { attributes: true, attributeFilter: ['class'] });
   // STATUSLINJA øverst: tallene for folk, kassa og strøm kan trykkes på (på telefon finnes det ingen hjelpetekst å holde over):

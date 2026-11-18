@@ -457,7 +457,8 @@ function KAI_VIKTIG(x, y, t, l, m) {
   if (INFRA_FOKUS.alt || (navigator.webdriver && !INFRA_FOKUS.test)) return true;
   if (m < (t >= 2 ? 8 : 4) || (t === 3 && m < 25)) return true;
   const st = document.getElementById('oppstart'); if (st && st.classList.contains('på')) return true;
-  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return true;
+  // i krigskartet: bare havnene og ferjeterminalene (småkaiene ga et teppe av ankere langs kysten)
+  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return t >= 3;
   if (valgt && typeof valgt.x === 'number' && Math.hypot(valgt.x - x, valgt.y - y) < INFRA_FOKUS.rundtValgt) return true;
   const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (!S || !S.leir) return true;   // ingen leir ennå: du velger sted
   return Math.hypot(S.leir.x - x, S.leir.y - y) < 5000;
@@ -3072,7 +3073,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
-<script src="/dovre-fliser/spill/byggesett-visning.js?v=0c6cf4934e"></script>
+<script src="/dovre-fliser/spill/byggesett-visning.js?v=2888ca022f"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=9925e7834a"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=5cf4c81c55"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
@@ -3106,7 +3107,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folk3d.js?v=6362673d15"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=083acfd2e5"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
-<script src="/dovre-fliser/spill/panelpynt.js?v=49fdc9e1e5"></script>
+<script src="/dovre-fliser/spill/panelpynt.js?v=20284f4f18"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/strid.js?v=76235e3a9c"></script>
 <script src="/dovre-fliser/spill/strid-visning.js?v=2efdd45a36"></script>
@@ -3142,7 +3143,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=4905700357"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=e78f0a255b"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/tema.js?v=2ba22aaa4c"></script>
+<script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=49f596422d"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=68948f7dbd"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
@@ -3151,7 +3152,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flistips.js?v=6ed87893fa"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=fc65e32c9e"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
-<script src="/dovre-fliser/spill/paneler.js?v=688afd8260"></script>
+<script src="/dovre-fliser/spill/paneler.js?v=59bd34cd61"></script>
 <script src="/dovre-fliser/spill/spillhud.js?v=447e296e5d"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 </body>

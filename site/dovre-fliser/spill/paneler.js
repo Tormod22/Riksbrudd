@@ -16,7 +16,7 @@
   const Paneler = { PLASS, plass, viker, test: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Paneler; return; }
   rot.Paneler = Paneler;
-  const $ = id => document.getElementById(id), ALLE = Object.values(PLASS).flat();
+  const $ = id => document.getElementById(id), ALLE = Object.values(PLASS).flat(), KORT = ['hendelse', 'formkort', 'samfunnkort', 'flytkort', 'krigkort'];
   const NYE = ['region', 'samfunnmeny', 'personkort', 'samfunnkort', 'krigpanel', 'verdenpanel', 'sjopanel', 'evpanel', 'flytkort', 'flytgruppe', 'marsjvalg', 'hendelse'], sel = (e, f = '') => NYE.map(id => `body #${id}${e}${f}`).join(', ');
   const css = document.createElement('style');
   css.textContent = `${sel('')}{ background:linear-gradient(180deg,#241c10 0,#17120a 150px); border:1px solid #8a7440; box-shadow:0 0 0 1px #0d0a06, inset 0 1px 0 rgba(255,230,160,.06), 0 12px 34px rgba(0,0,0,.65); border-radius:4px; color:var(--ink,#e7dcc3); scrollbar-width:thin; scrollbar-color:#5a4f38 transparent; }
@@ -29,13 +29,13 @@ ${sel(' button:not(.lukk)')}{ background:#241c10; border:1px solid #5a4a2a; colo
 body.spill #region, body.spill #samfunnmeny{ left:10px; top:calc(var(--topp,58px) + 6px); z-index:7; max-height:calc(100% - var(--topp,58px) - 76px); overflow-y:auto; }
 body.spill #verdenpanel, body.spill #sjopanel, body.spill #krigpanel, body.spill #karakterark, body.spill #tropppanel, body.spill #sekk{ right:10px; left:auto; top:calc(var(--topp,58px) + 6px); z-index:11; max-height:calc(100% - var(--topp,58px) - 76px); overflow-y:auto; }
 body #region .lukk, body #krigpanel .lukk, body #verdenpanel .lukk, body #sjopanel .lukk, body #evpanel .lukk, body #personkort .lukk{ position:absolute; right:8px; top:8px; }
-body #flytgruppe{ z-index:5; }
+body #flytgruppe{ z-index:5; } body.kortoppe #personkort, body.kortoppe #evpanel{ display:none !important; }
 body #personkort, body #evpanel{ z-index:14; } body #samfunnkort, body #hendelse, body #flytkort{ z-index:15; }
 body.kort #region, body.kort #samfunnmeny, body.kort #verdenpanel, body.kort #sjopanel, body.kort #krigpanel{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); width:auto; max-width:none; max-height:none; overflow-y:auto; z-index:11; }
 body.kort #personkort, body.kort #evpanel, body.kort #samfunnkort{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); width:auto; max-width:none; max-height:calc(100% - var(--topp,44px) - 20px); overflow-y:auto; transform:none; }
 /* når du går på telefon: kameravarselet står til venstre midt på (ikke oppå kompass, minikart, helse eller våpenruta) */
 body.kort.minikart3d #kamvarsel{ top:calc(var(--topp,44px) + 176px); } body.kort.gaar #kamvarsel{ left:8px; right:auto; top:46%; width:min(240px, 60vw); }
-@keyframes panelinn2{ from{ opacity:0; translate:0 8px; } } #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:panelinn2 .18s ease-out; }
+@keyframes panelinn2{ from{ opacity:0; } } #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:panelinn2 .18s ease-out; }
 @media (prefers-reduced-motion:reduce){ #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:none; } }`;
   document.head.appendChild(css);
   // ---------- ett panel per plass ----------
@@ -52,6 +52,9 @@ body.kort.minikart3d #kamvarsel{ top:calc(var(--topp,44px) + 176px); } body.kort
       for (const id of viker(ny, [...nå], smal)) { if (lukk(id)) nå.delete(id); }
       // et panel på venstre plass dekker lagpanelet nede til venstre: det lukkes (som Leir og Folk alt gjør)
       if ((plass(ny) === 'venstre' || smal) && plass(ny) !== 'midt' && typeof rot.lukkPanel === 'function' && vises('panel')) rot.lukkPanel(); }
+    // KORT MED VALG (hendelse, samfunnskort, spillformkort, flytkort, krigskort – køen i window.Kortkø sørger for ett om gangen):
+    // mens et slikt kort står oppe, viker panelene i midten (personkort, «Lag noe»/tilflukt) og kommer tilbake når kortet er besvart
+    const kort = KORT.some(vises); if (document.body.classList.contains('kortoppe') !== kort) document.body.classList.toggle('kortoppe', kort);
     før = new Set(ALLE.filter(vises)); }
   setInterval(sjekk, 120);
   Paneler.sjekk = sjekk; Paneler.åpne = () => ALLE.filter(vises); Paneler.lukk = lukk; Paneler.NYE = NYE;
