@@ -16,7 +16,8 @@
     // krigen (kapittel 5): stillingen fra krigskartet, og egne tettsteder med et lag i garnison
     let andel = 0, vunnet = false, garnison = 0;
     try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) { andel = K.st.sider.blå.andel; vunnet = K.ut.vinner === 'blå'; garnison = K.byer.filter(b => window.Garnison && Garnison.tilstand(TETTSTEDER, b.id).eier === 'blå' && Garnison.lagI(b.ref, ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e))).length > 0).length; } } catch (e) { /* krigskartet er ikke klart */ }
-    return { bygg, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
+    // strøm: egen strøm (aggregat eller solceller) – strømnettet i området ga før «Mål nådd: få strøm» i første sekund av et nytt spill
+    return { bygg, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0 && (bygg.aggregat || bygg.solcelle)), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
       hogd: R && R.hogd ? R.hogd.filter(h => !(h.andel < 1)).length : 0, revet: R && R.revet ? R.revet.length : 0, tettsteder, går, andel, vunnet, garnison,
       inne: går && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y)), lett: window.LeteSpill ? LeteSpill.antall() : 0 };
   }

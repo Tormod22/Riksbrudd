@@ -49,6 +49,8 @@ body.kort #opplaering{ left:calc(8px + env(safe-area-inset-left,0px)); right:cal
 #opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(5px + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
 #opplaering.liten .nr{ left:7px; top:4px; width:22px; height:22px; line-height:21px; font-size:13px; } #opplaering.liten b{ font-size:15px; margin:0; }
 body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } body.foto #opplaering, body.foto #oppring, body.bygger2d.kort #opplaering{ display:none !important; }
+/* PC: mens et bygg plasseres ligger byggebanneret nederst – opplæringen flyttes opp så de ikke dekker hverandre */
+body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 22px); }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);

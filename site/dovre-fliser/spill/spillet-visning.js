@@ -63,7 +63,7 @@
   if (LB && FR) {
     const km = LB.kjøpMateriale, kd = LB.kjøpDrivstoff, kf = FR.kjøpMat, husk = () => skriv('riksbrudd-marked', M);
     LB.kjøpMateriale = (l, type, mengde, betal) => { if (!knapt()) return km(l, type, mengde, betal); const kan = Marked.kan(M, type, mengde); if (!(kan > 0)) return { feil: Marked.tomt(LB.MATERIALER[type].navn.toLowerCase()) };
-      const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen.`); } return r; };
+      const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen. Hyllene fylles litt hvert døgn (${Marked.LAGER[type].fyll} ${LB.MATERIALER[type].enhet}) – resten får du ved hogst, riving eller fra tettsteder du holder.`); } return r; };
     LB.kjøpDrivstoff = (l, liter, betal) => { if (!knapt()) return kd(l, liter, betal); const kan = Marked.kan(M, 'diesel', liter); if (!(kan > 0)) return { feil: Marked.tomt('diesel') };
       const r = kd(l, kan, betal); if (!r.feil) { Marked.ta(M, 'diesel', r.liter); husk(); } return r; };
     FR.kjøpMat = (f, rasjoner, betal) => { if (!knapt()) return kf(f, rasjoner, betal); const kan = Marked.kan(M, 'mat', rasjoner); if (!(kan > 0)) return { feil: Marked.tomt('mat') };

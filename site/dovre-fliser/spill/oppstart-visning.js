@@ -43,6 +43,8 @@
 #leirvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
   border:1px solid var(--hover); padding:10px 14px; color:var(--ink); max-width:min(560px,92vw); text-align:center; }
 #leirvalg.på{ display:block; }
+/* PC: over kommandolinja nederst */
+body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
 #leirvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:42px; padding:4px 14px; margin:6px 4px 0; cursor:pointer; font:inherit; }`;
   document.head.appendChild(css);
 

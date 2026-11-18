@@ -99,14 +99,23 @@
   const settFart = id => { const b = document.getElementById(id); if (b && (fartId() !== id || tempo === 0)) b.click(); };
 
   // ---------- øyeblikksbildet ----------
+  // Den samme fienden (eller den samme ildkampen) skal bare stoppe spolingen én gang: et lag som forsvinner bak en ås og kommer fram
+  // igjen, telte før som «ny fiende i sikte» hver gang (spolingen stoppet hvert 2.–9. spillminutt under et angrep). Nå regnes en fiende som
+  // sett, og et lag som i strid, i HUSK spillminutter etter sist gang (Claudes forslag).
+  const HUSK = 90, sistSett = new Map(), sistStrid = new Map();
+  function nylig(kart, nå, alle) {
+    for (const e of nå) kart.set(e, tid);
+    let n = 0; for (const [e, t] of kart) { if (tid - t > HUSK || tid < t || !alle.includes(e)) kart.delete(e); else n++; }
+    return n;
+  }
   function bilde() {
     const L = rot.LeirSpill && LeirSpill.tilstand(), lag = egne(), marsj = {};
     for (const s of lag) if (s.sti || s.planlegger || (s.kø && s.kø.length)) marsj[s.navn] = true;
     let tettsteder = 0; if (rot.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') tettsteder++;
     const al = document.getElementById('alarm');
     return { dag: Math.floor((6 + tid / 60) / 24) + 1, marsj, navn: lag.map(s => s.navn), lag: lag.length,
-      strid: lag.filter(s => s.skyterPå && s.skyterPå.size).length + ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå')).length,
-      fiender: ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).length,
+      strid: nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
+      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e))),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
       mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
