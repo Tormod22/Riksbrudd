@@ -62,9 +62,16 @@
   function veger(a, b) { const g = window.VEGNETT; if (!g || !g.rute) return null;
     const v = sperrVersjon(g); if (v !== vegVersjon) { vegVersjon = v; VEG.clear(); vegKø = []; }
     const k = vegNøkkel(a, b); if (VEG.has(k)) return VEG.get(k); if (!vegKø.some(q => q.k === k)) vegKø.push({ k, a, b }); return null; }
-  const brutteNavn = (g, lenker) => { const navn = new Set(); for (const e of lenker) { let t = []; try { t = g.infraPåLenke(e); } catch (er) { t = []; }
-      for (const [lag, id] of t) { const o = typeof INFRA !== 'undefined' && INFRA && (INFRA[lag] || []).find(q => q.e && q.e.id === id); navn.add((lag === 'bru' ? 'brua' : lag === 'tunnel' ? 'tunnelen' : lag) + (o && o.e.navn ? ' ' + o.e.navn : '')); } }
-    return navn.size ? [...navn].join(' og ') : 'en bru'; };
+  // Hva som bryter vegen, som en hel setning: «brua X er sprengt», «tunnelen X er sperret», «et sprengt krater i vegen (E39)».
+  // Vegkratere fra «Spreng vegen her» (spill/odeleggelse-visning.js) ligger i INFRA_TILSTAND som 'veg:<lenke>' og sperres i vegnettet på samme
+  // måte (Odeleggelse.oppdaterVegnett legger dem i graf._sperretAv) – derfor stenger de handelsrutene som en sprengt bru.
+  function vegNavn(g, e) { try { const l = g.lenke(e), k = l.vegkategori, nr = l.vegnummer; return nr && 'ERF'.includes(k) ? (k === 'E' ? 'E' + nr : k + 'v ' + nr) : ''; } catch (er) { return ''; } }
+  const brutteNavn = (g, lenker) => { const navn = new Set(), T = window.INFRA_TILSTAND; for (const e of lenker) { let t = []; try { t = g.infraPåLenke(e); } catch (er) { t = []; }
+      const krater = T && T.has && T.has('veg:' + e) && (T.get('veg:' + e).tilstand || 'sprengt') !== 'hel';
+      const bru = t.filter(([lag]) => lag === 'bru' || lag === 'tunnel' || lag === 'ferjekai');
+      for (const [lag, id] of bru) { const o = typeof INFRA !== 'undefined' && INFRA && (INFRA[lag] || []).find(q => q.e && q.e.id === id); navn.add((lag === 'bru' ? 'brua' : lag === 'tunnel' ? 'tunnelen' : 'ferjekaia') + (o && o.e.navn ? ' ' + o.e.navn : '') + (lag === 'bru' ? ' er sprengt' : ' er sperret')); }
+      if (krater || !bru.length) { const v = vegNavn(g, e); navn.add(`et sprengt krater i vegen${v ? ' (' + v + ')' : ''}`); } }
+    return [...navn].join(', og '); };
   function regnVeg(job) { const g = window.VEGNETT; if (!g) return; const sp = g._sperretAv ? [...g._sperretAv] : [], spSett = new Set(sp); let r = null;
     // vegen slik den går når alt er helt – så ser vi om en sprengt bru ligger på den
     try { for (const e of sp) g.åpne(e); r = g.rute([job.a.x, job.a.y], [job.b.x, job.b.y], { maksAvstand: 4000 }); } catch (e) { r = null; } finally { for (const e of sp) g.sperr(e); }
@@ -94,7 +101,7 @@
       if (!o && b.uro && b.loj > R.opprørVed + 10) { b.uro = false; logg(`${navn} har roet seg.`); }
       // meldinger når ruta eller strømmen skifter
       const fr = meldtRute.get(q.by.e.id), rs = q.rute.status;
-      if (fr !== undefined && fr !== rs && rs === 'stengt' && q.rute.brutt && q.rute.brutt.length) logg(`Handelsruta fra ${navn} er STENGT: ${q.rute.brutt[0]} er sprengt. Ingenting kommer fram landevegen før den er reparert.`);
+      if (fr !== undefined && fr !== rs && rs === 'stengt' && q.rute.brutt && q.rute.brutt.length) logg(`Handelsruta fra ${navn} er STENGT: ${q.rute.brutt[0]}. Ingenting kommer fram landevegen før det er reparert.`);
       else if (fr !== undefined && fr !== rs) logg(rs === 'åpen' ? `Handelsruta fra ${navn} er åpen igjen.` : rs === 'truet' ? `Handelsruta fra ${navn} er truet: fiender i nærheten. Bare halvparten kommer fram – sett et lag til å vokte ruta.` : `Handelsruta fra ${navn} er STENGT av fiender. Ingenting kommer fram før de er borte eller et lag vokter ruta.`);
       meldtRute.set(q.by.e.id, rs);
       const fs = meldtStrøm.get(q.by.e.id); if (fs !== undefined && fs !== q.strøm) logg(q.strøm ? `${navn} har fått strømmen tilbake.` : `${navn} har mistet strømmen: tettstedet gir mindre og blir misfornøyd til et kraftverk i nærheten virker igjen.`);
@@ -224,7 +231,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     br.append(el('span', { klasse: 'brikke ' + (q.garnison ? 'god' : 'obs') }, q.garnison ? 'Garnison' : 'Ingen garnison'));
     k.append(br);
     const verst = q.rute.ledd.reduce((a, l) => (l.meter < a.meter ? l : a), { meter: Infinity });
-    if (q.rute.brutt && q.rute.brutt.length) k.append(el('small', {}, `Vegen er brutt: ${q.rute.brutt[0]} er sprengt. Ingenting kommer fram før den er reparert (ingeniørlag).`));
+    if (q.rute.brutt && q.rute.brutt.length) k.append(el('small', {}, `Vegen er brutt: ${q.rute.brutt[0]}. Ingenting kommer fram før det er reparert (ingeniørlag).`));
     else if (q.rute.status !== 'åpen') k.append(el('small', {}, `Fiender ${km(verst.meter)} fra ruta. ` + (q.rute.status === 'stengt' ? 'Ingenting kommer fram.' : 'Halvparten kommer fram.') + ' Jag dem bort, eller sett et lag ved ruta som vakt.'));
     else if (verst.vakt && verst.meter < R.rute.truet) k.append(el('small', {}, 'Et av lagene dine vokter ruta.'));
     const sk = el('div', { klasse: 'skatt', role: 'group', 'aria-label': 'Skatt' });
@@ -303,7 +310,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
         const strek = () => { g.beginPath(); if (V) { g.moveTo(sx(V[0][0]), sy(V[0][1])); for (let n = 1; n < V.length; n++) g.lineTo(sx(V[n][0]), sy(V[n][1])); } else { g.moveTo(ax, ay); g.lineTo(bx, by); } g.stroke(); };
         g.strokeStyle = 'rgba(15,11,7,.7)'; g.lineWidth = 5; g.setLineDash([]); strek();
         g.strokeStyle = FARGE[st]; g.lineWidth = 2.5; g.setLineDash(st === 'åpen' ? [10, 6] : [4, 6]); strek(); g.setLineDash([]);
-        if (st !== 'åpen' && tydelig) { const mid = V ? V[Math.floor(V.length / 2)] : null, tx = mid ? sx(mid[0]) : (ax + bx) / 2, ty = mid ? sy(mid[1]) : (ay + by) / 2, t = q.rute.ledd[i].brutt ? 'BRUA ER SPRENGT' : st === 'stengt' ? 'RUTA ER STENGT' : 'ruta er truet'; g.font = '600 12px "Cormorant Garamond",serif'; g.textAlign = 'center';
+        if (st !== 'åpen' && tydelig) { const mid = V ? V[Math.floor(V.length / 2)] : null, tx = mid ? sx(mid[0]) : (ax + bx) / 2, ty = mid ? sy(mid[1]) : (ay + by) / 2, t = q.rute.ledd[i].brutt ? (/^brua/.test(q.rute.ledd[i].brutt) ? 'BRUA ER SPRENGT' : 'VEGEN ER BRUTT') : st === 'stengt' ? 'RUTA ER STENGT' : 'ruta er truet'; g.font = '600 12px "Cormorant Garamond",serif'; g.textAlign = 'center';
           g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(t, tx, ty - 6); g.fillStyle = FARGE[st]; g.fillText(t, tx, ty - 6); } } }
     // hva tettstedene er og gir (bare når Region eller krigskartet er åpent)
     if (tydelig) { g.font = '13px "Cormorant Garamond",serif'; g.textAlign = 'center';
@@ -325,7 +332,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     const linje = tekst => boks.append(el('div', {}, tekst));
     if (e === 'blå') { const q = status().get(by.e.id) || status(true).get(by.e.id);
       if (q) { linje(`Gir deg nå per døgn: ${RG.girTekst(girNå(q), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen.`);
-        linje(`Strøm: ${strømOrd}. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta ${q.rute.status}` + (q.rute.brutt && q.rute.brutt.length ? ` (${q.rute.brutt[0]} er sprengt)` : '') + '.'); }
+        linje(`Strøm: ${strømOrd}. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta ${q.rute.status}` + (q.rute.brutt && q.rute.brutt.length ? ` (${q.rute.brutt[0]})` : '') + '.'); }
       return boks; }
     const g = grunnFor(by.e.folk || 0, t), uten = st ? g : RG.gir(by.e.folk || 0, t, { loj: R.lojStart, skatt: 'vanlig', strøm: false, rute: 'åpen', utenStrøm: G.REGLER.strøm.uten });
     linje(`Hvis du tar det, per døgn: ${RG.girTekst(st ? g : medPf(uten), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen. Strøm: ${strømOrd}.`);

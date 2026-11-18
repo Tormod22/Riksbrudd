@@ -150,10 +150,37 @@ leirvalget, krigskartet og lojaliteten.
   «Bord den» – lesbart, ingen sidefeil. Vaktene «sjøen» og «økonomi» består på PC og mobil (to ganger etter hverandre i samme side).
 
 ### IKKE gjort / svakheter (runde 4)
-- Fiendens båter skyter ikke på dine båter, og dine båter har ingen helse (bare fiendens kan senkes). Et AI-lag om bord skyter som vanlig
-  fra båten (treffer dårlig), men kan ikke bordes – bare senkes.
+- (Rettet i del 2: dine båter har helse, og fiendens båter skyter tilbake.) Et AI-lag om bord kan ikke bordes – bare senkes.
 - AI-båtene lagres ikke (som fiendens lag), og AI-en bruker bare sjark og høyst én båt per side om gangen. AI-en legger ikke miner.
-- Handelsrutene langs vegnettet bare på PC (vegnettet hentes ikke på telefon); der gjelder luftlinja som før. Vegkrater («Spreng vegen her»)
-  stenger ikke handelsrutene – bare sprengte bruer/tunneler/ferjekaier i `graf._sperretAv`.
+- Handelsrutene langs vegnettet bare på PC (vegnettet hentes ikke på telefon); der gjelder luftlinja som før. (Vegkrater stenger rutene – se del 2.)
 - Skjulingen av ruteferja er ikke sett i 3D med ekte data (prøvd i Node med den ekte koden). Et ekte musetrykk i 3D er ikke prøvd – bare kroken.
-- Sjøpanelet på telefon dekker det meste av skjermen (som før – ikke endret i denne runden).
+- (Rettet i del 2: sjøpanelet på telefon er et lavt bunnark.)
+
+## Runde 4, del 2 (18. nov dag)
+ALLE NYE TALL ER CLAUDES FORSLAG (i `Sjo.REGLER.mot`, `Sjo.REGLER.svømTap`, `Sjo.REGLER.reparer` og `hp` i `Sjo.TYPER`).
+
+1. **Sjøpanelet på telefon** (body.kort/smal, eller vindu under 700 × 560) er et lavt bunnark (`#sjopanel.kort`, høyst 36 vh / 230 px stående,
+   52 vh / 210 px liggende): tittel, én linje (status, lag om bord, last, helse) og én rad med det viktigste – båt: «Til kai», «Til sted»,
+   «Stopp»/«Sett i land»/«Ta om bord», «Bord» (når en forsyningsbåt er i sikte), «Fisk»; kai: kjøp av båtene som passer, «Ta ferja», båten som
+   ligger der; oversikt: de tre første båtene. Raden kan rulles sidelengs, og «Mer ▾» står fast til høyre og viser hele panelet («▴ Mindre»
+   tilbake; stående høyst 72 vh). Overstyrer `body.kort #sjopanel` i paneler.js og `body.kort.tlfligg #sjopanel` i telefon.js med høyere
+   spesifisitet (`#sjopanel.på.kort`) – de filene er ikke endret. Sett på bilder 390 × 844 og 844 × 390 (scratchpad natt/sjo/mob.js).
+2. **Dine båter har helse** (småbåt 30, sjark 50, lekter 120, ferje 200; lagres) og repareres ved en kai innen 3 km fra leiren (+10 i timen).
+   **Fiendens båter skyter tilbake** hvert spillminutt på det nærmeste innen 450 m: en av dine båter (skade som før, 2 per skytter × KROKER.ild),
+   eller et lag på land innen 300 m (0,04 treff per skytter per minutt × faktoren; et treff gjør en frisk mann såret, en såret falt; laget får
+   `beskuttTid`). Skytterne er laget om bord på AI-båten, eller forsyningsbåtens mannskap på tre (det finnes ingen eskorte ellers). Synker din
+   båt, svømmer laget om bord i land og mister 30 % av de levende (de sårede først), kjøretøy og last går ned. Samme svømmetap for AI-båtene
+   (før: halvparten). Melding «X er under ild fra …» høyst hvert 10. spillminutt per mål. Vakten: småbåten senket etter 42 min, 8 av 12 i land.
+3. **Vegkrater** fra «Spreng vegen her» lagres i `INFRA_TILSTAND` som `'veg:<lenke>'` (odeleggelse-visning.js), og `Odeleggelse.oppdaterVegnett`
+   sperrer dem i vegnettet og legger dem i `graf._sperretAv` – akkurat som bruene. Handelsrutene fra runde 4 stengte derfor allerede på kratere;
+   nå sier teksten hva det er («et sprengt krater i vegen (E39)», «brua X er sprengt», «tunnelen X er sperret»; «VEGEN ER BRUTT» i kartet).
+   Ingen andres filer er endret. Prøvd på /rogaland: krater midt på vegen Sauda–leiren ga «stengt», reparert ga ruta tilbake.
+   (Notatet over sa at kratere ikke var med – det var feil.)
+4. **Is**: pakka «verden» (grenen claude/natt18-verden, ikke flettet inn her ennå) har `Verden.islagtVann(V, moh, klasse)` og `Verden.islagt(x, y)`.
+   `SjoSpill.isFor()` bruker `Verden.islagtVann` med `VerdenSpill.tilstand()` (frost ≥ `Verden.REGLER.is.båt`) rute for rute i sjøkartet (det har
+   høyden i hver rute): islagte innsjøer er stengt (`Sjo.sjøkart(v, sperringer, is)`, `Sjo.rute(…, { is })`). Ruta går rundt, eller seilasen sier
+   «isen stenger – innsjøen er islagt. Vent på mildvær.» (`feil: 'is'`). Gjelder dine båter, forsyningsbåtene og AI-båtene. Uten verden-modulen:
+   ingen is (som før). Prøvd med verden.js fra grenen i Node (120 moh. med frost: islagt, sjøen: aldri) og med en prøve-is i vakten.
+   Ikke gjort: en båt som alt er ute på en innsjø når isen legger seg, stopper ikke.
+
+Nye API-er: `Sjo.maksHp/treffPåLag/drukner/reparer`, `SjoSpill.ildSteg/skytTilbake/egenSenket/isFor`. Tester: test_sjo.js (+12).

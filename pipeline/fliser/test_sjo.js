@@ -63,4 +63,21 @@ ok(S.nivå(5000).zv === 9 && S.nivå(30000).zv === 8 && S.nivå(100000).zv === 7
   ok(Math.abs(S.igjenAvSti([[0, 0], [100, 0], [100, 100]], 0, 50, 0) - 150) < 1e-9 && S.igjenAvSti(null, 0, 0, 0) === 0, 'igjen av marsjruta');
   const T = S.ny(); S.havnSteg(T, [{ id: 1, folk: 500 }, { id: 2, folk: 500, størrelse: 'middels' }], 7 * 1440);
   ok(Math.abs(T.havner[2].rasjoner - T.havner[1].rasjoner * S.REGLER.middelsHavn) < 1e-9 && T.havner[2].rasjoner > 0, 'middels kai gir ' + Math.round(S.REGLER.middelsHavn * 100) + ' % av en stor havn'); }
+// (runde 4 del 2) dine båter har helse, fiendens båter skyter tilbake, svømmetap, reparasjon
+{ const T = S.ny(), b = S.nyBåt(T, 'sjark', 0, 0); ok(b.hp === S.TYPER.sjark.hp && S.maksHp(b) === 50 && S.maksHp({ type: 'frakt' }) === S.REGLER.fiendeBåt.hp, 'en ny sjark har full helse (50)');
+  ok(S.skadBåt(b, [{ menn: S.REGLER.mot.mannskap, faktor: S.REGLER.skuddFraBåt * S.REGLER.treffPåBåt }], 1) === 'truffet' && b.hp < 50, 'forsyningsbåtens mannskap skader sjarken');
+  b.hp = 10; const U = S.fraJSON(JSON.parse(JSON.stringify(S.tilJSON(T)))); ok(U.båter[0].hp === 10, 'helsa lagres');
+  ok(S.reparer(b, 60) === 10 + S.REGLER.reparer && S.reparer({ type: 'sjark', hp: 49 }, 600) === 50, 'reparasjon ved kaia: +' + S.REGLER.reparer + ' i timen, aldri over full helse');
+  ok(S.drukner(10) === 3 && S.drukner(0) === 0 && S.drukner(1) === 0, 'svømmetap: 3 av 10 drukner');
+  ok(Math.abs(S.treffPåLag(3, 0.4, 10) - 3 * S.REGLER.mot.treffLag * 0.4 * 10) < 1e-12 && S.treffPåLag(3, 0, 10) === 0, 'treff på et lag fra en båt');
+  ok(S.fraJSON({ versjon: 1, båter: [{ id: 1, type: 'lekter', x: 0, y: 0 }] }).båter[0].hp === 120, 'gamle lagringer: full helse'); }
+// (runde 4 del 2) islagte innsjøer: kartet over har en innsjø (vann over 1 moh.) som eneste lei
+{ const w = 30, h = 10, v = { x0: 0, y0: 1000, r: 100, w, h, K: new Uint8Array(w * h).fill(1), H: new Float32Array(w * h).fill(0) };
+  for (let j = 3; j < 7; j++) for (let i = 0; i < w; i++) { v.K[j * w + i] = 3; v.H[j * w + i] = i >= 10 && i < 20 ? 120 : 0; }
+  const m = (i, j) => [(i + .5) * 100, 1000 - (j + .5) * 100], a = m(2, 5), b = m(27, 5), is = moh => moh > 1;
+  ok(S.rute(v, ...a, ...b).sti, 'uten is: båten seiler gjennom innsjøen');
+  const r = S.rute(v, ...a, ...b, { is }); ok(r.feil === 'is', 'isen stenger leia (' + (r.feil || 'rute') + ')');
+  ok(S.rute(v, ...a, ...m(8, 5), { is }).sti, 'på åpent vann utenfor isen går det fint');
+  ok(S.rute(v, ...a, ...b, { is: () => false }).sti, 'is-funksjon som sier nei: som før');
+  const sp = S.rute(v, ...a, ...b, { is, sperringer: [{ x: 500, y: 500, r: 300 }] }); ok(sp.feil === 'sperret' || sp.feil === 'is', 'både sperring og is: stengt (' + sp.feil + ')'); }
 console.log(feil ? feil + ' feil' : 'test_sjo: alt i orden'); process.exit(feil ? 1 : 0);
