@@ -176,7 +176,8 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
 
 ## Fellesfiler endret i runde 4
 - `site/dovre-fliser/index.html`: én skript-tagg (`spill/tegnforklaring.js`) rett etter minikart2d.js. versjon.py er kjørt.
-- `spill/leir-visning.js`: én linje i `visByggPanel` (se 5).
+- `spill/leir-visning.js`: én linje i `visByggPanel` (se 5) og samme linje i `visPlanPanel` (tegningen i panelet for en planlagt skisse,
+  rett etter `banner.append(...)`, `a.type` i stedet for `b.type`).
 - `spill/kjoretoy-visning.js`: `symbol()` bruker Merker for hele merket (3 linjer, reserve beholdt).
 - `spill/garnison-visning.js`: tettstedsmerket fra Merker (vimpelen som reserve).
 - Ellers egne filer: merker.js, tegnforklaring.js (ny), flistips.js, paneler.js, spillhud.js, flyt.js, scenario.js, scenario-visning.js.
@@ -194,6 +195,6 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
 
 ## Ikke gjort
 - Båtene (pakka «sjo») og kaiene i kaier.js er urørt her.
-- Byggpanelet for planlagte skisser (`visPlanPanel`) og plasseringsbanneret har ingen tegning.
+- Plasseringsbanneret («Brakke: trykk der bygget skal stå») har ingen tegning (panelet for bygg og for planlagte skisser har).
 - Rammen i 3D virker bare med mus (telefon: «Velg lag» velger alle på skjermen).
 - Kortene i midten på telefon ligger fortsatt oppå arkene (med vilje, se 1).
