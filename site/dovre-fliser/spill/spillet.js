@@ -27,10 +27,26 @@
     VARER, SALG: .8,
     ny: () => ({ f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, infl: 1, dag: 0 }),
     // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er 0,4 % per døgn
-    steg(M, rng) { M.før = { ...M.f }; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; return M; },
+    steg(M, rng) { M.før = { ...M.f }; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; Marked.fyll(M, 1); return M; },
     pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * M.f[vare] * M.infl / 100) * 100),
     // endringen siden i går i prosent (med inflasjonen)
     endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
+    // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
+    // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
+    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 40, fyll: 10 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
+    ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner' },
+    // kjøpsprisen på tre, betong og stål er 1,5 × markedsprisen (frakt og mellommenn), så hogst og riving lønner seg klart
+    PÅSLAG: 1.5,
+    kjøpspris: (M, vare, grunnpris, dyrt) => Math.round(Marked.pris(M, vare, grunnpris) * (dyrt && Marked.erMateriale(vare) ? Marked.PÅSLAG : 1) / 100) * 100,
+    erMateriale: vare => vare === 'tre' || vare === 'betong' || vare === 'stål',
+    // hyllene i et marked (gamle lagrede markeder får fulle hyller)
+    hyller(M) { if (!M.lager) M.lager = {}; for (const v of VARER) if (!(M.lager[v] >= 0)) M.lager[v] = Marked.LAGER[v].maks; return M.lager; },
+    // nye varer: døgn = hvor mange døgn som er gått
+    fyll(M, døgn = 1) { const H = Marked.hyller(M); for (const v of VARER) H[v] = Math.min(Marked.LAGER[v].maks, H[v] + Marked.LAGER[v].fyll * døgn); return M; },
+    // hvor mye av ønsket mengde du får kjøpt (mat og diesel i hele, resten i tideler)
+    kan(M, vare, mengde) { const h = Marked.hyller(M)[vare] || 0, m = Math.min(mengde, h); return Marked.erMateriale(vare) ? Math.floor(m * 10 + 1e-6) / 10 : Math.floor(m + 1e-6); },
+    ta(M, vare, mengde) { const H = Marked.hyller(M); H[vare] = Math.max(0, (H[vare] || 0) - mengde); return H[vare]; },
+    tomt: (vare) => `Markedet er tomt for ${vare === 'mat' ? 'mat' : vare} i dag. Det kommer mer i morgen – eller skaff det selv (hogst, riving, tettsteder).`,
     tekst(M) { const d = VARER.map(v => [v, Marked.endring(M, v)]).filter(q => Math.abs(q[1]) >= 5).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3);
       return d.length ? 'Markedet: ' + d.map(([v, e]) => `${v} ${e > 0 ? 'opp' : 'ned'} ${Math.abs(e)} %`).join(', ') + '.' : 'Markedet: små endringer i dag.'; },
   };

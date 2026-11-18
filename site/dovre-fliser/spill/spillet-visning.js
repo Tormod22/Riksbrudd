@@ -47,7 +47,20 @@
 
   // ================= MARKED =================
   let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;
-  function settPriser() { if (!GRUNN || !M) return; for (const v of ['tre', 'betong', 'stål']) LB.MATERIALER[v].pris = Marked.pris(M, v, GRUNN[v]); LB.DRIVSTOFF.prisPerLiter = Marked.pris(M, 'diesel', GRUNN.diesel); FR.R.matPris = Marked.pris(M, 'mat', GRUNN.mat); LB.REGLER.salg = Marked.SALG; }
+  // KNAPPHET (natt til 18. nov): i det ekte spillet (ikke i testene, uten api.knapphet = true) koster tre, betong og stål 1,5 × markedsprisen,
+  // og markedet har tomme hyller (Marked.LAGER). Salgsprisen er den samme som før (80 % av markedsprisen = ca. halve kjøpsprisen).
+  const dyrt = () => !navigator.webdriver || api.knapphet === true, knapt = () => dyrt() && !!M && klar;
+  function settPriser() { if (!GRUNN || !M) return; const d = dyrt(); for (const v of ['tre', 'betong', 'stål']) LB.MATERIALER[v].pris = Marked.kjøpspris(M, v, GRUNN[v], d); LB.DRIVSTOFF.prisPerLiter = Marked.pris(M, 'diesel', GRUNN.diesel); FR.R.matPris = Marked.pris(M, 'mat', GRUNN.mat); LB.REGLER.salg = d ? Math.round(Marked.SALG / Marked.PÅSLAG * 100) / 100 : Marked.SALG; }
+  // Kjøpene går gjennom hyllene: Leir.kjøpMateriale, Leir.kjøpDrivstoff og FolkRegler.kjøpMat pakkes inn (alle som kjøper, bruker dem).
+  if (LB && FR) {
+    const km = LB.kjøpMateriale, kd = LB.kjøpDrivstoff, kf = FR.kjøpMat, husk = () => skriv('riksbrudd-marked', M);
+    LB.kjøpMateriale = (l, type, mengde, betal) => { if (!knapt()) return km(l, type, mengde, betal); const kan = Marked.kan(M, type, mengde); if (!(kan > 0)) return { feil: Marked.tomt(LB.MATERIALER[type].navn.toLowerCase()) };
+      const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen.`); } return r; };
+    LB.kjøpDrivstoff = (l, liter, betal) => { if (!knapt()) return kd(l, liter, betal); const kan = Marked.kan(M, 'diesel', liter); if (!(kan > 0)) return { feil: Marked.tomt('diesel') };
+      const r = kd(l, kan, betal); if (!r.feil) { Marked.ta(M, 'diesel', r.liter); husk(); } return r; };
+    FR.kjøpMat = (f, rasjoner, betal) => { if (!knapt()) return kf(f, rasjoner, betal); const kan = Marked.kan(M, 'mat', rasjoner); if (!(kan > 0)) return { feil: Marked.tomt('mat') };
+      const r = kf(f, kan, betal); if (!r.feil) { Marked.ta(M, 'mat', r.rasjoner); husk(); } return r; };
+  }
   function markedSteg() { if (!auto() || !M) return; const d = Math.floor(tid / 1440); if (d === M.spilldag && ekte - M.ekte < 600) return; M.spilldag = d; M.ekte = ekte; Marked.steg(M, Math.random); settPriser(); skriv('riksbrudd-marked', M); logg(Marked.tekst(M)); meny(); }
 
   // ================= OPPDRAG =================
@@ -160,8 +173,9 @@
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar) return;
     // markedet (i fanen Lager: overskriften begynner med «Materialer»)
     if (M && GRUNN) { hode.append(e('h3', { 'data-fane': 'lager' }, 'Markedet i dag')); const NAVN = { tre: 'Tre (m³)', betong: 'Betong (m³)', stål: 'Stål (t)', diesel: 'Diesel (liter)', mat: 'Mat (rasjon)' };
-      for (const v of Marked.VARER) { const en = Marked.endring(M, v); hode.append(e('div', { klasse: 'markedrad' }, e('span', {}, NAVN[v]), e('span', { klasse: en > 1 ? 'opp' : en < -1 ? 'ned' : '' }, `${kr(Marked.pris(M, v, GRUNN[v]))} ${en > 1 ? '↑' : en < -1 ? '↓' : '→'} ${en > 0 ? '+' : ''}${en} %`))); }
-      hode.append(e('small', {}, `Prisene flytter seg hver dag. Du får ${Math.round(Marked.SALG * 100)} % av dagens pris når du selger – kjøp billig og selg dyrt.`)); }
+      for (const v of Marked.VARER) { const en = Marked.endring(M, v); hode.append(e('div', { klasse: 'markedrad' }, e('span', {}, NAVN[v] + (knapt() ? ` · ${Marked.kan(M, v, 1e9) > 0 ? 'på hylla: ' + String(Marked.kan(M, v, 1e9)).replace('.', ',') : 'TOMT'}` : '')), e('span', { klasse: en > 1 ? 'opp' : en < -1 ? 'ned' : '' }, `${kr(Marked.kjøpspris(M, v, GRUNN[v], dyrt()))} ${en > 1 ? '↑' : en < -1 ? '↓' : '→'} ${en > 0 ? '+' : ''}${en} %`))); }
+      hode.append(e('small', {}, knapt() ? 'Prisene flytter seg hver dag, og hyllene fylles sakte: det du kjøper tomt i dag, er borte til det kommer mer. Du får omtrent halve kjøpsprisen når du selger. Hogst, riving og tettsteder gir det samme uten å koste penger.'
+        : `Prisene flytter seg hver dag. Du får ${Math.round(Marked.SALG * 100)} % av dagens pris når du selger – kjøp billig og selg dyrt.`)); }
     // oppdrag og trussel står ØVERST i fanen Mål (flyttes foran overskriften «Mål» til slutt), vennene nederst
     const første = hode.childNodes.length; hode.append(e('h3', { 'data-fane': 'mål' }, 'Oppdrag'));
     if (O) { if (!O.liste.length) hode.append(e('small', {}, 'Ingen oppdrag akkurat nå – nye kommer snart.'));
@@ -185,7 +199,7 @@
   setInterval(() => { if (performance.now() > varselTil) varselEl.classList.remove('på'); if (!klar || !S() || !S().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     const g = deg(); skytKnapp.classList.toggle('på', !!g && VW < 900 && !(window.KjorSpill && KjorSpill.fører()));
     if (tempo > 0) { angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); } }, 1000);
-  Object.assign(api, { start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
+  Object.assign(api, { start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
     T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg });
   window.SpilletSpill = api;
 })();

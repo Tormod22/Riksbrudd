@@ -21,4 +21,11 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
 { const k = Deling.kode('Dovrefolket æøå', '#aa3322', { x: 196400, y: 6898900 }, [{ type: 'brakke', x: 196420, y: 6898910, ret: 1.57 }, { type: 'gjerde', punkter: [] }, { type: 'tull', x: 196400, y: 6898900 }]);
   const d = Deling.les(k, t => t === 'brakke'); ok(/^[A-Za-z0-9_-]+$/.test(k) && d && d.navn === 'Dovrefolket æøå' && d.farge === '#aa3322' && d.bygg.length === 1 && d.bygg[0].x === 196420 && Math.abs(d.bygg[0].ret - 1.57) < .02, `deling: leiren blir en kode på ${k.length} tegn og kan leses tilbake`);
   ok(Deling.les('tull') === null && Deling.les('') === null && Deling.les(k.slice(0, 20)) === null, 'deling: en ugyldig kode gir ingenting'); }
+// hyllene (natt til 18. nov): markedet har ikke alt hver dag
+{ const M = Marked.ny(), H = Marked.hyller(M); ok(H.tre === 60 && H.diesel === 2500 && Marked.kan(M, 'tre', 10) === 10 && Marked.kan(M, 'tre', 100) === 60, 'hyller: et nytt marked har fulle hyller, og du får ikke mer enn det som står der');
+  Marked.ta(M, 'tre', 55.5); Marked.ta(M, 'mat', 299.5); ok(Marked.kan(M, 'tre', 10) === 4.5 && Marked.kan(M, 'mat', 50) === 0 && /tomt for mat/.test(Marked.tomt('mat')), 'hyller: tre i tideler, mat i hele – tomt er tomt');
+  Marked.steg(M, rng); ok(Math.abs(M.lager.tre - 19.5) < 1e-9 && Math.abs(M.lager.mat - 80.5) < 1e-9, 'hyller: fylles sakte hvert døgn (15 m³ tre, 80 rasjoner)');
+  for (let i = 0; i < 20; i++) Marked.steg(M, rng); ok(M.lager.tre === 60 && M.lager.stål === 20, 'hyller: aldri over fulle hyller');
+  const G = { f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: {}, infl: 1, dag: 3 }; ok(Marked.hyller(G).betong === 40, 'hyller: et lagret marked fra før får fulle hyller');
+  const N = Marked.ny(); ok(Marked.kjøpspris(N, 'tre', 20000, true) === 30000 && Marked.kjøpspris(N, 'tre', 20000, false) === 20000 && Marked.kjøpspris(N, 'diesel', 8000, true) === 8000, 'kjøpspris: tre, betong og stål koster 1,5 × i det ekte spillet, diesel og mat som før'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);
