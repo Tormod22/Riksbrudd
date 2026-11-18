@@ -24,6 +24,13 @@
     hulR: 110, hulDyp: 26, hulMørk: .2, ryggLys: .07,
     // flekker: to størrelser (meter) og styrke (andel lysstyrke), litt grønnere/brunere med den store
     flekkStor: 230, flekkSmå: 55, flekkStorK: .12, flekkSmåK: .09, flekkFarge: .05,
+    // stranda (runde 5): rutenes side (m), utjevning av kartets vann (m), hvor langt fra helt vann vannstanden spres (m), hvor høyt over
+    // vannstanden det fortsatt er vann (m), hvor mange meter i høyde kanten tones over, støy på høyden (m) og på kartets vann (andel),
+    // støyens to størrelser (m), den lyse sonen (m over vannet) og hvor lys den blir, den fuktige kanten (m over vannet) og hvor mørk,
+    // stranda farge (lys grå stein og grus) og landets farge der kartet hadde vann som ikke er vann (lyng mot stein)
+    strandCelle: 2.5, strandGlatt: 5, strandRekk: 40, strandNivå: .3, strandKant: .22, strandStøyH: .15, strandStøyKart: .16,
+    strandStøyStor: 9, strandStøySmå: 3.2, strandSone: 1.3, strandLys: .55, strandVåt: .14, strandMørk: .28,
+    strandFarge: [152, 146, 132], strandLand: [104, 100, 76],
   };
   // Den faste snøgrensen (moh.) etter hvor langt nord: 1150 m i Rogaland/Hordaland, ca. 1040 i Jotunheimen, ca. 870 ved Svartisen,
   // ca. 730 i Lyngen. Breene ligger over den (lave bretunger blir grå – det er prisen). Claudes forslag.
@@ -105,8 +112,110 @@
         px[q] = klem(R * L * (1 + (fr - 1) * w), 0, 255); px[q + 1] = klem(G * L * (1 + (fg - 1) * w), 0, 255); px[q + 2] = klem(B * L, 0, 255); n++; } }
     return n;
   }
+  // 4. STRANDA (runde 5, 18.–19. nov: «hakkete strandkanter … vannflatene følger 32 m-ruter, så strendene ser trappete ut»).
+  // Vannet i kartbildet er kartflisenes vannfarge, strukket fra grove ruter: kanten går i trapper, og rundt innsjøene på heia lå en mørk
+  // ring (satellittbildets vann utenfor kartets vannflate). Høydedataene (Kartverket) har innsjøene helt flate: vannstanden er kjent.
+  // Her lages kanten på nytt, punkt for punkt, før vannmasken (u.vann) lages – så gange, dyr og bygg følger det du ser:
+  //  a. Ruter (ca. 2,5 m): hvor mye vann (kartet), utjevnet (runde hjørner der høyden ikke vet bedre).
+  //  b. Vannstanden: fra ruter som er helt vann, spredt ut til ruter innen REGLER.strandRekk meter (nærmeste vanns høyde).
+  //  c. Hvert punkt nær stranda: vann der terrenget ligger lavere enn vannstanden + strandNivå (med støy i kartets meter, så kanten
+  //     blir ujevn som en ekte strand), land der det ligger over (også der kartet hadde vann). Uten kjent vannstand: kartet utjevnet.
+  //     Kanten tones over ca. én meter.
+  //  d. På land rett ved vannet: en lys sone med stein og grus (bredere der det er slakt, smal der det er bratt – den følger høyden over
+  //     vannet) og en mørk, fuktig kant helt nede. Ikke ved havet (havnivå() i index.html har sin egen strand).
+  // Gir antall punkter som ble endret. o.hav = true: høydenettet har hav (ingen lys sone under 1 moh.).
+  // Glidende snitt over 2r + 1 punkter langs én linje i et M × M-gitter (start, steg = 1 langs raden eller M langs kolonnen), på stedet
+  function glidLinje(A, start, steg, M, r, tmp) {
+    let s = 0; const n = 2 * r + 1, at = k => A[start + (k < 0 ? 0 : k > M - 1 ? M - 1 : k) * steg];
+    for (let k = -r; k <= r; k++) s += at(k);
+    for (let k = 0; k < M; k++) { tmp[k] = s / n; s += at(k + r + 1) - at(k - r); }
+    for (let k = 0, q = start; k < M; k++, q += steg) A[q] = tmp[k];
+  }
+  function* strandG(px, TW, H, N, cx, cy, S, o = {}) {
+    const Rg = REGLER, mpp = 2 * S / TW, K = Math.max(1, Math.round(Rg.strandCelle / mpp)), M = Math.ceil(TW / K), cm = K * mpp;
+    // a. vann per rute, og vannets farge i snitt
+    // (hvert andre punkt i hver retning når rutene er minst to punkter brede – andelen blir nesten den samme, på en firedel av tiden)
+    const f0 = new Float32Array(M * M), ant = new Uint16Array(M * M), sp = K >= 2 ? 2 : 1; let nV = 0, sR = 0, sG = 0, sB = 0;
+    for (let y = 0; y < TW; y += sp) { if ((y & 63) === 0) yield; const rad = ((y / K) | 0) * M;
+      for (let x = 0, q = y * TW * 4; x < TW; x += sp, q += 4 * sp) { const c = rad + ((x / K) | 0); ant[c]++; if (px[q + 3] < 200) continue; const R = px[q], G = px[q + 1], B = px[q + 2];
+        if (erVann(R, G, B)) { f0[c]++; nV++; sR += R; sG += G; sB += B; } } }
+    if (!nV) return 0;
+    const vannF = [sR / nV, sG / nV, sB / nV];
+    for (let c = 0; c < M * M; c++) f0[c] /= ant[c] || 1;
+    yield;
+    // utjevnet kart (to ganger en glidende firkant langs hver akse – nesten en gaussisk utjevning)
+    const glatt = f0.slice(), tmp = new Float32Array(M), r = Math.max(1, Math.round(Rg.strandGlatt / cm));
+    for (let gang = 0; gang < 2; gang++) for (let akse = 0; akse < 2; akse++) for (let a = 0; a < M; a++) { if ((a & 31) === 0) yield;
+      glidLinje(glatt, akse ? a : a * M, akse ? M : 1, M, r, tmp); }
+    // høyden midt i en rute (bilineært i høydenettet), og i et punkt i bildet
+    const fH = (N - 1) / TW, hBilde = (x, y) => { const fx = (x + .5) * fH, fy = (y + .5) * fH, x0 = Math.min(N - 2, fx | 0), y0 = Math.min(N - 2, fy | 0), a = fx - x0, b = fy - y0, k = y0 * N + x0;
+      return (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b; };
+    // b. vannstanden: kilder er ruter som er helt vann (og ikke ligger i en kant i det utjevnede), spredt med avstand (to gjennomløp)
+    const INF = 1e9, avst = new Float32Array(M * M).fill(INF), nivå = new Float32Array(M * M), maks = Rg.strandRekk / cm, R2 = Math.SQRT2;
+    for (let c = 0; c < M * M; c++) if (f0[c] >= .99 && glatt[c] >= .9) { const cj = (c / M) | 0, ci = c - cj * M; avst[c] = 0; nivå[c] = hBilde(Math.min(TW - 1, ci * K + (K >> 1)), Math.min(TW - 1, cj * K + (K >> 1))); }
+    yield;
+    const spre = (c, d, n) => { const v = avst[n] + d; if (v < avst[c]) { avst[c] = v; nivå[c] = nivå[n]; } };
+    for (let j = 0; j < M; j++) { if ((j & 63) === 0) yield; for (let i = 0; i < M; i++) { const c = j * M + i; if (!avst[c]) continue;
+      if (i > 0) spre(c, 1, c - 1); if (j > 0) { spre(c, 1, c - M); if (i > 0) spre(c, R2, c - M - 1); if (i < M - 1) spre(c, R2, c - M + 1); } } }
+    for (let j = M - 1; j >= 0; j--) { if ((j & 63) === 0) yield; for (let i = M - 1; i >= 0; i--) { const c = j * M + i; if (!avst[c]) continue;
+      if (i < M - 1) spre(c, 1, c + 1); if (j < M - 1) { spre(c, 1, c + M); if (i < M - 1) spre(c, R2, c + M + 1); if (i > 0) spre(c, R2, c + M - 1); } } }
+    // c. punktene i rutene nær stranda (innen rekkevidden fra vannet, eller i kartets utjevnede kant)
+    const X0 = cx - S, Y1 = cy + S, [lr, lg, lb] = Rg.strandFarge, nær = c => avst[c] <= maks || (glatt[c] > .01 && glatt[c] < .99);
+    // nivået i et punkt: lineært mellom rutene som har det (ruter uten kjent nivå teller ikke). vekt: hvor mye høyden bestemmer –
+    // den tones ut den siste tredjedelen av rekkevidden (ellers fikk kanten et hakk der rekkevidden slutter)
+    let vekt = 0;
+    const nivåVed = (x, y) => { const gx = (x + .5) / K - .5, gy = (y + .5) / K - .5, i0 = Math.max(0, Math.min(M - 1, Math.floor(gx))), j0 = Math.max(0, Math.min(M - 1, Math.floor(gy))), i1 = Math.min(M - 1, i0 + 1), j1 = Math.min(M - 1, j0 + 1), a = klem(gx - i0, 0, 1), b = klem(gy - j0, 0, 1);
+      let s = 0, w = 0; vekt = 0;
+      for (let k = 0; k < 4; k++) { const c = k & 1 ? (k & 2 ? j1 * M + i1 : j0 * M + i1) : (k & 2 ? j1 * M + i0 : j0 * M + i0), v = (k & 1 ? a : 1 - a) * (k & 2 ? b : 1 - b);
+        if (avst[c] <= maks && v > 0) { s += nivå[c] * v; w += v; vekt += v * trinn(maks, maks * .66, avst[c]); } }
+      return w > .001 ? s / w : NaN; };
+    const glattVed = (x, y) => { const gx = (x + .5) / K - .5, gy = (y + .5) / K - .5, i0 = Math.max(0, Math.min(M - 2, Math.floor(gx))), j0 = Math.max(0, Math.min(M - 2, Math.floor(gy))), a = klem(gx - i0, 0, 1), b = klem(gy - j0, 0, 1), c = j0 * M + i0;
+      return (glatt[c] * (1 - a) + glatt[c + 1] * a) * (1 - b) + (glatt[c + M] * (1 - a) + glatt[c + M + 1] * a) * b; };
+    // ruter der ingenting kan skje, hoppes over: tørt land høyt over vannet (uten vann i kartet), og vann godt under vannstanden som alt
+    // er vann i kartet. Høyden prøves i rutens fire hjørner.
+    const tørr = Rg.strandNivå + Rg.strandSone * 1.4 + Rg.strandStøyH * 1.5 + .1, våtGrense = Rg.strandNivå - Rg.strandKant - Rg.strandStøyH * 1.5 - .1;
+    let lo = 0, hi = 0;
+    const hjørner = (ci, cj, L) => { const x0 = ci * K, y0 = cj * K, x1 = Math.min(TW - 1, x0 + K - 1), y1 = Math.min(TW - 1, y0 + K - 1);
+      const a = hBilde(x0, y0) - L, b = hBilde(x1, y0) - L, c = hBilde(x0, y1) - L, d = hBilde(x1, y1) - L; lo = Math.min(a, b, c, d); hi = Math.max(a, b, c, d); };
+    let endret = 0, arbeid = 0;
+    for (let cj = 0; cj < M; cj++) {
+      for (let ci = 0; ci < M; ci++) { const c = cj * M + ci; if (!avst[c] || !nær(c)) continue;
+        if (avst[c] <= maks) { hjørner(ci, cj, nivå[c]); if ((glatt[c] < .01 && lo > tørr) || (f0[c] >= .999 && glatt[c] >= .97 && hi < våtGrense)) continue; }
+        if ((arbeid += K * K) > 12000) { arbeid = 0; yield; }
+        for (let y = cj * K; y < Math.min(TW, cj * K + K); y++) for (let x = ci * K; x < Math.min(TW, ci * K + K); x++) {
+          const q = (y * TW + x) * 4; if (px[q + 3] < 200) continue;
+          const X = X0 + (x + .5) * mpp, Y = Y1 - (y + .5) * mpp, n = (støy(X, Y, Rg.strandStøyStor) - .5) * 2 + (støy(X + 5113, Y - 2207, Rg.strandStøySmå) - .5);
+          const L = nivåVed(x, y), R = px[q], G = px[q + 1], B = px[q + 2], var_ = erVann(R, G, B);
+          // w: hvor mye vann (0–1) i punktet; dh: meter over vannstanden (NaN uten kjent vannstand)
+          let w, dh = NaN;
+          // kartets vann (utjevnet, med støy), og der vannstanden er kjent: høyden over den
+          w = klem((glattVed(x, y) + n * Rg.strandStøyKart - .5) / .12 + .5, 0, 1);
+          if (L === L) { dh = hBilde(x, y) - L + n * Rg.strandStøyH; w += (klem((Rg.strandNivå - dh) / Rg.strandKant + .5, 0, 1) - w) * vekt; }
+          if (w > .5 !== var_) endret++;
+          if (w >= .5) {
+            // vann: vannets farge (litt av punktets eget mønster blir med, som i resten av vannet)
+            // (også der kartet alt hadde vann: den gamle kanten var en mørkere stripe inne i vannet)
+            const t = var_ ? .8 * trinn(.99, .85, glattVed(x, y)) : .9 + .1 * trinn(.5, .8, w); px[q] = R + (vannF[0] - R) * t; px[q + 1] = G + (vannF[1] - G) * t; px[q + 2] = B + (vannF[2] - B) * t;
+            continue; }
+          // land: der kartet hadde vann, fargen fra landet rundt (stein og lyng i lysere og mørkere flekker)
+          let r0 = R, g0 = G, b0 = B;
+          if (var_) { const l = 1 + n * .12; r0 = Rg.strandLand[0] * l; g0 = Rg.strandLand[1] * l; b0 = Rg.strandLand[2] * l; }
+          // d. strandsonen: lys stein og grus opp til strandSone meter over vannet, mørk og fuktig helt nede
+          if (dh === dh && !(o.hav && L < 1)) {
+            const over = dh - Rg.strandNivå, sone = Rg.strandSone * (.65 + .35 * (n + 1)), lys = trinn(sone, 0, over) * Rg.strandLys, våt = trinn(Rg.strandVåt, 0, over);
+            const m = .92 + (((x * 73856093) ^ (y * 19349663)) & 15) / 100;
+            r0 += (lr * m - r0) * lys; g0 += (lg * m - g0) * lys; b0 += (lb * m - b0) * lys;
+            const f = 1 - Rg.strandMørk * våt; r0 *= f; g0 *= f; b0 *= f;
+          }
+          // kanten mot vannet tones (en meter eller så)
+          const t = w * 2 * .6; px[q] = r0 + (vannF[0] - r0) * t; px[q + 1] = g0 + (vannF[1] - g0) * t; px[q + 2] = b0 + (vannF[2] - b0) * t;
+          // (et kantpunkt skal ikke bli regnet som vann av vannmasken)
+          if (erVann(px[q], px[q + 1], px[q + 2])) px[q + 2] = Math.min(px[q + 2], px[q] + 17);
+        } } }
+    return endret;
+  }
   // kjør en generator helt ut (Node-testene og reserven)
   const kjør = it => { let r; while (!(r = it.next()).done); return r.value; };
-  const api = { REGLER, snøFast, striperG, snøTilBergG, relieffG, støy, kjør };
+  const api = { REGLER, snøFast, striperG, snøTilBergG, relieffG, strandG, støy, kjør };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Kartbilde = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

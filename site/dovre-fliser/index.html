@@ -126,7 +126,7 @@ function skjulMelding(type) {
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
-<script src="/dovre-fliser/spill/kartbilde.js?v=92e773de5b"></script>
+<script src="/dovre-fliser/spill/kartbilde.js?v=e99c749e91"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
@@ -1354,7 +1354,8 @@ function detaljIBakken(mat, side) {
       // fine bare helt naert. To oppslag i stedet for fem.
       {
       float mettK = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
-      float vegK = clamp((diffuseColor.g - diffuseColor.b) * 6.0, 0.0, 1.0) * smoothstep(0.02, 0.07, mettK);
+      // (runde 5: heia i Rogaland er brun lyng – rødt over blått teller som vegetasjon, ikke bare grønt; stein og grus bare der kartet er graatt)
+      float vegK = clamp((max(diffuseColor.g, diffuseColor.r * 0.97) - diffuseColor.b - 0.02) * 6.0, 0.0, 1.0) * smoothstep(0.02, 0.07, mettK);
       float wGress = vegK * smoothstep(-0.08, 0.03, diffuseColor.g - diffuseColor.r);
       float wLyng = vegK - wGress, wGrus = 1.0 - vegK;
       vec2 aUv = vUv * detaljSkala;
@@ -1373,7 +1374,7 @@ function detaljIBakken(mat, side) {
       if (naer > 0.0) {
       float k2 = texture2D(detalj, vUv * detaljSkala * 4.7 + vec2(0.31, 0.17)).r, k3 = texture2D(detalj, vUv * detaljSkala * 4.1 + vec2(0.71, 0.43)).b;
       float k4 = texture2D(detalj, vUv * detaljSkala * 1.9 + vec2(0.13, 0.59)).g;
-      float veg = clamp((diffuseColor.g - diffuseColor.b) * 5.0, 0.0, 1.0);
+      float veg = clamp((max(diffuseColor.g, diffuseColor.r * 0.97) - diffuseColor.b - 0.02) * 6.0, 0.0, 1.0);
       float k5 = texture2D(straa, vUv * detaljSkala * 3.0 + vec2(0.53, 0.29)).r, k6 = texture2D(detalj, vUv * detaljSkala * 7.3 + vec2(0.11, 0.83)).r;
       vec3 naerF = diffuseColor.rgb * (0.8 + 0.4 * k2) * mix(0.72 + 0.46 * k3, (0.7 + 0.55 * k5) * (0.85 + 0.3 * k6), veg);
       naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
@@ -1448,6 +1449,9 @@ async function bygg3d(cx, cy, S) {
   // /norge: sjøen i satellittbildet er ofte grå (havna i Bergen ble mørk og ble ikke vann i 3D). Det som ligger på havnivå (under 0,3 m), blir hav.
   if (NORGE_BLOKKER) { const st = {}; await iStriper(TW, (y0, y1) => havnivå(px, TW, H, N, steg, y0, y1, st)); }
   { const st = {}; await iStriper(TW, (y0, y1) => vannIBratt(px, TW, H, N, steg, y0, y1, st)); }
+  // (runde 5, pakke «natur»: «hakkete strandkanter») stranda lages på nytt fra høyden (innsjøene er flate i høydedataene) med støy,
+  // lys strandsone og fuktig kant – spill/kartbilde.js strandG. Før vannmasken, så u.vann (gange, dyr, bygg) følger det du ser.
+  if (window.Kartbilde && Kartbilde.strandG && !window.STRAND_AV) u.strand = await kjørAsynk(Kartbilde.strandG(px, TW, H, N, cx, cy, S));
   u.vann = await vannmaske(px, TW, H, N, steg); u.harVann = !!u.vann.harVann;
   // (18. nov, hakk: den første modulen som trengte vannmasken, leste den tilbake fra bildet med getImageData – 25–55 ms i ett strekk her,
   // og på et ekte grafikkort må nettleseren vente på grafikkortet. Punktene finnes alt: u.vannData = { W, d } som modulene bruker.)
@@ -2163,6 +2167,8 @@ function bunnkart(px, TW, skog) {
     rgb[k * 3] = R; rgb[k * 3 + 1] = G; rgb[k * 3 + 2] = B;
     const iSkog = skog && skog.m[Math.floor(j * skog.W / W) * skog.W + Math.floor(i * skog.W / W)];
     gress[k] = iSkog ? 2 : G >= R - 8 && G > B + 6 && Math.abs(R - G) + Math.abs(G - B) >= 14 && R + G + B < 600 ? 1 : 0;   // 2 = skogbunn
+    // 3 = lyng på åpen mark (runde 5: brun hei i Rogaland fikk verken gress eller lyng, bare bar bakke som så ut som stein)
+    if (!gress[k] && R > B + 14 && G > B + 8 && Math.max(R, G, B) - Math.min(R, G, B) >= 18 && R + G + B < 560 && !(B > R + 18 && B > G + 4)) gress[k] = 3;
   }
   return { W, rgb, gress };
 }
@@ -2205,6 +2211,8 @@ async function smått3d(u, px, b) {
       // ikke på asfalt, parkeringsplasser, veger og hus (grått i kartet); på snaufjellet er lys grå stein naturlig, men ikke mørk asfalt
       const kl = kv.K[j * kv.w + i], gr = Math.abs(px[q] - px[q + 1]) + Math.abs(px[q + 1] - px[q + 2]) < 14, lys = .3 * px[q] + .59 * px[q + 1] + .11 * px[q + 2];
       if (gr && (kl !== 0 || lys < 120)) continue;
+      // (runde 5) snaufjell i arealklassene kan være lyngrygger (Rogaland): der kartet er brunt/grønt, bare en firedel av steinene
+      if (liste === stein && kl === 0 && !gr && px[q + 2] < Math.min(px[q], px[q + 1]) - 10 && hash(frø + 5e6) > .25) continue;
       if (u.hus && u.hus.omriss && nærHus(u, x - u.cx, y - u.cy)) continue;
       liste.push(x - u.cx, y - u.cy, (hoyde3d(x, y, u) - u.h0) * R3.EX, liste === stein ? .5 + Math.pow(hash(frø + 3e6), 2.5) * 2.8 : .45 + hash(frø + 3e6) * .7, hash(frø + 4e6));
     }
@@ -2485,12 +2493,13 @@ function gress3d() {
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
     if ((u.vegNær && u.vegNær(x, y)) || (u.påVeg && u.påVeg(x, y))) continue; if (iVann3d(u, x, y) || (u.påBane && u.påBane(x, y))) continue;
     // ikke inne i husene (det vokste gress opp gjennom gulvet da husene fikk interiør)
-    if (u.husRute && hindring3d(x, y, u.husRute)) continue;
+    // (runde 5: også hus som er lagt inn etter at utsnittet ble bygget – prøvehus, leirens bygg, byggesettets vegger – i R.hindre)
+    if ((u.husRute && hindring3d(x, y, u.husRute)) || (R.hindre && hindring3d(x, y, R.hindre))) continue;
     if (window.Interior3d && Interior3d.iLeirbygg(x, y)) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     // høyt gress i flekker (enga er ikke klippet): flekkene står fast i kartet
     const eng = Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45;
-    const k = (j * W + i) * 3, lyng = type === 2, h = (lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
+    const k = (j * W + i) * 3, lyng = type === 2 || type === 3, h = (lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
@@ -3287,7 +3296,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=7eaf0fb472"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=e81d7843d9"></script>
+<script src="/dovre-fliser/spill/lave3d.js?v=4ce08c9902"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>

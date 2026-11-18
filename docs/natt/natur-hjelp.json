@@ -3,5 +3,8 @@
   ["Støv, eksos og hjulspor", "Kjøretøy som kjører, slipper eksos. På tørr grus og i terrenget virvler de opp støv, på snø snøføyke. Hjulsporene blir liggende et par minutter før de blir borte. På asfalt blir det ikke spor.", "I 3D"],
   ["Ildkamp som synes", "Når et lag skyter, ser du munningsild, sporlys mot målet, kruttrøyk og nedslag i bakken. I kartet blinker det ved laget som skyter.", "Lag og strid"],
   ["Kratere og brent skog", "Et kjøretøy som blir ødelagt, etterlater et krater og en røyksky. Der det har brent, er bakken svidd og trærne svarte. Der det brenner nå, ser du flammer og røyk.", "I 3D"],
-  ["Skogen fortsetter i det fjerne", "Skog langt unna tegnes som enkle holt, så landskapet ikke slutter i en kant. Kommer du nær, står de ekte trærne der. På lav grafikk er de fjerne holtene slått av.", "Vær, lyd og bilde"]
+  ["Skogen fortsetter i det fjerne", "Skog langt unna tegnes som enkle holt, så landskapet ikke slutter i en kant. Kommer du nær, står de ekte trærne der. På lav grafikk er de fjerne holtene slått av.", "Vær, lyd og bilde"],
+  ["Strender og vannkant", "Innsjøer og elver har en myk, ujevn strandkant som følger terrenget, med en lys sone av stein og grus og en mørk, fuktig kant helt nede ved vannet. Der du ser vann, kan du ikke gå – og der du ser land, kan du gå.", "I 3D"],
+  ["Lyng på heia", "Brun og grønn hei er lyng og gress når du går på den. Stein ligger der fjellet er grått.", "I 3D"],
+  ["Låver og uthus", "Låvene har høy på gulvet, et høyloft med stige, redskap langs veggen, trillebår, melkespann og ofte en gammel grå traktor. Uthus har redskap og trillebår. Traktoren må du gå rundt.", "I 3D"]
 ]

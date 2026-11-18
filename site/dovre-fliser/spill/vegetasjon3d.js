@@ -284,7 +284,17 @@
     // ikke inne i leirens egne bygg (spill/interior3d.js)
     if (window.Interior3d && Interior3d.iLeirbygg(x, y)) return false;
     if (iVann(u, x, y) || (u.vegNær && u.vegNær(x, y, .3)) || (u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
-    return !(u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y));
+    if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) return false;
+    // (runde 5) også hus som er lagt inn etter at utsnittet ble bygget (prøvehus, leirens bygg, byggesettets vegger): R3.hindre
+    const R = r3(); return !(R && R.hindre && typeof hindring3d === 'function' && hindring3d(x, y, R.hindre));
+  }
+  // Et lite merke for hindringene (antall ting i R3.hindre): endres det – et hus er lagt til eller tatt bort –, settes plantene og
+  // gresset rundt kameraet på nytt (ellers sto de til du hadde gått 12 m). Leses høyst hvert 0,7 s.
+  let hindreMerke = -1, hindreLest = 0;
+  function hindreEndret(R) {
+    const nå = performance.now(); if (nå - hindreLest < 700 || !R.hindre) return false; hindreLest = nå;
+    let n = 0; for (const l of R.hindre.values()) n += l.length;
+    const endret = hindreMerke >= 0 && n !== hindreMerke; hindreMerke = n; return endret;
   }
   let vekst = null, vekstSenter = null, vekstNøkkel = '';
   function lagVekst(R) {
@@ -343,6 +353,7 @@
     if (!R.ut) return;
     const VR = window.VAER; U.uTid.value = performance.now() / 1000;
     U.uHostV.value = VR ? VR.høst : 0; U.uNakenV.value = VR && VR.årstid === 'vinter' ? 1 : 0; U.uSnoGrV.value = VR ? VR.snøgrense : 1900;
+    if (hindreEndret(R)) { vekstSenter = null; R.gressSenter = null; }
     oppdaterVekst(R);
   });
 

@@ -1,5 +1,5 @@
 // VAKT «natur» (18. nov): trær med bladtekstur, gress med vind og lyng, soldater som rører seg, effekter (støv, spor, skudd, kratere,
-// brente områder) og fjern skog. Tåler at 3D er av (da prøves bare reglene og at delene finnes) og setter alt tilbake.
+// brente områder) og fjern skog. Runde 5: stranda (u.strand), planter ikke i hus lagt inn etterpå, låvens innhold (regler). Tåler at 3D er av (da prøves bare reglene og at delene finnes) og setter alt tilbake.
 module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => {
     const ut = { feil: [] }, krev = (ok, tekst) => { if (!ok) ut.feil.push(tekst); };
@@ -10,6 +10,7 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     krev(Effekter.områder(undefined).length === 0 && Effekter.områder([{ x: 1, y: 2 }, { x: 'a' }, null]).length === 1, 'områder() er ikke tolerant');
     krev(Effekter.underlag('asfalt', false, 0).støv === 0 && Effekter.underlag('grus', false, 0).støv === 1, 'underlag');
     krev(FjernBy.inneAndel(1) === 0 && FjernBy.inneAndel(.4) > 0, 'inneAndel');
+    krev(window.Kartbilde && typeof Kartbilde.strandG === 'function' && window.Lave3d && typeof Lave3d.plasser === 'function', 'strandG eller Lave3d mangler');
     const R = typeof R3 !== 'undefined' && R3 && R3.ut && på3d ? R3 : null; ut.i3d = !!R;
     if (!R) return ut;
     const ramme = () => new Promise(r => { const t = setTimeout(r, 2500); requestAnimationFrame(() => { clearTimeout(t); r(); }); });
@@ -41,6 +42,18 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     krev(Effekter3d.tall().brent === 0 || (førBrent && førBrent.length), 'det brente området ble ikke ryddet');
     // fjern skog: ingen holt svever eller står nær midten
     const f = FjernBy3d.sjekk(); ut.fjern = f; krev(f && f.svever === 0 && f.nær === 0 && f.iScene, 'fjern skog: ' + JSON.stringify(f)); krev(f && f.trekanter < 130000, 'fjern skog har for mange trekanter');
+    // RUNDE 5: stranda er laget på nytt i utsnittet (et tall når utsnittet har vann), og vannmasken finnes
+    ut.strand = u.strand; krev(!u.harVann || typeof u.strand === 'number', 'stranda ble ikke laget (u.strand ' + u.strand + ')'); krev(u.vannData && u.vannData.W > 0, 'vannmasken mangler');
+    // RUNDE 5: planter og gress står ikke i et hus som legges inn etter at utsnittet er bygget (R3.hindre)
+    { const x0 = 70, y0 = -90, P = [[x0, y0], [x0 + 12, y0], [x0 + 12, y0 + 10], [x0, y0 + 10]], o = { P }, nøkler = [];
+      for (let a = Math.floor(x0 / 20); a <= Math.floor((x0 + 12) / 20); a++) for (let q = Math.floor(y0 / 20); q <= Math.floor((y0 + 10) / 20); q++) { const k = a + ',' + q; if (!R.hindre.has(k)) R.hindre.set(k, []); R.hindre.get(k).push(o); nøkler.push(k); }
+      try { ut.friInne = Vegetasjon3d.fri(x0 + 6, y0 + 5); ut.friUte = Vegetasjon3d.fri(x0 - 14, y0 + 5) || Vegetasjon3d.fri(x0 + 26, y0 + 5) || Vegetasjon3d.fri(x0 + 6, y0 - 14);
+        krev(ut.friInne === false, 'en blomst kan stå inne i et hus lagt inn etterpå'); }
+      finally { for (const k of nøkler) { const A = R.hindre.get(k), q = A ? A.indexOf(o) : -1; if (q >= 0) A.splice(q, 1); } } }
+    // RUNDE 5: låven – innholdet (høyloft, høy, redskap, trillebår, gråtass) i en prøvelåve når du går
+    { const L = Lave3d.plasser(Interior.plan([[0, 0], [16, 0], [16, 10], [0, 10]], { i: 5151, kl: 'låve', h: 8, dør: { x: 8, y: 0, ux: 1, uy: 0, w: 3 } }), () => false, () => true);
+      ut.låveRegler = L && { loft: !!L.loft, høy: L.høy.length, redskap: L.redskap.length, traktor: !!L.traktor };
+      krev(L && L.loft && L.høy.length > 5 && L.redskap.length >= 3 && L.trillebår, 'låvens plasser: ' + JSON.stringify(ut.låveRegler)); }
     return ut;
   });
   const ok = !d.feil.length;
