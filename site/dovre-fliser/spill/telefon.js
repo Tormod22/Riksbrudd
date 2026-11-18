@@ -17,6 +17,8 @@
  *     hvert navn i Folk brakk midt i.
  * 11. Liggende telefon mens du går: helse- og våpenruta lå oppå Skyt, Huk og Hopp, og våpenbyttet oppå minikartet.
  *     Rutene står nå nederst i midten, og våpenbyttet til venstre for Skyt.
+ * 12. Kortene (flyktninger, hendelser, personkort) lå oppå knappene øverst og kunne bli høyere enn en liggende skjerm uten
+ *     å kunne rulles.
  *  9. Fliser i raden nederst som ikke finnes ennå (hidden), vistes likevel (display:flex slo ut hidden).
  */
 (() => {
@@ -40,6 +42,10 @@ body.kort #oppstart .ark{ max-height:100%; box-sizing:border-box; } body.kort #h
 body.kort.tlfopp #leirmeny, body.kort.tlfopp #folkmeny{ padding-bottom:46px; }
 body.kort #verdenpanel{ background:#181613; }
 body.kort #krig{ background:#1a150d; }
+body.kort #samfunnkort, body.kort #hendelse{ top:calc(var(--topp,44px) + 6px); box-sizing:border-box; max-height:calc(100% - var(--topp,44px) - 16px - ${B}); overflow-y:auto; }
+body.kort #personkort{ box-sizing:border-box; max-height:calc(100% - var(--topp,44px) - 16px - ${B}); overflow-y:auto; }
+body.kort:not(.smal) #personkort{ top:calc(var(--topp,44px) + 6px); transform:translateX(-50%); }
+body.kort #etterspill{ bottom:calc(14px + ${B}); box-sizing:border-box; }
 body.kort #evpanel{ background:#1a150d; }
 body.kort:not(.smal) #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
 body.kort:not(.smal) #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
