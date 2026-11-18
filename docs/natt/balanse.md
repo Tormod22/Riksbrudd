@@ -246,3 +246,35 @@ Første valg på alle kort. Hvert døgn får inntil 6–7,5 minutter ekte tid (s
   uten røverbølge, legger ned våpnene når fienden er ute.
 - Skriptet erstatter ikke sårede og falne (ingen nye tropper etter dag 2), og kjøper aldri ammunisjon eller kontrollrom (kassa nådde
   aldri 16 mill.). En spiller som gjør det, står sterkere enn skriptet.
+
+**Kjøring 8** (all koden i runde 4, også fiender i leiren og HERJER som «inne»). Hele sju døgn:
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.5 mill. | 6 | 71 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra nordøst (2,0 km unna). Bølge 1. |
+| 2 | 13.0 mill. | 4 | 65 | 37 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne.; TROPP 2 ok rekrutt,rekrutt folk igjen bygg,bygg,vakt,bygg |
+| 3 | 13.2 mill. | 4 | 62 | 52 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:3 | 2 | Varsel: et røverlag er på vei mot leiren fra nord (1,6 km unna). Bølge 2.; Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne.; 4 reparasjoner av seg selv |
+| 4 | 13.7 mill. | 8 | 56 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:3 Ola (deg):1 Tropp 1:4 Tropp 2:3 | 3 | Varsel: et røverlag er på vei mot leiren fra nordøst (2,0 km unna). Bølge 3.; Angrepet er slått tilbake! Dere tok 750 000 kr fra røverne.; REPARER Reparer alle (97 949 kr); 3 reparasjoner av seg selv |
+| 5 | 12.1 mill. | 8 | 21 | 27 | vakttårn | Vaktlaget:0 Ola (deg):1 Tropp 1:0 Tropp 2:0 | 4 | Fienden er inne i leiren! Vaktlaget, Tropp 1, Tropp 2 går mot dem.; Varsel: et røverlag er på vei mot leiren fra sørøst (1,4 km unna). Bølge 4.; Dieseltank er ødelagt av Kystalliansens 4. lag! 300 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Aggregat er ødelagt av Røvere 4.1! 200 l diesel gikk tapt.; Brakke er ødelagt av Kystalliansens 4. lag!; Spolingen stoppet: et bygg i leiren er ødelagt.; Røvere 4.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr og 5 rasjoner.; Bølge 4 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; REPARER Reparer alle (168 605 kr); 4 reparasjoner av seg selv |
+| 6 | 11.2 mill. | 10 | 18 | 63 | vakttårn | Vaktlaget:0 Ola (deg):1 Tropp 1:0 Tropp 2:0 | 5 | Lite mat: den rekker under to døgn. Kjøp mat i Folk-panelet, send et lag på jakt, fisk med; Varsel: et røverlag er på vei mot leiren fra øst (1,6 km unna). Bølge 5.; Røvere 5.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr og 2 rasjoner.; Bølge 5 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; REPARER Reparer alle (155 220 kr); MAT kjøpte 50 rasjoner |
+| 7 | 10.4 mill. | 9 | 24 | 49 | vakttårn(39%) | Vaktlaget:0 Ola (deg):1 Tropp 1:0 Tropp 2:0 | 6 | Varsel: et røverlag er på vei mot leiren fra sørøst (1,7 km unna). Bølge 6.; Vakta melder: Sabotører 6 600 m fra leiren!; 1. lastebilkolonne er under ild fra Sabotører 6 (36 m)!; Sabotører 6 åpner ild mot Ola (deg).; Sabotasje! Røverne har skadet vakttårn i leiren og stikker av.; Jon Stølen har forlatt gjengen (moralen er for lav).; Sabotørene er borte.; Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.; REPARER Reparer alle (763 385 kr) |
+
+- Røverne: bølge 1–3 slått tilbake (450 000, 600 000, 750 000 kr), byggene reparert av seg selv (3–4 ganger per døgn), kassa 13–14 mill.
+- Dag 5, spillminutt 5819 (natt til dag 5, rett etter at fredstiden på fire døgn var over): «Fienden er inne i leiren! Vaktlaget,
+  Tropp 1, Tropp 2 går mot dem» – Kystalliansens 4. lag (12 mann). Alle tre lagene gikk inn, ble slått ut (alle sårede) og trakk seg
+  1,5 km tilbake. Bølge 4 kom samtidig, og Kystalliansen og røverne ødela dieseltank, aggregat og brakke (6813–6820). Bølge 5 og 6
+  (sabotører) herjet i den tomme leiren.
+
+### Konklusjon (runde 4)
+
+- **Røverne alene velter ikke lenger leiren.** I kjøring 7 og 8 ble alle røverbølgene som kom mens lagene var hele, slått tilbake
+  (bølge 1–4 i kjøring 7, 1–3 i kjøring 8), byggene ble reparert av seg selv, og røvere som får herje, tar et merkbart, men ikke
+  knusende bytte (høyst 500 000 kr og litt av lageret) og går – de blir ikke stående et døgn som i kjøring 4.
+- **Målet (sju døgn på Vanlig) er ikke nådd:** begge de hele kjøringene falt på dag 5–6 for **Kystalliansen** da fredstiden (4 døgn
+  på Vanlig, `fraksjoner-visning.js`) var over. Et lag på 12 mot tre egne lag på 4 vinner, og skriptet bygger ikke opp igjen sårede
+  lag. Forslag til den som eier fraksjonene (ikke gjort her, filene er ikke mine): fredstid på minst 7 døgn på Vanlig, eller at
+  fraksjonens første angrep på leiren er et lite lag (som røverne: høyst soldatene dine + 2), med et varsel i forkant.
+- Ikke gjort: skriptet kjøper aldri ammunisjon, helbreder ikke sårede og lager ikke nye tropper etter dag 2, og kontrollrommet ble aldri
+  kjøpt (kassa nådde ikke 16 mill.). Hvordan en menneskelig spiller som gjør det, klarer seg mot Kystalliansen, er ikke prøvd.
+- Én ting jeg ikke har forklart: i kjøring 7 sto Tropp 2 1,5 km unna i over to døgn etter å ha trukket seg tilbake. «Hjem igjen»
+  venter til ingen fiende er innen 900 m; trolig sto Kystalliansens lag i nærheten hele tiden. Ikke undersøkt nærmere.
