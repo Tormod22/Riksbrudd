@@ -1611,7 +1611,8 @@ async function trær3d(u, px, b) {
   const klasse = (X, Y) => { const i = Math.floor((X - kv.x0) / kv.r), j = Math.floor((kv.y0 - Y) / kv.r); return i < 0 || j < 0 || i >= kv.w || j >= kv.h ? 255 : kv.K[j * kv.w + i]; };
   const MAKS = VW < 700 ? 18000 : 40000, NÆR = 600, S5 = TRE_RUTE, i0 = Math.floor((u.cx - u.S) / S5), i1 = Math.ceil((u.cx + u.S) / S5), j0 = Math.floor((u.cy - u.S) / S5), j1 = Math.ceil((u.cy + u.S) / S5);
   const nær = [], fjern = []; let arb = 0;
-  for (let j = j0; j <= j1; j++) { if ((++arb & 7) === 0 && børPuste()) await pust();
+  // (19. nov: pust prøves for hver rad – åtte rader på 5 m-gitteret er over 10 000 oppslag i et stort utsnitt, 170 ms under last)
+  for (let j = j0; j <= j1; j++) { if (børPuste()) await pust();
     for (let i = i0; i <= i1; i++) {
       if (hash(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue; const x = t.X, y = t.Y; if (Math.abs(x - u.cx) >= u.S - 1 || Math.abs(y - u.cy) >= u.S - 1) continue;
       const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
@@ -1632,7 +1633,8 @@ async function naboerAsynk(sentre, R = 100) {
   const rut = new Map(), K = 1 << 20, k = (ci, cj) => (ci + K / 2) * K + (cj + K / 2), ut = new Array(sentre.length);
   sentre.forEach(([x, y], j) => { const n = k(Math.floor(x / R), Math.floor(y / R)); let l = rut.get(n); if (!l) rut.set(n, l = []); l.push(j); });
   for (let q = 0; q < sentre.length; q++) {
-    if ((q & 63) === 63 && børPuste()) await pust();
+    // (19. nov: hvert 8. senter – i sentrum av Stavanger har hvert bygg hundrevis av naboer, og 64 om gangen tok 170 ms)
+    if ((q & 7) === 7 && børPuste()) await pust();
     const [x, y] = sentre[q], ci = Math.floor(x / R), cj = Math.floor(y / R); let n = 0;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = rut.get(k(ci + di, cj + dj)); if (l) for (const j of l) { const p = sentre[j]; if (Math.hypot(p[0] - x, p[1] - y) < R) n++; } }
     ut[q] = n - 1;
