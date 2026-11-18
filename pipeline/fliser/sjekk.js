@@ -10,6 +10,14 @@ const VISNINGER = [ // navn, sentrum (EPSG:25833), meter per punkt, forventet h�
   ['Snøhetta', 203188, 6922980, 8, 2200, 2290],
 ];
 const fs = require('fs');
+// TIDTAKING (18. nov, gjennomgang 50: «kontrollen er for treg»): hver linje får tiden siden forrige linje i samme profil bak seg,
+// «(12,3 s)», og til slutt skrives de tregeste linjene og tiden per profil. Profilene kjører samtidig, så hver profil har sin egen
+// klokke (AsyncLocalStorage følger med gjennom alle await). Linjer utenfor profilene måles mot forrige linje utenfor.
+const TID = new (require('async_hooks').AsyncLocalStorage)(), TIDER = [], KALL_TID = [], PROFIL_TID = [], T_START = Date.now(), UTENFOR = { navn: '', sist: Date.now() };
+const sek = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+const skriv = console.log.bind(console);
+console.log = (...a) => { const s = TID.getStore() || UTENFOR, nå = Date.now(), d = nå - s.sist; s.sist = nå;
+  const tekst = require('util').format(...a); if (/^(ok  |FEIL)/.test(tekst)) TIDER.push([d, s.navn, tekst.slice(0, 110)]); skriv(tekst + ` (${sek(d)})`); };
 // Infrastrukturen (INFRA_TAG i index.html) hentes fra GitHub-releasen én gang til en lokal mappe (eller INFRA_DIR).
 const INFRA = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/index.html'), 'utf8').match(/const INFRA_TAG = '([^']*)';/);
   if (!m || !m[1]) return null; const dir = process.env.INFRA_DIR || path.join(require('os').tmpdir(), m[1]);
@@ -32,10 +40,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
   await new Promise(r => setTimeout(r, 800)); let feil = 0;
   { // syntaks i alle skriptfilene (en kommentar som slukte resten av en linje stoppet hele kartet 9. nov)
     const D = path.join(__dirname, '../../site/dovre-fliser'), filer = ['kartflis.js', 'kartflis-arbeider.js', 'terreng.js', ...fs.readdirSync(path.join(D, 'spill')).filter(f => f.endsWith('.js')).map(f => 'spill/' + f)];
-    const dårlige = filer.filter(f => { try { require('child_process').execFileSync(process.execPath, ['--check', path.join(D, f)], { stdio: 'pipe' }); return false; } catch (e) { return true; } });
+    // (18. nov, raskere kontroll: filene leses i samme prosess som en CommonJS-funksjon – det node --check gjør – i stedet for 157 nye
+    // node-prosesser, 13 s -> under 1 s. Bare en fil som ikke lar seg lese slik, sjekkes med node --check som før, så svaret er det samme.)
+    const sjekkFil = fil => { try { require('vm').compileFunction(fs.readFileSync(fil, 'utf8'), ['exports', 'require', 'module', '__filename', '__dirname'], { filename: fil }); return true; } catch (e) {
+      try { require('child_process').execFileSync(process.execPath, ['--check', fil], { stdio: 'pipe' }); return true; } catch (e2) { return false; } } };
+    const dårlige = filer.filter(f => !sjekkFil(path.join(D, f)));
     { const html = fs.readFileSync(path.join(D, 'index.html'), 'utf8'), blokker = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]), tmp = path.join(require('os').tmpdir(), 'riksbrudd-hoved.js');
       fs.writeFileSync(tmp, blokker.sort((a, b) => b.length - a.length)[0]); filer.push('index.html (hovedskriptet)');
-      try { require('child_process').execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' }); } catch (e) { dårlige.push('index.html (hovedskriptet)'); } }   // en kommentar kan sluke resten av en linje
+      if (!sjekkFil(tmp)) dårlige.push('index.html (hovedskriptet)'); }   // en kommentar kan sluke resten av en linje
     // kode inne i en kommentar (en //-kommentar midt på en linje har slukt kode tre ganger 10. nov – gyldig syntaks, men koden kjøres ikke)
     for (const f of [...filer.filter(f => !f.startsWith('index.html')), 'index.html']) fs.readFileSync(path.join(D, f), 'utf8').split('\n').forEach((l, n) => {
       const i = l.search(/(^|[^:'"`\\])\/\/ /); if (i < 0) return; const k = l.slice(i);
@@ -59,21 +71,33 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
   // de tre profilene kjører samtidig (hver i sin fane), så hele sjekken tar omtrent like lang tid som én profil
   // SJEKK_PROFIL=PC (eller mobil / «eldre iPhone») kjører bare den ene, for en rask runde underveis
   const PROFILER = [[1400, 900, 'PC'], [390, 844, 'mobil'], [390, 844, 'eldre iPhone', true]].filter(p => !process.env.SJEKK_PROFIL || p[2] === process.env.SJEKK_PROFIL);
-  await Promise.all(PROFILER.map(async ([w, h, navn, gammel]) => {
+  await Promise.all(PROFILER.map(([w, h, navn, gammel]) => TID.run({ navn, sist: Date.now(), start: Date.now() }, async () => {
     const kt = await b.newContext({ viewport: { width: w, height: h } });
     if (gammel) await kt.addInitScript(() => { delete window.OffscreenCanvas; window.createImageBitmap = () => Promise.reject(new Error('ikke støttet')); });
     await kt.route(/^https?:\/\/(?!localhost)/, r => r.abort());   // ingen andre nettsider: spillet skal virke selv om en CDN er blokkert (brukeren fikk svart side 8. nov)
     if (INFRA) await kt.route(new RegExp('/api/kart/' + INFRA.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
-      const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/), b = fs.readFileSync(path.join(INFRA.dir, fil));
+      const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/), b = INFRA[fil] = INFRA[fil] || fs.readFileSync(path.join(INFRA.dir, fil));   // (18. nov) lest én gang, ikke ved hver henting
       r.fulfill({ status: 200, contentType: fil.endsWith('.json') ? 'application/json' : 'application/octet-stream', body: b.subarray(+fra, +fra + +len) }); });
     if (NVE) await kt.route(new RegExp('/api/kart/' + NVE.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
       const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/);
       r.fulfill({ status: 200, contentType: 'application/json', body: (NVE[fil] = NVE[fil] || fs.readFileSync(path.join(NVE.dir, fil))).subarray(+fra, +fra + +len) }); });
     if (VEGNETT) await kt.route(new RegExp('/api/kart/' + VEGNETT.tag + '/([a-z.-]+)/(\\d+)/(\\d+)$'), r => {
       const [, fil, fra, len] = r.request().url().match(/\/([a-z.-]+)\/(\d+)\/(\d+)$/);
-      if (!fs.existsSync(path.join(VEGNETT.dir, fil))) return r.fulfill({ status: 404, body: '' });
-      r.fulfill({ status: 200, body: fs.readFileSync(path.join(VEGNETT.dir, fil)).subarray(+fra, +fra + +len) }); });
+      if (!(fil in VEGNETT)) VEGNETT[fil] = fs.existsSync(path.join(VEGNETT.dir, fil)) ? fs.readFileSync(path.join(VEGNETT.dir, fil)) : null;   // (18. nov) lest én gang
+      if (!VEGNETT[fil]) return r.fulfill({ status: 404, body: '' });
+      r.fulfill({ status: 200, body: VEGNETT[fil].subarray(+fra, +fra + +len) }); });
+    // RASKERE 3D-BYGGING I KONTROLLEN (18. nov): et utsnitt som bygges ved siden av det som vises (bygg3d, hus3d, nytt3dUtsnitt), tar
+    // pust mellom bitene, og i hvert pust tegnes scenen på nytt – i programvare-grafikk 0,3–1 s per bilde, så ca. 95 % av tiden gikk til å
+    // tegne det samme bildet om igjen (målt på mobil: bygg3d på heia 90 s med tegning, 3,2 s uten). utenTegning(f) lar tegningen være
+    // mens f bygger: samme kode, de samme pustene og det samme utsnittet, bare uten bilder imellom. Tegningen er tilbake før vakta ser
+    // på scenen (bildene etterpå tegner og kompilerer det nye).
+    await kt.addInitScript(() => { window.utenTegning = async f => { const R = typeof R3 !== 'undefined' && R3 && R3.renderer, r0 = R && R.render;
+      if (R) R.render = () => {}; try { return await f(); } finally { if (R) R.render = r0; } }; });
     const pg = await kt.newPage(); const err = [];
+    // (tidtaking) hvert kall til siden som tar over 1 s, huskes med linja i sjekk.js eller vakta som kalte det – de tregeste skrives til slutt
+    for (const m of ['evaluate', 'waitForFunction', 'click', 'waitForTimeout', 'goto']) { const f = pg[m].bind(pg);
+      pg[m] = async (...a) => { const l = ((new Error().stack || '').split('\n').slice(2).join(' ').match(/(vakter[/\\][\w.-]+\.js|sjekk\.js):(\d+)/) || []), hvor = l[1] ? l[1] + ':' + l[2] : '?', t0 = Date.now();
+        try { return await f(...a); } finally { const d = Date.now() - t0; if (d > 1000) KALL_TID.push([d, navn, hvor + ' ' + m]); } }; }
     pg.on('pageerror', e => err.push(e.message)); pg.on('console', m => m.type() === 'error' && !(m.text().includes('net::ERR_FAILED') && !m.location().url.startsWith('http://localhost')) && !(m.location().url || '').includes('/api/kart/') && err.push(m.text()));   // /api finnes ikke lokalt (reserven testes under)   // forespørsler testen selv blokkerer, teller ikke
     await pg.goto(`http://localhost:${process.env.PORT || 8765}/dovre-fliser/`); await pg.waitForTimeout(3000);
     await pg.evaluate(() => { if (window.AI) AI.på = false; if (window.VaerSpill) { Vaer.låsVær(VaerSpill.S, 'klart'); VaerSpill.oppdater(); } if (window.KVAL) KVAL.bytt('høy'); });   // klart vær i testene (sikten ellers tilfeldig)   // motstanderne (S8) står stille under de andre testene; S8 testes for seg
@@ -905,7 +929,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const r = { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; c.z = z0; return r; });
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await bygg3d(193300, 6896300, 900); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
+    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await utenTegning(() => bygg3d(193300, 6896300, 900)); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
       // VAKT veger i 3D (spill/veg.js, 13. nov): gang- og sykkelvegene er skilt ut, bilvegene ligger ikke oppå hverandre (utenom kryssene),
       // ingen gatelys står i en vegbane, og veger som krysser en elv uten bru i dataene har fått en nødbru
       window.VEG_SJEKK = (() => { if (!window.Veg || !u.veger) return null;
@@ -940,7 +964,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const hus = n => ({ e: { i: 998000 + n, t: 0, h: 6 }, deler: [[[lx + n * 30 * k, ly], [lx + (n * 30 + 12) * k, ly], [lx + (n * 30 + 12) * k, ly + 10 * k], [lx + n * 30 * k, ly + 10 * k], [lx + n * 30 * k, ly]]] });
       const ekte = window.hentFlis, R = RessursSpill.tilstand(); R.revet.push({ i: 998001, P: [[u.cx + 30, u.cy], [u.cx + 42, u.cy], [u.cx + 42, u.cy - 10], [u.cx + 30, u.cy - 10]], gruppe: 'betong' }); RessursSpill.sett(R);
       window.hentFlis = (lag, zz, x, y) => lag === 'hus' ? Promise.resolve(zz === z && x === fx && y === fy ? { hus: { obj: [hus(0), hus(1)] } } : null) : ekte(lag, zz, x, y);
-      try { const h = await hus3d(u); ut.hus = h ? h.omriss.length : -1; } finally { window.hentFlis = ekte; }
+      try { const h = await utenTegning(() => hus3d(u)); ut.hus = h ? h.omriss.length : -1; } finally { window.hentFlis = ekte; }
       ut.ruin = RessursSpill.ruinTrekanter(u); RessursSpill.sett(Ressurser.ny()); return ut; });
     const rs3ok = rs3.inne === 0 && rs3.rundt > 0 && rs3.stubber > 0 && rs3.hus === 1 && rs3.ruin > 50; if (!rs3ok) feil++;
     console.log(`${rs3ok ? 'ok  ' : 'FEIL'} ${navn} hogst og riving i 3D: trær i det hogde feltet ${rs3.inne}, rundt ${rs3.rundt}, stubber ${rs3.stubber}; hus igjen av to (ett revet) ${rs3.hus}, ruin ${rs3.ruin} trekanter`);
@@ -970,7 +994,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           const R = n % 5 === 4 ? [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d / 2], [x0 + w / 2, y0 + d / 2], [x0 + w / 2, y0 + d], [x0, y0 + d], [x0, y0]] : [[x0, y0], [x0 + w, y0], [x0 + w, y0 + d], [x0, y0 + d], [x0, y0]];
           obj.push({ e: { i: 900000 + n * 7919, t, h }, deler: [R] }); }
         const ekte = window.hentFlis; window.hentFlis = (lag, zz, x, y) => lag === 'hus' ? Promise.resolve(zz === z && x === fx && y === fy ? { hus: { obj } } : null) : ekte(lag, zz, x, y);
-        try { const r = await hus3d(u); s = r && r.stat; } finally { window.hentFlis = ekte; } }
+        try { const r = await utenTegning(() => hus3d(u)); s = r && r.stat; } finally { window.hentFlis = ekte; } }
 
       for (const n of Byhus.FASADER) { const c = Byhus.tekstur(n).image, d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let k = 0; for (let q = 0; q < d.length; q += 4) if (d[q + 2] - d[q] > 10 && d[q] < 158) k++; glass[n] = Math.round(k / (d.length / 4) * 100); }
       return { s, glass }; });
@@ -1409,8 +1433,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
     const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));
       const tell = P => Object.fromEntries(Object.entries(P).map(([k, a]) => [k, a.length / 3])), feil = (s, felt) => Object.keys(s.dyr || {}).reduce((a, k) => a + (s[felt][k] || 0), 0);
-      const hei = await bygg3d(201400, 6893300, 900), s = Vakt3d.sjekk(hei, 'sommer'), by = Vakt3d.sjekk(await bygg3d(193300, 6896300, 900), 'sommer');
-      const fjell = await bygg3d(205000, 6921000, 900);
+      const hei = await utenTegning(() => bygg3d(201400, 6893300, 900)), s = Vakt3d.sjekk(hei, 'sommer'), by = Vakt3d.sjekk(await utenTegning(() => bygg3d(193300, 6896300, 900)), 'sommer');
+      const fjell = await utenTegning(() => bygg3d(205000, 6921000, 900));
       return { sommer: s.dyr, vinter: tell(Dyr3d.punkter(hei, 'vinter')), fjellVinter: tell(Dyr3d.punkter(fjell, 'vinter')), by: by.dyr,
         iHus: feil(s, 'iHus') + feil(by, 'iHus'), svever: feil(s, 'svever') + feil(by, 'svever'), iVann: feil(s, 'iVann') + feil(by, 'iVann'), eks: s.eksempel.concat(by.eksempel), tri: Dyr3d.prøvShadere(R3) }; });
     const dok = dy.sommer && dy.sommer.sau > 0 && !dy.vinter.sau && dy.fjellVinter.rein > 0 && dy.iHus + dy.svever + dy.iVann <= 2 && Object.keys(dy.tri).length === 5; if (!dok) feil++;
@@ -1456,7 +1480,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // bekker (NVE Elvenett): lastet, vannbåndet i 3D i lia ovenfor Dombås ligger på terrenget (ikke svevende > 1 m eller begravd)
     const bk = await pg.evaluate(async () => {
       while (R3.bygger) await new Promise(r => setTimeout(r, 100));
-      await nytt3dUtsnitt(193135, 6897627, 800); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
+      await utenTegning(() => nytt3dUtsnitt(193135, 6897627, 800)); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
       await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
       const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, kulvert: S.kulvert, kilde: BEKKER.STAT.kilde, kraftKilde: Kraft3d.lag.STAT.kilde, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
       if (m) { const p = m.geometry.attributes.position, ray = new THREE.Raycaster();
@@ -1476,10 +1500,10 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         return { terreng: R3.mesh.geometry.index.count, trær: (R3.treLOD || []).reduce((s, l) => s + l.n, 0), hus: (R3.husMesh || []).length, liv: k.liv3d || 0, veger: (R3.ut.veger || []).length, hindre: R3.hindre ? Object.keys(R3.hindre).length : -1 }; };
       // (utsnittet ved Dombås fra bekkevakten over: nært, med trær, hus og veger)
       const u0 = R3.ut, a = stat(), forberedt = R3.forberedt, p0 = pustAntall;
-      const u2 = await bygg3d(u0.cx, u0.cy, u0.S), pust = pustAntall - p0, utenKlar = !u2.klar; sett3d(u2); await vent(3);
+      const u2 = await utenTegning(() => bygg3d(u0.cx, u0.cy, u0.S)), pust = pustAntall - p0, utenKlar = !u2.klar; sett3d(u2); await vent(3);
       const b = stat(), uten = R3.forberedt === false, gl = R3.renderer.getContext().getError();
       // og tilbake gjennom den vanlige vegen (med forberedelsen), så resten av testene står på et forberedt utsnitt
-      await nytt3dUtsnitt(u0.cx, u0.cy, u0.S); await vent(3); const c = stat();
+      await utenTegning(() => nytt3dUtsnitt(u0.cx, u0.cy, u0.S)); await vent(3); const c = stat();
       return { a, b, c, forberedt, uten, utenKlar, pust, igjen: R3.forberedt, gl }; });
     const like = (x, y) => ['terreng', 'trær', 'hus', 'liv', 'veger', 'hindre'].every(k => x[k] === y[k]);
     const bibok = bib.forberedt === true && bib.uten && bib.utenKlar && bib.igjen === true && bib.pust > 10 && like(bib.a, bib.b) && like(bib.a, bib.c) && bib.a.terreng > 1000 && bib.a.trær > 0 && bib.a.liv > 0 && bib.gl === 0;
@@ -1507,8 +1531,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const d3ok =Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
-    await kt.close();
-  }));
+    await kt.close(); PROFIL_TID.push([navn, Date.now() - TID.getStore().start]);
+  })));
   await b.close(); srv.kill();
+  // tidene: de 20 tregeste linjene og hver profil for seg
+  const godkjent = TIDER.filter(t => /^ok/.test(t[2])).length;
+  skriv(`\nTID: ${sek(Date.now() - T_START)} i alt` + PROFIL_TID.map(([n, ms]) => `, ${n} ${sek(ms)}`).join('') + ` – ${godkjent} ok, ${TIDER.length - godkjent} FEIL. De tregeste:`);
+  for (const [d, n, t] of TIDER.slice().sort((a, b) => b[0] - a[0]).slice(0, 25)) skriv(`  ${sek(d).padStart(8)}  ${t}`);
+  skriv('De tregeste kallene til siden (linje i sjekk.js eller vakta):');
+  for (const [d, n, t] of KALL_TID.slice().sort((a, b) => b[0] - a[0]).slice(0, 30)) skriv(`  ${sek(d).padStart(8)}  ${n}: ${t}`);
   console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });
