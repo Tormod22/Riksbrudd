@@ -305,16 +305,18 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         // S8: motstanderne (AI) marsjerer mot Dombås og tar det når ingen av våre er der
         const s8 = await pg.evaluate(async () => { const by = INFRA.tettsted.find(t => t.e.navn === 'Dombås'); TETTSTEDER.clear(); tempo = 0;
           const blå = ENHETER.filter(s => s.side === 'blå'); for (const s of blå) { s.x += 4e4; s.sti = null; }
+          // (den nye AI-en husker hvor den så deg og kan ha funnet leiren: her prøves bare marsjen mot tettstedet)
+          if (AI.minne) for (const M of Object.values(AI.minne)) { M.sist = null; M.leir = false; M.hatt.clear(); } AI.angripLeir = false;
           const ai = ENHETER.filter(s => s.ai); AI.på = true; for (const s of ai) s.ai.neste = 0;
           for (let i = 0; i < 30; i++) { sim(.1); await new Promise(r => setTimeout(r, 20)); }
           for (let n = 0; n < 200 && ai.some(s => s.planlegger); n++) await new Promise(r => setTimeout(r, 100));
-          const plan = ai.map(s => s.ai.tekst), stier = ai.filter(s => s.sti).length;
+          const plan = ai.map(s => s.ai.tekst), stier = ai.filter(s => s.sti || s.ombord).length, kjører = ai.filter(s => s.ombord).length;
           let i = 0; for (; i < 12000 && !Garnison.tilstand(TETTSTEDER, by.e.id).eier; i++) { sim(.1); if (i % 300 === 0) await new Promise(r => setTimeout(r, 30)); }
-          const eier = Garnison.tilstand(TETTSTEDER, by.e.id).eier; AI.på = false;
+          const eier = Garnison.tilstand(TETTSTEDER, by.e.id).eier; AI.på = false; AI.angripLeir = true;
           for (const s of blå) s.x -= 4e4; for (const s of ai) s.sti = null;
-          return { plan, stier, n: ai.length, eier, timer: i * 6 / 3600, farge: sidefarge('grønn', 'farge'), meny: [...document.querySelectorAll('#lagmeny button')].some(b => b.textContent === 'Motstandere') }; });
+          return { plan, stier, kjører, n: ai.length, eier, timer: i * 6 / 3600, farge: sidefarge('grønn', 'farge'), meny: [...document.querySelectorAll('#lagmeny button')].some(b => b.textContent === 'Motstandere') }; });
         const s8ok = s8.n === 4 && s8.stier === 4 && s8.plan.every(t => /Dombås/.test(t)) && (s8.eier === 'rød' || s8.eier === 'grønn') && s8.farge === '#3f6b3a' && s8.meny; if (!s8ok) feil++;
-        console.log(`${s8ok ? 'ok  ' : 'FEIL'} ${navn} motstandere: ${s8.n} AI-lag, ${s8.stier} på marsj («${s8.plan[0]}»), Dombås tatt av ${s8.eier || 'ingen'} etter ${s8.timer.toFixed(1)} spilltimer; «Motstandere» i menyen: ${s8.meny}`);
+        console.log(`${s8ok ? 'ok  ' : 'FEIL'} ${navn} motstandere: ${s8.n} AI-lag, ${s8.stier} på marsj (${s8.kjører} i lastebil) («${s8.plan[0]}»), Dombås tatt av ${s8.eier || 'ingen'} etter ${s8.timer.toFixed(1)} spilltimer; «Motstandere» i menyen: ${s8.meny}`);
         // S6 del 2: fienden skyter mot kjøretøy den ser (lastebilkolonnen tar skade), og AI-en trekker seg unna en stridsvogn
         const kjS = await pg.evaluate(async () => { const f = ENHETER[3], k = KJORETOY.find(k => k.navn === '1. lastebilkolonne'), b = OLJE.BASER[0];
           k.x = b.x; k.y = b.y; k.sti = null; k.oppdrag = null; k.skade = 0; const antall = k.antall;
@@ -338,12 +340,14 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         const fa = await pg.evaluate(async () => { const l = ENHETER[1], s = ENHETER.find(s => s.ingeniør), f = ENHETER[3];
           for (let i = 0; i < 700; i++) sim(.1);
           // (17. nov: blir laget beskutt mens det graver, mister det folk og bruker litt lenger tid – vent til det er ferdig)
+          let hvem = '', _sti = l.sti; Object.defineProperty(l, 'sti', { configurable: true, enumerable: true, get() { return _sti; }, set(v) { if (v && !hvem) hvem = String(new Error().stack).split('\n').slice(1, 5).map(q => q.trim().slice(0, 90)).join(' | '); _sti = v; } });
           for (let i = 0; i < 4000 && !l.nedgravd; i++) sim(.1);
+          { const v = _sti; delete l.sti; l.sti = v; }
           const nedgravd = l.nedgravd, tekst = KROKER.lagTekst.map(h => h(l)).filter(Boolean).join(' · '), vern = Feltarbeid.vern(l), felt = MINEFELT.length;
           f.x = s.x; f.y = s.y; f.sti = null; f.menn.forEach(m => { m.hp = 1; }); f.slattUtMeldt = false; f.roligTil = 1e9; const sj = Feltarbeid.REGLER.mine.sjanse; Feltarbeid.REGLER.mine.sjanse = 1;
           await ordre(f, f.x + 1200, f.y, true); let n = 0; while (f.sti && n < 400 && f.menn.every(m => m.hp === 1)) { sim(.1); n++; }
           Feltarbeid.REGLER.mine.sjanse = sj; const treff = f.menn.filter(m => m.hp < 1).length; f.sti = null; MINEFELT.length = 0;
-          return { nedgravd, tekst, vern, felt, treff, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
+          return { nedgravd, tekst, vern, felt, treff, hvem, logg: document.getElementById('logg').textContent.slice(0, 300) }; });
         const faok = fa.nedgravd && /nedgravd/.test(fa.tekst) && fa.vern === .5 && fa.felt === 1 && fa.treff > 0; if (!faok) { feil++; console.log(JSON.stringify(fa)); }
         console.log(`${faok ? 'ok  ' : 'FEIL'} ${navn} feltarbeid: 2. lag nedgravd (${fa.tekst}), vern ×${fa.vern}; minefelt lagt: ${fa.felt}, patruljen gikk på en mine: ${fa.treff} treff`);
         // S5 del 3: ingeniørene sprenger en dam -> flom nedover dalen, et lag i flomfeltet får tap, vannet trekker seg tilbake etter 12 t
@@ -1250,12 +1254,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       try { const ild = () => KROKER.ild.reduce((a, q) => a * (q(s, fi) === undefined ? 1 : q(s, fi)), 1), sti0 = s.sti; s.sti = null;
         FormasjonSpill.sett(s, 'kile'); const k = ild(), pk = FORMPLASS(s, 5); FormasjonSpill.sett(s, 'linje'); const l = ild(), pl = FORMPLASS(s, 5); ut.linje = k > 0 ? +(l / k).toFixed(3) : (l === k ? 1.15 : 0); ut.flyttet = pk.join() !== pl.join();
         FormasjonSpill.sett(fi, 'spredt'); const sp = ild(); ut.spredt = l > 0 ? +(sp / l).toFixed(3) : .75; FormasjonSpill.sett(fi, 'kile'); FormasjonSpill.sett(s, 'kile');
-        const før = ild(); s.menn.forEach(m => { if (m.hp >= 1) m.erf = 130; }); const etter = ild(); ut.veteran = før > 0 ? +(etter / før).toFixed(3) : 1.18; ut.tekst = /veteran/.test(KROKER.lagTekst.map(h => h(s)).filter(Boolean).join(' '));
+        s.menn.forEach(m => { m.erf = 0; }); const før = ild(); s.menn.forEach(m => { if (m.hp >= 1) m.erf = 130; }); const etter = ild(); ut.veteran = før > 0 ? +(etter / før).toFixed(3) : 1.18; ut.tekst = /veteran/.test(KROKER.lagTekst.map(h => h(s)).filter(Boolean).join(' '));
         valgt = s; visPanel(); ut.knapp = !!document.getElementById('formknapp'); if (ut.knapp) { document.getElementById('formknapp').click(); ut.bladde = s.formasjon === 'linje'; }
         // bytte våpen ved leiren
         s.x = L.x + 20; s.y = L.y + 20; visPanel(); ut.utstyrknapp = !!document.getElementById('utstyrknapp'); ut.åpnet = TropperSpill.endre(s); await vent(150); ut.rader = document.querySelectorAll('#tropppanel [data-mann]').length;
-        const v0 = s.menn[1].valgt, u0 = s.utstyr, b0 = s.strid ? { ...s.strid } : null; TropperSpill.settEndring(1, 'presisjonsrifle'); ut.pris = TropperSpill.endrePris(); const r = TropperSpill.brukEndring(s); ut.byttet = !r.feil && (s.menn[1].våpen || s.menn[1].rolle) === 'presisjonsrifle' && p0 - O.penger === 80000;
-        if (v0) s.menn[1].valgt = v0; else delete s.menn[1].valgt; s.utstyr = u0; if (!u0) delete s.utstyr; if (b0) { s.strid = b0; s.bevSatt = null; StridSpill.regel(s); } TropperSpill.lukk(); s.sti = sti0;
+        const mi = s.menn.findIndex(m => m.hp > 0), v0 = s.menn[mi].valgt, u0 = s.utstyr, b0 = s.strid ? { ...s.strid } : null; TropperSpill.settEndring(mi, 'presisjonsrifle'); ut.pris = TropperSpill.endrePris(); const r = TropperSpill.brukEndring(s); ut.byttet = !r.feil && (s.menn[mi].våpen || s.menn[mi].rolle) === 'presisjonsrifle' && p0 - O.penger === 80000;
+        if (v0) s.menn[mi].valgt = v0; else delete s.menn[mi].valgt; s.utstyr = u0; if (!u0) delete s.utstyr; if (b0) { s.strid = b0; s.bevSatt = null; StridSpill.regel(s); } TropperSpill.lukk(); s.sti = sti0;
         // fiendens lastebil og stillinger
         const k2 = window.AI && AI.biler && AI.biler.rød; ut.bil = !!k2 && KJORETOY.includes(k2); if (k2) { const kx = k2.x, ky = k2.y; k2.x = s.x + 60000; k2.y = s.y; ut.skjult = !kjoretoySes(k2); k2.x = s.x + 50; k2.y = s.y; ut.sett = kjoretoySes(k2); k2.x = kx; k2.y = ky; }
         STILLINGER.push({ x: fi.x, y: fi.y, side: 'rød', kjent: true }); ut.vern = Fraksjoner.stillingVern(fi, STILLINGER); ut.ikkeOss = Fraksjoner.stillingVern({ x: fi.x, y: fi.y, side: 'blå' }, STILLINGER); STILLINGER.length = 0;

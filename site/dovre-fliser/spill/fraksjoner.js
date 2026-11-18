@@ -27,7 +27,7 @@
     minne: 120,            // spillminutter fraksjonen husker hvor den sist så en fiende
     jakt: 6000,            // meter: så langt går et lag for å lete der fienden sist ble sett
     tapt: 2.5,             // et tettsted fraksjonen har mistet, teller så mye «nærmere» (vil ta det tilbake)
-    leirVekt: 4000,        // spillerens leir teller som et tettsted med så mange innbyggere når fraksjonen vet hvor den er
+    leirVekt: 1500,        // spillerens leir teller som et tettsted med så mange innbyggere når fraksjonen vet hvor den er
     stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Kystalliansen tar sjanser, Folkefronten gjør det ikke
     // KJØRETØY OG STILLINGER (17. nov, brukeren: «at fienden bruker kjøretøy eller bygger egne stillinger»)
     bil: { langt: 3000, nær: 200, av: 800 },        // kjør når målet er over 3 km unna og lastebilen står innen 200 m; gå av når en fiende ses innen 800 m
