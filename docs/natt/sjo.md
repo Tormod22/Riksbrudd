@@ -146,3 +146,14 @@ leirvalget, krigskartet og lojaliteten.
   sjøpanelet med båten. Jelsa hadde ingen ferjerute i utsnittet (ferje3d trenger begge kaiene innenfor), så skjulingen av ruteferja er prøvd
   med den ekte ferje3d.js i Node (scratchpad natt/sjo/ferje3d-tatt.js: går før, borte når ferja er tatt ved kai B, går når en ferje er tatt
   et annet sted). Et ekte musetrykk i 3D rakk ikke å bli prøvd (maskinen var svært treg, belastning 27).
+- Mobil (390 × 780, /rogaland): krigskartets bunnark med tilleggene (sidene og Vikedal) og sjøpanelet med «Fiendens forsyningsbåter» og
+  «Bord den» – lesbart, ingen sidefeil. Vaktene «sjøen» og «økonomi» består på PC og mobil (to ganger etter hverandre i samme side).
+
+### IKKE gjort / svakheter (runde 4)
+- Fiendens båter skyter ikke på dine båter, og dine båter har ingen helse (bare fiendens kan senkes). Et AI-lag om bord skyter som vanlig
+  fra båten (treffer dårlig), men kan ikke bordes – bare senkes.
+- AI-båtene lagres ikke (som fiendens lag), og AI-en bruker bare sjark og høyst én båt per side om gangen. AI-en legger ikke miner.
+- Handelsrutene langs vegnettet bare på PC (vegnettet hentes ikke på telefon); der gjelder luftlinja som før. Vegkrater («Spreng vegen her»)
+  stenger ikke handelsrutene – bare sprengte bruer/tunneler/ferjekaier i `graf._sperretAv`.
+- Skjulingen av ruteferja er ikke sett i 3D med ekte data (prøvd i Node med den ekte koden). Et ekte musetrykk i 3D er ikke prøvd – bare kroken.
+- Sjøpanelet på telefon dekker det meste av skjermen (som før – ikke endret i denne runden).
