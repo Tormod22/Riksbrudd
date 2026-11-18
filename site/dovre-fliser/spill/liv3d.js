@@ -261,7 +261,13 @@
   // ---------- trafikk og folk ----------
   // avstanden langs linjen til hvert punkt (D); regnet på forhånd i forbered3d-kroken (u.vegD, vegAvstander) eller her
   const avstander = v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return D; };
-  function velgLinjer(u, krav, liste) { return (liste || u.veger).filter(krav).map(v => { const D = (u.vegD && u.vegD.get(v)) || avstander(v); return { ...v, D, L: D[D.length - 1] }; }).filter(v => v.L > 80); }
+  function velgLinjer(u, krav, liste) { return kjørRett(velgLinjerG(u, krav, liste)); }
+  // (generator: samme linjer, yield for hver 64. veg – forbered3d-kroken lager dem på forhånd, u.livLinjer)
+  function* velgLinjerG(u, krav, liste) { const ut = []; let n = 0;
+    for (const v of (liste || u.veger)) { if ((++n & 63) === 0) yield; if (!krav(v)) continue; const D = (u.vegD && u.vegD.get(v)) || avstander(v); const l = { ...v, D, L: D[D.length - 1] }; if (l.L > 80) ut.push(l); }
+    return ut; }
+  // hvilke linjer bilene og folkene bruker
+  const KRAV_BIL = v => 'ERFK'.includes(v.k) && Veg.vanlig(v), KRAV_GATE = v => v.by && 'RFK'.includes(v.k) && Veg.vanlig(v), KRAV_GS = v => v.by && v.t !== 5;
   // (18. nov, hakk: i Bergen tok velgLinjer 80 ms i selve byttet – nå regnes avstandene på forhånd, med yield mellom vegene)
   function* vegAvstander(u) { const m = new Map(); for (const v of (u.veger || []).concat(u.gangveger || [])) { m.set(v, avstander(v)); yield; } return m; }
   function punkt(v, s, side) {   // posisjon s meter langs linjen, «side» meter til høyre for kjøreretningen
@@ -272,10 +278,12 @@
   const kasse = (x, y, z, sx, sy, sz) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); return g; };
   function instanser(R, deler, n) { return deler.map(([g, farge]) => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial(farge ? { color: farge } : {}), n);
     if (!farge) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.frustumCulled = false; m.count = 0; R.scene.add(m); liv.mesh.push(m); return m; }); }
+  let kjegleBilde = null;
   function startLiv(u, R) {
     let f = 4242; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296, mob = VW < 700;
     // biler: lakk (instansfarge), ruter, hjul
-    const veg = velgLinjer(u, v => 'ERFK'.includes(v.k) && Veg.vanlig(v));
+    const LL = u.livLinjer; u.livLinjer = null;
+    const veg = LL ? LL.veg : velgLinjer(u, KRAV_BIL);
     // ender i en tunnelportal eller ved kanten av utsnittet: bilen kommer inn igjen et annet slikt sted i stedet for å snu
     liv.åpne = []; for (const v of veg) for (const e of [0, 1]) if (v.åpen && v.åpen[e]) liv.åpne.push([v, e]);
     if (veg.length) {
@@ -291,15 +299,16 @@
       const n = liv.biler.length, front = samle([kasse(2.21, .6, .5, .05, .32, .13), kasse(2.21, -.6, .5, .05, .32, .13)]), bak = samle([kasse(-2.21, .62, .55, .05, .28, .12), kasse(-2.21, -.62, .55, .05, .28, .12)]);
       const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.Float32BufferAttribute([2.3, -.9, .08, 16, -3.2, .08, 16, 3.2, .08, 2.3, -.9, .08, 16, 3.2, .08, 2.3, .9, .08], 3));
       kg.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2));
-      const kc = document.createElement('canvas'); kc.width = 64; kc.height = 32; const kgx = kc.getContext('2d'); for (let x = 0; x < 64; x++) for (let y = 0; y < 32; y++) {
-        const a = Math.pow(1 - x / 64, 1.4) * Math.sin(Math.PI * (y + .5) / 32) ** 2; kgx.fillStyle = `rgba(255,240,200,${a.toFixed(3)})`; kgx.fillRect(x, y, 1, 1); }
+      // (bildet av lyskjeglen tegnes én gang og brukes av alle utsnitt – 2048 småruter med fargetekst hver gang før)
+      const kc = kjegleBilde || (kjegleBilde = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 32; const kgx = c.getContext('2d'); for (let x = 0; x < 64; x++) for (let y = 0; y < 32; y++) {
+        const a = Math.pow(1 - x / 64, 1.4) * Math.sin(Math.PI * (y + .5) / 32) ** 2; kgx.fillStyle = `rgba(255,240,200,${a.toFixed(3)})`; kgx.fillRect(x, y, 1, 1); } return c; })());
       const lag = (g, mat) => { const m = new THREE.InstancedMesh(g, mat, n); m.frustumCulled = false; m.count = 0; R.scene.add(m); liv.mesh.push(m); liv.bilMesh.push(m); return m; };
       liv.lys = { front: lag(front, new THREE.MeshBasicMaterial({ color: 0xb4b4ae })), bak: lag(bak, new THREE.MeshBasicMaterial({ color: 0x700e0a })),
         kjegle: lag(kg, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(kc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 })) };
       liv.lys.kjegle.material.userData.egetKart = true;
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
-    const gate = velgLinjer(u, v => v.by && 'RFK'.includes(v.k) && Veg.vanlig(v)).concat(velgLinjer(u, v => v.by && v.t !== 5, u.gangveger || []));
+    const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, u.gangveger || []));
     if (gate.length) {
       const bein = samle([kasse(0, .1, 0, .14, .14, .84), kasse(0, -.1, 0, .14, .14, .84)]), kropp = kasse(0, 0, .84, .26, .42, .62), hode = new THREE.SphereGeometry(.11, 10, 8); hode.translate(0, 0, 1.6);
       const hår = new THREE.SphereGeometry(.115, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.2); hår.rotateX(Math.PI / 2); hår.translate(-.01, 0, 1.62);
@@ -308,6 +317,7 @@
       liv.folk = Array.from({ length: mob ? 16 : 45 }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
       liv.folk.forEach((p, k) => liv.folkMesh[1].setColorAt(k, new THREE.Color(...KLÆR[k % KLÆR.length])));
     }
+    liv.start = JSON.stringify([(liv.biler || []).map(b => [b.v.k, b.v.L.toFixed(2), b.s.toFixed(3), b.dir]), (liv.folk || []).map(p => [p.v.k, p.v.L.toFixed(2), p.s.toFixed(3), p.dir])]);
     // fugler: tre flokker som sirkler over utsnittet
     const vinge = new THREE.BufferGeometry(); vinge.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -.3, .9, .08, .25, 0, 0, 0, 0, 0, .25, 0, 0, -.3, -.9, .08], 3)); vinge.computeVertexNormals();
     liv.fuglMesh = instanser(R, [[vinge, 0x1c1c1c]], 24); liv.fugler = Array.from({ length: 24 }, (_, k) => ({ flokk: k % 3, nr: Math.floor(k / 3), fase: rnd() * 6 }));
@@ -337,7 +347,8 @@
   }
   // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
   function fjern(R) { if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
-  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null; });
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null;
+    u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, u.gangveger || []))) } : null; });
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); u.vegD = null; });
 
   // ---------- hver ramme ----------
@@ -376,5 +387,6 @@
       const pr = Bruer.projiser(m.P2, x, y); if (pr.d < m.W / 2 && pr.s > 0 && pr.s < m.L && !(m.sprengt && pr.s > m.L * Bruer.GAP[0] && pr.s < m.L * Bruer.GAP[1])) { const zb = m.zPå(pr.s) + .03; if (z === null || zb > z) z = zb; } }
     return z;
   }
-  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke };
+  // start(): hvor bilene og folkene startet i siste utsnitt (veg, plass, retning) – for prøvene (likt utsnitt før og etter)
+  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start };
 })();

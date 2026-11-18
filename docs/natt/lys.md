@@ -363,3 +363,30 @@ Det som står igjen over 100 ms: hus3d (78 ms selv), sett3d 130–135 ms (liv3d 
 sett3d ca. 23, merkingen i `R.scene.add` (ytelse.js) ca. 20), og kartbildet i striper (én stripe 83 ms med programvare-grafikk).
 Dovre-testsiden etter del 2 (`t-dovre.js`): fingeravtrykket fortsatt likt koden fra før runde 4, «bygging i biter» lik (133 pust),
 kartbildet likt lerretet, brukontrollen som før, ingen sidefeil.
+
+## Runde 4, del 3 (18. nov dag)
+### 1. Merkingen i `R.scene.add` (ytelse.js)
+`userData.kilde` trengs ikke bare til «Mål ytelse»: lys3d.js bruker den til å velge hva som kaster skygge (`STILLE`), og vaktene i
+sjekk.js teller nettene per fil («bygging i biter» krever liv3d-nett, «kilder»-vakta). Den må derfor settes hele tiden, også i
+testene – å sette den bare mens det måles ville endret skyggene og vaktene. I stedet er hver merking billigere (`kildeNå`): først en
+kort stakk (`Error.stackTraceLimit = 5`: de tre nærmeste rammene utenfor ytelse.js), og hele stakken bare når den korte ikke har noen
+spill/-fil (dvs. når kilden blir «index» eller ligger dypere). Første treff i den korte stakken er første treff i hele, så svaret er
+det samme; den hele stakken får én ramme ekstra for `kildeNå` selv, så vinduet er det samme som før. Nettlesere uten
+`Error.stackTraceLimit` (Safari, Firefox) får hele stakken som før. «Mål ytelse» grupperer etter fil som før; utsnittet trenger ikke
+bygges på nytt. Målt i Node (V8, dybde 12): 17–23 µs per merking med hel stakk, 6–11 µs med kort. I et bytte i Bergen: 280
+merkinger, 223 avgjøres av den korte stakken (57 blir «index»).
+Prøvd: alle 308 objektene i scenen etter et bytte i Bergen har samme kilde før og etter (samme fordeling: index 57, liv3d 95,
+natt3d 42, vind3d 32, vegetasjon3d 12, anlegg3d 10, gate3d 10, kraft3d 6, kyst3d 5, infra3d 4, bane3d 4, bekker-visning 1,
+portal3d 1, dyr3d 1; samme sjekksum over hele lista).
+
+### 2. hus3d
+Den lange biten var ikke husene selv (de har pust for hvert 16. bygg), men rutenettet over gatene (`GATE`, et punkt hver 3. m langs
+alle vegene i vektorflisene) og midtpunktene, regnet for alle flisene i ett strekk med tekstnøkler. Nå tallnøkler (`gnk`, samme ruter)
+og pust mellom flisene i begge løkkene.
+
+### 3. liv3d og vegetasjon3d i byttet → forbered3d
+- **liv3d.js:** linjene bilene og folkene bruker (`velgLinjer`, nå generator `velgLinjerG`, samme rekkefølge) lages i forbered3d-kroken
+  (`u.livLinjer`); startLiv bruker dem. Bildet av billysenes lyskjegle (2048 småruter med fargetekst) tegnes én gang og brukes av alle
+  utsnitt. `Liv3d.start()` gir hvor bilene og folkene startet (for prøvene).
+- **vegetasjon3d.js:** matrisene og fargene for de seks nye treslagene (`treslagMatriser`, generator, yield for hvert 1024. tre) lages i
+  forbered3d-kroken (`u.treslagKlar`); sett3d bruker dem bare når treslagslistene er de samme (ellers lages de på nytt).

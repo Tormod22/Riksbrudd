@@ -20,6 +20,8 @@
     'ressurser-visning': 'hogst og ruiner', index: 'gress, soldater og himmel', annet: 'alt det andre' };
   const median = L => { if (!L.length) return 0; const s = [...L].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   // Hvilken fil i spill/ la tingen inn i scenen? Første fil i stakken som ikke er denne; uten treff er det index.html.
+  // første spill/-fil i stakken utenom ytelse.js, eller null (kildeNå nedenfor)
+  const førsteFil = stakk => { const re = /\/spill\/([\w-]+)\.js/g; let m; while ((m = re.exec(stakk || ''))) if (m[1] !== 'ytelse') return m[1]; return null; };
   function kilde(stakk) { const re = /\/spill\/([\w-]+)\.js/g; let m; while ((m = re.exec(stakk || ''))) if (m[1] !== 'ytelse') return m[1]; return 'index'; }
   function nettleser(ua) {
     ua = ua || ''; const v = re => { const m = re.exec(ua); return m ? m[1] : ''; };
@@ -89,7 +91,7 @@
     }
     return '?';
   }
-  const Ytelse = { NAVN, median, kilde, nettleser, grunnlag, tabell, vurdering, des, hel, erTak, nokTegninger, hakkTekst, stedFraStakk };
+  const Ytelse = { NAVN, median, kilde, førsteFil, nettleser, grunnlag, tabell, vurdering, des, hel, erTak, nokTegninger, hakkTekst, stedFraStakk };
   if (typeof module !== 'undefined') { module.exports = Ytelse; return; }
   rot.Ytelse = Ytelse;
 
@@ -98,8 +100,19 @@
   KROKER.bygg3d.push(() => {
     const R = typeof R3 !== 'undefined' && R3; if (!R || !R.scene || R.scene.userData.kildeMerket) return; R.scene.userData.kildeMerket = true;
     const leggTil = R.scene.add;
-    R.scene.add = function (...o) { let k = null; for (const m of o) if (m && m.userData && !m.userData.kilde) { if (k == null) k = kilde(new Error().stack); m.userData.kilde = k; } return leggTil.apply(this, o); };
+    R.scene.add = function (...o) { let k = null; for (const m of o) if (m && m.userData && !m.userData.kilde) { if (k == null) k = kildeNå(); m.userData.kilde = k; } return leggTil.apply(this, o); };
   });
+  // KILDEN TIL DET SOM LEGGES I SCENEN (18. nov, hakk: en hel stakk per nett – ca. 280 i et bytte i Bergen, 15–20 ms). userData.kilde
+  // brukes av «Mål ytelse», av lys3d.js (hvem kaster skygge) og av vaktene, så den må settes hele tiden. Nå leses først en kort stakk
+  // (de nærmeste rammene – nesten alt avgjøres der), og hele stakken bare når den korte ikke har noen spill/-fil. Første treff i den
+  // korte er første treff i hele, så svaret er det samme; hele stakken får én ramme ekstra for kildeNå selv. Nettlesere uten
+  // Error.stackTraceLimit (Safari, Firefox) gir alltid hele stakken, som før.
+  function kildeNå() {
+    const L = Error.stackTraceLimit, tall = typeof L === 'number';
+    if (tall) { let s; try { Error.stackTraceLimit = 5; s = new Error().stack; } finally { Error.stackTraceLimit = L; } const f = førsteFil(s); if (f) return f; }
+    let s; try { if (tall) Error.stackTraceLimit = L + 1; s = new Error().stack; } finally { if (tall) Error.stackTraceLimit = L; }
+    return kilde(s);
+  }
   const tegnes = o => o.isMesh || o.isPoints || o.isLine || o.isSprite;
   function trekanter(o) {
     const g = o.geometry; if (!g || !o.isMesh) return 0;
