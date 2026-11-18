@@ -18,12 +18,13 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
     try {
       RS.sett(null); RS.test = true; TETTSTEDER.set(id, { eier: 'blå', inntar: null });
       // 1: typen og det tettstedet gir
-      o.type = RS.typeAv(by); const q = RS.status().get(id); o.rute0 = q && q.rute.status; o.gir = RG.girTekst(RS.sum(), v => Math.round(v) + ' kr');
+      o.type = RS.typeAv(by); const q = RS.status().get(id); o.rute0 = q && q.rute.status; o.gir = RG.girTekst(RS.girFor(id), v => Math.round(v) + ' kr'); o.andre = RS.status().size - 1;
       const P0 = OppstartSpill.tilstand().penger; RS.steg(.5); RS.lever(); o.tjent = OppstartSpill.tilstand().penger - P0;
       // 2: panelet, skatt
       RS.åpne(); o.panel = document.getElementById('region').classList.contains('på') && !!document.querySelector(`#region [data-by="${id}"]`);
       const hard = document.querySelector(`#region [data-by="${id}"] [data-skatt="hard"]`); if (hard) hard.click(); o.hard = RS.tilstand().byer[id].skatt === 'hard';
-      const g1 = RS.sum().penger; RS.settSkatt(id, 'vanlig'); o.hardGirMer = g1 > RS.sum().penger * 1.5;
+      // (målt på prøvebyen alene: andre vakter kan ha latt spilleren holde flere tettsteder, og da drukner forskjellen i summen)
+      const g1 = RS.girFor(id).penger; RS.settSkatt(id, 'vanlig'); const g0 = RS.girFor(id).penger; o.hardGirMer = g1 > g0 * 1.5; o.hardTall = [Math.round(g1), Math.round(g0)];
       // 3: en fiende på ruta truer eller stenger den (står et eget lag ved ruta, blir den «truet»)
       fiende = nyttLag('Vaktprøve', c.x + (l.x - c.x) * .1, c.y + (l.y - c.y) * .1, 'rød'); ENHETER.push(fiende);
       o.rute1 = RS.status().get(id).rute.status;
@@ -56,5 +57,5 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
     return o; });
   if (d.mangler) return { ok: false, tekst: 'RegionSpill mangler eller er ikke startet', data: d };
   const ok = !d.feil && !!d.type && d.rute0 === 'åpen' && d.tjent > 0 && d.panel && d.hard && d.hardGirMer && d.rute1 !== 'åpen' && d.rute2 === 'åpen' && d.opprør && d.børs && d.veksle && d.hylle && d.mat && d.fordel && d.tilbake;
-  return { ok, tekst: `Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
+  return { ok, tekst: `Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn med ${d.andre} andre tettsteder), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
 } };
