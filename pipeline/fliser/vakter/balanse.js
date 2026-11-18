@@ -49,7 +49,10 @@ async function runde5(pg) {
   const r = await pg.evaluate(() => {
     const feil = [], d = {}, Sp = window.SpilletSpill, TL = window.TrusselLagringSpill, OS = window.OppgjorSpill, T0 = Sp && Sp.klar && Sp.klar() ? Sp.T() : null, Sx = window.OppstartSpill && OppstartSpill.tilstand();
     if (!Sp || !TL || !T0 || !Sx || !Sx.leir) return { feil: ['SpilletSpill/TrusselLagringSpill mangler'], d };
-    const L = Sx.leir, før = { T: JSON.parse(JSON.stringify(T0)), angrep: localStorage.getItem(TL.NØKKEL), hjelp: localStorage.getItem('riksbrudd-hjelp'), enheter: ENHETER.slice(), oppl: window.OpplaeringSpill ? OpplaeringSpill.test : null, hjelpÅpen: document.getElementById('hjelp') && document.getElementById('hjelp').classList.contains('på') };
+    const L = Sx.leir, før = { T: JSON.parse(JSON.stringify(T0)), angrep: localStorage.getItem(TL.NØKKEL), hjelp: localStorage.getItem('riksbrudd-hjelp'), enheter: ENHETER.slice(), oppl: window.OpplaeringSpill ? OpplaeringSpill.test : null, hjelpÅpen: document.getElementById('hjelp') && document.getElementById('hjelp').classList.contains('på'),
+      blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.strid, e.stridFør, e.forsvar]),
+      // nyttLag bruker den faste tilfeldighetsrekka (frø i index.html): den settes tilbake, så vaktene etter får de samme lagene som før
+      frø: typeof frø === 'number' ? frø : null };
     try {
       // et angrep i gang: to røverlag, det ene har vært inne i leiren en stund og har mistet folk, det andre trekker seg ut med byttet
       const nr = 9101; T0.aktiv = nr; T0.bølge = Math.max(T0.bølge || 0, nr);
@@ -85,7 +88,8 @@ async function runde5(pg) {
     } catch (e) { feil.push('kast: ' + e.message); }
     finally {
       for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1);
-      for (const k of Object.keys(T0)) delete T0[k]; Object.assign(T0, før.T);
+      for (const k of Object.keys(T0)) delete T0[k]; Object.assign(T0, før.T); if (T0.nesteSpill === null) T0.nesteSpill = Infinity; if (T0.nesteEkte === null) T0.nesteEkte = Infinity;
+      if (TL.glem) TL.glem(); if (før.frø !== null) frø = før.frø; for (const [e, st, sf, fs] of før.blå) { e.strid = st; if (sf === undefined) delete e.stridFør; else e.stridFør = sf; if (fs === undefined) delete e.forsvar; else e.forsvar = fs; }
       if (før.angrep === null) localStorage.removeItem(TL.NØKKEL); else localStorage.setItem(TL.NØKKEL, før.angrep);
       if (før.hjelp === null) localStorage.removeItem('riksbrudd-hjelp'); else localStorage.setItem('riksbrudd-hjelp', før.hjelp);
       if (window.OpplaeringSpill) { OpplaeringSpill.test = før.oppl; OpplaeringSpill.kjør(); }

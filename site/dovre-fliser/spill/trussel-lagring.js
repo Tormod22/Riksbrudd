@@ -74,7 +74,7 @@
   const spill = () => rot.OppstartSpill && OppstartSpill.tilstand();
   const leirId = () => { const S = spill(); return S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : null; };
   const T = () => (rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null);
-  let sist = 0, gjenopprettet = 0, bølgeTilbake = 0;
+  let sist = 0, gjenopprettet = 0, bølgeTilbake = 0; const egneTilbake = [];
   const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.karakter && !s.leirvakt && Array.isArray(s.menn));
   function lagre() {
     const id = leirId(), t = T(); if (!id || !t) return false;
@@ -94,7 +94,8 @@
     const n = nye.filter(s => s.raid === aktiv).length; gjenopprettet = n;
     // egne lag i forsvar: stridsreglene fra før forsvaret og plassen (lagring.js har alt lagt lagene tilbake). ForsvarSpill vet ikke
     // etter omlastingen at forsvaret var satt, så reglene settes tilbake her når bølgen er over (se KROKER.sim under).
-    if (n) { for (const q of d.egne) { const s = egneLag().find(e => e.navn === q.navn); if (!s) continue; if (q.stridFør && !s.stridFør) s.stridFør = q.stridFør; if (q.forsvar) s.forsvar = q.forsvar; } bølgeTilbake = aktiv; }
+    if (n) { for (const q of d.egne) { const s = egneLag().find(e => e.navn === q.navn); if (!s) continue; if (q.stridFør && !s.stridFør) s.stridFør = q.stridFør; if (q.forsvar) s.forsvar = q.forsvar; egneTilbake.push(s); }
+      if (egneTilbake.length) bølgeTilbake = aktiv; }
     // ordren på nytt når kartet rundt er lastet: de som trakk seg ut eller flyktet, går samme vei ut; de andre fortsetter mot leiren
     setTimeout(() => { const S = spill(); if (!S || !S.leir) return;
       for (const s of nye) { if (!ENHETER.includes(s) || !levende(s)) continue; const m = s.målLagret; delete s.målLagret;
@@ -105,12 +106,13 @@
     skitten = true; return n;
   }
   // bølgen som kom tilbake, er over: egne lag får stridsreglene fra før forsvaret og går ut av forsvarsstillingen
+  // (bare lagene som fikk reglene og plassen fra lagringen; har forsvaret blitt satt på nytt etterpå, gjør ForsvarSpill.opphev det)
   function etterBølgen() { const t = T(); if (!bølgeTilbake || !t || t.aktiv === bølgeTilbake) return false; bølgeTilbake = 0;
-    if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) return false;
-    for (const s of egneLag()) { if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; } return true; }
+    if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) { egneTilbake.length = 0; return false; }
+    for (const s of egneTilbake.splice(0)) { if (!ENHETER.includes(s)) continue; if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; } return true; }
   // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes
   KROKER.sim.push(() => { etterBølgen(); const nå = performance.now(); if (nå - sist < REGLER.hverMs) return; sist = nå; lagre(); });
   rot.addEventListener('pagehide', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  const ut = rot.TrusselLagringSpill = { test: rot.TRUSSEL_LAGRING_TEST === true, NØKKEL, lagre, tilbake, lesLagret, etterBølgen, gjenopprettet: () => gjenopprettet };
+  const ut = rot.TrusselLagringSpill = { test: rot.TRUSSEL_LAGRING_TEST === true, NØKKEL, lagre, tilbake, lesLagret, etterBølgen, glem: () => { bølgeTilbake = 0; egneTilbake.length = 0; }, gjenopprettet: () => gjenopprettet };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
