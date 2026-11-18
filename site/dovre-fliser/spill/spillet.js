@@ -93,12 +93,16 @@
     fra: s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return typeof atob === 'function' ? decodeURIComponent(escape(atob(s))) : Buffer.from(s, 'base64').toString('utf8'); } };
   const Deling = {
     // koden: navn, farge, sted og byggene (type, plass i hele meter fra leiren, retning i grader); høyst 80 bygg
-    kode(navn, farge, leir, bygg) { const b = bygg.filter(q => q.x !== undefined).slice(0, 80).map(q => [q.type, Math.round(q.x - leir.x), Math.round(q.y - leir.y), Math.round((q.ret || 0) * 57.3)]);
-      return b64.til(JSON.stringify({ v: 1, n: String(navn).slice(0, 40), f: farge, x: Math.round(leir.x), y: Math.round(leir.y), b })); },
+    // (natt 18. nov) stilling = { byer: [tettsted-id …], andel (prosent av folket i området), dag }: det vennen holder i krigen – valgfritt
+    kode(navn, farge, leir, bygg, stilling) { const b = bygg.filter(q => q.x !== undefined).slice(0, 80).map(q => [q.type, Math.round(q.x - leir.x), Math.round(q.y - leir.y), Math.round((q.ret || 0) * 57.3)]);
+      const d = { v: 1, n: String(navn).slice(0, 40), f: farge, x: Math.round(leir.x), y: Math.round(leir.y), b };
+      if (stilling) d.s = { t: (stilling.byer || []).slice(0, 60).map(String), a: Math.max(0, Math.min(100, Math.round(stilling.andel || 0))), d: Math.max(1, Math.round(stilling.dag || 1)) };
+      return b64.til(JSON.stringify(d)); },
     // les en kode: gir { navn, farge, x, y, bygg } eller null når den ikke er gyldig
     les(kode, kjente) { try { const d = JSON.parse(b64.fra(String(kode).trim())); if (!d || d.v !== 1 || typeof d.x !== 'number' || typeof d.y !== 'number' || !Array.isArray(d.b)) return null;
       const bygg = d.b.filter(q => Array.isArray(q) && (!kjente || kjente(q[0])) && q.slice(1).every(t => typeof t === 'number' && Math.abs(t) < 5000)).slice(0, 80).map(q => ({ type: q[0], x: d.x + q[1], y: d.y + q[2], ret: q[3] / 57.3 }));
-      return { navn: String(d.n || 'Venn').slice(0, 40), farge: /^#[0-9a-f]{6}$/i.test(d.f) ? d.f : '#8fc2ef', x: d.x, y: d.y, bygg }; } catch (e) { return null; } },
+      const st = d.s && typeof d.s === 'object' && Array.isArray(d.s.t) ? { byer: d.s.t.filter(t => typeof t === 'string' || typeof t === 'number').slice(0, 60).map(String), andel: Math.max(0, Math.min(100, Math.round(+d.s.a || 0))), dag: Math.max(1, Math.round(+d.s.d || 1)) } : null;
+      return { navn: String(d.n || 'Venn').slice(0, 40), farge: /^#[0-9a-f]{6}$/i.test(d.f) ? d.f : '#8fc2ef', x: d.x, y: d.y, bygg, stilling: st }; } catch (e) { return null; } },
   };
 
   const api = { Trussel, Marked, Oppdrag, Kamp, Hendelser, Deling, retning };

@@ -70,7 +70,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
     <div><b id="sH">–</b> <span>moh.</span></div>
     <div><b id="sKB">0</b> <span id="sReq">lastet</span></div>
   </div>
-  <div class="knapper"><button id="v3d" aria-pressed="false" title="3D-terreng">3D</button><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button><button id="sp4" title="600 ganger fart: 10 spilltimer per minutt">600×</button></div>
+  <div class="knapper"><button id="v3d" aria-pressed="false" title="3D-terreng">3D</button><button id="meny" aria-expanded="false" aria-controls="lagmeny" title="Kartlag">☰</button><button id="sp0" aria-label="Pause">❚❚</button><button id="sp1" class="på">1×</button><button id="sp2">10×</button><button id="sp3">60×</button><button id="sp4" title="600 ganger fart: 10 spilltimer per minutt">600×</button><button id="nesteh" aria-pressed="false" aria-label="Spol til neste hendelse" title="Spol til neste hendelse: tiden går fort til noe skjer (lag framme, bygg ferdig, fienden i sikte, alarm, ny dag) og går så ned til 1× (spill/flyt.js)">⏭</button></div>
 </div>
 <div id="lagmeny"></div>
 <div id="logg" aria-live="polite"></div>
@@ -758,6 +758,8 @@ function nyttLag(navn, x, y, side, speider) {
 // Samme steder som på /dovre (regnet om fra UTM 32 til UTM 33).
 const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2. lag, Dombås', 198872, 6896752, 'blå'),
   nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Kystalliansens patrulje', 213280, 6908986, 'rød')];
+// patruljelaget huskes for seg: et nytt spill kan ta bort startlagene (spill/scenario-visning.js), så plassen i lista er ikke fast
+const PATRULJELAG = ENHETER[3];
 const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
 
 // ---------- tid: 1 spilltime = 60 s ved 1× ----------
@@ -773,7 +775,7 @@ function patruljeMål(fi, nr) {
 }
 function sim(dt) {
   for (const f of KROKER.sim) f(dt);
-  const før = tid; tid += dt; const fi = ENHETER[3];
+  const før = tid; tid += dt; const fi = PATRULJELAG;
   if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // kamprunde hvert KAMPRUNDE_MIN spillminutt
   if (!Terreng.slattUt(fi.menn)) {
     const fiende = ENHETER.find(b => b.side === 'blå' && levende(b) && Math.hypot(b.x - fi.x, b.y - fi.y) < 900 && ser(fi, b.x, b.y));
@@ -839,6 +841,8 @@ const MARSJ_MAKS = 30000;
 async function ordre(s, X, Y, stille) {
   // et mindre spillkart (/rogaland, spill/omraade.js): ingen marsj ut av området
   if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { if (!stille) logg(s.navn + ': det ligger utenfor spillkartet.'); return; }
+  // en ny ordre tømmer køen av ordre (spill/flyt.js setter s.køGår når ordren kommer fra køen selv)
+  if (!s.køGår && (s.kø || s.køSlutt)) { s.kø = null; s.køSlutt = null; s.køSiste = false; }
   const d = Math.hypot(X - s.x, Y - s.y), pad = Math.max(2500, d * .3);
   if (d > MARSJ_MAKS) { if (!stille) logg(s.navn + ': for langt å gå i én marsj (over ' + MARSJ_MAKS / 1000 + ' km). Gi ordren i etapper.'); return; }
   s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
@@ -1002,7 +1006,7 @@ function visPanel() {
   if (s.side === 'blå' && levende(s)) {
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
     H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => { s.speider = !s.speider; s.siktSkitten = true; visPanel(); }));
-    if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.siktSkitten = true; visPanel(); skitten = true; }));
+    if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.kø = null; s.køSlutt = null; s.køSiste = false; s.siktSkitten = true; visPanel(); skitten = true; }));
     for (const f of KROKER.lagKnapper) f(s, H);
   }
   const M = document.getElementById('menn'); M.innerHTML = '';
@@ -2960,6 +2964,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt.js?v=d6903e035e"></script>
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
 <script src="/dovre-fliser/spill/meny.js?v=9b4e940c42"></script>
+<script src="/dovre-fliser/spill/flyt.js?v=0"></script>
+<script src="/dovre-fliser/spill/scenario.js?v=0"></script>
+<script src="/dovre-fliser/spill/scenario-visning.js?v=0"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
