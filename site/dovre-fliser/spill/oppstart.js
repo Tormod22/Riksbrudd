@@ -5,7 +5,11 @@
  */
 (function (rot) {
   'use strict';
-  const STARTPENGER = 100e6;
+  // Natt til 18. nov (gjennomgangen: «100 mill. kr er for mye, spilleren kan kjøpe seg ut av alt»): NYE spill starter med 40 mill. kr
+  // (Claudes forslag: kontrollrom 15 + aggregat 8 + brakke 4 + dieseltank 3 = 30, og 10 igjen til materialer, diesel og mat) –
+  // resten må komme fra tettstedene, oppdrag og det du finner. Lagrede spill beholder pengene sine (S.penger er lagret).
+  // I testene (Node og kontrollskriptet med navigator.webdriver) er beløpet 100 mill. som før.
+  const STARTPENGER = (typeof module !== 'undefined' && module.exports) || (typeof navigator !== 'undefined' && navigator.webdriver) ? 100e6 : 40e6;
   // bonus: treff (faktor på treff for egne lag), sikt (faktor på siktvidden), penger (ekstra ved start),
   // helse (sårede blir friske så mange ganger fortere), bygg (byggefart), mat (faktor på matpris)
   const BAKGRUNNER = {

@@ -199,7 +199,7 @@
   setInterval(() => { if (performance.now() > varselTil) varselEl.classList.remove('på'); if (!klar || !S() || !S().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     const g = deg(); skytKnapp.classList.toggle('på', !!g && VW < 900 && !(window.KjorSpill && KjorSpill.fører()));
     if (tempo > 0) { angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); } }, 1000);
-  Object.assign(api, { start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
+  Object.assign(api, { start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, varsel, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
     T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg });
   window.SpilletSpill = api;
 })();

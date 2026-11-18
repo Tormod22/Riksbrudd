@@ -11,6 +11,8 @@
   const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
   const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
+  // for regionen (spill/region-visning.js): strømmen til et tettsted og kraftverkene
+  window.GarnisonSpill = { strømFor, kraft, byFor, byer };
 
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
