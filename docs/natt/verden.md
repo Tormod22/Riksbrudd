@@ -210,7 +210,8 @@ lagreKratere, mineKrater, salve, lyng).
 - Funn kan fortsatt ligge inntil et enkelt hus (bare tettbebyggelse i 32 m-rutene regnes). Funn som er tatt eller sett, lagres som før;
   stedet de er flyttet til, regnes ut på nytt.
 - Regnflom: feltet bygger på 32 m-høyder (z9), så kanten i 3D er grov; vegene stenges langs feltet bare når vegnettet er lastet.
-- Isen: `Verden.islagt` er laget, men ingen båter bruker den ennå (sjo-filene er ikke endret). Ikke prøvd på et ekte vann (fant ikke et
-  vann innen ca. 2,7 km fra leiren på testsiden) – reglene er testet i Node.
+- Isen: `Verden.islagt` er laget, men ingen båter bruker den ennå (sjo-filene er ikke endret). Prøvd på /rogaland (leir i Ryfylke):
+  et vann 69 moh. 2 km fra leiren er ikke islagt uten kulde og islagt med 12 døgngrader; land gir false. Sjøen er ikke prøvd i nettleseren
+  (vannruter under 1 moh. ble ikke funnet i søket; reglene sier nei til sjø i Node-testen).
 - Brente hus: bare sotlaget utenpå (husene kan fortsatt ikke farges ett og ett); før-bildet med det gamle flate lokket er ikke tatt.
 - Åkeren: kan legges over veger og bekker; ingen 3D-skisse mens du plasserer den (bare i 2D).
