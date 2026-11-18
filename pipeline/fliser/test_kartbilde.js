@@ -59,6 +59,12 @@ const TW = 256, lyng = (x, y) => { const v = 8 * Math.sin(x * .3) * Math.cos(y *
   let a = 0, na = 0, b = 0, nb = 0; for (let y = 0; y < TW; y += 2) for (let x = 0; x < TW; x++) { const X = x * mpp, Y = y * mpp, d = X - kyst(Y), q = (y * TW + x) * 4, l = lys(px, q);
     if (d > 1.5 && d < 4.5) { a += l; na++; } else if (d > 30 && d < 35) { b += l; nb++; } }
   ok(na && nb && a / na > b / nb + 4, `lys strandsone (${(a / na).toFixed(0)} mot ${(b / nb).toFixed(0)} inne på land)`);
+  // nedenfor utløpet: en flate 6 m under vannstanden rett ved vannet (sør for y = 900) blir ikke vann
+  { const H2 = H.slice(); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = i * steg, Y = j * steg; if (Y > 900 && X > kyst(Y) + 4 && X < kyst(Y) + 40) H2[j * N + i] = 94; }
+    const p2 = bilde(TW, (x, y) => { const X = x * mpp, Y = y * mpp, rx = Math.floor(X / 32) * 32 + 16, ry = Math.floor(Y / 32) * 32 + 16; return rx < kyst(ry) ? vann : land; });
+    K.kjør(K.strandG(p2, TW, H2, N, cx, cy, S)); let feilV = 0;
+    for (let y = Math.ceil(905 / mpp); y < TW; y += 2) for (let x = 0; x < TW; x += 2) { const X = x * mpp, Y = y * mpp, q = (y * TW + x) * 4; if (X > kyst(Y) + 8 && X < kyst(Y) + 36 && p2[q + 2] > p2[q] + 18 && p2[q + 2] > p2[q + 1] + 4) feilV++; }
+    ok(feilV === 0, `terreng under vannstanden (nedenfor et utløp) blir ikke vann (${feilV})`); }
   // uten vann: ingenting skjer
   const tørt = bilde(64, () => land), k2 = tørt.slice(); ok(K.kjør(K.strandG(tørt, 64, H, N, cx, cy, S)) === 0 && tørt.every((v, i) => v === k2[i]), 'uten vann røres ingenting'); }
 

@@ -31,6 +31,8 @@
     strandCelle: 2.5, strandGlatt: 5, strandRekk: 40, strandNivå: .3, strandKant: .22, strandStøyH: .15, strandStøyKart: .16,
     strandStøyStor: 9, strandStøySmå: 3.2, strandSone: 1.3, strandLys: .55, strandVåt: .14, strandMørk: .28,
     strandFarge: [152, 146, 132], strandLand: [104, 100, 76],
+    // terreng mer enn så mange meter under vannstanden regnes ikke med (nedenfor utløp og fosser)
+    strandUnder: -.8,
   };
   // Den faste snøgrensen (moh.) etter hvor langt nord: 1150 m i Rogaland/Hordaland, ca. 1040 i Jotunheimen, ca. 870 ved Svartisen,
   // ca. 730 i Lyngen. Breene ligger over den (lave bretunger blir grå – det er prisen). Claudes forslag.
@@ -190,7 +192,8 @@
           let w, dh = NaN;
           // kartets vann (utjevnet, med støy), og der vannstanden er kjent: høyden over den
           w = klem((glattVed(x, y) + n * Rg.strandStøyKart - .5) / .12 + .5, 0, 1);
-          if (L === L) { dh = hBilde(x, y) - L + n * Rg.strandStøyH; w += (klem((Rg.strandNivå - dh) / Rg.strandKant + .5, 0, 1) - w) * vekt; }
+          // (terreng godt UNDER vannstanden er ikke denne innsjøen – nedenfor et utløp, en foss eller en demning: da bestemmer kartet)
+          if (L === L) { dh = hBilde(x, y) - L + n * Rg.strandStøyH; if (dh > Rg.strandUnder) w += (klem((Rg.strandNivå - dh) / Rg.strandKant + .5, 0, 1) - w) * vekt * trinn(Rg.strandUnder, Rg.strandUnder + .3, dh); else dh = NaN; }
           if (w > .5 !== var_) endret++;
           if (w >= .5) {
             // vann: vannets farge (litt av punktets eget mønster blir med, som i resten av vannet)
