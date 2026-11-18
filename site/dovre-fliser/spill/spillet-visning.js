@@ -114,7 +114,10 @@
   // ================= HENDELSER I GJENGEN =================
   let H = null; const kort = el('div', { id: 'hendelse', role: 'dialog' }); document.body.appendChild(kort);
   function tilstand() { const f = F(), s = S(); return { folk: f ? f.personer.length : 0, mat: f ? f.mat : 0, penger: s ? s.penger : 0 }; }
-  function hendelse() { const f = F(); if (!f || !f.personer.length) return false; const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h) return false; const p = f.personer[Math.floor(Math.random() * f.personer.length)];
+  // annenhver gang et kort fra samfunnet (krangler og ønsker med følger som varer, spill/samfunn-visning.js)
+  function hendelse() { const f = F(); if (!f || !f.personer.length) return false;
+    if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && Math.random() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; return true; }
+    const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h) return false; const p = f.personer[Math.floor(Math.random() * f.personer.length)];
     H.åpen = { id: h.id, navn: p.navn }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
   function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); return; }
     kort.append(el('h3', {}, 'I leiren'), el('p', {}, h.tekst(å.navn))); const t = tilstand();

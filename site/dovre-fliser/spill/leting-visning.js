@@ -65,7 +65,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     let person = null;
     if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {
       const r = FolkRegler.rekrutter(FolkSpill.tilstand(), LeirSpill.tilstand(), () => true);
-      if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (LeirSpill.lagre) LeirSpill.lagre(); }
+      if (r.person) { person = r.person; logg(`Du møtte en overlevende: ${r.person.navn}${r.person.yrke ? ' (' + String(r.person.yrke).toLowerCase() + ')' : ''} blir med til leiren.`); if (window.SamfunnSpill && SamfunnSpill.funnet) SamfunnSpill.funnet(r.person); if (LeirSpill.lagre) LeirSpill.lagre(); }
       else logg('Du møtte en overlevende, men leiren har ingen ledig seng – vedkommende ble igjen.');
     }
     if (window.OverlevSpill) OverlevSpill.øk('leting', 14);

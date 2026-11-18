@@ -15,7 +15,14 @@
   // senger i egenbygde rom (spill/byggesett.js, del 2), hvis de finnes – men ikke når Leir.plasser allerede har dem med
   // (byggesett.js legger rommene inn i Leir.plasser; før ble de telt to ganger)
   function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return 0; try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
-  const valg = () => ({ årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: window.OverlevSpill ? OverlevSpill.moralTillegg() : 0 });
+  // egenbygde rom brukt som kjøkken eller verksted (spill/byggesett-visning.js: Byggesett.romBruk)
+  function romBruk() { try { return window.Byggesett && Byggesett.romBruk ? Byggesett.romBruk() : null; } catch (e) { return null; } }
+  const grunn = () => { const rb = romBruk(); return { årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: window.OverlevSpill ? OverlevSpill.moralTillegg() : 0,
+    ekstraKjøkken: rb ? rb.kjøkken : 0, ekstraVerksted: rb ? rb.verksted : 0 }; };
+  // samfunnet (spill/samfunn-visning.js) legger til lover, barn og gamle, ønsker, sykdom og hendelser som varer
+  const valg = () => (window.SamfunnSpill && SamfunnSpill.valg ? SamfunnSpill.valg(grunn()) : grunn());
+  // maten koster mer når butikkene er tomme (forfallet, spill/overlev.js)
+  const matF = () => (window.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1);
 
   // ---------- stil ----------
   const css = document.createElement('style');
@@ -94,12 +101,13 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
     for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
     if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
-    const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(matN * FR.R.matPris)})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
+    const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(Math.round(matN * FR.R.matPris * matF()))})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal, matF()); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
     const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg());
       logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
     // færre enn tre i gjengen: rekruttering er alltid mulig (FR.kanRekruttere), så spillet ikke låser seg
     const hvorfor = FR.kanRekruttere(F, Lr, valg()); rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
-    panel.append(el('div', { klasse: 'rad' }, kjøp, rek));
+    panel.append(el('div', { klasse: 'rad' }, kjøp, rek, window.SamfunnSpill && SamfunnSpill.tilstand() ? knapp('Samfunn ›', () => SamfunnSpill.åpne(true), { id: 'samfunn-fra-folk' }) : ''));
+    if (B.avh) panel.append(el('div', { klasse: 'status' }, `Barn og gamle: ${B.avh} (arbeider ikke, men spiser og trenger seng)`));
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));
     for (const o of FR.OPPGAVER) {
@@ -117,8 +125,12 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
       const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
       velg.onchange = () => { FR.sett(F, p.id, velg.value); endret(); };
-      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør ? ' syk' : '') }, el('span', {}, `${p.navn}, ${p.alder} `), velg,
-        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}`)));
+      // trykk på navnet åpner personkortet (ansikt, historie, ønske – spill/samfunn-visning.js)
+      const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
+      navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
+      const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
+      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, navn, velg,
+        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}`)));
     }
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
@@ -141,7 +153,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const Lr = L(); if (!F || !Lr || !spill()) return;
     akk += dt;
     if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); akk = 0;
-      for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre(); }
+      for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre();
+      if (r.døde && r.døde.length && window.SamfunnSpill) SamfunnSpill.døde(r.døde); }
     soldater(dt); vakter();
     if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
   });
@@ -162,7 +175,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
 
   // ---------- forsvar: vakttårn og sandsekker ----------
   let forsvarNå = null;
-  const forsvar = () => { const Lr = L(); if (!F || !Lr) return { tårn: [], sekker: [], varsling: 0 }; return forsvarNå || (forsvarNå = FR.forsvar(F, Lr)); };
+  const forsvar = () => { const Lr = L(); if (!F || !Lr) return { tårn: [], sekker: [], varsling: 0 }; if (!forsvarNå) { forsvarNå = FR.forsvar(F, Lr); if (window.SamfunnSpill && SamfunnSpill.varsling) forsvarNå.varsling *= SamfunnSpill.varsling(); } return forsvarNå; };
   const nær = (liste, s, r) => liste.some(b => Math.hypot(b.x - s.x, b.y - s.y) < r);
   KROKER.sikt.push(s => (s.side === 'blå' && nær(forsvar().tårn, s, 150) ? 1.25 : 1));
   KROKER.ild.push((a, b) => {
@@ -201,7 +214,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     F = (Lr.folk && FR.fraJSON(Lr.folk)) || FR.ny(frø); Lr.folk = F; meldt.clear(); forsvarNå = null; lagre(); visStatus(); vis();
   }
   window.addEventListener('riksbrudd-spill', start);
-  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, forsvar: () => forsvar() };
+  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar() };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

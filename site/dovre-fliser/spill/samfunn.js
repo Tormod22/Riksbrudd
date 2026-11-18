@@ -42,7 +42,7 @@
     // Grålungen
     utbrudd: .03,              // sjanse per døgn for at sykdommen bryter ut av seg selv
     utbruddPause: 6,           // døgn før et nytt utbrudd kan komme
-    smitte: .25,               // smittepress per syk per døgn
+    smitte: .1,                // smittepress per syk per døgn
     trangt: 2.5,               // flere folk enn senger
     karanteneSmitte: .15,      // en syk i karantene smitter så mye
     sykestueSmitte: .7, legeSmitte: .5, portforbudSmitte: .7,
