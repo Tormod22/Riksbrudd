@@ -1268,6 +1268,11 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const frmok = !frm.uten && Math.abs(frm.linje - 1.15) < .01 && frm.flyttet && Math.abs(frm.spredt - .75) < .01 && Math.abs(frm.veteran - 1.18) < .01 && frm.tekst && frm.knapp && frm.bladde && frm.utstyrknapp && frm.åpnet && frm.rader >= 2 && frm.pris === 80000 && frm.byttet && frm.bil && frm.skjult && frm.sett && frm.vern === .6 && frm.ikkeOss === 1;
     if (!frmok) { feil++; console.log(JSON.stringify(frm)); }
     console.log(`${frmok ? 'ok  ' : 'FEIL'} ${navn} formasjoner, erfaring og utstyr: linje ×${frm.linje}, mot spredt ×${frm.spredt}, veteraner ×${frm.veteran}, knappen blar ${frm.bladde}, våpenbytte ved leiren ${frm.byttet} (${frm.pris} kr), fiendens lastebil skjult i tåka ${frm.skjult}, stilling ×${frm.vern}`);
+    // VAKTER I EGNE FILER (18. nov): pipeline/fliser/vakter/*.js – hver fil gir module.exports = { navn, kjør: async (pg, profil) =>
+    // ({ ok, tekst, data }) }. Vakten skal sette alt tilbake slik det var (3D av/på, lag, penger, tid), og tåle både PC og mobil.
+    { const vdir = require('path').join(__dirname, 'vakter'), vfs = require('fs'); const filer = vfs.existsSync(vdir) ? vfs.readdirSync(vdir).filter(f => f.endsWith('.js')).sort() : [];
+      for (const f of filer) { let r; try { const V = require(require('path').join(vdir, f)); r = await V.kjør(pg, navn); r.navn = V.navn || f; } catch (e) { r = { ok: false, navn: f, tekst: 'kastet: ' + String(e && e.message).slice(0, 300) }; }
+        if (!r.ok) { feil++; if (r.data) console.log(JSON.stringify(r.data).slice(0, 1200)); } console.log(`${r.ok ? 'ok  ' : 'FEIL'} ${navn} ${r.navn}: ${r.tekst || ''}`); } }
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.
