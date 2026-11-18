@@ -179,6 +179,10 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
   10 folk i leiren · 100 mill. kr · kamper siden forrige bilde: 1 sted». Gamle bilder uten det nye virker som før. Sløret er litt lysere (0,72).
   REGLER.etterspill: byggMaks 60, kjMaks 24, kampMaks 24, kampRute 250.
 
+## Etter siste fletting
+- Vakta «ui» fant «bygg uten tegning: åker» (nytt bygg fra pakka «verden»): `tegninger.js` har fått en tegning av åkeren (pløyd jord
+  med furer og planter). Ikonet (`blad`) legger verden-visning.js inn selv.
+
 ## Fellesfiler endret i runde 4
 - `site/dovre-fliser/index.html`: én skript-tagg (`spill/tegnforklaring.js`) rett etter minikart2d.js. versjon.py er kjørt.
 - `spill/leir-visning.js`: én linje i `visByggPanel` (se 5) og samme linje i `visPlanPanel` (tegningen i panelet for en planlagt skisse,
