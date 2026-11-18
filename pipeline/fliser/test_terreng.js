@@ -54,6 +54,20 @@ const S = (v, i, j) => T.senter(v, i, j);
   sjekk('fart: tettbebyggelse 3,5 km/t, veg gjennom 4–5', T.fart(7, 0) === 3.5 && T.fart(7, 1) === 4);
   sjekk('siktfelt: ikke lenger enn radius', T.siktfelt(flatt(), ...S(v, 50, 50), 640)[50 * 100 + 75] === 0);
 }
+{ // 5b. (18. nov) Sikten er lik begge veger: brekken fra Dovre (1118 -> 1127 moh. på 250 m, funnet med to lag 250 m fra hverandre –
+  // laget på flata så laget nedenfor, men ikke omvendt). Målet er en person 1,8 m over bakken; med bakken som mål (mål = 0) var det skjevt.
+  const P = [[0, 1118], [25, 1118], [50, 1119], [75, 1119], [100, 1120], [125, 1120], [150, 1122], [175, 1125], [200, 1127], [225, 1127], [250, 1127], [300, 1127]];
+  const hAt = d => { for (let q = 1; q < P.length; q++) if (d <= P[q][0]) { const [a, ha] = P[q - 1], [b, hb] = P[q]; return ha + (hb - ha) * (d - a) / (b - a); } return 1127; };
+  const brekk = i0 => { const v = flatt(); for (let j = 0; j < 100; j++) for (let i = 0; i < 100; i++) v.H[j * 100 + i] = i < i0 ? 1118 : hAt((i - i0) * 32); return v; };
+  let skjev = 0, skjevFør = 0, n = 0;
+  for (const i0 of [20, 25, 30]) for (let db = 5; db <= 10; db++) { const v = brekk(i0), A = S(v, i0, 50), B = S(v, i0 + db, 50), kA = 50 * 100 + i0, kB = 50 * 100 + i0 + db; n++;
+    if (T.siktfelt(v, ...A, 3000)[kB] !== T.siktfelt(v, ...B, 3000)[kA]) skjev++;
+    if (T.siktfelt(v, ...A, 3000, 2, 0)[kB] !== T.siktfelt(v, ...B, 3000, 2, 0)[kA]) skjevFør++; }
+  sjekk('siktfelt: over en brekk ser begge hverandre, eller ingen', skjev === 0, `${n} plasseringer, skjeve nå ${skjev}, med bakken som mål ${skjevFør}`);
+  sjekk('siktfelt: brekken ga skjev sikt med bakken som mål (testen finner feilen)', skjevFør > 0);
+  const v = flatt(); for (let j = 0; j < 100; j++) for (let i = 60; i < 63; i++) v.H[j * 100 + i] = 1060;
+  sjekk('siktfelt: en person bak ryggen synes fortsatt ikke', T.siktfelt(v, ...S(v, 30, 50), 3000)[50 * 100 + 70] === 0);
+}
 { // 6. Ildkamp
   const lag = () => ['lagfører', 'nestlagfører', 'skarpskytter', 'sanitet', 'radio', 'maskingevær', 'maskingevær', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'].map(rolle => ({ rolle, hp: 1 }));
   const snitt = (d, f) => { const r = T.frø(42); let s = 0; for (let i = 0; i < 4000; i++) s += T.ildrunde(lag(), d, f, r); return s / 4000; };

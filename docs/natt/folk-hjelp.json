@@ -16,12 +16,12 @@
  ],
  [
   "Spesialister",
-  "Lege, mekaniker, radiooperatør og skytter er sjeldne. Du finner dem blant flyktninger og når du leter i hus. De virker bare når de står på riktig oppgave (stell, verksted, overvåking, vakt).",
+  "Lege, mekaniker, radiooperatør og skytter er sjeldne. Du finner dem blant flyktninger, når du leter i hus – og på oppdrag: står det ★ ved et redningsoppdrag eller en røverpost i fanen Mål, får dere en spesialist når det er gjort. De virker bare når de står på riktig oppgave (stell, verksted, overvåking, vakt).",
   "Leiren"
  ],
  [
   "Barn og gamle",
-  "De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen. Sulter eller fryser de, faller den hardt.",
+  "De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen. Sulter eller fryser de, faller den hardt. De kan få Grålungen selv – barna sjeldnere, og de gamle tåler den dårligst: karantene, sykestue og lege redder liv.",
   "Leiren"
  ],
  [
@@ -73,5 +73,30 @@
   "Ett kort om gangen",
   "Kort med valg (hendelser, flyktninger, krangler) kommer ett om gangen, med minst to minutter imellom.",
   "Leiren"
+ ],
+ [
+  "Varsler øverst til venstre",
+  "Brikkene øverst til venstre sier fra om Grålungen i leiren, døde som venter på begravelse, skader du selv har, og kort som venter på deg. Trykk på en brikke for å komme dit det gjelder.",
+  "Leiren"
+ ],
+ [
+  "Kort som venter",
+  "Hendelser i leiren kommer som kort midt på skjermen, ett om gangen og i den rekkefølgen de kom. Står det «Et kort venter» øverst til venstre, kan du trykke for å se det med en gang.",
+  "Leiren"
+ ],
+ [
+  "Folk i byggene",
+  "I 3D står operatørene inne i kontrollrommet, kokken i kjøkkenet og de som steller syke i sykestua – gå inn, så ser du dem. Vakta står oppe i vakttårnet og speider.",
+  "I 3D"
+ ],
+ [
+  "Hunden din",
+  "Hunden trenger mat: i leiren spiser den av leirens mat, ute må du gi den en rasjon (knappen «Gi … mat»). Får den ikke mat, går den sin vei. Blir du truffet, kan hunden også bli truffet – den gror i leiren.",
+  "Lag og strid"
+ ],
+ [
+  "Dekning bak en bakketopp",
+  "Ligger en bakketopp mellom deg og fienden, treffer de deg sjelden. Legg deg ned bak en kul – da holder selv en lav forhøyning.",
+  "Lag og strid"
  ]
 ]

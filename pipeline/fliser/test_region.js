@@ -50,4 +50,18 @@ ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 500
 // tilstand
 { const S = R.ny(); R.by(S, 7).loj = 77; R.settSkatt(S, 7, 'hard'); S.har.våpen = 1; S.pott.mat = 2.5; const T = R.fraJSON(JSON.parse(JSON.stringify(S)));
   ok(T.byer[7].loj === 77 && T.byer[7].skatt === 'hard' && T.har.våpen === 1 && T.pott.mat === 2.5 && !R.settSkatt(S, 7, 'tull') && R.fraJSON(null).døgn === 0, 'tilstanden lagres og leses'); }
+// (runde 4) handelsrutene langs vegnettet og sprengte bruer
+{ const leir = { x: 0, y: 0 }, A = { id: 1, navn: 'A', x: 10000, y: 0 };
+  // vegen går en bue nordover (5 km ut): en fiende 4,5 km nord for luftlinja er nær vegen, men ikke nær linja
+  const bue = [[10000, 0], [5000, 5000], [0, 0]], fi = [{ x: 5000, y: 4500 }];
+  ok(R.rute(A, [A], leir, fi, []).status === 'åpen' && R.rute(A, [A], leir, fi, [], () => ({ sti: bue, brutt: null })).status === 'stengt', 'langs vegen: fienden måles mot vegen, ikke luftlinja');
+  const r = R.rute(A, [A], leir, [], [], () => ({ sti: bue, brutt: null })); ok(r.langsVeg === 1 && Math.abs(r.lengde - 2 * Math.hypot(5000, 5000)) < 1, 'lengden er vegens lengde (' + Math.round(r.lengde) + ' m)');
+  const b = R.rute(A, [A], leir, [], [{ x: 5000, y: 5000 }], () => ({ sti: bue, brutt: 'brua Ølen' }));
+  ok(b.status === 'stengt' && b.brutt[0] === 'brua Ølen' && b.ledd[0].vakt, 'en sprengt bru på vegen stenger ruta – også med vakt');
+  ok(R.rute(A, [A], leir, [], [], () => null).status === 'åpen' && R.rute(A, [A], leir, [], [], () => null).langsVeg === 0, 'uten veg mellom stedene: luftlinja som før'); }
+// (runde 4) lojaliteten når du mister et tettsted og tar det igjen
+{ const S = R.ny(); R.by(S, 9).loj = 90; R.settSkatt(S, 9, 'lett');
+  ok(R.mistet(S, 9) && !R.mistet(S, 9) && S.byer[9].tapt && R.fraJSON(JSON.parse(JSON.stringify(S))).byer[9].tapt, 'mistet: merket (én gang) og lagret');
+  const b = R.by(S, 9); ok(b.loj === R.REGLER.lojGjentatt && b.skatt === 'vanlig' && !b.tapt && b.gjentatt === 1, `tatt igjen: lojaliteten faller fra 90 til ${R.REGLER.lojGjentatt}, skatten vanlig`);
+  const S2 = R.ny(); R.by(S2, 4).loj = 20; R.mistet(S2, 4); ok(R.by(S2, 4).loj === 20, 'en lav lojalitet stiger ikke av å bli tatt igjen'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

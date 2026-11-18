@@ -81,13 +81,16 @@
   function ta(id) { const o = O.liste.find(q => q.id === id); if (!o || o.tatt) return false; o.tatt = true; o.frist = Math.max(o.frist, tid + 2 * 1440);
     if (o.type === 'post') for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}${o.fiender > 1 ? '.' + (i + 1) : ''}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); }
     skriv('riksbrudd-oppdrag', O); logg(`Oppdrag tatt: ${Oppdrag.TYPER[o.type].navn.toLowerCase()}, ${meter(o.meter)} mot ${o.retning}.`); skitten = true; meny(); return true; }
-  function fullfør(o, plasser) { const g = { ...o.gir }, f = F(), l = L(); let ekstra = '';
-    if (g.folk) { let fikk = 0; const n = Oppdrag.medFolk(o, plasser); for (let i = 0; i < n; i++) { const r = f && l && FR ? FR.rekrutter(f, l, () => true) : {}; if (r.person) fikk++; }
+  function fullfør(o, plasser) { const g = { ...o.gir }, f = F(), l = L(), nye = []; let ekstra = '';
+    if (g.folk) { let fikk = 0; const n = Oppdrag.medFolk(o, plasser); for (let i = 0; i < n; i++) { const r = f && l && FR ? FR.rekrutter(f, l, () => true) : {}; if (r.person) { fikk++; nye.push(r.person); } }
       if (fikk < n) { g.penger = (g.penger || 0) + (n - fikk) * 2e5; ekstra = ` ${n - fikk} fikk ikke seng og dro videre (de la igjen litt som takk).`; } if (n < g.folk) ekstra += ` ${g.folk - n} måtte bli igjen – det var ikke plass.`; g.folk = fikk; }
     if (g.penger) OppstartSpill.gi(g.penger); if (g.mat && f) f.mat += g.mat; if (l && LB) { if (g.tre) LB.leggInn(l, 'tre', g.tre); if (g.stål) LB.leggInn(l, 'stål', g.stål); }
     for (const e of ENHETER.filter(q => q.post === o.id)) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); }
     O.liste.splice(O.liste.indexOf(o), 1); O.gjort = (O.gjort || 0) + 1; skriv('riksbrudd-oppdrag', O); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre();
-    varsel(`Oppdrag fullført: ${Oppdrag.TYPER[o.type].navn.toLowerCase()}. Dere fikk ${Oppdrag.belønning(g) || 'ingenting'}.${ekstra}`, true); if (window.MaalSpill) MaalSpill.sjekk(false); skitten = true; fyllOppdrag(); meny(); }
+    varsel(`Oppdrag fullført: ${Oppdrag.TYPER[o.type].navn.toLowerCase()}. Dere fikk ${Oppdrag.belønning(g) || 'ingenting'}.${ekstra}`, true);
+    // (runde 4, pakke «folk») hendelsen «riksbrudd-oppdrag»: samfunn-visning.js gjør en av de reddede (eller en fange fra røverposten) til spesialist
+    try { window.dispatchEvent(new CustomEvent('riksbrudd-oppdrag', { detail: { o, nye } })); } catch (e) { /* uten CustomEvent: ingen spesialist */ }
+    if (window.MaalSpill) MaalSpill.sjekk(false); skitten = true; fyllOppdrag(); meny(); }
   function oppdragSteg() { if (!O) return; const d = deg(), punkter = ENHETER.filter(e => e.side === 'blå' && levende(e)).map(e => ({ x: e.x, y: e.y }));
     for (const o of [...O.liste]) {
       if (Oppdrag.utløpt(o, tid)) { if (o.tatt) logg(`Oppdraget «${Oppdrag.TYPER[o.type].navn}» gikk ut på tid.`); for (const e of ENHETER.filter(q => q.post === o.id)) ENHETER.splice(ENHETER.indexOf(e), 1); O.liste.splice(O.liste.indexOf(o), 1); skriv('riksbrudd-oppdrag', O); meny(); continue; }
@@ -163,7 +166,9 @@
     if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && Math.random() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; return true; }
     const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h) return false; const p = f.personer[Math.floor(Math.random() * f.personer.length)];
     H.åpen = { id: h.id, navn: p.navn }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
-  function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); return; }
+  function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); if (window.Kortkø && Kortkø.ferdig) Kortkø.ferdig('hendelse'); return; }
+    // én kortkø for alle kortene med valg (spill/samfunn-visning.js): vent på tur, så står aldri to kort oppå hverandre
+    if (window.Kortkø && Kortkø.ta && !Kortkø.ta('hendelse', false, visHendelse)) { kort.classList.remove('på'); Kortkø.be('hendelse', visHendelse, { tittel: 'I leiren' }); return; }
     kort.append(el('h3', {}, 'I leiren'), el('p', {}, h.tekst(å.navn))); const t = tilstand();
     h.valg.forEach((v, i) => { const b = el('button', { type: 'button' }, v.t); b.disabled = !Hendelser.kan(v.v, t); b.onclick = () => velg(i); kort.appendChild(b); }); kort.classList.add('på'); }
   function velg(i) { const å = H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) return; const v = h.valg[i].v, f = F(), l = L(); let ut = '';

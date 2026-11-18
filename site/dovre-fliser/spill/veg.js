@@ -254,24 +254,29 @@
   // Kryss = minst tre vegarmer møtes: ender som ligger innen 3 m av hverandre, eller en ende som treffer midt på en annen veg (T-kryss).
   // To ender alene er bare en skjøt og ikke et kryss. Hvert kryss får armene sine med retning ut fra krysset.
   // veger = [{ k, t, by, P: [[x, y, z]] }] (bare bilveger: gang- og sykkelvegene er ikke med).
-  function finnKryss(veger) {
+  // (18. nov, hakk: i Bergen tok finnKryss 60–300 ms i ett strekk. finnKryssG er samme regel som generator – yield for hver 16. veg
+  // og hvert 32. kryss –, så spill/liv3d.js kan ta pust innimellom; finnKryss() gjør alt i ett og gir det samme.)
+  function finnKryss(veger) { const it = finnKryssG(veger); let r; while (!(r = it.next()).done); return r.value; }
+  function* finnKryssG(veger) {
     const C = 8, rut = new Map(), nk = (x, y) => Math.floor(x / C) + ',' + Math.floor(y / C), noder = [];
     const nærNode = (x, y, r) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const n of rut.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) if (Math.hypot(n.x - x, n.y - y) < r) return n; return null; };
-    veger.forEach((v, li) => { if (v.P.length < 2) return;
+    for (let li = 0; li < veger.length; li++) { if ((li & 15) === 15) yield; const v = veger[li]; if (v.P.length < 2) continue;
       for (const s of [0, 1]) { const p = s ? v.P[v.P.length - 1] : v.P[0]; let n = nærNode(p[0], p[1], 3);
         if (!n) { n = { x: p[0], y: p[1], z: p[2], armer: [] }; noder.push(n); const k = nk(p[0], p[1]); if (!rut.has(k)) rut.set(k, []); rut.get(k).push(n); }
-        n.armer.push({ li, j: s ? v.P.length - 1 : 0, r: s ? -1 : 1 }); } });
+        n.armer.push({ li, j: s ? v.P.length - 1 : 0, r: s ? -1 : 1 }); } }
     // T-kryss: en vegende som ligger på en annen veg (ikke nær den vegens ender)
-    const pr = new Map(); veger.forEach((v, li) => v.P.forEach((p, j) => { const k = nk(p[0], p[1]); if (!pr.has(k)) pr.set(k, []); pr.get(k).push([li, j]); }));
+    const pr = new Map(); for (let li = 0; li < veger.length; li++) { if ((li & 15) === 15) yield; veger[li].P.forEach((p, j) => { const k = nk(p[0], p[1]); if (!pr.has(k)) pr.set(k, []); pr.get(k).push([li, j]); }); }
+    let q = 0;
     for (const n of noder) {
+      if ((++q & 31) === 0) yield;
       const har = new Set(n.armer.map(a => a.li)); let best = null;
       for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const [li, pj] of pr.get((Math.floor(n.x / C) + i) + ',' + (Math.floor(n.y / C) + j)) || []) {
         if (har.has(li)) continue; const v = veger[li], p = v.P[pj], d = Math.hypot(p[0] - n.x, p[1] - n.y);
         if (d < halv(v) + 1.5 && Math.abs(p[2] - n.z) < 2 && pj > 1 && pj < v.P.length - 2 && (!best || d < best.d)) best = { li, pj, d }; }
       if (best) n.armer.push({ li: best.li, j: best.pj, r: 1 }, { li: best.li, j: best.pj, r: -1 });
     }
-    const ut = [];
-    for (const n of noder) { if (n.armer.length < 3) continue;
+    const ut = []; q = 0;
+    for (const n of noder) { if ((++q & 31) === 0) yield; if (n.armer.length < 3) continue;
       const maks = Math.max(...n.armer.map(a => halv(veger[a.li]))), d = maks + 1.4; let z = -1e9;
       const armer = n.armer.map(a => { const v = veger[a.li], P = v.P; let j = a.j, L = 0; z = Math.max(z, P[j][2]);
         while (j + a.r >= 0 && j + a.r < P.length && L < d) { L += Math.hypot(P[j + a.r][0] - P[j][0], P[j + a.r][1] - P[j][1]); j += a.r; }
@@ -343,9 +348,12 @@
   // Gatelys langs de vanlige bilvegene (E, R, F, K) i tettstedene, hver 38. meter, helst på venstre side, med armen inn over vegen.
   // Aldri i en vegbane eller på en gang- og sykkelveg (klaring under 0,6 m), aldri i et kryss, aldri to nærmere hverandre enn 20 m.
   // o: { ru (rute over alle linjene), nr(v) = linjens nummer i ru, kryss, ok(x, y) }. Gir [x, y, retning, ...].
-  function lykter(veger, o) {
+  // (18. nov, hakk: i Bergen tok lyktene 140 ms i ett strekk. lykterG er samme regel som generator – yield etter hver veg –, så
+  // spill/liv3d.js kan ta pust mellom vegene; lykter() gjør alt i ett og gir det samme.)
+  function lykter(veger, o) { const it = lykterG(veger, o); let r; while (!(r = it.next()).done); return r.value; }
+  function* lykterG(veger, o) {
     const ut = [], satt = new Set();
-    for (const v of veger) { if (!v.by || !vanlig(v) || !'ERFK'.includes(v.k)) continue; const avst = v.k === 'K' ? 4.6 : 6.2, li = o.nr(v); let L = 0, neste = 19;
+    for (const v of veger) { if (!v.by || !vanlig(v) || !'ERFK'.includes(v.k)) continue; yield; const avst = v.k === 'K' ? 4.6 : 6.2, li = o.nr(v); let L = 0, neste = 19;
       for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!l) continue;
         for (; neste < L + l; neste += 38) { const f = (neste - L) / l, X = a[0] + (b[0] - a[0]) * f, Y = a[1] + (b[1] - a[1]) * f, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
           for (const sd of [1, -1]) { const x = X + nx * avst * sd, y = Y + ny * avst * sd, k = Math.round(x / 20) + ',' + Math.round(y / 20);
@@ -355,6 +363,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, finnKryssG, utenomKryss, kryssFlate, striper, gangfelt, lykter, lykterG };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

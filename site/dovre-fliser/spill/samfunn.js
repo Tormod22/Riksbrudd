@@ -50,13 +50,19 @@
     kuldeSmitte: 1.5,          // sprengkulde ute (under −8 grader): folk sitter tett inne
     fryserSmitte: 1.5,         // folk fryser i leiren (mangler ved eller diesel)
     bySpes: .08,               // sjansen for at en rekrutt fra en by er spesialist
+    // spesialister fra oppdrag (runde 4): et redningsoppdrag har så ofte en spesialist blant dem som skal reddes, og en røverpost
+    // holder så ofte en fange som er spesialist (begge fast per oppdrag, så det kan stå i oppdragslista før dere drar)
+    oppdragSpes: .35, postSpes: .25,
     fangeLojal: [.15, .35],    // en fange som får bli, er lite trofast i starten
     fangeMoral: 2, fangeAndres: .02,
     sykLengde: [3, 5],         // døgn
     sykHelse: .14,             // helsetap per døgn
     legeHelse: .5, stellHelse: .7,
     sykMoral: 2, sykMoralMaks: 8, karanteneMoral: 3,
-    gammelDør: .05,            // sjanse per døgn for at en gammel dør under et utbrudd uten karantene
+    // barn og gamle blir syke selv (runde 4): barn smittes sjeldnere, gamle oftere – og de gamle tåler sykdommen dårligst
+    barnSmitte: .6, gammelSmitte: 1.2,   // smittesjansen i forhold til en voksen
+    gammelSykDør: .1,          // sjanse per døgn for at en gammel som er syk, dør (lege ×0,5, stell i sykestua ×0,7)
+    barnSykDør: .01,           // det samme for barn
     // lover
     lovLojal: .05,             // de som misliker en lov, mister så mye lojalitet når den innføres
     // forrædere
@@ -154,6 +160,14 @@
   // en overlevende funnet ved leting: av og til en spesialist (r: tilfeldighet 0–1)
   function funnet(p, r) { if (!p || p.spes || r() >= REGLER.spesLeting) return null; const typer = Object.keys(SPES); return gjørSpesialist(p, typer[Math.floor(r() * typer.length)]); }
 
+  // SPESIALISTER FRA OPPDRAG: hvilken spesialist oppdraget o gir (eller null) – fast per oppdrag (nummeret). frø = leirens tall.
+  function oppdragSpes(o, frø = 0) {
+    // bare oppdragets nummer og leiren teller (spillet kan flytte oppdraget litt, f.eks. til land, etter at det er laget)
+    if (!o || (o.type !== 'redd' && o.type !== 'post')) return null; const h = s => { let x = (Math.imul((o.id | 0) + 1, 2654435761) ^ Math.imul(s + 7, 40503) ^ Math.imul((frø | 0) + 13, 2246822519)) >>> 0; x = Math.imul(x ^ (x >>> 15), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; };
+    if (h(1) >= (o.type === 'redd' ? REGLER.oppdragSpes : REGLER.postSpes)) return null; const typer = Object.keys(SPES); return typer[Math.floor(h(2) * typer.length)];
+  }
+  // teksten i oppdragslista
+  const oppdragSpesTekst = (o, type) => (o.type === 'redd' ? `Blant dem som skal reddes, er ${SPES[type].yrke === 'skarpskytter' ? 'en skarpskytter' : 'en ' + SPES[type].yrke}.` : `Røverne holder en fange – ${SPES[type].yrke === 'skarpskytter' ? 'en skarpskytter' : 'en ' + SPES[type].yrke}.`);
   // en rekrutt fra en by (handelsruta): får stedet i historien sin, og er en sjelden gang spesialist
   function ankommet(p, fra, r) { if (!p) return null; if (fra) p.fra = fra; if (!p.spes && r() < REGLER.bySpes) { const typer = Object.keys(SPES); gjørSpesialist(p, typer[Math.floor(r() * typer.length)]); } return p; }
   // fanger som får bli i leiren: n nye personer med lav lojalitet; de andre liker det dårlig
@@ -205,32 +219,37 @@
 
   // ================= GRÅLUNGEN =================
   const sykeI = F => F.personer.filter(p => p.syk);
+  // barna og de gamle som er syke (S.avhengige)
+  const sykeAvh = S => S.avhengige.filter(a => a.syk);
   function smitt(S, F, r, n = 1, tid = 0) { const ut = [], friske = F.personer.filter(p => !p.syk && !p.immun);
     for (let i = 0; i < n && friske.length; i++) { const p = friske.splice(Math.floor(r() * friske.length), 1)[0]; p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; if (S.karantene) p.karantene = true; ut.push(p); }
     if (ut.length) S.sistUtbrudd = tid; return ut; }
-  function settKarantene(S, F, på) { S.karantene = !!på; for (const p of F.personer) { if (S.karantene && p.syk) p.karantene = true; else delete p.karantene; } return S.karantene; }
+  function settKarantene(S, F, på) { S.karantene = !!på; for (const p of [...F.personer, ...S.avhengige]) { if (S.karantene && p.syk) p.karantene = true; else delete p.karantene; } return S.karantene; }
   // ett steg av sykdommen (dt i spillminutter). k: { B, tid, auto, utenVann }
   function sykdomSteg(S, F, dt, k, r) {
-    const H = [], d = dt / REGLER.døgn, syke = sykeI(F), lege = harSpes(F, 'lege'), stell = FR.arbeidere(F, 'stell') > 0 && k.B && k.B.sykestue > 0;
+    const H = [], d = dt / REGLER.døgn, syke = sykeI(F), avhSyke = sykeAvh(S), lege = harSpes(F, 'lege'), stell = FR.arbeidere(F, 'stell') > 0 && k.B && k.B.sykestue > 0;
     const trangt = k.B && k.B.utenSeng > 0;
     // nytt utbrudd av seg selv (aldri i testene: k.auto)
-    if (k.auto && !syke.length && F.personer.length >= 4 && (k.tid - S.sistUtbrudd) / REGLER.døgn > REGLER.utbruddPause
+    if (k.auto && !syke.length && !avhSyke.length && F.personer.length >= 4 && (k.tid - S.sistUtbrudd) / REGLER.døgn > REGLER.utbruddPause
       && r() < 1 - Math.exp(-REGLER.utbrudd * (trangt ? 2 : 1) * (k.utenVann ? 2 : 1) * d)) {
       const ny = smitt(S, F, r, 1, k.tid); if (ny.length) H.push(`${ny[0].navn} hoster og har grå lepper: Grålungen er i leiren! ` + (S.karantene ? 'Hen er satt i karantene.' : 'Sett på karantene i Samfunn-panelet, ellers smitter det fort.')); }
-    if (!syke.length) return H;
-    // smitte: hver syk gir et smittepress; i karantene bare en brøkdel
-    const press = syke.reduce((s, p) => s + (p.karantene ? REGLER.karanteneSmitte : 1), 0) * REGLER.smitte * (trangt ? REGLER.trangt : 1) * (k.sprengkulde ? REGLER.kuldeSmitte : 1) * (k.kald > .3 ? REGLER.fryserSmitte : 1)
+    if (!syke.length && !avhSyke.length) return H;
+    // smitte: hver syk (også barn og gamle) gir et smittepress; i karantene bare en brøkdel
+    const press = [...syke, ...avhSyke].reduce((s, p) => s + (p.karantene ? REGLER.karanteneSmitte : 1), 0) * REGLER.smitte * (trangt ? REGLER.trangt : 1) * (k.sprengkulde ? REGLER.kuldeSmitte : 1) * (k.kald > .3 ? REGLER.fryserSmitte : 1)
       * (k.B && k.B.sykestue ? REGLER.sykestueSmitte : 1) * (lege ? REGLER.legeSmitte : 1) * (S.lover.portforbud ? REGLER.portforbudSmitte : 1);
-    const pSmitte = 1 - Math.exp(-press * d / Math.max(4, F.personer.length) * 4);
-    for (const p of F.personer) if (!p.syk && !p.immun && r() < pSmitte) { p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; if (S.karantene) p.karantene = true; S.sistUtbrudd = k.tid;
+    const alle = F.personer.length + S.avhengige.length, pSmitte = f => 1 - Math.exp(-press * f * d / Math.max(4, alle) * 4);
+    for (const p of F.personer) if (!p.syk && !p.immun && r() < pSmitte(1)) { p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; if (S.karantene) p.karantene = true; S.sistUtbrudd = k.tid;
       H.push(`${p.navn} er smittet av Grålungen` + (S.karantene ? ' og er satt i karantene.' : '.')); }
+    for (const a of S.avhengige) if (!a.syk && !a.immun && r() < pSmitte(a.type === 'barn' ? REGLER.barnSmitte : REGLER.gammelSmitte)) { a.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; if (S.karantene) a.karantene = true; S.sistUtbrudd = k.tid;
+      H.push(`${a.type === 'barn' ? 'Barnet' : 'Den gamle'} ${a.navn} (${a.alder}) er smittet av Grålungen` + (S.karantene ? ' og er satt i karantene.' : '.')); }
     // forløpet
     for (const p of syke) { p.syk.dag += d; p.helse = Math.max(0, p.helse - REGLER.sykHelse * (lege ? REGLER.legeHelse : 1) * (stell ? REGLER.stellHelse : 1) * d);
       if (p.syk.dag >= p.syk.lengde && p.helse > 0) { delete p.syk; delete p.karantene; p.immun = true; H.push(`${p.navn} har kommet seg gjennom Grålungen og tåler den nå.`); } }
-    // de gamle er utsatt når sykdommen går fritt
-    if (!S.karantene && S.avhengige.some(a => a.type === 'gammel') && r() < 1 - Math.exp(-REGLER.gammelDør * d)) { const a = S.avhengige.find(q => q.type === 'gammel');
-      S.avhengige = S.avhengige.filter(q => q !== a); død(S, a.navn, 'gammel', k.tid); H.push(`${a.navn} (${a.alder}) døde av Grålungen.`); }
-    if (!sykeI(F).length) { H.push('Grålungen har sluppet taket i leiren.'); if (S.karantene) { settKarantene(S, F, false); H.push('Karantenen er opphevet.'); } }
+    // barn og gamle: ingen helse å tære på – i stedet en sjanse for å dø mens de er syke (størst for de gamle)
+    for (const a of avhSyke) { a.syk.dag += d; const dør = (a.type === 'barn' ? REGLER.barnSykDør : REGLER.gammelSykDør) * (lege ? REGLER.legeHelse : 1) * (stell ? REGLER.stellHelse : 1);
+      if (r() < 1 - Math.exp(-dør * d)) { S.avhengige = S.avhengige.filter(q => q !== a); død(S, a.navn, a.type === 'barn' ? 'barn' : 'gammel', k.tid); H.push(`${a.navn} (${a.alder}) døde av Grålungen.`); continue; }
+      if (a.syk.dag >= a.syk.lengde) { delete a.syk; delete a.karantene; a.immun = true; H.push(`${a.navn} (${a.alder}) har kommet seg gjennom Grålungen.`); } }
+    if (!sykeI(F).length && !sykeAvh(S).length) { H.push('Grålungen har sluppet taket i leiren.'); if (S.karantene) { settKarantene(S, F, false); H.push('Karantenen er opphevet.'); } }
     return H;
   }
 
@@ -251,6 +270,18 @@
   // ================= FORRÆDERE OG SPIONER =================
   const snittLojal = F => (F.personer.length ? F.personer.reduce((s, p) => s + p.lojal, 0) / F.personer.length : 1);
   // ett døgnsteg (kalles med d døgn): noen kan bli forrædere, og forrædere kan lekke eller sabotere. Bare når k.auto.
+  // Sabotasje av et bygg går gjennom Leir.skad, som når fienden skader leiren: en byggeplass kan ødelegges (de ubrukte
+  // materialene kommer tilbake på lageret), et ferdig bygg skades men står (bare bygg som er mer enn 40 % hele).
+  // Byggesettets deler og bygg som alt er hardt skadet, røres ikke. Gir { tekst, ødelagt, id } eller null.
+  function saboter(L, r) {
+    if (!L || !L.bygg || !LB || !LB.skad) return null;
+    const mulige = L.bygg.filter(q => !(LB.BYGG[q.type] && LB.BYGG[q.type].del) && (q.igjen > 0 || q.hp > .4)), b = mulige[Math.floor(r() * mulige.length)]; if (!b) return null;
+    const navn = LB.BYGG[b.type] ? LB.BYGG[b.type].navn : 'Et bygg', plass = b.igjen > 0, u = LB.skad(L, b.id, REGLER.sabotasjeHp); if (!u) return null;
+    const mt = Object.entries(u.mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
+    const tekst = u.ødelagt ? `Sabotasje! Byggeplassen for ${navn.toLowerCase()} er ødelagt i natt.` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '') + ' Noen i leiren står bak.'
+      : `Sabotasje! ${plass ? 'Byggeplassen for ' + navn.toLowerCase() : navn} er skadet i natt. Noen i leiren står bak.`;
+    return { tekst, ødelagt: u.ødelagt, id: b.id };
+  }
   function spionSteg(S, F, L, dt, k, r) {
     const ut = { hendelser: [], lekk: false }, d = dt / REGLER.døgn; if (!k.auto) return ut;
     if (F.moral < 50 || snittLojal(F) < .5) for (const p of F.personer) if (!p.spion && p.lojal < REGLER.spionLojal && r() < 1 - Math.exp(-REGLER.spionBlir * d)) p.spion = true;
@@ -262,8 +293,7 @@
       S.mistanke++;
       if (!S.lekket && r() < .5) { S.lekket = true; ut.lekk = true; ut.hendelser.push('Noen har lekket til fienden: de vet nå hvor leiren ligger. Etterforsk i Samfunn-panelet.'); }
       else if (r() < .5 && F.mat > 5) { const m = F.mat * REGLER.sabotasjeMat; F.mat -= m; ut.hendelser.push(`Sabotasje! ${Math.round(m)} rasjoner er ødelagt i matlageret. Noen i leiren står bak.`); }
-      else { const mulige = L && L.bygg ? L.bygg.filter(q => q.igjen <= 0 && q.hp > .4 && !(LB && LB.BYGG[q.type] && LB.BYGG[q.type].del)) : [], b = mulige[Math.floor(r() * mulige.length)];
-        if (b) { b.hp = Math.max(.1, b.hp - REGLER.sabotasjeHp); ut.hendelser.push(`Sabotasje! ${LB && LB.BYGG[b.type] ? LB.BYGG[b.type].navn : 'Et bygg'} er skadet i natt. Noen i leiren står bak.`); } }
+      else { const s = saboter(L, r); if (s) { ut.hendelser.push(s.tekst); if (s.ødelagt) ut.ødelagt = true; } }
     }
     return ut;
   }
@@ -388,7 +418,7 @@
   // ================= ALT SAMLET =================
   // Det FolkRegler.steg trenger fra samfunnet. k: { B, sult, kald, tid, minnesmerke, brønn, radiomast, F }
   function valg(S, F, k) {
-    const nå = k.tid || 0, V = S.virkninger.filter(v => v.til > nå), syke = sykeI(F).length;
+    const nå = k.tid || 0, V = S.virkninger.filter(v => v.til > nå), syke = sykeI(F).length + sykeAvh(S).length;
     const deler = { lover: lovMoral(S), 'barn og gamle': avhengigMoral(S, k), ønsker: Math.round((ønskeAndel(F, { ...k, F }) - .5) * REGLER.ønskeMoral),
       hendelser: V.reduce((s, v) => s + v.moral, 0), 'ugravlagte døde': -Math.min(REGLER.ugravlagtMaks, REGLER.ugravlagt * S.døde.length), minnesmerke: minneMoral(S, k.minnesmerke),
       Grålungen: -Math.min(REGLER.sykMoralMaks, REGLER.sykMoral * syke) - (S.karantene ? REGLER.karanteneMoral : 0) };
@@ -414,7 +444,7 @@
     if (S.døde.length && S.døde.every(q => (nå - q.tid) / REGLER.døgn > REGLER.gravFrist)) { const navn = S.døde.map(q => q.navn); S.gravlagte.push(...navn); S.døde = [];
       virkning(S, { navn: 'Ingen tok farvel', moral: -3, døgn: 2 }, nå); ut.hendelser.push(`${liste(navn)} ble lagt i jorda uten at noen tok farvel. Det tynger leiren.`); }
     ut.hendelser.push(...sykdomSteg(S, F, dt, kk, r), ...opplæringSteg(S, F, dt));
-    const sp = spionSteg(S, F, L, dt, kk, r); ut.hendelser.push(...sp.hendelser); ut.lekk = sp.lekk;
+    const sp = spionSteg(S, F, L, dt, kk, r); ut.hendelser.push(...sp.hendelser); ut.lekk = sp.lekk; ut.ødelagt = !!sp.ødelagt;
     // det som kommer av seg selv: flyktninger og kort (ett om gangen)
     if (k.auto) {
       if (S.nesteFlykt === null) S.nesteFlykt = nå + mellom(r, REGLER.flyktTid) * REGLER.døgn; if (S.nesteKort === null) S.nesteKort = nå + mellom(r, REGLER.kortTid) * REGLER.døgn;
@@ -425,8 +455,8 @@
     ut.kort = S.kort; return ut;
   }
 
-  const api = { REGLER, ny, fraJSON, tilf, profil, portrettSVG, ØNSKER, LYNNE, ønskeOppfylt, ønskeAndel, beste, SPES, gjørSpesialist, nySpesialist, harSpes, funnet, ankommet, fangerInn, nyAvhengig, avhengigMoral,
-    nyeFlyktninger, flyktTekst, flyktValg, flyktSvar, sykeI, smitt, settKarantene, sykdomSteg, LOVER, settLov, lovMoral, snittLojal, spionSteg, etterforsk, dom,
+  const api = { REGLER, ny, fraJSON, tilf, profil, portrettSVG, ØNSKER, LYNNE, ønskeOppfylt, ønskeAndel, beste, SPES, gjørSpesialist, nySpesialist, harSpes, funnet, oppdragSpes, oppdragSpesTekst, ankommet, fangerInn, nyAvhengig, avhengigMoral,
+    nyeFlyktninger, flyktTekst, flyktValg, flyktSvar, sykeI, sykeAvh, smitt, settKarantene, sykdomSteg, LOVER, settLov, lovMoral, snittLojal, spionSteg, saboter, etterforsk, dom,
     lærerNivå, kanLære, lærere, startOpplæring, stoppOpplæring, opplæringSteg, død, gravlegg, minneMoral, virkning, KORT, velgKort, kortTekst, kortSvar, valg, steg };
   if (node) module.exports = api; else rot.Samfunn = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

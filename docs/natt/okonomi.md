@@ -105,3 +105,16 @@ Lagring: «riksbrudd-region» per leir.
 - Vakten målte «hard skatt gir mer» på summen av ALLE tettstedene spilleren holdt. Når en tidligere vakt hadde latt Dombås være blått,
   druknet prøvebyens forskjell (120 000 → 204 000 kr) i summen (235 000 → 319 000, under kravet ×1,5). Regelen var riktig; vakten måler nå
   prøvebyen alene (`RegionSpill.girFor(id)`, ny). «Gir»-teksten i vakten gjelder også bare prøvebyen.
+
+## Runde 4 (18. nov dag) – tatt over av pakka «sjø»
+Detaljer, filer og prøving står i `docs/natt/sjo.md` (Runde 4, punkt 1–3). Kort:
+- **Krigskartets panel** viser nå hva det valgte tettstedet gir per døgn (skatt, varer, olje til basen, strøm, lojalitet, rute) og hva det gir
+  hvis du tar det – via den nye kroken `window.KRIG_TILLEGG` i `strategi-visning.js` (by/trekk/side). MutationObserveren `pyntKrig` er borte.
+- **Handelsrutene følger vegnettet** (`Region.rute(…, veger)`, `Region.tilSti`) når `window.VEGNETT` er lastet; ellers luftlinje som før.
+  Vegnettet hentes på PC når Region eller krigskartet er åpent (ikke i testene). En sprengt bru/tunnel på vegen (`graf._sperretAv`) stenger
+  ruta til den er reparert – den tar ikke omveg, og vakter hjelper ikke.
+- **Lojaliteten** i et tettsted du mister og tar igjen, blir høyst `Region.REGLER.lojGjentatt` = 35 (Claudes forslag), skatten vanlig.
+- **Motstanderne** får faktisk noe av tettstedene sine (sjekket: treff, forsterkning av garnisoner, AI-forsterkninger oftere, flere lag via
+  `Fraksjoner.lagTak`), og det vises i krigskartet. De har ingen kasse, så penger får de ikke.
+- Fortsatt ikke gjort: rutene bruker vegene, men ikke ferjene som eget ledd (vegnettets ferjelenker brukes slik vegnettet gir dem), og
+  vegkrater fra «Spreng vegen her» ER med (se sjo.md, del 2).
