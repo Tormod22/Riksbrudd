@@ -78,7 +78,9 @@ module.exports = {
           const n = fm.querySelectorAll('img.ansikt').length; ut.portretter = n === F.personer.length && n > 0; vf = document.getElementById('visfolk'); if (vf && !viste) vf.click(); if (!åpen0) FolkSpill.åpne(false); }
         // folk inne i byggene / oppe i tårnet (bare når 3D er åpent): vakta står 5,6 m over bakken i et prøvetårn
         if (typeof R3 !== 'undefined' && R3 && R3.ut && window.Folk3d && Folk3d.plassVed) { const u = R3.ut, b = { id: -77, type: 'vakttårn', x: u.cx + 10, y: u.cy + 10, ret: 0, nivå: 1, igjen: 0 }, pl = Folk3d.plassVed(b, 3);
-          ut.tårn = !!pl && pl.tårn && Math.abs(pl.z - ((hoyde3d(b.x, b.y) - u.h0) * R3.EX + 5.65)) < 1.5; } else ut.tårn = '2D';
+          // (18. nov) tårnet står på det høyeste punktet under fotavtrykket (LeirSpill.grunn3d, «bygg i skråning») – ikke midtens høyde
+          const G3 = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b, u, R3) : null, bunn = G3 ? G3.topp : (hoyde3d(b.x, b.y) - u.h0) * R3.EX;
+          ut.tårn = !!pl && pl.tårn && Math.abs(pl.z - (bunn + 5.65)) < 1.5; if (!ut.tårn) ut.tårnMål = { z: pl && pl.z, bunn }; } else ut.tårn = '2D';
         // hunden (regler), dekning bak bakketopp (regler) og sløret i et minikart
         { const E2 = window.Eventyr; const h = E2.Hund.fyll({ navn: 'Prøve' }); E2.Hund.steg(h, E2.REGLER.hund.sultTimer, 0, {}); const sulten = h.mett < E2.REGLER.hund.spisUnder; E2.Hund.steg(h, 1, 0, { leir: true, mat: () => true });
           ut.hund = sulten && h.mett === 100 && E2.Hund.truffet(h, 10, 0) > 0; ut.bakke = E2.Snik.bakkeImellom([100, 100, 104, 104, 100, 100], 1.6) && !E2.Snik.bakkeImellom([100, 100, 100, 100, 100, 100], 1.6);
