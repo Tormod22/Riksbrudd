@@ -117,4 +117,4 @@ Detaljer, filer og prøving står i `docs/natt/sjo.md` (Runde 4, punkt 1–3). K
 - **Motstanderne** får faktisk noe av tettstedene sine (sjekket: treff, forsterkning av garnisoner, AI-forsterkninger oftere, flere lag via
   `Fraksjoner.lagTak`), og det vises i krigskartet. De har ingen kasse, så penger får de ikke.
 - Fortsatt ikke gjort: rutene bruker vegene, men ikke ferjene som eget ledd (vegnettets ferjelenker brukes slik vegnettet gir dem), og
-  vegkrater fra «Spreng vegen her» er ikke med i `_sperretAv` (bare INFRA-ødeleggelser).
+  vegkrater fra «Spreng vegen her» ER med (se sjo.md, del 2).

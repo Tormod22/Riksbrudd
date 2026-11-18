@@ -50,6 +50,12 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
           o.senketEtter = n5; ok(!S.båter.includes(b5) && !s4.påBåt, `din småbåt senket etter ${n5} min`); o.svømte = s4.menn.filter(m => m.hp > 0).length + ' av ' + lev0;
           ok(s4.menn.filter(m => m.hp > 0).length === lev0 - Sjo.drukner(lev0), 'laget svømte i land med tap (' + o.svømte + ')'); FB.splice(FB.indexOf(f4), 1);
           await new Promise(r => setTimeout(r, 2500)); s4.menn.forEach((m, i) => { m.hp = hp0[i]; }); }
+        // (del 2) is: et lite sjøkart 6 km øst (unna minefeltet) der eneste lei går over en innsjø (120 moh.); med is stenger den, og seilasen sier fra
+        { const w = 30, hh = 10, vi = { x0: L.x + 6000, y0: L.y + 500, r: 100, w, h: hh, K: new Uint8Array(w * hh).fill(1), H: new Float32Array(w * hh).fill(0) };
+          for (let j = 3; j < 7; j++) for (let i = 0; i < w; i++) { vi.K[j * w + i] = 3; vi.H[j * w + i] = i >= 10 && i < 20 ? 120 : 0; }
+          const xa = L.x + 6250, xb = L.x + 8750, yy = L.y; ok(Sjo.rute(vi, xa, yy, xb, yy).sti && Sjo.rute(vi, xa, yy, xb, yy, { is: m => m > 1 }).feil === 'is', 'isen stenger leia over innsjøen');
+          const bi = Sjo.nyBåt(S, 'småbåt', xa, yy, -1), ri = await SjoSpill.seil(bi, xb, yy, -1, { vindu: vi, is: m => m > 1, stille: true }); o.is = ri.feil; ok(/isen stenger/.test(ri.feil || ''), 'seilasen sier «isen stenger»');
+          S.båter.splice(S.båter.indexOf(bi), 1); let isF = 'feil'; try { const f0 = SjoSpill.isFor(); isF = f0 === null ? 'ingen is' : typeof f0; } catch (e) { isF = 'unntak'; } o.isFor = isF; ok(isF !== 'unntak' && isF !== 'feil', 'is fra pakka «verden»: ' + isF); }
         // AI-lag som tar båt fra prøvehavna til prøvebrygga
         const ai = nyttLag('Vaktbåtfolk', L.x + 500, L.y + 40, 'rød'); ai.ai = { neste: 0, mål: [L.x + 4000, L.y] }; ENHETER.push(ai);
         const pl = await SjoSpill.planAI(ai, 0, 1, 1e6, [L.x + 4000, L.y], { vindu: v }); ok(pl && pl.plan && ai.båtPlan, 'AI-laget planlegger båt (' + (pl && (pl.feil || Math.round(pl.plan.meter) + ' m')) + ')');
@@ -77,5 +83,5 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
     if (lagretNå === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagretNå); SjoSpill.start(); if (lagret === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagret);
     KaierSpill.settData(K0); SjoSpill.test = test0; SjoSpill.vis(åpen); valgt = valgt0; skitten = true; o.penger = OppstartSpill.tilstand().penger === p0; if (!o.penger) o.feil.push('pengene ble ikke satt tilbake'); return o; });
   const ok = data.feil.length === 0;
-  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner, havn, bording (${data.bordet}), senking, ild tilbake (din småbåt senket etter ${data.senketEtter} min, ${data.svømte} i land), AI-båt, trykk i 3D, leirvalg og krigskart` : data.feil.join('; '), data };
+  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner, havn, bording (${data.bordet}), senking, ild tilbake (din småbåt senket etter ${data.senketEtter} min, ${data.svømte} i land), AI-båt, is (${data.isFor}), trykk i 3D, leirvalg og krigskart` : data.feil.join('; '), data };
 } };
