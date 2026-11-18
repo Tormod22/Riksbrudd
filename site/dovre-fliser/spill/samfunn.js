@@ -251,6 +251,18 @@
   // ================= FORRÆDERE OG SPIONER =================
   const snittLojal = F => (F.personer.length ? F.personer.reduce((s, p) => s + p.lojal, 0) / F.personer.length : 1);
   // ett døgnsteg (kalles med d døgn): noen kan bli forrædere, og forrædere kan lekke eller sabotere. Bare når k.auto.
+  // Sabotasje av et bygg går gjennom Leir.skad, som når fienden skader leiren: en byggeplass kan ødelegges (de ubrukte
+  // materialene kommer tilbake på lageret), et ferdig bygg skades men står (bare bygg som er mer enn 40 % hele).
+  // Byggesettets deler og bygg som alt er hardt skadet, røres ikke. Gir { tekst, ødelagt, id } eller null.
+  function saboter(L, r) {
+    if (!L || !L.bygg || !LB || !LB.skad) return null;
+    const mulige = L.bygg.filter(q => !(LB.BYGG[q.type] && LB.BYGG[q.type].del) && (q.igjen > 0 || q.hp > .4)), b = mulige[Math.floor(r() * mulige.length)]; if (!b) return null;
+    const navn = LB.BYGG[b.type] ? LB.BYGG[b.type].navn : 'Et bygg', plass = b.igjen > 0, u = LB.skad(L, b.id, REGLER.sabotasjeHp); if (!u) return null;
+    const mt = Object.entries(u.mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
+    const tekst = u.ødelagt ? `Sabotasje! Byggeplassen for ${navn.toLowerCase()} er ødelagt i natt.` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '') + ' Noen i leiren står bak.'
+      : `Sabotasje! ${plass ? 'Byggeplassen for ' + navn.toLowerCase() : navn} er skadet i natt. Noen i leiren står bak.`;
+    return { tekst, ødelagt: u.ødelagt, id: b.id };
+  }
   function spionSteg(S, F, L, dt, k, r) {
     const ut = { hendelser: [], lekk: false }, d = dt / REGLER.døgn; if (!k.auto) return ut;
     if (F.moral < 50 || snittLojal(F) < .5) for (const p of F.personer) if (!p.spion && p.lojal < REGLER.spionLojal && r() < 1 - Math.exp(-REGLER.spionBlir * d)) p.spion = true;
@@ -262,8 +274,7 @@
       S.mistanke++;
       if (!S.lekket && r() < .5) { S.lekket = true; ut.lekk = true; ut.hendelser.push('Noen har lekket til fienden: de vet nå hvor leiren ligger. Etterforsk i Samfunn-panelet.'); }
       else if (r() < .5 && F.mat > 5) { const m = F.mat * REGLER.sabotasjeMat; F.mat -= m; ut.hendelser.push(`Sabotasje! ${Math.round(m)} rasjoner er ødelagt i matlageret. Noen i leiren står bak.`); }
-      else { const mulige = L && L.bygg ? L.bygg.filter(q => q.igjen <= 0 && q.hp > .4 && !(LB && LB.BYGG[q.type] && LB.BYGG[q.type].del)) : [], b = mulige[Math.floor(r() * mulige.length)];
-        if (b) { b.hp = Math.max(.1, b.hp - REGLER.sabotasjeHp); ut.hendelser.push(`Sabotasje! ${LB && LB.BYGG[b.type] ? LB.BYGG[b.type].navn : 'Et bygg'} er skadet i natt. Noen i leiren står bak.`); } }
+      else { const s = saboter(L, r); if (s) { ut.hendelser.push(s.tekst); if (s.ødelagt) ut.ødelagt = true; } }
     }
     return ut;
   }
@@ -414,7 +425,7 @@
     if (S.døde.length && S.døde.every(q => (nå - q.tid) / REGLER.døgn > REGLER.gravFrist)) { const navn = S.døde.map(q => q.navn); S.gravlagte.push(...navn); S.døde = [];
       virkning(S, { navn: 'Ingen tok farvel', moral: -3, døgn: 2 }, nå); ut.hendelser.push(`${liste(navn)} ble lagt i jorda uten at noen tok farvel. Det tynger leiren.`); }
     ut.hendelser.push(...sykdomSteg(S, F, dt, kk, r), ...opplæringSteg(S, F, dt));
-    const sp = spionSteg(S, F, L, dt, kk, r); ut.hendelser.push(...sp.hendelser); ut.lekk = sp.lekk;
+    const sp = spionSteg(S, F, L, dt, kk, r); ut.hendelser.push(...sp.hendelser); ut.lekk = sp.lekk; ut.ødelagt = !!sp.ødelagt;
     // det som kommer av seg selv: flyktninger og kort (ett om gangen)
     if (k.auto) {
       if (S.nesteFlykt === null) S.nesteFlykt = nå + mellom(r, REGLER.flyktTid) * REGLER.døgn; if (S.nesteKort === null) S.nesteKort = nå + mellom(r, REGLER.kortTid) * REGLER.døgn;
@@ -426,7 +437,7 @@
   }
 
   const api = { REGLER, ny, fraJSON, tilf, profil, portrettSVG, ØNSKER, LYNNE, ønskeOppfylt, ønskeAndel, beste, SPES, gjørSpesialist, nySpesialist, harSpes, funnet, ankommet, fangerInn, nyAvhengig, avhengigMoral,
-    nyeFlyktninger, flyktTekst, flyktValg, flyktSvar, sykeI, smitt, settKarantene, sykdomSteg, LOVER, settLov, lovMoral, snittLojal, spionSteg, etterforsk, dom,
+    nyeFlyktninger, flyktTekst, flyktValg, flyktSvar, sykeI, smitt, settKarantene, sykdomSteg, LOVER, settLov, lovMoral, snittLojal, spionSteg, saboter, etterforsk, dom,
     lærerNivå, kanLære, lærere, startOpplæring, stoppOpplæring, opplæringSteg, død, gravlegg, minneMoral, virkning, KORT, velgKort, kortTekst, kortSvar, valg, steg };
   if (node) module.exports = api; else rot.Samfunn = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

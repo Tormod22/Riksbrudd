@@ -227,6 +227,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     const u = SR.steg(S, f, l, d, ktx(), r());
     for (const h of u.hendelser) logg(h);
     if (u.lekk && window.AI && AI.minne) for (const side of Object.keys(AI.minne)) AI.minne[side].leir = true;
+    // en byggeplass ødelagt av en forræder: tegn leiren på nytt (som når fienden ødelegger noe)
+    if (u.ødelagt && window.LeirSpill) { if (LeirSpill.oppdater3d) LeirSpill.oppdater3d(); if (LeirSpill.lagre) LeirSpill.lagre(); skitten = true; }
     if (u.hendelser.length || u.kort) lagre();
   });
   // hvert sekund: kort, panel, falne soldater, mekanikeren

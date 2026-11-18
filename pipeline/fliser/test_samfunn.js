@@ -84,6 +84,15 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
   const F2 = F0.ny(), S2 = S0.ny(9); const l0 = F2.personer[0].lojal; const e2 = S0.etterforsk(S2, F2, 5000, fast(0)); ok(!e2.funnet && F2.personer[0].lojal < l0, 'etterforskning uten forræder koster lojalitet');
   const u = S0.spionSteg(S0.ny(1), (() => { const f = F0.ny(); f.moral = 10; f.personer.forEach(p => { p.lojal = .05; }); return f; })(), L, 1440 * 30, { tid: 0, auto: false }, fast(0)); ok(!u.lekk && !u.hendelser.length, 'uten auto blir ingen forræder');
 }
+// ---------- sabotasje går gjennom Leir.skad (runde 4) ----------
+{ const L = L0.ny(); const brakke = sett(L, 'brakke', 0); L0.kjøpMateriale(L, 'tre', 50, betal); const r = L0.bygg(L, { type: 'brakke', x: 40, y: 0 }, betal); const plass = r.bygg;
+  // byggeplassen har brukt litt av materialene: resten skal tilbake på lageret når den ødelegges
+  plass.igjen = plass.totalt * .5; plass.hp = .2; const før = { ...L.lager };
+  const s1 = S0.saboter(L, fast(.99)); const tilbake = Object.keys(plass.mat || {}).some(k => (L.lager[k] || 0) > (før[k] || 0));
+  ok(s1 && s1.ødelagt && !L.bygg.includes(plass) && tilbake, 'en forræder kan ødelegge en byggeplass: ' + (s1 && s1.tekst));
+  const s2 = S0.saboter(L, fast(0)); ok(s2 && !s2.ødelagt && Math.abs(brakke.hp - (1 - S0.REGLER.sabotasjeHp)) < 1e-9 && L.bygg.includes(brakke), 'et ferdig bygg skades men står: ' + (s2 && s2.tekst));
+  brakke.hp = .35; ok(S0.saboter(L, fast(0)) === null && brakke.hp === .35, 'et hardt skadet bygg røres ikke');
+}
 // ---------- opplæring ----------
 { const F = F0.ny(), S = S0.ny(1), snekker = F.personer.find(p => p.yrke === 'snekker'), elev = F.personer.find(p => p.yrke === 'kokk'), f0 = elev.ferd.bygg;
   ok(S0.startOpplæring(S, F, elev.id, snekker.id, 'bygg').feil, 'en som ikke er god nok kan ikke lære bort');
