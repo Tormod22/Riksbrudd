@@ -1260,10 +1260,10 @@ function detaljIBakken(mat, side) {
       #ifdef USE_SPECULARMAP
       {
       float dypV = smoothstep(0.0, 1.0, maskeT.b);
-      vec3 grunnF = mix(vec3(0.45, 0.6, 0.52), diffuseColor.rgb, 0.4);
-      vec3 vannF = mix(grunnF, diffuseColor.rgb * vec3(0.7, 0.8, 0.9), dypV);
-      float skumV = (1.0 - smoothstep(0.0, 0.12, maskeT.b)) * (0.5 + 0.5 * sin(maskeT.b * 55.0 - uFxTid * 1.2 + flekk * 6.0)) * (0.35 + 0.65 * korn);
-      vannF = mix(vannF, vec3(0.93, 0.95, 0.96), skumV * 0.6);
+      vec3 grunnF = mix(diffuseColor.rgb, vec3(0.3, 0.47, 0.42), 0.5);
+      vec3 vannF = mix(grunnF, diffuseColor.rgb * vec3(0.7, 0.8, 0.92), dypV);
+      float skumV = (1.0 - smoothstep(0.0, 0.07, maskeT.b)) * (0.5 + 0.5 * sin(maskeT.b * 80.0 - uFxTid * 1.2 + flekk * 6.0)) * (0.3 + 0.7 * korn);
+      vannF = mix(vannF, vec3(0.9, 0.93, 0.94), skumV * 0.4);
       diffuseColor.rgb = mix(diffuseColor.rgb, vannF, vannM);
       }
       #endif
@@ -1293,22 +1293,22 @@ function detaljIBakken(mat, side) {
       #ifdef BAKKE_NAER
       #ifdef BAKKE_FX
       // SKARP BAKKE NAERT (18. nov): fire monstre i ett bilde (bakkeAtlas: r gress, g lyng, b grus, a berg) blandes etter kartfargen –
-      // gront = gress, graatt = grus/asfalt, bratt = berg, resten lyng og mose. To malestokker (ca. 3,6 m og 14 m per rute), den
+      // gront og olivengront = gress, brunlig = lyng og mose, graatt og jord = grus, bratt = berg. To malestokker (ca. 3,6 m og 14 m per rute), den
       // fine bare helt naert. To oppslag i stedet for fem.
       {
       float mettK = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
-      float wGress = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 9.0, 0.0, 1.0);
-      float wGrus = (1.0 - smoothstep(0.03, 0.1, mettK)) * (1.0 - wGress);
-      float wLyng = clamp(1.0 - wGress - wGrus, 0.0, 1.0);
+      float vegK = clamp((diffuseColor.g - diffuseColor.b) * 6.0, 0.0, 1.0) * smoothstep(0.02, 0.07, mettK);
+      float wGress = vegK * smoothstep(-0.08, 0.03, diffuseColor.g - diffuseColor.r);
+      float wLyng = vegK - wGress, wGrus = 1.0 - vegK;
       vec2 aUv = vUv * detaljSkala;
       vec4 a1 = texture2D(bakkeAtlas, aUv * 0.9 + vec2(0.13, 0.57));
       vec4 a2 = texture2D(bakkeAtlas, vec2(aUv.x * 0.8 - aUv.y * 0.6, aUv.x * 0.6 + aUv.y * 0.8) * 0.23 + vec2(0.41, 0.09));
       float heltN = 1.0 - smoothstep(5.0, 40.0, detAvst);
       vec4 at = mix(a2, a1 * 0.7 + a2 * 0.3, heltN);
-      vec3 fG = diffuseColor.rgb * mix(vec3(0.6, 0.76, 0.56), vec3(1.36, 1.25, 0.84), at.r);
-      vec3 fL = diffuseColor.rgb * mix(vec3(0.58, 0.6, 0.6), vec3(1.32, 1.18, 1.0), at.g);
-      vec3 fS = diffuseColor.rgb * mix(0.62, 1.34, at.b);
-      vec3 fB = diffuseColor.rgb * mix(0.56, 1.3, at.a);
+      vec3 fG = diffuseColor.rgb * mix(vec3(0.62, 0.78, 0.56), vec3(1.62, 1.5, 0.92), at.r);
+      vec3 fL = diffuseColor.rgb * mix(vec3(0.5, 0.54, 0.5), vec3(1.4, 1.32, 1.08), at.g);
+      vec3 fS = diffuseColor.rgb * mix(0.5, 1.42, at.b);
+      vec3 fB = diffuseColor.rgb * mix(0.5, 1.36, at.a);
       vec3 naerF = mix(fG * wGress + fL * wLyng + fS * wGrus, fB, bratt);
       diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * (1.0 - sno * 0.7) * (1.0 - vannM));
       }
@@ -1395,6 +1395,8 @@ async function bygg3d(cx, cy, S) {
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
   u.skygger = await treskygger(px, TW, u);
+  // omgivelsesskygge ved husene (18. nov, pakke «lys»): mørkere bakke inntil veggene og mørkere vegger nederst
+  if (bakkeFx() && u.hus) { u.husSkygger = await husskygger(px, TW, u); await husFot(u); }
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
@@ -2039,6 +2041,31 @@ async function treskygger(px, TW, u) {
   for (const art of Object.keys(u.trær || {})) { mal(u.trær[art], art === 'einer' ? .5 : .24, art === 'einer' ? .22 : .36); await pust(); }
   if (u.smått) { mal(u.smått.busk, .9, .22); await pust(); }
   return n;
+}
+// OMGIVELSESSKYGGE VED HUSENE (18. nov): bakken er mørkere de siste HUS_SKYGGE.bredde meterne inn mot en husvegg (malt i kartbildet,
+// som treskyggene – ingen nye trekanter), og veggene er mørkere nederst (hjørnefargene ved bakken, se husFot). Tallene er Claudes forslag.
+const HUS_SKYGGE = { bredde: 2.4, styrke: .3, fot: .72 };
+async function husskygger(px, TW, u) {
+  const mpp = 2 * u.S / TW; if (mpp > 2.4 || !u.hus.omriss) return 0;
+  const r = HUS_SKYGGE.bredde / mpp, r0 = Math.ceil(r); let n = 0;
+  for (const P of u.hus.omriss) { if (!P || P.length < 3) continue;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const ax = (P[j][0] + u.S) / mpp, ay = (u.S - P[j][1]) / mpp, bx = (P[i][0] + u.S) / mpp, by = (u.S - P[i][1]) / mpp, dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy; if (l2 < .01) continue;
+      const x0 = Math.max(0, Math.floor(Math.min(ax, bx)) - r0), x1 = Math.min(TW - 1, Math.ceil(Math.max(ax, bx)) + r0), y0 = Math.max(0, Math.floor(Math.min(ay, by)) - r0), y1 = Math.min(TW - 1, Math.ceil(Math.max(ay, by)) + r0);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), ex = ax + dx * t - x, ey = ay + dy * t - y, d = Math.sqrt(ex * ex + ey * ey) / r; if (d >= 1) continue;
+        // (hjørnene dekkes av to vegger: der halv styrke fra hver, så de ikke blir svarte)
+        const m = 1 - HUS_SKYGGE.styrke * (1 - d) * (1 - d) * (t > 0 && t < 1 ? 1 : .5), q = (y * TW + x) * 4; px[q] *= m; px[q + 1] *= m; px[q + 2] *= m; } }
+    n++; if ((n & 63) === 0 && børPuste()) await pust(); }
+  return n;
+}
+// Veggene mørkere nederst: hjørnene som står ved bakken (under en halv meter over terrenget) får mørkere farge, og fargen glir
+// over mot veggens egen oppover (hjørnefargene blandes over flaten).
+async function husFot(u) {
+  if (!u.hus.deler) return;
+  for (const d of Object.values(u.hus.deler)) { const pos = d.pos, kol = d.kol; if (!pos || !kol) continue;
+    for (let k = 0; k < pos.length; k += 3) { const g = (hoyde3d(pos[k] + u.cx, pos[k + 1] + u.cy, u) - u.h0) * R3.EX;
+      if (pos[k + 2] - g < .5) { kol[k] *= HUS_SKYGGE.fot; kol[k + 1] *= HUS_SKYGGE.fot; kol[k + 2] *= HUS_SKYGGE.fot; }
+      if ((k & 16383) === 0 && børPuste()) await pust(); } }
 }
 function bunnkart(px, TW, skog) {
   const W = 512, st = TW / W, rgb = new Uint8Array(W * W * 3), gress = new Uint8Array(W * W);
@@ -2953,7 +2980,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=7628d04568"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=2f0ea4a0a5"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=c6a733a755"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=cf59ab2885"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=e46f113456"></script>
@@ -2987,7 +3014,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior.js?v=e4c7eb43c3"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=773fa0b376"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
-<script src="/dovre-fliser/spill/filtre.js?v=5341367f19"></script>
+<script src="/dovre-fliser/spill/filtre.js?v=9c562fa418"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
@@ -3027,7 +3054,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
 <script src="/dovre-fliser/spill/meny.js?v=9b4e940c42"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/lys3d.js?v=9a4c34e7ab"></script>
+<script src="/dovre-fliser/spill/lys3d.js?v=64fdbf7d6c"></script>
 <script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/spillhud.js?v=aaabcd096f"></script>

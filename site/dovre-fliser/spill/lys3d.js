@@ -71,7 +71,7 @@
     const tuer = celler(18), stein = celler(56), stein2 = celler(20);
     const G = new Float32Array(W * W);
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4;
-      G[y * W + x] = .22 + .3 * gB(x, y);
+      G[y * W + x] = .14 + .24 * gB(x, y);
       // lyng: tuer (mørke mellomrom), fin struktur
       const [t1] = tuer(x, y), tue = 1 - s2(Math.min(1, t1 / 21));
       d[o + 1] = 255 * Math.min(1, .16 + .62 * tue * (.45 + .75 * lyngN(x, y)) + .1 * lyngN(y, x));
@@ -81,11 +81,16 @@
       // berg: grov flate, sprekker (to retninger) og lyse lavflekker
       const bn = bergN(x, y), sp = Math.min(Math.abs(bergS(x, y) - .5), Math.abs(bergS2(x, y) - .5)), sprekk = 1 - s2(Math.min(1, sp / .022)), lv = s2(Math.max(0, Math.min(1, (lav(x, y) - .6) / .1)));
       d[o + 3] = 255 * Math.max(0, Math.min(1, .3 + .5 * bn - .34 * sprekk + .22 * lv)); }
-    // gress: mange korte strå, lysest i tuppen, i litt ulike retninger
-    for (let k = 0; k < 15000; k++) { const x0 = rnd() * W, y0 = rnd() * W, len = 7 + rnd() * 16, v = -1.57 + (rnd() - .5) * 1.5, lys = .35 + .65 * rnd(), dx = Math.cos(v), dy = Math.sin(v), bøy = (rnd() - .5) * .05;
-      for (let t = 0; t < len; t++) { const x = Math.round(x0 + dx * t + bøy * t * t), y = Math.round(y0 + dy * t), q = (((y % W) + W) % W) * W + (((x % W) + W) % W), val = lys * (.5 + .5 * t / len);
-        if (val > G[q]) G[q] = val; } }
+    // gress: tuer av strå som spriker ut fra samme rot – brede nederst (3 punkter), smale og lyse i tuppen
+    const settG = (x, y, v) => { const q = (((Math.round(y) % W) + W) % W) * W + (((Math.round(x) % W) + W) % W); if (v > G[q]) G[q] = v; };
+    for (let k = 0; k < 1900; k++) { const cx = rnd() * W, cy = rnd() * W, n = 4 + Math.floor(rnd() * 5), tl = .45 + .55 * rnd();
+      for (let b = 0; b < n; b++) { const v = -1.57 + (rnd() - .5) * 2.3, len = 12 + rnd() * 26, lys = tl * (.55 + .45 * rnd()), dx = Math.cos(v), dy = Math.sin(v), bøy = (rnd() - .5) * .03;
+        for (let t = 0; t < len; t++) { const x = cx + dx * t + bøy * t * t, y = cy + dy * t, val = lys * (.45 + .55 * t / len);
+          settG(x, y, val); if (t < len * .7) { settG(x - dy, y + dx, val * .8); settG(x + dy, y - dx, val * .8); } } } }
     for (let k = 0; k < W * W; k++) d[k * 4] = 255 * Math.min(1, G[k]);
+    // lyng: små, skarpe blad og kvister oppå tuene (korte streker, to punkter brede), noen lyse, noen mørke
+    for (let k = 0; k < 11000; k++) { const x0 = rnd() * W, y0 = rnd() * W, len = 3 + rnd() * 5, v = rnd() * 6.283, dx = Math.cos(v), dy = Math.sin(v), lys = rnd() < .3 ? 30 + 50 * rnd() : 120 + 135 * rnd();
+      for (let t = 0; t < len; t++) for (let o = 0; o < 2; o++) { const x = ((Math.round(x0 + dx * t - dy * o) % W) + W) % W, y = ((Math.round(y0 + dy * t + dx * o) % W) + W) % W; d[(y * W + x) * 4 + 1] = lys * (.5 + .5 * d[(y * W + x) * 4 + 1] / 255 + .25); } }
     // småprikker i lyngen (blomster og lyse blad)
     for (let k = 0; k < 2600; k++) { const x = Math.floor(rnd() * W), y = Math.floor(rnd() * W); d[(y * W + x) * 4 + 1] = 200 + 55 * rnd(); if (rnd() < .5) d[(y * W + (x + 1) % W) * 4 + 1] = 190; }
     const t = new THREE.DataTexture(d, W, W, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
@@ -114,7 +119,7 @@
   let v1 = null, v2 = null, v3 = null, vx = null, vy = null, vz = null;
   function skygger(R) {
     const fx = window.KVAL && KVAL.fx ? KVAL.fx : null, n = fx ? fx.skygge[VW < 900 ? 1 : 0] : 0, sol = R.sol, r = R.renderer;
-    const vil = n > 0 && sol.intensity >= REGLER.minLys && !!R.ut && !!R.mesh;
+    const vil = n > 0 && !!R.ut && !!R.mesh;
     if (!vil) { if (L.på) { L.på = false; sol.castShadow = false; merk(R, false); if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; } S.n = 0; } return; }
     if (!v1) { v1 = new THREE.Vector3(); v2 = new THREE.Vector3(); v3 = new THREE.Vector3(); vx = new THREE.Vector3(); vy = new THREE.Vector3(); vz = new THREE.Vector3(); }
     let ny = false;
@@ -127,6 +132,13 @@
     // nye ting i scenen: nytt utsnitt straks, ellers en titt av og til (moduler som legger til ting litt etter litt)
     const nå = performance.now();
     if (S.sett !== R.settNr || nå - S.merket > 1500) { const før = L.kaster; S.merket = nå; merk(R, true); if (S.sett !== R.settNr || før !== L.kaster) ny = true; S.sett = R.settNr; }
+    // For svakt lys (natt uten måne): skyggekartet flyttes langt bort og tømmes – ingen skygger, men de samme programmene.
+    // (Å slå skyggene helt av og på ved skumring og daggry ville gitt nye skyggeprogrammer for hele scenen hver gang: et hakk.)
+    if (sol.intensity < REGLER.minLys) {
+      if (S.mørkt && !ny) return; S.mørkt = true; S.midt = null; L.mørkt = true;
+      const k = sol.shadow.camera; k.left = 9e5; k.right = 9e5 + 10; k.bottom = 9e5; k.top = 9e5 + 10; k.near = 1; k.far = 10; k.updateProjectionMatrix(); r.shadowMap.needsUpdate = true; return;
+    }
+    if (S.mørkt) { S.mørkt = false; L.mørkt = false; ny = true; }
     // området: der du går, eller der kameraet ser fra lufta
     const b = R.bane, u = R.ut, c = R.cam.position; let halv, mx, my;
     if (R.fot) { halv = REGLER.gåHalv; R.cam.getWorldDirection(v1); const h = Math.hypot(v1.x, v1.y) || 1; mx = c.x + v1.x / h * halv * .55; my = c.y + v1.y / h * halv * .55; }
@@ -144,7 +156,7 @@
     v3.set(mx, my, mz).sub(sol.position);
     const tex = 2 * halv / n, lx = Math.round(v3.dot(vx) / tex) * tex, ly = Math.round(v3.dot(vy) / tex) * tex, lz = -v3.dot(vz), k = sol.shadow.camera;
     k.left = lx - halv; k.right = lx + halv; k.top = ly + halv; k.bottom = ly - halv; k.near = lz - REGLER.motSola; k.far = lz + halv * 1.6 + 250; k.updateProjectionMatrix();
-    const dybde = k.far - k.near; sol.shadow.bias = -.35 / dybde; sol.shadow.normalBias = Math.max(.25, tex * 1.6);
+    const dybde = k.far - k.near; sol.shadow.bias = -(.35 + tex) / dybde; sol.shadow.normalBias = Math.max(.25, tex * 1.6);
     r.shadowMap.needsUpdate = true; L.tegnet++;
   }
 
@@ -166,6 +178,6 @@
   });
   // Tall for vakta og testene
   L.sjekk = () => { const R = typeof R3 !== 'undefined' && R3; if (!R) return null; const s = R.sol.shadow;
-    return { på: L.på, kart: s && s.map ? s.map.width : 0, kaster: L.kaster, tar: L.tar, tegnet: L.tegnet, halv: L.halv, dal: Array.from(DAL), atlas: !!atlasTex,
+    return { på: L.på, mørkt: !!L.mørkt, kart: s && s.map ? s.map.width : 0, kaster: L.kaster, tar: L.tar, tegnet: L.tegnet, halv: L.halv, dal: Array.from(DAL), atlas: !!atlasTex,
       glFeil: R.renderer.getContext().getError() }; };
 })();

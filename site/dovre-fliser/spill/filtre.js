@@ -340,8 +340,8 @@ void main() {
     else if (mobil && F.mobilSkala) { w = Math.round(W * F.mobilSkala); h = Math.round(H * F.mobilSkala); }
     let variant = null;
     if (std) {
-      // dybdeuskarphet bare på 'full' når du går; da trengs dybden. Kantutjevning: flerprøve-mål med dybde der det går, ellers FXAA.
-      const dof = std === 'full' && !!R.fot && G.harDybde && !(window.Interior3d && Interior3d.inne && R.bane && Interior3d.inne(R.bane.x, R.bane.y));
+      // dybdeuskarphet bare på 'full' når du går, og ikke på telefon; da trengs dybden. Kantutjevning: flerprøve-mål med dybde der det går, ellers FXAA.
+      const dof = std === 'full' && !!R.fot && !mobil && G.harDybde && !(window.Interior3d && Interior3d.inne && R.bane && Interior3d.inne(R.bane.x, R.bane.y));
       const ms = r.capabilities.isWebGL2 && !!THREE.WebGLMultisampleRenderTarget;
       type = dof ? (ms && !G.msFeil ? 'dybdeMS' : 'dybde') : 'vanlig';
       if (dof || (type === 'vanlig' && !ms && std === 'full')) { variant = {}; if (dof) variant.STD_DOF = ''; if (type === 'dybde' || (type === 'vanlig' && !ms)) variant.STD_AA = ''; }

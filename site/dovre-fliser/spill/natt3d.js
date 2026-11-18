@@ -28,8 +28,9 @@
       im.data[o] = verdi(x, y, 0, 4) * 255; im.data[o + 1] = verdi(x * 3 % W, y * 3 % W, 2, 5) * 255; im.data[o + 2] = verdi((x + 97) % W, (y + 41) % W, 1, 5) * 255; im.data[o + 3] = 255; }
     g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
   }
-  function rund(W, stopp) {
+  function rund(W, stopp, bak) {
     const c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), gr = g.createRadialGradient(W / 2, W / 2, 0, W / 2, W / 2, W / 2);
+    if (bak) { g.fillStyle = bak; g.fillRect(0, 0, W, W); }
     for (const [a, f] of stopp) gr.addColorStop(a, f); g.fillStyle = gr; g.fillRect(0, 0, W, W); return new THREE.CanvasTexture(c);
   }
   // Tåkeflak: myk kant med litt struktur
@@ -179,7 +180,7 @@
   // testene (sjekk.js): kompilerer vindusshaderen også der det ikke står hus (en shaderfeil logges som feil i nettleseren)
   N.prøvShadere = R => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: vinduTekstur() })); vinduShader(m.material);
     m.position.copy(R.cam.position); R.scene.add(m); R.renderer.compile(R.scene, R.cam); R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); return true; };
-  let tåkeTex = null, poolTex = null, glødTex = null;
+  let tåkeTex = null, poolTex = null, glødTex = null, lysTex = null;
   // grafikknivået byttet: terrenget har fått nytt materiale (byttBakke i index.html)
   if (KROKER.bakke) KROKER.bakke.push((u, R) => { if (!R.mesh.material.userData.enkel) bakkeShader(R.mesh.material); });
   KROKER.sett3d.push((u, R) => {
@@ -205,6 +206,32 @@
       for (const o of [flekk, glød]) { o.frustumCulled = false; o.visible = false; R.scene.add(o); R.nattObj.push(o); }
       R.nattLys = { flekk, glød };
     } else R.nattLys = null;
+    // LYS PÅ BAKKEN (18. nov, pakke «lys», KVAL.fx.lys): lyktene og vinduene lyser opp bakken rundt seg. Flatene ganger lyset inn i
+    // det som ligger under (bakken blir opptil dobbelt så lys der – vegen, gresset og snøen synes i lyset), i stedet for bare å legge
+    // en farge oppå. Ingen nye lys i scenen. Flatene følger bakkens helning. Tallene er Claudes forslag.
+    R.nattLys2 = null;
+    if (window.KVAL && KVAL.fx && KVAL.fx.lys) {
+      // (blandingen bruker bare fargen, ikke gjennomsiktigheten: lysstyrken ligger i fargen, svart = ingenting)
+      if (!lysTex) lysTex = rund(64, [[0, 'rgb(255,236,200)'], [.25, 'rgb(204,179,136)'], [.55, 'rgb(87,71,51)'], [.8, 'rgb(26,20,14)'], [1, 'rgb(0,0,0)']], '#000');
+      const pkt = [];
+      if (u.lys) for (let k = 0; k < u.lys.length; k += 4) { const v = u.lys[k + 3]; pkt.push([u.lys[k] + Math.cos(v) * 1.6, u.lys[k + 1] + Math.sin(v) * 1.6, 26, 1]); }
+      // vinduslys: en myk flekk rundt en fast andel av husene (de nærmeste midten først)
+      if (u.hus && u.hus.omriss) { const hus = [];
+        for (const P of u.hus.omriss) { if (!P || !P.length || P.leir) continue; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of P) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+          const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, hv = Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1; if (hv > .6) continue;
+          hus.push([cx, cy, Math.min(60, Math.max(x1 - x0, y1 - y0) + 14), .45 + .4 * hv, cx * cx + cy * cy]); }
+        hus.sort((a, b) => a[4] - b[4]); for (const h of hus.slice(0, mob() ? 300 : 900)) pkt.push(h); }
+      // hver flekk to ganger (en mindre oppå): lyset ganges inn to ganger, så midten blir opptil fire ganger så lys som bakken rundt
+      for (let k = pkt.length - 1; k >= 0; k--) pkt.push([pkt[k][0], pkt[k][1], pkt[k][2] * .62, pkt[k][3]]);
+      if (pkt.length) {
+        const pg2 = new THREE.PlaneGeometry(1, 1), mm = new THREE.MeshBasicMaterial({ map: lysTex, transparent: true, depthWrite: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.DstColorFactor, blendDst: THREE.OneFactor, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
+        const fl2 = new THREE.InstancedMesh(pg2, mm, pkt.length), d2 = new THREE.Object3D(), opp = new THREE.Vector3(0, 0, 1), nv = new THREE.Vector3(), farge = new THREE.Color();
+        const hz = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX;
+        pkt.forEach(([x, y, str, lys], k) => { const z = hz(x, y); nv.set(hz(x - 3, y) - hz(x + 3, y), hz(x, y - 3) - hz(x, y + 3), 6).normalize();
+          d2.position.set(x, y, z + .5); d2.quaternion.setFromUnitVectors(opp, nv); d2.scale.set(str, str, 1); d2.updateMatrix(); fl2.setMatrixAt(k, d2.matrix); fl2.setColorAt(k, farge.setScalar(lys)); });
+        fl2.frustumCulled = false; fl2.visible = false; fl2.renderOrder = 1; R.scene.add(fl2); R.nattObj.push(fl2); R.nattLys2 = fl2; N.lysflekker = pkt.length / 2;
+      }
+    }
     // tåkebanker i dalbunnen
     if (!tåkeTex) tåkeTex = tåkeTekstur();
     let f = 3; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
@@ -289,6 +316,8 @@
     }
     // vinduer og gatelys
     U.uVindu.value = trinn(.15, .6, m) * (mob() ? .9 : 1); U.uAndel.value = Vaer.vinduAndel(h);
+    // (lyset på bakken: flatene ganger inn bakken under, to ganger sterkere jo mørkere det er)
+    if (R.nattLys2) { const a2 = trinn(.25, .7, m); R.nattLys2.visible = a2 > .01 && !!(window.KVAL && KVAL.fx && KVAL.fx.lys); R.nattLys2.material.color.setScalar(a2); }
     if (R.nattLys) { const a = trinn(.3, .7, m); R.nattLys.flekk.visible = R.nattLys.glød.visible = a > .01; R.nattLys.flekk.material.opacity = a * .5; R.nattLys.glød.material.opacity = a * .9; }
     // skyskygger og skyfart: skyene driver med vinden i spilltid (2 × vindfarten), skyggene bare når sola skinner gjennom glipper
     const vf = V.vind ? V.vind.fart : 3, vr = V.vind ? V.vind.retning : .4, fl = U.uSkyFlytt.value;
