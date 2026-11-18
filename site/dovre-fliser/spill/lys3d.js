@@ -26,7 +26,7 @@
     disDag: .1, disMorgen: .8, lagTykkelse: 70, perMeter: 1 / 380,
   };
   // delte uniformer: U for skyggeleggere som kobler seg på selv; DAL/DALF ligger i three.js sitt bibliotek (alle innebygde materialer)
-  const U = { uFxTid: { value: 0 } };
+  const U = { uFxTid: { value: 0 }, uNakenS: { value: 0 } };
   const DAL = new Float32Array(4), DALF = new Float32Array(3);
   const L = { REGLER, U, DAL, DALF, på: false, tegnet: 0, kaster: 0, tar: 0, halv: 0 };
   window.Lys3d = L;
@@ -42,8 +42,9 @@
     C.fog_pars_vertex = C.fog_pars_vertex.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vDalZ;');
     C.fog_vertex = C.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = - mvPosition.z;\n\tvDalZ = dot(viewMatrix[2].xyz, mvPosition.xyz - viewMatrix[3].xyz);');
     C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vDalZ;\n\tuniform vec4 uDalT;\n\tuniform vec3 uDalF;');
-    C.fog_fragment = C.fog_fragment.replace('#ifdef USE_FOG', '#ifdef USE_FOG\n\tfloat dalT = uDalT.x * exp(-max(vDalZ - uDalT.y, 0.0) / max(uDalT.z, 1.0)) * (1.0 - exp(-fogDepth * uDalT.w));\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uDalF, clamp(dalT, 0.0, 1.0));');
-    // (verdiene er tallrekker, som three.js ikke kopierer per materiale: alle materialer deler de samme)
+    C.fog_fragment = C.fog_fragment.replace('#ifdef USE_FOG', '#ifdef USE_FOG\n\tif (uDalT.x > 0.0) {\n\tfloat dalT = uDalT.x * exp(-max(vDalZ - uDalT.y, 0.0) / max(uDalT.z, 1.0)) * (1.0 - exp(-fogDepth * uDalT.w));\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uDalF, clamp(dalT, 0.0, 1.0));\n\t}');
+    // (verdiene er tallrekker, som three.js ikke kopierer per materiale: alle materialer deler de samme. Uten tåke i dalene – Lav, eller
+    // «Lys og skygger» av – er uDalT.x = 0, og skyggeleggeren hopper over regningen.)
     for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) { lib.uniforms.uDalT = { value: DAL }; lib.uniforms.uDalF = { value: DALF }; }
     DAL[2] = REGLER.lagTykkelse; DAL[3] = REGLER.perMeter;
   };
@@ -117,6 +118,20 @@
       if (k) nk++; if (t) nt++;
     });
     L.kaster = nk; L.tar = nt;
+    vinterløv();
+  }
+  // Trærnes dybdemateriale (TreDeler.dybde() i index.html, pakka «natur») kjenner ikke vinteren: de nakne løvtrærne ville kastet
+  // skygge av hele krona. Samme regel som fargeleggeren (vaer-visning.js treVær «løv»): om vinteren faller det meste av bladfeltet
+  // i bladteksturen (øverst til venstre) bort – også i skyggekartet. Grana og furua bruker andre felt og blir ikke berørt.
+  function vinterløv() {
+    const d = typeof TreDeler !== 'undefined' && TreDeler.dyb; if (!d || d.userData.vinterløv) return;
+    d.userData.vinterløv = true;
+    d.onBeforeCompile = sh => { sh.uniforms.uNakenS = U.uNakenS;
+      sh.fragmentShader = 'uniform float uNakenS;\n' + sh.fragmentShader.replace('#include <alphatest_fragment>', `#include <alphatest_fragment>
+        #ifdef USE_ALPHAMAP
+        if (uNakenS > 0.5 && vUv.x < 0.5 && vUv.y > 0.5 && fract(sin(dot(floor(vUv * 46.0), vec2(12.9898, 78.233))) * 43758.5453) > 0.22) discard;
+        #endif`); };
+    d.customProgramCacheKey = () => 'tredybde-vinter'; d.needsUpdate = true;
   }
   function kastKart(sol) { const s = sol.shadow; if (s.map) { s.map.dispose(); s.map = null; } if (s.mapPass) { s.mapPass.dispose(); s.mapPass = null; } }
   const S = { n: 0, midt: null, halv: 0, dir: null, lod: null, sett: -1, merket: 0, myk: null };
@@ -184,6 +199,8 @@
   KROKER.ramme3d.push(R => {
     if (!L.koblet || !R.ut) return;
     U.uFxTid.value = (performance.now() / 1000) % 10000;
+    // vinter: nakne løvtrær også i skyggekartet (se vinterløv); skyggekartet tegnes på nytt når årstiden skifter
+    const naken = window.VAER && VAER.årstid === 'vinter' ? 1 : 0; if (U.uNakenS.value !== naken) { U.uNakenS.value = naken; S.dir = null; }
     skygger(R); dalen(R);
   });
   // Tall for vakta og testene
