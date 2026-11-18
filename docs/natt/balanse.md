@@ -36,9 +36,50 @@ tropp av fire (de to «fri» og to fra bygg) og vakttårn ved start, 500 l diese
 alle kort, «Forsvar leiren» ved alarm. NB: skriptet kjøpte kontrollrommet så snart kassa hadde 16 mill. – det skjedde alt på dag 1
 (17,5 mill. igjen etter de andre byggene), altså ikke slik rådet sier. Kjøringen startet FØR fredstiden for motstanderne var lagt inn.
 
-TABELL_HER
+**Kjøring 1** (før fredstiden for motstanderne; skriptet kjøpte kontrollrommet alt på dag 1, 1,7 mill. igjen). Stoppet etter
+tre døgn fordi leiren var borte – resten sa ikke noe om røverne:
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1.7 mill. | 6 | 63 | 44 | brakke aggregat drivstofftank vakttårn kontrollrom | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | ? | KONTROLLROM OK kontrollrom -40,40 |
+| 2 | 2.2 mill. | 6 | 49 | 28 | brakke(27%) aggregat(26%) drivstofftank(24%) vakttårn(81%) kontrollrom(21%) | Vaktlaget:0 Ola (deg):1 Tropp 1:1 | ? | FORSVAR |
+| 3 | 2.2 mill. | 6 | 39 | 22 | vakttårn(19%) | Vaktlaget:0 Ola (deg):1 Tropp 1:1 | ? | FORSVAR |
+
+- Bølge 1 (ett lag, 12 mann) kom etter 24 spilltimer og ble slått (+450 000 kr). Kystalliansens lag fant leiren på dag 2, slo ut
+  Vaktlaget og ødela byggene (21–27 %); dag 3 sto bare vakttårnet igjen. Derfor fredstiden i `fraksjoner-visning.js`.
+
+**Kjøring 2** (all koden i denne pakka; kontrollrommet først fra dag 3 når kassa har 14 mill., slik rådet sier):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.5 mill. | 6 | 63 | 36 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | ? | FORSVAR |
+| 2 | 14.0 mill. | 6 | 63 | 30 | brakke(95%) aggregat(95%) drivstofftank(95%) vakttårn(95%) | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne. |
+| 3 | 2.7 mill. | 9 | 57 | 24 | brakke(94%) aggregat(34%) drivstofftank(94%) vakttårn(93%) kontrollrom | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 2 | Varsel: et røverlag er på vei mot leiren fra sørøst (1,7 km unna). Bølge 2.; Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne. |
+| 4 | 2.7 mill. | 9 | 30 | 6 |  | Vaktlaget:3 Ola (deg):1 Tropp 1:3 | 3 | Varsel: et røverlag er på vei mot leiren fra sørvest (1,4 km unna). Bølge 3.; Sabotasje! Røverne har ødelagt aggregat i leiren og stikker av.; Spolingen stoppet: et lag er i ildkamp, et bygg i leiren er ødelagt.; Brannen tar Vakttårn i leiren – det er ødelagt.; Brannen tar Brakke i leiren – det er ødelagt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Brannen tar Dieseltank i leiren – det er ødelagt.; Brannen tar Kontrollrom i leiren – det er ødelagt. |
+
+- Røverne er ikke lenger hovedinntekten: 450 000 og 600 000 kr for bølge 1 og 2; kassa holdt seg på 13,5–14 mill. til
+  kontrollrommet ble kjøpt på dag 3. Bølgene kom etter 24 og 50 spilltimer med ett lag hver, og leiren tålte dem (byggene 94–95 %).
+- Motstanderne kom ikke til leiren i fredstiden.
+- **Dag 4 falt leiren likevel** – ikke på grunn av røverbølgens størrelse, men fordi bølge 3 var en sabotørbølge (krig-visning.js:
+  «Sabotasje! Røverne har ødelagt aggregat i leiren og stikker av») og brannen etterpå (verden-visning.js) spredte seg til vakttårn,
+  brakke, dieseltank og kontrollrom. Samtidig var maten nesten tom (6 rasjoner, moral 30): skriptet kjøpte aldri mat, og
+  opplæringen sier ikke at det må gjøres. Det er de neste tingene å balansere (filene eies av andre pakker, så de er ikke rørt her):
+  ingen sabotører de første bølgene/døgnene, brann som ikke tar hele leiren (avstand mellom byggene, slukking med folk), og et råd/mål om mat.
+- Målet («står støtt etter sju døgn») er altså IKKE nådd ennå.
+
+
+## Også gjort (punkt 5)
+- (a) Avbrutt bølge: se tabellen (samme bølge igjen etter 20 spillminutter). Ikke prøvd i nettleser med en ekte omlasting.
+- (b) Du sover av deg selv i leiren også før brakka står, halvt så godt (`karakter.js`, Claudes forslag). Ikke prøvd i nettleser.
+- (c) Første hus og butikker, se tabellen. Ikke prøvd i nettleser.
+- (d) Steget «Gå i 3D» i opplæringen velger karakterlaget før Gå trykkes, så du starter ved karakteren (`opplaering.js`,
+  lytter i fangstfasen). Ikke prøvd i nettleser.
 
 ## Ikke gjort
-- (b) Karakteren blir «utslitt» når du spoler – ikke rørt.
-- (d) «Gå» fra opplæringen setter deg ikke ved karakterlaget – ikke rørt.
-- Ingen ny sjudøgnskjøring med fredstiden for motstanderne (tiden rakk ikke).
+- En full sjudøgnskjøring der leiren står (se over: sabotører, brann og mat).
+- Vakten «ui» ga KAST på mobil i mitt eget prøveskript (`… reading 'getBoundingClientRect'`); de andre vaktene var OK på PC og
+  mobil, og «ui» var OK på PC. Ikke undersøkt om det er prøveskriptet (390 × 844, isMobile) eller en feil.
+
+## Vakt
+`pipeline/fliser/vakter/balanse.js`: tallene for bølgene, byttet, første bølge, kostnaden for de fire første byggene + diesel
+(≤ 35 mill.), hyllene, og at testspillet har stridsvogna og rakettartilleriet. OK på PC og mobil (32,8 mill.).
