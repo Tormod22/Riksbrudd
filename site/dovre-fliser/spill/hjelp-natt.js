@@ -2,6 +2,21 @@
 // Laget av pipeline/fliser/samle_hjelp.py fra docs/natt/*-hjelp.json – ikke rediger for hånd.
 window.HJELP_TILLEGG = [
 [
+"Den første uka",
+"Bygg brakke, aggregat og dieseltank først, kjøp 500 l diesel, sett folk i arbeid og lag en tropp. Et vakttårn med en person på «Vakt» melder røverne før de er i leiren. Kontrollrommet (9 mill. kr) kan vente til leiren står. Den første røverbølgen kommer tidligst etter et døgn (eller en halv time spilling), og de tre første døgnene er det bare ett røverlag om gangen.",
+"Kom i gang"
+],
+[
+"Røverne og byttet",
+"Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, kommer den samme bølgen tilbake litt senere.",
+"Lag og strid"
+],
+[
+"Brann og mat i leiren",
+"Inne i leiren er det grusplass, så brann sprer seg sakte der. Folk hjemme på «Vakt» og «Bygg» slokker en brann innen 150 m fra leiren – jo flere, jo fortere – og byggene tar skade litt etter litt. Når det brenner i leiren, stopper spolingen. Maten: hver person spiser én rasjon per døgn. Når den rekker under to døgn, sier loggen fra: kjøp mat i Folk-panelet, send et lag på jakt, fisk eller så en åker – eller bygg drivhus.",
+"Leiren"
+],
+[
 "Folk som personer",
 "Trykk «Vis folkene» i Folk og så på et navn: du får et kort med ansikt, historie, lynne og hva personen ønsker seg. Får folk ønsket sitt oppfylt, blir de mer trofaste. ★ betyr spesialist.",
 "Leiren"
@@ -200,6 +215,16 @@ window.HJELP_TILLEGG = [
 "Når angrepet er over",
 "Et angrep er slått tilbake når røverne er slått ut, eller når de har trukket seg unna og holdt seg over 2,5 km fra leiren i en halv time. Da får dere belønningen, og neste bølge kommer senere.",
 "Leiren"
+],
+[
+"Lys og skygger",
+"På Høy og Middels grafikk kaster sola (og månen) skygger fra trær, hus, bruer og leirens bygg, bildet får en lett fargesetting (varm kveld, kald vinter), bakken er skarpere nært, vannet er lysere på grunna, skyene henger sammen med skyggene sine, og tåka ligger i dalbunnen. Går bildet tregt, slår du alt av med «Lys og skygger» i ☰ – eller velger lavere grafikk.",
+"Vær, lyd og bilde"
+],
+[
+"Lys om natta",
+"Gatelys og vinduer lyser opp bakken rundt seg om natta. Skyggene kommer da fra månen når den er oppe.",
+"Vær, lyd og bilde"
 ],
 [
 "Trær, gress og lyng",
