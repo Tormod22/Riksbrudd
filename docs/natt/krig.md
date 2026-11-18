@@ -203,3 +203,10 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
 - spill/kontrollrom-visning.js, `rapport()`: lag fra en side dere har våpenhvile med (`AI.hvile('blå', side)`), tas ut av lista radioen
   melder «Fiende sett» fra (én hjelpefunksjon + filter på `nå.fiender`). De står fortsatt på kartet som «sist sett» (e.sett settes for alle).
 - Prøvd (p6c.js, to lag 120 m fra hverandre): 0 «Fiende sett» under hvilen, 2 rett etter «Bryt».
+
+### 4b. Motstanderen foreslår fangebytte
+- Har en side noen av dine (`T.tatt`) og du noen av deres (`T.fanger`), kan den foreslå et bytte én mot én (`Krig.forslagBytte`): hvert
+  6. spilltime 50 % sjanse (bare av seg selv utenfor testene), forslaget står i 12 timer (`Krig.REGLER.fange.forslagHver/-Sjanse/-Varer`,
+  Claudes forslag). Melding i loggen (og «riksbrudd-hendelse» som stopper spolingen), og øverst i Leir → Mål → Fanger en rad med
+  «Godta» / «Avslå». `KrigSpill.foreslå(side)`, `KrigSpill.svarForslag(ja)`, `T.forslag` (lagres). «Godta» bruker `byttEgne(i, maks)`.
+- Vakta prøver forslag + Godta (din mann kommer hjem i Folk, én av deres fanger går). test_krig.js har to nye sjekker.

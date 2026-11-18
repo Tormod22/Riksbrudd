@@ -27,7 +27,7 @@
   const harVm = s => erLag(s) && s.side !== 'blå' && !s.raid && !s.post;
 
   // ---------- tilstanden (lagres per leir i «riksbrudd-krig») ----------
-  const NØKKEL = 'riksbrudd-krig', ny = () => ({ fanger: [], etter: [], fred: {}, fredN: {}, brudd: {}, vern: {}, beleiring: {}, raid: {}, tatt: [] });
+  const NØKKEL = 'riksbrudd-krig', ny = () => ({ fanger: [], etter: [], fred: {}, fredN: {}, brudd: {}, vern: {}, beleiring: {}, raid: {}, tatt: [], forslag: null });
   let T = ny(), klar = false; const RØYK = [], LYS = []; let HELI = null, modus = null, natt0 = 0;
   const leirId = () => { const L = leir(); return L ? Math.round(L.x) + ',' + Math.round(L.y) : null; };
   // (runde 4) lagres også: røyk og lys som brenner, helikopteret i lufta og kjøreordre for egne kjøretøy (målet; ruta legges på nytt)
@@ -139,11 +139,29 @@
   api.byttPenger = i => { const f = T.fanger[i]; if (!f || f.til) return false; const kr0 = K.byttePris(f.n); T.fanger.splice(i, 1); OppstartSpill.gi(kr0);
     logg(`${fnavn(f.side)} har kjøpt tilbake ${fangeTekst(f.n)} for ${kr(kr0)}.`); lagre(); return true; };
   // bytte én mot én: dine som er tatt, kommer hjem (de står som «fri» i Folk)
-  api.byttEgne = i => { const f = T.fanger[i]; if (!f || f.til) return false; const tatt = egneTatt(f.side), k = Math.min(f.n, tatt.length);
+  api.byttEgne = (i, maks) => { const f = T.fanger[i]; if (!f || f.til) return false; const tatt = egneTatt(f.side), k = Math.min(f.n, tatt.length, maks > 0 ? maks : Infinity);
     if (!k) { logg(`${fnavn(f.side)} har ingen av dine å bytte.`); return false; }
     const hjem = tatt.slice(0, k); T.tatt = T.tatt.filter(q => !hjem.includes(q)); f.n -= k; fjernTom(i); const Fo = folk(); let inn = 0;
     if (Fo && window.Tropper && window.FolkRegler) { for (const p of Tropper.oppløs({ menn: hjem.map(q => ({ navn: q.navn, rolle: q.rolle, hp: q.hp, erf: q.erf, person: q.person })) }, FolkRegler.OPPGAVER)) { p.id = Fo.neste++; Fo.personer.push(p); inn++; } lagreLeir(); }
     logg(`Fangeutveksling med ${fnavn(f.side)}: ${k} mot ${k}. ${hjem.map(q => q.navn.split(' ')[0]).join(', ')} er tilbake i leiren${inn ? ' (de står som «fri» i Folk)' : ''}.`); lagre(); skitten = true; return true; };
+  // (runde 4, del 2) motstanderen foreslår selv et bytte når de har noen av dine og du har noen av deres (bare av seg selv utenfor
+  // testene); svaret gis under Leir → Mål → Fanger
+  const fangerFra = side => T.fanger.reduce((v, f) => v + (f.side === side && !f.til ? f.n : 0), 0);
+  api.foreslå = side => { const k = K.forslagBytte(fangerFra(side), egneTatt(side).length); if (!k || T.forslag) return false;
+    T.forslag = { side, n: k, til: tid + R.fange.forslagVarer }; logg(`${fnavn(side)} foreslår et fangebytte: ${k} av deres mot ${k} av dine. Svar under Leir → Mål → Fanger.`);
+    hend('annet', `${fnavn(side)} foreslår et fangebytte`); lagre(); return true; };
+  api.svarForslag = ja => { const q = T.forslag; if (!q) return false; T.forslag = null;
+    if (!ja) { logg(`Du avslo fangebyttet med ${fnavn(q.side)}.`); lagre(); return true; }
+    let igjen = K.forslagBytte(Math.min(q.n, fangerFra(q.side)), egneTatt(q.side).length);
+    if (!igjen) { logg(`Fangebyttet med ${fnavn(q.side)} kunne ikke gjennomføres – noen av fangene er ikke lenger her.`); lagre(); return false; }
+    for (let i = T.fanger.length - 1; i >= 0 && igjen > 0; i--) { const f = T.fanger[i]; if (!f || f.side !== q.side || f.til) continue; const før = egneTatt(q.side).length; api.byttEgne(i, igjen); igjen -= før - egneTatt(q.side).length; }
+    return true; };
+  let forslagAkk = 0;
+  function forslagSteg(min) {
+    if (T.forslag && tid > T.forslag.til) { logg(`Forslaget om fangebytte fra ${fnavn(T.forslag.side)} gikk ut.`); T.forslag = null; lagre(); }
+    if (!auto() || T.forslag || !T.tatt.length || !T.fanger.length) return; forslagAkk += min; if (forslagAkk < R.fange.forslagHver) return; forslagAkk = 0;
+    for (const side of new Set(T.tatt.map(q => q.side))) if (rng() < R.fange.forslagSjanse && api.foreslå(side)) break;
+  }
   // arbeid: fangene er halve arbeidere på oppgaven (null = de sitter innestengt). Blar gjennom oppgavene når o mangler.
   api.arbeid = (i, o) => { const f = T.fanger[i]; if (!f) return false; const liste = [null, ...R.fange.oppgaver];
     if (o === undefined) o = liste[(liste.indexOf(f.arbeid || null) + 1) % liste.length]; if (o !== null && !R.fange.oppgaver.includes(o)) return false;
@@ -408,7 +426,7 @@
     for (let i = RØYK.length - 1; i >= 0; i--) if (RØYK[i].til <= tid) { RØYK.splice(i, 1); skitten = true; }
     for (let i = LYS.length - 1; i >= 0; i--) if (LYS[i].til <= tid) { for (const e of ENHETER) if (avst(e, LYS[i]) <= R.lys.radius) e.siktSkitten = true; LYS.splice(i, 1); skitten = true; }
     for (let i = STØY.length - 1; i >= 0; i--) if (STØY[i].til <= tid) STØY.splice(i, 1);
-    fredSteg(); avhørFerdig(); leverFanger(L); bakhold(); etterretning(min, L); droner(); koblArbeid(); if (T.fanger.length) fangeSteg(min, L);
+    fredSteg(); avhørFerdig(); leverFanger(L); bakhold(); etterretning(min, L); droner(); koblArbeid(); if (T.fanger.length) fangeSteg(min, L); forslagSteg(min);
     // ved leiren: røyk, lys og støy fylles opp
     for (const s of egne()) if (s.krig && Math.hypot(s.x - L.x, s.y - L.y) <= R.sårede.avstand) { s.krig.røyk = R.røyk.antall; s.krig.lys = R.lys.antall; s.krig.støy = R.støy.antall; }
     if (auto()) {
@@ -483,6 +501,10 @@
     if (T.fanger.length || T.tatt.length) {
       hode.append(e('h3', { 'data-fane': 'mål' }, 'Fanger'));
       const fb = e('div', { klasse: 'krigliste', id: 'krigfanger' }), FA = R.fange, oppg = o => (window.FolkRegler && FolkRegler.OPPGAVE[o] ? FolkRegler.OPPGAVE[o].navn : o).toLowerCase();
+      if (T.forslag) { const q = T.forslag, v = e('div', {}, `${fnavn(q.side)} foreslår et fangebytte: ${q.n} mot ${q.n}`), h = e('div', { klasse: 'krigknapper' });
+        v.append(e('small', {}, `De gir tilbake ${q.n} av dine og får like mange av sine. Svar innen ${Math.max(1, Math.round((q.til - tid) / 60))} t.`));
+        h.append(kn('Godta', () => api.svarForslag(true), { 'data-krig': 'forslag-ja' }), kn('Avslå', () => api.svarForslag(false), { 'data-krig': 'forslag-nei' }));
+        fb.append(e('div', { klasse: 'rad fange' }, v, h)); }
       T.fanger.forEach((f, i) => {
         const st = [f.til ? `avhøres, ferdig om ${Math.max(1, Math.round(f.til - tid))} min` : f.avhørt ? 'avhørt' : 'ikke avhørt – de vet hvor lagene deres står'];
         if (f.arbeid) { const af = fangeArbeidF(f.arbeid), v = api.vakter();

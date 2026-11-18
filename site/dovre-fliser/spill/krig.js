@@ -56,7 +56,10 @@
     // er «ja» + «jaMoral» × moralen/100, og «forræder» av dem som blir med, arbeider egentlig for fienden. Nei: spør igjen om
     // «nyttForsøk» døgn. De nye er mer trofaste («lojal») enn fanger som slippes rett inn (spill/samfunn.js).
     fange: { pris: 150000, arbeid: .5, maksF: 2, oppgaver: ['bygg', 'hogst', 'riving', 'frakt'], rømBase: .03, rømLav: .25, perVakt: 4,
-      mat: 1, døgn: 3, ja: .3, jaMoral: .3, forræder: .1, nyttForsøk: 1, lojal: [.4, .6] },
+      mat: 1, døgn: 3, ja: .3, jaMoral: .3, forræder: .1, nyttForsøk: 1, lojal: [.4, .6],
+      // (runde 4, del 2) motstanderen foreslår selv et bytte når begge har fanger: prøver hvert «forslagHver» spillminutt med sjansen
+      // «forslagSjanse»; forslaget står i «forslagVarer» minutter
+      forslagHver: 360, forslagSjanse: .5, forslagVarer: 720 },
   };
   const RAD = Math.PI / 180;
   // minste vinkel mellom to retninger (0–π)
@@ -228,10 +231,12 @@
   const kanSpørres = (f, tid) => !!f && !!f.god && (f.godMin || 0) >= REGLER.fange.døgn * 1440 && !((f.nei || 0) > tid);
   const jaSjanse = moral => Math.max(0, Math.min(1, REGLER.fange.ja + REGLER.fange.jaMoral * Math.max(0, Math.min(100, moral || 0)) / 100));
   // n fanger spørres: hvor mange som vil, og hvem av dem som er forrædere. Gir { ja, forrædere: [indeks blant dem som sa ja] }
+  // hvor mange motstanderen vil bytte: én mot én, så mange som begge har (0 = ikke noe forslag)
+  const forslagBytte = (dineFanger, deresFanger) => Math.max(0, Math.min(Math.floor(dineFanger || 0), Math.floor(deresFanger || 0)));
   function spør(n, moral, rng) { const s = jaSjanse(moral), ut = { ja: 0, forrædere: [] }; for (let i = 0; i < n; i++) if (rng() < s) { if (rng() < REGLER.fange.forræder) ut.forrædere.push(ut.ja); ut.ja++; } return ut; }
 
   const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
     røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder,
-    inni, polyAvst, krysser, byggDekning, leirVern, byttePris, arbeidF, rømSjanse, rømmer, kanSpørres, jaSjanse, spør };
+    inni, polyAvst, krysser, byggDekning, leirVern, byttePris, arbeidF, rømSjanse, rømmer, kanSpørres, jaSjanse, spør, forslagBytte };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
