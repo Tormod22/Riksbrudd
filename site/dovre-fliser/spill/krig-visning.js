@@ -30,8 +30,34 @@
   const NØKKEL = 'riksbrudd-krig', ny = () => ({ fanger: [], etter: [], fred: {}, fredN: {}, brudd: {}, vern: {}, beleiring: {}, raid: {}, tatt: [] });
   let T = ny(), klar = false; const RØYK = [], LYS = []; let HELI = null, modus = null, natt0 = 0;
   const leirId = () => { const L = leir(); return L ? Math.round(L.x) + ',' + Math.round(L.y) : null; };
-  function lagre() { if (!klar || !leirId()) return; try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), ...T })); } catch (e) { /* fullt lager */ } }
-  function les() { T = ny(); try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (d && d.leir === leirId()) for (const k of Object.keys(T)) if (d[k] && typeof d[k] === 'object') T[k] = d[k]; } catch (e) { T = ny(); } fredTilAI(); }
+  // (runde 4) lagres også: røyk og lys som brenner, helikopteret i lufta og kjøreordre for egne kjøretøy (målet; ruta legges på nytt)
+  const r1 = v => Math.round(v * 10) / 10;
+  function kjøreordre() { const ut = [];
+    for (const k of window.KJORETOY || []) { if (k.side !== 'blå' || k.oppdrag || !k.sti || !Array.isArray(k.sti.P) || k.sti.P.length < 4 || k.framme) continue; const P = k.sti.P; ut.push({ navn: k.navn, mål: [r1(P[P.length - 2]), r1(P[P.length - 1])] }); }
+    return ut; }
+  function lagre() { if (!klar || !leirId()) return;
+    try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), ...T, røyk: RØYK.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })), lys: LYS.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })),
+      heli: HELI ? { lag: HELI.lag && HELI.lag.navn, fase: HELI.fase, x: r1(HELI.x), y: r1(HELI.y), mål: HELI.mål.map(r1), retning: +(HELI.retning || 0).toFixed(3) } : null, kjør: kjøreordre() })); } catch (e) { /* fullt lager */ } }
+  const tallOk = v => typeof v === 'number' && Number.isFinite(v), punktOk = q => q && tallOk(q.x) && tallOk(q.y) && tallOk(q.til);
+  api.gjenopprettet = null;
+  function les() { T = ny(); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (!d || d.leir !== leirId()) d = null; else for (const k of Object.keys(T)) if (d[k] && typeof d[k] === 'object') T[k] = d[k]; } catch (e) { T = ny(); d = null; } fredTilAI();
+    RØYK.length = 0; LYS.length = 0; HELI = null; api.gjenopprettet = null; if (!d) return;
+    // røyk og lys: tiden (tid) er lagret av spill/lagring.js, så «til» gjelder fortsatt
+    for (const q of Array.isArray(d.røyk) ? d.røyk : []) if (punktOk(q)) RØYK.push({ x: q.x, y: q.y, til: q.til });
+    for (const q of Array.isArray(d.lys) ? d.lys : []) if (punktOk(q)) LYS.push({ x: q.x, y: q.y, til: q.til });
+    const G = api.gjenopprettet = { røyk: RØYK.length, lys: LYS.length, heli: null, kjør: [] };
+    // helikopteret og kjøreordrene settes inn når lagene og kjøretøyene er lest inn (spill/lagring.js), og vegnettet kan hentes
+    setTimeout(() => {
+      const h = d.heli, L = leir(); if (h && L && tallOk(h.x) && tallOk(h.y) && Array.isArray(h.mål) && h.mål.length === 2 && ['ut', 'hjem', 'frakt', 'retur'].includes(h.fase)) {
+        const s = h.lag ? egne().concat(ENHETER.filter(e => e.side === 'blå' && e.iLufta)).find(e => e.navn === h.lag) : null;
+        HELI = { lag: s || null, fase: s || h.fase === 'retur' ? h.fase : 'retur', x: h.x, y: h.y, mål: s || h.fase === 'retur' ? h.mål.slice() : [L.x, L.y], retning: tallOk(h.retning) ? h.retning : 0 };
+        if (s && (HELI.fase === 'hjem' || HELI.fase === 'frakt')) { s.iLufta = true; s.sti = null; s.x = HELI.x; s.y = HELI.y; }
+        G.heli = HELI.fase; skitten = true; }
+      for (const q of Array.isArray(d.kjør) ? d.kjør : []) { const k = (window.KJORETOY || []).find(e => e.side === 'blå' && e.navn === q.navn);
+        if (!k || k.sti || k.oppdrag || !Array.isArray(q.mål) || !tallOk(q.mål[0]) || !tallOk(q.mål[1]) || typeof window.kjørTil !== 'function') continue;
+        G.kjør.push(k.navn); window.kjørTil(k, q.mål[0], q.mål[1]); }
+      if (G.heli || G.kjør.length || G.røyk || G.lys) logg(`Fortsetter der dere slapp: ${[G.heli ? 'helikopteret er i lufta' : '', G.kjør.length ? `${G.kjør.length} ${G.kjør.length === 1 ? 'kjøretøy kjører' : 'kjøretøy kjører'} videre` : '', G.røyk ? 'røyken ligger fortsatt' : '', G.lys ? 'lysraketten brenner' : ''].filter(Boolean).join(', ')}.`);
+    }, 2000); }
   function fredTilAI() { if (window.AI && AI.fred) for (const side of Object.keys(AI.fred)) delete AI.fred[side]; if (window.AI && AI.fred) Object.assign(AI.fred, T.fred); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(() => { les(); klar = true; }, 0));
   window.addEventListener('pagehide', lagre);
