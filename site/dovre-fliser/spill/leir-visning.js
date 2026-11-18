@@ -268,7 +268,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (p && !p.mal && !p.flytt && !p.pid) banner.append(knapp(fortsett ? 'Fortsett: på' : 'Fortsett: av', () => { fortsett = !fortsett; prøv(); }, { title: 'Sett ut flere av samme slag etter hverandre' }));
     if (p && p.plan) { if (kan) banner.append(knapp(p.pid ? 'Flytt skissen hit' : 'Legg i planen', bekreft, { id: 'leggplan' })); }
     else {
-      if (kan) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
+      // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
+      if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
       if (kan === 'mat') banner.append(knapp(`Kjøp materialene (${LB.kroner(p.matPris)}) og bygg`, () => { if (kjøpManglende(p.mat)) bekreft(); }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
