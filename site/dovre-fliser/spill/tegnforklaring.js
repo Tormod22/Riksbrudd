@@ -4,7 +4,7 @@
  * med eksempler tegnet med de samme funksjonene som kartet bruker: hvem (eget, fiende, nøytralt), hva (lag, kjøretøyene, tettsted, kai,
  * bygg, ukjent), og strekene og feltene (marsjrute, kjøretøyrute, sist sett, front, tettsted dere holder, inntak, siktfelt, valgt).
  * Lister og eksemplene uten DOM øverst (Tegnforklaring.RADER/tegnEksempel – test i test_merker.js); visningen under. window.Tegnforklaring (vis, lukk, erÅpen).
- * Knappen vises ikke i 3D (der gjelder ikke kartmerkene) og ikke på startskjermen.
+ * Knappen vises ikke i 3D (der gjelder ikke kartmerkene), i fotomodus eller i kontrollrommet (der skal zoomknappene stå som før).
  */
 (function (rot) {
   // [gruppe, nøkkel, tekst] – nøkkelen sier hvordan eksemplet tegnes (se tegnEksempel)
@@ -63,7 +63,7 @@
   const IKON = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'><rect x='3' y='4' width='5' height='4'/><path d='M11 6h10'/><path d='M5.5 11l2.5 2.5-2.5 2.5-2.5-2.5z'/><path d='M11 13.5h10'/><path d='M3 20h5' stroke-dasharray='2 2'/><path d='M11 20h10'/></svg>";
   const css = document.createElement('style');
   css.textContent = `#forklarknapp{ display:flex; align-items:center; justify-content:center; color:#d9c27a; } #forklarknapp svg{ width:24px; height:24px; } #forklarknapp.på{ border-color:#e8d48a; color:#fff3c8; }
-body.på3d #forklarknapp, body.foto #forklarknapp{ display:none; }
+body.på3d #forklarknapp, body.foto #forklarknapp, body.ikontrollrom #forklarknapp{ display:none; }
 #forklaring{ position:fixed; right:64px; bottom:calc(34px + env(safe-area-inset-bottom,0px)); z-index:12; display:none; width:min(350px, calc(100vw - 84px)); max-height:calc(100% - var(--topp,58px) - 50px); overflow-y:auto; box-sizing:border-box; padding:10px 12px 12px;
   background:linear-gradient(180deg,#241c10 0,#17120a 150px); border:1px solid #8a7440; box-shadow:0 0 0 1px #0d0a06, 0 12px 34px rgba(0,0,0,.65); border-radius:4px; color:var(--ink,#e7dcc3); scrollbar-width:thin; scrollbar-color:#5a4f38 transparent; }
 #forklaring.på{ display:block; animation:forklarinn .16s ease-out; } @keyframes forklarinn{ from{ opacity:0; } }
