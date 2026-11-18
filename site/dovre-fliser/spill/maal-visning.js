@@ -16,7 +16,8 @@
     // krigen (kapittel 5): stillingen fra krigskartet, og egne tettsteder med et lag i garnison
     let andel = 0, vunnet = false, garnison = 0;
     try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) { andel = K.st.sider.blå.andel; vunnet = K.ut.vinner === 'blå'; garnison = K.byer.filter(b => window.Garnison && Garnison.tilstand(TETTSTEDER, b.id).eier === 'blå' && Garnison.lagI(b.ref, ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e))).length > 0).length; } } catch (e) { /* krigskartet er ikke klart */ }
-    return { bygg, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
+    // strøm: egen strøm (aggregat eller solceller) – strømnettet i området ga før «Mål nådd: få strøm» i første sekund av et nytt spill
+    return { bygg, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0 && (bygg.aggregat || bygg.solcelle)), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
       hogd: R && R.hogd ? R.hogd.filter(h => !(h.andel < 1)).length : 0, revet: R && R.revet ? R.revet.length : 0, tettsteder, går, andel, vunnet, garnison,
       inne: går && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y)), lett: window.LeteSpill ? LeteSpill.antall() : 0 };
   }
@@ -25,9 +26,11 @@
     const nye = Maal.vurder(T, ferdige); if (!nye.length) return nye;
     lagre();
     // én melding, også når flere mål nås samtidig (ellers skyver de alt annet ut av loggen)
-    if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => Maal.finn(id).tekst.toLowerCase());
+    // bare første bokstav gjøres liten («gå selv i 3D», ikke «3d»)
+    const liten = t => t.charAt(0).toLowerCase() + t.slice(1);
+    if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => liten(Maal.finn(id).tekst));
       if (s.krigÅpen && nye.some(id => Maal.GRUNN.some(m => m.id === id))) setTimeout(() => logg('Leiren står. Nå gjelder det krigen om regionen – nye mål står under Leir → Mål, og «Krig» viser kartet.'), 2500);
-      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${s.neste.tekst.toLowerCase()}.` : ' Alle målene er nådd.')); }
+      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${liten(s.neste.tekst)}.` : ' Alle målene er nådd.')); }
     return nye;
   }
   const kort = () => { const s = Maal.stilling(ferdige); return s.kapittel < 0 ? '✓' : `${s.totalt}/${s.alle}`; };

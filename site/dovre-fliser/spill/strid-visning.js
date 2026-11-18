@@ -43,7 +43,10 @@
     return best; }
   function høyereNær(s) { const h0 = hoydeVed(s.x, s.y); if (!isFinite(h0)) return null; let best = null; for (const r of [70, S.INITIATIV.søk]) for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r, h = hoydeVed(x, y); if (isFinite(h) && (!best || h > best.h)) best = { x, y, h }; }
     return best ? { ...best, vinn: best.h - h0 } : null; }
-  function initiativ(s, v) { const r = regel(s); if (s.sti && r.forsyn !== 'ja') return; if (s.nedgravd || s.ombord || s.forsvar || s.leirvakt) return; if (!KROKER.kanOrdre.every(f => f(s))) return;
+  // Laget spør selv om det kan ta ordre (eget initiativ, hvert steg): krokene skal da ikke skrive i loggen. Før sto
+  // «ingen radiokontakt – ordren når ikke fram» på nytt og på nytt for et lag uten kontakt.
+  const kanStille = s => { const l = window.logg; window.logg = () => {}; try { return KROKER.kanOrdre.every(f => f(s)); } finally { window.logg = l; } };
+  function initiativ(s, v) { const r = regel(s); if (s.sti && r.forsyn !== 'ja') return; if (s.nedgravd || s.ombord || s.forsvar || s.leirvakt) return; if (!kanStille(s)) return;
     const amm = window.Forsyning ? Forsyning.ammo(s) : 1, sted = amm < S.INITIATIV.ammo ? forsyningssted(s) : null, hø = v && !s.sti ? høyereNær(s) : null;
     let venn = null; if (!v && !s.sti && r.støtte === 'ja') for (const e of egne()) { if (e === s || !beskutt(e)) continue; const d = Math.hypot(e.x - s.x, e.y - s.y); if (d <= S.INITIATIV.støtte && (!venn || d < venn.d)) venn = { e, d }; }
     const t = S.tiltak(r, { stille: !s.sti, fiende: v ? v.d : null, beskutt: beskutt(s), høyde: hø ? hø.vinn : 0, venn: venn ? venn.d : null, ammo: amm, hjemme: !sted || sted.d < 250 || (s.initiativ === 'forsyn' && !!s.sti) });
@@ -63,7 +66,7 @@
     if (!auto()) return;
     for (const s of egne()) { if (s.planlegger || tid - (s.stridSist === undefined ? -99 : s.stridSist) < 15) continue; const v = vurdering(s), r = S.reaksjon(regel(s), v ? { forhold: v.forhold, ute: v.ute, avstand: v.d, beskutt: beskutt(s), rekkevidde: v.rekkevidde } : { ute: Terreng.uteAvKamp(s.menn), forhold: 1 });
       if (!r || (!v && !beskutt(s))) { initiativ(s, v); continue; } s.stridSist = tid;
-      if (r.hva === 'fram') { if (s.sti || !KROKER.kanOrdre.every(f => f(s))) continue; const a = Math.atan2(s.y - v.fi.y, s.x - v.fi.x), q = v.rekkevidde * .45; ordre(s, v.fi.x + Math.cos(a) * q, v.fi.y + Math.sin(a) * q, true); logg(`${s.navn} rykker fram mot ${v.fi.navn}: ${r.grunn}.`); s.egetValg = { hva: 'rykket fram mot ' + v.fi.navn, grunn: r.grunn || '', t: tid }; }
+      if (r.hva === 'fram') { if (s.sti || !kanStille(s)) continue; const a = Math.atan2(s.y - v.fi.y, s.x - v.fi.x), q = v.rekkevidde * .45; ordre(s, v.fi.x + Math.cos(a) * q, v.fi.y + Math.sin(a) * q, true); logg(`${s.navn} rykker fram mot ${v.fi.navn}: ${r.grunn}.`); s.egetValg = { hva: 'rykket fram mot ' + v.fi.navn, grunn: r.grunn || '', t: tid }; }
       else { const fx = v ? v.fi.x : s.x + 1, fy = v ? v.fi.y : s.y, a = Math.atan2(s.y - fy, s.x - fx); ordre(s, s.x + Math.cos(a) * 1500, s.y + Math.sin(a) * 1500, true); logg(`${s.navn} ${r.hva === 'unngå' ? 'trekker unna' : 'trekker seg tilbake'}: ${r.grunn}.`); s.egetValg = { hva: r.hva === 'unngå' ? 'trakk unna' : 'trakk seg tilbake', grunn: r.grunn || '', t: tid }; }
       if (valgt === s) visPanel(); } });
 

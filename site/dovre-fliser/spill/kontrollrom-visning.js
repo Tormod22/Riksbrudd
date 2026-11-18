@@ -15,7 +15,10 @@
   const les = () => { try { return JSON.parse(localStorage.getItem(NØKKEL)) || null; } catch (e) { return null; } };
   const lagre = () => { if (!T || !deg) return; T.karakter = { x: Math.round(deg.x), y: Math.round(deg.y) }; T.inne = inne; try { localStorage.setItem(NØKKEL, JSON.stringify(T)); } catch (e) { /* privat vindu */ } };
   const info = new Map();   // lag -> { kontakt, meldt: { x, y, tid }, før, sist: {} }
-  const lagInfo = s => { if (!info.has(s)) info.set(s, { kontakt: false, meldt: null, før: null, sist: {} }); return info.get(s); };
+  // Et nytt lag som står ved leiren (innen 1200 m, der terrenget ikke regnes) har kontakt med en gang – ellers sto det
+  // «ingen radiokontakt: 0 km fra leiren» i panelet til første kontroll var gjort
+  const nærLeiren = s => { try { const L = spill().leir; return Math.hypot(s.x - L.x, s.y - L.y) <= 1200; } catch (e) { return false; } };
+  const lagInfo = s => { if (!info.has(s)) info.set(s, { kontakt: nærLeiren(s), meldt: null, før: null, sist: {} }); return info.get(s); };
 
   // ---------- hvor du er ----------
   const kontrollrom = () => { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'kontrollrom' && Leir.virker(b)) : []; };

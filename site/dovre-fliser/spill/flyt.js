@@ -46,6 +46,11 @@
     if ((nå.strid || 0) > (før.strid || 0)) ut.push({ type: 'kontakt', tekst: 'et lag er i ildkamp' });
     else if ((nå.fiender || 0) > (før.fiender || 0)) ut.push({ type: 'kontakt', tekst: 'fienden er i sikte' });
     if ((nå.lag || 0) < (før.lag || 0)) ut.push({ type: 'tapt', tekst: 'et lag er slått ut' });
+    // leiren raseres: et bygg er borte, eller enda et bygg er under halv helse (bare mens leiren angripes – ikke når du river selv)
+    if (nå.alarm || før.alarm) {
+      if ((nå.byggTall || 0) < (før.byggTall || 0)) ut.push({ type: 'alarm', tekst: 'et bygg i leiren er ødelagt' });
+      else if ((nå.skadd || 0) > (før.skadd || 0)) ut.push({ type: 'alarm', tekst: 'et bygg i leiren er hardt skadet' });
+    }
     if ((nå.bygg || 0) > (før.bygg || 0)) ut.push({ type: 'bygg', tekst: 'et bygg er ferdig' });
     if ((nå.tettsteder || 0) > (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har tatt et tettsted' });
     else if ((nå.tettsteder || 0) < (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har mistet et tettsted' });
@@ -99,15 +104,25 @@
   const settFart = id => { const b = document.getElementById(id); if (b && (fartId() !== id || tempo === 0)) b.click(); };
 
   // ---------- øyeblikksbildet ----------
+  // Den samme fienden (eller den samme ildkampen) skal bare stoppe spolingen én gang: et lag som forsvinner bak en ås og kommer fram
+  // igjen, telte før som «ny fiende i sikte» hver gang (spolingen stoppet hvert 2.–9. spillminutt under et angrep). Nå regnes en fiende som
+  // sett, og et lag som i strid, i HUSK spillminutter etter sist gang (Claudes forslag).
+  const HUSK = 90, sistSett = new Map(), sistStrid = new Map();
+  function nylig(kart, nå, alle) {
+    for (const e of nå) kart.set(e, tid);
+    let n = 0; for (const [e, t] of kart) { if (tid - t > HUSK || tid < t || !alle.includes(e)) kart.delete(e); else n++; }
+    return n;
+  }
   function bilde() {
     const L = rot.LeirSpill && LeirSpill.tilstand(), lag = egne(), marsj = {};
     for (const s of lag) if (s.sti || s.planlegger || (s.kø && s.kø.length)) marsj[s.navn] = true;
     let tettsteder = 0; if (rot.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') tettsteder++;
     const al = document.getElementById('alarm');
     return { dag: Math.floor((6 + tid / 60) / 24) + 1, marsj, navn: lag.map(s => s.navn), lag: lag.length,
-      strid: lag.filter(s => s.skyterPå && s.skyterPå.size).length + ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå')).length,
-      fiender: ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).length,
+      strid: nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
+      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e))),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
+      byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
       mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
       // et kort midt på skjermen som venter på svar (hendelser i gjengen, flyktninger ved porten, seier, scenario)

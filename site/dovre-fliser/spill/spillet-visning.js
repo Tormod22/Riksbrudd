@@ -63,7 +63,7 @@
   if (LB && FR) {
     const km = LB.kjøpMateriale, kd = LB.kjøpDrivstoff, kf = FR.kjøpMat, husk = () => skriv('riksbrudd-marked', M);
     LB.kjøpMateriale = (l, type, mengde, betal) => { if (!knapt()) return km(l, type, mengde, betal); const kan = Marked.kan(M, type, mengde); if (!(kan > 0)) return { feil: Marked.tomt(LB.MATERIALER[type].navn.toLowerCase()) };
-      const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen.`); } return r; };
+      const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen. Hyllene fylles litt hvert døgn (${Marked.LAGER[type].fyll} ${LB.MATERIALER[type].enhet}) – resten får du ved hogst, riving eller fra tettsteder du holder.`); } return r; };
     LB.kjøpDrivstoff = (l, liter, betal) => { if (!knapt()) return kd(l, liter, betal); const kan = Marked.kan(M, 'diesel', liter); if (!(kan > 0)) return { feil: Marked.tomt('diesel') };
       const r = kd(l, kan, betal); if (!r.feil) { Marked.ta(M, 'diesel', r.liter); husk(); } return r; };
     FR.kjøpMat = (f, rasjoner, betal) => { if (!knapt()) return kf(f, rasjoner, betal); const kan = Marked.kan(M, 'mat', rasjoner); if (!(kan > 0)) return { feil: Marked.tomt('mat') };
@@ -116,6 +116,20 @@
     if (window.EventyrSpill && EventyrSpill.slåttUt && EventyrSpill.slåttUt(K)) return;
     K.hp = 60; K.mag = A().def.magasin; K.res = Math.max(K.res, A().def.magasin * 2); const f = F(); if (f) f.moral = Math.max(0, f.moral - 5); if (window.KjorSpill && KjorSpill.fører()) KjorSpill.ut(true); if (window.Gange) Gange.stopp();
     const Q = r3(), leir = S() && S().leir; if (Q && Q.ut && leir) { Q.bane.x = leir.x - Q.ut.cx; Q.bane.y = leir.y - Q.ut.cy; } varsel('Du ble såret og båret tilbake til leiren. Gjengen mistet litt mot.'); }
+  // DU FALLER I KARTET: karakteren er et lag med én mann (K3) og kan bli truffet i en vanlig kamprunde. Før ble han liggende «falt» for
+  // godt, mens karakterarket sa «Helse 100 av 100». Nå bæres du til leiren, ligger nede i SYK_TIMER spilltimer (ingen skyter på deg,
+  // og du skyter ikke), og er så på beina igjen. Claudes forslag: 6 timer, helse 40, moral −5. Ikke i testene (auto()).
+  const SYK_TIMER = 6;
+  KROKER.ild.push((a, b) => ((a && a.karakter && a.sykTil > tid) || (b && b.karakter && b.sykTil > tid) ? 0 : 1));
+  function faltSteg() {
+    if (!auto()) return; const d = ENHETER.find(e => e.karakter && e.side === 'blå'), m = d && d.menn && d.menn[0]; if (!m) return;
+    if (m.hp >= 1) { if (d.sykTil) delete d.sykTil; return; }
+    if (d.sykTil === undefined) { const falt = m.hp <= 0, leir = S() && S().leir; d.sykTil = tid + SYK_TIMER * 60; m.hp = Math.max(m.hp, .5); d.slattUtMeldt = false;
+      if (falt) { if (leir && !(r3() && r3().fot)) { d.x = leir.x + 12; d.y = leir.y + 12; d.sti = null; d.siktSkitten = true; } K.hp = Math.min(K.hp, 40); const f = F(); if (f) f.moral = Math.max(0, f.moral - 5);
+        varsel(`Du ble truffet og båret tilbake til leiren. Du ligger nede i ${SYK_TIMER} timer, og gjengen mistet litt mot.`); skitten = true; }
+      return; }
+    if (tid >= d.sykTil) { m.hp = 1; delete d.sykTil; logg('Du er på beina igjen.'); skitten = true; }
+  }
   function kampSteg() { const d = deg(); if (!d) { K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile * 3); return; } // dekning og sniking (spill/eventyr-visning.js): faktor per fiende – 0 når de ikke har oppdaget deg, mindre når du ligger eller står bak en vegg
     const EV = window.EventyrSpill && EventyrSpill.fiendeFaktor ? EventyrSpill : null;
     const nær = fiender().map(e => ({ avst: Math.hypot(e.x - d.x, e.y - d.y), menn: e.menn.filter(m => m.hp > 0).length * (EV ? EV.fiendeFaktor(d, e) : 1) })).filter(q => q.avst < 300);
@@ -222,7 +236,7 @@
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setInterval(() => { if (performance.now() > varselTil) varselEl.classList.remove('på'); if (!klar || !S() || !S().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     const g = deg(); skytKnapp.classList.toggle('på', !!g && VW < 900 && !(window.KjorSpill && KjorSpill.fører()));
-    if (tempo > 0) { angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); } }, 1000);
+    if (tempo > 0) { angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); faltSteg(); } }, 1000);
   Object.assign(api, { venner: () => V.map(v => v.d), minStilling, start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, varsel, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
     T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg });
   window.SpilletSpill = api;

@@ -120,9 +120,11 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     for (const b of siste.framme || []) logg(`Byggelaget er framme ved ${LB.BYGG[b.type].del ? 'byggesettet' : LB.BYGG[b.type].navn.toLowerCase()} (${LB.kmTekst(LB.reise(L, b.x, b.y).meter)} fra leiren) og begynner arbeidet.`);
     // fiender skader byggene: 8 % per spilltime per fiendtlig lag innen 120 m. Også byggeplassene (bygg under bygging eller i kø) kan
     // skades (brukeren 12. nov); blir en byggeplass ødelagt, kommer materialene som ikke var brukt, tilbake på lageret (Leir.skad).
+    HERJER.clear();
     for (const e of ENHETER) { if (e.side === 'blå' || !levende(e)) continue;
       const deler = { n: 0, mat: {} };
       for (const b of L.bygg.slice()) { if (Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
+        HERJER.add(e);
         const B = LB.BYGG[b.type], navn = B.navn.toLowerCase(), r = LB.skad(L, b.id, .08 * dt / 60); if (!r) continue;
         if (r.ødelagt) { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L)), mt = matTekst(r.mat);
           // delene i byggesettet (ofte mange på én gang) meldes samlet under
@@ -271,7 +273,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (o.pid) { const a = LB.planFinn(L, o.pid); plassering.ret = a.ret; plassering.retSatt = true; }
     if (o.ret !== undefined) { plassering.ret = o.ret; plassering.retSatt = true; }
     meny = false; menyEl.classList.remove('på'); leirKnapp.classList.remove('på');
-    visBanner(LB.BYGG[type].linje ? `Trykk der ${LB.BYGG[type].veg ? 'vegen' : 'gjerdet'} skal begynne, og så punkt for punkt.` : `Trykk der ${LB.BYGG[type].navn.toLowerCase()} skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
+    visBanner(LB.BYGG[type].linje ? `Trykk der ${LB.BYGG[type].veg ? 'vegen' : 'gjerdet'} skal begynne, og så punkt for punkt.` : `${LB.BYGG[type].navn}: trykk der bygget skal ${flytt || o.pid ? 'flyttes' : 'stå'}.`);
   }
   // En mal settes inn i planen: trykk der midten skal være, roter, «Legg i planen»
   function startMal(i) {
@@ -382,6 +384,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return null;
   }
   KROKER.trykk.push(trykk); KROKER.trykk3d.push(trykk);
+  // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
+  const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));
   function bekreft() {
     const p = plassering; if (!p || p.feil) return;
     if (p.mal) { if (p.sjekket !== p.x + ',' + p.y + ',' + p.ret) return; husk(); let nr = 0;
@@ -401,7 +405,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function ferdigPlassert(p) {
     lagre(); visStatus(); bygg3dPåNytt(!p.plan); skitten = true; if (meny) visMeny();
     if (fortsett && !p.mal && !p.flytt && !p.pid && !LB.BYGG[p.type].linje) { plassering = { ...p, x: null, y: null, rx: null, ry: null, feil: null, linjer: [], retSatt: true };
-      visBanner(`Trykk der neste ${LB.BYGG[p.type].navn.toLowerCase()} skal stå (Fortsett er på).`); skisse3d(); return; }
+      visBanner(`${LB.BYGG[p.type].navn}: trykk der neste skal stå (Fortsett er på).`); skisse3d(); return; }
     plassering = null; banner.classList.remove('på'); skisse3d();
   }
 
