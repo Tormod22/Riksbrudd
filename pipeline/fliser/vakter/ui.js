@@ -13,7 +13,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       const m = SpillHud.mer(); ut.mer = m.antall; if (m.antall > 0) { SpillHud.åpneMer(true); await vent(30); const rader = document.querySelectorAll('#flismerliste button').length; krev(rader === m.antall && $('flismerliste').getClientRects().length > 0, `«mer» viser ${rader} av ${m.antall}`); SpillHud.åpneMer(false); }
       krev(getComputedStyle($('mkom')).display === 'none', 'telefonlinja vises på PC'); }
     else { ut.telefon = SpillHud.telefon(); const kn = [...document.querySelectorAll('#mkom button')].filter(b => b.getClientRects().length);
-      if (ut.telefon) { krev(kn.length >= 3 && kn.every(b => b.getBoundingClientRect().height >= 44), 'knappene i telefonlinja er for små'); const z = document.querySelector('.ctl'), zr = z && z.getBoundingClientRect(), siste = kn[kn.length - 1].getBoundingClientRect(); krev(!zr || siste.right <= zr.left + 1, 'telefonlinja ligger oppå zoomknappene');
+      if (ut.telefon) { krev(kn.length >= 3 && kn.every(b => b.getBoundingClientRect().height >= 44), 'knappene i telefonlinja er for små'); const z = document.querySelector('.ctl'), zr = z && z.getBoundingClientRect(), siste = kn[kn.length - 1].getBoundingClientRect(); krev(!zr || siste.right <= zr.left + 1 || zr.bottom <= siste.top + 1, 'telefonlinja ligger oppå zoomknappene');
         krev(getComputedStyle($('leirknapp')).display === 'none', 'Leir står både oppe og nede'); }
       krev(document.querySelector('.stats').getBoundingClientRect().height < 34, 'statuslinja på telefon er for høy'); }
     // loggen: ikon etter innholdet
