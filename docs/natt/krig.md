@@ -279,7 +279,10 @@ vakt.js / vakt2.js kjører vakta på PC og mobil, vakt2.js med infrastrukturen s
   tider og geometri som hele grafen (prøvd på tre ruter ved Dovre, og i test_vegnett.js). På telefon (`VEG_TLF.telefon()`: vindu under 900 px,
   eller grov peker og skjerm under 900 px) er boksen leiren ±150 km, utvidet så basene og nærmeste oljeterminal er med (+20 km). Andel av landet
   (±150 km): rundt Dovre 20 %, Ryfylke 24 %, Oslo 44 % (±100 km: 6/11/35 %, ±200 km: 32/35/52 %). MÅLT i telefonprofilen: **+49 MB** i stedet for
-  +214 MB (403 502 lenker), RSS +82 MB (topp +252 MB mens fila pakkes ut). (b) **Når**: ikke ved oppstart. `VEG_TLF.sjekk()` (hvert 5. s) henter
+  +214 MB (403 502 lenker), RSS +73–82 MB. **Toppen** mens det leses: `Vegnett.råUtsnitt` leser utsnittet rett fra fila (bare nodene for hele
+  landet, lenkene én og én) i stedet for å lage hele landets tabeller først – samme svar felt for felt (prøvd på tre bokser med ekte data og i
+  test_vegnett.js). Målt i Node (høyvannsmerket, utover selve fila): +39 MB mot +204 MB for utsnitt(rå(...)) og +133 MB for hele landet; i
+  telefonprofilen RSS-topp +202 MB (før: +252, hele landet +345 – resten er nedlastingen og den utpakkede fila). (b) **Når**: ikke ved oppstart. `VEG_TLF.sjekk()` (hvert 5. s) henter
   vegnettet første gang et fiendelag har et mål over 3 km unna og lastebilen sin innen 200 m (samme regel som `Fraksjoner.kjør`); lag som da går
   til fots mot et slikt mål, tenker på nytt og setter seg i bilen. Ikke med datasparing, `navigator.deviceMemory` < 3, eller i testene
   (`VEG_TLF.test`). (c) Bitene pakkes ut rett fra en Blob (før ble de kopiert sammen først: 25 MB ekstra på toppen – gjelder også PC).
@@ -330,6 +333,7 @@ vakt.js / vakt2.js kjører vakta på PC og mobil, vakt2.js med infrastrukturen s
 ### IKKE gjort / svakheter (runde 5)
 - Vogna har ingen egen 3D-sikt eller tegning av siktfeltet; det lyse feltet i kartet viser fortsatt bare lagenes sikt.
 - Utsnittet på telefon leses én gang per økt: starter du et nytt spill med leiren et helt annet sted i samme økt, gjelder det gamle området.
-  Toppen i minnet mens fila pakkes ut er fortsatt høy (ca. +250 MB RSS i noen sekunder) – lettere må gjøres i byggejobben (egne fliser per område).
+  Toppen i minnet mens fila hentes og pakkes ut er fortsatt ca. +200 MB RSS i noen sekunder (25 MB nedlasting + 41 MB utpakket + resten) – enda
+  lettere må gjøres i byggejobben (egne vegnettfiler per område).
 - Region-visning.js (balanse) bruker vegnettet på telefon når det først er lastet, men utsnittet har ikke veger utenfor ±150 km.
 - Fiendens lastebil: kjøreturen legges på nytt bare når vegnettet finnes; ellers går laget av.

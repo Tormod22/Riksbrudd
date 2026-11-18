@@ -105,6 +105,52 @@
     ut.I = ie.length; ut.ie = Uint32Array.from(ie); ut.it = Uint32Array.from(it); ut.id = Uint32Array.from(id);
     return ut;
   }
+  // UTSNITT RETT FRA FILA (RBVEG002): samme svar som utsnitt(rå(data), boks), men uten å lage tabellene for hele landet først – bare
+  // nodene (x, y) leses for alt, lenkene leses én og én og bare de som ligger i boksen tas vare på. Toppen i minnet blir mye lavere
+  // (viktig på telefon). Andre formater: via rå().
+  function råUtsnitt(data, boks) {
+    const d = new DataView(data.buffer, data.byteOffset, data.byteLength), u = p => d.getUint32(p, true), magic = String.fromCharCode(...data.subarray(0, 8));
+    if (magic !== 'RBVEG002') return utsnitt(rå(data), boks);
+    const N0 = u(8), M0 = u(12), I0 = u(16), K = u(24); if (K !== 17) throw new Error('Skadet vegnettfil');
+    const lengder = [], start = []; let p = 28 + K * 4;
+    for (let k = 0; k < K; k++) { lengder.push(u(28 + k * 4)); start.push(p); p += lengder[k]; }
+    if (p !== data.byteLength) throw new Error('Skadet vegnettfil');
+    const kol = k => { let pos = start[k]; const slutt = pos + lengder[k]; return { v: varint(data, () => pos, q => { pos = q; }, slutt), ferdig: () => pos === slutt }; };
+    const byte = (k, n) => { if (lengder[k] !== n) throw new Error('Skadet vegnettfil'); return data.subarray(start[k], start[k] + n); };
+    const flagg0 = byte(9, M0), fart0 = byte(10, M0), kat0 = byte(11, M0);
+    const [cx, cy, cf, ct, cl, cs, cst, csl, cv, , , , ci, cg, , cie, cid] = Array.from({ length: K }, (_, k) => kol(k));
+    const x0 = new Int32Array(N0), y0 = new Int32Array(N0);
+    { let X = 0, Y = 0; for (let n = 0; n < N0; n++) { X += zz(cx.v()); Y += zz(cy.v()); x0[n] = X; y0[n] = Y; } }
+    const [bx0, by0, bx1, by1] = boks, inne = n => x0[n] >= bx0 && x0[n] <= bx1 && y0[n] >= by0 && y0[n] <= by1;
+    // tabeller som vokser (lenkene i boksen er ikke kjent på forhånd)
+    const V = (T, n = 1 << 14) => ({ a: new T(n), n: 0, legg(v) { if (this.n === this.a.length) { const b = new T(this.a.length * 2); b.set(this.a); this.a = b; } this.a[this.n++] = v; }, ut() { return this.a.slice(0, this.n); } });
+    const fra = V(Uint32Array), til = V(Uint32Array), l = V(Float64Array), sekvens = V(Uint32Array), st0 = V(Uint32Array), sl0 = V(Uint32Array), vegnr = V(Uint32Array),
+      flagg = V(Uint8Array), fart = V(Uint8Array), kat = V(Uint8Array), gamle = V(Uint32Array), goff = V(Uint32Array), P = V(Int32Array, 1 << 16);
+    const nyN = new Int32Array(N0).fill(-1); let N = 0; const nr = n => (nyN[n] < 0 ? (nyN[n] = N++) : nyN[n]);
+    let tilF = 0, sek = -1, sl = 0, vn = 0, np = 0;
+    for (let e = 0; e < M0; e++) {
+      const a = tilF + zz(cf.v()), b = a + zz(ct.v()), s = sek < 0 ? cs.v() : sek + cs.v(), st = (s === sek ? sl : 0) + zz(cst.v()), slu = st + csl.v();
+      vn += zz(cv.v()); const lv = cl.v() / 10, ind = ci.v(); tilF = b; sek = s; sl = slu;
+      if (a >= N0 || b >= N0) throw new Error('Ugyldig veglenke ' + e);
+      const ta = inne(a) && inne(b);
+      // geometrien: indre punkter (delta fra fra-noden), med endepunktene rundt – som R.linje i rå()
+      let X = x0[a], Y = y0[a];
+      if (ta) { goff.legg(np); P.legg(X); P.legg(Y); np++; }
+      for (let i = 0; i < ind; i++) { X += zz(cg.v()); Y += zz(cg.v()); if (ta) { P.legg(X); P.legg(Y); np++; } }
+      if (!ta) continue;
+      P.legg(x0[b]); P.legg(y0[b]); np++;
+      fra.legg(nr(a)); til.legg(nr(b)); l.legg(lv); sekvens.legg(s); st0.legg(st); sl0.legg(slu); vegnr.legg(vn); flagg.legg(flagg0[e]); fart.legg(fart0[e]); kat.legg(kat0[e]); gamle.legg(e);
+    }
+    const M = fra.n; goff.legg(np);
+    // infrastrukturen: lenkenumrene står i stigende rekkefølge (delta-kodet), så de kan slås opp mot lenkene vi tok vare på
+    const typer = byte(14, I0), G = gamle.ut(), ie = [], it = [], id = []; let le = 0, j = 0;
+    for (let i = 0; i < I0; i++) { if (typer[i] > 2) throw new Error('Ugyldig infrastrukturkobling'); le += cie.v(); const kid = cid.v();
+      while (j < M && G[j] < le) j++; if (j < M && G[j] === le) { ie.push(j); it.push([60, 67, 770][typer[i]]); id.push(kid); } }
+    if (![cx, cy, cf, ct, cl, cs, cst, csl, cv, ci, cg, cie, cid].every(c => c.ferdig())) throw new Error('Skadet vegnettfil');
+    const x = new Int32Array(N), y = new Int32Array(N); for (let n = 0; n < N0; n++) if (nyN[n] >= 0) { x[nyN[n]] = x0[n]; y[nyN[n]] = y0[n]; }
+    return { N, M, I: ie.length, dato: u(20), x, y, fra: fra.ut(), til: til.ut(), l: l.ut(), sekvens: sekvens.ut(), start: st0.ut(), slutt: sl0.ut(), vegnr: vegnr.ut(),
+      flagg: flagg.ut(), fart: fart.ut(), kat: kat.ut(), ie: Uint32Array.from(ie), it: Uint32Array.from(it), id: Uint32Array.from(id), linje: linjeFra(goff.ut(), P.ut()) };
+  }
   // (egen funksjon: en pil laget inne i utsnitt() ville holdt på hele landets tabeller, fordi V8 deler omgivelsene mellom pilene der)
   function linjeFra(goff, P) { return e => { const ut = []; for (let i = goff[e]; i < goff[e + 1]; i++) ut.push([P[2 * i], P[2 * i + 1]]); return ut; }; }
   // valg.boks: les bare et utsnitt (se utsnitt) – grafen får .boks
@@ -113,7 +159,7 @@
     else if (data instanceof ArrayBuffer) data = new Uint8Array(data);
     else throw new TypeError('Forventet ArrayBuffer eller typet tabell');
     if (data.byteLength < 28) throw new Error('Ukjent vegnettformat');
-    let R = rå(data); if (valg.boks) { R = utsnitt(R, valg.boks); data = null; }
+    let R = valg.boks ? råUtsnitt(data, valg.boks) : rå(data); if (valg.boks) data = null;
     const { N, M, I, x, y, fra, til, flagg } = R;
     const lengde = new Float64Array(M), tid = new Float64Array(M);
     const antall = new Uint32Array(N + 1), land = new Uint8Array(N), sperret = new Uint8Array(M);
@@ -218,7 +264,7 @@
     if (!svar.ok) throw new Error('Kunne ikke hente vegnett: HTTP ' + svar.status);
     return les(await svar.arrayBuffer());
   }
-  const api = { les, last, utsnitt };
+  const api = { les, last, utsnitt, råUtsnitt, rå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vegnett = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -49,7 +49,12 @@ const offset = Buffer.concat([Buffer.alloc(7), data]).subarray(7); assert.deepEq
   assert.equal(u.rute(a, [4000, 0], { maksAvstand: 100 }), null, 'ferja utenfor boksen er ikke med'); assert(hel.rute(a, [4000, 0], { maksAvstand: 100 }));
   const bru = u.infraLenker(60, 12345); assert.equal(bru.length, 1); assert.deepEqual(u.linje(bru[0]), hel.linje(1));
   u.sperr(bru[0]); assert(u.rute(a, c).sekunder > r1.sekunder, 'sperring virker i utsnittet'); u.åpne(bru[0]);
-  assert.equal(les(data, { boks: [1e6, 1e6, 1e6 + 10, 1e6 + 10] }).antallLenker, 0, 'tom boks'); }
+  assert.equal(les(data, { boks: [1e6, 1e6, 1e6 + 10, 1e6 + 10] }).antallLenker, 0, 'tom boks');
+  // rett fra fila (uten hele landets tabeller) gir det samme som utsnitt(rå(...))
+  const V = require('../../site/dovre-fliser/spill/vegnett'), B = [-100, -1500, 2100, 1500], ra = V.utsnitt(V.rå(new Uint8Array(data)), B), rb = V.råUtsnitt(new Uint8Array(data), B);
+  for (const k of ['N', 'M', 'I']) assert.equal(rb[k], ra[k], k);
+  for (const k of ['x', 'y', 'fra', 'til', 'l', 'sekvens', 'start', 'slutt', 'vegnr', 'flagg', 'fart', 'kat', 'ie', 'it', 'id']) assert.deepEqual([...rb[k]], [...ra[k]], k);
+  for (let e = 0; e < ra.M; e++) assert.deepEqual(rb.linje(e), ra.linje(e)); }
 // Samme nettleserfil uten Node, DOM, fetch, document eller window ved innlasting.
 const vm = require('vm'), kontekst = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/vegnett.js'), 'utf8'), kontekst);
