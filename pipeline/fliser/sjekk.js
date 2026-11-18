@@ -921,6 +921,13 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       let tb = 0; if (u.påBane && u.trær) for (const k in u.trær) for (let q = 0; q < u.trær[k].length; q += 5) if (u.påBane(u.trær[k][q], u.trær[k][q + 1])) tb++;
       let gj = 0; if (u.påBane && u.gard) for (const B of u.gard.biter) for (let q = 0; q < B.length; q += 6) if (u.påBane(B[q], B[q + 1])) gj++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb, gjerder: gj }; return Vakt3d.sjekk(u); });
+    // Prøven for vakta «trærne står likt i 2D og 3D» (lenger ned). c = [cx, cy] gir det utsnittet RessursSpill husker, ellers R3.ut.
+    const TRE_PRØVE = async c => { if (typeof treVed !== 'function' || typeof TRE_RUTE === 'undefined') return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = c && window.RessursSpill ? RessursSpill.sisteU(c[0], c[1]) : R3.ut, ut = { antall: 0, feil: 0, ikkeEkte: 0 };
+      if (!u || !u.trær) return { utenTrær: true, S: u && u.S, vis: typeof VIS !== 'undefined' && VIS.traer }; const sett = new Set();
+      for (const k of Object.keys(u.trær)) { const A = u.trær[k]; if (!A || !A.length) continue; for (let q = 0; q + 4 < A.length; q += 5 * Math.max(1, Math.floor(A.length / 5 / 400))) { const X = A[q] + u.cx, Y = A[q + 1] + u.cy, i = Math.floor(X / TRE_RUTE), j = Math.floor(Y / TRE_RUTE);
+          ut.antall++; const gx = (i + hash(i, j, 1)) * TRE_RUTE, gy = (j + hash(i, j, 2)) * TRE_RUTE; if (Math.abs(gx - X) > .02 || Math.abs(gy - Y) > .02) { ut.feil++; continue; } if (hash(i, j, 7) >= TRE_TETT) ut.ikkeEkte++; sett.add(i + ',' + j); } }
+      ut.like = sett.size; ut.tall = u.treTall || null; return ut; };
+    const treDombås = await pg.evaluate(TRE_PRØVE, [193300, 6896300]);
     // VAKT materialer fra verden i 3D (spill/ressurser-visning.js): et hogstfelt (40 m) legges der skogen i Dombås-utsnittet over er tettest; etter
     // krok3d har feltet ingen trær, men stubber, og skog rundt; et revet hus (HUS_BORT) er borte fra hus3d, og ruinen lages
     const rs3 = await pg.evaluate(async () => { const u = RessursSpill.sisteU(193300, 6896300), ut = { inne: 0, rundt: 0 }; if (!u || !u.trær) return ut;
@@ -1310,15 +1317,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${grmok ? 'ok  ' : 'FEIL'} ${navn} bygg i skråning: ${grm.flatt ? 'ingen skråning i utsnittet' : `${(grm.forskjell || 0).toFixed(1)} m høydeforskjell godkjent, grunnmur ${grm.mur}, bygget på toppen ${grm.påTopp}, muren når ned ${grm.ned}`}`);
     // VAKT trærne står likt i 2D og 3D (brukeren 17. nov): hvert tre i 3D-utsnittet står på en plass fra kartets regel (treVed i
     // kartflis.js: 5 m-gitteret, «ekte» trær), og nær midten er ingen tynnet bort.
-    const tre2 = await pg.evaluate(async () => { if (typeof treVed !== 'function' || typeof TRE_RUTE === 'undefined') return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = R3.ut, ut = { antall: 0, feil: 0, ikkeEkte: 0 };
-      if (!u || !u.trær) return { utenTrær: true }; const sett = new Set();
-      for (const k of Object.keys(u.trær)) { const A = u.trær[k]; if (!A || !A.length) continue; for (let q = 0; q + 4 < A.length; q += 5 * Math.max(1, Math.floor(A.length / 5 / 400))) { const X = A[q] + u.cx, Y = A[q + 1] + u.cy, i = Math.floor(X / TRE_RUTE), j = Math.floor(Y / TRE_RUTE);
-          ut.antall++; const gx = (i + hash(i, j, 1)) * TRE_RUTE, gy = (j + hash(i, j, 2)) * TRE_RUTE; if (Math.abs(gx - X) > .02 || Math.abs(gy - Y) > .02) { ut.feil++; continue; } if (hash(i, j, 7) >= TRE_TETT) ut.ikkeEkte++; sett.add(i + ',' + j); } }
-      ut.like = sett.size; ut.tall = u.treTall || null; return ut; });
+    // 18. nov: utsnittet her er ofte for stort for trær (S > 4200) – da brukes prøven fra Dombås-utsnittet (før prøvde vakta 0 trær og sa «ok»)
+    let tre2 = await pg.evaluate(TRE_PRØVE, null); if (tre2.utenTrær && treDombås && !treDombås.utenTrær) tre2 = { ...treDombås, fra: 'Dombås' };
     // (trær som vegetasjon3d/byhus setter i tillegg – einer, vier, gatetrær – står ikke på gitteret; de er få)
-    const tre2ok = !tre2.uten && (tre2.utenTrær || (tre2.antall > 20 && tre2.feil <= tre2.antall * .12 && tre2.ikkeEkte === 0));
+    const tre2ok = !tre2.uten && ((tre2.utenTrær && (tre2.S > 4200 || !tre2.vis)) || (tre2.antall > 20 && tre2.feil <= tre2.antall * .12 && tre2.ikkeEkte === 0));
     if (!tre2ok) { feil++; console.log(JSON.stringify(tre2)); }
-    console.log(`${tre2ok ? 'ok  ' : 'FEIL'} ${navn} trærne står likt i 2D og 3D: ${tre2.antall || 0} trær prøvd, ${tre2.feil || 0} utenfor kartets treplasser (einer, vier og gatetrær), ${tre2.ikkeEkte || 0} som kartet ikke tegner som tre`);
+    console.log(`${tre2ok ? 'ok  ' : 'FEIL'} ${navn} trærne står likt i 2D og 3D: ${tre2.utenTrær ? `ingen trær i utsnittet (S ${Math.round(tre2.S || 0)} m, trær ${tre2.vis ? 'på' : 'av'}) – ` : ''}${tre2.antall || 0} trær prøvd, ${tre2.feil || 0} utenfor kartets treplasser (einer, vier og gatetrær), ${tre2.ikkeEkte || 0} som kartet ikke tegner som tre`);
     // VAKT egne tropper (spill/tropper.js, brukeren 17. nov: «selv måtte lage troppene med å velge folk og evt. kjøretøy»): tre fra leiren
     // blir en tropp med lagfører, de er ute av Folk, troppen går om bord i speiderbilen og følger den, og oppløst ved leiren kommer de hjem.
     const trp = await pg.evaluate(async () => { if (!window.TropperSpill || !window.FolkSpill || !FolkSpill.tilstand()) return { uten: true }; const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), F = FolkSpill.tilstand(), S = OppstartSpill.tilstand().leir, n0 = F.personer.length, lag0 = ENHETER.length;
