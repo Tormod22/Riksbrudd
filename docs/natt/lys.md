@@ -321,7 +321,8 @@ tegnInfra3d i index.html). Rekkefølge etter størrelse. Alt skal gi det samme s
 - **kompass.js** (minikartet, 28–140 ms 4 ganger i sekundet): en kopi av kartbildet på 1024² lages én gang per utsnitt (WeakMap per
   kartbilde, slippes med utsnittet) og brukes når minikartet viser mer enn to kildepunkter per skjermpunkt; helt nært brukes det fulle
   bildet som før. Kopien skaleres med høy kvalitet – minikartet blir likt eller jevnere (ikke likt bit for bit: før hoppet
-  nedskaleringen over punkter).
+  nedskaleringen over punkter). Kopien lages i åtte striper, én per bilde (i ett strekk tok den 94 ms i bildet rett etter byttet);
+  til den er ferdig, tegnes minikartet fra det fulle bildet som før.
 - **index.html tegnInfra3d** (navn og merker i 3D hver ramme): `proj3` og `brupunkt3` projiserer punktet først (`projFørst`) og gir null
   for punkter bak kameraet før de dyre siktlinjene (`bakÅs`: 15 høydeoppslag, `bakHus`) – samme svar, men omtrent halvparten av
   objektene slipper siktlinjene.
@@ -330,3 +331,9 @@ tegnInfra3d i index.html). Rekkefølge etter størrelse. Alt skal gi det samme s
   om imens.
 - **portal3d.js** (25–65 ms i byttet): én mal per tunnelbredde (laget én gang), en kopi per portal som dreies og flyttes (samme tall),
   og alt lages i forbered3d-kroken (`lagG`, generator); sett3d legger bare nettet i scenen.
+- Etter første måling av del 2 (det som sto igjen i byttet): **anlegg3d.js** – bensinstasjonene (nærmeste veg, plassen og nettene)
+  lages i forbered3d-kroken (`u.bensinKlar`); **bekker-visning.js** – vannbåndet som nett lages i forbered3d-kroken (`båndGeo`,
+  generator, med terrengnettet som byttet setter inn: `u.klar.geo`), normalene med `normalerG`; **index.html `småting`** (biler,
+  flagg, lykter ved husene) – matrisene regnes én gang per slag og kopieres inn i hver del (før sju ganger for bilene), samme tall;
+  **kompass.js** – bredden på minikartet fra en ResizeObserver i stedet for `clientWidth` hvert bilde (det tvang nettleseren til å
+  regne ut siden på nytt: opptil 140 ms i ett bilde under bygging).

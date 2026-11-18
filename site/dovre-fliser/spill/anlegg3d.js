@@ -63,8 +63,14 @@
     instans(R, samle([boks(0, 0, 0, .35, .35, 18), boks(.3, 0, 17.2, .5, 2.4, 1.1)]), new THREE.MeshLambertMaterial({ color: 0x8c9096 }), A.master, 4, false);
     // basketkurv: stolpe, plate og ring (forenklet som en flat ramme)
     instans(R, samle([boks(-1.2, 0, 0, .14, .14, 3.3), boks(-1.1, 0, 2.9, .05, 1.8, 1.05), boks(-.75, 0, 3.05, .45, .45, .04)]), new THREE.MeshLambertMaterial({ color: 0xd8d6d0 }), A.kurver, 4, false);
-    if (A.bensin && A.bensin.length) for (const st of A.bensin) for (const m of bensinstasjon(u, st)) { R.scene.add(m); mesh.push(m); }
+    const klar = u.bensinKlar; u.bensinKlar = null;
+    if (A.bensin && A.bensin.length) for (const ms of klar && klar.length === A.bensin.length ? klar : A.bensin.map(st => bensinstasjon(u, st))) for (const m of ms) { R.scene.add(m); mesh.push(m); }
   });
+  // (18. nov, hakk: bensinstasjonene – nærmeste veg, plassen og nettene – lages i forbered3d-kroken, én om gangen med pust mellom, ikke i
+  // selve byttet; sett3d lager dem selv når de ikke er forberedt)
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => {
+    u.bensinKlar = null; const A = u.anlegg; if (!A || !A.bensin || !A.bensin.length) return;
+    const ut = []; for (const st of A.bensin) { if (børPuste()) await pust(); ut.push(bensinstasjon(u, st)); } u.bensinKlar = ut; });
 
   // ---------- bensinstasjon ----------
   // Fargede bokser slått sammen til ett nett per stasjon (vertex-farger); skiltet med navnet som tekstur (skiltTekstur i index.html).

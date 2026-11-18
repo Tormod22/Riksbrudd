@@ -125,16 +125,18 @@
 
   let mesh = null, shader = null;
   function fjern(R) { if (mesh) { R.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh = null; shader = null; } }
-  KROKER.sett3d.push((u, R) => {
-    fjern(R); STAT.bånd3d = 0; STAT.trekanter = 0; if (!u.bekk || !u.bekk.length) return;
-    const pos = [], kol = [], sk = [], st = [], idx = [];
+  // Vannbåndet som nett (18. nov, hakk: ca. 35 ms i selve byttet i Bergen). Generator: lages i forbered3d-kroken med terrengnettet
+  // som byttet skal sette inn (u.klar.geo – det samme R.mesh får), med yield mellom bekkene; sett3d kjører den i ett når den mangler.
+  function* båndGeo(u, tg) {
+    const pos = [], kol = [], sk = [], st = [], idx = []; let n = 0;
     // fem punkt på tvers: steinkant, vannkant, midt, vannkant, steinkant. Bredden varierer litt langs bekken (ikke en kanal).
     // Hvert punkt ligger på bakken under seg + et lite løft (polygonOffset gjør resten); aStrom.x: 0–1 i vannet, under 0 / over 1 på kanten.
     const KANT = [.36, .34, .3];
     // høyden fra selve terrengnettet (R.mesh), så båndet verken svever eller blir borte i grove ruter langt fra midten
-    const tg = R.mesh && R.mesh.geometry, Mn = tg && tg.parameters ? tg.parameters.widthSegments + 1 : 0, An = (Mn - 1) / (u.N - 1), zN = tg && tg.attributes.position.array;
+    const Mn = tg && tg.parameters ? tg.parameters.widthSegments + 1 : 0, An = (Mn - 1) / (u.N - 1), zN = tg && tg.attributes.position.array;
     const bakke = (x, y) => Mn ? Bekker.nettHøyde(zN, Mn, An, u.S, x, y) : (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX;
     for (const { P3, b, type, f } of u.bekk) {
+      yield;
       const n0 = pos.length / 3, frø = (P3[0][0] * 7.1 + P3[0][1] * 3.7) % 6.283; let L = 0; const farge = type === 1 ? [.34, .46, .55] : [.29, .4, .46];
       for (let k = 0; k < P3.length; k++) {
         const p = P3[k], q = P3[Math.min(P3.length - 1, k + 1)], o = P3[Math.max(0, k - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
@@ -144,10 +146,18 @@
           pos.push(x, y, z + (a < 0 || a > 1 ? .05 : d ? .08 : .12)); kol.push(...(a < 0 || a > 1 ? KANT : farge)); sk.push(s); st.push(a, L); }
       }
       for (let k = 0; k < P3.length - 1; k++) for (let c = 0; c < 4; c++) { const a = n0 + k * 5 + c, e2 = a + 5; idx.push(a, e2, a + 1, a + 1, e2, e2 + 1); }
-      STAT.bånd3d++;
+      n++;
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(kol, 3));
-    g.setAttribute('aSkum', new THREE.Float32BufferAttribute(sk, 1)); g.setAttribute('aStrom', new THREE.Float32BufferAttribute(st, 2)); g.setIndex(idx); g.computeVertexNormals();
+    g.setAttribute('aSkum', new THREE.Float32BufferAttribute(sk, 1)); g.setAttribute('aStrom', new THREE.Float32BufferAttribute(st, 2)); g.setIndex(idx);
+    if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
+    return { g, n, tri: idx.length / 3 };
+  }
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.bekkKlar = u.bekk && u.bekk.length && u.klar && u.klar.geo ? await kjørAsynk(båndGeo(u, u.klar.geo)) : null; });
+  KROKER.sett3d.push((u, R) => {
+    const klar = u.bekkKlar; u.bekkKlar = null;
+    fjern(R); STAT.bånd3d = 0; STAT.trekanter = 0; if (!u.bekk || !u.bekk.length) { if (klar) klar.g.dispose(); return; }
+    const { g, n, tri } = klar || kjørRett(båndGeo(u, R.mesh && R.mesh.geometry)); STAT.bånd3d = n;
     const mat = new THREE.MeshPhongMaterial({ vertexColors: true, specular: 0x14181c, shininess: 40, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, side: THREE.DoubleSide });
     // GLSL: bare ASCII i navnene
     mat.onBeforeCompile = sh => { sh.uniforms.uTid = { value: 0 }; sh.uniforms.uHimmel = { value: new THREE.Color(.7, .78, .85) }; shader = sh;
@@ -168,7 +178,7 @@
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
   float bkF = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 4.0);
   diffuseColor.rgb = mix(diffuseColor.rgb, uHimmel * 0.7, bkF * 0.35 * bkW * (1.0 - bkS));`); };
-    mesh = new THREE.Mesh(g, mat); mesh.name = 'bekker'; mesh.renderOrder = 1; R.scene.add(mesh); STAT.trekanter = idx.length / 3; R.bekkMesh = mesh;
+    mesh = new THREE.Mesh(g, mat); mesh.name = 'bekker'; mesh.renderOrder = 1; R.scene.add(mesh); STAT.trekanter = tri; R.bekkMesh = mesh;
   });
   KROKER.ramme3d.push(R => { if (!shader) return; shader.uniforms.uTid.value = (performance.now() / 1000) % 1000; if (R.scene.fog) shader.uniforms.uHimmel.value.copy(R.scene.fog.color); });
 })();

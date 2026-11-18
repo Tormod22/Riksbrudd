@@ -2396,11 +2396,15 @@ function småting(R, type, data) {
     const knapp = new THREE.SphereGeometry(.09, 8, 6); knapp.translate(0, 0, 7.55);
     deler = [[stang, [.94, .94, .92]], [knapp, [.85, .75, .35]], [duk, 'flagg']];
   }
+  // (18. nov, hakk: matrisene var regnet på nytt for hver del – sju ganger for bilene, 35–40 ms i byttet i Bergen. Nå én gang per slag
+  // og kopiert inn i hver del – de samme tallene som setMatrixAt/setColorAt gir.)
+  const M = new Float32Array(n * 16), FI = new Float32Array(n);
+  for (let k = 0; k < n; k++) { const [x, y, z, v, fi] = data.subarray(k * per, k * per + per); d.position.set(x, y, z); d.rotation.set(0, 0, v); d.scale.set(1, 1, 1); d.updateMatrix(); d.matrix.toArray(M, k * 16); FI[k] = fi; }
   for (const [g, farge] of deler) {
     const mat = farge === 'lys' ? new THREE.MeshBasicMaterial({ color: 0xb8b4a8 }) : farge === 'flagg' ? new THREE.MeshLambertMaterial({ map: flaggTekstur(), side: THREE.DoubleSide }) : new THREE.MeshLambertMaterial();
     const m = new THREE.InstancedMesh(g, mat, n);
-    for (let k = 0; k < n; k++) { const [x, y, z, v, fi] = data.subarray(k * per, k * per + per); d.position.set(x, y, z); d.rotation.set(0, 0, v); d.scale.set(1, 1, 1); d.updateMatrix(); m.setMatrixAt(k, d.matrix);
-      if (Array.isArray(farge) || farge === 'inst') { c.setRGB(...(farge === 'inst' ? BILFARGER[fi | 0] : farge)); m.setColorAt(k, c); } }
+    m.instanceMatrix.array.set(M);
+    if (Array.isArray(farge) || farge === 'inst') for (let k = 0; k < n; k++) { c.setRGB(...(farge === 'inst' ? BILFARGER[FI[k] | 0] : farge)); m.setColorAt(k, c); }
     if (farge === 'lys') { R.lyktMat = mat; R.lysTid = null; }
     m.frustumCulled = false; R.scene.add(m); R.småMesh.push(m);
   }
@@ -3235,10 +3239,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gange.js?v=4574ac903d"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=82d1b6fa40"></script>
-<script src="/dovre-fliser/spill/anlegg3d.js?v=7dae5f07ea"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=e50408086d"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=134fd452b4"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=3eb79ba996"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=4ca063b25a"></script>
@@ -3286,7 +3290,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior3d.js?v=773fa0b376"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=35f19ce7ae"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=907d2c119a"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=2d853eaf08"></script>
