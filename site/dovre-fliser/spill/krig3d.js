@@ -48,7 +48,17 @@
     if (!G.st) { G.stGeo = stillingGeo(); if (!G.stGeo) return; G.st = new THREE.InstancedMesh(G.stGeo, MODELLER.materiale(), ST.maks); G.st.userData.kilde = 'krig3d.js'; G.st.frustumCulled = false; R.scene.add(G.st); }
     const m = new THREE.Matrix4(), p = new THREE.Vector3(), q4 = new THREE.Quaternion(), e = new THREE.Euler(), sk = new THREE.Vector3(1, 1, R.EX || 1);
     Q.forEach((q, i) => { const v = L ? Math.atan2(L.y - q.y, L.x - q.x) : 0; e.set(0, 0, v); q4.setFromEuler(e); p.set(q.x - u.cx, q.y - u.cy, z(q.x, q.y) - .05); m.compose(p, q4, sk); G.st.setMatrixAt(i, m); });
-    G.st.count = Q.length; G.st.instanceMatrix.needsUpdate = true;
+    G.st.count = Q.length; G.st.instanceMatrix.needsUpdate = true; ryddTrær(R, Q.map(q => [q.x - u.cx, q.y - u.cy]));
+  }
+  // trær og busker inne i og inntil ringen tas bort (som leirens bygg i leir-visning.js: matrisen nulles, detaljnivået regnes på nytt)
+  function ryddTrær(R, P) {
+    const r2 = (ST.radius + 1.5) ** 2, inni = (x, y) => P.some(([px, py]) => (x - px) ** 2 + (y - py) ** 2 < r2), null16 = new Float32Array(16); let n = 0;
+    for (const t of R.treLOD || []) for (let k = 0; k < t.n; k++) if (inni(t.data[k * 5], t.data[k * 5 + 1])) { t.M.set(null16, k * 16); n++; }
+    if (n) R.lodVed = null;
+    const mm = new THREE.Matrix4(), v = new THREE.Vector3(), nullM = new THREE.Matrix4().makeScale(0, 0, 0);
+    for (const m of [...(R.treMesh || []), ...(R.småMesh || [])]) { if (!m.isInstancedMesh || (R.treLOD || []).some(t => t.nær === m || t.fjern === m)) continue;
+      let endret = false; for (let k = 0; k < m.count; k++) { m.getMatrixAt(k, mm); v.setFromMatrixPosition(mm); if (inni(v.x, v.y)) { m.setMatrixAt(k, nullM); endret = true; } }
+      if (endret) m.instanceMatrix.needsUpdate = true; }
   }
   // helikopteret på tur: modellen fra spill/kjor.js flyttes dit helikopteret er (kjor.js setter det på plassen igjen hver ramme)
   function helikopter(R, u, z) {

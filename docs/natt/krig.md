@@ -96,3 +96,52 @@ Det spilleren selv setter i gang (røyk, lys, støy, bakhold, artilleri, våpenh
 - Ingen 3D for helikopterfrakt eller etterretningsmerker (bare 2D-kartet).
 - Våpenhvile på /rogaland: lagene i prøven så ikke hverandre (skog, dårlig vær), så «ingen kamp under hvilen, kamp etter brudd» er bare sett på kroknivå (ild = 0) og i AI-ens valg.
 - En første prøve av beleiring midt i et tettsted der fienden og bygdevernet også sloss, startet ikke ringen – ikke gjenskapt i ren prøve.
+
+## Runde 4 (18. nov dag)
+Alle nye tall er **Claudes forslag** og står i `Krig.REGLER.leirbygg` og `Krig.REGLER.fange` (spill/krig.js).
+
+### 1. Dekning bak leirens egne bygg
+- `Krig.leirVern(b, a, bygg)`: et **eget** lag som står stille innen 6 m fra et ferdig bygg i leiren, med bygget mellom seg og
+  skytteren (skuddlinja krysser byggets omriss, `Leir.hjørner`), tar treff ×0,55 (telt, drivhus, solceller og vakttårn ×0,8).
+  Sandsekkvollen har sin egen regel (folk-visning.js, ×0,6 innen 15 m) og er ikke med; gjerde, port, veg, master og helikopterplass gir
+  ingen dekning. Hjelpere: `inni`, `polyAvst`, `krysser`, `byggDekning`.
+- I KROKER.ild (krig-visning.js) tas den beste av «bak hus i kartet» og «bak leirens bygg» (ganges ikke sammen). Lagpanelet: «i dekning bak
+  brakke». Byggelista regnes på nytt hvert spillminutt eller når antallet bygg endres (`leirBygg`), og bare for lag innen 1,5 km fra leiren.
+- Bare egne lag (dere kjenner leiren) – røverne får ikke dekning bak byggene dine. Som de andre stridsfaktorene: av i testene til `KrigSpill.test = true`.
+
+### 2. Fanger: bytte, arbeid og rekruttering
+Fangegruppene i `T.fanger` (`{ side, n, t, avhørt, til }`) har fått `arbeid` (oppgave eller null), `god`, `godMin`, `nei`. Nytt: `T.tatt` =
+dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, persondata). Alt i «riksbrudd-krig» per leir. Leir → Mål → **Fanger**:
+- **Bytt (150 000 kr per fange)** – `KrigSpill.byttPenger(i)`: motstanderen kjøper dem tilbake.
+- **Bytt mot dine** – `KrigSpill.byttEgne(i)`: én mot én med `T.tatt` fra samme side; de som kommer hjem, blir personer i Folk («fri»)
+  via `Tropper.oppløs` (persondata og erfaring følger med).
+- **Arbeid: bygg/hogst/riving/frakt/nei** – `KrigSpill.arbeid(i, o)` (uten o: blar). En fange = en halv arbeider, men bare der minst én av
+  dine arbeider (`Krig.arbeidF`, høyst ×2). Virker gjennom `FolkRegler.oppgaveF` (overlev.js bruker den også – krig-visning.js henger seg på
+  det som står der, og kobler seg på igjen hvis noen setter den på nytt). Rømming (bare av seg selv, ikke i testene): per døgn per fange
+  3 % + opptil 25 % når få vokter (`Krig.rømSjanse`: én vakt holder fire; vakter = folk på «vakt» + friske soldater i lag innen 300 m).
+  De som rømmer, sier fra hvor leiren ligger (`AI.minne[side].leir = true`).
+- **God behandling** – `KrigSpill.behandling(i)`: 1 rasjon per fange per døgn fra Folk-maten. Etter 3 døgn: **Spør om de vil bli med**
+  (`KrigSpill.spør(i)`): sjanse 30 % + 30 % × moral/100 per fange, krever `FolkRegler.kanRekruttere` (seng og moral ≥ 40) og høyst så
+  mange som det er ledige senger. De nye får lojalitet 0,4–0,6 (fanger som «slippes rett inn» i Samfunn-panelet får 0,15–0,35 og koster moral),
+  `p.fange` = fraksjonen. 10 % av dem som blir med, er forrædere: `p.spion = true` (det samfunn.js bruker – de kan lekke og sabotere til
+  de blir avslørt) og `p.krigForræder = true`. Nei: spør igjen om ett døgn.
+
+### 3. Lagring mellom øktene
+- «riksbrudd-krig» (per leir) har nå også `røyk`, `lys` (sted og «til» i spillminutter – `tid` lagres av lagring.js), `heli` (lagets navn,
+  fase, sted, mål, `fra`) og `kjør` (egne kjøretøy med kjøreordre: målet = siste punkt i ruta; ikke økonomiens oppdrag). Leses ved
+  «riksbrudd-spill»; helikopteret og kjøreordrene settes inn 2 s senere (etter at lagring.js har lest lagene og kjøretøyene), og
+  kjøreordrene legges på nytt med `window.kjørTil` (vegnettet hentes). Loggen: «Fortsetter der dere slapp: …». `KrigSpill.gjenopprettet`.
+- **Fiendens stillinger og minne** lagres allerede i «riksbrudd-verden» av lagring.js (lagt inn i nattarbeidet): ikke endret, prøvd på nytt
+  med omlasting – stillingen (side, kjent) og `AI.minne.rød` (leir, sist) kom tilbake.
+- Prøvd i nettleser (Dovre): røyk, lys, helikopter på veg hjem med laget om bord, kjøreordre for «1. lastebilkolonne», en kjent stilling
+  og minnet – alt var der etter omlasting. Kjøreordren ble lagt på nytt, men testserveren har ikke vegnettet («Fikk ikke lastet vegnettet»);
+  på den ekte siden hentes det fra kartlageret.
+
+### 4. 3D (krig3d.js)
+- **Stillinger**: ring av sandsekker (`MODELLER.sandsekkvoll`, 7 biter på en bue av 300°, radius 4,2 m, tre rader ≈ 0,55 m – lav brystvern),
+  åpningen bak, fronten mot leiren din. Én InstancedMesh (høyst 12), bare kjente stillinger (`q.kjent`) i utsnittet; matrisene settes bare
+  når lista/utsnittet endres. Frigjøres når scenen byttes (`frigjør`). Trærne inne i ringen ryddes ikke.
+- **Helikopterfrakt**: helikoptermodellen fra kjor.js flyttes ut på turen (stiger 0,3 m per meter fra start, synker mot målet, høyst 110 m,
+  rotoren går) og står på plassen sin igjen etterpå (kjor.js setter den hver ramme før krig3d.js). Ingen ny modell.
+- **Etterretning**: rombe med «?», navn og alder over stedet laget sist ble meldt, i overlegget (KROKER.tegn3d, proj3 – skjules bak åser og hus).
+- `Krig3d.antall()` = { røyk, lys, stillinger, heli, merker }.
