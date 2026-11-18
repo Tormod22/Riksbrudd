@@ -102,3 +102,20 @@ Verden, Sjø), `t4.js` (PC), `vk.js` (vaktene; bruker `../ui/u2.js`).
 Ikke gjort / ikke prøvd i runde 2:
 - Ekte Safari (bare Chromium med telefonprofil). «Lag noe» liggende er bare prøvd med CSS-en (panelet åpnes bare når du går i 3D).
 - Liggende iPhone SE (667 × 375) får også sidepanelene (bredere enn 1,2 × høyden); ikke prøvd.
+
+## Runde 3 (samme natt): små iPhoner, «Lag noe», byggekortene, lagpanelet
+Prøvd som iPhone SE: 375 × 667 stående og 667 × 375 liggende (telefonprofil, webdriver av, ekte trykk). Bilder: scratchpad `natt/test2/r2-se-*.png`.
+1. iPhone SE: startskjermen (ruller, ingenting utenfor), Leir-menyen, krigskartet liggende (/rogaland: sidepanel 334 px, området til
+   høyre), Region/Verden/Sjø liggende og lagpanelet er sett. Ingen knapper havner utenfor skjermen. SE liggende er både `smal` og `tlfligg`.
+2. «Lag noe» liggende (`EventyrSpill.åpne('lag')`): sidepanel til høyre med full høyde, ruller; sett på SE liggende.
+3. FANEN BYGG: på telefon tre kolonner med liten tegning (34 px), navn og pris på én linje; hele kortet er Bygg-knappen (knappen ligger
+   usynlig over kortet, så vakten og «Planlegg»-modus virker som før), kort du ikke har råd til er dempet (`:has(button:disabled)`),
+   forklaringen og materialene kommer i byggebanneret når du har trykket. Leir-menyen med fanen Bygg: 3206 → 1796 px høy på SE
+   (resten er statusflisene øverst). Trykk på et kort starter plasseringen (prøvd).
+4. LAGPANELET: stående 52 % av høyden (før 46 %: «Mer (2) ▾» havnet under kanten på SE), liggende sidepanel til venstre med full høyde.
+   Når panelet åpnes for et lag som havner under det, flyttes kartet én gang så laget står midt i den frie delen (over panelet stående,
+   til høyre liggende). Ikke i testene (navigator.webdriver), `Telefon.test = true` slår det på. På SE liggende står «Mer (2) ▾» fortsatt
+   9 px under kanten – panelet ruller.
+Vakter: skjermvaktene fra sjekk.js og alle `vakter/*.js` grønne på telefon (stående) etter runde 3.
+Ikke prøvd i runde 3: Gå i 3D på iPhone SE (styrespak, Huk/Hopp, Skyt, våpenrute, minikart) – 3D tar minutter i programvare-grafikk her,
+og tiden strakk ikke til. Loggen kan stikke inn under et sidepanel liggende (den står øverst til venstre) – ikke rettet.
