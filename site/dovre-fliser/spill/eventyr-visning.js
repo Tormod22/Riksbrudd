@@ -57,8 +57,8 @@
   // ---------- meldinger ----------
   const css = document.createElement('style');
   css.textContent = `#evrad{ position:fixed; left:8px; top:calc(var(--topp,58px) + 150px); z-index:6; display:none; flex-direction:column; gap:5px; align-items:flex-start; max-width:46vw; }
-#evrad.på{ display:flex; } #evrad button{ min-height:36px; padding:3px 10px; background:rgba(20,16,10,.72); border:1px solid rgba(231,220,195,.55); color:#e7dcc3; font:600 13px sans-serif; cursor:pointer; text-align:left; }
-#evrad button.viktig{ border-color:#e8a46a; color:#ffd9a8; } #evrad .lapp{ padding:2px 8px; background:rgba(40,16,12,.85); border:1px solid #c96a4a; color:#f6dccb; font:600 12px sans-serif; } #evrad .lapp.god{ background:rgba(20,30,16,.8); border-color:#9fc46a; color:#dcebc6; }
+#evrad.på{ display:flex; } #evrad button{ min-height:36px; padding:3px 10px; background:rgba(20,16,10,.72); border:1px solid rgba(231,220,195,.55); color:#e7dcc3; font:inherit; font-size:14px; font-weight:600; cursor:pointer; text-align:left; }
+#evrad button.viktig{ border-color:#e8a46a; color:#ffd9a8; } #evrad .lapp{ padding:2px 8px; background:rgba(40,16,12,.85); border:1px solid #c96a4a; color:#f6dccb; font-size:13px; font-weight:600; } #evrad .lapp.god{ background:rgba(20,30,16,.8); border-color:#9fc46a; color:#dcebc6; }
 body.kort #evrad{ top:calc(var(--topp,40px) + 96px); gap:3px; } body.kort #evrad button{ min-height:32px; font-size:12px; padding:2px 8px; }
 #evpanel{ position:fixed; left:50%; top:calc(var(--topp,58px) + 56px); transform:translateX(-50%); z-index:31; display:none; width:min(430px,94vw); max-height:calc(100vh - var(--topp,58px) - 110px); overflow:auto; padding:10px 14px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #evpanel.på{ display:block; } #evpanel h2{ margin:0 30px 4px 0; font-size:19px; } #evpanel h3{ margin:11px 0 3px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
@@ -67,7 +67,7 @@ body.kort #evrad{ top:calc(var(--topp,40px) + 96px); gap:3px; } body.kort #evrad
 #evpanel button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; } #evpanel button:disabled{ opacity:.45; }
 #evpanel .knapper2{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
 body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; transform:none; width:auto; max-height:64vh; border-width:1px 0 0; }
-#evtoast{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 100px); z-index:13; display:none; max-width:min(540px,90vw); padding:9px 16px; background:rgba(24,30,18,.96); border:1px solid #9fc46a; color:#e6f0d6; font-size:15px; text-align:center; } #evtoast.på{ display:block; } #evtoast b{ display:block; font-size:17px; margin-bottom:2px; }
+#evtoast{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 100px); z-index:13; display:none; width:max-content; max-width:min(540px,90vw); padding:9px 16px; background:rgba(24,30,18,.96); border:1px solid #9fc46a; color:#e6f0d6; font-size:15px; text-align:center; } #evtoast.på{ display:block; } #evtoast b{ display:block; font-size:17px; margin-bottom:2px; }
 #evsov{ position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(4,4,6,.93); color:#cfc6b0; font-size:20px; } #evsov.på{ display:flex; }
 #karakterark .evhist{ padding:6px 8px; margin:4px 0; background:#231d13; border-left:3px solid #c9b26a; } #karakterark .evhist b{ display:block; } #karakterark .evhist small{ display:block; color:var(--ink-dim,#a99); margin-top:2px; }`;
   document.head.appendChild(css);
@@ -163,7 +163,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function giBelønning(b) { if (b.penger && rot.OppstartSpill) OppstartSpill.gi(b.penger); const I = sekk();
     if (b.ting && I) for (const [id, n] of Object.entries(b.ting)) I.ting[id] = (I.ting[id] || 0) + n;
     if (b.ferdighet && rot.OverlevSpill) OverlevSpill.øk(b.ferdighet[0], b.ferdighet[1]); lagreSekk(); }
-  const belønningTekst = b => { const d = []; if (b.penger) d.push(rot.Leir ? Leir.kroner(b.penger) : b.penger + ' kr'); if (b.ting) for (const [id, n] of Object.entries(b.ting)) d.push(`${n} ${(Utstyr.TING[id] || { navn: id }).navn.toLowerCase()}`); if (b.ferdighet) d.push(`et løft i ${(Overlev.Ferdigheter.LISTE[b.ferdighet[0]] || { navn: b.ferdighet[0] }).navn.toLowerCase()}`); return d.join(', '); };
+  const belønningTekst = b => { const d = []; if (b.penger) d.push(rot.Leir ? Leir.kroner(b.penger) : b.penger + ' kr'); if (b.ting) for (const [id, n] of Object.entries(b.ting)) d.push(`${n} ${(q => (q.enhet === 'skudd' ? 'skudd ' + q.navn : q.navn.toLowerCase()))(Utstyr.TING[id] || { navn: id })}`); if (b.ferdighet) d.push(`et løft i ${(Overlev.Ferdigheter.LISTE[b.ferdighet[0]] || { navn: b.ferdighet[0] }).navn.toLowerCase()}`); return d.join(', '); };
   function historieSteg() { const k = E.Historie.fullfør(bakgrunn(), T.hist, tellere()); if (!k) return null; giBelønning(k.belønning); lagre(); si(`Kapittel fullført: ${k.tittel}`, `${k.etter} Du får ${belønningTekst(k.belønning)}.`);
     const n = E.Historie.kapittel(bakgrunn(), T.hist); if (n) logg(`Nytt kapittel – ${n.tittel}: ${n.tekst}`); oppdater(); return k; }
 
@@ -209,7 +209,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function fjernHund() { if (hundFig) { if (hundFig.parent) hundFig.parent.remove(hundFig); hundFig.geometry.dispose(); hundFig.material.dispose(); hundFig = null; } }
   KROKER.ramme3d.push(Rr => { if (typeof THREE === 'undefined' || !rot.MODELLER) return; if (hundFig && hundFig.parent !== Rr.scene) fjernHund();
     if (!klar || !T.hund || !Rr.fot || !Rr.ut || fører()) { if (hundFig) hundFig.visible = false; return; } if (!hundFig) hundFig = byggHund(Rr);
-    const u = Rr.ut, a = Rr.fot.a, mx = Rr.bane.x + Math.sin(a) * 1.6 + Math.cos(a) * 1.3, my = Rr.bane.y - Math.cos(a) * 1.6 + Math.sin(a) * 1.3;
+    const u = Rr.ut, a = Rr.fot.a, mx = Rr.bane.x - Math.sin(a) * 2.2 + Math.cos(a) * 1.5, my = Rr.bane.y + Math.cos(a) * 2.2 + Math.sin(a) * 1.5;
     if (!hundPos || hundPos.u !== u || Math.hypot(hundPos.x - mx, hundPos.y - my) > 40) hundPos = { x: mx, y: my, u, r: 0, t: performance.now() };
     const nå = performance.now(), dt = Math.min(.1, (nå - hundPos.t) / 1000); hundPos.t = nå; const dx = mx - hundPos.x, dy = my - hundPos.y, l = Math.hypot(dx, dy);
     if (l > .6) { const v = Math.min(l, (l > 6 ? 7 : 2.6) * dt); hundPos.x += dx / l * v; hundPos.y += dy / l * v; hundPos.r = Math.atan2(dy, dx); }

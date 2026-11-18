@@ -30,7 +30,7 @@
     // fella
     felle: { timer: 6, ekteMin: 5, sjanse: .6, skog: .85, maks: 4, nær: 6 },
     // kartsløret
-    slør: { celle: 250, n: 512, lag: 1200, leir: 3000, deg: 700, alfa: .4 },
+    slør: { celle: 250, n: 512, lag: 1200, leir: 3000, deg: 700, alfa: .3 },
     stødig: 1.2, hodeskudd: .15,
   };
 
