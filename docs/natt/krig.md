@@ -210,3 +210,17 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   Claudes forslag). Melding i loggen (og «riksbrudd-hendelse» som stopper spolingen), og øverst i Leir → Mål → Fanger en rad med
   «Godta» / «Avslå». `KrigSpill.foreslå(side)`, `KrigSpill.svarForslag(ja)`, `T.forslag` (lagres). «Godta» bruker `byttEgne(i, maks)`.
 - Vakta prøver forslag + Godta (din mann kommer hjem i Folk, én av deres fanger går). test_krig.js har to nye sjekker.
+
+### 4a. Soldater i fiendens stillinger (3D)
+- krig3d.js `figurer()`: tre figurer på kne bak sandsekkene (våpenet over vollen), vendt mot leiren, i hver kjent stilling som har et lag
+  fra samme side innen 25 m som du ser (`synlig` – tåka gjelder). Én InstancedMesh (høyst 36) med egen figur (bein, kropp, armer, sekk,
+  hode, hjelm, gevær; hjørnefarger) og sidens farge som et skjær (instanceColor, laget selv). Oppdateres høyst hvert halve sekund, og bare
+  når lista endres. Eget materiale (MeshLambert med hjørnefarger) – frigjøres sammen med resten når scenen byttes. `Krig3d.antall().soldater`.
+- Prøvd med bilde (p9.js): en kjent rød stilling 180 m fra leiren med et rødt lag i: 3 figurer bak vollen mot leiren, laget selv rundt.
+- Lagets egne soldater (soldater3d i index.html) står fortsatt i formasjonen sin rundt laget – figurene i stillingen kommer i tillegg.
+
+### Fellesfiler endret i del 2
+- `site/dovre-fliser/terreng.js`: `MÅL_HØYDE = 1.8`, ny parameter `mål` i `siktfelt` og `helling = (z + mål - oz) / d` (+ kommentar).
+- `site/dovre-fliser/index.html`, `kamprunde()`: `ammo0 = a.ammo` før krokene, og `if (ildf <= 0) { a.ammo = ammo0; continue; }` (+ kommentar).
+- `site/dovre-fliser/spill/kontrollrom-visning.js`, `rapport()`: `hvile`-hjelper og `fiender: fiender.filter(f => !hvile(f))` i `nå` (+ kommentar).
+- `pipeline/fliser/test_terreng.js`: ny blokk 5b (brekken).
