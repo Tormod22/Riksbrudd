@@ -36,6 +36,12 @@
     dag: 1440,             // spillminutter per døgn
     lagres: 3000,          // så mange endrede beholdere huskes (de eldste glemmes)
     rygg: 'tursekk',       // sekken alle har på ryggen fra start (figuren i 3D har en)
+    // (runde 5) HUSENE LEVER: fiendelag og røvere nær et bygg tømmer det (andelen som er tatt: 1 − e^(−fart · timer)), og
+    // butikker og lagre fylles litt på igjen med tiden
+    ran: { radius: 60, fart: 1.2, tømt: .6, steg: 10 },   // m fra byggets midte, per spilltime nær, «ransaket» fra, spillminutter mellom hver sjekk
+    påfyll: { døgn: 3, andel: .35, klasser: { butikk: 1, lager: 1 } },   // hvert tredje døgn kommer en tredel av en ny forsyning
+    // (runde 5) FØRSTE HUS: boliger nær en ny leir er aldri ransaket, og den første beholderen av noen typer har alltid noe nyttig
+    nærLeir: 1500,
   };
 
   // GJENSTANDENE. kat: mat, fersk, drikke, våpen, ammo, medisin, utstyr, sekk. spis: det et måltid fyller (0–100 på behovene i spill/karakter.js),
@@ -211,12 +217,34 @@
   function avstand(m, x, y) { const c = Math.cos(m.a || 0), s = Math.sin(m.a || 0), dx = x - m.x, dy = y - m.y, u = dx * c + dy * s, v = -dx * s + dy * c;
     return Math.hypot(Math.max(0, Math.abs(u) - (m.b || .5) / 2), Math.max(0, Math.abs(v) - (m.d || .5) / 2)); }
 
+  // (runde 5) noe nyttig i de første beholderne i boligene nær leiren – trukket fra lista med byggets nummer (ingen fast oppskrift)
+  const NYTTIG = { kjøkkenbenk: ['lapskaus', 'fiskeboller', 'knekkebrød', 'saft', 'havregryn', 'pølseboks'], kjøleskap: ['brunost', 'saft', 'saftbr', 'brus', 'flaskevann'],
+    skap: ['skolesekk', 'a762', 'forbinding', 'tursekk', 'ahagl', 'sovepose', 'lommelykt'], nattbord: ['sjokolade', 'smertestillende', 'a9', 'lommelykt'] };
+  const BOLIG = { hus: 1, hytte: 1, leil: 1 };
   // DET FASTE INNHOLDET i én beholder: kl = byggets klasse, type = møbeltypen, i = byggets nummer, k = nummeret blant like møbler.
-  // Fersk mat har ligget der siden alt stoppet (dato 0).
-  function innhold(kl, type, i, k) {
+  // Fersk mat har ligget der siden alt stoppet (dato 0). o.nær: en bolig nær leiren (aldri ransaket, noe nyttig i den første av hver type).
+  function innhold(kl, type, i, k, o = {}) {
+    const B = innhold0(kl, type, i, k, !!(o.nær && BOLIG[kl]));
+    if (o.nær && BOLIG[kl] && (k | 0) === 0 && NYTTIG[type] && !LEIR[kl]) { const L = NYTTIG[type], id = L[Math.floor(hash(i | 0, 333 + TYPER.indexOf(type)) * L.length)], g = G(id), D = BEHOLDERE[type];
+      if (g && !(B.t[id] > 0) && kg(B) + g.vekt <= D.kg) { const n = g.kat === 'ammo' ? g.n[0] + Math.floor(hash(i | 0, 334) * (g.n[1] - g.n[0] + 1)) : 1; B.t[id] = n; if (g.fersk) B.d[id] = Array.from({ length: n }, () => (D.kald ? [0, 0] : 0)); } }
+    return B;
+  }
+  // tøm en andel av det som ligger i B (fast trekning per ting med frø): gir antallet som ble tatt
+  function tøm(B, andel, frø = 0) { let n = 0; if (!(andel > 0)) return 0;
+    for (const id of Object.keys(B.t)) { const har = B.t[id] || 0, f = har * Math.min(1, andel), ta = Math.min(har, Math.floor(f) + (hash(frø | 0, id.length * 31 + id.charCodeAt(0)) < f - Math.floor(f) ? 1 : 0)); if (!ta) continue;
+      B.t[id] = har - ta; n += ta; if (B.d && B.d[id]) B.d[id].splice(0, ta); if (!B.t[id]) { delete B.t[id]; if (B.d) delete B.d[id]; } }
+    return n; }
+  // hvor mye av et bygg som er tatt etter h spilltimer med et fiendelag nær (fra før: a)
+  const ransak = (a, h) => 1 - (1 - Math.max(0, Math.min(1, a || 0))) * Math.exp(-REGLER.ran.fart * Math.max(0, h));
+  // påfyll: legg en andel av en ny forsyning (ny) i B, så langt plassen rekker; gir antallet
+  function påfyll(B, ny, andel, plass, vekter) { let n = 0, ledig = plass - kg(B, vekter);
+    for (const [id, har] of Object.entries(ny.t)) { const v = kgAv(id, vekter), q = Math.min(Math.max(1, Math.round(har * andel)), v > 0 ? Math.floor((ledig + 1e-9) / v) : har); if (!(q > 0)) continue;
+      B.t[id] = (B.t[id] || 0) + q; ledig -= q * v; n += q; if (G(id) && G(id).fersk) { if (!B.d) B.d = {}; const a = B.d[id] || (B.d[id] = []); for (let j = 0; j < q; j++) a.push((ny.d && ny.d[id] && ny.d[id][0]) || 0); } }
+    return n; }
+  function innhold0(kl, type, i, k, aldriRansaket) {
     const B = ny(), D = BEHOLDERE[type]; if (!D || LEIR[kl]) return B;
     const K = KLASSER[kl] || KLASSER.hus, frø = (Math.imul(i | 0, 131) + TYPER.indexOf(type) * 7919 + (k | 0) * 104729) | 0, r = n => hash(frø, n);
-    const ransaket = hash(i | 0, 901) < K.tomt;
+    const ransaket = !aldriRansaket && hash(i | 0, 901) < K.tomt;
     const n = Math.round((D.n[0] + Math.floor((D.n[1] - D.n[0] + 1) * r(1))) * (K.rik || 1));
     const kandidater = []; let sum = 0;
     for (const [id, g] of Object.entries(GJENSTANDER)) { const w = (D.kat[g.kat] || 0) * (K.kat[g.kat] === undefined ? 1 : K.kat[g.kat]) * g.w * (g.b && g.b[type] !== undefined ? g.b[type] : 1) * (g.k && g.k[kl] !== undefined ? g.k[kl] : 1); if (w > 0) { kandidater.push([id, w]); sum += w; } }
@@ -253,7 +281,7 @@
   const tall = v => String(Math.round(v * 100) / 100).replace('.', ',');
   const rad = (n, navn, st) => `${n} × ${navn}${st && st !== 'fersk' ? ' – ' + st : ''}`;
 
-  const api = { REGLER, GJENSTANDER, BEHOLDERE, KLASSER, LEIR, REKKE, STATUS, STADIUM, ny, nøkkel, alder, stadium, normaliser, kg, flytt, taUt, stabler, måltid, beholdere, avstand, innhold, bæring, holder, tall, rad, hash };
+  const api = { REGLER, GJENSTANDER, BEHOLDERE, KLASSER, LEIR, REKKE, STATUS, STADIUM, NYTTIG, BOLIG, ny, nøkkel, alder, stadium, normaliser, kg, flytt, taUt, stabler, måltid, beholdere, avstand, innhold, tøm, ransak, påfyll, bæring, holder, tall, rad, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Lut = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

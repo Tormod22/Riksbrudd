@@ -72,4 +72,17 @@ ok(L.måltid('lommelykt') === null && L.måltid('kaffe').søvn > 0, 'lommelykta 
 { const uten = L.bæring({ tingKg: 20 }), med = L.bæring({ tingKg: 20, rygg: 'militærsekk' }); ok(med.vekt < uten.vekt && uten.plass === R.lommer, `sekken gjør vekten lettere (${med.vekt} mot ${uten.vekt} kg), uten sekk bare lommene`); }
 ok(L.bæring({ tingKg: 10, ekstra: 10 }).evne === R.bæreevne + 10, 'styrken gir høyere bæreevne');
 
+// (runde 5) husene lever: tømming, ransak over tid, påfyll; første hus nær leiren
+{ const B = { t: { brunost: 4, a762: 20, saft: 2 }, d: { brunost: [1, 2, 3, 4] } }, n = L.tøm(B, .5, 7);
+  ok(n > 0 && (B.t.a762 || 0) === 10 && (B.t.brunost || 0) === 2 && B.d.brunost.length === 2, `tøm halvparten: ${n} ting tatt, datoene følger med`);
+  ok(L.tøm(B, 1, 1) > 0 && !Object.keys(B.t).length, 'tøm alt: tomt');
+  ok(L.ransak(0, 0) === 0 && L.ransak(0, 1) > .6 && L.ransak(.5, 1) > L.ransak(0, 1) && L.ransak(0, 100) <= 1, 'ransak: mer jo lenger et lag er der');
+  const C = { t: { havregryn: 1 }, d: {} }, ny = L.innhold('butikk', 'reol', 77, 1000); const før = L.kg(C), m = L.påfyll(C, ny, .35, 60);
+  ok(m > 0 && L.kg(C) > før && L.kg(C) <= 60 + 1e-9, `påfyll legger til (${m} ting) innenfor plassen`);
+  let tomme = 0, nyttige = 0; for (let i = 1; i <= 300; i++) { const v = ['kjøkkenbenk', 'kjøleskap', 'skap', 'nattbord'].map(t => L.innhold('hus', t, i, 0, { nær: true })); if (v.every(b => !Object.keys(b.t).length)) tomme++;
+    if (v.some(b => Object.keys(b.t).some(id => L.GJENSTANDER[id] && /mat|drikke|fersk|sekk|ammo/.test(L.GJENSTANDER[id].kat)))) nyttige++; }
+  ok(tomme === 0 && nyttige === 300, `boliger nær leiren: aldri tomme, alltid mat/drikke/sekk/ammo (${nyttige} av 300)`);
+  let ulike = new Set(); for (let i = 1; i <= 40; i++) ulike.add(Object.keys(L.innhold('hus', 'kjøkkenbenk', i, 0, { nær: true }).t).sort().join()); ok(ulike.size > 10, `ingen fast oppskrift (${ulike.size} ulike kjøkkenskap av 40)`);
+  let uten = 0; for (let i = 1; i <= 300; i++) if (['kjøkkenbenk', 'kjøleskap', 'skap', 'nattbord'].every(t => !Object.keys(L.innhold('hus', t, i, 0).t).length)) uten++;
+  ok(uten > 0, `uten «nær» kan et hus være tomt (${uten} av 300) – det er det vi retter nær leiren`); }
 console.log(feil ? feil + ' FEIL' : 'alle luttestene ok'); process.exit(feil ? 1 : 0);
