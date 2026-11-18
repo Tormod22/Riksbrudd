@@ -22,17 +22,21 @@
     lasting = (async () => {
       const m = await (await fetch(`/api/kart/${VEGNETT_TAG}/manifest.json/0/1048576`)).json();
       const gz = typeof DecompressionStream !== 'undefined', fil = gz ? 'vegnett.bin.gz' : 'vegnett.bin', byte = gz ? m.gzip_byte : m.byte;
-      logg(`Laster vegnettet for hele Norge (${Math.round(byte / 1048576)} MB) …`);
+      logg(VEG_TLF.boks() ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – på telefon beholdes bare vegene rundt leiren …` : `Laster vegnettet for hele Norge (${Math.round(byte / 1048576)} MB) …`);
       const deler = [], kø = []; for (let fra = 0; fra < byte; fra += BIT) kø.push(fra);
       let ferdig = 0;
       await Promise.all(Array.from({ length: 4 }, async () => { for (let fra; (fra = kø.shift()) !== undefined;) {
         const r = await fetch(`/api/kart/${VEGNETT_TAG}/${fil}/${fra}/${Math.min(BIT, byte - fra)}`);
         if (!r.ok) throw new Error('Vegnettet: HTTP ' + r.status);
         deler[fra / BIT] = new Uint8Array(await r.arrayBuffer()); ferdig++; STAT.byte += deler[fra / BIT].byteLength; STAT.req++; tegnHud(); } }));
-      let data = new Uint8Array(byte), p = 0; for (const d of deler) { data.set(d, p); p += d.byteLength; }
-      if (gz) data = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
-      graf = Vegnett.les(data); window.VEGNETT = graf;
-      logg(`Vegnettet er lastet: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`);
+      // (19. nov) bitene pakkes ut rett fra en Blob – før ble de først kopiert sammen til én tabell (25 MB ekstra på toppen, viktig på telefon)
+      let data;
+      if (gz) { const blob = new Blob(deler); deler.length = 0; data = new Uint8Array(await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()); }
+      else { data = new Uint8Array(byte); let p = 0; for (const d of deler) { data.set(d, p); p += d.byteLength; } deler.length = 0; }
+      // på telefon bare vegene rundt leiren (VEG_TLF.boks): ca. 20 MB i minnet i stedet for ca. 210 MB for hele landet
+      const boks = VEG_TLF.boks(); graf = Vegnett.les(data, boks ? { boks } : {}); data = null; window.VEGNETT = graf;
+      logg(boks ? `Vegnettet er lastet for området rundt leiren (${Math.round((boks[2] - boks[0]) / 1000)} × ${Math.round((boks[3] - boks[1]) / 1000)} km): ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`
+        : `Vegnettet er lastet: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`);
       return graf;
     })();
     lasting.catch(e => { lasting = null; logg('Fikk ikke lastet vegnettet: ' + e.message); });
@@ -40,11 +44,66 @@
   }
   window.lastVegnett = lastVegnett;
 
+  // ---------- vegnettet på telefon (19. nov) ----------
+  // Fiendens lastebiler (spill/fraksjoner-visning.js) kjører bare når vegnettet er lastet, og der hentes det bare på PC (vinduet minst 900 px
+  // bredt). Telefonen fikk det derfor aldri, og fienden gikk til fots. MÅLT (docs/natt/krig.md, runde 5): 25 MB nedlasting og ca. 210 MB i
+  // minnet for hele landet (41 MB utpakket fil + tabellene). På telefon leses derfor bare et utsnitt rundt leiren (ca. 20 MB), og det
+  // hentes først når et fiendelag har et mål over 3 km unna og lastebilen sin like ved – altså første gang fienden vil kjøre.
+  // Ikke med datasparing, ikke på telefoner som sier de har under 3 GB minne (navigator.deviceMemory), og ikke i testene (VEG_TLF.test).
+  // Sjekkes hvert 5. sekund (hver, ms); feiler hentingen, prøves det igjen om ti minutter (ventFeil).
+  // Tallene er Claudes forslag.
+  const VEG_TLF = { test: false, hver: 5000, grunn: null, bedt: false, sist: -1e9, ventFeil: 600000 };
+  window.VEG_TLF = VEG_TLF;
+  // Telefon: bare et utsnitt på 2 × UTSNITT_HALV rundt leiren (Vegnett.les med boks), utvidet så basene og den nærmeste oljeterminalen
+  // er med (+ UTSNITT_KANT), så «Hent olje» virker. PC og testene (navigator.webdriver uten VEG_TLF.test): hele landet som før.
+  // MÅLT (andel av hele landets 2,03 mill. lenker): ±150 km rundt Dovre 20 %, rundt Ryfylke 24 %, rundt Oslo 44 % (hele landet ca. 210 MB).
+  // Tallene er Claudes forslag.
+  const UTSNITT_HALV = 150000, UTSNITT_KANT = 20000;
+  VEG_TLF.telefon = () => VEG_TLF.tvingTelefon || innerWidth < 900 || matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900;
+  VEG_TLF.boks = () => { if (!VEG_TLF.telefon() || (navigator.webdriver && !VEG_TLF.test)) return null; const S = window.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir;
+    const [x, y] = L && Number.isFinite(L.x) ? [L.x, L.y] : [kam.x, kam.y], b = [x - UTSNITT_HALV, y - UTSNITT_HALV, x + UTSNITT_HALV, y + UTSNITT_HALV];
+    const O = window.OLJE || {}, ta = p => { if (!p || !Number.isFinite(p.x)) return; b[0] = Math.min(b[0], p.x - UTSNITT_KANT); b[1] = Math.min(b[1], p.y - UTSNITT_KANT); b[2] = Math.max(b[2], p.x + UTSNITT_KANT); b[3] = Math.max(b[3], p.y + UTSNITT_KANT); };
+    for (const p of O.BASER || []) ta(p);
+    ta((O.TERMINALER || []).slice().sort((a, c) => Math.hypot(a.x - x, a.y - y) - Math.hypot(c.x - x, c.y - y))[0]);
+    return b; };
+  VEG_TLF.kan = () => {
+    if (graf || lasting) return false;
+    if (navigator.webdriver && !VEG_TLF.test) return false;
+    if (navigator.connection && navigator.connection.saveData) return false;
+    if (navigator.deviceMemory && navigator.deviceMemory < 3) return false;
+    return VEG_TLF.telefon();   // på PC henter AI-en det selv
+  };
+  // Vil et fiendelag kjøre nå? (samme regel som AI-en: Fraksjoner.kjør – mål over bil.langt unna, lastebilen innen bil.nær)
+  VEG_TLF.trenger = () => {
+    if (!window.AI || !AI.på || !AI.biler || !window.Fraksjoner) return null; const B = Fraksjoner.REGLER.bil;
+    for (const s of ENHETER) { if (!s.ai || !levende(s) || s.ombord || !s.ai.mål) continue; const k = AI.biler[s.side];
+      if (!k || !KJ.includes(k) || k.sti || ENHETER.some(e => e.ombord === k)) continue;
+      if (Math.hypot(s.ai.mål[0] - s.x, s.ai.mål[1] - s.y) > B.langt && Math.hypot(k.x - s.x, k.y - s.y) <= B.nær) return s; }
+    return null;
+  };
+  // Når vegnettet er lastet: lag som går til fots mot et mål langt unna og har lastebilen ved seg, tenker på nytt (og kjører).
+  VEG_TLF.etter = () => {
+    if (!window.AI || !AI.biler || !window.Fraksjoner) return 0; const B = Fraksjoner.REGLER.bil; let n = 0;
+    for (const s of ENHETER) { if (!s.ai || !levende(s) || s.ombord || !s.ai.mål || !s.sti) continue; const k = AI.biler[s.side];
+      if (!k || k.sti || Math.hypot(s.ai.mål[0] - s.x, s.ai.mål[1] - s.y) <= B.langt || Math.hypot(k.x - s.x, k.y - s.y) > B.nær) continue;
+      s.sti = null; s.siktSkitten = true; s.ai.mål = null; s.ai.neste = 0; n++; }
+    return n;
+  };
+  VEG_TLF.sjekk = () => {
+    const nå = performance.now(); if (nå - VEG_TLF.sist < VEG_TLF.hver || !VEG_TLF.kan()) return false; VEG_TLF.sist = nå;
+    const s = VEG_TLF.trenger(); if (!s) return false;
+    VEG_TLF.grunn = s.navn; VEG_TLF.bedt = true;
+    lastVegnett().then(() => { VEG_TLF.etter(); skitten = true; }, () => { VEG_TLF.sist = performance.now() + VEG_TLF.ventFeil; });
+    return true;
+  };
+
   async function kjørTil(kj, X, Y) {
     // et mindre spillkart (/rogaland, spill/omraade.js): ingen kjøring ut av området
     if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { logg(kj.navn + ': det ligger utenfor spillkartet.'); return; }
     try {
-      const g = await lastVegnett(), r = Kjoretoy.planlegg(kj, g, [X, Y]);
+      const g = await lastVegnett();
+      if (g.boks && !(X >= g.boks[0] && X <= g.boks[2] && Y >= g.boks[1] && Y <= g.boks[3])) { logg(`${kj.navn}: på telefon er bare vegene i området rundt leiren lastet (ca. ${Math.round(UTSNITT_HALV / 1000)} km hver veg) – velg et mål nærmere.`); return; }
+      const r = Kjoretoy.planlegg(kj, g, [X, Y]);
       if (r.feil) { logg(kj.navn + ': ' + r.feil); return; }
       logg(`${kj.navn}: ${nf.format(r.meter / 1000)} km, ca. ${tidTekst(r.sekunder)}${r.ferjer ? ', ' + r.ferjer + ' ferje' + (r.ferjer > 1 ? 'r' : '') : ''}.`);
     } catch (e) { /* meldt i loggen */ } finally { if (valgtKj === kj) visKj(kj); skitten = true; }
@@ -54,6 +113,7 @@
 
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
+    VEG_TLF.sjekk();
     for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { if (k.side === 'blå') logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
     if (valgtKj && performance.now() - sistPanel > 1000 && !pekerNede(document.getElementById('panel'))) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
