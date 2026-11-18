@@ -23,6 +23,8 @@
 
   // ---------- minnesmerket: et nytt bygg ----------
   if (!LB.BYGG.minnesmerke) LB.BYGG.minnesmerke = { navn: 'Minnesmerke', pris: 4e5, tid: 1, kw: 0, modell: 'minnesmerke', fot: [-1.6, 1.6, -1.6, 1.6], mat: { betong: 2, tre: 1 }, tekst: 'En stein med navnene på dem som er borte: bedre moral' };
+  // ikonet i byggelista (vakten «ikoner» krever at alle bygg har ett)
+  if (window.Ikoner && Ikoner.BYGG && !Ikoner.BYGG.minnesmerke) Ikoner.BYGG.minnesmerke = Ikoner.har('kors') ? 'kors' : Ikoner.BYGG.sykestue;
   if (window.MODELLER && !MODELLER.minnesmerke) MODELLER.minnesmerke = function () {
     const d = [], boks = (x, y, z, sx, sy, sz, c) => { let g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); g = g.toNonIndexed(); g.computeVertexNormals(); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let i = 0; i < n; i++) f.set(c, i * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); g.deleteAttribute('uv'); d.push(g); };
     const stein = [.5, .5, .48], mørk = [.3, .3, .29], tre = [.42, .31, .2];
