@@ -51,16 +51,33 @@ ALLE TALL ER CLAUDES FORSLAG (samlet i `Sjo.REGLER` og `Sjo.TYPER` i `spill/sjo.
 `miner(båt)`, `senk(båt)`, `rydd(id)`, `havner()`, `fiendeHavner()`, `sendFrakt(havn)`, `avskåret()`, `test` (true = ting skjer av seg selv
 også i testene, og panelet åpnes ved trykk på en kai).
 
+## Runde 2 (etter flettingen med claude/nattfiks)
+- REGIONEN (spill/region.js) OG HAVNENE – ÉN REGEL, INGEN DOBBEL LEVERANSE: når Regionen er i gang, frakter den alt et tettsted gir, over
+  land til leiren. Sjøen gir da bare DET VEGEN IKKE FÅR FRAM: er Regionens rute fra en havneby (tettsted du holder med stor kai innen
+  1,5 km) «truet» eller «stengt», legges mangelen (full leveranse minus det som kom fram; mat → rasjoner, diesel → l diesel, tre, betong,
+  stål) på kaia, høyst sju døgns full leveranse (`Sjo.havnMangel`, `REGLER.regionTak`). Åpen veg = ingenting på kaia. Folk og skatt går
+  aldri sjøvegen. Ukesvarene (`havnUke`) og landevegen en gang i uka gjelder bare UTEN Regionen (og i testene, der Regionen står stille
+  uten `RegionSpill.test`). Forklaringen står i sjøpanelet (kaia og «Havner du holder»). Region-panelet er ikke endret.
+- KJØRETØY OM BORD: lekter 2, ferje 6 (`TYPER.kj`). Båten må ligge ved en kai, kjøretøyet stå innen 250 m og ikke være på oppdrag.
+  `k.påBåt = båten`; kjøretøyet følger båten og tar ikke ordre (en ordre stoppes med beskjed), lag som sitter i kjøretøyet følger med.
+  «Kjør i land» ved kai setter det på nærmeste land. Lagres (navnene i `b.kj`). `SjoSpill.kjørOmBord/kjørILand/kjOmBord`.
+- FISKE MED FOLK: har leiren en kai innen 3 km, kan du i sjøpanelet («Fiske fra kaia», − / +) be om opptil 10 fiskere. De tas av dem
+  som står på «fri» i Folk (oppgavelista er ikke endret; får de en annen oppgave, slutter de). 0,1 rasjon per person per spilltime
+  (2,4 i døgnet), årstid og storm som for båtene. `S.fiskere`, `SjoSpill.settFiskere/fiskere`.
+- KJØR SELV VED FYLKESGRENSA: `spill/omraade.js` har en `KROKER.ramme3d`-krok som setter føreren (`KjorSpill.fører()`) tilbake til
+  siste sted innenfor og nuller farten. IKKE PRØVD I NETTLESER (bare lest mot kjor.js: rammen regner fra k.X/k.Y hver gang).
+- 3D PÅ SJØEN: sett på /rogaland (ferja fra Sand i Saudafjorden): modellen ligger i vannflata, og båtene har kjølvann via
+  `window.Kjølvann` (ett spor per båt).
+- IKKE GJORT i runde 2: fiendens AI bruker fortsatt ikke sjøen utover forsyningsbåtene. Kjøretøy om bord tegnes av kjøretøy3d i
+  sjøhøyde (inne i/bak skroget – en kolonne på flere biler henger etter ferja på vannet); det må rettes i kjøretøy3d i index.html.
+
 ## IKKE gjort / svakheter
-- Kjøretøy kan ikke fraktes på lekter/ferje (bare lag og varer).
-- Fiske med folk fra kaia (en egen oppgave i Folk) er ikke laget – bare båter fisker.
 - Fiendens AI vet ikke om båtene: den bruker ikke båter selv, og «ser» et lag om bord som et hvilket som helst lag (men treffer det dårlig).
 - Forsyningsbåtene kan ikke bordes eller senkes med ild – bare stoppes med miner/vrak.
 - Ferjene i rute i 3D (ferje3d.js) er pynt og forsvinner ikke når du «tar ferja».
 - I 3D kan du ikke trykke på kaier/båter (panelet virker, men «Seil til en kai» krever 2D-kartet). Lagene om bord tegnes som
-  figurer ved båten i 3D. Ingen kjølvann.
+  figurer ved båten i 3D. 
 - Mørkleggingen utenfor fylkesgrensa finnes fortsatt ikke i 3D (tåkebildet tegnes i index.html; ikke billig å få til utenfra).
-- KjorSpill (kjør selv) stoppes ikke ved fylkesgrensa.
 - Kaier i innsjøer gir båter som bare kan seile på innsjøen. Det grove sjøkartet (128 m) kan lukke trange sund på lange turer.
 - Havneinntekten krever en «stor» kai (Claudes inndeling i kaier.js); tettsteder med bare småkaier gir ingenting.
 - Prøvd på /rogaland (Sand/Sauda) med ekte data i 2D; 3D-modellene er bare sett på Dovre-testsiden (på land).
