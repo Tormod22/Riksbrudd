@@ -138,11 +138,12 @@ dag 6 fordi røverne i bølge 4 ble stående inne i leiren et døgn, ingen slo d
 
 | Hva | Tall | Fil | Hvorfor |
 |---|---|---|---|
-| **1. Røvere som har herjet** trekker seg ut med byttet | inne i leiren = innen 150 m fra midten; etter 45 spillminutter der tar laget byttet og marsjerer 2,2 km bort; fjernes ved 1,8 km eller etter 3 spilltimer | `spillet.js` Trussel.HERJ, herjet(), bytte(), bytteTekst(), ferdig() → 'herjet'; `spillet-visning.js` (KROKER.sim teller e.inne, trekkUt, utSteg) | Røverne sto et døgn i leiren i kjøring 4. |
-| Byttet per røverlag | 8 % av kassa (høyst 800 000 kr), 20 % av tre/betong/stål, 25 % av dieselen, 15 % av maten | Trussel.HERJ | Merkes, men tar ikke alt. |
+| **1. Røvere som har herjet** trekker seg ut med byttet | inne i leiren = innen 150 m fra midten; etter 60 spillminutter der (kjøring 5a: 45) tar laget byttet og går samme vei ut som det kom (e.fra); fjernes ved 1,8 km eller etter 90 spillminutter | `spillet.js` Trussel.HERJ, herjet(), bytte(), bytteTekst(), ferdig() → 'herjet'; `spillet-visning.js` (KROKER.sim teller e.inne, trekkUt, utSteg) | Røverne sto et døgn i leiren i kjøring 4. |
+| Byttet per røverlag | 5 % av kassa (høyst 500 000 kr), 20 % av tre/betong/stål, 10 % av dieselen, 15 % av maten | Trussel.HERJ | Merkes, men tar ikke alt. Kjøring 5a/5b: 8 %/800 000 kr og 25 % av dieselen (8000 kr literen: over 1 mill. kr) var for mye. |
+| Røverne gir opp | et røverlag der halvparten er falt eller såret (HERJ.brudd 0,5), flykter samme vei som det kom og teller som slått ut – bølgen kan bli «slått tilbake» med belønning | Trussel.brutt(), `spillet-visning.js` | Terreng regner et lag som slått ut først ved 6 ute: et røverlag på 6 måtte slås helt ut. |
 | Bølgen er over («herjet») | ikke «slått tilbake», ingen belønning, moral −4; melding i loggen og varselet; neste bølge planlegges som vanlig; T.herjet teller | `spillet-visning.js` | |
-| **2. Forsvarerne går mot røverne** | røvere innen 150 m (Forsvar.R.mot.inne) → egne lag innen 3 km som står stille, er i forsvarsstilling eller allerede går mot dem (ikke på vei et annet sted, ikke om bord, ikke slått ut) og Leirvakta går til et punkt 50 m fra nærmeste røver; ny ordre når målet har flyttet seg 60 m. Leirvakta tar opp våpen av seg selv (≥ 2 på vakt). Når røverne er ute: tilbake til forsvarsstillingen. | `forsvar.js` motHerjere(), `forsvar-visning.js` motSteg/motFerdig | |
-| **3. Reparasjon** av seg selv | ledige byggelag (Leir.byggelag − jobbene) reparerer bygg under 95 % helse, de mest skadde først, bare mellom bølgene, og 300 000 kr blir alltid igjen i kassa. Standard på, også i lagrede spill; bryter i Leir → Bygg → Forsvar («riksbrudd-reparer», per leir). Prisen og farten er Leir.reparer som før (25 % av prisen × skaden, 30 % av byggetiden × skaden). | `forsvar.js` velgReparasjon(), `forsvar-visning.js` repSteg | Byggene var 23–37 % før bølge 4 i kjøring 4. |
+| **2. Forsvarerne går mot røverne** | røvere innen 150 m (Forsvar.R.mot.inne) → egne lag innen 3 km som står stille, er i forsvarsstilling eller allerede går mot dem (ikke på vei et annet sted, ikke om bord, ikke slått ut) og Leirvakta går til et punkt 25 m fra nærmeste røver; et lag på vei får ny ordre når målet har flyttet seg 40 m, og et lag som står mer enn 55 m unna, sendes på nytt (høyst hvert 4. sekund). Kjøring 5b: med 50 m sto lagene i skogen uten å se røverne og løsnet ikke et skudd. Leirvakta tar opp våpen av seg selv (≥ 2 på vakt). Når røverne er ute: tilbake til forsvarsstillingen. | `forsvar.js` motHerjere(), `forsvar-visning.js` motSteg/motFerdig | |
+| **3. Reparasjon** av seg selv | ledige byggelag (Leir.byggelag − jobbene) reparerer bygg under 95 % helse, de mest skadde først, bare mellom bølgene og ikke mens fiender er innen 200 m fra leiren, og 300 000 kr blir alltid igjen i kassa. Standard på, også i lagrede spill; bryter i Leir → Bygg → Forsvar («riksbrudd-reparer», per leir). Prisen og farten er Leir.reparer som før (25 % av prisen × skaden, 30 % av byggetiden × skaden). | `forsvar.js` velgReparasjon(), `forsvar-visning.js` repSteg | Byggene var 23–37 % før bølge 4 i kjøring 4. |
 | Skadevarsel etter angrep | «N bygg er skadet» i banneret øverst (#alarm) med «Reparer alle (X kr)» og «Lukk», i 3 minutter eller til alt repareres; knappen også i Leir → Bygg → Forsvar | `forsvar.js` skadet(), `forsvar-visning.js` etterAngrep/visSkade/reparerAlle | |
 | **4. Opplæringen**: fire nye steg etter de fem | «Lag en tropp til» (to tropper), «Ha mat til tre døgn», «Sett lagene i forsvar» (alarmen eller en øvelse), «Reparer byggene etter et angrep» (et angrep er over og ingen bygg under 98 % står ureparert) | `opplaering.js` (NYE; lagret opplæring som var ferdig og lukket, får dem som «hoppet over»), `test_opplaering.js` | |
 | Målet «Bygg kontrollrommet» | hjelpeteksten sier «to tropper og et vakttårn» | `maal.js` | (Antallet mål er uendret: vakta «spillform» teller 19/15.) |
@@ -152,3 +153,43 @@ API: `SpilletSpill.trekkUt(e)`, `SpilletSpill.utSteg()`; `ForsvarSpill.test`, `m
 `repPå()`, `settRep(på)`, `etterAngrep()`, `skade()`, `lukkSkade()`; `Forsvar.R.mot`, `Forsvar.R.rep`, `Forsvar.motHerjere`, `velgReparasjon`, `skadet`.
 Fellesfiler: ingen (leir.js og leir-visning.js er IKKE endret – reparasjonen går gjennom Leir.reparer/Leir.jobber/Leir.byggelag fra forsvar-visning.js).
 
+
+### Gjennomspillingen (/rogaland, Sand 6825, 6627357, «Vanlig», webdriver av)
+
+Skriptene ligger i scratchpad `natt/balanse4/` (daemon.js med dev.py, `kjor.sh` kjører alt, `s/ny.js`, `hj.js`, `hj2.js`, `b1.js`, `b2.js`,
+`dag.js`; `tabell.py` lager tabellen). Skriptet spiller slik rådene sier: brakke, aggregat, dieseltank, Tropp 1 (fire som ikke er på bygg/vakt)
+og vakttårn ved start, 500 l diesel når tanken står og under 300 l, «Forsvar leiren» ved alarm, «Reparer alle» når skadevarselet kommer,
+Tropp 2 fra dag 2 (rekrutterer opp til 8 folk først; de som er igjen: to på bygg, én på vakt), rekrutterer når færre enn 4 er hjemme
+(og kassa har 3 mill.), kjøper 50 rasjoner når maten rekker under to døgn, og kontrollrommet først når to tropper står og kassa har 16 mill.
+Første valg på alle kort. Hvert døgn får inntil 6–7,5 minutter ekte tid (spoling med ⏭).
+
+**Kjøring 5a** (første utgave av punkt 1–3: herjing etter 45 min, bytte 8 % / høyst 800 000 kr og 25 % av dieselen). Stoppet etter to døgn for å rette:
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.5 mill. | 6 | 65 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra sørøst (1,5 km unna). Bølge 1. |
+| 2 | 10.5 mill. | 4 | 67 | 23 | brakke(96%) aggregat(97%) drivstofftank(97%) vakttårn(95%) | Vaktlaget:2 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 1 | Røverne er inne i leiren! Vaktlaget, Tropp 1 går mot dem.; Røvere 1.1 har herjet i leiren og trekker seg ut med byttet: 800 000 kr, 125 l diesel og 6; Bølge 1 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; REPARER Reparer alle (200 310 kr); TROPP 2 ok rekrutt,rekrutt folk igjen bygg,bygg,vakt,bygg; 14 reparasjoner av seg selv |
+
+- Bølge 1 (ett lag på 6) kom inn i leiren; Vaktlaget og Tropp 1 gikk mot dem, men røverne herjet i 41 minutter og tok 800 000 kr. Et røverlag
+  på 6 regnes først som slått ut når alle 6 er ute (Terreng: 6 ute) – derfor «gir opp ved halvparten» (Trussel.brutt).
+- Røverne som trakk seg ut, ble stående i leiren (ruta bort fantes ikke), og byggene ble reparert og skadet om igjen i nesten tre timer
+  (14 reparasjoner, 1,2 mill. kr). Derfor: samme vei ut som de kom, fjernet etter 90 min, og ingen reparasjon mens fiender er i leiren.
+
+**Kjøring 5b** (herjing etter 60 min, bytte 5 % / høyst 500 000 kr, gir opp ved halvparten). Døgn 6 ble ikke ferdig innen tidsgrensen (raden «5» to ganger):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.5 mill. | 6 | 65 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra øst (1,7 km unna). Bølge 1. |
+| 2 | 12.7 mill. | 4 | 68 | 39 | brakke(97%) aggregat drivstofftank vakttårn(96%) | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne.; TROPP 2 ok rekrutt,rekrutt folk igjen bygg,bygg,vakt,bygg; 4 reparasjoner av seg selv |
+| 3 | 12.9 mill. | 6 | 80 | 53 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 2 | Varsel: et røverlag er på vei mot leiren fra øst (2,1 km unna). Bølge 2.; Røverne er inne i leiren! Vaktlaget går mot dem.; Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne.; REPARER Reparer alle (112 945 kr); 2 reparasjoner av seg selv |
+| 4 | 12.0 mill. | 6 | 95 | 28 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 3 | Flommen 9,4 km øst for leiren har trukket seg tilbake.; Varsel: et røverlag er på vei mot leiren fra sørøst (1,8 km unna). Bølge 3.; Røverne er inne i leiren! Vaktlaget går mot dem.; Røvere 3.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr, 125 l diesel og 7; Bølge 3 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; 4 reparasjoner av seg selv |
+| 5 | 7.3 mill. | 6 | 90 | 17 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 4 | Varsel: et røverlag er på vei mot leiren fra vest (1,6 km unna). Bølge 4.; Røvere 4.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr, 93 l diesel og 3 ; Bølge 4 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; 4 reparasjoner av seg selv |
+| 5 | 5.5 mill. | 7 | 53 | 42 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 5 | Varsel: 2 røverlag er på vei mot leiren fra sørvest (2,1 km unna). Bølge 5.; Røverne er inne i leiren! Vaktlaget går mot dem.; Røvere 5.1 har herjet i leiren og trekker seg ut med byttet: 356 000 kr, 193 l diesel og 8; Røvere 5.2 har herjet i leiren og trekker seg ut med byttet: 338 000 kr, 145 l diesel og 7; Bølge 5 er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gang; MAT kjøpte 50 rasjoner; 4 reparasjoner av seg selv |
+| 6 | 5.5 mill. | 7 | 53 | 41 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0 Ola (deg):1 Tropp 1:4 Tropp 2:4 | 5 |  |
+
+- Leiren sto: alle fire byggene var hele ved hver døgnslutt (reparert av seg selv 2–4 ganger per døgn). Bølge 1 og 2 ble slått tilbake
+  (450 000 og 600 000 kr), bølge 3, 4 og 5 endte med at røverne herjet og tok byttet. Kassa falt fra 13,5 til 5,5 mill. – mest diesel (500 l koster 4 mill. kr), og i byttet tok røverne
+  25 % av tanken per røverlag (8000 kr literen: 0,7–1,5 mill. kr hver gang). Nå 10 %.
+- Troppene løsnet aldri et skudd (4 og 4 mann hele veien), Vaktlaget ble slått ut i bølge 5. Prøvd på Dovre-testsiden (prov3.js):
+  lagene gikk 50 m fra røverne, ble stående i skogen 75–100 m fra røverne midt i leiren og så dem ikke. Nå går de til 25 m, og lag som står
+  over 55 m unna, sendes på nytt. Etter det: alle tre lagene skjøt, og røverne hadde 5 av 8 ute etter 40 spillminutter.
