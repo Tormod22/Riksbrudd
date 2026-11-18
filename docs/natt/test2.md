@@ -116,6 +116,11 @@ Prøvd som iPhone SE: 375 × 667 stående og 667 × 375 liggende (telefonprofil,
    Når panelet åpnes for et lag som havner under det, flyttes kartet én gang så laget står midt i den frie delen (over panelet stående,
    til høyre liggende). Ikke i testene (navigator.webdriver), `Telefon.test = true` slår det på. På SE liggende står «Mer (2) ▾» fortsatt
    9 px under kanten – panelet ruller.
-Vakter: skjermvaktene fra sjekk.js og alle `vakter/*.js` grønne på telefon (stående) etter runde 3.
-Ikke prøvd i runde 3: Gå i 3D på iPhone SE (styrespak, Huk/Hopp, Skyt, våpenrute, minikart) – 3D tar minutter i programvare-grafikk her,
-og tiden strakk ikke til. Loggen kan stikke inn under et sidepanel liggende (den står øverst til venstre) – ikke rettet.
+5. GÅ I 3D PÅ iPhone SE: liggende (667 × 375 er både `smal` og `tlfligg`) lå helse- og våpenruta oppå Huk/Hopp og våpenbyttet og Skyt
+   oppå minikartet (reglene for liggende gjaldt bare `:not(.smal)`). Nå gjelder de også `tlfligg`, minikartet er 80 px og Skyt/våpenbyttet
+   står litt lenger til venstre. Målt: ingen knapper utenfor skjermen eller oppå hverandre (bortsett fra testvarselet om programvare-
+   grafikk). Stående SE: styrespak, Skyt, våpenbytte, Huk/Hopp, ruter og minikart står fritt.
+Vakter: skjermvaktene fra sjekk.js og alle `vakter/*.js` er grønne på stående og liggende telefon etter runde 3 (knapperaden ikke kjørt
+på nytt – den trenger 3D).
+Ikke rettet: stående SE når du går – loggmeldingen (to linjer) ligger oppå «Flaske 4/4 · rasjoner» til den tones ut (10 s).
+Loggen kan også stikke inn under et sidepanel liggende (den står øverst til venstre).
