@@ -29,7 +29,7 @@
       const [oi, oj] = Terreng.rute(v, X, Y), Rc = Math.ceil(r / v.r) + 1, i0 = Math.max(0, oi - Rc), j0 = Math.max(0, oj - Rc), i1 = Math.min(v.w - 1, oi + Rc), j1 = Math.min(v.h - 1, oj + Rc), w = i1 - i0 + 1, h = j1 - j0 + 1;
       const mk = new Uint8Array(w * h); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) mk[j * w + i] = m[(j0 + j) * v.w + i0 + i];
       o.sikt = { x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, m: mk, mw: w, mh: h, r: v.r }; o.ved = [X, Y];
-    } catch (e) { console.error(e); } finally { o.jobb = false; }
+    } catch (e) { o.sikt = null; } finally { o.jobb = false; }   // uten kart der: den gamle regelen gjelder (ingen melding – vogna kan stå utenfor kartet)
   }
   // Ser vogna punktet selv? true/false, eller null når siktfeltet ikke er regnet her ennå (da gjelder den gamle sirkelen)
   // (et lag inne i skogen ser vogna bare på nært hold, RS.skog meter – som før, da hele skogen var skjult for den)
@@ -48,6 +48,7 @@
     const nå = performance.now();
     for (const k of KJORETOY) { if (k.type !== 'stridsvogn') continue; const o = VSIKT.get(k);
       if (o && (o.jobb || nå - o.bedt < 1500)) continue;
+      if (typeof OMRÅDE !== 'undefined' && OMRÅDE && !(k.x > OMRÅDE[0] && k.x < OMRÅDE[2] && k.y > OMRÅDE[1] && k.y < OMRÅDE[3])) continue;
       if (!o || !o.ved || Math.hypot(k.x - o.ved[0], k.y - o.ved[1]) > RS.flytt) vognSikt(k); }
   });
 

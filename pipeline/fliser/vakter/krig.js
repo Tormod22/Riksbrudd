@@ -107,6 +107,8 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     if (!K || !window.S6 || !S6.vognSikt || !window.Enheter || !Enheter.velgKanonmål) return { uten: true };
     const k0 = { x: K.x, y: K.y, sti: K.sti, skyterPå: K.skyterPå, meldtSett: K.meldtSett }, tempo0 = tempo, dr0 = DRONER.length, lag = [];
     try {
+      // vogna settes ved leiren (tidligere prøver kan ha flyttet den ut av kartet)
+      { const L0 = OppstartSpill.tilstand().leir; if (L0) { K.x = L0.x + 40; K.y = L0.y - 30; } }
       tempo = 0; K.sti = null; await S6.vognSikt(K); let p = null;
       for (let r = 300; r <= 1150 && !p; r += 50) for (let a = 0; a < 6.28 && !p; a += .2) { const x = K.x + Math.cos(a) * r, y = K.y + Math.sin(a) * r; if (!vognSer(K, x, y, null)) p = [x, y]; }
       ut.skjult = !!p;
