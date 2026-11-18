@@ -26,13 +26,13 @@
     kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
     // regn: regnsummen (timer med fullt regn, tørker 0,2 per time uten regn, maks 30); flom mulig over «flom», ras over «ras»
     // sjanse per spilltime når terskelen er nådd; flomsonen varer «flomTimer», raset «rasTimer»; radius i meter; bratt = stigning (m per m)
-    // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras
-    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5 },
+    // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras; ryddTimer: så lenge bruker et ingeniørlag på å rydde et ras
+    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
     // tørke: døgn uten regn (maks 10); brannfaren er 0 under «fra» og full ved «full»
     tørke: { maks: 10, fra: .5, full: 3 },
     // brann: rutenett (m), brenntid per rute (spillminutter), spredning per 10 min til en naborute i full tørke uten vind,
     // vind: hvor mye medvind øker spredningen per m/s, regn slokker (sjanse per 10 min i fullt regn), flest ruter som brenner samtidig,
-    // skade: treff på et lag som står i brannen per 30 min; bygg: hp-andel per time
+    // treff: treff på et lag som står i brannen per 30 min; bygg: andel av byggets hp per 30 min; radius: ikke i bruk
     brann: { rute: 64, brenner: [50, 110], spred: .16, vind: .3, slokk: .5, maks: 350, treff: 1, bygg: .2, radius: 2500 },
     // brennbarhet per terrengklasse (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 7 tettbebyggelse)
     brennbar: [.05, 1, .55, 0, 0, .3, .1, .45],

@@ -87,7 +87,7 @@
   // ---------- 31 vinter: marsjen, isen, kulda ----------
   // Stien til et lag får tiden per stykke delt på faktoren der (snø, snøvær, flom, ras). Regnes alltid fra den opprinnelige tiden.
   function tilpassSti(s, v) {
-    if (s._vSti !== s.sti) { s._vSti = s.sti; s._vOrig = Array.from(s.steg || []); s._vForsøk = 0; }
+    if (s._vSti !== s.sti) { s._vSti = s.sti; s._vOrig = Array.from(s.steg || []); s._vForsøk = 0; s._vMeldt = false; }
     const O = s._vOrig; if (!O || !O.length) return; let minst = 1, sum = 0, ukjent = false; const res = l => l == null ? leirMoh() : l;
     for (let k = 0; k < s.sti.length - 1; k++) {
       const mx = (s.sti[k][0] + s.sti[k + 1][0]) / 2, my = (s.sti[k][1] + s.sti[k + 1][1]) / 2, h = moh(mx, my); if (h == null) ukjent = true;
@@ -97,6 +97,8 @@
     // uten snø, flom og ras står marsjen som den var
     if (minst < 1 || s._vEndret) { s.timerIgjen = sum; s._vEndret = minst < 1; }
     s.verdenF = minst; s._vNøkkel = nøkkel(v);
+    if (minst < 1 && !s._vMeldt && s.side === 'blå' && klar) { s._vMeldt = true; const hva = V.soner.length && !(W.marsjFaktor(v, leirMoh()) < 1) && !(v.snø > .5) ? 'flom eller ras på ruta' : 'snø';
+      logg(`${s.navn}: tungt føre (${hva}) – marsjen tar ca. ${tall(Math.max(0, s.timerIgjen), 1)} t.`); if (valgt === s) visPanel(); }
     // høyder som ikke var hentet ennå: prøv igjen noen ganger
     if (ukjent && s._vForsøk++ < 6) s._vNøkkel = null;
   }
@@ -325,6 +327,8 @@
   KROKER.lagKnapper.push((s, H) => {
     if (s.side !== 'blå' || s.ombord || !klar) return;
     const f = funnVed(s); if (f) { const b = knapp(`Undersøk ${f.navn.toLowerCase()}`, false, () => { undersøk(s, f); }); b.id = 'funnknapp'; H.appendChild(b); }
+    // ingeniørene rydder et ras på noen timer
+    const so = W.iSone(V, s.x, s.y, 'ras'); if (so && s.ingeniør && so.til - tid > R.regn.ryddTimer * 60) { const b = knapp(`Rydd raset (${R.regn.ryddTimer} t)`, false, () => { so.til = tid + R.regn.ryddTimer * 60; endret(); logg(`${s.navn} rydder raset: vegen er åpen om ${R.regn.ryddTimer} timer.`); visPanel(); }); b.id = 'ryddknapp'; H.appendChild(b); }
     if (s.karakter) return;
     if (s.jakt) { const b = knapp('Avbryt jakta', true, () => { s.jakt = null; logg(`${s.navn} avbrøt jakta.`); visPanel(); }); b.id = 'jaktknapp'; H.appendChild(b); }
     else { const art = viltHer(s); if (art && !s.sti) { const hviler = W.jaktHviler(V, s.x, s.y, tid), b = knapp(hviler ? 'Viltet her er skremt' : `Jakt på ${art} (${R.jakt.timer} t)`, false, () => { const r = startJakt(s); if (r.feil) logg(s.navn + ': ' + r.feil); visPanel(); });
@@ -365,6 +369,7 @@
   setInterval(() => { if (BRANNER.length && typeof på3d !== 'undefined' && !på3d) skitten = true; }, 400);
   KROKER.tegn3d.push((g, proj) => {
     if (!klar) return; g.save(); g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center';
+    if (BRANNER.length) { let x = 0, y = 0; for (const c of BRANNER) { x += c.x; y += c.y; } const q = proj(x / BRANNER.length, y / BRANNER.length); if (q) { g.fillStyle = '#ffb347'; g.fillText('BRANN', q[0], q[1]); } }
     for (const s of V.soner) { const q = proj(s.x, s.y); if (!q) continue; g.fillStyle = s.type === 'flom' ? '#a9c6df' : '#e3c9a0'; g.fillText(s.type === 'flom' ? 'flom' : 'ras – vegen stengt', q[0], q[1]); }
     for (const id of Object.keys(V.funn.sett)) { if (V.funn.tatt[id]) continue; const [bx, by] = id.split(',').map(Number), f = W.funnIBlokk(bx, by), q = f && proj(f.x, f.y); if (!q) continue; g.fillStyle = '#f1e2a8'; g.fillText('◆ ' + f.navn, q[0], q[1]); }
     g.restore();
