@@ -4,7 +4,7 @@ Målet: folkene i leiren skal føles som personer og et lite samfunn, ikke bare 
 `Samfunn.REGLER`, `Forfall.MER`, `Byggesett.ROMBRUK`).
 
 ## Filer
-- NY `site/dovre-fliser/spill/samfunn.js` – regler uten DOM (`Samfunn`), test `pipeline/fliser/test_samfunn.js` (58 punkter).
+- NY `site/dovre-fliser/spill/samfunn.js` – regler uten DOM (`Samfunn`), test `pipeline/fliser/test_samfunn.js` (64 punkter).
 - NY `site/dovre-fliser/spill/samfunn-visning.js` – `window.SamfunnSpill` (panelet #samfunnmeny, personkortet #personkort, kortene
   #samfunnkort, minnesmerket som bygg, krokene). Lagres per leir i `riksbrudd-samfunn`.
 - NY `pipeline/fliser/vakter/folk.js` – vakten (ca. 0,1 s, PC og mobil, setter alt tilbake).
@@ -82,7 +82,6 @@ Nye felt i `FolkRegler`: `oppgaveF` (krok for tempo per oppgave), `kjøpMat(F, n
 - Operatører/kokk vises ved bygget, ikke inne i det; vakta står ikke oppe i tårnet.
 - Samfunnskortene og #hendelse fra før er to ulike bokser (mitt kort venter mens det andre er oppe).
 - Forrædernes sabotasje av bygg bruker `b.hp` direkte (ikke Leir.skad), og fiendens «funnet leiren» lagres ikke mellom økter (som før).
-- Romtypene er prøvd i regeltesten og at Leir-menyen tegner uten feil, men ikke med et ferdig bygget rom i nettleseren.
 - Mekanikerens reparasjon av kjøretøy og skytterens ildbonus er ikke prøvd i en ekte kamp i nettleseren (bare at krokene ikke feiler).
 - Ingen varsel-brikke i #varsler (narhud.js er ikke min) for sykdom eller ugravlagte – bare loggen og panelet.
 - Tallene er ikke balansert mot lang spilling.

@@ -18,6 +18,7 @@
   const node = typeof module !== 'undefined' && module.exports;
   const FR = node ? require('./folk.js') : rot.FolkRegler;
   const PM = node ? require('./portrett-motor.js') : rot.RiksbruddPortrait;
+  const LB = node ? require('./leir.js') : rot.Leir;
   // Claudes forslag – alle tallene samlet
   const REGLER = {
     døgn: 1440,
@@ -248,8 +249,8 @@
       S.mistanke++;
       if (!S.lekket && r() < .5) { S.lekket = true; ut.lekk = true; ut.hendelser.push('Noen har lekket til fienden: de vet nå hvor leiren ligger. Etterforsk i Samfunn-panelet.'); }
       else if (r() < .5 && F.mat > 5) { const m = F.mat * REGLER.sabotasjeMat; F.mat -= m; ut.hendelser.push(`Sabotasje! ${Math.round(m)} rasjoner er ødelagt i matlageret. Noen i leiren står bak.`); }
-      else { const b = L && L.bygg ? L.bygg.filter(q => q.igjen <= 0 && q.hp > .4)[Math.floor(r() * 1e6) % Math.max(1, L.bygg.filter(q => q.igjen <= 0 && q.hp > .4).length)] : null;
-        if (b) { b.hp = Math.max(.1, b.hp - REGLER.sabotasjeHp); ut.hendelser.push(`Sabotasje! Et bygg i leiren er skadet i natt (${b.type}). Noen i leiren står bak.`); } }
+      else { const mulige = L && L.bygg ? L.bygg.filter(q => q.igjen <= 0 && q.hp > .4 && !(LB && LB.BYGG[q.type] && LB.BYGG[q.type].del)) : [], b = mulige[Math.floor(r() * mulige.length)];
+        if (b) { b.hp = Math.max(.1, b.hp - REGLER.sabotasjeHp); ut.hendelser.push(`Sabotasje! ${LB && LB.BYGG[b.type] ? LB.BYGG[b.type].navn : 'Et bygg'} er skadet i natt. Noen i leiren står bak.`); } }
     }
     return ut;
   }
