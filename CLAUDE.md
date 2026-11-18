@@ -1218,3 +1218,34 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   liggende/små iPhoner (spill/telefon.js, docs/natt/test2.md runde 2–3), balansen (docs/natt/balanse.md: røverbytte, bølgestørrelse,
   fredstid, kontrollrom 9 mill., lett start uten stridsvogn, brann i leiren, mat – 15 grunnmål nå). Rapport: docs/natt/RAPPORT.md.
   Mobilkontrollen 115/115. Leiren overlever ennå ikke sju døgn i den automatiske gjennomspillingen (se balanse.md).
+  RUNDE 4, 18. NOV DAG (10:45–13:40, brukeren: «fortsett på lista å utbedre enda mer»; sju hjelpere på Opus i de samme natt-mappene,
+  regler i scratchpad RUNDE4-BRIEF.md; hver skrev videre i sitt notat under «Runde 4»). KRIG (docs/natt/krig.md): dekning bak leirens
+  egne bygg (Krig.leirVern ×0,55, telt/drivhus ×0,8), fanger kan byttes (penger / én mot én – T.tatt), settes i arbeid (halv arbeider,
+  kan rømme og røpe leiren) eller rekrutteres etter tre døgn (10 % spioner, p.spion), motstanderen foreslår bytte (KrigSpill.foreslå),
+  røyk/lys/helikopter/kjøreordrer lagres i «riksbrudd-krig», fiendens stillinger som sandsekkring med figurer i 3D (krig3d.js).
+  RETTET: sikten var skjev (terreng.js siktfelt prøvde bakken der målet sto – nå et mål 1,8 m over bakken, MÅL_HØYDE; test_terreng 5b),
+  ammunisjon brukt uten skudd når en krok ga 0 (kamprunde: ammo0), radio «Fiende sett» under våpenhvile, lag svarte aldri et kjøretøy
+  som skjøt på dem uten å se det (enheter-visning.js motKjøretøy: k.skyterPå røper kjøretøyet innen 600 m). Beleiring virker når
+  bygdevernet sloss (sted uten eier). SJØ/ØKONOMI (sjo.md, okonomi.md): krigskartet viser hva et tettsted gir (window.KRIG_TILLEGG i
+  strategi-visning.js), handelsruter langs vegnettet (luftlinje uten vegnett/på telefon) stenges av sprengte bruer og kratere,
+  lojaliteten høyst 35 når du tar et sted igjen, båtene har helse og kan bordes/senkes, fiendens båter skyter, AI-lag tar sjark når
+  sjøvegen er mye kortere, ruteferja skjules når du tar ferja, trykk på kaier/båter i 3D (SjoSpill.trykk3d), nærmeste kai i leirvalget
+  (window.LEIRVALG_TILLEGG i oppstart-visning.js), middels kai gir 40 % havnevarer, sjøpanelet er et lavt bunnark på telefon, isen stenger
+  innsjøer (Verden.islagtVann). FOLK (folk.md): varselbrikker for sykdom, ugravlagte, skader og ventende kort (window.VARSEL_TILLEGG i
+  narhud.js), forrædere skader via Leir.skad, ÉN KORTKØ (window.Kortkø: ta/be/ferdig – #hendelse og samfunnskortene, viker for
+  krigkort/formkort), barn og gamle syke og i 3D, operatører/kokk inne i byggene og vakta på tårnet, spesialister fra oppdrag (hendelsen
+  «riksbrudd-oppdrag»), portretter i Folk, hunden går, spiser og kan skades, dekning bak bakketopp (bare i 3D-utsnittet).
+  VERDEN (verden.md): snø stenger veglenker over 900 moh./snøgrensen mens det snør + 6 t (Kjoretoy.planlegg pakket inn, tunneler unntatt),
+  fiendens lag fryser, kratere fra miner og salver og hjulspor lagres («riksbrudd-effekter»), felte dyr huskes («riksbrudd-natur»),
+  åkeren er et bygg (Leir.BYGG.åker lagt inn fra verden-visning.js, kan brenne), funn som 3D-modeller og aldri i tettbebyggelse/vann,
+  regnflom følger dalen (flom.js med valg), Verden.islagt(x, y), sotlag med møne på brente hus. UI (ui.md): paneler oppå hverandre rettet
+  i paneler.js (plassene venstre/høyre, målestokk/minikart/zoom viker), kjøretøy og tettsteder i Merker, tegnforklaring
+  (spill/tegnforklaring.js), «Påvirkes av» og langt trykk på flisene, byggelista som rutenett på PC og tegning i byggpanelet, ramme med
+  Shift + dra i 3D (ROTERER IKKE LENGER med Shift – høyre museknapp/to fingre), marsjtid ved pekeren i 3D, etterspillet med bygg/
+  kjøretøy/kamper. HAKK (lys.md «Runde 4», del 1–3): byttet til nytt utsnitt i biter – normalerG (likt computeVertexNormals), delBakkenG,
+  naboerAsynk, lastOppIBiter (kartbildet i striper på 256 rader), u.vannData i stedet for getImageData, bruer/kaier, trafo, fjernby,
+  portaler, bensinstasjoner, bekkebåndet, treslag og bil-/folkelinjer i forbered3d, generatorer i veg.js (lykterG, finnKryssG), kyst.js
+  (plasserG), gate.js (plasserG), anlegg3d (omrissVed), kompass-minikartet fra en 1024²-kopi (WeakMap) og ResizeObserver, proj3 projiserer
+  før siktlinjene, kildeNå i ytelse.js (kort stakk). Bergen 3,1 km: lange oppgaver 6,1 s -> 1,3 s, lengste 812 -> 157 ms. Skygger fra
+  kjøretøy/soldater er målt og forkastet (836 -> 2355 ms per bilde). BE BRUKEREN OM NY «MÅL HAKK».
+  KONTROLLEN: tresjekken prøvde 0 trær (utsnittet var for stort for trær) og sa «ok» – prøver nå Dombås-utsnittet (TRE_PRØVE).
