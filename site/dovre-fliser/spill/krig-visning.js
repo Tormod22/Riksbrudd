@@ -37,7 +37,7 @@
     return ut; }
   function lagre() { if (!klar || !leirId()) return;
     try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), ...T, røyk: RØYK.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })), lys: LYS.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })),
-      heli: HELI ? { lag: HELI.lag && HELI.lag.navn, fase: HELI.fase, x: r1(HELI.x), y: r1(HELI.y), mål: HELI.mål.map(r1), retning: +(HELI.retning || 0).toFixed(3) } : null, kjør: kjøreordre() })); } catch (e) { /* fullt lager */ } }
+      heli: HELI ? { lag: HELI.lag && HELI.lag.navn, fase: HELI.fase, x: r1(HELI.x), y: r1(HELI.y), mål: HELI.mål.map(r1), retning: +(HELI.retning || 0).toFixed(3), fra: HELI.fra ? HELI.fra.map(r1) : null } : null, kjør: kjøreordre() })); } catch (e) { /* fullt lager */ } }
   const tallOk = v => typeof v === 'number' && Number.isFinite(v), punktOk = q => q && tallOk(q.x) && tallOk(q.y) && tallOk(q.til);
   api.gjenopprettet = null;
   function les() { T = ny(); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (!d || d.leir !== leirId()) d = null; else for (const k of Object.keys(T)) if (d[k] && typeof d[k] === 'object') T[k] = d[k]; } catch (e) { T = ny(); d = null; } fredTilAI();
@@ -50,7 +50,8 @@
     setTimeout(() => {
       const h = d.heli, L = leir(); if (h && L && tallOk(h.x) && tallOk(h.y) && Array.isArray(h.mål) && h.mål.length === 2 && ['ut', 'hjem', 'frakt', 'retur'].includes(h.fase)) {
         const s = h.lag ? egne().concat(ENHETER.filter(e => e.side === 'blå' && e.iLufta)).find(e => e.navn === h.lag) : null;
-        HELI = { lag: s || null, fase: s || h.fase === 'retur' ? h.fase : 'retur', x: h.x, y: h.y, mål: s || h.fase === 'retur' ? h.mål.slice() : [L.x, L.y], retning: tallOk(h.retning) ? h.retning : 0 };
+        HELI = { lag: s || null, fase: s || h.fase === 'retur' ? h.fase : 'retur', x: h.x, y: h.y, mål: s || h.fase === 'retur' ? h.mål.slice() : [L.x, L.y], retning: tallOk(h.retning) ? h.retning : 0,
+          fra: Array.isArray(h.fra) && tallOk(h.fra[0]) && tallOk(h.fra[1]) ? h.fra.slice() : null };
         if (s && (HELI.fase === 'hjem' || HELI.fase === 'frakt')) { s.iLufta = true; s.sti = null; s.x = HELI.x; s.y = HELI.y; }
         G.heli = HELI.fase; skitten = true; }
       for (const q of Array.isArray(d.kjør) ? d.kjør : []) { const k = (window.KJORETOY || []).find(e => e.side === 'blå' && e.navn === q.navn);
@@ -89,7 +90,7 @@
   function leirBygg(b) {
     const L = leir(); if (!L || !window.Leir || !window.LeirSpill) return [];
     if (b && Math.hypot(b.x - L.x, b.y - L.y) > 1500) return [];
-    const t = Math.floor(tid); if (t === leirBt) return leirB; leirBt = t; const LS = LeirSpill.tilstand();
+    const LS = LeirSpill.tilstand(), t = Math.floor(tid) + ':' + (LS ? LS.bygg.length : 0); if (t === leirBt) return leirB; leirBt = t;
     leirB = !LS ? [] : LS.bygg.filter(q => Leir.ferdig(q) && q.hp > 0 && Leir.BYGG[q.type] && !Leir.BYGG[q.type].linje && K.byggDekning(q.type) < 1)
       .map(q => ({ P: Leir.hjørner(q), tar: K.byggDekning(q.type), navn: Leir.BYGG[q.type].navn }));
     return leirB;
@@ -115,7 +116,7 @@
   api.overgi = overgi;
   function overgivelser() {
     const E = egne(); if (!E.length) return;
-    for (const e of fiender()) { if (e.iLufta) continue; const nær = E.filter(s => avst(s, e) <= R.overgi.omringet); if (!nær.length) continue;
+    for (const e of fiender()) { if (e.iLufta || (window.AI && AI.hvile && AI.hvile('blå', e.side))) continue; const nær = E.filter(s => avst(s, e) <= R.overgi.omringet); if (!nær.length) continue;
       const d = nær.reduce((v, s) => Math.min(v, avst(s, e)), Infinity), st = s => (window.Fraksjoner ? Fraksjoner.styrke(s, window.Forsyning ? Forsyning.ammo(s) : 1) : friske(s));
       const g = K.girSeg({ ute: Terreng.uteAvKamp(e.menn), nær: d, omringet: K.omringet(e, nær), forhold: st(e) / Math.max(.1, nær.reduce((v, s) => v + st(s), 0)), seig: harVm(e) && vm(e).seig });
       if (g) overgi(e, nær.sort((a, b) => avst(a, e) - avst(b, e))[0], g); }
@@ -261,14 +262,20 @@
   // ---------- beleiring ----------
   const utenStrøm = () => { if (!window.INFRA_TILSTAND) return false; for (const [k, v] of INFRA_TILSTAND) if (/^kraft:/.test(k) && v && v.tilstand && v.tilstand !== 'hel') return true; return false; };
   function beleiringer(min) {
-    const E = egne(); for (const e of fiender()) e.krigSvekket = false;
-    for (const by of byer()) { const id = by.e.id, ei = eier(by), før = T.beleiring[id];
+    const E = egne(), FI = fiender().filter(e => !e.raid && !e.post); for (const e of fiender()) e.krigSvekket = false;
+    for (const by of byer()) { const id = by.e.id, før = T.beleiring[id], m = midt(by);
+      if (før === undefined && !E.some(s => Math.abs(s.x - m.x) < 4000 && Math.abs(s.y - m.y) < 4000)) continue;
+      // (runde 4) et tettsted ingen eier, der fiendens lag holder til (og kanskje sloss med bygdevernet), kan også beleires –
+      // før startet ringen aldri der, fordi stedet ikke hadde noen eier (prøvd på /rogaland 18. nov)
+      let ei = eier(by), nøytral = false;
+      if (!ei) { const inne = FI.find(e => e.x > by.bb[0] && e.x < by.bb[2] && e.y > by.bb[1] && e.y < by.bb[3] && Garnison.inni(by, e.x, e.y)); if (inne) { ei = inne.side; nøytral = true; } }
       if (!ei || ei === 'blå') { if (før !== undefined) delete T.beleiring[id]; continue; }
-      const m = midt(by); if (!E.some(s => Math.abs(s.x - m.x) < 4000 && Math.abs(s.y - m.y) < 4000) && før === undefined) continue;
+      // våpenhvile med dem som sitter i stedet: beleiringen står stille (tiden telles ikke)
+      if (window.AI && AI.hvile && AI.hvile('blå', ei)) continue;
       if (!K.beleiret(m, E)) { if (før !== undefined) { delete T.beleiring[id]; logg(`Beleiringen av ${by.e.navn} er brutt – lagene dine står ikke lenger på to kanter.`); lagre(); } continue; }
       const nå = K.beleiringSteg(før || 0, min, utenStrøm()), s0 = K.beleiringNå(før || 0), s1 = K.beleiringNå(nå); T.beleiring[id] = nå;
       const garnison = fiender().filter(e => e.side === ei && Garnison.inni(by, e.x, e.y));
-      if (før === undefined) logg(`${by.e.navn} er beleiret: garnisonen får ikke forsyninger. Etter ${R.beleiring.svekket / 60} timer svekkes den, etter ${R.beleiring.girSeg / 60} gir den seg${utenStrøm() ? ' (uten strøm går det fortere)' : ''}.`);
+      if (før === undefined) logg(`${by.e.navn} er beleiret: ${nøytral ? `${fnavn(ei)} sitter fast der${T.vern[id] > 0 ? ' og sloss med bygdevernet' : ''}, og får` : 'garnisonen får'} ikke forsyninger. Etter ${R.beleiring.svekket / 60} timer svekkes den, etter ${R.beleiring.girSeg / 60} gir den seg${utenStrøm() ? ' (uten strøm går det fortere)' : ''}.`);
       // garnisonen får ikke ny ammunisjon mens ringen holder
       for (const e of garnison) { const a = window.Forsyning ? Forsyning.ammo(e) : 1; e.krigAmmoTak = Math.min(e.krigAmmoTak === undefined ? a : e.krigAmmoTak, a); e.ammo = e.krigAmmoTak; e.krigSvekket = s1 === 'svekket' || s1 === 'girSeg'; }
       if (s1 === 'svekket' && s0 !== 'svekket') logg(`Garnisonen i ${by.e.navn} er svekket av beleiringen og skyter dårligere.`);
@@ -316,7 +323,7 @@
     const d = fase === 'ut' ? Math.hypot(s.x - L.x, s.y - L.y) : Math.hypot(mål[0] - L.x, mål[1] - L.y);
     if (d > R.heli.radius) { logg(`For langt for helikopteret (høyst ${R.heli.radius / 1000} km fra leiren).`); return false; }
     if (!OppstartSpill.betal(R.heli.pris)) { logg(`Dere har ikke råd til turen (${kr(R.heli.pris)}).`); return false; }
-    HELI = { lag: s, fase, x: L.x, y: L.y, mål: fase === 'ut' ? [s.x, s.y] : mål, retning: 0 };
+    HELI = { lag: s, fase, x: L.x, y: L.y, mål: fase === 'ut' ? [s.x, s.y] : mål, retning: 0, fra: [L.x, L.y] };
     if (fase === 'frakt') { s.iLufta = true; s.sti = null; }
     logg(fase === 'ut' ? `Helikopteret henter ${s.navn}: framme om ca. ${Math.max(1, Math.round(K.heliMin(d)))} min (${kr(R.heli.pris)}).` : `Helikopteret flyr ${s.navn} ut: framme om ca. ${Math.max(1, Math.round(K.heliMin(d)))} min (${kr(R.heli.pris)}).`);
     skitten = true; return true;
@@ -329,6 +336,7 @@
     const dx = H.mål[0] - H.x, dy = H.mål[1] - H.y, d = Math.hypot(dx, dy); skitten = true;
     if (d > steg) { H.x += dx / d * steg; H.y += dy / d * steg; H.retning = Math.atan2(dy, dx); if (s.iLufta) { s.x = H.x; s.y = H.y; } return; }
     H.x = H.mål[0]; H.y = H.mål[1];
+    H.fra = [H.x, H.y];
     if (H.fase === 'ut') { if (!levende(s)) { H.fase = 'retur'; H.mål = [L.x, L.y]; return; } s.iLufta = true; s.sti = null; H.fase = 'hjem'; H.mål = [L.x + 30, L.y - 20]; logg(`${s.navn} er om bord i helikopteret${K.sårede(s.menn) ? ' med de sårede' : ''}.`); return; }
     if (H.fase === 'hjem' || H.fase === 'frakt') { s.iLufta = false; s.x = H.x; s.y = H.y; s.sti = null; s.siktSkitten = true; logg(H.fase === 'hjem' ? `${s.navn} er satt av ved leiren.` : `${s.navn} er satt av. Helikopteret flyr hjem.`);
       if (valgt === s) visPanel(); if (H.fase === 'hjem') { HELI = null; return; } H.fase = 'retur'; H.mål = [L.x, L.y]; return; }
