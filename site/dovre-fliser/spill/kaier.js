@@ -37,7 +37,10 @@
     } catch (e) { if (forsøk < 3) setTimeout(() => { henter = false; hent(forsøk + 1); }, 60000 * forsøk); return; } finally { if (K) henter = false; } }
   setTimeout(hent, 3000);
   const FARGE = { 1: '#9fc0dc', 2: '#8fd0c0', 3: '#e8d48a', 4: '#a9c6df' };
-  function merke(g, x, y, t, r, valgt) { g.fillStyle = 'rgba(15,11,7,.82)'; g.strokeStyle = FARGE[t] || FARGE[1]; g.lineWidth = valgt ? 2.4 : 1.4; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke();
+  function merke(g, x, y, t, r, valgt) {
+    // det felles merkesettet (spill/merker.js, 18. nov): en kai er nøytral = avrundet kvadrat med anker; fargen sier hva slags kai
+    if (window.Merker) { Merker.tegn(g, x, y, { forhold: 'nøytral', slag: 'kai', farge: 'rgba(15,11,7,.86)', strek: FARGE[t] || FARGE[1], valgt, r: r * 1.15 }); return; }
+    g.fillStyle = 'rgba(15,11,7,.82)'; g.strokeStyle = FARGE[t] || FARGE[1]; g.lineWidth = valgt ? 2.4 : 1.4; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke();
     // anker: stokk, tverrstang og bue
     const s = r * .58; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y - s); g.lineTo(x, y + s); g.moveTo(x - s * .55, y - s * .45); g.lineTo(x + s * .55, y - s * .45); g.moveTo(x - s, y + s * .15); g.quadraticCurveTo(x - s * .8, y + s, x, y + s); g.quadraticCurveTo(x + s * .8, y + s, x + s, y + s * .15); g.stroke(); }
   // 18. nov (nattarbeid «ui»): færre merker som standard – index.html (KAI_VIKTIG) sier om kaien betyr noe for det du gjør nå

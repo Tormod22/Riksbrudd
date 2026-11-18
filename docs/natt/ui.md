@@ -62,3 +62,36 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
   panel er åpne, treffer det raden i stedet for kartet.
 - Nye testfiler: `pipeline/fliser/test_opplaering.js`, `pipeline/fliser/test_merker.js` (merker + tegninger). Vakt: `pipeline/fliser/vakter/ui.js`.
 - ☰: knappen «Kartmerker» (`#allemerker`) legges i gruppen ved siden av «Infrastruktur» – navnet bør inn i GRUPPER i meny.js («Kartet»).
+
+# Runde 2 (etter sammenflettingen med de sju andre pakkene) – helheten
+
+- **«Mer» i kommandolinja** (`spill/spillhud.js`): de fem faste (Leir, Folk, Tropper, Krig, Deg) står i linja; alt fra `KOMMANDO_TILLEGG`
+  (Region, Verden, Sjø, Velg lag …) samles i en rad som åpnes av «Mer» (`#kommer` på PC, `#mkommer` på telefon) når det er flere enn
+  ett tillegg. Tillegg uten eget ikon får et (sjø: anker, velg lag: ramme). Skjulte knapper (`hidden`) vises ikke lenger.
+  `SpillHud.bakMer()`, `SpillHud.åpneKomMer(bool)`.
+- **Panelene som én familie** (ny `spill/paneler.js`, `window.Paneler`, `test_paneler.js`): samme ramme, tittelskrift, knapper og
+  lukkeknapp for #region, #samfunnmeny, #personkort, #samfunnkort, #krigpanel, #verdenpanel, #sjopanel, #evpanel, #flytkort,
+  #flytgruppe, #marsjvalg og #hendelse (bare CSS med id-ene – de andres filer er ikke endret). FASTE PLASSER: venstre (Leir, Folk,
+  Samfunn, Region, Krigskartet), høyre (Deg, Verden, Sjø, Tiltak, Sekk, Tropper, Stridsregler), midt (personkort, «Lag noe»/tilflukt).
+  Åpner spilleren et panel, lukkes det som sto på samme plass (med panelets egen lukkeknapp); på telefon deler venstre og høyre plass.
+  Skjer bare etter et ekte trykk/tastetrykk siste 1,5 s (eller `Paneler.test = true`), så kontrollskriptet kan ha flere åpne som før.
+  Telefonraden `#mkom` viker også for de nye panelene.
+- **Leir-menyen** (`visMeny` i leir-visning.js): hver overskrift (h3) åpner/lukker delen sin (`h3.del`, valget huskes i
+  «riksbrudd-leirdeler»), delene står i fast rekkefølge per fane (DELREKKE), og i fanen Bygg står byggekortene rett under jobbene med
+  resten av delene under kortene (`.hale`). Som standard er de lange delene lagt sammen (DEL_LUKKET: Forsvar, Tropper, Strømnett,
+  Byggesett, Kameravakt, Sjøen, Våpen og utstyr, Markedet, Venner, Etterretning, Vær og verden, «Mål · …», Opplæring, Region, Samfunn)
+  – i testene (navigator.webdriver) er alt åpent til noe lukkes (`window.LEIRDELER_TEST = true` gir spillerens standard).
+- **Når du går**: målt på PC og telefon (alle synlige ruter mot hverandre): ingen ligger oppå hverandre med «Lag noe»/«Legg deg»-raden
+  framme. Kameravarselet (`#kamvarsel`) flyttes på telefon bort fra minikart/helse/våpen (CSS i paneler.js).
+- **Merkesettet** brukes nå også for kjøretøy-symbolet (kjoretoy-visning.js `symbol`: formen), tettstedene i krigskartet
+  (strategi-visning.js) og kaiene (kaier.js `merke`) – tre små endringer med reserve når Merker mangler.
+- **Folk-panelet**: ansiktet fra portrettmotoren (samme som personkortet, `Samfunn.portrettSVG`) foran hvert navn i «Vis folkene»
+  (`spill/panelpynt.js`; trykk åpner personkortet). Nytt bygg «minnesmerke» har fått tegning.
+
+Fellesfiler endret i runde 2: `spill/kjoretoy-visning.js` (symbol), `spill/strategi-visning.js` (tettstedsmerket), `spill/kaier.js`
+(merke), `index.html` (én skript-tagg: paneler.js). Ellers egne filer.
+
+Fortsatt svakt: båtene bruker ikke merkesettet (de tegnes som skrog); krigskartets panel står lavere enn de andre venstrepanelene;
+lagpanelet nede til venstre har fått svært mange knapper fra flere pakker; byggekortene gjør fanen Bygg lang (ca. 3000 punkter);
+kortene i midten (hendelse, samfunnskort, «Lag noe») kan ligge oppå hverandre; drikk/spis-, hund-, snike- og skaderadene er ikke sett
+med alle framme samtidig (bare «Lag noe» og «Legg deg» lot seg vise i prøven).
