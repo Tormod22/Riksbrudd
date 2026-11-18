@@ -123,18 +123,49 @@
             logg(`Ukas varer fra ${H.length === 1 ? 'havna i ' + H[0].navn : H.length + ' havner'} som ingen båt hentet, kom landevegen: ${SJ.lastTekst(inn)} (halvparten gikk tapt på vegen).`); } } } else S.sistHavn = null; }
     const nå = performance.now(); if (endret && nå - sistLagret > 5000) lagre(); if (åpen && nå - sistTegn > 1000) tegnPanel(); });
 
+  // ---------- fiendens forsyning sjøvegen ----------
+  // Havnebyer andre holder nær leiren får en forsyningsbåt annethvert døgn. Sperrer du leia (miner, vrak), kommer den ikke fram:
+  // garnisonen er avskåret og treffer dårligere til neste båt kommer igjennom. Skjer ikke av seg selv i testene.
+  let fraktTeller = 0, fraktOpptatt = false, avskåret = [];
+  function fiendeHavner() { const L = leir(), utl = []; if (!L || !window.TETTSTEDER || !K()) return utl; for (const [id, t] of TETTSTEDER) { if (!t || !t.eier || t.eier === 'blå') continue; const by = byMedId(id); if (!by) continue; const i = havnFor(by); if (i < 0) continue; const q = kai(i), d = Math.hypot(q.x - L.x, q.y - L.y); if (d <= R.frakt.innen) utl.push({ id, navn: by.e.navn, side: t.eier, kai: i, by, d }); }
+    return utl.sort((a, b) => a.d - b.d).slice(0, R.frakt.maks); }
+  const sideNavn = side => (window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : side === 'rød' ? 'de røde' : 'de grønne');
+  function oppdaterAvskåret() { avskåret = []; for (const [id, st] of Object.entries(S.fiende)) { if (!st.avskåret) continue; const by = byMedId(+id) || byMedId(id), t = by && window.TETTSTEDER && TETTSTEDER.get(by.e.id); if (by && t && t.eier && t.eier !== 'blå') avskåret.push(by); else st.avskåret = false; } }
+  async function sendFrakt(h, o = {}) { if (fraktOpptatt) return null; fraktOpptatt = true; const st = SJ.fraktBy(S, h.id, tid), k = K(), q = kai(h.kai); st.underveis = true;
+    try { // startkaier: 6–25 km unna, en ny for hver gang
+      const [d0, d1] = R.frakt.fra, kand = Kaier.iBoks(k, q.x - d1, q.x + d1, q.y - d1, q.y + d1).filter(i => { const d = Math.hypot(k.x[i] - q.x, k.y[i] - q.y); return d >= d0 && d <= d1; }); st.nr = (st.nr || 0) + 1;
+      let sperret = false; for (let f = 0; f < Math.min(3, kand.length); f++) { const i = kand[(st.nr * 7 + f * 3) % kand.length], d = Math.hypot(k.x[i] - q.x, k.y[i] - q.y), N = SJ.nivå(d);
+        const v = o.vindu || await lagVindu([Math.min(k.x[i], q.x) - N.pad, Math.min(k.y[i], q.y) - N.pad, Math.max(k.x[i], q.x) + N.pad, Math.max(k.y[i], q.y) + N.pad], false, N.zv), r = SJ.rute(v, k.x[i], k.y[i], q.x, q.y, { sperringer: S.sperringer });
+        if (r.sti) { const b = { id: 'f' + h.id, type: 'frakt', navn: 'Forsyningsbåt', side: h.side, by: h.id, byNavn: h.navn, x: k.x[i], y: k.y[i], kai: -1, sti: r.sti, seg: 0, mål: h.kai, retning: 0, last: SJ.tomLast() }; S.frakt.push(b); endret = true; return b; }
+        if (r.feil === 'sperret') sperret = true; }
+      // ingen lei: sperret = fienden er avskåret; ellers (innsjø, ingen kaier) prøves det igjen senere uten virkning
+      if (sperret) { SJ.fraktSvar(S, h.id, tid, false); oppdaterAvskåret(); logg(`Forsyningsbåten til ${h.navn} kom ikke forbi sperringen. Garnisonen til ${sideNavn(h.side)} der er avskåret og treffer dårligere.`); }
+      else { st.underveis = false; st.neste = tid + R.frakt.hverDøgn * 1440; } endret = true; return null;
+    } catch (e) { st.underveis = false; st.neste = tid + 120; return null; } finally { fraktOpptatt = false; } }
+  const serFrakt = b => S.båter.some(q => Math.hypot(q.x - b.x, q.y - b.y) < 3000) || ENHETER.some(s => s.side === 'blå' && levende(s) && Math.abs(s.x - b.x) < 6000 && Math.abs(s.y - b.y) < 6000 && ser(s, b.x, b.y));
+  KROKER.sim.push(dt => { if (!klar) return;
+    for (let q = S.frakt.length - 1; q >= 0; q--) { const b = S.frakt[q], fr = SJ.steg(b, dt), sp = SJ.iSperring(S, b.x, b.y); skitten = true;
+      if (sp) { S.frakt.splice(q, 1); SJ.fraktSvar(S, b.by, tid, false); oppdaterAvskåret(); logg(`En forsyningsbåt på veg til ${b.byNavn} ${sp.type === 'vrak' ? 'gikk på vraket' : 'gikk på en mine'} og sank. Garnisonen der er avskåret.`); endret = true; continue; }
+      if (fr === 'framme') { S.frakt.splice(q, 1); const var0 = (S.fiende[b.by] || {}).avskåret; SJ.fraktSvar(S, b.by, tid, true); oppdaterAvskåret(); if (var0) logg(`En forsyningsbåt kom fram til ${b.byNavn}. Garnisonen der er ikke lenger avskåret.`); endret = true; } }
+    if (!auto()) return; fraktTeller += dt; if (fraktTeller < 30) return; fraktTeller = 0;
+    const H = fiendeHavner(); for (const h of H) { const st = SJ.fraktBy(S, h.id, tid); if (!st.underveis && tid >= st.neste) { sendFrakt(h); break; } }
+    // byer som ikke lenger er fiendens, glemmes
+    for (const id of Object.keys(S.fiende)) if (!H.some(h => String(h.id) === id)) { if (!S.frakt.some(b => String(b.by) === id)) delete S.fiende[id]; } oppdaterAvskåret(); });
+  KROKER.ild.push(a => (avskåret.length && a.side !== 'blå' && window.Garnison && avskåret.some(by => Garnison.inni(by, a.x, a.y)) ? R.frakt.avskåret : 1));
+  KROKER.lagTekst.push(s => (avskåret.length && s.side !== 'blå' && avskåret.some(by => Garnison.inni(by, s.x, s.y)) ? 'avskåret fra sjøen: treffer dårligere' : null));
+
   // ---------- lagring ----------
   function lagre() { if (!klar) return; sistLagret = performance.now(); endret = false; const d = SJ.tilJSON(S); for (let q = 0; q < S.båter.length; q++) { const n = omBord(S.båter[q]).map(s => s.navn); if (n.length) d.båter[q].lag = n; }
     try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, ...d })); } catch (e) { /* fullt eller sperret */ } }
   function start() { const L = leir(); if (!L) return; leirId = Math.round(L.x) + ',' + Math.round(L.y); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
-    for (const s of ENHETER) if (s.påBåt) s.påBåt = null; S = d && d.leir === leirId ? SJ.fraJSON(d) : SJ.ny(); klar = true; valg = null; modus = null; kaiSjekket = false; skitten = true; }
+    for (const s of ENHETER) if (s.påBåt) s.påBåt = null; S = d && d.leir === leirId ? SJ.fraJSON(d) : SJ.ny(); for (const st of Object.values(S.fiende)) st.underveis = false; klar = true; valg = null; modus = null; kaiSjekket = false; skitten = true; fraktTeller = 0; setTimeout(oppdaterAvskåret, 0); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0)); window.addEventListener('pagehide', () => { if (endret) lagre(); });
 
   // ---------- kartet ----------
   const FARGE = { skrog: '#d8e6f2', kant: '#0f0b07', valgt: '#e8d48a', sti: 'rgba(160,205,240,.85)', mine: '#d0563c', havn: '#e8d48a' };
-  function tegnBåt(g, b, x, y, m, valgt) { const T = TY[b.type], L = Math.max(T.lengde / m, m < 60 ? 13 : 8), B = Math.max(L * .36, 4); g.save(); g.translate(x, y); g.rotate(b.retning || 0);
+  function tegnBåt(g, b, x, y, m, valgt, side = 'blå') { const T = TY[b.type], L = Math.max(T.lengde / m, m < 60 ? 13 : 8), B = Math.max(L * .36, 4); g.save(); g.translate(x, y); g.rotate(b.retning || 0);
     g.beginPath(); g.moveTo(0, -L / 2); g.quadraticCurveTo(B / 2, -L / 4, B / 2, L / 6); g.lineTo(B / 2 * .8, L / 2); g.lineTo(-B / 2 * .8, L / 2); g.lineTo(-B / 2, L / 6); g.quadraticCurveTo(-B / 2, -L / 4, 0, -L / 2); g.closePath();
-    g.fillStyle = typeof sidefarge === 'function' ? sidefarge('blå', 'lys') : FARGE.skrog; g.strokeStyle = valgt ? FARGE.valgt : FARGE.kant; g.lineWidth = valgt ? 2.4 : 1.3; g.fill(); g.stroke();
+    g.fillStyle = typeof sidefarge === 'function' ? sidefarge(side, 'lys') : FARGE.skrog; g.strokeStyle = valgt ? FARGE.valgt : FARGE.kant; g.lineWidth = valgt ? 2.4 : 1.3; g.fill(); g.stroke();
     // styrehus (lekteren har last i stedet)
     g.fillStyle = 'rgba(15,11,7,.75)'; if (b.type === 'lekter') g.fillRect(-B * .28, -L * .2, B * .56, L * .45); else g.fillRect(-B * .22, L * .02, B * .44, L * .2); g.restore();
     if (b.fisker) { g.strokeStyle = '#8fd0c0'; g.lineWidth = 1.2; g.setLineDash([3, 3]); g.beginPath(); g.arc(x, y, L * .8 + 4, 0, 6.283); g.stroke(); g.setLineDash([]); } }
@@ -151,6 +182,9 @@
       if (b.sti && (v || m < 80)) { g.strokeStyle = FARGE.sti; g.lineWidth = v ? 2 : 1.2; g.setLineDash([7, 5]); g.beginPath(); g.moveTo(x, y); for (let q = b.seg + 1; q < b.sti.length; q++) { const [sx, sy] = P(b.sti[q][0], b.sti[q][1]); g.lineTo(sx, sy); } g.stroke(); g.setLineDash([]); const e = b.sti[b.sti.length - 1], [ex, ey] = P(e[0], e[1]); g.beginPath(); g.arc(ex, ey, 4, 0, 6.283); g.stroke(); }
       if (x < -60 || y < -60 || x > VW + 60 || y > VH + 60) continue; tegnBåt(g, b, x, y, m, v);
       if (m < 30 || v) { const n = omBord(b).length, t = b.navn + (n ? ` (${n} lag)` : ''), yt = window.Etikett ? Etikett.tekst(g, t, x, y + 22, 1) : y + 22; g.lineWidth = 3; g.strokeStyle = 'rgba(15,11,7,.85)'; g.strokeText(t, x, yt); g.fillStyle = '#d8e6f2'; g.fillText(t, x, yt); } }
+    // fiendens forsyningsbåter: bare der du ser dem
+    for (const b of S.frakt) { if (!serFrakt(b)) continue; const [x, y] = P(b.x, b.y); if (x < -60 || y < -60 || x > VW + 60 || y > VH + 60) continue; g.save(); tegnBåt(g, b, x, y, m, false, b.side); g.restore();
+      if (m < 30) { const t = `Forsyningsbåt til ${b.byNavn}`; g.lineWidth = 3; g.strokeStyle = 'rgba(15,11,7,.85)'; g.strokeText(t, x, y + 22); g.fillStyle = typeof sidefarge === 'function' ? sidefarge(b.side, 'lys') : '#e0a090'; g.fillText(t, x, y + 22); } }
     if (modus && valg && valg.båt) { const t = modus === 'kai' ? `Trykk på kaia ${valg.båt.navn} skal seile til` : `Trykk i sjøen der ${valg.båt.navn} skal ligge`; g.font = '15px "Cormorant Garamond", serif'; const w = g.measureText(t).width + 20; g.fillStyle = 'rgba(15,11,7,.85)'; g.fillRect(VW / 2 - w / 2, 96, w, 26); g.fillStyle = FARGE.valgt; g.fillText(t, VW / 2, 114); }
     g.restore(); });
   // Trykk i kartet (kalles først fra kaier.js sin trykk-krok): svarer true når trykket er brukt.
@@ -204,7 +238,7 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     const h = havnVedKai(i); if (h) { const Hh = S.havner[h.id]; H.append(el('h3', {}, `Havna i ${h.navn}`), el('p', {}, `Du holder ${h.navn}. Varene samler seg her: ${Hh && SJ.lastVekt(Hh) > 0.05 ? SJ.lastTekst(Hh) : 'ingenting ennå'}. Hent dem med båt – det ingen henter, kjøres landevegen en gang i uka, og da kommer bare halvparten fram.`)); }
     H.append(el('h3', {}, 'Kjøp båt')); const grunn = kjøpGrunn(q);
     if (!grunn) H.append(el('p', {}, el('small', {}, `Du kan kjøpe båt ved kaier innen ${km(R.kjøpLeir)} fra leiren, eller ved et tettsted du holder.`)));
-    else { H.append(el('p', {}, el('small', {}, `Du kan kjøpe her (${grunn}).`))); for (const [id, T] of Object.entries(TY)) { if (!T.pris) continue; const ok = SJ.passer(id, q.størrelse); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, T.navn), ' ', el('small', {}, kr(T.pris)), el('br'), el('small', {}, ok ? T.tekst : 'Kaia er for liten.')), kn('Kjøp', () => kjøp(id, i), ok ? { 'data-kjop': id } : { disabled: '' }))); } }
+    else { H.append(el('p', {}, el('small', {}, `Du kan kjøpe her (${grunn}).`))); for (const [id, T] of Object.entries(TY)) { if (!T.pris || T.skjult) continue; const ok = SJ.passer(id, q.størrelse); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, T.navn), ' ', el('small', {}, kr(T.pris)), el('br'), el('small', {}, ok ? T.tekst : 'Kaia er for liten.')), kn('Kjøp', () => kjøp(id, i), ok ? { 'data-kjop': id } : { disabled: '' }))); } }
     if (ferjeHer(q)) { H.append(el('h3', {}, 'Ferja'), el('p', {}, `Her ligger en ferje. Står et av lagene dine innen ${R.taFerje} m, kan dere ta den.`), kn('Ta ferja', () => taFerje(i), { 'data-sjo': 'ferje' })); }
     H.append(el('p', {}, kn('Vis i kartet', () => gåTil(q.x, q.y)), kn('← Alle båter og havner', () => { valg = null; }))); }
   function byggOversikt(H) { H.append(el('h2', {}, 'Sjøen'));
@@ -213,6 +247,8 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     for (const b of S.båter) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, b.navn), el('br'), el('small', {}, båtStatus(b) + (omBord(b).length ? ` · ${omBord(b).length} lag om bord` : '') + (SJ.lastVekt(b.last) > 0.01 ? ` · ${SJ.lastTekst(b.last)}` : ''))), kn('Velg', () => { valg = { båt: b }; gåTil(b.x, b.y); }, { 'data-bat': String(b.id) })));
     const Hv = havner(); H.append(el('h3', {}, `Havner du holder (${Hv.length})`)); if (!Hv.length) H.append(el('p', {}, el('small', {}, 'Ingen. Hold et tettsted med en stor kai eller havn, så kommer det tre, betong, stål, diesel og mat hver uke.')));
     for (const h of Hv) { const Hh = S.havner[h.id], q = kai(h.kai); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, h.navn), el('br'), el('small', {}, `på kaia: ${Hh && SJ.lastVekt(Hh) > 0.05 ? SJ.lastTekst(Hh) : 'ingenting ennå'}`)), kn('Vis', () => { valg = { kai: h.kai }; gåTil(q.x, q.y); }))); }
+    const Fh = fiendeHavner(); if (Fh.length) { H.append(el('h3', {}, 'Fiendens havner')); for (const h of Fh) { const st = S.fiende[h.id], q = kai(h.kai); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, h.navn), ' ', el('small', {}, sideNavn(h.side)), el('br'), el('small', {}, st && st.avskåret ? 'avskåret – forsyningsbåten kommer ikke fram' : S.frakt.some(b => b.by === h.id) ? 'en forsyningsbåt er på veg' : 'får forsyninger sjøvegen annethvert døgn')), kn('Vis', () => { valg = { kai: h.kai }; gåTil(q.x, q.y); }))); }
+      H.append(el('p', {}, el('small', {}, 'Sperr leia inn til havna med miner eller et vrak, så kommer ikke forsyningsbåten fram, og garnisonen treffer dårligere.'))); }
     if (S.sperringer.length) { H.append(el('h3', {}, 'Sperringer')); for (const s of S.sperringer) H.append(el('div', { klasse: 'rad' }, el('div', {}, s.type === 'vrak' ? `Vrak${s.navn ? ' (' + s.navn + ')' : ''}` : 'Minefelt', ' ', el('small', {}, `${s.r} m`)), el('div', {}, kn('Vis', () => gåTil(s.x, s.y)), s.type === 'miner' ? kn(`Rydd (${kr(R.ryddPris)})`, () => rydd(s.id)) : ''))); }
     H.append(el('p', {}, el('small', {}, 'Kaiene vises som ankermerker i kartet (☰ → Kaier). Trykk på en kai for å kjøpe båt, eller på en båt for å gi den ordre.'))); }
   function tegnPanel(tving) { if (!åpen) return; sistTegn = performance.now(); if (!tving && window.pekerNede && pekerNede(panel)) return;
@@ -232,5 +268,5 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     hode.appendChild(k2('Åpne sjøpanelet', () => { valg = null; vis(true); }, { id: 'sjoknapp' })); });
 
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
-    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
+    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
 })();

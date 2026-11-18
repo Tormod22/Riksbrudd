@@ -30,6 +30,9 @@
     taFerje: 400,
     // lengste seilas i én ordre (m)
     maksSeilas: 160000,
+    // fiendens forsyning sjøvegen: havnebyer andre holder innen så langt fra leiren (m, høyst så mange) får en forsyningsbåt så ofte
+    // (døgn); den kommer fra en kai så langt unna (m). Kommer den ikke fram, er garnisonen avskåret og treffer dårligere.
+    frakt: { innen: 60000, maks: 4, hverDøgn: 2, fra: [6000, 25000], avskåret: 0.75 },
   };
   // Båttypene (Claudes forslag): pris i kroner, fart i m/s, lag = hvor mange lag som får plass, last = plass i lasterommet,
   // fiske = rasjoner per spilltime, kai = minste kaistørrelse båten kan legge til ved.
@@ -37,6 +40,8 @@
     småbåt: { navn: 'Småbåt', pris: 400000, fart: 6, lag: 1, last: 3, fiske: 0.4, kai: 'liten', lengde: 7, tekst: 'Rask og billig. Ett lag, nesten ingen last. Legger til ved alle kaier.' },
     sjark: { navn: 'Sjark', pris: 2000000, fart: 4.5, lag: 1, last: 20, fiske: 1.5, kai: 'liten', lengde: 11, tekst: 'Fiskebåt: best til fiske, tar ett lag og litt last. Legger til ved alle kaier.' },
     lekter: { navn: 'Lekter med slepebåt', pris: 6000000, fart: 3, lag: 3, last: 150, fiske: 0, kai: 'middels', lengde: 30, tekst: 'Treg, men tar tre lag og mye last. Trenger en middels eller stor kai.' },
+    // fiendens forsyningsbåt (kan ikke kjøpes eller tas)
+    frakt: { navn: 'Forsyningsbåt', pris: 0, fart: 4, lag: 0, last: 0, fiske: 0, kai: 'liten', lengde: 26, skjult: true, tekst: '' },
     ferje: { navn: 'Ferje', pris: 0, fart: 6.5, lag: 4, last: 250, fiske: 0, kai: 'stor', lengde: 70, tekst: 'Kan ikke kjøpes – tas ved en ferjekai. Fire lag og mest last. Trenger en stor kai.' },
   };
   const STØRRELSE = { liten: 0, middels: 1, stor: 2 };
@@ -45,7 +50,7 @@
   const tomLast = () => ({ tre: 0, betong: 0, stål: 0, drivstoff: 0, rasjoner: 0 });
   const rund = v => Math.round(v * 10) / 10;
 
-  function ny() { return { versjon: 1, båter: [], neste: 1, sperringer: [], nesteSperring: 1, havner: {}, ferjerTatt: [], sistHavn: null }; }
+  function ny() { return { versjon: 1, båter: [], neste: 1, sperringer: [], nesteSperring: 1, havner: {}, ferjerTatt: [], sistHavn: null, fiende: {}, frakt: [] }; }
   // Passer båttypen ved en kai av denne størrelsen ('liten' | 'middels' | 'stor')?
   const passer = (type, størrelse) => !!TYPER[type] && STØRRELSE[størrelse] >= STØRRELSE[TYPER[type].kai];
   function nyBåt(S, type, x, y, kai, navn) { const T = TYPER[type]; if (!T) return null;
@@ -159,16 +164,22 @@
   function ild(a, b, tid) { let f = 1; if (a.påBåt) f *= REGLER.skuddFraBåt; if (b.påBåt) f *= REGLER.treffPåBåt;
     if (a.landgang && tid < a.landgang) f *= REGLER.landgangEgen; if (b.landgang && tid < b.landgang) f *= REGLER.landgangFiende; return f; }
 
+  // ---------- fiendens forsyning sjøvegen ----------
+  // Tilstanden for en havneby fienden holder: { neste: spillminuttet neste båt går, avskåret, underveis }.
+  function fraktBy(S, id, tid) { return S.fiende[id] || (S.fiende[id] = { neste: tid + REGLER.frakt.hverDøgn * 1440 * 0.25, avskåret: false, underveis: false }); }
+  // Båten kom fram (ok = true) eller ble stoppet av en sperring (ok = false).
+  function fraktSvar(S, id, tid, ok) { const st = fraktBy(S, id, tid); st.underveis = false; st.avskåret = !ok; st.neste = tid + REGLER.frakt.hverDøgn * 1440; return st; }
+
   // ---------- lagring ----------
-  function tilJSON(S) { return { versjon: 1, neste: S.neste, nesteSperring: S.nesteSperring, sistHavn: S.sistHavn, ferjerTatt: S.ferjerTatt.slice(), havner: S.havner, sperringer: S.sperringer.map(s => ({ ...s, x: Math.round(s.x), y: Math.round(s.y) })),
+  function tilJSON(S) { return { versjon: 1, fiende: S.fiende, neste: S.neste, nesteSperring: S.nesteSperring, sistHavn: S.sistHavn, ferjerTatt: S.ferjerTatt.slice(), havner: S.havner, sperringer: S.sperringer.map(s => ({ ...s, x: Math.round(s.x), y: Math.round(s.y) })),
     båter: S.båter.map(b => ({ id: b.id, type: b.type, navn: b.navn, x: Math.round(b.x), y: Math.round(b.y), kai: b.kai, mål: b.mål, retning: +(b.retning || 0).toFixed(2), last: Object.fromEntries(VARER.map(k => [k, rund(b.last[k] || 0)])), fisker: !!b.fisker,
       sti: b.sti ? b.sti.slice(b.seg).map(p => [Math.round(p[0]), Math.round(p[1])]) : null, lag: b.lag || undefined })) }; }
   function fraJSON(d) { const S = ny(); if (!d || d.versjon !== 1) return S; S.neste = d.neste || 1; S.nesteSperring = d.nesteSperring || 1; S.sistHavn = typeof d.sistHavn === 'number' ? d.sistHavn : null; S.ferjerTatt = Array.isArray(d.ferjerTatt) ? d.ferjerTatt.slice() : [];
-    S.havner = d.havner && typeof d.havner === 'object' ? d.havner : {}; S.sperringer = (d.sperringer || []).filter(s => s && isFinite(s.x) && isFinite(s.y) && s.r > 0);
-    for (const q of d.båter || []) { if (!q || !TYPER[q.type] || !isFinite(q.x) || !isFinite(q.y)) continue; const b = { id: q.id, type: q.type, navn: String(q.navn || TYPER[q.type].navn), x: q.x, y: q.y, kai: typeof q.kai === 'number' ? q.kai : -1, mål: typeof q.mål === 'number' ? q.mål : -1, retning: q.retning || 0, last: { ...tomLast(), ...(q.last || {}) }, fisker: !!q.fisker, fangst: 0, sti: null, seg: 0 };
+    S.havner = d.havner && typeof d.havner === 'object' ? d.havner : {}; S.fiende = d.fiende && typeof d.fiende === 'object' ? d.fiende : {}; S.sperringer = (d.sperringer || []).filter(s => s && isFinite(s.x) && isFinite(s.y) && s.r > 0);
+    for (const q of d.båter || []) { if (!q || !TYPER[q.type] || TYPER[q.type].skjult || !isFinite(q.x) || !isFinite(q.y)) continue; const b = { id: q.id, type: q.type, navn: String(q.navn || TYPER[q.type].navn), x: q.x, y: q.y, kai: typeof q.kai === 'number' ? q.kai : -1, mål: typeof q.mål === 'number' ? q.mål : -1, retning: q.retning || 0, last: { ...tomLast(), ...(q.last || {}) }, fisker: !!q.fisker, fangst: 0, sti: null, seg: 0 };
       if (Array.isArray(q.sti) && q.sti.length > 1) { b.sti = q.sti; b.sti[0] = [b.x, b.y]; } if (Array.isArray(q.lag)) b.lag = q.lag.slice(); S.båter.push(b); S.neste = Math.max(S.neste, b.id + 1); }
     return S; }
 
-  const api = { REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, tilJSON, fraJSON };
+  const api = { REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, fraktBy, fraktSvar, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Sjo = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

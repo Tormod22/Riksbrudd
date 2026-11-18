@@ -40,6 +40,9 @@ penger = 2e6; ok(S.leggMiner(T, 100, 100, betal).sperring && penger === 5e5, 'mi
 ok(S.rydd(T, T.sperringer[1].id, betal).feil && !S.rydd(T, T.sperringer[0].id, betal).feil && T.sperringer.length === 1, 'miner ryddes, vrak ikke');
 const b2 = S.nyBåt(T, 'småbåt', 10, 20, 3); b2.last.tre = 2; b2.lag = ['Lag 1']; const T2 = S.fraJSON(JSON.parse(JSON.stringify(S.tilJSON(T)))); ok(T2.båter.length === 1 && T2.båter[0].last.tre === 2 && T2.båter[0].kai === 3 && T2.båter[0].lag[0] === 'Lag 1' && T2.sperringer.length === 1 && T2.neste === T.neste, 'lagring fram og tilbake');
 ok(S.nivå(5000).zv === 9 && S.nivå(30000).zv === 8 && S.nivå(100000).zv === 7, 'detaljnivå etter avstand'); ok(S.passer('lekter', 'middels') && !S.passer('ferje', 'middels') && S.passer('småbåt', 'liten'), 'kaistørrelse');
+// fiendens forsyning
+{ const F = S.ny(), st = S.fraktBy(F, 12, 1000); ok(st.neste > 1000 && !st.avskåret, 'første forsyningsbåt går litt senere'); S.fraktSvar(F, 12, 2000, false); ok(F.fiende[12].avskåret && F.fiende[12].neste === 2000 + 2 * 1440, 'stoppet båt = avskåret, ny om to døgn'); S.fraktSvar(F, 12, 5000, true); ok(!F.fiende[12].avskåret, 'båt fram = ikke avskåret');
+  const F2 = S.fraJSON(JSON.parse(JSON.stringify(S.tilJSON(F)))); ok(F2.fiende[12] && F2.frakt.length === 0, 'fiendens havner lagres'); ok(S.kjøp(F, 'frakt', { x: 0, y: 0, i: 0, størrelse: 'stor' }, () => true).feil, 'forsyningsbåten kan ikke kjøpes'); }
 // stort kart: tid
 { const w = 1600, h = 1600, V = { x0: 0, y0: h * 128, r: 128, w, h, K: new Uint8Array(w * h).fill(3) }; for (let j = 100; j < 1500; j++) for (let i = 790; i < 810; i++) V.K[j * w + i] = 1; const t0 = Date.now(), R = S.rute(V, 1000, 100000, 200000, 100000); ok(R.sti && Date.now() - t0 < 4000, 'stort kart på under 4 s (' + (Date.now() - t0) + ' ms)'); }
 console.log(feil ? feil + ' feil' : 'test_sjo: alt i orden'); process.exit(feil ? 1 : 0);
