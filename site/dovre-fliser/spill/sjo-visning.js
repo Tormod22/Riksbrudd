@@ -81,9 +81,10 @@
     b.planlegger = true; logg(`${b.navn}: finner lei over sjøen …`);
     try { let r = null, N = SJ.nivå(d);
       for (let forsøk = 0; forsøk < 2; forsøk++) { const v = o.vindu || await lagVindu([Math.min(b.x, x) - N.pad, Math.min(b.y, y) - N.pad, Math.max(b.x, x) + N.pad, Math.max(b.y, y) + N.pad], false, N.zv);
-        r = SJ.rute(v, b.x, b.y, x, y, { sperringer: S.sperringer });
-        // trange sund forsvinner i det grove kartet: prøv en gang til med finere kart når turen ikke er for lang
-        if (r.sti || o.vindu || N.zv >= 9 || d > 40000 || r.feil === 'sperret') break; N = { zv: N.zv + 1, pad: Math.min(N.pad, 12000) }; }
+        const ny = SJ.rute(v, b.x, b.y, x, y, { sperringer: S.sperringer }); if (!r || !r.sti || (ny.sti && ny.meter < r.meter)) r = ny;
+        // trange sund forsvinner i det grove kartet: prøv en gang til med finere kart når turen ikke er for lang og ruta mangler
+        // eller er en lang omveg
+        if (o.vindu || N.zv >= 9 || d > 40000 || r.feil === 'sperret' || (r.sti && r.meter < d * 1.8)) break; N = { zv: N.zv + 1, pad: Math.min(Math.max(N.pad, 6000), 14000) }; }
       if (r.feil) return si(r.feil === 'sperret' ? 'leia er sperret av miner eller et vrak. Rydd sperringen eller velg et annet mål.' : r.feil === 'start' ? 'båten ligger ikke i sjøen.' : r.feil === 'mål' ? 'det er ikke sjø der.' : 'det går ingen lei over sjøen dit – båten kan ikke gå over land.');
       SJ.settRute(b, r.sti, kaiI); b.friFor = S.sperringer.filter(q => Math.hypot(q.x - b.x, q.y - b.y) <= q.r).map(q => q.id); merk(); logg(`${b.navn}: seiler til ${kaiI >= 0 ? kaiNavn(kaiI) : 'stedet på sjøen'}, ${km(r.meter)}, ca. ${tidTekst(r.meter / TY[b.type].fart / 60)}.`); return { meter: r.meter };
     } catch (e) { return si('fikk ikke hentet sjøkartet. Prøv igjen.'); } finally { b.planlegger = false; tegnPanel(true); } }
