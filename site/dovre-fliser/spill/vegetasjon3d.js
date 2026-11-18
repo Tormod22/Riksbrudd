@@ -214,15 +214,28 @@
   }
 
   // ---------- sett3d: instansene med detaljnivå ----------
-  KROKER.sett3d.push((u, R) => {
-    if (!u.trær) return;
-    const d = new THREE.Object3D();
+  // Matrisene og fargene for de nye treslagene (18. nov, hakk: ca. 23 ms i selve byttet i Bergen). Generator: lages i forbered3d-kroken
+  // (u.treslagKlar, yield for hvert 1024. tre), og sett3d lager dem i ett når de mangler – de samme tallene.
+  function* treslagMatriser(u) {
+    const d = new THREE.Object3D(), ut = {};
     for (const art of NYE) {
       const data = u.trær[art], n = data ? data.length / 5 : 0; if (!n) continue;
       const M = new Float32Array(n * 16), C = new Float32Array(n * 3), skjev = art === 'fjellbjørk' ? .35 : art === 'selje' ? .15 : .08;
-      for (let k = 0; k < n; k++) { const x = data[k * 5], y = data[k * 5 + 1], z = data[k * 5 + 2], h = data[k * 5 + 3], v = data[k * 5 + 4], b = h * (.85 + .3 * ((v * 13.7) % 1));
+      for (let k = 0; k < n; k++) { if ((k & 1023) === 1023) yield; const x = data[k * 5], y = data[k * 5 + 1], z = data[k * 5 + 2], h = data[k * 5 + 3], v = data[k * 5 + 4], b = h * (.85 + .3 * ((v * 13.7) % 1));
         d.position.set(x, y, z - (art === 'einer' ? .1 : .25)); d.scale.set(b, b, h); d.rotation.set((v - .5) * skjev, ((v * 7.3) % 1 - .5) * skjev, v * 6.283); d.updateMatrix();
         d.matrix.toArray(M, k * 16); const f = .84 + v * .32; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
+      ut[art] = { data, M, C }; yield;
+    }
+    return ut;
+  }
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.treslagKlar = u.trær ? await kjørAsynk(treslagMatriser(u)) : null; });
+  KROKER.sett3d.push((u, R) => {
+    const klar = u.treslagKlar; u.treslagKlar = null;
+    if (!u.trær) return;
+    // (de forberedte gjelder bare så lenge listene er de samme – en krok som har endret u.trær etterpå, får dem laget på nytt)
+    const ferdig = klar && NYE.every(a => !klar[a] || klar[a].data === u.trær[a]) && NYE.every(a => klar[a] || !(u.trær[a] && u.trær[a].length)) ? klar : kjørRett(treslagMatriser(u));
+    for (const art of NYE) {
+      if (!ferdig[art]) continue; const { data, M, C } = ferdig[art], n = data.length / 5;
       const lag = (geo, enkel) => { const m = new THREE.InstancedMesh(geo, TreDeler.materiale(treMateriale(art, enkel), geo), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
         m.count = 0; m.frustumCulled = false; m.userData.treslag = art; if (!enkel) TreDeler.skygge(m); R.scene.add(m); R.treMesh.push(m); return m; };
       // små treslag (einer, rogn, fjellbjørk, selje) med alle detaljene bare nær kameraet (lodTrær leser G2)

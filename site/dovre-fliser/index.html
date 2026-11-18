@@ -1685,13 +1685,14 @@ async function hus3d(u) {
     if (!n) { let mx = 0, my = 0; for (const q of P) { mx += q[0]; my += q[1]; } mx /= P.length; my /= P.length; for (let j = 0; j < P.length; j++) { tri([...P[j], z], [...P[(j + 1) % P.length], z], [mx, my, z], farge); n++; } }
     return n; };
   // gatene (vektor z13, E/R/F/K) i et rutenett på 8 m: veggen vender mot gata når det ligger veg 3–11 m rett ut fra den
-  const GATE = new Map(), GC = 8, gk = (x, y) => Math.floor(x / GC) + ',' + Math.floor(y / GC);
+  // (18. nov, hakk: tallnøkler i rutenettet og pust mellom flisene – hus3d holdt ellers hovedtråden ca. 80 ms i ett strekk i Bergen; samme ruter)
+  const GATE = new Map(), GC = 8, gnk = (i, j) => (i + 32768) * 65536 + (j + 32768), gk = (x, y) => gnk(Math.floor(x / GC), Math.floor(y / GC));
   if (BY && u.S <= 2200) { const fv = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fv.push(hentFlis('vektor', z, x, y).then(t => [x, y, t]));
-    for (const [x, y, t] of await Promise.all(fv)) { if (!t || !t.veg) continue; const mx = G.x0 + x * sp - u.cx, my = G.y0 - y * sp - u.cy, e = t.veg.ext;
+    for (const [x, y, t] of await Promise.all(fv)) { if (børPuste()) await pust(); if (!t || !t.veg) continue; const mx = G.x0 + x * sp - u.cx, my = G.y0 - y * sp - u.cy, e = t.veg.ext;
       for (const o of t.veg.obj) { if (!'ERFK'.includes(o.e.k)) continue;
         for (const d of o.deler) for (let q = 1; q < d.length; q++) { const ax = mx + d[q - 1][0] / e * sp, ay = my - d[q - 1][1] / e * sp, bx = mx + d[q][0] / e * sp, by = my - d[q][1] / e * sp, n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 3));
           for (let s2 = 0; s2 <= n; s2++) { const px = ax + (bx - ax) * s2 / n, py = ay + (by - ay) * s2 / n, kk = gk(px, py); if (!GATE.has(kk)) GATE.set(kk, []); GATE.get(kk).push(px, py); } } } } }
-  const vegVed = (x, y, r) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = GATE.get((Math.floor(x / GC) + di) + ',' + (Math.floor(y / GC) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < r) return true; } return false; };
+  const vegVed = (x, y, r) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = GATE.get(gnk(Math.floor(x / GC) + di, Math.floor(y / GC) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < r) return true; } return false; };
   stat.gater = GATE.size;
   const motGate = (a, b) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 4 || !GATE.size) return false; const nx = (b[1] - a[1]) / L, ny = -(b[0] - a[0]) / L, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
     for (const s2 of [3, 7, 11, 15]) if (vegVed(mx + nx * s2, my + ny * s2, 3.5)) return true; return false; };
@@ -1699,7 +1700,7 @@ async function hus3d(u) {
   const flisene = await Promise.all(fl);
   // først midtpunktene: naboer innen 100 m (på landet får flere bygg tak med fall), industri (runde bygg der er tanker)
   const SENTER = new Map(), IND = [];
-  for (const [x, y, t] of flisene) { if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
+  for (const [x, y, t] of flisene) { if (børPuste()) await pust(); if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) { if (SENTER.has(o.e.i) || !o.deler[0]) continue; const d = o.deler[0]; let sx = 0, sy = 0; for (const [a, b] of d) { sx += a; sy += b; }
       const c = [minx + sx / d.length * k - u.cx, maxy - sy / d.length * k - u.cy]; SENTER.set(o.e.i, c); if (o.e.t === 6 || o.e.t === 12) IND.push(c); } }
   const idListe = [...SENTER.keys()], tl = await naboerAsynk(idListe.map(i => SENTER.get(i))), TETT = new Map(idListe.map((i, n) => [i, tl[n]])), fyrer = [];
@@ -1708,7 +1709,8 @@ async function hus3d(u) {
     for (const o of t.hus.obj) {
       // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil; pusterom for nettleseren hvert 256. bygg
       if (sett.has(o.e.i) || sett.size > 30000 || (window.HUS_BORT && HUS_BORT.has(o.e.i))) continue;   // HUS_BORT: revet (spill/ressurser-visning.js)
-      if ((sett.size & 15) === 15 && børPuste()) await pust();
+      // (18. nov: pust prøves for hvert 4. bygg – store bygårder tok 50–90 ms per 16 bygg i Bergen)
+      if ((sett.size & 3) === 3 && børPuste()) await pust();
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
       let P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);
@@ -3238,7 +3240,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=4574ac903d"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=82d1b6fa40"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=0003cd1eff"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
@@ -3260,7 +3262,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=71851cd3ca"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=7eaf0fb472"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
@@ -3281,7 +3283,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=4bcf906dc4"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=0b725285d6"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=c98ba036b6"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>

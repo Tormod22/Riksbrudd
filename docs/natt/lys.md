@@ -363,3 +363,48 @@ Det som står igjen over 100 ms: hus3d (78 ms selv), sett3d 130–135 ms (liv3d 
 sett3d ca. 23, merkingen i `R.scene.add` (ytelse.js) ca. 20), og kartbildet i striper (én stripe 83 ms med programvare-grafikk).
 Dovre-testsiden etter del 2 (`t-dovre.js`): fingeravtrykket fortsatt likt koden fra før runde 4, «bygging i biter» lik (133 pust),
 kartbildet likt lerretet, brukontrollen som før, ingen sidefeil.
+
+## Runde 4, del 3 (18. nov dag)
+### 1. Merkingen i `R.scene.add` (ytelse.js)
+`userData.kilde` trengs ikke bare til «Mål ytelse»: lys3d.js bruker den til å velge hva som kaster skygge (`STILLE`), og vaktene i
+sjekk.js teller nettene per fil («bygging i biter» krever liv3d-nett, «kilder»-vakta). Den må derfor settes hele tiden, også i
+testene – å sette den bare mens det måles ville endret skyggene og vaktene. I stedet er hver merking billigere (`kildeNå`): først en
+kort stakk (`Error.stackTraceLimit = 5`: de tre nærmeste rammene utenfor ytelse.js), og hele stakken bare når den korte ikke har noen
+spill/-fil (dvs. når kilden blir «index» eller ligger dypere). Første treff i den korte stakken er første treff i hele, så svaret er
+det samme; den hele stakken får én ramme ekstra for `kildeNå` selv, så vinduet er det samme som før. Nettlesere uten
+`Error.stackTraceLimit` (Safari, Firefox) får hele stakken som før. «Mål ytelse» grupperer etter fil som før; utsnittet trenger ikke
+bygges på nytt. Målt i Node (V8, dybde 12): 17–23 µs per merking med hel stakk, 6–11 µs med kort. I et bytte i Bergen: 280
+merkinger, 223 avgjøres av den korte stakken (57 blir «index»).
+Prøvd: alle 308 objektene i scenen etter et bytte i Bergen har samme kilde før og etter (samme fordeling: index 57, liv3d 95,
+natt3d 42, vind3d 32, vegetasjon3d 12, anlegg3d 10, gate3d 10, kraft3d 6, kyst3d 5, infra3d 4, bane3d 4, bekker-visning 1,
+portal3d 1, dyr3d 1; samme sjekksum over hele lista).
+
+### 2. hus3d
+Den lange biten var ikke husene selv (de har pust for hvert 16. bygg), men rutenettet over gatene (`GATE`, et punkt hver 3. m langs
+alle vegene i vektorflisene) og midtpunktene, regnet for alle flisene i ett strekk med tekstnøkler. Nå tallnøkler (`gnk`, samme ruter)
+og pust mellom flisene i begge løkkene.
+
+### 3. liv3d og vegetasjon3d i byttet → forbered3d
+- **liv3d.js:** linjene bilene og folkene bruker (`velgLinjer`, nå generator `velgLinjerG`, samme rekkefølge) lages i forbered3d-kroken
+  (`u.livLinjer`); startLiv bruker dem. Bildet av billysenes lyskjegle (2048 småruter med fargetekst) tegnes én gang og brukes av alle
+  utsnitt. `Liv3d.start()` gir hvor bilene og folkene startet (for prøvene).
+- **vegetasjon3d.js:** matrisene og fargene for de seks nye treslagene (`treslagMatriser`, generator, yield for hvert 1024. tre) lages i
+  forbered3d-kroken (`u.treslagKlar`); sett3d bruker dem bare når treslagslistene er de samme (ellers lages de på nytt).
+- Etterpå: pust prøves for hvert 4. bygg i hus3d (før hvert 16.) – store bygårder tok 50–90 ms per 16 bygg i Bergen.
+
+### Prøvd – likt før og etter (Bergen 3,1 km, `t-del3.js`, gammel kode = rett før del 3, kopi i scratchpad `natt/lys/hakk/head3`)
+Første utsnitt, uforberedt og forberedt bytte: samme kilde for alle 308 objektene (sjekksum over hele lista), like husnett (posisjoner
+og normaler i alle nettene) og `u.hus.stat`, like treslag i nettene (`R3.treLOD`: antall, matriser og farger for alle 14), og samme
+start for alle biler og folk (`Liv3d.start()`: veg, lengde, plass og retning). Ingen sidefeil. Regeltestene test_ytelse, test_veg,
+test_vegetasjon, test_kyst, test_fjernby3d grønne. Vakta lys grønn (PC, 3D på og av).
+
+### Målt (Bergen 3,1 km, gammel og ny kode rett etter hverandre, last ca. 9; `d4før-b900.log`, `d4etter-b900.log`)
+| | før del 3 | etter del 3 |
+|---|---|---|
+| sett3d (største) | 191 / 70 ms | **61 / 48 ms** |
+| hus3d, lengste bit | 230 ms (133 ms selv – gaterutenettet) / 114 ms | 95 / 67 ms (resten er husene selv) |
+| merkingen i `R.scene.add` i et bytte | 11–23 ms (stor spredning) | 11 ms |
+| lengste lange oppgave | 230 / 392 ms (søppeltømming 361) | 166 / 329 ms (søppeltømming 272) |
+| «gjør klar», lengste pause | 297 / 394 ms | 141 / 332 ms |
+Lange oppgaver totalt og pausene i «henter høydene og kartet» varierte mer mellom de to kjøringene enn noe del 3 rører (der var det
+søppeltømming, `okonomi-visning` sin teller og oppgaver uten stakk) – de tallene sier ingenting om del 3.
