@@ -64,7 +64,7 @@
     const k = vegNøkkel(a, b); if (VEG.has(k)) return VEG.get(k); if (!vegKø.some(q => q.k === k)) vegKø.push({ k, a, b }); return null; }
   const brutteNavn = (g, lenker) => { const navn = new Set(); for (const e of lenker) { let t = []; try { t = g.infraPåLenke(e); } catch (er) { t = []; }
       for (const [lag, id] of t) { const o = typeof INFRA !== 'undefined' && INFRA && (INFRA[lag] || []).find(q => q.e && q.e.id === id); navn.add((lag === 'bru' ? 'brua' : lag === 'tunnel' ? 'tunnelen' : lag) + (o && o.e.navn ? ' ' + o.e.navn : '')); } }
-    return navn.size ? [...navn].join(' og ') : 'en sprengt bru'; };
+    return navn.size ? [...navn].join(' og ') : 'en bru'; };
   function regnVeg(job) { const g = window.VEGNETT; if (!g) return; const sp = g._sperretAv ? [...g._sperretAv] : [], spSett = new Set(sp); let r = null;
     // vegen slik den går når alt er helt – så ser vi om en sprengt bru ligger på den
     try { for (const e of sp) g.åpne(e); r = g.rute([job.a.x, job.a.y], [job.b.x, job.b.y], { maksAvstand: 4000 }); } catch (e) { r = null; } finally { for (const e of sp) g.sperr(e); }
@@ -335,7 +335,8 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   function krigTrekk(by) { if (!klar || !by || !by.e) return null; const t = typeAv(by); return `${RG.TYPER[t].navn}: ville gitt ${RG.girTekst(grunnFor(by.e.folk || 0, t), kr)} per døgn`; }
   function krigSide(sd) { if (!klar) return null; if (sd === 'blå') { const n = status().size; return n ? `Tettstedene dine gir per døgn: ${RG.girTekst(sum(), kr)}.` : null; }
     fordelTid = -1e9; const f = fordel(sd); if (!f.antall) return null;
-    return `Får av ${f.antall} tettsted${f.antall === 1 ? '' : 'er'}: treff +${Math.round((f.treff - 1) * 100)} %, forsterkninger ${Math.round((f.forsterk - 1) * 100)} % raskere og flere lag.`; }
+    const d = []; if (f.treff > 1.001) d.push(`treff +${Math.round((f.treff - 1) * 100)} %`); if (f.forsterk > 1.001) d.push(`forsterkninger ${Math.round((f.forsterk - 1) * 100)} % raskere`);
+    return `Får av ${f.antall} tettsted${f.antall === 1 ? '' : 'er'}: ${d.concat(['flere lag']).join(', ').replace(/, ([^,]*)$/, ' og $1')}.`; }
   { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; (KT.by = KT.by || []).push(krigBy); (KT.trekk = KT.trekk || []).push(krigTrekk); (KT.side = KT.side || []).push(krigSide); }
   // eldre navn (natt 18. nov): panelet pyntes nå gjennom kroken over
   function pyntKrig() { if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.takt(); }

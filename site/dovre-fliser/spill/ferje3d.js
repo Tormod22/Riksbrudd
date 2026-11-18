@@ -133,8 +133,13 @@
   // ---------- ferjene flyttes ----------
   function flyttFerjer(u, nå, dt) {
     const fart = (window.Vind3d && Vind3d.VIND && Vind3d.VIND.fart) || 0, gy = Ferje.gynging ? Ferje.gynging(fart, true) : { amp: .3, takt: 1 };
+    // (18. nov, runde 4) har du «tatt ferja» ved en av kaiene i sambandet (spill/sjo-visning.js), går ikke ruteferja lenger – din ferje
+    // tegnes av sjø-visningen der du har den
+    const tatt = window.SjoSpill && SjoSpill.tatteFerjer ? SjoSpill.tatteFerjer() : [], vedKai = k => tatt.some(p => Math.hypot(p.x - (k.Q[0] + u.cx), p.y - (k.Q[1] + u.cy)) < 600);
     for (const f of u.ferjer3d || []) {
-      if (!f.mesh) continue; const R = f.rute.R, st = Ferje.stilling(R, nå, f.forskyv), q = st.s / (R.L || 1), z = f.zA * (1 - q) + f.zB * q;
+      if (!f.mesh) continue;
+      if (tatt.length && (vedKai(f.rute.kA) || vedKai(f.rute.kB))) { f.mesh.visible = false; f.st = null; f.tatt = true; continue; } f.mesh.visible = true; f.tatt = false;
+      const R = f.rute.R, st = Ferje.stilling(R, nå, f.forskyv), q = st.s / (R.L || 1), z = f.zA * (1 - q) + f.zB * q;
       const fase = nå * gy.takt * .8 + f.id % 7, a = gy.amp * .25;
       f.mesh.position.set(st.x, st.y, z + Math.sin(fase) * .05 * a);
       f.mesh.rotation.set(Math.sin(fase * .9) * .012 * a, Math.sin(fase * .7 + 1) * .006 * a, Math.atan2(st.hy, st.hx), 'ZYX');
@@ -153,7 +158,7 @@
   window.Ferje3d = {
     sjekk: () => { const u = typeof R3 !== 'undefined' && R3 && R3.ut; const fs = (u && u.ferjer3d) || [];
       return { ruter: new Set(fs.map(f => f.rute)).size, ferjer: fs.length, iScenen: fs.filter(f => f.mesh && f.mesh.parent).length, kjølvann: KV.tegnet,
-        ferjeliste: fs.map(f => ({ navn: f.rute.navn, L: Math.round(f.rute.R.L), s: f.st ? Math.round(f.st.s) : null, v: f.st ? +f.st.v.toFixed(2) : null, ved: f.st ? f.st.ved : null, x: f.st && Math.round(f.st.x + u.cx), y: f.st && Math.round(f.st.y + u.cy) })) }; },
+        ferjeliste: fs.map(f => ({ tatt: !!f.tatt, navn: f.rute.navn, L: Math.round(f.rute.R.L), s: f.st ? Math.round(f.st.s) : null, v: f.st ? +f.st.v.toFixed(2) : null, ved: f.st ? f.st.ved : null, x: f.st && Math.round(f.st.x + u.cx), y: f.st && Math.round(f.st.y + u.cy) })) }; },
     // for skjermbilder/tester: hopp i ruteplanen (sekunder lagt til sanntida)
     T, KV,
     // spol fram sek sekunder fram til nå (kjølvannet bygges opp; skjermbilder i swiftshader har for få rammer)
