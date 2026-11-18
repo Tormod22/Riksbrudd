@@ -220,8 +220,8 @@
 #lutpanel .detalj{ margin-top:6px; padding:6px 8px; border:1px solid #3a3224; background:rgba(0,0,0,.25); min-height:40px; } #lutpanel .detalj b{ font-size:15px; } #lutpanel .detalj p{ margin:2px 0 4px; font-size:13px; color:var(--ink-dim,#a99); }
 #lutpanel .valg{ display:flex; flex-wrap:wrap; gap:4px; } #lutpanel .valg button.hoved{ border-color:#c9b26a; color:#f0e2b0; } #lutpanel .tips{ font-size:12px; color:var(--ink-dim,#a99); margin-top:4px; } #lutpanel .melding{ font-size:13px; color:#f0e2b0; margin-top:4px; }
 #lutdra{ position:fixed; z-index:30; pointer-events:none; padding:4px 10px; background:rgba(28,23,15,.94); border:1px solid #c9b26a; color:#f0e2b0; font-size:14px; transform:translate(-50%,-130%); white-space:nowrap; }
-#lutknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(146px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:200px; min-height:42px; padding:6px 18px; background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; }
-#lutknapp.på{ display:block; } body.kort #lutknapp{ bottom:calc(276px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:170px; }
+#lutknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(200px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:200px; min-height:42px; padding:6px 18px; background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; }
+#lutknapp.på{ display:block; } body.kort #lutknapp{ bottom:calc(330px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:170px; }
 body.kort #lutpanel, body.smal #lutpanel{ left:4px; right:4px; transform:none; width:auto; top:calc(var(--topp,40px) + 4px); max-height:calc(100vh - var(--topp,40px) - 12px); padding:6px; font-size:13px; }
 body.kort #lutpanel .rad, body.smal #lutpanel .rad{ padding:6px 4px; gap:4px; } body.kort #lutpanel .tips, body.smal #lutpanel .tips{ display:none; } body.kort #lutpanel h2, body.smal #lutpanel h2{ font-size:16px; }
 body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px 4px; } body.kort #lutpanel .liste, body.smal #lutpanel .liste{ padding:2px 3px 6px; }`;
@@ -376,9 +376,94 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   const kanLøpe = () => { const b = klar && status(); return b ? b.kanLøpe : true; };
   const løp = () => { const b = klar && status(); return b ? b.løp : 1; };
 
+  // ---------- 3D: tingene du ser i husene, og haugene på gulvet ----------
+  // Det som ligger i benker, bord, hyller og garderober, står oppå møbelet (eller lener mot veggen ved garderoben, som våpen) – og
+  // forsvinner når du tar det. Ett lite nett per bygg med hjørnefarger, lagt i interiørets egen liste (o.nett i spill/interior3d.js),
+  // så det tas bort og frigjøres sammen med interiøret. Haugene på gulvet og bakken: ett nett for dem innen 120 m. Ingen lys.
+  // møbler det står ting OPPÅ (andelen av møbelets høyde: hyllene har tingene på en hylle i midten)
+  const OPPÅ = { kjøkkenbenk: 1, nattbord: 1, pult: 1, kateter: 1, tvbenk: 1, skranke: 1, kasse: 1, arbeidsbenk: 1, verktøyvogn: 1, arkivskap: 1, hylle: .5, bokhylle: .5, tønne: 1 };
+  let mat3 = null, gulvMesh = null, gulvSig = '', sist3 = 0, forU3 = null; const sig3 = new Map();
+  const farg3 = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); return g; };
+  const kloss = (d, x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); d.push(farg3(g, c)); };
+  const rull = (d, x, y, z, r, h, c, seg = 8, ligg) => { const g = new THREE.CylinderGeometry(r, r, h, seg).toNonIndexed(); if (ligg) { g.rotateZ(Math.PI / 2); g.translate(x, y, z + r); } else { g.rotateX(Math.PI / 2); g.translate(x, y, z + h / 2); } d.push(farg3(g, c)); };
+  const flaske = (d, r, h, c, kork) => { rull(d, 0, 0, 0, r, h * .72, c, 10); rull(d, 0, 0, h * .72, r * .45, h * .2, c, 8); rull(d, 0, 0, h * .92, r * .5, h * .08, kork, 8); };
+  const boks = (d, c) => { rull(d, 0, 0, 0, .04, .1, c, 10); rull(d, 0, 0, .1, .041, .006, [.75, .76, .78], 10); };
+  const eske = (d, sx, sy, sz, c, lapp) => { kloss(d, 0, 0, 0, sx, sy, sz, c); if (lapp) kloss(d, 0, sy / 2 + .001, sz * .3, sx * .7, .003, sz * .4, lapp); };
+  // en sekk: hovedrom, lokk, lomme foran og to remmer bak
+  const sekk3 = (d, b, t, h, c) => { const m = c.map(v => v * .75); kloss(d, 0, 0, 0, b, t, h, c); kloss(d, 0, 0, h, b * 1.04, t * 1.08, .06, m); kloss(d, 0, t / 2 + .03, h * .12, b * .7, .06, h * .35, m); for (const x of [-b * .28, b * .28]) kloss(d, x, -t / 2 - .01, h * .15, .05, .02, h * .75, [.1, .1, .1]); };
+  // utseendet per ting (punkt i møbelets ramme: x langs bredden, y inn i rommet, z opp fra overflaten)
+  const FORM = {
+    brunost: d => { kloss(d, 0, 0, 0, .13, .09, .08, [.52, .28, .1]); kloss(d, 0, 0, .03, .135, .095, .025, [.75, .12, .1]); },
+    gulost: d => kloss(d, 0, 0, 0, .14, .09, .07, [.95, .8, .32]), knekkebrød: d => eske(d, .25, .1, .06, [.82, .66, .4], [.85, .2, .15]),
+    fiskeboller: d => boks(d, [.2, .35, .65]), lapskaus: d => boks(d, [.55, .3, .15]), pølseboks: d => boks(d, [.75, .2, .15]), makrell: d => kloss(d, 0, 0, 0, .1, .07, .025, [.85, .15, .12]),
+    havregryn: d => eske(d, .14, .07, .2, [.85, .75, .5], [.3, .5, .2]), tørrfisk: d => kloss(d, 0, 0, 0, .35, .1, .03, [.8, .72, .55]), sjokolade: d => kloss(d, 0, 0, 0, .16, .08, .015, [.15, .2, .55]),
+    kaffe: d => eske(d, .09, .07, .16, [.75, .15, .1], [.95, .9, .7]), rasjon: d => kloss(d, 0, 0, 0, .2, .12, .06, [.35, .38, .25]),
+    melk: d => { kloss(d, 0, 0, 0, .07, .07, .19, [.95, .95, .95]); kloss(d, 0, 0, .19, .07, .02, .03, [.2, .4, .75]); }, grovbrød: d => kloss(d, 0, 0, 0, .22, .11, .1, [.45, .3, .15]),
+    egg: d => kloss(d, 0, 0, 0, .15, .1, .06, [.7, .65, .55]), epler: d => rull(d, 0, 0, 0, .04, .07, [.7, .12, .1], 8), wienerpølser: d => kloss(d, 0, 0, 0, .18, .08, .03, [.85, .45, .35]),
+    leverpostei: d => rull(d, 0, 0, 0, .045, .05, [.25, .45, .25], 10),
+    saft: d => flaske(d, .045, .3, [.42, .05, .2], [.9, .9, .9]), saftbr: d => flaske(d, .045, .3, [.78, .12, .22], [.9, .9, .9]), flaskevann: d => flaske(d, .045, .33, [.72, .86, .95], [.2, .4, .8]),
+    brus: d => flaske(d, .035, .23, [.15, .3, .15], [.85, .15, .1]),
+    a762: d => eske(d, .11, .06, .05, [.28, .36, .22], [.9, .8, .3]), ahagl: d => eske(d, .12, .07, .06, [.65, .14, .12], [.95, .9, .8]), a9: d => eske(d, .09, .06, .04, [.2, .25, .35], [.9, .9, .9]), a556: d => eske(d, .1, .06, .05, [.3, .3, .2], [.9, .8, .3]),
+    forbinding: d => { kloss(d, 0, 0, 0, .18, .12, .08, [.85, .15, .12]); kloss(d, 0, .061, .03, .06, .003, .02, [.95, .95, .95]); kloss(d, 0, .061, .02, .02, .003, .04, [.95, .95, .95]); },
+    smertestillende: d => eske(d, .08, .03, .1, [.95, .95, .95], [.2, .45, .75]), lommelykt: d => rull(d, 0, 0, 0, .025, .2, [.15, .15, .17], 8, true), batterier: d => eske(d, .07, .02, .1, [.9, .55, .1], [.1, .1, .1]),
+    tau: d => rull(d, 0, 0, 0, .1, .06, [.75, .65, .4], 12), verktøy: d => { kloss(d, 0, 0, 0, .45, .2, .2, [.75, .12, .1]); kloss(d, 0, 0, .2, .2, .03, .04, [.15, .15, .15]); },
+    sovepose: d => rull(d, 0, 0, 0, .13, .4, [.25, .35, .55], 10, true), feltflaske: d => flaske(d, .05, .22, [.3, .36, .26], [.1, .1, .1]),
+    handlenett: d => { kloss(d, 0, 0, 0, .3, .15, .25, [.2, .45, .25]); kloss(d, 0, 0, .25, .02, .12, .1, [.15, .3, .18]); }, skolesekk: d => sekk3(d, .28, .15, .38, [.2, .35, .65]), tursekk: d => sekk3(d, .32, .22, .55, [.55, .2, .12]), militærsekk: d => sekk3(d, .38, .25, .6, [.3, .34, .22]),
+  };
+  // et våpen som ligger (langs x): kolbe, kasse, løp; rifler i tre
+  function våpen3(d, vid) { const V = rot.Utstyr && Utstyr.VÅPEN[vid], lang = vid === 'pistol' ? .22 : vid === 'mp' ? .6 : .95 + (V && V.rekkevidde > 400 ? .15 : 0), tre = /hagle|rifle/.test(vid), st = [.12, .12, .13], tr = [.38, .25, .14];
+    kloss(d, -lang * .32, 0, 0, lang * .36, .045, .1, tre ? tr : st); kloss(d, 0, 0, .01, lang * .2, .04, .07, st); rull(d, lang * .28, 0, .03, .011, lang * .5, st, 6, true); if (vid === 'jaktrifle' || vid === 'rifle') rull(d, .02, 0, .085, .018, .26, [.08, .08, .09], 8, true); }
+  function tingTil(d, id) { const vid = våpenAv(id); if (vid) { våpen3(d, vid); return; } (FORM[id] || (q => kloss(q, 0, 0, 0, .12, .08, .08, [.6, .55, .45])))(d); }
+  // legg geometriene i d (laget i tingens ramme) inn i bygget: dreid a, flyttet til (x, y, z)
+  const plasser = (ut, d, a, x, y, z, vipp) => { for (const g of d) { if (vipp) g.rotateY(vipp); g.rotateZ(a); g.translate(x, y, z); ut.push(g); } };
+  // bakveggen bak et møbel: den siden (±dybden) som er sperret
+  function bak(pl, m) { const c = Math.cos(m.a || 0), s = Math.sin(m.a || 0), nx = -s, ny = c, k = (m.d || .5) / 2 + .25; const B = rot.Interior && Interior.blokkert;
+    const a1 = B ? B(pl, m.x + nx * k, m.y + ny * k) : false, a2 = B ? B(pl, m.x - nx * k, m.y - ny * k) : false; return a1 && !a2 ? 1 : a2 && !a1 ? -1 : 1; }
+  // hva som vises i et bygg: [{ b, type, vis }] og en signatur (bygges bare på nytt når den endres)
+  function visesI(pl) { const kl = L.LEIR[pl.kl] ? 'brakke' : pl.kl, liste = [], sig = [];
+    for (const b of L.beholdere(pl)) { if (b.type !== 'skap' && !OPPÅ[b.type]) continue; const nk = L.nøkkel(pl.i, b.type, b.k), B = innholdAv(nk, kl, b.type, pl.i, b.k); if (!Object.keys(B.t).length) continue;
+      const rr = L.stabler(B, nå(), undefined, { vekter: VEKT }), vis = b.type === 'skap' ? rr.filter(r => våpenAv(r.id)).slice(0, 2) : rr.slice(0, Math.max(1, Math.min(6, Math.floor((b.m.b || .6) / .22))));
+      if (!vis.length) continue; liste.push({ b, vis }); sig.push(nk + ':' + vis.map(r => r.id + (r.n > 2 ? 2 : r.n)).join(',')); }
+    return { liste, sig: sig.join('|') }; }
+  function byggTing(pl, liste) {
+    const ut = [];
+    for (const { b, vis } of liste) { const m = b.m, ca = Math.cos(m.a || 0), sa = Math.sin(m.a || 0), bredde = m.b || .6;
+      if (b.type === 'skap') { const sd = bak(pl, m), nx = -sa * sd, ny = ca * sd;
+        vis.forEach((r, q) => { const side = q ? -1 : 1, px = m.x + ca * side * (bredde / 2 + .18) + nx * ((m.d || .58) / 2 - .05), py = m.y + sa * side * (bredde / 2 + .18) + ny * ((m.d || .58) / 2 - .05), d = []; våpen3(d, våpenAv(r.id));
+          // reist mot veggen: løpet opp, litt hellende inn mot veggen
+          for (const g of d) { g.rotateY(-Math.PI / 2 + .14); g.rotateZ(Math.atan2(ny, nx)); g.translate(px, py, pl.gulv + .5); ut.push(g); } });
+        continue; }
+      const z = pl.gulv + (m.h || .9) * OPPÅ[b.type] + .005, steg = bredde / (vis.length + 1);
+      vis.forEach((r, q) => { const t = -bredde / 2 + steg * (q + 1), n = Math.min(2, r.n); for (let e = 0; e < n; e++) { const d = []; tingTil(d, r.id); const off = e * .09, vri = L.hash(pl.i + q, e) * .6 - .3;
+        plasser(ut, d, (m.a || 0) + vri, m.x + ca * (t + off * .5) - sa * (off - .04), m.y + sa * (t + off * .5) + ca * (off - .04), z); } }); }
+    return ut;
+  }
+  function haugene(R, u) {
+    const p0 = { x: u.cx + R.bane.x, y: u.cy + R.bane.y }, nær = S.gulv.filter(h => Math.hypot(h.x - p0.x, h.y - p0.y) < 120 && Object.values(h.t).some(n => n > 0)), ut = [];
+    const sig = nær.map(h => `${h.x},${h.y}:${Object.entries(h.t).map(([a, b]) => a + b).join(',')}`).join('|'); if (sig === gulvSig && (gulvMesh || !nær.length)) return;
+    gulvSig = sig; if (gulvMesh) { R.scene.remove(gulvMesh); gulvMesh.geometry.dispose(); gulvMesh = null; } if (!nær.length) return;
+    const terr = (x, y) => (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX;
+    for (const h of nær) { const x = h.x - u.cx, y = h.y - u.cy, z0 = rot.Interior3d ? Interior3d.høyde(x, y, terr) : null, z = z0 === null ? terr(x, y) : z0; let q = 0;
+      for (const [id, n] of Object.entries(h.t)) { if (!(n > 0) || q >= 8) continue; const d = []; tingTil(d, id); const v = q * 2.4, rr = q ? .12 + q * .06 : 0; plasser(ut, d, L.hash(Math.round(h.x), q) * 6.28, x + Math.cos(v) * rr, y + Math.sin(v) * rr, z + .005); q++; } }
+    if (!ut.length) return; if (!mat3) mat3 = new THREE.MeshLambertMaterial({ vertexColors: true });
+    gulvMesh = new THREE.Mesh(MODELLER.samle(ut), mat3); gulvMesh.userData.lut = true; R.scene.add(gulvMesh); for (const g of ut) g.dispose();
+  }
+  function ramme3(R) {
+    if (!klar || typeof THREE === 'undefined' || !rot.MODELLER || !R.ut || !rot.Interior3d) return;
+    if (forU3 !== R.ut) { forU3 = R.ut; gulvSig = ''; if (gulvMesh) { if (gulvMesh.parent) gulvMesh.parent.remove(gulvMesh); gulvMesh.geometry.dispose(); gulvMesh = null; } }
+    if (!R.fot) { if (gulvMesh) { R.scene.remove(gulvMesh); gulvMesh.geometry.dispose(); gulvMesh = null; gulvSig = ''; } return; }
+    const t = performance.now(); if (t - sist3 < 300) return; sist3 = t;
+    for (const o of Interior3d.aktive()) { if (!o.plan || !o.nett) continue; const { liste, sig } = visesI(o.plan); if (o.lutSig === sig) continue; o.lutSig = sig;
+      const gammel = o.nett.find(m => m.userData && m.userData.lut); if (gammel) { R.scene.remove(gammel); gammel.geometry.dispose(); o.nett.splice(o.nett.indexOf(gammel), 1); }
+      const ut = byggTing(o.plan, liste); if (!ut.length) continue; if (!mat3) mat3 = new THREE.MeshLambertMaterial({ vertexColors: true });
+      const m = new THREE.Mesh(MODELLER.samle(ut), mat3); m.userData.lut = true; R.scene.add(m); o.nett.push(m); for (const g of ut) g.dispose(); }
+    haugene(R, R.ut);
+  }
+  KROKER.ramme3d.push(ramme3);
+
   Object.assign(ut, { start, registrer, åpne, erÅpen: () => åpen, vis, klar: () => klar, S: () => S, bær: () => status(), fart, kanLøpe, løp, sekkKnapp,
     beholdere: () => beholdereNå(), nærmeste, aktiv, velgFane: nk => { fane = nk; vis(true); }, taFra, leggI, våpenTil, våpenISekk, tilBeltet, taPå, taAv, spis, bruk, lad, tilLeiren,
-    gulv: () => S.gulv, strømTil, oppdaterKnapp, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
+    gulv: () => S.gulv, strømTil, oppdaterKnapp, ramme3, gulvMesh: () => gulvMesh, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
     // til vakten: glem det som er endret i beholderne for et bygg, og sett sekken på ryggen tilbake
     glemBygg: i => { for (const k of Object.keys(S.b)) if (k.startsWith(i + ':')) delete S.b[k]; for (const k of [...minne.keys()]) if (k.startsWith(i + ':')) minne.delete(k); lagre(); },
     settS: d => { S = { ...nyS(), ...d }; lagre(); } });
