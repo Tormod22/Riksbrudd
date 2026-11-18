@@ -103,6 +103,13 @@
   const fiskere = () => (leirHarKai() ? Math.min(S.fiskere || 0, ledige()) : 0);
   function settFiskere(n) { S.fiskere = Math.max(0, Math.min(R.kaiFiske.maks, n)); merk(); }
 
+  // ---------- isen (runde 4 del 2) ----------
+  // Pakka «verden» (spill/verden.js + verden-visning.js) legger is på innsjøene etter lang kulde: Verden.islagtVann(V, moh, klasse) med
+  // V = VerdenSpill.tilstand(). Sjøkartet har høyden i hver rute, så samme regel brukes rute for rute. Finnes ikke modulen: ingen is.
+  function isFor() { const W = window.Verden, VS = window.VerdenSpill; if (!W || typeof W.islagtVann !== 'function' || !VS || typeof VS.tilstand !== 'function') return null;
+    let V = null; try { V = VS.tilstand(); } catch (e) { V = null; } if (!V) return null; const Ri = W.REGLER && W.REGLER.is; if (Ri && !(V.frost >= Ri.båt)) return null;
+    return moh => { try { return !!W.islagtVann(V, moh, 3); } catch (e) { return false; } }; }
+
   // ---------- seilas ----------
   // Seil båten til et punkt (kaiI = kaia der, eller -1 for et sted på sjøen). o.vindu: ferdig sjøkart (testene).
   async function seil(b, x, y, kaiI = -1, o = {}) { if (b.planlegger) return { feil: 'planlegger' }; const d = Math.hypot(x - b.x, y - b.y), si = t => { if (!o.stille) logg(`${b.navn}: ${t}`); return { feil: t }; };
@@ -112,11 +119,11 @@
     b.planlegger = true; if (!o.stille) logg(`${b.navn}: finner lei over sjøen …`);
     try { let r = null, N = SJ.nivå(d);
       for (let forsøk = 0; forsøk < 2; forsøk++) { const v = o.vindu || await lagVindu([Math.min(b.x, x) - N.pad, Math.min(b.y, y) - N.pad, Math.max(b.x, x) + N.pad, Math.max(b.y, y) + N.pad], false, N.zv);
-        const ny = SJ.rute(v, b.x, b.y, x, y, { sperringer: S.sperringer }); if (!r || !r.sti || (ny.sti && ny.meter < r.meter)) r = ny;
+        const ny = SJ.rute(v, b.x, b.y, x, y, { sperringer: S.sperringer, is: o.is === undefined ? isFor() : o.is }); if (!r || !r.sti || (ny.sti && ny.meter < r.meter)) r = ny;
         // trange sund forsvinner i det grove kartet: prøv en gang til med finere kart når turen ikke er for lang og ruta mangler
         // eller er en lang omveg
-        if (o.vindu || N.zv >= 9 || d > 40000 || r.feil === 'sperret' || (r.sti && r.meter < d * 1.8)) break; N = { zv: N.zv + 1, pad: Math.min(Math.max(N.pad, 6000), 14000) }; }
-      if (r.feil) return si(r.feil === 'sperret' ? 'leia er sperret av miner eller et vrak. Rydd sperringen eller velg et annet mål.' : r.feil === 'start' ? 'båten ligger ikke i sjøen.' : r.feil === 'mål' ? 'det er ikke sjø der.' : 'det går ingen lei over sjøen dit – båten kan ikke gå over land.');
+        if (o.vindu || N.zv >= 9 || d > 40000 || r.feil === 'sperret' || r.feil === 'is' || (r.sti && r.meter < d * 1.8)) break; N = { zv: N.zv + 1, pad: Math.min(Math.max(N.pad, 6000), 14000) }; }
+      if (r.feil) return si(r.feil === 'sperret' ? 'leia er sperret av miner eller et vrak. Rydd sperringen eller velg et annet mål.' : r.feil === 'is' ? 'isen stenger – innsjøen er islagt. Vent på mildvær.' : r.feil === 'start' ? 'båten ligger ikke i sjøen.' : r.feil === 'mål' ? 'det er ikke sjø der.' : 'det går ingen lei over sjøen dit – båten kan ikke gå over land.');
       SJ.settRute(b, r.sti, kaiI); b.friFor = S.sperringer.filter(q => Math.hypot(q.x - b.x, q.y - b.y) <= q.r).map(q => q.id); merk(); if (!o.stille) logg(`${b.navn}: seiler til ${kaiI >= 0 ? kaiNavn(kaiI) : 'stedet på sjøen'}, ${km(r.meter)}, ca. ${tidTekst(r.meter / TY[b.type].fart / 60)}.`); return { meter: r.meter };
     } catch (e) { return si('fikk ikke hentet sjøkartet. Prøv igjen.'); } finally { b.planlegger = false; tegnPanel(true); } }
 
@@ -174,7 +181,7 @@
     try { // startkaier: 6–25 km unna, en ny for hver gang
       const [d0, d1] = R.frakt.fra, kand = Kaier.iBoks(k, q.x - d1, q.x + d1, q.y - d1, q.y + d1).filter(i => { const d = Math.hypot(k.x[i] - q.x, k.y[i] - q.y); return d >= d0 && d <= d1; }); st.nr = (st.nr || 0) + 1;
       let sperret = false; for (let f = 0; f < Math.min(3, kand.length); f++) { const i = kand[(st.nr * 7 + f * 3) % kand.length], d = Math.hypot(k.x[i] - q.x, k.y[i] - q.y), N = SJ.nivå(d);
-        const v = o.vindu || await lagVindu([Math.min(k.x[i], q.x) - N.pad, Math.min(k.y[i], q.y) - N.pad, Math.max(k.x[i], q.x) + N.pad, Math.max(k.y[i], q.y) + N.pad], false, N.zv), r = SJ.rute(v, k.x[i], k.y[i], q.x, q.y, { sperringer: S.sperringer });
+        const v = o.vindu || await lagVindu([Math.min(k.x[i], q.x) - N.pad, Math.min(k.y[i], q.y) - N.pad, Math.max(k.x[i], q.x) + N.pad, Math.max(k.y[i], q.y) + N.pad], false, N.zv), r = SJ.rute(v, k.x[i], k.y[i], q.x, q.y, { sperringer: S.sperringer, is: isFor() });
         if (r.sti) { const b = { id: 'f' + h.id, type: 'frakt', hp: R.fiendeBåt.hp, navn: 'Forsyningsbåt', side: h.side, by: h.id, byNavn: h.navn, x: k.x[i], y: k.y[i], kai: -1, sti: r.sti, seg: 0, mål: h.kai, retning: 0, last: SJ.tomLast() }; S.frakt.push(b); endret = true; return b; }
         if (r.feil === 'sperret') sperret = true; }
       // ingen lei: sperret = fienden er avskåret; ellers (innsjø, ingen kaier) prøves det igjen senere uten virkning
@@ -279,7 +286,7 @@
       return planAI(s, a.i, b.i, veg, [mx, my]); }
     return null; }
   async function planAI(s, ia, ib, veg, mål, o = {}) { aiOpptatt.add(s); try { const k = K(), ax = k.x[ia], ay = k.y[ia], bx = k.x[ib], by = k.y[ib], d = Math.hypot(bx - ax, by - ay), N = SJ.nivå(d);
-      const v = o.vindu || await lagVindu([Math.min(ax, bx) - N.pad, Math.min(ay, by) - N.pad, Math.max(ax, bx) + N.pad, Math.max(ay, by) + N.pad], false, N.zv), r = SJ.rute(v, ax, ay, bx, by, { sperringer: S.sperringer });
+      const v = o.vindu || await lagVindu([Math.min(ax, bx) - N.pad, Math.min(ay, by) - N.pad, Math.max(ax, bx) + N.pad, Math.max(ay, by) + N.pad], false, N.zv), r = SJ.rute(v, ax, ay, bx, by, { sperringer: S.sperringer, is: o.is === undefined ? isFor() : o.is });
       if (!r.sti || !SJ.aiTarBåt(veg, r.meter + Math.hypot(s.x - ax, s.y - ay))) { if (s.ai) s.ai.ingenBåt = tid + 120; return { feil: r.feil || 'lønner seg ikke' }; }
       if (!levende(s) || s.påBåt) return { feil: 'laget er borte' }; s.båtPlan = { ax, ay, ia, ib, sti: r.sti, meter: r.meter, mål, t: tid }; if (s.ai) s.ai.neste = 1800;
       if (Math.hypot(s.x - ax, s.y - ay) > R.aiBåt.ombord) ordre(s, ax, ay, true);
@@ -515,6 +522,6 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
     kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjørOmBord, kjørILand, kjOmBord, settFiskere, fiskere, leirHarKai, region: () => !!region(), nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai,
     // runde 4
-    fiendeBåter: () => S.frakt, skyttereMot, bord, senket, ildSteg, skytTilbake, egenSenket, startJakt, aiSteg, planAI, gåOmAI, iLandAI, trykk3d, tegnBåt,
+    isFor, fiendeBåter: () => S.frakt, skyttereMot, bord, senket, ildSteg, skytTilbake, egenSenket, startJakt, aiSteg, planAI, gåOmAI, iLandAI, trykk3d, tegnBåt,
     tatteFerjer: () => S.ferjerTatt.map(n => { const [x, y] = String(n).split(',').map(Number); return { x: x * 50, y: y * 50 }; }) });
 })();

@@ -114,8 +114,9 @@
 
   // ---------- sjøkartet og ruta ----------
   // v: vindu fra lagVindu { x0, y0, r, w, h, K } (rute (i, j) dekker x0 + i·r … og y0 − j·r …; K 3 = vann).
-  // Gir maske 1 = seilbart. sperringer: [{ x, y, r }] gjør rutene innenfor uframkommelige.
-  function sjøkart(v, sperringer) { const n = v.w * v.h, M = new Uint8Array(n); for (let k = 0; k < n; k++) M[k] = v.K[k] === 3 ? 1 : 0;
+  // Gir maske 1 = seilbart. sperringer: [{ x, y, r }] gjør rutene innenfor uframkommelige. is(moh) (runde 4 del 2, valgfri): true når vannet
+  // i den høyden er islagt (pakka «verden»: innsjøer over 1 moh. etter lang kulde) – da er ruta stengt.
+  function sjøkart(v, sperringer, is) { const n = v.w * v.h, M = new Uint8Array(n); for (let k = 0; k < n; k++) M[k] = v.K[k] === 3 && !(is && v.H && is(v.H[k])) ? 1 : 0;
     for (const s of sperringer || []) { const i0 = Math.max(0, Math.floor((s.x - s.r - v.x0) / v.r)), i1 = Math.min(v.w - 1, Math.floor((s.x + s.r - v.x0) / v.r)), j0 = Math.max(0, Math.floor((v.y0 - s.y - s.r) / v.r)), j1 = Math.min(v.h - 1, Math.floor((v.y0 - s.y + s.r) / v.r));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const cx = v.x0 + (i + .5) * v.r, cy = v.y0 - (j + .5) * v.r; if (Math.hypot(cx - s.x, cy - s.y) <= s.r + v.r * .5) M[j * v.w + i] = 0; } }
     return M; }
@@ -142,14 +143,19 @@
         const c = g[k] + (dx && dy ? 1.4142 : 1) * (vedLand ? 1.8 : 1); if (c < g[q]) { g[q] = c; fra[q] = k; inn(q, c + H(q)); } } }
     if (!lukket[mål]) return null; const sti = []; for (let k = mål; k >= 0; k = fra[k]) sti.push(k); return sti.reverse(); }
   // Rute over sjøen fra (x0, y0) til (x1, y1). o: { sperringer, snapp (m til nærmeste vann, standard 5 ruter + 150 m) }.
-  // Gir { sti: [[x, y], …], meter } eller { feil: 'start' | 'mål' | 'land' | 'sperret' }.
-  function rute(v, x0, y0, x1, y1, o = {}) { const snapp = o.snapp || v.r * 5 + 150, M0 = sjøkart(v, null), har = o.sperringer && o.sperringer.length, M = har ? sjøkart(v, o.sperringer) : M0;
+  // o.is(moh): islagt vann (se sjøkart). Gir { sti: [[x, y], …], meter } eller { feil: 'start' | 'mål' | 'land' | 'sperret' | 'is' }.
+  function rute(v, x0, y0, x1, y1, o = {}) { const snapp = o.snapp || v.r * 5 + 150, M0 = sjøkart(v, null), har = (o.sperringer && o.sperringer.length) || o.is, M = har ? sjøkart(v, o.sperringer, o.is) : M0;
+    const iIs = k => !!(o.is && v.H && o.is(v.H[k]));
     // start og mål finnes i kartet uten sperringer (en båt som ligger i et minefelt, skal kunne komme seg ut)
     let a = nærVann(v, M, x0, y0, snapp), b = nærVann(v, M, x1, y1, snapp); if (a < 0) a = nærVann(v, M0, x0, y0, snapp); if (b < 0) b = nærVann(v, M0, x1, y1, snapp);
     if (a < 0) return { feil: 'start' }; if (b < 0) return { feil: 'mål' };
-    if (har) { M[a] = 1; M[b] = M0[b] && !o.sperringer.some(s => Math.hypot(v.x0 + (b % v.w + .5) * v.r - s.x, v.y0 - (((b / v.w) | 0) + .5) * v.r - s.y) <= s.r) ? 1 : M[b]; }
+    if (har) { M[a] = 1; M[b] = M0[b] && !iIs(b) && !(o.sperringer || []).some(s => Math.hypot(v.x0 + (b % v.w + .5) * v.r - s.x, v.y0 - (((b / v.w) | 0) + .5) * v.r - s.y) <= s.r) ? 1 : M[b]; }
     let R = a === b || friLinje(v, M, a, b) ? [a, b] : astjerne(v, M, a, b);
-    if (!R) { if (har && (friLinje(v, M0, a, b) || astjerne(v, M0, a, b))) return { feil: 'sperret' }; return { feil: 'land' }; }
+    if (!R) { if (har && (friLinje(v, M0, a, b) || astjerne(v, M0, a, b))) {
+        // er det isen som stenger? (uten isen, men med sperringene, finnes det en lei)
+        if (o.is) { const Ms = o.sperringer && o.sperringer.length ? sjøkart(v, o.sperringer) : M0.slice(); Ms[a] = 1; if (friLinje(v, Ms, a, b) || astjerne(v, Ms, a, b)) return { feil: 'is' }; }
+        return { feil: 'sperret' }; }
+      return { feil: 'land' }; }
     // rett ut ruta: hopp over punkter når det er fri sikt over vann (ser høyst 200 ruter fram)
     const K = [R[0]]; let i = 0; while (i < R.length - 1) { let j = i + 1; const tak = Math.min(R.length - 1, i + 200); while (j < tak && friLinje(v, M, R[i], R[j + 1])) j++; K.push(R[j]); i = j; }
     const P = K.map(k => [v.x0 + (k % v.w + .5) * v.r, v.y0 - (((k / v.w) | 0) + .5) * v.r]);
