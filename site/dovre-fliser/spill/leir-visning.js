@@ -438,6 +438,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
     banner.firstChild.byggNøkkel = nøkkel;
+    // runde 4 (pakke «ui»): tegningen av bygget i panelet (spill/tegninger.js; utseendet i spillhud.js, .byggtegn)
+    if (window.Tegninger) { const t = el('img', { klasse: 'byggtegn', alt: '', draggable: 'false' }); t.src = Tegninger.bilde(Tegninger.bygg(b.type)); banner.firstChild.prepend(t); }
     // radiomasten: se hvor langt feltradioene når (sirkelen tegnes av byggevisning.js så lenge masten er valgt)
     if (b.type === 'radiomast' && window.BYGGEVISNING && BYGGEVISNING.visRekkevidde) banner.appendChild(knapp(BYGGEVISNING.radioZoom() ? 'Tilbake til leiren' : `Vis rekkevidden (${LB.kmTekst(BYGGEVISNING.radioRekkevidde(b))})`, () => { BYGGEVISNING.visRekkevidde(b); visByggPanel(); }, { id: 'visradio' }));
     // delegere: denne jobben først (byggelagene tar køen i rekkefølge)

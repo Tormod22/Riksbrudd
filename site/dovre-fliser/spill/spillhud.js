@@ -69,7 +69,23 @@ body.kort .stats > div[data-s="sPenger"]{ border-color:#c9b26a; } body.kort .sta
 body.mkom #kilde{ bottom:calc(62px + env(safe-area-inset-bottom,0px)); } body.mkom #skala{ bottom:calc(80px + env(safe-area-inset-bottom,0px)); } body.mkom #nordpil{ bottom:calc(104px + env(safe-area-inset-bottom,0px)); }
 body.mkom .ctl{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); }
 body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper #karakterknapp{ display:none; }
-@media (prefers-reduced-motion:reduce){ #mkom.på, #flismerliste.på{ animation:none; } }`;
+@media (prefers-reduced-motion:reduce){ #mkom.på, #flismerliste.på{ animation:none; } }
+/* RUNDE 4: BYGGELISTA PÅ PC som et tett rutenett – ikon (Ikoner.BYGG), navn og pris, hele flisa er Bygg-knappen (knappen ligger usynlig
+   over flisa, som på telefon); tegningen står i byggpanelet når bygget er valgt, og materialene/teksten i forklaringen (data-tips) */
+body.spill #leirmeny .liste{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:5px; }
+body.spill #leirmeny .liste h4{ margin:6px 0 0; font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:#a89970; font-weight:600; }
+body.spill #leirmeny .bygg.kort{ position:relative; align-items:center; text-align:center; gap:1px; padding:6px 4px 5px; min-height:0; }
+body.spill #leirmeny .bygg.kort .tegn{ display:none; }
+body.spill #leirmeny .bygg.kort[data-ikon]::before{ display:block; width:24px; height:24px; margin:0 auto 1px; color:#d9c27a; opacity:1; }
+body.spill #leirmeny .bygg.kort > div{ width:100%; }
+body.spill #leirmeny .bygg.kort b{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.spill #leirmeny .bygg.kort .pris{ display:block; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.spill #leirmeny .bygg.kort .kortlinje{ display:none; }
+body.spill #leirmeny .bygg.kort > button{ position:absolute; inset:0; width:auto; height:auto; min-height:0; margin:0; padding:0; opacity:0; z-index:1; cursor:pointer; }
+body.spill #leirmeny .bygg.kort:has(> button:disabled){ opacity:.5; } body.spill #leirmeny .bygg.kort:has(> button:disabled) .pris{ color:#c98a6a; }
+body.spill #leirmeny .bygg.kort:has(> button:focus-visible){ border-color:#e8d48a; }
+#byggvalg:has(> div > .byggtegn){ padding-left:96px; text-align:left; min-height:64px; } #byggvalg .byggtegn{ position:absolute; left:12px; top:10px; width:72px; height:54px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.18), rgba(0,0,0,0) 70%); }
+body.kort #byggvalg:has(> div > .byggtegn){ padding-left:66px; min-height:48px; } body.kort #byggvalg .byggtegn{ left:8px; top:8px; width:50px; height:38px; }`;
   // «MER» (18. nov, runde 2): de fem faste står i linja, resten (Region, Sjø, Verden, Velg lag …) i en rad som åpnes av «Mer»
   css.textContent = css.textContent.replace(/#kommando button/g, ':is(#kommando,#kommer) button').replace(/#mkom button/g, ':is(#mkom,#mkommer) button') + `
 :is(#kommando,#kommer,#mkom,#mkommer) button[hidden]{ display:none; }
