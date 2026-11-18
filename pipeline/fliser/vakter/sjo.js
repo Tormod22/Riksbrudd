@@ -24,6 +24,9 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
       // lag om bord
       const s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.ombord && levende(e)); if (s) { const før = [s.x, s.y, s.sti]; s.x = bt.x + 30; s.y = bt.y + 20; ok(SjoSpill.gåOmBord(s, bt) && s.påBåt === bt && SjoSpill.omBord(bt).length === 1, 'laget går om bord');
         ok(!KROKER.kanOrdre.every(f => f(s)), 'laget tar ikke ordre om bord'); ok(Sjo.ild({ påBåt: bt }, {}, tid) < 1, 'om bord: dårligere treff'); s.påBåt = null; s.x = før[0]; s.y = før[1]; s.sti = før[2]; s.siktSkitten = true; }
+      // kjøretøy om bord i en lekter, og folk som fisker fra kaia
+      const lk = Sjo.nyBåt(S, 'lekter', L.x + 500, L.y, 0), bil = (window.KJORETOY || []).find(k => k.side === 'blå' && !k.oppdrag && !k.sti); if (bil) { const før = [bil.x, bil.y]; bil.x = lk.x + 20; bil.y = lk.y + 10; ok(!SjoSpill.kjørOmBord(bil, bt) && SjoSpill.kjørOmBord(bil, lk) && SjoSpill.kjOmBord(lk).length === 1, 'kjøretøy om bord i lekteren, ikke i sjarken'); bil.påBåt = null; bil.x = før[0]; bil.y = før[1]; }
+      ok(SjoSpill.leirHarKai(), 'leiren har kai'); const f0 = S.fiskere; SjoSpill.settFiskere(2); o.fiskere = SjoSpill.fiskere(); ok(o.fiskere >= 0 && o.fiskere <= 2 && Sjo.kaiFangst(2, 60, {}) > 0, 'folk kan settes til fiske fra kaia'); SjoSpill.settFiskere(f0);
       // fiske og miner
       bt.fisker = true; ok(Sjo.fangst(bt, 60, { vind: 2, årstid: 'vår' }) > 1, 'sjarken fisker'); bt.fisker = false;
       const p1 = OppstartSpill.tilstand().penger; bt.x = L.x + 1500; bt.y = L.y; bt.kai = -1; SjoSpill.miner(bt); ok(S.sperringer.length >= 1 && OppstartSpill.tilstand().penger === p1 - Sjo.REGLER.minePris, 'miner lagt og betalt');

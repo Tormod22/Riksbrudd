@@ -72,6 +72,35 @@
     const b = S.båter.find(q => !q.sti && Math.hypot(q.x - s.x, q.y - s.y) <= R.ombord && omBord(q).length < TY[q.type].lag); if (b) H.appendChild(knapp(`Om bord i ${b.navn}`, false, () => { gåOmBord(s, b); tegnPanel(true); })); });
   KROKER.ild.push((a, b) => (a.påBåt || b.påBåt || a.landgang || b.landgang ? SJ.ild(a, b, tid) : 1));
 
+  // ---------- kjøretøy om bord (lekter og ferje) ----------
+  const biler = () => window.KJORETOY || [];
+  const kjOmBord = b => biler().filter(k => k.påBåt === b);
+  function kjørOmBord(k, b) { const T = TY[b.type], si = t => { logg(`${k.navn}: ${t}`); return false; }; if (!T.kj) return si(`${T.navn.toLowerCase()} tar ikke kjøretøy – bruk lekter eller ferje.`); if (b.sti || b.kai < 0) return si('båten må ligge ved en kai.');
+    if (kjOmBord(b).length >= T.kj) return si(`${b.navn} er full (${T.kj} kjøretøy).`); if (k.oppdrag) return si('kjøretøyet er på oppdrag.'); if (Math.hypot(k.x - b.x, k.y - b.y) > R.ombord) return si(`må stå innen ${R.ombord} m fra båten.`);
+    if (k.sti && window.Kjoretoy) Kjoretoy.stopp(k); k.sti = null; k.påBåt = b; k.x = b.x; k.y = b.y; logg(`${k.navn} er kjørt om bord i ${b.navn}.`); merk(); return true; }
+  async function kjørILand(k) { const b = k.påBåt; if (!b) return false; if (b.sti || b.kai < 0) { logg(`${b.navn} må ligge ved en kai før kjøretøyene kan kjøre i land.`); return false; } const p = (await landVed(b.x, b.y)) || [b.x + 10, b.y + 8]; if (k.påBåt !== b) return false;
+    k.påBåt = null; k.x = p[0] + (Math.random() - .5) * 14; k.y = p[1] + (Math.random() - .5) * 14; k.sti = null; logg(`${k.navn} har kjørt i land ved ${kaiNavn(b.kai)}.`); merk(); tegnPanel(true); return true; }
+
+  // ---------- Regionen (spill/region.js) ----------
+  // Regionen frakter alt et tettsted gir, over land til leiren. For at havnebyene ikke skal gi dobbelt, gir sjøen da bare DET VEGEN
+  // IKKE FÅR FRAM: er ruta truet eller stengt, legges mangelen på kaia, og du henter den med båt. Uten Regionen (og i testene): ukesvarene.
+  let regTid = -1e9, regKart = null;
+  function region() { if (!(window.RegionSpill && window.Region && RegionSpill.klar && RegionSpill.klar()) || (navigator.webdriver && !RegionSpill.test)) return null;
+    if (!regKart || performance.now() - regTid > 3000) { regTid = performance.now(); try { regKart = RegionSpill.status(); } catch (e) { regKart = null; } } return regKart; }
+  const tilVarer = g => ({ tre: g.tre || 0, betong: g.betong || 0, stål: g.stål || 0, drivstoff: g.diesel || 0, rasjoner: g.mat || 0 });
+  function regMangel(q) { const st = { loj: q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: window.Garnison ? Garnison.REGLER.strøm.uten : .4 }, folk = q.by.e.folk || 0;
+    const full = tilVarer(Region.gir(folk, q.type, { ...st, rute: 'åpen' })), nå = tilVarer(Region.gir(folk, q.type, st)), mangel = {}; for (const k of SJ.VARER) mangel[k] = Math.max(0, full[k] - nå[k]); return { full, mangel, rute: q.rute.status }; }
+  // Teksten om hvor varene i havna kommer fra (panelet).
+  function havnForklaring(h) { const RK = region(), q = RK && RK.get(h.id); if (!RK) return `Varene samler seg her gjennom uka. Hent dem med båt – det ingen henter, kjøres landevegen en gang i uka, og da kommer bare halvparten fram.`;
+    if (!q) return 'Regionen frakter varene herfra over land.'; const m = regMangel(q); return m.rute === 'åpen' ? `Vegen til leiren er åpen: Regionen frakter alt ${h.navn} gir, over land (se Region), og ingenting legges på kaia. Blir vegen truet eller stengt, havner det som ikke kommer fram, her – da henter du det med båt.` : `Vegen til leiren er ${m.rute}: det Regionen ikke får fram over land (${SJ.lastTekst(m.mangel)} per døgn), legges på kaia her. Hent det med båt.`; }
+
+  // ---------- fiske fra kaia med folk ----------
+  let leirKaiFor = null, leirKaiSvar = false;
+  function leirHarKai() { const k = K(), L = leir(); if (!k || !L) return false; if (leirKaiFor !== k) { leirKaiFor = k; leirKaiSvar = !!Kaier.nær(k, L.x, L.y, R.leirKai); } return leirKaiSvar; }
+  const ledige = () => { const F = window.FolkSpill && FolkSpill.tilstand(); return F ? F.personer.filter(p => p.oppgave === 'fri' && p.helse >= .4 && !p.karantene && !p.borte).length : 0; };
+  const fiskere = () => (leirHarKai() ? Math.min(S.fiskere || 0, ledige()) : 0);
+  function settFiskere(n) { S.fiskere = Math.max(0, Math.min(R.kaiFiske.maks, n)); merk(); }
+
   // ---------- seilas ----------
   // Seil båten til et punkt (kaiI = kaia der, eller -1 for et sted på sjøen). o.vindu: ferdig sjøkart (testene).
   async function seil(b, x, y, kaiI = -1, o = {}) { if (b.planlegger) return { feil: 'planlegger' }; const d = Math.hypot(x - b.x, y - b.y), si = t => { logg(`${b.navn}: ${t}`); return { feil: t }; };
@@ -102,7 +131,7 @@
     const inn = Object.fromEntries(SJ.VARER.map(k => [k, (v[k] || 0) - (rest[k] || 0)])); logg(`${b.navn} har losset ${SJ.lastTekst(inn)} til leiren.` + (SJ.lastVekt(rest) > 0.01 ? ` Det var ikke plass til ${SJ.lastTekst(rest)} – det ligger igjen om bord.` : '')); merk(); return inn; }
   function fisk(b, på) { if (!TY[b.type].fiske) { logg(`${b.navn} kan ikke fiske.`); return; } if (b.sti) SJ.stopp(b); b.fisker = på === undefined ? !b.fisker : !!på; logg(b.fisker ? `${b.navn} fisker nå. Fangsten går rett til leiren når båten ligger innen ${km(R.leirKai)} fra den, ellers i lasterommet.` : `${b.navn} har sluttet å fiske.`); merk(); }
   function miner(b) { if (b.sti) { logg('Stopp båten først.'); return; } const r = SJ.leggMiner(S, b.x, b.y, betal); if (r.feil) { logg(r.feil); return; } logg(`${b.navn} har lagt miner (${kr(R.minePris)}). Ingen båter kommer forbi innen ${R.mineRadius} m – heller ikke dine egne.`); merk(); }
-  function senk(b) { for (const s of omBord(b)) { logg(`${s.navn} er om bord – sett laget i land først.`); return; } const r = SJ.senk(S, b); if (r.feil) { logg(r.feil); return; } logg(`${b.navn} er senket. Vraket sperrer leia innen ${R.vrakRadius} m for godt.`); if (valg && valg.båt === b) valg = null; merk(); }
+  function senk(b) { for (const k of kjOmBord(b)) { logg(`${k.navn} står om bord – kjør det i land først.`); return; } for (const s of omBord(b)) { logg(`${s.navn} er om bord – sett laget i land først.`); return; } const r = SJ.senk(S, b); if (r.feil) { logg(r.feil); return; } logg(`${b.navn} er senket. Vraket sperrer leia innen ${R.vrakRadius} m for godt.`); if (valg && valg.båt === b) valg = null; merk(); }
   function rydd(id) { const r = SJ.rydd(S, id, betal); if (r.feil) logg(r.feil); else { logg(`Minefeltet er ryddet (${kr(R.ryddPris)}).`); merk(); } }
 
   // ---------- tiden går ----------
@@ -112,13 +141,18 @@
     for (const b of S.båter) {
       // lagene som sto om bord da spillet ble lagret
       if (b.lag) { for (const n of b.lag) { const s = ENHETER.find(e => e.navn === n && e.side === 'blå'); if (s) s.påBåt = b; } delete b.lag; }
+      if (b.kj && biler().length) { for (const n of b.kj) { const k = biler().find(q => q.navn === n && q.side === 'blå'); if (k) k.påBåt = b; } delete b.kj; }
       if (b.sti) { const fr = SJ.steg(b, dt); skitten = true; endret = true;
         const sp = SJ.iSperring(S, b.x, b.y); if (sp && b.sti && !(b.friFor || []).includes(sp.id)) { SJ.stopp(b); logg(`${b.navn} stopper: ${sp.type === 'vrak' ? 'et vrak' : 'et minefelt'} sperrer leia.`); }
         if (fr === 'framme') { logg(b.kai >= 0 ? `${b.navn} ligger ved ${kaiNavn(b.kai)}.` : `${b.navn} er framme og ligger stille.`); tegnPanel(true); } }
       if (b.fisker) { const f = SJ.fangst(b, dt, { vind: vind(), årstid: window.VAER && VAER.årstid }); if (f > 0) { const F = window.FolkSpill && FolkSpill.tilstand(); if (F && vedLeiren(b.x, b.y)) F.mat += f; else b.last.rasjoner += Math.min(f, SJ.ledig(b) / R.vekt.rasjoner); b.fangst = (b.fangst || 0) + f; endret = true; } } }
     for (const s of ENHETER) { const b = s.påBåt; if (!b) continue; if (!S.båter.includes(b) || !levende(s)) { s.påBåt = null; continue; } if (s.x !== b.x || s.y !== b.y) { s.x = b.x; s.y = b.y; s.siktSkitten = true; } s.sti = null; s.retning = b.retning; }
-    // havnene: varene samler seg på kaia; en gang i uka kjøres resten landevegen
-    if (auto()) { const H = havner(); if (H.length) { SJ.havnSteg(S, H, dt); endret = true; if (S.sistHavn === null) S.sistHavn = tid;
+    for (const k of biler()) { const b = k.påBåt; if (!b) continue; if (!S.båter.includes(b)) { k.påBåt = null; continue; } if (k.sti) { if (window.Kjoretoy) Kjoretoy.stopp(k); k.sti = null; logg(`${k.navn} står om bord i ${b.navn} – kjør i land ved en kai først.`); } k.x = b.x; k.y = b.y; k.retning = b.retning; }
+    // folk fra leiren fisker fra kaia
+    { const n = fiskere(); if (n > 0) { const F = FolkSpill.tilstand(), f = SJ.kaiFangst(n, dt, { vind: vind(), årstid: window.VAER && VAER.årstid }); if (f > 0) { F.mat += f; S.kaiFangst = (S.kaiFangst || 0) + f; } } }
+    // havnene. Med Regionen: det vegen ikke får fram, legges på kaia. Ellers: varene samler seg, og en gang i uka kjøres resten landevegen
+    const RK = region(); if (RK) { for (const h of havner()) { const q = RK.get(h.id); if (!q) continue; const m = regMangel(q); if (SJ.lastVekt(m.mangel) > 0) { SJ.havnMangel(S, h.id, m.mangel, m.full, dt); endret = true; } } S.sistHavn = null; }
+    else if (auto()) { const H = havner(); if (H.length) { SJ.havnSteg(S, H, dt); endret = true; if (S.sistHavn === null) S.sistHavn = tid;
         if (tid - S.sistHavn >= R.havnDøgn * 1440) { S.sistHavn = tid; const v = SJ.havnLandeveg(S, H.map(h => h.id)); if (SJ.lastVekt(v) > 0.05) { const rest = tilLeiren(v); const inn = Object.fromEntries(SJ.VARER.map(q => [q, (v[q] || 0) - (rest[q] || 0)]));
             logg(`Ukas varer fra ${H.length === 1 ? 'havna i ' + H[0].navn : H.length + ' havner'} som ingen båt hentet, kom landevegen: ${SJ.lastTekst(inn)} (halvparten gikk tapt på vegen).`); } } } else S.sistHavn = null; }
     const nå = performance.now(); if (endret && nå - sistLagret > 5000) lagre(); if (åpen && nå - sistTegn > 1000) tegnPanel(); });
@@ -155,10 +189,10 @@
   KROKER.lagTekst.push(s => (avskåret.length && s.side !== 'blå' && avskåret.some(by => Garnison.inni(by, s.x, s.y)) ? 'avskåret fra sjøen: treffer dårligere' : null));
 
   // ---------- lagring ----------
-  function lagre() { if (!klar) return; sistLagret = performance.now(); endret = false; const d = SJ.tilJSON(S); for (let q = 0; q < S.båter.length; q++) { const n = omBord(S.båter[q]).map(s => s.navn); if (n.length) d.båter[q].lag = n; }
+  function lagre() { if (!klar) return; sistLagret = performance.now(); endret = false; const d = SJ.tilJSON(S); for (let q = 0; q < S.båter.length; q++) { const n = omBord(S.båter[q]).map(s => s.navn); if (n.length) d.båter[q].lag = n; const kj = kjOmBord(S.båter[q]).map(k => k.navn); if (kj.length) d.båter[q].kj = kj; }
     try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, ...d })); } catch (e) { /* fullt eller sperret */ } }
   function start() { const L = leir(); if (!L) return; leirId = Math.round(L.x) + ',' + Math.round(L.y); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
-    for (const s of ENHETER) if (s.påBåt) s.påBåt = null; S = d && d.leir === leirId ? SJ.fraJSON(d) : SJ.ny(); for (const st of Object.values(S.fiende)) st.underveis = false; klar = true; valg = null; modus = null; kaiSjekket = false; skitten = true; fraktTeller = 0; setTimeout(oppdaterAvskåret, 0); }
+    for (const s of ENHETER) if (s.påBåt) s.påBåt = null; for (const k of biler()) if (k.påBåt) k.påBåt = null; S = d && d.leir === leirId ? SJ.fraJSON(d) : SJ.ny(); for (const st of Object.values(S.fiende)) st.underveis = false; klar = true; valg = null; modus = null; kaiSjekket = false; skitten = true; fraktTeller = 0; setTimeout(oppdaterAvskåret, 0); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0)); window.addEventListener('pagehide', () => { if (endret) lagre(); });
 
   // ---------- kartet ----------
@@ -218,7 +252,10 @@
     for (const b of alle) { let m = nett3.get(b.id); const x = b.x - u.cx, y = b.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) { if (m) m.visible = false; continue; }
       if (!m) { m = new THREE.Mesh(geo3(b.type), mat3); m.name = 'sjo-bat'; R.scene.add(m); nett3.set(b.id, m); }
       // sjøen ligger i null; en innsjø (over 2 moh.) i sin egen høyde
-      let h = 0; try { h = hoyde3d(b.x, b.y, u); } catch (e) { h = 0; } m.visible = true; m.position.set(x, y, ((h > 2 ? h : Math.min(.3, Math.max(0, h || 0))) - u.h0) * R.EX + .15); m.rotation.z = -(b.retning || 0); } });
+      let h = 0; try { h = hoyde3d(b.x, b.y, u); } catch (e) { h = 0; } m.visible = true; m.position.set(x, y, ((h > 2 ? h : Math.min(.3, Math.max(0, h || 0))) - u.h0) * R.EX + .15); m.rotation.z = -(b.retning || 0);
+      // kjølvann (spill/ferje3d.js) bak båter som går
+      if (window.Kjølvann && Kjølvann.nyttSpor) { const T = TY[b.type]; if (!m.userData.spor || m.userData.gen !== Kjølvann.gen) { m.userData.spor = Kjølvann.nyttSpor(Math.max(2.4, T.lengde * .3), 30); m.userData.gen = Kjølvann.gen; }
+        const a = b.retning || 0, bak = T.lengde * .45; Kjølvann.flytt(m.userData.spor, x - Math.sin(a) * bak, y - Math.cos(a) * bak, m.position.z - .1, b.sti && typeof tempo !== 'undefined' && tempo > 0 ? T.fart : 0, Kjølvann.nå()); } } });
 
   // ---------- panelet ----------
   const css = document.createElement('style');
@@ -244,6 +281,10 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     if (!om.length) H.append(el('p', {}, el('small', {}, `Ingen. Plass til ${T.lag} lag – laget må stå innen ${R.ombord} m fra båten.`)));
     for (const s of om) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, s.navn)), kn('Sett i land', () => { gåILand(s); }, b.sti || b.kai < 0 ? { disabled: '', title: 'Båten må ligge ved en kai' } : { 'data-sjo': 'iland' })));
     if (!b.sti && om.length < T.lag) for (const s of egne().filter(e => !e.påBåt && !e.ombord && !e.karakter && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord)) H.append(el('div', { klasse: 'rad' }, el('div', {}, s.navn, ' ', el('small', {}, 'står ved båten')), kn('Ta om bord', () => gåOmBord(s, b), { 'data-sjo': 'ombord' })));
+    if (T.kj) { const kj = kjOmBord(b); H.append(el('h3', {}, `Kjøretøy om bord (${kj.length} av ${T.kj})`));
+      for (const k of kj) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, k.navn)), kn('Kjør i land', () => { kjørILand(k); }, b.sti || b.kai < 0 ? { disabled: '', title: 'Båten må ligge ved en kai' } : { 'data-sjo': 'kjiland' })));
+      if (!b.sti && b.kai >= 0 && kj.length < T.kj) for (const k of biler().filter(q => q.side === 'blå' && !q.påBåt && !q.oppdrag && Math.hypot(q.x - b.x, q.y - b.y) <= R.ombord)) H.append(el('div', { klasse: 'rad' }, el('div', {}, k.navn, ' ', el('small', {}, 'står ved båten')), kn('Kjør om bord', () => kjørOmBord(k, b), { 'data-sjo': 'kjombord' })));
+      if (!kj.length) H.append(el('p', {}, el('small', {}, `Kjøretøy som står innen ${R.ombord} m fra båten ved en kai, kan kjøres om bord. Lag som sitter i kjøretøyet, følger med.`))); }
     H.append(el('h3', {}, 'Last og fiske'));
     const h = !b.sti && b.kai >= 0 ? havnVedKai(b.kai) : null, Hh = h && S.havner[h.id];
     if (h) H.append(el('p', {}, `På kaia i ${h.navn}: ${Hh ? SJ.lastTekst(Hh) : 'ingenting ennå'}.`), kn('Last om bord', () => lastOm(b), Hh && SJ.lastVekt(Hh) > 0.05 && SJ.ledig(b) > 0.05 ? { 'data-sjo': 'last' } : { disabled: '' }));
@@ -258,7 +299,7 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     H.append(el('h2', {}, q.navn), el('p', {}, el('small', {}, `${Kaier.NAVN[q.t] || 'Kai'}${q.l > 0 ? ` · ${q.l} m kai` : ''} · ${q.størrelse} kai${L ? ` · ${km(Math.hypot(q.x - L.x, q.y - L.y))} fra leiren` : ''}`)));
     H.append(el('p', {}, q.størrelse === 'stor' ? 'Stor nok for alle båter, også lekter og ferje.' : q.størrelse === 'middels' ? 'Passer for småbåt, sjark og lekter.' : 'Bare småbåt og sjark kan legge til her.'));
     const her = S.båter.filter(b => !b.sti && Math.hypot(b.x - q.x, b.y - q.y) < 60); if (her.length) { H.append(el('h3', {}, 'Båter som ligger her')); for (const b of her) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, b.navn), ' ', el('small', {}, SJ.lastTekst(b.last))), kn('Velg', () => { valg = { båt: b }; }))); }
-    const h = havnVedKai(i); if (h) { const Hh = S.havner[h.id]; H.append(el('h3', {}, `Havna i ${h.navn}`), el('p', {}, `Du holder ${h.navn}. Varene samler seg her: ${Hh && SJ.lastVekt(Hh) > 0.05 ? SJ.lastTekst(Hh) : 'ingenting ennå'}. Hent dem med båt – det ingen henter, kjøres landevegen en gang i uka, og da kommer bare halvparten fram.`)); }
+    const h = havnVedKai(i); if (h) { const Hh = S.havner[h.id]; H.append(el('h3', {}, `Havna i ${h.navn}`), el('p', {}, `Du holder ${h.navn}. På kaia nå: ${Hh && SJ.lastVekt(Hh) > 0.05 ? SJ.lastTekst(Hh) : 'ingenting'}.`), el('p', {}, el('small', {}, havnForklaring(h)))); }
     H.append(el('h3', {}, 'Kjøp båt')); const grunn = kjøpGrunn(q);
     if (!grunn) H.append(el('p', {}, el('small', {}, `Du kan kjøpe båt ved kaier innen ${km(R.kjøpLeir)} fra leiren, eller ved et tettsted du holder.`)));
     else { H.append(el('p', {}, el('small', {}, `Du kan kjøpe her (${grunn}).`))); for (const [id, T] of Object.entries(TY)) { if (!T.pris || T.skjult) continue; const ok = SJ.passer(id, q.størrelse); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, T.navn), ' ', el('small', {}, kr(T.pris)), el('br'), el('small', {}, ok ? T.tekst : 'Kaia er for liten.')), kn('Kjøp', () => kjøp(id, i), ok ? { 'data-kjop': id } : { disabled: '' }))); } }
@@ -268,8 +309,12 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     if (!K()) H.append(el('p', {}, el('small', {}, 'Kaiene er ikke lastet ennå (eller kartet har ingen).')));
     H.append(el('h3', {}, `Båter (${S.båter.length})`)); if (!S.båter.length) H.append(el('p', {}, 'Du har ingen båter. Trykk på en kai (ankermerket) nær leiren eller i et tettsted du holder, og kjøp en der.'));
     for (const b of S.båter) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, b.navn), el('br'), el('small', {}, båtStatus(b) + (omBord(b).length ? ` · ${omBord(b).length} lag om bord` : '') + (SJ.lastVekt(b.last) > 0.01 ? ` · ${SJ.lastTekst(b.last)}` : ''))), kn('Velg', () => { valg = { båt: b }; gåTil(b.x, b.y); }, { 'data-bat': String(b.id) })));
-    const Hv = havner(); H.append(el('h3', {}, `Havner du holder (${Hv.length})`)); if (!Hv.length) H.append(el('p', {}, el('small', {}, 'Ingen. Hold et tettsted med en stor kai eller havn, så kommer det tre, betong, stål, diesel og mat hver uke.')));
+    const Hv = havner(); H.append(el('h3', {}, `Havner du holder (${Hv.length})`)); if (!Hv.length) H.append(el('p', {}, el('small', {}, 'Ingen. Hold et tettsted med en stor kai eller havn: da kan varene derfra hentes sjøvegen.')));
+    else H.append(el('p', {}, el('small', {}, region() ? 'Regionen frakter varene fra tettstedene over land. Det vegen ikke får fram fra en havneby (truet eller stengt rute), legges på kaia – hent det med båt. Du får aldri det samme to ganger.' : 'Varene samler seg på kaia gjennom uka. Det ingen båt henter, kjøres landevegen en gang i uka (halvparten kommer fram).')));
     for (const h of Hv) { const Hh = S.havner[h.id], q = kai(h.kai); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, h.navn), el('br'), el('small', {}, `på kaia: ${Hh && SJ.lastVekt(Hh) > 0.05 ? SJ.lastTekst(Hh) : 'ingenting ennå'}`)), kn('Vis', () => { valg = { kai: h.kai }; gåTil(q.x, q.y); }))); }
+    if (leirHarKai() && window.FolkSpill && FolkSpill.tilstand()) { const n = S.fiskere || 0, akt = fiskere(), led = ledige(); H.append(el('h3', {}, 'Fiske fra kaia'));
+      H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, `${akt} fisker`), n > akt ? el('small', {}, ` (du ba om ${n}, men bare ${led} er ledige)`) : '', el('br'), el('small', {}, `ca. ${String(Math.round(akt * R.kaiFiske.perTime * 24 * 10) / 10).replace('.', ',')} rasjoner i døgnet`)), el('div', {}, kn('−', () => settFiskere(n - 1), n > 0 ? { 'data-sjo': 'fmin', 'aria-label': 'Færre fiskere' } : { disabled: '' }), kn('+', () => settFiskere(n + 1), n < R.kaiFiske.maks ? { 'data-sjo': 'fpluss', 'aria-label': 'Flere fiskere' } : { disabled: '' }))));
+      H.append(el('p', {}, el('small', {}, `Folk som står på «fri» i Folk-panelet, kan fiske fra kaia ved leiren (høyst ${R.kaiFiske.maks}). Gir du dem en annen oppgave, slutter de å fiske. Ingen fangst i storm.`))); }
     const Fh = fiendeHavner(); if (Fh.length) { H.append(el('h3', {}, 'Fiendens havner')); for (const h of Fh) { const st = S.fiende[h.id], q = kai(h.kai); H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, h.navn), ' ', el('small', {}, sideNavn(h.side)), el('br'), el('small', {}, st && st.avskåret ? 'avskåret – forsyningsbåten kommer ikke fram' : S.frakt.some(b => b.by === h.id) ? 'en forsyningsbåt er på veg' : 'får forsyninger sjøvegen annethvert døgn')), kn('Vis', () => { valg = { kai: h.kai }; gåTil(q.x, q.y); }))); }
       H.append(el('p', {}, el('small', {}, 'Sperr leia inn til havna med miner eller et vrak, så kommer ikke forsyningsbåten fram, og garnisonen treffer dårligere.'))); }
     if (S.sperringer.length) { H.append(el('h3', {}, 'Sperringer')); for (const s of S.sperringer) H.append(el('div', { klasse: 'rad' }, el('div', {}, s.type === 'vrak' ? `Vrak${s.navn ? ' (' + s.navn + ')' : ''}` : 'Minefelt', ' ', el('small', {}, `${s.r} m`)), el('div', {}, kn('Vis', () => gåTil(s.x, s.y)), s.type === 'miner' ? kn(`Rydd (${kr(R.ryddPris)})`, () => rydd(s.id)) : ''))); }
@@ -291,5 +336,5 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     hode.appendChild(k2('Åpne sjøpanelet', () => { valg = null; vis(true); }, { id: 'sjoknapp' })); });
 
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
-    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
+    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjørOmBord, kjørILand, kjOmBord, settFiskere, fiskere, leirHarKai, region: () => !!region(), nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
 })();
