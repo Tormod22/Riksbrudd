@@ -24,6 +24,13 @@ forsvaret alene. Det uferdige utkastet (18f62fd) er beholdt og bygget videre på
 | Avbrutt bølge | røverne borte, bølgenummeret økt | samme bølge kommer igjen etter 20 spillminutter / 1 ekte min | `spillet-visning.js` start() | Røverlagene lagres ikke (lagring.js hopper over e.raid); å starte bølgen på nytt er enklere og sikrere enn å lagre dem. |
 | Første hus du leter i | kunne være tomt | aldri tomt: 4 rasjoner og 20 000 kr hvis det ellers var tomt | `leting-visning.js` | Ikke i testene. |
 | Butikk | 20 % tomme | aldri tomme (alltid mat) | `leting.js` | Butikken har fulle hyller i 3D. |
+| **Runde 2:** sabotører | bølge 2 (med ett lag), 3, 7 … | med spilldøgnet: tidligst bølge 4 og fra dag 5 (`Krig.SABOTASJE_FRA` = { bølge 4, dag 4 }); ellers «rett på» | `krig.js` røverVariant(…, dag), `krig-visning.js` | Kjøring 2: sabotørene i bølge 3 (dag 4) ødela aggregatet, og brannen etterpå tok resten. Testene (webdriver) gir ikke dagen – som før. |
+| Brann i leiren: spredning | som ellers i terrenget | ×0,25 innen 70 m fra leirens midte (grusplass) | `verden-visning.js` LEIRBRANN.grus/grusR | |
+| Brann i leiren: slokking | ingen | folk på «vakt» og «bygg» (friske) slokker ruter innen 150 m: 12 % per person per 10 spillminutter, høyst 70 % | LEIRBRANN.perPerson/maks/slokkR, slokkILeiren() | Med fire hjemme er brannen i leiren ute på 10–20 minutter. |
+| Brann i leiren: skade | `Math.max(1, hp × 0,2)` per 30 min – altså hele bygget på én gang (feil) | 0,12 av full helse per 30 min (ca. 4 timer fra helt til ødelagt) | LEIRBRANN.bygg | Byggene forsvant ett for ett så snart ruta brant. |
+| Brann i leiren: varsel | «Brannen tar X i leiren – det er ødelagt» | «Brann i leiren! N på vakt og bygg prøver å slokke» (eller: ingen er hjemme – sett folk på det), stopper spolingen (riksbrudd-hendelse type brann), «Brannen i leiren er slukket», «Brannen skader X (76 % igjen)» | `verden-visning.js` | |
+| Lite mat | logg ved under ett døgn, brikke ved 1,5 døgn | også logg ved under to døgn («kjøp mat, jakt, fisk, åker eller drivhus»), brikken «Lite mat» ved 2 døgn | `folk.js` (toDøgn), `narhud.js` | Kjøring 2: maten gikk fra 36 til 0 på fire døgn. |
+| Mål og råd om mat | – | nytt mål i kapittel 1: «Ha mat til tre døgn» (matDøgn = mat / folk); rådet ved start nevner mat og drivhus | `maal.js`, `maal-visning.js`, `oppstart-visning.js`; tallet i vakta `spillform.js` er 19/15 mål | Startmaten (50) er ikke endret. |
 
 Kostnaden for en nybegynner som følger rådet (brakke, aggregat, tank, 500 l diesel, en tropp, et vakttårn): 26,5 mill. – 13,5 mill.
 igjen til mat, reparasjoner og kontrollrommet senere. Med kontrollrom første dag: 38,3 mill. (1,7 mill. igjen) – det er derfor rådet
