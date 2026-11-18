@@ -219,6 +219,48 @@
       s.visible = false; s.renderOrder = 2; R.scene.add(s); R.nattObj.push(s); return s; });
   });
 
+  // ---------- skyer i lag (18. nov, pakke «lys») ----------
+  // Skyene på himmelen er de SAMME som kaster skyggene på bakken: et flatt lag SKY_H meter over bakken, tegnet på en kule rundt
+  // kameraet. Hvert punkt på himmelen regnes om til stedet synslinja treffer laget, og tettheten leses fra samme støy, terskel og
+  // drift som skyskyggene (uStoy, uSkyTerskel, uSkyFlytt) – forskjøvet etter sola, så skyggen ligger der sola ser skya. Langt unna
+  // tynnes skyene med et grovere mønster (ellers gjentar de seg hver 2,4 km), og de tones over i disen mot horisonten. Lyssatt
+  // kant mot sola og mørkere kjerne. Tre oppslag per himmelpunkt. Bare med KVAL.fx.skyer (ellers skybildet på kula som før).
+  // Tallene er Claudes forslag.
+  const SKY_H = 1500;
+  const SKYU = { uSkySol: { value: null }, uSkyKam: { value: null }, uSkyFarge: { value: null }, uSkyDis: { value: null }, uSkyAlfa: { value: 1 }, uSkyH: { value: SKY_H }, uSkyLys: { value: null } };
+  function lagSkylag(R) {
+    SKYU.uSkySol.value = new THREE.Vector2(); SKYU.uSkyKam.value = new THREE.Vector3(); SKYU.uSkyFarge.value = new THREE.Color(1, 1, 1); SKYU.uSkyDis.value = new THREE.Color(1, 1, 1); SKYU.uSkyLys.value = new THREE.Vector2(1, 0);
+    const g = new THREE.SphereGeometry(1, 32, 16); g.rotateX(Math.PI / 2);
+    const m = new THREE.ShaderMaterial({ uniforms: { uStoy: U.uStoy, uSkyTerskel: U.uSkyTerskel, uSkyFlytt: U.uSkyFlytt, uSentrum: U.uSentrum, ...SKYU }, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide,
+      vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform sampler2D uStoy; uniform float uSkyTerskel; uniform vec2 uSkyFlytt; uniform vec2 uSentrum; uniform vec2 uSkySol; uniform vec3 uSkyKam;
+        uniform vec3 uSkyFarge; uniform vec3 uSkyDis; uniform float uSkyAlfa; uniform float uSkyH; uniform vec2 uSkyLys; varying vec3 vDir;
+        void main() { vec3 d = normalize(vDir); if (d.z < 0.012) discard;
+          float t = uSkyH / d.z; vec2 q = uSkyKam.xy + uSentrum + d.xy * t + uSkyFlytt - uSkySol;
+          vec4 n = texture2D(uStoy, q / 2400.0);
+          float n2 = texture2D(uStoy, (q + uSkyLys * 150.0) / 2400.0).r;
+          float stor = texture2D(uStoy, vec2(q.x * 0.8 - q.y * 0.6, q.x * 0.6 + q.y * 0.8) / 13700.0 + vec2(0.31, 0.67)).r;
+          float tett = smoothstep(uSkyTerskel, uSkyTerskel + 0.12, n.r + (n.g - 0.5) * 0.07);
+          tett *= mix(1.0, smoothstep(uSkyTerskel - 0.3, uSkyTerskel - 0.1, stor), smoothstep(2500.0, 7000.0, t));
+          float lys = clamp(0.55 + (n.r - n2) * 7.0, 0.0, 1.0), tykk = smoothstep(uSkyTerskel, uSkyTerskel + 0.3, n.r);
+          vec3 farge = uSkyFarge * mix(0.66, 1.0, lys) * mix(1.0, 0.8, tykk);
+          farge = mix(farge, uSkyDis, smoothstep(5000.0, 30000.0, t) * 0.9);
+          gl_FragColor = vec4(farge, tett * uSkyAlfa * 0.94 * smoothstep(0.012, 0.085, d.z)); }` });
+    const o = new THREE.Mesh(g, m); o.renderOrder = -1; o.frustumCulled = false; o.scale.setScalar(.965); R.kuppel.add(o); return o;
+  }
+  function skylag(R, e, sky) {
+    const på = !!(window.KVAL && KVAL.fx && KVAL.fx.skyer) && !!U.uStoy.value;
+    if (!på) { if (H.skylag && H.skylag.visible) { H.skylag.visible = false; R.skyer.visible = true; } N.skylag = false; return; }
+    if (!H.skylag) H.skylag = lagSkylag(R);
+    H.skylag.visible = true; R.skyer.visible = false; N.skylag = true;
+    const c = R.cam.position, sp = R.sol.position, sl = Math.hypot(sp.x, sp.y, sp.z) || 1, sz = Math.max(.25, sp.z / sl), h = Math.max(400, SKY_H - c.z);
+    // skyggen på bakken (høyde ca. 0 i scenen) kommer fra skya SKY_H over, forskjøvet mot sola
+    SKYU.uSkySol.value.set(sp.x / sl / sz * SKY_H, sp.y / sl / sz * SKY_H); SKYU.uSkyKam.value.copy(c); SKYU.uSkyH.value = h;
+    const hl = Math.hypot(sp.x, sp.y) || 1; SKYU.uSkyLys.value.set(sp.x / hl, sp.y / hl);
+    SKYU.uSkyFarge.value.copy(R.skyer.material.color); SKYU.uSkyAlfa.value = Math.min(1, R.skyer.material.opacity); if (R.scene.fog) SKYU.uSkyDis.value.copy(R.scene.fog.color);
+    // skyene er nå ekte også i lettskyet vær: skyggene følger med så snart sola er oppe
+    U.uSkySkygge.value = .36 * trinn(3, 15, e) * (1 - trinn(.85, 1, sky));
+  }
   // ---------- hver ramme ----------
   let sistNå = 0, sistTid = null, nesteLyn = 0, lynStart = -9;
   KROKER.ramme3d.push(R => {
@@ -253,6 +295,7 @@
     if (fl && dTid) { fl.x = (fl.x - Math.cos(vr) * vf * 2 * dTid * 60) % 2400; fl.y = (fl.y - Math.sin(vr) * vf * 2 * dTid * 60) % 2400; }
     R.skyVri = (R.skyVri || tid * .0015) + dTid * .0015 * vf / 3.5;
     U.uSkySkygge.value = .34 * trinn(3, 15, e) * trinn(.12, .45, sky) * (1 - trinn(.85, 1, sky)); U.uSkyTerskel.value = .78 - .38 * sky;
+    skylag(R, e, sky);
     U.uVaat.value = V.våt || 0;
     // tåkebanker i dalen om morgenen (og i tåkevær), tones ut nær kameraet; litt dis i lavlandet om morgenen
     const dt = V.dalTåke || 0, høyde = c.z;

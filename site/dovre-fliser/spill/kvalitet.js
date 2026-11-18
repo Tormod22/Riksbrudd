@@ -14,9 +14,20 @@
 // innstilling: spilleren får beskjed om å slå på maskinvareakselerasjon, og Auto starter på Lav. (Ikke i testene: navigator.webdriver.)
 // Reglene øverst uten DOM (Kvalitet.neste) – test: node pipeline/fliser/test_kvalitet.js.
 (function (rot) {
+  // LYS OG SKYGGER (18. nov, pakke «lys»): det nye og dyre i bildet følger grafikknivået (KVAL.fx) og kan slås av med knappen
+  // «Lys og skygger» i ☰ (localStorage «riksbrudd-effekter»). Lav grafikk har ingenting av det. Tallene er Claudes forslag.
+  //   skygge  skyggekartets side i punkter [PC, mobil] (0 = ingen skygger fra sola)      myk    myke skyggekanter (flere oppslag)
+  //   etter   etterbehandling av bildet: 'full' = fargesetting, kantutjevning og dybdeuskarphet når du går, 'farge' = bare fargesetting
+  //   bakke   skarp bakke nært (egne teksturer), dybde i vannet og tåke i dalene i bakkens skyggelegger
+  //   skyer   skyer i lag som henger sammen med skyskyggene                              lys    lys fra lykter på bakken om natta
+  const FX = {
+    høy: { skygge: [2048, 1024], myk: true, etter: 'full', bakke: true, skyer: true, lys: true },
+    middels: { skygge: [1024, 0], myk: false, etter: 'farge', bakke: true, skyer: true, lys: true },
+    ingen: { skygge: [0, 0], myk: false, etter: null, bakke: false, skyer: false, lys: false },
+  };
   const NIVÅ = {
-    høy: { navn: 'Høy', pr: [1.5, 1.25], tre: 1, gress: 1, blomster: true, tekstur: true, vann: 1 },
-    middels: { navn: 'Middels', pr: [1, 1], tre: .6, gress: .5, blomster: true, tekstur: false, vann: 1, nett: .92 },
+    høy: { navn: 'Høy', pr: [1.5, 1.25], tre: 1, gress: 1, blomster: true, tekstur: true, vann: 1, fx: FX.høy },
+    middels: { navn: 'Middels', pr: [1, 1], tre: .6, gress: .5, blomster: true, tekstur: false, vann: 1, nett: .92, fx: FX.middels },
     lav: { navn: 'Lav', pr: [.75, .75], tre: .35, gress: 0, blomster: false, tekstur: false, vann: 0, bakke: 'enkel', nett: .83 },
   };
   const REKKE = ['høy', 'middels', 'lav'];
@@ -42,7 +53,7 @@
     if (m) { const d = m[1].split(','); t = (d.length >= 2 ? d[1] : d[0]).trim(); }
     return t.replace(/\s*(Direct3D|OpenGL|vs_\d|ps_\d|D3D\d+).*$/i, '').replace(/\(0x[0-9a-f]+\)/ig, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'ukjent';
   }
-  const Kvalitet = { NIVÅ, REKKE, neste, programvare, kortNavn };
+  const Kvalitet = { NIVÅ, REKKE, FX, neste, programvare, kortNavn };
   if (typeof module !== 'undefined') { module.exports = Kvalitet; return; }
   rot.Kvalitet = Kvalitet;
 
@@ -50,19 +61,33 @@
   let valg = 'auto'; try { const v = localStorage.getItem('riksbrudd-grafikk'); if (v && (v === 'auto' || NIVÅ[v])) valg = v; } catch (e) { /* privat vindu */ }
   const S = { nivå: valg === 'auto' ? 'høy' : valg };
   // KVAL: det andre deler av spillet leser (index.html: størrelse3d, lodTrær, gress3d, bygg3d; vegetasjon3d.js; vind3d.js)
-  const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { return NIVÅ[S.nivå]; } };
+  const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { return NIVÅ[S.nivå]; },
+    // fx: de nye effektene på dette nivået (FX.ingen når de er slått av, på Lav og i testene – se under)
+    get fx() { return (fxPå && NIVÅ[S.nivå].fx) || FX.ingen; }, get effekterPå() { return fxPå; } };
+  // Effektene er på hos spilleren til han slår dem av. I testene (navigator.webdriver) er de av til testen selv slår dem på
+  // (KVAL.effekter(true)) – kontrollskriptet skal se det samme bildet som før.
+  let fxPå = !navigator.webdriver; try { if (localStorage.getItem('riksbrudd-effekter') === 'av') fxPå = false; } catch (e) { /* privat vindu */ }
+  const fxKnapp = document.createElement('button'); fxKnapp.id = 'vis-effekter';
+  const settFx = () => { fxKnapp.textContent = 'Lys og skygger: ' + (fxPå ? 'på' : 'av'); fxKnapp.title = 'Skygger fra sola, fargesetting, skarp bakke nært, dybde i vannet og tåke i dalene (bare på Høy og Middels grafikk). Slå av hvis bildet går tregt.'; };
+  // Slår effektene på eller av. lagre = false: husk ikke valget (testene).
+  KVAL.effekter = (på, lagre) => { på = !!på; if (på === fxPå) return på; fxPå = på; KVAL.v++; settFx();
+    if (lagre !== false) try { localStorage.setItem('riksbrudd-effekter', på ? 'på' : 'av'); } catch (e) { /* privat vindu */ }
+    if (typeof R3 !== 'undefined' && R3) { R3.lodVed = null; if (typeof byttBakke === 'function') byttBakke(true); }
+    return på; };
+  fxKnapp.onclick = () => { KVAL.effekter(!fxPå); if (typeof logg === 'function') logg('Lys og skygger: ' + (fxPå ? 'på' : 'av') + '.'); };
+  settFx();
   const knapp = document.createElement('button'); knapp.id = 'vis-grafikk';
   const settKnapp = () => { knapp.textContent = 'Grafikk: ' + (valg === 'auto' ? 'auto (' + NIVÅ[S.nivå].navn.toLowerCase() + ')' : NIVÅ[valg].navn); knapp.title = 'Lavere grafikk gir jevnere bilde på svake maskiner' + (KVAL.kort ? '. Grafikkort: ' + kortNavn(KVAL.kort) : ''); };
   function bytt(nivå) {
     if (nivå === S.nivå) return; S.nivå = nivå; KVAL.v++; settKnapp();
     // trærne, gresset og blomstene fordeles på nytt i neste ramme; bakketeksturen følger med i neste utsnitt
     if (typeof R3 !== 'undefined' && R3) { R3.lodVed = null; R3.gressSenter = null; }
-    if (typeof byttBakke === 'function') byttBakke();
+    if (typeof byttBakke === 'function') byttBakke(true);
     if (typeof logg === 'function') logg('Grafikk: ' + NIVÅ[nivå].navn.toLowerCase() + (valg === 'auto' ? ' (automatisk – velg selv i ☰)' : '') + '.');
   }
   knapp.onclick = () => { const r = ['auto', ...REKKE]; valg = r[(r.indexOf(valg) + 1) % r.length]; try { localStorage.setItem('riksbrudd-grafikk', valg); } catch (e) { /* privat vindu */ }
     if (valg === 'auto') { S.endret = performance.now() / 1000; S.lett = null; S.forTungt = null; settKnapp(); } else bytt(valg); settKnapp(); };
-  settKnapp(); const lm = document.getElementById('lagmeny'); if (lm) lm.appendChild(knapp);
+  settKnapp(); const lm = document.getElementById('lagmeny'); if (lm) { lm.appendChild(knapp); lm.appendChild(fxKnapp); }
   // Første bilde i 3D: hvilket grafikkort tegner nettleseren med?
   KVAL.kort = null; KVAL.programvare = false;
   KROKER.ramme3d.push(R => {
