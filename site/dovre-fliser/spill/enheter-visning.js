@@ -148,6 +148,17 @@
     if (k.type === 'stridsvogn') return `kanon ${R.stridsvogn.rekkevidde / 1000} km, ${R.roller.stridsvogn.tekst}` + (k.skyterPå ? ' · i ildkamp' : '') + (k.skade ? ` · skade ${Math.round(100 * k.skade)} %` : '');
     return k.skade ? `skade ${Math.round(100 * k.skade)} %` : null;
   });
+  // (19. nov) meldte mål kan vogna kjøre mot: knappen gir kjøreordre mot det nærmeste fiendelaget du vet om, men som vogna ikke ser selv
+  // (innen RS.kjørMot meter)
+  function meldtMål(k) { let b = null, bd = RS.kjørMot;
+    for (const q of ENHETER) { if (q.side === k.side || !levende(q) || Terreng.slattUt(q.menn) || !synlig(q)) continue; const d = Math.hypot(q.x - k.x, q.y - k.y);
+      if (d < bd && kanonF(k, q) <= 0) { bd = d; b = q; } }
+    return b ? { lag: b, avstand: bd } : null; }
+  KJ_PANEL.push((k, H) => {
+    if (k.type !== 'stridsvogn' || k.side !== 'blå' || typeof window.kjørTil !== 'function') return; const m = meldtMål(k); if (!m) return;
+    const b = knapp(`Kjør mot ${m.lag.navn} (${kmTekst(m.avstand)})`, false, () => { window.kjørTil(k, m.lag.x, m.lag.y); logg(`${k.navn} kjører mot ${m.lag.navn}, som er meldt, men ikke sett fra vogna.`); });
+    b.title = 'Vogna skyter bare på det den ser selv eller et eget lag rett ved ser. Kjør nærmere.'; H.appendChild(b);
+  });
   KJ_PANEL.push((k, H) => {
     if (k.type !== 'rakettartilleri') return;
     const på = ildModus === k;
@@ -174,7 +185,7 @@
     SALVER.push(r.salve); logg(`${k.navn} skyter en salve mot målet ${kmTekst(Math.hypot(X - k.x, Y - k.y))} unna (${obs ? 'observert' : 'ingen ser målet – stor spredning'}). Nedslag om ${R.artilleri.flytid} s.`);
     skitten = true; return r.salve;
   }
-  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon, motKjøretøy, vognSer, naboSer, kanonF, vognSikt };   // for sjekk.js
+  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon, motKjøretøy, vognSer, naboSer, kanonF, vognSikt, meldtMål };   // for sjekk.js
   KROKER.trykk.unshift((X, Y) => {
     if (ildModus) { const k = ildModus; ildModus = null; ild(k, X, Y); visKjoretoy(k); return true; }
     if (droneModus) { const b = droneModus; droneModus = null; sendDrone(b, X, Y); if (window.visBase) visBase(b); return true; }

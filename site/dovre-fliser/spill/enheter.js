@@ -26,7 +26,8 @@
     // men ikke skyte på (meldt = treffaktor for et mål som bare er meldt: 0 = ingen skudd). Siktfeltet regnes på nytt når vogna har flyttet
     // seg flytt meter; har den flyttet seg mer enn gammel meter siden sist, brukes den gamle regelen (sirkel, ikke inn i skog) til det nye er klart.
     // Et lag inne i skogen ser vogna bare innen skog meter. minnes: spillminutter mellom hver melding om et mål vogna ikke ser.
-    egenSikt: { øyne: 3, nabo: 150, meldt: 0, flytt: 40, gammel: 200, minnes: 30, skog: 150 },
+    // kjørMot: meldte fiender innen så mange meter gir knappen «Kjør mot …» i panelet.
+    egenSikt: { øyne: 3, nabo: 150, meldt: 0, flytt: 40, gammel: 200, minnes: 30, skog: 150, kjørMot: 6000 },
     styrke: { stridsvogn: 30, speiderbil: 3, lastebil: 1, rakettartilleri: 1, radar: 1 },   // hvor farlig kjøretøyet er for et lag (AI-en)
   };
   // Kjøretøytypene for spill/kjoretoy.js (legges inn i Kjoretoy.TYPER av visningen eller testen).
