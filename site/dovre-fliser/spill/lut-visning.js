@@ -201,7 +201,7 @@
   // ---------- panelet ----------
   const css = document.createElement('style');
   css.textContent = `#lutpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 44px); z-index:12; display:none; width:min(900px,95vw); max-height:calc(100vh - var(--topp,58px) - 160px);
-  flex-direction:column; padding:8px 10px 6px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; box-sizing:border-box; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  flex-direction:column; padding:8px 10px 6px; background:rgba(24,20,13,.97); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; box-sizing:border-box; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 #lutpanel.på{ display:flex; } #lutpanel .topp{ display:flex; align-items:center; gap:8px; } #lutpanel .topp h2{ margin:0; font-size:18px; flex:1; }
 #lutpanel button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:32px; padding:2px 9px; font:inherit; font-size:13px; cursor:pointer; } #lutpanel button:disabled{ opacity:.45; }
 #lutpanel .kol{ display:flex; gap:8px; min-height:0; flex:1; margin-top:6px; } #lutpanel .side{ flex:1; min-width:0; display:flex; flex-direction:column; border:1px solid #3a3224; background:rgba(0,0,0,.18); }
@@ -280,7 +280,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const id = v.id, g = G[id], T = Utstyr.TING[id] || g || {}, B = v.side === 'deg' ? bærer() : c && c.B; if (!B || !(B.t[id] > 0)) { valgt = null; return detalj(I, c, liste); }
     const n = L.stabler(B, nå(), v.side === 'der' ? kaldAv(c) : undefined, { erKald: v.side === 'der' && !!(c && c.kald), vekter: VEKT }).filter(r => r.id === id && (r.st || null) === (v.st || null)).reduce((s, r) => s + r.n, 0); if (!n) { valgt = null; return detalj(I, c, liste); }
     const fra = v.side === 'der' ? c : null, mf = g && g.spis ? L.måltid(id, v.st) : null;
-    const virk = mf ? ['sult', 'tørst', 'søvn'].filter(k => mf[k]).map(k => `${{ sult: 'Mett', tørst: 'Tørst', søvn: 'Våken' }[k]} ${mf[k] > 0 ? '+' : ''}${mf[k]}`).concat(mf.helse ? [`Helse ${mf.helse}`] : []).join(' · ') : '';
+    const virk = mf ? ['sult', 'tørst', 'søvn'].filter(k => mf[k]).map(k => `${{ sult: 'Mett', tørst: 'Tørst', søvn: 'Våken' }[k]} ${mf[k] > 0 ? '+' : ''}${mf[k]}`).concat(mf.helse ? [`Helse ${mf.helse}`] : []).join(' · ') + '.' : '';
     const ferskTekst = g && g.fersk ? (v.st === 'råtten' ? 'Råtten – gjør deg dårlig.' : v.st === 'gammel' ? `Gammel – metter mindre, råtten etter ca. ${g.fersk[1]} døgn.` : `Fersk – holder ca. ${g.fersk[0]} døgn${fra && fra.kald ? ' (lenger i kjøleskap med strøm)' : ''}.`) : g && (g.kat === 'mat' || g.kat === 'drikke') ? 'Holder lenge.' : '';
     f.append(el('b', {}, `${n} × ${T.navn || id}`), el('p', {}, [g && g.tekst, ferskTekst, virk, våpenAv(id) ? `Våpen: ${Utstyr.VÅPEN[våpenAv(id)].navn.toLowerCase()}, ${navn(Utstyr.VÅPEN[våpenAv(id)].ammo)}.` : '', g && g.sekk ? `Sekk: ${L.tall(g.sekk.plass)} kg plass, vekten føles ${Math.round(g.sekk.lettere * 100)} % lettere.` : '', `${kg(vektAv(id))} per ${T.enhet === 'skudd' ? 'skudd' : 'stk.'} · ${kg(vektAv(id) * n)} i alt.`].filter(Boolean).join(' ')));
     if (g && g.spis) valg.append(knapp(g.drikk ? 'Drikk' : 'Spis', () => { spis(fra, id, v.st); vis(true); }, { 'data-valg': 'spis', klasse: 'hoved' }));
@@ -378,7 +378,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
 
   Object.assign(ut, { start, registrer, åpne, erÅpen: () => åpen, vis, klar: () => klar, S: () => S, bær: () => status(), fart, kanLøpe, løp, sekkKnapp,
     beholdere: () => beholdereNå(), nærmeste, aktiv, velgFane: nk => { fane = nk; vis(true); }, taFra, leggI, våpenTil, våpenISekk, tilBeltet, taPå, taAv, spis, bruk, lad, tilLeiren,
-    gulv: () => S.gulv, strømTil, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
+    gulv: () => S.gulv, strømTil, oppdaterKnapp, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
     // til vakten: glem det som er endret i beholderne for et bygg, og sett sekken på ryggen tilbake
     glemBygg: i => { for (const k of Object.keys(S.b)) if (k.startsWith(i + ':')) delete S.b[k]; for (const k of [...minne.keys()]) if (k.startsWith(i + ':')) minne.delete(k); lagre(); },
     settS: d => { S = { ...nyS(), ...d }; lagre(); } });
