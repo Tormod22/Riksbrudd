@@ -488,12 +488,13 @@ Det som står igjen (de største): søppeltømming (opptil 280 ms – store tabe
 Beste sted: **tåke-biten i three.js (`fog_fragment`), koblet i `Lys3d.init` (lys3d.js) på samme måte som daltåka (`uDalT`)**. Den er med i alle
 innebygde materialer som har tåke – terrenget (bakkeshaderen bygger på Lambert/Phong), husene, interiøret, trærne, steinene –, så lykta lyser på
 alt uten et nytt THREE-lys og uten nye skyggeprogrammer. Forslag:
-- `uniform vec4 uLykt;` i `fog_pars_fragment` (x = styrke 0–1, y = rekkevidde i m, z = kjeglens radius i andel av skjermhøyden, w = skjermhøyden
-  i punkter), verdien en `Float32Array(4)` lagt i `THREE.ShaderLib[*].uniforms` (og `THREE.UniformsLib.fog`) som `uDalT` – den deles da av alle.
+- `uniform vec4 uLykt;` i `fog_pars_fragment`: x = styrke 0–1 (0 = av, og da hoppes regningen over), y = rekkevidde i m, zw = skjermens
+  midte i tegnepunkter (`renderer.getDrawingBufferSize` / 2 – husk pikseltettheten). Pluss `uniform float uLyktR;` = kjeglens radius i
+  tegnepunkter. Verdiene som `Float32Array` lagt i `THREE.ShaderLib[*].uniforms` (og `THREE.UniformsLib.fog`) som `uDalT` – de deles da av alle.
 - Rett ETTER `#ifdef USE_FOG` (før tåka blandes inn, så tåka fortsatt skjuler langt borte):
-  `if (uLykt.x > 0.0) { vec2 d = (gl_FragCoord.xy - 0.5 * uSkjerm) / uLykt.w; float k = uLykt.x * smoothstep(uLykt.z, uLykt.z * 0.35, length(d)) * exp(-fogDepth / uLykt.y); gl_FragColor.rgb = gl_FragColor.rgb * (1.0 + 3.0 * k) + vec3(0.06, 0.055, 0.045) * k; }`
-  (lykta peker der du ser – skjermens midte –; `fogDepth` er avstanden langs blikket; midten av skjermen kan ligge i `uLykt` sammen med
-  w eller i en egen vec2). Bruk ikke `diffuseColor`: røyken i effekter3d.js er en egen ShaderMaterial med tåke, og der finnes den ikke
+  `if (uLykt.x > 0.0) { float k = uLykt.x * smoothstep(uLyktR, uLyktR * 0.35, length(gl_FragCoord.xy - uLykt.zw)) * exp(-fogDepth / uLykt.y); gl_FragColor.rgb = gl_FragColor.rgb * (1.0 + 3.0 * k) + vec3(0.06, 0.055, 0.045) * k; }`
+  (lykta peker der du ser – skjermens midte –; `fogDepth` er avstanden langs blikket). Med etterbehandling (filtre.js tegner til et mål i
+  annen størrelse) må midten og radiusen være målets, ikke skjermens. Bruk ikke `diffuseColor`: røyken i effekter3d.js er en egen ShaderMaterial med tåke, og der finnes den ikke
   (skyggeleggeren ville ikke kompileres). Vakt: `uLykt.x = 0` skal gi samme bilde som før, og 0 GL-feil på /rogaland og Dovre.
 - Pass på `fog: false`-materialer (vindusglasset i interiøret, himmelen) – de får ikke lykta, og det er riktig.
 
