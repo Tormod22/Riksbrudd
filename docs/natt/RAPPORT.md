@@ -76,3 +76,27 @@ Alt ligger på grenen `claude/nattfiks`. **Ingenting er publisert.** Detaljene f
 - Ikke sett i ekte Safari på iPhone, og 3D (særlig skyggene) er bare målt med programvare-grafikk: be om «Mål ytelse» med «Lys og skygger» på og av.
 - Hakk når et nytt område lastes i 3D er ikke arbeidet med.
 - Y-tasten (100 mill. kr) ligger inne, som avtalt.
+
+---
+
+# Runde 4 (18. nov 10:45–13:40, brukeren: «fortsett på lista å utbedre enda mer»)
+
+Sju hjelpere på Opus, hver i sin pakke. Detaljene står under «Runde 4» i `docs/natt/<pakke>.md`. Alt ligger på `claude/nattfiks`.
+**Ikke publisert.**
+
+## Gjort
+| Pakke | Hva |
+|---|---|
+| Balanse | Røvere som har herjet 90 min i leiren, tar bytte og går. Røverlag som har mistet en tredel, flykter. Lagene hjemme går mot fiender i leiren av seg selv. Ledige byggelag reparerer mellom bølgene, og «N bygg er skadet – Reparer alle». Opplæringen har fire nye steg. Etter flettingen: motstanderne har fredstid i 7 døgn på Vanlig (før 4), med varsel ett døgn før. |
+| Hakk i 3D | Byttet til et nytt område går i biter. I Bergen-målingen gikk summen av lange pauser fra 6,1 til 1,3 s, og den lengste fra 812 til 157 ms. Utsnittene er like før og etter. Skygger fra kjøretøy og soldater er målt og forkastet (nesten tre ganger tregere). |
+| Krig | Dekning bak leirens bygg. Fanger kan byttes, settes i arbeid eller rekrutteres, og motstanderen foreslår bytte. Røyk, lys, helikopter og kjøreordrer huskes. Fiendens stillinger vises med sandsekker og figurer i 3D. **Feil rettet:** skjev sikt, ammunisjon brukt uten skudd, radio under våpenhvile, lag som ikke svarte et kjøretøy som skjøt. |
+| Folk | Varsler for sykdom, ugravlagte og skader. Én kø for alle kortene. Barn og gamle i 3D og syke. Folk inne i byggene, vakta på tårnet. Spesialister fra oppdrag. Portretter i Folk-panelet. Hunden går og trenger mat. |
+| Sjø og økonomi | Krigskartet viser hva et tettsted gir. Handelsruter langs vegene, stengt av sprengte bruer og kratere. Båter med helse kan bordes og senkes, fiendens båter skyter, og fienden bruker båter. Trykk på kaier og båter i 3D. Nærmeste kai i leirvalget. Lavt sjøpanel på telefon. Is stenger innsjøer. |
+| Verden og natur | Snø stenger fjellveger, og fienden fryser. Kratere og spor huskes, og felte dyr kommer ikke tilbake. Åkeren er et bygg. Funn vises som 3D-modeller. Regnflom følger dalen. Sotlag på brente hus. |
+| Grensesnitt | Paneler oppå hverandre er rettet. Kjøretøy og tettsteder bruker merkesettet. Tegnforklaring og forklaring på flisene. Byggelista som rutenett, og tegning i byggpanelet. Ramme for å velge lag i 3D (Shift + dra; rotering nå med høyre museknapp). Marsjtid i 3D. Etterspillet viser mer. |
+
+## Står igjen
+- **Sju døgn:** leiren sto mot røverne i fem døgn, men falt for Kystalliansen på dag 5–6 (gjennomspilling 7 og 8). Fredstiden er nå 7 døgn, men det er ikke spilt gjennom på nytt.
+- **Hakk:** trinnet «henter høydene og kartet» er bare litt bedre. Det som står igjen, er søppeltømming og grafikkortet, og det kan bare måles hos brukeren («Mål hakk»).
+- **Stridsvogna:** den skyter fortsatt på mål den ikke ser selv, bare fordi vakter, kameraer eller droner har meldt dem.
+- **Ikke sett i Safari:** ingenting er prøvd i ekte Safari på iPhone.
