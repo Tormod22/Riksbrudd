@@ -290,6 +290,10 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if (våpenAv(id)) valg.append(knapp('Utstyr (i beltet)', () => { if (fra) taFra(fra, id, null, 1); else tilBeltet(id); valgt = null; vis(true); }, { 'data-valg': 'utstyr', klasse: 'hoved' }));
     if (g && g.sekk) valg.append(knapp('Ta på', () => { if (taPå(id, fra)) valgt = null; vis(true); }, { 'data-valg': 'tapå', klasse: 'hoved' }));
     if (kat(id) === 'ammo' && v.side === 'deg') valg.append(knapp('Lad', () => { lad(id); vis(true); }, { 'data-valg': 'lad' }));
+    // (runde 5) lommelykta og batteriene (spill/lykt.js)
+    if (rot.LyktSpill && v.side === 'deg' && id === 'lommelykt') { valg.append(knapp(LyktSpill.på() ? 'Slå av' : 'Slå på', () => { LyktSpill.slå(); vis(true); }, { 'data-valg': 'lykt', klasse: 'hoved' }));
+      if ((I.ting.batterier || 0) > 0 && LyktSpill.S().batteri < .999) valg.append(knapp('Bytt batterier', () => { LyktSpill.bytt(); vis(true); }, { 'data-valg': 'batteri' })); }
+    if (rot.LyktSpill && v.side === 'deg' && id === 'batterier' && (I.ting.lommelykt || 0) > 0 && LyktSpill.S().batteri < .999) valg.append(knapp('Lad (i lykta)', () => { LyktSpill.bytt(); vis(true); }, { 'data-valg': 'batteri', klasse: 'hoved' }));
     if (g && g.rasjoner && v.st !== 'råtten' && iLeiren()) valg.append(knapp('Gi til leiren', () => { tilLeiren(fra, id, v.st); vis(true); }, { 'data-valg': 'leiren' }));
     if (v.side === 'deg') { if (c) { valg.append(knapp(c.haug ? 'Legg fra deg' : `Legg i ${c.tittel.toLowerCase()}`, () => { leggI(c, id, v.st, n); vis(true); }, { 'data-valg': 'legg' })); if (n > 1) valg.append(knapp('Én', () => { leggI(c, id, v.st, 1); vis(true); }, { 'data-valg': 'leggen' })); }
       for (const q of andre) valg.append(knapp(`Flytt til ${q.fane.toLowerCase()}`, () => { leggI(q, id, v.st, n); vis(true); })); }
@@ -372,7 +376,10 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   // knapper på tingene i sekken: Spis/Drikk, Til beltet, Ta på (feltrasjonen og vannet har sine fra spill/eventyr-visning.js)
   function sekkKnapp(id) { if (klar && våpenAv(id)) return ['Til beltet', () => tilBeltet(id)]; const g = G[id]; if (!klar || !g || g.finnes) return null;
     if (g.spis) return [g.drikk ? 'Drikk' : 'Spis', () => { const B = bærer(), s = B && L.stabler(B, nå()).filter(r => r.id === id).sort((a, b) => ['fersk', 'gammel', 'råtten'].indexOf(a.st) - ['fersk', 'gammel', 'råtten'].indexOf(b.st))[0]; spis(null, id, s ? s.st : null); }];
-    if (g.sekk) return ['Ta på', () => taPå(id, null)]; return null; }
+    if (g.sekk) return ['Ta på', () => taPå(id, null)];
+    if (id === 'lommelykt' && rot.LyktSpill) return [LyktSpill.på() ? 'Slå av' : 'Slå på', () => LyktSpill.slå()];
+    if (id === 'batterier' && rot.LyktSpill && LyktSpill.har()) return ['Lad lykta', () => LyktSpill.bytt()];
+    return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
     p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg · ${L.STATUS[b.status]}`))),
       kn('Inventar og beholdere (Tab)', () => åpne(true), { id: 'lutfrasekk' })); });

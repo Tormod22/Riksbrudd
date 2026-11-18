@@ -82,8 +82,8 @@
     forbinding: { finnes: true, navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, kat: 'medisin', helse: 45, w: 2, n: [1, 2], b: { vask: 2, skap: .5, bil: 1.5 }, k: { sykehus: 3, skole: 1.5 }, tekst: 'Forbinding og plaster.' },
     smertestillende: { navn: 'Smertestillende (paracetamol)', enhet: 'stk.', vekt: .03, kat: 'medisin', helse: 15, w: 3, n: [1, 3], b: { vask: 3, nattbord: 2 }, k: { sykehus: 3 }, tekst: 'Demper smerten litt.' },
     // utstyr (tau finnes i spill/eventyr.js)
-    lommelykt: { navn: 'Lommelykt', enhet: 'stk.', vekt: .3, kat: 'utstyr', w: 2, n: [1, 1], b: { nattbord: 2, skap: 1, arbeidsbenk: 1.5, bil: 2 }, tekst: 'Lys i mørket (til senere).' },
-    batterier: { navn: 'Batterier (AA)', enhet: 'stk.', vekt: .1, kat: 'utstyr', w: 2, n: [1, 3], b: { kasse: 3, tvbenk: 2, arbeidsbenk: 1 }, tekst: 'Til lommelykta og radioen.' },
+    lommelykt: { navn: 'Lommelykt', enhet: 'stk.', vekt: .3, kat: 'utstyr', w: 2, n: [1, 1], b: { nattbord: 2, skap: 1, arbeidsbenk: 1.5, bil: 2 }, tekst: 'Lys i mørket: L slår den på. Du ser mer om natta – men fiendene ser deg også.' },
+    batterier: { navn: 'Batterier (AA)', enhet: 'stk.', vekt: .1, kat: 'utstyr', w: 2, n: [1, 3], b: { kasse: 3, tvbenk: 2, arbeidsbenk: 1 }, tekst: 'Nye batterier til lommelykta (8 timer lys).' },
     tau: { finnes: true, navn: 'Tau', enhet: 'stk.', vekt: .4, kat: 'utstyr', w: 1.5, n: [1, 2], b: { arbeidsbenk: 2, hylle: 2, bil: 1.5 }, k: { låve: 2, uthus: 1.5 }, tekst: 'Til håndverk og feller.' },
     verktøy: { navn: 'Verktøykasse', enhet: 'stk.', vekt: 4.5, kat: 'utstyr', w: 2, n: [1, 1], b: { arbeidsbenk: 4, verktøyvogn: 4, hylle: 2, bil: 1 }, k: { industri: 2, uthus: 2, låve: 1.5 }, tekst: 'Hammer, sag, tang og skrutrekkere.' },
     sovepose: { navn: 'Sovepose', enhet: 'stk.', vekt: 1.6, kat: 'utstyr', w: 1.5, n: [1, 1], b: { skap: 3 }, k: { hytte: 2 }, tekst: 'Varm natt ute.' },

@@ -137,8 +137,9 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   const mørke = () => (rot.NATT && isFinite(NATT.mørke) ? NATT.mørke : rot.Krig && Krig.natt && Krig.klokkeTime && typeof tid !== 'undefined' ? Krig.natt(Krig.klokkeTime(tid)) || 0 : 0);
   // fiender med nattsikt (pakka «krig»: utstyr eller røvere som venter på mørket) ser deg som om det var dag
   const harNattsikt = e => !!((e.utstyr && e.utstyr.nattsikt) || e.nattsikt);
-  function snikRekkevidde(utenMørke) { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now();
-    return E.Snik.rekkevidde({ stilling: stilling(), mørke: utenMørke ? 0 : mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
+  // (runde 5) lommelykta på om natta (spill/lykt.js): mørket skjuler deg ikke, og fiendene ser deg lenger unna
+  function snikRekkevidde(utenMørke) { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now(), ly = rot.LyktSpill && LyktSpill.på() ? LyktSpill.røper() : 0;
+    return (ly || 1) * E.Snik.rekkevidde({ stilling: stilling(), mørke: utenMørke || ly ? 0 : mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
   // står det en vegg eller et tre mellom deg og fienden, like ved deg?
   function vegg(d, e) { const Q = r3(); if (!Q || !Q.ut || typeof hindring3d !== 'function') return false; const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy) || 1, x0 = d.x - Q.ut.cx, y0 = d.y - Q.ut.cy;
     for (let s = 1; s <= Math.min(R.dekning.veggAvstand, l - 1); s += .5) if (hindring3d(x0 + dx / l * s, y0 + dy / l * s)) return true; return false; }
@@ -320,6 +321,8 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     if (T.skader.infeksjon && !T.skader.infeksjon.behandlet && t.forbinding > 0) d.push(['knapp', 'Behandle infeksjonen', 'inf', 'viktig']);
     if (iTilflukt()) d.push(['knapp', 'Tilflukt: sov og lager', 'tilflukt', '']);
     d.push(['knapp', `Lag noe${pc ? ' (B)' : ''}`, 'lag', '']);
+    // (runde 5) lommelykta: av/på og batterier (spill/lykt.js)
+    if (rot.LyktSpill) for (const q of LyktSpill.rad()) d.push(q);
     return d; }
   // skadene dine som brikker i #varsler (spill/narhud.js leser window.VARSEL_TILLEGG); trykk = karakterarket
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
@@ -328,7 +331,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       return { i: 'hjerte', k: q.behandlet ? '' : 'fare', t: D.navn, s: q.behandlet ? 'behandlet – gror' : t[D.kur] > 0 ? `bruk ${D.kur === 'spjelk' ? 'spjelka' : 'førstehjelp'} (i sekken)` : `trenger ${D.kurTekst.replace(/ \(.*\)$/, '')}`,
         f: () => { if (rot.KarakterSpill) KarakterSpill.åpne(); } }; }).filter(Boolean);
   });
-  const GJØR = { hundmat: () => matHund(), ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
+  const GJØR = { lykt: () => rot.LyktSpill && LyktSpill.slå(), lyktbatteri: () => rot.LyktSpill && LyktSpill.bytt(), hundmat: () => matHund(), ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
   function oppdater() { const vis = klar && går() && !sover; rad.classList.toggle('på', vis);
     if (vis && !(rot.pekerNede && pekerNede(rad))) { const d = radInnhold(), n = JSON.stringify(d); if (n !== sistRad) { sistRad = n; rad.replaceChildren(...d.map(([type, tekst, gjør, kl]) => type === 'lapp' ? el('div', { klasse: 'lapp ' + kl }, tekst) : knapp(tekst, () => { GJØR[gjør](); oppdater(); }, { klasse: kl, 'data-ev': gjør }))); } }
     if (panelModus) visPanel(false); if (rot.KarakterSpill && KarakterSpill.erÅpen && KarakterSpill.erÅpen()) KarakterSpill.vis(false); }
