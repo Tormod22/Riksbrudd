@@ -174,3 +174,41 @@ Funn (R = rettet her, I = ikke rettet – eier i parentes):
 16. I Telefon, Gå: loggmeldingen på to linjer ligger litt oppå «Flaske 4/4 · rasjoner 2» til den tones ut (som i runde 3).
 17. I Kartflisene nær leiren har rektangulære felt med ulik skogtone (`b2/tlf-10-brakke-plass.png`). (natur: kartbilde)
 Ikke et funn: testvarselet «Nettleseren tegner 3D uten grafikkortet» kommer fordi testmaskinen bruker programvaregrafikk.
+Prøvd etter rettingene (`p2.js`, bilder `b/tlf-r5-01-alarm-varsel-stopp.png`, `b/pc-r5-01-…`, `b/*-r5-02-gaa-uten-lagpanel.png`):
+alarm, varsel og stoppkort står under hverandre uten overlapp på telefon (alarm 120–226, varsel 232–304, stoppkort 310–364 px) og
+PC; lagpanelet er skjult mens du går (display none, body.gaar) og tilbake når du slutter, på begge.
+
+### 2. Kontrollen raskere (pipeline/fliser/sjekk.js, gjennomgang nr. 50)
+Målt med tidtaking (ny): hver linje får «(12,3 s)» = tiden siden forrige linje i samme profil (AsyncLocalStorage, så PC/mobil/eldre
+iPhone som kjører samtidig, har hver sin klokke), og til slutt «TID: … i alt, <profil> …, N ok, M FEIL» med de 25 tregeste linjene og
+de 30 tregeste kallene til siden (evaluate/waitForFunction/click/goto over 1 s) med linjenummer i sjekk.js eller vakta.
+Funnet: nesten all tid gikk til å TEGNE 3D-scenen mens et utsnitt ble bygd ved siden av. Bygging tar pust (pust/pusterom i
+index.html) mellom bitene, og i hvert pust tegnes scenen på nytt – i programvaregrafikk 0,2–1 s per bilde. Målt på mobil (e2.js):
+bygg3d på heia 90 s med tegning, 3,2 s uten; et utsnitt som bygges på skjermen etter «Gå» ble ventet på i 166 s (e3.js).
+Endret (ingenting av det som sjekkes er tatt bort):
+- `utenTegning(f)` (lagt inn i siden med addInitScript): renderer.render er en tom funksjon mens f bygger; samme kode, samme pust,
+  samme utsnitt. Brukt rundt bygg3d/hus3d/nytt3dUtsnitt i vaktene «rare ting», hogst og riving, byhus, dyr (3 utsnitt), bekker 3D og
+  bygging i biter (pust-tellingen der er uendret: 50–63). Tegningen er tilbake før vakta ser på scenen.
+- `ventPåBygging()` i stedet for `while (R3.bygger) await …` (12 steder): venter på det samme, uten å tegne det gamle bildet imens.
+- Syntakssjekken: filene leses i samme prosess (vm.compileFunction = det node --check gjør for CommonJS) i stedet for 157 nye
+  node-prosesser – 13 s -> 0,2 s. En fil som ikke lar seg lese slik, sjekkes med node --check som før (prøvd: feil fanges, `return`
+  på toppnivå godtas, ESM-fil går via node --check).
+- Infrastruktur- og vegnettfilene leses én gang (før: hele fila fra disk for hver Range-henting).
+- `SJEKK_DEL=rask`: bare det som ikke trenger 3D – 2D-delen og vaktene i vakter/*.js (bruene i 3D og hele 3D-delen hoppes over).
+  Full kjøring uten SJEKK_DEL er som før.
+Tider (SJEKK_PROFIL=mobil, PORT=8806; maskinen delt med de andre hjelperne, «hele bildet» = tid per 3D-bilde i vakta «måling av
+ytelse» viser lasten):
+| kjøring | tid | godkjent | last | hele bildet |
+|---|---|---|---|---|
+| før (ingen endring, bare tidtaking) | 1082,8 s (18,0 min) | 116 ok, 0 FEIL | 10 -> 20 | 167 ms |
+| etter 1 (utenTegning, syntaks, filer) | 555,4 s (9,3 min) | 116 ok, 0 FEIL | 15 -> 25 | 625 ms |
+| etter 2 (+ ventPåBygging, telefonrettingene) | 537,8 s (9,0 min) | 116 ok, 0 FEIL | 15 -> 24 | 817 ms |
+| rask (SJEKK_DEL=rask) | 53,3 s | 47 ok, 1 FEIL (se under) | ca. 12 | – |
+De tregeste før -> etter 2: dyr i 3D 279 -> 25 s, bekker 3D 247 -> 26 s, hogst og riving (med «rare ting»-utsnittet) 159 -> 16 s,
+bygging i biter 145 -> 20 s, knapperaden 34 -> 11 s, syntaks 13 -> 0,2 s. Etter-kjøringene gikk med 4–5 ganger tregere tegning
+(mer last) enn før-kjøringen og ble likevel halvparten så lange; med samme last ville forskjellen vært større.
+Rask-kjøringen: vakta `vakter/krig.js` (eier: krig) feiler når 3D-delen ikke har kjørt før den: «knust lag ga seg: false»,
+TypeError «reading 'avhørt'». I full kjøring er den grønn. Vakta tåler altså ikke at den kjøres uten det de andre vaktene har satt
+opp – må rettes i krig.js (eller rask-delen må hoppe over den).
+Det som fortsatt tar tid (etter 2): gå selv 30 s, vegetasjon 27 s, første høyde (sidelasting) 26 s, bekker 26 s, måling av ytelse
+25 s, dyr 25 s, ferjer 22 s – her tegnes bilder med vilje (målinger, kamera, kompass), så de er ikke rørt.
