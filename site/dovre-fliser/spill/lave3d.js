@@ -222,5 +222,9 @@
   Lave.antall = () => laget.size;
   Lave.trekanter = () => Math.round(trekanter);
   Lave.oppdater = () => { const R = r3(); if (R) { sist = 0; oppdater(R); } };
+  // til vakten: lag nettet for en plan (uten scenen) og gi antall trekanter og om alle hjørnene er tall; nettet frigjøres straks
+  Lave.prøvNett = plan => { const p = plasser(plan, (x, y) => Interior.blokkert(plan, x, y), (x, y) => Interior.inni(plan.P, x, y)); if (!p) return null;
+    const m = lagNett(plan, p), a = m.geometry.attributes.position.array; let ok = true; for (let i = 0; i < a.length; i++) if (!(a[i] === a[i])) { ok = false; break; }
+    const ut = { trekanter: a.length / 9, tall: ok, loft: !!p.loft, traktor: !!p.traktor, hauger: (p.hauger || []).length }; m.geometry.dispose(); return ut; };
   Lave.sjekk = () => [...laget].map(([pl, m]) => ({ kl: pl.kl, areal: Math.round(pl.areal), trekanter: m.geometry.attributes.position.count / 3, gulv: pl.gulv }));
 })(typeof globalThis !== 'undefined' ? globalThis : this);

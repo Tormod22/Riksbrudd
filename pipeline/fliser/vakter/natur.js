@@ -53,9 +53,12 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     // RUNDE 5: låven – innholdet (høyloft, høy, redskap, trillebår, gråtass) i en prøvelåve når du går
     { const L = Lave3d.plasser(Interior.plan([[0, 0], [16, 0], [16, 10], [0, 10]], { i: 5151, kl: 'låve', h: 8, dør: { x: 8, y: 0, ux: 1, uy: 0, w: 3 } }), () => false, () => true);
       ut.låveRegler = L && { loft: !!L.loft, høy: L.høy.length, redskap: L.redskap.length, traktor: !!L.traktor };
-      krev(L && L.loft && L.høy.length > 5 && L.redskap.length >= 3 && L.trillebår, 'låvens plasser: ' + JSON.stringify(ut.låveRegler)); }
+      krev(L && L.loft && L.høy.length > 5 && L.redskap.length >= 3 && L.trillebår, 'låvens plasser: ' + JSON.stringify(ut.låveRegler));
+      // nettet for to prøvelåver (høy og lav himling) lages uten feil og med få trekanter
+      for (const [h, i] of [[8, 5151], [3.4, 77]]) { const pl = Interior.plan([[0, 0], [16, 0], [16, 10], [0, 10]], { i, kl: 'låve', h, dør: { x: 8, y: 0, ux: 1, uy: 0, w: 3 } }); pl.gulv = 0;
+        const n = Lave3d.prøvNett(pl); (ut.låveNett = ut.låveNett || []).push(n); krev(n && n.tall && n.trekanter > 300 && n.trekanter < 6000, 'låvenettet: ' + JSON.stringify(n)); } }
     return ut;
   });
   const ok = !d.feil.length;
-  return { ok, tekst: ok ? (d.i3d ? `trær med blad (${d.blad} nett), soldat ${Math.round(d.soldat)} trekanter, effekter og ${d.fjern ? d.fjern.holt : 0} skogholt` : 'reglene (3D var av)') : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? (d.i3d ? `trær med blad (${d.blad} nett), soldat ${Math.round(d.soldat)} trekanter, effekter, ${d.fjern ? d.fjern.holt : 0} skogholt, strand ${d.strand}, ingen blomst i prøvehus, låve ${(d.låveNett || []).map(n => n && n.trekanter).join('/')} trekanter` : 'reglene (3D var av)') : d.feil.join('; '), data: d };
 } };
