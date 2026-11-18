@@ -408,3 +408,12 @@ test_vegetasjon, test_kyst, test_fjernby3d grønne. Vakta lys grønn (PC, 3D på
 | «gjør klar», lengste pause | 297 / 394 ms | 141 / 332 ms |
 Lange oppgaver totalt og pausene i «henter høydene og kartet» varierte mer mellom de to kjøringene enn noe del 3 rører (der var det
 søppeltømming, `okonomi-visning` sin teller og oppgaver uten stakk) – de tallene sier ingenting om del 3.
+
+## Etter publiseringen 18. nov: brukerens «Mål hakk» på iPhone (Safari 26, Apple GPU, utsnitt 12 km)
+7 pauser over 50 ms på 20 s (sum 1,4 s, før 15. nov: 25 pauser, 6,4 s), 50 bilder i sekundet. Seks av pausene var ved byttet
+(«norge:2741 forbered3d → fjern3d.js:60» og «fjern3d.js:60 → norge:1412») – altså mellom slutten av forbered3d og neste pust, der
+sett3d setter inn utsnittet og første tegning laster opp alle nettene. Tiltak: lastOppNett(liste, R) i index.html tegner terrengnettet
+og husnettene (K.geo, K.hus) én gang til et mål på 1 × 1 punkt med MeshBasicMaterial før byttet, ett nett om gangen med pust
+(three.js laster opp attributtene, det ekte nettet bruker dem). R3.forhåndslastet = antall. Prøvd: Dovre (1 nett) og /rogaland ved Sand
+(18 nett) – ingen GL-feil, antallet geometrier på grafikkortet øker ikke over bytter. Trærnes instansmatriser lastes fortsatt opp ved
+første tegning. Virkningen kan bare måles hos brukeren.

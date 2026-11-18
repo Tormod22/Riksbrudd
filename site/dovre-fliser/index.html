@@ -2739,6 +2739,23 @@ async function forbered3d(u) {
   await pusterom(); K.vannTex = u.vann.piksler ? await lastOppIBiter(u.vann.piksler, u.vann.width, R, u.vann, true) : null;
   if (!K.vannTex) { await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex); }
   await pusterom();
+  // Terrengnettet og husnettene sendes også til grafikkortet på forhånd, ett og ett (18. nov, brukerens «Mål hakk» på iPhone: de lengste
+  // pausene kom ved byttet – første tegning av det nye utsnittet lastet opp alle nettene i samme bilde). kastForberedt frigjør dem.
+  R.forhåndslastet = await lastOppNett([K.geo, ...Object.values(K.hus || {})], R);
+}
+// Tegner hvert nett én gang til et mål på 1 × 1 punkt med et enkelt materiale: three.js laster da opp punktene (attributtene) til
+// grafikkortet, og det ekte nettet med samme geometri bruker dem etterpå uten ny opplasting. Pust mellom nettene (ca. 6 ms per bilde).
+async function lastOppNett(liste, R) {
+  const geos = liste.filter(g => g && g.isBufferGeometry && g.attributes.position); if (!geos.length || !R.renderer) return 0;
+  if (!R.lastOpp) { const sc = new THREE.Scene(), m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial()); m.frustumCulled = false; sc.add(m);
+    R.lastOpp = { rt: new THREE.WebGLRenderTarget(1, 1), sc, m, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1) }; }
+  const L = R.lastOpp, r = R.renderer, tom = L.m.geometry; let n = 0, t0 = performance.now();
+  for (const g of geos) {
+    const før = r.getRenderTarget(), auto = r.info.autoReset; r.info.autoReset = false;
+    L.m.geometry = g; r.setRenderTarget(L.rt); r.render(L.sc, L.cam); r.setRenderTarget(før); r.info.autoReset = auto; L.m.geometry = tom; n++;
+    if (performance.now() - t0 > 6) { await pusterom(); t0 = performance.now(); }
+  }
+  return n;
 }
 // BILDE TIL GRAFIKKORTET I STRIPER (18. nov, hakk ved nytt utsnitt). Før: CanvasTexture av kartbildet (opptil 4096 × 4096) og
 // renderer.initTexture – nettleseren leste hele lerretet og sendte 64 MB i ett strekk (her: 270 ms i én oppgave; vannmasken 66 ms).
