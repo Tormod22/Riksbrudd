@@ -10,7 +10,8 @@
  */
 (function (rot) {
   // RUNDE 4: lagpanelet (#panel) står også til venstre (nede) – målt: Leir, Folk og Samfunn lå oppå det (skript natt/ui4/paneler.js)
-  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel'], høyre: ['karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
+  // og gruppa av lag (#flytgruppe, nede til venstre på PC der lagpanelet står) – den lå under Leir-menyen og krigskartet
+  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe'], høyre: ['karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
   const plass = id => Object.keys(PLASS).find(p => PLASS[p].includes(id)) || null;
   // hvilke åpne paneler som må vike når «ny» åpnes (smal = telefon: venstre og høyre er samme plass)
   function viker(ny, åpne, smal) { const p = plass(ny); if (!p) return []; const samme = q => q === p || (smal && p !== 'midt' && q !== 'midt' && q !== null); return åpne.filter(id => id !== ny && samme(plass(id))); }
@@ -47,6 +48,7 @@ body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; }
   function lukk(id) { const e = $(id); if (!e) return false;
     if (id === 'krig') { if (rot.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen() && $('krigknapp')) { $('krigknapp').click(); return true; } return false; }
     if (id === 'leirmeny') { if ($('leirknapp')) { $('leirknapp').click(); return true; } return false; }
+    if (id === 'flytgruppe') { if (rot.FlytSpill && FlytSpill.velg) { FlytSpill.velg([]); return true; } return false; }
     if (id === 'panel') { if (typeof rot.lukkPanel === 'function') { rot.lukkPanel(); return true; } return false; }
     if (id === 'stridpanel') { if (rot.StridSpill && StridSpill.lukk) { StridSpill.lukk(); return true; } e.classList.remove('på'); return true; }
     const b = e.querySelector('.lukk, button[aria-label^="Lukk"]'); if (b) { b.click(); return true; } return false; }

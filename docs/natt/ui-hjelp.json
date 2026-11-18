@@ -6,7 +6,7 @@
  ],
  [
   "Tallene øverst",
-  "Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker.",
+  "Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk, eller hold fingeren på flisa – da åpnes ikke det flisa ellers åpner) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker. Linja «Påvirkes av» sier hva som gjør tallet større eller mindre.",
   "Kom i gang"
  ],
  [
@@ -21,7 +21,7 @@
  ],
  [
   "Merkene i kartet",
-  "Formen sier hvem: egne lag er liggende rektangler, fiender er ruter som står på spissen, nøytrale ting er kvadrater. Fargen sier hvilken side. En stiplet rute er der en fiende sist ble sett.",
+  "Formen sier hvem: egne er liggende rektangler, fiender er ruter som står på spissen, nøytrale ting er kvadrater. Tegnet inni sier hva: kryss = lag, egne tegn for lastebil, stridsvogn, rakettartilleri, radarbil og speiderbil, ring = tettsted, anker = kai. Fargen sier hvilken side. En stiplet rute er der en fiende sist ble sett. Knappen med tre rader nederst blant zoomknappene viser hele tegnforklaringen.",
   "Lag og strid"
  ],
  [
@@ -48,5 +48,30 @@
   "Delene i Leir-menyen",
   "Trykk på en overskrift i Leir-menyen for å legge delen sammen eller åpne den. Spillet husker valget. De lange delene er lagt sammen fra start.",
   "Leiren"
+ ],
+ [
+  "Tegnforklaring",
+  "Knappen med tre små rader nederst blant zoomknappene (i 2D) viser hva merkene, fargene og strekene i kartet betyr: egne, fiender og nøytrale, lag, kjøretøy, tettsteder, kaier, marsjruter, fronter, «sist sett» og siktfeltet.",
+  "Lag og strid"
+ ],
+ [
+  "Paneler",
+  "Det står ett panel til venstre og ett til høyre. Åpner du et nytt på samme side, lukkes det gamle – også lagpanelet nede til venstre når du åpner Leir, Folk eller Samfunn (og omvendt når du velger et lag). Målestokken flytter seg til høyre for panelet, og oversikten nede til høyre viker for panelene til høyre.",
+  "Kom i gang"
+ ],
+ [
+  "Byggelista",
+  "På PC står byggene i fanen Bygg som små ruter med ikon, navn og pris – trykk på ruta for å bygge. Pek på en rute for materialer og hva bygget gjør. Trykker du på et bygg i leiren, viser panelet en tegning av det.",
+  "Leiren"
+ ],
+ [
+  "Flere lag i 3D",
+  "Shift + dra med musa i 3D (og i 2D) tegner en ramme rundt lagene du vil velge. Shift + trykk på et lag tar det med eller ut. «Velg lag» i kommandolinja velger alle lagene på skjermen. Høyre museknapp dreier kameraet. Når du velger mål, står marsjtida ved pekeren før du gir ordren.",
+  "Lag og strid"
+ ],
+ [
+  "Krigen på nytt",
+  "Leir-menyen → Mål → «Se krigen på nytt» spiller av bilder av krigen (ett hver tredje spilltime): hvem som holdt tettstedene, lagene og kjøretøyene, byggene i leiren og flammer der det ble kjempet. Under står hvor mange lag, mann, kjøretøy, bygg, folk og penger dere hadde.",
+  "Lag og strid"
  ]
 ]

@@ -139,7 +139,7 @@ body.kort .knapper #nesteh{ min-width:34px; padding:0 6px; }
 #marsjvalg.på{ display:flex; } #marsjvalg b{ color:#f0e2b0; } #marsjvalg small{ display:block; color:var(--ink-dim,#a99); font-size:12px; } #marsjvalg button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; min-height:40px; min-width:64px; padding:2px 12px; font:inherit; cursor:pointer; } #marsjvalg button.hoved{ border-color:#c9b26a; background:#4a3f22; } #marsjvalg button:disabled{ opacity:.45; }
 #flytgruppe{ position:fixed; left:10px; top:calc(var(--topp,58px) + 56px); z-index:10; display:none; max-width:min(330px,92vw); padding:8px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #flytgruppe.på{ display:block; } #flytgruppe .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } #flytgruppe small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; line-height:1.3; } #flytgruppe button.på{ border-color:#c9b26a; background:#4a3f22; }
-body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgruppe{ top:auto; bottom:64px; left:6px; max-width:calc(100vw - 70px); }`;
+body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:calc(14px + env(safe-area-inset-bottom,0px)); } body.smal #flytgruppe, body.kort #flytgruppe{ top:auto; bottom:64px; left:6px; max-width:calc(100vw - 70px); }`;
   document.head.appendChild(css);
   const kort = el('div', { id: 'flytkort', role: 'status' }); document.body.appendChild(kort);
   let spoler = false, før = null, sistBilde = 0, kortTid = 0, sistStopp = null;
