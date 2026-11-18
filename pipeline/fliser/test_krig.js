@@ -28,7 +28,7 @@ ok(/omringet/.test(K.girSeg({ ute: 2, nær: 400, omringet: true, forhold: .3 }))
 ok(K.væremåte('Kåre Lien') === K.væremåte('Kåre Lien') && Object.values(K.VÆREMÅTER).includes(K.væremåte('x')), 'samme navn, samme væremåte');
 { const s = new Set(); for (let i = 0; i < 60; i++) s.add(K.væremåte('Fører ' + i).navn); ok(s.size === 4, 'alle fire væremåtene forekommer'); }
 // røverne
-ok(K.røverVariant(1, 12) === 'rett' && K.røverVariant(2, 12) === 'to' && K.røverVariant(3, 12) === 'sabotasje' && K.røverVariant(4, 12) === 'natt' && K.røverVariant(4, 23) === 'rett' && K.røverVariant(6, 12) === 'to', 'variantene på rundgang, om natta kommer de rett på');
+ok(K.røverVariant(1, 12) === 'rett' && K.røverVariant(2, 12) === 'to' && K.røverVariant(3, 12) === 'sabotasje' && K.røverVariant(4, 12) === 'natt' && K.røverVariant(4, 23) === 'rett' && K.røverVariant(6, 12) === 'to' && K.røverVariant(2, 12, 1) === 'sabotasje' && K.røverVariant(2, 12, 2) === 'to', 'variantene på rundgang, om natta kommer de rett på');
 // natt
 ok(K.natt(12) === 0 && K.natt(23) === 1 && K.natt(2) === 1 && K.natt(21.25) > 0 && K.natt(21.25) < 1 && K.natt(4) > 0 && K.natt(4) < 1 && K.natt(5) === 0 && K.natt(36) === 0, 'mørket etter klokka');
 ok(K.nattSikt(12, false, false) === 1 && nær(K.nattSikt(0, false, false), R.natt.sikt) && K.nattSikt(0, true, false) === 1 && K.nattSikt(0, false, true) === 1, 'nattsikt og lys opphever natta');

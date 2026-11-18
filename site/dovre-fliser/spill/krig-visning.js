@@ -230,11 +230,12 @@
   }
 
   // ---------- røverne varierer ----------
+  let ventere = [];
   function røvere() {
-    const Sp = window.SpilletSpill, Tr = Sp && Sp.T && Sp.T(), L = leir(); if (!Tr || !Tr.aktiv || !L) return;
+    const Sp = window.SpilletSpill, Tr = Sp && Sp.T && Sp.T(), L = leir(); if (!Tr || !Tr.aktiv || !L) { ventere = []; return; }
     const lag = ENHETER.filter(e => e.raid === Tr.aktiv && levende(e)); if (!lag.length) return;
     let V = T.raid[Tr.aktiv];
-    if (!V) { if (lag.some(e => e.planlegger)) return; let id = K.røverVariant(Tr.aktiv, K.klokkeTime(tid)); if (id === 'to' && lag.length < 2) id = 'rett';
+    if (!V) { if (lag.some(e => e.planlegger)) return; const id = K.røverVariant(Tr.aktiv, K.klokkeTime(tid), lag.length);
       V = { id, t: tid }; T.raid = { [Tr.aktiv]: V }; if (K.VARIANTER[id].tekst) logg(K.VARIANTER[id].tekst);
       if (id === 'to') for (const e of lag.slice(Math.ceil(lag.length / 2))) { const nx = 2 * L.x - e.x, ny2 = 2 * L.y - e.y;
         lagVindu([nx - 200, ny2 - 200, nx + 200, ny2 + 200], false).then(v => { if (Terreng.verdi(v, v.K, nx, ny2, 3) === 3 || !levende(e)) return; e.x = nx; e.y = ny2; e.sti = null; e.siktSkitten = true; ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); skitten = true; }).catch(() => {}); }
@@ -243,7 +244,8 @@
         const mål = B.find(b => /aggregat|drivstofftank|radiomast|lager/.test(b.type)) || B[0], e = lag[lag.length - 1];
         if (mål) { V.bygg = mål.id; V.lag = e.navn = `Sabotører ${Tr.aktiv}`; ordre(e, mål.x, mål.y, true); } else V.id = 'rett'; }
       lagre(); return; }
-    if (V.id === 'natt' && !V.gått && (K.natt(K.klokkeTime(tid)) >= .5 || tid >= V.til)) { V.gått = true; logg('Røverne kommer i mørket!'); for (const e of lag) ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); lagre(); }
+    ventere = V.id === 'natt' && !V.gått ? lag : [];
+    if (V.id === 'natt' && !V.gått && (K.natt(K.klokkeTime(tid)) >= .5 || tid >= V.til)) { V.gått = true; ventere = []; logg('Røverne kommer i mørket!'); for (const e of lag) ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); lagre(); }
     if (V.id === 'sabotasje') { const e = lag.find(q => q.navn === V.lag), LS = window.LeirSpill && LeirSpill.tilstand(), b = LS && LS.bygg.find(q => q.id === V.bygg); if (!e) return;
       if (!V.gjort && b && Math.hypot(e.x - b.x, e.y - b.y) <= R.røvere.sabotasje) { V.gjort = true; const r = Leir.skade(LS, b.id, R.røvere.skade), navn = (Leir.BYGG[b.type] || {}).navn || 'et bygg';
         logg(`Sabotasje! Røverne har ${r === 'ødelagt' ? 'ødelagt' : 'skadet'} ${navn.toLowerCase()} i leiren og stikker av.`); if (LeirSpill.lagre) LeirSpill.lagre(); if (LeirSpill.oppdater3d) LeirSpill.oppdater3d();
@@ -256,6 +258,8 @@
   let akk = 0, sistLagret = 0;
   KROKER.sim.push(dt => {
     if (HELI) heliSteg(dt);
+    // røvere som venter på mørket, står stille (spillet-visning.js gir dem ellers ordren på nytt)
+    for (const e of ventere) if (e.sti) { e.sti = null; e.siktSkitten = true; }
     // bygdevernet holder stedet: ingen tar tettstedet mens vernet står
     if (vernAktive.length && window.TETTSTEDER) for (const { by } of vernAktive) { const t = TETTSTEDER.get(by.e.id); if (t && t.inntar && t.inntar.side === 'blå') t.inntar.sek = 0; }
     // laget snur seg mot den det skyter på, eller den som skyter på det
@@ -299,7 +303,7 @@
   });
   const css = document.createElement('style');
   css.textContent = `#krigpanel{ position:fixed; right:10px; top:calc(var(--topp,58px) + 56px); z-index:31; display:none; width:min(360px,94vw); max-height:calc(100vh - var(--topp,58px) - 120px); overflow:auto; padding:10px 12px 12px; background:#1c170f; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; border-radius:6px; }
-#krigpanel.på{ display:block; } #krigpanel h2{ margin:0 28px 6px 0; font-size:19px; } #krigpanel .rad{ margin:7px 0; } #krigpanel .rad button{ min-height:36px; padding:4px 10px; margin-right:6px; } #krigpanel small{ display:block; color:var(--ink-dim,#a99); margin-top:2px; }
+#krigpanel.på{ display:block; } #krigpanel h2{ margin:0 28px 6px 0; font-size:19px; } #krigpanel .rad{ margin:7px 0; } #krigpanel .rad button{ min-height:36px; padding:4px 12px; margin-right:6px; background:#2a2216; color:inherit; border:1px solid rgba(201,178,106,.55); border-radius:4px; font:inherit; cursor:pointer; } #krigpanel .rad button:hover:not(:disabled){ background:#3a2f1d; } #krigpanel small{ display:block; color:var(--ink-dim,#a99); margin-top:2px; }
 #krigpanel .lukk{ position:absolute; right:6px; top:4px; background:none; border:0; color:inherit; font-size:22px; min-width:34px; min-height:34px; cursor:pointer; }
 .krigliste{ margin:4px 0 8px; } .krigliste .rad{ display:flex; gap:8px; align-items:center; justify-content:space-between; padding:4px 0; border-top:1px solid rgba(201,178,106,.18); } .krigliste .rad small{ color:var(--ink-dim,#a99); display:block; } .krigliste button{ min-height:32px; white-space:nowrap; }`;
   document.head.appendChild(css);

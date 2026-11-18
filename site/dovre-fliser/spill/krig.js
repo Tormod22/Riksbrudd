@@ -37,7 +37,7 @@
     fred: { pris: 5e6, varer: 1440, økning: 1.5, brudd: 2 },
     // bygdevern i tettsteder ingen eier: én mann per «perFolk» innbyggere (mellom «minst» og «høyst»), treffsjanse per mann og
     // runde; en avtale koster «kr» per innbygger (mellom «krMinst» og «krHøyst»). Å knuse vernet koster «moral» i leiren.
-    vern: { perFolk: 150, minst: 3, høyst: 14, treff: .04, motTreff: .06, kr: 2000, krMinst: 5e5, krHøyst: 8e6, moral: 5 },
+    vern: { perFolk: 150, minst: 3, høyst: 14, treff: .06, motTreff: .06, kr: 2000, krMinst: 5e5, krHøyst: 8e6, moral: 5 },
     // helikopterfrakt: fart i km/t, lengste tur i meter, pris per tur i kroner
     heli: { fart: 200, radius: 60000, pris: 50000, plasser: 12 },
     // drone i kameravakta: varsler om samme lag høyst hvert «varsel» minutt
@@ -106,8 +106,10 @@
     natt: { navn: 'venter på mørket', tekst: 'Røverne er sett i terrenget, men de venter – de kommer trolig når det blir mørkt.' },
     sabotasje: { navn: 'sabotasje', tekst: 'Noen av røverne er ute etter å ødelegge i leiren, ikke å slåss.' },
   };
-  function røverVariant(bølge, time) {
-    if (bølge <= 1) return 'rett'; const natta = natt(time) > .5, r = ['to', 'sabotasje', 'natt', 'rett'][(bølge - 2) % 4];
+  // antall: hvor mange røverlag bølgen har – «fra to kanter» krever minst to (ellers sabotasje).
+  function røverVariant(bølge, time, antall) {
+    if (bølge <= 1) return 'rett'; const natta = natt(time) > .5; let r = ['to', 'sabotasje', 'natt', 'rett'][(bølge - 2) % 4];
+    if (r === 'to' && antall !== undefined && antall < 2) r = 'sabotasje';
     return r === 'natt' && natta ? 'rett' : r;
   }
   // ---------- natt ----------
