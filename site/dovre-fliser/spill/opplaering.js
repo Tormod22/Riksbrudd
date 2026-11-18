@@ -84,6 +84,8 @@ body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } bo
     const nye = Opplaering.oppdater(T, bilde()); if (nye.length) lagre();
     const s = Opplaering.neste(T);
     if (!s) { if (T.slutt) { boks.classList.remove('på'); ring.classList.remove('på'); return; } tegn(null, 'Opplæringen er ferdig'); boks.classList.add('på'); ring.classList.remove('på'); return; }
+    // mens du går (eller sitter i et kjøretøy) er menyene borte: da venter opplæringen til du er tilbake
+    if (document.body.classList.contains('gaar') || document.body.classList.contains('ikontrollrom') || document.body.classList.contains('ikamera')) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
     tegn(s); boks.classList.add('på');
     // på telefon dekker menyene skjermen: da står bare overskriften igjen helt nederst
     const tlf = document.body.classList.contains('kort'), meny = ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'].some(id => synlig($(id)));

@@ -83,7 +83,7 @@ body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper
   ];
   // andre moduler kan legge til knapper: window.KOMMANDO_TILLEGG.push({ k, navn, tast, ikon (svg-innmat), fins(), på(), trykk(), tittel }) – før denne fila lastes
   for (const T of window.KOMMANDO_TILLEGG || []) { KN.push(T); if (T.ikon) { const st = document.createElement('style'); st.textContent = `#kommando button[data-k="${T.k}"], #mkom button[data-k="${T.k}"]{ --kn:${svg(T.ikon)}; }`; document.head.appendChild(st); } }
-  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.title = K.tittel; b.append(document.createTextNode(K.navn)); if (K.tast) { const t = document.createElement('i'); t.textContent = K.tast; b.appendChild(t); } b.onclick = e => { e.stopPropagation(); K.trykk(); oppdater(); }; K.el = b; bar.appendChild(b); }
+  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.dataset.tips = K.navn + '|' + K.tittel; b.setAttribute('aria-label', K.tittel); b.append(document.createTextNode(K.navn)); if (K.tast) { const t = document.createElement('i'); t.textContent = K.tast; b.appendChild(t); } b.onclick = e => { e.stopPropagation(); K.trykk(); oppdater(); }; K.el = b; bar.appendChild(b); }
   // TELEFONEN (18. nov): samme kommandoer som en egen rad nederst (#mkom), store nok til en tommel, til venstre for zoomknappene.
   // Egen rad (ikke #kommando), så PC-linja er urørt. Borte når du går (styrespak, Huk og Hopp står der), bygger eller har et panel åpent.
   const mbar = document.createElement('div'); mbar.id = 'mkom'; mbar.setAttribute('role', 'toolbar'); mbar.setAttribute('aria-label', 'Kommandoer'); document.body.appendChild(mbar);
@@ -109,9 +109,9 @@ body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper
   function merkStats(bred) { const S = document.querySelector('.stats'); if (!S) return; for (const d of S.children) { const b = d.querySelector('b[id]') || d.querySelector('[id]'); if (!b) continue; if (d.dataset.s !== b.id) d.dataset.s = b.id;
       // «0 %» og «ute» sier ingenting alene: de får ordet sitt foran tallet (også på telefon)
       if (ORD[b.id] && d.dataset.ord !== ORD[b.id]) d.dataset.ord = ORD[b.id];
-      if (!bred) { if (d.style.order) d.style.order = ''; continue; } const i = REKKE.indexOf(b.id); const o = i >= 0 ? String(i) : '50'; if (d.style.order !== o) d.style.order = o; if (TEKNISK.includes(b.id)) d.dataset.teknisk = '1';
       // en flis uten tall (bare en strek) sier ingenting: den vises først når den har noe å si
-      const tom = /^[–-]?$/.test(b.textContent.trim()) ? '1' : ''; if ((d.dataset.tom || '') !== tom) { if (tom) d.dataset.tom = tom; else delete d.dataset.tom; }
+      { const tom = /^[–-]?$/.test(b.textContent.trim()) ? '1' : ''; if ((d.dataset.tom || '') !== tom) { if (tom) d.dataset.tom = tom; else delete d.dataset.tom; } }
+      if (!bred) { if (d.style.order) d.style.order = ''; continue; } const i = REKKE.indexOf(b.id); const o = i >= 0 ? String(i) : '50'; if (d.style.order !== o) d.style.order = o; if (TEKNISK.includes(b.id)) d.dataset.teknisk = '1';
       // ordet som er skjult i spillskjermen, står i verktøytipset
       if (!d.title && !window.FlisTips) { const o = d.querySelector('span:not([id])'); if (o && o.textContent.trim()) d.title = o.textContent.trim(); } } }
   function oppdater() { const bred = window.innerWidth >= 900 && !document.body.classList.contains('kort'); if (document.body.classList.contains('spill') !== bred) document.body.classList.toggle('spill', bred); merkStats(bred); let noen = false;

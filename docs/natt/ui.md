@@ -1,0 +1,52 @@
+# Nattarbeid 18. nov – pakke «ui» (grenen claude/natt18-ui)
+
+Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle tall er Claudes forslag.
+
+## Laget
+- **Én rad med fliser + «mer»-flis** (`spill/spillhud.js`): `passInn()` måler raden; får ikke flisene plass, skjules først årstid og vind
+  (`.stats[data-trang]`), så går de minst viktige (UT: du er, kontroll, olje, mål, stål, betong, tre, folk, strøm, diesel) inn bak flisa
+  `#flismer` («+3»), som åpner `#flismerliste`. `SpillHud.mer()`, `SpillHud.åpneMer(bool)`, `SpillHud.passInn()`.
+- **Ord på «0 %» og «ute»**: `data-ord` («Kontroll», «Du er») vises foran tallet (PC og telefon); kontroll-flisa har skjold-ikon.
+- **Forklaring på flisene** (`spill/flistips.js`, `window.FlisTips`): pek (PC) eller trykk (telefon) på en flis – hva tallet er, hva
+  fargene betyr, og hvordan det står nå (den gamle `title` flyttes til `data-tittel`). Alt med `data-tips="Tittel|Tekst"` får samme rute
+  (kommandolinja, kortene i byggemenyen, «mer»). Lapp som flyter fra kassa når pengene endres, og et blink i tallet.
+- **Telefon** (`spill/spillhud.js`): flisene er brikker på den ene sveipbare raden (under 34 px), og kommandolinja `#mkom` står nederst
+  (Leir, Folk, Tropper, Krig, Deg; 52 px høye, til venstre for zoomknappene). `body.mtlf` skjuler Leir/Krig/Deg i den trange raden
+  øverst; `body.mkom` løfter målestokk, nordpil og kildetekst. Raden viker når du går, bygger eller har et panel åpent.
+  PC-linja `#kommando` er urørt (vakten «spillskjermen» krever den skjult på telefon). `SpillHud.telefon()`.
+- **Opplæring** (`spill/opplaering.js`, regler + `window.OpplaeringSpill`, `test_opplaering.js`): fem steg (Åpne Leir, Bygg en brakke,
+  Sett to på bygg, Lag en tropp, Gå i 3D) i en rute nederst, med en ring rundt knappen/stedet. «Hopp over» og «Slå av»; kan slås på
+  igjen i Leir-menyen → Mål → «Opplæring». Lagres per leir («riksbrudd-opplaering»), av/på i «riksbrudd-opplaering-av».
+  Vises ikke i testene før `OpplaeringSpill.test = true`. På telefon blir ruta én linje nederst mens en meny er åpen.
+- **Kort logg** (`spill/hud.js`, `window.Hud`): ikon etter innholdet (varsel, mål, bygg, folk, penger, radio, ellers snakkeboble),
+  høyst to linjer, rød kant på varsler; trykk på loggen for å lese alt (lukker seg etter 10 s). Telefonen har én linje som før.
+- **Byggemenyen som kort** (`visMeny` i `spill/leir-visning.js`): rutenett med tegning, navn, pris og én linje (tid · strøm);
+  materialer og beskrivelse står i forklaringen (`data-tips`). Knappen i hvert kort er den samme som før.
+- **Tegninger** (`spill/tegninger.js`, `window.Tegninger`, uten DOM): `bygg(type)` (21 bygg + reservehus), `våpen(id)` (5),
+  `person(frø)` (samme navn = samme ansikt), `bilde(svg)` = data-adresse. Brukes i byggemenyen, i lagpanelet (portrett per mann,
+  `spill/panelpynt.js`) og i våpenruta når du går (`spill/narhud.js`). Nye bygg i `Leir.BYGG` bør få en tegning (vakta krever det).
+- **Ett merkesett** (`spill/merker.js`, `window.Merker`, `test_merker.js`): eget = rektangel, fiende = rute på spissen, nøytralt =
+  avrundet kvadrat; tegn inni for lag, kjøretøy, bygg, kai, tettsted. `tegnLag` i index.html bruker det for lagene og «sist sett»,
+  `symKai` for ferjekaiene, og oversikten i 2D.
+- **Færre infrastrukturmerker** (index.html, `INFRA_FOKUS` + `infraViktig`): bruer, tunneler, kraftverk, dammer og ferjekaier vises
+  bare helt nær, når de er store, skadet, nær valgt lag/kjøretøy (2,5 km) eller målet deres, nær leiren, eller når krigskartet er åpent.
+  «Kartmerker: de viktige / alle» i ☰ (gruppen Kartet, `#allemerker`, «riksbrudd-allemerker»). I testene som før (`INFRA_FOKUS.test`).
+- **Lysere 2D-kart** (`kartflis.js`): `KARTLYS_GAMMA` 0,74, `KARTLYS_SKYGGE` 0,46 (før 0,3), `KARTLYS_METNING` 1,12 – bare der skyggen
+  tegnes (2D); 3D-bakken er urørt. Lysere og litt bredere veger (VEG). Luft mellom navnene i `tegnEtiketter` (færre navn i tette strøk).
+- **Oversikt i 2D** (`spill/minikart2d.js`, `window.Minikart2d`): zoomet inn (≤ 2,5 m per punkt) på PC kommer en rund oversikt nede
+  til høyre: leir, lag, kjøretøy, sette fiender, tettsteder og skjermens ramme; trykk flytter kartet. Følger «Minikart» i ☰.
+- **Overganger** (`spill/tema.js`): panelene glir inn, kort og knapper svarer; alt slås av med «redusert bevegelse».
+- **Våpenruta** flyttet fra minikartet (`#nhud .vapen` right 282 px), `#panel` smalere/høyere så det ikke ligger under kommandolinja.
+
+## Fellesfiler som er endret
+- `site/dovre-fliser/index.html`: (1) fire skript-tagger rett før spillhud.js (merker, tegninger, flistips, opplaering, minikart2d);
+  (2) `INFRA_FOKUS`/`infraViktig` rett etter `INFRA_REKKE`; (3) luft i `tegnEtiketter`; (4) `tegnLag`: lagsymbol og «sist sett» via
+  Merker; (5) `symKai` via Merker.
+- `site/dovre-fliser/kartflis.js`: VEG-fargene, KARTLYS_* og skyggeløkka i `komponer`.
+- `spill/leir-visning.js`: bare kortene i bygglista (visMeny) og CSS for dem.
+
+## Ikke gjort
+- Kjøretøy, tettsteder og kaiene fra `spill/kaier.js` bruker ikke Merker ennå (andre filer) – API-et er klart (`Merker.tegn`).
+- Portretter i Folk-panelet og tegning i byggpanelet (panelene bygges på nytt ved sammenligning av innerHTML – må gjøres i filene selv).
+- Kaiene (ankermerkene i kaier.js) er ikke med i «bare når de betyr noe».
+- Tegnforklaring i kartet, og opplæring ut over de fem stegene.

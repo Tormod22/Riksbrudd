@@ -542,7 +542,8 @@ function tegnEtiketter(g, etiketter, W, H) {
   }
 }
 // Symbolene (samme i 2D og 3D). Gir radien tilbake, så navnet kan stå over.
-function symKai(g, px, py) { g.fillStyle = '#8fb3d4'; g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = 1.2; g.fillRect(px - 3.5, py - 3.5, 7, 7); g.strokeRect(px - 3.5, py - 3.5, 7, 7); return 3.5; }
+function symKai(g, px, py) { if (window.Merker) return Merker.tegn(g, px, py, { forhold: 'nøytral', slag: 'kai', farge: '#2f5878', r: 7.5 });   // felles merkesett (18. nov): nøytralt = kvadrat, anker = kai
+  g.fillStyle = '#8fb3d4'; g.strokeStyle = 'rgba(15,11,7,.9)'; g.lineWidth = 1.2; g.fillRect(px - 3.5, py - 3.5, 7, 7); g.strokeRect(px - 3.5, py - 3.5, 7, 7); return 3.5; }
 function symKraft(g, px, py, o) {   // blå sirkel med lyn, størrelse etter ytelse
   const r = Math.max(3.5, Math.min(10, 3 + Math.sqrt(o.e.mw || 0) / 2.5));
   g.fillStyle = '#26394d'; g.strokeStyle = '#9cc1e0'; g.lineWidth = 1.3; g.beginPath(); g.arc(px, py, r, 0, 6.283); g.fill(); g.stroke();
@@ -2985,11 +2986,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/tema.js?v=2ba22aaa4c"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
-<script src="/dovre-fliser/spill/merker.js?v=6aae274dfb"></script>
+<script src="/dovre-fliser/spill/merker.js?v=e007fd169f"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=8b820fd1b7"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=0edb043a66"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=da92510102"></script>
-<script src="/dovre-fliser/spill/spillhud.js?v=88366e5d6f"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=fc65e32c9e"></script>
+<script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
+<script src="/dovre-fliser/spill/spillhud.js?v=f5d6b7cdfd"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 </body>
 </html>

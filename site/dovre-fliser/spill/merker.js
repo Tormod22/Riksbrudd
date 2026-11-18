@@ -28,7 +28,9 @@
     // tegnet inni holder seg innenfor formen (klippes for ruta)
     g.save(); omriss(g, f, x, y, r); g.clip(); g.strokeStyle = lys; g.fillStyle = lys; g.lineWidth = 1.2; g.beginPath();
     const s = v.slag || 'lag';
-    if (s === 'lag') { g.moveTo(x - w, y - h); g.lineTo(x + w, y + h); g.moveTo(x + w, y - h); g.lineTo(x - w, y + h); g.stroke(); }
+    // slag 'tom' = bare formen (små merker i oversikten)
+    if (s === 'tom') g.beginPath();
+    else if (s === 'lag') { g.moveTo(x - w, y - h); g.lineTo(x + w, y + h); g.moveTo(x + w, y - h); g.lineTo(x - w, y + h); g.stroke(); }
     else if (s === 'kjøretøy') { const a = Math.min(w, h * 1.6) * .62, b = h * .42; g.ellipse(x, y - b * .15, a, b, 0, 0, 6.283); g.stroke(); g.beginPath(); g.arc(x - a * .55, y + b * .95, 1.3, 0, 6.283); g.arc(x + a * .55, y + b * .95, 1.3, 0, 6.283); g.fill(); }
     else if (s === 'bygg') { const a = Math.min(w, h) * .62; g.moveTo(x - a, y + a * .75); g.lineTo(x - a, y - a * .1); g.lineTo(x, y - a * .85); g.lineTo(x + a, y - a * .1); g.lineTo(x + a, y + a * .75); g.closePath(); g.stroke(); }
     else if (s === 'kai') { const a = Math.min(w, h) * .7; g.moveTo(x, y - a * .55); g.lineTo(x, y + a * .8); g.moveTo(x - a * .45, y - a * .2); g.lineTo(x + a * .45, y - a * .2); g.moveTo(x - a * .75, y + a * .25); g.quadraticCurveTo(x - a * .6, y + a * .85, x, y + a * .8); g.quadraticCurveTo(x + a * .6, y + a * .85, x + a * .75, y + a * .25); g.stroke(); g.beginPath(); g.arc(x, y - a * .75, a * .2, 0, 6.283); g.stroke(); }
