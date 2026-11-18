@@ -203,8 +203,9 @@
     if (f && f.helse) ut.helse = f.helse; return ut; }
 
   // BEHOLDERNE I ET BYGG: møblene i planen som det kan ligge noe i, med nummer per type (stabilt for samme bygg)
-  function beholdere(pl) { const tel = {}, ut = []; if (!pl || !pl.møbler) return ut;
-    for (const m of pl.møbler) { if (!BEHOLDERE[m.type]) continue; const k = tel[m.type] = (tel[m.type] || 0) + 1; ut.push({ type: m.type, k: k - 1, m, ...BEHOLDERE[m.type] }); }
+  // (møbler som er flyttet – spill/mobler.js – har sin opprinnelige nøkkel i m.nk; den følger dem, så innholdet følger med)
+  function beholdere(pl, i) { const tel = {}, ut = []; if (!pl || !pl.møbler) return ut;
+    for (const m of pl.møbler) { if (!BEHOLDERE[m.type]) continue; const k = m.flyttet ? -1 : (tel[m.type] = (tel[m.type] || 0) + 1) - 1; ut.push({ type: m.type, k, m, nk: m.nk || nøkkel(i === undefined ? pl.i : i, m.type, k), ...BEHOLDERE[m.type] }); }
     return ut; }
   // avstanden fra (x, y) til kanten av møbelet (0 inni)
   function avstand(m, x, y) { const c = Math.cos(m.a || 0), s = Math.sin(m.a || 0), dx = x - m.x, dy = y - m.y, u = dx * c + dy * s, v = -dx * s + dy * c;

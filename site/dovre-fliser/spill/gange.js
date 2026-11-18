@@ -8,7 +8,7 @@
 // Kroker i index.html: kamera3d() spør Gange.kamera når R3.fot er satt, og styringen i 3D sender pekerne hit først (Gange.peker).
 (function () {
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);   // R3 er en let i index.html, ikke window.R3
-  const taster = new Set(); let sist = 0, spak = null, se = null, lagret = null, kropp = null, hoppVent = false, mobilHuk = false, fov = 50, kroppU = null, hoppHoldt = false, hukHoldt = false, fører = null, ligger = false;
+  const taster = new Set(); let sist = 0, spak = null, se = null, lagret = null, kropp = null, hoppVent = false, mobilHuk = false, fov = 50, kroppU = null, hoppHoldt = false, hukHoldt = false, fører = null, ligger = false, vedKar = null;
   const knapp = document.createElement('button'); knapp.id = 'gaaknapp'; knapp.textContent = 'Gå'; knapp.title = 'Gå selv i førsteperson'; knapp.hidden = true;
   document.querySelector('.knapper').insertBefore(knapp, document.getElementById('meny'));
   setInterval(() => { knapp.hidden = !(typeof på3d !== 'undefined' && på3d); if (knapp.hidden && r3() && R3.fot) stopp(); }, 400);
@@ -31,7 +31,12 @@
   function start() {
     if (!r3() || !R3.ut) return;
     const b = R3.bane; lagret = { avst: b.avst, pitch: b.pitch, x: b.x, y: b.y };
-    if (valgt && Math.abs(valgt.x - R3.ut.cx) < R3.ut.S && Math.abs(valgt.y - R3.ut.cy) < R3.ut.S) { b.x = valgt.x - R3.ut.cx + 3; b.y = valgt.y - R3.ut.cy - 3; }   // ved siden av laget
+    // (18. nov kveld, fra en gjennomspilling: «Gå» satte deg der kameraet tilfeldigvis så – det så ut som du teleporterte.) Nå: ved
+    // siden av et valgt lag som før, ellers der karakteren din står (og karakteren følger deg mens du går), ellers der kameraet ser.
+    const iU = p => !!p && Math.abs(p.x - R3.ut.cx) < R3.ut.S * .95 && Math.abs(p.y - R3.ut.cy) < R3.ut.S * .95;
+    const kar = typeof ENHETER !== 'undefined' ? ENHETER.find(e => e.karakter && (typeof levende !== 'function' || levende(e))) : null; vedKar = null;
+    if (valgt && !valgt.karakter && iU(valgt)) { b.x = valgt.x - R3.ut.cx + 3; b.y = valgt.y - R3.ut.cy - 3; }   // ved siden av laget
+    else if (kar && iU(kar)) { b.x = kar.x - R3.ut.cx; b.y = kar.y - R3.ut.cy; vedKar = kar; kar.sti = null; }
     R3.fot = { a: b.yaw, pitch: -.05 }; b.avst = 1000;   // utsnittet rundt deg: ca. 3,4 km, skarpt kart nær
     const u = R3.ut; ledig(u, b); R3.fot.a = åpenRetning(b.x, b.y, R3.fot.a);
     kropp = Bevegelse.ny(b.x, b.y, hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0);
@@ -57,7 +62,7 @@
   function stopp() {
     if (!r3() || !R3.fot) return; const b = R3.bane;
     if (fører && fører.ut) fører.ut();
-    R3.fot = null; kropp = null; kroppU = null; if (lagret) { b.avst = lagret.avst; b.pitch = lagret.pitch; } knapp.classList.remove('på'); spak = se = null; taster.clear(); mk.classList.remove('på');
+    R3.fot = null; kropp = null; kroppU = null; vedKar = null; if (lagret) { b.avst = lagret.avst; b.pitch = lagret.pitch; } knapp.classList.remove('på'); spak = se = null; taster.clear(); mk.classList.remove('på');
     if (document.pointerLockElement) document.exitPointerLock();
     fov = 50; R3.cam.fov = 50; R3.cam.updateProjectionMatrix();
   }
@@ -101,6 +106,8 @@
     if (kropp.landet > 0 && EV && EV.fall) EV.fall(kropp.landet);
     hoppVent = false;
     b.x = kropp.x; b.y = kropp.y;
+    // karakteren din står der du går (så neste «Gå» starter her, og kartet viser deg der du er)
+    if (vedKar && !fører && typeof ENHETER !== 'undefined' && ENHETER.includes(vedKar)) { vedKar.x = u.cx + kropp.x; vedKar.y = u.cy + kropp.y; }
     c.position.set(k.kx, k.ky, k.kz); c.up.set(0, 0, 1);
     c.lookAt(k.kx - Math.sin(f.a) * Math.cos(f.pitch), k.ky + Math.cos(f.a) * Math.cos(f.pitch), k.kz + Math.sin(f.pitch));
     // litt større synsfelt når du løper
@@ -148,7 +155,7 @@
   });
   // Flytt deg til et annet sted i utsnittet mens du går (x, y i utsnittets meter): kroppen lages på nytt der
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
-  window.Gange = { start, stopp, kamera, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
+  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
     // fører(R, inn) tar over rammen når den svarer true (spill/kjor.js); knappene nede til høyre får navnene [huk, hopp]
