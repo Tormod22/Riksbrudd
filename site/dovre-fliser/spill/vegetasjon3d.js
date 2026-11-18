@@ -189,7 +189,10 @@
         float tSno = smoothstep(uSnoGrV - 60.0, uSnoGrV + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);
         ${T.løv ? `diffuseColor.rgb = mix(diffuseColor.rgb, ${høst} * (0.8 + 0.3 * vTFro), uHostV * (0.6 + 0.35 * vTFro) * blad);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.4, 0.36, 0.32), uNakenV * 0.88 * blad);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNakenV * 0.5);` : `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`}`);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.96), tSno * uNakenV * 0.5);
+        #ifdef USE_ALPHAMAP
+        if (uNakenV > 0.5 && vUv.x < 0.5 && vUv.y > 0.5 && fract(sin(dot(floor(vUv * 46.0), vec2(12.9898, 78.233))) * 43758.5453) > 0.22) discard;
+        #endif` : `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`}`);
     };
     m.customProgramCacheKey = () => 'vegetasjon|' + art + '|' + (enkel ? 1 : 0);
     return m;
