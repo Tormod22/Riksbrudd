@@ -14,10 +14,16 @@
     sult: { navn: 'Sult', timer: 48, ord: ['utsultet', 'veldig sulten', 'sulten', 'mett'], råd: 'Spis i leiren eller en feltrasjon fra sekken.' },
     søvn: { navn: 'Søvn', timer: 36, ord: ['utslitt', 'veldig trøtt', 'trøtt', 'uthvilt'], råd: 'Hvil i leiren eller i et hus du har sikret.' },
   };
-  const R = { lav: 25, greit: 60, løpTørst: 1.6, hvile: 12, skade: 4, minTreff: .7, minLøp: .6, rasjon: 50, nær: 150 };
+  // (runde 5) spoling = farten 60× eller mer; vedLeir = så nær leiren du steller deg av leirens lager mens du spoler; brems = det leiren
+  // ikke har (vann, mat), går så mye saktere da (du sparer på det og venter). Claudes forslag.
+  const R = { lav: 25, greit: 60, løpTørst: 1.6, hvile: 12, skade: 4, minTreff: .7, minLøp: .6, rasjon: 50, nær: 150, spoling: 60, vedLeir: 600, brems: .3 };
   const ny = () => ({ tørst: 100, sult: 100, søvn: 100 });
   // t spilltimer går: behovene synker. o.løper: tørsten går fortere.
-  function steg(B, t, o = {}) { if (!(t > 0)) return B; for (const [k, D] of Object.entries(BEHOV)) B[k] = Math.max(0, (B[k] === undefined ? 100 : B[k]) - 100 / D.timer * t * (k === 'tørst' && o.løper ? R.løpTørst : 1)); return B; }
+  function steg(B, t, o = {}) { if (!(t > 0)) return B; for (const [k, D] of Object.entries(BEHOV)) B[k] = Math.max(0, (B[k] === undefined ? 100 : B[k]) - 100 / D.timer * t * (k === 'tørst' && o.løper ? R.løpTørst : 1) * (o.faktor && o.faktor[k] !== undefined ? o.faktor[k] : 1)); return B; }
+  // (runde 5, fra en gjennomspilling: «karakteren blir utslitt når du spoler») Spoler du og er i eller ved leiren, steller du deg av
+  // leirens lager; det leiren mangler (vann, mat), synker saktere. o: { spoler, avst (m fra leiren), vann, mat }. Gir { ved, faktor }.
+  function stell(o) { const ved = o.avst <= (o.spoler ? R.vedLeir : R.nær), b = !!(o.spoler && ved);
+    return { ved, faktor: { tørst: b && !o.vann ? R.brems : 1, sult: b && !o.mat ? R.brems : 1, søvn: 1 } }; }
   const fyll = (B, k, m) => { if (!BEHOV[k]) return 0; const før = B[k] || 0; B[k] = Math.max(0, Math.min(100, før + m)); return B[k] - før; };
   // Virkningen: faktor for treff og løping (1 = ingen), og helsetap per spilltime når noe står på 0.
   function virkning(B) { const lav = Math.min(B.tørst, B.sult, B.søvn), svak = Math.min(B.tørst, B.søvn), f = (v, min) => (v >= R.lav ? 1 : min + (1 - min) * v / R.lav);
@@ -34,7 +40,7 @@
     return { hud: rgb(p.skin, [.87, .69, .57]), hår: rgb(p.hairColor, [.16, .13, .12]), øyne: rgb(p.eyeColor, [.25, .35, .45]), stil, frisyre: h, hale: h === 'ponytail' || h === 'braid', skallet: h === 'bald', lugg: /^(fringe|bob|pixie|shag)$/.test(h), topp: /^(quiff|pompadour)$/.test(h), afro: h === 'afro',
       skjegg: !!skjegg, skjeggtype: skjegg, hodeplagg: !!lue, lue, briller: !!briller, brilletype: briller, jakke: mett(rgb(p.outfitColor, [.3, .34, .28]), 1.35), klær: KLÆR[p.outfit] || 'jakke', plagg: String(p.outfit || 'jakke'), høyhals: p.outfit === 'hoyhalset',
       kvinne: p.gender === 'kvinne', alder: Number.isFinite(p.age) ? p.age : null, opphav: p.origin ? String(p.origin) : '', bredde: p.face === 'bred' || p.face === 'rund' ? 1.07 : p.face === 'smal' ? .93 : 1, kantet: p.face === 'kantete', arr: p.detail === 'arr', fregner: p.detail === 'fregner', grå: Number.isFinite(p.grayAmount) ? p.grayAmount / 100 : 0 }; }
-  const api = { BEHOV, R, ny, steg, fyll, virkning, ord, tilstand, utseende };
+  const api = { BEHOV, R, ny, steg, stell, fyll, virkning, ord, tilstand, utseende };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Karakter = api;
 
@@ -63,8 +69,11 @@
 
   // hvert sekund: behovene synker med spilltiden, og fylles der det går
   function takt() { if (!klar || !T) return; const nå = typeof tid !== 'undefined' ? tid : 0; if (sistTid === null) sistTid = nå; const t = Math.max(0, Math.min(6, (nå - sistTid) / TIME)); sistTid = nå;
-    if (auto() && t > 0) { const kr = går() && rot.Gange && Gange.kropp(); K.steg(T.behov, t, { løper: !!(kr && kr.løper && kr.fart > 2.5) });
-      if (iLeiren()) { const L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand();
+    if (auto() && t > 0) { const kr = går() && rot.Gange && Gange.kropp(), S0 = spill(), p0 = sted(), F0 = rot.FolkSpill && FolkSpill.tilstand();
+      // spoler du (60× eller mer) og er ved leiren (600 m), steller du deg av leirens lager – og det den mangler, synker saktere
+      const st = K.stell({ spoler: typeof tempo !== 'undefined' && tempo >= K.R.spoling, avst: S0 && S0.leir && p0 ? Math.hypot(p0.x - S0.leir.x, p0.y - S0.leir.y) : Infinity, vann: harVann(), mat: !!(F0 && F0.mat >= 1) });
+      K.steg(T.behov, t, { løper: !!(kr && kr.løper && kr.fart > 2.5), faktor: st.faktor });
+      if (st.ved) { const L = rot.LeirSpill && LeirSpill.tilstand(), F = F0;
         if (T.behov.tørst < K.R.greit && harVann()) { T.behov.tørst = 100; logg('Du drikker deg utørst i leiren.'); }
         if (T.behov.sult < K.R.greit && F && F.mat >= 1) { F.mat -= 1; K.fyll(T.behov, 'sult', K.R.rasjon); logg('Du spiser i leiren (én rasjon av leirens mat).'); }
         // (balansen 18. nov, Claudes forslag) du sover av deg selv i leiren også før brakka står – på bakken, halvt så godt. Før ble du
