@@ -159,5 +159,24 @@ lagreKratere, mineKrater, salve, lyng).
   IKKE endret). Panelet sier «Innsjøene er islagt: båtene kommer ikke fram der». Regelen: `Verden.islagtVann(V, moh, klasse)`.
 
 ### 7. Brente hus og lyng
+- **Brente hus** (effekter3d.js `stegBrent`): sotlaget var et skall med flatt lokk på toppen (P0.topp) – over et saltak la det en mørk
+  flekk i lufta over takfoten og (sett på skrå) på bakken bak huset, fordi lokket mørkner alt bak seg. Nå følger skallet taket: veggene går
+  opp til takfoten (P0.veggTopp fra hus3d) og taket har møne langs husets lengste side fra ende til ende (`sotMøne`; gavlene blir loddrette
+  trekanter); flate tak får et flatt lokk som før. Prøvd på /rogaland (dev.py, ekte husdata, leir ved Sand 6825, 6627357): 1206 hus i
+  utsnittet, et brent område på 3 × 3 ruter over en gård gav sotlag på 3 hus – taket og veggene er mørke, ingen mørke flekker i lufta, nært og
+  på avstand (bilder i scratchpad natt/verden4/d1-brent.png og d2-brent-naer.png). IKKE sett: før-bildet med det gamle lokket (feilen er
+  funnet ved å lese koden).
+- **Brent mark**: lyse jorder og plener i kartbildet sto lyse midt i det brente (den svidde bakken ganget bakken med en mørk farge). Nå
+  blandes bakken mot aske (`Effekter.REGLER.aske`: farge og dekning 0,74 der det har brent helt; hjørnefarger med alfa, vanlig blanding).
+  Sett på bilde ved leiren på Dovre (svarte trær og askebakke, ingen GL-feil).
+- **Lyngen**: prøvd at materialet kompilerer (programnøkkel «gress-vind-true-lyng», gl.getError() = 0) og at tustene tegnes ovenfra.
+  Ikke sammenlignet før/etter på bilde.
+
+### Prøvd i nettleser (runde 4, maskinen var svært tungt lastet – 3D-bildene er tatt i 1000 × 620)
+- Vakta (`pipeline/fliser/vakter/verden.js`) på Dovre-testsiden: PC og mobil, ok, under 1 s.
+- Felte dyr: utsnitt på heia (bygg3d 201400, 6893300, 900): 12 saueflokker; ett dyr felt → borte fra ny plassering, alle andre der,
+  nøkkelen lagret og tilbake etter ny innlasting (`Dyr3d.felte()`). Selve skuddet (egneSkudd → Dyr3d.fell) er ikke prøvd i denne runden –
+  sett3d med et eget utsnitt ble overstyrt av kameraet i prøveskriptet.
+- Funn i 3D: «Forlatt leir» ved Dombås (to telt, sekker, tønne) sett på bilde.
 - Lyngen ovenfra: materialet til gresset (index.html gressMateriale) pakkes inn fra effekter3d.js (`lyngLys`, ingen endring i index.html):
   lyngtustene (aFelt = 1) lysnes opptil 1,6 × jo mer rett ovenfra du ser (`Effekter.REGLER.lyng`).

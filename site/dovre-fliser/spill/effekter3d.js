@@ -36,6 +36,8 @@
     nær: 900,
     // lyngtustene lysnes opptil så mange ganger når du ser rett ned på dem (runde 4)
     lyng: 1.6,
+    // brent mark: askefargen (0–1) og hvor mye den dekker der det har brent helt (resten er bakken under)
+    aske: { farge: [.1, .085, .07], dekker: .74 },
   };
   // Hva ligger under hjulene? vegtype = 'asfalt' | 'grus' | null (terreng), snø = ligger det snø her, våt = 0–1.
   // Svar: { støv: 0–1, snø: bool, spor: 0–1 (hvor mørke sporene blir) }
@@ -279,7 +281,9 @@
     if (R.effBrent && (T.brentTeller = (T.brentTeller || 0) + 1) % 20 && T.brentNøkkel !== '') return;
     const u = R.ut, om = brente(), nøkkel = u.cx + '|' + u.cy + '|' + (R.settNr || 0) + '|' + sum(om);
     if (nøkkel === T.brentNøkkel && R.effBrent) return; T.brentNøkkel = nøkkel; ryddBrent(R);
-    if (!R.effBrentMat) R.effBrentMat = new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    // (runde 4) brent mark blandes mot aske (farge og styrke per hjørne) i stedet for å ganges mørkere: før ble lyse jorder og plener
+    // stående lyse midt i det brente (sett på /rogaland)
+    if (!R.effBrentMat) R.effBrentMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const inne = om.filter(o => Math.abs(o.x - u.cx) < u.S + o.r && Math.abs(o.y - u.cy) < u.S + o.r);
     if (inne.length) {
       const minR = inne.reduce((a, o) => Math.min(a, o.r), Infinity), st = Math.max(8, Math.min(40, minR / 3)), sett = new Set(), pos = [], kol = [], zs = new Map(), bs = new Map();
@@ -291,8 +295,8 @@
         for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) { const q = i + ',' + j; if (sett.has(q)) continue; sett.add(q);
           const K = [hj(i, j), hj(i + 1, j), hj(i + 1, j + 1), hj(i, j + 1)]; if (K.every(k => bs.get(k) <= 0) || K.some(k => zs.get(k) !== zs.get(k))) continue;
           const P = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
-          for (const n of [0, 1, 2, 0, 2, 3]) { const c = 1 - .72 * bs.get(K[n]); pos.push(P[n][0] * st - u.cx, P[n][1] * st - u.cy, zs.get(K[n])); kol.push(c, c * .97, c * .94); } } }
-      if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3));
+          for (const n of [0, 1, 2, 0, 2, 3]) { const b = bs.get(K[n]), A = REGLER.aske; pos.push(P[n][0] * st - u.cx, P[n][1] * st - u.cy, zs.get(K[n])); kol.push(A.farge[0], A.farge[1], A.farge[2], A.dekker * b); } } }
+      if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 4));
         const m = new THREE.Mesh(g, R.effBrentMat); m.renderOrder = 1; m.frustumCulled = false; R.scene.add(m); R.effBrent.push(m); }
     }
     const lokal = inne.map(o => ({ x: o.x - u.cx, y: o.y - u.cy, r: o.r, styrke: o.styrke }));
