@@ -217,7 +217,7 @@
 #lutpanel .faner{ display:flex; flex-wrap:wrap; gap:3px; padding:4px 4px 0; } #lutpanel .faner button{ min-height:28px; padding:1px 8px; font-size:12px; } #lutpanel .faner button.på{ background:#c9b26a; color:#1c170f; border-color:#c9b26a; }
 #lutpanel .info{ font-size:12px; color:var(--ink-dim,#a99); margin:3px 6px 0; } #lutpanel .tom{ color:var(--ink-dim,#a99); font-size:13px; padding:10px 6px; }
 #lutpanel .bunn{ display:flex; gap:6px; padding:4px 6px 6px; } #lutpanel .bunn button{ flex:1; }
-#lutpanel .detalj{ margin-top:6px; padding:6px 8px; border:1px solid #3a3224; background:rgba(0,0,0,.25); min-height:40px; } #lutpanel .detalj b{ font-size:15px; } #lutpanel .detalj p{ margin:2px 0 4px; font-size:13px; color:var(--ink-dim,#a99); }
+#lutpanel .detalj{ margin-top:6px; padding:6px 8px; border:1px solid #3a3224; background:rgba(0,0,0,.25); min-height:104px; max-height:34vh; overflow:auto; box-sizing:border-box; flex:none; } #lutpanel .detalj b{ font-size:15px; } #lutpanel .detalj p{ margin:2px 0 4px; font-size:13px; color:var(--ink-dim,#a99); }
 #lutpanel .valg{ display:flex; flex-wrap:wrap; gap:4px; } #lutpanel .valg button.hoved{ border-color:#c9b26a; color:#f0e2b0; } #lutpanel .tips{ font-size:12px; color:var(--ink-dim,#a99); margin-top:4px; } #lutpanel .melding{ font-size:13px; color:#f0e2b0; margin-top:4px; }
 #lutdra{ position:fixed; z-index:30; pointer-events:none; padding:4px 10px; background:rgba(28,23,15,.94); border:1px solid #c9b26a; color:#f0e2b0; font-size:14px; transform:translate(-50%,-130%); white-space:nowrap; }
 #lutknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(200px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:200px; min-height:42px; padding:6px 18px; background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; }
@@ -326,10 +326,14 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   }
   const radInfo = r => (r ? { side: r.getAttribute('data-side'), id: r.getAttribute('data-id') || undefined, st: r.getAttribute('data-st') || null, belte: r.hasAttribute('data-belte') && !r.hasAttribute('data-utst') ? +r.getAttribute('data-belte') : r.getAttribute('data-utst') === 'hånd' ? +r.getAttribute('data-belte') : undefined, utst: r.getAttribute('data-utst') || undefined } : null);
   const sammeValg = (a, b) => !!a && !!b && a.side === b.side && a.id === b.id && (a.st || null) === (b.st || null) && a.belte === b.belte && a.utst === b.utst;
+  // (dobbelttrykk telles her: panelet tegnes på nytt etter første trykk, så nettleserens dblclick kommer ikke)
+  let sistTrykk = null;
   function trykk(r, side) {
-    if (valgt && side && valgt.side !== side) { flyttValgt(side); return; }
+    if (valgt && side && valgt.side !== side) { sistTrykk = null; flyttValgt(side); return; }
     if (!r) { if (valgt) { valgt = null; vis(true); } return; }
-    const q = radInfo(r); if (q.utst === 'hånd') q.utst = undefined; valgt = sammeValg(valgt, q) ? null : q; vis(true);
+    const q = radInfo(r); if (q.utst === 'hånd') q.utst = undefined; const t = performance.now();
+    if (sistTrykk && sammeValg(sistTrykk.q, q) && t - sistTrykk.t < 420 && q.utst !== 'rygg') { sistTrykk = null; valgt = q; flyttValgt(q.side === 'deg' ? 'der' : 'deg'); return; }
+    sistTrykk = { q, t }; valgt = sammeValg(valgt, q) ? null : q; vis(true);
   }
   // pekeren: trykk velger/flytter, dra og slipp flytter, hold inne (0,5 s) eller høyreklikk = velg og vis valgene
   let ned = null, holdT = 0;
@@ -343,7 +347,6 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if (n.holdt || !(e.target instanceof Node) || !panel.contains(e.target) || (e.target.closest && e.target.closest('button'))) return; trykk(n.r, n.side); });
   rot.addEventListener('pointercancel', () => { clearTimeout(holdT); ned = null; if (drar) { drar.remove(); drar = null; vis(true); } });
   panel.addEventListener('contextmenu', e => { const r = e.target.closest('.rad'); if (!r) return; e.preventDefault(); const q = radInfo(r); if (q.utst === 'hånd') q.utst = undefined; valgt = q; vis(true); });
-  panel.addEventListener('dblclick', e => { const r = e.target.closest('.rad'); if (!r) return; const q = radInfo(r); if (q.utst === 'hånd') q.utst = undefined; valgt = q; flyttValgt(q.side === 'deg' ? 'der' : 'deg'); });
   panel.addEventListener('click', e => { const b = e.target.closest('[data-fane]'); if (b) { fane = b.getAttribute('data-fane'); valgt = valgt && valgt.side === 'der' ? null : valgt; vis(true); } });
 
   // ---------- knappen «Åpne kjøleskapet (E)», tastene og takten ----------
@@ -352,7 +355,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   function oppdaterKnapp() {
     const c = klar && går() && !åpen ? nærmeste() : null; knappFor = c;
     if (!c) { åpneKnapp.classList.remove('på'); return; }
-    const t = `Åpne ${c.navn} (E)`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
+    const t = `Åpne ${c.navn}${rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
   }
   åpneKnapp.addEventListener('click', e => { e.preventDefault(); const c = knappFor || nærmeste(); if (c) åpne(true, c.nk); });
   // E: åpne beholderen du står ved (eller lukk panelet); Tab: panelet med det som er her; Esc lukker
