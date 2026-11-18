@@ -12,7 +12,7 @@
   const kr = v => (LB ? LB.kroner(v) : Math.round(v) + ' kr'), tall = v => String(Math.round(v * 10) / 10).replace('.', ',');
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else e.setAttribute(k, v); } e.append(...barn.filter(b => b !== null && b !== undefined && b !== false)); return e; };
   const kn = (tekst, fn, eg = {}) => { const b = el('button', eg, tekst); b.onclick = e => { e.stopPropagation(); fn(); }; return b; };
-  let S = RG.ny(), leirId = '', klar = false, åpen = false, sist = '', spillAkk = 0, statusTid = -1e9, STATUS = new Map(), meldtRute = new Map(), meldtStrøm = new Map();
+  let åpnet = 0, S = RG.ny(), leirId = '', klar = false, åpen = false, sist = '', spillAkk = 0, statusTid = -1e9, STATUS = new Map(), meldtRute = new Map(), meldtStrøm = new Map();
   const les = () => { try { const d = JSON.parse(localStorage.getItem('riksbrudd-region') || 'null'); return d && d.leir === leirId ? d.d : null; } catch (e) { return null; } };
   const lagre = () => { try { localStorage.setItem('riksbrudd-region', JSON.stringify({ leir: leirId, d: S })); } catch (e) { /* fullt eller sperret */ } };
 
@@ -97,7 +97,7 @@
   }
   KROKER.sim.push(dt => { spillAkk += dt / 1440; });
   setInterval(() => { if (!klar || !leir()) return; if (typeof tempo !== 'undefined' && tempo > 0 && !document.hidden) { const d = Math.max(spillAkk, 1 / R.døgnEkteSek); spillAkk = 0; if (auto()) steg(d); } else spillAkk = 0;
-    if (åpen) { if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) lukk(); else vis(); } }, 1000);
+    if (åpen) { const lm = document.getElementById('leirmeny'); if ((window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) || (lm && lm.classList.contains('på') && performance.now() - åpnet > 1500)) lukk(); else vis(); } }, 1000);
 
   // ---------- svartebørsen ----------
   const klokketime = () => (6 + tid / TIME) % 24;
@@ -150,7 +150,7 @@
 
   // ---------- panelet ----------
   const css = document.createElement('style');
-  css.textContent = `#region{ position:fixed; left:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(390px,94vw); max-height:calc(100vh - var(--topp,58px) - 130px); overflow:auto; padding:10px 12px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
+  css.textContent = `#region{ position:fixed; left:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(390px,94vw); max-height:calc(100vh - var(--topp,58px) - 130px); overflow:auto; padding:10px 12px 12px; background:#1c170f; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #region.på{ display:block; } #region h2{ margin:0 26px 2px 0; font-size:19px; } #region h3{ margin:12px 0 3px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
 #region .lukk{ position:absolute; right:6px; top:4px; background:none; border:0; color:inherit; font-size:22px; min-width:34px; min-height:34px; cursor:pointer; }
 #region small{ color:var(--ink-dim,#a99); font-size:12.5px; line-height:1.3; } #region .ingress{ display:block; margin-bottom:4px; }
@@ -227,8 +227,8 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   function vis(tving) { if (!åpen) return; if (!tving && window.pekerNede && pekerNede(panel)) return;
     const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.firstChild.childNodes); panel.scrollTop = topp; }
   function åpne() { if (!klar) return; if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.lukk(); if (window.lukkPanel) lukkPanel();
-    const lm = document.getElementById('leirmeny'); if (lm && lm.classList.contains('på') && (document.body.classList.contains('smal') || document.body.classList.contains('kort'))) { const k = document.getElementById('leirknapp'); if (k) k.click(); }
-    åpen = true; panel.classList.add('på'); document.body.classList.add('region'); sist = ''; vis(true); skitten = true; }
+    const lm = document.getElementById('leirmeny'); if (lm && lm.classList.contains('på')) { const k = document.getElementById('leirknapp'); if (k) k.click(); }
+    åpen = true; åpnet = performance.now(); panel.classList.add('på'); document.body.classList.add('region'); sist = ''; vis(true); skitten = true; }
   function lukk() { if (!åpen) return; åpen = false; panel.classList.remove('på'); document.body.classList.remove('region'); skitten = true; }
   // Kartet: 2D, og zoom så hele ruta synes ved siden av panelet
   function visIKart(q) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
@@ -263,7 +263,11 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   });
 
   // ---------- tettstedspanelet (trykk på et tettsted i kartet) ----------
-  KROKER.info.push(o => { if (o.lag !== 'tettsted' || !klar) return; const h = document.getElementById('hint'); if (!h) return;
+  KROKER.info.push(o => { const h = document.getElementById('hint'); if (!h || !klar) return;
+    // kraftverket: sabotasje slår tilbake på deg når dine egne tettsteder får strømmen herfra
+    if (o.lag === 'kraft') { const x = o.deler[0][0], y = o.deler[0][1], n = mine().filter(by => Math.hypot(midt(by).x - x, midt(by).y - y) <= G.REGLER.strøm.radius);
+      if (n.length) h.textContent = `Gir strøm til ${n.length === 1 ? n[0].e.navn : n.length + ' av tettstedene dine'}: uten strøm gir de ${Math.round(G.REGLER.strøm.uten * 100)} % og blir misfornøyde. ` + h.textContent; return; }
+    if (o.lag !== 'tettsted') return;
     const t = typeAv(o), T = RG.TYPER[t], q = status(true).get(o.e.id);
     h.textContent += ` ${T.navn} (${T.tekst}): ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt: ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta er ${q.rute.status}. Skatten velger du i «Region».`
       : `som ditt gir det ${RG.girTekst(RG.grunn(o.e.folk || 0, t), kr)} per døgn til leiren.`); });
