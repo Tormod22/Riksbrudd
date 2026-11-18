@@ -337,3 +337,29 @@ tegnInfra3d i index.html). Rekkefølge etter størrelse. Alt skal gi det samme s
   flagg, lykter ved husene) – matrisene regnes én gang per slag og kopieres inn i hver del (før sju ganger for bilene), samme tall;
   **kompass.js** – bredden på minikartet fra en ResizeObserver i stedet for `clientWidth` hvert bilde (det tvang nettleseren til å
   regne ut siden på nytt: opptil 140 ms i ett bilde under bygging).
+
+### Prøvd – likt før og etter (Bergen, /norge, utsnitt 3,1 km; scratchpad `natt/lys/hakk/t-del2.js`)
+Gammel kode (rett før del 2, kopi i scratchpad `natt/lys/hakk/head2`) og ny kode, både første utsnitt, uforberedt og forberedt bytte:
+like gatemøbler (benk 236, søppel 484, sykkel 184, skur 72, skilt 52, postkasse 6 verdier – med summer), løvtrær med gatetrærne
+(27 480 verdier, 1500 gatetrær), bekkene (6 bånd) og vannbåndets nett (4345 punkter, 6904 trekanter – posisjoner, normaler og farger),
+`iBekk` i 20 000 punkter, småtingene ved husene (matriser og farger i alle 13 nettene), bensinstasjonene (to, alle nett), fjernringen
+(16 641 punkter – posisjoner, normaler og farger), tunnelportalene (8580 punkter) og navnene i 3D (`proj3`/`brupunkt3` for 141 objekter
+fra tre kameraer, samme skjermpunkter). Ingen sidefeil. Regeltestene test_gate, test_byhus, test_bekker, test_kompass, test_fjern3d grønne.
+Minikartet (scratchpad `t-mini.js`, Dovre, 4096²): snittforskjell 1,1–2,1 av 255 per farge mellom fullt bilde og kopien (kopien er
+jevnere); her var tegningen fra det fulle bildet bare 1–2 ms (programvare), så gevinsten der kan ikke vises på denne maskinen.
+
+### Målt – før og etter del 2 (Bergen 3,1 km, samme last ca. 7–9, rett etter hverandre; `d3før-b900.log`, `d3etter-b900.log`)
+| (Bergen 3,1 km) | før del 2 | etter del 2 |
+|---|---|---|
+| lange oppgaver ≥ 50 ms, sum | 57 / 19, 6,1 / 1,7 s | **18 / 17, 1,3 / 1,3 s** |
+| lengste lange oppgave | 812 / 234 ms | **157 / 187 ms** |
+| byttet («gjør klar uten pust») | 988 / 254 ms | under 50 ms (ingen slik pause; lengste pause i trinnet 179 / 219 ms med pust) |
+| sett3d alene | 401 ms | 135 ms |
+| pauser over 50 ms | 72 / 27 | 20 / 21 |
+| «henter høydene og kartet» uten pust | 22 / 9 pauser, 2,2 / 0,7 s | 0 / 3 pauser, 0 / 0,18 s |
+| tid til utsnittet er bygget | 25,6 / 16,6 s | 17,0 / 16,5 s |
+Første flytting før del 2 var tyngre enn den andre (søppeltømming 307 ms, gate3d, byhus); i del 2-målingen var det ingen slike.
+Det som står igjen over 100 ms: hus3d (78 ms selv), sett3d 130–135 ms (liv3d `startLiv`/`velgLinjer` ca. 25, vegetasjon3d sin
+sett3d ca. 23, merkingen i `R.scene.add` (ytelse.js) ca. 20), og kartbildet i striper (én stripe 83 ms med programvare-grafikk).
+Dovre-testsiden etter del 2 (`t-dovre.js`): fingeravtrykket fortsatt likt koden fra før runde 4, «bygging i biter» lik (133 pust),
+kartbildet likt lerretet, brukontrollen som før, ingen sidefeil.
