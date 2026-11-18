@@ -41,7 +41,9 @@
   function holtFarge(f, moh, V) {
     const løv = f > .68, lys = .8 + .4 * brøk(f * 7.3); let k = løv ? [1.25 * lys, 1.3 * lys, .9 * lys] : [lys, lys, lys];
     if (V && V.høst && løv) { const t = V.høst * .8; k = [k[0] + (2.6 - k[0]) * t, k[1] + (1.7 - k[1]) * t, k[2] + (.5 - k[2]) * t]; }
-    if (V && Number.isFinite(V.snøgrense) && moh > V.snøgrense) { const t = Math.min(1, (moh - V.snøgrense) / 60) * .78; k = k.map(v => v + (5.2 - v) * t); }
+    // (18. nov, pakka «lys»: samme tall for alle tre kanalene ganget den grønne grunnfargen opp til knallgrønt i vinterbildet – snøen
+    // trenger mer rødt og blått enn grønt for å bli hvit. Claudes forslag: målet per kanal.)
+    if (V && Number.isFinite(V.snøgrense) && moh > V.snøgrense) { const t = Math.min(1, (moh - V.snøgrense) / 60) * .78, SNØ = [9.5, 5.2, 10.5]; k = k.map((v, i) => v + (SNØ[i] - v) * t); }
     return k;
   }
   const FjernBy = { REGLER, hash, inneAndel, nettHøyde, holtFarge };

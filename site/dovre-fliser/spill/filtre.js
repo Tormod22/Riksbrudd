@@ -235,12 +235,62 @@ void main() {
   gl_FragColor = vec4(c, 1.);
 }` },
   ];
+  // STANDARD (18. nov, pakke «lys»): når ingen filter er valgt og «Lys og skygger» er på (KVAL.fx.etter i spill/kvalitet.js), får hele
+  // bildet en lett fargesetting – litt kontrast og metning, varm kveld, kald vinter, svak vignett. På Høy ('full') også litt
+  // dybdeuskarphet langt unna når du går (STD_DOF) og kantutjevning (flerprøve-mål med dybde; STD_AA = enkel FXAA der det ikke går).
+  // Egne programmer per variant (en betingelse i skyggeleggeren hopper ikke over koden bak den). Tallene er Claudes forslag.
+  const STANDARD = { id: 'standard', navn: 'Standard', frag: `
+uniform vec4 uGrad;
+uniform vec3 uDof;
+void main() {
+  vec2 px = 1. / uKilde;
+  vec3 c = texture2D(tBilde, vUv).rgb;
+  #ifdef STD_AA
+  {
+    float lNV = lum(texture2D(tBilde, vUv + vec2(-px.x, px.y)).rgb), lNO = lum(texture2D(tBilde, vUv + px).rgb);
+    float lSV = lum(texture2D(tBilde, vUv - px).rgb), lSO = lum(texture2D(tBilde, vUv + vec2(px.x, -px.y)).rgb), lM = lum(c);
+    float lMin = min(lM, min(min(lNV, lNO), min(lSV, lSO))), lMax = max(lM, max(max(lNV, lNO), max(lSV, lSO)));
+    vec2 dir = vec2(-((lNV + lNO) - (lSV + lSO)), (lNV + lSV) - (lNO + lSO));
+    float red = max((lNV + lNO + lSV + lSO) * .03125, .0078125), rcp = 1. / (min(abs(dir.x), abs(dir.y)) + red);
+    dir = clamp(dir * rcp, vec2(-8.), vec2(8.)) * px;
+    vec3 a = .5 * (texture2D(tBilde, vUv + dir * (1. / 3. - .5)).rgb + texture2D(tBilde, vUv + dir * (2. / 3. - .5)).rgb);
+    vec3 b = a * .5 + .25 * (texture2D(tBilde, vUv - dir * .5).rgb + texture2D(tBilde, vUv + dir * .5).rgb);
+    float lB = lum(b);
+    c = (lB < lMin || lB > lMax) ? a : b;
+  }
+  #endif
+  #ifdef STD_DOF
+  {
+    float z = avstand(vUv);
+    float rad = uDof.x * (smoothstep(uDof.y, uDof.y * 7., z) + (1. - smoothstep(.5, 1.6, z)) * .8);
+    vec3 sum = c; 
+    for (int i = 0; i < 8; i++) { float v = float(i) * .785 + .4; sum += texture2D(tBilde, vUv + vec2(cos(v), sin(v)) * px * rad * (1. + mod(float(i), 2.) * .6)).rgb; }
+    c = sum / 9.;
+  }
+  #endif
+  c = mix(c, c * c * (3. - 2. * c), uGrad.y);
+  c = metning(c, uGrad.z);
+  float l = lum(c);
+  c += uGrad.x * (vec3(.04, .014, -.035) * smoothstep(.25, 1., l) + vec3(-.01, 0., .016) * (1. - smoothstep(0., .5, l)));
+  vec2 p = vUv - .5; c *= 1. - dot(p, p) * uGrad.w;
+  gl_FragColor = vec4(c, 1.);
+}` };
+  // fargesettingen etter klokka og årstiden: [varme, kontrast, metning, vignett]
+  function gradering() {
+    const N = window.NATT, V = window.VAER, e = N && N.e != null ? N.e : 40, m = N ? N.mørke || 0 : 0, sky = V ? V.sky || 0 : 0;
+    // lav sol (kveld og morgen) er varm; vinteren er kald; ellers en anelse varmt
+    const lavSol = Math.max(0, 1 - Math.abs(e - 4) / 14) * (1 - m) * (1 - .7 * sky), vinter = V && /vinter/i.test(String(V.årstid || '')) ? 1 : 0;
+    const varme = Math.max(-1, Math.min(1.2, .18 + 1.0 * lavSol - .75 * vinter * (1 - lavSol) - .3 * m));
+    return [varme, .15 * (1 - .65 * m), 1.07 + .06 * lavSol - .05 * vinter, .2];
+  }
+
   // palett til Piksel: dempede jord-, grønn- og himmelfarger (80-tall)
   const PALETT = ['14161a', '2b2f33', '4a4f4f', '7a7d75', 'b5b3a3', 'e6e1cc', '2e3a28', '4d5e33', '7d8a4a', '3b4a5a', '6b8299', 'a9bccb', '5a4231', '8f6a45', 'c2a172', '8a3b2e'];
 
   const NØKKEL = 'riksbrudd-filter';
   let valgt = 'ingen';
   try { const v = localStorage.getItem(NØKKEL); if (FILTRE.some(f => f.id === v)) valgt = v; } catch (e) { /* privat vindu */ }
+  const S = { standard: false };   // hva standardleddet gjorde sist (Filtre.sjekk)
   let G = null;   // GL-ting, lages første gang et filter brukes (THREE finnes først i 3D)
 
   function oppsett(R) {
@@ -257,33 +307,50 @@ void main() {
     if (!rt) {
       const T = THREE, r = R3.renderer, val = { minFilter: T.LinearFilter, magFilter: T.LinearFilter, format: T.RGBAFormat, depthBuffer: true };
       if (type === 'lav') { val.minFilter = val.magFilter = T.NearestFilter; rt = new T.WebGLRenderTarget(w, h, val); }
-      else if (type === 'dybde') { rt = new T.WebGLRenderTarget(w, h, val); rt.depthTexture = new T.DepthTexture(w, h); rt.depthTexture.type = T.UnsignedIntType; }
+      else if (type === 'dybde' || type === 'dybdeMS') { rt = type === 'dybdeMS' ? new T.WebGLMultisampleRenderTarget(w, h, val) : new T.WebGLRenderTarget(w, h, val); rt.depthTexture = new T.DepthTexture(w, h); rt.depthTexture.type = T.UnsignedIntType; }
       else rt = r.capabilities.isWebGL2 && T.WebGLMultisampleRenderTarget ? new T.WebGLMultisampleRenderTarget(w, h, val) : new T.WebGLRenderTarget(w, h, val);
       G.rt[type] = rt;
     }
     if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
     return rt;
   }
-  function materiale(F) {
-    if (G.mat[F.id]) return G.mat[F.id];
+  function materiale(F, variant) {
+    const navn = F.id + (variant ? '|' + Object.keys(variant).join('|') : '');
+    if (G.mat[navn]) return G.mat[navn];
     const u = { tBilde: { value: null }, tDybde: { value: G.tom }, uRes: { value: new THREE.Vector2() }, uKilde: { value: new THREE.Vector2() }, uTid: { value: 0 },
       uPx: { value: 1 }, uNaer: { value: 5 }, uFjern: { value: 80000 }, uHarDybde: { value: 0 } };
     if (F.id === 'piksel') u.uPal = { value: G.pal };
-    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: VERT, fragmentShader: FELLES + F.frag, depthTest: false, depthWrite: false });
-    G.mat[F.id] = m; return m;
+    if (F.id === 'standard') { u.uGrad = { value: new THREE.Vector4(0, .2, 1.05, .2) }; u.uDof = { value: new THREE.Vector3(0, 150, 0) }; }
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: VERT, fragmentShader: FELLES + F.frag, depthTest: false, depthWrite: false, defines: variant || {} });
+    G.mat[navn] = m; return m;
   }
 
   function tegn(R) {
-    const F = FILTRE.find(f => f.id === valgt);
-    if (!F || !F.frag) return false;
+    let F = FILTRE.find(f => f.id === valgt), std = null;
+    if (!F || !F.frag) {
+      // ingen filter valgt: standard fargesetting når «Lys og skygger» er på (ellers tegner index.html rett til skjermen som før)
+      std = window.KVAL && KVAL.fx ? KVAL.fx.etter : null; if (!std) { S.standard = false; return false; }
+      F = STANDARD;
+    }
     if (!G) oppsett(R);
     const r = R.renderer; r.getDrawingBufferSize(G.str);
     const W = G.str.x, H = G.str.y, mobil = VW < 900;
     let w = W, h = H, type = F.dybde && G.harDybde ? 'dybde' : 'vanlig';
     if (F.lav) { h = Math.min(H, F.lav(mobil)); w = Math.max(1, Math.round(W * h / H)); type = 'lav'; }
     else if (mobil && F.mobilSkala) { w = Math.round(W * F.mobilSkala); h = Math.round(H * F.mobilSkala); }
-    const rt = mål(type, w, h), m = materiale(F), u = m.uniforms;
-    u.tBilde.value = rt.texture; u.tDybde.value = type === 'dybde' ? rt.depthTexture : G.tom; u.uHarDybde.value = type === 'dybde' ? 1 : 0;
+    let variant = null;
+    if (std) {
+      // dybdeuskarphet bare på 'full' når du går, og ikke på telefon; da trengs dybden. Kantutjevning: flerprøve-mål med dybde der det går, ellers FXAA.
+      const dof = std === 'full' && !!R.fot && !mobil && G.harDybde && !(window.Interior3d && Interior3d.inne && R.bane && Interior3d.inne(R.bane.x, R.bane.y));
+      const ms = r.capabilities.isWebGL2 && !!THREE.WebGLMultisampleRenderTarget;
+      type = dof ? (ms && !G.msFeil ? 'dybdeMS' : 'dybde') : 'vanlig';
+      if (dof || (type === 'vanlig' && !ms && std === 'full')) { variant = {}; if (dof) variant.STD_DOF = ''; if (type === 'dybde' || (type === 'vanlig' && !ms)) variant.STD_AA = ''; }
+      S.standard = true; S.type = type; S.dof = dof; S.aa = !!(variant && 'STD_AA' in variant);
+    }
+    const rt = mål(type, w, h), m = materiale(F, variant), u = m.uniforms;
+    if (std) { u.uGrad.value.fromArray(gradering()); u.uDof.value.set(variant && 'STD_DOF' in variant ? 1.6 * r.getPixelRatio() : 0, 140, 0); S.grad = u.uGrad.value.toArray(); }
+    const medDybde = type === 'dybde' || type === 'dybdeMS';
+    u.tBilde.value = rt.texture; u.tDybde.value = medDybde ? rt.depthTexture : G.tom; u.uHarDybde.value = medDybde ? 1 : 0;
     u.uRes.value.set(W, H); u.uKilde.value.set(w, h); u.uTid.value = (performance.now() / 1000) % 1000; u.uPx.value = r.getPixelRatio();
     u.uNaer.value = R.cam.near; u.uFjern.value = R.cam.far;
     G.quad.material = m;
@@ -293,6 +360,8 @@ void main() {
       r.setRenderTarget(rt); r.render(R.scene, R.cam);
       r.setRenderTarget(null); r.render(G.scene, G.cam);
     } finally { r.setRenderTarget(null); r.info.autoReset = true; }
+    // flerprøve-mål med dybdetekstur virker ikke overalt: gir det en GL-feil første gang, brukes vanlig mål med FXAA fra nå av
+    if (type === 'dybdeMS' && !G.msPrøvd) { G.msPrøvd = true; if (r.getContext().getError()) { G.msFeil = true; rt.dispose(); delete G.rt.dybdeMS; } }
     return true;
   }
   KROKER.bilde3d.push(tegn);
@@ -333,5 +402,6 @@ void main() {
   }
   knapp.onclick = () => { const i = FILTRE.findIndex(f => f.id === valgt); velg(FILTRE[(i + 1) % FILTRE.length].id); if (typeof logg === 'function') logg('Filter i 3D: ' + FILTRE.find(f => f.id === valgt).navn); };
   sett(); document.getElementById('lagmeny').appendChild(knapp);
-  window.Filtre = { liste: FILTRE.map(f => ({ id: f.id, navn: f.navn })), velg, valgt: () => valgt, harDybde: () => G ? G.harDybde : null };
+  window.Filtre = { liste: FILTRE.map(f => ({ id: f.id, navn: f.navn })), velg, valgt: () => valgt, harDybde: () => G ? G.harDybde : null,
+    sjekk: () => ({ ...S, msFeil: G ? !!G.msFeil : null }) };
 })();

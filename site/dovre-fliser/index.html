@@ -1168,12 +1168,14 @@ function ruterSynlige(R) {
 // med programvare-grafikk (1400 × 900, Dombås fra lufta, terrenget alene): ca. 400 ms per bilde med alle effektene overalt (slik det
 // var), ca. 275 ms med variantene under, ca. 190 ms med kartbildet og lys per hjørne. (Tallene fra 14. nov – 700 og 20 ms – var
 // feilmålt: spillet tegner bare fire bilder i sekundet når tiden står og kameraet er i ro.)
+// Skal bakken ha de nye effektene (skarp bakke nært, dybde i vannet – KVAL.fx.bakke i spill/kvalitet.js)?
+const bakkeFx = () => !!(window.KVAL && KVAL.fx && KVAL.fx.bakke && window.Lys3d);
 function bakkeMateriale(R, u, tex, valg) {
   if (window.KVAL && KVAL.p.bakke === 'enkel') { const mat = new THREE.MeshLambertMaterial({ map: tex }); enkelBakke(mat); return mat; }
   // lys per punkt; bare vannet glinser. valg: { nær, glans, land } – se bakkeVariant (uten valg: alt med)
   const v = valg || { nær: true, glans: true };
   const mat = new THREE.MeshPhongMaterial({ map: tex, specularMap: R.vannTex, specular: VANN_GLANS.farge, shininess: VANN_GLANS.skarphet });
-  if (v.nær) mat.defines = { BAKKE_NAER: '' }; mat.userData.utenGlans = !v.glans; mat.userData.land = !!v.land;
+  mat.defines = {}; if (v.nær) mat.defines.BAKKE_NAER = ''; if (bakkeFx()) { mat.defines.BAKKE_FX = ''; mat.userData.fx = true; } mat.userData.utenGlans = !v.glans; mat.userData.land = !!v.land;
   detaljIBakken(mat, 2 * u.S); return mat;
 }
 // Lys per hjørne for land uten glans (15. nov). Lysretningen er uansett bare kjent i hjørnene av terrengnettet, så bildet blir
@@ -1183,11 +1185,13 @@ function bakkeMateriale(R, u, tex, valg) {
 function hjørnelys(mat) {
   if (!mat || !mat.isMeshPhongMaterial || mat.userData.enkel || mat.userData.hjørnelys) return;
   mat.userData.hjørnelys = true; const før = mat.onBeforeCompile, nøkkel = mat.customProgramCacheKey, utenGlans = !!mat.userData.utenGlans;
-  const HJ = 'reflectedLight.directDiffuse = vLightFront * hjL; reflectedLight.indirectDiffuse = vIndirectFront * hjL;';
+  // (18. nov: skyggen fra sola – getShadowMask – legges på sollyset; uten skyggekart gir den 1)
+  const HJ = 'reflectedLight.directDiffuse = vLightFront * hjL * getShadowMask(); reflectedLight.indirectDiffuse = vIndirectFront * hjL;';
   mat.onBeforeCompile = (sh, rr) => { if (før) før(sh, rr);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n#include <bsdfs>\n#include <lights_pars_begin>\nvarying vec3 vLightFront;\nvarying vec3 vIndirectFront;\n#ifdef DOUBLE_SIDED\nvarying vec3 vLightBack;\nvarying vec3 vIndirectBack;\n#endif')
       .replace('#include <project_vertex>', '#include <project_vertex>\n#include <lights_lambert_vertex>');
     sh.fragmentShader = 'varying vec3 vLightFront;\nvarying vec3 vIndirectFront;\n' + sh.fragmentShader
+      .replace('#include <shadowmap_pars_fragment>', '#include <shadowmap_pars_fragment>\n#include <shadowmask_pars_fragment>')
       .replace('#include <lights_phong_fragment>', 'vec3 hjL = BRDF_Diffuse_Lambert(diffuseColor.rgb);\n' + (utenGlans ? '#if 0' : 'if (specularStrength > 0.004) {') + '\n#include <lights_phong_fragment>')
       .replace('#include <aomap_fragment>', (utenGlans ? '#endif\n  ' + HJ : '} else {\n  ' + HJ + '\n}') + '\n#include <aomap_fragment>');
   };
@@ -1265,7 +1269,9 @@ function enkelBakke(mat) {
 // (KROKER.bakke: bølger, skyskygger) kobler seg på igjen.
 function byttBakke() {
   const R = R3; if (!R || !R.mesh || !R.ut || !R.tex) return;
-  const enkel = !!(window.KVAL && KVAL.p.bakke === 'enkel'); if (bakkeErEnkel(R) === enkel) return;
+  // (18. nov: også når «Lys og skygger» slås av eller på – bakkens skyggelegger har da andre deler med, se BAKKE_FX)
+  const enkel = !!(window.KVAL && KVAL.p.bakke === 'enkel'), fx = bakkeFx(), merke = enkel + '|' + fx;
+  if ((R.bakkeMerke || bakkeErEnkel(R) + '|false') === merke) return; R.bakkeMerke = merke;
   const var0 = Object.values(R.bakkeVar || {}); for (const m of var0) m.dispose();
   for (const m of [].concat(R.mesh.material)) if (!var0.includes(m)) m.dispose();
   R.bakkeVar = null; R.bakkeSett = null;
@@ -1275,9 +1281,11 @@ function byttBakke() {
 function detaljIBakken(mat, side) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U, TAAKE_U);
+    // (18. nov, BAKKE_FX: egne teksturer for gress, lyng, grus og berg nært, og dybde i vannet – spill/lys3d.js)
+    if (mat.userData.fx && window.Lys3d) { sh.uniforms.bakkeAtlas = { value: Lys3d.atlas() }; sh.uniforms.uFxTid = Lys3d.U.uFxTid; }
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = 'uniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = '#ifdef BAKKE_FX\nuniform sampler2D bakkeAtlas;\nuniform float uFxTid;\n#endif\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
       ${TAAKE_GLSL}
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
       vec2 fUv = vUv * detaljSkala;
@@ -1287,6 +1295,20 @@ function detaljIBakken(mat, side) {
       float opp = vOpp, vannM = 0.0;
       #ifdef USE_SPECULARMAP
       vec4 maskeT = texture2D(specularMap, vUv); opp = maskeT.g; vannM = maskeT.r;
+      #endif
+      // VANN MED DYBDE (18. nov): grunt vann er lysere og gronnere (bunnen synes), dypt vann morkere, og et smalt skumband mot land.
+      // maskeT.b = avstanden til land (0 ved stranda, 1 fra 40 m ut – se vannmaske)
+      #ifdef BAKKE_FX
+      #ifdef USE_SPECULARMAP
+      {
+      float dypV = smoothstep(0.0, 1.0, maskeT.b);
+      vec3 grunnF = mix(diffuseColor.rgb, vec3(0.3, 0.47, 0.42), 0.5);
+      vec3 vannF = mix(grunnF, diffuseColor.rgb * vec3(0.7, 0.8, 0.92), dypV);
+      float skumV = (1.0 - smoothstep(0.0, 0.07, maskeT.b)) * (0.5 + 0.5 * sin(maskeT.b * 80.0 - uFxTid * 1.2 + flekk * 6.0)) * (0.3 + 0.7 * korn);
+      vannF = mix(vannF, vec3(0.9, 0.93, 0.94), skumV * 0.4);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vannF, vannM);
+      }
+      #endif
       #endif
       float gronn = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronn * (0.55 + 0.45 * flekk));
@@ -1311,6 +1333,28 @@ function detaljIBakken(mat, side) {
       // (ytelse 12. nov: resten av bildet slipper de fem oppslagene under – bakken var den tyngste delen å tegne)
       // (15. nov: nærdetaljene er bare med i varianten for kamera nær bakken – BAKKE_NAER, se bakkeVariant)
       #ifdef BAKKE_NAER
+      #ifdef BAKKE_FX
+      // SKARP BAKKE NAERT (18. nov): fire monstre i ett bilde (bakkeAtlas: r gress, g lyng, b grus, a berg) blandes etter kartfargen –
+      // gront og olivengront = gress, brunlig = lyng og mose, graatt og jord = grus, bratt = berg. To malestokker (ca. 3,6 m og 14 m per rute), den
+      // fine bare helt naert. To oppslag i stedet for fem.
+      {
+      float mettK = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+      float vegK = clamp((diffuseColor.g - diffuseColor.b) * 6.0, 0.0, 1.0) * smoothstep(0.02, 0.07, mettK);
+      float wGress = vegK * smoothstep(-0.08, 0.03, diffuseColor.g - diffuseColor.r);
+      float wLyng = vegK - wGress, wGrus = 1.0 - vegK;
+      vec2 aUv = vUv * detaljSkala;
+      vec4 a1 = texture2D(bakkeAtlas, aUv * 0.9 + vec2(0.13, 0.57));
+      vec4 a2 = texture2D(bakkeAtlas, vec2(aUv.x * 0.8 - aUv.y * 0.6, aUv.x * 0.6 + aUv.y * 0.8) * 0.23 + vec2(0.41, 0.09));
+      float heltN = 1.0 - smoothstep(5.0, 40.0, detAvst);
+      vec4 at = mix(a2, a1 * 0.7 + a2 * 0.3, heltN);
+      vec3 fG = diffuseColor.rgb * mix(vec3(0.6, 0.74, 0.54), vec3(1.4, 1.36, 0.88), at.r);
+      vec3 fL = diffuseColor.rgb * mix(vec3(0.5, 0.54, 0.5), vec3(1.4, 1.32, 1.08), at.g);
+      vec3 fS = diffuseColor.rgb * mix(0.5, 1.42, at.b);
+      vec3 fB = diffuseColor.rgb * mix(0.5, 1.36, at.a);
+      vec3 naerF = mix(fG * wGress + fL * wLyng + fS * wGrus, fB, bratt);
+      diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * (1.0 - sno * 0.7) * (1.0 - vannM));
+      }
+      #else
       if (naer > 0.0) {
       float k2 = texture2D(detalj, vUv * detaljSkala * 4.7 + vec2(0.31, 0.17)).r, k3 = texture2D(detalj, vUv * detaljSkala * 4.1 + vec2(0.71, 0.43)).b;
       float k4 = texture2D(detalj, vUv * detaljSkala * 1.9 + vec2(0.13, 0.59)).g;
@@ -1320,6 +1364,7 @@ function detaljIBakken(mat, side) {
       naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
       diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));
       }
+      #endif
       #endif`)
       // is med sno paa innsjoene glinser ikke
       .replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno;')
@@ -1392,6 +1437,8 @@ async function bygg3d(cx, cy, S) {
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
   u.skygger = await treskygger(px, TW, u);
+  // omgivelsesskygge ved husene (18. nov, pakke «lys»): mørkere bakke inntil veggene og mørkere vegger nederst
+  if (bakkeFx() && u.hus) { u.husSkygger = await husskygger(px, TW, u); await husFot(u); }
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
@@ -1458,6 +1505,7 @@ function vannIBratt(px, TW, H, N, steg, rad0 = 0, rad1 = TW, st = {}) {
 // Rød kanal = vann (alle som leser masken, bruker den). Grønn kanal = hvor flatt terrenget er (normalens z, 255 = flatt), glattet:
 // bakkeshaderen bruker den til berg i bratte sider og snø på flatt terreng (feilretting 12. nov: før kom helningen fra hjørnene i
 // terrengnettet, og flekkene med berg fikk sagtakkete, trekantete kanter – lia over Mannheller).
+const STRAND_M = 40;
 async function vannmaske(px, TW, H, N, steg) {
   const W = TW >> 1, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'), im = g.createImageData(W, W), d = im.data; let harVann = false;
   for (let j = 0; j < W; j++) { if ((j & 63) === 0 && børPuste()) await pust();
@@ -1475,6 +1523,24 @@ async function vannmaske(px, TW, H, N, steg) {
     for (let j = 0; j < W; j++) { if ((j & 63) === 0 && børPuste()) await pust(); const fy = (j + .5) * f, y0 = Math.min(N - 2, fy | 0), b = fy - y0;
       for (let i = 0; i < W; i++) { const fx = (i + .5) * f, x0 = Math.min(N - 2, fx | 0), a = fx - x0, k = y0 * N + x0;
         d[(j * W + i) * 4 + 1] = 255 * ((F[k] * (1 - a) + F[k + 1] * a) * (1 - b) + (F[k + N] * (1 - a) + F[k + N + 1] * a) * b) + .5; } }
+  }
+  // AVSTAND TIL LAND (18. nov, «vann med dybde»): den blå kanalen sier hvor langt det er til land – 0 ved stranda, 255 fra STRAND_M
+  // meter ut (Claudes forslag: 40 m). Bakkens skyggelegger (BAKKE_FX) gjør grunt vann lysere og legger skum mot land.
+  // To gjennomløp med avstandsvekter 3 (rett) og 4 (skrått), i tredels punkter.
+  if (harVann && H) {
+    const mpp = (N - 1) * steg / W, maks = Math.max(1.5, Math.min(60, STRAND_M / mpp)), D = new Uint8Array(W * W);
+    for (let k = 0; k < W * W; k++) D[k] = d[k * 4] ? 255 : 0;
+    for (let j = 0; j < W; j++) { if ((j & 127) === 0 && børPuste()) await pust(); const r = j * W;
+      for (let i = 0; i < W; i++) { let v = D[r + i]; if (!v) continue;
+        if (i > 0) v = Math.min(v, D[r + i - 1] + 3);
+        if (j > 0) { v = Math.min(v, D[r - W + i] + 3); if (i > 0) v = Math.min(v, D[r - W + i - 1] + 4); if (i < W - 1) v = Math.min(v, D[r - W + i + 1] + 4); }
+        D[r + i] = v; } }
+    const f = 255 / (maks * 3);
+    for (let j = W - 1; j >= 0; j--) { if ((j & 127) === 0 && børPuste()) await pust(); const r = j * W;
+      for (let i = W - 1; i >= 0; i--) { let v = D[r + i]; if (!v) { d[(r + i) * 4 + 2] = 0; continue; }
+        if (i < W - 1) v = Math.min(v, D[r + i + 1] + 3);
+        if (j < W - 1) { v = Math.min(v, D[r + W + i] + 3); if (i < W - 1) v = Math.min(v, D[r + W + i + 1] + 4); if (i > 0) v = Math.min(v, D[r + W + i - 1] + 4); }
+        D[r + i] = v; d[(r + i) * 4 + 2] = Math.min(255, v * f); } }
   }
   // harVann: finnes det vann i utsnittet i det hele tatt? (delBakken: uten vann tegnes hele terrenget med varianten for land)
   g.putImageData(im, 0, 0); c.harVann = harVann; return c;
@@ -2018,6 +2084,31 @@ async function treskygger(px, TW, u) {
   if (u.smått) { mal(u.smått.busk, .9, .22); await pust(); }
   return n;
 }
+// OMGIVELSESSKYGGE VED HUSENE (18. nov): bakken er mørkere de siste HUS_SKYGGE.bredde meterne inn mot en husvegg (malt i kartbildet,
+// som treskyggene – ingen nye trekanter), og veggene er mørkere nederst (hjørnefargene ved bakken, se husFot). Tallene er Claudes forslag.
+const HUS_SKYGGE = { bredde: 2.4, styrke: .3, fot: .72 };
+async function husskygger(px, TW, u) {
+  const mpp = 2 * u.S / TW; if (mpp > 2.4 || !u.hus.omriss) return 0;
+  const r = HUS_SKYGGE.bredde / mpp, r0 = Math.ceil(r); let n = 0;
+  for (const P of u.hus.omriss) { if (!P || P.length < 3) continue;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const ax = (P[j][0] + u.S) / mpp, ay = (u.S - P[j][1]) / mpp, bx = (P[i][0] + u.S) / mpp, by = (u.S - P[i][1]) / mpp, dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy; if (l2 < .01) continue;
+      const x0 = Math.max(0, Math.floor(Math.min(ax, bx)) - r0), x1 = Math.min(TW - 1, Math.ceil(Math.max(ax, bx)) + r0), y0 = Math.max(0, Math.floor(Math.min(ay, by)) - r0), y1 = Math.min(TW - 1, Math.ceil(Math.max(ay, by)) + r0);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), ex = ax + dx * t - x, ey = ay + dy * t - y, d = Math.sqrt(ex * ex + ey * ey) / r; if (d >= 1) continue;
+        // (hjørnene dekkes av to vegger: der halv styrke fra hver, så de ikke blir svarte)
+        const m = 1 - HUS_SKYGGE.styrke * (1 - d) * (1 - d) * (t > 0 && t < 1 ? 1 : .5), q = (y * TW + x) * 4; px[q] *= m; px[q + 1] *= m; px[q + 2] *= m; } }
+    n++; if ((n & 63) === 0 && børPuste()) await pust(); }
+  return n;
+}
+// Veggene mørkere nederst: hjørnene som står ved bakken (under en halv meter over terrenget) får mørkere farge, og fargen glir
+// over mot veggens egen oppover (hjørnefargene blandes over flaten).
+async function husFot(u) {
+  if (!u.hus.deler) return;
+  for (const d of Object.values(u.hus.deler)) { const pos = d.pos, kol = d.kol; if (!pos || !kol) continue;
+    for (let k = 0; k < pos.length; k += 3) { const g = (hoyde3d(pos[k] + u.cx, pos[k + 1] + u.cy, u) - u.h0) * R3.EX;
+      if (pos[k + 2] - g < .5) { kol[k] *= HUS_SKYGGE.fot; kol[k + 1] *= HUS_SKYGGE.fot; kol[k + 2] *= HUS_SKYGGE.fot; }
+      if ((k & 16383) === 0 && børPuste()) await pust(); } }
+}
 function bunnkart(px, TW, skog) {
   const W = 512, st = TW / W, rgb = new Uint8Array(W * W * 3), gress = new Uint8Array(W * W);
   for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
@@ -2477,6 +2568,8 @@ function init3d() {
   const skyer = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ map: skyTekstur(), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false })); skyer.renderOrder = -1; kuppel.add(skyer); skyer.scale.setScalar(.97);
   R3 = { renderer, scene, cam, c3, ov: document.getElementById('c3o'), mesh: null, ut: null, tex: null, texC: document.createElement('canvas'),
     bane: { x: 0, y: 0, avst: 3000, yaw: 0, pitch: .75 }, ray: new THREE.Raycaster(), EX: 1, bygger: false, nøkkel: '', sol, himmelLys, kuppel, skyer, lysTid: null };   // EX 1: ingen overdrivelse av høyden
+  // skygger fra sola og tåke i dalene (spill/lys3d.js) – må kobles på før noe materiale er laget
+  if (window.Lys3d) Lys3d.init(R3);
 }
 // Skyer: lette sommerskyer (verdistøy i flere lag, sømløs rundt) over horisonten, tynnere mot horisonten. Øverst i bildet = senit.
 function skyTekstur() {
@@ -2628,7 +2721,7 @@ function sett3d(u) {
   if (!R.tåkeC) { R.tåkeC = document.createElement('canvas'); R.tåkeC.width = R.tåkeC.height = 1024;
     R.tåkeTex = new THREE.CanvasTexture(R.tåkeC); R.tåkeTex.generateMipmaps = false; R.tåkeTex.minFilter = THREE.LinearFilter; R.tåkeTex.premultiplyAlpha = true; TAAKE_U.taakeKart.value = R.tåkeTex; }
   if (R.vannTex) R.vannTex.dispose(); R.vannTex = K.vannTex || new THREE.CanvasTexture(u.vann);
-  const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh);
+  const mat = bakkeMateriale(R, u, tex); R.mesh = new THREE.Mesh(geo, mat); R.scene.add(R.mesh); R.bakkeMerke = !!mat.userData.enkel + '|' + !!mat.userData.fx;
   // rutene med vann for seg (bølger og glans bare der – se bakkeVariant)
   R.bakkeDel = K.geo ? K.del : delBakken(geo, u); R.bakkeSett = null;
   // Trærne, steinene og buskene deler geometri (TREGEO), som brukes om igjen. Småtingene (biler, flagg, gatelys) lager sin egen hver gang.
@@ -3055,10 +3148,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=7628d04568"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=9b2a26091f"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=eebfdb4b4c"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=cf59ab2885"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
-<script src="/dovre-fliser/spill/kvalitet.js?v=3be9c3f6e9"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=89cad098e5"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
@@ -3089,7 +3182,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior.js?v=e4c7eb43c3"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=773fa0b376"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
-<script src="/dovre-fliser/spill/filtre.js?v=bb9b521aa4"></script>
+<script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
@@ -3145,9 +3238,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=4905700357"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=e78f0a255b"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
+<script src="/dovre-fliser/spill/lys3d.js?v=a6cfdf5458"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=49f596422d"></script>
-<script src="/dovre-fliser/spill/fjernby3d.js?v=68948f7dbd"></script>
+<script src="/dovre-fliser/spill/fjernby3d.js?v=37d8433bdb"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/merker.js?v=e007fd169f"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=8afcdc2066"></script>
