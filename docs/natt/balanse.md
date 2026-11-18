@@ -409,3 +409,19 @@ unna som «slapp unna», ikke «slått tilbake».
   lagene den lager fikk andre navn og væremåter). Prøvd: balanse + krig etter hverandre, OK på PC og mobil.
 - Hjelpetekst: `docs/natt/balanse-hjelp.json` – «Siste døgn» og «Ammunisjon og hvile hjemme» er nye, «Røverne og byttet» er rettet
   (omlasting, taket for hele bølgen).
+
+**Kort kontroll på Hard** (all koden i runde 5, også «hjem for å hvile»; 24 mill. kr i start, fiendens treff × 1,3, røverlag × 1,5,
+fredstid 5 døgn). Fire døgnkall – det tredje døgnet ble ikke ferdig innen tidsgrensen (raden «2» to ganger), så det er tre døgn:
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (% = helse) | Lag: sårede eller falne / mann | Slått ut | Bølge | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1.5 mill. | 6 | 71 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 | 0 | 1 (aktiv) |  |
+| 2 | 0.0 mill. | 4 | 67 | 38 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne.; Siste døgn: Bølge 1 slått tilbake. 2 har dratt.; 4 rep. av seg selv |
+| 2 | 0.0 mill. | 4 | 57 | 32 | brakke(80%) aggregat(80%) drivstofftank(81%) vakttårn(80%) | Vaktlaget:3/4 Tropp 1:1/4 Tropp 2:4/4 | 1 | 2 | Røvere 2.2 har herjet i leiren og trekker seg ut med byttet: 5 rasjoner.; REPARER Reparer alle (950 137 kr) |
+| 3 | 0.0 mill. | 4 | 52 | 28 | brakke(80%) aggregat(80%) drivstofftank(81%) vakttårn(80%) | Vaktlaget:3/4 Tropp 1:1/4 Tropp 2:4/4 | 1 | 2 | Vaktlaget ser noe 1,3 km øst for leiren: forlatt leir. Send et lag dit og unders |
+
+- Startbyggene, Tropp 1 og vakttårnet tok nesten hele kassa (1,5 mill. igjen etter døgn 1); skriptet fikk aldri kjøpt diesel
+  (500 l = 4–4,7 mill. kr) og hadde 9 000 kr fra dag 3.
+- Bølge 1 var to røverlag på 6 (12 mot 8) og ble slått tilbake (450 000 kr, som gikk til reparasjon). Bølge 2 (to lag) kom inn i
+  leiren: Tropp 2 ble slått ut (4/4), Vaktlaget mistet tre, og røverne herjet – byggene står på 80 % uten penger til reparasjon.
+- Leiren hadde ikke falt etter tre døgn, men den er på vei: ingen penger, ingen diesel, to lag nesten borte. **På Hard kan leiren falle.**
