@@ -54,3 +54,25 @@ Alt ligger på grenen `claude/nattfiks`. **Ingenting er publisert.** Detaljene f
 - Fra gjennomspillingene, ikke rettet: last på nytt midt i et angrep fjerner røverne; karakteren blir utslitt når du spoler; første hus kan være tomt; «Gå» setter deg der kameraet ser; krigskartet er trangt i liggende format på telefon; hjelpen og opplæringen kommer samtidig første gang.
 - Hakk ved nytt utsnitt er ikke arbeidet med.
 - Y-tasten (100 mill. kr) ligger fortsatt inne, som avtalt.
+
+---
+
+# Tillegg kl. 10:30 (arbeid 08:30–10:30)
+
+## Kontroll
+- **Mobilkontrollen (hele `sjekk.js`) på den endelige versjonen: 115 godkjente, «Alt i orden».**
+- PC-kontrollen på versjonen fra 08:30 (uten lys, balanse og telefon runde 2–3): 109 godkjente og ingen feil så langt; den var ikke ferdig kl. 10:20 (maskinen var travel). PC-kontrollen er ikke kjørt på den endelige versjonen.
+- Fem feil i selve kontrollen ble rettet (graving-laget var drept av tidligere vakter; kontrollrommet koster nå 9 mill.; 15 grunnmål; knappehøyde og kassa på telefon).
+
+## Gjort
+- **Lys og skygger i 3D er nå flettet inn og kontrollert:** skygger fra sola (Høy og Middels på PC, Høy på mobil), omgivelsesskygge ved hus, skarp bakke nært, vann med dybde og skum, skyer i lag, lys på bakken om natta, tåke i dalene, standard fargesetting, kantutjevning og dybdeuskarphet når du går. «Lys og skygger» i ☰ slår alt av. Lav grafikk er ikke tyngre enn før (målt 1,48 mot 1,46 s per bilde i programvare-grafikk). Ingen grafikkfeil.
+- **Minnelekkasje rettet:** 3D-flagget ved leiren la igjen ett bilde på grafikkortet for hvert nytt område (fantes fra før).
+- **Telefon:** krigskartet og panelene står som sidepanel i liggende format; små iPhoner (SE) rettet; byggekortene i tre kolonner (fanen Bygg fra 3200 til 1800 px); lagpanelet flytter kartet så valgt lag ikke ligger under panelet; opplæringen kommer før hjelpen første gang; ☰-radene 40 px.
+- **Balansen de første døgnene** (tallene i `docs/natt/balanse.md`): røverbytte 0,45–1,5 mill. (før 3–7), bølger som vokser med gjengen og dagen, røverlag på 6–12 mann og aldri mer enn dine soldater + 2, første bølge tidligst etter ett døgn, sabotører tidligst fra dag 5, motstanderne holder seg unna leiren de første døgnene, kontrollrommet 9 mill. (før 15), betonghylla 60 m³, nye spill uten stridsvogn og rakettartilleri, brann i leiren slokkes av folk hjemme og skader gradvis, varsel og mål for mat.
+- Fra gjennomspillingen: laster du på nytt midt i et angrep, kommer bølgen igjen; du sover i leiren; første hus er aldri tomt; «Gå» i opplæringen starter ved karakteren. (Ikke prøvd i nettleser.)
+
+## Står igjen
+- **Leiren overlever fortsatt ikke sju døgn** i den automatiske gjennomspillingen: den sto i fire døgn og falt på dag 6, fordi røverne i bølge 4 ble stående inne i leiren og ingen slo dem, og byggene aldri ble reparert. Neste steg: røvere som har herjet en stund trekker seg med byttet, forsvarerne går mot røvere i leiren, og opplæringen sier «reparer byggene» og «lag en tropp til». Gjennomspillingen laget bare én tropp på fire – en ekte spiller ville gjort mer.
+- Ikke sett i ekte Safari på iPhone, og 3D (særlig skyggene) er bare målt med programvare-grafikk: be om «Mål ytelse» med «Lys og skygger» på og av.
+- Hakk når et nytt område lastes i 3D er ikke arbeidet med.
+- Y-tasten (100 mill. kr) ligger inne, som avtalt.

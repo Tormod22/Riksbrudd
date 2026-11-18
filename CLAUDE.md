@@ -1212,4 +1212,9 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   spille på ekte i Playwright: `context.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }))`.
   FLETTING: scratchpad inn.sh <gren> (løser skript-tagg-konflikter i index.html med flett.py, kjører versjon.py og alle regeltestene).
   KJENT: graving-vakten («feltarbeid») feiler av og til (laget blir ikke ferdig nedgravd; årsaken ikke funnet – målingen `mål` skrives
-  ut når den feiler). IKKE PUBLISERT før brukeren sier «Publiser».
+  ut når den feiler – ÅRSAKEN: laget var drept av tidligere vakter; vakten gjør det friskt først). IKKE PUBLISERT før brukeren sier «Publiser».
+  MORGENEN 18. NOV (08:30–10:30, på Opus fordi Fable-grensen var nådd): lys og skygger ferdigstilt og flettet inn (docs/natt/lys.md:
+  spill/lys3d.js, «Lys og skygger» i ☰, KVAL.fx; AV i testene), teksturlekkasje fra 3D-flagget i oppstart-visning.js rettet, telefon
+  liggende/små iPhoner (spill/telefon.js, docs/natt/test2.md runde 2–3), balansen (docs/natt/balanse.md: røverbytte, bølgestørrelse,
+  fredstid, kontrollrom 9 mill., lett start uten stridsvogn, brann i leiren, mat – 15 grunnmål nå). Rapport: docs/natt/RAPPORT.md.
+  Mobilkontrollen 115/115. Leiren overlever ennå ikke sju døgn i den automatiske gjennomspillingen (se balanse.md).
