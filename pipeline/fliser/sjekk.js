@@ -39,6 +39,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // kode inne i en kommentar (en //-kommentar midt på en linje har slukt kode tre ganger 10. nov – gyldig syntaks, men koden kjøres ikke)
     for (const f of [...filer.filter(f => !f.startsWith('index.html')), 'index.html']) fs.readFileSync(path.join(D, f), 'utf8').split('\n').forEach((l, n) => {
       const i = l.search(/(^|[^:'"`\\])\/\/ /); if (i < 0) return; const k = l.slice(i);
+      // (18. nov: bare kommentarer som står ETTER kode på linja – en hel kommentarlinje som forklarer «X.y = …» er ikke slukt kode)
+      if (/^\s*\/\//.test(l)) return;
       if (/\b\w+(\.\w+)+\([^)]*\)\s*;|\b\w+(\.\w+)+\s*=\s*[^=>\s]/.test(k)) dårlige.push(`${f}:${n + 1} (kode i kommentar: ${k.trim().slice(0, 60)})`); });
     if (dårlige.length) feil++; console.log(`${dårlige.length ? 'FEIL' : 'ok  '} syntaks i ${filer.length} skriptfiler` + (dårlige.length ? ': ' + dårlige.join(', ') : ''));
   }
