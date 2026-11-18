@@ -47,7 +47,32 @@
     // «Lys og skygger» av – er uDalT.x = 0, og skyggeleggeren hopper over regningen.)
     for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) { lib.uniforms.uDalT = { value: DAL }; lib.uniforms.uDalF = { value: DALF }; }
     DAL[2] = REGLER.lagTykkelse; DAL[3] = REGLER.perMeter;
+    // et mindre spillkart (/rogaland): alt utenfor området mørklegges også i 3D (spill/grense3d.js lager masken). Bare der – ellers som før.
+    if (typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE) koblGrense(C);
   };
+
+  // ---------- grensa på et mindre spillkart ----------
+  // Etter tåka: punktet slås opp i områdets maske (1 inne, 0 ute, glattet) etter hvor det står i verden (xy regnet ut fra kameramatrisen
+  // som høyden over), og blandes mot RG.F (styrke, farge) der masken er 0. Gjelder alt som har tåke. uRgF.x = 0 til masken er klar.
+  // uRgO = (maskens hjørne i scenens mål x, y, 1 / bredde, 1 / høyde).
+  const RG = { O: new Float32Array(4), F: new Float32Array(4), tex: null };
+  L.RG = RG;
+  function koblGrense(C) {
+    const t = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.LuminanceFormat);
+    t.unpackAlignment = 1; t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
+    // three.js kopierer bilder i uniformene per materiale (cloneUniforms): masken skal deles av alle, så kopien er bildet selv
+    t.clone = function () { return this; };
+    RG.tex = t;
+    C.fog_pars_vertex = C.fog_pars_vertex.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying vec2 vRgXY;');
+    C.fog_vertex = C.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = - mvPosition.z;\n\tvRgXY = vec2(dot(viewMatrix[0].xyz, mvPosition.xyz - viewMatrix[3].xyz), dot(viewMatrix[1].xyz, mvPosition.xyz - viewMatrix[3].xyz));');
+    C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying vec2 vRgXY;\n\tuniform vec4 uRgO;\n\tuniform vec4 uRgF;\n\tuniform sampler2D uRgM;');
+    const tåke = 'gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );';
+    C.fog_fragment = C.fog_fragment.replace(tåke, () => tåke + '\n\tif (uRgF.x > 0.0) {\n\tfloat rgM = texture2D(uRgM, (vRgXY - uRgO.xy) * uRgO.zw).r;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uRgF.yzw, uRgF.x * (1.0 - rgM));\n\t}');
+    const lag = () => ({ uRgO: { value: RG.O }, uRgF: { value: RG.F }, uRgM: { value: t } });
+    for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) Object.assign(lib.uniforms, lag());
+    // (egne ShaderMaterial som bygger på UniformsLib.fog, f.eks. røyken i effekter3d.js, får det samme)
+    Object.assign(THREE.UniformsLib.fog, lag());
+  }
 
   // ---------- bakkens mønstre ----------
   // 512 × 512, sømløst: r = gress (strå), g = lyng og mose (tuer med småprikker), b = grus (småstein), a = berg (sprekker og lav)
