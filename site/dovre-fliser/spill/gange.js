@@ -60,7 +60,8 @@
   }
   // Vannet i 3D-utsnittet (vannmasken fra bygg3d), lest én gang per utsnitt
   function vannVed(u) {
-    if (!u.vann) return () => false;
+    // isen bærer (spill/verden-visning.js): da stopper ikke vannet deg
+    if (!u.vann || window.VERDEN_IS) return () => false;
     if (!u.vannData) { try { const W = u.vann.width; u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { u.vannData = { W: 0 }; } }
     const { W, d } = u.vannData; if (!W) return () => false;
     return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; };

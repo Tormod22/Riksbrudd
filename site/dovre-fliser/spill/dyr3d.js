@@ -269,5 +269,13 @@
     sc.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
     return ut;
   }
-  window.Dyr3d = { plasser, punkter, antall, prøvShadere, lovlig, flokker: () => (D ? D.flokker : []) };
+  // Jakt (spill/verden-visning.js): et skudd fra (X, Y) i kartet i retningen (fx, fy) feller det nærmeste dyret i skuddlinja.
+  // treffer(flokker, x, y, fx, fy) er Verden.sikt. Dyret tas ut av flokken og vises ikke mer. Gir { art, ung, avst } eller null.
+  function fell(X, Y, fx, fy, treffer) {
+    if (!D || !treffer) return null; const u = D.u, t = treffer(D.flokker, X - u.cx, Y - u.cy, fx, fy); if (!t) return null;
+    const d = t.F.dyr[t.i], m = D.mesh[t.F.art]; t.F.dyr.splice(t.i, 1);
+    if (m && d.nr != null) { if (!o3) o3 = new THREE.Object3D(); o3.position.set(0, 0, -9999); o3.scale.setScalar(0); o3.updateMatrix(); m.setMatrixAt(d.nr, o3.matrix); m.instanceMatrix.needsUpdate = true; }
+    return { art: t.F.art, ung: !!d.ung, avst: t.avst };
+  }
+  window.Dyr3d = { plasser, punkter, antall, prøvShadere, lovlig, fell, flokker: () => (D ? D.flokker : []) };
 })();

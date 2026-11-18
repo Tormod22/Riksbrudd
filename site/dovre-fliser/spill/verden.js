@@ -21,12 +21,13 @@
     temp: { perHundre: .6, dal: 650 },
     // is: døgngrader med kulde før isen bærer folk til fots, mest is, hvor fort den tiner (per varmegrad-døgn), fart på isen (km/t)
     is: { bærer: 25, maks: 80, tiner: 4, fart: 2.5 },
-    // kulde: lag som står ute (ikke i leir eller tettsted) under «grense» grader tåler «timerFør» timer; så ett treff (skade) hver «timerPer» time
+    // kulde: lag som står ute (ikke i leir eller tettsted) under «grense» grader tåler «timerFør» timer; så blir én mann såret (aldri drept) hver «timerPer» time; «læ» = innen så mange meter fra leiren står de ikke ute
     // ved: ekstra tre (m³ per døgn) i leiren per 10 grader under «vedFra»
-    kulde: { grense: -8, timerFør: 10, timerPer: 5, skade: .25, vedFra: -8, ved: 1, læ: 300 },
+    kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
     // regn: regnsummen (timer med fullt regn, tørker 0,2 per time uten regn, maks 30); flom mulig over «flom», ras over «ras»
     // sjanse per spilltime når terskelen er nådd; flomsonen varer «flomTimer», raset «rasTimer»; radius i meter; bratt = stigning (m per m)
-    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, ryddTimer: 3 },
+    // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras
+    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5 },
     // tørke: døgn uten regn (maks 10); brannfaren er 0 under «fra» og full ved «full»
     tørke: { maks: 10, fra: .5, full: 3 },
     // brann: rutenett (m), brenntid per rute (spillminutter), spredning per 10 min til en naborute i full tørke uten vind,
