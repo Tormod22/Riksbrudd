@@ -41,9 +41,10 @@
   // Kjøring 4: røverne sto et døgn inne i leiren og ødela bygg etter bygg mens lagene ble stående i stillingene sine, og byggene ble
   // aldri reparert. Tallene er Claudes forslag:
   //  mot.inne: røvere nærmere leirens midte enn dette er «inne i leiren»; mot.avstand: lagene går hit (meter fra røverne, på sin egen
-  //  side); mot.ny: målet må ha flyttet seg så langt før laget får ny ordre. rep.under: byggelagene reparerer bygg under denne helsen
+  //  side); mot.ny: målet må ha flyttet seg så langt før et lag på vei får ny ordre; mot.nær: et lag som står innen avstand + nær, blir stående. rep.under: byggelagene reparerer bygg under denne helsen
   //  av seg selv; rep.reserve: så mye blir alltid igjen i kassa; rep.varsel: bygg under denne helsen teller som skadet i varselet.
-  R.mot = { inne: 150, avstand: 50, ny: 60 };
+  // (kjøring 5: på 50 m sto lagene i skogen uten å se røverne midt i leiren og løsnet ikke et skudd – nå 25 m)
+  R.mot = { inne: 150, avstand: 25, ny: 40, nær: 30 };
   R.rep = { under: .95, reserve: 3e5, varsel: .98 };
   // Hvem går mot hvem: hvert lag mot den nærmeste røveren inne i leiren, og stiller seg mot.avstand m fra den på sin egen side.
   // lag: [{ x, y }], røvere: [{ x, y }] (bare de inne i leiren), leir: { x, y }. Gir [{ lag, fi, mål: { x, y } }].

@@ -86,7 +86,7 @@ async function runde4(pg) {
     finally {
       // alt tilbake
       for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1);
-      for (const [e, x, y, sti, strid, fsv] of før.pos) { e.x = x; e.y = y; e.sti = sti; e.strid = strid; if (fsv) e.forsvar = fsv; else delete e.forsvar; delete e.motMål; delete e.motHerjer; e.siktSkitten = true; }
+      for (const [e, x, y, sti, strid, fsv] of før.pos) { e.x = x; e.y = y; e.sti = sti; e.strid = strid; if (fsv) e.forsvar = fsv; else delete e.forsvar; delete e.motMål; delete e.motHerjer; delete e.motTid; e.siktSkitten = true; }
       LS.bygg = LS.bygg.filter(b => før.bygg.some(q => q[0] === b)); for (const [b, hp, arb] of før.bygg) { b.hp = hp; b.arbeid = arb; } LS.nesteJobb = før.nesteJobb;
       Object.assign(LS.lager, før.lager); LS.drivstoff = før.diesel; if (F) { F.mat = før.mat; F.moral = før.moral; F.personer.forEach((p, i) => { if (før.opp[i]) { p.oppgave = før.opp[i][0]; p.helse = før.opp[i][1]; } }); }
       const diff = før.penger - OppstartSpill.tilstand().penger; if (diff > 0) OppstartSpill.gi(diff); else if (diff < 0) OppstartSpill.betal(-diff);

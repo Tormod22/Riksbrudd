@@ -88,7 +88,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
     for (const p of B.punkter) boks.append(e('div', { klasse: 'p' + (p.ok ? ' ok' : ''), 'data-punkt': p.id }, e('span', { klasse: 'h' }, p.ok ? '✓' : '○'), e('span', {}, p.navn, ' ', e('small', {}, p.tekst)), e('small', {}, `${p.poeng}/${p.av}`)));
     if (B.råd.length) boks.append(e('div', { klasse: 'raad' }, 'Dette hjelper mest nå: ' + B.råd[0]));
     boks.append(satt ? knapp(røvere().length ? 'Opphev forsvaret' : 'Avslutt øvelsen', () => { opphev(false); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'forsvaropphev' }) : knapp(røvere().length ? 'Forsvar leiren nå' : 'Øv: sett lagene i stilling', () => { sett(!røvere().length); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'forsvarov' }));
-    { const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS)) : { n: 0 }, på = repPå();
+    { const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS).filter(q => !q.opptatt)) : { n: 0 }, på = repPå();
       boks.append(knapp(`Byggelagene reparerer av seg selv: ${på ? 'på' : 'av'}`, () => { settRep(!repPå()); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'reparerauto' }));
       if (sk.n) boks.append(knapp(`${sk.tekst} – reparer alle`, () => { reparerAlle(); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'reparerallemeny' })); }
     boks.append(e('small', { style: 'display:block;margin-top:6px;color:var(--ink-dim,#a99)' }, 'Når røverne kommer, står det et banner øverst. «Forsvar leiren» sender alle lag innen 3 km i stilling på den siden fienden kommer fra, bak sandsekkvollene først, og lar dem grave seg ned. Folk på «vakt» blir Leirvakta. Kommer røverne inn i leiren, går lagene hjemme og Leirvakta mot dem av seg selv. Mellom angrepene reparerer ledige byggelag de mest skadde byggene (det koster penger; 300 000 kr blir alltid igjen i kassa).'));
@@ -108,12 +108,14 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
     if (vakt && levende(vakt) && !vakt.planlegger) lag.push(vakt);
     const navn = [];
     for (const q of FO.motHerjere(lag, inne, L)) { const s = q.lag;
-      if (s.motMål && Math.hypot(s.motMål.x - q.mål.x, s.motMål.y - q.mål.y) < R.mot.ny && (s.sti || Math.hypot(s.x - s.motMål.x, s.y - s.motMål.y) < 20)) continue;
-      if (Math.hypot(s.x - q.mål.x, s.y - q.mål.y) < 15 || !kanStille(s)) continue;
-      s.motHerjer = q.fi.navn; s.motMål = q.mål; ordre(s, q.mål.x, q.mål.y, true); navn.push(s.navn); }
+      // på vei dit vi sendte laget, og målet har ikke flyttet seg mye; eller står alt nær nok; eller fikk ordre for under 4 s siden
+      if (s.sti && s.motMål && Math.hypot(s.motMål.x - q.mål.x, s.motMål.y - q.mål.y) < R.mot.ny) continue;
+      if (!s.sti && q.meter <= R.mot.avstand + R.mot.nær) continue;
+      if (performance.now() - (s.motTid || 0) < 4000 || !kanStille(s)) continue;
+      s.motHerjer = q.fi.navn; s.motMål = q.mål; s.motTid = performance.now(); ordre(s, q.mål.x, q.mål.y, true); navn.push(s.navn); }
     if (navn.length && !motMeldt) { motMeldt = true; logg(`Røverne er inne i leiren! ${navn.join(', ')} går mot dem.`); } }
   // røverne er ute av leiren (eller angrepet er over): lagene i forsvarsstilling går tilbake dit
-  function motFerdig() { motMeldt = false; for (const s of ENHETER) { if (!s.motMål) continue; const gikk = motVår(s); delete s.motHerjer; delete s.motMål; if (gikk && s.forsvar && levende(s) && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) > 12) ordre(s, s.forsvar.x, s.forsvar.y, true); } }
+  function motFerdig() { motMeldt = false; for (const s of ENHETER) { if (!s.motMål) continue; const gikk = motVår(s); delete s.motHerjer; delete s.motMål; delete s.motTid; if (gikk && s.forsvar && levende(s) && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) > 12) ordre(s, s.forsvar.x, s.forsvar.y, true); } }
 
   // ---------- (runde 4) REPARASJON: byggelagene reparerer skadde bygg når de ikke har annet å gjøre ----------
   // Standard på (også i lagrede spill); valget lagres per leir i «riksbrudd-reparer». Bare mellom angrepene, og reserven blir i kassa.
