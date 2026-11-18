@@ -8,7 +8,7 @@
 // Kroker i index.html: kamera3d() spør Gange.kamera når R3.fot er satt, og styringen i 3D sender pekerne hit først (Gange.peker).
 (function () {
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);   // R3 er en let i index.html, ikke window.R3
-  const taster = new Set(); let sist = 0, spak = null, se = null, lagret = null, kropp = null, hoppVent = false, mobilHuk = false, fov = 50, kroppU = null, hoppHoldt = false, hukHoldt = false, fører = null;
+  const taster = new Set(); let sist = 0, spak = null, se = null, lagret = null, kropp = null, hoppVent = false, mobilHuk = false, fov = 50, kroppU = null, hoppHoldt = false, hukHoldt = false, fører = null, ligger = false;
   const knapp = document.createElement('button'); knapp.id = 'gaaknapp'; knapp.textContent = 'Gå'; knapp.title = 'Gå selv i førsteperson'; knapp.hidden = true;
   document.querySelector('.knapper').insertBefore(knapp, document.getElementById('meny'));
   setInterval(() => { knapp.hidden = !(typeof på3d !== 'undefined' && på3d); if (knapp.hidden && r3() && R3.fot) stopp(); }, 400);
@@ -22,9 +22,12 @@
   const mk = document.createElement('div'); mk.id = 'gangeknapper'; const hb = document.createElement('button'), kb = document.createElement('button');
   hb.textContent = 'Hopp'; kb.textContent = 'Huk'; mk.append(kb, hb); document.body.appendChild(mk);
   hb.addEventListener('pointerdown', e => { e.preventDefault(); hoppVent = true; hoppHoldt = true; });
-  kb.addEventListener('pointerdown', e => { e.preventDefault(); hukHoldt = true; if (fører) return; mobilHuk = !mobilHuk; kb.classList.toggle('på', mobilHuk); });
+  kb.addEventListener('pointerdown', e => { e.preventDefault(); hukHoldt = true; if (fører) return; if (ligger) { ligger = false; mobilHuk = false; } else if (mobilHuk) { ligger = true; mobilHuk = false; } else mobilHuk = true; stillingKnapp(); });
   for (const t of ['pointerup', 'pointercancel', 'pointerleave']) { hb.addEventListener(t, () => { hoppHoldt = false; }); kb.addEventListener(t, () => { hukHoldt = false; }); }
 
+  // Knappen nede til høyre viser det neste trykket gir: Huk -> Ligg -> Reis deg (natt til 18. nov: ny stilling «ligg» under huk)
+  function stillingKnapp() { if (fører) return; kb.textContent = ligger ? 'Reis deg' : mobilHuk ? 'Ligg' : 'Huk'; kb.classList.toggle('på', mobilHuk || ligger); }
+  function settLigg(v) { ligger = !!v; if (ligger) mobilHuk = false; stillingKnapp(); return ligger; }
   function start() {
     if (!r3() || !R3.ut) return;
     const b = R3.bane; lagret = { avst: b.avst, pitch: b.pitch, x: b.x, y: b.y };
@@ -32,9 +35,9 @@
     R3.fot = { a: b.yaw, pitch: -.05 }; b.avst = 1000;   // utsnittet rundt deg: ca. 3,4 km, skarpt kart nær
     const u = R3.ut; ledig(u, b); R3.fot.a = åpenRetning(b.x, b.y, R3.fot.a);
     kropp = Bevegelse.ny(b.x, b.y, hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0);
-    knapp.classList.add('på'); sist = performance.now(); mobilHuk = false; kb.classList.remove('på'); mk.classList.toggle('på', VW < 900);
+    knapp.classList.add('på'); sist = performance.now(); mobilHuk = false; ligger = false; stillingKnapp(); mk.classList.toggle('på', VW < 900);
     logg(VW < 900 ? 'Du går selv: styrespaken nede til venstre (helt ut = løp), dra ellers for å se rundt, «Hopp» og «Huk» nede til høyre. «Gå» flyr opp.'
-      : 'Du går selv: W/A/S/D, Shift løper, mellomrom hopper, C på huk. Klikk i bildet for å styre med musa; Esc slipper musa, Esc igjen flyr opp.');
+      : 'Du går selv: W/A/S/D, Shift løper, mellomrom hopper, C på huk, Z legger deg ned. Klikk i bildet for å styre med musa; Esc slipper musa, Esc igjen flyr opp.');
   }
   // Start med blikket mot åpent lende (15. nov: i Bergen startet «Gå» med nesa en meter fra en husvegg). Kursen er a, og du ser mot
   // (−sin a, cos a). Den retningen nærmest den du hadde som har minst 12 m fri sikt (ingen vegg eller stamme); ellers den med lengst fri sikt.
@@ -88,7 +91,13 @@
     const verden = { høyde: (x, y) => { const g = gulv(x, y); if (g !== null) return g; const t = terr(x, y), d = dekke(x, y); return d !== null && d > t ? d : t; },
       trapp: (x, y) => !!window.Interior3d && Interior3d.påTrapp(x, y),
       hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => gulv(x, y) === null && (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && dekke(x, y) === null };
-    const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk }, dt, verden);
+    // skader (spill/eventyr-visning.js): brukket bein gir lavere fart og verken løp eller hopp
+    const EV = window.EventyrSpill, skadd = EV && EV.fart ? EV.fart() : 1;
+    if (ligger && hoppVent) settLigg(false);
+    kropp.landet = 0;
+    const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk, ligg: ligger, faktor: skadd, ikkeLøp: !!(EV && EV.kanLøpe && !EV.kanLøpe()) }, dt, verden);
+    // et fall (farten du landet med) meldes til skadereglene
+    if (kropp.landet > 0 && EV && EV.fall) EV.fall(kropp.landet);
     hoppVent = false;
     b.x = kropp.x; b.y = kropp.y;
     c.position.set(k.kx, k.ky, k.kz); c.up.set(0, 0, 1);
@@ -114,11 +123,14 @@
     else { if (spak && spak.id === e.pointerId) spak = null; if (se && se.id === e.pointerId) se = null; }
     return true;
   }
-  const BRUKT = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', ' ', 'c', 'control'];
+  const BRUKT = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', ' ', 'c', 'control', 'z'];
   window.addEventListener('keydown', e => { if (!r3() || !R3.fot) return; const k = e.key.toLowerCase();
     if (k === 'escape') { if (!document.pointerLockElement) stopp(); return; }
     // hoppet huskes til neste ramme, så et kort trykk ikke blir borte når bildet henger litt
     if (k === ' ' && !e.repeat) hoppVent = true;
+    // Z legger deg ned og reiser deg igjen; C (huk) reiser deg også
+    if (k === 'z' && !e.repeat && !fører) settLigg(!ligger);
+    if ((k === 'c' || k === 'control') && ligger) settLigg(false);
     if (BRUKT.includes(k)) { taster.add(k); e.preventDefault(); } });
   window.addEventListener('keyup', e => taster.delete(e.key.toLowerCase()));
   window.addEventListener('blur', () => taster.clear());
@@ -133,7 +145,11 @@
       g.beginPath(); g.arc(sx, sy, 55, 0, 6.283); g.stroke(); g.fillStyle = '#e7dcc3'; g.beginPath(); g.arc(sx + (spak ? spak.dx : 0), sy + (spak ? spak.dy : 0), 22, 0, 6.283); g.fill(); }
     g.restore();
   });
-  window.Gange = { start, stopp, kamera, peker, kropp: () => kropp, åpenRetning, vannVed,
+  // Flytt deg til et annet sted i utsnittet mens du går (x, y i utsnittets meter): kroppen lages på nytt der
+  function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
+  window.Gange = { start, stopp, kamera, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
+    // stillingen din: 'stå', 'huk' eller 'ligg'
+    stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
     // fører(R, inn) tar over rammen når den svarer true (spill/kjor.js); knappene nede til høyre får navnene [huk, hopp]
-    settFører: (f, navn) => { fører = f || null; kb.textContent = navn ? navn[0] : 'Huk'; hb.textContent = navn ? navn[1] : 'Hopp'; if (f) { mobilHuk = false; kb.classList.remove('på'); } } };
+    settFører: (f, navn) => { fører = f || null; kb.textContent = navn ? navn[0] : 'Huk'; hb.textContent = navn ? navn[1] : 'Hopp'; if (f) { mobilHuk = false; ligger = false; kb.classList.remove('på'); } } };
 })();
