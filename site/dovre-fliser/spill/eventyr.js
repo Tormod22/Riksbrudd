@@ -21,7 +21,9 @@
     // (runde 2) søvnen spoler klokka: opptil sovTimer spilltimer i 600× (høyst sovSek ekte sekunder), og avbrytes hvis noe skjer
     tilflukt: { sovSek: 45, sovTimer: 6, sovSøvn: 80, sovHelse: 40, vekkAvstand: 300, nær: 1500, helseEtter: 45, lagerKg: 60 },
     // dekning: faktor på skaden du tar
-    dekning: { ligg: .5, huk: .8, vegg: .4, veggAvstand: 10 },
+    dekning: { ligg: .5, huk: .8, vegg: .4, veggAvstand: 10,
+      // (runde 4) en bakketopp mellom deg og fienden: skaden ×0,15. Øyehøyden din etter stillingen, fienden sikter fra 1,5 m.
+      bakke: .15, øye: { stå: 1.6, huk: .9, ligg: .35 }, fiendeØye: 1.5, klaring: .1, prøver: 32 },
     // sniking: grunnavstand (m) der en fiende oppdager deg når du står og går i dagslys
     snik: { grunn: 220, huk: .6, ligg: .35, mørke: .5, skog: .65, stille: .8, løp: 1.4, stilleLøp: 1.15, skudd: 420, skuddStille: .3, skuddSek: 20, opp: .5, ned: .12, glemt: .4, skogTrær: 6 },
     // skader
@@ -29,7 +31,11 @@
     // jakt: lenger enn dette fra leiren bærer du kjøttet selv (det som får plass i sekken)
     jakt: { nær: 500 },
     // hunden
-    hund: { varsle: 350, igjen: 60, husSjanse: .05, perM: 1 / 2500, sikkertEtter: 800 },
+    hund: { varsle: 350, igjen: 60, husSjanse: .05, perM: 1 / 2500, sikkertEtter: 800,
+      // (runde 4) hunden spiser og kan skades: sulten etter 36 spilltimer eller 30 ekte minutter (det som kommer først), spiser en rasjon
+      // (fra leirens mat når dere er i leiren, ellers fra sekken når du gir den), går sin vei etter 12 spilltimer / 10 ekte minutter uten mat.
+      // Blir du truffet, kan hunden også bli truffet (sjanse 0,25, skade = 1,5 × tapet ditt); helse 100, gror 6 per spilltime (×4 i leiren).
+      sultTimer: 36, sultEkteMin: 30, spisUnder: 40, gårTimer: 12, gårEkteMin: 10, treffSjanse: .25, skade: 1.5, gror: 6, gangFart: 2.6 },
     // fella
     felle: { timer: 6, ekteMin: 5, sjanse: .6, skog: .85, maks: 4, nær: 6 },
     // kartsløret
@@ -134,7 +140,11 @@
     sett: (var_, nivå) => (nivå >= 1 ? true : nivå < REGLER.snik.glemt ? false : !!var_),
     ord: n => (n >= 1 ? 'Sett' : n > .05 ? 'Mistenkt' : 'Skjult'),
     // dekningen: faktor på skaden fra én fiende
-    dekning(stilling, vegg) { const D = REGLER.dekning; return (stilling === 'ligg' ? D.ligg : stilling === 'huk' ? D.huk : 1) * (vegg ? D.vegg : 1); },
+    dekning(stilling, vegg, bakke) { const D = REGLER.dekning; return (stilling === 'ligg' ? D.ligg : stilling === 'huk' ? D.huk : 1) * (vegg ? D.vegg : 1) * (bakke ? D.bakke : 1); },
+    // ligger terrenget i veien? h = høyder langs linja fra deg (h[0]) til fienden (h[n−1]), likt fordelt. Sant når et punkt imellom
+    // (ikke de ytterste 5 %) stikker opp over siktelinja fra øyet ditt (h[0] + øye) til fiendens øye (h[n−1] + fiendeØye).
+    bakkeImellom(h, øye) { const D = REGLER.dekning, n = h.length; if (n < 3) return false; const a = h[0] + øye, b = h[n - 1] + D.fiendeØye;
+      for (let i = 1; i < n - 1; i++) { const t = i / (n - 1); if (t < .05 || t > .95) continue; if (h[i] > a + (b - a) * t - D.klaring) return true; } return false; },
   };
 
   // ---------- hunden ----------
@@ -147,6 +157,23 @@
     // dukker det opp en hund? gått = meter siden sist du lette, r = tilfeldig tall for de siste d meterne
     kommer: (gått, d, r, sikkert) => (sikkert && gått >= REGLER.hund.sikkertEtter) || r < d * REGLER.hund.perM,
     iHus: i => hash(i, 31) < REGLER.hund.husSjanse,
+    // (runde 4) en ny hund: mett og frisk. Gamle lagringer får feltene når de leses (fyll).
+    fyll: H => { if (!H) return H; if (typeof H.mett !== 'number') H.mett = 100; if (typeof H.hp !== 'number') H.hp = 100; if (typeof H.sulten !== 'number') H.sulten = 0; return H; },
+    // tiden går: t spilltimer, s ekte sekunder. o.leir: i leiren (gror fortere), o.mat(): spis en rasjon fra leiren (gir true når det gikk).
+    // Gir { spiste, sulten (nettopp blitt sulten), går (gir opp og går), hp }
+    steg(H, t, s, o = {}) { const R = REGLER.hund, ut = { spiste: false, sulten: false, går: false }; Hund.fyll(H);
+      const tap = Math.max(t / R.sultTimer, s / (R.sultEkteMin * 60)) * 100, før = H.mett; H.mett = Math.max(0, H.mett - tap);
+      if (H.mett < R.spisUnder && o.leir && o.mat && o.mat()) { H.mett = 100; H.sulten = 0; ut.spiste = true; }
+      if (før >= R.spisUnder && H.mett < R.spisUnder && !ut.spiste) ut.sulten = true;
+      if (H.mett <= 0) { H.sulten += Math.max(t / R.gårTimer, s / (R.gårEkteMin * 60)); if (H.sulten >= 1) ut.går = true; } else H.sulten = 0;
+      if (H.hp < 100) H.hp = Math.min(100, H.hp + R.gror * t * (o.leir ? 4 : 1));
+      ut.hp = H.hp; return ut; },
+    // gi hunden en rasjon fra sekken
+    mat: (H, ting) => { if (!H) return 'Du har ingen hund.'; if (!(ting.rasjon > 0)) return 'Du har ingen rasjoner å gi hunden.'; ting.rasjon--; if (!ting.rasjon) delete ting.rasjon; Hund.fyll(H); H.mett = 100; H.sulten = 0; return null; },
+    // du ble truffet (tap = helsa du mistet): blir hunden truffet også? r = tilfeldig tall. Gir skaden (0 = ikke truffet).
+    truffet: (H, tap, r) => (H && tap > 0 && r < REGLER.hund.treffSjanse ? Math.round(tap * REGLER.hund.skade * 10) / 10 : 0),
+    // ordet for hvordan hunden har det
+    tilstand: H => { Hund.fyll(H); return H.hp < 35 ? 'hardt skadet' : H.hp < 80 ? 'skadet' : H.mett < REGLER.hund.spisUnder ? 'sulten' : 'i fin form'; },
   };
 
   // ---------- historien: tre kapitler per bakgrunn ----------
