@@ -3,7 +3,7 @@
 module.exports = {
   navn: 'balanse',
   kjør: async (pg, profil) => pg.evaluate(() => {
-    const feil = [], T = window.Trussel, M = window.Marked, LB = window.Leir;
+    const feil = [], Sp = window.Spillet || {}, T = Sp.Trussel, M = Sp.Marked, LB = window.Leir;
     if (!T || !M || !LB) return { ok: false, tekst: 'Trussel, Marked eller Leir mangler', data: {} };
     // bølgene: aldri flere lag enn dagen og soldatene tilsier
     if (T.lagFor(9, { soldater: 40, dag: 0 }) !== 1) feil.push('første døgn: mer enn ett røverlag');
