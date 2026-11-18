@@ -273,8 +273,11 @@
       // våpenhvile med dem som sitter i stedet: beleiringen står stille (tiden telles ikke)
       if (window.AI && AI.hvile && AI.hvile('blå', ei)) continue;
       if (!K.beleiret(m, E)) { if (før !== undefined) { delete T.beleiring[id]; logg(`Beleiringen av ${by.e.navn} er brutt – lagene dine står ikke lenger på to kanter.`); lagre(); } continue; }
-      const nå = K.beleiringSteg(før || 0, min, utenStrøm()), s0 = K.beleiringNå(før || 0), s1 = K.beleiringNå(nå); T.beleiring[id] = nå;
       const garnison = fiender().filter(e => e.side === ei && Garnison.inni(by, e.x, e.y));
+      // (runde 4) ingen å beleire: en ny ring startes ikke rundt et tomt tettsted (på /rogaland startet den på nytt med en gang etter at
+      // garnisonen hadde gitt seg, og meldte «beleiret» hver tolvte time)
+      if (før === undefined && !garnison.length) continue;
+      const nå = K.beleiringSteg(før || 0, min, utenStrøm()), s0 = K.beleiringNå(før || 0), s1 = K.beleiringNå(nå); T.beleiring[id] = nå;
       if (før === undefined) logg(`${by.e.navn} er beleiret: ${nøytral ? `${fnavn(ei)} sitter fast der${T.vern[id] > 0 ? ' og sloss med bygdevernet' : ''}, og får` : 'garnisonen får'} ikke forsyninger. Etter ${R.beleiring.svekket / 60} timer svekkes den, etter ${R.beleiring.girSeg / 60} gir den seg${utenStrøm() ? ' (uten strøm går det fortere)' : ''}.`);
       // garnisonen får ikke ny ammunisjon mens ringen holder
       for (const e of garnison) { const a = window.Forsyning ? Forsyning.ammo(e) : 1; e.krigAmmoTak = Math.min(e.krigAmmoTak === undefined ? a : e.krigAmmoTak, a); e.ammo = e.krigAmmoTak; e.krigSvekket = s1 === 'svekket' || s1 === 'girSeg'; }
