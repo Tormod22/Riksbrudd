@@ -27,7 +27,9 @@
   // fot: omrisset i meter rundt modellens origo [x0, x1, y0, y1] (fronten mot +x); kw: + produserer, − bruker; tid i spilltimer;
   // mat: materialer { tre, betong, stål }; nivå: verdiene for nivå 1, 2, 3 (bare byggene som kan oppgraderes)
   const BYGG = {
-    kontrollrom: { navn: 'Kontrollrom', pris: 15e6, tid: 6, kw: -8, modell: 'hovedhus', fot: [-5.1, 5.8, -6.5, 6.5], mat: { tre: 10, betong: 40, stål: 8 }, tekst: 'Kartet, kameraene og radioen' },
+    // (balansen 18. nov, Claudes forslag: 15 → 9 mill. kr – brakke, aggregat, dieseltank og kontrollrom med materialer og 500 l
+    // diesel kostet 39 av 40 mill.; nå ca. 33 mill. Betonghylla i markedet er større, så de 48 m³ fås første dag.)
+    kontrollrom: { navn: 'Kontrollrom', pris: 9e6, tid: 6, kw: -8, modell: 'hovedhus', fot: [-5.1, 5.8, -6.5, 6.5], mat: { tre: 10, betong: 40, stål: 8 }, tekst: 'Kartet, kameraene og radioen' },
     brakke: { navn: 'Brakke', pris: 4e6, tid: 2, kw: -1, modell: 'brakke', fot: [-3.4, 4.2, -6.4, 6.4], mat: { tre: 25, betong: 5 }, nivå: { plasser: [8, 14, 20] }, tekst: 'Sengeplasser og ett byggelag til' },
     vakttårn: { navn: 'Vakttårn', pris: 5e6, tid: 1, kw: 0, modell: 'vakttårn', fot: [-1.6, 1.6, -1.9, 1.6], mat: { tre: 12, stål: 1 }, tekst: 'Utsikt og lyskaster' },
     port: { navn: 'Port med vaktbu', pris: 1.5e6, tid: 1, kw: 0, modell: 'port', fot: [-2.3, 2.3, -7.1, 3.9], mat: { stål: 3, betong: 2 }, port: true, tekst: 'Settes i gjerdet og lager en åpning' },

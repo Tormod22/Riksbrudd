@@ -16,13 +16,16 @@
     //  - bølgene vokser saktere (1, 1, 1, 2, 2, 2, 3 … høyst 6) og aldri over det spilleren kan møte (lagFor)
     //  - første bølge tidligst etter 24 spilltimer / 30 minutter spilling, siden 16–26 timer / 16–28 minutter mellom
     //  - byttet dekker skadene, ikke mer: 300 000 kr + 150 000 per bølge, høyst 1,5 mill.
-    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
+    //  - og aldri over det dagen tilsier: ett lag de tre første døgnene, så ett til hvert tredje døgn (dagerPerLag)
+    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
     // antall lag i bølge nr (1, 1, 1, 2, 2, 2, 3 … høyst 6)
     lag: nr => klem(1 + Math.floor((nr - 1) / Trussel.BALANSE.perLag), 1, 6),
     // … men ikke flere enn spilleren kan møte: ett røverlag per åtte soldater (minst ett), og ett til når han har stridsvogn eller
-    // rakettartilleri. o: { soldater, tunge (antall tunge kjøretøy), faktor (vanskelighetsgraden: lett 0,6 – hard 1,5) }
-    lagFor: (nr, o = {}) => { const tak = Math.max(1, Math.ceil((o.soldater || 0) / Trussel.BALANSE.mennPerLag)) + (o.tunge > 0 ? 1 : 0);
-      return Math.max(1, Math.round(Math.min(Trussel.lag(nr), tak) * (o.faktor || 1))); },
+    // rakettartilleri. o: { soldater, tunge (antall tunge kjøretøy), dag (spilldøgn fra 0; uten dag gjelder ikke dagtaket),
+    // faktor (vanskelighetsgraden: lett 0,6 – hard 1,5) }
+    lagFor: (nr, o = {}) => { const B = Trussel.BALANSE, tak = Math.max(1, Math.ceil((o.soldater || 0) / B.mennPerLag)) + (o.tunge > 0 ? 1 : 0),
+        dagTak = o.dag >= 0 ? 1 + Math.floor(o.dag / B.dagerPerLag) : 6;
+      return Math.max(1, Math.round(Math.min(Trussel.lag(nr), tak, dagTak) * (o.faktor || 1))); },
     // ventetiden til neste bølge: spillminutter og ekte minutter med spilling (det som kommer først, gjelder)
     vent: nr => ({ spill: klem(27 - nr, 16, 26) * 60, ekte: klem(30 - nr * 2, 16, 28) }),
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
@@ -50,7 +53,7 @@
     endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
     // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
     // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
-    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 50, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
+    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 60, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
     ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner' },
     // kjøpsprisen på tre, betong og stål er 1,5 × markedsprisen (frakt og mellommenn), så hogst og riving lønner seg klart
     PÅSLAG: 1.5,

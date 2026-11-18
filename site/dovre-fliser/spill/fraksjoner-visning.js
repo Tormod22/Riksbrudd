@@ -114,13 +114,16 @@
       const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
       if (sett) M.sist = { x: sett.x, y: sett.y, navn: sett.navn, styrke: F.styrke(sett, Forsyning.ammo(sett)), t: tid };
       if (M.sist && Math.hypot(M.sist.x - s.x, M.sist.y - s.y) < 250 && !sett) M.sist = null;   // vi er der, og ingen er her lenger
+      // (balansen 18. nov, Claudes forslag) i et ekte spill går motstanderne ikke løs på leiren de to første døgnene: gjennomspillingen
+      // hadde Kystalliansen i leiren på dag 2, før en nybegynner har mer enn én tropp (testene som før)
+      const fredTid = () => !navigator.webdriver && tid < 2 * 1440;
       if (L && !M.leir && Math.hypot(L.x - s.x, L.y - s.y) < 2000) { M.leir = true; if (synlig(s)) logg(`${F.FRAKSJONER[s.side].navn} har funnet leiren din.`); }
       const opptatt = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) opptatt.set(f.ai.målBy, f);
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
       // (18. nov) førerens væremåte (spill/krig.js) flytter terskelen for når laget angriper
       const vmF = window.Krig && window.KrigSpill && KrigSpill.auto() && !s.raid ? (Krig.væremåte((s.menn[s.leder] || s.menn[0]).navn).overtak || 1) : 1;
       const v = F.velg(s, { overtakF: vmF, side: s.side, byer, fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
-        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
       if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }

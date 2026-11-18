@@ -38,7 +38,7 @@
     // … og hva spilleren har å møte dem med (Trussel.lagFor): soldater i egne lag og tunge kjøretøy
     const egne = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)), soldater = egne.reduce((t, e) => t + e.menn.filter(m => m.hp >= 1).length, 0);
     const tunge = (window.KJORETOY || []).filter(k => k.side === 'blå' && (k.type === 'stridsvogn' || k.type === 'rakettartilleri')).length;
-    const n = Trussel.lagFor(nr, { soldater, tunge, faktor: window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1 }); let s = null;
+    const n = Trussel.lagFor(nr, { soldater, tunge, dag: Math.floor(tid / 1440), faktor: window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1 }); let s = null;
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
@@ -232,7 +232,11 @@
 
   // ================= START OG TAKT =================
   function start() { const s = S(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); ekte = 0;
-    T = les('riksbrudd-trussel') || { bølge: 0, aktiv: 0 }; T.aktiv = 0; T.nesteSpill = tid + (T.bølge ? Trussel.vent(T.bølge + 1).spill / 2 : Trussel.BALANSE.først.spill); T.nesteEkte = (T.bølge ? Trussel.vent(T.bølge + 1).ekte / 2 : Trussel.BALANSE.først.ekte) * 60;
+    T = les('riksbrudd-trussel') || { bølge: 0, aktiv: 0 }; const avbrutt = T.aktiv; T.aktiv = 0; T.borteFra = null;
+    // (balansen 18. nov) siden ble lastet på nytt midt i et angrep: røverlagene lagres ikke, og før forsvant de mens bølgenummeret
+    // økte. Nå begynner den samme bølgen på nytt om 20 spillminutter / ett minutt spilling (Claudes forslag).
+    if (avbrutt) { T.bølge = avbrutt - 1; T.nesteSpill = tid + 20; T.nesteEkte = 60; if (auto()) logg('Røverne som angrep leiren, har samlet seg igjen – de kommer tilbake om litt.'); }
+    else { T.nesteSpill = tid + (T.bølge ? Trussel.vent(T.bølge + 1).spill / 2 : Trussel.BALANSE.først.spill); T.nesteEkte = (T.bølge ? Trussel.vent(T.bølge + 1).ekte / 2 : Trussel.BALANSE.først.ekte) * 60; }
     M = les('riksbrudd-marked') || Marked.ny(); M.spilldag = Math.floor(tid / 1440); M.ekte = 0; if (auto()) settPriser();
     O = les('riksbrudd-oppdrag') || { nr: 0, liste: [], gjort: 0 }; for (const o of O.liste) if (o.type === 'post' && o.tatt && !ENHETER.some(e => e.post === o.id)) { for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); } }
     H = les('riksbrudd-hendelser') || { sist: null, åpen: null }; H.nesteSpill = tid + 8 * 60; H.nesteEkte = 9 * 60; lesV(); vennFraAdressen(); klar = true; visHendelse(); fyllOppdrag(); }

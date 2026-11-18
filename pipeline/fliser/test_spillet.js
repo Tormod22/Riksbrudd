@@ -10,6 +10,7 @@ let frø = 7; const rng = () => (frø = (frø * 16807) % 2147483647) / 214748364
   ok(Trussel.ferdig([l(true, false, 3000, true)], 99) === null, 'angrep: røvere som venter på mørket, teller ikke som unna'); }
 ok([1, 2, 3, 4, 7, 30].map(Trussel.lag).join() === '1,1,1,2,3,6', 'angrep: bølgene vokser sakte fra ett lag til høyst seks');
 ok(Trussel.lagFor(7, { soldater: 6 }) === 1 && Trussel.lagFor(7, { soldater: 20 }) === 3 && Trussel.lagFor(7, { soldater: 6, tunge: 1 }) === 2 && Trussel.lagFor(4, { soldater: 40, faktor: 1.5 }) === 3 && Trussel.lagFor(1, { soldater: 0, faktor: .6 }) === 1, 'angrep: aldri flere lag enn spilleren kan møte, og vanskelighetsgraden teller');
+ok(Trussel.lagFor(9, { soldater: 40, dag: 0 }) === 1 && Trussel.lagFor(9, { soldater: 40, dag: 3 }) === 2 && Trussel.lagFor(9, { soldater: 40, dag: 6 }) === 3, 'angrep: de tre første døgnene kommer bare ett lag, så ett til hvert tredje døgn');
 ok(Trussel.belønning(1) === 450000 && Trussel.belønning(40) === 1.5e6, 'angrep: byttet er lite og har et tak');
 ok(Trussel.vent(1).spill > Trussel.vent(8).spill && Trussel.vent(30).spill === 16 * 60 && Trussel.vent(30).ekte === 16, 'angrep: kortere mellom bølgene, men aldri under 16 timer / 16 minutter');
 { const s = Trussel.start({ x: 1000, y: 2000 }, .25, .5), d = Math.hypot(s.x - 1000, s.y - 2000); ok(d > 1399 && d < 2201 && s.retning === 'nord' && /nord/.test(Trussel.varsel(3, 2, s)), 'angrep: starter 1,4–2,2 km unna, varselet sier retningen'); }
@@ -34,6 +35,6 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   Marked.ta(M, 'tre', 55.5); Marked.ta(M, 'mat', 299.5); ok(Marked.kan(M, 'tre', 10) === 4.5 && Marked.kan(M, 'mat', 50) === 0 && /tomt for mat/.test(Marked.tomt('mat')), 'hyller: tre i tideler, mat i hele – tomt er tomt');
   Marked.steg(M, rng); ok(Math.abs(M.lager.tre - 19.5) < 1e-9 && Math.abs(M.lager.mat - 80.5) < 1e-9, 'hyller: fylles sakte hvert døgn (15 m³ tre, 80 rasjoner)');
   for (let i = 0; i < 20; i++) Marked.steg(M, rng); ok(M.lager.tre === 60 && M.lager.stål === 20, 'hyller: aldri over fulle hyller');
-  const G = { f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: {}, infl: 1, dag: 3 }; ok(Marked.hyller(G).betong === 50, 'hyller: et lagret marked fra før får fulle hyller');
+  const G = { f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: {}, infl: 1, dag: 3 }; ok(Marked.hyller(G).betong === 60, 'hyller: et lagret marked fra før får fulle hyller');
   const N = Marked.ny(); ok(Marked.kjøpspris(N, 'tre', 20000, true) === 30000 && Marked.kjøpspris(N, 'tre', 20000, false) === 20000 && Marked.kjøpspris(N, 'diesel', 8000, true) === 8000, 'kjøpspris: tre, betong og stål koster 1,5 × i det ekte spillet, diesel og mat som før'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);
