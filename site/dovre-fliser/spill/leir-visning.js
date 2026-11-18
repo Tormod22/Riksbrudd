@@ -438,6 +438,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
     banner.firstChild.byggNøkkel = nøkkel;
+    // runde 4 (pakke «ui»): tegningen av bygget i panelet (spill/tegninger.js; utseendet i spillhud.js, .byggtegn)
+    if (window.Tegninger) { const t = el('img', { klasse: 'byggtegn', alt: '', draggable: 'false' }); t.src = Tegninger.bilde(Tegninger.bygg(b.type)); banner.firstChild.prepend(t); }
     // radiomasten: se hvor langt feltradioene når (sirkelen tegnes av byggevisning.js så lenge masten er valgt)
     if (b.type === 'radiomast' && window.BYGGEVISNING && BYGGEVISNING.visRekkevidde) banner.appendChild(knapp(BYGGEVISNING.radioZoom() ? 'Tilbake til leiren' : `Vis rekkevidden (${LB.kmTekst(BYGGEVISNING.radioRekkevidde(b))})`, () => { BYGGEVISNING.visRekkevidde(b); visByggPanel(); }, { id: 'visradio' }));
     // delegere: denne jobben først (byggelagene tar køen i rekkefølge)
@@ -466,6 +468,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const rs = LB.reiseFor(L, a);
     banner.append(el('div', {}, el('b', {}, `Planlagt ${B.navn.toLowerCase()}`), ` – ${LB.kroner(k.pris)}, ${tidTekst(k.timer * 60)}` + (rs.min > 0 ? ` + ${tidTekst(rs.min)} reise` : '')), rs.full > 0 ? el('small', {}, LB.reiseTekst(rs) + '.') : '',
       matTekst(k.mat) ? el('small', {}, `Materialer: ${matTekst(k.mat)}` + (mp ? ` – mangler for ${LB.kroner(mp)}` : '')) : '');
+    if (window.Tegninger) { const t = el('img', { klasse: 'byggtegn', alt: '', draggable: 'false' }); t.src = Tegninger.bilde(Tegninger.bygg(a.type)); banner.firstChild.prepend(t); }
     banner.appendChild(knapp(`Bygg nå (${LB.kroner(k.pris + mp)})`, () => { valgtPlan = null; banner.classList.remove('på'); byggFraPlan([a.pid], true); }, { id: 'byggskisse' }));
     if (!B.linje) banner.appendChild(knapp('Flytt', () => startPlassering(a.type, null, { pid: a.pid })));
     if (!B.linje) banner.appendChild(knapp('Kopier', () => startPlassering(a.type, null, { plan: true, ret: a.ret })));

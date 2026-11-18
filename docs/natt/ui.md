@@ -108,3 +108,110 @@ med alle framme samtidig (bare «Lag noe» og «Legg deg» lot seg vise i prøve
 - **Kort i midten**: mens et kort med valg står oppe (hendelse, samfunnskort, spillformkort, flytkort, krigskort – `window.Kortkø`
   sørger for ett om gangen), viker personkortet og «Lag noe»/tilflukt (`body.kortoppe`) og kommer tilbake når kortet er besvart.
 - **Krigskartet** viser bare havner og ferjeterminaler av kaimerkene (`KAI_VIKTIG` i index.html).
+
+# Runde 4 (18. nov dag) – pakke «ui» med det som sto igjen fra «spillform»
+
+Gren `claude/natt18-ui`. Alle tall er Claudes forslag. Prøveskript og bilder: scratchpad `natt/ui4/` (start.js = felles oppstart,
+paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.js = vaktene ui + spillform i en testside).
+
+## 1. Paneler oppå hverandre (målt, så rettet)
+- **Målingen** (`natt/ui4/paneler.js`): åpner lagpanelet, Leir, Folk, Samfunn, Region, krigskartet, Sjø, Verden, Tropper, Deg, kortet
+  (#hendelse), tegnforklaringen og gruppa to og to slik spilleren ville gjort (`Paneler.test = true`), og måler rektanglene mot hverandre og
+  mot kommandolinja, oversikten (#mini2d), minikartet i 3D, telefonraden, målestokken og nordpila. 1400 × 820, 1920 × 1080 og 390 × 844.
+- **Funnet**: Leir/Folk/Samfunn + lagpanelet lå oppå hverandre (PC og telefon), på telefon også alle arkene + lagpanelet; Deg/Tropper/Verden
+  dekket oversikten nede til høyre; panelene til venstre dekket målestokken og nordpila. (Region/Krig over kommandolinja og Sjø over
+  minikartet fra test1 finnes ikke lenger.)
+- **Rettet i `spill/paneler.js`**: `#panel` (lagpanelet) og `#flytgruppe` (gruppa av lag) står nå på plassen «venstre» – velger du et lag
+  mens Folk er åpen, lukkes Folk, og åpner du Leir, lukkes lagpanelet (som før). `Paneler.vik()`: målestokk og nordpil flyttes til høyre for
+  et panel som når ned i hjørnet (`--venstrekant`) når det er plass før kommandolinja, ellers viker de (`body.skalavik`); oversikten og
+  minikartet i 3D viker (`body.minivik`) mens et panel til høyre står over dem (bare utenfor testene eller med `Paneler.test`).
+  `#flytgruppe` står nede til venstre på PC (flyt.js, én CSS-regel) – før lå den under Leir-menyen og krigskartet.
+  Panelene til høyre (Deg, Tropper, Verden, Sjø, Tiltak, Sekk, Stridsregler) står på PC nå 64 px fra kanten – til venstre for zoomknappene,
+  som de dekket – og slutter over kommandolinja (max-height − 130 px; Stridsregler − 200 px fordi det starter lavere). Målt også på 1280 × 800.
+- Kortene i midten (#hendelse, #samfunnkort, #flytkort) flyttes på PC til midten av det frie feltet mellom panelene til venstre og høyre
+  som de ellers ville ligget inn over (`body.kortflytt`, `--kortmidt`), når de får plass der; ellers midt på som før. Bare utenfor testene
+  (eller med `Paneler.test`). Målt etterpå: 0 overlapp på 1280 × 800 og 1400 × 820.
+- **Igjen (med vilje)**: kortene i midten ligger oppå arkene på telefon – de krever svar og står øverst.
+
+## 2. Merker
+- `spill/merker.js`: `Merker.tegn(g, x, y, { slag: 'kjøretøy', type, antall })` tegner tegnet for hver type (lastebil tverrstrek, stridsvogn
+  belter, rakettartilleri spiss, radar sagtann, speiderbil skråstrek, hjul) og antallet ved siden av; `Merker.KJØRETØY`.
+- `kjoretoy-visning.js` `symbol()`: én linje – hele merket fra Merker (den gamle tegningen står som reserve når Merker mangler).
+- `garnison-visning.js`: vimpelen ved tettstedsnavnet er byttet mot `slag: 'tettsted'` i eierens farge (fiendens = rute, ingens = kvadrat);
+  vimpelen er reserve. Inntaksringen er som før.
+
+## 3. Tegnforklaring (ny fil `spill/tegnforklaring.js`, `window.Tegnforklaring`)
+- Knapp `#forklarknapp` (tre små rader) nederst i `.ctl` (zoomknappene), skjult i 3D (`body.på3d`) og i fotomodus. Ruta `#forklaring`
+  (høyre plass i Paneler; bunnark på telefon) med 20 eksempler tegnet med `Merker.tegn` og samme farger/streker som kartet: hvem (eget,
+  fiende rød/grønn, nøytralt), hva (lag, fem kjøretøy, tettsted, kai, ukjent), streker og felt (marsjrute, kjørerute, sist sett, front,
+  tettsted som holdes, inntak, siktfelt, valgt). `Tegnforklaring.RADER` og `tegnEksempel` er uten DOM (test i test_merker.js). Esc lukker.
+
+## 4. Verktøytips på flisene (`spill/flistips.js`)
+- Ny linje «Påvirkes av: …» (`FlisTips.PÅVIRKES`) for alle flisene: hva som gjør tallet større/mindre (kjøp, hogst, riving, frakt, bygging,
+  aggregatene, rekruttering, sult/kulde/moral, tettsteder …).
+- Telefon: LANGT TRYKK (0,45 s uten å flytte fingeren mer enn 10 px, `FlisTips.LANGT`) viser ruta uten at flisa gjør det den ellers gjør
+  (klikket etterpå stoppes); ruta står mens fingeren er nede og 6 s etter. Kort trykk virker som før (ruta + flisas handling). Ingen
+  tekstmarkering/meny ved langt trykk på flisene.
+
+## 5. Byggelista og byggpanelet
+- PC (`body.spill`, CSS i `spillhud.js`): byggekortene er et rutenett i tre kolonner med ikon (`Ikoner.BYGG` via data-ikon), navn og pris;
+  tegningen og «tid · strøm»-linja er skjult, hele flisa er Bygg-knappen (knappen ligger usynlig over, som på telefon), et kort du ikke har
+  råd til er dempet med rød pris. Materialer og tekst står i forklaringen (data-tips) som før. Fanen Bygg: lista 1038 px (22 bygg) –
+  før ca. 150 px per kort i to kolonner.
+- Telefonen er uendret (telefon.js sine tre kolonner med liten tegning).
+- **leir-visning.js, ÉN endring** (i `visByggPanel`, rett etter `banner.firstChild.byggNøkkel = nøkkel;`):
+  `if (window.Tegninger) { const t = el('img', { klasse: 'byggtegn', … }); t.src = Tegninger.bilde(Tegninger.bygg(b.type)); banner.firstChild.prepend(t); }`
+  – tegningen legges først i panelets første div (nøkkelen ligger fortsatt på den div-en). Utseendet (`#byggvalg:has(> div > .byggtegn)`,
+  tegningen til venstre, 72 × 54 px PC / 50 × 38 telefon) står i spillhud.js.
+
+## 6. Spillform (det som sto igjen)
+- **Ramme med mus i 3D** (`flyt.js`): Shift + dra med venstre knapp i 3D tegner en ramme og velger egne lag etter hvor de står på skjermen
+  (også bak en ås), Shift + trykk på et lag tar det med/ut av gruppa. NB: Shift + dra dreide kameraet i 3D før – høyre knapp (og to fingre)
+  dreier fortsatt. «Velg lag» i kommandolinja og «Velg alle i bildet» virker nå også i 3D (lagene på skjermen). Gruppa får stiplede ringer
+  i 3D. `FlytSpill.iRamme3d(x0, y0, x1, y1)`, `velgIBildet3d()`, `skjerm3d(X, Y)`.
+- **Marsjtid før ordren i 3D**: med mus i marsjmodus står «ca. 1,9 km · ca. 30 min (4 lag)» ved pekeren og en stiplet linje fra laget
+  (stråletreff mot terrenget høyst hver 0,12 s; `FlytSpill.peker3()`). Bekreftelsen `#marsjvalg` etter trykket er som før.
+- **Etterspillet** (`scenario.js` + `scenario-visning.js`): `Scenario.bilde(tid, byer, lag, R, ekstra)` tar også leirens ferdige bygg
+  (`b`, lagres bare når de har endret seg – `Scenario.byggI(liste, i)` leser det siste bildet med bygg, `sammeBygg`, `leggTil` flytter
+  byggene når eldre bilder tynnes ut), kjøretøy (`k`: egne + fiendens dere så), kampsteder (`s`: KROKER.ild – hver ildveksling med et eget
+  lag legges i en rute på 250 m, `Scenario.kampsted`) og tallene (`n`: lag, mann, kjøretøy, bygg, folk, penger). Avspillingen tegner bygg
+  (lyse ruter), flammer der det ble kjempet, lag og kjøretøy med merkesettet, og en linje «Dere: 4 lag (48 mann) · 4 kjøretøy · 3 bygg ·
+  10 folk i leiren · 100 mill. kr · kamper siden forrige bilde: 1 sted». Gamle bilder uten det nye virker som før. Sløret er litt lysere (0,72).
+  REGLER.etterspill: byggMaks 60, kjMaks 24, kampMaks 24, kampRute 250.
+
+## Etter siste fletting
+- Vakta «ui» fant «bygg uten tegning: åker» (nytt bygg fra pakka «verden»): `tegninger.js` har fått en tegning av åkeren (pløyd jord
+  med furer og planter). Ikonet (`blad`) legger verden-visning.js inn selv.
+- Alle vaktene etter hverandre på telefon: «ui» feilet med «knappene i telefonlinja er for små» fordi tidligere vakter lot alarmen
+  (krig) og `body.tlfdekk` (sjo) stå igjen, så raden nederst var skjult. Vakta prøver nå ikke knappestørrelsen når raden er skjult
+  (som når et panel er åpent). Kjørt på nytt: alle vaktene ok på telefon og PC. Til den som samler: krig- og sjø-vaktene etterlater
+  alarm/tlfdekk på telefon.
+
+## Fellesfiler endret i runde 4
+- `site/dovre-fliser/index.html`: én skript-tagg (`spill/tegnforklaring.js`) rett etter minikart2d.js. versjon.py er kjørt.
+- `spill/leir-visning.js`: én linje i `visByggPanel` (se 5) og samme linje i `visPlanPanel` (tegningen i panelet for en planlagt skisse,
+  rett etter `banner.append(...)`, `a.type` i stedet for `b.type`).
+- `spill/kjoretoy-visning.js`: `symbol()` bruker Merker for hele merket (3 linjer, reserve beholdt).
+- `spill/garnison-visning.js`: tettstedsmerket fra Merker (vimpelen som reserve).
+- Ellers egne filer: merker.js, tegnforklaring.js (ny), flistips.js, paneler.js, spillhud.js, flyt.js, scenario.js, scenario-visning.js.
+
+## Prøvd
+- Regeltester: test_merker.js (kjøretøymerker, tettsted, tegnforklaringen), test_paneler.js (lagpanelet til venstre), test_scenario.js
+  (etterspill med bygg/kjøretøy/kamper, utynning), test_flyt.js – alle ok.
+- Nettleser (Dovre-testsiden): målingen over (før/etter), bilder PC 1400 × 820 og 1920 × 1080, telefon 390 × 844 og liggende 844 × 390:
+  Folk + lag (Folk lukkes), målestokken flyttet ved Folk på 1920, tegnforklaringen (PC og telefon), forklaringen på Tre (PC) og langt trykk
+  på Folk (telefon: ruta kom, Folk-panelet åpnet seg ikke; kort trykk åpnet Folk som før), byggelista som rutenett (PC), byggpanelet med
+  tegning (PC og telefon), etterspillet med bygg/flamme/kjøretøy og tallene, 3D: ramme rundt fire lag (kameraet sto stille), marsjtida ved
+  pekeren for gruppa. 0 sidefeil.
+- Vaktene «ui» og «spillform» i samme side: PC 2D (10 s + 4 s), telefon (6 s + 2 s), PC i 3D (ui 54 s, runde 4-delen 3 ms – resten er
+  den gamle vakta i programvare-3D; spillform 50 s). Alle ok.
+- Etter siste fletting med claude/nattfiks (12:15): alle vaktene i `pipeline/fliser/vakter/` etter hverandre i samme side (balanse, folk,
+  karakter, krig, natur, okonomi, sjo, verden, ui, spillform) – PC 1400 × 820 og telefon 390 × 844: alle ok, 0 sidefeil. ui alene også
+  på 1920 × 1080. Målingen av panelene på 1280 × 800, 1400 × 820 og 1920 × 1080: bare kortet i midten over panelene til siden (se 1).
+- Tegnforklaringsknappen skjules i kontrollrommet, så zoomknappene der står som før (sjekk.js prøver at de er frie).
+
+## Ikke gjort
+- Båtene (pakka «sjo») og kaiene i kaier.js er urørt her.
+- Plasseringsbanneret («Brakke: trykk der bygget skal stå») har ingen tegning (panelet for bygg og for planlagte skisser har).
+- Rammen i 3D virker bare med mus (telefon: «Velg lag» velger alle på skjermen).
+- Kortene i midten på telefon ligger fortsatt oppå arkene (med vilje, se 1).

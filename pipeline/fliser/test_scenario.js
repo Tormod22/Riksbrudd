@@ -60,4 +60,15 @@ ok(M.vurder(krig, ferdige).sort().join() === 'krig1,krig3,krig30,krigseier' && M
 // vennens stilling i delingskoden
 const k1 = D.kode('Vik', '#aa3300', { x: 100, y: 200 }, [], { byer: ['12', 34], andel: 22.4, dag: 5 }), d1 = D.les(k1), d0 = D.les(D.kode('Vik', '#aa3300', { x: 100, y: 200 }, []));
 ok(d1.stilling.byer.join() === '12,34' && d1.stilling.andel === 22 && d1.stilling.dag === 5 && d0.stilling === null && d0.x === 100, 'delingskoden har stillingen (og gamle koder virker)');
+// runde 4: etterspillet med bygg, kjøretøy, kampsteder og tall
+{ const ekstra = (bygg, kamp) => ({ bygg, kj: [{ x: 10.4, y: 20, side: 'blå', type: 'lastebil' }, { x: 5, y: 5, side: 'rød', type: 'stridsvogn' }], kamp, tall: { p: 4e7, f: 9, m: 20, l: 3, k: 1, b: bygg.length } });
+  const B1 = [{ x: 1, y: 2, type: 'brakke' }, { x: 30, y: 2, type: 'aggregat' }], B2 = B1.concat([{ x: 60, y: 9, type: 'kjøkken' }]);
+  const b1 = S.bilde(0, [], [], S.REGLER.etterspill, ekstra(B1, [{ x: 100, y: 100, n: 2 }, { x: 300, y: 50, n: 9 }]));
+  ok(b1.b.length === 2 && b1.b[0][2] === 'brakke' && b1.k[0][0] === 10 && b1.k[1][2] === 'r' && b1.k[1][3] === 'stridsvogn' && b1.s[0][2] === 9 && b1.n.m === 20, 'bildet har bygg, kjøretøy (med side og type), kampsteder (flest skudd først) og tallene');
+  const L = []; S.leggTil(L, b1); const b2 = S.bilde(200, [], [], S.REGLER.etterspill, ekstra(B1, [])); S.leggTil(L, b2); const b3 = S.bilde(400, [], [], S.REGLER.etterspill, ekstra(B2, [])); S.leggTil(L, b3);
+  ok(L[0].b && !L[1].b && L[2].b && S.byggI(L, 1).length === 2 && S.byggI(L, 2).length === 3 && !L[1].s, 'like bygg lagres ikke på nytt, men leses fra bildet før; ingen kamp gir ingen kampsteder');
+  const R = { ...S.REGLER.etterspill, maks: 6 }, L2 = []; for (let i = 0; i < 9; i++) S.leggTil(L2, S.bilde(i * 200, [], [], R, ekstra(i === 0 ? B1 : i === 5 ? B2 : B1, [])), R);
+  ok(L2.length <= 7 && L2.every((q, i) => S.byggI(L2, i).length >= 2), 'når de eldste bildene tynnes ut, har alle bildene fortsatt byggene sine');
+  const gml = S.bilde(0, [{ id: 'a', eier: 'blå' }], [{ x: 1, y: 1, side: 'blå' }]); ok(!gml.b && !gml.k && !gml.s && !gml.n && S.byggI([gml], 0).length === 0, 'bilder uten det nye (gamle lagrede) virker som før');
+  const K = new Map(); S.kampsted(K, 10, 10); S.kampsted(K, 200, 240); S.kampsted(K, 260, 10); ok(K.size === 2 && [...K.values()].find(q => q.n === 2).x === 125, 'ildvekslinger i samme rute på 250 m telles sammen'); }
 console.log(feil ? feil + ' FEIL' : 'alle scenariotestene ok'); process.exit(feil ? 1 : 0);

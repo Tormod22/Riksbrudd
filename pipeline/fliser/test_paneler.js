@@ -7,5 +7,8 @@ ok(P.viker('sjopanel', ['leirmeny', 'verdenpanel', 'personkort', 'sjopanel'], fa
 ok(P.viker('sjopanel', ['leirmeny', 'verdenpanel', 'personkort', 'sjopanel'], true).join() === 'leirmeny,verdenpanel', 'telefon: venstre og høyre er samme plass, kortet i midten står');
 ok(P.viker('personkort', ['leirmeny', 'evpanel', 'personkort'], true).join() === 'evpanel', 'kortene i midten viker bare for hverandre');
 ok(P.viker('hvasomhelst', ['leirmeny'], false).length === 0, 'et ukjent panel lukker ingenting');
+ok(P.plass('panel') === 'venstre' && P.viker('panel', ['folkmeny', 'karakterark', 'panel'], false).join() === 'folkmeny', 'lagpanelet står til venstre: Folk viker når et lag velges (de lå oppå hverandre)');
+ok(P.viker('leirmeny', ['panel', 'leirmeny'], false).join() === 'panel', 'Leir-menyen lukker lagpanelet');
+ok(P.plass('flytgruppe') === 'venstre' && P.viker('flytgruppe', ['folkmeny', 'flytgruppe'], false).join() === 'folkmeny' && P.plass('forklaring') === 'høyre', 'gruppa av lag står nede til venstre, tegnforklaringen til høyre');
 const alle = Object.values(P.PLASS).flat(); ok(new Set(alle).size === alle.length, 'ingen panel står på to plasser');
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

@@ -36,6 +36,8 @@
     sandsekkvoll: () => { let t = ''; const rad = (y, x0, n) => { for (let i = 0; i < n; i++) t += `<rect x='${x0 + i * 10}' y='${y}' width='9.500' height='5.500' rx='2.600' fill='#b09a6a' ${S}/>`; }; rad(34, 7, 5); rad(28.500, 12, 4); rad(23, 17, 3); return t; },
     veg: () => `<path d='M22 42L28 12h8l6 30z' fill='#4a4844' ${S}/><path d='M32 14v4M32 22v5M32 31v7' stroke='#e8c75a' stroke-width='1.200' stroke-linecap='round'/><path d='M8 30c5-3 9-3 13 0M45 24c4-2 8-2 12 1' ${L} stroke='#5a7a3a' stroke-width='.9'/>`,
     minnesmerke: () => `<path d='M24 39.500v-4h16v4z' fill='#6a6a62' ${S}/><path d='M27 35.500V17c0-7 10-7 10 0v18.500z' fill='#9a968a' ${S}/><path d='M32 19v9M29 22h6' ${L} stroke-width='1.300'/><path d='M29.500 31h5' ${L} stroke-width='.7'/><path d='M17 39c0-3 2-4 2-4s2 1 2 4M43 39c0-3 2-5 2-5s2 2 2 5' fill='#6fa84a' stroke='#2a4a1a' stroke-width='.7'/><circle cx='19' cy='34' r='1.300' fill='#e8d48a'/><circle cx='45' cy='33' r='1.300' fill='#d86a6a'/>`,
+    // åkeren (verden-visning.js legger bygget inn, runde 4): pløyd jord i perspektiv med furer og små planter
+    åker: () => `<path d='M5 40L15 23h34l10 17z' fill='#7a5634' ${S}/><path d='M20 23L13 40M27 23l-3 17M32 23v17M37 23l3 17M44 23l7 17' stroke='#5a3c20' stroke-width='.9'/>${[[16, 36], [24, 36], [32, 36], [40, 36], [48, 36], [19, 29], [26, 29], [32, 29], [38, 29], [45, 29]].map(([x, y]) => `<path d='M${x} ${y}c-1.500-1.500-1.500-3.500 0-4.500c1.500 1 1.500 3 0 4.500z' fill='#7fb54a' stroke='#2a4a1a' stroke-width='.5'/>`).join('')}`,
     hus: () => `${hus(16, 32, 13, 9, '#8a6f4a', '#5a3a2a')}${vindu(21, 29)}${dør(34)}`,
   };
   // våpen sett fra siden (løpet mot høyre)

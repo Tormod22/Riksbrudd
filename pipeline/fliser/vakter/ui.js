@@ -1,5 +1,6 @@
 // VAKT «ui» (nattarbeid 18. nov): ressursene på én rad med «mer»-flis og forklaring, kommandolinja på telefon, opplæringen,
-// kort logg med ikon, byggene som kort med tegning, ett merkesett og færre infrastrukturmerker. Setter alt tilbake.
+// kort logg med ikon, byggene som kort med tegning, ett merkesett og færre infrastrukturmerker. Runde 4: paneler oppå hverandre, merker for
+// kjøretøy, tegnforklaring, «Påvirkes av» og langt trykk, byggelista som rutenett, tegning i byggpanelet, etterspill og ramme i 3D. Setter alt tilbake.
 module.exports = { navn: 'ui', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => { const ut = { feil: [] }, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id), krev = (b, t) => { if (!b) ut.feil.push(t); };
     for (const n of ['SpillHud', 'FlisTips', 'OpplaeringSpill', 'Opplaering', 'Merker', 'Tegninger', 'Hud']) krev(!!window[n], 'mangler ' + n); if (ut.feil.length) return ut;
@@ -13,6 +14,8 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       const m = SpillHud.mer(); ut.mer = m.antall; if (m.antall > 0) { SpillHud.åpneMer(true); await vent(30); const rader = document.querySelectorAll('#flismerliste button').length; krev(rader === m.antall && $('flismerliste').getClientRects().length > 0, `«mer» viser ${rader} av ${m.antall}`); SpillHud.åpneMer(false); }
       krev(getComputedStyle($('mkom')).display === 'none', 'telefonlinja vises på PC'); }
     else { ut.telefon = SpillHud.telefon(); const kn = [...document.querySelectorAll('#mkom button')].filter(b => b.getClientRects().length);
+      // (runde 4) står raden skjult fordi en tidligere vakt har latt noe stå oppe (alarm, tlfdekk, kort), prøves ikke størrelsen
+      if (ut.telefon && getComputedStyle($('mkom')).display === 'none') ut.telefon = false;
       if (ut.telefon) { krev(kn.length >= 3 && kn.every(b => b.offsetHeight >= 44), 'knappene i telefonlinja er for små'); const z = document.querySelector('.ctl'), zr = z && z.getBoundingClientRect(), siste = kn.length ? kn[kn.length - 1].getBoundingClientRect() : { right: -1, top: 1e9 }; krev(!zr || siste.right <= zr.left + 1 || zr.bottom <= siste.top + 1, 'telefonlinja ligger oppå zoomknappene');
         krev(getComputedStyle($('leirknapp')).display === 'none', 'Leir står både oppe og nede'); }
       krev(document.querySelector('.stats').getBoundingClientRect().height < 34, 'statuslinja på telefon er for høy'); }
@@ -52,7 +55,63 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
         const finn = () => [...m.querySelectorAll('h3.del')].filter(h => h.getClientRects().length), H = finn(); ut.deler = H.length; krev(H.length >= 1, 'ingen deler i Leir-menyen kan legges sammen');
         if (H.length) { const navn = H[H.length - 1].dataset.del, h0 = m.scrollHeight, lukket0 = H[H.length - 1].classList.contains('lukket'); H[H.length - 1].click(); await vent(250); const h = finn().find(q => q.dataset.del === navn); krev(h && h.classList.contains('lukket') !== lukket0 && m.scrollHeight !== h0, 'overskriften åpner/lukker ikke delen'); krev(/"/.test(localStorage.getItem('riksbrudd-leirdeler') || ''), 'valget huskes ikke'); if (h) h.click(); await vent(200); }
         if (valg0 === null) localStorage.removeItem('riksbrudd-leirdeler'); else localStorage.setItem('riksbrudd-leirdeler', valg0); if (!var0) lk.click(); await vent(100); } }
+    // RUNDE 4 (18. nov dag): paneler oppå hverandre, merker for kjøretøy og tettsteder, tegnforklaring, «Påvirkes av» og langt trykk,
+    // byggelista som rutenett på PC, tegning i byggpanelet, etterspillet med bygg/kjøretøy/kamper og ramme i 3D
+    { const r4 = ut.runde4 = {}, t4 = performance.now(), går4 = document.body.classList.contains('gaar'), i3 = typeof på3d !== 'undefined' && på3d;
+      for (const n of ['Tegnforklaring']) krev(!!window[n], 'mangler ' + n);
+      // (1) lagpanelet står til venstre: Folk viker når et lag velges (og omvendt)
+      krev(Paneler.plass('panel') === 'venstre' && Paneler.plass('forklaring') === 'høyre', 'lagpanelet/tegnforklaringen har ikke plassen sin');
+      const egneL = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)), valgt0 = valgt, pÅpen0 = $('panel').classList.contains('på');
+      if (!går4 && !i3 && window.FolkSpill && egneL.length && !Paneler.åpne().length && !pÅpen0) { const t0 = Paneler.test; Paneler.test = true; Paneler.sjekk();
+        FolkSpill.åpne(true); await vent(300); const folkÅpen = $('folkmeny').classList.contains('på'); r4.vik = document.body.classList.contains('skalavik') ? 'skjult' : document.body.style.getPropertyValue('--venstrekant') || '-';
+        valgt = egneL[0]; visPanel(); await vent(350); r4.folkEtterLag = $('folkmeny').classList.contains('på'); r4.lagpanel = $('panel').classList.contains('på');
+        krev(folkÅpen && !r4.folkEtterLag && r4.lagpanel, 'Folk og lagpanelet står oppå hverandre (Folk lukkes ikke når et lag velges)');
+        if (spill) krev(r4.vik !== '-', 'målestokken/nordpila står under panelet til venstre');
+        if (typeof lukkPanel === 'function') lukkPanel(); if ($('folkmeny').classList.contains('på')) FolkSpill.åpne(false); valgt = valgt0; if (valgt) visPanel(); await vent(150); Paneler.test = t0; Paneler.sjekk(); }
+      // (2) kjøretøymerkene: hver type sitt tegn, antallet ved siden av
+      { const c4 = document.createElement('canvas'); c4.width = 60; c4.height = 40; const g4 = c4.getContext('2d'), bilder = new Set();
+        for (const t of Merker.KJØRETØY || []) { g4.clearRect(0, 0, 60, 40); Merker.tegn(g4, 25, 20, { forhold: 'eget', slag: 'kjøretøy', type: t, antall: 3, farge: '#3b5878', r: 11 }); bilder.add(c4.toDataURL()); }
+        krev((Merker.KJØRETØY || []).length >= 5 && bilder.size === Merker.KJØRETØY.length, 'kjøretøytypene får ikke hvert sitt merke'); }
+      // (3) tegnforklaringen: knappen blant zoomknappene (ikke i 3D), ruta med eksempler som er tegnet
+      { const kn = $('forklarknapp'); krev(!!kn && !!kn.closest('.ctl'), 'knappen for tegnforklaringen mangler');
+        if (kn) krev(i3 ? getComputedStyle(kn).display === 'none' : kn.getClientRects().length > 0, i3 ? 'tegnforklaringen vises i 3D' : 'knappen for tegnforklaringen vises ikke');
+        if (!i3) { const var4 = Tegnforklaring.erÅpen(); Tegnforklaring.vis(true); await vent(80); const P = $('forklaring'), rader = [...P.querySelectorAll('.rad canvas')];
+          const tegnet = rader.filter(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n > 20; }).length;
+          r4.forklaring = rader.length; krev(P.getClientRects().length > 0 && rader.length >= 15 && tegnet === rader.length, `tegnforklaringen viser ${tegnet} av ${rader.length} eksempler`);
+          const pr = P.getBoundingClientRect(); krev(pr.left >= 0 && pr.right <= innerWidth + 1 && pr.top >= 0 && pr.bottom <= innerHeight + 1, 'tegnforklaringen går ut av skjermen'); Tegnforklaring.vis(var4); } }
+      // (4) forklaringen på flisene: «Påvirkes av», og langt trykk viser ruta uten å trykke flisa
+      // (i 3D tegner programvare-grafikken sekunder per bilde: ventingen i (4)–(6) prøves bare i 2D – det er de samme rutene)
+      if (!i3) { const fl = [...document.querySelectorAll('.stats > div')].filter(q => q.getClientRects().length && q.id !== 'flismer' && !q.dataset.teknisk);
+        const uten = fl.filter(q => { const T = FlisTips.tekst(q); return T && !T.påvirkes && !['sH', 'sKB'].includes(q.dataset.s); }).map(q => q.dataset.s); krev(uten.length === 0, 'fliser uten «Påvirkes av»: ' + uten.join());
+        const d4 = fl.find(q => q.dataset.s === 'sDag') || fl[0];
+        if (d4) { let klikket = 0; const merk = () => { klikket++; }; d4.addEventListener('click', merk); const r = d4.getBoundingClientRect(), o = { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 77, isPrimary: true, clientX: r.left + 5, clientY: r.top + 5 };
+          d4.dispatchEvent(new PointerEvent('pointerdown', o)); await vent(FlisTips.LANGT.ms + 150); const vist = FlisTips.viser() === d4; d4.dispatchEvent(new PointerEvent('pointerup', o)); d4.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          d4.removeEventListener('click', merk); r4.langt = { vist, klikket }; krev(vist && klikket === 0, 'langt trykk på en flis viser ikke forklaringen (eller trykker flisa)'); FlisTips.skjul();
+          document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' })); } }
+      // (5) byggelista som rutenett på PC (ikon, navn, pris; hele flisa er knappen) og (6) tegningen i byggpanelet
+      const m4 = $('leirmeny'), lk4 = $('leirknapp');
+      if (spill && !i3 && !går4 && m4 && lk4 && window.LeirSpill && LeirSpill.tilstand()) { const var0 = m4.classList.contains('på'), fane0 = ((m4.querySelector('[data-fane-knapp].på') || {}).dataset || {}).faneKnapp || 'bygg';
+        if (!var0) lk4.click(); LeirSpill.fane('bygg'); await vent(250); const kort = [...m4.querySelectorAll('.liste .bygg.kort')].filter(k => k.getClientRects().length);
+        const høy = kort.filter(k => k.getBoundingClientRect().height > 95).length, medTegn = kort.filter(k => { const t = k.querySelector('.tegn'); return t && t.getClientRects().length; }).length, utenIkon = kort.filter(k => !k.dataset.ikon).length;
+        const dekker = kort.every(k => { const b = k.querySelector(':scope > button'), kr = k.getBoundingClientRect(), br = b && b.getBoundingClientRect(); return br && Math.abs(br.width - kr.width) < 3 && Math.abs(br.height - kr.height) < 3; });
+        r4.byggkort = { n: kort.length, høy, medTegn, utenIkon, dekker }; krev(kort.length >= 10 && !høy && !medTegn && !utenIkon && dekker, 'byggelista på PC er ikke et tett rutenett med ikon (' + JSON.stringify(r4.byggkort) + ')');
+        LeirSpill.fane(fane0); if (!var0) lk4.click(); await vent(100); }
+      if (!i3 && !går4 && window.LeirSpill && LeirSpill.tilstand() && !$('byggvalg').classList.contains('på') && !LeirSpill.plassering()) { const L4 = LeirSpill.tilstand(), S4 = OppstartSpill.tilstand(), id = 987654;
+        const b = { id, type: 'brakke', x: S4.leir.x + 1800, y: S4.leir.y + 1800, ret: 0, nivå: 1, hp: 1, igjen: 0, pris: 1 }; L4.bygg.push(b); LeirSpill.trykk(b.x, b.y); await vent(150);
+        const bv = $('byggvalg'), t4 = bv.querySelector('.byggtegn'); r4.byggtegn = !!t4 && bv.classList.contains('på'); krev(r4.byggtegn, 'byggpanelet har ingen tegning av bygget');
+        const lukk = [...bv.querySelectorAll('button')].find(q => q.textContent === 'Lukk'); if (lukk) lukk.click(); const i4 = L4.bygg.indexOf(b); if (i4 >= 0) L4.bygg.splice(i4, 1); if (typeof skitten !== 'undefined') skitten = true; }
+      // (7) etterspillet: bildet har tallene, kjøretøyene og byggene (byggI), og teksten sier det
+      if (window.ScenarioSpill && ScenarioSpill.bilder && !ScenarioSpill.etterspillÅpen()) { const E = ScenarioSpill.bilder(), n0 = E.length, rå = localStorage.getItem('riksbrudd-etterspill'), t0 = tid;
+        tid = (n0 ? E[n0 - 1].t : t0) + Scenario.REGLER.etterspill.hver + 1; const lagt = ScenarioSpill.taBilde(); tid = t0; const b = E[E.length - 1];
+        r4.etterspill = lagt && b ? { n: !!b.n, k: (b.k || []).length, bygg: Scenario.byggI(E, E.length - 1).length } : null;
+        krev(lagt && b && b.n && typeof b.n.m === 'number' && typeof b.n.b === 'number', 'etterspillets bilde mangler tallene (lag, mann, bygg)');
+        if (!i3 && lagt) { ScenarioSpill.etterspill(); await vent(150); const tx = ($('etterspill').querySelector('.tekst') || {}).textContent || ''; ScenarioSpill.etterspillLukk(); krev(/Dere: \d+ lag/.test(tx), 'etterspillet viser ikke lagene, byggene og kjøretøyene'); }
+        E.length = n0; if (rå === null) localStorage.removeItem('riksbrudd-etterspill'); else localStorage.setItem('riksbrudd-etterspill', rå); }
+      // (8) 3D: rammen velger lagene på skjermen (prøves bare når 3D er oppe og du ikke går)
+      if (i3 && typeof R3 !== 'undefined' && R3 && R3.ut && !R3.fot && window.FlytSpill && FlytSpill.iRamme3d) { const på = FlytSpill.iRamme3d(0, 0, innerWidth, innerHeight), synlige = egneL.filter(s => FlytSpill.skjerm3d(s.x, s.y));
+        r4.ramme3d = på.length; krev(på.length === synlige.filter(s => { const q = FlytSpill.skjerm3d(s.x, s.y); return q[0] >= 0 && q[1] >= 0 && q[0] <= innerWidth && q[1] <= innerHeight; }).length, 'rammen i 3D velger ikke lagene på skjermen'); }
+      r4.ms = Math.round(performance.now() - t4); }
     ut.var3d = var3d; return ut; });
   const ok = d.feil.length === 0;
-  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') : d.feil.join('; '), data: d };
 } };
