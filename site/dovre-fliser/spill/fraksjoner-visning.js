@@ -142,7 +142,9 @@
     }
     // forsterkninger: nytt lag ved startstedet (eller i et eget tettsted) hver 6. spilltime når fraksjonen har få lag igjen
     for (const side of AI.sider) {
-      sist[side] += sek; if (sist[side] < R.forsterkning.hver) continue;
+      // (18. nov) tettstedene fraksjonen holder, gir forsterkninger fortere (RegionSpill.fordel, docs/natt/okonomi.md)
+      const forsterk = window.RegionSpill && RegionSpill.fordel ? Math.max(.25, +RegionSpill.fordel(side).forsterk || 1) : 1;
+      sist[side] += sek; if (sist[side] < R.forsterkning.hver / forsterk) continue;
       const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; if (lag.length >= F.lagTak(holder)) continue;
       sist[side] = 0; const egen = ((INFRA && INFRA.tettsted) || []).find(b => eier(b) === side), [x, y] = egen ? inne(egen) : HJEM[side], s = nytt(side, x, y);
       if (synlig(s)) logg(`${F.FRAKSJONER[side].navn} har fått forsterkninger: ${s.navn}.`);

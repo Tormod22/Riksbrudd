@@ -59,6 +59,8 @@
   KROKER.sikt.push(s => (auto() ? K.nattSikt(K.klokkeTime(tid), !!((s.utstyr && s.utstyr.nattsikt) || s.nattsikt), K.iLys(s, LYS, tid)) : 1));
   KROKER.kanOrdre.push(s => !s.iLufta);
 
+  // viktige hendelser stopper spolingen (spill/flyt.js, docs/natt/spillform.md)
+  const hend = (type, tekst) => { try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
   // ---------- overgivelse og fanger ----------
   function overgi(e, til, grunn) {
     const n = ilive(e); if (!til) til = egne().sort((a, b) => avst(a, e) - avst(b, e))[0];
@@ -170,7 +172,7 @@
       // garnisonen får ikke ny ammunisjon mens ringen holder
       for (const e of garnison) { const a = window.Forsyning ? Forsyning.ammo(e) : 1; e.krigAmmoTak = Math.min(e.krigAmmoTak === undefined ? a : e.krigAmmoTak, a); e.ammo = e.krigAmmoTak; e.krigSvekket = s1 === 'svekket' || s1 === 'girSeg'; }
       if (s1 === 'svekket' && s0 !== 'svekket') logg(`Garnisonen i ${by.e.navn} er svekket av beleiringen og skyter dårligere.`);
-      if (s1 === 'girSeg') { delete T.beleiring[id]; if (garnison.length) for (const e of garnison) overgi(e, null, 'beleiringen har tatt motet fra dem'); else logg(`${by.e.navn} har ingen garnison igjen – gå inn og ta stedet.`); lagre(); } }
+      if (s1 === 'girSeg') { delete T.beleiring[id]; if (garnison.length) for (const e of garnison) overgi(e, null, 'beleiringen har tatt motet fra dem'); else logg(`${by.e.navn} har ingen garnison igjen – gå inn og ta stedet.`); hend('annet', `Beleiringen av ${by.e.navn} er over`); lagre(); } }
   }
 
   // ---------- våpenhvile ----------
@@ -179,7 +181,7 @@
     if (!OppstartSpill.betal(p)) { logg(`Dere har ikke råd til en våpenhvile med ${fnavn(side)} (${kr(p)}).`); return false; }
     T.fred[side] = tid + R.fred.varer; T.fredN[side] = (T.fredN[side] || 0) + 1; fredTilAI(); logg(`Våpenhvile med ${fnavn(side)} i ${R.fred.varer / 60} timer (${kr(p)}). De skyter ikke på dere, og dere ikke på dem – bruk tiden mot den andre.`); lagre(); return true; };
   api.brytFred = side => { if (!((T.fred[side] || 0) > tid)) return false; delete T.fred[side]; T.brudd[side] = (T.brudd[side] || 0) + 1; fredTilAI(); logg(`Du har brutt våpenhvilen med ${fnavn(side)}. Neste avtale med dem blir dobbelt så dyr.`); lagre(); return true; };
-  function fredSteg() { for (const side of Object.keys(T.fred)) if (T.fred[side] <= tid) { delete T.fred[side]; fredTilAI(); logg(`Våpenhvilen med ${fnavn(side)} er over.`); lagre(); } }
+  function fredSteg() { for (const side of Object.keys(T.fred)) if (T.fred[side] <= tid) { delete T.fred[side]; fredTilAI(); logg(`Våpenhvilen med ${fnavn(side)} er over.`); hend('annet', `Våpenhvilen med ${fnavn(side)} er over`); lagre(); } }
 
   // ---------- bygdevern ----------
   let vernAktive = [], vernAkk = 0;
@@ -196,7 +198,7 @@
     for (const { by, inne } of vernAktive) { const id = by.e.id, s = inne[Math.floor(rng() * inne.length)], r = K.vernRunde(T.vern[id], inne.reduce((v, q) => v + friske(q), 0), rng), blå = inne.some(q => q.side === 'blå');
       if (r.motLaget && window.S6) S6.treffPå(s, r.motLaget, 'av bygdevernet'); T.vern[id] -= r.motVernet;
       if (T.vern[id] <= 0) { T.vern[id] = 0; const F = window.FolkSpill && FolkSpill.tilstand(); if (blå && F) F.moral = Math.max(0, F.moral - R.vern.moral);
-        if (blå) logg(`Bygdevernet i ${by.e.navn} har gitt opp. Folk i leiren liker det dårlig (moral −${R.vern.moral}).`); else if (inne.some(synlig)) logg(`${fnavn(inne[0].side)} har knust bygdevernet i ${by.e.navn}.`); }
+        if (blå) { logg(`Bygdevernet i ${by.e.navn} har gitt opp. Folk i leiren liker det dårlig (moral −${R.vern.moral}).`); hend('annet', `Bygdevernet i ${by.e.navn} har gitt opp`); } else if (inne.some(synlig)) logg(`${fnavn(inne[0].side)} har knust bygdevernet i ${by.e.navn}.`); }
       lagre(); }
   }
   api.vernAvtale = id => { const by = byer().find(b => b.e.id === id); if (!by || !(T.vern[id] > 0)) return false; const p = K.vernPris(by.e.folk);
@@ -236,26 +238,20 @@
   // ---------- røverne varierer ----------
   let ventere = [];
   function røvere() {
-    const Sp = window.SpilletSpill, Tr = Sp && Sp.T && Sp.T(), L = leir(); if (!Tr || !Tr.aktiv || !L) { ventere = [];
-      // sabotørene slapp unna: angrepet regnes ikke som slått tilbake – belønningen (spill/spillet-visning.js) tas tilbake
-      for (const nr of Object.keys(T.raid)) { const V = T.raid[nr]; if (!V || !V.slapp || V.trukket) continue; V.trukket = true;
-        const b = window.Spillet && Spillet.Trussel && Spillet.Trussel.belønning ? Spillet.Trussel.belønning(+nr) : 0, F = window.FolkSpill && FolkSpill.tilstand();
-        if (b > 0) OppstartSpill.betal(Math.min(b, spill().penger)); if (F) F.moral = Math.max(0, F.moral - 5);
-        logg('Sabotørene slapp unna – da ble det ingen belønning for dette angrepet.'); lagre(); }
-      return; }
+    const Sp = window.SpilletSpill, Tr = Sp && Sp.T && Sp.T(), L = leir(); if (!Tr || !Tr.aktiv || !L) { ventere = []; return; }
     const lag = ENHETER.filter(e => e.raid === Tr.aktiv && levende(e)); if (!lag.length) return;
     let V = T.raid[Tr.aktiv];
     if (!V) { if (lag.some(e => e.planlegger)) return; const id = K.røverVariant(Tr.aktiv, K.klokkeTime(tid), lag.length);
       V = { id, t: tid }; T.raid = { [Tr.aktiv]: V }; if (K.VARIANTER[id].tekst) logg(K.VARIANTER[id].tekst);
       if (id === 'to') for (const e of lag.slice(Math.ceil(lag.length / 2))) { const nx = 2 * L.x - e.x, ny2 = 2 * L.y - e.y;
         lagVindu([nx - 200, ny2 - 200, nx + 200, ny2 + 200], false).then(v => { if (Terreng.verdi(v, v.K, nx, ny2, 3) === 3 || !levende(e)) return; e.x = nx; e.y = ny2; e.sti = null; e.siktSkitten = true; ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); skitten = true; }).catch(() => {}); }
-      if (id === 'natt') { V.til = tid + R.røvere.venterHøyst; for (const e of lag) { e.sti = null; e.nattsikt = true; e.siktSkitten = true; } }
+      if (id === 'natt') { V.til = tid + R.røvere.venterHøyst; for (const e of lag) { e.sti = null; e.nattsikt = true; e.venterNatt = true; e.siktSkitten = true; } }
       if (id === 'sabotasje') { const LS = window.LeirSpill && LeirSpill.tilstand(), B = LS ? LS.bygg.filter(b => Leir.ferdig(b) && Leir.BYGG[b.type] && !Leir.BYGG[b.type].del && !Leir.BYGG[b.type].veg && b.type !== 'gjerde') : [];
         const mål = B.find(b => /aggregat|drivstofftank|radiomast|lager/.test(b.type)) || B[0], e = lag[lag.length - 1];
         if (mål) { V.bygg = mål.id; V.lag = e.navn = `Sabotører ${Tr.aktiv}`; ordre(e, mål.x, mål.y, true); } else V.id = 'rett'; }
       lagre(); return; }
     ventere = V.id === 'natt' && !V.gått ? lag : [];
-    if (V.id === 'natt' && !V.gått && (K.natt(K.klokkeTime(tid)) >= .5 || tid >= V.til)) { V.gått = true; ventere = []; logg('Røverne kommer i mørket!'); for (const e of lag) ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); lagre(); }
+    if (V.id === 'natt' && !V.gått && (K.natt(K.klokkeTime(tid)) >= .5 || tid >= V.til)) { V.gått = true; ventere = []; logg('Røverne kommer i mørket!'); for (const e of lag) { e.venterNatt = false; } for (const e of lag) ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); lagre(); }
     if (V.id === 'sabotasje') { const e = lag.find(q => q.navn === V.lag), LS = window.LeirSpill && LeirSpill.tilstand(), b = LS && LS.bygg.find(q => q.id === V.bygg); if (!e) return;
       if (!V.gjort && b && Math.hypot(e.x - b.x, e.y - b.y) <= R.røvere.sabotasje) { V.gjort = true; const r = Leir.skade(LS, b.id, R.røvere.skade), navn = (Leir.BYGG[b.type] || {}).navn || 'et bygg';
         logg(`Sabotasje! Røverne har ${r === 'ødelagt' ? 'ødelagt' : 'skadet'} ${navn.toLowerCase()} i leiren og stikker av.`); if (LeirSpill.lagre) LeirSpill.lagre(); if (LeirSpill.oppdater3d) LeirSpill.oppdater3d();
@@ -275,9 +271,9 @@
   // ---------- egne lag kan gi seg (stridsvalget «Knust og omringet») ----------
   function egneGirSeg() {
     const Fi = fiender().filter(e => !Terreng.slattUt(e.menn));
-    for (const s of egne()) { if (!s.krig || !s.krig.overgi || s.leirvakt) continue; const nær = Fi.filter(e => avst(e, s) <= R.overgi.omringet && !(window.AI && AI.hvile && AI.hvile('blå', e.side)));
+    for (const s of egne()) { if (!window.Strid || Strid.ren(s.strid || (window.StridSpill && StridSpill.regel ? StridSpill.regel(s) : null)).overgi !== 'ja' || s.leirvakt) continue; const nær = Fi.filter(e => avst(e, s) <= R.overgi.omringet && !(window.AI && AI.hvile && AI.hvile('blå', e.side)));
       if (!K.egetGirSeg({ ute: Terreng.uteAvKamp(s.menn), omringet: K.omringet(s, nær) })) continue;
-      logg(`${s.navn} har gitt seg: laget var knust og omringet. ${ilive(s)} mann er tatt til fange av ${fnavn(nær[0].side)}.`);
+      logg(`${s.navn} har gitt seg: laget var knust og omringet. ${ilive(s)} mann er tatt til fange av ${fnavn(nær[0].side)}.`); hend('fanger', `${s.navn} har gitt seg`);
       const i = ENHETER.indexOf(s); s.sti = null; s.ombord = null; if (valgt === s && window.lukkPanel) lukkPanel();
       // startlagene har faste plasser i lista: de blir stående som tomme lag
       if (i > 3) ENHETER.splice(i, 1); else for (const m of s.menn) m.hp = 0; skitten = true; }
@@ -351,8 +347,6 @@
     rad(s.bakhold ? 'Avslutt bakholdet' : 'Legg bakhold ved vegen', () => { s.bakhold = !s.bakhold; if (s.bakhold) { s.sti = null; logg(`${s.navn} ligger i bakhold: fiendens kjøretøy som kommer innen ${R.bakhold.avstand} m, blir stoppet og kan tas.`); } visTiltak(s); visPanel(); skitten = true; }, 'Laget ligger stille og stopper fiendens kjøretøy som kjører forbi. De som sitter på, blir tatt på senga.', false, 'bakhold');
     if (vedLeir) rad('Fly ut med helikopter …', () => velg('heli', s, `Trykk i kartet der ${s.navn} skal settes av (høyst ${R.heli.radius / 1000} km fra leiren).`), `Helikopteret setter laget av der du peker (${kr(R.heli.pris)} per tur).`, !heliFins() || !!HELI, 'heliut');
     else rad('Hent med helikopter', () => { api.heliHent(s); lukk(); }, `Helikopteret henter laget og de sårede hjem til leiren (${kr(R.heli.pris)}).`, !heliFins() || !!HELI, 'helihjem');
-    // stridsvalget ligger her og ikke i Stridsregler-panelet (kontrollskriptet teller valgene der)
-    rad(q.overgi ? 'Knust og omringet: gi seg' : 'Knust og omringet: aldri gi seg', () => { q.overgi = !q.overgi; logg(q.overgi ? `${s.navn} gir seg heller enn å dø når laget er knust (seks ute av kamp) og har fiender på to kanter.` : `${s.navn} gir seg aldri.`); visTiltak(s); }, 'Trykk for å bytte. Et lag som gir seg, er tapt – men mennene lever.', false, 'overgi');
     P.append(el('small', {}, 'Røyk, lys og støy fylles opp når laget står ved leiren.')); P.classList.add('på');
   }
   KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter || s.ombord || s.iLufta || s.leirvakt) return; const b = knapp('Tiltak', panelLag === s, () => { if (panelLag === s) lukk(); else visTiltak(s); }); b.id = 'krigtiltak'; b.title = 'Artilleri, røyk, lys, støy, bakhold og helikopter'; H.appendChild(b); });
@@ -406,7 +400,7 @@
     g.restore();
   });
 
-  Object.assign(api, { T: () => T, lagre, les, røykSkyer: RØYK, lysSkyer: LYS, vm, fører, visTiltak, lukk, modus: () => modus, settModus: (hva, s) => { modus = hva ? { hva, lag: s } : null; },
+  Object.assign(api, { slapp: nr => !!(T.raid[nr] && T.raid[nr].slapp), T: () => T, lagre, les, røykSkyer: RØYK, lysSkyer: LYS, vm, fører, visTiltak, lukk, modus: () => modus, settModus: (hva, s) => { modus = hva ? { hva, lag: s } : null; },
     nullstill: () => { T = ny(); RØYK.length = 0; LYS.length = 0; STØY.length = 0; HELI = null; modus = null; vernAktive = []; fredTilAI(); }, steg: { egneGirSeg, husSjekk, overgivelser, beleiringer, røvere, vern, etterretning, droner, bakhold, heliSteg } });
   window.KrigSpill = api;
 })();

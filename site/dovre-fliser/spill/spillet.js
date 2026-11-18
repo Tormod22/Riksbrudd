@@ -18,6 +18,13 @@
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
     start: (leir, r1, r2) => { const v = r1 * 6.2832, d = 1400 + r2 * 800; return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
     belønning: nr => 2e6 + 1e6 * nr,
+    // NÅR ER BØLGEN OVER? (18. nov: røvere som var slått, trakk seg 3,9 km unna og ble stående – bølgen var «aktiv» for alltid, og det
+    // kom aldri nye.) Et lag kan kjempe når det lever og ikke er slått ut. Bølgen er over når ingen kan kjempe ('slått'), eller når de
+    // som kan, har holdt seg mer enn «borte» meter fra leiren i «borteMin» spillminutter ('unna'). Lag som venter på mørket (venter),
+    // teller ikke som unna. lag: [{ lever, slåttUt, avstand, venter }], minutter: hvor lenge alle har vært unna. Tallene er Claudes forslag.
+    borte: 2500, borteMin: 30,
+    ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt); if (!k.length) return 'slått';
+      if (k.every(q => q.avstand > Trussel.borte && !q.venter)) return (minutter || 0) >= Trussel.borteMin ? 'unna' : 'trekker'; return null; },
     varsel: (nr, n, s) => `Varsel: ${n === 1 ? 'et røverlag' : n + ' røverlag'} er på vei mot leiren fra ${s.retning} (${(s.meter / 1000).toFixed(1).replace('.', ',')} km unna). Bølge ${nr}.`,
   };
 
