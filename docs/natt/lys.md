@@ -155,7 +155,8 @@ sjekk.js, kartbildet på grafikkortet lest tilbake rad for rad, og «bygging i b
   `u.vann.piksler`) sendes med `texSubImage2D` 256 rader om gangen med pust mellom (UNPACK_FLIP_Y + y = W − rad1 gir samme plass
   som CanvasTexture med flipY), mipmapene lages til slutt. Etterpå er teksturen som en CanvasTexture av lerretet (`image` = lerretet,
   `flipY`, `isDataTexture = false`, så en eventuell ny opplasting sender lerretet som før – og vakta «tåkebildet» sitt
-  `R3.tex.image === R3.ut.base` holder). Feiler noe (WebGL-feil, mangler punkter), lages teksturen som før. `tex.iBiter` = sendt i
+  `R3.tex.image === R3.ut.base` holder). Kaster noe en feil eller mangler punktene, lages teksturen som før. Ingen `gl.getError()`
+  i opplastingen: det venter på grafikkortets prosess, og det ville tatt feil som andre har laget (vaktene ser etter dem). `tex.iBiter` = sendt i
   striper. `u.px` slippes etter opplastingen, i sett3d og i kastForberedt.
 - **bygg3d**: pust før `tegnInfraPå` og rundt `infraI`/`bruer3d` (de gikk i samme bit som slutten av høydene, trinnet «henter
   høydene og kartet»).
@@ -203,6 +204,12 @@ Fra profilen i Bergen, utsnitt 3,1 km (programvare-grafikk, belastet maskin):
   (`fillRect` på hele 4096², 60 ms) fylles i striper på 512 rader med pust – flisene tegnes først når den er ferdig (`await bunn`);
   `naboerAsynk` og `løftVeger` (lange veger: yield hvert 256. punkt) i mindre biter.
 
+- Til slutt (etter målingene i Bergen med 7,3 km-utsnitt, der dette sto igjen i byttet): **kraft3d.js** – trafostasjonene
+  (`trafoGeo`, opptil 200 ms i byttet under last) lages i forbered3d-kroken (`u.trafoKlar`, pust mellom stasjonene; hindringene fra
+  `u.klar.hindre`, de samme som `R3.hindre` blir i byttet). **fjernby3d.js** – punktene for skogholtene (`punkterG`, generator med
+  yield per rad) lages i forbered3d-kroken (`u.fjernbyKlar`, brukt når utsnitt og grafikknivå stemmer), ikke i byttet (50–70 ms
+  under last). Ingen `gl.getError()` i `lastOppIBiter` (synkroniserer med grafikkortets prosess).
+
 ### Etter – målt (Bergen, utsnitt 3,1 km, to flyttinger hver)
 Maskinen ble svært belastet mens jeg målte (last 20–25 på fire kjerner, mot ca. 3 under før-målingen kl. 10:52), så alt tar 2–5 ganger
 så lang tid som før-målingen. Derfor målte jeg den gamle koden (kopien i scratchpad `natt/lys/hakk/head`) og den nye rett etter
@@ -229,3 +236,33 @@ striper à 256 rader: første 696–950 ms, resten ca. 50 ms, mipmap 160–270 m
 skriving. På et ekte grafikkort er det ikke slik (plassen lages på grafikkortet), og den gamle veien måtte lese hele lerretet
 (64 MB) og snu det i nettleseren i ett strekk. BE BRUKEREN om en ny «Mål hakk»-rapport: står `lastOppIBiter` som sted i en lang pause,
 kan stripene gjøres mindre, eller den gamle veien tas tilbake (bare `lastOppIBiter` som gir null).
+
+### Etter – målt (Bergen, utsnitt 7,3 km som brukerens, to flyttinger hver, samme last, gammel kode rett før ny)
+| (Bergen 7,3 km, belastet maskin) | gammel kode | ny kode |
+|---|---|---|
+| byttet («gjør klar uten pust») | 1271 / 884 ms | 618 / 361 ms |
+| sett3d alene | 857 / 762 ms | 384 / 219 ms |
+| lengste lange oppgave | 909 / 836 ms | 496 / 428 ms |
+| lange oppgaver ≥ 50 ms, sum | 27 / 41, 4,2 / 5,1 s | 31 / 37, 3,4 / 4,1 s |
+| «henter høydene og kartet» uten pust | 19 / 30 pauser, sum 2,5 / 3,1 s, lengste 472 / 277 ms | 18 / 17, sum 2,2 / 1,8 s, lengste 434 / 245 ms |
+finnLinje 515 → 0, bruene i byttet 372 → 85 (nå i forberedelsen), delBakken 137 → 0, kartbildet 92 (én opplasting) → høyst 47 per stripe.
+I det som sto igjen i byttet var trafostasjonene (kraft3d `trafoGeo` 207 ms) og fjernby3d (51–68 ms) mine – de er flyttet til
+forberedelsen etterpå (ikke målt i Bergen etter det, se «Prøvd» for at utsnittet er det samme).
+
+### «Henter høydene og kartet» – det brukeren så mest av (911 ms i 5 pauser)
+Her er nesten ikke byggekode igjen: høydene hentes og kartbildet lages i bakgrunnstråden. De lange pausene i dette trinnet var her
+søppeltømming (opptil 244 ms i én oppgave under last), bildeløkka selv (kompass.js `tegnMini` – minikartet tegnet fra utsnittets
+4096²-lerret: 28–143 ms per gang; `tegnInfra3d`/`infraViktig` – navn og merker for infrastrukturen i 3D: opptil 49 ms uten last i
+Bergen), og arbeid uten JavaScript-stakk («(program)», 60–120 ms – sannsynligvis grafikkortets prosess/bildeavkoding). Rettet her:
+bunnfargen på kartbildet i striper (fillRect 60 ms), pust rundt `tegnInfraPå`/`infraI`/`bruer3d`. IKKE rettet (ikke mine filer):
+minikartet bør tegnes fra en liten kopi av kartbildet (lages én gang per utsnitt) i stedet for fra hele lerretet hver gang;
+`tegnInfra3d` bør ikke regne alle objektene hver ramme. Søppeltømmingen kommer av de store tabellene per utsnitt (kartbildet 64 MB,
+høydene, nettene) – kan bare bli mindre med gjenbruk av tabeller, ikke gjort.
+
+### Ikke gjort
+- Oppgave 4 (skygger fra kjøretøy, soldater og dyr på Høy): ikke gjort. Skyggekartet tegnes bevisst bare når kameraet har flyttet
+  seg (høyst 4 ganger i sekundet); ting som beveger seg må ha et nytt skyggekart i hvert bilde for ikke å henge etter, og kostnaden
+  for det kan ikke måles her (programvare-grafikk, og maskinen var svært belastet). Forslag: skyggekartet tegnes hvert bilde bare når
+  et lag/kjøretøy innen skyggekameraets område har flyttet seg, og bare castShadow på de nettene – mål med «Mål ytelse» på Høy.
+- Skyggekartet i samme bilde som byttet (se over) og teksturopplastingens virkning på et ekte grafikkort: kan ikke måles her.
+- Andres moduler med lange steg (gate3d, byhus, anlegg3d, portal3d, fjern3d, kompass-minikartet): bare funn og forslag over.

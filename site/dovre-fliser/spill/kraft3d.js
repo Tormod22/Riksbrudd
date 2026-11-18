@@ -185,7 +185,8 @@
     // Hver del står på bakken der den står (skråning), og deler som havner i et bygg (stasjonshallen i dataene) eller på vegen hoppes over.
     const G = bygger(), b2 = TRAFO.b / 2, d2 = TRAFO.d / 2, MØRK = [.28, .3, .31], BEIGE = [.72, .66, .55];
     const bakke = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX;
-    const fri = (x, y) => !hindring3d(x, y, u.husRute || (typeof R3 !== 'undefined' && R3.hindre)) && !(u.påVeg && u.påVeg(x, y));
+    // (hindringene: husene, ellers utsnittets egne – u.klar.hindre når stasjonen lages på forhånd i forbered3d, R3.hindre i byttet)
+    const fri = (x, y) => !hindring3d(x, y, u.husRute || (u.klar && u.klar.hindre) || (typeof R3 !== 'undefined' && R3.hindre)) && !(u.påVeg && u.påVeg(x, y));
     // del(x0, y0, x1, y1, lag): bunnen er laveste punkt under delen; lag(ox, oy, oz) tegner med forskyvning
     const del = (x0, y0, x1, y1, lag) => { const P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [(x0 + x1) / 2, (y0 + y1) / 2]].map(([a, b]) => [a + t.x, b + t.y]);
       if (!P.every(([a, b]) => fri(a, b))) return; lag(t.x, t.y, Math.min(...P.map(([a, b]) => bakke(a, b)))); };
@@ -246,8 +247,13 @@
     if (L.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(L, 3));
       const pm = new THREE.PointsMaterial({ color: 0xff2a1a, size: VW < 900 ? 7 : 9, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false, map: lysTekstur() });
       obj.lys = new THREE.Points(g, pm); obj.lys.frustumCulled = false; obj.lys.visible = false; R.scene.add(obj.lys); obj.mesh.push(obj.lys); }
-    for (const t of k.trafo) { const m = new THREE.Mesh(trafoGeo(u, t), mat.clone()); R.scene.add(m); obj.mesh.push(m); }
+    const tg = u.trafoKlar && u.trafoKlar.length === k.trafo.length ? u.trafoKlar : k.trafo.map(t => trafoGeo(u, t)); u.trafoKlar = null;
+    for (const g of tg) { const m = new THREE.Mesh(g, mat.clone()); R.scene.add(m); obj.mesh.push(m); }
   });
+  // (18. nov, hakk: trafostasjonene tok opptil 200 ms i selve byttet – nå lages de i forbered3d-kroken, én om gangen med pust mellom)
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => {
+    u.trafoKlar = null; const k = u.kraft; if (!k || !k.trafo.length) return;
+    const ut = []; for (const t of k.trafo) { if (børPuste()) await pust(); ut.push(trafoGeo(u, t)); } u.trafoKlar = ut; });
   KROKER.ramme3d.push(R => {
     if (!obj) return;
     for (const m of obj.mesh) m.visible = VIS.kraft;

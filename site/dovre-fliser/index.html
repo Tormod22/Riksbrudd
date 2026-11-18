@@ -2730,7 +2730,7 @@ async function forbered3d(u) {
 // UNPACK_FLIP_Y snur stripen, og stripen legges ved y = W − rad1: samme plass som CanvasTexture (flipY) gir hver rad. three.js setter
 // pixelStorei selv før hver opplasting, og bindingen går gjennom renderer.state, så three sin oversikt over tilstanden stemmer.
 // Etterpå er teksturen som en CanvasTexture av lerretet (kilde): image = lerretet, flipY – blir den sendt på nytt (needsUpdate), sendes
-// lerretet som før. Gir null (og brukes ikke) hvis noe mangler eller WebGL gir en feil – da lages teksturen som før.
+// lerretet som før. Gir null (og brukes ikke) hvis noe mangler eller noe kaster en feil – da lages teksturen som før.
 async function lastOppIBiter(data, W, R, kilde, utenAniso) {
   const r = R && R.renderer; if (!r || !data || !kilde || !W || data.length !== W * W * 4 || (W & (W - 1))) return null;
   const gl = r.getContext(); let tex = null;
@@ -2738,8 +2738,6 @@ async function lastOppIBiter(data, W, R, kilde, utenAniso) {
     tex = new THREE.DataTexture(null, W, W, THREE.RGBAFormat, THREE.UnsignedByteType);
     tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true; tex.unpackAlignment = 4;
     if (!utenAniso) tex.anisotropy = r.capabilities.getMaxAnisotropy();
-    // gamle feil tømmes først, så bare feil fra denne opplastingen teller
-    for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++);
     r.initTexture(tex);
     const glTex = r.properties.get(tex).__webglTexture; if (!glTex) throw new Error('ingen tekstur');
     for (let y0 = 0; y0 < W; y0 += 256) {
@@ -2751,8 +2749,9 @@ async function lastOppIBiter(data, W, R, kilde, utenAniso) {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     }
     await pust();
+    // (ingen gl.getError her: det venter på grafikkortets prosess, og det ville tatt feil som andre har laget – vaktene ser etter dem)
     r.state.bindTexture(gl.TEXTURE_2D, glTex); gl.generateMipmap(gl.TEXTURE_2D); r.state.unbindTexture();
-    if (gl.getError() !== gl.NO_ERROR) throw new Error('WebGL-feil');
+    if (gl.isContextLost()) throw new Error('WebGL-sammenhengen er tapt');
     tex.isDataTexture = false; tex.image = kilde; tex.flipY = true; tex.iBiter = true; return tex;
   } catch (e) { console.warn('kartbildet i striper:', e && e.message || e); if (tex) tex.dispose(); try { r.state.unbindTexture(); } catch (e2) { /* ingenting */ } return null; }
 }
@@ -3247,7 +3246,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=71851cd3ca"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
-<script src="/dovre-fliser/spill/kraft3d.js?v=541e0afaaa"></script>
+<script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=9c1b411ff7"></script>
 <script src="/dovre-fliser/spill/leir.js?v=0a4a249693"></script>
@@ -3333,7 +3332,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lys3d.js?v=a6cfdf5458"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=49f596422d"></script>
-<script src="/dovre-fliser/spill/fjernby3d.js?v=37d8433bdb"></script>
+<script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/merker.js?v=e007fd169f"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=8afcdc2066"></script>
