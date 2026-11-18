@@ -47,8 +47,12 @@
     // ingen fikk has på dem). Et røverlag som har vært inne i leiren (innen «radius» m fra midten) i til sammen «min» spillminutter,
     // tar med seg et bytte fra kassa og lageret og trekker seg ut: marsjerer «borte» m bort og fjernes (senest etter «maksMin»
     // spillminutter). Byttet per lag: «penger.andel» av kassa (høyst «penger.tak»), og en andel av materialene, dieselen og maten.
-    // Alle tallene er Claudes forslag.
-    HERJ: { radius: 150, min: 45, borte: 1800, maksMin: 180, moral: 4, penger: { andel: .08, tak: 8e5 }, lager: .2, diesel: .25, mat: .15 },
+    // «brudd»: et røverlag gir opp og flykter når så stor del av mennene er falt eller såret (Terreng regner et lag som slått ut
+    // først ved 6 ute – et røverlag på 6 måtte slås helt ut). Alle tallene er Claudes forslag (justert etter kjøring 5: 45 min og
+    // 800 000 kr var for strengt – bølge 1 endte med herjing mens to lag skjøt på røverne inne i leiren).
+    HERJ: { radius: 150, min: 60, borte: 1800, maksMin: 90, moral: 4, brudd: .5, penger: { andel: .05, tak: 5e5 }, lager: .2, diesel: .25, mat: .15 },
+    // har røverlaget gitt opp? menn: [{ hp }] – halvparten (brudd) eller flere er falt eller såret
+    brutt: menn => { const n = (menn || []).length; return n > 0 && menn.filter(m => m.hp < 1).length >= Math.ceil(n * Trussel.HERJ.brudd); },
     // har laget herjet lenge nok? q: { inne (spillminutter innenfor radius) }
     herjet: q => (q.inne || 0) >= Trussel.HERJ.min,
     // hva ett lag tar med seg. h: { penger, lager: { tre, betong, stål }, diesel, mat } – det som finnes. Gir det samme med mengdene som

@@ -128,3 +128,27 @@ rekker under to døgn). Stoppet etter tre døgn:
 ## Vakt
 `pipeline/fliser/vakter/balanse.js`: tallene for bølgene, byttet, første bølge, kostnaden for de fire første byggene + diesel
 (≤ 35 mill.), hyllene, og at testspillet har stridsvogna og rakettartilleriet. OK på PC og mobil (32,8 mill.).
+
+## Runde 4 (18. nov dag)
+
+Målet: en ny spiller som følger rådene, skal klare sju spilldøgn på /rogaland med «Vanlig» – uten at det blir lett. Kjøring 4 falt på
+dag 6 fordi røverne i bølge 4 ble stående inne i leiren et døgn, ingen slo dem, og byggene var aldri reparert. **Alle tallene er Claudes forslag.**
+
+### Det som er laget
+
+| Hva | Tall | Fil | Hvorfor |
+|---|---|---|---|
+| **1. Røvere som har herjet** trekker seg ut med byttet | inne i leiren = innen 150 m fra midten; etter 45 spillminutter der tar laget byttet og marsjerer 2,2 km bort; fjernes ved 1,8 km eller etter 3 spilltimer | `spillet.js` Trussel.HERJ, herjet(), bytte(), bytteTekst(), ferdig() → 'herjet'; `spillet-visning.js` (KROKER.sim teller e.inne, trekkUt, utSteg) | Røverne sto et døgn i leiren i kjøring 4. |
+| Byttet per røverlag | 8 % av kassa (høyst 800 000 kr), 20 % av tre/betong/stål, 25 % av dieselen, 15 % av maten | Trussel.HERJ | Merkes, men tar ikke alt. |
+| Bølgen er over («herjet») | ikke «slått tilbake», ingen belønning, moral −4; melding i loggen og varselet; neste bølge planlegges som vanlig; T.herjet teller | `spillet-visning.js` | |
+| **2. Forsvarerne går mot røverne** | røvere innen 150 m (Forsvar.R.mot.inne) → egne lag innen 3 km som står stille, er i forsvarsstilling eller allerede går mot dem (ikke på vei et annet sted, ikke om bord, ikke slått ut) og Leirvakta går til et punkt 50 m fra nærmeste røver; ny ordre når målet har flyttet seg 60 m. Leirvakta tar opp våpen av seg selv (≥ 2 på vakt). Når røverne er ute: tilbake til forsvarsstillingen. | `forsvar.js` motHerjere(), `forsvar-visning.js` motSteg/motFerdig | |
+| **3. Reparasjon** av seg selv | ledige byggelag (Leir.byggelag − jobbene) reparerer bygg under 95 % helse, de mest skadde først, bare mellom bølgene, og 300 000 kr blir alltid igjen i kassa. Standard på, også i lagrede spill; bryter i Leir → Bygg → Forsvar («riksbrudd-reparer», per leir). Prisen og farten er Leir.reparer som før (25 % av prisen × skaden, 30 % av byggetiden × skaden). | `forsvar.js` velgReparasjon(), `forsvar-visning.js` repSteg | Byggene var 23–37 % før bølge 4 i kjøring 4. |
+| Skadevarsel etter angrep | «N bygg er skadet» i banneret øverst (#alarm) med «Reparer alle (X kr)» og «Lukk», i 3 minutter eller til alt repareres; knappen også i Leir → Bygg → Forsvar | `forsvar.js` skadet(), `forsvar-visning.js` etterAngrep/visSkade/reparerAlle | |
+| **4. Opplæringen**: fire nye steg etter de fem | «Lag en tropp til» (to tropper), «Ha mat til tre døgn», «Sett lagene i forsvar» (alarmen eller en øvelse), «Reparer byggene etter et angrep» (et angrep er over og ingen bygg under 98 % står ureparert) | `opplaering.js` (NYE; lagret opplæring som var ferdig og lukket, får dem som «hoppet over»), `test_opplaering.js` | |
+| Målet «Bygg kontrollrommet» | hjelpeteksten sier «to tropper og et vakttårn» | `maal.js` | (Antallet mål er uendret: vakta «spillform» teller 19/15.) |
+
+Alt som skjer av seg selv (herjing, mot røverne, reparasjon, skadevarsel) skjer bare når `!navigator.webdriver || SpilletSpill.test / ForsvarSpill.test`.
+API: `SpilletSpill.trekkUt(e)`, `SpilletSpill.utSteg()`; `ForsvarSpill.test`, `motSteg()`, `motFerdig()`, `herjere()`, `repSteg(tving)`, `reparerAlle()`,
+`repPå()`, `settRep(på)`, `etterAngrep()`, `skade()`, `lukkSkade()`; `Forsvar.R.mot`, `Forsvar.R.rep`, `Forsvar.motHerjere`, `velgReparasjon`, `skadet`.
+Fellesfiler: ingen (leir.js og leir-visning.js er IKKE endret – reparasjonen går gjennom Leir.reparer/Leir.jobber/Leir.byggelag fra forsvar-visning.js).
+

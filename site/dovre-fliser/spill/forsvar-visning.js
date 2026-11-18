@@ -100,7 +100,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   const stiSlutt = s => (s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null);
   const motVår = s => { const e = stiSlutt(s); return !e || (s.motMål && Math.hypot(e[0] - s.motMål.x, e[1] - s.motMål.y) < 25) || (s.forsvar && Math.hypot(e[0] - s.forsvar.x, e[1] - s.forsvar.y) < 25); };
   let motMeldt = false;
-  const herjere = () => { const L = leir(); return L ? røvere().filter(e => !e.trekker && !Terreng.slattUt(e.menn) && Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne) : []; };
+  const herjere = () => { const L = leir(); return L ? røvere().filter(e => !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne) : []; };
   function motSteg() { if (!auto()) return; const L = leir(); if (!L) return; const inne = herjere();
     if (!inne.length) { if (motMeldt) motFerdig(); return; }
     if (!vakt) { const lv = leirvakt({ x: L.x + 12, y: L.y, voll: false }); if (lv) logg(`Leirvakta (${lv.menn.length} fra vakta) tar opp våpen.`); }
@@ -132,6 +132,8 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   let repSist = 0;
   function repSteg(tving) { if (!auto() || !repPå() || !window.Leir || !window.LeirSpill) return; const t = T(); if (t && t.aktiv) return; if (!tving && performance.now() - repSist < 3000) return; repSist = performance.now();
     const LS = LeirSpill.tilstand(), S = window.OppstartSpill && OppstartSpill.tilstand(); if (!LS || !S) return; const ledige = Leir.byggelag(LS) - Leir.jobber(LS).length; if (ledige <= 0) return;
+    // ikke mens fiender er i leiren (byggene ville bli skadet igjen med en gang)
+    const L = leir(); if (L && ENHETER.some(e => e.side !== 'blå' && levende(e) && Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne + 50)) return;
     reparer(FO.velgReparasjon(repListe(LS), ledige, S.penger)); }
   // «Reparer alle»: alle skadde bygg i køen så langt pengene rekker (uten reserve – du har trykket selv)
   function reparerAlle() { const LS = window.LeirSpill && LeirSpill.tilstand(); if (!LS) return 0; const ider = repListe(LS).filter(q => !q.opptatt && q.hp < 1).sort((a, b) => a.hp - b.hp).map(q => q.id), n = reparer(ider, true);

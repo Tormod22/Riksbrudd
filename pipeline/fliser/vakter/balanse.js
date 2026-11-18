@@ -63,6 +63,9 @@ async function runde4(pg) {
       if (!d.trekker) feil.push('røverlaget trakk seg ikke ut etter 45 min i leiren'); if (!(d.tatt > 0 && rv.bytte && rv.bytte.lager.tre === 2)) feil.push('byttet ble ikke tatt fra kassa og lageret');
       if (!d.over || d.raidEtter !== -nr || !d.iEnheter) feil.push('bølgen ble ikke over som «herjet» (laget skal gå videre bort)');
       rv.trekkerFra = tid - Tr.HERJ.maksMin - 1; Sp.utSteg(); if (ENHETER.includes(rv)) feil.push('røverlaget som trakk seg ut, ble ikke fjernet');
+      // … og et røverlag der halvparten er falt eller såret, gir opp og flykter: bølgen er slått tilbake
+      const rv3 = nyttLag('Røvere vakt 3', L.x + 300, L.y, 'rød'); rv3.raid = nr + 2; ENHETER.push(rv3); T0.aktiv = nr + 2; rv3.menn = rv3.menn.slice(0, 8); rv3.leder = 0; for (let i = 4; i < 8; i++) rv3.menn[i].hp = 0;
+      Sp.angrepSteg(); d.flykter = !!rv3.flykter && T0.aktiv === 0 && !ENHETER.includes(rv3); if (!d.flykter) feil.push('røverlaget med halvparten ute ga ikke opp');
       // PUNKT 2: røvere inne i leiren – et eget lag 500 m unna som står stille, går mot dem, og Leirvakta tar opp våpen
       const rv2 = nyttLag('Røvere vakt 2', L.x + 50, L.y, 'rød'); rv2.raid = nr + 1; ENHETER.push(rv2); T0.aktiv = nr + 1;
       const s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && !e.ombord && levende(e) && !Terreng.slattUt(e.menn));
@@ -96,5 +99,5 @@ async function runde4(pg) {
   // ordrene over er asynkrone: vent til lagene er ferdige med å planlegge, og stopp dem der de sto
   await pg.waitForTimeout(1500);
   await pg.evaluate(() => { for (const [e, x, y, sti] of window.__balanseVakt || []) { e.x = x; e.y = y; e.sti = sti; e.siktSkitten = true; } delete window.__balanseVakt; skitten = true; });
-  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 4: ' + r.feil.join('; ') : `runde 4: herjing (bytte ${r.d.bytte}), mot røverne, Leirvakta, reparasjon og skadevarsel ok`, data: r.d };
+  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 4: ' + r.feil.join('; ') : `runde 4: herjing (bytte ${r.d.bytte}), røvere som gir opp, mot røverne, Leirvakta, reparasjon og skadevarsel ok`, data: r.d };
 }
