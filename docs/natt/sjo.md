@@ -142,3 +142,7 @@ leirvalget, krigskartet og lojaliteten.
   ga «stengt» og meldingen i panelet; åpnet igjen ga ruta tilbake. Lojalitet 90 -> mistet -> tatt igjen = 35.
 - Bording fra en småbåt (tok 3 betong, resten over bord), senking med ild fra laget om bord, et rødt lag som tok sjark fra Sand
   hurtigbåtkai 40 km over sjøen og gikk i land ved målkaia. Båtmerkene i kartet.
+- 3D (/rogaland, Jelsa ferjekai, utsnitt 1700 m): «Ta ferja» ga «Ferja fra Jelsa ferjekai»; trykk-kroken i 3D ved kaia og ved båten åpnet
+  sjøpanelet med båten. Jelsa hadde ingen ferjerute i utsnittet (ferje3d trenger begge kaiene innenfor), så skjulingen av ruteferja er prøvd
+  med den ekte ferje3d.js i Node (scratchpad natt/sjo/ferje3d-tatt.js: går før, borte når ferja er tatt ved kai B, går når en ferje er tatt
+  et annet sted). Et ekte musetrykk i 3D rakk ikke å bli prøvd (maskinen var svært treg, belastning 27).

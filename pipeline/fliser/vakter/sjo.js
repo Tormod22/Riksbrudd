@@ -51,12 +51,15 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
         ok(Array.isArray(SjoSpill.tatteFerjer()), 'listen over tatte ferjer');
         o.leirvalg = Kaier.leirTekst(KaierSpill.data(), L.x, L.y); ok(/Prøvehavn, stor \(500 m\) – leirens egen kai/.test(o.leirvalg), 'leirvalget viser nærmeste kai: ' + o.leirvalg);
         // krigskartets tillegg og lojaliteten (Regionen)
-        const by = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted && INFRA.tettsted[0];
-        if (by && window.RegionSpill && RegionSpill.klar() && window.KRIG_TILLEGG) { const t0 = TETTSTEDER.get(by.e.id), RS = RegionSpill.tilstand(), b0 = RS.byer[by.e.id] ? { ...RS.byer[by.e.id] } : null, rlag = localStorage.getItem('riksbrudd-region');
+        // et eget prøvetettsted 3 km sør for leiren (som vakten «økonomi»); uten infrastruktur lages en tom mens vakten går
+        const utenInfra = typeof INFRA === 'undefined' || !INFRA; if (utenInfra) { const tom = {}; for (const k of INFRA_REKKE) tom[k] = []; INFRA = tom; } if (!INFRA.tettsted) INFRA.tettsted = [];
+        const rr = 300, cx = L.x, cy = L.y - 3000, by = { lag: 'tettsted', e: { id: 'sjø1', navn: 'Prøvevik', folk: 1500 }, bb: [cx - rr, cy - rr, cx + rr, cy + rr], deler: [[cx - rr, cy - rr, cx + rr, cy - rr, cx + rr, cy + rr, cx - rr, cy + rr]] }; INFRA.tettsted.push(by);
+        if (window.RegionSpill && RegionSpill.klar() && window.KRIG_TILLEGG) { const t0 = TETTSTEDER.get(by.e.id), RS = RegionSpill.tilstand(), b0 = RS.byer[by.e.id] ? { ...RS.byer[by.e.id] } : null, rlag = localStorage.getItem('riksbrudd-region');
           try { TETTSTEDER.set(by.e.id, { eier: null, inntar: null }); const e1 = KRIG_TILLEGG.by.map(fn => fn(by, null)).filter(Boolean).map(e => e.textContent || e).join(' '); o.krig = e1.slice(0, 160); ok(/Hvis du tar det, per døgn: .*olje til basen.*Strøm/.test(e1), 'krigskartet: hva tettstedet gir hvis du tar det');
             TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null }); RegionSpill.status(); const e2 = KRIG_TILLEGG.by.map(fn => fn(by, 'blå')).filter(Boolean).map(e => e.textContent || e).join(' '); ok(/Gir deg nå per døgn/.test(e2), 'krigskartet: hva ditt tettsted gir nå');
             RS.byer[by.e.id].loj = 90; Region.mistet(RS, by.e.id); TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null }); RegionSpill.status(); o.loj = RS.byer[by.e.id].loj; ok(o.loj === Region.REGLER.lojGjentatt, 'tatt igjen: lojaliteten faller til ' + o.loj);
-          } finally { if (t0) TETTSTEDER.set(by.e.id, t0); else TETTSTEDER.delete(by.e.id); if (b0) RS.byer[by.e.id] = b0; else delete RS.byer[by.e.id]; if (rlag === null) localStorage.removeItem('riksbrudd-region'); else localStorage.setItem('riksbrudd-region', rlag); RegionSpill.status(); } } }
+          } finally { if (t0) TETTSTEDER.set(by.e.id, t0); else TETTSTEDER.delete(by.e.id); if (b0) RS.byer[by.e.id] = b0; else delete RS.byer[by.e.id]; if (rlag === null) localStorage.removeItem('riksbrudd-region'); else localStorage.setItem('riksbrudd-region', rlag); RegionSpill.status(); } } else o.feil.push('Regionen eller krigskartets krok mangler');
+        { const i = INFRA.tettsted.indexOf(by); if (i >= 0) INFRA.tettsted.splice(i, 1); } if (utenInfra) INFRA = null; }
       // havn: varene samler seg og kan lastes
       Sjo.havnSteg(S, [{ id: 'prøve', folk: 3000 }], 7 * 1440); ok(S.havner.prøve && Math.abs(S.havner.prøve.tre - 30) < 1e-6, 'en uke i havna gir 30 tre'); delete S.havner.prøve;
     } catch (e) { o.feil.push('unntak: ' + e.message); }
