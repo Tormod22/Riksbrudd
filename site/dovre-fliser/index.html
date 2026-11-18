@@ -782,7 +782,8 @@ function sim(dt) {
   }
   for (const s of ENHETER) {
     if (!s.sti) continue;
-    let igjen = dt / TIME; s.timerIgjen -= igjen;
+    // KROKER.fart (spill/formasjon-visning.js, spill/krig-visning.js): faktor på marsjfarten per lag
+    let igjen = dt / TIME * (KROKER.fart ? KROKER.fart.reduce((v, f) => v * f(s), 1) : 1); s.timerIgjen -= igjen;
     while (igjen > 0 && s.seg < s.sti.length - 1) {
       const [ax, ay] = s.sti[s.seg], [bx, by] = s.sti[s.seg + 1], t = s.steg[s.seg] || 1e-9, rest = (1 - s.prog) * t;
       s.retning = Math.atan2(by - ay, bx - ax);

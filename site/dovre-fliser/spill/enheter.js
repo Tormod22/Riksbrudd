@@ -15,6 +15,12 @@
     navn: { stridsvogn: 'Stridsvogn', rakettartilleri: 'Rakettartilleri', radar: 'Radarbil' },
     skade: { lastebil: .12, speiderbil: .08, stridsvogn: .01, rakettartilleri: .12, radar: .12 },   // skade per treff fra håndvåpen (1 = ødelagt)
     artilleriSkade: .6,   // skade per treff fra en salve (stridsvogn: en tiendedel)
+    // ROLLER (18. nov, Claudes forslag): stridsvogna er til for å knekke stillinger og kjøretøy – kanonen bryr seg ikke om
+    // skyttergraver og stillinger (dekkFaktor opphever vernet), river en stilling den treffer (stillingSjanse per treff) og
+    // skyter på fiendens kjøretøy når ingen lag er i sikte (kjøretøy: [skudd, grunnsjanse]). Rakettartilleriet river stillinger
+    // innen stillingRadius fra nedslaget og er farlig for kjøretøy, men kan ikke skyte nær seg selv.
+    roller: { stridsvogn: { dekkFaktor: 1.8, stillingSjanse: .5, kjøretøy: [2, .35], tekst: 'mot stillinger og kjøretøy' },
+      rakettartilleri: { stillingRadius: 100, tekst: 'mot stillinger og kolonner langt unna' } },
     styrke: { stridsvogn: 30, speiderbil: 3, lastebil: 1, rakettartilleri: 1, radar: 1 },   // hvor farlig kjøretøyet er for et lag (AI-en)
   };
   // Kjøretøytypene for spill/kjoretoy.js (legges inn i Kjoretoy.TYPER av visningen eller testen).
@@ -34,6 +40,17 @@
     return treff;
   }
 
+  // Stridsvogn mot et kjøretøy: treff i én kamprunde (bare kanonen).
+  function kanonMotKj(avstand, f, rng) {
+    const R = REGLER.stridsvogn, [n, p0] = REGLER.roller.stridsvogn.kjøretøy; if (avstand > R.rekkevidde) return 0;
+    let p = p0 * (1 - avstand / R.rekkevidde), treff = 0; if (f && f.skytterPåMarsj) p *= .5; if (f && f.målPåMarsj) p *= .7;
+    for (let i = 0; i < n; i++) if (rng() < p) treff++; return treff;
+  }
+  // Stillinger som rives: av kanonen (treff på et lag som står i stillingen) eller av en salve (innen stillingRadius).
+  // stillinger: [{ x, y }]. Gir indeksene som skal bort (høyeste først).
+  function rivStillinger(stillinger, x, y, radius, sjanse, rng) {
+    const ut = []; for (let i = (stillinger || []).length - 1; i >= 0; i--) { const q = stillinger[i]; if (Math.hypot(q.x - x, q.y - y) <= radius && rng() < sjanse) ut.push(i); } return ut;
+  }
   // Artilleri: ett batteri (kjøretøy) med ladetid. Gir { feil } når det ikke kan skyte, ellers en salve { x, y, igjen } underveis.
   function avfyr(kj, mål, observert, rng) {
     const R = REGLER.artilleri, d = Math.hypot(mål[0] - kj.x, mål[1] - kj.y);
@@ -92,7 +109,7 @@
     if (kj.antall <= 0) kj.skade = 0;
     return { ødelagt, borte: kj.antall <= 0 };
   }
-  const api = { REGLER, KJORETOY, skad, kanonrunde, avfyr, nedslag, nedslagKj, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
+  const api = { REGLER, KJORETOY, skad, kanonrunde, kanonMotKj, rivStillinger, avfyr, nedslag, nedslagKj, lad, radarSer, radarSteg, nyDrone, droneSteg, droneSer };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Enheter = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
