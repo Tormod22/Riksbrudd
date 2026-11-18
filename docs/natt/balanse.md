@@ -425,3 +425,15 @@ fredstid 5 døgn). Fire døgnkall – det tredje døgnet ble ikke ferdig innen t
 - Bølge 1 var to røverlag på 6 (12 mot 8) og ble slått tilbake (450 000 kr, som gikk til reparasjon). Bølge 2 (to lag) kom inn i
   leiren: Tropp 2 ble slått ut (4/4), Vaktlaget mistet tre, og røverne herjet – byggene står på 80 % uten penger til reparasjon.
 - Leiren hadde ikke falt etter tre døgn, men den er på vei: ingen penger, ingen diesel, to lag nesten borte. **På Hard kan leiren falle.**
+
+### Konklusjon og det som ikke er gjort (runde 5)
+- **Vanlig:** med det publiserte (kjøring A) sto byggene den første uka, men forsvaret var borte fra dag 5 (24 røvere mot 12, tom
+  ammunisjon, sårede som aldri ble friske), og de fire første døgnene var uten tap. Med endringene (kjøring B) sto leiren hele veien,
+  og spilleren mistet noe: ett bytte i bølge 1, alle i Vaktlaget, halve Tropp 2, og moralen. Det er det målet sa.
+- **Hard:** tydelig hardere – pengene tar slutt, ingen diesel, røverne herjer i bølge 2. Leiren kan falle (ikke spilt til den gjorde det).
+- **Lett:** se under (kort kontroll, hvis den rakk å bli ferdig). Lett er lettere av konstruksjonen: 60 mill. kr, ett røverlag på
+  høyst ca. 60 % av soldatene + 2, fiendens treff × 0,75 og fredstid 9 døgn.
+- Ikke gjort: en tredje kjøring på Vanlig med «hjem for å hvile» (lagt inn etter kjøring B – prøvd bare i regeltesten og i Hard-
+  kontrollen); motstanderne etter fredstiden ble ikke prøvd (de kom ikke til leiren på dag 8–10 i noen av kjøringene); skriptet lager
+  ingen nye tropper etter dag 2 og bygger ikke sykestue – en menneskelig spiller som gjør det, står sterkere.
+- Startdøgnene på Vanlig er fortsatt rolige når bølge 1 går bra (A), men kan gi tap (B). Ikke endret.
