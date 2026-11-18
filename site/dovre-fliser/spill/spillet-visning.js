@@ -42,20 +42,54 @@
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     const mann = Trussel.menn(nr, soldater);
-    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
     varsel(Trussel.varsel(nr, n, s)); skitten = true; meny(); return true; }
+  // ---------- (runde 4) RØVERE SOM HAR HERJET trekker seg ut med byttet (Trussel.HERJ) ----------
+  // tiden hvert røverlag er inne i leiren (innen Trussel.HERJ.radius fra midten), i spillminutter
+  KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
+    // (kjøring 7: røverne sto like utenfor 150 m, men innen 120 m av byggene, og skadet dem i timevis uten å telle som «inne» –
+    // nå teller også de som skader bygg: HERJER i leir-visning.js)
+    for (const e of ENHETER) if (e.raid === T.aktiv && !e.trekker && levende(e) && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.HERJ.radius || (window.HERJER && HERJER.has(e)))) e.inne = (e.inne || 0) + dt; });
+  // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
+  function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
+    const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });
+    if (b.penger > 0 && !OppstartSpill.betal(b.penger)) b.penger = 0;
+    if (LS) { for (const [k, v] of Object.entries(b.lager)) LS.lager[k] = Math.max(0, Math.round(((LS.lager[k] || 0) - v) * 10) / 10); LS.drivstoff = Math.max(0, LS.drivstoff - b.diesel); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); }
+    if (f) f.mat = Math.max(0, f.mat - b.mat);
+    e.trekker = true; e.trekkerFra = tid; e.bytte = b; e.venterNatt = false; bort(e);
+    varsel(`${e.navn} har herjet i leiren og trekker seg ut med byttet: ${Trussel.bytteTekst(b)}.`); skitten = true; return b; }
+  // bort fra leiren: samme vei som de kom (der finnes det en rute), ellers rett ut fra leiren
+  function bort(e, tilfeldig) { const leir = S().leir, H = Trussel.HERJ;
+    if (e.fra && !tilfeldig) { ordre(e, e.fra.x, e.fra.y, true); return; }
+    const a = !tilfeldig && Math.hypot(e.x - leir.x, e.y - leir.y) > 5 ? Math.atan2(e.y - leir.y, e.x - leir.x) : Math.random() * 6.2832;
+    ordre(e, leir.x + Math.cos(a) * (H.borte + 400), leir.y + Math.sin(a) * (H.borte + 400), true); }
+  // lag som trekker seg ut: fjernes når de er langt nok unna (eller har brukt for lang tid); står de fast, prøver de en annen vei
+  function utSteg() { const leir = S().leir, H = Trussel.HERJ;
+    for (const e of ENHETER.filter(q => q.trekker || q.flykter)) { const d = Math.hypot(e.x - leir.x, e.y - leir.y);
+      if (!levende(e) || d > H.borte || tid - (e.trekkerFra || 0) > H.maksMin) { if (e.raid > 0 && e.raid === T.aktiv) continue; const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); skitten = true; continue; }
+      if (!e.sti && !e.planlegger && Math.random() < .25) bort(e, Math.random() < .5); } }
   function angrepSteg() { if (!T.aktiv) { if (auto() && (tid >= T.nesteSpill || ekte >= T.nesteEkte)) { T.nesteSpill = T.nesteEkte = Infinity; angrep(); } return; }
     const lag = ENHETER.filter(e => e.raid === T.aktiv), leir = S().leir;
+    if (auto()) for (const e of lag) { if (e.trekker || e.flykter || !levende(e) || Terreng.slattUt(e.menn)) continue;
+      // en tredel ute (Trussel.brutt): røverne gir opp og flykter (bølgen kan da bli slått tilbake); ellers: har de herjet lenge nok, tar de byttet
+      if (Trussel.brutt(e.menn)) { e.flykter = true; e.trekkerFra = tid; e.venterNatt = false; bort(e); if (synlig(e)) logg(`${e.navn} gir opp og flykter – for mange av dem er falt eller såret.`); }
+      else if (Trussel.herjet(e)) trekkUt(e); }
     // (18. nov) bølgen er over når røverne er slått ut ELLER har holdt seg unna leiren en halv spilltime (Trussel.ferdig)
-    const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn), avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
+    // (runde 4) … eller når de som er igjen, har trukket seg ut med byttet ('herjet': ingen belønning)
+    const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn) || !!e.flykter, avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt, trekker: !!e.trekker })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
     if (st === 'trekker') { if (T.borteFra === undefined || T.borteFra === null) T.borteFra = tid; } else T.borteFra = null;
+    if (st === 'herjet') { const f = F(); if (f) f.moral = Math.max(0, f.moral - Trussel.HERJ.moral);
+      varsel(`Bølge ${T.aktiv} er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gangen – reparer byggene og gjør leiren klar til neste bølge.`);
+      // lagene som trekker seg ut, går videre bort (utSteg fjerner dem); resten fjernes nå
+      for (const e of lag) { if (e.trekker && levende(e)) { e.raid = -T.aktiv; continue; } const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); }
+      T.aktiv = 0; T.borteFra = null; T.herjet = (T.herjet || 0) + 1; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     if (st === 'slått' || st === 'unna') { const b = Trussel.belønning(T.aktiv), f = F(), slapp = !!(window.KrigSpill && KrigSpill.slapp && KrigSpill.slapp(T.aktiv));
       // sabotører som fikk gjort sitt og slapp unna (spill/krig-visning.js): ingen belønning
       if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); varsel('Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
       else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); varsel(st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
       for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
-    for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
 
   // ================= MARKED =================
   let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;
@@ -249,8 +283,8 @@
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setInterval(() => { if (performance.now() > varselTil) varselEl.classList.remove('på'); if (!klar || !S() || !S().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     const g = deg(); skytKnapp.classList.toggle('på', !!g && VW < 900 && !(window.KjorSpill && KjorSpill.fører()));
-    if (tempo > 0) { angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); faltSteg(); } }, 1000);
+    if (tempo > 0) { utSteg(); angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); faltSteg(); } }, 1000);
   Object.assign(api, { venner: () => V.map(v => v.d), minStilling, start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, varsel, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
-    T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg });
+    T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg, trekkUt, utSteg });
   window.SpilletSpill = api;
 })();

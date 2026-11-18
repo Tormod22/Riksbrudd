@@ -39,8 +39,34 @@
     // som kan, har holdt seg mer enn «borte» meter fra leiren i «borteMin» spillminutter ('unna'). Lag som venter på mørket (venter),
     // teller ikke som unna. lag: [{ lever, slåttUt, avstand, venter }], minutter: hvor lenge alle har vært unna. Tallene er Claudes forslag.
     borte: 2500, borteMin: 30,
-    ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt); if (!k.length) return 'slått';
+    // (runde 4) Lag som har herjet og trekker seg ut med byttet (trekker), kjemper ikke lenger: er ingen andre igjen, er bølgen over
+    // som 'herjet' – ikke slått tilbake, og ingen belønning.
+    ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt && !q.trekker); if (!k.length) return (lag || []).some(q => q.trekker) ? 'herjet' : 'slått';
       if (k.every(q => q.avstand > Trussel.borte && !q.venter)) return (minutter || 0) >= Trussel.borteMin ? 'unna' : 'trekker'; return null; },
+    // RØVERE SOM HAR HERJET (runde 4, 18. nov – kjøring 4: røverne i bølge 4 sto et døgn inne i leiren og ødela bygg etter bygg, og
+    // ingen fikk has på dem). Et røverlag som har vært inne i leiren (innen «radius» m fra midten) i til sammen «min» spillminutter,
+    // tar med seg et bytte fra kassa og lageret og trekker seg ut: marsjerer «borte» m bort og fjernes (senest etter «maksMin»
+    // spillminutter). Byttet per lag: «penger.andel» av kassa (høyst «penger.tak»), og en andel av materialene, dieselen og maten.
+    // «brudd»: et røverlag gir opp og flykter når så stor del av mennene er falt eller såret (Terreng regner et lag som slått ut
+    // først ved 6 ute – et røverlag på 6 måtte slås helt ut). Alle tallene er Claudes forslag (justert etter kjøring 5: 45 min og
+    // 800 000 kr var for strengt – bølge 1 endte med herjing mens to lag skjøt på røverne inne i leiren).
+    // (dieselen koster 8000 kr literen: 25 % av en full tank var over 1 mill. kr – nå 10 %)
+    // (kjøring 6b: to lag mot seks røvere fikk bare én ute på en time – nå gir røverne opp ved en tredel ute, og herjer i halvannen time)
+    HERJ: { radius: 150, min: 90, borte: 1800, maksMin: 90, moral: 4, brudd: 1 / 3, penger: { andel: .05, tak: 5e5 }, lager: .2, diesel: .1, mat: .15 },
+    // har røverlaget gitt opp? menn: [{ hp }] – en tredel (brudd) eller flere er falt eller såret
+    brutt: menn => { const n = (menn || []).length; return n > 0 && menn.filter(m => m.hp < 1).length >= Math.ceil(n * Trussel.HERJ.brudd); },
+    // har laget herjet lenge nok? q: { inne (spillminutter innenfor radius) }
+    herjet: q => (q.inne || 0) >= Trussel.HERJ.min,
+    // hva ett lag tar med seg. h: { penger, lager: { tre, betong, stål }, diesel, mat } – det som finnes. Gir det samme med mengdene som
+    // tas (penger i hele 1000 kr, materialer i tideler, diesel og mat i hele).
+    bytte(h) { const H = Trussel.HERJ, l = h.lager || {}, ut = { penger: Math.floor(Math.min((h.penger || 0) * H.penger.andel, H.penger.tak) / 1000) * 1000, lager: {}, diesel: Math.floor((h.diesel || 0) * H.diesel), mat: Math.floor((h.mat || 0) * H.mat) };
+      for (const k of Object.keys(l)) { const m = Math.floor((l[k] || 0) * H.lager * 10) / 10; if (m > 0) ut.lager[k] = m; }
+      return ut; },
+    // byttet som tekst: «640 000 kr, 3 m³ tre, 50 l diesel og 4 rasjoner»
+    bytteTekst(b) { const d = [], tall = v => Math.round(v).toLocaleString('nb-NO'), ENH = { tre: 'm³ tre', betong: 'm³ betong', stål: 't stål' };
+      if (b.penger > 0) d.push(tall(b.penger) + ' kr'); for (const [k, v] of Object.entries(b.lager || {})) if (v > 0) d.push(String(v).replace('.', ',') + ' ' + (ENH[k] || k));
+      if (b.diesel > 0) d.push(tall(b.diesel) + ' l diesel'); if (b.mat > 0) d.push(b.mat + (b.mat === 1 ? ' rasjon' : ' rasjoner'));
+      return d.length ? (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0]) : 'ingenting'; },
     varsel: (nr, n, s) => `Varsel: ${n === 1 ? 'et røverlag' : n + ' røverlag'} er på vei mot leiren fra ${s.retning} (${(s.meter / 1000).toFixed(1).replace('.', ',')} km unna). Bølge ${nr}.`,
   };
 

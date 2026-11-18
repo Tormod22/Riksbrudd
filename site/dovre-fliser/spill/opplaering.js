@@ -14,11 +14,21 @@
     { id: 'bygg2', tittel: 'Sett to på bygg', tekst: 'Åpne Folk og bruk + ved Bygg til det står to der. To personer er ett byggelag – uten dem blir ingenting bygget.', mål: 'folk', ferdig: b => b.folkÅpnet && b.påBygg >= 2 },
     { id: 'tropp', tittel: 'Lag en tropp', tekst: 'Åpne Tropper, velg noen av folkene og gi troppen et navn. Tropper kan du sende ut i kartet.', mål: 'tropper', ferdig: b => b.tropper > 0 },
     { id: 'gaa', tittel: 'Gå i 3D', tekst: 'Trykk 3D for å se landet ovenfra, og så Gå for å gå rundt i leiren selv.', mål: '3d', ferdig: b => b.går },
+    // (balansen runde 4, 18. nov) det gjennomspillingen viste at en ny spiller trenger for å klare den første uka: to tropper, mat,
+    // forsvar når alarmen går, og reparasjon etter angrep. Rekkefølgen og «før dag 4» er Claudes forslag.
+    { id: 'tropp2', tittel: 'Lag en tropp til', tekst: 'Røverbølgene vokser. Ha to tropper før dag 4. Mangler du folk: rekrutter i Folk (det trengs ledige senger – bygg en brakke til eller oppgrader den).', mål: 'tropper', ferdig: b => b.tropper >= 2 },
+    { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3 },
+    { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
+    { id: 'reparer', tittel: 'Reparer byggene etter et angrep', tekst: 'Etter et angrep er byggene skadet. Trykk «Reparer alle» i banneret, eller velg et bygg og Reparer. Ledige byggelag reparerer også av seg selv.', mål: 'reparer', ferdig: b => b.angrep && b.skadet === 0 },
   ];
+  // stegene som kom i runde 4: en opplæring som alt var ferdig og lukket (lagret uten v), får dem ikke på nytt
+  const NYE = ['tropp2', 'mat', 'forsvar', 'reparer'];
   const tom = () => ({ gjort: [], hoppet: [], slutt: false });
   const fra = t => { let o = null; try { o = typeof t === 'string' ? JSON.parse(t) : t; } catch (e) { o = null; } const T = tom(); if (!o || typeof o !== 'object') return T;
-    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined; return T; };
-  const til = T => JSON.stringify({ leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt });
+    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined;
+    if (T.slutt && !(o.v >= 2)) for (const id of NYE) if (!T.gjort.includes(id) && !T.hoppet.includes(id)) T.hoppet.push(id);
+    return T; };
+  const til = T => JSON.stringify({ v: 2, leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt });
   const tatt = (T, id) => T.gjort.includes(id) || T.hoppet.includes(id);
   // første steg som verken er gjort eller hoppet over
   const neste = T => STEG.find(s => !tatt(T, s.id)) || null;
@@ -34,7 +44,7 @@
   // ---------------- visningen ----------------
   const $ = id => document.getElementById(id), NØKKEL = 'riksbrudd-opplaering', AV = 'riksbrudd-opplaering-av';
   const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, skriv = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* sperret */ } };
-  let T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false }, sistSteg = null;
+  let T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false, forsvar: false }, sistSteg = null;
   const css = document.createElement('style');
   css.textContent = `#opplaering{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:7; display:none; box-sizing:border-box; width:min(490px, calc(100vw - 16px)); padding:9px 12px 10px 46px; background:linear-gradient(180deg,rgba(42,33,20,.97),rgba(23,18,10,.97)); border:1px solid #c9b26a; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.6); border-radius:5px; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; }
 #opplaering.på{ display:block; animation:oppinn .3s ease-out; } @keyframes oppinn{ from{ opacity:0; transform:translate(-50%, 12px); } }
@@ -55,14 +65,20 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
   const leirNøkkel = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : null; };
-  function last() { const k = leirNøkkel(), o = fra(les(NØKKEL)); T = k && o.leir === k ? o : tom(); T.leir = k || undefined; sett = { leir: false, folk: false }; }
+  function last() { const k = leirNøkkel(), o = fra(les(NØKKEL)); T = k && o.leir === k ? o : tom(); T.leir = k || undefined; sett = { leir: false, folk: false, forsvar: false }; }
   const lagre = () => { if (T.leir) skriv(NØKKEL, til(T)); };
   const synlig = e => !!e && e.getClientRects().length > 0;
   const kn = k => { const a = document.querySelector('#kommando [data-k="' + k + '"]'), b = document.querySelector('#mkom [data-k="' + k + '"]'); return synlig(a) ? a : synlig(b) ? b : null; };
   function bilde() { const L = rot.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand && FolkSpill.tilstand();
     if ($('leirmeny') && $('leirmeny').classList.contains('på')) sett.leir = true; if ($('folkmeny') && $('folkmeny').classList.contains('på')) sett.folk = true;
     return { leirÅpnet: sett.leir, brakker: L ? L.bygg.filter(b => b.type === 'brakke').length : 0, folkÅpnet: sett.folk, påBygg: F && F.personer ? F.personer.filter(p => p.oppgave === 'bygg').length : 0,
-      tropper: typeof ENHETER !== 'undefined' ? ENHETER.filter(s => s.fraFolk).length : 0, går: typeof R3 !== 'undefined' && !!(R3 && R3.fot) && typeof på3d !== 'undefined' && på3d }; }
+      tropper: typeof ENHETER !== 'undefined' ? ENHETER.filter(s => s.fraFolk && levende(s)).length : 0, går: typeof R3 !== 'undefined' && !!(R3 && R3.fot) && typeof på3d !== 'undefined' && på3d,
+      ...bilde4(L, F) }; }
+  // (runde 4) mat, forsvar og reparasjon: matDøgn (mat per person), forsvarSatt (forsvaret – eller en øvelse – har vært satt),
+  // angrep (minst én bølge er over) og skadet (bygg under 98 % som ikke repareres)
+  function bilde4(L, F) { if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) sett.forsvar = true; const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null;
+    return { matDøgn: F && F.personer && F.personer.length ? F.mat / F.personer.length : 99, forsvarSatt: sett.forsvar, angrep: !!(T0 && T0.bølge >= 1 && !T0.aktiv),
+      skadet: L ? L.bygg.filter(b => b.igjen <= 0 && b.hp > 0 && b.hp < .98 && !b.arbeid).length : 0 }; }
   // hva ringen skal stå rundt for steget: knappen i kommandolinja, eller neste ting inne i menyen når den alt er åpen
   function pekPå(s) { if (!s) return null; const lm = $('leirmeny'), åpen = lm && lm.classList.contains('på');
     if (s.mål === 'leir') return kn('leir') || $('leirknapp');
@@ -70,6 +86,8 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
     if (s.mål === 'folk') { const fm = $('folkmeny'); if (fm && fm.classList.contains('på')) return null; return kn('folk') || $('folkknapp'); }
     if (s.mål === 'tropper') { const tp = $('tropppanel'); if (tp && tp.classList.contains('på')) return null; return kn('tropper') || $('nytropp'); }
     if (s.mål === '3d') return typeof på3d !== 'undefined' && på3d ? $('gaaknapp') : $('v3d');
+    if (s.mål === 'forsvar') { if (synlig($('forsvarknapp'))) return $('forsvarknapp'); if (åpen) return synlig($('forsvarov')) ? $('forsvarov') : null; return kn('leir') || $('leirknapp'); }
+    if (s.mål === 'reparer') return synlig($('reparerknapp')) ? $('reparerknapp') : null;
     return null; }
   function tegn(s, okTekst) { const n = Opplaering.nr(T), sig = (s ? s.id : 'slutt') + '|' + (okTekst || ''); if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
     const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };

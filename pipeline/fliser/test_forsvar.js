@@ -15,3 +15,14 @@ assert.strictEqual(F.fordel(lag, [S[0]]).length, 1, 'ikke flere lag enn plasser'
 assert.ok(Math.abs(F.ankomst(1300 * 1.3) - 21.67) < .01); assert.strictEqual(F.vaktStørrelse(1), 0); assert.strictEqual(F.vaktStørrelse(5), 5); assert.strictEqual(F.vaktStørrelse(30), 12);
 assert.strictEqual(F.rapport({ fiender: 2, fienderUte: 2, falne: 1, sårede: 2, bygg: 1 }), 'alle 2 røverlag er slått ut, vi har 1 falne og 2 sårede, 1 bygg ble skadet.'); assert.ok(/ingen tap/.test(F.rapport({ fiender: 1, fienderUte: 1, falne: 0, sårede: 0, bygg: 0 })));
 console.log('ok   forsvar: beredskap, stillinger, fordeling, ankomst, leirvakt og rapport');
+// (runde 4) mot røverne i leiren: hvert lag mot nærmeste røver, 50 m fra den på sin egen side
+{ const M = F.motHerjere([{ x: 1300, y: 1000 }, { x: 1000, y: 700 }], [{ x: 1100, y: 1000 }, { x: 1000, y: 950 }], leir);
+  assert.strictEqual(M.length, 2); assert.ok(M[0].fi.x === 1100 && Math.abs(M[0].mål.x - 1125) < 1e-9 && Math.abs(M[0].mål.y - 1000) < 1e-9, 'laget øst for leiren går mot røveren i øst og stiller seg 25 m fra den');
+  assert.ok(M[1].fi.y === 950 && Math.abs(M[1].mål.y - 925) < 1e-9, 'laget i sør tar den nærmeste'); assert.strictEqual(F.motHerjere([{ x: 1, y: 1 }], [], leir).length, 0, 'ingen røvere inne: ingen ordre');
+  const Q = F.motHerjere([{ x: 1010, y: 1000 }], [{ x: 1000, y: 1000 }], leir); assert.ok(Math.hypot(Q[0].mål.x - 1000, Q[0].mål.y - 1000) <= 10 + 1e-9, 'et lag like ved går ikke lenger bort'); }
+// (runde 4) reparasjon: de mest skadde først, bare så mange som det er ledige byggelag, og reserven blir igjen i kassa
+{ const B = [{ id: 1, hp: .9, pris: 1e5 }, { id: 2, hp: .3, pris: 7e5 }, { id: 3, hp: .5, pris: 4e5, opptatt: true }, { id: 4, hp: .97, pris: 2e4 }, { id: 5, hp: 0, pris: 1e6 }];
+  assert.deepStrictEqual(F.velgReparasjon(B, 2, 5e6), [2, 1]); assert.deepStrictEqual(F.velgReparasjon(B, 1, 5e6), [2]); assert.deepStrictEqual(F.velgReparasjon(B, 3, 6e5), [1], 'for dyrt: hopper over, tar det neste');
+  assert.deepStrictEqual(F.velgReparasjon(B, 3, 3.5e5), [], 'reserven (300 000 kr) blir alltid igjen'); assert.deepStrictEqual(F.velgReparasjon(B, 0, 5e6), []);
+  const s = F.skadet(B); assert.strictEqual(s.n, 4); assert.strictEqual(s.pris, 1e5 + 7e5 + 2e4); assert.strictEqual(s.tekst, '4 bygg er skadet'); assert.strictEqual(F.skadet([{ hp: .5, pris: 1 }]).tekst, 'Ett bygg er skadet'); }
+console.log('ok   forsvar: mot røverne i leiren, reparasjon og skadevarsel');
