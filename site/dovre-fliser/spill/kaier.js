@@ -46,8 +46,11 @@
       const n = navn(K, i); if (n && (m < (t >= 3 ? 40 : 9) || i === valgtKai)) { const yt = window.Etikett ? Etikett.tekst(g, n, x, y + r + 12, 1) : y + r + 12; g.lineWidth = 3; g.strokeStyle = 'rgba(15,11,7,.85)'; g.strokeText(n, x, yt); g.fillStyle = FARGE[t] || FARGE[1]; g.fillText(n, x, yt); } }
     g.restore(); });
   // trykk på et merke: sist i lista, så lag, bygg og annet går foran
-  KROKER.trykk.push((X, Y) => { if (!K || !vis || kam.m >= 160) return false; const f = nær(K, X, Y, 13 * kam.m, i => vises(K.t[i], K.l[i], kam.m)); if (!f) { if (valgtKai >= 0) { valgtKai = -1; skitten = true; } return false; }
-    valgtKai = f.i; skitten = true; const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir, d = L ? Math.hypot(K.x[f.i] - L.x, K.y[f.i] - L.y) : null, st = størrelse(K.t[f.i], K.l[f.i]);
+  KROKER.trykk.push((X, Y) => { if (rot.SjoSpill && SjoSpill.trykk(X, Y)) return true; if (!K || !vis || kam.m >= 160) return false; const f = nær(K, X, Y, 13 * kam.m, i => vises(K.t[i], K.l[i], kam.m)); if (!f) { if (valgtKai >= 0) { valgtKai = -1; skitten = true; } return false; }
+    valgtKai = f.i; skitten = true;
+    // sjøen (spill/sjo-visning.js): en båt som venter på et mål, seiler hit; ellers åpnes kaia i sjøpanelet
+    if (rot.SjoSpill && SjoSpill.kai(f.i)) return true;
+    const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir, d = L ? Math.hypot(K.x[f.i] - L.x, K.y[f.i] - L.y) : null, st = størrelse(K.t[f.i], K.l[f.i]);
     logg(`${tekst(K, f.i)}. ${st === 'stor' ? 'Stor nok for lasteskip og ferjer.' : st === 'middels' ? 'Passer for sjarker og lektere.' : 'Bare for småbåter.'}${d !== null ? ` ${d < 1000 ? Math.round(d / 10) * 10 + ' m' : (d / 1000).toFixed(d < 10000 ? 1 : 0).replace('.', ',') + ' km'} fra leiren.` : ''}`); return true; });
   // ---------- av/på i ☰ ----------
   const meny = document.getElementById('lagmeny'); if (meny) { const b = document.createElement('button'); b.id = 'vis-kaier'; b.textContent = 'Kaier'; const sett = () => { b.classList.toggle('av', !vis); b.setAttribute('aria-pressed', String(vis)); };
