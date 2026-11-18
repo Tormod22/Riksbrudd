@@ -129,7 +129,7 @@
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(1)), knapp('Neste: plass til leiren →', false, () => { const f = O.feil(utkast); if (f.length) { melding.textContent = f.join(' '); return; } vis(3); })));
     } else {
       // spillformen (spill/scenario.js): vanskelighetsgrad, utfordringer og scenario velges her, før leiren
-      const SC = window.Scenario, rg = utkast.regler || (utkast.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: null }), form = el('div', { id: 'spillform' });
+      const SC = window.Scenario, rg = utkast.regler || (utkast.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: null }), form = el('div', { id: 'formvalg' });
       const lagForm = () => { form.innerHTML = ''; if (!SC) return;
         form.append(el('h3', {}, 'Vanskelighetsgrad'));
         const v = el('div', { klasse: 'bakgrunn' }); for (const [id, V] of Object.entries(SC.REGLER.vanskelighet)) { const kn = knapp('', rg.vanskelighet === id, () => { rg.vanskelighet = id; lagForm(); }); kn.dataset.vansk = id; kn.append(el('b', {}, V.navn), el('small', {}, V.tekst)); v.appendChild(kn); } form.append(v);
