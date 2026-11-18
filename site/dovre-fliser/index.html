@@ -782,7 +782,8 @@ function sim(dt) {
   }
   for (const s of ENHETER) {
     if (!s.sti) continue;
-    let igjen = dt / TIME; s.timerIgjen -= igjen;
+    // KROKER.fart (spill/formasjon-visning.js, spill/krig-visning.js): faktor på marsjfarten per lag
+    let igjen = dt / TIME * (KROKER.fart ? KROKER.fart.reduce((v, f) => v * f(s), 1) : 1); s.timerIgjen -= igjen;
     while (igjen > 0 && s.seg < s.sti.length - 1) {
       const [ax, ay] = s.sti[s.seg], [bx, by] = s.sti[s.seg + 1], t = s.steg[s.seg] || 1e-9, rest = (1 - s.prog) * t;
       s.retning = Math.atan2(by - ay, bx - ax);
@@ -2855,13 +2856,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/forsyning.js?v=bc0138ce5d"></script>
 <script src="/dovre-fliser/spill/forsyning-visning.js?v=ead7533791"></script>
 <script src="/dovre-fliser/spill/odeleggelse.js?v=f9e275fc03"></script>
-<script src="/dovre-fliser/spill/enheter.js?v=7f0b842503"></script>
-<script src="/dovre-fliser/spill/enheter-visning.js?v=42546c64ff"></script>
+<script src="/dovre-fliser/spill/enheter.js?v=254d3c5786"></script>
+<script src="/dovre-fliser/spill/enheter-visning.js?v=163c790579"></script>
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=1d37b93e82"></script>
 <script src="/dovre-fliser/spill/garnison-visning.js?v=0572049e08"></script>
 <script src="/dovre-fliser/spill/fraksjoner.js?v=68fa2ae477"></script>
-<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=a1a092be84"></script>
+<script src="/dovre-fliser/spill/fraksjoner-visning.js?v=701d20a729"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=6e125b8c6d"></script>
@@ -2911,7 +2912,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggevisning.js?v=9925e7834a"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=5cf4c81c55"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
-<script src="/dovre-fliser/spill/lagring.js?v=5815ba23b4"></script>
+<script src="/dovre-fliser/spill/lagring.js?v=4bcf906dc4"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=92eb15257d"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
@@ -2944,10 +2945,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/panelpynt.js?v=1c38fa5f9d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/strid.js?v=d675a62245"></script>
-<script src="/dovre-fliser/spill/strid-visning.js?v=30785e70c2"></script>
+<script src="/dovre-fliser/spill/strid-visning.js?v=2efdd45a36"></script>
 <script src="/dovre-fliser/spill/forsvar.js?v=1863a78401"></script>
 <script src="/dovre-fliser/spill/forsvar-visning.js?v=c17211d07f"></script>
-<script src="/dovre-fliser/spill/tropper.js?v=eba3d37990"></script>
+<script src="/dovre-fliser/spill/tropper.js?v=77bff43d43"></script>
 <script src="/dovre-fliser/spill/tropper-visning.js?v=d0314ad484"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=32d05e6169"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=1fbadf5e33"></script>
@@ -2956,8 +2957,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/region.js?v=ed9b60f396"></script>
 <script src="/dovre-fliser/spill/region-visning.js?v=a5b06e7b90"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3b1ebac80c"></script>
-<script src="/dovre-fliser/spill/formasjon.js?v=919f758676"></script>
-<script src="/dovre-fliser/spill/formasjon-visning.js?v=3220bb9b4d"></script>
+<script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
+<script src="/dovre-fliser/spill/formasjon-visning.js?v=bb808bd838"></script>
+<script src="/dovre-fliser/spill/krig.js?v=ffb5b2a6a4"></script>
+<script src="/dovre-fliser/spill/krig-visning.js?v=47a3a56324"></script>
 <script src="/dovre-fliser/spill/kaier.js?v=7205ff7575"></script>
 <script src="/dovre-fliser/spill/verden.js?v=8a268069b3"></script>
 <script src="/dovre-fliser/spill/verden-visning.js?v=02e95351c0"></script>
