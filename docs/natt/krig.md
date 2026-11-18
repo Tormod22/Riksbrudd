@@ -181,3 +181,46 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
 - 3D: ingen figurer i stillingene; etterretningsmerket er i overlegget (ikke i scenen); trær ryddes i ringen, men ikke busker fra
   vegetasjon3d som ikke ligger i R.treMesh/R.småMesh.
 - Bygdevernet faller fort mot fulle lag (8 mann på under 50 min mot 24) – tallene i `Krig.REGLER.vern` er ikke endret.
+
+## Runde 4, del 2 (18. nov dag)
+### 1. Sikten er lik begge veger (terreng.js)
+- `Terreng.siktfelt(v, X, Y, radius, oyne = 2, mål = 1.8)`: målet i en rute er en person 1,8 m over bakken (`MÅL_HØYDE`, Claudes
+  forslag); den som ser, har fortsatt øynene 2 m oppe. Før ble bakken prøvd: på brekken ved Dovre (1118 -> 1127 moh. på 250 m) så laget
+  på flata laget nedenfor, men ikke omvendt. Ingen andre endringer i terreng.js (to linjer + kommentar).
+- test_terreng.js (5b): brekkprofilen fra Dovre i 18 plasseringer – 0 skjeve nå, 3 skjeve med bakken som mål (mål = 0, testen finner feilen),
+  og en person bak en 60 m rygg synes fortsatt ikke. Alle regeltestene (alle pipeline/fliser/test_*.js) går som før – ingen eksisterende
+  test endret svar. I nettleser: de to lagene på brekken ser nå hverandre begge veger.
+- Virkning i spillet: det lyse siktfeltet viser nå der en person ville synes (litt større i kupert terreng, likt på flatt).
+
+### 2. Ingen ammunisjon uten skudd
+- MÅLT (scratchpad natt/krig/p8.js, Dovre, to lag 120 m fra hverandre som ser hverandre, fem kamprunder): «Ild: bare svar» uten å være
+  beskutt (den røde var tom) ga 0 skudd, men ammunisjonen gikk fra 100 % til 90 % – like mye som med fri ild (5 skudd, 90 %). Årsak:
+  Forsyning.skyt trekker ammunisjon i KROKER.ild, og alle krokene kalles selv når en annen gir 0. Under våpenhvile: 100 % (rettet i del 1).
+- RETTET med én samlet endring i index.html, kamprunde(): ammunisjonen før krokene huskes (`ammo0 = a.ammo`) og legges tilbake når
+  produktet er 0 (`if (ildf <= 0) { a.ammo = ammo0; continue; }`). Etter: «bare svar» 0 skudd og 100 %, fri ild som før (5 skudd, 90 %).
+
+### 3. Radioen og våpenhvile
+- spill/kontrollrom-visning.js, `rapport()`: lag fra en side dere har våpenhvile med (`AI.hvile('blå', side)`), tas ut av lista radioen
+  melder «Fiende sett» fra (én hjelpefunksjon + filter på `nå.fiender`). De står fortsatt på kartet som «sist sett» (e.sett settes for alle).
+- Prøvd (p6c.js, to lag 120 m fra hverandre): 0 «Fiende sett» under hvilen, 2 rett etter «Bryt».
+
+### 4b. Motstanderen foreslår fangebytte
+- Har en side noen av dine (`T.tatt`) og du noen av deres (`T.fanger`), kan den foreslå et bytte én mot én (`Krig.forslagBytte`): hvert
+  6. spilltime 50 % sjanse (bare av seg selv utenfor testene), forslaget står i 12 timer (`Krig.REGLER.fange.forslagHver/-Sjanse/-Varer`,
+  Claudes forslag). Melding i loggen (og «riksbrudd-hendelse» som stopper spolingen), og øverst i Leir → Mål → Fanger en rad med
+  «Godta» / «Avslå». `KrigSpill.foreslå(side)`, `KrigSpill.svarForslag(ja)`, `T.forslag` (lagres). «Godta» bruker `byttEgne(i, maks)`.
+- Vakta prøver forslag + Godta (din mann kommer hjem i Folk, én av deres fanger går). test_krig.js har to nye sjekker.
+
+### 4a. Soldater i fiendens stillinger (3D)
+- krig3d.js `figurer()`: tre figurer på kne bak sandsekkene (våpenet over vollen), vendt mot leiren, i hver kjent stilling som har et lag
+  fra samme side innen 25 m som du ser (`synlig` – tåka gjelder). Én InstancedMesh (høyst 36) med egen figur (bein, kropp, armer, sekk,
+  hode, hjelm, gevær; hjørnefarger) og sidens farge som et skjær (instanceColor, laget selv). Oppdateres høyst hvert halve sekund, og bare
+  når lista endres. Eget materiale (MeshLambert med hjørnefarger) – frigjøres sammen med resten når scenen byttes. `Krig3d.antall().soldater`.
+- Prøvd med bilde (p9.js): en kjent rød stilling 180 m fra leiren med et rødt lag i: 3 figurer bak vollen mot leiren, laget selv rundt.
+- Lagets egne soldater (soldater3d i index.html) står fortsatt i formasjonen sin rundt laget – figurene i stillingen kommer i tillegg.
+
+### Fellesfiler endret i del 2
+- `site/dovre-fliser/terreng.js`: `MÅL_HØYDE = 1.8`, ny parameter `mål` i `siktfelt` og `helling = (z + mål - oz) / d` (+ kommentar).
+- `site/dovre-fliser/index.html`, `kamprunde()`: `ammo0 = a.ammo` før krokene, og `if (ildf <= 0) { a.ammo = ammo0; continue; }` (+ kommentar).
+- `site/dovre-fliser/spill/kontrollrom-visning.js`, `rapport()`: `hvile`-hjelper og `fiender: fiender.filter(f => !hvile(f))` i `nå` (+ kommentar).
+- `pipeline/fliser/test_terreng.js`: ny blokk 5b (brekken).

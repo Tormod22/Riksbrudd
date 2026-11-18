@@ -123,7 +123,7 @@ function skjulMelding(type) {
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/kartflis.js?v=857b0c3418"></script>
-<script src="/dovre-fliser/terreng.js?v=3e6ae3f53a"></script>
+<script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script>
@@ -851,7 +851,8 @@ function kamprunde() {
       const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || (!ser(a, b.x, b.y) && !(d < 300 && window.HERJER && (HERJER.has(a) || HERJER.has(b))))) continue;
       const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
       if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.våpen || m.rolle, d, f) > 0)) continue;   // ingen når fram
-      const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)
+      // ammunisjonen trekkes i en krok (Forsyning.skyt) – blir det ikke noe skudd (f.eks. «Ild: bare svar» uten å være beskutt), legges den tilbake
+      const ammo0 = a.ammo, ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) { a.ammo = ammo0; continue; }   // f.eks. tom for ammunisjon (S4)
       let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
       if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
       // over 1 (bonus, f.eks. bakgrunnen «soldat» i K1): hvert treff kan gi ett til
@@ -3172,7 +3173,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=2888ca022f"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=9925e7834a"></script>
-<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=e0f787a2af"></script>
+<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=05561e1f9d"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=4bcf906dc4"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
@@ -3223,9 +3224,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=36dba41f7e"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=bb808bd838"></script>
-<script src="/dovre-fliser/spill/krig.js?v=0d3788d1ec"></script>
-<script src="/dovre-fliser/spill/krig-visning.js?v=bef4875e38"></script>
-<script src="/dovre-fliser/spill/krig3d.js?v=964d2c76f5"></script>
+<script src="/dovre-fliser/spill/krig.js?v=a151b32857"></script>
+<script src="/dovre-fliser/spill/krig-visning.js?v=c01c82fd08"></script>
+<script src="/dovre-fliser/spill/krig3d.js?v=a4a9f1a4ce"></script>
 <script src="/dovre-fliser/spill/kaier.js?v=bcd6f795c1"></script>
 <script src="/dovre-fliser/spill/verden.js?v=63902ec403"></script>
 <script src="/dovre-fliser/spill/verden-visning.js?v=a67d152c12"></script>

@@ -80,7 +80,9 @@
   function rapport(s, t) {
     const I = lagInfo(s), ute = s.menn.filter(q => q.hp < 1).length;
     const fiender = ENHETER.filter(e => e.side !== 'blå' && levende(e) && ser(s, e.x, e.y)).map(e => ({ id: ENHETER.indexOf(e), navn: e.navn, x: e.x, y: e.y, e }));
-    const nå = { marsj: !!s.sti, ute, underIld: SKUDD.some(k => k.b === s), fiender, sted: K.retning(spill().leir, s) + ' for leiren' };
+    // våpenhvile (spill/krig-visning.js, AI.hvile): lag fra en side dere har hvile med, meldes ikke som «Fiende sett» (de står likevel på kartet)
+    const hvile = f => !!(window.AI && AI.hvile && AI.hvile('blå', f.e.side));
+    const nå = { marsj: !!s.sti, ute, underIld: SKUDD.some(k => k.b === s), fiender: fiender.filter(f => !hvile(f)), sted: K.retning(spill().leir, s) + ' for leiren' };
     const før = I.før || { marsj: nå.marsj, ute };
     const tekster = K.meldinger(s, før, nå, I.sist, t); I.før = nå;
     for (const f of fiender) f.e.sett = { x: f.x, y: f.y, tid };   // det som meldes, står på kartet som «sist sett»
