@@ -147,6 +147,8 @@
       if (b.sti) { const fr = SJ.steg(b, dt); skitten = true; endret = true;
         const sp = SJ.iSperring(S, b.x, b.y); if (sp && b.sti && !(b.friFor || []).includes(sp.id)) { SJ.stopp(b); logg(`${b.navn} stopper: ${sp.type === 'vrak' ? 'et vrak' : 'et minefelt'} sperrer leia.`); }
         if (fr === 'framme') { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'båt', tekst: b.navn + ' er framme' } })); logg(b.kai >= 0 ? `${b.navn} ligger ved ${kaiNavn(b.kai)}.` : `${b.navn} er framme og ligger stille.`); tegnPanel(true); } }
+      // (runde 4 del 2) skadde båter repareres ved en kai nær leiren
+      if (!b.sti && b.kai >= 0 && b.hp !== undefined && b.hp < SJ.maksHp(b) && vedLeiren(b.x, b.y)) { b.hp = SJ.reparer(b, dt); endret = true; }
       if (b.fisker) { const f = SJ.fangst(b, dt, { vind: vind(), årstid: window.VAER && VAER.årstid }); if (f > 0) { const F = window.FolkSpill && FolkSpill.tilstand(); if (F && vedLeiren(b.x, b.y)) F.mat += f; else b.last.rasjoner += Math.min(f, SJ.ledig(b) / R.vekt.rasjoner); b.fangst = (b.fangst || 0) + f; endret = true; } } }
     for (const s of ENHETER) { const b = s.påBåt; if (!b) continue; if ((!S.båter.includes(b) && !S.frakt.includes(b)) || !levende(s)) { s.påBåt = null; continue; } if (s.x !== b.x || s.y !== b.y) { s.x = b.x; s.y = b.y; s.siktSkitten = true; } s.sti = null; s.retning = b.retning; }
     for (const k of biler()) { const b = k.påBåt; if (!b) continue; if (!S.båter.includes(b)) { k.påBåt = null; continue; } if (k.sti) { if (window.Kjoretoy) Kjoretoy.stopp(k); k.sti = null; logg(`${k.navn} står om bord i ${b.navn} – kjør i land ved en kai først.`); } k.x = b.x; k.y = b.y; k.retning = b.retning; }
@@ -206,9 +208,9 @@
       let ser1 = !!s.påBåt || Math.hypot(s.x - b.x, s.y - b.y) <= 150; if (!ser1) try { ser1 = ser(s, b.x, b.y); } catch (e) { ser1 = false; } if (!ser1) continue; const n = friske(s); if (n) utl.push({ menn: n, faktor: ildFaktor(s, mål), lag: s }); }
     return utl; }
   function senket(b, lag, hvordan) { const i = S.frakt.indexOf(b); if (i >= 0) S.frakt.splice(i, 1); endret = true; skitten = true;
-    if (b.ai) { const om = ENHETER.filter(e => e.påBåt === b); for (const s of om) { s.påBåt = null; const lev = s.menn.filter(m => m.hp > 0); lev.slice(0, Math.round(lev.length * R.aiBåt.senketTap)).forEach(m => { m.hp = 0; }); s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; }
+    if (b.ai) { const om = ENHETER.filter(e => e.påBåt === b); for (const s of om) { s.påBåt = null; const lev = s.menn.filter(m => m.hp > 0).sort((a, c) => a.hp - c.hp); lev.slice(0, SJ.drukner(lev.length)).forEach(m => { m.hp = 0; }); s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; }
         landVed(b.x, b.y).then(p => { if (p && !s.påBåt) { s.x = p[0]; s.y = p[1]; s.siktSkitten = true; } }); }
-      logg(`${b.navn} ${hvordan || `er senket av ${lag ? lag.navn : 'lagene dine'}`}.` + (om.length ? ` ${om.map(e => e.navn).join(' og ')} mistet mange og svømte i land.` : '')); return; }
+      logg(`${b.navn} ${hvordan || `er senket av ${lag ? lag.navn : 'lagene dine'}`}.` + (om.length ? ` ${om.map(e => e.navn).join(' og ')} svømte i land med tap.` : '')); return; }
     SJ.fraktSvar(S, b.by, tid, false); oppdaterAvskåret(); logg(`${lag ? lag.navn : 'Lagene dine'} har senket forsyningsbåten til ${b.byNavn}. Garnisonen til ${sideNavn(b.side)} der er avskåret.`); }
   function bord(q, f) { const i = S.frakt.indexOf(f); if (i < 0) return null; S.frakt.splice(i, 1); const haug = SJ.fraktLast(), fikk = SJ.lastOm(q, haug); SJ.fraktSvar(S, f.by, tid, false); oppdaterAvskåret(); q.jakter = null; endret = true; skitten = true;
     const lag = omBord(q)[0]; logg(`${lag ? lag.navn : 'Laget'} bordet forsyningsbåten til ${f.byNavn} fra ${q.navn} og tok lasten: ${SJ.lastTekst(fikk)}.` + (SJ.lastVekt(haug) > 0.5 ? ` Resten (${SJ.lastTekst(haug)}) fikk ikke plass og gikk over bord.` : '') + ` Mannskapet ble satt i land, og garnisonen i ${f.byNavn} er avskåret.`);
@@ -224,9 +226,37 @@
   KROKER.sim.push(dt => { if (!klar || (!S.frakt.length && !S.båter.some(q => q.jakter))) return;
     // bording sjekkes hvert steg (båtene går fort forbi hverandre), ilden en gang i spillminuttet
     for (const f of S.frakt.slice()) if (f.type === 'frakt' && !f.ai) for (const q of S.båter) if (SJ.kanBorde(q, omBord(q).length, f)) { bord(q, f); break; }
-    ildAkk += dt; if (ildAkk < 1) return; const d = Math.min(ildAkk, 10); ildAkk = 0;
-    for (const f of S.frakt.slice()) { if (!serFrakt(f)) continue; const sk = skyttereMot(f); if (sk.length) { const r = SJ.skadBåt(f, sk, d); if (r) f.beskutt = tid; if (r === 'senket') senket(f, sk[0].lag); } }
+    ildAkk += dt; if (ildAkk < 1) return; const d = Math.min(ildAkk, 10); ildAkk = 0; ildSteg(d);
     for (const q of S.båter) if (q.jakter) jakt(q); });
+  // Ett spillminutt (d) med ild: lagene dine mot fiendens båter, og (runde 4 del 2) fiendens båter tilbake mot dine båter og lag.
+  function ildSteg(d) { const ut = { mot: 0, tilbake: 0 };
+    for (const f of S.frakt.slice()) { if (!S.frakt.includes(f)) continue;
+      if (serFrakt(f)) { const sk = skyttereMot(f); if (sk.length) { ut.mot++; const r = SJ.skadBåt(f, sk, d); if (r) f.beskutt = tid; if (r === 'senket') { senket(f, sk[0].lag); continue; } } }
+      if (skytTilbake(f, d)) ut.tilbake++; }
+    return ut; }
+  // Fiendens båt skyter på det nærmeste innen rekkevidden: en av dine båter, eller et lag på land den ser (R.mot.ser). Skytterne er laget om
+  // bord (AI-båten) eller forsyningsbåtens mannskap (R.mot.mannskap). KROKER.ild gjelder (om bord skyter dårlig, mål på båt treffes dårlig).
+  const meldt = new Map();
+  function meldBeskutt(navn, f) { const t = meldt.get(navn); if (t !== undefined && tid - t < 10) return; meldt.set(navn, tid); logg(`${navn} er under ild fra ${f.ai ? f.navn.toLowerCase() : 'forsyningsbåten til ' + f.byNavn}!`); }
+  function skytTilbake(f, d) { const r = R.fiendeBåt.rekkevidde, om = f.ai ? ENHETER.filter(e => e.påBåt === f && levende(e)) : [];
+    const n = f.ai ? om.reduce((a, s) => a + friske(s), 0) : R.mot.mannskap; if (!n) return null;
+    let mål = null, md = Infinity;
+    for (const q of S.båter) { const dd = Math.hypot(q.x - f.x, q.y - f.y); if (dd <= r && dd < md) { md = dd; mål = { båt: q }; } }
+    for (const s of ENHETER) { if (s.side !== 'blå' || !levende(s) || s.påBåt || s.ombord || s.karakter || s.leirvakt) continue; const dd = Math.hypot(s.x - f.x, s.y - f.y); if (dd > Math.min(r, R.mot.ser) || dd >= md) continue; md = dd; mål = { lag: s }; }
+    if (!mål) return null;
+    const skytter = om[0] || { navn: f.navn, side: f.side, x: f.x, y: f.y, påBåt: f, menn: [] }, offer = mål.båt ? { navn: mål.båt.navn, side: 'blå', x: mål.båt.x, y: mål.båt.y, påBåt: mål.båt, menn: [], båt: true } : mål.lag, faktor = ildFaktor(skytter, offer);
+    if (mål.båt) { const q = mål.båt, res = SJ.skadBåt(q, [{ menn: n, faktor }], d); if (res) { meldBeskutt(q.navn, f); endret = true; skitten = true; } if (res === 'senket') egenSenket(q, f); return res; }
+    const s = mål.lag; s.båtTreff = (s.båtTreff || 0) + SJ.treffPåLag(n, faktor, d); let treff = 0;
+    while (s.båtTreff >= 1) { s.båtTreff -= 1; const lev = s.menn.filter(m => m.hp > 0); if (!lev.length) break; const m = lev.find(q => q.hp >= 1) || lev[0]; m.hp = m.hp >= 1 ? .5 : 0; treff++; }
+    if (treff) { s.beskuttTid = tid; s.siktSkitten = true; skitten = true; meldBeskutt(s.navn, f); if (valgt === s) visPanel(); } return treff ? 'truffet' : 'bom'; }
+  // Din båt synker: laget om bord svømmer i land (SJ.drukner av de levende drukner, de sårede først), kjøretøy og last går ned.
+  function egenSenket(q, f) { const i = S.båter.indexOf(q); if (i < 0) return; S.båter.splice(i, 1); if (valg && valg.båt === q) valg = null; endret = true; skitten = true;
+    const om = omBord(q), tap = [], kj = kjOmBord(q);
+    for (const s of om) { s.påBåt = null; s.sti = null; s.x = q.x; s.y = q.y; s.siktSkitten = true; const lev = s.menn.filter(m => m.hp > 0).sort((a, c) => a.hp - c.hp), n = SJ.drukner(lev.length); lev.slice(0, n).forEach(m => { m.hp = 0; }); tap.push(`${s.navn} mistet ${n}`);
+      landVed(q.x, q.y).then(p => { if (p && !s.påBåt) { s.x = p[0] + (Math.random() - .5) * 12; s.y = p[1] + (Math.random() - .5) * 12; s.siktSkitten = true; } }); }
+    for (const k of kj) { const j = (window.KJORETOY || []).indexOf(k); if (j >= 0) KJORETOY.splice(j, 1); k.påBåt = null; if (window.Kjoretoy && k.sti) Kjoretoy.stopp(k); }
+    logg(`${q.navn} er senket${f ? ` av ${f.ai ? f.navn.toLowerCase() : 'forsyningsbåten til ' + f.byNavn}` : ''}. Lasten er tapt.` + (om.length ? ` ${om.map(s => s.navn).join(' og ')} svømte i land (${tap.join(', ')}).` : '') + (kj.length ? ` ${kj.map(k => k.navn).join(' og ')} gikk ned med båten.` : ''));
+    window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'båt', tekst: q.navn + ' er senket' } })); lagre(); tegnPanel(true); }
 
   // ---------- fiendens lag tar båt (runde 4) ----------
   // Et lag fra AI-en (s.ai) på marsj mot et mål der sjøvegen er mye kortere enn vegen (Sjo.aiTarBåt), med en kai nær seg og en nær målet:
@@ -255,7 +285,7 @@
       if (Math.hypot(s.x - ax, s.y - ay) > R.aiBåt.ombord) ordre(s, ax, ay, true);
       if (synlig(s)) logg(`${s.navn} går mot ${kaiNavn(ia)} – det ser ut som de vil ta båt.`); return { plan: s.båtPlan };
     } catch (e) { if (s.ai) s.ai.ingenBåt = tid + 120; return { feil: e.message }; } finally { aiOpptatt.delete(s); } }
-  function gåOmAI(s, p) { delete s.båtPlan; const b = { id: 'a' + (++aiNr), type: R.aiBåt.type, ai: true, navn: `Båten til ${sideNavn(s.side)}`, side: s.side, x: p.ax, y: p.ay, kai: -1, sti: p.sti, seg: 0, mål: p.ib, retning: 0, last: SJ.tomLast(), hp: R.fiendeBåt.hp, målXY: p.mål, byNavn: '' };
+  function gåOmAI(s, p) { delete s.båtPlan; const b = { id: 'a' + (++aiNr), type: R.aiBåt.type, ai: true, navn: `Båten til ${sideNavn(s.side)}`, side: s.side, x: p.ax, y: p.ay, kai: -1, sti: p.sti, seg: 0, mål: p.ib, retning: 0, last: SJ.tomLast(), hp: SJ.maksHp({ type: R.aiBåt.type }), målXY: p.mål, byNavn: '' };
     S.frakt.push(b); s.påBåt = b; s.sti = null; s.x = b.x; s.y = b.y; s.siktSkitten = true; if (s.ai) s.ai.neste = 1e9; endret = true; skitten = true;
     if (synlig(s) || serFrakt(b)) logg(`${s.navn} har gått om bord i en båt ved ${kaiNavn(p.ia)}.`); return b; }
   function iLandAI(b) { const om = ENHETER.filter(e => e.påBåt === b); endret = true; skitten = true;
@@ -281,7 +311,7 @@
     g.beginPath(); g.moveTo(x - a * .1, y + a * .1); g.lineTo(x - a * .1, y - a * .85); g.lineTo(x + a * .55, y - a * .05); g.closePath(); g.stroke();
     // kursen: en kort strek ut av merket når båten går
     if (b.sti) { const v = b.retning || 0; g.beginPath(); g.moveTo(x + Math.sin(v) * r * 1.05, y - Math.cos(v) * r * 1.05); g.lineTo(x + Math.sin(v) * r * 1.7, y - Math.cos(v) * r * 1.7); g.lineWidth = 2; g.stroke(); }
-    if (b.hp !== undefined && b.hp < R.fiendeBåt.hp) { const w = r * 2; g.fillStyle = 'rgba(15,11,7,.85)'; g.fillRect(x - w / 2, y - r - 7, w, 3.5); g.fillStyle = '#d0563c'; g.fillRect(x - w / 2, y - r - 7, w * b.hp / R.fiendeBåt.hp, 3.5); }
+    if (b.hp !== undefined && b.hp < SJ.maksHp(b)) { const w = r * 2; g.fillStyle = 'rgba(15,11,7,.85)'; g.fillRect(x - w / 2, y - r - 7, w, 3.5); g.fillStyle = side === 'blå' ? '#8fb86a' : '#d0563c'; g.fillRect(x - w / 2, y - r - 7, w * b.hp / SJ.maksHp(b), 3.5); }
     g.restore(); }
   function tegnBåt(g, b, x, y, m, valgt, side = 'blå') { const T = TY[b.type]; if (window.Merker && T.lengde / m < 16) { båtMerke(g, b, x, y, valgt, side); if (b.fisker) { g.strokeStyle = '#8fd0c0'; g.lineWidth = 1.2; g.setLineDash([3, 3]); g.beginPath(); g.arc(x, y, 15, 0, 6.283); g.stroke(); g.setLineDash([]); } return; }
     const L = Math.max(T.lengde / m, m < 60 ? 13 : 8), B = Math.max(L * .36, 4); g.save(); g.translate(x, y); g.rotate(b.retning || 0);
@@ -318,7 +348,7 @@
     // fiendens båter: si hva det er (og la en valgt båt med lag om bord jakte den)
     for (const f of S.frakt) { if (!serFrakt(f) || Math.hypot(f.x - X, f.y - Y) > Math.max(16 * m, 20)) continue; fiendeInfo(f); return true; }
     return false; }
-  function fiendeInfo(f) { const hp = Math.round(100 * (f.hp === undefined ? R.fiendeBåt.hp : f.hp) / R.fiendeBåt.hp), om = ENHETER.filter(e => e.påBåt === f);
+  function fiendeInfo(f) { const hp = Math.round(100 * (f.hp === undefined ? SJ.maksHp(f) : f.hp) / SJ.maksHp(f)), om = ENHETER.filter(e => e.påBåt === f);
     logg(`${f.ai ? f.navn : 'Forsyningsbåt til ' + f.byNavn} (${sideNavn(f.side)}), helse ${hp} %` + (om.length ? `, ${om.map(e => e.navn).join(' og ')} om bord` : '') + `. Lag innen ${R.fiendeBåt.rekkevidde} m skyter på den.` + (f.type === 'frakt' && !f.ai ? ' En båt med et lag om bord kan borde den (velg båten: «Bord forsyningsbåten»).' : ''));
     if (valg && valg.båt && f.type === 'frakt' && !f.ai && omBord(valg.båt).length) startJakt(valg.båt, f); }
   // Trykk i 3D (runde 4): samme som i 2D – en egen båt, en kai (ankermerket står ikke i 3D, så kaia nærmest trykket innen 60 m), eller et
@@ -384,7 +414,7 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
   function vis(på) { const var0 = åpen; åpen = på === undefined ? !åpen : !!på; if (åpen && !var0) mer = false; panel.classList.toggle('på', åpen); if (!åpen) { modus = null; skitten = true; } else tegnPanel(true); }
   // ---------- telefon (runde 4 del 2): lavt bunnark med det viktigste, «Mer» viser alt ----------
   let mer = false;
-  const helseTekst = b => { const m = TY[b.type].hp || R.fiendeBåt.hp; return b.hp !== undefined && b.hp < m ? ` · helse ${Math.round(100 * b.hp / m)} %` : ''; };
+  const helseTekst = b => { const m = SJ.maksHp(b); return b.hp !== undefined && b.hp < m ? ` · helse ${Math.round(100 * b.hp / m)} %` : ''; };
   const liten = () => { const k = document.body.classList; return k.contains('smal') || k.contains('kort') || innerWidth < 700 || innerHeight < 560; };
   function byggKort(H) { const rad = el('div', { klasse: 'rad1' }), K2 = [];
     if (valg && valg.båt) { const b = valg.båt, T = TY[b.type], om = omBord(b);
@@ -410,7 +440,7 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
   const gåTil = (x, y) => { if (typeof på3d !== 'undefined' && på3d) return; kam.x = x; kam.y = y; if (kam.m > 25) kam.m = 12; skitten = true; };
   function båtStatus(b) { if (b.planlegger) return 'finner lei …'; if (b.sti) return `underveis til ${b.mål >= 0 ? kaiNavn(b.mål) : 'et sted på sjøen'}, ${km(SJ.meterIgjen(b))} igjen (ca. ${tidTekst(SJ.minutterIgjen(b))})`; return (b.kai >= 0 ? `ligger ved ${kaiNavn(b.kai)}` : 'ligger stille på sjøen') + (b.fisker ? ' og fisker' : ''); }
   function byggBåt(H, b) { const T = TY[b.type], om = omBord(b);
-    H.append(el('h2', {}, b.navn), el('p', {}, el('small', {}, `${T.navn} · ${(T.fart * 1.944).toFixed(0)} knop · ${T.lag} lag · last ${T.last}`)), el('p', {}, båtStatus(b) + '.'));
+    H.append(el('h2', {}, b.navn), el('p', {}, el('small', {}, `${T.navn} · ${(T.fart * 1.944).toFixed(0)} knop · ${T.lag} lag · last ${T.last}`)), el('p', {}, båtStatus(b) + '.' + (helseTekst(b) ? ` Helse ${Math.round(100 * b.hp / SJ.maksHp(b))} % – repareres ved en kai nær leiren.` : '')));
     H.append(el('p', {}, `Last: ${SJ.lastTekst(b.last)} (${Math.round(SJ.lastVekt(b.last))} av ${T.last}).`));
     H.append(el('h3', {}, 'Seilas'));
     H.append(kn('Seil til en kai', () => { modus = modus === 'kai' ? null : 'kai'; skitten = true; if (modus) logg(`Trykk på kaia ${b.navn} skal seile til (zoom inn for å se småkaiene).`); }, modus === 'kai' ? { klasse: 'på', 'data-sjo': 'tilkai' } : { 'data-sjo': 'tilkai' }));
@@ -433,7 +463,7 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
     { const synligeFi = S.frakt.filter(f => f.type === 'frakt' && !f.ai && serFrakt(f)).map(f => ({ f, d: Math.hypot(f.x - b.x, f.y - b.y) })).filter(o => o.d < 15000).sort((p, q) => p.d - q.d);
       if (synligeFi.length || b.jakter) { H.append(el('h3', {}, 'Fiendens forsyningsbåter'));
         if (b.jakter) H.append(el('p', {}, 'Jakter en forsyningsbåt.'), kn('Avbryt jakten', () => { b.jakter = null; SJ.stopp(b); merk(); }));
-        else for (const { f, d } of synligeFi.slice(0, 3)) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, `Til ${f.byNavn}`), ' ', el('small', {}, `${km(d)} unna · helse ${Math.round(100 * (f.hp === undefined ? R.fiendeBåt.hp : f.hp) / R.fiendeBåt.hp)} %`)), kn('Bord den', () => startJakt(b, f), om.length ? { 'data-sjo': 'bord' } : { disabled: '', title: 'Ta et lag om bord først' })));
+        else for (const { f, d } of synligeFi.slice(0, 3)) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, `Til ${f.byNavn}`), ' ', el('small', {}, `${km(d)} unna · helse ${Math.round(100 * (f.hp === undefined ? SJ.maksHp(f) : f.hp) / SJ.maksHp(f))} %`)), kn('Bord den', () => startJakt(b, f), om.length ? { 'data-sjo': 'bord' } : { disabled: '', title: 'Ta et lag om bord først' })));
         H.append(el('p', {}, el('small', {}, `Kommer båten innen ${R.fiendeBåt.bord} m med et lag om bord, bordes forsyningsbåten og lasten blir din. Lag innen ${R.fiendeBåt.rekkevidde} m skyter på fiendens båter og kan senke dem.`))); } }
     H.append(el('h3', {}, 'Sperr leia'));
     H.append(kn(`Legg miner her (${kr(R.minePris)})`, () => miner(b), b.sti ? { disabled: '' } : { 'data-sjo': 'miner' }), kn('Senk båten her', () => { if (confirm(`Senke ${b.navn}? Vraket sperrer leia for godt, og båten er tapt.`)) senk(b); }, b.sti ? { disabled: '' } : {}));
@@ -485,6 +515,6 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
     kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjørOmBord, kjørILand, kjOmBord, settFiskere, fiskere, leirHarKai, region: () => !!region(), nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai,
     // runde 4
-    fiendeBåter: () => S.frakt, skyttereMot, bord, senket, startJakt, aiSteg, planAI, gåOmAI, iLandAI, trykk3d, tegnBåt,
+    fiendeBåter: () => S.frakt, skyttereMot, bord, senket, ildSteg, skytTilbake, egenSenket, startJakt, aiSteg, planAI, gåOmAI, iLandAI, trykk3d, tegnBåt,
     tatteFerjer: () => S.ferjerTatt.map(n => { const [x, y] = String(n).split(',').map(Number); return { x: x * 50, y: y * 50 }; }) });
 })();

@@ -41,6 +41,15 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
         if (s4) { s4.påBåt = null; s4.x = L.x + 500; s4.y = L.y - 60; s4.sti = null; }
         const f2 = { ...f, id: 'vakt2', x: L.x + 560, y: L.y - 60, hp: Sjo.REGLER.fiendeBåt.hp }; FB.push(f2); const sk = SjoSpill.skyttereMot(f2); o.skyttere = sk.length;
         ok(!s4 || sk.length >= 1, 'et lag 60 m unna skyter på båten'); let n4 = 0; while (sk.length && Sjo.skadBåt(f2, sk.map(q => ({ ...q, faktor: Math.max(.3, q.faktor) })), 1) !== 'senket' && n4 < 500) n4++; if (sk.length) SjoSpill.senket(f2, sk[0].lag); ok(!sk.length || !FB.includes(f2), 'forsyningsbåten senket med ild etter ' + n4 + ' min');
+        // (del 2) fiendens båt skyter tilbake: på et lag på land, og på din båt til den synker (laget svømmer i land med tap)
+        if (s4) { const hp0 = s4.menn.map(m => m.hp), f3 = { ...f, id: 'vakt3', x: s4.x, y: s4.y - 100, hp: 60 }; FB.push(f3);
+          let tr = 0; for (let n = 0; n < 300 && !tr; n++) if (SjoSpill.skytTilbake(f3, 5) === 'truffet') tr++; ok(tr > 0 && s4.menn.some((m, i) => m.hp < hp0[i]), 'forsyningsbåten skyter på laget på land');
+          s4.menn.forEach((m, i) => { m.hp = hp0[i]; }); FB.splice(FB.indexOf(f3), 1);
+          const b5 = Sjo.nyBåt(S, 'småbåt', L.x + 520, L.y + 300, -1); s4.x = b5.x + 10; s4.y = b5.y; s4.sti = null; SjoSpill.gåOmBord(s4, b5); const lev0 = s4.menn.filter(m => m.hp > 0).length;
+          const f4 = { ...f, id: 'vakt4', x: b5.x + 200, y: b5.y, hp: 60 }; FB.push(f4); let n5 = 0; while (S.båter.includes(b5) && n5++ < 600) SjoSpill.skytTilbake(f4, 1);
+          o.senketEtter = n5; ok(!S.båter.includes(b5) && !s4.påBåt, `din småbåt senket etter ${n5} min`); o.svømte = s4.menn.filter(m => m.hp > 0).length + ' av ' + lev0;
+          ok(s4.menn.filter(m => m.hp > 0).length === lev0 - Sjo.drukner(lev0), 'laget svømte i land med tap (' + o.svømte + ')'); FB.splice(FB.indexOf(f4), 1);
+          await new Promise(r => setTimeout(r, 2500)); s4.menn.forEach((m, i) => { m.hp = hp0[i]; }); }
         // AI-lag som tar båt fra prøvehavna til prøvebrygga
         const ai = nyttLag('Vaktbåtfolk', L.x + 500, L.y + 40, 'rød'); ai.ai = { neste: 0, mål: [L.x + 4000, L.y] }; ENHETER.push(ai);
         const pl = await SjoSpill.planAI(ai, 0, 1, 1e6, [L.x + 4000, L.y], { vindu: v }); ok(pl && pl.plan && ai.båtPlan, 'AI-laget planlegger båt (' + (pl && (pl.feil || Math.round(pl.plan.meter) + ' m')) + ')');
@@ -68,5 +77,5 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
     if (lagretNå === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagretNå); SjoSpill.start(); if (lagret === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagret);
     KaierSpill.settData(K0); SjoSpill.test = test0; SjoSpill.vis(åpen); valgt = valgt0; skitten = true; o.penger = OppstartSpill.tilstand().penger === p0; if (!o.penger) o.feil.push('pengene ble ikke satt tilbake'); return o; });
   const ok = data.feil.length === 0;
-  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner, havn, bording (${data.bordet}), senking, AI-båt, trykk i 3D, leirvalg og krigskart` : data.feil.join('; '), data };
+  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner, havn, bording (${data.bordet}), senking, ild tilbake (din småbåt senket etter ${data.senketEtter} min, ${data.svømte} i land), AI-båt, trykk i 3D, leirvalg og krigskart` : data.feil.join('; '), data };
 } };
