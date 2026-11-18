@@ -183,6 +183,37 @@
   let tåkeTex = null, poolTex = null, glødTex = null, lysTex = null;
   // grafikknivået byttet: terrenget har fått nytt materiale (byttBakke i index.html)
   if (KROKER.bakke) KROKER.bakke.push((u, R) => { if (!R.mesh.material.userData.enkel) bakkeShader(R.mesh.material); });
+  // Plassene til lysflekkene under gatelysene og vinduslyset på bakken (matrisene som instansnettene får), med yield mellom bitene.
+  // Samme regning som før i sett3d (samme Object3D-rekkefølge), så nettene blir de samme.
+  function* nattPlass(u, R, lys2På, mobil) {
+    const ut = { lys2På, mobil, lys: null, lys2: null }, hz = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX;
+    if (u.lys) { const n = u.lys.length / 4, d = new THREE.Object3D(), gp = new Float32Array(n * 3), mat = new Float32Array(n * 16);
+      for (let k = 0; k < n; k++) { const [x, y, z, v] = u.lys.subarray(k * 4, k * 4 + 4), hx = x + Math.cos(v) * 1.6, hy = y + Math.sin(v) * 1.6;
+        d.position.set(hx, hy, (hoyde3d(hx + u.cx, hy + u.cy, u) - u.h0) * R.EX + .45); d.updateMatrix(); d.matrix.toArray(mat, k * 16); gp.set([hx, hy, z + 7.6], k * 3);
+        if ((k & 127) === 127) yield; }
+      ut.lys = { n, mat, gp }; }
+    if (lys2På) {
+      const pkt = [];
+      if (u.lys) for (let k = 0; k < u.lys.length; k += 4) { const v = u.lys[k + 3]; pkt.push([u.lys[k] + Math.cos(v) * 1.6, u.lys[k + 1] + Math.sin(v) * 1.6, 26, 1]); }
+      // vinduslys: en myk flekk rundt en fast andel av husene (de nærmeste midten først)
+      if (u.hus && u.hus.omriss) { const hus = []; let q = 0;
+        for (const P of u.hus.omriss) { if ((++q & 511) === 0) yield; if (!P || !P.length || P.leir) continue; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of P) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+          const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, hv = Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1; if (hv > .6) continue;
+          hus.push([cx, cy, Math.min(60, Math.max(x1 - x0, y1 - y0) + 14), .45 + .4 * hv, cx * cx + cy * cy]); }
+        hus.sort((a, b) => a[4] - b[4]); for (const h of hus.slice(0, mobil ? 300 : 900)) pkt.push(h); }
+      // hver flekk to ganger (en mindre oppå): lyset ganges inn to ganger, så midten blir opptil fire ganger så lys som bakken rundt
+      for (let k = pkt.length - 1; k >= 0; k--) pkt.push([pkt[k][0], pkt[k][1], pkt[k][2] * .62, pkt[k][3]]);
+      const n = pkt.length, mat = new Float32Array(n * 16), farge = new Float32Array(n * 3), d2 = new THREE.Object3D(), opp = new THREE.Vector3(0, 0, 1), nv = new THREE.Vector3();
+      for (let k = 0; k < n; k++) { const [x, y, str, lys] = pkt[k], z = hz(x, y); nv.set(hz(x - 3, y) - hz(x + 3, y), hz(x, y - 3) - hz(x, y + 3), 6).normalize();
+        d2.position.set(x, y, z + .5); d2.quaternion.setFromUnitVectors(opp, nv); d2.scale.set(str, str, 1); d2.updateMatrix(); d2.matrix.toArray(mat, k * 16); farge[k * 3] = farge[k * 3 + 1] = farge[k * 3 + 2] = lys;
+        if ((k & 63) === 63) yield; }
+      ut.lys2 = { n, mat, farge }; }
+    return ut;
+  }
+  const iEtt = it => { let r; while (!(r = it.next()).done); return r.value; };
+  // for vakta: plassene regnet på nytt nå (skal være like dem nettene fikk)
+  N.plass = (u, R) => iEtt(nattPlass(u, R, !!(window.KVAL && KVAL.fx && KVAL.fx.lys), mob()));
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async (u, R) => { u.nattKlar = await kjørAsynk(nattPlass(u, R, !!(window.KVAL && KVAL.fx && KVAL.fx.lys), mob())); });
   KROKER.sett3d.push((u, R) => {
     if (!U.uStoy.value) { U.uStoy.value = støyTekstur(); U.uSkyFlytt.value = new THREE.Vector2(); U.uSentrum.value = new THREE.Vector2(); }
     U.uSentrum.value.set(((u.cx % 2400) + 2400) % 2400, ((u.cy % 2400) + 2400) % 2400);
@@ -193,15 +224,17 @@
     for (const m of R.husMesh || []) if (m.material.map && medGlass.includes(m.material.map)) vinduShader(m.material);
     // gamle objekter bort
     for (const o of R.nattObj || []) { R.scene.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); } R.nattObj = [];
+    // (19. nov, hakk ved byttet: plassene til lysflekkene og vinduslyset trengte hoyde3d for hvert punkt – 20–60 ms i byttet i en by.
+    // De regnes nå i forbered3d-kroken (u.nattKlar, nattPlass under) og brukes her når valget er det samme; ellers regnes de her i ett.)
+    const lys2På = !!(window.KVAL && KVAL.fx && KVAL.fx.lys), NK = u.nattKlar, P = NK && NK.lys2På === lys2På && NK.mobil === mob() ? NK : iEtt(nattPlass(u, R, lys2På, mob()));
+    u.nattKlar = null; N.forberedt = P === NK;
     // lysflekker under gatelysene (adderes på bakken) og en liten glød rundt lampa
     if (u.lys) {
       if (!poolTex) { poolTex = rund(64, [[0, 'rgba(255,214,150,.9)'], [.35, 'rgba(255,200,130,.45)'], [.7, 'rgba(255,190,120,.12)'], [1, 'rgba(255,190,120,0)']]);
         glødTex = rund(32, [[0, 'rgba(255,230,180,1)'], [.3, 'rgba(255,215,150,.5)'], [1, 'rgba(255,210,140,0)']]); }
-      const n = u.lys.length / 4, pg = new THREE.PlaneGeometry(15, 15), mp = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
-      const flekk = new THREE.InstancedMesh(pg, mp, n), d = new THREE.Object3D(), gp = new Float32Array(n * 3);
-      for (let k = 0; k < n; k++) { const [x, y, z, v] = u.lys.subarray(k * 4, k * 4 + 4), hx = x + Math.cos(v) * 1.6, hy = y + Math.sin(v) * 1.6;
-        d.position.set(hx, hy, (hoyde3d(hx + u.cx, hy + u.cy, u) - u.h0) * R.EX + .45); d.updateMatrix(); flekk.setMatrixAt(k, d.matrix); gp.set([hx, hy, z + 7.6], k * 3); }
-      const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(gp, 3));
+      const n = P.lys.n, pg = new THREE.PlaneGeometry(15, 15), mp = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+      const flekk = new THREE.InstancedMesh(pg, mp, n); flekk.instanceMatrix.array.set(P.lys.mat);
+      const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(P.lys.gp, 3));
       const glød = new THREE.Points(gg, new THREE.PointsMaterial({ size: 3.4, map: glødTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       for (const o of [flekk, glød]) { o.frustumCulled = false; o.visible = false; R.scene.add(o); R.nattObj.push(o); }
       R.nattLys = { flekk, glød };
@@ -210,26 +243,14 @@
     // det som ligger under (bakken blir opptil dobbelt så lys der – vegen, gresset og snøen synes i lyset), i stedet for bare å legge
     // en farge oppå. Ingen nye lys i scenen. Flatene følger bakkens helning. Tallene er Claudes forslag.
     R.nattLys2 = null;
-    if (window.KVAL && KVAL.fx && KVAL.fx.lys) {
+    if (lys2På) {
       // (blandingen bruker bare fargen, ikke gjennomsiktigheten: lysstyrken ligger i fargen, svart = ingenting)
       if (!lysTex) lysTex = rund(64, [[0, 'rgb(255,236,200)'], [.25, 'rgb(204,179,136)'], [.55, 'rgb(87,71,51)'], [.8, 'rgb(26,20,14)'], [1, 'rgb(0,0,0)']], '#000');
-      const pkt = [];
-      if (u.lys) for (let k = 0; k < u.lys.length; k += 4) { const v = u.lys[k + 3]; pkt.push([u.lys[k] + Math.cos(v) * 1.6, u.lys[k + 1] + Math.sin(v) * 1.6, 26, 1]); }
-      // vinduslys: en myk flekk rundt en fast andel av husene (de nærmeste midten først)
-      if (u.hus && u.hus.omriss) { const hus = [];
-        for (const P of u.hus.omriss) { if (!P || !P.length || P.leir) continue; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of P) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-          const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, hv = Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1; if (hv > .6) continue;
-          hus.push([cx, cy, Math.min(60, Math.max(x1 - x0, y1 - y0) + 14), .45 + .4 * hv, cx * cx + cy * cy]); }
-        hus.sort((a, b) => a[4] - b[4]); for (const h of hus.slice(0, mob() ? 300 : 900)) pkt.push(h); }
-      // hver flekk to ganger (en mindre oppå): lyset ganges inn to ganger, så midten blir opptil fire ganger så lys som bakken rundt
-      for (let k = pkt.length - 1; k >= 0; k--) pkt.push([pkt[k][0], pkt[k][1], pkt[k][2] * .62, pkt[k][3]]);
-      if (pkt.length) {
+      const L2 = P.lys2;
+      if (L2 && L2.n) {
         const pg2 = new THREE.PlaneGeometry(1, 1), mm = new THREE.MeshBasicMaterial({ map: lysTex, transparent: true, depthWrite: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.DstColorFactor, blendDst: THREE.OneFactor, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
-        const fl2 = new THREE.InstancedMesh(pg2, mm, pkt.length), d2 = new THREE.Object3D(), opp = new THREE.Vector3(0, 0, 1), nv = new THREE.Vector3(), farge = new THREE.Color();
-        const hz = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX;
-        pkt.forEach(([x, y, str, lys], k) => { const z = hz(x, y); nv.set(hz(x - 3, y) - hz(x + 3, y), hz(x, y - 3) - hz(x, y + 3), 6).normalize();
-          d2.position.set(x, y, z + .5); d2.quaternion.setFromUnitVectors(opp, nv); d2.scale.set(str, str, 1); d2.updateMatrix(); fl2.setMatrixAt(k, d2.matrix); fl2.setColorAt(k, farge.setScalar(lys)); });
-        fl2.frustumCulled = false; fl2.visible = false; fl2.renderOrder = 1; R.scene.add(fl2); R.nattObj.push(fl2); R.nattLys2 = fl2; N.lysflekker = pkt.length / 2;
+        const fl2 = new THREE.InstancedMesh(pg2, mm, L2.n); fl2.instanceMatrix.array.set(L2.mat); fl2.instanceColor = new THREE.InstancedBufferAttribute(L2.farge, 3);
+        fl2.frustumCulled = false; fl2.visible = false; fl2.renderOrder = 1; R.scene.add(fl2); R.nattObj.push(fl2); R.nattLys2 = fl2; N.lysflekker = L2.n / 2;
       }
     }
     // tåkebanker i dalbunnen

@@ -95,10 +95,43 @@ module.exports = {
           ok(gl.getError() === 0, 'GL-feil etter kontrollen av kartbildet'); ut.tekstur = tx;
         }
       } catch (e) { ut.feil.push('unntak (runde 4): ' + (e && e.message || e)); }
+      // RUNDE 5 (19. nov): grensa i 3D, hindring3d med boksen først, lysflekkene forberedt
+      try {
+        // (1) grensa: bare på et mindre spillkart. Her (Dovre/Norge) skal ingen skyggelegger ha fått oppslaget, og mørket er 0.
+        ok(window.Grense3d && typeof Grense3d.maske === 'function', 'Grense3d mangler');
+        const påOmr = typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE;
+        if (typeof THREE !== 'undefined' && window.Lys3d && Lys3d.koblet) ok(påOmr ? /uRgF/.test(THREE.ShaderChunk.fog_fragment) : !/uRgF/.test(THREE.ShaderChunk.fog_fragment), 'tåka har feil oppslag for grensa');
+        if (!påOmr && window.Lys3d && Lys3d.RG) ok(Lys3d.RG.F[0] === 0 && !Lys3d.RG.tex, 'grensa er koblet på en side uten område');
+        // masken for en prøvefirkant: midten inne, langt ute ute, kanten midt mellom; et hull med vilje blir funnet
+        if (window.Grense3d) { const O = { navn: 'prøve', bb: [0, 0, 3000, 2000], P: [[0, 0], [3000, 0], [3000, 2000], [0, 2000]] }, M = Grense3d.maske(O, { ...Grense3d.REGLER, punkter: 128 });
+          const v = (x, y) => Grense3d.verdi(M, x, y); ok(v(1500, 1000) > .99 && v(-2500, 1000) < .01 && v(1500, 4500) < .01 && v(0, 1000) > .2 && v(0, 1000) < .8, 'masken for prøvefirkanten er feil: ' + [v(1500, 1000), v(-2500, 1000), v(0, 1000)].map(x => x.toFixed(2)));
+          const F = { ...M, d: M.d.slice() }, i = Math.floor((1500 - M.x0) / M.ts), j = Math.floor((1000 - M.y0) / M.ts); for (let b = j - 2; b <= j + 2; b++) for (let a = i - 2; a <= i + 2; a++) F.d[b * M.W + a] = 0;
+          ok(Grense3d.verdi(F, 1500, 1000) < .5, 'selvtest: et hull i masken ble ikke sett');
+          ut.grense = { W: M.W, H: M.H, side: påOmr ? 'område' : 'uten område' }; }
+        // (2) hindring3d med boksen rundt omrisset (hindringer) svarer likt som uten boksen – prøvehus med mange hjørner
+        if (typeof hindringer === 'function' && typeof hindring3d === 'function') {
+          let f3 = 11; const rnd = () => (f3 = (f3 * 16807) % 2147483647) / 2147483647, omriss = [];
+          for (let h = 0; h < 40; h++) { const cx = rnd() * 600 - 300, cy = rnd() * 600 - 300, n = 4 + Math.floor(rnd() * 14), P = []; for (let k = 0; k < n; k++) { const v = k / n * 6.283, r = 4 + rnd() * 14; P.push([cx + Math.cos(v) * r, cy + Math.sin(v) * r]); } omriss.push(P); }
+          const H = hindringer({ hus: { omriss } }), U = new Map(); for (const [k, l] of H) U.set(k, l.map(o => o.P ? { P: o.P } : o));
+          let ulik = 0, inne = 0; for (let k = 0; k < 20000; k++) { const x = rnd() * 680 - 340, y = rnd() * 680 - 340, a = hindring3d(x, y, H); if (a !== hindring3d(x, y, U)) ulik++; if (a) inne++; }
+          ok(ulik === 0 && inne > 100, `hindring3d med boksen svarer ulikt i ${ulik} punkter (${inne} inne)`);
+          // feil med vilje: en for liten boks gir ulike svar (sammenligningen virker)
+          const G = new Map(); for (const [k, l] of H) G.set(k, l.map(o => o.P ? { P: o.P, bb: [o.bb[0] + 3, o.bb[1] + 3, o.bb[2] - 3, o.bb[3] - 3] } : o));
+          let ulikG = 0; f3 = 11; for (let k = 0; k < 20000; k++) { const x = rnd() * 680 - 340, y = rnd() * 680 - 340; if (hindring3d(x, y, G) !== hindring3d(x, y, U)) ulikG++; }
+          ok(ulikG > 0, 'selvtest: en for liten boks ga samme svar'); ut.hindring = { inne, ulik };
+        }
+        // (3) lysflekkene under gatelysene og vinduslyset: nettene har de plassene som regnes nå (forberedt i forbered3d)
+        const R5 = typeof R3 !== 'undefined' && R3;
+        if (R5 && R5.ut && !R5.bygger && window.NATT && NATT.plass && typeof på3d !== 'undefined' && på3d) {
+          const P = NATT.plass(R5.ut, R5), lik = (a, b) => { if (!a || !b || a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
+          if (R5.nattLys && P.lys) ok(lik(R5.nattLys.flekk.instanceMatrix.array, P.lys.mat) && lik(R5.nattLys.glød.geometry.attributes.position.array, P.lys.gp), 'lysflekkene under gatelysene står ikke der de skal');
+          ut.natt = { lys: P.lys ? P.lys.n : 0, lys2: P.lys2 ? P.lys2.n : 0, forberedt: !!NATT.forberedt };
+        }
+      } catch (e) { ut.feil.push('unntak (runde 5): ' + (e && e.message || e)); }
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };

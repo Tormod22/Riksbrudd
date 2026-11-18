@@ -1615,7 +1615,8 @@ async function trær3d(u, px, b) {
   const klasse = (X, Y) => { const i = Math.floor((X - kv.x0) / kv.r), j = Math.floor((kv.y0 - Y) / kv.r); return i < 0 || j < 0 || i >= kv.w || j >= kv.h ? 255 : kv.K[j * kv.w + i]; };
   const MAKS = VW < 700 ? 18000 : 40000, NÆR = 600, S5 = TRE_RUTE, i0 = Math.floor((u.cx - u.S) / S5), i1 = Math.ceil((u.cx + u.S) / S5), j0 = Math.floor((u.cy - u.S) / S5), j1 = Math.ceil((u.cy + u.S) / S5);
   const nær = [], fjern = []; let arb = 0;
-  for (let j = j0; j <= j1; j++) { if ((++arb & 7) === 0 && børPuste()) await pust();
+  // (19. nov: pust prøves for hver rad – åtte rader på 5 m-gitteret er over 10 000 oppslag i et stort utsnitt, 170 ms under last)
+  for (let j = j0; j <= j1; j++) { if (børPuste()) await pust();
     for (let i = i0; i <= i1; i++) {
       if (hash(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue; const x = t.X, y = t.Y; if (Math.abs(x - u.cx) >= u.S - 1 || Math.abs(y - u.cy) >= u.S - 1) continue;
       const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
@@ -1636,7 +1637,8 @@ async function naboerAsynk(sentre, R = 100) {
   const rut = new Map(), K = 1 << 20, k = (ci, cj) => (ci + K / 2) * K + (cj + K / 2), ut = new Array(sentre.length);
   sentre.forEach(([x, y], j) => { const n = k(Math.floor(x / R), Math.floor(y / R)); let l = rut.get(n); if (!l) rut.set(n, l = []); l.push(j); });
   for (let q = 0; q < sentre.length; q++) {
-    if ((q & 63) === 63 && børPuste()) await pust();
+    // (19. nov: hvert 8. senter – i sentrum av Stavanger har hvert bygg hundrevis av naboer, og 64 om gangen tok 170 ms)
+    if ((q & 7) === 7 && børPuste()) await pust();
     const [x, y] = sentre[q], ci = Math.floor(x / R), cj = Math.floor(y / R); let n = 0;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = rut.get(k(ci + di, cj + dj)); if (l) for (const j of l) { const p = sentre[j]; if (Math.hypot(p[0] - x, p[1] - y) < R) n++; } }
     ut[q] = n - 1;
@@ -2361,7 +2363,7 @@ function treGeo(type) {
 // Hindringer når du går: husomrissene og trestammene i et rutenett (20 m). hindring3d(x, y) = true når du ikke kan stå der.
 function hindringer(u) {
   const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
-  for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P }); }
+  for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P, bb: [x0, y0, x1, y1] }); }
   if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
   return rute;
 }
@@ -2386,11 +2388,14 @@ function nærHus(u, x, y) {
 }
 function hindring3d(x, y, egen) {
   const rute = egen || (R3 && R3.hindre); if (!rute) return false;
-  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const pi = P[i], pj = P[j], xi = pi[0], yi = pi[1], xj = pj[0], yj = pj[1]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
   for (const o of rute.get(Math.floor(x / 20) + ',' + Math.floor(y / 20)) || []) {
     // bygg med interiør (o.P.inne fra spill/interior3d.js): veggene, døråpningen og møblene avgjør
     if (o.P && o.P.inne && !egen) { if (Interior.blokkert(o.P.inne, x, y)) return true; }
-    else if (o.P) { for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
+    // (19. nov, hakk når du går: gresset og blomstene rundt deg spør om tusenvis av punkter. Boksen rundt omrisset fra hindringer() først –
+    // et punkt utenfor boksen er aldri inni, så svaret er det samme.)
+    else if (o.P) { const b = o.bb; if (b && (x + .4 < b[0] || x - .4 > b[2] || y + .4 < b[1] || y - .4 > b[3])) continue;
+      for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
     else if (Math.hypot(o.x - x, o.y - y) < .55) return true;
   }
   return false;
@@ -3294,7 +3299,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=9b2a26091f"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=f602752d1b"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=c1f96f0f47"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
@@ -3368,6 +3373,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/strategi-visning.js?v=9ee9bb714e"></script>
 <script src="/dovre-fliser/spill/region.js?v=421e0ffcf2"></script>
 <script src="/dovre-fliser/spill/region-visning.js?v=3dbbdb12e5"></script>
+<script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
 <script src="/dovre-fliser/spill/samfunn.js?v=4c2d58a0e9"></script>
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=c73502fac8"></script>
@@ -3390,7 +3396,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=8dd27fc47f"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=fde53c72c5"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/lys3d.js?v=a6cfdf5458"></script>
+<script src="/dovre-fliser/spill/lys3d.js?v=5ffbf58287"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>

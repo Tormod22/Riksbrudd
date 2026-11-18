@@ -417,3 +417,101 @@ og husnettene (K.geo, K.hus) én gang til et mål på 1 × 1 punkt med MeshBasic
 (three.js laster opp attributtene, det ekte nettet bruker dem). R3.forhåndslastet = antall. Prøvd: Dovre (1 nett) og /rogaland ved Sand
 (18 nett) – ingen GL-feil, antallet geometrier på grafikkortet øker ikke over bytter. Trærnes instansmatriser lastes fortsatt opp ved
 første tegning. Virkningen kan bare måles hos brukeren.
+
+## Runde 5 (18.–19. nov kveld)
+
+### 1. Grensa i 3D på /rogaland (gjennomgang nr. 49) – laget og prøvd
+I 2D legger `spill/omraade.js` et slør over alt utenfor fylket (rgba(8,8,10,.6)) og en stiplet gul strek på grensa. Nå også i 3D:
+- **`spill/grense3d.js`** (NY, skripttagg rett etter region-visning.js; reglene øverst uten DOM, test `pipeline/fliser/test_grense3d.js`,
+  23 sjekker): `Grense3d.maske(O)` / `maskeG(O)` (generator) lager én maske over hele området – 1 inne, 0 ute – med 4 km luft rundt,
+  ca. 100 m per punkt (Rogaland: 1688 × 2048, ett byte per punkt), inne/ute med samme regel som `Omraade.inni`, glattet med boksfilter
+  (radius 2, tre runder: overgangen er ca. 600 m bred, midt på grensa ≈ 0,5). `verdi(M, x, y)` (som grafikkortet: lineært),
+  `mørke()`, `biter(O, bb)` (grensas biter i en boks, punkt hver 15 m). Visningen: masken lages én gang (i biter med `kjørAsynk`) når
+  3D er på og `window.SPILLOMRÅDE` finnes; hvert bilde settes bare to tall (hvor masken ligger i scenens mål). Streken på bakken:
+  `LineDashedMaterial` (36 m strek, 26 m mellomrom, gul, som i 2D) som følger terrenget i utsnittet, løftet 2,5 m + 3 m per km fra
+  midten (terrengnettet er glissere ute). Byttes når utsnittet byttes. `Grense3d.sjekk()`.
+- **`spill/lys3d.js`** `koblGrense(C)` (bare når `PÅ_OMRÅDE` er satt – /norge og /dovre-fliser får ingen endring i skyggeleggerne):
+  three.js sin tåke (`fog_vertex`/`fog_fragment`) får verdens x/y (regnet ut fra kameramatrisen, som høyden for daltåka) og et oppslag
+  i masken ETTER tåka: `gl_FragColor.rgb = mix(farge, uRgF.yzw, uRgF.x * (1 − maske))` – samme blanding som 2D-sløret. Gjelder alt som har
+  tåke: terrenget, fjernringen, husene, trærne, ting, røyken (UniformsLib.fog). Himmelen og ting med `fog: false` berøres ikke.
+  Uniformene ligger i `THREE.ShaderLib` (tallrekker deles, og bildets `clone()` gir bildet selv – three.js kopierer ellers bilder per
+  materiale). `uRgF.x = 0` til masken er klar. Kostnad: ett teksturoppslag per punkt bare på /rogaland, ingenting per utsnitt.
+- Tallene (60 %, farge, 100 m, 600 m overgang, strekens mål) er Claudes forslag – i `Grense3d.REGLER`.
+- Prøvd i nettleser (scratchpad `natt5/lys/grense.js`, ekte kartdata via dev.py): Sirdal mot Agder og Ølen mot Etne, PC og mobil, 0 GL-feil,
+  0 sidefeil; /norge samme sted er uendret (ingen slør, ingen strek). Bilder: scratchpad `natt5/lys/pc-sirdal-ovenfra.png`,
+  `pc-sirdal-skrått.png`, `pc-sirdal-lavt.png`, `pc-sirdal-lavt2.png`, `pc-olen-ovenfra.png`, `pc-olen-skrått.png`,
+  `mob-olen-skrått.png`, `mob-olen-lavt-ost.png`, og til sammenligning `norge-olen-skrått.png`.
+- Ikke gjort: minikartet i 3D (kompass.js) har ikke sløret; navn/merker i 3D-overlegget utenfor fylket er ikke tonet ned.
+
+### 2. Hakk – målt når du går og flyr (scratchpad `natt5/lys/mr.js`: ekte data, PC 1400 × 800, Høy med effektene, tegningen slått av,
+lange oppgaver + pauser mellom bilder + CPU-profil; maskinen hadde last 18–22 på fire kjerner, så tallene svinger mye)
+**Går i Bergen sentrum (−32117 6734202), 25 s, kroppen flyttes 4 m hver 0,4 s.** De lengste pausene var ikke utsnittet, men
+ramme-arbeid: blomstene/plantene rundt deg (`vegetasjon3d.js` `oppdaterVekst` → `fri` → `nærHus` → `hindring3d`, opptil 259 ms),
+gresset (`gress3d` → `hindring3d`, opptil 266 ms) og interiøret (`interior3d.js` `bygg`, 160–330 ms per bygg). `hindring3d` prøvde
+omrisstesten fem ganger for hvert hus i ruta (og `nærHus` fem ganger det).
+- Rettet (index.html, samme svar): `hindringer()` legger boksen rundt omrisset på objektet (`{ P, bb }` – den ble alt regnet ut der),
+  og `hindring3d` hopper over omriss der punktet ±0,4 m ligger utenfor boksen (et punkt utenfor boksen er aldri inni). Objekter uten
+  `bb` (byggesettet, leirens bygg, interiør) som før. Omrisstesten uten destrukturering (samme regning).
+  Prøvd: 60 000 tilfeldige punkter i Bergen gir likt svar med og uten boksen (0 ulike, 12 211 inne), 76 mot 125 ms. Vakta prøver det
+  med 40 prøvehus (0 ulike) og en for liten boks med vilje (gir ulike svar = sammenligningen virker).
+| Bergen, går 25 s | før | etter |
+|---|---|---|
+| vegetasjon3d (plantene) i lange oppgaver | 1122 ms | 225 ms |
+| hindring3d / nærHus i lange oppgaver | 1232 / 862 ms | 514 / 146 ms |
+| pauser > 50 ms: antall, sum, lengste | 71, 9,4 s, 612 ms | 66, 8,0 s, 370 ms |
+| lange oppgaver: antall, sum, lengste | 29, 3,7 s, 339 ms | 38, 4,6 s, 353 ms (flere interiør ble bygget denne gangen: 849 → 1184 ms) |
+Det som står igjen når du går: **interiøret** (`interior3d.js` `bygg`, ett bygg per kvarte sekund, alt i én bit: 160–330 ms her –
+`Interior.plan` er ca. 15 % av det, resten er nettet). Ikke min fil og ikke endret: den bør bygges som generator (en del av rommene per
+bilde) eller planen ett bilde før nettet. Også `gress3d` (opptil 36 000 kandidater hver 12. meter i ett strekk). Lut-tingene
+(`lut-visning.js` ramme3) kom ikke med blant de lange oppgavene (10 interiør aktive).
+
+**Flyr i Stavanger (/rogaland, −33500 6573500), 40 s, 150 m/s, kameraavstand 900 m (1–2 nye utsnitt).** Før: sett3d 120 ms, der natt3d
+sin sett3d-krok (lysflekkene under gatelysene og vinduslyset – `hoyde3d` for hvert punkt) var 46 + 19 ms; `naboerAsynk` 167–172 ms i én bit;
+`trær3d` 169 ms i én bit (pust ble prøvd hver 8. rad på 5 m-gitteret).
+- Rettet: **natt3d.js** – plassene (matrisene, glødens punkter, vinduslysets farger) regnes i en generator `nattPlass` i forbered3d-kroken
+  (`u.nattKlar`); sett3d bruker dem når valget (Lys på bakken, mobil) er det samme, ellers regnes de der i ett som før. Samme regning i samme
+  rekkefølge. Prøvd i Stavanger etter et forberedt bytte: 1167 lysflekker og 4134 vinduslysflekker er like bit for bit med en ny utregning
+  (`NATT.plass`, vakta sjekker gatelysene). **index.html** – `naboerAsynk` prøver pust hvert 8. senter (før 64), `trær3d` for hver rad (før hver 8.).
+| Stavanger, flyr 40 s | før | etter |
+|---|---|---|
+| sett3d (største) | 120 ms (natt3d 65) | 110 ms (natt3d 0; bane3d 18, liv3d 16, lagVindu 16, merkingen 14) |
+| naboerAsynk / trær3d, største bit | 172 / 169 ms | ikke blant de lange |
+| lange oppgaver: antall, sum, lengste | 52, 4,8 s, 231 ms | 44, 4,0 s, 292 ms (søppeltømming 280) |
+| pauser > 50 ms: antall, sum, lengste | 79, 7,4 s, 234 ms | 79, 8,1 s, 322 ms (fjern3d `bygg` 309) |
+Det som står igjen (de største): søppeltømming (opptil 280 ms – store tabeller per utsnitt), `fjern3d.js` `bygg`/`fargeleggG` (opptil 309 ms
+«bygging uten pust» under last), infra3d `byggBru`/`løftVegerG` (én stor bru om gangen), hus3d (86–117 ms per bit), kartbildet i striper
+(én stripe 94–154 ms med programvare-grafikk), og i sett3d bane3d/liv3d/lagVindu.
+- **lastOppNett kan ikke måles her**: målingene slår av tegningen (ellers tar programvare-grafikken flere sekunder per bilde), og da gjør
+  lastOppNett ingenting (den tegner). Virkningen må måles hos brukeren («Mål hakk»).
+
+### 3. Lommelykt om natta (bare anbefaling – ikke laget)
+Beste sted: **tåke-biten i three.js (`fog_fragment`), koblet i `Lys3d.init` (lys3d.js) på samme måte som daltåka (`uDalT`)**. Den er med i alle
+innebygde materialer som har tåke – terrenget (bakkeshaderen bygger på Lambert/Phong), husene, interiøret, trærne, steinene –, så lykta lyser på
+alt uten et nytt THREE-lys og uten nye skyggeprogrammer. Forslag:
+- `uniform vec4 uLykt;` i `fog_pars_fragment`: x = styrke 0–1 (0 = av, og da hoppes regningen over), y = rekkevidde i m, zw = skjermens
+  midte i tegnepunkter (`renderer.getDrawingBufferSize` / 2 – husk pikseltettheten). Pluss `uniform float uLyktR;` = kjeglens radius i
+  tegnepunkter. Verdiene som `Float32Array` lagt i `THREE.ShaderLib[*].uniforms` (og `THREE.UniformsLib.fog`) som `uDalT` – de deles da av alle.
+- Rett ETTER `#ifdef USE_FOG` (før tåka blandes inn, så tåka fortsatt skjuler langt borte):
+  `if (uLykt.x > 0.0) { float k = uLykt.x * smoothstep(uLyktR, uLyktR * 0.35, length(gl_FragCoord.xy - uLykt.zw)) * exp(-fogDepth / uLykt.y); gl_FragColor.rgb = gl_FragColor.rgb * (1.0 + 3.0 * k) + vec3(0.06, 0.055, 0.045) * k; }`
+  (lykta peker der du ser – skjermens midte –; `fogDepth` er avstanden langs blikket). Med etterbehandling (filtre.js tegner til et mål i
+  annen størrelse) må midten og radiusen være målets, ikke skjermens. Bruk ikke `diffuseColor`: røyken i effekter3d.js er en egen ShaderMaterial med tåke, og der finnes den ikke
+  (skyggeleggeren ville ikke kompileres). Vakt: `uLykt.x = 0` skal gi samme bilde som før, og 0 GL-feil på /rogaland og Dovre.
+- Pass på `fog: false`-materialer (vindusglasset i interiøret, himmelen) – de får ikke lykta, og det er riktig.
+
+### 4. Telefon (mobil-profilen) – ikke gjort
+Ikke målt i denne runden (tiden gikk til 1–3, og maskinen ble startet på nytt kl. 00:15). Grensa er prøvd på mobil (bilder over).
+
+### Prøvd etter endringene (Dovre-testsiden, scratchpad `natt5/lys/vakt.js` og `natt5/lys/f-sjekk.js`)
+- Vakta lys med 3D på: PC 1400 × 820 grønn (23 s), mobil 390 × 844 grønn (9 s) – også runde 5-delen (grensemasken, hindring3d med boks,
+  lysflekkene; Dombås-utsnittet hadde ingen gatelys i det utsnittet, så lysflekkene ble prøvd i Stavanger: 1167 + 4134 like).
+- 3D-vaktene fra sjekk.js med effektene på (Høy, PC): billigere terreng, tåkebildet, utseende 15. nov, filtre i 3D, bygging i biter
+  (137 pust, forberedt og uforberedt bytte like) og minne i 3D (geometrier 70 -> 70, teksturer 17 -> 17) – alle grønne, 0 sidefeil.
+- Regeltestene test_grense3d, test_omraade, test_ytelse, test_kvalitet, test_fjern3d, test_vegetasjon grønne; `node --check` på filene og hovedskriptet.
+- Et bilde helt nede på bakken («Gå») ved grensa ble ikke tatt: utsnittet for gange ble ikke ferdig bygget innen 8 min med programvare-grafikk
+  under last. Bildene «lavt» er tatt 300–380 m fra bakken.
+
+### Fellesfiler endret i runde 5
+- `site/dovre-fliser/index.html`: skripttaggen for grense3d.js (rett etter region-visning.js); `hindringer()` – `{ P, bb }`;
+  `hindring3d()` – boksen først og omrisstesten uten destrukturering; `naboerAsynk` – pust hvert 8. senter; `trær3d` – pust hver rad.
+- Mine: `spill/lys3d.js` (koblGrense, `Lys3d.RG`), `spill/natt3d.js` (nattPlass, forbered3d-krok, `NATT.plass`, `NATT.forberedt`),
+  `spill/grense3d.js` (ny), `pipeline/fliser/test_grense3d.js` (ny), `pipeline/fliser/vakter/lys.js` (runde 5-delen), `docs/natt/lys-hjelp.json`.
