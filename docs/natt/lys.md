@@ -81,8 +81,10 @@ klippet ut av sjekk.js, med effektene PÅ). Bilder: scratchpad `natt/lys/f-pc-*.
   var på i min kjøring (vakta leser `kn[kn.length - 1]` uten å sjekke). Trolig ikke lys (vakta rører ikke 3D-bildet); IKKE undersøkt
   til bunns – prøv ui-vakta på mobil med 3D av.
 - 3D-vaktene fra sjekk.js med effektene PÅ (Høy, PC): «billigere terreng», «tåkebildet», «utseende 15. nov» og «filtre i 3D» grønne.
-  «bygging i biter» og «minne i 3D» ble IKKE ferdige før fristen (en bygging uten forberedelse med tegning i hvert bilde tar
-  mange minutter med programvare-grafikk) – de er ikke prøvd med effektene på.
+  «bygging i biter» grønn (94 pust, like utsnitt). «minne i 3D» FEIL: teksturer 21 -> 22 etter andre gang 3D av/på (geometrier
+  69 -> 69, 0 instansnett glemt). OBS: testserveren ble stoppet ved en feil mens denne vakta gikk (08:07), så resultatet kan være
+  forstyrret – men et skyggekart/etterbehandlingsmål som lages på nytt uten å frigjøres er en mulig årsak. KJØR «minne i 3D» PÅ NYTT
+  med effektene på før publisering, og se på kastKart()/Filtre-målene hvis den fortsatt feiler.
 
 ### Kjent etter ferdigstillingen
 - Nakne løvtrær kaster nå tynn skygge, men de fjerne, enkle løvtrærne (lodTrær) er klumper og kaster klumpskygge om vinteren.
