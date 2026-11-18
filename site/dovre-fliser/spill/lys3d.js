@@ -17,7 +17,7 @@
     // halve siden av området skyggekartet dekker (meter): når du går, og fra lufta (andel av kameraavstanden, mellom min og maks)
     gåHalv: 110, luftAndel: .55, luftMin: 120, luftMaks: 700,
     // skyggekartet tegnes på nytt når midten har flyttet seg denne andelen av halve siden
-    flyttAndel: .22,
+    flyttAndel: .22, perSekund: 4,
     // hvor langt mot sola ting kan stå og likevel kaste skygge inn i området (meter)
     motSola: 3000,
     // sollys svakere enn dette gir ingen skygger (natt uten måne)
@@ -110,8 +110,9 @@
       if (!o.isMesh) return; const m = [].concat(o.material)[0]; if (!lyssatt(m)) return;
       let kilde = null; for (let p = o; p && !kilde; p = p.parent) kilde = p.userData && p.userData.kilde;
       const gjennom = m.transparent && !(m.alphaTest > 0);
-      // (gresstustene rundt kameraet tar ikke imot skygge: mange gjennomsiktige flater oppå hverandre, og de er mørke fra før)
-      const k = på && !gjennom && (kast.has(o) || STILLE.test(kilde || '')), t = på && o !== R.gressMesh;
+      // (gresstustene rundt kameraet tar ikke imot skygge: mange gjennomsiktige flater oppå hverandre, og de er mørke fra før.
+      // Heller ikke innsiden av hus: taket og veggene ville lagt alt der inne i skygge – interiøret har sitt eget lys.)
+      const k = på && !gjennom && (kast.has(o) || STILLE.test(kilde || '')), t = på && o !== R.gressMesh && kilde !== 'interior3d';
       if (o.castShadow !== k) o.castShadow = k; if (o.receiveShadow !== t) { o.receiveShadow = t; for (const mm of [].concat(o.material)) mm.needsUpdate = true; }
       if (k) nk++; if (t) nt++;
     });
@@ -125,22 +126,22 @@
     const vil = n > 0 && !!R.ut && !!R.mesh;
     if (!vil) { if (L.på) { L.på = false; sol.castShadow = false; merk(R, false); kastKart(sol); S.n = 0; } return; }
     if (!v1) { v1 = new THREE.Vector3(); v2 = new THREE.Vector3(); v3 = new THREE.Vector3(); vx = new THREE.Vector3(); vy = new THREE.Vector3(); vz = new THREE.Vector3(); }
-    let ny = false;
+    let ny = false, straks = false;
     if (!L.på || S.n !== n || S.myk !== fx.myk) {
       L.på = true; S.n = n; S.myk = fx.myk; r.shadowMap.enabled = true; r.shadowMap.autoUpdate = false;
       // SKYGGETYPEN (målt 18. nov med programvare-grafikk: myke skygger med mange oppslag per punkt – PCF 17, PCFSoft 9 – var det
       // klart dyreste i hele pakka). VSM: skyggekartet glattes når det tegnes (sjelden), og hvert punkt i bildet gjør ETT oppslag.
       const type = THREE.VSMShadowMap; if (r.shadowMap.type !== type) { r.shadowMap.type = type; R.scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); }
       sol.castShadow = true; kastKart(sol); sol.shadow.mapSize.set(n, n); sol.shadow.radius = fx.myk ? 3 : 2;
-      S.sett = -1; ny = true;
+      S.sett = -1; ny = true; straks = true;
     }
     // nye ting i scenen: nytt utsnitt straks, ellers en titt av og til (moduler som legger til ting litt etter litt)
     const nå = performance.now();
-    if (S.sett !== R.settNr || nå - S.merket > 1500) { const før = L.kaster; S.merket = nå; merk(R, true); if (S.sett !== R.settNr || før !== L.kaster) ny = true; S.sett = R.settNr; }
+    if (S.sett !== R.settNr || nå - S.merket > 1500) { const før = L.kaster; S.merket = nå; merk(R, true); if (S.sett !== R.settNr) ny = straks = true; else if (før !== L.kaster) ny = true; S.sett = R.settNr; }
     // For svakt lys (natt uten måne): skyggekartet flyttes langt bort og tømmes – ingen skygger, men de samme programmene.
     // (Å slå skyggene helt av og på ved skumring og daggry ville gitt nye skyggeprogrammer for hele scenen hver gang: et hakk.)
     if (sol.intensity < REGLER.minLys) {
-      if (S.mørkt && !ny) return; S.mørkt = true; S.midt = null; L.mørkt = true;
+      if (S.mørkt && !ny) return; S.mørkt = true; S.venter = false; S.midt = null; L.mørkt = true;
       const k = sol.shadow.camera; k.left = 9e5; k.right = 9e5 + 10; k.bottom = 9e5; k.top = 9e5 + 10; k.near = 1; k.far = 10; k.updateProjectionMatrix(); r.shadowMap.needsUpdate = true; return;
     }
     if (S.mørkt) { S.mørkt = false; L.mørkt = false; ny = true; }
@@ -154,14 +155,18 @@
     if (!S.midt || Math.hypot(mx - S.midt[0], my - S.midt[1], mz - S.midt[2]) > S.halv * REGLER.flyttAndel || Math.abs(halv - S.halv) > S.halv * .15) ny = true;
     if (!S.dir || v2.dot(S.dir) < .99998) ny = true;
     if (R.lodVed !== S.lod) ny = true;
-    if (!ny) return;
+    if (ny) S.venter = true;
+    // høyst REGLER.perSekund ganger i sekundet (snur du deg eller går, fordeles trærne på nytt hele tiden – skyggekartet skal ikke
+    // tegnes i hvert bilde av den grunn); et nytt utsnitt får skyggene sine straks
+    if (!S.venter || (!straks && nå - (S.sist || 0) < 1000 / REGLER.perSekund)) return;
+    S.venter = false; S.sist = nå;
     S.midt = [mx, my, mz]; S.halv = halv; S.dir = (S.dir || new THREE.Vector3()).copy(v2); S.lod = R.lodVed; L.halv = halv;
     // skyggekameraet ser fra sola mot origo (three.js setter det slik); området legges til siden i kameraets egne mål, på hele punkter
     vz.copy(v2); vx.set(0, 1, 0).cross(vz).normalize(); vy.copy(vz).cross(vx);
     v3.set(mx, my, mz).sub(sol.position);
     const tex = 2 * halv / n, lx = Math.round(v3.dot(vx) / tex) * tex, ly = Math.round(v3.dot(vy) / tex) * tex, lz = -v3.dot(vz), k = sol.shadow.camera;
     k.left = lx - halv; k.right = lx + halv; k.top = ly + halv; k.bottom = ly - halv; k.near = lz - REGLER.motSola; k.far = lz + halv * 1.6 + 250; k.updateProjectionMatrix();
-    const dybde = k.far - k.near; sol.shadow.bias = -(.35 + tex) / dybde; sol.shadow.normalBias = Math.max(.25, tex * 1.6);
+    const dybde = k.far - k.near; sol.shadow.bias = -(.22 + tex * .6) / dybde; sol.shadow.normalBias = Math.max(.25, tex * 1.6);
     r.shadowMap.needsUpdate = true; L.tegnet++;
   }
 
