@@ -39,6 +39,14 @@ module.exports = {
         ut.spion = e.funnet === sp && S.kort && S.kort.type === 'spion' && kort.classList.contains('på'); const n1 = F.personer.length; kort.querySelector('[data-valg="utvis"]').click(); ut.utvist = F.personer.length === n1 - 1 && !S.kort;
         // et kort med følger som varer
         SS.nyttKort('fest'); ut.kort = kort.classList.contains('på') && /fest/i.test(kort.textContent); const m0 = F.mat; F.mat = Math.max(F.mat, 20); kort.querySelector('[data-valg="0"]').click(); ut.virkning = S.virkninger.some(q => q.navn === 'Etter festen' && q.moral === 8); F.mat = m0;
+        // kortkøen: mens et annet kort med valg står oppe, venter samfunnskortet
+        const hd = document.getElementById('hendelse'); S.kort = { type: 'flyktninger', voksne: 1, barn: 0, gamle: 0, spes: null, smittet: false, fra: 'Lom' };
+        if (hd && window.Kortkø) { hd.classList.add('på'); SS.visKort(); const venter = !kort.classList.contains('på') && Kortkø.åpent() === 'hendelse'; hd.classList.remove('på'); SS.visKort(); ut.kortkø = venter && kort.classList.contains('på'); } else ut.kortkø = false;
+        S.kort = null; SS.visKort();
+        // en rekrutt fra en by får byen i historien; fanger kan få bli (lite trofaste)
+        const by = F.personer.find(q => !q.spes && q !== elev); SR.ankommet(by, 'Prøveby', fast(.9)); ut.fraBy = /Kom med handelsruta fra Prøveby/.test(SR.profil(by).historie);
+        if (window.KrigSpill && KrigSpill.T && KrigSpill.T()) { const T = KrigSpill.T(), n2 = F.personer.length, t0 = T.fanger.length; T.fanger.push({ side: 'rød', n: 2, t: 0 }); const nye = SS.taFanger(T.fanger.length - 1);
+          ut.fanger = !!nye && nye.length === 2 && F.personer.length === n2 + 2 && nye.every(q => q.lojal <= .35 && q.fange) && T.fanger.length === t0; } else ut.fanger = 'ingen KrigSpill';
         // panelet
         SS.åpne(true); const pan = document.getElementById('samfunnmeny'); ut.panel = pan.classList.contains('på') && /Lov i leiren/.test(pan.textContent) && /Grålungen/.test(pan.textContent) && pan.querySelectorAll('[data-lov]').length === 4 && !!pan.querySelector('#etterforsk') && pan.scrollWidth <= pan.clientWidth + 2; SS.åpne(false);
         // forfallet har flere trinn, byggesettet romtyper, kameravakta et varselkort
@@ -56,8 +64,8 @@ module.exports = {
       return ut;
     });
     if (d.mangler) return { ok: false, tekst: 'SamfunnSpill finnes ikke (eller spillet er ikke startet)', data: d };
-    const krav = ['sover', 'person', 'personLukket', 'flyktKort', 'flykt', 'avhengige', 'lov', 'sykdom', 'spesialist', 'opplæring', 'begravelse', 'spion', 'utvist', 'kort', 'virkning', 'panel', 'forfall', 'romtyper', 'kamvarsel', 'kamvarselBort', 'tilbake'];
+    const krav = ['sover', 'person', 'personLukket', 'flyktKort', 'flykt', 'avhengige', 'lov', 'sykdom', 'spesialist', 'opplæring', 'begravelse', 'spion', 'utvist', 'kort', 'virkning', 'kortkø', 'fraBy', 'fanger', 'panel', 'forfall', 'romtyper', 'kamvarsel', 'kamvarselBort', 'tilbake'];
     const feil = krav.filter(k => !d[k]); if (d.feil) feil.push('feil: ' + d.feil);
-    return { ok: !feil.length, tekst: feil.length ? `${profil}: mangler ${feil.join(', ')}` : `${profil}: personkort, flyktninger, barn og gamle, lov, Grålungen, spesialist, opplæring, begravelse, forræder, kort, panel, forfall, romtyper og kameravarsel virker`, data: d };
+    return { ok: !feil.length, tekst: feil.length ? `${profil}: mangler ${feil.join(', ')}` : `${profil}: personkort, flyktninger, barn og gamle, lov, Grålungen, spesialist, opplæring, begravelse, forræder, kort, kortkø, rekrutt fra by, fanger, panel, forfall, romtyper og kameravarsel virker`, data: d };
   },
 };

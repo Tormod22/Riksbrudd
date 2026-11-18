@@ -12,6 +12,8 @@
   // PÅ PLASS (18. nov): folk holder seg ved bygget der oppgaven deres hører hjemme (vakta ved tårnet, kokken ved kjøkkenet,
   // operatørene ved kontrollrommet, byggelaget ved byggeplassen). De som er syke i karantene, står ved sykestua eller brakka.
   const ARBEIDSSTED = { vakt: ['vakttårn', 'port'], kjøkken: ['kjøkken'], stell: ['sykestue'], verksted: ['verksted'], overvåking: ['kontrollrom'], frakt: ['lagertelt', 'container'] };
+  // halve bredden av bygget (fra fotavtrykket), så folk står like utenfor veggen – også ved det smale vakttårnet
+  const halv = b => { const f = window.Leir && Leir.BYGG[b.type] && Leir.BYGG[b.type].fot; return f ? Math.max(1.5, Math.min(7, Math.max(Math.abs(f[0]), Math.abs(f[1]), Math.abs(f[2]), Math.abs(f[3])))) : 5; };
   function arbeidssted(pers, bygg, i) {
     if (!pers || !bygg.length) return null; let typer = ARBEIDSSTED[pers.oppgave];
     if (pers.karantene) typer = ['sykestue', 'brakke'];
@@ -51,7 +53,7 @@
     nett.jakke.count = nett.fast.count = n; nett.bein.count = nett.arm.count = n * 2;
     figurer.forEach((p, i) => { let går = 0;
       if (p.vent > 0) p.vent -= dt; else { const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
-        if (!p.tx || d < .6) { const jobb = arbeidssted(F.personer[i], bygg, i), hos = jobb && Math.random() < .85, b = hos ? jobb : bygg.length && Math.random() < .75 ? bygg[Math.floor(Math.random() * bygg.length)] : null, v = Math.random() * 6.283, r = hos ? 5 + Math.random() * 3 : b ? 7 + Math.random() * 5 : Math.random() * 30;
+        if (!p.tx || d < .6) { const jobb = arbeidssted(F.personer[i], bygg, i), hos = jobb && Math.random() < .85, b = hos ? jobb : bygg.length && Math.random() < .75 ? bygg[Math.floor(Math.random() * bygg.length)] : null, v = Math.random() * 6.283, r = hos ? halv(jobb) + 1 + Math.random() * 2 : b ? 7 + Math.random() * 5 : Math.random() * 30;
           p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.vent = hos ? 8 + Math.random() * 30 : 2 + Math.random() * 14; p.hos = hos ? jobb.type : ''; }
         else { const nx = p.x + dx / d * 1.25 * dt, ny = p.y + dy / d * 1.25 * dt; if (typeof hindring3d === 'function' && hindring3d(nx - u.cx, ny - u.cy)) p.tx = 0; else { p.x = nx; p.y = ny; let da = Math.atan2(dy, dx) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 6); p.fase += 1.25 * dt * 4.2; går = 1; } } }
       p.går += (går - p.går) * Math.min(1, dt * 8 + (dt ? 0 : 1));

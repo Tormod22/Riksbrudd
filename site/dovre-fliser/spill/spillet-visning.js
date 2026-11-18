@@ -150,7 +150,8 @@
       if (v.folk > 0) { const r = l && FR ? FR.rekrutter(f, l, () => true) : {}; ut = r.person ? ` ${r.person.navn} er blitt med i gjengen.` : ' Det var ingen ledig seng, så vandreren gikk videre.'; } }
     logg(`${h.tekst(å.navn)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; skriv('riksbrudd-hendelser', H);
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
-  function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }
+  // kortkøen (samfunn-visning.js): ett kort om gangen, med pause mellom
+  function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (window.Kortkø && !Kortkø.ledig() && (tid >= H.nesteSpill || ekte >= H.nesteEkte)) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }
 
   // (folkene som figurer i leiren ligger i spill/folk3d.js)
 

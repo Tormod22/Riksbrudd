@@ -85,3 +85,30 @@ Nye felt i `FolkRegler`: `oppgaveF` (krok for tempo per oppgave), `kjøpMat(F, n
 - Mekanikerens reparasjon av kjøretøy og skytterens ildbonus er ikke prøvd i en ekte kamp i nettleseren (bare at krokene ikke feiler).
 - Ingen varsel-brikke i #varsler (narhud.js er ikke min) for sykdom eller ugravlagte – bare loggen og panelet.
 - Tallene er ikke balansert mot lang spilling.
+
+## RUNDE 2 (etter sammenflettingen med økonomi, verden, krig, spillform, sjø og karakter)
+- KORTKØ (`window.Kortkø` i samfunn-visning.js): kortene med valg er #hendelse, #formkort og #samfunnkort. Ett om gangen:
+  samfunnskortet venter mens et av de andre står oppe, og hendelsene i spillet-visning.js venter på samfunnskortet. Minst
+  `KORT_PAUSE` = 120 ekte sekunder fra ett kort lukkes til det neste vises (en avslørt forræder slipper pausen; i testene – webdriver –
+  gjelder ingen pause). #flytkort er en statuslinje uten valg og er ikke med.
+- BALANSE (prøvd 18 samfunnsdøgn med alle pakkene på, tilfeldige svar, mat kjøpt ved behov): 20 samfunnskort + 3 hendelser =
+  ca. 1,3 kort per døgn, og et døgn er minst 24 ekte minutter – altså et kort hvert kvarter eller sjeldnere i vanlig fart, og aldri
+  tettere enn hvert annet minutt i høy fart (køen). Leiren døde ikke ut; den vokste 10 -> 20 voksne + 8 barn/gamle, og moralen falt
+  til 25–30 fordi senger ikke ble bygget (det er meningen). Justert: flyktninger hver 2–4 døgn (før 3–6); barn og gamle «lider» av
+  sengemangel først når også alle de voksne står uten (de får seng først) – før ga én manglende seng −15.
+- REKRUTTER FRA BYENE (region-visning.js, én linje: `SamfunnSpill.ankommet(r.person)`): personen får `p.fra` = det største
+  tettstedet dere holder, historien sier «Kom med handelsruta fra …», og 8 % er spesialister.
+- FANGER (krig-visning.js er ikke endret): «Fanger» i Samfunn-panelet når `KrigSpill.T().fanger` har noen – «La dem bli med i leiren»
+  (`SamfunnSpill.taFanger(i)`): høyst 6 per gruppe blir personer med lojalitet 0,15–0,35 og `p.fange` (historien: «Kjempet for … til
+  hen ble tatt til fange»), moral −2 og −0,02 lojalitet hos de andre. Lav lojalitet = fare for forræderi.
+- KULDE: Grålungen smitter ×1,5 i sprengkulde (VAER.regel.temp ≤ −8, samme grense som spill/verden.js) og ×1,5 når folk fryser i leiren.
+- PRØVD I KAMP: eget lag 100 m fra leiren mot et fiendelag – ildfaktoren ×1,15 med skytter på vakt, ×1,265 med våpenloven i tillegg,
+  ×1 når skytteren har fri eller laget er 2 km unna; i seks kamper à 40 min: 36 mot 39 utslåtte. Mekanikeren: et kjøretøy med 50 %
+  skade 60 m fra leiren ble helt på et par sekunder i 60×, og ble ikke reparert da mekanikeren hadde fri.
+- `window.kartTil(x, y, m)` (samfunn-visning.js) flytter 2D-kartet; kameravarselets «Vis i kartet» bruker den.
+- KAMERAVARSELET PRØVD: «Vis i kartet» flytter kartet til stedet, «Se gjennom kameraet» fra 2D åpner 3D inne i kameraet (body.ikamera).
+  FUNN OG RETTING: `kam2d(c)` i kameravakt-visning.js satte `kam.x` på en lokal funksjon som også het `kam`, så kartet ble aldri
+  flyttet når du gikk ut av kameraet – nå brukes `window.kartTil`. Fra 3D i pause (tempo 0) kom ikke «Se gjennom» inn i kameraet
+  i én prøve; ikke undersøkt videre.
+- 3D PÅ NÆRT HOLD: figurene sto 5–8 m fra bygget; nå står de 1–3 m utenfor veggen etter byggets fotavtrykk (vakta 3 m fra tårnet,
+  målt). De står fortsatt på bakken, ikke oppe i tårnet eller inne i bygget.

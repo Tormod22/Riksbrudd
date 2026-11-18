@@ -40,7 +40,9 @@
     const f = F(), l = L(), o = grunn || (window.FolkSpill && FolkSpill.grunn ? FolkSpill.grunn() : {});
     const B = FR.behov(f, l, { ...o, avhengige: S.avhengige.length, matFaktor: S.lover.rasjonering ? SR.LOVER.rasjonering.mat : 1 });
     const D = window.OverlevSpill && OverlevSpill.D ? OverlevSpill.D() : null;
-    return { B, sult: !!(f.sist && f.sist.sult), kald: (f.sist && f.sist.kald) || 0, tid: S.klokke || 0, auto: auto(), utenVann: !!(D && D.vann && D.vann.nede && !har('brønn')),
+    // sprengkulde (spill/verden.js bruker −8 grader som grense): Grålungen smitter lettere
+    const temp = window.VAER && VAER.regel && typeof VAER.regel.temp === 'number' ? VAER.regel.temp : 10;
+    return { B, sprengkulde: temp <= -8, sult: !!(f.sist && f.sist.sult), kald: (f.sist && f.sist.kald) || 0, tid: S.klokke || 0, auto: auto(), utenVann: !!(D && D.vann && D.vann.nede && !har('brønn')),
       minnesmerke: har('minnesmerke'), brønn: har('brønn'), radiomast: har('radiomast'), F: f };
   }
   // FolkSpill.valg() spør her: grunnvalgene pluss samfunnets (sover i testene)
@@ -75,6 +77,18 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   document.body.append(panel, pk, kort);
   const si = t => { if (t) logg(t); };
 
+  // ---------- KORTKØEN: ett kort med valg om gangen, og en pause mellom dem ----------
+  // Kortene med valg er #hendelse (spillet-visning.js), #formkort (scenario-visning.js) og #samfunnkort (her). Claudes forslag: minst
+  // KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises (flyktninger og en avslørt forræder venter bare på ledig plass).
+  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'formkort', 'samfunnkort']; let sistÅpent = -1e9;
+  const Kortkø = { åpent: () => KORT_ID.find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); }) || null,
+    // ledig(haster): er det plass til et nytt kort nå? I testene (webdriver) gjelder ingen pause.
+    ledig: haster => !Kortkø.åpent() && (haster || navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE), pause: KORT_PAUSE, sist: () => sistÅpent };
+  setInterval(() => { if (Kortkø.åpent()) sistÅpent = performance.now(); }, 1000);
+  window.Kortkø = Kortkø;
+  // flytt 2D-kartet til et sted (brukes av varselkortet i kameravakt-visning.js)
+  window.kartTil = (x, y, m) => { kam.x = x; kam.y = y; if (m && kam.m > m) kam.m = m; skitten = true; };
+
   // ---------- personkortet ----------
   const bilder = new Map();
   function bilde(p, bredde) {
@@ -102,7 +116,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   // ---------- kortene ----------
   function visKort() {
     const c = S && S.kort, f = F(); const annet = document.getElementById('hendelse');
-    if (!c || !f || (annet && annet.classList.contains('på'))) { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } return; }
+    const andre = Kortkø.åpent(), venter = !kort.classList.contains('på') && !Kortkø.ledig(c && c.type === 'spion');
+    if (!c || !f || (andre && andre !== 'samfunnkort') || venter) { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } return; }
     const nøkkel = JSON.stringify(c) + '|' + Math.round(f.mat); if (nøkkel === sistKort) return; sistKort = nøkkel; kort.innerHTML = '';
     if (c.type === 'flyktninger') { kort.append(el('h3', {}, 'Flyktninger ved porten'), el('p', {}, SR.flyktTekst(c)));
       const k = ktx(), ledig = k.B.senger - k.B.n - k.B.avh; kort.append(el('p', { style: 'font-size:13px;color:var(--ink-dim,#b5a888)' }, `Ledige senger: ${Math.max(0, ledig)} · mat: ${Math.round(f.mat)} rasjoner`));
@@ -123,7 +138,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     const f = F(); if (!S || !f || S.kort) return false;
     if (type === 'flyktninger') S.kort = SR.nyeFlyktninger(S, r());
     else if (type && type !== 'kort') { const P = f.personer; if (P.length < 2 || !SR.KORT.find(q => q.id === type)) return false; S.kort = { type: 'kort', id: type, a: P[0].id, b: P[1].id }; }
-    else S.kort = SR.velgKort(S, f, ktx(), r());
+    else { if (!Kortkø.ledig()) return false; S.kort = SR.velgKort(S, f, ktx(), r()); }
     if (!S.kort) return false; lagre(); visKort(); return true;
   }
 
@@ -170,6 +185,9 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     p.append(el('h3', {}, 'Lov i leiren'));
     for (const [id, Lv] of Object.entries(SR.LOVER)) p.append(el('div', { klasse: 'lov' }, el('div', {}, el('b', {}, Lv.navn), el('small', {}, Lv.tekst)),
       knapp(S.lover[id] ? 'På' : 'Av', () => { si(SR.settLov(S, f, id, !S.lover[id]).tekst); lagre(); vis(); }, { klasse: S.lover[id] ? 'på' : '', 'data-lov': id, 'aria-pressed': String(!!S.lover[id]) })));
+    // fanger som kan få bli
+    const FA = fanger(); if (FA.length) { p.append(el('h3', {}, 'Fanger'), el('small', {}, 'Fangene i leiren kan få bli som en del av gjengen. De er lite trofaste i starten, og de andre liker det dårlig (moral −2).'));
+      FA.forEach((q, i) => p.append(el('div', { klasse: 'rad' }, el('span', {}, `${q.n} ${q.n === 1 ? 'fange' : 'fanger'}`), knapp('La dem bli med i leiren', () => taFanger(i), { 'data-fange': String(i) })))); }
     // forrædere
     const dager = (nå - S.sistEtterforsket) / SR.REGLER.døgn;
     p.append(el('h3', {}, 'Forrædere'), el('div', { klasse: S.mistanke ? 'varsel' : '' }, S.mistanke ? `Noe er galt: ${S.mistanke} ${S.mistanke === 1 ? 'hendelse' : 'hendelser'} tyder på at noen i leiren arbeider for fienden.` : 'Ingen tegn til forræderi.'),
@@ -232,6 +250,15 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   }
   // folk som dør i leiren (folk-visning.js melder dem)
   function døde(liste) { if (!S || !auto()) return; for (const p of liste) SR.død(S, p.navn, 'folk', S.klokke || 0); if (liste.length) { logg('Ta farvel med de døde i Samfunn-panelet (begravelse).'); lagre(); } }
+  // en rekrutt fra en by (region-visning.js): får et sted i historien. Stedet = det største tettstedet dere holder (ellers «byen»).
+  function ankommet(p) { if (!S || !p || !auto()) return null; let navn = '';
+    try { const B = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []; let best = -1; for (const b of B) { if (!b.e || Garnison.tilstand(TETTSTEDER, b.e.id).eier !== 'blå') continue; const n = b.e.folk || b.e.innb || b.e.n || 0; if (n > best) { best = n; navn = b.e.navn || ''; } } } catch (e) { navn = ''; }
+    const q = SR.ankommet(p, navn, Math.random); if (q && q.spes) logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}!`); lagre(); return q; }
+  // fanger i leiren (krig-visning.js: KrigSpill.T().fanger) kan få bli – de er lite trofaste i starten
+  const fanger = () => { try { return window.KrigSpill && KrigSpill.T && KrigSpill.T() ? KrigSpill.T().fanger || [] : []; } catch (e) { return []; } };
+  function taFanger(i) { const T = fanger(), q = T[i], f = F(); if (!S || !q || !f) return false; const navn = window.Fraksjoner && Fraksjoner.FRAKSJONER[q.side] ? Fraksjoner.FRAKSJONER[q.side].navn : 'røverne';
+    const nye = SR.fangerInn(f, Math.min(6, q.n || 1), navn, r()); T.splice(i, 1); if (KrigSpill.lagre) KrigSpill.lagre();
+    logg(`${nye.length} ${nye.length === 1 ? 'fange' : 'fanger'} fra ${navn} får bli i leiren: ${nye.map(p => p.navn.split(' ')[0]).join(', ')}. De er lite trofaste – følg med på dem.`); lagre(); vis(); if (window.FolkSpill) FolkSpill.vis(); return nye; }
   // en overlevende funnet ved leting (leting-visning.js): av og til en spesialist
   function funnet(p) { if (!S || !p) return null; const q = SR.funnet(p, Math.random); if (q) { logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}! ${SR.SPES[q.spes].tekst}`); lagre(); } return q; }
 
@@ -257,7 +284,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     falne = null; akk = 0; sistEkte = performance.now(); sistKort = ''; sistHtml = ''; visKort(); vis();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
+  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
     // for testene og vakten: sett en ny, tom tilstand
     nullstill: () => { const sp = spill(); S = SR.ny(1); S.klokke = typeof tid === 'number' ? tid : 0; sistKort = ''; falne = null; if (sp) lagre(); visKort(); vis(); } });
   window.SamfunnSpill = api;
