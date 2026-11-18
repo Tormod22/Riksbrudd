@@ -75,8 +75,8 @@
       const Q = r3(); if (går() && !fører() && T.behov.tørst < 80 && Q.ut && rot.Gange && Gange.vannVed && performance.now() - sistDrakk > 20000) { const k = Gange.kropp(), v = Gange.vannVed(Q.ut);
         if (k && [[2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]].some(([dx, dy]) => v(k.x + dx, k.y + dy))) { sistDrakk = performance.now(); T.behov.tørst = 100; logg('Du drikker av vannet.'); } }
       const V = K.virkning(T.behov), SS = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.K() : null; if (V.skade > 0 && SS && SS.hp > 5) SS.hp = Math.max(5, SS.hp - V.skade * t);
-      // løpingen (Bevegelse.REGLER.løpTid settes av overlev.js fra ferdigheten; her ganges behovene inn)
-      if (rot.Bevegelse && Bevegelse.REGLER) { if (!takt.løp0 || Math.abs(Bevegelse.REGLER.løpTid - takt.satt) > 1e-9) takt.løp0 = Bevegelse.REGLER.løpTid; takt.satt = takt.løp0 * V.løp; Bevegelse.REGLER.løpTid = takt.satt; }
+      // løpingen (Bevegelse.REGLER.løpTid settes av overlev.js fra ferdigheten; her ganges behovene inn, og tung last fra spill/lut-visning.js)
+      if (rot.Bevegelse && Bevegelse.REGLER) { if (!takt.løp0 || Math.abs(Bevegelse.REGLER.løpTid - takt.satt) > 1e-9) takt.løp0 = Bevegelse.REGLER.løpTid; takt.satt = takt.løp0 * V.løp * (rot.LutSpill && LutSpill.løp ? LutSpill.løp() : 1); Bevegelse.REGLER.løpTid = takt.satt; }
       for (const k of Object.keys(K.BEHOV)) { const til = K.tilstand(T.behov[k]); if ((til === 'lite' || til === 'tomt') && (takt.meldt = takt.meldt || {})[k] !== til) { takt.meldt[k] = til; logg(`Du er ${K.ord(k, T.behov[k])}. ${K.BEHOV[k].råd}`); } else if (!til && takt.meldt) delete takt.meldt[k]; } }
     if (performance.now() - sistLagret > 15000) { sistLagret = performance.now(); lagre(); } vis(false); }
   setInterval(takt, 1000);

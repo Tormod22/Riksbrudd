@@ -158,7 +158,7 @@
   function stadium(id, e, nå, C) { const g = G(id); if (!g || !g.fersk) return null; const d = alder(e, nå, C) / REGLER.dag; return d < g.fersk[0] ? 'fersk' : d < g.fersk[1] ? 'gammel' : 'råtten'; }
   // datoene følger antallet: mangler det datoer (noe annet har lagt til), er de nye ferske; er det for mange (noe er tatt ut), går de eldste
   function normaliser(B, nå, kald) { if (!B.d) B.d = {}; for (const id of Object.keys(B.d)) if (holder(id) || !(B.t[id] > 0)) delete B.d[id];
-    for (const [id, n] of Object.entries(B.t)) { if (!(n > 0)) { delete B.t[id]; continue; } if (holder(id)) continue; const a = B.d[id] || (B.d[id] = []);
+    for (const [id, n] of Object.entries(B.t)) { if (!(n > 0) || holder(id)) continue; const a = B.d[id] || (B.d[id] = []);
       if (a.length > n) { a.sort((p, q) => alder(q, nå, kald ? Infinity : null) - alder(p, nå, kald ? Infinity : null)); a.splice(0, a.length - n); }
       while (a.length < n) a.push(kald ? [0, nå] : nå); }
     return B; }
