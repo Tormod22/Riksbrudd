@@ -49,13 +49,39 @@ Alt som skjer **av seg selv**, skjer bare når `!navigator.webdriver || VerdenSp
 - /rogaland med ekte data: tog Stavanger/Sandnes–Bryne (betaling, første tog med last), flomsted fra ekte elvedata (Kvennåna), ras-søk.
 
 ## IKKE gjort / svakheter
-- Brannen har ikke noe 3D-utseende (pakka «natur» – listene over er til dem). Flom/ras/funn er bare tekst i 3D.
+- Brent bakke i 3D tegnes ikke her (pakka «natur» – listene over er til dem). 3D-visningen av brann, ras, flom og funn er enkel.
 - Snø «stenger» ikke veger i vegnettet (ville krevd høyden for alle lenker): kolonner på fjellet stoppes i stedet.
-- Omkjøring for kjøretøy som alt er på vei når en veg sperres av flom/ras, er IKKE prøvd (koden er som i flom-visning.js).
 - Felte dyr kommer tilbake når 3D-utsnittet bygges på nytt.
-- Åkeren vises ikke i kartet, og krever ikke folk.
+- Åkeren er ikke et bygg (ingen 3D-modell, kan ikke brenne).
 - Funn kan ligge i tettbebyggelse; de er ikke 3D-modeller.
-- Stasjonslista er etter hukommelsen og kan ha hull. Toget trenger ikke at leiren ligger ved banen.
+- «Stasjon» = spor gjennom eller innen 1 km fra tettstedet (ikke en ekte stasjonsliste). Toget trenger ikke at leiren ligger ved banen.
 - Jaktlagene får alltid kjøttet hjem uten transport. Isen gjør ingenting med båter/ferjer.
 - Flom fra regn bruker enkle sirkler, ikke flomfeltet fra flom.js (det følger en dal fra en dam).
 - Fiendens lag fryser ikke (bare egne), men får samme føre.
+
+## Runde 2 (samme natt)
+- **Prøvd nå** (/rogaland, ekte vegnett): en kolonne på vei fikk et ras midt på ruta – lenken ble sperret, kolonnen la om («kjører om raset»,
+  28 min ble til 69 min) og unngikk den sperrede lenken. Lyn og skuddveksling som brannstarter er prøvd med tvunget sjanse (begge tente).
+  FEIL FUNNET OG RETTET: lynet kunne aldri tenne (brannfaren er 0 mens det regner). Nå avgjør tørken, og lynet slår ned når det er
+  torden eller tunge skyer («tørrlyn»).
+- **Stasjoner fra kartet:** `sjekkSpor(by)` leser jernbanen i utveg-flisene (laget «bane», z9): tettstedet er stasjonsby når sporet går gjennom
+  omrisset eller innen 1 km (`REGLER.tog.nærSpor`) fra navnepunktet. Tettsteder innen 150 km fra leiren (høyst 80) spørres når panelet
+  åpnes. Navnelista `Verden.STASJONER` brukes bare når kartet ikke har svart (ingen fliser der / jernbanedata mangler, som på testserveren).
+  På /rogaland ga det: Stavanger/Sandnes, Kvernaland, Bryne, Nærbø, Varhaug, Hæen, Vigrestad, Brusand, Ogna, Moi, Sirevåg, Hellvik, Egersund.
+  `Verden.togPlan` tar `stasjon: true/false/null` per ende.
+- **Åkeren synes og krever folk:** første rydding finner et sted 220–460 m fra leiren (helst dyrket mark, ikke vann/tettbebyggelse/bratt) og
+  lagrer det (`V.åker.x/y`). 2D: en firkant på 1000 m² per mål – brun (pløyd), grønn (gror), gul (modent) – med navn. Folk: én person på «fri»
+  per 40 mål (`REGLER.åker.målPerPerson`, lest med `Folk.arbeidere('fri')`; spill/folk.js er ikke endret). Færre folk = kornet gror
+  tilsvarende saktere; panelet sier hvor mange som trengs. Åkeren er fortsatt ikke et bygg (kan ikke rives eller brenne) og har ingen 3D-modell.
+- **3D** (i verden-visning.js, KROKER.ramme3d/sett3d, ingen nye lys): flammer (Points, additive, stiger og blaffer), glød på bakken og røyk
+  som driver med vinden i rutene som brenner; steinur (instansnett, 46 steiner) der raset gikk; en blå vannflate ved flom; vrak, kasser,
+  telt og fly av enkle kasser (ett instansnett) for funn som er sett. Bygges på nytt når noe endres (sjekkes to ganger i sekundet).
+  Sett på bilde ved Dombås: brann, røyk og steinur. Vannflaten er flat og skjærer terrenget i skrå lier. Brent bakke: `window.BRENT` til «natur».
+- **Balanse** (/rogaland, auto på, hvert spillminutt simulert): 4 døgn sommer + 3 døgn høst + 4 døgn vinter, og 9 døgn sommer.
+  Første kjøring: flom/ras hver 2.–8. time hele høsten (loggen full), og flom midt på vinteren. Rettet: sjanse 12 % → 4 % per time, høyst én
+  flom og ett ras om gangen, regnsummen synker etter en hendelse, og snø teller ikke som regn. Etterpå: 2 flommer og 1 ras på 9 sommerdøgn,
+  1 flom på de 11 blandede. Tørken kom aldri høyt nok til brannfare (regn nullet den seks ganger så fort som den bygget seg opp): nå to
+  ganger så fort, og full brannfare etter 2 tørre døgn – i sommerkjøringen lå tørken da på 0,5–2,1 (brannfare av og på). Ingen brann av seg
+  selv på 9 døgn (lyn 1,5 % per time når det er tørt og overskyet) – brann er altså mest noe spilleren og kampene starter.
+  Vinter: isen bar etter ca. 2 døgn; lagene ved leiren (360–410 m unna) fryser ikke (læ 500 m). Lag som sendes ut, får varsel etter ca. 7 timer
+  og første frostskade etter 12 (prøvd på Dovre-siden).

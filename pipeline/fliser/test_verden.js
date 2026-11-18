@@ -25,8 +25,11 @@ assert.ok(V.forhold(V.ny(), { ...vinter, snø: 1 }).some(l => /marsj −/.test(l
 // 32 regn, flom og ras
 S = V.ny(); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), null);
 for (let i = 0; i < 6; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'flom');
-for (let i = 0; i < 4; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'ras');
-assert.strictEqual(V.trekkHendelse(S, 1, () => .99), null);
+assert.strictEqual(S.regn, 6 - R.regn.etter.flom, 'regnsummen synker etter flommen');
+for (let i = 0; i < 6; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'ras');
+S.regn = 20; assert.strictEqual(V.trekkHendelse(S, 1, () => .99), null);
+V.nySone(S, 'ras', 0, 0, 90, 0); V.nySone(S, 'flom', 0, 0, 90, 0); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), null, 'høyst én flom og ett ras om gangen'); S.soner = [];
+const S9 = V.ny(); V.steg(S9, 600, { ...vinter, regn: 1 }); assert.strictEqual(S9.regn, 0, 'snø teller ikke som regn');
 const sone = V.nySone(S, 'ras', 1000, 2000, 90, 100); assert.ok(V.iSone(S, 1050, 2000) === sone && !V.iSone(S, 1200, 2000) && !V.iSone(S, 1050, 2000, 'flom'));
 assert.strictEqual(V.ryddSoner(S, 200).length, 0); assert.strictEqual(V.ryddSoner(S, 100 + R.regn.rasTimer * 60).length, 1); assert.strictEqual(S.soner.length, 0);
 assert.ok(V.flomRadius(S, 6) >= V.flomRadius(S, 2));
@@ -47,6 +50,8 @@ V.åkerSteg(S, 2, 'vår'); V.åkerSteg(S, 2, 'sommer'); const h = V.åkerSteg(S,
 assert.deepStrictEqual(V.åkerSteg(S, 1, 'høst'), {}, 'bare én avling');
 V.så(S, 'vår'); V.åkerSteg(S, 1, 'vår'); assert.ok(V.åkerSteg(S, 1, 'høst').mat < R.åker.ryddMål * R.åker.perMål, 'umoden avling gir mindre');
 V.så(S, 'vår'); assert.ok(V.åkerSteg(S, 1, 'vinter').tapt);
+V.så(S, 'vår'); V.åkerSteg(S, 4, 'sommer', .5); assert.strictEqual(S.åker.grodd, 2, 'halvparten av folkene: halv vekst'); V.åkerSteg(S, 1, 'høst');
+assert.strictEqual(V.åkerBehov(20), 1); assert.strictEqual(V.åkerBehov(100), 3); assert.ok(Math.abs(V.åkerSide(20) - 141.42) < .01);
 for (let i = 0; i < 20; i++) V.ryddÅker(S); assert.ok(S.åker.mål <= R.åker.maks);
 
 // 35 brann
@@ -77,6 +82,7 @@ assert.strictEqual(S.radio.liste.length, R.radio.liste); assert.strictEqual(S.ra
 assert.ok(V.erStasjon('Dombås') && V.erStasjon('dombås') && !V.erStasjon('Geiranger'));
 const a = { id: 1, navn: 'Dombås', x: 0, y: 0, eier: 'blå' }, b = { id: 2, navn: 'Otta', x: 30000, y: -30000, eier: 'blå' };
 assert.ok(V.togPlan(a, { ...b, eier: 'rød' }).feil); assert.ok(V.togPlan(a, { ...b, navn: 'Geiranger' }).feil); assert.ok(V.togPlan(a, a).feil);
+assert.ok(V.togPlan({ ...a, stasjon: false }, b).feil, 'kartet sier ingen spor'); assert.ok(!V.togPlan(a, { ...b, navn: 'Geiranger', stasjon: true }).feil, 'kartet sier spor');
 const p = V.togPlan(a, b); assert.ok(p.km > 42 && p.km < 43 && p.pris > 0 && p.stål > 0);
 S = V.ny(); const st = V.togStart(S, a, b, 0); assert.ok(st.s && V.togStart(S, b, a, 0).feil);
 assert.strictEqual(V.togSteg(S, 10, () => 'blå').length, 0);

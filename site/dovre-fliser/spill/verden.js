@@ -26,28 +26,32 @@
     kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
     // regn: regnsummen (timer med fullt regn, tørker 0,2 per time uten regn, maks 30); flom mulig over «flom», ras over «ras»
     // sjanse per spilltime når terskelen er nådd; flomsonen varer «flomTimer», raset «rasTimer»; radius i meter; bratt = stigning (m per m)
+    // etter: så mye synker regnsummen når det har gått en flom / et ras (trykket slipper); høyst én flom og ett ras om gangen;
+    // i kuldegrader faller nedbøren som snø og teller ikke
     // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras; ryddTimer: så lenge bruker et ingeniørlag på å rydde et ras
-    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
-    // tørke: døgn uten regn (maks 10); brannfaren er 0 under «fra» og full ved «full»
-    tørke: { maks: 10, fra: .5, full: 3 },
+    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .04, etter: { flom: 3, ras: 4 }, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
+    // tørke: døgn uten regn (maks 10; nedbør og våt bakke tar bort «vått» ganger så fort); brannfaren er 0 under «fra» og full ved «full»
+    tørke: { maks: 10, fra: .5, full: 2, vått: 2 },
     // brann: rutenett (m), brenntid per rute (spillminutter), spredning per 10 min til en naborute i full tørke uten vind,
     // vind: hvor mye medvind øker spredningen per m/s, regn slokker (sjanse per 10 min i fullt regn), flest ruter som brenner samtidig,
-    // treff: treff på et lag som står i brannen per 30 min; bygg: andel av byggets hp per 30 min; radius: ikke i bruk
-    brann: { rute: 64, brenner: [50, 110], spred: .16, vind: .3, slokk: .5, maks: 350, treff: 1, bygg: .2, radius: 2500 },
+    // treff: treff på et lag som står i brannen per 30 min; bygg: andel av byggets hp per 30 min;
+    // lyn: sjanse per time for at lynet tenner når det er knusktørt og overskyet eller torden; skudd: sjanse per skuddveksling i knusktørt lende
+    brann: { rute: 64, brenner: [50, 110], spred: .16, vind: .3, slokk: .5, maks: 350, treff: 1, bygg: .2, lyn: .015, skudd: .004 },
     // brennbarhet per terrengklasse (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 7 tettbebyggelse)
     brennbar: [.05, 1, .55, 0, 0, .3, .1, .45],
     // jakt: rasjoner per felt dyr, jaktlag: timer per jakt, dyr per jakt (minst, flest), området hviler (timer), rute (m)
     kjøtt: { elg: 60, rein: 25, moskus: 70, sau: 10, ku: 80 },
     jakt: { timer: 6, dyr: { elg: [0, 1], rein: [1, 3] }, hviler: 72, rute: 3000, rekkevidde: 250, bredde: 1.3 },
+    // (målPerPerson: én person på «fri» i leiren steller så mange mål; færre folk = kornet gror tilsvarende saktere)
     // åker: rasjoner per mål ved høsting, døgn til kornet er modent, såkorn (kr per mål), ny åker (kr og mål per rydding), mest
-    åker: { perMål: 6, modning: 3, såkorn: 20000, rydd: 1e6, ryddMål: 20, maks: 200, nær: 500 },
+    åker: { perMål: 6, modning: 3, såkorn: 20000, rydd: 1e6, ryddMål: 20, maks: 200, nær: 500, målPerPerson: 40 },
     // funn: rutenett (m), sjanse per rute, oppdages innen (m), undersøkes innen (m)
     funn: { blokk: 2500, p: .3, ser: 300, tar: 80 },
     // radio: timer mellom meldingene, andelen sanne, flest i lista
     radio: { timer: [3, 6], sann: .65, liste: 8 },
     // tog: kr per km for å sette strekningen i stand, stål per 10 km, timer å sette i stand per 10 km, lengste strekning (km),
     // timer mellom togene og lasten hvert tog har med
-    tog: { krPerKm: 150000, stålPer10: 2, timerPer10: 2, maksKm: 250, mellom: 24, last: { tre: 60, betong: 40, stål: 30, drivstoff: 3000, mat: 80 } },
+    tog: { nærSpor: 1000, krPerKm: 150000, stålPer10: 2, timerPer10: 2, maksKm: 250, mellom: 24, last: { tre: 60, betong: 40, stål: 30, drivstoff: 3000, mat: 80 } },
     // årstidene går av seg selv (valgfritt): døgn per årstid
     årstid: { døgn: 8, rekke: ['sommer', 'høst', 'vinter', 'vår'] },
   };
@@ -86,9 +90,9 @@
   function steg(V, dtMin, vær) {
     const d = dtMin / 1440, t = dtMin / 60, R = REGLER;
     if (vær.temp < 0) V.frost = Math.min(R.is.maks, V.frost - vær.temp * d); else V.frost = Math.max(0, V.frost - vær.temp * d * R.is.tiner);
-    V.regn = klem(V.regn + (vær.regn > .1 ? vær.regn * t : -R.regn.tørker * t), 0, R.regn.maks);
+    V.regn = klem(V.regn + (vær.regn > .1 && vær.temp > 0 ? vær.regn * t : -R.regn.tørker * t * (vær.temp < 0 ? 2 : 1)), 0, R.regn.maks);
     const vått = vær.regn > .1 || vær.snø > .1 || (vær.våt || 0) > .3;
-    V.tørke = klem(V.tørke + (vått ? -d * 6 : d), 0, R.tørke.maks);
+    V.tørke = klem(V.tørke + (vått ? -d * R.tørke.vått : d), 0, R.tørke.maks);
     return V;
   }
   // Brannfaren 0–1 (tørke, ikke regn, ikke snø på bakken i dalen om vinteren)
@@ -101,8 +105,9 @@
   // Hva kan skje denne timen? Gir 'flom', 'ras' eller null. rnd: tilfeldig tall 0–1.
   function trekkHendelse(V, timer, rnd) {
     const R = REGLER.regn, p = 1 - Math.pow(1 - R.sjanse, timer);
-    if (V.regn >= R.ras && rnd() < p) return 'ras';
-    if (V.regn >= R.flom && rnd() < p) return 'flom';
+    const har = type => V.soner.some(s => s.type === type);
+    if (V.regn >= R.ras && !har('ras') && rnd() < p) { V.regn -= R.etter.ras; return 'ras'; }
+    if (V.regn >= R.flom && !har('flom') && rnd() < p) { V.regn -= R.etter.flom; return 'flom'; }
     return null;
   }
   // Det spilleren skal se: linjer med følgene av været og årstiden nå. o: { moh (leiren) }
@@ -164,12 +169,15 @@
   }
   // Åkeren d døgn: gror vår og sommer, høstes i én klump om høsten når kornet er modent, fryser bort om vinteren.
   // Gir { mat } når det høstes, { tapt: true } når avlinga gikk tapt, ellers {}.
-  function åkerSteg(V, d, årstid) {
+  function åkerSteg(V, d, årstid, arbeid = 1) {
     const Å = V.åker, R = REGLER.åker; if (!Å.sådd) return {};
-    if (årstid === 'vår' || årstid === 'sommer') { Å.grodd += d; return {}; }
+    if (årstid === 'vår' || årstid === 'sommer') { Å.grodd += d * klem(arbeid, 0, 1); return {}; }
     if (årstid === 'høst') { Å.sådd = false; const andel = klem(Å.grodd / R.modning, 0, 1), mat = Math.round(Å.mål * R.perMål * andel); Å.grodd = 0; Å.år++; return { mat, andel }; }
     Å.sådd = false; Å.grodd = 0; return { tapt: true };
   }
+  // Folk åkeren trenger, og siden (m) på den kvadratiske åkeren i kartet (1 mål = 1000 m²)
+  const åkerBehov = mål => Math.ceil(mål / REGLER.åker.målPerPerson);
+  const åkerSide = mål => Math.sqrt(Math.max(0, mål) * 1000);
   function ryddÅker(V, mål = REGLER.åker.ryddMål) { const Å = V.åker, R = REGLER.åker; if (Å.mål + mål > R.maks) return { feil: `Dere kan ikke drive mer enn ${R.maks} mål.` }; Å.mål += mål; return { ok: true, pris: R.rydd * mål / R.ryddMål }; }
 
   // ---------- 35 brann ----------
@@ -262,6 +270,7 @@
   }
 
   // ---------- 38 tog ----------
+  // RESERVE når jernbanedataene ikke er lastet (visningen ser ellers etter spor innen 1 km fra tettstedet).
   // Tettsteder med jernbanestasjon (Claudes liste etter hukommelsen: de viktigste stasjonsbyene på Dovrebanen, Raumabanen, Rørosbanen,
   // Bergensbanen, Sørlandsbanen, Jærbanen, Østfoldbanen, Vestfoldbanen, Nordlandsbanen, Ofotbanen m.fl.). Sammenlignes uten store bokstaver.
   const STASJONER = ['Oslo', 'Lillestrøm', 'Eidsvoll', 'Hamar', 'Brumunddal', 'Moelv', 'Lillehammer', 'Ringebu', 'Vinstra', 'Otta', 'Dovre', 'Dombås', 'Oppdal', 'Berkåk', 'Støren',
@@ -273,7 +282,8 @@
   // Kan strekningen a–b settes i stand? a, b: { id, navn, x, y, eier }. Gir { feil } eller { km, pris, stål, timer }.
   function togPlan(a, b, side = 'blå') {
     const R = REGLER.tog; if (!a || !b || a.id === b.id) return { feil: 'Velg to forskjellige stasjoner.' };
-    for (const s of [a, b]) { if (!erStasjon(s.navn)) return { feil: `${s.navn} har ingen jernbanestasjon.` }; if (s.eier !== side) return { feil: `Dere holder ikke ${s.navn}.` }; }
+    // s.stasjon: true/false når kartdataene har svart (spor nær tettstedet), ellers gjelder navnelista
+    for (const s of [a, b]) { if (!(s.stasjon === true || (s.stasjon == null && erStasjon(s.navn)))) return { feil: `${s.navn} har ingen jernbanestasjon.` }; if (s.eier !== side) return { feil: `Dere holder ikke ${s.navn}.` }; }
     const km = Math.round(Math.hypot(a.x - b.x, a.y - b.y) / 100) / 10; if (km > R.maksKm) return { feil: `For langt (${km} km, mest ${R.maksKm} km).` };
     return { km, pris: Math.round(km * R.krPerKm), stål: Math.ceil(km / 10 * R.stålPer10), timer: Math.max(1, Math.round(km / 10 * R.timerPer10)) };
   }
@@ -295,7 +305,7 @@
   function fraJSON(d) { const V = ny(); if (!d || d.versjon !== 1) return V; for (const k of Object.keys(V)) if (d[k] != null) V[k] = typeof V[k] === 'object' && !Array.isArray(V[k]) ? { ...V[k], ...d[k] } : d[k]; if (!V.brann.celler) V.brann = nyBrann(); return V; }
 
   const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
-    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
+    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
     funnIBlokk, funnNær, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Verden = api;
