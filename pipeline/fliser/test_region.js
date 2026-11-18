@@ -6,7 +6,7 @@ let frø = 11; const rng = () => (frø = (frø * 16807) % 2147483647) / 21474836
 
 // typer
 ok(R.type(1200, {}) === 'bygd' && R.type(9000, {}) === 'by' && R.type(1200, { kraft: 4000 }) === 'industri' && R.type(300, { kraft: 4000 }) === 'bygd', 'type: bygd, by og industristed (kraftverk nær og nok folk)');
-ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 12000, kai: 100 }) === 'oljeby', 'type: kai gir havn, oljeanlegg går foran alt');
+ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 5000, kai: 100 }) === 'oljeby' && R.type(20000, { olje: 12000, kai: 100, kraft: 100 }) === 'by' && R.type(3000, { kai: 100, kraft: 100 }) === 'industri', 'type: kai gir havn, oljeanlegg går foran alt, en by er by');
 // det de gir
 { const g = R.grunn(1200, 'bygd'), h = R.grunn(40, 'bygd'), s = R.grunn(200000, 'by');
   ok(g.mat === 36 && g.tre === 6 && g.penger === 360000 && !g.stål, 'bygd på 1200: 36 rasjoner, 6 m³ tre og 360 000 kr per døgn');
@@ -20,9 +20,9 @@ ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 120
   ok(/36 rasjoner/.test(R.girTekst(R.gir(1200, 'bygd', st), v => v + ' kr')) && R.girTekst({}) === 'ingenting', 'teksten: ' + R.girTekst(R.gir(1200, 'bygd', st), v => v + ' kr')); }
 // lojalitet
 { let l = 50; for (let i = 0; i < 10; i++) l = R.lojSteg(l, { skatt: 'hard', strøm: true }, .5);
-  ok(l === 5 && R.opprør(l, false) === 'tapt' && R.opprør(l, true) === 'uro' && R.opprør(40, false) === null, 'hard skatt: fra 50 til bunnen på fem døgn – opprør uten garnison, uro med');
+  ok(l === 0 && R.opprør(l, false) === 'tapt' && R.opprør(l, true) === 'uro' && R.opprør(40, false) === null, 'hard skatt: fra 50 til bunnen på fem døgn – opprør uten garnison, uro med');
   let m = 20; for (let i = 0; i < 40; i++) m = R.lojSteg(m, { skatt: 'støtte', strøm: true }, .25); ok(m === 100, 'støtte løfter lojaliteten til topps');
-  ok(R.lojMål({ skatt: 'vanlig', strøm: true, garnison: true }) === 65 && R.lojMål({ skatt: 'vanlig', strøm: false }) === 40 && R.lojMål({ skatt: 'hard', strøm: false }) === 0, 'garnison løfter målet, uten strøm senker det');
+  ok(R.lojMål({ skatt: 'vanlig', strøm: true, garnison: true }) === 65 && R.lojMål({ skatt: 'vanlig', strøm: false }) === 40 && R.lojMål({ skatt: 'hard', strøm: false }) === 0 && R.opprør(R.lojMål({ skatt: 'hard', strøm: true, garnison: true }), true) === 'uro', 'garnison løfter målet, uten strøm senker det');
   ok(R.lojOrd(90) === 'trofast' && R.lojOrd(5) === 'opprør', 'ord for lojaliteten'); }
 // handelsruter
 { const leir = { x: 0, y: 0 }, A = { id: 1, navn: 'A', x: 10000, y: 0 }, B = { id: 2, navn: 'B', x: 20000, y: 1000 }, C = { id: 3, navn: 'C', x: -50000, y: 0 };
@@ -37,6 +37,9 @@ ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 120
 // gjenoppbygging
 { const byer = [{ id: 1, x: 3000, y: 0, eier: 'blå' }, { id: 2, x: 6000, y: 0, eier: null }, { id: 3, x: 4000, y: 0, eier: null, fiendeI: true }, { id: 4, x: 9000, y: 0, eier: 'rød' }, { id: 5, x: 40000, y: 0, eier: 'blå' }];
   const g = R.gjenoppbygg(0, 0, byer); ok(g.lojale.join() === '1' && g.vunnet === 2 && g.pluss === 20, 'reparasjon: eget tettsted nær blir mer lojalt, nærmeste nøytrale uten fiender går over'); }
+// motstandernes fordel
+{ const f = R.fordel(['industri', 'by', 'bygd', 'havn', 'bygd']), tom = R.fordel([]), mye = R.fordel(Array(9).fill('industri').concat(Array(9).fill('bygd')));
+  ok(Math.abs(f.treff - 1.1) < 1e-9 && Math.abs(f.forsterk - 1.75) < 1e-9 && tom.treff === 1 && tom.forsterk === 1 && Math.abs(mye.treff - 1.2) < 1e-9 && mye.forsterk === 2, 'motstanderne: industri og byer gir bedre treff (høyst +20 %), bygder og havner raskere forsterkning (høyst ×2)'); }
 // veksling
 { const V = R.Veksle; ok(V.tilDiesel(10, 25.5, 1000).liter === 100 && V.tilDiesel(10, 4.9, 1000).tonn === 4 && V.tilDiesel(10, 50, 35).tonn === 3, 'olje til diesel: 10 liter per tonn, etter oljen og plassen');
   ok(!!V.tilDiesel(10, .5, 1000).feil && !!V.tilDiesel(10, 50, 5).feil && V.tilOlje(10, 150).tonn === 10 && V.tilOlje(10, 40).tonn === 2 && !!V.tilOlje(10, 10).feil && /10 liter/.test(V.tekst()), 'diesel til olje: 15 liter per tonn; feil når det ikke går'); }

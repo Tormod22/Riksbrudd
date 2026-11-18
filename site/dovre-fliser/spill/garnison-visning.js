@@ -29,7 +29,7 @@
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || !t.eier) continue;
       const strøm = strømFor(by);
       if (t.eier === 'blå' && b) b.beholdning += G.produksjon(by.e.folk, sek, strøm);
-      for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek, strøm, nyMann))
+      for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek * (t.eier !== 'blå' && window.RegionSpill && RegionSpill.fordel ? RegionSpill.fordel(t.eier).forsterk : 1), strøm, nyMann))
         if (s.side === 'blå') logg(hva === 'ny' ? `${m.navn} (${m.rolle}) er rekruttert i ${by.e.navn} og går inn i ${s.navn}.` : `${m.navn} (${s.navn}) er frisk igjen etter stell i ${by.e.navn}.`);
     }
     // verkstedene i egne tettsteder reparerer kjøretøy: 10 % skade per spilltime (uten strøm 4 %)

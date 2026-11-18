@@ -17,9 +17,9 @@ Alle tall er **Claudes forslag** og står samlet i `Region.REGLER`, `Region.TYPE
 (1/24 døgn), og loggen sier hver morgen hva regionen ga.
 
 7. **Hvert tettsted gir noe eget.** Typen bestemmes av første regel som slår til (`Region.type`):
-   oljeanlegg på land innen 25 km = *oljeby* (diesel) · kai innen 2,5 km (ferjekai, eller havn/kai ≥ 60 m fra kaier.js) = *havn* (mat, diesel) ·
-   kraftverk innen 10 km og minst 800 innbyggere = *industristed* (stål, betong) · minst 5000 innbyggere = *by* (rekrutter, stål) ·
-   ellers *bygd* (mat, tre). Mengden følger folketallet (per 1000 innbyggere, med minst og høyst). Alle betaler skatt: 300 kr per innbygger per døgn
+   oljeanlegg på land innen 8 km = *oljeby* (diesel) · kraftverk innen 6 km og 1000–4999 innbyggere = *industristed* (stål, betong) ·
+   minst 5000 innbyggere = *by* (rekrutter, stål) · ferjekai eller havn/ferjeterminal (kaier.js type ≥ 3) innen 1,5 km = *havn* (mat, diesel) ·
+   ellers *bygd* (mat, tre). (Runde 2: de første grensene ga 434 havner og 119 oljebyer av 990 tettsteder på /rogaland – strammet inn.) Mengden følger folketallet (per 1000 innbyggere, med minst og høyst). Alle betaler skatt: 300 kr per innbygger per døgn
    (høyst 4 mill.). Vises i Region-panelet, i tettstedspanelet (trykk på tettstedet) og som tekst under tettstedene i kartet når Region eller
    krigskartet er åpent. Den gamle oljen til basen (garnison.js) er som før.
 8. **Handelsruter.** `Region.rute`: rett linje fra tettstedet til leiren, via nærmeste tettsted du holder som ligger nærmere leiren (høyst 30 km
@@ -27,7 +27,7 @@ Alle tall er **Claudes forslag** og står samlet i `Region.REGLER`, `Region.TYPE
    leddet vokter det (ett hakk tryggere). Ingen egne kjøretøy. Tegnes i 2D (grønn/gul/rød stiplet) når Region/krigskartet er åpent eller
    kartet er zoomet ut (kam.m ≥ 18). Loggen melder når en rute skifter.
 9. **Skatt og lojalitet** per tettsted (og «Alle: …»): Støtte (ingen varer, koster 150 kr per innbygger per døgn, mål 100), Lett (×0,6, mål 80),
-   Vanlig (×1, mål 55), Hard (×1,7, mål 5). Lojaliteten (0–100, start 50) går mot målet; garnison +10, uten strøm −15. Varene ganges med
+   Vanlig (×1, mål 55), Hard (×1,7, mål 0 – med garnison 10 = uro). Lojaliteten (0–100, start 50) går mot målet; garnison +10, uten strøm −15. Varene ganges med
    0,6–1,4 etter lojaliteten. Lojalitet ≤ 10: uten garnison OPPRØR (tettstedet blir nøytralt), med garnison «uro» (gir halvparten).
 10. **Strøm.** Samme regel som før (helt kraftverk innen 40 km): uten strøm gir tettstedet 40 % og lojaliteten synker. Kraftverkpanelet sier
     hvilke av DINE tettsteder som får strøm derfra, og loggen melder når et tettsted mister eller får strøm.
@@ -73,3 +73,20 @@ Lagring: «riksbrudd-region» per leir.
 - Balansen er ikke spilt gjennom over tid (bare regnet på): Dombås (1145 innb., industristed) gir ca. 344 000 kr, 2,3 m³ betong og 1,7 t stål
   per døgn ved vanlig skatt.
 - Bare prøvd på Dovre-testsiden (ett tettsted). Ruter via flere tettsteder er bare prøvd i regeltesten.
+
+## Runde 2 (samme natt)
+- **Motstanderne har nytte av tettstedene sine** (`Region.fordel(typer)`, tallene i `Region.FORDEL`): hvert industristed, hver by og oljeby
+  gir treff +5 % (høyst +20 %), hver bygd og havn gjør at garnisonene forsterkes 25 % raskere (høyst dobbelt så fort). Ikke i testene.
+  **KROKEN for pakka «krig»:** `RegionSpill.fordel(side)` → `{ treff, forsterk, antall, typer }` (1 = ingen fordel; 'blå' og testene gir alltid 1;
+  regnes høyst hvert tredje sekund). Den brukes i dag to steder: `KROKER.ild` i region-visning.js (treff) og forsterkningen av garnisoner i
+  garnison-visning.js. AI-en kan f.eks. dele ventetiden på nye lag (`R.forsterkning.hver`) på `fordel(side).forsterk`. fraksjoner*.js er ikke endret.
+  Region-panelet har en del «Motstanderne» som sier hva de får.
+- **Krigskartets panel** får en linje om type og ytelse på det valgte tettstedet og i «Neste trekk» (`RegionSpill.pyntKrig`, en
+  MutationObserver på #krig som bare ser på panelets egne barn). strategi-visning.js er ikke endret.
+- Rettet: kjøp av nattsikt ga en sidefeil (oppdaterSikt uten lag) – nå merkes lagene for ny sikt. Hard skatt med garnison endte aldri i uro
+  (målet 15 lå over grensa 10) – målet er nå 0. Tekstene i kartet vises bare for større tettsteder når kartet er zoomet langt ut.
+- Prøvd på /rogaland med ekte data (sju tettsteder): ruter via andre tettsteder (Etne → Sandeid → Vikedal → Sand → leiren), «Alle: hard»,
+  leveranse av mat, diesel, betong, stål, penger og en rekrutt, medisiner, smuglerdiesel, nattsikt (×1,4 kl. 00, ×1 kl. 12), veksling begge
+  veger med tank, uro med garnison, og en ekte reparasjon av et kraftverk (Lundsæter) som fikk Leirvik over på spillerens side.
+- Sju tettsteder i Ryfylke ga ca. 2,6 mill. kr per døgn (ti minutter). Det er trolig for rundhåndet over tid – skatten (300 kr per innbygger)
+  er det første tallet å skru ned hvis pengene blir for lette.

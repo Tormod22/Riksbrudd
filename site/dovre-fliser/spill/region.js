@@ -20,9 +20,9 @@
   const REGLER = {
     døgnEkteSek: 600,                       // et handelsdøgn er høyst ti minutter ekte spilling
     // hva som gjør et tettsted til hva (meter til nærmeste)
-    nær: { olje: 25000, kai: 2500, kraft: 10000 },
+    nær: { olje: 8000, kai: 1500, kraft: 6000 },
     byFolk: 5000,                            // fra så mange innbyggere er det en by
-    industriFolk: 800,                       // et industristed har minst så mange innbyggere (og et kraftverk innen nær.kraft)
+    industriFolk: 1000,                      // et industristed har minst så mange innbyggere (og et kraftverk innen nær.kraft)
     // skatt i kroner per innbygger per døgn (ved «vanlig»), og taket per tettsted
     skattKr: 300, skattMaks: 4e6,
     // lojalitet 0–100
@@ -44,7 +44,7 @@
   // Typene: hva tettstedet lever av, og hva det gir per 1000 innbyggere per døgn [per 1000, minst, høyst]
   const TYPER = {
     oljeby: { navn: 'Oljeby', tekst: 'oljeanlegg i nærheten', gir: { diesel: [150, 60, 900] } },
-    havn: { navn: 'Havn', tekst: 'kai: fiske og varer sjøvegen', gir: { mat: [20, 8, 120], diesel: [60, 20, 400] } },
+    havn: { navn: 'Havn', tekst: 'havn eller ferjekai: fiske og varer sjøvegen', gir: { mat: [20, 8, 120], diesel: [60, 20, 400] } },
     industri: { navn: 'Industristed', tekst: 'kraftverk like ved: verksteder og smelteverk', gir: { stål: [1.5, .5, 10], betong: [2, 1, 12] } },
     by: { navn: 'By', tekst: 'mange folk: rekrutter og verksteder', gir: { folk: [.1, .3, 2], stål: [.4, .5, 5] } },
     bygd: { navn: 'Bygd', tekst: 'jordbruk og skog', gir: { mat: [30, 10, 150], tre: [5, 2, 25] } },
@@ -58,7 +58,7 @@
     støtte: { navn: 'Støtte', f: 0, mål: 100, fart: 15, koster: 150, tekst: 'Du gir i stedet for å ta: koster penger, lojaliteten stiger fort.' },
     lett: { navn: 'Lett', f: .6, mål: 80, fart: 6, tekst: 'Litt mindre varer, lojaliteten stiger.' },
     vanlig: { navn: 'Vanlig', f: 1, mål: 55, fart: 4, tekst: 'Vanlig skatt, lojaliteten holder seg midt på treet.' },
-    hard: { navn: 'Hard', f: 1.7, mål: 5, fart: 10, tekst: 'Mye mer nå, men lojaliteten faller – til slutt blir det opprør.' },
+    hard: { navn: 'Hard', f: 1.7, mål: 0, fart: 10, tekst: 'Mye mer nå, men lojaliteten faller – til slutt blir det opprør (uro hvis du har garnison).' },
   };
   const SKATTER = Object.keys(SKATT);
 
@@ -67,9 +67,9 @@
   function type(folk, om = {}) {
     const N = REGLER.nær, inf = v => (v === undefined || v === null ? Infinity : v);
     if (inf(om.olje) <= N.olje) return 'oljeby';
-    if (inf(om.kai) <= N.kai) return 'havn';
-    if (inf(om.kraft) <= N.kraft && folk >= REGLER.industriFolk) return 'industri';
+    if (inf(om.kraft) <= N.kraft && folk >= REGLER.industriFolk && folk < REGLER.byFolk) return 'industri';
     if (folk >= REGLER.byFolk) return 'by';
+    if (inf(om.kai) <= N.kai) return 'havn';
     return 'bygd';
   }
   // Det tettstedet gir per døgn ved vanlig skatt, full rute, strøm og lojalitet midt på (faktor 1)
@@ -166,6 +166,16 @@
     return { lojale, vunnet, pluss: B.lojal };
   }
 
+  // ---------- motstandernes tettsteder ----------
+  // Også motstanderne har nytte av det de holder (Claudes forslag): industristeder, byer og oljebyer gir bedre våpen (treff +5 % hver,
+  // høyst +20 %), bygder og havner gir mat og folk (garnisonene forsterkes 25 % raskere for hver, høyst dobbelt så fort).
+  // typer: lista over typene til tettstedene siden holder. Gir { treff, forsterk } (faktorer, 1 = ingen fordel).
+  const FORDEL = { treff: .05, treffMaks: .2, forsterk: .25, forsterkMaks: 1 };
+  function fordel(typer) {
+    let v = 0, m = 0; for (const t of typer || []) { if (t === 'industri' || t === 'by' || t === 'oljeby') v++; else m++; }
+    return { treff: 1 + Math.min(FORDEL.treffMaks, FORDEL.treff * v), forsterk: 1 + Math.min(FORDEL.forsterkMaks, FORDEL.forsterk * m), antall: v + m };
+  }
+
   // ---------- veksling olje ↔ diesel ----------
   const Veksle = {
     // tonn olje -> liter diesel (så mye som får plass); gir { tonn, liter } eller { feil }
@@ -221,7 +231,7 @@
     return S; }
 
   const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, gir, girTekst, lojMål, lojSteg, opprør, lojOrd,
-    tilLinje, ledd, kjede, rute, ruteOrd, gjenoppbygg, Veksle, Bors, ny, by, settSkatt, fraJSON };
+    tilLinje, ledd, kjede, rute, ruteOrd, gjenoppbygg, FORDEL, fordel, Veksle, Bors, ny, by, settSkatt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Region = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
