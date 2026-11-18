@@ -20,10 +20,21 @@
  * 12. Kortene (flyktninger, hendelser, personkort) lå oppå knappene øverst og kunne bli høyere enn en liggende skjerm uten
  *     å kunne rulles.
  *  9. Fliser i raden nederst som ikke finnes ennå (hidden), vistes likevel (display:flex slo ut hidden).
+ *
+ * Runde 2 (samme natt, pakke «telefon2»):
+ * 13. LIGGENDE TELEFON (body.tlfligg: kort, og bredere enn 1,2 × høyden): bunnarkene (krigskartet, Region, Sjø, Verden, Tropper, Deg,
+ *     Stridsregler, «Lag noe», Samfunn, Tiltak) tok halve høyden, så kartet over ble ca. 150 px høyt. Nå er de sidepaneler med full
+ *     høyde – til venstre der de står til venstre på PC (krigskartet, Region, Samfunn), ellers til høyre. Bredden min(400 px, 50 %)
+ *     er Claudes forslag. Krigskartet passer inn området i den frie delen ved siden av (strategi-visning.js åpne()).
+ * 14. Stoppkortet etter spoling («Stoppet: …») lå oppå loggmeldingen som sier det samme: loggen viker (skjules) mens kortet står
+ *     oppå den (body.flytvik – gjelder også PC når de overlapper).
+ * 15. ☰-menyen hadde 32 px høye rader: nå minst 40 px (menyen kan rulles).
  */
 (() => {
   if (typeof document === 'undefined') return;
   const T = 'env(safe-area-inset-top,0px)', B = 'env(safe-area-inset-bottom,0px)', L = 'env(safe-area-inset-left,0px)', Rt = 'env(safe-area-inset-right,0px)';
+  // liggende telefon: disse panelene blir sidepaneler med full høyde (13)
+  const SIDE = { venstre: ['krig', 'region', 'samfunnmeny'], høyre: ['sjopanel', 'verdenpanel', 'tropppanel', 'karakterark', 'stridpanel', 'evpanel', 'krigpanel'] };
   const css = document.createElement('style'); css.id = 'telefoncss';
   css.textContent = `
 body.kort.smal .knapper button{ height:40px; min-width:38px; }
@@ -53,16 +64,32 @@ body.kort:not(.smal) #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + 
 body.kort #krigpanel{ left:calc(8px + ${L}); right:calc(8px + ${Rt}); width:auto; box-sizing:border-box; }
 body.kort #folkmeny .person small{ display:block; margin-top:2px; }
 body.kort #folkmeny select, body.kort #samfunnmeny select, body.kort #stridpanel select, body.kort #tropppanel select{ min-height:40px; }
-body.kort #flytkort{ max-width:calc(100vw - 24px); }
+body.kort #flytkort{ left:calc(12px + ${L}); right:calc(12px + ${Rt}); transform:none; width:fit-content; max-width:min(560px, calc(100vw - 24px)); margin:0 auto; box-sizing:border-box; flex-wrap:nowrap; } body.kort #flytkort > span{ flex:1 1 auto; min-width:0; }
+body.kort #lagmeny.på button{ height:auto; min-height:40px; }
+body.flytvik #logg{ visibility:hidden; }
+body.kort #opplaering .rad{ flex-wrap:wrap; }
+${SIDE.venstre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ left:calc(8px + ${L}); right:auto; }
+${SIDE.høyre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ right:calc(8px + ${Rt}); left:auto; }
+${[...SIDE.venstre, ...SIDE.høyre].map(id => `body.kort.tlfligg #${id}`).join(', ')}{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); width:min(400px, 50vw); max-width:none; height:auto; max-height:none; transform:none; overflow-y:auto; box-sizing:border-box; border-width:1px; border-style:solid; }
 `;
   document.head.appendChild(css);
 
   // paneler som aldri skal regnes som «dekker raden nederst»
   const IKKE = new Set(['mkom', 'kommando', 'opplaering', 'logg', 'nhud', 'kontrollrom', 'oppstart', 'feil', 'kilde', 'skala', 'nordpil', 'minikart', 'kompass']);
   const merket = new WeakSet();
+  // 14: stoppkortet etter spoling står oppå loggen (som sier det samme) -> loggen viker så lenge kortet står
+  function flyt() { const b = document.body, k = document.getElementById('flytkort'), l = document.getElementById('logg'); let vik = false;
+    if (k && l && k.classList.contains('på')) { const a = k.getBoundingClientRect(), c = l.getBoundingClientRect();
+      vik = a.width > 0 && c.width > 0 && a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom; }
+    // når loggen alt er skjult, har den fortsatt mål (visibility) – den blir skjult til kortet er borte
+    if (b.classList.contains('flytvik') && k && k.classList.contains('på')) vik = true;
+    if (b.classList.contains('flytvik') !== vik) b.classList.toggle('flytvik', vik); }
   function pass() {
-    const b = document.body; if (!b.classList.contains('kort')) { for (const k of ['mkomfull', 'tlfdekk', 'tlfopp']) if (b.classList.contains(k)) b.classList.remove(k); return; }
+    flyt();
+    const b = document.body; if (!b.classList.contains('kort')) { for (const k of ['mkomfull', 'tlfdekk', 'tlfopp', 'tlfligg']) if (b.classList.contains(k)) b.classList.remove(k); return; }
     const H = window.innerHeight, W = window.innerWidth, m = document.getElementById('mkom');
+    // 13: liggende telefon
+    const ligg = W > H * 1.2; if (b.classList.contains('tlfligg') !== ligg) b.classList.toggle('tlfligg', ligg);
     // 2: mange fliser på smal skjerm -> hele bredden
     const ant = m ? [...m.children].filter(k => !k.hidden).length : 0, full = b.classList.contains('smal') && ant > 6;
     if (b.classList.contains('mkomfull') !== full) b.classList.toggle('mkomfull', full);
@@ -82,5 +109,5 @@ body.kort #flytkort{ max-width:calc(100vw - 24px); }
     if (b.classList.contains('tlfopp') !== opp) b.classList.toggle('tlfopp', opp);
   }
   setInterval(pass, 350); window.addEventListener('resize', pass); pass();
-  window.Telefon = { pass };
+  window.Telefon = { pass, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
 })();

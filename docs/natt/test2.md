@@ -63,3 +63,42 @@ krig, sjo, spillform, verden ok; ui og okonomi se 20 og 21.
 - Å gå inn i et hus på /rogaland, hund, snikemåler, Drikk/Spis-knappene (3D går i programvare-grafikk her: flere sekunder per bilde).
 - Styrespaken ble dratt med berøring, men flyttingen ble ikke målt.
 - Hele sjekk.js er ikke kjørt.
+
+## Runde 2 (pakke «telefon2», samme natt)
+Gren `claude/natt18-test2`, flettet med `origin/claude/nattfiks` først (bare skript-tagger i index.html, versjon.py kjørt).
+Prøvd med Playwright i telefonprofil (390 × 844 og 844 × 390, isMobile, hasTouch, iPhone-brukerstreng, webdriver av) med ekte trykk,
+og på PC (1400 × 820). Dovre-testsiden, og /rogaland med dev.py for krigskartet, Region og Sjø. Bilder: scratchpad `natt/test2/r2-*.png`.
+
+Rettet:
+1. (funn 16) KRIGSKARTET LIGGENDE: på liggende telefon (`body.tlfligg` = kort og bredere enn 1,2 × høyden) er krigskartet et sidepanel
+   til venstre med full høyde (fra under knappene øverst til bunnen), og `strategi-visning.js` åpne() passer området inn i den frie
+   delen til høyre for panelet – som på PC (måler panelets høyre kant; kartet midt i det frie feltet, under statuslinja). Før: bunnark
+   med halve høyden og ca. 150 px kart. Nå ca. 430 × 340 px kart, og hele området (stiplet ring) står ved siden av panelet.
+   Noen navn kan fortsatt ligge tett der tettstedene ligger tett (Sauda/Saudasjøen), men langt færre.
+2. (funn 16) De andre bunnpanelene liggende: Region, Samfunn (venstre), Sjø, Verden, Tropper, Deg (#karakterark), Stridsregler,
+   «Lag noe» (#evpanel) og Tiltak (#krigpanel) (høyre) er sidepaneler med full høyde, bredde min(400 px, 50 %) (Claudes forslag).
+   Venstre/høyre følger plassene i `paneler.js` (PLASS) og PC. Raden nederst skjules mens de står (som før, `tlfdekk`).
+   Stående telefon er uendret (bunnark / fullt panel som før).
+3. (funn 17) FØRSTE GANG: opplæringen kommer først. `hjelp.js` første() åpner ikke «Slik spiller du» av seg selv når opplæringen er på
+   og ikke ferdig (merker den likevel som sett). Opplæringskortet har fått knappen «Les mer i hjelpen» (`opplaering.js`, #opphjelp),
+   og ?-knappen øverst virker som før. Opplæringen gjemmer seg mens hjelpen er oppe og kommer tilbake når den lukkes. Er opplæringen
+   slått av, kommer hjelpen første gang som før. Gjelder PC og telefon. Tekstene i hjelpen er ikke rørt.
+4. (funn 19) STOPPKORTET: loggen viker (skjules, `body.flytvik`) mens stoppkortet står oppå den – på PC bare når de faktisk overlapper
+   (der står loggen til høyre, så den vises). Loggmeldingen er der når kortet lukkes eller går bort etter 9 s. På telefon er kortet nå
+   sentrert i full bredde (før ble det klemt til 195 px stående: «left:50%» ga halve skjermen) med teksten til venstre og knappene på
+   samme linje.
+5. (funn 18) ☰-MENYEN: radene er minst 40 px høye på telefon (før 32). Menyen rulles som før.
+
+Filer: `spill/telefon.js` (CSS + pass(): tlfligg, flytvik; `Telefon.SIDE`, `Telefon.ligg()`), `spill/strategi-visning.js` (åpne(): liggende),
+`spill/hjelp.js` (første(): 4 linjer, bare oppstartslogikken), `spill/opplaering.js` (tegn(): knappen «Les mer i hjelpen», 3 linjer),
+`index.html` (bare versjonsmerker fra versjon.py).
+
+Vakter: de utklipte skjermvaktene fra sjekk.js (kompakt skjerm, ikoner, samlet utseende, hurtigtaster, ☰-menyen, Leir-menyen og målene,
+folk innenfor skjermen, spillskjermen, knapperaden i 3D) og alle `vakter/*.js` (ui, folk, karakter, krig, natur, okonomi, sjo, spillform,
+verden) er grønne på PC, stående telefon og liggende telefon (knapperaden bare PC og stående – den trenger 3D).
+Skript: scratchpad `natt/test2/t1.js` (Dovre: første gang, ☰, stoppkort, panelene liggende), `t2.js` (/rogaland: krigskartet, Region,
+Verden, Sjø), `t4.js` (PC), `vk.js` (vaktene; bruker `../ui/u2.js`).
+
+Ikke gjort / ikke prøvd i runde 2:
+- Ekte Safari (bare Chromium med telefonprofil). «Lag noe» liggende er bare prøvd med CSS-en (panelet åpnes bare når du går i 3D).
+- Liggende iPhone SE (667 × 375) får også sidepanelene (bredere enn 1,2 × høyden); ikke prøvd.

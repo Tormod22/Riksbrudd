@@ -112,10 +112,13 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
     const ny = el('div'); ny.append(bygg(T)); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }
   function åpne() { const L = leir(); if (!L) return; if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
     if (window.lukkPanel) lukkPanel(); åpen = true; panel.classList.add('på'); document.body.classList.add('krig'); kn.classList.add('på'); kn.setAttribute('aria-pressed', 'true');
-    førKam = { x: kam.x, y: kam.y, m: kam.m }; const smal = document.body.classList.contains('smal') || document.body.classList.contains('kort');
-    kam.x = L.x; const rr = område().radius || S.REGLER.radius, pb = smal ? 0 : Math.min(370, VW * .4);
-    // hele området skal være synlig i det frie feltet: til høyre for panelet på PC, over panelet på telefon
-    kam.m = smal ? rr * 2.3 / Math.max(200, Math.min(VW, VH * .5)) : rr * 2.3 / Math.max(200, Math.min(VW - pb, VH - 120)); kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : -20 * kam.m); sist = ''; vis(true); skitten = true; }
+    førKam = { x: kam.x, y: kam.y, m: kam.m }; const kl = document.body.classList;
+    // liggende telefon (telefon.js, body.tlfligg): panelet er et sidepanel til venstre med full høyde, som på PC
+    const ligg = kl.contains('kort') && innerWidth > innerHeight * 1.2, smal = !ligg && (kl.contains('smal') || kl.contains('kort'));
+    kam.x = L.x; const rr = område().radius || S.REGLER.radius, pb = ligg ? Math.max(0, panel.getBoundingClientRect().right + 4) : smal ? 0 : Math.min(370, VW * .4);
+    // hele området skal være synlig i det frie feltet: til høyre for panelet på PC og liggende telefon, over panelet på stående telefon
+    kam.m = smal ? rr * 2.3 / Math.max(200, Math.min(VW, VH * .5)) : ligg ? rr * 2.3 / Math.max(150, Math.min(VW - pb - 10, VH - 60)) : rr * 2.3 / Math.max(200, Math.min(VW - pb, VH - 120));
+    kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : ligg ? -22 * kam.m : -20 * kam.m); sist = ''; vis(true); skitten = true; }
   function lukk() { if (!åpen) return; åpen = false; valgtBy = null; panel.classList.remove('på'); document.body.classList.remove('krig'); kn.classList.remove('på'); kn.setAttribute('aria-pressed', 'false');
     if (førKam) { kam.x = førKam.x; kam.y = førKam.y; kam.m = førKam.m; førKam = null; } skitten = true; }
   window.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
