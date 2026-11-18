@@ -189,3 +189,28 @@ lagreKratere, mineKrater, salve, lyng).
 - Funn i 3D: «Forlatt leir» ved Dombås (to telt, sekker, tønne) sett på bilde.
 - Lyngen ovenfra: materialet til gresset (index.html gressMateriale) pakkes inn fra effekter3d.js (`lyngLys`, ingen endring i index.html):
   lyngtustene (aFelt = 1) lysnes opptil 1,6 × jo mer rett ovenfra du ser (`Effekter.REGLER.lyng`).
+
+### Filer og innpakninger (runde 4)
+- Endret (mine): spill/verden.js, spill/verden-visning.js, spill/effekter3d.js, spill/flom.js (valg `o` og `flate`, ellers som før),
+  spill/dyr3d.js (nøkkel per dyr, `FELTE`, `settFelte/felte`), testene test_verden.js, test_effekter3d.js, test_flom.js, test_dyr.js,
+  vakter/verden.js, docs/natt/verden.md og verden-hjelp.json.
+- index.html: bare versjonsmerkene (versjon.py) og flettingen av claude/nattfiks. Ingen nye skript-tagger.
+- Ikke endret, men pakket inn eller utvidet mens spillet kjører (fra verden-visning.js / effekter3d.js):
+  `Kjoretoy.planlegg` (snø: `tillat` uten høye lenker), `Leir.kanBygge` (åkeren sjekkes inne på jordet), `Leir.BYGG.åker` og
+  `Ikoner.BYGG.åker` (nye nøkler), `R3.gressMesh.material` (lyngen ovenfra: onBeforeCompile + programnøkkel), `window.Verden.islagt`.
+- Nye API-er for andre: `window.Verden.islagt(x, y)` (pakka «sjo»: båter på islagte innsjøer), `window.VERDEN_I_SONE(x, y, type)`,
+  `Effekter3d.kratere()/lagre()/lastInn()/lyngLys()`, `Dyr3d.settFelte/felte`, `VerdenSpill.snø*`, `åkerStykker/åkerVed/syncÅker/anleggÅker`,
+  `funnNær/funnI/plasserFunn`, `iSoneV/lagFlomfelt/felt(id)`, `islagt`.
+- Lagring: `riksbrudd-natur` (nå også `jakt.felt`, `åker.ryddet/sådde`, `soner[].kilde`) og ny `riksbrudd-effekter` (kratere og spor) – begge per leir.
+
+### IKKE gjort / svakheter (runde 4)
+- Snø: høyden på en lenke er start, midt og slutt (lange lenker over et pass kan ha toppen et annet sted); lenker vi ikke kjenner høyden på,
+  er åpne til de er hentet. Kolonner til fots/lag stoppes ikke av stengte veger (bare kjøretøy).
+- Fiendens lag får frostskader, men AI-en vet ikke om kulda (søker ikke ly).
+- Funn kan fortsatt ligge inntil et enkelt hus (bare tettbebyggelse i 32 m-rutene regnes). Funn som er tatt eller sett, lagres som før;
+  stedet de er flyttet til, regnes ut på nytt.
+- Regnflom: feltet bygger på 32 m-høyder (z9), så kanten i 3D er grov; vegene stenges langs feltet bare når vegnettet er lastet.
+- Isen: `Verden.islagt` er laget, men ingen båter bruker den ennå (sjo-filene er ikke endret). Ikke prøvd på et ekte vann (fant ikke et
+  vann innen ca. 2,7 km fra leiren på testsiden) – reglene er testet i Node.
+- Brente hus: bare sotlaget utenpå (husene kan fortsatt ikke farges ett og ett); før-bildet med det gamle flate lokket er ikke tatt.
+- Åkeren: kan legges over veger og bekker; ingen 3D-skisse mens du plasserer den (bare i 2D).
