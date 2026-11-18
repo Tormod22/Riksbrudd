@@ -26,15 +26,17 @@
     kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
     // regn: regnsummen (timer med fullt regn, tørker 0,2 per time uten regn, maks 30); flom mulig over «flom», ras over «ras»
     // sjanse per spilltime når terskelen er nådd; flomsonen varer «flomTimer», raset «rasTimer»; radius i meter; bratt = stigning (m per m)
+    // etter: så mye synker regnsummen når det har gått en flom / et ras (trykket slipper); høyst én flom og ett ras om gangen;
+    // i kuldegrader faller nedbøren som snø og teller ikke
     // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras; ryddTimer: så lenge bruker et ingeniørlag på å rydde et ras
-    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .12, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
-    // tørke: døgn uten regn (maks 10); brannfaren er 0 under «fra» og full ved «full»
-    tørke: { maks: 10, fra: .5, full: 3 },
+    regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .04, etter: { flom: 3, ras: 4 }, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
+    // tørke: døgn uten regn (maks 10; nedbør og våt bakke tar bort «vått» ganger så fort); brannfaren er 0 under «fra» og full ved «full»
+    tørke: { maks: 10, fra: .5, full: 2, vått: 2 },
     // brann: rutenett (m), brenntid per rute (spillminutter), spredning per 10 min til en naborute i full tørke uten vind,
     // vind: hvor mye medvind øker spredningen per m/s, regn slokker (sjanse per 10 min i fullt regn), flest ruter som brenner samtidig,
     // treff: treff på et lag som står i brannen per 30 min; bygg: andel av byggets hp per 30 min;
     // lyn: sjanse per time for at lynet tenner når det er knusktørt og overskyet eller torden; skudd: sjanse per skuddveksling i knusktørt lende
-    brann: { rute: 64, brenner: [50, 110], spred: .16, vind: .3, slokk: .5, maks: 350, treff: 1, bygg: .2, lyn: .03, skudd: .004 },
+    brann: { rute: 64, brenner: [50, 110], spred: .16, vind: .3, slokk: .5, maks: 350, treff: 1, bygg: .2, lyn: .015, skudd: .004 },
     // brennbarhet per terrengklasse (0 snaufjell, 1 skog, 2 hei, 3 vann, 4 snø, 5 dyrket, 6 myr, 7 tettbebyggelse)
     brennbar: [.05, 1, .55, 0, 0, .3, .1, .45],
     // jakt: rasjoner per felt dyr, jaktlag: timer per jakt, dyr per jakt (minst, flest), området hviler (timer), rute (m)
@@ -88,9 +90,9 @@
   function steg(V, dtMin, vær) {
     const d = dtMin / 1440, t = dtMin / 60, R = REGLER;
     if (vær.temp < 0) V.frost = Math.min(R.is.maks, V.frost - vær.temp * d); else V.frost = Math.max(0, V.frost - vær.temp * d * R.is.tiner);
-    V.regn = klem(V.regn + (vær.regn > .1 ? vær.regn * t : -R.regn.tørker * t), 0, R.regn.maks);
+    V.regn = klem(V.regn + (vær.regn > .1 && vær.temp > 0 ? vær.regn * t : -R.regn.tørker * t * (vær.temp < 0 ? 2 : 1)), 0, R.regn.maks);
     const vått = vær.regn > .1 || vær.snø > .1 || (vær.våt || 0) > .3;
-    V.tørke = klem(V.tørke + (vått ? -d * 6 : d), 0, R.tørke.maks);
+    V.tørke = klem(V.tørke + (vått ? -d * R.tørke.vått : d), 0, R.tørke.maks);
     return V;
   }
   // Brannfaren 0–1 (tørke, ikke regn, ikke snø på bakken i dalen om vinteren)
@@ -103,8 +105,9 @@
   // Hva kan skje denne timen? Gir 'flom', 'ras' eller null. rnd: tilfeldig tall 0–1.
   function trekkHendelse(V, timer, rnd) {
     const R = REGLER.regn, p = 1 - Math.pow(1 - R.sjanse, timer);
-    if (V.regn >= R.ras && rnd() < p) return 'ras';
-    if (V.regn >= R.flom && rnd() < p) return 'flom';
+    const har = type => V.soner.some(s => s.type === type);
+    if (V.regn >= R.ras && !har('ras') && rnd() < p) { V.regn -= R.etter.ras; return 'ras'; }
+    if (V.regn >= R.flom && !har('flom') && rnd() < p) { V.regn -= R.etter.flom; return 'flom'; }
     return null;
   }
   // Det spilleren skal se: linjer med følgene av været og årstiden nå. o: { moh (leiren) }

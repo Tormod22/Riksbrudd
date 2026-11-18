@@ -25,8 +25,11 @@ assert.ok(V.forhold(V.ny(), { ...vinter, snø: 1 }).some(l => /marsj −/.test(l
 // 32 regn, flom og ras
 S = V.ny(); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), null);
 for (let i = 0; i < 6; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'flom');
-for (let i = 0; i < 4; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'ras');
-assert.strictEqual(V.trekkHendelse(S, 1, () => .99), null);
+assert.strictEqual(S.regn, 6 - R.regn.etter.flom, 'regnsummen synker etter flommen');
+for (let i = 0; i < 6; i++) V.steg(S, 60, { ...sommer, regn: 1 }); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), 'ras');
+S.regn = 20; assert.strictEqual(V.trekkHendelse(S, 1, () => .99), null);
+V.nySone(S, 'ras', 0, 0, 90, 0); V.nySone(S, 'flom', 0, 0, 90, 0); assert.strictEqual(V.trekkHendelse(S, 1, () => 0), null, 'høyst én flom og ett ras om gangen'); S.soner = [];
+const S9 = V.ny(); V.steg(S9, 600, { ...vinter, regn: 1 }); assert.strictEqual(S9.regn, 0, 'snø teller ikke som regn');
 const sone = V.nySone(S, 'ras', 1000, 2000, 90, 100); assert.ok(V.iSone(S, 1050, 2000) === sone && !V.iSone(S, 1200, 2000) && !V.iSone(S, 1050, 2000, 'flom'));
 assert.strictEqual(V.ryddSoner(S, 200).length, 0); assert.strictEqual(V.ryddSoner(S, 100 + R.regn.rasTimer * 60).length, 1); assert.strictEqual(S.soner.length, 0);
 assert.ok(V.flomRadius(S, 6) >= V.flomRadius(S, 2));

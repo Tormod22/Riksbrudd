@@ -295,11 +295,13 @@
   const avstSeg = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0; return Math.hypot(px - ax - dx * t, py - ay - dy * t); };
   function sjekkSpor(b) {
     if (spor.has(b.id) || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.utveg || typeof hentFlis !== 'function') return;
-    const z = 9, sp = span(z), d = R.tog.nærSpor, [x0, y0, x1, y1] = flisområde([b.x - d, b.y - d, b.x + d, b.y + d], z), fl = []; spor.set(b.id, null);
+    const z = 9, sp = span(z), d = R.tog.nærSpor, bb = b.ref.bb || [b.x, b.y, b.x, b.y], [x0, y0, x1, y1] = flisområde([Math.min(bb[0], b.x - d), Math.min(bb[1], b.y - d), Math.max(bb[2], b.x + d), Math.max(bb[3], b.y + d)], z), fl = []; spor.set(b.id, null);
+    // sporet går gjennom tettstedet (et punkt på sporet ligger inne i omrisset), eller innen 1 km fra navnet
+    const iByen = (X, Y) => { if (X < bb[0] || Y < bb[1] || X > bb[2] || Y > bb[3]) return false; try { return Garnison.inni(b.ref, X, Y); } catch (e) { return false; } };
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(Promise.resolve(hentFlis('utveg', z, x, y)).then(t => [x, y, t]));
     Promise.all(fl).then(F => { let nær = false, data = false;
       for (const [x, y, t] of F) { if (!t) continue; data = true; if (!t.bane || nær) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.bane.ext || 4096;
-        for (const o of t.bane.obj) { for (const del of o.deler) { for (let i = 1; i < del.length && !nær; i++) if (avstSeg(b.x, b.y, mx + del[i - 1][0] / e * sp, my - del[i - 1][1] / e * sp, mx + del[i][0] / e * sp, my - del[i][1] / e * sp) < d) nær = true; if (nær) break; } if (nær) break; } }
+        for (const o of t.bane.obj) { for (const del of o.deler) { for (let i = 1; i < del.length && !nær; i++) { const ax = mx + del[i - 1][0] / e * sp, ay = my - del[i - 1][1] / e * sp, cx = mx + del[i][0] / e * sp, cy = my - del[i][1] / e * sp; if (avstSeg(b.x, b.y, ax, ay, cx, cy) < d || iByen(cx, cy) || iByen((ax + cx) / 2, (ay + cy) / 2)) nær = true; } if (nær) break; } if (nær) break; } }
       spor.set(b.id, data ? nær : 'ukjent'); sistHtml = ''; }).catch(() => spor.set(b.id, 'ukjent'));
   }
   // stasjonsbyene i spillkartet (høyst 150 km fra leiren), de nærmeste først
@@ -343,7 +345,7 @@
     if (sistTime == null) sistTime = time;
     if (time !== sistTime) { const timer = Math.min(6, Math.max(1, time - sistTime)); sistTime = time; kuldeTime(v, timer); regnHendelse().catch(e => console.error(e));
       // lynet tenner når det er knusktørt (tørken, ikke regnet som nettopp har begynt, avgjør) og det er torden eller tunge skyer
-      if (v.årstid !== 'vinter' && V.tørke >= R.tørke.full && (v.torden > 0 || v.sky > .7) && Math.random() < 1 - Math.pow(1 - R.brann.lyn, timer)) { const l = leir(); if (l) { const a = Math.random() * 6.283, d = 1000 + Math.random() * 7000; tenn(l.x + Math.cos(a) * d, l.y + Math.sin(a) * d, 'Lynet', true).catch(() => {}); } }
+      if (v.årstid !== 'vinter' && V.tørke >= (R.tørke.fra + R.tørke.full) / 2 && (v.torden > 0 || v.sky > .7) && Math.random() < 1 - Math.pow(1 - R.brann.lyn, timer)) { const l = leir(); if (l) { const a = Math.random() * 6.283, d = 1000 + Math.random() * 7000; tenn(l.x + Math.cos(a) * d, l.y + Math.sin(a) * d, 'Lynet', true).catch(() => {}); } }
       if (harRadio() && tid >= V.radio.neste) radioNå();
       visForhold(); }
   });
