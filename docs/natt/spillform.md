@@ -97,3 +97,14 @@ Det denne pakka selv gjør med dem:
   med hyllene på; hard ga 2 røverlag; marsj med bekreftelse virket i 3D.
 - **Ikke gjort i runde 2:** de seks overlevende røverne trakk seg 3,9 km unna og ble stående, så bølge 1 var «aktiv» resten av tiden (ingen
   nye bølger) – det ligger i angrepsdelen og er ikke rørt. Flyktninger/samfunnskort har ikke eget kall (de fanges som «kort som venter»).
+
+## Runde 3 (18. nov)
+- **Vakten:** scenario-delen antar ikke lenger noe om tid, tettsteder eller hva scenariet husker fra før (tid settes til 100, tre
+  prøvetettsteder «vsf1–3» settes blå og tas bort, minnet settes tilbake). Prøvd etter de andre pakkenes vakter i samme side (PC og
+  mobil), og en gang til med tiden flyttet ni døgn fram.
+- **To spilldøgn på /rogaland, nytt spill uten ferdige lag, alt på, med bygg og egen tropp** (scratchpad natt/spillform/p9.js): materialer
+  kjøpt og brakke, dieseltank, aggregat og vakttårn satt opp (ferdige etter 3 timer; kontrollrommet fikk ikke plass der skriptet prøvde –
+  for bratt), én tropp på fire laget av folkene etter seks timer. Bølge 1 (12 timer, 12 røvere) og bølge 2 (ca. 32 timer, med sabotører)
+  ble slått tilbake uten tap; røverne skadet brakka, aggregatet og tanken i bølge 1. Etter 42 timer: Vaktlaget 4/4, Tropp 1 4/4, 7 personer,
+  moral 74, mat 37 rasjoner, kassa 20,5 mill. kr (40 ved start). Ingen justering av første bølge var nødvendig. Startkjøretøyene
+  (stridsvogna) gjør mye av jobben – tas de bort senere, må bølge 1 ses på igjen.

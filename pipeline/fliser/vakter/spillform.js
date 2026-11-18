@@ -42,7 +42,14 @@ module.exports = { navn: 'spillform: flyt, scenarier, seier og tap', kjør: asyn
       ut.hard = r.faktor.fiende === 1.3 && window.SPILLREGLER.har('ingenRadio') && KROKER.ild.reduce((v, h) => v * h(fi, s), 1) > KROKER.ild.reduce((v, h) => v * h(s, fi), 1) * 0 && Math.abs(r.faktor.penger - .6) < 1e-9;
       const L = LeirSpill.tilstand(), tre = L.lager.tre; ut.ingenKjøp = !!Leir.kjøpMateriale(L, 'tre', 1, OppstartSpill.betal).feil && L.lager.tre === tre && S.penger === før.penger;
       const sx = s.x; s.x = S.leir.x + 5000; ut.ingenRadio = !KROKER.kanOrdre.every(f => f(s)); s.x = S.leir.x + 300; ut.radioNær = KROKER.kanOrdre.every(f => f(s)); s.x = sx;
-      const sc = ScenarioSpill.scenario(); ut.scenario = !!sc && sc.status === 'pågår' && /0 av 3/.test(sc.tekst);
+      // scenariet «Tre på fem døgn»: vakten antar ikke noe om tid, tettsteder eller hva scenariet husker fra før – alt settes her og tilbake
+      { const TS = ScenarioSpill.tilstand(), scFør = JSON.stringify(TS.sc || {}), meldtFør = TS.scMeldt, tidNå = tid, prøve = ['vsf1', 'vsf2', 'vsf3'];
+        try { tid = 100; TS.sc = {}; const egne = [...TETTSTEDER.values()].filter(t => t && t.eier === 'blå').length; let sc = ScenarioSpill.scenario(); ut.scTekst = sc ? sc.status + ': ' + sc.tekst : 'ingen';
+          const først = !!sc && (egne >= 3 ? sc.status === 'vunnet' : sc.status === 'pågår' && sc.tekst.includes(egne + ' av 3'));
+          for (const id of prøve) TETTSTEDER.set(id, { eier: 'blå', inntar: null }); TS.sc = {}; sc = ScenarioSpill.scenario(); const vunnet = !!sc && sc.status === 'vunnet';
+          for (const id of prøve) TETTSTEDER.delete(id); TS.sc = {}; tid = 6 * 1440; sc = ScenarioSpill.scenario(); const frist = !!sc && (egne >= 3 ? sc.status === 'vunnet' : sc.status === 'tapt');
+          ut.scenario = først && vunnet && frist; ut.scDeler = [først, vunnet, frist].join(); }
+        finally { for (const id of prøve) TETTSTEDER.delete(id); TS.sc = JSON.parse(scFør); TS.scMeldt = meldtFør; tid = tidNå; } }
       LeirSpill.fane('mål'); const m = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'), åpen = m.classList.contains('på'); if (!åpen) lk.click(); LeirSpill.fane('mål'); await vent(60);
       ut.meny = !!document.getElementById('scenariolinje') && !!document.getElementById('ukelinje') && !!document.getElementById('flytauto'); LeirSpill.fane('bygg'); if (!åpen) lk.click();
       S.regler = JSON.parse(før.regler) || undefined; if (!S.regler) delete S.regler; ScenarioSpill.settRegler();
