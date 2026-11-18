@@ -45,7 +45,7 @@
     return best ? { ...best, vinn: best.h - h0 } : null; }
   // Laget spør selv om det kan ta ordre (eget initiativ, hvert steg): krokene skal da ikke skrive i loggen. Før sto
   // «ingen radiokontakt – ordren når ikke fram» på nytt og på nytt for et lag uten kontakt.
-  const kanStille = s => { const l = window.logg; window.logg = () => {}; try { return kanStille(s); } finally { window.logg = l; } };
+  const kanStille = s => { const l = window.logg; window.logg = () => {}; try { return KROKER.kanOrdre.every(f => f(s)); } finally { window.logg = l; } };
   function initiativ(s, v) { const r = regel(s); if (s.sti && r.forsyn !== 'ja') return; if (s.nedgravd || s.ombord || s.forsvar || s.leirvakt) return; if (!kanStille(s)) return;
     const amm = window.Forsyning ? Forsyning.ammo(s) : 1, sted = amm < S.INITIATIV.ammo ? forsyningssted(s) : null, hø = v && !s.sti ? høyereNær(s) : null;
     let venn = null; if (!v && !s.sti && r.støtte === 'ja') for (const e of egne()) { if (e === s || !beskutt(e)) continue; const d = Math.hypot(e.x - s.x, e.y - s.y); if (d <= S.INITIATIV.støtte && (!venn || d < venn.d)) venn = { e, d }; }
