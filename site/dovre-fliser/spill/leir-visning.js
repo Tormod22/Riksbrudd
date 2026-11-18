@@ -39,7 +39,7 @@
 #leirmeny [hidden]{ display:none !important; }
 #leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
-#leirmeny .liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:7px; } #leirmeny .liste h4{ grid-column:1 / -1; }
+#leirmeny .liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:7px; } #leirmeny .liste[hidden], #leirmeny .liste [hidden]{ display:none; } #leirmeny .liste h4{ grid-column:1 / -1; }
 #leirmeny .bygg.kort{ flex-direction:column; align-items:stretch; gap:3px; padding:6px 7px 7px; background:linear-gradient(180deg,#2c2416,#1a140b); border:1px solid #4a3d24; border-radius:4px; transition:border-color .12s, transform .12s; }
 #leirmeny .bygg.kort:hover{ border-color:#c9b26a; transform:translateY(-1px); } #leirmeny .bygg.kort .tegn{ width:100%; height:58px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.16), rgba(0,0,0,0) 70%); pointer-events:none; }
 #leirmeny .bygg.kort b{ display:block; font-size:14.5px; line-height:1.15; } #leirmeny .bygg.kort .pris{ color:#f0dc9a; font-size:13.5px; } #leirmeny .bygg.kort .kortlinje{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

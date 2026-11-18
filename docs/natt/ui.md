@@ -30,6 +30,8 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
   `symKai` for ferjekaiene, og oversikten i 2D.
 - **Færre infrastrukturmerker** (index.html, `INFRA_FOKUS` + `infraViktig`): bruer, tunneler, kraftverk, dammer og ferjekaier vises
   bare helt nær, når de er store, skadet, nær valgt lag/kjøretøy (2,5 km) eller målet deres, nær leiren, eller når krigskartet er åpent.
+  Kaiene (ankermerkene) følger samme tanke via `KAI_VIKTIG(x, y, t, l, m)` i index.html: helt nær, store havner et stykke ut, nær valgt
+  lag eller leiren (5 km), alle mens du velger leir. Grensene (meter per punkt): bru 3, tunnel 4, kraft 12, ferjekai 8, dam 8.
   «Kartmerker: de viktige / alle» i ☰ (gruppen Kartet, `#allemerker`, «riksbrudd-allemerker»). I testene som før (`INFRA_FOKUS.test`).
 - **Lysere 2D-kart** (`kartflis.js`): `KARTLYS_GAMMA` 0,74, `KARTLYS_SKYGGE` 0,46 (før 0,3), `KARTLYS_METNING` 1,12 – bare der skyggen
   tegnes (2D); 3D-bakken er urørt. Lysere og litt bredere veger (VEG). Luft mellom navnene i `tegnEtiketter` (færre navn i tette strøk).
@@ -44,9 +46,10 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
   Merker; (5) `symKai` via Merker.
 - `site/dovre-fliser/kartflis.js`: VEG-fargene, KARTLYS_* og skyggeløkka i `komponer`.
 - `spill/leir-visning.js`: bare kortene i bygglista (visMeny) og CSS for dem.
+- `spill/kaier.js` (ikke min fil – liten endring): `viktig(i, m)` spør `KAI_VIKTIG` i tegningen og i trykket (to steder + én hjelpelinje).
+- Prøvd på /rogaland med ekte data (Stavanger på 18 og 5 m per punkt, leiren i Ryfylke): bilder i scratchpad natt/ui/rog-*.png.
 
 ## Ikke gjort
 - Kjøretøy, tettsteder og kaiene fra `spill/kaier.js` bruker ikke Merker ennå (andre filer) – API-et er klart (`Merker.tegn`).
 - Portretter i Folk-panelet og tegning i byggpanelet (panelene bygges på nytt ved sammenligning av innerHTML – må gjøres i filene selv).
-- Kaiene (ankermerkene i kaier.js) er ikke med i «bare når de betyr noe».
 - Tegnforklaring i kartet, og opplæring ut over de fem stegene.
