@@ -437,3 +437,13 @@ fredstid 5 døgn). Fire døgnkall – det tredje døgnet ble ikke ferdig innen t
   kontrollen); motstanderne etter fredstiden ble ikke prøvd (de kom ikke til leiren på dag 8–10 i noen av kjøringene); skriptet lager
   ingen nye tropper etter dag 2 og bygger ikke sykestue – en menneskelig spiller som gjør det, står sterkere.
 - Startdøgnene på Vanlig er fortsatt rolige når bølge 1 går bra (A), men kan gi tap (B). Ikke endret.
+
+**Kort kontroll på Lett** (all koden i runde 5; 60 mill. kr, to døgn):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (% = helse) | Lag: sårede eller falne / mann | Slått ut | Bølge | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 33.5 mill. | 6 | 65 | 64 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 | 0 | 1 (aktiv) |  |
+| 2 | 20.4 mill. | 4 | 61 | 58 | brakke aggregat drivstofftank vakttårn kontrollrom* | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne.; Siste døgn: Bølge 1 slått tilbake. 2 har dratt.; REPARER Reparer alle (169 272 kr) |
+
+- Kassa 33,5 mill. etter startbyggene (Vanlig 12,5–13, Hard 1,5), og skriptet hadde råd til kontrollrommet alt på dag 2. Bølge 1 var
+  ett lag på 6 og ble slått tilbake uten tap. Klart lettere – men bare to døgn er spilt.
