@@ -11,6 +11,10 @@ ok(['alarm', 'kontakt', 'bygg', 'tettsted', 'mål', 'dag'].every(t => h.some(q =
 ok(F.stopper(h, 'spol').length === h.length, 'spolingen stopper for alle');
 ok(F.stopper(h, 'auto').map(q => q.type).sort().join() === 'alarm,bygg,kontakt', 'auto-stopp bare for alarm, kontakt og bygg');
 ok(F.stopper(F.hendelser(B({ marsj: { A: true } }), B({})), 'auto').length === 0, 'auto-stopp ikke når et lag er framme');
+h = F.hendelser(B({ alarm: true, byggTall: 4 }), B({ alarm: true, byggTall: 3 }));
+ok(h.some(q => q.type === 'alarm' && /ødelagt/.test(q.tekst)), 'et bygg som blir borte under et angrep, stopper spolingen');
+ok(F.hendelser(B({ alarm: true, skadd: 0 }), B({ alarm: true, skadd: 1 })).some(q => /hardt skadet/.test(q.tekst)), 'et hardt skadet bygg under et angrep stopper spolingen');
+ok(F.hendelser(B({ byggTall: 4 }), B({ byggTall: 3 })).length === 0, 'riving uten angrep stopper ingenting');
 ok(F.hendelser(B({ strid: 0 }), B({ strid: 1 }))[0].tekst === 'et lag er i ildkamp', 'ildkamp');
 ok(F.hendelser(B({ tettsteder: 2 }), B({ tettsteder: 1 }))[0].tekst === 'du har mistet et tettsted', 'mistet tettsted');
 // tid og avstand

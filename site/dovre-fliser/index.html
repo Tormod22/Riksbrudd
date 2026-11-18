@@ -843,7 +843,9 @@ function kamprunde() {
     a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
     if (!Terreng.slattUt(a.menn)) for (const b of ENHETER) {
       if (a.side === b.side || !levende(b)) continue;
-      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || !ser(a, b.x, b.y)) continue;
+      // HERJER (spill/leir-visning.js): fiender som står inne i leiren og ødelegger bygg. De høres og ses av alle innen 300 m, selv om
+      // en bakketopp står i veien – ellers kunne et røverlag rasere hele leiren mens egne lag sto 75 m unna uten å løsne skudd.
+      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || (!ser(a, b.x, b.y) && !(d < 300 && window.HERJER && (HERJER.has(a) || HERJER.has(b))))) continue;
       const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
       if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.våpen || m.rolle, d, f) > 0)) continue;   // ingen når fram
       const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)

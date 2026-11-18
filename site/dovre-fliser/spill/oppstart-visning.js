@@ -213,7 +213,10 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
       logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`);
       if (S.utenLag) logg('Du har ingen ferdige lag – bare Vaktlaget (4 mann). Lag troppene selv av folkene dine: Leir → Tropper → «Lag ny tropp».'); }
-    else logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
+    else { logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
+      // Et lagret spill åpnet før med hele landet i bildet (200 km-målestokk), og leiren var en prikk. Nå står kartet over leiren.
+      // Ikke i testene (kontrollskriptet regner med startbildet), og ikke når adressen selv sier hvor kartet skal stå.
+      if (!navigator.webdriver && !/[#&?](x|kart|pos)=/.test(location.href)) { kam.x = L.x; kam.y = L.y; kam.m = Math.min(kam.m, 8); skitten = true; } }
   }
   // Ringen rundt leiren kan ligge i sjøen eller i en fjellvegg (feilretting 12. nov: leir på en holme ved Reine satte alle lagene og
   // kjøretøyene i sjøen). Når terrenget rundt leiren er hentet, flyttes de til land som henger sammen med leiren, kjøretøyene helst til

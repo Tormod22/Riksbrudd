@@ -118,9 +118,11 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     for (const b of siste.framme || []) logg(`Byggelaget er framme ved ${LB.BYGG[b.type].del ? 'byggesettet' : LB.BYGG[b.type].navn.toLowerCase()} (${LB.kmTekst(LB.reise(L, b.x, b.y).meter)} fra leiren) og begynner arbeidet.`);
     // fiender skader byggene: 8 % per spilltime per fiendtlig lag innen 120 m. Også byggeplassene (bygg under bygging eller i kø) kan
     // skades (brukeren 12. nov); blir en byggeplass ødelagt, kommer materialene som ikke var brukt, tilbake på lageret (Leir.skad).
+    HERJER.clear();
     for (const e of ENHETER) { if (e.side === 'blå' || !levende(e)) continue;
       const deler = { n: 0, mat: {} };
       for (const b of L.bygg.slice()) { if (Math.hypot(e.x - b.x, e.y - b.y) > 120) continue;
+        HERJER.add(e);
         const B = LB.BYGG[b.type], navn = B.navn.toLowerCase(), r = LB.skad(L, b.id, .08 * dt / 60); if (!r) continue;
         if (r.ødelagt) { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L)), mt = matTekst(r.mat);
           // delene i byggesettet (ofte mange på én gang) meldes samlet under
@@ -355,6 +357,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return null;
   }
   KROKER.trykk.push(trykk); KROKER.trykk3d.push(trykk);
+  // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
+  const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));
   function bekreft() {
     const p = plassering; if (!p || p.feil) return;
     if (p.mal) { if (p.sjekket !== p.x + ',' + p.y + ',' + p.ret) return; husk(); let nr = 0;

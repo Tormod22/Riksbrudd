@@ -46,6 +46,11 @@
     if ((nå.strid || 0) > (før.strid || 0)) ut.push({ type: 'kontakt', tekst: 'et lag er i ildkamp' });
     else if ((nå.fiender || 0) > (før.fiender || 0)) ut.push({ type: 'kontakt', tekst: 'fienden er i sikte' });
     if ((nå.lag || 0) < (før.lag || 0)) ut.push({ type: 'tapt', tekst: 'et lag er slått ut' });
+    // leiren raseres: et bygg er borte, eller enda et bygg er under halv helse (bare mens leiren angripes – ikke når du river selv)
+    if (nå.alarm || før.alarm) {
+      if ((nå.byggTall || 0) < (før.byggTall || 0)) ut.push({ type: 'alarm', tekst: 'et bygg i leiren er ødelagt' });
+      else if ((nå.skadd || 0) > (før.skadd || 0)) ut.push({ type: 'alarm', tekst: 'et bygg i leiren er hardt skadet' });
+    }
     if ((nå.bygg || 0) > (før.bygg || 0)) ut.push({ type: 'bygg', tekst: 'et bygg er ferdig' });
     if ((nå.tettsteder || 0) > (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har tatt et tettsted' });
     else if ((nå.tettsteder || 0) < (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har mistet et tettsted' });
@@ -117,6 +122,7 @@
       strid: nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
       fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e))),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
+      byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
       mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
       // et kort midt på skjermen som venter på svar (hendelser i gjengen, flyktninger ved porten, seier, scenario)
