@@ -37,11 +37,50 @@
     return ut; }
   function lagre() { if (!klar || !leirId()) return;
     try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), ...T, røyk: RØYK.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })), lys: LYS.map(q => ({ x: r1(q.x), y: r1(q.y), til: q.til })),
-      heli: HELI ? { lag: HELI.lag && HELI.lag.navn, fase: HELI.fase, x: r1(HELI.x), y: r1(HELI.y), mål: HELI.mål.map(r1), retning: +(HELI.retning || 0).toFixed(3), fra: HELI.fra ? HELI.fra.map(r1) : null } : null, kjør: kjøreordre() })); } catch (e) { /* fullt lager */ } }
+      heli: HELI ? { lag: HELI.lag && HELI.lag.navn, fase: HELI.fase, x: r1(HELI.x), y: r1(HELI.y), mål: HELI.mål.map(r1), retning: +(HELI.retning || 0).toFixed(3), fra: HELI.fra ? HELI.fra.map(r1) : null } : null, kjør: kjøreordre(),
+      fiende: fiendePakk() })); } catch (e) { /* fullt lager */ } }
+  // ---------- FIENDEN MELLOM ØKTENE (runde 5, 19. nov) ----------
+  // spill/lagring.js lagrer fiendens lag (sted, helse, hva de holdt på med), minnet (AI.minne) og stillingene (med «kjent»), og målet
+  // for marsjen – men bare dine egne marsjer ble satt i gang igjen. Her i tillegg: der du sist så hvert fiendelag («sist sett» i kartet),
+  // fiendens lastebiler (sted, skade, hvor de kjørte og hvem som satt på), og fiendens marsjer settes i gang igjen mot målet de hadde.
+  function fiendePakk() {
+    const sett = {}; for (const e of ENHETER) if (e.side !== 'blå' && e.sett && tallOk(e.sett.x) && tallOk(e.sett.y)) sett[e.navn] = { x: r1(e.sett.x), y: r1(e.sett.y), tid: r1(+e.sett.tid || 0) };
+    const biler = []; if (window.AI && AI.biler) for (const side of Object.keys(AI.biler)) { const k = AI.biler[side]; if (!k) continue; const P = k.sti && Array.isArray(k.sti.P) && k.sti.P.length >= 4 ? k.sti.P : null;
+      biler.push({ side, navn: k.navn, borte: !(window.KJORETOY || []).includes(k), x: r1(k.x), y: r1(k.y), retning: +(+k.retning || 0).toFixed(3), antall: k.antall, skade: +(+(k.skade || 0)).toFixed(3),
+        mål: P ? [r1(P[P.length - 2]), r1(P[P.length - 1])] : null, ombord: ENHETER.filter(e => e.ombord === k).map(e => e.navn) }); }
+    return { sett, biler }; }
+  let fiendeVenter = null; api.fiendePakk = () => fiendePakk(); api.fiendeBruk = f => fiendeBruk(f);
+  // Legger det lagrede inn igjen. Kalles 2 s etter lesingen og på nytt etter AI.flytt (som flytter motstanderne og bilene til leiren).
+  // Uten vegnett kan ikke kjøreturen legges på nytt: da går de om bord av der lastebilen står, og AI-en tenker på nytt.
+  async function fiendeBruk(f) {
+    if (!f || typeof f !== 'object') return null; const ut = { sett: 0, biler: 0, kjører: 0 };
+    for (const e of ENHETER) { const q = f.sett && f.sett[e.navn]; if (e.side === 'blå' || !q || !tallOk(q.x) || !tallOk(q.y)) continue; e.sett = { x: q.x, y: q.y, tid: tallOk(q.tid) ? q.tid : tid }; ut.sett++; }
+    for (const b of Array.isArray(f.biler) ? f.biler : []) { const k = window.AI && AI.biler && AI.biler[b.side]; if (!k || k.navn !== b.navn || !tallOk(b.x) || !tallOk(b.y)) continue; ut.biler++;
+      const KJ = window.KJORETOY || [];
+      if (b.borte) { const i = KJ.indexOf(k); if (i >= 0) KJ.splice(i, 1); for (const e of ENHETER) if (e.ombord === k) e.ombord = null; continue; }
+      if (window.Kjoretoy && k.sti) Kjoretoy.stopp(k); k.x = b.x; k.y = b.y; k.retning = tallOk(b.retning) ? b.retning : k.retning; if (b.antall >= 1) k.antall = Math.min(40, Math.round(b.antall)); k.skade = tallOk(b.skade) ? b.skade : 0;
+      const lag = (Array.isArray(b.ombord) ? b.ombord : []).map(n => ENHETER.find(e => e.navn === n && e.side === b.side && levende(e))).filter(Boolean);
+      let g = window.VEGNETT || null;
+      if (!g && b.mål && lag.length && window.lastVegnett && (window.VEG_TLF ? VEG_TLF.kan() || (innerWidth >= 900 && !navigator.webdriver) : !navigator.webdriver)) { try { g = await lastVegnett(); } catch (e) { g = null; } }
+      let kjører = false;
+      if (g && b.mål && tallOk(b.mål[0]) && tallOk(b.mål[1]) && lag.length) { let r = null; try { r = Kjoretoy.planlegg(k, g, b.mål); } catch (e) { r = null; } kjører = !!(r && !r.feil); }
+      for (const e of lag) { e.ombord = kjører ? k : null; e.x = k.x + (kjører ? 0 : 6); e.y = k.y + (kjører ? 0 : 4); e.sti = null; e.siktSkitten = true; delete e.målLagret; if (e.ai) { e.ai.mål = kjører ? b.mål.slice() : null; e.ai.neste = kjører ? 60 : 0; } }
+      if (kjører) ut.kjører++; }
+    skitten = true; return ut; }
+  // fiendens marsjer som var i gang (målet er lagret av spill/lagring.js i s.målLagret): planlegg ruta på nytt, høyst én gang i sekundet
+  // (runde 5) lagres også når siden skjules – pagehide kommer ikke alltid på telefon (spill/lagring.js gjør det samme); ellers hvert 10. s (simuleringen)
+  let fiendeSjekk = 0;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
+  KROKER.sim.push(() => { const nå = performance.now(); if (nå - fiendeSjekk < 1000) return; fiendeSjekk = nå;
+    for (const e of ENHETER) { if (e.side === 'blå' || !e.målLagret || e.planlegger || e.ombord) continue; const m = e.målLagret; delete e.målLagret;
+      if (!levende(e) || !tallOk(m[0]) || !tallOk(m[1]) || Math.hypot(m[0] - e.x, m[1] - e.y) <= 30) continue;
+      if (e.ai) e.ai.mål = [m[0], m[1]]; ordre(e, m[0], m[1], true).catch(() => {}); } });
+  if (window.AI && AI.flytt) { const flytt0 = AI.flytt; AI.flytt = async function (...a) { const r = await flytt0.apply(this, a); if (fiendeVenter) { try { await fiendeBruk(fiendeVenter); } catch (e) { console.error(e); } } return r; }; }
   const tallOk = v => typeof v === 'number' && Number.isFinite(v), punktOk = q => q && tallOk(q.x) && tallOk(q.y) && tallOk(q.til);
   api.gjenopprettet = null;
   function les() { T = ny(); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (!d || d.leir !== leirId()) d = null; else for (const k of Object.keys(T)) if (d[k] && typeof d[k] === 'object') T[k] = d[k]; } catch (e) { T = ny(); d = null; } fredTilAI();
-    RØYK.length = 0; LYS.length = 0; HELI = null; api.gjenopprettet = null; if (!d) return;
+    RØYK.length = 0; LYS.length = 0; HELI = null; api.gjenopprettet = null; fiendeVenter = null; if (!d) return;
+    fiendeVenter = d.fiende && typeof d.fiende === 'object' ? d.fiende : null;
     // røyk og lys: tiden (tid) er lagret av spill/lagring.js, så «til» gjelder fortsatt
     for (const q of Array.isArray(d.røyk) ? d.røyk : []) if (punktOk(q)) RØYK.push({ x: q.x, y: q.y, til: q.til });
     for (const q of Array.isArray(d.lys) ? d.lys : []) if (punktOk(q)) LYS.push({ x: q.x, y: q.y, til: q.til });
@@ -54,6 +93,7 @@
           fra: Array.isArray(h.fra) && tallOk(h.fra[0]) && tallOk(h.fra[1]) ? h.fra.slice() : null };
         if (s && (HELI.fase === 'hjem' || HELI.fase === 'frakt')) { s.iLufta = true; s.sti = null; s.x = HELI.x; s.y = HELI.y; }
         G.heli = HELI.fase; skitten = true; }
+      if (fiendeVenter) fiendeBruk(fiendeVenter).then(f => { G.fiende = f; }).catch(e => console.error(e));
       for (const q of Array.isArray(d.kjør) ? d.kjør : []) { const k = (window.KJORETOY || []).find(e => e.side === 'blå' && e.navn === q.navn);
         if (!k || k.sti || k.oppdrag || !Array.isArray(q.mål) || !tallOk(q.mål[0]) || !tallOk(q.mål[1]) || typeof window.kjørTil !== 'function') continue;
         G.kjør.push(k.navn); window.kjørTil(k, q.mål[0], q.mål[1]); }
