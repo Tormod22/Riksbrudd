@@ -55,7 +55,7 @@ ok(M.vekt({ type: 'nyttMøbel', b: 1, d: 1, h: 1 }) > 0, 'nye møbeltyper får v
 ok(M.kanSettesUte({ type: 'kasse', x: 0, y: 0, a: 0, b: 1.6, d: .8 }, () => true, () => 0).ok && !M.kanSettesUte({ type: 'kasse', x: 0, y: 0, a: 0, b: 1.6, d: .8 }, (x) => x < .5, () => 0).ok
   && !M.kanSettesUte({ type: 'kasse', x: 0, y: 0, a: 0, b: 1.6, d: .8 }, () => true, x => x).ok, 'ute: ledig, opptatt og for bratt');
 // spøkelset foran deg: du ser mot (−sin a, cos a)
-{ const g = M.foran(0, 0, 0, { b: 1, d: .4 }, 0); ok(Math.abs(g.x) < 1e-9 && g.y > .6 && g.y < .9, 'spøkelset står foran deg (' + g.y.toFixed(2) + ' m)'); }
+{ const g = M.foran(0, 0, 0, { b: 1, d: .4 }, 0); ok(Math.abs(g.x) < 1e-9 && Math.abs(g.y - (M.REGLER.foran + .2)) < 1e-9, 'spøkelset står foran deg (' + g.y.toFixed(2) + ' m)'); }
 ok(M.overlapp({ x: 0, y: 0, a: 0, b: 1, d: 1 }, { x: .9, y: 0, a: .3, b: 1, d: 1 }) && !M.overlapp({ x: 0, y: 0, a: 0, b: 1, d: 1 }, { x: 1.6, y: 0, a: .3, b: 1, d: 1 }), 'overlapp med skrå rektangler');
 
 console.log(feil ? `\n${feil} FEIL` : '\nAlt ok'); process.exit(feil ? 1 : 0);
