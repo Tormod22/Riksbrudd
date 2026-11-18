@@ -293,9 +293,11 @@ minikartet bør tegnes fra en liten kopi av kartbildet (lages én gang per utsni
 høydene, nettene) – kan bare bli mindre med gjenbruk av tabeller, ikke gjort.
 
 ### Ikke gjort
-- Oppgave 4 (skygger fra kjøretøy, soldater og dyr på Høy): ikke gjort. Skyggekartet tegnes bevisst bare når kameraet har flyttet
-  seg (høyst 4 ganger i sekundet); ting som beveger seg må ha et nytt skyggekart i hvert bilde for ikke å henge etter, og kostnaden
-  for det kan ikke måles her (programvare-grafikk, og maskinen var svært belastet). Forslag: skyggekartet tegnes hvert bilde bare når
-  et lag/kjøretøy innen skyggekameraets område har flyttet seg, og bare castShadow på de nettene – mål med «Mål ytelse» på Høy.
+- Oppgave 4 (skygger fra kjøretøy, soldater og dyr på Høy): **droppet etter måling**. Skyggekartet tegnes bevisst bare når kameraet
+  har flyttet seg (høyst 4 ganger i sekundet). Ting som beveger seg må ha et nytt skyggekart i hvert bilde for ikke å få skygger som
+  henger igjen, og det betyr at alle som kaster skygge (terreng, trær, hus …) tegnes én gang til per bilde – et eget lys bare for dem
+  er ikke lov (nye skyggeprogrammer). Målt (scratchpad `natt/lys/hakk/t-skygge.js`, Dovre ved laget, lavt kamera, Høy, effektene på,
+  139 kastere, skyggekart 2048): 836 ms per bilde uten og 2355 ms med skyggekartet tegnet hvert bilde (median av 4, programvare-
+  grafikk) – langt over 5 %. Billigere vei om det ønskes: en myk mørk flekk under hver enhet (som treskyggene), uten skyggekartet.
 - Skyggekartet i samme bilde som byttet (se over) og teksturopplastingens virkning på et ekte grafikkort: kan ikke måles her.
 - Andres moduler med lange steg (gate3d, byhus, anlegg3d, portal3d, fjern3d, kompass-minikartet): bare funn og forslag over.
