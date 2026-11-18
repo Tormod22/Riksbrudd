@@ -1,11 +1,57 @@
 [
-  ["Verden rundt dere", "Trykk «Verden» nederst (eller på værflisa øverst, eller «Vær og verden» i Leir-menyen under Mål). Der står det hva været og årstiden gjør akkurat nå – føre, is, brannfare og flomfare – og du finner åkeren, jakta, funnene, radioen og toget.", "Vær, lyd og bilde"],
-  ["Vinter som biter", "Snø gjør marsjen 30 % tregere, snøvær enda mer, og kolonner blir stående på fjellet i snøvær. Etter lang kulde bærer isen: da kan lagene gå rett over vann og elver. Lag som står ute i sprengkulde i mange timer får frostskader – få dem til leiren eller inn i et tettsted. Leiren bruker mer ved når det er kaldt.", "Vær, lyd og bilde"],
-  ["Flom og ras", "Etter mye regn kan elver gå over sine bredder og bratte lier rase ut. Stedet merkes i kartet. Det er tungt å gå gjennom, og vegen der er stengt til vannet har trukket seg tilbake eller raset er ryddet. Et ingeniørlag som står i raset, kan rydde det på tre timer.", "Vær, lyd og bilde"],
-  ["Brann", "I tørt vær kan skog og mark brenne. Brannen går med vinden og slokner i regn. Du kan tenne på selv med «Tenn på her» i lagpanelet – for eksempel for å stenge en dal for fienden. Lag som står i brannen blir skadet, og leiren kan brenne. Brent mark vises mørk i kartet.", "Vær, lyd og bilde"],
-  ["Jakt", "Det er rein i høyfjellet og elg i skogen. Velg et lag som står i ro der, og trykk «Jakt på …»: etter seks timer kommer de hjem med kjøtt. Går du selv i 3D og skyter et dyr, får leiren kjøttet. Samme område må hvile noen døgn mellom hver jakt.", "Leiren"],
-  ["Åker", "I «Verden» kan du rydde åker ved leiren. Så om våren, så høstes kornet av seg selv når det blir høst – mye mat på én gang. Åkeren synes i kartet ved leiren og trenger folk: én person på «fri» i Folk-panelet per 40 mål – med færre gror kornet saktere. Blir det vinter før du har høstet, fryser avlinga bort. Slå på «Årstidene går av seg selv» hvis du vil at året skal gå uten at du bytter årstid i menyen.", "Leiren"],
-  ["Funn i terrenget", "Rundt i terrenget ligger bilvrak, gjemte depoter, forlatte leirer og flyvrak. Lagene melder fra når de ser noe, og stedet får et gult merke i kartet. Send et lag helt bort og trykk «Undersøk» – det kan gi materialer, mat, diesel eller penger. Noen er tomme, og en forlatt leir kan være en felle.", "Lag og strid"],
-  ["Radio", "Med en radiomast eller et kontrollrom hører dere meldinger fra regionen noen ganger i døgnet: vegmeldinger, varsler og rykter om hvor det ligger noe. Ikke alt som sendes, er sant.", "Leiren"],
-  ["Tog", "Holder du to tettsteder som jernbanen går gjennom, kan du sette banen mellom dem i stand i «Verden». Da kommer det et tog hvert døgn med mye tre, betong, stål, diesel og mat – så lenge du holder begge stasjonene.", "Leiren"]
+  [
+    "Verden rundt dere",
+    "Trykk «Verden» nederst (eller på værflisa øverst, eller «Vær og verden» i Leir-menyen under Mål). Der står det hva været og årstiden gjør akkurat nå – føre, is, brannfare og flomfare – og du finner åkeren, jakta, funnene, radioen og toget.",
+    "Vær, lyd og bilde"
+  ],
+  [
+    "Vinter som biter",
+    "Snø gjør marsjen 30 % tregere, snøvær enda mer, og mens det snør (og noen timer etter, til vegen er brøytet) er vegene over fjellet stengt: kolonner kjører om, eller blir stående og får beskjed hvis det ikke finnes noen omkjøring. Kulda biter på fiendens lag også. Etter lang kulde legger isen seg på innsjøene – først stenger den båtene, så bærer den, og lagene kan gå rett over vann og elver. Lag som står ute i sprengkulde, får frostskader – få dem til leiren eller inn i et tettsted.",
+    "Vær, lyd og bilde"
+  ],
+  [
+    "Flom og ras",
+    "Etter mye regn kan elver gå over sine bredder og bratte lier rase ut. Flommen følger dalen nedover fra elva og vises som blått vann i kartet og i 3D. Det er tungt å gå gjennom, og vegene der er stengt til vannet har trukket seg tilbake. Et ingeniørlag kan rydde et ras på noen timer.",
+    "Vær, lyd og bilde"
+  ],
+  [
+    "Brann",
+    "I tørt vær kan skog og mark brenne. Brannen går med vinden og slokner i regn. Du kan tenne på selv med «Tenn på her» i lagpanelet – for eksempel for å stenge en dal for fienden. Lag som står i brannen blir skadet, og leiren kan brenne. Brent mark vises mørk i kartet.",
+    "Vær, lyd og bilde"
+  ],
+  [
+    "Jakt",
+    "Det er rein i høyfjellet og elg i skogen. Velg et lag som står i ro der, og trykk «Jakt på …»: etter seks timer kommer de hjem med kjøtt. Går du selv i 3D og skyter et dyr, får leiren kjøttet. Samme område må hvile noen døgn mellom hver jakt.",
+    "Leiren"
+  ],
+  [
+    "Åker",
+    "En åker er et bygg i leiren: trykk «Anlegg en åker» i «Verden» (eller velg Åker under Annet i byggelista) og legg den der det er flatt og åpent – et byggelag rydder og pløyer den. Så om våren, så høstes kornet av seg selv når det blir høst – mye mat på én gang. I 3D ser du radene vokse fra grønt til gult. Åkeren trenger folk på «fri», og modent korn brenner lett: en brann i åkeren tar avlinga.",
+    "Leiren"
+  ],
+  [
+    "Funn i terrenget",
+    "Rundt i terrenget ligger bilvrak, gjemte depoter, forlatte leirer og flyvrak. Lagene melder fra når de ser noe, og stedet får et gult merke i kartet. Send et lag helt bort og trykk «Undersøk» – det kan gi materialer, mat, diesel eller penger. Noen er tomme, og en forlatt leir kan være en felle. Funnene ligger aldri midt i et tettsted eller i vannet, og i 3D ser du kasser, tønner, sekker, telt eller vraket der de ligger.",
+    "Lag og strid"
+  ],
+  [
+    "Radio",
+    "Med en radiomast eller et kontrollrom hører dere meldinger fra regionen noen ganger i døgnet: vegmeldinger, varsler og rykter om hvor det ligger noe. Ikke alt som sendes, er sant.",
+    "Leiren"
+  ],
+  [
+    "Tog",
+    "Holder du to tettsteder som jernbanen går gjennom, kan du sette banen mellom dem i stand i «Verden». Da kommer det et tog hvert døgn med mye tre, betong, stål, diesel og mat – så lenge du holder begge stasjonene.",
+    "Leiren"
+  ],
+  [
+    "Kratere og spor",
+    "Miner, rakettsalver og sprengte kjøretøy etterlater kratere, og kjøretøy i terrenget lager hjulspor. Kraterne og de ferskeste sporene blir liggende også etter at du har lastet spillet på nytt.",
+    "I 3D"
+  ],
+  [
+    "Dyr du har felt",
+    "Et dyr du har skutt selv, kommer ikke tilbake når du går videre eller laster spillet på nytt.",
+    "I 3D"
+  ]
 ]

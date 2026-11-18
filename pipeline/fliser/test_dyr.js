@@ -45,4 +45,8 @@ const F5 = Dyr.nyFlokk('sau', 0, 0, 10, rnd); for (let t = 0; t < 10; t++) Dyr.s
 ok(F5.redd <= 0, 'på huk kan du gå nærmere (30 m)');
 const F6 = Dyr.nyFlokk('sau', 0, 0, 10, rnd); for (let t = 0; t < 10; t++) Dyr.steg(F6, .1, rnd, { skudd: [[250, 0]] });
 ok(F6.redd > 0, 'skudd 250 m unna skremmer sauene');
+// runde 4: felte dyr kjennes igjen på art og første plass (dyr3d.js) – samme frø gir samme plasser, også når noen plasser er ulovlige
+{ const nøkler = F => F.dyr.map(d => Math.round(d.x) + ':' + Math.round(d.y)), lov = (x, y) => x > -8;
+  const A = Dyr.nyFlokk('sau', 0, 0, 12, Dyr.tilfeldig(4242), lov), B = Dyr.nyFlokk('sau', 0, 0, 12, Dyr.tilfeldig(4242), lov);
+  ok(JSON.stringify(nøkler(A)) === JSON.stringify(nøkler(B)) && new Set(nøkler(A)).size === A.dyr.length, 'samme flokk gir samme dyr (felte dyr kan huskes)'); }
 console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);

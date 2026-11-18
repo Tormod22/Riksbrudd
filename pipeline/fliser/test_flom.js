@@ -21,5 +21,11 @@ assert(!Fl.iFlom(felt, x(360), y(150)), 'ikke dalen bak ryggen'); assert(!Fl.iFl
 // bredere nær dammen (15 m) enn nederst (3 m)
 const bredde = j => { let n = 0; for (let i = 0; i < w; i++) n += maske[j * w + i]; return n; };
 assert(bredde(120) > bredde(100 + Math.floor(R.lengde / r) - 10), `bredde øverst ${bredde(120)} > nederst ${bredde(100 + Math.floor(R.lengde / r) - 10)}`);
+// runde 4: flom etter regn – samme felt, men kortere, grunnere og smalere (valgene o)
+{ const o = { lengde: 3000, dybde: [2.5, 1], bredde: 250, start: 120 }, s2 = Fl.flomvei(v, x(200), y(300), o), f2 = Fl.flomfelt(v, s2, o), F2 = { ...v, maske: f2.maske };
+  assert(s2.length > 30 && s2.length < sti.length, 'kortere flomvei: ' + s2.length); assert(s2.every(([i]) => Math.abs(i - 200) <= 2), 'regnflommen følger også dalen');
+  assert(f2.antall > 50 && f2.antall < antall, 'mindre felt: ' + f2.antall); assert(Fl.iFlom(F2, x(200), y(330)) && !Fl.iFlom(F2, x(200), y(300 + 3000 / r + 20)), 'går 3 km nedover');
+  assert(!Fl.iFlom(F2, x(230), y(330)), 'ikke dalsiden'); const q = 330 * w + 200; assert(f2.flate[q] > v.H[q], 'vannflaten står over dalbunnen');
+  assert(Fl.flomvei(v, damX, damY).length === sti.length, 'uten valg som før'); }
 { const vm = require('vm'), k = vm.createContext({}); vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/flom.js'), 'utf8'), k); assert.equal(typeof k.Flom.flomvei, 'function'); }
 console.log(`ok – flomveien følger dalen ${Math.round((sti[sti.length - 1][1] - sti[0][1]) * r / 1000)} km over et søkk, flomfeltet ${antall} celler, ikke magasinet, dalsidene eller dalen bak ryggen`);

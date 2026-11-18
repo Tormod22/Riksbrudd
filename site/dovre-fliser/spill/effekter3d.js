@@ -17,18 +17,27 @@
     partikler: { høy: 700, middels: 400, lav: 160 },
     spor: { høy: 1600, middels: 900, lav: 300 },
     sporlys: 48,
-    // hjulspor: nytt stykke for hver 1,5 m, ligger i 100 s og tones bort de siste 30 (sekunder i ekte tid)
-    sporSteg: 1.5, sporTid: 100, sporTone: 30, sporBredde: .34,
+    // hjulspor: nytt stykke for hver 1,5 m, ligger i 10 minutter og tones bort de siste 2 (sekunder i ekte tid; runde 4: før 100 s –
+    // sporene lagres nå per leir og kommer tilbake etter ny innlasting, så de får ligge litt)
+    sporSteg: 1.5, sporTid: 600, sporTone: 120, sporBredde: .34,
+    // lagring per leir (localStorage «riksbrudd-effekter»): høyst så mange hjulspor og kratere
+    lagreSpor: 900, lagreKratere: 80,
+    // krater: en mine mot fotfolk (radius m) og en salve fra rakettartilleriet (antall nedslag spredt innen «spredt» × salvens radius)
+    mineKrater: 2.2, salve: { nedslag: 6, r: [3.5, 6], spredt: .45 },
     // støv: bare når bakken er tørrere enn dette (VAER.våt 0–1)
     tørt: .35,
     // skudd: så mange sporlys per sekund per lag som skyter, og farten på dem (m/s; saktere enn ekte kuler så de synes)
     skuddTakt: 5, kuleFart: 320, kuleLengde: 9,
     // kratere: høyst så mange, standard radius
-    kratere: 40, kraterR: 4,
+    kratere: 80, kraterR: 4,
     // brente områder og branner: høyst så mange leses (de siste i lista)
     brente: 160, brenteHus: 60,
     // bare ting innen denne avstanden fra kameraet får røyk og støv (m)
     nær: 900,
+    // lyngtustene lysnes opptil så mange ganger når du ser rett ned på dem (runde 4)
+    lyng: 1.6,
+    // brent mark: askefargen (0–1) og hvor mye den dekker der det har brent helt (resten er bakken under)
+    aske: { farge: [.1, .085, .07], dekker: .74 },
   };
   // Hva ligger under hjulene? vegtype = 'asfalt' | 'grus' | null (terreng), snø = ligger det snø her, våt = 0–1.
   // Svar: { støv: 0–1, snø: bool, spor: 0–1 (hvor mørke sporene blir) }
@@ -53,7 +62,27 @@
   function brentVed(om, x, y) { let b = 0; for (const o of om) { const d = Math.hypot(x - o.x, y - o.y); if (d < o.r) b = Math.max(b, Math.min(1, (1 - d / o.r) * 2.2) * o.styrke); } return b; }
   // Hjulsporets styrke etter alderen (sekunder): fullt først, tones bort mot slutten
   function sporStyrke(alder) { const R = REGLER; if (alder >= R.sporTid) return 0; return alder < R.sporTid - R.sporTone ? 1 : (R.sporTid - alder) / R.sporTone; }
-  const Effekter = { REGLER, underlag, områder, brentVed, sporStyrke };
+  // Lagring (runde 4): kratere [{ x, y, r, v }] og spor [{ x, y, cx, cy, l, v, h, b, k, født }] (født i sekunder som nå) blir til korte
+  // lister i kartets meter; sporene som er for gamle, tas ikke med. Gir { kratere: [[x, y, r, v]], spor: [[X, Y, l, v, h, b, k, alder]] }.
+  function tilLagring(kratere, spor, nå) {
+    const R = REGLER, r2 = (x, d = 100) => Math.round(x * d) / d;
+    const S = []; for (const s of spor.slice(-R.lagreSpor)) { const alder = nå - s.født; if (alder >= R.sporTid) continue; S.push([r2(s.x + (s.cx || 0), 10), r2(s.y + (s.cy || 0), 10), r2(s.l), r2(s.v, 1000), r2(s.h, 1000), s.b, r2(s.k), Math.max(0, Math.round(alder))]); }
+    return { kratere: kratere.slice(-R.lagreKratere).map(k => [r2(k.x, 10), r2(k.y, 10), r2(k.r), r2(k.v || 0)]), spor: S };
+  }
+  // Tilbake fra lagringen: kratere og spor (sporene i kartets meter med cx = cy = 0, z regnes når de tegnes). Tåler skadde data.
+  function fraLagring(d, nå) {
+    const R = REGLER, ok = a => Array.isArray(a) && a.every(Number.isFinite), kratere = [], spor = []; if (!d || typeof d !== 'object') return { kratere, spor };
+    for (const k of (Array.isArray(d.kratere) ? d.kratere : []).slice(-R.lagreKratere)) if (ok(k) && k.length >= 3 && k[2] > 0) kratere.push({ x: k[0], y: k[1], r: Math.min(30, k[2]), v: k[3] || 0 });
+    for (const q of (Array.isArray(d.spor) ? d.spor : []).slice(-R.lagreSpor)) if (ok(q) && q.length >= 8 && q[7] < R.sporTid) spor.push({ x: q[0], y: q[1], cx: 0, cy: 0, z: 0, dz: null, l: q[2], v: q[3], h: q[4], b: q[5], k: q[6], født: nå - q[7] });
+    return { kratere, spor };
+  }
+  // Nedslagene i en salve: n kratere spredt rundt (x, y) innen radius, fast for salven (frø)
+  function salveKratere(x, y, radius, frø) {
+    const S = REGLER.salve, ut = []; let f = (Math.floor(Math.abs(frø)) % 2147483646) + 1; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < S.nedslag; i++) { const a = rnd() * 6.283, d = i ? Math.sqrt(rnd()) * radius * S.spredt : 0; ut.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, r: S.r[0] + (S.r[1] - S.r[0]) * rnd() }); }
+    return ut;
+  }
+  const Effekter = { REGLER, underlag, områder, brentVed, sporStyrke, tilLagring, fraLagring, salveKratere };
   if (typeof module !== 'undefined') { module.exports = Effekter; return; }
   rot.Effekter = Effekter;
   if (typeof KROKER === 'undefined') return;
@@ -62,6 +91,8 @@
   const r3 = () => (typeof R3 !== 'undefined' && R3 && R3.ut ? R3 : null);
   const nivå = () => (window.KVAL ? KVAL.nivå : 'høy');
   const T = { P: [], kuler: [], spor: [], sporNr: 0, sist: 0, kj: new Map(), skudd: new WeakMap(), kratere: [], brentNøkkel: '', brannTid: 0, laget: 0 };
+  // lagringen per leir (runde 4)
+  const L = { nøkkel: 'riksbrudd-effekter', leir: '', klar: false, endret: false };
   const zVed = (R, x, y) => (hoyde3d(x + R.ut.cx, y + R.ut.cy) - R.ut.h0) * R.EX;
 
   // ---- punktskyen: røyk, støv, eksos, munningsild, nedslag ----
@@ -164,7 +195,7 @@
   function leggSpor(R, x0, y0, x1, y1, bredde, styrke) {
     const maks = REGLER.spor[nivå()] || 600, z0 = zVed(R, x0, y0), z1 = zVed(R, x1, y1);
     const s = { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: (z0 + z1) / 2 + .07, l: Math.hypot(x1 - x0, y1 - y0) + .15, v: Math.atan2(y1 - y0, x1 - x0), h: Math.atan2(z1 - z0, Math.hypot(x1 - x0, y1 - y0) || 1), b: bredde, k: styrke, født: T.nå, cx: R.ut.cx, cy: R.ut.cy };
-    if (T.spor.length >= maks) T.spor.shift(); T.spor.push(s);
+    if (T.spor.length >= maks) T.spor.shift(); T.spor.push(s); L.endret = true;
   }
   function stegSpor(R) {
     const m = spornett(R), d = DUMMY.o || (DUMMY.o = new THREE.Object3D()), u = R.ut, K = m.instanceColor.array; let n = 0, ut = 0;
@@ -234,7 +265,7 @@
   // Lag et krater (kartets meter). smell = eksplosjon med ild og røyk nå.
   function krater(X, Y, r, smell) {
     if (!Number.isFinite(X) || !Number.isFinite(Y)) return; r = Number.isFinite(r) && r > 0 ? Math.min(30, r) : REGLER.kraterR;
-    if (T.kratere.length >= REGLER.kratere) T.kratere.shift(); T.kratere.push({ x: X, y: Y, r, v: Math.random() * 6.283 });
+    if (T.kratere.length >= REGLER.kratere) T.kratere.shift(); T.kratere.push({ x: X, y: Y, r, v: Math.random() * 6.283 }); T.sistKrater = { x: X, y: Y, t: performance.now() }; L.endret = true;
     const R = r3(); if (R && smell && på3d) { const x = X - R.ut.cx, y = Y - R.ut.cy; if (Math.abs(x) < R.ut.S && Math.abs(y) < R.ut.S) eksplosjon(x, y, zVed(R, x, y), r); }
     if (R) R.effKraterNøkkel = '';
   }
@@ -250,7 +281,9 @@
     if (R.effBrent && (T.brentTeller = (T.brentTeller || 0) + 1) % 20 && T.brentNøkkel !== '') return;
     const u = R.ut, om = brente(), nøkkel = u.cx + '|' + u.cy + '|' + (R.settNr || 0) + '|' + sum(om);
     if (nøkkel === T.brentNøkkel && R.effBrent) return; T.brentNøkkel = nøkkel; ryddBrent(R);
-    if (!R.effBrentMat) R.effBrentMat = new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    // (runde 4) brent mark blandes mot aske (farge og styrke per hjørne) i stedet for å ganges mørkere: før ble lyse jorder og plener
+    // stående lyse midt i det brente (sett på /rogaland)
+    if (!R.effBrentMat) R.effBrentMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const inne = om.filter(o => Math.abs(o.x - u.cx) < u.S + o.r && Math.abs(o.y - u.cy) < u.S + o.r);
     if (inne.length) {
       const minR = inne.reduce((a, o) => Math.min(a, o.r), Infinity), st = Math.max(8, Math.min(40, minR / 3)), sett = new Set(), pos = [], kol = [], zs = new Map(), bs = new Map();
@@ -262,8 +295,8 @@
         for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) { const q = i + ',' + j; if (sett.has(q)) continue; sett.add(q);
           const K = [hj(i, j), hj(i + 1, j), hj(i + 1, j + 1), hj(i, j + 1)]; if (K.every(k => bs.get(k) <= 0) || K.some(k => zs.get(k) !== zs.get(k))) continue;
           const P = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
-          for (const n of [0, 1, 2, 0, 2, 3]) { const c = 1 - .72 * bs.get(K[n]); pos.push(P[n][0] * st - u.cx, P[n][1] * st - u.cy, zs.get(K[n])); kol.push(c, c * .97, c * .94); } } }
-      if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3));
+          for (const n of [0, 1, 2, 0, 2, 3]) { const b = bs.get(K[n]), A = REGLER.aske; pos.push(P[n][0] * st - u.cx, P[n][1] * st - u.cy, zs.get(K[n])); kol.push(A.farge[0], A.farge[1], A.farge[2], A.dekker * b); } } }
+      if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 4));
         const m = new THREE.Mesh(g, R.effBrentMat); m.renderOrder = 1; m.frustumCulled = false; R.scene.add(m); R.effBrent.push(m); }
     }
     const lokal = inne.map(o => ({ x: o.x - u.cx, y: o.y - u.cy, r: o.r, styrke: o.styrke }));
@@ -275,9 +308,15 @@
         if (brentVed(lokal, mx, my) < .3) continue; ant++;
         // mot klokka sett ovenfra, og litt større enn huset
         const P = (areal < 0 ? P0.slice().reverse() : P0).map(p => { const dx = p[0] - mx, dy = p[1] - my, l = Math.hypot(dx, dy) || 1; return [p[0] + dx / l * .25, p[1] + dy / l * .25]; });
-        let zb = Infinity; for (const p of P) zb = Math.min(zb, zVed(R, p[0], p[1])); zb -= .3; const zt = P0.topp + .3;
+        let zb = Infinity; for (const p of P) zb = Math.min(zb, zVed(R, p[0], p[1])); zb -= .3;
+        // (runde 4, sett på ekte hus på /rogaland) skallet følger taket: veggene opp til der taket begynner (P0.veggTopp fra hus3d), og et
+        // tak med møne langs den lengste siden opp til P0.topp – før var det et flatt lokk på toppen, som la en mørk flekk i lufta over
+        // saltakene og på bakken bak husene. Flate tak (uten veggTopp) får et flatt lokk som før.
+        const zv = (Number.isFinite(P0.veggTopp) ? Math.min(P0.veggTopp, P0.topp) : P0.topp) + .25, zt = P0.topp + .3, ms = sotMøne(P, mx, my);
         for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length];
-          pos.push(a[0], a[1], zb, b[0], b[1], zb, b[0], b[1], zt, a[0], a[1], zb, b[0], b[1], zt, a[0], a[1], zt, mx, my, zt, a[0], a[1], zt, b[0], b[1], zt); } }
+          pos.push(a[0], a[1], zb, b[0], b[1], zb, b[0], b[1], zv, a[0], a[1], zb, b[0], b[1], zv, a[0], a[1], zv);
+          if (zt - zv < .2) { pos.push(mx, my, zv, a[0], a[1], zv, b[0], b[1], zv); continue; }
+          const ra = ms(a), rb = ms(b); pos.push(a[0], a[1], zv, b[0], b[1], zv, rb[0], rb[1], zt); if (Math.hypot(ra[0] - rb[0], ra[1] - rb[1]) > .05) pos.push(a[0], a[1], zv, rb[0], rb[1], zt, ra[0], ra[1], zt); } }
       if (pos.length) { if (!R.effSotMat) R.effSotMat = new THREE.MeshBasicMaterial({ color: 0x4a4541, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
         const m = new THREE.Mesh(g, R.effSotMat); m.renderOrder = 4; m.frustumCulled = false; m.userData.sot = ant; R.scene.add(m); R.effBrent.push(m); } }
@@ -289,6 +328,13 @@
         t.C[k * 3] *= f * .9; t.C[k * 3 + 1] *= f * .78; t.C[k * 3 + 2] *= f * .7; } }
     R.lodVed = null;
   }
+  // Mønet for sotlaget: linja gjennom midten langs husets lengste side, fra ende til ende av omrisset. Gir en funksjon som legger et
+  // punkt på omrisset vinkelrett inn på mønet (et punkt på en gavl havner i mønets ende, så gavlen blir en loddrett trekant).
+  function sotMøne(P, mx, my) {
+    let lx = 1, ly = 0, best = -1; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > best) { best = l; lx = (b[0] - a[0]) / (l || 1); ly = (b[1] - a[1]) / (l || 1); } }
+    let t0 = Infinity, t1 = -Infinity; for (const p of P) { const t = (p[0] - mx) * lx + (p[1] - my) * ly; t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
+    return p => { const t = Math.max(t0, Math.min(t1, (p[0] - mx) * lx + (p[1] - my) * ly)); return [mx + lx * t, my + ly * t]; };
+  }
   // der det brenner: flammer og røyk (noen få av rutene per gang, tilfeldig valgt blant dem nær kameraet)
   function stegBrann(R, dt) {
     T.brannTid += dt; if (T.brannTid < .09) return; T.brannTid = 0;
@@ -299,7 +345,24 @@
       if (Math.random() < .6) ny(x + tilf(1), y + tilf(1), z + 3, tilf(.5), tilf(.5), 2 + Math.random() * 1.5, 5 + Math.random() * 4, 2 * stor, 7 * stor, .2, .2, .21, .4, -.25, .35); }
   }
 
+  // ---- lyngen sett ovenfra (runde 4) ----
+  // Lyngtustene i gresset (index.html gress3d/gressMateriale, aFelt = 1) ser mørke ut mot lys bakke når du ser rett ned på dem fra
+  // 30–110 m. Materialet pakkes inn her (index.html er ikke endret): lyngen lysnes opptil REGLER.lyng ganger jo mer ovenfra du ser.
+  function lyngLys(R) {
+    const m = R.gressMesh && R.gressMesh.material; if (!m || m.userData.lyngLys) return; m.userData.lyngLys = true;
+    const før = m.onBeforeCompile, nøkkel = m.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : () => '';
+    m.onBeforeCompile = (sh, r) => { if (før) før(sh, r);
+      if (!/attribute float aFelt/.test(sh.vertexShader)) return;
+      sh.vertexShader = sh.vertexShader.replace('attribute float aFelt;', 'attribute float aFelt;\nvarying float vLyngLys;').replace('#include <fog_vertex>', `#include <fog_vertex>
+  vec4 lyngW = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+  float lyngOpp = clamp((cameraPosition.z - lyngW.z) / max(0.001, length(cameraPosition - lyngW.xyz)), 0.0, 1.0);
+  vLyngLys = 1.0 + ${(REGLER.lyng - 1).toFixed(3)} * aFelt * smoothstep(0.35, 0.8, lyngOpp);`);
+      sh.fragmentShader = 'varying float vLyngLys;\n' + sh.fragmentShader.replace('#include <fog_fragment>', 'gl_FragColor.rgb *= vLyngLys;\n#include <fog_fragment>'); };
+    m.customProgramCacheKey = () => nøkkel() + '-lyng' + REGLER.lyng; m.needsUpdate = true;
+  }
+
   // ---- krokene ----
+  KROKER.ramme3d.push(R => { lyngLys(R); });
   KROKER.ramme3d.push(R => {
     if (!R.ut || !R.scene || R.bygger && !R.mesh) return;
     const nå = performance.now() / 1000; let dt = T.sist ? nå - T.sist : 0; T.sist = nå; if (dt > .25) dt = .25; T.nå = nå;
@@ -340,7 +403,40 @@
     if (!Number.isFinite(X) || !Number.isFinite(Y)) return;
     if (o.lag === 'veg') krater(X, Y, 5, true); else { window.Effekter3d.eksplosjon(X, Y, 7); window.Effekter3d.røyk(X, Y, 10); } } catch (e) { /* effekten er ikke viktig */ } });
 
-  window.Effekter3d = { krater, eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
+  // ---- miner mot fotfolk og salver fra rakettartilleriet lager kratere (runde 4) ----
+  // Modulene sier ikke fra selv, så lista over salver (window.SALVER) og minefeltene (window.MINEFELT) følges: en salve som er borte
+  // fra lista, har slått ned der den sto; et minefelt som har mistet ladninger, har gått av under et lag til fots i feltet
+  // (kjøretøy på en mine får krateret sitt fra skadKjoretoy over).
+  const kjenteSalver = new Set(), ladninger = new WeakMap();
+  function følgNedslag() {
+    const SA = window.SALVER;
+    if (Array.isArray(SA)) { for (const s of kjenteSalver) if (!SA.includes(s)) { kjenteSalver.delete(s);
+        const rad = (window.Enheter && Enheter.REGLER && Enheter.REGLER.artilleri && Enheter.REGLER.artilleri.radius) || 150;
+        Effekter.salveKratere(s.x, s.y, rad, s.x * 7 + s.y * 3).forEach((k, i) => krater(k.x, k.y, k.r, i < 3)); }
+      for (const s of SA) if (s && Number.isFinite(s.x) && Number.isFinite(s.y)) kjenteSalver.add(s); }
+    const MF = window.MINEFELT; if (!Array.isArray(MF) || typeof ENHETER === 'undefined') return;
+    const radius = (window.Feltarbeid && Feltarbeid.REGLER && Feltarbeid.REGLER.mine && Feltarbeid.REGLER.mine.radius) || 60;
+    for (const f of MF) { const før = ladninger.get(f), nå = f.ladninger; ladninger.set(f, nå); if (før == null || !(nå < før)) continue;
+      const kand = ENHETER.filter(e => e.menn && e.side !== f.side && Math.hypot(e.x - f.x, e.y - f.y) <= radius * 1.3);
+      // et kjøretøy har alt fått krateret sitt (skadKjoretoy) hvis det kom et krater i feltet nettopp nå
+      const sist = T.sistKrater; if (!kand.length || (sist && performance.now() - sist.t < 1500 && Math.hypot(sist.x - f.x, sist.y - f.y) < radius * 1.5)) continue;
+      for (let i = 0; i < Math.min(før - nå, 3); i++) { const e = kand[Math.floor(Math.random() * kand.length)]; krater(e.x + tilf(4), e.y + tilf(4), REGLER.mineKrater, true); } }
+  }
+  KROKER.sim.push(følgNedslag);
+
+  // ---- lagring per leir: kratere og hjulspor (runde 4) ----
+  function lagre() { L.endret = false; if (!L.klar || !L.leir) return; try { localStorage.setItem(L.nøkkel, JSON.stringify({ leir: L.leir, ...Effekter.tilLagring(T.kratere, T.spor, performance.now() / 1000) })); } catch (e) { /* fullt eller sperret */ } }
+  function lastInn() {
+    const S = window.OppstartSpill && OppstartSpill.tilstand(); if (!S || !S.leir) return; L.leir = Math.round(S.leir.x) + ',' + Math.round(S.leir.y); let d = null;
+    try { d = JSON.parse(localStorage.getItem(L.nøkkel) || 'null'); } catch (e) { d = null; }
+    const r = Effekter.fraLagring(d && d.leir === L.leir ? d : null, performance.now() / 1000); T.kratere.length = 0; T.kratere.push(...r.kratere); T.spor.length = 0; T.spor.push(...r.spor);
+    L.klar = true; L.endret = false; const R = r3(); if (R) R.effKraterNøkkel = '';
+  }
+  window.addEventListener('riksbrudd-spill', () => setTimeout(lastInn, 0));
+  window.addEventListener('pagehide', () => { if (L.endret) lagre(); });
+  setInterval(() => { if (L.endret) lagre(); }, 5000);
+
+  window.Effekter3d = { krater, kratere: () => T.kratere, lagre, lastInn, lyngLys, lagring: () => ({ ...L }), eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
     røyk(X, Y, mengde) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; røyk(x, y, zVed(R, x, y) + 1, mengde || 3); } },
     brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length, sotHus: (r3() && r3().effBrent || []).reduce((a, m) => a + (m.userData.sot || 0), 0), brentTrekanter: (r3() && r3().effBrent || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0) }),
     // oppdater(): les BRENT på nytt i neste bilde (ellers leses lista hver 20. ramme)

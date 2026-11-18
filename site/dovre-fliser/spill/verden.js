@@ -16,11 +16,14 @@
   // Claudes forslag – alle tallene i pakka
   const REGLER = {
     // snø: marsjfart på snødekt mark og i snøvær (faktorer), storm i tillegg; fjellveger over «vegFjell» moh. stenger i snøvær
-    snø: { marsj: .7, snøvær: .8, storm: .85, vegFjell: 900 },
+    snø: { marsj: .7, snøvær: .8, storm: .85, vegFjell: 900, brøyt: 6, sjekk: 10 },
+    // (brøyt: timer etter at snøværet har gitt seg før fjellvegene er brøytet og åpne igjen; sjekk: spillminutter mellom hver gang
+    //  kolonnenes ruter sjekkes mot stengte høye lenker)
     // temperaturen faller med høyden (grader per 100 m over dalen, 650 moh.)
     temp: { perHundre: .6, dal: 650 },
     // is: døgngrader med kulde før isen bærer folk til fots, mest is, hvor fort den tiner (per varmegrad-døgn), fart på isen (km/t)
-    is: { bærer: 25, maks: 80, tiner: 4, fart: 2.5 },
+    is: { bærer: 25, maks: 80, tiner: 4, fart: 2.5, båt: 10, sjø: 1 },
+    // (båt: døgngrader før isen stenger båter på innsjøene; sjø: vann under så mange moh. er sjøen, som ikke fryser)
     // kulde: lag som står ute (ikke i leir eller tettsted) under «grense» grader tåler «timerFør» timer; så blir én mann såret (aldri drept) hver «timerPer» time; «læ» = innen så mange meter fra leiren står de ikke ute
     // ved: ekstra tre (m³ per døgn) i leiren per 10 grader under «vedFra»
     kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
@@ -29,6 +32,9 @@
     // etter: så mye synker regnsummen når det har gått en flom / et ras (trykket slipper); høyst én flom og ett ras om gangen;
     // i kuldegrader faller nedbøren som snø og teller ikke
     // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras; ryddTimer: så lenge bruker et ingeniørlag på å rydde et ras
+    // regnflom (runde 4): vannet følger dalen nedover fra elva i flomfeltet til spill/flom.js – så langt (m), vannflaten så mye over
+    // dalbunnen øverst og nederst (m), så bredt på hver side (m), og flomveien starter i det laveste punktet så nær elva (m)
+    regnflom: { lengde: 3000, dybde: [2.5, 1], bredde: 250, start: 120 },
     regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .04, etter: { flom: 3, ras: 4 }, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
     // tørke: døgn uten regn (maks 10; nedbør og våt bakke tar bort «vått» ganger så fort); brannfaren er 0 under «fra» og full ved «full»
     tørke: { maks: 10, fra: .5, full: 2, vått: 2 },
@@ -41,12 +47,18 @@
     brennbar: [.05, 1, .55, 0, 0, .3, .1, .45],
     // jakt: rasjoner per felt dyr, jaktlag: timer per jakt, dyr per jakt (minst, flest), området hviler (timer), rute (m)
     kjøtt: { elg: 60, rein: 25, moskus: 70, sau: 10, ku: 80 },
-    jakt: { timer: 6, dyr: { elg: [0, 1], rein: [1, 3] }, hviler: 72, rute: 3000, rekkevidde: 250, bredde: 1.3 },
+    // (huskFelt: så mange dyr du har felt selv huskes per leir, så de ikke kommer tilbake når 3D-utsnittet bygges på nytt)
+    jakt: { timer: 6, dyr: { elg: [0, 1], rein: [1, 3] }, hviler: 72, rute: 3000, rekkevidde: 250, bredde: 1.3, huskFelt: 600 },
     // (målPerPerson: én person på «fri» i leiren steller så mange mål; færre folk = kornet gror tilsvarende saktere)
     // åker: rasjoner per mål ved høsting, døgn til kornet er modent, såkorn (kr per mål), ny åker (kr og mål per rydding), mest
     åker: { perMål: 6, modning: 3, såkorn: 20000, rydd: 1e6, ryddMål: 20, maks: 200, nær: 500, målPerPerson: 40 },
+    // ÅKEREN SOM BYGG (runde 4): ett åkerstykke i leiren er 5 mål (50 × 100 m), koster det samme per mål som ryddingen før og tar 4 spilltimer
+    // for et byggelag. Brann: hvor lett åkeren tar fyr (modent korn, grønt korn, bar jord/stubb) og hvor mye av åkeren som brenner per 30 min.
+    // Kornet står opptil «høyde» m når det er modent.
+    åkerBygg: { mål: 5, bredde: 50, lengde: 100, tid: 4, brann: { moden: .9, grønn: .35, bar: .15, skade: .25 }, høyde: .9 },
     // funn: rutenett (m), sjanse per rute, oppdages innen (m), undersøkes innen (m)
-    funn: { blokk: 2500, p: .3, ser: 300, tar: 80 },
+    funn: { blokk: 2500, p: .3, ser: 300, tar: 80, flytt: { steg: 40, maks: 800 } },
+    // (flytt: et funn som havner i tettbebyggelse, vann eller utenfor kartet, flyttes til nærmeste åpne sted – ringer hver «steg» m ut til «maks» m)
     // radio: timer mellom meldingene, andelen sanne, flest i lista
     radio: { timer: [3, 6], sann: .65, liste: 8 },
     // tog: kr per km for å sette strekningen i stand, stål per 10 km, timer å sette i stand per 10 km, lengste strekning (km),
@@ -61,7 +73,7 @@
 
   function ny() {
     return { versjon: 1, frost: 0, regn: 0, tørke: 0, soner: [], nesteSone: 1, brann: nyBrann(), åker: { mål: 0, sådd: false, grodd: 0, år: 0 },
-      jakt: { hviler: {}, lag: {} }, funn: { sett: {}, tatt: {} }, radio: { neste: 0, liste: [] }, tog: [], kulde: {}, auto: { på: false, start: 0, fra: 'sommer' } };
+      jakt: { hviler: {}, lag: {}, felt: [] }, funn: { sett: {}, tatt: {} }, radio: { neste: 0, liste: [] }, tog: [], kulde: {}, auto: { på: false, start: 0, fra: 'sommer' } };
   }
 
   // ---------- 31 vinter ----------
@@ -74,7 +86,18 @@
   }
   // Er en veg i denne høyden stengt av snøvær?
   const vegStengt = (vær, moh) => vær.snø > .5 && moh >= REGLER.snø.vegFjell;
+  // Snø stenger høye veglenker: gir høyden (moh.) som veglenker over er stengt, eller null. timerSiden = timer siden det sist snødde.
+  // Det må snø (eller ha snødd for mindre enn «brøyt» timer siden); grensen er fjellgrensen eller snøgrensen, det som er høyest.
+  function snøVegGrense(vær, timerSiden) {
+    const S = REGLER.snø, snør = vær.snø > .5 || (timerSiden != null && timerSiden < S.brøyt);
+    return snør && vær.snøgrense < S.vegFjell * 2 ? Math.max(S.vegFjell, Math.round(vær.snøgrense)) : null;
+  }
+  // Er lenken over grensen? høyder = [moh, ...] langs lenken (null = ukjent – da er den åpen)
+  const lenkeStengt = (grense, høyder) => grense != null && høyder.some(h => h != null && h > grense);
   const isBærer = V => V.frost >= REGLER.is.bærer;
+  // Islagt vann (pakka «sjo» kan bruke det for båter): ferskvann (vannflate over 1 moh., ikke sjøen) etter så mye kulde at isen har lagt seg.
+  // moh = høyden på vannflaten, klasse = terrengklasse (3 = vann). Isen stenger båter før den bærer folk (REGLER.is.båt).
+  const islagtVann = (V, moh, klasse) => klasse === 3 && moh != null && moh > REGLER.is.sjø && V.frost >= REGLER.is.båt;
   // Ekstra ved (m³ tre) leiren bruker på d døgn i kulda
   const vedEkstra = (temp, d) => Math.max(0, (REGLER.kulde.vedFra - temp) / 10) * REGLER.kulde.ved * d;
   // Et lag (id) har stått ute i «timer» timer ved temperaturen temp. Gir antall treff kulda gir nå (0 for det meste).
@@ -117,6 +140,7 @@
     if (f < 1) ut.push(`Snø: marsj −${pst(f)} % her`); else if (fFjell < 1) ut.push(`Snø i fjellet: marsj −${pst(fFjell)} % over ${Math.round(Math.max(0, vær.snøgrense))} moh.`);
     if (vær.snø > .5) ut.push(`Snøvær: vegene over ${REGLER.snø.vegFjell} moh. er stengt`);
     if (isBærer(V)) ut.push('Isen bærer: lag kan gå over vann'); else if (V.frost > 0) ut.push(`Is på vannene, bærer ikke ennå (${Math.round(V.frost / REGLER.is.bærer * 100)} %)`);
+    if (V.frost >= REGLER.is.båt) ut.push('Innsjøene er islagt: båtene kommer ikke fram der');
     if (vær.temp <= REGLER.kulde.grense) ut.push(`Kulde (${Math.round(vær.temp)} °C): lag som står ute lenge tar skade, leiren bruker mer ved`);
     const fl = flomfare(V), ra = rasfare(V), br = brannfare(V, vær);
     if (ra >= 1) ut.push('Mye regn: fare for ras og flom'); else if (fl >= 1) ut.push('Mye regn: fare for flom'); else if (fl > .3) ut.push('Elvene stiger');
@@ -178,6 +202,15 @@
   // Folk åkeren trenger, og siden (m) på den kvadratiske åkeren i kartet (1 mål = 1000 m²)
   const åkerBehov = mål => Math.ceil(mål / REGLER.åker.målPerPerson);
   const åkerSide = mål => Math.sqrt(Math.max(0, mål) * 1000);
+  // Hvor lett åkeren tar fyr: sådd og hvor modent kornet er (0–1), årstiden (vinter: snø på åkeren)
+  function åkerBrennbar(sådd, mod, årstid) { const B = REGLER.åkerBygg.brann; if (årstid === 'vinter') return 0; return sådd ? (mod >= .6 ? B.moden : B.grønn) : B.bar; }
+  // Hele åkeren: mål ryddet før (uten bygg) + mål i åkerstykkene, hvert ganget med hvor helt det er (hp 0–1; et brent stykke gir mindre)
+  const åkerMål = (ryddet, stykker) => Math.round(((ryddet || 0) + (stykker || []).reduce((a, b) => a + REGLER.åkerBygg.mål * Math.max(0, Math.min(1, b.hp == null ? 1 : b.hp)), 0)) * 10) / 10;
+  // Kornets høyde (m) og farge [r, g, b] 0–1: brun jord, grønt som vokser, gult når det er modent
+  function korn(sådd, mod) {
+    if (!sådd) return { h: 0, farge: [.4, .31, .21] }; const m = klem(mod, 0, 1);
+    return { h: .08 + (REGLER.åkerBygg.høyde - .08) * m, farge: m >= 1 ? [.82, .7, .32] : [.36 + .2 * m, .52 + .1 * m, .2 + .02 * m] };
+  }
   function ryddÅker(V, mål = REGLER.åker.ryddMål) { const Å = V.åker, R = REGLER.åker; if (Å.mål + mål > R.maks) return { feil: `Dere kan ikke drive mer enn ${R.maks} mål.` }; Å.mål += mål; return { ok: true, pris: R.rydd * mål / R.ryddMål }; }
 
   // ---------- 35 brann ----------
@@ -230,6 +263,15 @@
     const typer = ['vrak', 'vrak', 'depot', 'depot', 'leir', 'leir', 'fly'], type = typer[Math.floor(hash3(bx, by, 2) * typer.length)];
     return { id: bx + ',' + by, type, navn: FUNN[type].navn, x: Math.round((bx + .15 + .7 * hash3(bx, by, 3)) * R.blokk), y: Math.round((by + .15 + .7 * hash3(bx, by, 4)) * R.blokk), frø: Math.floor(hash3(bx, by, 5) * 1e9) };
   }
+  // Stedene et funn kan flyttes til, nærmest først: selve stedet, så ringer hver «steg» m (fast rekkefølge for samme funn)
+  function funnKandidater(x, y, frø = 0) {
+    const F = REGLER.funn.flytt, ut = [[x, y]];
+    for (let r = F.steg; r <= F.maks; r += F.steg) { const n = Math.max(6, Math.round(2 * Math.PI * r / F.steg)), a0 = hash((frø | 0) + r) * 2 * Math.PI;
+      for (let i = 0; i < n; i++) { const a = a0 + i * 2 * Math.PI / n; ut.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); } }
+    return ut;
+  }
+  // Kan et funn ligge i denne terrengklassen? Ikke i vann (3), tettbebyggelse (7) eller utenfor kartet (255)
+  const åpentFunnSted = k => k != null && k !== 3 && k !== 7 && k !== 255;
   function funnNær(x, y, r) {
     const B = REGLER.funn.blokk, ut = [];
     for (let by = Math.floor((y - r) / B); by <= Math.floor((y + r) / B); by++) for (let bx = Math.floor((x - r) / B); bx <= Math.floor((x + r) / B); bx++) {
@@ -304,9 +346,9 @@
 
   function fraJSON(d) { const V = ny(); if (!d || d.versjon !== 1) return V; for (const k of Object.keys(V)) if (d[k] != null) V[k] = typeof V[k] === 'object' && !Array.isArray(V[k]) ? { ...V[k], ...d[k] } : d[k]; if (!V.brann.celler) V.brann = nyBrann(); return V; }
 
-  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
-    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
-    funnIBlokk, funnNær, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
+  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagtVann, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
+    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, åkerBrennbar, åkerMål, korn, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
+    funnIBlokk, funnNær, funnKandidater, åpentFunnSted, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Verden = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

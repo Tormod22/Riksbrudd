@@ -68,12 +68,16 @@
     return Math.abs(h([x + 2, y]) - h0) < 1.5 && Math.abs(h([x, y + 2]) - h0) < 1.5;
   }
   // Flokkene for en årstid: nærmest midten først, til taket (PC 400, mobil 150) er nådd
+  // dyr som er felt (nøklene fra plasser); pakka «verden» fyller lista fra lagringen per leir (Dyr3d.settFelte)
+  const FELTE = new Set();
   function plasser(u, årstid) {
     const ut = []; let n = 0; if (!u || !u.dyrSteder) return ut;
     const liste = u.dyrSteder.filter(s => Dyr.iSesong(s.art, årstid)).sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
     for (const s of liste) {
       const k = Math.min(s.n, maks() - n); if (k <= 0) break;
       const F = Dyr.nyFlokk(s.art, s.x, s.y, k, Dyr.tilfeldig(s.frø), (x, y) => lovlig(u, x, y));
+      // felte dyr (runde 4) kommer ikke tilbake: hvert dyr kjennes igjen på art og første plass i kartet (fast for flokken)
+      F.dyr = F.dyr.filter(d => { d.nøkkel = s.art + ':' + Math.round(d.x + u.cx) + ':' + Math.round(d.y + u.cy); return !FELTE.has(d.nøkkel); });
       if (F.dyr.length) { ut.push(F); n += F.dyr.length; }
     }
     return ut;
@@ -275,7 +279,9 @@
     if (!D || !treffer) return null; const u = D.u, t = treffer(D.flokker, X - u.cx, Y - u.cy, fx, fy); if (!t) return null;
     const d = t.F.dyr[t.i], m = D.mesh[t.F.art]; t.F.dyr.splice(t.i, 1);
     if (m && d.nr != null) { if (!o3) o3 = new THREE.Object3D(); o3.position.set(0, 0, -9999); o3.scale.setScalar(0); o3.updateMatrix(); m.setMatrixAt(d.nr, o3.matrix); m.instanceMatrix.needsUpdate = true; }
-    return { art: t.F.art, ung: !!d.ung, avst: t.avst };
+    if (d.nøkkel) FELTE.add(d.nøkkel);
+    return { art: t.F.art, ung: !!d.ung, avst: t.avst, nøkkel: d.nøkkel || null };
   }
-  window.Dyr3d = { plasser, punkter, antall, prøvShadere, lovlig, fell, flokker: () => (D ? D.flokker : []) };
+  function settFelte(liste) { FELTE.clear(); for (const k of liste || []) FELTE.add(k); }
+  window.Dyr3d = { plasser, punkter, antall, prøvShadere, lovlig, fell, flokker: () => (D ? D.flokker : []), settFelte, felte: () => [...FELTE] };
 })();
