@@ -133,10 +133,23 @@
   let snøGrense = null, sistSnø = -1e9, sistSnøSjekk = -1e9;
   // høyden på et punkt uten å hente noe (null = ukjent)
   function mohKjent(x, y) { let h = null; try { h = hoydeVed(x, y); } catch (e) { h = null; } if (h != null) return h; const v = vinduFor(x, y); return v ? les(v, x, y).h : null; }
+  // TUNNELER stenges ikke av snø: midten av en tunnel ligger under fjellet (terrenget over den er høyt). En lenke er en tunnel når midten
+  // ligger innen 30 m av en tunnel i INFRA.tunnel, eller når den er nesten rett (geometrien under 6 % lengre enn luftlinja) og midten
+  // ligger over 50 m høyere enn begge endene (Claudes forslag). Da teller bare endene (portalene).
+  let tunListe = null, tunAntall = -1;
+  function tunneler() {
+    const T = typeof INFRA !== 'undefined' && INFRA && INFRA.tunnel; if (!T) return []; if (tunListe && tunAntall === T.length) return tunListe; tunAntall = T.length; tunListe = [];
+    for (const o of T) for (const d of o.deler || []) { const P = Array.isArray(d[0]) ? d : []; if (!P.length) for (let i = 0; i + 1 < d.length; i += 2) P.push([d[i], d[i + 1]]); if (P.length < 2) continue;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } tunListe.push({ P, bb: [x0, y0, x1, y1] }); }
+    return tunListe;
+  }
+  const nærTunnel = (x, y, tol = 30) => tunneler().some(t => x >= t.bb[0] - tol && x <= t.bb[2] + tol && y >= t.bb[1] - tol && y <= t.bb[3] + tol && t.P.some((p, i) => i && avstSeg(x, y, t.P[i - 1][0], t.P[i - 1][1], p[0], p[1]) <= tol));
   // høydene langs lenken: start, midten og slutt (husket når alle tre er kjent). hent = be om kartet der det mangler.
   function lenkeHøyder(g, e, hent) {
     if (lenkeH.has(e)) return lenkeH.get(e); let L; try { L = g.linje(e); } catch (er) { return []; }
     const pkt = [L[0], L[L.length >> 1], L[L.length - 1]], hs = pkt.map(p => hent ? moh(p[0], p[1]) : mohKjent(p[0], p[1]));
+    let geo = 0; for (let i = 1; i < L.length; i++) geo += Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1]); const rett = geo < 1.06 * Math.hypot(L[L.length - 1][0] - L[0][0], L[L.length - 1][1] - L[0][1]);
+    if (nærTunnel(pkt[1][0], pkt[1][1]) || (rett && hs.every(h => h != null) && hs[1] > Math.max(hs[0], hs[2]) + 50)) hs.splice(1, 1);
     if (hs.every(h => h != null)) { lenkeH.set(e, hs); if (lenkeH.size > 20000) lenkeH.delete(lenkeH.keys().next().value); } return hs;
   }
   // pakk inn rutesøket: når snøen stenger, er lenker over grensen ikke lov (bare de vi kjenner høyden til)
@@ -562,6 +575,11 @@
         const a = sx(f.x), b = sy(f.y); g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 7, b); g.lineTo(a, b + 7); g.lineTo(a - 7, b); g.closePath(); g.fillStyle = '#e2c15a'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#1b1a17'; g.stroke();
         g.fillStyle = '#1b1a17'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center'; g.fillText('?', a, b + 3.5);
         if (m < 25) { g.font = 'italic 12px "Cormorant Garamond",serif'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(f.navn, a, b + 20); g.fillText(f.navn, a, b + 20); } } }
+    // veglenker som snøen har stengt (runde 4): stiplet hvitt over vegen, og «stengt (snø)» når du er nær nok
+    if (snøLenker.size && window.VEGNETT && m < 60) { const gr = window.VEGNETT; g.setLineDash([6, 5]); g.lineWidth = 3; g.strokeStyle = 'rgba(235,242,250,.9)'; let tekst = null;
+      for (const e of snøLenker) { let Lp; try { Lp = gr.linje(e); } catch (er) { continue; } if (!Lp.some(p => inne(p[0], p[1], 20))) continue;
+        g.beginPath(); Lp.forEach((p, i) => (i ? g.lineTo(sx(p[0]), sy(p[1])) : g.moveTo(sx(p[0]), sy(p[1])))); g.stroke(); if (!tekst) tekst = Lp[Lp.length >> 1]; }
+      g.setLineDash([]); if (tekst && m < 20) { g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#eef4fa'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText('stengt (snø)', sx(tekst[0]), sy(tekst[1]) - 8); g.fillText('stengt (snø)', sx(tekst[0]), sy(tekst[1]) - 8); } }
     // jaktlag
     for (const s of ENHETER) if (s.jakt && s.side === 'blå' && inne(s.x, s.y, 30)) { g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#e8e0cc'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText('på jakt', sx(s.x), sy(s.y) - 22); g.fillText('på jakt', sx(s.x), sy(s.y) - 22); }
     // tog

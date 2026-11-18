@@ -358,7 +358,7 @@
   float lyngOpp = clamp((cameraPosition.z - lyngW.z) / max(0.001, length(cameraPosition - lyngW.xyz)), 0.0, 1.0);
   vLyngLys = 1.0 + ${(REGLER.lyng - 1).toFixed(3)} * aFelt * smoothstep(0.35, 0.8, lyngOpp);`);
       sh.fragmentShader = 'varying float vLyngLys;\n' + sh.fragmentShader.replace('#include <fog_fragment>', 'gl_FragColor.rgb *= vLyngLys;\n#include <fog_fragment>'); };
-    m.customProgramCacheKey = () => nøkkel() + '-lyng'; m.needsUpdate = true;
+    m.customProgramCacheKey = () => nøkkel() + '-lyng' + REGLER.lyng; m.needsUpdate = true;
   }
 
   // ---- krokene ----

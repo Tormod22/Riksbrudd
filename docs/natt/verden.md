@@ -100,10 +100,16 @@ lagreKratere, mineKrater, salve, lyng).
   av snø») eller blir stående («… det finnes ingen omkjøring. Kolonnen venter til vegen er brøytet.»). Når snøværet er over og vegen brøytet,
   åpnes lenkene (ikke de som er sperret av flom, ras eller sprengt infrastruktur). Bare når ting får skje av seg selv (`!navigator.webdriver ||
   VerdenSpill.test`). API: `VerdenSpill.snøVegSteg(v)`, `snøRuter()`, `snøLenker()`, `snøGrense()`, `snøTilbake()`, `lenkeHøyder(g, e, hent)`.
+- **Tunneler** stenges ikke: en lenke der midten ligger innen 30 m av en tunnel i INFRA.tunnel, eller som er nesten rett med midten over
+  50 m høyere enn endene, regnes bare med endene (portalene). FUNNET VED PRØVING: på /rogaland ble Honganviktunnelen «stengt av snø»
+  fordi terrenget over den er høyt.
+- 2D: veglenkene snøen har stengt, tegnes stiplet hvitt over vegen med «stengt (snø)» (når du er zoomet inn).
 - **Fiendens lag fryser også**: samme kulderegler, «ute» = ikke i et tettsted og ikke om bord (de har ingen leir). Nøkkel `side:navn` i
   `V.kulde`. Meldingen kommer bare når du ser laget.
-- Prøvd (/rogaland, ekte vegnett, `vegFjell` satt ned til 250 m for prøven): 3 høye lenker funnet på ruta til lastebilkolonnen, den ble stående
-  med melding (ingen omkjøring under 250 m), ny rute med snøen på brukte ingen kjente høye lenker, alt åpnet igjen etter brøytingen.
+- Prøvd (/rogaland, ekte vegnett, fjellgrensen satt ned for prøven): ved 280 m ble en lenke funnet og kolonnen kjørte om (60 → 89 min) –
+  men lenken var en tunnel (rettet, se over; etter rettingen ble ingen lenker stengt på den ruta ved 280 m); ved 150 m ble lenker over en ås
+  stengt, kolonnen ble stående med melding, og vegen ble tegnet stiplet i kartet. Ny rute med snøen på brukte ingen kjente høye lenker, og
+  alt ble åpnet igjen etter brøytingen.
   Et rødt lag 4 km ute fikk frostskade etter 24 timer i −25 °C.
 
 ### 2. Kratere (effekter3d.js)
