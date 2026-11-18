@@ -29,7 +29,9 @@ ${sel(' .lukk')}{ width:30px; height:30px; padding:0; line-height:1; font-size:1
 ${sel(' .lukk', ':hover')}{ border-color:#e8d48a; }
 ${sel(' button:not(.lukk)')}{ background:#241c10; border:1px solid #5a4a2a; color:var(--ink,#e7dcc3); border-radius:3px; font:inherit; } ${sel(' button:not(.lukk):not(:disabled)', ':hover')}{ border-color:#c9b26a; } ${sel(' button', ':disabled')}{ opacity:.45; }
 body.spill #region, body.spill #samfunnmeny{ left:10px; top:calc(var(--topp,58px) + 6px); z-index:7; max-height:calc(100% - var(--topp,58px) - 76px); overflow-y:auto; }
-body.spill #verdenpanel, body.spill #sjopanel, body.spill #krigpanel, body.spill #karakterark, body.spill #tropppanel, body.spill #sekk{ right:10px; left:auto; top:calc(var(--topp,58px) + 6px); z-index:11; max-height:calc(100% - var(--topp,58px) - 76px); overflow-y:auto; }
+body.spill #verdenpanel, body.spill #sjopanel, body.spill #krigpanel, body.spill #karakterark, body.spill #tropppanel, body.spill #sekk{ right:64px; left:auto; top:calc(var(--topp,58px) + 6px); z-index:11; max-height:calc(100% - var(--topp,58px) - 130px); overflow-y:auto; }
+/* runde 4: panelene til høyre står til venstre for zoomknappene (de lå over dem) og slutter over kommandolinja */
+body.spill #stridpanel{ right:64px; max-height:calc(100% - var(--topp,58px) - 200px); }
 body #region .lukk, body #krigpanel .lukk, body #verdenpanel .lukk, body #sjopanel .lukk, body #evpanel .lukk, body #personkort .lukk{ position:absolute; right:8px; top:8px; }
 body #flytgruppe{ z-index:5; } body.kortoppe #personkort, body.kortoppe #evpanel{ display:none !important; }
 body #personkort, body #evpanel{ z-index:14; } body #samfunnkort, body #hendelse, body #flytkort{ z-index:15; }

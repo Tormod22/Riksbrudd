@@ -91,6 +91,9 @@ ok(F.fart('kolonne', true) === 1.2 && F.fart('kolonne', false) === 1.1 && F.fart
   ok(K.jaSjanse(100) > K.jaSjanse(20) && nær(K.jaSjanse(0), FA.ja), 'god moral i leiren: flere vil bli med');
   { const r = frø(3); let ja = 0, forr = 0; for (let i = 0; i < 400; i++) { const s = K.spør(5, 60, r); ja += s.ja; forr += s.forrædere.length; ok(s.forrædere.every(j => j < s.ja), 'forræderne er blant dem som sa ja'); }
     ok(ja > 400 * 5 * .35 && ja < 400 * 5 * .65 && forr > 0 && forr < ja * .2, `ja ${ja} av 2000, forrædere ${forr}`); } }
+// (runde 4, del 2) motstanderen foreslår bytte: én mot én, så mange som begge har
+ok(K.forslagBytte(3, 1) === 1 && K.forslagBytte(2, 5) === 2 && K.forslagBytte(0, 4) === 0 && K.forslagBytte(4, 0) === 0, 'forslag om bytte: én mot én, bare når begge har fanger');
+ok(R.fange.forslagHver > 0 && R.fange.forslagSjanse > 0 && R.fange.forslagSjanse <= 1 && R.fange.forslagVarer > 0, 'forslagene har tall');
 console.log(`ok   krig: ${n} sjekker`);
 // AI-en: førerens væremåte flytter terskelen (overtakF) – en jevn kamp angripes av den pågående, ikke av den forsiktige
 { const Fr = require('../../site/dovre-fliser/spill/fraksjoner.js'), lag = (ute = 0) => ({ navn: 'A', x: 0, y: 0, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });

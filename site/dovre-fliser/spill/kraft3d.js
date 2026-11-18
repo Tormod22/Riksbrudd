@@ -73,7 +73,9 @@
     await pust(); const ut = K.utsnitt(KD.linjer, u.cx, u.cy, u.S, z, mob ? 1600 : 4000); await pust();
     ut.trafo = KD.trafo.filter(([X, Y]) => Math.abs(X - u.cx) < u.S - 40 && Math.abs(Y - u.cy) < u.S - 40).map(([X, Y, kv]) => ({ x: X - u.cx, y: Y - u.cy, kv }));
     // trafostasjonen: NVEs punkt ligger ofte i stasjonshallen (et bygg i dataene) – flytt gården (høyst ca. 45 m) dit den får plass utenfor bygg og veg
+    // (18. nov, hakk: kroken holdt hovedtråden 0,1 s i ett strekk i Bergen – nå pust mellom trafostasjonene, treslagene og radene i beltet)
     for (const t of ut.trafo) {
+      if (børPuste()) await pust();
       const fri = (x, y) => !(u.husRute && hindring3d(x, y, u.husRute)) && !(u.påVeg && u.påVeg(x, y));
       let best = null;
       for (const [dx, dy] of [[0, 0], [0, -30], [0, 30], [-35, 0], [35, 0], [-30, -25], [30, -25], [-30, 25], [30, 25]]) {
@@ -89,7 +91,7 @@
     if (belte.length) {
       const iB = K.belte(belte);
       const rens = data => { if (!data || !data.length) return data; const ny = []; for (let k = 0; k < data.length; k += 5) if (!iB(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ny.push(data[k + q]); return ny.length === data.length ? data : new Float32Array(ny); };
-      if (u.trær) for (const n of treslag(u)) u.trær[n] = rens(u.trær[n]);
+      if (u.trær) for (const n of treslag(u)) { u.trær[n] = rens(u.trær[n]); if (børPuste()) await pust(); }
       if (u.smått) u.smått.busk = rens(u.smått.busk);
       // ryddegata i bakken: lys lyng og kratt der det er skog, grus på trafostasjonen
       const mpp = 2 * u.S / TW, W = skog.W, st = W / TW;
@@ -98,6 +100,7 @@
         const i0 = Math.max(0, Math.floor((Math.min(b.ax, b.bx) - b.b + u.S) / mpp)), i1 = Math.min(TW - 1, Math.ceil((Math.max(b.ax, b.bx) + b.b + u.S) / mpp));
         const j0 = Math.max(0, Math.floor((u.S - Math.max(b.ay, b.by) - b.b) / mpp)), j1 = Math.min(TW - 1, Math.ceil((u.S - Math.min(b.ay, b.by) + b.b) / mpp));
         for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+          if (i === i0 && (j & 15) === 0 && børPuste()) await pust();
           const x = -u.S + (i + .5) * mpp, y = u.S - (j + .5) * mpp, q = (j * TW + i) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
           if (B > R + 18 && B > G + 4) continue;
           if (trafo) { if (Math.abs(x - (b.ax + b.bx) / 2) < TRAFO.b / 2 && Math.abs(y - b.ay) < TRAFO.d / 2) { const v = ((i * 7 + j * 13) % 9) * 3; px[q] = 132 + v; px[q + 1] = 128 + v; px[q + 2] = 120 + v; } continue; }
@@ -182,7 +185,8 @@
     // Hver del står på bakken der den står (skråning), og deler som havner i et bygg (stasjonshallen i dataene) eller på vegen hoppes over.
     const G = bygger(), b2 = TRAFO.b / 2, d2 = TRAFO.d / 2, MØRK = [.28, .3, .31], BEIGE = [.72, .66, .55];
     const bakke = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX;
-    const fri = (x, y) => !hindring3d(x, y, u.husRute || (typeof R3 !== 'undefined' && R3.hindre)) && !(u.påVeg && u.påVeg(x, y));
+    // (hindringene: husene, ellers utsnittets egne – u.klar.hindre når stasjonen lages på forhånd i forbered3d, R3.hindre i byttet)
+    const fri = (x, y) => !hindring3d(x, y, u.husRute || (u.klar && u.klar.hindre) || (typeof R3 !== 'undefined' && R3.hindre)) && !(u.påVeg && u.påVeg(x, y));
     // del(x0, y0, x1, y1, lag): bunnen er laveste punkt under delen; lag(ox, oy, oz) tegner med forskyvning
     const del = (x0, y0, x1, y1, lag) => { const P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [(x0 + x1) / 2, (y0 + y1) / 2]].map(([a, b]) => [a + t.x, b + t.y]);
       if (!P.every(([a, b]) => fri(a, b))) return; lag(t.x, t.y, Math.min(...P.map(([a, b]) => bakke(a, b)))); };
@@ -243,8 +247,13 @@
     if (L.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(L, 3));
       const pm = new THREE.PointsMaterial({ color: 0xff2a1a, size: VW < 900 ? 7 : 9, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false, map: lysTekstur() });
       obj.lys = new THREE.Points(g, pm); obj.lys.frustumCulled = false; obj.lys.visible = false; R.scene.add(obj.lys); obj.mesh.push(obj.lys); }
-    for (const t of k.trafo) { const m = new THREE.Mesh(trafoGeo(u, t), mat.clone()); R.scene.add(m); obj.mesh.push(m); }
+    const tg = u.trafoKlar && u.trafoKlar.length === k.trafo.length ? u.trafoKlar : k.trafo.map(t => trafoGeo(u, t)); u.trafoKlar = null;
+    for (const g of tg) { const m = new THREE.Mesh(g, mat.clone()); R.scene.add(m); obj.mesh.push(m); }
   });
+  // (18. nov, hakk: trafostasjonene tok opptil 200 ms i selve byttet – nå lages de i forbered3d-kroken, én om gangen med pust mellom)
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => {
+    u.trafoKlar = null; const k = u.kraft; if (!k || !k.trafo.length) return;
+    const ut = []; for (const t of k.trafo) { if (børPuste()) await pust(); ut.push(trafoGeo(u, t)); } u.trafoKlar = ut; });
   KROKER.ramme3d.push(R => {
     if (!obj) return;
     for (const m of obj.mesh) m.visible = VIS.kraft;

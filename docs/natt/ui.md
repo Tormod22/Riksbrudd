@@ -126,7 +126,10 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
   et panel som når ned i hjørnet (`--venstrekant`) når det er plass før kommandolinja, ellers viker de (`body.skalavik`); oversikten og
   minikartet i 3D viker (`body.minivik`) mens et panel til høyre står over dem (bare utenfor testene eller med `Paneler.test`).
   `#flytgruppe` står nede til venstre på PC (flyt.js, én CSS-regel) – før lå den under Leir-menyen og krigskartet.
-- **Igjen (med vilje)**: kortene i midten (hendelse, samfunnskort …) ligger oppå arkene på telefon – de krever svar og står øverst.
+  Panelene til høyre (Deg, Tropper, Verden, Sjø, Tiltak, Sekk, Stridsregler) står på PC nå 64 px fra kanten – til venstre for zoomknappene,
+  som de dekket – og slutter over kommandolinja (max-height − 130 px; Stridsregler − 200 px fordi det starter lavere). Målt også på 1280 × 800.
+- **Igjen (med vilje)**: kortene i midten (hendelse, samfunnskort …) ligger oppå arkene på telefon, og på PC under ca. 1300 px bredde
+  litt inn over panelene til siden – de krever svar og står øverst.
 
 ## 2. Merker
 - `spill/merker.js`: `Merker.tegn(g, x, y, { slag: 'kjøretøy', type, antall })` tegner tegnet for hver type (lastebil tverrstrek, stridsvogn

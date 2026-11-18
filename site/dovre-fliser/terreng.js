@@ -86,7 +86,10 @@
 
   // Siktfelt: hvilke ruter innen radius som kan sees fra (X, Y). Øyne 2 m over bakken, skog og hus er 8 m høye.
   // Returnerer Uint8Array (1 = synlig) med samme størrelse som vinduet.
-  function siktfelt(v, X, Y, radius, oyne = 2) {
+  // (18. nov) Målet i en rute er en person, ca. 1,8 m over bakken (MÅL_HØYDE, Claudes forslag) – før ble bakken prøvd, så et lag på
+  // flata bak en brekk så laget nedenfor, men ikke omvendt. Nå ser to lag hverandre (nesten) likt begge veger.
+  const MÅL_HØYDE = 1.8;
+  function siktfelt(v, X, Y, radius, oyne = 2, mål = MÅL_HØYDE) {
     const ut = new Uint8Array(v.w * v.h), [oi, oj] = rute(v, X, Y);
     if (!inne(v, oi, oj)) return ut;
     const oz = v.H[idx(v, oi, oj)] + oyne, R = Math.ceil(radius / v.r);
@@ -97,7 +100,7 @@
       for (let d = 1; d <= R; d++) {
         const i = Math.round(oi + ca * d), j = Math.round(oj + sa * d); if (!inne(v, i, j)) break;
         const k = idx(v, i, j), z = v.H[k]; if (z !== z) continue;
-        const helling = (z - oz) / d;                 // bakken selv synes hvis den er over sikteleinja
+        const helling = (z + mål - oz) / d;           // en person i ruta synes hvis hodet er over sikteleinja
         if (helling >= maks) ut[k] = 1;
         const topp = (z + (v.K[k] === 1 || v.K[k] === 7 ? 8 : 0) - oz) / d;  // trær og hus skygger for det bak
         if (topp > maks) maks = topp;

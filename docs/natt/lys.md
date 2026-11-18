@@ -103,3 +103,201 @@ Skyggekartet (kastKart() frigjør `shadow.map`/`mapPass` når utsnittet bygges p
 Målt med effektene på (Høy, PC): teksturer 14 – 14 – 14 – 14 over fire runder 3D av/på (før: 16 – 17 – 18 – 19), geometrier 69
 hele veien. Vaktene lys og natur grønne etterpå. Selve vakta «minne i 3D» klippet ut av sjekk.js (scratchpad
 `natt/lys/f-minnevakt.js`) kjørt to ganger på rad med effektene på: ok begge ganger (teksturer 14 -> 14, geometrier 69 -> 69).
+
+## Runde 4 – hakk (18. nov dag)
+Oppgave: hakk når et nytt 3D-utsnitt lastes. Brukerens rapport 17. nov (Iris Xe, Edge, utsnitt 7,3 km): 27 pauser over 50 ms på
+20 s, lengste 407 ms; 911 ms i 5 pauser «uten pust (henter høydene og kartet)», 205 ms «uten pust (gjør klar)».
+
+### Slik er det målt
+Scratchpad `natt/lys/hakk/m.js` (som `hakk/hakk2.js`: ekte kartdata via `feiljakt/teknisk/skript/dev.py`, /norge, PC 1400 × 800,
+grafikk Høy, tegningen slått av – `R3.renderer.render` tom –, lange oppgaver fra PerformanceObserver, pausene mellom bildene delt på
+trinn (`R3.steg`) og med/uten pust, og en CPU-profil per lang oppgave; profilen rettes inn etter en merket funksjon `__merke`).
+Kameraet flyttes 0,6 utsnitt, og det måles til byggingen er ferdig. Maskinen var svært belastet (sju hjelpere, last 20–30 på fire
+kjerner), så tallene varierer mye; se på de største og på hva som står i profilen.
+Prøve av at resultatet er det samme: scratchpad `natt/lys/hakk/t-dovre.js` (Dovre ved Jora bru: fingeravtrykk av nettene – summer av
+terrengets normaler og indeks, bruenes posisjoner og normaler, husenes normaler, vegene, trærne, kraftlinjene –, brukontrollen fra
+sjekk.js, kartbildet på grafikkortet lest tilbake rad for rad, og «bygging i biter» fra sjekk.js med flere tall).
+
+### Før (commit b01c410, Bergen −32117 6734202, /norge, PC, Høy, tegningen av)
+- **Utsnitt 7,3 km** (som brukerens, kameraavstand 2400 m, S = 3660), to flyttinger: bygget på 7,7 og 8,6 s; lange oppgaver 8 + 8,
+  sum 1507 / 1277 ms, lengste **610 / 516 ms**; pauser over 50 ms 9 + 6, lengste 698 / 567 ms – den lengste er alltid
+  «gjør klar uten pust» = slutten av forbered3d + byttet. Profilen i den lengste: bruene i sett3d (infra3d byggBru 98–289 ms),
+  opplastingen av kartbildet (texImage2D 46–52 ms), delBakken 34 ms, three-intern 40 ms. Ellers: finnLinje 61–95 ms (bruene
+  prøvde alle vegene rundt alle bruene), vegetasjon3d (treslagene) 83 ms, kraft3d 40 ms, vegLinjer 53 ms. «Henter høydene og
+  kartet» hadde bare 1 pause på 52–56 ms her.
+- **Utsnitt 3,1 km** (kameraavstand 900 m, S = 1560, alt med: hus, veger, trær, kyst, kraft …), én flytting: bygget på 25,8 s,
+  48 lange oppgaver, sum 7,0 s, lengste **1534 ms**, 60 pauser over 50 ms. De største: sett3d 1534 ms (bruene 511, søppeltømming
+  418, anlegg3d 220, liv3d velgLinjer 78), texImage2D for kartbildet 4096² **269 ms** og vannmasken 66 ms (egne oppgaver),
+  gate3d 436 ms, byhus 304 ms, hus3d/naboer 267 ms, finnLinje 263 ms, løftVeger 234 ms, forbered3d husGeometri (normalene)
+  172 ms, liv3d lykter 166 ms, kyst plasser 157 ms, terrengGeo (normalene) 128 ms, kraft3d 127 ms, vegetasjon3d vegRute 115 ms,
+  delBakken 76 ms, havnivå/søppel 91 ms.
+
+### Hva som er endret (alt gir det samme utsnittet som før – se «Prøvd» under)
+- **Bruene i byttet** (infra3d.js): geometrien for bruer og ferjekaier lages nå i `KROKER.forbered3d` som generator (`lagGeo`,
+  én bru/kai per bit, normalene i biter), og sett3d legger bare nettene i scenen (`u.infraKlar`; uten forberedelse kjører sett3d den
+  samme generatoren i ett). `finnLinje` får bare vegene der bruas første ende ligger høyst 10,5 m fra boksen rundt vegen (`nærEnde`,
+  `l.bb` fra `vegLinjer`) – finnLinje forkaster uansett veger lenger unna enn 10 m, så svaret er det samme. `løftVeger`/`ryddTrær`
+  er generatorer (kroken: `kjørAsynk`, testene: `løftVeger` = `kjørRett`), og hver veg prøver bare bruene der boksene overlapper
+  (de andre ble hoppet over punkt for punkt). Pust mellom flisene i `vegLinjer` og mellom bruene i `modeller`.
+- **Normalene i biter** (index.html `normalerG`): samme regning som three.js r128 `computeVertexNormals` – samme rekkefølge, samme
+  32-bits mellomlagring, normalisering med `x * (1 / lengde)` –, så normalene er like til siste bit (vakta lys sjekker det), men med
+  yield for hver ca. 10 000 trekanter. Brukes i `terrengGeo`, `husGeometri` (nå generator: `kjørAsynk` i forbered3d, `kjørRett` i
+  sett3d) og infra3d sin `lagGeo`.
+- **delBakken** er generator (`delBakkenG`, yield mellom radene); `delBakken()` gjør alt i ett som før (byttBakke bruker den).
+- **hus3d**: `naboerAsynk` (samme rutenett og `Math.hypot` som `naboer()` i kartflis.js, men tallnøkler og pust) – samme tall.
+- **Vannmasken**: `vannmaske()` gir punktene sine med (`c.piksler`, alfa er alltid 255 så getImageData ville gitt det samme), og
+  bygg3d setter `u.vannData` straks. Før leste den første modulen som trengte den, hele bildet tilbake med getImageData (25–55 ms her;
+  på et ekte grafikkort må nettleseren også vente på grafikkortet). NB: `byhus.js` og `gate3d.js` leser fortsatt vannbildet selv med
+  getImageData – de kan bruke `u.vannData` (ikke mine filer).
+- **Kartbildet og vannmasken til grafikkortet i striper** (index.html `lastOppIBiter`): før `new CanvasTexture(u.base)` +
+  `initTexture` = hele lerretet (opptil 4096², 64 MB) lest og sendt i én oppgave (269 ms her for 4096², 46–52 ms for 2048², vannmasken
+  66 ms). Nå: DataTexture med samme innstillinger (lineær, mipmap, anisotropi) og tom plass, punktene vi alt har (`u.px` fra bygg3d,
+  `u.vann.piksler`) sendes med `texSubImage2D` 256 rader om gangen med pust mellom (UNPACK_FLIP_Y + y = W − rad1 gir samme plass
+  som CanvasTexture med flipY), mipmapene lages til slutt. Etterpå er teksturen som en CanvasTexture av lerretet (`image` = lerretet,
+  `flipY`, `isDataTexture = false`, så en eventuell ny opplasting sender lerretet som før – og vakta «tåkebildet» sitt
+  `R3.tex.image === R3.ut.base` holder). Kaster noe en feil eller mangler punktene, lages teksturen som før. Ingen `gl.getError()`
+  i opplastingen: det venter på grafikkortets prosess, og det ville tatt feil som andre har laget (vaktene ser etter dem). `tex.iBiter` = sendt i
+  striper. `u.px` slippes etter opplastingen, i sett3d og i kastForberedt.
+- **bygg3d**: pust før `tegnInfraPå` og rundt `infraI`/`bruer3d` (de gikk i samme bit som slutten av høydene, trinnet «henter
+  høydene og kartet»).
+- **kraft3d.js**: pust mellom trafostasjonene, treslagene og radene i ryddebeltet.
+- **vegetasjon3d.js**: `vegRuteAsynk` – samme som `Vegetasjon.vegRute` (samme rutenett, bredder og oppslag) med pust mellom vegene;
+  `Vegetasjon3d.vegRuteAsynk` for vakta, som sammenligner svarene i 4000 tilfeldige punkter + punkter ved vegene.
+- **liv3d.js**: lyktene med `Veg.lykterG` (pust mellom vegene); avstandene langs vegene (`velgLinjer`, 80 ms i byttet i Bergen) regnes
+  i forbered3d-kroken (`u.vegD`, generator `vegAvstander`) og brukes i startLiv.
+- **kyst3d.js**: plasseringen med `Kyst.plasserG` (pust for hver rad i rutenettene og hvert 64. kystpunkt).
+- Fellesfiler endret (små, samlede endringer): **spill/veg.js** – `lykterG` (generator) og `lykter()` = den kjørt i ett, eksportert;
+  **spill/kyst.js** – `plasserG` (generator) og `plasser()` = den kjørt i ett, eksportert. Reglene er urørt (test_veg.js og
+  test_kyst.js grønne).
+
+### Funn i andre moduler (ikke endret – ikke mine filer)
+Fra profilen i Bergen, utsnitt 3,1 km (programvare-grafikk, belastet maskin):
+- **gate3d.js** (bygg3d-kroken) 436 ms i ett strekk: `Gate.plasser` 215 ms (`prøv` 111), `finnKryss` 54, `nærHus`/`hindring3d` 53,
+  `mal` 51, egen getImageData av vannbildet. Forslag: plasser som generator (som Kyst.plasserG) og `u.vannData` for vannet.
+- **byhus.js:145** (gatetrærne, bygg3d) 304 ms: `nærHus`/`hindring3d` 84, getImageData av vannbildet 55, søppeltømming. Forslag:
+  `u.vannData`, og `if (børPuste()) await pust();` i løkka.
+- **anlegg3d.js** (sett3d!) 220 ms: `bensinstasjon` – `inni` prøver alle husomrissene i utsnittet for hvert forsøk (anlegg3d.js:86,
+  114 ms selv). Forslag: `nærHus(u, x, y)`/`hindring3d` (rutenettet), eller flytt plasseringen til bygg3d/forbered3d.
+- **portal3d.js** (sett3d) 26 ms, **dyr3d.js** (bygg3d) 61 + 92 ms (`nærGård`, hindringer), **bekker-visning.js** 55 ms.
+- Oppgave 3 (natt-modulene): **lys3d.js**, **krig3d.js**, **folk3d.js**, **sjo-visning.js** har ingen bygg3d/sett3d-kroker (bare
+  ramme3d) – ingenting å dele opp ved et nytt utsnitt. **effekter3d.js** sin sett3d-krok nullstiller bare tre felt. **fjernby3d.js**
+  bygger skogholtene i sett3d og en gang til i ramme3d når fjernringen kommer (`bygg`, ca. 30–35 ms her, ca. 50 000 rutepunkter med
+  hash) – under 50 ms, ikke endret.
+- **Skyggekartet** (lys3d.js) tegnes i samme bilde som byttet («et nytt utsnitt får det straks»): to tegninger av hele scenen i
+  bildet der alle de nye nettene sendes til grafikkortet. Kan ikke måles her. Mulig tiltak: vent ett–to bilder med skyggekartet etter
+  byttet (skyggene står da ett bilde på feil sted) – ikke gjort.
+
+### Prøvd – samme utsnitt som før (Dovre-testsiden, Jora bru, PC 1400 × 820)
+- **Fingeravtrykket** av nettene er likt før (commit b01c410, kopi i scratchpad `natt/lys/hakk/head`) og etter: terrengets normaler
+  (250 563 verdier, sum 77 339,88) og indeks, alle fire infra3d-nettene (posisjoner og normaler), alle 14 husnettenes normaler,
+  302 veger (16 271 punkter, samme høyder), trærne per treslag (gran 88 870 … einer 7345), kraftlinjene (102 master, 98 belter).
+- **Brukontrollen** fra sjekk.js: 14 bruer, 1 søyle + 28 landkar, 0 svever, 0 for dype, 105 vegpunkter løftet, 8 nødbruer, sprengt
+  bru gir 2 stykker og 0 vegpunkter i gapet, hel igjen etterpå – likt før og etter.
+- **Kartbildet på grafikkortet** lest tilbake (rammebuffer + readPixels, 9 rader): 4096² kart og 2048² vannmaske er like lerretet i
+  alle 147 456 / 73 728 verdier, sendt i striper (`iBiter`), GL-feil 0.
+- **Bygging i biter** (som vakta i sjekk.js) med grafikk Høy låst: fire bytter etter hverandre – uforberedt, forberedt, uforberedt,
+  forberedt – gir likt terreng (497 664), trær i nettene (38 895), trær per treslag og steiner/busker; 156 pust under én bygging.
+  (Første forsøk uten låst grafikknivå ga ulikt terreng: automatisk grafikk gikk ned mens programvare-grafikken tegnet – ikke endringene.)
+- Regeltestene test_kyst, test_veg, test_vegetasjon, test_bruer, test_kraft, test_ytelse, test_fjernby3d: grønne.
+- **Bergen** (/norge med ekte data, utsnitt 3,1 km, scratchpad `natt/lys/hakk/t-bergen.js`): uforberedt og forberedt bytte gir likt
+  terreng (normaler og land/vann-grupper), husnettenes normaler, 17 355 trær, 3042 veger, 6988 gatelys, kysten (260 båter, 7 naust,
+  40 brygger), 3 trafostasjoner, 59 bruer, 1237 skogholt, like mange nett per modul, og like summer av posisjoner og normaler for
+  bruene, kysten og kraftlinjene. Bare liv3d sin sum skilte i 7. siffer – fuglene og røyken (Points) flytter seg mellom målingene.
+  Kartbildet sendt i striper i det forberedte byttet.
+- **Vakta lys** (`pipeline/fliser/vakter/lys.js`), prøvd på Dovre-testsiden med 3D på: PC 1400 × 820 grønn (43 s – det meste er de
+  gamle bildene med effektene; runde 4-delen tar et par sekunder), mobil 390 × 844 grønn (21 s), og med 3D av grønn. (I Bergen med
+  tegningen slått av feiler den på «skyggekartet er ikke på» – det kommer av at prøveskriptet slo av tegningen, ikke av koden.)
+- Senere samme dag (commit 596f9d6): **veg.js** `finnKryssG` (generator, `finnKryss()` som før) – liv3d bruker den i bygg3d-kroken
+  (lyktene) og i forbered3d (`byggVeger`); vegnettenes normaler med `normalerG` (`nettG` i liv3d.js); kartbildets bunnfarge
+  (`fillRect` på hele 4096², 60 ms) fylles i striper på 512 rader med pust – flisene tegnes først når den er ferdig (`await bunn`);
+  `naboerAsynk` og `løftVeger` (lange veger: yield hvert 256. punkt) i mindre biter.
+
+- Til slutt (etter målingene i Bergen med 7,3 km-utsnitt, der dette sto igjen i byttet): **kraft3d.js** – trafostasjonene
+  (`trafoGeo`, opptil 200 ms i byttet under last) lages i forbered3d-kroken (`u.trafoKlar`, pust mellom stasjonene; hindringene fra
+  `u.klar.hindre`, de samme som `R3.hindre` blir i byttet). **fjernby3d.js** – punktene for skogholtene (`punkterG`, generator med
+  yield per rad) lages i forbered3d-kroken (`u.fjernbyKlar`, brukt når utsnitt og grafikknivå stemmer), ikke i byttet (50–70 ms
+  under last). Ingen `gl.getError()` i `lastOppIBiter` (synkroniserer med grafikkortets prosess).
+
+### Etter – målt (Bergen, utsnitt 3,1 km, to flyttinger hver)
+Maskinen ble svært belastet mens jeg målte (last 20–25 på fire kjerner, mot ca. 3 under før-målingen kl. 10:52), så alt tar 2–5 ganger
+så lang tid som før-målingen. Derfor målte jeg den gamle koden (kopien i scratchpad `natt/lys/hakk/head`) og den nye rett etter
+hverandre under samme last (`før2-b900.log`, `etter-b900.log`, `etter2-b900.log`):
+
+| (Bergen 3,1 km, belastet maskin) | gammel kode | ny kode (2 målinger) |
+|---|---|---|
+| byttet («gjør klar uten pust», bildet står) | 1455 / 1438 ms | 504 / 431 · 583 / 499 ms |
+| sett3d alene (største) | 1258 / 1261 ms | 291 / 248 · 384 ms |
+| lengste lange oppgave | 1384 / 1434 ms | 493 / 1016 · 664 / 770 ms |
+| lange oppgaver ≥ 50 ms, sum | 155 / 187, 27,0 / 34,2 s | 93 / 107, 10,6 / 12,8 s · 153 / 86, 19,0 / 10,5 s |
+| tid til utsnittet er bygget | 55,6 / 70,7 s | 36,8 / 39,1 s · 53,0 / 34,4 s |
+
+Største bidrag i én lang oppgave per funksjon (gammel → ny, samme last; `sammenlign.js`): bruene i byttet 167 → (i forberedelsen,
+34–139 i biter), finnLinje 390 → 0, løftVeger 956 → 17–148, naboer (hus3d) 980 → 18–90, vegRute 211 → 7–56, lykter 193 → 19–52,
+kyst plasser 592 → 55–138, delBakken 64 → 0–11, fillRect 222 → 42–77, velgLinjer → 0.
+Det som står igjen i byttet (ikke mine filer): anlegg3d bensinstasjon 60–130 ms, fjern3d.js `bygg` 82–106 ms, portal3d 65 ms, og
+merkingen av kilden i `R.scene.add` (ytelse.js, en stakk per nett) ca. 25 ms under last. Mine: kraft3d sin sett3d (mastene) ca. 60 ms
+under last.
+
+**Kartbildet i striper – kan ikke avgjøres her.** Med programvare-grafikk (SwiftShader) koster det like mye i sum, og den første stripen
+bærer nesten hele kostnaden (scratchpad `natt/lys/hakk/tex-bench.js`, tvunget ferdig med readPixels: hele lerretet 1158–1367 ms;
+striper à 256 rader: første 696–950 ms, resten ca. 50 ms, mipmap 160–270 ms). SwiftShader lager altså hele teksturen ved første
+skriving. På et ekte grafikkort er det ikke slik (plassen lages på grafikkortet), og den gamle veien måtte lese hele lerretet
+(64 MB) og snu det i nettleseren i ett strekk. BE BRUKEREN om en ny «Mål hakk»-rapport: står `lastOppIBiter` som sted i en lang pause,
+kan stripene gjøres mindre, eller den gamle veien tas tilbake (bare `lastOppIBiter` som gir null).
+
+### Etter – målt (Bergen, utsnitt 7,3 km som brukerens, to flyttinger hver, samme last, gammel kode rett før ny)
+| (Bergen 7,3 km, belastet maskin) | gammel kode | ny kode |
+|---|---|---|
+| byttet («gjør klar uten pust») | 1271 / 884 ms | 618 / 361 ms |
+| sett3d alene | 857 / 762 ms | 384 / 219 ms |
+| lengste lange oppgave | 909 / 836 ms | 496 / 428 ms |
+| lange oppgaver ≥ 50 ms, sum | 27 / 41, 4,2 / 5,1 s | 31 / 37, 3,4 / 4,1 s |
+| «henter høydene og kartet» uten pust | 19 / 30 pauser, sum 2,5 / 3,1 s, lengste 472 / 277 ms | 18 / 17, sum 2,2 / 1,8 s, lengste 434 / 245 ms |
+finnLinje 515 → 0, bruene i byttet 372 → 85 (nå i forberedelsen), delBakken 137 → 0, kartbildet 92 (én opplasting) → høyst 47 per stripe.
+I det som sto igjen i byttet var trafostasjonene (kraft3d `trafoGeo` 207 ms) og fjernby3d (51–68 ms) mine – de er flyttet til
+forberedelsen etterpå (ikke målt i Bergen etter det, se «Prøvd» for at utsnittet er det samme).
+
+### Sluttmåling med alt (commit 5da88f5, Bergen 7,3 km, lasten hadde falt til ca. 9–12)
+Sammenlign med før-målingen øverst (gammel kode, last ca. 3 – altså lettere forhold for den gamle koden):
+| (Bergen 7,3 km) | før (b01c410, last ≈ 3) | etter (5da88f5, last ≈ 9–12) |
+|---|---|---|
+| byttet («gjør klar uten pust») | 698 / 567 ms | **285 / 219 ms** |
+| lengste lange oppgave | 610 / 516 ms | **205 / 196 ms** |
+| lange oppgaver ≥ 50 ms, sum | 8 / 8, 1,5 / 1,3 s | 14 / 10, 1,1 / 0,9 s |
+| sett3d alene | – | 170 / 94 ms |
+| tid til utsnittet er bygget | 7,7 / 8,6 s | 7,2 / 8,7 s |
+| «henter høydene og kartet» uten pust | 0–1 pause, 52 ms | 7 / 5 pauser, sum 586 / 496 ms, lengste 165 ms (last) |
+
+Bergen 3,1 km (alt med), samme sluttmåling:
+| (Bergen 3,1 km) | før (b01c410, last ≈ 3) | etter (5da88f5, last ≈ 10) |
+|---|---|---|
+| byttet («gjør klar uten pust») | 1670 / 350 ms | **380 / 283 ms** |
+| lengste lange oppgave | 1534 / 430 ms | **433 / 395 ms** |
+| sett3d alene | 1025 ms (største) | 226 / 151 ms |
+| tid til utsnittet er bygget | 25,8 / 27,0 s | 25,7 / 27,0 s |
+De lengste som står igjen er ikke mine: gate3d 433 ms (Gate.plasser 162, finnKryss 73), bekker-visning 273 ms, byhus 254 ms,
+søppeltømming 206 ms, dyr3d 101 ms; i byttet anlegg3d (bensinstasjonene) 22–54 ms og fjern3d 24 ms, og i samme bilde som byttet
+tegnInfra3d (navn og merker, hoyde3d i bakÅs/brupunkt3) 95 ms. ytelse.js sin merking i `R.scene.add` ca. 12 ms.
+
+### «Henter høydene og kartet» – det brukeren så mest av (911 ms i 5 pauser)
+Her er nesten ikke byggekode igjen: høydene hentes og kartbildet lages i bakgrunnstråden. De lange pausene i dette trinnet var her
+søppeltømming (opptil 244 ms i én oppgave under last), bildeløkka selv (kompass.js `tegnMini` – minikartet tegnet fra utsnittets
+4096²-lerret: 28–143 ms per gang; `tegnInfra3d`/`infraViktig` – navn og merker for infrastrukturen i 3D: opptil 49 ms uten last i
+Bergen), og arbeid uten JavaScript-stakk («(program)», 60–120 ms, rett etter at byggingen starter – nettleserens eget arbeid: trolig
+minnet til det nye lerretet, bildene fra bakgrunnstråden eller Blinks søppeltømming; kan ikke deles opp fra JavaScript).
+Under samme last var den nye koden ikke verre her enn den gamle (19 / 30 mot 18 / 17 pauser); at sluttmålingen har flere pauser i
+dette trinnet enn før-målingen, kommer av lasten (9–12 mot 3). Rettet her:
+bunnfargen på kartbildet i striper (fillRect 60 ms), pust rundt `tegnInfraPå`/`infraI`/`bruer3d`. IKKE rettet (ikke mine filer):
+minikartet bør tegnes fra en liten kopi av kartbildet (lages én gang per utsnitt) i stedet for fra hele lerretet hver gang;
+`tegnInfra3d` bør ikke regne alle objektene hver ramme. Søppeltømmingen kommer av de store tabellene per utsnitt (kartbildet 64 MB,
+høydene, nettene) – kan bare bli mindre med gjenbruk av tabeller, ikke gjort.
+
+### Ikke gjort
+- Oppgave 4 (skygger fra kjøretøy, soldater og dyr på Høy): **droppet etter måling**. Skyggekartet tegnes bevisst bare når kameraet
+  har flyttet seg (høyst 4 ganger i sekundet). Ting som beveger seg må ha et nytt skyggekart i hvert bilde for ikke å få skygger som
+  henger igjen, og det betyr at alle som kaster skygge (terreng, trær, hus …) tegnes én gang til per bilde – et eget lys bare for dem
+  er ikke lov (nye skyggeprogrammer). Målt (scratchpad `natt/lys/hakk/t-skygge.js`, Dovre ved laget, lavt kamera, Høy, effektene på,
+  139 kastere, skyggekart 2048): 836 ms per bilde uten og 2355 ms med skyggekartet tegnet hvert bilde (median av 4, programvare-
+  grafikk) – langt over 5 %. Billigere vei om det ønskes: en myk mørk flekk under hver enhet (som treskyggene), uten skyggekartet.
+- Skyggekartet i samme bilde som byttet (se over) og teksturopplastingens virkning på et ekte grafikkort: kan ikke måles her.
+- Andres moduler med lange steg (gate3d, byhus, anlegg3d, portal3d, fjern3d, kompass-minikartet): bare funn og forslag over.

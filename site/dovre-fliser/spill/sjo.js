@@ -42,20 +42,27 @@
     // (runde 4) fiendens båter: helse, skade per frisk mann per spillminutt når et lag skyter på båten innen rekkevidden (m), hvor nær
     // en båt med et lag om bord må komme for å borde forsyningsbåten (m), og lasten den har med
     fiendeBåt: { hp: 60, skade: 2, rekkevidde: 450, bord: 60, last: { tre: 0, betong: 4, stål: 3, drivstoff: 400, rasjoner: 40 } },
+    // (runde 4 del 2) fiendens båter skyter tilbake: en forsyningsbåt har et lite væpnet mannskap (så mange skyttere), en AI-båt har laget
+    // om bord. Mot en båt gir hver skytter skade som over (fiendeBåt.skade); mot et lag på land treffer hver skytter så mange ganger per
+    // spillminutt (før faktorene). Et treff gjør en frisk mann såret, en såret mann falt. Et lag på land ser en båt innen så mange meter.
+    mot: { mannskap: 3, treffLag: 0.04, ser: 300 },
+    // (runde 4 del 2) når en båt synker med et lag om bord, svømmer laget i land – så stor del av de levende drukner. Dine båter repareres ved
+    // en kai nær leiren med så mange helsepoeng per spilltime.
+    svømTap: 0.3, reparer: 10,
     // (runde 4) fiendens lag tar båt når vegen dit er mye lengre enn sjøvegen: vegen > faktor × sjøvegen + tillegg (m). Kaiene må ligge
     // innen kai meter fra laget og fra målet, målet minst så langt unna (m); høyst maks båter ute per side, og de ser etter hvert så mange
-    // spillminutter. Halvparten av mennene om bord på en båt som senkes, kommer ikke i land.
-    aiBåt: { faktor: 1.6, tillegg: 2000, kai: 1500, minst: 4000, maks: 1, hver: 10, ombord: 250, gåTil: 120, senketTap: 0.5, type: 'sjark' },
+    // spillminutter. Senkes båten, gjelder svømTap under (som for dine båter).
+    aiBåt: { faktor: 1.6, tillegg: 2000, kai: 1500, minst: 4000, maks: 1, hver: 10, ombord: 250, gåTil: 120, type: 'sjark' },
   };
   // Båttypene (Claudes forslag): pris i kroner, fart i m/s, lag = hvor mange lag som får plass, last = plass i lasterommet,
   // fiske = rasjoner per spilltime, kai = minste kaistørrelse båten kan legge til ved.
   const TYPER = {
-    småbåt: { navn: 'Småbåt', pris: 400000, fart: 6, lag: 1, kj: 0, last: 3, fiske: 0.4, kai: 'liten', lengde: 7, tekst: 'Rask og billig. Ett lag, nesten ingen last. Legger til ved alle kaier.' },
-    sjark: { navn: 'Sjark', pris: 2000000, fart: 4.5, lag: 1, kj: 0, last: 20, fiske: 1.5, kai: 'liten', lengde: 11, tekst: 'Fiskebåt: best til fiske, tar ett lag og litt last. Legger til ved alle kaier.' },
-    lekter: { navn: 'Lekter med slepebåt', pris: 6000000, fart: 3, lag: 3, kj: 2, last: 150, fiske: 0, kai: 'middels', lengde: 30, tekst: 'Treg, men tar tre lag, to kjøretøy og mye last. Trenger en middels eller stor kai.' },
+    småbåt: { hp: 30, navn: 'Småbåt', pris: 400000, fart: 6, lag: 1, kj: 0, last: 3, fiske: 0.4, kai: 'liten', lengde: 7, tekst: 'Rask og billig. Ett lag, nesten ingen last. Legger til ved alle kaier.' },
+    sjark: { hp: 50, navn: 'Sjark', pris: 2000000, fart: 4.5, lag: 1, kj: 0, last: 20, fiske: 1.5, kai: 'liten', lengde: 11, tekst: 'Fiskebåt: best til fiske, tar ett lag og litt last. Legger til ved alle kaier.' },
+    lekter: { hp: 120, navn: 'Lekter med slepebåt', pris: 6000000, fart: 3, lag: 3, kj: 2, last: 150, fiske: 0, kai: 'middels', lengde: 30, tekst: 'Treg, men tar tre lag, to kjøretøy og mye last. Trenger en middels eller stor kai.' },
     // fiendens forsyningsbåt (kan ikke kjøpes eller tas)
-    frakt: { navn: 'Forsyningsbåt', pris: 0, fart: 4, lag: 0, kj: 0, last: 0, fiske: 0, kai: 'liten', lengde: 26, skjult: true, tekst: '' },
-    ferje: { navn: 'Ferje', pris: 0, fart: 6.5, lag: 4, kj: 6, last: 250, fiske: 0, kai: 'stor', lengde: 70, tekst: 'Kan ikke kjøpes – tas ved en ferjekai. Fire lag, seks kjøretøy og mest last. Trenger en stor kai.' },
+    frakt: { hp: 60, navn: 'Forsyningsbåt', pris: 0, fart: 4, lag: 0, kj: 0, last: 0, fiske: 0, kai: 'liten', lengde: 26, skjult: true, tekst: '' },
+    ferje: { hp: 200, navn: 'Ferje', pris: 0, fart: 6.5, lag: 4, kj: 6, last: 250, fiske: 0, kai: 'stor', lengde: 70, tekst: 'Kan ikke kjøpes – tas ved en ferjekai. Fire lag, seks kjøretøy og mest last. Trenger en stor kai.' },
   };
   const STØRRELSE = { liten: 0, middels: 1, stor: 2 };
   const VARER = ['tre', 'betong', 'stål', 'drivstoff', 'rasjoner'];
@@ -67,7 +74,7 @@
   // Passer båttypen ved en kai av denne størrelsen ('liten' | 'middels' | 'stor')?
   const passer = (type, størrelse) => !!TYPER[type] && STØRRELSE[størrelse] >= STØRRELSE[TYPER[type].kai];
   function nyBåt(S, type, x, y, kai, navn) { const T = TYPER[type]; if (!T) return null;
-    const b = { id: S.neste++, type, navn: navn || `${T.navn} ${S.båter.filter(q => q.type === type).length + 1}`, x, y, kai: kai === undefined ? -1 : kai, sti: null, seg: 0, mål: -1, retning: 0, last: tomLast(), fisker: false, fangst: 0 };
+    const b = { id: S.neste++, type, navn: navn || `${T.navn} ${S.båter.filter(q => q.type === type).length + 1}`, x, y, kai: kai === undefined ? -1 : kai, sti: null, seg: 0, mål: -1, retning: 0, last: tomLast(), fisker: false, fangst: 0, hp: T.hp || REGLER.fiendeBåt.hp };
     S.båter.push(b); return b; }
   // Kjøp: betal(kr) svarer true når pengene er trukket.
   function kjøp(S, type, kai, betal) { const T = TYPER[type]; if (!T) return { feil: 'Ukjent båttype.' }; if (!T.pris) return { feil: `${T.navn} kan ikke kjøpes.` };
@@ -107,8 +114,9 @@
 
   // ---------- sjøkartet og ruta ----------
   // v: vindu fra lagVindu { x0, y0, r, w, h, K } (rute (i, j) dekker x0 + i·r … og y0 − j·r …; K 3 = vann).
-  // Gir maske 1 = seilbart. sperringer: [{ x, y, r }] gjør rutene innenfor uframkommelige.
-  function sjøkart(v, sperringer) { const n = v.w * v.h, M = new Uint8Array(n); for (let k = 0; k < n; k++) M[k] = v.K[k] === 3 ? 1 : 0;
+  // Gir maske 1 = seilbart. sperringer: [{ x, y, r }] gjør rutene innenfor uframkommelige. is(moh) (runde 4 del 2, valgfri): true når vannet
+  // i den høyden er islagt (pakka «verden»: innsjøer over 1 moh. etter lang kulde) – da er ruta stengt.
+  function sjøkart(v, sperringer, is) { const n = v.w * v.h, M = new Uint8Array(n); for (let k = 0; k < n; k++) M[k] = v.K[k] === 3 && !(is && v.H && is(v.H[k])) ? 1 : 0;
     for (const s of sperringer || []) { const i0 = Math.max(0, Math.floor((s.x - s.r - v.x0) / v.r)), i1 = Math.min(v.w - 1, Math.floor((s.x + s.r - v.x0) / v.r)), j0 = Math.max(0, Math.floor((v.y0 - s.y - s.r) / v.r)), j1 = Math.min(v.h - 1, Math.floor((v.y0 - s.y + s.r) / v.r));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const cx = v.x0 + (i + .5) * v.r, cy = v.y0 - (j + .5) * v.r; if (Math.hypot(cx - s.x, cy - s.y) <= s.r + v.r * .5) M[j * v.w + i] = 0; } }
     return M; }
@@ -135,14 +143,19 @@
         const c = g[k] + (dx && dy ? 1.4142 : 1) * (vedLand ? 1.8 : 1); if (c < g[q]) { g[q] = c; fra[q] = k; inn(q, c + H(q)); } } }
     if (!lukket[mål]) return null; const sti = []; for (let k = mål; k >= 0; k = fra[k]) sti.push(k); return sti.reverse(); }
   // Rute over sjøen fra (x0, y0) til (x1, y1). o: { sperringer, snapp (m til nærmeste vann, standard 5 ruter + 150 m) }.
-  // Gir { sti: [[x, y], …], meter } eller { feil: 'start' | 'mål' | 'land' | 'sperret' }.
-  function rute(v, x0, y0, x1, y1, o = {}) { const snapp = o.snapp || v.r * 5 + 150, M0 = sjøkart(v, null), har = o.sperringer && o.sperringer.length, M = har ? sjøkart(v, o.sperringer) : M0;
+  // o.is(moh): islagt vann (se sjøkart). Gir { sti: [[x, y], …], meter } eller { feil: 'start' | 'mål' | 'land' | 'sperret' | 'is' }.
+  function rute(v, x0, y0, x1, y1, o = {}) { const snapp = o.snapp || v.r * 5 + 150, M0 = sjøkart(v, null), har = (o.sperringer && o.sperringer.length) || o.is, M = har ? sjøkart(v, o.sperringer, o.is) : M0;
+    const iIs = k => !!(o.is && v.H && o.is(v.H[k]));
     // start og mål finnes i kartet uten sperringer (en båt som ligger i et minefelt, skal kunne komme seg ut)
     let a = nærVann(v, M, x0, y0, snapp), b = nærVann(v, M, x1, y1, snapp); if (a < 0) a = nærVann(v, M0, x0, y0, snapp); if (b < 0) b = nærVann(v, M0, x1, y1, snapp);
     if (a < 0) return { feil: 'start' }; if (b < 0) return { feil: 'mål' };
-    if (har) { M[a] = 1; M[b] = M0[b] && !o.sperringer.some(s => Math.hypot(v.x0 + (b % v.w + .5) * v.r - s.x, v.y0 - (((b / v.w) | 0) + .5) * v.r - s.y) <= s.r) ? 1 : M[b]; }
+    if (har) { M[a] = 1; M[b] = M0[b] && !iIs(b) && !(o.sperringer || []).some(s => Math.hypot(v.x0 + (b % v.w + .5) * v.r - s.x, v.y0 - (((b / v.w) | 0) + .5) * v.r - s.y) <= s.r) ? 1 : M[b]; }
     let R = a === b || friLinje(v, M, a, b) ? [a, b] : astjerne(v, M, a, b);
-    if (!R) { if (har && (friLinje(v, M0, a, b) || astjerne(v, M0, a, b))) return { feil: 'sperret' }; return { feil: 'land' }; }
+    if (!R) { if (har && (friLinje(v, M0, a, b) || astjerne(v, M0, a, b))) {
+        // er det isen som stenger? (uten isen, men med sperringene, finnes det en lei)
+        if (o.is) { const Ms = o.sperringer && o.sperringer.length ? sjøkart(v, o.sperringer) : M0.slice(); Ms[a] = 1; if (friLinje(v, Ms, a, b) || astjerne(v, Ms, a, b)) return { feil: 'is' }; }
+        return { feil: 'sperret' }; }
+      return { feil: 'land' }; }
     // rett ut ruta: hopp over punkter når det er fri sikt over vann (ser høyst 200 ruter fram)
     const K = [R[0]]; let i = 0; while (i < R.length - 1) { let j = i + 1; const tak = Math.min(R.length - 1, i + 200); while (j < tak && friLinje(v, M, R[i], R[j + 1])) j++; K.push(R[j]); i = j; }
     const P = K.map(k => [v.x0 + (k % v.w + .5) * v.r, v.y0 - (((k / v.w) | 0) + .5) * v.r]);
@@ -184,7 +197,15 @@
 
   // ---------- fiendens båter: ild, bording, AI (runde 4) ----------
   // Skade på en fiendebåt fra skyttere [{ menn: friske, faktor }] i dtMin spillminutter. Gir 'senket' når helsa er borte.
-  function skadBåt(b, skyttere, dtMin) { if (b.hp === undefined) b.hp = REGLER.fiendeBåt.hp; let d = 0; for (const q of skyttere) d += Math.max(0, q.menn) * REGLER.fiendeBåt.skade * Math.max(0, q.faktor === undefined ? 1 : q.faktor) * dtMin;
+  // (runde 4 del 2) full helse for båttypen
+  const maksHp = b => (TYPER[b.type] && TYPER[b.type].hp) || REGLER.fiendeBåt.hp;
+  // Treff på et lag fra en båt: n skyttere med faktoren i dtMin spillminutter (forventet antall treff, brøkdeler spares hos laget)
+  const treffPåLag = (n, faktor, dtMin) => Math.max(0, n) * REGLER.mot.treffLag * Math.max(0, faktor === undefined ? 1 : faktor) * dtMin;
+  // Hvor mange av de levende om bord drukner når båten synker
+  const drukner = levende => Math.round(Math.max(0, levende) * REGLER.svømTap);
+  // Reparasjon ved kaia nær leiren: ny helse etter dtMin spillminutter
+  const reparer = (b, dtMin) => Math.min(maksHp(b), (b.hp === undefined ? maksHp(b) : b.hp) + REGLER.reparer * dtMin / 60);
+  function skadBåt(b, skyttere, dtMin) { if (b.hp === undefined) b.hp = maksHp(b); let d = 0; for (const q of skyttere) d += Math.max(0, q.menn) * REGLER.fiendeBåt.skade * Math.max(0, q.faktor === undefined ? 1 : q.faktor) * dtMin;
     b.hp = Math.max(0, b.hp - d); return b.hp <= 0 ? 'senket' : d > 0 ? 'truffet' : null; }
   // Kan båten q (med lag om bord) borde fiendebåten f? Bare forsyningsbåter (ikke båter med soldater om bord).
   const kanBorde = (q, lagOmBord, f) => f.type === 'frakt' && !f.ai && lagOmBord > 0 && Math.hypot(q.x - f.x, q.y - f.y) <= REGLER.fiendeBåt.bord;
@@ -203,14 +224,14 @@
 
   // ---------- lagring ----------
   function tilJSON(S) { return { versjon: 1, fiende: S.fiende, fiskere: S.fiskere || 0, neste: S.neste, nesteSperring: S.nesteSperring, sistHavn: S.sistHavn, ferjerTatt: S.ferjerTatt.slice(), havner: S.havner, sperringer: S.sperringer.map(s => ({ ...s, x: Math.round(s.x), y: Math.round(s.y) })),
-    båter: S.båter.map(b => ({ id: b.id, type: b.type, navn: b.navn, x: Math.round(b.x), y: Math.round(b.y), kai: b.kai, mål: b.mål, retning: +(b.retning || 0).toFixed(2), last: Object.fromEntries(VARER.map(k => [k, rund(b.last[k] || 0)])), fisker: !!b.fisker,
+    båter: S.båter.map(b => ({ id: b.id, type: b.type, navn: b.navn, x: Math.round(b.x), y: Math.round(b.y), kai: b.kai, mål: b.mål, retning: +(b.retning || 0).toFixed(2), last: Object.fromEntries(VARER.map(k => [k, rund(b.last[k] || 0)])), fisker: !!b.fisker, hp: b.hp === undefined ? undefined : Math.round(b.hp * 10) / 10,
       sti: b.sti ? b.sti.slice(b.seg).map(p => [Math.round(p[0]), Math.round(p[1])]) : null, lag: b.lag || undefined, kj: b.kj || undefined })) }; }
   function fraJSON(d) { const S = ny(); if (!d || d.versjon !== 1) return S; S.neste = d.neste || 1; S.nesteSperring = d.nesteSperring || 1; S.sistHavn = typeof d.sistHavn === 'number' ? d.sistHavn : null; S.ferjerTatt = Array.isArray(d.ferjerTatt) ? d.ferjerTatt.slice() : [];
     S.havner = d.havner && typeof d.havner === 'object' ? d.havner : {}; S.fiende = d.fiende && typeof d.fiende === 'object' ? d.fiende : {}; S.fiskere = Math.max(0, Math.min(REGLER.kaiFiske.maks, Math.round(d.fiskere) || 0)); S.sperringer = (d.sperringer || []).filter(s => s && isFinite(s.x) && isFinite(s.y) && s.r > 0);
-    for (const q of d.båter || []) { if (!q || !TYPER[q.type] || TYPER[q.type].skjult || !isFinite(q.x) || !isFinite(q.y)) continue; const b = { id: q.id, type: q.type, navn: String(q.navn || TYPER[q.type].navn), x: q.x, y: q.y, kai: typeof q.kai === 'number' ? q.kai : -1, mål: typeof q.mål === 'number' ? q.mål : -1, retning: q.retning || 0, last: { ...tomLast(), ...(q.last || {}) }, fisker: !!q.fisker, fangst: 0, sti: null, seg: 0 };
+    for (const q of d.båter || []) { if (!q || !TYPER[q.type] || TYPER[q.type].skjult || !isFinite(q.x) || !isFinite(q.y)) continue; const b = { id: q.id, type: q.type, navn: String(q.navn || TYPER[q.type].navn), x: q.x, y: q.y, kai: typeof q.kai === 'number' ? q.kai : -1, mål: typeof q.mål === 'number' ? q.mål : -1, retning: q.retning || 0, last: { ...tomLast(), ...(q.last || {}) }, fisker: !!q.fisker, fangst: 0, sti: null, seg: 0, hp: isFinite(q.hp) && q.hp > 0 ? Math.min(+q.hp, (TYPER[q.type].hp || REGLER.fiendeBåt.hp)) : (TYPER[q.type].hp || REGLER.fiendeBåt.hp) };
       if (Array.isArray(q.sti) && q.sti.length > 1) { b.sti = q.sti; b.sti[0] = [b.x, b.y]; } if (Array.isArray(q.lag)) b.lag = q.lag.slice(); if (Array.isArray(q.kj)) b.kj = q.kj.slice(); S.båter.push(b); S.neste = Math.max(S.neste, b.id + 1); }
     return S; }
 
-  const api = { skadBåt, kanBorde, fraktLast, aiTarBåt, igjenAvSti, REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, havnMangel, kaiFangst, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, fraktBy, fraktSvar, tilJSON, fraJSON };
+  const api = { maksHp, treffPåLag, drukner, reparer, skadBåt, kanBorde, fraktLast, aiTarBåt, igjenAvSti, REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, havnMangel, kaiFangst, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, fraktBy, fraktSvar, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Sjo = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

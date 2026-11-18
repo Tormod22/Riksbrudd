@@ -46,7 +46,7 @@
 #folkmeny .opp span.n{ text-align:center; font-size:16px; font-weight:600; }
 #folkmeny .opp button{ min-height:38px; padding:0; font-size:19px; }
 #folkmeny .person{ font-size:13px; padding:3px 0; border-bottom:1px solid #2e281e; line-height:1.3; } #folkmeny .person small{ color:var(--ink-dim); }
-#folkmeny .person.syk{ color:#e8a46a; } #folkmeny .person select{ background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; font-size:13px; min-height:30px; margin:0 4px; }
+#folkmeny .person.syk{ color:#e8a46a; } #folkmeny .person img.ansikt{ float:left; width:30px; height:37px; margin:1px 7px 2px 0; border:1px solid #3a3226; background:#2a2318; border-radius:3px; cursor:pointer; } #folkmeny .person::after{ content:''; display:block; clear:both; } #folkmeny .person select{ background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; font-size:13px; min-height:30px; margin:0 4px; }
 body.kort #folkmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); left:calc(8px + env(safe-area-inset-left,0px)); padding:8px 10px 10px; }
 body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-height:34px; } body.kort #folkmeny .opp{ grid-template-columns:1fr 36px 24px 36px; }`;
   document.head.appendChild(css);
@@ -80,6 +80,16 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (!åpen) return; const ny = el('div'); fyll(ny);
     if (ny.innerHTML === sistHtml && panel.firstChild) return;
     const rulle = panel.scrollTop; sistHtml = ny.innerHTML; panel.innerHTML = ''; panel.append(...ny.childNodes); panel.scrollTop = rulle;
+  }
+  // (runde 4) små portretter i lista over folkene: portrettmotoren (Samfunn.portrettSVG, fast per person – samme ansikt som i
+  // personkortet). Bildet lages én gang per person som en blob-adresse, så innerHTML holder seg kort og lik mellom tegningene
+  // (vis() bytter bare inn når innholdet er endret).
+  const ansikter = new Map();
+  function ansikt(p) {
+    if (!window.Samfunn || !Samfunn.portrettSVG || typeof Blob === 'undefined' || !window.URL || !URL.createObjectURL) return null;
+    const k = p.navn + '|' + p.yrke; let u = ansikter.get(k);
+    if (u === undefined) { try { u = URL.createObjectURL(new Blob([Samfunn.portrettSVG(p)], { type: 'image/svg+xml' })); } catch (e) { u = null; } ansikter.set(k, u); }
+    return u ? el('img', { klasse: 'ansikt', src: u, alt: '', 'data-person': String(p.id), width: '30', height: '37' }) : null;
   }
   // fyll(panel): innholdet i panelet (panel er her en løs boks som vis() setter inn)
   function fyll(panel) {
@@ -129,7 +139,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
       navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
       const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
-      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, navn, velg,
+      const bilde = ansikt(p); if (bilde) bilde.onclick = navn.onclick;
+      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, ...(bilde ? [bilde] : []), navn, velg,
         el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}`)));
     }
   }

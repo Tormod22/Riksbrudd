@@ -1,5 +1,7 @@
 // Vakt for pakka «folk» (nattarbeidet 18. nov): samfunnet i leiren – personkort, flyktninger, spesialister, barn og gamle, Grålungen,
 // lover, forrædere, opplæring, begravelser, flere trinn i forfallet, romtyper i byggesettet og varselkortet fra kameravakta.
+// Runde 4: varselbrikker, sabotasje via Leir.skad, én kortkø, syke barn og gamle, spesialist fra oppdrag, portretter i Folk,
+// vakta oppe i tårnet (bare når 3D er åpent), hundens regler, dekning bak bakketopp og sløret som minikart-API.
 // Setter alt tilbake (folket, samfunnet, testbryteren, lagringen).
 module.exports = {
   navn: 'samfunnet i leiren (folk som personer)',
@@ -55,6 +57,32 @@ module.exports = {
         if (window.KameravaktSpill && KameravaktSpill.varselKort) { const S0 = OppstartSpill.tilstand(); KameravaktSpill.varselKort({ kam: 1, x: S0.leir.x + 300, y: S0.leir.y, hva: 'folk', antall: 3, meter: 120, retning: 'nord' }, null); const vk = document.getElementById('kamvarsel');
           ut.kamvarsel = vk.classList.contains('på') && vk.querySelectorAll('button').length === 3 && /3 personer/.test(vk.textContent) && /300 m øst/.test(vk.textContent); KameravaktSpill.skjulVarsel(); ut.kamvarselBort = !vk.classList.contains('på'); }
         else ut.kamvarsel = ut.kamvarselBort = false;
+        // ---------- RUNDE 4 ----------
+        // varselbrikkene: Grålungen, ugravlagte døde (samfunnet) – via window.VARSEL_TILLEGG i narhud.js
+        if (window.NarHud && NarHud.brikker) { const s2 = SR.smitt(S, F, fast(0), 1, S.klokke)[0]; SR.død(S, 'Ola Varselsen', 'folk', S.klokke); const B = NarHud.brikker().map(b => b.t).join('|');
+          ut.varsler = /Grålungen/.test(B) && /begravelse/.test(B); if (s2) { delete s2.syk; delete s2.karantene; } S.døde = S.døde.filter(q => q.navn !== 'Ola Varselsen'); } else ut.varsler = 'ingen NarHud';
+        // sabotasje gjennom Leir.skad: en byggeplass i en prøveleir ødelegges, og materialene kommer tilbake
+        { const L2 = Leir.ny(); L2.lager = { tre: 0, betong: 0, stål: 0 }; L2.bygg.push({ id: 1, type: 'brakke', x: 0, y: 0, ret: 0, nivå: 1, hp: .2, igjen: 5, totalt: 10, mat: { tre: 20, betong: 4 }, nr: 1 }); const sb = SR.saboter(L2, fast(0));
+          ut.sabotasje = !!sb && sb.ødelagt && !L2.bygg.length && L2.lager.tre > 0; }
+        // én kortkø: et kort som venter, får plassen når samfunnskortet er lukket
+        if (window.Kortkø && Kortkø.ta) { S.kort = { type: 'flyktninger', voksne: 1, barn: 0, gamle: 0, spes: null, smittet: false, fra: 'Lesja' }; SS.visKort(); let vist = 0;
+          const venter = !Kortkø.ta('hendelse') && kort.classList.contains('på'); Kortkø.be('hendelse', () => { vist++; }, { tittel: 'Prøve' }); const iKø = Kortkø.venter().some(q => q.id === 'hendelse');
+          S.kort = null; SS.visKort(); Kortkø.nå(); Kortkø.ferdig('hendelse'); ut.énKø = venter && iKø && vist === 1 && !Kortkø.venter().length; } else ut.énKø = false;
+        // barn og gamle blir syke selv, og en syk gammel kan dø
+        { const a = SR.nyAvhengig(S, fast(.5), 'gammel'); a.syk = { dag: 0, lengde: 4 }; SR.sykdomSteg(S, F, 1440, { ...SS.ktx(), auto: false }, fast(0)); ut.barnGamle = !S.avhengige.includes(a) && S.døde.some(q => q.navn === a.navn && q.hvem === 'gammel'); S.døde = []; }
+        // spesialist fra et oppdrag
+        { let o = null; for (let id = 900; id < 1100 && !o; id++) { const q = { id, type: 'redd', x: 0, y: 0, meter: 900, retning: 'øst' }; if (SR.oppdragSpes(q, SS.leirFrø())) o = q; }
+          const pp = F.personer.find(q => !q.spes); const sp2 = o && SS.fraOppdrag(o, [pp]); ut.oppdragSpes = !!sp2 && pp.spes === SR.oppdragSpes(o, SS.leirFrø()); }
+        // portretter i Folk-panelet
+        { const fm = document.getElementById('folkmeny'), åpen0 = fm.classList.contains('på'); FolkSpill.åpne(true); FolkSpill.vis(); let vf = document.getElementById('visfolk'); const viste = vf && /Skjul/.test(vf.textContent); if (vf && !viste) { vf.click(); FolkSpill.vis(); }
+          const n = fm.querySelectorAll('img.ansikt').length; ut.portretter = n === F.personer.length && n > 0; vf = document.getElementById('visfolk'); if (vf && !viste) vf.click(); if (!åpen0) FolkSpill.åpne(false); }
+        // folk inne i byggene / oppe i tårnet (bare når 3D er åpent): vakta står 5,6 m over bakken i et prøvetårn
+        if (typeof R3 !== 'undefined' && R3 && R3.ut && window.Folk3d && Folk3d.plassVed) { const u = R3.ut, b = { id: -77, type: 'vakttårn', x: u.cx + 10, y: u.cy + 10, ret: 0, nivå: 1, igjen: 0 }, pl = Folk3d.plassVed(b, 3);
+          ut.tårn = !!pl && pl.tårn && Math.abs(pl.z - ((hoyde3d(b.x, b.y) - u.h0) * R3.EX + 5.65)) < 1.5; } else ut.tårn = '2D';
+        // hunden (regler), dekning bak bakketopp (regler) og sløret i et minikart
+        { const E2 = window.Eventyr; const h = E2.Hund.fyll({ navn: 'Prøve' }); E2.Hund.steg(h, E2.REGLER.hund.sultTimer, 0, {}); const sulten = h.mett < E2.REGLER.hund.spisUnder; E2.Hund.steg(h, 1, 0, { leir: true, mat: () => true });
+          ut.hund = sulten && h.mett === 100 && E2.Hund.truffet(h, 10, 0) > 0; ut.bakke = E2.Snik.bakkeImellom([100, 100, 104, 104, 100, 100], 1.6) && !E2.Snik.bakkeImellom([100, 100, 100, 100, 100, 100], 1.6);
+          const ET = window.EventyrSpill, t0 = ET.test; ET.test = true; const c = document.createElement('canvas'); c.width = c.height = 64; const S0 = OppstartSpill.tilstand(); ut.slør = ET.slørTegn ? ET.slørTegn(c.getContext('2d'), S0.leir.x - 2000, S0.leir.y + 2000, 4000 / 64, 64, 64) === true : false; ET.test = t0; }
       } catch (err) { ut.feil = String(err && err.stack || err).slice(0, 300); }
       // alt tilbake
       const g0 = JSON.parse(f0); for (const k of Object.keys(F)) delete F[k]; Object.assign(F, g0); if (romBruk0 === undefined) delete L.romBruk; else L.romBruk = romBruk0;
@@ -64,8 +92,9 @@ module.exports = {
       return ut;
     });
     if (d.mangler) return { ok: false, tekst: 'SamfunnSpill finnes ikke (eller spillet er ikke startet)', data: d };
-    const krav = ['sover', 'person', 'personLukket', 'flyktKort', 'flykt', 'avhengige', 'lov', 'sykdom', 'spesialist', 'opplæring', 'begravelse', 'spion', 'utvist', 'kort', 'virkning', 'kortkø', 'fraBy', 'fanger', 'panel', 'forfall', 'romtyper', 'kamvarsel', 'kamvarselBort', 'tilbake'];
+    const krav = ['sover', 'person', 'personLukket', 'flyktKort', 'flykt', 'avhengige', 'lov', 'sykdom', 'spesialist', 'opplæring', 'begravelse', 'spion', 'utvist', 'kort', 'virkning', 'kortkø', 'fraBy', 'fanger', 'panel', 'forfall', 'romtyper', 'kamvarsel', 'kamvarselBort',
+      'varsler', 'sabotasje', 'énKø', 'barnGamle', 'oppdragSpes', 'portretter', 'tårn', 'hund', 'bakke', 'slør', 'tilbake'];
     const feil = krav.filter(k => !d[k]); if (d.feil) feil.push('feil: ' + d.feil);
-    return { ok: !feil.length, tekst: feil.length ? `${profil}: mangler ${feil.join(', ')}` : `${profil}: personkort, flyktninger, barn og gamle, lov, Grålungen, spesialist, opplæring, begravelse, forræder, kort, kortkø, rekrutt fra by, fanger, panel, forfall, romtyper og kameravarsel virker`, data: d };
+    return { ok: !feil.length, tekst: feil.length ? `${profil}: mangler ${feil.join(', ')}` : `${profil}: personkort, flyktninger, barn og gamle, lov, Grålungen, spesialist, opplæring, begravelse, forræder, kort, kortkø, rekrutt fra by, fanger, panel, forfall, romtyper, kameravarsel – og (runde 4) varselbrikker, sabotasje via Leir.skad, én kortkø, syke barn/gamle, spesialist fra oppdrag, portretter, vakta i tårnet (${d.tårn === '2D' ? 'ikke prøvd: 2D' : '3D'}), hunden, bakkedekning og sløret virker`, data: d };
   },
 };
