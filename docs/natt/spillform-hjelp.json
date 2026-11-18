@@ -1,14 +1,62 @@
 [
-  ["Spol til neste hendelse", "Knappen ⏭ ved fartsknappene lar tiden gå fort (600×) til noe skjer: et lag er framme, et bygg er ferdig, fienden er i sikte, leiren angripes, det blir ny dag eller et mål er nådd. Da går farten ned til 1×, og et kort øverst sier hva den stoppet for. Trykk ⏭ igjen for å spole videre.", "Kom i gang"],
-  ["Farten senkes av seg selv", "Har du satt opp farten, går den ned til 1× når leiren angripes, når et lag får kontakt med fienden og når et bygg er ferdig. Det kan slås av under Leir → Mål → «Tid og flyt».", "Kom i gang"],
-  ["Marsjtid før du gir ordren", "Trykk «Marsjer» og pek i kartet (PC): ved pekeren står avstanden og hvor lang tid marsjen tar. Korte marsjer regnes ut nøyaktig langs ruta, lange er et anslag («ca.»). På telefon står avstand og tid i loggen når ordren er gitt.", "Lag og strid"],
-  ["Køordre: gå hit, så dit", "Når et lag er på marsj, legger «Legg til (så dit)» i lagpanelet et punkt til i køen (på PC også Shift + trykk i kartet). Laget går punktene etter tur – høyst åtte. «… og grav ned» får laget til å grave seg ned når det er framme ved det siste. «Stopp» eller en ny vanlig marsjordre tømmer køen.", "Lag og strid"],
-  ["Flere lag på én gang", "«Velg lag» nederst (PC) eller «Velg alle i bildet» i lagpanelet velger alle lagene dine som er i bildet. På PC kan du også holde Shift og dra en ramme, eller Shift + trykke på lag for å ta dem med eller ut. «Marsjer alle» gir alle samme mål – de stiller seg i ring rundt det. Esc eller «Opphev» slipper gruppa.", "Lag og strid"],
-  ["Start uten ferdige lag", "Et nytt spill begynner med deg, ti personer, noen kjøretøy og et lite vaktlag på fire. Troppene lager du selv: Leir → Tropper → «Lag ny tropp». Du får litt ekstra mat i starten.", "Kom i gang"],
-  ["Vanskelighetsgrad, scenario og utfordringer", "På siste steg i «Nytt spill» velger du Lett, Vanlig eller Hard (penger, hvor godt fienden treffer, røverbølger), et scenario med mål og tidsfrist (for eksempel «Hold byen» i tre døgn) eller fritt spill, og utfordringer som endrer reglene: ingen kjøp, evig vinter, ingen radio, tåkeland, tom kasse. Stillingen i scenariet står under Leir → Mål.", "Kom i gang"],
-  ["Når du vinner regionen", "Holder du 60 % av folket i området, har du vunnet. Da velger du: en større region (flere tettsteder lenger unna – du må vinne på nytt), en sterkere motstander (fienden treffer bedre), eller å fortsette som nå. Etter de fire første kapitlene med mål kommer kapittelet «Krigen om regionen».", "Lag og strid"],
-  ["Hvis leiren faller", "Står en fiende inne i leiren i halvannen time uten at noen av dine lag er der, er leiren tapt. Da begynner dere på nytt i en utpost – i det nærmeste tettstedet du holder, ellers fire kilometer unna – med halve kassa, halve lageret og de fleste folkene. Byggene er borte, lagene står der de sto. Du får et varsel når fienden står i leiren.", "Leiren"],
-  ["Krigen på nytt", "Spillet tar et bilde av krigen hver tredje spilltime: hvem som holder tettstedene, og hvor lagene sto. Leir → Mål → «Se krigen på nytt» lar deg spole gjennom dem. Fiendens lag vises bare der dere så dem.", "Lag og strid"],
-  ["Ukas oppdrag", "Hver uke har ett oppdrag som er likt for alle som spiller (Leir → Mål). Start det når du vil. Det finnes ingen felles resultatliste, for spillet har ingen tjener – men du kan kopiere resultatet som en kode og sammenligne med kodene til venner.", "Kom i gang"],
-  ["Venner i samme område", "Lenka under Leir → Mål → Venner har nå også med hvilke tettsteder du holder og hvor stor del av området du har. Vennens leir, tettsteder (stiplet ring i vennens farge) og stilling vises i kartet og i krigskartet ditt. Det er ikke sanntid: dere spiller hver for dere, og bildet er fra da lenka ble laget.", "Lag og strid"]
+ [
+  "Spol til neste hendelse",
+  "Knappen ⏭ ved fartsknappene lar tiden gå fort (600×) til noe skjer: et lag er framme, et bygg er ferdig, fienden er i sikte, leiren angripes, det blir ny dag, et mål er nådd, noe venter på svaret ditt (flyktninger, hendelser), flom eller ras, brann nær leiren, en fiende gir seg, en båt eller et tog er framme. Da går farten ned til 1×, og et kort øverst sier hva den stoppet for. Trykk ⏭ igjen for å spole videre.",
+  "Kom i gang"
+ ],
+ [
+  "Farten senkes av seg selv",
+  "Har du satt opp farten, går den ned til 1× når leiren angripes, når et lag får kontakt med fienden og når et bygg er ferdig. Det kan slås av under Leir → Mål → «Tid og flyt».",
+  "Kom i gang"
+ ],
+ [
+  "Marsjtid før du gir ordren",
+  "Trykk «Marsjer» og pek i kartet (PC): ved pekeren står avstanden og hvor lang tid marsjen tar. På telefon og i 3D trykker du først der laget skal: da står avstand og tid i et banner øverst, og «Gå» gir ordren (et nytt trykk flytter målet, «Avbryt» lar være). Korte marsjer regnes ut nøyaktig langs ruta, lange er et anslag («ca.»).",
+  "Lag og strid"
+ ],
+ [
+  "Køordre: gå hit, så dit",
+  "Når et lag er på marsj, legger «Legg til (så dit)» i lagpanelet et punkt til i køen (på PC også Shift + trykk i kartet). Laget går punktene etter tur – høyst åtte. «… og grav ned» får laget til å grave seg ned når det er framme ved det siste. «Stopp» eller en ny vanlig marsjordre tømmer køen.",
+  "Lag og strid"
+ ],
+ [
+  "Flere lag på én gang",
+  "«Velg lag» nederst (PC) eller «Velg alle i bildet» i lagpanelet velger alle lagene dine som er i bildet. På PC kan du også holde Shift og dra en ramme, eller Shift + trykke på lag for å ta dem med eller ut. «Marsjer alle» gir alle samme mål – de stiller seg i ring rundt det. Esc eller «Opphev» slipper gruppa.",
+  "Lag og strid"
+ ],
+ [
+  "Start uten ferdige lag",
+  "Et nytt spill begynner med deg, ti personer, noen kjøretøy og et lite vaktlag på fire. Troppene lager du selv: Leir → Tropper → «Lag ny tropp». Du får litt ekstra mat i starten.",
+  "Kom i gang"
+ ],
+ [
+  "Vanskelighetsgrad, scenario og utfordringer",
+  "På siste steg i «Nytt spill» velger du Lett, Vanlig eller Hard (startkassa, hvor godt fienden treffer, hvor mange røverlag som kommer), et scenario med mål og tidsfrist (for eksempel «Hold byen» i tre døgn) eller fritt spill, og utfordringer som endrer reglene: ingen kjøp (heller ikke på svartebørsen), evig vinter, ingen radio (ingen ordre over 3 km fra leiren og ingen radiomeldinger), tåkeland, tom kasse. Stillingen i scenariet står under Leir → Mål.",
+  "Kom i gang"
+ ],
+ [
+  "Når du vinner regionen",
+  "Holder du 60 % av folket i området, har du vunnet. Da velger du: en større region (flere tettsteder lenger unna – du må vinne på nytt), en sterkere motstander (fienden treffer bedre), eller å fortsette som nå. Etter de fire første kapitlene med mål kommer kapittelet «Krigen om regionen».",
+  "Lag og strid"
+ ],
+ [
+  "Hvis leiren faller",
+  "De to første døgnene kan ikke leiren tapes. Etter det: står en fiende inne i leiren i halvannen time uten at noen av dine lag er der, er leiren tapt. Da begynner dere på nytt i en utpost – i det nærmeste tettstedet du holder, ellers fire kilometer unna – med halve kassa, halve lageret og de fleste folkene. Byggene er borte, lagene står der de sto. Du får et varsel når fienden står i leiren.",
+  "Leiren"
+ ],
+ [
+  "Krigen på nytt",
+  "Spillet tar et bilde av krigen hver tredje spilltime: hvem som holder tettstedene, og hvor lagene sto. Leir → Mål → «Se krigen på nytt» lar deg spole gjennom dem. Fiendens lag vises bare der dere så dem.",
+  "Lag og strid"
+ ],
+ [
+  "Ukas oppdrag",
+  "Hver uke har ett oppdrag som er likt for alle som spiller (Leir → Mål). Start det når du vil. Det finnes ingen felles resultatliste, for spillet har ingen tjener – men du kan kopiere resultatet som en kode og sammenligne med kodene til venner.",
+  "Kom i gang"
+ ],
+ [
+  "Venner i samme område",
+  "Lenka under Leir → Mål → Venner har nå også med hvilke tettsteder du holder og hvor stor del av området du har. Vennens leir, tettsteder (stiplet ring i vennens farge) og stilling vises i kartet og i krigskartet ditt. Det er ikke sanntid: dere spiller hver for dere, og bildet er fra da lenka ble laget.",
+  "Lag og strid"
+ ]
 ]

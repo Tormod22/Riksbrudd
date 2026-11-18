@@ -26,6 +26,14 @@
     mål: { spol: true, auto: false },
     tettsted: { spol: true, auto: false },
     tapt: { spol: true, auto: true },
+    // fra andre moduler (hendelsen «riksbrudd-hendelse», se under) og kort som venter på svar
+    kort: { spol: true, auto: true },
+    natur: { spol: true, auto: false },
+    brann: { spol: true, auto: false },
+    fanger: { spol: true, auto: false },
+    båt: { spol: true, auto: false },
+    tog: { spol: true, auto: false },
+    annet: { spol: true, auto: false },
   };
   // Øyeblikksbildet B: { dag, marsj: { navn: true }, strid (egne lag i ildkamp), fiender (fiender du ser), bygg (ferdige bygg),
   //   alarm (leiren angripes), mål (mål nådd), tettsteder (dine), lag (egne lag som lever) }
@@ -42,6 +50,7 @@
     if ((nå.tettsteder || 0) > (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har tatt et tettsted' });
     else if ((nå.tettsteder || 0) < (før.tettsteder || 0)) ut.push({ type: 'tettsted', tekst: 'du har mistet et tettsted' });
     if ((nå.mål || 0) > (før.mål || 0)) ut.push({ type: 'mål', tekst: 'et mål er nådd' });
+    if (nå.kort && !før.kort) ut.push({ type: 'kort', tekst: 'noe venter på svaret ditt' });
     if (nå.dag !== før.dag) ut.push({ type: 'dag', tekst: 'ny dag (dag ' + nå.dag + ')' });
     return ut;
   }
@@ -100,7 +109,9 @@
       fiender: ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).length,
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
-      mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder };
+      mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
+      // et kort midt på skjermen som venter på svar (hendelser i gjengen, flyktninger ved porten, seier, scenario)
+      kort: ['hendelse', 'samfunnkort', 'krigkort', 'formkort'].some(id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på')); }) };
   }
 
   // ---------- spol til neste hendelse og automatisk stopp ----------
@@ -109,6 +120,8 @@
 body.kort .knapper #nesteh{ min-width:34px; padding:0 6px; }
 #flytkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; max-width:min(520px,94vw); padding:6px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; }
 #flytkort.på{ display:flex; } #flytkort b{ color:#f0e2b0; } #flytkort button, #flytgruppe button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; min-height:34px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; }
+#marsjvalg{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; max-width:min(440px,94vw); padding:7px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; gap:8px; align-items:center; }
+#marsjvalg.på{ display:flex; } #marsjvalg b{ color:#f0e2b0; } #marsjvalg small{ display:block; color:var(--ink-dim,#a99); font-size:12px; } #marsjvalg button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; min-height:40px; min-width:64px; padding:2px 12px; font:inherit; cursor:pointer; } #marsjvalg button.hoved{ border-color:#c9b26a; background:#4a3f22; } #marsjvalg button:disabled{ opacity:.45; }
 #flytgruppe{ position:fixed; left:10px; top:calc(var(--topp,58px) + 56px); z-index:10; display:none; max-width:min(330px,92vw); padding:8px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #flytgruppe.på{ display:block; } #flytgruppe .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } #flytgruppe small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; line-height:1.3; } #flytgruppe button.på{ border-color:#c9b26a; background:#4a3f22; }
 body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgruppe{ top:auto; bottom:64px; left:6px; max-width:calc(100vw - 70px); }`;
@@ -136,6 +149,12 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
   if (spolKnapp) spolKnapp.onclick = () => spol();
   // en annen fartsknapp avbryter spolingen
   for (const id of ['sp0', 'sp1', 'sp2', 'sp3']) { const b = document.getElementById(id); if (b) b.addEventListener('click', () => { if (spoler) { spoler = false; merk(); } }); }
+  // HENDELSER FRA ANDRE MODULER: window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })).
+  // type er en nøkkel i Flyt.HENDELSER (natur, fanger, båt, tog … – ukjente regnes som «annet»); tekst står i kortet «Stoppet: …».
+  // Branner meldes av spill/verden-visning.js som «riksbrudd-brann»: en ny brann innen 3 km fra leiren stopper spolingen.
+  const innboks = []; let branner = 0;
+  window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (d.tekst) innboks.push({ type: F.HENDELSER[d.type] ? d.type : 'annet', tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
+  window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);
   KROKER.sim.push(() => {
     // køordrene: neste punkt når laget står stille, og «grav ned» etter det siste
@@ -148,9 +167,9 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
     }
     // hendelsene: høyst ti bilder i sekundet (ved 600× er det ett per spillminutt)
     const nå = performance.now(); if (nå - sistBilde < 100) return; sistBilde = nå;
-    if (!spoler && !(autoPå() && tempo > 1)) { før = null; return; }
-    const b = bilde(); if (!før) { før = b; return; }
-    const h = F.hendelser(før, b); før = b; if (!h.length) return;
+    if (!spoler && !(autoPå() && tempo > 1)) { før = null; innboks.length = 0; return; }
+    const b = bilde(); if (!før) { før = b; innboks.length = 0; return; }
+    const h = F.hendelser(før, b).concat(innboks.splice(0)); før = b; if (!h.length) return;
     const st = F.stopper(h, spoler ? 'spol' : 'auto'); if (st.length) stopp(st, spoler ? 'spol' : 'auto');
   });
 
@@ -199,11 +218,38 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
     F.tømKø(s); ordre(s, X, Y); return true;
   }
   // trykk i kartet: gruppa får ordren (hvert lag sin plass rundt målet), eller det valgte laget får et punkt til i køen
+  // MARSJ MED BEKREFTELSE (telefon og 3D, der ingen peker kan vise marsjtida på forhånd): første trykk setter målet og viser avstand og
+  // tid i banneret #marsjvalg, «Gå» gir ordren, et nytt trykk flytter målet. Med mus i 2D går ordren rett ut som før (tida står ved
+  // pekeren). I testene (navigator.webdriver) er det bare slik når FlytSpill.test = true.
+  let sistePeker = 'mouse', utkast = null, mvSist = '';
+  window.addEventListener('pointerdown', e => { sistePeker = e.pointerType || 'mouse'; }, true);
+  const mv = el('div', { id: 'marsjvalg', role: 'group', 'aria-label': 'Bekreft marsjen' }); document.body.appendChild(mv);
+  const fraPunkt = s => (køModus && s.kø && s.kø.length ? { navn: s.navn + 'k', x: s.kø[s.kø.length - 1][0], y: s.kø[s.kø.length - 1][1] } : køModus && s.sti && s.sti.length ? { navn: s.navn + 'k', x: s.sti[s.sti.length - 1][0], y: s.sti[s.sti.length - 1][1] } : s);
+  function visUtkast() {
+    if (utkast && (modus !== 'marsj' || !utkast.lag.every(s => ENHETER.includes(s) && levende(s)))) utkast = null;
+    if (!utkast) { if (mvSist) { mv.classList.remove('på'); mvSist = ''; } return; }
+    const s = utkast.lag[0], f = forhånd(fraPunkt(s), utkast.X, utkast.Y), t = (utkast.lag.length > 1 ? utkast.lag.length + ' lag' : s.navn) + ': ' + (utkast.kø ? '+ ' : '') + forhTekst(f);
+    if (t === mvSist || (rot.pekerNede && pekerNede(mv))) return; mvSist = t;
+    const gå = el('button', { id: 'marsjgaa', klasse: 'hoved' }, utkast.kø ? 'Legg til' : 'Gå'), nei = el('button', { id: 'marsjnei' }, 'Avbryt');
+    gå.disabled = !!(f.ingen || f.forLangt); gå.onclick = () => utfør(); nei.onclick = () => { utkast = null; modus = null; køModus = false; visUtkast(); visPanel(); gpSist = ''; skitten = true; };
+    mv.replaceChildren(el('div', {}, el('b', {}, t), el('small', {}, 'Trykk et annet sted for å flytte målet.')), gå, nei); mv.classList.add('på');
+  }
+  function utfør() { if (!utkast) return false; const u = utkast; utkast = null; køModus = u.kø; const ok = sendOrdre(u.X, u.Y); visUtkast(); return ok; }
+  const medBekreft = () => (!navigator.webdriver || api2.test === true) && (sistePeker !== 'mouse' || (typeof på3d !== 'undefined' && på3d));
   const trykk = (X, Y) => {
+    if (modus !== 'marsj') return false;
+    if (medBekreft()) { const lag = gruppe.length > 1 ? gruppe.slice() : valgt && valgt.side === 'blå' && levende(valgt) ? [valgt] : []; if (!lag.length) return false;
+      if (!lag.every(s => KROKER.kanOrdre.every(f => f(s))) && lag.length === 1) { modus = null; visPanel(); return true; }
+      utkast = { lag, X, Y, kø: køModus }; mvSist = ''; visUtkast(); skitten = true; return true; }
+    return sendOrdre(X, Y);
+  };
+  // ordren går ut: gruppa (hvert lag sin plass rundt målet), ett lag i køen, eller ett lag rett fram (bare etter bekreftelse – ellers tar kartet seg av det)
+  const sendOrdre = (X, Y) => {
     if (modus !== 'marsj') return false;
     if (gruppe.length > 1) { const pl = F.plasser(gruppe.length, X, Y); let n = 0; gruppe.forEach((s, i) => { if (giOrdre(s, pl[i][0], pl[i][1], køModus)) n++; });
       logg(n + ' lag ' + (køModus ? 'har fått et punkt til i køen.' : 'har fått marsjordre.')); modus = null; køModus = false; gpSist = ''; visGruppe(); skitten = true; return true; }
     if (valgt && valgt.side === 'blå' && køModus) { if (giOrdre(valgt, X, Y, true) && valgt.kø) logg(valgt.navn + ': punkt ' + valgt.kø.length + ' lagt i køen.'); modus = null; køModus = false; visPanel(); skitten = true; return true; }
+    if (valgt && valgt.side === 'blå' && medBekreft()) { giOrdre(valgt, X, Y, false); modus = null; visPanel(); skitten = true; return true; }
     return false;
   };
   KROKER.trykk.push(trykk); if (KROKER.trykk3d) KROKER.trykk3d.push(trykk);
@@ -240,7 +286,7 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
   cv.addEventListener('pointerup', shiftOpp, true); cv.addEventListener('pointercancel', shiftOpp, true);
   window.addEventListener('keydown', e => { if (e.key === 'Escape') { køModus = false; if (gruppe.length) velg([]); } });
   // velger du ett lag på vanlig måte, oppheves gruppa
-  setInterval(() => { if (gruppe.length && valgt) { gruppe = []; køModus = false; } if (modus !== 'marsj') køModus = false; visGruppe(); }, 300);
+  setInterval(() => { if (gruppe.length && valgt) { gruppe = []; køModus = false; } if (modus !== 'marsj') køModus = false; visGruppe(); visUtkast(); }, 300);
 
   // ---------- tegning: køen, gruppa, ramma og marsjtida ved pekeren ----------
   KROKER.tegn.push((g, vx0, vy1) => {
@@ -250,6 +296,7 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
       for (const [a, b] of s.kø) g.lineTo(sx(a), sy(b)); g.stroke(); g.setLineDash([]); g.font = '700 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       s.kø.forEach(([a, b], i) => { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(a), sy(b), 8, 0, 6.283); g.fill(); g.fillStyle = '#1c170f'; g.fillText(String(i + 2), sx(a), sy(b) + .5); }); }
     for (const s of gruppe) { g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.arc(sx(s.x), sy(s.y), 17, 0, 6.283); g.stroke(); g.setLineDash([]); }
+    if (utkast) { const x = sx(utkast.X), y = sy(utkast.Y), s = utkast.lag[0], fra = fraPunkt(s); g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.setLineDash([5, 5]); g.beginPath(); g.moveTo(sx(fra.x), sy(fra.y)); g.lineTo(x, y); g.stroke(); g.setLineDash([]); g.beginPath(); g.arc(x, y, 10, 0, 6.283); g.stroke(); g.beginPath(); g.arc(x, y, 3, 0, 6.283); g.fillStyle = '#f0d79a'; g.fill(); }
     if (ramme) { g.strokeStyle = '#f0d79a'; g.fillStyle = 'rgba(240,215,154,.12)'; g.lineWidth = 1.5; const [a, b, c, d] = ramme; g.fillRect(a, b, c - a, d - b); g.strokeRect(a, b, c - a, d - b); }
     if (modus === 'marsj' && peker) { const s = valgt && valgt.side === 'blå' ? valgt : gruppe[0];
       if (s) { const fra = køModus && s.kø && s.kø.length ? { navn: s.navn + 'k', x: s.kø[s.kø.length - 1][0], y: s.kø[s.kø.length - 1][1] } : køModus && s.sti && s.sti.length ? { navn: s.navn + 'k', x: s.sti[s.sti.length - 1][0], y: s.sti[s.sti.length - 1][1] } : s;
@@ -259,6 +306,9 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
         g.fillStyle = 'rgba(20,16,10,.88)'; g.fillRect(bx, by - 11, w, 22); g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.strokeRect(bx + .5, by - 10.5, w - 1, 21); g.fillStyle = f.ingen || f.forLangt ? '#e8a46a' : '#f0e2b0'; g.fillText(t, bx + 6, by + .5); } }
     g.restore();
   });
+
+  // målet du har pekt ut, i 3D
+  if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj3) => { if (!utkast) return; const p = proj3(utkast.X, utkast.Y); if (!p) return; g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 2.5; g.beginPath(); g.arc(p[0], p[1], 12, 0, 6.283); g.stroke(); g.beginPath(); g.moveTo(p[0], p[1] - 22); g.lineTo(p[0], p[1] - 4); g.stroke(); g.restore(); });
 
   // ---------- Leir-menyen (fanen Mål): av/på for automatisk stopp ----------
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e2, knapp: kn }) => {
@@ -272,6 +322,6 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
     ikon: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><rect x="2" y="2" width="20" height="20" fill="none" stroke-dasharray="3 2"/>' });
 
   const api2 = { test: false, spol, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
-    køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
+    utkast: () => utkast, utfør, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
   rot.FlytSpill = api2;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

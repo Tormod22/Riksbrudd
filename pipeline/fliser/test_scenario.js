@@ -26,8 +26,9 @@ ok(S.fristTekst(1500) === '1 døgn 1 t igjen' && S.fristTekst(125) === '2 t 5 mi
 // tap av leiren
 const leir = { x: 0, y: 0 };
 ok(S.truet(leir, [{ x: 100, y: 0 }], []) && !S.truet(leir, [{ x: 100, y: 0 }], [{ x: 300, y: 0 }]) && !S.truet(leir, [{ x: 200, y: 0 }], []), 'truet: fiende i leiren og ingen egne nær');
-st = {}; ok(!S.tapSteg(st, true, 10) && !S.tapSteg(st, true, 60) && S.tapSteg(st, true, 100), 'tapt etter 90 minutter');
-st = {}; S.tapSteg(st, true, 10); S.tapSteg(st, false, 50); ok(st.fra === null && !S.tapSteg(st, true, 120), 'tellingen nulles når fienden er borte');
+const F0 = S.REGLER.tap.fred; st = {}; ok(!S.tapSteg(st, true, F0 + 10) && !S.tapSteg(st, true, F0 + 60) && S.tapSteg(st, true, F0 + 100), 'tapt etter 90 minutter');
+st = {}; S.tapSteg(st, true, F0 + 10); S.tapSteg(st, false, F0 + 50); ok(st.fra === null && !S.tapSteg(st, true, F0 + 120), 'tellingen nulles når fienden er borte');
+st = {}; ok(F0 === 2880 && !S.tapSteg(st, true, 10) && !S.tapSteg(st, true, 2000) && st.fra === null, 'de to første døgnene kan ikke leiren tapes');
 let u = S.utpost(leir, [{ x: 100, y: 0 }], []); ok(u.x === -4000 && u.y === 0, 'utposten ligger 4 km bort fra fienden');
 u = S.utpost(leir, [], [{ x: 500, y: 0, navn: 'For nær' }, { x: 3000, y: 0, navn: 'Vik' }, { x: 9000, y: 0, navn: 'Langt' }]); ok(u.navn === 'Vik', 'utposten: nærmeste egne tettsted (ikke det som ligger i leiren)');
 const e = S.etterTap(80e6, 10); ok(e.penger === 40e6 && e.folk === 7 && S.etterTap(1, 2).folk === 2 && S.etterTap(1, 4).folk === 3, 'det som er igjen etter tapet');

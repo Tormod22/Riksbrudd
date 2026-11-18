@@ -110,6 +110,7 @@
     if (!n && !syke) return { feil: 'Ingen er såret eller syke nå. Medisinene ligger på lager.' };
     S.medisin--; lagre(); skitten = true; const t = `Medisinene er brukt: ${n} sårede soldater er kampklare` + (syke ? ` og ${syke} i leiren er friske` : '') + '.'; logg(t); return { ok: true, sårede: n, syke }; }
   function kjøp(id) {
+    if (window.SPILLREGLER && SPILLREGLER.har('ingenKjøp')) return { feil: 'Utfordringen «Ingen kjøp»: dere handler ikke på svartebørsen.' };
     const V = RG.Bors.VARER[id]; if (!V || !S.børs.tilbud.includes(id)) return { feil: 'Selgeren har ikke dette i dag.' };
     if (!RG.Bors.kan(id, S.har)) return { feil: 'Dere har alt dette.' };
     const l = L(); let liter = 0; if (id === 'smugler') { liter = l ? Math.min(V.liter, Math.floor(LB.kapasitet(l) - l.drivstoff)) : 0; if (liter < 1) return { feil: 'Ingen plass til mer diesel: bygg en dieseltank.' }; }

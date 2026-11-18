@@ -72,3 +72,28 @@ Det denne pakka selv gjør med dem:
 - Etterspillet viser bare tettsteder og lag (ikke bygg, kjøretøy eller kamper), og kartet under er bare mørklagt.
 - Ukas oppdrag har ingen felles liste (ingen tjener) og kan jukses med – koden har bare en enkel kontrollsum.
 - Id-er som begynner på «sp» får klassen «på» slått av/på av fartsknappene i index.html ([id^=sp]) – unngå slike id-er.
+
+## Runde 2 (18. nov, etter fletting med claude/nattfiks)
+- **Køen:** en vanlig ny ordre tømmer køen (ordre() i index.html), og «Stopp» gjør det samme. Vakten målte forrige gang køen FØR ordren
+  (derfor `køFør: 1`). Nå er `køTømt` og `stoppTømmer` krav i vakten.
+- **Marsj med bekreftelse (telefon og 3D):** `#marsjvalg` – første trykk i marsjmodus setter målet og viser avstand og tid, «Gå»
+  (`#marsjgaa`) gir ordren, nytt trykk flytter målet. Gjelder berøring (siste pekertype ≠ mus) og alltid i 3D (KROKER.trykk3d). Med mus i
+  2D er det som før. I testene bare med `FlytSpill.test = true` (sjekk.js sine marsjtester er uendret). `FlytSpill.utkast()`, `utfør()`.
+- **Hendelser fra andre moduler:** `window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } }))` – type er en
+  nøkkel i `Flyt.HENDELSER` (natur, brann, fanger, båt, tog, kort, annet). Spolingen stopper og viser teksten. Lagt inn (én linje hver):
+  verden-visning.js (flom, ras, tog framme), sjo-visning.js (båt framme), krig-visning.js (et lag gir seg). Brann: flyt.js lytter på
+  `riksbrudd-brann` (ny brann innen 3 km fra leiren). Kort som venter på svar (#hendelse, #samfunnkort, #krigkort, #formkort) oppdages
+  av øyeblikksbildet uten endring hos de andre – de senker også farten ved auto-stopp.
+- **Koblinger:** `faktor.røvere` ganger antall røverlag i `angrep()` (spillet-visning.js, én linje; minst ett lag; hard bølge 1 = 2 lag).
+  `faktor.penger` virker mot den nye STARTPENGER (40 mill. utenom testene: lett 60, vanlig 40, hard 24, «Tom kasse» en tidel) – steg 3 viser
+  beløpet. «Ingen kjøp»: innpakkingen legges på igjen etter at markedet har byttet ut kjøpsfunksjonene (hyllene), og
+  `RegionSpill`s svartebørs-kjøp avviser (region-visning.js kjøp(), én linje). «Evig vinter»: VerdenSpill leser årstiden fra VaerSpill, så
+  kulde/føre følger med uten endring der. «Ingen radio»: `harRadio()` i verden-visning.js og radiosambandet i krig-visning.js svarer nei.
+- **Tap:** `REGLER.tap.fred = 2880` – de to første døgnene kan ikke leiren tapes.
+- **Prøvd på /rogaland med ekte data:** to spilldøgn av et nytt spill med alt på (navigator.webdriver slått av): første røverbølge kom etter
+  12 timer (12 røvere), startkjøretøyene (stridsvogna) slo dem tilbake, Vaktlaget var uskadd, 10 personer og mat til 3,3 døgn på dag 3,
+  leiren ikke tapt. NB: byggingen i prøveskriptet slo feil (ingen bygg ble satt opp), så dette er en spiller som IKKE bygger – moralen falt
+  til 33–39. «Hold byen» (Sand) og «Større region» (8 → 34 tettsteder, 45 → 76 km) virket; «Ingen kjøp» stoppet tre, mat og svartebørs
+  med hyllene på; hard ga 2 røverlag; marsj med bekreftelse virket i 3D.
+- **Ikke gjort i runde 2:** de seks overlevende røverne trakk seg 3,9 km unna og ble stående, så bølge 1 var «aktiv» resten av tiden (ingen
+  nye bølger) – det ligger i angrepsdelen og er ikke rørt. Flyktninger/samfunnskort har ikke eget kall (de fanges som «kort som venter»).

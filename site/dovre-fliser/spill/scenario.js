@@ -10,9 +10,9 @@
   const REGLER = {
     // penger = faktor på startkassa, fiende = faktor på fiendens treff, røvere = faktor på størrelsen på røverbølgene
     vanskelighet: {
-      lett: { navn: 'Lett', tekst: '150 mill. kr, fienden treffer dårligere, små røverbølger', penger: 1.5, fiende: .75, røvere: .6 },
+      lett: { navn: 'Lett', tekst: '50 % mer penger, fienden treffer dårligere, små røverbølger', penger: 1.5, fiende: .75, røvere: .6 },
       vanlig: { navn: 'Vanlig', tekst: 'Slik spillet er ment', penger: 1, fiende: 1, røvere: 1 },
-      hard: { navn: 'Hard', tekst: '60 mill. kr, fienden treffer bedre, store røverbølger', penger: .6, fiende: 1.3, røvere: 1.5 },
+      hard: { navn: 'Hard', tekst: '40 % mindre penger, fienden treffer bedre, store røverbølger', penger: .6, fiende: 1.3, røvere: 1.5 },
     },
     utfordringer: {
       ingenKjøp: { navn: 'Ingen kjøp', tekst: 'Materialer, diesel og mat kan ikke kjøpes – hogg, riv, let i hus og dyrk selv.' },
@@ -29,7 +29,8 @@
     // start uten ferdige lag: så mange mann i vaktlaget, og så mange ekstra rasjoner
     vaktlag: 4, startmat: 20,
     // tap av leiren: fiende innen «nær» meter uten egne lag innen «vern» meter i «minutter» spillminutter
-    tap: { nær: 150, vern: 400, minutter: 90, penger: .5, lager: .5, folk: .7, minstFolk: 3, avstand: 4000 },
+    // (fred: de to første døgnene kan ikke leiren tapes – en ny spiller uten lag skal rekke å lage tropper)
+    tap: { fred: 2880, nær: 150, vern: 400, minutter: 90, penger: .5, lager: .5, folk: .7, minstFolk: 3, avstand: 4000 },
     // etterspill: et bilde hvert «hver» spillminutt, høyst «maks» bilder (eldre tynnes ut)
     etterspill: { hver: 180, maks: 240, lagMaks: 40 },
   };
@@ -87,7 +88,7 @@
     return fiender.some(f => d(f) <= R.nær) && !egne.some(e => d(e) <= R.vern);
   }
   // tapSteg(st, truetNå, tid): teller minuttene leiren har vært tatt; gir true når den er tapt. st = { fra }
-  function tapSteg(st, truetNå, tid, R = REGLER.tap) { if (!truetNå) { st.fra = null; return false; } if (st.fra == null) st.fra = tid; return tid - st.fra >= R.minutter; }
+  function tapSteg(st, truetNå, tid, R = REGLER.tap) { if (!truetNå || tid < (R.fred || 0)) { st.fra = null; return false; } if (st.fra == null) st.fra = tid; return tid - st.fra >= R.minutter; }
   // utpost(leir, fiender, egneByer): der du begynner på nytt – det nærmeste tettstedet du holder (minst 1 km unna), ellers 4 km bort fra fienden
   function utpost(leir, fiender, egneByer, R = REGLER.tap) {
     let best = null, bd = Infinity; for (const b of egneByer || []) { const d = Math.hypot(b.x - leir.x, b.y - leir.y); if (d > 1000 && d < bd) { bd = d; best = b; } }
