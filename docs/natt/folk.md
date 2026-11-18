@@ -177,8 +177,10 @@ Tester: test_samfunn.js (nye: barn/gamle syke, sabotasje, oppdrag), test_eventyr
 (varsler, sabotasje, énKø, barnGamle, oppdragSpes, portretter, tårn – bare med 3D åpent, ellers «2D» –, hund, bakke, slør).
 
 ### IKKE gjort / svakheter (runde 4)
-- Figurene inne i byggene står stille (ingen gange inne, ingen sitting ved pultene), og de vises bare når du er inne (veggene skjuler dem).
-- Barn/gamle i 3D har ikke grått hår eller egne klær utover fargen; høyst 8 vises.
+- Figurene inne i byggene står (snur seg litt innimellom; ingen gange inne, ingen sitting ved pultene), og de synes bare når du er
+  inne (veggene og taket skjuler dem).
+- Barn/gamle i 3D: høyst 8 vises; de gamle har grått/hvitt hår (håret er nå et eget instansnett, alle får sin hårfarge), men ingen
+  egne klær utover fargen.
 - Sløret er ikke i minikartene (bare API + forslag); 3D-minikartet er ikke vurdert.
 - Hunden har ingen lyd, og fienden sikter ikke på hunden med vilje (bare «truffet sammen med deg»).
 - Dekningen bak bakketoppen gjelder skaden du tar – fienden oppdager deg fortsatt (snik) som før.
