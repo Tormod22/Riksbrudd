@@ -39,6 +39,10 @@ module.exports = { navn: 'verden (vinter, flom, brann, jakt, åker, funn, radio,
       S.penger = Math.max(S.penger, 5e6); const p0 = S.penger, r1 = VS.ryddÅker(); krev(r1.ok && S.penger < p0 && V.åker.mål === Verden.REGLER.åker.ryddMål, 'åkeren ble ikke ryddet');
       krev(VS.så().feil, 'det gikk an å så om sommeren'); settÅr('vår'); krev(VS.så().ok && V.åker.sådd, 'det gikk ikke an å så om våren');
       V.åker.grodd = Verden.REGLER.åker.modning; const m0 = F ? F.mat : 0, h = Verden.åkerSteg(V, .01, 'høst'); ut.avling = h.mat; krev(h.mat === V.åker.mål * Verden.REGLER.åker.perMål, 'avlinga stemmer ikke');
+      // jaktlag: et lag i skogen får kjøtt etter jakta
+      if (s) { await VS.punkt(s.x, s.y); const her = s.her; s.her = null; const art = VS.viltHer(s); ut.vilt = art;
+        if (art) { const sti = s.sti; krev(VS.startJakt(s).ok && s.jakt, 'jakta startet ikke'); if (s.jakt) { s.jakt.til = tid; VS.jaktSteg(); krev(!s.jakt, 'jakta ble ikke ferdig'); krev(VS.startJakt(s).feil, 'viltet er ikke skremt etter jakta'); } s.sti = sti; }
+        s.her = her; }
       // radio og tog
       const n0 = V.radio.liste.length, m = VS.radioNå(); krev(m && m.tekst && V.radio.liste.length === Math.min(Verden.REGLER.radio.liste, n0 + 1), 'radiomeldingen kom ikke');
       ut.stasjoner = VS.stasjoner().map(q => q.navn); krev(Array.isArray(ut.stasjoner), 'stasjonslista mangler');

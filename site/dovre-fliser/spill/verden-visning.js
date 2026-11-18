@@ -94,7 +94,9 @@
       let f = W.marsjFaktor(v, res(h)); const so = W.iSone(V, mx, my); if (so) f *= so.type === 'flom' ? R.regn.vasser : R.regn.rasFart;
       if (k >= s.seg) { s.steg[k] = (O[k] || 1e-9) / f; sum += s.steg[k] * (k === s.seg ? 1 - (s.prog || 0) : 1); minst = Math.min(minst, f); }
     }
-    s.timerIgjen = sum; s.verdenF = minst; s._vNøkkel = nøkkel(v);
+    // uten snø, flom og ras står marsjen som den var
+    if (minst < 1 || s._vEndret) { s.timerIgjen = sum; s._vEndret = minst < 1; }
+    s.verdenF = minst; s._vNøkkel = nøkkel(v);
     // høyder som ikke var hentet ennå: prøv igjen noen ganger
     if (ukjent && s._vForsøk++ < 6) s._vNøkkel = null;
   }
@@ -270,7 +272,9 @@
   function radioNå() { const v = vær(), l = leir(), steder = l ? byer().filter(b => Math.hypot(b.x - l.x, b.y - l.y) < 80000).map(b => b.navn) : []; const m = W.radioInn(V, W.radioMelding(sanne(v), steder, Math.random), tid, Math.random); endret(); logg('Radio: ' + m.tekst); return m; }
 
   // ---------- 38 tog ----------
-  const stasjoner = () => byer().filter(b => W.erStasjon(b.navn)).map(b => ({ id: b.id, navn: b.navn, x: b.x, y: b.y, eier: eier(b.id) }));
+  // stasjonsbyene i spillkartet, de nærmeste leiren først
+  function stasjoner() { const l = leir(), d = b => (l ? Math.hypot(b.x - l.x, b.y - l.y) : 0);
+    return byer().filter(b => W.erStasjon(b.navn) && (!window.OMRÅDE_OK || OMRÅDE_OK(b.x, b.y))).sort((a, b) => d(a) - d(b)).map(b => ({ id: b.id, navn: b.navn, x: b.x, y: b.y, eier: eier(b.id) })); }
   function togStart(idA, idB) {
     const S = stasjoner(), a = S.find(s => String(s.id) === String(idA)), b = S.find(s => String(s.id) === String(idB)), p = W.togPlan(a, b); if (p.feil) return p;
     const L = LL(); if (!L || (L.lager.stål || 0) < p.stål) return { feil: `Dere trenger ${p.stål} stål til skinner og sviller.` }; if (spill().penger < p.pris) return { feil: 'Ikke nok penger.' };
@@ -447,7 +451,7 @@
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
   Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, startJakt, viltHer, ryddÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
-    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse,
+    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     ryddKart() { for (const s of V.soner) åpneVeger(s); V.soner = []; V.brann = W.nyBrann(); brannLister(); skitten = true; endret(); } });
   window.VerdenSpill = api;
