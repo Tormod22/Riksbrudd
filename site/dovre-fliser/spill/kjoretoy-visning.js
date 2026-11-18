@@ -41,6 +41,8 @@
   window.lastVegnett = lastVegnett;
 
   async function kjørTil(kj, X, Y) {
+    // et mindre spillkart (/rogaland, spill/omraade.js): ingen kjøring ut av området
+    if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { logg(kj.navn + ': det ligger utenfor spillkartet.'); return; }
     try {
       const g = await lastVegnett(), r = Kjoretoy.planlegg(kj, g, [X, Y]);
       if (r.feil) { logg(kj.navn + ': ' + r.feil); return; }
