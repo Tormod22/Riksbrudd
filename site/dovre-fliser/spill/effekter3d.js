@@ -26,7 +26,7 @@
     // kratere: høyst så mange, standard radius
     kratere: 40, kraterR: 4,
     // brente områder og branner: høyst så mange leses (de siste i lista)
-    brente: 160,
+    brente: 160, brenteHus: 60,
     // bare ting innen denne avstanden fra kameraet får røyk og støv (m)
     nær: 900,
   };
@@ -261,8 +261,22 @@
       if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3));
         const m = new THREE.Mesh(g, R.effBrentMat); m.renderOrder = 1; m.frustumCulled = false; R.scene.add(m); R.effBrent.push(m); }
     }
-    // trærne i de brente områdene blir svarte (fargen per tre i detaljnivå-lista; lodTrær fordeler dem på nytt)
     const lokal = inne.map(o => ({ x: o.x - u.cx, y: o.y - u.cy, r: o.r, styrke: o.styrke }));
+    // brente hus: et sotlag utenpå huset (et skall litt større enn omrisset som mørkner det som er bak – husene selv er ett
+    // sammenslått nett og kan ikke farges ett og ett). Høyst REGLER.brenteHus hus.
+    if (lokal.length && u.hus && u.hus.omriss) { const pos = []; let ant = 0;
+      for (const P0 of u.hus.omriss) { if (ant >= REGLER.brenteHus) break; if (!P0 || P0.length < 3 || !(P0.topp === P0.topp)) continue;
+        let mx = 0, my = 0, areal = 0; for (let i = 0; i < P0.length; i++) { const a = P0[i], b = P0[(i + 1) % P0.length]; mx += a[0]; my += a[1]; areal += a[0] * b[1] - b[0] * a[1]; } mx /= P0.length; my /= P0.length;
+        if (brentVed(lokal, mx, my) < .3) continue; ant++;
+        // mot klokka sett ovenfra, og litt større enn huset
+        const P = (areal < 0 ? P0.slice().reverse() : P0).map(p => { const dx = p[0] - mx, dy = p[1] - my, l = Math.hypot(dx, dy) || 1; return [p[0] + dx / l * .25, p[1] + dy / l * .25]; });
+        let zb = Infinity; for (const p of P) zb = Math.min(zb, zVed(R, p[0], p[1])); zb -= .3; const zt = P0.topp + .3;
+        for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length];
+          pos.push(a[0], a[1], zb, b[0], b[1], zb, b[0], b[1], zt, a[0], a[1], zb, b[0], b[1], zt, a[0], a[1], zt, mx, my, zt, a[0], a[1], zt, b[0], b[1], zt); } }
+      if (pos.length) { if (!R.effSotMat) R.effSotMat = new THREE.MeshBasicMaterial({ color: 0x4a4541, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+        const m = new THREE.Mesh(g, R.effSotMat); m.renderOrder = 4; m.frustumCulled = false; m.userData.sot = ant; R.scene.add(m); R.effBrent.push(m); } }
+    // trærne i de brente områdene blir svarte (fargen per tre i detaljnivå-lista; lodTrær fordeler dem på nytt)
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const o of lokal) { x0 = Math.min(x0, o.x - o.r); x1 = Math.max(x1, o.x + o.r); y0 = Math.min(y0, o.y - o.r); y1 = Math.max(y1, o.y + o.r); }
     for (const t of R.treLOD || []) { if (!t.C0) t.C0 = new Float32Array(t.C); else t.C.set(t.C0); if (!lokal.length) continue;
       for (let k = 0; k < t.n; k++) { const x = t.data[k * 5], y = t.data[k * 5 + 1]; if (x < x0 || x > x1 || y < y0 || y > y1) continue; const b = brentVed(lokal, x, y); if (b <= .05) continue; const f = 1 - .85 * Math.min(1, b * 1.3);
@@ -307,15 +321,23 @@
   function pakkSkade() {
     const før = window.skadKjoretoy; if (typeof før !== 'function' || før.effekter) return;
     const ny2 = function (k, ...rest) { const x = k && k.x, y = k && k.y, antall = k && k.antall; const svar = før.call(this, k, ...rest);
-      try { if (Number.isFinite(x) && (typeof KJORETOY === 'undefined' || !KJORETOY.includes(k) || (k.antall || 0) < antall)) krater(x, y, 3.5, true); } catch (e) { /* effekten er ikke viktig */ }
+      try { if (Number.isFinite(x) && (rest.includes('en mine') || typeof KJORETOY === 'undefined' || !KJORETOY.includes(k) || (k.antall || 0) < antall)) krater(x, y, 3.5, true); } catch (e) { /* effekten er ikke viktig */ }
       return svar; };
     ny2.effekter = true; window.skadKjoretoy = ny2;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pakkSkade); else pakkSkade();
+  // sprengt bru, tunnel, kraftverk, dam eller veg (spill/odeleggelse-visning.js): smell og røyk der det skjer, krater i vegen
+  if (KROKER.ødelagt) KROKER.ødelagt.push((o, hva) => { try { if (hva !== 'ødelegg' || !o) return;
+    let X = o.x, Y = o.y; const d = o.deler && o.deler[0];
+    if (!Number.isFinite(X) && d && d.length) { if (Array.isArray(d[0])) { X = 0; Y = 0; for (const p of d) { X += p[0]; Y += p[1]; } X /= d.length; Y /= d.length; }
+      else { X = 0; Y = 0; for (let i = 0; i + 1 < d.length; i += 2) { X += d[i]; Y += d[i + 1]; } X /= d.length / 2; Y /= d.length / 2; } }
+    if (!Number.isFinite(X) && o.bb && o.bb.length >= 4) { X = (o.bb[0] + o.bb[2]) / 2; Y = (o.bb[1] + o.bb[3]) / 2; }
+    if (!Number.isFinite(X) || !Number.isFinite(Y)) return;
+    if (o.lag === 'veg') krater(X, Y, 5, true); else { window.Effekter3d.eksplosjon(X, Y, 7); window.Effekter3d.røyk(X, Y, 10); } } catch (e) { /* effekten er ikke viktig */ } });
 
   window.Effekter3d = { krater, eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
     røyk(X, Y, mengde) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; røyk(x, y, zVed(R, x, y) + 1, mengde || 3); } },
-    brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length, brentTrekanter: (r3() && r3().effBrent || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0) }),
+    brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length, sotHus: (r3() && r3().effBrent || []).reduce((a, m) => a + (m.userData.sot || 0), 0), brentTrekanter: (r3() && r3().effBrent || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0) }),
     // oppdater(): les BRENT på nytt i neste bilde (ellers leses lista hver 20. ramme)
     oppdater() { T.brentNøkkel = ''; },
     tøm() { T.P.length = 0; T.kuler.length = 0; T.spor.length = 0; T.kratere.length = 0; T.kj.clear(); T.brentNøkkel = ''; const R = r3(); if (R) R.effKraterNøkkel = ''; } };

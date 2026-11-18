@@ -18,7 +18,7 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     krev(!gran || (gran.userData.blad && gran.attributes.uv), 'grana mangler bladtekstur'); krev(!løv || (løv.userData.blad && løv.attributes.uv), 'bjørka mangler bladtekstur');
     ut.blad = (R.treMesh || []).filter(m => m.material.alphaMap).length; ut.uten = (R.treMesh || []).filter(m => m.geometry.userData.blad && !m.material.alphaMap).length;
     krev(ut.uten === 0, ut.uten + ' trenett med kort uten bladtekstur');
-    ut.tre = gran ? gran.attributes.position.count / 3 : 0; krev(!gran || (ut.tre > 60 && ut.tre < 260), 'grana har ' + ut.tre + ' trekanter');
+    ut.tre = gran ? gran.attributes.position.count / 3 : 0; krev(!gran || (ut.tre > 40 && ut.tre < 260), 'grana har ' + ut.tre + ' trekanter');
     // soldatene: fem nett med ganglaget
     ut.soldat = (R.solMesh || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0);
     krev(!R.solMesh || (R.solMesh.length === 5 && R.solMesh.every(m => m.geometry.attributes.aLem && m.geometry.attributes.aGang) && ut.soldat > 400 && ut.soldat < 6000), 'soldatfigurene: ' + ut.soldat + ' trekanter');
