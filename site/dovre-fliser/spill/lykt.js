@@ -77,7 +77,7 @@
   function tekstur() { const W = 64, H = 128, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), im = g.createImageData(W, H);
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const t = j / (H - 1), u = (i + .5) / W * 2 - 1, br = .18 + .82 * Math.sqrt(t), kant = 1 - Math.min(1, Math.abs(u) / br), lang = Math.pow(1 - t, .7) * Math.min(1, t * 7 + .25);
       const v = Math.max(0, Math.pow(kant, 1.4) * lang), k = (j * W + i) * 4; im.data[k] = 255 * v; im.data[k + 1] = 236 * v; im.data[k + 2] = 196 * v; im.data[k + 3] = 255; }
-    g.putImageData(im, 0, 0); const T = new THREE.CanvasTexture(c); T.wrapS = T.wrapT = THREE.ClampToEdgeWrapping; return T; }
+    g.putImageData(im, 0, 0); const T = new THREE.CanvasTexture(c); T.flipY = false; T.wrapS = T.wrapT = THREE.ClampToEdgeWrapping; return T; }
   const BITER = 6;
   function lag(R) {
     if (!kjegleTex) kjegleTex = tekstur();
