@@ -91,7 +91,26 @@ rekker under to døgn). Stoppet etter tre døgn:
   samme røverlaget – utfallet var på vippen. Derfor: røverlagene har nå 4 + 2 mann per bølge (6, 8, 10, 12), og aldri flere enn
   soldatene dine + 2 (`Trussel.menn`, bare i ekte spill).
 
-KJØRING4_HER
+**Kjøring 4** (all koden, også de små røverlagene). Stoppet etter seks døgn (fristen):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.0 mill. | 6 | 63 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra sør (2,0 km unna). Bølge 1. |
+| 2 | 13.5 mill. | 6 | 69 | 38 | brakke(95%) aggregat(95%) drivstofftank(95%) vakttårn(95%) | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne. |
+| 3 | 2.2 mill. | 9 | 76 | 31 | brakke(89%) aggregat(90%) drivstofftank(90%) vakttårn(90%) kontrollrom | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 2 | Varsel: et røverlag er på vei mot leiren fra øst (2,1 km unna). Bølge 2.; Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne.; KONTROLLROM OK kontrollrom -40,40 |
+| 4 | 2.5 mill. | 9 | 77 | 63 | brakke(75%) aggregat(77%) drivstofftank(77%) vakttårn(76%) kontrollrom(87%) | Vaktlaget:3 Ola (deg):1 Tropp 1:3 | 3 | Varsel: et røverlag er på vei mot leiren fra øst (1,6 km unna). Bølge 3.; Angrepet er slått tilbake! Dere tok 750 000 kr fra røverne.; MAT kjøpte 50 rasjoner |
+| 5 | 2.5 mill. | 9 | 55 | 53 | brakke(23%) aggregat(27%) drivstofftank(25%) vakttårn(25%) kontrollrom(37%) | Vaktlaget:3 Ola (deg):1 Tropp 1:2 | 4 (aktiv) | Varsel: et røverlag er på vei mot leiren fra øst (1,7 km unna). Bølge 4.; Radio: Rykte: det skal ligge noe (forlatt leir) 7,2 km sørøst for leiren.; Radio: Rykte: det skal ligge noe (forlatt leir) 1,3 km øst for leiren. |
+| 6 | 2.5 mill. | 9 | 45 | 34 |  | Vaktlaget:3 Ola (deg):1 Tropp 1:2 | 4 (aktiv) | Brakke er ødelagt av Røvere 4.1!; Spolingen stoppet: et bygg i leiren er ødelagt.; Vakttårn er ødelagt av Røvere 4.1!; Dieseltank er ødelagt av Røvere 4.1! 156 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Aggregat er ødelagt av Røvere 4.1! 200 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Kontrollrom er ødelagt av Røvere 4.1!; Spolingen stoppet: et bygg i leiren er ødelagt. |
+
+- Døgn 1–4 sto leiren: bølge 1–3 (ett lag hver) ble slått, byttet 450 000 / 600 000 / 750 000 kr, moralen 63–77, maten kjøpt i tide
+  (varselet kom), ingen sabotører og ingen brann. Kontrollrommet ble bygget på dag 3.
+- **Det som veltet leiren på dag 6:** bølge 4 (ett lag på 8) ble ikke slått ut. Røverne ble stående inne i leiren og ødela bygg etter
+  bygg (HERJER i leir-visning.js) i et døgn, mens Vaktlaget (3) og Tropp 1 (2) ikke fikk has på dem. Byggene var alt slitt ned til
+  23–37 % (skriptet reparerer aldri, og byggene tar skade i hver bølge). Neste ting å se på: at røvere som har herjet en stund
+  trekker seg med byttet (bølgen er over), at forsvarerne søker mot herjerne, og at opplæringen sier «reparer byggene» og
+  «lag en tropp til» (skriptet laget aldri mer enn én tropp på fire).
+- Målet (sju døgn) er dermed ikke nådd, men leiren holdt to døgn lenger enn i kjøring 2 og tre lenger enn i kjøring 1.
+
 
 
 ## Også gjort (punkt 5)
