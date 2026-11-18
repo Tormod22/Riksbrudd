@@ -36,7 +36,7 @@
   const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, skriv = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* sperret */ } };
   let T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false }, sistSteg = null;
   const css = document.createElement('style');
-  css.textContent = `#opplaering{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:7; display:none; width:min(430px, calc(100vw - 20px)); padding:9px 12px 10px 46px; background:linear-gradient(180deg,rgba(42,33,20,.97),rgba(23,18,10,.97)); border:1px solid #c9b26a; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.6); border-radius:5px; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; }
+  css.textContent = `#opplaering{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:7; display:none; box-sizing:border-box; width:min(490px, calc(100vw - 16px)); padding:9px 12px 10px 46px; background:linear-gradient(180deg,rgba(42,33,20,.97),rgba(23,18,10,.97)); border:1px solid #c9b26a; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.6); border-radius:5px; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; }
 #opplaering.på{ display:block; animation:oppinn .3s ease-out; } @keyframes oppinn{ from{ opacity:0; transform:translate(-50%, 12px); } }
 #opplaering .nr{ position:absolute; left:10px; top:10px; width:27px; height:27px; line-height:26px; border-radius:50%; border:1px solid #c9b26a; text-align:center; font-family:"IM Fell English",serif; font-size:15px; color:#f0dc9a; }
 #opplaering small{ display:block; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#a89970; } #opplaering b{ display:block; font-family:"IM Fell English",serif; font-weight:400; font-size:18px; color:#f0dc9a; margin:0 0 2px; }
@@ -45,7 +45,9 @@
 #opplaering.ok b::after{ content:' ✓'; color:#a8d47a; }
 #oppring{ position:fixed; z-index:28; display:none; pointer-events:none; border:2px solid #f0dc9a; border-radius:8px; box-shadow:0 0 0 3px rgba(240,220,154,.25), 0 0 16px rgba(240,220,154,.7); animation:oppring 1.3s ease-in-out infinite; }
 #oppring.på{ display:block; } @keyframes oppring{ 50%{ box-shadow:0 0 0 8px rgba(240,220,154,.08), 0 0 22px rgba(240,220,154,.9); transform:scale(1.06); } }
-body.kort #opplaering{ bottom:calc(64px + env(safe-area-inset-bottom,0px)); font-size:13px; padding:7px 10px 8px 42px; } body.kort #opplaering b{ font-size:16px; } body.kort #opplaering .nr{ left:8px; top:8px; }
+body.kort #opplaering{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); width:auto; transform:none; animation:none; bottom:calc(64px + env(safe-area-inset-bottom,0px)); font-size:13px; padding:7px 10px 8px 42px; } body.kort #opplaering b{ font-size:16px; } body.kort #opplaering .nr{ left:8px; top:8px; }
+#opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(5px + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
+#opplaering.liten .nr{ left:7px; top:4px; width:22px; height:22px; line-height:21px; font-size:13px; } #opplaering.liten b{ font-size:15px; margin:0; }
 body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } body.foto #opplaering, body.foto #oppring, body.bygger2d.kort #opplaering{ display:none !important; }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
@@ -70,7 +72,7 @@ body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } bo
   function tegn(s, okTekst) { const n = Opplaering.nr(T), sig = (s ? s.id : 'slutt') + '|' + (okTekst || ''); if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
     const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
     boks.classList.toggle('ok', !!okTekst); boks.append(el('div', 'nr', okTekst ? '✓' : String(n)), el('small', '', `Opplæring · ${okTekst ? 'ferdig' : n + ' av ' + STEG.length}`), el('b', '', okTekst ? okTekst : s.tittel));
-    if (!okTekst) boks.appendChild(document.createTextNode(s.tekst)); else boks.appendChild(document.createTextNode('Bra. Videre går det etter målene: åpne Leir og velg fanen Mål.'));
+    boks.appendChild(el('span', 't', okTekst ? 'Bra. Videre går det etter målene: åpne Leir og velg fanen Mål.' : s.tekst));
     const rad = el('div', 'rad'); if (!okTekst) { const h = el('button', '', 'Hopp over'); h.id = 'opphopp'; h.onclick = () => { Opplaering.hopp(T); lagre(); kjør(); }; rad.appendChild(h); }
     const a = el('button', '', okTekst ? 'Lukk' : 'Slå av opplæringen'); a.id = 'oppav'; a.onclick = () => (okTekst ? (T.slutt = true, lagre(), kjør()) : slå(false)); rad.appendChild(a); boks.appendChild(rad);
     const p = el('div', 'prikker'); STEG.forEach(x => p.appendChild(el('i', tatt(T, x.id) ? 'g' : s && x.id === s.id ? 'n' : ''))); boks.appendChild(p); }
@@ -83,6 +85,9 @@ body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } bo
     const s = Opplaering.neste(T);
     if (!s) { if (T.slutt) { boks.classList.remove('på'); ring.classList.remove('på'); return; } tegn(null, 'Opplæringen er ferdig'); boks.classList.add('på'); ring.classList.remove('på'); return; }
     tegn(s); boks.classList.add('på');
+    // på telefon dekker menyene skjermen: da står bare overskriften igjen helt nederst
+    const tlf = document.body.classList.contains('kort'), meny = ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'].some(id => synlig($(id)));
+    boks.classList.toggle('liten', tlf && meny); if (tlf && !meny && ['panel', 'stridpanel', 'byggvalg'].some(id => synlig($(id)))) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
     const m = pekPå(s); if (m && synlig(m)) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
   setInterval(kjør, 400); window.addEventListener('riksbrudd-spill', () => { last(); setTimeout(kjør, 600); }); window.addEventListener('resize', kjør);
   // Leir-menyen, fanen Mål: slå opplæringen av og på, eller ta den en gang til

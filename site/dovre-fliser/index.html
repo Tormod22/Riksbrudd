@@ -122,7 +122,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=fa72518ab0"></script>
+<script src="/dovre-fliser/kartflis.js?v=857b0c3418"></script>
 <script src="/dovre-fliser/terreng.js?v=a7c00fd4ce"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -246,7 +246,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=e3b78c3c9a');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=58fce7f9c0');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -433,6 +433,25 @@ const VISES = {
   bru: (o, m) => m < 25 || (o.e.lengde || 0) >= 100 && m < 120 || (o.e.lengde || 0) >= 500 && m < 800 || (o.e.lengde || 0) >= 1000,
 };
 const INFRA_REKKE = ['felt', 'tettsted', 'magasin', 'ror', 'ferje', 'tunnel', 'dam', 'bru', 'ferjekai', 'kraft', 'olje'];
+// FÆRRE MERKER SOM STANDARD (18. nov, nattarbeid «ui»: mye rot nær byer). Bruer, tunneler, kraftverk, dammer og ferjekaier vises bare
+// når de betyr noe for det du gjør: du er zoomet helt inn (INFRA_FOKUS.nær, meter per punkt), de er store landemerker, de ligger nær
+// laget eller kjøretøyet du har valgt (eller dit det er på vei), nær leiren, de er sprengt/skadet, eller krigskartet er åpent.
+// «Alle merker» i ☰ (INFRA_FOKUS.alt) viser alt som før. I testene (navigator.webdriver) er alt som før til INFRA_FOKUS.test = true.
+// Tallene er Claudes forslag.
+const INFRA_FOKUS = { alt: false, test: false, nær: { bru: 8, tunnel: 10, kraft: 22, ferjekai: 35, dam: 15 }, stor: { bru: o => (o.e.lengde || 0) >= 500, tunnel: o => (o.e.lengde || 0) >= 3000, kraft: o => (o.e.mw || 0) >= 100, ferjekai: () => false, dam: () => false },
+  rundtValgt: 2500, rundtLeir: { kraft: 3000, ferjekai: 3000, bru: 1200, tunnel: 1200, dam: 1200 } };
+try { INFRA_FOKUS.alt = localStorage.getItem('riksbrudd-allemerker') === '1'; } catch (e) { INFRA_FOKUS.alt = false; }
+function infraViktig(lag, o, m) {
+  if (INFRA_FOKUS.alt || (navigator.webdriver && !INFRA_FOKUS.test)) return true;
+  if (m < INFRA_FOKUS.nær[lag] || INFRA_FOKUS.stor[lag](o)) return true;
+  if (window.INFRA_TILSTAND && INFRA_TILSTAND.has(lag + ':' + o.e.id)) return true;
+  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return true;
+  const nær = (x, y, r) => x >= o.bb[0] - r && x <= o.bb[2] + r && y >= o.bb[1] - r && y <= o.bb[3] + r;
+  if (valgt && typeof valgt.x === 'number') { const r = INFRA_FOKUS.rundtValgt; if (nær(valgt.x, valgt.y, r)) return true; const sti = valgt.sti; if (sti && sti.length) { const e = sti[sti.length - 1]; if (e && nær(e[0] !== undefined ? e[0] : e.x, e[1] !== undefined ? e[1] : e.y, r)) return true; } }
+  const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (S && S.leir && nær(S.leir.x, S.leir.y, INFRA_FOKUS.rundtLeir[lag])) return true;
+  return false;
+}
+for (const lag of ['bru', 'tunnel', 'kraft', 'ferjekai', 'dam']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && infraViktig(lag, o, m); }
 // Navnet på et tettsted står inne i tettbebyggelsen, lengst fra kanten (Kart2d.navnepunkt, regnes én gang per tettsted) – ikke midt i
 // rammen rundt flaten: «Oslo» sto ute i fjorden (12. nov). Brukes av 2D, 3D og trykk i 3D.
 const navnP = o => o.navnP || (o.navnP = Kart2d.navnepunkt(o.deler, o.bb));
@@ -516,7 +535,8 @@ function tegnEtiketter(g, etiketter, W, H) {
   for (const e of etiketter) {
     if (e.x < -50 || e.y < -20 || e.x > W + 50 || e.y > H + 20) continue;
     g.font = e.font; const w = g.measureText(e.tekst).width + 6, h = 16, r = [e.x - w / 2, e.y - h / 2, w, h];
-    if (tatt.some(q => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3])) continue;
+    // (18. nov: luft mellom navnene – 10 punkter til siden og 5 opp og ned – så det blir færre navn i tette strøk)
+    if (tatt.some(q => r[0] - 10 < q[0] + q[2] && q[0] < r[0] + r[2] + 10 && r[1] - 5 < q[1] + q[3] && q[1] < r[1] + r[3] + 5)) continue;
     if (tatt.some(q => q.tekst === e.tekst && Math.hypot(q[0] + q[2] / 2 - e.x, q[1] + q[3] / 2 - e.y) < 250)) continue;   // samme navn (f.eks. hvert tunnelløp) bare én gang
     r.tekst = e.tekst; tatt.push(r); if (window.Etikett && Etikett.merk) Etikett.merk(r); g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(e.tekst, e.x, e.y); g.fillStyle = e.farge; g.fillText(e.tekst, e.x, e.y);
   }
@@ -2961,12 +2981,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
 <script src="/dovre-fliser/spill/meny.js?v=9b4e940c42"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
+<script src="/dovre-fliser/spill/tema.js?v=2ba22aaa4c"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
-<script src="/dovre-fliser/spill/tegninger.js?v=b93f7a2d96"></script>
-<script src="/dovre-fliser/spill/flistips.js?v=ef019ae65e"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=00a538aa6a"></script>
-<script src="/dovre-fliser/spill/spillhud.js?v=60212e2a27"></script>
+<script src="/dovre-fliser/spill/tegninger.js?v=d775f7c9a4"></script>
+<script src="/dovre-fliser/spill/flistips.js?v=0edb043a66"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=bca320eb9c"></script>
+<script src="/dovre-fliser/spill/spillhud.js?v=3b92a54c8b"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 </body>
 </html>
