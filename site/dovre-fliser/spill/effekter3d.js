@@ -175,30 +175,35 @@
       const c = 1 - f; K[n * 3] = c; K[n * 3 + 1] = c; K[n * 3 + 2] = c * 1.02 > 1 ? 1 : c * 1.02; n++; }
     T.spor.length = ut; m.count = n; m.visible = n > 0; if (n) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
   }
-  // kjøretøyene: eksos, støv/snøføyke og spor når de flytter seg
+  // Ett kjøretøy som kanskje har flyttet seg: eksos, støv/snøføyke og spor. id = fast navn, (X, Y) i kartets meter,
+  // L = lengde, B = bredde, belter = bredere spor. Retningen tas fra bevegelsen.
+  function kjør(R, dt, sett, id, X, Y, L, B, belter) {
+    const u = R.ut, c = R.cam.position, x = X - u.cx, y = Y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) return; sett.add(id);
+    const f = T.kj.get(id); if (!f) { T.kj.set(id, { X, Y, sx: X, sy: Y, røyk: 0 }); return; }
+    const d = Math.hypot(X - f.X, Y - f.Y), cv = d ? (X - f.X) / d : 1, sv = d ? (Y - f.Y) / d : 0; f.X = X; f.Y = Y;
+    // hopp (ny ordre, spoling med 600×) gir ingen spor
+    if (d < .004 || d > 40) { f.sx = X; f.sy = Y; return; }
+    const fart = d / Math.max(dt, .001), nær = Math.hypot(x - c.x, y - c.y) < REGLER.nær, lav = nivå() === 'lav', våt = window.VAER && Number.isFinite(VAER.våt) ? VAER.våt : 0;
+    const U = underlag(u.vegType && (!u.påVeg || u.påVeg(x, y) || (u.vegNær && u.vegNær(x, y))) ? u.vegType(x, y) : null, snøVed(X, Y), våt);
+    if (nær) { f.røyk += dt * Math.min(3, .6 + fart * .15);
+      if (f.røyk > .12) { f.røyk = 0; const bx = x - cv * L * .45, by = y - sv * L * .45, z = zVed(R, bx, by);
+        // eksos bak, støv eller snøføyke fra hjulene
+        ny(bx + tilf(.3), by + tilf(.3), z + .6, -cv * 1.2 + tilf(.3), -sv * 1.2 + tilf(.3), .5, .9 + Math.random() * .6, .25, 1.1, .2, .2, .21, .38, -.3, 1.5);
+        if (!lav && U.snø) støv(bx, by, z, 1, true); else if (!lav && U.støv > 0 && Math.random() < U.støv * Math.min(1, fart / 6)) støv(bx, by, z, fart > 9 ? 2 : 1, false); } }
+    // spor: ett stykke per hjulrad for hver 1,5 m
+    const ds = Math.hypot(X - f.sx, Y - f.sy);
+    if (ds >= REGLER.sporSteg) { if (U.spor > 0 && ds < 12) { const hb = B * .38, nx = -(Y - f.sy) / ds, ny2 = (X - f.sx) / ds;
+        for (const s of [-1, 1]) leggSpor(R, f.sx - u.cx + nx * hb * s, f.sy - u.cy + ny2 * hb * s, x + nx * hb * s, y + ny2 * hb * s, belter ? .55 : REGLER.sporBredde, U.spor); }
+      f.sx = X; f.sy = Y; }
+  }
+  // kolonnenes kjøretøy (KJORETOY) og bilen du kjører selv (KjorSpill)
   function stegKjøretøy(R, dt) {
-    if (!window.KJORETOY || !window.Kjoretoy) return; const u = R.ut, c = R.cam.position, sett = new Set(), lav = nivå() === 'lav';
-    const våt = window.VAER && Number.isFinite(VAER.våt) ? VAER.våt : 0;
-    for (const k of KJORETOY) { const Ty = Kjoretoy.TYPER[k.type]; if (!Ty) continue; if (k.side !== 'blå' && typeof synlig === 'function' && !synlig(k)) continue;
+    const sett = new Set();
+    if (window.KJORETOY && window.Kjoretoy) for (const k of KJORETOY) { const Ty = Kjoretoy.TYPER[k.type]; if (!Ty) continue; if (k.side !== 'blå' && typeof synlig === 'function' && !synlig(k)) continue;
       for (let i = 0; i < Math.min(k.antall || 1, 12); i++) { let p; try { p = Kjoretoy.posisjon(k, i * Ty.avstand); } catch (e) { continue; }
-        const x = p.x - u.cx, y = p.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) continue;
-        const id = (k.id != null ? k.id : k.navn) + ':' + i; sett.add(id); let f = T.kj.get(id);
-        if (!f) { T.kj.set(id, { X: p.x, Y: p.y, sx: p.x, sy: p.y, røyk: 0 }); continue; }
-        const d = Math.hypot(p.x - f.X, p.y - f.Y); f.X = p.x; f.Y = p.y;
-        // hopp (ny ordre, spoling med 600×) gir ingen spor
-        if (d < .004 || d > 40) { f.sx = p.x; f.sy = p.y; continue; }
-        const fart = d / Math.max(dt, .001), nær = Math.hypot(x - c.x, y - c.y) < REGLER.nær, v = p.retning, cv = Math.cos(v), sv = Math.sin(v), L = (Ty.lengde || 6) * .45;
-        const U = underlag(u.vegType && (!u.påVeg || u.påVeg(x, y) || (u.vegNær && u.vegNær(x, y))) ? u.vegType(x, y) : null, snøVed(p.x, p.y), våt);
-        if (nær) { f.røyk += dt * Math.min(3, .6 + fart * .15);
-          if (f.røyk > .12) { f.røyk = 0; const bx = x - cv * L, by = y - sv * L, z = zVed(R, bx, by);
-            // eksos bak, støv eller snøføyke fra hjulene
-            ny(bx + tilf(.3), by + tilf(.3), z + .6, -cv * 1.2 + tilf(.3), -sv * 1.2 + tilf(.3), .5, .9 + Math.random() * .6, .25, 1.1, .2, .2, .21, .38, -.3, 1.5);
-            if (!lav && U.snø) støv(bx, by, z, 1, true); else if (!lav && U.støv > 0 && Math.random() < U.støv * Math.min(1, fart / 6)) støv(bx, by, z, fart > 9 ? 2 : 1, false); } }
-        // spor: ett stykke per hjulrad for hver 1,5 m
-        const ds = Math.hypot(p.x - f.sx, p.y - f.sy);
-        if (ds >= REGLER.sporSteg) { if (U.spor > 0 && ds < 12) { const hb = (Ty.bredde || 2.4) * .38, nx = -(p.y - f.sy) / ds, ny2 = (p.x - f.sx) / ds;
-            for (const s of [-1, 1]) leggSpor(R, f.sx - u.cx + nx * hb * s, f.sy - u.cy + ny2 * hb * s, x + nx * hb * s, y + ny2 * hb * s, Ty.belter ? .55 : REGLER.sporBredde, U.spor); }
-          f.sx = p.x; f.sy = p.y; } } }
+        kjør(R, dt, sett, (k.id != null ? k.id : k.navn) + ':' + i, p.x, p.y, Ty.lengde || 6, Ty.bredde || 2.4, !!Ty.belter || k.type === 'stridsvogn'); } }
+    try { const L = window.KjorSpill && KjorSpill.liste ? KjorSpill.liste() : null;
+      if (L) L.forEach((k, i) => { if (k && k.type === 'bil' && Number.isFinite(k.X) && Number.isFinite(k.Y)) kjør(R, dt, sett, 'egen:' + i, k.X, k.Y, 4.5, 2, false); }); } catch (e) { /* kjøring finnes ikke */ }
     if (T.kj.size > sett.size + 40) for (const id of [...T.kj.keys()]) if (!sett.has(id)) T.kj.delete(id);
   }
 
