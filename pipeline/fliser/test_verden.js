@@ -10,6 +10,15 @@ assert.strictEqual(V.marsjFaktor(vinter, 700), R.snø.marsj);
 assert.ok(Math.abs(V.marsjFaktor({ ...vinter, snø: 1 }, 700) - R.snø.marsj * R.snø.snøvær) < 1e-9);
 assert.strictEqual(V.marsjFaktor(sommer, 2000), R.snø.marsj, 'snø over snøgrensa om sommeren');
 assert.ok(V.vegStengt({ ...vinter, snø: 1 }, 1000) && !V.vegStengt({ ...vinter, snø: 1 }, 600) && !V.vegStengt(vinter, 1000));
+// runde 4: snø stenger høye veglenker, isen stenger båter
+assert.strictEqual(V.snøVegGrense(sommer, 100), null, 'ingen stengte veger om sommeren');
+assert.strictEqual(V.snøVegGrense({ ...vinter, snø: 1 }, 0), R.snø.vegFjell, 'snøvær om vinteren stenger over fjellgrensen');
+assert.strictEqual(V.snøVegGrense(vinter, R.snø.brøyt - 1), R.snø.vegFjell, 'stengt til vegen er brøytet');
+assert.strictEqual(V.snøVegGrense(vinter, R.snø.brøyt + 1), null, 'åpen etter brøytingen');
+assert.strictEqual(V.snøVegGrense({ ...vinter, snø: 1, snøgrense: 1200 }, 0), 1200, 'snøgrensen over fjellgrensen');
+assert.ok(V.lenkeStengt(900, [700, 950, 800]) && !V.lenkeStengt(900, [700, null, 800]) && !V.lenkeStengt(null, [2000]));
+{ const I = V.ny(); assert.ok(!V.islagtVann(I, 600, 3)); I.frost = R.is.båt; assert.ok(V.islagtVann(I, 600, 3), 'innsjøen er islagt');
+  assert.ok(!V.islagtVann(I, .3, 3), 'sjøen fryser ikke'); assert.ok(!V.islagtVann(I, 600, 1), 'skog er ikke is'); assert.ok(R.is.båt < R.is.bærer, 'isen stenger båter før den bærer'); }
 let S = V.ny(); assert.ok(!V.isBærer(S));
 V.steg(S, 1440, vinter); assert.ok(!V.isBærer(S), 'ett døgn med −15 er ikke nok');
 V.steg(S, 1440, vinter); assert.ok(V.isBærer(S), 'to døgn med −15 gir is som bærer');
@@ -34,6 +43,19 @@ const sone = V.nySone(S, 'ras', 1000, 2000, 90, 100); assert.ok(V.iSone(S, 1050,
 assert.strictEqual(V.ryddSoner(S, 200).length, 0); assert.strictEqual(V.ryddSoner(S, 100 + R.regn.rasTimer * 60).length, 1); assert.strictEqual(S.soner.length, 0);
 assert.ok(V.flomRadius(S, 6) >= V.flomRadius(S, 2));
 for (let i = 0; i < 200; i++) V.steg(S, 60, sommer); assert.strictEqual(S.regn, 0); assert.ok(V.brannfare(S, sommer) === 1 && V.brannfare(S, { ...sommer, regn: 1 }) === 0 && V.brannfare(S, vinter) === 0);
+
+// runde 4: åkeren som bygg
+assert.strictEqual(V.åkerMål(20, []), 20); assert.strictEqual(V.åkerMål(0, [{ hp: 1 }, { hp: .5 }]), R.åkerBygg.mål * 1.5, 'et halvbrent stykke teller halvt');
+assert.strictEqual(V.åkerMål(undefined, [{}]), R.åkerBygg.mål, 'uten hp: helt');
+assert.ok(V.åkerBrennbar(true, 1, 'sommer') > V.åkerBrennbar(true, .2, 'sommer') && V.åkerBrennbar(true, .2, 'sommer') > V.åkerBrennbar(false, 0, 'sommer') && V.åkerBrennbar(true, 1, 'vinter') === 0, 'modent korn brenner lettest');
+assert.strictEqual(V.korn(false, 1).h, 0); assert.ok(V.korn(true, 1).h > V.korn(true, .3).h && V.korn(true, 1).h <= R.åkerBygg.høyde, 'kornet vokser');
+assert.ok(V.korn(true, 1).farge[0] > V.korn(true, .3).farge[0], 'modent korn er gult');
+
+// runde 4: funn flyttes ut av tettbebyggelse og vann
+{ const K = V.funnKandidater(1000, 2000, 5); assert.deepStrictEqual(K[0], [1000, 2000], 'først selve stedet');
+  for (let i = 1; i < K.length; i++) assert.ok(Math.hypot(K[i][0] - 1000, K[i][1] - 2000) >= Math.hypot(K[i - 1][0] - 1000, K[i - 1][1] - 2000) - 1e-6, 'nærmest først');
+  assert.ok(Math.hypot(K[K.length - 1][0] - 1000, K[K.length - 1][1] - 2000) <= R.funn.flytt.maks + 1e-6); assert.deepStrictEqual(V.funnKandidater(1000, 2000, 5), K, 'fast rekkefølge');
+  assert.ok(V.åpentFunnSted(1) && V.åpentFunnSted(2) && !V.åpentFunnSted(7) && !V.åpentFunnSted(3) && !V.åpentFunnSted(255) && !V.åpentFunnSted(null)); }
 
 // 33 jakt
 assert.strictEqual(V.vilt(1300, 0), 'rein'); assert.strictEqual(V.vilt(700, 1), 'elg'); assert.strictEqual(V.vilt(700, 5), null);

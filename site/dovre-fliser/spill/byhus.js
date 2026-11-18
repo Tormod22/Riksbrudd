@@ -145,7 +145,9 @@
   if (typeof window !== 'undefined' && typeof KROKER !== 'undefined') KROKER.bygg3d.push(async u => {
     gatetrær.antall = 0;
     if (!u.veger || !u.trær || !u.påVeg || !u.hus || u.S > 2200) return;
-    const maks = typeof VW !== 'undefined' && VW < 900 ? 500 : 1500, ny = [], vann = u.vann && u.vann.getContext ? (() => { try { const W = u.vann.width, d = u.vann.getContext('2d').getImageData(0, 0, W, W).data;
+    // (18. nov, hakk: 250–300 ms i ett strekk i Bergen – nå vannmaskens punkter fra bygg3d (u.vannData, de samme som bildet), pust
+    // mellom vegene, og de billige prøvene før nærHus; samme trær)
+    const maks = typeof VW !== 'undefined' && VW < 900 ? 500 : 1500, ny = [], vann = u.vann && u.vann.getContext ? (() => { try { const W = u.vann.width, d = u.vannData && u.vannData.W === W && u.vannData.d ? u.vannData.d : u.vann.getContext('2d').getImageData(0, 0, W, W).data;
       return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; }; } catch (e) { return () => false; } })() : () => false;
     const satt = new Map(), nær = (x, y) => { for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of satt.get((Math.floor(x / 8) + di) + ',' + (Math.floor(y / 8) + dj)) || []) if (Math.hypot(a - x, b - y) < 7) return true; return false; };
     // bare der det er bymessig tett (minst 10 bygg innen 80 m): ikke langs vegene i bygder og villastrøk
@@ -153,6 +155,7 @@
     for (const P of u.hus.omriss) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x /= P.length; y /= P.length; const kk = Math.floor(x / C) + ',' + Math.floor(y / C); if (!sentre.has(kk)) sentre.set(kk, []); sentre.get(kk).push(x, y); }
     const tett = (x, y) => { let n = 0; for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const l = sentre.get((Math.floor(x / C) + di) + ',' + (Math.floor(y / C) + dj)); if (l) for (let q = 0; q < l.length; q += 2) if (Math.hypot(l[q] - x, l[q + 1] - y) < 80) n++; } return n; };
     for (const v of u.veger) {
+      if (børPuste()) await pust();
       if (!v.by || !'RFK'.includes(v.k) || ny.length / 5 >= maks * 4) continue;
       const off = BREDDE[v.k] / 2 + 2.9; let d = 6;
       for (let q = 1; q < v.P.length; q++, d = Math.max(0, d)) {
@@ -161,7 +164,7 @@
         for (; d < L; d += 12) {
           const x0 = ax + (bx - ax) * d / L, y0 = ay + (by - ay) * d / L;
           for (const side of [1, -1]) { const x = x0 + nx * off * side, y = y0 + ny2 * off * side, r = hash(Math.round(x * 3), Math.round(y * 3), 71);
-            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || nærHus(u, x, y) || vann(x, y) || nær(x, y) || tett(x, y) < 10) continue;
+            if (r < .2 || Math.abs(x) > u.S - 10 || Math.abs(y) > u.S - 10 || u.påVeg(x, y) || vann(x, y) || nær(x, y) || tett(x, y) < 10 || nærHus(u, x, y)) continue;
             const z = (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX, kk = Math.floor(x / 8) + ',' + Math.floor(y / 8);
             if (!satt.has(kk)) satt.set(kk, []); satt.get(kk).push([x, y]); ny.push(x, y, z, 8 + r * 5, r); }
         }

@@ -31,22 +31,33 @@
     const bue = new THREE.CircleGeometry(r, 14, 0, Math.PI); bue.rotateY(Math.PI / 2); bue.rotateX(Math.PI / 2); bue.translate(.06, 0, h); legg(d, bue, MØRK);
     return d;
   }
-  function bygg(u, R) {
-    if (mesh) { R.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh = null; } antall = 0; portaler = [];
-    if (!u.infra || !window.MODELLER) return;
-    const alle = [];
+  // (18. nov, hakk: portalene ble laget i selve byttet, ni nye geometrier per portal – 25–65 ms i Bergen.) Nå: én mal per bredde (laget
+  // én gang og beholdt), en kopi per portal som dreies og flyttes – de samme tallene –, og alt lages i forbered3d-kroken med pust
+  // mellom portalene (generator; uten forberedelse kjører sett3d den samme i ett).
+  const MAL = {};
+  const mal = B => MAL[B] || (MAL[B] = portalGeo(B));
+  function* lagG(u, EX) {
+    const alle = [], port = [];
     for (const o of u.infra) { if (o.lag !== 'tunnel') continue; const B = o.e && o.e.type === 1 ? 4 : 9;   // gang- og sykkeltunnel smalere
       for (const a of o.deler) { const n = a.length; if (n < 4) continue;
         for (const [i, j] of [[0, 2], [n - 2, n - 4]]) {
           const X = a[i], Y = a[i + 1], x = X - u.cx, y = Y - u.cy; if (Math.abs(x) > u.S - 20 || Math.abs(y) > u.S - 20) continue;
           // retningen ut av tunnelen er bort fra neste punkt
-          const v = Math.atan2(Y - a[j + 1], X - a[j]), z = (hoyde3d(X, Y, u) - u.h0) * R.EX;
-          for (const g of portalGeo(B)) { g.rotateZ(v); g.translate(x, y, z - .3); alle.push(g); }
-          portaler.push({ x, y, z, v }); antall++; } } }
-    if (!alle.length) return;
-    mesh = new THREE.Mesh(MODELLER.samle(alle), new THREE.MeshLambertMaterial({ vertexColors: true })); mesh.name = 'tunnelportaler'; R.scene.add(mesh);
-    for (const g of alle) g.dispose();
+          const v = Math.atan2(Y - a[j + 1], X - a[j]), z = (hoyde3d(X, Y, u) - u.h0) * EX;
+          for (const g0 of mal(B)) { const g = g0.clone(); g.rotateZ(v); g.translate(x, y, z - .3); alle.push(g); }
+          port.push({ x, y, z, v }); yield; } } }
+    if (!alle.length) return { geo: null, port };
+    yield; const geo = MODELLER.samle(alle); for (const g of alle) g.dispose();
+    return { geo, port };
   }
-  KROKER.sett3d.push((u, R) => { if (VIS.infra) bygg(u, R); });
+  function bygg(u, R, klar) {
+    if (mesh) { R.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh = null; } antall = 0; portaler = [];
+    if (!u.infra || !window.MODELLER) return;
+    const { geo, port } = klar || kjørRett(lagG(u, R.EX)); portaler = port; antall = port.length;
+    if (!geo) return;
+    mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true })); mesh.name = 'tunnelportaler'; R.scene.add(mesh);
+  }
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.portalKlar = VIS.infra && u.infra && window.MODELLER ? await kjørAsynk(lagG(u, R3.EX)) : null; });
+  KROKER.sett3d.push((u, R) => { const k = u.portalKlar; u.portalKlar = null; if (VIS.infra) bygg(u, R, k); else if (k && k.geo) k.geo.dispose(); });
   window.Portal3d = { sjekk: () => ({ antall, iScene: !!(mesh && R3.scene.children.includes(mesh)), portaler }) };
 })();

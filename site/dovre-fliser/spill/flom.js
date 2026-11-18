@@ -10,8 +10,10 @@
   const hoyde = (v, i, j) => i < 0 || j < 0 || i >= v.w || j >= v.h ? NaN : v.H[j * v.w + i];
   // Flomveien fra dammen (X, Y): start i det laveste punktet innen 300 m (foten av dammen), så alltid til den laveste ubesøkte
   // nabocellen innen «søk» celler – også litt oppover når det er et søkk i høydemodellen. Gir [[i, j, h], ...].
-  function flomvei(v, X, Y) {
-    const R = REGLER, [ci, cj] = celle(v, X, Y), n0 = Math.ceil(300 / v.r);
+  // o (valgfritt, runde 4 – flom etter regn bruker det samme feltet, men mindre): { lengde, dybde: [øverst, nederst], bredde, start (m) }
+  const valg = o => ({ ...REGLER, ...(o || {}) });
+  function flomvei(v, X, Y, o) {
+    const R = valg(o), [ci, cj] = celle(v, X, Y), n0 = Math.ceil((R.start || 300) / v.r);
     let start = null;
     for (let j = cj - n0; j <= cj + n0; j++) for (let i = ci - n0; i <= ci + n0; i++) { const h = hoyde(v, i, j); if (h === h && (!start || h < start[2])) start = [i, j, h]; }
     if (!start) return [];
@@ -31,8 +33,8 @@
   }
   // Flomfeltet: celler innen «bredde» fra flomveien som ligger lavere enn vannflaten der (dalbunnen + dybde, synkende nedover).
   // Fylles fra veien og utover så bare sammenhengende lavland tas (ikke en dal på andre siden av en rygg). Gir { maske, antall }.
-  function flomfelt(v, sti) {
-    const R = REGLER, maske = new Uint8Array(v.w * v.h), flate = new Float32Array(v.w * v.h).fill(-Infinity), nb = Math.ceil(R.bredde / v.r);
+  function flomfelt(v, sti, o) {
+    const R = valg(o), maske = new Uint8Array(v.w * v.h), flate = new Float32Array(v.w * v.h).fill(-Infinity), nb = Math.ceil(R.bredde / v.r);
     sti.forEach(([i, j, h], k) => { const f = k / Math.max(1, sti.length - 1), d = R.dybde[0] + (R.dybde[1] - R.dybde[0]) * f, nivå = h + d;
       for (let b = j - nb; b <= j + nb; b++) for (let a = i - nb; a <= i + nb; a++) { if (a < 0 || b < 0 || a >= v.w || b >= v.h || (a - i) ** 2 + (b - j) ** 2 > nb * nb) continue;
         const q = b * v.w + a; if (nivå > flate[q]) flate[q] = nivå; } });
@@ -41,7 +43,8 @@
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= v.w || b >= v.h) continue;
         const p = b * v.w + a, h = v.H[p]; if (maske[p] || !(h === h) || h > flate[p]) continue; maske[p] = 1; kø.push(p); } }
     let antall = 0; for (let q = 0; q < maske.length; q++) antall += maske[q];
-    return { maske, antall };
+    // flate: vannflatens høyde (moh.) per celle (−Infinity utenfor) – brukes til å tegne vannet i 3D
+    return { maske, antall, flate };
   }
   // Er punktet (X, Y) under vann? felt: { x0, y0, r, w, h, maske }.
   function iFlom(felt, X, Y) { const [i, j] = celle(felt, X, Y); return i >= 0 && j >= 0 && i < felt.w && j < felt.h && felt.maske[j * felt.w + i] === 1; }

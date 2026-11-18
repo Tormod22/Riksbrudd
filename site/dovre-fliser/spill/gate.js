@@ -25,11 +25,12 @@
   const mot = (tx, ty) => Math.atan2(-tx, ty);
 
   // Rutenett med vegbitene: hvor langt er det til nærmeste kjørebane?
-  function vegRute(veger) {
-    const C = 12, rute = new Map();
-    veger.forEach(v => { for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i];
+  function vegRute(veger) { const it = vegRuteG(veger); let r; while (!(r = it.next()).done); return r.value; }
+  function* vegRuteG(veger) {
+    const C = 12, rute = new Map(); let nv = 0;
+    for (const v of veger) { if ((++nv & 31) === 0) yield; for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i];
       for (let x = Math.floor(Math.min(a[0], b[0]) / C); x <= Math.floor(Math.max(a[0], b[0]) / C); x++)
-        for (let y = Math.floor(Math.min(a[1], b[1]) / C); y <= Math.floor(Math.max(a[1], b[1]) / C); y++) { const k = x + ',' + y; if (!rute.has(k)) rute.set(k, []); rute.get(k).push([a, b, v]); } } });
+        for (let y = Math.floor(Math.min(a[1], b[1]) / C); y <= Math.floor(Math.max(a[1], b[1]) / C); y++) { const k = x + ',' + y; if (!rute.has(k)) rute.set(k, []); rute.get(k).push([a, b, v]); } } }
     // nær(x, y, ekstra): ligger punktet på en kjørebane (vegbredde/2 + ekstra)? fortau(x, y): høyden på fortauet der, ellers null
     const bit = (x, y, f) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const [a, b, v] of rute.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)) || []) {
       const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2));
@@ -55,15 +56,19 @@
   }
   const lengder = v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return D; };
 
-  function plasser(veger, o) {
+  // (18. nov, hakk: i Bergen tok plasser() 160–250 ms i ett strekk. plasserG er samme regel som generator – yield mellom vegene,
+  // byggene og kryssene –, så spill/gate3d.js kan ta pust innimellom; plasser() gjør alt i ett og gir det samme.)
+  function plasser(veger, o) { const it = plasserG(veger, o); let r; while (!(r = it.next()).done); return r.value; }
+  function* plasserG(veger, o) {
     const ut = {}; for (const s of SLAG) ut[s] = [];
     if (!veger || !veger.length) return ut;
+    let nq = 0; const bit = () => (++nq & 15) === 0;
     const cx = o.cx || 0, cy = o.cy || 0, S = o.S || 1e9, tak = o.tak || TAK.pc, kryss = o.kryss || [], ok = o.ok || (() => true), bakke = o.bakke || (() => 0);
     const H = (x, y, s) => hash(Math.round(x + cx), Math.round(y + cy), s);
     // samme, men avrundet til et rutenett i kartet (steg meter): punkter langs en veg som ligger nesten likt, får samme tall
     const Hq = (x, y, steg, s) => hash(Math.round((x + cx) / steg), Math.round((y + cy) / steg), s);
     const kryssNær = (x, y, e) => !!(kryss.nær && kryss.nær(x, y, e));
-    const VR = vegRute(veger);
+    const VR = yield* vegRuteG(veger);
     // høyden der tingen står: på fortauet (vegbanen + 15 cm) eller på bakken; null når fortauet og bakken ikke stemmer (bru, skjæring)
     const høyde = (x, y) => { const g = bakke(x, y), f = VR.fortau(x, y); if (f === null) return g; return Math.abs(f - g) < .45 ? f : null; };
     // plasserte ting i et rutenett på 6 m: ingen ting oppå hverandre, og samme slag ikke for tett
@@ -91,11 +96,12 @@
 
     // 1) busskur langs E/R/F i tettstedene, minst 420 m mellom holdeplassene (kandidater hver 20. m, valgt etter hash så det er fast)
     const kand = [];
-    for (const { v, D } of linjer) { if (!v.by || !'ERF'.includes(v.k)) continue; const L = D[D.length - 1];
+    for (const { v, D } of linjer) { if (bit()) yield; if (!v.by || !'ERF'.includes(v.k)) continue; const L = D[D.length - 1];
       for (let s = 10; s < L - 6; s += 20) { const p = langs(v, D, s); kand.push({ v, D, s, p, h: Hq(p[0], p[1], 20, 3) }); } }
     kand.sort((a, b) => a.h - b.h);
     const stopp = [];
     for (const k of kand) {
+      if (bit()) yield;
       const { v, p } = k, w = BREDDE[v.k] / 2; if (!inne(p[0], p[1], 'skur') || kryssNær(p[0], p[1], 18) || stopp.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < BUSS_AVSTAND)) continue;
       // E-veg i tettsted har skulder og ikke fortau: skuret står bak skulderen på bakken
       const off = v.k === 'E' ? w + 2.1 : w + 1.35, s0 = k.h * 1e4 % 1 < .5 ? 1 : -1;
@@ -111,6 +117,7 @@
     }
     // 2) butikker og skoler: sykkelstativ inntil veggen mot vegen, med søppelkasse og benk ved siden av
     for (const g of o.bygg || []) {
+      if (bit()) yield;
       const butikk = g.t === 7 || (g.k && g.t !== 0 && g.t !== 10), skole = g.t === 9; if (!butikk && !skole) continue;
       // ikke alle butikker har sykkelstativ; nærmeste veg innen 60 m
       if (Math.hypot(g.x, g.y) > RADIUS || (butikk && H(g.x, g.y, 4) > .65)) continue;
@@ -127,20 +134,21 @@
       if (butikk && H(g.x, g.y, 6) < .7) prøv('benk', x0 - ex * sd * (n * 1.6 + 1.8), y0 - ey * sd * (n * 1.6 + 1.8), ret, 8);
     }
     // 3) ved fotgjengerfeltene i kryssene i tettstedene: søppelkasse på hjørnet, av og til en benk litt lenger ut
-    for (const n of kryss) { if (!n.by) continue;
+    for (const n of kryss) { if (bit()) yield; if (!n.by) continue;
       for (const a of n.armer) { if (!'RFK'.includes(a.k) || a.L < n.d - .5) continue;
         const h = H(a.x, a.y, 7), sd = h * 1e3 % 1 < .5 ? 1 : -1, nx = -a.dy * sd, ny = a.dx * sd, ret = mot(-nx, -ny), off = a.w + 1.55;
         if (h < .45) prøv('søppel', a.x + a.dx * 6 + nx * off, a.y + a.dy * 6 + ny * off, ret, 20);
         else if (h < .7) prøv('benk', a.x + a.dx * 10 + nx * (a.w + 1.45), a.y + a.dy * 10 + ny * (a.w + 1.45), ret, 30);
       } }
     // 4) langs fortauene ellers: en benk eller søppelkasse her og der (ikke tettere enn 60 / 50 m for samme slag)
-    for (const { v, D } of linjer) { if (!v.by || !'RFK'.includes(v.k)) continue; const L = D[D.length - 1], w = BREDDE[v.k] / 2;
+    for (const { v, D } of linjer) { if (bit()) yield; if (!v.by || !'RFK'.includes(v.k)) continue; const L = D[D.length - 1], w = BREDDE[v.k] / 2;
       for (let s = 7; s < L - 4; s += 15) { const p = langs(v, D, s), h = Hq(p[0], p[1], 15, 11);
         if (h > .2) continue; const sd = h * 1e3 % 1 < .5 ? 1 : -1;
         if (h < .08) { const [x, y, r] = ved(p, sd, w + 1.45); prøv('benk', x, y, r, 60); }
         else { const [x, y, r] = ved(p, sd, w + 1.6); prøv('søppel', x, y, r, 50); } } }
     // 5) postkassestativ ved innkjørselen til en del eneboliger langs K/P-veger (1–3 kasser), ikke nærmere hverandre enn 12 m
     for (const g of o.bygg || []) {
+      if (bit()) yield;
       if (g.t !== 0 || g.A > 400 || H(g.x, g.y, 13) > .45 || Math.hypot(g.x, g.y) > RADIUS) continue;
       const best = VR.nærmest(g.x, g.y, 35, v => 'KP'.includes(v.k));
       if (!best) continue;
@@ -165,6 +173,6 @@
     for (const s of SLAG) { const st = s === 'postkasse' ? 6 : 4, a = g[s] || [], p = []; for (let q = 0; q < a.length; q += st) p.push(a[q], a[q + 1], a[q + 2]); ut[s] = p; }
     return ut;
   }
-  const Gate = { plasser, punkter, hash, BREDDE, RAD, SLAG, TAK, RADIUS, FORTAU, KANT, BUSS_AVSTAND, vegRute };
+  const Gate = { plasser, plasserG, punkter, hash, BREDDE, RAD, SLAG, TAK, RADIUS, FORTAU, KANT, BUSS_AVSTAND, vegRute };
   if (typeof module !== 'undefined' && module.exports) module.exports = Gate; else rot.Gate = Gate;
 })(typeof window !== 'undefined' ? window : this);

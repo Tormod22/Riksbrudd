@@ -14,7 +14,7 @@
     const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), fl = [];
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.push(hentFlis('hus', z, x, y).then(t => [x, y, t]).catch(() => [x, y, null]));
     const sett = new Set(), ut = [];
-    for (const [x, y, t] of await Promise.all(fl)) { if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
+    for (const [x, y, t] of await Promise.all(fl)) { if (børPuste()) await pust(); if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
       for (const o of t.hus.obj) { if (sett.has(o.e.i) || !o.deler[0] || o.deler[0].length < 4) continue; sett.add(o.e.i);
         const d = o.deler[0]; let sx = 0, sy = 0, A = 0; const n = d.length - 1;
         for (let q = 0; q < n; q++) { sx += d[q][0]; sy += d[q][1]; const a = d[q], b = d[q + 1]; A += a[0] * b[1] - b[0] * a[1]; }
@@ -23,26 +23,31 @@
     return ut;
   }
   // hindringer som ikke er hus: trær (alle treslagene), lyktestolper, flaggstenger og parkerte biler, i et rutenett på 4 m
-  function hindre(u) {
-    const C = 4, rute = new Map(), legg = (x, y, r) => { const k = Math.floor(x / C) + ',' + Math.floor(y / C); if (!rute.has(k)) rute.set(k, []); rute.get(k).push(x, y, r); };
-    if (u.trær) for (const a of Object.values(u.trær)) for (let q = 0; q < a.length; q += 5) legg(a[q], a[q + 1], 1.6);
+  // (18. nov, hakk: tallnøkler i stedet for tekst og pust mellom treslagene – samme ruter og samme svar)
+  async function hindre(u) {
+    const C = 4, rute = new Map(), nøkkel = (i, j) => (i + 32768) * 65536 + (j + 32768), legg = (x, y, r) => { const k = nøkkel(Math.floor(x / C), Math.floor(y / C)); let l = rute.get(k); if (!l) rute.set(k, l = []); l.push(x, y, r); };
+    if (u.trær) for (const a of Object.values(u.trær)) { for (let q = 0; q < a.length; q += 5) legg(a[q], a[q + 1], 1.6); if (børPuste()) await pust(); }
     if (u.lys) for (let q = 0; q < u.lys.length; q += 4) legg(u.lys[q], u.lys[q + 1], .6);
     if (u.hus && u.hus.flagg) for (let q = 0; q < u.hus.flagg.length; q += 4) legg(u.hus.flagg[q], u.hus.flagg[q + 1], .6);
     if (u.hus && u.hus.biler) for (let q = 0; q < u.hus.biler.length; q += 5) legg(u.hus.biler[q], u.hus.biler[q + 1], 2.8);
-    return (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const l = rute.get((Math.floor(x / C) + i) + ',' + (Math.floor(y / C) + j)); if (l) for (let q = 0; q < l.length; q += 3) if (Math.hypot(l[q] - x, l[q + 1] - y) < l[q + 2]) return true; } return false; };
+    return (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const l = rute.get(nøkkel(Math.floor(x / C) + i, Math.floor(y / C) + j)); if (l) for (let q = 0; q < l.length; q += 3) if (Math.hypot(l[q] - x, l[q + 1] - y) < l[q + 2]) return true; } return false; };
   }
+  // vannmasken: punktene fra bygg3d (u.vannData, de samme som bildet) – getImageData bare når de mangler
   function vannTest(u) {
     if (!u.vann || !u.vann.getContext) return () => false;
-    try { const W = u.vann.width, d = u.vann.getContext('2d').getImageData(0, 0, W, W).data;
+    try { const W = u.vann.width, d = u.vannData && u.vannData.W === W && u.vannData.d ? u.vannData.d : u.vann.getContext('2d').getImageData(0, 0, W, W).data;
       return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; }; } catch (e) { return () => false; }
   }
   const stat = { tid: 0 };
   KROKER.bygg3d.push(async u => {
     u.gate = null;
     if (u.S > 2200 || !u.veger || !u.veger.length || !window.Gate || !window.Liv3d || typeof VIS === 'undefined' || !VIS.veg) return;
-    const t0 = performance.now(), R = r3(), kryss = Liv3d.finnKryss(u.veger), B = await bygg(u), vann = vannTest(u), hinder = hindre(u);
+    // (18. nov, hakk: kroken holdt hovedtråden 0,3–0,45 s i ett strekk i Bergen – nå kryssene, hindringene og plasseringen i biter)
+    const t0 = performance.now(), R = r3(), kryss = window.Veg && Veg.finnKryssG ? await kjørAsynk(Veg.finnKryssG(u.veger)) : Liv3d.finnKryss(u.veger);
+    await pust(); const B = await bygg(u), vann = vannTest(u); await pust(); const hinder = await hindre(u); await pust();
     const ok = (x, y) => !(u.hus && nærHus(u, x, y)) && !vann(x, y) && !(u.iBekk && u.iBekk(x, y)) && !(u.påBane && u.påBane(x, y)) && !hinder(x, y);
-    u.gate = Gate.plasser(u.veger, { cx: u.cx, cy: u.cy, S: u.S, kryss, bygg: B, ok, bakke: (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * (R ? R.EX : 1), tak: mobil() ? Gate.TAK.mobil : Gate.TAK.pc });
+    const go = { cx: u.cx, cy: u.cy, S: u.S, kryss, bygg: B, ok, bakke: (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * (R ? R.EX : 1), tak: mobil() ? Gate.TAK.mobil : Gate.TAK.pc };
+    u.gate = Gate.plasserG ? await kjørAsynk(Gate.plasserG(u.veger, go)) : Gate.plasser(u.veger, go);
     for (const k of Gate.SLAG) u.gate[k] = new Float32Array(u.gate[k]);
     stat.tid = Math.round(performance.now() - t0); stat.bygg = B.length;
   });

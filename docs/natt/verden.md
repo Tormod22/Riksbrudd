@@ -85,3 +85,133 @@ Alt som skjer **av seg selv**, skjer bare når `!navigator.webdriver || VerdenSp
   selv på 9 døgn (lyn 1,5 % per time når det er tørt og overskyet) – brann er altså mest noe spilleren og kampene starter.
   Vinter: isen bar etter ca. 2 døgn; lagene ved leiren (360–410 m unna) fryser ikke (læ 500 m). Lag som sendes ut, får varsel etter ca. 7 timer
   og første frostskade etter 12 (prøvd på Dovre-siden).
+
+## Runde 4 (18. nov dag)
+Pakka «verden» tok også det som sto igjen fra pakka «natur» (effekter3d.js, dyr3d.js). Alle nye tall er **Claudes forslag** og står i
+`Verden.REGLER` (snø.brøyt/sjekk, is.båt/sjø, regnflom, åkerBygg, funn.flytt, jakt.huskFelt) og `Effekter.REGLER` (sporTid, lagreSpor,
+lagreKratere, mineKrater, salve, lyng).
+
+### 1. Vinter
+- **Snø stenger høye veglenker** (`Verden.snøVegGrense(vær, timerSiden)`, `lenkeStengt`): mens det snør, og `snø.brøyt` = 6 timer etter, er
+  veglenker over `max(snø.vegFjell = 900, snøgrensen)` moh. stengt. Høyden regnes bare når den trengs: `Kjoretoy.planlegg` er pakket inn i
+  verden-visning.js (kjoretoy.js er ikke endret) med `tillat`, som avviser lenker vi alt kjenner høyden på (start, midt, slutt – bare kart som
+  er hentet; ingenting hentes under rutesøket). Hvert 10. spillminutt (`snø.sjekk`) sjekkes lenkene foran kolonnene som kjører (alle sider;
+  her hentes høydene), høye lenker sperres i vegnettet (`Vegnett.sperr`), og kolonnen kjører om («… kjører om: vegen over 900 moh. er stengt
+  av snø») eller blir stående («… det finnes ingen omkjøring. Kolonnen venter til vegen er brøytet.»). Når snøværet er over og vegen brøytet,
+  åpnes lenkene (ikke de som er sperret av flom, ras eller sprengt infrastruktur). Bare når ting får skje av seg selv (`!navigator.webdriver ||
+  VerdenSpill.test`). API: `VerdenSpill.snøVegSteg(v)`, `snøRuter()`, `snøLenker()`, `snøGrense()`, `snøTilbake()`, `lenkeHøyder(g, e, hent)`.
+- **Tunneler** stenges ikke: en lenke der midten ligger innen 30 m av en tunnel i INFRA.tunnel, eller som er nesten rett med midten over
+  50 m høyere enn endene, regnes bare med endene (portalene). FUNNET VED PRØVING: på /rogaland ble Honganviktunnelen «stengt av snø»
+  fordi terrenget over den er høyt.
+- 2D: veglenkene snøen har stengt, tegnes stiplet hvitt over vegen med «stengt (snø)» (når du er zoomet inn).
+- **Fiendens lag fryser også**: samme kulderegler, «ute» = ikke i et tettsted og ikke om bord (de har ingen leir). Nøkkel `side:navn` i
+  `V.kulde`. Meldingen kommer bare når du ser laget.
+- Prøvd (/rogaland, ekte vegnett, fjellgrensen satt ned for prøven): ved 280 m ble en lenke funnet og kolonnen kjørte om (60 → 89 min) –
+  men lenken var en tunnel (rettet, se over; etter rettingen ble ingen lenker stengt på den ruta ved 280 m); ved 150 m ble lenker over en ås
+  stengt, kolonnen ble stående med melding, og vegen ble tegnet stiplet i kartet. Ny rute med snøen på brukte ingen kjente høye lenker, og
+  alt ble åpnet igjen etter brøytingen.
+  Et rødt lag 4 km ute fikk frostskade etter 24 timer i −25 °C.
+
+### 2. Kratere (effekter3d.js)
+- **Miner mot fotfolk og rakettsalver** lager kratere: modulene sier ikke fra selv, så `window.SALVER` og `window.MINEFELT` følges i
+  KROKER.sim – en salve som er borte fra lista, har slått ned (6 kratere spredt innen 45 % av salvens radius, `Effekter.salveKratere`, fast per
+  salve); et minefelt som har mistet ladninger med et lag til fots innen radien, gir et krater ved laget (kjøretøy får sitt fra skadKjoretoy
+  som før). feltarbeid-visning.js og enheter-visning.js er IKKE endret.
+- **Lagring per leir** i `riksbrudd-effekter` ({ leir, kratere, spor }, høyst 80 kratere og 900 hjulspor; `Effekter.tilLagring/fraLagring`).
+  Hjulsporene ligger nå 10 minutter (ekte tid) og tones bort de siste 2 (før 100 s) – ellers var det ingenting å lagre. Lagres hvert 5. s når
+  noe er endret og ved pagehide; leses ved «riksbrudd-spill».
+- Prøvd (Dovre): salve → 6 kratere, mine mot et lag → 1 krater, ny innlasting → 7 kratere tilbake. Kraterne sett i 3D ved leiren.
+
+### 3. Felte dyr (dyr3d.js, liten endring)
+- `plasser()` gir hvert dyr en nøkkel (art + første plass i kartet, rundet til meter – fast for flokken) og hopper over felte dyr
+  (`FELTE`); `fell()` legger nøkkelen inn og gir den tilbake. `Dyr3d.settFelte(liste)`, `Dyr3d.felte()`.
+- verden-visning.js lagrer nøklene i `V.jakt.felt` (riksbrudd-natur, per leir, høyst `jakt.huskFelt` = 600) og gir dem til Dyr3d ved start.
+- Test: test_dyr.js («samme flokk gir samme dyr»). IKKE prøvd i nettleser (bygg3d ved heia hang to ganger under høy last på maskinen).
+
+### 4. Åkeren som bygg
+- `Leir.BYGG.åker` legges inn fra verden-visning.js (som overlev.js gjør med brønnen): 5 mål, 50 × 100 m, 250 000 kr (samme pris per mål som
+  ryddingen før), 4 spilltimer for et byggelag, ingen materialer, ikon «blad» (Ikoner.BYGG.åker). Står under «Annet» i byggelista;
+  «Anlegg en åker» i panelet starter plasseringen. leir.js, leir-visning.js og ikoner.js er IKKE endret.
+- Målene: `V.åker.mål = ryddet (det gamle, uten bygg) + Σ 5 mål × hp` for ferdige stykker (`Verden.åkerMål`). Det som sås, er stykkene som
+  var ferdige da (`V.åker.sådde`), så et stykke som blir ferdig etter såinga, sås neste vår.
+- 2D (verden-visning.js, oppå leirens rektangel): jord/grønt/gult etter veksten, furer langs den lange siden, svidd farge når hp < 1, hvitt om
+  vinteren, navn. 3D: ett nett per stykke (jord i ruter på 5 m som følger terrenget, og kornrader hver 1,25 m som to skrå flater – lave furer
+  når det er bart, opptil 0,9 m korn når det er modent, `Verden.korn`). Ingen modell i leir-visning.js (den setter bygg flatt på det
+  høyeste punktet med grunnmur).
+- Brann: brennbarheten i åkeren er 0,9 (modent korn), 0,35 (grønt) og 0,15 (bart) (`Verden.åkerBrennbar`); en rute som brenner i stykket
+  (midten eller et hjørne) tar 25 % av stykkets hp per 30 min; et nedbrent stykke forsvinner (Leir.skad), og avlinga der er tapt.
+- Prøvd (Dovre): plassert 260 m vest for leiren, 5 mål, brennbar 0,9, tent på i åkeren → 75 % og 50 % igjen etter to halvtimer, 2D og 3D
+  sett på bilde.
+- Leir.kanBygge ser bare på hjørnene og midten; for åkeren pakkes den inn (verden-visning.js) og sjekker også et rutenett på 5 × 9 punkter
+  inne på jordet for vann, tettbebyggelse og hus («Åkeren kan ikke ligge i tettbebyggelse.»). Prøvd i vakta med et kunstig kart.
+- Svakhet: veger og bekker sjekkes ikke (kartet som plasseringen får, har dem ikke), så en åker kan legges over en veg.
+
+### 5. Funn
+- Et funn i tettbebyggelse (klasse 7), vann eller utenfor kartet flyttes til nærmeste åpne sted (`Verden.funnKandidater`: ringer hver
+  40 m ut til 800 m, `åpentFunnSted`). Stedet finnes én gang per funn (ikke lagret: terrenget er fast) før funnet kan oppdages
+  (`VerdenSpill.plasserFunn`, `funnI`, `funnNær`). Før ble funn i vann tatt bort; nå flyttes de til land.
+- 3D: kasser, tønner, sekker og telt (fire instansnett, hjørnefarger per del, hver del på bakken der den står): vrak (bil med hjul og en
+  tønne), depot (kasser, tønner, sekker under en presenning), forlatt leir (to telt, bålplass, sekker), fly (skrog, vinger, hale, kasser).
+- Prøvd: 3D-bildet av funnet ble ikke tatt (utsnittet ble bygget på nytt da kameraet ble flyttet 5 km), men nettene ble laget (vrak).
+
+### 6. Regnflom og is
+- **Regnflom i flomfeltet**: flom.js tar nå valg (`o`: lengde, dybde, bredde, start) i `flomvei`/`flomfelt` og gir også `flate` (vannflaten
+  per celle) – uten valg som før (test_flom.js). En flom etter regn får `s.kilde` = punktet på elva, og feltet regnes med
+  `Verden.REGLER.regnflom` (3 km nedover dalen, 2,5–1 m over dalbunnen, 250 m til siden). Feltet holdes i minnet (ikke lagret) og regnes på
+  nytt etter innlasting. Marsjfarten, rammede lag og vegene som stenges, følger feltet (`VerdenSpill.iSoneV`, `window.VERDEN_I_SONE(x, y, type)`);
+  vegene stenges langs feltet (nærmeste node for annenhver celle). 2D: mykt blått bilde som dam-flommen; 3D: et rutenett med kanten under
+  bakken (vannkanten skjærer terrenget), 0,3–1,2 m over bakken. Gamle lagrede flommer uten kilde er sirkler som før.
+  Prøvd (Dovre, Jora): 564 celler (0,58 km²) som følger dalen ca. 2,5 km, 2D og 3D på bilde.
+- **Isen**: `Verden.islagt(x, y)` (window.Verden) – true når punktet er en innsjø (vann over 1 moh., ikke sjøen) og kulda har gitt
+  `is.båt` = 10 døgngrader (før isen bærer, 25). Svarer false til kartet der er hentet. **Pakka «sjo» kan bruke den** for båter (sjo-filene er
+  IKKE endret). Panelet sier «Innsjøene er islagt: båtene kommer ikke fram der». Regelen: `Verden.islagtVann(V, moh, klasse)`.
+
+### 7. Brente hus og lyng
+- **Brente hus** (effekter3d.js `stegBrent`): sotlaget var et skall med flatt lokk på toppen (P0.topp) – over et saltak la det en mørk
+  flekk i lufta over takfoten og (sett på skrå) på bakken bak huset, fordi lokket mørkner alt bak seg. Nå følger skallet taket: veggene går
+  opp til takfoten (P0.veggTopp fra hus3d) og taket har møne langs husets lengste side fra ende til ende (`sotMøne`; gavlene blir loddrette
+  trekanter); flate tak får et flatt lokk som før. Prøvd på /rogaland (dev.py, ekte husdata, leir ved Sand 6825, 6627357): 1206 hus i
+  utsnittet, et brent område på 3 × 3 ruter over en gård gav sotlag på 3 hus – taket og veggene er mørke, ingen mørke flekker i lufta, nært og
+  på avstand (bilder i scratchpad natt/verden4/d1-brent.png og d2-brent-naer.png). IKKE sett: før-bildet med det gamle lokket (feilen er
+  funnet ved å lese koden).
+- **Brent mark**: lyse jorder og plener i kartbildet sto lyse midt i det brente (den svidde bakken ganget bakken med en mørk farge). Nå
+  blandes bakken mot aske (`Effekter.REGLER.aske`: farge og dekning 0,74 der det har brent helt; hjørnefarger med alfa, vanlig blanding).
+  Sett på bilde ved leiren på Dovre (svarte trær og askebakke, ingen GL-feil).
+- **Lyngen**: prøvd at materialet kompilerer (programnøkkel «gress-vind-true-lyng1.6», gl.getError() = 0). Før/etter fra 60 m rett ovenfra
+  i skogen ved leiren (Høy grafikk, 12 000 tuster, alle lyng): bakken med tustene ble litt lysere (snitt 35,7 → 37,0 av 255; 12 % av
+  punktene endret) – virkningen er liten fra den høyden. Bilde: scratchpad natt/verden4/i3-lyng-sammen.png (venstre før, høyre etter).
+
+### Prøvd i nettleser (runde 4, maskinen var svært tungt lastet – 3D-bildene er tatt i 1000 × 620)
+- Vakta (`pipeline/fliser/vakter/verden.js`) på Dovre-testsiden: PC og mobil, ok, under 1 s.
+- Felte dyr: utsnitt på heia (bygg3d 201400, 6893300, 900): 12 saueflokker; ett dyr felt → borte fra ny plassering, alle andre der,
+  nøkkelen lagret og tilbake etter ny innlasting (`Dyr3d.felte()`). Selve skuddet (egneSkudd → Dyr3d.fell) er ikke prøvd i denne runden –
+  sett3d med et eget utsnitt ble overstyrt av kameraet i prøveskriptet.
+- Funn i 3D: «Forlatt leir» ved Dombås (to telt, sekker, tønne) sett på bilde.
+- Lyngen ovenfra: materialet til gresset (index.html gressMateriale) pakkes inn fra effekter3d.js (`lyngLys`, ingen endring i index.html):
+  lyngtustene (aFelt = 1) lysnes opptil 1,6 × jo mer rett ovenfra du ser (`Effekter.REGLER.lyng`).
+
+### Filer og innpakninger (runde 4)
+- Endret (mine): spill/verden.js, spill/verden-visning.js, spill/effekter3d.js, spill/flom.js (valg `o` og `flate`, ellers som før),
+  spill/dyr3d.js (nøkkel per dyr, `FELTE`, `settFelte/felte`), testene test_verden.js, test_effekter3d.js, test_flom.js, test_dyr.js,
+  vakter/verden.js, docs/natt/verden.md og verden-hjelp.json.
+- index.html: bare versjonsmerkene (versjon.py) og flettingen av claude/nattfiks. Ingen nye skript-tagger.
+- Ikke endret, men pakket inn eller utvidet mens spillet kjører (fra verden-visning.js / effekter3d.js):
+  `Kjoretoy.planlegg` (snø: `tillat` uten høye lenker), `Leir.kanBygge` (åkeren sjekkes inne på jordet), `Leir.BYGG.åker` og
+  `Ikoner.BYGG.åker` (nye nøkler), `R3.gressMesh.material` (lyngen ovenfra: onBeforeCompile + programnøkkel), `window.Verden.islagt`.
+- Nye API-er for andre: `window.Verden.islagt(x, y)` (pakka «sjo»: båter på islagte innsjøer), `window.VERDEN_I_SONE(x, y, type)`,
+  `Effekter3d.kratere()/lagre()/lastInn()/lyngLys()`, `Dyr3d.settFelte/felte`, `VerdenSpill.snø*`, `åkerStykker/åkerVed/syncÅker/anleggÅker`,
+  `funnNær/funnI/plasserFunn`, `iSoneV/lagFlomfelt/felt(id)`, `islagt`.
+- Lagring: `riksbrudd-natur` (nå også `jakt.felt`, `åker.ryddet/sådde`, `soner[].kilde`) og ny `riksbrudd-effekter` (kratere og spor) – begge per leir.
+
+### IKKE gjort / svakheter (runde 4)
+- Snø: høyden på en lenke er start, midt og slutt (lange lenker over et pass kan ha toppen et annet sted); lenker vi ikke kjenner høyden på,
+  er åpne til de er hentet. Kolonner til fots/lag stoppes ikke av stengte veger (bare kjøretøy).
+- Fiendens lag får frostskader, men AI-en vet ikke om kulda (søker ikke ly).
+- Funn kan fortsatt ligge inntil et enkelt hus (bare tettbebyggelse i 32 m-rutene regnes). Funn som er tatt eller sett, lagres som før;
+  stedet de er flyttet til, regnes ut på nytt.
+- Regnflom: feltet bygger på 32 m-høyder (z9), så kanten i 3D er grov; vegene stenges langs feltet bare når vegnettet er lastet.
+- Isen: `Verden.islagt` er laget, men ingen båter bruker den ennå (sjo-filene er ikke endret). Prøvd på /rogaland (leir i Ryfylke):
+  et vann 69 moh. 2 km fra leiren er ikke islagt uten kulde og islagt med 12 døgngrader; land gir false. Sjøen er ikke prøvd i nettleseren
+  (vannruter under 1 moh. ble ikke funnet i søket; reglene sier nei til sjø i Node-testen).
+- Brente hus: bare sotlaget utenpå (husene kan fortsatt ikke farges ett og ett); før-bildet med det gamle flate lokket er ikke tatt.
+- Åkeren: kan legges over veger og bekker; ingen 3D-skisse mens du plasserer den (bare i 2D).

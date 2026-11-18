@@ -1,6 +1,6 @@
 // Vakt for pakka «verden» (spill/verden.js + verden-visning.js): vinterføre, is, brann, flom, funn, åker, radio og panelet.
 // Setter alt tilbake (penger, mat, lager, været, tilstanden i VerdenSpill).
-module.exports = { navn: 'verden (vinter, flom, brann, jakt, åker, funn, radio, tog)', kjør: async (pg, profil) => {
+module.exports = { navn: 'verden (vinter, snøstengte veger, flom i flomfeltet, is, brann, jakt, åker som bygg, funn, kratere, radio, tog)', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => {
     const ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
     if (!window.VerdenSpill || !window.Verden) return { feil: ['VerdenSpill mangler'] };
@@ -44,6 +44,29 @@ module.exports = { navn: 'verden (vinter, flom, brann, jakt, åker, funn, radio,
       if (s) { await VS.punkt(s.x, s.y); const her = s.her; s.her = null; const art = VS.viltHer(s); ut.vilt = art;
         if (art) { const sti = s.sti; krev(VS.startJakt(s).ok && s.jakt, 'jakta startet ikke'); if (s.jakt) { s.jakt.til = tid; VS.jaktSteg(); krev(!s.jakt, 'jakta ble ikke ferdig'); krev(VS.startJakt(s).feil, 'viltet er ikke skremt etter jakta'); } s.sti = sti; }
         s.her = her; }
+      // RUNDE 4: snø stenger høye veglenker (grensen settes og fjernes), fiendens lag fryser, kratere, felte dyr, åkeren som bygg,
+      // funn flyttes ut av tettbebyggelse, regnflom i flomfeltet og isen
+      { const v0 = VAER.regel || VAER; VS.snøVegSteg({ ...v0, snø: 1, snøgrense: -1000 }); ut.snøGrense = VS.snøGrense(); krev(ut.snøGrense === Verden.REGLER.snø.vegFjell, 'snøværet stenger ikke fjellvegene: ' + ut.snøGrense);
+        VS.snøTilbake(); krev(VS.snøGrense() == null && !VS.snøLenker().size, 'snøstengningen ble ikke opphevet'); }
+      { const hp = ENHETER.map(e => (e.menn || []).map(m => m.hp)), led = ENHETER.map(e => e.leder), fi = nyttLag('Vaktfiende', l.x + 4000, l.y - 3000, 'rød'); ENHETER.push(fi);
+        try { const v0 = VAER.regel || VAER; for (let i = 0; i < 4; i++) VS.kuldeTime({ ...v0, temp: -25 }, 6); ut.fiendeFryser = fi.menn.filter(m => m.hp < 1).length; }
+        finally { ENHETER.splice(ENHETER.indexOf(fi), 1); ENHETER.forEach((e, i) => { (e.menn || []).forEach((m, k) => { if (hp[i] && hp[i][k] != null) m.hp = hp[i][k]; }); e.leder = led[i]; }); }
+        krev(ut.fiendeFryser > 0, 'fiendens lag fryser ikke'); }
+      if (window.Effekter3d && Effekter3d.kratere) { const K = Effekter3d.kratere(), n0 = K.length; Effekter3d.krater(l.x + 50, l.y + 50, 3); krev(K.length === Math.min(n0 + 1, Effekter.REGLER.kratere), 'krateret kom ikke'); K.pop(); Effekter3d.lagre();
+        krev(Effekter.salveKratere(0, 0, 150, 1).length === Effekter.REGLER.salve.nedslag && !!window.SALVER, 'salvene lager ikke kratere'); }
+      krev(!!(window.Dyr3d && Dyr3d.settFelte && Dyr3d.felte), 'felte dyr huskes ikke (Dyr3d.settFelte)');
+      if (L && Leir.BYGG.åker) { const å0 = JSON.stringify(V.åker), b = { id: -7707, type: 'åker', x: l.x + 900, y: l.y + 900, ret: 0, igjen: 0, hp: 1, nivå: 1 }; L.bygg.push(b);
+        try { const m0 = V.åker.mål; VS.syncÅker(); ut.åkerBygg = V.åker.mål - m0; krev(ut.åkerBygg === Verden.REGLER.åkerBygg.mål, 'åkerstykket teller ikke: ' + ut.åkerBygg); krev(VS.åkerVed(b.x + 10, b.y + 40) === b && !VS.åkerVed(b.x + 40, b.y), 'åkerstykket ligger feil');
+          krev(!!(window.Ikoner && Ikoner.BYGG.åker), 'åkeren mangler ikon');
+          // åkeren sjekkes inne på jordet: tettbebyggelse midt på gir feil, åpen mark gir ingen
+          const X = l.x + 5000, Y = l.y + 5000, kb = k => Leir.kanBygge(L, { type: 'åker', x: X, y: Y, ret: 0 }, { klasse: (x, y) => (Math.abs(x - X) < 1 && Math.abs(y - (Y + 25)) < 1 ? k : 2) });
+          ut.åkerTett = kb(7); krev(/tettbebyggelse/.test(ut.åkerTett || '') && kb(2) == null && /vann/.test(kb(3) || ''), 'åkeren sjekkes ikke inne på jordet: ' + ut.åkerTett + ' / ' + kb(2)); }
+        finally { L.bygg.splice(L.bygg.indexOf(b), 1); Object.assign(V.åker, JSON.parse(å0)); } }
+      else krev(false, 'Leir.BYGG.åker mangler');
+      { const f = Verden.funnNær(l.x, l.y, 20000)[0]; if (f) { const r = await Promise.race([VS.plasserFunn(f), new Promise(q => setTimeout(() => q('tid'), 6000))]); ut.funnSted = r; krev(r === true || Array.isArray(r) || r === 'tid', 'funnet fikk ikke et sted: ' + JSON.stringify(r)); } }
+      { const s2 = VS.flom(l.x + 1500, l.y, 4, 'Prøveelva'); krev(Array.isArray(s2.kilde), 'regnflommen har ingen kilde'); const f2 = await Promise.race([VS.lagFlomfelt(s2), new Promise(q => setTimeout(() => q('tid'), 8000))]);
+        ut.flomfelt = f2 === 'tid' ? 'tid' : f2 ? f2.antall : null; if (f2 && f2 !== 'tid') krev(f2.antall > 0 && !!VS.iSoneV(f2.x0 + (f2.maske.indexOf(1) % f2.w + .5) * f2.r, f2.y0 - (Math.floor(f2.maske.indexOf(1) / f2.w) + .5) * f2.r, 'flom'), 'flomfeltet virker ikke'); VS.ryddKart(); }
+      { const f0 = V.frost; V.frost = Verden.REGLER.is.båt + 1; krev(typeof Verden.islagt === 'function' && typeof Verden.islagt(l.x, l.y) === 'boolean' && VS.linjer().some(t => /islagt/.test(t)), 'isen på innsjøene'); V.frost = f0; }
       // radio og tog
       const n0 = V.radio.liste.length, m = VS.radioNå(); krev(m && m.tekst && V.radio.liste.length === Math.min(Verden.REGLER.radio.liste, n0 + 1), 'radiomeldingen kom ikke');
       ut.stasjoner = VS.stasjoner().map(q => q.navn); krev(Array.isArray(ut.stasjoner), 'stasjonslista mangler');
@@ -56,5 +79,5 @@ module.exports = { navn: 'verden (vinter, flom, brann, jakt, åker, funn, radio,
     Vaer.settÅrstid(VaerSpill.S, før.årstid, tid); Vaer.låsVær(VaerSpill.S, før.låst || 'auto'); if (!før.låst) VaerSpill.S.vær = før.vær; VaerSpill.straks(); VS.lagre(); VS.vis(før.åpen); skitten = true;
     return ut;
   });
-  return { ok: !d.feil.length, tekst: d.feil.length ? d.feil.join('; ') : `vinterføre, is, brann (${d.brann} ruter), flom, funn, åker (${d.avling} rasjoner), radio og panel virker`, data: d };
+  return { ok: !d.feil.length, tekst: d.feil.length ? d.feil.join('; ') : `vinterføre, snøstengte veger (${d.snøGrense} moh.), fiendens lag fryser (${d.fiendeFryser}), is, brann (${d.brann} ruter), flom (flomfelt ${d.flomfelt} ruter), funn (sted ${JSON.stringify(d.funnSted)}), åker som bygg (${d.åkerBygg} mål) og avling (${d.avling} rasjoner), radio og panel virker`, data: d };
 } };
