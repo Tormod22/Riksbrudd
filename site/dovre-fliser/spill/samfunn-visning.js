@@ -204,8 +204,9 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     // barn og gamle
     const barn = S.avhengige.filter(a => a.type === 'barn'), gamle = S.avhengige.filter(a => a.type !== 'barn');
     p.append(el('h3', {}, `Barn og gamle (${S.avhengige.length})`), el('small', {}, S.avhengige.length ? 'De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen – lider de, tærer det hardt.' : 'Ingen ennå. De kommer gjerne med flyktninger.'));
-    if (barn.length) p.append(el('div', {}, 'Barn: ' + barn.map(a => `${a.navn.split(' ')[0]} (${a.alder})`).join(', ')));
-    if (gamle.length) p.append(el('div', {}, 'Gamle: ' + gamle.map(a => `${a.navn.split(' ')[0]} (${a.alder})`).join(', ')));
+    const avhNavn = a => `${a.navn.split(' ')[0]} (${a.alder}${a.syk ? ', syk' : a.immun ? ', tåler Grålungen' : ''})`;
+    if (barn.length) p.append(el('div', {}, 'Barn: ' + barn.map(avhNavn).join(', ')));
+    if (gamle.length) p.append(el('div', {}, 'Gamle: ' + gamle.map(avhNavn).join(', ')), el('small', {}, 'De gamle tåler Grålungen dårligst – karantene, sykestue og lege hjelper.'));
     // spesialister
     const sp = f.personer.filter(q => q.spes);
     p.append(el('h3', {}, `Spesialister (${sp.length})`));
@@ -214,8 +215,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
       const rad = el('div', { klasse: 'rad' }, knapp(`★ ${T.navn}: ${q.navn}`, () => visPerson(q.id), { 'data-person': String(q.id) }));
       if (!virker) rad.append(knapp(`Sett på «${FR.OPPGAVE[T.oppgave].navn.toLowerCase()}»`, () => { FR.sett(f, q.id, T.oppgave); lagre(); vis(); })); p.append(rad, el('small', { klasse: virker ? '' : 'varsel' }, virker ? T.tekst : `Virker bare på «${FR.OPPGAVE[T.oppgave].navn.toLowerCase()}».`)); }
     // Grålungen
-    const syke = SR.sykeI(f);
-    p.append(el('h3', {}, 'Grålungen'), el('div', { klasse: syke.length ? 'varsel' : '' }, syke.length ? `${syke.length} syke: ${syke.map(q => q.navn.split(' ')[0]).join(', ')}.` : 'Ingen syke i leiren.'),
+    const syke = [...SR.sykeI(f), ...SR.sykeAvh(S)];
+    p.append(el('h3', {}, 'Grålungen'), el('div', { klasse: syke.length ? 'varsel' : '' }, syke.length ? `${syke.length} syke: ${syke.map(q => q.navn.split(' ')[0] + (q.type === 'barn' ? ' (barn)' : q.type === 'gammel' ? ' (gammel)' : '')).join(', ')}.` : 'Ingen syke i leiren.'),
       el('small', {}, 'Smitter fort når folk sover trangt. Karantene, sykestue og lege bremser den. I karantene arbeider ikke de syke.'),
       el('div', { klasse: 'rad' }, knapp(S.karantene ? 'Opphev karantenen' : 'Sett syke i karantene', () => { SR.settKarantene(S, f, !S.karantene); logg(S.karantene ? 'Karantene: de syke holdes for seg selv og arbeider ikke.' : 'Karantenen er opphevet.'); lagre(); vis(); }, { id: 'karantene', klasse: S.karantene ? 'på' : '' })));
     // lovene
@@ -301,6 +302,20 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   // en overlevende funnet ved leting (leting-visning.js): av og til en spesialist
   function funnet(p) { if (!S || !p) return null; const q = SR.funnet(p, Math.random); if (q) { logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}! ${SR.SPES[q.spes].tekst}`); lagre(); } return q; }
 
+  // ---------- spesialister fra oppdrag (spillet-visning.js sender «riksbrudd-oppdrag» når et oppdrag er fullført) ----------
+  // Redningsoppdrag: en av dem dere fikk med, er spesialisten (står i oppdragslista på forhånd). Røverpost: fangen røverne holdt, blir med.
+  const spesNavn = t => (SR.SPES[t].yrke === 'skarpskytter' ? 'skarpskytter' : SR.SPES[t].yrke);
+  function fraOppdrag(o, nye) {
+    if (!S || !o || !auto()) return null; const type = SR.oppdragSpes(o, S.frø), f = F(), l = L(); if (!type || !f) return null;
+    let p = null;
+    if (o.type === 'redd') { p = (nye || [])[0] || null; if (!p) { logg(`Blant dem dere reddet, var en ${spesNavn(type)} – men det var ingen ledig seng, så hen dro videre.`); return null; } }
+    else { const r = l ? FR.rekrutter(f, l, () => true) : {}; p = r.person || null; if (!p) { logg(`Røverne holdt en ${spesNavn(type)} som fange. Hen ville bli med, men det var ingen ledig seng.`); return null; } p.lojal = Math.round((.55 + Math.random() * .25) * 100) / 100; }
+    SR.gjørSpesialist(p, type); logg(`${p.navn} er ${spesNavn(type)} – en spesialist! ${SR.SPES[type].tekst}`); lagre(); if (window.FolkSpill) FolkSpill.vis(); return p;
+  }
+  window.addEventListener('riksbrudd-oppdrag', ev => { try { const d = ev.detail || {}; fraOppdrag(d.o, d.nye); } catch (e) { /* et oppdrag skal aldri stoppe av samfunnet */ } });
+  // oppdragene i lista som gir en spesialist (vises i fanen Mål i Leir-menyen)
+  const oppdragMedSpes = () => { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); if (!S || !O || !O.liste) return []; return O.liste.map(o => ({ o, type: SR.oppdragSpes(o, S.frø) })).filter(q => q.type); };
+
   // ---------- spesialistene og lovene i krokene ----------
   KROKER.ild.push((a, b) => {
     if (!S || !auto() || a.side !== 'blå') return 1; const sp = spill(), f = F(); if (!sp || !sp.leir || !f || Math.hypot(a.x - sp.leir.x, a.y - sp.leir.y) > SR.REGLER.skytterAvstand) return 1;
@@ -311,9 +326,10 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
 
   // ---------- Leir-menyen ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e2, knapp: k2 }) => {
-    if (!S || !auto()) return; const f = F(); if (!f) return; const syke = SR.sykeI(f).length;
+    if (!S || !auto()) return; const f = F(); if (!f) return; const syke = SR.sykeI(f).length + SR.sykeAvh(S).length;
     hode.append(e2('h3', { 'data-fane': 'mål' }, 'Samfunnet'), e2('small', {}, `${S.avhengige.length} barn og gamle · ${f.personer.filter(q => q.spes).length} spesialister` + (syke ? ` · ${syke} syke av Grålungen` : '') + (S.døde.length ? ` · ${S.døde.length} venter på begravelse` : '')),
       e2('div', { klasse: 'mat' }, k2('Samfunn ›', () => åpne(true), { id: 'samfunnknapp' })));
+    for (const { o, type } of oppdragMedSpes()) hode.append(e2('small', { 'data-spesoppdrag': String(o.id) }, `★ ${window.Spillet && Spillet.Oppdrag ? Spillet.Oppdrag.TYPER[o.type].navn : 'Oppdrag'} ${(o.meter / 1000).toFixed(1).replace('.', ',')} km mot ${o.retning}: ${SR.oppdragSpesTekst(o, type)}`));
   });
 
   // ---------- varselbrikkene øverst til venstre (spill/narhud.js leser window.VARSEL_TILLEGG) ----------
@@ -335,7 +351,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     falne = null; akk = 0; sistEkte = performance.now(); sistKort = ''; sistHtml = ''; visKort(); vis();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
+  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
     // for testene og vakten: sett en ny, tom tilstand
     nullstill: () => { const sp = spill(); S = SR.ny(1); S.klokke = typeof tid === 'number' ? tid : 0; sistKort = ''; falne = null; if (sp) lagre(); visKort(); vis(); } });
   window.SamfunnSpill = api;
