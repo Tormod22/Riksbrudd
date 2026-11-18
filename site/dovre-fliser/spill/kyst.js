@@ -10,7 +10,10 @@
   const TYPER = ['snekke', 'sjark', 'motorbåt'], FARGER = [[.93, .93, .9], [.93, .93, .9], [.72, .14, .12], [.16, .26, .5], [.93, .93, .9], [.2, .42, .36]];
 
   // v = { S, cx, cy, sjø(x, y), moh(x, y), by(x, y), hinder(x, y), mobil } – x, y relativt til utsnittets midte
-  function plasser(v) {
+  // (18. nov, hakk: i Bergen tok plasser() 110–150 ms i ett strekk. plasserG er samme regel som generator – yield for hver rad i
+  // rutenettene og for hvert 64. kystpunkt –, så spill/kyst3d.js kan ta pust innimellom; plasser() gjør alt i ett og gir det samme.)
+  function plasser(v) { const it = plasserG(v); let r; while (!(r = it.next()).done); return r.value; }
+  function* plasserG(v) {
     const T = TAK[v.mobil ? 'mobil' : 'pc'], S = v.S, ut = { båter: [], brygger: [], naust: [], bøyer: [] };
     const land = (x, y) => !v.sjø(x, y), hind = (x, y) => v.hinder ? v.hinder(x, y) : false, by = (x, y) => v.by ? v.by(x, y) : false;
     const inne = (x, y, m) => Math.abs(x) < S - m && Math.abs(y) < S - m;
@@ -19,14 +22,16 @@
     const tilSjø = (x, y, nx, ny, maks) => { for (let t = 0; t <= maks; t += 1) if (v.sjø(x + nx * t, y + ny * t)) return t; return null; };
     // kystpunkter: landruter (12 m) med sjø innen 10 m; retningen ut mot sjøen = snittet av sjøretningene
     const st = 12, kyst = [];
-    for (let Y = Math.ceil((v.cy - S) / st) * st; Y < v.cy + S; Y += st) for (let X = Math.ceil((v.cx - S) / st) * st; X < v.cx + S; X += st) {
+    for (let Y = Math.ceil((v.cy - S) / st) * st; Y < v.cy + S; Y += st) { yield; for (let X = Math.ceil((v.cx - S) / st) * st; X < v.cx + S; X += st) {
       const x = X - v.cx, y = Y - v.cy; if (!inne(x, y, 40) || !land(x, y)) continue;
       let sx = 0, sy = 0, n = 0; for (const [dx, dy] of RETN) if (v.sjø(x + dx * 10, y + dy * 10)) { sx += dx; sy += dy; n++; }
       if (!n || n > 12) continue; const l = Math.hypot(sx, sy); if (l < .5) continue;
       kyst.push({ x, y, X, Y, nx: sx / l, ny: sy / l, d: x * x + y * y });
-    }
+    } }
     kyst.sort((a, b) => a.d - b.d);
+    let nk = 0;
     for (const k of kyst) {
+      if ((++nk & 63) === 0) yield;
       const h = frø(k.X, k.Y, 0), h2 = frø(k.X, k.Y, 1), h3 = frø(k.X, k.Y, 2), iBy = by(k.x, k.y), a = Math.atan2(k.ny, k.nx);
       const t0 = tilSjø(k.x, k.y, k.nx, k.ny, 14); if (t0 === null) continue;
       const sx = k.x + k.nx * t0, sy = k.y + k.ny * t0;
@@ -66,13 +71,13 @@
     // Småbåtene holder seg nær kysten (feilretting 12. nov: 48 snekker og sjarker lå spredt 110 km til havs ved Troll A): det må være land
     // innen LAND_NÆR meter – land inne i utsnittet; utenfor utsnittet vet vi ikke hva som er land.
     const LAND_NÆR = 800, kystNær = (x, y) => { for (let r = 100; r <= LAND_NÆR; r += 100) for (const [dx, dy] of RETN) { const p = x + dx * r, q = y + dy * r; if (inne(p, q, 0) && land(p, q)) return true; } return false; };
-    for (const [st2, k0] of [[150, 7], [90, 8]]) for (let Y = Math.ceil((v.cy - S) / st2) * st2; Y < v.cy + S; Y += st2) for (let X = Math.ceil((v.cx - S) / st2) * st2; X < v.cx + S; X += st2) {
+    for (const [st2, k0] of [[150, 7], [90, 8]]) for (let Y = Math.ceil((v.cy - S) / st2) * st2; Y < v.cy + S; Y += st2) { yield; for (let X = Math.ceil((v.cx - S) / st2) * st2; X < v.cx + S; X += st2) {
       const x0 = X - v.cx, y0 = Y - v.cy, h = frø(X, Y, k0); if (h > (k0 === 7 ? .16 : .3)) continue;
       const x = x0 + (frø(X, Y, 11) - .5) * st2 * .6, y = y0 + (frø(X, Y, 12) - .5) * st2 * .6; if (!inne(x, y, 60) || !v.sjø(x, y)) continue;
       const nærLand = r => RETN.some(([dx, dy]) => land(x + dx * r, y + dy * r));
       if (k0 === 7) { if (ut.båter.length >= T.båter || nærLand(20) || nærLand(40) || !kystNær(x, y)) continue; const bt = båt(X + Y, true); bt.x = x; bt.y = y; bt.a = frø(X, Y, 13) * 6.283; ut.båter.push(bt); }
       else { if (ut.bøyer.length >= T.bøyer || nærLand(20) || !(nærLand(45) || nærLand(90))) continue; ut.bøyer.push({ x, y, type: Math.floor(frø(X, Y, 14) * 3) }); }
-    }
+    } }
     return ut;
   }
   // en båt: type, lengde, bredde, farge på skroget, styrehus; fri = ute på sjøen (gynger mer)
@@ -81,6 +86,6 @@
     const L = t === 'snekke' ? 5 + h2 * 2 : t === 'sjark' ? 8 + h2 * 4 : 6 + h2 * 3;
     return { type: t, L, B: L * (t === 'motorbåt' ? .36 : .34), farge: FARGER[Math.floor(hash((n | 0) + 3331) * FARGER.length)], fri, fase: h2 * 6.283 };
   }
-  const API = { plasser, båt, frø, TAK };
+  const API = { plasser, plasserG, båt, frø, TAK };
   if (typeof module !== 'undefined') module.exports = API; else rot.Kyst = API;
 })(typeof window !== 'undefined' ? window : globalThis);

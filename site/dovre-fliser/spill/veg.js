@@ -343,9 +343,12 @@
   // Gatelys langs de vanlige bilvegene (E, R, F, K) i tettstedene, hver 38. meter, helst på venstre side, med armen inn over vegen.
   // Aldri i en vegbane eller på en gang- og sykkelveg (klaring under 0,6 m), aldri i et kryss, aldri to nærmere hverandre enn 20 m.
   // o: { ru (rute over alle linjene), nr(v) = linjens nummer i ru, kryss, ok(x, y) }. Gir [x, y, retning, ...].
-  function lykter(veger, o) {
+  // (18. nov, hakk: i Bergen tok lyktene 140 ms i ett strekk. lykterG er samme regel som generator – yield etter hver veg –, så
+  // spill/liv3d.js kan ta pust mellom vegene; lykter() gjør alt i ett og gir det samme.)
+  function lykter(veger, o) { const it = lykterG(veger, o); let r; while (!(r = it.next()).done); return r.value; }
+  function* lykterG(veger, o) {
     const ut = [], satt = new Set();
-    for (const v of veger) { if (!v.by || !vanlig(v) || !'ERFK'.includes(v.k)) continue; const avst = v.k === 'K' ? 4.6 : 6.2, li = o.nr(v); let L = 0, neste = 19;
+    for (const v of veger) { if (!v.by || !vanlig(v) || !'ERFK'.includes(v.k)) continue; yield; const avst = v.k === 'K' ? 4.6 : 6.2, li = o.nr(v); let L = 0, neste = 19;
       for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!l) continue;
         for (; neste < L + l; neste += 38) { const f = (neste - L) / l, X = a[0] + (b[0] - a[0]) * f, Y = a[1] + (b[1] - a[1]) * f, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
           for (const sd of [1, -1]) { const x = X + nx * avst * sd, y = Y + ny * avst * sd, k = Math.round(x / 20) + ',' + Math.round(y / 20);
@@ -355,6 +358,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, utenomKryss, kryssFlate, striper, gangfelt, lykter, lykterG };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1223,7 +1223,9 @@ function bakkeNå(R, u, nær, våt) {
 // Terrengnettet deles i land og vann: rutene som har vann i seg (vannmasken, med en rutes margin i den grove masken) legges sist i
 // indekslista og får sin egen gruppe. Gir { land, vann } (antall indekser), eller null når vannmasken ikke kan leses.
 // Kan kalles flere ganger på samme nett (rekkefølgen fra PlaneGeometry – seks indekser per rute – huskes i userData.indeks0).
-function delBakken(geo, u) {
+// (18. nov, hakk: ca. 50 ms i ett strekk i Bergen – nå generator med yield mellom radene; delBakken gjør alt i ett som før)
+function delBakken(geo, u) { return kjørRett(delBakkenG(geo, u)); }
+function* delBakkenG(geo, u) {
   geo.clearGroups();
   { const i0 = geo.index.array; if (geo.userData.indeks0) { i0.set(geo.userData.indeks0); geo.index.needsUpdate = true; } else geo.userData.indeks0 = i0.slice(); }
   if (!u.vannData) { try { const W = u.vann.width; u.vannData = { W, d: u.vann.getContext('2d').getImageData(0, 0, W, W).data }; } catch (e) { u.vannData = { W: 0 }; } }
@@ -1231,7 +1233,7 @@ function delBakken(geo, u) {
   if (u.harVann === false) return { land: idx.length, vann: 0 };
   // grov maske: K × K punkter i vannmasken per rute
   const K = W >= 1024 ? 4 : 2, Wc = Math.ceil(W / K), grov = new Uint8Array(Wc * Wc), d = D.d; let noe = false;
-  for (let j = 0; j < W; j++) { const rad = (j / K | 0) * Wc; for (let i = 0; i < W; i++) if (d[(j * W + i) * 4] > 127) { grov[rad + (i / K | 0)] = 1; noe = true; } }
+  for (let j = 0; j < W; j++) { if ((j & 127) === 0) yield; const rad = (j / K | 0) * Wc; for (let i = 0; i < W; i++) if (d[(j * W + i) * 4] > 127) { grov[rad + (i / K | 0)] = 1; noe = true; } }
   if (!noe) return { land: idx.length, vann: 0 };
   // nettets ruter langs hver akse, målt fra maskens første kant (x fra vest, y fra nord): rute k går fra T[k] til T[k + 1]
   const M = geo.parameters.widthSegments + 1, n = M - 1, pos = geo.attributes.position.array, TX = new Float32Array(M), TY = new Float32Array(M);
@@ -1242,11 +1244,12 @@ function delBakken(geo, u) {
       while (a < n - 1 && T[a + 1] < t0) a++; while (b < n - 1 && T[b + 1] <= t1) b++; lo[c] = a; hi[c] = b; }
     return [lo, hi]; };
   const [xlo, xhi] = omr(TX), [ylo, yhi] = omr(TY), vann = new Uint8Array(n * n); let nv = 0;
-  for (let jc = 0; jc < Wc; jc++) for (let ic = 0; ic < Wc; ic++) if (grov[jc * Wc + ic])
-    for (let r = ylo[jc]; r <= yhi[jc]; r++) for (let c = xlo[ic]; c <= xhi[ic]; c++) if (!vann[r * n + c]) { vann[r * n + c] = 1; nv++; }
+  for (let jc = 0; jc < Wc; jc++) { if ((jc & 31) === 0) yield;
+    for (let ic = 0; ic < Wc; ic++) if (grov[jc * Wc + ic])
+      for (let r = ylo[jc]; r <= yhi[jc]; r++) for (let c = xlo[ic]; c <= xhi[ic]; c++) if (!vann[r * n + c]) { vann[r * n + c] = 1; nv++; } }
   if (nv === n * n) return { land: 0, vann: idx.length };
   const ny = new idx.constructor(idx.length); let a = 0, b = (n * n - nv) * 6;
-  for (let k = 0; k < n * n; k++) { const bit = idx.subarray(k * 6, k * 6 + 6); if (vann[k]) { ny.set(bit, b); b += 6; } else { ny.set(bit, a); a += 6; } }
+  for (let k = 0; k < n * n; k++) { if ((k & 32767) === 0) yield; const bit = idx.subarray(k * 6, k * 6 + 6); if (vann[k]) { ny.set(bit, b); b += 6; } else { ny.set(bit, a); a += 6; } }
   idx.set(ny); geo.index.needsUpdate = true; geo.addGroup(0, a, 0); geo.addGroup(a, idx.length - a, 1);
   return { land: a, vann: idx.length - a };
 }
@@ -1427,6 +1430,9 @@ async function bygg3d(cx, cy, S) {
   if (NORGE_BLOKKER) { const st = {}; await iStriper(TW, (y0, y1) => havnivå(px, TW, H, N, steg, y0, y1, st)); }
   { const st = {}; await iStriper(TW, (y0, y1) => vannIBratt(px, TW, H, N, steg, y0, y1, st)); }
   u.vann = await vannmaske(px, TW, H, N, steg); u.harVann = !!u.vann.harVann;
+  // (18. nov, hakk: den første modulen som trengte vannmasken, leste den tilbake fra bildet med getImageData – 25–55 ms i ett strekk her,
+  // og på et ekte grafikkort må nettleseren vente på grafikkortet. Punktene finnes alt: u.vannData = { W, d } som modulene bruker.)
+  u.vannData = { W: u.vann.width, d: u.vann.piksler };
   framdrift('planter trærne', .6);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
@@ -1543,7 +1549,8 @@ async function vannmaske(px, TW, H, N, steg) {
         D[r + i] = v; d[(r + i) * 4 + 2] = Math.min(255, v * f); } }
   }
   // harVann: finnes det vann i utsnittet i det hele tatt? (delBakken: uten vann tegnes hele terrenget med varianten for land)
-  g.putImageData(im, 0, 0); c.harVann = harVann; return c;
+  // piksler: de samme punktene som i bildet (alfa er alltid 255, så getImageData ville gitt nøyaktig dette) – se u.vannData i bygg3d
+  g.putImageData(im, 0, 0); c.harVann = harVann; c.piksler = d; return c;
 }
 // Trær i 3D: gran (mørk, smal) og løvtre/furu (lysere, bredere) i skogrutene (terrengklasse skog, 32 m), 1–4 per rute med fast
 // tilfeldighet, ikke der kartet under er veg, hus eller vann. Mindre og glissent mot tregrensen. Høyde i meter (ikke overdrevet).
@@ -1594,6 +1601,19 @@ async function trær3d(u, px, b) {
   return { gran: new Float32Array(gran), løv: new Float32Array(løv) };
 }
 // Byggene som klosser: vegger og tak fra omrissene (z13), satt på terrenget ved byggets midtpunkt. Ett samlet nett.
+// Antall bygg innen R meter for hvert senter – samme svar som naboer() i kartflis.js (samme rutenett, samme Math.hypot), men med
+// tallnøkler og pust mellom bitene (18. nov, hakk: i Bergen tok naboer() 180 ms i ett strekk).
+async function naboerAsynk(sentre, R = 100) {
+  const rut = new Map(), K = 1 << 20, k = (ci, cj) => (ci + K / 2) * K + (cj + K / 2), ut = new Array(sentre.length);
+  sentre.forEach(([x, y], j) => { const n = k(Math.floor(x / R), Math.floor(y / R)); let l = rut.get(n); if (!l) rut.set(n, l = []); l.push(j); });
+  for (let q = 0; q < sentre.length; q++) {
+    if ((q & 255) === 255 && børPuste()) await pust();
+    const [x, y] = sentre[q], ci = Math.floor(x / R), cj = Math.floor(y / R); let n = 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = rut.get(k(ci + di, cj + dj)); if (l) for (const j of l) { const p = sentre[j]; if (Math.hypot(p[0] - x, p[1] - y) < R) n++; } }
+    ut[q] = n - 1;
+  }
+  return ut;
+}
 async function hus3d(u) {
   const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), sett = new Set(), biler = [], flagg = [], omriss = [], piper = [], skilt = [];
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
@@ -1665,7 +1685,7 @@ async function hus3d(u) {
   for (const [x, y, t] of flisene) { if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) { if (SENTER.has(o.e.i) || !o.deler[0]) continue; const d = o.deler[0]; let sx = 0, sy = 0; for (const [a, b] of d) { sx += a; sy += b; }
       const c = [minx + sx / d.length * k - u.cx, maxy - sy / d.length * k - u.cy]; SENTER.set(o.e.i, c); if (o.e.t === 6 || o.e.t === 12) IND.push(c); } }
-  const idListe = [...SENTER.keys()], tl = naboer(idListe.map(i => SENTER.get(i))), TETT = new Map(idListe.map((i, n) => [i, tl[n]])), fyrer = [];
+  const idListe = [...SENTER.keys()], tl = await naboerAsynk(idListe.map(i => SENTER.get(i))), TETT = new Map(idListe.map((i, n) => [i, tl[n]])), fyrer = [];
   for (const [x, y, t] of flisene) {
     if (!t || !t.hus) continue; const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
     for (const o of t.hus.obj) {
@@ -2630,8 +2650,37 @@ function* terrengGeo(u, R) {
   const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv; yield;
   for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
     pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); if ((k & 2047) === 2047) yield; }
-  yield; geo.computeVertexNormals(); yield;
+  yield; yield* normalerG(geo); yield;
   return geo;
+}
+// NORMALENE I BITER (18. nov, hakk: computeVertexNormals holdt hovedtråden 80 ms for terrenget og 130 ms for én husgruppe i Bergen).
+// Samme regning som three.js r128 sin computeVertexNormals, i samme rekkefølge og med de samme 32-bits mellomlagrene, så normalene
+// blir like til siste bit – bare med yield (pust) for hver ca. 10 000 trekanter. Med indeks: summen av flatenes normaler per hjørne;
+// uten indeks: hver trekant flat. Til slutt normaliseres de (three: ganger med 1 / lengden).
+function* normalerG(geo) {
+  const pa = geo.attributes.position, p = pa.array, ix = geo.index;
+  let na = geo.attributes.normal; if (na === undefined) { na = new THREE.BufferAttribute(new Float32Array(pa.count * 3), 3); geo.setAttribute('normal', na); } else na.array.fill(0);
+  const n = na.array;
+  if (ix) { const I = ix.array;
+    for (let f = 0; f < ix.count; f += 3) {
+      if (f % 30000 === 0) yield;
+      const a = I[f] * 3, b = I[f + 1] * 3, c = I[f + 2] * 3, bx = p[b], by = p[b + 1], bz = p[b + 2];
+      const cbx = p[c] - bx, cby = p[c + 1] - by, cbz = p[c + 2] - bz, abx = p[a] - bx, aby = p[a + 1] - by, abz = p[a + 2] - bz;
+      const x = cby * abz - cbz * aby, y = cbz * abx - cbx * abz, z = cbx * aby - cby * abx;
+      const ax0 = n[a] + x, ay0 = n[a + 1] + y, az0 = n[a + 2] + z, bx0 = n[b] + x, by0 = n[b + 1] + y, bz0 = n[b + 2] + z, cx0 = n[c] + x, cy0 = n[c + 1] + y, cz0 = n[c + 2] + z;
+      n[a] = ax0; n[a + 1] = ay0; n[a + 2] = az0; n[b] = bx0; n[b + 1] = by0; n[b + 2] = bz0; n[c] = cx0; n[c + 1] = cy0; n[c + 2] = cz0;
+    } }
+  else for (let i = 0; i < pa.count * 3; i += 9) {
+    if (i % 90000 === 0) yield;
+    const bx = p[i + 3], by = p[i + 4], bz = p[i + 5], cbx = p[i + 6] - bx, cby = p[i + 7] - by, cbz = p[i + 8] - bz, abx = p[i] - bx, aby = p[i + 1] - by, abz = p[i + 2] - bz;
+    const x = cby * abz - cbz * aby, y = cbz * abx - cbx * abz, z = cbx * aby - cby * abx;
+    n[i] = n[i + 3] = n[i + 6] = x; n[i + 1] = n[i + 4] = n[i + 7] = y; n[i + 2] = n[i + 5] = n[i + 8] = z;
+  }
+  for (let i = 0; i < n.length; i += 3) {
+    if (i % 150000 === 0) yield;
+    const x = n[i], y = n[i + 1], z = n[i + 2], k = 1 / (Math.sqrt(x * x + y * y + z * z) || 1); n[i] = x * k; n[i + 1] = y * k; n[i + 2] = z * k;
+  }
+  na.needsUpdate = true;
 }
 // Plassen (matrisene) og fargene til trærne, steinene eller buskene i en liste [x, y, z, h, v, …]. lod: nettene med detaljnivå.
 function* treMatriser(data, smal, valg, lod) {
@@ -2641,9 +2690,9 @@ function* treMatriser(data, smal, valg, lod) {
     d.matrix.toArray(M, k * 16); const f = .82 + v * .36; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); if ((k & 1023) === 1023) yield; }
   return { M, C };
 }
-function husGeometri(d) {
+function* husGeometri(d) {
   const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.BufferAttribute(d.pos, 3)); hg.setAttribute('color', new THREE.BufferAttribute(d.kol, 3));
-  hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); hg.computeVertexNormals(); return hg;
+  hg.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2)); yield* normalerG(hg); return hg;
 }
 // FORBEREDELSE (15. nov, målt i Bergen: selve byttet av utsnitt holdt hovedtråden 0,35–0,55 s, og bildet sto stille så lenge). Det tunge
 // lages her på forhånd, i små biter med pust mellom: terrengnettet med delingen i land og vann, trærnes plass, husnettene, hindringene
@@ -2651,11 +2700,11 @@ function husGeometri(d) {
 // det selv hvis det ikke er forberedt.
 async function forbered3d(u) {
   const R = R3, K = {}; if (!R) return;
-  K.geo = await kjørAsynk(terrengGeo(u, R)); K.del = delBakken(K.geo, u); await pust();
+  K.geo = await kjørAsynk(terrengGeo(u, R)); K.del = await kjørAsynk(delBakkenG(K.geo, u)); await pust();
   K.tre = new Map();
   for (const [data, smal, valg, lod] of [[u.trær && u.trær.gran, .3, null, true], [u.trær && u.trær.løv, .5, null, true], [u.smått && u.smått.stein, 1, null, false], [u.smått && u.smått.busk, 1.3, BUSKVALG(), true]])
     if (data && data.length) K.tre.set(data, await kjørAsynk(treMatriser(data, smal, valg, lod)));
-  if (u.hus) { K.hus = {}; for (const [n, d] of Object.entries(u.hus.deler)) { await pust(); K.hus[n] = husGeometri(d); } }
+  if (u.hus) { K.hus = {}; for (const [n, d] of Object.entries(u.hus.deler)) { await pust(); K.hus[n] = await kjørAsynk(husGeometri(d)); } }
   await pust(); K.hindre = hindringer(u); await pust();
   u.klar = K;
   for (const f of KROKER.forbered3d) { await pust(); await f(u, R); }
@@ -2758,7 +2807,7 @@ function sett3d(u) {
     const tekstur = { mur: vinduTekstur, tre: treTekstur, tak: takTekstur, leil: () => byggTekstur('leil'), kontor: () => byggTekstur('kontor'), lager: () => byggTekstur('lager'), glass: () => byggTekstur('glass'), industri: () => byggTekstur('industri'), planke: () => byggTekstur('planke'), butikk: () => byggTekstur('butikk'), kirke: () => byggTekstur('kirke'), dør: () => byggTekstur('dør') };
     for (const [n, d] of Object.entries(u.hus.deler)) {
       if (!tekstur[n]) tekstur[n] = () => Byhus.tekstur(n);
-      const hg = (K.hus && K.hus[n]) || husGeometri(d);
+      const hg = (K.hus && K.hus[n]) || kjørRett(husGeometri(d));
       const m = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, map: tekstur[n]() })); R.scene.add(m); R.husMesh.push(m);
     }
     if (u.hus.skilt && u.hus.skilt.length) for (const m of skilt3d(u.hus.skilt)) { R.scene.add(m); R.husMesh.push(m); }

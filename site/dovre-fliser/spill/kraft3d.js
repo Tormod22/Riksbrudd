@@ -73,7 +73,9 @@
     await pust(); const ut = K.utsnitt(KD.linjer, u.cx, u.cy, u.S, z, mob ? 1600 : 4000); await pust();
     ut.trafo = KD.trafo.filter(([X, Y]) => Math.abs(X - u.cx) < u.S - 40 && Math.abs(Y - u.cy) < u.S - 40).map(([X, Y, kv]) => ({ x: X - u.cx, y: Y - u.cy, kv }));
     // trafostasjonen: NVEs punkt ligger ofte i stasjonshallen (et bygg i dataene) – flytt gården (høyst ca. 45 m) dit den får plass utenfor bygg og veg
+    // (18. nov, hakk: kroken holdt hovedtråden 0,1 s i ett strekk i Bergen – nå pust mellom trafostasjonene, treslagene og radene i beltet)
     for (const t of ut.trafo) {
+      if (børPuste()) await pust();
       const fri = (x, y) => !(u.husRute && hindring3d(x, y, u.husRute)) && !(u.påVeg && u.påVeg(x, y));
       let best = null;
       for (const [dx, dy] of [[0, 0], [0, -30], [0, 30], [-35, 0], [35, 0], [-30, -25], [30, -25], [-30, 25], [30, 25]]) {
@@ -89,7 +91,7 @@
     if (belte.length) {
       const iB = K.belte(belte);
       const rens = data => { if (!data || !data.length) return data; const ny = []; for (let k = 0; k < data.length; k += 5) if (!iB(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ny.push(data[k + q]); return ny.length === data.length ? data : new Float32Array(ny); };
-      if (u.trær) for (const n of treslag(u)) u.trær[n] = rens(u.trær[n]);
+      if (u.trær) for (const n of treslag(u)) { u.trær[n] = rens(u.trær[n]); if (børPuste()) await pust(); }
       if (u.smått) u.smått.busk = rens(u.smått.busk);
       // ryddegata i bakken: lys lyng og kratt der det er skog, grus på trafostasjonen
       const mpp = 2 * u.S / TW, W = skog.W, st = W / TW;
@@ -98,6 +100,7 @@
         const i0 = Math.max(0, Math.floor((Math.min(b.ax, b.bx) - b.b + u.S) / mpp)), i1 = Math.min(TW - 1, Math.ceil((Math.max(b.ax, b.bx) + b.b + u.S) / mpp));
         const j0 = Math.max(0, Math.floor((u.S - Math.max(b.ay, b.by) - b.b) / mpp)), j1 = Math.min(TW - 1, Math.ceil((u.S - Math.min(b.ay, b.by) + b.b) / mpp));
         for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+          if (i === i0 && (j & 15) === 0 && børPuste()) await pust();
           const x = -u.S + (i + .5) * mpp, y = u.S - (j + .5) * mpp, q = (j * TW + i) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
           if (B > R + 18 && B > G + 4) continue;
           if (trafo) { if (Math.abs(x - (b.ax + b.bx) / 2) < TRAFO.b / 2 && Math.abs(y - b.ay) < TRAFO.d / 2) { const v = ((i * 7 + j * 13) % 9) * 3; px[q] = 132 + v; px[q + 1] = 128 + v; px[q + 2] = 120 + v; } continue; }

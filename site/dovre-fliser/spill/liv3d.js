@@ -77,7 +77,9 @@
     // gatelysene følger de ferdige vegene: aldri i en vegbane, på en gangveg, i et kryss, i et hus eller i vann
     u.lys = null;
     if (byer.length) { await pust(); const kryssL = Veg.finnKryss(veger); await pust(); const ru = Veg.rute(alle), nr = new Map(alle.map((v, i) => [v, i])), vann = window.Infra3d && Infra3d.iVann;
-      await pust(); const L = Veg.lykter(veger, { ru, nr: v => nr.get(v), kryss: kryssL, ok: (x, y) => !(u.hus && u.hus.omriss && nærHus(u, x, y)) && !(vann && vann(u, x, y)) }), ut = [];
+      // (pust mellom vegene: Veg.lykterG, 18. nov)
+      const lo = { ru, nr: v => nr.get(v), kryss: kryssL, ok: (x, y) => !(u.hus && u.hus.omriss && nærHus(u, x, y)) && !(vann && vann(u, x, y)) };
+      await pust(); const L = Veg.lykterG ? await kjørAsynk(Veg.lykterG(veger, lo)) : Veg.lykter(veger, lo), ut = [];
       for (let q = 0; q < L.length; q += 3) ut.push(L[q], L[q + 1], zf(L[q], L[q + 1]), L[q + 2]);
       if (ut.length) u.lys = new Float32Array(ut); }
   });
