@@ -182,3 +182,16 @@ Tester: test_samfunn.js (nye: barn/gamle syke, sabotasje, oppdrag), test_eventyr
 - Sløret er ikke i minikartene (bare API + forslag); 3D-minikartet er ikke vurdert.
 - Hunden har ingen lyd, og fienden sikter ikke på hunden med vilje (bare «truffet sammen med deg»).
 - Dekningen bak bakketoppen gjelder skaden du tar – fienden oppdager deg fortsatt (snik) som før.
+
+### Punkt 9: prøvd i ekte kamp (18. nov, spilløkka, ikke sim() kalt for hånd)
+Oppsett: Dovre-testsiden, AI av, alle andre lag flyttet bort, «1. lag, Dombås» (12 mann) 100 m fra leiren, et nytt rødt prøvelag 360 m
+unna, tempo 60 i 25 ekte sekunder (ca. 25 spillminutter) per runde, tre runder med og tre uten skytteren på vakt (våpenloven av).
+- Ildfaktoren fra KROKER.ild: 1,265 med skytteren på vakt, 1,1 når hen har fri – skytteren gir altså ×1,15 som regelen sier (1,1 kommer
+  fra en annen krok, ikke min).
+- Utfallet: MED skytter 2, 1 og 2 utslåtte fiender (helse igjen 9 / 10,5 / 10 av 12), UTEN 0, 1 og 0 (11,5 / 10,5 / 12). Fem mot én
+  utslåtte – mer enn ×1,15 skulle tilsi, så mye er tilfeldigheter med så få treff.
+- SÅ OGSÅ: prøvelaget skjøt aldri tilbake (egne lag 12 av 12 hele og fulle i alle seks rundene). Ikke undersøkt (ikke min pakke) –
+  kanskje et lag uten AI ikke åpner ild, eller ikke ser laget vårt. Pakka «krig»/«balanse» bør se på det.
+- Mekanikeren (verksted bygget, kjøretøy med 50 % skade 60 m fra leiren): i sanntid (1×) 0,50 -> 0,433 på 20 s (ca. 0,2 per spilltime
+  ganget med samfunnsklokka, helt etter ca. 2,5 minutter); med mekanikeren på «fri» 0,50 -> 0,50; 400 m unna 0,50 -> 0,50; i 60× helt
+  på 2,1 s, og loggen sier «Mekanikeren har reparert 1. lastebilkolonne.»
