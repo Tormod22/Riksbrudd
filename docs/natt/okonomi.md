@@ -26,7 +26,7 @@ Alle tall er **Claudes forslag** og står samlet i `Region.REGLER`, `Region.TYPE
    per hopp). Fiende innen 4 km av et ledd = truet (halvparten kommer fram), innen 1,5 km = stengt (ingenting). Et eget lag innen 1,5 km av
    leddet vokter det (ett hakk tryggere). Ingen egne kjøretøy. Tegnes i 2D (grønn/gul/rød stiplet) når Region/krigskartet er åpent eller
    kartet er zoomet ut (kam.m ≥ 18). Loggen melder når en rute skifter.
-9. **Skatt og lojalitet** per tettsted (og «Alle: …»): Støtte (ingen varer, koster 150 kr per innbygger per døgn, mål 100), Lett (×0,6, mål 80),
+9. **Skatt og lojalitet** per tettsted (og «Alle: …»): Støtte (ingen varer, koster 50 kr per innbygger per døgn, mål 100), Lett (×0,6, mål 80),
    Vanlig (×1, mål 55), Hard (×1,7, mål 0 – med garnison 10 = uro). Lojaliteten (0–100, start 50) går mot målet; garnison +10, uten strøm −15. Varene ganges med
    0,6–1,4 etter lojaliteten. Lojalitet ≤ 10: uten garnison OPPRØR (tettstedet blir nøytralt), med garnison «uro» (gir halvparten).
 10. **Strøm.** Samme regel som før (helt kraftverk innen 40 km): uten strøm gir tettstedet 40 % og lojaliteten synker. Kraftverkpanelet sier
@@ -90,3 +90,13 @@ Lagring: «riksbrudd-region» per leir.
   veger med tank, uro med garnison, og en ekte reparasjon av et kraftverk (Lundsæter) som fikk Leirvik over på spillerens side.
 - Sju tettsteder i Ryfylke ga ca. 2,6 mill. kr per døgn (ti minutter). Det er trolig for rundhåndet over tid – skatten (300 kr per innbygger)
   er det første tallet å skru ned hvis pengene blir for lette.
+
+## Runde 3
+- **Skatten er satt ned:** `Region.REGLER.skattKr` 300 → **100 kr per innbygger per døgn** (tak 1,5 mill. per tettsted; støtte koster 50 kr).
+  Begrunnelse: med 300 kr ga sju tettsteder i Ryfylke 2,6 mill. kr per ti minutter mot 40 mill. i startkasse – pengene ble uviktige igjen.
+  Med 100 kr gir de samme sju ca. 0,9 mill. per ti minutter (et kontrollrom til 15 mill. = rundt tre timer), og ett tettsted som Dombås
+  ca. 115 000 kr. Skatten ganges med vanskelighetsgraden (`window.SPILLREGLER.faktor.penger`: lett 1,5, vanlig 1, hard 0,6; holdt innen 0,4–1,5)
+  i region-visning.js (`pf()`); varene er like på alle nivåer. Tallene over ellers i notatet (344 000 kr for Dombås osv.) er fra før endringen.
+- **Vakten er robust:** eget prøvetettsted («Prøveby», id «øk1», 3 km øst for leiren) som legges inn og tas bort, alle fiendelag flyttes
+  600 km bort mens den prøver og settes tilbake, og mangler infrastrukturen (INFRA = null), lages en tom mens vakten går.
+  Prøvd etter alle de andre vaktene i samme side (alfabetisk) på PC og mobil, og uten infrastruktur.
