@@ -278,3 +278,8 @@ Første valg på alle kort. Hvert døgn får inntil 6–7,5 minutter ekte tid (s
   kjøpt (kassa nådde ikke 16 mill.). Hvordan en menneskelig spiller som gjør det, klarer seg mot Kystalliansen, er ikke prøvd.
 - Én ting jeg ikke har forklart: i kjøring 7 sto Tropp 2 1,5 km unna i over to døgn etter å ha trukket seg tilbake. «Hjem igjen»
   venter til ingen fiende er innen 900 m; trolig sto Kystalliansens lag i nærheten hele tiden. Ikke undersøkt nærmere.
+
+### Etter flettingen (18. nov kl. 13, hovedøkta)
+Fredstiden for motstanderne i `fraksjoner-visning.js` er satt fra 4 til **7 døgn på «Vanlig»** (7 / fiendens faktor, 4–10: Lett ca. 9,
+Hard ca. 5), etter forslaget over (kjøring 7 og 8 falt for Kystalliansen på dag 5–6). Ett døgn før den slutter, kommer et varsel i
+loggen («Motstanderne samler seg …»). Claudes forslag – ikke spilt gjennom på nytt.

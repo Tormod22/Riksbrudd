@@ -117,8 +117,12 @@
       // (balansen 18. nov, Claudes forslag) i et ekte spill går motstanderne ikke løs på leiren de første døgnene: 4 på «Vanlig»,
       // 5 på «Lett», 3 på «Hard» (4 / fiendens faktor). Gjennomspillingen hadde Kystalliansen i leiren på dag 2 og hele leiren
       // ødelagt på dag 3, før en nybegynner har mer enn én tropp. Lag innen 1,5 km fra leiren regnes heller ikke som mål da. Testene som før.
-      const fredTid = () => { if (navigator.webdriver) return false; const f = window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende || 1;
-        return tid < Math.max(2, Math.min(6, Math.round(4 / f))) * 1440; };
+      // Runde 4 (18. nov, Claudes forslag etter gjennomspillingene 7 og 8 i docs/natt/balanse.md: leiren sto mot røverne, men falt for
+      // Kystalliansen på dag 5–6, rett etter fredstiden): 7 døgn på «Vanlig» (7 / fiendens faktor, 4–10), og et varsel i loggen ett døgn før.
+      const fredTid = () => { if (navigator.webdriver) return false; const f = window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende || 1,
+          slutt = Math.max(4, Math.min(10, Math.round(7 / f))) * 1440;
+        if (!AI.fredVarslet && tid > slutt - 1440 && tid < slutt) { AI.fredVarslet = true; logg('Motstanderne samler seg. Om et døgn kan de gå løs på leiren din – ha minst to tropper hjemme og vakttårn bemannet.'); }
+        return tid < slutt; };
       if (L && !M.leir && Math.hypot(L.x - s.x, L.y - s.y) < 2000) { M.leir = true; if (synlig(s)) logg(`${F.FRAKSJONER[s.side].navn} har funnet leiren din.`); }
       const opptatt = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) opptatt.set(f.ai.målBy, f);
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));

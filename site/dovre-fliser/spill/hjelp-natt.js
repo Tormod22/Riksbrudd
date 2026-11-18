@@ -17,6 +17,21 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Røvere i leiren",
+"Kommer røverne inn i leiren (innen ca. 150 m fra midten), går lagene dine hjemme (innen 3 km, som står stille eller er i forsvarsstilling) og Leirvakta helt inn til dem av seg selv. Røverne gir opp og flykter når en tredel av dem er falt eller såret – da er bølgen slått tilbake. Får de herje i halvannen time, tar de med seg et bytte (litt av kassa, materialene, dieselen og maten) og trekker seg ut: bølgen er over, men du får ingen belønning. Lag som har trukket seg tilbake etter stridsreglene sine, går hjem igjen når faren er over.",
+"Lag og strid"
+],
+[
+"Reparasjon etter angrep",
+"Etter et angrep står det «N bygg er skadet» øverst, med knappen «Reparer alle». Ledige byggelag reparerer også av seg selv mellom angrepene, de mest skadde først (300 000 kr blir alltid igjen i kassa). Det slår du av og på i Leir → Bygg → Forsvar. Reparasjon koster en firedel av byggets pris for et helt ødelagt bygg, mindre jo mindre skaden er.",
+"Leiren"
+],
+[
+"To tropper før dag 4",
+"Røverbølgene vokser med dagene. Lag en tropp til før dag 4 (Leir → Tropper). Har du for få folk, rekrutter i Folk – det trengs ledige senger, så oppgrader brakka eller bygg en til. Hold minst to på «Bygg» (ett byggelag) så byggene blir reparert, og én på «Vakt».",
+"Kom i gang"
+],
+[
 "Folk som personer",
 "Trykk «Vis folkene» i Folk og så på et navn: du får et kort med ansikt, historie, lynne og hva personen ønsker seg. Får folk ønsket sitt oppfylt, blir de mer trofaste. ★ betyr spesialist.",
 "Leiren"
@@ -33,12 +48,12 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Spesialister",
-"Lege, mekaniker, radiooperatør og skytter er sjeldne. Du finner dem blant flyktninger og når du leter i hus. De virker bare når de står på riktig oppgave (stell, verksted, overvåking, vakt).",
+"Lege, mekaniker, radiooperatør og skytter er sjeldne. Du finner dem blant flyktninger, når du leter i hus – og på oppdrag: står det ★ ved et redningsoppdrag eller en røverpost i fanen Mål, får dere en spesialist når det er gjort. De virker bare når de står på riktig oppgave (stell, verksted, overvåking, vakt).",
 "Leiren"
 ],
 [
 "Barn og gamle",
-"De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen. Sulter eller fryser de, faller den hardt.",
+"De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen. Sulter eller fryser de, faller den hardt. De kan få Grålungen selv – barna sjeldnere, og de gamle tåler den dårligst: karantene, sykestue og lege redder liv.",
 "Leiren"
 ],
 [
@@ -90,6 +105,31 @@ window.HJELP_TILLEGG = [
 "Ett kort om gangen",
 "Kort med valg (hendelser, flyktninger, krangler) kommer ett om gangen, med minst to minutter imellom.",
 "Leiren"
+],
+[
+"Varsler øverst til venstre",
+"Brikkene øverst til venstre sier fra om Grålungen i leiren, døde som venter på begravelse, skader du selv har, og kort som venter på deg. Trykk på en brikke for å komme dit det gjelder.",
+"Leiren"
+],
+[
+"Kort som venter",
+"Hendelser i leiren kommer som kort midt på skjermen, ett om gangen og i den rekkefølgen de kom. Står det «Et kort venter» øverst til venstre, kan du trykke for å se det med en gang.",
+"Leiren"
+],
+[
+"Folk i byggene",
+"I 3D står operatørene inne i kontrollrommet, kokken i kjøkkenet og de som steller syke i sykestua – gå inn, så ser du dem. Vakta står oppe i vakttårnet og speider.",
+"I 3D"
+],
+[
+"Hunden din",
+"Hunden trenger mat: i leiren spiser den av leirens mat, ute må du gi den en rasjon (knappen «Gi … mat»). Får den ikke mat, går den sin vei. Blir du truffet, kan hunden også bli truffet – den gror i leiren.",
+"Lag og strid"
+],
+[
+"Dekning bak en bakketopp",
+"Ligger en bakketopp mellom deg og fienden, treffer de deg sjelden. Legg deg ned bak en kul – da holder selv en lav forhøyning.",
+"Lag og strid"
 ],
 [
 "Vann og mat på tur",
@@ -153,7 +193,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Fanger og avhør",
-"Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål kan du avhøre dem (da får du vite hvor lagene deres står) eller sette dem fri.",
+"Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål → Fanger kan du avhøre dem (da får du vite hvor lagene deres står), bytte dem, sette dem i arbeid, gi dem god behandling eller sette dem fri.",
 "Lag og strid"
 ],
 [
@@ -217,6 +257,36 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Dekning bak leirens bygg",
+"Et lag som står stille inntil et ferdig bygg i leiren, tar mye færre treff når bygget står mellom laget og fienden. Brakker, verksted og containere gir best dekning, telt og drivhus mindre. Sandsekkvollen har sin egen dekning.",
+"Leiren"
+],
+[
+"Bytte fanger",
+"Under Leir → Mål → Fanger: «Bytt» gir penger fra motstanderen (150 000 kr per fange). Har motstanderen tatt noen av dine, kan du bytte én mot én – de som kommer hjem, står som «fri» i Folk.",
+"Lag og strid"
+],
+[
+"Fanger i arbeid",
+"«Arbeid» setter fangene på bygg, hogst, riving eller frakt. En fange er en halv arbeider, men bare der minst én av dine arbeider. Fanger i arbeid kan rømme – mest når få vokter dem (folk på vakt og soldater ved leiren). De som rømmer, vet hvor leiren ligger.",
+"Leiren"
+],
+[
+"Fanger som blir med",
+"Gi fangene god behandling (én rasjon per fange per døgn). Etter tre døgn kan du spørre om de vil bli med i gjengen – flere sier ja når moralen er god. De trenger en ledig seng. Noen få kan være forrædere.",
+"Leiren"
+],
+[
+"Krigen lagres",
+"Røyk og lysraketter som brenner, helikopteret på tur og kjøreordrene for kjøretøyene dine er med når du kommer tilbake til spillet. Det samme er fiendens stillinger og det motstanderne vet om deg.",
+"Kom i gang"
+],
+[
+"Krigen i 3D",
+"Fiendens stillinger du har sett, står som ringer av sandsekker. Helikopteret flyr ut når det henter eller frakter et lag, og stedene der fiendens lag sist ble meldt, har et merke med «?».",
+"I 3D"
+],
+[
 "Lys og skygger",
 "På Høy og Middels grafikk kaster sola (og månen) skygger fra trær, hus, bruer og leirens bygg, bildet får en lett fargesetting (varm kveld, kald vinter), bakken er skarpere nært, vannet er lysere på grunna, skyene henger sammen med skyggene sine, og tåka ligger i dalbunnen. Går bildet tregt, slår du alt av med «Lys og skygger» i ☰ – eller velger lavere grafikk.",
 "Vær, lyd og bilde"
@@ -268,12 +338,12 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Handelsruter",
-"Varene må fram til leiren langs en rute – rett linje, gjerne via et annet tettsted du holder. Står det fiender nærmere enn 4 km fra ruta, er den truet og bare halvparten kommer fram. Nærmere enn 1,5 km er den stengt. Et eget lag ved ruta vokter den og gjør den ett hakk tryggere. Rutene tegnes i kartet (grønn, gul, rød) når Region eller krigskartet er åpent.",
+"Varene må fram til leiren langs en rute – rett linje, gjerne via et annet tettsted du holder. Står det fiender nærmere enn 4 km fra ruta, er den truet og bare halvparten kommer fram. Nærmere enn 1,5 km er den stengt. Et eget lag ved ruta vokter den og gjør den ett hakk tryggere. Rutene tegnes i kartet (grønn, gul, rød) når Region eller krigskartet er åpent. Når vegnettet er lastet (på PC hentes det når du åpner Region eller krigskartet), følger rutene vegene. Er en bru eller tunnel på vegen sprengt, eller er det sprengt et krater i vegen, er ruta stengt til den er reparert.",
 "Lag og strid"
 ],
 [
 "Skatt, lojalitet og opprør",
-"For hvert tettsted velger du skatt: Støtte (du gir i stedet for å ta – koster penger, lojaliteten stiger fort), Lett, Vanlig eller Hard (mye mer nå, men lojaliteten faller). Lojale tettsteder gir mer. Faller lojaliteten til bunnen, blir det opprør: uten garnison blir tettstedet nøytralt igjen, med garnison holder du det, men det gir bare halvparten. En garnison og strøm løfter lojaliteten.",
+"For hvert tettsted velger du skatt: Støtte (du gir i stedet for å ta – koster penger, lojaliteten stiger fort), Lett, Vanlig eller Hard (mye mer nå, men lojaliteten faller). Lojale tettsteder gir mer. Faller lojaliteten til bunnen, blir det opprør: uten garnison blir tettstedet nøytralt igjen, med garnison holder du det, men det gir bare halvparten. En garnison og strøm løfter lojaliteten. Mister du et tettsted og tar det igjen, starter lojaliteten på høyst 35.",
 "Lag og strid"
 ],
 [
@@ -299,6 +369,11 @@ window.HJELP_TILLEGG = [
 [
 "Motstandernes tettsteder",
 "Også motstanderne har nytte av det de holder: industristeder, byer og oljebyer gir dem bedre våpen (treff +5 % for hvert, høyst +20 %), og bygder og havner gjør at garnisonene deres fylles opp raskere. «Region» viser hva hver motstander får. Tar du tettstedene, mister de fordelen.",
+"Lag og strid"
+],
+[
+"Krigskartet: hva et tettsted gir",
+"Trykk på et tettsted i krigskartet: boksen sier hva det gir deg per døgn nå (skatt, varer, olje til basen og om det har strøm) – eller hva det ville gitt hvis du tar det, og hva det gir motstanderen som holder det. Under hver side står hva tettstedene deres gir.",
 "Lag og strid"
 ],
 [
@@ -335,6 +410,31 @@ window.HJELP_TILLEGG = [
 "Kjøretøy på lekter og ferje",
 "En lekter tar to kjøretøy og en ferje seks. Kjør kjøretøyet bort til båten mens den ligger ved kai, velg båten og trykk «Kjør om bord». Lag som sitter i kjøretøyet, følger med. Ved neste kai: «Kjør i land».",
 "Lag og strid"
+],
+[
+"Bord eller senk fiendens båter",
+"Fiendens forsyningsbåter (og båter med soldater) kan stoppes på tre måter: miner og vrak som før, ild – et lag innen 450 m som ser båten, skyter på den til den synker – eller bording: velg en egen båt med et lag om bord og trykk «Bord den» under «Fiendens forsyningsbåter». Båten jager forsyningsbåten, og når den er innen 60 m, tas lasten. Garnisonen som skulle hatt forsyningene, er avskåret og treffer dårligere. Fiendens båter skyter tilbake – på båtene dine og på lag som står nær vannet. Dine båter har også helse: en skadet båt repareres ved en kai nær leiren, og synker den, svømmer laget i land og mister noen.",
+"Lag og strid"
+],
+[
+"Fienden bruker sjøen",
+"Fiendens lag kan også ta båt: står de ved en kai og skal til et sted der sjøvegen er mye kortere enn vegen, går de om bord i en sjark og går i land ved kaia nær målet. Senk båten underveis, så mister de halvparten av mennene.",
+"Lag og strid"
+],
+[
+"Kaier i 3D og ved oppstart",
+"I 3D kan du trykke på en egen båt eller nær en kai for å åpne sjøpanelet, og gi båten et mål på samme måte som i kartet. Når du velger leirplass ved oppstart, sier startskjermen hvor nærmeste kai er og hvor stor den er – det avgjør hvilke båter leiren kan få. Tar du en ferje, går ikke ruteferja der lenger.",
+"I 3D"
+],
+[
+"Is på innsjøene",
+"Etter lang kulde legger isen seg på innsjøene. Da kommer ingen båter gjennom der – heller ikke fiendens. Båten finner en annen lei, eller sier at isen stenger. Sjøen fryser aldri.",
+"Vær, lyd og bilde"
+],
+[
+"Sjøpanelet på telefon",
+"På telefon er sjøpanelet et lavt ark nederst med det viktigste på én rad. Trykk «Mer» for alt.",
+"Kom i gang"
 ],
 [
 "Spol til neste hendelse",
@@ -403,7 +503,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Tallene øverst",
-"Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker.",
+"Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk, eller hold fingeren på flisa – da åpnes ikke det flisa ellers åpner) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker. Linja «Påvirkes av» sier hva som gjør tallet større eller mindre.",
 "Kom i gang"
 ],
 [
@@ -418,7 +518,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Merkene i kartet",
-"Formen sier hvem: egne lag er liggende rektangler, fiender er ruter som står på spissen, nøytrale ting er kvadrater. Fargen sier hvilken side. En stiplet rute er der en fiende sist ble sett.",
+"Formen sier hvem: egne er liggende rektangler, fiender er ruter som står på spissen, nøytrale ting er kvadrater. Tegnet inni sier hva: kryss = lag, egne tegn for lastebil, stridsvogn, rakettartilleri, radarbil og speiderbil, ring = tettsted, anker = kai. Fargen sier hvilken side. En stiplet rute er der en fiende sist ble sett. Knappen med tre rader nederst blant zoomknappene viser hele tegnforklaringen.",
 "Lag og strid"
 ],
 [
@@ -447,18 +547,38 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Tegnforklaring",
+"Knappen med tre små rader nederst blant zoomknappene (i 2D) viser hva merkene, fargene og strekene i kartet betyr: egne, fiender og nøytrale, lag, kjøretøy, tettsteder, kaier, marsjruter, fronter, «sist sett» og siktfeltet.",
+"Lag og strid"
+],
+[
+"Paneler",
+"Det står ett panel til venstre og ett til høyre. Åpner du et nytt på samme side, lukkes det gamle – også lagpanelet nede til venstre når du åpner Leir, Folk eller Samfunn (og omvendt når du velger et lag). Målestokken flytter seg til høyre for panelet, og oversikten nede til høyre viker for panelene til høyre.",
+"Kom i gang"
+],
+[
+"Byggelista",
+"På PC står byggene i fanen Bygg som små ruter med ikon, navn og pris – trykk på ruta for å bygge. Pek på en rute for materialer og hva bygget gjør. Trykker du på et bygg i leiren, viser panelet en tegning av det.",
+"Leiren"
+],
+[
+"Flere lag i 3D",
+"Shift + dra med musa i 3D (og i 2D) tegner en ramme rundt lagene du vil velge. Shift + trykk på et lag tar det med eller ut. «Velg lag» i kommandolinja velger alle lagene på skjermen. Høyre museknapp dreier kameraet. Når du velger mål, står marsjtida ved pekeren før du gir ordren.",
+"Lag og strid"
+],
+[
 "Verden rundt dere",
 "Trykk «Verden» nederst (eller på værflisa øverst, eller «Vær og verden» i Leir-menyen under Mål). Der står det hva været og årstiden gjør akkurat nå – føre, is, brannfare og flomfare – og du finner åkeren, jakta, funnene, radioen og toget.",
 "Vær, lyd og bilde"
 ],
 [
 "Vinter som biter",
-"Snø gjør marsjen 30 % tregere, snøvær enda mer, og kolonner blir stående på fjellet i snøvær. Etter lang kulde bærer isen: da kan lagene gå rett over vann og elver. Lag som står ute i sprengkulde i mange timer får frostskader – få dem til leiren eller inn i et tettsted. Leiren bruker mer ved når det er kaldt.",
+"Snø gjør marsjen 30 % tregere, snøvær enda mer, og mens det snør (og noen timer etter, til vegen er brøytet) er vegene over fjellet stengt: kolonner kjører om, eller blir stående og får beskjed hvis det ikke finnes noen omkjøring. Kulda biter på fiendens lag også. Etter lang kulde legger isen seg på innsjøene – først stenger den båtene, så bærer den, og lagene kan gå rett over vann og elver. Lag som står ute i sprengkulde, får frostskader – få dem til leiren eller inn i et tettsted.",
 "Vær, lyd og bilde"
 ],
 [
 "Flom og ras",
-"Etter mye regn kan elver gå over sine bredder og bratte lier rase ut. Stedet merkes i kartet. Det er tungt å gå gjennom, og vegen der er stengt til vannet har trukket seg tilbake eller raset er ryddet. Et ingeniørlag som står i raset, kan rydde det på tre timer.",
+"Etter mye regn kan elver gå over sine bredder og bratte lier rase ut. Flommen følger dalen nedover fra elva og vises som blått vann i kartet og i 3D. Det er tungt å gå gjennom, og vegene der er stengt til vannet har trukket seg tilbake. Et ingeniørlag kan rydde et ras på noen timer.",
 "Vær, lyd og bilde"
 ],
 [
@@ -473,12 +593,12 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Åker",
-"I «Verden» kan du rydde åker ved leiren. Så om våren, så høstes kornet av seg selv når det blir høst – mye mat på én gang. Åkeren synes i kartet ved leiren og trenger folk: én person på «fri» i Folk-panelet per 40 mål – med færre gror kornet saktere. Blir det vinter før du har høstet, fryser avlinga bort. Slå på «Årstidene går av seg selv» hvis du vil at året skal gå uten at du bytter årstid i menyen.",
+"En åker er et bygg i leiren: trykk «Anlegg en åker» i «Verden» (eller velg Åker under Annet i byggelista) og legg den der det er flatt og åpent – et byggelag rydder og pløyer den. Så om våren, så høstes kornet av seg selv når det blir høst – mye mat på én gang. I 3D ser du radene vokse fra grønt til gult. Åkeren trenger folk på «fri», og modent korn brenner lett: en brann i åkeren tar avlinga.",
 "Leiren"
 ],
 [
 "Funn i terrenget",
-"Rundt i terrenget ligger bilvrak, gjemte depoter, forlatte leirer og flyvrak. Lagene melder fra når de ser noe, og stedet får et gult merke i kartet. Send et lag helt bort og trykk «Undersøk» – det kan gi materialer, mat, diesel eller penger. Noen er tomme, og en forlatt leir kan være en felle.",
+"Rundt i terrenget ligger bilvrak, gjemte depoter, forlatte leirer og flyvrak. Lagene melder fra når de ser noe, og stedet får et gult merke i kartet. Send et lag helt bort og trykk «Undersøk» – det kan gi materialer, mat, diesel eller penger. Noen er tomme, og en forlatt leir kan være en felle. Funnene ligger aldri midt i et tettsted eller i vannet, og i 3D ser du kasser, tønner, sekker, telt eller vraket der de ligger.",
 "Lag og strid"
 ],
 [
@@ -490,5 +610,15 @@ window.HJELP_TILLEGG = [
 "Tog",
 "Holder du to tettsteder som jernbanen går gjennom, kan du sette banen mellom dem i stand i «Verden». Da kommer det et tog hvert døgn med mye tre, betong, stål, diesel og mat – så lenge du holder begge stasjonene.",
 "Leiren"
+],
+[
+"Kratere og spor",
+"Miner, rakettsalver og sprengte kjøretøy etterlater kratere, og kjøretøy i terrenget lager hjulspor. Kraterne og de ferskeste sporene blir liggende også etter at du har lastet spillet på nytt.",
+"I 3D"
+],
+[
+"Dyr du har felt",
+"Et dyr du har skutt selv, kommer ikke tilbake når du går videre eller laster spillet på nytt.",
+"I 3D"
 ]
 ];
