@@ -13,6 +13,10 @@
  *  6. Startskjermen, hjelpen og kortene midt på skjermen lå under klokka/hakket øverst.
  *  7. Når du går, sto zoomknappene (som ikke gjør noe da) tett i Hopp-knappen.
  *  8. Opplæringslinja nederst dekket det siste i Leir-menyen.
+ * 10. Krigskartet var gjennomsiktig (panelet bak skinte gjennom), Tiltak-panelet gikk ut over venstre kant, og linja under
+ *     hvert navn i Folk brakk midt i.
+ * 11. Liggende telefon mens du går: helse- og våpenruta lå oppå Skyt, Huk og Hopp, og våpenbyttet oppå minikartet.
+ *     Rutene står nå nederst i midten, og våpenbyttet til venstre for Skyt.
  *  9. Fliser i raden nederst som ikke finnes ennå (hidden), vistes likevel (display:flex slo ut hidden).
  */
 (() => {
@@ -35,6 +39,14 @@ body.kort #oppstart, body.kort #hjelp, body.kort #formkort, body.kort #krigkort,
 body.kort #oppstart .ark{ max-height:100%; box-sizing:border-box; } body.kort #hjelp .ark{ max-height:100%; box-sizing:border-box; }
 body.kort.tlfopp #leirmeny, body.kort.tlfopp #folkmeny{ padding-bottom:46px; }
 body.kort #verdenpanel{ background:#181613; }
+body.kort #krig{ background:#1a150d; }
+body.kort #evpanel{ background:#1a150d; }
+body.kort:not(.smal) #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + ${B}); }
+body.kort #krigpanel{ left:calc(8px + ${L}); right:calc(8px + ${Rt}); width:auto; box-sizing:border-box; }
+body.kort #folkmeny .person small{ display:block; margin-top:2px; }
+body.kort #folkmeny select, body.kort #samfunnmeny select, body.kort #stridpanel select, body.kort #tropppanel select{ min-height:40px; }
 body.kort #flytkort{ max-width:calc(100vw - 24px); }
 `;
   document.head.appendChild(css);
