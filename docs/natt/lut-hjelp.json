@@ -18,5 +18,30 @@
   "Fersk mat",
   "Melk, brød, pølser, egg og epler blir gamle og så råtne etter noen døgn. Gammel mat metter mindre, råtten mat gjør deg dårlig (minus helse). Hermetikk, knekkebrød, tørrfisk og saft holder; brunost holder lenge, men ikke evig. Et kjøleskap holder maten fersk fire ganger så lenge – men bare så lenge det er strøm. I leiren kan du gi mat til folket («Gi til leiren»): den blir rasjoner i matlageret.",
   "I 3D"
+ ],
+ [
+  "Flytte møbler",
+  "Står du ved et møbel (inne i et hus, i leirens bygg eller ute), kommer knappen «Plukk opp …» (P på PC). Et gjennomsiktig bilde av møbelet står foran deg og følger blikket: grønt = her kan det stå, rødt = ikke plass (vegg, et annet møbel, døråpning, vann eller hus). R dreier det, E (eller «Sett her») setter det ned, «Sett tilbake» legger det der det sto. Det som ligger i et skap eller kjøleskap, følger med – opptil 20 kg, ellers må du ta ut noe først. Store møbler bærer du i armene: du går tregere og kan verken løpe eller skyte. Traktorer, biler og fly er for tunge. Et kjøleskap i en brakke med strøm holder maten kald.",
+  "Leiren"
+ ],
+ [
+  "Lommelykt",
+  "Har du en lommelykt i sekken, slår L (eller knappen «Lykt» til venstre når du går) den på og av. Om natta lyser den opp bakken foran deg, og du ser lenger – men fiendene ser deg også mye lenger unna, og mørket skjuler deg ikke lenger. Et sett batterier varer i 8 spilltimer; «Bytt batterier» bruker én pakke batterier fra sekken.",
+  "I 3D"
+ ],
+ [
+  "Sove ute og sovepose",
+  "Er du trøtt ute, kommer knappen «Sov her». Med en sovepose i sekken sover du like godt som i et sikret hus. Uten sovepose sover du halvt så godt – og om vinteren fryser du: lite søvn, du blir sulten og mister litt helse. Soveposer finner du i garderober og hytter.",
+  "I 3D"
+ ],
+ [
+  "Feltflasker",
+  "Flaska di rommer fire slurker. Hver ekstra feltflaske du finner i husene, gir fire slurker til («Flaske 3/8»). Flaskene fylles av seg selv i leiren (når leiren har vann) og når du står ved et vann eller en bekk.",
+  "I 3D"
+ ],
+ [
+  "Ransakede hus",
+  "Røvere og fiendelag som går forbi et hus, tar med seg det som ligger i det – jo lenger de er der, jo mindre blir igjen. I panelet står det «huset er ransaket». Butikker og lagre fylles litt på igjen hvert tredje døgn. Husene nærmest en ny leir er aldri tomme.",
+  "I 3D"
  ]
 ]

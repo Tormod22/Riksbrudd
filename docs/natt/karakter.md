@@ -97,3 +97,16 @@ Bare `site/dovre-fliser/index.html`: to skript-tagger rett før `spill/meny.js` 
 - **Fellesfil/andres fil endret i runde 2:** `spill/verden-visning.js` (pakka «verden»), én linje i jaktløkka: spør
   `EventyrSpill.felteDyr` før kjøttet legges i leiren.
 - Ikke gjort: fanger og brann er ikke koblet til karakteren; soving er ikke prøvd mens et angrep faktisk starter (bare koden for vekking).
+
+## Runde 5 (18.–19. nov kveld) – punkt 6 og 7 fra gjennomspillingene (pakka «lut» gjorde dem)
+- **6. Utslitt når du spoler:** `Karakter.stell({ spoler, avst, vann, mat })` i karakter.js (test i `test_karakter.js`). Spoler du
+  (farten 60× eller mer, `R.spoling`) og står innen 600 m fra leiren (`R.vedLeir`; ellers 150 m som før), steller du deg av leirens
+  lager: drikker (vannverk eller brønn), spiser én rasjon av leirens mat og sover (som før). Det leiren mangler (vann eller mat), synker
+  70 % saktere (`R.brems` 0,3) – du venter og sparer. Ute på tur (lenger unna eller uten spoling) merkes behovene som før. I testene
+  skjer ingenting av seg selv (som før: `KarakterSpill.test`). Testen spoler tre døgn ved leiren uten å bli utslitt.
+- **7. «Gå» ved karakteren:** gange.js – «Gå» starter ved siden av et valgt lag som før; ellers der karakteren din står (hvis den er i
+  3D-utsnittet), og karakteren følger deg mens du går (`Gange.vedKarakter()`), så neste «Gå» starter der du slapp. Ellers der kameraet ser.
+  `ledig()` leter fortsatt i en spiral etter et fritt sted (ikke i hus, tre eller vann). En ordre karakteren hadde, stoppes når du tar over.
+- Vakten `vakter/karakter.js` prøver begge (stell/brems, og at «Gå» starter innen 61 m fra karakteren og følger den).
+- Også i eventyr-visning.js (runde 5): «Sov her» ute med/uten sovepose, flere feltflasker, fylling ved bekker, lommelykta i raden og
+  i snikingen – se docs/natt/lut.md.
