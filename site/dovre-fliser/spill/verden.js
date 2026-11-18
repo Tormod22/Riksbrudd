@@ -16,11 +16,14 @@
   // Claudes forslag – alle tallene i pakka
   const REGLER = {
     // snø: marsjfart på snødekt mark og i snøvær (faktorer), storm i tillegg; fjellveger over «vegFjell» moh. stenger i snøvær
-    snø: { marsj: .7, snøvær: .8, storm: .85, vegFjell: 900 },
+    snø: { marsj: .7, snøvær: .8, storm: .85, vegFjell: 900, brøyt: 6, sjekk: 10 },
+    // (brøyt: timer etter at snøværet har gitt seg før fjellvegene er brøytet og åpne igjen; sjekk: spillminutter mellom hver gang
+    //  kolonnenes ruter sjekkes mot stengte høye lenker)
     // temperaturen faller med høyden (grader per 100 m over dalen, 650 moh.)
     temp: { perHundre: .6, dal: 650 },
     // is: døgngrader med kulde før isen bærer folk til fots, mest is, hvor fort den tiner (per varmegrad-døgn), fart på isen (km/t)
-    is: { bærer: 25, maks: 80, tiner: 4, fart: 2.5 },
+    is: { bærer: 25, maks: 80, tiner: 4, fart: 2.5, båt: 10, sjø: 1 },
+    // (båt: døgngrader før isen stenger båter på innsjøene; sjø: vann under så mange moh. er sjøen, som ikke fryser)
     // kulde: lag som står ute (ikke i leir eller tettsted) under «grense» grader tåler «timerFør» timer; så blir én mann såret (aldri drept) hver «timerPer» time; «læ» = innen så mange meter fra leiren står de ikke ute
     // ved: ekstra tre (m³ per døgn) i leiren per 10 grader under «vedFra»
     kulde: { grense: -8, timerFør: 12, timerPer: 8, vedFra: -8, ved: 1, læ: 500 },
@@ -74,7 +77,18 @@
   }
   // Er en veg i denne høyden stengt av snøvær?
   const vegStengt = (vær, moh) => vær.snø > .5 && moh >= REGLER.snø.vegFjell;
+  // Snø stenger høye veglenker: gir høyden (moh.) som veglenker over er stengt, eller null. timerSiden = timer siden det sist snødde.
+  // Det må snø (eller ha snødd for mindre enn «brøyt» timer siden); grensen er fjellgrensen eller snøgrensen, det som er høyest.
+  function snøVegGrense(vær, timerSiden) {
+    const S = REGLER.snø, snør = vær.snø > .5 || (timerSiden != null && timerSiden < S.brøyt);
+    return snør && vær.snøgrense < S.vegFjell * 2 ? Math.max(S.vegFjell, Math.round(vær.snøgrense)) : null;
+  }
+  // Er lenken over grensen? høyder = [moh, ...] langs lenken (null = ukjent – da er den åpen)
+  const lenkeStengt = (grense, høyder) => grense != null && høyder.some(h => h != null && h > grense);
   const isBærer = V => V.frost >= REGLER.is.bærer;
+  // Islagt vann (pakka «sjo» kan bruke det for båter): ferskvann (vannflate over 1 moh., ikke sjøen) etter så mye kulde at isen har lagt seg.
+  // moh = høyden på vannflaten, klasse = terrengklasse (3 = vann). Isen stenger båter før den bærer folk (REGLER.is.båt).
+  const islagt = (V, moh, klasse) => klasse === 3 && moh != null && moh > REGLER.is.sjø && V.frost >= REGLER.is.båt;
   // Ekstra ved (m³ tre) leiren bruker på d døgn i kulda
   const vedEkstra = (temp, d) => Math.max(0, (REGLER.kulde.vedFra - temp) / 10) * REGLER.kulde.ved * d;
   // Et lag (id) har stått ute i «timer» timer ved temperaturen temp. Gir antall treff kulda gir nå (0 for det meste).
@@ -304,7 +318,7 @@
 
   function fraJSON(d) { const V = ny(); if (!d || d.versjon !== 1) return V; for (const k of Object.keys(V)) if (d[k] != null) V[k] = typeof V[k] === 'object' && !Array.isArray(V[k]) ? { ...V[k], ...d[k] } : d[k]; if (!V.brann.celler) V.brann = nyBrann(); return V; }
 
-  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
+  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
     nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
     funnIBlokk, funnNær, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

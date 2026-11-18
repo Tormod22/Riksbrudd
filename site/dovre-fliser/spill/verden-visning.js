@@ -116,14 +116,63 @@
     for (const k of KJORETOY) { if (!k.sti || k.oppdrag || (k.side && k.side !== 'blå')) continue; const h = moh(k.x, k.y); if (h == null || !W.vegStengt(v, h)) continue;
       Kjoretoy.stopp(k); logg(`${k.navn} står fast i snøen på fjellet (${Math.round(h)} moh.). Vent til snøværet gir seg.`); skitten = true; }
   }
+  // SNØ STENGER HØYE VEGLENKER (runde 4): mens det snør (og «brøyt» timer etter), er veglenker over fjellgrensen/snøgrensen stengt.
+  // Høyden regnes bare der det trengs: når en rute bes om (Kjoretoy.planlegg pakkes inn – lenker vi alt vet er for høye, er ikke lov)
+  // og for lenkene på rutene til kolonner som kjører (høydene hentes da). Lenkene vi finner, sperres i vegnettet og åpnes igjen etterpå.
+  const snøLenker = new Set(), lenkeH = new Map();
+  let snøGrense = null, sistSnø = -1e9, sistSnøSjekk = -1e9;
+  // høyden på et punkt uten å hente noe (null = ukjent)
+  function mohKjent(x, y) { let h = null; try { h = hoydeVed(x, y); } catch (e) { h = null; } if (h != null) return h; const v = vinduFor(x, y); return v ? les(v, x, y).h : null; }
+  // høydene langs lenken: start, midten og slutt (husket når alle tre er kjent). hent = be om kartet der det mangler.
+  function lenkeHøyder(g, e, hent) {
+    if (lenkeH.has(e)) return lenkeH.get(e); let L; try { L = g.linje(e); } catch (er) { return []; }
+    const pkt = [L[0], L[L.length >> 1], L[L.length - 1]], hs = pkt.map(p => hent ? moh(p[0], p[1]) : mohKjent(p[0], p[1]));
+    if (hs.every(h => h != null)) { lenkeH.set(e, hs); if (lenkeH.size > 20000) lenkeH.delete(lenkeH.keys().next().value); } return hs;
+  }
+  // pakk inn rutesøket: når snøen stenger, er lenker over grensen ikke lov (bare de vi kjenner høyden til)
+  (function pakkPlanlegg() {
+    if (!window.Kjoretoy || Kjoretoy.planlegg.verden) return; const før = Kjoretoy.planlegg;
+    const ny = function (kj, graf, mål, valg = {}) {
+      if (snøGrense == null || !graf || !graf.linje) return før.call(this, kj, graf, mål, valg);
+      const t0 = valg.tillat, grense = snøGrense;
+      return før.call(this, kj, graf, mål, { ...valg, tillat: l => (!t0 || t0(l)) && !snøLenker.has(l.id) && !W.lenkeStengt(grense, lenkeHøyder(graf, l.id, false)) });
+    };
+    ny.verden = true; Kjoretoy.planlegg = ny;
+  })();
+  function åpneSnø() { const g = window.VEGNETT, flom = new Set(); for (const l of stengt.values()) for (const e of l) flom.add(e);
+    if (g) for (const e of snøLenker) if (!(g._sperretAv && g._sperretAv.has(e)) && !flom.has(e)) g.åpne(e); snøLenker.clear(); }
+  // kolonnene som kjører: ligger det en stengt lenke foran dem? Da sperres den, og de kjører om – eller blir stående.
+  function snøRuter() {
+    const g = window.VEGNETT; if (!g || snøGrense == null || typeof KJORETOY === 'undefined') return 0; let n = 0;
+    for (const k of KJORETOY) { if (!k.sti) continue; let lenker; try { lenker = Kjoretoy.lenkerIgjen(k); } catch (e) { continue; }
+      const høye = lenker.filter(e => !snøLenker.has(e) && W.lenkeStengt(snøGrense, lenkeHøyder(g, e, true)));
+      if (!høye.length) continue; n++; for (const e of høye) { snøLenker.add(e); g.sperr(e); }
+      const P = k.sti.P, r = Kjoretoy.planlegg(k, g, [P[P.length - 2], P[P.length - 1]]), egen = !k.side || k.side === 'blå';
+      if (r.feil) { Kjoretoy.stopp(k); k.oppdrag = null; if (egen) logg(`${k.navn}: snøen har stengt fjellvegen (over ${tall(snøGrense)} moh.), og det finnes ingen omkjøring. Kolonnen venter til vegen er brøytet.`); }
+      else if (egen) logg(`${k.navn} kjører om: vegen over ${tall(snøGrense)} moh. er stengt av snø.`);
+      skitten = true; }
+    return n;
+  }
+  function snøVegSteg(v) {
+    if (v.snø > .5) sistSnø = tid; const g = W.snøVegGrense(v, (tid - sistSnø) / 60);
+    if (g !== snøGrense) { const før = snøGrense; snøGrense = g; lenkeH.clear();
+      if (g == null) { åpneSnø(); if (klar) logg('Fjellvegene er brøytet og åpne igjen.'); }
+      else { if (før != null) åpneSnø(); sistSnøSjekk = -1e9; if (klar && før == null) logg(`Snøværet stenger vegene over ${tall(g)} moh. Kolonner som skal over fjellet, kjører om eller venter.`); } }
+    if (g != null && (tid - sistSnøSjekk >= R.snø.sjekk || tid < sistSnøSjekk)) { sistSnøSjekk = tid; snøRuter(); }
+  }
   function kuldeTime(v, timer) {
     const l = leir(), L = LL();
     for (const s of ENHETER) {
-      if (s.side !== 'blå' || !levende(s) || s.leirvakt) continue;
-      const ute = !(l && Math.hypot(s.x - l.x, s.y - l.y) < R.kulde.læ) && !s.ombord && !iBy(s.x, s.y), h = moh(s.x, s.y);
-      const t = W.tempVed(v, h == null ? leirMoh() : h), før = V.kulde[s.navn] || 0, n = W.kuldeSteg(V, s.navn, timer, t, ute), nå = V.kulde[s.navn] || 0, varsel = R.kulde.timerFør * .6;
-      if (før < varsel && nå >= varsel && !n) logg(`${s.navn} begynner å fryse (${Math.round(t)} °C). Få dem til leiren eller inn i et tettsted før noen får frostskader.`);
+      if (!levende(s) || s.leirvakt) continue;
+      // fiendens lag fryser også (runde 4): ute = ikke i et tettsted og ikke om bord; de har ingen leir å gå til
+      const egen = s.side === 'blå', id = egen ? s.navn : s.side + ':' + s.navn;
+      const ute = !(egen && l && Math.hypot(s.x - l.x, s.y - l.y) < R.kulde.læ) && !s.ombord && !iBy(s.x, s.y), h = moh(s.x, s.y);
+      const t = W.tempVed(v, h == null ? leirMoh() : h), før = V.kulde[id] || 0, n = W.kuldeSteg(V, id, timer, t, ute), nå = V.kulde[id] || 0, varsel = R.kulde.timerFør * .6;
+      if (egen && før < varsel && nå >= varsel && !n) logg(`${s.navn} begynner å fryse (${Math.round(t)} °C). Få dem til leiren eller inn i et tettsted før noen får frostskader.`);
       if (!n) continue;
+      if (!egen) { for (let i = 0; i < n; i++) { const friske = s.menn.filter(m => m.hp >= 1); if (!friske.length) break; friske[Math.floor(rng() * friske.length)].hp = .5; }
+        s.siktSkitten = true; if (s.menn[s.leder] && s.menn[s.leder].hp < 1) { const ny = s.menn.findIndex(q => q.hp >= 1); if (ny >= 0) s.leder = ny; }
+        if (typeof synlig === 'function' && synlig(s)) logg(`${s.navn} (fienden) fryser ute i ${Math.round(t)} °C og har fått frostskader.`); endret(); continue; }
       // kulda sårer, men dreper ikke: en frisk mann blir såret
       const ut = []; for (let i = 0; i < n; i++) { const friske = s.menn.filter(m => m.hp >= 1); if (!friske.length) break; const m = friske[Math.floor(rng() * friske.length)]; m.hp = .5; ut.push(m.navn); }
       if (!ut.length) continue; s.siktSkitten = true;
@@ -363,7 +412,7 @@
     if (BRANNER.length && (sistSkade == null || tid - sistSkade >= 30 || tid < sistSkade)) { sistSkade = tid; brannSkade(); }
     if (!auto()) { if (window.VERDEN_IS) isSteg(); return; }
     // det som skjer av seg selv (ikke i testene)
-    W.steg(V, dt, v); if (dt) endret(); isSteg(); marsjSteg(v); snøVeg(v); sjekkFunn();
+    W.steg(V, dt, v); if (dt) endret(); isSteg(); marsjSteg(v); snøVeg(v); snøVegSteg(v); sjekkFunn();
     const time = Math.floor(tid / 60);
     if (sistTime == null) sistTime = time;
     if (time !== sistTime) { const timer = Math.min(6, Math.max(1, time - sistTime)); sistTime = time; kuldeTime(v, timer); regnHendelse().catch(e => console.error(e));
@@ -583,7 +632,7 @@
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
   Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, startJakt, viltHer, ryddÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
-    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
+    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     åkerFolk, spor: () => spor, D3: () => D3, LEIRBRANN, slokkILeiren, brennbar,
     ryddKart() { for (const s of V.soner) åpneVeger(s); V.soner = []; V.brann = W.nyBrann(); brannLister(); skitten = true; endret(); } });
