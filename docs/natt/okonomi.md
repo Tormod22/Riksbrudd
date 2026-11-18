@@ -100,3 +100,8 @@ Lagring: «riksbrudd-region» per leir.
 - **Vakten er robust:** eget prøvetettsted («Prøveby», id «øk1», 3 km øst for leiren) som legges inn og tas bort, alle fiendelag flyttes
   600 km bort mens den prøver og settes tilbake, og mangler infrastrukturen (INFRA = null), lages en tom mens vakten går.
   Prøvd etter alle de andre vaktene i samme side (alfabetisk) på PC og mobil, og uten infrastruktur.
+
+## Runde 4
+- Vakten målte «hard skatt gir mer» på summen av ALLE tettstedene spilleren holdt. Når en tidligere vakt hadde latt Dombås være blått,
+  druknet prøvebyens forskjell (120 000 → 204 000 kr) i summen (235 000 → 319 000, under kravet ×1,5). Regelen var riktig; vakten måler nå
+  prøvebyen alene (`RegionSpill.girFor(id)`, ny). «Gir»-teksten i vakten gjelder også bare prøvebyen.
