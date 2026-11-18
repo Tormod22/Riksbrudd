@@ -12,7 +12,7 @@
     øye: 1.7, øyeHuk: 1, øyeLigg: .35, radius: .3,   // m
     bratt: .84,                              // stigning (høyde/lengde) der det stopper: ca. 40°
     løpTid: 12, hvile: 6, løpIgjen: .25,     // s med løping på full utholdenhet; s for å fylles helt; må ha 25 % før du kan løpe igjen
-    stup: 2.5,                               // m: går du utfor en kant som er høyere enn dette, faller du (s.landet = farten du lander med)
+    stup: 2.5,                               // m: går du utfor en kant som er høyere enn dette, faller du (s.landet er farten du lander med)
     skritt: .75, gynge: .035,                // m per skritt; hvor mye hodet gynger opp og ned (m)
   };
   function ny(x, y, z) { return { x, y, z, vx: 0, vy: 0, vz: 0, bakke: true, huk: false, øye: R.øye, utholdenhet: 1, sliten: false, fase: 0, løper: false, fart: 0, ligg: false, landet: 0 }; }
