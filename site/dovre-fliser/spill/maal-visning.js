@@ -26,9 +26,11 @@
     const nye = Maal.vurder(T, ferdige); if (!nye.length) return nye;
     lagre();
     // én melding, også når flere mål nås samtidig (ellers skyver de alt annet ut av loggen)
-    if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => Maal.finn(id).tekst.toLowerCase());
+    // bare første bokstav gjøres liten («gå selv i 3D», ikke «3d»)
+    const liten = t => t.charAt(0).toLowerCase() + t.slice(1);
+    if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => liten(Maal.finn(id).tekst));
       if (s.krigÅpen && nye.some(id => Maal.GRUNN.some(m => m.id === id))) setTimeout(() => logg('Leiren står. Nå gjelder det krigen om regionen – nye mål står under Leir → Mål, og «Krig» viser kartet.'), 2500);
-      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${s.neste.tekst.toLowerCase()}.` : ' Alle målene er nådd.')); }
+      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${liten(s.neste.tekst)}.` : ' Alle målene er nådd.')); }
     return nye;
   }
   const kort = () => { const s = Maal.stilling(ferdige); return s.kapittel < 0 ? '✓' : `${s.totalt}/${s.alle}`; };
