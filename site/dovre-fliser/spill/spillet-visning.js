@@ -275,7 +275,9 @@
     T = les('riksbrudd-trussel') || { bølge: 0, aktiv: 0 }; const avbrutt = T.aktiv; T.aktiv = 0; T.borteFra = null;
     // (balansen 18. nov) siden ble lastet på nytt midt i et angrep: røverlagene lagres ikke, og før forsvant de mens bølgenummeret
     // økte. Nå begynner den samme bølgen på nytt om 20 spillminutter / ett minutt spilling (Claudes forslag).
-    if (avbrutt) { T.bølge = avbrutt - 1; T.nesteSpill = tid + 20; T.nesteEkte = 60; if (auto()) logg('Røverne som angrep leiren, har samlet seg igjen – de kommer tilbake om litt.'); }
+    // (runde 5) røverlagene er lagret (spill/trussel-lagring.js): angrepet fortsetter der det var. Mangler lagringen, som før.
+    if (avbrutt && window.TrusselLagringSpill && TrusselLagringSpill.tilbake(avbrutt) > 0) { T.aktiv = avbrutt; T.bølge = Math.max(T.bølge, avbrutt); T.nesteSpill = T.nesteEkte = Infinity; }
+    else if (avbrutt) { T.bølge = avbrutt - 1; T.nesteSpill = tid + 20; T.nesteEkte = 60; if (auto()) logg('Røverne som angrep leiren, har samlet seg igjen – de kommer tilbake om litt.'); }
     else { T.nesteSpill = tid + (T.bølge ? Trussel.vent(T.bølge + 1).spill / 2 : Trussel.BALANSE.først.spill); T.nesteEkte = (T.bølge ? Trussel.vent(T.bølge + 1).ekte / 2 : Trussel.BALANSE.først.ekte) * 60; }
     M = les('riksbrudd-marked') || Marked.ny(); M.spilldag = Math.floor(tid / 1440); M.ekte = 0; if (auto()) settPriser();
     O = les('riksbrudd-oppdrag') || { nr: 0, liste: [], gjort: 0 }; for (const o of O.liste) if (o.type === 'post' && o.tatt && !ENHETER.some(e => e.post === o.id)) { for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); } }

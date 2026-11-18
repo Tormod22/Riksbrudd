@@ -1,0 +1,71 @@
+/* Riksbrudd – DØGNOPPGJØRET (runde 5, 18.–19. nov, pakke «balanse»). Dagboka (spill/dagbok.js) skriver hver morgen kl. 06 hvor mange
+ * dere er, moral, mat, diesel og kassa. Det den ikke sier, er hva som HENDTE siste døgn: angrep (slått tilbake eller herjet), egne
+ * sårede og falne, bygg som ble ødelagt eller skadet, hus dere lette gjennom, folk som kom eller dro – og hvor lenge maten rekker.
+ * Dette er en linje rett etter dagbokas rapport: «Siste døgn: bølge 3 slått tilbake. 2 nye sårede. Brakke ødelagt. 2 hus gjennomsøkt.
+ * Mat til 3,4 døgn.» (maten bare når dagboka mangler – den står alt i dagbokas rapport rett over).
+ * Reglene øverst er uten DOM (Node: require('./forsvar-oppgjor'); nettleser: globalThis.Oppgjor) – test_forsvar_oppgjor.js.
+ * I testene (navigator.webdriver) skrives ingenting av seg selv: OppgjorSpill.test = true slår det på.
+ */
+(function (rot) {
+  'use strict';
+  const des = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',').replace(/,0$/, '');
+  // Claudes forslag: et bygg som har tapt mer enn «skadet» av helsa på et døgn, regnes som skadet; et bygg som er borte og sist hadde
+  // under «ødelagt» helse, regnes som ødelagt (ellers revet av spilleren og ikke nevnt)
+  const REGLER = { skadet: .05, ødelagt: .6, maksBygg: 3 };
+  // b: { bølge (bølger startet), aktiv (bølgen som pågår, 0 = ingen), herjet (bølger som endte med herjing), friske, såret, falne
+  //      (egne menn i lagene), slåttUt (egne lag slått ut), bygg: [{ id, navn, hp }], hus (gjennomsøkt), folk, mat, matDøgn }
+  // ferdige bølger = bølge − (aktiv ? 1 : 0); slått tilbake = ferdige − herjet (sabotører som slapp unna regnes også som herjet)
+  function tekst(før, nå) {
+    if (!før || !nå) return null;
+    const deler = [], ferdig = b => (b.bølge || 0) - (b.aktiv ? 1 : 0);
+    const nyeFerdig = Math.max(0, ferdig(nå) - ferdig(før)), nyeHerjet = Math.max(0, (nå.herjet || 0) - (før.herjet || 0)), slått = Math.max(0, nyeFerdig - nyeHerjet);
+    if (slått) deler.push(slått === 1 ? `bølge ${ferdig(nå) - nyeHerjet} slått tilbake` : `${slått} bølger slått tilbake`);
+    if (nyeHerjet) deler.push(nyeHerjet === 1 ? 'røverne herjet i leiren og tok et bytte' : `røverne herjet i leiren ${nyeHerjet} ganger`);
+    if (nå.aktiv) deler.push(`bølge ${nå.aktiv} pågår`);
+    const såret = Math.max(0, (nå.såret || 0) - (før.såret || 0)), falne = Math.max(0, (nå.falne || 0) - (før.falne || 0)), ute = Math.max(0, (nå.slåttUt || 0) - (før.slåttUt || 0));
+    if (såret || falne) deler.push([såret ? `${såret} ${såret === 1 ? 'ny såret' : 'nye sårede'}` : '', falne ? `${falne} falt` : ''].filter(Boolean).join(', '));
+    if (ute) deler.push(ute === 1 ? 'ett lag er slått ut' : `${ute} lag er slått ut`);
+    const nåId = new Map((nå.bygg || []).map(b => [b.id, b])), ødelagt = (før.bygg || []).filter(b => !nåId.has(b.id) && b.hp < REGLER.ødelagt).map(b => b.navn);
+    const skadet = (før.bygg || []).filter(b => nåId.has(b.id) && b.hp - nåId.get(b.id).hp > REGLER.skadet).length;
+    if (ødelagt.length) deler.push(`${ødelagt.length > REGLER.maksBygg ? ødelagt.length + ' bygg' : ødelagt.join(', ')} ødelagt`);
+    if (skadet) deler.push(`${skadet} ${skadet === 1 ? 'bygg' : 'bygg'} skadet`);
+    const hus = Math.max(0, (nå.hus || 0) - (før.hus || 0)); if (hus) deler.push(`${hus} ${hus === 1 ? 'hus' : 'hus'} gjennomsøkt`);
+    const folk = (nå.folk || 0) - (før.folk || 0); if (folk) deler.push(folk > 0 ? `${folk} ${folk === 1 ? 'ny' : 'nye'} i gjengen` : `${-folk} har dratt`);
+    const hendte = deler.length;
+    const stor = s => s.charAt(0).toUpperCase() + s.slice(1);
+    let t = hendte ? 'Siste døgn: ' + deler.map(stor).join('. ') + '.' : 'Siste døgn: Et rolig døgn.';
+    if (nå.folk > 0 && Number.isFinite(nå.matDøgn)) t += ` Mat til ${des(Math.max(0, nå.matDøgn))} døgn${nå.matDøgn < 2 ? ' – kjøp eller skaff mat' : ''}.`;
+    return { tekst: t, hendte };
+  }
+  const api = { REGLER, tekst };
+  if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
+  rot.Oppgjor = api;
+  if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
+
+  // ---------- visningen ----------
+  const NØKKEL = 'riksbrudd-oppgjor';
+  const ut = { test: false }, auto = () => !navigator.webdriver || ut.test;
+  const spill = () => rot.OppstartSpill && OppstartSpill.tilstand();
+  const leirId = () => { const S = spill(); return S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : null; };
+  const dag = t => Math.floor(t / 1440) + 1;
+  let S = null, klar = false;
+  // matDøgn bare når dagboka ikke finnes (ellers står maten i rapporten dens)
+  function bilde() {
+    const L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand(), T = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : {};
+    const egne = ENHETER.filter(e => e.side === 'blå' && !e.karakter && !e.leirvakt && Array.isArray(e.menn)), menn = egne.flatMap(e => e.menn);
+    let matDøgn = Infinity; try { const B = F && L && rot.FolkRegler ? FolkRegler.behov(F, L, FolkSpill.valg ? FolkSpill.valg() : {}) : null; matDøgn = B && Number.isFinite(B.dager) ? B.dager : (F && F.personer.length ? F.mat / F.personer.length : Infinity); } catch (e) { matDøgn = F && F.personer.length ? F.mat / F.personer.length : Infinity; }
+    return { bølge: T.bølge || 0, aktiv: T.aktiv || 0, herjet: T.herjet || 0, friske: menn.filter(m => m.hp >= 1).length, såret: menn.filter(m => m.hp > 0 && m.hp < 1).length, falne: menn.filter(m => m.hp <= 0).length,
+      slåttUt: egne.filter(e => !levende(e) || (rot.Terreng && Terreng.slattUt(e.menn))).length,
+      bygg: L ? L.bygg.filter(b => !b.del && !(b.igjen > 0)).map(b => ({ id: b.id, navn: Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type, hp: Math.round((b.hp === undefined ? 1 : b.hp) * 100) / 100 })) : [],
+      hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, folk: F ? F.personer.length : 0, mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };
+  }
+  const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), d: S })); } catch (e) { /* fullt eller sperret */ } };
+  function start() { const id = leirId(); if (!id) return; let d = null; try { const o = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); d = o && o.leir === id ? o.d : null; } catch (e) { d = null; }
+    S = d && d.før && Number.isFinite(d.dag) ? d : { dag: dag(tid), før: bilde() }; klar = true; lagre(); }
+  rot.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
+  // ny morgen (samme regel som dagboka: ny dag fra kl. 06): oppgjøret etter dagbokas rapport (denne kroken ligger etter dagboka i lista)
+  function morgen(tving) { if (!klar || !S) return null; if (!tving && dag(tid) === S.dag) return null; const nå = bilde(), r = tekst(S.før, nå); S.dag = dag(tid); S.før = nå; lagre();
+    if (r && (auto() || tving)) logg(r.tekst); return r; }
+  KROKER.sim.push(() => { morgen(false); });
+  rot.OppgjorSpill = Object.assign(ut, { bilde, morgen, start, tilstand: () => S });
+})(typeof globalThis !== 'undefined' ? globalThis : this);
