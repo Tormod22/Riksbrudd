@@ -6,7 +6,7 @@
   ],
   [
     "Røverne og byttet",
-    "Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, fortsetter angrepet der det var: røverne står der de sto, med de sårede og det de alt har tatt.",
+    "Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Til sammen har røverne i en bølge på det meste omtrent like mange mann som soldatene dine + 2 (på «Vanlig»; flere på «Hard», færre på «Lett»). Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, fortsetter angrepet der det var: røverne står der de sto, med de sårede og det de alt har tatt.",
     "Lag og strid"
   ],
   [
@@ -33,5 +33,10 @@
     "Siste døgn",
     "Hver morgen kl. 06, rett etter dagboka, kommer en linje i loggen om det som hendte siste døgn: bølger som ble slått tilbake eller som herjet i leiren, nye sårede og falne, lag som ble slått ut, bygg som ble ødelagt eller skadet, hus dere lette gjennom, og folk som kom eller dro.",
     "Kom i gang"
+  ],
+  [
+    "Ammunisjon og hvile hjemme",
+    "Et lag som står stille hjemme i leiren (innen ca. 250 m) mellom angrepene, fyller ammunisjon av seg selv: gratis når basen har olje, ellers fra kassa (en full last koster 200 000 kr, og 300 000 kr blir alltid igjen). De sårede i laget blir sakte bedre – fra hardt såret til frisk på omtrent et døgn. Med sykestue og folk på «Stell» går det fortere. Falne blir ikke friske: lag nye tropper av folkene dine.",
+    "Lag og strid"
   ]
 ]

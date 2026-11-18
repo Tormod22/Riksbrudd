@@ -13,4 +13,8 @@ const leir = { x: 0, y: 0 };
 ok(H.hjemme({ x: 100, y: 0 }, leir, []) && !H.hjemme({ x: R.radius + 1, y: 0 }, leir, []), 'hjemme innen radien');
 ok(!H.hjemme({ x: 10, y: 0, sti: [[0, 0]] }, leir, []) && !H.hjemme({ x: 10, y: 0, ombord: {} }, leir, []), 'ikke på marsj eller om bord');
 ok(!H.hjemme({ x: 10, y: 0 }, leir, [{ x: 500, y: 0 }]) && H.hjemme({ x: 10, y: 0 }, leir, [{ x: 10 + R.fiende + 1, y: 0 }]), 'ikke med en fiende i nærheten');
+const sår = { menn: [{ hp: .3 }, { hp: 0 }, { hp: 1 }, { hp: 1 }] }, hel = { menn: [{ hp: 1 }, { hp: .5 }, { hp: 1 }, { hp: 1 }], ammo: .9 };
+ok(H.børHjem(sår, 1600, 61, 5000) && !H.børHjem(hel, 1600, 61, 5000), 'halvparten ute: hjem; én såret: blir');
+ok(H.børHjem({ ...hel, ammo: .2 }, 1600, 61, 5000), 'nesten tom for ammunisjon: hjem');
+ok(!H.børHjem(sår, 300, 61, 5000) && !H.børHjem(sår, 3500, 61, 5000) && !H.børHjem(sår, 1600, 30, 5000) && !H.børHjem(sår, 1600, 61, 500), 'ikke nær leiren, ikke langt unna, ikke før det har stått en time, ikke med fiender nær');
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);
