@@ -299,12 +299,21 @@ lagene hjemme forsvarer, reparasjon mellom bølgene, lut og sekk. **Alle tallene
 - Lagringen leses bare for samme bølge, ikke når den er eldre enn to spilldøgn (`REGLER.maksAlder`) eller lagret mer enn to spilltimer
   «etter» klokka (`REGLER.framtid` – et nytt spill på samme sted). Røverne står stille og får ordren på nytt etter 1,5 s (de som trakk
   seg ut eller flyktet: samme vei ut). Loggen (ekte spill): «Angrepet fortsetter: ett røverlag i bølge N er fortsatt ved leiren.»
+- I testene (navigator.webdriver) som før – ingen røvere tilbake – med mindre `TrusselLagringSpill.test`, `window.TRUSSEL_LAGRING_TEST
+  = true` før skriptene lastes (omlastingsprøven), eller `tilbake(bølge, true)` (vakta).
+- Prøvd i nettleser (scratchpad `natt5/balanse/prov/omlast.js`, Dovre, PC og mobil): et angrep med to røverlag (ett 220 m fra leiren
+  med 37 min «inne», én såret og én falt; ett som trakk seg ut med 123 000 kr i bytte) – etter omlasting var bølge 1 fortsatt aktiv,
+  begge lagene sto der de sto med samme helse, tid inne og bytte, og gikk videre (alarmen «Angrep: 2 røverlag fra vest 220 m unna»
+  kom igjen). En omlasting etter at bølgen var over ga ingen røvere. Bilder: `natt5/balanse/omlast-pc.png`, `omlast-mobil.png`.
 - **Fellesfil:** `spillet-visning.js` start() – én linje før den gamle: `if (avbrutt && TrusselLagringSpill.tilbake(avbrutt) > 0)` beholder
   bølgen (T.aktiv), ellers som før (samme bølge på nytt om 20 spillminutter).
 
 ### Feil: hjelpen og opplæringen kom samtidig første gang
 - Rettet alt i runde 4 av pakka «telefon2» i `hjelp.js` (første(): åpnes ikke av seg selv mens opplæringen går og ikke er ferdig;
-  opplæringen har «Les mer i hjelpen»). Prøvd på nytt her i et ekte spill (webdriver av, tomt minne) – se under. Vakta sjekker det nå.
+  opplæringen har «Les mer i hjelpen»). Prøvd på nytt her i et ekte spill (scratchpad `natt5/balanse/prov/forste.js`: webdriver av,
+  tomt minne, startskjermen, leiren lagt): 1, 3, 6 og 12 s etter start var bare opplæringen oppe (hjelpen lukket), både på PC og
+  mobil; «Les mer i hjelpen» og «?» åpnet hjelpen. Ingen kodeendring trengtes. Vakta sjekker det nå (Hjelp.første() gir false mens
+  opplæringen går). Bilder: `natt5/balanse/forste-pc.png`, `forste-mobil.png`.
 
 ### Døgnoppgjøret om morgenen (nytt)
 - Dagboka (`dagbok.js`) fantes: folk, moral, mat, diesel og kassa kl. 06. Den sa ikke hva som hendte. Ny fil `spill/forsvar-oppgjor.js`
@@ -312,3 +321,43 @@ lagene hjemme forsvarer, reparasjon mellom bølgene, lut og sekk. **Alle tallene
   tilbake. 2 nye sårede, 1 falt. Brakke ødelagt. 1 bygg skadet. 2 hus gjennomsøkt. 1 har dratt.» (eller «Et rolig døgn»). Maten står i
   dagbokas linje rett over (og i oppgjøret bare når dagboka mangler). Bildet fra i går lagres i `riksbrudd-oppgjor` per leir.
   Ikke i testene (OppgjorSpill.test).
+
+### Gjennomspillingene (/rogaland, Sand 6825, 6627357, webdriver av)
+
+Skriptet fra runde 4 (scratchpad `natt5/balanse/kjA/`: `daemon.js` med `dev.py`, `kjor.sh <døgn> <vanskelighet>`, `s/ny.js`, `hj.js`, `hj2.js`,
+`b1.js`, `b2.js`, `dag.js`; `tabell2.py` lager tabellen) – samme «fornuftige nye spiller» som i runde 4: brakke, aggregat, dieseltank,
+Tropp 1 og vakttårn ved start, 500 l diesel, «Forsvar leiren» ved alarm, «Reparer alle», Tropp 2 fra dag 2, kjøper mat under to døgn,
+første valg på alle kort. Skriptet lager ingen nye tropper etter dag 2, bygger ikke sykestue og henter aldri olje til basen.
+Spilt på en kopi av siden (`snapA/`, `snapB/` …), så arbeidstreet kunne endres imens. «Lag» = sårede eller falne av mennene i laget.
+
+**Kjøring A** (det som var publisert, Vanlig, 10 døgn):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (% = helse) | Lag: sårede eller falne / mann | Slått ut | Bølge | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 12.5 mill. | 4 | 65 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 1 (aktiv) |  |
+| 2 | 12.9 mill. | 4 | 65 | 39 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne.; REPARER Reparer alle (129 121 kr) |
+| 3 | 13.5 mill. | 5 | 77 | 33 | brakke(99%) aggregat(99%) drivstofftank(99%) vakttårn(99%) | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 2 | Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne. |
+| 4 | 13.5 mill. | 7 | 66 | 25 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 Tropp 2:0/4 | 0 | 3 | Angrepet er slått tilbake! Dere tok 750 000 kr fra røverne.; 4 rep. av seg selv |
+| 5 | 12.0 mill. | 7 | 70 | 47 | brakke aggregat drivstofftank vakttårn | Vaktlaget:1/4 Tropp 1:4/4 Tropp 2:4/4 | 2 | 4 | Røvere 4.2 har herjet i leiren og trekker seg ut med byttet: 500 000 kr, 49 l di; MAT kjøpte 50 rasjoner; REPARER Reparer alle (543 784 kr); 2 rep. av seg selv |
+| 6 | 10.3 mill. | 7 | 58 | 32 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:4/4 Tropp 2:4/4 | 3 | 5 | Røvere 5.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr, 44 l di; Motstanderne samler seg. Om et døgn kan de gå løs på leiren din – ha minst to tr; REPARER Reparer alle (648 675 kr) |
+| 7 | 9.0 mill. | 8 | 45 | 22 | brakke(99%) aggregat drivstofftank vakttårn(99%) | Vaktlaget:4/4 Tropp 1:4/4 Tropp 2:4/4 | 3 | 6 | Sabotasje! Røverne har skadet aggregat i leiren og stikker av.; 1 rep. av seg selv |
+| 8 | 7.6 mill. | 9 | 50 | 61 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:4/4 Tropp 2:4/4 | 3 | 7 | Sabotasje! Røverne har skadet aggregat i leiren og stikker av.; MAT kjøpte 50 rasjoner; REPARER Reparer alle (94 243 kr); 1 rep. av seg selv |
+| 9 | 6.5 mill. | 9 | 59 | 32 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:4/4 Tropp 2:4/4 | 3 | 8 | Røvere 8.1 har herjet i leiren og trekker seg ut med byttet: 378 000 kr, 37 l di; 4 rep. av seg selv |
+| 10 | 7.9 mill. | 9 | 46 | 20 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:4/4 Tropp 2:4/4 | 3 | 9 | Angrepet er slått tilbake! Dere tok 1,5 mill. kr fra røverne.; REPARER Reparer alle (166 320 kr) |
+
+- Døgn 1–4: bølge 1–3 (ett lag på 6, 8 og 10) ble slått tilbake (450 000 / 600 000 / 750 000 kr) **uten et eneste sårede** – for lett.
+- Døgn 5: bølge 4 var **to lag på 12 – 24 røvere mot 12 soldater** (taket «soldatene + 2» gjaldt per lag), og lagene hadde bare 46 %
+  ammunisjon igjen (86 % etter bølge 3): basen starter uten olje, og skriptet (som en ny spiller) vet ikke at ammunisjonen fylles med
+  olje på basen. Alle tre lagene ble slått ut (4/4 sårede), og røverne herjet. Vaktlaget sto med 0 % ammunisjon i bølge 5.
+- Fra dag 5 hadde leiren ingen forsvarere: bølge 4, 5 og 8 herjet (500 000 / 500 000 / 378 000 kr + diesel og mat), 6 og 7 var
+  sabotører som slapp unna. Byggene sto likevel (reparert av seg selv), og kassa sank fra 13,5 til 6,5–7,9 mill.
+- Motstanderne (fredstid 7 døgn) kom ikke til leiren på dag 8–10.
+- Svar: leiren **sto** den første uka (byggene), men alle lagene var slått ut fra dag 5 – og de første fire døgnene var uten trykk.
+
+**Det som ble endret etter kjøring A** (alle tallene Claudes forslag):
+
+| Hva | Før | Nå | Fil |
+|---|---|---|---|
+| Taket på røverne | soldatene + 2 per lag (to lag: 2 × 12) | hele bølgen: ⌈(soldatene × faktor + 2) / antall lag⌉ per lag, 5–12 (`Trussel.BALANSE.ekstra` = 2). Med ett lag som før. Vanlig, 12 soldater, to lag: 2 × 7. Hard (faktor 1,5): 3 × 7. Lett (0,6): ett lag på 10. | `spillet.js` Trussel.menn, `spillet-visning.js` (sender antall lag og faktoren) |
+| Ammunisjon hjemme | bare fra olje på basen (starter med 0 t) | et lag som står stille innen 250 m fra leiren mellom angrepene, uten fiender innen 800 m, fyller 25 % av en full last per spilltime når basen ikke har olje; full last 200 000 kr, 300 000 kr blir igjen i kassa. Loggen: «Tropp 1 fyller ammunisjon i leiren (ca. 110 000 kr for full last)», lagpanelet: «fyller ammunisjon i leiren» | ny `forsvar-hjemme.js` (Hjemme.REGLER.ammo) |
+| Sårede hjemme | ble aldri friske uten sykestue | +0,03 helse per spilltime for sårede (0 < helse < 1) i lag hjemme mellom angrepene (hardt såret til frisk på ca. et døgn); falne blir ikke friske; sykestua gjør det fortere som før | `forsvar-hjemme.js` (Hjemme.REGLER.hvile) |
