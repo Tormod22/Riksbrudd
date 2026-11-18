@@ -41,11 +41,17 @@
     for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
     varsel(Trussel.varsel(nr, n, s)); skitten = true; meny(); return true; }
   function angrepSteg() { if (!T.aktiv) { if (auto() && (tid >= T.nesteSpill || ekte >= T.nesteEkte)) { T.nesteSpill = T.nesteEkte = Infinity; angrep(); } return; }
-    const lag = ENHETER.filter(e => e.raid === T.aktiv);
-    if (!lag.some(levende)) { const b = Trussel.belønning(T.aktiv); OppstartSpill.gi(b); const f = F(); if (f) f.moral = Math.min(100, f.moral + 5); varsel(`Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true);
-      for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } T.aktiv = 0; planlegg(); skriv('riksbrudd-trussel', T); meny(); return; }
-    // røvere som står stille langt fra leiren, får ordren på nytt
-    const leir = S().leir; for (const e of lag) if (levende(e) && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    const lag = ENHETER.filter(e => e.raid === T.aktiv), leir = S().leir;
+    // (18. nov) bølgen er over når røverne er slått ut ELLER har holdt seg unna leiren en halv spilltime (Trussel.ferdig)
+    const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn), avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
+    if (st === 'trekker') { if (T.borteFra === undefined || T.borteFra === null) T.borteFra = tid; } else T.borteFra = null;
+    if (st === 'slått' || st === 'unna') { const b = Trussel.belønning(T.aktiv), f = F(), slapp = !!(window.KrigSpill && KrigSpill.slapp && KrigSpill.slapp(T.aktiv));
+      // sabotører som fikk gjort sitt og slapp unna (spill/krig-visning.js): ingen belønning
+      if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); varsel('Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
+      else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); varsel(st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
+      for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
+    // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
+    for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
 
   // ================= MARKED =================
   let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;

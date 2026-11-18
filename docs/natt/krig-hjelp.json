@@ -71,7 +71,12 @@
   ],
   [
     "Når laget er knust og omringet",
-    "Under Tiltak velger du om laget skal gi seg heller enn å dø når det er knust og har fiender på to kanter. Standard er at det aldri gir seg.",
+    "I Stridsregler for laget velger du om det skal gi seg heller enn å dø når det er knust og har fiender på to kanter. Standard er at det aldri gir seg.",
     "Lag og strid"
+  ],
+  [
+    "Når angrepet er over",
+    "Et angrep er slått tilbake når røverne er slått ut, eller når de har trukket seg unna og holdt seg over 2,5 km fra leiren i en halv time. Da får dere belønningen, og neste bølge kommer senere.",
+    "Leiren"
   ]
 ]

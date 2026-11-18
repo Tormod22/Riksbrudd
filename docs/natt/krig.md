@@ -65,7 +65,7 @@ Det spilleren selv setter i gang (røyk, lys, støy, bakhold, artilleri, våpenh
 - **Dekning bak ekte hus:** `husSjekk()` spør `finnBygg` i midten og åtte punkter 14 m rundt et lag som står stille (én gang per sted) ->
   `s.vedHus`. Dekning = terrengklassen tettbebyggelse ELLER `vedHus` (`Krig.husVern(klasse, marsj, vedHus)`, `Krig.husPunkter`).
 - **Væremåten i AI-ens valg:** `Fraksjoner.velg` tar `overtakF` (pågående 0,85, forsiktig 1,25) – terskelen for å angripe.
-- **Egne lag kan gi seg:** Tiltak → «Knust og omringet: aldri gi seg / gi seg» (`s.krig.overgi`, lagres). Seks ute og fiender på to kanter
+- **Egne lag kan gi seg** (flyttet til stridsreglene i runde 3, se under): Seks ute og fiender på to kanter
   innen 600 m -> laget er tapt. Valget ligger IKKE i Stridsregler-panelet fordi kontrollskriptet krever nøyaktig sju valg der
   (`str.valg === 7`) – flytt det dit (Strid.VALG) når sjekk.js kan endres.
 - **Bygdevernet gjelder alle:** også motstandernes lag må slå vernet (de kan ikke gjøre avtaler). Vernets treff er 4 % per mann og runde.
@@ -75,6 +75,19 @@ Det spilleren selv setter i gang (røyk, lys, støy, bakhold, artilleri, våpenh
   holdt startstedet, de andre lagene marsjerte mot nye tettsteder hele tiden, forsterkninger kom etter seks timer, ingen overgivelser,
   ingen sidefeil. Bygdevern med makt (Hjelmelandsvågen) og med avtale (Vikedal, 1 mill. kr), dekning ved et ekte hus, og beleiring
   (svekket etter 6 t, ga seg etter 12 t) virket.
+
+## Runde 3 (samme natt)
+- **Bølgen tar slutt:** `Trussel.ferdig(lag, minutter)` i spill/spillet.js (`Trussel.borte` = 2500 m, `Trussel.borteMin` = 30): over når
+  ingen røverlag kan kjempe (falt eller slått ut – også når restene står langt unna), eller når de som kan, har vært over 2,5 km fra
+  leiren i 30 spillminutter. `angrepSteg` (spillet-visning.js) fjerner da lagene, gir belønningen som før («Røverne har trukket seg
+  unna – angrepet er slått tilbake!») og planlegger neste bølge; `T.borteFra` husker når de trakk seg unna. Lag som er slått ut, får
+  ikke lenger ordren mot leiren på nytt. Røvere som venter på mørket (`e.venterNatt`), teller ikke som unna.
+  Sabotører som slapp unna (`KrigSpill.slapp(nr)`): ingen belønning, moral −5 (det gamle «ta pengene tilbake»-grepet er fjernet).
+- **Stridsvalget:** `Strid.VALG.overgi` (nøkkel `overgi`, verdier `nei` = standard / `ja`) – åttende valg i Stridsregler-panelet.
+  Raden under Tiltak er tatt bort. KONTROLLSKRIPTET må endres fra `str.valg === 7` til 8.
+- **Økonomi-kroken:** fraksjoner-visning.js deler ventetiden på nye lag på `RegionSpill.fordel(side).forsterk` (minst 0,25) når RegionSpill finnes.
+- **Hendelser som stopper spolingen** (`riksbrudd-hendelse`): et lag gir seg (fanger – lagt inn av «spillform»), et eget lag gir seg
+  (fanger), bygdevern slått (annet), beleiring ferdig uten garnison (annet; med garnison kommer «gir seg»), våpenhvile ute (annet).
 
 ## IKKE gjort / svakheter
 - Ingen dekning bak leirens egne bygg (bare kartets hus og tettbebyggelse).

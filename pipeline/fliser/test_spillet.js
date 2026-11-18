@@ -2,6 +2,12 @@
 const { Trussel, Marked, Oppdrag, Kamp, Hendelser, Deling } = require('../../site/dovre-fliser/spill/spillet.js'); let feil = 0;
 const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
 let frø = 7; const rng = () => (frø = (frø * 16807) % 2147483647) / 2147483647;
+// bølgen er over: slått ut, eller trukket seg unna i en halv spilltime (18. nov)
+{ const l = (lever, slåttUt, avstand, venter) => ({ lever, slåttUt, avstand, venter });
+  ok(Trussel.ferdig([l(false, true, 100)], 0) === 'slått' && Trussel.ferdig([], 0) === 'slått' && Trussel.ferdig([l(true, true, 3900), l(false, false, 50)], 0) === 'slått', 'angrep: over når ingen røverlag kan kjempe (falt eller slått ut), også når restene står langt unna');
+  ok(Trussel.ferdig([l(true, false, 500)], 99) === null && Trussel.ferdig([l(true, false, 3000), l(true, false, 500)], 99) === null, 'angrep: ikke over mens et lag som kan kjempe, er nær leiren');
+  ok(Trussel.ferdig([l(true, false, 3000)], 0) === 'trekker' && Trussel.ferdig([l(true, false, 3000)], 29) === 'trekker' && Trussel.ferdig([l(true, false, 3000), l(true, true, 100)], 30) === 'unna', 'angrep: over når de som kan kjempe, har vært over 2,5 km unna i 30 spillminutter');
+  ok(Trussel.ferdig([l(true, false, 3000, true)], 99) === null, 'angrep: røvere som venter på mørket, teller ikke som unna'); }
 ok([1, 2, 3, 4, 5, 20].map(Trussel.lag).join() === '1,1,2,2,3,6', 'angrep: bølgene vokser fra ett lag til høyst seks');
 ok(Trussel.vent(1).spill > Trussel.vent(8).spill && Trussel.vent(30).spill === 600 && Trussel.vent(30).ekte === 12, 'angrep: kortere mellom bølgene, men aldri under 10 timer / 12 minutter');
 { const s = Trussel.start({ x: 1000, y: 2000 }, .25, .5), d = Math.hypot(s.x - 1000, s.y - 2000); ok(d > 1399 && d < 2201 && s.retning === 'nord' && /nord/.test(Trussel.varsel(3, 2, s)), 'angrep: starter 1,4–2,2 km unna, varselet sier retningen'); }
