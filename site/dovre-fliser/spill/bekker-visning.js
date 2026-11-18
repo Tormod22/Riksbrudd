@@ -68,7 +68,8 @@
     const iVann = l => { const r = l.type === 1 ? Math.max(6, l.b * .6) : 0;
       return (X, Y) => { const x = X - u.cx, y = Y - u.cy; return vannPkt(x, y) || r > 0 && (vannPkt(x + r, y) || vannPkt(x - r, y) || vannPkt(x, y + r) || vannPkt(x, y - r)); }; };
     const linjer = [], stegV = Math.max(2, mpp * 1.5);
-    for (const l of iBiter(biter, bb)) { if (!(l.orden >= mo || l.type === 1)) continue;
+    // (18. nov, hakk: kroken holdt hovedtråden 0,27 s i ett strekk i Bergen – pust i alle løkkene under; samme resultat)
+    for (const l of iBiter(biter, bb)) { if (børPuste()) await pust(); if (!(l.orden >= mo || l.type === 1)) continue;
       const k = kulvert(l); let deler = k ? k.map(P => ({ ...l, P })) : [l];
       if (vd) deler = deler.flatMap(d => { const v = Bekker.klipp(d.P, iVann(d), stegV, Math.max(8, d.b)); if (!v) return [d]; STAT.iVann++; return v.map(P => ({ ...d, P })); });
       for (const d of deler) linjer.push(d); }
@@ -90,7 +91,7 @@
     STAT.maling3d = linjer.length;
     // maske (2048²): ingen trær, busker eller gress i bekken og helt på kanten
     const W = 2048, cel = 2 * S / W, m = new Uint8Array(W * W);
-    for (const l of linjer) { const r = l.b / 2 + .9 + cel * .5, rc = Math.ceil(r / cel);
+    for (const l of linjer) { if (børPuste()) await pust(); const r = l.b / 2 + .9 + cel * .5, rc = Math.ceil(r / cel);
       for (const [x, y] of Bekker.punkter(l.P, cel)) { const ci = Math.floor((x - u.cx + S) / cel), cj = Math.floor((u.cy + S - y) / cel);
         for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const a = ci + di, b = cj + dj, d2 = (di * di + dj * dj) * cel * cel; if (a < 0 || b < 0 || a >= W || b >= W || d2 > r * r) continue;
           // 2 = selve vannet i en bred elv, 1 = bekk eller bredden av elva
@@ -100,14 +101,15 @@
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) { if (iBekk(data[k], data[k + 1])) { STAT.trærFjernet++; continue; } for (let q = 0; q < 5; q++) ut.push(data[k + q]); } return new Float32Array(ut); };
     STAT.trærFjernet = 0;
     u.iBekk = iBekk;
-    if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = sil(u.trær[art]);
+    if (u.trær) for (const art of Object.keys(u.trær)) { u.trær[art] = sil(u.trær[art]); if (børPuste()) await pust(); }
     if (u.smått) u.smått.busk = sil(u.smått.busk);
-    if (u.bunn) { const Bn = u.bunn; for (let j = 0; j < Bn.W; j++) for (let i = 0; i < Bn.W; i++) { const x = -S + (i + .5) / Bn.W * 2 * S, y = S - (j + .5) / Bn.W * 2 * S; if (iBekk(x, y)) Bn.gress[j * Bn.W + i] = 0; } }
+    if (u.bunn) { const Bn = u.bunn; for (let j = 0; j < Bn.W; j++) { if ((j & 31) === 0 && børPuste()) await pust(); for (let i = 0; i < Bn.W; i++) { const x = -S + (i + .5) / Bn.W * 2 * S, y = S - (j + .5) / Bn.W * 2 * S; if (iBekk(x, y)) Bn.gress[j * Bn.W + i] = 0; } } }
     if (S > 2200) return;
     // vannbåndet: myke svinger, punkt hver ~2 m, høyde fra terrenget; rennretning nedover (v øker med strømmen)
     // punkt hver 2 m i lite utsnitt, opp til 4 m i store (trekanter: ca. 22 000 ved S 800, under ca. 60 000 ved S 1700–2200)
     const bånd = [], stegB = Math.max(2, Math.min(4, 2 + (S - 800) / 600));
     for (const l of linjer) {
+      if (børPuste()) await pust();
       let P = Bekker.punkter(Bekker.myk(l.P), stegB).map(([x, y]) => [x - u.cx, y - u.cy]);
       const biter = []; let bit = [];
       for (const p of P) { if (Math.abs(p[0]) < S - 4 && Math.abs(p[1]) < S - 4) bit.push(p); else { if (bit.length > 1) biter.push(bit); bit = []; } }

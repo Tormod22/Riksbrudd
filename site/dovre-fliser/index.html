@@ -656,9 +656,17 @@ function brupunkt3(o, X, Y) {   // navnet står over dekket, ikke nede i dalen
   const a = o.deler[0], h = Math.max(hoyde3d(a[0], a[1]), hoyde3d(a[a.length - 2], a[a.length - 1]), hoyde3d(X, Y));
   const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * R3.EX + 4);
   // brunavn bak en ås eller et hus skjules som de andre navnene (12. nov: «Jori» og «Hindå Nordre» sto på husveggen)
+  // (18. nov, hakk: punktet projiseres først – bak kameraet eller utenfor dybden gir null uansett, så de dyre siktlinjene i bakÅs
+  // og bakHus spares der; samme svar)
+  const p = projFørst(v); if (!p) return null;
   if (bakÅs(v) || bakHus(v)) return null;
-  v.project(R3.cam);
-  return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
+  return p;
+}
+// skjermpunktet for v (uten å endre v), eller null når det er bak kameraet / utenfor dybden – som v.project(R3.cam) i proj3/brupunkt3
+let PROJ_TMP = null;
+function projFørst(v) {
+  const q = (PROJ_TMP || (PROJ_TMP = new THREE.Vector3())).copy(v).project(R3.cam);
+  return q.z > 1 || q.z < -1 ? null : [(q.x + 1) / 2 * VW, (1 - q.y) / 2 * VH];
 }
 // Trykk i 3D: nærmeste symbol, bru eller tettstedsnavn innen 22 punkter.
 function finnInfra3d(cx, cy) {
@@ -2886,9 +2894,10 @@ function proj3(X, Y) {
   // inne i et hus (spill/interior3d.js) vises ingen navn og merker fra kartet – de sto tvers gjennom veggene
   if (R3.fot && window.Interior3d && Interior3d.inne(R3.bane.x, R3.bane.y)) return null;
   const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
+  // (projisert først, se brupunkt3 – samme svar, men siktlinjene regnes bare for punkter foran kameraet)
+  const p = projFørst(v); if (!p) return null;
   if (bakÅs(v) || bakHus(v)) return null;
-  v.project(R3.cam);
-  return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH];
+  return p;
 }
 // Navn og merker bak en ås skal ikke synes gjennom terrenget: terrenget prøves 15 steder langs linja fra kameraet (2 m slingringsmonn)
 function bakÅs(v) {
@@ -3226,20 +3235,20 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gange.js?v=4574ac903d"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=82d1b6fa40"></script>
-<script src="/dovre-fliser/spill/anlegg3d.js?v=88d5ce3240"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=7dae5f07ea"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
-<script src="/dovre-fliser/spill/bekker-visning.js?v=31fdab0098"></script>
+<script src="/dovre-fliser/spill/bekker-visning.js?v=e50408086d"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
 <script src="/dovre-fliser/spill/infra3d.js?v=3eb79ba996"></script>
-<script src="/dovre-fliser/spill/portal3d.js?v=f71538dffe"></script>
+<script src="/dovre-fliser/spill/portal3d.js?v=4ca063b25a"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=7a66cf0db4"></script>
 <script src="/dovre-fliser/spill/kyst3d.js?v=9956133882"></script>
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=7628d04568"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=5f5e3ed00e"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=4ad0de990a"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=9b2a26091f"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=cf59ab2885"></script>
@@ -3277,11 +3286,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior3d.js?v=773fa0b376"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
-<script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=35f19ce7ae"></script>
+<script src="/dovre-fliser/spill/byhus.js?v=907d2c119a"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
-<script src="/dovre-fliser/spill/gate.js?v=86cf1b06e3"></script>
-<script src="/dovre-fliser/spill/gate3d.js?v=91483bcfa9"></script>
+<script src="/dovre-fliser/spill/gate.js?v=2d853eaf08"></script>
+<script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>
 <script src="/dovre-fliser/spill/leting.js?v=0fdd1bbf02"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=9a9f8fcc5b"></script>
 <script src="/dovre-fliser/spill/kjoretoy3d.js?v=70bec8641d"></script>

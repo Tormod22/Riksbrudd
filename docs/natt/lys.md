@@ -301,3 +301,32 @@ høydene, nettene) – kan bare bli mindre med gjenbruk av tabeller, ikke gjort.
   grafikk) – langt over 5 %. Billigere vei om det ønskes: en myk mørk flekk under hver enhet (som treskyggene), uten skyggekartet.
 - Skyggekartet i samme bilde som byttet (se over) og teksturopplastingens virkning på et ekte grafikkort: kan ikke måles her.
 - Andres moduler med lange steg (gate3d, byhus, anlegg3d, portal3d, fjern3d, kompass-minikartet): bare funn og forslag over.
+
+## Runde 4, del 2 (18. nov dag) – de tunge stegene i andres filer
+Koordinatoren ga meg filene der jeg fant tunge steg (gate3d/gate, byhus, bekker-visning, anlegg3d, fjern3d, portal3d, kompass og
+tegnInfra3d i index.html). Rekkefølge etter størrelse. Alt skal gi det samme som før.
+
+### Endringer
+- **gate.js / gate3d.js** (433 ms i ett strekk): `Gate.plasserG` (generator – yield mellom vegene, byggene og kryssene; `plasser()`
+  kjører den i ett og gir det samme, test_gate grønn) og `vegRuteG`; gate3d-kroken bruker `kjørAsynk`, kryssene med
+  `Veg.finnKryssG`, hindringene med tallnøkler og pust (`hindre` er async), pust mellom husflisene, og vannmaskens punkter
+  (`u.vannData`) i stedet for getImageData.
+- **byhus.js** (gatetrærne, 254–304 ms): `u.vannData` i stedet for getImageData, pust mellom vegene, og de billige prøvene (vann,
+  avstand til andre gatetrær, tetthet) før `nærHus` – samme trær (prøvene er uten bivirkninger, rekkefølgen endrer ikke svaret).
+- **bekker-visning.js** (273 ms): pust i alle løkkene i bygg3d-kroken (linjene, masken, silingen av trær per treslag, gresskartet
+  per 32 rader, vannbåndet) – samme resultat.
+- **anlegg3d.js** (bensinstasjonene i byttet, 30–220 ms): `inni` prøvde alle husomrissene i utsnittet for hvert punkt. Nå et rutenett
+  på 32 m etter boksen rundt hvert omriss (`omrissVed`, WeakMap per omrissliste) – et punkt utenfor boksen er aldri inni, så svaret er
+  det samme.
+- **kompass.js** (minikartet, 28–140 ms 4 ganger i sekundet): en kopi av kartbildet på 1024² lages én gang per utsnitt (WeakMap per
+  kartbilde, slippes med utsnittet) og brukes når minikartet viser mer enn to kildepunkter per skjermpunkt; helt nært brukes det fulle
+  bildet som før. Kopien skaleres med høy kvalitet – minikartet blir likt eller jevnere (ikke likt bit for bit: før hoppet
+  nedskaleringen over punkter).
+- **index.html tegnInfra3d** (navn og merker i 3D hver ramme): `proj3` og `brupunkt3` projiserer punktet først (`projFørst`) og gir null
+  for punkter bak kameraet før de dyre siktlinjene (`bakÅs`: 15 høydeoppslag, `bakHus`) – samme svar, men omtrent halvparten av
+  objektene slipper siktlinjene.
+- **fjern3d.js** (fjernringen, 50–250 ms i ett strekk når høydene kom): pust mellom radene, normalene med `normalerG` (likt bit for
+  bit), fargene i biter (`fargeleggG`; `fargelegg()` i ett som før når været endres), og byggingen gir opp hvis et nytt utsnitt er bedt
+  om imens.
+- **portal3d.js** (25–65 ms i byttet): én mal per tunnelbredde (laget én gang), en kopi per portal som dreies og flyttes (samme tall),
+  og alt lages i forbered3d-kroken (`lagG`, generator); sett3d legger bare nettet i scenen.

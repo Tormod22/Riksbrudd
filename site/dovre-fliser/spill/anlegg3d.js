@@ -74,6 +74,19 @@
     for (const g of liste) { P.set(g.attributes.position.array, o * 3); N.set(g.attributes.normal.array, o * 3); C.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; g.dispose(); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3)); return g; }
   const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+  // Husomrissene i et rutenett på 32 m etter boksen rundt hvert omriss (18. nov, hakk: «inni» prøvde alle husene i utsnittet for hvert
+  // punkt – 30–120 ms i byttet i Bergen). omrissVed(omriss, x, y): bare omrissene der boksen rundt dem har punktet – et punkt utenfor
+  // boksen er aldri inni omrisset, så svaret er det samme. Ett rutenett per omrissliste (WeakMap, slippes med utsnittet).
+  const OMRISS_RUTE = new WeakMap(), OC = 32;
+  function omrissVed(omriss, x, y) {
+    if (!omriss || !omriss.length) return [];
+    let r = OMRISS_RUTE.get(omriss);
+    if (!r) { r = new Map(); OMRISS_RUTE.set(omriss, r);
+      for (const P of omriss) { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const p of P) { if (p[0] < a) a = p[0]; if (p[0] > c) c = p[0]; if (p[1] < b) b = p[1]; if (p[1] > d) d = p[1]; }
+        const e = { P, a, b, c, d }; for (let j = Math.floor(b / OC); j <= Math.floor(d / OC); j++) for (let i = Math.floor(a / OC); i <= Math.floor(c / OC); i++) { const k = (i + 32768) * 65536 + (j + 32768); let l = r.get(k); if (!l) r.set(k, l = []); l.push(e); } } }
+    const l = r.get((Math.floor(x / OC) + 32768) * 65536 + (Math.floor(y / OC) + 32768)); if (!l) return [];
+    const ut = []; for (const e of l) if (x >= e.a && x <= e.c && y >= e.b && y <= e.d) ut.push(e.P); return ut;
+  }
   function bensinstasjon(u, st) {
     // langs nærmeste veg (innen 70 m): taket står ved siden av vegen, på samme side som stasjonen
     let ret = 0, cx = st.x, cy = st.y, best = 70, nær = null;
@@ -83,7 +96,7 @@
         if (d < best) { best = d; ret = Math.atan2(dy, dx); const l = Math.sqrt(l2), side = ((st.x - px) * -dy + (st.y - py) * dx) >= 0 ? 1 : -1, w = { E: 8, R: 7.5, F: 6.5, K: 5.5 }[v.k] / 2;
           nær = { px, py, ux: dx / l, uy: dy / l, nx: -dy / l * side, ny: dx / l * side, w }; } } }
     // taket skal ikke gå inn i et bygg: prøv flere plasser langs vegen og litt nærmere vegen, ta den første som er fri
-    const inni = (x, y) => (u.hus && u.hus.omriss || []).some(P => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; });
+    const inni = (x, y) => omrissVed(u.hus && u.hus.omriss, x, y).some(P => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; });
     if (nær) { let fri = null;
       for (const ut of [8.5, 7]) for (const langs of [0, 8, -8, 16, -16, 24, -24]) { if (fri) break;
         const x = nær.px + nær.nx * (nær.w + ut) + nær.ux * langs, y = nær.py + nær.ny * (nær.w + ut) + nær.uy * langs;

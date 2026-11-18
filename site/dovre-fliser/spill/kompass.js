@@ -189,6 +189,19 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
 
   // ---------- minikartet ----------
   const mini = { sist: 0, nøkkel: '', r: 300 };
+  // NEDSKALERT KART (18. nov, hakk): minikartet tegnet hele utsnittets kartbilde (opptil 4096², 64 MB) ned til et par hundre punkter
+  // fire ganger i sekundet – 28–140 ms hver gang her. Nå lages en kopi på 1024² én gang per utsnitt, og den brukes når minikartet
+  // uansett viser mer enn to kildepunkter per skjermpunkt (ellers, helt nært, det fulle bildet som før). Kopien skaleres med høy
+  // kvalitet, så den er minst like skarp som før (nedskalering med «low» hopper over punkter).
+  // (WeakMap: kopien holder ikke det store bildet i live når utsnittet er borte)
+  const SMÅ = new WeakMap(), SMÅ_N = 1024;
+  function kartKilde(T, behov) {
+    if (!(behov > 2) || T.width <= SMÅ_N) return { c: T, f: 1 };
+    let c = SMÅ.get(T);
+    if (!c) { c = document.createElement('canvas'); c.width = c.height = SMÅ_N; const g = c.getContext('2d');
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(T, 0, 0, SMÅ_N, SMÅ_N); SMÅ.set(T, c); }
+    return { c, f: SMÅ_N / T.width };
+  }
   function tegnMini(k, R3_) {
     const D = mk.clientWidth || 200, d = Math.min(2, window.devicePixelRatio || 1), nå = performance.now();
     // tegnes på nytt når kameraet har flyttet/snudd seg merkbart, ellers fire ganger i sekundet (lagene går)
@@ -207,7 +220,8 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
     if (TW && u.TW === TW) {
       g.save(); g.translate(M, M); if (roter) g.rotate(-k.kurs / RAD);
       const sx = (cx - (u.cx - u.S)) / mpp, sy = ((u.cy + u.S) - cy) / mpp, sr = r * 1.45 / mpp;
-      g.globalAlpha = .92; g.drawImage(T, sx - sr, sy - sr, sr * 2, sr * 2, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm);
+      const K = kartKilde(T, (sr * 2) / (r * 2.9 * ppm * d));
+      g.globalAlpha = .92; g.drawImage(K.c, (sx - sr) * K.f, (sy - sr) * K.f, sr * 2 * K.f, sr * 2 * K.f, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm);
       // tåka og siktfeltene ligger i sitt eget bilde (R3.tåkeC, se TAAKE_U i index.html)
       const TC = R3_.tåkeC; if (TC) { const f = TC.width / TW; g.drawImage(TC, (sx - sr) * f, (sy - sr) * f, sr * 2 * f, sr * 2 * f, -r * 1.45 * ppm, -r * 1.45 * ppm, r * 2.9 * ppm, r * 2.9 * ppm); }
       g.globalAlpha = 1;

@@ -55,7 +55,9 @@
     const pos = new Float32Array(n * n * 3), kol = new Float32Array(n * n * 3), ok = new Uint8Array(n * n), vann = new Float32Array(n * n);
     // per punkt: arealklassen, høyden (moh.), tregrensen der og om det er hav – fargene regnes på nytt når årstiden eller snøgrensen endres
     const kl = new Uint8Array(n * n), moh = new Float32Array(n * n), tg = new Float32Array(n * n), sjø = new Uint8Array(n * n);
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    // (18. nov, hakk: ringen ble laget i ett strekk når høydene kom – 50–250 ms. Nå pust mellom radene, normalene og fargene i biter,
+    // og byggingen gir opp hvis et nytt utsnitt er bedt om imens; samme ring.)
+    for (let j = 0; j < n; j++) { if ((j & 7) === 0 && børPuste()) { await pust(); if (mitt !== nr || R3.ut !== u) return; } for (let i = 0; i < n; i++) {
       const x = -R2 + i * celle, y = R2 - j * celle, [a, b] = Terreng.rute(v, u.cx + x, u.cy + y), inne = a >= 0 && b >= 0 && a < v.w && b < v.h, k = j * n + i;
       let h = inne ? v.H[b * v.w + a] : NaN, K = inne ? v.K[b * v.w + a] : 255;
       // havet på /norge (ingen høyde) ligger på 0 moh.; i Dovre-piloten er det utenfor kartet (hull)
@@ -67,7 +69,7 @@
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = (h - u.h0) * R.EX - d * d / (2 * JORD) - 1.5;
       kl[k] = K; moh[k] = h; tg[k] = window.Vegetasjon ? Vegetasjon.tregrense(u.cy + y) : 1100; ok[k] = 1;
       if (K === 3) vann[k] = 1;
-    }
+    } }
     // trekantene utenfor utsnittet (utsnittets kant overlapper litt, så det ikke blir sprekk)
     const idx = [], S = u.S * .96;
     for (let j = 0; j < n - 1; j++) for (let i = 0; i < n - 1; i++) {
@@ -78,14 +80,19 @@
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(kol, 3));
     g.setAttribute('aVann', new THREE.BufferAttribute(vann, 1));
-    g.setIndex(idx); g.computeVertexNormals();
-    fjern(R); ring = new THREE.Mesh(g, ringMateriale()); ring.name = 'fjernring'; ring.userData.R2 = R2;
-    ring.userData.punkt = { n, kl, moh, tg, sjø, ok }; fargelegg(); R.scene.add(ring);
+    g.setIndex(idx);
+    if (typeof normalerG === 'function') await kjørAsynk(normalerG(g)); else g.computeVertexNormals();
+    if (mitt !== nr || R3.ut !== u) { g.dispose(); return; }
+    const m = new THREE.Mesh(g, ringMateriale()); m.name = 'fjernring'; m.userData.R2 = R2; m.userData.punkt = { n, kl, moh, tg, sjø, ok };
+    await kjørAsynk(fargeleggG(m));
+    if (mitt !== nr || R3.ut !== u) { g.dispose(); m.material.dispose(); return; }
+    fjern(R); ring = m; R.scene.add(ring);
   }
   // Fargene i ringen etter årstiden og snøgrensen akkurat nå (ca. 17 000 punkter – regnes bare når været har endret seg)
-  function fargelegg() {
+  function fargelegg() { kjørRett(fargeleggG(ring)); }
+  function* fargeleggG(ring) {
     const { n, kl, moh, tg, sjø, ok } = ring.userData.punkt, V = vær(), kol = ring.geometry.attributes.color, nor = ring.geometry.attributes.normal;
-    for (let k = 0; k < n * n; k++) { if (!ok[k]) continue;
+    for (let k = 0; k < n * n; k++) { if ((k & 2047) === 0) yield; if (!ok[k]) continue;
       const i = k % n, j = (k - i) / n, f = farge(kl[k], moh[k], nor.getZ(k), tg[k], V, !!sjø[k]), lys = .92 + .08 * Math.sin(i * 12.9898 + j * 78.233);
       // sjøen har samme farge som sjøen i utsnittet (ingen firkantet kant), uten flekker
       if (sjø[k]) kol.setXYZ(k, HAVFARGE[0], HAVFARGE[1], HAVFARGE[2]); else kol.setXYZ(k, f[0] * lys, f[1] * lys, f[2] * lys); }
