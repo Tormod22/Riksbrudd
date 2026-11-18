@@ -39,6 +39,8 @@
 #leirmeny [hidden]{ display:none !important; }
 #leirmeny .liste{ padding:6px 8px 10px; flex:0 0 auto; }
 #leirmeny .bygg{ display:flex; gap:8px; align-items:center; padding:6px 4px; border-bottom:1px solid #3a3226; }
+#leirmeny h3.del{ cursor:pointer; position:relative; padding-right:24px; user-select:none; -webkit-user-select:none; } #leirmeny h3.del::after{ content:'▾'; position:absolute; right:4px; top:8px; font-size:13px; opacity:.8; } #leirmeny h3.del.lukket::after{ content:'▸'; }
+#leirmeny h3.del:hover{ color:#f0dc9a; } #leirmeny h3.del.lukket{ margin-bottom:0; opacity:.9; } #leirmeny .delboks.lukket > :not(h3):not(:has(h3)){ display:none; } #leirmeny .hale[hidden]{ display:none; } #leirmeny .hale{ border-bottom:0; padding-top:2px; } #leirmeny .hale:empty{ display:none; }
 #leirmeny .liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(132px, 1fr)); gap:7px; } #leirmeny .liste[hidden], #leirmeny .liste [hidden]{ display:none; } #leirmeny .liste h4{ grid-column:1 / -1; }
 #leirmeny .bygg.kort{ flex-direction:column; align-items:stretch; gap:3px; padding:6px 7px 7px; background:linear-gradient(180deg,#2c2416,#1a140b); border:1px solid #4a3d24; border-radius:4px; transition:border-color .12s, transform .12s; }
 #leirmeny .bygg.kort:hover{ border-color:#c9b26a; transform:translateY(-1px); } #leirmeny .bygg.kort .tegn{ width:100%; height:58px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.16), rgba(0,0,0,0) 70%); pointer-events:none; }
@@ -140,6 +142,14 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // Menyen tegnes på nytt hvert sekund (strøm, kø): behold plassen du har bladd til (brukeren 11. nov: «lar meg ikke bla ned»)
   let menyNøkkel = '';
   let fane = 'bygg';
+  // delene i fanene: rekkefølge, og hvilke som er lagt sammen til du åpner dem (Claudes forslag)
+  const FANEREKKE = ['bygg', 'lager', 'plan', 'mål'], DELREKKE = { bygg: [/^Byggelag/, /^Strøm$/, /^Byggesett/, /^Forsvar/, /^Tropper/, /^Kameravakt/, /^Sjøen/, /^Strømnett/],
+    lager: [/^Materialer$/, /^Oversikt/, /^Materialer fra verden/, /^Markedet/, /^Region/, /^Sjø/, /^Våpen/], plan: [/^Planlegg/],
+    mål: [/^Oppdrag/, /^Mål$/, /^Trusselen/, /^Ukas|^Scenario/, /^Etterretning/, /^Vær og verden/, /^Samfunn/, /^Dagbok/, /^Venner/, /tid og flyt/, /spillform/, /^Opplæring/] };
+  const DEL_LUKKET = /^(Forsvar|Tropper|Strømnett|Byggesett|Kameravakt|Sjøen|Våpen og utstyr|Markedet|Venner|Etterretning|Vær og verden|Mål · |Opplæring|Region|Samfunn)/;
+  let DELVALG = {}; try { DELVALG = JSON.parse(localStorage.getItem('riksbrudd-leirdeler') || '{}') || {}; } catch (e) { DELVALG = {}; }
+  const delNøkkel = t => t.replace(/[\d(].*$/, '').replace(/[:·\s]+$/, '').trim() || t.trim();
+  const delLukket = k => (k in DELVALG ? !!DELVALG[k] : (!navigator.webdriver || window.LEIRDELER_TEST === true) && DEL_LUKKET.test(k));
   function visMeny() {
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
@@ -230,8 +240,25 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       const nm = hode.querySelector('.nestemaal'); if (nm) bar.before(nm);
       // det som hører til en fane og sto over fanene (dieselkjøpet), flyttes ned under dem
       let etter = bar; for (const n of [...hode.children]) { if (n === bar) break; if (n.dataset && n.dataset.fane) { etter.after(n); etter = n; } } }
-    const nøkkel = hode.innerHTML + liste.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
-    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste); menyEl.scrollTop = rulle;
+    // DELER SOM KAN LEGGES SAMMEN, I FAST REKKEFØLGE (18. nov, runde 2: fanene hadde fått mange nye deler fra andre moduler – Bygg var
+    // nesten 4000 punkter høy). Hver overskrift (h3) åpner og lukker delen sin, og valget huskes («riksbrudd-leirdeler»). Delene
+    // sorteres etter DELREKKE per fane (ukjente sist, i den rekkefølgen de kom); i fanen Bygg står byggekortene rett under jobbene,
+    // og resten av delene under kortene (hale). I testene (navigator.webdriver) er alle deler åpne til noen lukker dem.
+    const hale = el('div', { klasse: 'hode hale' });
+    { const grupper = []; let g = null;
+      for (const n of [...hode.children]) { if (n === status || !n.dataset || !n.dataset.fane || (n.classList && (n.classList.contains('faner') || n.classList.contains('nestemaal')))) continue;
+        const h = n.tagName === 'H3' ? n : n.querySelector && n.querySelector('h3');
+        if (h) { g = { nøkkel: delNøkkel(h.textContent), fane: n.dataset.fane, h, noder: [n], boks: n !== h }; grupper.push(g); } else if (g && g.fane === n.dataset.fane) g.noder.push(n); else g = null; }
+      const rang = q => { const R = DELREKKE[q.fane] || [], i = R.findIndex(re => re.test(q.nøkkel)); return i < 0 ? 50 : i; };
+      grupper.forEach((q, i) => { q.i = i; q.rang = rang(q); }); grupper.sort((a, b) => FANEREKKE.indexOf(a.fane) - FANEREKKE.indexOf(b.fane) || a.rang - b.rang || a.i - b.i);
+      for (const q of grupper) { const lukket = delLukket(q.nøkkel), til = q.fane === 'bygg' && q.rang > 0 ? hale : hode;
+        q.h.classList.add('del'); q.h.classList.toggle('lukket', lukket); q.h.setAttribute('role', 'button'); q.h.setAttribute('aria-expanded', String(!lukket)); q.h.tabIndex = 0; q.h.dataset.del = q.nøkkel;
+        q.h.onclick = () => { DELVALG[q.nøkkel] = !lukket; try { localStorage.setItem('riksbrudd-leirdeler', JSON.stringify(DELVALG)); } catch (e) { /* sperret */ } visMeny(); };
+        q.h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.h.onclick(); } };
+        for (const n of q.noder) { if (lukket) { if (n === q.h) { /* overskriften står */ } else if (q.boks && n === q.noder[0]) n.classList.add('delboks', 'lukket'); else n.hidden = true; } til.appendChild(n); } }
+      if (fane !== 'bygg') hale.hidden = true; }
+    const nøkkel = hode.innerHTML + liste.innerHTML + hale.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyEl.scrollTop = rulle;
   }
   const tidTekst = LB.tidTekst;
 

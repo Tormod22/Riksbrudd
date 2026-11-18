@@ -16,7 +16,7 @@
  */
 (function () {
   const $ = id => document.getElementById(id), svg = d => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>${d}</svg>`)}")`;
-  const IK = { leir: "<path d='M3 20L12 5l9 15zM12 5v15M9.5 20l2.5-4.5 2.5 4.5'/>", folk: "<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.5 2.6-5.5 6-5.5s6 2 6 5.5'/><circle cx='17' cy='9' r='2.4'/><path d='M16 14.6c3 0 5 1.7 5 4.6'/>",
+  const IK = { sjo: "<circle cx='12' cy='5' r='2'/><path d='M12 7v14M8 11h8M4 14c0 4 3.5 7 8 7s8-3 8-7'/>", allelag: "<path d='M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4' /><rect x='8.5' y='9' width='7' height='6'/>", mer: "<circle cx='5' cy='12' r='1.7'/><circle cx='12' cy='12' r='1.7'/><circle cx='19' cy='12' r='1.7'/>", leir: "<path d='M3 20L12 5l9 15zM12 5v15M9.5 20l2.5-4.5 2.5 4.5'/>", folk: "<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.5 2.6-5.5 6-5.5s6 2 6 5.5'/><circle cx='17' cy='9' r='2.4'/><path d='M16 14.6c3 0 5 1.7 5 4.6'/>",
     tropper: "<path d='M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z'/><path d='M9 12l2 2 4-4'/>", krig: "<path d='M5 4l12 12M19 4L7 16M4.5 17.5l2.5 2.5M19.5 17.5L17 20M6.5 13.5l-2.5 2.5M17.5 13.5l2.5 2.5'/>", deg: "<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7'/>" };
   const REKKE = ['sDag', 'sVaer', 'sVind', 'sAar', 'sPenger', 'sDiesel', 'sTre', 'sBetong', 'sStaal', 'sStrom', 'sOlje', 'sFolk', 'sMaal', 'sKrig', 'sHvor'], TEKNISK = ['sH', 'sKB', 'sFps'];
   const css = document.createElement('style');
@@ -38,13 +38,13 @@ body.spill #kommando.på{ display:flex; }
 #kommando button::before{ content:''; width:26px; height:26px; background:#d9c27a; -webkit-mask:var(--kn) center/contain no-repeat; mask:var(--kn) center/contain no-repeat; }
 #kommando button:hover{ border-color:#e8d48a; transform:translateY(-2px); } #kommando button:active{ transform:translateY(0); } #kommando button.på{ background:linear-gradient(180deg,#6a5a34,#3f331c); border-color:#e8d48a; color:#fff3c8; } #kommando button.på::before{ background:#fff3c8; }
 #kommando button i{ position:absolute; right:4px; top:2px; font-style:normal; font-size:10.5px; color:#a89970; } #kommando button .merke{ position:absolute; left:4px; top:3px; min-width:15px; height:15px; line-height:15px; padding:0 3px; border-radius:8px; background:#b4452f; color:#fff; font-size:10.5px; text-align:center; }
-${Object.entries(IK).map(([n, d]) => `#kommando button[data-k="${n}"], #mkom button[data-k="${n}"]{ --kn:${svg(d)}; }`).join('\n')}
+${Object.entries(IK).map(([n, d]) => `:is(#kommando,#kommer,#mkom,#mkommer) button[data-k="${n}"]{ --kn:${svg(d)}; }`).join('\n')}
 body.spill #leirmeny, body.spill #folkmeny, body.spill #panel, body.spill #krig, body.spill #karakterark, body.spill #stridpanel, body.spill #tropppanel, body.spill #sekk, body.spill #lagmeny{ background:linear-gradient(180deg,#241c10 0,#17120a 150px); border:1px solid #8a7440; box-shadow:0 0 0 1px #0d0a06, inset 0 1px 0 rgba(255,230,160,.06), 0 12px 34px rgba(0,0,0,.65); border-radius:4px; }
 body.spill #leirmeny h2, body.spill #folkmeny h2, body.spill #krig h2, body.spill #stridpanel h2, body.spill #tropppanel h2, body.spill #sekk h2, body.spill #panel h2{ font-family:"IM Fell English",serif; font-weight:400; letter-spacing:.04em; padding-bottom:5px; margin-bottom:6px; border-bottom:1px solid #5a4a2a; background:linear-gradient(90deg,rgba(201,178,106,.14),rgba(201,178,106,0) 70%); margin-left:-12px; padding-left:12px; }
 body.spill #kilde{ left:auto; right:64px; bottom:calc(6px + env(safe-area-inset-bottom,0px)); max-width:min(900px,70vw); font-size:0; pointer-events:auto; cursor:help; text-align:right; }
 body.spill #kilde::before{ content:'ⓘ Kilder'; font-size:11.5px; font-style:normal; letter-spacing:.04em; padding:2px 7px; background:rgba(20,16,10,.7); border:1px solid #4a4030; border-radius:3px; }
 body.spill #kilde:hover{ font-size:12px; background:rgba(20,16,10,.92); border:1px solid #5a4a2a; padding:6px 9px; text-shadow:none; } body.spill #kilde:hover::before{ display:none; }
-body.spill #panel{ max-width:min(420px, calc(50vw - 226px)); } @media (max-width:1180px){ body.spill #panel{ max-width:420px; bottom:calc(92px + env(safe-area-inset-bottom,0px)); } }
+body.spill #panel{ box-sizing:border-box; max-width:min(446px, calc(50vw - 226px)); } @media (max-width:1180px){ body.spill #panel{ max-width:420px; bottom:calc(92px + env(safe-area-inset-bottom,0px)); } }
 body.spill .ctl button{ background:linear-gradient(180deg,#2a2215,#17120a); border-color:#5a4a2a; border-radius:3px; }
 body.spill #varsler button, body.spill #varsler > *{ border-radius:3px; }
 .stats > div[data-ord]::after{ content:attr(data-ord); order:1; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:#a89970; margin:0 5px 0 3px; }
@@ -70,6 +70,14 @@ body.mkom #kilde{ bottom:calc(62px + env(safe-area-inset-bottom,0px)); } body.mk
 body.mkom .ctl{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); }
 body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper #karakterknapp{ display:none; }
 @media (prefers-reduced-motion:reduce){ #mkom.på, #flismerliste.på{ animation:none; } }`;
+  // «MER» (18. nov, runde 2): de fem faste står i linja, resten (Region, Sjø, Verden, Velg lag …) i en rad som åpnes av «Mer»
+  css.textContent = css.textContent.replace(/#kommando button/g, ':is(#kommando,#kommer) button').replace(/#mkom button/g, ':is(#mkom,#mkommer) button') + `
+:is(#kommando,#kommer,#mkom,#mkommer) button[hidden]{ display:none; }
+#kommer{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(92px + env(safe-area-inset-bottom,0px)); z-index:8; display:none; gap:6px; padding:6px; max-width:calc(100vw - 20px); flex-wrap:wrap; justify-content:center; background:linear-gradient(180deg,rgba(34,27,16,.96),rgba(18,14,8,.97)); border:1px solid #8a7440; box-shadow:0 0 0 1px #0d0a06, 0 8px 26px rgba(0,0,0,.6); border-radius:5px; }
+body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyframes kommeropp{ from{ opacity:0; translate:0 10px; } }
+#mkommer{ position:fixed; left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; gap:4px; padding:5px; flex-wrap:wrap; justify-content:center; background:rgba(22,17,10,.96); border:1px solid #8a7440; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.6); }
+#mkommer.på{ display:flex; animation:kommeropp .16s ease-out; } #mkommer button{ flex:0 0 68px; }
+@media (prefers-reduced-motion:reduce){ #kommer.på, #mkommer.på{ animation:none; } }`;
   document.head.appendChild(css);
 
   // ---------- kommandolinja ----------
@@ -82,14 +90,24 @@ body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper
     { k: 'deg', navn: 'Deg', tast: 'O', fins: () => $('karakterknapp') && !$('karakterknapp').hidden, på: () => !!(window.KarakterSpill && KarakterSpill.erÅpen()), trykk: () => $('karakterknapp').click(), tittel: 'Karakterarket: helse, sult, tørst, søvn og utstyr (O)' },
   ];
   // andre moduler kan legge til knapper: window.KOMMANDO_TILLEGG.push({ k, navn, tast, ikon (svg-innmat), fins(), på(), trykk(), tittel }) – før denne fila lastes
-  for (const T of window.KOMMANDO_TILLEGG || []) { KN.push(T); if (T.ikon) { const st = document.createElement('style'); st.textContent = `#kommando button[data-k="${T.k}"], #mkom button[data-k="${T.k}"]{ --kn:${svg(T.ikon)}; }`; document.head.appendChild(st); } }
-  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.dataset.tips = K.navn + '|' + K.tittel; b.setAttribute('aria-label', K.tittel); b.append(document.createTextNode(K.navn)); if (K.tast) { const t = document.createElement('i'); t.textContent = K.tast; b.appendChild(t); } b.onclick = e => { e.stopPropagation(); K.trykk(); oppdater(); }; K.el = b; bar.appendChild(b); }
+  const FASTE = KN.length;
+  for (const T of window.KOMMANDO_TILLEGG || []) { T.tillegg = true; KN.push(T); if (T.ikon) { const st = document.createElement('style'); st.textContent = `[data-k="${T.k}"]{ --kn:${svg(T.ikon)}; }`; document.head.appendChild(st); } }
+  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.dataset.tips = K.navn + '|' + K.tittel; b.setAttribute('aria-label', K.tittel); b.append(document.createTextNode(K.navn)); if (K.tast) { const t = document.createElement('i'); t.textContent = K.tast; b.appendChild(t); } b.onclick = e => { e.stopPropagation(); K.trykk(); åpneKomMer(false); oppdater(); }; K.el = b; bar.appendChild(b); }
   // TELEFONEN (18. nov): samme kommandoer som en egen rad nederst (#mkom), store nok til en tommel, til venstre for zoomknappene.
   // Egen rad (ikke #kommando), så PC-linja er urørt. Borte når du går (styrespak, Huk og Hopp står der), bygger eller har et panel åpent.
   const mbar = document.createElement('div'); mbar.id = 'mkom'; mbar.setAttribute('role', 'toolbar'); mbar.setAttribute('aria-label', 'Kommandoer'); document.body.appendChild(mbar);
-  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.setAttribute('aria-label', K.tittel); b.append(document.createTextNode(K.navn)); b.onclick = e => { e.stopPropagation(); K.trykk(); setTimeout(oppdater, 60); }; K.el2 = b; mbar.appendChild(b); }
+  for (const K of KN) { const b = document.createElement('button'); b.dataset.k = K.k; b.setAttribute('aria-label', K.tittel); b.append(document.createTextNode(K.navn)); b.onclick = e => { e.stopPropagation(); K.trykk(); åpneKomMer(false); setTimeout(oppdater, 60); }; K.el2 = b; mbar.appendChild(b); }
+  // «Mer»-knappen og raden den åpner (én for PC-linja, én for telefonraden)
+  const kommer = document.createElement('div'); kommer.id = 'kommer'; const mkommer = document.createElement('div'); mkommer.id = 'mkommer'; document.body.append(kommer, mkommer); let komMerÅpen = false;
+  const merKn = [bar, mbar].map(forelder => { const b = document.createElement('button'); b.dataset.k = 'mer'; b.className = 'kommer'; b.append(document.createTextNode('Mer')); b.setAttribute('aria-label', 'Flere kommandoer'); if (forelder === bar) b.dataset.tips = 'Mer|Flere kommandoer: region, sjø, verden og annet som ikke får plass i linja'; b.onclick = e => { e.stopPropagation(); åpneKomMer(!komMerÅpen); }; b.hidden = true; forelder.appendChild(b); return b; });
+  function åpneKomMer(på) { komMerÅpen = !!på; for (const b of merKn) b.classList.toggle('åpen', komMerÅpen); settKomMer(); }
+  function settKomMer() { const pc = bar.classList.contains('på'), tlf = mbar.classList.contains('på'); kommer.classList.toggle('på', komMerÅpen && pc && kommer.children.length > 0); mkommer.classList.toggle('på', komMerÅpen && tlf && mkommer.children.length > 0); }
+  document.addEventListener('pointerdown', e => { if (komMerÅpen && !kommer.contains(e.target) && !mkommer.contains(e.target) && !merKn.includes(e.target)) åpneKomMer(false); });
+  // tilleggene som finnes nå, flyttes inn i raden bak «Mer» når de er flere enn én (én alene står i linja)
+  function fordel() { const T = KN.filter(K => K.tillegg && !K.el.hidden), samle = T.length > 1; for (const K of KN) if (K.tillegg) { const f1 = samle ? kommer : bar, f2 = samle ? mkommer : mbar; if (K.el.parentNode !== f1) f1.insertBefore(K.el, f1 === bar ? merKn[0] : null); if (K.el2.parentNode !== f2) f2.insertBefore(K.el2, f2 === mbar ? merKn[1] : null); }
+    const noePå = samle && T.some(K => K.el.classList.contains('på')); for (const b of merKn) { b.hidden = !samle; b.classList.toggle('på', noePå || komMerÅpen); let m = b.querySelector('.merke'); if (samle) { if (!m) { m = document.createElement('span'); m.className = 'merke'; m.style.background = '#5a4a2a'; b.appendChild(m); } if (m.textContent !== String(T.length)) m.textContent = String(T.length); } else if (m) m.remove(); } }
   // paneler som ligger nederst eller dekker skjermen på telefon: mens ett av dem vises, viker raden
-  const DEKKER = ['panel', 'leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'stridpanel', 'sekk', 'hjelp', 'kontrollrom', 'hendelse', 'lagmeny', 'byggvalg', 'byggesett', 'alarm', 'degmeny'];
+  const DEKKER = ['panel', 'leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'stridpanel', 'sekk', 'hjelp', 'kontrollrom', 'hendelse', 'lagmeny', 'byggvalg', 'byggesett', 'alarm', 'degmeny', 'region', 'samfunnmeny', 'personkort', 'samfunnkort', 'krigpanel', 'verdenpanel', 'sjopanel', 'evpanel', 'flytkort', 'flytgruppe', 'marsjvalg', 'formkort', 'krigkort', 'etterspill'];
   const vises = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).opacity !== '0';
   // «MER»-FLISA (18. nov): ressursene skal stå på én rad. Får de ikke plass, går de minst viktige inn bak en flis «+3» som åpner resten.
   const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sFolk', 'sStrom', 'sDiesel'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };
@@ -121,11 +139,11 @@ body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper
     // når du går, er kommandolinja borte: da står Deg (med Sekk og Utenfra under) oppe i raden som før
     const g = !!går(); if (document.body.classList.contains('gaar') !== g) document.body.classList.toggle('gaar', g);
     const bv = $('byggvalg'), bs = $('byggesett'), st = $('oppstart'), skjul = går() || (bv && getComputedStyle(bv).display !== 'none') || (bs && bs.classList.contains('på')) || (st && st.classList.contains('på')) || document.body.classList.contains('foto');
-    bar.classList.toggle('på', bred && noen && !skjul);
+    fordel(); bar.classList.toggle('på', bred && noen && !skjul);
     // telefonen: raden nederst, og Leir/Krig/Deg tas da ut av den trange raden øverst (de står nede)
     const tlf = !bred && noen && !g && !(st && st.classList.contains('på')), mpå = tlf && !skjul && !DEKKER.some(id => vises($(id)));
     if (document.body.classList.contains('mtlf') !== tlf) document.body.classList.toggle('mtlf', tlf); if (mbar.classList.contains('på') !== mpå) { mbar.classList.toggle('på', mpå); document.body.classList.toggle('mkom', mpå); }
-    if (bred) passInn(); else if (merÅpen) åpneMer(false); }
+    if (komMerÅpen && !bar.classList.contains('på') && !mbar.classList.contains('på')) åpneKomMer(false); settKomMer(); if (bred) passInn(); else if (merÅpen) åpneMer(false); }
   setInterval(oppdater, 400); window.addEventListener('resize', oppdater); window.addEventListener('riksbrudd-spill', () => setTimeout(oppdater, 100)); oppdater();
   // «Tekniske tall» i ☰: moh., MB lastet og bilder per sekund
   { const m = $('lagmeny'); if (m) { const b = document.createElement('button'); b.id = 'tekniskknapp'; b.textContent = 'Tekniske tall'; let på = false; try { på = localStorage.getItem('riksbrudd-teknisk') === '1'; } catch (e) { på = false; } const sett = () => { document.body.classList.toggle('teknisk', på); b.textContent = 'Tekniske tall: ' + (på ? 'vises' : 'skjult'); }; b.onclick = () => { på = !på; try { localStorage.setItem('riksbrudd-teknisk', på ? '1' : '0'); } catch (e) { /* sperret */ } sett(); }; sett();
@@ -135,5 +153,5 @@ body.mtlf .knapper #leirknapp, body.mtlf .knapper #krigknapp, body.mtlf .knapper
   { const m = $('lagmeny'); if (m && typeof INFRA_FOKUS !== 'undefined') { const b = document.createElement('button'); b.id = 'allemerker'; const sett = () => { b.textContent = 'Kartmerker: ' + (INFRA_FOKUS.alt ? 'alle' : 'de viktige'); b.title = 'Bruer, tunneler, kraftverk og ferjekaier: bare de som betyr noe for det du gjør, eller alle'; };
       b.onclick = () => { INFRA_FOKUS.alt = !INFRA_FOKUS.alt; try { localStorage.setItem('riksbrudd-allemerker', INFRA_FOKUS.alt ? '1' : '0'); } catch (e) { /* sperret */ } sett(); if (typeof skitten !== 'undefined') skitten = true; }; sett();
       const inf = [...m.querySelectorAll('button')].find(q => /^Infrastruktur/.test(q.textContent)); if (inf && inf.parentNode !== m) inf.parentNode.insertBefore(b, inf.nextSibling); } }
-  window.SpillHud = { oppdater, aktiv: () => document.body.classList.contains('spill'), knapper: () => KN.filter(K => !K.el.hidden).map(K => K.k), telefon: () => mbar.classList.contains('på'), mer: () => ({ antall: mer.classList.contains('på') ? +merTall.textContent : 0, åpen: merÅpen }), åpneMer, passInn: () => { merSig = ''; passInn(); } };
+  window.SpillHud = { oppdater, aktiv: () => document.body.classList.contains('spill'), knapper: () => KN.filter(K => !K.el.hidden).map(K => K.k), bakMer: () => KN.filter(K => K.tillegg && !K.el.hidden && K.el.parentNode === kommer).map(K => K.k), åpneKomMer, FASTE, telefon: () => mbar.classList.contains('på'), mer: () => ({ antall: mer.classList.contains('på') ? +merTall.textContent : 0, åpen: merÅpen }), åpneMer, passInn: () => { merSig = ''; passInn(); } };
 })();
