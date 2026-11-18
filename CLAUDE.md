@@ -1257,3 +1257,15 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   Opplæringen: fire nye steg (tropp nr. 2, mat til tre døgn, forsvar, reparer). FREDSTIDEN for motstanderne er 7 døgn på Vanlig
   (7 / fiendens faktor, 4–10; fraksjoner-visning.js fredTid) med varsel ett døgn før – gjennomspillingene 7–8 falt for Kystalliansen på
   dag 5–6 med 4 døgn. Ikke spilt gjennom på nytt. Rapport: docs/natt/RAPPORT.md («Runde 4»).
+  3D-KARTET OVENFRA (18. nov kveld, brukeren: «ting så litt svakt ut i vanlig 3D-view … bare den vanlige 3D-kart»). Bilder fra Rogaland
+  (scratchpad syn/syn.js: nytt spill, leir 37880 6617991, ekte data via dev.py; DEL=kart|flytt|gange|diag, FX=1 = lys og skygger på)
+  viste: heia som én jevn olivenfarge, kritthvite snøfonner fra satellittbildene på heia (også om høsten) og lyse vannrette streker over
+  innsjøer og daler. spill/kartbilde.js (regler uten DOM, test_kartbilde.js) bakes inn i kartbildet i bygg3d: striperG (skanne-striper i
+  satellittmosaikken rettes rad for rad, bare der blokkene på tvers er enige), snøTilBergG (hvitt under Kartbilde.snøFast(Y) – 1150 m i
+  sør, ca. 730 i Lyngen – males som bart fjell; fjern3d.js gjør klasse 4 om til snaufjell under samme grense) og relieffG (søkk mørkere,
+  rygger lysere fra høydenettet, lyng/berg-flekker på 230 m og 55 m – fast etter kartets meter). Vann i naturfarger beholder bare 20 % av
+  satellittbildets mønster (før 45 %). STREKENE var tåkebankene i natt3d.js (64 plakater som alltid vender mot kameraet): de tones nå bort
+  når kameraet ser ned på kartet (14–33° ned). MÅLEFELLE: med tempo 0 tegner 3D sjelden nye bilder – et skjermbilde rett etter en endring
+  viser det gamle bildet; tegn til et eget mål (WebGLRenderTarget + readRenderTargetPixels) for sammenligninger (syn/diag10.js).
+  Ekstra byggetid: ca. 0,25 s (2048²) / 0,6 s (4096²) i biter med pust. Ikke gjort: hakkete strandkanter (vannflatene er 32 m-ruter),
+  steinmønster nær bakken på heia (heia er snaufjell i arealklassene).

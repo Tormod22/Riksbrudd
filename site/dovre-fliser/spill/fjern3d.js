@@ -65,6 +65,8 @@
       // utenfor Norge (omlandets høyde, ingen arealklasse – feilretting 12. nov: Sverige var hav): skog under tregrensen, snaufjell over
       else if (K === 255 && NORGE_BLOKKER) K = h > (window.Vegetasjon ? Vegetasjon.tregrense(u.cy + y) : 900) ? 0 : 1;
       if (NORGE_BLOKKER && K === 3 && h < .5) sjø[k] = 1;
+      // (18. nov) «snø/is» fra satellittbildet under den faste snøgrensen er snøfonner – bart fjell (spill/kartbilde.js); snø fra været kommer i farge()
+      if (K === 4 && window.Kartbilde && h < Kartbilde.snøFast(u.cy + y)) K = 0;
       const d = Math.hypot(x, y);
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = (h - u.h0) * R.EX - d * d / (2 * JORD) - 1.5;
       kl[k] = K; moh[k] = h; tg[k] = window.Vegetasjon ? Vegetasjon.tregrense(u.cy + y) : 1100; ok[k] = 1;

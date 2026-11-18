@@ -331,9 +331,12 @@
     if (dt > .01) { const fc = R.scene.fog.color, lys = .35 + .65 * (1 - m);
       // plakatens «opp» er kameraets: den synlige delen (31 % av høyden til hver side av midten) rekker oppZ ganger så langt ned
       const oppZ = Math.abs(R.cam.matrixWorld.elements[6]);
+      // (18. nov, brukeren: «3D-kartet ser svakt ut») plakatene vender alltid mot kameraet – sett ovenfra ble de lyse, vannrette streker
+      // over dalene og innsjøene. De tones bort når kameraet ser ned på kartet (14–33° ned); når du går eller ser langs bakken, er de der.
+      const ovenfra = 1 - trinn(.25, .55, R.cam.matrixWorld.elements[10]);
       for (const s of R.nattTåke || []) { s.position.z = s.userData.bakke + s.scale.y * .31 * oppZ;
         const dd = Math.hypot(s.position.x - c.x, s.position.y - c.y, s.position.z - c.z);
-        s.material.opacity = Math.min(.6, dt * s.userData.a * .7) * trinn(40, 220, dd); s.visible = s.material.opacity > .01;
+        s.material.opacity = Math.min(.6, dt * s.userData.a * .7) * trinn(40, 220, dd) * ovenfra; s.visible = s.material.opacity > .01;
         s.material.color.setRGB((fc.r * .5 + .5) * lys, (fc.g * .5 + .5) * lys, (fc.b * .5 + .52) * lys); }
       const fog = R.scene.fog; fog.far = Math.max(160, fog.far * (1 - .3 * dt * trinn(3000, 300, høyde))); fog.near = Math.min(fog.near, fog.far * .3);
     } else for (const s of R.nattTåke || []) s.visible = false;
