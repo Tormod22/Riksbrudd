@@ -9,14 +9,14 @@ ok(R.type(1200, {}) === 'bygd' && R.type(9000, {}) === 'by' && R.type(1200, { kr
 ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 5000, kai: 100 }) === 'oljeby' && R.type(20000, { olje: 12000, kai: 100, kraft: 100 }) === 'by' && R.type(3000, { kai: 100, kraft: 100 }) === 'industri', 'type: kai gir havn, oljeanlegg går foran alt, en by er by');
 // det de gir
 { const g = R.grunn(1200, 'bygd'), h = R.grunn(40, 'bygd'), s = R.grunn(200000, 'by');
-  ok(g.mat === 36 && g.tre === 6 && g.penger === 360000 && !g.stål, 'bygd på 1200: 36 rasjoner, 6 m³ tre og 360 000 kr per døgn');
+  ok(g.mat === 36 && g.tre === 6 && g.penger === 120000 && !g.stål, 'bygd på 1200: 36 rasjoner, 6 m³ tre og 120 000 kr per døgn');
   ok(h.mat === 10 && h.tre === 2 && s.penger === R.REGLER.skattMaks && s.folk === 2, 'minste og største mengder holder'); }
 { const st = { loj: 50, skatt: 'vanlig', strøm: true, rute: 'åpen' }, f = R.faktor(st);
   ok(Math.abs(f - 1) < 1e-9, 'vanlig skatt, lojalitet 50, strøm og åpen rute = faktor 1');
   ok(R.faktor({ ...st, skatt: 'hard' }) > 1.6 && R.faktor({ ...st, skatt: 'lett' }) < .7 && R.faktor({ ...st, skatt: 'støtte' }) === 0, 'hard skatt gir mer, lett mindre, støtte ingenting');
   ok(Math.abs(R.faktor({ ...st, strøm: false, utenStrøm: .4 }) - .4) < 1e-9 && R.faktor({ ...st, rute: 'stengt' }) === 0 && R.faktor({ ...st, rute: 'truet' }) === .5, 'uten strøm 40 %, truet rute halvparten, stengt rute ingenting');
   ok(R.faktor({ ...st, loj: 100 }) > R.faktor(st) && R.faktor({ ...st, loj: 0 }) < R.faktor(st) && R.faktor({ ...st, uro: true }) === .5, 'lojale tettsteder gir mer, uro halverer');
-  const støtte = R.gir(1000, 'bygd', { ...st, skatt: 'støtte' }); ok(støtte.mat === 0 && støtte.penger === -150000, 'støtte koster 150 kr per innbygger per døgn');
+  const støtte = R.gir(1000, 'bygd', { ...st, skatt: 'støtte' }); ok(støtte.mat === 0 && støtte.penger === -50000, 'støtte koster 50 kr per innbygger per døgn');
   ok(/36 rasjoner/.test(R.girTekst(R.gir(1200, 'bygd', st), v => v + ' kr')) && R.girTekst({}) === 'ingenting', 'teksten: ' + R.girTekst(R.gir(1200, 'bygd', st), v => v + ' kr')); }
 // lojalitet
 { let l = 50; for (let i = 0; i < 10; i++) l = R.lojSteg(l, { skatt: 'hard', strøm: true }, .5);

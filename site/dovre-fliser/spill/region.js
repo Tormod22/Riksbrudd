@@ -24,7 +24,9 @@
     byFolk: 5000,                            // fra så mange innbyggere er det en by
     industriFolk: 1000,                      // et industristed har minst så mange innbyggere (og et kraftverk innen nær.kraft)
     // skatt i kroner per innbygger per døgn (ved «vanlig»), og taket per tettsted
-    skattKr: 300, skattMaks: 4e6,
+    // (Runde 3: 300 kr ga 2,6 mill. kr per ti minutter med sju tettsteder i Ryfylke – for mye mot 40 mill. i startkasse. Med 100 kr gir de
+    // samme sju ca. 0,9 mill., så et kontrollrom til 15 mill. tar rundt tre timer: inntekten merkes, men pengene er fortsatt knappe.)
+    skattKr: 100, skattMaks: 1.5e6,
     // lojalitet 0–100
     lojStart: 50, lojEtterOpprør: 30, opprørVed: 10,
     lojGarnison: 10,                         // en garnison i tettstedet løfter målet
@@ -55,7 +57,7 @@
   // Skattenivåene: f = faktor på varer og skatt, mål = lojaliteten den går mot, fart = poeng per døgn.
   // «Støtte» koster deg penger (koster kr per innbygger per døgn) og gir ingen varer.
   const SKATT = {
-    støtte: { navn: 'Støtte', f: 0, mål: 100, fart: 15, koster: 150, tekst: 'Du gir i stedet for å ta: koster penger, lojaliteten stiger fort.' },
+    støtte: { navn: 'Støtte', f: 0, mål: 100, fart: 15, koster: 50, tekst: 'Du gir i stedet for å ta: koster penger, lojaliteten stiger fort.' },
     lett: { navn: 'Lett', f: .6, mål: 80, fart: 6, tekst: 'Litt mindre varer, lojaliteten stiger.' },
     vanlig: { navn: 'Vanlig', f: 1, mål: 55, fart: 4, tekst: 'Vanlig skatt, lojaliteten holder seg midt på treet.' },
     hard: { navn: 'Hard', f: 1.7, mål: 0, fart: 10, tekst: 'Mye mer nå, men lojaliteten faller – til slutt blir det opprør (uro hvis du har garnison).' },

@@ -47,7 +47,11 @@
     STATUS = ut; return ut;
   }
   const stFor = q => ({ loj: q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: G.REGLER.strøm.uten });
-  const girNå = q => RG.gir(q.by.e.folk || 0, q.type, stFor(q));
+  // vanskelighetsgraden (window.SPILLREGLER.faktor.penger: lett 1,5, vanlig 1, hard 0,6) gjelder også skatten fra tettstedene
+  const pf = () => { const f = window.SPILLREGLER && SPILLREGLER.faktor ? +SPILLREGLER.faktor.penger : 1; return f > 0 ? Math.max(.4, Math.min(1.5, f)) : 1; };
+  const medPf = g => { if (g.penger > 0) g.penger *= pf(); return g; };
+  const grunnFor = (folk, t) => medPf(RG.grunn(folk, t));
+  const girNå = q => medPf(RG.gir(q.by.e.folk || 0, q.type, stFor(q)));
   function sum() { const ut = {}; for (const q of status().values()) { const g = girNå(q); for (const k of RG.VARER) if (g[k]) ut[k] = (ut[k] || 0) + g[k]; } return ut; }
 
   // ---------- takten ----------
@@ -67,7 +71,7 @@
       meldtRute.set(q.by.e.id, rs);
       const fs = meldtStrøm.get(q.by.e.id); if (fs !== undefined && fs !== q.strøm) logg(q.strøm ? `${navn} har fått strømmen tilbake.` : `${navn} har mistet strømmen: tettstedet gir mindre og blir misfornøyd til et kraftverk i nærheten virker igjen.`);
       meldtStrøm.set(q.by.e.id, q.strøm);
-      const g = RG.gir(q.by.e.folk || 0, q.type, st); for (const k of RG.VARER) if (g[k]) S.pott[k] = (S.pott[k] || 0) + g[k] * d;
+      const g = medPf(RG.gir(q.by.e.folk || 0, q.type, st)); for (const k of RG.VARER) if (g[k]) S.pott[k] = (S.pott[k] || 0) + g[k] * d;
     }
     const t0 = Math.floor(S.time), d0 = Math.floor(S.døgn); S.time += d * 24; S.døgn += d;
     if (Math.floor(S.time) !== t0) lever();
@@ -214,7 +218,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     if (l) { const andre = byer().filter(by => eier(by) !== 'blå').map(by => ({ by, d: Math.hypot(midt(by).x - l.x, midt(by).y - l.y) })).sort((a, b) => a.d - b.d).slice(0, 4);
       if (andre.length) { ut.append(el('h3', {}, 'Verdt å ta'));
         for (const { by, d } of andre) { const t = typeAv(by), e = eier(by), hvem = e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].navn : 'fienden') : 'nøytralt';
-          ut.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, by.e.navn), el('small', {}, `${RG.TYPER[t].navn} (${RG.TYPER[t].tekst}) · ${km(d)} · ${hvem}`), el('small', {}, 'Ville gitt: ' + RG.girTekst(RG.grunn(by.e.folk || 0, t), kr))),
+          ut.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, by.e.navn), el('small', {}, `${RG.TYPER[t].navn} (${RG.TYPER[t].tekst}) · ${km(d)} · ${hvem}`), el('small', {}, 'Ville gitt: ' + RG.girTekst(grunnFor(by.e.folk || 0, t), kr))),
             kn('Vis', () => { if (typeof på3d !== 'undefined' && på3d) slå3d(false); kam.x = midt(by).x; kam.y = midt(by).y; kam.m = Math.min(Math.max(kam.m, 6), 20); skitten = true; }))); } } }
     // motstanderne har også nytte av tettstedene sine
     { fordelTid = -1e9; const rader = []; for (const sd of ['rød', 'grønn']) { const f = fordel(sd); if (!f.antall) continue; const navn = window.Fraksjoner && Fraksjoner.FRAKSJONER[sd] ? Fraksjoner.FRAKSJONER[sd].navn : sd;
@@ -282,7 +286,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // strategi-visning.js eies av en annen pakke og er ikke endret: linjene legges til i panelet etter at det er tegnet. Observatøren ser bare
   // på panelets egne barn (ikke under dem), så linjene vi legger til, utløser den ikke på nytt.
   function pyntKrig() { const P = document.getElementById('krig'); if (!P || !klar) return; const l = leir();
-    const linje = by => { const t = typeAv(by), q = STATUS.get(by.e.id); return el('small', { klasse: 'regionlinje', style: 'display:block;color:#d9c48a' }, `${RG.TYPER[t].navn}: ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn` : `ville gitt deg ${RG.girTekst(RG.grunn(by.e.folk || 0, t), kr)} per døgn`)); };
+    const linje = by => { const t = typeAv(by), q = STATUS.get(by.e.id); return el('small', { klasse: 'regionlinje', style: 'display:block;color:#d9c48a' }, `${RG.TYPER[t].navn}: ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn` : `ville gitt deg ${RG.girTekst(grunnFor(by.e.folk || 0, t), kr)} per døgn`)); };
     for (const r of P.querySelectorAll('.rad[data-trekk]')) { if (r.querySelector('.regionlinje')) continue; const by = byMedId(+r.dataset.trekk) || byMedId(r.dataset.trekk); if (by && r.firstChild) r.firstChild.append(linje(by)); }
     const boks = P.querySelector('.by'); if (boks && !boks.querySelector('.regionlinje')) { const navn = boks.querySelector('b') ? boks.querySelector('b').textContent : '', kn = boks.querySelector('[data-send]');
       let by = kn ? byMedId(+kn.dataset.send) || byMedId(kn.dataset.send) : null;
@@ -298,7 +302,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     if (o.lag !== 'tettsted') return;
     const t = typeAv(o), T = RG.TYPER[t], q = status(true).get(o.e.id);
     h.textContent += ` ${T.navn} (${T.tekst}): ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt: ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta er ${q.rute.status}. Skatten velger du i «Region».`
-      : `som ditt gir det ${RG.girTekst(RG.grunn(o.e.folk || 0, t), kr)} per døgn til leiren.`); });
+      : `som ditt gir det ${RG.girTekst(grunnFor(o.e.folk || 0, t), kr)} per døgn til leiren.`); });
 
   // ---------- Leir-menyen (fanen Lager) og kommandolinja ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar) return;
