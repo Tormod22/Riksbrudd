@@ -166,6 +166,9 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
 - Store lyse flekker der satellittbildet hadde snø/is (malt som berg av snøTilBergG) har fortsatt den grove formen fra satellittbildet.
 - Høyloftet kommer bare i låver med høy himling (minst 3,3 m); i Ryfylke har de fleste låvene himlingen ved veggtoppen (1,95 m).
 - Låveinnholdet ble ikke prøvd på telefon.
+- Ved leiren står en teltmodell (ikke et av leirens bygg – LeirSpill.tilstand().bygg var tom; trolig basen) med gress tett inntil;
+  om gresset står inne i den, er ikke avklart (den er ikke i R3.hindre, så gress og planter vet ikke om den).
+- Bilder etter tregrensen ble senket: etter2-gaa-strand, etter2-gaa-strand-ned, etter2-gaa-hei, etter2-gaa-hei-ned (glisnere gress på heia).
 
 ### Filer i runde 5 (til flettingen)
 - Nye: site/dovre-fliser/spill/lave3d.js, pipeline/fliser/test_lave3d.js.
