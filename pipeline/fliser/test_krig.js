@@ -70,6 +70,27 @@ ok(F.fart('kolonne', true) === 1.2 && F.fart('kolonne', false) === 1.1 && F.fart
   const f = { navn: 'Rød 1', x: 0, y: 0, menn: [], ai: { hva: null, tekst: '', mål: [1, 1] } }; L.brukLag(f, d.fiender[0]); ok(f.ai.hva === 'angrip' && f.ai.mål === null && f.menn[0].hp === .5, 'fiendens lag settes tilbake');
   const M = { rød: { sist: null, hatt: new Set(), leir: false }, grønn: { sist: { x: 1 }, hatt: new Set([1]), leir: true } }; ok(L.brukMinne(M, d.minne) === 2 && M.rød.hatt.has(9) && M.rød.leir && M.rød.sist.navn === 'N' && M.grønn.sist === null && !M.grønn.leir, 'minnet legges tilbake');
   ok(L.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 1, y: 2 }, tid: 1 }), { x: 1, y: 2 }).fiender.length === 0, 'gamle lagringer uten fiender leses'); }
+// (runde 4) dekning bak leirens egne bygg: en brakke 10 × 6 m med midten i (0, 0); laget står 3 m øst for østveggen
+{ const P = [[-5, -3], [5, -3], [5, 3], [-5, 3]], B = [{ P, tar: K.byggDekning('brakke'), navn: 'Brakke' }], lag = { x: 8, y: 0 };
+  ok(K.polyAvst(8, 0, P) === 3 && K.polyAvst(0, 0, P) === 0 && K.inni(1, 1, P) && !K.inni(9, 9, P), 'avstand til bygget');
+  ok(K.leirVern(lag, { x: -300, y: 0 }, B).f === R.leirbygg.tar && K.leirVern(lag, { x: -300, y: 0 }, B).navn === 'Brakke', 'bygget mellom laget og skytteren gir dekning');
+  ok(K.leirVern(lag, { x: 300, y: 0 }, B).f === 1, 'skutt fra den åpne siden: ingen dekning');
+  ok(K.leirVern({ x: 20, y: 0 }, { x: -300, y: 0 }, B).f === 1, 'for langt fra bygget (over 6 m): ingen dekning');
+  ok(K.leirVern(lag, { x: -300, y: 200 }, B).f === R.leirbygg.tar && K.leirVern(lag, { x: 300, y: 400 }, B).f === 1, 'på skrå: bare når skuddlinja går gjennom bygget');
+  ok(K.byggDekning('lagertelt') === R.leirbygg.lett && K.byggDekning('gjerde') === 1 && K.byggDekning('sandsekkvoll') === 1 && K.byggDekning('verksted') === R.leirbygg.tar, 'lette bygg gir mindre, gjerder og sandsekker ingen (egen regel)');
+  ok(K.leirVern(lag, { x: -300, y: 0 }, [{ P, tar: R.leirbygg.lett }, { P, tar: R.leirbygg.tar }]).f === R.leirbygg.tar && K.leirVern(lag, { x: -300, y: 0 }, []).f === 1, 'beste dekning gjelder, ingen bygg = 1'); }
+// (runde 4) fanger
+{ const FA = R.fange;
+  ok(K.byttePris(3) === 3 * FA.pris && K.byttePris(0) === 0, 'bytte mot penger: pris per fange');
+  ok(K.arbeidF(0, 4) === 1 && nær(K.arbeidF(2, 2), (2 + FA.arbeid * 2) / 2) && K.arbeidF(1, 20) === FA.maksF && K.arbeidF(3, 0) === 1, 'fanger i arbeid er halve arbeidere, bare der dine arbeider');
+  ok(nær(K.rømSjanse(4, 0), FA.rømBase + FA.rømLav) && nær(K.rømSjanse(4, 1), FA.rømBase) && K.rømSjanse(8, 1) > K.rømSjanse(8, 2) && K.rømSjanse(0, 0) === 0, 'færre vakter: flere rømmer');
+  { const r = frø(7); let a = 0, b = 0; for (let i = 0; i < 200; i++) { a += K.rømmer(4, 0, 1440, r); b += K.rømmer(4, 4, 1440, r); } ok(a > b * 2 && b > 0, `rømming per døgn uten vakter ${a}, med vakter ${b}`);
+    ok(K.rømmer(4, 0, 0, r) === 0, 'ingen tid: ingen rømmer'); }
+  ok(!K.kanSpørres({ god: true, godMin: FA.døgn * 1440 - 1 }, 0) && K.kanSpørres({ god: true, godMin: FA.døgn * 1440 }, 0) && !K.kanSpørres({ god: false, godMin: 1e9 }, 0), 'spørres først etter noen døgn med god behandling');
+  ok(!K.kanSpørres({ god: true, godMin: 1e9, nei: 100 }, 50) && K.kanSpørres({ god: true, godMin: 1e9, nei: 100 }, 100), 'nei: vent før neste forsøk');
+  ok(K.jaSjanse(100) > K.jaSjanse(20) && nær(K.jaSjanse(0), FA.ja), 'god moral i leiren: flere vil bli med');
+  { const r = frø(3); let ja = 0, forr = 0; for (let i = 0; i < 400; i++) { const s = K.spør(5, 60, r); ja += s.ja; forr += s.forrædere.length; ok(s.forrædere.every(j => j < s.ja), 'forræderne er blant dem som sa ja'); }
+    ok(ja > 400 * 5 * .35 && ja < 400 * 5 * .65 && forr > 0 && forr < ja * .2, `ja ${ja} av 2000, forrædere ${forr}`); } }
 console.log(`ok   krig: ${n} sjekker`);
 // AI-en: førerens væremåte flytter terskelen (overtakF) – en jevn kamp angripes av den pågående, ikke av den forsiktige
 { const Fr = require('../../site/dovre-fliser/spill/fraksjoner.js'), lag = (ute = 0) => ({ navn: 'A', x: 0, y: 0, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });
