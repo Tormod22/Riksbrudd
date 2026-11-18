@@ -100,11 +100,15 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   const stiSlutt = s => (s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null);
   const motVår = s => { const e = stiSlutt(s); return !e || (s.motMål && Math.hypot(e[0] - s.motMål.x, e[1] - s.motMål.y) < 25) || (s.forsvar && Math.hypot(e[0] - s.forsvar.x, e[1] - s.forsvar.y) < 25); };
   let motMeldt = false;
-  // inne i leiren: nær midten, eller så nær et bygg at de skader det (HERJER i leir-visning.js)
-  const herjere = () => { const L = leir(); return L ? røvere().filter(e => !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne || (window.HERJER && HERJER.has(e)))) : []; };
+  // inne i leiren: nær midten, eller så nær et bygg at de skader det (HERJER i leir-visning.js). (Kjøring 7: Kystalliansens lag
+  // raserte leiren på dag 6 mens lagene sto stille – derfor gjelder det alle fiender i leiren, ikke bare røverbølgen.)
+  const herjere = () => { const L = leir(); return L ? ENHETER.filter(e => e.side !== 'blå' && levende(e) && Array.isArray(e.menn) && !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne || (window.HERJER && HERJER.has(e)))) : []; };
+  let selvVakt = false;
   function motSteg() { if (!auto()) return; const L = leir(); if (!L) return; const inne = herjere();
-    if (!inne.length) { if (motMeldt) motFerdig(); return; }
-    if (!vakt) { const lv = leirvakt({ x: L.x + 12, y: L.y, voll: false }); if (lv) logg(`Leirvakta (${lv.menn.length} fra vakta) tar opp våpen.`); }
+    if (!inne.length) { if (motMeldt) motFerdig();
+      // Leirvakta som kom av seg selv uten røverbølge (fiender fra en fraksjon), legger ned våpnene når de er ute av leiren
+      if (selvVakt && vakt && !satt && !(T() && T().aktiv)) opphev(false); if (!vakt) selvVakt = false; return; }
+    if (!vakt) { const lv = leirvakt({ x: L.x + 12, y: L.y, voll: false }); if (lv) { selvVakt = true; logg(`Leirvakta (${lv.menn.length} fra vakta) tar opp våpen.`); } }
     const lag = egne().filter(s => !s.ombord && !s.planlegger && !Terreng.slattUt(s.menn) && Math.hypot(s.x - L.x, s.y - L.y) <= R.hent && motVår(s));
     if (vakt && levende(vakt) && !vakt.planlegger) lag.push(vakt);
     const navn = [];
@@ -116,7 +120,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
       if (!s.sti && s.skyterPå && s.skyterPå.size && q.meter <= R.mot.skyter) continue;
       if (performance.now() - (s.motTid || 0) < 4000 || !kanStille(s)) continue;
       s.motHerjer = q.fi.navn; s.motMål = q.mål; s.motTid = performance.now(); ordre(s, q.mål.x, q.mål.y, true); navn.push(s.navn); }
-    if (navn.length && !motMeldt) { motMeldt = true; logg(`Røverne er inne i leiren! ${navn.join(', ')} går mot dem.`); } }
+    if (navn.length && !motMeldt) { motMeldt = true; logg(`${inne.some(e => e.raid) ? 'Røverne' : 'Fienden'} er inne i leiren! ${navn.join(', ')} går mot dem.`); } }
   // røverne er ute av leiren (eller angrepet er over): lagene i forsvarsstilling går tilbake dit
   function motFerdig() { motMeldt = false; for (const s of ENHETER) { if (!s.motMål) continue; const gikk = motVår(s); delete s.motHerjer; delete s.motMål; delete s.motTid; if (gikk && s.forsvar && levende(s) && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) > 12) ordre(s, s.forsvar.x, s.forsvar.y, true); } }
 
