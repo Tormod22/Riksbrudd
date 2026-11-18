@@ -39,12 +39,10 @@
     const d = S && S.leir ? Math.hypot(k.x - S.leir.x, k.y - S.leir.y) : 0, v = S && S.leir ? Math.atan2(k.x - S.leir.x, k.y - S.leir.y) : 0, ret = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'][((Math.round(v / (Math.PI / 4)) % 8) + 8) % 8];
     vk.innerHTML = ''; const tittel = document.createElement('b'); tittel.textContent = `${c ? navn(c) : 'Kameraet'} har sett folk`; const tekst = document.createElement('div');
     tekst.textContent = KV.tekst(k) + (d > 30 ? ` – ${Math.round(d / 10) * 10} m ${ret} for leiren.` : '.'); const rad = document.createElement('div'); rad.className = 'rad';
-    rad.append(kn('Se gjennom kameraet', () => { skjulVarsel(); seGjennom(c ? c.id : k.kam); }, 'hoved'), kn('Vis i kartet', () => { skjulVarsel(); if (typeof slå3d === 'function' && typeof på3d !== 'undefined' && på3d) slå3d(false); kam2d(k.x, k.y); }));
+    rad.append(kn('Se gjennom kameraet', () => { skjulVarsel(); seGjennom(c ? c.id : k.kam); }, 'hoved'), kn('Vis i kartet', () => { skjulVarsel(); if (typeof slå3d === 'function' && typeof på3d !== 'undefined' && på3d) slå3d(false); if (window.kartTil) kartTil(k.x, k.y, 3); }));
     vk.append(kn('×', skjulVarsel, 'x'), tittel, tekst, rad); vk.classList.add('på'); vkTid = performance.now(); vk.dataset.kam = String(c ? c.id : k.kam);
   }
   function skjulVarsel() { vk.classList.remove('på'); }
-  // flytt 2D-kartet til stedet (kam er kartets kamera i index.html; navnet «kam» er brukt til noe annet i denne fila)
-  function kam2d(x, y) { try { const K2 = (0, eval)('kam'); K2.x = x; K2.y = y; if (K2.m > 3) K2.m = 3; } catch (e) { /* kartet er ikke klart */ } skitten = true; }
   setInterval(() => { if (vk.classList.contains('på') && performance.now() - vkTid > 45000) skjulVarsel(); }, 2000);
   // uten folk på overvåking blir klippene liggende: si fra én gang i blant
   let sistMast = 0;
@@ -74,7 +72,8 @@
     api.filterFør = window.Filtre ? Filtre.valgt() : null; if (window.Filtre && api.filterFør === 'ingen') Filtre.velg('vhs');
     document.body.classList.add('ikamera'); lapp.textContent = `${navn(c)} · ${KV.type(c.nivå).navn}`; lapp.append(document.createElement('br'), document.createTextNode(sist ? `Sist: ${sist.status === 'venter' ? 'usett klipp' : KV.tekst(sist)}, kl. ${klokke(sist.t)}` : 'Ingen klipp ennå'));
     logg(`Du ser gjennom ${navn(c).toLowerCase()}. Dra for å se deg rundt. Esc går ut.`); return true; }
-  function kam2d(c) { kam.x = c.x; kam.y = c.y; kam.m = Math.min(kam.m, 1.2); skitten = true; }
+  // (rettet 18. nov: «kam» er i denne fila en funksjon som finner et kamera, så kartet ble aldri flyttet; window.kartTil ligger i samfunn-visning.js)
+  function kam2d(c) { if (window.kartTil) kartTil(c.x, c.y, 1.2); skitten = true; }
   function ut() { if (!inne) return; inne = null; document.body.classList.remove('ikamera'); if (window.Gange) { Gange.settFører(null); Gange.stopp(); } if (window.Filtre && api.filterFør === 'ingen' && Filtre.valgt() === 'vhs') Filtre.velg('ingen'); }
   window.addEventListener('keydown', e => { if (inne && (e.key === 'Escape' || e.key === 'f' || e.key === 'F')) { e.stopPropagation(); ut(); } }, true);
   setInterval(() => { if (inne && !(r3() && R3.fot)) ut(); }, 500);

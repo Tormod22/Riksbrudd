@@ -80,7 +80,7 @@
     if (l) { for (const k of ['tre', 'betong', 'stål']) { if (!(P[k] >= .1)) continue; const m = LB.leggInn(l, k, Math.floor(P[k] * 10) / 10); P[k] -= m; fikk(k, m); P[k] = Math.min(P[k], 30); }
       if (P.diesel >= 1) { const n = Math.max(0, Math.min(Math.floor(P.diesel), Math.floor(LB.kapasitet(l) - l.drivstoff))); l.drivstoff += n; P.diesel -= n; fikk('diesel', n); P.diesel = Math.min(P.diesel, 600); } }
     if (f && l && P.folk >= 1) { const o = window.FolkSpill && FolkSpill.valg ? FolkSpill.valg() : {};
-      if (!FR.kanRekruttere(f, l, o)) { const r = FR.rekrutter(f, l, () => true, o); if (r && !r.feil) { P.folk -= 1; fikk('folk', 1); logg(`${r.person.navn} (${r.person.yrke}) kom med handelsruta fra byen og er med i gjengen.`); } }
+      if (!FR.kanRekruttere(f, l, o)) { const r = FR.rekrutter(f, l, () => true, o); if (r && !r.feil) { P.folk -= 1; fikk('folk', 1); logg(`${r.person.navn} (${r.person.yrke}) kom med handelsruta fra byen og er med i gjengen.`); if (window.SamfunnSpill && SamfunnSpill.ankommet) SamfunnSpill.ankommet(r.person); } }
       P.folk = Math.min(P.folk, 2); }
     if (P.penger >= 1000) { const v = Math.round(P.penger); OppstartSpill.gi(v); P.penger = 0; fikk('penger', v); }
     else if (P.penger <= -1000) { const v = Math.round(-P.penger); P.penger = 0;
