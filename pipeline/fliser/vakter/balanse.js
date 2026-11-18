@@ -11,6 +11,7 @@ module.exports = {
     if (T.lagFor(9, { soldater: 40, dag: 6 }) !== 3) feil.push('dag 7 med 40 soldater: ikke tre lag');
     // byttet dekker skader, ikke mer
     if (!(T.belønning(1) <= 5e5 && T.belønning(40) <= 1.5e6)) feil.push('røverbyttet er for stort');
+    if (!(T.menn && T.menn(1, 8) <= 6 && T.menn(9, 40) === 12)) feil.push('røverlagene i første bølge er for store');
     if (!(T.BALANSE.først.spill >= 12 * 60)) feil.push('første bølge kommer før 12 spilltimer');
     // de fire første byggene med materialer (1,5 × prisen) og 500 l diesel får plass i 40 mill. med margin, og betongen finnes første dag
     const typer = ['brakke', 'aggregat', 'drivstofftank', 'kontrollrom'], mat = { tre: 0, betong: 0, stål: 0 };
