@@ -63,10 +63,10 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     const ild = (a, b) => KROKER.ild.reduce((v, h) => v * h(a, b), 1);
     const a = nyttLag('Vakt4 blå', L.x + 600 + 4.2 + 3, L.y + 600, 'blå'), b = nyttLag('Vakt4 rød', L.x + 300, L.y + 600, 'rød'); ENHETER.push(a, b); a.retning = Math.PI; b.retning = 0;
     try {
-      KS.test = true; const u0 = ild(b, a);
+      KS.test = false; const u0av = ild(b, a); KS.test = true; const u0 = ild(b, a);
       LS.bygg.push({ id: 987654, type: 'brakke', x: L.x + 600, y: L.y + 600, ret: 0, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 1, hp: 1 });
       ut.dekning = ild(b, a) / u0; ut.dekningTekst = /i dekning bak brakke/.test(KROKER.lagTekst.map(h => h(a)).filter(Boolean).join(' · '));
-      KS.test = false; ut.dekningAv = ild(b, a) / u0; KS.test = true;
+      KS.test = false; ut.dekningAv = ild(b, a) / u0av; KS.test = true;
       // fanger: bytte mot penger og mot egne, arbeid, god behandling og rekruttering
       const T = KS.T(); T.fanger.push({ side: 'rød', n: 2, t: tid }); const kr1 = OppstartSpill.tilstand().penger; ut.bytt = KS.byttPenger(T.fanger.length - 1) && OppstartSpill.tilstand().penger - kr1 === Krig.byttePris(2);
       if (F) { T.fanger.push({ side: 'rød', n: 3, t: tid }); T.tatt.push({ side: 'rød', navn: 'Vakt Tatt', rolle: 'rifle', hp: 1, t: tid }); const n1 = F.personer.length;

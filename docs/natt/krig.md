@@ -145,3 +145,36 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   rotoren går) og står på plassen sin igjen etterpå (kjor.js setter den hver ramme før krig3d.js). Ingen ny modell.
 - **Etterretning**: rombe med «?», navn og alder over stedet laget sist ble meldt, i overlegget (KROKER.tegn3d, proj3 – skjules bak åser og hus).
 - `Krig3d.antall()` = { røyk, lys, stillinger, heli, merker }.
+
+### 5. Prøvd: beleiring i et tettsted der fienden og bygdevernet sloss, og våpenhvile der lagene ser hverandre
+- **Beleiring, /rogaland med ekte data** (dev.py, leir 15607 6622779; scratchpad natt/krig/p5.js): Sand (1203 innbyggere, 10,5 km fra
+  leiren, ingen eier), et rødt lag midt i stedet (Kystalliansens 2. lag sto der fra før), egne lag 1,1 km øst og vest, 600× i ca. 14 spilltimer.
+  FUNN 1: ringen startet aldri i et tettsted ingen eier – beleiringen krevde en eier, og mens bygdevernet sloss, har stedet ingen.
+  RETTET: et tettsted uten eier der fiendens lag (ikke røvere/poster) står inne, kan beleires; meldingen sier «Kystalliansen sitter fast
+  der». FUNN 2: når garnisonen hadde gitt seg, startet en ny beleiring av det tomme stedet med en gang (og meldte «beleiret» på nytt).
+  RETTET: en ny ring startes ikke uten noen å beleire. Etter rettingene: beleiret fra første minutt, bygdevernet (8 mann) var knust på
+  under 50 spillminutter av de to røde lagene (24 mann), Kystalliansen tok stedet etter 53 min, garnisonen svekket etter 6 t, begge lagene
+  ga seg etter 12 t (24 fanger til «Ring vest»), ingen ny ring etterpå, 0 sidefeil. Under våpenhvile med dem som sitter i stedet, står
+  beleiringen stille.
+- **Våpenhvile, Dovre** (scratchpad natt/krig/p6.js): et blått og et rødt lag 250 m fra hverandre på åpen hei. Under hvilen (17 spillminutter
+  på 60×): ingen skudd, ingen tap – men den røde brukte 6 % ammunisjon uten å skyte (Forsyning.skyt kalles i KROKER.ild selv når en annen
+  krok gir 0). RETTET i index.html: kamprunde() hopper over par med våpenhvile før krokene kalles (ammunisjonen står på 100 %). Etter
+  «Bryt»: det røde laget åpnet ild med en gang (2 av de blå ute på 17 min). Overgivelser skjer ikke under hvile.
+  SETT, IKKE RETTET: det blå laget så ikke det røde (ser() usann den ene vegen, sann den andre – siktfeltet i 32 m-ruter er ikke likt begge
+  veger i ujevnt terreng), så det blå skjøt ikke tilbake. Og: et blått lag med «Ild: bare svar» bruker trolig også ammunisjon uten å skyte
+  (samme Forsyning.skyt) – ikke målt.
+
+### Fellesfiler endret i runde 4
+- `site/dovre-fliser/index.html` – i `kamprunde()`, rett etter `if (a.side === b.side || !levende(b)) continue;`: én linje (med kommentar
+  over) `if (window.AI && AI.hvile && AI.hvile(a.side, b.side)) continue;`. Og versjonsmerkene (versjon.py).
+- Ingen endring i fraksjoner-visning.js, lagring.js, leir.js eller folk-filene.
+
+### IKKE gjort / svakheter (runde 4)
+- Dekningen bak leirens bygg ser bare på omrisset (2D) – ikke høyden på bygget, og ikke om laget står på riktig side for andre skyttere enn
+  den som skyter nå (regnes per skytter, så det stemmer i hver ildrunde).
+- Fangene: bytte skjer straks (ingen forhandling eller levering); motstanderen tar aldri initiativ til bytte; dine som er tatt, finnes bare
+  når et eget lag har gitt seg etter denne runden (eldre spill har ingen i `T.tatt`). Fanger som ikke arbeider, rømmer aldri.
+- Lagring: røverne i et pågående angrep lagres fortsatt ikke, heller ikke fiendens kjøretøy-ordre.
+- 3D: ingen figurer i stillingene; etterretningsmerket er i overlegget (ikke i scenen); trær ryddes i ringen, men ikke busker fra
+  vegetasjon3d som ikke ligger i R.treMesh/R.småMesh.
+- Bygdevernet faller fort mot fulle lag (8 mann på under 50 min mot 24) – tallene i `Krig.REGLER.vern` er ikke endret.

@@ -485,7 +485,8 @@
       const fb = e('div', { klasse: 'krigliste', id: 'krigfanger' }), FA = R.fange, oppg = o => (window.FolkRegler && FolkRegler.OPPGAVE[o] ? FolkRegler.OPPGAVE[o].navn : o).toLowerCase();
       T.fanger.forEach((f, i) => {
         const st = [f.til ? `avhøres, ferdig om ${Math.max(1, Math.round(f.til - tid))} min` : f.avhørt ? 'avhørt' : 'ikke avhørt – de vet hvor lagene deres står'];
-        if (f.arbeid) st.push(`arbeider på «${oppg(f.arbeid)}» (×${String(Math.round(fangeArbeidF(f.arbeid) * 100) / 100).replace('.', ',')}), rømmer lettere med få vakter (${api.vakter()} nå)`);
+        if (f.arbeid) { const af = fangeArbeidF(f.arbeid), v = api.vakter();
+          st.push(`arbeider på «${oppg(f.arbeid)}» (${af > 1 ? `+${Math.round((af - 1) * 100)} % fart` : 'ingen av dine er der – gir ingenting ennå'}) · ${v} ${v === 1 ? 'vakt' : 'vakter'} – med få vakter kan de rømme`); }
         if (f.god) st.push(K.kanSpørres(f, tid) ? 'god behandling – kan spørres om å bli med' : f.nei > tid && (f.godMin || 0) >= FA.døgn * 1440 ? `sa nei – spør igjen om ${Math.max(1, Math.round((f.nei - tid) / 60))} t` : `god behandling i ${String(Math.round((f.godMin || 0) / 144) / 10).replace('.', ',')} av ${FA.døgn} døgn`);
         const tatt = egneTatt(f.side).length, v = e('div', {}, `${fangeTekst(f.n)} fra ${fnavn(f.side)}`); v.append(e('small', {}, st.join(' · ')));
         const h = e('div', { klasse: 'krigknapper' });
