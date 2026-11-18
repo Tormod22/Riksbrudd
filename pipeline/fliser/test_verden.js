@@ -51,6 +51,12 @@ assert.ok(V.åkerBrennbar(true, 1, 'sommer') > V.åkerBrennbar(true, .2, 'sommer
 assert.strictEqual(V.korn(false, 1).h, 0); assert.ok(V.korn(true, 1).h > V.korn(true, .3).h && V.korn(true, 1).h <= R.åkerBygg.høyde, 'kornet vokser');
 assert.ok(V.korn(true, 1).farge[0] > V.korn(true, .3).farge[0], 'modent korn er gult');
 
+// runde 4: funn flyttes ut av tettbebyggelse og vann
+{ const K = V.funnKandidater(1000, 2000, 5); assert.deepStrictEqual(K[0], [1000, 2000], 'først selve stedet');
+  for (let i = 1; i < K.length; i++) assert.ok(Math.hypot(K[i][0] - 1000, K[i][1] - 2000) >= Math.hypot(K[i - 1][0] - 1000, K[i - 1][1] - 2000) - 1e-6, 'nærmest først');
+  assert.ok(Math.hypot(K[K.length - 1][0] - 1000, K[K.length - 1][1] - 2000) <= R.funn.flytt.maks + 1e-6); assert.deepStrictEqual(V.funnKandidater(1000, 2000, 5), K, 'fast rekkefølge');
+  assert.ok(V.åpentFunnSted(1) && V.åpentFunnSted(2) && !V.åpentFunnSted(7) && !V.åpentFunnSted(3) && !V.åpentFunnSted(255) && !V.åpentFunnSted(null)); }
+
 // 33 jakt
 assert.strictEqual(V.vilt(1300, 0), 'rein'); assert.strictEqual(V.vilt(700, 1), 'elg'); assert.strictEqual(V.vilt(700, 5), null);
 S = V.ny(); const u = V.jaktUtbytte(S, 'rein', 6, 5000, 5000, 0, rnd); assert.ok(u.dyr >= 1 && u.dyr <= 3 && u.mat === u.dyr * R.kjøtt.rein);

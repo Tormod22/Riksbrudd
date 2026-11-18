@@ -292,11 +292,24 @@
   }
 
   // ---------- 36 funn ----------
+  // Et funn i tettbebyggelse eller vann flyttes til nærmeste åpne sted (runde 4). Stedet finnes én gang per funn (terrenget er fast):
+  // id -> [x, y] (flyttet) | true (ligger der det ligger) | 'venter'. funnI/funnNær gir funnene med det stedet.
+  const funnFlytt = new Map();
+  function funnI(bx, by) { const f = W.funnIBlokk(bx, by); if (!f) return null; const q = funnFlytt.get(f.id); if (Array.isArray(q)) { f.x = q[0]; f.y = q[1]; f.flyttet = true; } return f; }
+  function funnNær(x, y, r) { const ut = []; for (const f0 of W.funnNær(x, y, r + R.funn.flytt.maks)) { const [bx, by] = f0.id.split(',').map(Number), f = funnI(bx, by); if (f && Math.hypot(f.x - x, f.y - y) <= r) ut.push(f); } return ut; }
+  const funnKlar = f => { const q = funnFlytt.get(f.id); return q === true || Array.isArray(q); };
+  async function plasserFunn(f) {
+    if (funnFlytt.has(f.id)) return funnFlytt.get(f.id); funnFlytt.set(f.id, 'venter');
+    try { for (const [x, y] of W.funnKandidater(f.x, f.y, f.frø)) { const p = await punktA(x, y); if (p && p.h != null && W.åpentFunnSted(p.k)) { const ny = x === f.x && y === f.y ? true : [Math.round(x), Math.round(y)]; funnFlytt.set(f.id, ny); skitten = true; return ny; } } }
+    catch (e) { /* kartet svarte ikke: prøv igjen senere */ funnFlytt.delete(f.id); return null; }
+    funnFlytt.set(f.id, true); return true;
+  }
   function sjekkFunn() {
     const ser = []; for (const s of ENHETER) if (s.side === 'blå' && levende(s)) ser.push([s.x, s.y, s.navn]);
     const Q = typeof R3 !== 'undefined' ? R3 : null, kr = Q && Q.fot && Q.ut && window.Gange && Gange.kropp && Gange.kropp(); if (kr) ser.push([Q.ut.cx + kr.x, Q.ut.cy + kr.y, 'Du', true]);
-    for (const [x, y, navn, selv] of ser) for (const f of W.funnNær(x, y, R.funn.ser)) {
-      if (V.funn.tatt[f.id]) continue;
+    for (const [x, y, navn, selv] of ser) for (const f0 of W.funnNær(x, y, R.funn.ser + R.funn.flytt.maks)) {
+      if (V.funn.tatt[f0.id]) continue; if (!funnKlar(f0)) { if (!funnFlytt.has(f0.id)) plasserFunn(f0); continue; }
+      const f = funnI(...f0.id.split(',').map(Number)); if (Math.hypot(f.x - x, f.y - y) > R.funn.ser) continue;
       if (!V.funn.sett[f.id]) { const p = punkt(f.x, f.y); if (!p) continue; if (p.h == null || p.k === 3) { V.funn.tatt[f.id] = 1; endret(); continue; }
         V.funn.sett[f.id] = 1; endret(); skitten = true; logg(`${navn} ser noe ${stedTekst(f.x, f.y)}: ${f.navn.toLowerCase()}. Send et lag dit og undersøk.`); }
       if (selv && Math.hypot(f.x - x, f.y - y) < 25) undersøk(null, f);
@@ -309,7 +322,7 @@
     else logg(`${hvem} undersøker ${f.navn.toLowerCase()}: ` + (i.hendelse ? i.tekst : fikk.length ? `fant ${fikk.join(', ')} – sendt til leiren.` : 'det var noe der, men leiren har ikke plass til det.'));
     if (s && valgt === s) visPanel(); return i;
   }
-  const funnVed = s => W.funnNær(s.x, s.y, R.funn.tar).find(f => V.funn.sett[f.id] && !V.funn.tatt[f.id]) || null;
+  const funnVed = s => funnNær(s.x, s.y, R.funn.tar).find(f => V.funn.sett[f.id] && !V.funn.tatt[f.id]) || null;
 
   // ---------- 33 jakt ----------
   function viltHer(s) { const p = s.her && s.her.h === s.her.h ? s.her : punkt(s.x, s.y); return p ? W.vilt(p.h, p.k) : null; }
@@ -383,7 +396,7 @@
     if (BRANNER.length) ut.push(`Brannvakta: det brenner ${stedTekst(BRANNER[0].x, BRANNER[0].y)}.`);
     if (v) { if (W.brannfare(V, v) >= 1) ut.push('Værmelding: knusktørt i skogen – stor brannfare.'); if (W.flomfare(V) >= 1) ut.push('Værmelding: mye regn – elvene kan gå over.');
       if (v.temp <= R.kulde.grense) ut.push(`Værmelding: sprengkulde, ${Math.round(v.temp)} grader i dalen.`); if (W.isBærer(V)) ut.push('Melding fra fiskere: isen på vannene bærer.'); }
-    for (const f of W.funnNær(l.x, l.y, 9000)) if (!V.funn.tatt[f.id] && !V.funn.sett[f.id]) { ut.push(`Rykte: det skal ligge noe (${f.navn.toLowerCase()}) ${stedTekst(f.x, f.y)}.`); if (ut.length > 8) break; }
+    for (const f of funnNær(l.x, l.y, 9000)) if (!V.funn.tatt[f.id] && !V.funn.sett[f.id]) { ut.push(`Rykte: det skal ligge noe (${f.navn.toLowerCase()}) ${stedTekst(f.x, f.y)}.`); if (ut.length > 8) break; }
     for (const b of byer()) { const e = eier(b.id); if (e && e !== 'blå' && Math.hypot(b.x - l.x, b.y - l.y) < 60000 && window.Fraksjoner && Fraksjoner.FRAKSJONER[e]) ut.push(`Melding: ${Fraksjoner.FRAKSJONER[e].navn} holder ${b.navn}.`); }
     return ut;
   }
@@ -507,7 +520,7 @@
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = flom ? '#d5e6f5' : '#f0dcc0'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; const t = flom ? 'flom' : 'ras'; g.strokeText(t, sx(s.x), sy(s.y) + 4); g.fillText(t, sx(s.x), sy(s.y) + 4); }
     // funn som er sett, men ikke undersøkt
     if (m < 120) { const B = R.funn.blokk, x0 = vx0, x1 = vx0 + VW * m, y1 = vy1, y0 = vy1 - VH * m;
-      for (const id of Object.keys(V.funn.sett)) { if (V.funn.tatt[id]) continue; const [bx, by] = id.split(',').map(Number); if ((bx + 1) * B < x0 || bx * B > x1 || (by + 1) * B < y0 || by * B > y1) continue; const f = W.funnIBlokk(bx, by); if (!f) continue;
+      for (const id of Object.keys(V.funn.sett)) { if (V.funn.tatt[id]) continue; const [bx, by] = id.split(',').map(Number); const fl = R.funn.flytt.maks; if ((bx + 1) * B + fl < x0 || bx * B - fl > x1 || (by + 1) * B + fl < y0 || by * B - fl > y1) continue; const f = funnI(bx, by); if (!f) continue;
         const a = sx(f.x), b = sy(f.y); g.beginPath(); g.moveTo(a, b - 7); g.lineTo(a + 7, b); g.lineTo(a, b + 7); g.lineTo(a - 7, b); g.closePath(); g.fillStyle = '#e2c15a'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#1b1a17'; g.stroke();
         g.fillStyle = '#1b1a17'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center'; g.fillText('?', a, b + 3.5);
         if (m < 25) { g.font = 'italic 12px "Cormorant Garamond",serif'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(f.navn, a, b + 20); g.fillText(f.navn, a, b + 20); } } }
@@ -525,7 +538,7 @@
     if (!klar) return; g.save(); g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center';
     if (BRANNER.length) { let x = 0, y = 0; for (const c of BRANNER) { x += c.x; y += c.y; } const q = proj(x / BRANNER.length, y / BRANNER.length); if (q) { g.fillStyle = '#ffb347'; g.fillText('BRANN', q[0], q[1]); } }
     for (const s of V.soner) { const q = proj(s.x, s.y); if (!q) continue; g.fillStyle = s.type === 'flom' ? '#a9c6df' : '#e3c9a0'; g.fillText(s.type === 'flom' ? 'flom' : 'ras – vegen stengt', q[0], q[1]); }
-    for (const id of Object.keys(V.funn.sett)) { if (V.funn.tatt[id]) continue; const [bx, by] = id.split(',').map(Number), f = W.funnIBlokk(bx, by), q = f && proj(f.x, f.y); if (!q) continue; g.fillStyle = '#f1e2a8'; g.fillText('◆ ' + f.navn, q[0], q[1]); }
+    for (const id of Object.keys(V.funn.sett)) { if (V.funn.tatt[id]) continue; const [bx, by] = id.split(',').map(Number), f = funnI(bx, by), q = f && proj(f.x, f.y); if (!q) continue; g.fillStyle = '#f1e2a8'; g.fillText('◆ ' + f.navn, q[0], q[1]); }
     g.restore();
   });
 
@@ -548,9 +561,32 @@
   // åkerstykkene i 3D endrer seg med framdrift, brann, såing, veksten (i tideler) og årstiden
   const åkerNøkkel = () => { const st = åkerStykker(); if (!st.length) return ''; const v = vær(); return st.map(b => b.id + ':' + Math.round((b.hp == null ? 1 : b.hp) * 10) + ':' + Math.round(Leir.framdrift(b) * 10) + ':' + (stykkeSådd(b) ? 1 : 0)).join(',') + '|' + Math.round(Math.min(1, V.åker.grodd / R.åker.modning) * 10) + (v ? v.årstid : ''); };
   const nøkkel3d = u => åkerNøkkel() + '|' + BRANNER.length + ':' + (BRANNER[0] ? BRANNER[0].x + ',' + BRANNER[BRANNER.length - 1].y : '') + '|' + V.soner.map(s => s.id).join(',') + '|' + Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).join(';') + '|' + u.cx + ',' + u.cy + ',' + u.S;
-  // deler per funn: [fram, side, høyde, x, y, z, farge] i meter
-  const FUNN3D = { vrak: [[4.2, 1.8, 1, 0, 0, .5, 0x5a4334], [1.9, 1.6, .8, -.4, 0, 1.4, 0x3b302a]], depot: [[1.6, 1.2, 1, 0, 0, .5, 0x4f5a3a], [1.2, 1, .8, 1.7, .4, .4, 0x5d6844], [1.2, 1, .7, .3, 1.5, .35, 0x6b5a3c]],
-    leir: [[2.6, 2, 1.3, 0, 0, .65, 0x6c6f4e], [2.2, 1.8, 1.1, 3.4, 1.2, .55, 0x7a6e52], [.9, .9, .25, 1.6, -2, .12, 0x2a2622]], fly: [[8, 1.3, 1.3, 0, 0, .8, 0xd8d6cf], [1.6, 9.5, .22, .6, 0, 1.2, 0xc9c7c0], [1, 3, .2, -3.6, 0, 1.3, 0xc9c7c0], [1.1, .2, 1.3, -3.6, 0, 1.9, 0xb24a3a]] };
+  // FUNN I 3D (runde 4): kasser, sekker, tønner, telt, vrak og fly av fire former (ett instansnett per form, hjørnefarger per del).
+  // Del: [form, lengde, bredde, høyde, x, y, z (over bakken), vridning (rad), farge, helling om y, helling om x (rad)]. Former: kasse, tønne (stående
+  // sylinder), sekk (flattrykt kule) og telt (trekantet prisme langs y). Alle mål i meter, fronten mot +x.
+  const KASSE = 0x7a5a36, KASSE2 = 0x8a6a40, GRØNN = 0x4f5a3a, TØNNE = 0x3d5a44, TØNNE2 = 0x7a3a2a, SEKK = 0xb8a27a, SEKK2 = 0x8c7b58, RUST = 0x6a4030;
+  const FUNN3D = {
+    vrak: [['kasse', 4.2, 1.8, .9, 0, 0, .35, 0, RUST, .04], ['kasse', 2, 1.6, .7, -.5, 0, 1.25, 0, 0x3b302a, .04], ['tønne', .7, .7, .3, 1.35, 1.2, .35, 0, 0x1c1a18, 0, 1.57], ['tønne', .7, .7, .3, 1.35, -1.1, .35, 0, 0x1c1a18, 0, 1.57],
+      ['tønne', .7, .7, .3, -1.35, 1.2, .35, 0, 0x1c1a18, 0, 1.57], ['tønne', .7, .7, .3, -1.3, -1.25, .3, .4, 0x1c1a18, .2, 1.4], ['tønne', .6, .6, .9, 3.2, 1.6, 0, 0, TØNNE2, 0], ['kasse', .6, .5, .4, 2.8, -1.5, 0, .5, KASSE, 0]],
+    depot: [['kasse', 1.2, .8, .7, 0, 0, 0, 0, KASSE, 0], ['kasse', 1.2, .8, .7, 0, .85, 0, .05, KASSE2, 0], ['kasse', 1.2, .8, .7, .1, .4, .7, -.08, GRØNN, 0], ['kasse', .8, .6, .5, 1.4, .1, 0, .6, GRØNN, 0],
+      ['tønne', .6, .6, .9, -1.1, -.3, 0, 0, TØNNE, 0], ['tønne', .6, .6, .9, -1.1, .4, 0, 0, TØNNE, 0], ['tønne', .6, .6, .9, -1.75, .05, 0, 0, TØNNE2, 0],
+      ['sekk', .9, .55, .4, 1.3, 1.2, 0, .3, SEKK, 0], ['sekk', .9, .55, .4, 1.5, 1.75, 0, -.2, SEKK2, 0], ['kasse', 2.6, 3, .05, 0, .3, 1.45, 0, 0x55603e, .25]],
+    leir: [['telt', 2.4, 3.2, 1.5, 0, 0, 0, 0, 0x6c6f4e, 0], ['telt', 2, 2.8, 1.3, 3.6, 1.6, 0, .5, 0x7a6e52, 0], ['kasse', .25, .25, .25, 1.8, -2, 0, 0, 0x2a2622, 0],
+      ['tønne', .9, .9, .12, 1.8, -2.1, 0, 0, 0x3a3631, 0], ['sekk', .8, .5, .35, -1.6, -1, 0, .7, SEKK, 0], ['sekk', .8, .5, .35, -1.7, -1.6, 0, .1, SEKK2, 0], ['kasse', .9, .6, .5, .9, 2.3, 0, .3, KASSE, 0], ['tønne', .55, .55, .85, -1.2, 1.9, 0, 0, TØNNE, 0]],
+    fly: [['tønne', 1.4, 1.4, 8, 0, 0, .7, 0, 0xd8d6cf, 1.57], ['kasse', 1.6, 9.5, .2, .6, 0, 1, 0, 0xc9c7c0, .05], ['kasse', 1, 3, .18, -3.7, 0, 1.15, 0, 0xc9c7c0, 0], ['kasse', 1.1, .18, 1.4, -3.7, 0, 1.2, 0, 0xb24a3a, 0],
+      ['kasse', .8, .7, .6, 2.6, 2.6, 0, .7, KASSE, 0], ['kasse', .8, .7, .6, -1.8, -3, 0, .2, KASSE2, 0], ['sekk', .8, .5, .35, 3.4, -1.8, 0, .4, SEKK, 0]],
+  };
+  const FORMER = ['kasse', 'tønne', 'sekk', 'telt'];
+  function formGeo(navn) {
+    let g;
+    if (navn === 'kasse') g = new THREE.BoxGeometry(1, 1, 1);
+    else if (navn === 'tønne') { g = new THREE.CylinderGeometry(.5, .5, 1, 12); g.rotateX(Math.PI / 2); }
+    else if (navn === 'sekk') { g = new THREE.SphereGeometry(.5, 8, 5); }
+    // (en sylinder med tre sider langs y har mønet opp og en flat side ned: et telt)
+    else g = new THREE.CylinderGeometry(.6, .6, 1, 3);
+    // origo midt på bunnen (sekken litt ned i bakken)
+    g.computeBoundingBox(); g.translate(0, 0, -g.boundingBox.min.z - (navn === 'sekk' ? .15 : 0)); return g;
+  }
   function lag3d(R) {
     const u = R.ut, M = mat3(), gr = new THREE.Group(), EX = R.EX || 1, inne = (X, Y, d = 0) => Math.abs(X - u.cx) < u.S - d && Math.abs(Y - u.cy) < u.S - d, z = (X, Y) => (hoyde3d(X, Y, u) - u.h0) * EX;
     D3 = { u, gruppe: gr, nøkkel: nøkkel3d(u), flammer: null }; gr.userData.kilde = 'verden-visning.js';
@@ -573,12 +609,16 @@
     // flom: en vannflate litt over det laveste punktet
     for (const s of V.soner) { if (s.type !== 'flom' || !inne(s.x, s.y, s.r)) continue; let lav = z(s.x, s.y); for (let a = 0; a < 8; a++) lav = Math.min(lav, z(s.x + Math.cos(a * .785) * s.r * .5, s.y + Math.sin(a * .785) * s.r * .5));
       const v = new THREE.Mesh(new THREE.CircleGeometry(s.r, 40), M.vann); v.position.set(s.x - u.cx, s.y - u.cy, lav + 1.6 * EX); v.renderOrder = 2; gr.add(v); }
-    // funn: vrak, kasser, telt og fly som enkle kasser
-    const funn = Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).map(id => { const [bx, by] = id.split(',').map(Number); return W.funnIBlokk(bx, by); }).filter(f => f && inne(f.x, f.y, 20));
-    if (funn.length) { let n = 0; for (const f of funn) n += FUNN3D[f.type].length; const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), M.kasse, n), o = new THREE.Object3D(), c = new THREE.Color(); let k = 0;
-      for (const f of funn) { const a = W.hash(f.frø) * 6.283, cs = Math.cos(a), sn = Math.sin(a), z0 = z(f.x, f.y);
-        for (const [l, b, h, dx, dy, dz, farge] of FUNN3D[f.type]) { o.position.set(f.x - u.cx + dx * cs - dy * sn, f.y - u.cy + dx * sn + dy * cs, z0 + dz); o.rotation.set(0, 0, a); o.scale.set(l, b, h); o.updateMatrix(); m.setMatrixAt(k, o.matrix); m.setColorAt(k, c.setHex(farge)); k++; } }
-      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.frustumCulled = false; gr.add(m); }
+    // funn: vrak, depoter, forlatte leirer og fly – kasser, tønner, sekker og telt der funnet ligger (hver del på bakken der den står)
+    const funn = Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).map(id => { const [bx, by] = id.split(',').map(Number); return funnI(bx, by); }).filter(f => f && inne(f.x, f.y, 20));
+    if (funn.length) { const ant = {}; for (const f of funn) for (const d of FUNN3D[f.type]) ant[d[0]] = (ant[d[0]] || 0) + 1;
+      const nett = {}, k = {}, o = new THREE.Object3D(), c = new THREE.Color();
+      for (const navn of FORMER) if (ant[navn]) { nett[navn] = new THREE.InstancedMesh(formGeo(navn), M.kasse, ant[navn]); k[navn] = 0; }
+      for (const f of funn) { const a = W.hash(f.frø) * 6.283, cs = Math.cos(a), sn = Math.sin(a);
+        for (const [form, l, b, h, dx, dy, dz, vri, farge, hell, hellX] of FUNN3D[f.type]) { const X = f.x + dx * cs - dy * sn, Y = f.y + dx * sn + dy * cs, m = nett[form];
+          o.position.set(X - u.cx, Y - u.cy, z(X, Y) + dz); o.rotation.set(hellX || 0, hell || 0, a + vri, 'ZYX'); o.scale.set(l, b, h); o.updateMatrix(); m.setMatrixAt(k[form], o.matrix);
+          const lys = .88 + .24 * W.hash(f.frø + k[form] * 13); m.setColorAt(k[form], c.setHex(farge).multiplyScalar(lys)); k[form]++; } }
+      for (const m of Object.values(nett)) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.frustumCulled = false; m.userData.funn = true; gr.add(m); } }
     // åkerstykkene: jord som følger terrenget, og kornet i rader langs den lange siden (rygger som vokser med årstiden)
     for (const b of åkerStykker()) { if (!inne(b.x, b.y, 60)) continue; const m = åkerNett(b, z); if (m) gr.add(m); }
     if (gr.children.length) R.scene.add(gr); else D3.tom = true;
@@ -663,7 +703,7 @@
       if (BRANNER.length) ut.push(`<p>Det brenner ${esc(stedTekst(BRANNER[0].x, BRANNER[0].y))} (${BRANNER.length} ruter).</p>`); if (BRENT.length) ut.push(`<p><small>Brent mark: ${tall(BRENT.length * R.brann.rute * R.brann.rute / 1e4)} dekar.</small></p>`);
       for (const s of V.soner) ut.push(`<p>${s.type === 'ras' ? 'Ras' : 'Flom'} ${esc(stedTekst(s.x, s.y))} – ${tall(Math.max(0, (s.til - tid) / 60), 1)} t igjen. <button data-gjør="se" data-x="${s.x}" data-y="${s.y}">Vis</button></p>`); }
     // funn
-    const funn = Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).map(id => { const [bx, by] = id.split(',').map(Number); return W.funnIBlokk(bx, by); }).filter(Boolean);
+    const funn = Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).map(id => { const [bx, by] = id.split(',').map(Number); return funnI(bx, by); }).filter(Boolean);
     ut.push('<h3>Funn i terrenget</h3>' + (funn.length ? funn.map(f => `<p>${esc(f.navn)} ${esc(stedTekst(f.x, f.y))} <button data-gjør="se" data-x="${f.x}" data-y="${f.y}">Vis</button></p>`).join('') + '<p><small>Send et lag helt bort (80 m) og trykk «Undersøk» i lagpanelet.</small></p>'
       : `<p><small>Vrak, depoter og forlatte leirer ligger rundt i terrenget. Lagene melder fra når de ser noe (innen ${R.funn.ser} m). Undersøkt: ${Object.keys(V.funn.tatt).filter(id => V.funn.sett[id]).length}.</small></p>`));
     // radio
@@ -704,7 +744,7 @@
   });
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
-  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
+  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, funnNær, funnI, plasserFunn, funnFlytt: () => funnFlytt, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
     punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     åkerFolk, spor: () => spor, D3: () => D3, LEIRBRANN, slokkILeiren, brennbar,

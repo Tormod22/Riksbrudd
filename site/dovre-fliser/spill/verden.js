@@ -54,7 +54,8 @@
     // Kornet står opptil «høyde» m når det er modent.
     åkerBygg: { mål: 5, bredde: 50, lengde: 100, tid: 4, brann: { moden: .9, grønn: .35, bar: .15, skade: .25 }, høyde: .9 },
     // funn: rutenett (m), sjanse per rute, oppdages innen (m), undersøkes innen (m)
-    funn: { blokk: 2500, p: .3, ser: 300, tar: 80 },
+    funn: { blokk: 2500, p: .3, ser: 300, tar: 80, flytt: { steg: 40, maks: 800 } },
+    // (flytt: et funn som havner i tettbebyggelse, vann eller utenfor kartet, flyttes til nærmeste åpne sted – ringer hver «steg» m ut til «maks» m)
     // radio: timer mellom meldingene, andelen sanne, flest i lista
     radio: { timer: [3, 6], sann: .65, liste: 8 },
     // tog: kr per km for å sette strekningen i stand, stål per 10 km, timer å sette i stand per 10 km, lengste strekning (km),
@@ -258,6 +259,15 @@
     const typer = ['vrak', 'vrak', 'depot', 'depot', 'leir', 'leir', 'fly'], type = typer[Math.floor(hash3(bx, by, 2) * typer.length)];
     return { id: bx + ',' + by, type, navn: FUNN[type].navn, x: Math.round((bx + .15 + .7 * hash3(bx, by, 3)) * R.blokk), y: Math.round((by + .15 + .7 * hash3(bx, by, 4)) * R.blokk), frø: Math.floor(hash3(bx, by, 5) * 1e9) };
   }
+  // Stedene et funn kan flyttes til, nærmest først: selve stedet, så ringer hver «steg» m (fast rekkefølge for samme funn)
+  function funnKandidater(x, y, frø = 0) {
+    const F = REGLER.funn.flytt, ut = [[x, y]];
+    for (let r = F.steg; r <= F.maks; r += F.steg) { const n = Math.max(6, Math.round(2 * Math.PI * r / F.steg)), a0 = hash((frø | 0) + r) * 2 * Math.PI;
+      for (let i = 0; i < n; i++) { const a = a0 + i * 2 * Math.PI / n; ut.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); } }
+    return ut;
+  }
+  // Kan et funn ligge i denne terrengklassen? Ikke i vann (3), tettbebyggelse (7) eller utenfor kartet (255)
+  const åpentFunnSted = k => k != null && k !== 3 && k !== 7 && k !== 255;
   function funnNær(x, y, r) {
     const B = REGLER.funn.blokk, ut = [];
     for (let by = Math.floor((y - r) / B); by <= Math.floor((y + r) / B); by++) for (let bx = Math.floor((x - r) / B); bx <= Math.floor((x + r) / B); bx++) {
@@ -334,7 +344,7 @@
 
   const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
     nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, åkerBrennbar, åkerMål, korn, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
-    funnIBlokk, funnNær, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
+    funnIBlokk, funnNær, funnKandidater, åpentFunnSted, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Verden = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
