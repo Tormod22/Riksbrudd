@@ -28,8 +28,8 @@
     const m = midt(by);
     if (!by.omR) { const nærmest = (liste, filter) => { let d = Infinity; for (const o of liste || []) { if (filter && !filter(o)) continue; const p = pkt(o); d = Math.min(d, Math.hypot(p.x - m.x, p.y - m.y)); } return d; };
       by.omR = { olje: nærmest(INFRA.olje, o => o.e.type === 3), kai: nærmest(INFRA.ferjekai), kraft: nærmest(INFRA.kraft), kaier: false }; }
-    // kaiene fra OpenStreetMap (spill/kaier.js) tas med når de er lastet: havner og lange kaier teller, småbrygger gjør ikke
-    if (!by.omR.kaier) try { const K = window.KaierSpill && KaierSpill.data(); if (K) { by.omR.kaier = true; const f = window.Kaier.nær(K, m.x, m.y, R.nær.kai, i => K.t[i] >= 3 || K.l[i] >= 60); if (f) by.omR.kai = Math.min(by.omR.kai, f.d); } } catch (e) { by.omR.kaier = true; }
+    // kaiene fra OpenStreetMap (spill/kaier.js) tas med når de er lastet: havner og ferjeterminaler teller, småbrygger og småbåthavner gjør ikke
+    if (!by.omR.kaier) try { const K = window.KaierSpill && KaierSpill.data(); if (K) { by.omR.kaier = true; const f = window.Kaier.nær(K, m.x, m.y, R.nær.kai, i => K.t[i] >= 3); if (f) by.omR.kai = Math.min(by.omR.kai, f.d); } } catch (e) { by.omR.kaier = true; }
     return by.omR;
   }
   const typeAv = by => RG.type(by.e.folk || 0, omgivelser(by));
@@ -117,9 +117,20 @@
     S.børs.tilbud = S.børs.tilbud.filter(q => q !== id); S.har[id] = (S.har[id] || 0) + 1;
     if (id === 'medisin') { S.medisin++; const r = brukMedisin(); if (r.feil) logg('Medisinene er kjøpt og ligger på lager til noen trenger dem (knappen «Bruk medisiner» i Region).'); }
     else if (id === 'smugler') { l.drivstoff += liter; logg(`Smuglerdiesel: ${liter} liter er fylt på tankene.`); if (LeirSpill.lagre) LeirSpill.lagre(); }
-    else if (id === 'nattsikt') { logg('Nattsikt kjøpt: lagene dine ser lenger om natta.'); if (typeof oppdaterSikt === 'function') try { oppdaterSikt(); } catch (e) { /* tegnes ved neste runde */ } }
+    else if (id === 'nattsikt') { logg('Nattsikt kjøpt: lagene dine ser lenger om natta.'); for (const e of ENHETER) if (e.side === 'blå') e.siktSkitten = true; }
     else logg(`${V.navn} kjøpt: lagene dine treffer bedre.`);
     lagre(); skitten = true; vis(true); return { ok: true }; }
+
+  // ---------- motstandernes tettsteder ----------
+  // RegionSpill.fordel(side) = { treff, forsterk, antall, typer } – det en motstander får av tettstedene den holder (Region.fordel).
+  // Brukes her (KROKER.ild) og i garnison-visning.js (forsterkning). Andre moduler (AI-en) kan lese den samme. Ikke i testene.
+  const INGEN = { treff: 1, forsterk: 1, antall: 0, typer: [] }; let fordelTid = -1e9, FORDELER = {};
+  function fordel(side) { if (!klar || !auto() || !side || side === 'blå') return INGEN;
+    if (performance.now() - fordelTid > 3000) { fordelTid = performance.now(); const T = {}; for (const [id, t] of TETTSTEDER) { if (!t.eier || t.eier === 'blå') continue; const by = byMedId(id); if (by) (T[t.eier] = T[t.eier] || []).push(typeAv(by)); }
+      FORDELER = {}; for (const [sd, typer] of Object.entries(T)) FORDELER[sd] = { ...RG.fordel(typer), typer }; }
+    return FORDELER[side] || INGEN; }
+  let BYID = null; const byMedId = id => { if (!BYID || BYID.n !== byer().length) { BYID = { n: byer().length, m: new Map(byer().map(by => [by.e.id, by])) }; } return BYID.m.get(id); };
+  KROKER.ild.push(a => (a.side !== 'blå' ? fordel(a.side).treff : 1));
 
   // ---------- veksling olje ↔ diesel ----------
   const base = () => (window.OLJE && OLJE.BASER[0]) || null;
@@ -204,6 +215,10 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
         for (const { by, d } of andre) { const t = typeAv(by), e = eier(by), hvem = e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].navn : 'fienden') : 'nøytralt';
           ut.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, by.e.navn), el('small', {}, `${RG.TYPER[t].navn} (${RG.TYPER[t].tekst}) · ${km(d)} · ${hvem}`), el('small', {}, 'Ville gitt: ' + RG.girTekst(RG.grunn(by.e.folk || 0, t), kr))),
             kn('Vis', () => { if (typeof på3d !== 'undefined' && på3d) slå3d(false); kam.x = midt(by).x; kam.y = midt(by).y; kam.m = Math.min(Math.max(kam.m, 6), 20); skitten = true; }))); } } }
+    // motstanderne har også nytte av tettstedene sine
+    { fordelTid = -1e9; const rader = []; for (const sd of ['rød', 'grønn']) { const f = fordel(sd); if (!f.antall) continue; const navn = window.Fraksjoner && Fraksjoner.FRAKSJONER[sd] ? Fraksjoner.FRAKSJONER[sd].navn : sd;
+        rader.push(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, navn), el('small', {}, `holder ${f.antall} tettsted${f.antall === 1 ? '' : 'er'}: treff +${Math.round((f.treff - 1) * 100)} %, garnisonene forsterkes ${Math.round((f.forsterk - 1) * 100)} % raskere`)))); }
+      if (rader.length) { ut.append(el('h3', {}, 'Motstanderne')); ut.append(...rader); ut.append(el('small', {}, 'Industristeder, byer og oljebyer gir dem bedre våpen; bygder og havner gir folk. Ta tettstedene fra dem, så mister de fordelen.')); } }
     // svartebørsen
     ut.append(el('h3', {}, 'Svartebørsen'));
     if (!S.børs.tilbud.length) ut.append(el('small', {}, 'Ingen selger i leiren i dag. Han dukker opp av og til med ting markedet ikke har – dyrt.'));
@@ -256,11 +271,23 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     // hva tettstedene er og gir (bare når Region eller krigskartet er åpent)
     if (tydelig) { g.font = '13px "Cormorant Garamond",serif'; g.textAlign = 'center';
       for (const by of byer()) { const c = midt(by); if (Math.hypot(c.x - l.x, c.y - l.y) > 80000) continue; const x = sx(c.x), y = sy(c.y); if (x < -40 || x > VW + 40 || y < -20 || y > VH + 40) continue;
-        const t = typeAv(by), q = ST.get(by.e.id), varer = Object.keys(RG.TYPER[t].gir).map(k => ({ mat: 'mat', tre: 'tre', stål: 'stål', betong: 'betong', diesel: 'diesel', folk: 'folk' })[k]).join(' + ');
+        const q = ST.get(by.e.id); if (!q && (m > 45 && (by.e.folk || 0) < 1000 || m > 90)) continue; const t = typeAv(by), varer = Object.keys(RG.TYPER[t].gir).map(k => ({ mat: 'mat', tre: 'tre', stål: 'stål', betong: 'betong', diesel: 'diesel', folk: 'folk' })[k]).join(' + ');
         const tekst = `${RG.TYPER[t].navn}: ${varer}` + (q ? ` · lojalitet ${Math.round(q.b.loj)}` : '');
         g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(tekst, x, y + 30); g.fillStyle = q ? '#f0d79a' : '#d8cdb4'; g.fillText(tekst, x, y + 30); } }
     g.restore();
   });
+
+  // ---------- krigskartets panel: type og ytelse på det valgte tettstedet og i «Neste trekk» ----------
+  // strategi-visning.js eies av en annen pakke og er ikke endret: linjene legges til i panelet etter at det er tegnet. Observatøren ser bare
+  // på panelets egne barn (ikke under dem), så linjene vi legger til, utløser den ikke på nytt.
+  function pyntKrig() { const P = document.getElementById('krig'); if (!P || !klar) return; const l = leir();
+    const linje = by => { const t = typeAv(by), q = STATUS.get(by.e.id); return el('small', { klasse: 'regionlinje', style: 'display:block;color:#d9c48a' }, `${RG.TYPER[t].navn}: ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn` : `ville gitt deg ${RG.girTekst(RG.grunn(by.e.folk || 0, t), kr)} per døgn`)); };
+    for (const r of P.querySelectorAll('.rad[data-trekk]')) { if (r.querySelector('.regionlinje')) continue; const by = byMedId(+r.dataset.trekk) || byMedId(r.dataset.trekk); if (by && r.firstChild) r.firstChild.append(linje(by)); }
+    const boks = P.querySelector('.by'); if (boks && !boks.querySelector('.regionlinje')) { const navn = boks.querySelector('b') ? boks.querySelector('b').textContent : '', kn = boks.querySelector('[data-send]');
+      let by = kn ? byMedId(+kn.dataset.send) || byMedId(kn.dataset.send) : null;
+      if (!by && l) by = byer().filter(b => b.e.navn === navn).sort((a, b) => Math.hypot(midt(a).x - l.x, midt(a).y - l.y) - Math.hypot(midt(b).x - l.x, midt(b).y - l.y))[0];
+      if (by) boks.insertBefore(linje(by), boks.querySelector('.kn')); } }
+  { const P = document.getElementById('krig'); if (P && window.MutationObserver) new MutationObserver(() => { try { status(); pyntKrig(); } catch (e) { /* panelet virker uten linjene */ } }).observe(P, { childList: true }); }
 
   // ---------- tettstedspanelet (trykk på et tettsted i kartet) ----------
   KROKER.info.push(o => { const h = document.getElementById('hint'); if (!h || !klar) return;
@@ -285,7 +312,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // ---------- start ----------
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = RG.fraJSON(les()); STATUS = new Map(); statusTid = -1e9; meldtRute = new Map(); meldtStrøm = new Map(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre,
+  Object.assign(api, { start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
   window.RegionSpill = api;
 })();

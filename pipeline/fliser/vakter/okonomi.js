@@ -32,7 +32,9 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
       // 7: markedets hyller (bare i det ekte spillet – her slått på for prøven)
       SS.knapphet = true; SS.settPriser(); const H = SS.hyller(); H.tre = 3; const t0 = L.lager.tre || 0, r = Leir.kjøpMateriale(L, 'tre', 10, OppstartSpill.betal);
       o.hylle = !r.feil && Math.abs(r.mengde - 3) < 1e-6 && Math.abs((L.lager.tre || 0) - t0 - 3) < 1e-6 && !!Leir.kjøpMateriale(L, 'tre', 10, OppstartSpill.betal).feil && Leir.REGLER.salg < .6;
-      o.leirmeny = true;
+      // 8: leveranse av mat, og motstanderens fordel av et tettsted
+      const F = FolkSpill.tilstand(), m0 = F.mat; RS.tilstand().pott.mat = 3.4; RS.lever(); o.mat = F.mat === m0 + 3;
+      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); RS.åpne(); const f = RS.fordel('rød'); o.fordel = f.antall === 1 && (f.treff > 1 || f.forsterk > 1) && RS.fordel('blå').treff === 1;
     } catch (e) { o.feil = String(e && e.message || e); }
     // tilbake
     if (fiende && ENHETER.includes(fiende)) ENHETER.splice(ENHETER.indexOf(fiende), 1);
@@ -45,6 +47,6 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
     LeirSpill.lagre(); skitten = true; o.tilbake = OppstartSpill.tilstand().penger === før.penger && ENHETER.length === før.n;
     return o; });
   if (d.mangler) return { ok: false, tekst: 'RegionSpill mangler eller er ikke startet', data: d };
-  const ok = !d.feil && !!d.type && d.rute0 === 'åpen' && d.tjent > 0 && d.panel && d.hard && d.hardGirMer && d.rute1 !== 'åpen' && d.rute2 === 'åpen' && d.opprør && d.børs && d.veksle && d.hylle && d.tilbake;
-  return { ok, tekst: `Dombås er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
+  const ok = !d.feil && !!d.type && d.rute0 === 'åpen' && d.tjent > 0 && d.panel && d.hard && d.hardGirMer && d.rute1 !== 'åpen' && d.rute2 === 'åpen' && d.opprør && d.børs && d.veksle && d.hylle && d.mat && d.fordel && d.tilbake;
+  return { ok, tekst: `Dombås er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
 } };
