@@ -163,7 +163,9 @@
     if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && Math.random() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; return true; }
     const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h) return false; const p = f.personer[Math.floor(Math.random() * f.personer.length)];
     H.åpen = { id: h.id, navn: p.navn }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
-  function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); return; }
+  function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); if (window.Kortkø && Kortkø.ferdig) Kortkø.ferdig('hendelse'); return; }
+    // én kortkø for alle kortene med valg (spill/samfunn-visning.js): vent på tur, så står aldri to kort oppå hverandre
+    if (window.Kortkø && Kortkø.ta && !Kortkø.ta('hendelse', false, visHendelse)) { kort.classList.remove('på'); Kortkø.be('hendelse', visHendelse, { tittel: 'I leiren' }); return; }
     kort.append(el('h3', {}, 'I leiren'), el('p', {}, h.tekst(å.navn))); const t = tilstand();
     h.valg.forEach((v, i) => { const b = el('button', { type: 'button' }, v.t); b.disabled = !Hendelser.kan(v.v, t); b.onclick = () => velg(i); kort.appendChild(b); }); kort.classList.add('på'); }
   function velg(i) { const å = H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) return; const v = h.valg[i].v, f = F(), l = L(); let ut = '';

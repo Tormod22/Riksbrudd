@@ -77,15 +77,50 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   document.body.append(panel, pk, kort);
   const si = t => { if (t) logg(t); };
 
-  // ---------- KORTKØEN: ett kort med valg om gangen, og en pause mellom dem ----------
-  // Kortene med valg er #hendelse (spillet-visning.js), #formkort (scenario-visning.js) og #samfunnkort (her). Claudes forslag: minst
-  // KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises (flyktninger og en avslørt forræder venter bare på ledig plass).
-  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'formkort', 'samfunnkort']; let sistÅpent = -1e9;
-  const Kortkø = { åpent: () => KORT_ID.find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); }) || null,
-    // ledig(haster): er det plass til et nytt kort nå? I testene (webdriver) gjelder ingen pause.
-    ledig: haster => !Kortkø.åpent() && (haster || navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE), pause: KORT_PAUSE, sist: () => sistÅpent };
-  setInterval(() => { if (Kortkø.åpent()) sistÅpent = performance.now(); }, 1000);
+  // ---------- KORTKØEN: ett kort med valg om gangen, i den rekkefølgen de kom, og en pause mellom dem ----------
+  // Kortene med valg er #hendelse (spillet-visning.js), #samfunnkort (her), #formkort (scenario-visning.js) og #krigkort (strategi-visning.js).
+  // #hendelse og #samfunnkort går gjennom køen: Kortkø.ta(id) før kortet vises (false = vent, og meld deg med Kortkø.be(id, vis, { tittel })),
+  // Kortkø.ferdig(id) når det lukkes. Køen kaller vis() for det første som venter når plassen er ledig. #formkort og #krigkort (seier, tap)
+  // er utenfor køen: står ett av dem oppe, viker kortene i køen (de skjules og settes først i køen igjen) – så står aldri to kort oppå
+  // hverandre. Et kort som venter, vises som brikken «Et kort venter» i #varsler (trykk = vis det nå). #flytkort er en statuslinje uten
+  // valg og er ikke med. Claudes forslag: minst KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises av seg selv
+  // (en avslørt forræder slipper pausen; i testene – webdriver – gjelder ingen pause).
+  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'samfunnkort', 'formkort', 'krigkort']; let sistÅpent = -1e9, eier = null, kø = [], straks = null; const visFor = {}, tittelFor = {};
+  const kortSynlig = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på')); };
+  const pauseOk = () => navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE;
+  const Kortkø = {
+    // kortet som står oppe nå (eieren først), ellers null
+    åpent: () => (eier && kortSynlig(eier) ? eier : KORT_ID.find(kortSynlig) || null),
+    // er det plass til et nytt kort nå (ingen oppe, pausen er over og ingen venter)? Brukes før et nytt kort lages.
+    ledig: haster => !Kortkø.åpent() && (haster || pauseOk()) && !kø.length,
+    // får kortet id stå oppe nå? Gir true og plassen, eller false (vent).
+    ta(id, haster, vis) { if (vis) visFor[id] = vis;
+      if (KORT_ID.some(k => k !== id && kortSynlig(k))) { if (eier === id) { eier = null; Kortkø.be(id, null, { først: true }); } return false; }
+      if (eier === id) return true;
+      if (!haster && straks !== id && (!pauseOk() || (kø.length && kø[0].id !== id))) return false;
+      eier = id; kø = kø.filter(q => q.id !== id); return true;
+    },
+    // meld et kort som venter: vis() kalles når det er dets tur (den skal selv spørre ta(id))
+    be(id, vis, o = {}) { if (vis) visFor[id] = vis; else vis = visFor[id]; if (o.tittel) tittelFor[id] = o.tittel; const q = kø.find(x => x.id === id); if (q) { if (vis) q.vis = vis; if (o.tittel) q.tittel = o.tittel; return; }
+      const ny = { id, vis, tittel: o.tittel || tittelFor[id] || '' }; if (o.først) kø.unshift(ny); else kø.push(ny); },
+    // kortet er lukket: plassen er ledig, og pausen begynner
+    ferdig(id) { kø = kø.filter(q => q.id !== id); if (eier === id) { eier = null; sistÅpent = performance.now(); } },
+    // vis det første kortet som venter med en gang (brikken i #varsler)
+    nå() { const q = kø[0]; if (!q || !q.vis || Kortkø.åpent()) return false; straks = q.id; try { q.vis(); } finally { straks = null; } return Kortkø.åpent() === q.id; },
+    venter: () => kø.map(q => ({ id: q.id, tittel: q.tittel })), eier: () => eier, pause: KORT_PAUSE, sist: () => sistÅpent };
+  setInterval(() => {
+    if (eier && !kortSynlig(eier)) Kortkø.ferdig(eier);
+    // et kort utenfor køen (seier, tap) har kommet oppå: kortet i køen viker og står først i køen igjen
+    if (eier && KORT_ID.some(k => k !== eier && kortSynlig(k))) { const id = eier; eier = null; document.getElementById(id).classList.remove('på'); Kortkø.be(id, null, { først: true }); }
+    if (Kortkø.åpent()) { sistÅpent = performance.now(); return; }
+    // plassen er ledig: neste i køen får vise seg
+    const q = kø[0]; if (q && q.vis && pauseOk()) { try { q.vis(); } catch (e) { kø.shift(); } }
+  }, 1000);
   window.Kortkø = Kortkø;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => {
+    if (!kø.length || Kortkø.åpent()) return [];
+    return [{ i: 'snakk', k: '', t: kø.length === 1 ? 'Et kort venter' : `${kø.length} kort venter`, s: kø[0].tittel || 'trykk for å se', f: () => Kortkø.nå() }];
+  });
   // flytt 2D-kartet til et sted (brukes av varselkortet i kameravakt-visning.js)
   window.kartTil = (x, y, m) => { kam.x = x; kam.y = y; if (m && kam.m > m) kam.m = m; skitten = true; };
 
@@ -114,11 +149,13 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   }
 
   // ---------- kortene ----------
+  const kortTittel = c => (c.type === 'flyktninger' ? 'Flyktninger ved porten' : c.type === 'spion' ? 'Forræder avslørt' : (() => { try { return SR.kortTekst(S, F(), c, ktx()).tittel; } catch (e) { return 'Noe skjer i leiren'; } })());
   function visKort() {
-    const c = S && S.kort, f = F(); const annet = document.getElementById('hendelse');
-    const andre = Kortkø.åpent(), venter = !kort.classList.contains('på') && !Kortkø.ledig(c && c.type === 'spion');
-    if (!c || !f || (andre && andre !== 'samfunnkort') || venter) { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } return; }
-    const nøkkel = JSON.stringify(c) + '|' + Math.round(f.mat); if (nøkkel === sistKort) return; sistKort = nøkkel; kort.innerHTML = '';
+    const c = S && S.kort, f = F(), skjul = () => { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } };
+    if (!c || !f) { skjul(); Kortkø.ferdig('samfunnkort'); return; }
+    // vent på tur i kortkøen (forræderen haster)
+    if (!Kortkø.ta('samfunnkort', c.type === 'spion', visKort)) { skjul(); Kortkø.be('samfunnkort', visKort, { tittel: kortTittel(c) }); return; }
+    const nøkkel = JSON.stringify(c) + '|' + Math.round(f.mat); if (nøkkel === sistKort && kort.classList.contains('på')) return; sistKort = nøkkel; kort.innerHTML = '';
     if (c.type === 'flyktninger') { kort.append(el('h3', {}, 'Flyktninger ved porten'), el('p', {}, SR.flyktTekst(c)));
       const k = ktx(), ledig = k.B.senger - k.B.n - k.B.avh; kort.append(el('p', { style: 'font-size:13px;color:var(--ink-dim,#b5a888)' }, `Ledige senger: ${Math.max(0, ledig)} · mat: ${Math.round(f.mat)} rasjoner`));
       for (const v of SR.flyktValg(c)) { const b = knapp(v.t, () => svarFlykt(v.id), { 'data-valg': v.id }); if (v.id === 'mat' && f.mat < (c.voksne + c.barn + c.gamle) * SR.REGLER.flyktMat) b.disabled = true; kort.append(b); } }
