@@ -107,7 +107,7 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
       knapp('Velg', () => { valgt = s; kam.x = s.x; kam.y = s.y; visPanel(); skitten = true; })));
     f.append(el('div', { klasse: 'tips' }, `Et lag som står ${G.REGLER.innta / 60} minutter i et tettsted uten fiender, tar det. La et lag stå igjen som garnison. Fargene i kartet viser hvem som rår hvor; stiplede streker er fronter. Trykk på et tettsted for å sende et lag dit. En marsj tar timer – sett farten til 60× eller 600× mens lagene går.`));
     return f; }
-  function vis(tving) { if (!åpen) return; const T = bilde(); if (!T) { panel.textContent = 'Kartdataene for tettstedene er ikke lastet ennå.'; return; }
+  function vis(tving) { if (!åpen) return; const T = bilde(); if (!T) { panel.replaceChildren(knapp('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk krigskartet' }), el('h2', {}, 'Krigskartet'), el('div', { klasse: 'tips' }, 'Kartdataene for tettstedene er ikke lastet ennå. Prøv igjen om litt.')); sist = ''; return; }
     if (!tving && window.pekerNede && pekerNede(panel)) return;
     const ny = el('div'); ny.append(bygg(T)); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }
   function åpne() { const L = leir(); if (!L) return; if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
