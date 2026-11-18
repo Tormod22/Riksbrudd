@@ -1249,3 +1249,11 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   før siktlinjene, kildeNå i ytelse.js (kort stakk). Bergen 3,1 km: lange oppgaver 6,1 s -> 1,3 s, lengste 812 -> 157 ms. Skygger fra
   kjøretøy/soldater er målt og forkastet (836 -> 2355 ms per bilde). BE BRUKEREN OM NY «MÅL HAKK».
   KONTROLLEN: tresjekken prøvde 0 trær (utsnittet var for stort for trær) og sa «ok» – prøver nå Dombås-utsnittet (TRE_PRØVE).
+  BALANSE RUNDE 4 (balanse.md): Trussel.HERJ – røvere innen 150 m av leiren (eller som skader et bygg) i 90 min tar bytte (5 % av kassa,
+  høyst 0,5 mill., 20 % materialer, 10 % diesel, 15 % mat) og går ut igjen; Trussel.brutt – et røverlag som har mistet en tredel, flykter
+  (bølgen er slått tilbake); forsvar-visning.js: lagene hjemme (innen 3 km, i ro/forsvar) går mot alle fiender i leiren, Leirvakta tar
+  opp våpen, lag som har trukket seg går hjem etter 30 min uten fiender innen 900 m; ledige byggelag reparerer bygg under 95 % mellom
+  bølgene (300 000 kr blir igjen, bryter i Leir → Bygg → Forsvar, «riksbrudd-reparer»), banneret «N bygg er skadet – Reparer alle».
+  Opplæringen: fire nye steg (tropp nr. 2, mat til tre døgn, forsvar, reparer). FREDSTIDEN for motstanderne er 7 døgn på Vanlig
+  (7 / fiendens faktor, 4–10; fraksjoner-visning.js fredTid) med varsel ett døgn før – gjennomspillingene 7–8 falt for Kystalliansen på
+  dag 5–6 med 4 døgn. Ikke spilt gjennom på nytt. Rapport: docs/natt/RAPPORT.md («Runde 4»).
