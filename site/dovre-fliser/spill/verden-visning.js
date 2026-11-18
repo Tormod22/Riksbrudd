@@ -246,7 +246,10 @@
     for (const sk of SKUDD) { if (settSkudd.has(sk)) continue; settSkudd.add(sk); const a = sk.a, b = sk.b; if (!a || !b) continue;
       const selv = !a.menn && a.side === 'blå' && Math.abs(Math.hypot(b.x - a.x, b.y - a.y) - 80) < 1;
       if (selv && window.Dyr3d && Dyr3d.fell) { const fx = (b.x - a.x) / 80, fy = (b.y - a.y) / 80, t = Dyr3d.fell(a.x, a.y, fx, fy, W.sikt);
-        if (t) { const mat = Math.round((R.kjøtt[t.art] || 0) * (t.ung ? .5 : 1)), F = FF(); if (F) F.mat += mat; const navn = (window.Dyr && Dyr.ARTER[t.art] ? Dyr.ARTER[t.art].navn : t.art).toLowerCase();
+        if (t) { const mat = Math.round((R.kjøtt[t.art] || 0) * (t.ung ? .5 : 1)), F = FF(), navn = (window.Dyr && Dyr.ARTER[t.art] ? Dyr.ARTER[t.art].navn : t.art).toLowerCase();
+          // (pakka «karakter») langt fra leiren bærer du kjøttet selv: EventyrSpill.felteDyr svarer true når det er lagt i sekken
+          if (window.EventyrSpill && EventyrSpill.felteDyr && EventyrSpill.felteDyr(mat, navn, t.avst)) continue;
+          if (F) F.mat += mat;
           logg(`Du felte en ${navn} på ${Math.round(t.avst)} m: ${mat} rasjoner kjøtt til leiren.`); } }
       // skudd i knusktørr skog kan tenne (ikke av seg selv i testene)
       else if (auto() && v && W.brannfare(V, v) >= .6 && Math.random() < .004) tenn(b.x, b.y, 'Skuddvekslingen').catch(() => {});

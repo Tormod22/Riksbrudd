@@ -18,13 +18,16 @@
     // tur: så mange meter til fots for ett poeng tørst/sult (løping tørster dobbelt), utenfor leiren
     tur: { tørstPerM: 1 / 45, sultPerM: 1 / 140, løp: 2, slurk: 35, flaske: 4, pakkRasjoner: 3, tørstVarsel: 45, sultVarsel: 40 },
     // tilflukt: sove (sekunder, søvn og helse du får), hvor nær du må bli slått ut for å våkne der
-    tilflukt: { sovSek: 8, sovSøvn: 80, sovHelse: 40, nær: 1500, helseEtter: 45, lagerKg: 60 },
+    // (runde 2) søvnen spoler klokka: opptil sovTimer spilltimer i 600× (høyst sovSek ekte sekunder), og avbrytes hvis noe skjer
+    tilflukt: { sovSek: 45, sovTimer: 6, sovSøvn: 80, sovHelse: 40, vekkAvstand: 300, nær: 1500, helseEtter: 45, lagerKg: 60 },
     // dekning: faktor på skaden du tar
     dekning: { ligg: .5, huk: .8, vegg: .4, veggAvstand: 10 },
     // sniking: grunnavstand (m) der en fiende oppdager deg når du står og går i dagslys
     snik: { grunn: 220, huk: .6, ligg: .35, mørke: .5, skog: .65, stille: .8, løp: 1.4, stilleLøp: 1.15, skudd: 420, skuddStille: .3, skuddSek: 20, opp: .5, ned: .12, glemt: .4, skogTrær: 6 },
     // skader
-    skade: { fallFra: 8.5, fallHelse: 6, fallBein: 5, skuddSjanse: .012, skuddMaks: .5, kuldePerTime: .05, leirFart: 4 },
+    skade: { fallFra: 8.5, fallHelse: 6, fallBein: 5, skuddSjanse: .012, skuddMaks: .5, kuldePerTime: .05, leirFart: 4, frost: -8, frostFaktor: 3 },
+    // jakt: lenger enn dette fra leiren bærer du kjøttet selv (det som får plass i sekken)
+    jakt: { nær: 500 },
     // hunden
     hund: { varsle: 350, igjen: 60, husSjanse: .05, perM: 1 / 2500, sikkertEtter: 800 },
     // fella
@@ -48,7 +51,8 @@
     // sjansen for infeksjon når du mister så mye helse av skudd
     skudd: tap => klem(tap * REGLER.skade.skuddSjanse, 0, REGLER.skade.skuddMaks),
     // kulde: sjansen per spilltime ute i vinter eller nedbør (ikke i hus, leir eller tilflukt)
-    kulde: (timer, vinter, vått) => (vinter || vått ? klem(REGLER.skade.kuldePerTime * timer * (vinter && vått ? 2 : 1), 0, 1) : 0),
+    // temp (°C der du står, valgfri): under REGLER.skade.frost er det farlig uansett årstid
+    kulde(timer, vinter, vått, temp) { const frost = temp !== undefined && temp !== null && temp <= REGLER.skade.frost; if (!vinter && !vått && !frost) return 0; return klem(REGLER.skade.kuldePerTime * timer * (vinter && vått ? 2 : 1) * (frost ? REGLER.skade.frostFaktor : 1), 0, 1); },
     // tiden går: t spilltimer og s ekte sekunder. o.leir: du er i leiren (gror fortere), o.sykestue: alt behandles straks, o.seig: bein gror dobbelt så fort
     // Gir { friske: [id], helse: tapet }
     steg(S, t, s, o = {}) { const ut = { friske: [], helse: 0 };
@@ -214,6 +218,10 @@
     slit(d, løper, lettTilBeins) { const T = REGLER.tur; return { tørst: d * T.tørstPerM * (løper && !lettTilBeins ? T.løp : 1), sult: d * T.sultPerM }; },
     // drikk en slurk av flaska: gir tørsten du får tilbake (0 når flaska er tom)
     drikk(ting) { if (!(ting.vann > 0)) return 0; ting.vann--; if (!ting.vann) delete ting.vann; return REGLER.tur.slurk; },
+    // søvn: andelen av en hel natt (0–1) gir søvn og helse
+    søvn: andel => ({ søvn: Math.round(REGLER.tilflukt.sovSøvn * klem(andel, 0, 1)), helse: Math.round(REGLER.tilflukt.sovHelse * klem(andel, 0, 1)) }),
+    // kjøtt fra et felt dyr: så mange rasjoner du får med (plass i sekken), resten blir liggende
+    kjøtt: (rasjoner, plass) => ({ med: Math.max(0, Math.min(rasjoner, plass)), igjen: Math.max(0, rasjoner - Math.max(0, plass)) }),
     fyll(ting) { const før = ting.vann || 0; ting.vann = REGLER.tur.flaske; return REGLER.tur.flaske - før; },
   };
 

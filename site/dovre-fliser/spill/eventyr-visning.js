@@ -58,7 +58,7 @@
   const css = document.createElement('style');
   css.textContent = `#evrad{ position:fixed; left:8px; top:calc(var(--topp,58px) + 150px); z-index:6; display:none; flex-direction:column; gap:5px; align-items:flex-start; max-width:46vw; }
 #evrad.på{ display:flex; } #evrad button{ min-height:36px; padding:3px 10px; background:rgba(20,16,10,.72); border:1px solid rgba(231,220,195,.55); color:#e7dcc3; font:inherit; font-size:14px; font-weight:600; cursor:pointer; text-align:left; }
-#evrad button.viktig{ border-color:#e8a46a; color:#ffd9a8; } #evrad .lapp{ padding:2px 8px; background:rgba(40,16,12,.85); border:1px solid #c96a4a; color:#f6dccb; font-size:13px; font-weight:600; } #evrad .lapp.god{ background:rgba(20,30,16,.8); border-color:#9fc46a; color:#dcebc6; }
+#evrad button.viktig{ border-color:#e8a46a; color:#ffd9a8; } #evrad .lapp{ padding:2px 8px; background:rgba(40,16,12,.85); border:1px solid #c96a4a; color:#f6dccb; font-size:13px; font-weight:600; } #evrad .lapp.rolig{ background:rgba(20,16,10,.6); border-color:rgba(231,220,195,.3); color:#d8cdb4; font-weight:400; } #evrad .lapp.god{ background:rgba(20,30,16,.8); border-color:#9fc46a; color:#dcebc6; }
 body.kort #evrad{ top:calc(var(--topp,40px) + 96px); gap:3px; } body.kort #evrad button{ min-height:32px; font-size:12px; padding:2px 8px; }
 #evpanel{ position:fixed; left:50%; top:calc(var(--topp,58px) + 56px); transform:translateX(-50%); z-index:31; display:none; width:min(430px,94vw); max-height:calc(100vh - var(--topp,58px) - 110px); overflow:auto; padding:10px 14px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #evpanel.på{ display:block; } #evpanel h2{ margin:0 30px 4px 0; font-size:19px; } #evpanel h3{ margin:11px 0 3px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
@@ -73,6 +73,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   document.head.appendChild(css);
   const rad = el('div', { id: 'evrad' }), panel = el('div', { id: 'evpanel', role: 'dialog', 'aria-label': 'Eventyret' }), toast = el('div', { id: 'evtoast', role: 'status' }), sov = el('div', { id: 'evsov' }, 'Du sover …');
   document.body.append(rad, panel, toast, sov);
+  sov.addEventListener('click', () => { if (sover && !sover.straks) våkn(Math.min(1, ((typeof tid !== 'undefined' ? tid : 0) - sover.start) / TIME / R.tilflukt.sovTimer), 'du sto opp selv.'); });
   let toastTil = 0;
   function si(tittel, tekst) { toast.replaceChildren(el('b', {}, tittel), tekst || ''); toast.classList.add('på'); toastTil = performance.now() + 8000; logg(tittel + (tekst ? ': ' + tekst : '')); }
   // én melding per tilstand (ikke hvert sekund)
@@ -98,6 +99,8 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function fall(v) { if (!auto() || !klar) return; const f = E.Skader.fall(v, har('seig')); if (!f) return; const K = helse(); if (K) { K.hp = Math.max(5, K.hp - f.helse); K.skadd = performance.now(); }
     logg(`Du falt hardt (−${f.helse} helse).`); if (Math.random() < f.bein) fåSkade('bein', 'Du landet stygt'); }
   function truffet(tap) { if (!auto() || !klar) return; if (Math.random() < E.Skader.skudd(tap)) fåSkade('infeksjon', 'Et skuddsår har blitt betent'); }
+  // temperaturen der du står: værets temperatur, 0,6 °C kaldere per 100 m over leiren (som i spill/verden.js)
+  function tempHer() { const v = rot.VAER, t = v ? (v.regel && isFinite(v.regel.temp) ? v.regel.temp : v.temp) : null; if (!isFinite(t) || t === null) return null; const p = deg(), S = spill(); if (!p || !S || !S.leir || typeof hoydeVed !== 'function') return t; const dh = hoydeVed(p.x, p.y) - hoydeVed(S.leir.x, S.leir.y); return isFinite(dh) ? t - Math.max(0, dh) * .006 : t; }
   const sykestue = () => { const L = rot.LeirSpill && LeirSpill.tilstand(); return !!(L && rot.Leir && L.bygg.some(b => b.type === 'sykestue' && (Leir.virker ? Leir.virker(b) : Leir.ferdig(b)))); };
 
   // ---------- håndverk ----------
@@ -124,26 +127,44 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function fåHund(tekst) { if (T.hund) return false; T.hund = { navn: E.Hund.NAVN[Math.floor(Math.random() * E.Hund.NAVN.length)] }; hundPos = null; lagre(); si(`${T.hund.navn} følger deg`, (tekst || 'En hund har slått følge med deg.') + ' Den knurrer når fiender du ikke ser, er i nærheten.'); oppdater(); return true; }
 
   // ---------- sniking og dekning ----------
-  const mørke = () => (rot.NATT && isFinite(NATT.mørke) ? NATT.mørke : 0);
-  function snikRekkevidde() { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now();
-    return E.Snik.rekkevidde({ stilling: stilling(), mørke: mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
+  // mørket: 3D-natta (spill/natt3d.js), ellers krigens natt etter klokka (spill/krig.js)
+  const mørke = () => (rot.NATT && isFinite(NATT.mørke) ? NATT.mørke : rot.Krig && Krig.natt && Krig.klokkeTime && typeof tid !== 'undefined' ? Krig.natt(Krig.klokkeTime(tid)) || 0 : 0);
+  // fiender med nattsikt (pakka «krig»: utstyr eller røvere som venter på mørket) ser deg som om det var dag
+  const harNattsikt = e => !!((e.utstyr && e.utstyr.nattsikt) || e.nattsikt);
+  function snikRekkevidde(utenMørke) { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now();
+    return E.Snik.rekkevidde({ stilling: stilling(), mørke: utenMørke ? 0 : mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
   // står det en vegg eller et tre mellom deg og fienden, like ved deg?
   function vegg(d, e) { const Q = r3(); if (!Q || !Q.ut || typeof hindring3d !== 'function') return false; const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy) || 1, x0 = d.x - Q.ut.cx, y0 = d.y - Q.ut.cy;
     for (let s = 1; s <= Math.min(R.dekning.veggAvstand, l - 1); s += .5) if (hindring3d(x0 + dx / l * s, y0 + dy / l * s)) return true; return false; }
   // faktoren på skaden fra én fiende (kampSteg i spillet-visning.js): 0 når de ikke har oppdaget deg
   function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), vegg(d, e)); }
-  function snikSteg(p, dt) { const rekk = snikRekkevidde(); let høyest = 0, nær = Infinity;
-    for (const e of fiender()) { const a = Math.hypot(e.x - p.x, e.y - p.y); if (a > 900) { snik.delete(e); continue; } const s = snik.get(e) || { nivå: 0, sett: false }; s.nivå = E.Snik.steg(s.nivå, a, rekk, dt); const før = s.sett; s.sett = E.Snik.sett(s.sett, s.nivå); snik.set(e, s);
+  function snikSteg(p, dt) { const rekk0 = snikRekkevidde(), rekkN = snikRekkevidde(true); let høyest = 0, nær = Infinity, rekk = rekk0;
+    for (const e of fiender()) { const a = Math.hypot(e.x - p.x, e.y - p.y); if (a > 900) { snik.delete(e); continue; } const s = snik.get(e) || { nivå: 0, sett: false }; rekk = harNattsikt(e) ? rekkN : rekk0; s.nivå = E.Snik.steg(s.nivå, a, rekk, dt); const før = s.sett; s.sett = E.Snik.sett(s.sett, s.nivå); snik.set(e, s);
       if (s.sett && !før) logg(`${e.navn} har oppdaget deg!`); høyest = Math.max(høyest, s.nivå); nær = Math.min(nær, a); }
-    snikSteg.nivå = høyest; snikSteg.nær = nær; snikSteg.rekk = rekk; }
+    snikSteg.nivå = høyest; snikSteg.nær = nær; snikSteg.rekk = rekk0; }
 
   // ---------- tilflukt: sov, lager, våkn opp der ----------
   const herTilflukt = () => { const P = rot.OverlevSpill && OverlevSpill.her ? OverlevSpill.her() : null; return P && tilflukter().find(q => q.i === P.bygg.i) || null; };
   const lagerFor = q => (T.lagre[q.i] = T.lagre[q.i] || E.Lager.ny());
+  // SOV: klokka spoles (600×) til du har sovet REGLER.tilflukt.sovTimer spilltimer – høyst sovSek ekte sekunder – og du vekkes hvis noe skjer
+  // (fiender nær, du tar skade, leiren angripes). I testene (straks) får du en hel natt uten at klokka røres.
+  const FART = { 0: 'sp0', 1: 'sp1', 10: 'sp2', 60: 'sp3', 600: 'sp4' };
+  const settFart = v => { const b = document.getElementById(FART[v] || 'sp1'); if (b && tempo !== v) b.click(); };
+  const fare = () => { const p = deg(); return !!p && fiender().some(e => Math.hypot(e.x - p.x, e.y - p.y) < R.tilflukt.vekkAvstand || (snik.get(e) || {}).sett); };
+  function våkn(andel, grunn) { const g = E.Tur.søvn(andel), B = behov(), K = helse(); sov.classList.remove('på'); if (sover && sover.fart !== undefined) settFart(sover.fart); sover = 0;
+    if (B) B.søvn = Math.min(100, B.søvn + g.søvn); if (K) K.hp = Math.min(100, K.hp + g.helse); if (andel >= .5) T.tellere.sovet++; lagre();
+    logg(grunn ? `Du ble vekket: ${grunn} Du rakk å sove ${tall(andel * R.tilflukt.sovTimer)} timer.` : `Du har sovet ${R.tilflukt.sovTimer} timer. Du er uthvilt, og kroppen har hentet seg inn.`); oppdater(); }
   function sovNå(straks) { if (!iTilflukt() && !straks) { logg('Du kan bare sove i et hus du har sikret.'); return false; } if (sover) return false;
-    if (auto() && fiender().some(e => { const s = snik.get(e); return s && s.sett; })) { logg('Du kan ikke sove mens fienden vet hvor du er.'); return false; }
-    const ferdig = () => { sover = 0; sov.classList.remove('på'); const B = behov(), K = helse(); if (B) B.søvn = Math.min(100, B.søvn + R.tilflukt.sovSøvn); if (K) K.hp = Math.min(100, K.hp + R.tilflukt.sovHelse); T.tellere.sovet++; lagre(); logg('Du har sovet. Du er uthvilt, og kroppen har hentet seg inn.'); oppdater(); };
-    if (straks) { ferdig(); return true; } sover = performance.now() + R.tilflukt.sovSek * 1000; sov.classList.add('på'); setTimeout(ferdig, R.tilflukt.sovSek * 1000); return true; }
+    if (straks) { sover = { straks: true }; våkn(1, ''); return true; }
+    if (fare()) { logg('Du kan ikke sove mens fienden er så nær.'); return false; }
+    const K = helse(); sover = { start: typeof tid !== 'undefined' ? tid : 0, ekte: performance.now(), fart: tempo, hp: K ? K.hp : 100, angrep: !!(rot.SpilletSpill && SpilletSpill.T && SpilletSpill.T() && SpilletSpill.T().aktiv) };
+    sov.textContent = 'Du sover …'; sov.classList.add('på'); settFart(600); return true; }
+  // hver kvarte sekund mens du sover: ferdig, eller vekket
+  setInterval(() => { if (!sover || sover.straks) return; const K = helse(), sovet = ((typeof tid !== 'undefined' ? tid : 0) - sover.start) / TIME, andel = Math.min(1, sovet / R.tilflukt.sovTimer);
+    sov.textContent = `Du sover … ${tall(sovet)} av ${R.tilflukt.sovTimer} timer (trykk for å våkne)`;
+    const angrep = !!(rot.SpilletSpill && SpilletSpill.T && SpilletSpill.T() && SpilletSpill.T().aktiv);
+    if (andel >= 1) våkn(1, ''); else if (K && K.hp < sover.hp - 1) våkn(andel, 'du blir skadet!'); else if (fare()) våkn(andel, 'fiender i nærheten!'); else if (angrep && !sover.angrep) våkn(andel, 'leiren er under angrep!');
+    else if (!iTilflukt()) våkn(andel, 'du er ikke lenger i tilfluktsstedet.'); else if (performance.now() - sover.ekte > R.tilflukt.sovSek * 1000) våkn(1, ''); else if (tempo !== 600) settFart(600); }, 250);
   function tilLager(id) { const q = herTilflukt(), t = ting(); if (!q || !t) return 0; const L = lagerFor(q), plass = R.tilflukt.lagerKg - E.Lager.vekt(L, Utstyr.TING, Utstyr.VÅPEN), D = Utstyr.TING[id]; if (!D) return 0;
     const n = E.Lager.flytt(t, L.ting, id, Math.min(t[id] || 0, Math.floor((plass + 1e-9) / D.vekt))); if (!n) logg('Lageret i tilfluktsstedet er fullt.'); lagreSekk(); lagre(); return n; }
   function fraLager(id) { const q = herTilflukt(), I = sekk(); if (!q || !I) return 0; const L = lagerFor(q), n = E.Lager.flytt(L.ting, I.ting, id, Math.min(L.ting[id] || 0, Utstyr.plassTil(I, id))); if (!n) logg('Sekken er for tung.'); lagreSekk(); lagre(); return n; }
@@ -154,7 +175,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   // slått ut: våkn i nærmeste tilfluktssted når det ligger nær nok og innenfor 3D-utsnittet (spillet-visning.js spør)
   function slåttUt(K) { if (!klar || !T.våkn || fører()) return false; const p = deg(), Q = r3(); if (!p) return false; const q = rot.Overlev.Tilflukt.nærmeste(tilflukter(), p.x, p.y); if (!q || q.meter > R.tilflukt.nær) return false;
     const x = q.x - Q.ut.cx, y = q.y - Q.ut.cy; if (Math.abs(x) > Q.ut.S * .9 || Math.abs(y) > Q.ut.S * .9) return false;
-    K.hp = R.tilflukt.helseEtter; Gange.flytt(x, y, false); if (Gange.ligg) Gange.ligg(false); snik = new WeakMap();
+    K.hp = R.tilflukt.helseEtter; Gange.flytt(x, y, false);
+    // interiøret i huset bygges straks (ellers er huset en massiv kloss til du har stått der litt), og du settes på et fritt sted på gulvet
+    if (rot.Interior3d && Interior3d.oppdater) { try { for (let n = 0; n < 14 && !Interior3d.inne(x, y); n++) Interior3d.oppdater(true); } catch (e) { /* bygges av seg selv etterpå */ }
+      if (typeof hindring3d === 'function' && hindring3d(x, y)) { let funnet = false; for (let r = .5; r <= 8 && !funnet; r += .5) for (let v = 0; v < 6.28 && !funnet; v += .52) { const px = x + Math.cos(v) * r, py = y + Math.sin(v) * r; if (Interior3d.inne(px, py) && !hindring3d(px, py) && !hindring3d(px + .4, py) && !hindring3d(px - .4, py) && !hindring3d(px, py + .4) && !hindring3d(px, py - .4)) { Gange.flytt(px, py, false); funnet = true; } } } } if (Gange.ligg) Gange.ligg(false); snik = new WeakMap();
     si('Du kom deg unna', `Såret slepte du deg til tilfluktsstedet ${Math.round(q.meter)} m unna. Hvil eller sov her.`); if (auto() && Math.random() < .35) fåSkade('infeksjon', 'Såret har blitt betent'); return true; }
 
   // ---------- historien ----------
@@ -234,7 +258,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       if (Object.keys(T.skader).length) { const r = E.Skader.steg(T.skader, timer, 1, { leir: iLeiren(), sykestue: iLeiren() && sykestue(), seig: har('seig') }); if (r.helse > 0 && K && K.hp > 5) K.hp = Math.max(5, K.hp - r.helse);
         for (const id of r.friske) logg(`${E.Skader.LISTE[id].navn}: du er frisk igjen${iLeiren() && sykestue() ? ' (behandlet i sykestua)' : ''}.`); if (r.friske.length) lagre(); }
       // kulde: ute i vinter eller nedbør
-      if (ute && !inne() && timer > 0 && rot.VAER) { const reg = VAER.regel || VAER, vått = (reg.regn || 0) + (reg.snø || 0) > .3; if (Math.random() < E.Skader.kulde(timer, VAER.årstid === 'vinter', vått)) fåSkade('infeksjon', 'Du har blitt syk av kulde og væte'); }
+      if (ute && !inne() && timer > 0 && rot.VAER) { const reg = VAER.regel || VAER, vått = (reg.regn || 0) + (reg.snø || 0) > .3; if (Math.random() < E.Skader.kulde(timer, VAER.årstid === 'vinter', vått, tempHer())) fåSkade('infeksjon', 'Du har blitt syk av kulde og væte'); }
       // en hund slår følge
       if (!T.hund && ute && gikk && t && t.rasjon > 0) { const sikkert = (E.Historie.kapittel(bakgrunn(), T.hist) || { mål: {} }).mål.slag === 'hund'; if (E.Hund.kommer(T.hundGått, gikk, Math.random(), sikkert)) { t.rasjon--; if (!t.rasjon) delete t.rasjon; lagreSekk(); fåHund('En hund har fulgt etter deg en stund. Du ga den en rasjon, og nå blir den hos deg.'); } }
       if (p) snikSteg(p, 1);
@@ -251,6 +275,8 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   // ---------- knapperaden når du går ----------
   function radInnhold() { const d = [], t = ting() || {}, B = behov(), pc = VW >= 900, st = stilling();
     for (const [id, q] of Object.entries(T.skader)) d.push(['lapp', `${E.Skader.LISTE[id].navn}${q.behandlet ? ' (behandlet)' : ''}`, null, q.behandlet ? 'god' : '']);
+    // alltid synlig: hva du har med av vann og mat
+    d.push(['lapp', `Flaske ${t.vann || 0}/${R.tur.flaske} · rasjoner ${t.rasjon || 0}`, null, 'rolig']);
     if (T.hund) d.push(['lapp', `Hund: ${T.hund.navn}`, null, 'god']);
     if (pc) d.push(['knapp', st === 'ligg' ? 'Reis deg (Z)' : 'Legg deg ned (Z)', 'ligg', '']);
     if (B && t.vann > 0 && B.tørst < 85) d.push(['knapp', `Drikk (${t.vann})${pc ? ' X' : ''}`, 'drikk', B.tørst < R.tur.tørstVarsel ? 'viktig' : '']);
@@ -277,8 +303,8 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
         f.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, o.navn), el('small', {}, `${o.tekst}. Trenger ${Object.entries(o.trenger).map(([d, n]) => `${n} ${E.Handverk.DELER[d].navn.toLowerCase()}`).join(' + ')}.${m ? ' ' + m : ''}`)), b)); } }
     else if (panelModus === 'tilflukt') { const q = herTilflukt(); f.append(el('h2', {}, 'Tilfluktsstedet'));
       if (!q || !I) { f.append(el('small', {}, 'Du står ikke i et hus du har sikret.')); return f; } const L = lagerFor(q), kg = E.Lager.vekt(L, Utstyr.TING, Utstyr.VÅPEN);
-      f.append(el('small', {}, 'Her er du nesten trygg for skudd. Sov for å bli uthvilt, og legg igjen utstyr du vil ha i reserve.'));
-      const kn = el('div', { klasse: 'knapper2' }, knapp(`Sov (${R.tilflukt.sovSek} s)`, () => { if (sovNå()) åpne(''); }, { id: 'evsovknapp' }), knapp('Hvil litt (+helse)', () => { OverlevSpill.hvil(); }), knapp(T.våkn ? 'Våkner her hvis du blir slått ut: PÅ' : 'Våkner her hvis du blir slått ut: AV', () => { T.våkn = !T.våkn; lagre(); visPanel(true); }, { id: 'evvakn' })); f.append(kn);
+      f.append(el('small', {}, 'Her er du nesten trygg for skudd. Sov for å bli uthvilt (klokka går fort mens du sover, og du vekkes hvis noe skjer), og legg igjen utstyr du vil ha i reserve.'));
+      const kn = el('div', { klasse: 'knapper2' }, knapp(`Sov (${R.tilflukt.sovTimer} timer)`, () => { if (sovNå()) åpne(''); }, { id: 'evsovknapp' }), knapp('Hvil litt (+helse)', () => { OverlevSpill.hvil(); }), knapp(T.våkn ? 'Våkner her hvis du blir slått ut: PÅ' : 'Våkner her hvis du blir slått ut: AV', () => { T.våkn = !T.våkn; lagre(); visPanel(true); }, { id: 'evvakn' })); f.append(kn);
       f.append(el('small', {}, `Blir du slått ut innen ${R.tilflukt.nær} m fra et tilfluktssted, våkner du der i stedet for i leiren (når valget står på).`));
       f.append(el('h3', {}, `Lageret her (${tall(kg)} av ${R.tilflukt.lagerKg} kg)`)); if (!Object.keys(L.ting).length && !L.våpen.length) f.append(el('small', {}, 'Tomt.'));
       L.våpen.forEach((v, n) => f.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, Utstyr.VÅPEN[v.id].navn), el('small', {}, `${v.mag} i magasinet`)), knapp('Ta med', () => { våpenFraLager(n); visPanel(true); }))));
@@ -320,6 +346,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     lettHus(kl, i, tomt) { if (!klar) return ''; const d = []; if (!tomt) { const f = E.Handverk.funn(kl, i, har('finner')), I = sekk(), fikk = {}; if (I) for (const [id, n] of Object.entries(f)) { const g = Utstyr.leggTil(I, id, n); if (g) fikk[id] = g; } lagreSekk(); const t = E.Handverk.tekst(fikk); if (t) d.push(t); }
       if (!T.hund && E.Hund.iHus(i) && fåHund('En hund gjemte seg i huset. Den vil bli med deg.')) d.push('En hund blir med deg!'); return d.join(' '); },
     trolig(kl, areal, i) { return har('øye') && rot.Leting ? ` (${E.Handverk.trolig(Leting.funn(kl, areal, i))})` : ''; },
+    // verden-visning.js (jakt): et dyr du selv har felt. Langt fra leiren bærer du kjøttet selv – svarer true når det er tatt hånd om
+    felteDyr(rasjoner, navn, avst) { const p = deg(), S = spill(), I = sekk(); if (!klar || !p || !I || !S || !S.leir || Math.hypot(p.x - S.leir.x, p.y - S.leir.y) <= R.jakt.nær) return false;
+      const k = E.Tur.kjøtt(rasjoner, Utstyr.plassTil(I, 'rasjon')); if (k.med) I.ting.rasjon = (I.ting.rasjon || 0) + k.med; lagreSekk();
+      logg(`Du felte en ${navn}${avst ? ` på ${Math.round(avst)} m` : ''}: ${k.med} rasjoner kjøtt i sekken${k.igjen ? `, ${k.igjen} måtte ligge igjen (sekken er full – nær leiren bæres alt hjem)` : ''}.`); oppdater(); return true; },
     // utstyr.js: egen knapp for en ting i sekken
     sekkKnapp(id) { if (!klar) return null; if (id === 'vann') return ['Drikk', drikk]; if (id === 'rasjon') return ['Spis', spis]; if (id === 'felle') return ['Sett ut', settFelle]; if (id === 'spjelk') return ['Bruk', () => behandle('bein')]; if (id === 'forbinding' && T.skader.infeksjon && !T.skader.infeksjon.behandlet) return ['Behandle', () => behandle('infeksjon')]; return null; },
   });
