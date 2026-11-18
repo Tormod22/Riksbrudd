@@ -24,6 +24,7 @@
 body.spill .stats{ background:none; border:0; padding:0; gap:5px; flex-wrap:wrap; align-items:stretch; flex:1 1 auto; min-width:0; }
 body.spill .stats > div{ display:flex; align-items:center; gap:2px; padding:3px 10px 3px 8px; min-height:34px; background:linear-gradient(180deg,#2a2215,#17120a); border:1px solid #5a4a2a; box-shadow:inset 0 1px 0 rgba(255,230,160,.07), 0 2px 6px rgba(0,0,0,.5); border-radius:3px; }
 body.spill .stats > div > span:not([id]){ display:none; } body.spill .stats > div b{ font-size:17px; letter-spacing:.01em; }
+body.gaar #panel{ display:none; }   /* (runde 5, test2) lagpanelet fra kartet lå under Skyt/Huk/Hopp (telefon) og helsestreken (PC) når du gikk */
 .stats #sVind{ margin-left:5px; }   /* (runde 5, test2) «8 °C3 m/s SV» på telefon: mellomrommet før vinden forsvinner i flex-boksen */
 body.spill .stats > div[data-s="sDag"]{ border-color:#c9b26a; padding-right:12px; } body.spill .stats > div[data-s="sDag"] b{ font-size:19px; }
 body.spill .stats > div[data-s="sPenger"]{ border-color:#c9b26a; background:linear-gradient(180deg,#3a2f18,#1d160b); margin-left:8px; } body.spill .stats > div[data-s="sPenger"] b{ font-size:20px; color:#f0dc9a; }

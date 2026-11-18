@@ -124,3 +124,53 @@ Vakter: skjermvaktene fra sjekk.js og alle `vakter/*.js` er grønne på stående
 på nytt – den trenger 3D).
 Ikke rettet: stående SE når du går – loggmeldingen (to linjer) ligger oppå «Flaske 4/4 · rasjoner» til den tones ut (10 s).
 Loggen kan også stikke inn under et sidepanel liggende (den står øverst til venstre).
+
+## Runde 5 (18.–19. nov kveld): ny spiller fra startskjermen, og kontrollen raskere
+Gren `claude/natt18-test2` (flettet med `origin/claude/nattfiks` først). Maskinen ble startet på nytt kl. 00:15 norsk tid midt i
+PC-runden; alt var committet eller ble committet etterpå. Skript og bilder: scratchpad `natt5/test2/` (h5.js = oppsettet, p1.js =
+gjennomspillingen, e1–e3.js = målingene av 3D-byggingen; bilder i `b/` = PC, `b2/` = telefon, `b1/` = første telefonforsøk).
+
+### 1. Spilt som ny spiller (webdriver av, ekte trykk/klikk, telefon 390 × 844 og PC 1400 × 820)
+Startskjermen steg 1–3 (navn på karakter og fraksjon), leirplass på kartet, opplæringen steg 1–6 (Leir, brakke med «Kjøp materialene
+og bygg», + på Bygg i Folk, tropp fra forslaget «Speidertropp» med navn, 3D og Gå), inn i brakka, inventaret (Tab på PC), spoling med
+⏭ til natta og gjennom to angrep (telefon: dag 1 kl. 00:06 og dag 2 kl. 02:49, «Forsvar leiren», «Angrepet er slått tilbake»),
+spørsmålskort fra folket. PC-runden kom til inventaret før omstarten (spolingen på PC er ikke sett).
+
+Funn (R = rettet her, I = ikke rettet – eier i parentes):
+1. R Stoppkortet («⏭ Stoppet: Leiren angripes» osv.) lå på telefon oppå alarmen øverst («Angrep: ett røverlag fra …» – overskriften
+   og deler av «Forsvar leiren» var skjult) og oppå spørsmålskortet fra folket (spørsmålet var skjult, bare svarene synlige).
+   Bilder: `b1/tlf-17-stopp-1.png`, `b1/tlf-27-forsvar-1.png`. Nå flyttes kortet ned under dem (`telefon.js` ned(), punkt 19);
+   etter: `b2/tlf-31-sporsmal-4.png`, `b2/tlf-35-runde-6.png`.
+2. R Varselet «Varsel: et røverlag er på vei …» og «Angrepet er slått tilbake!» (#varsel, spillet-visning.js) står like høyt som
+   alarmen (#alarm) – også på PC – og dekket «Forsvar leiren» i 9 s, og senere skadebanneret slik at «Lukk» der så ut til å høre til
+   varselet. Bilder: `b2/tlf-29-runde-3.png`, `b2/tlf-35-runde-6.png`. Varselet flyttes nå ned under alarmen (samme ned()).
+3. R Lagpanelet fra kartet ble stående når du gikk inn i 3D og trykket Gå: på telefon under Skyt, Huk, Hopp og våpenbyttet
+   (`b2/tlf-20-gaa.png`), på PC under helsestreken (`b/pc-20-gaa.png`). Skjult mens du går (`body.gaar #panel`, spillhud.js).
+4. R Værbrikken på telefon: «Klart, 8 °C3 m/s SV» – mellomrommet før vinden forsvant i flex-boksen (`b1/tlf-04-leirvalg.png`).
+5. R PC: «Velg lag» i kommandolinja sto under leirvalg-banneret før du hadde noen lag (`b/pc-04-leirvalg.png`). Skjult mens du
+   velger leirplass (spillhud.js).
+6. I Spolingen stopper igjen og igjen under et angrep: «Vaktlaget er framme» og «Et lag er i ildkamp» annenhver gang, 0–2
+   spillminutter mellom (p1-mobil.txt, runde 8–12). «framme» kommer hver gang forsvaret flytter laget litt. Forslag: ikke meld
+   «framme» mens alarmen står, eller ikke for samme lag oftere enn hvert 30. spillminutt (flyt.js hendelser() – ikke rørt, det er
+   oppførsel, ikke tekst).
+7. I Første angrep kom allerede første natt (dag 1 kl. 00:06), før en ny spiller har bygd noe annet enn én brakke; opplæringen
+   står da på steg 2–6. Det gikk bra (vaktlaget slo dem), men det er brått. (balanse: trussel/spillregler)
+8. I Merket rundt det opplæringen peker på (Brakke-kortet, Folk-flisa) er større enn kortet og dekker kanten av nabokortet
+   («Kjøkken», «3 mill. kr»), `b2/tlf-08-leirmeny-bygg.png`, `b2/tlf-11-brakke-bestilt.png`. (balanse: opplaering.js)
+9. I Navnene ved leiren ligger oppå hverandre: leirflagget står oppå «1. lastebilkolonne» og «Leiren til Dovrefolket», og «0 t olje»
+   ser ut som «o t olje» med skriftens gammeldagse sifre. `b2/tlf-16-tropp-laget.png`, `b/pc-06-forste-blikk.png`.
+   (oppstart-visning.js tegner flagget, okonomi-visning.js basens navn – ingen eier i kveld, men ikke en liten tekstretting.)
+10. I Inventaret (#lutpanel) er gjennomskinnelig: teksten bak (her testvarselet om programvaregrafikk) skinner gjennom
+    (`b/pc-23-lutpanel.png`). (lut: lut-visning.js)
+11. I Opplæringskortet nederst på telefon dekker en melding nede til venstre («⚠ Angrep: 1 røverlag …», skimtes gjennom kortet,
+    `b2/tlf-29-runde-3.png`). Ikke funnet hvilket element det er før omstarten.
+12. I Opplæringen steg 3 sier «bruk + ved Bygg til det står to der», men det står alt fire på Bygg i et nytt spill – steget blir
+    ferdig straks Folk åpnes. (balanse: opplaering.js)
+13. I Byggebanneret på telefon: «… mangler for 975 000 / kr» – «kr» alene på neste linje (vanlig mellomrom før kr i LB.kroner).
+14. I Fraksjonsnavnet mangler: feilen «Fraksjonen må ha et navn» står nederst ved knappen, men feltet står øverst (rullet bort).
+    Feltet burde få fokus/rulles fram. (oppstart-visning.js)
+15. I Startskjermen: alder-glideren har nettleserens blå farge (ikke spillets gull), og tittelen «Riksbrudd - nytt spill» har bindestrek
+    der det skal være tankestrek. Små ting i oppstart-visning.js.
+16. I Telefon, Gå: loggmeldingen på to linjer ligger litt oppå «Flaske 4/4 · rasjoner 2» til den tones ut (som i runde 3).
+17. I Kartflisene nær leiren har rektangulære felt med ulik skogtone (`b2/tlf-10-brakke-plass.png`). (natur: kartbilde)
+Ikke et funn: testvarselet «Nettleseren tegner 3D uten grafikkortet» kommer fordi testmaskinen bruker programvaregrafikk.

@@ -42,8 +42,8 @@
  *     («Silje foreslår en fest …»), så du ikke så hva som var galt eller hva du ble spurt om. Varselet «Angrepet er slått tilbake!» lå
  *     oppå skadebanneret («Ett bygg er skadet … Reparer alle»), så «Lukk» der så ut til å høre til varselet (også på PC). Nå flyttes
  *     varselet og så stoppkortet ned under kort som står øverst (lavere enn 60 % av skjermen), så lenge det er plass til det.
- * 20. Lagpanelet (valgt lag) ble stående åpent når du trykket 3D og Gå, under Skyt, Huk, Hopp og våpenbyttet. Det er skjult mens du går
- *     (body.gaar) og kommer tilbake når du slutter å gå.
+ * 20. Lagpanelet (valgt lag) ble stående åpent når du trykket 3D og Gå, under Skyt, Huk, Hopp og våpenbyttet (på PC under helsestreken).
+ *     Det er skjult mens du går (body.gaar, regelen står i spillhud.js) og kommer tilbake når du slutter å gå.
  */
 (() => {
   if (typeof document === 'undefined') return;
@@ -60,8 +60,6 @@ body.kort.mkom.mkomfull .ctl{ bottom:calc(64px + ${B}); }
 body.kort.tlfdekk #mkom.på{ display:none; }
 #mkom button[hidden]{ display:none; }
 body.kort.gaar .ctl{ display:none; }
-/* 20 (runde 5): lagpanelet fra kartet ble stående når du gikk inn i 3D og «Gå», under Skyt, Huk, Hopp og våpenbyttet – skjult mens du går */
-body.kort.gaar #panel{ display:none; }
 body.kort.gaar #gangeknapper{ right:calc(10px + ${Rt}); }
 body.kort button:not(.knapper *):not(#lagmeny *):not(#minikart *):not(#mkom *):not(.ctl *):not([class*="farge"]):not(.prikk){ min-height:40px; }
 body.kort button.lukk, body.kort button[aria-label^="Lukk"]{ min-width:40px; }
