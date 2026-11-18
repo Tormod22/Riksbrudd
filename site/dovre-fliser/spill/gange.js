@@ -92,10 +92,11 @@
       trapp: (x, y) => !!window.Interior3d && Interior3d.påTrapp(x, y),
       hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => gulv(x, y) === null && (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && dekke(x, y) === null };
     // skader (spill/eventyr-visning.js): brukket bein gir lavere fart og verken løp eller hopp
-    const EV = window.EventyrSpill, skadd = EV && EV.fart ? EV.fart() : 1;
+    // og tung last (spill/lut-visning.js): tregere, og svært tungt = ingen løping
+    const EV = window.EventyrSpill, LS = window.LutSpill, skadd = (EV && EV.fart ? EV.fart() : 1) * (LS && LS.fart ? LS.fart() : 1);
     if (ligger && hoppVent) settLigg(false);
     kropp.landet = 0;
-    const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk, ligg: ligger, faktor: skadd, ikkeLøp: !!(EV && EV.kanLøpe && !EV.kanLøpe()) }, dt, verden);
+    const k = Bevegelse.steg(kropp, { fram, side, retning: f.a, løp, hopp: hoppVent, huk: taster.has('c') || taster.has('control') || mobilHuk, ligg: ligger, faktor: skadd, ikkeLøp: !!(EV && EV.kanLøpe && !EV.kanLøpe()) || !!(LS && LS.kanLøpe && !LS.kanLøpe()) }, dt, verden);
     // et fall (farten du landet med) meldes til skadereglene
     if (kropp.landet > 0 && EV && EV.fall) EV.fall(kropp.landet);
     hoppVent = false;

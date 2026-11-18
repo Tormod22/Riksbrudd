@@ -62,7 +62,11 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     // våpen, ammunisjon og førstehjelp går i sekken din (spill/utstyr.js)
-    { const ekstra = !f.tomt && window.UtstyrSpill ? UtstyrSpill.fantIHus(P.bygg.kl, P.bygg.i) : ''; if (ekstra) { logg(melding); logg(ekstra); visFunn(melding + ' ' + ekstra); } else { logg(melding); visFunn(melding); } }
+    // (18. nov kveld) med beholderne (spill/lut-visning.js) ligger våpen, ammunisjon, mat og utstyr i skapene og skuffene i stedet –
+    // letingen gir det tunge (materialer, diesel, penger og mat i kartonger til leiren), og meldingen minner om skapene
+    { const LS = window.LutSpill && LutSpill.klar && LutSpill.klar(), ekstra = !f.tomt && window.UtstyrSpill && !LS ? UtstyrSpill.fantIHus(P.bygg.kl, P.bygg.i) : '';
+      const skap = LS && P.inne && window.Lut && Lut.beholdere(P.inne).length ? ' Skap og skuffer åpner du selv (E ved møbelet).' : '';
+      if (ekstra) { logg(melding); logg(ekstra); visFunn(melding + ' ' + ekstra); } else { logg(melding); visFunn(melding + skap); } }
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
     let person = null;
     if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {
@@ -90,7 +94,8 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   knapp.addEventListener('click', e => { e.preventDefault(); const R = r3(); if (!R || !R.fot || jobb) return; const P = Interior3d.inne(R.bane.x, R.bane.y); if (P && P.bygg && !P.leir && lett.has(P.bygg.i)) { if (plassTil(restAv(P))) hent(P); return; } if (!P || !P.bygg || P.leir) return;
     jobb = { P, start: performance.now(), sek: Leting.tid(arealAv(P)) * (window.OverlevSpill ? OverlevSpill.letetid() : 1) }; });
   // E på tastaturet gjør det samme som knappen
-  window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb) knapp.click(); });
+  // (står du ved et skap eller en annen beholder, åpner E den i stedet – spill/lut-visning.js)
+  window.addEventListener('keydown', e => { if ((e.key === 'e' || e.key === 'E') && knapp.classList.contains('på') && !jobb && !(window.LutSpill && LutSpill.tarE && LutSpill.tarE())) knapp.click(); });
   KROKER.ramme3d.push(ramme);
   // 2D: et lite merke på husene du har lett gjennom (når kartet er nært nok til å se husene); gult + der noe ligger igjen
   KROKER.tegn.push((g, vx0, vy1) => { if (!klar || !lett.size || kam.m > 4) return; g.save(); g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
