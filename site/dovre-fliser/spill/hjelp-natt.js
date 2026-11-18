@@ -202,6 +202,31 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Trær, gress og lyng",
+"Trærne har kroner av blader og nåler, og granene har hengende greiner. Går du selv, står det høyt gress i flekker på enga og lyng i skogen, og alt svaier i vinden. Om vinteren mister løvtrærne nesten alt løvet.",
+"I 3D"
+],
+[
+"Støv, eksos og hjulspor",
+"Kjøretøy som kjører, slipper eksos. På tørr grus og i terrenget virvler de opp støv, på snø snøføyke. Hjulsporene blir liggende et par minutter før de blir borte. På asfalt blir det ikke spor.",
+"I 3D"
+],
+[
+"Ildkamp som synes",
+"Når et lag skyter, ser du munningsild, sporlys mot målet, kruttrøyk og nedslag i bakken. I kartet blinker det ved laget som skyter.",
+"Lag og strid"
+],
+[
+"Kratere og brent skog",
+"Et kjøretøy som blir ødelagt, etterlater et krater og en røyksky. Der det har brent, er bakken svidd og trærne svarte. Der det brenner nå, ser du flammer og røyk.",
+"I 3D"
+],
+[
+"Skogen fortsetter i det fjerne",
+"Skog langt unna tegnes som enkle holt, så landskapet ikke slutter i en kant. Kommer du nær, står de ekte trærne der. På lav grafikk er de fjerne holtene slått av.",
+"Vær, lyd og bilde"
+],
+[
 "Penger og knapphet",
 "Et nytt spill starter med 40 millioner kr (før 100). Det rekker til et kontrollrom, strøm og en brakke – resten må du skaffe: tettsteder gir skatt og varer, oppdrag og angrep du slår tilbake gir penger, og hogst, riving og leting i hus gir materialer uten å koste noe. Et spill du alt har lagret, beholder pengene sine.",
 "Kom i gang"
@@ -358,7 +383,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Knappene nederst",
-"Leir, Folk, Tropper, Krig og Deg står samlet nederst – også på telefon. Raden er borte mens du går, bygger eller har et panel åpent.",
+"Leir, Folk, Tropper, Krig og Deg står samlet nederst – også på telefon. «Mer» åpner resten: Region, Verden, Sjø og Velg lag. Raden er borte mens du går, bygger eller har et panel åpent.",
 "Kom i gang"
 ],
 [
@@ -384,6 +409,16 @@ window.HJELP_TILLEGG = [
 [
 "Byggemenyen",
 "Byggene står som kort med en tegning, pris, byggetid og strøm. Pek på et kort for materialer og hva bygget gjør.",
+"Leiren"
+],
+[
+"Paneler og plasser",
+"Menyene åpner seg til venstre, arkene (Deg, Verden, Sjø, Tiltak) til høyre og små kort i midten. Åpner du et nytt panel på samme plass, lukkes det som sto der.",
+"Kom i gang"
+],
+[
+"Delene i Leir-menyen",
+"Trykk på en overskrift i Leir-menyen for å legge delen sammen eller åpne den. Spillet husker valget. De lange delene er lagt sammen fra start.",
 "Leiren"
 ],
 [

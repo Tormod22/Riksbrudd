@@ -1187,3 +1187,29 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   nummeret, legg stien inn i regexene (PÅ_NORGE, PÅ_OMRÅDE) og vercel.json. IKKE GJORT: mørkleggingen finnes ikke i 3D, kjøretøy kan
   kjøre ut av fylket, og kartdataene er de samme som for hele landet (ingenting lastes raskere – men alt spillet gjør, er nærmere).
   Lokal prøve: scratchpad gj/rog.js (dev.py sender /rogaland til /dovre-fliser).
+  NATTARBEIDET 18. NOV (brukeren: «utarbeid alle femti forbedringer uten om Y-tasten, lag en plan for alt dette og utfør» – 50 forbedringer,
+  50 nye ideer og 20 utseendegrep fra docs/gjennomgang-2026-11-18.md). Bygget av ti hjelpere i hver sin worktree (/home/user/natt-*,
+  grener claude/natt18-*), flettet inn i claude/nattfiks. DETALJENE STÅR I docs/natt/<pakke>.md (les den for pakka du skal røre):
+  sjo.md (spill/sjo.js + sjo-visning.js: båter, havner, fiske, landgang, sperring, ferjer, kjøretøy om bord), okonomi.md (spill/region.js
+  + region-visning.js: tettstedstyper, handelsruter, skatt/lojalitet, svartebørs, gjenoppbygging; nye spill starter med 40 mill. kr,
+  markedets hyller, veksling olje/diesel), folk.md (spill/samfunn.js + samfunn-visning.js: flyktninger, spesialister, barn og gamle,
+  Grålungen, lover, forrædere, opplæring, begravelser, personkort, window.Kortkø), krig.md (spill/krig.js + krig-visning.js + krig3d.js:
+  flanke, fart etter formasjon via KROKER.fart, fanger, etterretning, natt/nattsikt, artilleri, røyk/lys/støy, bakhold på veg, beleiring,
+  våpenhvile, bygdevern, helikopterfrakt, droner; åtte stridsvalg), verden.md (spill/verden.js + verden-visning.js: vinterføre, is, kulde,
+  flom, ras, jakt, åker, brann – window.BRANNER/BRENT –, funn, radio, tog), karakter.md (spill/eventyr.js + eventyr-visning.js: behov
+  ute, tilflukt med lager og søvn, ligg, skader, håndverk, hund, sniking, kartslør, historie i kapitler), spillform.md (spill/flyt.js,
+  scenario.js, scenario-visning.js: spol til neste hendelse, køordre, flervalg, start uten lag, seier/tap, scenarier, utfordringer,
+  vanskelighetsgrad – window.SPILLREGLER –, etterspill, ukas oppdrag; hendelsen «riksbrudd-hendelse»), ui.md (spill/opplaering.js,
+  flistips.js, merker.js, tegninger.js, minikart2d.js, paneler.js: opplæring, fliser og kommandolinje også på telefon, «Mer»-knappen,
+  byggekort, lysere 2D-kart, merkesett, panelplasser, sammenleggbare deler i Leir-menyen), natur.md (TreDeler i index.html,
+  spill/effekter3d.js, fjernby3d.js: trær med bladtekstur, gress i vind, runde figurer, støv/spor, kampeffekter, kratere, fjern skog),
+  lys.md (skygger, bakke, vann, himmel, nattlys, tåke, fargesetting – se fila for hva som ble ferdig), test2.md (telefon: spill/telefon.js).
+  FELLES NYTT: vakter i egne filer pipeline/fliser/vakter/*.js (sjekk.js kjører dem etter «knapperaden»-vaktene; hver setter alt
+  tilbake og må tåle det andre vakter etterlater), hjelpetekster i docs/natt/*-hjelp.json -> spill/hjelp-natt.js via
+  `python3 pipeline/fliser/samle_hjelp.py`, kommandolinja tar window.KOMMANDO_TILLEGG, «kode i kommentar»-regelen gjelder bare
+  kommentarer etter kode på samme linje. I TESTENE (navigator.webdriver) SOVER ALT DET NYE til <Navn>Spill.test = true
+  (RegionSpill, SamfunnSpill, KrigSpill, VerdenSpill, EventyrSpill, FlytSpill, ScenarioSpill, SjoSpill, OpplaeringSpill …) – for å
+  spille på ekte i Playwright: `context.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }))`.
+  FLETTING: scratchpad inn.sh <gren> (løser skript-tagg-konflikter i index.html med flett.py, kjører versjon.py og alle regeltestene).
+  KJENT: graving-vakten («feltarbeid») feiler av og til (laget blir ikke ferdig nedgravd; årsaken ikke funnet – målingen `mål` skrives
+  ut når den feiler). IKKE PUBLISERT før brukeren sier «Publiser».
