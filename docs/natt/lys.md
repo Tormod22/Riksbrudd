@@ -199,6 +199,14 @@ Fra profilen i Bergen, utsnitt 3,1 km (programvare-grafikk, belastet maskin):
   forberedt – gir likt terreng (497 664), trær i nettene (38 895), trær per treslag og steiner/busker; 156 pust under én bygging.
   (Første forsøk uten låst grafikknivå ga ulikt terreng: automatisk grafikk gikk ned mens programvare-grafikken tegnet – ikke endringene.)
 - Regeltestene test_kyst, test_veg, test_vegetasjon, test_bruer, test_kraft, test_ytelse, test_fjernby3d: grønne.
+- **Bergen** (/norge med ekte data, utsnitt 3,1 km, scratchpad `natt/lys/hakk/t-bergen.js`): uforberedt og forberedt bytte gir likt
+  terreng (normaler og land/vann-grupper), husnettenes normaler, 17 355 trær, 3042 veger, 6988 gatelys, kysten (260 båter, 7 naust,
+  40 brygger), 3 trafostasjoner, 59 bruer, 1237 skogholt, like mange nett per modul, og like summer av posisjoner og normaler for
+  bruene, kysten og kraftlinjene. Bare liv3d sin sum skilte i 7. siffer – fuglene og røyken (Points) flytter seg mellom målingene.
+  Kartbildet sendt i striper i det forberedte byttet.
+- **Vakta lys** (`pipeline/fliser/vakter/lys.js`), prøvd på Dovre-testsiden med 3D på: PC 1400 × 820 grønn (43 s – det meste er de
+  gamle bildene med effektene; runde 4-delen tar et par sekunder), mobil 390 × 844 grønn (21 s), og med 3D av grønn. (I Bergen med
+  tegningen slått av feiler den på «skyggekartet er ikke på» – det kommer av at prøveskriptet slo av tegningen, ikke av koden.)
 - Senere samme dag (commit 596f9d6): **veg.js** `finnKryssG` (generator, `finnKryss()` som før) – liv3d bruker den i bygg3d-kroken
   (lyktene) og i forbered3d (`byggVeger`); vegnettenes normaler med `normalerG` (`nettG` i liv3d.js); kartbildets bunnfarge
   (`fillRect` på hele 4096², 60 ms) fylles i striper på 512 rader med pust – flisene tegnes først når den er ferdig (`await bunn`);
@@ -249,11 +257,36 @@ finnLinje 515 → 0, bruene i byttet 372 → 85 (nå i forberedelsen), delBakken
 I det som sto igjen i byttet var trafostasjonene (kraft3d `trafoGeo` 207 ms) og fjernby3d (51–68 ms) mine – de er flyttet til
 forberedelsen etterpå (ikke målt i Bergen etter det, se «Prøvd» for at utsnittet er det samme).
 
+### Sluttmåling med alt (commit 5da88f5, Bergen 7,3 km, lasten hadde falt til ca. 9–12)
+Sammenlign med før-målingen øverst (gammel kode, last ca. 3 – altså lettere forhold for den gamle koden):
+| (Bergen 7,3 km) | før (b01c410, last ≈ 3) | etter (5da88f5, last ≈ 9–12) |
+|---|---|---|
+| byttet («gjør klar uten pust») | 698 / 567 ms | **285 / 219 ms** |
+| lengste lange oppgave | 610 / 516 ms | **205 / 196 ms** |
+| lange oppgaver ≥ 50 ms, sum | 8 / 8, 1,5 / 1,3 s | 14 / 10, 1,1 / 0,9 s |
+| sett3d alene | – | 170 / 94 ms |
+| tid til utsnittet er bygget | 7,7 / 8,6 s | 7,2 / 8,7 s |
+| «henter høydene og kartet» uten pust | 0–1 pause, 52 ms | 7 / 5 pauser, sum 586 / 496 ms, lengste 165 ms (last) |
+
+Bergen 3,1 km (alt med), samme sluttmåling:
+| (Bergen 3,1 km) | før (b01c410, last ≈ 3) | etter (5da88f5, last ≈ 10) |
+|---|---|---|
+| byttet («gjør klar uten pust») | 1670 / 350 ms | **380 / 283 ms** |
+| lengste lange oppgave | 1534 / 430 ms | **433 / 395 ms** |
+| sett3d alene | 1025 ms (største) | 226 / 151 ms |
+| tid til utsnittet er bygget | 25,8 / 27,0 s | 25,7 / 27,0 s |
+De lengste som står igjen er ikke mine: gate3d 433 ms (Gate.plasser 162, finnKryss 73), bekker-visning 273 ms, byhus 254 ms,
+søppeltømming 206 ms, dyr3d 101 ms; i byttet anlegg3d (bensinstasjonene) 22–54 ms og fjern3d 24 ms, og i samme bilde som byttet
+tegnInfra3d (navn og merker, hoyde3d i bakÅs/brupunkt3) 95 ms. ytelse.js sin merking i `R.scene.add` ca. 12 ms.
+
 ### «Henter høydene og kartet» – det brukeren så mest av (911 ms i 5 pauser)
 Her er nesten ikke byggekode igjen: høydene hentes og kartbildet lages i bakgrunnstråden. De lange pausene i dette trinnet var her
 søppeltømming (opptil 244 ms i én oppgave under last), bildeløkka selv (kompass.js `tegnMini` – minikartet tegnet fra utsnittets
 4096²-lerret: 28–143 ms per gang; `tegnInfra3d`/`infraViktig` – navn og merker for infrastrukturen i 3D: opptil 49 ms uten last i
-Bergen), og arbeid uten JavaScript-stakk («(program)», 60–120 ms – sannsynligvis grafikkortets prosess/bildeavkoding). Rettet her:
+Bergen), og arbeid uten JavaScript-stakk («(program)», 60–120 ms, rett etter at byggingen starter – nettleserens eget arbeid: trolig
+minnet til det nye lerretet, bildene fra bakgrunnstråden eller Blinks søppeltømming; kan ikke deles opp fra JavaScript).
+Under samme last var den nye koden ikke verre her enn den gamle (19 / 30 mot 18 / 17 pauser); at sluttmålingen har flere pauser i
+dette trinnet enn før-målingen, kommer av lasten (9–12 mot 3). Rettet her:
 bunnfargen på kartbildet i striper (fillRect 60 ms), pust rundt `tegnInfraPå`/`infraI`/`bruer3d`. IKKE rettet (ikke mine filer):
 minikartet bør tegnes fra en liten kopi av kartbildet (lages én gang per utsnitt) i stedet for fra hele lerretet hver gang;
 `tegnInfra3d` bør ikke regne alle objektene hver ramme. Søppeltømmingen kommer av de store tabellene per utsnitt (kartbildet 64 MB,
