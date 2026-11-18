@@ -27,6 +27,8 @@
     kikkert: { navn: 'Kikkerter', pris: 150000, tekst: 'Troppen ser 20 % lenger.', sikt: 1.2 },
     ammo: { navn: 'Ekstra ammunisjon', pris: 100000, tekst: 'Ammunisjonen varer dobbelt så lenge.', sparer: .5 },
     sanitet: { navn: 'Sanitetsutstyr', pris: 200000, tekst: 'Saniteten får én såret kampklar hver sjette time (krever sanitet i troppen).', timer: 6 },
+    // (18. nov, spill/krig.js) om natta ser alle kortere; nattsikt opphever det. Prisen er Claudes forslag.
+    nattsikt: { navn: 'Nattsikt', pris: 400000, tekst: 'Troppen ser like langt om natta som om dagen.' },
     feltradio: { navn: 'Feltradio', pris: 1000000, tekst: 'Kontakt med leiren like langt som leirens radio rekker (ellers håndradio, 3 km).' },
   };
   // Ferdige forslag: antall, våpen etter plass i troppen (resten rifle), utstyr og kjøretøy.

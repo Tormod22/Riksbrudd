@@ -7,6 +7,7 @@
   window.AI = AI;
   function nytt(side, x, y) { const s = nyttLag(`${F.FRAKSJONER[side].eieform} ${++nr[side]}. lag`, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
   for (const side of AI.sider) { const [x, y] = HJEM[side]; nytt(side, x, y); nytt(side, x + 220, y - 180); }
+  AI.nytt = nytt;   // spill/lagring.js lager lagene som fantes da spillet ble lagret
   // KJØRETØY OG STILLINGER (17. nov): hver fraksjon har en lastebil som lagene bruker når målet er langt unna (bare når vegnettet er
   // lastet – på PC hentes det for dette), og en garnison som har holdt et tettsted i to timer, bygger en stilling der.
   const BIL = {}, STILLINGER = []; window.STILLINGER = STILLINGER; AI.biler = BIL;
@@ -85,6 +86,11 @@
 
   const MINNE = { rød: { sist: null, hatt: new Set(), leir: false }, grønn: { sist: null, hatt: new Set(), leir: false } }, leir = () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
   AI.minne = MINNE;
+  // VÅPENHVILE (18. nov, spill/krig-visning.js): AI.fred[side] = spillminuttet hvilen varer til. Så lenge ser ikke fraksjonens lag
+  // dine lag som fiender, og de går ikke mot leiren din.
+  AI.fred = {};
+  const hvile = (a, b) => (a === 'blå' && (AI.fred[b] || 0) > tid) || (b === 'blå' && (AI.fred[a] || 0) > tid);
+  AI.hvile = hvile;
   let akk = 0;
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return; const sek = akk; akk = 0;   // ett steg per spillminutt
@@ -96,23 +102,23 @@
       if (!s.ai || !levende(s) || s.planlegger) continue;
       s.ai.neste -= sek; if (s.ai.neste > 0) continue; s.ai.neste = R.tenk;
       // om bord i lastebilen: gå av når den er framme eller laget ser en fiende nær, ellers kjør videre (tenker hvert minutt)
-      if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
+      if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
         if (!KJORETOY.includes(k) || F.gåAv(!k.sti, nær === Infinity ? null : nær)) avBil(s); else { s.ai.neste = 60; continue; } }
       const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y) }; });
-      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
-        .concat(KJORETOY.filter(k => k.side !== s.side && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
+      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
+        .concat(KJORETOY.filter(k => k.side !== s.side && !hvile(s.side, k.side) && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
       // BEDRE AI (17. nov): det fraksjonen husker og vet – hvor den sist så en fiende, hvilke tettsteder den har mistet, hvem av
       // vennene som blir beskutt, hva de andre lagene alt går mot, og hvor spillerens leir er når et lag har vært nær nok til å se den
       const M = MINNE[s.side], venner = ENHETER.filter(e => e.side === s.side && e.ai && levende(e)), L = leir();
       for (const b of byer) { if (b.eier === s.side) M.hatt.add(b.id); else if (M.hatt.has(b.id)) b.tapt = true; }
-      const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
       if (sett) M.sist = { x: sett.x, y: sett.y, navn: sett.navn, styrke: F.styrke(sett, Forsyning.ammo(sett)), t: tid };
       if (M.sist && Math.hypot(M.sist.x - s.x, M.sist.y - s.y) < 250 && !sett) M.sist = null;   // vi er der, og ingen er her lenger
       if (L && !M.leir && Math.hypot(L.x - s.x, L.y - s.y) < 2000) { M.leir = true; if (synlig(s)) logg(`${F.FRAKSJONER[s.side].navn} har funnet leiren din.`); }
       const opptatt = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) opptatt.set(f.ai.målBy, f);
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
       const v = F.velg(s, { side: s.side, byer, fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
-        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
       if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }
