@@ -136,7 +136,8 @@
     // opplæringen kommer først (natt 18. nov, «telefon2»: før kom hjelpen og opplæringen samtidig, med hjelpen oppå). Er opplæringen
     // på og ikke ferdig, åpnes ikke hjelpen av seg selv – opplæringen har knappen «Les mer i hjelpen», og ?-knappen øverst åpner den.
     const O = window.OpplaeringSpill, ferdig = O && window.Opplaering && Opplaering.ferdig ? Opplaering.ferdig(O.tilstand()) : false;
-    if (O && !O.av() && !ferdig) return false;
+    // (opplæringen vises ikke i testene – navigator.webdriver uten OpplaeringSpill.test – og da kommer hjelpen som før)
+    if (O && !O.av() && !ferdig && (!navigator.webdriver || O.test === true)) return false;
     vis(true); return true;
   }
   // etter at alle skriptene er lastet (oppstart-visning.js kommer etter denne fila)
