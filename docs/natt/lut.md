@@ -82,7 +82,10 @@ utstyrt, handlinger, ferskhet), ikke spillets utseende, navn eller tekster. Alle
 
 ### Prøvd
 - `node pipeline/fliser/test_lut.js` (45 ok), `test_utstyr.js`, `test_leting.js`.
-- Vakten «lut og beholdere» i nettleser på PC og mobil (3D: 1,6 s; uten 3D bare reglene).
+- Vakten «lut og beholdere» i nettleser på PC og mobil (3D: 1,6–1,8 s; uten 3D bare reglene).
+- Ekte mus (Playwright): dra og slipp flytter, dobbeltklikk flytter tilbake (telles i trykk() – nettleserens dblclick kommer ikke
+  fordi panelet tegnes på nytt etter første klikk), høyreklikk gir valgene. I sekken (#sekk): Drikk på saften, Til beltet på hagla,
+  Ta på på skolesekken, Spis på brunosten (sult 40 -> 65).
 - Vaktene «leting i hus», «angrep, marked … sekken» og «det som ble igjen» kjørt fra sjekk.js-koden i samme side: grønne.
   (Interiørvakten ga geo = 4 i mitt oppsett både med og uten lut-skriptene – ikke fra denne pakka.)
 - Bilder: lutpanelet PC 1400 og telefon 390, benken med brunost/saft/knekkebrød/fiskeboller, rifle ved garderoben, haug på gulvet,
