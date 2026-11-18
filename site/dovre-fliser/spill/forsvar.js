@@ -37,7 +37,30 @@
   function rapport(t) { const d = []; d.push(t.fienderUte >= t.fiender ? `alle ${t.fiender} røverlag er slått ut` : `${t.fienderUte} av ${t.fiender} røverlag slått ut`);
     d.push(t.falne || t.sårede ? `vi har ${t.falne ? t.falne + ' falne' : ''}${t.falne && t.sårede ? ' og ' : ''}${t.sårede ? t.sårede + ' sårede' : ''}` : 'ingen tap hos oss'); if (t.bygg > 0) d.push(`${t.bygg} bygg ble skadet`);
     return d.join(', ') + '.'; }
-  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport };
+  // ---------- (runde 4, 18. nov) MOT RØVERNE I LEIREN og REPARASJON ----------
+  // Kjøring 4: røverne sto et døgn inne i leiren og ødela bygg etter bygg mens lagene ble stående i stillingene sine, og byggene ble
+  // aldri reparert. Tallene er Claudes forslag:
+  //  mot.inne: røvere nærmere leirens midte enn dette er «inne i leiren»; mot.avstand: lagene går hit (meter fra røverne, på sin egen
+  //  side); mot.ny: målet må ha flyttet seg så langt før laget får ny ordre. rep.under: byggelagene reparerer bygg under denne helsen
+  //  av seg selv; rep.reserve: så mye blir alltid igjen i kassa; rep.varsel: bygg under denne helsen teller som skadet i varselet.
+  R.mot = { inne: 150, avstand: 50, ny: 60 };
+  R.rep = { under: .95, reserve: 3e5, varsel: .98 };
+  // Hvem går mot hvem: hvert lag mot den nærmeste røveren inne i leiren, og stiller seg mot.avstand m fra den på sin egen side.
+  // lag: [{ x, y }], røvere: [{ x, y }] (bare de inne i leiren), leir: { x, y }. Gir [{ lag, fi, mål: { x, y } }].
+  function motHerjere(lag, røvere, leir) { const ut = []; if (!røvere.length) return ut;
+    for (const s of lag) { let fi = null, d = Infinity; for (const e of røvere) { const q = Math.hypot(e.x - s.x, e.y - s.y); if (q < d) { d = q; fi = e; } }
+      // står laget oppå røveren (eller i midten), kommer det fra leirens midte
+      const fra = d > 1 ? s : leir, a = Math.hypot(fra.x - fi.x, fra.y - fi.y) > 1 ? Math.atan2(fra.y - fi.y, fra.x - fi.x) : 0, r = Math.min(R.mot.avstand, d);
+      ut.push({ lag: s, fi, mål: { x: fi.x + Math.cos(a) * r, y: fi.y + Math.sin(a) * r }, meter: d }); }
+    return ut; }
+  // Hvilke bygg byggelagene reparerer nå: de mest skadde først, så mange som det er ledige byggelag, og bare så langt pengene rekker
+  // (reserve igjen). bygg: [{ id, hp, pris, opptatt }]. Gir en liste med id-er.
+  function velgReparasjon(bygg, ledige, penger) { const ut = []; let igjen = (penger || 0) - R.rep.reserve;
+    for (const b of bygg.filter(q => !q.opptatt && q.hp < R.rep.under && q.hp > 0 && q.pris >= 0).sort((a, c) => a.hp - c.hp)) { if (ut.length >= ledige) break; if (b.pris > igjen) continue; igjen -= b.pris; ut.push(b.id); }
+    return ut; }
+  // varselet etter et angrep: «3 bygg er skadet» (hp under rep.varsel), og hva det koster å reparere alle
+  function skadet(bygg) { const s = bygg.filter(q => q.hp > 0 && q.hp < R.rep.varsel); return { n: s.length, pris: s.reduce((t, q) => t + (q.opptatt ? 0 : q.pris || 0), 0), tekst: s.length === 1 ? 'Ett bygg er skadet' : `${s.length} bygg er skadet` }; }
+  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
