@@ -1396,13 +1396,16 @@ async function bygg3d(cx, cy, S) {
   høyder.catch(() => {});   // (feil kommer fram der høydene ventes på under – dette hindrer en melding om «ubehandlet feil» før det)   // 2 m der den finnes (Dombås), ellers 8 m
   const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
-  const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
+  const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS;
+  // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
+  const bunn = (async () => { for (let y = 0; y < TW; y += 512) { g.fillRect(0, y, TW, Math.min(512, TW - y)); if (børPuste()) await pust(); } })();
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
-  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); framdrift('henter høydene og kartet', .1 + .4 * ++flisFerdig / flisAlle);
+  await Promise.all(Array.from({ length: 6 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg); await bunn; framdrift('henter høydene og kartet', .1 + .4 * ++flisFerdig / flisAlle);
     g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
+  await bunn;
   visVent();
   const [grov, fin] = await høyder, H = new Float32Array(N * N); R3.venterPå = '';
   // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
@@ -1610,7 +1613,7 @@ async function naboerAsynk(sentre, R = 100) {
   const rut = new Map(), K = 1 << 20, k = (ci, cj) => (ci + K / 2) * K + (cj + K / 2), ut = new Array(sentre.length);
   sentre.forEach(([x, y], j) => { const n = k(Math.floor(x / R), Math.floor(y / R)); let l = rut.get(n); if (!l) rut.set(n, l = []); l.push(j); });
   for (let q = 0; q < sentre.length; q++) {
-    if ((q & 255) === 255 && børPuste()) await pust();
+    if ((q & 63) === 63 && børPuste()) await pust();
     const [x, y] = sentre[q], ci = Math.floor(x / R), cj = Math.floor(y / R); let n = 0;
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const l = rut.get(k(ci + di, cj + dj)); if (l) for (const j of l) { const p = sentre[j]; if (Math.hypot(p[0] - x, p[1] - y) < R) n++; } }
     ut[q] = n - 1;

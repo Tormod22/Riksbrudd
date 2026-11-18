@@ -250,6 +250,7 @@
       const våt = v.P.map(p => iVann(u, p[0], p[1])), sjø = våt.map(() => false);
       for (let i = 0; i < våt.length;) { if (!våt[i]) { i++; continue; } let j = i; while (j < våt.length && våt[j]) j++; if (j - i >= 12) for (let k = i; k < j; k++) sjø[k] = true; i = j; }
       for (let i = 0; i < v.P.length; i++) {
+        if ((i & 255) === 255) yield;
         const p = v.P[i], q = v.P[Math.min(i + 1, v.P.length - 1)], o = v.P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1; let borte = false, påBru = false;
         for (const m of nære) {
           if (p[0] < m.bb[0] || p[0] > m.bb[2] || p[1] < m.bb[1] || p[1] > m.bb[3]) continue;
