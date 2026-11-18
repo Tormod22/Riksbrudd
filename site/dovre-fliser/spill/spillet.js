@@ -17,7 +17,7 @@
     //  - første bølge tidligst etter 24 spilltimer / 30 minutter spilling, siden 16–26 timer / 16–28 minutter mellom
     //  - byttet dekker skadene, ikke mer: 300 000 kr + 150 000 per bølge, høyst 1,5 mill.
     //  - og aldri over det dagen tilsier: ett lag de tre første døgnene, så ett til hvert tredje døgn (dagerPerLag)
-    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
+    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, ekstra: 2, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
     // antall lag i bølge nr (1, 1, 1, 2, 2, 2, 3 … høyst 6)
     lag: nr => klem(1 + Math.floor((nr - 1) / Trussel.BALANSE.perLag), 1, 6),
     // … men ikke flere enn spilleren kan møte: ett røverlag per åtte soldater (minst ett), og ett til når han har stridsvogn eller
@@ -28,7 +28,10 @@
       return Math.max(1, Math.round(Math.min(Trussel.lag(nr), tak, dagTak) * (o.faktor || 1))); },
     // mann per røverlag (runde 2 av balansen, Claudes forslag): 4 + 2 per bølge, 6–12 – kjøring 3 hadde ett lag på 12 mot to egne
     // lag på fire, og leiren falt i første bølge. Aldri mer enn soldatene dine + 2 (minst 5).
-    menn: (nr, soldater) => klem(Math.min(4 + 2 * nr, (soldater === undefined ? 99 : soldater) + 2), 5, 12),
+    // (runde 5, kjøring A: bølge 4 hadde to lag på 12 – 24 røvere mot 12 soldater –, og alle tre lagene ble slått ut. Taket gjelder nå
+    // hele bølgen: n lag deler på (soldatene × faktor) + BALANSE.ekstra, faktor = vanskelighetsgraden (lett 0,6 – hard 1,5). Med ett lag og
+    // faktor 1 som før.)
+    menn: (nr, soldater, n = 1, faktor = 1) => klem(Math.min(4 + 2 * nr, Math.ceil(((soldater === undefined ? 99 : soldater) * (faktor || 1) + Trussel.BALANSE.ekstra) / Math.max(1, n || 1))), 5, 12),
     // ventetiden til neste bølge: spillminutter og ekte minutter med spilling (det som kommer først, gjelder)
     vent: nr => ({ spill: klem(27 - nr, 16, 26) * 60, ekte: klem(30 - nr * 2, 16, 28) }),
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning

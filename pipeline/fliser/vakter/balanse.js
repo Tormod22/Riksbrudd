@@ -40,8 +40,67 @@ module.exports = {
       if (!(VS.LEIRBRANN.bygg < .5 && VS.LEIRBRANN.grus < 1)) feil.push('brann i leiren: byggene forsvinner eller grusplassen brenner som før'); }
     else feil.push('VerdenSpill.slokkILeiren mangler');
     return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : `bølger, bytte, sabotører, mat og startkostnader ok (fire bygg + diesel: ${Math.round(kr / 1e5) / 10} mill. kr), brann i leiren slokket etter ${brann && brann.steg} × 10 min`, data: { kr, mat, tunge, brann } };
-  }).then(async a => { const b = await runde4(pg); return { ok: a.ok && b.ok, tekst: a.tekst + ' · ' + b.tekst, data: { ...a.data, runde4: b.data } }; }),
+  }).then(async a => { const b = await runde4(pg); const c = await runde5(pg); return { ok: a.ok && b.ok && c.ok, tekst: a.tekst + ' · ' + b.tekst + ' · ' + c.tekst, data: { ...a.data, runde4: b.data, runde5: c.data } }; }),
 };
+
+// (runde 5, 18.–19. nov) et angrep som er i gang, lagres og kommer tilbake (TrusselLagringSpill), døgnoppgjøret om morgenen, og at
+// hjelpen ikke åpnes av seg selv mens opplæringen går. Alt settes tilbake (lag, bølgen, lagringen, hjelpens merke, testbryterne).
+async function runde5(pg) {
+  const r = await pg.evaluate(() => {
+    const feil = [], d = {}, Sp = window.SpilletSpill, TL = window.TrusselLagringSpill, OS = window.OppgjorSpill, T0 = Sp && Sp.klar && Sp.klar() ? Sp.T() : null, Sx = window.OppstartSpill && OppstartSpill.tilstand();
+    if (!Sp || !TL || !T0 || !Sx || !Sx.leir) return { feil: ['SpilletSpill/TrusselLagringSpill mangler'], d };
+    const L = Sx.leir, før = { T: JSON.parse(JSON.stringify(T0)), angrep: localStorage.getItem(TL.NØKKEL), hjelp: localStorage.getItem('riksbrudd-hjelp'), enheter: ENHETER.slice(), oppl: window.OpplaeringSpill ? OpplaeringSpill.test : null, hjelpÅpen: document.getElementById('hjelp') && document.getElementById('hjelp').classList.contains('på'),
+      blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.strid, e.stridFør, e.forsvar]),
+      // nyttLag bruker den faste tilfeldighetsrekka (frø i index.html): den settes tilbake, så vaktene etter får de samme lagene som før
+      frø: typeof frø === 'number' ? frø : null };
+    try {
+      // et angrep i gang: to røverlag, det ene har vært inne i leiren en stund og har mistet folk, det andre trekker seg ut med byttet
+      const nr = 9101; T0.aktiv = nr; T0.bølge = Math.max(T0.bølge || 0, nr);
+      const a = nyttLag('Røvere vakt5.1', L.x + 230, L.y + 20, 'rød'); a.raid = nr; a.fra = { x: L.x + 1800, y: L.y }; a.inne = 33; a.menn[1].hp = .25; a.menn[2].hp = 0; ENHETER.push(a);
+      const b = nyttLag('Røvere vakt5.2', L.x - 640, L.y + 15, 'rød'); b.raid = nr; b.trekker = true; b.trekkerFra = tid - 5; b.bytte = { penger: 77000, lager: { tre: 1.5 }, diesel: 8, mat: 2 }; ENHETER.push(b);
+      if (!TL.lagre()) feil.push('lagringen av angrepet feilet');
+      // «siden lastes på nytt»: lagene borte, så tilbake
+      ENHETER.splice(ENHETER.indexOf(a), 1); ENHETER.splice(ENHETER.indexOf(b), 1);
+      d.tilbake = TL.tilbake(nr, true);
+      const a2 = ENHETER.find(e => e.navn === a.navn && e.raid === nr), b2 = ENHETER.find(e => e.navn === b.navn && e.raid === nr);
+      if (d.tilbake !== 2 || !a2 || !b2) feil.push(`røverlagene kom ikke tilbake (${d.tilbake})`);
+      else { if (Math.abs(a2.x - a.x) > 1 || a2.inne !== 33 || a2.menn[1].hp !== .25 || a2.menn[2].hp !== 0 || !a2.fra) feil.push('røverlaget kom tilbake, men ikke som det var');
+        if (!b2.trekker || !b2.bytte || b2.bytte.penger !== 77000) feil.push('byttet og «trekker seg ut» ble borte'); }
+      // en annen bølge (eller ingen) gir ingenting tilbake
+      if (TL.tilbake(nr + 1, true) !== 0 || TL.tilbake(nr) !== 0) feil.push('lagringen ga røvere til feil bølge (eller i testene uten test-bryteren)');
+      // døgnoppgjøret: et bilde, og teksten etter en bølge som ble slått tilbake
+      if (!OS || !window.Oppgjor) feil.push('døgnoppgjøret mangler');
+      else { const bi = OS.bilde(); const t = Oppgjor.tekst({ ...bi, bølge: 0, aktiv: 0 }, { ...bi, bølge: 1, aktiv: 0 }); d.oppgjør = t && t.tekst;
+        if (!bi || !Array.isArray(bi.bygg) || !/Bølge 1 slått tilbake/.test(d.oppgjør || '')) feil.push('døgnoppgjøret sier ikke at bølgen ble slått tilbake'); }
+      // lagene hjemme fyller ammunisjon fra kassa (basen uten olje) og de sårede hviler – mellom angrepene
+      const HS = window.HjemmeSpill, s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && !e.ombord && Array.isArray(e.menn) && e.menn.length >= 2 && levende(e));
+      if (!HS || !window.Hjemme) feil.push('HjemmeSpill mangler');
+      else if (s) { T0.aktiv = 0; for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1); const fiendeR = Hjemme.REGLER.fiende; Hjemme.REGLER.fiende = 0; const fx = [s.x, s.y, s.sti, s.planlegger, s.ammo, s.menn.map(m => m.hp)], B = window.OLJE && OLJE.BASER[0], olje = B ? B.beholdning : 0, p0 = OppstartSpill.tilstand().penger, test = HS.test;
+        if (p0 < 2e6) OppstartSpill.gi(2e6); const p1 = OppstartSpill.tilstand().penger;
+        try { s.x = L.x + 30; s.y = L.y + 10; s.sti = null; s.planlegger = false; s.ammo = .5; s.menn[0].hp = .5; if (B) B.beholdning = 0; HS.test = true; HS.steg(60);
+          d.hjemme = { ammo: Math.round(s.ammo * 100), hp: Math.round(s.menn[0].hp * 100), kr: p1 - OppstartSpill.tilstand().penger };
+          if (!(s.ammo > .7 && s.ammo < 1 && d.hjemme.kr > 0)) feil.push('laget hjemme fikk ikke ammunisjon for penger'); if (!(s.menn[0].hp > .5)) feil.push('den sårede hvilte ikke'); }
+        finally { HS.test = test; Hjemme.REGLER.fiende = fiendeR; if (B) B.beholdning = olje; [s.x, s.y, s.sti, s.planlegger] = fx; if (fx[4] === undefined) delete s.ammo; else s.ammo = fx[4]; s.menn.forEach((m, i) => { m.hp = fx[5][i]; });
+          const diff = p0 - OppstartSpill.tilstand().penger; if (diff > 0) OppstartSpill.gi(diff); else if (diff < 0) OppstartSpill.betal(-diff); s.siktSkitten = true; } }
+      // hjelpen åpnes ikke av seg selv mens opplæringen går (første gang)
+      if (window.Hjelp && window.OpplaeringSpill) { localStorage.removeItem('riksbrudd-hjelp'); OpplaeringSpill.test = true; const av = OpplaeringSpill.av(); if (av) OpplaeringSpill.slå(true);
+        const ferdig = window.Opplaering && Opplaering.ferdig(OpplaeringSpill.tilstand()); d.hjelpFørst = Hjelp.første(); if (d.hjelpFørst && !ferdig) feil.push('hjelpen åpnet seg selv mens opplæringen går'); if (av) OpplaeringSpill.slå(false); }
+    } catch (e) { feil.push('kast: ' + e.message); }
+    finally {
+      for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1);
+      for (const k of Object.keys(T0)) delete T0[k]; Object.assign(T0, før.T); if (T0.nesteSpill === null) T0.nesteSpill = Infinity; if (T0.nesteEkte === null) T0.nesteEkte = Infinity;
+      if (TL.glem) TL.glem(); if (før.frø !== null) frø = før.frø; for (const [e, st, sf, fs] of før.blå) { e.strid = st; if (sf === undefined) delete e.stridFør; else e.stridFør = sf; if (fs === undefined) delete e.forsvar; else e.forsvar = fs; }
+      if (før.angrep === null) localStorage.removeItem(TL.NØKKEL); else localStorage.setItem(TL.NØKKEL, før.angrep);
+      if (før.hjelp === null) localStorage.removeItem('riksbrudd-hjelp'); else localStorage.setItem('riksbrudd-hjelp', før.hjelp);
+      if (window.OpplaeringSpill) { OpplaeringSpill.test = før.oppl; OpplaeringSpill.kjør(); }
+      if (window.Hjelp && !før.hjelpÅpen) Hjelp.vis(false); skitten = true;
+    }
+    return { feil, d };
+  });
+  // ordrene til røverne som kom tilbake, sendes etter 1,5 s – lagene er alt fjernet, men vent så ingenting henger igjen
+  await pg.waitForTimeout(1700);
+  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 5: ' + r.feil.join('; ') : `runde 5: angrepet lagres og kommer tilbake, ammunisjon og hvile hjemme (${r.d.hjemme ? r.d.hjemme.kr + ' kr' : '–'}), døgnoppgjøret og opplæringen før hjelpen ok`, data: r.d };
+}
 
 // (runde 4, 18. nov) røvere som har herjet trekker seg ut med byttet, lagene hjemme går mot røvere i leiren, byggelagene reparerer og
 // skadevarselet. Alt med SpilletSpill.test / ForsvarSpill.test = true, og alt settes tilbake (penger, lager, mat, moral, lag, bygg, bølgen).

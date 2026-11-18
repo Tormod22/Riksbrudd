@@ -1,0 +1,20 @@
+// Test av spill/forsvar-hjemme.js (runde 5): ammunisjon og hvile for lagene hjemme (node pipeline/fliser/test_forsvar_hjemme.js)
+const H = require('../../site/dovre-fliser/spill/forsvar-hjemme.js');
+let feil = 0; const ok = (b, t, x) => { if (!b) { feil++; console.log('FEIL:', t, x === undefined ? '' : JSON.stringify(x)); } else console.log('ok  ', t); };
+const R = H.REGLER;
+let p = H.påfyll(.4, 1, 5e6); ok(Math.abs(p.andel - R.ammo.perTime) < 1e-9 && p.kr === Math.round(R.ammo.perTime * R.ammo.pris), 'en spilltime gir en firedel av en full last', p);
+p = H.påfyll(.9, 2, 5e6); ok(Math.abs(p.andel - .1) < 1e-9, 'aldri over full', p);
+p = H.påfyll(.2, 4, R.ammo.reserve + 50000); ok(p.kr <= 50000 + 1 && p.andel > 0, 'reserven blir igjen i kassa', p);
+p = H.påfyll(.2, 4, R.ammo.reserve - 1); ok(p.andel === 0 && p.kr === 0, 'ingenting når kassa er under reserven', p);
+ok(H.påfyll(1, 3, 5e6).andel === 0 && H.påfyll(undefined, 3, 5e6).andel === 0, 'fullt lag (eller uten tall) får ingenting');
+ok(Math.abs(H.hvil(.3, 10) - (.3 + 10 * R.hvile.perTime)) < 1e-9 && H.hvil(.9, 10) === 1, 'sårede blir bedre, aldri over frisk');
+ok(H.hvil(0, 10) === 0 && H.hvil(1, 10) === 1, 'falne og friske er som før');
+const leir = { x: 0, y: 0 };
+ok(H.hjemme({ x: 100, y: 0 }, leir, []) && !H.hjemme({ x: R.radius + 1, y: 0 }, leir, []), 'hjemme innen radien');
+ok(!H.hjemme({ x: 10, y: 0, sti: [[0, 0]] }, leir, []) && !H.hjemme({ x: 10, y: 0, ombord: {} }, leir, []), 'ikke på marsj eller om bord');
+ok(!H.hjemme({ x: 10, y: 0 }, leir, [{ x: 500, y: 0 }]) && H.hjemme({ x: 10, y: 0 }, leir, [{ x: 10 + R.fiende + 1, y: 0 }]), 'ikke med en fiende i nærheten');
+const sår = { menn: [{ hp: .3 }, { hp: 0 }, { hp: 1 }, { hp: 1 }] }, hel = { menn: [{ hp: 1 }, { hp: .5 }, { hp: 1 }, { hp: 1 }], ammo: .9 };
+ok(H.børHjem(sår, 1600, 61, 5000) && !H.børHjem(hel, 1600, 61, 5000), 'halvparten ute: hjem; én såret: blir');
+ok(H.børHjem({ ...hel, ammo: .2 }, 1600, 61, 5000), 'nesten tom for ammunisjon: hjem');
+ok(!H.børHjem(sår, 300, 61, 5000) && !H.børHjem(sår, 3500, 61, 5000) && !H.børHjem(sår, 1600, 30, 5000) && !H.børHjem(sår, 1600, 61, 500), 'ikke nær leiren, ikke langt unna, ikke før det har stått en time, ikke med fiender nær');
+console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);
