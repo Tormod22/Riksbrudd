@@ -31,6 +31,35 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
       bt.fisker = true; ok(Sjo.fangst(bt, 60, { vind: 2, årstid: 'vår' }) > 1, 'sjarken fisker'); bt.fisker = false;
       const p1 = OppstartSpill.tilstand().penger; bt.x = L.x + 1500; bt.y = L.y; bt.kai = -1; SjoSpill.miner(bt); ok(S.sperringer.length >= 1 && OppstartSpill.tilstand().penger === p1 - Sjo.REGLER.minePris, 'miner lagt og betalt');
       const bt2 = Sjo.nyBåt(S, 'småbåt', L.x + 500, L.y, 0); const sv2 = await SjoSpill.seilTilKai(bt2, 1, { vindu: v }); ok(sv2.meter && bt2.sti.every(p => Math.hypot(p[0] - (L.x + 1500), p[1] - L.y) > Sjo.REGLER.mineRadius - 40), 'neste båt går utenom minefeltet');
+      // (runde 4) fiendens båter: bording, senking med ild, et AI-lag som tar båt, trykk i 3D, leirvalget, krigskartet, lojaliteten
+      { const FB = SjoSpill.fiendeBåter(), nF = FB.length, s4 = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.ombord && levende(e)), før = s4 && [s4.x, s4.y, s4.sti];
+        bt.x = L.x + 500; bt.y = L.y; bt.sti = null; bt.kai = 0; bt.last = Sjo.tomLast();
+        if (s4) { s4.x = bt.x + 20; s4.y = bt.y; s4.sti = null; SjoSpill.gåOmBord(s4, bt); }
+        const f = { id: 'vakt1', type: 'frakt', hp: Sjo.REGLER.fiendeBåt.hp, navn: 'Forsyningsbåt', side: 'rød', by: 'vakt', byNavn: 'Prøveby', x: bt.x + 40, y: bt.y, kai: -1, sti: null, seg: 0, mål: -1, retning: 0, last: Sjo.tomLast() }; FB.push(f);
+        ok(Sjo.kanBorde(bt, SjoSpill.omBord(bt).length, f), 'båten med laget kan borde forsyningsbåten'); const fikk = SjoSpill.bord(bt, f); o.bordet = fikk ? Sjo.lastTekst(fikk) : null;
+        ok(fikk && Sjo.lastVekt(bt.last) > 1 && !FB.includes(f), 'bordet: lasten er om bord og forsyningsbåten borte (' + o.bordet + ')');
+        if (s4) { s4.påBåt = null; s4.x = L.x + 500; s4.y = L.y - 60; s4.sti = null; }
+        const f2 = { ...f, id: 'vakt2', x: L.x + 560, y: L.y - 60, hp: Sjo.REGLER.fiendeBåt.hp }; FB.push(f2); const sk = SjoSpill.skyttereMot(f2); o.skyttere = sk.length;
+        ok(!s4 || sk.length >= 1, 'et lag 60 m unna skyter på båten'); let n4 = 0; while (sk.length && Sjo.skadBåt(f2, sk.map(q => ({ ...q, faktor: Math.max(.3, q.faktor) })), 1) !== 'senket' && n4 < 500) n4++; if (sk.length) SjoSpill.senket(f2, sk[0].lag); ok(!sk.length || !FB.includes(f2), 'forsyningsbåten senket med ild etter ' + n4 + ' min');
+        // AI-lag som tar båt fra prøvehavna til prøvebrygga
+        const ai = nyttLag('Vaktbåtfolk', L.x + 500, L.y + 40, 'rød'); ai.ai = { neste: 0, mål: [L.x + 4000, L.y] }; ENHETER.push(ai);
+        const pl = await SjoSpill.planAI(ai, 0, 1, 1e6, [L.x + 4000, L.y], { vindu: v }); ok(pl && pl.plan && ai.båtPlan, 'AI-laget planlegger båt (' + (pl && (pl.feil || Math.round(pl.plan.meter) + ' m')) + ')');
+        if (ai.båtPlan) { const ab = SjoSpill.gåOmAI(ai, ai.båtPlan); ok(ab && ai.påBåt === ab && FB.includes(ab), 'AI-laget er om bord'); let fr4 = null, m4 = 0; while (!fr4 && m4++ < 3000) fr4 = Sjo.steg(ab, 1); if (FB.includes(ab)) { FB.splice(FB.indexOf(ab), 1); SjoSpill.iLandAI(ab); } ok(fr4 === 'framme' && !ai.påBåt && ai.ai.neste === 0, 'AI-båten kom fram og laget gikk i land'); }
+        ENHETER.splice(ENHETER.indexOf(ai), 1); FB.length = nF; if (s4) { s4.x = før[0]; s4.y = før[1]; s4.sti = før[2]; s4.siktSkitten = true; }
+        // trykk i 3D (kroken med kartets meter): båten åpner panelet
+        const v0 = valgt; valgt = null; SjoSpill.vis(false); ok(SjoSpill.trykk3d(bt.x + 3, bt.y) && SjoSpill.erÅpen() && SjoSpill.valgt() && SjoSpill.valgt().båt === bt, 'trykk på båten i 3D åpner den'); SjoSpill.vis(false); valgt = v0;
+        ok(Array.isArray(SjoSpill.tatteFerjer()), 'listen over tatte ferjer');
+        o.leirvalg = Kaier.leirTekst(KaierSpill.data(), L.x, L.y); ok(/Prøvehavn, stor \(500 m\) – leirens egen kai/.test(o.leirvalg), 'leirvalget viser nærmeste kai: ' + o.leirvalg);
+        // krigskartets tillegg og lojaliteten (Regionen)
+        // et eget prøvetettsted 3 km sør for leiren (som vakten «økonomi»); uten infrastruktur lages en tom mens vakten går
+        const utenInfra = typeof INFRA === 'undefined' || !INFRA; if (utenInfra) { const tom = {}; for (const k of INFRA_REKKE) tom[k] = []; INFRA = tom; } if (!INFRA.tettsted) INFRA.tettsted = [];
+        const rr = 300, cx = L.x, cy = L.y - 3000, by = { lag: 'tettsted', e: { id: 'sjø1', navn: 'Prøvevik', folk: 1500 }, bb: [cx - rr, cy - rr, cx + rr, cy + rr], deler: [[cx - rr, cy - rr, cx + rr, cy - rr, cx + rr, cy + rr, cx - rr, cy + rr]] }; INFRA.tettsted.push(by);
+        if (window.RegionSpill && RegionSpill.klar() && window.KRIG_TILLEGG) { const t0 = TETTSTEDER.get(by.e.id), RS = RegionSpill.tilstand(), b0 = RS.byer[by.e.id] ? { ...RS.byer[by.e.id] } : null, rlag = localStorage.getItem('riksbrudd-region');
+          try { TETTSTEDER.set(by.e.id, { eier: null, inntar: null }); const e1 = KRIG_TILLEGG.by.map(fn => fn(by, null)).filter(Boolean).map(e => e.textContent || e).join(' '); o.krig = e1.slice(0, 160); ok(/Hvis du tar det, per døgn: .*olje til basen.*Strøm/.test(e1), 'krigskartet: hva tettstedet gir hvis du tar det');
+            TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null }); RegionSpill.status(); const e2 = KRIG_TILLEGG.by.map(fn => fn(by, 'blå')).filter(Boolean).map(e => e.textContent || e).join(' '); ok(/Gir deg nå per døgn/.test(e2), 'krigskartet: hva ditt tettsted gir nå');
+            RS.byer[by.e.id].loj = 90; Region.mistet(RS, by.e.id); TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null }); RegionSpill.status(); o.loj = RS.byer[by.e.id].loj; ok(o.loj === Region.REGLER.lojGjentatt, 'tatt igjen: lojaliteten faller til ' + o.loj);
+          } finally { if (t0) TETTSTEDER.set(by.e.id, t0); else TETTSTEDER.delete(by.e.id); if (b0) RS.byer[by.e.id] = b0; else delete RS.byer[by.e.id]; if (rlag === null) localStorage.removeItem('riksbrudd-region'); else localStorage.setItem('riksbrudd-region', rlag); RegionSpill.status(); } } else o.feil.push('Regionen eller krigskartets krok mangler');
+        { const i = INFRA.tettsted.indexOf(by); if (i >= 0) INFRA.tettsted.splice(i, 1); } if (utenInfra) INFRA = null; }
       // havn: varene samler seg og kan lastes
       Sjo.havnSteg(S, [{ id: 'prøve', folk: 3000 }], 7 * 1440); ok(S.havner.prøve && Math.abs(S.havner.prøve.tre - 30) < 1e-6, 'en uke i havna gir 30 tre'); delete S.havner.prøve;
     } catch (e) { o.feil.push('unntak: ' + e.message); }
@@ -39,5 +68,5 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
     if (lagretNå === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagretNå); SjoSpill.start(); if (lagret === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagret);
     KaierSpill.settData(K0); SjoSpill.test = test0; SjoSpill.vis(åpen); valgt = valgt0; skitten = true; o.penger = OppstartSpill.tilstand().penger === p0; if (!o.penger) o.feil.push('pengene ble ikke satt tilbake'); return o; });
   const ok = data.feil.length === 0;
-  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner og havn` : data.feil.join('; '), data };
+  return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner, havn, bording (${data.bordet}), senking, AI-båt, trykk i 3D, leirvalg og krigskart` : data.feil.join('; '), data };
 } };

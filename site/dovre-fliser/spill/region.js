@@ -29,6 +29,9 @@
     skattKr: 100, skattMaks: 1.5e6,
     // lojalitet 0–100
     lojStart: 50, lojEtterOpprør: 30, opprørVed: 10,
+    // (runde 4) et tettsted du har mistet og tar igjen, husker ikke den gamle lojaliteten: folk er lei av å bytte herre.
+    // Lojaliteten blir høyst så høy når du tar det igjen (Claudes forslag).
+    lojGjentatt: 35,
     lojGarnison: 10,                         // en garnison i tettstedet løfter målet
     lojUtenStrøm: -15,                       // uten strøm synker målet
     lojFaktor: [.6, 1.4],                    // varene ganges med dette fra lojalitet 0 til 100
@@ -125,14 +128,20 @@
     const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy, t = l2 ? klem(((p.x - a.x) * dx + (p.y - a.y) * dy) / l2, 0, 1) : 0;
     return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
   }
+  // (runde 4) Avstanden fra p til en vegstrekning P = [[x, y], …] (nærmeste stykke)
+  function tilSti(p, P) { let d = Infinity; for (let i = 0; i + 1 < P.length; i++) d = Math.min(d, tilLinje(p, { x: P[i][0], y: P[i][1] }, { x: P[i + 1][0], y: P[i + 1][1] })); return d; }
+  const stiLengde = P => { let m = 0; for (let i = 1; i < P.length; i++) m += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); return m; };
   // Ett ledd: åpen, truet eller stengt etter nærmeste fiende. Et eget lag nær leddet (vakt) gjør det ett hakk tryggere.
-  function ledd(a, b, fiender, egne) {
-    const Q = REGLER.rute; let nær = Infinity, fi = null;
-    for (const f of fiender) { const d = tilLinje(f, a, b); if (d < nær) { nær = d; fi = f; } }
-    const vakt = egne.some(e => tilLinje(e, a, b) <= Q.vakt);
+  // veg (runde 4, valgfri): { sti: [[x, y], …] langs vegnettet, brutt: navnet på en sprengt bru/tunnel på vegen } – da måles avstanden
+  // til vegen, og en brutt veg stenger leddet (vakter hjelper ikke) til den er reparert.
+  function ledd(a, b, fiender, egne, veg) {
+    const Q = REGLER.rute, P = veg && veg.sti && veg.sti.length > 1 ? veg.sti : null, mål = P ? p => tilSti(p, P) : p => tilLinje(p, a, b); let nær = Infinity, fi = null;
+    for (const f of fiender) { const d = mål(f); if (d < nær) { nær = d; fi = f; } }
+    const vakt = egne.some(e => mål(e) <= Q.vakt);
     let status = nær <= Q.stengt ? 'stengt' : nær <= Q.truet ? 'truet' : 'åpen';
     if (vakt && status !== 'åpen') status = status === 'stengt' ? 'truet' : 'åpen';
-    return { status, meter: nær, fiende: fi, vakt };
+    if (veg && veg.brutt) status = 'stengt';
+    return { status, meter: nær, fiende: fi, vakt, sti: P, brutt: (veg && veg.brutt) || null };
   }
   // Ruta fra et tettsted til leiren: via nærmeste tettsted du holder som ligger nærmere leiren (høyst Q.hopp unna), ellers rett hjem.
   // byer: de du holder [{ id, x, y, navn }]. Gir punktene [by, …, leir].
@@ -149,11 +158,14 @@
   }
   const RANG = { åpen: 0, truet: 1, stengt: 2 };
   // Hele ruta: det verste leddet gjelder. Gir { status, punkter, ledd: [{ status, meter, fiende, vakt }], via: [navn], lengde }
-  function rute(by, byer, leir, fiender, egne) {
-    const P = kjede(by, byer, leir), L = []; let status = 'åpen', lengde = 0;
-    for (let i = 0; i + 1 < P.length; i++) { const l = ledd(P[i], P[i + 1], fiender, egne); L.push(l); lengde += Math.hypot(P[i + 1].x - P[i].x, P[i + 1].y - P[i].y);
+  // veger(a, b) (runde 4, valgfri): vegen mellom to punkter i kjeden – { sti, brutt } eller null (da gjelder luftlinja).
+  function rute(by, byer, leir, fiender, egne, veger) {
+    const P = kjede(by, byer, leir), L = []; let status = 'åpen', lengde = 0, langsVeg = 0;
+    for (let i = 0; i + 1 < P.length; i++) { const v = veger ? veger(P[i], P[i + 1]) : null, l = ledd(P[i], P[i + 1], fiender, egne, v); L.push(l);
+      if (l.sti) langsVeg++; lengde += l.sti ? stiLengde(l.sti) : Math.hypot(P[i + 1].x - P[i].x, P[i + 1].y - P[i].y);
       if (RANG[l.status] > RANG[status]) status = l.status; }
-    return { status, punkter: P, ledd: L, via: P.slice(1, -1).map(p => p.navn), lengde };
+    const brutt = L.filter(l => l.brutt).map(l => l.brutt);
+    return { status, punkter: P, ledd: L, via: P.slice(1, -1).map(p => p.navn), lengde, langsVeg, brutt };
   }
   const ruteOrd = s => (s === 'stengt' ? 'stengt' : s === 'truet' ? 'truet' : 'åpen');
 
@@ -222,10 +234,15 @@
   // ---------- tilstanden ----------
   // byer: id -> { loj, skatt, uro }, pott: varer på vei som ikke er hele ennå, har: kjøpt på svartebørsen
   const ny = () => ({ versjon: 1, byer: {}, pott: {}, døgn: 0, time: 0, børs: { tilbud: [], dag: -1 }, har: {}, sist: {}, medisin: 0 });
-  function by(S, id, start) { return S.byer[id] || (S.byer[id] = { loj: start === undefined ? REGLER.lojStart : start, skatt: 'vanlig', uro: false }); }
+  function by(S, id, start) { const b = S.byer[id];
+    // (runde 4) tatt tilbake etter å ha vært mistet: lojaliteten faller til høyst lojGjentatt, skatten og uroen begynner på nytt
+    if (b && b.tapt) { b.tapt = false; b.loj = Math.min(b.loj, REGLER.lojGjentatt); b.skatt = 'vanlig'; b.uro = false; b.gjentatt = (b.gjentatt || 0) + 1; }
+    return b || (S.byer[id] = { loj: start === undefined ? REGLER.lojStart : start, skatt: 'vanlig', uro: false }); }
+  // (runde 4) du har mistet tettstedet: merk det, så lojaliteten faller når du tar det igjen
+  function mistet(S, id) { const b = S.byer[id]; if (!b || b.tapt) return false; b.tapt = true; return true; }
   function settSkatt(S, id, skatt) { if (!SKATT[skatt]) return false; by(S, id).skatt = skatt; return true; }
   function fraJSON(d) { const S = ny(); if (!d || typeof d !== 'object') return S;
-    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro };
+    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro, tapt: !!b.tapt, gjentatt: +b.gjentatt || 0 };
     for (const k of VARER) if (d.pott && d.pott[k] > 0) S.pott[k] = +d.pott[k];
     S.døgn = +d.døgn || 0; S.time = +d.time || 0; S.medisin = +d.medisin || 0;
     if (d.børs && Array.isArray(d.børs.tilbud)) S.børs = { tilbud: d.børs.tilbud.filter(id => BØRS[id]), dag: +d.børs.dag || 0 };
@@ -233,7 +250,7 @@
     return S; }
 
   const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, gir, girTekst, lojMål, lojSteg, opprør, lojOrd,
-    tilLinje, ledd, kjede, rute, ruteOrd, gjenoppbygg, FORDEL, fordel, Veksle, Bors, ny, by, settSkatt, fraJSON };
+    tilLinje, tilSti, stiLengde, ledd, kjede, rute, ruteOrd, mistet, gjenoppbygg, FORDEL, fordel, Veksle, Bors, ny, by, settSkatt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Region = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

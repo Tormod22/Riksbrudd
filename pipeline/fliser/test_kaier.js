@@ -14,4 +14,9 @@ ok(K.vises(1, 200, 60) && !K.vises(1, 60, 60) && K.vises(1, 60, 20) && !K.vises(
 ok(K.tekst(S, 2) === 'Kaia (kai), 55 m kai' && K.tekst(S, 0) === 'Havn' && /ferjeterminal\), 120 m kai/.test(K.tekst(S, 4)), 'tekst');
 ok(K.størrelse(1, 20) === 'liten' && K.størrelse(1, 60) === 'middels' && K.størrelse(2, 0) === 'middels' && K.størrelse(1, 200) === 'stor' && K.størrelse(4, 0) === 'stor', 'størrelse');
 ok(K.les(null).n === 0 && K.les({}).n === 0, 'tåler tom fil');
+// (runde 4) teksten i leirvalget
+{ const t1 = K.leirTekst(S, 250300, 6600300); ok(/^Nærmeste kai: liten \(220 m\) – leirens egen kai: småbåt og sjark\.$/.test(t1), 'leirvalg: ' + t1);
+  const t3 = K.leirTekst(S, 250000, 6599600); ok(/^Nærmeste kai: Kaia, middels \(400 m\) – leirens egen kai: småbåt, sjark og lekter\.$/.test(t3), 'leirvalg middels: ' + t3);
+  const t2 = K.leirTekst(S, 255000, 6600000); ok(/for langt til å være leirens kai/.test(t2), 'leirvalg langt unna: ' + t2);
+  ok(/Ingen kai innen 10 km/.test(K.leirTekst(S, 500000, 7000000)) && K.leirTekst(null, 0, 0) === '', 'leirvalg uten kai'); }
 console.log(`ok   kaier: ${n} sjekker`);

@@ -37,6 +37,15 @@
     kaiFiske: { perTime: 0.1, maks: 10 },
     // med Regionen (spill/region.js): det vegen ikke får fram fra en havneby, legges på kaia – høyst så mange døgns full leveranse
     regionTak: 7,
+    // (runde 4) en middels kai i et tettsted du holder, gir også havnevarer – men bare denne andelen av det en stor kai gir
+    middelsHavn: 0.4,
+    // (runde 4) fiendens båter: helse, skade per frisk mann per spillminutt når et lag skyter på båten innen rekkevidden (m), hvor nær
+    // en båt med et lag om bord må komme for å borde forsyningsbåten (m), og lasten den har med
+    fiendeBåt: { hp: 60, skade: 2, rekkevidde: 450, bord: 60, last: { tre: 0, betong: 4, stål: 3, drivstoff: 400, rasjoner: 40 } },
+    // (runde 4) fiendens lag tar båt når vegen dit er mye lengre enn sjøvegen: vegen > faktor × sjøvegen + tillegg (m). Kaiene må ligge
+    // innen kai meter fra laget og fra målet, målet minst så langt unna (m); høyst maks båter ute per side, og de ser etter hvert så mange
+    // spillminutter. Halvparten av mennene om bord på en båt som senkes, kommer ikke i land.
+    aiBåt: { faktor: 1.6, tillegg: 2000, kai: 1500, minst: 4000, maks: 1, hver: 10, ombord: 250, gåTil: 120, senketTap: 0.5, type: 'sjark' },
   };
   // Båttypene (Claudes forslag): pris i kroner, fart i m/s, lag = hvor mange lag som får plass, last = plass i lasterommet,
   // fiske = rasjoner per spilltime, kai = minste kaistørrelse båten kan legge til ved.
@@ -81,7 +90,7 @@
   const havnFaktor = folk => (folk >= 10000 ? 2 : folk >= 2000 ? 1.5 : 1);
   // Varene samler seg på kaia mens du holder tettstedet (jevnt gjennom uka, høyst havnTak uker). havner: [{ id, folk }] du holder.
   function havnSteg(S, havner, dtMin) { const andel = dtMin / (7 * 1440);
-    for (const h of havner) { const H = S.havner[h.id] || (S.havner[h.id] = tomLast()), f = havnFaktor(h.folk || 0);
+    for (const h of havner) { const H = S.havner[h.id] || (S.havner[h.id] = tomLast()), f = havnFaktor(h.folk || 0) * (h.størrelse === 'middels' ? REGLER.middelsHavn : 1);
       for (const k of VARER) H[k] = Math.min(REGLER.havnUke[k] * f * REGLER.havnTak, (H[k] || 0) + REGLER.havnUke[k] * f * andel); } }
   // En gang i uka: det som ligger igjen på kaiene, kjøres landevegen til leiren – bare en del kommer fram. Gir det som kom.
   function havnLandeveg(S, ider) { const ut = tomLast(); for (const id of ider) { const H = S.havner[id]; if (!H) continue; for (const k of VARER) { ut[k] += (H[k] || 0) * REGLER.landeveg; H[k] = 0; } } return ut; }
@@ -173,6 +182,19 @@
   function ild(a, b, tid) { let f = 1; if (a.påBåt) f *= REGLER.skuddFraBåt; if (b.påBåt) f *= REGLER.treffPåBåt;
     if (a.landgang && tid < a.landgang) f *= REGLER.landgangEgen; if (b.landgang && tid < b.landgang) f *= REGLER.landgangFiende; return f; }
 
+  // ---------- fiendens båter: ild, bording, AI (runde 4) ----------
+  // Skade på en fiendebåt fra skyttere [{ menn: friske, faktor }] i dtMin spillminutter. Gir 'senket' når helsa er borte.
+  function skadBåt(b, skyttere, dtMin) { if (b.hp === undefined) b.hp = REGLER.fiendeBåt.hp; let d = 0; for (const q of skyttere) d += Math.max(0, q.menn) * REGLER.fiendeBåt.skade * Math.max(0, q.faktor === undefined ? 1 : q.faktor) * dtMin;
+    b.hp = Math.max(0, b.hp - d); return b.hp <= 0 ? 'senket' : d > 0 ? 'truffet' : null; }
+  // Kan båten q (med lag om bord) borde fiendebåten f? Bare forsyningsbåter (ikke båter med soldater om bord).
+  const kanBorde = (q, lagOmBord, f) => f.type === 'frakt' && !f.ai && lagOmBord > 0 && Math.hypot(q.x - f.x, q.y - f.y) <= REGLER.fiendeBåt.bord;
+  // Lasten en forsyningsbåt har med (bytte når du border den)
+  const fraktLast = () => ({ ...tomLast(), ...REGLER.fiendeBåt.last });
+  // Lønner det seg for fiendens lag å ta båt? veg = meter igjen å gå, sjø = meter over sjøen (med vegen til og fra kaiene)
+  const aiTarBåt = (veg, sjø) => veg > REGLER.aiBåt.faktor * sjø + REGLER.aiBåt.tillegg;
+  // Lengden som er igjen av en marsjrute [[x, y], …] fra punktet (x, y) og stykke seg
+  function igjenAvSti(sti, seg, x, y) { if (!sti || sti.length < 2) return 0; let m = Math.hypot(sti[Math.min(seg + 1, sti.length - 1)][0] - x, sti[Math.min(seg + 1, sti.length - 1)][1] - y); for (let q = seg + 2; q < sti.length; q++) m += Math.hypot(sti[q][0] - sti[q - 1][0], sti[q][1] - sti[q - 1][1]); return m; }
+
   // ---------- fiendens forsyning sjøvegen ----------
   // Tilstanden for en havneby fienden holder: { neste: spillminuttet neste båt går, avskåret, underveis }.
   function fraktBy(S, id, tid) { return S.fiende[id] || (S.fiende[id] = { neste: tid + REGLER.frakt.hverDøgn * 1440 * 0.25, avskåret: false, underveis: false }); }
@@ -189,6 +211,6 @@
       if (Array.isArray(q.sti) && q.sti.length > 1) { b.sti = q.sti; b.sti[0] = [b.x, b.y]; } if (Array.isArray(q.lag)) b.lag = q.lag.slice(); if (Array.isArray(q.kj)) b.kj = q.kj.slice(); S.båter.push(b); S.neste = Math.max(S.neste, b.id + 1); }
     return S; }
 
-  const api = { REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, havnMangel, kaiFangst, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, fraktBy, fraktSvar, tilJSON, fraJSON };
+  const api = { skadBåt, kanBorde, fraktLast, aiTarBåt, igjenAvSti, REGLER, TYPER, VARER, VARENAVN, STØRRELSE, ny, passer, nyBåt, kjøp, tomLast, lastVekt, ledig, lastTekst, lastOm, loss, havnFaktor, havnSteg, havnLandeveg, havnMangel, kaiFangst, fangst, sjøkart, nærVann, friLinje, rute, nivå, settRute, stopp, steg, meterIgjen, minutterIgjen, leggMiner, senk, rydd, iSperring, ombordFeil, ild, fraktBy, fraktSvar, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Sjo = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
