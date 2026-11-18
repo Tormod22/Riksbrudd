@@ -152,16 +152,33 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   }
 
   // ---------- etterspillet: bilder av krigen ----------
+  // RUNDE 4 (pakke «ui»): bildet har også leirens ferdige bygg, kjøretøyene (egne, og fiendens der dere så dem), stedene det ble kjempet
+  // siden forrige bilde (KROKER.ild: hver ildveksling med et eget lag legges i en rute på 250 m) og tallene for gjengen
+  let kamper = new Map();
+  KROKER.ild.push((a, b) => { if (a && b && (a.side === 'blå' || b.side === 'blå')) SC.kampsted(kamper, (a.x + b.x) / 2, (a.y + b.y) / 2); return 1; });
+  function ekstra() {
+    const LS = window.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(), LB = window.Leir, F = window.FolkSpill && FolkSpill.tilstand && FolkSpill.tilstand(), S = spill();
+    const bygg = LS && LB ? LS.bygg.filter(b => LB.BYGG[b.type] && !LB.BYGG[b.type].del && LB.ferdig(b)) : [];
+    const kj = typeof KJORETOY !== 'undefined' ? KJORETOY.filter(k => k.side === 'blå' || (typeof synlig === 'function' && (() => { try { return synlig(k); } catch (e) { return false; } })())) : [];
+    const egne = ENHETER.filter(e => e.side === 'blå' && levende(e) && !e.karakter);
+    const tall = { p: S && typeof S.penger === 'number' ? Math.round(S.penger) : null, f: F && F.personer ? F.personer.length : null, m: egne.reduce((n, e) => n + e.menn.filter(q => q.hp > 0).length, 0), l: egne.length,
+      k: kj.filter(k => k.side === 'blå').length, b: bygg.length };
+    return { bygg, kj, kamp: [...kamper.values()], tall };
+  }
+  const nyttBilde = () => SC.bilde(tid, [...(window.TETTSTEDER || new Map())].map(([id, t]) => ({ id, eier: t && t.eier })), ENHETER.filter(e => levende(e) && !e.karakter && (e.side === 'blå' || synlig(e))), SC.REGLER.etterspill, ekstra());
   function taBilde() {
-    const b = SC.bilde(tid, [...(window.TETTSTEDER || new Map())].map(([id, t]) => ({ id, eier: t && t.eier })), ENHETER.filter(e => levende(e) && !e.karakter && (e.side === 'blå' || synlig(e))));
-    if (SC.leggTil(E, b)) { lagreE(); return true; } return false;
+    const b = nyttBilde();
+    if (SC.leggTil(E, b)) { kamper = new Map(); lagreE(); return true; } return false;
   }
   const ep = el('div', { id: 'etterspill', role: 'dialog', 'aria-label': 'Krigen på nytt' }); document.body.appendChild(ep);
   let eÅpen = false, eNr = 0, eSpiller = 0, eFør = null, byRef = null, navnAv = new Map();
   const klokke2 = t => { const h = 6 + t / 60; return 'dag ' + (Math.floor(h / 24) + 1) + ' kl. ' + String(Math.floor(h % 24)).padStart(2, '0'); };
   function eVis() {
     const b = E[eNr]; if (!b) return; const st = SC.stillingVed(b), navn = s => (s === 'blå' ? 'du' : (window.Fraksjoner && Fraksjoner.FRAKSJONER[s] ? Fraksjoner.FRAKSJONER[s].navn : s));
-    ep.querySelector('.tekst').replaceChildren(el('b', {}, klokke2(b.t)), ` · ${navn('blå')} ${st.blå} · ${navn('rød')} ${st.rød} · ${navn('grønn')} ${st.grønn} tettsteder · bilde ${eNr + 1} av ${E.length}`);
+    const n = b.n, kr = v => (v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace('.', ',') + ' mill. kr' : Math.round(v).toLocaleString('nb-NO') + ' kr'), kampN = (b.s || []).length;
+    const linje2 = n ? [`${n.l} lag (${n.m} mann)`, n.k ? `${n.k} kjøretøy` : '', `${n.b} bygg`, n.f != null ? `${n.f} folk i leiren` : '', n.p != null ? kr(n.p) : ''].filter(Boolean).join(' · ') : '';
+    ep.querySelector('.tekst').replaceChildren(el('b', {}, klokke2(b.t)), ` · ${navn('blå')} ${st.blå} · ${navn('rød')} ${st.rød} · ${navn('grønn')} ${st.grønn} tettsteder · bilde ${eNr + 1} av ${E.length}`,
+      el('small', {}, (linje2 ? 'Dere: ' + linje2 : 'Bildet er fra før bygg og kjøretøy ble tatt med.') + (kampN ? ` · kamper siden forrige bilde: ${kampN} ${kampN === 1 ? 'sted' : 'steder'}` : '')));
     ep.querySelector('input').value = String(eNr); skitten = true;
   }
   function etterspill() {
@@ -174,7 +191,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     // utsnittet: alle tettstedene og lagene som er med i bildene
     byRef = new Map(byer().map(b => [String(b.e.id), midt(b)])); navnAv = new Map(byer().map(b => [String(b.e.id), b.e.navn])); let x0 = S.leir.x, x1 = S.leir.x, y0 = S.leir.y, y1 = S.leir.y;
     const ta = (x, y) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
-    for (const b of E) { for (const id of Object.keys(b.e)) { const p = byRef.get(String(id)); if (p) ta(p[0], p[1]); } for (const l of b.l) if (l[2] === 'b') ta(l[0], l[1]); }
+    for (const b of E) { for (const id of Object.keys(b.e)) { const p = byRef.get(String(id)); if (p) ta(p[0], p[1]); } for (const l of b.l) if (l[2] === 'b') ta(l[0], l[1]); for (const k of b.k || []) if (k[2] === 'b') ta(k[0], k[1]); for (const q of b.s || []) ta(q[0], q[1]); }
     kam.x = (x0 + x1) / 2; kam.y = (y0 + y1) / 2; kam.m = Math.max(4, Math.max((x1 - x0) / Math.max(200, VW - 80), (y1 - y0) / Math.max(200, VH - 260)) * 1.25);
     eNr = 0; eÅpen = true; document.body.classList.add('etterspill');
     const spill2 = el('button', { 'data-e': 'spill' }, '▶ Spill av'), lukk = el('button', { 'data-e': 'lukk' }, 'Lukk'), sl = el('input', { type: 'range', min: '0', max: String(Math.max(0, E.length - 1)), value: '0', 'aria-label': 'Tidspunkt' });
@@ -182,12 +199,12 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     spill2.onclick = () => { if (eSpiller) { clearInterval(eSpiller); eSpiller = 0; spill2.textContent = '▶ Spill av'; return; } if (eNr >= E.length - 1) eNr = 0; spill2.textContent = '❚❚ Stopp';
       eSpiller = setInterval(() => { if (eNr >= E.length - 1) { clearInterval(eSpiller); eSpiller = 0; spill2.textContent = '▶ Spill av'; return; } eNr++; eVis(); }, 450); };
     lukk.onclick = () => etterspillLukk();
-    ep.replaceChildren(el('div', {}, el('b', {}, 'Krigen din på nytt'), el('small', {}, 'Fargene viser hvem som holdt tettstedene. Fiendens lag vises bare der dere så dem.')), sl, el('div', { klasse: 'tekst' }), el('div', {}, spill2, lukk));
+    ep.replaceChildren(el('div', {}, el('b', {}, 'Krigen din på nytt'), el('small', {}, 'Fargene viser hvem som holdt tettstedene. Fiendens lag og kjøretøy vises bare der dere så dem; flammene er steder det ble kjempet siden forrige bilde.')), sl, el('div', { klasse: 'tekst' }), el('div', {}, spill2, lukk));
     ep.classList.add('på'); eVis(); requestAnimationFrame(eRamme); return true;
   }
   function etterspillLukk() { if (!eÅpen) return; eÅpen = false; if (eSpiller) { clearInterval(eSpiller); eSpiller = 0; } ep.classList.remove('på'); document.body.classList.remove('etterspill');
     if (eFør) { kam.x = eFør.x; kam.y = eFør.y; kam.m = eFør.m; if (eFør.fart && tempo === 0) document.getElementById('sp0').click(); eFør = null; } skitten = true; }
-  function taBildeTving() { const sist = E[E.length - 1]; if (sist && tid - sist.t < 1) return; const b = SC.bilde(tid, [...(window.TETTSTEDER || new Map())].map(([id, t]) => ({ id, eier: t && t.eier })), ENHETER.filter(e => levende(e) && !e.karakter && (e.side === 'blå' || synlig(e)))); E.push(b); lagreE(); }
+  function taBildeTving() { const sist = E[E.length - 1]; if (sist && tid - sist.t < 1) return; const b = nyttBilde(); if (SC.sammeBygg(E, b)) delete b.b; E.push(b); kamper = new Map(); lagreE(); }
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && eÅpen) etterspillLukk(); });
   // Etterspillet tegnes på et eget lerret oppå kartet (mørkt slør), så lagene og navnene som står der nå, ikke blandes med bildet fra den gang.
   const ec = el('canvas', { id: 'etterlerret', 'aria-hidden': 'true' }); document.body.appendChild(ec);
@@ -199,12 +216,21 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   }
   const tegnE = (g, vx0, vy1) => {
     if (!eÅpen) return; const b = E[eNr]; if (!b) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; g.save();
-    g.fillStyle = 'rgba(14,11,7,.8)'; g.fillRect(0, 0, VW, VH);
+    g.fillStyle = 'rgba(14,11,7,.72)'; g.fillRect(0, 0, VW, VH);
+    // leirens bygg (lyse ruter; ser du nærmere, får de typens farge), kampstedene (flammer etter hvor mye det ble skutt)
+    { const bb = SC.byggI(E, eNr), r = Math.max(2.5, Math.min(7, 14 / m)); g.fillStyle = 'rgba(240,226,176,.75)'; g.strokeStyle = 'rgba(20,16,10,.9)'; g.lineWidth = 1;
+      for (const [x0, y0] of bb) { const x = sx(x0), y = sy(y0); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue; g.fillRect(x - r, y - r, r * 2, r * 2); g.strokeRect(x - r, y - r, r * 2, r * 2); } }
+    for (const [x0, y0, n] of b.s || []) { const x = sx(x0), y = sy(y0), r = 7 + Math.min(10, Math.sqrt(n) * 2); g.fillStyle = 'rgba(232,120,60,.28)'; g.beginPath(); g.arc(x, y, r * 1.5, 0, 6.283); g.fill();
+      g.fillStyle = '#e8783c'; g.strokeStyle = '#2a1408'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283, rr = i % 2 ? r * .45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); g.stroke(); }
     g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'top';
     for (const [id, p] of byRef) { const e = SC.eierI(b, id), x = sx(p[0]), y = sy(p[1]); if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue; if (!e && m > 60) continue;
       g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(60,52,40,.9)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1; g.beginPath(); g.arc(x, y, e ? 9 : 5, 0, 6.283); g.fill(); g.stroke();
       if (e && navnAv.get(id)) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(navnAv.get(id), x, y + 11); g.fillStyle = '#e7dcc3'; g.fillText(navnAv.get(id), x, y + 11); } }
-    for (const [x0, y0, s] of b.l) { const x = sx(x0), y = sy(y0), side = s === 'b' ? 'blå' : s === 'g' ? 'grønn' : 'rød'; g.fillStyle = sidefarge(side, 'lys'); g.strokeStyle = '#1c170f'; g.lineWidth = 1.5; g.beginPath(); g.rect(x - 7, y - 5, 14, 10); g.fill(); g.stroke(); }
+    // lag og kjøretøy med det felles merkesettet (spill/merker.js): formen sier hvem, tegnet inni hva
+    const side = s => (s === 'b' ? 'blå' : s === 'g' ? 'grønn' : 'rød');
+    for (const [x0, y0, s, type] of b.k || []) { const x = sx(x0), y = sy(y0); if (window.Merker) Merker.tegn(g, x, y, { forhold: Merker.forhold(side(s)), slag: 'kjøretøy', type: type || 'lastebil', farge: sidefarge(side(s), 'farge'), r: 7 }); }
+    for (const [x0, y0, s] of b.l) { const x = sx(x0), y = sy(y0); if (window.Merker) Merker.tegn(g, x, y, { forhold: Merker.forhold(side(s)), slag: 'lag', farge: sidefarge(side(s), 'farge'), r: 7 });
+      else { g.fillStyle = sidefarge(side(s), 'lys'); g.strokeStyle = '#1c170f'; g.lineWidth = 1.5; g.beginPath(); g.rect(x - 7, y - 5, 14, 10); g.fill(); g.stroke(); } }
     const S = spill(); if (S && S.leir) { const x = sx(S.leir.x), y = sy(S.leir.y); g.strokeStyle = '#f0e2b0'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 18); g.stroke(); g.fillStyle = '#f0e2b0'; g.fillRect(x + 1, y - 18, 12, 8); }
     g.restore(); };
   // mens etterspillet er åpent, gjør trykk i kartet ingenting

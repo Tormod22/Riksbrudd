@@ -32,7 +32,8 @@
     // (fred: de to første døgnene kan ikke leiren tapes – en ny spiller uten lag skal rekke å lage tropper)
     tap: { fred: 2880, nær: 150, vern: 400, minutter: 90, penger: .5, lager: .5, folk: .7, minstFolk: 3, avstand: 4000 },
     // etterspill: et bilde hvert «hver» spillminutt, høyst «maks» bilder (eldre tynnes ut)
-    etterspill: { hver: 180, maks: 240, lagMaks: 40 },
+    // runde 4 (pakke «ui»): også leirens bygg (lagres bare når de har endret seg), kjøretøy og stedene det ble kjempet (ruter på 250 m)
+    etterspill: { hver: 180, maks: 240, lagMaks: 40, byggMaks: 60, kjMaks: 24, kampMaks: 24, kampRute: 250 },
   };
   const DØGN = 1440;
   const dag = tid => Math.floor(tid / DØGN) + 1;
@@ -103,14 +104,34 @@
   // ---------- etterspill ----------
   const SIDE = { blå: 'b', rød: 'r', grønn: 'g' }, SIDE_UT = { b: 'blå', r: 'rød', g: 'grønn' };
   // bilde(tid, byer: [{ id, eier }], lag: [{ x, y, side }]) -> { t, e: { id: 'b' }, l: [[x, y, 'b']] } (bare tettsteder med eier)
-  function bilde(tid, byer, lag, R = REGLER.etterspill) {
+  // runde 4: ekstra = { bygg: [{ x, y, type }], kj: [{ x, y, side, type }], kamp: [{ x, y, n }], tall: { p, f, m, l, k, b } } gir
+  //   b: [[x, y, type]] (leirens ferdige bygg), k: [[x, y, 'b', type]], s: [[x, y, n]] (kampsteder siden forrige bilde), n: tallene
+  function bilde(tid, byer, lag, R = REGLER.etterspill, ekstra = null) {
     const e = {}; for (const b of byer || []) if (SIDE[b.eier]) e[b.id] = SIDE[b.eier];
-    return { t: Math.round(tid), e, l: (lag || []).slice(0, R.lagMaks).map(s => [Math.round(s.x), Math.round(s.y), SIDE[s.side] || 'r']) };
+    const ut = { t: Math.round(tid), e, l: (lag || []).slice(0, R.lagMaks).map(s => [Math.round(s.x), Math.round(s.y), SIDE[s.side] || 'r']) };
+    if (ekstra) {
+      if (ekstra.bygg) ut.b = ekstra.bygg.slice(0, R.byggMaks).map(b => [Math.round(b.x), Math.round(b.y), String(b.type)]);
+      if (ekstra.kj && ekstra.kj.length) ut.k = ekstra.kj.slice(0, R.kjMaks).map(k => [Math.round(k.x), Math.round(k.y), SIDE[k.side] || 'r', String(k.type || '')]);
+      if (ekstra.kamp && ekstra.kamp.length) ut.s = ekstra.kamp.slice().sort((a, b) => (b.n || 1) - (a.n || 1)).slice(0, R.kampMaks).map(k => [Math.round(k.x), Math.round(k.y), k.n || 1]);
+      if (ekstra.tall) ut.n = { ...ekstra.tall };
+    }
+    return ut;
   }
+  // byggI(liste, i): byggene i bilde i – eller i det siste bildet før som har dem (de lagres bare når de har endret seg)
+  function byggI(liste, i) { for (let j = Math.min(i, liste.length - 1); j >= 0; j--) if (liste[j] && liste[j].b) return liste[j].b; return []; }
+  // sammeBygg(liste, b): har bildet de samme byggene som det siste som er lagret? (da tas de ut av bildet før det legges til)
+  function sammeBygg(liste, b) { if (!b.b) return false; const f = byggI(liste, liste.length - 1); return f.length === b.b.length && f.every((q, i) => q[0] === b.b[i][0] && q[1] === b.b[i][1] && q[2] === b.b[i][2]); }
+  // kampsted(kart, x, y, R): legger en ildveksling i ruta si (Map 'i,j' -> { x, y, n }) – midt i ruta, n = antall runder
+  function kampsted(kart, x, y, R = REGLER.etterspill) { const i = Math.floor(x / R.kampRute), j = Math.floor(y / R.kampRute), k = i + ',' + j; const q = kart.get(k);
+    if (q) q.n++; else kart.set(k, { x: (i + .5) * R.kampRute, y: (j + .5) * R.kampRute, n: 1 }); return kart; }
   // leggTil(liste, b): nytt bilde når det er lenge nok siden det forrige; over taket tas annethvert av de eldste bort
   function leggTil(liste, b, R = REGLER.etterspill) {
     const sist = liste[liste.length - 1]; if (sist && b.t - sist.t < R.hver) return false;
-    liste.push(b); if (liste.length > R.maks) { const halv = Math.floor(liste.length / 2), ny = liste.filter((q, i) => i >= halv || i % 2 === 0); liste.length = 0; liste.push(...ny); }
+    if (sammeBygg(liste, b)) delete b.b;
+    liste.push(b); if (liste.length > R.maks) { const halv = Math.floor(liste.length / 2), behold = liste.map((q, i) => i >= halv || i % 2 === 0), ny = [];
+      // et bilde som tas bort, kan ha hatt byggene som de neste bruker: de flyttes til bildet etter
+      for (let i = 0; i < liste.length; i++) if (behold[i]) { const q = liste[i]; if (!q.b && i > 0 && !behold[i - 1]) { const bb = byggI(liste, i); if (bb.length) q.b = bb; } ny.push(q); }
+      liste.length = 0; liste.push(...ny); }
     return true;
   }
   // stillingVed(b): { blå: n, rød: n, grønn: n } tettsteder i et bilde
@@ -157,7 +178,7 @@
   function ukeBedre(o, a, b) { if (a.klart !== b.klart) return a.klart; if (a.verdi !== b.verdi) return o.lavest ? a.verdi < b.verdi : a.verdi > b.verdi; return a.dager < b.dager; }
   function ukeTekst(o, navn, st) { return `Riksbrudd, ukas oppdrag (uke ${o.uke}): ${o.tekst} ${navn}: ${st.tekst} på ${String(st.dager).replace('.', ',')} døgn – ${st.klart ? 'klart' : 'ikke klart'}. Kode: ${ukeKode(o, navn, st)}`; }
 
-  const api = { REGLER, SCENARIER, DØGN, dag, regler, beskriv, vurder, fristTekst, truet, tapSteg, utpost, etterTap, bilde, leggTil, stillingVed, eierI, uke, ukasOppdrag, ukeStatus, ukeKode, lesUkeKode, ukeBedre, ukeTekst };
+  const api = { REGLER, SCENARIER, DØGN, dag, regler, beskriv, vurder, fristTekst, truet, tapSteg, utpost, etterTap, bilde, leggTil, stillingVed, eierI, byggI, sammeBygg, kampsted, uke, ukasOppdrag, ukeStatus, ukeKode, lesUkeKode, ukeBedre, ukeTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Scenario = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

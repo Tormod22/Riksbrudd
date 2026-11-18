@@ -277,7 +277,7 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
       if (rot.Feltarbeid) H.appendChild(knapp(s.køSlutt === 'grav' ? '… og grav ned ✓' : '… og grav ned', s.køSlutt === 'grav', () => { s.køSlutt = s.køSlutt === 'grav' ? null : 'grav'; if (s.køSlutt && !(s.kø && s.kø.length)) s.køSiste = true; visPanel(); }));
       if (s.kø && s.kø.length) H.appendChild(knapp('Tøm køen', false, () => { F.tømKø(s); visPanel(); skitten = true; }));
     }
-    if (egne().length > 1) H.appendChild(knapp('Velg alle i bildet', false, () => velgIBildet()));
+    if (egne().length > 1) H.appendChild(knapp('Velg alle i bildet', false, () => (i3d() ? velgIBildet3d() : velgIBildet())));
   });
   // Shift + dra med musa: ramme rundt lagene. Shift + trykk: på et lag = med i/ut av gruppa; ellers et punkt i køen for det valgte laget.
   // (fanges før kartets egne lyttere, så kartet ikke flytter seg)
@@ -325,6 +325,53 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
   // målet du har pekt ut, i 3D
   if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj3) => { if (!utkast) return; const p = proj3(utkast.X, utkast.Y); if (!p) return; g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 2.5; g.beginPath(); g.arc(p[0], p[1], 12, 0, 6.283); g.stroke(); g.beginPath(); g.moveTo(p[0], p[1] - 22); g.lineTo(p[0], p[1] - 4); g.stroke(); g.restore(); });
 
+  // ---------- RUNDE 4 (pakke «ui»): 3D – ramme med musa, Shift + trykk og marsjtida ved pekeren ----------
+  // I 3D roterte Shift + dra kameraet; nå velger det lag som i 2D (høyreknappen roterer som før). Lagene velges etter hvor de står på
+  // skjermen (også bak en ås – som i strategispill). Marsjtida står ved pekeren mens du velger mål med mus (målt hvert 0,12 s).
+  const R4 = { flytt: 6, nær: 28, målHver: 120 };
+  const c3 = document.getElementById('c3');
+  const i3d = () => typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.ut && R3.cam && !R3.fot && rot.THREE;
+  // kartpunkt -> skjermpunkt i 3D (uten å skjule det som står bak en ås)
+  function skjerm3d(X, Y) { const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null; const h = typeof hoyde3d === 'function' ? hoyde3d(X, Y) : u.h0;
+    const v = new THREE.Vector3(X - u.cx, Y - u.cy, (h - u.h0) * (R3.EX || 1) + 1.5); v.project(R3.cam); return v.z > 1 || v.z < -1 ? null : [(v.x + 1) / 2 * VW, (1 - v.y) / 2 * VH]; }
+  // skjermpunkt -> bakken i 3D
+  function bakke3d(x, y) { if (!R3.ray || !R3.mesh) return null; R3.ray.setFromCamera(new THREE.Vector2(x / VW * 2 - 1, -y / VH * 2 + 1), R3.cam); const h = R3.ray.intersectObject(R3.mesh)[0]; return h ? [R3.ut.cx + h.point.x, R3.ut.cy + h.point.y] : null; }
+  const iRamme3d = (a, b, c, d) => { const x0 = Math.min(a, c), x1 = Math.max(a, c), y0 = Math.min(b, d), y1 = Math.max(b, d); return egne().filter(s => { const q = skjerm3d(s.x, s.y); return q && q[0] >= x0 && q[0] <= x1 && q[1] >= y0 && q[1] <= y1; }); };
+  let ned3 = null, ramme3 = null, peker3 = null, peker3Tid = 0, peker3Xy = null;
+  if (c3) {
+    const lok = e => { const r = c3.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    c3.addEventListener('pointerdown', e => { if (!e.shiftKey || e.pointerType !== 'mouse' || e.button !== 0 || !i3d()) return; e.stopImmediatePropagation(); e.preventDefault(); c3.setPointerCapture(e.pointerId);
+      const [x, y] = lok(e); ned3 = { id: e.pointerId, x, y, flyttet: false }; }, true);
+    c3.addEventListener('pointermove', e => {
+      if (ned3 && e.pointerId === ned3.id) { e.stopImmediatePropagation(); const [x, y] = lok(e); if (Math.hypot(x - ned3.x, y - ned3.y) > R4.flytt) ned3.flyttet = true; if (ned3.flyttet) ramme3 = [ned3.x, ned3.y, x, y]; return; }
+      // marsjtida ved pekeren: bare med mus, i marsjmodus og ikke oftere enn hver 0,12 s (stråletreff mot terrengnettet koster)
+      if (e.pointerType === 'mouse' && modus === 'marsj' && !e.buttons && i3d()) { peker3Xy = lok(e); const nå = performance.now(); if (nå - peker3Tid > R4.målHver) { peker3Tid = nå; peker3 = bakke3d(peker3Xy[0], peker3Xy[1]); } }
+      else if (peker3) peker3 = null; }, true);
+    const opp3 = e => { if (!ned3 || e.pointerId !== ned3.id) return; e.stopImmediatePropagation(); const n = ned3; ned3 = null; const [x, y] = lok(e); ramme3 = null;
+      if (e.type !== 'pointerup' || !i3d()) return;
+      if (n.flyttet) { const lag = iRamme3d(n.x, n.y, x, y); if (lag.length === 1) { velg([]); valgt = lag[0]; visPanel(); } else if (lag.length) velg(lag); else logg('Ingen av lagene dine er innenfor ramma.'); return; }
+      // Shift + trykk på et lag: med i / ut av gruppa (som i 2D)
+      let best = null, bd = R4.nær; for (const s of egne()) { const q = skjerm3d(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; best = s; } }
+      if (best) { const g = gruppe.length ? gruppe.slice() : valgt && valgt.side === 'blå' && !valgt.karakter ? [valgt] : []; const i = g.indexOf(best); if (i >= 0) g.splice(i, 1); else g.push(best);
+        if (g.length === 1) { velg([]); valgt = g[0]; visPanel(); } else velg(g); } };
+    c3.addEventListener('pointerup', opp3, true); c3.addEventListener('pointercancel', opp3, true);
+  }
+  // «Velg lag» i 3D: lagene som står på skjermen
+  function velgIBildet3d() { const lag = egne().filter(s => { const q = skjerm3d(s.x, s.y); return q && q[0] >= 0 && q[0] <= VW && q[1] >= 0 && q[1] <= VH; });
+    if (!lag.length) logg('Ingen av lagene dine er i bildet.'); else if (lag.length === 1) { velg([]); valgt = lag[0]; visPanel(); } else velg(lag); return lag.length; }
+  if (KROKER.tegn3d) KROKER.tegn3d.push(g => {
+    if (!i3d()) return; g.save();
+    // gruppa: stiplet ring rundt hvert lag
+    for (const s of gruppe) { const q = skjerm3d(s.x, s.y); if (!q) continue; g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.arc(q[0], q[1], 17, 0, 6.283); g.stroke(); g.setLineDash([]); }
+    if (ramme3) { const [a, b, c, d] = ramme3; g.strokeStyle = '#f0d79a'; g.fillStyle = 'rgba(240,215,154,.12)'; g.lineWidth = 1.5; g.fillRect(a, b, c - a, d - b); g.strokeRect(a, b, c - a, d - b); }
+    if (modus === 'marsj' && peker3 && peker3Xy && !utkast) { const s = valgt && valgt.side === 'blå' ? valgt : gruppe[0];
+      if (s) { const fra = fraPunkt(s), f = forhånd(fra, peker3[0], peker3[1]), t = (køModus ? '+ ' : '') + forhTekst(f) + (gruppe.length > 1 ? ' (' + gruppe.length + ' lag)' : ''), q = skjerm3d(fra.x, fra.y), [x, y] = peker3Xy;
+        if (q) { g.strokeStyle = 'rgba(240,215,154,.7)'; g.lineWidth = 1.5; g.setLineDash([5, 5]); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(x, y); g.stroke(); g.setLineDash([]); }
+        g.font = '600 13px sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 12, bx = Math.min(VW - w - 4, x + 14), by = Math.max(14, y - 22);
+        g.fillStyle = 'rgba(20,16,10,.88)'; g.fillRect(bx, by - 11, w, 22); g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.strokeRect(bx + .5, by - 10.5, w - 1, 21); g.fillStyle = f.ingen || f.forLangt ? '#e8a46a' : '#f0e2b0'; g.fillText(t, bx + 6, by + .5); } }
+    g.restore();
+  });
+
   // ---------- Leir-menyen (fanen Mål): av/på for automatisk stopp ----------
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e2, knapp: kn }) => {
     hode.appendChild(e2('h3', { 'data-fane': 'mål' }, 'Mål · tid og flyt'));
@@ -333,10 +380,10 @@ body.krig #flytgruppe{ display:none; } body.smal #flytgruppe, body.kort #flytgru
     b.id = 'flytauto'; hode.appendChild(b);
   });
   // kommandolinja nederst på PC: «Alle lag» velger lagene i bildet
-  (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'allelag', navn: 'Velg lag', tittel: 'Velg alle lagene dine som er i bildet (eller Shift + dra en ramme)', fins: () => egne().length > 1 && !(typeof på3d !== 'undefined' && på3d), på: () => gruppe.length > 1, trykk: () => { if (gruppe.length > 1) velg([]); else velgIBildet(); },
+  (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'allelag', navn: 'Velg lag', tittel: 'Velg alle lagene dine som er i bildet (eller Shift + dra en ramme)', fins: () => egne().length > 1 && !(typeof R3 !== 'undefined' && R3 && R3.fot), på: () => gruppe.length > 1, trykk: () => { if (gruppe.length > 1) velg([]); else if (i3d()) velgIBildet3d(); else velgIBildet(); },
     ikon: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><rect x="2" y="2" width="20" height="20" fill="none" stroke-dasharray="3 2"/>' });
 
   const api2 = { test: false, spol, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
-    utkast: () => utkast, utfør, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
+    utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
   rot.FlytSpill = api2;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
