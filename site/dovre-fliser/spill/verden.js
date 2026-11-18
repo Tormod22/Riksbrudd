@@ -49,6 +49,10 @@
     // (målPerPerson: én person på «fri» i leiren steller så mange mål; færre folk = kornet gror tilsvarende saktere)
     // åker: rasjoner per mål ved høsting, døgn til kornet er modent, såkorn (kr per mål), ny åker (kr og mål per rydding), mest
     åker: { perMål: 6, modning: 3, såkorn: 20000, rydd: 1e6, ryddMål: 20, maks: 200, nær: 500, målPerPerson: 40 },
+    // ÅKEREN SOM BYGG (runde 4): ett åkerstykke i leiren er 5 mål (50 × 100 m), koster det samme per mål som ryddingen før og tar 4 spilltimer
+    // for et byggelag. Brann: hvor lett åkeren tar fyr (modent korn, grønt korn, bar jord/stubb) og hvor mye av åkeren som brenner per 30 min.
+    // Kornet står opptil «høyde» m når det er modent.
+    åkerBygg: { mål: 5, bredde: 50, lengde: 100, tid: 4, brann: { moden: .9, grønn: .35, bar: .15, skade: .25 }, høyde: .9 },
     // funn: rutenett (m), sjanse per rute, oppdages innen (m), undersøkes innen (m)
     funn: { blokk: 2500, p: .3, ser: 300, tar: 80 },
     // radio: timer mellom meldingene, andelen sanne, flest i lista
@@ -193,6 +197,15 @@
   // Folk åkeren trenger, og siden (m) på den kvadratiske åkeren i kartet (1 mål = 1000 m²)
   const åkerBehov = mål => Math.ceil(mål / REGLER.åker.målPerPerson);
   const åkerSide = mål => Math.sqrt(Math.max(0, mål) * 1000);
+  // Hvor lett åkeren tar fyr: sådd og hvor modent kornet er (0–1), årstiden (vinter: snø på åkeren)
+  function åkerBrennbar(sådd, mod, årstid) { const B = REGLER.åkerBygg.brann; if (årstid === 'vinter') return 0; return sådd ? (mod >= .6 ? B.moden : B.grønn) : B.bar; }
+  // Hele åkeren: mål ryddet før (uten bygg) + mål i åkerstykkene, hvert ganget med hvor helt det er (hp 0–1; et brent stykke gir mindre)
+  const åkerMål = (ryddet, stykker) => Math.round(((ryddet || 0) + (stykker || []).reduce((a, b) => a + REGLER.åkerBygg.mål * Math.max(0, Math.min(1, b.hp == null ? 1 : b.hp)), 0)) * 10) / 10;
+  // Kornets høyde (m) og farge [r, g, b] 0–1: brun jord, grønt som vokser, gult når det er modent
+  function korn(sådd, mod) {
+    if (!sådd) return { h: 0, farge: [.4, .31, .21] }; const m = klem(mod, 0, 1);
+    return { h: .08 + (REGLER.åkerBygg.høyde - .08) * m, farge: m >= 1 ? [.82, .7, .32] : [.36 + .2 * m, .52 + .1 * m, .2 + .02 * m] };
+  }
   function ryddÅker(V, mål = REGLER.åker.ryddMål) { const Å = V.åker, R = REGLER.åker; if (Å.mål + mål > R.maks) return { feil: `Dere kan ikke drive mer enn ${R.maks} mål.` }; Å.mål += mål; return { ok: true, pris: R.rydd * mål / R.ryddMål }; }
 
   // ---------- 35 brann ----------
@@ -320,7 +333,7 @@
   function fraJSON(d) { const V = ny(); if (!d || d.versjon !== 1) return V; for (const k of Object.keys(V)) if (d[k] != null) V[k] = typeof V[k] === 'object' && !Array.isArray(V[k]) ? { ...V[k], ...d[k] } : d[k]; if (!V.brann.celler) V.brann = nyBrann(); return V; }
 
   const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
-    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
+    nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, åkerBrennbar, åkerMål, korn, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
     funnIBlokk, funnNær, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Verden = api;

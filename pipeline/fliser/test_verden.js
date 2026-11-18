@@ -44,6 +44,13 @@ assert.strictEqual(V.ryddSoner(S, 200).length, 0); assert.strictEqual(V.ryddSone
 assert.ok(V.flomRadius(S, 6) >= V.flomRadius(S, 2));
 for (let i = 0; i < 200; i++) V.steg(S, 60, sommer); assert.strictEqual(S.regn, 0); assert.ok(V.brannfare(S, sommer) === 1 && V.brannfare(S, { ...sommer, regn: 1 }) === 0 && V.brannfare(S, vinter) === 0);
 
+// runde 4: åkeren som bygg
+assert.strictEqual(V.åkerMål(20, []), 20); assert.strictEqual(V.åkerMål(0, [{ hp: 1 }, { hp: .5 }]), R.åkerBygg.mål * 1.5, 'et halvbrent stykke teller halvt');
+assert.strictEqual(V.åkerMål(undefined, [{}]), R.åkerBygg.mål, 'uten hp: helt');
+assert.ok(V.åkerBrennbar(true, 1, 'sommer') > V.åkerBrennbar(true, .2, 'sommer') && V.åkerBrennbar(true, .2, 'sommer') > V.åkerBrennbar(false, 0, 'sommer') && V.åkerBrennbar(true, 1, 'vinter') === 0, 'modent korn brenner lettest');
+assert.strictEqual(V.korn(false, 1).h, 0); assert.ok(V.korn(true, 1).h > V.korn(true, .3).h && V.korn(true, 1).h <= R.åkerBygg.høyde, 'kornet vokser');
+assert.ok(V.korn(true, 1).farge[0] > V.korn(true, .3).farge[0], 'modent korn er gult');
+
 // 33 jakt
 assert.strictEqual(V.vilt(1300, 0), 'rein'); assert.strictEqual(V.vilt(700, 1), 'elg'); assert.strictEqual(V.vilt(700, 5), null);
 S = V.ny(); const u = V.jaktUtbytte(S, 'rein', 6, 5000, 5000, 0, rnd); assert.ok(u.dyr >= 1 && u.dyr <= 3 && u.mat === u.dyr * R.kjøtt.rein);

@@ -20,6 +20,12 @@
   const FF = () => (window.FolkSpill && FolkSpill.tilstand()) || null;
   const vær = () => { const v = window.VAER; return v ? (v.regel || v) : null; };
   const rng = Terreng.frø(1814);
+  // ÅKEREN SOM BYGG (runde 4): legges inn i Leir.BYGG slik overlev.js legger inn brønnen (leir.js er ikke endret). Ingen modell i
+  // leir-visning.js (den setter byggene flatt på det høyeste punktet) – åkeren følger terrenget og tegnes her, i 2D og 3D.
+  const ÅB = R.åkerBygg;
+  if (window.Leir && !Leir.BYGG.åker) Leir.BYGG.åker = { navn: `Åker (${ÅB.mål} mål)`, pris: R.åker.rydd * ÅB.mål / R.åker.ryddMål, tid: ÅB.tid, kw: 0, modell: 'åker', fot: [-ÅB.bredde / 2, ÅB.bredde / 2, -ÅB.lengde / 2, ÅB.lengde / 2], mat: {}, åker: true,
+    tekst: 'Pløyd jord: så om våren og høst om høsten (panelet «Verden»). Tørt korn brenner lett.' };
+  if (window.Ikoner && Ikoner.BYGG && !Ikoner.BYGG.åker) Ikoner.BYGG.åker = 'blad';
   const BRANNER = window.BRANNER = [], BRENT = window.BRENT = [];
   window.VERDEN_SONER = () => V.soner.map(s => ({ type: s.type, x: s.x, y: s.y, r: s.r, til: s.til }));
   const tall = (n, d = 0) => new Intl.NumberFormat('nb-NO', { maximumFractionDigits: d }).format(n);
@@ -242,7 +248,12 @@
   // slokker med sjansen perPerson per 10 spillminutter (høyst maks); byggene tar skade bygg (andel av full helse) per 30 min.
   const LEIRBRANN = { grusR: 70, grus: .25, slokkR: 150, perPerson: .12, maks: .7, bygg: .12 };
   const iLeiren = (x, y, r) => { const l = leir(); return !!l && Math.hypot(x - l.x, y - l.y) < r; };
-  const brennbar = (x, y) => { const p = punkt(x, y), v = vær(); if (!p || p.h == null) return 0; if (v && p.h > v.snøgrense) return 0; return (R.brennbar[p.k] || 0) * (iLeiren(x, y, LEIRBRANN.grusR) ? LEIRBRANN.grus : 1); };
+  const brennbar = (x, y) => { const p = punkt(x, y), v = vær(); if (!p || p.h == null) return 0; if (v && p.h > v.snøgrense) return 0;
+    // åkeren (runde 4): modent korn tar lett fyr, bar jord nesten ikke
+    const å = åkerVed(x, y); if (å) return W.åkerBrennbar(stykkeSådd(å), V.åker.grodd / R.åker.modning, v ? v.årstid : 'sommer');
+    return (R.brennbar[p.k] || 0) * (iLeiren(x, y, LEIRBRANN.grusR) ? LEIRBRANN.grus : 1); };
+  // brenner det i åkerstykket? (midten og hjørnene – stykket er større enn ei brannrute)
+  const stykkeBrenner = b => [[b.x, b.y], ...Leir.hjørner(b)].some(([x, y]) => W.brenner(V.brann, x, y));
   const slokkere = () => { const F = window.FolkSpill && FolkSpill.tilstand(); return F && F.personer ? F.personer.filter(p => (p.oppgave === 'vakt' || p.oppgave === 'bygg') && !(p.helse < .4) && !p.syk).length : 0; };
   let leirBrannMeldt = false;
   // folk hjemme slokker; første rute som brenner i leiren varsles og stopper spolingen
@@ -273,7 +284,11 @@
   function brannSkade() {
     for (const s of ENHETER) { if (!levende(s) || !W.brenner(V.brann, s.x, s.y)) continue; const ut = Terreng.fordelTreff(s.menn, R.brann.treff, rng); s.siktSkitten = true;
       if (s.side === 'blå') logg(`${s.navn} står i brannen: ${ut.map(([m, t]) => `${m.navn} ${t}`).join(', ')}. Få dem ut!`); if (valgt === s) visPanel(); }
-    const L = LL(); if (L && window.Leir) for (const b of L.bygg.slice()) { if (!(b.hp > 0) || !W.brenner(V.brann, b.x, b.y)) continue; const r = Leir.skad(L, b.id, LEIRBRANN.bygg), navn = (Leir.BYGG[b.type] || {}).navn || 'Et bygg'; logg(r && r.ødelagt ? `Brannen har ødelagt ${navn.toLowerCase()} i leiren.` : `Brannen skader ${navn.toLowerCase()} i leiren (${Math.round((r ? r.hp : 0) * 100)} % igjen) – folk på vakt og bygg slokker.`); }
+    const L = LL(); if (L && window.Leir) for (const b of L.bygg.slice()) {
+      // åkeren brenner fortere enn bygg, og avlinga i det som brant, er tapt (stykket teller mindre ved høsting)
+      if (b.type === 'åker') { if (!(b.hp > 0) || !stykkeBrenner(b)) continue; const r = Leir.skad(L, b.id, ÅB.brann.skade); syncÅker();
+        logg(r && r.ødelagt ? `Åkeren er brent ned${stykkeSådd(b) ? ', og avlinga der er tapt' : ''}.` : `Brannen herjer åkeren (${Math.round((r ? r.hp : 0) * 100)} % igjen).`); continue; }
+      if (!(b.hp > 0) || !W.brenner(V.brann, b.x, b.y)) continue; const r = Leir.skad(L, b.id, LEIRBRANN.bygg), navn = (Leir.BYGG[b.type] || {}).navn || 'Et bygg'; logg(r && r.ødelagt ? `Brannen har ødelagt ${navn.toLowerCase()} i leiren.` : `Brannen skader ${navn.toLowerCase()} i leiren (${Math.round((r ? r.hp : 0) * 100)} % igjen) – folk på vakt og bygg slokker.`); }
   }
 
   // ---------- 36 funn ----------
@@ -329,6 +344,17 @@
   }
 
   // ---------- 34 åker ----------
+  // åkerstykkene i leiren (bygg av typen «åker»), de ferdige, og hvilket stykke (x, y) ligger i
+  const åkerStykker = () => { const L = LL(); return L && L.bygg ? L.bygg.filter(b => b.type === 'åker') : []; };
+  const ferdigeÅkre = () => åkerStykker().filter(b => window.Leir && Leir.ferdig(b));
+  function iStykke(b, x, y) { const c = Math.cos(-(b.ret || 0)), sn = Math.sin(-(b.ret || 0)), dx = x - b.x, dy = y - b.y, lx = dx * c - dy * sn, ly = dx * sn + dy * c, f = Leir.BYGG.åker.fot; return lx >= f[0] && lx <= f[1] && ly >= f[2] && ly <= f[3]; }
+  const åkerVed = (x, y) => ferdigeÅkre().find(b => iStykke(b, x, y)) || null;
+  // mål i alt: det som ble ryddet før (uten bygg) + åkerstykkene (et brent stykke teller mindre)
+  function syncÅker() { const Å = V.åker; if (Å.ryddet == null) Å.ryddet = Å.mål || 0; const m = W.åkerMål(Å.ryddet, ferdigeÅkre()); if (m !== Å.mål) { Å.mål = m; endret(); skitten = true; } return m; }
+  // det som ble sådd: stykkene som var ferdige da det ble sådd (Å.sådde = id-ene), og det gamle ryddede
+  const sådMål = () => { const Å = V.åker; return Å.sådde ? W.åkerMål(Å.ryddet, ferdigeÅkre().filter(b => Å.sådde.includes(b.id))) : Å.mål; };
+  const stykkeSådd = b => !!V.åker.sådd && (!V.åker.sådde || V.åker.sådde.includes(b.id));
+  function anleggÅker() { if (!window.LeirSpill || !LeirSpill.startPlassering) return { feil: 'Leiren er ikke klar.' }; vis(false); LeirSpill.startPlassering('åker', null, {}); logg(`Velg hvor åkeren (${ÅB.mål} mål, ${ÅB.bredde} × ${ÅB.lengde} m) skal ligge. Et byggelag rydder og pløyer den.`); return { ok: true }; }
   // Åkeren får et fast sted ved leiren første gang: helst dyrket mark, ellers åpen mark – ikke vann, tettbebyggelse eller bratt li.
   async function åkerSted() {
     const l = leir(); if (!l) return null; let reserve = null;
@@ -341,13 +367,13 @@
   async function ryddÅker() {
     const p = R.åker.rydd; if (V.åker.mål + R.åker.ryddMål > R.åker.maks) return { feil: `Dere kan ikke drive mer enn ${R.åker.maks} mål.` }; if (spill().penger < p) return { feil: 'Ikke nok penger.' };
     if (V.åker.x == null) { const st = await åkerSted(); if (!st) return { feil: 'Fant ikke plass til en åker.' }; V.åker.x = st.x; V.åker.y = st.y; }
-    if (!OppstartSpill.betal(p)) return { feil: 'Ikke nok penger.' }; W.ryddÅker(V); endret(); skitten = true; logg(`Ny åker ryddet ${stedTekst(V.åker.x, V.åker.y)}: ${V.åker.mål} mål i alt. Så om våren. Åkeren trenger ${W.åkerBehov(V.åker.mål)} av folkene på «fri».`); return { ok: true };
+    if (!OppstartSpill.betal(p)) return { feil: 'Ikke nok penger.' }; syncÅker(); W.ryddÅker(V); V.åker.ryddet = (V.åker.ryddet || 0) + R.åker.ryddMål; endret(); skitten = true; logg(`Ny åker ryddet ${stedTekst(V.åker.x, V.åker.y)}: ${V.åker.mål} mål i alt. Så om våren. Åkeren trenger ${W.åkerBehov(V.åker.mål)} av folkene på «fri».`); return { ok: true };
   }
   // Folk: én på «fri» per 40 mål. Færre = kornet gror saktere. Uten Folk-modulen (eller i en tom leir uten folk-system) som før.
   function åkerFolk() { const behov = W.åkerBehov(V.åker.mål); if (!window.Folk || !FF() || !behov) return { behov, har: behov, andel: 1 }; let har = 0; try { har = Folk.arbeidere('fri') || 0; } catch (e) { har = 0; } return { behov, har, andel: Math.min(1, har / behov) }; }
-  function så() { const v = vær(), å = v ? v.årstid : 'sommer', pris = V.åker.mål * R.åker.såkorn; if (å === 'vår' && V.åker.mål && !V.åker.sådd && spill().penger < pris) return { feil: 'Ikke nok penger til såkorn.' };
-    const r = W.så(V, å); if (r.feil) return r; OppstartSpill.betal(r.pris); endret(); logg(`Åkeren er sådd (${V.åker.mål} mål). Høstes til høsten.`); return r; }
-  function åkerSteg(v, dt) { if (!V.åker.sådd) return; const r = W.åkerSteg(V, dt / 1440, v.årstid, åkerFolk().andel); if (r.mat != null) { const F = FF(); if (F) F.mat += r.mat; endret(); logg(r.mat ? `Innhøsting: åkeren ga ${tall(r.mat)} rasjoner${r.andel < 1 ? ' (kornet rakk ikke å bli modent)' : ''}.` : 'Åkeren ga ingenting i år.'); } else if (r.tapt) { endret(); logg('Avlinga frøs bort: det ble vinter før dere fikk høstet.'); } }
+  function så() { syncÅker(); const v = vær(), å = v ? v.årstid : 'sommer', pris = V.åker.mål * R.åker.såkorn; if (å === 'vår' && V.åker.mål && !V.åker.sådd && spill().penger < pris) return { feil: 'Ikke nok penger til såkorn.' };
+    syncÅker(); const r = W.så(V, å); if (r.feil) return r; V.åker.sådde = ferdigeÅkre().map(b => b.id); OppstartSpill.betal(r.pris); endret(); skitten = true; logg(`Åkeren er sådd (${V.åker.mål} mål). Høstes til høsten.`); return r; }
+  function åkerSteg(v, dt) { const alle = syncÅker(); if (!V.åker.sådd) return; V.åker.mål = sådMål(); let r; try { r = W.åkerSteg(V, dt / 1440, v.årstid, åkerFolk().andel); } finally { V.åker.mål = alle; } if (!V.åker.sådd) V.åker.sådde = null; if (r.mat != null) { const F = FF(); if (F) F.mat += r.mat; endret(); logg(r.mat ? `Innhøsting: åkeren ga ${tall(r.mat)} rasjoner${r.andel < 1 ? ' (kornet rakk ikke å bli modent)' : ''}.` : 'Åkeren ga ingenting i år.'); } else if (r.tapt) { endret(); logg('Avlinga frøs bort: det ble vinter før dere fikk høstet.'); } }
 
   // ---------- 37 radio ----------
   const harRadio = () => { if (window.SPILLREGLER && SPILLREGLER.har('ingenRadio')) return false; const L = LL(); return !!(L && window.Leir && L.bygg.some(b => (b.type === 'radiomast' || b.type === 'kontrollrom') && Leir.virker(b))); };
@@ -456,12 +482,25 @@
       if (BRANNER.length && m > 6) { let x = 0, y = 0; for (const c of BRANNER) { x += c.x; y += c.y; } x /= BRANNER.length; y /= BRANNER.length; g.font = 'bold 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#ffb347'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3; g.strokeText('BRANN', sx(x), sy(y) - 8); g.fillText('BRANN', sx(x), sy(y) - 8); }
     }
     // åkeren ved leiren: brun pløyd jord, grønn når det gror, gul når kornet er modent
-    const Å = V.åker; if (Å.mål && Å.x != null) { const side = W.åkerSide(Å.mål), px = side / m;
-      if (px > 3 && inne(Å.x, Å.y, px)) { const x0 = sx(Å.x - side / 2), y0 = sy(Å.y + side / 2), mod = Math.min(1, Å.grodd / R.åker.modning);
+    const Å = V.åker, mod = Math.min(1, Å.grodd / R.åker.modning), vinter = vær() && vær().årstid === 'vinter';
+    // åkerstykkene (bygg): pløyd jord, grønt som gror, gult når det er modent, svart der det har brent; furer langs den lange siden
+    for (const b of åkerStykker()) { const P = Leir.hjørner(b).map(([x, y]) => [sx(x), sy(y)]); if (P.every(([x, y]) => x < -50 || y < -50 || x > VW + 50 || y > VH + 50)) continue;
+      const fer = Leir.ferdig(b), sådd = fer && stykkeSådd(b), k = W.korn(sådd, mod).farge, svidd = 1 - .75 * (1 - Math.max(0, Math.min(1, b.hp == null ? 1 : b.hp))), hvit = vinter ? .55 : 0;
+      const c = k.map(v => Math.round(255 * (v * svidd * (1 - hvit) + .93 * hvit)));
+      g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath(); g.globalAlpha = fer ? .92 : .35 + .5 * Leir.framdrift(b); g.fillStyle = `rgb(${c.join(',')})`; g.fill(); g.globalAlpha = 1;
+      const l01 = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), l12 = Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]);
+      if (Math.min(l01, l12) > 14) { const [a0, a1, b0, b1] = l01 >= l12 ? [P[0], P[1], P[3], P[2]] : [P[1], P[2], P[0], P[3]], n = Math.max(4, Math.min(60, Math.round(Math.min(l01, l12) / 3)));
+        g.beginPath(); for (let i = 1; i < n; i++) { const t = i / n; g.moveTo(a0[0] + (b0[0] - a0[0]) * t, a0[1] + (b0[1] - a0[1]) * t); g.lineTo(a1[0] + (b1[0] - a1[0]) * t, a1[1] + (b1[1] - a1[1]) * t); } g.lineWidth = 1; g.strokeStyle = 'rgba(40,30,18,.3)'; g.stroke(); }
+      g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath(); g.lineWidth = 1.3; g.setLineDash(fer ? [] : [6, 5]); g.strokeStyle = 'rgba(40,30,18,.75)'; g.stroke(); g.setLineDash([]);
+      if (m < 2.5) { const t = `Åker · ${ÅB.mål} mål` + (!fer ? ` · ${Math.round(Leir.framdrift(b) * 100)} %` : sådd ? (mod >= 1 ? ' · modent' : ' · gror') : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % igjen` : '');
+        g.font = 'italic 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(t, sx(b.x), sy(b.y) + 4); g.fillText(t, sx(b.x), sy(b.y) + 4); } }
+    // det som ble ryddet før åkeren ble et bygg (gamle lagrede spill)
+    if (Å.ryddet > 0 && Å.x != null) { const side = W.åkerSide(Å.ryddet), px = side / m;
+      if (px > 3 && inne(Å.x, Å.y, px)) { const x0 = sx(Å.x - side / 2), y0 = sy(Å.y + side / 2);
         g.fillStyle = !Å.sådd ? 'rgba(104,82,56,.82)' : mod >= 1 ? 'rgba(206,172,74,.85)' : `rgba(${Math.round(104 - 20 * mod)},${Math.round(98 + 50 * mod)},${Math.round(56 - 6 * mod)},.85)`; g.fillRect(x0, y0, px, px);
         if (px > 24) { g.beginPath(); const n = Math.max(4, Math.min(40, Math.round(side / 6))); for (let i = 1; i < n; i++) { g.moveTo(x0, y0 + px * i / n); g.lineTo(x0 + px, y0 + px * i / n); } g.lineWidth = 1; g.strokeStyle = 'rgba(40,30,18,.28)'; g.stroke(); }
         g.lineWidth = 1.2; g.strokeStyle = 'rgba(40,30,18,.7)'; g.strokeRect(x0, y0, px, px);
-        if (m < 8) { const t = `Åker · ${Å.mål} mål` + (Å.sådd ? (mod >= 1 ? ' · modent' : ' · gror') : ''); g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(t, x0 + px / 2, y0 - 5); g.fillText(t, x0 + px / 2, y0 - 5); } } }
+        if (m < 8) { const t = `Åker · ${Å.ryddet} mål` + (Å.sådd ? (mod >= 1 ? ' · modent' : ' · gror') : ''); g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(t, x0 + px / 2, y0 - 5); g.fillText(t, x0 + px / 2, y0 - 5); } } }
     // flom og ras
     for (const s of V.soner) { if (!inne(s.x, s.y, s.r / m + 20)) continue; const rr = Math.max(5, s.r / m), flom = s.type === 'flom';
       g.beginPath(); g.arc(sx(s.x), sy(s.y), rr, 0, 6.283); g.fillStyle = flom ? 'rgba(74,127,176,.42)' : 'rgba(120,92,60,.5)'; g.fill(); g.setLineDash([5, 4]); g.lineWidth = 1.5; g.strokeStyle = flom ? '#a9c6df' : '#d9b98a'; g.stroke(); g.setLineDash([]);
@@ -500,11 +539,15 @@
       flamme: new THREE.PointsMaterial({ size: 20, map: tex, color: 0xff7a22, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true }),
       røyk: new THREE.PointsMaterial({ size: 120, map: tex, color: 0x5a554f, transparent: true, opacity: .42, depthWrite: false, sizeAttenuation: true }),
       stein: new THREE.MeshLambertMaterial({ color: 0x7c756c }), kasse: new THREE.MeshLambertMaterial({ color: 0xffffff }),
-      vann: new THREE.MeshBasicMaterial({ color: 0x4a7fb0, transparent: true, opacity: .62, depthWrite: false }) };
+      vann: new THREE.MeshBasicMaterial({ color: 0x4a7fb0, transparent: true, opacity: .62, depthWrite: false }),
+      // åkeren: jord og korn med hjørnefarger (runde 4)
+      åker: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }) };
     return MAT3;
   }
   function fjern3d(R) { if (!D3) return; if (R && R.scene) R.scene.remove(D3.gruppe); D3.gruppe.traverse(o => { if (o.geometry) o.geometry.dispose(); }); D3 = null; }
-  const nøkkel3d = u => BRANNER.length + ':' + (BRANNER[0] ? BRANNER[0].x + ',' + BRANNER[BRANNER.length - 1].y : '') + '|' + V.soner.map(s => s.id).join(',') + '|' + Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).join(';') + '|' + u.cx + ',' + u.cy + ',' + u.S;
+  // åkerstykkene i 3D endrer seg med framdrift, brann, såing, veksten (i tideler) og årstiden
+  const åkerNøkkel = () => { const st = åkerStykker(); if (!st.length) return ''; const v = vær(); return st.map(b => b.id + ':' + Math.round((b.hp == null ? 1 : b.hp) * 10) + ':' + Math.round(Leir.framdrift(b) * 10) + ':' + (stykkeSådd(b) ? 1 : 0)).join(',') + '|' + Math.round(Math.min(1, V.åker.grodd / R.åker.modning) * 10) + (v ? v.årstid : ''); };
+  const nøkkel3d = u => åkerNøkkel() + '|' + BRANNER.length + ':' + (BRANNER[0] ? BRANNER[0].x + ',' + BRANNER[BRANNER.length - 1].y : '') + '|' + V.soner.map(s => s.id).join(',') + '|' + Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).join(';') + '|' + u.cx + ',' + u.cy + ',' + u.S;
   // deler per funn: [fram, side, høyde, x, y, z, farge] i meter
   const FUNN3D = { vrak: [[4.2, 1.8, 1, 0, 0, .5, 0x5a4334], [1.9, 1.6, .8, -.4, 0, 1.4, 0x3b302a]], depot: [[1.6, 1.2, 1, 0, 0, .5, 0x4f5a3a], [1.2, 1, .8, 1.7, .4, .4, 0x5d6844], [1.2, 1, .7, .3, 1.5, .35, 0x6b5a3c]],
     leir: [[2.6, 2, 1.3, 0, 0, .65, 0x6c6f4e], [2.2, 1.8, 1.1, 3.4, 1.2, .55, 0x7a6e52], [.9, .9, .25, 1.6, -2, .12, 0x2a2622]], fly: [[8, 1.3, 1.3, 0, 0, .8, 0xd8d6cf], [1.6, 9.5, .22, .6, 0, 1.2, 0xc9c7c0], [1, 3, .2, -3.6, 0, 1.3, 0xc9c7c0], [1.1, .2, 1.3, -3.6, 0, 1.9, 0xb24a3a]] };
@@ -536,12 +579,35 @@
       for (const f of funn) { const a = W.hash(f.frø) * 6.283, cs = Math.cos(a), sn = Math.sin(a), z0 = z(f.x, f.y);
         for (const [l, b, h, dx, dy, dz, farge] of FUNN3D[f.type]) { o.position.set(f.x - u.cx + dx * cs - dy * sn, f.y - u.cy + dx * sn + dy * cs, z0 + dz); o.rotation.set(0, 0, a); o.scale.set(l, b, h); o.updateMatrix(); m.setMatrixAt(k, o.matrix); m.setColorAt(k, c.setHex(farge)); k++; } }
       m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.frustumCulled = false; gr.add(m); }
+    // åkerstykkene: jord som følger terrenget, og kornet i rader langs den lange siden (rygger som vokser med årstiden)
+    for (const b of åkerStykker()) { if (!inne(b.x, b.y, 60)) continue; const m = åkerNett(b, z); if (m) gr.add(m); }
     if (gr.children.length) R.scene.add(gr); else D3.tom = true;
+  }
+  // ett nett per åkerstykke: jorda (ruter på 5 m) og radene (to skrå flater per stykke på 5 m), alt i lokale meter på utsnittet
+  function åkerNett(b, z) {
+    const f = Leir.BYGG.åker.fot, c = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0), u = D3.u, v = vær(), vinter = v && v.årstid === 'vinter';
+    const XY = (lx, ly) => [b.x + lx * c - ly * sn, b.y + lx * sn + ly * c], pos = [], col = [];
+    const fer = Leir.ferdig(b), andel = fer ? 1 : Math.max(0, Leir.framdrift(b)); if (andel <= .02) return null;
+    const sådd = fer && stykkeSådd(b), K = W.korn(sådd, Math.min(1, V.åker.grodd / R.åker.modning)), svidd = 1 - .8 * (1 - Math.max(0, Math.min(1, b.hp == null ? 1 : b.hp)));
+    const farge = (k, lys = 1) => { const q = vinter ? [.9, .91, .93] : k; return [q[0] * svidd * lys, q[1] * svidd * lys, q[2] * svidd * lys]; };
+    const jord = farge([.36, .28, .19]), y1 = f[2] + (f[3] - f[2]) * andel, steg = 5, nx = Math.max(1, Math.round((f[1] - f[0]) / steg)), ny = Math.max(1, Math.round((y1 - f[2]) / steg));
+    const P = (lx, ly, dz = 0) => { const [X, Y] = XY(lx, ly); return [X - u.cx, Y - u.cy, z(X, Y) + .06 + dz]; };
+    const tri = (a, b2, c2, ka, kb, kc) => { pos.push(...a, ...b2, ...c2); col.push(...ka, ...(kb || ka), ...(kc || ka)); };
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x0 = f[0] + (f[1] - f[0]) * i / nx, x1 = f[0] + (f[1] - f[0]) * (i + 1) / nx, ya = f[2] + (y1 - f[2]) * j / ny, yb = f[2] + (y1 - f[2]) * (j + 1) / ny;
+      const a = P(x0, ya), b2 = P(x1, ya), c2 = P(x1, yb), d = P(x0, yb); tri(a, b2, c2, jord); tri(a, c2, d, jord); }
+    // radene: furer (lave rygger) når åkeren er bar, kornet når den er sådd; snø om vinteren legger alt flatt og hvitt
+    if (!vinter) { const rad = 1.25, h = sådd ? K.h : .12, topp = farge(sådd ? K.farge : [.45, .35, .24]), bunn = farge(sådd ? K.farge : [.3, .23, .16], sådd ? .62 : 1), n = Math.floor((f[1] - f[0]) / rad);
+      for (let r = 0; r < n; r++) { const lx = f[0] + (r + .5) * rad;
+        for (let j = 0; j < ny; j++) { const ya = f[2] + (y1 - f[2]) * j / ny, yb = f[2] + (y1 - f[2]) * (j + 1) / ny;
+          const ta = P(lx, ya, h), tb = P(lx, yb, h), va = P(lx - rad * .45, ya), vb = P(lx - rad * .45, yb), ha = P(lx + rad * .45, ya), hb = P(lx + rad * .45, yb);
+          tri(va, vb, tb, bunn, bunn, topp); tri(va, tb, ta, bunn, topp, topp); tri(ha, ta, tb, bunn, topp, topp); tri(ha, tb, hb, bunn, topp, bunn); } } }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3)); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat3().åker); m.userData.åker = b.id; m.frustumCulled = true; g.computeBoundingSphere(); return m;
   }
   KROKER.ramme3d.push(R => {
     if (!klar || !R.ut || typeof THREE === 'undefined') return; const nå = performance.now();
     if (D3 && D3.u !== R.ut) fjern3d(R);
-    if (nå - sist3d > 500) { sist3d = nå; const harNoe = BRANNER.length || V.soner.length || Object.keys(V.funn.sett).some(id => !V.funn.tatt[id]);
+    if (nå - sist3d > 500) { sist3d = nå; const harNoe = BRANNER.length || V.soner.length || Object.keys(V.funn.sett).some(id => !V.funn.tatt[id]) || åkerStykker().length;
       if (D3 && D3.nøkkel !== nøkkel3d(R.ut)) fjern3d(R); if (!D3 && harNoe) lag3d(R); }
     const F = D3 && D3.flammer; if (!F) return;
     // flammene stiger og blaffer, røyken driver med vinden
@@ -581,9 +647,13 @@
     if (beskjed) ut.push(`<p class="usikker">${esc(beskjed)}</p>`);
     // åker
     const Å = V.åker; ut.push('<h3>Åker</h3>');
-    ut.push(`<p>${Å.mål ? `${Å.mål} mål ved leiren. ` + (Å.sådd ? `Sådd – ${Å.grodd >= R.åker.modning ? 'kornet er modent' : `modent om ${tall(Math.max(0, R.åker.modning - Å.grodd), 1)} døgn`}; høstes når det blir høst (ca. ${tall(Å.mål * R.åker.perMål * Math.min(1, Å.grodd / R.åker.modning))} rasjoner nå).` : v.årstid === 'vår' ? 'Ikke sådd ennå.' : 'Ligger brakk – det sås om våren.') : 'Dere har ingen åker. En åker gir mye mat på én gang om høsten.'}</p>`);
-    if (Å.mål) { const f = åkerFolk(); ut.push(`<p><small>Folk: åkeren trenger ${f.behov} på «fri» i Folk-panelet, dere har ${f.har}.${f.andel < 1 ? (f.andel > 0 ? ` Kornet gror ${Math.round(f.andel * 100)} % så fort som det kunne.` : ' Ingen steller åkeren: kornet gror ikke.') : ''} <button data-gjør="se" data-x="${Å.x}" data-y="${Å.y}">Vis åkeren</button></small></p>`); }
-    ut.push(`<button data-gjør="rydd" ${Å.mål + R.åker.ryddMål > R.åker.maks ? 'disabled' : ''}>Rydd ${R.åker.ryddMål} mål åker (${tall(R.åker.rydd / 1e6, 1)} mill. kr)</button>`);
+    syncÅker(); const stykker = åkerStykker(), uferdige = stykker.filter(b => !Leir.ferdig(b)).length;
+    ut.push(`<p>${Å.mål ? `${tall(Å.mål, 1)} mål ved leiren. ` + (Å.sådd ? `Sådd – ${Å.grodd >= R.åker.modning ? 'kornet er modent' : `modent om ${tall(Math.max(0, R.åker.modning - Å.grodd), 1)} døgn`}; høstes når det blir høst (ca. ${tall(Å.mål * R.åker.perMål * Math.min(1, Å.grodd / R.åker.modning))} rasjoner nå).` : v.årstid === 'vår' ? 'Ikke sådd ennå.' : 'Ligger brakk – det sås om våren.') : 'Dere har ingen åker. En åker gir mye mat på én gang om høsten.'}</p>`);
+    if (uferdige) ut.push(`<p><small>${uferdige} åkerstykke${uferdige > 1 ? 'r' : ''} ryddes og pløyes av byggelagene.</small></p>`);
+    const vis0 = stykker[0] || (Å.x != null ? Å : null);
+    if (Å.mål) { const f = åkerFolk(); ut.push(`<p><small>Folk: åkeren trenger ${f.behov} på «fri» i Folk-panelet, dere har ${f.har}.${f.andel < 1 ? (f.andel > 0 ? ` Kornet gror ${Math.round(f.andel * 100)} % så fort som det kunne.` : ' Ingen steller åkeren: kornet gror ikke.') : ''}${vis0 ? ` <button data-gjør="se" data-x="${Math.round(vis0.x)}" data-y="${Math.round(vis0.y)}">Vis åkeren</button>` : ''}</small></p>`); }
+    if (Å.sådd && Å.sådde && stykker.some(b => Leir.ferdig(b) && !Å.sådde.includes(b.id))) ut.push('<p><small>Åkerstykker som ble ferdige etter såinga, sås neste vår.</small></p>');
+    ut.push(`<button data-gjør="anlegg" ${Å.mål + ÅB.mål > R.åker.maks ? 'disabled' : ''}>Anlegg en åker (${ÅB.mål} mål, ${tall(Leir.BYGG.åker.pris / 1e6, 2)} mill. kr)</button><br><small>Åkeren er et bygg i leiren: velg stedet, så rydder et byggelag den. Den kan brenne når kornet er tørt.</small><br>`);
     if (Å.mål && !Å.sådd) ut.push(`<button data-gjør="så" ${v.årstid === 'vår' ? '' : 'disabled'}>Så (${tall(Å.mål * R.åker.såkorn / 1e6, 2)} mill. kr i såkorn)</button>`);
     // jakt
     ut.push(`<h3>Jakt</h3><p>Rein i fjellet (over 1100 moh.) og elg i skogen. Velg et lag som står i ro der, og trykk «Jakt på …». Går du selv og skyter et dyr i 3D, får leiren kjøttet.</p>`);
@@ -618,8 +688,8 @@
     const b = e.target.closest('button[data-gjør]'); if (!b || b.disabled) return; const hva = b.dataset.gjør; let r = null;
     if (hva === 'lukk') { vis(false); return; }
     if (hva === 'auto') settAuto(!V.auto.på);
-    else if (hva === 'rydd') { ryddÅker().then(q => { beskjed = q && q.feil ? q.feil : ''; sistHtml = ''; tegnPanel(); }); return; } else if (hva === 'så') r = så(); else if (hva === 'tog') r = togStart(valgA, valgB);
-    else if (hva === 'se') { if (typeof på3d !== 'undefined' && på3d) slå3d(false); kam.x = +b.dataset.x; kam.y = +b.dataset.y; if (kam.m > 12) kam.m = 12; if (hva === 'se' && b.textContent === 'Vis åkeren' && kam.m > 1.5) kam.m = 1.5; skitten = true; }
+    else if (hva === 'rydd') { ryddÅker().then(q => { beskjed = q && q.feil ? q.feil : ''; sistHtml = ''; tegnPanel(); }); return; } else if (hva === 'anlegg') { r = anleggÅker(); if (r.ok) return; } else if (hva === 'så') r = så(); else if (hva === 'tog') r = togStart(valgA, valgB);
+    else if (hva === 'se') { if (typeof på3d !== 'undefined' && på3d) slå3d(false); kam.x = +b.dataset.x; kam.y = +b.dataset.y; if (kam.m > 12) kam.m = 12; if (hva === 'se' && b.textContent === 'Vis åkeren' && kam.m > 2) kam.m = 2; skitten = true; }
     beskjed = r && r.feil ? r.feil : ''; sistHtml = ''; setTimeout(tegnPanel, 0);
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && åpen) vis(false); });
@@ -634,7 +704,7 @@
   });
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
-  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, startJakt, viltHer, ryddÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
+  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
     punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     åkerFolk, spor: () => spor, D3: () => D3, LEIRBRANN, slokkILeiren, brennbar,
