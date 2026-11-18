@@ -160,8 +160,11 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   på 60×): ingen skudd, ingen tap – men den røde brukte 6 % ammunisjon uten å skyte (Forsyning.skyt kalles i KROKER.ild selv når en annen
   krok gir 0). RETTET i index.html: kamprunde() hopper over par med våpenhvile før krokene kalles (ammunisjonen står på 100 %). Etter
   «Bryt»: det røde laget åpnet ild med en gang (2 av de blå ute på 17 min). Overgivelser skjer ikke under hvile.
-  SETT, IKKE RETTET: det blå laget så ikke det røde (ser() usann den ene vegen, sann den andre – siktfeltet i 32 m-ruter er ikke likt begge
-  veger i ujevnt terreng), så det blå skjøt ikke tilbake. Og: et blått lag med «Ild: bare svar» bruker trolig også ammunisjon uten å skyte
+  Samme prøve med lagene 120 m fra hverandre på flat hei (scratchpad natt/krig/p6b.js): begge så hverandre, 0 skudd og 100 % ammunisjon
+  under hvilen, 52 skudd begge veger og tap på begge sider etter «Bryt».
+  SETT, IKKE RETTET: på 250 m så det blå laget ikke det røde (ser() usann den ene vegen, sann den andre): det røde sto på flata bak en brekk
+  (1118 -> 1127 moh.), og siktfeltet (terreng.js) prøver bakken der målet står, ikke et mål på ca. 2 m – den som står høyt, ser ned, den
+  som står lavt, ser ikke opp over brekken. Radioen meldte også «Fiende sett» om laget under hvilen (ikke krig-filene). Og: et blått lag med «Ild: bare svar» bruker trolig også ammunisjon uten å skyte
   (samme Forsyning.skyt) – ikke målt.
 
 ### Fellesfiler endret i runde 4
