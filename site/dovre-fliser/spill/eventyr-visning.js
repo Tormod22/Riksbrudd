@@ -143,9 +143,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function vegg(d, e) { const Q = r3(); if (!Q || !Q.ut || typeof hindring3d !== 'function') return false; const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy) || 1, x0 = d.x - Q.ut.cx, y0 = d.y - Q.ut.cy;
     for (let s = 1; s <= Math.min(R.dekning.veggAvstand, l - 1); s += .5) if (hindring3d(x0 + dx / l * s, y0 + dy / l * s)) return true; return false; }
   // faktoren på skaden fra én fiende (kampSteg i spillet-visning.js): 0 når de ikke har oppdaget deg
-  // (runde 4) ligger en bakketopp mellom deg og fienden? Terrenget langs linja (hoyde3d i 3D-utsnittet, ellers hoydeVed).
-  function bakke(d, e) { const D = R.dekning, n = D.prøver, h = new Array(n), Q = r3(), hf = typeof hoyde3d === 'function' && Q && Q.ut ? (x, y) => hoyde3d(x, y) : typeof hoydeVed === 'function' ? hoydeVed : null; if (!hf) return false;
-    for (let i = 0; i < n; i++) { const t = i / (n - 1), v = hf(d.x + (e.x - d.x) * t, d.y + (e.y - d.y) * t); if (typeof v !== 'number' || !isFinite(v)) return false; h[i] = v; }
+  // (runde 4) ligger en bakketopp mellom deg og fienden? Terrenget langs linja fra 3D-utsnittet (kampen til fots skjer bare i 3D;
+  // hoydeVed i 2D gir 0 der kartet ikke er lastet). Utenfor utsnittet: ingen dekning.
+  function bakke(d, e) { const D = R.dekning, n = D.prøver, h = new Array(n), Q = r3(), u = Q && Q.ut; if (typeof hoyde3d !== 'function' || !u) return false;
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), x = d.x + (e.x - d.x) * t, y = d.y + (e.y - d.y) * t; if (Math.abs(x - u.cx) > u.S || Math.abs(y - u.cy) > u.S) return false; const v = hoyde3d(x, y); if (typeof v !== 'number' || !isFinite(v)) return false; h[i] = v; }
     return E.Snik.bakkeImellom(h, D.øye[stilling()] || D.øye.stå); }
   function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), vegg(d, e), bakke(d, e)); }
   function snikSteg(p, dt) { const rekk0 = snikRekkevidde(), rekkN = snikRekkevidde(true); let høyest = 0, nær = Infinity, rekk = rekk0;

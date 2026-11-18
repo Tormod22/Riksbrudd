@@ -160,9 +160,10 @@
   // en overlevende funnet ved leting: av og til en spesialist (r: tilfeldighet 0–1)
   function funnet(p, r) { if (!p || p.spes || r() >= REGLER.spesLeting) return null; const typer = Object.keys(SPES); return gjørSpesialist(p, typer[Math.floor(r() * typer.length)]); }
 
-  // SPESIALISTER FRA OPPDRAG: hvilken spesialist oppdraget o gir (eller null) – fast per oppdrag (id og sted). frø = leirens tall.
+  // SPESIALISTER FRA OPPDRAG: hvilken spesialist oppdraget o gir (eller null) – fast per oppdrag (nummeret). frø = leirens tall.
   function oppdragSpes(o, frø = 0) {
-    if (!o || (o.type !== 'redd' && o.type !== 'post')) return null; const h = s => { let x = (Math.imul((o.id | 0) + 1, 2654435761) ^ Math.imul((o.x | 0) + s, 40503) ^ Math.imul((o.y | 0) ^ (frø | 0), 2246822519)) >>> 0; x = Math.imul(x ^ (x >>> 15), 2246822507) >>> 0; return ((x ^ (x >>> 13)) >>> 0) / 4294967296; };
+    // bare oppdragets nummer og leiren teller (spillet kan flytte oppdraget litt, f.eks. til land, etter at det er laget)
+    if (!o || (o.type !== 'redd' && o.type !== 'post')) return null; const h = s => { let x = (Math.imul((o.id | 0) + 1, 2654435761) ^ Math.imul(s + 7, 40503) ^ Math.imul((frø | 0) + 13, 2246822519)) >>> 0; x = Math.imul(x ^ (x >>> 15), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; };
     if (h(1) >= (o.type === 'redd' ? REGLER.oppdragSpes : REGLER.postSpes)) return null; const typer = Object.keys(SPES); return typer[Math.floor(h(2) * typer.length)];
   }
   // teksten i oppdragslista

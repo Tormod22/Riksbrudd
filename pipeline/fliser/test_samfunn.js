@@ -108,7 +108,7 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
   const aR = R.filter(Boolean).length / 400, aP = P.filter(Boolean).length / 400;
   ok(Math.abs(aR - S0.REGLER.oppdragSpes) < .08 && Math.abs(aP - S0.REGLER.postSpes) < .08, `redningsoppdrag gir spesialist i ${Math.round(aR * 100)} %, røverposter i ${Math.round(aP * 100)} %`);
   ok(new Set(R.filter(Boolean)).size === Object.keys(S0.SPES).length, 'alle slags spesialister kan komme fra oppdrag');
-  ok(S0.oppdragSpes(mk(7, 'redd'), 1) === S0.oppdragSpes(mk(7, 'redd'), 1) && S0.oppdragSpes(mk(3, 'hent'), 1) === null, 'fast per oppdrag, og «hent» gir ingen');
+  ok(S0.oppdragSpes(mk(7, 'redd'), 1) === S0.oppdragSpes({ ...mk(7, 'redd'), x: 1, y: 2 }, 1) && S0.oppdragSpes(mk(3, 'hent'), 1) === null, 'fast per oppdrag (også når spillet flytter det), og «hent» gir ingen');
   const i = R.findIndex(Boolean); ok(/^Blant dem som skal reddes, er en /.test(S0.oppdragSpesTekst(mk(i, 'redd'), R[i])), S0.oppdragSpesTekst(mk(i, 'redd'), R[i]));
   const F = F0.ny(), p = F.personer[0]; S0.gjørSpesialist(p, 'lege'); ok(S0.harSpes(F, 'lege') || p.spes === 'lege', 'personen blir spesialist');
 }

@@ -304,9 +304,11 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
 
   // ---------- spesialister fra oppdrag (spillet-visning.js sender «riksbrudd-oppdrag» når et oppdrag er fullført) ----------
   // Redningsoppdrag: en av dem dere fikk med, er spesialisten (står i oppdragslista på forhånd). Røverpost: fangen røverne holdt, blir med.
+  // et fast tall for leiren (S.frø er tilfeldighetsgeneratorens tilstand og endrer seg)
+  const leirFrø = () => { const sp = spill(); return sp && sp.leir ? (Math.round(sp.leir.x) * 17 + Math.round(sp.leir.y) * 3) >>> 0 : 0; };
   const spesNavn = t => (SR.SPES[t].yrke === 'skarpskytter' ? 'skarpskytter' : SR.SPES[t].yrke);
   function fraOppdrag(o, nye) {
-    if (!S || !o || !auto()) return null; const type = SR.oppdragSpes(o, S.frø), f = F(), l = L(); if (!type || !f) return null;
+    if (!S || !o || !auto()) return null; const type = SR.oppdragSpes(o, leirFrø()), f = F(), l = L(); if (!type || !f) return null;
     let p = null;
     if (o.type === 'redd') { p = (nye || [])[0] || null; if (!p) { logg(`Blant dem dere reddet, var en ${spesNavn(type)} – men det var ingen ledig seng, så hen dro videre.`); return null; } }
     else { const r = l ? FR.rekrutter(f, l, () => true) : {}; p = r.person || null; if (!p) { logg(`Røverne holdt en ${spesNavn(type)} som fange. Hen ville bli med, men det var ingen ledig seng.`); return null; } p.lojal = Math.round((.55 + Math.random() * .25) * 100) / 100; }
@@ -314,7 +316,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   }
   window.addEventListener('riksbrudd-oppdrag', ev => { try { const d = ev.detail || {}; fraOppdrag(d.o, d.nye); } catch (e) { /* et oppdrag skal aldri stoppe av samfunnet */ } });
   // oppdragene i lista som gir en spesialist (vises i fanen Mål i Leir-menyen)
-  const oppdragMedSpes = () => { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); if (!S || !O || !O.liste) return []; return O.liste.map(o => ({ o, type: SR.oppdragSpes(o, S.frø) })).filter(q => q.type); };
+  const oppdragMedSpes = () => { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); if (!S || !O || !O.liste) return []; return O.liste.map(o => ({ o, type: SR.oppdragSpes(o, leirFrø()) })).filter(q => q.type); };
 
   // ---------- spesialistene og lovene i krokene ----------
   KROKER.ild.push((a, b) => {
@@ -351,7 +353,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     falne = null; akk = 0; sistEkte = performance.now(); sistKort = ''; sistHtml = ''; visKort(); vis();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
+  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, leirFrø, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
     // for testene og vakten: sett en ny, tom tilstand
     nullstill: () => { const sp = spill(); S = SR.ny(1); S.klokke = typeof tid === 'number' ? tid : 0; sistKort = ''; falne = null; if (sp) lagre(); visKort(); vis(); } });
   window.SamfunnSpill = api;
