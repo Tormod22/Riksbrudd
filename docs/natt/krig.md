@@ -198,3 +198,8 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   Forsyning.skyt trekker ammunisjon i KROKER.ild, og alle krokene kalles selv når en annen gir 0. Under våpenhvile: 100 % (rettet i del 1).
 - RETTET med én samlet endring i index.html, kamprunde(): ammunisjonen før krokene huskes (`ammo0 = a.ammo`) og legges tilbake når
   produktet er 0 (`if (ildf <= 0) { a.ammo = ammo0; continue; }`). Etter: «bare svar» 0 skudd og 100 %, fri ild som før (5 skudd, 90 %).
+
+### 3. Radioen og våpenhvile
+- spill/kontrollrom-visning.js, `rapport()`: lag fra en side dere har våpenhvile med (`AI.hvile('blå', side)`), tas ut av lista radioen
+  melder «Fiende sett» fra (én hjelpefunksjon + filter på `nå.fiender`). De står fortsatt på kartet som «sist sett» (e.sett settes for alle).
+- Prøvd (p6c.js, to lag 120 m fra hverandre): 0 «Fiende sett» under hvilen, 2 rett etter «Bryt».
