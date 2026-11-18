@@ -281,7 +281,7 @@ void main() {
     // lav sol (kveld og morgen) er varm; vinteren er kald; ellers en anelse varmt
     const lavSol = Math.max(0, 1 - Math.abs(e - 4) / 14) * (1 - m) * (1 - .7 * sky), vinter = V && /vinter/i.test(String(V.årstid || '')) ? 1 : 0;
     const varme = Math.max(-1, Math.min(1.2, .18 + 1.0 * lavSol - .75 * vinter * (1 - lavSol) - .3 * m));
-    return [varme, .2 * (1 - .65 * m), 1.07 + .06 * lavSol - .05 * vinter, .22];
+    return [varme, .15 * (1 - .65 * m), 1.07 + .06 * lavSol - .05 * vinter, .2];
   }
 
   // palett til Piksel: dempede jord-, grønn- og himmelfarger (80-tall)

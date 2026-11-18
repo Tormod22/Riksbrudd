@@ -1,9 +1,9 @@
 'use strict';
 // LYS OG SKYGGER I 3D (18. nov, pakke «lys»; brukeren: «få 3D til å se klart bedre ut uten å gjøre det tregere»).
-//  1. SKYGGER FRA SOLA (og månen): ett skyggekart som følger kameraet. Terrenget, husene, trærne, bruene og leiren kaster skygge, og alt
+//  1. SKYGGER FRA SOLA (og månen): ett skyggekart som følger kameraet (VSM: ett oppslag per punkt). Husene, trærne, bruene og leiren kaster skygge, og alt
 //     som er lyssatt tar imot. Skyggekartet tegnes IKKE hvert bilde, bare når kameraet har flyttet seg et stykke, sola har flyttet seg,
 //     trærne er fordelt på nytt eller et nytt utsnitt er satt inn – ellers koster skyggene bare oppslagene i bildet. Ting som beveger
-//     seg (kjøretøy, soldater, dyr, trafikk) kaster derfor ikke skygge. Skyggen tones ut mot kanten av skyggekartet (ingen skarp kant).
+//     seg (kjøretøy, soldater, dyr, trafikk) kaster derfor ikke skygge. Terrenget tar imot, men kaster ikke. Skyggen tones ut mot kanten av skyggekartet (ingen skarp kant).
 //  2. TÅKE I DALENE: all tåke (three.js sin «fog») får et tillegg som er tettest nederst i terrenget og tynnes oppover – morgentåka
 //     ligger i dalbunnen og følger terrenget, og om dagen er det en svak dis i lavlandet. Gjelder alt som har tåke (terreng, trær, hus).
 //  3. BAKKENS TEKSTURER: atlas() gir ett bilde med fire mønstre (gress, lyng, grus, berg) som bakkens skyggelegger blander etter
@@ -102,31 +102,36 @@
   const STILLE = /^(infra3d|kraft3d|leir-visning|anlegg3d|portal3d|gard3d|byhus|bane3d|kyst3d|vegetasjon3d)$/;
   const lyssatt = m => !!m && (m.isMeshLambertMaterial || m.isMeshPhongMaterial || m.isMeshStandardMaterial);
   function merk(R, på) {
-    const kast = new Set([R.mesh, R.bruMesh, ...(R.treMesh || []), ...(R.husMesh || []), ...(R.småMesh || [])]);
+    // (terrenget selv kaster ikke: med VSM tegnes forsidene i skyggekartet, og bratte lier ville skygge for seg selv i striper)
+    const kast = new Set([R.bruMesh, ...(R.treMesh || []), ...(R.husMesh || []), ...(R.småMesh || [])]);
     for (const t of R.treLOD || []) { kast.add(t.nær); kast.add(t.fjern); }
     let nk = 0, nt = 0;
     R.scene.traverse(o => {
       if (!o.isMesh) return; const m = [].concat(o.material)[0]; if (!lyssatt(m)) return;
       let kilde = null; for (let p = o; p && !kilde; p = p.parent) kilde = p.userData && p.userData.kilde;
       const gjennom = m.transparent && !(m.alphaTest > 0);
-      const k = på && !gjennom && (kast.has(o) || STILLE.test(kilde || '')), t = på;
+      // (gresstustene rundt kameraet tar ikke imot skygge: mange gjennomsiktige flater oppå hverandre, og de er mørke fra før)
+      const k = på && !gjennom && (kast.has(o) || STILLE.test(kilde || '')), t = på && o !== R.gressMesh;
       if (o.castShadow !== k) o.castShadow = k; if (o.receiveShadow !== t) { o.receiveShadow = t; for (const mm of [].concat(o.material)) mm.needsUpdate = true; }
       if (k) nk++; if (t) nt++;
     });
     L.kaster = nk; L.tar = nt;
   }
+  function kastKart(sol) { const s = sol.shadow; if (s.map) { s.map.dispose(); s.map = null; } if (s.mapPass) { s.mapPass.dispose(); s.mapPass = null; } }
   const S = { n: 0, midt: null, halv: 0, dir: null, lod: null, sett: -1, merket: 0, myk: null };
   let v1 = null, v2 = null, v3 = null, vx = null, vy = null, vz = null;
   function skygger(R) {
     const fx = window.KVAL && KVAL.fx ? KVAL.fx : null, n = fx ? fx.skygge[VW < 900 ? 1 : 0] : 0, sol = R.sol, r = R.renderer;
     const vil = n > 0 && !!R.ut && !!R.mesh;
-    if (!vil) { if (L.på) { L.på = false; sol.castShadow = false; merk(R, false); if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; } S.n = 0; } return; }
+    if (!vil) { if (L.på) { L.på = false; sol.castShadow = false; merk(R, false); kastKart(sol); S.n = 0; } return; }
     if (!v1) { v1 = new THREE.Vector3(); v2 = new THREE.Vector3(); v3 = new THREE.Vector3(); vx = new THREE.Vector3(); vy = new THREE.Vector3(); vz = new THREE.Vector3(); }
     let ny = false;
     if (!L.på || S.n !== n || S.myk !== fx.myk) {
       L.på = true; S.n = n; S.myk = fx.myk; r.shadowMap.enabled = true; r.shadowMap.autoUpdate = false;
-      const type = fx.myk ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap; if (r.shadowMap.type !== type) { r.shadowMap.type = type; R.scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); }
-      sol.castShadow = true; if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; } sol.shadow.mapSize.set(n, n); sol.shadow.radius = fx.myk ? 1 : 1.2;
+      // SKYGGETYPEN (målt 18. nov med programvare-grafikk: myke skygger med mange oppslag per punkt – PCF 17, PCFSoft 9 – var det
+      // klart dyreste i hele pakka). VSM: skyggekartet glattes når det tegnes (sjelden), og hvert punkt i bildet gjør ETT oppslag.
+      const type = THREE.VSMShadowMap; if (r.shadowMap.type !== type) { r.shadowMap.type = type; R.scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); }
+      sol.castShadow = true; kastKart(sol); sol.shadow.mapSize.set(n, n); sol.shadow.radius = fx.myk ? 3 : 2;
       S.sett = -1; ny = true;
     }
     // nye ting i scenen: nytt utsnitt straks, ellers en titt av og til (moduler som legger til ting litt etter litt)

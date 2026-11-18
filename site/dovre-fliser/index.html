@@ -1305,7 +1305,7 @@ function detaljIBakken(mat, side) {
       vec4 a2 = texture2D(bakkeAtlas, vec2(aUv.x * 0.8 - aUv.y * 0.6, aUv.x * 0.6 + aUv.y * 0.8) * 0.23 + vec2(0.41, 0.09));
       float heltN = 1.0 - smoothstep(5.0, 40.0, detAvst);
       vec4 at = mix(a2, a1 * 0.7 + a2 * 0.3, heltN);
-      vec3 fG = diffuseColor.rgb * mix(vec3(0.62, 0.78, 0.56), vec3(1.62, 1.5, 0.92), at.r);
+      vec3 fG = diffuseColor.rgb * mix(vec3(0.6, 0.74, 0.54), vec3(1.4, 1.36, 0.88), at.r);
       vec3 fL = diffuseColor.rgb * mix(vec3(0.5, 0.54, 0.5), vec3(1.4, 1.32, 1.08), at.g);
       vec3 fS = diffuseColor.rgb * mix(0.5, 1.42, at.b);
       vec3 fB = diffuseColor.rgb * mix(0.5, 1.36, at.a);
@@ -2983,7 +2983,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/natt3d.js?v=cf59ab2885"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
-<script src="/dovre-fliser/spill/kvalitet.js?v=e46f113456"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=d29d05d1e8"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
@@ -3014,7 +3014,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior.js?v=e4c7eb43c3"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=773fa0b376"></script>
 <script src="/dovre-fliser/spill/hud.js?v=97a84eea9b"></script>
-<script src="/dovre-fliser/spill/filtre.js?v=9c562fa418"></script>
+<script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=640d264f20"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=32418fd8d9"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
@@ -3054,7 +3054,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=f165c6cd03"></script>
 <script src="/dovre-fliser/spill/meny.js?v=9b4e940c42"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/lys3d.js?v=64fdbf7d6c"></script>
+<script src="/dovre-fliser/spill/lys3d.js?v=7b36bb2c44"></script>
 <script src="/dovre-fliser/spill/tema.js?v=15da5b9c2b"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/spillhud.js?v=aaabcd096f"></script>

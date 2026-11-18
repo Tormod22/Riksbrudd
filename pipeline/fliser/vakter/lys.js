@@ -26,7 +26,7 @@ module.exports = {
           const s = Lys3d.sjekk(), f = window.Filtre && Filtre.sjekk ? Filtre.sjekk() : {}; ut.på = s; ut.filter = f;
           const dag = R.sol.intensity >= Lys3d.REGLER.minLys;
           ok(s.glFeil === 0, 'GL-feil med effektene på: ' + s.glFeil);
-          if (dag) { ok(s.på && s.kart > 0, 'skyggekartet er ikke på'); ok(s.kaster > 0 && s.tar > 0, 'ingen kaster eller tar imot skygge'); ok(R.mesh.receiveShadow && R.mesh.castShadow, 'terrenget kaster/tar ikke skygge'); }
+          if (dag) { ok(s.på && s.kart > 0, 'skyggekartet er ikke på'); ok(s.kaster > 0 && s.tar > 0, 'ingen kaster eller tar imot skygge'); ok(R.mesh.receiveShadow, 'terrenget tar ikke imot skygge'); }
           ok(Filtre.valgt() !== 'ingen' || f.standard === true, 'standard fargesetting ble ikke brukt');
           ok([].concat(R.mesh.material).every(m => m.userData.fx && m.defines && 'BAKKE_FX' in m.defines), 'bakken har ikke fått BAKKE_FX');
           ok(s.dal[0] > 0, 'tåka i dalene er ikke satt');

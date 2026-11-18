@@ -24,6 +24,9 @@
     høy: { skygge: [2048, 1024], myk: true, etter: 'full', bakke: true, skyer: true, lys: true },
     middels: { skygge: [1024, 0], myk: false, etter: 'farge', bakke: true, skyer: true, lys: true },
     ingen: { skygge: [0, 0], myk: false, etter: null, bakke: false, skyer: false, lys: false },
+    // Auto: går bildet for tregt, tas de dyre effektene bort FØR grafikknivået senkes (trinn 1 = som Middels, trinn 2 = uten skygger
+    // og etterbehandling – målt med programvare-grafikk er de to omtrent hele kostnaden; resten er nesten gratis)
+    billig: { skygge: [0, 0], myk: false, etter: null, bakke: true, skyer: true, lys: true },
   };
   const NIVÅ = {
     høy: { navn: 'Høy', pr: [1.5, 1.25], tre: 1, gress: 1, blomster: true, tekstur: true, vann: 1, fx: FX.høy },
@@ -63,14 +66,15 @@
   // KVAL: det andre deler av spillet leser (index.html: størrelse3d, lodTrær, gress3d, bygg3d; vegetasjon3d.js; vind3d.js)
   const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { return NIVÅ[S.nivå]; },
     // fx: de nye effektene på dette nivået (FX.ingen når de er slått av, på Lav og i testene – se under)
-    get fx() { return (fxPå && NIVÅ[S.nivå].fx) || FX.ingen; }, get effekterPå() { return fxPå; } };
+    get fx() { const f = fxPå && NIVÅ[S.nivå].fx; return !f ? FX.ingen : fxTrinn >= 2 ? FX.billig : fxTrinn === 1 ? FX.middels : f; }, get effekterPå() { return fxPå; }, get fxTrinn() { return fxTrinn; } };
+  let fxTrinn = 0;
   // Effektene er på hos spilleren til han slår dem av. I testene (navigator.webdriver) er de av til testen selv slår dem på
   // (KVAL.effekter(true)) – kontrollskriptet skal se det samme bildet som før.
   let fxPå = !navigator.webdriver; try { if (localStorage.getItem('riksbrudd-effekter') === 'av') fxPå = false; } catch (e) { /* privat vindu */ }
   const fxKnapp = document.createElement('button'); fxKnapp.id = 'vis-effekter';
   const settFx = () => { fxKnapp.textContent = 'Lys og skygger: ' + (fxPå ? 'på' : 'av'); fxKnapp.title = 'Skygger fra sola, fargesetting, skarp bakke nært, dybde i vannet og tåke i dalene (bare på Høy og Middels grafikk). Slå av hvis bildet går tregt.'; };
   // Slår effektene på eller av. lagre = false: husk ikke valget (testene).
-  KVAL.effekter = (på, lagre) => { på = !!på; if (på === fxPå) return på; fxPå = på; KVAL.v++; settFx();
+  KVAL.effekter = (på, lagre) => { på = !!på; fxTrinn = 0; if (på === fxPå) return på; fxPå = på; KVAL.v++; settFx();
     if (lagre !== false) try { localStorage.setItem('riksbrudd-effekter', på ? 'på' : 'av'); } catch (e) { /* privat vindu */ }
     if (typeof R3 !== 'undefined' && R3) { R3.lodVed = null; if (typeof byttBakke === 'function') byttBakke(true); }
     return på; };
@@ -105,6 +109,13 @@
     const nå = performance.now() / 1000; if (!S.start) S.start = nå;
     // de første sekundene etter at 3D er åpnet bygges alt: ikke mål da
     if (nå - S.start < 6 || R.bygger) return;
+    // for tregt (samme grense som Kvalitet.neste): først de dyre effektene, så nivået
+    const ms = R.rammeSnitt, skala = R.skala || 1;
+    if (fxPå && fxTrinn < 2 && NIVÅ[S.nivå].fx && nå - (S.endret || -99) >= 4 && ((ms > 24 && skala <= .65) || ms > 40)) {
+      fxTrinn++; S.endret = nå; S.lett = null; KVAL.v++; if (typeof byttBakke === 'function') byttBakke();
+      if (typeof logg === 'function') logg(fxTrinn === 1 ? 'Grafikk: enklere skygger (bildet gikk tregt).' : 'Grafikk: uten skygger og fargesetting (bildet gikk tregt).');
+      return;
+    }
     const ny = neste(S, R.rammeSnitt, R.skala || 1, nå); if (ny !== S.nivå) bytt(ny);
   });
   KVAL.bytt = n => { valg = n; bytt(n === 'auto' ? 'høy' : n); settKnapp(); };
