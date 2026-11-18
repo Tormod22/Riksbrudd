@@ -150,8 +150,8 @@ dag 6 fordi røverne i bølge 4 ble stående inne i leiren et døgn, ingen slo d
 | Målet «Bygg kontrollrommet» | hjelpeteksten sier «to tropper og et vakttårn» | `maal.js` | (Antallet mål er uendret: vakta «spillform» teller 19/15.) |
 
 Alt som skjer av seg selv (herjing, mot røverne, reparasjon, skadevarsel) skjer bare når `!navigator.webdriver || SpilletSpill.test / ForsvarSpill.test`.
-API: `SpilletSpill.trekkUt(e)`, `SpilletSpill.utSteg()`; `ForsvarSpill.test`, `motSteg()`, `motFerdig()`, `herjere()`, `repSteg(tving)`, `reparerAlle()`,
-`repPå()`, `settRep(på)`, `etterAngrep()`, `skade()`, `lukkSkade()`; `Forsvar.R.mot`, `Forsvar.R.rep`, `Forsvar.motHerjere`, `velgReparasjon`, `skadet`.
+API: `SpilletSpill.trekkUt(e)`, `SpilletSpill.utSteg()`; `ForsvarSpill.test`, `motSteg()`, `motFerdig()`, `hjemSteg()`, `herjere()`, `repSteg(tving)`, `reparerAlle()`,
+`repPå()`, `settRep(på)`, `etterAngrep()`, `skade()`, `lukkSkade()`; `Forsvar.R.mot`, `Forsvar.R.rep`, `Forsvar.R.hjem`, `Trussel.brutt`, `Forsvar.motHerjere`, `velgReparasjon`, `skadet`.
 Fellesfiler: ingen (leir.js og leir-visning.js er IKKE endret – reparasjonen går gjennom Leir.reparer/Leir.jobber/Leir.byggelag fra forsvar-visning.js).
 
 
