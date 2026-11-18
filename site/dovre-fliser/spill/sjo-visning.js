@@ -195,7 +195,30 @@
     if (best) { valg = { båt: best }; vis(true); return true; } return false; }
   // Trykk på en kai (fra kaier.js). Svarer true når trykket ga en seilordre (da skriver ikke kaier.js i loggen).
   function kaiTrykk(i) { if (!klar) return false; if (modus === 'kai' && valg && valg.båt) { const b = valg.båt, q = kai(i); modus = null; if (q) seil(b, q.x, q.y, i); return true; }
-    valg = { kai: i }; vis(true); return false; }
+    // i testene åpnes ikke panelet av seg selv ved et trykk på en kai (det ville ligge oppå det de andre kontrollene trykker på)
+    valg = { kai: i }; if (navigator.webdriver && !ut.test) return false; vis(true); return false; }
+
+  // ---------- 3D: enkle båtmodeller ----------
+  // Ett lite nett per båt (kasser med hjørnefarger, ett felles materiale, ingen lys). Baugen peker mot +y i modellen.
+  const GEO3 = {}; let mat3 = null, R3for = null; const nett3 = new Map();
+  function boks(P, C, w, l, h, x, y, z, f, spiss = 0) { const x0 = x - w / 2, x1 = x + w / 2, y0 = y - l / 2, y1 = y + l / 2, z1 = z + h, s = w / 2 * spiss;
+    // åtte hjørner; spiss > 0 smalner forenden (baugen)
+    const H = [[x0, y0, z], [x1, y0, z], [x1 - s, y1, z], [x0 + s, y1, z], [x0, y0, z1], [x1, y0, z1], [x1 - s, y1, z1], [x0 + s, y1, z1]], F = [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7], [3, 2, 1, 0]];
+    for (const q of F) for (const i of [0, 1, 2, 0, 2, 3]) { P.push(...H[q[i]]); C.push(...f); } }
+  function geo3(type) { if (GEO3[type]) return GEO3[type]; const T = TY[type], L = T.lengde, B = Math.max(2.4, L * .3), P = [], C = [], skrog = type === 'frakt' ? [.25, .27, .3] : type === 'ferje' ? [.86, .86, .82] : [.2, .32, .45], hvit = [.9, .9, .86], mørk = [.16, .15, .14];
+    boks(P, C, B, L * .7, 1.3, 0, -L * .15, -.4, skrog); boks(P, C, B, L * .3, 1.3, 0, L * .35, -.4, skrog, .85); boks(P, C, B * .9, L * .68, .12, 0, -L * .15, .9, [.55, .5, .42]);
+    if (type === 'lekter') { boks(P, C, B * .7, L * .4, 1.4, 0, -L * .05, 1, [.5, .36, .22]); boks(P, C, B * .45, L * .12, 2.2, 0, -L * .42, 1, hvit); }
+    else if (type === 'ferje') { boks(P, C, B * .95, L * .5, 3, 0, -L * .1, 1, hvit); boks(P, C, B * .5, L * .14, 2.4, 0, L * .02, 4, hvit); boks(P, C, 1.6, 1.6, 2.5, 0, -L * .2, 4, mørk); }
+    else { boks(P, C, B * .6, L * .26, 1.9, 0, type === 'småbåt' ? L * .02 : -L * .22, 1, hvit); if (type !== 'småbåt') boks(P, C, .25, .25, 3.2, 0, L * .12, 1, mørk); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.computeVertexNormals(); return (GEO3[type] = g); }
+  function rydd3d(R) { for (const m of nett3.values()) if (R && R.scene) R.scene.remove(m); nett3.clear(); }
+  KROKER.ramme3d.push(R => { if (!klar || !R.ut || typeof THREE === 'undefined') return; const u = R.ut; if (R3for !== R) { nett3.clear(); R3for = R; if (mat3) mat3.dispose(); mat3 = null; }
+    const alle = S.frakt.length ? S.båter.concat(S.frakt.filter(serFrakt)) : S.båter; if (!alle.length && !nett3.size) return; if (!mat3) mat3 = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    for (const [id, m] of nett3) if (!alle.some(b => b.id === id)) { R.scene.remove(m); nett3.delete(id); }
+    for (const b of alle) { let m = nett3.get(b.id); const x = b.x - u.cx, y = b.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) { if (m) m.visible = false; continue; }
+      if (!m) { m = new THREE.Mesh(geo3(b.type), mat3); m.name = 'sjo-bat'; R.scene.add(m); nett3.set(b.id, m); }
+      // sjøen ligger i null; en innsjø (over 2 moh.) i sin egen høyde
+      let h = 0; try { h = hoyde3d(b.x, b.y, u); } catch (e) { h = 0; } m.visible = true; m.position.set(x, y, ((h > 2 ? h : Math.min(.3, Math.max(0, h || 0))) - u.h0) * R.EX + .15); m.rotation.z = -(b.retning || 0); } });
 
   // ---------- panelet ----------
   const css = document.createElement('style');
@@ -268,5 +291,5 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
     hode.appendChild(k2('Åpne sjøpanelet', () => { valg = null; vis(true); }, { id: 'sjoknapp' })); });
 
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
-    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
+    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai });
 })();

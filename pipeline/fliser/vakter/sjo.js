@@ -4,7 +4,7 @@
 module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
   const data = await pg.evaluate(async () => { const o = { feil: [] }; if (!window.SjoSpill || !window.Sjo || !window.KaierSpill) { o.feil.push('modulene mangler'); return o; }
     const ok = (b, t) => { if (!b) o.feil.push(t); }, O = OppstartSpill.tilstand(), L = O.leir, K0 = KaierSpill.data(), p0 = O.penger, lagret = localStorage.getItem('riksbrudd-sjo'), åpen = SjoSpill.erÅpen(), valgt0 = valgt;
-    if (!SjoSpill.klar()) SjoSpill.start(); SjoSpill.lagre();
+    const test0 = SjoSpill.test; SjoSpill.test = true; if (!SjoSpill.klar()) SjoSpill.start(); SjoSpill.lagre();
     const lagretNå = localStorage.getItem('riksbrudd-sjo');
     try {
       // to kaier: en stor 500 m øst for leiren og en liten 4,5 km øst
@@ -34,7 +34,7 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
     // alt tilbake
     for (const s of ENHETER) if (s.påBåt) s.påBåt = null; const p2 = OppstartSpill.tilstand().penger; if (p2 < p0) OppstartSpill.gi(p0 - p2);
     if (lagretNå === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagretNå); SjoSpill.start(); if (lagret === null) localStorage.removeItem('riksbrudd-sjo'); else localStorage.setItem('riksbrudd-sjo', lagret);
-    KaierSpill.settData(K0); SjoSpill.vis(åpen); valgt = valgt0; skitten = true; o.penger = OppstartSpill.tilstand().penger === p0; if (!o.penger) o.feil.push('pengene ble ikke satt tilbake'); return o; });
+    KaierSpill.settData(K0); SjoSpill.test = test0; SjoSpill.vis(åpen); valgt = valgt0; skitten = true; o.penger = OppstartSpill.tilstand().penger === p0; if (!o.penger) o.feil.push('pengene ble ikke satt tilbake'); return o; });
   const ok = data.feil.length === 0;
   return { ok, tekst: ok ? `kjøp, rute rundt øya (${data.meter} m, ${data.minutter} min), om bord, fiske, miner og havn` : data.feil.join('; '), data };
 } };
