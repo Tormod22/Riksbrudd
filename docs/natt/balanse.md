@@ -393,3 +393,19 @@ Spilt på en kopi av siden (`snapA/`, `snapB/` …), så arbeidstreet kunne endr
 ammunisjon), som har stått i ro i en time 400 m – 3 km fra leiren uten fiender innen 600 m, går hjem mellom angrepene («Tropp 1 er
 hardt skadet eller har lite ammunisjon og går hjem til leiren for å hvile og fylle opp.»). Døgnoppgjøret regner sabotører som slapp
 unna som «slapp unna», ikke «slått tilbake».
+
+### Filer, API og fellesfiler (runde 5)
+- Nye filer (skripttaggene rett etter `forsvar-visning.js`, i denne rekkefølgen): `spill/trussel-lagring.js` (TrusselLagring /
+  TrusselLagringSpill: `lagre`, `tilbake(bølge, tving)`, `etterBølgen`, `glem`, `test`), `spill/forsvar-oppgjor.js` (Oppgjor.tekst /
+  OppgjorSpill: `bilde`, `morgen(tving)`, `test`), `spill/forsvar-hjemme.js` (Hjemme.påfyll/hvil/hjemme/børHjem, Hjemme.REGLER /
+  HjemmeSpill: `steg(min)`, `hjemSteg`, `test`). Tester: `test_trussel_lagring.js`, `test_forsvar_oppgjor.js`, `test_forsvar_hjemme.js`.
+- Nye lagringsnøkler (per leir): `riksbrudd-angrep`, `riksbrudd-oppgjor`.
+- **Fellesfiler endret:** `spillet.js` – Trussel.menn(nr, soldater, n, faktor) og `BALANSE.ekstra = 2` (taket for hele bølgen);
+  `spillet-visning.js` – angrep() sender antall lag og faktoren til Trussel.menn, og start() spør TrusselLagringSpill.tilbake før
+  bølgen startes på nytt (to linjer); `index.html` – tre skripttagger; `test_spillet.js` – én ny test for taket.
+- Vakta `pipeline/fliser/vakter/balanse.js` har fått `runde5`: angrepet lagres og legges tilbake (to røverlag, sted, helse, tid inne,
+  bytte), feil bølge gir ingenting, døgnoppgjøret, påfyll og hvile hjemme (basen uten olje), og at hjelpen ikke åpnes av seg selv mens
+  opplæringen går. Alt settes tilbake – også tilfeldighetsrekka `frø` (nyttLag bruker den; uten det feilet vakta «krig» etterpå fordi
+  lagene den lager fikk andre navn og væremåter). Prøvd: balanse + krig etter hverandre, OK på PC og mobil.
+- Hjelpetekst: `docs/natt/balanse-hjelp.json` – «Siste døgn» og «Ammunisjon og hvile hjemme» er nye, «Røverne og byttet» er rettet
+  (omlasting, taket for hele bølgen).
