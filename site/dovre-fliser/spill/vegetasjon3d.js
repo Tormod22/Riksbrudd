@@ -61,7 +61,7 @@
     // andel myr og hei i de ni rutene rundt (ca. 100 × 100 m)
     const rundt = (X, Y) => { let myr = 0, hei = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const k = klasse(X + a * kv.r, Y + b * kv.r); if (k === 6) myr++; else if (k === 2 || k === 0) hei++; } return [myr / 9, hei / 9]; };
     const helning = (X, Y) => { const dx = hoyde3d(X + 6, Y, u) - hoyde3d(X - 6, Y, u), dy = hoyde3d(X, Y + 6, u) - hoyde3d(X, Y - 6, u); return Math.atan(Math.hypot(dx, dy) / 12) * 180 / Math.PI; };
-    await pust(); const vann = vannAvstand(u), tg = V.tregrense(u.cy), ut = {}; for (const k of V.REKKE) ut[k] = []; await pust();
+    await pust(); const vann = vannAvstand(u), tg = V.tregrense(u.cy, u.cx), ut = {}; for (const k of V.REKKE) ut[k] = []; await pust();
     let arb = 0;
     for (const kilde of ['gran', 'løv']) { const d = u.trær[kilde];
       for (let k = 0; k < d.length; k += 5) {
@@ -342,7 +342,7 @@
     const nøkkel = å + '|' + (R.fot ? 1 : 0);
     if (vekstSenter && nøkkel === vekstNøkkel && Math.hypot(c.x - vekstSenter[0], c.y - vekstSenter[1]) < 12) return;
     vekstSenter = [c.x, c.y]; vekstNøkkel = nøkkel;
-    const RAD = R.fot ? 45 : 70, d = new THREE.Object3D(), col = new THREE.Color(), W = K.W, bl = V.blomstring(å), høst = å === 'høst', tg = V.tregrense(u.cy);
+    const RAD = R.fot ? 45 : 70, d = new THREE.Object3D(), col = new THREE.Color(), W = K.W, bl = V.blomstring(å), høst = å === 'høst', tg = V.tregrense(u.cy, u.cx);
     let f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
     const n = { blomst: 0, bregne: 0, siv: 0 }, STED = [null, 'eng', 'hei', 'skog', 'veikant'];
     const sett = (type, x, y, s, h, farge, moh) => { const m = vekst[type]; if (n[type] >= m.instanceMatrix.count || !fri(u, x, y)) return;

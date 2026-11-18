@@ -22,7 +22,9 @@
   const klemme = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 
   // Tregrensen i moh.: ca. 1100 m på Dovre (62° N), lavere nordover (ca. 0,85 m per km), høyere i sør. y = nord i EPSG:25833.
-  function tregrense(y) { return klemme(1100 - (y - 6.89e6) * 0.00085, 250, 1250); }
+  // x (øst, valgfri – runde 5, Rogaland: høyt, frodig gress på heia i 1000 moh.): mot vestkysten ligger tregrensen lavere (kystklima),
+  // 3,5 m per km vest for x = 150 000 (Claudes forslag: Sirdalsheiane ca. 860 m, Ryfylke ca. 780 m, Bergen ca. 600 m). Uten x som før.
+  function tregrense(y, x) { const vest = x === undefined || x !== x ? 0 : Math.max(0, 150000 - x) * 0.0035; return klemme(1100 - (y - 6.89e6) * 0.00085 - vest, 250, 1250 - vest); }
 
   // Vektene for hvert treslag på et punkt i skogen.
   // p: { moh, tg (tregrense), helning (grader), vann (meter til nærmeste vann), myr (0–1 andel myr rundt), hei (0–1 andel hei/lyng rundt) }

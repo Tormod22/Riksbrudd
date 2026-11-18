@@ -2484,7 +2484,7 @@ function gress3d() {
   if (R.gressSenter && Math.hypot(c.x - R.gressSenter[0], c.y - R.gressSenter[1]) < 12) return;
   R.gressSenter = [c.x, c.y];
   const MAKS = Math.round(m.instanceMatrix.count * (window.KVAL ? KVAL.p.gress : 1)), RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W, FELT = m.geometry.attributes.aFelt.array; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
-  const tg = window.Vegetasjon ? Vegetasjon.tregrense(u.cy) : 1100;
+  const tg = window.Vegetasjon ? Vegetasjon.tregrense(u.cy, u.cx) : 1100;
   const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), 1.05), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
@@ -3298,8 +3298,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=cfc53a1f89"></script>
-<script src="/dovre-fliser/spill/vegetasjon.js?v=8dc3b57123"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=177fd6c0b0"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=07968fde8f"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=88b44806a5"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=603e1178c0"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
