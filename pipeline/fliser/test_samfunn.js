@@ -84,6 +84,43 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
   const F2 = F0.ny(), S2 = S0.ny(9); const l0 = F2.personer[0].lojal; const e2 = S0.etterforsk(S2, F2, 5000, fast(0)); ok(!e2.funnet && F2.personer[0].lojal < l0, 'etterforskning uten forræder koster lojalitet');
   const u = S0.spionSteg(S0.ny(1), (() => { const f = F0.ny(); f.moral = 10; f.personer.forEach(p => { p.lojal = .05; }); return f; })(), L, 1440 * 30, { tid: 0, auto: false }, fast(0)); ok(!u.lekk && !u.hendelser.length, 'uten auto blir ingen forræder');
 }
+// ---------- barn og gamle blir syke selv (runde 4) ----------
+{ // mange forsøk: ti barn og ti gamle i en leir med fem syke voksne i ett døgn – hvor mange smittes?
+  let barn = 0, gamle = 0, dødB = 0, dødG = 0; const L = nyLeir();
+  for (let f = 0; f < 40; f++) { const F = F0.ny(), S = S0.ny(100 + f), r = S0.tilf(S); for (let i = 0; i < 10; i++) { S0.nyAvhengig(S, r, 'barn'); S0.nyAvhengig(S, r, 'gammel'); }
+    S0.smitt(S, F, r, 5, 0); for (let t = 0; t < 24; t++) S0.sykdomSteg(S, F, 60, { B: F0.behov(F, L, { årstid: 'sommer', avhengige: 20 }), tid: t * 60, auto: false }, r);
+    barn += S0.sykeAvh(S).filter(a => a.type === 'barn').length; gamle += S0.sykeAvh(S).filter(a => a.type === 'gammel').length; }
+  ok(barn > 0 && gamle > barn, `barn smittes sjeldnere enn gamle (${barn} barn mot ${gamle} gamle på 40 forsøk)`);
+  for (let f = 0; f < 40; f++) { const F = F0.ny(), S = S0.ny(300 + f), r = S0.tilf(S); for (let i = 0; i < 5; i++) { S0.nyAvhengig(S, r, 'barn'); S0.nyAvhengig(S, r, 'gammel'); }
+    for (const a of S.avhengige) a.syk = { dag: 0, lengde: 4 }; for (let t = 0; t < 5 * 24; t++) S0.sykdomSteg(S, F, 60, { B: F0.behov(F, L, { årstid: 'sommer', avhengige: 10 }), tid: t * 60, auto: false }, r);
+    dødB += S.døde.filter(q => q.hvem === 'barn').length; dødG += S.døde.filter(q => q.hvem === 'gammel').length;
+    if (f === 0) ok(!S0.sykeAvh(S).length && S.avhengige.every(a => a.immun), 'de som overlever, blir friske og tåler sykdommen'); }
+  ok(dødG > dødB * 4 && dødG > 0, `syke gamle dør langt oftere enn syke barn (${dødG} gamle mot ${dødB} barn av 200 + 200)`);
+  const F = F0.ny(), S = S0.ny(5), r = S0.tilf(S), a = S0.nyAvhengig(S, r, 'gammel'); a.syk = { dag: 0, lengde: 4 }; S0.settKarantene(S, F, true);
+  ok(a.karantene === true, 'karantenen gjelder også syke barn og gamle'); const m = S0.valg(S, F, { B: F0.behov(F, L, {}), tid: 0, F }).deler.Grålungen;
+  ok(m <= -(S0.REGLER.sykMoral + S0.REGLER.karanteneMoral), `en syk gammel trekker moralen (${m})`);
+  const F2 = F0.ny(), S2 = S0.ny(5), r2 = S0.tilf(S2); S0.nyAvhengig(S2, r2, 'gammel'); for (let t = 0; t < 30 * 24; t++) S0.sykdomSteg(S2, F2, 60, { B: F0.behov(F2, L, {}), tid: t * 60, auto: false }, r2);
+  ok(S2.avhengige.length === 1 && !S2.døde.length, 'uten sykdom dør ingen gamle (før døde de av og til uten å være syke)');
+}
+// ---------- spesialister fra oppdrag (runde 4) ----------
+{ const mk = (id, type) => ({ id, type, x: 196400 + id * 97, y: 6898900 - id * 53 });
+  const R = [...Array(400).keys()].map(i => S0.oppdragSpes(mk(i, 'redd'), 12345)), P = [...Array(400).keys()].map(i => S0.oppdragSpes(mk(i, 'post'), 12345));
+  const aR = R.filter(Boolean).length / 400, aP = P.filter(Boolean).length / 400;
+  ok(Math.abs(aR - S0.REGLER.oppdragSpes) < .08 && Math.abs(aP - S0.REGLER.postSpes) < .08, `redningsoppdrag gir spesialist i ${Math.round(aR * 100)} %, røverposter i ${Math.round(aP * 100)} %`);
+  ok(new Set(R.filter(Boolean)).size === Object.keys(S0.SPES).length, 'alle slags spesialister kan komme fra oppdrag');
+  ok(S0.oppdragSpes(mk(7, 'redd'), 1) === S0.oppdragSpes({ ...mk(7, 'redd'), x: 1, y: 2 }, 1) && S0.oppdragSpes(mk(3, 'hent'), 1) === null, 'fast per oppdrag (også når spillet flytter det), og «hent» gir ingen');
+  const i = R.findIndex(Boolean); ok(/^Blant dem som skal reddes, er en /.test(S0.oppdragSpesTekst(mk(i, 'redd'), R[i])), S0.oppdragSpesTekst(mk(i, 'redd'), R[i]));
+  const F = F0.ny(), p = F.personer[0]; S0.gjørSpesialist(p, 'lege'); ok(S0.harSpes(F, 'lege') || p.spes === 'lege', 'personen blir spesialist');
+}
+// ---------- sabotasje går gjennom Leir.skad (runde 4) ----------
+{ const L = L0.ny(); const brakke = sett(L, 'brakke', 0); L0.kjøpMateriale(L, 'tre', 50, betal); const r = L0.bygg(L, { type: 'brakke', x: 40, y: 0 }, betal); const plass = r.bygg;
+  // byggeplassen har brukt litt av materialene: resten skal tilbake på lageret når den ødelegges
+  plass.igjen = plass.totalt * .5; plass.hp = .2; const før = { ...L.lager };
+  const s1 = S0.saboter(L, fast(.99)); const tilbake = Object.keys(plass.mat || {}).some(k => (L.lager[k] || 0) > (før[k] || 0));
+  ok(s1 && s1.ødelagt && !L.bygg.includes(plass) && tilbake, 'en forræder kan ødelegge en byggeplass: ' + (s1 && s1.tekst));
+  const s2 = S0.saboter(L, fast(0)); ok(s2 && !s2.ødelagt && Math.abs(brakke.hp - (1 - S0.REGLER.sabotasjeHp)) < 1e-9 && L.bygg.includes(brakke), 'et ferdig bygg skades men står: ' + (s2 && s2.tekst));
+  brakke.hp = .35; ok(S0.saboter(L, fast(0)) === null && brakke.hp === .35, 'et hardt skadet bygg røres ikke');
+}
 // ---------- opplæring ----------
 { const F = F0.ny(), S = S0.ny(1), snekker = F.personer.find(p => p.yrke === 'snekker'), elev = F.personer.find(p => p.yrke === 'kokk'), f0 = elev.ferd.bygg;
   ok(S0.startOpplæring(S, F, elev.id, snekker.id, 'bygg').feil, 'en som ikke er god nok kan ikke lære bort');

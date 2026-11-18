@@ -45,6 +45,7 @@
     leirId = Math.round(S.leir.x) + ',' + Math.round(S.leir.y);
     let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
     T = nyT(); if (d && d.leir === leirId && d.d) { Object.assign(T, d.d); T.tellere = { ...nyT().tellere, ...(d.d.tellere || {}) }; T.hist = { ...E.Historie.ny(), ...(d.d.hist || {}) }; T.feller = Array.isArray(T.feller) ? T.feller : []; T.skader = T.skader || {}; T.lagre = T.lagre || {}; }
+    if (T.hund) E.Hund.fyll(T.hund);
     M = E.Slør.ny(S.leir.x, S.leir.y);
     try { const s = JSON.parse(localStorage.getItem(SLØR) || 'null'); if (s && s.leir === leirId) E.Slør.fraTekst(M, s.t); } catch (e) { /* begynner på nytt */ }
     maske = null; snik = new WeakMap(); hundVarslet = {}; meldt = {}; sistPos = null; sistTid = null; klar = true;
@@ -98,7 +99,12 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     lagreSekk(); lagre(); logg(id === 'bein' ? 'Beinet er spjelket. Du går nesten som før, og det gror fortere.' : 'Såret er renset og forbundet. Infeksjonen går tilbake.'); if (id === 'infeksjon') T.tellere.behandlet = (T.tellere.behandlet || 0) + 1; oppdater(); return true; }
   function fall(v) { if (!auto() || !klar) return; const f = E.Skader.fall(v, har('seig')); if (!f) return; const K = helse(); if (K) { K.hp = Math.max(5, K.hp - f.helse); K.skadd = performance.now(); }
     logg(`Du falt hardt (−${f.helse} helse).`); if (Math.random() < f.bein) fåSkade('bein', 'Du landet stygt'); }
-  function truffet(tap) { if (!auto() || !klar) return; if (Math.random() < E.Skader.skudd(tap)) fåSkade('infeksjon', 'Et skuddsår har blitt betent'); }
+  function truffet(tap) { if (!auto() || !klar) return; if (Math.random() < E.Skader.skudd(tap)) fåSkade('infeksjon', 'Et skuddsår har blitt betent'); hundTruffet(tap); }
+  // (runde 4) hunden ved siden av deg kan også bli truffet
+  function hundTruffet(tap) { const H = T.hund; if (!H || !går()) return 0; const s = E.Hund.truffet(H, tap, Math.random()); if (!s) return 0; E.Hund.fyll(H); H.hp = Math.max(0, H.hp - s);
+    if (H.hp <= 0) { logg(`${H.navn} ble skutt og døde. Den fulgte deg til det siste.`); T.hund = null; hundPos = null; } else engang('hundSkadet', true, `${H.navn} ble truffet og halter (${Math.round(H.hp)} %). Den gror i leiren.`); lagre(); return s; }
+  // gi hunden en rasjon fra sekken
+  function matHund() { const t = ting(); if (!t) return false; const g = E.Hund.mat(T.hund, t); if (g) { logg(g); return false; } delete meldt.hundSulten; lagreSekk(); lagre(); logg(`${T.hund.navn} fikk en rasjon og logrer.`); return true; }
   // temperaturen der du står: værets temperatur, 0,6 °C kaldere per 100 m over leiren (som i spill/verden.js)
   function tempHer() { const v = rot.VAER, t = v ? (v.regel && isFinite(v.regel.temp) ? v.regel.temp : v.temp) : null; if (!isFinite(t) || t === null) return null; const p = deg(), S = spill(); if (!p || !S || !S.leir || typeof hoydeVed !== 'function') return t; const dh = hoydeVed(p.x, p.y) - hoydeVed(S.leir.x, S.leir.y); return isFinite(dh) ? t - Math.max(0, dh) * .006 : t; }
   const sykestue = () => { const L = rot.LeirSpill && LeirSpill.tilstand(); return !!(L && rot.Leir && L.bygg.some(b => b.type === 'sykestue' && (Leir.virker ? Leir.virker(b) : Leir.ferdig(b)))); };
@@ -124,7 +130,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     lagreSekk(); lagre(); skitten = true; oppdater(); return n; }
 
   // ---------- hunden ----------
-  function fåHund(tekst) { if (T.hund) return false; T.hund = { navn: E.Hund.NAVN[Math.floor(Math.random() * E.Hund.NAVN.length)] }; hundPos = null; lagre(); si(`${T.hund.navn} følger deg`, (tekst || 'En hund har slått følge med deg.') + ' Den knurrer når fiender du ikke ser, er i nærheten.'); oppdater(); return true; }
+  function fåHund(tekst) { if (T.hund) return false; T.hund = E.Hund.fyll({ navn: E.Hund.NAVN[Math.floor(Math.random() * E.Hund.NAVN.length)] }); hundPos = null; lagre(); si(`${T.hund.navn} følger deg`, (tekst || 'En hund har slått følge med deg.') + ' Den knurrer når fiender du ikke ser, er i nærheten.'); oppdater(); return true; }
 
   // ---------- sniking og dekning ----------
   // mørket: 3D-natta (spill/natt3d.js), ellers krigens natt etter klokka (spill/krig.js)
@@ -137,7 +143,12 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function vegg(d, e) { const Q = r3(); if (!Q || !Q.ut || typeof hindring3d !== 'function') return false; const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy) || 1, x0 = d.x - Q.ut.cx, y0 = d.y - Q.ut.cy;
     for (let s = 1; s <= Math.min(R.dekning.veggAvstand, l - 1); s += .5) if (hindring3d(x0 + dx / l * s, y0 + dy / l * s)) return true; return false; }
   // faktoren på skaden fra én fiende (kampSteg i spillet-visning.js): 0 når de ikke har oppdaget deg
-  function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), vegg(d, e)); }
+  // (runde 4) ligger en bakketopp mellom deg og fienden? Terrenget langs linja fra 3D-utsnittet (kampen til fots skjer bare i 3D;
+  // hoydeVed i 2D gir 0 der kartet ikke er lastet). Utenfor utsnittet: ingen dekning.
+  function bakke(d, e) { const D = R.dekning, n = D.prøver, h = new Array(n), Q = r3(), u = Q && Q.ut; if (typeof hoyde3d !== 'function' || !u) return false;
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), x = d.x + (e.x - d.x) * t, y = d.y + (e.y - d.y) * t; if (Math.abs(x - u.cx) > u.S || Math.abs(y - u.cy) > u.S) return false; const v = hoyde3d(x, y); if (typeof v !== 'number' || !isFinite(v)) return false; h[i] = v; }
+    return E.Snik.bakkeImellom(h, D.øye[stilling()] || D.øye.stå); }
+  function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), vegg(d, e), bakke(d, e)); }
   function snikSteg(p, dt) { const rekk0 = snikRekkevidde(), rekkN = snikRekkevidde(true); let høyest = 0, nær = Infinity, rekk = rekk0;
     for (const e of fiender()) { const a = Math.hypot(e.x - p.x, e.y - p.y); if (a > 900) { snik.delete(e); continue; } const s = snik.get(e) || { nivå: 0, sett: false }; rekk = harNattsikt(e) ? rekkN : rekk0; s.nivå = E.Snik.steg(s.nivå, a, rekk, dt); const før = s.sett; s.sett = E.Snik.sett(s.sett, s.nivå); snik.set(e, s);
       if (s.sett && !før) logg(`${e.navn} har oppdaget deg!`); høyest = Math.max(høyest, s.nivå); nær = Math.min(nær, a); }
@@ -202,15 +213,20 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function lagMaske() { maske = document.createElement('canvas'); maske.width = maske.height = M.n; const g = maske.getContext('2d'), b = g.createImageData(M.n, M.n), a = Math.round(R.slør.alfa * 255);
     for (let j = 0; j < M.n; j++) for (let i = 0; i < M.n; i++) { const k = j * M.n + i, o = ((M.n - 1 - j) * M.n + i) * 4; b.data[o] = 12; b.data[o + 1] = 10; b.data[o + 2] = 8; b.data[o + 3] = (M.bit[k >> 3] >> (k & 7)) & 1 ? 0 : a; }
     g.putImageData(b, 0, 0); }
+  // Sløret tegnet i et lerret med 2D-kartets regel: skjerm-x = (X − vx0) / m, skjerm-y = (vy1 − Y) / m; W × H = lerretets størrelse.
+  // (runde 4) Brukes av 2D-kartet under, og kan brukes av et minikart: EventyrSpill.slørTegn(g, cx − R, cy + R, 2R / px, px, px)
+  // etter at kartet er tegnet (minikart2d.js eies av pakka «ui»; forslaget står i docs/natt/folk.md). Gir false når sløret er av.
+  function slørTegn(g, vx0, vy1, m, VW, VH) { if (!M || !klar || !T.slør || !auto()) return false; if (!maske) lagMaske();
+    const c = M.celle, W = M.n * c, sx = (M.x0 - vx0) / m, sy = (vy1 - (M.y0 + W)) / m, sw = W / m; g.save(); g.fillStyle = `rgba(12,10,8,${R.slør.alfa})`;
+    // utenfor rutenettet er alt uoppdaget
+    if (sy > 0) g.fillRect(0, 0, VW, sy); if (sy + sw < VH) g.fillRect(0, sy + sw, VW, VH - sy - sw); const y0 = Math.max(0, sy), y1 = Math.min(VH, sy + sw);
+    if (y1 > y0) { if (sx > 0) g.fillRect(0, y0, sx, y1 - y0); if (sx + sw < VW) g.fillRect(sx + sw, y0, VW - sx - sw, y1 - y0); }
+    // bare den synlige delen av masken tegnes (myke kanter når den forstørres)
+    const i0 = Math.max(0, Math.floor(-sx * m / c)), i1 = Math.min(M.n, Math.ceil((VW - sx) * m / c)), j0 = Math.max(0, Math.floor(-sy * m / c)), j1 = Math.min(M.n, Math.ceil((VH - sy) * m / c));
+    if (i1 > i0 && j1 > j0) { g.imageSmoothingEnabled = true; g.drawImage(maske, i0, j0, i1 - i0, j1 - j0, sx + i0 * c / m, sy + j0 * c / m, (i1 - i0) * c / m, (j1 - j0) * c / m); }
+    g.restore(); return true; }
   KROKER.tegn.push((g, vx0, vy1) => { if (!klar) return;
-    if (slørVises() && M) { if (!maske) lagMaske(); const c = M.celle, W = M.n * c, m = kam.m, sx = (M.x0 - vx0) / m, sy = (vy1 - (M.y0 + W)) / m, sw = W / m; g.save(); g.fillStyle = `rgba(12,10,8,${R.slør.alfa})`;
-      // utenfor rutenettet er alt uoppdaget
-      if (sy > 0) g.fillRect(0, 0, VW, sy); if (sy + sw < VH) g.fillRect(0, sy + sw, VW, VH - sy - sw); const y0 = Math.max(0, sy), y1 = Math.min(VH, sy + sw);
-      if (y1 > y0) { if (sx > 0) g.fillRect(0, y0, sx, y1 - y0); if (sx + sw < VW) g.fillRect(sx + sw, y0, VW - sx - sw, y1 - y0); }
-      // bare den synlige delen av masken tegnes (myke kanter når den forstørres)
-      const i0 = Math.max(0, Math.floor(-sx * m / c)), i1 = Math.min(M.n, Math.ceil((VW - sx) * m / c)), j0 = Math.max(0, Math.floor(-sy * m / c)), j1 = Math.min(M.n, Math.ceil((VH - sy) * m / c));
-      if (i1 > i0 && j1 > j0) { g.imageSmoothingEnabled = true; g.drawImage(maske, i0, j0, i1 - i0, j1 - j0, sx + i0 * c / m, sy + j0 * c / m, (i1 - i0) * c / m, (j1 - j0) * c / m); }
-      g.restore(); }
+    if (slørVises() && M) slørTegn(g, vx0, vy1, kam.m, VW, VH);
     if (T.feller.length && kam.m < 30) { g.save(); g.font = '11px sans-serif'; g.textAlign = 'center';
       for (const f of T.feller) { const x = (f.x - vx0) / kam.m, y = (vy1 - f.y) / kam.m; if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) continue; g.strokeStyle = '#e8c46a'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6, 0, 6.283); g.moveTo(x - 4, y - 4); g.lineTo(x + 4, y + 4); g.stroke();
         if (kam.m < 4) { g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText('Felle', x, y + 19); g.fillStyle = '#f0e2b0'; g.fillText('Felle', x, y + 19); } }
@@ -224,21 +240,33 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     g.globalAlpha = 1; g.font = 'bold 12px sans-serif'; g.textAlign = 'center';
     for (const f of T.feller) { const d = Math.hypot(f.x - Q.ut.cx - Q.bane.x, f.y - Q.ut.cy - Q.bane.y); if (d > 250) continue; const p = proj3(f.x, f.y); if (!p) continue; const t = d < R.felle.nær ? 'Felle' : `Felle ${Math.round(d / 5) * 5} m`; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, p[0], p[1] - 8); g.fillStyle = '#f0e2b0'; g.fillText(t, p[0], p[1] - 8); }
     g.restore(); });
-  function byggHund(Rr) { const d = [], pels = [.45, .33, .2], mørk = [.2, .15, .1], lys = [.8, .72, .58];
-    const boks = (x, y, z, sx, sy, sz, c) => { const q = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); q.translate(x, y, z); const n = q.attributes.position.count, f = new Float32Array(n * 3); for (let i = 0; i < n; i++) f.set(c, i * 3); q.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(q); };
+  // (runde 4) hunden er en gruppe: kroppen og fire bein som svinger fra hofta/skuldra når den går, og halen logrer.
+  // Ett materiale, ingen lys. hundFig = THREE.Group, hundFig.userData.bein = [fv, fh, bv, bh], .hale
+  function byggHund(Rr) { const pels = [.45, .33, .2], mørk = [.2, .15, .1], lys = [.8, .72, .58], mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const geo = liste => rot.MODELLER.samle(liste), boks = (d, x, y, z, sx, sy, sz, c) => { const q = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); q.translate(x, y, z); const n = q.attributes.position.count, f = new Float32Array(n * 3); for (let i = 0; i < n; i++) f.set(c, i * 3); q.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(q); };
     // ser mot +x, potene i origo
-    boks(0, 0, .42, .62, .22, .24, pels); boks(.12, 0, .36, .3, .2, .08, lys); boks(.38, 0, .58, .2, .18, .2, pels); boks(.52, 0, .54, .14, .1, .09, mørk); boks(.4, .07, .7, .05, .04, .08, mørk); boks(.4, -.07, .7, .05, .04, .08, mørk);
-    boks(-.36, 0, .56, .2, .05, .05, pels); for (const [x, y] of [[.22, .08], [.22, -.08], [-.24, .08], [-.24, -.08]]) boks(x, y, .15, .07, .07, .3, x > 0 ? pels : mørk);
-    const m = new THREE.Mesh(rot.MODELLER.samle(d), new THREE.MeshLambertMaterial({ vertexColors: true })); m.frustumCulled = false; m.userData.kilde = 'eventyr-visning.js'; Rr.scene.add(m); return m; }
-  function fjernHund() { if (hundFig) { if (hundFig.parent) hundFig.parent.remove(hundFig); hundFig.geometry.dispose(); hundFig.material.dispose(); hundFig = null; } }
-  KROKER.ramme3d.push(Rr => { if (typeof THREE === 'undefined' || !rot.MODELLER) return; if (hundFig && hundFig.parent !== Rr.scene) fjernHund();
+    const kropp = []; boks(kropp, 0, 0, .42, .62, .22, .24, pels); boks(kropp, .12, 0, .36, .3, .2, .08, lys); boks(kropp, .38, 0, .58, .2, .18, .2, pels); boks(kropp, .52, 0, .54, .14, .1, .09, mørk); boks(kropp, .4, .07, .7, .05, .04, .08, mørk); boks(kropp, .4, -.07, .7, .05, .04, .08, mørk);
+    const G = new THREE.Group(), m = new THREE.Mesh(geo(kropp), mat); G.add(m);
+    // beinet henger ned fra leddet (z 0,3)
+    const fram = [], bak = []; boks(fram, 0, 0, -.15, .07, .07, .3, pels); boks(bak, 0, 0, -.15, .07, .07, .3, mørk); const gF = geo(fram), gB = geo(bak);
+    const bein = [[.22, .08, gF], [.22, -.08, gF], [-.24, .08, gB], [-.24, -.08, gB]].map(([x, y, g]) => { const b = new THREE.Mesh(g, mat); b.position.set(x, y, .3); G.add(b); return b; });
+    const hd = []; boks(hd, -.1, 0, 0, .2, .05, .05, pels); const hale = new THREE.Mesh(geo(hd), mat); hale.position.set(-.3, 0, .56); G.add(hale);
+    G.userData = { bein, hale, kilde: 'eventyr-visning.js' }; G.traverse(o => { o.frustumCulled = false; o.userData.kilde = 'eventyr-visning.js'; }); Rr.scene.add(G); return G; }
+  function fjernHund() { if (hundFig) { if (hundFig.parent) hundFig.parent.remove(hundFig); const sett = new Set(); hundFig.traverse(o => { if (o.geometry && !sett.has(o.geometry)) { sett.add(o.geometry); o.geometry.dispose(); } if (o.material && !sett.has(o.material)) { sett.add(o.material); o.material.dispose(); } }); hundFig = null; } }
+  KROKER.ramme3d.push(Rr => { if (typeof THREE === 'undefined' || !rot.MODELLER) return; if (hundFig && (hundFig.parent !== Rr.scene || !hundFig.isGroup)) fjernHund();
     if (!klar || !T.hund || !Rr.fot || !Rr.ut || fører()) { if (hundFig) hundFig.visible = false; return; } if (!hundFig) hundFig = byggHund(Rr);
     const u = Rr.ut, a = Rr.fot.a, mx = Rr.bane.x - Math.sin(a) * 2.2 + Math.cos(a) * 1.5, my = Rr.bane.y + Math.cos(a) * 2.2 + Math.sin(a) * 1.5;
-    if (!hundPos || hundPos.u !== u || Math.hypot(hundPos.x - mx, hundPos.y - my) > 40) hundPos = { x: mx, y: my, u, r: 0, t: performance.now() };
-    const nå = performance.now(), dt = Math.min(.1, (nå - hundPos.t) / 1000); hundPos.t = nå; const dx = mx - hundPos.x, dy = my - hundPos.y, l = Math.hypot(dx, dy);
-    if (l > .6) { const v = Math.min(l, (l > 6 ? 7 : 2.6) * dt); hundPos.x += dx / l * v; hundPos.y += dy / l * v; hundPos.r = Math.atan2(dy, dx); }
+    if (!hundPos || hundPos.u !== u || Math.hypot(hundPos.x - mx, hundPos.y - my) > 40) hundPos = { x: mx, y: my, u, r: 0, t: performance.now(), fase: 0, gang: 0 };
+    // en skadet hund halter: halv fart
+    const halt = T.hund.hp !== undefined && T.hund.hp < 35 ? .5 : 1;
+    const nå = performance.now(), dt = Math.min(.1, (nå - hundPos.t) / 1000); hundPos.t = nå; const dx = mx - hundPos.x, dy = my - hundPos.y, l = Math.hypot(dx, dy); let v = 0;
+    if (l > .6) { v = Math.min(l, (l > 6 ? 7 : R.hund.gangFart) * halt * dt); hundPos.x += dx / l * v; hundPos.y += dy / l * v; hundPos.r = Math.atan2(dy, dx); }
+    const fart = dt > 0 ? v / dt : 0; hundPos.gang += ((fart > .2 ? 1 : 0) - hundPos.gang) * Math.min(1, dt * 8); hundPos.fase += fart * dt * 7;
     const g = rot.Interior3d ? Interior3d.høyde(hundPos.x, hundPos.y, (x, y) => (hoyde3d(u.cx + x, u.cy + y) - u.h0) * Rr.EX) : null, z = g !== null && g !== undefined ? g : (hoyde3d(u.cx + hundPos.x, u.cy + hundPos.y) - u.h0) * Rr.EX;
-    hundFig.visible = true; hundFig.position.set(hundPos.x, hundPos.y, z + (l > .6 ? Math.abs(Math.sin(nå / 90)) * .04 : 0)); hundFig.rotation.z = hundPos.r; });
+    // beina: diagonale par i takt (trav), utslag etter farten; halen logrer når den står
+    const sv = Math.sin(hundPos.fase) * (fart > 4 ? .75 : .5) * hundPos.gang, B = hundFig.userData.bein; B[0].rotation.y = sv; B[3].rotation.y = sv; B[1].rotation.y = -sv; B[2].rotation.y = -sv;
+    hundFig.userData.hale.rotation.z = Math.sin(nå / (hundPos.gang > .5 ? 260 : 130)) * (T.hund.mett < R.hund.spisUnder ? .15 : .5); hundFig.userData.hale.rotation.y = .5;
+    hundFig.visible = true; hundFig.position.set(hundPos.x, hundPos.y, z + Math.abs(Math.sin(hundPos.fase)) * .03 * hundPos.gang); hundFig.rotation.z = hundPos.r; });
 
   // ---------- takten: hvert sekund ----------
   function takt() { if (!klar) return; const nå = typeof tid !== 'undefined' ? tid : 0; if (sistTid === null) sistTid = nå; const timer = Math.max(0, Math.min(6, (nå - sistTid) / TIME)); sistTid = nå;
@@ -262,6 +290,11 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       // en hund slår følge
       if (!T.hund && ute && gikk && t && t.rasjon > 0) { const sikkert = (E.Historie.kapittel(bakgrunn(), T.hist) || { mål: {} }).mål.slag === 'hund'; if (E.Hund.kommer(T.hundGått, gikk, Math.random(), sikkert)) { t.rasjon--; if (!t.rasjon) delete t.rasjon; lagreSekk(); fåHund('En hund har fulgt etter deg en stund. Du ga den en rasjon, og nå blir den hos deg.'); } }
       if (p) snikSteg(p, 1);
+      // (runde 4) hunden trenger mat: i leiren spiser den av leirens mat, ute må du gi den en rasjon
+      if (T.hund) { const H = T.hund, h = E.Hund.steg(H, timer, 1, { leir: iLeiren(), mat: () => { const F = rot.FolkSpill && FolkSpill.tilstand(); if (F && F.mat >= 1) { F.mat -= 1; return true; } return false; } });
+        if (h.spiste) delete meldt.hundSulten;
+        engang('hundSulten', H.mett < R.hund.spisUnder && !h.spiste, `${H.navn} er sulten. Gi den en rasjon (knappen «Gi ${H.navn} mat») eller ta den med til leiren.`);
+        if (h.går) { logg(`${H.navn} har gått sin vei for å finne mat.`); T.hund = null; hundPos = null; lagre(); } }
       // hunden varsler om fiender du ikke ser
       if (T.hund && p) { const F = fiender().map(e => ({ id: e.id || e.navn, dx: e.x - p.x, dy: e.y - p.y, avst: Math.hypot(e.x - p.x, e.y - p.y), synlig: synlig(e) })); for (const v of E.Hund.varsler(F, hundVarslet, performance.now() / 1000)) si(`${T.hund.navn} ${v.tekst.split(' – ')[0]}`, v.tekst.split(' – ')[1] ? v.tekst.split(' – ')[1].replace(/^./, c => c.toUpperCase()) + '.' : ''); }
     }
@@ -277,7 +310,8 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     for (const [id, q] of Object.entries(T.skader)) d.push(['lapp', `${E.Skader.LISTE[id].navn}${q.behandlet ? ' (behandlet)' : ''}`, null, q.behandlet ? 'god' : '']);
     // alltid synlig: hva du har med av vann og mat
     d.push(['lapp', `Flaske ${t.vann || 0}/${R.tur.flaske} · rasjoner ${t.rasjon || 0}`, null, 'rolig']);
-    if (T.hund) d.push(['lapp', `Hund: ${T.hund.navn}`, null, 'god']);
+    if (T.hund) { const tl = E.Hund.tilstand(T.hund); d.push(['lapp', `Hund: ${T.hund.navn}${tl === 'i fin form' ? '' : ' (' + tl + ')'}`, null, tl === 'i fin form' ? 'god' : '']);
+      if (T.hund.mett < 85 && t.rasjon > 0 && !iLeiren()) d.push(['knapp', `Gi ${T.hund.navn} mat`, 'hundmat', T.hund.mett < R.hund.spisUnder ? 'viktig' : '']); }
     if (pc) d.push(['knapp', st === 'ligg' ? 'Reis deg (Z)' : 'Legg deg ned (Z)', 'ligg', '']);
     if (B && t.vann > 0 && B.tørst < 85) d.push(['knapp', `Drikk (${t.vann})${pc ? ' X' : ''}`, 'drikk', B.tørst < R.tur.tørstVarsel ? 'viktig' : '']);
     if (B && t.rasjon > 0 && B.sult < 70) d.push(['knapp', `Spis (${t.rasjon})${pc ? ' N' : ''}`, 'spis', B.sult < R.tur.sultVarsel ? 'viktig' : '']);
@@ -287,7 +321,14 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     if (iTilflukt()) d.push(['knapp', 'Tilflukt: sov og lager', 'tilflukt', '']);
     d.push(['knapp', `Lag noe${pc ? ' (B)' : ''}`, 'lag', '']);
     return d; }
-  const GJØR = { ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
+  // skadene dine som brikker i #varsler (spill/narhud.js leser window.VARSEL_TILLEGG); trykk = karakterarket
+  (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
+    if (!klar) return []; const t = ting() || {};
+    return Object.entries(T.skader).map(([id, q]) => { const D = E.Skader.LISTE[id]; if (!D) return null;
+      return { i: 'hjerte', k: q.behandlet ? '' : 'fare', t: D.navn, s: q.behandlet ? 'behandlet – gror' : t[D.kur] > 0 ? `bruk ${D.kur === 'spjelk' ? 'spjelka' : 'førstehjelp'} (i sekken)` : `trenger ${D.kurTekst.replace(/ \(.*\)$/, '')}`,
+        f: () => { if (rot.KarakterSpill) KarakterSpill.åpne(); } }; }).filter(Boolean);
+  });
+  const GJØR = { hundmat: () => matHund(), ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
   function oppdater() { const vis = klar && går() && !sover; rad.classList.toggle('på', vis);
     if (vis && !(rot.pekerNede && pekerNede(rad))) { const d = radInnhold(), n = JSON.stringify(d); if (n !== sistRad) { sistRad = n; rad.replaceChildren(...d.map(([type, tekst, gjør, kl]) => type === 'lapp' ? el('div', { klasse: 'lapp ' + kl }, tekst) : knapp(tekst, () => { GJØR[gjør](); oppdater(); }, { klasse: kl, 'data-ev': gjør }))); } }
     if (panelModus) visPanel(false); if (rot.KarakterSpill && KarakterSpill.erÅpen && KarakterSpill.erÅpen()) KarakterSpill.vis(false); }
@@ -328,14 +369,14 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, `Feltflaske: ${t.vann || 0} av ${R.tur.flaske} slurker`), e('small', {}, 'Fylles i leiren og ved vann. Du blir tørst og sulten av å gå.')), kn('Drikk', drikk, { id: 'evdrikk' })));
     if (iLeiren()) f.append(kn('Pakk for tur (vann og rasjoner)', pakk, { id: 'evpakk' }));
     f.append(kn('Lag noe', () => { KarakterSpill.lukk(); åpne('lag'); }, { id: 'evlag' }));
-    f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, T.hund ? `Hunden ${T.hund.navn}` : 'Ingen hund'), e('small', {}, T.hund ? 'Følger deg når du går, og knurrer når fiender du ikke ser, er nærmere enn 350 m.' : 'Går du ute med en rasjon i sekken, kan en hund slå følge. Du kan også finne en i et hus.'))));
+    f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, T.hund ? `Hunden ${T.hund.navn}` : 'Ingen hund'), e('small', {}, T.hund ? `Følger deg når du går, og knurrer når fiender du ikke ser, er nærmere enn 350 m. ${T.hund.navn} er ${E.Hund.tilstand(T.hund)} (helse ${Math.round(E.Hund.fyll(T.hund).hp)} %, mett ${Math.round(T.hund.mett)} %). Spiser av leirens mat i leiren – ute må du gi den rasjoner.` : 'Går du ute med en rasjon i sekken, kan en hund slå følge. Du kan også finne en i et hus.'))));
     if (T.feller.length) f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, `${T.feller.length} felle${T.feller.length > 1 ? 'r' : ''} ute`), e('small', {}, 'De står merket i kartet. Gå bort til dem for å sjekke.'))));
     f.append(e('h3', {}, 'Kartet'));
     f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, `Oppdaget: ${tall(M ? E.Slør.km2(M) : 0)} km²`), e('small', {}, 'Det du, lagene dine og leiren har sett. Resten ligger under et lett slør i 2D-kartet.')), kn(T.slør ? 'Slør: PÅ' : 'Slør: AV', () => { T.slør = !T.slør; lagre(); skitten = true; KarakterSpill.vis(true); }, { id: 'evslor' }))); });
 
   // ---------- det de andre filene spør om ----------
   Object.assign(ut, { start, lagre, takt, oppdater, T: () => T, slør: () => M, klar: () => klar, åpne, panel: () => panelModus,
-    drikk, spis, pakk, fyllFlaske, lag, settFelle, sjekkFelle, fåHund, fåSkade, behandle, sovNå, tilLager, fraLager, våpenTilLager, våpenFraLager, historieSteg, merkSlør, snikRekkevidde, snikSteg, snikNivå: () => snikSteg.nivå || 0,
+    drikk, spis, pakk, matHund, hundTruffet, bakke, slørTegn, fyllFlaske, lag, settFelle, sjekkFelle, fåHund, fåSkade, behandle, sovNå, tilLager, fraLager, våpenTilLager, våpenFraLager, historieSteg, merkSlør, snikRekkevidde, snikSteg, snikNivå: () => snikSteg.nivå || 0,
     settSett: (e, v) => snik.set(e, { nivå: v ? 1 : 0, sett: !!v }),
     // gange.js
     fart: () => (klar ? E.Skader.fart(T.skader) : 1), kanLøpe: () => !klar || E.Skader.kanLøpe(T.skader), fall,

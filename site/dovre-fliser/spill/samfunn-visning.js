@@ -77,15 +77,50 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   document.body.append(panel, pk, kort);
   const si = t => { if (t) logg(t); };
 
-  // ---------- KORTKØEN: ett kort med valg om gangen, og en pause mellom dem ----------
-  // Kortene med valg er #hendelse (spillet-visning.js), #formkort (scenario-visning.js) og #samfunnkort (her). Claudes forslag: minst
-  // KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises (flyktninger og en avslørt forræder venter bare på ledig plass).
-  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'formkort', 'samfunnkort']; let sistÅpent = -1e9;
-  const Kortkø = { åpent: () => KORT_ID.find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); }) || null,
-    // ledig(haster): er det plass til et nytt kort nå? I testene (webdriver) gjelder ingen pause.
-    ledig: haster => !Kortkø.åpent() && (haster || navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE), pause: KORT_PAUSE, sist: () => sistÅpent };
-  setInterval(() => { if (Kortkø.åpent()) sistÅpent = performance.now(); }, 1000);
+  // ---------- KORTKØEN: ett kort med valg om gangen, i den rekkefølgen de kom, og en pause mellom dem ----------
+  // Kortene med valg er #hendelse (spillet-visning.js), #samfunnkort (her), #formkort (scenario-visning.js) og #krigkort (strategi-visning.js).
+  // #hendelse og #samfunnkort går gjennom køen: Kortkø.ta(id) før kortet vises (false = vent, og meld deg med Kortkø.be(id, vis, { tittel })),
+  // Kortkø.ferdig(id) når det lukkes. Køen kaller vis() for det første som venter når plassen er ledig. #formkort og #krigkort (seier, tap)
+  // er utenfor køen: står ett av dem oppe, viker kortene i køen (de skjules og settes først i køen igjen) – så står aldri to kort oppå
+  // hverandre. Et kort som venter, vises som brikken «Et kort venter» i #varsler (trykk = vis det nå). #flytkort er en statuslinje uten
+  // valg og er ikke med. Claudes forslag: minst KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises av seg selv
+  // (en avslørt forræder slipper pausen; i testene – webdriver – gjelder ingen pause).
+  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'samfunnkort', 'formkort', 'krigkort']; let sistÅpent = -1e9, eier = null, kø = [], straks = null; const visFor = {}, tittelFor = {};
+  const kortSynlig = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på')); };
+  const pauseOk = () => navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE;
+  const Kortkø = {
+    // kortet som står oppe nå (eieren først), ellers null
+    åpent: () => (eier && kortSynlig(eier) ? eier : KORT_ID.find(kortSynlig) || null),
+    // er det plass til et nytt kort nå (ingen oppe, pausen er over og ingen venter)? Brukes før et nytt kort lages.
+    ledig: haster => !Kortkø.åpent() && (haster || pauseOk()) && !kø.length,
+    // får kortet id stå oppe nå? Gir true og plassen, eller false (vent).
+    ta(id, haster, vis) { if (vis) visFor[id] = vis;
+      if (KORT_ID.some(k => k !== id && kortSynlig(k))) { if (eier === id) { eier = null; Kortkø.be(id, null, { først: true }); } return false; }
+      if (eier === id) return true;
+      if (!haster && straks !== id && (!pauseOk() || (kø.length && kø[0].id !== id))) return false;
+      eier = id; kø = kø.filter(q => q.id !== id); return true;
+    },
+    // meld et kort som venter: vis() kalles når det er dets tur (den skal selv spørre ta(id))
+    be(id, vis, o = {}) { if (vis) visFor[id] = vis; else vis = visFor[id]; if (o.tittel) tittelFor[id] = o.tittel; const q = kø.find(x => x.id === id); if (q) { if (vis) q.vis = vis; if (o.tittel) q.tittel = o.tittel; return; }
+      const ny = { id, vis, tittel: o.tittel || tittelFor[id] || '' }; if (o.først) kø.unshift(ny); else kø.push(ny); },
+    // kortet er lukket: plassen er ledig, og pausen begynner
+    ferdig(id) { kø = kø.filter(q => q.id !== id); if (eier === id) { eier = null; sistÅpent = performance.now(); } },
+    // vis det første kortet som venter med en gang (brikken i #varsler)
+    nå() { const q = kø[0]; if (!q || !q.vis || Kortkø.åpent()) return false; straks = q.id; try { q.vis(); } finally { straks = null; } return Kortkø.åpent() === q.id; },
+    venter: () => kø.map(q => ({ id: q.id, tittel: q.tittel })), eier: () => eier, pause: KORT_PAUSE, sist: () => sistÅpent };
+  setInterval(() => {
+    if (eier && !kortSynlig(eier)) Kortkø.ferdig(eier);
+    // et kort utenfor køen (seier, tap) har kommet oppå: kortet i køen viker og står først i køen igjen
+    if (eier && KORT_ID.some(k => k !== eier && kortSynlig(k))) { const id = eier; eier = null; document.getElementById(id).classList.remove('på'); Kortkø.be(id, null, { først: true }); }
+    if (Kortkø.åpent()) { sistÅpent = performance.now(); return; }
+    // plassen er ledig: neste i køen får vise seg
+    const q = kø[0]; if (q && q.vis && pauseOk()) { try { q.vis(); } catch (e) { kø.shift(); } }
+  }, 1000);
   window.Kortkø = Kortkø;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => {
+    if (!kø.length || Kortkø.åpent()) return [];
+    return [{ i: 'snakk', k: '', t: kø.length === 1 ? 'Et kort venter' : `${kø.length} kort venter`, s: kø[0].tittel || 'trykk for å se', f: () => Kortkø.nå() }];
+  });
   // flytt 2D-kartet til et sted (brukes av varselkortet i kameravakt-visning.js)
   window.kartTil = (x, y, m) => { kam.x = x; kam.y = y; if (m && kam.m > m) kam.m = m; skitten = true; };
 
@@ -114,11 +149,13 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   }
 
   // ---------- kortene ----------
+  const kortTittel = c => (c.type === 'flyktninger' ? 'Flyktninger ved porten' : c.type === 'spion' ? 'Forræder avslørt' : (() => { try { return SR.kortTekst(S, F(), c, ktx()).tittel; } catch (e) { return 'Noe skjer i leiren'; } })());
   function visKort() {
-    const c = S && S.kort, f = F(); const annet = document.getElementById('hendelse');
-    const andre = Kortkø.åpent(), venter = !kort.classList.contains('på') && !Kortkø.ledig(c && c.type === 'spion');
-    if (!c || !f || (andre && andre !== 'samfunnkort') || venter) { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } return; }
-    const nøkkel = JSON.stringify(c) + '|' + Math.round(f.mat); if (nøkkel === sistKort) return; sistKort = nøkkel; kort.innerHTML = '';
+    const c = S && S.kort, f = F(), skjul = () => { if (kort.classList.contains('på')) { kort.classList.remove('på'); kort.innerHTML = ''; sistKort = ''; } };
+    if (!c || !f) { skjul(); Kortkø.ferdig('samfunnkort'); return; }
+    // vent på tur i kortkøen (forræderen haster)
+    if (!Kortkø.ta('samfunnkort', c.type === 'spion', visKort)) { skjul(); Kortkø.be('samfunnkort', visKort, { tittel: kortTittel(c) }); return; }
+    const nøkkel = JSON.stringify(c) + '|' + Math.round(f.mat); if (nøkkel === sistKort && kort.classList.contains('på')) return; sistKort = nøkkel; kort.innerHTML = '';
     if (c.type === 'flyktninger') { kort.append(el('h3', {}, 'Flyktninger ved porten'), el('p', {}, SR.flyktTekst(c)));
       const k = ktx(), ledig = k.B.senger - k.B.n - k.B.avh; kort.append(el('p', { style: 'font-size:13px;color:var(--ink-dim,#b5a888)' }, `Ledige senger: ${Math.max(0, ledig)} · mat: ${Math.round(f.mat)} rasjoner`));
       for (const v of SR.flyktValg(c)) { const b = knapp(v.t, () => svarFlykt(v.id), { 'data-valg': v.id }); if (v.id === 'mat' && f.mat < (c.voksne + c.barn + c.gamle) * SR.REGLER.flyktMat) b.disabled = true; kort.append(b); } }
@@ -167,8 +204,9 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     // barn og gamle
     const barn = S.avhengige.filter(a => a.type === 'barn'), gamle = S.avhengige.filter(a => a.type !== 'barn');
     p.append(el('h3', {}, `Barn og gamle (${S.avhengige.length})`), el('small', {}, S.avhengige.length ? 'De arbeider ikke, men spiser og trenger seng. Har de det bra, løfter de moralen – lider de, tærer det hardt.' : 'Ingen ennå. De kommer gjerne med flyktninger.'));
-    if (barn.length) p.append(el('div', {}, 'Barn: ' + barn.map(a => `${a.navn.split(' ')[0]} (${a.alder})`).join(', ')));
-    if (gamle.length) p.append(el('div', {}, 'Gamle: ' + gamle.map(a => `${a.navn.split(' ')[0]} (${a.alder})`).join(', ')));
+    const avhNavn = a => `${a.navn.split(' ')[0]} (${a.alder}${a.syk ? ', syk' : a.immun ? ', tåler Grålungen' : ''})`;
+    if (barn.length) p.append(el('div', {}, 'Barn: ' + barn.map(avhNavn).join(', ')));
+    if (gamle.length) p.append(el('div', {}, 'Gamle: ' + gamle.map(avhNavn).join(', ')), el('small', {}, 'De gamle tåler Grålungen dårligst – karantene, sykestue og lege hjelper.'));
     // spesialister
     const sp = f.personer.filter(q => q.spes);
     p.append(el('h3', {}, `Spesialister (${sp.length})`));
@@ -177,8 +215,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
       const rad = el('div', { klasse: 'rad' }, knapp(`★ ${T.navn}: ${q.navn}`, () => visPerson(q.id), { 'data-person': String(q.id) }));
       if (!virker) rad.append(knapp(`Sett på «${FR.OPPGAVE[T.oppgave].navn.toLowerCase()}»`, () => { FR.sett(f, q.id, T.oppgave); lagre(); vis(); })); p.append(rad, el('small', { klasse: virker ? '' : 'varsel' }, virker ? T.tekst : `Virker bare på «${FR.OPPGAVE[T.oppgave].navn.toLowerCase()}».`)); }
     // Grålungen
-    const syke = SR.sykeI(f);
-    p.append(el('h3', {}, 'Grålungen'), el('div', { klasse: syke.length ? 'varsel' : '' }, syke.length ? `${syke.length} syke: ${syke.map(q => q.navn.split(' ')[0]).join(', ')}.` : 'Ingen syke i leiren.'),
+    const syke = [...SR.sykeI(f), ...SR.sykeAvh(S)];
+    p.append(el('h3', {}, 'Grålungen'), el('div', { klasse: syke.length ? 'varsel' : '' }, syke.length ? `${syke.length} syke: ${syke.map(q => q.navn.split(' ')[0] + (q.type === 'barn' ? ' (barn)' : q.type === 'gammel' ? ' (gammel)' : '')).join(', ')}.` : 'Ingen syke i leiren.'),
       el('small', {}, 'Smitter fort når folk sover trangt. Karantene, sykestue og lege bremser den. I karantene arbeider ikke de syke.'),
       el('div', { klasse: 'rad' }, knapp(S.karantene ? 'Opphev karantenen' : 'Sett syke i karantene', () => { SR.settKarantene(S, f, !S.karantene); logg(S.karantene ? 'Karantene: de syke holdes for seg selv og arbeider ikke.' : 'Karantenen er opphevet.'); lagre(); vis(); }, { id: 'karantene', klasse: S.karantene ? 'på' : '' })));
     // lovene
@@ -227,6 +265,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     const u = SR.steg(S, f, l, d, ktx(), r());
     for (const h of u.hendelser) logg(h);
     if (u.lekk && window.AI && AI.minne) for (const side of Object.keys(AI.minne)) AI.minne[side].leir = true;
+    // en byggeplass ødelagt av en forræder: tegn leiren på nytt (som når fienden ødelegger noe)
+    if (u.ødelagt && window.LeirSpill) { if (LeirSpill.oppdater3d) LeirSpill.oppdater3d(); if (LeirSpill.lagre) LeirSpill.lagre(); skitten = true; }
     if (u.hendelser.length || u.kort) lagre();
   });
   // hvert sekund: kort, panel, falne soldater, mekanikeren
@@ -262,6 +302,22 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   // en overlevende funnet ved leting (leting-visning.js): av og til en spesialist
   function funnet(p) { if (!S || !p) return null; const q = SR.funnet(p, Math.random); if (q) { logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}! ${SR.SPES[q.spes].tekst}`); lagre(); } return q; }
 
+  // ---------- spesialister fra oppdrag (spillet-visning.js sender «riksbrudd-oppdrag» når et oppdrag er fullført) ----------
+  // Redningsoppdrag: en av dem dere fikk med, er spesialisten (står i oppdragslista på forhånd). Røverpost: fangen røverne holdt, blir med.
+  // et fast tall for leiren (S.frø er tilfeldighetsgeneratorens tilstand og endrer seg)
+  const leirFrø = () => { const sp = spill(); return sp && sp.leir ? (Math.round(sp.leir.x) * 17 + Math.round(sp.leir.y) * 3) >>> 0 : 0; };
+  const spesNavn = t => (SR.SPES[t].yrke === 'skarpskytter' ? 'skarpskytter' : SR.SPES[t].yrke);
+  function fraOppdrag(o, nye) {
+    if (!S || !o || !auto()) return null; const type = SR.oppdragSpes(o, leirFrø()), f = F(), l = L(); if (!type || !f) return null;
+    let p = null;
+    if (o.type === 'redd') { p = (nye || [])[0] || null; if (!p) { logg(`Blant dem dere reddet, var en ${spesNavn(type)} – men det var ingen ledig seng, så hen dro videre.`); return null; } }
+    else { const r = l ? FR.rekrutter(f, l, () => true) : {}; p = r.person || null; if (!p) { logg(`Røverne holdt en ${spesNavn(type)} som fange. Hen ville bli med, men det var ingen ledig seng.`); return null; } p.lojal = Math.round((.55 + Math.random() * .25) * 100) / 100; }
+    SR.gjørSpesialist(p, type); logg(`${p.navn} er ${spesNavn(type)} – en spesialist! ${SR.SPES[type].tekst}`); lagre(); if (window.FolkSpill) FolkSpill.vis(); return p;
+  }
+  window.addEventListener('riksbrudd-oppdrag', ev => { try { const d = ev.detail || {}; fraOppdrag(d.o, d.nye); } catch (e) { /* et oppdrag skal aldri stoppe av samfunnet */ } });
+  // oppdragene i lista som gir en spesialist (vises i fanen Mål i Leir-menyen)
+  const oppdragMedSpes = () => { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); if (!S || !O || !O.liste) return []; return O.liste.map(o => ({ o, type: SR.oppdragSpes(o, leirFrø()) })).filter(q => q.type); };
+
   // ---------- spesialistene og lovene i krokene ----------
   KROKER.ild.push((a, b) => {
     if (!S || !auto() || a.side !== 'blå') return 1; const sp = spill(), f = F(); if (!sp || !sp.leir || !f || Math.hypot(a.x - sp.leir.x, a.y - sp.leir.y) > SR.REGLER.skytterAvstand) return 1;
@@ -272,9 +328,22 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
 
   // ---------- Leir-menyen ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e2, knapp: k2 }) => {
-    if (!S || !auto()) return; const f = F(); if (!f) return; const syke = SR.sykeI(f).length;
+    if (!S || !auto()) return; const f = F(); if (!f) return; const syke = SR.sykeI(f).length + SR.sykeAvh(S).length;
     hode.append(e2('h3', { 'data-fane': 'mål' }, 'Samfunnet'), e2('small', {}, `${S.avhengige.length} barn og gamle · ${f.personer.filter(q => q.spes).length} spesialister` + (syke ? ` · ${syke} syke av Grålungen` : '') + (S.døde.length ? ` · ${S.døde.length} venter på begravelse` : '')),
       e2('div', { klasse: 'mat' }, k2('Samfunn ›', () => åpne(true), { id: 'samfunnknapp' })));
+    for (const { o, type } of oppdragMedSpes()) hode.append(e2('small', { 'data-spesoppdrag': String(o.id) }, `★ ${window.Spillet && Spillet.Oppdrag ? Spillet.Oppdrag.TYPER[o.type].navn : 'Oppdrag'} ${(o.meter / 1000).toFixed(1).replace('.', ',')} km mot ${o.retning}: ${SR.oppdragSpesTekst(o, type)}`));
+  });
+
+  // ---------- varselbrikkene øverst til venstre (spill/narhud.js leser window.VARSEL_TILLEGG) ----------
+  // Claudes forslag: fra så mange syke heter det «utbrudd», og etter så mange døgn blir de ugravlagte en fare for moralen
+  const UTBRUDD_SYKE = 3, DØDE_FARE = 1;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => {
+    const f = F(); if (!S || !f || !auto()) return [];
+    const ut = [], voksne = SR.sykeI(f).length, avh = S.avhengige.filter(a => a.syk).length, n = voksne + avh;
+    if (n) ut.push({ i: 'kors', k: 'fare', t: n >= UTBRUDD_SYKE ? 'Utbrudd av Grålungen' : 'Grålungen i leiren', s: `${n} syke` + (avh ? ` (${avh} barn/gamle)` : '') + (S.karantene ? ' · i karantene' : ' · ingen karantene'), f: () => åpne(true) });
+    if (S.døde.length) { const eldst = Math.min(...S.døde.map(d => d.tid || 0)), døgn = ((S.klokke || 0) - eldst) / SR.REGLER.døgn;
+      ut.push({ i: 'folk', k: døgn >= DØDE_FARE ? 'fare' : '', t: `${S.døde.length} ${S.døde.length === 1 ? 'død venter' : 'døde venter'} på begravelse`, s: 'ta farvel i Samfunn', f: () => åpne(true) }); }
+    return ut;
   });
 
   // ---------- start ----------
@@ -284,7 +353,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     falne = null; akk = 0; sistEkte = performance.now(); sistKort = ''; sistHtml = ''; visKort(); vis();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
+  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, leirFrø, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
     // for testene og vakten: sett en ny, tom tilstand
     nullstill: () => { const sp = spill(); S = SR.ny(1); S.klokke = typeof tid === 'number' ? tid : 0; sistKort = ''; falne = null; if (sp) lagre(); visKort(); vis(); } });
   window.SamfunnSpill = api;

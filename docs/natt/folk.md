@@ -112,3 +112,100 @@ Nye felt i `FolkRegler`: `oppgaveF` (krok for tempo per oppgave), `kjøpMat(F, n
   i én prøve; ikke undersøkt videre.
 - 3D PÅ NÆRT HOLD: figurene sto 5–8 m fra bygget; nå står de 1–3 m utenfor veggen etter byggets fotavtrykk (vakta 3 m fra tårnet,
   målt). De står fortsatt på bakken, ikke oppe i tårnet eller inne i bygget.
+
+## Runde 4 (18. nov dag) – pakke «folk», også det som sto igjen fra «karakter»
+ALLE NYE TALL ER CLAUDES FORSLAG (samlet i `Samfunn.REGLER` og `Eventyr.REGLER`).
+
+1. **VARSELBRIKKER** (#varsler øverst til venstre): «Grålungen i leiren» / «Utbrudd av Grålungen» (fra 3 syke; antall, barn/gamle,
+   karantene eller ikke), «N døde venter på begravelse» (rød etter ett samfunnsdøgn), skadene dine («Brukket bein – trenger en spjelk»,
+   «Infeksjon – bruk førstehjelp (i sekken)», «behandlet – gror») og «Et kort venter» (se 3). Trykk: Samfunn-panelet / karakterarket /
+   viser kortet. **Endring i narhud.js (pakka «ui»)**: to linjer rett før `return ut.slice(0, 5)` i `brikker()` – en løkke over
+   `window.VARSEL_TILLEGG` (lister av funksjoner som gir brikker `{ i, k, t, s, f }`; en feil i et tillegg fanges). Ingen annen endring.
+   Brikkene legges inn fra samfunn-visning.js og eventyr-visning.js. Skadelappene i raden til venstre (når du går) står som før.
+2. **SABOTASJE GJENNOM Leir.skad**: `Samfunn.saboter(L, r)` – byggeplasser (igjen > 0) og ferdige bygg over 40 % kan rammes; skaden
+   går gjennom `Leir.skad`, så en ødelagt byggeplass legger de ubrukte materialene tilbake på lageret (teksten sier hva), og et ferdig
+   bygg står igjen skadet. Byggesettets deler røres ikke. Visningen tegner leiren på nytt (`LeirSpill.oppdater3d`) når noe ble ødelagt.
+3. **ÉN KORTKØ** (`window.Kortkø` i samfunn-visning.js): `ta(id, haster, vis)` (få plassen eller vent), `be(id, vis, { tittel })`
+   (stå i kø), `ferdig(id)`, `nå()` (vis det første med en gang), `venter()`, `eier()`, `ledig()` (som før, men også «ingen i kø»).
+   #hendelse og #samfunnkort går gjennom køen i den rekkefølgen de kom; #formkort og #krigkort (seier/tap) er utenfor køen – kommer ett
+   av dem opp, viker kortet i køen (skjules og står først i køen igjen). Et kort som venter, vises som brikken «Et kort venter – tittel».
+   Pausen på 120 s mellom kortene gjelder fortsatt (ikke i testene). **Endring i spillet-visning.js (pakka «balanse»)**: i `visHendelse()`
+   to linjer – `Kortkø.ferdig('hendelse')` når kortet lukkes, og `if (!Kortkø.ta('hendelse', false, visHendelse)) { … Kortkø.be(…); return; }`
+   før kortet vises. Prøvd i nettleser: hendelse mens samfunnskortet står → venter (i kø), vises etter svaret; et krigkort oppå → hendelsen
+   viker og kommer tilbake når krigkortet er borte.
+4. **BARN OG GAMLE BLIR SYKE**: smittes av alle syke (også andre barn/gamle), barn ×0,6, gamle ×1,2 av en voksens sjanse; mens de er
+   syke, dør gamle med 0,1 per døgn og barn med 0,01 (lege ×0,5, stell i sykestue ×0,7); de som kommer gjennom, blir immune. Den gamle
+   regelen «gamle dør av og til under et utbrudd uten karantene» (`gammelDør`) er fjernet – nå må de være syke. Karantene gjelder dem
+   også, og de teller i moralen («Grålungen») og i panelet. `Samfunn.sykeAvh(S)`.
+   **3D (folk3d.js)**: høyst 8 barn/gamle som egne figurer i de samme instansnettene (nå 22 plasser): barn 0,62 store, friske farger,
+   raske, leker rundt brakka/leiren; gamle krumme (overkroppen bøyd 0,32 rad fram – overkroppen dreier om hofta, armene sitter på den),
+   langsomme, holder seg ved brakka. Syke går saktere og litt bøyd.
+5. **FOLK I BYGGENE**: operatører (overvåking) inne i kontrollrommet, kokken i kjøkkenet, stell og syke i karantene i sykestua (ellers
+   brakka), verksted i verkstedet – på en fri plass på gulvet (Interior.plan på omrisset fra `Interior3d.egne()`, ikke i møbler, vegger
+   eller døråpningen; gulvhøyden som interior3d.js). De går til døra, «går inn» og står 25–85 s, så ut igjen. Vakta klatrer opp:
+   plattformen 5,65 m × nivået over `LeirSpill.grunn3d(b).topp`, speider sakte fram og tilbake. Står en figur fast mot en vegg på vei
+   til døra, går den en omveg til siden (høyst fire ganger). Målt: operatørene z 2,94 = interiørets gulv 2,936; vakta 5,68 m over bakken.
+   `Folk3d.plassVed(b, i)` (til vakten).
+6. **SPESIALISTER FRA OPPDRAG**: `Samfunn.oppdragSpes(o, leirFrø)` – redningsoppdrag 35 %, røverposter 25 %, fast per oppdragsnummer og
+   leir (ikke stedet: spillet flytter oppdraget etter at det er laget). Står i fanen Mål under «Samfunnet» («★ Redd overlevende 0,9 km mot
+   øst: Blant dem som skal reddes, er en skarpskytter»). Når oppdraget er fullført: den første som ble reddet, blir spesialisten; ved
+   en røverpost blir fangen med (gratis, lojalitet 0,55–0,8) hvis det er en ledig seng. **Endring i spillet-visning.js**: i `fullfør()`
+   samles de rekrutterte i `nye`, og etter `varsel(...)` sendes hendelsen `riksbrudd-oppdrag` med `{ o, nye }` (samfunn-visning.js lytter).
+   Prøvd i nettleser: «Knut Ødegård er skarpskytter – en spesialist!» og «Kari Furuseth er lege …».
+   OBS: `S.frø` er tilfeldighetsgeneratorens tilstand (endrer seg) – bruk `SamfunnSpill.leirFrø()` for noe som skal være fast.
+7. **PORTRETTER I FOLK**: lista under «Vis folkene» har et lite portrett (30 × 37) per person fra portrettmotoren (samme ansikt som
+   personkortet; blob-adresse laget én gang per person, så innerHTML er kort og lik mellom tegningene). Trykk = personkortet. Sett på
+   PC og telefon.
+8. **KARAKTER** (fra «karakter»-pakka):
+   - HUNDEN: gruppe med kropp, fire bein og hale – beina svinger i trav etter farten, halen logrer (svakt når den er sulten), halter
+     (halv fart) når den er hardt skadet. Trenger mat: sulten etter 36 spilltimer eller 30 ekte minutter; i leiren spiser den en rasjon
+     av leirens mat, ute: knappen «Gi Bamse mat» (en rasjon fra sekken). Uten mat i 12 spilltimer / 10 ekte minutter går den sin vei.
+     Blir du truffet mens du går, blir hunden truffet med sjanse 0,25 (1,5 × tapet ditt); helse 100, gror 6 per spilltime (×4 i leiren),
+     dør på 0. `Eventyr.Hund.fyll/steg/mat/truffet/tilstand`, `EventyrSpill.matHund/hundTruffet`.
+   - DEKNING BAK BAKKETOPP: `Eventyr.Snik.bakkeImellom(h, øye)` på 32 høyder langs linja (bare i 3D-utsnittet): stikker terrenget opp over
+     linja fra øyet ditt (stå 1,6 / huk 0,9 / ligg 0,35 m) til fiendens (1,5 m), er skaden ×0,15 (ganges med de andre dekningene).
+     `EventyrSpill.bakke(d, e)`.
+   - SLØRET I MINIKARTET: minikart2d.js eies av «ui» og har ingen krok. Jeg har laget API-et: `EventyrSpill.slørTegn(g, vx0, vy1, m, W, H)`
+     (samme regel som KROKER.tegn). FORSLAG til «ui» – én linje i `tegn()` etter at kartet er tegnet (innenfor den runde klippen):
+     `if (window.EventyrSpill && EventyrSpill.slørTegn) EventyrSpill.slørTegn(g, cx - R, cy + R, 2 * R / P, P, P);` (cx, cy = midten,
+     R = radius i meter, P = størrelsen i punkter). Prøvd på et eget lerret: hjørnet (uoppdaget) alfa 77, midten (leiren) 0.
+     3D-minikartet (kompass.js) er ikke endret.
+9. **PRØVD I EKTE KAMP** (spilløkka i tempo 60, AI av, ett eget lag 100 m fra leiren mot et prøvelag 360 m unna, 25 ekte s per runde):
+   se tallene nederst.
+
+Tester: test_samfunn.js (nye: barn/gamle syke, sabotasje, oppdrag), test_eventyr.js (hunden, bakkedekning). Vakt: folk.js har nye krav
+(varsler, sabotasje, énKø, barnGamle, oppdragSpes, portretter, tårn – bare med 3D åpent, ellers «2D» –, hund, bakke, slør).
+
+### IKKE gjort / svakheter (runde 4)
+- Figurene inne i byggene står (snur seg litt innimellom; ingen gange inne, ingen sitting ved pultene), og de synes bare når du er
+  inne (veggene og taket skjuler dem).
+- Barn/gamle i 3D: høyst 8 vises; de gamle har grått/hvitt hår (håret er nå et eget instansnett, alle får sin hårfarge), men ingen
+  egne klær utover fargen.
+- Sløret er ikke i minikartene (bare API + forslag); 3D-minikartet er ikke vurdert.
+- Hunden har ingen lyd, og fienden sikter ikke på hunden med vilje (bare «truffet sammen med deg»).
+- Dekningen bak bakketoppen gjelder skaden du tar – fienden oppdager deg fortsatt (snik) som før.
+
+### Punkt 9: prøvd i ekte kamp (18. nov, spilløkka, ikke sim() kalt for hånd)
+Oppsett: Dovre-testsiden, AI av, alle andre lag flyttet bort, «1. lag, Dombås» (12 mann) 100 m fra leiren, et nytt rødt prøvelag 360 m
+unna, tempo 60 i 25 ekte sekunder (ca. 25 spillminutter) per runde, tre runder med og tre uten skytteren på vakt (våpenloven av).
+- Ildfaktoren fra KROKER.ild: 1,265 med skytteren på vakt, 1,1 når hen har fri – skytteren gir altså ×1,15 som regelen sier (1,1 kommer
+  fra en annen krok, ikke min).
+- Utfallet: MED skytter 2, 1 og 2 utslåtte fiender (helse igjen 9 / 10,5 / 10 av 12), UTEN 0, 1 og 0 (11,5 / 10,5 / 12). Fem mot én
+  utslåtte – mer enn ×1,15 skulle tilsi, så mye er tilfeldigheter med så få treff.
+- SÅ OGSÅ: prøvelaget skjøt aldri tilbake (egne lag 12 av 12 hele og fulle i alle seks rundene). Ikke undersøkt (ikke min pakke) –
+  kanskje et lag uten AI ikke åpner ild, eller ikke ser laget vårt. Pakka «krig»/«balanse» bør se på det.
+- Mekanikeren (verksted bygget, kjøretøy med 50 % skade 60 m fra leiren): i sanntid (1×) 0,50 -> 0,433 på 20 s (ca. 0,2 per spilltime
+  ganget med samfunnsklokka, helt etter ca. 2,5 minutter); med mekanikeren på «fri» 0,50 -> 0,50; 400 m unna 0,50 -> 0,50; i 60× helt
+  på 2,1 s, og loggen sier «Mekanikeren har reparert 1. lastebilkolonne.»
+
+### Prøvd i nettleser (runde 4)
+- Varselbrikkene (PC-bilde): «Utbrudd av Grålungen – 3 syke · ingen karantene», «1 død venter på begravelse», «Brukket bein – trenger en spjelk».
+- Kortkøen: se punkt 3. Vakta folk.js: ok på PC (1 s), mobil (0,4 s) og i 3D (4,5 s, med vakta i tårnet); etterpå er køen tom,
+  ingen brikker igjen og «riksbrudd-samfunn» fjernet.
+- 3D: bilde inne i kontrollrommet med to av tre operatører på gulvet (de står mellom pultene og skapene); vakta 5,68 m over bakken.
+  Fra lufta ser du dem ikke (taket). Hunden i tredjeperson ved siden av deg; beinvinklene mens den går 0,16 / 0,46 / 0,49 / −0,44,
+  og 0 når den står.
+- Portretter: PC 1400 og telefon 390 – ett portrett per person, lastet, trykk åpner personkortet.
+- Spesialister fra oppdrag: redning («Knut Ødegård er skarpskytter …») og røverpost («Kari Furuseth er lege …»), linja med ★ i fanen Mål.
+- Sløret: `slørTegn` på et 176 px lerret – hjørnet (uoppdaget) alfa 77, midten (leiren) 0.
+- Ingen sidefeil i noen av kjøringene.

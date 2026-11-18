@@ -62,4 +62,21 @@ let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); i
 ok(E.Skader.kulde(1, false, false, -12) === 3 * R.skade.kuldePerTime && E.Skader.kulde(1, false, false, 2) === 0 && E.Skader.kulde(1, true, false, -12) === 3 * E.Skader.kulde(1, true, false, 0), 'under −8 °C er kulda farlig uansett årstid (tre ganger sjansen)');
 ok(E.Tur.søvn(1).søvn === R.tilflukt.sovSøvn && E.Tur.søvn(.5).helse === R.tilflukt.sovHelse / 2 && E.Tur.søvn(-1).søvn === 0, 'avbrutt søvn gir en andel');
 { const k = E.Tur.kjøtt(25, 10), a = E.Tur.kjøtt(5, 10), n = E.Tur.kjøtt(5, -2); ok(k.med === 10 && k.igjen === 15 && a.med === 5 && a.igjen === 0 && n.med === 0 && n.igjen === 5, 'kjøtt: det som får plass i sekken, resten blir liggende'); }
+// (runde 4) dekning bak en bakketopp
+{ const S = E.Snik, flat = Array(32).fill(100), ås = flat.map((v, i) => v + (i > 10 && i < 20 ? 3 : 0)), lav = flat.map((v, i) => v + (i > 10 && i < 20 ? .8 : 0));
+  ok(!S.bakkeImellom(flat, 1.6) && S.bakkeImellom(ås, 1.6), 'en ås på 3 m mellom deg og fienden gir dekning, flatt terreng ikke');
+  ok(S.bakkeImellom(lav, .35) && !S.bakkeImellom(lav, 1.6), 'en lav kul skjuler deg bare når du ligger');
+  const opp = flat.map((v, i) => v + i * 2); ok(!S.bakkeImellom(opp, 1.6), 'en jevn bakke opp mot fienden gir ikke dekning');
+  ok(Math.abs(S.dekning('stå', false, true) - R.dekning.bakke) < 1e-9 && S.dekning('ligg', true, true) < S.dekning('ligg', true, false), 'bakketoppen ganges med de andre dekningene');
+}
+// (runde 4) hunden spiser og kan skades
+{ const H = E.Hund, RH = R.hund, h = H.fyll({ navn: 'Rex' }); ok(h.mett === 100 && h.hp === 100, 'en ny hund er mett og frisk');
+  let u = H.steg(h, RH.sultTimer * .7, 0, {}); ok(u.sulten && h.mett < RH.spisUnder && !u.spiste, `sulten etter ${Math.round(RH.sultTimer * .7)} spilltimer (mett ${Math.round(h.mett)})`);
+  let spist = 0; u = H.steg(h, 1, 0, { leir: true, mat: () => { spist++; return true; } }); ok(u.spiste && spist === 1 && h.mett === 100, 'i leiren spiser den en rasjon av leirens mat');
+  const h2 = H.fyll({ navn: 'Luna' }); H.steg(h2, 0, RH.sultEkteMin * 60, {}); ok(h2.mett === 0, `uten spilltid blir den sulten på ${RH.sultEkteMin} ekte minutter`);
+  u = H.steg(h2, RH.gårTimer + 1, 0, { leir: true, mat: () => false }); ok(u.går, 'uten mat (heller ikke i leiren) går den sin vei');
+  const t = { rasjon: 1 }, h3 = H.fyll({ navn: 'Mira', mett: 10 }); ok(H.mat(h3, t) === null && h3.mett === 100 && !t.rasjon && H.mat(h3, t) !== null, 'du kan gi den en rasjon fra sekken (og ikke når du er tom)');
+  ok(H.truffet(h3, 20, .1) === 20 * RH.skade && H.truffet(h3, 20, .9) === 0, 'den kan bli truffet når du blir truffet');
+  h3.hp = 30; ok(H.tilstand(h3) === 'hardt skadet', 'hardt skadet'); H.steg(h3, 2, 0, { leir: true }); ok(h3.hp === 30 + RH.gror * 2 * 4, 'gror fire ganger så fort i leiren');
+}
 console.log(feil ? feil + ' feil' : 'alle eventyrtestene ok'); process.exit(feil ? 1 : 0);
