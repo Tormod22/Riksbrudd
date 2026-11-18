@@ -191,3 +191,10 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   og en person bak en 60 m rygg synes fortsatt ikke. Alle regeltestene (alle pipeline/fliser/test_*.js) går som før – ingen eksisterende
   test endret svar. I nettleser: de to lagene på brekken ser nå hverandre begge veger.
 - Virkning i spillet: det lyse siktfeltet viser nå der en person ville synes (litt større i kupert terreng, likt på flatt).
+
+### 2. Ingen ammunisjon uten skudd
+- MÅLT (scratchpad natt/krig/p8.js, Dovre, to lag 120 m fra hverandre som ser hverandre, fem kamprunder): «Ild: bare svar» uten å være
+  beskutt (den røde var tom) ga 0 skudd, men ammunisjonen gikk fra 100 % til 90 % – like mye som med fri ild (5 skudd, 90 %). Årsak:
+  Forsyning.skyt trekker ammunisjon i KROKER.ild, og alle krokene kalles selv når en annen gir 0. Under våpenhvile: 100 % (rettet i del 1).
+- RETTET med én samlet endring i index.html, kamprunde(): ammunisjonen før krokene huskes (`ammo0 = a.ammo`) og legges tilbake når
+  produktet er 0 (`if (ildf <= 0) { a.ammo = ammo0; continue; }`). Etter: «bare svar» 0 skudd og 100 %, fri ild som før (5 skudd, 90 %).

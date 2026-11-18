@@ -851,7 +851,8 @@ function kamprunde() {
       const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || (!ser(a, b.x, b.y) && !(d < 300 && window.HERJER && (HERJER.has(a) || HERJER.has(b))))) continue;
       const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
       if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.våpen || m.rolle, d, f) > 0)) continue;   // ingen når fram
-      const ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) continue;   // f.eks. tom for ammunisjon (S4)
+      // ammunisjonen trekkes i en krok (Forsyning.skyt) – blir det ikke noe skudd (f.eks. «Ild: bare svar» uten å være beskutt), legges den tilbake
+      const ammo0 = a.ammo, ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) { a.ammo = ammo0; continue; }   // f.eks. tom for ammunisjon (S4)
       let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
       if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
       // over 1 (bonus, f.eks. bakgrunnen «soldat» i K1): hvert treff kan gi ett til
