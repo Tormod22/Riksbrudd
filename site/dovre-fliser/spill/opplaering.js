@@ -80,7 +80,7 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
     const p = el('div', 'prikker'); STEG.forEach(x => p.appendChild(el('i', tatt(T, x.id) ? 'g' : s && x.id === s.id ? 'n' : ''))); boks.appendChild(p); }
   function slå(på) { av = !på; skriv(AV, av ? '1' : null); if (på && Opplaering.ferdig(T)) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); } if (!på && typeof logg === 'function') logg('Opplæringen er slått av. Du finner den igjen i Leir-menyen under Mål.'); sistSteg = null; kjør(); }
   function kjør() {
-    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = $('hendelse') && synlig($('hendelse'));
+    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp')));
     if (!klar || start || kort) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
     if (T.leir !== leirNøkkel()) last();
     const nye = Opplaering.oppdater(T, bilde()); if (nye.length) lagre();

@@ -61,7 +61,7 @@
         if (e.side !== 'blå' || e.sti || (e.oppdrag && e.oppdrag.type) || Math.hypot(e.x - b.x, e.y - b.y) > R.baseRadius) continue;
         const erLag = !!e.menn, behov = erLag ? Forsyning.behovLag(e) : Forsyning.behovKj(e); if (behov < .01 || b.beholdning <= 0) continue;
         const brukt = Forsyning.fyll(e, b.beholdning, erLag); b.beholdning -= brukt;
-        if (brukt > 0) logg(`${e.navn} fikk ${erLag ? 'ammunisjon' : 'drivstoff'} på ${b.navn} (${Math.round(brukt * 100) / 100} t olje).`);
+        if (brukt > 0) logg(`${e.navn} fikk ${erLag ? 'ammunisjon' : 'drivstoff'} på ${b.navn} (${String(Math.round(brukt * 100) / 100).replace('.', ',')} t olje).`);
       } }
   });
 })();
