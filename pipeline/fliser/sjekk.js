@@ -659,7 +659,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         r.navn = [Etikett.antall(), Etikett.overlapp()];
         // tekstene
         r.tekst = !/Riksrådet|Hovedbase/.test(el('logg').textContent + el('hjelp').textContent) && /600×/.test(el('hjelp').textContent) && el('sHvor').previousElementSibling.textContent === 'du er';
-        const xs = id => el(id).getBoundingClientRect().left; r.kassa = !document.body.classList.contains('kort') || xs('sPenger') < xs('sH');
+        const xs = id => el(id).getBoundingClientRect().left; r.kassa = !document.body.classList.contains('kort') || !el('sH').offsetParent || xs('sPenger') < xs('sH');   // (18. nov: moh. kan være skjult som teknisk tall)
         localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-k2');
         Object.assign(kam, kam0); tempo = tempo0; valgt = null; visPanel(); skitten = true; return r; });
       const uiok = ui && !ui.hjelpOver && ui.hjelpEtter && ui.leirvalg && ui.steg2Topp && ui.meny && ui.filter && ui.lukker && ui.holdt && ui.oppdatert && ui.strøm && ui.banner && ui.zoom === true && ui.topp === true
