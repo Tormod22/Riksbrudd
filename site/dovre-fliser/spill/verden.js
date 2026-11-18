@@ -44,7 +44,8 @@
     brennbar: [.05, 1, .55, 0, 0, .3, .1, .45],
     // jakt: rasjoner per felt dyr, jaktlag: timer per jakt, dyr per jakt (minst, flest), området hviler (timer), rute (m)
     kjøtt: { elg: 60, rein: 25, moskus: 70, sau: 10, ku: 80 },
-    jakt: { timer: 6, dyr: { elg: [0, 1], rein: [1, 3] }, hviler: 72, rute: 3000, rekkevidde: 250, bredde: 1.3 },
+    // (huskFelt: så mange dyr du har felt selv huskes per leir, så de ikke kommer tilbake når 3D-utsnittet bygges på nytt)
+    jakt: { timer: 6, dyr: { elg: [0, 1], rein: [1, 3] }, hviler: 72, rute: 3000, rekkevidde: 250, bredde: 1.3, huskFelt: 600 },
     // (målPerPerson: én person på «fri» i leiren steller så mange mål; færre folk = kornet gror tilsvarende saktere)
     // åker: rasjoner per mål ved høsting, døgn til kornet er modent, såkorn (kr per mål), ny åker (kr og mål per rydding), mest
     åker: { perMål: 6, modning: 3, såkorn: 20000, rydd: 1e6, ryddMål: 20, maks: 200, nær: 500, målPerPerson: 40 },
@@ -64,7 +65,7 @@
 
   function ny() {
     return { versjon: 1, frost: 0, regn: 0, tørke: 0, soner: [], nesteSone: 1, brann: nyBrann(), åker: { mål: 0, sådd: false, grodd: 0, år: 0 },
-      jakt: { hviler: {}, lag: {} }, funn: { sett: {}, tatt: {} }, radio: { neste: 0, liste: [] }, tog: [], kulde: {}, auto: { på: false, start: 0, fra: 'sommer' } };
+      jakt: { hviler: {}, lag: {}, felt: [] }, funn: { sett: {}, tatt: {} }, radio: { neste: 0, liste: [] }, tog: [], kulde: {}, auto: { på: false, start: 0, fra: 'sommer' } };
   }
 
   // ---------- 31 vinter ----------

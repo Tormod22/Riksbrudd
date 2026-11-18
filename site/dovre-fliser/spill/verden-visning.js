@@ -30,6 +30,7 @@
     const S = spill(); if (!S || !S.leir) return; leirId = Math.round(S.leir.x) + ',' + Math.round(S.leir.y); let d = null;
     try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
     V = d && d.leir === leirId ? W.fraJSON(d) : W.ny(); klar = true; sistT = null; sistTime = null; stengt.clear(); brannLister(); skitten = true;
+    if (window.Dyr3d && Dyr3d.settFelte) Dyr3d.settFelte(V.jakt.felt || []);
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   window.addEventListener('pagehide', () => { if (skittenLagring) lagre(); });
@@ -315,6 +316,8 @@
     for (const sk of SKUDD) { if (settSkudd.has(sk)) continue; settSkudd.add(sk); const a = sk.a, b = sk.b; if (!a || !b) continue;
       const selv = !a.menn && a.side === 'blå' && Math.abs(Math.hypot(b.x - a.x, b.y - a.y) - 80) < 1;
       if (selv && window.Dyr3d && Dyr3d.fell) { const fx = (b.x - a.x) / 80, fy = (b.y - a.y) / 80, t = Dyr3d.fell(a.x, a.y, fx, fy, W.sikt);
+        // felte dyr huskes per leir (runde 4): de kommer ikke tilbake når 3D-utsnittet bygges på nytt
+        if (t && t.nøkkel) { const L = V.jakt.felt = V.jakt.felt || []; if (!L.includes(t.nøkkel)) L.push(t.nøkkel); if (L.length > R.jakt.huskFelt) L.splice(0, L.length - R.jakt.huskFelt); endret(); }
         if (t) { const mat = Math.round((R.kjøtt[t.art] || 0) * (t.ung ? .5 : 1)), F = FF(), navn = (window.Dyr && Dyr.ARTER[t.art] ? Dyr.ARTER[t.art].navn : t.art).toLowerCase();
           // (pakka «karakter») langt fra leiren bærer du kjøttet selv: EventyrSpill.felteDyr svarer true når det er lagt i sekken
           if (window.EventyrSpill && EventyrSpill.felteDyr && EventyrSpill.felteDyr(mat, navn, t.avst)) continue;
