@@ -11,6 +11,8 @@ module.exports = {
       const LS = LutSpill, I = UtstyrSpill.tilstand(), B = KarakterSpill.T().behov, K = SpilletSpill.K();
       const før = { I: JSON.stringify(I), S: JSON.stringify(LS.S()), B: { ...B }, hp: K.hp, tid, lagret: {}, ekstra: Utstyr.ekstraVekt };
       for (const k of ['riksbrudd-lut', 'riksbrudd-utstyr', 'riksbrudd-karakter']) før.lagret[k] = localStorage.getItem(k);
+      // i 3D: vent litt hvis et utsnitt bygges (en tidligere vakt kan ha flyttet kameraet)
+      for (let q = 0; q < 60 && typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.bygger; q++) await new Promise(r => setTimeout(r, 200));
       const i3d = typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.ut && !R3.bygger; d.i3d = !!i3d;
       let P = null, nøkler = [], o = null, husFør, gikk = false; const pn = document.getElementById('lutpanel');
       const pek = (el, type) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: 5, clientY: 5, pointerId: 7, button: 0 }));

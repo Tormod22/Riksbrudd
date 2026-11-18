@@ -226,6 +226,8 @@
       const g = G(id); let antall = g.n[0] + Math.floor((g.n[1] - g.n[0] + 1) * r(200 + j));
       antall = Math.min(antall, Math.floor((D.kg - kg(B) + 1e-9) / g.vekt)); if (antall <= 0) continue;
       if (g.kat === 'våpen' || g.kat === 'sekk') antall = Math.min(antall, Math.max(0, 1 - (B.t[id] || 0))); if (antall <= 0) continue;
+      // våpen bare i det første møbelet av hver type i bygget (ellers fikk en hytte med to garderober tre-fire våpen)
+      if (g.kat === 'våpen' && k > 0) continue;
       B.t[id] = (B.t[id] || 0) + antall;
       if (g.fersk) { const a = B.d[id] || (B.d[id] = []); for (let q = 0; q < antall; q++) a.push(D.kald ? [0, 0] : 0); }
     }
