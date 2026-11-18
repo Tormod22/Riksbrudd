@@ -41,7 +41,8 @@
     const n = Trussel.lagFor(nr, { soldater, tunge, dag: Math.floor(tid / 1440), faktor: window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1 }); let s = null;
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
-    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    const mann = Trussel.menn(nr, soldater);
+    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
     varsel(Trussel.varsel(nr, n, s)); skitten = true; meny(); return true; }
   function angrepSteg() { if (!T.aktiv) { if (auto() && (tid >= T.nesteSpill || ekte >= T.nesteEkte)) { T.nesteSpill = T.nesteEkte = Infinity; angrep(); } return; }
     const lag = ENHETER.filter(e => e.raid === T.aktiv), leir = S().leir;

@@ -26,6 +26,9 @@
     lagFor: (nr, o = {}) => { const B = Trussel.BALANSE, tak = Math.max(1, Math.ceil((o.soldater || 0) / B.mennPerLag)) + (o.tunge > 0 ? 1 : 0),
         dagTak = o.dag >= 0 ? 1 + Math.floor(o.dag / B.dagerPerLag) : 6;
       return Math.max(1, Math.round(Math.min(Trussel.lag(nr), tak, dagTak) * (o.faktor || 1))); },
+    // mann per røverlag (runde 2 av balansen, Claudes forslag): 4 + 2 per bølge, 6–12 – kjøring 3 hadde ett lag på 12 mot to egne
+    // lag på fire, og leiren falt i første bølge. Aldri mer enn soldatene dine + 2 (minst 5).
+    menn: (nr, soldater) => klem(Math.min(4 + 2 * nr, (soldater === undefined ? 99 : soldater) + 2), 5, 12),
     // ventetiden til neste bølge: spillminutter og ekte minutter med spilling (det som kommer først, gjelder)
     vent: nr => ({ spill: klem(27 - nr, 16, 26) * 60, ekte: klem(30 - nr * 2, 16, 28) }),
     // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
