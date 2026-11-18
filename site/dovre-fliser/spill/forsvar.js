@@ -46,6 +46,10 @@
   // (kjøring 5: på 50 m sto lagene i skogen uten å se røverne midt i leiren og løsnet ikke et skudd – nå 25 m)
   R.mot = { inne: 150, avstand: 25, ny: 40, nær: 30 };
   R.rep = { under: .95, reserve: 3e5, varsel: .98 };
+  // HJEM IGJEN (kjøring 6: lagene «trakk seg tilbake» 1,5 km etter stridsreglene sine, ble stående der i døgn, og var ikke hjemme
+  // da neste bølge kom). Et lag som trakk seg tilbake av seg selv, går hjem når det har gått «vent» spillminutter, står mer enn «fra» m
+  // fra leiren (og innenfor R.hent) og ingen fiende er nærmere enn «fiende» m. Claudes forslag.
+  R.hjem = { vent: 30, fra: 400, fiende: 900 };
   // Hvem går mot hvem: hvert lag mot den nærmeste røveren inne i leiren, og stiller seg mot.avstand m fra den på sin egen side.
   // lag: [{ x, y }], røvere: [{ x, y }] (bare de inne i leiren), leir: { x, y }. Gir [{ lag, fi, mål: { x, y } }].
   function motHerjere(lag, røvere, leir) { const ut = []; if (!røvere.length) return ut;

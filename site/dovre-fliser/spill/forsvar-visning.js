@@ -69,7 +69,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
     if (r.length && sett2.length) alarm.append(kn('Vis', () => { const e = sett2[0]; if (typeof på3d !== 'undefined' && på3d) return; kam.x = (e.x + L.x) / 2; kam.y = (e.y + L.y) / 2; kam.m = Math.max(1.5, Math.hypot(e.x - L.x, e.y - L.y) * 1.6 / Math.min(VW, VH)); skitten = true; }, { klasse: 'rolig' })); }
   // hvert sekund: alarmen, graving i stillingene, og slutten på angrepet
   setInterval(() => { const t = T(), aktiv = t ? t.aktiv : 0; if (sistAktiv && !aktiv) { if (satt || snap || vakt) opphev(true); motFerdig(); if (auto()) etterAngrep(); } if (aktiv && !sistAktiv && !snap) snap = null; sistAktiv = aktiv;
-    if (typeof tempo === 'undefined' || tempo > 0) { motSteg(); repSteg(); }
+    if (typeof tempo === 'undefined' || tempo > 0) { motSteg(); repSteg(); hjemSteg(); }
     if (satt && window.Feltarbeid) for (const s of ENHETER) if (s.forsvar && s.side === 'blå' && !s.sti && !s.planlegger && !s.nedgravd && s.graver == null && !s.forsvar.voll && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) < 25) Feltarbeid.startGrav(s);
     vis(); }, 1000);
 
@@ -117,6 +117,14 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   // røverne er ute av leiren (eller angrepet er over): lagene i forsvarsstilling går tilbake dit
   function motFerdig() { motMeldt = false; for (const s of ENHETER) { if (!s.motMål) continue; const gikk = motVår(s); delete s.motHerjer; delete s.motMål; delete s.motTid; if (gikk && s.forsvar && levende(s) && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) > 12) ordre(s, s.forsvar.x, s.forsvar.y, true); } }
 
+  // ---------- (runde 4) HJEM IGJEN: lag som trakk seg tilbake av seg selv (stridsreglene), går hjem når faren er over ----------
+  function hjemSteg() { if (!auto()) return; const L = leir(); if (!L) return; let n = 0;
+    for (const s of egne()) { const v = s.egetValg; if (!v || !/^trakk/.test(v.hva) || s.sti || s.planlegger || s.ombord || s.hjemSendt === v.t || tid - v.t < R.hjem.vent) continue;
+      const d = Math.hypot(s.x - L.x, s.y - L.y); if (d < R.hjem.fra || d > R.hent) continue;
+      if (ENHETER.some(e => e.side !== 'blå' && levende(e) && Math.hypot(e.x - s.x, e.y - s.y) < R.hjem.fiende)) continue;
+      if (!kanStille(s)) continue; s.hjemSendt = v.t; const a = Math.random() * 6.2832; ordre(s, L.x + Math.cos(a) * 40, L.y + Math.sin(a) * 40, true);
+      logg(`${s.navn} trakk seg tilbake tidligere og går nå hjem til leiren igjen.`); if (++n >= 3) break; } }
+
   // ---------- (runde 4) REPARASJON: byggelagene reparerer skadde bygg når de ikke har annet å gjøre ----------
   // Standard på (også i lagrede spill); valget lagres per leir i «riksbrudd-reparer». Bare mellom angrepene, og reserven blir i kassa.
   const REP_NØKKEL = 'riksbrudd-reparer', leirId = () => { const L = leir(); return L ? Math.round(L.x) + ',' + Math.round(L.y) : ''; };
@@ -151,5 +159,5 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
     alarm.append(kn('Lukk', () => { skade = null; vis(); }, { klasse: 'rolig' })); return true; }
 
   window.ForsvarSpill = { beredskap, sett, opphev, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
-    test: false, motSteg, motFerdig, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
+    test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

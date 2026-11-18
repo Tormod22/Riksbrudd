@@ -74,6 +74,10 @@ async function runde4(pg) {
       if (s && !d.mot) feil.push('laget hjemme gikk ikke mot røverne i leiren'); if (!d.vakt) feil.push('Leirvakta tok ikke opp våpen');
       T0.aktiv = 0; ENHETER.splice(ENHETER.indexOf(rv2), 1); FS.motFerdig(); FS.opphev(false);
       if (s && s.motMål) feil.push('laget gikk ikke tilbake etter røverne');
+      // et lag som trakk seg tilbake av seg selv for over 30 min siden og står 1 km unna uten fiender nær, går hjem
+      if (s) { s.x = L.x - 1000; s.y = L.y; s.sti = null; s.planlegger = false; s.egetValg = { hva: 'trakk seg tilbake', grunn: 'vakt', t: tid - 31 };
+        const nær = ENHETER.some(e => e.side !== 'blå' && levende(e) && Math.hypot(e.x - s.x, e.y - s.y) < Forsvar.R.hjem.fiende);
+        FS.hjemSteg(); d.hjem = s.hjemSendt === s.egetValg.t; if (!d.hjem && !nær) feil.push('laget som trakk seg tilbake, gikk ikke hjem'); delete s.egetValg; delete s.hjemSendt; }
       // PUNKT 3: et skadet bygg repareres av ledige byggelag, og skadevarselet etter angrepet har en knapp
       const b = { id: 9e6, type: 'container', x: L.x + 70, y: L.y + 70, ret: 0, igjen: 0, totalt: 30, pris: 5e5, mat: {}, nivå: 1, hp: .5, nr: 0, arbeid: null };
       LS.bygg.push(b); const p1 = OppstartSpill.tilstand().penger;
@@ -99,5 +103,5 @@ async function runde4(pg) {
   // ordrene over er asynkrone: vent til lagene er ferdige med å planlegge, og stopp dem der de sto
   await pg.waitForTimeout(1500);
   await pg.evaluate(() => { for (const [e, x, y, sti] of window.__balanseVakt || []) { e.x = x; e.y = y; e.sti = sti; e.siktSkitten = true; } delete window.__balanseVakt; skitten = true; });
-  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 4: ' + r.feil.join('; ') : `runde 4: herjing (bytte ${r.d.bytte}), røvere som gir opp, mot røverne, Leirvakta, reparasjon og skadevarsel ok`, data: r.d };
+  return { ok: !r.feil.length, tekst: r.feil.length ? 'runde 4: ' + r.feil.join('; ') : `runde 4: herjing (bytte ${r.d.bytte}), røvere som gir opp, mot røverne, Leirvakta, hjem igjen, reparasjon og skadevarsel ok`, data: r.d };
 }
