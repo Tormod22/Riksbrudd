@@ -24,6 +24,14 @@ forsvaret alene. Det uferdige utkastet (18f62fd) er beholdt og bygget videre på
 | Avbrutt bølge | røverne borte, bølgenummeret økt | samme bølge kommer igjen etter 20 spillminutter / 1 ekte min | `spillet-visning.js` start() | Røverlagene lagres ikke (lagring.js hopper over e.raid); å starte bølgen på nytt er enklere og sikrere enn å lagre dem. |
 | Første hus du leter i | kunne være tomt | aldri tomt: 4 rasjoner og 20 000 kr hvis det ellers var tomt | `leting-visning.js` | Ikke i testene. |
 | Butikk | 20 % tomme | aldri tomme (alltid mat) | `leting.js` | Butikken har fulle hyller i 3D. |
+| **Runde 2:** sabotører | bølge 2 (med ett lag), 3, 7 … | med spilldøgnet: tidligst bølge 4 og fra dag 5 (`Krig.SABOTASJE_FRA` = { bølge 4, dag 4 }); ellers «rett på» | `krig.js` røverVariant(…, dag), `krig-visning.js` | Kjøring 2: sabotørene i bølge 3 (dag 4) ødela aggregatet, og brannen etterpå tok resten. Testene (webdriver) gir ikke dagen – som før. |
+| Brann i leiren: spredning | som ellers i terrenget | ×0,25 innen 70 m fra leirens midte (grusplass) | `verden-visning.js` LEIRBRANN.grus/grusR | |
+| Brann i leiren: slokking | ingen | folk på «vakt» og «bygg» (friske) slokker ruter innen 150 m: 12 % per person per 10 spillminutter, høyst 70 % | LEIRBRANN.perPerson/maks/slokkR, slokkILeiren() | Med fire hjemme er brannen i leiren ute på 10–20 minutter. |
+| Brann i leiren: skade | `Math.max(1, hp × 0,2)` per 30 min – altså hele bygget på én gang (feil) | 0,12 av full helse per 30 min (ca. 4 timer fra helt til ødelagt) | LEIRBRANN.bygg | Byggene forsvant ett for ett så snart ruta brant. |
+| Brann i leiren: varsel | «Brannen tar X i leiren – det er ødelagt» | «Brann i leiren! N på vakt og bygg prøver å slokke» (eller: ingen er hjemme – sett folk på det), stopper spolingen (riksbrudd-hendelse type brann), «Brannen i leiren er slukket», «Brannen skader X (76 % igjen)» | `verden-visning.js` | |
+| Lite mat | logg ved under ett døgn, brikke ved 1,5 døgn | også logg ved under to døgn («kjøp mat, jakt, fisk, åker eller drivhus»), brikken «Lite mat» ved 2 døgn | `folk.js` (toDøgn), `narhud.js` | Kjøring 2: maten gikk fra 36 til 0 på fire døgn. |
+| Mann per røverlag | 12 (nyttLag) | 4 + 2 × bølge, 6–12, høyst soldatene + 2 (minst 5) | `spillet.js` Trussel.menn, `spillet-visning.js` | Kjøring 3: 12 røvere mot 8 forsvarere i bølge 1, og leiren falt. Ikke i testene. |
+| Mål og råd om mat | – | nytt mål i kapittel 1: «Ha mat til tre døgn» (matDøgn = mat / folk); rådet ved start nevner mat og drivhus | `maal.js`, `maal-visning.js`, `oppstart-visning.js`; tallet i vakta `spillform.js` er 19/15 mål | Startmaten (50) er ikke endret. |
 
 Kostnaden for en nybegynner som følger rådet (brakke, aggregat, tank, 500 l diesel, en tropp, et vakttårn): 26,5 mill. – 13,5 mill.
 igjen til mat, reparasjoner og kontrollrommet senere. Med kontrollrom første dag: 38,3 mill. (1,7 mill. igjen) – det er derfor rådet
@@ -67,7 +75,42 @@ tre døgn fordi leiren var borte – resten sa ikke noe om røverne:
   opplæringen sier ikke at det må gjøres. Det er de neste tingene å balansere (filene eies av andre pakker, så de er ikke rørt her):
   ingen sabotører de første bølgene/døgnene, brann som ikke tar hele leiren (avstand mellom byggene, slukking med folk), og et råd/mål om mat.
 - Dag 5: ingen bygg, ingen mat, moral 5, Vaktlaget slått ut, bølge 4 på vei. Kjøringen ble stoppet der (fristen).
-- Målet («står støtt etter sju døgn») er altså IKKE nådd ennå.
+- Målet («står støtt etter sju døgn») ble altså ikke nådd i kjøring 2.
+
+**Kjøring 3** (runde 2: ingen tidlige sabotører, brannen i leiren, varsel og mål for mat; skriptet kjøper 50 rasjoner når maten
+rekker under to døgn). Stoppet etter tre døgn:
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.5 mill. | 6 | 70 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra sør (1,9 km unna). Bølge 1. |
+| 2 | 13.5 mill. | 6 | 21 | 38 |  | Vaktlaget:1 Ola (deg):1 Tropp 1:0 | 1 (aktiv) | Vakttårn er ødelagt av Røvere 1.1!; Spolingen stoppet: et bygg i leiren er ødelagt.; Brakke er ødelagt av Røvere 1.1!; Aggregat er ødelagt av Røvere 1.1!; Dieseltank er ødelagt av Røvere 1.1! 500 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt. |
+| 3 | 13.5 mill. | 5 | 25 | 32 |  | Vaktlaget:1 Ola (deg):1 Tropp 1:0 | 1 (aktiv) | Kristin Nygård har forlatt gjengen (moralen er for lav). |
+
+- Denne gangen tapte forsvaret alt i bølge 1: ett røverlag på 12 mann mot Vaktlaget (4) og Tropp 1 (4) – Tropp 1 ble slått ut, og
+  røverne ødela vakttårn, brakke, aggregat og dieseltank (HERJER i leir-visning.js). I kjøring 2 vant de samme to lagene mot det
+  samme røverlaget – utfallet var på vippen. Derfor: røverlagene har nå 4 + 2 mann per bølge (6, 8, 10, 12), og aldri flere enn
+  soldatene dine + 2 (`Trussel.menn`, bare i ekte spill).
+
+**Kjøring 4** (all koden, også de små røverlagene). Stoppet etter seks døgn (fristen):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (* = under bygging, % = helse) | Lag (levende) | Bølger | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 13.0 mill. | 6 | 63 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 (aktiv) | Varsel: et røverlag er på vei mot leiren fra sør (2,0 km unna). Bølge 1. |
+| 2 | 13.5 mill. | 6 | 69 | 38 | brakke(95%) aggregat(95%) drivstofftank(95%) vakttårn(95%) | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 1 | Angrepet er slått tilbake! Dere tok 450 000 kr fra røverne. |
+| 3 | 2.2 mill. | 9 | 76 | 31 | brakke(89%) aggregat(90%) drivstofftank(90%) vakttårn(90%) kontrollrom | Vaktlaget:4 Ola (deg):1 Tropp 1:4 | 2 | Varsel: et røverlag er på vei mot leiren fra øst (2,1 km unna). Bølge 2.; Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne.; KONTROLLROM OK kontrollrom -40,40 |
+| 4 | 2.5 mill. | 9 | 77 | 63 | brakke(75%) aggregat(77%) drivstofftank(77%) vakttårn(76%) kontrollrom(87%) | Vaktlaget:3 Ola (deg):1 Tropp 1:3 | 3 | Varsel: et røverlag er på vei mot leiren fra øst (1,6 km unna). Bølge 3.; Angrepet er slått tilbake! Dere tok 750 000 kr fra røverne.; MAT kjøpte 50 rasjoner |
+| 5 | 2.5 mill. | 9 | 55 | 53 | brakke(23%) aggregat(27%) drivstofftank(25%) vakttårn(25%) kontrollrom(37%) | Vaktlaget:3 Ola (deg):1 Tropp 1:2 | 4 (aktiv) | Varsel: et røverlag er på vei mot leiren fra øst (1,7 km unna). Bølge 4.; Radio: Rykte: det skal ligge noe (forlatt leir) 7,2 km sørøst for leiren.; Radio: Rykte: det skal ligge noe (forlatt leir) 1,3 km øst for leiren. |
+| 6 | 2.5 mill. | 9 | 45 | 34 |  | Vaktlaget:3 Ola (deg):1 Tropp 1:2 | 4 (aktiv) | Brakke er ødelagt av Røvere 4.1!; Spolingen stoppet: et bygg i leiren er ødelagt.; Vakttårn er ødelagt av Røvere 4.1!; Dieseltank er ødelagt av Røvere 4.1! 156 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Aggregat er ødelagt av Røvere 4.1! 200 l diesel gikk tapt.; Spolingen stoppet: et bygg i leiren er ødelagt.; Kontrollrom er ødelagt av Røvere 4.1!; Spolingen stoppet: et bygg i leiren er ødelagt. |
+
+- Døgn 1–4 sto leiren: bølge 1–3 (ett lag hver) ble slått, byttet 450 000 / 600 000 / 750 000 kr, moralen 63–77, maten kjøpt i tide
+  (varselet kom), ingen sabotører og ingen brann. Kontrollrommet ble bygget på dag 3.
+- **Det som veltet leiren på dag 6:** bølge 4 (ett lag på 8) ble ikke slått ut. Røverne ble stående inne i leiren og ødela bygg etter
+  bygg (HERJER i leir-visning.js) i et døgn, mens Vaktlaget (3) og Tropp 1 (2) ikke fikk has på dem. Byggene var alt slitt ned til
+  23–37 % (skriptet reparerer aldri, og byggene tar skade i hver bølge). Neste ting å se på: at røvere som har herjet en stund
+  trekker seg med byttet (bølgen er over), at forsvarerne søker mot herjerne, og at opplæringen sier «reparer byggene» og
+  «lag en tropp til» (skriptet laget aldri mer enn én tropp på fire).
+- Målet (sju døgn) er dermed ikke nådd, men leiren holdt to døgn lenger enn i kjøring 2 og tre lenger enn i kjøring 1.
+
 
 
 ## Også gjort (punkt 5)

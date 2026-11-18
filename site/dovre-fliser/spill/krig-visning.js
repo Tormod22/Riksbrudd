@@ -241,7 +241,7 @@
     const Sp = window.SpilletSpill, Tr = Sp && Sp.T && Sp.T(), L = leir(); if (!Tr || !Tr.aktiv || !L) { ventere = []; return; }
     const lag = ENHETER.filter(e => e.raid === Tr.aktiv && levende(e)); if (!lag.length) return;
     let V = T.raid[Tr.aktiv];
-    if (!V) { if (lag.some(e => e.planlegger)) return; const id = K.røverVariant(Tr.aktiv, K.klokkeTime(tid), lag.length);
+    if (!V) { if (lag.some(e => e.planlegger)) return; const id = K.røverVariant(Tr.aktiv, K.klokkeTime(tid), lag.length, navigator.webdriver ? undefined : Math.floor(tid / 1440));
       V = { id, t: tid }; T.raid = { [Tr.aktiv]: V }; if (K.VARIANTER[id].tekst) logg(K.VARIANTER[id].tekst);
       if (id === 'to') for (const e of lag.slice(Math.ceil(lag.length / 2))) { const nx = 2 * L.x - e.x, ny2 = 2 * L.y - e.y;
         lagVindu([nx - 200, ny2 - 200, nx + 200, ny2 + 200], false).then(v => { if (Terreng.verdi(v, v.K, nx, ny2, 3) === 3 || !levende(e)) return; e.x = nx; e.y = ny2; e.sti = null; e.siktSkitten = true; ordre(e, L.x + (rng() - .5) * 80, L.y + (rng() - .5) * 80, true); skitten = true; }).catch(() => {}); }

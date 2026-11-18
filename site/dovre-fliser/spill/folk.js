@@ -193,11 +193,14 @@
     // maten: varsel når det er under ett døgn igjen, når den er tom, og en påminnelse hvert halve døgn så lenge folk sulter
     const liteMat = !sult && B.dager < 1;
     if (liteMat && !F.sist.liteMat) H.push('Maten tar slutt om under ett døgn: kjøp mat i Folk-panelet eller bygg drivhus.');
+    // (balansen 18. nov) et døgn tidligere: i gjennomspillingen gikk maten fra 36 til 0 på fire døgn uten at det ble sagt i tide
+    const toDøgn = !sult && !liteMat && B.dager < 2;
+    if (toDøgn && !F.sist.toDøgn && !F.sist.liteMat) H.push('Lite mat: den rekker under to døgn. Kjøp mat i Folk-panelet, send et lag på jakt, fisk med båt eller så en åker – eller bygg drivhus.');
     if (sult && !F.sist.sult) H.push('Leiren er tom for mat! Kjøp mat eller bygg drivhus.');
     const sultTid = sult ? (F.sist.sultTid || 0) + dt : 0;
     if (sult && F.sist.sult && Math.floor(sultTid / 720) > Math.floor((F.sist.sultTid || 0) / 720)) H.push('Folk sulter fortsatt og blir syke: kjøp mat i Folk-panelet.');
     if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller kjøp diesel til leiren, og bygg brakker.');
-    F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, sultTid };
+    F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, toDøgn, sultTid };
     return { hendelser: H, behov: B, sult, kald, døde };
   }
   // ---------- mat og rekruttering ----------
