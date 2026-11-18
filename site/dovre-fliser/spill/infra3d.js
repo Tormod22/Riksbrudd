@@ -93,11 +93,19 @@
     const z = 13, sp = span(z), sett = new Set(), linjer = [];
     for (const o of bruer) { const [x0, y0, x1, y1] = flisområde([o.bb[0] - 30, o.bb[1] - 30, o.bb[2] + 30, o.bb[3] + 30], z); for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) sett.add(x + ',' + y); }
     const fl = await Promise.all([...sett].map(k => { const [x, y] = k.split(',').map(Number); return hentFlis('vektor', z, x, y).then(t => [x, y, t]).catch(() => [x, y, null]); }));
-    for (const [x, y, t] of fl) { if (!t || !t.veg) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
+    for (const [x, y, t] of fl) { if (børPuste()) await pust(); if (!t || !t.veg) continue; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
       for (const o of t.veg.obj) { if (o.e.t === 4) continue; for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp - u.cx, my - b / e * sp - u.cy]), mx - u.cx, my - sp - u.cy, mx + sp - u.cx, my - u.cy)) linjer.push({ k: o.e.k, g: o.e.g ? 1 : 0, t: o.e.t || 0, P }); } }
     // hele veger (skjøtet over flisgrenser og lenker), så en bru kan forlenges langs vegen forbi enden av en lenke
-    return Veg.skjøt(linjer);
+    await pust(); const hele = Veg.skjøt(linjer); await pust();
+    for (const l of hele) l.bb = boksRundt(l.P);
+    return hele;
   }
+  // [xmin, ymin, xmax, ymax] for punktene P
+  function boksRundt(P) { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const p of P) { if (p[0] < a) a = p[0]; if (p[0] > c) c = p[0]; if (p[1] < b) b = p[1]; if (p[1] > d) d = p[1]; } return [a, b, c, d]; }
+  // (18. nov, hakk: i Bergen tok finnLinje 170 ms fordi hver bru prøvde alle vegene rundt alle bruene.) finnLinje bruker bare veger der
+  // brua sin første ende ligger høyst 10 m fra vegen – veger der enden ligger mer enn 10 m fra boksen rundt vegen, kan hoppes over på
+  // forhånd uten at svaret endres (avstanden til boksen er aldri større enn avstanden til vegen). Linjer uten boks tas alltid med.
+  const nærEnde = (linjer, A) => linjer.filter(l => !l.bb || (A[0] >= l.bb[0] - 10.5 && A[0] <= l.bb[2] + 10.5 && A[1] >= l.bb[1] - 10.5 && A[1] <= l.bb[3] + 10.5));
 
   // ---------- bruene ----------
   // lin0: linjen brua skal følge når den ikke kommer fra dataene (nødbruene)
@@ -106,8 +114,8 @@
     // feilLinje: en vegbru som ikke fant noen bilveg ved geometrien sin (NVDB-geometrien ligger da ved siden av vegen) – se nødbruer()
     let lin = lin0 || null, feilLinje = false;
     if (!lin && o.e.type === 2) lin = bru.length > 1 ? { P: R.delLinje(bru, 0, R.lengde(bru)), k: null, veg: false } : null;
-    else if (!lin) { lin = R.finnLinje(bru, linjer.filter(l => o.e.type === 1 ? l.g : !l.g), o.e.lengde, true);
-      if (!lin) { lin = R.finnLinje(bru, linjer, o.e.lengde); feilLinje = o.e.type === 0; } }
+    else if (!lin) { const nær = bru.length ? nærEnde(linjer, bru[0]) : linjer; lin = R.finnLinje(bru, nær.filter(l => o.e.type === 1 ? l.g : !l.g), o.e.lengde, true);
+      if (!lin) { lin = R.finnLinje(bru, nær, o.e.lengde); feilLinje = o.e.type === 0; } }
     if (!lin || lin.P.length < 2) return null;
     if (lin.P.some(([x, y]) => Math.abs(x) > u.S - 12 || Math.abs(y) > u.S - 12)) return null;
     // punktene langs brua med retning, normal og terrenghøyde
@@ -230,16 +238,21 @@
 
   // Vegene fra liv3d.js som går over en bru løftes opp på dekket; i gapet på en sprengt bru tas de bort (vegen deles i to).
   // Ferjesambandene ligger også i vegnettet: vegbiter som går mer enn 30 m over vann (uten bru) tas bort, så ingen veg ligger på fjorden.
-  function løftVeger(u) { for (const liste of [u.veger, u.gangveger]) if (liste) løftListe(u, liste); }
-  function løftListe(u, veger) {
-    const R = B(), ut = [];
+  // (18. nov, hakk: 220 ms i Bergen i ett strekk.) Generator: kroken tar pust mellom vegene (kjørAsynk), testene kjører alt i ett.
+  // Hver veg prøver bare bruene der boksen rundt brua når inn i boksen rundt vegen – samme svar, de andre ble hoppet over punkt for punkt.
+  function løftVeger(u) { kjørRett(løftVegerG(u)); }
+  function* løftVegerG(u) { for (const liste of [u.veger, u.gangveger]) if (liste) yield* løftListe(u, liste); }
+  function* løftListe(u, veger) {
+    const R = B(), ut = [], alle = u.bruer3d;
     for (const v of veger) {
-      let bit = [];
+      yield;
+      let bit = []; const vb = boksRundt(v.P), nære = alle.filter(m => m.bb[0] <= vb[2] && m.bb[2] >= vb[0] && m.bb[1] <= vb[3] && m.bb[3] >= vb[1]);
       const våt = v.P.map(p => iVann(u, p[0], p[1])), sjø = våt.map(() => false);
       for (let i = 0; i < våt.length;) { if (!våt[i]) { i++; continue; } let j = i; while (j < våt.length && våt[j]) j++; if (j - i >= 12) for (let k = i; k < j; k++) sjø[k] = true; i = j; }
       for (let i = 0; i < v.P.length; i++) {
+        if ((i & 255) === 255) yield;
         const p = v.P[i], q = v.P[Math.min(i + 1, v.P.length - 1)], o = v.P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1; let borte = false, påBru = false;
-        for (const m of u.bruer3d) {
+        for (const m of nære) {
           if (p[0] < m.bb[0] || p[0] > m.bb[2] || p[1] < m.bb[1] || p[1] > m.bb[3]) continue;
           const pr = R.projiser(m.P2, p[0], p[1]); if (pr.d > m.W / 2 + .5 || pr.s < .2 || pr.s > m.L - .2 || Math.abs(pr.ex * dx / l + pr.ey * dy / l) < .85) continue;
           if (m.sprengt && pr.s > m.L * R.GAP[0] - 1 && pr.s < m.L * R.GAP[1] + 1) { borte = true; break; }
@@ -253,10 +266,11 @@
     veger.length = 0; for (const v of ut) veger.push(v);
   }
   // trær som ville stukket opp gjennom brua tas bort
-  function ryddTrær(u) {
+  // (generator: kroken tar pust innimellom, se løftVeger)
+  function* ryddTrær(u) {
     if (!u.trær) return; const R = B();
     for (const n of Object.keys(u.trær)) { const a = u.trær[n]; if (!a || !a.length) continue; const ut = [];
-      for (let k = 0; k < a.length; k += 5) { const x = a[k], y = a[k + 1]; let vekk = false;
+      for (let k = 0; k < a.length; k += 5) { const x = a[k], y = a[k + 1]; let vekk = false; if (k % 2000 === 0) yield;
         for (const m of u.bruer3d) { if (x < m.bb[0] - 4 || x > m.bb[2] + 4 || y < m.bb[1] - 4 || y > m.bb[3] + 4) continue; const pr = R.projiser(m.P2, x, y); if (pr.d < m.W / 2 + 4 && pr.s > -3 && pr.s < m.L + 3) { vekk = true; break; } }
         if (!vekk) for (let q = 0; q < 5; q++) ut.push(a[k + q]); }
       u.trær[n] = new Float32Array(ut); }
@@ -364,7 +378,8 @@
   async function modeller(u, kopi) {
     const bruer = u.infra.filter(o => o.lag === 'bru'), ms = [];
     const linjer = bruer.length ? await vegLinjer(u, bruer) : [];
-    for (const o of bruer) for (const del of o.deler) { const m = bruModell(u, o, del, linjer); if (m) ms.push(m); }
+    for (const o of bruer) for (const del of o.deler) { if (børPuste()) await pust(); const m = bruModell(u, o, del, linjer); if (m) ms.push(m); }
+    await pust();
     if (u.veger) { const nye = nødbruer(u, ms); for (let i = ms.length - 1; i >= 0; i--) if (ms[i].flyttet) ms.splice(i, 1); for (const m of nye) ms.push(m); }
     if (!kopi) return ms;
     const k = { ...u, bruer3d: ms, gangveger: null, veger: u.veger ? u.veger.map(v => ({ ...v, P: v.P.map(p => p.slice()) })) : null }; løftVeger(k);
@@ -374,20 +389,35 @@
     u.bruer3d = []; u.kaier3d = [];
     if (!window.Bruer || !INFRA || !VIS.infra || !u.infra) return;
     u.bruer3d = await modeller(u, false);
-    await pust(); løftVeger(u); await pust(); ryddTrær(u); await pust();
+    await pust(); await kjørAsynk(løftVegerG(u)); await pust(); await kjørAsynk(ryddTrær(u)); await pust();
     for (const o of u.infra) if (o.lag === 'ferjekai') { const k = kaiModell(u, o); if (k) u.kaier3d.push(k); if (børPuste()) await pust(); }
   });
+  // Geometrien for bruene og kaiene (18. nov, hakk: i Bergen tok dette 0,1–0,5 s midt i byttet). Generator: lages i forbered3d-kroken
+  // i biter (én bru eller kai per bit, normalene ca. 10 000 trekanter om gangen), og sett3d legger bare nettene i scenen. Uten
+  // forberedelsen kjører sett3d den samme generatoren i ett (kjørRett) – samme nett.
+  function* lagGeo(u) {
+    const G = ny(), T = { veg: { pos: [], uv: [], idx: [] }, plain: { pos: [], uv: [], idx: [] }, gs: { pos: [], uv: [], idx: [] }, plass: { pos: [], uv: [], idx: [] } };
+    for (const m of u.bruer3d) { m.søyler = []; byggBru(u, m, G, T); yield; }
+    for (const k of u.kaier3d) { byggKai(u, k, G, T); yield; }
+    const pos = new Float32Array(G.pos); yield; const kol = new Float32Array(G.kol); G.pos = G.kol = null; yield;
+    // normalene i biter (normalerG i index.html: samme regning som three.js sin computeVertexNormals)
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(kol, 3));
+    if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
+    const typer = [];
+    for (const [type, t] of Object.entries(T)) { if (!t.idx.length) continue; yield;
+      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); tg.computeVertexNormals();
+      typer.push([type, tg]); }
+    return { g, typer };
+  }
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.infraKlar = u.bruer3d && (u.bruer3d.length || u.kaier3d.length) ? await kjørAsynk(lagGeo(u)) : null; });
   let mesh = [];
   KROKER.sett3d.push((u, R) => {
     for (const m of mesh) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } mesh = []; R.infra3d = mesh;
+    const klar = u.infraKlar; u.infraKlar = null;
     if (!u.bruer3d || (!u.bruer3d.length && !u.kaier3d.length)) return;
-    const G = ny(), T = { veg: { pos: [], uv: [], idx: [] }, plain: { pos: [], uv: [], idx: [] }, gs: { pos: [], uv: [], idx: [] }, plass: { pos: [], uv: [], idx: [] } };
-    for (const m of u.bruer3d) { m.søyler = []; byggBru(u, m, G, T); }
-    for (const k of u.kaier3d) byggKai(u, k, G, T);
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(G.pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(G.kol, 3)); g.computeVertexNormals();
+    const { g, typer } = klar || kjørRett(lagGeo(u));
     const hoved = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); hoved.name = 'infra3d'; R.scene.add(hoved); mesh.push(hoved);
-    for (const [type, t] of Object.entries(T)) { if (!t.idx.length) continue;
-      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); tg.computeVertexNormals();
+    for (const [type, tg] of typer) {
       const tm = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: tekstur(type), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide })); R.scene.add(tm); mesh.push(tm); }
   });
   window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok };

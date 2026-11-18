@@ -35,10 +35,25 @@
     return (x, y) => { const i = Math.max(0, Math.min(G - 1, Math.floor((x + u.S) / c))), j = Math.max(0, Math.min(G - 1, Math.floor((u.S - y) / c))); return A[j * G + i]; };
   }
 
+  // Det samme som Vegetasjon.vegRute (spill/vegetasjon.js: samme rutenett, samme bredder, samme oppslag), men med pust mellom vegene
+  // (18. nov, hakk: ca. 60 ms i ett strekk i Bergen). Endres vegRute der, må dette endres likt – vakta lys sammenligner dem.
+  async function vegRuteAsynk(veger) {
+    const C = 8, rute = new Map(), VB = V.VEGBREDDE, klemme = t => (t < 0 ? 0 : t > 1 ? 1 : t);
+    for (const v of veger || []) { if (børPuste()) await pust(); const r = (VB[v.k] || 4) / 2 + (v.by ? 2.5 : .8);
+      for (let i = 1; i < v.P.length; i++) { const a = v.P[i - 1], b = v.P[i];
+        for (let cx = Math.floor((Math.min(a[0], b[0]) - r - 3) / C); cx <= Math.floor((Math.max(a[0], b[0]) + r + 3) / C); cx++)
+          for (let cy = Math.floor((Math.min(a[1], b[1]) - r - 3) / C); cy <= Math.floor((Math.max(a[1], b[1]) + r + 3) / C); cy++) {
+            const k = cx * 100003 + cy; let l = rute.get(k); if (!l) rute.set(k, (l = [])); l.push(a[0], a[1], b[0], b[1], r); } } }
+    return (x, y, ekstra = 0) => { const l = rute.get(Math.floor(x / C) * 100003 + Math.floor(y / C)); if (!l) return false;
+      for (let q = 0; q < l.length; q += 5) { const ax = l[q], ay = l[q + 1], vx = l[q + 2] - ax, vy = l[q + 3] - ay, t = klemme(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1));
+        if (Math.hypot(ax + vx * t - x, ay + vy * t - y) < l[q + 4] + Math.min(ekstra, 3)) return true; }
+      return false; };
+  }
+
   // ---------- bygg3d: treslag ----------
   KROKER.bygg3d.push(async (u, { px, TW }) => {
     // nøyaktig avstand til vegene og fortauene (for blomster og gress – vegmasken u.påVeg er for grov i store utsnitt)
-    u.vegNær = u.veger && u.veger.length ? V.vegRute(u.veger) : null; await pust();
+    u.vegNær = u.veger && u.veger.length ? await vegRuteAsynk(u.veger) : null; await pust();
     // bryteren VEG_AV på window slår dette av: som før (bare gran og bjørk, ingen blomster) – for å måle og sammenligne
     if (!u.trær || !u.trær.gran || window.VEG_AV) return;
     const kv = await lagVindu([u.cx - u.S - 60, u.cy - u.S - 60, u.cx + u.S + 60, u.cy + u.S + 60], false, 9);
@@ -320,6 +335,8 @@
 
   // for testene (sjekk.js) og for å se etter: hvilke treslag som står i scenen og et utvalg av plantene
   window.Vegetasjon3d = {
+    // vegRuteAsynk(veger): som Vegetasjon.vegRute, i biter (vakta lys sammenligner svarene)
+    vegRuteAsynk,
     treslag: () => { const R = r3(); const s = new Set(); if (R && R.treMesh) for (const m of R.treMesh) { const g = m.geometry, a = m.userData.treslag || (g === TREGEO.gran || g === TREGEO.granEnkel ? 'gran' : g === TREGEO['løv'] || g === TREGEO['løvEnkel'] ? 'løv' : null); if (a && m.count > 0) s.add(a); } return [...s]; },
     antall: () => { const R = r3(), u = R && R.ut; if (!u || !u.trær) return {}; return Object.fromEntries(Object.entries(u.trær).map(([k, v]) => [k, v.length / 5])); },
     // utvalg: [x, y, art] for trær (alle slag) og planter (blomster, bregner, siv) slik de står i scenen nå

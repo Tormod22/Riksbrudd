@@ -103,40 +103,50 @@
       m.userData.kule = new THREE.Sphere(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2 + 60); m.frustumCulled = false;
       m.userData.fjernby = slag; m.userData.punkter = L; m.name = 'fjernby-' + slag; R.scene.add(m); T.nett.push(m); }
   }
-  function bygg(R, ring, u = R.ut) {
-    rydd(R); if (!u) return; T.u = u; T.ring = ring; T.nivå = nivå(); T.vær = værNøkkel(værNå());
-    const i = mob() ? 1 : 0, maksHolt = (REGLER.holt[T.nivå] || [0, 0])[i], maksHus = (REGLER.hus[T.nivå] || [0, 0])[i]; if (!maksHolt && !maksHus) return;
+  // Punktene for utsnittet u og ringen: skogholt inne i utsnittet og ute i fjernringen, tettsteder ute. Generator (yield for hver rad
+  // i rutenettene), så forbered3d-kroken kan lage dem på forhånd for byttet (18. nov, hakk: 30–70 ms i selve byttet); bygg() kjører
+  // den i ett ellers. Gir null når grafikknivået ikke har noen.
+  function* punkterG(u, ring, niv) {
+    const i = mob() ? 1 : 0, maksHolt = (REGLER.holt[niv] || [0, 0])[i], maksHus = (REGLER.hus[niv] || [0, 0])[i]; if (!maksHolt && !maksHus) return null;
     const S = u.S, holt = [], hus = [];
     // inne i utsnittet: der skogen er tynnet
     const pInne = inneAndel(u.treTall ? u.treTall.andel : 1), B = u.bunn;
     if (pInne > 0 && B && maksHolt) { const st = REGLER.inneRute, i0 = Math.ceil((u.cx - S) / st), i1 = Math.floor((u.cx + S) / st), j0 = Math.ceil((u.cy - S) / st), j1 = Math.floor((u.cy + S) / st);
-      for (let j = j0; j <= j1; j++) for (let a = i0; a <= i1; a++) { if (hash(a, j, 1) >= pInne) continue;
+      for (let j = j0; j <= j1; j++) { yield; for (let a = i0; a <= i1; a++) { if (hash(a, j, 1) >= pInne) continue;
         const X = (a + .15 + .7 * hash(a, j, 2)) * st, Y = (j + .15 + .7 * hash(a, j, 3)) * st, x = X - u.cx, y = Y - u.cy; if (Math.abs(x) > S - 14 || Math.abs(y) > S - 14 || Math.hypot(x, y) < REGLER.inneFra) continue;
         const bi = Math.floor((x + S) / (2 * S) * B.W), bj = Math.floor((S - y) / (2 * S) * B.W); if (B.gress[bj * B.W + bi] !== 2) continue;
         if (u.påVeg && u.påVeg(x, y)) continue; const moh = hoyde3d(X, Y, u); if (!(moh === moh)) continue;
-        holt.push({ x, y, z: (moh - u.h0) * R.EX, moh, f: hash(a, j, 4), s: .8 + .35 * hash(a, j, 5) }); } }
+        holt.push({ x, y, z: (moh - u.h0) * R3.EX, moh, f: hash(a, j, 4), s: .8 + .35 * hash(a, j, 5) }); } } }
     // ute i ringen: skog og tettsteder etter arealklassen i fjernringens punkter, høyden fra ringens nett
     const P = ring && ring.userData && ring.userData.punkt, pos = ring && ring.geometry && ring.geometry.attributes.position, R2 = ring && ring.userData.R2;
     if (P && pos && R2 && P.kl && P.ok && P.n) { const n = P.n, celle = 2 * R2 / (n - 1), til = Math.min(R2 - celle, S * REGLER.uteTil), st = REGLER.uteRute, z = k => pos.getZ(k), ok = k => !!P.ok[k];
       const i0 = Math.ceil((u.cx - til) / st), i1 = Math.floor((u.cx + til) / st), j0 = Math.ceil((u.cy - til) / st), j1 = Math.floor((u.cy + til) / st);
-      for (let j = j0; j <= j1; j++) for (let a = i0; a <= i1; a++) {
+      for (let j = j0; j <= j1; j++) { yield; for (let a = i0; a <= i1; a++) {
         const X = (a + .1 + .8 * hash(a, j, 12)) * st, Y = (j + .1 + .8 * hash(a, j, 13)) * st, x = X - u.cx, y = Y - u.cy; if (Math.abs(x) < S * .98 && Math.abs(y) < S * .98) continue;
         const k = Math.round((R2 - y) / celle) * n + Math.round((x + R2) / celle), K = P.kl[k]; if (K !== 1 && K !== 7) continue;
         const zz = nettHøyde(z, ok, n, R2, x, y); if (!(zz === zz)) continue; const moh = P.moh ? P.moh[k] : 0;
         if (K === 1) { if (maksHolt && hash(a, j, 14) < .8) holt.push({ x, y, z: zz - .5, moh, f: hash(a, j, 15), s: REGLER.uteStørrelse * (.8 + .4 * hash(a, j, 16)), ute: true }); }
-        else if (maksHus && hash(a, j, 17) < .7) hus.push({ x, y, z: zz + .3, moh, f: hash(a, j, 18), s: 1 + .5 * hash(a, j, 19), ute: true }); } }
+        else if (maksHus && hash(a, j, 17) < .7) hus.push({ x, y, z: zz + .3, moh, f: hash(a, j, 18), s: 1 + .5 * hash(a, j, 19), ute: true }); } } }
     // over taket: tynnes jevnt (etter holtets faste tall), inne og ute hver for seg – så skogen ikke slutter i en kant
     const kutt = (L, maks) => { if (L.length <= maks) return L; const andel = maks / L.length; return L.filter(p => brøk(p.f * 91.7) < andel); };
     const inne = kutt(holt.filter(p => !p.ute), Math.round(maksHolt * REGLER.inneDel)), ute = kutt(holt.filter(p => p.ute), maksHolt - inne.length);
-    holt.length = 0; holt.push(...inne, ...ute); const hus2 = kutt(hus, maksHus); hus.length = 0; hus.push(...hus2); T.holt = holt.length; T.hus = hus.length; T.ute = ute.length;
-    const RAD = Math.max(S, Math.min(R2 || S, S * REGLER.uteTil)), G = geo();
+    holt.length = 0; holt.push(...inne, ...ute); const hus2 = kutt(hus, maksHus); hus.length = 0; hus.push(...hus2);
+    return { holt, hus, ute: ute.length, RAD: Math.max(S, Math.min(R2 || S, S * REGLER.uteTil)) };
+  }
+  // klar: punktene laget på forhånd (forbered3d-kroken) – brukes når de er for samme utsnitt og grafikknivå
+  function bygg(R, ring, u = R.ut, klar) {
+    rydd(R); if (!u) return; T.u = u; T.ring = ring; T.nivå = nivå(); T.vær = værNøkkel(værNå());
+    const p = klar && klar.u === u && klar.nivå === T.nivå && !ring ? klar.p : kjørRett(punkterG(u, ring, T.nivå)); if (!p) return;
+    const { holt, hus, RAD } = p; T.holt = holt.length; T.hus = hus.length; T.ute = p.ute;
+    const G = geo();
     if (holt.length) lagNett(R, holt, G.holt, () => materiale(true), 'holt', RAD);
     if (hus.length) lagNett(R, hus, G.hus, () => materiale(false), 'hus', RAD);
   }
   function farg() { const V = værNå(), c = new THREE.Color(); T.vær = værNøkkel(V);
     for (const m of T.nett) { if (m.userData.fjernby !== 'holt') continue; m.userData.punkter.forEach((p, i) => { c.setRGB(...holtFarge(p.f, p.moh, V)); m.setColorAt(i, c); }); m.instanceColor.needsUpdate = true; } }
   // ringen som ligger i scenen når et nytt utsnitt settes inn, hører til det forrige utsnittet: vent på en ny
-  KROKER.sett3d.push((u, R) => { T.gammel = R.scene.getObjectByName('fjernring') || null; bygg(R, null, u); T.teller = 0; });
+  KROKER.sett3d.push((u, R) => { T.gammel = R.scene.getObjectByName('fjernring') || null; bygg(R, null, u, u.fjernbyKlar); u.fjernbyKlar = null; T.teller = 0; });
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { const niv = nivå(); u.fjernbyKlar = { u, nivå: niv, p: await kjørAsynk(punkterG(u, null, niv)) }; });
   KROKER.ramme3d.push(R => {
     if (!R.ut) return; if (!U.uFjKam.value) U.uFjKam.value = new THREE.Vector3(); U.uFjKam.value.copy(R.cam.position);
     if (T.u !== R.ut) { T.gammel = R.scene.getObjectByName('fjernring') || null; bygg(R, null); T.teller = 0; }
