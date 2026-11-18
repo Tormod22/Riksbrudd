@@ -150,8 +150,9 @@
   function symbol(g, k, x, y, valgtNå) {
     const r = 11, blå = k.side === 'blå';
     // formen fra det felles merkesettet (spill/merker.js, 18. nov): eget = rektangel, fiende = rute på spissen; tegnet inni er typen
-    if (window.Merker) Merker.tegn(g, x, y, { forhold: Merker.forhold(k.side || 'blå'), slag: 'tom', farge: blå ? '#3b5878' : typeof sidefarge === 'function' ? sidefarge(k.side, 'farge') : '#8f3c2f', valgt: valgtNå, r });
-    else { g.fillStyle = blå ? '#3b5878' : '#8f3c2f'; g.strokeStyle = valgtNå ? '#f0d79a' : '#e7dcc3'; g.lineWidth = valgtNå ? 2.5 : 1.3;
+    // runde 4: hele merket (form, tegnet for typen og antallet) kommer fra merkesettet
+    if (window.Merker) { Merker.tegn(g, x, y, { forhold: Merker.forhold(k.side || 'blå'), slag: 'kjøretøy', type: k.type, antall: k.antall, farge: blå ? '#3b5878' : typeof sidefarge === 'function' ? sidefarge(k.side, 'farge') : '#8f3c2f', valgt: valgtNå, r }); navn(g, k, x, y - 16); return; }
+    { g.fillStyle = blå ? '#3b5878' : '#8f3c2f'; g.strokeStyle = valgtNå ? '#f0d79a' : '#e7dcc3'; g.lineWidth = valgtNå ? 2.5 : 1.3;
       g.beginPath(); g.rect(x - r, y - r * .7, r * 2, r * 1.4); g.fill(); g.stroke(); }
     g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.2; g.beginPath();
     if (k.type === 'lastebil') { g.moveTo(x - r * .6, y - r * .1); g.lineTo(x + r * .6, y - r * .1); }

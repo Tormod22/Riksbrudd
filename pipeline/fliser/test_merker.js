@@ -11,6 +11,19 @@ const A = M.FORHOLD.map(areal); ok(Math.max(...A) / Math.min(...A) < 1.25, `form
 const kall = []; const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => { kall.push(k); }), set: (o, k, v) => { o[k] = v; return true; } });
 for (const f of M.FORHOLD) for (const s of M.SLAG) M.tegn(g, 50, 50, { forhold: f, slag: s, farge: '#345' }); M.tegn(g, 1, 1, { forhold: 'fiende', stiplet: true });
 ok(kall.filter(k => k === 'save').length === kall.filter(k => k === 'restore').length && kall.includes('clip'), 'alle merkene tegnes, og lerretets tilstand settes tilbake');
+// runde 4: hver kjøretøytype har sitt tegn (ulike tegnekall), antallet skrives bare for kolonner, og tilstanden settes tilbake
+{ const spor = t => { const k = []; const h = new Proxy({}, { get: (o, n) => (n in o ? o[n] : (...a) => { k.push(n + ':' + a.map(x => (typeof x === 'number' ? Math.round(x) : x)).join(',')); }), set: (o, n, v) => { o[n] = v; return true; } }); M.tegn(h, 50, 50, { forhold: 'eget', slag: 'kjøretøy', type: t, antall: t === 'lastebil' ? 4 : 1 }); return k; };
+  const T4 = M.KJØRETØY.map(t => spor(t).join('|')); ok(new Set(T4).size === M.KJØRETØY.length, `${M.KJØRETØY.length} kjøretøytyper gir hvert sitt merke`);
+  const lb = spor('lastebil'), sv = spor('stridsvogn'); ok(lb.some(k => /^fillText:4,/.test(k)) && !sv.some(k => /^fillText/.test(k)), 'antallet står ved kolonnen (4), ikke ved ett kjøretøy');
+  ok(lb.filter(k => k === 'save:').length === lb.filter(k => k === 'restore:').length, 'kjøretøymerket setter lerretet tilbake'); }
+for (const side of ['blå', 'rød', null]) M.tegn(g, 9, 9, { forhold: M.forhold(side), slag: 'tettsted', farge: '#456', r: 9 });
+ok(kall.filter(k => k === 'save').length === kall.filter(k => k === 'restore').length, 'tettstedsmerket for eget, fiendens og ingens by tegnes');
+// runde 4: tegnforklaringen – alle rader tegnes med merkesettet uten feil, og den dekker det oppdraget krever
+{ globalThis.Merker = M; const TF = require('../../site/dovre-fliser/spill/tegnforklaring.js'); let feilT = '';
+  const n0 = kall.length; for (const [, n] of TF.RADER) { try { TF.tegnEksempel(g, n, 48, 30); } catch (e) { feilT += n + ': ' + e.message + ' '; } }
+  ok(!feilT && kall.length - n0 > TF.RADER.length * 3, 'tegnforklaringen tegner alle ' + TF.RADER.length + ' eksemplene' + (feilT ? ' – ' + feilT : ''));
+  const N = TF.RADER.map(r => r[1]); ok(['eget', 'fiende', 'nøytral', 'lag', 'tettsted', 'kai', 'front', 'sikt', 'sistsett', 'marsj'].every(k => N.includes(k)) && M.KJØRETØY.every(t => N.includes('k-' + t)), 'tegnforklaringen har egne/fiender/nøytrale, lag, alle kjøretøy, tettsted, kai, front, siktfelt, sist sett og marsjrute');
+  ok(new Set(N).size === N.length, 'ingen rad står to ganger'); }
 // tegningene: gyldig SVG uten doble egenskaper
 const dobbel = s => [...s.matchAll(/<\w+([^>]*)>/g)].some(m => { const n = [...m[1].matchAll(/([\w-]+)=/g)].map(x => x[1]); return new Set(n).size !== n.length; });
 const alle = [...T.BYGG.map(t => T.bygg(t)), ...T.VÅPEN.map(t => T.våpen(t)), T.person('Kari'), T.person(7)];

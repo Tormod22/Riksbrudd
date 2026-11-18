@@ -66,8 +66,10 @@
         g.globalAlpha = .12; g.fillStyle = sidefarge(t.eier, 'lys'); g.fill('evenodd'); g.globalAlpha = 1;
         g.strokeStyle = sidefarge(t.eier, 'sti'); g.lineWidth = 2; g.setLineDash([8, 4]); g.stroke(); g.setLineDash([]); }
       const x = sx((by.bb[0] + by.bb[2]) / 2) - 34, y = sy((by.bb[1] + by.bb[3]) / 2) - 4, r = 9;   // vimpelen ved navnet
-      g.fillStyle = t.eier ? sidefarge(t.eier, 'farge') : 'rgba(40,34,26,.85)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.3;
-      g.beginPath(); g.moveTo(x - 4, y + r); g.lineTo(x - 4, y - r); g.lineTo(x + 8, y - r + 4); g.lineTo(x - 4, y - r + 8); g.closePath(); g.fill(); g.stroke();   // vimpel
+      // runde 4: tettstedsmerket fra det felles merkesettet (spill/merker.js) i eierens farge – vimpelen bare som reserve
+      if (window.Merker) Merker.tegn(g, x, y, { forhold: Merker.forhold(t.eier), slag: 'tettsted', farge: t.eier ? sidefarge(t.eier, 'farge') : 'rgba(40,34,26,.85)', r });
+      else { g.fillStyle = t.eier ? sidefarge(t.eier, 'farge') : 'rgba(40,34,26,.85)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(x - 4, y + r); g.lineTo(x - 4, y - r); g.lineTo(x + 8, y - r + 4); g.lineTo(x - 4, y - r + 8); g.closePath(); g.fill(); g.stroke(); }
       if (t.inntar) { const p = t.inntar.sek / R.innta; g.strokeStyle = sidefarge(t.inntar.side, 'sti'); g.lineWidth = 3;
         g.beginPath(); g.arc(x, y, 14, -Math.PI / 2, -Math.PI / 2 + 6.283 * p); g.stroke(); }
     }
