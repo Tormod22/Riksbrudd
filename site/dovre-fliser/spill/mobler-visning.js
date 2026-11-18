@@ -117,10 +117,11 @@
     if (!bær || !R.fot || !R.ut || !rot.Interior3d || typeof THREE === 'undefined') { fjernSpøkelse(); return; }
     const t = performance.now(); if (t - sistSjekk > 110) { sistSjekk = t; try { plassér(R); } catch (e) { console.warn('møbler:', e); bær.mål = null; } visBar(); }
     const T = bær.mål; if (!T) return;
-    if (!spøk) { if (!spøkMat) spøkMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .5, depthWrite: false });
+    // (gjennomsiktig med møbelets farger og en grønn eller rød glød oppå, så formen synes og fargen sier ja/nei – også i mørke rom)
+    if (!spøk) { if (!spøkMat) spøkMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: .55, depthWrite: false });
       spøk = new THREE.Mesh(Interior3d.møbelGeo(bær), spøkMat); spøk.renderOrder = 5; spøk.frustumCulled = false; spøk.userData.møbelSpøkelse = true; R.scene.add(spøk); }
     if (spøk.parent !== R.scene) R.scene.add(spøk);
-    spøk.position.set(T.m.x, T.m.y, T.z + .01); spøk.rotation.set(0, 0, T.m.a); spøkMat.color.setRGB(T.ok ? .55 : 1.4, T.ok ? 1.5 : .45, T.ok ? .6 : .4);
+    spøk.position.set(T.m.x, T.m.y, T.z + .01); spøk.rotation.set(0, 0, T.m.a); spøkMat.color.setRGB(T.ok ? .6 : 1, T.ok ? 1 : .55, T.ok ? .6 : .5); spøkMat.emissive.setRGB(T.ok ? .08 : .5, T.ok ? .42 : .06, T.ok ? .1 : .04);
   }
   KROKER.ramme3d.push(ramme);
 

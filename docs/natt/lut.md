@@ -159,3 +159,19 @@ Zomboid – inspirasjonen, ikke en kopi). Alle tall er Claudes forslag (REGLER i
   nattbordet har én nyttig ting trukket med byggets nummer (`Lut.NYTTIG` – mat, drikke, sekk, ammo, førstehjelp, sovepose, lommelykt).
   Testen: 300 av 300 boliger har noe, 39 ulike kjøkkenskap av 40.
 - S.ran og S.fylt lagres i «riksbrudd-lut».
+
+### Prøvd i runde 5
+- Regeltester: `test_mobler.js` (24), `test_lykt.js` (8), `test_lut.js` (52), `test_karakter.js`, `test_eventyr.js`.
+- I nettleser (PC): vaktene «lut og beholdere» (med møblene) og «eventyret til fots (karakter)» grønne; de innebygde vaktene i sjekk.js
+  «leting i hus» og «angrep, marked … sekken …» grønne. «interiør» gir geo = 4 i mitt oppsett – det samme som i runde 4 (også uten
+  lut-skriptene), ikke fra denne pakka.
+- Bilder (scratchpad natt5/lut/): m1-ved/-spøkelse/-satt.png (inne, PC), m2-pc-knapp/-ute/-satt.png (ute, PC), l1-pc-av/-på/-inne.png
+  (lykta om natta, PC), m3-tlf-lykt/-knapp/-spøkelse/-satt.png (telefon 390 px).
+
+### Ikke gjort / svakheter
+- 8 (tingene inne i kjøleskap og reoler i 3D) er ikke gjort – reolene har alt fyllvarer i modellen, og kjøleskapet er lukket.
+- Møbler: ingen animasjon av møbelet i hendene (spøkelset vises bare foran deg), ingen «Riv/demonter», og du kan ikke stable møbler
+  oppå hverandre. Utemøbler lages bare innenfor 3D-utsnittet. Fiendene flytter ikke møbler.
+- På telefon dekker møbellinja øverst toppen av minikartet mens du bærer noe.
+- Lykta lyser bare bakken/gulvet (ikke vegger og møbler) – det er prisen for å ikke legge et nytt lys i scenen.
+- «Husene lever» gjelder bare bygg i 3D-utsnittet (byggomrissene finnes bare der); 2D-kartet viser ikke hvilke hus som er ransaket.
