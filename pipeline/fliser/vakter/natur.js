@@ -28,7 +28,7 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     const u = R.ut, førBrent = window.BRENT, førBrann = window.BRANNER, tempoFør = tempo, X = u.cx + 40, Y = u.cy + 30, før = Effekter3d.tall();
     const a = { x: X, y: Y, navn: 'a', side: 'blå', menn: [] }, b = { x: X + 80, y: Y + 40, navn: 'b', side: 'blå', menn: [] }, sk = { a, b, til: performance.now() + 4000 };
     try {
-      Effekter3d.krater(X, Y, 4, true); window.BRENT = [{ x: X + 60, y: Y, r: 30 }, { tull: 1 }]; window.BRANNER = [{ x: X + 60, y: Y, r: 10 }]; SKUDD.push(sk); if (tempo === 0) tempo = 1;
+      Effekter3d.krater(X, Y, 4, true); window.BRENT = [{ x: X + 60, y: Y, r: 30 }, { x: X + 120, y: Y, r: 30, t: 5 }, { tull: 1 }]; window.BRANNER = [{ x: X + 60, y: Y, r: 10 }]; SKUDD.push(sk); if (tempo === 0) tempo = 1; if (Effekter3d.oppdater) Effekter3d.oppdater();
       for (let i = 0; i < 4; i++) await ramme();
       const t = Effekter3d.tall(); ut.eff = t;
       krev(t.kratere === før.kratere + 1, 'krateret ble ikke laget'); krev(t.brent >= 1, 'det brente området ble ikke tegnet'); krev(t.partikler > 0, 'ingen røyk eller ild');

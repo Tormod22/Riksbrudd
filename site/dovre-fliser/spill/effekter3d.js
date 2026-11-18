@@ -25,8 +25,8 @@
     skuddTakt: 5, kuleFart: 320, kuleLengde: 9,
     // kratere: høyst så mange, standard radius
     kratere: 40, kraterR: 4,
-    // brente områder: høyst så mange tegnes, og hvert har så mange ruter på tvers
-    brente: 14, brentRuter: 10,
+    // brente områder og branner: høyst så mange leses (de siste i lista)
+    brente: 160,
     // bare ting innen denne avstanden fra kameraet får røyk og støv (m)
     nær: 900,
   };
@@ -234,38 +234,50 @@
     if (R) R.effKraterNøkkel = '';
   }
 
-  // ---- brente områder: svidd bakke (et lite nett som følger terrenget og mørkner det) og svidde trær ----
-  const brente = () => områder(window.BRENT, REGLER.brente), branner = () => områder(window.BRANNER, REGLER.brente);
+  // ---- brente områder: svidd bakke (ett nett som følger terrenget og mørkner det) og svidde trær ----
+  // Pakka «verden» gir rutene som har brent (64 m brede, r = halve bredden): derfor regnes sverten ut til 1,5 × r, så naboruter
+  // går i ett og en enslig rute får en myk, ujevn kant. Nettet ligger på et fast rutenett i kartet, og hver rute tegnes én gang.
+  const brente = () => områder(window.BRENT, REGLER.brente).map(o => ({ ...o, r: o.r * 1.5 })), branner = () => områder(window.BRANNER, REGLER.brente);
   function ryddBrent(R) { for (const m of R.effBrent || []) { R.scene.remove(m); m.geometry.dispose(); } R.effBrent = []; }
+  const sum = L => { let s = L.length; for (const o of L) s += o.x * 3 + o.y * 7 + o.r * 13 + o.styrke; return s; };
   function stegBrent(R) {
-    const u = R.ut, om = brente(), nøkkel = u.cx + '|' + u.cy + '|' + (R.settNr || 0) + '|' + om.map(o => Math.round(o.x) + ',' + Math.round(o.y) + ',' + Math.round(o.r) + ',' + Math.round(o.styrke * 10)).join(';');
+    // lista leses bare hver 20. ramme (den endres sjelden)
+    if (R.effBrent && (T.brentTeller = (T.brentTeller || 0) + 1) % 20 && T.brentNøkkel !== '') return;
+    const u = R.ut, om = brente(), nøkkel = u.cx + '|' + u.cy + '|' + (R.settNr || 0) + '|' + sum(om);
     if (nøkkel === T.brentNøkkel && R.effBrent) return; T.brentNøkkel = nøkkel; ryddBrent(R);
     if (!R.effBrentMat) R.effBrentMat = new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-    for (const o of om) { const x0 = o.x - u.cx, y0 = o.y - u.cy; if (Math.abs(x0) > u.S + o.r || Math.abs(y0) > u.S + o.r) continue;
-      const N = REGLER.brentRuter, pos = [], kol = [], idx = [];
-      for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) { const x = x0 + (i / N * 2 - 1) * o.r, y = y0 + (j / N * 2 - 1) * o.r, d = Math.hypot(x - x0, y - y0) / o.r;
-        // ujevn kant: avstanden rykkes litt etter stedet
-        const dd = d * (1 + .18 * Math.sin((x + u.cx) * .21) * Math.cos((y + u.cy) * .17)), b = Math.max(0, Math.min(1, (1 - dd) * 2.4)) * o.styrke, c = 1 - .72 * b;
-        pos.push(x, y, zVed(R, x, y) + .09); kol.push(c, c * .97, c * .94); }
-      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i; idx.push(a, a + 1, a + N + 2, a, a + N + 2, a + N + 1); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3)); g.setIndex(idx);
-      const m = new THREE.Mesh(g, R.effBrentMat); m.renderOrder = 1; m.frustumCulled = false; R.scene.add(m); R.effBrent.push(m); }
+    const inne = om.filter(o => Math.abs(o.x - u.cx) < u.S + o.r && Math.abs(o.y - u.cy) < u.S + o.r);
+    if (inne.length) {
+      const minR = inne.reduce((a, o) => Math.min(a, o.r), Infinity), st = Math.max(8, Math.min(40, minR / 3)), sett = new Set(), pos = [], kol = [], zs = new Map(), bs = new Map();
+      // hjørnet (i, j) i rutenettet: høyde og svertegrad regnes én gang
+      const hj = (i, j) => { const k = i + ',' + j; if (!bs.has(k)) { const X = i * st, Y = j * st, x = X - u.cx, y = Y - u.cy, ujevn = 1 + .16 * Math.sin(X * .21) * Math.cos(Y * .17);
+        let b = 0; for (const o of inne) { const d = Math.hypot(X - o.x, Y - o.y) * ujevn; if (d < o.r) b = Math.max(b, Math.min(1, (1 - d / o.r) * 2.2) * o.styrke); }
+        bs.set(k, b); zs.set(k, Math.abs(x) <= u.S && Math.abs(y) <= u.S ? zVed(R, x, y) + .09 : NaN); } return k; };
+      for (const o of inne) { const i0 = Math.floor((o.x - o.r) / st), i1 = Math.ceil((o.x + o.r) / st), j0 = Math.floor((o.y - o.r) / st), j1 = Math.ceil((o.y + o.r) / st);
+        for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) { const q = i + ',' + j; if (sett.has(q)) continue; sett.add(q);
+          const K = [hj(i, j), hj(i + 1, j), hj(i + 1, j + 1), hj(i, j + 1)]; if (K.every(k => bs.get(k) <= 0) || K.some(k => zs.get(k) !== zs.get(k))) continue;
+          const P = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
+          for (const n of [0, 1, 2, 0, 2, 3]) { const c = 1 - .72 * bs.get(K[n]); pos.push(P[n][0] * st - u.cx, P[n][1] * st - u.cy, zs.get(K[n])); kol.push(c, c * .97, c * .94); } } }
+      if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3));
+        const m = new THREE.Mesh(g, R.effBrentMat); m.renderOrder = 1; m.frustumCulled = false; R.scene.add(m); R.effBrent.push(m); }
+    }
     // trærne i de brente områdene blir svarte (fargen per tre i detaljnivå-lista; lodTrær fordeler dem på nytt)
-    const lokal = om.map(o => ({ x: o.x - u.cx, y: o.y - u.cy, r: o.r, styrke: o.styrke }));
+    const lokal = inne.map(o => ({ x: o.x - u.cx, y: o.y - u.cy, r: o.r, styrke: o.styrke }));
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const o of lokal) { x0 = Math.min(x0, o.x - o.r); x1 = Math.max(x1, o.x + o.r); y0 = Math.min(y0, o.y - o.r); y1 = Math.max(y1, o.y + o.r); }
     for (const t of R.treLOD || []) { if (!t.C0) t.C0 = new Float32Array(t.C); else t.C.set(t.C0); if (!lokal.length) continue;
-      for (let k = 0; k < t.n; k++) { const b = brentVed(lokal, t.data[k * 5], t.data[k * 5 + 1]); if (b <= .05) continue; const f = 1 - .85 * Math.min(1, b * 1.3);
+      for (let k = 0; k < t.n; k++) { const x = t.data[k * 5], y = t.data[k * 5 + 1]; if (x < x0 || x > x1 || y < y0 || y > y1) continue; const b = brentVed(lokal, x, y); if (b <= .05) continue; const f = 1 - .85 * Math.min(1, b * 1.3);
         // (rødt holdes lavest: «blad = grønnere enn rødt» i høstfargene skal fortsatt gjelde)
         t.C[k * 3] *= f * .9; t.C[k * 3 + 1] *= f * .78; t.C[k * 3 + 2] *= f * .7; } }
     R.lodVed = null;
   }
-  // der det brenner: flammer og røyk (noen få steder i hvert brannområde per bilde)
+  // der det brenner: flammer og røyk (noen få av rutene per gang, tilfeldig valgt blant dem nær kameraet)
   function stegBrann(R, dt) {
-    const om = branner(); if (!om.length) return; const u = R.ut, c = R.cam.position; T.brannTid += dt; if (T.brannTid < .09) return; T.brannTid = 0;
-    for (const o of om) { const x0 = o.x - u.cx, y0 = o.y - u.cy; if (Math.abs(x0) > u.S || Math.abs(y0) > u.S || Math.hypot(x0 - c.x, y0 - c.y) > 2500) continue;
-      const ant = nivå() === 'lav' ? 1 : Math.min(4, 1 + Math.round(o.r / 15));
-      for (let i = 0; i < ant; i++) { const a = Math.random() * 6.283, r = o.r * Math.sqrt(Math.random()) * .85, x = x0 + Math.cos(a) * r, y = y0 + Math.sin(a) * r, z = zVed(R, x, y);
-        ny(x, y, z + .4, tilf(.5), tilf(.5), 1.5 + Math.random() * 2, .6 + Math.random() * .5, 1.6, .5, 1, .5 + Math.random() * .3, .12, .85, -1.5, .4);
-        if (Math.random() < .55) røyk(x, y, z + 2, 1, .2); } }
+    T.brannTid += dt; if (T.brannTid < .09) return; T.brannTid = 0;
+    const om = branner(); if (!om.length) return; const u = R.ut, c = R.cam.position, ant = nivå() === 'lav' ? 2 : 7;
+    for (let n = 0; n < ant; n++) { const o = om[Math.floor(Math.random() * om.length)], x0 = o.x - u.cx, y0 = o.y - u.cy; if (Math.abs(x0) > u.S || Math.abs(y0) > u.S || Math.hypot(x0 - c.x, y0 - c.y) > 2500) continue;
+      const x = x0 + tilf(o.r), y = y0 + tilf(o.r), z = zVed(R, x, y), stor = Math.min(3, .8 + o.r / 20);
+      ny(x, y, z + .5, tilf(.6), tilf(.6), 2 + Math.random() * 2.5, .6 + Math.random() * .5, 1.8 * stor, .6 * stor, 1, .5 + Math.random() * .3, .12, .85, -1.5, .4);
+      if (Math.random() < .6) ny(x + tilf(1), y + tilf(1), z + 3, tilf(.5), tilf(.5), 2 + Math.random() * 1.5, 5 + Math.random() * 4, 2 * stor, 7 * stor, .2, .2, .21, .4, -.25, .35); }
   }
 
   // ---- krokene ----
@@ -303,6 +315,8 @@
 
   window.Effekter3d = { krater, eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
     røyk(X, Y, mengde) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; røyk(x, y, zVed(R, x, y) + 1, mengde || 3); } },
-    brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length }),
-    tøm() { T.P.length = 0; T.kuler.length = 0; T.spor.length = 0; T.kratere.length = 0; T.kj.clear(); const R = r3(); if (R) R.effKraterNøkkel = ''; } };
+    brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length, brentTrekanter: (r3() && r3().effBrent || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0) }),
+    // oppdater(): les BRENT på nytt i neste bilde (ellers leses lista hver 20. ramme)
+    oppdater() { T.brentNøkkel = ''; },
+    tøm() { T.P.length = 0; T.kuler.length = 0; T.spor.length = 0; T.kratere.length = 0; T.kj.clear(); T.brentNøkkel = ''; const R = r3(); if (R) R.effKraterNøkkel = ''; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -2,7 +2,7 @@
 // FJERN SKOG OG BEBYGGELSE (18. nov, nattarbeidet «natur»): verden skal ikke slutte brått. Trærne og husene finnes bare i utsnittet
 // rundt deg – og når taket på antall trær er nådd, tynnes skogen lenger enn 600 m fra midten. Utenfor lå fjernterrenget
 // (spill/fjern3d.js) som bare flater. Her fylles det ut med billige former:
-//  - SKOGHOLT: fem lave, tresidede kjegler (15 trekanter) som står for en klynge trær. Inne i utsnittet der skogen er tynnet
+//  - SKOGHOLT: fire lave, tresidede kjegler (12 trekanter) som står for en klynge trær. Inne i utsnittet der skogen er tynnet
 //    (skogbunnen i bunnkartet, lenger enn 520 m fra midten, så mange som tynningen tok bort), og ute i ringen der arealklassen
 //    er skog (ut til 2 × utsnittet). Nær kameraet krymper de bort (350–650 m), så de aldri står ved siden av ekte trær på nært hold.
 //  - HUSKLYNGER: tre små hus (kasser med mørkt tak, 30 trekanter) der ringen har arealklassen tettsted.
@@ -13,7 +13,7 @@
   // Alle tallene er Claudes forslag.
   const REGLER = {
     // høyeste antall skogholt [PC, mobil] per grafikknivå, og husklynger
-    holt: { høy: [6000, 2400], middels: [3000, 1200], lav: [0, 0] },
+    holt: { høy: [4500, 1800], middels: [2400, 1000], lav: [0, 0] },
     // så stor del av holtene kan stå inne i utsnittet (resten er til ringen utenfor)
     inneDel: .6,
     hus: { høy: [600, 250], middels: [300, 120], lav: [0, 0] },
@@ -22,7 +22,7 @@
     // holtene krymper bort nærmere kameraet enn dette (m): helt borte, helt framme
     nærFra: 350, nærTil: 650,
     // rutene nettene deles i (per side)
-    ruter: 6,
+    ruter: 8,
   };
   const brøk = x => x - Math.floor(x);
   // fast tilfeldig tall 0–1 for en rute (samme sted gir samme svar)
@@ -57,7 +57,7 @@
     if (GEO) return GEO;
     const lag = fn => { const pos = [], kol = []; fn((p, k) => { pos.push(...p); kol.push(...k); });
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kol), 3)); g.computeVertexNormals(); return g; };
-    const holt = lag(legg => { for (const [x, y, r, h, v] of [[0, 0, 4.4, 14, .2], [9, 3, 3.8, 11, 1.3], [-6, 8, 4, 12.5, 2.1], [-4, -9, 3.6, 10, .7], [7, -7, 3.4, 9, 1.7]])
+    const holt = lag(legg => { for (const [x, y, r, h, v] of [[0, 0, 4.6, 14, .2], [9, 3, 4, 11, 1.3], [-6, 8, 4.2, 12.5, 2.1], [-3, -9, 3.8, 10, .7]])
       for (let s = 0; s < 3; s++) { const a0 = v + s * 2.0944, a1 = v + (s + 1) * 2.0944, m = .7 + .25 * ((s * 5 + h) % 3) / 2;
         legg([x + Math.cos(a0) * r, y + Math.sin(a0) * r, -1], [.07 * m, .13 * m, .07 * m]); legg([x + Math.cos(a1) * r, y + Math.sin(a1) * r, -1], [.07 * m, .13 * m, .07 * m]); legg([x, y, h], [.15 * m, .26 * m, .13 * m]); } });
     const hus = lag(legg => { for (const [x, y, b, d, h, v] of [[0, 0, 11, 8, 6, .3], [17, 9, 9, 7, 5, 1.2], [-12, 14, 8, 8, 5.5, 2.4]]) {
@@ -82,7 +82,8 @@
     return m;
   }
   const T = { u: null, ring: null, nivå: null, nett: [], vær: '', teller: 0, holt: 0, hus: 0, ute: 0 };
-  function rydd(R) { for (const m of T.nett) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } T.nett = []; T.holt = T.hus = T.ute = 0; }
+  // (geometriene deles av alle rutene og beholdes; instansenes buffere frigjøres av scene.remove i index.html)
+  function rydd(R) { for (const m of T.nett) { R.scene.remove(m); m.material.dispose(); } T.nett = []; T.holt = T.hus = T.ute = 0; }
   const værNå = () => { const V = window.VAER || {}; return { snøgrense: Number.isFinite(V.snøgrense) ? V.snøgrense : 1e9, høst: V.høst || 0 }; };
   const værNøkkel = V => Math.round(V.snøgrense / 20) + '|' + Math.round(V.høst * 10);
   // Punktene deles i ruter (hver rute sitt instansnett med egen kule for synsfeltet)
@@ -90,14 +91,14 @@
     const N = REGLER.ruter, ruter = new Map(), d = new THREE.Object3D(), c = new THREE.Color(), V = værNå();
     for (const p of punkter) { const k = Math.min(N - 1, Math.max(0, Math.floor((p.x + RAD) / (2 * RAD) * N))) + N * Math.min(N - 1, Math.max(0, Math.floor((p.y + RAD) / (2 * RAD) * N))); if (!ruter.has(k)) ruter.set(k, []); ruter.get(k).push(p); }
     for (const L of ruter.values()) {
-      // egen geometri per rute (deler hjørnedataene), så kula for synsfeltet gjelder ruta
-      const g = new THREE.BufferGeometry(); for (const n of ['position', 'color', 'normal']) g.setAttribute(n, g0.attributes[n]);
+      // alle rutene deler geometrien; hver rute har sin egen kule, og synsfeltet prøves her (ramme3d) – ikke av three.js
+      const g = g0;
       let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
       const m = new THREE.InstancedMesh(g, mat(), L.length); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(L.length * 3), 3);
       L.forEach((p, i) => { d.position.set(p.x, p.y, p.z); d.rotation.set(0, 0, p.f * 6.283); d.scale.set(p.s, p.s, p.s * (.8 + .4 * brøk(p.f * 3.7))); d.updateMatrix(); m.setMatrixAt(i, d.matrix);
         x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z);
         if (slag === 'holt') c.setRGB(...holtFarge(p.f, p.moh, V)); else { const t = brøk(p.f * 5.1); c.setRGB(...(t < .45 ? [1.1, 1.1, 1.08] : t < .7 ? [.95, .42, .34] : t < .88 ? [1, .86, .6] : [.7, .72, .74])); } m.setColorAt(i, c); });
-      g.boundingSphere = new THREE.Sphere(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2 + 60);
+      m.userData.kule = new THREE.Sphere(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2 + 60); m.frustumCulled = false;
       m.userData.fjernby = slag; m.userData.punkter = L; m.name = 'fjernby-' + slag; R.scene.add(m); T.nett.push(m); }
   }
   function bygg(R, ring, u = R.ut) {
@@ -137,12 +138,17 @@
   KROKER.ramme3d.push(R => {
     if (!R.ut) return; if (!U.uFjKam.value) U.uFjKam.value = new THREE.Vector3(); U.uFjKam.value.copy(R.cam.position);
     if (T.u !== R.ut) { T.gammel = R.scene.getObjectByName('fjernring') || null; bygg(R, null); T.teller = 0; }
+    // bare rutene i synsfeltet tegnes – og ikke de som ligger helt inne i sonen der holtene er krympet bort, eller helt ute i disen
+    if (T.nett.length) { const F = T.fr || (T.fr = { fr: new THREE.Frustum(), m: new THREE.Matrix4(), inv: new THREE.Matrix4() }), c = R.cam; c.updateMatrixWorld();
+      F.fr.setFromProjectionMatrix(F.m.multiplyMatrices(c.projectionMatrix, F.inv.copy(c.matrixWorld).invert())); const dis = R.scene.fog && R.scene.fog.far ? R.scene.fog.far : 1e9;
+      for (const m of T.nett) { const k = m.userData.kule, d = k.center.distanceTo(c.position);
+        m.visible = F.fr.intersectsSphere(k) && d - k.radius < dis && !(m.userData.fjernby === 'holt' && d + k.radius < REGLER.nærFra); } }
     // fjernringen bygges litt etter utsnittet: se etter den av og til, og bygg på nytt når den er kommet (eller grafikknivået er byttet)
     if ((T.teller++ & 31) === 0) { const ring = R.scene.getObjectByName('fjernring') || null;
       if (T.nivå !== nivå() || (ring && ring !== T.ring && ring !== T.gammel && ring.userData && ring.userData.punkt)) bygg(R, ring && ring !== T.gammel && ring.userData && ring.userData.punkt ? ring : null);
       else if (T.vær !== værNøkkel(værNå())) farg(); }
   });
-  window.FjernBy3d = { tall: () => ({ holt: T.holt, ute: T.ute, hus: T.hus, nett: T.nett.length, trekanter: T.holt * 15 + T.hus * 30 }),
+  window.FjernBy3d = { tall: () => ({ holt: T.holt, ute: T.ute, hus: T.hus, nett: T.nett.length, trekanter: T.holt * 12 + T.hus * 30 }),
     // for vakten: står holtene på bakken? (bare de inne i utsnittet kan måles mot terrenget)
     sjekk() { const R = typeof R3 !== 'undefined' && R3; if (!R || !R.ut) return null; let svever = 0, nær = 0, inne = 0;
       for (const m of T.nett) for (const p of m.userData.punkter) { if (p.ute) continue; inne++; const z = (hoyde3d(p.x + R.ut.cx, p.y + R.ut.cy, R.ut) - R.ut.h0) * R.EX; if (Math.abs(z - p.z) > 1) svever++; if (Math.hypot(p.x, p.y) < REGLER.inneFra) nær++; }

@@ -209,7 +209,7 @@
         d.position.set(x, y, z - (art === 'einer' ? .1 : .25)); d.scale.set(b, b, h); d.rotation.set((v - .5) * skjev, ((v * 7.3) % 1 - .5) * skjev, v * 6.283); d.updateMatrix();
         d.matrix.toArray(M, k * 16); const f = .84 + v * .32; C[k * 3] = f * (.96 + v * .08); C[k * 3 + 1] = f; C[k * 3 + 2] = f * (1.04 - v * .08); }
       const lag = (geo, enkel) => { const m = new THREE.InstancedMesh(geo, TreDeler.materiale(treMateriale(art, enkel), geo), n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
-        m.count = 0; m.frustumCulled = false; m.userData.treslag = art; R.scene.add(m); R.treMesh.push(m); return m; };
+        m.count = 0; m.frustumCulled = false; m.userData.treslag = art; if (!enkel) TreDeler.skygge(m); R.scene.add(m); R.treMesh.push(m); return m; };
       // små treslag (einer, rogn, fjellbjørk, selje) med alle detaljene bare nær kameraet (lodTrær leser G2)
       const G2 = ['einer', 'rogn', 'fjellbjørk', 'selje'].includes(art) ? (mob() ? 80 : 130) ** 2 : undefined;
       R.treLOD.push({ n, M, C, data, G2, nær: lag(lagGeo(art), false), fjern: lag(lagGeo(art + 'Enkel'), true) });

@@ -11,6 +11,8 @@ assert.strictEqual(E.områder([{ x: 1, y: 2, r: 3 }, { x: 'a', y: 2 }, null, { X
 assert.strictEqual(E.områder([{ x: 1, y: 2 }])[0].r, 12, 'uten r: 12 m'); assert.strictEqual(E.områder([[7, 8, 9]])[0].r, 9);
 assert.strictEqual(E.områder(new Map([['a', { x: 1, y: 2, r: 3 }]])).length, 1, 'Map leses'); assert.strictEqual(E.områder({ a: { x: 1, y: 2, r: 3 } }).length, 1, 'objekt leses');
 assert.strictEqual(E.områder(Array.from({ length: 30 }, (_, i) => ({ x: i, y: 0, r: 5 })), 14).length, 14);
+// formen fra pakka «verden»: { x, y, r, t } og { x, y, r, fra, til }
+assert.strictEqual(E.områder([{ x: 196000, y: 6899000, r: 32, t: 500 }, { x: 196064, y: 6899000, r: 32, fra: 1, til: 9 }]).length, 2);
 assert.strictEqual(E.områder([{ x: 0, y: 0, r: 1e6 }])[0].r, 400, 'tak på radien');
 // brentVed: 1 i midten, 0 utenfor
 const om = E.områder([{ x: 0, y: 0, r: 50 }]); assert.strictEqual(E.brentVed(om, 0, 0), 1); assert.strictEqual(E.brentVed(om, 60, 0), 0); assert.ok(E.brentVed(om, 45, 0) > 0 && E.brentVed(om, 45, 0) < 1);
