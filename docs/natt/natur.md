@@ -130,6 +130,14 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
 - Sett i Ryfylke: de fleste låvene har himlingen ved veggtoppen (1,95 m – interior3d.js holder himlingen under P.veggTopp), så høyloftet
   kommer sjelden; da står høyhaugene der i stedet.
 
+### 5. Annet som så rart ut når du går i Rogaland
+- Gresset vokste opp gjennom lagerteltet i leiren (se punkt 3: alle leirens bygg holdes nå fri for gress og planter).
+- Heia i 1000 moh. hadde høyt, frodig gress og busker: tregrensen var 1250 m i hele Sør-Norge (Vegetasjon.tregrense(y) stiger
+  sørover). Nå tregrense(y, x): 3,5 m lavere per km vest for x = 150 000 (kystklima; Sirdalsheiane ca. 860 m, Ryfylke 780, Bergen 600 –
+  Claudes forslag). Kalles med x fra gress3d og vegetasjon3d (gress, blomster, busker, treslag); natt3d/vind3d/fjern3d kaller fortsatt
+  bare med y (som før). Dovre (x ≈ 200 000) er uendret. Test i test_vegetasjon.js.
+- Lyngtustene på åpen hei har halvt bakkens farge (ikke mørke prikker ovenfra).
+
 ### Prøvd i nettleser (runde 5)
 - Rogaland med ekte data (dev.py, leir 37880 6617991, PC 1400 × 820): ovenfra, skrått og høyt over innsjøen sør-øst for leiren, til fots
   ved stranda og på heia, før (window.STRAND_AV) og etter. Bilder i scratchpad natt5/natur/: for-strand-ovenfra/skraa/hoy, for-gaa-strand
@@ -158,3 +166,19 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
 - Store lyse flekker der satellittbildet hadde snø/is (malt som berg av snøTilBergG) har fortsatt den grove formen fra satellittbildet.
 - Høyloftet kommer bare i låver med høy himling (minst 3,3 m); i Ryfylke har de fleste låvene himlingen ved veggtoppen (1,95 m).
 - Låveinnholdet ble ikke prøvd på telefon.
+
+### Filer i runde 5 (til flettingen)
+- Nye: site/dovre-fliser/spill/lave3d.js, pipeline/fliser/test_lave3d.js.
+- Mine: spill/kartbilde.js (REGLER strand*, glidLinje, strandG), spill/vegetasjon.js (tregrense(y, x)), spill/vegetasjon3d.js (fri: R3.hindre +
+  iLeir, leirFot/iLeir, hindreEndret i ramme3d-kroken, Vegetasjon3d.iLeir, tregrense med x), test_kartbilde.js, test_vegetasjon.js,
+  vakter/natur.js, docs/natt/natur.md, docs/natt/natur-hjelp.json.
+- index.html (små, samlede endringer):
+  1. bygg3d: tre linjer rett før `u.vann = await vannmaske(...)` – kallet på Kartbilde.strandG (u.strand).
+  2. detaljIBakken: `float vegK = …` (BAKKE_FX) og `float veg = …` (uten FX) måler vegetasjon som max(grønt, rødt·0,97) − blått − 0,02.
+  3. bunnkart: én ny linje – klasse 3 (lyng på åpen mark).
+  4. gress3d: `lyng = type === 2 || type === 3`; husene i R.hindre i tillegg til u.husRute; `Vegetasjon3d.iLeir`; tregrense(u.cy, u.cx);
+     lyngfarge for klasse 3.
+  5. smått3d: én ny linje – på snaufjell med brun/grønn kartfarge står bare en firedel av steinene.
+  6. Skripttaggen `spill/lave3d.js` rett etter vegetasjon3d.js. versjon.py er kjørt.
+- interior.js / interior3d.js er IKKE endret. lave3d.js legger én møbeloppføring av den nye typen «gråtass» inn i planen (pl.møbler) for
+  kollisjon.
