@@ -47,7 +47,9 @@
   // ---------- (runde 4) RØVERE SOM HAR HERJET trekker seg ut med byttet (Trussel.HERJ) ----------
   // tiden hvert røverlag er inne i leiren (innen Trussel.HERJ.radius fra midten), i spillminutter
   KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
-    for (const e of ENHETER) if (e.raid === T.aktiv && !e.trekker && levende(e) && !Terreng.slattUt(e.menn) && Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.HERJ.radius) e.inne = (e.inne || 0) + dt; });
+    // (kjøring 7: røverne sto like utenfor 150 m, men innen 120 m av byggene, og skadet dem i timevis uten å telle som «inne» –
+    // nå teller også de som skader bygg: HERJER i leir-visning.js)
+    for (const e of ENHETER) if (e.raid === T.aktiv && !e.trekker && levende(e) && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.HERJ.radius || (window.HERJER && HERJER.has(e)))) e.inne = (e.inne || 0) + dt; });
   // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
   function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
     const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });

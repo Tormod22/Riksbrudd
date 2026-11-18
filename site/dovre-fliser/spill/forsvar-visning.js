@@ -100,7 +100,8 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   const stiSlutt = s => (s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null);
   const motVår = s => { const e = stiSlutt(s); return !e || (s.motMål && Math.hypot(e[0] - s.motMål.x, e[1] - s.motMål.y) < 25) || (s.forsvar && Math.hypot(e[0] - s.forsvar.x, e[1] - s.forsvar.y) < 25); };
   let motMeldt = false;
-  const herjere = () => { const L = leir(); return L ? røvere().filter(e => !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne) : []; };
+  // inne i leiren: nær midten, eller så nær et bygg at de skader det (HERJER i leir-visning.js)
+  const herjere = () => { const L = leir(); return L ? røvere().filter(e => !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne || (window.HERJER && HERJER.has(e)))) : []; };
   function motSteg() { if (!auto()) return; const L = leir(); if (!L) return; const inne = herjere();
     if (!inne.length) { if (motMeldt) motFerdig(); return; }
     if (!vakt) { const lv = leirvakt({ x: L.x + 12, y: L.y, voll: false }); if (lv) logg(`Leirvakta (${lv.menn.length} fra vakta) tar opp våpen.`); }
