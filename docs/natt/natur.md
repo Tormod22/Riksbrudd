@@ -94,6 +94,9 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
   meter), land over – også der kartet hadde vann. Høyden bestemmer helt nær vannet og tones ut den siste tredjedelen av rekkevidden; uten
   kjent vannstand brukes kartets vann, utjevnet med støy. Kanten tones over ca. én meter. (d) På land: lys sone av stein og grus opp til
   `strandSone` 1,3 m over vannet (bredere der det er slakt), mørk fuktig kant de første 0,14 m. Ikke lys sone ved havet (havnivå() har sin).
+- Terreng mer enn `strandUnder` = 0,8 m UNDER vannstanden (nedenfor et utløp, en foss, en demning) regnes ikke med – der bestemmer kartet
+  (uten dette ble opptil 40 m nedenfor et utløp gjort til vann; testen fanget 96 punkter med vernet slått av). Prisen: noen få steder
+  står litt av den mørke ringen igjen (bilde slutt-strand-ovenfra, nede i midten).
 - Ruter der ingenting kan skje, hoppes over (tørt land høyt over vannet, vann godt under vannstanden). Generator med yield (kjørAsynk).
 - Vannmasken (u.vann/u.vannData) lages av det ferdige kartbildet som før, så gange, dyr, trær, siv og bygg følger det du ser.
 - `window.STRAND_AV = true` før 3D bygges slår det av (til før/etter-bilder). `u.strand` = antall punkter som skiftet vann/land.
