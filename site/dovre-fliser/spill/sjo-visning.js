@@ -372,10 +372,41 @@
 #sjopanel .lukk{ position:absolute; right:6px; top:6px; width:28px; height:28px; padding:0; } #sjopanel p{ margin:4px 0; line-height:1.35; } #sjopanel small{ color:#b9ab86; }
 #sjopanel button{ font:inherit; font-size:13.5px; padding:5px 9px; margin:3px 4px 3px 0; background:#2a2215; border:1px solid #5a4a2a; color:inherit; border-radius:3px; cursor:pointer; } #sjopanel button:hover{ border-color:#e8d48a; } #sjopanel button.på{ background:#5a4a2a; border-color:#e8d48a; } #sjopanel button[disabled]{ opacity:.45; cursor:default; }
 #sjopanel .rad{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; border-top:1px solid rgba(201,178,106,.18); } #sjopanel .rad > div{ min-width:0; } #sjopanel .rad b{ font-weight:600; }
-body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:62vh; border-width:1px 0 0; border-radius:0; }`;
+body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:62vh; border-width:1px 0 0; border-radius:0; }
+#sjopanel .linje{ margin:0 0 6px; font-size:13px; color:#cdbf9a; line-height:1.3; } #sjopanel .rad1{ display:flex; gap:6px; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; } #sjopanel .rad1 button{ flex:0 0 auto; margin:0; }
+#sjopanel button.mer, #sjopanel button.mindre{ border-color:#c9b26a; } #sjopanel .rad1w{ display:flex; gap:6px; align-items:stretch; } #sjopanel .rad1w .rad1{ flex:1 1 auto; min-width:0; } #sjopanel .rad1w > button.mer{ flex:0 0 auto; margin:0; }
+body.kort #sjopanel.på.kort{ top:auto; bottom:calc(6px + env(safe-area-inset-bottom,0px)); height:auto; max-height:min(36vh, 230px); padding:8px 10px 9px; }
+body.kort #sjopanel.på.kort h2{ font-size:17px; margin:0 34px 2px 0; } body.kort #sjopanel.på.kort .linje{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.kort.tlfligg #sjopanel.på.kort{ top:auto; max-height:min(52vh, 210px); }
+body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh; }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'sjopanel', role: 'dialog', 'aria-label': 'Sjø' }); document.body.appendChild(panel);
-  function vis(på) { åpen = på === undefined ? !åpen : !!på; panel.classList.toggle('på', åpen); if (!åpen) { modus = null; skitten = true; } else tegnPanel(true); }
+  function vis(på) { const var0 = åpen; åpen = på === undefined ? !åpen : !!på; if (åpen && !var0) mer = false; panel.classList.toggle('på', åpen); if (!åpen) { modus = null; skitten = true; } else tegnPanel(true); }
+  // ---------- telefon (runde 4 del 2): lavt bunnark med det viktigste, «Mer» viser alt ----------
+  let mer = false;
+  const helseTekst = b => { const m = TY[b.type].hp || R.fiendeBåt.hp; return b.hp !== undefined && b.hp < m ? ` · helse ${Math.round(100 * b.hp / m)} %` : ''; };
+  const liten = () => { const k = document.body.classList; return k.contains('smal') || k.contains('kort') || innerWidth < 700 || innerHeight < 560; };
+  function byggKort(H) { const rad = el('div', { klasse: 'rad1' }), K2 = [];
+    if (valg && valg.båt) { const b = valg.båt, T = TY[b.type], om = omBord(b);
+      H.append(el('h2', {}, b.navn), el('p', { klasse: 'linje' }, båtStatus(b) + (om.length ? ` · ${om.length} lag om bord` : '') + (SJ.lastVekt(b.last) > .01 ? ` · ${SJ.lastTekst(b.last)}` : '') + helseTekst(b)));
+      if (modus) K2.push(kn('Avbryt', () => { modus = null; skitten = true; }, { klasse: 'på' }));
+      K2.push(kn('Til kai', () => { modus = modus === 'kai' ? null : 'kai'; skitten = true; }, { 'data-sjo': 'tilkai' }), kn('Til sted', () => { modus = modus === 'punkt' ? null : 'punkt'; skitten = true; }));
+      if (b.sti) K2.push(kn('Stopp', () => { SJ.stopp(b); b.jakter = null; merk(); logg(`${b.navn} stopper.`); }));
+      else if (om.length && b.kai >= 0) K2.push(kn('Sett i land', () => { for (const q of om) gåILand(q); }));
+      else { const s = om.length < T.lag && egne().find(e => !e.påBåt && !e.ombord && !e.karakter && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord); if (s) K2.push(kn('Ta om bord', () => gåOmBord(s, b))); }
+      const f = om.length && !b.jakter && S.frakt.filter(q => q.type === 'frakt' && !q.ai && serFrakt(q)).sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))[0];
+      if (f && Math.hypot(f.x - b.x, f.y - b.y) < 15000) K2.push(kn('Bord', () => startJakt(b, f), { 'data-sjo': 'bord' }));
+      if (T.fiske && !b.sti) K2.push(kn(b.fisker ? 'Slutt fiske' : 'Fisk', () => fisk(b), b.fisker ? { klasse: 'på' } : {}));
+    } else if (valg && valg.kai !== undefined && kai(valg.kai)) { const q = kai(valg.kai), L = leir(), h = havnVedKai(valg.kai);
+      H.append(el('h2', {}, q.navn), el('p', { klasse: 'linje' }, `${q.størrelse} kai` + (L ? ` · ${km(Math.hypot(q.x - L.x, q.y - L.y))} fra leiren` : '') + (h ? ` · din havn i ${h.navn}` : '')));
+      if (kjøpGrunn(q)) for (const id of ['småbåt', 'sjark', 'lekter']) if (SJ.passer(id, q.størrelse)) K2.push(kn(`${{ småbåt: 'Småbåt', sjark: 'Sjark', lekter: 'Lekter' }[id]} ${String(TY[id].pris / 1e6).replace('.', ',')} mill.`, () => kjøp(id, valg.kai), { 'data-kjop': id, title: TY[id].navn + ': ' + TY[id].tekst }));
+      if (ferjeHer(q)) K2.push(kn('Ta ferja', () => taFerje(valg.kai), { 'data-sjo': 'ferje' }));
+      const her = S.båter.find(b => !b.sti && Math.hypot(b.x - q.x, b.y - q.y) < 60); if (her) K2.push(kn(her.navn, () => { valg = { båt: her }; }));
+    } else { const Hv = havner();
+      H.append(el('h2', {}, 'Sjøen'), el('p', { klasse: 'linje' }, `${S.båter.length} båt${S.båter.length === 1 ? '' : 'er'} · ${Hv.length} havn${Hv.length === 1 ? '' : 'er'}` + (S.frakt.some(serFrakt) ? ' · fiendens båter i sikte' : '') + (S.båter.length ? '' : ' · trykk på en kai for å kjøpe båt')));
+      for (const b of S.båter.slice(0, 3)) K2.push(kn(b.navn, () => { valg = { båt: b }; gåTil(b.x, b.y); }, { 'data-bat': String(b.id) })); }
+    // «Mer» står fast til høyre; raden med resten kan rulles sidelengs
+    rad.append(...K2); H.append(el('div', { klasse: 'rad1w' }, rad, kn('Mer ▾', () => { mer = true; }, { klasse: 'mer', 'data-sjo': 'mer' }))); }
   const gåTil = (x, y) => { if (typeof på3d !== 'undefined' && på3d) return; kam.x = x; kam.y = y; if (kam.m > 25) kam.m = 12; skitten = true; };
   function båtStatus(b) { if (b.planlegger) return 'finner lei …'; if (b.sti) return `underveis til ${b.mål >= 0 ? kaiNavn(b.mål) : 'et sted på sjøen'}, ${km(SJ.meterIgjen(b))} igjen (ca. ${tidTekst(SJ.minutterIgjen(b))})`; return (b.kai >= 0 ? `ligger ved ${kaiNavn(b.kai)}` : 'ligger stille på sjøen') + (b.fisker ? ' og fisker' : ''); }
   function byggBåt(H, b) { const T = TY[b.type], om = omBord(b);
@@ -435,7 +466,10 @@ body.smal #sjopanel, body.kort #sjopanel{ left:0; right:0; top:auto; bottom:0; w
   function tegnPanel(tving) { if (!åpen) return; sistTegn = performance.now(); if (!tving && window.pekerNede && pekerNede(panel)) return;
     const H = el('div', {}); H.append(el('button', { klasse: 'lukk', 'aria-label': 'Lukk', 'data-lukk': '1' }, '×'));
     if (valg && valg.båt && !S.båter.includes(valg.båt)) valg = null;
-    if (valg && valg.båt) byggBåt(H, valg.båt); else if (valg && valg.kai !== undefined) byggKai(H, valg.kai); else byggOversikt(H);
+    const kort = liten() && !mer; panel.classList.toggle('kort', kort);
+    if (kort) byggKort(H);
+    else { if (liten()) H.append(kn('▴ Mindre', () => { mer = false; }, { klasse: 'mindre', 'data-sjo': 'mindre' }));
+      if (valg && valg.båt) byggBåt(H, valg.båt); else if (valg && valg.kai !== undefined) byggKai(H, valg.kai); else byggOversikt(H); }
     if (H.innerHTML === sistHtml && !tving) return; sistHtml = H.innerHTML; const rull = panel.scrollTop; panel.replaceChildren(...H.childNodes); panel.scrollTop = rull; const l = panel.querySelector('[data-lukk]'); if (l) l.onclick = () => vis(false); }
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && åpen) { if (modus) { modus = null; skitten = true; tegnPanel(true); } else vis(false); } });
 
