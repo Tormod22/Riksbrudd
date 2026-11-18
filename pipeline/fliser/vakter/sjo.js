@@ -62,7 +62,11 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
         if (ai.båtPlan) { const ab = SjoSpill.gåOmAI(ai, ai.båtPlan); ok(ab && ai.påBåt === ab && FB.includes(ab), 'AI-laget er om bord'); let fr4 = null, m4 = 0; while (!fr4 && m4++ < 3000) fr4 = Sjo.steg(ab, 1); if (FB.includes(ab)) { FB.splice(FB.indexOf(ab), 1); SjoSpill.iLandAI(ab); } ok(fr4 === 'framme' && !ai.påBåt && ai.ai.neste === 0, 'AI-båten kom fram og laget gikk i land'); }
         ENHETER.splice(ENHETER.indexOf(ai), 1); FB.length = nF; if (s4) { s4.x = før[0]; s4.y = før[1]; s4.sti = før[2]; s4.siktSkitten = true; }
         // trykk i 3D (kroken med kartets meter): båten åpner panelet
-        const v0 = valgt; valgt = null; SjoSpill.vis(false); ok(SjoSpill.trykk3d(bt.x + 3, bt.y) && SjoSpill.erÅpen() && SjoSpill.valgt() && SjoSpill.valgt().båt === bt, 'trykk på båten i 3D åpner den'); SjoSpill.vis(false); valgt = v0;
+        // (19. nov, test2) et lag innen 30 m av trykket går foran båten (trykk3d svarer da false med vilje) – hvor lagene står etter de
+        // andre vaktene, avhenger av hvor mye spilltid som har gått, så lag ved båten flyttes bort mens vakta trykker, og settes tilbake
+        const v0 = valgt, ved = ENHETER.filter(e => Math.abs(e.x - bt.x - 3) < 40 && Math.abs(e.y - bt.y) < 40 && !e.påBåt).map(e => [e, e.x]); ved.forEach(([e]) => { e.x += 1e5; });
+        try { valgt = null; SjoSpill.vis(false); ok(SjoSpill.trykk3d(bt.x + 3, bt.y) && SjoSpill.erÅpen() && SjoSpill.valgt() && SjoSpill.valgt().båt === bt, 'trykk på båten i 3D åpner den'); } finally { ved.forEach(([e, x]) => { e.x = x; }); }
+        SjoSpill.vis(false); valgt = v0;
         ok(Array.isArray(SjoSpill.tatteFerjer()), 'listen over tatte ferjer');
         o.leirvalg = Kaier.leirTekst(KaierSpill.data(), L.x, L.y); ok(/Prøvehavn, stor \(500 m\) – leirens egen kai/.test(o.leirvalg), 'leirvalget viser nærmeste kai: ' + o.leirvalg);
         // krigskartets tillegg og lojaliteten (Regionen)

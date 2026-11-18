@@ -216,6 +216,8 @@ PC-profilen (SJEKK_PROFIL=PC, etter alle endringene, last 12–18, «hele bildet
 for PC er ikke målt her (oppdraget sier ca. 60–70 min). Feilen: `vakter/sjo.js` «trykk på båten i 3D åpner den» –
 `SjoSpill.trykk3d` svarer false når et levende lag står innen 30 m av trykket (sjo-visning.js linje 368), og vakta flytter ikke egne
 lag bort fra prøvebåten først. Hvor lagene står, avhenger av hvor mye spilltid som har gått under de andre vaktene, og det går
-mindre sanntid nå. Grønn i begge mobilkjøringene. Rettes i vakta (flytt lag innen 30 m av båten bort mens den trykker, og sett dem
-tilbake) – ikke gjort her (sjø-pakkas vakt, og ingen tid til å prøve den på PC før fristen).
+mindre sanntid nå. Grønn i begge mobilkjøringene. RETTET i vakta (sjø-pakka har ingen eier i kveld): lag innen 40 m av båten flyttes
+bort mens vakta trykker, og settes tilbake (try/finally). Prøvd med feilen lagt inn med vilje (`p3.js`: et lag parkeres ved
+prøvebåten hvert 2. ms): gammel vakt FEIL «trykk på båten i 3D åpner den», ny vakt OK, og ny vakt OK uten laget. Hele PC-kjøringen
+er ikke kjørt på nytt etter rettingen (ingen tid).
 Tidtakingen på PC: gå selv 69 s, dyr 64 s, bygging i biter 45 s, bekker 42 s, måling av ytelse 42 s, hogst og riving 39 s.
