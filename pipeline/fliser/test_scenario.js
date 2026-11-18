@@ -53,9 +53,9 @@ ok(S.ukeBedre(ot, { klart: true, verdi: 2, dager: 2 }, { klart: true, verdi: 2, 
 ok(/Kode: RB-/.test(S.ukeTekst(ot, 'Dovre', us)), 'teksten som deles har koden');
 // krigsmålene åpner etter de fire første kapitlene
 const ferdige = new Set(), krig = { garnison: 1, tettsteder: 3, andel: .7, vunnet: true };
-ok(M.vurder(krig, ferdige).every(id => !/^krig/.test(id)) && M.stilling(ferdige).alle === 14 && !M.stilling(ferdige).krigÅpen, 'krigsmålene telles ikke før leiren står (14 mål)');
+ok(M.vurder(krig, ferdige).every(id => !/^krig/.test(id)) && M.stilling(ferdige).alle === M.GRUNN.length && !M.stilling(ferdige).krigÅpen, 'krigsmålene telles ikke før leiren står (' + M.GRUNN.length + ' mål)');
 for (const m of M.GRUNN) ferdige.add(m.id);
-ok(M.stilling(ferdige).krigÅpen && M.stilling(ferdige).alle === 18 && M.stilling(ferdige).neste.id === 'krig1', 'når de 14 er nådd: 18 mål, neste er krigen');
+ok(M.stilling(ferdige).krigÅpen && M.stilling(ferdige).alle === M.ALLE.length && M.stilling(ferdige).neste.id === 'krig1', 'når grunnmålene er nådd: ' + M.ALLE.length + ' mål, neste er krigen');
 ok(M.vurder(krig, ferdige).sort().join() === 'krig1,krig3,krig30,krigseier' && M.stilling(ferdige).kapittel === -1, 'krigsmålene nås');
 // vennens stilling i delingskoden
 const k1 = D.kode('Vik', '#aa3300', { x: 100, y: 200 }, [], { byer: ['12', 34], andel: 22.4, dag: 5 }), d1 = D.les(k1), d0 = D.les(D.kode('Vik', '#aa3300', { x: 100, y: 200 }, []));
