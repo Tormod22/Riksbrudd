@@ -63,6 +63,7 @@
   function overgi(e, til, grunn) {
     const n = ilive(e); if (!til) til = egne().sort((a, b) => avst(a, e) - avst(b, e))[0];
     if (til && n) til.fanger = { n: ((til.fanger && til.fanger.n) || 0) + n, side: e.side };
+    window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'fanger', tekst: e.navn + ' gir seg' } })); 
     logg(`${e.navn} gir seg${grunn ? ': ' + grunn : ''}. ${til && n ? `${til.navn} tar ${n} ${n === 1 ? 'fange' : 'fanger'} – ta dem med til leiren.` : ''}`);
     const i = ENHETER.indexOf(e); e.ombord = null; e.sti = null; e.overgitt = true;
     // de fire første lagene har faste plasser i lista (patruljen er nr. 4): de blir stående som tomme lag
@@ -100,7 +101,7 @@
     for (let i = T.etter.length - 1; i >= 0; i--) if (!ENHETER.some(e => e.navn === T.etter[i].navn && levende(e))) T.etter.splice(i, 1);
     if (!auto()) return;
     radioAkk += min; if (radioAkk < R.etterretning.hver) return; radioAkk = 0;
-    const LS = window.LeirSpill && LeirSpill.tilstand(); if (!LS || !LS.bygg.some(b => b.type === 'radiomast' && Leir.virker(b))) return;
+    const LS = window.LeirSpill && LeirSpill.tilstand(); if (!LS || !LS.bygg.some(b => b.type === 'radiomast' && Leir.virker(b)) || (window.SPILLREGLER && SPILLREGLER.har('ingenRadio'))) return;
     for (const e of fiender()) { if (!e.ai || !e.ai.tekst || synlig(e)) continue; const p = K.oppfang(e, L, rng); if (!p) continue;
       K.meld(T.etter, { navn: e.navn, side: e.side, x: p.x, y: p.y, t: tid, kilde: 'radio', hva: e.ai.tekst, varer: R.etterretning.radioVarer });
       logg(`Radiomasten fanget opp samband: ${e.navn} ${e.ai.tekst}. Omtrentlig sted er merket i kartet.`); skitten = true; break; }

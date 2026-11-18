@@ -156,8 +156,8 @@
     for (const e of ENHETER) if (e.side === 'blå' && levende(e) && W.iSone(V, e.x, e.y) === s && type === 'ras') { const ut = Terreng.fordelTreff(e.menn, 1, rng); logg(`${e.navn} ble tatt av raset: ${ut.map(([m, t]) => `${m.navn} ${t}`).join(', ')}.`); e.siktSkitten = true; }
     return s;
   }
-  function flom(x, y, orden, navn) { const s = nySone('flom', x, y, W.flomRadius(V, orden || 3), navn); logg(`Flom: ${navn || 'elva'} går over sine bredder ${stedTekst(x, y)}. Det er tungt å ta seg fram der i ${R.regn.flomTimer} timer, og vegene er stengt.`); return s; }
-  function ras(x, y) { const s = nySone('ras', x, y, R.regn.rasRadius); logg(`Ras: lia har gått ${stedTekst(x, y)}. Vegen der er stengt i ${R.regn.rasTimer} timer.`); return s; }
+  function flom(x, y, orden, navn) { const s = nySone('flom', x, y, W.flomRadius(V, orden || 3), navn); logg(`Flom: ${navn || 'elva'} går over sine bredder ${stedTekst(x, y)}. Det er tungt å ta seg fram der i ${R.regn.flomTimer} timer, og vegene er stengt.`); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'natur', tekst: 'flom ' + stedTekst(x, y) } })); return s; }
+  function ras(x, y) { const s = nySone('ras', x, y, R.regn.rasRadius); logg(`Ras: lia har gått ${stedTekst(x, y)}. Vegen der er stengt i ${R.regn.rasTimer} timer.`); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'natur', tekst: 'ras ' + stedTekst(x, y) } })); return s; }
   async function finnFlomsted() {
     const l = leir(); if (!l || !window.BEKKER || !BEKKER.hent) return null; const D = 12000; let biter = [];
     try { biter = await BEKKER.hent([l.x - D, l.y - D, l.x + D, l.y + D], [0, 1]); } catch (e) { return null; }
@@ -260,7 +260,7 @@
   function åkerSteg(v, dt) { const r = W.åkerSteg(V, dt / 1440, v.årstid); if (r.mat != null) { const F = FF(); if (F) F.mat += r.mat; endret(); logg(r.mat ? `Innhøsting: åkeren ga ${tall(r.mat)} rasjoner${r.andel < 1 ? ' (kornet rakk ikke å bli modent)' : ''}.` : 'Åkeren ga ingenting i år.'); } else if (r.tapt) { endret(); logg('Avlinga frøs bort: det ble vinter før dere fikk høstet.'); } }
 
   // ---------- 37 radio ----------
-  const harRadio = () => { const L = LL(); return !!(L && window.Leir && L.bygg.some(b => (b.type === 'radiomast' || b.type === 'kontrollrom') && Leir.virker(b))); };
+  const harRadio = () => { if (window.SPILLREGLER && SPILLREGLER.har('ingenRadio')) return false; const L = LL(); return !!(L && window.Leir && L.bygg.some(b => (b.type === 'radiomast' || b.type === 'kontrollrom') && Leir.virker(b))); };
   function sanne(v) {
     const ut = [], l = leir(); if (!l) return ut;
     for (const s of V.soner) ut.push(s.type === 'ras' ? `Vegmelding: ras ${stedTekst(s.x, s.y)}, vegen er stengt.` : `Flomvarsel: vannet står høyt ${stedTekst(s.x, s.y)}.`);
@@ -287,7 +287,7 @@
     for (const h of W.togSteg(V, tid, eier)) { const n = `${h.s.navnA}–${h.s.navnB}`; endret();
       if (h.åpnet) logg(`Banen ${n} er åpen. Første tog kommer om ${R.tog.mellom} timer.`);
       else if (!h.last) logg(`Toget på ${n} kom ikke fram: dere holder ikke begge stasjonene.`);
-      else { const fikk = gi(h.last); logg(`Tog på ${n}: ` + (fikk.length ? fikk.join(', ') + ' til leiren.' : 'lasten fikk ikke plass i leiren.')); } }
+      else { const fikk = gi(h.last); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'tog', tekst: 'toget på ' + n + ' er framme' } })); logg(`Tog på ${n}: ` + (fikk.length ? fikk.join(', ') + ' til leiren.' : 'lasten fikk ikke plass i leiren.')); } }
   }
 
   // ---------- årstidene av seg selv (valgfritt, slås på i panelet) ----------

@@ -33,7 +33,9 @@
   // ================= ANGREP =================
   let T = null;
   const planlegg = () => { const v = Trussel.vent(T.bølge + 1); T.nesteSpill = tid + v.spill; T.nesteEkte = ekte + v.ekte * 60; };
-  async function angrep() { const leir = S().leir, nr = T.bølge + 1, n = Trussel.lag(nr); let s = null;
+  async function angrep() { const leir = S().leir, nr = T.bølge + 1;
+    // vanskelighetsgraden (spill/scenario.js): SPILLREGLER.faktor.røvere ganger antall røverlag (lett 0,6 – hard 1,5), minst ett
+    const n = Math.max(1, Math.round(Trussel.lag(nr) * (window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1))); let s = null;
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }

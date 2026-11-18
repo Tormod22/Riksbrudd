@@ -18,10 +18,20 @@ module.exports = { navn: 'spillform: flyt, scenarier, seier og tap', kjør: asyn
       s.x = s.sti[s.sti.length - 1][0]; s.y = s.sti[s.sti.length - 1][1]; s.sti = null; sim(.001); await vent(50); for (let i = 0; i < 60 && s.planlegger; i++) await vent(100);
       ut.kø2 = !s.kø && !!s.sti && s.køSiste === true;
       // en vanlig ordre tømmer køen
-      FlytSpill.giOrdre(s, s.x + 100, s.y, true); ut.køFør = s.kø ? s.kø.length : 0; s.sti = null; s.kø = null; s.køSiste = false; s.køSlutt = null;
+      FlytSpill.giOrdre(s, s.x + 100, s.y, true); s.køSlutt = 'grav'; ut.køFør = s.kø ? s.kø.length : 0; await ordre(s, s.x + 150, s.y + 40, true); ut.køTømt = ut.køFør === 1 && !s.kø && !s.køSlutt && !!s.sti;
+      // «Stopp» i lagpanelet tømmer også køen
+      FlytSpill.giOrdre(s, s.x + 100, s.y, true); valgt = s; visPanel(); const stopp = [...document.querySelectorAll('#handl button')].find(b => b.textContent === 'Stopp'); if (stopp) stopp.click(); ut.stoppTømmer = !!stopp && !s.kø && !s.sti;
+      // hendelser fra andre moduler stopper spolingen
+      s.sti = null; s.kø = null; s.køSiste = false; s.køSlutt = null;
       // ---- hendelser og spoling ----
       const b0 = FlytSpill.bilde(); ut.bilde = b0.lag >= 1 && typeof b0.dag === 'number';
       const t0 = tid; ut.spol = FlytSpill.spol() && tempo === 600 && FlytSpill.spoler(); document.getElementById('sp1').click(); ut.avbrutt = !FlytSpill.spoler() && tempo === 1; tid = t0;
+      { FlytSpill.spol(); await vent(150); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'tog', tekst: 'prøvetoget er framme' } })); for (let i = 0; i < 20 && FlytSpill.spoler(); i++) await vent(100);
+        const st = FlytSpill.sistStopp(); ut.hendelse = !FlytSpill.spoler() && tempo === 1 && !!st && st.liste.some(h => /prøvetoget/.test(h.tekst)); tid = t0; }
+      // ---- marsj med bekreftelse (telefon og 3D): første trykk gir avstand og tid, «Gå» gir ordren ----
+      { const ft = FlytSpill.test; FlytSpill.test = true; document.body.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })); document.body.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true })); valgt = s; modus = 'marsj'; const brukt = FlytSpill.trykk(s.x + 300, s.y + 100); await vent(350);
+        const mv = document.getElementById('marsjvalg'); ut.bekreftTekst = mv.textContent.slice(0, 60); const ventet = brukt && !s.sti && mv.classList.contains('på') && /km/.test(mv.textContent); document.getElementById('marsjgaa').click(); for (let i = 0; i < 60 && s.planlegger; i++) await vent(100);
+        ut.bekreft = ventet && !!s.sti && modus === null; await vent(350); ut.bekreft = ut.bekreft && !mv.classList.contains('på'); document.body.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'mouse', bubbles: true })); document.body.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'mouse', bubbles: true })); FlytSpill.test = ft; s.sti = null; }
       // ---- flere lag ----
       const egne = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)); ut.egne = egne.length;
       if (egne.length > 1) { ut.gruppe = FlytSpill.velg(egne.slice(0, 2)) === 2 && document.getElementById('flytgruppe').classList.contains('på'); FlytSpill.velg([]); ut.opphevet = !document.getElementById('flytgruppe').classList.contains('på'); } else { ut.gruppe = ut.opphevet = true; }
@@ -57,7 +67,7 @@ module.exports = { navn: 'spillform: flyt, scenarier, seier og tap', kjør: asyn
     document.getElementById('flytkort').classList.remove('på'); visPanel(); skitten = true;
     return ut;
   });
-  const krav = ['finnes', 'marsj', 'kø1', 'kø2', 'bilde', 'spol', 'avbrutt', 'gruppe', 'opphevet', 'hard', 'ingenKjøp', 'ingenRadio', 'radioNær', 'scenario', 'meny', 'vanlig', 'utpost', 'etterspill', 'etterLukket', 'uke', 'maal', 'seier', 'venner'];
+  const krav = ['finnes', 'marsj', 'kø1', 'kø2', 'køTømt', 'stoppTømmer', 'hendelse', 'bekreft', 'bilde', 'spol', 'avbrutt', 'gruppe', 'opphevet', 'hard', 'ingenKjøp', 'ingenRadio', 'radioNær', 'scenario', 'meny', 'vanlig', 'utpost', 'etterspill', 'etterLukket', 'uke', 'maal', 'seier', 'venner'];
   const mangler = krav.filter(k => !d[k]); if (!(d.knapper >= 2)) mangler.push('knapper'); if (!d.tekst) mangler.push('tekst'); if (d.feil) mangler.push('feil: ' + d.feil);
   return { ok: !mangler.length, tekst: mangler.length ? 'mangler: ' + mangler.join(', ') : 'kø, spoling, gruppe, regler, scenario, utpost, etterspill, ukas oppdrag, krigsmål og seierskort virker', data: d };
 } };

@@ -34,7 +34,7 @@
     const S = spill(); if (!S || !S.leir) return; leirId = idAv(S.leir); settRegler();
     try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); T = d && d.leir === leirId ? { ...tom(), ...d } : tom(); } catch (e) { T = tom(); }
     try { const d = JSON.parse(localStorage.getItem(NØKKEL_E) || 'null'); E = d && d.leir === leirId && Array.isArray(d.liste) ? d.liste : []; } catch (e) { E = []; }
-    klar = true;
+    klar = true; pakkAlle(); setTimeout(pakkAlle, 600);
     // start uten ferdige lag: litt mer mat, så de første dagene går opp (én gang per spill)
     if (S.utenLag && !T.mat) { const F = window.FolkSpill && FolkSpill.tilstand(); if (F) { F.mat += R.startmat; T.mat = true; lagre(); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); } }
     const r = window.SPILLREGLER;
@@ -59,7 +59,9 @@
   // utfordringen «Ingen kjøp»: kjøp av materialer, diesel og mat avvises (reglene pakkes inn her; byggene koster fortsatt penger)
   const nekt = () => ({ feil: 'Utfordringen «Ingen kjøp»: dette kan ikke kjøpes. Hogg, riv, let i hus eller dyrk selv.' });
   function pakkInn(obj, navn) { if (!obj || typeof obj[navn] !== 'function' || obj[navn].spillform) return; const f = obj[navn]; obj[navn] = function (...a) { return window.SPILLREGLER.har('ingenKjøp') ? nekt() : f.apply(this, a); }; obj[navn].spillform = true; }
-  pakkInn(window.Leir, 'kjøpMateriale'); pakkInn(window.Leir, 'kjøpDrivstoff'); pakkInn(window.FolkRegler, 'kjøpMat');
+  // (markedet i spill/spillet-visning.js bytter ut de samme funksjonene når spillet starter – derfor pakkes de inn på nytt i start())
+  const pakkAlle = () => { pakkInn(window.Leir, 'kjøpMateriale'); pakkInn(window.Leir, 'kjøpDrivstoff'); pakkInn(window.FolkRegler, 'kjøpMat'); };
+  pakkAlle();
 
   // ---------- kortet midt på skjermen ----------
   const css = document.createElement('style');

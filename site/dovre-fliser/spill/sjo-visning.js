@@ -114,7 +114,7 @@
       if (b.lag) { for (const n of b.lag) { const s = ENHETER.find(e => e.navn === n && e.side === 'blå'); if (s) s.påBåt = b; } delete b.lag; }
       if (b.sti) { const fr = SJ.steg(b, dt); skitten = true; endret = true;
         const sp = SJ.iSperring(S, b.x, b.y); if (sp && b.sti && !(b.friFor || []).includes(sp.id)) { SJ.stopp(b); logg(`${b.navn} stopper: ${sp.type === 'vrak' ? 'et vrak' : 'et minefelt'} sperrer leia.`); }
-        if (fr === 'framme') { logg(b.kai >= 0 ? `${b.navn} ligger ved ${kaiNavn(b.kai)}.` : `${b.navn} er framme og ligger stille.`); tegnPanel(true); } }
+        if (fr === 'framme') { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'båt', tekst: b.navn + ' er framme' } })); logg(b.kai >= 0 ? `${b.navn} ligger ved ${kaiNavn(b.kai)}.` : `${b.navn} er framme og ligger stille.`); tegnPanel(true); } }
       if (b.fisker) { const f = SJ.fangst(b, dt, { vind: vind(), årstid: window.VAER && VAER.årstid }); if (f > 0) { const F = window.FolkSpill && FolkSpill.tilstand(); if (F && vedLeiren(b.x, b.y)) F.mat += f; else b.last.rasjoner += Math.min(f, SJ.ledig(b) / R.vekt.rasjoner); b.fangst = (b.fangst || 0) + f; endret = true; } } }
     for (const s of ENHETER) { const b = s.påBåt; if (!b) continue; if (!S.båter.includes(b) || !levende(s)) { s.påBåt = null; continue; } if (s.x !== b.x || s.y !== b.y) { s.x = b.x; s.y = b.y; s.siktSkitten = true; } s.sti = null; s.retning = b.retning; }
     // havnene: varene samler seg på kaia; en gang i uka kjøres resten landevegen

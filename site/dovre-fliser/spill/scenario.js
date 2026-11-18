@@ -10,9 +10,9 @@
   const REGLER = {
     // penger = faktor på startkassa, fiende = faktor på fiendens treff, røvere = faktor på størrelsen på røverbølgene
     vanskelighet: {
-      lett: { navn: 'Lett', tekst: '150 mill. kr, fienden treffer dårligere, små røverbølger', penger: 1.5, fiende: .75, røvere: .6 },
+      lett: { navn: 'Lett', tekst: '50 % mer penger, fienden treffer dårligere, små røverbølger', penger: 1.5, fiende: .75, røvere: .6 },
       vanlig: { navn: 'Vanlig', tekst: 'Slik spillet er ment', penger: 1, fiende: 1, røvere: 1 },
-      hard: { navn: 'Hard', tekst: '60 mill. kr, fienden treffer bedre, store røverbølger', penger: .6, fiende: 1.3, røvere: 1.5 },
+      hard: { navn: 'Hard', tekst: '40 % mindre penger, fienden treffer bedre, store røverbølger', penger: .6, fiende: 1.3, røvere: 1.5 },
     },
     utfordringer: {
       ingenKjøp: { navn: 'Ingen kjøp', tekst: 'Materialer, diesel og mat kan ikke kjøpes – hogg, riv, let i hus og dyrk selv.' },
