@@ -26,8 +26,26 @@
   const klokke = t => { const m = ((Math.floor(t) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
   KROKER.sim.push(dt => { if (!klar || !auto()) return; akk += dt; if (akk < .5) return; const d = akk; akk = 0; const C = kameraer(); if (!C.length) return;
     const u = KV.steg(K, C, fiender(), tid, d, { tempo: tempo(), vind: window.VAER && VAER.regel ? (VAER.regel.vind && VAER.regel.vind.fart) || 0 : 0 });
-    for (const k of u.varsler) { const c = kam(k.kam); logg(`${c ? navn(c) : 'Kameraet'}: ${KV.tekst(k)}${KV.type(c && c.nivå).selv ? '' : ' (sett av kameravakta)'}.`); merker.push({ x: k.x, y: k.y, til: performance.now() + 60000 }); skitten = true; }
+    for (const k of u.varsler) { const c = kam(k.kam); logg(`${c ? navn(c) : 'Kameraet'}: ${KV.tekst(k)}${KV.type(c && c.nivå).selv ? '' : ' (sett av kameravakta)'}.`); merker.push({ x: k.x, y: k.y, til: performance.now() + 60000 }); varselKort(k, c); skitten = true; }
     if (u.nye.length || u.varsler.length || u.avvist) { const nå = performance.now(); if (nå - sistLagret > 4000) { sistLagret = nå; lagre(); } } });
+  // VARSELKORTET (18. nov): et lite kort oppe til høyre når et kamera har sett folk – med «Se gjennom kameraet» og «Vis i kartet».
+  // Kortet blir borte av seg selv etter 45 sekunder (Claudes forslag).
+  const vk = document.createElement('div'); vk.id = 'kamvarsel'; vk.setAttribute('role', 'alert'); document.body.appendChild(vk); let vkTid = 0;
+  { const st = document.createElement('style'); st.textContent = `#kamvarsel{ position:fixed; right:12px; top:calc(var(--topp,58px) + 150px); z-index:9; display:none; width:min(300px, calc(100vw - 24px)); box-sizing:border-box; padding:10px 12px; background:var(--panel,#1c170f); border:1px solid #c0503a; border-left-width:4px; color:var(--ink,#e7dcc3); box-shadow:0 6px 22px rgba(0,0,0,.55); font-size:14px; line-height:1.35; }
+#kamvarsel.på{ display:block; } #kamvarsel b{ display:block; color:#f0b49a; margin-bottom:2px; } #kamvarsel .rad{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; } #kamvarsel button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:38px; padding:4px 10px; cursor:pointer; font:inherit; }
+#kamvarsel button.hoved{ border-color:#c9b26a; color:#f0d79a; } #kamvarsel .x{ position:absolute; right:2px; top:0; border:none; background:none; font-size:20px; min-height:32px; } body.kort #kamvarsel{ top:calc(var(--topp,44px) + 44px); right:8px; } body.ikamera #kamvarsel, body.foto #kamvarsel{ display:none; }`; document.head.appendChild(st); }
+  function varselKort(k, c) {
+    const S = spill(), kn = (t, f, kl) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (kl) b.className = kl; b.onclick = f; return b; };
+    const d = S && S.leir ? Math.hypot(k.x - S.leir.x, k.y - S.leir.y) : 0, v = S && S.leir ? Math.atan2(k.x - S.leir.x, k.y - S.leir.y) : 0, ret = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'][((Math.round(v / (Math.PI / 4)) % 8) + 8) % 8];
+    vk.innerHTML = ''; const tittel = document.createElement('b'); tittel.textContent = `${c ? navn(c) : 'Kameraet'} har sett folk`; const tekst = document.createElement('div');
+    tekst.textContent = KV.tekst(k) + (d > 30 ? ` – ${Math.round(d / 10) * 10} m ${ret} for leiren.` : '.'); const rad = document.createElement('div'); rad.className = 'rad';
+    rad.append(kn('Se gjennom kameraet', () => { skjulVarsel(); seGjennom(c ? c.id : k.kam); }, 'hoved'), kn('Vis i kartet', () => { skjulVarsel(); if (typeof slå3d === 'function' && typeof på3d !== 'undefined' && på3d) slå3d(false); kam2d(k.x, k.y); }));
+    vk.append(kn('×', skjulVarsel, 'x'), tittel, tekst, rad); vk.classList.add('på'); vkTid = performance.now(); vk.dataset.kam = String(c ? c.id : k.kam);
+  }
+  function skjulVarsel() { vk.classList.remove('på'); }
+  // flytt 2D-kartet til stedet (kam er kartets kamera i index.html; navnet «kam» er brukt til noe annet i denne fila)
+  function kam2d(x, y) { try { const K2 = (0, eval)('kam'); K2.x = x; K2.y = y; if (K2.m > 3) K2.m = 3; } catch (e) { /* kartet er ikke klart */ } skitten = true; }
+  setInterval(() => { if (vk.classList.contains('på') && performance.now() - vkTid > 45000) skjulVarsel(); }, 2000);
   // uten folk på overvåking blir klippene liggende: si fra én gang i blant
   let sistMast = 0;
   setInterval(() => { if (!klar || !auto()) return; const v = KV.venter(K); if (v >= 3 && tempo() <= 0 && performance.now() - sistMast > 240000) { sistMast = performance.now(); logg(`${v} klipp fra kameraene er ikke sett gjennom. ${rom() ? 'Sett noen på «overvåking» i Folk.' : 'Du trenger et kontrollrom som virker, og folk på «overvåking».'}`); } }, 5000);
@@ -85,6 +103,6 @@ body.ikamera #kamlapp{ display:block; } body.ikamera #kamut{ display:block; } bo
     boks.append(knapp(visSpor ? 'Skjul sporene i kartet' : `Vis sporene i kartet (${KV.spor(K).length})`, () => { visSpor = !visSpor; try { localStorage.setItem('riksbrudd-kamspor', visSpor ? '1' : '0'); } catch (x) { /* sperret */ } skitten = true; if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'kamspor' }));
     boks.append(e('small', { style: 'display:block;margin-top:6px;color:var(--ink-dim,#a99)' }, 'Nivå 1 filmer når noe rører seg (også dyr og vær), nivå 2 filmer hele tiden og lagrer sporet av dem som går forbi, nivå 3 skiller selv folk fra dyr og varsler straks. Oppgrader masta for å bytte type.'));
     hode.append(boks); });
-  Object.assign(api, { K: () => K, ser: c => !klar || !auto() || KV.ser(K, c, tid), venter: () => KV.venter(K), antall, tempo, rom, seGjennom, ut, inne: () => inne, visSpor: v => { if (v !== undefined) { visSpor = !!v; skitten = true; } return visSpor; }, lagre, nullstill: () => { K = KV.ny(); merker = []; } });
+  Object.assign(api, { varselKort, skjulVarsel, K: () => K, ser: c => !klar || !auto() || KV.ser(K, c, tid), venter: () => KV.venter(K), antall, tempo, rom, seGjennom, ut, inne: () => inne, visSpor: v => { if (v !== undefined) { visSpor = !!v; skitten = true; } return visSpor; }, lagre, nullstill: () => { K = KV.ny(); merker = []; } });
   window.KameravaktSpill = api;
 })();

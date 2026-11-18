@@ -68,5 +68,11 @@ ok(/vegg/.test(BS.plassering(D, 'bs_palisade', BS.kantVed(O, O.ox + 1.2, O.oy + 
   const mal = LB.tilMal(M, 0, 0, 'test'); ok(mal.bygg.length === 1 && mal.bygg[0].type === 'container', 'tilMal: bare vanlige bygg, ingen deler fra byggesettet');
   const gammel = { versjon: 1, navn: 'gammel', bygg: [{ type: 'bs_vegg_tre', dx: 0, dy: 0, ret: 0 }, { type: 'container', dx: 5, dy: 0, ret: 0 }] };
   ok(LB.fraMal(gammel, 100, 100).length === 1 && LB.planMal(LB.ny(), gammel, 100, 100).lagt.length === 1, 'gamle maler med deler: delene hoppes over når malen settes inn');
-  const rom = BS.rom(BS.fraLeir(M, LB)).reduce((s, r) => s + r.senger, 0); ok(rom === 8 && LB.plasser(M) === 8, 'sengene i et egenbygd rom er med i Leir.plasser én gang (8)'); }
+  const rom = BS.rom(BS.fraLeir(M, LB)).reduce((s, r) => s + r.senger, 0); ok(rom === 8 && LB.plasser(M) === 8, 'sengene i et egenbygd rom er med i Leir.plasser én gang (8)');
+  // romtyper (18. nov): rommet kan brukes som kjøkken, lager eller verksted i stedet for soverom
+  const R0 = BS.rom(BS.fraLeir(M, LB))[0], lp0 = LB.lagerplass(M); ok(R0.bruk === 'soverom' && /^\d+:-?\d+,-?\d+$/.test(R0.nøkkel), 'et rom er soverom til noe annet er valgt, og har en fast nøkkel (' + R0.nøkkel + ')');
+  M.romBruk = { [R0.nøkkel]: 'kjøkken' }; let Rk = BS.rom(BS.fraLeir(M, LB), M.romBruk); ok(Rk[0].bruk === 'kjøkken' && Rk[0].senger === 0 && LB.plasser(M) === 0 && BS.romSum(Rk).kjøkken === (Rk[0].areal >= 16 ? 1 : 0), `som kjøkken har rommet ingen senger (${Rk[0].navn})`);
+  M.romBruk = { [R0.nøkkel]: 'lager' }; Rk = BS.rom(BS.fraLeir(M, LB), M.romBruk); ok(Rk[0].lager > 0 && Math.abs(LB.lagerplass(M) - lp0 - Rk[0].lager) < 1e-9, `som lager gir rommet ${Rk[0].lager} m³ lagerplass`);
+  M.romBruk = { [R0.nøkkel]: 'verksted' }; ok(BS.romSum(BS.rom(BS.fraLeir(M, LB), M.romBruk)).verksted === (R0.areal >= 16 ? 1 : 0), 'som verksted teller rommet for folk på «verksted» (minst 16 m²)');
+  M.romBruk = { [R0.nøkkel]: 'tull' }; ok(BS.rom(BS.fraLeir(M, LB), M.romBruk)[0].bruk === 'soverom', 'ukjent bruk = soverom'); delete M.romBruk; ok(LB.plasser(M) === 8 && LB.lagerplass(M) === lp0, 'uten valg er alt som før'); }
 console.log(feil ? `${feil} FEIL` : 'alt ok'); process.exit(feil ? 1 : 0);

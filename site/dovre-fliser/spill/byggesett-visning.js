@@ -15,6 +15,11 @@
   // rutenettet går ut fra leirens midte (lagres i leiren første gang)
   function opphav() { const l = L(), S = spill(); if (!l) return null; if (!l.byggesett) { const x = S && S.leir ? S.leir.x : kam.x, y = S && S.leir ? S.leir.y : kam.y; l.byggesett = { ox: Math.round(x * 10) / 10, oy: Math.round(y * 10) / 10 }; } return l.byggesett; }
   const deler = () => BS.fraLeir(L(), LB);
+  // rommene med bruken spilleren har valgt (L.romBruk lagres med leiren)
+  const romNå = () => BS.rom(deler(), (L() || {}).romBruk);
+  function byttBruk(nøkkel) { const l = L(); if (!l) return; const typer = Object.keys(BS.ROMBRUK), r = romNå().find(q => q.nøkkel === nøkkel); if (!r) return;
+    const ny = typer[(typer.indexOf(r.bruk) + 1) % typer.length]; l.romBruk = { ...(l.romBruk || {}), [nøkkel]: ny }; if (ny === 'soverom') delete l.romBruk[nøkkel];
+    logg(`Rommet på ${String(r.areal).replace('.', ',')} m² brukes nå som ${BS.ROMBRUK[ny].navn.toLowerCase()}.`); if (LeirSpill.lagre) LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }
 
   // ---------- verktøylinja ----------
   const css = document.createElement('style');
@@ -74,10 +79,14 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function lukk() { V.åpen = false; A = null; B = null; forslag = []; visLinje(); skisse3d(); skitten = true; }
   // knappen i Leir-menyen
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e2, knapp: k2 }) => {
-    const R = BS.rom(deler()), senger = R.reduce((s, r) => s + r.senger, 0);
+    const R = romNå(), senger = R.reduce((s, r) => s + r.senger, 0);
     hode.appendChild(e2('h3', {}, 'Byggesett'));
     hode.appendChild(e2('div', { klasse: 'igang' }, 'Bygg selv av deler: gulv, vegger med dør og vindu, tak, palisade og mur. Lukkede rom med dør blir egenbygde brakker med senger.'));
     if (R.length) hode.appendChild(e2('div', { klasse: 'igang' }, `${R.length} rom: ` + R.map(r => `${r.navn.toLowerCase()} ${String(r.areal).replace('.', ',')} m²${r.senger ? ` (${r.senger} senger)` : ''}`).join(', ') + (senger ? '' : '')));
+    // ROMTYPER: velg hva hvert lukkede rom med dør skal brukes til (soverom, kjøkken, lager, verksted)
+    for (const r of R.filter(q => q.brukbart)) { const B = BS.ROMBRUK[r.bruk];
+      hode.appendChild(e2('div', { klasse: 'mat' }, e2('span', {}, `Rom ${String(r.areal).replace('.', ',')} m²: `), k2(`${B.navn} ›`, () => byttBruk(r.nøkkel), { 'data-rom': r.nøkkel, title: 'Bytt hva rommet brukes til' }),
+        e2('small', {}, ' ' + (r.bruk === 'soverom' ? `${r.senger} senger` : r.bruk === 'lager' ? `+${String(r.lager).replace('.', ',')} m³ lagerplass` : r.virker ? B.tekst : `for lite: trenger ${B.min} m²`)))); }
     hode.appendChild(e2('div', { klasse: 'mat' }, k2('Åpne byggesettet', åpne, { id: 'bs-apne' })));
   });
 
@@ -247,7 +256,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       for (const d of alle.slice().sort((a, b) => ordne(a) - ordne(b))) if (!under(d)) tegnDel(d, null);
       // rommene: navnet midt i (nær nok)
       if (G / m > 9) { g.save(); g.font = '12px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3;
-        for (const r of BS.rom(alle)) { if (r.etasje) continue; const x = sx(o.ox + r.ci * G), y = sy(o.oy + r.cj * G), t = r.navn + (r.senger ? ` · ${r.senger} senger` : '');
+        for (const r of BS.rom(alle, (L() || {}).romBruk)) { if (r.etasje) continue; const x = sx(o.ox + r.ci * G), y = sy(o.oy + r.cj * G), t = r.navn + (r.senger ? ` · ${r.senger} senger` : '');
           g.strokeStyle = 'rgba(0,0,0,.7)'; g.fillStyle = '#f2ead6'; g.strokeText(t, x, y + 4); g.fillText(t, x, y + 4); } g.restore(); } }
     // forslaget: grønt (kan bygges), rødt (får ikke plass); riv: rødt omriss
     for (const q of forslag) tegnDel(q.d, V.fane === 'riv' ? 'rgba(224,96,74,.75)' : q.feil ? 'rgba(224,96,74,.6)' : 'rgba(110,200,105,.62)');
@@ -506,7 +515,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     return { deler: liste.length, nett: mesh.length, iScene: mesh.filter(m => m.parent === R.scene).length, trekanter: tri, svever, ustøttet, rom: BS.rom(liste).length };
   }
   window.Byggesett = {
-    rom: () => BS.rom(deler()), senger: () => BS.rom(deler()).reduce((s, r) => s + r.senger, 0), deler, åpne, lukk, trykk, oppdater, bekreft, riv, lag3d, sjekk,
+    rom: () => romNå(), senger: () => romNå().reduce((s, r) => s + r.senger, 0), romBruk: () => BS.romSum(romNå()), byttBruk, deler, åpne, lukk, trykk, oppdater, bekreft, riv, lag3d, sjekk,
     velg: (o2) => { Object.assign(V, o2); A = null; B = null; forslag = []; visLinje(); }, forslag: () => forslag, tilstand: () => V, opphav,
   };
 })();

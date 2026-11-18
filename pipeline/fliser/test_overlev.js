@@ -13,4 +13,11 @@ const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++;
   const v2 = D.steg(s, 4 * 1440 + 5, 30); ok(v2.join() === 'strøm-nede' && D.nettKW(s) === 0, 'strømnettet går ned etter fire døgn');
   const v3 = D.steg(s, 4 * 1440 + 6, 65 * 60); ok(v3.join() === 'vann-nede' && D.moral(s, 0) === -15 && D.moral(s, 1) === 0, 'vannet svikter også etter ekte spilletid; uten brønn faller moralen, med brønn ikke');
   ok(D.igjen(s.vann, 0, 0) === 'nede' && /døgn til|min spilling til/.test(D.igjen(D.ny(0).strøm, 0, 0)), 'teksten sier hvor lenge det er igjen'); }
+// flere trinn (18. nov): mobilnettet, butikkene og vegene – med varsel i forkant
+{ const s = D.ny(0, .5, .5); s.mer = D.nyMer(0, 0, () => .5);
+  ok(Object.keys(s.mer).join() === 'mobil,butikk,veg' && D.stegMer(s, 100, 10).length === 0 && D.moralMer(s, 0) === 0, 'forfall: mobilnett, butikker og veger virker i starten');
+  ok(D.stegMer(s, 4 * 1440 + 10, 10).join() === 'mobil-varsel' && D.stegMer(s, 5 * 1440 + 10, 20).join() === 'mobil-nede', 'mobilnettet: varsel et døgn før, så dødt');
+  ok(D.moralMer(s, 0) === -5 && D.moralMer(s, 1) === 0, 'uten radiomast faller moralen, med radiomast ikke');
+  const h = D.stegMer(s, 5 * 1440 + 20, 200 * 60); ok(h.join() === 'butikk-nede,veg-nede' && D.nedeMer(s, 'butikk') && D.nedeMer(s, 'veg'), 'butikkene og vegene svikter også etter ekte spilletid');
+  ok(D.steg(s, 100, 10).length === 0 && !s.strøm.nede, 'de nye trinnene rører ikke strøm og vann'); ok(D.stegMer({}, 0, 0).length === 0, 'gamle lagringer uten de nye trinnene tåles'); }
 console.log(feil ? feil + ' feil' : 'alle overlevelsestestene ok'); process.exit(feil ? 1 : 0);
