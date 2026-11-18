@@ -28,6 +28,8 @@
   if (window.Ikoner && Ikoner.BYGG && !Ikoner.BYGG.åker) Ikoner.BYGG.åker = 'blad';
   const BRANNER = window.BRANNER = [], BRENT = window.BRENT = [];
   window.VERDEN_SONER = () => V.soner.map(s => ({ type: s.type, x: s.x, y: s.y, r: s.r, til: s.til }));
+  // (runde 4) er (x, y) i en sone? Flommer følger dalen (flomfeltet), så sirkelen over er bare en grov ramme rundt dem.
+  window.VERDEN_I_SONE = (x, y, type) => { const s = iSoneV(x, y, type); return s ? { type: s.type, x: s.x, y: s.y, r: s.r, til: s.til } : null; };
   const tall = (n, d = 0) => new Intl.NumberFormat('nb-NO', { maximumFractionDigits: d }).format(n);
 
   // ---------- lagring per leir ----------
@@ -37,6 +39,7 @@
     try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
     V = d && d.leir === leirId ? W.fraJSON(d) : W.ny(); klar = true; sistT = null; sistTime = null; stengt.clear(); brannLister(); skitten = true;
     if (window.Dyr3d && Dyr3d.settFelte) Dyr3d.settFelte(V.jakt.felt || []);
+    feltFor.clear(); feltVenter.clear(); for (const s of V.soner) if (s.type === 'flom' && s.kilde) lagFlomfelt(s);
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   window.addEventListener('pagehide', () => { if (skittenLagring) lagre(); });
@@ -98,7 +101,7 @@
     const O = s._vOrig; if (!O || !O.length) return; let minst = 1, sum = 0, ukjent = false; const res = l => l == null ? leirMoh() : l;
     for (let k = 0; k < s.sti.length - 1; k++) {
       const mx = (s.sti[k][0] + s.sti[k + 1][0]) / 2, my = (s.sti[k][1] + s.sti[k + 1][1]) / 2, h = moh(mx, my); if (h == null) ukjent = true;
-      let f = W.marsjFaktor(v, res(h)); const so = W.iSone(V, mx, my); if (so) f *= so.type === 'flom' ? R.regn.vasser : R.regn.rasFart;
+      let f = W.marsjFaktor(v, res(h)); const so = iSoneV(mx, my); if (so) f *= so.type === 'flom' ? R.regn.vasser : R.regn.rasFart;
       if (k >= s.seg) { s.steg[k] = (O[k] || 1e-9) / f; sum += s.steg[k] * (k === s.seg ? 1 - (s.prog || 0) : 1); minst = Math.min(minst, f); }
     }
     // uten snø, flom og ras står marsjen som den var
@@ -109,7 +112,7 @@
     // høyder som ikke var hentet ennå: prøv igjen noen ganger
     if (ukjent && s._vForsøk++ < 6) s._vNøkkel = null;
   }
-  const nøkkel = v => (v.snø > .5 ? 's' : '') + (v.vær === 'storm' ? 'k' : '') + Math.round(v.snøgrense / 50) + '|' + V.soner.length;
+  const nøkkel = v => (v.snø > .5 ? 's' : '') + (v.vær === 'storm' ? 'k' : '') + Math.round(v.snøgrense / 50) + '|' + V.soner.length + '|' + feltFor.size;
   function marsjSteg(v) {
     for (const s of ENHETER) {
       if (!s.sti || !s.steg) { if (s._vSti) { s._vSti = null; s._vOrig = null; s.verdenF = 1; } continue; }
@@ -193,31 +196,57 @@
   }
 
   // ---------- 32 flom og ras ----------
+  // FLOM ETTER REGN I FLOMFELTET (runde 4): vannet følger dalen nedover fra elva (Flom.flomvei/flomfelt i spill/flom.js med
+  // REGLER.regnflom), ikke en sirkel. Feltet ligger i minnet (feltFor: sone-id -> felt, null = kunne ikke lages: sirkel som før) og
+  // regnes ut på nytt etter innlasting fra s.kilde = [x, y]. Flommer uten kilde (gamle lagrede spill) er sirkler.
+  const feltFor = new Map(), feltVenter = new Map();
+  function lagFlomfelt(s) {
+    if (feltFor.has(s.id)) return Promise.resolve(feltFor.get(s.id)); if (feltVenter.has(s.id)) return feltVenter.get(s.id);
+    const p = (async () => {
+      if (!window.Flom || !s.kilde || typeof lagVindu !== 'function') return null; const [x, y] = s.kilde, F = R.regnflom, D = F.lengde + F.bredde + 300;
+      const v = await lagVindu([x - D, y - D, x + D, y + D], false); if (!v || !v.w) return null;
+      const sti = Flom.flomvei(v, x, y, F); if (!sti.length) return null; const { maske, antall, flate } = Flom.flomfelt(v, sti, F); if (!antall) return null;
+      let i0 = v.w, j0 = v.h, i1 = -1, j1 = -1; for (let j = 0; j < v.h; j++) for (let i = 0; i < v.w; i++) if (maske[j * v.w + i]) { if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j; }
+      const w = i1 - i0 + 1, h = j1 - j0 + 1, m = new Uint8Array(w * h), dyp = new Float32Array(w * h), c = lerret(w, h), g = c.getContext('2d'), im = g.createImageData(w, h); let sx = 0, sy = 0, n = 0;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const q = (j0 + j) * v.w + i0 + i; if (!maske[q]) continue; m[j * w + i] = 1; dyp[j * w + i] = Math.max(0, flate[q] - v.H[q]);
+        const k = (j * w + i) * 4; im.data[k] = 74; im.data[k + 1] = 127; im.data[k + 2] = 176; im.data[k + 3] = 255; sx += i; sy += j; n++; }
+      g.putImageData(im, 0, 0); const c4 = lerret(w * 4, h * 4), g4 = c4.getContext('2d'); g4.imageSmoothingEnabled = true; if ('filter' in g4) g4.filter = 'blur(3px)'; g4.drawImage(c, 0, 0, w * 4, h * 4);
+      const felt = { x0: v.x0 + i0 * v.r, y0: v.y0 - j0 * v.r, r: v.r, w, h, maske: m, dyp, c: c4, antall };
+      // midten (navnet i kartet) og en radius som dekker feltet (det andre moduler ser i VERDEN_SONER)
+      const mx = felt.x0 + (sx / n + .5) * v.r, my = felt.y0 - (sy / n + .5) * v.r; let rr = 0; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (m[j * w + i]) rr = Math.max(rr, Math.hypot(felt.x0 + (i + .5) * v.r - mx, felt.y0 - (j + .5) * v.r - my));
+      if (V.soner.includes(s)) { s.x = Math.round(mx); s.y = Math.round(my); s.r = Math.round(rr + v.r / 2); endret(); }
+      return felt; })().catch(e => { console.error(e); return null; }).then(f => { feltFor.set(s.id, f); feltVenter.delete(s.id); skitten = true; return f; });
+    feltVenter.set(s.id, p); return p;
+  }
+  // Er (x, y) i en sone? Som Verden.iSone, men flommer med felt bruker feltet
+  function iSoneV(x, y, type) { for (const s of V.soner) { if (type && s.type !== type) continue; const f = s.type === 'flom' ? feltFor.get(s.id) : null; if (f ? Flom.iFlom(f, x, y) : Math.hypot(s.x - x, s.y - y) <= s.r) return s; } return null; }
   const stengt = new Map();
   async function stengVeger(s) {
-    if (stengt.has(s.id)) return; let g = window.VEGNETT;
+    if (stengt.has(s.id)) return; if (s.type === 'flom' && s.kilde && !feltFor.has(s.id)) { await lagFlomfelt(s); if (stengt.has(s.id)) return; }
+    const felt = s.type === 'flom' ? feltFor.get(s.id) : null; let g = window.VEGNETT;
     // vegnettet er stort: i testene hentes det ikke bare for dette
     if (!g) { if (navigator.webdriver || !window.lastVegnett) return; try { g = await lastVegnett(); } catch (e) { return; } }
     if (stengt.has(s.id) || !V.soner.includes(s)) return; const lenker = []; stengt.set(s.id, lenker);
-    const pkt = [[s.x, s.y]]; if (s.r > 120) for (let a = 0; a < 8; a++) pkt.push([s.x + Math.cos(a * Math.PI / 4) * s.r * .6, s.y + Math.sin(a * Math.PI / 4) * s.r * .6]);
-    for (const p of pkt) { const n = g.naermeste(p, Math.max(120, s.r * .5)); if (n === -1) continue; const q = g.punkt(n); if (Math.hypot(q[0] - s.x, q[1] - s.y) > s.r) continue;
+    const pkt = [[s.x, s.y]]; if (felt) { pkt.length = 0; for (let j = 0; j < felt.h; j += 2) for (let i = 0; i < felt.w; i += 2) if (felt.maske[j * felt.w + i]) pkt.push([felt.x0 + (i + .5) * felt.r, felt.y0 - (j + .5) * felt.r]); }
+    else if (s.r > 120) for (let a = 0; a < 8; a++) pkt.push([s.x + Math.cos(a * Math.PI / 4) * s.r * .6, s.y + Math.sin(a * Math.PI / 4) * s.r * .6]);
+    for (const p of pkt) { const n = g.naermeste(p, felt ? felt.r * 1.5 : Math.max(120, s.r * .5)); if (n === -1) continue; const q = g.punkt(n); if (felt ? !Flom.iFlom(felt, q[0], q[1]) : Math.hypot(q[0] - s.x, q[1] - s.y) > s.r) continue;
       for (const e of g.lenkerVed(n)) if (!g.lenke(e).sperret) { g.sperr(e); lenker.push(e); } }
     if (!lenker.length) return; const sett = new Set(lenker);
     for (const k of KJORETOY) { if (!k.sti || !Kjoretoy.lenkerIgjen(k).some(e => sett.has(e))) continue; const P = k.sti.P, r = Kjoretoy.planlegg(k, g, [P[P.length - 2], P[P.length - 1]]);
       if (r.feil) { Kjoretoy.stopp(k); k.oppdrag = null; logg(`${k.navn}: vegen er stengt av ${s.type === 'ras' ? 'raset' : 'flommen'}, og det finnes ingen omkjøring.`); } else if (!k.side || k.side === 'blå') logg(`${k.navn} kjører om ${s.type === 'ras' ? 'raset' : 'flommen'}.`); }
   }
   function åpneVeger(s) { const g = window.VEGNETT, l = stengt.get(s.id); stengt.delete(s.id); if (g && l) for (const e of l) if (!g._sperretAv || !g._sperretAv.has(e)) g.åpne(e); }
-  function nySone(type, x, y, r, navn) {
-    const s = W.nySone(V, type, x, y, r, tid, navn); stengVeger(s).catch(e => console.error(e)); skitten = true; endret();
-    for (const e of ENHETER) if (e.side === 'blå' && levende(e) && W.iSone(V, e.x, e.y) === s && type === 'ras') { const ut = Terreng.fordelTreff(e.menn, 1, rng); logg(`${e.navn} ble tatt av raset: ${ut.map(([m, t]) => `${m.navn} ${t}`).join(', ')}.`); e.siktSkitten = true; }
+  function nySone(type, x, y, r, navn, kilde) {
+    const s = W.nySone(V, type, x, y, r, tid, navn); if (kilde) s.kilde = kilde; stengVeger(s).catch(e => console.error(e)); skitten = true; endret();
+    for (const e of ENHETER) if (e.side === 'blå' && levende(e) && iSoneV(e.x, e.y) === s && type === 'ras') { const ut = Terreng.fordelTreff(e.menn, 1, rng); logg(`${e.navn} ble tatt av raset: ${ut.map(([m, t]) => `${m.navn} ${t}`).join(', ')}.`); e.siktSkitten = true; }
     return s;
   }
-  function flom(x, y, orden, navn) { const s = nySone('flom', x, y, W.flomRadius(V, orden || 3), navn); logg(`Flom: ${navn || 'elva'} går over sine bredder ${stedTekst(x, y)}. Det er tungt å ta seg fram der i ${R.regn.flomTimer} timer, og vegene er stengt.`); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'natur', tekst: 'flom ' + stedTekst(x, y) } })); return s; }
+  function flom(x, y, orden, navn) { const s = nySone('flom', x, y, W.flomRadius(V, orden || 3), navn, [Math.round(x), Math.round(y)]); logg(`Flom: ${navn || 'elva'} går over sine bredder ${stedTekst(x, y)}. Det er tungt å ta seg fram der i ${R.regn.flomTimer} timer, og vegene er stengt.`); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'natur', tekst: 'flom ' + stedTekst(x, y) } })); return s; }
   function ras(x, y) { const s = nySone('ras', x, y, R.regn.rasRadius); logg(`Ras: lia har gått ${stedTekst(x, y)}. Vegen der er stengt i ${R.regn.rasTimer} timer.`); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'natur', tekst: 'ras ' + stedTekst(x, y) } })); return s; }
   async function finnFlomsted() {
     const l = leir(); if (!l || !window.BEKKER || !BEKKER.hent) return null; const D = 12000; let biter = [];
     try { biter = await BEKKER.hent([l.x - D, l.y - D, l.x + D, l.y + D], [0, 1]); } catch (e) { return null; }
-    const kand = []; for (const b of biter) for (const ln of (b && b.linjer) || []) if (ln.orden >= 3 && ln.P.length > 1) { const p = ln.P[Math.floor(Math.random() * ln.P.length)]; if (Math.hypot(p[0] - l.x, p[1] - l.y) < D && !W.iSone(V, p[0], p[1])) kand.push({ x: p[0], y: p[1], orden: ln.orden, navn: ln.navn }); }
+    const kand = []; for (const b of biter) for (const ln of (b && b.linjer) || []) if (ln.orden >= 3 && ln.P.length > 1) { const p = ln.P[Math.floor(Math.random() * ln.P.length)]; if (Math.hypot(p[0] - l.x, p[1] - l.y) < D && !iSoneV(p[0], p[1])) kand.push({ x: p[0], y: p[1], orden: ln.orden, navn: ln.navn }); }
     return kand.length ? kand[Math.floor(Math.random() * kand.length)] : null;
   }
   async function finnRassted() {
@@ -225,7 +254,7 @@
     for (let t = 0; t < 40; t++) {
       const a = Math.random() * 6.283, d = 800 + Math.random() * 11000; let x = l.x + Math.cos(a) * d, y = l.y + Math.sin(a) * d;
       if (g) { const n = g.naermeste([x, y], 1500); if (n === -1) continue; [x, y] = g.punkt(n); }
-      const p = await punktA(x, y); if (!p || p.h == null || p.k === 3 || W.iSone(V, x, y) || Math.hypot(x - l.x, y - l.y) < 300) continue; let bratt = 0;
+      const p = await punktA(x, y); if (!p || p.h == null || p.k === 3 || iSoneV(x, y) || Math.hypot(x - l.x, y - l.y) < 300) continue; let bratt = 0;
       for (const [dx, dy] of [[96, 0], [-96, 0], [0, 96], [0, -96]]) { const q = await punktA(x + dx, y + dy); if (q && q.h != null) bratt = Math.max(bratt, (q.h - p.h) / 96); }
       if (bratt >= R.regn.bratt) return { x, y };
     }
@@ -236,6 +265,13 @@
     if (hva === 'ras') { const p = await finnRassted(); if (p) { ras(p.x, p.y); return; } }
     const p = await finnFlomsted(); if (p) flom(p.x, p.y, p.orden, p.navn);
   }
+
+  // ---------- isen på innsjøene (runde 4) ----------
+  // Islagte innsjøer stenger båter. Pakka «sjo» kan spørre window.Verden.islagt(x, y) (kartets meter): true når vannet der er en
+  // innsjø (vannflate over 1 moh., ikke sjøen) og kulda har lagt is (Verden.REGLER.is.båt døgngrader). Svarer false til kartet der er
+  // hentet (det bestilles da). I testene (navigator.webdriver) legger isen seg ikke av seg selv.
+  function islagt(x, y) { if (!klar) return false; const p = punkt(x, y); return !!p && W.islagtVann(V, p.h, p.k); }
+  W.islagt = islagt;
 
   // ---------- 35 brann ----------
   function brannLister() {
@@ -448,7 +484,7 @@
     if (!klar) return; if (sistT != null && tid - sistT < 1 && tid >= sistT) return; const dt = sistT == null || tid < sistT ? 0 : Math.min(240, tid - sistT); sistT = tid;
     const v = vær(); if (!v) return;
     egneSkudd(v); jaktSteg(); togSteg(); autoÅrstid(); åkerSteg(v, dt);
-    for (const s of W.ryddSoner(V, tid)) { åpneVeger(s); skitten = true; endret(); logg(s.type === 'ras' ? `Raset ${stedTekst(s.x, s.y)} er ryddet. Vegen er åpen.` : `Flommen ${stedTekst(s.x, s.y)} har trukket seg tilbake.`); }
+    for (const s of W.ryddSoner(V, tid)) { åpneVeger(s); feltFor.delete(s.id); skitten = true; endret(); logg(s.type === 'ras' ? `Raset ${stedTekst(s.x, s.y)} er ryddet. Vegen er åpen.` : `Flommen ${stedTekst(s.x, s.y)} har trukket seg tilbake.`); }
     for (const s of V.soner) if (!stengt.has(s.id) && window.VEGNETT) stengVeger(s).catch(() => {});
     if (sistBrann == null || tid - sistBrann >= 10 || tid < sistBrann) { const d = sistBrann == null || tid < sistBrann ? 10 : Math.min(60, tid - sistBrann); sistBrann = tid; brannSteg(v, d); }
     if (BRANNER.length && (sistSkade == null || tid - sistSkade >= 30 || tid < sistSkade)) { sistSkade = tid; brannSkade(); }
@@ -475,7 +511,7 @@
     if (s.side !== 'blå' || s.ombord || !klar) return;
     const f = funnVed(s); if (f) { const b = knapp(`Undersøk ${f.navn.toLowerCase()}`, false, () => { undersøk(s, f); }); b.id = 'funnknapp'; H.appendChild(b); }
     // ingeniørene rydder et ras på noen timer
-    const so = W.iSone(V, s.x, s.y, 'ras'); if (so && s.ingeniør && so.til - tid > R.regn.ryddTimer * 60) { const b = knapp(`Rydd raset (${R.regn.ryddTimer} t)`, false, () => { so.til = tid + R.regn.ryddTimer * 60; endret(); logg(`${s.navn} rydder raset: vegen er åpen om ${R.regn.ryddTimer} timer.`); visPanel(); }); b.id = 'ryddknapp'; H.appendChild(b); }
+    const so = iSoneV(s.x, s.y, 'ras'); if (so && s.ingeniør && so.til - tid > R.regn.ryddTimer * 60) { const b = knapp(`Rydd raset (${R.regn.ryddTimer} t)`, false, () => { so.til = tid + R.regn.ryddTimer * 60; endret(); logg(`${s.navn} rydder raset: vegen er åpen om ${R.regn.ryddTimer} timer.`); visPanel(); }); b.id = 'ryddknapp'; H.appendChild(b); }
     if (s.karakter) return;
     if (s.jakt) { const b = knapp('Avbryt jakta', true, () => { s.jakt = null; logg(`${s.navn} avbrøt jakta.`); visPanel(); }); b.id = 'jaktknapp'; H.appendChild(b); }
     else { const art = viltHer(s); if (art && !s.sti) { const hviler = W.jaktHviler(V, s.x, s.y, tid), b = knapp(hviler ? 'Viltet her er skremt' : `Jakt på ${art} (${R.jakt.timer} t)`, false, () => { const r = startJakt(s); if (r.feil) logg(s.navn + ': ' + r.feil); visPanel(); });
@@ -515,8 +551,10 @@
         g.lineWidth = 1.2; g.strokeStyle = 'rgba(40,30,18,.7)'; g.strokeRect(x0, y0, px, px);
         if (m < 8) { const t = `Åker · ${Å.ryddet} mål` + (Å.sådd ? (mod >= 1 ? ' · modent' : ' · gror') : ''); g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = '#f1e2a8'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; g.strokeText(t, x0 + px / 2, y0 - 5); g.fillText(t, x0 + px / 2, y0 - 5); } } }
     // flom og ras
-    for (const s of V.soner) { if (!inne(s.x, s.y, s.r / m + 20)) continue; const rr = Math.max(5, s.r / m), flom = s.type === 'flom';
-      g.beginPath(); g.arc(sx(s.x), sy(s.y), rr, 0, 6.283); g.fillStyle = flom ? 'rgba(74,127,176,.42)' : 'rgba(120,92,60,.5)'; g.fill(); g.setLineDash([5, 4]); g.lineWidth = 1.5; g.strokeStyle = flom ? '#a9c6df' : '#d9b98a'; g.stroke(); g.setLineDash([]);
+    for (const s of V.soner) { if (!inne(s.x, s.y, s.r / m + 20)) continue; const rr = Math.max(5, s.r / m), flom = s.type === 'flom', felt = flom ? feltFor.get(s.id) : null;
+      // flom i flomfeltet: vannet langs dalbunnen (mykt blått bilde); ellers en sirkel som før
+      if (felt) { g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = .6; g.drawImage(felt.c, sx(felt.x0), sy(felt.y0), felt.w * felt.r / m, felt.h * felt.r / m); g.restore(); }
+      else { g.beginPath(); g.arc(sx(s.x), sy(s.y), rr, 0, 6.283); g.fillStyle = flom ? 'rgba(74,127,176,.42)' : 'rgba(120,92,60,.5)'; g.fill(); g.setLineDash([5, 4]); g.lineWidth = 1.5; g.strokeStyle = flom ? '#a9c6df' : '#d9b98a'; g.stroke(); g.setLineDash([]); }
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = flom ? '#d5e6f5' : '#f0dcc0'; g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 3; const t = flom ? 'flom' : 'ras'; g.strokeText(t, sx(s.x), sy(s.y) + 4); g.fillText(t, sx(s.x), sy(s.y) + 4); }
     // funn som er sett, men ikke undersøkt
     if (m < 120) { const B = R.funn.blokk, x0 = vx0, x1 = vx0 + VW * m, y1 = vy1, y0 = vy1 - VH * m;
@@ -552,7 +590,7 @@
       flamme: new THREE.PointsMaterial({ size: 20, map: tex, color: 0xff7a22, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true }),
       røyk: new THREE.PointsMaterial({ size: 120, map: tex, color: 0x5a554f, transparent: true, opacity: .42, depthWrite: false, sizeAttenuation: true }),
       stein: new THREE.MeshLambertMaterial({ color: 0x7c756c }), kasse: new THREE.MeshLambertMaterial({ color: 0xffffff }),
-      vann: new THREE.MeshBasicMaterial({ color: 0x4a7fb0, transparent: true, opacity: .62, depthWrite: false }),
+      vann: new THREE.MeshBasicMaterial({ color: 0x55707c, transparent: true, opacity: .72, depthWrite: false, side: THREE.DoubleSide }),
       // åkeren: jord og korn med hjørnefarger (runde 4)
       åker: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }) };
     return MAT3;
@@ -560,7 +598,7 @@
   function fjern3d(R) { if (!D3) return; if (R && R.scene) R.scene.remove(D3.gruppe); D3.gruppe.traverse(o => { if (o.geometry) o.geometry.dispose(); }); D3 = null; }
   // åkerstykkene i 3D endrer seg med framdrift, brann, såing, veksten (i tideler) og årstiden
   const åkerNøkkel = () => { const st = åkerStykker(); if (!st.length) return ''; const v = vær(); return st.map(b => b.id + ':' + Math.round((b.hp == null ? 1 : b.hp) * 10) + ':' + Math.round(Leir.framdrift(b) * 10) + ':' + (stykkeSådd(b) ? 1 : 0)).join(',') + '|' + Math.round(Math.min(1, V.åker.grodd / R.åker.modning) * 10) + (v ? v.årstid : ''); };
-  const nøkkel3d = u => åkerNøkkel() + '|' + BRANNER.length + ':' + (BRANNER[0] ? BRANNER[0].x + ',' + BRANNER[BRANNER.length - 1].y : '') + '|' + V.soner.map(s => s.id).join(',') + '|' + Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).join(';') + '|' + u.cx + ',' + u.cy + ',' + u.S;
+  const nøkkel3d = u => åkerNøkkel() + '|' + BRANNER.length + ':' + (BRANNER[0] ? BRANNER[0].x + ',' + BRANNER[BRANNER.length - 1].y : '') + '|' + V.soner.map(s => s.id + (feltFor.get(s.id) ? 'f' : '')).join(',') + '|' + Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).join(';') + '|' + u.cx + ',' + u.cy + ',' + u.S;
   // FUNN I 3D (runde 4): kasser, sekker, tønner, telt, vrak og fly av fire former (ett instansnett per form, hjørnefarger per del).
   // Del: [form, lengde, bredde, høyde, x, y, z (over bakken), vridning (rad), farge, helling om y, helling om x (rad)]. Former: kasse, tønne (stående
   // sylinder), sekk (flattrykt kule) og telt (trekantet prisme langs y). Alle mål i meter, fronten mot +x.
@@ -606,8 +644,10 @@
       for (const s of ras) for (let i = 0; i < per; i++, k++) { const a = W.hash(s.id * 97 + i * 3) * 6.283, d = Math.sqrt(W.hash(s.id * 97 + i * 3 + 1)) * s.r * .55, X = s.x + Math.cos(a) * d, Y = s.y + Math.sin(a) * d, st = .7 + W.hash(s.id * 97 + i * 3 + 2) * 3.2;
         o.position.set(X - u.cx, Y - u.cy, z(X, Y) + st * .3); o.rotation.set(a, a * 2, a * 3); o.scale.set(st, st * (.7 + .5 * W.hash(i)), st * .7); o.updateMatrix(); m.setMatrixAt(k, o.matrix); }
       m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; gr.add(m); }
-    // flom: en vannflate litt over det laveste punktet
-    for (const s of V.soner) { if (s.type !== 'flom' || !inne(s.x, s.y, s.r)) continue; let lav = z(s.x, s.y); for (let a = 0; a < 8; a++) lav = Math.min(lav, z(s.x + Math.cos(a * .785) * s.r * .5, s.y + Math.sin(a * .785) * s.r * .5));
+    // flom i flomfeltet: vannet ligger i dalbunnen og følger terrenget (0,3–1,2 m over bakken, dypest der feltet er dypest)
+    for (const s of V.soner) { const f = s.type === 'flom' ? feltFor.get(s.id) : null; if (!f) continue; const m = flomNett(f, z); if (m) gr.add(m); }
+    // flom uten felt (gamle lagrede spill): en vannflate litt over det laveste punktet
+    for (const s of V.soner) { if (s.type !== 'flom' || feltFor.get(s.id) || !inne(s.x, s.y, s.r)) continue; let lav = z(s.x, s.y); for (let a = 0; a < 8; a++) lav = Math.min(lav, z(s.x + Math.cos(a * .785) * s.r * .5, s.y + Math.sin(a * .785) * s.r * .5));
       const v = new THREE.Mesh(new THREE.CircleGeometry(s.r, 40), M.vann); v.position.set(s.x - u.cx, s.y - u.cy, lav + 1.6 * EX); v.renderOrder = 2; gr.add(v); }
     // funn: vrak, depoter, forlatte leirer og fly – kasser, tønner, sekker og telt der funnet ligger (hver del på bakken der den står)
     const funn = Object.keys(V.funn.sett).filter(id => !V.funn.tatt[id]).map(id => { const [bx, by] = id.split(',').map(Number); return funnI(bx, by); }).filter(f => f && inne(f.x, f.y, 20));
@@ -622,6 +662,18 @@
     // åkerstykkene: jord som følger terrenget, og kornet i rader langs den lange siden (rygger som vokser med årstiden)
     for (const b of åkerStykker()) { if (!inne(b.x, b.y, 60)) continue; const m = åkerNett(b, z); if (m) gr.add(m); }
     if (gr.children.length) R.scene.add(gr); else D3.tom = true;
+  }
+  // vannet i et flomfelt: et rutenett med felles hjørner (høyden = bakken + snittet av dybden i rutene rundt hjørnet)
+  function flomNett(f, z) {
+    const u = D3.u, inne = (X, Y) => Math.abs(X - u.cx) < u.S - 4 && Math.abs(Y - u.cy) < u.S - 4, hj = new Map(), pos = [], idx = [];
+    const hjørne = (i, j) => { const k = j * (f.w + 1) + i; if (hj.has(k)) return hj.get(k); let d = 0, n = 0;
+      for (const [a, b] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) if (a >= 0 && b >= 0 && a < f.w && b < f.h && f.maske[b * f.w + a]) { d += f.dyp[b * f.w + a]; n++; }
+      // hjørner i kanten av feltet ligger under bakken, så vannkanten skjærer terrenget (ikke trappetrinn langs rutenettet)
+      const X = f.x0 + i * f.r, Y = f.y0 - j * f.r, dz = n === 4 ? .3 + .9 * Math.min(1, d / n / 2.5) : n >= 2 ? -.4 : -1.5; pos.push(X - u.cx, Y - u.cy, z(X, Y) + dz); hj.set(k, pos.length / 3 - 1); return pos.length / 3 - 1; };
+    for (let j = 0; j < f.h; j++) for (let i = 0; i < f.w; i++) { if (!f.maske[j * f.w + i]) continue; const X = f.x0 + (i + .5) * f.r, Y = f.y0 - (j + .5) * f.r; if (!inne(X, Y)) continue;
+      const a = hjørne(i, j), b = hjørne(i + 1, j), c = hjørne(i + 1, j + 1), d = hjørne(i, j + 1); idx.push(a, d, c, a, c, b); }
+    if (!idx.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setIndex(idx);
+    const m = new THREE.Mesh(g, mat3().vann); m.renderOrder = 2; m.userData.flom = true; return m;
   }
   // ett nett per åkerstykke: jorda (ruter på 5 m) og radene (to skrå flater per stykke på 5 m), alt i lokale meter på utsnittet
   function åkerNett(b, z) {
@@ -744,10 +796,10 @@
   });
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
-  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, undersøk, funnVed, funnNær, funnI, plasserFunn, funnFlytt: () => funnFlytt, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
+  Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, islagt, iSoneV, lagFlomfelt, felt: id => feltFor.get(id), undersøk, funnVed, funnNær, funnI, plasserFunn, funnFlytt: () => funnFlytt, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
     punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     åkerFolk, spor: () => spor, D3: () => D3, LEIRBRANN, slokkILeiren, brennbar,
-    ryddKart() { for (const s of V.soner) åpneVeger(s); V.soner = []; V.brann = W.nyBrann(); brannLister(); skitten = true; endret(); } });
+    ryddKart() { for (const s of V.soner) åpneVeger(s); V.soner = []; feltFor.clear(); feltVenter.clear(); åpneSnø(); V.brann = W.nyBrann(); brannLister(); skitten = true; endret(); } });
   window.VerdenSpill = api;
 })();

@@ -32,6 +32,9 @@
     // etter: så mye synker regnsummen når det har gått en flom / et ras (trykket slipper); høyst én flom og ett ras om gangen;
     // i kuldegrader faller nedbøren som snø og teller ikke
     // vasser / rasFart: faktor på marsjfarten gjennom en flomsone / over et ras; ryddTimer: så lenge bruker et ingeniørlag på å rydde et ras
+    // regnflom (runde 4): vannet følger dalen nedover fra elva i flomfeltet til spill/flom.js – så langt (m), vannflaten så mye over
+    // dalbunnen øverst og nederst (m), så bredt på hver side (m), og flomveien starter i det laveste punktet så nær elva (m)
+    regnflom: { lengde: 3000, dybde: [2.5, 1], bredde: 250, start: 120 },
     regn: { tørker: .2, maks: 30, flom: 5, ras: 8, sjanse: .04, etter: { flom: 3, ras: 4 }, flomTimer: 12, rasTimer: 24, flomRadius: [150, 400], rasRadius: 90, bratt: .45, vasser: .25, rasFart: .5, ryddTimer: 3 },
     // tørke: døgn uten regn (maks 10; nedbør og våt bakke tar bort «vått» ganger så fort); brannfaren er 0 under «fra» og full ved «full»
     tørke: { maks: 10, fra: .5, full: 2, vått: 2 },
@@ -94,7 +97,7 @@
   const isBærer = V => V.frost >= REGLER.is.bærer;
   // Islagt vann (pakka «sjo» kan bruke det for båter): ferskvann (vannflate over 1 moh., ikke sjøen) etter så mye kulde at isen har lagt seg.
   // moh = høyden på vannflaten, klasse = terrengklasse (3 = vann). Isen stenger båter før den bærer folk (REGLER.is.båt).
-  const islagt = (V, moh, klasse) => klasse === 3 && moh != null && moh > REGLER.is.sjø && V.frost >= REGLER.is.båt;
+  const islagtVann = (V, moh, klasse) => klasse === 3 && moh != null && moh > REGLER.is.sjø && V.frost >= REGLER.is.båt;
   // Ekstra ved (m³ tre) leiren bruker på d døgn i kulda
   const vedEkstra = (temp, d) => Math.max(0, (REGLER.kulde.vedFra - temp) / 10) * REGLER.kulde.ved * d;
   // Et lag (id) har stått ute i «timer» timer ved temperaturen temp. Gir antall treff kulda gir nå (0 for det meste).
@@ -137,6 +140,7 @@
     if (f < 1) ut.push(`Snø: marsj −${pst(f)} % her`); else if (fFjell < 1) ut.push(`Snø i fjellet: marsj −${pst(fFjell)} % over ${Math.round(Math.max(0, vær.snøgrense))} moh.`);
     if (vær.snø > .5) ut.push(`Snøvær: vegene over ${REGLER.snø.vegFjell} moh. er stengt`);
     if (isBærer(V)) ut.push('Isen bærer: lag kan gå over vann'); else if (V.frost > 0) ut.push(`Is på vannene, bærer ikke ennå (${Math.round(V.frost / REGLER.is.bærer * 100)} %)`);
+    if (V.frost >= REGLER.is.båt) ut.push('Innsjøene er islagt: båtene kommer ikke fram der');
     if (vær.temp <= REGLER.kulde.grense) ut.push(`Kulde (${Math.round(vær.temp)} °C): lag som står ute lenge tar skade, leiren bruker mer ved`);
     const fl = flomfare(V), ra = rasfare(V), br = brannfare(V, vær);
     if (ra >= 1) ut.push('Mye regn: fare for ras og flom'); else if (fl >= 1) ut.push('Mye regn: fare for flom'); else if (fl > .3) ut.push('Elvene stiger');
@@ -342,7 +346,7 @@
 
   function fraJSON(d) { const V = ny(); if (!d || d.versjon !== 1) return V; for (const k of Object.keys(V)) if (d[k] != null) V[k] = typeof V[k] === 'object' && !Array.isArray(V[k]) ? { ...V[k], ...d[k] } : d[k]; if (!V.brann.celler) V.brann = nyBrann(); return V; }
 
-  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagt, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
+  const api = { REGLER, FUNN, STASJONER, ny, fraJSON, hash, tempVed, snøPåBakken, marsjFaktor, vegStengt, snøVegGrense, lenkeStengt, islagtVann, isBærer, vedEkstra, kuldeSteg, steg, brannfare, flomfare, rasfare, trekkHendelse, forhold,
     nySone, iSone, ryddSoner, flomRadius, vilt, jaktRute, jaktHviler, jaktUtbytte, sikt, så, åkerSteg, ryddÅker, åkerBehov, åkerSide, åkerBrennbar, åkerMål, korn, nyBrann, rute, midt, tenn, brenner, erBrent, brannSteg, brannListe,
     funnIBlokk, funnNær, funnKandidater, åpentFunnSted, innhold, radioMelding, radioInn, erStasjon, togPlan, togStart, togSteg, årstidNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -17,8 +17,8 @@ assert.strictEqual(V.snøVegGrense(vinter, R.snø.brøyt - 1), R.snø.vegFjell, 
 assert.strictEqual(V.snøVegGrense(vinter, R.snø.brøyt + 1), null, 'åpen etter brøytingen');
 assert.strictEqual(V.snøVegGrense({ ...vinter, snø: 1, snøgrense: 1200 }, 0), 1200, 'snøgrensen over fjellgrensen');
 assert.ok(V.lenkeStengt(900, [700, 950, 800]) && !V.lenkeStengt(900, [700, null, 800]) && !V.lenkeStengt(null, [2000]));
-{ const I = V.ny(); assert.ok(!V.islagt(I, 600, 3)); I.frost = R.is.båt; assert.ok(V.islagt(I, 600, 3), 'innsjøen er islagt');
-  assert.ok(!V.islagt(I, .3, 3), 'sjøen fryser ikke'); assert.ok(!V.islagt(I, 600, 1), 'skog er ikke is'); assert.ok(R.is.båt < R.is.bærer, 'isen stenger båter før den bærer'); }
+{ const I = V.ny(); assert.ok(!V.islagtVann(I, 600, 3)); I.frost = R.is.båt; assert.ok(V.islagtVann(I, 600, 3), 'innsjøen er islagt');
+  assert.ok(!V.islagtVann(I, .3, 3), 'sjøen fryser ikke'); assert.ok(!V.islagtVann(I, 600, 1), 'skog er ikke is'); assert.ok(R.is.båt < R.is.bærer, 'isen stenger båter før den bærer'); }
 let S = V.ny(); assert.ok(!V.isBærer(S));
 V.steg(S, 1440, vinter); assert.ok(!V.isBærer(S), 'ett døgn med −15 er ikke nok');
 V.steg(S, 1440, vinter); assert.ok(V.isBærer(S), 'to døgn med −15 gir is som bærer');
