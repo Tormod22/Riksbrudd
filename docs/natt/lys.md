@@ -499,7 +499,16 @@ alt uten et nytt THREE-lys og uten nye skyggeprogrammer. Forslag:
 - Pass på `fog: false`-materialer (vindusglasset i interiøret, himmelen) – de får ikke lykta, og det er riktig.
 
 ### 4. Telefon (mobil-profilen) – ikke gjort
-Ikke målt i denne runden (tiden gikk til 1–3). Grensa er prøvd på mobil (bilder over). Vakta lys er prøvd på PC (Dovre, 3D på: grønn, 23 s).
+Ikke målt i denne runden (tiden gikk til 1–3, og maskinen ble startet på nytt kl. 00:15). Grensa er prøvd på mobil (bilder over).
+
+### Prøvd etter endringene (Dovre-testsiden, scratchpad `natt5/lys/vakt.js` og `natt5/lys/f-sjekk.js`)
+- Vakta lys med 3D på: PC 1400 × 820 grønn (23 s), mobil 390 × 844 grønn (9 s) – også runde 5-delen (grensemasken, hindring3d med boks,
+  lysflekkene; Dombås-utsnittet hadde ingen gatelys i det utsnittet, så lysflekkene ble prøvd i Stavanger: 1167 + 4134 like).
+- 3D-vaktene fra sjekk.js med effektene på (Høy, PC): billigere terreng, tåkebildet, utseende 15. nov, filtre i 3D, bygging i biter
+  (137 pust, forberedt og uforberedt bytte like) og minne i 3D (geometrier 70 -> 70, teksturer 17 -> 17) – alle grønne, 0 sidefeil.
+- Regeltestene test_grense3d, test_omraade, test_ytelse, test_kvalitet, test_fjern3d, test_vegetasjon grønne; `node --check` på filene og hovedskriptet.
+- Et bilde helt nede på bakken («Gå») ved grensa ble ikke tatt: utsnittet for gange ble ikke ferdig bygget innen 8 min med programvare-grafikk
+  under last. Bildene «lavt» er tatt 300–380 m fra bakken.
 
 ### Fellesfiler endret i runde 5
 - `site/dovre-fliser/index.html`: skripttaggen for grense3d.js (rett etter region-visning.js); `hindringer()` – `{ P, bb }`;
