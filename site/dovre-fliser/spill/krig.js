@@ -11,7 +11,7 @@
     // snu: grader per spillminutt et lag som står stille, snur seg mot den som skyter. nedgravd: så mye av overtaket som er igjen.
     flanke: { front: 60, rygg: 120, flankeF: 1.25, ryggF: 1.5, nedgravd: .5, snu: 12 },
     // et lag som står stille i tettbebyggelse (terrengklasse 7), har hus å gjemme seg bak
-    hus: { klasse: 7, tar: .7 },
+    hus: { klasse: 7, tar: .7, nær: 14 },
     // sårede bæres: farten synker per såret (ned til «minst»); ved leiren blir én frisk per «leir» minutter, med sykestue per «sykestue»
     sårede: { per: .06, minst: .6, sykestue: 30, leir: 180, avstand: 300 },
     // overgivelse: knust = så mange ute av kamp, og en fiende innen «nær» meter; omringet = fiender på to sider (minst «vinkel»
@@ -37,7 +37,7 @@
     fred: { pris: 5e6, varer: 1440, økning: 1.5, brudd: 2 },
     // bygdevern i tettsteder ingen eier: én mann per «perFolk» innbyggere (mellom «minst» og «høyst»), treffsjanse per mann og
     // runde; en avtale koster «kr» per innbygger (mellom «krMinst» og «krHøyst»). Å knuse vernet koster «moral» i leiren.
-    vern: { perFolk: 150, minst: 3, høyst: 14, treff: .06, motTreff: .06, kr: 2000, krMinst: 5e5, krHøyst: 8e6, moral: 5 },
+    vern: { perFolk: 150, minst: 3, høyst: 14, treff: .04, motTreff: .06, kr: 2000, krMinst: 5e5, krHøyst: 8e6, moral: 5 },
     // helikopterfrakt: fart i km/t, lengste tur i meter, pris per tur i kroner
     heli: { fart: 200, radius: 60000, pris: 50000, plasser: 12 },
     // drone i kameravakta: varsler om samme lag høyst hvert «varsel» minutt
@@ -63,7 +63,10 @@
     return Math.abs(d) <= maks ? mål : retning + Math.sign(d) * maks;
   }
   // ---------- dekning bak hus ----------
-  const husVern = (klasse, marsj) => (!marsj && klasse === REGLER.hus.klasse ? REGLER.hus.tar : 1);
+  // vedHus: laget står i eller inntil et ekte bygg (husomrissene, når de er lastet)
+  const husVern = (klasse, marsj, vedHus) => (!marsj && (klasse === REGLER.hus.klasse || vedHus) ? REGLER.hus.tar : 1);
+  // punktene som sjekkes mot husomrissene: midten og en ring rundt laget
+  const husPunkter = (x, y) => { const r = REGLER.hus.nær, ut = [[x, y]]; for (let i = 0; i < 8; i++) ut.push([x + Math.cos(i * Math.PI / 4) * r, y + Math.sin(i * Math.PI / 4) * r]); return ut; };
   // ---------- sårede ----------
   const sårede = menn => (menn || []).filter(m => m.hp > 0 && m.hp < 1).length;
   const sårFart = menn => Math.max(REGLER.sårede.minst, 1 - REGLER.sårede.per * sårede(menn));
@@ -88,11 +91,13 @@
     if (o.omringet && o.forhold < R.forhold && o.ute >= 2) return 'laget er omringet og underlegent';
     return null;
   }
+  // Egne lag (stridsvalget «overgi» = ja): knust OG omringet av fiender. o: { ute, omringet }.
+  const egetGirSeg = o => o.ute >= REGLER.overgi.knust && !!o.omringet;
   // ---------- fiendens førere ----------
   // ild: faktor på lagets ild; tar: faktor på treffene det tar. Væremåten følger førerens navn (samme navn gir samme væremåte).
   const VÆREMÅTER = {
-    pågående: { navn: 'pågående', tekst: 'går rett på – skyter mer, men tar flere treff', ild: 1.1, tar: 1.1 },
-    forsiktig: { navn: 'forsiktig', tekst: 'holder seg i dekning – vanskeligere å treffe', ild: .95, tar: .88 },
+    pågående: { navn: 'pågående', tekst: 'går rett på – skyter mer, men tar flere treff, og angriper også når det er jevnt', ild: 1.1, tar: 1.1, overtak: .85 },
+    forsiktig: { navn: 'forsiktig', tekst: 'holder seg i dekning – vanskeligere å treffe, og angriper bare med klart overtak', ild: .95, tar: .88, overtak: 1.25 },
     slu: { navn: 'slu', tekst: 'går rundt og tar deg i flanken – flankeangrepene hans er verre', ild: 1, tar: 1, flanke: 1.2 },
     seig: { navn: 'seig', tekst: 'gir seg ikke før laget er nesten borte', ild: 1, tar: 1, seig: true },
   };
@@ -169,7 +174,7 @@
   }
   const alder = min => (min < 1 ? 'nå' : min < 60 ? `${Math.round(min)} min siden` : `${Math.round(min / 60)} t siden`);
 
-  const api = { REGLER, vinkel, flanke, snu, husVern, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, natt, nattSikt, klokkeTime,
+  const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, natt, nattSikt, klokkeTime,
     røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

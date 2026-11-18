@@ -1,15 +1,77 @@
 [
-  ["Flanke og rygg", "Lagene vender en veg. Skyter du på et lag fra siden eller bakfra, treffer du mye bedre. Et lag som står stille, snur seg sakte mot den som skyter – så angrip fra to kanter.", "Lag og strid"],
-  ["Formasjon og marsjfart", "Kolonne går raskest, særlig på veg, men er sårbar. Linje og spredt går saktere. Bytt formasjon i lagpanelet før marsjen.", "Lag og strid"],
-  ["Sårede og sykestue", "Et lag med sårede går saktere fordi de bæres. Stå stille ved leiren, så blir de friske – mye fortere med en sykestue. Helikopteret kan hente laget hjem.", "Lag og strid"],
-  ["Fanger og avhør", "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål kan du avhøre dem (da får du vite hvor lagene deres står) eller sette dem fri.", "Lag og strid"],
-  ["Etterretning", "Det speidere, droner, radiomasten og fanger forteller, står i kartet som stiplede merker med «?» og under Leir → Mål. Merket viser hvor laget sist ble meldt, og hvor gammelt det er.", "Lag og strid"],
-  ["Natt og nattsikt", "Om natta ser alle mye kortere. Gi troppen nattsikt (Tropper → utstyr), eller skyt opp en lysrakett fra Tiltak i lagpanelet.", "Lag og strid"],
-  ["Tiltak: artilleri, røyk, lys og støy", "Knappen «Tiltak» i lagpanelet: kall inn rakettartilleri på et sted laget ser, legg røyk for å komme unna, skyt opp lys om natta, eller lag støy som lokker fienden dit du vil.", "Lag og strid"],
-  ["Bakhold på veg", "Sett et lag i bakhold ved en veg (Tiltak). Kjører fiendens lastebil forbi, blir den stoppet – og du kan ta den.", "Lag og strid"],
-  ["Beleiring", "Still lag på to kanter av et tettsted fienden holder. Da får ikke garnisonen forsyninger: etter seks timer er den svekket, etter tolv gir den seg. Uten strøm går det fortere.", "Lag og strid"],
-  ["Våpenhvile", "Under Leir → Mål kan du kjøpe våpenhvile med en fraksjon for ett døgn. Da lar de deg være, og du kan ta deg av den andre. Bryter du avtalen, blir den neste dobbelt så dyr.", "Lag og strid"],
-  ["Bygdevern", "Tettsteder ingen eier, har et bygdevern. Du kan gjøre en avtale med dem (koster penger) eller ta stedet med makt – det koster både folk og moral.", "Lag og strid"],
-  ["Helikopterfrakt", "Har leiren et helikopter, kan det fly et lag ut eller hente det hjem (Tiltak i lagpanelet). Hver tur koster penger.", "Lag og strid"],
-  ["Røverne finner på nytt", "Røverne kommer ikke alltid rett på: de kan komme fra to kanter, vente til det blir mørkt, eller sende sabotører mot aggregatet eller tanken.", "Leiren"]
+  [
+    "Flanke og rygg",
+    "Lagene vender en veg. Skyter du på et lag fra siden eller bakfra, treffer du mye bedre. Et lag som står stille, snur seg sakte mot den som skyter – så angrip fra to kanter.",
+    "Lag og strid"
+  ],
+  [
+    "Formasjon og marsjfart",
+    "Kolonne går raskest, særlig på veg, men er sårbar. Linje og spredt går saktere. Bytt formasjon i lagpanelet før marsjen.",
+    "Lag og strid"
+  ],
+  [
+    "Sårede og sykestue",
+    "Et lag med sårede går saktere fordi de bæres. Stå stille ved leiren, så blir de friske – mye fortere med en sykestue. Helikopteret kan hente laget hjem.",
+    "Lag og strid"
+  ],
+  [
+    "Fanger og avhør",
+    "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål kan du avhøre dem (da får du vite hvor lagene deres står) eller sette dem fri.",
+    "Lag og strid"
+  ],
+  [
+    "Etterretning",
+    "Det speidere, droner, radiomasten og fanger forteller, står i kartet som stiplede merker med «?» og under Leir → Mål. Merket viser hvor laget sist ble meldt, og hvor gammelt det er.",
+    "Lag og strid"
+  ],
+  [
+    "Natt og nattsikt",
+    "Om natta ser alle mye kortere. Gi troppen nattsikt (Tropper → utstyr), eller skyt opp en lysrakett fra Tiltak i lagpanelet.",
+    "Lag og strid"
+  ],
+  [
+    "Tiltak: artilleri, røyk, lys og støy",
+    "Knappen «Tiltak» i lagpanelet: kall inn rakettartilleri på et sted laget ser, legg røyk for å komme unna, skyt opp lys om natta, eller lag støy som lokker fienden dit du vil.",
+    "Lag og strid"
+  ],
+  [
+    "Bakhold på veg",
+    "Sett et lag i bakhold ved en veg (Tiltak). Kjører fiendens lastebil forbi, blir den stoppet – og du kan ta den.",
+    "Lag og strid"
+  ],
+  [
+    "Beleiring",
+    "Still lag på to kanter av et tettsted fienden holder. Da får ikke garnisonen forsyninger: etter seks timer er den svekket, etter tolv gir den seg. Uten strøm går det fortere.",
+    "Lag og strid"
+  ],
+  [
+    "Våpenhvile",
+    "Under Leir → Mål kan du kjøpe våpenhvile med en fraksjon for ett døgn. Da lar de deg være, og du kan ta deg av den andre. Bryter du avtalen, blir den neste dobbelt så dyr.",
+    "Lag og strid"
+  ],
+  [
+    "Bygdevern",
+    "Tettsteder ingen eier, har et bygdevern. Du kan gjøre en avtale med dem (koster penger) eller ta stedet med makt – det koster både folk og moral. Motstanderne må også slåss mot vernet.",
+    "Lag og strid"
+  ],
+  [
+    "Helikopterfrakt",
+    "Har leiren et helikopter, kan det fly et lag ut eller hente det hjem (Tiltak i lagpanelet). Hver tur koster penger.",
+    "Lag og strid"
+  ],
+  [
+    "Røverne finner på nytt",
+    "Røverne kommer ikke alltid rett på: de kan komme fra to kanter, vente til det blir mørkt, eller sende sabotører mot aggregatet eller tanken.",
+    "Leiren"
+  ],
+  [
+    "Dekning bak hus",
+    "Et lag som står stille i et tettsted eller inntil et hus, er vanskeligere å treffe. Panelet sier «i dekning bak hus».",
+    "Lag og strid"
+  ],
+  [
+    "Når laget er knust og omringet",
+    "Under Tiltak velger du om laget skal gi seg heller enn å dø når det er knust og har fiender på to kanter. Standard er at det aldri gir seg.",
+    "Lag og strid"
+  ]
 ]

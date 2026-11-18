@@ -14,6 +14,9 @@ ok(K.snu(0, .1, 5) === .1 && nær(K.snu(3, -3, 1), 3 + 12 * Math.PI / 180), 'sto
 let r = 0; for (let i = 0; i < 20; i++) r = K.snu(r, Math.PI, 1); ok(nær(r, Math.PI), 'helt rundt på 15 minutter');
 // hus
 ok(K.husVern(7, false) === R.hus.tar && K.husVern(7, true) === 1 && K.husVern(1, false) === 1, 'dekning bak hus bare når laget står stille i tettbebyggelse');
+ok(K.husVern(1, false, true) === R.hus.tar && K.husVern(1, true, true) === 1 && K.husPunkter(10, 20).length === 9 && K.husPunkter(10, 20)[0].join() === '10,20' && Math.abs(Math.hypot(K.husPunkter(0, 0)[3][0], K.husPunkter(0, 0)[3][1]) - R.hus.nær) < 1e-9, 'ekte hus inntil laget gir også dekning (midten og en ring sjekkes)');
+ok(K.egetGirSeg({ ute: 6, omringet: true }) && !K.egetGirSeg({ ute: 5, omringet: true }) && !K.egetGirSeg({ ute: 9, omringet: false }), 'egne lag gir seg bare når de er knust OG omringet');
+ok(K.VÆREMÅTER.pågående.overtak < 1 && K.VÆREMÅTER.forsiktig.overtak > 1 && !K.VÆREMÅTER.seig.overtak, 'væremåten flytter terskelen for angrep');
 // sårede
 const menn = () => [{ navn: 'A', hp: 1 }, { navn: 'B', hp: .5 }, { navn: 'C', hp: .5 }, { navn: 'D', hp: 0 }];
 ok(K.sårede(menn()) === 2 && nær(K.sårFart(menn()), 1 - 2 * R.sårede.per) && K.sårFart(Array(12).fill({ hp: .5 })) === R.sårede.minst && K.sårFart([]) === 1, 'sårede senker farten');
@@ -67,3 +70,7 @@ ok(F.fart('kolonne', true) === 1.2 && F.fart('kolonne', false) === 1.1 && F.fart
   const M = { rød: { sist: null, hatt: new Set(), leir: false }, grønn: { sist: { x: 1 }, hatt: new Set([1]), leir: true } }; ok(L.brukMinne(M, d.minne) === 2 && M.rød.hatt.has(9) && M.rød.leir && M.rød.sist.navn === 'N' && M.grønn.sist === null && !M.grønn.leir, 'minnet legges tilbake');
   ok(L.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 1, y: 2 }, tid: 1 }), { x: 1, y: 2 }).fiender.length === 0, 'gamle lagringer uten fiender leses'); }
 console.log(`ok   krig: ${n} sjekker`);
+// AI-en: førerens væremåte flytter terskelen (overtakF) – en jevn kamp angripes av den pågående, ikke av den forsiktige
+{ const Fr = require('../../site/dovre-fliser/spill/fraksjoner.js'), lag = (ute = 0) => ({ navn: 'A', x: 0, y: 0, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });
+  const v = f => Fr.velg(lag(3), { side: 'grønn', byer: [], fiender: [{ x: 500, y: 0, navn: 'F', styrke: 10 }], venner: [], hjem: [-9000, 0], ammo: 1, overtakF: f }).hva;
+  assert.ok(v(.85) === 'angrip' && v(1.25) !== 'angrip', `pågående angriper (${v(.85)}), forsiktig ikke (${v(1.25)})`); console.log('ok   væremåten i AI-ens valg'); }
