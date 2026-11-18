@@ -44,6 +44,19 @@
     drone: { varsel: 20 },
     // røverne: sabotørene må stå «sabotasje» meter fra bygget, skaden de gjør, og hvor langt unna de er borte
     røvere: { sabotasje: 60, skade: .6, flukt: 2000, venterHøyst: 480 },
+    // (runde 4) dekning bak leirens egne bygg: et eget lag som står stille innen «nær» meter fra et ferdig bygg, med bygget mellom
+    // seg og den som skyter, tar «tar» av treffene («lett» bak telt, drivhus, solceller og vakttårn). Sandsekkvollen har sin egen
+    // regel (spill/folk-visning.js); gjerder, porter, veger, master og helikopterplassen gir ingen dekning.
+    leirbygg: { nær: 6, tar: .55, lett: .8, lette: ['lagertelt', 'drivhus', 'solcelle', 'vakttårn'],
+      ingen: ['sandsekkvoll', 'gjerde', 'port', 'veg', 'kameramast', 'radiomast', 'helikopterplass'] },
+    // (runde 4) fanger. bytte: «pris» kr per fange fra motstanderen, eller én mot én mot egne de har tatt.
+    // arbeid: en fange er en halv arbeider («arbeid») på oppgaven, men bare der minst én av dine arbeider (høyst «maksF» ganger så
+    // mye). Rømming per døgn for en fange i arbeid: «rømBase», pluss opptil «rømLav» når ingen vokter (én vakt holder «perVakt»).
+    // god behandling: «mat» rasjoner per fange per døgn. Etter «døgn» døgn med god behandling kan de spørres om å bli med: sjansen
+    // er «ja» + «jaMoral» × moralen/100, og «forræder» av dem som blir med, arbeider egentlig for fienden. Nei: spør igjen om
+    // «nyttForsøk» døgn. De nye er mer trofaste («lojal») enn fanger som slippes rett inn (spill/samfunn.js).
+    fange: { pris: 150000, arbeid: .5, maksF: 2, oppgaver: ['bygg', 'hogst', 'riving', 'frakt'], rømBase: .03, rømLav: .25, perVakt: 4,
+      mat: 1, døgn: 3, ja: .3, jaMoral: .3, forræder: .1, nyttForsøk: 1, lojal: [.4, .6] },
   };
   const RAD = Math.PI / 180;
   // minste vinkel mellom to retninger (0–π)
@@ -178,7 +191,47 @@
   }
   const alder = min => (min < 1 ? 'nå' : min < 60 ? `${Math.round(min)} min siden` : `${Math.round(min / 60)} t siden`);
 
+  // ---------- (runde 4) dekning bak leirens egne bygg ----------
+  // P: hjørnene til et bygg ([[x, y], …], Leir.hjørner). Avstand fra et punkt til mangekanten (0 når punktet er inni).
+  function inni(x, y, P) { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; } return inn; }
+  function polyAvst(x, y, P) {
+    if (inni(x, y, P)) return 0; let d = Infinity;
+    for (let i = 0; i < P.length; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length], dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
+      const t = l ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l)) : 0; d = Math.min(d, Math.hypot(x - ax - t * dx, y - ay - t * dy)); }
+    return d;
+  }
+  // linjestykket a–b krysser en kant i mangekanten
+  function krysser(ax, ay, bx, by, P) {
+    const k = (px, py, qx, qy, rx, ry) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+    for (let i = 0; i < P.length; i++) { const [cx, cy] = P[i], [dx, dy] = P[(i + 1) % P.length];
+      if (k(ax, ay, bx, by, cx, cy) * k(ax, ay, bx, by, dx, dy) < 0 && k(cx, cy, dx, dy, ax, ay) * k(cx, cy, dx, dy, bx, by) < 0) return true; }
+    return false;
+  }
+  // Hvilken dekning en bygningstype gir (1 = ingen)
+  const byggDekning = type => (REGLER.leirbygg.ingen.includes(type) ? 1 : REGLER.leirbygg.lette.includes(type) ? REGLER.leirbygg.lett : REGLER.leirbygg.tar);
+  // b (laget som blir skutt på) står stille ved et av byggene, og bygget ligger mellom b og a (skytteren).
+  // bygg: [{ P, tar, navn }]. Gir { f, navn } – f = 1 og navn = null når ingen bygg dekker.
+  function leirVern(b, a, bygg) {
+    let f = 1, navn = null; const R = REGLER.leirbygg;
+    for (const q of bygg || []) { if (!(q.tar < f)) continue; if (polyAvst(b.x, b.y, q.P) > R.nær) continue; if (!krysser(a.x, a.y, b.x, b.y, q.P)) continue; f = q.tar; navn = q.navn || null; }
+    return { f, navn };
+  }
+  // ---------- (runde 4) fanger: bytte, arbeid og rekruttering ----------
+  const byttePris = n => Math.max(0, Math.round(n || 0)) * REGLER.fange.pris;
+  // fangerIArbeid halve arbeidere på en oppgave der «arbeidere» av dine er: faktoren på arbeidstempoet
+  const arbeidF = (arbeidere, fangerIArbeid) => (arbeidere > 0 && fangerIArbeid > 0 ? Math.min(REGLER.fange.maksF, (arbeidere + REGLER.fange.arbeid * fangerIArbeid) / arbeidere) : 1);
+  // sjansen per døgn for at én fange i arbeid rømmer, med «vakter» som vokter «fanger» i arbeid
+  const rømSjanse = (fanger, vakter) => { const F = REGLER.fange; if (!(fanger > 0)) return 0; return F.rømBase + F.rømLav * Math.max(0, 1 - (vakter || 0) * F.perVakt / fanger); };
+  // hvor mange av n fanger i arbeid som rømmer i løpet av «minutter»
+  function rømmer(n, vakter, minutter, rng) { const s = rømSjanse(n, vakter), p = 1 - Math.pow(1 - s, minutter / 1440); let k = 0; for (let i = 0; i < n; i++) if (rng() < p) k++; return k; }
+  // kan fangene spørres om å bli med? f: { god, godMin, nei }
+  const kanSpørres = (f, tid) => !!f && !!f.god && (f.godMin || 0) >= REGLER.fange.døgn * 1440 && !((f.nei || 0) > tid);
+  const jaSjanse = moral => Math.max(0, Math.min(1, REGLER.fange.ja + REGLER.fange.jaMoral * Math.max(0, Math.min(100, moral || 0)) / 100));
+  // n fanger spørres: hvor mange som vil, og hvem av dem som er forrædere. Gir { ja, forrædere: [indeks blant dem som sa ja] }
+  function spør(n, moral, rng) { const s = jaSjanse(moral), ut = { ja: 0, forrædere: [] }; for (let i = 0; i < n; i++) if (rng() < s) { if (rng() < REGLER.fange.forræder) ut.forrædere.push(ut.ja); ut.ja++; } return ut; }
+
   const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
-    røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder };
+    røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder,
+    inni, polyAvst, krysser, byggDekning, leirVern, byttePris, arbeidF, rømSjanse, rømmer, kanSpørres, jaSjanse, spør };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
