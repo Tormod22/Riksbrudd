@@ -206,7 +206,7 @@
       let ser1 = !!s.påBåt || Math.hypot(s.x - b.x, s.y - b.y) <= 150; if (!ser1) try { ser1 = ser(s, b.x, b.y); } catch (e) { ser1 = false; } if (!ser1) continue; const n = friske(s); if (n) utl.push({ menn: n, faktor: ildFaktor(s, mål), lag: s }); }
     return utl; }
   function senket(b, lag, hvordan) { const i = S.frakt.indexOf(b); if (i >= 0) S.frakt.splice(i, 1); endret = true; skitten = true;
-    if (b.ai) { const om = ENHETER.filter(e => e.påBåt === b); for (const s of om) { s.påBåt = null; s.menn.forEach((m, n) => { if (n % 2 === 0 && m.hp > 0 && Math.random() < R.aiBåt.senketTap * 2) m.hp = 0; }); s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; }
+    if (b.ai) { const om = ENHETER.filter(e => e.påBåt === b); for (const s of om) { s.påBåt = null; const lev = s.menn.filter(m => m.hp > 0); lev.slice(0, Math.round(lev.length * R.aiBåt.senketTap)).forEach(m => { m.hp = 0; }); s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; }
         landVed(b.x, b.y).then(p => { if (p && !s.påBåt) { s.x = p[0]; s.y = p[1]; s.siktSkitten = true; } }); }
       logg(`${b.navn} ${hvordan || `er senket av ${lag ? lag.navn : 'lagene dine'}`}.` + (om.length ? ` ${om.map(e => e.navn).join(' og ')} mistet mange og svømte i land.` : '')); return; }
     SJ.fraktSvar(S, b.by, tid, false); oppdaterAvskåret(); logg(`${lag ? lag.navn : 'Lagene dine'} har senket forsyningsbåten til ${b.byNavn}. Garnisonen til ${sideNavn(b.side)} der er avskåret.`); }
@@ -219,7 +219,7 @@
     if (e && Math.hypot(e[0] - f.x, e[1] - f.y) < 150) return; if (tid - (q.jaktTid || -1e9) < 2) return; q.jaktTid = tid;
     // sikt litt foran båten den jakter (dit den er om ett minutt)
     const n = f.sti && f.sti[f.seg + 1], dx = n ? n[0] - f.x : 0, dy = n ? n[1] - f.y : 0, d = Math.hypot(dx, dy) || 1, fram = Math.hypot(f.x - q.x, f.y - q.y) < 400 ? 0 : Math.min(d, TY[f.type].fart * 60);
-    seil(q, f.x + dx / d * fram, f.y + dy / d * fram, -1, { stille: true }).then(r => { if (r && r.feil && q.jakter === f.id) { q.jakter = null; logg(`${q.navn} gir opp jakten: ${r.feil}`); } }); }
+    seil(q, f.x + dx / d * fram, f.y + dy / d * fram, -1, { stille: true }).then(r => { if (r && r.feil && !/ligger der alt/.test(r.feil) && q.jakter === f.id) { q.jakter = null; logg(`${q.navn} gir opp jakten: ${r.feil}`); } }); }
   function startJakt(q, f) { if (!omBord(q).length) { logg(`${q.navn}: ta et lag om bord først – det er laget som border.`); return false; } q.jakter = f.id; q.jaktTid = -1e9; q.fisker = false; logg(`${q.navn} setter kurs mot ${f.navn.toLowerCase()} ${f.byNavn ? 'til ' + f.byNavn : ''}.`); jakt(q); merk(); return true; }
   KROKER.sim.push(dt => { if (!klar || (!S.frakt.length && !S.båter.some(q => q.jakter))) return;
     // bording sjekkes hvert steg (båtene går fort forbi hverandre), ilden en gang i spillminuttet

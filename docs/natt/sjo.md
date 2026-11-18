@@ -81,3 +81,64 @@ også i testene, og panelet åpnes ved trykk på en kai).
 - Kaier i innsjøer gir båter som bare kan seile på innsjøen. Det grove sjøkartet (128 m) kan lukke trange sund på lange turer.
 - Havneinntekten krever en «stor» kai (Claudes inndeling i kaier.js); tettsteder med bare småkaier gir ingenting.
 - Prøvd på /rogaland (Sand/Sauda) med ekte data i 2D; 3D-modellene er bare sett på Dovre-testsiden (på land).
+
+## Runde 4 (18. nov dag) – sjøen og det som sto igjen fra «økonomi»
+ALLE NYE TALL ER CLAUDES FORSLAG (samlet i `Sjo.REGLER.fiendeBåt`, `Sjo.REGLER.aiBåt`, `Sjo.REGLER.middelsHavn`, `Region.REGLER.lojGjentatt`,
+`Kaier.LEIRVALG`). Økonomipunktene (1–3) står også i `docs/natt/okonomi.md`.
+
+1. **Krigskartet** viser hva et valgt tettsted gir: ny krok `window.KRIG_TILLEGG = { by: [], trekk: [], side: [] }` i
+   `spill/strategi-visning.js` (én samlet endring: `tillegg()` øverst, `...tillegg('by', b.ref, e)` i boksen for valgt tettsted,
+   `...tillegg('trekk', t.by.ref, t.eier)` i radene i «Neste trekk», `...tillegg('side', side)` under hver side i stillingen, og én CSS-linje
+   `#krig small.tillegg`). `region-visning.js` fyller den (MutationObserveren `pyntKrig` er tatt bort; `RegionSpill.pyntKrig()` ber bare
+   krigskartet tegne på nytt): typen, «Gir deg nå per døgn: … og N t olje til basen», strøm, lojalitet, skatt og handelsrute for dine;
+   «Hvis du tar det, per døgn: …» og hva det gir motstanderen som holder det; under hver side hva tettstedene gir (deg) / hva fordelen er (dem).
+2. **Handelsrutene følger vegnettet** når `window.VEGNETT` er lastet (det hentes på PC når Region eller krigskartet er åpent – ikke i
+   testene, ikke på telefon). `Region.rute(…, veger)` tar en valgfri `veger(a, b) -> { sti, brutt }`; trusler måles mot vegen
+   (`Region.tilSti`), lengden er vegens. Vegene regnes én om gangen (høyst 40 ms per halve sekund) og huskes til sperringene endres.
+   **En sprengt bru/tunnel på vegen stenger leddet** (også med vakt): vegen regnes med alle sperringene i `graf._sperretAv` åpne, og ligger
+   en av dem på vegen, er ruta «stengt» (`rute.brutt`, melding i loggen, «BRUA ER SPRENGT» i kartet). Ingen veg (øyer): luftlinja som før.
+   **Lojaliteten**: et tettsted du mister, merkes (`Region.mistet`, `b.tapt` lagres); tar du det igjen, er lojaliteten høyst 35 og skatten vanlig.
+3. **Motstandernes tettsteder**: sjekket at `RegionSpill.fordel` faktisk virker – treff (KROKER.ild), garnisonene forsterkes raskere
+   (garnison-visning.js) og AI-en får nye lag oftere (`fraksjoner-visning.js` deler ventetiden på `fordel(side).forsterk`); `Fraksjoner.lagTak`
+   gir flere lag jo flere tettsteder de holder. Motstanderne har ingen kasse, så «penger» får de ikke. Fordelen vises nå i krigskartet.
+   Prøvd på /rogaland: rød med Vikedal (havn) gir `{ treff: 1, forsterk: 1.25 }`.
+4. **Fiendens båter**: forsyningsbåtene (og AI-båtene) har helse 60. Et eget lag som ser båten innen 450 m (innen 150 m ser alle den; om
+   bord alltid), skyter på den hvert spillminutt: 2 skade per frisk mann × KROKER.ild-faktoren (om bord ×0,4, mål på båt ×0,3, ammunisjon og
+   stridsregler teller). Senket forsyningsbåt = garnisonen avskåret. **Bording**: en egen båt med et lag om bord innen 60 m tar lasten
+   (betong 4, stål 3, 400 l diesel, 40 rasjoner – det som ikke får plass, går over bord). «Bord den» i båtpanelet setter båten til å jage
+   (ny lei mot der forsyningsbåten er om et minutt, hvert annet spillminutt, rett på den innen 400 m). Trykk på en fiendebåt i kartet sier hva
+   den er; er en egen båt med lag valgt, starter jakten.
+   **AI-en bruker båter**: et AI-lag på marsj med en kai innen 1,5 km og en kai innen 1,5 km fra målet (minst 4 km unna) tar båt når vegen som
+   er igjen er over 1,6 × sjøvegen + 2 km. Laget går til kaia (`s.båtPlan`, AI-en tenker ikke imens), går om bord i en sjark (samme regler,
+   sjøkart og sperringer som spillerens båter; ligger i `S.frakt` med `ai: true`), og går i land ved målkaia (`s.ai.neste = 0`, AI-en tar over).
+   Høyst én båt per side, ser etter hvert 10. spillminutt, bare når `AI.på` og ikke av seg selv i testene. Senkes båten, mister laget
+   halvparten av mennene og svømmer i land. Fiendens båter lagres ikke (som fiendens lag).
+5. **3D**: `ferje3d.js` (liten endring i `flyttFerjer`): har du tatt ferja ved en av kaiene i et samband (innen 600 m), skjules ruteferja der
+   (`f.tatt`, `Ferje3d.sjekk().ferjeliste[].tatt`). **Trykk i 3D** (`KROKER.trykk3d`, `SjoSpill.trykk3d`): egen båt, fiendebåt eller nær en
+   kai (60 m) – samme panel som i 2D, og mål for «Seil til en kai» / «Seil til et sted på sjøen». Er et lag valgt, eller står et lag innen 30 m
+   fra trykket, tar ikke sjøen trykket (så marsjordre og valg av lag virker som før).
+6. **Leirvalget**: ny krok `window.LEIRVALG_TILLEGG = [(x, y) => tekst]` i `oppstart-visning.js` (én samlet endring i `prøvLeir`: teksten
+   legges etter «Her? N moh.» når stedet er gyldig). `kaier.js` fyller den med `Kaier.leirTekst`: nærmeste kai innen 10 km, størrelsen,
+   om den er leirens egen (innen 3 km) og hvilke båter den tar, og nærmeste store kai hvis den nærmeste er mindre.
+   **Middels kai gir havnevarer**: `havnFor` velger stor kai først, ellers middels; en middels havn gir 40 % (`Sjo.REGLER.middelsHavn`,
+   både ukesvarene og Regionens mangel).
+7. **Båtene i 2D** tegnes med det felles merkesettet (`Merker.tegn` med slag 'tom' + en liten båt med mast inni, sidens farge og form,
+   kursstrek, helsestolpe for fiendebåter) når skroget er under 16 punkter langt; nærmere som skrog i riktig størrelse som før.
+
+Nye API-er: `SjoSpill.fiendeBåter/skyttereMot/bord/senket/startJakt/aiSteg/planAI/gåOmAI/iLandAI/trykk3d/tatteFerjer`, `Sjo.skadBåt/kanBorde/
+fraktLast/aiTarBåt/igjenAvSti`, `Region.tilSti/stiLengde/mistet`, `Kaier.leirTekst`, `window.KRIG_TILLEGG`, `window.LEIRVALG_TILLEGG`.
+Tester: `test_sjo.js` (9 nye), `test_region.js` (7 nye), `test_kaier.js` (4 nye). Vakten «sjøen» prøver bording, senking, AI-båt, trykk i 3D,
+leirvalget, krigskartet og lojaliteten.
+
+### Fellesfiler endret (runde 4)
+- `spill/strategi-visning.js`: kroken KRIG_TILLEGG (se punkt 1) – fire små innsettinger og én CSS-regel.
+- `spill/oppstart-visning.js`: kroken LEIRVALG_TILLEGG i `prøvLeir` (tre linjer).
+
+### Prøvd i nettleser (/rogaland, ekte data, leir ved Sand 6825, 6627357)
+- Leirvalget: «Nærmeste kai: Sand hurtigbåtkai, stor (1,7 km) – leirens egen kai: alle båter, også lekter og ferje.»
+- Krigskartet: Sand (ditt) «Gir deg nå per døgn: 2,4 m³ betong, 1,8 t stål, 120 000 kr, og 28,9 t olje til basen», Vikedal (rød) «Hvis du
+  tar det …» + «Nå gir det Kystalliansen: garnisonene forsterkes 25 % raskere», sidene med sine linjer. Ingen sidefeil.
+- Vegnettet (24 MB) lastet på ca. 9 s; Sauda–leiren følger vegen 52,5 km (18 km i luftlinje), Sand 4,7 km. En sperret lenke midt på vegen
+  ga «stengt» og meldingen i panelet; åpnet igjen ga ruta tilbake. Lojalitet 90 -> mistet -> tatt igjen = 35.
+- Bording fra en småbåt (tok 3 betong, resten over bord), senking med ild fra laget om bord, et rødt lag som tok sjark fra Sand
+  hurtigbåtkai 40 km over sjøen og gikk i land ved målkaia. Båtmerkene i kartet.
