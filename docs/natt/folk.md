@@ -195,3 +195,15 @@ unna, tempo 60 i 25 ekte sekunder (ca. 25 spillminutter) per runde, tre runder m
 - Mekanikeren (verksted bygget, kjøretøy med 50 % skade 60 m fra leiren): i sanntid (1×) 0,50 -> 0,433 på 20 s (ca. 0,2 per spilltime
   ganget med samfunnsklokka, helt etter ca. 2,5 minutter); med mekanikeren på «fri» 0,50 -> 0,50; 400 m unna 0,50 -> 0,50; i 60× helt
   på 2,1 s, og loggen sier «Mekanikeren har reparert 1. lastebilkolonne.»
+
+### Prøvd i nettleser (runde 4)
+- Varselbrikkene (PC-bilde): «Utbrudd av Grålungen – 3 syke · ingen karantene», «1 død venter på begravelse», «Brukket bein – trenger en spjelk».
+- Kortkøen: se punkt 3. Vakta folk.js: ok på PC (1 s), mobil (0,4 s) og i 3D (4,5 s, med vakta i tårnet); etterpå er køen tom,
+  ingen brikker igjen og «riksbrudd-samfunn» fjernet.
+- 3D: bilde inne i kontrollrommet med to av tre operatører på gulvet (de står mellom pultene og skapene); vakta 5,68 m over bakken.
+  Fra lufta ser du dem ikke (taket). Hunden i tredjeperson ved siden av deg; beinvinklene mens den går 0,16 / 0,46 / 0,49 / −0,44,
+  og 0 når den står.
+- Portretter: PC 1400 og telefon 390 – ett portrett per person, lastet, trykk åpner personkortet.
+- Spesialister fra oppdrag: redning («Knut Ødegård er skarpskytter …») og røverpost («Kari Furuseth er lege …»), linja med ★ i fanen Mål.
+- Sløret: `slørTegn` på et 176 px lerret – hjørnet (uoppdaget) alfa 77, midten (leiren) 0.
+- Ingen sidefeil i noen av kjøringene.
