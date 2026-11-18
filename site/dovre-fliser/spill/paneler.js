@@ -40,7 +40,7 @@ body.kort #personkort, body.kort #evpanel, body.kort #samfunnkort{ left:calc(8px
 /* når du går på telefon: kameravarselet står til venstre midt på (ikke oppå kompass, minikart, helse eller våpenruta) */
 body.kort.minikart3d #kamvarsel{ top:calc(var(--topp,44px) + 176px); } body.kort.gaar #kamvarsel{ left:8px; right:auto; top:46%; width:min(240px, 60vw); }
 body.spill #skala, body.spill #nordpil{ left:var(--venstrekant,12px); transition:left .15s, opacity .15s; } body.spill.skalavik #skala, body.spill.skalavik #nordpil{ opacity:0; }
-body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; }
+body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; } body.spill.kortflytt :is(#hendelse, #samfunnkort, #flytkort){ left:var(--kortmidt,50%); }
 @keyframes panelinn2{ from{ opacity:0; } } #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:panelinn2 .18s ease-out; }
 @media (prefers-reduced-motion:reduce){ #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:none; } }`;
   document.head.appendChild(css);
@@ -78,7 +78,16 @@ body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; }
       if (mini.length && (!navigator.webdriver || Paneler.test === true)) for (const id of PLASS.høyre) { const e = $(id); if (!vises(id)) continue; const r = rekt(e); if (r && mini.some(m => møtes(r, m))) minivik = true; } }
     let v = '', skjul = false; if (kant > 0) { const kr = vises('kommando') ? rekt($('kommando')) : null; if (!kr || kant + VIK.luft + VIK.skala < kr.left - 8) v = Math.round(kant + VIK.luft) + 'px'; else skjul = true; }
     if (B.style.getPropertyValue('--venstrekant') !== v) { if (v) B.style.setProperty('--venstrekant', v); else B.style.removeProperty('--venstrekant'); }
-    if (B.classList.contains('skalavik') !== skjul) B.classList.toggle('skalavik', skjul); if (B.classList.contains('minivik') !== minivik) B.classList.toggle('minivik', minivik); }
+    if (B.classList.contains('skalavik') !== skjul) B.classList.toggle('skalavik', skjul); if (B.classList.contains('minivik') !== minivik) B.classList.toggle('minivik', minivik);
+    // kortene i midten (hendelse, samfunnskort, stoppkortet) midt i det frie feltet mellom panelene til venstre og høyre når de får plass
+    // der – på 1280–1400 px brede skjermer lå de ellers litt inn over panelet til høyre (målt). Får de ikke plass, står de midt på som før.
+    let midt = ''; if (pc && (!navigator.webdriver || Paneler.test === true)) { const kort = ['hendelse', 'samfunnkort', 'flytkort'].filter(vises).map(id => rekt($(id))).filter(Boolean);
+      if (kort.length) { let v = 0, h = window.innerWidth; const k0 = Math.min(...kort.map(r => r.top)), k1 = Math.max(...kort.map(r => r.bottom)), iHøyde = r => r && r.top < k1 && r.bottom > k0;
+        for (const id of PLASS.venstre) if (vises(id)) { const r = rekt($(id)); if (iHøyde(r)) v = Math.max(v, r.right); }
+        for (const id of PLASS.høyre) if (vises(id)) { const r = rekt($(id)); if (iHøyde(r)) h = Math.min(h, r.left); }
+        const bredest = Math.max(...kort.map(r => r.width)); if ((v > 0 || h < window.innerWidth) && h - v - 2 * VIK.luft >= bredest) midt = Math.round((v + h) / 2) + 'px'; } }
+    if (B.style.getPropertyValue('--kortmidt') !== midt) { if (midt) B.style.setProperty('--kortmidt', midt); else B.style.removeProperty('--kortmidt'); }
+    if (B.classList.contains('kortflytt') !== !!midt) B.classList.toggle('kortflytt', !!midt); }
   setInterval(sjekk, 120);
   Paneler.sjekk = sjekk; Paneler.åpne = () => ALLE.filter(vises); Paneler.lukk = lukk; Paneler.NYE = NYE; Paneler.vik = vik;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
