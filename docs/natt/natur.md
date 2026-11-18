@@ -115,3 +115,46 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
   leirens bygg (Leir.hjørner + 0,4 m; telt, tanker og bygg under arbeid hadde gress inni – sett på bilde: gress gjennom lagerteltet).
   `Vegetasjon3d.iLeir(x, y)` brukes av gress3d. Når antallet ting i R3.hindre eller leirens bygg endres, settes planter og gress rundt
   kameraet på nytt (sjekkes hvert 0,7 s) – før sto de til du hadde gått 12 m.
+
+### 4. Låven (ny fil spill/lave3d.js, regler øverst, test_lave3d.js; skripttagg rett etter vegetasjon3d.js)
+- Interiøret ga alt høyballer, båser, tønne og (over 90 m²) traktor – men rommet så tomt ut. lave3d.js legger til, OPPÅ interiøret
+  (ingen endring i interior.js/interior3d.js, som eies av lut-hjelperen): høy strødd på gulvet (flak med mykere farge mot kanten),
+  høyhauger i enden lengst fra døra når taket er lavt, høyloft på stolper med høyhauger, høyballer, høy som henger over kanten og stige
+  når taket er minst 3,3 m, redskap lent mot ytterveggen (høygaffel, rive, spade, ljå, kost), trillebår ved døra, melkespann og en
+  gammel grå traktor («gråtass») i låver over 45 m² uten traktor. Uthus over 18 m² får redskap og trillebår.
+- Ett samlet nett per bygg (MeshLambertMaterial med hjørnefarger, ingen tekstur, ingen nye lys), laget når interiøret lages
+  (Interior3d.aktive(), sjekkes hvert 0,4 s mens du går) og fjernet med det. Målt: 950–1150 trekanter per låve i Ryfylke.
+- Gråtassen legges inn i planens møbler som type «gråtass» med sperrer: true (Interior.blokkert stopper deg). lut.js kjenner ikke typen,
+  så den blir ingen beholder. ENESTE berøring med interiøret: `pl.møbler.push(...)` i lave3d.js `oppdater`.
+- `window.Lave3d` = { REGLER, slag, plasser, antall, trekanter, oppdater, sjekk }.
+- Sett i Ryfylke: de fleste låvene har himlingen ved veggtoppen (1,95 m – interior3d.js holder himlingen under P.veggTopp), så høyloftet
+  kommer sjelden; da står høyhaugene der i stedet.
+
+### Prøvd i nettleser (runde 5)
+- Rogaland med ekte data (dev.py, leir 37880 6617991, PC 1400 × 820): ovenfra, skrått og høyt over innsjøen sør-øst for leiren, til fots
+  ved stranda og på heia, før (window.STRAND_AV) og etter. Bilder i scratchpad natt5/natur/: for-strand-ovenfra/skraa/hoy, for-gaa-strand
+  (før), etter-strand-ovenfra/skraa/hoy, etter-gaa-strand, etter-gaa-strand-ned, etter-gaa-hei, etter-gaa-hei-ned (etter);
+  etter-mobil-strand/-gaa (telefon 390 × 800); heia før: scratchpad syn/9-gaa.png (samme leir, tatt før kveldens endringer).
+  Sett: trappekanten og den mørke ringen er borte, kanten er ujevn og myk med en lys stein-/grussone, holmene er runde; til fots
+  står lyng og gress helt ned til stranda, og heia er dekket av lyng/gress-tuster i stedet for steinmønster.
+- Ryfylke (/norge, 15607 6622779): låve på 93 m² – bilder lave2-dor/-midt-a/-midt-b (trillebår, høy på gulvet, redskap ved veggen,
+  melkespann, gråtass). Planter i ekte hus: 0 av 6033 planter og 0 av 12 000 gresstuster; prøvehus lagt inn etterpå: 0 og 0 (før
+  rettingen av gresset: 735 gresstuster inne i prøvehuset).
+- Vakta «natur» på Dovre-testsiden (PC, 3D på): ok på ca. 20 s, uten sidefeil (Dombås-utsnittet har ikke vann i kartet, så u.strand = 0).
+
+### Målt (regel 10)
+- Trekanter: stranda er bare kartbildet (0 nye). Samme kameraplass før/etter: ovenfra 870 376 -> 868 014, skrått 1 100 524 ->
+  1 098 042, til fots ved stranda 953 310 -> 954 410. Lyngen: like mange gresstuster som før (taket 12 000), færre steiner på grønn/brun
+  snaufjell. Låven: 950–1250 trekanter per låve (ett tegnekall), bare mens du går nær.
+- Byggetid for strandG (Node, samme kartbilde fra Rogaland, stille maskin): ca. 0,65 s for 4096² (PC nær) og 0,2 s for 2048² (telefon /
+  PC fjernt), lengste bit mellom yield 8–40 ms (med pust() i kjørAsynk). Med seks hjelpere på fire kjerner varierte det 0,65–2,8 s.
+  Første 3D-utsnitt i nettleseren (hele byggingen): 24 s før, 26 s etter (samme sted; programvare-grafikk og delt maskin – usikkert).
+
+### Ikke gjort / svakheter (runde 5)
+- Vannmasken (u.vann) er fortsatt binær i halv oppløsning (ca. 1,4 m ved 4096²): glansen og bølgene på vannet har små trapper på 1,4 m
+  helt ytterst – kartbildets kant er myk. Mange moduler leser masken med terskel, så den er ikke gjort myk.
+- Små mørke tjern som ikke er vann i kartet (svarte flekker på heia) er IKKE gjort om til vann – prøvd med en regel (mørkt, flatt), men
+  den traff også mørk mark; for usikkert.
+- Store lyse flekker der satellittbildet hadde snø/is (malt som berg av snøTilBergG) har fortsatt den grove formen fra satellittbildet.
+- Høyloftet kommer bare i låver med høy himling (minst 3,3 m); i Ryfylke har de fleste låvene himlingen ved veggtoppen (1,95 m).
+- Låveinnholdet ble ikke prøvd på telefon.

@@ -141,7 +141,7 @@
         if (erVann(R, G, B)) { f0[c]++; nV++; sR += R; sG += G; sB += B; } } }
     if (!nV) return 0;
     const vannF = [sR / nV, sG / nV, sB / nV];
-    for (let c = 0; c < M * M; c++) f0[c] /= ant[c] || 1;
+    for (let c = 0; c < M * M; c++) { if ((c & 262143) === 0) yield; f0[c] /= ant[c] || 1; }
     yield;
     // utjevnet kart (to ganger en glidende firkant langs hver akse – nesten en gaussisk utjevning)
     const glatt = f0.slice(), tmp = new Float32Array(M), r = Math.max(1, Math.round(Rg.strandGlatt / cm));
@@ -152,7 +152,7 @@
       return (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b; };
     // b. vannstanden: kilder er ruter som er helt vann (og ikke ligger i en kant i det utjevnede), spredt med avstand (to gjennomløp)
     const INF = 1e9, avst = new Float32Array(M * M).fill(INF), nivå = new Float32Array(M * M), maks = Rg.strandRekk / cm, R2 = Math.SQRT2;
-    for (let c = 0; c < M * M; c++) if (f0[c] >= .99 && glatt[c] >= .9) { const cj = (c / M) | 0, ci = c - cj * M; avst[c] = 0; nivå[c] = hBilde(Math.min(TW - 1, ci * K + (K >> 1)), Math.min(TW - 1, cj * K + (K >> 1))); }
+    for (let c = 0; c < M * M; c++) { if ((c & 131071) === 0) yield; if (f0[c] >= .99 && glatt[c] >= .9) { const cj = (c / M) | 0, ci = c - cj * M; avst[c] = 0; nivå[c] = hBilde(Math.min(TW - 1, ci * K + (K >> 1)), Math.min(TW - 1, cj * K + (K >> 1))); } }
     yield;
     const spre = (c, d, n) => { const v = avst[n] + d; if (v < avst[c]) { avst[c] = v; nivå[c] = nivå[n]; } };
     for (let j = 0; j < M; j++) { if ((j & 63) === 0) yield; for (let i = 0; i < M; i++) { const c = j * M + i; if (!avst[c]) continue;
