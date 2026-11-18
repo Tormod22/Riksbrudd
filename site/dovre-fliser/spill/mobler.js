@@ -21,6 +21,7 @@
     innhold: 20,       // kg innhold som følger med en beholder; mer må tas ut først
     fart: .72,         // farten når du bærer et stort møbel
     foran: .9,         // spøkelset står så langt foran deg (pluss halve møbelet)
+    foranSmal: 1.6,    // på smale skjermer (telefon på høykant) lenger ut, så det ikke fyller bildet
     luft: .02,         // m mellom møbler
     dør: .45,          // m fri plass rundt en døråpning
     inngang: .7,       // m fri plass innenfor inngangen
@@ -118,7 +119,7 @@
     return { ok: true, z: høyde ? høy : 0 };
   }
   // spøkelset: midten foran deg (x, y, kurs a: du ser mot (−sin a, cos a)), retning = byggets akse (aks) + k · 90°
-  function foran(x, y, a, m, k, aks = 0) { const ret = aks + k * Math.PI / 2, dyb = Math.abs(Math.cos(ret - a)) * (m.d || .5) + Math.abs(Math.sin(ret - a)) * (m.b || .5), d = REGLER.foran + dyb / 2;
+  function foran(x, y, a, m, k, aks = 0, avst = REGLER.foran) { const ret = aks + k * Math.PI / 2, dyb = Math.abs(Math.cos(ret - a)) * (m.d || .5) + Math.abs(Math.sin(ret - a)) * (m.b || .5), d = avst + dyb / 2;
     return { x: x - Math.sin(a) * d, y: y + Math.cos(a) * d, a: ret }; }
 
   const api = { REGLER, VEKT, FLAT, NAVN, navn, nøkkel, vekt, stor, kanBære, merk, bruk, hjørner, overlapp, avstand, veggNær, prøvepunkter, kanSettes, kanSettesUte, foran };
