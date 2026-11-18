@@ -1,5 +1,5 @@
 /* K1 – oppstarten av et nytt spill: regler uten DOM (Node: require('./oppstart'); nettleser: globalThis.Oppstart).
- * Du lager karakteren (navn, utseende, bakgrunn med en liten bonus) og fraksjonen (navn og eget flagg), får 100 millioner kr
+ * Du lager karakteren (navn, utseende, bakgrunn med en liten bonus) og fraksjonen (navn og eget flagg), får 40 millioner kr (100 i testene)
  * og velger hvor leiren skal ligge (ikke i et tettsted, ikke i vann, ikke utenfor kartet). Alt lagres som JSON (localStorage).
  * Se docs/plan-kollaps.md (K1). Bonusene er forslag fra planen, godkjent av brukeren 9. nov.
  */
@@ -110,7 +110,7 @@
       const p = velg(tx, ty, (x, y) => veg(x, y) && land(x, y)) || velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= .25) || velg(tx, ty, land); if (!p) ut.iVann++; ut.kj.push(p || [tx, ty]); }
     return ut;
   }
-  // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (100 mill. + eventuell bonus).
+  // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (STARTPENGER + eventuell bonus, ganget med vanskelighetsgraden).
   // faktor: vanskelighetsgraden og utfordringene ganger startkassa (spill/scenario.js; 1 når den ikke er gitt)
   function fullfør(S, leir, faktor) {
     const f = feil(S); if (f.length) return f;

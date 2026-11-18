@@ -17,7 +17,7 @@ Kjapp start:
 
 Kartdata for hele Norge: les docs/komprimering.md (fliser i nivåer + PMTiles, format per lag, detaljer fra frø).
 LORE OG KJERNE (9. nov, egen chat): Norge har kollapset etter korrupsjon og en oppdiktet pandemi («Grålungen»); hver spiller lager
-sin egen fraksjon og karakter, starter med 100 mill. kr (Kronekrakket, marked som flytter seg, inflasjon), bygger leir med
+sin egen fraksjon og karakter, starter med 40 mill. kr (fra 18. nov; før 100) (Kronekrakket, marked som flytter seg, inflasjon), bygger leir med
 KONTROLLROM (kart ovenfra, kamerafeeds, radio fra lagene), kameraer/vakttårn, første- og tredjeperson, 1–5 spillere, mild vinter.
 Les docs/plan-kollaps.md (faser K1–K9, åpne spørsmål). Den erstatter lore-en fra 1986 og bygger videre på plan-gjeng.md.
 NY RETNING (10. nov): spillet handler om din egen semi-lovlige militærgruppe («gjeng») med medlemmer, leir og oppdrag i
