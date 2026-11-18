@@ -1709,7 +1709,8 @@ async function hus3d(u) {
     for (const o of t.hus.obj) {
       // hvert bygg én gang (det ligger i alle fliser det berører); tak for ytelse på mobil; pusterom for nettleseren hvert 256. bygg
       if (sett.has(o.e.i) || sett.size > 30000 || (window.HUS_BORT && HUS_BORT.has(o.e.i))) continue;   // HUS_BORT: revet (spill/ressurser-visning.js)
-      if ((sett.size & 15) === 15 && børPuste()) await pust();
+      // (18. nov: pust prøves for hvert 4. bygg – store bygårder tok 50–90 ms per 16 bygg i Bergen)
+      if ((sett.size & 3) === 3 && børPuste()) await pust();
       sett.add(o.e.i);
       const d = o.deler[0]; if (!d || d.length < 4) continue;
       let P = d.slice(0, -1).map(([a, b]) => [minx + a * k - u.cx, maxy - b * k - u.cy]);

@@ -390,3 +390,21 @@ og pust mellom flisene i begge løkkene.
   utsnitt. `Liv3d.start()` gir hvor bilene og folkene startet (for prøvene).
 - **vegetasjon3d.js:** matrisene og fargene for de seks nye treslagene (`treslagMatriser`, generator, yield for hvert 1024. tre) lages i
   forbered3d-kroken (`u.treslagKlar`); sett3d bruker dem bare når treslagslistene er de samme (ellers lages de på nytt).
+- Etterpå: pust prøves for hvert 4. bygg i hus3d (før hvert 16.) – store bygårder tok 50–90 ms per 16 bygg i Bergen.
+
+### Prøvd – likt før og etter (Bergen 3,1 km, `t-del3.js`, gammel kode = rett før del 3, kopi i scratchpad `natt/lys/hakk/head3`)
+Første utsnitt, uforberedt og forberedt bytte: samme kilde for alle 308 objektene (sjekksum over hele lista), like husnett (posisjoner
+og normaler i alle nettene) og `u.hus.stat`, like treslag i nettene (`R3.treLOD`: antall, matriser og farger for alle 14), og samme
+start for alle biler og folk (`Liv3d.start()`: veg, lengde, plass og retning). Ingen sidefeil. Regeltestene test_ytelse, test_veg,
+test_vegetasjon, test_kyst, test_fjernby3d grønne. Vakta lys grønn (PC, 3D på og av).
+
+### Målt (Bergen 3,1 km, gammel og ny kode rett etter hverandre, last ca. 9; `d4før-b900.log`, `d4etter-b900.log`)
+| | før del 3 | etter del 3 |
+|---|---|---|
+| sett3d (største) | 191 / 70 ms | **61 / 48 ms** |
+| hus3d, lengste bit | 230 ms (133 ms selv – gaterutenettet) / 114 ms | 95 / 67 ms (resten er husene selv) |
+| merkingen i `R.scene.add` i et bytte | 11–23 ms (stor spredning) | 11 ms |
+| lengste lange oppgave | 230 / 392 ms (søppeltømming 361) | 166 / 329 ms (søppeltømming 272) |
+| «gjør klar», lengste pause | 297 / 394 ms | 141 / 332 ms |
+Lange oppgaver totalt og pausene i «henter høydene og kartet» varierte mer mellom de to kjøringene enn noe del 3 rører (der var det
+søppeltømming, `okonomi-visning` sin teller og oppgaver uten stakk) – de tallene sier ingenting om del 3.
