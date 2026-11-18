@@ -32,6 +32,10 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       if (window.AI && AI.fred) { OppstartSpill.gi(2e7); const p = KS.fredPris('rød'), s1 = OppstartSpill.tilstand().penger; ut.fred = KS.fred('rød') && OppstartSpill.tilstand().penger === s1 - p; ut.fredIld = ild(a, c) === 0 && ild(c, a) === 0; ut.brutt = KS.brytFred('rød') && ild(a, c) > 0 && KS.fredPris('rød') > p; }
       // lagpanelet: fiendens fører og væremåte, og knappen «Tiltak» for egne lag
       ut.fører = KROKER.lagTekst.map(h => h(c)).filter(Boolean).join(' · '); valgt = a; visPanel(); ut.knapp = !!document.getElementById('krigtiltak'); document.getElementById('krigtiltak') && document.getElementById('krigtiltak').click(); ut.panel = document.querySelectorAll('#krigpanel [data-tiltak]').length; KS.lukk();
+      // runde 2: ekte hus inntil laget gir dekning, og et eget lag som er knust og omringet, gir seg bare når du har valgt det
+      a.x = L.x + 5000; a.y = L.y + 5000; a.sti = null; c.retning = 0; const h0 = ild(c, a); a.vedHus = true; ut.hus = ild(c, a) / h0; a.vedHus = false;
+      const d1 = nyttLag('Vakt rød 3', a.x + 300, a.y, 'rød'), d2 = nyttLag('Vakt rød 4', a.x - 300, a.y, 'rød'); ENHETER.push(d1, d2); for (let i = 0; i < 6; i++) a.menn[i].hp = 0;
+      KS.steg.egneGirSeg(); ut.holdt = ENHETER.includes(a); a.krig = { ...(a.krig || {}), overgi: true }; KS.steg.egneGirSeg(); ut.egetGaSeg = !ENHETER.includes(a); ut.krig3d = !!window.Krig3d;
       // lagringen tar med fiendens lag, minnet og målet for en marsj
       const pk = Lagring.pakk({ tid, leir: L, lag: [], fiender: LagringSpill.fiendeLag(), minne: window.AI ? AI.minne : null, stillinger: window.STILLINGER || [] }); ut.lagret = pk.fiender.some(q => q.navn === 'Vakt rød 2' && q.side === 'rød') && (!window.AI || !!pk.minne.rød);
       // kartet tegnes med merkene uten feil
@@ -47,6 +51,6 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   });
   if (d.uten) return { ok: false, tekst: 'KrigSpill mangler', data: d };
   const ok = !d.feil && d.flanke > 1.4 && Math.abs(d.av - 1) < 1e-9 && d.snudd && d.fart < .9 && d.natt < .6 && d.nattsikt > 1.5 && d.røyk < .5 && d.gaSeg && d.levert && d.avhør && d.etter && d.avhørt && d.meny
-    && (d.fred === undefined || (d.fred && d.fredIld && d.brutt)) && /fører: .+\(.+\)/.test(d.fører) && d.knapp && d.panel >= 5 && d.lagret && d.ryddet;
-  return { ok, tekst: `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}`, data: d };
+    && (d.fred === undefined || (d.fred && d.fredIld && d.brutt)) && /fører: .+\(.+\)/.test(d.fører) && d.knapp && d.panel >= 7 && d.lagret && d.ryddet && d.hus < .75 && d.holdt && d.egetGaSeg && d.krig3d;
+  return { ok, tekst: `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}`, data: d };
 } };

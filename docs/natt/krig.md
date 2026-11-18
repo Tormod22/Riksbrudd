@@ -59,12 +59,27 @@ Det spilleren selv setter i gang (røyk, lys, støy, bakhold, artilleri, våpenh
 `lys(lag)`, `støy(lag, X, Y)`, `kallInn(lag, X, Y)`, `fred(side)`, `brytFred(side)`, `fredPris(side)`, `vernAvtale(id)`,
 `heliHent(lag)`, `heliFly(lag, X, Y)`, `heliFins()`, `seDrone(i)`, `visTiltak(lag)`, `nullstill()`, `steg.*`. Lagres i «riksbrudd-krig» per leir.
 
+## Runde 2 (samme natt)
+- **Sabotørene:** slipper de unna, tas belønningen fra spillet-visning.js tilbake (og moral −5): «Sabotørene slapp unna – da ble det ingen
+  belønning for dette angrepet.» (`V.slapp`/`V.trukket` i `T.raid`).
+- **Dekning bak ekte hus:** `husSjekk()` spør `finnBygg` i midten og åtte punkter 14 m rundt et lag som står stille (én gang per sted) ->
+  `s.vedHus`. Dekning = terrengklassen tettbebyggelse ELLER `vedHus` (`Krig.husVern(klasse, marsj, vedHus)`, `Krig.husPunkter`).
+- **Væremåten i AI-ens valg:** `Fraksjoner.velg` tar `overtakF` (pågående 0,85, forsiktig 1,25) – terskelen for å angripe.
+- **Egne lag kan gi seg:** Tiltak → «Knust og omringet: aldri gi seg / gi seg» (`s.krig.overgi`, lagres). Seks ute og fiender på to kanter
+  innen 600 m -> laget er tapt. Valget ligger IKKE i Stridsregler-panelet fordi kontrollskriptet krever nøyaktig sju valg der
+  (`str.valg === 7`) – flytt det dit (Strid.VALG) når sjekk.js kan endres.
+- **Bygdevernet gjelder alle:** også motstandernes lag må slå vernet (de kan ikke gjøre avtaler). Vernets treff er 4 % per mann og runde.
+- **3D:** `spill/krig3d.js` (KROKER.ramme3d) – røyken som seks myke flak per sky (høyst 8 skyer), lysraketten som ett lysende punkt
+  som synker (høyst 4). Sprites, ingen lys. `Krig3d.antall()`.
+- **Prøvd på /rogaland med ekte data** (leir 15607, 6622779, 990 tettsteder): AI-en i 8 spilltimer med alt slått på – begge fraksjonene
+  holdt startstedet, de andre lagene marsjerte mot nye tettsteder hele tiden, forsterkninger kom etter seks timer, ingen overgivelser,
+  ingen sidefeil. Bygdevern med makt (Hjelmelandsvågen) og med avtale (Vikedal, 1 mill. kr), dekning ved et ekte hus, og beleiring
+  (svekket etter 6 t, ga seg etter 12 t) virket.
+
 ## IKKE gjort / svakheter
-- Egne lag gir seg aldri (bare fiendens).
-- Dekning er terrengklassen «tettbebyggelse», ikke de ekte husomrissene; ingen dekning bak leirens bygg.
+- Ingen dekning bak leirens egne bygg (bare kartets hus og tettbebyggelse).
 - Fangene kan bare avhøres eller settes fri (ingen bytte, arbeid eller rekruttering).
-- Når sabotørene stikker av, regner spillet.js angrepet som slått tilbake (belønning utbetales).
 - Kjøreordre for kjøretøy, røvere i et pågående angrep, røyk/lys og helikopter i lufta lagres ikke.
-- Ingen 3D-modeller for røyk, lysrakett, helikopterfrakt eller etterretningsmerker (bare 2D-kartet).
-- Beleiring og bygdevern er prøvd med prøvetettsteder (Dovre-testsiden har ingen tettsteder lokalt), ikke på /rogaland.
-- Væremåten styrer ikke AI-ens valg (bare faktorer i ildkamp og overgivelse).
+- Ingen 3D for helikopterfrakt eller etterretningsmerker (bare 2D-kartet).
+- Våpenhvile på /rogaland: lagene i prøven så ikke hverandre (skog, dårlig vær), så «ingen kamp under hvilen, kamp etter brudd» er bare sett på kroknivå (ild = 0) og i AI-ens valg.
+- En første prøve av beleiring midt i et tettsted der fienden og bygdevernet også sloss, startet ikke ringen – ikke gjenskapt i ren prøve.
