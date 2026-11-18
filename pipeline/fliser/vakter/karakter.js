@@ -55,6 +55,13 @@ module.exports = {
           S.oppdater(); d.rad = document.querySelectorAll('#evrad.på > *').length; krev(d.rad >= 2, 'knapperaden mangler når du går'); Gange.ligg(false);
           const TT = OverlevSpill.T(), x0 = R3.bane.x, y0 = R3.bane.y; TT.push({ i: -77, x: Math.round(R3.ut.cx + x0 + 40), y: Math.round(R3.ut.cy + y0), kl: 'hus' }); T.våkn = true; S.test = false;
           const tok = S.slåttUt(K); d.våknet = tok && K.hp === E.REGLER.tilflukt.helseEtter && Math.abs(R3.bane.x - x0 - 40) < 2; krev(d.våknet, 'du våknet ikke i tilfluktsstedet'); TT.splice(TT.findIndex(q => q.i === -77), 1); Gange.flytt(x0, y0, false); }
+        // (runde 5) spoler du ved leiren, bremses det leiren mangler; «Gå» starter ved karakteren (ikke der kameraet ser)
+        { const st = Karakter.stell({ spoler: true, avst: 400, vann: false, mat: true }), ute = Karakter.stell({ spoler: true, avst: 3000, vann: false, mat: false });
+          krev(st.ved && st.faktor.tørst < 1 && st.faktor.sult === 1 && !ute.ved && ute.faktor.tørst === 1, 'spoling ved leiren: stell/brems virker ikke'); }
+        if (typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && R3.ut && !R3.bygger) { const kar = ENHETER.find(e => e.karakter);
+          if (kar) { const gikk = !!R3.fot; if (gikk) Gange.stopp(); const v0 = valgt; valgt = null; const kx = kar.x, ky = kar.y, nx = R3.ut.cx + 30, ny = R3.ut.cy - 20; kar.x = nx; kar.y = ny;
+            try { Gange.start(); d.gåVed = Math.round(Math.hypot(R3.ut.cx + R3.bane.x - nx, R3.ut.cy + R3.bane.y - ny)); krev(d.gåVed <= 61 && Gange.vedKarakter() === kar, '«Gå» startet ikke ved karakteren (' + d.gåVed + ' m unna)'); }
+            finally { Gange.stopp(); kar.x = kx; kar.y = ky; valgt = v0; if (gikk) Gange.start(); } } }
       } catch (e) { d.feil.push('unntak: ' + e.message); }
       // sett alt tilbake
       const T0 = JSON.parse(før.T); for (const k of Object.keys(T)) delete T[k]; Object.assign(T, T0);

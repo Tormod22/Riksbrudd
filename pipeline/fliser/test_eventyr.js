@@ -79,4 +79,10 @@ ok(E.Tur.søvn(1).søvn === R.tilflukt.sovSøvn && E.Tur.søvn(.5).helse === R.t
   ok(H.truffet(h3, 20, .1) === 20 * RH.skade && H.truffet(h3, 20, .9) === 0, 'den kan bli truffet når du blir truffet');
   h3.hp = 30; ok(H.tilstand(h3) === 'hardt skadet', 'hardt skadet'); H.steg(h3, 2, 0, { leir: true }); ok(h3.hp === 30 + RH.gror * 2 * 4, 'gror fire ganger så fort i leiren');
 }
+// (runde 5) feltflasker og sovepose
+{ const T = E.Tur; ok(T.maks({}) === R.tur.flaske && T.maks({ feltflaske: 2 }) === R.tur.flaske * 3, 'hver feltflaske gir flere slurker');
+  const t = { vann: 1, feltflaske: 1 }; ok(T.fyll(t) === R.tur.flaske * 2 - 1 && t.vann === R.tur.flaske * 2, 'fyll fyller alle flaskene');
+  const med = T.ute(1, true, false), uten = T.ute(1, false, false), kald = T.ute(1, false, true), vinterPose = T.ute(1, true, true), inne = T.søvn(1);
+  ok(med.søvn === inne.søvn && uten.søvn < med.søvn && !uten.frøs, 'sovepose = som i en tilflukt, uten sovepose dårligere');
+  ok(kald.frøs && kald.søvn < uten.søvn && kald.helse < 0 && kald.sult > 0 && !vinterPose.frøs && vinterPose.søvn === med.søvn, 'om vinteren uten sovepose fryser du (mindre søvn, sulten, helse)'); }
 console.log(feil ? feil + ' feil' : 'alle eventyrtestene ok'); process.exit(feil ? 1 : 0);

@@ -16,3 +16,14 @@ assert.deepStrictEqual(U.hud, [1, 0, 0]); assert.deepStrictEqual(U.hår, [0, 0, 
 U = K.utseende({ hair: 'bald' }); assert.ok(U.skallet && U.stil === 'snau' && !U.skjegg); U = K.utseende({ hair: 'afro' }); assert.strictEqual(U.stil, 'krøll');
 U = K.utseende(null); assert.ok(U.hud.length === 3 && U.stil === 'kort', 'uten portrett: et vanlig utseende');
 console.log('ok   karakter: behov, virkning, ord og utseende fra portrettet');
+// (runde 5) spoling ved leiren: det leiren mangler, synker saktere; ute på tur som før
+{ const s1 = K.stell({ spoler: true, avst: 400, vann: false, mat: true }), s2 = K.stell({ spoler: false, avst: 400, vann: false, mat: false }), s3 = K.stell({ spoler: true, avst: 2000, vann: false, mat: false });
+  assert.ok(s1.ved && s1.faktor.tørst === K.R.brems && s1.faktor.sult === 1, 'spoler 400 m fra leiren uten vann: tørsten bremses');
+  assert.ok(!s2.ved && s2.faktor.tørst === 1, 'uten spoling er 400 m ikke «i leiren»');
+  assert.ok(!s3.ved && s3.faktor.tørst === 1 && s3.faktor.sult === 1, 'ute på tur merkes behovene som før');
+  const B = K.ny(), B2 = K.ny(); K.steg(B, 12, { faktor: s1.faktor }); K.steg(B2, 12); assert.ok(B.tørst > B2.tørst && B.sult === B2.sult, 'faktoren virker i steg()');
+  // en spolt dag ved leiren med vann og mat: drikk/spis/sov holder deg over «lite» (simulert som i karakter.js)
+  const C = K.ny(); for (let h = 0; h < 72; h += 1 / 6) { const st = K.stell({ spoler: true, avst: 300, vann: true, mat: true }); K.steg(C, 1 / 6, { faktor: st.faktor });
+    if (C.tørst < K.R.greit) C.tørst = 100; if (C.sult < K.R.greit) K.fyll(C, 'sult', K.R.rasjon); K.fyll(C, 'søvn', K.R.hvile / 6 * .5); }
+  assert.ok(C.tørst >= K.R.lav && C.sult >= K.R.lav && C.søvn >= K.R.lav, 'tre spolte døgn ved leiren: ikke utslitt (' + Object.values(C).map(Math.round).join('/') + ')');
+  console.log('ok   karakter: spoling ved leiren (stell og brems)'); }

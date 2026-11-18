@@ -85,7 +85,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     const f = E.Tur.drikk(t); if (!f) { logg('Feltflaska er tom. Fyll den ved et vann eller i leiren.'); return false; }
     B.tørst = Math.min(100, B.tørst + f); lagreSekk(); logg(`Du drikker av feltflaska (${t.vann || 0} slurker igjen).`); oppdater(); return true; }
   const spis = () => (rot.KarakterSpill ? KarakterSpill.spisRasjon() : false);
-  function vedVann() { const Q = r3(); if (!går() || !rot.Gange || !Gange.vannVed) return false; const k = Gange.kropp(), v = Gange.vannVed(Q.ut); return !!k && [[2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]].some(([dx, dy]) => v(k.x + dx, k.y + dy)); }
+  // (runde 5) ved vann: vannmasken eller en bekk (u.iBekk) i 3D; i 2D der karakteren står, når 3D-utsnittet dekker stedet
+  function vedVann() { const Q = r3(); if (!Q || !Q.ut || !rot.Gange || !Gange.vannVed) return false; const u = Q.ut, v = Gange.vannVed(u), b = u.iBekk || (() => false);
+    let x, y; if (går()) { const k = Gange.kropp(); if (!k) return false; x = k.x; y = k.y; } else { const s = typeof ENHETER !== 'undefined' && ENHETER.find(e => e.karakter); if (!s) return false; x = s.x - u.cx; y = s.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) return false; }
+    return [[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]].some(([dx, dy]) => v(x + dx, y + dy) || b(x + dx, y + dy)); }
   function fyllFlaske(stille) { const t = ting(); if (!t) return 0; const n = E.Tur.fyll(t); if (n > 0) { lagreSekk(); if (!stille) logg('Du fyller feltflaska.'); } return n; }
   // «Pakk for tur» i leiren: full flaske og opptil tre rasjoner fra leirens mat
   function pakk() { const t = ting(), F = rot.FolkSpill && FolkSpill.tilstand(); if (!t) return false; if (!iLeiren()) { logg('Du må være i leiren for å pakke.'); return false; }
@@ -137,8 +140,9 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   const mørke = () => (rot.NATT && isFinite(NATT.mørke) ? NATT.mørke : rot.Krig && Krig.natt && Krig.klokkeTime && typeof tid !== 'undefined' ? Krig.natt(Krig.klokkeTime(tid)) || 0 : 0);
   // fiender med nattsikt (pakka «krig»: utstyr eller røvere som venter på mørket) ser deg som om det var dag
   const harNattsikt = e => !!((e.utstyr && e.utstyr.nattsikt) || e.nattsikt);
-  function snikRekkevidde(utenMørke) { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now();
-    return E.Snik.rekkevidde({ stilling: stilling(), mørke: utenMørke ? 0 : mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
+  // (runde 5) lommelykta på om natta (spill/lykt.js): mørket skjuler deg ikke, og fiendene ser deg lenger unna
+  function snikRekkevidde(utenMørke) { const k = rot.Gange && Gange.kropp ? Gange.kropp() : null, nå = performance.now(), ly = rot.LyktSpill && LyktSpill.på() ? LyktSpill.røper() : 0;
+    return (ly || 1) * E.Snik.rekkevidde({ stilling: stilling(), mørke: utenMørke || ly ? 0 : mørke(), skog: skogHer(), fart: k ? k.fart : 0, løper: !!(k && k.løper), stilleLøp: har('stilleløp'), skuddSiden: sistSkudd === null ? null : (nå - sistSkudd) / 1000, stilleVåpen: stilleSkudd }); }
   // står det en vegg eller et tre mellom deg og fienden, like ved deg?
   function vegg(d, e) { const Q = r3(); if (!Q || !Q.ut || typeof hindring3d !== 'function') return false; const dx = e.x - d.x, dy = e.y - d.y, l = Math.hypot(dx, dy) || 1, x0 = d.x - Q.ut.cx, y0 = d.y - Q.ut.cy;
     for (let s = 1; s <= Math.min(R.dekning.veggAvstand, l - 1); s += .5) if (hindring3d(x0 + dx / l * s, y0 + dy / l * s)) return true; return false; }
@@ -162,20 +166,26 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   const FART = { 0: 'sp0', 1: 'sp1', 10: 'sp2', 60: 'sp3', 600: 'sp4' };
   const settFart = v => { const b = document.getElementById(FART[v] || 'sp1'); if (b && tempo !== v) b.click(); };
   const fare = () => { const p = deg(); return !!p && fiender().some(e => Math.hypot(e.x - p.x, e.y - p.y) < R.tilflukt.vekkAvstand || (snik.get(e) || {}).sett); };
-  function våkn(andel, grunn) { const g = E.Tur.søvn(andel), B = behov(), K = helse(); sov.classList.remove('på'); if (sover && sover.fart !== undefined) settFart(sover.fart); sover = 0;
-    if (B) B.søvn = Math.min(100, B.søvn + g.søvn); if (K) K.hp = Math.min(100, K.hp + g.helse); if (andel >= .5) T.tellere.sovet++; lagre();
+  function våkn(andel, grunn) { const ute = sover && sover.ute, g = ute ? E.Tur.ute(andel, ute.pose, ute.vinter) : E.Tur.søvn(andel), B = behov(), K = helse(); sov.classList.remove('på'); if (sover && sover.fart !== undefined) settFart(sover.fart); sover = 0;
+    if (B) B.søvn = Math.min(100, B.søvn + g.søvn); if (K) K.hp = Math.max(5, Math.min(100, K.hp + g.helse)); if (B && g.sult) B.sult = Math.max(0, B.sult - g.sult); if (andel >= .5) T.tellere.sovet++; lagre();
+    if (ute) { logg(g.frøs ? `Du frøs i natt uten sovepose: bare ${g.søvn} søvn, sulten og ${-g.helse} helse borte. Finn en sovepose (skap og hytter) eller sov i et sikret hus.` : `Du sov ${tall(andel * R.tilflukt.sovTimer)} timer ute${ute.pose ? ' i soveposen' : ' uten sovepose (dårlig søvn)'}: +${g.søvn} søvn.`); oppdater(); return; }
     logg(grunn ? `Du ble vekket: ${grunn} Du rakk å sove ${tall(andel * R.tilflukt.sovTimer)} timer.` : `Du har sovet ${R.tilflukt.sovTimer} timer. Du er uthvilt, og kroppen har hentet seg inn.`); oppdater(); }
-  function sovNå(straks) { if (!iTilflukt() && !straks) { logg('Du kan bare sove i et hus du har sikret.'); return false; } if (sover) return false;
+  // (runde 5) «Sov her» ute: med sovepose like godt som i en tilflukt, uten halvt så godt – og om vinteren fryser du (Eventyr.Tur.ute)
+  const vinter = () => !!(rot.VAER && /vinter/i.test(String(VAER.årstid || '')));
+  function sovUte() { const t = ting() || {}; if (sover) return false; if (iTilflukt()) return sovNå(); if (inne()) { logg('Sov i et hus du har sikret, eller ute.'); return false; }
+    const pose = t.sovepose > 0; if (!sovNå(false, { pose, vinter: vinter() })) return false;
+    logg(pose ? 'Du ruller ut soveposen og legger deg.' : vinter() ? 'Du legger deg uten sovepose – det blir en kald natt.' : 'Du legger deg på bakken uten sovepose – du sover dårlig.'); return true; }
+  function sovNå(straks, ute) { if (!ute && !iTilflukt() && !straks) { logg('Du kan bare sove i et hus du har sikret.'); return false; } if (sover) return false;
     if (straks) { sover = { straks: true }; våkn(1, ''); return true; }
     if (fare()) { logg('Du kan ikke sove mens fienden er så nær.'); return false; }
-    const K = helse(); sover = { start: typeof tid !== 'undefined' ? tid : 0, ekte: performance.now(), fart: tempo, hp: K ? K.hp : 100, angrep: !!(rot.SpilletSpill && SpilletSpill.T && SpilletSpill.T() && SpilletSpill.T().aktiv) };
+    const K = helse(); sover = { start: typeof tid !== 'undefined' ? tid : 0, ekte: performance.now(), fart: tempo, hp: K ? K.hp : 100, angrep: !!(rot.SpilletSpill && SpilletSpill.T && SpilletSpill.T() && SpilletSpill.T().aktiv), ute: ute || null };
     sov.textContent = 'Du sover …'; sov.classList.add('på'); settFart(600); return true; }
   // hver kvarte sekund mens du sover: ferdig, eller vekket
   setInterval(() => { if (!sover || sover.straks) return; const K = helse(), sovet = ((typeof tid !== 'undefined' ? tid : 0) - sover.start) / TIME, andel = Math.min(1, sovet / R.tilflukt.sovTimer);
     sov.textContent = `Du sover … ${tall(sovet)} av ${R.tilflukt.sovTimer} timer (trykk for å våkne)`;
     const angrep = !!(rot.SpilletSpill && SpilletSpill.T && SpilletSpill.T() && SpilletSpill.T().aktiv);
     if (andel >= 1) våkn(1, ''); else if (K && K.hp < sover.hp - 1) våkn(andel, 'du blir skadet!'); else if (fare()) våkn(andel, 'fiender i nærheten!'); else if (angrep && !sover.angrep) våkn(andel, 'leiren er under angrep!');
-    else if (!iTilflukt()) våkn(andel, 'du er ikke lenger i tilfluktsstedet.'); else if (performance.now() - sover.ekte > R.tilflukt.sovSek * 1000) våkn(1, ''); else if (tempo !== 600) settFart(600); }, 250);
+    else if (!sover.ute && !iTilflukt()) våkn(andel, 'du er ikke lenger i tilfluktsstedet.'); else if (sover.ute && !går()) våkn(andel, ''); else if (performance.now() - sover.ekte > R.tilflukt.sovSek * 1000) våkn(1, ''); else if (tempo !== 600) settFart(600); }, 250);
   function tilLager(id) { const q = herTilflukt(), t = ting(); if (!q || !t) return 0; const L = lagerFor(q), plass = R.tilflukt.lagerKg - E.Lager.vekt(L, Utstyr.TING, Utstyr.VÅPEN), D = Utstyr.TING[id]; if (!D) return 0;
     const n = E.Lager.flytt(t, L.ting, id, Math.min(t[id] || 0, Math.floor((plass + 1e-9) / D.vekt))); if (!n) logg('Lageret i tilfluktsstedet er fullt.'); lagreSekk(); lagre(); return n; }
   function fraLager(id) { const q = herTilflukt(), I = sekk(); if (!q || !I) return 0; const L = lagerFor(q), n = E.Lager.flytt(L.ting, I.ting, id, Math.min(L.ting[id] || 0, Utstyr.plassTil(I, id))); if (!n) logg('Sekken er for tung.'); lagreSekk(); lagre(); return n; }
@@ -279,7 +289,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     if (auto() && spiller) {
       if (gikk && ute && B) { const k = rot.Gange.kropp(), s = E.Tur.slit(gikk, !!(k && k.løper), har('lett')); B.tørst = Math.max(0, B.tørst - s.tørst); B.sult = Math.max(0, B.sult - s.sult); }
       // feltflaska fylles i leiren og ved vann
-      if (t && (t.vann || 0) < R.tur.flaske) { if (p && iLeiren() && KarakterSpill.harVann()) { if (fyllFlaske(true)) logg('Feltflaska er fylt i leiren.'); } else if (p && vedVann()) fyllFlaske(false); }
+      if (t && (t.vann || 0) < E.Tur.maks(t)) { if (p && iLeiren() && KarakterSpill.harVann()) { if (fyllFlaske(true)) logg('Feltflaska er fylt i leiren.'); } else if (vedVann()) fyllFlaske(false); }
       if (B && p) { engang('tørst', ute && B.tørst < R.tur.tørstVarsel, (t && t.vann > 0) ? `Du er tørst. Drikk av feltflaska (knappen «Drikk»${VW >= 900 ? ' eller X' : ''}).` : 'Du er tørst, og feltflaska er tom. Finn et vann eller gå til leiren.');
         engang('sult', ute && B.sult < R.tur.sultVarsel, (t && t.rasjon > 0) ? `Du er sulten. Spis en rasjon (knappen «Spis»${VW >= 900 ? ' eller N' : ''}).` : 'Du er sulten og har ingen rasjoner. Let i hus, sett feller eller gå til leiren.'); }
       // skadene gror, og infeksjonen tærer
@@ -309,7 +319,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function radInnhold() { const d = [], t = ting() || {}, B = behov(), pc = VW >= 900, st = stilling();
     for (const [id, q] of Object.entries(T.skader)) d.push(['lapp', `${E.Skader.LISTE[id].navn}${q.behandlet ? ' (behandlet)' : ''}`, null, q.behandlet ? 'god' : '']);
     // alltid synlig: hva du har med av vann og mat
-    d.push(['lapp', `Flaske ${t.vann || 0}/${R.tur.flaske} · rasjoner ${t.rasjon || 0}`, null, 'rolig']);
+    d.push(['lapp', `Flaske ${t.vann || 0}/${E.Tur.maks(t)} · rasjoner ${t.rasjon || 0}`, null, 'rolig']);
     if (T.hund) { const tl = E.Hund.tilstand(T.hund); d.push(['lapp', `Hund: ${T.hund.navn}${tl === 'i fin form' ? '' : ' (' + tl + ')'}`, null, tl === 'i fin form' ? 'god' : '']);
       if (T.hund.mett < 85 && t.rasjon > 0 && !iLeiren()) d.push(['knapp', `Gi ${T.hund.navn} mat`, 'hundmat', T.hund.mett < R.hund.spisUnder ? 'viktig' : '']); }
     if (pc) d.push(['knapp', st === 'ligg' ? 'Reis deg (Z)' : 'Legg deg ned (Z)', 'ligg', '']);
@@ -319,7 +329,11 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     if (T.skader.bein && !T.skader.bein.behandlet && t.spjelk > 0) d.push(['knapp', 'Spjelk beinet', 'bein', 'viktig']);
     if (T.skader.infeksjon && !T.skader.infeksjon.behandlet && t.forbinding > 0) d.push(['knapp', 'Behandle infeksjonen', 'inf', 'viktig']);
     if (iTilflukt()) d.push(['knapp', 'Tilflukt: sov og lager', 'tilflukt', '']);
+    // (runde 5) sov ute når du er trøtt (med eller uten sovepose)
+    if (B && B.søvn < R.ute.visUnder && !iTilflukt() && !inne() && !iLeiren() && !fare()) d.push(['knapp', `Sov her${t.sovepose > 0 ? ' (sovepose)' : ''}`, 'sovute', B.søvn < 25 ? 'viktig' : '']);
     d.push(['knapp', `Lag noe${pc ? ' (B)' : ''}`, 'lag', '']);
+    // (runde 5) lommelykta: av/på og batterier (spill/lykt.js)
+    if (rot.LyktSpill) for (const q of LyktSpill.rad()) d.push(q);
     return d; }
   // skadene dine som brikker i #varsler (spill/narhud.js leser window.VARSEL_TILLEGG); trykk = karakterarket
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
@@ -328,7 +342,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       return { i: 'hjerte', k: q.behandlet ? '' : 'fare', t: D.navn, s: q.behandlet ? 'behandlet – gror' : t[D.kur] > 0 ? `bruk ${D.kur === 'spjelk' ? 'spjelka' : 'førstehjelp'} (i sekken)` : `trenger ${D.kurTekst.replace(/ \(.*\)$/, '')}`,
         f: () => { if (rot.KarakterSpill) KarakterSpill.åpne(); } }; }).filter(Boolean);
   });
-  const GJØR = { hundmat: () => matHund(), ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
+  const GJØR = { sovute: () => sovUte(), lykt: () => rot.LyktSpill && LyktSpill.slå(), lyktbatteri: () => rot.LyktSpill && LyktSpill.bytt(), hundmat: () => matHund(), ligg: () => rot.Gange.ligg(stilling() !== 'ligg'), drikk, spis, sjekk: () => sjekkFelle(), felle: settFelle, bein: () => behandle('bein'), inf: () => behandle('infeksjon'), tilflukt: () => åpne('tilflukt'), lag: () => åpne(panelModus === 'lag' ? '' : 'lag') };
   function oppdater() { const vis = klar && går() && !sover; rad.classList.toggle('på', vis);
     if (vis && !(rot.pekerNede && pekerNede(rad))) { const d = radInnhold(), n = JSON.stringify(d); if (n !== sistRad) { sistRad = n; rad.replaceChildren(...d.map(([type, tekst, gjør, kl]) => type === 'lapp' ? el('div', { klasse: 'lapp ' + kl }, tekst) : knapp(tekst, () => { GJØR[gjør](); oppdater(); }, { klasse: kl, 'data-ev': gjør }))); } }
     if (panelModus) visPanel(false); if (rot.KarakterSpill && KarakterSpill.erÅpen && KarakterSpill.erÅpen()) KarakterSpill.vis(false); }
@@ -366,7 +380,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       for (const [id, q] of sk) { const D = E.Skader.LISTE[id], b = kn(q.behandlet ? 'Behandlet' : 'Behandle', () => behandle(id), { 'data-behandle': id }); b.disabled = !!q.behandlet || !(t[D.kur] > 0);
         f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, D.navn), e('small', {}, `${q.behandlet ? 'Behandlet – gror av seg selv nå.' : D.tekst + ' Trenger ' + D.kurTekst + ', sykestua i leiren eller tid.'} ${Math.round((1 - E.Skader.igjen(q, D)) * 100)} % leget.`)), b)); } }
     f.append(e('h3', {}, 'På tur'));
-    f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, `Feltflaske: ${t.vann || 0} av ${R.tur.flaske} slurker`), e('small', {}, 'Fylles i leiren og ved vann. Du blir tørst og sulten av å gå.')), kn('Drikk', drikk, { id: 'evdrikk' })));
+    f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, `Feltflaske: ${t.vann || 0} av ${E.Tur.maks(t)} slurker`), e('small', {}, `Fylles i leiren og ved vann eller en bekk${t.feltflaske > 0 ? ` (${1 + t.feltflaske} flasker)` : ''}. Du blir tørst og sulten av å gå.`)), kn('Drikk', drikk, { id: 'evdrikk' })));
     if (iLeiren()) f.append(kn('Pakk for tur (vann og rasjoner)', pakk, { id: 'evpakk' }));
     f.append(kn('Lag noe', () => { KarakterSpill.lukk(); åpne('lag'); }, { id: 'evlag' }));
     f.append(e('div', { klasse: 'evrad' }, e('div', {}, e('b', {}, T.hund ? `Hunden ${T.hund.navn}` : 'Ingen hund'), e('small', {}, T.hund ? `Følger deg når du går, og knurrer når fiender du ikke ser, er nærmere enn 350 m. ${T.hund.navn} er ${E.Hund.tilstand(T.hund)} (helse ${Math.round(E.Hund.fyll(T.hund).hp)} %, mett ${Math.round(T.hund.mett)} %). Spiser av leirens mat i leiren – ute må du gi den rasjoner.` : 'Går du ute med en rasjon i sekken, kan en hund slå følge. Du kan også finne en i et hus.'))));
@@ -376,7 +390,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
 
   // ---------- det de andre filene spør om ----------
   Object.assign(ut, { start, lagre, takt, oppdater, T: () => T, slør: () => M, klar: () => klar, åpne, panel: () => panelModus,
-    drikk, spis, pakk, matHund, hundTruffet, bakke, slørTegn, fyllFlaske, lag, settFelle, sjekkFelle, fåHund, fåSkade, behandle, sovNå, tilLager, fraLager, våpenTilLager, våpenFraLager, historieSteg, merkSlør, snikRekkevidde, snikSteg, snikNivå: () => snikSteg.nivå || 0,
+    sovUte, vedVann, drikk, spis, pakk, matHund, hundTruffet, bakke, slørTegn, fyllFlaske, lag, settFelle, sjekkFelle, fåHund, fåSkade, behandle, sovNå, tilLager, fraLager, våpenTilLager, våpenFraLager, historieSteg, merkSlør, snikRekkevidde, snikSteg, snikNivå: () => snikSteg.nivå || 0,
     settSett: (e, v) => snik.set(e, { nivå: v ? 1 : 0, sett: !!v }),
     // gange.js
     fart: () => (klar ? E.Skader.fart(T.skader) : 1), kanLøpe: () => !klar || E.Skader.kanLøpe(T.skader), fall,

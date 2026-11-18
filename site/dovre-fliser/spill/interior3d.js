@@ -274,7 +274,10 @@
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, w = Math.min(D.w, L * .7), t = Math.max(w / 2 + .1, Math.min(L - w / 2 - .1, (D.x - a[0]) * ex + (D.y - a[1]) * ey)), x = a[0] + ex * t, y = a[1] + ey * t, av = Math.hypot(x - D.x, y - D.y);
       if (!best || av < best.av) best = { av, x, y, ux: ex, uy: ey, w }; }
     if (!best) return null;
-    const pl = Interior.plan(P, { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger }), I = pl.inngang, A = pl.akse;
+    const pl = Interior.plan(P, { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger });
+    // (18. nov kveld) krokene får planen før den bygges: møbler som er flyttet (spill/mobler-visning.js) tas ut eller settes inn her
+    for (const f of window.INTERIOR_PLAN || []) { try { f(pl, P, u); } catch (e) { console.warn('interiør-krok:', e); } }
+    const I = pl.inngang, A = pl.akse;
     let maks = -Infinity, mx = 0, my = 0; for (const [x, y] of P) { maks = Math.max(maks, terr(x, y)); mx += x; my += y; } maks = Math.max(maks, terr(mx / P.length, my / P.length));
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
@@ -545,9 +548,20 @@
   function høyde(x, y, terreng) { for (const [, o] of aktive) { const h = Interior.høyde(o.plan, x, y, terreng); if (h !== null) return h; } return null; }
   const påTrapp = (x, y) => { for (const [, o] of aktive) if (Interior.påTrapp(o.plan, x, y)) return true; return false; };
   function inne(x, y) { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; }
+  // (18. nov kveld) bygg interiøret i bygget med nummer i på nytt nå (et møbel er flyttet): gir sant når bygget hadde interiør
+  function bygOm(i) { const R = r3(); if (!R || !R.ut) return false;
+    for (const [P] of [...aktive]) { if (!P.bygg || P.bygg.i !== i) continue; fjern(R, P); let o = null; try { o = bygg(R, R.ut, P); } catch (e) { console.warn('interiør:', e); } if (o) { aktive.set(P, o); P.inne = o.plan; } return true; }
+    return false; }
+  // et møbel som eget nett (spøkelset når du bærer det, møbler ute): midten i origo, gulvet i z = 0, hjørnefarger
+  function møbelGeo(m) { const d = [];
+    for (const [x0, x1, y0, y1, z0, z1, c, , rund] of deler(m)) { let g;
+      if (rund) { g = new THREE.CylinderGeometry(1, 1, 1, 8).toNonIndexed(); g.rotateX(Math.PI / 2); g.scale(Math.max(.005, (x1 - x0) / 2), Math.max(.005, (y1 - y0) / 2), Math.max(.005, z1 - z0)); }
+      else g = new THREE.BoxGeometry(Math.max(.005, x1 - x0), Math.max(.005, y1 - y0), Math.max(.005, z1 - z0)).toNonIndexed();
+      g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }
+    const ut = MODELLER.samle(d); for (const g of d) g.dispose(); return ut; }
   window.Interior3d = { funn: P => { const o = aktive.get(P); return o && o.funn ? o.funn.visible : null; }, LEIRBYGG, egne: () => egne,
     // sant når (x, y) ligger inne i (eller en halv meter fra) et av leirens bygg – gress og blomster settes ikke der
-    iLeirbygg: (x, y) => { for (const e of egne) { const P = e.P; if (Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) return true; } return false; }, høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
+    iLeirbygg: (x, y) => { for (const e of egne) { const P = e.P; if (Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) return true; } return false; }, høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), bygOm, møbelGeo, aktivP: () => [...aktive.keys()], aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
     // til vakten: alle interiørene nå – rom, møbler, trekanter, stoffer i bruk, og om inngangen er fri
     sjekk: () => [...aktive.values()].map(o => ({ kl: o.plan.kl, rom: o.plan.rom.length, møbler: o.plan.møbler.length, trekanter: o.trekanter, nett: o.nett.length, stoffer: o.nett[0].geometry.groups.length, gulv: o.plan.gulv, inngang: o.plan.inngang,
       fri: !Interior.blokkert(o.plan, o.plan.inngang.inn[0], o.plan.inngang.inn[1]) })) };

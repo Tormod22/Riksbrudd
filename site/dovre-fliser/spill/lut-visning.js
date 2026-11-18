@@ -42,7 +42,7 @@
   const kat = id => (G[id] ? G[id].kat : /^v_/.test(id) ? 'våpen' : rot.Utstyr && Utstyr.TING[id] && Utstyr.TING[id].enhet === 'skudd' ? 'ammo' : 'utstyr');
 
   // ---------- tilstanden ----------
-  const nyS = () => ({ rygg: R.rygg, dato: {}, b: {}, gulv: [], strømAv: null });
+  const nyS = () => ({ rygg: R.rygg, dato: {}, b: {}, gulv: [], strømAv: null, ran: {}, fylt: {} });
   let S = nyS(), leirId = '', klar = false, sistLagret = 0, endret = false;
   const lagreNå = () => { endret = false; sistLagret = performance.now(); try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId, d: S })); } catch (e) { /* fullt eller sperret */ } };
   const lagre = () => { endret = true; if (performance.now() - sistLagret > 800) lagreNå(); };
@@ -51,7 +51,7 @@
   function start() {
     registrer(); const O = rot.OppstartSpill && OppstartSpill.tilstand(); if (!O || !O.leir) return;
     leirId = Math.round(O.leir.x) + ',' + Math.round(O.leir.y); let d = null; try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
-    S = nyS(); if (d && d.leir === leirId && d.d) { const q = d.d; S.rygg = q.rygg === null ? null : G[q.rygg] && G[q.rygg].sekk ? q.rygg : R.rygg; S.dato = q.dato || {}; S.b = q.b || {}; S.gulv = Array.isArray(q.gulv) ? q.gulv : []; S.strømAv = q.strømAv === undefined ? null : q.strømAv; }
+    S = nyS(); if (d && d.leir === leirId && d.d) { const q = d.d; S.rygg = q.rygg === null ? null : G[q.rygg] && G[q.rygg].sekk ? q.rygg : R.rygg; S.dato = q.dato || {}; S.b = q.b || {}; S.gulv = Array.isArray(q.gulv) ? q.gulv : []; S.strømAv = q.strømAv === undefined ? null : q.strømAv; S.ran = q.ran && typeof q.ran === 'object' ? q.ran : {}; S.fylt = q.fylt && typeof q.fylt === 'object' ? q.fylt : {}; }
     minne.clear(); klar = true; åpne(false);
   }
   rot.addEventListener('riksbrudd-spill', () => { registrer(); setTimeout(start, 0); });
@@ -60,7 +60,9 @@
   const sekk = () => (rot.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill.tilstand() : null);
   const tingKg = I => Object.entries(I.ting).reduce((s, [id, n]) => s + vektAv(id) * (n > 0 ? n : 0), 0);
   const våpenKg = I => I.våpen.reduce((s, v) => s + (Utstyr.VÅPEN[v.id] ? Utstyr.VÅPEN[v.id].vekt : 0), 0);
-  const bær = I => L.bæring({ våpenKg: våpenKg(I), tingKg: tingKg(I), rygg: S.rygg, ekstra: (rot.Utstyr && Utstyr.ekstraVekt) || 0 });
+  // (et møbel du bærer – spill/mobler-visning.js – teller i vekta, men ikke i plassen)
+  const møbelKg = () => (rot.MoblerSpill && MoblerSpill.kg ? MoblerSpill.kg() : 0);
+  const bær = I => L.bæring({ våpenKg: våpenKg(I) + møbelKg(), tingKg: tingKg(I), rygg: S.rygg, ekstra: (rot.Utstyr && Utstyr.ekstraVekt) || 0 });
   function maks() { return R.bæreevne + ((rot.Utstyr && Utstyr.ekstraVekt) || 0); }
   function vekt(I) { return bær(I).vekt; }
   function plassTil(I, id) { const v = vektAv(id); if (!(v > 0)) return 0; const b = bær(I); return Math.max(0, Math.floor((b.plass - b.tingKg + 1e-9) / v)); }
@@ -71,7 +73,30 @@
 
   // ---------- beholderne ----------
   const minne = new Map();
-  function innholdAv(nk, kl, type, i, k) { if (S.b[nk]) return S.b[nk]; if (!minne.has(nk)) minne.set(nk, L.innhold(kl, type, i, k)); return minne.get(nk); }
+  // (runde 5) nær = en bolig nær leiren (aldri ransaket, noe nyttig i den første beholderen). Et bygg som er ransaket (S.ran), har mindre
+  // i beholderne (de lagres da), og butikker og lagre fylles litt på igjen med tiden (S.fylt).
+  const flyttetMøbel = nk => !!(rot.MoblerSpill && MoblerSpill.F && MoblerSpill.F()[nk]);
+  const frøAv = nk => { let h = 7; for (let q = 0; q < nk.length; q++) h = (Math.imul(h, 31) + nk.charCodeAt(q)) | 0; return h; };
+  function innholdAv(nk, kl, type, i, k, nær) {
+    if (S.b[nk]) { påfyllHvis(nk, kl, type, i, k); return S.b[nk]; }
+    if (!minne.has(nk)) { const B = L.innhold(kl, type, i, k, { nær: !!nær }), a = S.ran[i] || 0;
+      if (a > 0 && !flyttetMøbel(nk)) { L.tøm(B, a, frøAv(nk)); S.b[nk] = B; if (R.påfyll.klasser[kl]) S.fylt[nk] = nå(); lagre(); return B; } minne.set(nk, B); }
+    return minne.get(nk);
+  }
+  function påfyllHvis(nk, kl, type, i, k) { const P = R.påfyll; if (!P.klasser[kl] || flyttetMøbel(nk)) return; const f = S.fylt[nk], per = P.døgn * R.dag;
+    if (f === undefined) { S.fylt[nk] = nå(); return; } const n = Math.floor((nå() - f) / per); if (n < 1) return;
+    const D = L.BEHOLDERE[type]; if (!D) return; const ny = L.innhold(kl, type, i, (k | 0) + 1000 * (1 + Math.floor(nå() / per)));
+    L.påfyll(S.b[nk], ny, Math.min(1, P.andel * n), D.kg, VEKT); S.fylt[nk] = nå(); if (S.ran[i]) S.ran[i] = Math.max(0, S.ran[i] - P.andel * n); lagre(); }
+  // TØM (API til fiendens lag – pakka «krig» kan bruke det): et lag tømmer andelen av det som er igjen i bygget byggNr
+  function tøm(byggNr, o = {}) { const andel = Math.max(0, Math.min(1, +o.andel || 0)); if (!andel) return 0; const før = S.ran[byggNr] || 0;
+    S.ran[byggNr] = 1 - (1 - før) * (1 - andel); let n = 0;
+    for (const nk of Object.keys(S.b)) if (nk.startsWith(byggNr + ':') && !flyttetMøbel(nk)) n += L.tøm(S.b[nk], andel, frøAv(nk) + Math.round(S.ran[byggNr] * 1000));
+    for (const nk of [...minne.keys()]) if (nk.startsWith(byggNr + ':')) minne.delete(nk);
+    lagre(); return n; }
+  const ransaket = byggNr => (S.ran[byggNr] || 0) >= R.ran.tømt;
+  // boliger nær leiren (P = omrisset i utsnittets meter; svaret huskes på omrisset)
+  function nærLeir(P) { if (!P || P.leir) return false; if (P.nærLeir !== undefined) return P.nærLeir; const Q = r3(), O = rot.OppstartSpill && OppstartSpill.tilstand(); if (!Q || !Q.ut || !O || !O.leir) return false;
+    let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x = x / P.length + Q.ut.cx; y = y / P.length + Q.ut.cy; return (P.nærLeir = Math.hypot(x - O.leir.x, y - O.leir.y) <= R.nærLeir); }
   // så lenge et kjøleskap har kulde (spillminutt): strømnettet i husene (spill/overlev.js), leirens egne bygg når de virker
   function strømTil(P) {
     if (P && P.leir) { const LS = rot.LeirSpill && LeirSpill.tilstand(), b = LS && LS.bygg.find(q => 9000000 + q.id === P.bygg.i); return b && rot.Leir && Leir.virker(b) && !b.av ? Infinity : -Infinity; }
@@ -84,8 +109,8 @@
     const Q = r3(); if (!Q || !Q.fot || !rot.Interior3d) return { P: null, liste: [] };
     const x = Q.bane.x, y = Q.bane.y, P = Interior3d.inne(x, y); if (!P || !P.inne || !P.bygg) return { P, liste: [] };
     const kl = P.leir ? (L.LEIR[P.bygg.kl] ? P.bygg.kl : 'brakke') : P.bygg.kl, liste = [];
-    for (const b of L.beholdere(P.inne)) { const av = L.avstand(b.m, x, y); if (av > R.nær) continue; const nk = L.nøkkel(P.bygg.i, b.type, b.k);
-      liste.push({ nk, type: b.type, navn: b.navn, tittel: b.tittel, kg: b.kg, kald: !!b.kald, av, P, B: innholdAv(nk, P.leir ? 'brakke' : kl, b.type, P.bygg.i, b.k), m: b.m }); }
+    for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær) continue; const nk = b.nk;
+      liste.push({ nk, type: b.type, navn: b.navn, tittel: b.tittel, kg: b.kg, kald: !!b.kald, av, P, B: innholdAv(nk, P.leir ? 'brakke' : kl, b.type, P.bygg.i, b.k, nærLeir(P)), m: b.m }); }
     liste.sort((a, b) => a.av - b.av);
     // to like møbler får nummer i fanen («Reol 2»)
     const tel = {}; for (const c of liste) tel[c.tittel] = (tel[c.tittel] || 0) + 1; const nr = {}; for (const c of liste) if (tel[c.tittel] > 1) { nr[c.tittel] = (nr[c.tittel] || 0) + 1; c.fane = c.tittel + ' ' + nr[c.tittel]; } else c.fane = c.tittel;
@@ -258,7 +283,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const f = el('section', { klasse: 'side', 'data-side': 'der' }), fan = el('div', { klasse: 'faner' });
     for (const q of liste) { const b = el('button', { type: 'button', 'data-fane': q.nk, klasse: q === c ? 'på' : '' }, q.fane); fan.append(b); }
     f.append(el('h3', {}, 'Beholdere'), fan); const li = el('div', { klasse: 'liste' });
-    if (c) { const k = L.kg(c.B, VEKT); f.append(el('div', { klasse: 'info' }, c.haug ? `Det som ligger på ${Interior3dInne() ? 'gulvet' : 'bakken'} der du står${k ? ' · ' + kg(k) : ''}` : `${c.tittel} · ${kg(k)} av ${kg(c.kg)}${c.kald ? (strømTil(c.P) > nå() ? ' · kaldt (strøm)' : ' · uten strøm') : ''}`));
+    if (c) { const k = L.kg(c.B, VEKT); f.append(el('div', { klasse: 'info' }, c.haug ? `Det som ligger på ${Interior3dInne() ? 'gulvet' : 'bakken'} der du står${k ? ' · ' + kg(k) : ''}` : `${c.tittel} · ${kg(k)} av ${kg(c.kg)}${c.kald ? (strømTil(c.P) > nå() ? ' · kaldt (strøm)' : ' · uten strøm') : ''}${c.P && c.P.bygg && ransaket(c.P.bygg.i) ? ' · huset er ransaket' : ''}`));
       const rr = rader(c.B, c); if (!rr.length) li.append(el('div', { klasse: 'tom' }, c.haug ? 'Ingenting her. Legg noe fra deg, så blir det liggende.' : 'Tomt.')); for (const r of rr) li.append(radEl('der', r, c)); }
     f.append(li); return f;
   }
@@ -288,6 +313,10 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if (våpenAv(id)) valg.append(knapp('Utstyr (i beltet)', () => { if (fra) taFra(fra, id, null, 1); else tilBeltet(id); valgt = null; vis(true); }, { 'data-valg': 'utstyr', klasse: 'hoved' }));
     if (g && g.sekk) valg.append(knapp('Ta på', () => { if (taPå(id, fra)) valgt = null; vis(true); }, { 'data-valg': 'tapå', klasse: 'hoved' }));
     if (kat(id) === 'ammo' && v.side === 'deg') valg.append(knapp('Lad', () => { lad(id); vis(true); }, { 'data-valg': 'lad' }));
+    // (runde 5) lommelykta og batteriene (spill/lykt.js)
+    if (rot.LyktSpill && v.side === 'deg' && id === 'lommelykt') { valg.append(knapp(LyktSpill.på() ? 'Slå av' : 'Slå på', () => { LyktSpill.slå(); vis(true); }, { 'data-valg': 'lykt', klasse: 'hoved' }));
+      if ((I.ting.batterier || 0) > 0 && LyktSpill.S().batteri < .999) valg.append(knapp('Bytt batterier', () => { LyktSpill.bytt(); vis(true); }, { 'data-valg': 'batteri' })); }
+    if (rot.LyktSpill && v.side === 'deg' && id === 'batterier' && (I.ting.lommelykt || 0) > 0 && LyktSpill.S().batteri < .999) valg.append(knapp('Lad (i lykta)', () => { LyktSpill.bytt(); vis(true); }, { 'data-valg': 'batteri', klasse: 'hoved' }));
     if (g && g.rasjoner && v.st !== 'råtten' && iLeiren()) valg.append(knapp('Gi til leiren', () => { tilLeiren(fra, id, v.st); vis(true); }, { 'data-valg': 'leiren' }));
     if (v.side === 'deg') { if (c) { valg.append(knapp(c.haug ? 'Legg fra deg' : `Legg i ${c.tittel.toLowerCase()}`, () => { leggI(c, id, v.st, n); vis(true); }, { 'data-valg': 'legg' })); if (n > 1) valg.append(knapp('Én', () => { leggI(c, id, v.st, 1); vis(true); }, { 'data-valg': 'leggen' })); }
       for (const q of andre) valg.append(knapp(`Flytt til ${q.fane.toLowerCase()}`, () => { leggI(q, id, v.st, n); vis(true); })); }
@@ -353,13 +382,14 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   const går = () => { const Q = r3(); return !!(Q && Q.fot && typeof på3d !== 'undefined' && på3d && !(rot.KjorSpill && KjorSpill.fører && KjorSpill.fører())); };
   let knappFor = null;
   function oppdaterKnapp() {
-    const c = klar && går() && !åpen ? nærmeste() : null; knappFor = c;
+    const c = klar && går() && !åpen && !(rot.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()) ? nærmeste() : null; knappFor = c;
     if (!c) { åpneKnapp.classList.remove('på'); return; }
     const t = `Åpne ${c.navn}${rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
   }
   åpneKnapp.addEventListener('click', e => { e.preventDefault(); const c = knappFor || nærmeste(); if (c) åpne(true, c.nk); });
   // E: åpne beholderen du står ved (eller lukk panelet); Tab: panelet med det som er her; Esc lukker
   rot.addEventListener('keydown', e => { if (!klar || /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '') || e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key;
+    if (rot.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()) return;
     if ((k === 'e' || k === 'E') && (åpen || (går() && nærmeste()))) { e.preventDefault(); e.stopImmediatePropagation(); if (åpen) åpne(false); else { const c = nærmeste(); åpne(true, c && c.nk); } }
     else if (k === 'Tab' && (åpen || går())) { e.preventDefault(); åpne(!åpen); }
     else if (k === 'Escape' && åpen) { e.preventDefault(); e.stopImmediatePropagation(); åpne(false); } }, true);
@@ -369,14 +399,19 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   // knapper på tingene i sekken: Spis/Drikk, Til beltet, Ta på (feltrasjonen og vannet har sine fra spill/eventyr-visning.js)
   function sekkKnapp(id) { if (klar && våpenAv(id)) return ['Til beltet', () => tilBeltet(id)]; const g = G[id]; if (!klar || !g || g.finnes) return null;
     if (g.spis) return [g.drikk ? 'Drikk' : 'Spis', () => { const B = bærer(), s = B && L.stabler(B, nå()).filter(r => r.id === id).sort((a, b) => ['fersk', 'gammel', 'råtten'].indexOf(a.st) - ['fersk', 'gammel', 'råtten'].indexOf(b.st))[0]; spis(null, id, s ? s.st : null); }];
-    if (g.sekk) return ['Ta på', () => taPå(id, null)]; return null; }
+    if (g.sekk) return ['Ta på', () => taPå(id, null)];
+    if (id === 'lommelykt' && rot.LyktSpill) return [LyktSpill.på() ? 'Slå av' : 'Slå på', () => LyktSpill.slå()];
+    if (id === 'batterier' && rot.LyktSpill && LyktSpill.har()) return ['Lad lykta', () => LyktSpill.bytt()];
+    return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
     p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg · ${L.STATUS[b.status]}`))),
       kn('Inventar og beholdere (Tab)', () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------
-  const fart = () => { const b = klar && status(); return b ? b.fart : 1; };
-  const kanLøpe = () => { const b = klar && status(); return b ? b.kanLøpe : true; };
+  // (bærer du et stort møbel i armene, går du tregere og kan ikke løpe – spill/mobler-visning.js)
+  const M = () => (rot.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer() ? MoblerSpill : null);
+  const fart = () => { const b = klar && status(); return (b ? b.fart : 1) * (M() ? M().fart() : 1); };
+  const kanLøpe = () => { const b = klar && status(); return (b ? b.kanLøpe : true) && !(M() && M().stor()); };
   const løp = () => { const b = klar && status(); return b ? b.løp : 1; };
 
   // ---------- 3D: tingene du ser i husene, og haugene på gulvet ----------
@@ -424,7 +459,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const a1 = B ? B(pl, m.x + nx * k, m.y + ny * k) : false, a2 = B ? B(pl, m.x - nx * k, m.y - ny * k) : false; return a1 && !a2 ? 1 : a2 && !a1 ? -1 : 1; }
   // hva som vises i et bygg: [{ b, type, vis }] og en signatur (bygges bare på nytt når den endres)
   function visesI(pl) { const kl = L.LEIR[pl.kl] ? 'brakke' : pl.kl, liste = [], sig = [];
-    for (const b of L.beholdere(pl)) { if (b.type !== 'skap' && !OPPÅ[b.type]) continue; const nk = L.nøkkel(pl.i, b.type, b.k), B = innholdAv(nk, kl, b.type, pl.i, b.k); if (!Object.keys(B.t).length) continue;
+    for (const b of L.beholdere(pl)) { if (b.type !== 'skap' && !OPPÅ[b.type]) continue; const nk = b.nk, B = innholdAv(nk, kl, b.type, pl.i, b.k, nærLeir(pl.P)); if (!Object.keys(B.t).length) continue;
       const rr = L.stabler(B, nå(), undefined, { vekter: VEKT }), vis = b.type === 'skap' ? rr.filter(r => våpenAv(r.id)).slice(0, 2) : rr.slice(0, Math.max(1, Math.min(6, Math.floor((b.m.b || .6) / .22))));
       if (!vis.length) continue; liste.push({ b, vis }); sig.push(nk + ':' + vis.map(r => r.id + (r.n > 2 ? 2 : r.n)).join(',')); }
     return { liste, sig: sig.join('|') }; }
@@ -464,7 +499,30 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   }
   KROKER.ramme3d.push(ramme3);
 
-  Object.assign(ut, { start, registrer, åpne, erÅpen: () => åpen, vis, klar: () => klar, S: () => S, bær: () => status(), fart, kanLøpe, løp, sekkKnapp,
+  // ---------- møbler som løftes og settes ned (spill/mobler-visning.js) ----------
+  // løft: innholdet i en beholder blir fast (S.b) og følger møbelet; fersk mat eldes som vanlig mens det bæres. Gir { kg } eller null.
+  function løft(nk, P, type) { const D = L.BEHOLDERE[type]; if (!D) return { kg: 0 }; const [i, , k] = nk.split(':'), kl = P && P.leir ? 'brakke' : P && P.bygg ? P.bygg.kl : 'hus';
+    const B = innholdAv(nk, kl, type, +i, +k, nærLeir(P)), kgInn = L.kg(B, VEKT); return { kg: kgInn, B }; }
+  function tattOpp(nk, P, type) { const D = L.BEHOLDERE[type]; if (!D) return; const r = løft(nk, P, type), nåT = nå(), C = D.kald ? strømTil(P) : undefined;
+    L.normaliser(r.B, nåT, !!D.kald); for (const [id, a] of Object.entries(r.B.d || {})) r.B.d[id] = a.map(e => nåT - L.alder(e, nåT, C));
+    endretInnhold({ nk, B: r.B }); }
+  // satt ned: i et kjøleskap teller kulden fra nå
+  function sattNed(nk, type) { const D = L.BEHOLDERE[type], B = S.b[nk]; if (!D || !B) return; if (D.kald) { const nåT = nå(); for (const [id, a] of Object.entries(B.d || {})) B.d[id] = a.map(e => [L.alder(e, nåT), nåT]); } minne.delete(nk); lagre(); }
+
+  // (runde 5) HUSENE LEVER: fiendelag og røvere nær et bygg i 3D-utsnittet tømmer det over tid (ikke av seg selv i testene: LutSpill.test)
+  let ranAkk = 0, ranU = null, ranRute = null;
+  const auto = () => !navigator.webdriver || ut.test;
+  KROKER.sim.push(dt => { if (!klar || !auto() || !(dt > 0)) return; ranAkk += dt; if (ranAkk < R.ran.steg) return; const h = Math.min(ranAkk, 240) / 60; ranAkk = 0;
+    const Q = r3(), u = Q && Q.ut; if (!u || !u.hus || !u.hus.omriss || typeof ENHETER === 'undefined') return;
+    if (ranU !== u) { ranU = u; ranRute = new Map(); for (const P of u.hus.omriss) { if (!P || !P.bygg || P.leir || !P.length) continue; let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x /= P.length; y /= P.length;
+        const k = Math.floor(x / 100) + ',' + Math.floor(y / 100); if (!ranRute.has(k)) ranRute.set(k, []); ranRute.get(k).push([P.bygg.i, x, y]); } }
+    const sett = new Set();
+    for (const e of ENHETER) { if (e.side === 'blå' || (typeof levende === 'function' && !levende(e))) continue; const x = e.x - u.cx, y = e.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) continue;
+      for (let a = Math.floor(x / 100) - 1; a <= Math.floor(x / 100) + 1; a++) for (let c = Math.floor(y / 100) - 1; c <= Math.floor(y / 100) + 1; c++)
+        for (const [i, bx, by] of ranRute.get(a + ',' + c) || []) { if (sett.has(i) || Math.hypot(bx - x, by - y) > R.ran.radius) continue; sett.add(i); const før = S.ran[i] || 0, ny = L.ransak(før, h); if (ny > før) tøm(i, { andel: (ny - før) / Math.max(1e-9, 1 - før) }); } }
+  });
+
+  Object.assign(ut, { tøm, ransaket, nærLeir, innholdAv, løft, tattOpp, sattNed, start, registrer, åpne, erÅpen: () => åpen, vis, klar: () => klar, S: () => S, bær: () => status(), fart, kanLøpe, løp, sekkKnapp,
     beholdere: () => beholdereNå(), nærmeste, aktiv, velgFane: nk => { fane = nk; vis(true); }, taFra, leggI, våpenTil, våpenISekk, tilBeltet, taPå, taAv, spis, bruk, lad, tilLeiren,
     gulv: () => S.gulv, strømTil, oppdaterKnapp, ramme3, gulvMesh: () => gulvMesh, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
     // til vakten: glem det som er endret i beholderne for et bygg, og sett sekken på ryggen tilbake

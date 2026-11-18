@@ -97,3 +97,81 @@ utstyrt, handlinger, ferskhet), ikke spillets utseende, navn eller tekster. Alle
 - Tingene inne i kjøleskap, kjøledisker, reoler og paller synes ikke i 3D (bare det som ligger oppå åpne møbler).
 - Fiender/overlevende leter ikke i husene; husene fylles ikke på igjen.
 - Leirens egne lagre (lagerteltet) er ikke koblet til leirens materialer – beholderne der er bare din egen lagring.
+
+## Runde 5 (18.–19. nov kveld)
+
+Brukeren: «forbedre enda mer». Midt i runden kom et nytt ønske som ble gjort FØRST: «Flyttbare møbler og alt» (som i Project
+Zomboid – inspirasjonen, ikke en kopi). Alle tall er Claudes forslag (REGLER i hver fil).
+
+### 0. Flyttbare møbler (nytt ønske, gjort først)
+- `spill/mobler.js` (regler uten DOM, `Mobler`; test `pipeline/fliser/test_mobler.js`, 24 sjekker) og `spill/mobler-visning.js`
+  (`window.MoblerSpill`). Skripttaggene står rett etter `lut-visning.js`.
+- Hvert møbel har nøkkelen «bygg:type:nr» (`Mobler.merk`) – den samme som beholderne i lut.js (`Lut.beholdere` gir nå `nk`, og et
+  flyttet møbel beholder sin), så innholdet følger møbelet.
+- `F = { nøkkel: { i, X, Y, a, type, b, d, h, f, sperrer } }`: i = bygget det står i (nummer), null = ute, 'bæres'. X/Y i kartets meter.
+  `Mobler.bruk(plan, i, F, cx, cy)` tar flyttede møbler ut av planen de kom fra og setter inn dem som står i bygget nå. interior3d.js
+  kaller krokene i `window.INTERIOR_PLAN` rett etter `Interior.plan` – da følger veggene, kollisjonen (`Interior.blokkert`), 3D-bildet,
+  tingene oppå møblene og beholderne med. `Interior3d.bygOm(i)` bygger et interiør på nytt med en gang, `Interior3d.møbelGeo(m)` gir et
+  møbel som eget nett (spøkelset og møbler ute).
+- Plukk opp: knappen «Plukk opp sofaen (P)» (#mobelknapp) når du står innen 1,3 m (helst det du ser mot). Vekt per type (`Mobler.VEKT`;
+  nye typer får vekt fra målene), over 85 kg for tungt (traktor, bil, fly, maskin, pallereol, kjøledisk), over 18 kg eller lengste side
+  over 1,3 m = stort: i armene, fart ×0,72, ingen løping (`LutSpill.fart/kanLøpe`), ingen skyting (`SpilletSpill.skyt` spør
+  `MoblerSpill.hender()`), våpenet i hånda skjules (narhud.js). Vekta (møbel + innhold) teller i det du bærer.
+- Innholdet: en beholder tar med seg det som ligger i den, høyst 20 kg (ellers «Ta ut det meste først»). `LutSpill.tattOpp` gjør
+  innholdet fast (S.b) og lar fersk mat eldes som vanlig mens det bæres; `LutSpill.sattNed` – i et kjøleskap teller kulden fra nå
+  (et kjøleskap i en brakke med strøm holder maten kald).
+- Sett ned: spøkelset (gjennomsiktig møbel, grønt/rødt) står foran deg og følger blikket, i byggets akser; R/Q dreier 90°, E/Enter, klikk
+  med låst mus eller «Sett her» setter ned, «Sett tilbake» legger det der det sto. Linja #mobelbar øverst (under kompasset) sier hva du bærer
+  og hvorfor det er rødt: gjennom ytterveggen, en skillevegg, oppå et annet møbel (tepper unntatt), i en døråpning, foran inngangen, ute:
+  vann/hus/tre/annet møbel/for bratt (0,45 m). Inne må du stå i samme bygg som spøkelset.
+- Ute: møblene er ett nett (hjørnefarger), og de som sperrer, legges i `R3.hindre` (du går ikke gjennom dem).
+- Lagres per leir i «riksbrudd-mobler» ({ leir, F, bær }).
+- Vakten «lut og beholdere» prøver nå også: kjøleskap med 27 kg i nektes, kjøleskap med brunost plukkes opp (borte fra planen, ingen
+  løping/skyting), spøkelset grønt i scenen, settes ned 1,5 m+ unna (sperrer der), brunosten følger med, lagret, og står der etter
+  `bygOm`. Alt settes tilbake (`MoblerSpill.settTilstand`).
+- Bilder: scratchpad natt5/lut/m1-ved.png, m1-spøkelse.png, m1-satt.png (inne, PC), m2-pc-knapp/ute/satt.png (ute, PC).
+
+### 1. Lommelykt (`spill/lykt.js`, `LyktSpill`; test `test_lykt.js`)
+- L (PC, fanges før hurtigtasten L for Leiren) eller «Lykt på (L) · 100 %» i raden til venstre når du går (eventyr-visning.js spør
+  `LyktSpill.rad()`); i sekken/lutpanelet «Slå på/av», «Bytt batterier», og på batteriene «Lad (i lykta)». Lykta må ligge i sekken.
+- Et sett batterier = 8 spilltimer (KROKER.sim), svakere de siste 15 %. Om natta: karakterlaget ser opptil 45 % lenger (KROKER.sikt),
+  fiendene ser deg opptil 90 % lenger unna og mørket skjuler deg ikke (eventyr-visning.js `snikRekkevidde` ganger med
+  `LyktSpill.røper()`; målt 89 m -> 160 m ved mørke 0,44).
+- 3D: en lyskjegle på bakken/gulvet foran deg (seks biter langs strålen som følger terrenget eller gulvet): ett nett som legger til et
+  varmt lys og ett som ganger opp det som er der (samme blanding som lysflekkene under gatelysene). INGEN nye lys. Målt med
+  `renderer.render` på testmaskinen: 1–2 ms uansett (ingen målbar forskjell).
+- Lagres i «riksbrudd-lykt». Bilder: natt5/lut/l1-pc-av.png, l1-pc-på.png, l1-pc-inne.png.
+
+### 2. Sovepose og 3. feltflaske (spill/eventyr.js + eventyr-visning.js)
+- «Sov her» (raden til venstre) når søvnen er under 70 ute (ikke i hus, leir eller nær fiender): samme søvn som i en tilflukt (spoler,
+  vekkes som før, våkner når du slutter å gå). `Eventyr.Tur.ute(andel, pose, vinter)`: med sovepose ×1, uten ×0,5; vinter uten sovepose:
+  ×0,35 søvn, −20 sult og −10 helse («Du frøs i natt …»).
+- Feltflaske: `Eventyr.Tur.maks(ting)` = 4 slurker × (1 + antall feltflasker i sekken) – samme «Flaske 3/8» som før, ikke to systemer.
+  Fylles i leiren og ved vann ELLER en bekk (u.iBekk); i 2D der karakteren står når 3D-utsnittet dekker stedet.
+
+### 4. Husene lever og 5. første hus
+- `Lut.tøm(B, andel, frø)`, `Lut.ransak(a, timer)` (1 − e^(−1,2·t)), `Lut.påfyll(B, ny, andel, plass)`; `REGLER.ran` (60 m, 1,2/t, «ransaket»
+  fra 0,6, sjekk hvert 10. spillminutt) og `REGLER.påfyll` (butikk/lager: hvert 3. døgn en tredel av en ny forsyning).
+- `LutSpill.tøm(byggNr, { av, andel })` (API som krig-hjelperen ba om) og `LutSpill.ransaket(byggNr)`. Fiendelag og røvere i
+  3D-utsnittet (byggene i u.hus.omriss) tømmer bygg innen 60 m (KROKER.sim, ikke i testene: `LutSpill.test`). Beholdere som er åpnet,
+  tømmes med en gang; de andre får tømmingen når de lages. Flyttede møbler røres ikke. Panelet sier «huset er ransaket».
+- Første hus: boliger (hus, hytte, leil) innen 1,5 km fra leiren er aldri ransaket, og den første kjøkkenbenken/kjøleskapet/garderoben/
+  nattbordet har én nyttig ting trukket med byggets nummer (`Lut.NYTTIG` – mat, drikke, sekk, ammo, førstehjelp, sovepose, lommelykt).
+  Testen: 300 av 300 boliger har noe, 39 ulike kjøkkenskap av 40.
+- S.ran og S.fylt lagres i «riksbrudd-lut».
+
+### Prøvd i runde 5
+- Regeltester: `test_mobler.js` (24), `test_lykt.js` (8), `test_lut.js` (52), `test_karakter.js`, `test_eventyr.js`.
+- I nettleser (PC): vaktene «lut og beholdere» (med møblene) og «eventyret til fots (karakter)» grønne; de innebygde vaktene i sjekk.js
+  «leting i hus» og «angrep, marked … sekken …» grønne. «interiør» gir geo = 4 i mitt oppsett – det samme som i runde 4 (også uten
+  lut-skriptene), ikke fra denne pakka.
+- Bilder (scratchpad natt5/lut/): m1-ved/-spøkelse/-satt.png (inne, PC), m2-pc-knapp/-ute/-satt.png (ute, PC), l1-pc-av/-på/-inne.png
+  (lykta om natta, PC), m3-tlf-lykt/-knapp/-spøkelse/-satt.png (telefon 390 px).
+
+### Ikke gjort / svakheter
+- 8 (tingene inne i kjøleskap og reoler i 3D) er ikke gjort – reolene har alt fyllvarer i modellen, og kjøleskapet er lukket.
+- Møbler: ingen animasjon av møbelet i hendene (spøkelset vises bare foran deg), ingen «Riv/demonter», og du kan ikke stable møbler
+  oppå hverandre. Utemøbler lages bare innenfor 3D-utsnittet. Fiendene flytter ikke møbler.
+- På telefon dekker møbellinja øverst toppen av minikartet mens du bærer noe.
+- Lykta lyser bare bakken/gulvet (ikke vegger og møbler) – det er prisen for å ikke legge et nytt lys i scenen.
+- «Husene lever» gjelder bare bygg i 3D-utsnittet (byggomrissene finnes bare der); 2D-kartet viser ikke hvilke hus som er ransaket.
