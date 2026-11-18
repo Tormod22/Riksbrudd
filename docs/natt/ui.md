@@ -182,6 +182,10 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
 ## Etter siste fletting
 - Vakta «ui» fant «bygg uten tegning: åker» (nytt bygg fra pakka «verden»): `tegninger.js` har fått en tegning av åkeren (pløyd jord
   med furer og planter). Ikonet (`blad`) legger verden-visning.js inn selv.
+- Alle vaktene etter hverandre på telefon: «ui» feilet med «knappene i telefonlinja er for små» fordi tidligere vakter lot alarmen
+  (krig) og `body.tlfdekk` (sjo) stå igjen, så raden nederst var skjult. Vakta prøver nå ikke knappestørrelsen når raden er skjult
+  (som når et panel er åpent). Kjørt på nytt: alle vaktene ok på telefon og PC. Til den som samler: krig- og sjø-vaktene etterlater
+  alarm/tlfdekk på telefon.
 
 ## Fellesfiler endret i runde 4
 - `site/dovre-fliser/index.html`: én skript-tagg (`spill/tegnforklaring.js`) rett etter minikart2d.js. versjon.py er kjørt.
