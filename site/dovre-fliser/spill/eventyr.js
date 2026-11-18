@@ -17,6 +17,9 @@
   const REGLER = {
     // tur: så mange meter til fots for ett poeng tørst/sult (løping tørster dobbelt), utenfor leiren
     tur: { tørstPerM: 1 / 45, sultPerM: 1 / 140, løp: 2, slurk: 35, flaske: 4, pakkRasjoner: 3, tørstVarsel: 45, sultVarsel: 40 },
+    // (runde 5) å sove ute uten seng: med sovepose som i et sikret hus, uten den halvt så godt – og om vinteren fryser du (mindre søvn,
+    // sulten og litt helse). Hver ekstra feltflaske (lut fra husene) gir flaske-slurker til. Claudes forslag.
+    ute: { medPose: 1, utenPose: .5, frysSøvn: .35, frysSult: 20, frysHelse: 10, visUnder: 70 },
     // tilflukt: sove (sekunder, søvn og helse du får), hvor nær du må bli slått ut for å våkne der
     // (runde 2) søvnen spoler klokka: opptil sovTimer spilltimer i 600× (høyst sovSek ekte sekunder), og avbrytes hvis noe skjer
     tilflukt: { sovSek: 45, sovTimer: 6, sovSøvn: 80, sovHelse: 40, vekkAvstand: 300, nær: 1500, helseEtter: 45, lagerKg: 60 },
@@ -249,7 +252,12 @@
     søvn: andel => ({ søvn: Math.round(REGLER.tilflukt.sovSøvn * klem(andel, 0, 1)), helse: Math.round(REGLER.tilflukt.sovHelse * klem(andel, 0, 1)) }),
     // kjøtt fra et felt dyr: så mange rasjoner du får med (plass i sekken), resten blir liggende
     kjøtt: (rasjoner, plass) => ({ med: Math.max(0, Math.min(rasjoner, plass)), igjen: Math.max(0, rasjoner - Math.max(0, plass)) }),
-    fyll(ting) { const før = ting.vann || 0; ting.vann = REGLER.tur.flaske; return REGLER.tur.flaske - før; },
+    // slurker flaskene rommer: den du har fra start pluss hver feltflaske i sekken
+    maks: ting => REGLER.tur.flaske * (1 + Math.max(0, Math.floor((ting && ting.feltflaske) || 0))),
+    fyll(ting) { const før = ting.vann || 0, m = Tur.maks(ting); ting.vann = Math.max(før, m); return Math.max(0, m - før); },
+    // en natt ute: andelen av natta, om du har sovepose, og om det er vinter -> { søvn, helse, sult, frøs }
+    ute(andel, pose, vinter) { const U = REGLER.ute, g = Tur.søvn(andel), frøs = !!vinter && !pose, k = frøs ? U.frysSøvn : pose ? U.medPose : U.utenPose;
+      return { søvn: Math.round(g.søvn * k), helse: frøs ? -Math.round(U.frysHelse * klem(andel, 0, 1)) : Math.round(g.helse * k), sult: frøs ? Math.round(U.frysSult * klem(andel, 0, 1)) : 0, frøs }; },
   };
 
   // ---------- tilfluktslageret ----------
