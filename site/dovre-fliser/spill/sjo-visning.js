@@ -202,7 +202,8 @@
   function ildFaktor(s, mål) { let f = 1; for (const fn of KROKER.ild) { try { const v = fn(s, mål); if (typeof v === 'number' && isFinite(v)) f *= v; } catch (e) { /* kroken kjenner ikke båter */ } } return Math.max(0, Math.min(3, f)); }
   function skyttereMot(b) { const r = R.fiendeBåt.rekkevidde, mål = { navn: b.navn, side: b.side, x: b.x, y: b.y, påBåt: b, menn: [], båt: true }, utl = [];
     for (const s of ENHETER) { if (s.side !== 'blå' || !levende(s) || s.karakter || s.ombord || Math.abs(s.x - b.x) > r || Math.abs(s.y - b.y) > r || Math.hypot(s.x - b.x, s.y - b.y) > r) continue;
-      let ser1 = !!s.påBåt; if (!ser1) try { ser1 = ser(s, b.x, b.y); } catch (e) { ser1 = false; } if (!ser1) continue; const n = friske(s); if (n) utl.push({ menn: n, faktor: ildFaktor(s, mål), lag: s }); }
+      // om bord ser de båten, og så nær (150 m) ser alle den – ellers siktfeltet til laget
+      let ser1 = !!s.påBåt || Math.hypot(s.x - b.x, s.y - b.y) <= 150; if (!ser1) try { ser1 = ser(s, b.x, b.y); } catch (e) { ser1 = false; } if (!ser1) continue; const n = friske(s); if (n) utl.push({ menn: n, faktor: ildFaktor(s, mål), lag: s }); }
     return utl; }
   function senket(b, lag, hvordan) { const i = S.frakt.indexOf(b); if (i >= 0) S.frakt.splice(i, 1); endret = true; skitten = true;
     if (b.ai) { const om = ENHETER.filter(e => e.påBåt === b); for (const s of om) { s.påBåt = null; s.menn.forEach((m, n) => { if (n % 2 === 0 && m.hp > 0 && Math.random() < R.aiBåt.senketTap * 2) m.hp = 0; }); s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; }
@@ -217,12 +218,14 @@
     const e = q.sti && q.sti[q.sti.length - 1]; if (Math.hypot(f.x - q.x, f.y - q.y) <= R.fiendeBåt.bord) { if (q.sti) SJ.stopp(q); return; }
     if (e && Math.hypot(e[0] - f.x, e[1] - f.y) < 150) return; if (tid - (q.jaktTid || -1e9) < 2) return; q.jaktTid = tid;
     // sikt litt foran båten den jakter (dit den er om ett minutt)
-    const n = f.sti && f.sti[f.seg + 1], dx = n ? n[0] - f.x : 0, dy = n ? n[1] - f.y : 0, d = Math.hypot(dx, dy) || 1, fram = Math.min(d, TY[f.type].fart * 60);
+    const n = f.sti && f.sti[f.seg + 1], dx = n ? n[0] - f.x : 0, dy = n ? n[1] - f.y : 0, d = Math.hypot(dx, dy) || 1, fram = Math.hypot(f.x - q.x, f.y - q.y) < 400 ? 0 : Math.min(d, TY[f.type].fart * 60);
     seil(q, f.x + dx / d * fram, f.y + dy / d * fram, -1, { stille: true }).then(r => { if (r && r.feil && q.jakter === f.id) { q.jakter = null; logg(`${q.navn} gir opp jakten: ${r.feil}`); } }); }
   function startJakt(q, f) { if (!omBord(q).length) { logg(`${q.navn}: ta et lag om bord først – det er laget som border.`); return false; } q.jakter = f.id; q.jaktTid = -1e9; q.fisker = false; logg(`${q.navn} setter kurs mot ${f.navn.toLowerCase()} ${f.byNavn ? 'til ' + f.byNavn : ''}.`); jakt(q); merk(); return true; }
-  KROKER.sim.push(dt => { if (!klar || (!S.frakt.length && !S.båter.some(q => q.jakter))) return; ildAkk += dt; if (ildAkk < 1) return; const d = Math.min(ildAkk, 10); ildAkk = 0;
-    for (const f of S.frakt.slice()) { if (!serFrakt(f)) continue; const sk = skyttereMot(f); if (sk.length) { const r = SJ.skadBåt(f, sk, d); if (r) f.beskutt = tid; if (r === 'senket') { senket(f, sk[0].lag); continue; } }
-      if (f.type === 'frakt' && !f.ai) for (const q of S.båter) if (SJ.kanBorde(q, omBord(q).length, f)) { bord(q, f); break; } }
+  KROKER.sim.push(dt => { if (!klar || (!S.frakt.length && !S.båter.some(q => q.jakter))) return;
+    // bording sjekkes hvert steg (båtene går fort forbi hverandre), ilden en gang i spillminuttet
+    for (const f of S.frakt.slice()) if (f.type === 'frakt' && !f.ai) for (const q of S.båter) if (SJ.kanBorde(q, omBord(q).length, f)) { bord(q, f); break; }
+    ildAkk += dt; if (ildAkk < 1) return; const d = Math.min(ildAkk, 10); ildAkk = 0;
+    for (const f of S.frakt.slice()) { if (!serFrakt(f)) continue; const sk = skyttereMot(f); if (sk.length) { const r = SJ.skadBåt(f, sk, d); if (r) f.beskutt = tid; if (r === 'senket') senket(f, sk[0].lag); } }
     for (const q of S.båter) if (q.jakter) jakt(q); });
 
   // ---------- fiendens lag tar båt (runde 4) ----------
