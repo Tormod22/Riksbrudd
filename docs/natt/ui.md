@@ -195,6 +195,10 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
   pekeren for gruppa. 0 sidefeil.
 - Vaktene «ui» og «spillform» i samme side: PC 2D (10 s + 4 s), telefon (6 s + 2 s), PC i 3D (ui 54 s, runde 4-delen 3 ms – resten er
   den gamle vakta i programvare-3D; spillform 50 s). Alle ok.
+- Etter siste fletting med claude/nattfiks (12:15): alle vaktene i `pipeline/fliser/vakter/` etter hverandre i samme side (balanse, folk,
+  karakter, krig, natur, okonomi, sjo, verden, ui, spillform) – PC 1400 × 820 og telefon 390 × 844: alle ok, 0 sidefeil. ui alene også
+  på 1920 × 1080. Målingen av panelene på 1280 × 800, 1400 × 820 og 1920 × 1080: bare kortet i midten over panelene til siden (se 1).
+- Tegnforklaringsknappen skjules i kontrollrommet, så zoomknappene der står som før (sjekk.js prøver at de er frie).
 
 ## Ikke gjort
 - Båtene (pakka «sjo») og kaiene i kaier.js er urørt her.
