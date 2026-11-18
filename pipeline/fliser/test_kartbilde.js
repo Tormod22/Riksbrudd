@@ -41,4 +41,31 @@ const TW = 256, lyng = (x, y) => { const v = 8 * Math.sin(x * .3) * Math.cos(y *
   // flekkene er faste etter kartets meter: samme sted gir samme verdi
   ok(K.støy(123456, 6620000, 230) === K.støy(123456, 6620000, 230) && K.støy(1, 2, 60) >= 0 && K.støy(1, 2, 60) <= 1, 'støyen er fast og mellom 0 og 1'); }
 
+// 4. stranda (runde 5): kartets vann i grove trapper (32 m), høyden sier flat innsjø (100 moh.) med land som stiger mot øst og en bukt.
+// Etter strandG følger vannkanten høyden (der terrenget er under 100,3 m), uten land-flekker ute i vannet, og med lys strandsone på land.
+{ const TW = 512, S = 512, N = 129, cx = 50000, cy = 6620000, mpp = 2 * S / TW, steg = 2 * S / (N - 1), H = new Float32Array(N * N);
+  // strandlinja (meter fra vest) bukter seg: x0(y) = 480 + 60·sin(y/90); landet stiger 0,15 m per meter østover fra den
+  const kyst = Y => 480 + 60 * Math.sin(Y / 90);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = i * steg, Y = j * steg; H[j * N + i] = 100 + Math.max(0, (X - kyst(Y)) * .15); }
+  const vann = [44, 74, 102], land = [120, 112, 74];
+  // kartet: vann i 32 m-ruter der rutens midte er vest for kysten (trapper)
+  const px = bilde(TW, (x, y) => { const X = x * mpp, Y = y * mpp, rx = Math.floor(X / 32) * 32 + 16, ry = Math.floor(Y / 32) * 32 + 16; return rx < kyst(ry) ? vann : land; });
+  const erV = q => px[q + 2] > px[q] + 18 && px[q + 2] > px[q + 1] + 4;
+  const enig = () => { let n = 0, e = 0; for (let y = 0; y < TW; y += 2) for (let x = 0; x < TW; x += 2) { const X = x * mpp, Y = y * mpp, d = X - kyst(Y); if (Math.abs(d) < 3 || Math.abs(d) > 40) continue; n++; if (erV((y * TW + x) * 4) === d < 0) e++; } return e / n; };
+  const før = enig(), n = K.kjør(K.strandG(px, TW, H, N, cx, cy, S)), etter = enig();
+  ok(n > 500 && etter > .97 && etter > før + .02, `vannkanten følger høyden: ${(før * 100).toFixed(1)} % -> ${(etter * 100).toFixed(1)} % enig (${n} punkter endret)`);
+  let flekker = 0; for (let y = 0; y < TW; y++) for (let x = 0; x < TW; x++) { const X = x * mpp, Y = y * mpp; if (X < kyst(Y) - 45 && !erV((y * TW + x) * 4)) flekker++; } ok(flekker === 0, `ingen land ute i vannet (${flekker})`);
+  // lys sone: punktene 1–3 m inn på land er lysere enn landet 30 m inne
+  let a = 0, na = 0, b = 0, nb = 0; for (let y = 0; y < TW; y += 2) for (let x = 0; x < TW; x++) { const X = x * mpp, Y = y * mpp, d = X - kyst(Y), q = (y * TW + x) * 4, l = lys(px, q);
+    if (d > 1.5 && d < 4.5) { a += l; na++; } else if (d > 30 && d < 35) { b += l; nb++; } }
+  ok(na && nb && a / na > b / nb + 4, `lys strandsone (${(a / na).toFixed(0)} mot ${(b / nb).toFixed(0)} inne på land)`);
+  // nedenfor utløpet: en flate 6 m under vannstanden rett ved vannet (sør for y = 900) blir ikke vann
+  { const H2 = H.slice(); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = i * steg, Y = j * steg; if (Y > 900 && X > kyst(Y) + 4 && X < kyst(Y) + 40) H2[j * N + i] = 94; }
+    const p2 = bilde(TW, (x, y) => { const X = x * mpp, Y = y * mpp, rx = Math.floor(X / 32) * 32 + 16, ry = Math.floor(Y / 32) * 32 + 16; return rx < kyst(ry) ? vann : land; });
+    K.kjør(K.strandG(p2, TW, H2, N, cx, cy, S)); let feilV = 0;
+    for (let y = Math.ceil(905 / mpp); y < TW; y += 2) for (let x = 0; x < TW; x += 2) { const X = x * mpp, Y = y * mpp, q = (y * TW + x) * 4; if (X > kyst(Y) + 8 && X < kyst(Y) + 36 && p2[q + 2] > p2[q] + 18 && p2[q + 2] > p2[q + 1] + 4) feilV++; }
+    ok(feilV === 0, `terreng under vannstanden (nedenfor et utløp) blir ikke vann (${feilV})`); }
+  // uten vann: ingenting skjer
+  const tørt = bilde(64, () => land), k2 = tørt.slice(); ok(K.kjør(K.strandG(tørt, 64, H, N, cx, cy, S)) === 0 && tørt.every((v, i) => v === k2[i]), 'uten vann røres ingenting'); }
+
 console.log(feil ? `${feil} feil` : 'alle kartbildetester ok'); process.exit(feil ? 1 : 0);

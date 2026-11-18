@@ -8,6 +8,9 @@ const fordeling = p => { const n = {}; for (let i = 0; i < 2000; i++) { const k 
 const pst = n => Object.entries(n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${Math.round(v * 100)} %`).join(', ');
 
 const tg = V.tregrense(6.89e6);
+// (runde 5) mot vestkysten lavere: Sirdalsheiane, Ryfylke og Bergen; uten x og på Dovre (x 200 000) som før
+sjekk(Math.abs(V.tregrense(6617991, 37880) - 858) < 15 && V.tregrense(6622779, 15607) < 800 && V.tregrense(6.73e6, -32000) < 650 && V.tregrense(6.89e6, 200000) === tg && V.tregrense(6.6e6, 37880) < V.tregrense(6.6e6),
+  `tregrensen mot kysten: Sirdal ${Math.round(V.tregrense(6617991, 37880))} m, Ryfylke ${Math.round(V.tregrense(6622779, 15607))} m, Bergen ${Math.round(V.tregrense(6.73e6, -32000))} m`);
 sjekk(Math.abs(tg - 1100) < 1 && V.tregrense(7.8e6) < 400 && V.tregrense(6.6e6) > 1150, `tregrensen: Dovre ${tg} m, Finnmark ${Math.round(V.tregrense(7.8e6))} m, sør ${Math.round(V.tregrense(6.6e6))} m`);
 const dal = fordeling({ moh: 500, tg, helning: 3, vann: 300, myr: 0, hei: 0 });
 sjekk(dal.gran > .4 && (dal.furu || 0) < .2, 'dalbunn (500 moh., flatt): mest gran – ' + pst(dal));
