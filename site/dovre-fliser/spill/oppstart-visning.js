@@ -267,7 +267,8 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   // 3D: flaggstangen fra leirmodellene (spill/modeller.js) med ditt flagg som duk
   let stang = [];
   KROKER.sett3d.push((u, R) => {
-    for (const m of stang) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } stang = [];
+    // (18. nov: flaggets bilde – CanvasTexture – frigjøres også; før ble ett nytt bilde liggende på grafikkortet for hvert nytt utsnitt)
+    for (const m of stang) { R.scene.remove(m); m.geometry.dispose(); if (m.material.map) m.material.map.dispose(); m.material.dispose(); } stang = [];
     if (!S || !S.leir || !window.MODELLER) return; const x = S.leir.x - u.cx, y = S.leir.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) return;
     const z = (hoyde3d(S.leir.x, S.leir.y, u) - u.h0) * R.EX, st2 = new THREE.Mesh(MODELLER.flaggstang({ farge: O.hovedfarge(S.fraksjon.flagg), merke: 'ingen' }), MODELLER.materiale().clone());
     st2.position.set(x, y, z); R.scene.add(st2); stang.push(st2);
