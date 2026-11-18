@@ -101,5 +101,4 @@ Verden, Sjø), `t4.js` (PC), `vk.js` (vaktene; bruker `../ui/u2.js`).
 
 Ikke gjort / ikke prøvd i runde 2:
 - Ekte Safari (bare Chromium med telefonprofil). «Lag noe» liggende er bare prøvd med CSS-en (panelet åpnes bare når du går i 3D).
-- Verden-panelet liggende er åpnet på /rogaland, men bildet er ikke sett nøye (bare målene: høyre side, 400 × 339).
 - Liggende iPhone SE (667 × 375) får også sidepanelene (bredere enn 1,2 × høyden); ikke prøvd.
