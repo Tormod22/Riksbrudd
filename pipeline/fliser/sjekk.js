@@ -15,6 +15,9 @@ const fs = require('fs');
 // klokke (AsyncLocalStorage følger med gjennom alle await). Linjer utenfor profilene måles mot forrige linje utenfor.
 const TID = new (require('async_hooks').AsyncLocalStorage)(), TIDER = [], KALL_TID = [], PROFIL_TID = [], T_START = Date.now(), UTENFOR = { navn: '', sist: Date.now() };
 const sek = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+// SJEKK_DEL=rask (18. nov): bare det som ikke trenger 3D – 2D-delen (høyder, marsj, kamp, infrastruktur, leiren, folk, oppstart,
+// grensesnitt …) og vaktene i vakter/*.js (de tåler at 3D er av). Full kjøring (uten SJEKK_DEL) sjekker alt som før.
+const RASK = process.env.SJEKK_DEL === 'rask';
 const skriv = console.log.bind(console);
 console.log = (...a) => { const s = TID.getStore() || UTENFOR, nå = Date.now(), d = nå - s.sist; s.sist = nå;
   const tekst = require('util').format(...a); if (/^(ok  |FEIL)/.test(tekst)) TIDER.push([d, s.navn, tekst.slice(0, 110)]); skriv(tekst + ` (${sek(d)})`); };
@@ -92,7 +95,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // mens f bygger: samme kode, de samme pustene og det samme utsnittet, bare uten bilder imellom. Tegningen er tilbake før vakta ser
     // på scenen (bildene etterpå tegner og kompilerer det nye).
     await kt.addInitScript(() => { window.utenTegning = async f => { const R = typeof R3 !== 'undefined' && R3 && R3.renderer, r0 = R && R.render;
-      if (R) R.render = () => {}; try { return await f(); } finally { if (R) R.render = r0; } }; });
+      if (R) R.render = () => {}; try { return await f(); } finally { if (R) R.render = r0; } };
+      // vakta venter på et utsnitt som bygges på skjermen (flyttet kamera, «Gå»): det samme, uten å tegne det gamle bildet imens (målt: 166 s -> 5 s)
+      window.ventPåBygging = () => window.utenTegning(async () => { while (typeof R3 !== 'undefined' && R3 && R3.bygger) await new Promise(r => setTimeout(r, 100)); }); });
     const pg = await kt.newPage(); const err = [];
     // (tidtaking) hvert kall til siden som tar over 1 s, huskes med linja i sjekk.js eller vakta som kalte det – de tregeste skrives til slutt
     for (const m of ['evaluate', 'waitForFunction', 'click', 'waitForTimeout', 'goto']) { const f = pg[m].bind(pg);
@@ -146,7 +151,8 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const iok = n.bru > 20 && n.kraft > 0 && n.dam > 0 &&   // Dovre-utsnittet har ingen vegtunneler
          dom && dom.folk > 500 && dom.panel === 'Dombås' && (bru[0] || 'Bru uten navn') === bru[2]; if (!iok) feil++;
       console.log(`${iok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur: ${JSON.stringify(n)}; Dombås ${dom && dom.folk} innb. (panel «${dom && dom.panel}»), lengste bru «${bru[0]}» ${bru[1]} m (panel «${bru[2]}»)`);
-      // 3D: bruene bygges som egne 3D-objekter, og trykk på en bru i 3D gir panelet
+      // 3D: bruene bygges som egne 3D-objekter, og trykk på en bru i 3D gir panelet (ikke med SJEKK_DEL=rask)
+      if (!RASK) {
       await pg.evaluate(() => { const b = INFRA.bru.find(o => o.e.navn === 'Jora bru') || INFRA.bru[0], a = b.deler[0]; kam.x = a[0]; kam.y = a[1]; kam.m = 1; window.testBru = b; });
       await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
       await pg.evaluate(() => { Object.assign(R3.bane, { x: window.testBru.deler[0][0] - R3.ut.cx, y: window.testBru.deler[0][1] - R3.ut.cy, avst: 500, pitch: .9 }); tegn3d(); });
@@ -202,6 +208,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       await pg.click('#v3d');
       const b3ok = b3.n > 0 && b3.mesh && b3.treff === b3.navn; if (!b3ok) feil++;
       console.log(`${b3ok ? 'ok  ' : 'FEIL'} ${navn} infrastruktur i 3D: ${b3.n} bruer som 3D-objekter, trykk på «${b3.navn}» gir «${b3.treff}»`);
+      }
       await pg.evaluate(() => { valgt = null; visPanel(); Object.assign(kam, window.kamFør); skitten = true; });   // tilbake til Snøhetta for 3D-testen
     }
     if (VEGNETT) { // S2: kolonnen velges med et trykk, får ordre «Kjør til» Otta, følger E6 og er framme i riktig tid
@@ -690,6 +697,11 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         && ui.navn[0] >= 3 && ui.navn[1] === 0 && ui.tekst && ui.kassa;
       if (ui && !uiok) { feil++; console.log(JSON.stringify(ui)); }
       console.log(ui ? `${uiok ? 'ok  ' : 'FEIL'} ${navn} grensesnitt: hjelpen venter på startskjermen, leirvalget går foran kjøretøy, ☰ innenfor skjermen, Leir-menyen står i ro mens en knapp holdes (${ui.holdt}) og oppdateres etterpå (${ui.oppdatert}), byggbanneret ikke midt på, zoomknappene fri i kontrollrommet, ${ui.navn[0]} navn uten overlapp` : `     ${navn} grensesnitt: hoppet over (ingen leir uten infrastrukturdata)`); }
+    // vaktene i egne filer (se «VAKTER I EGNE FILER» lenger ned) – en funksjon, så SJEKK_DEL=rask kan kjøre dem uten 3D
+    const kjørVakter = async () => { const vdir = require('path').join(__dirname, 'vakter'), vfs = require('fs'); const filer = vfs.existsSync(vdir) ? vfs.readdirSync(vdir).filter(f => f.endsWith('.js')).sort() : [];
+      for (const f of filer) { let r; try { const V = require(require('path').join(vdir, f)); r = await V.kjør(pg, navn); r.navn = V.navn || f; } catch (e) { r = { ok: false, navn: f, tekst: 'kastet: ' + String(e && e.message).slice(0, 300) }; }
+        if (!r.ok) { feil++; if (r.data) console.log(JSON.stringify(r.data).slice(0, 1200)); } console.log(`${r.ok ? 'ok  ' : 'FEIL'} ${navn} ${r.navn}: ${r.tekst || ''}`); } };
+    if (RASK) { await kjørVakter(); console.log(`–    ${navn} SJEKK_DEL=rask: 3D-delen er hoppet over`); } else {
     // 3D: bygges av flisene, viser riktig høyde, og en ordre kan gis
     await pg.click('#v3d'); await pg.waitForFunction(() => R3 && R3.ut && !R3.bygger, null, { timeout: 60000 });
     await pg.waitForFunction(() => R3.renderer.info.render.frame > 2, null, { timeout: 30000 }).catch(() => {});   // 3D må faktisk tegnes (en kommentar slukte render-kallet 10. nov)
@@ -890,7 +902,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       if (!window.Ferje3d || !window.Kjølvann || !window.Ferje) return { mangler: true };
       // sporet lever 10 min (tregt i swiftshader); et nytt utsnitt (sett3d) tømmer sporene: vent til byggingen er ferdig, og prøv igjen om det skjedde underveis
       let n = 0;
-      for (let forsøk = 0; forsøk < 4 && n <= 20; forsøk++) { while (R3.bygger) await new Promise(r => setTimeout(r, 200));
+      for (let forsøk = 0; forsøk < 4 && n <= 20; forsøk++) { await ventPåBygging();
         const s = Kjølvann.nyttSpor(4, 600), nå = Kjølvann.nå(), z = (hoyde3d(R3.ut.cx, R3.ut.cy) - R3.ut.h0) * R3.EX + .3;
         for (let i = 0; i <= 40; i++) Kjølvann.flytt(s, i * 3, 0, z, 4, nå - 6 + i * .15);
         await vent(4); n = Kjølvann.antall(); }
@@ -929,7 +941,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const r = { under: bakÅs(new THREE.Vector3(x, y, b - 60)), over: bakÅs(new THREE.Vector3(x, y, Math.max(b, c.z) + 300)) }; c.z = z0; return r; });
     if (!ås.under || ås.over) { feil++; console.log(`FEIL ${navn} navn bak ås: under ${ås.under}, over ${ås.over}`); }
     // VAKT mot rare ting i 3D (10. nov): et utsnitt i Dombås, ingen steiner/busker/trær/biler/lykter inne i hus, ingenting svever eller er begravd
-    const rart = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = await utenTegning(() => bygg3d(193300, 6896300, 900)); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
+    const rart = await pg.evaluate(async () => { await ventPåBygging(); const u = await utenTegning(() => bygg3d(193300, 6896300, 900)); window.KRAFT_SJEKK = window.Kraft3d ? Kraft3d.sjekk(u) : null; window.HUS_SJEKK = u.hus && u.hus.stat; window.GATE_TRI = window.Gate3d ? Gate3d.trekanter(u) : null;
       // VAKT veger i 3D (spill/veg.js, 13. nov): gang- og sykkelvegene er skilt ut, bilvegene ligger ikke oppå hverandre (utenom kryssene),
       // ingen gatelys står i en vegbane, og veger som krysser en elv uten bru i dataene har fått en nødbru
       window.VEG_SJEKK = (() => { if (!window.Veg || !u.veger) return null;
@@ -946,7 +958,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       let gj = 0; if (u.påBane && u.gard) for (const B of u.gard.biter) for (let q = 0; q < B.length; q += 6) if (u.påBane(B[q], B[q + 1])) gj++;
       window.BANE_SJEKK = { lag: !!(LAGFILER && LAGFILER.utveg), n: (u.baner || []).length, el: (u.baner || []).filter(b => b.el).length, trær: tb, gjerder: gj }; return Vakt3d.sjekk(u); });
     // Prøven for vakta «trærne står likt i 2D og 3D» (lenger ned). c = [cx, cy] gir det utsnittet RessursSpill husker, ellers R3.ut.
-    const TRE_PRØVE = async c => { if (typeof treVed !== 'function' || typeof TRE_RUTE === 'undefined') return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = c && window.RessursSpill ? RessursSpill.sisteU(c[0], c[1]) : R3.ut, ut = { antall: 0, feil: 0, ikkeEkte: 0 };
+    const TRE_PRØVE = async c => { if (typeof treVed !== 'function' || typeof TRE_RUTE === 'undefined') return { uten: true }; await ventPåBygging(); const u = c && window.RessursSpill ? RessursSpill.sisteU(c[0], c[1]) : R3.ut, ut = { antall: 0, feil: 0, ikkeEkte: 0 };
       if (!u || !u.trær) return { utenTrær: true, S: u && u.S, vis: typeof VIS !== 'undefined' && VIS.traer }; const sett = new Set();
       for (const k of Object.keys(u.trær)) { const A = u.trær[k]; if (!A || !A.length) continue; for (let q = 0; q + 4 < A.length; q += 5 * Math.max(1, Math.floor(A.length / 5 / 400))) { const X = A[q] + u.cx, Y = A[q + 1] + u.cy, i = Math.floor(X / TRE_RUTE), j = Math.floor(Y / TRE_RUTE);
           ut.antall++; const gx = (i + hash(i, j, 1)) * TRE_RUTE, gy = (j + hash(i, j, 2)) * TRE_RUTE; if (Math.abs(gx - X) > .02 || Math.abs(gy - Y) > .02) { ut.feil++; continue; } if (hash(i, j, 7) >= TRE_TETT) ut.ikkeEkte++; sett.add(i + ',' + j); } }
@@ -1046,7 +1058,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT interiør (spill/interior.js, interior3d.js; brukeren 15. nov: «Alle bygg skal ha interiør, og en skal kunne gå inn i dem»):
     // et prøvehus (10 × 8 m, dør midt på sørveggen) legges i utsnittet. Når du går, får det interiør med flere rom og møbler; du kan
     // gå inn gjennom døra og står da på gulvet, ytterveggen stopper deg ved siden av døra, og alt ryddes bort når du flyr opp.
-    const inn = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const u = R3.ut, R = R3, gl = R.renderer.getContext();
+    const inn = await pg.evaluate(async () => { await ventPåBygging(); const u = R3.ut, R = R3, gl = R.renderer.getContext();
       const x0 = 40, y0 = 60, P = [[x0, y0], [x0 + 10, y0], [x0 + 10, y0 + 8], [x0, y0 + 8]]; P.bygg = { i: 4242, t: 0, h: 6, kl: 'hus' };
       P.dør = { x: x0 + 5, y: y0, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(u.cx + x0 + 5, u.cy + y0 + 4, u) - u.h0) * R.EX };
       const husFør = u.hus, o = { P }, nøkler = []; if (!u.hus) u.hus = { omriss: [] };
@@ -1081,7 +1093,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${innok ? 'ok  ' : 'FEIL'} ${navn} interiør: prøvehuset fikk ${inn.rom} rom og ${inn.møbler} møbler (${inn.trekanter} trekanter), du går inn gjennom døra og står på gulvet, veggen stopper deg, ryddet bort etterpå`);
     // VAKT interiør i leirens bygg (interior3d.js LEIRBYGG; 16. nov: «alle bygg» gjelder også leiren): en ferdig brakke ved kameraet
     // blir registrert, veggen stopper deg, den får køyesenger når du går nær, du står på gulvet inne, og «Let» tilbys ikke der.
-    const lb = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+    const lb = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L) return { uten: true }; await ventPåBygging();
       const u = R3.ut, R = R3, ny = { id: L.neste++, type: 'brakke', x: u.cx + 120, y: u.cy - 90, ret: .5, igjen: 0, totalt: 60, pris: 0, mat: {}, nivå: 1, hp: 1, nr: L.nesteJobb++, arbeid: null }; L.bygg.push(ny);
       Gange.start(); const sett = (x, y, a) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); k.x = x; k.y = y; k.vx = k.vy = 0; k.z = (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX; R.fot.a = a; R.fot.pitch = 0; };
       Interior3d.oppdater(true); const e = Interior3d.egne().find(q => q.P.bygg.i === 9000000 + ny.id), ut = { registrert: !!e };
@@ -1095,7 +1107,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${lbok ? 'ok  ' : 'FEIL'} ${navn} interiør i leirens bygg: brakka er registrert, veggen stopper deg, ${lb.senger} køyesenger inne, du står på gulvet, ingen leting der, borte når bygget fjernes`);
     // VAKT kjørbare biler og helikopter (spill/kjor.js, brukeren 16. nov): feltbilen og helikopteret står fritt ved leiren, knappen
     // kommer når du går bort til dem, F setter deg inn, bilen kjører og bremser, helikopteret letter og lander, og plassen lagres.
-    const kj = await pg.evaluate(async () => { if (!window.KjorSpill || !KjorSpill.liste().length) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+    const kj = await pg.evaluate(async () => { if (!window.KjorSpill || !KjorSpill.liste().length) return { uten: true }; await ventPåBygging();
       const R = R3, u = R.ut, K = KjorSpill.liste(), ut = {}, tast = (k, ned) => window.dispatchEvent(new KeyboardEvent(ned ? 'keydown' : 'keyup', { key: k }));
       for (const k of K) { k.X = u.cx + (k.type === 'bil' ? 60 : 90); k.Y = u.cy - 200; k.ny = true; k.alt = null; } Gange.start(); KROKER.ramme3d.forEach(f => f(R));
       ut.fritt = K.every(k => !hindring3d(k.X - u.cx, k.Y - u.cy)); const sett = (x, y) => { R.bane.x = x; R.bane.y = y; const kr = Gange.kropp(); kr.x = x; kr.y = y; kr.vx = kr.vy = 0; };
@@ -1184,7 +1196,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${rmok ? 'ok  ' : 'FEIL'} ${navn} radiomastens rekkevidde: ${rm.r / 1000} km (avslått ${rm.av / 1000} km), «Vis rekkevidden» får plass til sirkelen: ${rm.passer}, tilbake: ${rm.tilbake}`);
     // VAKT karakteren din (spill/karakter.js, brukeren 17. nov: «gjøre spillerens egen karakter mer detaljert»): figuren i 3D er din egen
     // (ikke en soldat), «Utenfra» flytter kameraet bak deg og skjuler våpenet i hånda, behovene går ut over treffet, og karakterarket viser dem.
-    const kar = await pg.evaluate(async () => { if (!window.KarakterSpill || !KarakterSpill.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const R = R3, ut = {}, vent = ms => new Promise(r => setTimeout(r, ms));
+    const kar = await pg.evaluate(async () => { if (!window.KarakterSpill || !KarakterSpill.klar()) return { uten: true }; await ventPåBygging(); const R = R3, ut = {}, vent = ms => new Promise(r => setTimeout(r, ms));
       const var3 = KarakterSpill.tredje(), gikk = !!R.fot; if (!gikk) Gange.start(); KarakterSpill.settTredje(false); kamera3d(); KROKER.ramme3d.forEach(f => f(R)); const F = KarakterSpill.figur(); ut.figur = !!F; ut.ledd = !!(F && F.b && F.b[0].legg && F.a && F.a[0].under && F.hode); ut.trekanter = 0; if (F) F.g.traverse(m => { if (m.geometry) ut.trekanter += m.geometry.attributes.position.count / 3; });
       ut.første = F && !F.g.visible && !window.TREDJE; const øye = R.cam.position.clone();
       KarakterSpill.settTredje(true); kamera3d(); KROKER.ramme3d.forEach(f => f(R)); ut.tredje = F && F.g.visible && window.TREDJE === true; ut.bak = R.cam.position.distanceTo(øye); const k = Gange.kropp(); ut.vedDeg = F ? Math.hypot(F.g.position.x - k.x, F.g.position.y - k.y) : -1;
@@ -1214,7 +1226,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${strok ? 'ok  ' : 'FEIL'} ${navn} stridsregler: 60 m høyere ×${((str.høy || 0) * 1.2).toFixed(2)} med Terrengs del (nedenfra ×${(str.lav || 0).toFixed(2)}), bakhold ×${(str.bakhold || 0).toFixed(2)}, hold ilden ${str.holdIld}, fienden «${str.bevFi}», nærstrid ${str.maskinpistoler} maskinpistoler, underlegent lag trakk seg: ${str.trakk}`);
     // VAKT knapperaden (spill/knapper.js, brukeren 17. nov: «utfør nummer 5»): Gå, Leir, Krig og Deg har ikon, Sekk og Utenfra er samlet
     // under Deg (menyen kommer bare når du går), og raden får plass på én linje.
-    const knp = await pg.evaluate(async () => { if (!window.Knapper) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id); Knapper.merk();
+    const knp = await pg.evaluate(async () => { if (!window.Knapper) return { uten: true }; await ventPåBygging(); const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id); Knapper.merk();
       ut.ikon = ['gaaknapp', 'leirknapp', 'karakterknapp'].every(id => $(id) && $(id).dataset.kn && getComputedStyle($(id), '::before').maskImage !== 'none'); ut.skjult = ['sekkknapp', 'tredjeknapp'].every(id => !$(id) || getComputedStyle($(id)).display === 'none');
       const gikk = !!R3.fot; if (!gikk) Gange.start(); await vent(700); $('karakterknapp').click(); await vent(50); ut.meny = Knapper.åpen(); ut.rader = document.querySelectorAll('#degmeny button').length; ut.ark0 = KarakterSpill.erÅpen();
       const sk = [...document.querySelectorAll('#degmeny button')].find(b => /Sekken/.test(b.textContent)); if (sk) sk.click(); await vent(50); ut.sekk = UtstyrSpill.erÅpen(); ut.lukket = !Knapper.åpen(); UtstyrSpill.åpne(false);
@@ -1306,9 +1318,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${frmok ? 'ok  ' : 'FEIL'} ${navn} formasjoner, erfaring og utstyr: linje ×${frm.linje}, mot spredt ×${frm.spredt}, veteraner ×${frm.veteran}, knappen blar ${frm.bladde}, våpenbytte ved leiren ${frm.byttet} (${frm.pris} kr), fiendens lastebil skjult i tåka ${frm.skjult}, stilling ×${frm.vern}`);
     // VAKTER I EGNE FILER (18. nov): pipeline/fliser/vakter/*.js – hver fil gir module.exports = { navn, kjør: async (pg, profil) =>
     // ({ ok, tekst, data }) }. Vakten skal sette alt tilbake slik det var (3D av/på, lag, penger, tid), og tåle både PC og mobil.
-    { const vdir = require('path').join(__dirname, 'vakter'), vfs = require('fs'); const filer = vfs.existsSync(vdir) ? vfs.readdirSync(vdir).filter(f => f.endsWith('.js')).sort() : [];
-      for (const f of filer) { let r; try { const V = require(require('path').join(vdir, f)); r = await V.kjør(pg, navn); r.navn = V.navn || f; } catch (e) { r = { ok: false, navn: f, tekst: 'kastet: ' + String(e && e.message).slice(0, 300) }; }
-        if (!r.ok) { feil++; if (r.data) console.log(JSON.stringify(r.data).slice(0, 1200)); } console.log(`${r.ok ? 'ok  ' : 'FEIL'} ${navn} ${r.navn}: ${r.tekst || ''}`); } }
+    await kjørVakter();
     // VAKT forsvar av leiren (spill/forsvar.js, brukeren 17. nov: «hvordan skal jeg forsvare leiren fra et angrep på en god måte»):
     // beredskapen regnes, alarmen kommer når røvere er på vei, «Forsvar leiren» gir lagene stillinger og regelen «kjemp», folk på
     // vakt blir Leirvakta, og når angrepet er over, er reglene tilbake og Leirvakta borte.
@@ -1328,7 +1338,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${fsvok ? 'ok  ' : 'FEIL'} ${navn} forsvar av leiren: beredskap ${fsv.sum} av 100, alarm ${fsv.alarm}, ${fsv.lag} lag i stilling mot fienden, Leirvakta ${fsv.vakt} mann, alt tilbake etterpå: ${fsv.etter}`);
     // VAKT bygg i skråning (brukeren 17. nov: «ikke upraktisk og stygt å bygge hvor det er litt bratt»): et bygg på en skråning med flere
     // meters høydeforskjell godkjennes, står i høyde med det høyeste punktet under seg, og får grunnmur ned til bakken.
-    const grm = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !LeirSpill.grunn3d || !Leir.grunn) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100)); const R = R3, u = R.ut, ut = {};
+    const grm = await pg.evaluate(async () => { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !LeirSpill.grunn3d || !Leir.grunn) return { uten: true }; await ventPåBygging(); const R = R3, u = R.ut, ut = {};
       let best = null; for (let dx = -400; dx <= 400; dx += 20) for (let dy = -400; dy <= 400; dy += 20) { const b = { type: 'brakke', x: u.cx + dx, y: u.cy + dy, ret: 0 }, G = Leir.grunn(b, (x, y) => hoyde3d(x, y, u)); if (G.forskjell > 2 && G.forskjell < 7.5 && (!best || G.forskjell > best.G.forskjell)) best = { b, G }; }
       if (!best) return { flatt: true }; ut.forskjell = best.G.forskjell; ut.lov = Leir.kanBygge(L, best.b, { høyde: (x, y) => hoyde3d(x, y, u) }) === null || !/bratt/.test(Leir.kanBygge(L, best.b, { høyde: (x, y) => hoyde3d(x, y, u) }) || '');
       const b = { id: L.neste++, ...best.b, igjen: 0, totalt: 1, pris: 0, mat: {}, nivå: 1, hp: 1 }; L.bygg.push(b);
@@ -1364,7 +1374,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${trpok ? 'ok  ' : 'FEIL'} ${navn} egne tropper: ${trp.menn} fra leiren ble en tropp, om bord i speiderbilen ${trp.ombord} og følger den ${trp.følger}, oppløst: ${trp.hjem} kom hjem (én falt)`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
-    const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+    const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; await ventPåBygging();
       const ut = {}, vent = ms => new Promise(q => setTimeout(q, ms)), S = OppstartSpill.tilstand(), leir = S.leir, p0 = S.penger, t0 = tempo, F = FolkSpill.tilstand(), mor0 = F.moral, mat0 = F.mat, n0 = F.personer.length, tre0 = Leir.MATERIALER.tre.pris, salg0 = Leir.REGLER.salg, diesel0 = Leir.DRIVSTOFF.prisPerLiter, matpris0 = FolkRegler.R.matPris;
       ut.stille = !SS.T().aktiv && SS.O().liste.length === 0 && !SS.H().åpen && Leir.REGLER.salg === .5; SS.test = true; tempo = 1;
       SS.markedNå(); ut.marked = Leir.REGLER.salg === .8 && Leir.MATERIALER.tre.pris % 100 === 0 && SS.M().dag >= 1;
@@ -1431,7 +1441,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${dhok ? 'ok  ' : 'FEIL'} ${navn} drivhus: ${dh.bed} plantebed inne, modellen skjult bare mens du står inne`);
     // VAKT dyr (spill/dyr3d.js): sauer på heia ved Dombås om sommeren, ingen sau om vinteren, rein ved Snøhetta også om vinteren,
     // ingen dyr i hus, vann eller svevende (Dombås sentrum og heia), og alle modellene kompilerer (shaderfeil = feil i nettleseren)
-    const dy = await pg.evaluate(async () => { while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+    const dy = await pg.evaluate(async () => { await ventPåBygging();
       const tell = P => Object.fromEntries(Object.entries(P).map(([k, a]) => [k, a.length / 3])), feil = (s, felt) => Object.keys(s.dyr || {}).reduce((a, k) => a + (s[felt][k] || 0), 0);
       const hei = await utenTegning(() => bygg3d(201400, 6893300, 900)), s = Vakt3d.sjekk(hei, 'sommer'), by = Vakt3d.sjekk(await utenTegning(() => bygg3d(193300, 6896300, 900)), 'sommer');
       const fjell = await utenTegning(() => bygg3d(205000, 6921000, 900));
@@ -1479,7 +1489,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${ntok ? 'ok  ' : 'FEIL'} ${navn} dag og natt: stjerner ${nt.natt.stj.toFixed(2)} en vinternatt (himmellys ${nt.natt.himmel.toFixed(2)}), ${nt.dag.stj.toFixed(2)} kl. 13; månefase ${nt.natt.fase && nt.natt.fase.toFixed(3)} 31. jan.; regnet kom med største endring ${nt.maks.toFixed(3)} per minutt`);
     // bekker (NVE Elvenett): lastet, vannbåndet i 3D i lia ovenfor Dombås ligger på terrenget (ikke svevende > 1 m eller begravd)
     const bk = await pg.evaluate(async () => {
-      while (R3.bygger) await new Promise(r => setTimeout(r, 100));
+      await ventPåBygging();
       await utenTegning(() => nytt3dUtsnitt(193135, 6897627, 800)); R3.bane = { x: 0, y: 0, avst: 250, pitch: .5, yaw: .6 };
       await new Promise(r => { let n = 0; const f = () => (++n > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
       const m = R3.bekkMesh, S = window.BEKKER_STAT || {}, r = { linjer: S.linjer, bånd: S.bånd3d, tri: S.trekanter, kulvert: S.kulvert, kilde: BEKKER.STAT.kilde, kraftKilde: Kraft3d.lag.STAT.kilde, iScene: !!m && m.parent === R3.scene, min: 9, maks: -9, n: 0 };
@@ -1530,6 +1540,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${bk2ok ? 'ok  ' : 'FEIL'} ${navn} bekker 2D: ${bk2} bekker tegnet ved Dombås`);
     const d3ok =Math.abs(d3.h - 2287) < 40 && d3.bilder > 2 && d3.trekanter > 1000; if (!d3ok) feil++;
     console.log(`${d3ok ? 'ok  ' : 'FEIL'} ${navn} 3D: Snøhetta ${d3.h} moh. i 3D-terrenget (${d3.n}×${d3.n} punkter), ${d3.bilder} bilder tegnet, ${d3.trekanter} trekanter`);
+    }   // (slutten av 3D-delen, som SJEKK_DEL=rask hopper over)
     if (err.length) { feil++; console.log('FEIL i nettleseren:', err.slice(0, 5)); }
     await kt.close(); PROFIL_TID.push([navn, Date.now() - TID.getStore().start]);
   })));
