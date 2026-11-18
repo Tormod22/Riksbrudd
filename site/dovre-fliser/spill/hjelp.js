@@ -133,6 +133,10 @@
     if (sett) return false;
     if (nyttSpillPåGang()) { window.addEventListener('riksbrudd-spill', () => setTimeout(første, 400), { once: true }); return false; }
     try { localStorage.setItem('riksbrudd-hjelp', '1'); } catch (e) { /* privat vindu */ }
+    // opplæringen kommer først (natt 18. nov, «telefon2»: før kom hjelpen og opplæringen samtidig, med hjelpen oppå). Er opplæringen
+    // på og ikke ferdig, åpnes ikke hjelpen av seg selv – opplæringen har knappen «Les mer i hjelpen», og ?-knappen øverst åpner den.
+    const O = window.OpplaeringSpill, ferdig = O && window.Opplaering && Opplaering.ferdig ? Opplaering.ferdig(O.tilstand()) : false;
+    if (O && !O.av() && !ferdig) return false;
     vis(true); return true;
   }
   // etter at alle skriptene er lastet (oppstart-visning.js kommer etter denne fila)

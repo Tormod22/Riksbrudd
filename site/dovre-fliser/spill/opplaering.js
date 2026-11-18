@@ -76,7 +76,10 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
     boks.classList.toggle('ok', !!okTekst); boks.append(el('div', 'nr', okTekst ? '✓' : String(n)), el('small', '', `Opplæring · ${okTekst ? 'ferdig' : n + ' av ' + STEG.length}`), el('b', '', okTekst ? okTekst : s.tittel));
     boks.appendChild(el('span', 't', okTekst ? 'Bra. Videre går det etter målene: åpne Leir og velg fanen Mål.' : s.tekst));
     const rad = el('div', 'rad'); if (!okTekst) { const h = el('button', '', 'Hopp over'); h.id = 'opphopp'; h.onclick = () => { Opplaering.hopp(T); lagre(); kjør(); }; rad.appendChild(h); }
-    const a = el('button', '', okTekst ? 'Lukk' : 'Slå av opplæringen'); a.id = 'oppav'; a.onclick = () => (okTekst ? (T.slutt = true, lagre(), kjør()) : slå(false)); rad.appendChild(a); boks.appendChild(rad);
+    const a = el('button', '', okTekst ? 'Lukk' : 'Slå av opplæringen'); a.id = 'oppav'; a.onclick = () => (okTekst ? (T.slutt = true, lagre(), kjør()) : slå(false)); rad.appendChild(a);
+    // hjelpen («Slik spiller du») åpnes ikke av seg selv mens opplæringen går (hjelp.js første()) – den ligger bak denne knappen
+    if (typeof window.visHjelp === 'function') { const h = el('button', 'hjelp', 'Les mer i hjelpen'); h.id = 'opphjelp'; h.onclick = () => window.visHjelp(true); rad.appendChild(h); }
+    boks.appendChild(rad);
     const p = el('div', 'prikker'); STEG.forEach(x => p.appendChild(el('i', tatt(T, x.id) ? 'g' : s && x.id === s.id ? 'n' : ''))); boks.appendChild(p); }
   function slå(på) { av = !på; skriv(AV, av ? '1' : null); if (på && Opplaering.ferdig(T)) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); } if (!på && typeof logg === 'function') logg('Opplæringen er slått av. Du finner den igjen i Leir-menyen under Mål.'); sistSteg = null; kjør(); }
   function kjør() {
