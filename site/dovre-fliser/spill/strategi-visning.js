@@ -147,7 +147,9 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
     const T = åpen ? bilde() : null, topp = T ? T.trekk.slice(0, 3).map(t => t.by.id) : [];
     g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'top';
     B.forEach((b, i) => { const e = eierAv(b.id); if (!åpen && !e) return; const x = sx(b.x), y = sy(b.y); if (!inn(x, y, 30)) return; const r = Math.max(4, Math.min(13, 3 + Math.sqrt(b.folk) / 14));
-      g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1.2; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke();
+      // det felles merkesettet (spill/merker.js, 18. nov): ditt = rektangel, motstanderens = rute på spissen, uten eier = kvadrat
+      if (window.Merker) Merker.tegn(g, x, y, { forhold: e ? Merker.forhold(e) : 'nøytral', slag: 'tettsted', farge: e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)', r: r + 2 });
+      else { g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1.2; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke(); }
       if (valgtBy && valgtBy.id === b.id) { g.strokeStyle = '#f0c878'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, r + 5, 0, 6.283); g.stroke(); }
       const nr = topp.indexOf(b.id); if (nr >= 0) { g.fillStyle = '#c9b26a'; g.beginPath(); g.arc(x + r + 5, y - r - 5, 8, 0, 6.283); g.fill(); g.fillStyle = '#1c170f'; g.font = '700 12px Georgia, serif'; g.textBaseline = 'middle'; g.fillText(String(nr + 1), x + r + 5, y - r - 4.5); g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textBaseline = 'top'; }
       if (åpen && (i < 14 || e || nr >= 0 || m < 40)) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(b.navn, x, y + r + 2); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, y + r + 2); } });

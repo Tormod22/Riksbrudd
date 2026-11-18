@@ -33,6 +33,8 @@ body #flytgruppe{ z-index:5; }
 body #personkort, body #evpanel{ z-index:14; } body #samfunnkort, body #hendelse, body #flytkort{ z-index:15; }
 body.kort #region, body.kort #samfunnmeny, body.kort #verdenpanel, body.kort #sjopanel, body.kort #krigpanel{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); width:auto; max-width:none; max-height:none; overflow-y:auto; z-index:11; }
 body.kort #personkort, body.kort #evpanel, body.kort #samfunnkort{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); width:auto; max-width:none; max-height:calc(100% - var(--topp,44px) - 20px); overflow-y:auto; transform:none; }
+/* når du går på telefon: kameravarselet står til venstre midt på (ikke oppå kompass, minikart, helse eller våpenruta) */
+body.kort.minikart3d #kamvarsel{ top:calc(var(--topp,44px) + 176px); } body.kort.gaar #kamvarsel{ left:8px; right:auto; top:46%; width:min(240px, 60vw); }
 @keyframes panelinn2{ from{ opacity:0; translate:0 8px; } } #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:panelinn2 .18s ease-out; }
 @media (prefers-reduced-motion:reduce){ #region.på, #samfunnmeny.på, #verdenpanel.på, #sjopanel.på, #krigpanel.på, #evpanel.på, #personkort.på, #samfunnkort.på{ animation:none; } }`;
   document.head.appendChild(css);

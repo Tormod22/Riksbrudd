@@ -37,6 +37,17 @@
   if (menn) { const css3 = document.createElement('style'); css3.textContent = '.menn button{ display:flex; align-items:center; gap:7px; min-width:0; } .menn button .portrett{ flex:none; width:28px; height:31px; border:1px solid #4a3d24; border-radius:3px; background:#241c10; } .menn button .navn{ min-width:0; color:inherit; font-size:inherit; display:block; }'; document.head.appendChild(css3);
     const portrett = () => { if (!window.Tegninger) return; for (const b of menn.children) { if (b.querySelector('.portrett') || !b.firstChild || b.firstChild.nodeType !== 3) continue; const navn = b.firstChild.textContent, im = document.createElement('img'), boks = document.createElement('span'); im.className = 'portrett'; im.alt = ''; im.src = Tegninger.bilde(Tegninger.person(navn)); boks.className = 'navn'; while (b.firstChild) boks.appendChild(b.firstChild); b.append(im, boks); } };
     new MutationObserver(portrett).observe(menn, { childList: true }); portrett(); }
+  // FOLK-PANELET (18. nov, runde 2): hver person i lista «Vis folkene» får ansiktet sitt foran navnet – det SAMME ansiktet som på
+  // personkortet (portrettmotoren via Samfunn.portrettSVG; lages én gang per person). Trykk på ansiktet åpner personkortet.
+  // Folk-panelet sammenligner mot sin egen lagrede tekst, så bildet kan settes inn i den levende siden uten at panelet tegnes på nytt.
+  { const ansikter = new Map(), css4 = document.createElement('style'); css4.textContent = '#folkmeny .person{ overflow:hidden; } #folkmeny .person .ansikt{ float:left; width:30px; height:37px; margin:1px 8px 2px 0; object-fit:cover; object-position:top; border:1px solid #4a3d24; border-radius:3px; background:#241c10; cursor:pointer; }'; document.head.appendChild(css4);
+    let koblet = null;
+    const sett = () => { const fm = document.getElementById('folkmeny'); if (!fm || !window.Samfunn || !Samfunn.portrettSVG || !window.FolkSpill) return; const F = FolkSpill.tilstand(); if (!F) return;
+      for (const n of fm.querySelectorAll('.person .pnavn[data-person]')) { if (n.parentNode.querySelector('.ansikt')) continue; const id = n.dataset.person, p = F.personer.find(q => String(q.id) === id); if (!p) continue;
+        let src = ansikter.get(id); if (src === undefined) { try { src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Samfunn.portrettSVG(p)); } catch (e) { src = ''; } ansikter.set(id, src); } if (!src) continue;
+        const im = document.createElement('img'); im.className = 'ansikt'; im.alt = ''; im.loading = 'lazy'; im.src = src; im.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); }; n.parentNode.insertBefore(im, n); } };
+    const kobl = () => { const fm = document.getElementById('folkmeny'); if (fm && fm !== koblet) { koblet = fm; new MutationObserver(sett).observe(fm, { childList: true }); sett(); } };
+    kobl(); window.addEventListener('riksbrudd-spill', () => setTimeout(kobl, 500)); window.addEventListener('load', kobl); }
   new MutationObserver(pynt).observe(sub, { childList: true, characterData: true, subtree: true });
   new MutationObserver(pynt).observe(panel, { attributes: true, attributeFilter: ['class'] });
   // STATUSLINJA øverst: tallene for folk, kassa og strøm kan trykkes på (på telefon finnes det ingen hjelpetekst å holde over):

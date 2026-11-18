@@ -33,6 +33,7 @@
     port: () => `<path d='M12 39.500V14M52 39.500V14' ${L} stroke-width='2.600' stroke='#5a4a32'/><path d='M10 14h44' ${L} stroke-width='1.800'/><path d='M14 39.500V22h17v17.500zM33 39.500V22h17v17.500z' fill='#6a5a3a' fill-opacity='.7' ${S}/><path d='M14 22l17 17.500M50 22L33 39.500' ${L} stroke-width='.8'/><circle cx='29' cy='31' r='1' fill='#e8d48a'/><circle cx='35' cy='31' r='1' fill='#e8d48a'/>`,
     sandsekkvoll: () => { let t = ''; const rad = (y, x0, n) => { for (let i = 0; i < n; i++) t += `<rect x='${x0 + i * 10}' y='${y}' width='9.500' height='5.500' rx='2.600' fill='#b09a6a' ${S}/>`; }; rad(34, 7, 5); rad(28.500, 12, 4); rad(23, 17, 3); return t; },
     veg: () => `<path d='M22 42L28 12h8l6 30z' fill='#4a4844' ${S}/><path d='M32 14v4M32 22v5M32 31v7' stroke='#e8c75a' stroke-width='1.200' stroke-linecap='round'/><path d='M8 30c5-3 9-3 13 0M45 24c4-2 8-2 12 1' ${L} stroke='#5a7a3a' stroke-width='.9'/>`,
+    minnesmerke: () => `<path d='M24 39.500v-4h16v4z' fill='#6a6a62' ${S}/><path d='M27 35.500V17c0-7 10-7 10 0v18.500z' fill='#9a968a' ${S}/><path d='M32 19v9M29 22h6' ${L} stroke-width='1.300'/><path d='M29.500 31h5' ${L} stroke-width='.7'/><path d='M17 39c0-3 2-4 2-4s2 1 2 4M43 39c0-3 2-5 2-5s2 2 2 5' fill='#6fa84a' stroke='#2a4a1a' stroke-width='.7'/><circle cx='19' cy='34' r='1.300' fill='#e8d48a'/><circle cx='45' cy='33' r='1.300' fill='#d86a6a'/>`,
     hus: () => `${hus(16, 32, 13, 9, '#8a6f4a', '#5a3a2a')}${vindu(21, 29)}${dør(34)}`,
   };
   // våpen sett fra siden (løpet mot høyre)
