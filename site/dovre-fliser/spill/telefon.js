@@ -29,6 +29,13 @@
  * 14. Stoppkortet etter spoling («Stoppet: …») lå oppå loggmeldingen som sier det samme: loggen viker (skjules) mens kortet står
  *     oppå den (body.flytvik – gjelder også PC når de overlapper).
  * 15. ☰-menyen hadde 32 px høye rader: nå minst 40 px (menyen kan rulles).
+ * 18. Liten liggende telefon (iPhone SE 667 × 375 er både «smal» og «tlfligg»): når du gikk, lå helse- og våpenruta oppå Huk/Hopp og
+ *     våpenbyttet og Skyt oppå minikartet. Rutene og våpenbyttet flyttes nå som på større liggende telefoner, og minikartet er 80 px.
+ * 16. Fanen Bygg i Leir-menyen var ca. 3200 px høy på telefon (22 store byggekort i to kolonner). Nå tre kolonner med liten tegning,
+ *     navn og pris på én linje; hele kortet er Bygg-knappen (knappen ligger usynlig over kortet), og forklaringen kommer i banneret
+ *     når du har trykket. Kort du ikke har råd til, er dempet. Tallene (34 px tegning, tre kolonner) er Claudes forslag.
+ * 17. Lagpanelet nede dekket laget du nettopp valgte: når panelet åpnes for et lag som havner under det, flyttes kartet så laget står
+ *     midt i den frie delen (over panelet stående, til høyre for det liggende). Bare én gang per valg, og ikke i testene.
  */
 (() => {
   if (typeof document === 'undefined') return;
@@ -58,15 +65,27 @@ body.kort #personkort{ box-sizing:border-box; max-height:calc(100% - var(--topp,
 body.kort:not(.smal) #personkort{ top:calc(var(--topp,44px) + 6px); transform:translateX(-50%); }
 body.kort #etterspill{ bottom:calc(14px + ${B}); box-sizing:border-box; }
 body.kort #evpanel{ background:#1a150d; }
-body.kort:not(.smal) #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
-body.kort:not(.smal) #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
-body.kort:not(.smal) #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + ${B}); }
+body.kort:not(.smal) #nhud .helse, body.kort.tlfligg #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #nhud .vapen, body.kort.tlfligg #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #byttvapen, body.kort.tlfligg #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + ${B}); }
 body.kort #krigpanel{ left:calc(8px + ${L}); right:calc(8px + ${Rt}); width:auto; box-sizing:border-box; }
 body.kort #folkmeny .person small{ display:block; margin-top:2px; }
 body.kort #folkmeny select, body.kort #samfunnmeny select, body.kort #stridpanel select, body.kort #tropppanel select{ min-height:40px; }
 body.kort #flytkort{ left:calc(12px + ${L}); right:calc(12px + ${Rt}); transform:none; width:fit-content; max-width:min(560px, calc(100vw - 24px)); margin:0 auto; box-sizing:border-box; flex-wrap:nowrap; } body.kort #flytkort > span{ flex:1 1 auto; min-width:0; }
 body.kort #lagmeny.på button{ height:auto; min-height:40px; }
 body.flytvik #logg{ visibility:hidden; }
+body.kort.smal #panel{ max-height:52vh; }
+body.kort.tlfligg.smal #minikart{ width:80px; height:80px; }
+body.kort.tlfligg.smal #skytknapp{ right:calc(96px + ${Rt}); } body.kort.tlfligg.smal #byttvapen{ right:calc(180px + ${Rt}); }
+body.kort.tlfligg #panel{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); right:auto; width:min(380px, 52vw); max-width:none; max-height:none; box-sizing:border-box; }
+body.kort #leirmeny .liste{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:5px; }
+body.kort #leirmeny .bygg.kort{ position:relative; padding:4px 5px 5px; gap:1px; }
+body.kort #leirmeny .bygg.kort .tegn{ height:34px; }
+body.kort #leirmeny .bygg.kort b{ font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.kort #leirmeny .bygg.kort .pris{ display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.kort #leirmeny .bygg.kort .kortlinje{ display:none; }
+body.kort #leirmeny .bygg.kort > button{ position:absolute; inset:0; width:auto; height:auto; min-height:0; margin:0; padding:0; opacity:0; z-index:1; }
+body.kort #leirmeny .bygg.kort:has(> button:disabled){ opacity:.5; }
 body.kort #opplaering .rad{ flex-wrap:wrap; }
 ${SIDE.venstre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ left:calc(8px + ${L}); right:auto; }
 ${SIDE.høyre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ right:calc(8px + ${Rt}); left:auto; }
@@ -108,6 +127,21 @@ ${[...SIDE.venstre, ...SIDE.høyre].map(id => `body.kort.tlfligg #${id}`).join('
     const o = document.getElementById('opplaering'), opp = !!o && o.classList.contains('liten') && o.getClientRects().length > 0;
     if (b.classList.contains('tlfopp') !== opp) b.classList.toggle('tlfopp', opp);
   }
+  // 17: lagpanelet skal ikke dekke laget du valgte (én gang per valg; ikke i testene – Telefon.test slår det på der)
+  let sistValgt = null;
+  function seLag() {
+    const p = document.getElementById('panel'), åpen = !!p && p.classList.contains('på') && p.getClientRects().length > 0;
+    const s = typeof valgt !== 'undefined' && valgt && Number.isFinite(valgt.x) ? valgt : null;
+    if (!åpen || !s) { sistValgt = null; return; }
+    const nøkkel = s.id !== undefined ? s.id : s.navn; if (nøkkel === sistValgt) return; sistValgt = nøkkel;
+    if ((navigator.webdriver && Telefon.test !== true) || typeof kam === 'undefined' || (typeof på3d !== 'undefined' && på3d)) return;
+    const W = window.innerWidth, H = window.innerHeight, r = p.getBoundingClientRect(), sx = W / 2 + (s.x - kam.x) / kam.m, sy = H / 2 - (s.y - kam.y) / kam.m;
+    if (sx < r.left - 20 || sx > r.right + 20 || sy < r.top - 20 || sy > r.bottom + 20) return;
+    const topp = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topp')) || 44;
+    // stående: panelet går nesten over hele bredden -> laget over panelet; liggende: panelet står til venstre -> laget til høyre for det
+    if (r.width > W * .6) kam.y = s.y - (H / 2 - (topp + r.top) / 2) * kam.m; else kam.x = s.x - ((r.right + W) / 2 - W / 2) * kam.m;
+    if (typeof skitten !== 'undefined') skitten = true; }
+  setInterval(() => { if (document.body.classList.contains('kort')) seLag(); }, 250);
   setInterval(pass, 350); window.addEventListener('resize', pass); pass();
-  window.Telefon = { pass, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
+  window.Telefon = { pass, seLag, test: false, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
 })();
