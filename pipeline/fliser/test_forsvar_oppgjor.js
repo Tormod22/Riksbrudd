@@ -12,6 +12,6 @@ ok(/Brakke ødelagt/.test(r.tekst) && !/Lagertelt/.test(r.tekst) && /1 bygg skad
 ok(/2 hus gjennomsøkt/.test(r.tekst) && /1 har dratt/.test(r.tekst), 'hus og folk');
 ok(/Mat til 1,5 døgn – kjøp eller skaff mat/.test(r.tekst), 'maten med råd når den er lav');
 const h = O.tekst({ ...før, bølge: 3, aktiv: 3 }, { ...før, bølge: 4, aktiv: 4, herjet: 1, matDøgn: null });
-ok(/herjet i leiren og tok et bytte/.test(h.tekst) && /Bølge 4 pågår/.test(h.tekst) && !/slått tilbake/.test(h.tekst) && !/Mat til/.test(h.tekst), 'herjet, ny bølge pågår, uten mat (dagboka har den)', h.tekst);
+ok(/slapp unna \(herjet eller sabotasje\)/.test(h.tekst) && /Bølge 4 pågår/.test(h.tekst) && !/slått tilbake/.test(h.tekst) && !/Mat til/.test(h.tekst), 'herjet, ny bølge pågår, uten mat (dagboka har den)', h.tekst);
 ok(O.tekst(null, nå) === null, 'uten bilde fra i går: ingenting');
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

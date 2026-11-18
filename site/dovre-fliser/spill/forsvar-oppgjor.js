@@ -20,7 +20,7 @@
     const deler = [], ferdig = b => (b.bølge || 0) - (b.aktiv ? 1 : 0);
     const nyeFerdig = Math.max(0, ferdig(nå) - ferdig(før)), nyeHerjet = Math.max(0, (nå.herjet || 0) - (før.herjet || 0)), slått = Math.max(0, nyeFerdig - nyeHerjet);
     if (slått) deler.push(slått === 1 ? `bølge ${ferdig(nå) - nyeHerjet} slått tilbake` : `${slått} bølger slått tilbake`);
-    if (nyeHerjet) deler.push(nyeHerjet === 1 ? 'røverne herjet i leiren og tok et bytte' : `røverne herjet i leiren ${nyeHerjet} ganger`);
+    if (nyeHerjet) deler.push(nyeHerjet === 1 ? 'røverne slapp unna (herjet eller sabotasje)' : `røverne slapp unna ${nyeHerjet} ganger (herjet eller sabotasje)`);
     if (nå.aktiv) deler.push(`bølge ${nå.aktiv} pågår`);
     const såret = Math.max(0, (nå.såret || 0) - (før.såret || 0)), falne = Math.max(0, (nå.falne || 0) - (før.falne || 0)), ute = Math.max(0, (nå.slåttUt || 0) - (før.slåttUt || 0));
     if (såret || falne) deler.push([såret ? `${såret} ${såret === 1 ? 'ny såret' : 'nye sårede'}` : '', falne ? `${falne} falt` : ''].filter(Boolean).join(', '));
@@ -54,7 +54,9 @@
     const L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand(), T = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : {};
     const egne = ENHETER.filter(e => e.side === 'blå' && !e.karakter && !e.leirvakt && Array.isArray(e.menn)), menn = egne.flatMap(e => e.menn);
     let matDøgn = Infinity; try { const B = F && L && rot.FolkRegler ? FolkRegler.behov(F, L, FolkSpill.valg ? FolkSpill.valg() : {}) : null; matDøgn = B && Number.isFinite(B.dager) ? B.dager : (F && F.personer.length ? F.mat / F.personer.length : Infinity); } catch (e) { matDøgn = F && F.personer.length ? F.mat / F.personer.length : Infinity; }
-    return { bølge: T.bølge || 0, aktiv: T.aktiv || 0, herjet: T.herjet || 0, friske: menn.filter(m => m.hp >= 1).length, såret: menn.filter(m => m.hp > 0 && m.hp < 1).length, falne: menn.filter(m => m.hp <= 0).length,
+    // sabotører som slapp unna (krig-visning.js) regnes som herjet: ingen seier
+    let slapp = 0; if (rot.KrigSpill && KrigSpill.slapp) for (let w = 1; w <= (T.bølge || 0) - (T.aktiv ? 1 : 0); w++) if (KrigSpill.slapp(w)) slapp++;
+    return { bølge: T.bølge || 0, aktiv: T.aktiv || 0, herjet: (T.herjet || 0) + slapp, friske: menn.filter(m => m.hp >= 1).length, såret: menn.filter(m => m.hp > 0 && m.hp < 1).length, falne: menn.filter(m => m.hp <= 0).length,
       slåttUt: egne.filter(e => !levende(e) || (rot.Terreng && Terreng.slattUt(e.menn))).length,
       bygg: L ? L.bygg.filter(b => !b.del && !(b.igjen > 0)).map(b => ({ id: b.id, navn: Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type, hp: Math.round((b.hp === undefined ? 1 : b.hp) * 100) / 100 })) : [],
       hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, folk: F ? F.personer.length : 0, mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };

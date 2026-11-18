@@ -361,3 +361,35 @@ Spilt på en kopi av siden (`snapA/`, `snapB/` …), så arbeidstreet kunne endr
 | Taket på røverne | soldatene + 2 per lag (to lag: 2 × 12) | hele bølgen: ⌈(soldatene × faktor + 2) / antall lag⌉ per lag, 5–12 (`Trussel.BALANSE.ekstra` = 2). Med ett lag som før. Vanlig, 12 soldater, to lag: 2 × 7. Hard (faktor 1,5): 3 × 7. Lett (0,6): ett lag på 10. | `spillet.js` Trussel.menn, `spillet-visning.js` (sender antall lag og faktoren) |
 | Ammunisjon hjemme | bare fra olje på basen (starter med 0 t) | et lag som står stille innen 250 m fra leiren mellom angrepene, uten fiender innen 800 m, fyller 25 % av en full last per spilltime når basen ikke har olje; full last 200 000 kr, 300 000 kr blir igjen i kassa. Loggen: «Tropp 1 fyller ammunisjon i leiren (ca. 110 000 kr for full last)», lagpanelet: «fyller ammunisjon i leiren» | ny `forsvar-hjemme.js` (Hjemme.REGLER.ammo) |
 | Sårede hjemme | ble aldri friske uten sykestue | +0,03 helse per spilltime for sårede (0 < helse < 1) i lag hjemme mellom angrepene (hardt såret til frisk på ca. et døgn); falne blir ikke friske; sykestua gjør det fortere som før | `forsvar-hjemme.js` (Hjemme.REGLER.hvile) |
+
+**Kjøring B** (med endringene over, Vanlig; maskinen ble startet på nytt midt i døgn 10, så kjøringen har ni døgn):
+
+| Etter døgn | Kassa | Folk | Moral | Mat | Bygg (% = helse) | Lag: sårede eller falne / mann | Slått ut | Bølge | Hva skjedde |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 13.0 mill. | 6 | 65 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:0/4 Tropp 1:0/4 | 0 | 1 (aktiv) |  |
+| 2 | 10.4 mill. | 4 | 52 | 33 | brakke aggregat drivstofftank vakttårn | Vaktlaget:2/4 Tropp 1:3/4 Tropp 2:0/4 | 0 | 1 | Røvere 1.1 har herjet i leiren og trekker seg ut med byttet: 500 000 kr, 50 l di; REPARER Reparer alle (637 580 kr) |
+| 3 | 10.7 mill. | 7 | 58 | 25 | brakke aggregat drivstofftank vakttårn | Vaktlaget:2/4 Tropp 1:3/4 Tropp 2:0/4 | 0 | 2 | Angrepet er slått tilbake! Dere tok 600 000 kr fra røverne.; Siste døgn: Bølge 2 slått tilbake. 3 nye i gjengen.; 4 rep. av seg selv |
+| 4 | 10.2 mill. | 7 | 66 | 55 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:0/4 | 1 | 3 | Brann i leiren! 4 på vakt og bygg prøver å slokke.; Angrepet er slått tilbake! Dere tok 750 000 kr fra røverne.; Brann i leiren! 4 på vakt og bygg prøver å slokke.; Brann i leiren! 4 på vakt og bygg prøver å slokke.; Brann i leiren! 4 på vakt og bygg prøver å slokke.; Siste døgn: Bølge 3 slått tilbake. 2 falt. Ett lag er slått ut.; MAT kjøpte 50 rasjoner; REPARER Reparer alle (154 904 kr); 4 rep. av seg selv |
+| 5 | 10.7 mill. | 7 | 61 | 44 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:1/4 | 1 | 4 | Angrepet er slått tilbake! Dere tok 900 000 kr fra røverne.; Siste døgn: Bølge 4 slått tilbake. 1 falt.; 4 rep. av seg selv |
+| 6 | 11.6 mill. | 8 | 50 | 25 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:1/4 | 1 | 5 | Angrepet er slått tilbake! Dere tok 1,1 mill. kr fra røverne.; Siste døgn: Bølge 5 slått tilbake. 1 ny i gjengen.; Motstanderne samler seg. Om et døgn kan de gå løs på leiren din – ha minst to tr; REPARER Reparer alle (142 177 kr) |
+| 7 | 10.6 mill. | 8 | 48 | 64 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:2/4 | 1 | 6 | Sabotasje! Røverne har skadet aggregat i leiren og stikker av.; Sabotører 6 gir opp og flykter – for mange av dem er falt eller såret.; Angrepet er slått tilbake! Dere tok 1,2 mill. kr fra røverne.; Siste døgn: Bølge 6 slått tilbake. 1 falt.; MAT kjøpte 50 rasjoner; 4 rep. av seg selv |
+| 8 | 9.2 mill. | 8 | 39 | 52 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:2/4 | 1 | 7 | Sabotasje! Røverne har skadet aggregat i leiren og stikker av.; Siste døgn: Bølge 7 slått tilbake.; REPARER Reparer alle (24 149 kr); 1 rep. av seg selv |
+| 9 | 10.6 mill. | 11 | 34 | 37 | brakke aggregat drivstofftank vakttårn | Vaktlaget:4/4 Tropp 1:3/4 Tropp 2:2/4 | 1 | 8 | Angrepet er slått tilbake! Dere tok 1,5 mill. kr fra røverne.; Siste døgn: Bølge 8 slått tilbake. 3 nye i gjengen.; REPARER Reparer alle (159 489 kr) |
+
+- Døgn 2: bølge 1 (ett lag på 6) herjet denne gangen – Vaktlaget og Tropp 1 gikk inn, fikk tre sårede/falne og ingen røvere ute;
+  røverne tok 500 000 kr, 50 l diesel og 6 rasjoner. (I kjøring A ble den samme bølgen slått uten tap – utfallet varierer.)
+- Bølge 2–8 ble alle slått tilbake (600 000 kr – 1,5 mill.), også bølge 4 som nå var 2 × 7 røvere (kjøring A: 2 × 12). Bølge 6 og
+  7 var sabotører: aggregatet ble skadet og reparert. Byggene sto hele hver morgen.
+- Tap: Vaktlaget mistet alle fire (falne) innen dag 4, Tropp 2 to av fire innen dag 8; Tropp 1 ble stående 1,65 km fra leiren med tre
+  av fire ute fra dag 2 (se «hjem for å hvile» under – rettet etter kjøringen). Lagene hjemme fylte ammunisjon (Tropp 2: 84 → 100 %)
+  og de sårede ble friske; de falne blir ikke erstattet av skriptet.
+- Kassa holdt seg på 9,2–11,6 mill. (A: falt til 6,5). Moralen sank fra 66 til 34 (mange falne og hendelser), folket økte til 11.
+- Døgnoppgjøret kom hver morgen: «Siste døgn: Bølge 3 slått tilbake. 2 falt. Ett lag er slått ut.»
+- Motstanderne (fredstid 7 døgn) kom heller ikke nå til leiren på dag 8–9.
+- **Svar på spørsmålet:** med endringene holder leiren den første uka på Vanlig, og spilleren mister noe (ett bytte, en hel vaktstyrke,
+  halve Tropp 2, moral) – men aldri leiren. Uten endringene (A) sto byggene, men forsvaret var borte fra dag 5.
+
+**Rettet etter kjøring B:** `forsvar-hjemme.js` – HJEM FOR Å HVILE: et lag der minst halvparten er sårede eller falne (eller under 30 %
+ammunisjon), som har stått i ro i en time 400 m – 3 km fra leiren uten fiender innen 600 m, går hjem mellom angrepene («Tropp 1 er
+hardt skadet eller har lite ammunisjon og går hjem til leiren for å hvile og fylle opp.»). Døgnoppgjøret regner sabotører som slapp
+unna som «slapp unna», ikke «slått tilbake».
