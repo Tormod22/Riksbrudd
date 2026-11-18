@@ -797,7 +797,7 @@
   setInterval(() => { if (klar) visForhold(); }, 3000);
 
   Object.assign(api, { tilstand: () => V, vis, erÅpen: () => åpen, linjer, lagre, start, tenn, flom, ras, islagt, iSoneV, lagFlomfelt, felt: id => feltFor.get(id), undersøk, funnVed, funnNær, funnI, plasserFunn, funnFlytt: () => funnFlytt, startJakt, viltHer, ryddÅker, anleggÅker, åkerStykker, åkerVed, syncÅker, så, radioNå, harRadio, togStart, stasjoner, settAuto,
-    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
+    punkt: punktA, tilpassSti, marsjSteg, kuldeTime, snøVegSteg, snøRuter, snøTilbake() { åpneSnø(); snøGrense = null; sistSnø = -1e9; lenkeH.clear(); }, snøLenker: () => snøLenker, snøGrense: () => snøGrense, lenkeHøyder, brannSteg: d => { const v = vær(); if (v) brannSteg(v, d); }, brannSkade, sjekkFunn, jaktSteg, togSteg, isSteg, regnHendelse, finnFlomsted, finnRassted,
     // for vakta: tøm alt som ligger i kartet (brann, soner) uten å røre funn, åker og tog
     åkerFolk, spor: () => spor, D3: () => D3, LEIRBRANN, slokkILeiren, brennbar,
     ryddKart() { for (const s of V.soner) åpneVeger(s); V.soner = []; feltFor.clear(); feltVenter.clear(); åpneSnø(); V.brann = W.nyBrann(); brannLister(); skitten = true; endret(); } });

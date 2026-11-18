@@ -34,6 +34,8 @@
     brente: 160, brenteHus: 60,
     // bare ting innen denne avstanden fra kameraet får røyk og støv (m)
     nær: 900,
+    // lyngtustene lysnes opptil så mange ganger når du ser rett ned på dem (runde 4)
+    lyng: 1.6,
   };
   // Hva ligger under hjulene? vegtype = 'asfalt' | 'grus' | null (terreng), snø = ligger det snø her, våt = 0–1.
   // Svar: { støv: 0–1, snø: bool, spor: 0–1 (hvor mørke sporene blir) }
@@ -326,7 +328,24 @@
       if (Math.random() < .6) ny(x + tilf(1), y + tilf(1), z + 3, tilf(.5), tilf(.5), 2 + Math.random() * 1.5, 5 + Math.random() * 4, 2 * stor, 7 * stor, .2, .2, .21, .4, -.25, .35); }
   }
 
+  // ---- lyngen sett ovenfra (runde 4) ----
+  // Lyngtustene i gresset (index.html gress3d/gressMateriale, aFelt = 1) ser mørke ut mot lys bakke når du ser rett ned på dem fra
+  // 30–110 m. Materialet pakkes inn her (index.html er ikke endret): lyngen lysnes opptil REGLER.lyng ganger jo mer ovenfra du ser.
+  function lyngLys(R) {
+    const m = R.gressMesh && R.gressMesh.material; if (!m || m.userData.lyngLys) return; m.userData.lyngLys = true;
+    const før = m.onBeforeCompile, nøkkel = m.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : () => '';
+    m.onBeforeCompile = (sh, r) => { if (før) før(sh, r);
+      if (!/attribute float aFelt/.test(sh.vertexShader)) return;
+      sh.vertexShader = sh.vertexShader.replace('attribute float aFelt;', 'attribute float aFelt;\nvarying float vLyngLys;').replace('#include <fog_vertex>', `#include <fog_vertex>
+  vec4 lyngW = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+  float lyngOpp = clamp((cameraPosition.z - lyngW.z) / max(0.001, length(cameraPosition - lyngW.xyz)), 0.0, 1.0);
+  vLyngLys = 1.0 + ${(REGLER.lyng - 1).toFixed(3)} * aFelt * smoothstep(0.35, 0.8, lyngOpp);`);
+      sh.fragmentShader = 'varying float vLyngLys;\n' + sh.fragmentShader.replace('#include <fog_fragment>', 'gl_FragColor.rgb *= vLyngLys;\n#include <fog_fragment>'); };
+    m.customProgramCacheKey = () => nøkkel() + '-lyng'; m.needsUpdate = true;
+  }
+
   // ---- krokene ----
+  KROKER.ramme3d.push(R => { lyngLys(R); });
   KROKER.ramme3d.push(R => {
     if (!R.ut || !R.scene || R.bygger && !R.mesh) return;
     const nå = performance.now() / 1000; let dt = T.sist ? nå - T.sist : 0; T.sist = nå; if (dt > .25) dt = .25; T.nå = nå;
@@ -400,7 +419,7 @@
   window.addEventListener('pagehide', () => { if (L.endret) lagre(); });
   setInterval(() => { if (L.endret) lagre(); }, 5000);
 
-  window.Effekter3d = { krater, lagre, lastInn, lagring: () => ({ ...L }), eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
+  window.Effekter3d = { krater, kratere: () => T.kratere, lagre, lastInn, lyngLys, lagring: () => ({ ...L }), eksplosjon(X, Y, r) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; eksplosjon(x, y, zVed(R, x, y), r || 4); } },
     røyk(X, Y, mengde) { const R = r3(); if (R) { const x = X - R.ut.cx, y = Y - R.ut.cy; røyk(x, y, zVed(R, x, y) + 1, mengde || 3); } },
     brente, branner, tall: () => ({ partikler: T.P.length, sporlys: T.kuler.length, spor: T.spor.length, kjøretøy: T.kj.size, kratere: T.kratere.length, brent: (r3() && r3().effBrent || []).length, sotHus: (r3() && r3().effBrent || []).reduce((a, m) => a + (m.userData.sot || 0), 0), brentTrekanter: (r3() && r3().effBrent || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0) }),
     // oppdater(): les BRENT på nytt i neste bilde (ellers leses lista hver 20. ramme)
