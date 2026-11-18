@@ -53,7 +53,7 @@
   // en person som byste: frøet (navn eller nummer) gir hud, hår og jakke – samme person ser lik ut hver gang
   const hash = t => { let h = 2166136261; for (const c of String(t)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
   const HUD = ['#e8c8a8', '#d8b08a', '#c89a72', '#f0d4b8', '#a87a52'], HÅR = ['#3a2a1a', '#6a4a2a', '#b89a5a', '#1f1a14', '#8a8478', '#7a3a1a'], JAKKE = ['#4f5a3c', '#5a5246', '#3a4a5a', '#6a4a3a', '#4a4a44'];
-  function person(frø) { const h = hash(frø === undefined ? 'x' : frø), hud = HUD[h % 5], hår = HÅR[(h >> 4) % 6], jakke = JAKKE[(h >> 8) % 5], lang = (h >> 12) % 3 === 0, skjegg = (h >> 14) % 4 === 0, lue = (h >> 17) % 5 === 0;
+  function person(frø) { const h = hash(frø === undefined ? 'x' : frø), hud = HUD[h % 5], hår = HÅR[(h >>> 4) % 6], jakke = JAKKE[(h >>> 8) % 5], lang = (h >>> 12) % 3 === 0, skjegg = (h >>> 14) % 4 === 0, lue = (h >>> 17) % 5 === 0;
     return rens(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44'><path d='M4 44c0-10 6-14 16-14s16 4 16 14z' fill='${jakke}' ${S}/><path d='M15 30l5 5 5-5' ${L} stroke-width='.9'/><rect x='16.500' y='24' width='7' height='7' fill='${hud}' ${S}/>` +
       (lang ? `<path d='M10 18c0-9 20-9 20 0v10c-2 2-4 0-4 0H14s-2 2-4 0z' fill='${hår}' ${S}/>` : '') + `<ellipse cx='20' cy='17.500' rx='7.500' ry='9' fill='${hud}' ${S}/>` +
       (lue ? `<path d='M11.500 14c0-9 17-9 17 0l-1 1.500h-15z' fill='${jakke}' ${S}/>` : `<path d='M12.300 15c-1-9 16-10 15.500 0-3-4-10-5-15.500 0z' fill='${hår}' ${S}/>`) +

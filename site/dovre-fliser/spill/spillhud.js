@@ -44,6 +44,7 @@ body.spill #leirmeny h2, body.spill #folkmeny h2, body.spill #krig h2, body.spil
 body.spill #kilde{ left:auto; right:64px; bottom:calc(6px + env(safe-area-inset-bottom,0px)); max-width:min(900px,70vw); font-size:0; pointer-events:auto; cursor:help; text-align:right; }
 body.spill #kilde::before{ content:'ⓘ Kilder'; font-size:11.5px; font-style:normal; letter-spacing:.04em; padding:2px 7px; background:rgba(20,16,10,.7); border:1px solid #4a4030; border-radius:3px; }
 body.spill #kilde:hover{ font-size:12px; background:rgba(20,16,10,.92); border:1px solid #5a4a2a; padding:6px 9px; text-shadow:none; } body.spill #kilde:hover::before{ display:none; }
+body.spill #panel{ max-width:min(420px, calc(50vw - 226px)); } @media (max-width:1180px){ body.spill #panel{ max-width:420px; bottom:calc(92px + env(safe-area-inset-bottom,0px)); } }
 body.spill .ctl button{ background:linear-gradient(180deg,#2a2215,#17120a); border-color:#5a4a2a; border-radius:3px; }
 body.spill #varsler button, body.spill #varsler > *{ border-radius:3px; }
 .stats > div[data-ord]::after{ content:attr(data-ord); order:1; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:#a89970; margin:0 5px 0 3px; }

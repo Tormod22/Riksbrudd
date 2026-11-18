@@ -21,6 +21,7 @@
 #nhud .tilstand{ height:5px; margin-top:4px; }
 body.kort #nhud .helse{ left:auto; right:12px; bottom:auto; top:calc(var(--topp,44px) + 176px); width:118px; padding:4px 7px; } body.kort #nhud .helse .rad{ font-size:12px; } body.kort #nhud .helse .rad b{ font-size:14px; min-width:24px; }
 body.kort #nhud .vapen{ right:12px; bottom:auto; top:calc(var(--topp,44px) + 222px); min-width:118px; padding:4px 7px; } body.kort #nhud .vapen b{ font-size:21px; } body.kort #nhud .vapen span{ font-size:13px; } body.kort #nhud .felt{ display:none; }
+#nhud .vapen .vbilde{ display:block; width:86px; height:40px; margin:-4px 0 -2px auto; object-fit:contain; opacity:.92; } body.kort #nhud .vapen .vbilde{ width:60px; height:26px; }
 body.foto #nhud, body.foto #varsler{ display:none !important; }
 #varsler{ position:fixed; left:10px; top:calc(var(--topp,58px) + 8px); z-index:6; display:flex; flex-direction:column; gap:5px; align-items:flex-start; max-width:min(320px,70vw); }
 #varsler button{ pointer-events:auto; display:flex; align-items:center; gap:7px; background:rgba(22,18,12,.9); border:1px solid #6a5f42; border-left:4px solid #c9b26a; color:var(--ink,#e7dcc3); font:inherit; font-size:13.5px; padding:4px 10px 4px 8px; min-height:30px; cursor:pointer; text-align:left; }
@@ -30,16 +31,18 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
   // ---------- skjermbildet når du går eller kjører ----------
   const hud = el('div', { id: 'nhud' }), hp = el('i'), hpTall = el('b', {}, '100'), hpStrek = el('div', { klasse: 'strek' }, hp), pust = el('i'), kjHp = el('i');
   const helse = el('div', { klasse: 'boks helse' }, el('div', { klasse: 'rad' }, el('span', { 'data-ikon': 'hjerte' }), hpStrek, hpTall), el('div', { klasse: 'strek puste' }, pust));
-  const vNavn = el('small'), vTall = el('b'), vRes = el('span'), vHint = el('em'), vTil = el('div', { klasse: 'strek tilstand' }, kjHp), vapen = el('div', { klasse: 'boks vapen' }, vNavn, vTall, vRes, vHint, vTil), felt = el('div', { klasse: 'boks felt' });
+  const vNavn = el('small'), vTall = el('b'), vRes = el('span'), vHint = el('em'), vTil = el('div', { klasse: 'strek tilstand' }, kjHp), vBilde = el('img', { klasse: 'vbilde', alt: '' }), vapen = el('div', { klasse: 'boks vapen' }, vBilde, vNavn, vTall, vRes, vHint, vTil), felt = el('div', { klasse: 'boks felt' });
   hud.append(helse, vapen, felt); document.body.appendChild(hud);
   const sett = (e, t) => { if (e.textContent !== t) e.textContent = t; };
   let sistEndret = 0, forrigeHp = 100, feltNøkkel = '';
   function tegnHud() { const Q = r3(), går = !!(Q && Q.fot && typeof på3d !== 'undefined' && på3d), SS = window.SpilletSpill, K = SS && SS.klar && SS.klar() ? SS.K() : null; hud.classList.toggle('på', går && !!K); document.body.classList.toggle('gaar', går); if (!går || !K) return;
     const nå = performance.now(), h = Math.max(0, Math.round(K.hp)), kr = window.Gange && Gange.kropp && Gange.kropp(), fører = window.KjorSpill && KjorSpill.fører(), U = window.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill : null;
     if (h !== forrigeHp) { forrigeHp = h; sistEndret = nå; } hp.style.width = h + '%'; hpStrek.classList.toggle('lav', h <= 40); sett(hpTall, String(h)); pust.style.width = Math.round((kr ? kr.utholdenhet : 1) * 100) + '%';
-    if (fører) { const fart = fører.type === 'bil' ? Math.abs(fører.v) : Math.hypot(fører.vx, fører.vy); sett(vNavn, fører.kj ? fører.kj.navn : fører.type === 'bil' ? 'Feltbil' : 'Helikopter'); sett(vTall, String(Math.round(fart * 3.6))); sett(vRes, ' km/t');
+    if (fører) { vBilde.style.display = 'none'; const fart = fører.type === 'bil' ? Math.abs(fører.v) : Math.hypot(fører.vx, fører.vy); sett(vNavn, fører.kj ? fører.kj.navn : fører.type === 'bil' ? 'Feltbil' : 'Helikopter'); sett(vTall, String(Math.round(fart * 3.6))); sett(vRes, ' km/t');
       sett(vHint, fører.type === 'heli' ? (fører.rotor < .9 ? `rotoren spoler opp ${Math.round(fører.rotor / .9 * 100)} %` : `${Math.round(Math.max(0, fører.over || 0))} m over bakken`) : fører.v < -.3 ? 'rygger' : ''); vTil.style.display = fører.kj ? 'none' : ''; kjHp.style.width = Math.round((fører.hp === undefined ? 1 : fører.hp) * 100) + '%'; vTil.classList.toggle('lav', fører.hp < .4); felt.style.display = 'none'; sistEndret = nå; }
-    else { const A = U ? U.aktivt() : null; vTil.style.display = 'none'; sett(vNavn, A ? A.def.navn : 'Gevær'); sett(vTall, String(K.mag)); sett(vRes, ' / ' + K.res); sett(vHint, nå < K.lader ? 'lader …' : K.mag === 0 ? (K.res ? 'tomt – R lader' : 'tom for ammunisjon') : '');
+    else { const A = U ? U.aktivt() : null; vTil.style.display = 'none';
+      // en liten tegning av våpenet du har framme (spill/tegninger.js)
+      { const vid = A && A.v ? A.v.id : 'gevær'; if (window.Tegninger && vBilde.dataset.v !== vid) { vBilde.dataset.v = vid; vBilde.src = Tegninger.bilde(Tegninger.våpen(vid)); } vBilde.style.display = window.Tegninger ? '' : 'none'; } sett(vNavn, A ? A.def.navn : 'Gevær'); sett(vTall, String(K.mag)); sett(vRes, ' / ' + K.res); sett(vHint, nå < K.lader ? 'lader …' : K.mag === 0 ? (K.res ? 'tomt – R lader' : 'tom for ammunisjon') : '');
       if (nå - K.sist < 3000 || nå < K.lader || nå - K.skadd < 4000) sistEndret = nå;
       // våpenfeltene 1–4
       const I = U ? U.tilstand() : null, nøkkel = I ? I.våpen.map(w => w.id + w.mag).join() + '|' + I.aktiv : ''; felt.style.display = I && I.våpen.length > 1 ? '' : 'none';
