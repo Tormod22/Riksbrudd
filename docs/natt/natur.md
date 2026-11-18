@@ -79,3 +79,39 @@ trekanter, bare rutene i synsfeltet tegnes); trærne selv har omtrent like mange
 Ingen GL-feil. 3D av og på to ganger: geometrier 74 -> 74, teksturer 24 -> 24. Mobilstørrelse (390 × 800): 241 000–267 000 trekanter.
 Bilder: scratchpad natt/natur/ (for-*.png = før, e8-*.png = etter fra samme sted, e4-gå*.png og e10-gå.png til fots, e6-bil.png
 hjulspor og støv, e8-kamp.png kamp/krater/brann, e5-vinter.png vinter, m1-gå.png mobil).
+
+## Runde 5 (18.–19. nov kveld)
+
+Oppdraget: (1) hakkete strandkanter, (2) steinmønster på heia, (3) blomster/bregner/gress inne i hus, (4) tom låve, (5) annet rart i
+Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og spill/lave3d.js).
+
+### 1. Myk strandkant (spill/kartbilde.js `strandG`, kalt i bygg3d i index.html rett før `vannmaske`)
+- Årsaken: vannet i kartbildet er kartflisenes vannfarge strukket fra grove ruter (trapper i kanten), og rundt innsjøene på heia lå en
+  mørk ring (satellittbildets vann utenfor kartets vannflate). Høydedataene har innsjøene helt flate, så vannstanden er kjent.
+- strandG: (a) vann per rute (ca. 2,5 m, `strandCelle`) og utjevnet (`strandGlatt` 5 m, to glidende snitt per akse); (b) vannstanden fra
+  ruter som er helt vann, spredt til ruter innen `strandRekk` = 40 m (nærmeste vanns høyde, to gjennomløp); (c) hvert punkt nær stranda:
+  vann der terrenget ligger under vannstanden + `strandNivå` 0,3 m (støy på høyden ±0,15 m i to størrelser, 9 m og 3,2 m, fast i kartets
+  meter), land over – også der kartet hadde vann. Høyden bestemmer helt nær vannet og tones ut den siste tredjedelen av rekkevidden; uten
+  kjent vannstand brukes kartets vann, utjevnet med støy. Kanten tones over ca. én meter. (d) På land: lys sone av stein og grus opp til
+  `strandSone` 1,3 m over vannet (bredere der det er slakt), mørk fuktig kant de første 0,14 m. Ikke lys sone ved havet (havnivå() har sin).
+- Ruter der ingenting kan skje, hoppes over (tørt land høyt over vannet, vann godt under vannstanden). Generator med yield (kjørAsynk).
+- Vannmasken (u.vann/u.vannData) lages av det ferdige kartbildet som før, så gange, dyr, trær, siv og bygg følger det du ser.
+- `window.STRAND_AV = true` før 3D bygges slår det av (til før/etter-bilder). `u.strand` = antall punkter som skiftet vann/land.
+- Test: test_kartbilde.js (kunstig bukt med 32 m-trapper: 92 % -> 99,5 % enig med høyden, ingen landflekker i vannet, lys sone).
+
+### 2. Lyng og gress på heia i stedet for stein (index.html: `bunnkart`, `gress3d`, `detaljIBakken`, `smått3d`)
+- Årsaken: nær bakken ble brun lyng regnet som «ikke vegetasjon» tre steder: bunnkartet ga ikke gress der rødt var over grønt (bar bakke),
+  bakkeshaderens nærdetalj målte vegetasjon som grønt minus blått (brun lyng fikk 40–50 % småstein/grus), og smått3d satte 7 steiner per
+  32 m-rute på alt som er snaufjell i arealklassene (heia i Rogaland er snaufjell).
+- Nå: bunnkartet har klasse 3 = lyng på åpen mark (brunt/oliven, metning ≥ 18, ikke vann, ikke for lyst); gress3d setter lyngtuster der
+  (halvt bakkens egen farge, så de ikke blir mørke prikker ovenfra). Bakkeshaderen (begge variantene, med og uten «Lys og skygger»)
+  måler vegetasjon som max(grønt, rødt·0,97) − blått − 0,02: lyng og gress gir gress-/lyngmønster, bare grått gir stein og grus.
+  smått3d: på snaufjell der kartet er brunt/grønt står bare en firedel av steinene; der det er grått berg som før.
+- Klasse 3 i u.bunn.gress: vegetasjon3d gir den sted «hei» på snaufjell/hei; fjernby3d og lyd teller bare 2 (skog) som før.
+
+### 3. Planter og gress ikke inne i hus (index.html `gress3d`, spill/vegetasjon3d.js `fri`)
+- Fra før: gress mot u.husRute (husene fra kartet) og Interior3d.iLeirbygg; blomster/bregner/siv mot nærHus.
+- Nytt: begge sjekker også R3.hindre (hus lagt inn etter at utsnittet ble bygget – prøvehus i vaktene, byggesettets vegger) og ALLE
+  leirens bygg (Leir.hjørner + 0,4 m; telt, tanker og bygg under arbeid hadde gress inni – sett på bilde: gress gjennom lagerteltet).
+  `Vegetasjon3d.iLeir(x, y)` brukes av gress3d. Når antallet ting i R3.hindre eller leirens bygg endres, settes planter og gress rundt
+  kameraet på nytt (sjekkes hvert 0,7 s) – før sto de til du hadde gått 12 m.

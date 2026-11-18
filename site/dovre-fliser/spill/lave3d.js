@@ -59,6 +59,13 @@
         const sv = rom.v0 + lv * (tilf() < .5 ? .2 : .8), [sx, sy] = tilXY(kant + (langt ? -.55 : .55), sv);
         if (z <= plan.tak - 1) ut.loft = { u0, u1, v0: rom.v0, v1: rom.v1, z, kant, mot: langt ? -1 : 1, stolper, stige: fri(sx, sy) ? [sx, sy] : null };
       }
+      // uten høyloft (lavt tak – de fleste låvene der himlingen stopper ved veggtoppen): to–tre høyhauger i enden lengst fra døra
+      ut.hauger = [];
+      if (!ut.loft && lu >= 5) { const langt = iu - rom.u0 < rom.u1 - iu, n = Math.min(3, Math.max(1, Math.round(lv / 3.5)));
+        // helst i enden lengst fra døra; er den full (høyballer, båser), den andre enden
+        for (const ende of [langt, !langt]) for (let i = 0; i < n * 2 && ut.hauger.length < n; i++) {
+          const u = ende ? rom.u1 - 1.3 : rom.u0 + 1.3, v = rom.v0 + lv * (i + .5) / (n * 2), [x, y] = tilXY(u, v), r = Math.min(1.5, lv / n / 2 + .2);
+          if (fri(x, y, r * .75) && nærDør(x, y) > 2.5 && !ut.hauger.some(h => Math.hypot(h[0] - x, h[1] - y) < r * 1.6)) ut.hauger.push([x, y, r, Math.min(plan.tak - .5, .8 + tilf() * .6)]); } }
       // høy strødd på gulvet
       const nH = Math.min(REGLER.høyMaks, Math.round(plan.areal / REGLER.høyPer));
       for (let i = 0; i < nH * 2 && ut.høy.length < nH; i++) { const u = rom.u0 + .4 + (lu - .8) * tilf(), v = rom.v0 + .4 + (lv - .8) * tilf(), [x, y] = tilXY(u, v);
@@ -107,7 +114,7 @@
   // Et samlet nett: kasser (midt c, tre halve akser), prismer (sylindre med få kanter) og flate flak, med farge per hjørne
   function bygger() {
     const pos = [], kol = [];
-    const tri = (a, b, c, f) => { pos.push(...a, ...b, ...c); kol.push(...f, ...f, ...f); };
+    const tri = (a, b, c, f, fb, fc) => { pos.push(...a, ...b, ...c); kol.push(...f, ...(fb || f), ...(fc || f)); };
     const fire = (a, b, c, d, f) => { tri(a, b, c, f); tri(a, c, d, f); };
     const lys = (f, k) => [f[0] * k, f[1] * k, f[2] * k];
     // kasse: c midt, A/B/H halve akser (vektorer)
@@ -128,19 +135,22 @@
       const P = (i, s) => { const v = i / k * 6.2832, cs = Math.cos(v) * r, sn = Math.sin(v) * r; return [0, 1, 2].map(q => c[q] + a[q] * cs + b[q] * sn + e[q] * h * s); };
       for (let i = 0; i < k; i++) { fire(P(i, -1), P(i + 1, -1), P(i + 1, 1), P(i, 1), lys(f, .78 + .26 * Math.abs(Math.cos((i + .5) / k * 6.2832)))); tri(P(i, 1), P(i + 1, 1), c.map((v, q) => v + e[q] * h), lys(f, 1.05)); tri(P(i + 1, -1), P(i, -1), c.map((v, q) => v - e[q] * h), lys(f, .7)); } };
     // flatt, ujevnt flak (vifte) i høyde z
-    const flak = (x, y, z, r, v0, f, frø) => { const k = 9, P = []; for (let i = 0; i < k; i++) { const v = v0 + i / k * 6.2832, rr = r * (.6 + .5 * hash(frø, i)); P.push([x + Math.cos(v) * rr, y + Math.sin(v) * rr, z]); }
-      for (let i = 0; i < k; i++) tri([x, y, z + .01], P[i], P[(i + 1) % k], lys(f, .9 + .2 * hash(frø, 20 + i))); };
+    // (midten litt høyere og lysere, kanten mørkere – farge per hjørne, så flaket ikke blir kantete)
+    const flak = (x, y, z, r, v0, f, frø) => { const k = 9, P = [], F = []; for (let i = 0; i < k; i++) { const v = v0 + i / k * 6.2832, rr = r * (.6 + .5 * hash(frø, i)); P.push([x + Math.cos(v) * rr, y + Math.sin(v) * rr, z]); F.push(lys(f, .78 + .12 * hash(frø, 20 + i))); }
+      const m = [x, y, z + .05 + .05 * hash(frø, 40)], fm = lys(f, 1.05); for (let i = 0; i < k; i++) tri(m, P[i], P[(i + 1) % k], fm, F[i], F[(i + 1) % k]); };
     // haug: lav kuppel (ringer × kanter) med ujevn kant
     const haug = (x, y, z, r, h, f, frø) => { const k = 9, ringer = 3, P = [];
       for (let j = 0; j <= ringer; j++) { const t = j / ringer, rr = r * Math.cos(t * 1.5708), zz = z + h * Math.sin(t * 1.5708); const rad = [];
         for (let i = 0; i < k; i++) { const v = i / k * 6.2832, q = j < ringer ? .82 + .3 * hash(frø, j * 16 + i) : 0; rad.push([x + Math.cos(v) * rr * q, y + Math.sin(v) * rr * q, zz]); } P.push(rad); }
-      for (let j = 0; j < ringer; j++) for (let i = 0; i < k; i++) { const ii = (i + 1) % k; fire(P[j][i], P[j][ii], P[j + 1][ii], P[j + 1][i], lys(f, .82 + .26 * hash(frø, 100 + j * 16 + i) + .1 * j)); } };
+      const F = (j, i) => lys(f, .8 + .12 * hash(frø, 100 + j * 16 + i) + .08 * j);
+      for (let j = 0; j < ringer; j++) for (let i = 0; i < k; i++) { const ii = (i + 1) % k; tri(P[j][i], P[j][ii], P[j + 1][ii], F(j, i), F(j, ii), F(j + 1, ii)); tri(P[j][i], P[j + 1][ii], P[j + 1][i], F(j, i), F(j + 1, ii), F(j + 1, i)); } };
     return { pos, kol, kasse, boks, stav, prisme, flak, haug };
   }
 
   // Tegner plassene fra plasser() for én plan i ett nett
   function lagNett(plan, p) {
     const g = bygger(), z0 = plan.gulv, A = plan.akse, frø = plan.i | 0, tilXY = (u, v) => [u * A.ux + v * A.vx, u * A.uy + v * A.vy], vinkel = Math.atan2(A.uy, A.ux);
+    for (const [x, y, r, h] of p.hauger || []) g.haug(x, y, z0, r, h, HØY, Math.round(x * 31 + y * 17));
     for (const [x, y, r, v] of p.høy) g.flak(x, y, z0 + .012, r, v, hash(frø, x * 7 + y) < .3 ? HØY_MØRK : HØY, Math.round(x * 13 + y * 7));
     if (p.loft) { const L = p.loft, z = z0 + L.z, uM = (L.u0 + L.u1) / 2, vM = (L.v0 + L.v1) / 2, [mx, my] = tilXY(uM, vM), du = L.u1 - L.u0, dv = L.v1 - L.v0;
       // dekket (bord på bjelker) og kantbjelken

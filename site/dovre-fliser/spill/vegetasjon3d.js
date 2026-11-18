@@ -286,7 +286,28 @@
     if (iVann(u, x, y) || (u.vegNær && u.vegNær(x, y, .3)) || (u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
     if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) return false;
     // (runde 5) også hus som er lagt inn etter at utsnittet ble bygget (prøvehus, leirens bygg, byggesettets vegger): R3.hindre
-    const R = r3(); return !(R && R.hindre && typeof hindring3d === 'function' && hindring3d(x, y, R.hindre));
+    const R = r3(); if (R && R.hindre && typeof hindring3d === 'function' && hindring3d(x, y, R.hindre)) return false;
+    return !iLeir(u, x, y);
+  }
+  // Leirens bygg (alle, også telt, tanker og bygg under arbeid – Interior3d.iLeirbygg har bare dem med interiør): fotavtrykkene fra
+  // Leir.hjørner som mangekanter i utsnittets meter, med 0,4 m margin, lest på nytt høyst hvert sekund. (Runde 5: gresset vokste opp
+  // gjennom lagerteltet i leiren.)
+  let leirP = [], leirLest = 0, leirU = null;
+  function leirFot(u) {
+    const nå = performance.now(); if (u === leirU && nå - leirLest < 1000) return leirP; leirU = u; leirLest = nå; leirP = [];
+    const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, LB = window.Leir; if (!L || !L.bygg || !LB || !LB.hjørner) return leirP;
+    for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (!B || B.linje || !B.fot) continue;
+      const P = LB.hjørner(b).map(([x, y]) => [x - u.cx, y - u.cy]); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+      if (x1 < -u.S || x0 > u.S || y1 < -u.S || y0 > u.S) continue; leirP.push({ P, bb: [x0 - .4, y0 - .4, x1 + .4, y1 + .4] }); }
+    return leirP;
+  }
+  function iLeir(u, x, y) {
+    for (const { P, bb } of leirFot(u)) { if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) continue;
+      let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; }
+      if (inn) return true;
+      // (margin: nær en kant)
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [ax, ay] = P[j], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)); if (Math.hypot(ax + dx * t - x, ay + dy * t - y) < .4) return true; } }
+    return false;
   }
   // Et lite merke for hindringene (antall ting i R3.hindre): endres det – et hus er lagt til eller tatt bort –, settes plantene og
   // gresset rundt kameraet på nytt (ellers sto de til du hadde gått 12 m). Leses høyst hvert 0,7 s.
@@ -294,6 +315,8 @@
   function hindreEndret(R) {
     const nå = performance.now(); if (nå - hindreLest < 700 || !R.hindre) return false; hindreLest = nå;
     let n = 0; for (const l of R.hindre.values()) n += l.length;
+    const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null; if (L && L.bygg) n += L.bygg.length * 100003;
+    leirLest = 0;
     const endret = hindreMerke >= 0 && n !== hindreMerke; hindreMerke = n; return endret;
   }
   let vekst = null, vekstSenter = null, vekstNøkkel = '';
@@ -353,7 +376,7 @@
     if (!R.ut) return;
     const VR = window.VAER; U.uTid.value = performance.now() / 1000;
     U.uHostV.value = VR ? VR.høst : 0; U.uNakenV.value = VR && VR.årstid === 'vinter' ? 1 : 0; U.uSnoGrV.value = VR ? VR.snøgrense : 1900;
-    if (hindreEndret(R)) { vekstSenter = null; R.gressSenter = null; }
+    if (hindreEndret(R)) { vekstSenter = null; R.gressSenter = null; if (typeof gress3d === 'function') gress3d(); }
     oppdaterVekst(R);
   });
 
@@ -374,5 +397,7 @@
       for (const [type, m] of Object.entries(vekst)) if (m.visible) for (let k = 0; k < m.count; k++) { m.getMatrixAt(k, M); p.setFromMatrixPosition(M); ut.push([p.x, p.y, type]); }
       return ut; },
     fri: (x, y) => { const R = r3(); return !!(R && R.ut && fri(R.ut, x, y)); },
+    // (runde 5) inne i et av leirens bygg (gress3d i index.html spør også her)
+    iLeir: (x, y) => { const R = r3(); return !!(R && R.ut && iLeir(R.ut, x, y)); },
   };
 })();

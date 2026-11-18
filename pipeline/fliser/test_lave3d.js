@@ -27,5 +27,6 @@ const prøv = pl => L.plasser(pl, (x, y) => I.blokkert(pl, x, y), (x, y) => I.in
   ok(L.slag(låve(10, 8, 3, 6, 'hus')) === null, 'bolig får ingenting');
   const pl = låve(7, 5, 77, 4, 'uthus'), p = prøv(pl); ok(p && p.slag === 'uthus' && !p.loft && !p.høy.length && !p.traktor, `uthus: ${p ? p.redskap.length : 0} redskap, ingen loft/høy/traktor`); }
 // 4. lavt tak: ingen høyloft
-{ const pl = låve(16, 9, 5, 3.4), p = prøv(pl); ok(p && !p.loft, `lavt tak (${pl.tak.toFixed(1)} m): ikke noe høyloft`); }
+{ const pl = låve(16, 9, 5, 3.4), p = prøv(pl); ok(p && !p.loft, `lavt tak (${pl.tak.toFixed(1)} m): ikke noe høyloft`);
+  ok(p.hauger.length >= 1 && p.hauger.every(([x, y, r, h]) => !I.blokkert(pl, x, y) && h <= pl.tak - .5), `… men ${p.hauger.length} høyhauger i enden, under taket`); }
 console.log(feil ? `${feil} feil` : 'alle låvetester ok'); process.exit(feil ? 1 : 0);
