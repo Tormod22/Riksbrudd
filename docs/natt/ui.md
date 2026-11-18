@@ -19,7 +19,8 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
   igjen i Leir-menyen → Mål → «Opplæring». Lagres per leir («riksbrudd-opplaering»), av/på i «riksbrudd-opplaering-av».
   Vises ikke i testene før `OpplaeringSpill.test = true`. På telefon blir ruta én linje nederst mens en meny er åpen.
 - **Kort logg** (`spill/hud.js`, `window.Hud`): ikon etter innholdet (varsel, mål, bygg, folk, penger, radio, ellers snakkeboble),
-  høyst to linjer, rød kant på varsler; trykk på loggen for å lese alt (lukker seg etter 10 s). Telefonen har én linje som før.
+  høyst to linjer, rød kant på varsler; lappen «les alt» under loggen viser hele teksten (lukker seg etter 10 s). Meldingene selv
+  slipper trykk gjennom til kartet som før (kontrollskriptet klikker i kartet der). Telefonen har én linje som før.
 - **Byggemenyen som kort** (`visMeny` i `spill/leir-visning.js`): rutenett med tegning, navn, pris og én linje (tid · strøm);
   materialer og beskrivelse står i forklaringen (`data-tips`). Knappen i hvert kort er den samme som før.
 - **Tegninger** (`spill/tegninger.js`, `window.Tegninger`, uten DOM): `bygg(type)` (21 bygg + reservehus), `våpen(id)` (5),
@@ -53,3 +54,11 @@ Mål: skjermbildet skal se ut og kjennes som et spill, på PC og telefon. Alle t
 - Kjøretøy, tettsteder og kaiene fra `spill/kaier.js` bruker ikke Merker ennå (andre filer) – API-et er klart (`Merker.tegn`).
 - Portretter i Folk-panelet og tegning i byggpanelet (panelene bygges på nytt ved sammenligning av innerHTML – må gjøres i filene selv).
 - Tegnforklaring i kartet, og opplæring ut over de fem stegene.
+
+## Til den som samler
+- Vaktene «spillskjermen», «samlet utseende», «kompakt skjerm», «ikoner» og «knapperaden» fra sjekk.js er kjørt hver for seg (kopiert
+  ut av fila) på PC og telefon etter endringene: alle ok. Ingen av dem trenger endring.
+- Nytt på telefon: raden `#mkom` nederst (52 px). Klikker kontrollskriptet i kartet helt nederst på en telefonprofil mens ingen
+  panel er åpne, treffer det raden i stedet for kartet.
+- Nye testfiler: `pipeline/fliser/test_opplaering.js`, `pipeline/fliser/test_merker.js` (merker + tegninger). Vakt: `pipeline/fliser/vakter/ui.js`.
+- ☰: knappen «Kartmerker» (`#allemerker`) legges i gruppen ved siden av «Infrastruktur» – navnet bør inn i GRUPPER i meny.js («Kartet»).
