@@ -212,3 +212,10 @@ TypeError «reading 'avhørt'». I full kjøring er den grønn. Vakta tåler alt
 opp – må rettes i krig.js (eller rask-delen må hoppe over den).
 Det som fortsatt tar tid (etter 2): gå selv 30 s, vegetasjon 27 s, første høyde (sidelasting) 26 s, bekker 26 s, måling av ytelse
 25 s, dyr 25 s, ferjer 22 s – her tegnes bilder med vilje (målinger, kamera, kompass), så de er ikke rørt.
+PC-profilen (SJEKK_PROFIL=PC, etter alle endringene, last 12–18, «hele bildet» 992 ms): 963,0 s (16,0 min), 115 ok, 1 FEIL. Før-tiden
+for PC er ikke målt her (oppdraget sier ca. 60–70 min). Feilen: `vakter/sjo.js` «trykk på båten i 3D åpner den» –
+`SjoSpill.trykk3d` svarer false når et levende lag står innen 30 m av trykket (sjo-visning.js linje 368), og vakta flytter ikke egne
+lag bort fra prøvebåten først. Hvor lagene står, avhenger av hvor mye spilltid som har gått under de andre vaktene, og det går
+mindre sanntid nå. Grønn i begge mobilkjøringene. Rettes i vakta (flytt lag innen 30 m av båten bort mens den trykker, og sett dem
+tilbake) – ikke gjort her (sjø-pakkas vakt, og ingen tid til å prøve den på PC før fristen).
+Tidtakingen på PC: gå selv 69 s, dyr 64 s, bygging i biter 45 s, bekker 42 s, måling av ytelse 42 s, hogst og riving 39 s.
