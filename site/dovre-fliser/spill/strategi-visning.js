@@ -11,6 +11,8 @@
   const S = window.Strategi, G = window.Garnison; if (!S || !G) return;
   const NØKKEL = 'riksbrudd-strategi', auto = () => !navigator.webdriver || api.test;
   let åpen = false, valgtBy = null, førKam = null, byer = [], byNøkkel = '', sist = '', meldt = { leir: '', vunnet: false, tapt: false, fare: {} };
+  // panelet skjult til en stripe (huskes i denne nettleseren; bare en bekvemmelighet)
+  let inne = false; try { inne = localStorage.getItem('riksbrudd-krigpanel') === 'inn'; } catch (e) { inne = false; }
   const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (tekst, fn, a = {}) => { const b = el('button', a, tekst); b.onclick = fn; return b; };
   // TILLEGG (18. nov, runde 4 – pakke «sjø»/økonomi): andre moduler legger linjer i panelet uten å endre denne fila.
@@ -63,7 +65,25 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
 #krigkort div{ width:min(430px,90vw); padding:18px 20px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); text-align:center; } #krigkort h2{ margin:0 0 8px; font-size:26px; } #krigkort p{ margin:0 0 14px; }
 #krigkort > div{ max-height:90vh; overflow:auto; } #krigkort .valg{ width:auto; padding:0; border:0; background:none; margin:8px 0; } #krigkort .valg small{ display:block; margin-top:2px; color:var(--ink-dim,#a99); font-size:12.5px; } #krigkort .valg button{ min-width:210px; }
 #krigkort button{ background:#2a2318; border:1px solid #c9b26a; color:inherit; min-height:40px; padding:4px 18px; font:inherit; cursor:pointer; }
-#sKrigBoks{ cursor:pointer; }`;
+#sKrigBoks{ cursor:pointer; }
+/* TELEFON (19. nov, runde 5 – «krigskartet er trangt i liggende format», 844 × 390): panelet kan skjules til en stripe («Skjul»), er
+   smalere og tettere liggende, og det valgte tettstedet står øverst. Kartet passes inn i den frie delen ved siden av panelet og knappene. */
+#krig .hode{ display:flex; align-items:center; gap:8px; margin-right:30px; } #krig .hode h2{ flex:1; margin-right:0; } #krig .hode .skjul{ min-height:30px; padding:0 10px; font-size:13px; }
+#krig .stripe{ display:none; }
+#krig.inn > :not(.stripe):not(.lukk){ display:none; }
+#krig.inn{ overflow:visible; padding:5px 46px 5px 10px; }
+#krig.inn .stripe{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; font-size:14px; }
+#krig .stripe .du{ color:var(--ink-dim,#a99); } #krig .stripe .du b{ color:var(--ink,#e7dcc3); } #krig .stripe .vb{ color:#f0c878; }
+body.kort.tlfligg #krig.inn{ bottom:auto; width:auto; max-width:min(560px, 72vw); }
+body.kort:not(.tlfligg) #krig.inn{ max-height:none; }
+body.kort.tlfligg #krig:not(.inn){ width:min(330px, 40vw); padding:6px 10px 10px; }
+body.kort #krig:not(.inn){ display:none; } body.kort #krig.på:not(.inn){ display:flex; flex-direction:column; }
+body.kort #krig > *{ flex:none; } body.kort #krig > .by{ order:-1; margin-top:2px; } body.kort #krig > .hode{ order:-2; }
+body.kort #krig h2{ font-size:17px; } body.kort #krig .maal{ font-size:12.5px; margin-bottom:3px; }
+body.kort #krig .side{ margin:2px 0; } body.kort #krig .side .n{ font-size:13px; } body.kort #krig .stolpe{ height:7px; }
+body.kort.tlfligg #krig:not(.inn) .side{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; } body.kort.tlfligg #krig .side .n{ flex:0 0 64%; } body.kort.tlfligg #krig .side .stolpe{ flex:1; margin-top:0; } body.kort.tlfligg #krig .side small.tillegg{ flex:0 0 100%; }
+body.kort #krig .by .kn button{ min-height:30px; padding:0 9px; } body.kort #krig .by{ padding:6px 8px; }
+body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } body.kort #krig small, body.kort #krig .tips, body.kort #krig small.tillegg{ font-size:12.5px; }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'krig', role: 'dialog', 'aria-label': 'Krigskartet' }); document.body.appendChild(panel);
   const kort = el('div', { id: 'krigkort', role: 'alertdialog' }); document.body.appendChild(kort);
@@ -75,7 +95,13 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
   function statusTekst(s) { const b = iBy(s); if (s.planlegger) return 'planlegger rute'; if (s.sti) { const m = s.sti[s.sti.length - 1], mål = byer.find(q => G.inni(q.ref, m[0], m[1])); return 'marsjerer' + (mål ? ' mot ' + mål.navn : ''); }
     if (b) { const t = G.tilstand(TETTSTEDER, b.id); return t.eier === 'blå' ? 'garnison i ' + b.navn : t.inntar && t.inntar.side === 'blå' ? `tar ${b.navn} (${Math.round(100 * t.inntar.sek / G.REGLER.innta)} %)` : 'i ' + b.navn; } return 'ledig'; }
   function bygg(T) { const f = document.createDocumentFragment(), R = S.REGLER, st = T.st, L0 = leir();
-    f.append(knapp('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk krigskartet' }), el('h2', {}, 'Krigskartet'));
+    f.append(knapp('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk krigskartet' }), el('div', { klasse: 'hode' }, el('h2', {}, 'Krigskartet'), knapp('Skjul', () => skjul(true), { klasse: 'skjul', title: 'Skjul panelet så du ser hele kartet' })));
+    // stripa når panelet er skjult: andelen din, og det valgte tettstedet med den viktigste knappen
+    { const st0 = el('div', { klasse: 'stripe' }, el('b', {}, 'Krig'), el('span', { klasse: 'du' }, 'du har ', el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), ` (seier ${S.prosent(R.seier)} %)`));
+      if (valgtBy) { const b = valgtBy, e = eierAv(b.id), t = T.trekk.find(q => q.by.id === b.id);
+        st0.append(el('span', { klasse: 'vb' }, b.navn), el('small', {}, e === 'blå' ? 'ditt' : e ? fraksjon(e).eieform : 'nøytralt'));
+        if (e !== 'blå' && t && t.lag && t.innen) st0.append(knapp(`Send ${t.lag.navn}`, () => send(b), { klasse: 'hoved' })); }
+      st0.append(knapp('Vis mer', () => skjul(false), { title: 'Vis hele panelet' })); f.append(st0); }
     f.append(el('div', { klasse: 'maal' }, 'Mål: hold ', el('b', {}, S.prosent(R.seier) + ' %'), ` av folket i de ${st.byer} tettstedene i området (${Math.round(T.byer.radius / 1000)} km rundt leiren). Du har `, el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), '.'));
     for (const side of ['blå', 'rød', 'grønn']) { const m = st.sider[side]; if (!m) continue;
       f.append(el('div', { klasse: 'side', 'data-side': side }, el('div', { klasse: 'n' }, el('b', {}, side === 'blå' ? fraksjon('blå').navn + ' (du)' : fraksjon(side).navn), el('small', {}, `${m.byer} tettsted${m.byer === 1 ? '' : 'er'} · ${S.prosent(m.andel)} %`)),
@@ -124,7 +150,22 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
     kam.x = L.x; const rr = område().radius || S.REGLER.radius, pb = ligg ? Math.max(0, panel.getBoundingClientRect().right + 4) : smal ? 0 : Math.min(370, VW * .4);
     // hele området skal være synlig i det frie feltet: til høyre for panelet på PC og liggende telefon, over panelet på stående telefon
     kam.m = smal ? rr * 2.3 / Math.max(200, Math.min(VW, VH * .5)) : ligg ? rr * 2.3 / Math.max(150, Math.min(VW - pb - 10, VH - 60)) : rr * 2.3 / Math.max(200, Math.min(VW - pb, VH - 120));
-    kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : ligg ? -22 * kam.m : -20 * kam.m); sist = ''; vis(true); skitten = true; }
+    kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : ligg ? -22 * kam.m : -20 * kam.m); panel.classList.toggle('inn', inne); sist = ''; vis(true);
+    if (kl.contains('kort')) passInn(); skitten = true; }
+  // TELEFON (19. nov): hele området inn i den frie delen av skjermen – ved siden av eller over panelet, under statuslinja og knappene
+  // øverst, og til venstre for knappesøyla (.ctl). Regnes etter at panelet er tegnet (stående er høyden avhengig av innholdet).
+  function friDel() { const r = e => (e && (e.offsetParent !== null || getComputedStyle(e).position === 'fixed') && getComputedStyle(e).display !== 'none' ? e.getBoundingClientRect() : null), p = panel.getBoundingClientRect();
+    let x0 = 0, x1 = VW, y0 = 0, y1 = VH; const ligg = document.body.classList.contains('tlfligg');
+    for (const id of ['.stats', '.knapper']) { const b = r(document.querySelector(id)); if (b && b.width && b.top < VH * .3) y0 = Math.max(y0, b.bottom + 4); }
+    const c = r(document.querySelector('.ctl')); if (c && c.width && c.left > VW * .6) x1 = Math.min(x1, c.left - 4);
+    if (p.width) { if (ligg && p.left < VW * .3 && p.height > VH * .5) x0 = Math.max(x0, p.right + 4); else if (p.top > VH * .3) y1 = Math.min(y1, p.top - 4); else y0 = Math.max(y0, p.bottom + 4); }
+    return { x0, x1, y0, y1 }; }
+  function passInn() { const L = leir(); if (!L) return; const rr = område().radius || S.REGLER.radius, f = friDel(), w = Math.max(120, f.x1 - f.x0), h = Math.max(120, f.y1 - f.y0);
+    kam.m = rr * 2.3 / Math.min(w, h); kam.x = L.x - ((f.x0 + f.x1) / 2 - VW / 2) * kam.m; kam.y = L.y + ((f.y0 + f.y1) / 2 - VH / 2) * kam.m; skitten = true; return f; }
+  // Skjul/vis panelet (stripa). Kartet flyttes så området fortsatt står i den frie delen.
+  function skjul(ja) { inne = !!ja; try { localStorage.setItem('riksbrudd-krigpanel', inne ? 'inn' : 'ut'); } catch (e) { /* uten lagring */ }
+    panel.classList.toggle('inn', inne); sist = ''; vis(true); if (document.body.classList.contains('kort')) passInn(); else skitten = true; }
+  let snuTid = 0; window.addEventListener('resize', () => { if (!åpen || !document.body.classList.contains('kort')) return; clearTimeout(snuTid); snuTid = setTimeout(() => { if (åpen) passInn(); }, 350); });
   function lukk() { if (!åpen) return; åpen = false; valgtBy = null; panel.classList.remove('på'); document.body.classList.remove('krig'); kn.classList.remove('på'); kn.setAttribute('aria-pressed', 'false');
     if (førKam) { kam.x = førKam.x; kam.y = førKam.y; kam.m = førKam.m; førKam = null; } skitten = true; }
   window.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -192,6 +233,6 @@ body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:aut
       ['Fortsett som nå', null, 'Spill videre uten endringer.'],
       ...(window.ScenarioSpill && ScenarioSpill.etterspill ? [['Se krigen på nytt', () => ScenarioSpill.etterspill(), 'Spol gjennom hvem som holdt hva.']] : [])]); }
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
-  const api = { test: false, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  const api = { test: false, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;
 })();

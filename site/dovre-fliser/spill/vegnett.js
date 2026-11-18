@@ -82,12 +82,85 @@
       do { if (pos >= grense || faktor > 2 ** 49) throw new Error('Skadet vegnettfil'); b = data[pos++]; v += (b & 127) * faktor; faktor *= 128; } while (b & 128);
       sett(pos); return v; };
   }
-  function les(data) {
+  // UTSNITT (19. nov, for telefon): bare lenkene med begge ender inne i boksen [x0, y0, x1, y1] (meter, EPSG:25833), med nye nummer
+  // for noder og lenker. Geometrien kopieres ut (Int32Array), så den store fila og tabellene for hele landet kan slippes etterpå.
+  // Målt for hele Norge: ca. 210 MB i minnet; et utsnitt på 200 × 200 km rundt Dovre er en liten brøkdel (docs/natt/krig.md, runde 5).
+  function utsnitt(R, boks) {
+    const [bx0, by0, bx1, by1] = boks, inne = n => R.x[n] >= bx0 && R.x[n] <= bx1 && R.y[n] >= by0 && R.y[n] <= by1;
+    const nyN = new Int32Array(R.N).fill(-1), behold = []; let N = 0;
+    for (let e = 0; e < R.M; e++) if (inne(R.fra[e]) && inne(R.til[e])) behold.push(e);
+    for (const e of behold) for (const n of [R.fra[e], R.til[e]]) if (nyN[n] < 0) nyN[n] = N++;
+    const M = behold.length, nyE = new Map(); behold.forEach((e, i) => nyE.set(e, i));
+    const ut = { N, M, dato: R.dato, x: new Int32Array(N), y: new Int32Array(N), fra: new Uint32Array(M), til: new Uint32Array(M), l: new Float64Array(M),
+      sekvens: new Uint32Array(M), start: new Uint32Array(M), slutt: new Uint32Array(M), vegnr: new Uint32Array(M), flagg: new Uint8Array(M), fart: new Uint8Array(M), kat: new Uint8Array(M) };
+    for (let n = 0; n < R.N; n++) if (nyN[n] >= 0) { ut.x[nyN[n]] = R.x[n]; ut.y[nyN[n]] = R.y[n]; }
+    // to omganger over geometrien (først antall punkter, så punktene rett inn i en Int32Array) – ingen stor JS-liste på toppen
+    const goff = new Uint32Array(M + 1); let np = 0;
+    behold.forEach((e, i) => { ut.fra[i] = nyN[R.fra[e]]; ut.til[i] = nyN[R.til[e]]; ut.l[i] = R.l[e]; ut.sekvens[i] = R.sekvens[e]; ut.start[i] = R.start[e]; ut.slutt[i] = R.slutt[e];
+      ut.vegnr[i] = R.vegnr[e]; ut.flagg[i] = R.flagg[e]; ut.fart[i] = R.fart[e]; ut.kat[i] = R.kat[e]; goff[i] = np; np += R.linje(e).length; });
+    goff[M] = np; const P = new Int32Array(2 * np);
+    behold.forEach((e, i) => { let p = 2 * goff[i]; for (const [X, Y] of R.linje(e)) { P[p++] = X; P[p++] = Y; } });
+    ut.linje = linjeFra(goff, P);
+    const ie = [], it = [], id = []; for (let i = 0; i < R.I; i++) { const e = nyE.get(R.ie[i]); if (e === undefined) continue; ie.push(e); it.push(R.it[i]); id.push(R.id[i]); }
+    ut.I = ie.length; ut.ie = Uint32Array.from(ie); ut.it = Uint32Array.from(it); ut.id = Uint32Array.from(id);
+    return ut;
+  }
+  // UTSNITT RETT FRA FILA (RBVEG002): samme svar som utsnitt(rå(data), boks), men uten å lage tabellene for hele landet først – bare
+  // nodene (x, y) leses for alt, lenkene leses én og én og bare de som ligger i boksen tas vare på. Toppen i minnet blir mye lavere
+  // (viktig på telefon). Andre formater: via rå().
+  function råUtsnitt(data, boks) {
+    const d = new DataView(data.buffer, data.byteOffset, data.byteLength), u = p => d.getUint32(p, true), magic = String.fromCharCode(...data.subarray(0, 8));
+    if (magic !== 'RBVEG002') return utsnitt(rå(data), boks);
+    const N0 = u(8), M0 = u(12), I0 = u(16), K = u(24); if (K !== 17) throw new Error('Skadet vegnettfil');
+    const lengder = [], start = []; let p = 28 + K * 4;
+    for (let k = 0; k < K; k++) { lengder.push(u(28 + k * 4)); start.push(p); p += lengder[k]; }
+    if (p !== data.byteLength) throw new Error('Skadet vegnettfil');
+    const kol = k => { let pos = start[k]; const slutt = pos + lengder[k]; return { v: varint(data, () => pos, q => { pos = q; }, slutt), ferdig: () => pos === slutt }; };
+    const byte = (k, n) => { if (lengder[k] !== n) throw new Error('Skadet vegnettfil'); return data.subarray(start[k], start[k] + n); };
+    const flagg0 = byte(9, M0), fart0 = byte(10, M0), kat0 = byte(11, M0);
+    const [cx, cy, cf, ct, cl, cs, cst, csl, cv, , , , ci, cg, , cie, cid] = Array.from({ length: K }, (_, k) => kol(k));
+    const x0 = new Int32Array(N0), y0 = new Int32Array(N0);
+    { let X = 0, Y = 0; for (let n = 0; n < N0; n++) { X += zz(cx.v()); Y += zz(cy.v()); x0[n] = X; y0[n] = Y; } }
+    const [bx0, by0, bx1, by1] = boks, inne = n => x0[n] >= bx0 && x0[n] <= bx1 && y0[n] >= by0 && y0[n] <= by1;
+    // tabeller som vokser (lenkene i boksen er ikke kjent på forhånd)
+    const V = (T, n = 1 << 14) => ({ a: new T(n), n: 0, legg(v) { if (this.n === this.a.length) { const b = new T(this.a.length * 2); b.set(this.a); this.a = b; } this.a[this.n++] = v; }, ut() { return this.a.slice(0, this.n); } });
+    const fra = V(Uint32Array), til = V(Uint32Array), l = V(Float64Array), sekvens = V(Uint32Array), st0 = V(Uint32Array), sl0 = V(Uint32Array), vegnr = V(Uint32Array),
+      flagg = V(Uint8Array), fart = V(Uint8Array), kat = V(Uint8Array), gamle = V(Uint32Array), goff = V(Uint32Array), P = V(Int32Array, 1 << 16);
+    const nyN = new Int32Array(N0).fill(-1); let N = 0; const nr = n => (nyN[n] < 0 ? (nyN[n] = N++) : nyN[n]);
+    let tilF = 0, sek = -1, sl = 0, vn = 0, np = 0;
+    for (let e = 0; e < M0; e++) {
+      const a = tilF + zz(cf.v()), b = a + zz(ct.v()), s = sek < 0 ? cs.v() : sek + cs.v(), st = (s === sek ? sl : 0) + zz(cst.v()), slu = st + csl.v();
+      vn += zz(cv.v()); const lv = cl.v() / 10, ind = ci.v(); tilF = b; sek = s; sl = slu;
+      if (a >= N0 || b >= N0) throw new Error('Ugyldig veglenke ' + e);
+      const ta = inne(a) && inne(b);
+      // geometrien: indre punkter (delta fra fra-noden), med endepunktene rundt – som R.linje i rå()
+      let X = x0[a], Y = y0[a];
+      if (ta) { goff.legg(np); P.legg(X); P.legg(Y); np++; }
+      for (let i = 0; i < ind; i++) { X += zz(cg.v()); Y += zz(cg.v()); if (ta) { P.legg(X); P.legg(Y); np++; } }
+      if (!ta) continue;
+      P.legg(x0[b]); P.legg(y0[b]); np++;
+      fra.legg(nr(a)); til.legg(nr(b)); l.legg(lv); sekvens.legg(s); st0.legg(st); sl0.legg(slu); vegnr.legg(vn); flagg.legg(flagg0[e]); fart.legg(fart0[e]); kat.legg(kat0[e]); gamle.legg(e);
+    }
+    const M = fra.n; goff.legg(np);
+    // infrastrukturen: lenkenumrene står i stigende rekkefølge (delta-kodet), så de kan slås opp mot lenkene vi tok vare på
+    const typer = byte(14, I0), G = gamle.ut(), ie = [], it = [], id = []; let le = 0, j = 0;
+    for (let i = 0; i < I0; i++) { if (typer[i] > 2) throw new Error('Ugyldig infrastrukturkobling'); le += cie.v(); const kid = cid.v();
+      while (j < M && G[j] < le) j++; if (j < M && G[j] === le) { ie.push(j); it.push([60, 67, 770][typer[i]]); id.push(kid); } }
+    if (![cx, cy, cf, ct, cl, cs, cst, csl, cv, ci, cg, cie, cid].every(c => c.ferdig())) throw new Error('Skadet vegnettfil');
+    const x = new Int32Array(N), y = new Int32Array(N); for (let n = 0; n < N0; n++) if (nyN[n] >= 0) { x[nyN[n]] = x0[n]; y[nyN[n]] = y0[n]; }
+    return { N, M, I: ie.length, dato: u(20), x, y, fra: fra.ut(), til: til.ut(), l: l.ut(), sekvens: sekvens.ut(), start: st0.ut(), slutt: sl0.ut(), vegnr: vegnr.ut(),
+      flagg: flagg.ut(), fart: fart.ut(), kat: kat.ut(), ie: Uint32Array.from(ie), it: Uint32Array.from(it), id: Uint32Array.from(id), linje: linjeFra(goff.ut(), P.ut()) };
+  }
+  // (egen funksjon: en pil laget inne i utsnitt() ville holdt på hele landets tabeller, fordi V8 deler omgivelsene mellom pilene der)
+  function linjeFra(goff, P) { return e => { const ut = []; for (let i = goff[e]; i < goff[e + 1]; i++) ut.push([P[2 * i], P[2 * i + 1]]); return ut; }; }
+  // valg.boks: les bare et utsnitt (se utsnitt) – grafen får .boks
+  function les(data, valg = {}) {
     if (ArrayBuffer.isView(data)) data = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     else if (data instanceof ArrayBuffer) data = new Uint8Array(data);
     else throw new TypeError('Forventet ArrayBuffer eller typet tabell');
     if (data.byteLength < 28) throw new Error('Ukjent vegnettformat');
-    const R = rå(data), { N, M, I, x, y, fra, til, flagg } = R;
+    let R = valg.boks ? råUtsnitt(data, valg.boks) : rå(data); if (valg.boks) data = null;
+    const { N, M, I, x, y, fra, til, flagg } = R;
     const lengde = new Float64Array(M), tid = new Float64Array(M);
     const antall = new Uint32Array(N + 1), land = new Uint8Array(N), sperret = new Uint8Array(M);
     const infra = new Map(), infraPå = new Map(); let maksMS = 0;
@@ -179,7 +252,7 @@
       }
       return null;
     }
-    return { antallNoder: N, antallLenker: M, dato: String(R.dato), punkt, naermeste, linje, lenke, rute,
+    return { antallNoder: N, antallLenker: M, dato: String(R.dato), boks: valg.boks ? valg.boks.slice() : null, punkt, naermeste, linje, lenke, rute,
       infraLenker(type, id) { return (infra.get(type + ':' + id) || []).slice(); },
       lenkerVed(n) { if (!heltall(n, N)) throw new RangeError('Ukjent node'); return [...new Set(kant.slice(antall[n], antall[n + 1]))]; },   // lenkene som går fra/til noden (S5 vegkrater)
       infraPåLenke(e) { sjekkLenke(e); return (infraPå.get(e) || []).map(t => t.slice()); },   // [[type, kilde-id], ...]
@@ -191,7 +264,7 @@
     if (!svar.ok) throw new Error('Kunne ikke hente vegnett: HTTP ' + svar.status);
     return les(await svar.arrayBuffer());
   }
-  const api = { les, last };
+  const api = { les, last, utsnitt, råUtsnitt, rå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vegnett = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

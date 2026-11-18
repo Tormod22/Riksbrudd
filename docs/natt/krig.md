@@ -242,3 +242,101 @@ dine egne som er tatt (lagt inn når et eget lag gir seg: navn, rolle, hp, perso
   laget ikke; når vogna skyter på det, svarer det. Prøvd med feilen lagt inn igjen med vilje: vakta gir «svarer kjøretøy som skyter false».
 - IKKE ENDRET (designvalg, bør vurderes): stridsvogna skyter fortsatt på mål den selv ikke ser, så lenge du vet om dem (vakter, kameraer,
   droner). Et blått lag som står og ser på, deltar ikke – det trenger egen sikt.
+
+## Runde 5 (18.–19. nov kveld)
+Alle nye tall er **Claudes forslag**: `Enheter.REGLER.egenSikt` (spill/enheter.js), `UTSNITT_HALV`/`UTSNITT_KANT` og `VEG_TLF` (spill/kjoretoy-visning.js).
+Prøveskript og bilder: scratchpad `natt5/krig/` (p1 stridsvogn, p2 vegnett på telefon, p3 krigskartet, p4 lagring med omlasting, p5 bilde av vogna,
+vakt.js / vakt2.js kjører vakta på PC og mobil, vakt2.js med infrastrukturen som i sjekk.js).
+
+### 1. Stridsvogna skyter bare på det den selv ser
+- Før: `kanon()` (enheter-visning.js) valgte nærmeste fiende som var `synlig()` – altså alt du visste om, også det vaktene, kameraene, dronene og
+  radaren meldte, bak åser og inne i skogen. Kjøretøy som mål: det samme (`kjoretoySes`).
+- Nå: vogna har sitt eget siktfelt fra tårnet (`Terreng.siktfelt`, øyne 3 m, radius `R.stridsvogn.sikt` = 1,2 km), regnet i bakgrunnen når den
+  har flyttet seg over 40 m (høyst hver 1,5 s per vogn; lagres i en WeakMap, ikke på kjøretøyet). Til det nye siktfeltet er klart (vogna har flyttet
+  seg over 200 m siden sist), gjelder den gamle regelen (sirkel, ikke inn i skog). Et lag inne i skogen ses bare innen 150 m.
+- Kanonen skyter på et mål bare når vogna selv ser det, eller et eget lag innen 150 m fra vogna ser det (`Enheter.kanonFaktor`, `velgKanonmål`,
+  `tynn`). Meldte mål gir faktor `egenSikt.meldt` = 0: ingen skudd (valgt framfor «kraftig lavere treff» – enklere å forstå for spilleren).
+  Samme regel for kjøretøy som mål. Det vogna ser, er også det den melder som synlig (KROKER.ser bruker samme `vognSer`).
+- Spilleren får vite det: loggen sier «Stridsvogn 1: Røverlag Vest er meldt 500 m unna, men vogna ser dem ikke selv – kjør nærmere eller send et lag
+  dit» (høyst hvert 30. spillminutt per lag), og kjøretøypanelet får knappen **«Kjør mot …»** (meldte fiender innen 6 km, `kjørTil`).
+- Også rettet: vogna skjøt under våpenhvile (kamprunde() hoppet over paret, men kanon() gjorde det ikke). Nå hopper den over sider med `AI.hvile`.
+- **Rakettartilleriet**: skyter på et punkt, ikke et mål det ser selv – en observatør er greit (slik artilleri virker), og uten observatør er
+  spredningen stor (som før). Men observasjonen må nå fram: et lag teller som observatør bare når det har radiokontakt (`KROKER.innsyn`, samme
+  regel som for det du ser i kartet), eller en drone ser stedet. Vaktene og kameraene i leiren er ikke observatører.
+- Prøvd (p1.js): sjekk.js-scenariet S6 (patruljen med drone over, vogna 600 m unna) ga 6 treff på 12 runder (vogna ser den selv); et rødt lag
+  400 m unna bak terrenget, meldt av en drone: 0 skudd og meldingen i loggen; med et eget lag rett ved som ser det: skyter. Bilder:
+  `natt5/krig/stridsvogn-1400x820.png` og `stridsvogn-390x844.png` (panelet med «Kjør mot Røverlag Vest (0,5 km)»).
+- test_enheter.js: nye sjekker (kanonFaktor, velgKanonmål – det nærmeste vogna ser, ikke det nærmeste som er meldt –, tynn).
+
+### 2. Fienden bruker kjøretøy på telefon
+- HVORFOR IKKE FØR: fraksjoner-visning.js `vegnett()` ber om vegnettet bare når `innerWidth >= 900` (og ikke webdriver/datasparing) – valgt for å
+  spare telefonen for 25 MB og minnet. Uten vegnett går fiendens lag alltid til fots. (region-visning.js har samme sperre.)
+- MÅLT (Node, hele landet: 2 030 683 lenker, 1 915 412 noder, 41 MB utpakket): ca. 210–220 MB i minnet når det er lest (den utpakkede fila
+  beholdes for geometrien, pluss tabellene), lest på 0,6–1,5 s. I Chromium med telefonprofil (390 × 844, Dovre, vegnettet fra lokal kopi):
+  JS-minne + ArrayBuffer etter opprydding **+214 MB** for hele landet; prosessens RSS +247 MB (topp +345 MB).
+- LØSNING: (a) **Utsnitt**: `Vegnett.les(data, { boks })` / `Vegnett.utsnitt(R, boks)` (vegnett.js) beholder bare lenkene med begge ender i boksen,
+  med nye nummer, egen geometri (Int32Array) og infrastrukturkoblingene – så kan hele landets fil og tabeller slippes. Samme ruter, lengder,
+  tider og geometri som hele grafen (prøvd på tre ruter ved Dovre, og i test_vegnett.js). På telefon (`VEG_TLF.telefon()`: vindu under 900 px,
+  eller grov peker og skjerm under 900 px) er boksen leiren ±150 km, utvidet så basene og nærmeste oljeterminal er med (+20 km). Andel av landet
+  (±150 km): rundt Dovre 20 %, Ryfylke 24 %, Oslo 44 % (±100 km: 6/11/35 %, ±200 km: 32/35/52 %). MÅLT i telefonprofilen: **+49 MB** i stedet for
+  +214 MB (403 502 lenker), RSS +73–82 MB. **Toppen** mens det leses: `Vegnett.råUtsnitt` leser utsnittet rett fra fila (bare nodene for hele
+  landet, lenkene én og én) i stedet for å lage hele landets tabeller først – samme svar felt for felt (prøvd på tre bokser med ekte data og i
+  test_vegnett.js). Målt i Node (høyvannsmerket, utover selve fila): +39 MB mot +204 MB for utsnitt(rå(...)) og +133 MB for hele landet; i
+  telefonprofilen RSS-topp +202 MB (før: +252, hele landet +345 – resten er nedlastingen og den utpakkede fila). (b) **Når**: ikke ved oppstart. `VEG_TLF.sjekk()` (hvert 5. s) henter
+  vegnettet første gang et fiendelag har et mål over 3 km unna og lastebilen sin innen 200 m (samme regel som `Fraksjoner.kjør`); lag som da går
+  til fots mot et slikt mål, tenker på nytt og setter seg i bilen. Ikke med datasparing, `navigator.deviceMemory` < 3, eller i testene
+  (`VEG_TLF.test`). (c) Bitene pakkes ut rett fra en Blob (før ble de kopiert sammen først: 25 MB ekstra på toppen – gjelder også PC).
+- Prøvd (p2.js, telefonprofil): et rødt lag 9 km fra Dombås med lastebilen ved seg – vegnettet ble hentet (2,6–4,2 s fra lokal kopi), laget satte seg
+  i bilen og kjørte til Dombås, 0 sidefeil. Spillet var klart etter 11–12 s både før og etter (ingenting nytt lastes ved oppstart).
+- Prøvd ende til ende på /rogaland med ekte data (p8.js, telefon 390 × 844, AI på, 600×, `VEG_TLF.test = true`): etter ca. 20 s hentet telefonen
+  vegnettet selv (483 242 lenker rundt Ryfylke), og etter ca. 55 s satt Kystalliansens 3. lag og Folkefrontens 3. lag i hver sin lastebil og kjørte
+  (mot Vikedal 20 km og Sand 18 km). 0 sidefeil. Bilde: `natt5/krig/fiende-kjorer-390x844.png`.
+- Spillerens egne kjøreordre på telefon bruker samme utsnitt; et mål utenfor gir «på telefon er bare vegene i området rundt leiren lastet (ca. 150 km
+  hver veg) – velg et mål nærmere». PC og testene: hele landet som før.
+
+### 3. Krigskartet i liggende telefon (844 × 390)
+- Før (bilde `krig-844x390-før.png`): panelet tok 400 av 844 px i full høyde og kunne bare lukkes helt; valgt tettsted lå under stillingen.
+- Nå (strategi-visning.js): knappen **«Skjul»** i overskriftsraden gjør panelet til en stripe (andelen din, seiersstreken, valgt tettsted og «Send …»
+  for det, «Vis mer», ×) – huskes i nettleseren (`riksbrudd-krigpanel`). Liggende er panelet 330 px / 40 % bredt, stillingen står på én linje per
+  side med stolpen ved siden av, mindre luft, og det valgte tettstedet står øverst (på alle små skjermer). Teksten er minst 12,5 px.
+  `passInn()`/`friDel()`: på telefon passes hele området inn i den frie delen – ved siden av eller over panelet/stripa, under statuslinja og
+  knappene, til venstre for knappesøyla (`.ctl`) – også når panelet skjules/vises og når telefonen snus. PC som før (bortsett fra «Skjul»-knappen).
+- Bilder (/rogaland med ekte data): `krig-844x390-rogaland.png`, `krig-844x390-rogaland-skjult.png`, `krig-390x844-begge.png` (stående: åpent og skjult),
+  og Dovre: `krig-844x390-etter.png`, `krig-844x390-etter-skjult.png`.
+
+### 4. Fienden mellom øktene
+- Runde 4 hadde allerede (spill/lagring.js, «riksbrudd-verden»): fiendens lag (sted, helse, hva de holdt på med), AI.minne og stillingene (med
+  «kjent»), og målet for marsjen – men bare dine egne marsjer ble satt i gang igjen. Prøvd på nytt: dette virker.
+- Nytt (krig-visning.js, «riksbrudd-krig» → `fiende`): «sist sett» for hvert fiendelag (`e.sett`), fiendens lastebiler (sted, retning, antall, skade,
+  borte, målet for kjøreturen og hvem som satt på), og fiendens marsjer i gang settes i gang igjen mot målet (`s.målLagret` fra lagring.js; AI-lagene
+  får `ai.mål`, så de ikke tenker om igjen). Lastebilen legges inn 2 s etter lesingen og på nytt etter `AI.flytt` (som ellers flytter den hjem).
+  Uten vegnett (testene, eller telefon før det trengs) går laget av der bilen står, og AI-en tenker på nytt. `KrigSpill.fiendePakk()/fiendeBruk(f)`.
+  Lagres også når siden skjules (visibilitychange – pagehide kommer ikke alltid på telefon).
+- Prøvd med omlasting (p4.js): marsjen (mål 188100, 6904100) gikk videre, «sist sett» kom tilbake, bilen sto der den var med 37 % skade, stillingen og
+  minnet (leir funnet) var der; med vegnettet lastet satte laget seg i bilen og kjørte videre mot Dombås.
+
+### 5. Fiendens lag går inn i hus og tar det som ligger der – IKKE GJORT
+- Lut-hjelperen har ikke pushet «husene tømmes»-reglene ennå (ingen gren i kveld da jeg så etter), og LeteSpill/LutSpill har ikke noe API for å tømme
+  et hus fra utsiden. Jeg har ikke rørt lut-filene. ØNSKE TIL LUT-HJELPEREN: `LutSpill.tøm(byggNr, { av: side, andel })` (husene som er ransaket av
+  fienden, med hva som er igjen) og `LutSpill.ransaket(byggNr)` – da kan fraksjoner-visning/krig-visning la et AI-lag som står ved et hus i
+  et tettsted i X minutter tømme det (og ta mat/ammunisjon til seg).
+
+### Vakt (vakter/krig.js, del «RUNDE 5»)
+- Vogna skyter ikke på et meldt mål den ikke ser (drone over et lag bak terrenget: 0 skudd), men gjør det når et eget lag rett ved ser det.
+- `fiendePakk`/`fiendeBruk` gir «sist sett» tilbake, og en lagret fiendemarsj settes i gang igjen.
+- Krigskartet: «Skjul» gir en stripe (under 120 px høy, stillingen skjult), «Vis mer» henter panelet tilbake (bare når tettstedene er lastet).
+- Prøvd med feilene lagt inn med vilje: `egenSikt.meldt = 1` ga «skyter på et meldt mål: 3» (FEIL), og stillingen synlig i stripa ga
+  «krigskartet kan skjules: NEI» (FEIL). Vakta tar 2–6 s (PC og mobil).
+
+### Fellesfiler endret i runde 5
+- `site/dovre-fliser/index.html`: bare versjonsmerkene for mine filer (versjon.py).
+- Ingen andre fellesfiler. (fraksjoner-visning.js og region-visning.js er IKKE endret – vegnettet hentes på telefon fra kjoretoy-visning.js, og når
+  `window.VEGNETT` finnes, bruker AI-en det.)
+
+### IKKE gjort / svakheter (runde 5)
+- Vogna har ingen egen 3D-sikt eller tegning av siktfeltet; det lyse feltet i kartet viser fortsatt bare lagenes sikt.
+- Utsnittet på telefon leses én gang per økt: starter du et nytt spill med leiren et helt annet sted i samme økt, gjelder det gamle området.
+  Toppen i minnet mens fila hentes og pakkes ut er fortsatt ca. +200 MB RSS i noen sekunder (25 MB nedlasting + 41 MB utpakket + resten) – enda
+  lettere må gjøres i byggejobben (egne vegnettfiler per område).
+- Region-visning.js (balanse) bruker vegnettet på telefon når det først er lastet, men utsnittet har ikke veger utenfor ±150 km.
+- Fiendens lastebil: kjøreturen legges på nytt bare når vegnettet finnes; ellers går laget av.

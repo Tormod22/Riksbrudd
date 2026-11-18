@@ -41,11 +41,25 @@ assert.throws(() => g.rute([NaN, 1], c), TypeError);
 assert.throws(() => les(data.subarray(0, data.length - 1)));
 const korrupt = Buffer.from(data); korrupt.writeUInt32LE(0xffffffff, 8); assert.throws(() => les(korrupt));
 const offset = Buffer.concat([Buffer.alloc(7), data]).subarray(7); assert.deepEqual(les(offset).rute(a, c).lenker, [0, 1]);
+// UTSNITT (19. nov, telefon): bare lenkene inne i boksen, med samme ruter, geometri og infrastruktur som hele grafen der
+{ const hel = les(data), u = les(data, { boks: [-100, -1500, 2100, 1500] });
+  assert(u.antallLenker < hel.antallLenker && u.antallLenker > 0, 'utsnittet er mindre'); assert.deepEqual(u.boks, [-100, -1500, 2100, 1500]); assert.equal(hel.boks, null);
+  const r1 = hel.rute(a, c), r2 = u.rute(a, c); assert.equal(r2.meter, r1.meter); assert.equal(r2.sekunder, r1.sekunder);
+  assert.deepEqual(r2.lenker.map(e => u.linje(e)), r1.lenker.map(e => hel.linje(e)), 'samme geometri');
+  assert.equal(u.rute(a, [4000, 0], { maksAvstand: 100 }), null, 'ferja utenfor boksen er ikke med'); assert(hel.rute(a, [4000, 0], { maksAvstand: 100 }));
+  const bru = u.infraLenker(60, 12345); assert.equal(bru.length, 1); assert.deepEqual(u.linje(bru[0]), hel.linje(1));
+  u.sperr(bru[0]); assert(u.rute(a, c).sekunder > r1.sekunder, 'sperring virker i utsnittet'); u.åpne(bru[0]);
+  assert.equal(les(data, { boks: [1e6, 1e6, 1e6 + 10, 1e6 + 10] }).antallLenker, 0, 'tom boks');
+  // rett fra fila (uten hele landets tabeller) gir det samme som utsnitt(rå(...))
+  const V = require('../../site/dovre-fliser/spill/vegnett'), B = [-100, -1500, 2100, 1500], ra = V.utsnitt(V.rå(new Uint8Array(data)), B), rb = V.råUtsnitt(new Uint8Array(data), B);
+  for (const k of ['N', 'M', 'I']) assert.equal(rb[k], ra[k], k);
+  for (const k of ['x', 'y', 'fra', 'til', 'l', 'sekvens', 'start', 'slutt', 'vegnr', 'flagg', 'fart', 'kat', 'ie', 'it', 'id']) assert.deepEqual([...rb[k]], [...ra[k]], k);
+  for (let e = 0; e < ra.M; e++) assert.deepEqual(rb.linje(e), ra.linje(e)); }
 // Samme nettleserfil uten Node, DOM, fetch, document eller window ved innlasting.
 const vm = require('vm'), kontekst = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/vegnett.js'), 'utf8'), kontekst);
 assert.equal(typeof kontekst.Vegnett.les, 'function');
-console.log('ok – ruter, omkjøring, ingen veg, gjenåpning, enveiskjøring, planskilt kryss, ferje, binærformat og DOM-fri modul');
+console.log('ok – utsnitt for telefon, ruter, omkjøring, ingen veg, gjenåpning, enveiskjøring, planskilt kryss, ferje, binærformat og DOM-fri modul');
 
 // Uavhengig referanse: Dijkstra på fixture, inkludert tilfeldige sperringer.
 function referanse(graf, start, slutt) {

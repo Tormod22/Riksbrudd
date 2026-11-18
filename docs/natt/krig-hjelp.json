@@ -108,5 +108,25 @@
     "Krigen i 3D",
     "Fiendens stillinger du har sett, står som ringer av sandsekker. Helikopteret flyr ut når det henter eller frakter et lag, og stedene der fiendens lag sist ble meldt, har et merke med «?».",
     "I 3D"
+  ],
+  [
+    "Stridsvogna ser selv",
+    "Stridsvogna skyter bare på fiender den ser selv fra tårnet, eller som et av lagene dine rett ved vogna ser. Det vaktene, kameraene og dronene melder, ser du på kartet, men vogna skyter ikke på det. Står det «er meldt, men vogna ser dem ikke» i loggen, trykk «Kjør mot …» i panelet til vogna, eller send et lag dit.",
+    "Lag og strid"
+  ],
+  [
+    "Artilleri trenger en som ser",
+    "Rakettartilleriet treffer mye bedre når noen ser målet: en drone, eller et lag som har radiokontakt med deg. Uten det blir spredningen stor.",
+    "Lag og strid"
+  ],
+  [
+    "Krigskartet på telefon",
+    "Trykk «Skjul» øverst i krigskartet, så blir panelet en smal stripe og du ser hele kartet. Trykk på et tettsted for å se det i stripa – og «Send» et lag dit med en gang. «Vis mer» henter panelet tilbake.",
+    "Lag og strid"
+  ],
+  [
+    "Fienden husker",
+    "Når du lagrer og kommer tilbake, er fienden der den var: lagene, stillingene du har sett, der du sist så dem, marsjene de var på og lastebilene deres.",
+    "Lag og strid"
   ]
 ]
