@@ -100,3 +100,12 @@ Sju hjelpere på Opus, hver i sin pakke. Detaljene står under «Runde 4» i `do
 - **Hakk:** trinnet «henter høydene og kartet» er bare litt bedre. Det som står igjen, er søppeltømming og grafikkortet, og det kan bare måles hos brukeren («Mål hakk»).
 - **Stridsvogna:** den skyter fortsatt på mål den ikke ser selv, bare fordi vakter, kameraer eller droner har meldt dem.
 - **Ikke sett i Safari:** ingenting er prøvd i ekte Safari på iPhone.
+
+## Kontroll (kl. 14:30)
+- **Hele `sjekk.js` på den endelige versjonen: PC 115 av 115 og mobil 115 av 115, «Alt i orden».**
+- Regeltestene: alle grønne etter hver fletting.
+- Tre feil i selve kontrollene er rettet:
+  - Tresjekken prøvde 0 trær og sa «ok». Den prøver nå ca. 3260 trær i Dombås-utsnittet.
+  - Krig-vakta feilet når fiendelaget tilfeldig fikk en «forsiktig» fører.
+  - Folk-vakta målte vakta i tårnet fra midten av tårnet, ikke fra grunnen.
+- Skjermbilder av tegnforklaringen og byggelista er sett på PC (1400 px) og telefon (390 px), uten feil på siden.
