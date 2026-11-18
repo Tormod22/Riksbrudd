@@ -255,7 +255,11 @@
   }
 
   // ---------- trafikk og folk ----------
-  function velgLinjer(u, krav, liste) { return (liste || u.veger).filter(krav).map(v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return { ...v, D, L: D[D.length - 1] }; }).filter(v => v.L > 80); }
+  // avstanden langs linjen til hvert punkt (D); regnet på forhånd i forbered3d-kroken (u.vegD, vegAvstander) eller her
+  const avstander = v => { const D = [0]; for (let i = 1; i < v.P.length; i++) D.push(D[i - 1] + Math.hypot(v.P[i][0] - v.P[i - 1][0], v.P[i][1] - v.P[i - 1][1])); return D; };
+  function velgLinjer(u, krav, liste) { return (liste || u.veger).filter(krav).map(v => { const D = (u.vegD && u.vegD.get(v)) || avstander(v); return { ...v, D, L: D[D.length - 1] }; }).filter(v => v.L > 80); }
+  // (18. nov, hakk: i Bergen tok velgLinjer 80 ms i selve byttet – nå regnes avstandene på forhånd, med yield mellom vegene)
+  function* vegAvstander(u) { const m = new Map(); for (const v of (u.veger || []).concat(u.gangveger || [])) { m.set(v, avstander(v)); yield; } return m; }
   function punkt(v, s, side) {   // posisjon s meter langs linjen, «side» meter til høyre for kjøreretningen
     let i = 1; while (i < v.D.length - 1 && v.D[i] < s) i++;
     const a = v.P[i - 1], b = v.P[i], f = Math.max(0, Math.min(1, (s - v.D[i - 1]) / (v.D[i] - v.D[i - 1] || 1))), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
@@ -329,8 +333,8 @@
   }
   // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
   function fjern(R) { if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
-  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; });
-  KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); });
+  if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null; });
+  KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); u.vegD = null; });
 
   // ---------- hver ramme ----------
   let d = null;

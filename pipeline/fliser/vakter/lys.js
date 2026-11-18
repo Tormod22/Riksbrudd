@@ -2,6 +2,8 @@
 // VAKT for pakka «lys» (18. nov): skygger fra sola, standard fargesetting, bakkens nye skyggelegger, tåke i dalene og skylaget.
 // Effektene er av i testene (KVAL.fx = ingen) – vakta slår dem på, tegner to bilder, ser at alt er med uten GL-feil, slår dem av
 // igjen og ser at bildet tegnes som før. Er 3D av, prøves bare det som ikke trenger 3D (3D bygges ikke her: det tar for lang tid).
+// Runde 4 (hakk ved nytt utsnitt): normalerG = computeVertexNormals bit for bit, vegRuteAsynk = Vegetasjon.vegRute, og kartbildet og
+// vannmasken som ble sendt til grafikkortet i striper, er like lerretet rad for rad (med to feil lagt inn med vilje som selvtest).
 module.exports = {
   navn: 'lys og skygger',
   kjør: async (pg, profil) => {
@@ -45,9 +47,58 @@ module.exports = {
         }
       } catch (e) { ut.feil.push('unntak: ' + (e && e.message || e)); }
       finally { KVAL.effekter(før, false); KVAL.bytt(nivå); }
+      // RUNDE 4 (18. nov, hakk ved nytt utsnitt): det som nå lages i biter, skal gi det samme som før.
+      try {
+        // (1) normalerG = three.js sin computeVertexNormals, bit for bit, med og uten indeks
+        if (typeof THREE !== 'undefined' && typeof normalerG === 'function' && typeof kjørRett === 'function') {
+          let f = 7; const rnd = () => (f = (f * 16807) % 2147483647) / 2147483647;
+          const a = new THREE.PlaneGeometry(100, 100, 40, 40), p = a.attributes.position; for (let k = 0; k < p.count; k++) p.setZ(k, rnd() * 9);
+          const b = a.clone(), c = a.toNonIndexed(), d = c.clone();
+          a.computeVertexNormals(); kjørRett(normalerG(b)); c.computeVertexNormals(); kjørRett(normalerG(d));
+          const lik = (x, y) => { const A = x.attributes.normal.array, B = y.attributes.normal.array; if (A.length !== B.length) return false; for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) return false; return true; };
+          ok(lik(a, b), 'normalerG gir andre normaler enn three.js (med indeks)'); ok(lik(c, d), 'normalerG gir andre normaler enn three.js (uten indeks)');
+          // feil med vilje: ett hjørne flyttet gir ulike normaler (sammenligningen virker)
+          b.attributes.position.setZ(5, 50); kjørRett(normalerG(b)); ok(!lik(a, b), 'selvtest: normalene ble like selv med et flyttet hjørne');
+          for (const g of [a, b, c, d]) g.dispose(); ut.normaler = true;
+        }
+        // (2) vegRuteAsynk (vegetasjon3d.js) = Vegetasjon.vegRute, på utsnittets veger eller på prøveveger
+        if (window.Vegetasjon3d && Vegetasjon3d.vegRuteAsynk && window.Vegetasjon && Vegetasjon.vegRute) {
+          const R2 = typeof R3 !== 'undefined' && R3, veger = R2 && R2.ut && R2.ut.veger && R2.ut.veger.length ? R2.ut.veger
+            : [{ k: 'R', by: true, P: [[0, 0], [80, 30], [160, 20]] }, { k: 'K', by: false, P: [[-50, 90], [40, -60]] }, { k: 'P', P: [[10, 10], [12, 200]] }];
+          const A = Vegetasjon.vegRute(veger), B = await Vegetasjon3d.vegRuteAsynk(veger); let ulik = 0, sanne = 0, f2 = 3;
+          const rnd = () => (f2 = (f2 * 16807) % 2147483647) / 2147483647, S = R2 && R2.ut ? R2.ut.S : 220;
+          for (let k = 0; k < 4000; k++) { const x = (rnd() * 2 - 1) * S, y = (rnd() * 2 - 1) * S, e = rnd() * 4, a = A(x, y, e); if (a !== B(x, y, e)) ulik++; if (a) sanne++; }
+          // også punkter rett ved vegene (der svaret er sant)
+          for (const v of veger.slice(0, 200)) { const q = v.P[0]; for (const [dx, dy] of [[0, 0], [1.5, 0], [0, 3], [6, 6]]) { const a = A(q[0] + dx, q[1] + dy); if (a !== B(q[0] + dx, q[1] + dy)) ulik++; if (a) sanne++; } }
+          ok(ulik === 0, `vegRuteAsynk svarer ulikt Vegetasjon.vegRute i ${ulik} punkter`); ok(sanne > 0, 'vegRute: ingen punkter nær veg ble prøvd');
+          ut.vegRute = { veger: veger.length, sanne, ulik };
+        }
+        // (3) kartbildet og vannmasken sendt i striper (lastOppIBiter): på grafikkortet står det samme som i lerretet, rad for rad
+        const R = typeof R3 !== 'undefined' && R3;
+        if (R && R.ut && R.tex && typeof på3d !== 'undefined' && på3d && !R.bygger) {
+          const r = R.renderer, gl = r.getContext(), tx = {};
+          for (const [navn, tex, c] of [['kart', R.tex, R.ut.base], ['vann', R.vannTex, R.ut.vann]]) {
+            if (!tex || !c) continue; const t = r.properties.get(tex).__webglTexture, W = c.width, g = c.getContext('2d'), fb = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+            const fullt = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE, buf = new Uint8Array(W * 4); let ulik = 0, snudd = 0;
+            if (fullt) for (const rad of [0, 255, 256, W >> 1, W - 257, W - 1]) { gl.readPixels(0, rad, W, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+              const d = g.getImageData(0, W - 1 - rad, W, 1).data, e = g.getImageData(0, rad, W, 1).data;
+              for (let i = 0; i < W * 4; i++) { if (d[i] !== buf[i]) ulik++; if (e[i] !== buf[i]) snudd++; } }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); r.resetState();
+            tx[navn] = { fullt, ulik, snudd, iBiter: !!tex.iBiter, bilde: tex.image === c };
+            if (fullt) { ok(ulik === 0, `${navn}bildet på grafikkortet er ulikt lerretet i ${ulik} verdier`);
+              // feil med vilje: uten snuingen blir radene ulike (sammenligningen virker – bildet er ikke likt opp-ned)
+              ok(snudd > 0, `selvtest: ${navn}bildet var likt også uten snuing`); }
+            ok(tex.image === c, `${navn}teksturens bilde er ikke utsnittets lerret`);
+            if (R.forberedt) ok(tex.iBiter, `${navn}bildet ble ikke sendt i striper (forberedt utsnitt)`);
+          }
+          ok(gl.getError() === 0, 'GL-feil etter kontrollen av kartbildet'); ut.tekstur = tx;
+        }
+      } catch (e) { ut.feil.push('unntak (runde 4): ' + (e && e.message || e)); }
       return ut;
     });
     const ok = r.feil.length === 0;
-    return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : ''].filter(Boolean).join(', ');
+    return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };

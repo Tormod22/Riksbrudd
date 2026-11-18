@@ -1408,9 +1408,10 @@ async function bygg3d(cx, cy, S) {
   // (pust: se pusterom – byggingen skal aldri holde hovedtråden lenge i ett strekk)
   for (let j = 0; j < N; j++) { if ((j & 15) === 0 && børPuste()) await pust();
     for (let i = 0; i < N; i++) { const X = cx - S + i * steg, Y = cy + S - j * steg; let h = fin ? bilin(fin, X, Y) : NaN; if (h !== h) h = bilin(grov, X, Y); H[j * N + i] = h === h ? h : 0; } }   // hav
-  if (INFRA && VIS.infra) tegnInfraPå(g, cx - S, cy + S, mpp, TW, TW, { bruer: false, punkter: false, etiketter: false });   // tunneler, ferjer, dammer … i overflaten
+  // (18. nov: pust mellom de tunge stegene her – uten pust gikk de i samme bit som slutten av høydene)
+  await pust(); if (INFRA && VIS.infra) tegnInfraPå(g, cx - S, cy + S, mpp, TW, TW, { bruer: false, punkter: false, etiketter: false });   // tunneler, ferjer, dammer … i overflaten
   const u = { cx, cy, S, N, steg, H, base, TW, h0: H[((N - 1) / 2) * N + (N - 1) / 2], hus: null };
-  u.infra = infraI(u); if (VIS.infra) u.bru = bruer3d(u);
+  await pust(); u.infra = infraI(u); if (VIS.infra) u.bru = bruer3d(u); await pust();
   if (u.bru) {   // skyggen av bruene på bakken/vannet (dekker vegen som ellers ligger nede i dalen under brua)
     // med 3D-bruene (spill/infra3d.js) bare en svak skygge: den sterke ga svarte flekker der det er mange korte bruer (Bergen)
     const myk = !!window.Infra3d; g.save(); g.lineCap = 'butt'; g.lineJoin = 'round'; g.strokeStyle = myk ? 'rgba(14,16,18,.28)' : 'rgba(14,16,18,.82)';
@@ -1448,6 +1449,8 @@ async function bygg3d(cx, cy, S) {
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
+  // punktene beholdes til kartbildet er sendt til grafikkortet i forbered3d (lastOppIBiter); sett3d slipper dem
+  u.px = px;
   return u;
 }
 // Punktene i teksturen der terrenget ligger på havnivå (bilineært i høydenettet), farges i havets farge med en myk kant (0,3–0,8 m).
@@ -2710,9 +2713,45 @@ async function forbered3d(u) {
   for (const f of KROKER.forbered3d) { await pust(); await f(u, R); }
   // Kartbildet og vannmasken sendes til grafikkortet her – hver i sitt bilde, og ikke i samme bilde som byttet. Opplastingen av et
   // kartbilde på opptil 4096 × 4096 er det tyngste grafikkortet gjør ved et bytte (kan ikke måles på testmaskinen – se «Mål hakk»).
-  await pusterom(); K.tex = new THREE.CanvasTexture(u.base); K.tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy(); R.renderer.initTexture(K.tex);
-  await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex);
+  // (18. nov: i striper på 256 rader fra punktene vi alt har – lastOppIBiter –, ikke hele bildet i ett fra lerretet. Går det ikke, som før.)
+  await pusterom(); K.tex = await lastOppIBiter(u.px, u.TW, R, u.base); u.px = null;
+  if (!K.tex) { await pusterom(); K.tex = new THREE.CanvasTexture(u.base); K.tex.anisotropy = R.renderer.capabilities.getMaxAnisotropy(); R.renderer.initTexture(K.tex); }
+  await pusterom(); K.vannTex = u.vann.piksler ? await lastOppIBiter(u.vann.piksler, u.vann.width, R, u.vann, true) : null;
+  if (!K.vannTex) { await pusterom(); K.vannTex = new THREE.CanvasTexture(u.vann); R.renderer.initTexture(K.vannTex); }
   await pusterom();
+}
+// BILDE TIL GRAFIKKORTET I STRIPER (18. nov, hakk ved nytt utsnitt). Før: CanvasTexture av kartbildet (opptil 4096 × 4096) og
+// renderer.initTexture – nettleseren leste hele lerretet og sendte 64 MB i ett strekk (her: 270 ms i én oppgave; vannmasken 66 ms).
+// Nå: en DataTexture med samme innstillinger som CanvasTexture (lineær, mipmap, anisotropi) og plass uten innhold, så sendes punktene
+// (RGBA, rad 0 øverst som i lerretet) i striper på 256 rader med texSubImage2D – med pust mellom –, og mipmapene lages til slutt.
+// UNPACK_FLIP_Y snur stripen, og stripen legges ved y = W − rad1: samme plass som CanvasTexture (flipY) gir hver rad. three.js setter
+// pixelStorei selv før hver opplasting, og bindingen går gjennom renderer.state, så three sin oversikt over tilstanden stemmer.
+// Etterpå er teksturen som en CanvasTexture av lerretet (kilde): image = lerretet, flipY – blir den sendt på nytt (needsUpdate), sendes
+// lerretet som før. Gir null (og brukes ikke) hvis noe mangler eller WebGL gir en feil – da lages teksturen som før.
+async function lastOppIBiter(data, W, R, kilde, utenAniso) {
+  const r = R && R.renderer; if (!r || !data || !kilde || !W || data.length !== W * W * 4 || (W & (W - 1))) return null;
+  const gl = r.getContext(); let tex = null;
+  try {
+    tex = new THREE.DataTexture(null, W, W, THREE.RGBAFormat, THREE.UnsignedByteType);
+    tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true; tex.unpackAlignment = 4;
+    if (!utenAniso) tex.anisotropy = r.capabilities.getMaxAnisotropy();
+    // gamle feil tømmes først, så bare feil fra denne opplastingen teller
+    for (let i = 0; i < 8 && gl.getError() !== gl.NO_ERROR; i++);
+    r.initTexture(tex);
+    const glTex = r.properties.get(tex).__webglTexture; if (!glTex) throw new Error('ingen tekstur');
+    for (let y0 = 0; y0 < W; y0 += 256) {
+      if (børPuste()) await pust();
+      const y1 = Math.min(W, y0 + 256);
+      r.state.bindTexture(gl.TEXTURE_2D, glTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, W - y1, W, y1 - y0, gl.RGBA, gl.UNSIGNED_BYTE, data.subarray(y0 * W * 4, y1 * W * 4));
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    }
+    await pust();
+    r.state.bindTexture(gl.TEXTURE_2D, glTex); gl.generateMipmap(gl.TEXTURE_2D); r.state.unbindTexture();
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('WebGL-feil');
+    tex.isDataTexture = false; tex.image = kilde; tex.flipY = true; tex.iBiter = true; return tex;
+  } catch (e) { console.warn('kartbildet i striper:', e && e.message || e); if (tex) tex.dispose(); try { r.state.unbindTexture(); } catch (e2) { /* ingenting */ } return null; }
 }
 // FORHENTING (15. nov): ber om kartdataene byggingen og modulene trenger senere – terrengklassene og høydene i 32 m (trær, skogbunn, dyr,
 // planter), husene og vegene (z13) – med en gang, så de hentes mens høydene og kartbildet lages. hentFlis husker svarene (RÅ, høyst 900),
@@ -2754,12 +2793,13 @@ function forvarmEn(R, nær) {
 }
 // Et forberedt utsnitt som likevel ikke ble satt inn (3D slått av, eller et nytt utsnitt ble bedt om imens): frigjør det som ble laget.
 function kastForberedt(u) {
+  if (u) u.px = null;
   const K = u && u.klar; if (!K) return; u.klar = null;
   for (const t of [K.tex, K.vannTex]) if (t) t.dispose(); if (K.geo) K.geo.dispose(); for (const g of Object.values(K.hus || {})) g.dispose();
 }
 const BUSKVALG = () => ({ senk: .06, G2: (VW < 700 ? 80 : 130) ** 2, busk: true });
 function sett3d(u) {
-  const R = R3, K = u.klar || {}; u.klar = null; R.forberedt = !!K.geo; R.settNr = (R.settNr || 0) + 1;
+  const R = R3, K = u.klar || {}; u.klar = null; u.px = null; R.forberedt = !!K.geo; R.settNr = (R.settNr || 0) + 1;
   frigjørTerreng(R);
   // Terrengnettet: tett i midten (like tett som høydegitteret), glissere utover mot kanten (brukeren 11. nov: «terrenget kan forenkles
   // på avstand»). Punktene flyttes med g(t) = t·(A + (1 − A)·t²): g(±1) = ±1, og tettheten i midten blir A·(M − 1)/(N − 1) ganger …
