@@ -26,18 +26,21 @@
     veg: "<path d='M6 21L9 3M18 21L15 3M12 5v3M12 11v3M12 17v3'/>", bronn: "<path d='M5 21V11h14v10M4 11h16M7 11V6h10v5M12 6v5'/>", varsel: "<path d='M12 3l10 18H2zM12 10v5M12 18v.5'/>",
     oppdrag: "<path d='M12 3l9 9-9 9-9-9z'/>", hjerte: "<path d='M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z'/>", sekk: "<path d='M7 9a5 5 0 0 1 10 0v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2zM9 6V5a3 3 0 0 1 6 0v1M9 14h6'/>",
     vind: "<path d='M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h6'/>", vann: "<path d='M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11zM9 15a3 3 0 0 0 3 3'/>", sikte: "<circle cx='12' cy='12' r='7'/><path d='M12 2v5M12 17v5M2 12h5M17 12h5'/>",
+    skjold: "<path d='M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z'/>", mer: "<circle cx='5' cy='12' r='1.6'/><circle cx='12' cy='12' r='1.6'/><circle cx='19' cy='12' r='1.6'/>", radio: "<path d='M5 9h14v11H5zM8 9l8-5M9 14h.5M9 17h.5M14 13a2 2 0 1 0 .1 0'/>",
+    snakk: "<path d='M4 5h16v11H10l-5 4v-4H4z'/>", sverd: "<path d='M5 4l12 12M19 4L7 16M4.5 17.5l2.5 2.5M19.5 17.5L17 20'/>", hake: "<path d='M4 12l5 5L20 6'/>", bil: "<path d='M3 16v-4l3-5h9l4 5h2v4M6 16a2 2 0 1 0 4 0M15 16a2 2 0 1 0 4 0M10 16h5'/>",
   };
   const url = s => `url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${s}</svg>`)}")`;
   // byggene, fanene og statuslinja: hvilket ikon de får
   const BYGG = { kontrollrom: 'skjerm', brakke: 'seng', vakttårn: 'taarn', port: 'port', gjerde: 'gjerde', lagertelt: 'telt', container: 'container', verksted: 'verktoy', sykestue: 'kors', drivstofftank: 'tank', aggregat: 'motor', solcelle: 'sol',
     kameramast: 'kamera', radiomast: 'mast', drivhus: 'blad', helikopterplass: 'heli', sandsekkvoll: 'sandsekk', kjøkken: 'mat', veg: 'veg', batteri: 'batteri', brønn: 'bronn' };
-  const STAT = { sDag: 'klokke', sH: 'fjell', sKB: 'last', sOlje: 'olje', sVaer: 'vaer', sPenger: 'penger', sStrom: 'strom', sFolk: 'folk', sHvor: 'sted', sFps: 'fps', sMaal: 'maal' };
+  const STAT = { sDag: 'klokke', sH: 'fjell', sKB: 'last', sOlje: 'olje', sVaer: 'vaer', sPenger: 'penger', sStrom: 'strom', sFolk: 'folk', sHvor: 'sted', sFps: 'fps', sMaal: 'maal', sKrig: 'skjold' };
   const FLIS = [[/^kassa/i, 'penger'], [/^strøm/i, 'strom'], [/^diesel/i, 'tank'], [/^senge/i, 'seng']], FANE = ['hammer', 'kasse', 'plan', 'maal'];
   const css = document.createElement('style');
   css.textContent = `[data-ikon]::before{ content:''; display:inline-block; width:1.05em; height:1.05em; margin-right:.35em; vertical-align:-.16em; background:currentColor; opacity:.85; -webkit-mask:var(--ik) center/contain no-repeat; mask:var(--ik) center/contain no-repeat; flex:none; }
 ${Object.entries(I).map(([n, s]) => `[data-ikon="${n}"]{ --ik:${url(s)}; }`).join('\n')}
 .stats > div[data-ikon]::before{ color:var(--ink-dim,#a99); width:.95em; height:.95em; } #leirmeny .flis[data-ikon]::before{ float:right; width:1.25em; height:1.25em; margin:0; opacity:.5; }
-#leirmeny .liste .bygg[data-ikon]{ position:relative; padding-left:34px; } #leirmeny .liste .bygg[data-ikon]::before{ position:absolute; left:4px; top:8px; width:22px; height:22px; margin:0; color:#c9b26a; opacity:1; }
+#leirmeny .liste .bygg[data-ikon]:not(.kort){ position:relative; padding-left:34px; } #leirmeny .liste .bygg[data-ikon]:not(.kort)::before{ position:absolute; left:4px; top:8px; width:22px; height:22px; margin:0; color:#c9b26a; opacity:1; }
+#leirmeny .liste .bygg.kort[data-ikon]::before{ display:none; }
 #leirmeny .faner button{ white-space:nowrap; padding-left:3px; padding-right:3px; } #leirmeny .faner button[data-ikon]::before{ width:.85em; height:.85em; margin-right:.25em; }
 #leirmeny .oppdrag[data-ikon]::before{ float:left; width:1.2em; height:1.2em; margin:.1em .45em 0 0; color:#c9b26a; opacity:1; } #varsler button[data-ikon]::before{ margin-right:0; }`;
   document.head.appendChild(css);
