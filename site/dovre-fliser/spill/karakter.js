@@ -67,7 +67,9 @@
       if (iLeiren()) { const L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand();
         if (T.behov.tørst < K.R.greit && harVann()) { T.behov.tørst = 100; logg('Du drikker deg utørst i leiren.'); }
         if (T.behov.sult < K.R.greit && F && F.mat >= 1) { F.mat -= 1; K.fyll(T.behov, 'sult', K.R.rasjon); logg('Du spiser i leiren (én rasjon av leirens mat).'); }
-        if (L && rot.Leir && Leir.plasser(L) > 0) K.fyll(T.behov, 'søvn', K.R.hvile * t); }
+        // (balansen 18. nov, Claudes forslag) du sover av deg selv i leiren også før brakka står – på bakken, halvt så godt. Før ble du
+        // «utslitt» når du spolte de første timene.
+        if (L && rot.Leir) K.fyll(T.behov, 'søvn', K.R.hvile * t * (Leir.plasser(L) > 0 ? 1 : .5)); }
       else if (rot.OverlevSpill && OverlevSpill.iTilflukt && går() && OverlevSpill.iTilflukt()) K.fyll(T.behov, 'søvn', K.R.hvile * t);
       // ute: drikk når du står ved vann
       const Q = r3(); if (går() && !fører() && T.behov.tørst < 80 && Q.ut && rot.Gange && Gange.vannVed && performance.now() - sistDrakk > 20000) { const k = Gange.kropp(), v = Gange.vannVed(Q.ut);
