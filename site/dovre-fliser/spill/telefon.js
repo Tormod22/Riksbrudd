@@ -29,6 +29,8 @@
  * 14. Stoppkortet etter spoling («Stoppet: …») lå oppå loggmeldingen som sier det samme: loggen viker (skjules) mens kortet står
  *     oppå den (body.flytvik – gjelder også PC når de overlapper).
  * 15. ☰-menyen hadde 32 px høye rader: nå minst 40 px (menyen kan rulles).
+ * 18. Liten liggende telefon (iPhone SE 667 × 375 er både «smal» og «tlfligg»): når du gikk, lå helse- og våpenruta oppå Huk/Hopp og
+ *     våpenbyttet og Skyt oppå minikartet. Rutene og våpenbyttet flyttes nå som på større liggende telefoner, og minikartet er 80 px.
  * 16. Fanen Bygg i Leir-menyen var ca. 3200 px høy på telefon (22 store byggekort i to kolonner). Nå tre kolonner med liten tegning,
  *     navn og pris på én linje; hele kortet er Bygg-knappen (knappen ligger usynlig over kortet), og forklaringen kommer i banneret
  *     når du har trykket. Kort du ikke har råd til, er dempet. Tallene (34 px tegning, tre kolonner) er Claudes forslag.
@@ -63,9 +65,9 @@ body.kort #personkort{ box-sizing:border-box; max-height:calc(100% - var(--topp,
 body.kort:not(.smal) #personkort{ top:calc(var(--topp,44px) + 6px); transform:translateX(-50%); }
 body.kort #etterspill{ bottom:calc(14px + ${B}); box-sizing:border-box; }
 body.kort #evpanel{ background:#1a150d; }
-body.kort:not(.smal) #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
-body.kort:not(.smal) #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
-body.kort:not(.smal) #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + ${B}); }
+body.kort:not(.smal) #nhud .helse, body.kort.tlfligg #nhud .helse{ right:auto; left:50%; transform:translateX(-100%); margin-left:-4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #nhud .vapen, body.kort.tlfligg #nhud .vapen{ right:auto; left:50%; margin-left:4px; top:auto; bottom:calc(22px + ${B}); }
+body.kort:not(.smal) #byttvapen, body.kort.tlfligg #byttvapen{ right:calc(160px + ${Rt}); bottom:calc(144px + ${B}); }
 body.kort #krigpanel{ left:calc(8px + ${L}); right:calc(8px + ${Rt}); width:auto; box-sizing:border-box; }
 body.kort #folkmeny .person small{ display:block; margin-top:2px; }
 body.kort #folkmeny select, body.kort #samfunnmeny select, body.kort #stridpanel select, body.kort #tropppanel select{ min-height:40px; }
@@ -73,6 +75,8 @@ body.kort #flytkort{ left:calc(12px + ${L}); right:calc(12px + ${Rt}); transform
 body.kort #lagmeny.på button{ height:auto; min-height:40px; }
 body.flytvik #logg{ visibility:hidden; }
 body.kort.smal #panel{ max-height:52vh; }
+body.kort.tlfligg.smal #minikart{ width:80px; height:80px; }
+body.kort.tlfligg.smal #skytknapp{ right:calc(96px + ${Rt}); } body.kort.tlfligg.smal #byttvapen{ right:calc(180px + ${Rt}); }
 body.kort.tlfligg #panel{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); right:auto; width:min(380px, 52vw); max-width:none; max-height:none; box-sizing:border-box; }
 body.kort #leirmeny .liste{ grid-template-columns:repeat(3, minmax(0, 1fr)); gap:5px; }
 body.kort #leirmeny .bygg.kort{ position:relative; padding:4px 5px 5px; gap:1px; }
