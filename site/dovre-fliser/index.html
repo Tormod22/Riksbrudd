@@ -2378,7 +2378,7 @@ function nærHus(u, x, y) {
 }
 function hindring3d(x, y, egen) {
   const rute = egen || (R3 && R3.hindre); if (!rute) return false;
-  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  const inni = (P, X, Y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const pi = P[i], pj = P[j], xi = pi[0], yi = pi[1], xj = pj[0], yj = pj[1]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
   for (const o of rute.get(Math.floor(x / 20) + ',' + Math.floor(y / 20)) || []) {
     // bygg med interiør (o.P.inne fra spill/interior3d.js): veggene, døråpningen og møblene avgjør
     if (o.P && o.P.inne && !egen) { if (Interior.blokkert(o.P.inne, x, y)) return true; }
