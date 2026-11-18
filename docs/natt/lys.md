@@ -198,3 +198,34 @@ Fra profilen i Bergen, utsnitt 3,1 km (programvare-grafikk, belastet maskin):
   forberedt – gir likt terreng (497 664), trær i nettene (38 895), trær per treslag og steiner/busker; 156 pust under én bygging.
   (Første forsøk uten låst grafikknivå ga ulikt terreng: automatisk grafikk gikk ned mens programvare-grafikken tegnet – ikke endringene.)
 - Regeltestene test_kyst, test_veg, test_vegetasjon, test_bruer, test_kraft, test_ytelse, test_fjernby3d: grønne.
+- Senere samme dag (commit 596f9d6): **veg.js** `finnKryssG` (generator, `finnKryss()` som før) – liv3d bruker den i bygg3d-kroken
+  (lyktene) og i forbered3d (`byggVeger`); vegnettenes normaler med `normalerG` (`nettG` i liv3d.js); kartbildets bunnfarge
+  (`fillRect` på hele 4096², 60 ms) fylles i striper på 512 rader med pust – flisene tegnes først når den er ferdig (`await bunn`);
+  `naboerAsynk` og `løftVeger` (lange veger: yield hvert 256. punkt) i mindre biter.
+
+### Etter – målt (Bergen, utsnitt 3,1 km, to flyttinger hver)
+Maskinen ble svært belastet mens jeg målte (last 20–25 på fire kjerner, mot ca. 3 under før-målingen kl. 10:52), så alt tar 2–5 ganger
+så lang tid som før-målingen. Derfor målte jeg den gamle koden (kopien i scratchpad `natt/lys/hakk/head`) og den nye rett etter
+hverandre under samme last (`før2-b900.log`, `etter-b900.log`, `etter2-b900.log`):
+
+| (Bergen 3,1 km, belastet maskin) | gammel kode | ny kode (2 målinger) |
+|---|---|---|
+| byttet («gjør klar uten pust», bildet står) | 1455 / 1438 ms | 504 / 431 · 583 / 499 ms |
+| sett3d alene (største) | 1258 / 1261 ms | 291 / 248 · 384 ms |
+| lengste lange oppgave | 1384 / 1434 ms | 493 / 1016 · 664 / 770 ms |
+| lange oppgaver ≥ 50 ms, sum | 155 / 187, 27,0 / 34,2 s | 93 / 107, 10,6 / 12,8 s · 153 / 86, 19,0 / 10,5 s |
+| tid til utsnittet er bygget | 55,6 / 70,7 s | 36,8 / 39,1 s · 53,0 / 34,4 s |
+
+Største bidrag i én lang oppgave per funksjon (gammel → ny, samme last; `sammenlign.js`): bruene i byttet 167 → (i forberedelsen,
+34–139 i biter), finnLinje 390 → 0, løftVeger 956 → 17–148, naboer (hus3d) 980 → 18–90, vegRute 211 → 7–56, lykter 193 → 19–52,
+kyst plasser 592 → 55–138, delBakken 64 → 0–11, fillRect 222 → 42–77, velgLinjer → 0.
+Det som står igjen i byttet (ikke mine filer): anlegg3d bensinstasjon 60–130 ms, fjern3d.js `bygg` 82–106 ms, portal3d 65 ms, og
+merkingen av kilden i `R.scene.add` (ytelse.js, en stakk per nett) ca. 25 ms under last. Mine: kraft3d sin sett3d (mastene) ca. 60 ms
+under last.
+
+**Kartbildet i striper – kan ikke avgjøres her.** Med programvare-grafikk (SwiftShader) koster det like mye i sum, og den første stripen
+bærer nesten hele kostnaden (scratchpad `natt/lys/hakk/tex-bench.js`, tvunget ferdig med readPixels: hele lerretet 1158–1367 ms;
+striper à 256 rader: første 696–950 ms, resten ca. 50 ms, mipmap 160–270 ms). SwiftShader lager altså hele teksturen ved første
+skriving. På et ekte grafikkort er det ikke slik (plassen lages på grafikkortet), og den gamle veien måtte lese hele lerretet
+(64 MB) og snu det i nettleseren i ett strekk. BE BRUKEREN om en ny «Mål hakk»-rapport: står `lastOppIBiter` som sted i en lang pause,
+kan stripene gjøres mindre, eller den gamle veien tas tilbake (bare `lastOppIBiter` som gir null).
