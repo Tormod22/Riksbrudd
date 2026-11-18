@@ -63,7 +63,9 @@
   function motKjøretøy() {
     for (const a of ENHETER) {
       if (!levende(a) || Terreng.slattUt(a.menn) || (a.skyterPå && a.skyterPå.size)) continue;
-      let best = null, bd = 600; for (const k of KJORETOY) { if (k.side === a.side) continue; const d = Math.hypot(k.x - a.x, k.y - a.y); if (d < bd && ser(a, k.x, k.y)) { bd = d; best = k; } }
+      // (18. nov, del 3) et kjøretøy som skyter på laget, røper seg: laget svarer selv om det ikke ser det (stridsvogna skyter på alt du vet
+      // om – også det vaktene og kameraene melder –, så et lag i skogen ble skutt i stykker uten å kunne svare)
+      let best = null, bd = 600; for (const k of KJORETOY) { if (k.side === a.side) continue; const d = Math.hypot(k.x - a.x, k.y - a.y); if (d < bd && (ser(a, k.x, k.y) || k.skyterPå === a)) { bd = d; best = k; } }
       if (!best) continue;
       const ildf = KROKER.ild.reduce((v, h) => v * h(a, best), 1); if (ildf <= 0) continue;
       let treff = Terreng.ildrunde(a.menn, bd, { målPåMarsj: !!best.sti }, rng); if (ildf < 1) treff = [...Array(treff)].filter(() => rng() < ildf).length;
@@ -125,7 +127,7 @@
     SALVER.push(r.salve); logg(`${k.navn} skyter en salve mot målet ${kmTekst(Math.hypot(X - k.x, Y - k.y))} unna (${obs ? 'observert' : 'ingen ser målet – stor spredning'}). Nedslag om ${R.artilleri.flytid} s.`);
     skitten = true; return r.salve;
   }
-  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon };   // for sjekk.js
+  window.S6 = { sendDrone, ild, observert, treffPå, skadKj, kanon, motKjøretøy };   // for sjekk.js
   KROKER.trykk.unshift((X, Y) => {
     if (ildModus) { const k = ildModus; ildModus = null; ild(k, X, Y); visKjoretoy(k); return true; }
     if (droneModus) { const b = droneModus; droneModus = null; sendDrone(b, X, Y); if (window.visBase) visBase(b); return true; }
