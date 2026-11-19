@@ -453,5 +453,20 @@ rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(
 - `spill/strategi-visning.js` (eies av kart): små endringer – `bilde()` sender tida til `Strategi.utfall` (ikke i testene), målteksten (entall og
   «avgjøres tidligst dag 4»), raden i «Neste trekk» (kravteksten, knappen «For få»/«Send N lag»), `send()` (flere lag og melding når ett lag er for
   lite), og tipset nederst («… i et lite tettsted …»). Ingen endring i tegningen.
-- `pipeline/fliser/vakter/krig.js` (min): bølgeprøven setter `nærVært`.
-- `site/dovre-fliser/index.html`: bare versjonsmerkene (versjon.py).
+- `pipeline/fliser/vakter/krig.js` (min): bølgeprøven setter `nærVært`; runde 5-delen venter på at 3D er bygget igjen.
+- `site/dovre-fliser/index.html`: bare versjonsmerkene (versjon.py). `origin/claude/nattfiks` (959df79) er flettet inn i grenen; eneste konflikt var
+  versjonsmerkene i index.html (tok deres og kjørte versjon.py).
+
+### Kontroll
+- Regeltestene: test_garnison, test_fraksjoner, test_strategi, test_spillet, test_trussel_lagring, test_forsvar, test_tropper, test_strid – ok.
+- Vaktene krig og balanse i nettleseren (PC 2D, mobil 2D, mobil med 3D) – ok, også etter flettingen.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil`) før flettingen: 116 ok, 0 FEIL (den første kjøringen krasjet i «bygg i skråning» fordi vakta lot 3D være av – rettet).
+
+### IKKE gjort / svakheter (runde 6)
+- Med `lagMaks = 6` og en garnison per tettsted får ingen motstander 35 frie mann – de tar aldri Stavanger/Sandnes av seg selv (gjennomspillingen:
+  9,5 % og 6 % på dag 9). Spilleren kan vinne, men motstanderne blir ikke farligere etter ca. dag 6. Forslag: la `lagMaks` vokse etter en uke, eller la
+  garnisonene være mindre enn et helt lag.
+- Varselbrikka øverst til venstre (narhud.js, ikke min) viser den ekte avstanden («2,8 km fra leiren») også når banneret sier «ikke sett ennå».
+- Bannerets anslag bruker tida ruta deres tar (spillet vet den); det er et anslag, men det er ikke «usikkert» – kan gjøres grovere (±) hvis det føles som juks.
+- Fiendens lag går nå mot en fiende de vet står i tettstedet; spillerens garnison i et tettsted blir dermed angrepet oftere enn før.
+- Kortet «… har overtaket» sier ikke at spillet står på pause (strategi-visning.js, ikke rettet).
