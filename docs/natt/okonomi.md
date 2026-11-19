@@ -134,6 +134,12 @@ Punktene fra `docs/anmeldelse-2026-11-19.md` som er mine. Alle nye tall er **Cla
      kassa er under 6 mill. / en firedel av startkassa (+ én loggmelding). Ikke i testene (PengerSpill.test).
    - **Første oppdrag er alltid «Hent forsyninger»** i den nære halvdelen (700–1 650 m, gir 0,6–0,9 mill. kr) – en trygg inntekt de første
      døgnene (`Oppdrag.lag`, nr ≤ 1).
+   - **Oppdragene kommer i takt** (`Oppdrag.TAKT` i spillet.js): to ved start, høyst tre, og et nytt først 6–10 spilltimer (eller 8–14
+     minutter spilling) etter forrige nye – og høyst én ledig røverpost om gangen. Første gjennomspilling viste hvorfor: et nytt oppdrag kom
+     straks et var gjort, og én tropp på tre gjorde åtte oppdrag og tjente ca. 5 mill. kr første døgn (17,5 → 22,4 mill.). Etterpå sperret
+     tre røverposter for trygge oppdrag i tre døgn.
+   - **Markedets kjøpere** (`Marked.KJØPER`): markedet kjøper høyst 25 m³ tre, 15 m³ betong og 6 t stål per døgn. Uten tak ga én på hogst
+     og salg av alt treet 0,8–0,9 mill. kr per døgn (2,65 mill. på tre døgn). «Penger inn» og feilmeldingen sier taket.
    - Gjennomspilling på /rogaland: se under («Gjennomspillingen»).
 2. **Hogst gir ingenting – rettet.** Årsaken: en person på «Hogst» gjorde ingenting før noen hadde valgt et hogstfelt i kartet
    (Leir → Lager → «Hogst …»), og det sto ingen steder. Nå finner hogstlaget selv nærmeste skog innen 1,5 km (ringer fra 70 m, 12 punkter
