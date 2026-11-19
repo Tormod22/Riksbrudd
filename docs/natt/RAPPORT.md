@@ -141,7 +141,7 @@ startet på nytt kl. 00:15; hjelperne fortsatte fra det de hadde committet.
 | Krig | Stridsvogna skyter bare på det den selv (eller et lag rett ved) ser. Fienden kjører også på telefon. Krigskartet kan skjules og passer liggende telefon. Fiendens lastebiler og «sist sett» huskes. |
 | Natur | Myke strandkanter med stein- og grussone. Lyng i stedet for stein på heia. Ingen planter inne i hus eller leirbygg. Låvene har høy, redskap og traktor. Lavere tregrense mot vestkysten. |
 | Rogaland og hakk | Alt utenfor fylket er mørklagt også i 3D, med stiplet grense. Lengste pause når du går: 0,61 → 0,37 s. Mer forberedes før et nytt område settes inn. |
-| Kontrollen | Se under (test2). |
+| Kontrollen | Hele kontrollen tar nå ca. 7 min på mobil og 14 min på PC (før ca. 25 og 60–70 min): 3D bygges uten å tegne hvert bilde underveis, ventetider venter på betingelser, kartfiler leses én gang, tidtaking per linje. `SJEKK_DEL=rask` kjører bare 2D og vaktene (ca. 1 min). Som ny spiller: varsel og stoppkort over alarmen, lagpanelet mens du går, værbrikken og «Velg lag» er rettet. |
 
 ## Står igjen
 - Ting inne i kjøleskap og reoler synes ikke i 3D. Lykta lyser bare bakken, ikke vegger.
@@ -149,3 +149,16 @@ startet på nytt kl. 00:15; hjelperne fortsatte fra det de hadde committet.
 - Fiendens lag går inn i hus via LutSpill.tøm bare i 3D-utsnittet; 2D viser ikke ransakede hus.
 - Største hakk igjen: når innsiden av et hus bygges (160–330 ms per bygg).
 - Balansen etter fredstiden (motstanderne mot leiren) er ikke prøvd: de kom ikke på dag 8–10.
+
+## Etter flettingen (kl. 01:05–02:40)
+- Rettet etter gjennomspillingen som ny spiller: spolingen stopper ikke for hvert lag som er framme eller i ildkamp midt i et angrep
+  (bare alarm, tap og ødelagte bygg), «kr» står ikke alene på ny linje, opplæringen sier «se at minst to står på Bygg», lutpanelet er tett.
+- Fire feil i selve kontrollene: krig-vakta lot 3D være av etter krigskartet (vaktene etter kjørte uten 3D, og angrepsvakta krasjet),
+  møbelvakta brukte PC-avstanden på telefon og sto for langt unna kjøleskapet, lys-vakta ventet ikke på en ombygging, sjøvakta
+  kunne treffe en annen båt.
+
+## Kontroll (kl. 02:40)
+- **Hele `sjekk.js` på den endelige versjonen: PC 116 av 116 (836 s) og mobil 116 av 116 (414 s), «Alt i orden».**
+- Regeltestene: alle grønne etter hver fletting.
+- Ikke rettet fra gjennomspillingen (står i docs/natt/test2.md): første røverangrep allerede første natt, navnene ved leiren ligger
+  oppå hverandre, startskjermens feilmelding står utenfor synet, loggen over «Flaske» når du går på telefon.
