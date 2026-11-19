@@ -48,7 +48,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       SpillHud.oppdater(); const linje = document.querySelector('#kommando.på, #mkom.på'); ut.bakMer = SpillHud.bakMer();
       if (linje) { const r = linje.getBoundingClientRect(), merKn = linje.querySelector('[data-k=mer]'); krev(r.left >= 0 && r.right <= innerWidth + 1, 'kommandolinja går ut av skjermen'); krev(linje.querySelectorAll('button:not([hidden])').length <= 7, 'for mange knapper i kommandolinja');
         if (ut.bakMer.length) { krev(merKn && !merKn.hidden, '«Mer» mangler'); SpillHud.åpneKomMer(true); await vent(40); const rad = document.querySelector('#kommer.på, #mkommer.på'); krev(!!rad && rad.querySelectorAll('button:not([hidden])').length === ut.bakMer.length, '«Mer» viser ikke tilleggene'); SpillHud.åpneKomMer(false); } }
-      krev(Paneler.viker('region', ['leirmeny', 'karakterark', 'region'], false).join() === 'leirmeny' && Paneler.viker('sjopanel', ['leirmeny', 'sjopanel'], true).join() === 'leirmeny', 'reglene for panelplassene stemmer ikke');
+      krev(Paneler.viker('region', ['leirmeny', 'stridpanel', 'region'], false).join() === 'leirmeny' && Paneler.viker('sjopanel', ['leirmeny', 'sjopanel'], true).join() === 'leirmeny', 'reglene for panelplassene stemmer ikke');
       if (!går && window.VerdenSpill && window.SjoSpill && VerdenSpill.vis && SjoSpill.vis && !Paneler.åpne().length) { const t0 = Paneler.test; Paneler.test = true; Paneler.sjekk(); VerdenSpill.vis(true); await vent(200); SjoSpill.vis(true); await vent(320); ut.plass = Paneler.åpne().join();
         krev(ut.plass === 'sjopanel', 'to paneler på samme plass står åpne samtidig: ' + ut.plass); for (const id of Paneler.åpne()) Paneler.lukk(id); if (SjoSpill.erÅpen && SjoSpill.erÅpen()) SjoSpill.vis(false); if (VerdenSpill.erÅpen && VerdenSpill.erÅpen()) VerdenSpill.vis(false); await vent(150); Paneler.test = t0; krev(Paneler.åpne().length === 0, 'panelene ble stående åpne etter prøven'); }
       const m = $('leirmeny'), lk = $('leirknapp'); if (!går && m && lk && !lk.hidden && window.LeirSpill && LeirSpill.tilstand()) { const var0 = m.classList.contains('på'), valg0 = localStorage.getItem('riksbrudd-leirdeler'); if (!var0) lk.click(); await vent(250);
@@ -111,6 +111,46 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       if (i3 && typeof R3 !== 'undefined' && R3 && R3.ut && !R3.fot && window.FlytSpill && FlytSpill.iRamme3d) { const på = FlytSpill.iRamme3d(0, 0, innerWidth, innerHeight), synlige = egneL.filter(s => FlytSpill.skjerm3d(s.x, s.y));
         r4.ramme3d = på.length; krev(på.length === synlige.filter(s => { const q = FlytSpill.skjerm3d(s.x, s.y); return q[0] >= 0 && q[1] >= 0 && q[0] <= innerWidth && q[1] <= innerHeight; }).length, 'rammen i 3D velger ikke lagene på skjermen'); }
       r4.ms = Math.round(performance.now() - t4); }
+    // RUNDE 6 (19. nov, kritikerne): ord/enhet på flisene og telefonraden uten kutt, rekkefølgen på vinduene, kort som setter spillet på pause,
+    // bunnmenyen på telefon står alltid, opplæringen (✓, sammenleggbar), Leir-menyen starter øverst, panelplassene og hjelpen i grupper
+    { const r6 = ut.runde6 = {}, t6 = performance.now(), går6 = document.body.classList.contains('gaar'), i36 = typeof på3d !== 'undefined' && på3d;
+      krev(!!window.Skjermlag, 'mangler Skjermlag');
+      // (1) toppstripa: hver flis har et ord foran eller en enhet bak (klokka, kassa og været forklarer seg selv); telefonraden er ikke kuttet
+      SpillHud.passInn(); await vent(30);
+      const fl6 = [...document.querySelectorAll('.stats > div')].filter(q => q.getClientRects().length && q.id !== 'flismer' && !q.dataset.teknisk);
+      const utenOrd = fl6.filter(q => !['sPenger', 'sVaer', 'sDag', 'sAar'].includes(q.dataset.s) && !q.dataset.ord && !(q.querySelector('b[data-enhet]'))).map(q => q.dataset.s);
+      krev(utenOrd.length === 0, 'fliser uten ord eller enhet: ' + utenOrd.join());
+      if (!spill) { const S = document.querySelector('.stats'); r6.rad = [S.scrollWidth, S.clientWidth]; krev(S.scrollWidth <= S.clientWidth + 2, 'telefonraden øverst er kuttet (' + S.scrollWidth + ' > ' + S.clientWidth + ')'); }
+      if (window.Skjermlag) { const st0 = Skjermlag.test, tempo0 = typeof tempo !== 'undefined' ? tempo : 1, fart0 = [...document.querySelectorAll('[id^=sp].på')].map(b => b.id)[0];
+        Skjermlag.test = true; SpillHud.oppdater(); await vent(200);
+        // (2) rekkefølgen: det som åpnes sist, ligger øverst (Deg, så hjelpen)
+        if (!går6 && window.KarakterSpill && KarakterSpill.åpne && KarakterSpill.klar() && window.Hjelp && !$('karakterark').classList.contains('på') && !$('hjelp').classList.contains('på')) {
+          KarakterSpill.åpne(); await vent(250); Hjelp.vis(true); await vent(250); const zk = +getComputedStyle($('karakterark')).zIndex, zh = +getComputedStyle($('hjelp')).zIndex; r6.z = [zk, zh];
+          krev(zh > zk, `hjelpen åpnes under Deg-panelet (z ${zh} mot ${zk})`); Hjelp.vis(false); KarakterSpill.lukk(); await vent(200); }
+        // (3) et kort som venter på svar, setter spillet på pause og sier det – og spillet går videre når kortet er borte
+        const hk = $('hendelse'); if (hk && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && $('sp1')) { $('sp1').click(); await vent(60); const inn0 = hk.innerHTML;
+          if (!hk.textContent.trim()) hk.innerHTML = '<h3>Prøvekort</h3><button>Svar</button>'; hk.classList.add('på'); await vent(450);
+          r6.pause = { tempo, merke: Skjermlag.merke(), z: [+getComputedStyle(hk).zIndex] };
+          krev(tempo === 0 && Skjermlag.merke() && /pause til du svarer/.test($('kortpause').textContent), 'kortet setter ikke spillet på pause med lapp');
+          const al = $('alarm'); if (al) r6.pause.z.push(+getComputedStyle(al).zIndex || 0);
+          hk.classList.remove('på'); hk.innerHTML = inn0; await vent(450); r6.pause.etter = tempo; krev(tempo === 1 && !Skjermlag.merke(), 'spillet går ikke videre når kortet er besvart'); }
+        // (4) telefon: bunnmenyen står med et panel åpent, og panelet slutter over den
+        if (!spill && !går6 && !i36 && window.FolkSpill && SpillHud.telefon && !Paneler.åpne().length) { FolkSpill.åpne(true); await vent(500); SpillHud.oppdater(); await vent(400);
+          const mk = $('mkom'), fm = $('folkmeny'), mr = mk.getBoundingClientRect(), fr = fm.getBoundingClientRect(); r6.bunn = { mkom: mk.classList.contains('på') && getComputedStyle(mk).display !== 'none', folkBunn: Math.round(fr.bottom), mkomTopp: Math.round(mr.top) };
+          krev(r6.bunn.mkom, 'bunnmenyen forsvinner når Folk er åpent'); if (r6.bunn.mkom) krev(fr.bottom <= mr.top + 1, 'Folk-panelet ligger oppå bunnmenyen'); FolkSpill.åpne(false); await vent(300); }
+        Skjermlag.test = st0; Skjermlag.lag(); Skjermlag.løft(); if (fart0 && $(fart0) && !$(fart0).classList.contains('på')) $(fart0).click(); else if (typeof tempo !== 'undefined' && tempo !== tempo0 && tempo0 === 0) $('sp0').click(); SpillHud.oppdater(); }
+      // (5) opplæringen: ✓ gjort står en stund, og ruta kan legges sammen
+      krev(typeof OpplaeringSpill.gjort === 'function' && OpplaeringSpill.VIS_GJORT >= 2000, 'opplæringen viser ikke «✓ Gjort» før neste steg');
+      // (6) Leir-menyen starter øverst, og fanene står fast når du ruller
+      { const m = $('leirmeny'), lk = $('leirknapp'); if (!går6 && m && lk && !lk.hidden && window.LeirSpill && LeirSpill.tilstand() && !m.classList.contains('på')) { lk.click(); await vent(300); m.scrollTop = 800; await vent(200);
+          const fa = m.querySelector('.faner'), synlig = fa && fa.getBoundingClientRect().top >= m.getBoundingClientRect().top - 2; lk.click(); await vent(200); lk.click(); await vent(350); r6.leir = { rull: m.scrollTop, faner: synlig };
+          krev(m.scrollTop === 0, 'Leir-menyen husker hvor langt du rullet (' + m.scrollTop + ')'); krev(synlig, 'fanene i Leir-menyen rulles ut av syne'); lk.click(); await vent(150); } }
+      // (7) panelplassene: alt fra bunnmenyen til venstre, tilleggene til høyre
+      krev(['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark'].every(id => Paneler.plass(id) === 'venstre') && ['stridpanel', 'sekk'].every(id => Paneler.plass(id) === 'høyre'), 'panelene fra bunnmenyen åpnes ikke på samme side');
+      // (9) hjelpen: grupper som foldes ut, og søket finner noe
+      { const gr = document.querySelectorAll('#hjelp details.gruppe'), åpne = [...gr].filter(g => g.open).length; r6.hjelp = { grupper: gr.length, åpne }; krev(gr.length >= 8 && åpne <= 1, 'hjelpen er ikke delt i grupper som foldes ut');
+        const sk = document.querySelector('#hjelp .sok'); if (sk) { sk.value = 'ferje'; sk.dispatchEvent(new Event('input')); const n = [...document.querySelectorAll('#hjelp details:not(.gruppe):not([hidden])')].length; sk.value = ''; sk.dispatchEvent(new Event('input')); r6.hjelp.søk = n; krev(n >= 1 && n < 40, 'søket i hjelpen virker ikke'); } }
+      r6.ms = Math.round(performance.now() - t6); }
     ut.var3d = var3d; return ut; });
   const ok = d.feil.length === 0;
   return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') : d.feil.join('; '), data: d };

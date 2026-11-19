@@ -148,7 +148,7 @@ body.kort #opplaering .prikker{ display:none; } body.kort #opplaering{ padding-b
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
     const ferdig = Opplaering.ferdig(T), tekst = av ? 'Opplæringen er slått av.' : ferdig ? 'Opplæringen er ferdig.' : `Steg ${Opplaering.nr(T)} av ${STEG.length}: ${Opplaering.neste(T).tittel}.`;
     hode.appendChild(el('div', { klasse: 'rad' }, el('span', {}, tekst), knapp(av ? 'Slå på' : ferdig ? 'Ta den en gang til' : 'Slå av', () => { if (av) slå(true); else if (ferdig) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); sistSteg = null; kjør(); } else slå(false); }))); });
-  const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
+  const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
     nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; kjør(); } };
   rot.OpplaeringSpill = API;
   // (balansen 18. nov) steget «Gå i 3D»: Gå setter deg ved karakteren din i leiren (Gange starter ved det valgte laget). Før startet du
