@@ -25,7 +25,9 @@
   // ---------- beredskapen ----------
   function beredskap() { const L = leir(); if (!L) return null; const f = fsv(), t = T(), hjemme = egne().filter(s => Math.hypot(s.x - L.x, s.y - L.y) <= R.nær), ammo = hjemme.length && window.Forsyning ? hjemme.reduce((a, s) => a + Forsyning.ammo(s), 0) / hjemme.length : 1;
     const kam = window.KameraSpill ? KameraSpill.kameraer().reduce((m, c) => Math.max(m, c.r + Math.hypot(c.x - L.x, c.y - L.y)), 0) : 0;
-    return FO.beredskap({ lag: hjemme.length, tårn: f.tårn.length, sekker: f.sekker.length, varsling: Math.max(f.varsling || 0, kam), vakter: f.vakter || 0, ammo, bølge: t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + (t.aktiv ? 0 : 1)) : 1 }); }
+    // (19. nov) et bemannet vakttårn ser røverne på 1,5 km (Spillet.Trussel.VARSEL.tårn)
+    const tårnSer = f.tårn && f.tårn.length && window.Spillet && Spillet.Trussel.VARSEL ? Spillet.Trussel.VARSEL.tårn : 0;
+    return FO.beredskap({ lag: hjemme.length, tårn: f.tårn.length, sekker: f.sekker.length, varsling: Math.max(f.varsling || 0, kam, tårnSer), vakter: f.vakter || 0, ammo, bølge: t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + (t.aktiv ? 0 : 1)) : 1 }); }
 
   // ---------- sett forsvaret ----------
   // (19. nov) retningen fra dem du kjenner til; ellers fra startstedet i varselet (så banneret og varselet sier det samme, og ikke røper hvor de er)
