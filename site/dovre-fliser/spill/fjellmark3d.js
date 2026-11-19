@@ -6,7 +6,7 @@
  * (da ligger snøen overalt). Aldri i vann, bekk, veg, spor, hus eller leirens bygg.
  * Fire instansnett med hjørnefarger (ingen teksturer, ingen nye lys): stein (20 trekanter), lav/mose (åttekantet pute, 32), lyngtue
  * (samme pute, mørk og ujevn) og snøflekk (flat, ujevn skive, 7). Ca. 50 000 trekanter på PC når alt er fullt (bare rundt deg). Mengden følger
- * grafikknivået (KVAL.p.gress; Lav = av). Reglene øverst er uten DOM (Node: require('./fjellmark3d'), test_fjellmark3d.js).
+ * grafikknivået (KVAL.p.gress, men minst 40 % – også på Lav, der gresset er borte). Reglene øverst er uten DOM (Node: require('./fjellmark3d'), test_fjellmark3d.js).
  */
 (function (rot) {
   'use strict';
@@ -22,6 +22,8 @@
     underTregrensen: 60, snøUnder: 420,
     // andelen forsøk som blir snøflekk der det er høyt nok (de ligger i søkk og på le-sider – her bare spredt)
     snøAndel: .035,
+    // andelen på grafikknivå Lav (der gresset er av)
+    lavAndel: .4,
   };
   // Er dette fjellmark? moh = høyden, tg = tregrensen (moh), rgb = kartfargen (0–255). Gir 0–1 (hvor tett).
   function fjell(moh, tg, rgb) {
@@ -78,7 +80,8 @@
   function fordel(R) {
     const u = R.ut, c = R.cam.position, B = u.bunn, W = B.W, tg = window.Vegetasjon && Vegetasjon.tregrense ? Vegetasjon.tregrense(u.cy, u.cx) : 1100;
     const V = window.VAER, vinter = V && V.årstid === 'vinter', snøgr = V && V.snøgrense != null ? V.snøgrense : 1900;
-    const andel = window.KVAL ? KVAL.p.gress : 1, n = { stein: 0, lav: 0, lyng: 0, snø: 0 }, d = new THREE.Object3D(), col = new THREE.Color();
+    // (også på Lav – der er gresset borte, og uten fjellmarka var bakken helt tom: telefonen med programvare-grafikk starter på Lav)
+    const andel = window.KVAL ? Math.max(REGLER.lavAndel, KVAL.p.gress) : 1, n = { stein: 0, lav: 0, lyng: 0, snø: 0 }, d = new THREE.Object3D(), col = new THREE.Color();
     const maks = {}; for (const s of Object.keys(M)) maks[s] = Math.round(M[s].instanceMatrix.count * andel);
     let f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663 ^ 0x5bd1e995) >>> 0; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
     const tot = maks.stein + maks.lav + maks.lyng;
@@ -111,7 +114,7 @@
   }
   KROKER.ramme3d.push(R => {
     const u = R.ut; if (!u || !u.bunn) return;
-    const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0);
+    const nær = R.fot || R.bane.avst < 110;
     if (!nær) { if (M) for (const m of Object.values(M)) m.visible = false; return; }
     if (!M) lag(R); for (const m of Object.values(M)) { m.visible = true; if (m.parent !== R.scene) R.scene.add(m); }
     const c = R.cam.position, V = window.VAER, nk = (V ? V.årstid + '|' + Math.round((V.snøgrense || 0) / 50) : '') + '|' + (window.KVAL ? KVAL.v : 0);
