@@ -60,17 +60,20 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
 
   // ---------- 2: kort som venter på svar setter spillet på pause ----------
   const merke = document.createElement('div'); merke.id = 'kortpause'; merke.setAttribute('role', 'status'); merke.textContent = 'Spillet står på pause til du svarer'; document.body.appendChild(merke);
-  let pauset = false, sistTempo = typeof tempo !== 'undefined' ? tempo : 1;
+  let pauset = false, sistTempo = typeof tempo !== 'undefined' ? tempo : 1, tempoFør = 0;
   const fart = () => (typeof tempo !== 'undefined' ? tempo : 1);
   function kortOppe() { for (const id of KORT) { const e = $(id); if (e && e.classList.contains('på') && vises(e)) return e; } return null; }
   function pause() { const t = fart(), k = aktiv() ? kortOppe() : null, p = $('sp0');
-    if (k) { if (!pauset) { if (t > 0 && p) { p.click(); pauset = true; } else if (sistTempo > 0) pauset = true; }
+    if (k) { if (!pauset) { if (t > 0 && p) { tempoFør = t; p.click(); pauset = true; } else if (sistTempo > 0) { tempoFør = sistTempo; pauset = true; } }
       // lappen under kortet (over når det ikke er plass under); for krigskortet (hele skjermen) under ruta i midten
       const r = ((k.id === 'krigkort' || k.id === 'formkort') && k.firstElementChild ? k.firstElementChild : k).getBoundingClientRect(), H = window.innerHeight;
       if (fart() === 0 && r.width > 40) { merke.classList.add('på'); const h = merke.offsetHeight || 26, w = Math.min(Math.max(r.width, 250), window.innerWidth - 12);
         merke.style.width = w + 'px'; merke.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + (r.width - w) / 2)) + 'px';
         merke.style.top = (r.bottom + h + 6 < H - 70 ? r.bottom + 4 : Math.max(4, r.top - h - 4)) + 'px'; } else merke.classList.remove('på'); }
-    else { if (pauset && fart() === 0 && p) p.click(); pauset = false; merke.classList.remove('på'); }
+    else { if (pauset && fart() === 0 && p) { p.click();
+        // samme fart som før kortet (▶ gir farten på knappen; en fart satt på annen måte, f.eks. av spolingen, settes tilbake her)
+        if (typeof tempo !== 'undefined' && tempoFør > 0 && tempo !== tempoFør) tempo = tempoFør; }
+      pauset = false; merke.classList.remove('på'); }
     sistTempo = fart(); }
 
   // ---------- 3: bunnmenyen på telefon står alltid; panelene slutter over den ----------

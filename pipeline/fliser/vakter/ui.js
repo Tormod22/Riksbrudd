@@ -128,7 +128,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
           KarakterSpill.åpne(); await vent(250); Hjelp.vis(true); await vent(250); const zk = +getComputedStyle($('karakterark')).zIndex, zh = +getComputedStyle($('hjelp')).zIndex; r6.z = [zk, zh];
           krev(zh > zk, `hjelpen åpnes under Deg-panelet (z ${zh} mot ${zk})`); Hjelp.vis(false); KarakterSpill.lukk(); await vent(200); }
         // (3) et kort som venter på svar, setter spillet på pause og sier det – og spillet går videre når kortet er borte
-        const hk = $('hendelse'); if (hk && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && $('sp0')) { if (tempo === 0) $('sp0').click(); await vent(60); const førKort = tempo, inn0 = hk.innerHTML;
+        const hk = $('hendelse'); if (hk && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && $('sp0')) { if (tempo === 0) $('sp0').click(); if ($('sp2') && !$('sp2').classList.contains('på')) $('sp2').click(); await vent(60); const førKort = tempo, inn0 = hk.innerHTML;
           if (!hk.textContent.trim()) hk.innerHTML = '<h3>Prøvekort</h3><button>Svar</button>'; hk.classList.add('på'); await vent(450);
           r6.pause = { tempo, merke: Skjermlag.merke(), z: [+getComputedStyle(hk).zIndex] };
           krev(tempo === 0 && Skjermlag.merke() && /pause til du svarer/.test($('kortpause').textContent), 'kortet setter ikke spillet på pause med lapp');
@@ -138,7 +138,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
         if (!spill && !går6 && !i36 && window.FolkSpill && SpillHud.telefon && !Paneler.åpne().length) { FolkSpill.åpne(true); await vent(500); SpillHud.oppdater(); await vent(400);
           const mk = $('mkom'), fm = $('folkmeny'), mr = mk.getBoundingClientRect(), fr = fm.getBoundingClientRect(); r6.bunn = { mkom: mk.classList.contains('på') && getComputedStyle(mk).display !== 'none', folkBunn: Math.round(fr.bottom), mkomTopp: Math.round(mr.top) };
           krev(r6.bunn.mkom, 'bunnmenyen forsvinner når Folk er åpent'); if (r6.bunn.mkom) krev(fr.bottom <= mr.top + 1, 'Folk-panelet ligger oppå bunnmenyen'); FolkSpill.åpne(false); await vent(300); }
-        Skjermlag.test = st0; Skjermlag.lag(); Skjermlag.løft(); if (fart0 && $(fart0) && !$(fart0).classList.contains('på')) $(fart0).click(); else if (typeof tempo !== 'undefined' && tempo !== tempo0 && tempo0 === 0) $('sp0').click(); SpillHud.oppdater(); }
+        Skjermlag.test = st0; Skjermlag.lag(); Skjermlag.løft(); if (fart0 && $(fart0) && !$(fart0).classList.contains('på')) $(fart0).click(); else if (typeof tempo !== 'undefined' && tempo !== tempo0 && tempo0 === 0) $('sp0').click(); if (typeof tempo !== 'undefined' && tempo !== tempo0) tempo = tempo0; SpillHud.oppdater(); }
       // (5) opplæringen: ✓ gjort står en stund, og ruta kan legges sammen
       krev(typeof OpplaeringSpill.gjort === 'function' && OpplaeringSpill.VIS_GJORT >= 2000, 'opplæringen viser ikke «✓ Gjort» før neste steg');
       // (6) Leir-menyen starter øverst, og fanene står fast når du ruller

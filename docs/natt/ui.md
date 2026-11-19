@@ -255,6 +255,7 @@ panelplassene og banneret, hjelp.js, ga.js = gåmodus i 3D med måling av alle r
 4. **Pause ved kort** (`skjermlag.js`): står `#hendelse`, `#samfunnkort`, `#formkort` eller `#krigkort` oppe, trykkes ❚❚ og lappen
    `#kortpause` «❚❚ Spillet står på pause til du svarer» står under kortet. Når kortet er borte, trykkes ▶ (farten du hadde). Hadde du selv satt
    på pause, blir det stående; krigskortet som pauset selv, gjenkjennes (farten var > 0 i forrige runde) og får lappen og ▶ etterpå.
+   Farten etterpå er nøyaktig den før kortet (også når den var satt utenom knappene, f.eks. av spolingen – fant mobilkontrollen: ▶ ga 10× i stedet).
 5. **Opplæringen** (`opplaering.js`): et steg som blir gjort, står «✓ Gjort» i `VIS_GJORT` = 3,5 s («Neste ›» går videre straks) – også steg som
    alt var gjort når de kom for tur. «Hopp over» på steg 6 gikk «rett til 8» fordi steg 7 (mat til tre døgn) var oppfylt fra start og ble merket
    gjort i samme runde uten å vises; nå står det med ✓. Telefon: 124 px høy (før ca. 200) – tre linjer tekst, små knapper på én rad («Slå av»,
