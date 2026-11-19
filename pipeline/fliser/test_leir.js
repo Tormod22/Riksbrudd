@@ -111,7 +111,7 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   L0.kjøpDrivstoff(T, 8000, betal); const r1 = L0.riv(T, t1.id);
   ok(T.drivstoff === 5000 && r1.drivstoff === 3000 && r1.drivstoffPenger === 3000 * L0.DRIVSTOFF.prisPerLiter && r1.penger === r1.bygg + r1.drivstoffPenger && r1.bygg === Math.round(3e6 * L0.REGLER.rivFerdig),
     'riv en av to tanker: 5000 l blir i den andre, 3000 l selges tilbake til innkjøpspris');
-  const r2 = L0.riv(T, t2.id); L0.steg(T, 1); ok(T.drivstoff === 0 && r2.drivstoff === 5000 && r2.drivstoffPenger === 40e6, 'riv den siste tanken: alt drivstoffet selges tilbake (ikke borte uten varsel)');
+  const r2 = L0.riv(T, t2.id); L0.steg(T, 1); ok(T.drivstoff === 0 && r2.drivstoff === 5000 && r2.drivstoffPenger === 5000 * L0.DRIVSTOFF.prisPerLiter, 'riv den siste tanken: alt drivstoffet selges tilbake (ikke borte uten varsel)');
   full(); const br2 = L0.bygg(G, { type: 'container', x: 100, y: 100 }, betal, {}, land).bygg; br2.igjen = 0; const r3 = L0.riv(G, br2.id); ok(r3.drivstoff === 0 && r3.penger === r3.bygg, 'riv et annet bygg: ingen drivstoffpenger'); }
 // BRUKERENS VALG 12. nov (etter feiljakten): utposter med reisetid, byggeplasser kan skades, radiomastens nivåer, diesel
 { const full = U => { for (const k of ['tre', 'betong', 'stål']) U.lager[k] = 60; }, nær = (a, b) => Math.abs(a - b) < 1e-9;
@@ -216,4 +216,11 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   ok(L0.bryter(L, 4) === true && L0.bryter(L, 1) === null, 'bryter: bare bygg som bruker strøm kan slås av'); L.batteri = 1; s = L0.steg(L, 60, 0);
   ok(s.mangler.has(4) && s.avslått === 1 && s.behov === -L0.BYGG.kontrollrom.kw, 'et avslått bygg bruker ikke strøm og virker ikke'); ok(L0.bryter(L, 4) === false && !('av' in L.bygg[3]), 'på igjen');
   L.batteri = 999; L0.steg(L, 1, 0); ok(L.batteri <= 40, 'batteriet holder aldri mer enn det rommer'); L.drivstoff = 60; ok(L0.dieselTimer(L, 10) === 60 / (10 * L0.DRIVSTOFF.literPerKWt) && L0.dieselTimer(L, 0) === Infinity, 'dieselen rekker så og så lenge'); }
+// runde 6: én dieselprognose – snittet av de siste 24 spilltimene, før tre hele timer forbruket nå
+{ const L = L0.ny(); L.drivstoff = 480;
+  ok(L0.dieselRekker(L, 4).timer === 120 && !L0.dieselRekker(L, 4).målt, 'dieselprognosen uten målinger: forbruket nå (480 l / 4 l i timen = 120 t)');
+  for (let m = 0; m < 6 * 60; m++) L0.dieselMål(L, m < 180 ? 1 / 60 : 3 / 60, m); L0.dieselMål(L, 0, 6 * 60);
+  const P = L0.dieselRekker(L, 99); ok(P.målt && Math.abs(P.perDøgn - 48) < 1e-6 && Math.abs(P.timer - 240) < 1e-6, 'dieselprognosen: snittet av hele timer (1 l/t i tre timer, 3 l/t i tre = 2 l/t, 48 l i døgnet) – ikke forbruket nå');
+  L0.dieselMål(L, 0, 2 * 60); ok(L.dieselLogg.n === 0, 'dieselloggen begynner på nytt når tiden går bakover (eldre lagret spill)');
+  ok(L0.DRIVSTOFF.prisPerLiter === 3000, 'dieselen koster 3 000 kr literen (runde 6)'); }
 process.exit(feil ? 1 : 0);
