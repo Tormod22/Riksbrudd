@@ -6,7 +6,7 @@
  * Inni: lag (kryss), kjøretøy (oval med hjul), bygg (hus), kai (anker), tettsted (ring med prikk), ukjent (spørsmålstegn).
  * Fargen kommer fra den som tegner (sidens farge), så rød og grønn motstander skilles på fargen – begge har fiendens form.
  * Merker.tegn(g, x, y, { forhold, slag, type, antall, farge, valgt, r, stiplet }) tegner ett merke og svarer radien; Merker.form(forhold) og
- * Merker.treff(forhold, dx, dy, r) er uten lerret (test_merker.js). Lagene i index.html (tegnLag) bruker settet; kjøretøy, kaier og
+ * Merker.treff(forhold, dx, dy, r) er uten lerret (test_merker.js). Runde 6: hvert merke meldes inn i Etikett.hinder (navnene går utenom). Lagene i index.html (tegnLag) bruker settet; kjøretøy, kaier og
  * tettsteder tegnes av andre filer og bruker det samme (runde 4: kjoretoy-visning.js symbol() med slag 'kjøretøy' + type + antall,
  * garnison-visning.js med slag 'tettsted' i eierens farge, nøytral form når ingen eier byen).
  */
@@ -22,6 +22,8 @@
     else if (f === 'nøytral') { const q = r * .22; g.moveTo(x - w + q, y - h); g.lineTo(x + w - q, y - h); g.quadraticCurveTo(x + w, y - h, x + w, y - h + q); g.lineTo(x + w, y + h - q); g.quadraticCurveTo(x + w, y + h, x + w - q, y + h); g.lineTo(x - w + q, y + h); g.quadraticCurveTo(x - w, y + h, x - w, y + h - q); g.lineTo(x - w, y - h + q); g.quadraticCurveTo(x - w, y - h, x - w + q, y - h); g.closePath(); }
     else g.rect(x - w, y - h, w * 2, h * 2); }
   function tegn(g, x, y, v = {}) { const f = v.forhold || 'eget', r = v.r || 11, [w, h] = mål(f, r), lys = v.strek || '#e7dcc3';
+    // RUNDE 6: merket meldes inn som hindring, så navnene i kartet går utenom det (spill/etikett.js – merkene ligger over navnene)
+    if (rot.Etikett && rot.Etikett.hinder) rot.Etikett.hinder(x - w - 1, y - h - 1, 2 * w + 2 + (v.antall > 1 ? 14 : 0), 2 * h + 2);
     g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
     if (v.stiplet) { g.setLineDash([3, 3]); g.strokeStyle = v.farge || 'rgba(220,120,90,.8)'; g.lineWidth = 1.3; omriss(g, f, x, y, r); g.stroke(); g.restore(); return r; }
     g.fillStyle = 'rgba(0,0,0,.4)'; omriss(g, f, x + 1.5, y + 2, r); g.fill();
