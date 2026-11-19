@@ -22,8 +22,26 @@
 #oppstart .rad{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 #oppstart .to{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
 #oppstart .to>div{ flex:1 1 300px; min-width:0; }
-#oppstart .bilde{ position:sticky; top:0; }
-@media (max-width:700px){ #oppstart .bilde{ order:-1; position:static; text-align:center; } #oppstart .bilde img{ width:140px; height:auto; } }
+#oppstart .to>.bilde{ flex:0 0 auto; position:sticky; top:0; align-self:flex-start; }
+#oppstart .bilde img{ display:block; height:auto; max-height:calc(92vh - 70px); width:auto; max-width:200px; }
+/* (runde 6, kritikken) telefon: portrettet står lite og fast øverst mens du blar ned til klær og bakgrunn */
+@media (max-width:700px){ #oppstart .to>.bilde{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:2; background:#16120c; padding:16px 0 6px;
+  border-bottom:1px solid var(--rule); display:flex; justify-content:center; } #oppstart .bilde img{ width:92px; max-height:none; } }
+/* liggende telefon (lav skjerm): hele portrettet synlig ved siden av valgene */
+@media (max-height:500px) and (min-width:701px){ #oppstart .bilde img{ height:calc(92vh - 110px); max-height:none; width:auto; } }
+#oppstart .faner{ display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--rule); margin:2px 0 4px; }
+#oppstart .faner button{ background:transparent; border:0; border-bottom:3px solid transparent; color:var(--ink-dim); min-height:40px; padding:4px 14px; cursor:pointer; font:inherit; font-size:16px; }
+#oppstart .faner button.på{ color:var(--hover); border-bottom-color:var(--hover); }
+#oppstart .lagret{ color:var(--ink-dim); font-size:14px; margin:-4px 0 8px; padding-left:8px; border-left:2px solid var(--hover); }
+#oppstart input[type=range]{ -webkit-appearance:none; appearance:none; accent-color:var(--hover); height:28px; background:transparent; cursor:pointer; }
+#oppstart input[type=range]::-webkit-slider-runnable-track{ height:6px; background:#3a3022; border:1px solid var(--rule); border-radius:3px; }
+#oppstart input[type=range]::-moz-range-track{ height:6px; background:#3a3022; border:1px solid var(--rule); border-radius:3px; }
+#oppstart input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; margin-top:-8px; border-radius:50%; background:var(--hover); border:2px solid #16120c; box-shadow:0 0 0 1px var(--hover); }
+#oppstart input[type=range]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:var(--hover); border:2px solid #16120c; }
+#oppstart input[type=range]:focus-visible{ outline:2px solid var(--hover); outline-offset:2px; }
+#leirvalg .adv{ color:#e8b06a; text-align:left; margin-top:4px; font-size:15px; }
+#leirvalg .fakta{ color:var(--ink-dim); font-size:14px; margin-top:4px; }
+#leirvalg .kai{ font-size:14px; margin-top:4px; }
 #oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:1; background:#16120c; text-align:center; padding:22px 0 6px; border-bottom:1px solid var(--rule); }
   #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
@@ -83,7 +101,53 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   let fane = 0;
   function flaggLerret(fl, w, h) { const c = el('canvas', { width: w, height: h }); O.tegnFlagg(c.getContext('2d'), fl, w, h); return c; }
 
+  // ---------- hvor spillet foregår (runde 6, kritikken: steg 3 sa «Hvor som helst i Norge» på /rogaland) ----------
+  // /rogaland: fylket (SPILLOMRÅDE, eller navnet fra adressen før grensa er hentet); /dovre-fliser: Dovre-kartet; /norge: hele landet
+  // (OMRÅDE kan byttes ut av manifestet også på Dovre-siden, så adressen avgjør: alt som ikke er /norge eller /rogaland, er Dovre-piloten)
+  const påDovre = () => typeof PÅ_NORGE !== 'undefined' && !PÅ_NORGE && typeof DOVRE !== 'undefined';
+  function sted() {
+    const fylke = (window.SPILLOMRÅDE && SPILLOMRÅDE.navn) || (typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE ? PÅ_OMRÅDE[0].toUpperCase() + PÅ_OMRÅDE.slice(1) : null);
+    if (fylke) return { navn: fylke, hvor: 'i ' + fylke, bb: window.SPILLOMRÅDE ? SPILLOMRÅDE.bb : null };
+    if (påDovre()) return { navn: 'Dovre', hvor: 'på Dovre-kartet', bb: DOVRE };
+    return { navn: 'Norge', hvor: 'i Norge', bb: null };
+  }
+  // Hver side har sitt eget lagrede spill (/rogaland får nøklene med «@rogaland»; /dovre-fliser og /norge deler). Startskjermen sier
+  // fra når det finnes et spill på en annen side (kritikken: «/rogaland startet et helt nytt spill uten å si fra»). Nøklene leses rått
+  // (localStorage.key / localStorage[nøkkel]) fordi getItem på /rogaland alltid legger til endingen.
+  function andreSpill() {
+    const her = typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE ? PÅ_OMRÅDE : null, ute = [];
+    try { for (let i = 0; i < localStorage.length; i++) { const n = localStorage.key(i), m = /^riksbrudd-k1(?:@(\w+))?$/.exec(n || ''); if (!m || (m[1] || null) === her) continue;
+      const T = O.fraJSON(localStorage[n]); if (!T || !T.ferdig) continue;
+      const dovre = T.leir && typeof DOVRE !== 'undefined' && T.leir.x >= DOVRE[0] && T.leir.x <= DOVRE[2] && T.leir.y >= DOVRE[1] && T.leir.y <= DOVRE[3];
+      const hvor = m[1] ? `i ${m[1][0].toUpperCase() + m[1].slice(1)} (/${m[1]})` : dovre ? 'på Dovre (/dovre-fliser)' : 'på Norgeskartet (/norge)';
+      ute.push(`«${T.fraksjon.navn}» ${hvor}`); } } catch (e) { return ''; }
+    const st = sted(), eget = `Dette er et eget spill ${st.hvor}. `;
+    if (!ute.length) return her ? eget + 'Det lagres i denne nettleseren, for seg.' : '';
+    return eget + `Spillet ditt ${ute.join(' og ')} er lagret for seg og blir ikke rørt.`;
+  }
+  // Utkastet lagres underveis (kritikken: «omlasting under oppstarten sletter alt og starter på steg 1»): steget og valgene,
+  // i en egen nøkkel som tas bort når leiren er lagt. Leses bare for vanlige spillere (ikke i testene, som starter skjermen selv).
+  const UTKAST = NØKKEL + '-utkast'; let steget = 1, sistUtkast = '';
+  function lagreUtkast(tving) { if (!utkast || (S && !tving)) return; const t = JSON.stringify({ steg: steget, utkast });
+    if (t === sistUtkast) return; sistUtkast = t; try { localStorage.setItem(UTKAST, t); } catch (e) { /* privat vindu: huskes ikke */ } }
+  function lesUtkast() { try { const d = JSON.parse(localStorage.getItem(UTKAST) || 'null'); if (!d || !d.utkast) return null;
+    const u = O.fraJSON(JSON.stringify(d.utkast)); if (!u) return null; u.ferdig = false; u.leir = null; u.karakter.valgt = d.utkast.karakter.valgt || {};
+    if (d.utkast.regler) u.regler = d.utkast.regler; return { steg: [1, 2, 3].includes(d.steg) ? d.steg : 1, utkast: u }; } catch (e) { return null; } }
+  const glemUtkast = () => { sistUtkast = ''; try { localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } };
+  setInterval(() => { if (bak.classList.contains('på') || velger) lagreUtkast(); }, 1000);
+  // Kameraet mens du velger (bare for vanlige spillere og når OppstartSpill.test er satt): spillområdet fyller skjermen.
+  // dekk = true: hele skjermen er området (bakgrunnen bak startskjermen – før så man Agder bak steg 3 på /rogaland);
+  // ellers hele området synlig, men på høy, smal skjerm (telefon) fyller det høyden – før var over halve skjermen tom og mørk.
+  const ekte = () => !navigator.webdriver || window.OppstartSpill.test === true;
+  function visOmrådet(dekk) {
+    const b = sted().bb; if (!b || !ekte() || S || (typeof på3d !== 'undefined' && på3d)) return;
+    const topp = (document.querySelector('.top') || { getBoundingClientRect: () => ({ bottom: 60 }) }).getBoundingClientRect().bottom, bunn = dekk || (VH <= VW && VH < 600) ? 0 : VH > VW ? 230 : 210;
+    const høy = Math.max(200, VH - topp - bunn), mx = (b[2] - b[0]) / VW, my = (b[3] - b[1]) / høy;
+    kam.x = (b[0] + b[2]) / 2; kam.m = dekk || VH > VW ? Math.min(mx, my) : Math.max(mx, my) * 1.04;
+    kam.y = (b[1] + b[3]) / 2 + (dekk ? 0 : (topp - bunn) / 2 * kam.m); skitten = true;
+  }
   function vis(steg) {
+    steget = steg; visOmrådet(true); lagreUtkast();
     ark.innerHTML = ''; ark.scrollTop = 0; bak.classList.add('på');
     const k = utkast.karakter, fr = utkast.fraksjon, fl = fr.flagg, melding = el('div', { klasse: 'feil', 'aria-live': 'polite' });
     if (steg === 1) {
@@ -92,22 +156,27 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
       const bilde = el('div'), oppd = () => { bilde.innerHTML = ''; bilde.appendChild(portrettBilde(k)); };
       navn.oninput = () => { k.navn = navn.value; };
       const valg = el('div');
+      // (runde 6) det spilleren trykker på selv, huskes med kjønnet hen hadde da (Oppstart.byttKjønn beholder det)
+      const velg = (felt, v) => { const p = k.portrett, vt = k.valgt || (k.valgt = {}); if (felt === 'gender') O.byttKjønn(p, v, vt); else { p[felt] = v; vt[felt] = p.gender; } };
       const lagValg = () => { valg.innerHTML = ''; const p = k.portrett;
-        valg.appendChild(el('div', { klasse: 'rad' }, ...FANER.map(([t], i) => knapp(t, fane === i, () => { fane = i; lagValg(); }))));
+        valg.appendChild(el('div', { klasse: 'faner', role: 'tablist', 'aria-label': 'Utseende' }, ...FANER.map(([t], i) => { const b = knapp(t, fane === i, () => { fane = i; lagValg(); }, ''); b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(fane === i)); return b; })));
         for (const [tittel, felt, palett] of FANER[fane][1]) {
           valg.appendChild(el('h3', {}, tittel));
-          if (palett) valg.appendChild(el('div', { klasse: 'rad' }, ...O.P.palettes[palett].map(f => { const b = knapp('', p[felt] === f, () => { p[felt] = f; lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', tittel + ' ' + f); return b; })));
-          else if (O.P.numerics[felt]) { const [min, maks] = O.P.numerics[felt], r = el('input', { type: 'range', min, max: maks, value: p[felt], 'aria-label': tittel, style: 'width:100%; max-width:320px' }), v = el('span', { style: 'margin-left:8px' }, felt === 'age' ? p[felt] + ' år' : p[felt] + ' %');
-            r.oninput = () => { p[felt] = +r.value; v.textContent = felt === 'age' ? r.value + ' år' : r.value + ' %'; oppd(); }; valg.appendChild(el('div', { klasse: 'rad' }, r, v)); }
-          else valg.appendChild(el('div', { klasse: 'rad' }, ...NAVN[felt].map(([v, t]) => knapp(t, p[felt] === v, () => { p[felt] = v; lagValg(); oppd(); }))));
+          if (palett) valg.appendChild(el('div', { klasse: 'rad' }, ...O.P.palettes[palett].map(f => { const b = knapp('', p[felt] === f, () => { velg(felt, f); lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', tittel + ' ' + f); return b; })));
+          else if (O.P.numerics[felt]) { const [min, maks] = O.P.numerics[felt], r = el('input', { type: 'range', min, max: maks, value: p[felt], 'aria-label': tittel, style: 'flex:1 1 160px; min-width:0; max-width:320px' }), v = el('span', { style: 'margin-left:8px' }, felt === 'age' ? p[felt] + ' år' : p[felt] + ' %');
+            r.oninput = () => { velg(felt, +r.value); v.textContent = felt === 'age' ? r.value + ' år' : r.value + ' %'; oppd(); }; valg.appendChild(el('div', { klasse: 'rad' }, r, v)); }
+          else valg.appendChild(el('div', { klasse: 'rad' }, ...NAVN[felt].map(([v, t]) => knapp(t, p[felt] === v, () => { velg(felt, v); lagValg(); oppd(); }))));
         }
-        valg.appendChild(el('div', { klasse: 'rad', style: 'margin-top:12px' }, knapp('Tilfeldig utseende', false, () => { const t = O.P.randomCharacter(); k.portrett = O.portrett({ ...t, role: 'militaer', outfit: NAVN.outfit[Math.floor(Math.random() * 7)][0] }, k.navn); lagValg(); oppd(); })));
+        valg.appendChild(el('div', { klasse: 'rad', style: 'margin-top:12px' }, knapp('Tilfeldig utseende', false, () => { k.portrett = O.portrett(O.tilfeldigPortrett(), k.navn); k.valgt = {}; lagValg(); oppd(); })));
       };
       lagValg(); oppd();
       const bg = el('div', { klasse: 'bakgrunn' });
       const lagBg = () => { bg.innerHTML = ''; for (const [id, b] of Object.entries(O.BAKGRUNNER)) { const kn = knapp('', k.bakgrunn === id, () => { k.bakgrunn = id; lagBg(); }); kn.append(el('b', {}, b.navn), el('small', {}, b.tekst)); bg.appendChild(kn); } };
       lagBg();
-      ark.append(el('h3', {}, 'Navn'), navn, el('div', { klasse: 'to' }, el('div', {}, valg), el('div', { klasse: 'bilde', style: 'flex:0 0 auto' }, bilde)), el('h3', {}, 'Bakgrunn (gir en liten bonus)'), bg, melding,
+      const lagret = andreSpill();
+      if (lagret) ark.append(el('div', { klasse: 'lagret' }, lagret));
+      ark.append(el('div', { klasse: 'to' }, el('div', {}, el('h3', {}, 'Navn'), navn, el('h3', { style: 'margin-top:18px' }, 'Utseende'), valg, el('h3', {}, 'Bakgrunn (gir en liten bonus)'), bg),
+        el('div', { klasse: 'bilde' }, bilde)), melding,
         el('div', { klasse: 'bunn' }, el('span'), knapp('Neste: fraksjonen →', false, () => { if (k.navn.trim().length < 2) { melding.textContent = 'Skriv et navn (minst 2 tegn).'; return; } vis(2); })));
       setTimeout(() => navn.focus(), 50);
     } else if (steg === 2) {
@@ -142,14 +211,18 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
         const u = el('div', { klasse: 'bakgrunn' }); for (const [id, U] of Object.entries(SC.REGLER.utfordringer)) { const på = rg.utfordringer.includes(id), kn = knapp('', på, () => { if (på) rg.utfordringer = rg.utfordringer.filter(q => q !== id); else rg.utfordringer.push(id); lagForm(); }); kn.dataset.utfordring = id; kn.setAttribute('aria-pressed', String(på)); kn.append(el('b', {}, (på ? '☑ ' : '☐ ') + U.navn), el('small', {}, U.tekst)); u.appendChild(kn); } form.append(u);
         form.append(el('div', { klasse: 'steg' }, 'Du starter med ' + O.kroner(Math.round((O.STARTPENGER + (O.BAKGRUNNER[k.bakgrunn].bonus.penger || 0)) * SC.regler(rg).faktor.penger)) + ', ti personer og et lite vaktlag. Troppene lager du selv av folkene dine (Leir → Tropper).')); };
       lagForm();
-      ark.append(el('h2', {}, 'Spillform og plass til leiren'), el('div', { klasse: 'steg' }, 'Steg 3 av 3: velg hvordan du vil spille, og trykk så på kartet der leiren skal ligge. Hvor som helst i Norge – men ikke inne i et tettsted eller i vann.'), form,
+      ark.append(el('h2', {}, 'Spillform og plass til leiren'), el('div', { klasse: 'steg' }, `Steg 3 av 3: velg hvordan du vil spille, og trykk så på kartet der leiren skal ligge. Hvor som helst ${sted().hvor} – men ikke inne i et tettsted eller i vann.`), form,
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(2)), knapp('Velg på kartet', false, startVelg)));
     }
   }
   // ---------- velge leirplass på kartet ----------
-  function startVelg() { bak.classList.remove('på'); if (window.visHjelp) visHjelp(false); velger = true; forslag = null; visBanner('Trykk på kartet der leiren skal ligge. Zoom og flytt kartet som vanlig.'); }
-  function visBanner(tekst, kanBekrefte) {
+  function startVelg() { bak.classList.remove('på'); if (window.visHjelp) visHjelp(false); velger = true; forslag = null; gjemStart(); visOmrådet(false);
+    visBanner(`Trykk på kartet der leiren skal ligge – hvor som helst ${sted().hvor}. Zoom og flytt kartet som vanlig.`); }
+  function visBanner(tekst, kanBekrefte, mer) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst));
+    if (mer) { for (const a of mer.adv || []) banner.append(el('div', { klasse: 'adv' }, '⚠ ' + a));
+      if (mer.fakta && mer.fakta.length) banner.append(el('div', { klasse: 'fakta' }, mer.fakta.join(' · ')));
+      if (mer.kai) banner.append(el('div', { klasse: 'kai' }, mer.kai)); }
     if (kanBekrefte) banner.append(knapp('Legg leiren her', false, bekreft, 'valg'));
     banner.append(knapp('Tilbake til valgene', false, () => { velger = false; forslag = null; banner.classList.remove('på'); vis(2); skitten = true; }, 'valg'));
   }
@@ -164,8 +237,25 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     forslag = { x, y, ok: !grunn }; skitten = true;
     let h = null; try { h = hoydeVed(x, y); } catch (e) { /* ingen høyde her */ }
     // (18. nov, runde 4) andre moduler kan si noe om stedet: window.LEIRVALG_TILLEGG = [(x, y) => tekst] (kaier.js: nærmeste kai)
-    const til = grunn ? '' : (window.LEIRVALG_TILLEGG || []).map(f => { try { return f(x, y) || ''; } catch (e) { return ''; } }).filter(Boolean).join(' ');
-    visBanner(grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?') + (til ? ' ' + til : ''), !grunn); return grunn;
+    const til = grunn ? [] : (window.LEIRVALG_TILLEGG || []).map(f => { try { return f(x, y) || ''; } catch (e) { return ''; } }).filter(Boolean);
+    // (runde 6) kaiteksten bare der det betyr noe; vurderingen av stedet (høyfjell, skog, veg, folk) kommer når terrenget er målt
+    const først = grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?');
+    visBanner(først, !grunn, grunn ? null : { kai: window.Leirvalg ? '' : til.join(' ') });
+    if (!grunn && window.Leirvalg) vurderSted(x, y, h, til);
+    return grunn;
+  }
+  // Måler terrenget rundt stedet (Leirvalg.REGLER.radius) og viser advarslene i banneret – bare hvis forslaget fortsatt står
+  async function vurderSted(x, y, h, kai) {
+    const R = Leirvalg.REGLER.radius, f = forslag;
+    let v = null; try { v = await lagVindu([x - R, y - R, x + R, y + R], true); } catch (e) { v = null; }
+    if (!velger || forslag !== f) return;
+    // høyden fra vinduet når kartet ikke hadde den (stedet utenfor bildet eller ikke lastet ennå)
+    if (h == null && v && window.Terreng) try { const [i, j] = Terreng.rute(v, x, y), z = v.H[j * v.w + i]; if (z === z) h = z; } catch (e) { /* utenfor vinduet */ }
+    const m = Leirvalg.måle(v, x, y), tg = window.Vegetasjon && Vegetasjon.tregrense ? Vegetasjon.tregrense(y, x) : null;
+    let by = null; for (const b of ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [])) { const dx = Math.max(b.bb[0] - x, 0, x - b.bb[2]), dy = Math.max(b.bb[1] - y, 0, y - b.bb[3]), d = Math.hypot(dx, dy);
+      if (!by || d < by.m) by = { navn: b.e.navn, m: d }; }
+    const vu = Leirvalg.vurder(m, { h, tregrense: tg, by });
+    visBanner(h != null ? `Her? ${Math.round(h)} moh.` : 'Her?', true, { adv: vu.advarsler, fakta: vu.fakta, kai: kai.map(t => Leirvalg.kaiTekst(t, m.sjø)).filter(Boolean).join(' ') });
   }
   function bekreft() {
     if (!forslag || !forslag.ok) return;
@@ -175,13 +265,36 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     // bar forsvaret alene de første døgnene. De kan bygges på basen for olje senere.
     utkast.lettStart = utkast.utenLag;
     const f = O.fullfør(utkast, forslag, window.Scenario ? Scenario.regler(utkast.regler).faktor.penger : 1); if (f.length) { visBanner(f.join(' ')); return; }
-    S = utkast; velger = false; forslag = null; banner.classList.remove('på'); lagre(); bruk(true); skitten = true;
+    S = utkast; velger = false; forslag = null; banner.classList.remove('på'); glemUtkast(); gjemTilbake(); lagre(); bruk(true); skitten = true;
     // (17. nov) kartet går inn på leiren når den er lagt – før sto det igjen på hele landsdelen, og du så ikke leiren din
     if (typeof på3d === 'undefined' || !på3d) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, 3); skitten = true; }
   }
   // først i rekka: mens du velger leirplass, skal et trykk der et lag eller kjøretøy står, gi leirforslag og ikke åpne panelet
   KROKER.trykk.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
   KROKER.trykk3d.unshift((X, Y) => { if (!velger) return false; prøvLeir(X, Y); return true; });
+
+  // ---------- før spillet er startet: ingen ferdige lag (runde 6, kritikken) ----------
+  // Dovre-pilotens lag, kjøretøy og «Hovedbase Dombås» sto i kartet mens du valgte leirplass – også på /norge og /rogaland, med lapper
+  // oppå hverandre – mens teksten sa at du starter med ti personer. For vanlige spillere tas de ut av ENHETER/KJORETOY til leiren er
+  // lagt (gjemTilbake setter dem inn på samme plass i listene, og bruk(true) gjør resten som før: Vaktlaget blir igjen, de tunge
+  // kjøretøyene går). Basen flyttes langt ut av kartet til den får leirens plass. I testene (navigator.webdriver) skjer ingenting av
+  // dette før OppstartSpill.test er satt – kontrollskriptet bruker lagene som før.
+  const GJEMT = { lag: [], kj: [], base: null };
+  function gjemStart(tving) {
+    if (!tving && (S || !ekte())) return 0; let n = 0;
+    for (let i = ENHETER.length - 1; i >= 0; i--) { const e = ENHETER[i]; if (e.side !== 'blå' || e.karakter) continue; GJEMT.lag.push([i, e]); ENHETER.splice(i, 1); n++; if (valgt === e) { valgt = null; visPanel(); } }
+    if (window.KJORETOY) for (let i = KJORETOY.length - 1; i >= 0; i--) { const k = KJORETOY[i]; if (k.side !== 'blå') continue; GJEMT.kj.push([i, k]); KJORETOY.splice(i, 1); n++; if (valgt === k) { valgt = null; visPanel(); } }
+    const B = window.OLJE && OLJE.BASER && OLJE.BASER[0]; if (B && !GJEMT.base && B.x > -1e6) { GJEMT.base = { x: B.x, y: B.y }; B.x = B.y = -9e6; n++; }
+    if (n) skitten = true; return n;
+  }
+  // tilbake i samme rekkefølge (lavest plass først – de ble tatt ut bakfra, så lista snus)
+  function gjemTilbake() {
+    const inn = (liste, arr) => { arr.sort((a, b) => a[0] - b[0]); for (const [i, e] of arr) if (!liste.includes(e)) liste.splice(Math.min(i, liste.length), 0, e); arr.length = 0; };
+    inn(ENHETER, GJEMT.lag); if (window.KJORETOY) inn(KJORETOY, GJEMT.kj);
+    const B = window.OLJE && OLJE.BASER && OLJE.BASER[0]; if (B && GJEMT.base) Object.assign(B, GJEMT.base); GJEMT.base = null; skitten = true;
+  }
+  // nye lag som modulene legger inn senere (mens startskjermen står), gjemmes også – sjekkes i tegnekroken, billig
+  KROKER.tegn.push(() => { if (!S && (GJEMT.lag.length || GJEMT.kj.length || GJEMT.base) && (ENHETER.some(e => e.side === 'blå' && !e.karakter) || (window.KJORETOY || []).some(k => k.side === 'blå'))) gjemStart(); });
 
   // ---------- valgene tas i bruk: fraksjonen tar over «blå», basen og lagene flytter til leiren ----------
   // START UTEN FERDIGE LAG (natt 18. nov): et nytt spill har bare deg, de ti personene og et lite vaktlag (4 mann av 1. lag) – resten av
@@ -255,7 +368,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     const f = flaggBilde(); if (f && ok !== false && !forslag) { g.drawImage(f, x + 1, y - 38, 30, 20); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.strokeRect(x + 1, y - 38, 30, 20); }
     else { g.fillStyle = ok ? '#e0b53a' : '#c8102e'; g.fillRect(x + 1, y - 38, 24, 16); }
     g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(x, y, 7, 3, 0, 0, 6.283); g.fill();
-    if (navn) { g.font = '600 15px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, navn, x, y + 16, 1) : y + 16; g.strokeText(navn, x, ny); g.fillStyle = '#f2ead6'; g.fillText(navn, x, ny); }
+    if (navn) { g.font = '600 15px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett && !forslag ? Etikett.tekst(g, navn, x, y + 16, 1) : y + 16; g.strokeText(navn, x, ny); g.fillStyle = '#f2ead6'; g.fillText(navn, x, ny); }
     g.restore();
   }
   KROKER.tegn.push((g, vx0, vy1) => {
@@ -285,7 +398,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;
-  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); } catch (e) { /* ingen lagring */ } location.reload(); };
+  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } location.reload(); };
   document.getElementById('lagmeny').appendChild(nyKnapp);
   const visNyttKnapp = () => { nyKnapp.hidden = !S; };
 
@@ -296,10 +409,17 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   function betal(b) { if (!S || !(b >= 0) || S.penger < b) return false; S.penger -= b; lagre(); visPenger(); return true; }
   // gi(beløp): penger tilbake (for eksempel når et bygg rives)
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
-  window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL };
+  // lukk(): startskjermen og leirvalget bort uten å starte (vakten bruker den); gjemt()/gjemStart/gjemTilbake: lagene fra Dovre-piloten
+  function lukk() { bak.classList.remove('på'); banner.classList.remove('på'); velger = false; forslag = null; skitten = true; }
+  window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL,
+    UTKAST, lukk, sted, andreSpill, lesUtkast, lagreUtkast, glemUtkast, gjemStart, gjemTilbake, gjemt: () => ({ lag: GJEMT.lag.length, kj: GJEMT.kj.length, base: !!GJEMT.base }), visOmrådet };
   S = les(); if (S && !S.ferdig) S = null;
   // Et lagret spill tas i bruk når ALLE skriptene på siden er kjørt (DOMContentLoaded). Før var det setTimeout(0), som kan slå til mellom
   // to skript når nettet er tregt – da gikk «riksbrudd-spill» ut før leiren, folket og kontrollrommet lyttet (feilretting 12. nov).
   if (S) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => bruk(false)); else setTimeout(() => bruk(false), 0); }
-  else if (!navigator.webdriver) nytt();
+  else if (!navigator.webdriver) {
+    // (runde 6) et påbegynt utkast tas opp igjen der du slapp (steget og alle valgene)
+    const d = lesUtkast(); if (d) { utkast = d.utkast; vis(d.steg); } else nytt();
+    const gjem = () => gjemStart(); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', gjem); else setTimeout(gjem, 0);
+  }
 })();
