@@ -44,4 +44,25 @@ ok(LG.fraJSON(tekst, { x: 1, y: 2 }) === null, 'lagring for en annen leir (et an
 ok(LG.fraJSON('{"versjon":99}', leir) === null && LG.fraJSON('ødelagt', leir) === null && LG.fraJSON(null, leir) === null, 'ukjent versjon og ødelagt tekst gir null');
 { const d3 = LG.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 196400, y: 6898900 }, tid: -5, lag: [{ navn: 'x' }, null, { navn: 'ok', x: 1, y: 2, menn: [{ navn: 'A', hp: 7 }] }], kjøretøy: 'tull' }), leir);
   const s = LG.brukLag(nyttLag('ok', 0, 0), d3.lag[0]); ok(d3.tid === 0 && d3.lag.length === 1 && d3.kjøretøy.length === 0 && s.menn.length === 1 && s.menn[0].hp === 1 && s.leder === 0, 'ødelagte linjer hoppes over, og tallene holdes innenfor (hp 0–1, tid ≥ 0)'); }
+
+// ---------- lagringsplasser og filer (runde 7) ----------
+{ const P = LG.Plass, k1 = JSON.stringify({ versjon: 1, ferdig: true, leir, penger: 12345678, karakter: { navn: 'Kari' }, fraksjon: { navn: 'Hær <b>' } });
+  const nøkler = { 'riksbrudd-k1': k1, 'riksbrudd-k2': '{"bygg":[1,2]}', 'riksbrudd-verden': tekst, 'riksbrudd-filter': 'vhs', 'riksbrudd-maler': '[1]', 'riksbrudd-plass-1': '{}' };
+  const pl = P.pakk(nøkler, { side: 'dovre', nå: Date.UTC(2026, 10, 20, 1, 4) });
+  ok(Object.keys(pl.nøkler).join() === 'riksbrudd-k1,riksbrudd-k2,riksbrudd-verden', 'plassen tar med spillnøklene – ikke innstillinger, maler eller andre plasser');
+  ok(pl.info.fraksjon === 'Hær b' && pl.info.karakter === 'Kari' && pl.info.penger === 12345678 && pl.info.leir.x === 196400, 'info: fraksjon (renset), karakter, kassa og leir');
+  // tid 4321,5 spillminutter: 6 + 72,0 t = dag 4 kl. 06:01
+  ok(pl.info.dag === 4 && pl.info.klokke === '06:01' && pl.navn === 'Hær b, dag 4', 'dag og klokke som klokka i spillet, navn foreslås');
+  ok(P.pakk(nøkler, { navn: '  Før slaget\n ' }).navn === 'Før slaget', 'eget navn renses');
+  const fil = P.tilFil(pl), les = P.les(fil, 'dovre');
+  ok(les.d && JSON.stringify(les.d.nøkler) === JSON.stringify(pl.nøkler) && les.d.navn === pl.navn && les.d.laget === pl.laget, 'fila leses tilbake likt');
+  ok(/^riksbrudd-haer-b-dag-4-2026-11-20\.json$/.test(P.filnavn(pl)), 'filnavnet: ' + P.filnavn(pl));
+  ok(P.les(fil, 'norge').feil && P.les(fil, 'norge').side === 'dovre', 'en fil fra Dovre-siden lastes ikke på /norge (sier hvor den hører til)');
+  ok(P.les('tull', 'dovre').feil && P.les('{"spill":"Annet"}', 'dovre').feil && P.les(JSON.stringify({ ...pl, versjon: 9 }), 'dovre').feil, 'ødelagt fil, feil spill og ukjent utgave avvises');
+  ok(P.les(JSON.stringify({ ...pl, nøkler: { ...pl.nøkler, 'riksbrudd-filter': 'vhs' } }), 'dovre').feil, 'en fil med innstillinger eller fremmede nøkler avvises');
+  ok(P.les(JSON.stringify({ ...pl, nøkler: { 'riksbrudd-k2': '{}' } }), 'dovre').feil, 'en fil uten ferdig leir avvises');
+  ok(P.les('x'.repeat(P.REGLER.maksTegn + 1), 'dovre').feil, 'for stor fil avvises');
+  const plan = P.byttPlan({ 'riksbrudd-k1': 'a', 'riksbrudd-lut': '{}', 'riksbrudd-k2': 'b' }, pl);
+  ok(plan.fjern.join() === 'riksbrudd-lut' && plan.sett.length === 3, 'bytte: det plassen ikke har, tas bort; resten settes');
+}
 console.log(feil ? `${feil} FEIL` : 'Alle testene for lagring.js er ok'); process.exit(feil ? 1 : 0);

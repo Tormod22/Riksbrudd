@@ -83,12 +83,11 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
 <div id="feil" role="alert"><span id="feilTekst"></span><button class="lukk" id="feilLukk" aria-label="Lukk meldingen">×</button><button class="gjør" id="feilKnapp" hidden></button></div>
 <script>
-// Et mindre spillkart (/rogaland, spill/omraade.js) har sitt eget lagrede spill: nøklene «riksbrudd-…» får en egen ending der,
-// så leiren på /norge og leiren på /rogaland ikke går oppå hverandre.
+// Et mindre spillkart (/rogaland, spill/omraade.js) har sitt eget lagrede spill. Hver side (/dovre-fliser, /norge, /rogaland) har egne
+// nøkler i localStorage: spill/lagringsside.js (lastes her, før alt annet) legger til endingen «@norge» / «@rogaland» (runde 7).
 const PÅ_OMRÅDE = /^\/rogaland\/?$/.test(location.pathname) ? 'rogaland' : null;
-if (PÅ_OMRÅDE) try { const P = Storage.prototype, e = '@' + PÅ_OMRÅDE, om = k => (typeof k === 'string' && /^riksbrudd-/.test(k) && !k.endsWith(e) ? k + e : k);
-  for (const n of ['getItem', 'setItem', 'removeItem']) { const f = P[n]; P[n] = function (k, ...r) { return f.call(this, this === window.localStorage ? om(k) : k, ...r); }; } } catch (e) { /* uten lagring */ }
 </script>
+<script src="/dovre-fliser/spill/lagringsside.js?v=0"></script>
 <script>
 // Meldingsboksen midt på skjermen: tekst, lukkeknapp og eventuelt en knapp som gjør noe (12. nov: boksen ble stående for alltid).
 // type sier hva meldingen gjelder, så den kan tas bort når akkurat det virker igjen: skjulMelding('nett') når kartdata kommer inn,
