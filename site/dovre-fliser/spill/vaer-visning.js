@@ -18,7 +18,11 @@
   }
   function oppdater(melding) {
     const h = (6 + tid / TIME) % 24, V = Vaer.tilstand(S, h, tid), før = window.VAER;
-    if (!vist) vist = {}; for (const f of VIST) if (vist[f] == null) vist[f] = V[f];
+    // (runde 6, 19. nov – «Regn» øverst, men blå himmel i 3D): den glattede kopien ble bare oppdatert i 3D-bildene. Regnet det
+    // mens du var i 2D, viste 3D det gamle været til kopien hadde tatt det igjen – og med trege bilder tok det over et minutt.
+    // Nå følger kopien reglene direkte så lenge 3D ikke vises.
+    const i3d = typeof på3d !== 'undefined' && på3d && r3() && R3.ut;
+    if (!vist || !i3d) vist = {}; for (const f of VIST) if (vist[f] == null) vist[f] = V[f];
     window.VAER = { ...V, regel: { ...V }, mål: S.årstid + '|' + S.vær + '|' + Math.round(V.sikt * 20) }; settVist();
     VAER_U.uSno.value = 1; VAER_U.uSnoGrense.value = V.snøgrense; VAER_U.uHost.value = V.høst;
     TRE_U.uHostLov.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
@@ -28,7 +32,7 @@
       skitten = true;
     }
     knappÅ.textContent = 'Årstid: ' + V.årstidNavn; knappV.textContent = 'Vær: ' + (S.låst ? V.navn : 'automatisk (' + V.navn.toLowerCase() + ')');
-    document.getElementById('sVaer').textContent = `${V.navn}, ${V.temp} °C`; document.getElementById('sAar').textContent = V.årstidNavn.toLowerCase();
+    document.getElementById('sVaer').textContent = `${V.navnNå || V.navn}, ${V.temp} °C`; document.getElementById('sAar').textContent = V.årstidNavn.toLowerCase();
   }
 
   // ---------- meny og statuslinje ----------
@@ -106,9 +110,10 @@
   let sist = 0;
   KROKER.ramme3d.push(R => {
     const V = window.VAER; if (!V || !R.ut) return;
-    const nå = performance.now() / 1000, dt = Math.min(.1, nå - (sist || nå)); sist = nå;
-    // den glattede kopien tar igjen reglene (ca. 1,5 s), uavhengig av tempoet
-    if (vist && V.regel) { const k = Math.min(1, dt / 1.5); for (const f of VIST) vist[f] += (V.regel[f] - vist[f]) * k; settVist(); }
+    const nå = performance.now() / 1000, dtEkte = nå - (sist || nå), dt = Math.min(.1, dtEkte); sist = nå;
+    // den glattede kopien tar igjen reglene (ca. 1,5 s), uavhengig av tempoet – regnet i ekte tid (før høyst 0,1 s per bilde, så med
+    // ett bilde i sekundet tok det femten ganger så lang tid); etter en pause på over 3 s (3D nettopp åpnet) kommer været straks
+    if (vist && V.regel) { const k = dtEkte > 3 ? 1 : Math.min(1, dtEkte / 1.5); for (const f of VIST) vist[f] += (V.regel[f] - vist[f]) * k; settVist(); }
     // dis: tåke og nedbør trekker disen inn mot kameraet (kamera3d setter den på nytt hver ramme)
     if (V.dis < 1) { const fog = R.scene.fog; fog.far = Math.max(140, fog.far * V.dis); fog.near = Math.min(fog.near * V.dis, fog.far * .25); }
     const c = R.cam.position, bakke = hoyde3d(R.ut.cx + c.x, R.ut.cy + c.y) ;
