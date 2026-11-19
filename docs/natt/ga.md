@@ -23,7 +23,7 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
 - Årsak: døråpningen er 1,1 m og kroppen 0,6 m (radius 0,3 + vegg 0,12): du måtte treffe innen 13 cm fra midten.
 - **Døra trekker deg mot midten** (`Gaavalg.dørTrekk`, i `Gange.kamera`): innen 1,6 m fra døråpningen og høyst 0,8 m til siden av den,
   og når du går gjennom (inn når du står ute, ut når du står inne), skyves du sideveis mot midten (7 per sekund). Sjekkes mot `hindring3d`.
-- **Knappen «Gå inn» / «Gå ut»** (`#dorknapp`, midt nederst over Let/Sikre-knappene: PC bottom 204 px, telefon 282 px): ute innen 5 m fra
+- **Knappen «Gå inn» / «Gå ut»** (`#dorknapp`, PC midt nederst over Let/Sikre-knappene (bottom 204 px), telefon til høyre over våpenknappen (bottom 262 px – midt på lå «Sikre huset» der)): ute innen 5 m fra
   en inngang («Inngang»-merket); inne «Gå ut» (PC innen 5 m fra døra, telefon alltid). Trykk = dørhjelpen styrer deg (midt foran døra,
   så 1 m inn – eller motsatt). Styrer du selv, slipper den. Står du fast (tiden i bevegelsen, ikke ekte tid), settes du på punktet bak døra.
 - `Gange.dørNå()`, `Gange.dørHjelp()`.

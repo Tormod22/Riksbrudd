@@ -246,7 +246,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   // Første gang måleren vises (i denne nettleseren): en kort forklaring («riksbrudd-snikforklart»). Teksten står også i hjelpen.
   let snikForklart = false; try { snikForklart = !!localStorage.getItem('riksbrudd-snikforklart'); } catch (e) { /* privat vindu */ }
   function snikForklar() { if (snikForklart) return; snikForklart = true; try { localStorage.setItem('riksbrudd-snikforklart', '1'); } catch (e) { /* privat vindu */ }
-    si('Snikemåleren', 'Måleren under siktet viser om fienden i nærheten har merket deg: Skjult → Mistenkt (han har hørt eller sett noe) → Sett (han vet hvor du er og skyter). Gå på huk eller ligg (C/Z), hold deg i skog og mørke, og ikke løp, så tar det lenger tid før du blir sett.'); }
+    si('Snikemåleren', 'Under siktet: har fienden nær deg merket deg? Skjult → Mistenkt → Sett. Huk eller ligg (C/Z), skog og mørke skjuler deg – løping avslører.'); }
   KROKER.tegn3d.push((g, proj3) => { if (!klar || !går()) return; const Q = r3(); g.save();
     if (auto() && isFinite(snikSteg.nær) && snikSteg.nær < 700) { const n = snikSteg.nivå || 0, w = 96, x = VW / 2 - w / 2, y = VH / 2 + 46, farge = n >= 1 ? '#e0604a' : n > .05 ? '#e8c46a' : '#9fc46a';
       g.globalAlpha = .85; g.fillStyle = 'rgba(20,16,10,.6)'; g.fillRect(x - 1, y - 1, w + 2, 7); g.fillStyle = farge; g.fillRect(x, y, w * Math.max(.04, n), 5);

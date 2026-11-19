@@ -26,10 +26,10 @@
 #gaavalg .gang i{ display:block; height:100%; width:0; background:#c9b26a; }
 #dorknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(204px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:150px; min-height:44px; padding:6px 18px;
   background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; touch-action:manipulation; }
-#dorknapp.på{ display:block; } body.kort #dorknapp{ bottom:calc(282px + env(safe-area-inset-bottom,0px)); font-size:15px; }
+#dorknapp.på{ display:block; } body.kort #dorknapp{ left:auto; right:8px; transform:none; bottom:calc(262px + env(safe-area-inset-bottom,0px)); min-width:0; padding:6px 14px; font-size:15px; }
 #gaakort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 78px); z-index:12; display:none; max-width:min(420px,88vw); padding:5px 14px; background:rgba(28,23,15,.9);
   border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:14px; cursor:pointer; text-align:center; }
-#gaakort.på{ display:block; } #gaakort small{ color:#b9ab8a; } body.foto #gaavalg, body.foto #dorknapp, body.foto #gaakort{ display:none !important; }`;
+#gaakort.på{ display:block; } #gaakort small{ color:#b9ab8a; } body.kort #gaakort{ left:8px; transform:none; top:calc(var(--topp,58px) + 172px); max-width:56vw; font-size:13px; text-align:left; } body.foto #gaavalg, body.foto #dorknapp, body.foto #gaakort{ display:none !important; }`;
   document.head.appendChild(css);
   const mk = document.createElement('div'); mk.id = 'gangeknapper'; const hb = document.createElement('button'), kb = document.createElement('button');
   hb.textContent = 'Hopp'; kb.textContent = 'Huk'; mk.append(kb, hb); document.body.appendChild(mk);
