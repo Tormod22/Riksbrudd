@@ -58,7 +58,7 @@
 #oppring{ position:fixed; z-index:28; display:none; pointer-events:none; border:2px solid #f0dc9a; border-radius:8px; box-shadow:0 0 0 3px rgba(240,220,154,.25), 0 0 16px rgba(240,220,154,.7); animation:oppring 1.3s ease-in-out infinite; }
 #oppring.på{ display:block; } @keyframes oppring{ 50%{ box-shadow:0 0 0 8px rgba(240,220,154,.08), 0 0 22px rgba(240,220,154,.9); transform:scale(1.06); } }
 body.kort #opplaering{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); width:auto; max-width:440px; transform:none; animation:none; bottom:calc(64px + env(safe-area-inset-bottom,0px)); font-size:13px; padding:7px 10px 8px 42px; } body.kort #opplaering b{ font-size:16px; } body.kort #opplaering .nr{ left:8px; top:8px; }
-#opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(5px + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
+#opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(var(--oppbunn, 5px) + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
 #opplaering.liten .nr{ left:7px; top:4px; width:22px; height:22px; line-height:21px; font-size:13px; } #opplaering.liten b{ font-size:15px; margin:0; }
 body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } body.foto #opplaering, body.foto #oppring, body.bygger2d.kort #opplaering{ display:none !important; }
 /* PC: mens et bygg plasseres ligger byggebanneret nederst – opplæringen flyttes opp så de ikke dekker hverandre */
@@ -72,6 +72,8 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
 body.kort #opplaering .t{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
 body.kort #opplaering .rad{ flex-wrap:nowrap; justify-content:flex-start; gap:5px; margin-top:5px; } body.kort #opplaering .rad button{ height:30px; min-height:30px; padding:0 9px; font-size:12.5px; }
 body.kort #opplaering .prikker{ display:none; } body.kort #opplaering{ padding-bottom:7px; }
+/* (runde 6) bunnmenyen står nå også med en meny åpen (skjermlag.js): den sammenlagte linja står over den */
+body.mkomalltid.mkom{ --oppbunn:64px; }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
@@ -129,7 +131,9 @@ body.kort #opplaering .prikker{ display:none; } body.kort #opplaering{ padding-b
     // ble aldri vist – «Hopp over» på steg 6 så ut til å gå rett til steg 8)
     if (gjortKø.length) { const nå = performance.now(); if (!gjortTil) gjortTil = nå + VIS_GJORT;
       if (nå >= gjortTil) { gjortKø.shift(); gjortTil = gjortKø.length ? nå + VIS_GJORT : 0; }
-      if (gjortKø.length && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) { tegn(null, null, g); boks.classList.add('på'); ring.classList.remove('på'); return; } } }
+      if (gjortKø.length && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) { tegn(null, null, g); boks.classList.add('på'); ring.classList.remove('på');
+        // på telefon med en meny åpen: bare overskriften («✓ Åpne Leir») nederst, som for stegene
+        boks.classList.toggle('liten', document.body.classList.contains('kort') && ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'].some(id => synlig($(id)))); return; } } }
     const s = Opplaering.neste(T);
     if (!s) { if (T.slutt) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
       // «Opplæringen er ferdig» lukker seg selv etter en stund (den ble stående under «Mer»)

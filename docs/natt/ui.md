@@ -259,7 +259,8 @@ panelplassene og banneret, hjelp.js, ga.js = gåmodus i 3D med måling av alle r
    alt var gjort når de kom for tur. «Hopp over» på steg 6 gikk «rett til 8» fordi steg 7 (mat til tre døgn) var oppfylt fra start og ble merket
    gjort i samme runde uten å vises; nå står det med ✓. Telefon: 124 px høy (før ca. 200) – tre linjer tekst, små knapper på én rad («Slå av»,
    «Hjelp»), uten prikkene; – / + oppe til høyre legger ruta sammen til én linje (55 px telefon, 32 px PC; «riksbrudd-opplaering-sammen»).
-   «Opplæringen er ferdig» lukker seg selv etter 12 s. `OpplaeringSpill.gjort()`, `.sammen()`, `.VIS_GJORT`.
+   «Opplæringen er ferdig» lukker seg selv etter 12 s. Med en meny åpen på telefon står bare overskriften (også «✓ …») som én linje rett over
+   bunnmenyen (`--oppbunn` 64 px når bunnmenyen står). `OpplaeringSpill.gjort()`, `.sammen()`, `.VIS_GJORT`.
 6. **Leir-menyen** (`paneler.js`): starter alltid øverst når den åpnes (fanen er den du sist brukte – å tvinge Bygg ville ødelagt «trykk på
    diesel = fanen Lager»). Når de ekte fanene er rullet ut av syne, står en kopi `#leirfaner2` fast øverst i panelet (første barn i #leirmeny,
    sticky, `margin-bottom:-40px` så innholdet ikke hopper; settes inn igjen når Leir-menyen tegner seg på nytt; knappene kaller `LeirSpill.fane`).
