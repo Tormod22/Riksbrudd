@@ -92,7 +92,11 @@
   api.nårFeil = f => { lyttere.push(f); };
   api.L = () => L;
   // rå tilgang (nøkkelen som den står, uten ending og lås) – kaster ved feil, så lagringsmenyen kan si fra
-  api.rå = { get: k => (L ? RÅ.get.call(L, k) : null), set: (k, v) => { if (!L) throw new DOMException('Lagring er sperret', 'SecurityError'); try { RÅ.set.call(L, k, v); } catch (e) { feilet(e, k); throw e; } },
+  // simuler('fullt' | 'sperret' | null): rå.set feiler som om nettleseren var full eller sperret (bare for vakten)
+  let simulert = null; api.simuler = t => { simulert = t || null; };
+  api.rå = { get: k => (L ? RÅ.get.call(L, k) : null),
+    set: (k, v) => { if (!L) throw new DOMException('Lagring er sperret', 'SecurityError');
+      try { if (simulert) throw new DOMException('Simulert', simulert === 'fullt' ? 'QuotaExceededError' : 'SecurityError'); RÅ.set.call(L, k, v); } catch (e) { feilet(e, k); throw e; } },
     del: k => { if (L) RÅ.del.call(L, k); },
     // alle nøklene for denne siden: { navn uten ending: verdi }
     alle: (s = S) => { const ut = {}; if (!L) return ut; for (let i = 0; i < L.length; i++) { const k = L.key(i), h = hvem(k); if (h && h.side === s) ut[h.navn] = RÅ.get.call(L, k); } return ut; } };
