@@ -67,4 +67,20 @@ ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'por
   // bare sjø: ingen plass (teller hvor mange som står i vann)
   const hav = lagV(() => false); ok(O.startplasser(L, 4, 4, hav).iVann === 8, 'bare sjø rundt leiren: meldes som 8 i vann');
 }
+// KJØNNET (runde 6, kritikken: «Kvinne» ga skjeggstubb og herrefrisyre)
+{ const p = O.portrett(); ok(p.facialHair === 'skjeggstubb' && p.hair === 'short', 'startportrettet er en mann med skjeggstubb og kort hår');
+  O.byttKjønn(p, 'kvinne', {}); ok(p.gender === 'kvinne' && p.facialHair === 'ingen' && O.KJØNN.kvinne.hår.includes(p.hair), 'Kvinne: uten skjegg og med frisyre som passer (' + p.hair + ')');
+  const v = { hair: 'kvinne' }; p.hair = 'short'; O.byttKjønn(p, 'mann', v); ok(p.hair === 'short' && p.facialHair === 'skjeggstubb', 'Mann igjen: kort hår (passer) og skjeggstubb tilbake');
+  O.byttKjønn(p, 'kvinne', v); ok(p.hair === 'short' && p.facialHair === 'ingen', 'Kvinne igjen: frisyren hun valgte selv som kvinne beholdes, skjegget går');
+  const q = O.portrett({ gender: 'mann', hair: 'braid', facialHair: 'helskjegg' }); O.byttKjønn(q, 'mann', { hair: 'mann', facialHair: 'mann' }); ok(q.hair === 'braid' && q.facialHair === 'helskjegg', 'valg gjort som mann står når mann velges på nytt');
+  const w = O.portrett({ gender: 'kvinne', hair: 'long' }); w.facialHair = 'bart'; O.byttKjønn(w, 'kvinne', { facialHair: 'kvinne' }); ok(w.facialHair === 'bart', 'skjegg valgt av spilleren som kvinne står');
+  let skjegg = 0, hår = 0, n = 0; const P = O.P; for (let i = 0; i < 400; i++) { const t = O.portrett(O.tilfeldigPortrett()); n++;
+    if (t.gender === 'kvinne' && t.facialHair !== 'ingen') skjegg++; if (!O.KJØNN[t.gender].hår.includes(t.hair)) hår++; }
+  ok(skjegg === 0 && hår === 0, `«Tilfeldig utseende» 400 ganger: ${skjegg} kvinner med skjegg, ${hår} med frisyre som ikke passer`);
+  ok(P.allowed.hair.every(h => O.KJØNN.kvinne.hår.includes(h) || O.KJØNN.mann.hår.includes(h)), 'alle frisyrene passer minst ett kjønn');
+  // lagret spill fra før rettingen: kvinne med startverdiene får kvinnens utgangspunkt
+  const G = O.standard(); G.karakter.navn = 'Kari'; G.fraksjon.navn = 'Har'; G.karakter.portrett.gender = 'kvinne'; delete G.karakter.valgt; O.fullfør(G, { x: 1, y: 1 });
+  const L2 = O.fraJSON(O.tilJSON(G)); ok(L2.karakter.portrett.facialHair === 'ingen' && L2.karakter.portrett.hair === O.KJØNN.kvinne.hair, 'gammel lagring: kvinnen mister skjeggstubben og får ' + L2.karakter.portrett.hair);
+  const M = O.standard(); M.karakter.navn = 'Ola'; M.fraksjon.navn = 'Har'; O.fullfør(M, { x: 1, y: 1 }); const L3 = O.fraJSON(O.tilJSON(M));
+  ok(L3.karakter.portrett.facialHair === 'skjeggstubb' && L3.karakter.portrett.hair === 'short', 'gammel lagring: mannen er uendret'); }
 process.exit(feil ? 1 : 0);
