@@ -87,7 +87,14 @@ body.spill #leirmeny .bygg.kort > button{ position:absolute; inset:0; width:auto
 body.spill #leirmeny .bygg.kort:has(> button:disabled){ opacity:.5; } body.spill #leirmeny .bygg.kort:has(> button:disabled) .pris{ color:#c98a6a; }
 body.spill #leirmeny .bygg.kort:has(> button:focus-visible){ border-color:#e8d48a; }
 #byggvalg:has(> div > .byggtegn){ padding-left:96px; text-align:left; min-height:64px; } #byggvalg .byggtegn{ position:absolute; left:12px; top:10px; width:72px; height:54px; object-fit:contain; background:radial-gradient(ellipse at 50% 80%, rgba(201,178,106,.18), rgba(0,0,0,0) 70%); }
-body.kort #byggvalg:has(> div > .byggtegn){ padding-left:66px; min-height:48px; } body.kort #byggvalg .byggtegn{ left:8px; top:8px; width:50px; height:38px; }`;
+body.kort #byggvalg:has(> div > .byggtegn){ padding-left:66px; min-height:48px; } body.kort #byggvalg .byggtegn{ left:8px; top:8px; width:50px; height:38px; }
+/* RUNDE 6: enheten etter et rent tall («Tre 0/60 m³»), ordet foran (data-ord) også på telefon, og telefonraden uten kutt: det som ikke
+   får plass, står bak «Mer» (passInn) – raden rulles ikke lenger sidelengs, og de tekniske tallene (bilder per sekund, moh.) er borte der */
+.stats b[data-enhet]::after{ content:' ' attr(data-enhet); font-size:.74em; color:#a89970; letter-spacing:0; }
+body.kort .stats > div[data-ord] > span:not([id]){ display:none; }
+body.kort .stats > div[data-teknisk]{ display:none; } body.kort.teknisk .stats > div[data-teknisk]{ display:flex; }
+body.kort .stats > div[data-mer]{ display:none; } body.kort #flismer.på{ display:flex; }
+body.kort .stats{ overflow:hidden; mask-image:none; -webkit-mask-image:none; padding-right:0; gap:0 4px; } body.kort .stats > div{ padding:2px 6px 2px 5px; } body.kort .stats > div[data-ord]::after{ font-size:9.5px; letter-spacing:.05em; margin:0 3px 0 1px; }`;
   // «MER» (18. nov, runde 2): de fem faste står i linja, resten (Region, Sjø, Verden, Velg lag …) i en rad som åpnes av «Mer»
   css.textContent = css.textContent.replace(/#kommando button/g, ':is(#kommando,#kommer) button').replace(/#mkom button/g, ':is(#mkom,#mkommer) button') + `
 :is(#kommando,#kommer,#mkom,#mkommer) button[hidden]{ display:none; }
@@ -129,25 +136,38 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   const vises = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).opacity !== '0';
   // «MER»-FLISA (18. nov): ressursene skal stå på én rad. Får de ikke plass, går de minst viktige inn bak en flis «+3» som åpner resten.
   const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sFolk', 'sStrom', 'sDiesel'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };
-  const mer = document.createElement('div'); mer.id = 'flismer'; mer.dataset.ikon = 'mer'; mer.setAttribute('role', 'button'); mer.setAttribute('aria-label', 'Flere tall'); mer.dataset.tips = 'Flere tall|Tallene som ikke fikk plass på raden. Trykk for å se dem.'; const merTall = document.createElement('b'); mer.appendChild(merTall);
+  const mer = document.createElement('div'); mer.id = 'flismer'; mer.dataset.ikon = 'mer'; mer.setAttribute('role', 'button'); mer.setAttribute('aria-label', 'Flere tall'); mer.dataset.tips = 'Flere tall|Tallene som ikke fikk plass på raden. Trykk for å se dem.'; mer.dataset.ord = 'Mer'; const merTall = document.createElement('b'); mer.appendChild(merTall);
   const merListe = document.createElement('div'); merListe.id = 'flismerliste'; document.body.appendChild(merListe); let merSig = '', merÅpen = false;
   function fyllMer() { const S = document.querySelector('.stats'); if (!S) return; const rader = [...S.children].filter(d => d.dataset.mer && !d.hidden && !d.dataset.tom && !d.dataset.teknisk), sig = rader.map(d => d.textContent).join('|'); if (sig === merListe.dataset.sig) return; merListe.dataset.sig = sig; merListe.textContent = '';
     for (const d of rader) { const b = document.createElement('button'), o = d.querySelector('span:not([id])'), v = d.querySelector('b'); if (d.dataset.ikon) b.dataset.ikon = d.dataset.ikon; const n = document.createElement('span'); n.textContent = d.dataset.ord || (o ? o.textContent.trim() : ''); const t = document.createElement('b'); t.textContent = v ? v.textContent : ''; if (v && v.style.color) t.style.color = v.style.color; b.append(n, t); if (d.dataset.tips) b.dataset.tips = d.dataset.tips; b.onclick = () => { åpneMer(false); d.click(); }; merListe.appendChild(b); } }
   function åpneMer(på) { merÅpen = på; mer.classList.toggle('åpen', på); merListe.classList.toggle('på', på); if (på) { fyllMer(); const r = mer.getBoundingClientRect(); merListe.style.left = Math.max(6, Math.min(window.innerWidth - 230, r.left)) + 'px'; merListe.style.top = r.bottom + 5 + 'px'; } }
   mer.onclick = e => { e.stopPropagation(); åpneMer(!merÅpen); }; document.addEventListener('pointerdown', e => { if (merÅpen && !merListe.contains(e.target) && !mer.contains(e.target)) åpneMer(false); });
-  function passInn() { const S = document.querySelector('.stats'); if (!S) return; if (mer.parentNode !== S) S.appendChild(mer); const barn = [...S.children].filter(d => d !== mer);
+  function passInn() { const S = document.querySelector('.stats'); if (!S) return; if (mer.parentNode !== S) S.appendChild(mer); const barn = [...S.children].filter(d => d !== mer), kort = document.body.classList.contains('kort'), ut = kort ? UT_TLF : UT;
     const sig = window.innerWidth + '|' + document.body.className.length + '|' + barn.map(d => (d.hidden || d.dataset.tom || d.dataset.teknisk ? 0 : d.textContent.length)).join(','); if (sig === merSig) { if (merÅpen) fyllMer(); return; } merSig = sig;
-    const enRad = () => { let t = null; for (const d of S.children) { if (!d.getClientRects().length) continue; if (t === null) t = d.offsetTop; else if (Math.abs(d.offsetTop - t) > 4) return false; } return true; };
-    const sett = n => { S.dataset.trang = String(Math.min(n, 2)); let ant = 0; for (const d of barn) { const i = UT.indexOf(d.dataset.s), ut = i >= 0 && i < n - 2; if (ut) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom) ant++; } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merTall.textContent = '+' + ant; return ant; };
-    let n = 0; sett(0); while (!enRad() && n < UT.length + 2) sett(++n);
+    // PC: alt på én rad; telefon (runde 6): raden skal ikke rulles eller kuttes («ingen t…») – det som ikke får plass, står bak «Mer»
+    const enRad = () => { if (kort) return S.scrollWidth <= S.clientWidth + 1; let t = null; for (const d of S.children) { if (!d.getClientRects().length) continue; if (t === null) t = d.offsetTop; else if (Math.abs(d.offsetTop - t) > 4) return false; } return true; };
+    const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) ant++; } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merTall.textContent = '+' + ant; return ant; };
+    let n = 0; sett(0); while (!enRad() && n < ut.length + 2) sett(++n);
     if (merÅpen) { if (!mer.classList.contains('på')) åpneMer(false); else fyllMer(); } }
   const går = () => typeof R3 !== 'undefined' && R3 && R3.fot && typeof på3d !== 'undefined' && på3d;
-  function merkStats(bred) { const S = document.querySelector('.stats'); if (!S) return; for (const d of S.children) { const b = d.querySelector('b[id]') || d.querySelector('[id]'); if (!b) continue; if (d.dataset.s !== b.id) d.dataset.s = b.id;
-      // «0 %» og «ute» sier ingenting alene: de får ordet sitt foran tallet (også på telefon)
-      if (ORD[b.id] && d.dataset.ord !== ORD[b.id]) d.dataset.ord = ORD[b.id];
+  // RUNDE 6 (19. nov, kritikerne: «toppstripa er tall uten forklaring» – «ingen tank», «0/60» × 3, «1/15», «+3», «10 ⚠»): hver flis får et kort
+  // ord foran tallet (ETIKETT, vises med data-ord) og enheten etter et rent tall (ENHET, b[data-enhet]). Klokka, kassa og været forklarer
+  // seg selv med ikon og enhet («40 mill. kr», «Klart, 8 °C»). Ordene er Claudes forslag.
+  const ETIKETT = { sDag: 'Dag', sDiesel: 'Diesel', sTre: 'Tre', sBetong: 'Betong', sStaal: 'Stål', sStrom: 'Strøm', sOlje: 'Olje', sFolk: 'Folk', sMaal: 'Mål', sKrig: 'Kontroll', sHvor: 'Du er', sH: 'Høyde', sFps: 'FPS', sKB: 'Lastet' };
+  const ENHET = { sTre: 'm³', sBetong: 'm³', sStaal: 't', sOlje: 't', sH: 'moh.' };
+  // telefonen: rekkefølgen på raden (de viktigste først), og hvilke flisene som går inn bak «Mer» først når raden ikke får plass
+  const REKKE_TLF = ['sDag', 'sPenger', 'sFolk', 'sDiesel', 'sMaal', 'sKrig', 'sStrom', 'sTre', 'sBetong', 'sStaal', 'sOlje', 'sVaer', 'sHvor', 'sH', 'sFps', 'sKB'];
+  const UT_TLF = ['sH', 'sHvor', 'sVaer', 'sOlje', 'sStaal', 'sBetong', 'sTre', 'sStrom', 'sKrig', 'sMaal', 'sDiesel', 'sFolk'];
+  function merkStats(bred) { const S = document.querySelector('.stats'); if (!S) return; const kort = document.body.classList.contains('kort');
+    for (const d of S.children) { if (d === mer) continue; const b = d.querySelector('b[id]') || d.querySelector('[id]'); if (!b) continue; if (d.dataset.s !== b.id) d.dataset.s = b.id;
+      // «0 %» og «ute» sier ingenting alene: de får ordet sitt foran tallet (også på telefon) – og (runde 6) alle de andre flisene også
+      const ord = kort && b.id === 'sDag' ? '' : ORD[b.id] || ETIKETT[b.id]; if ((d.dataset.ord || '') !== ord) { if (ord) d.dataset.ord = ord; else delete d.dataset.ord; }
+      { const v = b.textContent.trim(), e = ENHET[b.id] && /^[\d\s.,/\u00a0\u202f−-]+$/.test(v) ? ENHET[b.id] : ''; if ((b.dataset.enhet || '') !== e) { if (e) b.dataset.enhet = e; else delete b.dataset.enhet; } }
       // en flis uten tall (bare en strek) sier ingenting: den vises først når den har noe å si
       { const tom = /^[–-]?$/.test(b.textContent.trim()) ? '1' : ''; if ((d.dataset.tom || '') !== tom) { if (tom) d.dataset.tom = tom; else delete d.dataset.tom; } }
-      if (!bred) { if (d.style.order) d.style.order = ''; continue; } const i = REKKE.indexOf(b.id); const o = i >= 0 ? String(i) : '50'; if (d.style.order !== o) d.style.order = o; if (TEKNISK.includes(b.id)) d.dataset.teknisk = '1';
+      if (TEKNISK.includes(b.id) && d.dataset.teknisk !== '1') d.dataset.teknisk = '1';
+      if (!bred) { const i = kort ? REKKE_TLF.indexOf(b.id) : -1, o = i >= 0 ? String(i - 20) : ''; if (d.style.order !== o) d.style.order = o; continue; }
+      const i = REKKE.indexOf(b.id); const o = i >= 0 ? String(i) : '50'; if (d.style.order !== o) d.style.order = o;
       // ordet som er skjult i spillskjermen, står i verktøytipset
       if (!d.title && !window.FlisTips) { const o = d.querySelector('span:not([id])'); if (o && o.textContent.trim()) d.title = o.textContent.trim(); } } }
   function oppdater() { const bred = window.innerWidth >= 900 && !document.body.classList.contains('kort'); if (document.body.classList.contains('spill') !== bred) document.body.classList.toggle('spill', bred); merkStats(bred); let noen = false;
@@ -162,7 +182,7 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
     // telefonen: raden nederst, og Leir/Krig/Deg tas da ut av den trange raden øverst (de står nede)
     const tlf = !bred && noen && !g && !(st && st.classList.contains('på')), mpå = tlf && !skjul && !DEKKER.some(id => vises($(id)));
     if (document.body.classList.contains('mtlf') !== tlf) document.body.classList.toggle('mtlf', tlf); if (mbar.classList.contains('på') !== mpå) { mbar.classList.toggle('på', mpå); document.body.classList.toggle('mkom', mpå); }
-    if (komMerÅpen && !bar.classList.contains('på') && !mbar.classList.contains('på')) åpneKomMer(false); settKomMer(); if (bred) passInn(); else if (merÅpen) åpneMer(false); }
+    if (komMerÅpen && !bar.classList.contains('på') && !mbar.classList.contains('på')) åpneKomMer(false); settKomMer(); if (bred || document.body.classList.contains('kort')) passInn(); else if (merÅpen) åpneMer(false); }
   setInterval(oppdater, 400); window.addEventListener('resize', oppdater); window.addEventListener('riksbrudd-spill', () => setTimeout(oppdater, 100)); oppdater();
   // «Tekniske tall» i ☰: moh., MB lastet og bilder per sekund
   { const m = $('lagmeny'); if (m) { const b = document.createElement('button'); b.id = 'tekniskknapp'; b.textContent = 'Tekniske tall'; let på = false; try { på = localStorage.getItem('riksbrudd-teknisk') === '1'; } catch (e) { på = false; } const sett = () => { document.body.classList.toggle('teknisk', på); b.textContent = 'Tekniske tall: ' + (på ? 'vises' : 'skjult'); }; b.onclick = () => { på = !på; try { localStorage.setItem('riksbrudd-teknisk', på ? '1' : '0'); } catch (e) { /* sperret */ } sett(); }; sett();
