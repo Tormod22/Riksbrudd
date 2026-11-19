@@ -72,6 +72,9 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
   småstein, lav/mose, lyngtuer og snøflekker innen 48 m rundt deg der det er fjellmark (over tregrensen, eller grått/brunt i kartet nær den;
   brun hei også lavere), fordelt på nytt per 12 m. Snøflekker 0–420 m under snøgrensen, ikke om vinteren. Aldri i vann/bekk/veg/spor/hus/
   leirbygg. Fire instansnett med hjørnefarger, mengden følger `KVAL.p.gress` (Lav = av). `Fjellmark.antall()`.
+- Prøvd: ved 1665 moh. på Dovre (tregrensen 1075 m): 520 steiner, 700 lav/mose, 520 lyngtuer, 26 snøflekker rundt deg
+  (scratchpad natt6/ga/fjellmark-hoyt-pc.png). Lyngtuene var først to kryssede flak – de så ut som små røde kasser på avstand og er
+  nå lave, mørke puter. Ved 1231 moh. står gresset (gress3d) fortsatt høyt og dekker det meste; over ca. 1,35 × tregrensen er det bare fjellmarka.
 - **Figurene (ikke gjort):** soldatene er i index.html (soldater3d), folkene i folk3d.js og karakteren i karakter.js – ingen av dem er mine.
 
 ### Filer
@@ -80,3 +83,19 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
 - Endret (mine): `spill/gange.js`, `spill/vaer.js`, `spill/vaer-visning.js`, `spill/kvalitet.js`, `spill/eventyr-visning.js`,
   `spill/ytelse.js` (navnet «fjellmark nær deg» i målingen), `pipeline/fliser/test_vaer.js`.
 - Fellesfil: `index.html` – bare to skripttagger rett etter lykt.js (`gaavalg.js`, `fjellmark3d.js`) + versjonsmerkene fra versjon.py.
+
+### Vakt og prøver
+- `pipeline/fliser/vakter/ga.js`: uten 3D – reglene, statusteksten under et ekte værskifte («Klart → skyet» → «Skyet»), at 3D-kopien
+  følger reglene i 2D, maskinvarelappen (liten, ikke midt i bildet, kommer ikke igjen), at Esc-sjekken ser sekken og at kortkøen er koblet
+  til. Med 3D også: valget (Esc lukker det), en reise på 90 m (tiden går, farten tilbake), prøvehus med «Gå inn» → inne → «Gå ut», Esc med
+  sekken åpen, og et prøvekort som venter mens du går (med `Gange.test`). Dørhjelpen kjøres med faste steg (`Gange.kamera(R, dt)`), så
+  vakta tar ca. 7 s i 3D også under last (første utgave ventet på bildene: 8 min). Grønn på PC i 2D og 3D (to kjøringer).
+- Prøveskript: scratchpad `natt6/ga/` (kjor.js + e_*.js; LEIR=x,y velger leiren). Bilder: ga-valg-pc/mobil, ga-reiser-pc, ga-framme-pc/mobil,
+  dor-knapp-pc/mobil, dor-inne-pc/mobil, esc-sekk-pc, kort-venter-pc, kort-varsel-snik-mobil, fjellmark-hoyt-pc, vaer-3d/vaer-gaar (før).
+- Kontrollforsøk for døra: samme gange mot veggen 0,45 m til siden uten trekket → står fast mot veggen; med trekket → inne.
+
+### Ikke gjort
+- Mykere figurer (soldater3d i index.html, folk3d.js, karakter.js og våpenet i hånda i narhud.js er ikke mine).
+- Reisen går i rett linje (omvegen er bare regnet inn i tiden); den sjekker ikke fiender underveis utover at spillet senker farten.
+- Med programvare-grafikk kan reisen bli noen minutter lengre enn sagt (600× og trege bilder: opptil 2,5 spillminutter per bilde).
+- «Gå inn» gjelder byggene som har interiør (de nærmeste innen 30 m når du går), ikke byggesettets egne hus.
