@@ -461,6 +461,8 @@ rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(
 - Regeltestene: test_garnison, test_fraksjoner, test_strategi, test_spillet, test_trussel_lagring, test_forsvar, test_tropper, test_strid – ok.
 - Vaktene krig og balanse i nettleseren (PC 2D, mobil 2D, mobil med 3D) – ok, også etter flettingen.
 - Hele mobilkontrollen (`SJEKK_PROFIL=mobil`) før flettingen: 116 ok, 0 FEIL (den første kjøringen krasjet i «bygg i skråning» fordi vakta lot 3D være av – rettet).
+  Etter flettingen med nattfiks: 118 ok, 0 FEIL (én kjøring før det hadde 1 FEIL i «måling av ytelse» – halv oppløsning ble ikke halv, ikke krig-kode;
+  neste kjøring var grønn, så den ser ustabil ut).
 
 ### IKKE gjort / svakheter (runde 6)
 - Med `lagMaks = 6` og en garnison per tettsted får ingen motstander 35 frie mann – de tar aldri Stavanger/Sandnes av seg selv (gjennomspillingen:
