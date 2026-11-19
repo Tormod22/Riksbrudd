@@ -67,7 +67,9 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   const iStrid = e => (e.skyterPå && [...e.skyterPå].some(b => b && b.side === 'blå')) ? [...e.skyterPå].find(b => b && b.side === 'blå') : blåLag().find(s => s.skyterPå && s.skyterPå.has(e)) || null;
   const kjent = e => { const L = leir(); return synlig(e) || !!iStrid(e) || (L && Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne); };
   // anslaget fra varselet: minutter til den første er framme (startstedet og tida de har gått – ikke hvor de faktisk er)
-  const anslag = r => { const L = leir(), TR = window.Spillet && Spillet.Trussel; if (!L || !TR || !TR.anslag) return null; const m = r.filter(e => e.fra && Number.isFinite(e.startTid)).map(e => TR.anslag(Math.hypot(e.fra.x - L.x, e.fra.y - L.y), tid - e.startTid, R.fart));
+  // (når ruta er lagt: tida som er igjen av marsjen, timerIgjen i timer)
+  const anslag = r => { const L = leir(), TR = window.Spillet && Spillet.Trussel; if (!L || !TR || !TR.anslag) return null;
+    const m = r.filter(e => (e.sti && e.timerIgjen > 0) || (e.fra && Number.isFinite(e.startTid))).map(e => (e.sti && e.timerIgjen > 0 ? e.timerIgjen * 60 : TR.anslag(Math.hypot(e.fra.x - L.x, e.fra.y - L.y), tid - e.startTid)));
     return m.length ? Math.min(...m) : null; };
   // hvem som så dem: vakttårnet (Trussel.VARSEL.tårn), et kamera, vaktene, eller et lag
   function settAv(e) { const L = leir(), f = fsv(), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL; if (!L) return '';

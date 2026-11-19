@@ -25,7 +25,7 @@ ok(Trussel.menn(4, 12, 2) === 7 && Trussel.menn(4, 12, 1) === 12 && Trussel.menn
 ok(Trussel.belønning(1) === 450000 && Trussel.belønning(40) === 1.5e6, 'angrep: byttet er lite og har et tak');
 ok(Trussel.vent(1).spill > Trussel.vent(8).spill && Trussel.vent(30).spill === 16 * 60 && Trussel.vent(30).ekte === 16, 'angrep: kortere mellom bølgene, men aldri under 16 timer / 16 minutter');
 { const s = Trussel.start({ x: 1000, y: 2000 }, .25, .5), d = Math.hypot(s.x - 1000, s.y - 2000); ok(d > 2999 && d < 4001 && s.retning === 'nord' && /nord/.test(Trussel.varsel(3, 2, s)), 'angrep: starter 3–4 km unna (19. nov), varselet sier retningen');
-  ok(Math.round(Trussel.anslag(3500, 0)) === 45 && Trussel.anslag(3500, 30) < 16 && Trussel.anslag(3500, 999) === 0, 'angrep: anslaget på ankomsten (ca. 45 min fra 3,5 km)'); }
+  ok(Math.round(Trussel.anslag(3500, 0, 1.3)) === 45 && Math.round(Trussel.anslag(3500, 0)) === 78 && Trussel.anslag(3500, 60) < 20 && Trussel.anslag(3500, 999) === 0, 'angrep: anslaget på ankomsten (ca. 78 min fra 3,5 km i terrenget)'); }
 { const M = Marked.ny(); let lav = 9, høy = 0; for (let i = 0; i < 400; i++) { Marked.steg(M, rng); for (const v of Marked.VARER) { lav = Math.min(lav, M.f[v]); høy = Math.max(høy, M.f[v]); } }
   ok(lav >= .55 && høy <= 1.8 && høy > 1.15 && lav < .88, `marked: prisene svinger mellom ${lav.toFixed(2)} og ${høy.toFixed(2)} av det vanlige`);
   ok(M.infl > 1.5 && M.infl <= 3 && Marked.pris(M, 'tre', 20000) % 100 === 0 && /Markedet/.test(Marked.tekst(M)), 'marked: inflasjonen gjør alt dyrere, prisene er hele hundre'); }

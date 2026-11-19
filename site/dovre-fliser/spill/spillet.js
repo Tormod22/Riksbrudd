@@ -46,9 +46,11 @@
     // VARSELET (19. nov, Claudes forslag): start = meter fra leiren røverne starter (3–4 km); kommerMaks = spillminutter et lag som ennå ikke
     // har vært innen «borte» m, teller som «på vei» (ikke «unna»); snart = minutter før ankomst farten senkes og det varsles igjen;
     // tårn = meter et bemannet vakttårn ser røverne på (vaktene uten tårn ser 400 m, med tårn 800 m – nå ser tårnet røverne alt på 1,5 km)
-    VARSEL: { start: [3000, 4000], kommerMaks: 240, snart: 10, tårn: 1500 },
-    // anslaget: minutter til et lag som startet «meter» unna for «gått» spillminutter siden, er framme (fart m/s som Forsvar.R.fart)
-    anslag: (meter, gått, fart = 1.3) => Math.max(0, (meter - Math.max(0, gått) * fart * 60) / fart / 60),
+    // fart = m/s røverne i snitt kommer seg fram i terrenget (målt i gjennomspillingen 19. nov: 3,7 km tok over 80 min); brukes bare
+    // før ruta deres er kjent – siden gir ruta (timerIgjen) anslaget
+    VARSEL: { start: [3000, 4000], kommerMaks: 240, snart: 10, tårn: 1500, fart: .75 },
+    // anslaget: minutter til et lag som startet «meter» unna for «gått» spillminutter siden, er framme
+    anslag: (meter, gått, fart = Trussel.VARSEL.fart) => Math.max(0, (meter - Math.max(0, gått) * fart * 60) / fart / 60),
     // (runde 4) Lag som har herjet og trekker seg ut med byttet (trekker), kjemper ikke lenger: er ingen andre igjen, er bølgen over
     // som 'herjet' – ikke slått tilbake, og ingen belønning.
     ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt && !q.trekker); if (!k.length) return (lag || []).some(q => q.trekker) ? 'herjet' : 'slått';
