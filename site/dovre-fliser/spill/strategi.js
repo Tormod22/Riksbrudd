@@ -91,7 +91,8 @@
       ut.push({ by: b, garnison: g, fiende: nær, km: nær ? nd / 1000 : null, alvor: (nær ? 2 : 0) + (g ? 0 : 1) + b.folk / 1e5 }); }
     return ut.sort((a, b) => b.alvor - a.alvor);
   }
-  const prosent = a => Math.round(a * 100);
+  // (19. nov) en side som holder noe, står ikke med «0 %»: under en halv prosent er «under 1»
+  const prosent = a => (a > 0 && a < .005 ? 'under 1' : Math.round(a * 100));
   // entall/flertall: «1 tettsted», «2 tettsteder»
   const tettsteder = n => `${n} tettsted${n === 1 ? '' : 'er'}`;
   const api = { REGLER, område, stilling, utfall, rekkevidde, fronter, trekk, trusler, prosent, kravTekst, tettsteder };
