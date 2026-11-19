@@ -41,7 +41,7 @@
     //  storEtter: tettsteder som trenger mer enn ett lag (minst over «ettLag» mann) blir mål først så mange døgn etter fredstiden –
     //    de tar småstedene først (gjennomspillingen 19. nov: rett etter fredstiden gikk begge mot Stavanger/Sandnes)
     //  midten: meter fra tettstedets midtpunkt et lag som tar det, går inn til
-    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 400,
+    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 150,
   };
   // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
   const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
