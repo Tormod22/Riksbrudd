@@ -81,7 +81,7 @@
   fxKnapp.onclick = () => { KVAL.effekter(!fxPå); if (typeof logg === 'function') logg('Lys og skygger: ' + (fxPå ? 'på' : 'av') + '.'); };
   settFx();
   const knapp = document.createElement('button'); knapp.id = 'vis-grafikk';
-  const settKnapp = () => { knapp.textContent = 'Grafikk: ' + (valg === 'auto' ? 'auto (' + NIVÅ[S.nivå].navn.toLowerCase() + ')' : NIVÅ[valg].navn); knapp.title = 'Lavere grafikk gir jevnere bilde på svake maskiner' + (KVAL.kort ? '. Grafikkort: ' + kortNavn(KVAL.kort) : ''); };
+  const settKnapp = () => { knapp.textContent = 'Grafikk: ' + (valg === 'auto' ? 'auto (' + NIVÅ[S.nivå].navn.toLowerCase() + ')' : NIVÅ[valg].navn); knapp.title = 'Lavere grafikk gir jevnere bilde på svake maskiner' + (KVAL.kort ? '. Grafikkort: ' + kortNavn(KVAL.kort) : '') + (KVAL.programvare ? ' (programvare: slå på maskinvareakselerasjon i nettleseren)' : ''); };
   function bytt(nivå) {
     if (nivå === S.nivå) return; S.nivå = nivå; KVAL.v++; settKnapp();
     // trærne, gresset og blomstene fordeles på nytt i neste ramme; bakketeksturen følger med i neste utsnitt
@@ -101,8 +101,31 @@
     if (typeof logg === 'function') logg('Grafikkort: ' + kortNavn(navn) + (KVAL.programvare ? ' (programvare – ikke et grafikkort)' : '') + '.');
     if (!KVAL.programvare || navigator.webdriver) return;
     if (valg === 'auto') bytt('lav');
-    if (typeof visMelding === 'function') visMelding('Nettleseren tegner 3D uten grafikkortet, og da går det tregt uansett innstilling i spillet. Slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt.', { type: 'grafikk' });
+    programvareVarsel();
   });
+  // MASKINVAREVARSELET (runde 6, 19. nov, kritikken: varselet la seg midt i bildet ved hver åpning av 3D, også over siktet når du gikk,
+  // og kom tilbake etter × og omlasting). Nå: en liten lapp i hjørnet én gang i denne nettleseren – lukket (×) eller borte av seg selv
+  // etter REGLER_VARSEL.sek sekunder er den husket som sett («riksbrudd-grafikkvarsel»). Rådet står også i loggen og på Grafikk-knappen.
+  // Claudes forslag:
+  const REGLER_VARSEL = { sek: 25 };
+  function programvareVarsel() {
+    const RÅD = 'Slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt.';
+    let sett = null; try { sett = localStorage.getItem('riksbrudd-grafikkvarsel'); } catch (e) { /* privat vindu */ }
+    if (sett || document.getElementById('grafikkvarsel')) return;
+    if (typeof logg === 'function') logg('3D går tregt: nettleseren tegner uten grafikkortet. ' + RÅD);
+    const husk = () => { try { localStorage.setItem('riksbrudd-grafikkvarsel', 'lukket'); } catch (e) { /* privat vindu */ } };
+    if (!document.getElementById('grafikkvarselcss')) { const css = document.createElement('style'); css.id = 'grafikkvarselcss';
+      css.textContent = `#grafikkvarsel{ position:fixed; box-sizing:border-box; right:12px; top:calc(var(--topp,58px) + 56px); z-index:9; width:min(290px,60vw); padding:7px 30px 7px 10px; background:rgba(28,23,15,.9);
+  border:1px solid #6b5a36; color:#d8ccb0; font-size:12.5px; line-height:1.3; } #grafikkvarsel b{ color:#f0d79a; font-weight:600; }
+#grafikkvarsel button{ position:absolute; right:3px; top:3px; width:24px; height:24px; padding:0; background:none; border:0; color:#e7dcc3; font-size:16px; cursor:pointer; }
+body.kort #grafikkvarsel{ right:auto; left:8px; top:38%; width:min(180px,45vw); font-size:12px; } body.foto #grafikkvarsel{ display:none; }`; document.head.appendChild(css); }
+    const v = document.createElement('div'); v.id = 'grafikkvarsel'; v.setAttribute('role', 'status');
+    const b = document.createElement('b'); b.textContent = '3D går tregt: '; const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.title = 'Lukk (vises ikke igjen)'; x.setAttribute('aria-label', 'Lukk');
+    v.append(b, 'nettleseren tegner uten grafikkortet. Slå på maskinvareakselerasjon i nettleserens innstillinger (mer i loggen).', x);
+    x.onclick = () => { husk(); v.remove(); }; document.body.appendChild(v); husk();
+    setTimeout(() => v.remove(), REGLER_VARSEL.sek * 1000);
+  }
+  KVAL.programvareVarsel = programvareVarsel;
   KROKER.ramme3d.push(R => {
     // (R.måler: spill/ytelse.js måler – da står nivået stille)
     if (valg !== 'auto' || R.rammeSnitt == null || R.måler) return;

@@ -44,7 +44,11 @@
     const k = glatt((t - S.start) / S.varighet); if (k >= 1) return mål;
     const ut = {}; for (const f of FELT) ut[f] = S.fra[f] + (mål[f] - S.fra[f]) * k; return ut;
   }
-  function skift(S, nytt, t, varighet) { S.fra = t == null ? null : blandet(S, t); S.start = t || 0; S.varighet = varighet; S.vær = nytt; }
+  // (runde 6, 19. nov: fraVær = været det skifter fra, så statuslinja kan si «Klart → regn» mens overgangen pågår – før sto «Regn» øverst
+  // mens 3D fortsatt viste blå himmel tidlig i overgangen)
+  function skift(S, nytt, t, varighet) { S.fra = t == null ? null : blandet(S, t); S.fraVær = S.vær; S.start = t || 0; S.varighet = varighet; S.vær = nytt; }
+  // Hvor langt overgangen er kommet (0–1; 1 = ferdig eller ingen overgang)
+  function overgang(S, t) { if (!S.fra || !S.varighet || t == null) return 1; return Math.max(0, Math.min(1, (t - S.start) / S.varighet)); }
   // Ett steg: t i spillminutter. Gir true når været skiftet. Bakken blir våt i regnet (ca. 25 min) og tørker sakte (ca. 2,5 t).
   function steg(S, t, rnd = Math.random) {
     const dt = S.sistT == null ? 0 : Math.max(0, Math.min(600, t - S.sistT)); S.sistT = t;
@@ -54,11 +58,12 @@
     if (t < S.til) return false;
     S.til = t + 60 + rnd() * 180; const nytt = trekk(ÅRSTIDER[S.årstid].vær, rnd());
     if (nytt === S.vær) return false;
-    skift(S, nytt, t, 45 + rnd() * 45); S.styrke = .35 + rnd() * .65; return true;
+    // overgangen: 25–45 spillminutter (Claudes forslag; før 45–90, som ved 1× = sanntid ga nesten halvannen time med blå himmel og «Regn» øverst)
+    skift(S, nytt, t, 25 + rnd() * 20); S.styrke = .35 + rnd() * .65; return true;
   }
   function settÅrstid(S, å, t) { S.årstid = å; S.fra = null; if (!S.låst) { const v = ÅRSTIDER[å].vær; if (!v[S.vær]) { S.vær = 'skyet'; } S.til = t + 30; } }
   // Låst vær fra menyen kommer med en gang (visningen glatter det over noen sekunder)
-  function låsVær(S, v) { S.låst = v === 'auto' ? null : v; if (S.låst) { S.vær = S.låst; S.fra = null; } }
+  function låsVær(S, v) { S.låst = v === 'auto' ? null : v; if (S.låst) { S.vær = S.låst; S.fra = null; S.fraVær = null; } }
   // Høyden over horisonten (grader) for deklinasjon dekl (grader) og timevinkel ω (timer fra sør) på bredde 62,1° N (Dombås)
   function høyde(dekl, ω, bredde = 62.1) {
     const δ = dekl * Math.PI / 180, φ = bredde * Math.PI / 180, w = ω * 15 * Math.PI / 180;
@@ -108,10 +113,12 @@
     const dagNr = t == null ? 0 : Math.floor((6 + t / 60) / 24), morgen = trinn(3, 5, time) * (1 - trinn(8.5, 11, time));
     const dalTåke = Math.min(1, Math.max(b.dh, morgen * Å.fukt * b.dt * 1.15));
     const torden = b.regn * (S.styrke > .72 ? 1 : 0) * ({ sommer: 1, høst: .5, vår: .3 }[S.årstid] || 0);
-    return { vær: S.vær, navn: V.navn, årstid: S.årstid, årstidNavn: Å.navn, dag: Å.dag, dato: Å.dag + dagNr, dagNr, sikt: b.sikt, dis: b.dis, sky: b.sky, nedbør,
+    // navnNå: det statuslinja viser – i første halvdel av en overgang «Klart → regn», ellers navnet på været
+    const k = overgang(S, t), fra = S.fraVær && S.fraVær !== S.vær && VÆR[S.fraVær] ? VÆR[S.fraVær].navn : null, navnNå = k < .5 && fra ? fra + ' → ' + V.navn.toLowerCase() : V.navn;
+    return { vær: S.vær, navn: V.navn, navnNå, overgang: k, årstid: S.årstid, årstidNavn: Å.navn, dag: Å.dag, dato: Å.dag + dagNr, dagNr, sikt: b.sikt, dis: b.dis, sky: b.sky, nedbør,
       regn: b.regn, snø: b.snø, snøgrense, høst: Å.høst, temp, vind: vind(t || 0, b.vind), våt: S.våt || 0, dalTåke, torden, styrke: S.styrke };
   }
-  const api = { VÆR, ÅRSTIDER, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn };
+  const api = { VÆR, ÅRSTIDER, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, overgang, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vaer = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
