@@ -75,6 +75,9 @@ console.log('ok – fiendens kjøretøy og stillinger');
   assert.deepEqual([F.lagTak(0, 0), F.lagTak(0, 2), F.lagTak(0, 4), F.lagTak(2, 2)], [3, 4, 5, 5], 'lagtaket vokser over døgnene');
   const st = F.startsteder({ x: 0, y: 0 }, [{ navn: 'Storby', x: 7000, y: 0, folk: 235000 }, { navn: 'Vatne', x: 0, y: 9000, folk: 2000 }, { navn: 'Sør', x: 0, y: -20000, folk: 900 }]);
   assert.equal(st.rød.navn, 'Vatne', 'startstedet er ikke storbyen');
+  const fb = F.velg(lag('K', 3000, 0), verden({ byer: [by(1, 'Nær', 3000, 0, 500, 'grønn')], iByFiende: { x: 3060, y: 0, navn: 'Grønn garnison', styrke: 8 } }));
+  assert.deepEqual([fb.hva, fb.x], ['jakt', 3060], 'en skjult fiende i tettstedet: laget går mot den');
+  assert.match(F.velg(lag('K', 3000, 0), verden({ byer: [by(1, 'Nær', 3000, 0, 500, 'grønn')], iByFiende: { x: 3060, y: 0, navn: 'G', styrke: 30 } })).tekst, /tar Nær/, 'for sterk: blir stående');
   const kant = F.velg(lag('K', 3300, 0), verden()); assert.deepEqual([kant.hva, kant.x, kant.mål], ['ta', 3000, 1], 'i kanten av tettstedet: går inn mot midten'); }
 console.log('ok – runde 6: storbyer krever styrke, fred de første døgnene, lagtaket vokser, startsted ikke i storbyen');
 console.log('ok – bedre AI: samlet angrep, samling, hjelp, jakt, bakhold, opptatte og tapte tettsteder, leiren, lagtak og angrepspunkt');

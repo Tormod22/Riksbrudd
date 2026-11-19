@@ -153,7 +153,10 @@
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
       // (18. nov) førerens væremåte (spill/krig.js) flytter terskelen for når laget angriper
       const vmF = window.Krig && window.KrigSpill && KrigSpill.auto() && !s.raid ? (Krig.væremåte((s.menn[s.leder] || s.menn[0]).navn).overtak || 1) : 1;
-      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), småFørst: småFørst(), mot, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
+      // (19. nov) fienden som står i tettstedet laget er i (lagene vet om hverandre der, også når skogen skjuler dem)
+      const byHer = byer.find(b => b.inni(s.x, s.y)), iByFiende = byHer ? ENHETER.filter(e => e !== s && e.side !== s.side && levende(e) && Array.isArray(e.menn) && !F.slåttUt(e) && !hvile(s.side, e.side) && byHer.inni(e.x, e.y))
+        .map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) })).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] : null;
+      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), småFørst: småFørst(), mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
         minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst) ? (byer.find(b => b.inni(s.x, s.y)) || {}).id : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på

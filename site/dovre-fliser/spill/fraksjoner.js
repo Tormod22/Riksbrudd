@@ -41,7 +41,8 @@
     //  storEtter: tettsteder som trenger mer enn ett lag (minst over «ettLag» mann) blir mål først så mange døgn etter fredstiden –
     //    de tar småstedene først (gjennomspillingen 19. nov: rett etter fredstiden gikk begge mot Stavanger/Sandnes)
     //  midten: meter fra tettstedets midtpunkt et lag som tar det, går inn til
-    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 150,
+    //  inntil: meter et lag går inntil en fiende i tettstedet det vil ta (så de ser hverandre også i skog)
+    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 150, inntil: 25,
   };
   // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
   const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
@@ -91,6 +92,10 @@
     const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
     const mulig = b => !(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag));
+    // (19. nov, gjennomspillingen: et rødt lag sto 51 m fra Folkefrontens garnison i Sviland i fire døgn – skogen skjulte dem, og ingen
+    // tok noe) en fiende som står i tettstedet laget vil ta, vet laget om (v.iByFiende): er laget sterkt nok, går det rett mot den
+    const fb = v.iByFiende;
+    if (iBy && iBy.eier !== v.side && fb && avstand(fb, her) > R.inntil && min >= overtak * (fb.styrke || 0)) return { hva: 'jakt', x: fb.x, y: fb.y, tekst: `går mot ${fb.navn} i ${iBy.navn}` };
     // (19. nov, gjennomspillingen: to sider sto i hver sin kant av Ålgård i tre døgn uten å se hverandre, og ingen tok byen) laget går
     // inn mot midten av tettstedet (b.x, b.y) før det blir stående; da møtes de som slåss om det
     if (iBy && iBy.eier !== v.side && mulig(iBy)) { const tekst = !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}`;
