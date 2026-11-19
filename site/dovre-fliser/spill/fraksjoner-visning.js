@@ -170,7 +170,8 @@
         continue; }
       s.ai.holdt = 0;
       const m = s.ai.mål; if (s.sti && m && Math.hypot(m[0] - v.x, m[1] - v.y) < 300) continue;   // allerede på veg dit
-      if (Math.hypot(v.x - s.x, v.y - s.y) < 150) continue;
+      // (19. nov) mot en fiende i tettstedet går laget helt inntil (ellers blir korte flytt over 150 m)
+      if (Math.hypot(v.x - s.x, v.y - s.y) < (v.hva === 'jakt' && iByFiende ? R.inntil : 150)) continue;
       // langt unna og lastebilen står like ved: kjør (laget følger kjøretøyet – spill/tropper-visning.js)
       { const k = BIL[s.side], dk = k && KJORETOY.includes(k) && !bærer(k) && !k.sti ? Math.hypot(k.x - s.x, k.y - s.y) : null;
         if (F.kjør(v.hva, Math.hypot(v.x - s.x, v.y - s.y), dk)) { const g = vegnett(); if (g) { let r = null; try { r = Kjoretoy.planlegg(k, g, [v.x, v.y]); } catch (e) { r = { feil: e.message }; }
