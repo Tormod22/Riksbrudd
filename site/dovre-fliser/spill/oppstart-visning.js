@@ -127,7 +127,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   // Utkastet lagres underveis (kritikken: «omlasting under oppstarten sletter alt og starter på steg 1»): steget og valgene,
   // i en egen nøkkel som tas bort når leiren er lagt. Leses bare for vanlige spillere (ikke i testene, som starter skjermen selv).
   const UTKAST = NØKKEL + '-utkast'; let steget = 1, sistUtkast = '';
-  function lagreUtkast() { if (!utkast || S) return; const t = JSON.stringify({ steg: steget, utkast });
+  function lagreUtkast(tving) { if (!utkast || (S && !tving)) return; const t = JSON.stringify({ steg: steget, utkast });
     if (t === sistUtkast) return; sistUtkast = t; try { localStorage.setItem(UTKAST, t); } catch (e) { /* privat vindu: huskes ikke */ } }
   function lesUtkast() { try { const d = JSON.parse(localStorage.getItem(UTKAST) || 'null'); if (!d || !d.utkast) return null;
     const u = O.fraJSON(JSON.stringify(d.utkast)); if (!u) return null; u.ferdig = false; u.leir = null; u.karakter.valgt = d.utkast.karakter.valgt || {};
@@ -140,7 +140,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   const ekte = () => !navigator.webdriver || window.OppstartSpill.test === true;
   function visOmrådet(dekk) {
     const b = sted().bb; if (!b || !ekte() || S || (typeof på3d !== 'undefined' && på3d)) return;
-    const topp = (document.querySelector('.top') || { getBoundingClientRect: () => ({ bottom: 60 }) }).getBoundingClientRect().bottom, bunn = dekk ? 0 : VH > VW ? 230 : 120;
+    const topp = (document.querySelector('.top') || { getBoundingClientRect: () => ({ bottom: 60 }) }).getBoundingClientRect().bottom, bunn = dekk || (VH <= VW && VH < 600) ? 0 : VH > VW ? 230 : 210;
     const høy = Math.max(200, VH - topp - bunn), mx = (b[2] - b[0]) / VW, my = (b[3] - b[1]) / høy;
     kam.x = (b[0] + b[2]) / 2; kam.m = dekk || VH > VW ? Math.min(mx, my) : Math.max(mx, my) * 1.04;
     kam.y = (b[1] + b[3]) / 2 + (dekk ? 0 : (topp - bunn) / 2 * kam.m); skitten = true;
@@ -248,6 +248,8 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     const R = Leirvalg.REGLER.radius, f = forslag;
     let v = null; try { v = await lagVindu([x - R, y - R, x + R, y + R], true); } catch (e) { v = null; }
     if (!velger || forslag !== f) return;
+    // høyden fra vinduet når kartet ikke hadde den (stedet utenfor bildet eller ikke lastet ennå)
+    if (h == null && v && window.Terreng) try { const [i, j] = Terreng.rute(v, x, y), z = v.H[j * v.w + i]; if (z === z) h = z; } catch (e) { /* utenfor vinduet */ }
     const m = Leirvalg.måle(v, x, y), tg = window.Vegetasjon && Vegetasjon.tregrense ? Vegetasjon.tregrense(y, x) : null;
     let by = null; for (const b of ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [])) { const dx = Math.max(b.bb[0] - x, 0, x - b.bb[2]), dy = Math.max(b.bb[1] - y, 0, y - b.bb[3]), d = Math.hypot(dx, dy);
       if (!by || d < by.m) by = { navn: b.e.navn, m: d }; }
