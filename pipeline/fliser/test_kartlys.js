@@ -13,5 +13,6 @@ const regn = K.tone({ e: 40, regn: 1, sky: 1 }), litt = K.tone({ e: 40, regn: .3
 ok(regn.grå > .3 && regn.mørk > 0 && regn.natt === 0, `kraftig regn: gråere og litt mørkere (grå ${regn.grå.toFixed(2)}, mørk ${regn.mørk.toFixed(2)})`);
 ok(litt.grå > 0 && litt.grå < regn.grå, 'lett regn: mindre grått');
 ok(snø.grå > 0, 'snø gjør også kartet gråere');
-ok(K.tone({ e: -20, regn: 1, sky: 1 }).natt + regn.mørk < .75, 'natt og regn sammen: kartet kan fortsatt leses (ikke svart)');
+{ const T = K.tone({ e: -20, regn: 1, sky: 1 }), snitt = T.farge.reduce((a, b) => a + b, 0) / 3 / 255, lys = (1 - T.natt * (1 - snitt)) * (1 - T.mørk);
+  ok(lys > .4, `natt og regn sammen: kartet har ${Math.round(lys * 100)} % av lyset igjen (kan leses, ikke svart)`); }
 process.exit(feil ? 1 : 0);

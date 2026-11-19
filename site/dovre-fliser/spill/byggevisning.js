@@ -134,7 +134,9 @@
       for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (B.linje || B.del || !LB.ferdig(b)) continue; const x = sx(b.x), y = sy(b.y); if (x < 0 || y < 0 || x > VW || y > VH) continue;
         const e = LB.effekt(b), d = []; if (uten && uten.has(b.id)) d.push('uten strøm'); else if (e.kw > 0) d.push('+' + tall(e.kw) + ' kW'); else if (e.kw < 0) d.push('−' + tall(-e.kw) + ' kW');
         if (e.plasser) d.push(e.plasser + ' senger'); if (e.lager) d.push('lager ' + e.lager); if (e.liter) d.push(tall(e.liter) + ' l'); if (!d.length) continue;
-        const t = d.join(' · '); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, y + 18); g.fillText(t, x, y + 18); } }
+        // RUNDE 6 (kritikken: «Brakke −1 kW · 8 senger» lå oppå bygget og så ut som en feil): tallene står under byggets omriss, ikke oppå taket
+        let yb = y + 18; try { const H = LB.hjørner(b); if (H && H.length) yb = Math.max(...H.map(q => sy(q[1]))) + 13; } catch (e) { yb = y + 18; }
+        const t = d.join(' · '); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, yb); g.fillText(t, x, yb); } }
     const type = p && !p.mal ? p.type : null;
     if (type && RING[type]) for (const b of L.bygg) if (b.type === type && b.id !== p.flytt) ring(b, false);
     if (p && !p.mal) { const B = LB.BYGG[p.type];

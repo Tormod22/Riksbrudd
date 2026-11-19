@@ -10,13 +10,15 @@
   // Claudes forslag: hvor mørkt og blått natta blir, og hvor grått regnet gjør kartet
   const REGLER = {
     // multipliseres over kartet: full natt = kartet ganges med denne fargen med styrken natt
-    nattFarge: [46, 64, 112], nattMaks: .58,
+    nattFarge: [46, 64, 112], nattMaks: .62,
+    // de lyse sommernettene (sola 4–14° under horisonten) gir litt lys tilbake – mindre enn i 3D, så 2D-kartet føles som natt
+    tussmørke: .35,
     // regn/snø: fargene trekkes mot grått (metning) og kartet blir litt mørkere
     gråMaks: .45, mørkRegn: .1, mørkSky: .05,
   };
   const klemt = v => Math.max(0, Math.min(1, v)), myk = t => t * t * (3 - 2 * t);
   // dagslys 0–1 som i lys3d: dag fra −8° til 8°, tussmørke fra −14° (lyse sommernetter)
-  function dagslys(e) { const dag = myk(klemt((e + 8) / 16)), tu = klemt((e + 14) / 10); return Math.max(dag, myk(tu) * .55); }
+  function dagslys(e) { const dag = myk(klemt((e + 8) / 16)), tu = klemt((e + 14) / 10); return Math.max(dag, myk(tu) * REGLER.tussmørke); }
   function tone(o = {}) { const e = typeof o.e === 'number' ? o.e : 40, nedbør = klemt(Math.max(o.regn || 0, o.snø || 0)), sky = klemt(((o.sky || 0) - .3) / .7);
     const natt = (1 - dagslys(e)) * REGLER.nattMaks;
     return { natt, farge: REGLER.nattFarge, grå: nedbør * REGLER.gråMaks, mørk: nedbør * REGLER.mørkRegn + sky * REGLER.mørkSky }; }
