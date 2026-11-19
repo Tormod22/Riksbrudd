@@ -259,8 +259,9 @@
     return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 128; };
   }
   // Kameraet i øyehøyde; flytter deg etter tastene/styrespaken (kalles hver ramme fra kamera3d).
-  function kamera(R) {
-    const b = R.bane, f = R.fot, c = R.cam, u = R.ut, nå = performance.now(), dt = Math.max(0, Math.min(.1, (nå - sist) / 1000)); sist = nå;
+  // (dtFast: vakta kjører rammer med fast steg i sekunder, uten å vente på bildene)
+  function kamera(R, dtFast) {
+    const b = R.bane, f = R.fot, c = R.cam, u = R.ut, nå = performance.now(), dt = dtFast > 0 ? Math.min(.1, dtFast) : Math.max(0, Math.min(.1, (nå - sist) / 1000)); sist = nå;
     if (!kropp) kropp = Bevegelse.ny(b.x, b.y, hoyde3d(u.cx + b.x, u.cy + b.y) - u.h0);
     // nytt utsnitt: kroppen står i utsnittets egne meter og må flyttes med (ellers hoppet du flere hundre meter når utsnittet byttet)
     if (kroppU && kroppU !== u) { kropp.x += kroppU.cx - u.cx; kropp.y += kroppU.cy - u.cy; kropp.z += (kroppU.h0 - u.h0) * R.EX; } kroppU = u;
@@ -350,7 +351,7 @@
   });
   // Flytt deg til et annet sted i utsnittet mens du går (x, y i utsnittets meter): kroppen lages på nytt der
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
-  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
+  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
     // fører(R, inn) tar over rammen når den svarer true (spill/kjor.js); knappene nede til høyre får navnene [huk, hopp]

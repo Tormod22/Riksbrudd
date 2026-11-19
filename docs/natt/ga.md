@@ -59,6 +59,8 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
   svarer `Kortkø.ta` false, så kortene venter i køen (de som bruker køen: #hendelse og #samfunnkort). `Kortkø.nå()` slipper gjennom.
   Øverst kommer `#gaakort` «Et kort venter: I leiren · Enter eller trykk her» (telefon: «trykk her»); trykk/Enter = `Gange.visKort()`.
   Et kort som står oppe når du begynner å gå, går tilbake i køen. Når du slutter å gå, kommer kortet (0,7 s etter).
+  I testene (webdriver) venter kortene bare når `Gange.test = true` (vakta setter det), så de andre vaktene ser kortene som før.
+  Plassering: PC midt øverst (`top: --topp + 78px`), telefon til venstre under «Lag noe» (`top: --topp + 172px`).
 - **Til samkjøringen med hud-hjelperen (som setter spillet på pause når kort venter):** kortene venter nå også *fordi du går*. Spør
   `Gange.kortVenter()` / `typeof R3 !== 'undefined' && R3 && R3.fot` hvis pausen ikke skal slå til mens spilleren går (ellers står verden
   stille hver gang et kort kommer mens du går – det kan være greit, men da bør varselet si «spillet står på pause»). `#gaakort` ligger
