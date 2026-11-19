@@ -12,7 +12,8 @@
   const knapp = document.createElement('button'); knapp.id = 'gaaknapp'; knapp.textContent = 'Gå'; knapp.title = 'Gå selv i førsteperson'; knapp.hidden = true;
   document.querySelector('.knapper').insertBefore(knapp, document.getElementById('meny'));
   setInterval(() => { knapp.hidden = !(typeof på3d !== 'undefined' && på3d); if (knapp.hidden && r3() && R3.fot) stopp(); if (knapp.hidden && valgÅpen() && !reise) lukkValg(); venteSteg(); dørKnapp(); kortVarsel(); }, 250);
-  knapp.onclick = () => (r3() && R3.fot ? stopp() : valgÅpen() ? lukkValg() : startValg());
+  // (i testene – webdriver – starter knappen som før uten å spørre, utenom med Gange.test = true; sjekk.js trykker på «Gå»)
+  knapp.onclick = () => (r3() && R3.fot ? stopp() : valgÅpen() ? lukkValg() : navigator.webdriver && window.Gange.test !== true ? start() : startValg());
   // knappene for hopp og huk på smale skjermer
   const css = document.createElement('style');
   css.textContent = `#gangeknapper{ position:fixed; right:70px; bottom:calc(40px + env(safe-area-inset-bottom,0px)); z-index:5; display:none; gap:10px; }
@@ -79,6 +80,8 @@
     if (!r3() || !R3.fot) return; const b = R3.bane;
     if (fører && fører.ut) fører.ut();
     R3.fot = null; kropp = null; kroppU = null; vedKar = null; dørHjelp = null; dørEl.classList.remove('på'); kortEl.classList.remove('på');
+    // fjellmarka rundt deg (spill/fjellmark3d.js) frigjøres straks du flyr opp
+    if (window.Fjellmark && Fjellmark.bort && !(R3.bane && R3.bane.avst < 110)) Fjellmark.bort();
     // et kort som ventet mens du gikk, kommer nå
     if (kortVenter()) setTimeout(() => { if (!(r3() && R3.fot) && kortVenter()) Kortkø.nå(); }, 700);
     if (lagret) { b.avst = lagret.avst; b.pitch = lagret.pitch; } knapp.classList.remove('på'); spak = se = null; taster.clear(); mk.classList.remove('på');

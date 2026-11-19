@@ -36,20 +36,11 @@ module.exports = {
       if (!i3d || !kar) return d;
       const R = R3, u = R.ut, b = R.bane, bane = { X: u.cx + b.x, Y: u.cy + b.y, avst: b.avst, yaw: b.yaw, pitch: b.pitch }, gikk = !!R.fot; let hus = null, kort = null;
       try {
-        if (gikk) Gange.stopp();
-        // kameraet ser 90 m fra karakteren: valget kommer med «Reis hit»
-        b.x = kar.x - u.cx + 90; b.y = kar.y - u.cy; Gange.startValg();
-        const knapper = [...document.querySelectorAll('#gaavalg button')].map(e => e.textContent); d.valg = knapper;
-        krev(Gange.valgÅpen() && /^Reis hit \(ca\. \d+ min til fots\)/.test(knapper[0] || '') && knapper.some(t => /^Gå her/.test(t)), 'valget «Reis hit / Gå her» kom ikke');
-        // Esc lukker valget
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!Gange.valgÅpen() && !R.fot, 'Esc lukket ikke valget');
-        // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
-        b.x = kar.x - u.cx + 90; b.y = kar.y - u.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); document.querySelector('#gaavalg button').click();
-        for (let q = 0; q < 80 && !R.fot; q++) await vent(100);
-        d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
-        krev(R.fot && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));
+        // (rekkefølgen: døra, Esc og kortene uten pauser rett etter at du begynner å gå – et nytt utsnitt kan bli satt inn ved neste bilde –,
+        // så valget og reisen til slutt)
+        if (!R.fot) Gange.start();
+        const U = R.ut, k = Gange.kropp(), x0 = Math.round(k.x) - 5, y0 = Math.round(k.y) + 3;
         // døra: et prøvehus foran deg (dør mot sør); du står 2,5 m ute og 0,45 m til siden
-        const k = Gange.kropp(), x0 = Math.round(k.x) - 5, y0 = Math.round(k.y) + 3, U = R.ut;
         const P = [[x0, y0], [x0 + 10, y0], [x0 + 10, y0 + 8], [x0, y0 + 8]]; P.bygg = { i: 4244, t: 0, h: 6, kl: 'hus' };
         P.dør = { x: x0 + 5, y: y0, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(U.cx + x0 + 5, U.cy + y0 + 4, U) - U.h0) * R.EX };
         hus = { o: { P }, nøkler: [] };
@@ -59,9 +50,9 @@ module.exports = {
         const kn = document.getElementById('dorknapp'); d.dørknapp = kn.classList.contains('på') ? kn.textContent : '(skjult)';
         krev(!!P.inne && kn.classList.contains('på') && kn.textContent === 'Gå inn', '«Gå inn» kom ikke ved døra: ' + d.dørknapp);
         kn.click(); for (let q = 0; q < 90 && Gange.dørHjelp(); q++) Gange.kamera(R, .06);
-        const ki = Gange.kropp(); d.inne = !!Interior3d.inne(ki.x, ki.y); krev(d.inne, '«Gå inn» førte deg ikke inn');
+        const ki = Gange.kropp(); d.inne = !!Interior3d.inne(ki.x, ki.y); d.innePos = [+(ki.x - x0).toFixed(2), +(ki.y - y0).toFixed(2)]; krev(d.inne, '«Gå inn» førte deg ikke inn: ' + JSON.stringify(d.innePos));
         Gange.oppdaterKnapper(); d.utknapp = kn.classList.contains('på') ? kn.textContent : '(skjult)'; krev(d.utknapp === 'Gå ut', 'inne kom ikke «Gå ut»: ' + d.utknapp);
-        // Esc med sekken åpen: sekken lukkes, du går fortsatt; Esc igjen (uten låst mus): opp i lufta
+        // Esc med sekken åpen: sekken lukkes, du går fortsatt
         if (window.UtstyrSpill && UtstyrSpill.klar && UtstyrSpill.klar()) { UtstyrSpill.åpne(true);
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); d.esc = { går: !!R.fot, sekk: UtstyrSpill.erÅpen() };
           krev(d.esc.går && !d.esc.sekk, 'Esc med sekken åpen: ' + JSON.stringify(d.esc)); }
@@ -73,6 +64,23 @@ module.exports = {
         krev(!d.kort.vist && d.kort.varsel, 'kortet kom opp mens du gikk, eller varselet manglet: ' + JSON.stringify(d.kort));
         Gange.visKort(); krev(el.classList.contains('på'), 'Gange.visKort() viste ikke kortet');
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!!R.fot, 'Esc med et åpent kort tok deg ut av førsteperson');
+        Gange.test = false; kort.remove(); Kortkø.ferdig('gaavaktkort'); kort = null;
+        for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); } hus = null;
+        Gange.stopp();
+        // valget: kameraet ser 90 m fra karakteren (bare når karakteren står i utsnittet)
+        const V = R.ut, iUt = Math.abs(kar.x - V.cx) < V.S * .8 && Math.abs(kar.y - V.cy) < V.S * .8;
+        if (iUt) {
+          b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; Gange.startValg();
+          const knapper = [...document.querySelectorAll('#gaavalg button')].map(e => e.textContent); d.valg = knapper;
+          krev(Gange.valgÅpen() && /^Reis hit \(ca\. \d+ min til fots\)/.test(knapper[0] || '') && knapper.some(t => /^Gå her/.test(t)), 'valget «Reis hit / Gå her» kom ikke');
+          // Esc lukker valget
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!Gange.valgÅpen() && !R.fot, 'Esc lukket ikke valget');
+          // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
+          b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); document.querySelector('#gaavalg button').click();
+          for (let q = 0; q < 80 && !R.fot; q++) await vent(100);
+          d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
+          krev(R.fot && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));
+        } else d.valg = ['(karakteren står utenfor utsnittet – valget og reisen ikke prøvd)'];
       } finally {
         Gange.test = false; if (kort) { kort.remove(); Kortkø.ferdig('gaavaktkort'); }
         if (hus) for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); }

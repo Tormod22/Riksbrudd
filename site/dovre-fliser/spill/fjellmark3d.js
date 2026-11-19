@@ -115,8 +115,9 @@
   KROKER.ramme3d.push(R => {
     const u = R.ut; if (!u || !u.bunn) return;
     const nær = R.fot || R.bane.avst < 110;
-    if (!nær) { if (M) for (const m of Object.values(M)) m.visible = false; return; }
-    if (!M) lag(R); for (const m of Object.values(M)) { m.visible = true; if (m.parent !== R.scene) R.scene.add(m); }
+    // (ikke nær: alt frigjøres – sjekk.js krever at geometriene ikke øker etter at du har gått og flydd opp igjen)
+    if (!nær) { if (M) bort(R); return; }
+    if (!M) { lag(R); senter = null; } for (const m of Object.values(M)) { m.visible = true; if (m.parent !== R.scene) R.scene.add(m); }
     const c = R.cam.position, V = window.VAER, nk = (V ? V.årstid + '|' + Math.round((V.snøgrense || 0) / 50) : '') + '|' + (window.KVAL ? KVAL.v : 0);
     if (utsnitt !== u || nk !== nøkkel) { utsnitt = u; nøkkel = nk; senter = null; }
     if (senter && Math.hypot(c.x - senter[0], c.y - senter[1]) < REGLER.flytt) return;
@@ -125,5 +126,6 @@
   });
   // 3D slått av: alt bort (lages på nytt neste gang)
   setInterval(() => { const R = r3(); if (M && R && typeof på3d !== 'undefined' && !på3d) bort(R); }, 500);
+  rot.Fjellmark.bort = () => { const R = r3(); if (R) bort(R); };
   rot.Fjellmark.antall = () => (M ? Object.fromEntries(Object.entries(M).map(([s, m]) => [s, m.visible ? m.count : 0])) : null);
 })(typeof globalThis !== 'undefined' ? globalThis : this);
