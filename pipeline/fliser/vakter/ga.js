@@ -66,7 +66,8 @@ module.exports = {
         if (window.UtstyrSpill && UtstyrSpill.klar && UtstyrSpill.klar()) { UtstyrSpill.åpne(true);
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); d.esc = { går: !!R.fot, sekk: UtstyrSpill.erÅpen() };
           krev(d.esc.går && !d.esc.sekk, 'Esc med sekken åpen: ' + JSON.stringify(d.esc)); }
-        // et kort som kommer mens du går, venter; varselet øverst; Gange.visKort() viser det
+        // et kort som kommer mens du går, venter; varselet øverst; Gange.visKort() viser det (i testene bare med Gange.test)
+        Gange.test = true;
         const el = document.createElement('div'); el.id = 'gaavaktkort'; el.style.display = 'none'; document.body.appendChild(el); kort = el;
         const vis = () => { if (!Kortkø.ta('gaavaktkort', false, vis)) { el.classList.remove('på'); Kortkø.be('gaavaktkort', vis, { tittel: 'Prøve' }); return; } el.classList.add('på'); };
         vis(); await vent(400); d.kort = { vist: el.classList.contains('på'), varsel: document.getElementById('gaakort').classList.contains('på') };
@@ -74,7 +75,7 @@ module.exports = {
         Gange.visKort(); krev(el.classList.contains('på'), 'Gange.visKort() viste ikke kortet');
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!!R.fot, 'Esc med et åpent kort tok deg ut av førsteperson');
       } finally {
-        if (kort) { kort.remove(); Kortkø.ferdig('gaavaktkort'); }
+        Gange.test = false; if (kort) { kort.remove(); Kortkø.ferdig('gaavaktkort'); }
         if (hus) for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); }
         if (Gange.reiser()) await vent(1500); Gange.lukkValg(); if (R.fot && !gikk) Gange.stopp(); else if (!R.fot && gikk) Gange.start();
         Interior3d.oppdater(true); if (karFør) { kar.x = karFør.x; kar.y = karFør.y; kar.sti = null; } tid = før.tid;

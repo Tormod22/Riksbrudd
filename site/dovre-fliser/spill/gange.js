@@ -209,7 +209,8 @@
   function kortKø() {
     const K = window.Kortkø; if (!K || K.gåVent) return; K.gåVent = true;
     const ta = K.ta, nå = K.nå;
-    K.ta = function (id, haster, vis) { if (!slipp && ((r3() && R3.fot) || reise)) return false; return ta.call(K, id, haster, vis); };
+    // (i testene – webdriver – bare med Gange.test = true, så de andre vaktene ser kortene som før)
+    K.ta = function (id, haster, vis) { if (!slipp && ((r3() && R3.fot) || reise) && (!navigator.webdriver || window.Gange.test === true)) return false; return ta.call(K, id, haster, vis); };
     K.nå = function () { slipp = true; try { return nå.call(K); } finally { slipp = false; } };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', kortKø); else setTimeout(kortKø, 0);
