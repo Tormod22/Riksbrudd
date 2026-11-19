@@ -57,7 +57,7 @@ body.kort:not(.smal) .knapper button{ height:36px; min-width:36px; }
 body.kort.mkomfull #mkom{ right:calc(8px + ${Rt}); gap:3px; }
 body.kort.mkomfull #mkom button{ font-size:10.5px; letter-spacing:0; }
 body.kort.mkom.mkomfull .ctl{ bottom:calc(64px + ${B}); }
-body.kort.tlfdekk #mkom.på{ display:none; }
+body.kort.tlfdekk:not(.mkomalltid) #mkom.på{ display:none; }
 #mkom button[hidden]{ display:none; }
 body.kort.gaar .ctl{ display:none; }
 body.kort.gaar #gangeknapper{ right:calc(10px + ${Rt}); }
