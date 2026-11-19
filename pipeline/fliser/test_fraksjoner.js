@@ -74,7 +74,8 @@ console.log('ok – fiendens kjøretøy og stillinger');
   assert(F.fredDøgn(1) === 2.5 && F.fredDøgn(.75) > F.fredDøgn(1) && F.fredDøgn(1.3) < 2.5 && F.fredDøgn(10) === 1.5, 'fredstiden etter vanskelighetsgraden');
   assert.deepEqual([F.lagTak(0, 0), F.lagTak(0, 2), F.lagTak(0, 4), F.lagTak(2, 2)], [3, 4, 5, 5], 'lagtaket vokser over døgnene');
   const st = F.startsteder({ x: 0, y: 0 }, [{ navn: 'Storby', x: 7000, y: 0, folk: 235000 }, { navn: 'Vatne', x: 0, y: 9000, folk: 2000 }, { navn: 'Sør', x: 0, y: -20000, folk: 900 }]);
-  assert.equal(st.rød.navn, 'Vatne', 'startstedet er ikke storbyen'); }
+  assert.equal(st.rød.navn, 'Vatne', 'startstedet er ikke storbyen');
+  const kant = F.velg(lag('K', 3450, 0), verden()); assert.deepEqual([kant.hva, kant.x, kant.mål], ['ta', 3000, 1], 'i kanten av tettstedet: går inn mot midten'); }
 console.log('ok – runde 6: storbyer krever styrke, fred de første døgnene, lagtaket vokser, startsted ikke i storbyen');
 console.log('ok – bedre AI: samlet angrep, samling, hjelp, jakt, bakhold, opptatte og tapte tettsteder, leiren, lagtak og angrepspunkt');
 console.log('ok – AI: ta tettsteder (store foran), garnison og videre, stell/forsyninger, angrip/trekk unna, slått ut trekker seg tilbake');

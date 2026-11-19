@@ -40,7 +40,8 @@
     //  startMaks: startstedet er helst et tettsted med høyst så mange innbyggere (ikke storbyen ved siden av leiren).
     //  storEtter: tettsteder som trenger mer enn ett lag (minst over «ettLag» mann) blir mål først så mange døgn etter fredstiden –
     //    de tar småstedene først (gjennomspillingen 19. nov: rett etter fredstiden gikk begge mot Stavanger/Sandnes)
-    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12,
+    //  midten: meter fra tettstedets midtpunkt et lag som tar det, går inn til
+    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 400,
   };
   // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
   const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
@@ -90,7 +91,10 @@
     const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
     const mulig = b => !(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag));
-    if (iBy && iBy.eier !== v.side && mulig(iBy)) return { hva: 'hold', x: s.x, y: s.y, tekst: !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}` };
+    // (19. nov, gjennomspillingen: to sider sto i hver sin kant av Ålgård i tre døgn uten å se hverandre, og ingen tok byen) laget går
+    // inn mot midten av tettstedet (b.x, b.y) før det blir stående; da møtes de som slåss om det
+    if (iBy && iBy.eier !== v.side && mulig(iBy)) { const tekst = !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}`;
+      return avstand(iBy, her) > R.midten ? { hva: 'ta', mål: iBy.id, x: iBy.x, y: iBy.y, tekst } : { hva: 'hold', x: s.x, y: s.y, tekst }; }
     // ta det nærmeste tettstedet som ikke er vårt (større tettsteder teller som nærmere)
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;
     // tettsteder fraksjonen har mistet, vil den ha tilbake; og vet den hvor spillerens leir er, er leiren også et mål
