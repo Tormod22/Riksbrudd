@@ -1304,3 +1304,29 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   spill/lave3d.js (høy, redskap, trillebår, gråtass i låver). LYS: spill/grense3d.js – alt utenfor fylket mørklegges i 3D på /rogaland via
   tåka (Lys3d koblGrense, bare når PÅ_OMRÅDE), stiplet grense på bakken; hindring3d sjekker boksen først, natt3d forberedes i forbered3d,
   mer pust i naboerAsynk/trær3d. Største hakk igjen: interior3d bygg (160–330 ms per bygg).
+  KRITIKKEN OG RUNDE 6 (19. nov, brukeren: «lat som du er en spillkritiker og lag en rapport for så å fikse alt den sa som var dårlig»):
+  to kritikere (PC/Rogaland og telefon/Dovre, webdriver av, på den ekte siden) – docs/anmeldelse-2026-11-19.md (terningkast 3 og 3,
+  grensesnitt 2). Seks hjelpere rettet feillistene (notater «Runde 6» i docs/natt/kart.md, ui.md, krig.md, okonomi.md, start.md, ga.md).
+  KART: spill/etikett.js samler navnene i en ramme og plasserer dem til slutt etter viktighet (fiender > valgt > tettsteder i krigskartet >
+  egne lag > leiren > kjøretøy > bygg), skjuler det som ikke får plass («+3»), merkene er hindringer og ligger øverst; kartlapper.js (meldte
+  fiender øverst), kartlys.js (2D mørkere/blåere om natta etter solhøyden, gråere i regn; av i testene til KartLys.test); ingen kai-ankre i
+  krigskartet (bare leirens kai), krigskartet fyller telefonen, «0 t olje» og «Leiren til» ved basen vises ikke, sifre med vanlige tall.
+  HUD: toppstripa med ord foran tallene, overflyt bak «Mer»; spill/skjermlag.js = én vindusrekkefølge (kort < varsel < pauselapp < angrep <
+  egne paneler < bunnmeny < tips < opplæringsring), bunnmenyen står alltid (også liggende og under angrep), kort som venter på svar setter
+  spillet på pause («Spillet står på pause til du svarer»; av i testene til Skjermlag.test), opplæringen viser «✓ Gjort» og kan legges
+  sammen, Leir-menyen starter øverst, alt fra bunnmenyen åpnes til venstre (tillegg til høyre), hjelpen i 11 grupper med søk, forsiden
+  «Spill nå» (Rogaland, hele Norge). KRIG: inntak etter størrelse (garnison.js: ≤ 4000 innb. som før, Stavanger/Sandnes 35–69 mann og 4–8 t),
+  fredstid i regionkrigen (2,5 døgn på Vanlig), taket på lag vokser et halvt lag per døgn, ingen seier/«overtaket» før dag 4, motstanderen
+  holder sitt startsted, «Neste trekk» sier hvor mange mann som trengs; røverne starter 3–4 km unna med anslag i varsel og banner, vakttårn
+  ser dem på 1,5 km, «snart framme» 10 min før, «Forsvar leiren» lagres med angrepet. ØKONOMI: diesel 3 000 kr/l (500 l = 1,5 mill.),
+  penger-visning.js («Penger inn» under Lager, lav kasse-brikke), oppdragstakt (to ved start, nytt etter 6–10 t), salgstak per døgn,
+  hogstlaget finner selv skog innen 1,5 km, én dieselprognose (Leir.dieselRekker), totalpris i byggemenyen, «Kjøp 500 l» i tom-diesel-
+  varselet, auto-nedbremsing til 10× for bygg/kort (1× for fiende/alarm/tap), lagring oftere ved høy fart; gjennomspilling: 6–10 mill. dag 3–7.
+  START: kjønnsbytte gir passende hår/skjegg (Oppstart.KJØNN; portrett-motor.js urørt), portrettet fast på telefon, utkastet lagres
+  («riksbrudd-k1-utkast»), ingen Dovre-pilot-lag før leiren er lagt (settes inn igjen ved leiren; testmodus som før), spill/leirvalg.js
+  (advarsler: høyfjell, lite skog, langt til veg/tettsted; kai bare ved sjø), steg 3 sier riktig område, beskjed om andre lagrede spill.
+  GÅ: spill/gaavalg.js – «Hvor vil du gå?» når kameraet ser > 60 m fra karakteren: «Reis hit (ca. N min)» (spoler mens karakteren går),
+  «Gå her», døra trekker deg mot midten + «Gå inn»/«Gå ut», Esc lukker det som er åpent først, været i 3D følger reglene (overgang 25–45 min,
+  «Klart → regn»), maskinvarevarselet én gang som liten lapp, snikemåleren forklart, kort venter mens du går, spill/fjellmark3d.js (stein,
+  lav, lyng, snøflekker på fjellet). Etter flettingen: røvervarselet bare i loggen (banneret sier det samme), loggen skjult bak banneret på
+  telefon. Kontroll: PC og mobil 119/119.

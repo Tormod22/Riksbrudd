@@ -162,3 +162,25 @@ startet på nytt kl. 00:15; hjelperne fortsatte fra det de hadde committet.
 - Regeltestene: alle grønne etter hver fletting.
 - Ikke rettet fra gjennomspillingen (står i docs/natt/test2.md): første røverangrep allerede første natt, navnene ved leiren ligger
   oppå hverandre, startskjermens feilmelding står utenfor synet, loggen over «Flaske» når du går på telefon.
+
+# Kritikken og runde 6 (19. nov)
+Brukeren: «Lat som du er en spillkritiker og lag en rapport for så å fikse alt den sa som var dårlig.» To kritikere spilte den ekte siden
+som nye spillere (PC i Rogaland, telefon på Dovre) og ga begge terningkast 3 (`docs/anmeldelse-2026-11-19.md`). Seks hjelpere rettet
+feillistene; detaljer under «Runde 6» i `docs/natt/kart.md`, `ui.md`, `krig.md`, `okonomi.md`, `start.md` og `ga.md`.
+
+## Rettet
+| Pakke | Hva |
+|---|---|
+| Kartet | Navnelappene overlapper ikke (plassert etter viktighet, fiender øverst). Ingen kai-ankre i krigskartet, som også fyller telefonen. «0 t olje» borte. /norge-søylen rettet. Natt og regn i 2D. |
+| Skjermbildet | Ord i toppstripa. Bunnmenyen alltid synlig. Én rekkefølge for vinduer. Kort setter spillet på pause. Opplæringen med «✓ Gjort» og sammenleggbar. Leir-menyen starter øverst. Hjelpen i grupper med søk. Forsiden med «Spill nå». |
+| Krigen | Store byer krever mange mann og timer. Fredstid de første 2,5 døgnene og ingen seier før dag 4. Motstanderen holder sitt startsted. «Neste trekk» sier hvor mange som trengs. Røvervarsel 3–4 km ute med anslag. Forsvaret huskes. |
+| Økonomien | Diesel 3 000 kr/l. «Penger inn» viser hvor pengene kommer fra. Hogst virker. Én dieselprognose. Hele byggeprisen i menyen. Kjøpsknapp i dieselvarselet. Mindre masete nedbremsing. Ingen tapt tid ved omlasting. |
+| Start | «Kvinne» gir kvinneportrett. Portrettet fast på telefon. Utkastet huskes. Ingen pilot-lag før start. Advarsler ved leirvalget. Riktig område i steg 3. |
+| Gå og 3D | «Reis hit» når kameraet ser et annet sted. «Gå inn» ved dører. Esc lukker sekken først. Været i 3D stemmer. Maskinvarevarselet én gang. Snikemåleren forklart. Fjellmark. |
+
+## Står igjen
+- Mykere figurer (folk og soldater er fortsatt kantete).
+- Leirens bygg i 2D på nær zoom er grå bokser.
+- Motstanderne tar ikke Stavanger/Sandnes av seg selv; krigen står på ca. 15 % fra dag 6 hvis spilleren ikke gjør noe.
+- Balansen er prøvd med automatiske gjennomspillinger, ikke av et menneske over mange døgn.
+- /dovre-fliser og /norge deler fortsatt ett lagret spill.
