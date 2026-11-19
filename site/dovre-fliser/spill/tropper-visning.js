@@ -117,9 +117,9 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
           // (19. nov, kritikken: «ildkraften stiger med avstanden – 25 % på 100 m, 26 % på 400 m, 31 % på 800 m») Prosentene er
           // troppen MOT et vanlig lag (som har maskingevær, som treffer dårlig på langt hold), så de kan stige. Nå står treffene først
           // (de faller med avstanden), og sammenligningen etter, med forklaring.
-          const tr = d => String(Math.round(kr(d) * 10) / 10).replace('.', ',');
+          const tr = d => { const v = kr(d); return (v > 0 && v < .1 ? v.toFixed(2) : String(Math.round(v * 10) / 10)).replace('.', ','); };
           boks.append(el('div', { id: 'troppkraft' }, 'Treff per salve: ', el('b', {}, `${tr(100)} på 100 m`), `, ${tr(400)} på 400 m, ${tr(800)} på 800 m. `,
-            el('small', {}, `Mot et vanlig lag på tolv: ${pst(100)} %, ${pst(400)} % og ${pst(800)} % av deres ildkraft – andelen kan stige med avstanden fordi maskingeværene i et vanlig lag treffer dårlig på langt hold.`))); } }
+            el('small', { style: 'display:block;margin-top:2px;line-height:1.3;color:var(--ink-dim,#a99)' }, `Mot et vanlig lag på tolv: ${pst(100)} %, ${pst(400)} % og ${pst(800)} % av deres ildkraft – andelen kan stige med avstanden fordi maskingeværene i et vanlig lag treffer dårlig på langt hold.`))); } }
       const tap = TR.mister(VP), tl = Object.entries(tap).map(([o, n]) => `${n} fra ${o}`); if (tl.length) boks.append(el('div', { klasse: 'advar' }, 'Leiren mister: ' + tl.join(', ') + '.'));
       if (utstyr.has('sanitet') && VP.length < 4) boks.append(el('div', { klasse: 'advar' }, 'Sanitetsutstyret trenger en sanitet: velg minst fire.'));
       f.append(boks); }
