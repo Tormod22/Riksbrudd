@@ -2532,67 +2532,35 @@ function gress3d() {
   }
   m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.geometry.attributes.aFelt.needsUpdate = true;
 }
-// Soldatene i 3D: hver mann i laget som en figur (bein, jakke i sidens farge, hode, hjelm, gevær) i formasjonen fra kartet:
-// kolonne på marsj, kile når laget står. Sårede kneler, falne ligger. Bare lag du ser (tåka), og bare innenfor utsnittet.
+// Soldatene i 3D: hver mann i laget som en figur i formasjonen fra kartet: kolonne på marsj, kile når laget står. Sårede kneler,
+// falne ligger. Bare lag du ser (tåka), og bare innenfor utsnittet.
+// RUNDE 7 (20. nov, kritikerne: «kantete klosser»): figuren er den felles, avrundede figuren i spill/figur3d.js (jakke i sidens farge,
+// hjelm, sekk, gevær), og bevegelsen (gange, geværet lavt/klart/ved skulderen, knele) regnes i skyggeleggeren. R.solMesh = [nær, fjern].
 function soldater3d() {
-  const R = R3, u = R.ut; if (!u) return;
-  if (!R.solMesh) { const MAKS = 600;
-    // (18. nov: «figurer med myke former og enkle bevegelser») Lår, legger, kropp og armer er runde (sylindre med sju kanter) i stedet
-    // for kasser, og figuren rører seg i skyggeleggeren: aLem per hjørne sier hvilket lem det hører til (1 venstre bein, 2 høyre bein,
-    // 3 underarmer, hender og våpen), aGang per figur gir (takt i gangen, hvor mye beina svinger, stilling: 0 bærer våpenet lavt på
-    // marsj, 0,45 klar, 1 sikter). Fortsatt fem nett og ingen regning per figur i JavaScript utover de tre tallene.
-    const gang = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3), 3);
-    const solMat = m => { m.onBeforeCompile = sh => { sh.vertexShader = 'attribute float aLem;\nattribute vec3 aGang;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      if (aLem > 0.5 && aLem < 2.5) { float sv = sin(aGang.x) * aGang.y * (aLem < 1.5 ? 0.55 : -0.55), sc = cos(sv), ss = sin(sv); vec2 sp = vec2(transformed.x, transformed.z - 0.9);
-        transformed.x = sp.x * sc - sp.y * ss; transformed.z = 0.9 + sp.x * ss + sp.y * sc; }
-      else if (aLem > 2.5) { float sv = (1.0 - aGang.z) * 0.55 + sin(aGang.x * 2.0) * aGang.y * 0.04, sc = cos(sv), ss = sin(sv); vec2 sp = vec2(transformed.x - 0.05, transformed.z - 1.3);
-        transformed.x = 0.05 + sp.x * sc + sp.y * ss; transformed.z = 1.3 - sp.x * ss + sp.y * sc + aGang.z * 0.17; }`); };
-      m.customProgramCacheKey = () => 'soldat-gang'; return m; };
-    const lag = (g, farge) => { g.setAttribute('aGang', gang); const m = new THREE.InstancedMesh(g, solMat(new THREE.MeshLambertMaterial(farge ? { color: farge } : {})), MAKS); if (!farge) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3), 3); m.frustumCulled = false; m.count = 0; m.castShadow = true; R.scene.add(m); return m; };
-    const lem = (g, l) => { if (g.index) g = g.toNonIndexed(); g.setAttribute('aLem', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(l || 0), 1)); return g; };
-    const bx = (sx, sy, sz, x, y, z, ry, rz, l) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x, y, z); return lem(g, l); };
-    // rundt lem langs z: halv tykkelse rx (fram–bak) og ry (sideveis), lengde len, smalere nederst (k); vy legger det framover
-    const rør = (rx, ry, len, x, y, z, vy, vz, l, k = .8, seg = 7) => { const g = new THREE.CylinderGeometry(1, k, len, seg); g.rotateX(Math.PI / 2); g.scale(rx, ry, 1); if (vy) g.rotateY(vy); if (vz) g.rotateZ(vz); g.translate(x, y, z); return lem(g, l); };
-    const kule = (r, x, y, z, l, sx = 1, sz = 1) => { const g = new THREE.SphereGeometry(r, 7, 5); g.rotateX(Math.PI / 2); g.scale(sx, 1, sz); g.translate(x, y, z); return lem(g, l); };
-    const samleL = liste => { const n = liste.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), le = new Float32Array(n); let o = 0;
-      for (const g of liste) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); le.set(g.attributes.aLem.array, o); o += g.attributes.position.count; g.dispose(); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('aLem', new THREE.BufferAttribute(le, 1)); return g; };
-    // bukse: lår og legger (runde), hofte, knelapper
-    const bein = samleL([rør(.095, .088, .46, 0, .1, .66, 0, 0, 1), rør(.095, .088, .46, 0, -.1, .66, 0, 0, 2), rør(.076, .072, .42, -.01, .1, .27, 0, 0, 1, .78), rør(.076, .072, .42, -.01, -.1, .27, 0, 0, 2, .78),
-      rør(.125, .2, .17, 0, 0, .9, 0, 0, 0, .92, 8), bx(.04, .13, .12, .09, .1, .5, 0, 0, 1), bx(.04, .13, .12, .09, -.1, .5, 0, 0, 2)]);
-    // jakke: rund kropp som smalner mot livet, skuldre, overarmer, underarmer mot våpenet, krage
-    const kropp = samleL([rør(.15, .215, .4, 0, 0, 1.3, 0, 0, 0, .88, 9), rør(.132, .188, .24, 0, 0, 1.02, 0, 0, 0, .97, 9), kule(.085, 0, .25, 1.45, 0, 1, .8), kule(.085, 0, -.25, 1.45, 0, 1, .8),
-      rør(.062, .062, .3, 0, .27, 1.3, 0, 0, 0, .85), rør(.062, .062, .3, 0, -.27, 1.3, 0, 0, 0, .85), rør(.05, .05, .3, .16, .22, 1.16, Math.PI / 2, -.5, 3, .85), rør(.05, .05, .34, .17, -.2, 1.18, Math.PI / 2, .35, 3, .85), bx(.14, .2, .06, 0, 0, 1.5)]);
-    const hode = samleL([lem((() => { const g = new THREE.SphereGeometry(.105, 10, 8); g.scale(1, .92, 1.1); g.translate(.01, 0, 1.62); return g; })()), rør(.05, .05, .1, 0, 0, 1.5, 0, 0, 0, 1), kule(.045, .31, .1, 1.13, 3), kule(.045, .33, -.08, 1.2, 3), bx(.03, .05, .03, .115, 0, 1.6)]);
-    const hjelm = samleL([lem((() => { const g = new THREE.SphereGeometry(.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2); g.rotateX(Math.PI / 2); g.scale(1.08, 1, 1); g.translate(0, 0, 1.635); return g; })()), bx(.3, .28, .025, 0, 0, 1.635), bx(.16, .32, .42, -.21, 0, 1.24), bx(.1, .26, .14, -.2, 0, 1.52), bx(.07, .12, .16, -.3, 0, 1.2)]);
-    const gevær = samleL([bx(.5, .05, .09, .3, -.04, 1.2, -.12, .18, 3), bx(.34, .035, .035, .68, .03, 1.25, -.12, .18, 3), bx(.26, .05, .13, -.02, -.1, 1.14, -.12, .18, 3), bx(.07, .04, .2, .3, -.04, 1.08, .25, .18, 3), bx(.05, .03, .06, .34, -.03, 1.27, -.12, .18, 3), bx(.04, .03, .05, .8, .05, 1.29, -.12, .18, 3),
-      bx(.28, .13, .13, .04, .1, .065, 0, 0, 1), bx(.28, .13, .13, .04, -.1, .065, 0, 0, 2), bx(.15, .14, .12, -.01, .1, .14, 0, 0, 1), bx(.15, .14, .12, -.01, -.1, .14, 0, 0, 2),
-      bx(.25, .44, .06, 0, 0, .95), bx(.07, .11, .14, .15, .12, 1.12), bx(.07, .11, .14, .15, 0, 1.12), bx(.07, .1, .12, .13, -.16, .98), bx(.06, .08, .16, -.02, .24, .98), bx(.02, .3, .03, .08, 0, 1.52)]);
-    R.solMesh = [lag(bein, 0x2f3424), lag(kropp), lag(hode, 0xc9a07e), lag(hjelm), lag(gevær, 0x1d1d1a)]; R.solGang = gang; }
-  const [bein, kropp, hode, hjelm, gevær] = R.solMesh, d = new THREE.Object3D(), c = new THREE.Color(), nå = performance.now() / 1000; let n = 0;
-  const rgb = hex => { const v = parseInt(hex.slice(1), 16); return [(v >> 16) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255]; };
-  const GA = R.solGang.array;
-  const sett = (X, Y, v, liggende, kne, farge, bob, fase = 0, sving = 0, stilling = .45) => {
-    if (n >= 600 || Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return;
-    d.position.set(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R.EX + (liggende ? .15 : 0) + bob); d.rotation.set(0, liggende ? Math.PI / 2 : 0, v, 'ZYX'); d.scale.set(1, 1, kne ? .72 : 1); d.updateMatrix();
-    for (const m of R.solMesh) m.setMatrixAt(n, d.matrix);
-    GA[n * 3] = fase; GA[n * 3 + 1] = sving; GA[n * 3 + 2] = stilling;
-    c.setRGB(...farge); kropp.setColorAt(n, c); c.setRGB(...farge.map(x => x * .7)); hjelm.setColorAt(n, c); n++;
+  const R = R3, u = R.ut; if (!u || !window.Figur3d) return;
+  if (!R.solFlokk || R.solFlokk.scene !== R.scene) { if (R.solFlokk) R.solFlokk.kast(); R.solFlokk = Figur3d.flokk(R, { maks: 600, kilde: 'soldater3d', deler: Figur3d.DEL.hjelm | Figur3d.DEL.sekk | Figur3d.DEL.gevær }); R.solMesh = [R.solFlokk.nær, R.solFlokk.fjern]; R.solFarger = new Map(); }
+  const F = R.solFlokk, D = Figur3d.DEL, MASKE = D.hjelm | D.sekk | D.gevær, d = R.solObj || (R.solObj = new THREE.Object3D()), nå = performance.now() / 1000;
+  // fargene per side (jakken i sidens lyse farge, litt mørkere; buksa og huden faste), pakket én gang
+  const farger = side => { const hex = sidefarge(side, 'lys'); let f = R.solFarger.get(hex); if (!f) { const v = parseInt(hex.slice(1), 16); f = Figur3d.farger([(v >> 16) / 255 * .8, ((v >> 8) & 255) / 255 * .8, (v & 255) / 255 * .8], [.18, .2, .14], [.2, .16, .12], [.79, .63, .5]); R.solFarger.set(hex, f); } return f; };
+  const sett = (X, Y, v, liggende, o) => {
+    if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return;
+    d.position.set(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R.EX + (liggende ? .15 : 0) + (o.bob || 0)); d.rotation.set(0, liggende ? Math.PI / 2 : 0, v, 'ZYX'); d.scale.set(1, 1, 1); d.updateMatrix();
+    F.legg(d.matrix, o);
   };
+  F.start();
   for (const s of ENHETER) {
     if (Math.abs(s.x - u.cx) > u.S + 100 || Math.abs(s.y - u.cy) > u.S + 100 || (VIS.taake && !synlig(s))) continue;
     // karakteren din har sin egen figur (spill/karakter.js) og tegnes ikke som en soldat
     if (s.karakter && window.KarakterSpill && KarakterSpill.figur()) continue;
-    const ca = Math.cos(s.retning), sa = Math.sin(s.retning), farge = rgb(sidefarge(s.side, 'lys')).map(x => x * .8), lev = s.menn.filter(q => q.hp > 0);
-    const skyter = !!(s.skyterPå && s.skyterPå.size);
-    s.menn.filter(q => q.hp <= 0).forEach((q, k) => sett(s.x - (k + 1) * 2.5 * ca + 6 * sa, s.y - (k + 1) * 2.5 * sa - 6 * ca, s.retning + k, true, false, farge, 0));
+    const ca = Math.cos(s.retning), sa = Math.sin(s.retning), farge = farger(s.side), lev = s.menn.filter(q => q.hp > 0), skyter = !!(s.skyterPå && s.skyterPå.size);
+    // de falne ligger uten geværet i hendene
+    s.menn.filter(q => q.hp <= 0).forEach((q, k) => sett(s.x - (k + 1) * 2.5 * ca + 6 * sa, s.y - (k + 1) * 2.5 * sa - 6 * ca, s.retning + k, true, { maske: MASKE & ~D.gevær, farger: farge }));
     lev.forEach((q, k) => { const [fx, fy] = FORMPLASS(s, k);
-      // på marsj: beina går i takt (hver mann litt forskjøvet) og våpenet bæres lavt; i ildkamp sikter de; ellers står de klare
-      const går = !!s.sti && q.hp >= 1, fase = nå * 7.5 + k * 1.7;
-      sett(s.x + fx * ca - fy * sa, s.y + fx * sa + fy * ca, s.retning, false, q.hp < 1, farge, går ? Math.abs(Math.sin(fase)) * .04 : 0, går ? fase : 0, går ? 1 : 0, skyter ? 1 : går ? 0 : .45); });
+      // på marsj: beina går i takt (hver mann litt forskjøvet) og våpenet bæres lavt; i ildkamp sikter de; ellers står de klare; sårede kneler
+      const går = !!s.sti && q.hp >= 1, fase = nå * 7.5 + k * 1.7, h = Figur3d.holdning(går, skyter, q.hp < 1);
+      sett(s.x + fx * ca - fy * sa, s.y + fx * sa + fy * ca, s.retning, false, { fase: går ? fase : 0, sving: h.sving, sikte: h.sikte, kne: h.kne, maske: MASKE, farger: farge, bob: går ? Math.abs(Math.sin(fase)) * .04 : 0 }); });
   }
-  for (const m of R.solMesh) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
-  R.solGang.needsUpdate = true;
+  F.slutt();
 }
 // Kjøretøyene i 3D: hver type har sin egen modell (spill/kjoretoy3d.js: lastebil, speiderbil, stridsvogn, rakettartilleri, radar),
 // tegnet som instanser – ett nett per type. Andre sider enn din egen får et skjær av sidens farge. Bilen følger helningen i bakken.
@@ -3379,6 +3347,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/spillet-visning.js?v=60c0fea472"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=0a4f6dac0b"></script>
+<script src="/dovre-fliser/spill/figur3d.js?v=0"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=6496c4ec9a"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=20284f4f18"></script>

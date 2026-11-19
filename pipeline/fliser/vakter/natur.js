@@ -20,9 +20,9 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     ut.blad = (R.treMesh || []).filter(m => m.material.alphaMap).length; ut.uten = (R.treMesh || []).filter(m => m.geometry.userData.blad && !m.material.alphaMap).length;
     krev(ut.uten === 0, ut.uten + ' trenett med kort uten bladtekstur');
     ut.tre = gran ? gran.attributes.position.count / 3 : 0; krev(!gran || (ut.tre > 40 && ut.tre < 260), 'grana har ' + ut.tre + ' trekanter');
-    // soldatene: fem nett med ganglaget
+    // soldatene: nettene med ganglaget (runde 7: den felles figuren i figur3d.js gir to nett – nær og fjern – i stedet for fem)
     ut.soldat = (R.solMesh || []).reduce((a, m) => a + m.geometry.attributes.position.count / 3, 0);
-    krev(!R.solMesh || (R.solMesh.length === 5 && R.solMesh.every(m => m.geometry.attributes.aLem && m.geometry.attributes.aGang) && ut.soldat > 400 && ut.soldat < 6000), 'soldatfigurene: ' + ut.soldat + ' trekanter');
+    krev(!R.solMesh || (R.solMesh.length >= 1 && R.solMesh.every(m => m.geometry.attributes.aLem && m.geometry.attributes.aGang) && ut.soldat > 400 && ut.soldat < 6000), 'soldatfigurene: ' + ut.soldat + ' trekanter');
     // gresset: felt-attributtet finnes når gresset er laget
     krev(!R.gressMesh || !!R.gressMesh.geometry.attributes.aFelt, 'gresset mangler aFelt');
     // effekter: krater, brent område, brann og et skudd – og alt bort igjen
