@@ -118,11 +118,12 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     const her = typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE ? PÅ_OMRÅDE : null, ute = [];
     try { for (let i = 0; i < localStorage.length; i++) { const n = localStorage.key(i), m = /^riksbrudd-k1(?:@(\w+))?$/.exec(n || ''); if (!m || (m[1] || null) === her) continue;
       const T = O.fraJSON(localStorage[n]); if (!T || !T.ferdig) continue;
-      const hvor = m[1] ? 'i ' + m[1][0].toUpperCase() + m[1].slice(1) : T.leir && typeof DOVRE !== 'undefined' && T.leir.x >= DOVRE[0] && T.leir.x <= DOVRE[2] && T.leir.y >= DOVRE[1] && T.leir.y <= DOVRE[3] ? 'på Dovre' : 'på Norgeskartet';
+      const dovre = T.leir && typeof DOVRE !== 'undefined' && T.leir.x >= DOVRE[0] && T.leir.x <= DOVRE[2] && T.leir.y >= DOVRE[1] && T.leir.y <= DOVRE[3];
+      const hvor = m[1] ? `i ${m[1][0].toUpperCase() + m[1].slice(1)} (/${m[1]})` : dovre ? 'på Dovre (/dovre-fliser)' : 'på Norgeskartet (/norge)';
       ute.push(`«${T.fraksjon.navn}» ${hvor}`); } } catch (e) { return ''; }
-    const st = sted(), eget = her ? `Dette er et eget spill ${st.hvor}. ` : '';
+    const st = sted(), eget = `Dette er et eget spill ${st.hvor}. `;
     if (!ute.length) return her ? eget + 'Det lagres i denne nettleseren, for seg.' : '';
-    return eget + `Spillet ditt ${ute.join(' og ')} er lagret der og blir ikke rørt.`;
+    return eget + `Spillet ditt ${ute.join(' og ')} er lagret for seg og blir ikke rørt.`;
   }
   // Utkastet lagres underveis (kritikken: «omlasting under oppstarten sletter alt og starter på steg 1»): steget og valgene,
   // i en egen nøkkel som tas bort når leiren er lagt. Leses bare for vanlige spillere (ikke i testene, som starter skjermen selv).

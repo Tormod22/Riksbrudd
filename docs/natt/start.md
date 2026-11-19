@@ -47,8 +47,8 @@ bilder etter: scratchpad natt6/start/ (tlf-*, pc-*, ligg-*, rog-pc-*, rog-tlf-*,
    kartet ikke hadde den. REGLER: radius 2500, skogLite 0,04, skogMye 0,3, vegLangt 1500, byLangt 20000, sjøMoh 3.
 10. **Egen lagring per side uten å si fra – RETTET.** `andreSpill()` leser de rå nøklene (localStorage.key / localStorage[nøkkel] –
     getItem legger til «@rogaland» på /rogaland) og steg 1 sier f.eks. «Dette er et eget spill i Rogaland. Spillet ditt
-    «Dovregubbene» på Dovre er lagret der og blir ikke rørt.» (eller «på Norgeskartet», «i Rogaland»). Uten andre spill: på
-    /rogaland «Det lagres i denne nettleseren, for seg», ellers ingenting.
+    «Dovregubbene» på Dovre (/dovre-fliser) er lagret for seg og blir ikke rørt.» (eller «på Norgeskartet (/norge)», «i Rogaland
+    (/rogaland)»). Uten andre spill: på /rogaland «Det lagres i denne nettleseren, for seg», ellers ingenting.
 
 Også: lappen «Leiren her?» står rett under flagget (Etikett flyttet den ca. 100 px unna, pc 17-leir-etter-5s.png).
 
