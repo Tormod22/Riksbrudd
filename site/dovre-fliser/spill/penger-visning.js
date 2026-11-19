@@ -52,7 +52,8 @@
     if (H.felt) ut.push({ id: 'hogst', tekst: `Hogst: ${H.folk || 0} på hogst, feltet ${km(H.felt.avst)} fra leiren er ${Math.round(H.felt.fram * 100)} % hogd (${tall(H.felt.tre)} m³ tre i alt). Tre trengs til byggene, og det du ikke trenger, kan selges for ca. ${kr(H.trePris)} per m³.` });
     else ut.push({ id: 'hogst', tekst: H.folk ? `Hogst: ${H.folk} på hogst leter etter skog nær leiren.` : 'Hogst: ingen på hogst. Sett noen på «Hogst» under Folk – da hogger de skog nær leiren, gratis tre til byggene eller for salg.' });
     const L = T.lager || {}, har = ['tre', 'betong', 'stål'].filter(k => (L[k] || 0) >= 10);
-    ut.push({ id: 'salg', tekst: har.length ? `Salg: dere har ${har.map(k => `${tall(L[k])} ${k === 'stål' ? 't stål' : 'm³ ' + k}`).join(' og ')} – «Selg 10» under Materialer gir penger straks.` : 'Salg: tre, betong og stål dere hogger og river selv, kan selges under Materialer («Selg 10»).' });
+    const K = T.kjøper, tak = K ? ` Markedet kjøper høyst ${K.tre} m³ tre, ${K.betong} m³ betong og ${K.stål} t stål per døgn.` : '';
+    ut.push({ id: 'salg', tekst: (har.length ? `Salg: dere har ${har.map(k => `${tall(L[k])} ${k === 'stål' ? 't stål' : 'm³ ' + k}`).join(' og ')} – «Selg 10» under Materialer gir penger straks.` : 'Salg: tre, betong og stål dere hogger og river selv, kan selges under Materialer («Selg 10»).') + tak });
     const G = T.tettsteder || {};
     ut.push({ id: 'region', tekst: G.antall ? `Tettsteder: ${G.antall} er deres og betaler ca. ${kr(G.kr || 0)} i skatt per døgn (Mer → Region).` : 'Tettsteder: flytt et lag inn i et tettsted og hold det – det betaler skatt hver dag (Mer → Region, Krig).' });
     ut.push({ id: 'røvere', tekst: 'Røvere: slår dere tilbake et angrep, tar dere byttet deres.' });
@@ -96,7 +97,8 @@
     const trePris = rot.Leir ? Leir.MATERIALER.tre.pris * Leir.REGLER.salg : 0;
     let tettsteder = { antall: 0, kr: 0 }; try { if (rot.RegionSpill && RegionSpill.status) { const st = RegionSpill.status(); tettsteder = { antall: st.size, kr: st.size ? (RegionSpill.sum().penger || 0) : 0 }; } } catch (e) { /* regionen er ikke klar */ }
     const L = rot.LeirSpill && LeirSpill.tilstand();
-    return { oppdrag, hogst: { folk, felt, trePris }, tettsteder, lager: L ? L.lager : {} };
+    const kjøper = rot.SpilletSpill && SpilletSpill.knapt && SpilletSpill.knapt() && rot.Spillet ? Spillet.Marked.KJØPER : null;
+    return { oppdrag, hogst: { folk, felt, trePris }, tettsteder, lager: L ? L.lager : {}, kjøper };
   }
 
   // ---------- «Penger inn» i fanen Lager ----------
