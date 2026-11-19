@@ -33,7 +33,7 @@
   function feilTekst(e) {
     const t = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) ? 'fullt' : 'sperret';
     return t === 'fullt' ? 'Nettleseren har ikke mer plass til lagring. Slett en lagringsplass, eller last ned spillet som fil.'
-      : 'Nettleseren lar ikke spillet lagre noe her (privat vindu eller blokkert lagring). Last ned spillet som fil for å ta vare på det.';
+      : 'Nettleseren lar ikke spillet lagre noe her (privat vindu eller blokkert lagring). Spillet virker, men blir borte når siden lukkes – last det ned som fil for å ta vare på det.';
   }
 
   // ---------- plassene ----------
@@ -60,6 +60,7 @@
   function last(kilde, o = {}) {
     const lastInn = o.lastInn !== false, pl = typeof kilde === 'string' ? plass(kilde) : kilde;
     if (!pl || pl.ødelagt || !pl.nøkler) return { feil: (pl && pl.feil) || 'Plassen er tom.' };
+    if (LS.virker() === 'sperret' && lastInn) return { feil: 'Nettleseren lagrer ingenting i dette vinduet, så et spill kan ikke lastes inn her. Åpne spillet i et vanlig vindu.' };
     if (harSpill() && kilde !== AUTO) { const r = taAuto(`Før «${pl.navn}» ble lastet`); if (r.feil) return { feil: 'Fikk ikke tatt vare på spillet du har nå. ' + r.feil }; }
     tøm(); if (rot.LagringSpill) LagringSpill.av(true); LS.lås(true);
     const før = spillNå(), plan = P.byttPlan(før, pl);
@@ -75,7 +76,7 @@
   }
   // filene: teksten som lastes ned, og lesing av en fil (gir { d } eller { feil })
   function filTekst(id) {
-    if (id === 'nå') { if (!harSpill()) return null; tøm(); return P.tilFil(P.pakk(spillNå(), { side: LS.her, nå: Date.now() })); }
+    if (id === 'nå') { if (!harSpill()) return null; tøm(); const pl = P.pakk(spillNå(), { side: LS.her, nå: Date.now() }); return pl.nøkler['riksbrudd-k1'] ? P.tilFil(pl) : null; }
     const p = plass(id); return p && !p.ødelagt ? P.tilFil(p) : null;
   }
   const hentFil = tekst => P.les(tekst, LS.her);
@@ -107,25 +108,28 @@
 #lagremeny .topp b{ font-family:"IM Fell English",serif; font-weight:400; font-size:22px; color:#f0dc9a; }
 #lagremeny button{ background:#2a2318; border:1px solid #6a5a36; color:inherit; min-height:34px; padding:2px 11px; font:inherit; font-size:13.5px; cursor:pointer; border-radius:4px; }
 #lagremeny button:hover{ border-color:#c9b26a; filter:brightness(1.15); } #lagremeny button:focus-visible{ outline:2px solid #e9d79a; outline-offset:1px; }
+#lagremeny button:disabled{ opacity:.45; cursor:default; filter:none; }
 #lagremeny button.lukk{ min-width:36px; font-size:20px; padding:0; }
 #lagremeny button.fare{ border-color:#8a4a3a; color:#e7b3a3; background:#2a1a16; } #lagremeny button.ja{ border-color:#c9b26a; color:#f0e2b0; }
 #lagremeny .status{ margin:0 0 10px; padding:6px 9px; border-left:3px solid #7c9a4e; background:#1f1a12; color:var(--ink-dim,#b9ad92); }
 #lagremeny .status.feil{ border-left-color:#c0533a; color:#f0c3b3; background:#2a1712; }
 #lagremeny .status b{ color:#e9e0c8; }
-#lagremeny .navn{ display:flex; gap:8px; align-items:center; margin:0 0 8px; } #lagremeny .navn span{ white-space:nowrap; color:var(--ink-dim,#a99); font-size:13px; }
+#lagremeny .navn{ display:flex; gap:8px; align-items:center; margin:0 0 8px; } #lagremeny .navn[hidden]{ display:none; } #lagremeny .navn span{ white-space:nowrap; color:var(--ink-dim,#a99); font-size:13px; }
 #lagremeny .navn input{ flex:1 1 auto; min-width:0; height:32px; box-sizing:border-box; padding:0 8px; background:#14110b; border:1px solid #5a4a2a; color:inherit; font:inherit; border-radius:4px; }
 #lagremeny .plass{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:space-between; padding:8px 9px; margin:0 0 6px; border:1px solid #3a3226; background:#1e1911; border-radius:4px; }
 #lagremeny .plass.nå{ border-color:#5a6a3a; background:#1d1e12; }
 #lagremeny .plass.tom .tekst b{ color:var(--ink-dim,#a99); font-weight:400; }
-#lagremeny .plass .tekst{ flex:1 1 240px; min-width:0; } #lagremeny .plass .tekst b{ display:block; color:#f0e2b0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#lagremeny .plass .tekst{ flex:1 1 150px; min-width:0; } #lagremeny .plass .tekst b{ display:block; color:#f0e2b0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #lagremeny .plass .tekst small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; }
-#lagremeny .plass .knapper{ display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; }
+#lagremeny .plass .knapper{ display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; flex:0 1 auto; max-width:100%; min-width:0; }
 #lagremeny .plass.spør{ border-color:#c9b26a; } #lagremeny .plass.spør .tekst b{ white-space:normal; }
 #lagremeny h3{ margin:10px 0 5px; font-size:12.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim,#a99); border-bottom:1px solid var(--rule,#3a3226); padding-bottom:3px; }
 #lagremeny .filrad{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; } #lagremeny .filrad small{ color:var(--ink-dim,#a99); flex:1 1 200px; }
 #lagremeny .melding{ min-height:1.2em; margin:8px 0 0; color:#e9d79a; } #lagremeny .melding.feil{ color:#f0a890; }
-#oppstart .lastinn{ margin:14px 0 0; padding-top:10px; border-top:1px solid var(--rule,#3a3226); font-size:13.5px; color:var(--ink-dim,#a99); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-@media (max-width:480px){ #lagremeny{ padding:6px; align-items:flex-start; } #lagremeny .ark{ padding:10px; } #lagremeny .plass .knapper{ justify-content:flex-start; } #lagremeny .plass .tekst{ flex-basis:100%; } }`;
+#oppstart .lastinn{ margin:2px 0 10px; padding:6px 9px; border:1px solid var(--rule,#3a3226); background:rgba(0,0,0,.18); border-radius:4px; font-size:13.5px; color:var(--ink-dim,#a99); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#oppstart .lastinn button{ background:#2a2318; border:1px solid #c9b26a; color:#f0e2b0; min-height:34px; padding:2px 12px; font:inherit; font-size:13.5px; cursor:pointer; border-radius:4px; }
+#oppstart .lastinn button:hover{ filter:brightness(1.15); }
+@media (max-width:480px){ #lagremeny{ padding:6px; align-items:flex-start; } #lagremeny .ark{ padding:10px; } #lagremeny .plass{ padding:7px 8px; } }`;
   document.head.appendChild(css);
   const bak = el('div', { id: 'lagremeny', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Lagre og last' }), ark = el('div', { klasse: 'ark' });
   const lukkKn = el('button', { type: 'button', klasse: 'lukk', 'aria-label': 'Lukk' }, '×');
@@ -133,8 +137,9 @@
   const navnInn = el('input', { type: 'text', maxlength: String(P.REGLER.navnMaks), placeholder: 'For eksempel «Før angrepet»', 'aria-label': 'Navn på lagringen' });
   const filInn = el('input', { type: 'file', accept: '.json,application/json', hidden: '' });
   const hentKn = el('button', { type: 'button', 'data-gjør': 'hent' }, 'Hent fra fil …');
+  const navnRad = el('label', { klasse: 'navn' }, el('span', {}, 'Navn:'), navnInn);
   ark.append(el('div', { klasse: 'topp' }, el('b', {}, 'Lagre og last'), lukkKn), statusEl, nåEl,
-    el('h3', {}, 'Lagringsplasser'), el('label', { klasse: 'navn' }, el('span', {}, 'Navn:'), navnInn), listeEl,
+    el('h3', {}, 'Lagringsplasser'), navnRad, listeEl,
     el('h3', {}, 'Fil'), el('div', { klasse: 'filrad' }, hentKn, el('small', {}, 'Ta vare på spillet, eller flytt det til en annen maskin: «Last ned» lager en fil, «Hent fra fil» leser den inn igjen.')), filKortEl, filInn, meldingEl);
   bak.appendChild(ark); document.body.appendChild(bak);
   let åpen = false, spør = null, filPlass = null, tidsur = 0;
@@ -164,7 +169,10 @@
       const linje = [`Dag ${dagTid.dag} kl. ${dagTid.klokke}`, S.karakter && S.karakter.navn, Number.isFinite(S.penger) ? kroner(S.penger) : ''].filter(Boolean).join(' · ');
       bytt(nåEl, `<div class="plass nå"><div class="tekst"><b>Spillet nå: ${esc(S.fraksjon && S.fraksjon.navn)}</b><small>${esc(linje)}${st.ms ? ' · lagret ' + kl(st.ms) : ''}</small></div><div class="knapper"><button type="button" data-gjør="ned" data-plass="nå">Last ned som fil</button></div></div>`);
     } else bytt(nåEl, '');
-    bytt(listeEl, REGLER.plasser.map((id, n) => rad(id, plass(id), 'Plass ' + (n + 1))).join('') + rad(AUTO, plass(AUTO), 'Automatisk'));
+    // uten lagring i nettleseren (sperret) kan ingenting lastes inn – det ville blitt borte ved omlastingen
+    const sperret = st.tilstand === 'sperret'; hentKn.disabled = sperret; navnRad.hidden = sperret || !harSpill();
+    bytt(listeEl, sperret ? '<div class="plass tom"><div class="tekst"><b>Lagringsplassene virker ikke her</b><small>Nettleseren lagrer ingenting i dette vinduet. Bruk «Last ned som fil», og hent fila i et vanlig vindu.</small></div></div>'
+      : REGLER.plasser.map((id, n) => rad(id, plass(id), 'Plass ' + (n + 1))).join('') + rad(AUTO, plass(AUTO), 'Automatisk'));
     if (filPlass) { const i = filPlass.info; bytt(filKortEl, `<div class="plass spør"><div class="tekst"><b>Fra fila: ${esc(filPlass.navn)}</b><small>${esc([`Dag ${i.dag} kl. ${i.klokke}`, i.fraksjon, i.penger !== null ? kroner(i.penger) : '', filPlass.laget ? 'lagret ' + når(filPlass.laget) : ''].filter(Boolean).join(' · '))}</small></div><div class="knapper"><button type="button" class="ja" data-gjør="fil-last">Last inn nå</button>${REGLER.plasser.map((id, n) => `<button type="button" data-gjør="fil-legg" data-plass="${id}">Legg i plass ${n + 1}</button>`).join('')}<button type="button" data-gjør="fil-avbryt">Avbryt</button></div></div>`); }
     else bytt(filKortEl, '');
   }
@@ -205,15 +213,17 @@
   setInterval(oppdaterKnapp, 5000);
   (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'lagre', navn: 'Lagre', tast: '', tittel: 'Lagre og last: lagringsplasser og fil',
     ikon: "<path d='M5 4h11l3 3v13H5z'/><path d='M8 4v5h7V4'/><path d='M8 20v-6h8v6'/>", fins: () => true, på: () => åpen, trykk: () => (åpen ? lukk() : åpne()) });
-  // på startskjermen (der ☰ ikke kan nås): «Last inn et lagret spill» nederst i steg 1
+  // på startskjermen (der ☰ ikke kan nås): «Last inn et lagret spill» rett under «Steg 1 av 3» (steg 1 kan være lang å bla i på telefon)
   const oppstart = document.getElementById('oppstart'), oppArk = oppstart && oppstart.querySelector('.ark');
   function startLenke() {
     if (!oppArk || oppArk.querySelector('.lastinn')) return; const h = oppArk.querySelector('h2'); if (!h || !/nytt spill/i.test(h.textContent)) return;
     const n = plasser().filter(q => q.p && !q.p.ødelagt).length;
     const b = el('button', { type: 'button' }, 'Last inn et lagret spill …'); b.onclick = () => { åpne(); };
-    oppArk.appendChild(el('div', { klasse: 'lastinn' }, el('span', {}, n ? `Du har ${n} ${n === 1 ? 'lagret spill' : 'lagrede spill'} på denne siden.` : 'Har du lagret spillet som fil?'), b));
+    const rad = el('div', { klasse: 'lastinn' }, el('span', {}, n ? `Du har ${n} ${n === 1 ? 'lagret spill' : 'lagrede spill'} på denne siden.` : 'Har du lagret spillet som fil?'), b), steg = oppArk.querySelector('.steg');
+    if (steg && steg.parentNode === oppArk) steg.after(rad); else oppArk.appendChild(rad);
   }
-  if (oppArk) new MutationObserver(() => startLenke()).observe(oppArk, { childList: true });
+  // (endringen vår utløser observatøren én gang til, men da finnes .lastinn og ingenting skjer)
+  if (oppArk) { new MutationObserver(() => startLenke()).observe(oppArk, { childList: true }); startLenke(); }
 
   // ---------- etter omlasting, automatisk kopi og feil ----------
   rot.addEventListener('riksbrudd-spill', () => setTimeout(() => {

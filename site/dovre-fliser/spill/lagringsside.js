@@ -9,7 +9,8 @@
  *   - lås(true): andre skript kan ikke skrive «riksbrudd-…» (lagringsmenyen låser når et lagret spill lastes inn, så det modulene
  *     lagrer når siden lastes på nytt, ikke skriver over det som ble lastet inn);
  *   - feil(): sist gang en lagring feilet (nettleseren full eller lagring sperret) – lagringsmenyen sier fra;
- *   - rå: getItem/setItem/removeItem uten ending og uten lås (bare for lagringsmenyen).
+ *   - rå: getItem/setItem/removeItem uten ending og uten lås (bare for lagringsmenyen);
+ *   - er lagringen sperret (localStorage kaster), får spillet en lagring i minnet for økten (iMinne()), så det virker og kan lastes ned.
  * Reglene øverst er uten DOM (Node: require('./lagringsside'); nettleser: globalThis.LagringSide) – test_lagringsside.js.
  */
 (function (rot) {
@@ -66,41 +67,54 @@
   // ---------- på siden: endingen, delingen og låsen ----------
   const S = side(location.pathname), P = Storage.prototype, RÅ = { get: P.getItem, set: P.setItem, del: P.removeItem };
   let L = null; try { L = window.localStorage; } catch (e) { L = null; }
-  let låst = false, sistFeil = null; const lyttere = [];
+  let låst = false, sistFeil = null, iMinne = false; const lyttere = [];
+  const låsTil = k => låst && typeof k === 'string' && /^riksbrudd-/.test(k);
+  // SPERRET LAGRING (localStorage kaster, f.eks. blokkerte informasjonskapsler): spillet får en lagring i minnet for denne økten, så alt
+  // virker som før og kan lastes ned som fil – men ingenting huskes når siden lukkes (lagringsmenyen sier fra). Går ikke det, er L null.
+  const M = new Map();
+  if (!L) try {
+    const mem = { getItem: k => (M.has(tilRå(String(k), S)) ? M.get(tilRå(String(k), S)) : null), setItem: (k, v) => { if (!låsTil(k)) M.set(tilRå(String(k), S), String(v)); },
+      removeItem: k => { if (!låsTil(k)) M.delete(tilRå(String(k), S)); }, key: i => { const a = [...M.keys()]; return i >= 0 && i < a.length ? a[i] : null; }, get length() { return M.size; }, clear: () => M.clear() };
+    Object.defineProperty(window, 'localStorage', { configurable: true, get: () => mem }); L = mem; iMinne = true;
+  } catch (e) { L = null; }
+  // rå lesing og skriving (nøkkelen som den står)
+  const rg = k => (!L ? null : iMinne ? (M.has(k) ? M.get(k) : null) : RÅ.get.call(L, k));
+  const rs = (k, v) => { if (!L) throw new DOMException('Lagring er sperret', 'SecurityError'); if (iMinne) M.set(k, String(v)); else RÅ.set.call(L, k, v); };
+  const rd = k => { if (!L) return; if (iMinne) M.delete(k); else RÅ.del.call(L, k); };
   api.her = S; api.ending = (s = S) => ending(s); api.tilRå = (navn, s = S) => tilRå(navn, s); api.egen = (rå, s = S) => egen(rå, s);
+  api.iMinne = () => iMinne;
   // den gamle felles lagringen deles én gang (før endingen slås på, så nøklene leses rått)
-  if (L) try {
-    const alle = {}; for (let i = 0; i < L.length; i++) { const k = L.key(i); if (k && /^riksbrudd-/.test(k)) alle[k] = RÅ.get.call(L, k); }
+  if (L && !iMinne) try {
+    const alle = {}; for (let i = 0; i < L.length; i++) { const k = L.key(i); if (k && /^riksbrudd-/.test(k)) alle[k] = rg(k); }
     const plan = delPlan(alle);
-    if (plan) { for (const [fra, til] of plan.kopier) RÅ.set.call(L, til, alle[fra]); for (const k of plan.fjern) RÅ.del.call(L, k);
-      RÅ.set.call(L, MERKE, new Date().toISOString().slice(0, 10)); api.delt = { kopiert: plan.kopier.length, flyttet: plan.fjern.length }; }
+    if (plan) { for (const [fra, til] of plan.kopier) rs(til, alle[fra]); for (const k of plan.fjern) rd(k);
+      rs(MERKE, new Date().toISOString().slice(0, 10)); api.delt = { kopiert: plan.kopier.length, flyttet: plan.fjern.length }; }
   } catch (e) { /* fullt eller sperret: prøves igjen neste gang */ }
   // en lagring som feiler: «fullt» (QuotaExceededError) eller «sperret» (alt annet)
-  function feilet(e, navn) { sistFeil = { t: Date.now(), navn, type: e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) ? 'fullt' : 'sperret' };
+  const erFull = e => !!e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+  function feilet(e, navn) { sistFeil = { t: Date.now(), navn, type: erFull(e) ? 'fullt' : 'sperret' };
     for (const f of lyttere) try { f(sistFeil); } catch (e2) { /* lytteren feilet */ } }
   // getItem/setItem/removeItem: endingen for siden, låsen og feilene (bare for localStorage – sessionStorage er som før)
-  try {
+  if (!iMinne) try {
     P.getItem = function (k, ...r) { return RÅ.get.call(this, this === L ? tilRå(k, S) : k, ...r); };
-    P.setItem = function (k, ...r) { if (this !== L) return RÅ.set.call(this, k, ...r); if (låst && typeof k === 'string' && /^riksbrudd-/.test(k)) return undefined;
+    P.setItem = function (k, ...r) { if (this !== L) return RÅ.set.call(this, k, ...r); if (låsTil(k)) return undefined;
       try { return RÅ.set.call(this, tilRå(k, S), ...r); } catch (e) { feilet(e, k); throw e; } };
-    P.removeItem = function (k, ...r) { if (this !== L) return RÅ.del.call(this, k, ...r); if (låst && typeof k === 'string' && /^riksbrudd-/.test(k)) return undefined;
+    P.removeItem = function (k, ...r) { if (this !== L) return RÅ.del.call(this, k, ...r); if (låsTil(k)) return undefined;
       return RÅ.del.call(this, tilRå(k, S), ...r); };
   } catch (e) { /* uten lagring */ }
   api.lås = (v = true) => { låst = !!v; return låst; };
   api.låst = () => låst;
   api.feil = () => sistFeil;
   api.nårFeil = f => { lyttere.push(f); };
-  api.L = () => L;
-  // rå tilgang (nøkkelen som den står, uten ending og lås) – kaster ved feil, så lagringsmenyen kan si fra
   // simuler('fullt' | 'sperret' | null): rå.set feiler som om nettleseren var full eller sperret (bare for vakten)
   let simulert = null; api.simuler = t => { simulert = t || null; };
-  api.rå = { get: k => (L ? RÅ.get.call(L, k) : null),
-    set: (k, v) => { if (!L) throw new DOMException('Lagring er sperret', 'SecurityError');
-      try { if (simulert) throw new DOMException('Simulert', simulert === 'fullt' ? 'QuotaExceededError' : 'SecurityError'); RÅ.set.call(L, k, v); } catch (e) { feilet(e, k); throw e; } },
-    del: k => { if (L) RÅ.del.call(L, k); },
+  // rå tilgang (nøkkelen som den står, uten ending og lås) – kaster ved feil, så lagringsmenyen kan si fra
+  api.rå = { get: rg,
+    set: (k, v) => { try { if (simulert) throw new DOMException('Simulert', simulert === 'fullt' ? 'QuotaExceededError' : 'SecurityError'); rs(k, v); } catch (e) { feilet(e, k); throw e; } },
+    del: rd,
     // alle nøklene for denne siden: { navn uten ending: verdi }
-    alle: (s = S) => { const ut = {}; if (!L) return ut; for (let i = 0; i < L.length; i++) { const k = L.key(i), h = hvem(k); if (h && h.side === s) ut[h.navn] = RÅ.get.call(L, k); } return ut; } };
-  // virker lagringen? «ok», «fullt» eller «sperret» (prøver å skrive en liten nøkkel)
-  api.virker = () => { if (!L) return 'sperret'; const k = 'riksbrudd-plass-prøve' + ending(S);
-    try { RÅ.set.call(L, k, '1'); RÅ.del.call(L, k); return 'ok'; } catch (e) { return e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) ? 'fullt' : 'sperret'; } };
+    alle: (s = S) => { const ut = {}; if (!L) return ut; for (let i = 0; i < L.length; i++) { const k = L.key(i), h = hvem(k); if (h && h.side === s) ut[h.navn] = rg(k); } return ut; } };
+  // virker lagringen? «ok», «fullt» eller «sperret» (prøver å skrive en liten nøkkel; lagring i minnet regnes som sperret)
+  api.virker = () => { if (!L || iMinne) return 'sperret'; if (simulert) return simulert; const k = 'riksbrudd-plass-test' + ending(S);
+    try { rs(k, '1'); rd(k); return 'ok'; } catch (e) { return erFull(e) ? 'fullt' : 'sperret'; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
