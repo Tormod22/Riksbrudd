@@ -28,7 +28,9 @@
     return FO.beredskap({ lag: hjemme.length, tårn: f.tårn.length, sekker: f.sekker.length, varsling: Math.max(f.varsling || 0, kam), vakter: f.vakter || 0, ammo, bølge: t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + (t.aktiv ? 0 : 1)) : 1 }); }
 
   // ---------- sett forsvaret ----------
-  function retningMotFienden() { const L = leir(), r = røvere(); if (r.length) { const x = r.reduce((a, e) => a + e.x, 0) / r.length, y = r.reduce((a, e) => a + e.y, 0) / r.length; sistV = Math.atan2(y - L.y, x - L.x); } return sistV; }
+  // (19. nov) retningen fra dem du kjenner til; ellers fra startstedet i varselet (så banneret og varselet sier det samme, og ikke røper hvor de er)
+  function retningMotFienden() { const L = leir(), r0 = røvere(); if (r0.length) { const k = r0.filter(e => kjent(e)), r = k.length ? k.map(e => ({ x: e.x, y: e.y })) : r0.map(e => e.fra || e);
+      const x = r.reduce((a, e) => a + e.x, 0) / r.length, y = r.reduce((a, e) => a + e.y, 0) / r.length; sistV = Math.atan2(y - L.y, x - L.x); } return sistV; }
   function leirvakt(plass) { const F = folk(), L = leir(); if (!F || vakt || !window.FolkRegler) return null; const vakter = F.personer.filter(p => p.oppgave === 'vakt' && FolkRegler.arbeidsfør(p)), n = FO.vaktStørrelse(vakter.length); if (!n) return null;
     const s = nyttLag('Leirvakta', plass ? plass.x : L.x + 12, plass ? plass.y : L.y, 'blå'); s.menn = vakter.slice(0, n).map((p, i) => ({ navn: p.navn, rolle: i === 0 ? 'lagfører' : 'rifle', hp: 1, loy: p.lojal || .7, person: p.id })); s.leder = 0; s.leirvakt = true; s.strid = { ...HOLD, bev: 'standard' }; s.forsvar = plass || { x: s.x, y: s.y, voll: false };
     ENHETER.push(s); vakt = s; return s; }
@@ -80,7 +82,9 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
       const strid = sett2.map(iStrid).find(Boolean), syn = sett2.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', an = anslag(r);
       if (sett2.length && nær <= R.mot.inne) liten = 'i leiren' + (strid ? ` · i ildkamp med ${strid.navn}` : '');
       else if (sett2.length) liten = `${km(nær)} unna · framme om ca. ${Math.max(1, Math.round(FO.ankomst(nær)))} min` + (strid ? ` · i ildkamp med ${strid.navn}` : hvem ? ` · ${hvem}` : '');
-      else liten = an !== null ? (an > .5 ? `ikke sett ennå · ventet om ca. ${Math.max(1, Math.round(an))} min (anslag) – vakttårn og kameraer ser dem før` : 'ikke sett ennå · kan være framme når som helst – vakttårn og kameraer ser dem før') : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem';
+      // (på små skjermer uten forklaringen om tårn og kameraer, så banneret ikke blir høyt)
+      else { const hint = document.body.classList.contains('kort') ? '' : ' – vakttårn og kameraer ser dem før';
+        liten = an !== null ? (an > .5 ? `ikke sett ennå · ventet om ca. ${Math.max(1, Math.round(an))} min (anslag)` : 'ikke sett ennå · kan være framme når som helst') + hint : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; }
       // (19. nov) senest ca. 10 min før de er framme: farten ned og et varsel til (én gang per bølge; ikke i testene)
       const V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, min = sett2.length ? FO.ankomst(nær) : an, t = T();
       if (V && t && auto() && snartMeldt !== t.aktiv && min !== null && min <= V.snart && nær > R.mot.inne * .5) { snartMeldt = t.aktiv;
