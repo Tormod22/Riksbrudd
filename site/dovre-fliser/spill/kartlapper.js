@@ -32,7 +32,7 @@
       E.øverst(() => { g.save(); g.strokeStyle = sidefarge(q.side, 'lys') || '#b5503d'; g.fillStyle = 'rgba(20,16,10,.7)'; g.lineWidth = 2; g.setLineDash([4, 3]);
         g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 9, y); g.lineTo(x, y + 9); g.lineTo(x - 9, y); g.closePath(); g.fill(); g.stroke(); g.setLineDash([]);
         g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e7dcc3'; g.fillText('?', x, y + 4);
-        if (tekst) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(tekst, x, y + 23); g.fillText(tekst, x, y + 23); } g.restore(); }); }
+        if (tekst) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; E.skrivTekst(g, tekst, x, y + 23, false); E.skrivTekst(g, tekst, x, y + 23, true); } g.restore(); }); }
   }
   // 2D: merkene som skal ligge over navnene (tegnes av andre filer; her bare meldt inn)
   KROKER.tegn.push((g, vx0, vy1) => { const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, S = leir();

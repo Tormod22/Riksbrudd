@@ -102,6 +102,8 @@
     const bredder = deler.map((d, i) => { g.font = fonter[i]; return g.measureText(d).width; }), sum = bredder.reduce((a, b) => a + b, 0);
     let x0 = L.align === 'center' ? x - sum / 2 : L.align === 'right' || L.align === 'end' ? x - sum : x; const a0 = g.textAlign; g.textAlign = 'left';
     deler.forEach((d, i) => { g.font = fonter[i]; tegn.call(g, d, x0, y); x0 += bredder[i]; }); g.textAlign = a0; g.font = L.font; }
+  // skrivTekst(g, t, x, y, fyll): som fillText (fyll) / strokeText, men sifrene i en skrift med vanlige tall (for tekst utenom køen)
+  function skrivTekst(g, t, x, y, fyll) { skriv(g, { t: String(t), font: g.font, align: g.textAlign }, x, y, fyll); }
   // tegnAlle(g, fortsett): plasserer og tegner navnene i køen (de minst viktige først, så de viktigste ligger øverst), og så det som
   // skal ligge øverst. fortsett = true: rammen er ikke ferdig (byggevisningen tegner navn i to omganger)
   function tegnAlle(g, fortsett) {
@@ -125,7 +127,7 @@
       if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
   // for vakten: navnene som ble tegnet i siste ramme ({ t, x, y, prio }) og merkene
   const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, ramme: L.ramme.slice() }));
-  const E = { nullstill, plass, merk, tekst, hinder, regel, øverst, tegnAlle, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
+  const E = { nullstill, plass, merk, tekst, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
     aktiv: () => aktiv, antall: () => tatt.length, overlapp, LINJE, MAKS, REGLER };
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else rot.Etikett = E;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -47,16 +47,18 @@ Punktene fra `docs/anmeldelse-2026-11-19.md`. Alle tall er Claudes forslag (saml
 
 ### Filer
 - `site/dovre-fliser/spill/etikett.js` – utsatt plassering (`plasser`, `kandidater`, `tegnAlle`, `hinder`, `regel`, `øverst`, `tegnet`,
-  `hindringer`, `aktiv`, `REGLER`). Test: `pipeline/fliser/test_etikett.js` (gamle + 9 nye).
+  `hindringer`, `aktiv`, `skrivTekst` (sifre i vanlige tall for tekst utenom køen), `REGLER`). Test: `pipeline/fliser/test_etikett.js` (gamle + 9 nye).
 - `site/dovre-fliser/spill/kartlapper.js` (ny, rett etter merker.js) – hindringer og regler for leiren, basen, kjøretøyene, meldte fiender.
   `window.KartLapper`.
 - `site/dovre-fliser/spill/kartlys.js` (ny, rett etter kartlapper.js) – natt/regn og mønsteret i bakken. `window.KartLys` (tone, nå,
   tegn, detaljTegn, detalj, forskyv, av, test). Test: `pipeline/fliser/test_kartlys.js`.
 - `site/dovre-fliser/spill/merker.js` – `Merker.tegn` melder merket inn i `Etikett.hinder`.
 - `site/dovre-fliser/spill/strategi-visning.js` – `boks()`, `passInn`/`åpne` bruker den, tettstedsnavn gjennom Etikett, tall på målene.
-- Vakt: `pipeline/fliser/vakter/kart.js` (ca. 0,5 s): leiren på 5 og 2 m uten overlapp og uten «0 t olje»/«Leiren til», ingen navn oppå
+- Vakt: `pipeline/fliser/vakter/kart.js` (ca. 0,5 s; rører ikke tilfeldighetene `frø` – nyttLag bruker dem, og krig-vakta etter
+  denne regner med samme rekke –, ikke tida og ikke 3D: krigskartet åpnes ikke, `StrategiSpill.erÅpen` svarer ja en stund): leiren på 5 og 2 m uten overlapp og uten «0 t olje»/«Leiren til», ingen navn oppå
   merker; fiende + tre egne lag på samme sted (fiendens merke øverst, lest som piksel); seks lag på samme punkt på 150 m gir ingen søyle;
-  kaier i krigskartet; krigskartets boks på Dovre; natt kl. 02 mørkere og blåere enn kl. 12. Tegner med `tegn()` direkte (3D kan stå på).
+  kaier i krigskartet; krigskartets boks på Dovre; natt mørkere og blåere og regn gråere på et eget lite lerret med kjent farge (`KartLys.tegnTone`), og kartet tegnes med kartlyset på.
+  Tegner med `tegn()` direkte (3D kan stå på).
 
 ### Endret i fellesfiler
 - `index.html`: `tegn()` – `KartLys.tegn(ctx)` etter flisene, `Etikett.tegnAlle(ctx)` etter lagene (to ganger i byggevisningen: før
