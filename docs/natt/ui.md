@@ -261,8 +261,10 @@ panelplassene og banneret, hjelp.js, ga.js = gåmodus i 3D med måling av alle r
    «Hjelp»), uten prikkene; – / + oppe til høyre legger ruta sammen til én linje (55 px telefon, 32 px PC; «riksbrudd-opplaering-sammen»).
    «Opplæringen er ferdig» lukker seg selv etter 12 s. `OpplaeringSpill.gjort()`, `.sammen()`, `.VIS_GJORT`.
 6. **Leir-menyen** (`paneler.js`): starter alltid øverst når den åpnes (fanen er den du sist brukte – å tvinge Bygg ville ødelagt «trykk på
-   diesel = fanen Lager»). Toppen (`#leirmeny > .hode`) er sticky med `top = −(fanenes offsetTop)`, så fanene Bygg/Lager/Plan/Mål står fast øverst
-   når du ruller. Målt: rullet 900 px → fanene 1 px fra toppen; åpnet igjen → scrollTop 0.
+   diesel = fanen Lager»). Når de ekte fanene er rullet ut av syne, står en kopi `#leirfaner2` fast øverst i panelet (første barn i #leirmeny,
+   sticky, `margin-bottom:-40px` så innholdet ikke hopper; settes inn igjen når Leir-menyen tegner seg på nytt; knappene kaller `LeirSpill.fane`).
+   Først prøvd: hele toppen sticky – det gikk ikke i Lager og Mål, der toppen er 700–1700 px høy. Målt i alle fire fanene: rullet → kopien 1 px
+   fra toppen; åpnet igjen → scrollTop 0.
 7. **Panelplassene** (`paneler.js`, `telefon.js`): REGELEN – alt fra bunnmenyen (Leir, Folk, Tropper, Krig, Deg, og Region, Verden, Sjø under
    «Mer») åpnes til VENSTRE, ett om gangen; det som hører til et panel eller lag (Stridsregler, Tiltak, Sekken, krigskortpanelet) og
    tegnforklaringen åpnes til HØYRE ved siden av; kort i midten. Valgt fordi bunnmenyen er én ting man bytter mellom (som faner), og fordi

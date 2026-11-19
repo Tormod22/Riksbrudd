@@ -143,7 +143,7 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       krev(typeof OpplaeringSpill.gjort === 'function' && OpplaeringSpill.VIS_GJORT >= 2000, 'opplæringen viser ikke «✓ Gjort» før neste steg');
       // (6) Leir-menyen starter øverst, og fanene står fast når du ruller
       { const m = $('leirmeny'), lk = $('leirknapp'); if (!går6 && m && lk && !lk.hidden && window.LeirSpill && LeirSpill.tilstand() && !m.classList.contains('på')) { lk.click(); await vent(300); m.scrollTop = 800; await vent(200);
-          const fa = m.querySelector('.faner'), synlig = fa && fa.getBoundingClientRect().top >= m.getBoundingClientRect().top - 2; lk.click(); await vent(200); lk.click(); await vent(350); r6.leir = { rull: m.scrollTop, faner: synlig };
+          await vent(150); const fa = m.querySelector('.hode .faner'), k2 = $('leirfaner2'), synlig = (fa && fa.getBoundingClientRect().top >= m.getBoundingClientRect().top - 2) || (!!k2 && k2.classList.contains('på') && Math.abs(k2.getBoundingClientRect().top - m.getBoundingClientRect().top) < 4); lk.click(); await vent(200); lk.click(); await vent(350); r6.leir = { rull: m.scrollTop, faner: synlig };
           krev(m.scrollTop === 0, 'Leir-menyen husker hvor langt du rullet (' + m.scrollTop + ')'); krev(synlig, 'fanene i Leir-menyen rulles ut av syne'); lk.click(); await vent(150); } }
       // (7) panelplassene: alt fra bunnmenyen til venstre, tilleggene til høyre
       krev(['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark'].every(id => Paneler.plass(id) === 'venstre') && ['stridpanel', 'sekk'].every(id => Paneler.plass(id) === 'høyre'), 'panelene fra bunnmenyen åpnes ikke på samme side');
