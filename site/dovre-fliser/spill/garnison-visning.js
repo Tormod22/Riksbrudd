@@ -31,7 +31,8 @@
         if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
       // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite
       if (h.hva === 'forFå' && blå) logg(`For få til å ta ${navn} (${nf.format(h.by.e.folk || 0)} innb.): det trengs minst ${h.trengs} mann, dere har ${Math.floor(h.har)}. Send flere lag.`);
-      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : `${hvem(h.side)} har tatt ${navn}.`);
+      // (runde 7) et tettsted du holdt, er tapt: si det tydelig (motstanderne angriper nå garnisonene dine)
+      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : h.fra === 'blå' ? `Vi har mistet ${navn} – ${hvem(h.side)} har tatt det.` : `${hvem(h.side)} har tatt ${navn}${h.fra && h.fra !== h.side ? ' fra ' + hvem(h.fra) : ''}.`);
       if (h.hva === 'strid') logg(`Kamp om ${navn}: ingen tar tettstedet mens begge sider er der.`);
       skitten = true;
     }
