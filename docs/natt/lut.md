@@ -172,6 +172,13 @@ Zomboid – inspirasjonen, ikke en kopi). Alle tall er Claudes forslag (REGLER i
 - 8 (tingene inne i kjøleskap og reoler i 3D) er ikke gjort – reolene har alt fyllvarer i modellen, og kjøleskapet er lukket.
 - Møbler: ingen animasjon av møbelet i hendene (spøkelset vises bare foran deg), ingen «Riv/demonter», og du kan ikke stable møbler
   oppå hverandre. Utemøbler lages bare innenfor 3D-utsnittet. Fiendene flytter ikke møbler.
-- På telefon dekker møbellinja øverst toppen av minikartet mens du bærer noe.
 - Lykta lyser bare bakken/gulvet (ikke vegger og møbler) – det er prisen for å ikke legge et nytt lys i scenen.
 - «Husene lever» gjelder bare bygg i 3D-utsnittet (byggomrissene finnes bare der); 2D-kartet viser ikke hvilke hus som er ransaket.
+
+### Rettet etter gjennomsyn (telefon)
+- Spøkelset står 1,6 m (pluss halve møbelet) foran deg på smale skjermer (`Mobler.REGLER.foranSmal`; PC 0,9 m), så det ikke fyller bildet.
+- Møbellinja står nede over styrespaken på telefon (body.kort), ikke oppå minikartet og helselinja; øverst under kompasset på PC.
+- Mens du bærer et møbel (body.bærermøbel) skjules «Skyt», våpenbyttet, «Let gjennom huset», «Sikre huset», «Sett deg inn i …»,
+  merkelappen for huset og «Åpne …».
+- Den store grå flaten nederst i det første telefonbildet var ikke spøkelset: prøveskriptet la prøvehuset der rakettartilleriet i
+  leiren sto (det sto inne i huset). Skriptet flytter nå kjøretøyene bort først.

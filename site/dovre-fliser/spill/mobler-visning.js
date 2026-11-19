@@ -98,7 +98,9 @@
   function fjernSpøkelse() { if (spøk) { if (spøk.parent) spøk.parent.remove(spøk); spøk.geometry.dispose(); spøk = null; } }
   function plassér(R) {
     const u = R.ut, x = R.bane.x, y = R.bane.y, P = Interior3d.inne(x, y), aks = P && P.inne ? Math.atan2(P.inne.akse.uy, P.inne.akse.ux) : 0;
-    const g = M.foran(x, y, R.fot.a || 0, bær, bær.k || 0, aks), m = { type: bær.type, x: g.x, y: g.y, a: g.a, b: bær.b, d: bær.d, h: bær.h };
+    // (på telefon på høykant er synsfeltet smalt: spøkelset står lenger ut, så det ikke dekker bildet)
+    const smal = typeof VW !== 'undefined' && typeof VH !== 'undefined' ? VW < 700 || VW < VH : false;
+    const g = M.foran(x, y, R.fot.a || 0, bær, bær.k || 0, aks, smal ? RG.foranSmal : RG.foran), m = { type: bær.type, x: g.x, y: g.y, a: g.a, b: bær.b, d: bær.d, h: bær.h };
     let res, z;
     const PG = Interior3d.inne(g.x, g.y);
     if (P && P.inne) { if (PG !== P) res = { ok: false, grunn: 'Det går gjennom veggen – gå lenger inn.' }; else res = M.kanSettes(P.inne, m, Interior, bær.nk); z = P.inne.gulv; }
@@ -150,7 +152,10 @@
 #mobelbar{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 52px); z-index:7; display:none; width:min(520px,94vw); box-sizing:border-box; padding:7px 10px; background:rgba(24,20,13,.94); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; text-align:center; }
 #mobelbar.på{ display:block; } #mobelbar .linje{ margin-bottom:5px; } #mobelbar .linje b{ color:#f0e2b0; } #mobelbar .st{ display:block; font-size:13px; margin-top:2px; } #mobelbar .st.ok{ color:#9fd47a; } #mobelbar .st.nei{ color:#f08a70; }
 #mobelbar .kn{ display:flex; gap:6px; justify-content:center; } #mobelbar button{ flex:1; min-height:38px; background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); font:inherit; font-size:14px; cursor:pointer; } #mobelbar button.hoved{ border-color:#9fd47a; color:#e3efc9; }
-#mobelbar .meld{ font-size:12px; color:#f0e2b0; margin-top:4px; } body.kort #mobelbar{ top:calc(var(--topp,40px) + 40px); font-size:13px; padding:5px 6px; }
+#mobelbar .meld{ font-size:12px; color:#f0e2b0; margin-top:4px; }
+body.kort #mobelbar{ top:auto; bottom:calc(184px + env(safe-area-inset-bottom,0px)); left:8px; right:8px; transform:none; width:auto; font-size:12px; padding:4px 6px; }
+body.kort #mobelbar .linje{ margin-bottom:3px; } body.kort #mobelbar .st{ display:inline; margin-left:6px; font-size:12px; } body.kort #mobelbar button{ min-height:34px; font-size:13px; }
+body.bærermøbel #skytknapp, body.bærermøbel #byttvapen, body.bærermøbel #letknapp, body.bærermøbel #sikreknapp, body.bærermøbel #kjorknapp, body.bærermøbel #innelapp, body.bærermøbel #lutknapp{ display:none !important; }
 @media (max-height:560px){ body.kort #mobelbar{ top:calc(var(--topp,40px) + 4px); width:min(420px,60vw); } body.kort #mobelknapp{ bottom:calc(150px + env(safe-area-inset-bottom,0px)); left:auto; right:120px; transform:none; } }`;
   document.head.appendChild(css);
   const knapp = el('button', { id: 'mobelknapp', type: 'button' }); document.body.appendChild(knapp);
@@ -164,7 +169,7 @@
   }
   knapp.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); plukkOpp(knappFor || nærmeste()); oppdaterKnapp(); });
   function visBar() {
-    const vis = !!bær && går(); bar.classList.toggle('på', vis); if (!vis) { sistBar = ''; return; }
+    const vis = !!bær && går(); bar.classList.toggle('på', vis); document.body.classList.toggle('bærermøbel', vis); if (!vis) { sistBar = ''; return; }
     const T = bær.mål, st = !T ? '' : T.ok ? 'Ledig – her kan det stå' : T.grunn || 'Ikke plass her', m = meld && performance.now() < meldTil ? meld : '';
     const nøkkel = [bær.nk, bær.kg, st, T && T.ok, m, grov()].join('|'); if (nøkkel === sistBar) return; sistBar = nøkkel;
     const g = grov();
