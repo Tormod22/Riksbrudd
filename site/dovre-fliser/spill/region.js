@@ -214,7 +214,9 @@
     medisin: { navn: 'Medisiner', pris: 2.5e6, tekst: 'Antibiotika og smertestillende: seks sårede soldater blir kampklare, og de syke i leiren blir friske.', sårede: 6 },
     nattsikt: { navn: 'Nattsikt', pris: 6e6, en: 1, tekst: 'Nattbriller til lagene: de ser 40 % lenger mellom kl. 22 og 05.', sikt: 1.4, fra: 22, til: 5 },
     våpen: { navn: 'Kasse med tunge våpen', pris: 5e6, en: 2, tekst: 'Maskingevær og panservåpen: lagene dine treffer 15 % bedre (kan kjøpes to ganger).', treff: .15 },
-    smugler: { navn: 'Smuglerdiesel', pris: 5e6, tekst: '800 liter diesel utenom markedet – dyrt, men den finnes når hyllene er tomme.', liter: 800 },
+    // (runde 6: dieselen i markedet er satt ned til 3 000 kr literen, så smuglerdieselen koster nå 3 mill. for 800 l = 3 750 kr literen –
+    // dyrere enn markedet, men den finnes når hyllene er tomme. Claudes forslag.)
+    smugler: { navn: 'Smuglerdiesel', pris: 3e6, tekst: '800 liter diesel utenom markedet – dyrt, men den finnes når hyllene er tomme.', liter: 800 },
   };
   const Bors = {
     VARER: BØRS,

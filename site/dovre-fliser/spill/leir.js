@@ -57,7 +57,11 @@
   const PRIORITET = ['kontrollrom', 'radiomast', 'kameramast', 'sykestue', 'verksted', 'drivhus', 'brakke'];
   // Leirens diesel (liter, kjøpes for kroner): driver aggregatene og fyrer om vinteren. Kjøretøyene bruker IKKE denne – de fylles med
   // olje (tonn) på basen (spill/forsyning.js). Brukeren 12. nov: to systemer, men spillet skal si tydelig hva som er hva.
-  const DRIVSTOFF = { prisPerLiter: 8000, literPerKWt: .3, iAggregat: 200 };   // 10 l = 80 000 kr (plan-kollaps.md); aggregatet har en liten egen tank
+  // PRISEN (runde 6, kritikken 19. nov: «diesel til 8 000 kr literen, blakk på dag 2–3»): plan-kollaps.md hadde 8 000 kr literen da
+  // spillet startet med 100 mill. kr og maten kostet 15 000 kr. Nå starter det med 40 mill. og maten koster 3 000 kr, så dieselen er satt
+  // ned i samme forhold: 3 000 kr literen (Claudes forslag). 500 l = 1,5 mill. kr; et aggregat på 9 kW bruker ca. 65 l (ca. 200 000 kr) i døgnet.
+  // Markedet flytter prisen ±12 % i døgnet og legger på inflasjon (spill/spillet.js). Aggregatet har en liten egen tank.
+  const DRIVSTOFF = { prisPerLiter: 3000, literPerKWt: .3, iAggregat: 200 };
   const REGLER = { rivFerdig: .3, rivUferdig: .9, flyttPris: .25, flyttTid: .3, oppgrader: [.6, 1], oppgraderTid: .5, reparerPris: .25, reparerTid: .3, halvSkade: .5,
     reise: { fri: 300, kmt: 10 },
     salg: .5 };   // det du får for overskudd av materialer, som andel av innkjøpsprisen (Claudes tall, 16. nov)   // utposter: meter fra leirens midte uten reisetid, og byggelagets fart i km/t (luftlinje)
@@ -421,6 +425,24 @@
   function bryter(L, id, av) { const b = finn(L, id); if (!b || !(BYGG[b.type].kw < 0)) return null; b.av = av === undefined ? !b.av : !!av; if (!b.av) delete b.av; return !!b.av; }
   // Hvor lenge dieselen rekker med dagens forbruk i aggregatene (spilltimer), eller Infinity
   const dieselTimer = (L, aggKW) => (aggKW > 0 ? L.drivstoff / (aggKW * DRIVSTOFF.literPerKWt) : Infinity);
+  // DIESELPROGNOSEN (runde 6, kritikken 19. nov: dagsrapporten sa «rekker ca. 5,4 døgn» mens Lager samtidig sa «Rekker 14 døgn» – to
+  // ulike regnestykker). Nå én beregning som brukes overalt (dagsrapporten, Lager, varselbrikkene): det tanken faktisk har sunket per
+  // spilltime de siste 24 spilltimene (aggregatene og fyringen, også om natta når sola ikke hjelper). Før det finnes tre hele timer med
+  // målinger, brukes forbruket akkurat nå. L.dieselLogg = { l: [liter i hver av de 24 siste spilltimene], h: timen nå, n: hele timer målt }.
+  function dieselMål(L, liter, tidMin) {
+    const h = Math.floor(tidMin / 60); let D = L.dieselLogg;
+    // ny logg første gang, når tiden har gått bakover (et eldre lagret spill) eller når det er gått mer enn to døgn uten målinger
+    if (!D || !Array.isArray(D.l) || D.l.length !== 24 || !(h >= D.h) || h - D.h > 48) D = L.dieselLogg = { l: new Array(24).fill(0), h, n: 0 };
+    while (D.h < h) { D.h++; D.l[D.h % 24] = 0; D.n = Math.min(23, D.n + 1); }
+    if (liter > 0) D.l[h % 24] += liter;
+    return D;
+  }
+  // Gir { timer (Infinity når ingenting brukes), perDøgn (liter), målt (true = snittet av målingene) }. nåLiterTime: forbruket akkurat nå.
+  function dieselRekker(L, nåLiterTime = 0) {
+    const D = L.dieselLogg, d = Math.max(0, L.drivstoff || 0); let perTime = Math.max(0, nåLiterTime || 0), målt = false;
+    if (D && Array.isArray(D.l) && D.n >= 3) { let s = 0; for (let k = 1; k <= D.n; k++) s += D.l[((D.h - k) % 24 + 24) % 24]; perTime = s / D.n; målt = true; }
+    return { timer: perTime > 1e-6 ? d / perTime : Infinity, perDøgn: perTime * 24, målt };
+  }
   // DELEGERE (brukeren 16. nov): sett en jobb først i køen – byggelagene tar den først. Gir false når bygget ikke har noen jobb.
   function prioriter(L, id) { const J = jobber(L), j = J.find(q => q.b.id === id); if (!j) return false; let nr = Math.min(...J.map(q => q.nr)) - 1; if (nr === 0) nr = -1;   // (0 leses som «ikke satt» i jobber())
     if (j.hva === 'bygg') j.b.nr = nr; else j.b.arbeid.nr = nr; return true; }
@@ -436,7 +458,7 @@
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
   function grunn(b, høyde) { const z = [...hjørner(b), [b.x, b.y]].map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); if (!z.length) return { topp: 0, bunn: 0, forskjell: 0 }; const topp = Math.max(...z), bunn = Math.min(...z); return { topp, bunn, forskjell: topp - bunn }; }
-  const api = { grunn, hjørner, bryter, dieselTimer, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

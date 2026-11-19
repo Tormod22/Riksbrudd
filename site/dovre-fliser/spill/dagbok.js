@@ -11,7 +11,8 @@
   function rapport(d) {
     const varsler = [], deler = [`Dag ${d.dag}: ${d.folk} ${d.folk === 1 ? 'person' : 'personer'}, moral ${Math.round(d.moral)}.`];
     if (d.folk > 0) { if (d.matDager === Infinity) deler.push('Maten dekkes av drivhusene.'); else { deler.push(`Mat til ${des(Math.max(0, d.matDager))} døgn.`); if (d.matDager < 2) varsler.push(d.matDager <= 0 ? 'Dere er tomme for mat' : 'Lite mat'); } }
-    if (d.diesel > 0 || d.dieselBruk > 0) { const døgn = d.dieselBruk > 0 ? d.diesel / d.dieselBruk : Infinity;
+    // (runde 6) d.rekkerDøgn = den felles prognosen (Leir.dieselRekker, samme tall som i Lager); uten den: forbruket siste døgn som før
+    if (d.diesel > 0 || d.dieselBruk > 0) { const døgn = d.rekkerDøgn !== undefined && d.rekkerDøgn !== null ? d.rekkerDøgn : d.dieselBruk > 0 ? d.diesel / d.dieselBruk : Infinity;
       deler.push(`Diesel ${Math.round(d.diesel).toLocaleString('nb-NO')} l` + (døgn === Infinity ? '.' : ` (rekker ca. ${des(døgn)} døgn).`)); if (døgn < 1.5) varsler.push(d.diesel <= 0 ? 'Tomt for diesel' : 'Lite diesel'); }
     if (d.moral < 30 && d.folk > 0) varsler.push('Moralen er farlig lav');
     deler.push(`Kassa ${kr(d.kassa)}` + (d.kassaFør === null || d.kassaFør === undefined || Math.abs(d.kassa - d.kassaFør) < 1000 ? '.' : ` (${d.kassa >= d.kassaFør ? '+' : ''}${kr(d.kassa - d.kassaFør)} siste døgn).`));
@@ -37,8 +38,8 @@
   function nå() {
     const O = rot.OppstartSpill && OppstartSpill.tilstand(), L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand(); if (!O || !L) return null;
     let matDager = 0; try { const B = F && rot.FolkRegler ? FolkRegler.behov(F, L, FolkSpill.valg ? FolkSpill.valg() : {}) : null; matDager = B ? B.dager : 0; } catch (e) { matDager = 0; }
-    const bruk = S.diesel === null ? 0 : Math.max(0, S.diesel - (L.drivstoff || 0));
-    return { dag: dag(tid), folk: F ? F.personer.length : 0, moral: F ? F.moral : 0, matDager, diesel: L.drivstoff || 0, dieselBruk: bruk, kassa: O.penger, kassaFør: S.kassa,
+    const bruk = S.diesel === null ? 0 : Math.max(0, S.diesel - (L.drivstoff || 0)), P = rot.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null;
+    return { dag: dag(tid), folk: F ? F.personer.length : 0, moral: F ? F.moral : 0, matDager, diesel: L.drivstoff || 0, dieselBruk: P ? P.perDøgn : bruk, rekkerDøgn: P ? P.timer / 24 : undefined, kassa: O.penger, kassaFør: S.kassa,
       mål: rot.MaalSpill ? [MaalSpill.stilling().totalt, MaalSpill.stilling().alle] : null };
   }
   KROKER.sim.push(() => { if (!klar || dag(tid) === S.dag) return; const d = nå(); if (!d) return;

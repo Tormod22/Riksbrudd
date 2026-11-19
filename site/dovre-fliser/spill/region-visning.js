@@ -131,7 +131,9 @@
     S.sist = {};
     // svartebørsen: gårsdagens selger drar, kanskje kommer en ny
     S.børs = { tilbud: RG.Bors.tilbud(Math.random, S.har), dag: Math.floor(S.døgn) };
-    if (S.børs.tilbud.length) melding(`Svartebørsen: en selger er i leiren i dag med ${S.børs.tilbud.map(id => RG.Bors.VARER[id].navn.toLowerCase()).join(' og ')}. Se «Region».`, true);
+    // (runde 6, kritikken: «Se «Region»», men ingen knapp het Region i bunnmenyen, og meldingen midt øverst dekket leiren) – nå bare i
+    // loggen, med veien dit (Mer → Region), og en liten varselbrikke øverst til venstre som åpner panelet (se VARSEL_TILLEGG under)
+    if (S.børs.tilbud.length) { børsSett = false; logg(`Svartebørsen: en selger er i leiren i dag med ${S.børs.tilbud.map(id => RG.Bors.VARER[id].navn.toLowerCase()).join(' og ')}. Se Mer → Region (eller trykk «Svartebørsen» øverst til venstre).`); }
     lagre();
   }
   KROKER.sim.push(dt => { spillAkk += dt / 1440; });
@@ -283,7 +285,11 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   }
   function vis(tving) { if (!åpen) return; if (!tving && window.pekerNede && pekerNede(panel)) return;
     const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.firstChild.childNodes); panel.scrollTop = topp; }
-  function åpne() { if (!klar) return; if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.lukk(); if (window.lukkPanel) lukkPanel();
+  // varselbrikken for svartebørsen: står til panelet er åpnet eller selgeren har dratt
+  let børsSett = true;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => (klar && !børsSett && S.børs && S.børs.tilbud && S.børs.tilbud.length && leir()
+    ? [{ i: 'kasse', k: 'god', t: 'Svartebørsen', s: 'en selger er i leiren i dag', f: () => åpne() }] : []));
+  function åpne() { if (!klar) return; børsSett = true; if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.lukk(); if (window.lukkPanel) lukkPanel();
     const lm = document.getElementById('leirmeny'); if (lm && lm.classList.contains('på')) { const k = document.getElementById('leirknapp'); if (k) k.click(); }
     åpen = true; åpnet = performance.now(); panel.classList.add('på'); document.body.classList.add('region'); sist = ''; vis(true); skitten = true; }
   function lukk() { if (!åpen) return; åpen = false; panel.classList.remove('på'); document.body.classList.remove('region'); skitten = true; }

@@ -115,8 +115,11 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg());
       logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
     // færre enn tre i gjengen: rekruttering er alltid mulig (FR.kanRekruttere), så spillet ikke låser seg
-    const hvorfor = FR.kanRekruttere(F, Lr, valg()); rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
+    // (runde 6, kritikken: «Rekrutter» var grå uten forklaring) – grunnen står nå som tekst under knappene, ikke bare i verktøytipset
+    const penger = OppstartSpill.tilstand().penger, hvorfor = FR.kanRekruttere(F, Lr, valg()) || (FR.nød(F) || penger >= FR.R.rekruttPris ? null : `Ikke nok penger i kassa (${LB.kroner(FR.R.rekruttPris)}).`);
+    rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
     panel.append(el('div', { klasse: 'rad' }, kjøp, rek, window.SamfunnSpill && SamfunnSpill.tilstand() ? knapp('Samfunn ›', () => SamfunnSpill.åpne(true), { id: 'samfunn-fra-folk' }) : ''));
+    if (hvorfor) panel.append(el('div', { klasse: 'mangler', id: 'rekrutthvorfor' }, 'Kan ikke rekruttere nå – ' + hvorfor.charAt(0).toLowerCase() + hvorfor.slice(1)));
     if (B.avh) panel.append(el('div', { klasse: 'status' }, `Barn og gamle: ${B.avh} (arbeider ikke, men spiser og trenger seng)`));
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));
