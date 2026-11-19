@@ -25,4 +25,17 @@ eier = { a: 'blå', b: 'blå' };
 let Tr = S.trusler('blå', O, eierAv, id => (id === 'a' ? 1 : 0), [{ x: 1000, y: 3000, navn: 'Røvere' }]);
 assert.strictEqual(Tr.length, 2); assert.strictEqual(Tr[0].by.id, 'a', 'fiende 3 km unna er alvorligst'); assert.strictEqual(Tr[1].garnison, 0);
 assert.strictEqual(S.trusler('blå', O, eierAv, () => 1, []).length, 0);
+// (19. nov, kritikken) ingen vinner før det har gått tre døgn; «Neste trekk» sier hva et tettsted krever, og et lag på tre sendes ikke mot storbyen
+{ const byer = [{ id: 1, navn: 'Storby', x: 17000, y: 0, folk: 235000 }, { id: 2, navn: 'Liten', x: 9000, y: 0, folk: 6700 }, { id: 3, navn: 'Vatne', x: 0, y: 7000, folk: 2000 }];
+  const st = S.stilling(byer, id => (id === 1 ? 'rød' : null));
+  assert.equal(S.utfall(st).vinner, 'rød', 'uten tid: som før'); assert.equal(S.utfall(st, S.REGLER, 600).vinner, null, 'dag 1: ingen vinner');
+  assert(S.utfall(st, S.REGLER, 600).forTidlig && S.utfall(st, S.REGLER, 3 * 1440 + 1).vinner === 'rød', 'etter tre døgn: vinner');
+  const tre = { x: 0, y: 0, navn: 'Kritikerlaget', lag: { menn: [{ hp: 1 }, { hp: 1 }, { hp: 1 }] } };
+  const T = S.trekk('blå', byer, () => null, [tre], []), stor = T.find(t => t.by.id === 1), liten = T.find(t => t.by.id === 2);
+  assert(stor.mann >= 60 && stor.minst >= 30 && !stor.nok && stor.har === 3, 'storbyen: for få');
+  assert.match(S.kravTekst(stor), /trenger ca\. \d+ mann \(minst \d+\) – dere har 3/);
+  assert(T.indexOf(stor) > 0, 'storbyen er ikke første forslag med tre mann');
+  const fire = [1, 2, 3, 4].map(i => ({ x: i * 100, y: 0, navn: 'L' + i, lag: { menn: Array.from({ length: 12 }, () => ({ hp: 1 })) } })), T4 = S.trekk('blå', byer, () => null, fire, []), s4 = T4.find(t => t.by.id === 1);
+  assert(s4.nok && !s4.ettLag && s4.flere.length >= 3, 'fire lag: nok, men det trengs flere lag sammen');
+  assert.equal(S.tettsteder(1), '1 tettsted'); assert.equal(S.tettsteder(41), '41 tettsteder'); }
 console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og trusler');

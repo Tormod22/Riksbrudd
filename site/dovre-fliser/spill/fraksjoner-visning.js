@@ -55,7 +55,7 @@
     for (let i = 0; i < 120 && !(INFRA && INFRA.tettsted); i++) await new Promise(r => setTimeout(r, 500));
     if (mitt !== flyttNr) return null;
     const byer = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > leir.x - 50000 && b.bb[0] < leir.x + 50000 && b.bb[3] > leir.y - 50000 && b.bb[1] < leir.y + 50000)
-      .map(b => { const [x, y] = inne(b); return { x, y, navn: b.e.navn }; }).filter(b => !window.OMRÅDE_OK || OMRÅDE_OK(b.x, b.y));   // et mindre spillkart: bare tettstedene der
+      .map(b => { const [x, y] = inne(b); return { x, y, navn: b.e.navn, id: b.e.id, folk: b.e.folk || 0 }; }).filter(b => !window.OMRÅDE_OK || OMRÅDE_OK(b.x, b.y));   // et mindre spillkart: bare tettstedene der
     const st = F.startsteder(leir, byer);
     for (const side of AI.sider) {
       const m = st[side], lag = ENHETER.filter(e => e.side === side && e.ai); let pl = null;
@@ -67,7 +67,7 @@
       if (!pl) continue;   // bare sjø rundt: denne fraksjonen blir stående der den var
       HJEM[side] = [m.x, m.y]; lag.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; s.ai.mål = null; });
       if (BIL[side]) { const k = BIL[side]; for (const q of lag) if (q.ombord === k) q.ombord = null; if (k.sti) Kjoretoy.stopp(k); k.x = pl[0][0] + 12; k.y = pl[0][1] + 8; }
-      ut[side] = { navn: m.navn, x: m.x, y: m.y, km: Math.round(Math.hypot(m.x - leir.x, m.y - leir.y) / 1000), retning: retning(m.x - leir.x, m.y - leir.y) };
+      ut[side] = { navn: m.navn, x: m.x, y: m.y, km: Math.round(Math.hypot(m.x - leir.x, m.y - leir.y) / 1000), retning: retning(m.x - leir.x, m.y - leir.y), id: m.by ? m.by.id : null };
     }
     // patruljen (rød, uten AI): på vegen fra Kystalliansen mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
     const pat = ENHETER.filter(e => e.side === 'rød' && !e.ai);
@@ -76,11 +76,33 @@
         try { pl = await påLand(p, pat.length, p.x === ut.rød.x ? 260 : 60); } catch (e) { console.error(e); } }
       if (mitt !== flyttNr) return null;
       if (pl) pat.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; }); }
-    const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? 'i ' + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren`);
+    // (19. nov, kritikken: «Kystalliansen holder til i Vatne», men krigskartet viste 0 tettsteder) – startstedet er deres fra start
+    const eid = startEie(ut);
+    const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? (eid[sd] ? 'og holder ' : 'i ') + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren`);
     if (tekst.length) logg(tekst.join('. ') + '.');
     skitten = true; return ut;
   };
   AI.hjem = () => ({ rød: HJEM.rød.slice(), grønn: HJEM.grønn.slice() });
+  // STARTSTEDET ER DERES (19. nov): i et nytt spill (de første tre spilltimene) får hver motstander tettstedet den holder til i, når det
+  // er nøytralt og fraksjonen ikke holder noe annet. ut: { side: { id } } fra AI.flytt; uten ut: tettstedet der HJEM ligger (Dovre).
+  // Ikke i testene (navigator.webdriver) uten AI.test. Gir { side: true } for dem som fikk det.
+  function startEie(ut) { const fikk = {}; if ((navigator.webdriver && !AI.test) || typeof tid === 'undefined' || tid > 180 || !window.TETTSTEDER || !(INFRA && INFRA.tettsted)) return fikk;
+    for (const side of AI.sider) { if ([...TETTSTEDER.values()].some(t => t && t.eier === side)) continue;
+      const id = ut ? (ut[side] && ut[side].id) : (((INFRA.tettsted || []).find(b => Garnison.inni(b, HJEM[side][0], HJEM[side][1])) || { e: {} }).e.id);
+      if (id === undefined || id === null) continue; const t = Garnison.tilstand(TETTSTEDER, id); if (t.eier) continue;
+      TETTSTEDER.set(id, { eier: side, inntar: null }); fikk[side] = true; skitten = true; }
+    return fikk; }
+  AI.startEie = startEie;
+  // Dovre (AI.flytt kalles ikke): når spillet er klart
+  window.addEventListener('riksbrudd-spill', () => setTimeout(() => { if (!flyttNr) startEie(null); }, 3000));
+  // FREDSTIDEN I REGIONKRIGEN (19. nov): de første døgnene (Fraksjoner.fredDøgn) tar motstanderne ingen tettsteder. Ikke i testene.
+  const regionFred = () => { if (navigator.webdriver && !AI.test) return false; const f = window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende || 1;
+    const slutt = F.fredDøgn(f) * 1440;
+    if (!AI.regionVarslet && tid < slutt && tid > 5 && window.OppstartSpill && OppstartSpill.tilstand() && OppstartSpill.tilstand().leir) { AI.regionVarslet = true;
+      logg(`Motstanderne samler styrker de første ${String(Math.round(F.fredDøgn(f) * 10) / 10).replace('.', ',')} døgnene og tar ingen tettsteder ennå. Bruk tida: lag tropper og ta tettsteder nær leiren.`); }
+    if (!AI.regionSlutt && tid >= slutt && tid < slutt + 60) { AI.regionSlutt = true; logg('Motstanderne har samlet seg og begynner å ta tettsteder. Hold garnison i det du har.'); }
+    return tid < slutt; };
+  AI.regionFred = regionFred;
   const byerRundt = (s, r) => ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > s.x - r && b.bb[0] < s.x + r && b.bb[3] > s.y - r && b.bb[1] < s.y + r && (!window.OMRÅDE_OK || OMRÅDE_OK((b.bb[0] + b.bb[2]) / 2, (b.bb[1] + b.bb[3]) / 2)));
   const eier = by => Garnison.tilstand(TETTSTEDER, by.e.id).eier;
 
@@ -104,7 +126,7 @@
       // om bord i lastebilen: gå av når den er framme eller laget ser en fiende nær, ellers kjør videre (tenker hvert minutt)
       if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
         if (!KJORETOY.includes(k) || F.gåAv(!k.sti, nær === Infinity ? null : nær)) avBil(s); else { s.ai.neste = 60; continue; } }
-      const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y) }; });
+      const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y), mann: Garnison.mannFor ? Garnison.mannFor(by.e.folk) : 0, minst: Garnison.minstFor ? Garnison.minstFor(by.e.folk) : 0 }; });
       const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
         .concat(KJORETOY.filter(k => k.side !== s.side && !hvile(s.side, k.side) && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
       // BEDRE AI (17. nov): det fraksjonen husker og vet – hvor den sist så en fiende, hvilke tettsteder den har mistet, hvem av
@@ -124,13 +146,13 @@
         if (!AI.fredVarslet && tid > slutt - 1440 && tid < slutt) { AI.fredVarslet = true; logg('Motstanderne samler seg. Om et døgn kan de gå løs på leiren din – ha minst to tropper hjemme og vakttårn bemannet.'); }
         return tid < slutt; };
       if (L && !M.leir && Math.hypot(L.x - s.x, L.y - s.y) < 2000) { M.leir = true; if (synlig(s)) logg(`${F.FRAKSJONER[s.side].navn} har funnet leiren din.`); }
-      const opptatt = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) opptatt.set(f.ai.målBy, f);
+      const opptatt = new Map(), mot = new Map(); for (const f of venner) if (f !== s && f.ai.målBy !== undefined && f.ai.målBy !== null) { opptatt.set(f.ai.målBy, f); if (!mot.has(f.ai.målBy)) mot.set(f.ai.målBy, []); mot.get(f.ai.målBy).push(f); }
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
       // (18. nov) førerens væremåte (spill/krig.js) flytter terskelen for når laget angriper
       const vmF = window.Krig && window.KrigSpill && KrigSpill.auto() && !s.raid ? (Krig.væremåte((s.menn[s.leder] || s.menn[0]).navn).overtak || 1) : 1;
-      const v = F.velg(s, { overtakF: vmF, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
+      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), mot, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
         minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
-      s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : null;
+      s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst) ? (byer.find(b => b.inni(s.x, s.y)) || {}).id : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
       if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }
       const ny = v.hva !== s.ai.hva; s.ai.hva = v.hva; s.ai.tekst = v.tekst;
@@ -154,7 +176,7 @@
       // (18. nov) tettstedene fraksjonen holder, gir forsterkninger fortere (RegionSpill.fordel, docs/natt/okonomi.md)
       const forsterk = window.RegionSpill && RegionSpill.fordel ? Math.max(.25, +RegionSpill.fordel(side).forsterk || 1) : 1;
       sist[side] += sek; if (sist[side] < R.forsterkning.hver / forsterk) continue;
-      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; if (lag.length >= F.lagTak(holder)) continue;
+      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; if (lag.length >= F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440))) continue;
       sist[side] = 0; const egen = ((INFRA && INFRA.tettsted) || []).find(b => eier(b) === side), [x, y] = egen ? inne(egen) : HJEM[side], s = nytt(side, x, y);
       if (synlig(s)) logg(`${F.FRAKSJONER[side].navn} har fått forsterkninger: ${s.navn}.`);
     }

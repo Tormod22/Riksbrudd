@@ -33,7 +33,15 @@
     bil: { langt: 3000, nær: 200, av: 800 },        // kjør når målet er over 3 km unna og lastebilen står innen 200 m; gå av når en fiende ses innen 800 m
     stilling: { etter: 120, avstand: 300, vern: .6, radius: 25, maks: 4 },   // garnison i 120 min bygger en stilling (treff ×0,6 innen 25 m); høyst 4 per fraksjon
     lagPerBy: .5, lagMaks: 6,   // forsterkninger: taket vokser med et halvt lag per tettsted fraksjonen holder (høyst 6)
+    // KRIGEN SKAL IKKE AVGJØRES DAG 1 (19. nov, kritikken: «Kystalliansen tok Stavanger/Sandnes kl. 14 dag 1»). Claudes forslag:
+    //  regionFred: så mange døgn (på «Vanlig»; delt på fiendens faktor, 1,5–4) samler motstanderne styrker i sitt eget tettsted og tar
+    //    ingen andre – de forsvarer seg, men går ikke ut for å ta tettsteder;
+    //  lagPerDøgn: taket for antall lag vokser med ett lag for hvert andre døgn (de bygger seg opp over dager);
+    //  startMaks: startstedet er helst et tettsted med høyst så mange innbyggere (ikke storbyen ved siden av leiren).
+    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000,
   };
+  // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
+  const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
   const ute = s => s.menn.filter(m => m.hp < 1).length;
   const slåttUt = s => ute(s) >= 6;
   // Kampkraft: friske teller 1, sårede ½; tom for ammunisjon teller lite.
@@ -65,21 +73,32 @@
     const iEgen = v.byer.find(b => b.eier === v.side && b.inni(s.x, s.y)), eneste = iEgen && !andre.some(f => iEgen.inni(f.x, f.y));
     const nød = (v.hjelp || []).filter(h => h.lag !== s && avstand(h, her) <= R.støtte).sort((a, b) => avstand(a, her) - avstand(b, her))[0];
     if (nød && !eneste) return { hva: 'støtt', x: nød.x, y: nød.y, tekst: `kommer ${nød.navn} til hjelp` };
-    // fraksjonen husker hvor den sist så en fiende: let der, hvis den ikke er for sterk
+    // fraksjonen husker hvor den sist så en fiende: let der, hvis den ikke er for sterk (ikke i fredstiden – da samler de seg)
     const m = v.minne && v.minne.alder <= R.minne && avstand(v.minne, her) <= R.jakt && avstand(v.minne, her) > 200 ? v.minne : null;
-    if (m && !eneste && min >= overtak * (m.styrke || 0)) return { hva: 'jakt', x: m.x, y: m.y, tekst: `leter etter ${m.navn} der de sist ble sett` };
+    if (m && !eneste && !v.fred && min >= overtak * (m.styrke || 0)) return { hva: 'jakt', x: m.x, y: m.y, tekst: `leter etter ${m.navn} der de sist ble sett` };
     // garnison: står laget i et eget tettsted og er det eneste av sine der, blir det
     const iBy = v.byer.find(b => b.inni(s.x, s.y));
     if (iBy && iBy.eier === v.side && !v.venner.some(f => f !== s && iBy.inni(f.x, f.y) && !slåttUt(f) && f.navn < s.navn)) return { hva: 'hold', x: s.x, y: s.y, tekst: `garnison i ${iBy.navn}` };
-    if (iBy && iBy.eier !== v.side) return { hva: 'hold', x: s.x, y: s.y, tekst: `tar ${iBy.navn}` };
+    // FREDSTIDEN (19. nov): de første døgnene samler fraksjonen styrkene i et eget tettsted (eller hjemme) og tar ingen tettsteder
+    if (v.fred) { if (iBy && iBy.eier === v.side) return { hva: 'hold', x: s.x, y: s.y, tekst: `samler styrker i ${iBy.navn}` };
+      const b = nærmest(egne); return b ? { hva: 'samle', x: b.x, y: b.y, tekst: `samler seg i ${b.navn}` } : avstand({ x: v.hjem[0], y: v.hjem[1] }, her) > 300 ? { hva: 'samle', x: v.hjem[0], y: v.hjem[1], tekst: 'samler seg hjemme' } : { hva: 'hold', x: s.x, y: s.y, tekst: 'samler styrker' }; }
+    // STYRKEN (19. nov): store tettsteder trenger mange mann (b.minst, b.mann – spill/garnison.js). «Fri» styrke = laget og vennene som
+    // ikke er eneste garnison i et eget tettsted. mot: Map tettsted-id -> [lag på vei dit]. Uten b.minst gjelder ikke dette (som før).
+    const sty = f => styrke(f, f.ammo === undefined ? 1 : f.ammo), garn = f => v.byer.some(b => b.eier === v.side && b.inni(f.x, f.y) && !andre.concat([s]).some(g => g !== f && b.inni(g.x, g.y) && !slåttUt(g) && g.navn < f.navn));
+    const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
+    const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
+    const mulig = b => !(b.minst > 0) || fri >= b.minst;
+    if (iBy && iBy.eier !== v.side && mulig(iBy)) return { hva: 'hold', x: s.x, y: s.y, tekst: !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}` };
     // ta det nærmeste tettstedet som ikke er vårt (større tettsteder teller som nærmere)
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;
     // tettsteder fraksjonen har mistet, vil den ha tilbake; og vet den hvor spillerens leir er, er leiren også et mål
     const vekt = b => avstand(b, her) / Math.sqrt(1 + b.folk / 1000) / (b.tapt ? R.tapt : 1);
-    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde).map(b => ({ b, v: vekt(b), leir: false }));
+    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b)).map(b => ({ b, v: vekt(b), leir: false }));
     if (v.leir && avstand(v.leir, her) <= R.rekkevidde) kand.push({ b: { id: 'leir', navn: v.leir.navn || 'leiren', x: v.leir.x, y: v.leir.y, folk: R.leirVekt }, v: avstand(v.leir, her) / Math.sqrt(1 + R.leirVekt / 1000), leir: true });
     kand.sort((a, b) => a.v - b.v);
-    const ledig = kand.filter(k => !(v.opptatt && v.opptatt.has(k.b.id) && v.opptatt.get(k.b.id) !== s)), valg = (ledig.length ? ledig : kand)[0];
+    // (19. nov) et stort tettsted er «ledig» til de som går dit, er mange nok for full fart (b.mann)
+    const fullt = b => (b.mann > 0 && v.mot ? mot(b).filter(f => f !== s).reduce((a, f) => a + sty(f), 0) >= b.mann : !!(v.opptatt && v.opptatt.has(b.id) && v.opptatt.get(b.id) !== s));
+    const ledig = kand.filter(k => !fullt(k.b)), valg = (ledig.length ? ledig : kand)[0];
     if (valg) return { hva: valg.leir ? 'leir' : 'ta', mål: valg.b.id, x: valg.b.x, y: valg.b.y, tekst: valg.leir ? `rykker mot ${valg.b.navn}` : valg.b.tapt ? `vil ta tilbake ${valg.b.navn}` : `marsjerer mot ${valg.b.navn}` };
     return { hva: 'hold', x: s.x, y: s.y, tekst: 'holder stillingen' };
   }
@@ -91,7 +110,9 @@
   // Finnes det ikke tettsteder, gis et punkt 9 km vest (rød) / sørøst (grønn) for leiren med by = null – visningen må finne land der.
   function startsteder(leir, byer, o = {}) {
     const MIN = o.min || 6000, MAKS = o.maks || 45000, d = b => Math.hypot(b.x - leir.x, b.y - leir.y), vinkel = b => Math.atan2(b.y - leir.y, b.x - leir.x);
-    const kand = (byer || []).filter(b => d(b) >= MIN && d(b) <= MAKS).sort((a, b) => d(a) - d(b));
+    // (19. nov) helst ikke en storby som startsted (byer med folk over REGLER.startMaks kommer sist, når de har folketall)
+    const stor = b => (b.folk > (o.startMaks || REGLER.startMaks) ? 1 : 0);
+    const kand = (byer || []).filter(b => d(b) >= MIN && d(b) <= MAKS).sort((a, b) => stor(a) - stor(b) || d(a) - d(b));
     const sted = (b, dx, dy) => (b ? { x: b.x, y: b.y, navn: b.navn, by: b } : { x: leir.x + dx, y: leir.y + dy, navn: null, by: null });
     const rød = kand[0] || null, unna = b => b !== rød && Math.hypot(b.x - rød.x, b.y - rød.y) >= 8000;
     const skille = b => { let v = Math.abs(vinkel(b) - vinkel(rød)); if (v > Math.PI) v = 2 * Math.PI - v; return v > Math.PI / 3; };
@@ -99,7 +120,8 @@
     return { rød: sted(rød, -9000, 0), grønn: sted(grønn, 6400, -6400) };
   }
   // Taket for antall lag: grunntaket + et halvt lag per tettsted fraksjonen holder.
-  const lagTak = byer => Math.min(REGLER.lagMaks, REGLER.forsterkning.maks + Math.floor((byer || 0) * REGLER.lagPerBy));
+  // (19. nov) … og et halvt lag per døgn som har gått (dag = hele døgn siden start), så motstanderne bygger seg opp over dager
+  const lagTak = (byer, dag = 0) => Math.min(REGLER.lagMaks, REGLER.forsterkning.maks + Math.floor((byer || 0) * REGLER.lagPerBy + Math.max(0, dag || 0) * REGLER.lagPerDøgn));
   // Hvor laget stiller seg når det angriper: det høyeste punktet på en ring rundt målet (høyde gir overtak i strid.js), men ikke
   // lenger unna enn at det er verdt det – 4 m høyere per 100 m ekstra marsj. høyde(x, y) kan gi NaN/null (ukjent).
   function angrepspunkt(s, mål, høyde, radius = 280) { let best = null; const d0 = Math.hypot(mål.x - s.x, mål.y - s.y); if (d0 <= radius) return { x: s.x, y: s.y, h: høyde(s.x, s.y), vinn: 0 };
@@ -115,7 +137,7 @@
   const byggStilling = (holdt, nærmeste, antall) => holdt >= REGLER.stilling.etter && antall < REGLER.stilling.maks && !(nærmeste < REGLER.stilling.avstand);
   // Vernet et lag har av stillingene: lag = { x, y, side }, stillinger = [{ x, y, side }]
   const stillingVern = (lag, stillinger) => ((stillinger || []).some(q => q.side === lag.side && Math.hypot(q.x - lag.x, q.y - lag.y) <= REGLER.stilling.radius) ? REGLER.stilling.vern : 1);
-  const api = { FRAKSJONER, REGLER, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
+  const api = { FRAKSJONER, REGLER, fredDøgn, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Fraksjoner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

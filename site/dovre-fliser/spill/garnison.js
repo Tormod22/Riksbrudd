@@ -10,7 +10,24 @@
     forsterkning: { perTusen: 1, min: .5, maks: 6 },  // mann per spilltime per 1000 innbyggere (sårede først, så falne)
     produksjon: { perTusen: 1, maks: 40 },            // tonn olje per spilltime per 1000 innbyggere
     strøm: { radius: 40000, uten: .4 },               // kraftverk innen 40 km; uten strøm: 40 % produksjon og forsterkning
+    // INNTAK ETTER STØRRELSE (19. nov, kritikken: «Kystalliansen tok Stavanger/Sandnes – 235 000 innbyggere – kl. 14 dag 1 med ett lag»).
+    // Claudes forslag: tettsteder opp til «små» innbyggere tas som før på 30 min av et lag. Større tar lengre tid ved full styrke
+    // (innta × √(folk / små), høyst «maksTid» sekunder) og trenger flere mann: √folk / «perMann» (minst «minMann») friske for full fart.
+    // Med færre går det saktere (andelen av mennene), og under «minst» av det som trengs, står inntaket stille.
+    // Stavanger/Sandnes: 69 mann for full fart (ca. 3,8 t), minst 35 (ca. 7,7 t). Ålgård (11 900): 16 mann, 52 min. Dombås: 5 mann, 30 min.
+    størrelse: { små: 4000, maksTid: 8 * 3600, perMann: 7, minMann: 4, minst: .5 },
   };
+  // mann som trengs for full fart, og minst så mange for at inntaket går i det hele tatt
+  const mannFor = folk => Math.max(REGLER.størrelse.minMann, Math.round(Math.sqrt(Math.max(0, folk || 0)) / REGLER.størrelse.perMann));
+  const minstFor = folk => Math.ceil(mannFor(folk) * REGLER.størrelse.minst);
+  // sekunder et tettsted tar ved full styrke
+  const inntaTid = folk => Math.min(REGLER.størrelse.maksTid, REGLER.innta * Math.max(1, Math.sqrt(Math.max(0, folk || 0) / REGLER.størrelse.små)));
+  // styrken til lagene: friske teller 1, sårede ½ (som Fraksjoner.styrke)
+  const mann = lag => lag.reduce((a, s) => a + s.menn.reduce((v, m) => v + (m.hp >= 1 ? 1 : m.hp > 0 ? .5 : 0), 0), 0);
+  // farten på inntaket (0–1) med «har» mann mot et tettsted med «folk» innbyggere
+  const fart = (har, folk) => (har < minstFor(folk) ? 0 : Math.min(1, har / mannFor(folk)));
+  // hvor lenge det tar (sekunder) med «har» mann; Infinity når de er for få
+  const tidMed = (har, folk) => { const f = fart(har, folk); return f > 0 ? inntaTid(folk) / f : Infinity; };
   function ny() { return new Map(); }   // tettsted-id -> { eier, inntar: { side, sek } | null }
   const tilstand = (S, id) => S.get(id) || { eier: null, inntar: null };
   // Punkt i tettstedets omriss (alle deler, partall/oddetall).
@@ -36,7 +53,7 @@
   const kanHolde = s => s.menn.some(m => m.hp > 0) && s.menn.filter(m => m.hp < 1).length < 6;
   // Lagene i tettstedet som kan holde det (levende og ikke slått ut).
   const lagI = (by, lag) => lag.filter(s => kanHolde(s) && inni(by, s.x, s.y));
-  // sek spillsekunder: inntak. Gir hendelser [{ hva: 'inntatt'|'inntar'|'strid', by, side }].
+  // sek spillsekunder: inntak. Gir hendelser [{ hva: 'inntatt'|'inntar'|'strid'|'forFå', by, side }] (forFå: { har, trengs } mann).
   function steg(S, byer, lag, sek) {
     const ut = [];
     for (const by of byer) {
@@ -44,11 +61,15 @@
       const t = { ...tilstand(S, by.e.id) }, sider = [...new Set(her.map(s => s.side))];
       if (sider.length === 1 && sider[0] !== t.eier) {
         if (!t.inntar || t.inntar.side !== sider[0]) { t.inntar = { side: sider[0], sek: 0 }; ut.push({ hva: 'inntar', by, side: sider[0] }); }
-        t.inntar.sek += sek;
-        if (t.inntar.sek >= REGLER.innta) { const før = t.eier; t.eier = sider[0]; t.inntar = null; ut.push({ hva: 'inntatt', by, side: t.eier, fra: før }); }
+        // (19. nov) inntaket går etter størrelsen og styrken: sek telles om til «30-minutters-sekunder», så sek / innta er andelen som før
+        const folk = by.e.folk || 0, har = mann(her), f = fart(har, folk);
+        if (!f) { if (!t.forFå) ut.push({ hva: 'forFå', by, side: sider[0], har, trengs: minstFor(folk) }); t.forFå = true; }
+        else t.forFå = false;
+        t.inntar.sek += sek * f * REGLER.innta / inntaTid(folk);
+        if (t.inntar.sek >= REGLER.innta) { const før = t.eier; t.eier = sider[0]; t.inntar = null; t.forFå = false; ut.push({ hva: 'inntatt', by, side: t.eier, fra: før }); }
       } else {
         if (sider.length > 1 && t.inntar) ut.push({ hva: 'strid', by });
-        t.inntar = null;
+        t.inntar = null; t.forFå = false;
       }
       S.set(by.e.id, t);
     }
@@ -72,7 +93,7 @@
   // Strøm: et helt kraftverk innen radien. kraft: [{ x, y, hel }].
   const harStrøm = (by, kraft) => { const x = (by.bb[0] + by.bb[2]) / 2, y = (by.bb[1] + by.bb[3]) / 2;
     return kraft.some(k => k.hel && Math.hypot(k.x - x, k.y - y) <= REGLER.strøm.radius); };
-  const api = { REGLER, ny, tilstand, inni, lagI, steg, forsterk, produksjon, harStrøm, rate };
+  const api = { REGLER, ny, tilstand, inni, lagI, steg, forsterk, produksjon, harStrøm, rate, mannFor, minstFor, inntaTid, mann, fart, tidMed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Garnison = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

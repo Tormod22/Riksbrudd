@@ -11,8 +11,14 @@
   const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
   const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
+  const tidTekst = sek => (!isFinite(sek) ? 'for få mann' : sek < 5400 ? Math.round(sek / 60) + ' min' : (Math.round(sek / 360) / 10).toString().replace('.', ',') + ' t');
+  // (19. nov) hva et tettsted krever: «trenger ca. 69 mann (minst 35) og ca. 3,8 t»
+  const kravTekst = folk => `${G.mannFor(folk) <= 6 ? 'Et lag på ' + G.mannFor(folk) + ' mann' : 'Ca. ' + G.mannFor(folk) + ' mann (minst ' + G.minstFor(folk) + ')'} tar det på ${tidTekst(G.inntaTid(folk))} uten fiender der`;
   // for regionen (spill/region-visning.js): strømmen til et tettsted og kraftverkene
-  window.GarnisonSpill = { strømFor, kraft, byFor, byer };
+  window.GarnisonSpill = { strømFor, kraft, byFor, byer, kravTekst, tidTekst };
+  // krigskartet (spill/strategi-visning.js): hva det valgte tettstedet krever
+  { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.by = KT.by || [];
+    KT.by.push((by, eier) => (eier === 'blå' || !by || !by.e ? null : kravTekst(by.e.folk || 0) + '.')); }
 
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
@@ -20,7 +26,9 @@
     for (const h of G.steg(S, byer(), ENHETER, sek)) {
       const navn = h.by.e.navn, blå = h.side === 'blå';
       if (h.hva === 'inntar' && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
-        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${R.innta / 60} min uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
+        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
+      // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite
+      if (h.hva === 'forFå' && blå) logg(`For få til å ta ${navn} (${nf.format(h.by.e.folk || 0)} innb.): det trengs minst ${h.trengs} mann, dere har ${Math.floor(h.har)}. Send flere lag.`);
       if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : `${hvem(h.side)} har tatt ${navn}.`);
       if (h.hva === 'strid') logg(`Kamp om ${navn}: ingen tar tettstedet mens begge sider er der.`);
       skitten = true;
@@ -53,7 +61,7 @@
     const prod = G.rate(o.e.folk, R.produksjon, strøm), fs = G.rate(o.e.folk, R.forsterkning, strøm), gar = G.lagI(o, ENHETER.filter(s => s.side === t.eier && t.eier));
     document.getElementById('hint').textContent = `${strøm ? 'Har strøm' : 'Uten strøm (ingen hele kraftverk innen ' + R.strøm.radius / 1000 + ' km): ' + Math.round(R.strøm.uten * 100) + ' %'}. `
       + `Som ditt gir det ${nf.format(Math.round(prod * 10) / 10)} t olje i timen til basen og forsterker garnisonen med ${nf.format(Math.round(fs * 10) / 10)} mann i timen. `
-      + (t.eier ? (gar.length ? 'Garnison: ' + gar.map(s => s.navn).join(', ') + '.' : 'Ingen garnison.') : `Et lag som står ${R.innta / 60} min i tettstedet uten fiender, tar det.`);
+      + (t.eier ? (gar.length ? 'Garnison: ' + gar.map(s => s.navn).join(', ') + '.' : 'Ingen garnison.') : '') + (t.eier === 'blå' ? '' : ' ' + kravTekst(o.e.folk || 0) + '.');
   });
 
   // ---------- tegning: omrisset i eierens farge, og inntak som en ring som fylles ----------
