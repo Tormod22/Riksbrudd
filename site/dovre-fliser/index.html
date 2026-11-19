@@ -495,7 +495,8 @@ function tegnInfraPå(g, vx0, vy1, m, W, H, valg = {}) {
   for (const o of synlige('tettsted')) {
     if (m < 600) { g.beginPath(); sti(o, true); g.fillStyle = 'rgba(231,220,195,.05)'; g.fill('evenodd'); g.strokeStyle = 'rgba(231,220,195,.28)'; g.lineWidth = 1; g.stroke(); }
     const f = o.e.folk, stor = f >= 50000 ? 19 : f >= 10000 ? 16 : f >= 2000 ? 14 : 12.5;
-    if (f >= 50000 || f >= 10000 && m < 1500 || f >= 2000 && m < 300 || m < 80)
+    // (runde 6: i krigskartet skriver krigskartet selv navnene på tettstedene – ellers sto «Stavanger/Sandnes» to ganger)
+    if ((f >= 50000 || f >= 10000 && m < 1500 || f >= 2000 && m < 300 || m < 80) && !(window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()))
       etikett(...navnP(o), o.e.navn, f >= 50000 ? 0 : f >= 10000 ? 1 : 4, `${f >= 10000 ? '600 ' : ''}${stor}px "IM Fell English",serif`, '#e7dcc3');
   }
   // regulerte magasin (blå flate med stiplet kant) og dammer (tykk lys strek)
