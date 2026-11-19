@@ -78,7 +78,7 @@
       if (pl) pat.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; }); }
     // (19. nov, kritikken: «Kystalliansen holder til i Vatne», men krigskartet viste 0 tettsteder) – startstedet er deres fra start
     const eid = startEie(ut);
-    const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? (eid[sd] ? 'og holder ' : 'i ') + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren`);
+    const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? 'i ' + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren${eid[sd] ? ', og holder tettstedet' : ''}`);
     if (tekst.length) logg(tekst.join('. ') + '.');
     skitten = true; return ut;
   };

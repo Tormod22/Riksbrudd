@@ -1,132 +1,167 @@
 [
-  [
-    "Flanke og rygg",
-    "Lagene vender en veg. Skyter du på et lag fra siden eller bakfra, treffer du mye bedre. Et lag som står stille, snur seg sakte mot den som skyter – så angrip fra to kanter.",
-    "Lag og strid"
-  ],
-  [
-    "Formasjon og marsjfart",
-    "Kolonne går raskest, særlig på veg, men er sårbar. Linje og spredt går saktere. Bytt formasjon i lagpanelet før marsjen.",
-    "Lag og strid"
-  ],
-  [
-    "Sårede og sykestue",
-    "Et lag med sårede går saktere fordi de bæres. Stå stille ved leiren, så blir de friske – mye fortere med en sykestue. Helikopteret kan hente laget hjem.",
-    "Lag og strid"
-  ],
-  [
-    "Fanger og avhør",
-    "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål → Fanger kan du avhøre dem (da får du vite hvor lagene deres står), bytte dem, sette dem i arbeid, gi dem god behandling eller sette dem fri.",
-    "Lag og strid"
-  ],
-  [
-    "Etterretning",
-    "Det speidere, droner, radiomasten og fanger forteller, står i kartet som stiplede merker med «?» og under Leir → Mål. Merket viser hvor laget sist ble meldt, og hvor gammelt det er.",
-    "Lag og strid"
-  ],
-  [
-    "Natt og nattsikt",
-    "Om natta ser alle mye kortere. Gi troppen nattsikt (Tropper → utstyr), eller skyt opp en lysrakett fra Tiltak i lagpanelet.",
-    "Lag og strid"
-  ],
-  [
-    "Tiltak: artilleri, røyk, lys og støy",
-    "Knappen «Tiltak» i lagpanelet: kall inn rakettartilleri på et sted laget ser, legg røyk for å komme unna, skyt opp lys om natta, eller lag støy som lokker fienden dit du vil.",
-    "Lag og strid"
-  ],
-  [
-    "Bakhold på veg",
-    "Sett et lag i bakhold ved en veg (Tiltak). Kjører fiendens lastebil forbi, blir den stoppet – og du kan ta den.",
-    "Lag og strid"
-  ],
-  [
-    "Beleiring",
-    "Still lag på to kanter av et tettsted fienden holder. Da får ikke garnisonen forsyninger: etter seks timer er den svekket, etter tolv gir den seg. Uten strøm går det fortere.",
-    "Lag og strid"
-  ],
-  [
-    "Våpenhvile",
-    "Under Leir → Mål kan du kjøpe våpenhvile med en fraksjon for ett døgn. Da lar de deg være, og du kan ta deg av den andre. Bryter du avtalen, blir den neste dobbelt så dyr.",
-    "Lag og strid"
-  ],
-  [
-    "Bygdevern",
-    "Tettsteder ingen eier, har et bygdevern. Du kan gjøre en avtale med dem (koster penger) eller ta stedet med makt – det koster både folk og moral. Motstanderne må også slåss mot vernet.",
-    "Lag og strid"
-  ],
-  [
-    "Helikopterfrakt",
-    "Har leiren et helikopter, kan det fly et lag ut eller hente det hjem (Tiltak i lagpanelet). Hver tur koster penger.",
-    "Lag og strid"
-  ],
-  [
-    "Røverne finner på nytt",
-    "Røverne kommer ikke alltid rett på: de kan komme fra to kanter, vente til det blir mørkt, eller sende sabotører mot aggregatet eller tanken.",
-    "Leiren"
-  ],
-  [
-    "Dekning bak hus",
-    "Et lag som står stille i et tettsted eller inntil et hus, er vanskeligere å treffe. Panelet sier «i dekning bak hus».",
-    "Lag og strid"
-  ],
-  [
-    "Når laget er knust og omringet",
-    "I Stridsregler for laget velger du om det skal gi seg heller enn å dø når det er knust og har fiender på to kanter. Standard er at det aldri gir seg.",
-    "Lag og strid"
-  ],
-  [
-    "Når angrepet er over",
-    "Et angrep er slått tilbake når røverne er slått ut, eller når de har trukket seg unna og holdt seg over 2,5 km fra leiren i en halv time. Da får dere belønningen, og neste bølge kommer senere.",
-    "Leiren"
-  ],
-  [
-    "Dekning bak leirens bygg",
-    "Et lag som står stille inntil et ferdig bygg i leiren, tar mye færre treff når bygget står mellom laget og fienden. Brakker, verksted og containere gir best dekning, telt og drivhus mindre. Sandsekkvollen har sin egen dekning.",
-    "Leiren"
-  ],
-  [
-    "Bytte fanger",
-    "Under Leir → Mål → Fanger: «Bytt» gir penger fra motstanderen (150 000 kr per fange). Har motstanderen tatt noen av dine, kan du bytte én mot én – de som kommer hjem, står som «fri» i Folk.",
-    "Lag og strid"
-  ],
-  [
-    "Fanger i arbeid",
-    "«Arbeid» setter fangene på bygg, hogst, riving eller frakt. En fange er en halv arbeider, men bare der minst én av dine arbeider. Fanger i arbeid kan rømme – mest når få vokter dem (folk på vakt og soldater ved leiren). De som rømmer, vet hvor leiren ligger.",
-    "Leiren"
-  ],
-  [
-    "Fanger som blir med",
-    "Gi fangene god behandling (én rasjon per fange per døgn). Etter tre døgn kan du spørre om de vil bli med i gjengen – flere sier ja når moralen er god. De trenger en ledig seng. Noen få kan være forrædere.",
-    "Leiren"
-  ],
-  [
-    "Krigen lagres",
-    "Røyk og lysraketter som brenner, helikopteret på tur og kjøreordrene for kjøretøyene dine er med når du kommer tilbake til spillet. Det samme er fiendens stillinger og det motstanderne vet om deg.",
-    "Kom i gang"
-  ],
-  [
-    "Krigen i 3D",
-    "Fiendens stillinger du har sett, står som ringer av sandsekker. Helikopteret flyr ut når det henter eller frakter et lag, og stedene der fiendens lag sist ble meldt, har et merke med «?».",
-    "I 3D"
-  ],
-  [
-    "Stridsvogna ser selv",
-    "Stridsvogna skyter bare på fiender den ser selv fra tårnet, eller som et av lagene dine rett ved vogna ser. Det vaktene, kameraene og dronene melder, ser du på kartet, men vogna skyter ikke på det. Står det «er meldt, men vogna ser dem ikke» i loggen, trykk «Kjør mot …» i panelet til vogna, eller send et lag dit.",
-    "Lag og strid"
-  ],
-  [
-    "Artilleri trenger en som ser",
-    "Rakettartilleriet treffer mye bedre når noen ser målet: en drone, eller et lag som har radiokontakt med deg. Uten det blir spredningen stor.",
-    "Lag og strid"
-  ],
-  [
-    "Krigskartet på telefon",
-    "Trykk «Skjul» øverst i krigskartet, så blir panelet en smal stripe og du ser hele kartet. Trykk på et tettsted for å se det i stripa – og «Send» et lag dit med en gang. «Vis mer» henter panelet tilbake.",
-    "Lag og strid"
-  ],
-  [
-    "Fienden husker",
-    "Når du lagrer og kommer tilbake, er fienden der den var: lagene, stillingene du har sett, der du sist så dem, marsjene de var på og lastebilene deres.",
-    "Lag og strid"
-  ]
+ [
+  "Flanke og rygg",
+  "Lagene vender en veg. Skyter du på et lag fra siden eller bakfra, treffer du mye bedre. Et lag som står stille, snur seg sakte mot den som skyter – så angrip fra to kanter.",
+  "Lag og strid"
+ ],
+ [
+  "Formasjon og marsjfart",
+  "Kolonne går raskest, særlig på veg, men er sårbar. Linje og spredt går saktere. Bytt formasjon i lagpanelet før marsjen.",
+  "Lag og strid"
+ ],
+ [
+  "Sårede og sykestue",
+  "Et lag med sårede går saktere fordi de bæres. Stå stille ved leiren, så blir de friske – mye fortere med en sykestue. Helikopteret kan hente laget hjem.",
+  "Lag og strid"
+ ],
+ [
+  "Fanger og avhør",
+  "Et fiendelag som er knust eller omringet, gir seg. Fangene følger laget ditt til leiren. Under Leir → Mål → Fanger kan du avhøre dem (da får du vite hvor lagene deres står), bytte dem, sette dem i arbeid, gi dem god behandling eller sette dem fri.",
+  "Lag og strid"
+ ],
+ [
+  "Etterretning",
+  "Det speidere, droner, radiomasten og fanger forteller, står i kartet som stiplede merker med «?» og under Leir → Mål. Merket viser hvor laget sist ble meldt, og hvor gammelt det er.",
+  "Lag og strid"
+ ],
+ [
+  "Natt og nattsikt",
+  "Om natta ser alle mye kortere. Gi troppen nattsikt (Tropper → utstyr), eller skyt opp en lysrakett fra Tiltak i lagpanelet.",
+  "Lag og strid"
+ ],
+ [
+  "Tiltak: artilleri, røyk, lys og støy",
+  "Knappen «Tiltak» i lagpanelet: kall inn rakettartilleri på et sted laget ser, legg røyk for å komme unna, skyt opp lys om natta, eller lag støy som lokker fienden dit du vil.",
+  "Lag og strid"
+ ],
+ [
+  "Bakhold på veg",
+  "Sett et lag i bakhold ved en veg (Tiltak). Kjører fiendens lastebil forbi, blir den stoppet – og du kan ta den.",
+  "Lag og strid"
+ ],
+ [
+  "Beleiring",
+  "Still lag på to kanter av et tettsted fienden holder. Da får ikke garnisonen forsyninger: etter seks timer er den svekket, etter tolv gir den seg. Uten strøm går det fortere.",
+  "Lag og strid"
+ ],
+ [
+  "Våpenhvile",
+  "Under Leir → Mål kan du kjøpe våpenhvile med en fraksjon for ett døgn. Da lar de deg være, og du kan ta deg av den andre. Bryter du avtalen, blir den neste dobbelt så dyr.",
+  "Lag og strid"
+ ],
+ [
+  "Bygdevern",
+  "Tettsteder ingen eier, har et bygdevern. Du kan gjøre en avtale med dem (koster penger) eller ta stedet med makt – det koster både folk og moral. Motstanderne må også slåss mot vernet.",
+  "Lag og strid"
+ ],
+ [
+  "Helikopterfrakt",
+  "Har leiren et helikopter, kan det fly et lag ut eller hente det hjem (Tiltak i lagpanelet). Hver tur koster penger.",
+  "Lag og strid"
+ ],
+ [
+  "Røverne finner på nytt",
+  "Røverne kommer ikke alltid rett på: de kan komme fra to kanter, vente til det blir mørkt, eller sende sabotører mot aggregatet eller tanken.",
+  "Leiren"
+ ],
+ [
+  "Dekning bak hus",
+  "Et lag som står stille i et tettsted eller inntil et hus, er vanskeligere å treffe. Panelet sier «i dekning bak hus».",
+  "Lag og strid"
+ ],
+ [
+  "Når laget er knust og omringet",
+  "I Stridsregler for laget velger du om det skal gi seg heller enn å dø når det er knust og har fiender på to kanter. Standard er at det aldri gir seg.",
+  "Lag og strid"
+ ],
+ [
+  "Når angrepet er over",
+  "Et angrep er slått tilbake når røverne er slått ut, eller når de har trukket seg unna og holdt seg over 2,5 km fra leiren i en halv time. Da får dere belønningen, og neste bølge kommer senere.",
+  "Leiren"
+ ],
+ [
+  "Dekning bak leirens bygg",
+  "Et lag som står stille inntil et ferdig bygg i leiren, tar mye færre treff når bygget står mellom laget og fienden. Brakker, verksted og containere gir best dekning, telt og drivhus mindre. Sandsekkvollen har sin egen dekning.",
+  "Leiren"
+ ],
+ [
+  "Bytte fanger",
+  "Under Leir → Mål → Fanger: «Bytt» gir penger fra motstanderen (150 000 kr per fange). Har motstanderen tatt noen av dine, kan du bytte én mot én – de som kommer hjem, står som «fri» i Folk.",
+  "Lag og strid"
+ ],
+ [
+  "Fanger i arbeid",
+  "«Arbeid» setter fangene på bygg, hogst, riving eller frakt. En fange er en halv arbeider, men bare der minst én av dine arbeider. Fanger i arbeid kan rømme – mest når få vokter dem (folk på vakt og soldater ved leiren). De som rømmer, vet hvor leiren ligger.",
+  "Leiren"
+ ],
+ [
+  "Fanger som blir med",
+  "Gi fangene god behandling (én rasjon per fange per døgn). Etter tre døgn kan du spørre om de vil bli med i gjengen – flere sier ja når moralen er god. De trenger en ledig seng. Noen få kan være forrædere.",
+  "Leiren"
+ ],
+ [
+  "Krigen lagres",
+  "Røyk og lysraketter som brenner, helikopteret på tur og kjøreordrene for kjøretøyene dine er med når du kommer tilbake til spillet. Det samme er fiendens stillinger og det motstanderne vet om deg.",
+  "Kom i gang"
+ ],
+ [
+  "Krigen i 3D",
+  "Fiendens stillinger du har sett, står som ringer av sandsekker. Helikopteret flyr ut når det henter eller frakter et lag, og stedene der fiendens lag sist ble meldt, har et merke med «?».",
+  "I 3D"
+ ],
+ [
+  "Stridsvogna ser selv",
+  "Stridsvogna skyter bare på fiender den ser selv fra tårnet, eller som et av lagene dine rett ved vogna ser. Det vaktene, kameraene og dronene melder, ser du på kartet, men vogna skyter ikke på det. Står det «er meldt, men vogna ser dem ikke» i loggen, trykk «Kjør mot …» i panelet til vogna, eller send et lag dit.",
+  "Lag og strid"
+ ],
+ [
+  "Artilleri trenger en som ser",
+  "Rakettartilleriet treffer mye bedre når noen ser målet: en drone, eller et lag som har radiokontakt med deg. Uten det blir spredningen stor.",
+  "Lag og strid"
+ ],
+ [
+  "Krigskartet på telefon",
+  "Trykk «Skjul» øverst i krigskartet, så blir panelet en smal stripe og du ser hele kartet. Trykk på et tettsted for å se det i stripa – og «Send» et lag dit med en gang. «Vis mer» henter panelet tilbake.",
+  "Lag og strid"
+ ],
+ [
+  "Fienden husker",
+  "Når du lagrer og kommer tilbake, er fienden der den var: lagene, stillingene du har sett, der du sist så dem, marsjene de var på og lastebilene deres.",
+  "Lag og strid"
+ ],
+ [
+  "Store tettsteder tar tid",
+  "Et lite tettsted (opptil ca. 4000 innbyggere) tas av et lag som står 30 minutter der uten fiender. Større steder trenger flere mann og lengre tid: Stavanger/Sandnes trenger ca. 69 mann for full fart (ca. 4 timer) og minst 35 for at det går i det hele tatt. Med færre går det saktere, og under minstetallet skjer ingenting. Trykk på tettstedet (eller se «Neste trekk» i krigskartet) for å se hva det krever.",
+  "Lag og strid"
+ ],
+ [
+  "Motstanderne samler seg først",
+  "De første døgnene (2,5 på Vanlig, lenger på Lett, kortere på Hard) holder Kystalliansen og Folkefronten seg i sitt eget tettsted og bygger seg opp – de tar ingen andre tettsteder. Bruk tida til å lage tropper og ta tettstedene nær leiren. Etterpå får de et nytt lag omtrent hvert sjette spilltime, og flere jo lenger spillet varer.",
+  "Lag og strid"
+ ],
+ [
+  "Seier tidligst dag 4",
+  "Ingen side kan vinne krigen eller «ha overtaket» før det har gått tre døgn. Krigskartet sier når krigen tidligst kan avgjøres.",
+  "Lag og strid"
+ ],
+ [
+  "Send flere lag",
+  "«Neste trekk» i krigskartet sier hvor mange mann et tettsted trenger. Er ett lag for lite, står det «Send 3 lag» – da sendes de nærmeste lagene sammen. Har du for få, står det «For få».",
+  "Lag og strid"
+ ],
+ [
+  "Varsel om røvere",
+  "Røverne starter 3–4 km fra leiren. Banneret sier fra hvilken kant de kommer og når de ventes (et anslag) til noen ser dem. Et bemannet vakttårn ser dem på 1,5 km, kameramaster innenfor sin sirkel, og vaktene nær leiren. Omtrent ti minutter før de er framme, senkes farten og du får et varsel til.",
+  "Leiren"
+ ],
+ [
+  "Forsvaret huskes",
+  "Har du trykket «Forsvar leiren», husker spillet det selv om du laster siden på nytt midt i angrepet: lagene står i stillingene og banneret sier «lagene holder stillingen».",
+  "Leiren"
+ ],
+ [
+  "Ildkraft i troppsoppsettet",
+  "Troppsoppsettet viser treff per salve på 100, 400 og 800 m (de faller med avstanden) og hvor mye det er mot et vanlig lag på tolv. Prosenten kan stige på langt hold fordi maskingeværene i et vanlig lag treffer dårlig der.",
+  "Lag og strid"
+ ]
 ]
