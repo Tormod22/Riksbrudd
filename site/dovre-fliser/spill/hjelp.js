@@ -84,6 +84,9 @@
 #hjelp .kort{ margin:6px 0 10px; padding:8px 10px 8px 30px; background:#221c13; border:1px solid #3a3226; line-height:1.4; font-size:15px; } #hjelp .kort li{ margin:2px 0; }
 #hjelp .sok{ width:100%; box-sizing:border-box; background:#1c1710; border:1px solid var(--rule); color:var(--ink); font:inherit; font-size:16px; padding:7px 10px; }
 #hjelp .ingen{ color:var(--ink-dim); padding:8px 2px; }
+#hjelp details.gruppe{ border-bottom:0; } #hjelp details.gruppe > summary{ padding:0; margin-top:10px; border-bottom:1px solid var(--rule); } #hjelp details.gruppe > summary h4{ margin:4px 0 4px; border:0; padding:0; font-size:13.5px; color:#c9b26a; }
+#hjelp details.gruppe > summary .antall{ margin-left:auto; margin-right:8px; font-size:12px; color:var(--ink-dim); } #hjelp details.gruppe > summary::after{ font-size:20px; color:#c9b26a; }
+#hjelp details:not([open]) > summary::after{ content:'+'; } #hjelp details.gruppe > details{ margin-left:8px; } #hjelp .sok{ position:sticky; top:0; z-index:1; }
 #hjelp p{ margin:0; line-height:1.4; font-size:15px; }
 #hjelp .lukk{ float:right; background:none; border:none; color:var(--ink); font-size:24px; cursor:pointer; min-width:40px; height:40px; }`;
   document.head.appendChild(css);
@@ -93,13 +96,22 @@
   const h = document.createElement('h2'); h.textContent = 'Slik spiller du'; ark.appendChild(h);
   // (16. nov, brukeren: «forbedre menyene»: hjelpen var 36 avsnitt etter hverandre.) Nå: kort oppskrift øverst, søkefelt, og
   // emnene i grupper der hvert emne åpnes med et trykk. Et emne som ikke står i GRUPPER, havner under «Annet».
-  const GRUPPER = [['Kom i gang', ['Nytt spill', 'Skjermbildet', 'Krigskartet', 'Stridsregler', 'Eget initiativ', 'Formasjoner', 'Erfaring', 'Folk og utstyr til troppen', 'Bytte våpen og utstyr', 'Motstandernes AI', 'Fiendens kjøretøy og stillinger', 'Forsvar av leiren', 'Lageret', 'Karakteren din', 'Mål', 'Oppdrag', 'Angrep på leiren', 'Dagbok', 'Tiden', 'Kartet', 'Hurtigtaster', 'Telefon']],
-    ['Leiren', ['Leiren', 'Strøm', 'Strøm og vann svikter', 'Folk', 'Hendelser i leiren', 'Markedet', 'Venner', 'Planlegge leiren', 'Bygge veg', 'Byggesett', 'Materialer fra verden', 'Utposter', 'Diesel og olje', 'Kontrollrommet', 'Kameravakt']],
-    ['Lag og strid', ['Lagene', 'Tåke', 'Kjøretøy', 'Forsyning', 'Olje', 'Ingeniører', 'Flere enheter', 'Tettsteder', 'Motstanderne']],
-    ['I 3D', ['Gå selv', 'Kamp når du går selv', 'Våpen og sekken', 'Ferdigheter', 'Tilfluktssteder', 'Kjøre bil og helikopter', 'Gå inn i husene', 'Let i husene', 'Kompass og minikart', 'Filter i 3D', 'Fotomodus', 'Byer og butikker', 'Dyr', 'Ferjer og båter', 'Kraftledninger']],
+  // RUNDE 6 (19. nov, kritikeren på telefon: «Hjelpen er en flat liste med over 150 emner»): emnene står i ti grupper som foldes ut (bare
+  // «Kom i gang» er åpen), med søkefeltet øverst. Inndelingen er Claudes forslag. Emner fra pakkene (HJELP_TILLEGG) som står i en liste
+  // her, havner i den gruppa; ellers i gruppa pakken oppga, ellers under «Annet».
+  const GRUPPER = [['Kom i gang', ['Nytt spill', 'Den første uka', 'Opplæringen', 'Tiden', 'Spol til neste hendelse', 'Farten senkes av seg selv', 'Mål', 'Ukas oppdrag', 'Dagbok', 'Vanskelighetsgrad, scenario og utfordringer', 'Start uten ferdige lag', 'To tropper før dag 4', 'Din historie og evner', 'Penger og knapphet', 'Krigen lagres', 'Kartet du oppdager']],
+    ['Skjermen og knappene', ['Skjermbildet', 'Tallene øverst', 'Knappene nederst', 'Spillet står på pause til du svarer', 'Hvilket vindu ligger øverst', 'Leir-menyen', 'Hjelpen', 'Meldingene', 'Paneler og plasser', 'Paneler', 'Varsler øverst til venstre', 'Ett kort om gangen', 'Kort som venter', 'Tegnforklaring', 'Merkene i kartet', 'Bruer, tunneler og kraftverk i kartet', 'Oversikten når du er zoomet inn', 'Kartet', 'Hurtigtaster', 'Telefon', 'Sjøpanelet på telefon', 'Delene i Leir-menyen', 'Byggemenyen', 'Byggelista']],
+    ['Leiren og bygging', ['Leiren', 'Lageret', 'Strøm', 'Strøm og vann svikter', 'Forfallet', 'Planlegge leiren', 'Bygge veg', 'Byggesett', 'Egne rom', 'Bygge i skråning', 'Materialer fra verden', 'Utposter', 'Diesel og olje', 'Olje og diesel kan veksles', 'Kontrollrommet', 'Kameravakt', 'Varsel fra kameraene', 'Brann og mat i leiren', 'Åker', 'Radio', 'Tog']],
+    ['Angrep og forsvar', ['Forsvar av leiren', 'Angrep på leiren', 'Røverne og byttet', 'Røvere i leiren', 'Røverne finner på nytt', 'Når angrepet er over', 'Reparasjon etter angrep', 'Dekning bak leirens bygg', 'Hvis leiren faller']],
+    ['Folk og samfunn', ['Folk', 'Folk som personer', 'Samfunnet', 'Hendelser i leiren', 'Flyktninger', 'Spesialister', 'Barn og gamle', 'Grålungen', 'Lov i leiren', 'Forrædere', 'Begravelser og minnesmerke', 'Karakteren din', 'Venner', 'Venner i samme område', 'Fanger og rekrutter', 'Fanger i arbeid', 'Fanger som blir med', 'Hunden din']],
+    ['Mat, penger og handel', ['Markedet', 'Markedets hyller', 'Svartebørsen', 'Handelsruter', 'Havner og varer sjøvegen', 'Fiske', 'Jakt', 'Oppdrag']],
+    ['Lag og strid', ['Lagene', 'Egne tropper', 'Tåke', 'Stridsregler', 'Eget initiativ', 'Formasjoner', 'Formasjon og marsjfart', 'Erfaring', 'Folk og utstyr til troppen', 'Bytte våpen og utstyr', 'Kjøretøy', 'Forsyning', 'Olje', 'Ingeniører', 'Flere enheter', 'Marsjtid før du gir ordren', 'Køordre: gå hit, så dit', 'Flere lag på én gang', 'Dekning bak en bakketopp', 'Dekning bak hus', 'Flanke og rygg', 'Ildkamp som synes', 'Sårede og sykestue', 'Når laget er knust og omringet', 'Fanger og avhør', 'Bytte fanger', 'Etterretning', 'Natt og nattsikt', 'Tiltak: artilleri, røyk, lys og støy', 'Bakhold på veg', 'Beleiring', 'Våpenhvile', 'Helikopterfrakt', 'Funn i terrenget']],
+    ['Krigen og regionen', ['Krigskartet', 'Krigskartet: hva et tettsted gir', 'Tettsteder', 'Motstanderne', 'Motstandernes AI', 'Motstandernes tettsteder', 'Fiendens kjøretøy og stillinger', 'Regionen: hva tettstedene gir', 'Skatt, lojalitet og opprør', 'Strøm til tettstedene', 'Gjenoppbygging', 'Bygdevern', 'Når du vinner regionen', 'Krigen på nytt']],
+    ['Sjøen', ['Sjøen og båter', 'Lag om bord og landgang', 'Sperr et sund', 'Ta en ferje', 'Kjøretøy på lekter og ferje', 'Bord eller senk fiendens båter', 'Fienden bruker sjøen', 'Ferjer og båter', 'Kaier i 3D og ved oppstart']],
+    ['I 3D', ['Gå selv', 'Kamp når du går selv', 'Våpen og sekken', 'Ferdigheter', 'Tilfluktssteder', 'Kjøre bil og helikopter', 'Gå inn i husene', 'Let i husene', 'Kompass og minikart', 'Filter i 3D', 'Fotomodus', 'Byer og butikker', 'Dyr', 'Kraftledninger', 'Flere lag i 3D', 'Krigen i 3D']],
     ['Vær, lyd og bilde', ['Vær og årstid', 'Dag og natt', 'Bølger, vind og tåke', 'Lyd', 'Grafikk']]];
   // hjelpetekster fra pakkene (spill/hjelp-natt.js, laget av pipeline/fliser/samle_hjelp.py): et emne som finnes fra før, får ny tekst
-  for (const [t, tekst, g] of window.HJELP_TILLEGG || []) { const gammel = DELER.find(d => d[0] === t); if (gammel) gammel[1] = tekst; else { DELER.push([t, tekst]); (GRUPPER.find(q => q[0] === g) || GRUPPER[0])[1].push(t); } }
+  for (const [t, tekst, g] of window.HJELP_TILLEGG || []) { const gammel = DELER.find(d => d[0] === t); if (gammel) gammel[1] = tekst; else { DELER.push([t, tekst]); if (!GRUPPER.some(q => q[1].includes(t))) (GRUPPER.find(q => q[0] === g) || GRUPPER[GRUPPER.length - 1])[1].push(t); } }
   const kort = document.createElement('ol'); kort.className = 'kort';
   for (const t of ['Åpne «Leir» og bygg det første: en brakke, en dieseltank og et aggregat. Øverst i menyen står neste mål.', 'Sett folkene i arbeid under «Folk» (bygg, hogst, vakt, kjøkken).',
     'Trykk på et lag i kartet og velg «Marsjer» for å flytte det. Lagene ser bare et stykke rundt seg – resten ligger i tåke.', 'Trykk «3D» for å se landskapet, og «Gå» for å gå selv – også inn i husene, der du kan lete etter forsyninger.',
@@ -108,14 +120,17 @@
   const ingen = document.createElement('p'); ingen.className = 'ingen'; ingen.textContent = 'Ingen emner passer med søket.'; ingen.hidden = true;
   ark.append(kort, søk, ingen);
   const emner = new Map(DELER.map(([t, tekst]) => [t, tekst])), brukt = new Set(), alle = [];
-  const gruppe = (navn, liste) => { if (!liste.length) return; const g = document.createElement('section'), o = document.createElement('h4'); o.textContent = navn; g.appendChild(o);
-    for (const t of liste) { const dt = document.createElement('details'), sm = document.createElement('summary'), a = document.createElement('h3'), p = document.createElement('p'); a.textContent = t; p.textContent = emner.get(t); sm.appendChild(a); dt.append(sm, p); g.appendChild(dt); alle.push({ dt, g, tekst: (t + ' ' + emner.get(t)).toLowerCase() }); }
+  // hver gruppe er en <details> (section beholdes som ramme, så søket skjuler hele gruppa); overskriften viser antallet emner
+  const gruppe = (navn, liste) => { if (!liste.length) return; const g = document.createElement('section'), gd = document.createElement('details'), gs = document.createElement('summary'), o = document.createElement('h4');
+    gd.className = 'gruppe'; o.textContent = navn; const n = document.createElement('span'); n.className = 'antall'; n.textContent = liste.length + (liste.length === 1 ? ' emne' : ' emner'); gs.append(o, n); gd.appendChild(gs); g.appendChild(gd); if (navn === 'Kom i gang') gd.open = true;
+    const gEl = g; g.dataset.gruppe = navn; const leggTil = el => gd.appendChild(el);
+    for (const t of liste) { const dt = document.createElement('details'), sm = document.createElement('summary'), a = document.createElement('h3'), p = document.createElement('p'); a.textContent = t; p.textContent = emner.get(t); sm.appendChild(a); dt.append(sm, p); leggTil(dt); alle.push({ dt, g: gEl, tekst: (t + ' ' + emner.get(t)).toLowerCase() }); }
     ark.appendChild(g); };
   for (const [navn, liste] of GRUPPER) { const L = liste.filter(t => emner.has(t)); for (const t of L) brukt.add(t); gruppe(navn, L); }
   gruppe('Annet', DELER.map(d => d[0]).filter(t => !brukt.has(t)));
   søk.addEventListener('input', () => { const q = søk.value.trim().toLowerCase(); let n = 0;
     for (const e of alle) { const treff = !q || e.tekst.includes(q); e.dt.hidden = !treff; e.dt.open = !!q && treff; if (treff) n++; }
-    for (const g of ark.querySelectorAll('section')) g.hidden = ![...g.querySelectorAll('details')].some(dd => !dd.hidden);
+    for (const g of ark.querySelectorAll('section')) { const treff = [...g.querySelectorAll('details:not(.gruppe)')].some(dd => !dd.hidden); g.hidden = !treff; const gd = g.querySelector('details.gruppe'); if (gd) gd.open = q ? treff : g.dataset.gruppe === 'Kom i gang'; }
     ingen.hidden = n > 0; });
   d.appendChild(ark); document.body.appendChild(d);
   const vis = på => { d.classList.toggle('på', på); knapp.setAttribute('aria-expanded', String(på)); };

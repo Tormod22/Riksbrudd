@@ -3060,12 +3060,13 @@ function tegn3d() {
   const o = R.ov; if (o.width !== VW * dpr || o.height !== VH * dpr) { o.width = VW * dpr; o.height = VH * dpr; }
   const g = o.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, o.width, o.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   // navn og merker tegnes ikke oppe under knappene og kompasset (spill/kompakt.js setter UI_TOPP3D)
-  const klipp = window.UI_TOPP3D || 0; if (klipp) { g.save(); g.beginPath(); g.rect(0, klipp, VW, VH); g.clip(); }
+  // (runde 6) og ikke under rutene på skjermen (spill/narhud.js setter UI_HULL3D = [[x, y, b, h] …]: våpen, helse, «Flaske …», minikart, loggen)
+  const klipp = window.UI_TOPP3D || 0, hull = window.UI_HULL3D || []; if (klipp || hull.length) { g.save(); g.beginPath(); g.rect(0, klipp, VW, VH); for (const h of hull) g.rect(h[0], h[1], h[2], h[3]); g.clip('evenodd'); }
   if (window.Etikett) Etikett.nullstill();
   tegnInfra3d(g);
   for (const f of KROKER.tegn3d) f(g, proj3, mPer3);
   tegnLag(g, proj3, mPer3);
-  if (klipp) g.restore();
+  if (klipp || hull.length) g.restore();
   tegnHud();
 }
 // Hvor 3D skal åpne (feilretting 12. nov: «3D» rett fra åpningsbildet på /norge åpnet midt i Sverige, 9 km opp, og viste bare en grå flate).
@@ -3279,7 +3280,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom.js?v=47a26f294e"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=43c689d2ce"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=c56e4c4938"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=9e05e40906"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=b2e87ebcf3"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
@@ -3359,7 +3360,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/spillet-visning.js?v=4adcbc7c9d"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=0a4f6dac0b"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=250528afdc"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=6496c4ec9a"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=20284f4f18"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
@@ -3408,13 +3409,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/merker.js?v=beb785f12e"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
-<script src="/dovre-fliser/spill/flistips.js?v=66d2ec420f"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=a76b5426f3"></script>
+<script src="/dovre-fliser/spill/flistips.js?v=5532e70297"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=c7596d4af1"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=4142f566bb"></script>
-<script src="/dovre-fliser/spill/paneler.js?v=32212e56fd"></script>
-<script src="/dovre-fliser/spill/spillhud.js?v=76ca1d56e6"></script>
+<script src="/dovre-fliser/spill/paneler.js?v=7c30488bdb"></script>
+<script src="/dovre-fliser/spill/spillhud.js?v=31fbadf972"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
-<script src="/dovre-fliser/spill/telefon.js?v=b237171513"></script>
+<script src="/dovre-fliser/spill/telefon.js?v=f7467698dc"></script>
+<script src="/dovre-fliser/spill/skjermlag.js?v=fb298a3485"></script>
 </body>
 </html>
