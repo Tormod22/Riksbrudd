@@ -122,7 +122,8 @@
     if (O.liste.length >= (start ? T.start : T.maks)) return;
     if (!start && O.nesteSpill !== undefined && tid < O.nesteSpill && ekte < (O.nesteEkte || 0)) return;
     lager = true; try { const leir = S().leir, mål = start ? T.start : O.liste.length + 1;
-      for (let k = 0; k < 12 && O.liste.length < mål; k++) { const o = Oppdrag.lag(leir, ++O.nr, Math.random, tid); if (await påLand(o.x, o.y)) O.liste.push(o); }
+      // høyst én ledig røverpost om gangen – ellers kunne tre poster sperre for trygge oppdrag i tre døgn (gjennomspillingen 19. nov)
+      for (let k = 0; k < 12 && O.liste.length < mål; k++) { const o = Oppdrag.lag(leir, ++O.nr, Math.random, tid); if (o.type === 'post' && O.liste.some(q => q.type === 'post' && !q.tatt)) continue; if (await påLand(o.x, o.y)) O.liste.push(o); }
       if (!start) { const v = Oppdrag.vent(Math.random); O.nesteSpill = tid + v.spill; O.nesteEkte = ekte + v.ekte; }
       skriv('riksbrudd-oppdrag', O); meny(); } finally { lager = false; } }
   function ta(id) { const o = O.liste.find(q => q.id === id); if (!o || o.tatt) return false; o.tatt = true; o.frist = Math.max(o.frist, tid + 2 * 1440);
