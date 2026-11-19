@@ -105,6 +105,8 @@
   // tegnAlle(g, fortsett): plasserer og tegner navnene i køen (de minst viktige først, så de viktigste ligger øverst), og så det som
   // skal ligge øverst. fortsett = true: rammen er ikke ferdig (byggevisningen tegner navn i to omganger)
   function tegnAlle(g, fortsett) {
+    // navn som tegneren aldri tegnet (ingen farge fanget), tas ut
+    for (let i = kø.length - 1; i >= 0; i--) if (!kø[i].fyll && !kø[i].strek && g) kø.splice(i, 1);
     if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false })))); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
       if (g) { g.save(); for (const L of rek) { g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
         if (L.strek) { g.lineWidth = L.bredde || 3; g.lineJoin = 'round'; g.strokeStyle = L.strek; skriv(g, L, L.px, L.py, false); }
