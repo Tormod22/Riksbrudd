@@ -16,7 +16,8 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
   - **Gå her, der du står** – som før (ved karakteren). Står karakteren utenfor utsnittet, flyr kameraet dit og du starter når kartet er bygget.
   - **Avbryt** (eller Esc). Enter velger det første valget.
   Midt i bildet står merket «Hit» (der kameraet ser) mens kortet er oppe. Valgt lag: ved laget som før. Uten karakter: der kameraet ser.
-- `Gange.start()` (testene, sjekk.js) starter som før uten å spørre. Nytt i API-et: `Gange.startValg, reis, valgÅpen, lukkValg, reiser`.
+- `Gange.start()` starter som før uten å spørre, og i testene (webdriver) gjør knappen «Gå» det samme utenom med `Gange.test = true`
+  (sjekk.js trykker på «Gå» i «gå selv» – første kontroll feilet på det). Nytt i API-et: `Gange.startValg, reis, valgÅpen, lukkValg, reiser`.
 - Prøvd i nettleser (PC): kortet kom (810 m), «Reis hit» → tid +17,5 min, karakteren og du står på stedet, farten tilbake til 1×.
 
 ### 2. Vanskelig å komme inn i hus på telefon – RETTET
@@ -71,7 +72,9 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
 - **Fjellmark (gjort):** ny fil `spill/fjellmark3d.js` (regler øverst, `test_fjellmark3d.js`): når du går (eller er under 110 m), legges
   småstein, lav/mose, lyngtuer og snøflekker innen 48 m rundt deg der det er fjellmark (over tregrensen, eller grått/brunt i kartet nær den;
   brun hei også lavere), fordelt på nytt per 12 m. Snøflekker 0–420 m under snøgrensen, ikke om vinteren. Aldri i vann/bekk/veg/spor/hus/
-  leirbygg. Fire instansnett med hjørnefarger, mengden følger `KVAL.p.gress` (Lav = av). `Fjellmark.antall()`.
+  leirbygg. Fire instansnett med hjørnefarger, mengden følger `KVAL.p.gress`, men minst 40 % også på Lav (telefonen med programvare-grafikk
+  starter på Lav, og der var bakken helt tom – det var det kritikeren så). Frigjøres når du flyr opp (`Fjellmark.bort()` fra `Gange.stopp`;
+  interiørvakta i sjekk.js krever at geometriene ikke øker). `Fjellmark.antall()`.
 - Prøvd: ved 1665 moh. på Dovre (tregrensen 1075 m): 520 steiner, 700 lav/mose, 520 lyngtuer, 26 snøflekker rundt deg
   (scratchpad natt6/ga/fjellmark-hoyt-pc.png). Lyngtuene var først to kryssede flak – de så ut som små røde kasser på avstand og er
   nå lave, mørke puter. Ved 1231 moh. står gresset (gress3d) fortsatt høyt og dekker det meste; over ca. 1,35 × tregrensen er det bare fjellmarka.
