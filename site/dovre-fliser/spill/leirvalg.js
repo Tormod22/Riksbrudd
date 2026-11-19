@@ -30,11 +30,11 @@
   function vurder(m, o = {}) {
     const adv = [], fakta = [], h = o.h, tg = o.tregrense, R = REGLER;
     const høyt = h != null && tg != null && h > tg + R.overTregrensen;
-    if (høyt) adv.push(`Høyfjell: ${Math.round(h)} moh., over tregrensen (ca. ${Math.round(tg / 10) * 10} m her). Kaldt og værhardt${m.skog < R.skogLite ? ', og ingen skog å hogge ved og tømmer i' : ''}.`);
+    if (høyt) adv.push(`Høyfjell, over tregrensen (ca. ${Math.round(tg / 10) * 10} moh. her): kaldt og værhardt${m.skog < R.skogLite ? ', og ingen skog å hogge' : ''}.`);
     else if (m.land && m.skog < R.skogLite) adv.push(`Nesten ingen skog innen ${km(R.radius)} – ved og tømmer må hentes langt unna.`);
-    if (m.vegM === Infinity) adv.push(`Ingen veg innen ${km(R.radius)} – lastebilene kommer ikke fram før dere bygger grusveg.`);
-    else if (m.vegM > R.vegLangt) adv.push(`Nærmeste veg er ${km(m.vegM)} unna – lastebilene kommer ikke helt fram.`);
-    if (o.by && o.by.m > R.byLangt) adv.push(`Langt til folk: ${o.by.navn} er nærmeste tettsted, ${km(o.by.m)} unna – få hus å lete i og ingen å handle med i nærheten.`);
+    if (m.vegM === Infinity) adv.push(`Ingen veg innen ${km(R.radius)}: lastebilene kommer ikke fram før dere bygger grusveg.`);
+    else if (m.vegM > R.vegLangt) adv.push(`${km(m.vegM)} til nærmeste veg: lastebilene kommer ikke helt fram.`);
+    if (o.by && o.by.m > R.byLangt) adv.push(`${km(o.by.m)} til nærmeste tettsted (${o.by.navn}): få hus å lete i og ingen å handle med.`);
     if (m.land) fakta.push('skog: ' + (m.skog >= R.skogMye ? 'mye' : m.skog >= R.skogLite ? 'noe' : 'nesten ingen'));
     if (m.vegM < Infinity && m.vegM <= R.vegLangt) fakta.push('veg ' + km(m.vegM) + ' unna');
     if (o.by && o.by.m <= R.byLangt) fakta.push(`${o.by.navn} ${km(o.by.m)}`);

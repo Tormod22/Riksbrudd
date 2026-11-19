@@ -17,7 +17,7 @@ ok(vd.advarsler.length === 0 && vd.fakta.join(' · ') === 'skog: mye · veg 340 
 // langt til veg og langt til folk, nesten ingen skog under tregrensen
 const myr = L.måle(vindu((i, j) => [6, 600, i === 199 && j === 100 ? 1 : 0]), 3200, 3200);
 const vm = L.vurder(myr, { h: 600, tregrense: 1100, by: { navn: 'Dombås', m: 26000 } });
-ok(vm.advarsler.length === 3 && /Nesten ingen skog/.test(vm.advarsler[0]) && /Nærmeste veg er 3,2 km|Ingen veg/.test(vm.advarsler[1]) && /26 km/.test(vm.advarsler[2]), 'myr: ingen skog, langt til veg og folk: ' + vm.advarsler.join(' | '));
+ok(vm.advarsler.length === 3 && /Nesten ingen skog/.test(vm.advarsler[0]) && /3,2 km til nærmeste veg|Ingen veg/.test(vm.advarsler[1]) && /26 km/.test(vm.advarsler[2]), 'myr: ingen skog, langt til veg og folk: ' + vm.advarsler.join(' | '));
 // sjø: vann under 3 moh. i nærheten
 const kyst = L.måle(vindu(i => (i < 60 ? [3, 0] : [1, 20])), 3200, 3200), innsjø = L.måle(vindu(i => (i < 60 ? [3, 900] : [1, 920])), 3200, 3200);
 ok(kyst.sjø && !innsjø.sjø, 'sjø ved kysten, ikke ved en fjellsjø i 900 moh.');
