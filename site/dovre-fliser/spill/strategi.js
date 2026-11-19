@@ -77,7 +77,8 @@
       const poeng = Math.sqrt(1 + b.folk) / (4 + (km === Infinity ? 60 : km)) * (e ? .8 : 1.15) / (1 + forsvar / 8) * (nok ? 1 : .25) * (ettLag ? 1 : .7);
       const grunn = forsvar > 0 ? 'forsvart' : e ? 'fiendens, uten kjent forsvar' : 'nøytralt';
       ut.push({ by: b, eier: e, km, lag, forsvar, innen: km * 1000 <= R.marsj, poeng, grunn, mann, minst, har: Math.floor(har), nok, ettLag, flere: nok && !ettLag ? flere : lag ? [lag] : [] }); }
-    return ut.sort((a, b) => b.poeng - a.poeng);
+    // det dere har mann nok til, står først (en storby dere ikke kan ta ennå, kommer etter)
+    return ut.sort((a, b) => (b.nok ? 1 : 0) - (a.nok ? 1 : 0) || b.poeng - a.poeng);
   }
   // teksten om hva et trekk krever: «trenger ca. 69 mann (minst 35) – dere har 12»
   const kravTekst = t => (!t.minst ? '' : `trenger ${t.mann <= 6 ? t.mann : 'ca. ' + t.mann} mann` + (t.minst < t.mann && t.mann > 6 ? ` (minst ${t.minst})` : '') + (t.nok ? '' : ` – dere har ${t.har}`));

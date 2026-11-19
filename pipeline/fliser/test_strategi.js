@@ -34,7 +34,7 @@ assert.strictEqual(S.trusler('blå', O, eierAv, () => 1, []).length, 0);
   const T = S.trekk('blå', byer, () => null, [tre], []), stor = T.find(t => t.by.id === 1), liten = T.find(t => t.by.id === 2);
   assert(stor.mann >= 60 && stor.minst >= 30 && !stor.nok && stor.har === 3, 'storbyen: for få');
   assert.match(S.kravTekst(stor), /trenger ca\. \d+ mann \(minst \d+\) – dere har 3/);
-  assert(T.indexOf(stor) > 0, 'storbyen er ikke første forslag med tre mann');
+  assert(T.indexOf(stor) > 0 && T[0].nok && T[0].by.id === 3, 'det tre mann kan ta (Vatne) står først, storbyen etter');
   const fire = [1, 2, 3, 4].map(i => ({ x: i * 100, y: 0, navn: 'L' + i, lag: { menn: Array.from({ length: 12 }, () => ({ hp: 1 })) } })), T4 = S.trekk('blå', byer, () => null, fire, []), s4 = T4.find(t => t.by.id === 1);
   assert(s4.nok && !s4.ettLag && s4.flere.length >= 3, 'fire lag: nok, men det trengs flere lag sammen');
   assert.equal(S.tettsteder(1), '1 tettsted'); assert.equal(S.tettsteder(41), '41 tettsteder'); }
