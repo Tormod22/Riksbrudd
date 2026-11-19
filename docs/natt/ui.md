@@ -285,6 +285,8 @@ panelplassene og banneret, hjelp.js, ga.js = gåmodus i 3D med måling av alle r
 11. **Forsiden** (`site/index.html`): «Spill nå» øverst med «Spill i Rogaland» (start her) og «Spill i hele Norge» som store kort med knapp,
     «Spill på Dovre» under, en linje om at hvert kart har sin egen lagring, og «Tidlige prototyper» (kommunekartet 1986, Dovre 1987) nederst.
 
+Regeltest: `node pipeline/fliser/test_skjermlag.js` (båndene, rekkefølgen, «fram», ingen panel over bunnmenyen). Endret test: test_paneler.js.
+
 ## Fellesfiler endret i runde 6
 - `site/dovre-fliser/index.html`: (1) én skript-tagg `spill/skjermlag.js` rett etter telefon.js; (2) tegn3d: klippingen tar også hull for
   `window.UI_HULL3D` (to linjer: `const klipp …` og `if (klipp || hull.length) g.restore();`). versjon.py er kjørt.
