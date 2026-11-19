@@ -1284,3 +1284,23 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   de tas. utstyr.js: Utstyr.krok (maks, vekt, plassTil, våpenOk), window.SEKK_TILLEGG. VAKT: vakter/lut.js. Notat docs/natt/lut.md.
   Ikke gjort: lommelykt/batterier/sovepose/feltflaske uten virkning, sekk i sekk, innholdet i kjøleskap/reoler synes ikke i 3D, fiender
   leter ikke i hus, husene fylles ikke på igjen.
+  RUNDE 5, 18.–19. NOV KVELD (22:50–01:30, brukeren: «publiser så forbedre enda mer» + «flyttbare møbler og alt»; seks hjelpere i
+  natt-mappene, notater under «Runde 5» i docs/natt/<pakke>.md, flettet inn i claude/nattfiks; maskinen ble startet på nytt 00:15 –
+  hjelperne fortsatte fra sine commits). MØBLER (lut): spill/mobler.js (regler, test_mobler.js) + mobler-visning.js (MoblerSpill): alle
+  møbeltyper kan plukkes opp (P), > 85 kg nei, > 18 kg eller > 1,3 m bæres i armene (×0,72 fart, ikke løpe/skyte, body.bærermøbel skjuler
+  våpen-/huseknapper), spøkelse (grønt/rødt med grunn, R/Q roterer, E/Enter/«Sett her», «Sett tilbake»; 0,9 m foran på PC, 1,6 m på smal
+  skjerm), innhold ≤ 20 kg følger med, kollisjon via interiørplanen / hindringene i 3D, lagres «riksbrudd-mobler»; interior3d.js har
+  window.INTERIOR_PLAN, Interior3d.bygOm(i), Interior3d.møbelGeo(m). LYKT: spill/lykt.js (L, batterier 8 spilltimer, ser 45 % lenger om
+  natta, fiender ser deg lenger unna; lyskjegle på bakken med samme blanding som lysflekkene, ingen nye lys). Sovepose («Sov her» ute),
+  feltflaske (+4 slurker per flaske, fylles ved vann/bekk), LutSpill.tøm/ransaket (fiendelag innen 60 m tømmer bygg i 3D-utsnittet,
+  butikker fylles hvert 3. døgn), boliger innen 1,5 km fra leiren har alltid noe, Karakter.stell (≥ 60× innen 600 m fra leiren: stell av
+  leirens lager), «Gå» starter ved karakteren. BALANSE: røvertaket gjelder hele bølgen (Trussel.menn), forsvar-hjemme.js (ammo fra kassa,
+  sårede hviler, «hjem for å hvile»), trussel-lagring.js («riksbrudd-angrep»: pågående bølge tilbake etter omlasting), forsvar-oppgjor.js
+  (døgnoppgjør kl. 06); kjøring B på Vanlig: leiren holdt 9 døgn, tapte et lag. KRIG: stridsvogna skyter bare på det den eller et lag
+  innen 150 m ser (Enheter.REGLER.egenSikt), fienden kjører på telefon (Vegnett.les med boks ±150 km, hentes første gang fienden kjører,
+  VEG_TLF i kjoretoy-visning.js), krigskartet kan skjules til en stripe og passer liggende telefon, fiendens lastebiler og «sist sett»
+  lagres. NATUR: Kartbilde.strandG (myk strand fra høyden, lys stein-/grussone; u.vann lages av det ferdige kartbildet), lyng (bunnkart
+  klasse 3) i stedet for stein på heia, planter/gress sjekker R3.hindre og Vegetasjon3d.iLeir, tregrense(y, x) lavere mot vestkysten,
+  spill/lave3d.js (høy, redskap, trillebår, gråtass i låver). LYS: spill/grense3d.js – alt utenfor fylket mørklegges i 3D på /rogaland via
+  tåka (Lys3d koblGrense, bare når PÅ_OMRÅDE), stiplet grense på bakken; hindring3d sjekker boksen først, natt3d forberedes i forbered3d,
+  mer pust i naboerAsynk/trær3d. Største hakk igjen: interior3d bygg (160–330 ms per bygg).

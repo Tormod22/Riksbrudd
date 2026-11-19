@@ -128,3 +128,24 @@ Laget av én hjelper på grenen `claude/natt18-karakter`, flettet inn i `claude/
 - Lommelykt, batterier, sovepose og feltflaske har ingen virkning ennå.
 - Ingen sekk i sekk. Det som ligger inne i kjøleskap og reoler, synes ikke i 3D.
 - Fiender leter ikke i hus, og husene fylles ikke på igjen.
+
+# Runde 5 (18.–19. nov kveld, brukeren: «publiser så forbedre enda mer» og «flyttbare møbler og alt»)
+Seks hjelpere, hver i sin pakke. Detaljene står under «Runde 5» i `docs/natt/<pakke>.md`. Flettet inn i `claude/nattfiks`. Maskinen ble
+startet på nytt kl. 00:15; hjelperne fortsatte fra det de hadde committet.
+
+## Gjort
+| Pakke | Hva |
+|---|---|
+| Lut og møbler | Alle møbler kan plukkes opp, bæres og settes ned (grønt/rødt spøkelse, roter, innholdet følger med, lagres). Lommelykt med batterier, sovepose, feltflaske. Fiender tømmer hus, butikker fylles på, husene nær leiren har alltid noe. Du stelles av leirens lager når du spoler ved leiren. «Gå» starter ved karakteren. |
+| Balanse | Spilt gjennom på nytt: leiren holdt i 9 døgn på Vanlig og mistet et lag. Taket på røverne gjelder hele bølgen, lagene hjemme fyller ammunisjon og hviler, skadde lag går hjem. Et angrep som er i gang, kommer tilbake etter omlasting. Døgnoppgjør hver morgen. |
+| Krig | Stridsvogna skyter bare på det den selv (eller et lag rett ved) ser. Fienden kjører også på telefon. Krigskartet kan skjules og passer liggende telefon. Fiendens lastebiler og «sist sett» huskes. |
+| Natur | Myke strandkanter med stein- og grussone. Lyng i stedet for stein på heia. Ingen planter inne i hus eller leirbygg. Låvene har høy, redskap og traktor. Lavere tregrense mot vestkysten. |
+| Rogaland og hakk | Alt utenfor fylket er mørklagt også i 3D, med stiplet grense. Lengste pause når du går: 0,61 → 0,37 s. Mer forberedes før et nytt område settes inn. |
+| Kontrollen | Se under (test2). |
+
+## Står igjen
+- Ting inne i kjøleskap og reoler synes ikke i 3D. Lykta lyser bare bakken, ikke vegger.
+- «Husene lever», «første hus har noe» og soveposen ute er regeltestet, men ikke prøvd i spillet.
+- Fiendens lag går inn i hus via LutSpill.tøm bare i 3D-utsnittet; 2D viser ikke ransakede hus.
+- Største hakk igjen: når innsiden av et hus bygges (160–330 ms per bygg).
+- Balansen etter fredstiden (motstanderne mot leiren) er ikke prøvd: de kom ikke på dag 8–10.
