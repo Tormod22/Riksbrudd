@@ -3,13 +3,38 @@
 // Regler uten DOM (test: pipeline/fliser/test_etikett.js). Hver ramme: Etikett.nullstill(), og så spør hver tegner
 // Etikett.plass(x, y, bredde, retning) om hvor navnet skal stå. Er plassen tatt, flyttes navnet en linje om gangen
 // oppover (retning −1, navn over symbolet) eller nedover (retning 1, navn under symbolet) til det er ledig.
+//
+// RUNDE 6 (19. nov, kritikken: «Leiren til …» under flagget, «Kari (deg)» oppå «Vaktlaget», røvernes merke gjemt under egne
+// navn, og på /norge en lang søyle av navn langt nord for symbolene): navnene SAMLES i rammen og plasseres til slutt, viktigst
+// først – fiender, så det valgte, egne lag, kjøretøy og til sist bygg og steder. Et navn prøver plassen sin, en eller to linjer
+// unna, ved siden av merket og på andre siden av merket; finnes ingen ledig plass, skjules det (de viktigste står likevel).
+// Merkene (Merker.tegn, leirens flagg, basen …) meldes inn som hindringer, så navnene går utenom dem: merkene ligger øverst.
+// Slik virker det for tegnerne: Etikett.tekst(g, t, x, y, retning) svarer NaN mens rammen pågår (nullstill() … tegnAlle(g)),
+// og tegnerens egne strokeText/fillText(t, x, NaN) fanges opp (farge, skrift, strek) i stedet for å tegnes. tegnAlle(g) plasserer
+// og tegner alt, og så det som skal ligge øverst (Etikett.øverst(fn): fiendens merker). Utenfor en ramme virker tekst() som før.
 (function (rot) {
   const LINJE = 15, MAKS = 30, tatt = [];
+  // Claudes forslag (runde 6): prioritetene og hvor langt et navn kan flyttes før det skjules
+  const REGLER = {
+    prio: { fiende: 6, valgt: 5, viktig: 4.5, egne: 3, by: 3.5, kjøretøy: 2, leir: 2.5, sted: 1, kart: .5 },
+    // navn med minst denne prioriteten skjules aldri: finnes ingen ledig plass, står de der de skulle (over kartnavnene)
+    tving: 4,
+    // høyst så mange linjer opp eller ned fra plassen sin
+    linjer: 2,
+    // luft mellom et navn og et merke ved siden av (px)
+    side: 6,
+    // tall i navn: en skrift der 0 ikke ser ut som o (Cormorant Garamond har gammeldagse tall)
+    tallSkrift: '"Times New Roman", Times, "Liberation Serif", "Noto Serif", "DejaVu Serif", serif', tallSkala: .94,
+  };
   // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
   const ramme = (x, y, w, h) => [x - w / 2 - 3, y - h + 3, w + 6, h];
-  const kolliderer = r => tatt.some(q => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]);
-  function nullstill() { tatt.length = 0; }
+  const over = (r, q) => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3];
+  const kolliderer = r => tatt.some(q => over(r, q));
+  // utsatt modus: kø = navnene i denne rammen, hindre = merkene, topp = det som tegnes etter navnene
+  const kø = [], hindre = [], topp = [], regler = [], vist = [];
+  let aktiv = false;
+  function nullstill() { tatt.length = 0; kø.length = 0; hindre.length = 0; topp.length = 0; vist.length = 0; aktiv = true; }
   // plass(x, y, w, retning, h): y-en teksten skal tegnes i. Plassen blir merket som tatt.
   function plass(x, y, w, retning = -1, h = LINJE) {
     let r = ramme(x, y, w, h), yy = y;
@@ -18,12 +43,87 @@
   }
   // merk(r): en ramme [x, y, bredde, høyde] som alt er tegnet av andre (navnene på infrastrukturen, tegnEtiketter i index.html), så
   // navnene på lag, kjøretøy og olje ikke legges oppå dem (feiljakten 12. nov: «STURE», «MONGSTAD» og «500 t olje» i én klump)
-  function merk(r) { tatt.push([r[0], r[1], r[2], r[3]]); }
-  // tekst(g, t, x, y, retning): måler teksten med skriften som er satt i g, og gir y-en den skal tegnes i
-  function tekst(g, t, x, y, retning) { return plass(x, y, g.measureText(t).width, retning); }
-  // overlapp(): antall par av navn som fortsatt ligger oppå hverandre i denne rammen (0 når alt fikk plass) – for vakten i sjekk.js
-  function overlapp() { let n = 0; for (let i = 0; i < tatt.length; i++) for (let j = i + 1; j < tatt.length; j++) { const r = tatt[i], q = tatt[j];
-    if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
-  const E = { nullstill, plass, merk, tekst, antall: () => tatt.length, overlapp, LINJE, MAKS };
+  function merk(r) { tatt.push([r[0], r[1], r[2], r[3]]); if (aktiv) hindre.push({ r: [r[0], r[1], r[2], r[3]], prio: REGLER.prio.kart, tekst: true }); }
+  // hinder(x0, y0, w, h): et merke (symbol, flagg) som navnene skal gå utenom
+  function hinder(x0, y0, w, h) { if (aktiv && isFinite(x0) && isFinite(y0)) hindre.push({ r: [x0, y0, w, h], prio: 9, tekst: false }); }
+  // regel(fn): fn(tekst) svarer false (skjul navnet), et tall (prioriteten) eller undefined (som før). Gjelder alle rammer.
+  function regel(fn) { regler.push(fn); }
+  function vurder(t) { for (const f of regler) { let v; try { v = f(t); } catch (e) { v = undefined; } if (v === false || typeof v === 'number') return v; } return undefined; }
+
+  // ---------- plasseringen (ren regel, testes i Node) ----------
+  // lapper: [{ t, x, y, w, h, retning, prio, nr }], hindringer: [{ r, prio, tekst }]. Setter vis, px, py og tvunget på hver lapp.
+  function kandidater(L, R) { const d = L.retning < 0 ? -1 : 1, h = L.h || LINJE, ut = [[L.x, L.y]];
+    for (let k = 1; k <= R.linjer; k++) ut.push([L.x, L.y + d * k * h]);
+    // ved siden av merket: merket står ca. 16 px under (over) et navn over (under) det
+    const my = L.y - d * 12, sx = L.w / 2 + 14 + R.side; ut.push([L.x + sx, my], [L.x - sx, my]);
+    // på andre siden av merket
+    ut.push([L.x, L.y - d * (2 * 16 + h - 6)], [L.x, L.y - d * (2 * 16 + 2 * h - 6)]);
+    return ut; }
+  function plasser(lapper, hindringer, R = REGLER) {
+    const rek = lapper.slice().sort((a, b) => b.prio - a.prio || a.nr - b.nr), satt = [];
+    const ledig = (r, utenTekst, minPrio) => !satt.some(q => over(r, q.ramme)) && !hindringer.some(o => (!utenTekst || !o.tekst) && over(r, o.r));
+    for (const L of rek) { L.vis = false; L.tvunget = false; const K = kandidater(L, R), h = L.h || LINJE;
+      let funnet = null;
+      for (const [x, y] of K) { const r = ramme(x, y, L.w, h); if (ledig(r, false)) { funnet = [x, y, r]; break; } }
+      // de viktigste kan stå oppå kartnavnene (byer, bruer), men ikke oppå merker eller andre lag
+      if (!funnet && L.prio >= R.tving) for (const [x, y] of K) { const r = ramme(x, y, L.w, h); if (ledig(r, true)) { funnet = [x, y, r]; break; } }
+      if (!funnet && L.prio >= R.tving) { funnet = [L.x, L.y, ramme(L.x, L.y, L.w, h)]; L.tvunget = true; }
+      if (!funnet) continue;
+      L.vis = true; L.px = funnet[0]; L.py = funnet[1]; L.ramme = funnet[2]; satt.push(L); }
+    return lapper; }
+
+  // ---------- tegnerne: tekst() fanger navnet, og strokeText/fillText(t, x, NaN) gir fargene ----------
+  function pakkInn(g) { if (!g || g.__etikett) return; g.__etikett = true; const f0 = g.fillText, s0 = g.strokeText;
+    g.fillText = function (t, x, y, mw) { const L = this.__etikettSiste; if (y !== y && L && L.t === String(t)) { L.fyll = this.fillStyle; L.font = this.font; L.align = this.textAlign; L.baseline = this.textBaseline; L.alpha = this.globalAlpha; return; }
+      return arguments.length > 3 ? f0.call(this, t, x, y, mw) : f0.call(this, t, x, y); };
+    g.strokeText = function (t, x, y, mw) { const L = this.__etikettSiste; if (y !== y && L && L.t === String(t)) { L.strek = this.strokeStyle; L.bredde = this.lineWidth; L.font = this.font; L.align = this.textAlign; L.baseline = this.textBaseline; return; }
+      return arguments.length > 3 ? s0.call(this, t, x, y, mw) : s0.call(this, t, x, y); };
+    g.__etikettF = f0; g.__etikettS = s0; }
+  // tekst(g, t, x, y, retning, prio): måler teksten med skriften som er satt i g, og gir y-en den skal tegnes i (NaN i en ramme:
+  // navnet tegnes av tegnAlle)
+  function tekst(g, t, x, y, retning, prio) {
+    const v = vurder(String(t));
+    if (!aktiv || !g || typeof g.measureText !== 'function') { if (v === false) return NaN; return plass(x, y, g.measureText(t).width, retning); }
+    if (v === false || !isFinite(x) || !isFinite(y)) return NaN;
+    pakkInn(g); const P = REGLER.prio, L = { t: String(t), x, y, w: g.measureText(t).width, h: LINJE, retning: retning < 0 ? -1 : 1, nr: kø.length,
+      prio: typeof v === 'number' ? v : typeof prio === 'number' ? prio : retning < 0 ? P.kjøretøy : P.sted,
+      font: g.font, align: g.textAlign, baseline: g.textBaseline, alpha: g.globalAlpha, fyll: null, strek: null, bredde: 3 };
+    kø.push(L); g.__etikettSiste = L; return NaN;
+  }
+  // øverst(fn): tegnes etter navnene (fiendens merker skal alltid synes)
+  function øverst(fn) { if (aktiv) topp.push(fn); else fn(); }
+  // TALL: skriv sifrene i en skrift med vanlige tall (0 ikke som o, 1 ikke som I) når navnet bruker Cormorant Garamond
+  const harTall = t => /\d/.test(t);
+  function tallFont(font) { return font.replace(/(\d+(?:\.\d+)?)px\s+.*$/, (s, px) => `${Math.round(px * REGLER.tallSkala * 10) / 10}px ${REGLER.tallSkrift}`); }
+  function skriv(g, L, x, y, fyll) {
+    const f0 = g.__etikettF || g.fillText, s0 = g.__etikettS || g.strokeText, tegn = fyll ? f0 : s0;
+    if (!harTall(L.t) || !/Cormorant/i.test(L.font || '')) { tegn.call(g, L.t, x, y); return; }
+    const deler = L.t.split(/(\d+(?:[.,]\d+)*)/).filter(Boolean), fonter = deler.map(d => (/^\d/.test(d) ? tallFont(L.font) : L.font));
+    const bredder = deler.map((d, i) => { g.font = fonter[i]; return g.measureText(d).width; }), sum = bredder.reduce((a, b) => a + b, 0);
+    let x0 = L.align === 'center' ? x - sum / 2 : L.align === 'right' || L.align === 'end' ? x - sum : x; const a0 = g.textAlign; g.textAlign = 'left';
+    deler.forEach((d, i) => { g.font = fonter[i]; tegn.call(g, d, x0, y); x0 += bredder[i]; }); g.textAlign = a0; g.font = L.font; }
+  // tegnAlle(g, fortsett): plasserer og tegner navnene i køen (de minst viktige først, så de viktigste ligger øverst), og så det som
+  // skal ligge øverst. fortsett = true: rammen er ikke ferdig (byggevisningen tegner navn i to omganger)
+  function tegnAlle(g, fortsett) {
+    if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false })))); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
+      if (g) { g.save(); for (const L of rek) { g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
+        if (L.strek) { g.lineWidth = L.bredde || 3; g.lineJoin = 'round'; g.strokeStyle = L.strek; skriv(g, L, L.px, L.py, false); }
+        g.fillStyle = L.fyll || '#e7dcc3'; skriv(g, L, L.px, L.py, true); } g.restore(); }
+      for (const L of rek) { vist.push(L); tatt.push(L.ramme); }
+      kø.length = 0; }
+    if (g) g.__etikettSiste = null;
+    const T = topp.splice(0); for (const f of T) { try { f(); } catch (e) { /* et merke som ikke kan tegnes, hoppes over */ } }
+    if (!fortsett) aktiv = false; }
+  // overlapp(): antall par av navn som fortsatt ligger oppå hverandre i denne rammen (0 når alt fikk plass) – for vakten i sjekk.js.
+  // Utsatt modus: navn som er tegnet, mot hverandre og mot kartnavnene (de viktigste som står oppå et kartnavn med vilje, telles ikke).
+  function overlapp() { let n = 0;
+    if (vist.length) { for (let i = 0; i < vist.length; i++) { for (let j = i + 1; j < vist.length; j++) if (over(vist[i].ramme, vist[j].ramme)) n++;
+      if (!vist[i].tvunget && vist[i].prio < REGLER.tving) for (const o of hindre) if (o.tekst && over(vist[i].ramme, o.r)) n++; } return n; }
+    for (let i = 0; i < tatt.length; i++) for (let j = i + 1; j < tatt.length; j++) { const r = tatt[i], q = tatt[j];
+      if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
+  // for vakten: navnene som ble tegnet i siste ramme ({ t, x, y, prio }) og merkene
+  const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, ramme: L.ramme.slice() }));
+  const E = { nullstill, plass, merk, tekst, hinder, regel, øverst, tegnAlle, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
+    aktiv: () => aktiv, antall: () => tatt.length, overlapp, LINJE, MAKS, REGLER };
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else rot.Etikett = E;
 })(typeof window !== 'undefined' ? window : globalThis);

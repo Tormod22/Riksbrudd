@@ -322,15 +322,17 @@ function tegn() {
       if (a) { const w = G.T / f; ctx.drawImage(a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); break; }
     }
   }
+  // natt og regn i 2D-kartet (spill/kartlys.js, runde 6): kartet mørkere og blåere om natta, gråere i regn – under navn og merker
+  if (window.KartLys) KartLys.tegn(ctx);
   if (window.Etikett) Etikett.nullstill();   // navnene på lag, kjøretøy, base og leir får hver sin plass (spill/etikett.js)
   tegnInfra(vx0, vy1);
   // BYGGEVISNING (spill/byggevisning.js): mens du bygger i 2D, dempes kartet, lagene og navnene, og byggene tegnes øverst
   if (window.BYGGEVISNING && BYGGEVISNING.på()) {
     for (const f of KROKER.tegn) if (!f.bygg) f(ctx, vx0, vy1);
-    tegnEnheter(vx0, vy1); BYGGEVISNING.under(ctx, vx0, vy1);
+    tegnEnheter(vx0, vy1); if (window.Etikett) Etikett.tegnAlle(ctx, true); BYGGEVISNING.under(ctx, vx0, vy1);
     for (const f of KROKER.tegn) if (f.bygg) f(ctx, vx0, vy1);
-    BYGGEVISNING.over(ctx, vx0, vy1);
-  } else { for (const f of KROKER.tegn) f(ctx, vx0, vy1); tegnEnheter(vx0, vy1); }
+    if (window.Etikett) Etikett.tegnAlle(ctx); BYGGEVISNING.over(ctx, vx0, vy1);
+  } else { for (const f of KROKER.tegn) f(ctx, vx0, vy1); tegnEnheter(vx0, vy1); if (window.Etikett) Etikett.tegnAlle(ctx); }
   tegnHud();
 }
 
@@ -446,7 +448,9 @@ function infraViktig(lag, o, m) {
   if (INFRA_FOKUS.alt || (navigator.webdriver && !INFRA_FOKUS.test)) return true;
   if (m < INFRA_FOKUS.nær[lag] || INFRA_FOKUS.stor[lag](o)) return true;
   if (window.INFRA_TILSTAND && INFRA_TILSTAND.has(lag + ':' + o.e.id)) return true;
-  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return true;
+  // i krigskartet: alt, men ferjekaiene bare ved leiren (runde 6: ankrene druknet tettstedene – samme regel som KAI_VIKTIG)
+  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) { if (lag !== 'ferjekai') return true; const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand();
+    return !!(S && S.leir) && S.leir.x >= o.bb[0] - 3000 && S.leir.x <= o.bb[2] + 3000 && S.leir.y >= o.bb[1] - 3000 && S.leir.y <= o.bb[3] + 3000; }
   const nær = (x, y, r) => x >= o.bb[0] - r && x <= o.bb[2] + r && y >= o.bb[1] - r && y <= o.bb[3] + r;
   if (valgt && typeof valgt.x === 'number') { const r = INFRA_FOKUS.rundtValgt; if (nær(valgt.x, valgt.y, r)) return true; const sti = valgt.sti; if (sti && sti.length) { const e = sti[sti.length - 1]; if (e && nær(e[0] !== undefined ? e[0] : e.x, e[1] !== undefined ? e[1] : e.y, r)) return true; } }
   const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (S && S.leir && nær(S.leir.x, S.leir.y, INFRA_FOKUS.rundtLeir[lag])) return true;
@@ -456,10 +460,11 @@ function infraViktig(lag, o, m) {
 // velger leir på startskjermen (en kai kan være grunnen til å legge leiren der) eller har krigskartet åpent.
 function KAI_VIKTIG(x, y, t, l, m) {
   if (INFRA_FOKUS.alt || (navigator.webdriver && !INFRA_FOKUS.test)) return true;
+  // i krigskartet: bare leirens egen kai (innen 3 km) – runde 6, kritikken: havnene og ferjeterminalene i Rogaland ga fortsatt et teppe
+  // av ankere, så Stavanger/Sandnes, fronten og tettstedene ikke kunne leses (helt nær, under 4 m per punkt, vises alle som før)
+  if (m >= 4 && window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) { const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return !!(S && S.leir) && Math.hypot(S.leir.x - x, S.leir.y - y) <= ((window.Kaier && Kaier.LEIRVALG.leirKai) || 3000); }
   if (m < (t >= 2 ? 8 : 4) || (t === 3 && m < 25)) return true;
   const st = document.getElementById('oppstart'); if (st && st.classList.contains('på')) return true;
-  // i krigskartet: bare havnene og ferjeterminalene (småkaiene ga et teppe av ankere langs kysten)
-  if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) return t >= 3;
   if (valgt && typeof valgt.x === 'number' && Math.hypot(valgt.x - x, valgt.y - y) < INFRA_FOKUS.rundtValgt) return true;
   const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (!S || !S.leir) return true;   // ingen leir ennå: du velger sted
   return Math.hypot(S.leir.x - x, S.leir.y - y) < 5000;
@@ -965,9 +970,11 @@ function tegnLag(g, proj, mPer) {
   for (const s of ENHETER) if (s.side !== 'blå') {   // sist sett: der fienden var da noen av våre så den
     if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
     else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
-      if (window.Merker) Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
+      if (window.Merker) { Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); if (window.Etikett) Etikett.øverst(() => Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true })); }
+      else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
+      // RUNDE 6: «sist sett» er en fiende – navnet plasseres først (Etikett), og merket tegnes på nytt over alle navn
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
-      g.fillText('sist sett ' + klokkeslett(s.sett.tid), a, b - 13); }
+      const tS = 'sist sett ' + klokkeslett(s.sett.tid), yS = window.Etikett ? Etikett.tekst(g, tS, a, b - 13, -1, Etikett.REGLER.prio.fiende) : b - 13; g.fillText(tS, a, yS); }
   }
   for (const s of ENHETER) {
     if (VIS.taake && !synlig(s)) continue;
@@ -990,9 +997,12 @@ function tegnLag(g, proj, mPer) {
         g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
         g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
         g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); }
+        if (window.Etikett) Etikett.hinder(a - r, b - r, 2 * r, 2 * r);
       });
     } else if (window.Merker) { // lagsymbol fra det felles merkesettet (18. nov): eget = rektangel, fiende = rute på spissen
-      Merker.tegn(g, px, py, { forhold: Merker.forhold(s.side), slag: 'lag', farge: sidefarge(s.side, 'farge'), valgt: s === valgt });
+      const v = { forhold: Merker.forhold(s.side), slag: 'lag', farge: sidefarge(s.side, 'farge'), valgt: s === valgt }; Merker.tegn(g, px, py, v);
+      // RUNDE 6 (kritikken: røvernes merke lå gjemt under egne navn): fiendens merke tegnes på nytt over alle navn
+      if (s.side !== 'blå' && window.Etikett) Etikett.øverst(() => Merker.tegn(g, px, py, v));
     } else { // lagsymbol (infanteri)
       const r = 11; g.fillStyle = sidefarge(s.side, 'farge'); g.strokeStyle = s === valgt ? '#f0d79a' : '#e7dcc3'; g.lineWidth = s === valgt ? 2.5 : 1.3;
       g.beginPath(); g.rect(px - r, py - r * .7, r * 2, r * 1.4); g.fill(); g.stroke();
@@ -1000,7 +1010,9 @@ function tegnLag(g, proj, mPer) {
     }
     if (!navnSynlig(s)) continue;
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
-    const ty0 = py - (m < 1.6 ? Math.max(14, 30 / m) : 16), ty = window.Etikett ? Etikett.tekst(g, s.navn, px, ty0, -1) : ty0; g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
+    // RUNDE 6: viktigheten avgjør hvem som får plassen (fiender > valgt > egne lag > kjøretøy > bygg og steder)
+    const P = window.Etikett && Etikett.REGLER.prio, pr = P ? (s.side !== 'blå' ? P.fiende : s === valgt ? P.valgt : P.egne) : 0;
+    const ty0 = py - (m < 1.6 ? Math.max(14, 30 / m) : 16), ty = window.Etikett ? Etikett.tekst(g, s.navn, px, ty0, -1, pr) : ty0; g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
   }
   if (modus === 'marsj' && peker) { const q = proj(peker[0], peker[1]); if (!q) return; const [a, b] = q; g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(a, b, 9, 0, 6.283); g.stroke(); }
 }
@@ -3065,6 +3077,7 @@ function tegn3d() {
   tegnInfra3d(g);
   for (const f of KROKER.tegn3d) f(g, proj3, mPer3);
   tegnLag(g, proj3, mPer3);
+  if (window.Etikett) Etikett.tegnAlle(g);
   if (klipp) g.restore();
   tegnHud();
 }
@@ -3257,7 +3270,7 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=cc36a2f4dc"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=aacca48cfc"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c4be8fd592"></script>
@@ -3404,7 +3417,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
-<script src="/dovre-fliser/spill/merker.js?v=beb785f12e"></script>
+<script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
+<script src="/dovre-fliser/spill/kartlapper.js?v=28ad119410"></script>
+<script src="/dovre-fliser/spill/kartlys.js?v=7d2623e4ec"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=66d2ec420f"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=a76b5426f3"></script>
