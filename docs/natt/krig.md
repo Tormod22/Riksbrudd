@@ -445,7 +445,9 @@ Storbyen (Dombås med 235 000 innbyggere i prøven) tas ikke av ett lag på seks
 boksen; entall i målteksten; ingen vinner på dag 1; fredstid/lagtak finnes; banneret viser anslag og «i ildkamp med …» (ikke «ikke sett ennå»);
 forsvaret lagres med angrepet og kommer tilbake. Den gamle bølgeprøven setter `nærVært` på røverne (de har vært ved leiren og trukket seg unna).
 Prøvd med feil lagt inn: uten `nærVært` i bølgeprøven ble «røvere som trekker seg unna avslutter bølgen: false» (FEIL) – det var slik vakta fant at
-den nye «på vei»-regelen må skille på det. Tar ca. 3 s (PC).
+den nye «på vei»-regelen må skille på det. Tar ca. 3 s (PC, 2D). Krigskartpanelet prøves bare i 2D (krigskartet slår 3D av); i 3D prøves tekstene fra
+reglene, og vakta sjekker at 3D står som før (`i3d`). Den første mobilkontrollen krasjet i «bygg i skråning» fordi runde 6-delen lot 3D være av –
+rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(true)`). Prøvd i 3D på mobil: ok, 3D på etterpå.
 
 ### Fellesfiler endret i runde 6
 - `spill/strategi-visning.js` (eies av kart): små endringer – `bilde()` sender tida til `Strategi.utfall` (ikke i testene), målteksten (entall og
