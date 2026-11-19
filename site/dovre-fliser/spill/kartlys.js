@@ -58,7 +58,9 @@
   api.nå = nå;
   // i testene (navigator.webdriver) er kartet som før, så vaktene som leser fargene i kartet ikke påvirkes – KartLys.test = true slår det på
   const på = () => !api.av && (!navigator.webdriver || api.test);
-  api.tegn = g => { if (!på() || typeof tid === 'undefined') return; api.detaljTegn(g); const T = nå(); if (T.natt < .01 && T.grå < .01 && T.mørk < .01) return;
+  api.tegn = g => { if (!på() || typeof tid === 'undefined') return; api.detaljTegn(g); api.tegnTone(g, nå()); };
+  // tegnTone(g, T): tonen T (fra tone()) over hele lerretet – brukes av tegn() og av vakten (på et eget lite lerret)
+  api.tegnTone = (g, T) => { if (T.natt < .01 && T.grå < .01 && T.mørk < .01) return;
     g.save();
     if (T.grå > .01) { g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${T.grå.toFixed(3)})`; g.fillRect(0, 0, VW, VH); }
     if (T.natt > .01) { g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgba(${T.farge.join(',')},${T.natt.toFixed(3)})`; g.fillRect(0, 0, VW, VH); }

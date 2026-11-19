@@ -7,7 +7,8 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
     const ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
     if (!window.Etikett || !Etikett.tegnAlle || !window.KartLapper || !window.KartLys) return { feil: ['Etikett/KartLapper/KartLys mangler'] };
     const S = OppstartSpill.tilstand(); if (!S || !S.leir) return { feil: ['ingen leir'] };
-    const L = S.leir, kam0 = { x: kam.x, y: kam.y, m: kam.m }, tid0 = tid, taake0 = VIS.taake, valgt0 = valgt, kl0 = KartLys.test, nye = [];
+    // frø: tilfeldighetene i index.html (tilf) er faste – nyttLag bruker dem, og vaktene etter denne (krig) regner med samme rekke
+    const L = S.leir, kam0 = { x: kam.x, y: kam.y, m: kam.m }, tid0 = tid, frø0 = frø, taake0 = VIS.taake, valgt0 = valgt, kl0 = KartLys.test, nye = [];
     const over = (r, q) => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3];
     const tegnNå = (x, y, m) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; tegn(); return { navn: Etikett.tegnet(), hindre: Etikett.hindringer(), overlapp: Etikett.overlapp() }; };
     const piksel = (x, y) => { const p = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data; return [p[0], p[1], p[2]]; };
@@ -35,24 +36,25 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
         ut.fjern = fj.map(n => Math.round(Math.hypot(n.x - ax, n.y - ay))); krev(fj.length >= 2 && fj.every(n => Math.hypot(n.x - ax, n.y - ay) < 110), 'navnene langt ute står i en søyle: ' + ut.fjern.join(', ')); }
       for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } nye.length = 0; VIS.taake = taake0;
       // 4) krigskartet: kaiene bare ved leiren, og utsnittet holder seg der kartet finnes
-      { const fokus = INFRA_FOKUS.test; INFRA_FOKUS.test = true; const var0 = StrategiSpill.erÅpen();
+      // (krigskartet åpnes ikke – det slår av 3D; erÅpen svarer ja en liten stund)
+      { const fokus = INFRA_FOKUS.test, erÅpen0 = StrategiSpill.erÅpen; INFRA_FOKUS.test = true;
         try { const før = [KAI_VIKTIG(L.x + 20000, L.y, 3, 200, 120), KAI_VIKTIG(L.x + 800, L.y, 1, 30, 120)];
-          if (!var0) StrategiSpill.åpne(); const etter = [KAI_VIKTIG(L.x + 20000, L.y, 3, 200, 120), KAI_VIKTIG(L.x + 800, L.y, 1, 30, 120), KAI_VIKTIG(L.x + 20000, L.y, 4, 300, 2)];
+          StrategiSpill.erÅpen = () => true; const etter = [KAI_VIKTIG(L.x + 20000, L.y, 3, 200, 120), KAI_VIKTIG(L.x + 800, L.y, 1, 30, 120), KAI_VIKTIG(L.x + 20000, L.y, 4, 300, 2)];
           ut.kai = { før, etter }; krev(etter[0] === false && etter[1] === true && etter[2] === true, 'krigskartet viser kaier langt fra leiren: ' + JSON.stringify(ut.kai));
           const B = StrategiSpill.boks(); ut.boks = B && [Math.round(B.w), Math.round(B.h)];
           if (B && !NORGE_BLOKKER && Array.isArray(OMRÅDE)) krev(B.w <= OMRÅDE[2] - OMRÅDE[0] + 3001 && B.h <= OMRÅDE[3] - OMRÅDE[1] + 3001, 'krigskartet viser svart utenfor kartet: ' + ut.boks);
-        } finally { if (!var0) StrategiSpill.lukk(); INFRA_FOKUS.test = fokus; } }
-      // 5) natt og regn i 2D: kartet er mørkere og blåere kl. 02 enn kl. 12, og navnene står fortsatt
-      { KartLys.test = true; const måle = () => { let r = 0, g = 0, b = 0; for (const [fx, fy] of [[.3, .3], [.7, .3], [.5, .5], [.3, .7], [.7, .7]]) { const p = piksel(VW * fx, VH * fy); r += p[0]; g += p[1]; b += p[2]; } return [r / 5, g / 5, b / 5]; };
-        const dagTid = Math.floor(tid / 1440) * 1440 + 6 * 60, nattTid = dagTid + 14 * 60;
-        tid = dagTid; tegnNå(L.x, L.y, 5); const dag = måle(); tid = nattTid; const N = tegnNå(L.x, L.y, 5), natt = måle(); ut.lys = { dag: dag.map(Math.round), natt: natt.map(Math.round), tone: KartLys.nå() };
-        krev(natt[0] + natt[1] + natt[2] < (dag[0] + dag[1] + dag[2]) * .85, 'kartet blir ikke mørkere om natta: ' + JSON.stringify(ut.lys));
-        krev(natt[2] / Math.max(1, natt[0]) > dag[2] / Math.max(1, dag[0]), 'natta er ikke blåere');
-        krev(N.navn.length > 0 && N.overlapp === 0, 'navnene forsvant om natta');
-        krev(KartLys.tone({ e: 40, regn: 1, sky: 1 }).grå > .2, 'regn gjør ikke kartet gråere'); }
+        } finally { StrategiSpill.erÅpen = erÅpen0; INFRA_FOKUS.test = fokus; } }
+      // 5) natt og regn i 2D: på et eget lite lerret med kjent kartfarge (tida i spillet røres ikke) – natta er mørkere og blåere, dagen uendret
+      { const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d'), prøv = T => { g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.fillStyle = 'rgb(200,180,140)'; g.fillRect(0, 0, 8, 8); KartLys.tegnTone(g, T); const p = g.getImageData(4, 4, 1, 1).data; return [p[0], p[1], p[2]]; };
+        const dag = prøv(KartLys.tone({ e: 40 })), natt = prøv(KartLys.tone({ e: -12 })), regn = prøv(KartLys.tone({ e: 40, regn: 1, sky: 1 })); ut.lys = { dag, natt, regn };
+        krev(dag[0] === 200 && dag[1] === 180 && dag[2] === 140, 'kartet endres midt på dagen: ' + dag);
+        krev(natt[0] + natt[1] + natt[2] < 520 * .8 && natt[2] / natt[0] > 140 / 200, 'natta er ikke mørkere og blåere: ' + natt);
+        krev(Math.abs(regn[0] - regn[2]) < 60 - 5 && regn[0] + regn[1] + regn[2] < 520, 'regnet gjør ikke kartet gråere: ' + regn);
+        // og med KartLys på i selve kartet tegnes det uten feil, med navnene oppå
+        KartLys.test = true; const N = tegnNå(L.x, L.y, .3); krev(N.navn.length > 0 && N.overlapp === 0, 'navnene forsvant med kartlyset på'); KartLys.test = kl0; }
     } catch (e) { ut.feil.push('kastet: ' + e.message); }
-    finally { for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } VIS.taake = taake0; valgt = valgt0; tid = tid0; KartLys.test = kl0; Object.assign(kam, kam0); skitten = true; }
+    finally { for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } VIS.taake = taake0; valgt = valgt0; tid = tid0; frø = frø0; KartLys.test = kl0; Object.assign(kam, kam0); skitten = true; }
     return ut; });
   const ok = !d.feil.length;
-  return { ok, data: d, tekst: ok ? `leiren uten overlapp (${(d.m5 || []).length} navn ved 5 m), fiendens merke øverst, langt ute ${(d.fjern || []).length} navn nær merket, kaier i krigskartet bare ved leiren, krigskartet ${d.boks ? d.boks.map(v => Math.round(v / 1000)).join(' × ') + ' km' : '–'}, natt i 2D ${d.lys ? d.lys.natt.join('/') : ''}` : d.feil.join('; ') };
+  return { ok, data: d, tekst: ok ? `leiren uten overlapp (${(d.m5 || []).length} navn ved 5 m), fiendens merke øverst, langt ute ${(d.fjern || []).length} navn nær merket, kaier i krigskartet bare ved leiren, krigskartet ${d.boks ? d.boks.map(v => Math.round(v / 1000)).join(' × ') + ' km' : '–'}, natt i 2D ${d.lys ? d.lys.natt.join('/') + ' (dag ' + d.lys.dag.join('/') + ')' : ''}` : d.feil.join('; ') };
 } };
