@@ -162,7 +162,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
         for (const [tittel, felt, palett] of FANER[fane][1]) {
           valg.appendChild(el('h3', {}, tittel));
           if (palett) valg.appendChild(el('div', { klasse: 'rad' }, ...O.P.palettes[palett].map(f => { const b = knapp('', p[felt] === f, () => { velg(felt, f); lagValg(); oppd(); }, 'farge'); b.style.background = f; b.setAttribute('aria-label', tittel + ' ' + f); return b; })));
-          else if (O.P.numerics[felt]) { const [min, maks] = O.P.numerics[felt], r = el('input', { type: 'range', min, max: maks, value: p[felt], 'aria-label': tittel, style: 'width:100%; max-width:320px' }), v = el('span', { style: 'margin-left:8px' }, felt === 'age' ? p[felt] + ' år' : p[felt] + ' %');
+          else if (O.P.numerics[felt]) { const [min, maks] = O.P.numerics[felt], r = el('input', { type: 'range', min, max: maks, value: p[felt], 'aria-label': tittel, style: 'flex:1 1 160px; min-width:0; max-width:320px' }), v = el('span', { style: 'margin-left:8px' }, felt === 'age' ? p[felt] + ' år' : p[felt] + ' %');
             r.oninput = () => { velg(felt, +r.value); v.textContent = felt === 'age' ? r.value + ' år' : r.value + ' %'; oppd(); }; valg.appendChild(el('div', { klasse: 'rad' }, r, v)); }
           else valg.appendChild(el('div', { klasse: 'rad' }, ...NAVN[felt].map(([v, t]) => knapp(t, p[felt] === v, () => { velg(felt, v); lagValg(); oppd(); }))));
         }
@@ -216,7 +216,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   }
   // ---------- velge leirplass på kartet ----------
   function startVelg() { bak.classList.remove('på'); if (window.visHjelp) visHjelp(false); velger = true; forslag = null; gjemStart(); visOmrådet(false);
-    visBanner(`Trykk på kartet der leiren skal ligge${sted().bb ? ' – hvor som helst ' + sted().hvor : ''}. Zoom og flytt kartet som vanlig.`); }
+    visBanner(`Trykk på kartet der leiren skal ligge – hvor som helst ${sted().hvor}. Zoom og flytt kartet som vanlig.`); }
   function visBanner(tekst, kanBekrefte, mer) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst));
     if (mer) { for (const a of mer.adv || []) banner.append(el('div', { klasse: 'adv' }, '⚠ ' + a));
