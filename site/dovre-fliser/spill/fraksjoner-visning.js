@@ -183,7 +183,12 @@
       // (18. nov) tettstedene fraksjonen holder, gir forsterkninger fortere (RegionSpill.fordel, docs/natt/okonomi.md)
       const forsterk = window.RegionSpill && RegionSpill.fordel ? Math.max(.25, +RegionSpill.fordel(side).forsterk || 1) : 1;
       sist[side] += sek; if (sist[side] < R.forsterkning.hver / forsterk) continue;
-      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; if (lag.length >= F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440))) continue;
+      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; const tak = F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440)); if (lag.length >= tak) continue;
+      // (19. nov, gjennomspillingen: slåtte lag teller ikke, så Kystalliansen hadde 26 lag på dag 8) er det alt så mange lag som taket,
+      // samles et slått lag som står i et eget tettsted, til det nye laget; ellers kommer ikke noe nytt (ikke i testene)
+      if (!navigator.webdriver || AI.test) { const alle = ENHETER.filter(e => e.side === side && e.ai && levende(e)); if (alle.length >= tak) {
+        const brutt = alle.find(e => F.slåttUt(e) && ((INFRA && INFRA.tettsted) || []).some(b => eier(b) === side && b.bb[0] <= e.x && e.x <= b.bb[2] && b.bb[1] <= e.y && e.y <= b.bb[3] && Garnison.inni(b, e.x, e.y)));
+        if (!brutt) continue; ENHETER.splice(ENHETER.indexOf(brutt), 1); if (typeof valgt !== 'undefined' && valgt === brutt && window.lukkPanel) lukkPanel(); } }
       sist[side] = 0; const egen = ((INFRA && INFRA.tettsted) || []).find(b => eier(b) === side), [x, y] = egen ? inne(egen) : HJEM[side], s = nytt(side, x, y);
       if (synlig(s)) logg(`${F.FRAKSJONER[side].navn} har fått forsterkninger: ${s.navn}.`);
     }
