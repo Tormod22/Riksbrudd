@@ -47,4 +47,18 @@ assert(G.inni(by, 500, 500) && !G.inni(by, 1000, 1000) && !G.inni(by, 2500, 500)
   }
   assert.equal(ulike, 0, 'inni() med bånd avviker fra den enkle utgaven'); assert(inne > sjekket * .1 && inne < sjekket * .9, 'testen må ha punkter både inne og ute');
   console.log(`ok – inni() med bånd: ${sjekket} punkter mot den enkle utgaven, ${ulike} ulike (${inne} inne)`); }
+// (19. nov, kritikken) store tettsteder: flere mann og lengre tid. En by på 235 000 tas ikke av ett lag på en ettermiddag.
+{ const stor = { e: { id: 2, navn: 'Storby', folk: 235000 }, bb: [0, 0, 2000, 2000], deler: [new Float64Array([0, 0, 2000, 0, 2000, 2000, 0, 2000])] };
+  assert.equal(G.mannFor(1300), 5); assert.equal(G.inntaTid(1300), R.innta, 'små steder som før'); assert.equal(G.inntaTid(3000), R.innta);
+  assert(G.mannFor(235000) >= 60 && G.minstFor(235000) >= 30, 'storbyen trenger mange');
+  assert(G.inntaTid(235000) > 3 * 3600 && G.inntaTid(235000) <= R.størrelse.maksTid, 'og lang tid');
+  assert(G.tidMed(12, 235000) === Infinity, 'ett lag er for lite'); assert(G.tidMed(36, 235000) > 6 * 3600, 'tre lag bruker over seks timer');
+  const S = G.ny(), en = lag('A', 500, 500, 'rød');
+  let h = G.steg(S, [stor], [en], 600); assert(h.some(x => x.hva === 'forFå' && x.trengs === G.minstFor(235000)), 'melder for få');
+  G.steg(S, [stor], [en], 10 * 3600); assert.equal(G.tilstand(S, 2).eier, null, 'ett lag tar ikke storbyen på ti timer');
+  const tre = [en, lag('B', 600, 600, 'rød'), lag('C', 700, 700, 'rød')]; G.steg(S, [stor], tre, 4 * 3600); assert.equal(G.tilstand(S, 2).eier, null, 'tre lag: ikke på fire timer');
+  const p = G.tilstand(S, 2).inntar.sek / R.innta; assert(p > .3 && p < .9, 'men inntaket går: ' + p.toFixed(2));
+  G.steg(S, [stor], tre, 6 * 3600); assert.equal(G.tilstand(S, 2).eier, 'rød', 'tre lag tar den til slutt');
+  // selvtest (årsak H): med den gamle regelen (30 min for alle) ville ett lag tatt den – kontrollen må se forskjellen
+  assert(G.tidMed(12, 3000) === R.innta && G.tidMed(12, 235000) !== R.innta); }
 console.log('ok – inntak (30 min alene), strid, fienden tar over, slått ut lag holder ikke, forsterkning (sårede først), produksjon og strøm');

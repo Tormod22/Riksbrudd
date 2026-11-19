@@ -340,3 +340,135 @@ vakt.js / vakt2.js kjører vakta på PC og mobil, vakt2.js med infrastrukturen s
   lettere må gjøres i byggejobben (egne vegnettfiler per område).
 - Region-visning.js (balanse) bruker vegnettet på telefon når det først er lastet, men utsnittet har ikke veger utenfor ±150 km.
 - Fiendens lastebil: kjøreturen legges på nytt bare når vegnettet finnes; ellers går laget av.
+
+## Runde 6 (19. nov, kritikken)
+Kritikken: docs/anmeldelse-2026-11-19.md. Bilder: scratchpad `kritikk/pc` og `kritikk/tlf`; mine bilder i scratchpad `natt6/krig/`.
+Alle tall under er Claudes forslag (samlet i REGLER-objektene som står nevnt).
+
+### 1. Krigen er nesten tapt på dag 1 – RETTET (regler + AI), prøvd i gjennomspilling (tall under)
+- **Inntak etter størrelse og styrke** (`spill/garnison.js`, `REGLER.størrelse = { små: 4000, maksTid: 8 t, perMann: 7, minMann: 4, minst: .5 }`):
+  tettsteder opp til 4000 innbyggere tas som før på 30 min av et lag (Dombås og testene uendret). Større tar `30 min × √(folk / 4000)`
+  ved full styrke (høyst 8 t) og trenger `√folk / 7` mann (minst 4) for full fart; med færre går det saktere (andelen), og under halvparten
+  står inntaket stille. Stavanger/Sandnes (234 757): 69 mann for full fart (3,8 t), minst 35 (7,7 t). Ålgård/Figgjo (11 876): 16 mann, 52 min.
+  Framdriften telles om til «30-minutters-sekunder», så `t.inntar.sek / innta` er fortsatt andelen (krigskartet, lagteksten og ringen i kartet
+  virker uten endring). Nye funksjoner: `Garnison.mannFor`, `minstFor`, `inntaTid`, `mann`, `fart`, `tidMed`; hendelsen `forFå` («For få til å ta
+  Stavanger/Sandnes: det trengs minst 35 mann, dere har 12. Send flere lag.»).
+- **Fredstid i regionkrigen** (`Fraksjoner.REGLER.regionFred = 2.5` døgn på Vanlig, delt på fiendens faktor, 1,5–4 døgn; `Fraksjoner.fredDøgn`):
+  motstanderne samler seg i sitt eget tettsted (eller hjemme) og tar ingen andre tettsteder. De forsvarer seg fortsatt. Melding i loggen ved start
+  og når fredstiden er over (`AI.regionFred` i fraksjoner-visning.js). Ikke i testene (navigator.webdriver) uten `AI.test`.
+- **Småstedene først** (`Fraksjoner.REGLER.storEtter = 1`, `ettLag = 12`): det første døgnet etter fredstiden går motstanderne bare mot tettsteder ett
+  lag kan ta (minst ≤ 12 mann); storbyene blir mål etterpå (`v.småFørst`, `AI.småFørst`). Lagt inn etter den første gjennomspillingen, der begge gikk
+  rett mot Stavanger/Sandnes da freden var over.
+- **Motstanderne bygger seg opp over dager**: `Fraksjoner.lagTak(byer, dag)` = 3 + ½ per tettsted + ½ per døgn (høyst 6).
+- **AI-en regner med styrken** (`Fraksjoner.velg`): et tettsted med `b.minst` tas bare når lagets og de frie vennenes styrke (ikke eneste garnison)
+  er minst `minst`; laget venter i byen («venter på flere for å ta …») når vennene er på vei, og ellers velger det noe annet. Store tettsteder er
+  «ledige» for flere lag til de som går dit, er mange nok for full fart (`v.mot`: Map tettsted → lag på vei; `s.ai.målBy` settes også mens laget
+  står og tar byen). Uten `b.minst` (gamle tester) som før.
+- **Ingen vinner før dag 4** (`Strategi.REGLER.tidligst = 3 × 1440`): `Strategi.utfall(st, R, tid)` gir ingen vinner (og ikke kortet «… har
+  overtaket») før tre døgn har gått; krigskartet sier «Krigen avgjøres tidligst dag 4». I testene (webdriver) sendes ikke tida inn (som før).
+- **Startstedet er ikke storbyen** (`Fraksjoner.REGLER.startMaks = 8000`): byer over 8000 innbyggere velges sist som startsted.
+
+#### Gjennomspilling på /rogaland (19. nov, webdriver av, nytt spill på Vanlig, leiren midt mellom Sviland og Oltedal, spilleren gjør ingenting i krigen)
+Skript: scratchpad `natt/krig/gjennom6.js` (ekte klokke på 600×, dev.py med ekte kartdata; 600× ga bare ca. 240× på denne maskinen, så den kom til
+dag 2) og `natt/krig/rask6.js` (samme start, men spoler med `sim(.1)` i biter – samme regler). Tallene: andel av folket i området (41 tettsteder,
+47 km), tettstedene hver side holder. Siste kjøring (rask7, med alle rettingene under):
+
+| Tid | Kystalliansen (rød) | Folkefronten (grønn) | Hva skjer |
+|---|---|---|---|
+| dag 1 06:00 | Oltedal (1 011) – «under 1 %» | Sviland (742) – «under 1 %» | startstedene er deres; «samler styrker» |
+| dag 1 14:00 (der kritikeren tapte) | Oltedal | Sviland | ingenting tatt; 3 lag hver (også med ekte klokke) |
+| dag 2 06:00 | Oltedal | Sviland | 4 lag hver; første røverbølge, «ventet om ca. 85–90 min (anslag)» |
+| dag 3 18:00 | Oltedal | Sviland | fredstiden slutter; ingen seier mulig før dag 4 06:00 |
+| dag 4 06:00 | + Kvernaland, Høle – 2,7 % | + Ålgård/Figgjo, Vatne – 4 % | småstedene først |
+| dag 4 12:00 | 2,7 % | + Hommersåk – 6 % | |
+| dag 6 12:00 | + Kleppe/Verdalen, Bryne – 9,5 % | 6 % | 6 lag hver |
+| dag 9 06:00 | 9,5 % | 6 % | ingen tar Stavanger/Sandnes: med 6 lag og en garnison per tettsted har ingen 35 frie mann |
+
+Før (kritikeren, samme område): Stavanger/Sandnes tatt kl. 14:19 dag 1, «Kystalliansen har overtaket – 69 %». Etter: ingen side over 10 % på åtte
+døgn når spilleren ikke gjør noe; spilleren har 2,5 døgn i fred og kan ta småstedene rundt leiren med Vaktlaget (4 mann holder til steder under ca.
+1500 innbyggere). Krigen avgjøres i praksis av Stavanger/Sandnes (78 % av folket i området): den som får 35–69 mann dit. Mellomkjøringene fant tre
+AI-feil som er rettet (se under): begge gikk rett mot Stavanger da freden var over (→ småstedene først), lag fra to sider sto i hver sin kant av
+Ålgård og 51 m fra hverandre i skogen i Sviland i flere døgn uten å se hverandre (→ inn mot midten, og mot en fiende de vet står i tettstedet), og
+slåtte lag talte ikke mot taket, så Kystalliansen hadde 26 lag på dag 8 (→ de teller, og et slått lag i et eget tettsted samles til det nye).
+Bilder: scratchpad `natt6/krig/gjennom-etter-*.png` (ekte klokke), `gjennom-rask7-*.png`, `rask-rask-krig-start.png` (krigskartet ved start:
+«Stavanger/Sandnes … trenger ca. 69 mann (minst 35) – dere har 4», knappen «For få»), `rask-rask*-banner-*.png`. Loggene: scratchpad `natt/krig/gj-*.log`.
+
+#### AI-rettinger funnet i gjennomspillingene (fraksjoner.js / fraksjoner-visning.js)
+- `REGLER.midten = 150`: et lag som tar et tettsted, går inn til 150 m fra midten før det blir stående (før stoppet det i kanten).
+- `v.iByFiende` / `REGLER.inntil = 25`: en fiende som står i tettstedet laget vil ta, vet laget om; er laget sterkt nok (som ved angrep), går det helt
+  inntil den («går mot … i …»), også når skogen skjuler dem. Visningen gir da også korte flytt (under 150 m).
+- Forsterkninger: slåtte lag teller mot taket; er alle plassene brukt, samles et slått lag som står i et eget tettsted, til det nye laget (ikke i testene).
+
+### 2. «Kystalliansen holder til i Vatne», men 0 tettsteder – RETTET
+`AI.startEie(ut)` (fraksjoner-visning.js): i et nytt spill (de første tre spilltimene) får hver motstander tettstedet den holder til i, når det er
+nøytralt og den ikke holder noe annet. Meldingen sier nå «Kystalliansen (rød) holder til i Vatne, 7 km nordvest for leiren, og holder tettstedet.» Dovre (uten AI.flytt): tettstedet der
+HJEM ligger, 3 s etter «riksbrudd-spill». Lagres som før med tettstedene. Ikke i testene.
+
+### 3. «Neste trekk» foreslo 3 mann mot Stavanger/Sandnes – RETTET
+`Strategi.trekk` gir per tettsted `mann`, `minst`, `har` (mann i lagene innen marsjavstand), `nok`, `ettLag` og `flere` (lagene som til sammen
+trengs, nærmeste først); et tettsted dere ikke har mann nok til, teller en firedel, ett som trenger flere lag 0,7. `Strategi.kravTekst(t)` =
+«trenger ca. 69 mann (minst 35) – dere har 3». Det dere har mann nok til, står først (storbyen etter). I krigskartet (strategi-visning.js, små tekstendringer): teksten står i raden, knappen sier «For
+få» (av) eller «Send 3 lag» (sender alle i `t.flere`), og `send()` sier fra når ett lag ikke kan ta det alene. Boksen for det valgte tettstedet får
+«Ca. 69 mann (minst 35) tar det på 3,8 t uten fiender der» via `KRIG_TILLEGG.by` (garnison-visning.js). Tettstedspanelet i kartet sier det samme.
+
+### 4. Røvervarselet kom 50 m unna – RETTET
+- Røverne starter 3–4 km unna (før 1,4–2,2 km; `Trussel.VARSEL.start`), ca. 40–55 spillminutter fra leiren. Lag som ennå ikke har vært innen
+  2,5 km av leiren, teller som «på vei», ikke «unna» (høyst 4 t, `VARSEL.kommerMaks`; `e.startTid`, `e.nærVært` lagres med angrepet).
+- Varselet sier «Ventet om ca. 85 min.»: `angrep()` venter høyst 3 s på ruta deres og bruker tida den tar (`timerIgjen`, rundet til 5 min); uten
+  rute 0,75 m/s i terrenget (`VARSEL.fart` – målt i gjennomspillingen: 3,7 km tok over 80 min; med 1,3 m/s sa banneret «kan være framme når som
+  helst» i en halv time). Banneret bruker det samme (tida som er igjen av marsjen), så de sier det samme.
+- Banneret viser **anslaget** («ikke sett ennå · ventet om ca. 39 min (anslag) – vakttårn og kameraer ser
+  dem før», `Trussel.anslag`) til noen ser dem, og så «2,1 km unna · framme om ca. 27 min · sett fra vakttårnet».
+- **Vakttårnet har verdi**: et bemannet vakttårn ser røverne på 1,5 km (`VARSEL.tårn`, KROKER.ser i forsvar-visning.js; vaktene ellers 400/800 m).
+- Senest ca. 10 min før de er framme (`VARSEL.snart`): «Røverne er snart framme (ca. 7 min) – trykk «Forsvar leiren».» i loggen og farten ned (hendelsen «riksbrudd-hendelse» type alarm til flyt.js) – én
+  gang per bølge, ikke i testene.
+
+### 5. «Ikke sett ennå» mens Vaktlaget er under ild – RETTET
+`ForsvarSpill.kjent(e)`: en røver er kjent når den er synlig, skyter på et av lagene dine, blir skutt på av dem, eller står i leiren. Banneret sier da
+avstanden/«i leiren» og «· i ildkamp med Vaktlaget».
+
+### 6. «Forsvar leiren» huskes ikke etter omlasting – RETTET
+`trussel-lagring.js` lagrer `satt` (ForsvarSpill.erSatt) med angrepet; når angrepet kommer tilbake, kaller den `ForsvarSpill.gjenopprett()` – banneret
+sier «lagene holder stillingen» (lagene hadde alt plassen og reglene sine fra lagringen).
+
+### 7. Ildkraften «stiger med avstanden» – FORKLART
+Prosentene var troppen *mot et vanlig lag på tolv*, og et vanlig lag har maskingevær som treffer dårlig på langt hold – derfor kunne andelen stige.
+Troppsoppsettet (tropper-visning.js) viser nå treff per salve først («Treff per salve: 1,4 på 100 m, 0,5 på 400 m, 0,1 på 800 m»), og prosentene
+etter med forklaringen.
+
+### 8. «de 1 tettstedene» – RETTET (og «0 %» for en side som holder et lite sted: nå «under 1 %», `Strategi.prosent`)
+Målteksten sier «i det ene tettstedet» / «i de 41 tettstedene»; resten av krigskartet hadde alt entall/flertall (`Strategi.tettsteder(n)` finnes for
+nye tekster).
+
+### Vakt (vakter/krig.js, del «RUNDE 6»)
+Storbyen (Dombås med 235 000 innbyggere i prøven) tas ikke av ett lag på seks timer, men av tre lag; «trenger … mann» i «Neste trekk» og kravet i
+boksen; entall i målteksten; ingen vinner på dag 1; fredstid/lagtak finnes; banneret viser anslag og «i ildkamp med …» (ikke «ikke sett ennå»);
+forsvaret lagres med angrepet og kommer tilbake. Den gamle bølgeprøven setter `nærVært` på røverne (de har vært ved leiren og trukket seg unna).
+Prøvd med feil lagt inn: uten `nærVært` i bølgeprøven ble «røvere som trekker seg unna avslutter bølgen: false» (FEIL) – det var slik vakta fant at
+den nye «på vei»-regelen må skille på det. Tar ca. 3 s (PC, 2D). Krigskartpanelet prøves bare i 2D (krigskartet slår 3D av); i 3D prøves tekstene fra
+reglene, og vakta sjekker at 3D står som før (`i3d`). Den første mobilkontrollen krasjet i «bygg i skråning» fordi runde 6-delen lot 3D være av –
+rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(true)`). Prøvd i 3D på mobil: ok, 3D på etterpå.
+
+### Fellesfiler endret i runde 6
+- `spill/strategi-visning.js` (eies av kart): små endringer – `bilde()` sender tida til `Strategi.utfall` (ikke i testene), målteksten (entall og
+  «avgjøres tidligst dag 4»), raden i «Neste trekk» (kravteksten, knappen «For få»/«Send N lag»), `send()` (flere lag og melding når ett lag er for
+  lite), og tipset nederst («… i et lite tettsted …»). Ingen endring i tegningen.
+- `pipeline/fliser/vakter/krig.js` (min): bølgeprøven setter `nærVært`; runde 5-delen venter på at 3D er bygget igjen.
+- `site/dovre-fliser/index.html`: bare versjonsmerkene (versjon.py). `origin/claude/nattfiks` (959df79) er flettet inn i grenen; eneste konflikt var
+  versjonsmerkene i index.html (tok deres og kjørte versjon.py).
+
+### Kontroll
+- Regeltestene: test_garnison, test_fraksjoner, test_strategi, test_spillet, test_trussel_lagring, test_forsvar, test_tropper, test_strid – ok.
+- Vaktene krig og balanse i nettleseren (PC 2D, mobil 2D, mobil med 3D) – ok, også etter flettingen.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil`) før flettingen: 116 ok, 0 FEIL (den første kjøringen krasjet i «bygg i skråning» fordi vakta lot 3D være av – rettet).
+  Etter flettingen med nattfiks: 118 ok, 0 FEIL (én kjøring før det hadde 1 FEIL i «måling av ytelse» – halv oppløsning ble ikke halv, ikke krig-kode;
+  neste kjøring var grønn, så den ser ustabil ut).
+
+### IKKE gjort / svakheter (runde 6)
+- Med `lagMaks = 6` og en garnison per tettsted får ingen motstander 35 frie mann – de tar aldri Stavanger/Sandnes av seg selv (gjennomspillingen:
+  9,5 % og 6 % på dag 9). Spilleren kan vinne, men motstanderne blir ikke farligere etter ca. dag 6. Forslag: la `lagMaks` vokse etter en uke, eller la
+  garnisonene være mindre enn et helt lag.
+- Varselbrikka øverst til venstre (narhud.js, ikke min) viser den ekte avstanden («2,8 km fra leiren») også når banneret sier «ikke sett ennå».
+- Bannerets anslag bruker tida ruta deres tar (spillet vet den); det er et anslag, men det er ikke «usikkert» – kan gjøres grovere (±) hvis det føles som juks.
+- Fiendens lag går nå mot en fiende de vet står i tettstedet; spillerens garnison i et tettsted blir dermed angrepet oftere enn før.
+- Kortet «… har overtaket» sier ikke at spillet står på pause (strategi-visning.js, ikke rettet).

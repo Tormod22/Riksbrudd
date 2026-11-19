@@ -114,7 +114,12 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
       const kasse = window.OppstartSpill && OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0; boks.append(el('div', {}, 'Pris: ', el('b', {}, sum.toLocaleString('nb-NO') + ' kr'), sum > kasse ? el('span', { klasse: 'advar' }, ' – ikke råd') : ''));
       if (VP.length >= R.min && window.Strid && window.Terreng) { const prøve = TR.opprett(VP, 'x'); if (!prøve.feil) { if (egen) TR.utrust(prøve, Object.fromEntries(VP.map(q => [q.id, våpen[q.id] || 'rifle']))); else Strid.bevæpn(prøve.menn, bev); if (egen) Strid.bevæpn(prøve.menn, 'egen');
           const std = Array.from({ length: 12 }, (_, i) => ({ hp: 1, rolle: TR.ROLLER[i] })), kr = d => Strid.kraft(prøve.menn, d, {}, 1, Terreng.treffsjanse), ks = d => Strid.kraft(std, d, {}, 1, Terreng.treffsjanse), pst = d => (ks(d) > 0 ? Math.round(kr(d) / ks(d) * 100) : 0);
-          boks.append(el('div', { id: 'troppkraft' }, 'Ildkraft mot et vanlig lag på tolv: ', el('b', {}, `${pst(100)} % på 100 m`), `, ${pst(400)} % på 400 m, ${pst(800)} % på 800 m`)); } }
+          // (19. nov, kritikken: «ildkraften stiger med avstanden – 25 % på 100 m, 26 % på 400 m, 31 % på 800 m») Prosentene er
+          // troppen MOT et vanlig lag (som har maskingevær, som treffer dårlig på langt hold), så de kan stige. Nå står treffene først
+          // (de faller med avstanden), og sammenligningen etter, med forklaring.
+          const tr = d => { const v = kr(d); return (v > 0 && v < .1 ? v.toFixed(2) : String(Math.round(v * 10) / 10)).replace('.', ','); };
+          boks.append(el('div', { id: 'troppkraft' }, 'Treff per salve: ', el('b', {}, `${tr(100)} på 100 m`), `, ${tr(400)} på 400 m, ${tr(800)} på 800 m. `,
+            el('small', { style: 'display:block;margin-top:2px;line-height:1.3;color:var(--ink-dim,#a99)' }, `Mot et vanlig lag på tolv: ${pst(100)} %, ${pst(400)} % og ${pst(800)} % av deres ildkraft – andelen kan stige med avstanden fordi maskingeværene i et vanlig lag treffer dårlig på langt hold.`))); } }
       const tap = TR.mister(VP), tl = Object.entries(tap).map(([o, n]) => `${n} fra ${o}`); if (tl.length) boks.append(el('div', { klasse: 'advar' }, 'Leiren mister: ' + tl.join(', ') + '.'));
       if (utstyr.has('sanitet') && VP.length < 4) boks.append(el('div', { klasse: 'advar' }, 'Sanitetsutstyret trenger en sanitet: velg minst fire.'));
       f.append(boks); }

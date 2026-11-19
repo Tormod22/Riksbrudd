@@ -18,7 +18,7 @@
     legg('lag', 'Lag i leiren', (t.lag || 0) / bølge, `${t.lag || 0} lag mot ${bølge} ventet`, t.lag ? 'Hold like mange lag hjemme som bølgen har.' : 'Ingen lag i leiren: hold minst ett lag hjemme.');
     legg('tårn', 'Bemannet vakttårn', t.tårn ? 1 : 0, t.tårn ? `${t.tårn} tårn med vakt` : 'ingen', 'Bygg et vakttårn og sett noen på «vakt»: lagene ser og treffer bedre nær tårnet.');
     legg('sekker', 'Sandsekkvoller', (t.sekker || 0) / 2, `${t.sekker || 0} voller`, 'Bygg sandsekkvoller på den siden fienden kommer fra: lag bak dem tar bare 60 % av treffene.');
-    legg('varsling', 'Varsling', (t.varsling || 0) / 600, t.varsling ? `vaktene ser ${Math.round(t.varsling)} m` : 'ingen vakter', 'Folk på «vakt» (helst med vakttårn) og kameramaster oppdager fienden tidligere.');
+    legg('varsling', 'Varsling', (t.varsling || 0) / 600, t.varsling ? `vaktene ser ${Math.round(t.varsling)} m` : 'ingen vakter', 'Sett folk på «vakt» i et vakttårn: tårnet ser røverne 1,5 km unna (vaktene alene 400 m). Kameramaster ser også.');
     legg('vakt', 'Leirvakt', (t.vakter || 0) / 4, `${t.vakter || 0} på vakt`, 'Sett minst fire på «vakt»: de tar opp våpen som et eget lag når leiren angripes.');
     legg('ammo', 'Ammunisjon', (t.ammo === undefined ? 1 : t.ammo) / .5, `${Math.round((t.ammo === undefined ? 1 : t.ammo) * 100)} %`, 'Lagene mangler ammunisjon: la dem stå ved basen, eller forsyn dem fra en lastebil.');
     const sum = p.reduce((s, q) => s + q.poeng, 0); return { sum, ord: sum >= 80 ? 'godt forberedt' : sum >= 55 ? 'brukbart' : sum >= 30 ? 'svakt' : 'forsvarsløst', punkter: p, råd: p.filter(q => !q.ok).sort((a, b) => (b.av - b.poeng) - (a.av - a.poeng)).map(q => q.råd) }; }

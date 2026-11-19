@@ -58,5 +58,27 @@ assert(F.gåAv(true, null) && F.gåAv(false, 500) && !F.gåAv(false, 1500) && !F
 assert(F.byggStilling(120, Infinity, 0) && !F.byggStilling(60, Infinity, 0) && !F.byggStilling(120, 100, 1) && !F.byggStilling(120, Infinity, 4) && F.byggStilling(120, 900, 2), 'stilling etter to timer, ikke for tett og høyst fire');
 { const st = [{ x: 0, y: 0, side: 'rød' }]; assert(F.stillingVern({ x: 10, y: 10, side: 'rød' }, st) === .6 && F.stillingVern({ x: 10, y: 10, side: 'blå' }, st) === 1 && F.stillingVern({ x: 100, y: 0, side: 'rød' }, st) === 1 && F.stillingVern({ x: 0, y: 0, side: 'rød' }, []) === 1, 'vernet gjelder bare eierens lag i stillingen'); }
 console.log('ok – fiendens kjøretøy og stillinger');
+// (19. nov, kritikken) store tettsteder krever styrke, fred de første døgnene, lagtak som vokser, startsted ikke i storbyen
+{ const G = require('../../site/dovre-fliser/spill/garnison'), krav = b => Object.assign(b, { mann: G.mannFor(b.folk), minst: G.minstFor(b.folk) });
+  const stor = krav(by(2, 'Storby', 3000, 0, 235000, null)), liten = krav(by(1, 'Liten', 6000, 0, 1500, null)), vår = krav(by(3, 'Vår', -4000, 0, 800, 'rød'));
+  const s = lag('A', 0, 0), b = lag('B', -4000, 0), c = lag('C', 100, 0), w = o => verden({ byer: [stor, liten, vår], venner: [s, b, c], ...o });
+  assert.equal(F.velg(s, w()).x, 6000, 'to frie lag (24 mann) går ikke mot en by som trenger minst ' + stor.minst);
+  const d = lag('D', 200, 0), e = lag('E', 300, 0), v4 = F.velg(s, verden({ byer: [stor, liten, vår], venner: [s, b, c, d, e] })); assert.equal(v4.x, 3000, 'fire frie lag (48 mann): storbyen');
+  const i = lag('I', 3000, 0), vi = F.velg(i, verden({ byer: [stor, vår], venner: [i, b] })); assert.notEqual(vi.tekst, 'tar Storby', 'blir ikke stående alene i en by den aldri kan ta');
+  const j = lag('J', 3000, 0), vj = F.velg(j, verden({ byer: [stor, vår], venner: [j, b, c, d, e] })); assert.match(vj.tekst, /venter på flere for å ta Storby/);
+  const mot = new Map([[2, [c, d, e, lag('F', 0, 0), lag('G', 0, 0), lag('H', 0, 0)]]]), vm = F.velg(s, verden({ byer: [stor, liten, vår], venner: [s, b, c, d, e], mot })); assert.equal(vm.x, 6000, 'nok på vei til storbyen: dette laget tar noe annet');
+  // fred: ingen nye tettsteder, laget samler seg i et eget tettsted
+  const vf = F.velg(s, w({ fred: true })); assert.deepEqual([vf.hva, vf.x], ['samle', -4000], 'fred: samler seg i eget tettsted');
+  assert.equal(F.velg(b, w({ fred: true })).hva, 'hold');
+  assert.equal(F.velg(s, verden({ byer: [stor, liten, vår], venner: [s, b, c, d, e], småFørst: true })).x, 6000, 'første døgnet etter fredstiden: småstedene først'); assert.equal(F.velg(s, w({ fred: true, fiender: [{ x: 800, y: 0, navn: 'Blå', styrke: 4 }] })).hva, 'angrip', 'men forsvarer seg');
+  assert(F.fredDøgn(1) === 2.5 && F.fredDøgn(.75) > F.fredDøgn(1) && F.fredDøgn(1.3) < 2.5 && F.fredDøgn(10) === 1.5, 'fredstiden etter vanskelighetsgraden');
+  assert.deepEqual([F.lagTak(0, 0), F.lagTak(0, 2), F.lagTak(0, 4), F.lagTak(2, 2)], [3, 4, 5, 5], 'lagtaket vokser over døgnene');
+  const st = F.startsteder({ x: 0, y: 0 }, [{ navn: 'Storby', x: 7000, y: 0, folk: 235000 }, { navn: 'Vatne', x: 0, y: 9000, folk: 2000 }, { navn: 'Sør', x: 0, y: -20000, folk: 900 }]);
+  assert.equal(st.rød.navn, 'Vatne', 'startstedet er ikke storbyen');
+  const fb = F.velg(lag('K', 3000, 0), verden({ byer: [by(1, 'Nær', 3000, 0, 500, 'grønn')], iByFiende: { x: 3060, y: 0, navn: 'Grønn garnison', styrke: 8 } }));
+  assert.deepEqual([fb.hva, fb.x], ['jakt', 3060], 'en skjult fiende i tettstedet: laget går mot den');
+  assert.match(F.velg(lag('K', 3000, 0), verden({ byer: [by(1, 'Nær', 3000, 0, 500, 'grønn')], iByFiende: { x: 3060, y: 0, navn: 'G', styrke: 30 } })).tekst, /tar Nær/, 'for sterk: blir stående');
+  const kant = F.velg(lag('K', 3300, 0), verden()); assert.deepEqual([kant.hva, kant.x, kant.mål], ['ta', 3000, 1], 'i kanten av tettstedet: går inn mot midten'); }
+console.log('ok – runde 6: storbyer krever styrke, fred de første døgnene, lagtaket vokser, startsted ikke i storbyen');
 console.log('ok – bedre AI: samlet angrep, samling, hjelp, jakt, bakhold, opptatte og tapte tettsteder, leiren, lagtak og angrepspunkt');
 console.log('ok – AI: ta tettsteder (store foran), garnison og videre, stell/forsyninger, angrip/trekk unna, slått ut trekker seg tilbake');

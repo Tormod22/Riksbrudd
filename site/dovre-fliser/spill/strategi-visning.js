@@ -39,11 +39,15 @@
   // lagene som kan sendes: uten ordre, og ikke eneste garnison i et eget tettsted (det skal holdes)
   function ledige() { return egneLag().filter(s => !s.sti && !s.planlegger).map(s => { const b = iBy(s); return { x: s.x, y: s.y, navn: s.navn, lag: s, holder: !!(b && eierAv(b.id) === 'blå' && G.lagI(b.ref, egneLag()).length === 1) }; }); }
   function bilde() { const B = område(); if (!B.length) return null; const st = S.stilling(B, eierAv), led = ledige(), fri = led.filter(l => !l.holder), fi = fiender();
-    return { byer: B, st, ut: S.utfall(st), trekk: S.trekk('blå', B, eierAv, fri.length ? fri : led, fi), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
+    return { byer: B, st, ut: S.utfall(st, undefined, auto() && typeof tid === 'number' ? tid : undefined), trekk: S.trekk('blå', B, eierAv, fri.length ? fri : led, fi), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
 
   // ---------- ordre ----------
   function send(by, lag) { const T = bilde(); if (!T) return false; const t = T.trekk.find(q => q.by.id === by.id);
     const s = lag || (t && t.lag && t.lag.lag); if (!s) { logg('Ingen ledige lag å sende. Lag som marsjerer, må komme fram først.'); return false; }
+    // (19. nov, pakke «krig») store tettsteder trenger flere lag: send alle i t.flere, og si fra når det ikke er nok
+    if (!lag && t && t.flere && t.flere.length > 1) { const sendt = t.flere.filter(q => q.lag && KROKER.kanOrdre.every(f => f(q.lag))); for (const q of sendt) ordre(q.lag, by.x, by.y);
+      logg(`${sendt.map(q => q.navn).join(', ')} sendes mot ${by.navn} (${S.kravTekst(t)}).`); valgtBy = by; vis(true); skitten = true; return sendt.length > 0; }
+    if (!lag && t && !t.nok) logg(`${by.navn} ${S.kravTekst(t)}. Laget kan ikke ta det alene – samle flere lag først.`);
     if (Math.hypot(s.x - by.x, s.y - by.y) > S.REGLER.marsj) { logg(`${by.navn} ligger over ${S.REGLER.marsj / 1000} km fra ${s.navn}. Ta et tettsted på vegen først.`); return false; }
     if (!KROKER.kanOrdre.every(f => f(s))) return false;
     ordre(s, by.x, by.y); logg(`${s.navn} sendes mot ${by.navn}` + (t && t.forsvar > 0 ? ' – tettstedet er forsvart.' : '.')); valgtBy = by; vis(true); skitten = true; return true; }
@@ -102,7 +106,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
         st0.append(el('span', { klasse: 'vb' }, b.navn), el('small', {}, e === 'blå' ? 'ditt' : e ? fraksjon(e).eieform : 'nøytralt'));
         if (e !== 'blå' && t && t.lag && t.innen) st0.append(knapp(`Send ${t.lag.navn}`, () => send(b), { klasse: 'hoved' })); }
       st0.append(knapp('Vis mer', () => skjul(false), { title: 'Vis hele panelet' })); f.append(st0); }
-    f.append(el('div', { klasse: 'maal' }, 'Mål: hold ', el('b', {}, S.prosent(R.seier) + ' %'), ` av folket i de ${st.byer} tettstedene i området (${Math.round(T.byer.radius / 1000)} km rundt leiren). Du har `, el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), '.'));
+    f.append(el('div', { klasse: 'maal' }, 'Mål: hold ', el('b', {}, S.prosent(R.seier) + ' %'), ` av folket i ${st.byer === 1 ? 'det ene tettstedet' : `de ${st.byer} tettstedene`} i området (${Math.round(T.byer.radius / 1000)} km rundt leiren). Du har `, el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), '.' + (T.ut.forTidlig ? ` Krigen avgjøres tidligst dag ${Math.floor(T.ut.fra / 1440) + 1}.` : '')));
     for (const side of ['blå', 'rød', 'grønn']) { const m = st.sider[side]; if (!m) continue;
       f.append(el('div', { klasse: 'side', 'data-side': side }, el('div', { klasse: 'n' }, el('b', {}, side === 'blå' ? fraksjon('blå').navn + ' (du)' : fraksjon(side).navn), el('small', {}, `${m.byer} tettsted${m.byer === 1 ? '' : 'er'} · ${S.prosent(m.andel)} %`)),
         el('div', { klasse: 'stolpe' }, el('i', { style: `width:${Math.min(100, m.andel * 100)}%; background:${sidefarge(side, 'lys')}` }), el('u', { style: `left:${R.seier * 100}%` })), ...tillegg('side', side))); }
@@ -121,8 +125,8 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     f.append(el('h3', {}, 'Neste trekk'));
     const topp = T.trekk.slice(0, 4); if (!topp.length) f.append(el('div', { klasse: 'tips' }, 'Du holder alle tettstedene i området.'));
     topp.forEach((t, i) => f.append(el('div', { klasse: 'rad', 'data-trekk': t.by.id }, el('div', {}, i < 3 ? el('span', { klasse: 'nr' }, String(i + 1)) : '', el('b', {}, t.by.navn),
-      el('small', {}, `${t.eier ? fraksjon(t.eier).eieform : 'nøytralt'}${t.forsvar > 0 ? ', forsvart' : ''} · ${tall(t.by.folk)} innb.` + (t.lag ? ` · ${km(t.km)} fra ${t.lag.navn}` : '')), ...tillegg('trekk', t.by.ref, t.eier)),
-      knapp(t.lag && t.innen ? 'Send' : t.lag ? 'For langt' : 'Ingen lag', () => send(t.by), Object.assign({ 'data-send': t.by.id }, t.lag && t.innen ? { klasse: 'hoved' } : { disabled: '' })))));
+      el('small', {}, `${t.eier ? fraksjon(t.eier).eieform : 'nøytralt'}${t.forsvar > 0 ? ', forsvart' : ''} · ${tall(t.by.folk)} innb.` + (t.lag ? ` · ${km(t.km)} fra ${t.lag.navn}` : '') + (S.kravTekst(t) ? ' · ' + S.kravTekst(t) : '')), ...tillegg('trekk', t.by.ref, t.eier)),
+      knapp(t.lag && t.innen && t.nok === false ? 'For få' : t.lag && t.innen ? (t.flere && t.flere.length > 1 ? `Send ${t.flere.length} lag` : 'Send') : t.lag ? 'For langt' : 'Ingen lag', () => send(t.by), Object.assign({ 'data-send': t.by.id }, t.lag && t.innen && t.nok !== false ? { klasse: 'hoved' } : { disabled: '' })))));
     // trusler
     if (T.trusler.length) { f.append(el('h3', {}, 'Trusler'));
       for (const t of T.trusler.slice(0, 4)) f.append(el('div', { klasse: 'rad fare' }, el('div', {}, el('b', {}, t.by.navn), el('small', {}, (t.fiende ? `${t.fiende.navn} ${km(t.km)} unna` : '') + (t.fiende && !t.garnison ? ' · ' : '') + (t.garnison ? '' : 'ingen garnison'))),
@@ -137,7 +141,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const lag = egneLag(); if (!lag.length) f.append(el('div', { klasse: 'tips' }, 'Du har ingen lag. Tettsteder du holder, og basen, gir nye.'));
     for (const s of lag) f.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, s.navn), el('small', {}, `${s.menn.filter(m => m.hp >= 1).length} av ${s.menn.length} friske · ${statusTekst(s)}`)),
       knapp('Velg', () => { valgt = s; kam.x = s.x; kam.y = s.y; visPanel(); skitten = true; })));
-    f.append(el('div', { klasse: 'tips' }, `Et lag som står ${G.REGLER.innta / 60} minutter i et tettsted uten fiender, tar det. La et lag stå igjen som garnison. Fargene i kartet viser hvem som rår hvor; stiplede streker er fronter. Trykk på et tettsted for å sende et lag dit. En marsj tar timer – sett farten til 60× eller 600× mens lagene går.`));
+    f.append(el('div', { klasse: 'tips' }, `Et lag som står ${G.REGLER.innta / 60} minutter i et lite tettsted uten fiender, tar det. Større steder trenger flere mann og lengre tid (se «trenger»). La et lag stå igjen som garnison. Fargene i kartet viser hvem som rår hvor; stiplede streker er fronter. Trykk på et tettsted for å sende et lag dit. En marsj tar timer – sett farten til 60× eller 600× mens lagene går.`));
     return f; }
   function vis(tving) { if (!åpen) return; const T = bilde(); if (!T) { panel.replaceChildren(knapp('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk krigskartet' }), el('h2', {}, 'Krigskartet'), el('div', { klasse: 'tips' }, 'Kartdataene for tettstedene er ikke lastet ennå. Prøv igjen om litt.')); sist = ''; return; }
     if (!tving && window.pekerNede && pekerNede(panel)) return;
