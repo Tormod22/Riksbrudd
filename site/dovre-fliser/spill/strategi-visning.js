@@ -153,9 +153,19 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const ligg = kl.contains('kort') && innerWidth > innerHeight * 1.2, smal = !ligg && (kl.contains('smal') || kl.contains('kort'));
     kam.x = L.x; const rr = område().radius || S.REGLER.radius, pb = ligg ? Math.max(0, panel.getBoundingClientRect().right + 4) : smal ? 0 : Math.min(370, VW * .4);
     // hele området skal være synlig i det frie feltet: til høyre for panelet på PC og liggende telefon, over panelet på stående telefon
-    kam.m = smal ? rr * 2.3 / Math.max(200, Math.min(VW, VH * .5)) : ligg ? rr * 2.3 / Math.max(150, Math.min(VW - pb - 10, VH - 60)) : rr * 2.3 / Math.max(200, Math.min(VW - pb, VH - 120));
-    kam.x = L.x - pb / 2 * kam.m; kam.y = L.y - (smal ? VH * .2 * kam.m : ligg ? -22 * kam.m : -20 * kam.m); panel.classList.toggle('inn', inne); sist = ''; vis(true);
+    const Bk = boks(), fw = smal ? Math.max(200, VW) : ligg ? Math.max(150, VW - pb - 10) : Math.max(200, VW - pb), fh = smal ? Math.max(200, VH * .5) : ligg ? Math.max(150, VH - 60) : Math.max(200, VH - 120);
+    kam.m = Math.max(Bk.w / fw, Bk.h / fh) * 1.15; if (!(kam.m > 0)) kam.m = rr * 2.3 / Math.min(fw, fh);
+    kam.x = Bk.x - pb / 2 * kam.m; kam.y = Bk.y - (smal ? VH * .2 * kam.m : ligg ? -22 * kam.m : -20 * kam.m); panel.classList.toggle('inn', inne); sist = ''; vis(true);
     if (kl.contains('kort')) passInn(); skitten = true; }
+  // RUNDE 6 (kritikken: «krigskartet på telefon er et lite firkantet utsnitt i en stort sett svart sirkel på 45 km»): det som vises, er
+  // området (sirkelen) – men bare den delen der det finnes kartdata (Dovre-piloten har bare et lite område), og alltid tettstedene
+  // og leiren. boks() = { x, y, w, h } i kartets meter; kartet passes inn så boksen fyller den frie plassen.
+  function boks() { const L = leir(); if (!L) return null; const B = område(), rr = B.radius || S.REGLER.radius;
+    let x0 = L.x - rr, x1 = L.x + rr, y0 = L.y - rr, y1 = L.y + rr;
+    const D = typeof NORGE_BLOKKER !== 'undefined' && !NORGE_BLOKKER && typeof OMRÅDE !== 'undefined' && Array.isArray(OMRÅDE) ? OMRÅDE : null;
+    if (D) { x0 = Math.max(x0, D[0]); y0 = Math.max(y0, D[1]); x1 = Math.min(x1, D[2]); y1 = Math.min(y1, D[3]); if (x1 - x0 < 2000 || y1 - y0 < 2000) { x0 = L.x - rr; x1 = L.x + rr; y0 = L.y - rr; y1 = L.y + rr; } }
+    for (const p of [L, ...B]) { x0 = Math.min(x0, p.x - 1500); x1 = Math.max(x1, p.x + 1500); y0 = Math.min(y0, p.y - 1500); y1 = Math.max(y1, p.y + 1500); }
+    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }; }
   // TELEFON (19. nov): hele området inn i den frie delen av skjermen – ved siden av eller over panelet, under statuslinja og knappene
   // øverst, og til venstre for knappesøyla (.ctl). Regnes etter at panelet er tegnet (stående er høyden avhengig av innholdet).
   function friDel() { const r = e => (e && (e.offsetParent !== null || getComputedStyle(e).position === 'fixed') && getComputedStyle(e).display !== 'none' ? e.getBoundingClientRect() : null), p = panel.getBoundingClientRect();
@@ -164,8 +174,8 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const c = r(document.querySelector('.ctl')); if (c && c.width && c.left > VW * .6) x1 = Math.min(x1, c.left - 4);
     if (p.width) { if (ligg && p.left < VW * .3 && p.height > VH * .5) x0 = Math.max(x0, p.right + 4); else if (p.top > VH * .3) y1 = Math.min(y1, p.top - 4); else y0 = Math.max(y0, p.bottom + 4); }
     return { x0, x1, y0, y1 }; }
-  function passInn() { const L = leir(); if (!L) return; const rr = område().radius || S.REGLER.radius, f = friDel(), w = Math.max(120, f.x1 - f.x0), h = Math.max(120, f.y1 - f.y0);
-    kam.m = rr * 2.3 / Math.min(w, h); kam.x = L.x - ((f.x0 + f.x1) / 2 - VW / 2) * kam.m; kam.y = L.y + ((f.y0 + f.y1) / 2 - VH / 2) * kam.m; skitten = true; return f; }
+  function passInn() { const L = leir(); if (!L) return; const f = friDel(), w = Math.max(120, f.x1 - f.x0), h = Math.max(120, f.y1 - f.y0), Bk = boks();
+    kam.m = Math.max(Bk.w / w, Bk.h / h) * 1.12; kam.x = Bk.x - ((f.x0 + f.x1) / 2 - VW / 2) * kam.m; kam.y = Bk.y + ((f.y0 + f.y1) / 2 - VH / 2) * kam.m; skitten = true; return f; }
   // Skjul/vis panelet (stripa). Kartet flyttes så området fortsatt står i den frie delen.
   function skjul(ja) { inne = !!ja; try { localStorage.setItem('riksbrudd-krigpanel', inne ? 'inn' : 'ut'); } catch (e) { /* uten lagring */ }
     panel.classList.toggle('inn', inne); sist = ''; vis(true); if (document.body.classList.contains('kort')) passInn(); else skitten = true; }
@@ -205,8 +215,12 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       if (window.Merker) Merker.tegn(g, x, y, { forhold: e ? Merker.forhold(e) : 'nøytral', slag: 'tettsted', farge: e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)', r: r + 2 });
       else { g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(52,45,34,.92)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1.2; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.stroke(); }
       if (valgtBy && valgtBy.id === b.id) { g.strokeStyle = '#f0c878'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, r + 5, 0, 6.283); g.stroke(); }
-      const nr = topp.indexOf(b.id); if (nr >= 0) { g.fillStyle = '#c9b26a'; g.beginPath(); g.arc(x + r + 5, y - r - 5, 8, 0, 6.283); g.fill(); g.fillStyle = '#1c170f'; g.font = '700 12px Georgia, serif'; g.textBaseline = 'middle'; g.fillText(String(nr + 1), x + r + 5, y - r - 4.5); g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textBaseline = 'top'; }
-      if (åpen && (i < 14 || e || nr >= 0 || m < 40)) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(b.navn, x, y + r + 2); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, y + r + 2); } });
+      const nr = topp.indexOf(b.id); if (nr >= 0) { g.fillStyle = '#c9b26a'; g.beginPath(); g.arc(x + r + 5, y - r - 5, 8, 0, 6.283); g.fill(); g.fillStyle = '#1c170f'; g.font = '700 12px "Times New Roman", Times, "Liberation Serif", serif'; if (window.Etikett) Etikett.hinder(x + r - 3, y - r - 13, 16, 16); g.textBaseline = 'middle'; g.fillText(String(nr + 1), x + r + 5, y - r - 4.5); g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textBaseline = 'top'; }
+      // RUNDE 6: navnene går gjennom Etikett (spill/etikett.js) – de tre beste målene og tettsteder med eier foran resten, alle foran
+      // kjøretøy, bygg og kaier, og ingen navn ligger oppå hverandre eller oppå merkene
+      if (åpen && (i < 14 || e || nr >= 0 || m < 40)) { const P = window.Etikett && Etikett.REGLER.prio, pr = P ? (nr >= 0 ? P.viktig : e ? P.by : P.egne) : 0;
+        g.textBaseline = 'alphabetic'; const ty = window.Etikett ? Etikett.tekst(g, b.navn, x, y + r + 13, 1, pr) : y + r + 13;
+        g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(b.navn, x, ty); g.fillStyle = '#e7dcc3'; g.fillText(b.navn, x, ty); g.textBaseline = 'top'; } });
     // fiender du vet om
     if (åpen && T) for (const f of T.fiender) { const x = sx(f.x), y = sy(f.y); g.fillStyle = sidefarge(f.side, 'lys'); g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 6, y); g.lineTo(x, y + 6); g.lineTo(x - 6, y); g.closePath(); g.fill(); g.stroke(); }
     g.restore(); };
@@ -237,6 +251,6 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       ['Fortsett som nå', null, 'Spill videre uten endringer.'],
       ...(window.ScenarioSpill && ScenarioSpill.etterspill ? [['Se krigen på nytt', () => ScenarioSpill.etterspill(), 'Spol gjennom hvem som holdt hva.']] : [])]); }
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
-  const api = { test: false, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  const api = { test: false, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;
 })();

@@ -49,7 +49,8 @@
   if (typeof document === 'undefined') return;
   const T = 'env(safe-area-inset-top,0px)', B = 'env(safe-area-inset-bottom,0px)', L = 'env(safe-area-inset-left,0px)', Rt = 'env(safe-area-inset-right,0px)';
   // liggende telefon: disse panelene blir sidepaneler med full høyde (13)
-  const SIDE = { venstre: ['krig', 'region', 'samfunnmeny'], høyre: ['sjopanel', 'verdenpanel', 'tropppanel', 'karakterark', 'stridpanel', 'evpanel', 'krigpanel'] };
+  // (runde 6) samme regel som på PC (paneler.js): det fra bunnmenyen til venstre, det som hører til et panel til høyre
+  const SIDE = { venstre: ['krig', 'region', 'samfunnmeny', 'sjopanel', 'verdenpanel', 'tropppanel', 'karakterark'], høyre: ['stridpanel', 'evpanel', 'krigpanel'] };
   const css = document.createElement('style'); css.id = 'telefoncss';
   css.textContent = `
 body.kort.smal .knapper button{ height:40px; min-width:38px; }
@@ -57,11 +58,11 @@ body.kort:not(.smal) .knapper button{ height:36px; min-width:36px; }
 body.kort.mkomfull #mkom{ right:calc(8px + ${Rt}); gap:3px; }
 body.kort.mkomfull #mkom button{ font-size:10.5px; letter-spacing:0; }
 body.kort.mkom.mkomfull .ctl{ bottom:calc(64px + ${B}); }
-body.kort.tlfdekk #mkom.på{ display:none; }
+body.kort.tlfdekk:not(.mkomalltid) #mkom.på{ display:none; }
 #mkom button[hidden]{ display:none; }
 body.kort.gaar .ctl{ display:none; }
 body.kort.gaar #gangeknapper{ right:calc(10px + ${Rt}); }
-body.kort button:not(.knapper *):not(#lagmeny *):not(#minikart *):not(#mkom *):not(.ctl *):not([class*="farge"]):not(.prikk){ min-height:40px; }
+body.kort button:not(.knapper *):not(#lagmeny *):not(#minikart *):not(#mkom *):not(.ctl *):not(#opplaering *):not([class*="farge"]):not(.prikk){ min-height:40px; }
 body.kort button.lukk, body.kort button[aria-label^="Lukk"]{ min-width:40px; }
 body.kort #oppstart, body.kort #hjelp, body.kort #formkort, body.kort #krigkort, body.kort #ytelse{ padding-top:calc(12px + ${T}); padding-bottom:calc(12px + ${B}); padding-left:calc(10px + ${L}); padding-right:calc(10px + ${Rt}); box-sizing:border-box; }
 body.kort #oppstart .ark{ max-height:100%; box-sizing:border-box; } body.kort #hjelp .ark{ max-height:100%; box-sizing:border-box; }

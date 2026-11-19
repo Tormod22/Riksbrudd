@@ -25,9 +25,29 @@ body.kort #nhud .vapen{ right:12px; bottom:auto; top:calc(var(--topp,44px) + 222
 body.foto #nhud, body.foto #varsler{ display:none !important; }
 #varsler{ position:fixed; left:10px; top:calc(var(--topp,58px) + 8px); z-index:6; display:flex; flex-direction:column; gap:5px; align-items:flex-start; max-width:min(320px,70vw); }
 #varsler button{ pointer-events:auto; display:flex; align-items:center; gap:7px; background:rgba(22,18,12,.9); border:1px solid #6a5f42; border-left:4px solid #c9b26a; color:var(--ink,#e7dcc3); font:inherit; font-size:13.5px; padding:4px 10px 4px 8px; min-height:30px; cursor:pointer; text-align:left; }
+#varsler .rad{ display:flex; flex-wrap:wrap; gap:5px; align-items:stretch; } #varsler .rad > button:first-child span{ white-space:nowrap; } #varsler button.handling{ border-left-color:#9fc46a; font-weight:600; white-space:nowrap; }
 #varsler button.fare{ border-left-color:#e0604a; } #varsler button.god{ border-left-color:#9fc46a; } #varsler button small{ color:var(--ink-dim,#a99); }
 body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)); max-width:62vw; } body.kort #varsler button{ font-size:12px; min-height:28px; padding:3px 8px 3px 6px; } body.kort.gaar #varsler, body.bygger2d #varsler{ display:none; }`;
   document.head.appendChild(css);
+  // RUNDE 6 (19. nov, kritikerne om gåmodus): (1) PC: venstreraden («Flaske …», «Legg deg ned», «Lag noe») sto midt i bildet oppå navnelappene
+  // i 3D – den står nå nede til venstre over helsa; (2) PC: våpenruta litt lenger fra minikartet; (3) telefon: «Sett deg inn i feltbilen»
+  // lå under våpenbyttet («Automatgevær») – den står høyere; (4) telefon: knapperaden øverst var bredere enn skjermen (3D-knappen kuttet i
+  // venstre kant) – Krig er borte mens du går (den viser uansett 2D-kartet) og knappene er litt smalere; (5) telefon: loggen la seg over
+  // «Flaske …» – raden står lenger ned. Tallene er Claudes forslag.
+  const css6 = document.createElement('style');
+  css6.textContent = `body.gaar:not(.kort) #evrad{ top:auto; bottom:calc(98px + env(safe-area-inset-bottom,0px)); }
+body.gaar:not(.kort) #nhud .vapen{ right:296px; }
+body.kort.gaar:not(.tlfligg):not(.kjorer) #kjorknapp:not(.x){ bottom:calc(272px + env(safe-area-inset-bottom,0px)); }
+body.kort.smal.gaar .knapper #krigknapp{ display:none; } body.kort.smal.gaar .knapper button{ min-width:33px; padding:0 5px; } body.kort.smal.gaar .knapper{ gap:3px; }
+body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
+  document.head.appendChild(css6);
+  // (runde 6) navnelappene i 3D tegnes ikke under rutene på skjermen (de lå under «Flaske …», helsa og våpenruta): hullene i klippingen
+  // i tegn3d (index.html). Rutene som overlapper hverandre, slås ikke sammen – de står hver for seg (målt: ingen overlapp).
+  const HULL = ['#evrad > *', '#nhud .helse', '#nhud .vapen', '#nhud .felt', '#kjorknapp', '#byttvapen', '#minikart', '#logg > div', '#letknapp', '#innelapp'];
+  setInterval(() => { const i3 = typeof på3d !== 'undefined' && på3d, topp = window.UI_TOPP3D || 0, ut = [];
+    if (i3) for (const s of HULL) for (const e of document.querySelectorAll(s)) { if (!e.getClientRects().length) continue; const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || +cs.opacity < .05) continue;
+      const r = e.getBoundingClientRect(), y0 = Math.max(topp, r.top - 4), y1 = r.bottom + 4; if (r.width > 2 && y1 > y0) ut.push([Math.round(r.left - 4), Math.round(y0), Math.round(r.width + 8), Math.round(y1 - y0)]); }
+    window.UI_HULL3D = ut; }, 400);
   // ---------- skjermbildet når du går eller kjører ----------
   const hud = el('div', { id: 'nhud' }), hp = el('i'), hpTall = el('b', {}, '100'), hpStrek = el('div', { klasse: 'strek' }, hp), pust = el('i'), kjHp = el('i');
   const helse = el('div', { klasse: 'boks helse' }, el('div', { klasse: 'rad' }, el('span', { 'data-ikon': 'hjerte' }), hpStrek, hpTall), el('div', { klasse: 'strek puste' }, pust));
@@ -114,8 +134,9 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
     // karakteren din: tørst, sulten eller trøtt (spill/karakter.js)
     if (window.KarakterSpill && KarakterSpill.klar()) for (const v of KarakterSpill.varsler()) ut.push({ i: v.id === 'søvn' ? 'seng' : v.id === 'sult' ? 'mat' : 'vann', k: 'fare', t: 'Du er ' + v.tekst, s: v.råd.toLowerCase().replace(/\.$/, ''), f: () => KarakterSpill.åpne() });
     // tom eller snart tom for diesel (bare når du har aggregat som trenger den)
-    if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, rekker = s.agg > 0 && d > 0 ? Leir.dieselTimer(L, s.agg) : Infinity;
-      if (d <= 0) ut.push({ i: 'tank', k: 'fare', t: 'Tom for diesel', s: 'aggregatene står – kjøp diesel', f: () => åpneLeir('lager') }); else if (rekker < 6) ut.push({ i: 'tank', k: '', t: 'Lite diesel', s: `rekker ${rekker >= 1 ? Math.round(rekker) + ' t' : Math.max(1, Math.round(rekker * 60)) + ' min'}`, f: () => åpneLeir('lager') }); }
+    // (runde 6) samme prognose som dagsrapporten og Lager (LeirSpill.diesel), og en egen knapp som kjøper diesel (LeirSpill.kjøpDiesel)
+    if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, P = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null, rekker = d > 0 ? (P ? P.timer : s.agg > 0 ? Leir.dieselTimer(L, s.agg) : Infinity) : Infinity;
+      if (d <= 0) ut.push({ i: 'tank', k: 'fare', t: 'Tom for diesel', s: 'aggregatene står', f: () => åpneLeir('lager'), knapp: window.LeirSpill && LeirSpill.kjøpDiesel && Leir.kapasitet(L) > 0 ? { t: `Kjøp 500 l (${Leir.kroner(500 * Leir.DRIVSTOFF.prisPerLiter)})`, f: () => LeirSpill.kjøpDiesel(500) } : null }); else if (rekker < 6) ut.push({ i: 'tank', k: '', t: 'Lite diesel', s: `rekker ${rekker >= 1 ? Math.round(rekker) + ' t' : Math.max(1, Math.round(rekker * 60)) + ' min'}`, f: () => åpneLeir('lager') }); }
     const OS = window.OverlevSpill && OverlevSpill.klar && OverlevSpill.klar() ? OverlevSpill : null, D = OS && OS.D();
     if (D && !navigator.webdriver) { if (D.strøm.varslet && !D.strøm.nede && !egenStrøm()) ut.push({ i: 'strom', k: '', t: 'Strømnettet svikter snart', s: 'bygg aggregat eller solceller', f: () => åpneLeir('bygg') }); if (D.vann.varslet && !D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: '', t: 'Vannet svikter snart', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); if (D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: 'fare', t: 'Leiren mangler vann', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); }
     const F = window.FolkSpill && FolkSpill.tilstand(); if (F && F.personer.length && L && window.FolkRegler) { let B = null; try { B = FolkRegler.behov(F, L, FolkSpill.valg()); } catch (e) { B = null; }
@@ -125,7 +146,9 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
     return ut.slice(0, 5); }
   function tegnVarsler() { { const åpen = ['leirmeny', 'folkmeny', 'hjelp', 'lagmeny'].some(id => $(id) && $(id).classList.contains('på')) && VW < 1500; varsler.style.display = åpen ? 'none' : ''; }
     if ($('oppstart') && $('oppstart').classList.contains('på')) { if (brikkeNøkkel) { varsler.innerHTML = ''; brikkeNøkkel = ''; } return; } const B = brikker(), nøkkel = B.map(b => b.k + b.t + b.s).join('|'); if (nøkkel === brikkeNøkkel) return; if (window.pekerNede && pekerNede(varsler)) return; brikkeNøkkel = nøkkel; varsler.innerHTML = '';
-    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f; varsler.appendChild(k); } }
+    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f;
+      // en brikke kan ha en egen knapp ved siden av seg (b.knapp = { t, f }), f.eks. «Kjøp 500 l» ved «Tom for diesel» (runde 6)
+      if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
   setInterval(tegnVarsler, 1000);
   window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm };
 })();

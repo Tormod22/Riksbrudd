@@ -11,14 +11,15 @@
   const KAPITLER = [
     { navn: 'Få leiren i gang', mål: [
       { id: 'brakke', tekst: 'Bygg en brakke', hjelp: 'Leir → Bygg → Brakke. Folkene sover i telt til de får senger.', ferdig: T => b(T, 'brakke') > 0 },
-      { id: 'tank', tekst: 'Bygg en dieseltank og kjøp diesel', hjelp: 'Leir → Bygg → Dieseltank, så Leir → Lager → «Kjøp 500 l diesel».', ferdig: T => b(T, 'drivstofftank') > 0 && T.diesel > 0 },
+      // (runde 6, kritikken: «Neste: bygg en dieseltank og kjøp diesel» sto etter at tanken var bygget) – nå() gir teksten for det som gjenstår
+      { id: 'tank', tekst: 'Bygg en dieseltank og kjøp diesel', nå: T => (b(T, 'drivstofftank') > 0 ? 'Kjøp diesel til tanken' : null), hjelp: 'Leir → Bygg → Dieseltank, så Leir → Lager → «Kjøp 500 l diesel».', ferdig: T => b(T, 'drivstofftank') > 0 && T.diesel > 0 },
       { id: 'strøm', tekst: 'Få strøm: bygg et aggregat eller solceller', hjelp: 'Aggregatet bruker diesel, solcellene gir mindre, men er gratis i drift.', ferdig: T => !!T.strøm },
       // (balansen 18. nov) maten: folk spiser én rasjon hver per døgn, og startmaten varer bare noen døgn
       { id: 'mat', tekst: 'Ha mat til tre døgn', hjelp: 'Folk spiser én rasjon hver per døgn. Kjøp mat i Folk-panelet, send et lag på jakt, fisk med båt eller så en åker – eller bygg drivhus.', ferdig: T => T.matDøgn >= 3 },
       { id: 'lager', tekst: 'Ha 20 m³ tre på lager', hjelp: 'Kjøp under Leir → Lager, eller hogg skog (samme fane).', ferdig: T => T.tre >= 20 },
     ] },
     { navn: 'Få oversikt', mål: [
-      { id: 'kontrollrom', tekst: 'Bygg kontrollrommet', hjelp: 'Kartet, kameraene og radioen. Det koster 9 mill. kr og kan vente til leiren står og du har to tropper og et vakttårn.', ferdig: T => b(T, 'kontrollrom') > 0 },
+      { id: 'kontrollrom', tekst: 'Bygg kontrollrommet', hjelp: 'Kartet, kameraene og radioen. Det koster ca. 12 mill. kr med materialene (9 mill. kr arbeid) og kan vente til leiren står og du har to tropper og et vakttårn.', ferdig: T => b(T, 'kontrollrom') > 0 },
       { id: 'radiomast', tekst: 'Bygg en radiomast', hjelp: 'Lagene må ha radiokontakt for å ta imot ordre: 15 km med mast, 8 km uten.', ferdig: T => b(T, 'radiomast') > 0 },
       { id: 'vakttårn', tekst: 'Bygg et vakttårn', hjelp: 'Sett en person på «Vakt» under Folk, så melder tårnet fiender nær leiren.', ferdig: T => b(T, 'vakttårn') > 0 },
     ] },
@@ -55,7 +56,9 @@
       gjort: k ? k.mål.filter(m => ferdige.has(m.id)).length : ALLE.length, av: k ? k.mål.length : ALLE.length, totalt: med.filter(m => ferdige.has(m.id)).length, alle: med.length };
   }
   const finn = id => ALLE.find(m => m.id === id);
-  const api = { KAPITLER, ALLE, GRUNN, krigÅpen, vurder, stilling, finn };
+  // teksten for et mål slik det står nå (m.nå(T) når en del av målet alt er gjort), ellers den faste teksten
+  const tekstNå = (m, T) => { if (!m) return ''; let t = null; try { t = T && m.nå ? m.nå(T) : null; } catch (e) { t = null; } return t || m.tekst; };
+  const api = { KAPITLER, ALLE, GRUNN, krigÅpen, vurder, stilling, finn, tekstNå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Maal = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

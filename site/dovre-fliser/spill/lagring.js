@@ -156,9 +156,14 @@
   }
   // etter K1 (og etter at kontrollrommet har satt inn karakteren): les verden inn én gang, og lagre fra da av
   window.addEventListener('riksbrudd-spill', () => setTimeout(() => { if (fortsetter) { fortsetter = false; les(); } aktiv = true; lagre(); }, 0));
-  // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes
-  KROKER.sim.push(() => { const nå = performance.now(); if (nå - sist < 5000) return; sist = nå; lagre(); });
-  window.addEventListener('pagehide', lagre);
+  // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes.
+  // (runde 6, kritikken: «omlasting mister spilltid: 14:19 → 13:59 og 10:57 → 10:45») Ved 600× gikk det 50 spillminutter mellom hver
+  // lagring. Nå lagres det oftere jo fortere tiden går: høyst LAGRE.spillMin spillminutter mellom hver gang, men aldri oftere enn hvert
+  // LAGRE.minMs millisekund (ved 600×: hvert halve sekund = 5 spillminutter). Også ved beforeunload. Claudes forslag.
+  const LAGRE = { maksMs: 5000, minMs: 500, spillMin: 2 };
+  KROKER.sim.push(() => { const nå = performance.now(), t = typeof tempo !== 'undefined' && tempo > 0 ? tempo : 1, hver = Math.max(LAGRE.minMs, Math.min(LAGRE.maksMs, LAGRE.spillMin * 60000 / t));
+    if (nå - sist < hver) return; sist = nå; lagre(); });
+  window.addEventListener('pagehide', lagre); window.addEventListener('beforeunload', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
   rot.LagringSpill = { NØKKEL, lagre, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -30,6 +30,38 @@
   const gyldig = (k, v) => (P.allowed[k] ? P.allowed[k].includes(v) : FARGEFELT[k] ? P.palettes[FARGEFELT[k]].includes(v) : P.numerics[k] ? Number.isFinite(Number(v)) : false);
   const portrett = (valg, navn) => { const ren = {}; for (const [k, v] of Object.entries(valg || {})) if (gyldig(k, v)) ren[k] = v;
     const c = P.normalize({ ...PORTRETT, ...ren }); c.name = String(navn || '').slice(0, 46); c.origin = ''; c.id = 'RB-27-0001'; return c; };
+  // KJØNNET (runde 6, 19. nov – kritikerne: «Kvinne» lyste, men portrettet beholdt kort herrefrisyre og skjeggstubb, også i Deg-panelet).
+  // Portrettmotoren tegner nøyaktig det som er valgt, så når kjønnet byttes, settes et utgangspunkt som passer: ikke skjegg på en kvinne,
+  // og en frisyre fra lista under når den som står, ikke passer. Det spilleren selv har valgt MENS hen hadde det kjønnet, beholdes
+  // (valgt = { felt: kjønnet da feltet ble valgt }, lagres på karakteren – ikke i portrettet, som motoren renser).
+  // Hvilke frisyrer som «passer», er Claudes inndeling (alle kan fortsatt velges fritt i Hår-fanen).
+  const KJØNN = {
+    kvinne: { hår: ['sidepart', 'waves', 'bob', 'long', 'curly', 'fringe', 'shag', 'pixie', 'braid', 'ponytail', 'afro', 'curls-short'], hair: 'ponytail', facialHair: 'ingen' },
+    mann: { hår: ['sidepart', 'short', 'slick', 'waves', 'curly', 'buzz', 'bald', 'fringe', 'crop', 'undercut', 'quiff', 'pompadour', 'shag', 'mullet', 'afro', 'curls-short', 'crew', 'long'], hair: 'short', facialHair: 'skjeggstubb' },
+  };
+  // p = portrettvalgene (endres), kjønn = 'kvinne' | 'mann', valgt = { felt: kjønn } (det spilleren har trykket på selv)
+  function byttKjønn(p, kjønn, valgt = {}) {
+    const K = KJØNN[kjønn]; if (!K) return p; p.gender = kjønn;
+    if (valgt.hair !== kjønn && !K.hår.includes(p.hair)) p.hair = K.hair;
+    if (valgt.facialHair !== kjønn && (kjønn === 'kvinne' || p.facialHair === 'ingen' || !P.allowed.facialHair.includes(p.facialHair))) p.facialHair = K.facialHair;
+    return p;
+  }
+  // Tilfeldig utseende: motorens tilfeldige portrett, men militært og med frisyre og skjegg som passer kjønnet.
+  // Kvinner får aldri skjegg; menn får skjegg i ca. halvparten av tilfellene (Claudes forslag). rnd = Math.random (tester kan gi sin egen).
+  function tilfeldigPortrett(rnd = Math.random, antrekk = ['feltuniform', 'arbeidsjakke', 'skinnjakke', 'jakke', 'genser', 'frakk', 'hoyhalset']) {
+    const t = P.randomCharacter(), K = KJØNN[t.gender] || KJØNN.mann, pick = a => a[Math.floor(rnd() * a.length) % a.length];
+    t.role = 'militaer'; t.outfit = pick(antrekk);
+    if (!K.hår.includes(t.hair)) t.hair = pick(K.hår);
+    t.facialHair = t.gender === 'kvinne' ? 'ingen' : rnd() < .5 ? 'ingen' : pick(P.allowed.facialHair.filter(f => f !== 'ingen'));
+    return t;
+  }
+  // Lagrede spill fra før rettingen: en kvinne som fikk stå med startverdiene (kort hår og skjeggstubb), får kvinnens utgangspunkt.
+  // Skjegg tas bort på alle kvinner som ikke selv har valgt skjegg som kvinne (gamle lagringer har ikke valgt-lista).
+  function rettKjønn(k) {
+    const p = k && k.portrett; if (!p || p.gender !== 'kvinne') return k; const v = k.valgt || {};
+    if (v.facialHair !== 'kvinne' && p.facialHair !== 'ingen') { if (p.hair === 'short' && p.facialHair === 'skjeggstubb' && v.hair !== 'kvinne') p.hair = KJØNN.kvinne.hair; p.facialHair = 'ingen'; }
+    return k;
+  }
   // Flagget: et mønster i opptil tre farger, et symbol og opptil tre bokstaver
   const FARGER = ['#1f1f22', '#f2efe6', '#8f2a24', '#c8102e', '#e46c1e', '#e0b53a', '#4f7a2f', '#1f4d2e', '#2d6a8a', '#1d3557',
     '#5b3a6e', '#7a5a3a', '#9aa0a6', '#c9a227', '#3e5a3a', '#6b1e3a'];
@@ -40,7 +72,7 @@
   function standard() {
     return {
       versjon: 1, ferdig: false,
-      karakter: { navn: '', bakgrunn: 'soldat', portrett: portrett() },
+      karakter: { navn: '', bakgrunn: 'soldat', portrett: portrett(), valgt: {} },
       fraksjon: { navn: '', flagg: { mønster: 'loddrett', farger: ['#1d3557', '#f2efe6', '#8f2a24'], symbol: 'ulv', symbolfarge: '#e0b53a', bokstaver: '', bokstavfarge: '#e0b53a' } },
       penger: STARTPENGER, leir: null,
       // spillformen (natt 18. nov, spill/scenario.js): vanskelighetsgrad, utfordringer og scenario; utenLag = start uten ferdige lag
@@ -131,7 +163,7 @@
   // Leser lagrede valg; ødelagt eller ukjent versjon gir null (da starter man på nytt)
   function fraJSON(t) {
     try { const S = JSON.parse(t); if (!S || S.versjon !== 1 || !S.karakter || !S.fraksjon) return null;
-      const s = standard(); return { ...s, ...S, karakter: { ...s.karakter, ...S.karakter, portrett: portrett(S.karakter.portrett, S.karakter.navn) }, fraksjon: { ...s.fraksjon, ...S.fraksjon, flagg: { ...s.fraksjon.flagg, ...(S.fraksjon.flagg || {}) } } };
+      const s = standard(); return { ...s, ...S, karakter: rettKjønn({ ...s.karakter, ...S.karakter, portrett: portrett(S.karakter.portrett, S.karakter.navn) }), fraksjon: { ...s.fraksjon, ...S.fraksjon, flagg: { ...s.fraksjon.flagg, ...(S.fraksjon.flagg || {}) } } };
     } catch (e) { return null; }
   }
   // Lysere og mørkere utgave av en farge (for kartet: farge, lys, sti)
@@ -190,7 +222,7 @@
     }
     g.restore();
   }
-  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, startplasser, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
+  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, KJØNN, byttKjønn, tilfeldigPortrett, rettKjønn, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, startplasser, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Oppstart = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

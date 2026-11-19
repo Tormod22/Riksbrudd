@@ -62,7 +62,7 @@
     // «brudd»: et røverlag gir opp og flykter når så stor del av mennene er falt eller såret (Terreng regner et lag som slått ut
     // først ved 6 ute – et røverlag på 6 måtte slås helt ut). Alle tallene er Claudes forslag (justert etter kjøring 5: 45 min og
     // 800 000 kr var for strengt – bølge 1 endte med herjing mens to lag skjøt på røverne inne i leiren).
-    // (dieselen koster 8000 kr literen: 25 % av en full tank var over 1 mill. kr – nå 10 %)
+    // (dieselen kostet 8000 kr literen: 25 % av en full tank var over 1 mill. kr – nå 10 %; fra runde 6 koster den 3 000 kr)
     // (kjøring 6b: to lag mot seks røvere fikk bare én ute på en time – nå gir røverne opp ved en tredel ute, og herjer i halvannen time)
     HERJ: { radius: 150, min: 90, borte: 1800, maksMin: 90, moral: 4, brudd: 1 / 3, penger: { andel: .05, tak: 5e5 }, lager: .2, diesel: .1, mat: .15 },
     // har røverlaget gitt opp? menn: [{ hp }] – en tredel (brudd) eller flere er falt eller såret
@@ -88,7 +88,7 @@
     VARER, SALG: .8,
     ny: () => ({ f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, infl: 1, dag: 0 }),
     // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er 0,4 % per døgn
-    steg(M, rng) { M.før = { ...M.f }; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; Marked.fyll(M, 1); return M; },
+    steg(M, rng) { M.før = { ...M.f }; M.solgt = {}; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; Marked.fyll(M, 1); return M; },
     pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * M.f[vare] * M.infl / 100) * 100),
     // endringen siden i går i prosent (med inflasjonen)
     endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
@@ -107,6 +107,13 @@
     // hvor mye av ønsket mengde du får kjøpt (mat og diesel i hele, resten i tideler)
     kan(M, vare, mengde) { const h = Marked.hyller(M)[vare] || 0, m = Math.min(mengde, h); return Marked.erMateriale(vare) ? Math.floor(m * 10 + 1e-6) / 10 : Math.floor(m + 1e-6); },
     ta(M, vare, mengde) { const H = Marked.hyller(M); H[vare] = Math.max(0, (H[vare] || 0) - mengde); return H[vare]; },
+    // KJØPERNE (runde 6, gjennomspillingen 19. nov: én på hogst og salg av alt treet ga ca. 0,8 mill. kr det første døgnet, uten noen
+    // grense): markedet kjøper høyst så mye av hvert materiale per døgn (tømmes når markedet går et døgn videre). Claudes forslag.
+    KJØPER: { tre: 25, betong: 15, stål: 6 },
+    // hvor mye av `mengde` markedet tar imot i dag (tideler)
+    kanSelge(M, vare, mengde) { const s = (M.solgt && M.solgt[vare]) || 0, tak = Marked.KJØPER[vare]; const igjen = tak === undefined ? mengde : Math.max(0, tak - s); return Math.floor(Math.min(mengde, igjen) * 10 + 1e-6) / 10; },
+    selg(M, vare, mengde) { if (!M.solgt) M.solgt = {}; M.solgt[vare] = Math.round(((M.solgt[vare] || 0) + mengde) * 10) / 10; return M.solgt[vare]; },
+    fulltSalg: (navn, vare) => `Markedet kjøper ikke mer ${navn} i dag (høyst ${Marked.KJØPER[vare]} ${Marked.ENHET[vare]} per døgn). Bruk det selv, eller selg i morgen.`,
     tomt: (vare) => `Markedet er tomt for ${vare === 'mat' ? 'mat' : vare} i dag. Det kommer mer i morgen – eller skaff det selv (hogst, riving, tettsteder).`,
     tekst(M) { const d = VARER.map(v => [v, Marked.endring(M, v)]).filter(q => Math.abs(q[1]) >= 5).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3);
       return d.length ? 'Markedet: ' + d.map(([v, e]) => `${v} ${e > 0 ? 'opp' : 'ned'} ${Math.abs(e)} %`).join(', ') + '.' : 'Markedet: små endringer i dag.'; },
@@ -120,8 +127,16 @@
   };
   const Oppdrag = {
     TYPER: OPPDRAG,
+    // TAKTEN (runde 6, gjennomspillingen 19. nov: et nytt oppdrag kom straks et var gjort, så én tropp gjorde åtte oppdrag og tjente
+    // ca. 5 mill. kr første døgn). Nå: to oppdrag ved start, høyst tre, og et nytt først 6–10 spilltimer (eller 8–14 minutter spilling,
+    // det som kommer først) etter forrige nye. Claudes forslag.
+    TAKT: { start: 2, maks: 3, ventSpill: [360, 600], ventEkte: [480, 840] },
+    // vent(rng) gir { spill (spillminutter), ekte (sekunder) } til neste nye oppdrag
+    vent: rng => { const T = Oppdrag.TAKT; return { spill: T.ventSpill[0] + rng() * (T.ventSpill[1] - T.ventSpill[0]), ekte: T.ventEkte[0] + rng() * (T.ventEkte[1] - T.ventEkte[0]) }; },
     // et nytt oppdrag: type etter rekkefølgen, sted i en ring rundt leiren, belønning etter avstand
-    lag(leir, nr, rng, tid) { const type = ['hent', 'redd', 'post'][Math.floor(rng() * 3)], T = OPPDRAG[type], v = rng() * 6.2832, d = T.avst[0] + rng() * (T.avst[1] - T.avst[0]);
+    // (runde 6, kritikken: «ingen inntekt i sikte») det første oppdraget i et nytt spill er alltid «Hent forsyninger» i den nære
+    // halvdelen av avstanden (700–1650 m), så en ny spiller har en trygg inntekt å gå etter de første døgnene. Claudes forslag.
+    lag(leir, nr, rng, tid) { const type = nr <= 1 ? 'hent' : ['hent', 'redd', 'post'][Math.floor(rng() * 3)], T = OPPDRAG[type], v = rng() * 6.2832, d = T.avst[0] + rng() * (T.avst[1] - T.avst[0]) * (nr <= 1 ? .5 : 1);
       const o = { id: nr, type, x: Math.round(leir.x + Math.cos(v) * d), y: Math.round(leir.y + Math.sin(v) * d), meter: Math.round(d), retning: retning(Math.cos(v), Math.sin(v)), frist: tid + 3 * 1440, tatt: false };
       if (type === 'hent') o.gir = { penger: Math.round((4e5 + d * 300) / 1e5) * 1e5, mat: 4 + Math.floor(rng() * 8), tre: Math.floor(rng() * 6), stål: Math.round(rng() * 20) / 10 };
       if (type === 'redd') o.gir = { folk: 1 + Math.floor(rng() * 3), penger: 3e5 };

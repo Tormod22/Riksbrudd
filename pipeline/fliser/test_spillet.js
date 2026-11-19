@@ -49,4 +49,8 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   for (let i = 0; i < 20; i++) Marked.steg(M, rng); ok(M.lager.tre === 60 && M.lager.stål === 20, 'hyller: aldri over fulle hyller');
   const G = { f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: {}, infl: 1, dag: 3 }; ok(Marked.hyller(G).betong === 60, 'hyller: et lagret marked fra før får fulle hyller');
   const N = Marked.ny(); ok(Marked.kjøpspris(N, 'tre', 20000, true) === 30000 && Marked.kjøpspris(N, 'tre', 20000, false) === 20000 && Marked.kjøpspris(N, 'diesel', 8000, true) === 8000, 'kjøpspris: tre, betong og stål koster 1,5 × i det ekte spillet, diesel og mat som før'); }
+// runde 6: markedets kjøpere tar høyst KJØPER per døgn, og oppdragene kommer i takt
+{ const M = Marked.ny(); ok(Marked.kanSelge(M, 'tre', 10) === 10 && (Marked.selg(M, 'tre', 20), Marked.kanSelge(M, 'tre', 10)) === 5 && Marked.kanSelge(M, 'diesel', 7) === 7, 'markedet kjøper høyst 25 m³ tre per døgn (diesel uten tak)');
+  Marked.steg(M, () => .5); ok(Marked.kanSelge(M, 'tre', 10) === 10, 'nytt døgn: kjøperne tar imot igjen');
+  const v = Oppdrag.vent(() => .5); ok(Oppdrag.TAKT.start === 2 && v.spill >= 360 && v.spill <= 600 && v.ekte >= 480 && v.ekte <= 840, 'nye oppdrag: 6–10 spilltimer eller 8–14 minutter spilling'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);

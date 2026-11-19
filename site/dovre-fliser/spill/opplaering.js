@@ -45,6 +45,8 @@
   const $ = id => document.getElementById(id), NØKKEL = 'riksbrudd-opplaering', AV = 'riksbrudd-opplaering-av';
   const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, skriv = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* sperret */ } };
   let T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false, forsvar: false }, sistSteg = null;
+  // (runde 6) Claudes forslag: et gjort steg står med ✓ i VIS_GJORT ms før neste vises; «ferdig»-ruta lukker seg selv etter FERDIG_LUKK ms
+  const VIS_GJORT = 3500, FERDIG_LUKK = 12000; let gjortKø = [], gjortTil = 0, ferdigFra = 0, sammen = les('riksbrudd-opplaering-sammen') === '1';
   const css = document.createElement('style');
   css.textContent = `#opplaering{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:7; display:none; box-sizing:border-box; width:min(490px, calc(100vw - 16px)); padding:9px 12px 10px 46px; background:linear-gradient(180deg,rgba(42,33,20,.97),rgba(23,18,10,.97)); border:1px solid #c9b26a; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.6); border-radius:5px; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; }
 #opplaering.på{ display:block; animation:oppinn .3s ease-out; } @keyframes oppinn{ from{ opacity:0; transform:translate(-50%, 12px); } }
@@ -56,11 +58,22 @@
 #oppring{ position:fixed; z-index:28; display:none; pointer-events:none; border:2px solid #f0dc9a; border-radius:8px; box-shadow:0 0 0 3px rgba(240,220,154,.25), 0 0 16px rgba(240,220,154,.7); animation:oppring 1.3s ease-in-out infinite; }
 #oppring.på{ display:block; } @keyframes oppring{ 50%{ box-shadow:0 0 0 8px rgba(240,220,154,.08), 0 0 22px rgba(240,220,154,.9); transform:scale(1.06); } }
 body.kort #opplaering{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); width:auto; max-width:440px; transform:none; animation:none; bottom:calc(64px + env(safe-area-inset-bottom,0px)); font-size:13px; padding:7px 10px 8px 42px; } body.kort #opplaering b{ font-size:16px; } body.kort #opplaering .nr{ left:8px; top:8px; }
-#opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(5px + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
+#opplaering.liten{ right:calc(8px + env(safe-area-inset-right,0px)) !important; bottom:calc(var(--oppbunn, 5px) + env(safe-area-inset-bottom,0px)) !important; top:auto !important; padding:5px 10px 5px 38px; pointer-events:none; opacity:.96; } #opplaering.liten .t, #opplaering.liten .rad, #opplaering.liten small, #opplaering.liten .prikker{ display:none; }
 #opplaering.liten .nr{ left:7px; top:4px; width:22px; height:22px; line-height:21px; font-size:13px; } #opplaering.liten b{ font-size:15px; margin:0; }
 body.kort.gaar #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 64px); } body.foto #opplaering, body.foto #oppring, body.bygger2d.kort #opplaering{ display:none !important; }
 /* PC: mens et bygg plasseres ligger byggebanneret nederst – opplæringen flyttes opp så de ikke dekker hverandre */
 body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 22px); }
+/* RUNDE 6 (kritikerne): på telefon tok ruta den nederste tredjedelen (ca. 200 px) – nå to–tre linjer tekst og små knapper på én rad,
+   og den kan legges sammen til én linje (–/+ oppe til høyre, huskes); et steg som blir gjort, står med ✓ en liten stund før neste */
+#oppfold{ position:absolute; right:6px; top:5px; width:24px; height:22px; padding:0; background:none; border:1px solid #5a4a2a; border-radius:3px; color:#c9b26a; font:inherit; font-size:15px; line-height:18px; cursor:pointer; }
+#opplaering:has(#oppfold) small{ padding-right:26px; } body #opplaering.sammen{ padding-top:5px; padding-bottom:5px; } body #opplaering.sammen .t, body #opplaering.sammen .rad, body #opplaering.sammen .prikker, body #opplaering.sammen small{ display:none; }
+#opplaering.sammen .nr{ top:4px; width:22px; height:22px; line-height:21px; font-size:13px; } #opplaering.sammen b{ font-size:15px; margin:0; padding-right:28px; } #opplaering.sammen #oppfold{ top:4px; }
+#opplaering.gjort{ border-color:#8fc46a; } #opplaering.gjort .nr{ border-color:#8fc46a; color:#bfe39e; } #opplaering.gjort small{ color:#9fd08a; }
+body.kort #opplaering .t{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+body.kort #opplaering .rad{ flex-wrap:nowrap; justify-content:flex-start; gap:5px; margin-top:5px; } body.kort #opplaering .rad button{ height:30px; min-height:30px; padding:0 9px; font-size:12.5px; }
+body.kort #opplaering .prikker{ display:none; } body.kort #opplaering{ padding-bottom:7px; }
+/* (runde 6) bunnmenyen står nå også med en meny åpen (skjermlag.js): den sammenlagte linja står over den */
+body.mkomalltid.mkom{ --oppbunn:64px; }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
@@ -89,24 +102,44 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
     if (s.mål === 'forsvar') { if (synlig($('forsvarknapp'))) return $('forsvarknapp'); if (åpen) return synlig($('forsvarov')) ? $('forsvarov') : null; return kn('leir') || $('leirknapp'); }
     if (s.mål === 'reparer') return synlig($('reparerknapp')) ? $('reparerknapp') : null;
     return null; }
-  function tegn(s, okTekst) { const n = Opplaering.nr(T), sig = (s ? s.id : 'slutt') + '|' + (okTekst || ''); if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
+  function tegn(s, okTekst, gjort) { const kort = document.body.classList.contains('kort'), n = gjort ? STEG.indexOf(gjort) + 1 : Opplaering.nr(T), sig = (gjort ? 'gjort:' + gjort.id : s ? s.id : 'slutt') + '|' + (okTekst || '') + '|' + kort + '|' + sammen; if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
+    boks.classList.toggle('gjort', !!gjort); boks.classList.toggle('sammen', sammen);
+    if (gjort) { const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
+      boks.append(el('div', 'nr', '✓'), el('small', '', `Opplæring · ${n} av ${STEG.length} · gjort`), el('b', '', '✓ ' + gjort.tittel), el('span', 't', gjortKø.length > 1 ? 'Gjort. Neste steg er også gjort – se under.' : 'Gjort! Neste steg kommer om et øyeblikk.'));
+      const rad = el('div', 'rad'), v = el('button', '', 'Neste ›'); v.id = 'oppneste'; v.onclick = () => { gjortTil = 1; kjør(); }; rad.appendChild(v); boks.appendChild(rad); fold(); return; }
     const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
     boks.classList.toggle('ok', !!okTekst); boks.append(el('div', 'nr', okTekst ? '✓' : String(n)), el('small', '', `Opplæring · ${okTekst ? 'ferdig' : n + ' av ' + STEG.length}`), el('b', '', okTekst ? okTekst : s.tittel));
     boks.appendChild(el('span', 't', okTekst ? 'Bra. Videre går det etter målene: åpne Leir og velg fanen Mål.' : s.tekst));
-    const rad = el('div', 'rad'); if (!okTekst) { const h = el('button', '', 'Hopp over'); h.id = 'opphopp'; h.onclick = () => { Opplaering.hopp(T); lagre(); kjør(); }; rad.appendChild(h); }
-    const a = el('button', '', okTekst ? 'Lukk' : 'Slå av opplæringen'); a.id = 'oppav'; a.onclick = () => (okTekst ? (T.slutt = true, lagre(), kjør()) : slå(false)); rad.appendChild(a);
+    const rad = el('div', 'rad'); if (!okTekst) { const h = el('button', '', 'Hopp over'); h.id = 'opphopp'; h.onclick = () => { Opplaering.hopp(T); lagre(); gjortKø = []; gjortTil = 0; kjør(); }; rad.appendChild(h); }
+    const a = el('button', '', okTekst ? 'Lukk' : kort ? 'Slå av' : 'Slå av opplæringen'); a.id = 'oppav'; a.onclick = () => (okTekst ? (T.slutt = true, lagre(), kjør()) : slå(false)); rad.appendChild(a);
     // hjelpen («Slik spiller du») åpnes ikke av seg selv mens opplæringen går (hjelp.js første()) – den ligger bak denne knappen
-    if (typeof window.visHjelp === 'function') { const h = el('button', 'hjelp', 'Les mer i hjelpen'); h.id = 'opphjelp'; h.onclick = () => window.visHjelp(true); rad.appendChild(h); }
+    if (typeof window.visHjelp === 'function') { const h = el('button', 'hjelp', kort ? 'Hjelp' : 'Les mer i hjelpen'); h.id = 'opphjelp'; h.onclick = () => window.visHjelp(true); rad.appendChild(h); }
     boks.appendChild(rad);
-    const p = el('div', 'prikker'); STEG.forEach(x => p.appendChild(el('i', tatt(T, x.id) ? 'g' : s && x.id === s.id ? 'n' : ''))); boks.appendChild(p); }
+    const p = el('div', 'prikker'); STEG.forEach(x => p.appendChild(el('i', tatt(T, x.id) ? 'g' : s && x.id === s.id ? 'n' : ''))); boks.appendChild(p); fold(); }
+  // –/+ oppe til høyre: legg ruta sammen til én linje (huskes for alle spill)
+  function fold() { const f = document.createElement('button'); f.id = 'oppfold'; f.textContent = sammen ? '+' : '–'; f.setAttribute('aria-label', sammen ? 'Vis hele opplæringen' : 'Legg sammen opplæringen'); f.title = f.getAttribute('aria-label');
+    f.onclick = e => { e.stopPropagation(); sammen = !sammen; skriv('riksbrudd-opplaering-sammen', sammen ? '1' : null); sistSteg = null; kjør(); }; boks.appendChild(f); }
   function slå(på) { av = !på; skriv(AV, av ? '1' : null); if (på && Opplaering.ferdig(T)) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); } if (!på && typeof logg === 'function') logg('Opplæringen er slått av. Du finner den igjen i Leir-menyen under Mål.'); sistSteg = null; kjør(); }
   function kjør() {
     const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp')));
     if (!klar || start || kort) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
     if (T.leir !== leirNøkkel()) last();
-    const nye = Opplaering.oppdater(T, bilde()); if (nye.length) lagre();
+    const nye = Opplaering.oppdater(T, bilde()); if (nye.length) { lagre(); gjortKø.push(...nye); }
+    // (runde 6) over «Mer»-raden når den er åpen (den la seg oppå ruta)
+    { const km = [$('kommer'), $('mkommer')].find(e => e && e.classList.contains('på') && synlig(e)), b = km ? Math.round(window.innerHeight - km.getBoundingClientRect().top + 8) + 'px' : ''; if (boks.style.bottom !== b) boks.style.bottom = b; }
+    // (runde 6) et steg som nettopp ble gjort, står med ✓ en stund (før hoppet det videre før man rakk å lese, og et steg som alt var gjort,
+    // ble aldri vist – «Hopp over» på steg 6 så ut til å gå rett til steg 8)
+    if (gjortKø.length) { const nå = performance.now(); if (!gjortTil) gjortTil = nå + VIS_GJORT;
+      if (nå >= gjortTil) { gjortKø.shift(); gjortTil = gjortKø.length ? nå + VIS_GJORT : 0; }
+      if (gjortKø.length && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) { tegn(null, null, g); boks.classList.add('på'); ring.classList.remove('på');
+        // på telefon med en meny åpen: bare overskriften («✓ Åpne Leir») nederst, som for stegene
+        boks.classList.toggle('liten', document.body.classList.contains('kort') && ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'].some(id => synlig($(id)))); return; } } }
     const s = Opplaering.neste(T);
-    if (!s) { if (T.slutt) { boks.classList.remove('på'); ring.classList.remove('på'); return; } tegn(null, 'Opplæringen er ferdig'); boks.classList.add('på'); ring.classList.remove('på'); return; }
+    if (!s) { if (T.slutt) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
+      // «Opplæringen er ferdig» lukker seg selv etter en stund (den ble stående under «Mer»)
+      if (!ferdigFra) ferdigFra = performance.now(); if (performance.now() - ferdigFra > FERDIG_LUKK) { T.slutt = true; lagre(); boks.classList.remove('på'); return; }
+      tegn(null, 'Opplæringen er ferdig'); boks.classList.add('på'); ring.classList.remove('på'); return; }
+    ferdigFra = 0;
     // mens du går (eller sitter i et kjøretøy) er menyene borte: da venter opplæringen til du er tilbake
     if (document.body.classList.contains('gaar') || document.body.classList.contains('ikontrollrom') || document.body.classList.contains('ikamera')) { boks.classList.remove('på'); ring.classList.remove('på'); return; }
     tegn(s); boks.classList.add('på');
@@ -119,7 +152,7 @@ body.bygger2d:not(.kort) #opplaering{ bottom:auto; top:calc(var(--topp,44px) + 2
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
     const ferdig = Opplaering.ferdig(T), tekst = av ? 'Opplæringen er slått av.' : ferdig ? 'Opplæringen er ferdig.' : `Steg ${Opplaering.nr(T)} av ${STEG.length}: ${Opplaering.neste(T).tittel}.`;
     hode.appendChild(el('div', { klasse: 'rad' }, el('span', {}, tekst), knapp(av ? 'Slå på' : ferdig ? 'Ta den en gang til' : 'Slå av', () => { if (av) slå(true); else if (ferdig) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); sistSteg = null; kjør(); } else slå(false); }))); });
-  const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
+  const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
     nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; kjør(); } };
   rot.OpplaeringSpill = API;
   // (balansen 18. nov) steget «Gå i 3D»: Gå setter deg ved karakteren din i leiren (Gange starter ved det valgte laget). Før startet du

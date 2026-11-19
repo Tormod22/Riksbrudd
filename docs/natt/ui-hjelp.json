@@ -1,17 +1,17 @@
 [
  [
   "Opplæringen",
-  "Første gang får du fem små oppgaver nederst på skjermen: åpne Leir, bygg en brakke, sett to på bygg, lag en tropp og gå i 3D. En lysende ring viser hvor du skal trykke. «Hopp over» tar neste oppgave, «Slå av» fjerner ruta. Du finner den igjen i Leir → Mål → Opplæring.",
+  "Ni korte steg i en rute nederst: Åpne Leir, Bygg en brakke, Sett to på bygg, Lag en tropp, Gå i 3D, Lag en tropp til, Ha mat til tre døgn, Sett lagene i forsvar og Reparer etter et angrep. En ring viser hva du skal trykke på. Når et steg er gjort, står det «✓ Gjort» en liten stund før neste steg kommer («Neste ›» går videre med en gang) – også når steget alt var gjort fra før. «Hopp over» tar ett steg, «Slå av» tar bort alt (slå den på igjen i Leir-menyen under Mål). Med – oppe til høyre legger du ruta sammen til én linje; + åpner den igjen.",
   "Kom i gang"
  ],
  [
   "Tallene øverst",
-  "Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk, eller hold fingeren på flisa – da åpnes ikke det flisa ellers åpner) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker. Linja «Påvirkes av» sier hva som gjør tallet større eller mindre.",
+  "Øverst står klokka, været og kassa, og så det leiren har: Diesel (liter, eller «ingen tank»), Tre og Betong (m³), Stål (t), Strøm (kW), Folk, Mål og Kontroll (din andel av folket i området). Hver flis har et kort ord foran tallet og enheten bak. Det som ikke får plass, står bak «Mer» – trykk der for resten. Pek (PC) eller trykk lenge (telefon) på en flis for å se hva tallet betyr og hva som påvirker det.",
   "Kom i gang"
  ],
  [
   "Knappene nederst",
-  "Leir, Folk, Tropper, Krig og Deg står samlet nederst – også på telefon. «Mer» åpner resten: Region, Verden, Sjø og Velg lag. Raden er borte mens du går, bygger eller har et panel åpent.",
+  "Leir, Folk, Tropper, Krig og Deg står nederst – på telefon også under angrep, med et kort oppe og når telefonen ligger. «Mer» åpner resten (Region, Verden, Sjø …). Panelene du åpner herfra, åpnes alltid til venstre og ett om gangen; det som hører til et panel (Stridsregler, Tiltak, Sekken) åpnes til høyre ved siden av.",
   "Kom i gang"
  ],
  [
@@ -41,7 +41,7 @@
  ],
  [
   "Paneler og plasser",
-  "Menyene åpner seg til venstre, arkene (Deg, Verden, Sjø, Tiltak) til høyre og små kort i midten. Åpner du et nytt panel på samme plass, lukkes det som sto der.",
+  "Alt du åpner fra knappene nederst (Leir, Folk, Tropper, Krig, Deg, og Region, Verden og Sjø under «Mer»), står til venstre – åpner du et nytt, lukkes det som sto der. Stridsregler, Tiltak, Sekken og tegnforklaringen står til høyre. Kort som venter på svar står i midten. Det du åpnet sist, ligger alltid øverst, og et trykk i et panel henter det fram.",
   "Kom i gang"
  ],
  [
@@ -73,5 +73,25 @@
   "Krigen på nytt",
   "Leir-menyen → Mål → «Se krigen på nytt» spiller av bilder av krigen (ett hver tredje spilltime): hvem som holdt tettstedene, lagene og kjøretøyene, byggene i leiren og flammer der det ble kjempet. Under står hvor mange lag, mann, kjøretøy, bygg, folk og penger dere hadde.",
   "Lag og strid"
+ ],
+ [
+  "Spillet står på pause til du svarer",
+  "Når et kort venter på svar – en hendelse i leiren, et spørsmål fra folket eller et kort om krigen – settes spillet på pause, og under kortet står «Spillet står på pause til du svarer». Når du har svart, går spillet videre i farten du hadde. Hadde du satt spillet på pause selv, blir det stående. Røverangrepet kommer aldri bak et kort: banneret øverst ligger over kortene, og kortet flyttes ned under banneret.",
+  "Kom i gang"
+ ],
+ [
+  "Hvilket vindu ligger øverst",
+  "Kort som venter på svar ligger nederst, så varsler og angrepsbanneret, og øverst panelene du åpner selv – det siste du åpnet ligger øverst (åpner du hjelpen mens Deg er åpen, ligger hjelpen over). Trykk i et panel for å hente det fram.",
+  "Kom i gang"
+ ],
+ [
+  "Leir-menyen",
+  "Leir-menyen åpnes alltid øverst, i fanen du brukte sist, så et trykk treffer det samme bygget hver gang. Fanene Bygg, Lager, Plan og Mål står fast øverst når du ruller nedover.",
+  "Leiren"
+ ],
+ [
+  "Hjelpen",
+  "Hjelpen (?) er delt i grupper – Kom i gang, Skjermen og knappene, Leiren og bygging, Angrep og forsvar, Folk og samfunn, Mat, penger og handel, Lag og strid, Krigen og regionen, Sjøen, I 3D og Vær, lyd og bilde. Trykk på en gruppe for å åpne den, eller skriv i søkefeltet øverst.",
+  "Kom i gang"
  ]
 ]

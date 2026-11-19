@@ -41,4 +41,7 @@ ok(minst > 40, 'lagene står ikke oppå hverandre (minst ' + Math.round(minst) +
 ok(F.plasser(20, 0, 0).every(q => Math.hypot(q[0], q[1]) < 250), 'tjue lag holder seg innen 250 m');
 const lag = [{ x: 0, y: 0 }, { x: 50, y: 50 }, { x: 500, y: 0 }];
 ok(F.iRamme(lag, 60, 60, -10, -10).length === 2, 'ramme med hjørnene i omvendt rekkefølge');
+// runde 6: ferdig bygg senker bare til 10×, fienden til 1×; et nytt ferdig bygg innen to spilltimer senker ikke igjen
+ok(F.autoFart([{ type: 'bygg' }]) === 'sp2' && F.autoFart([{ type: 'kontakt' }]) === 'sp1' && F.autoFart([{ type: 'bygg' }, { type: 'alarm' }]) === 'sp1', 'auto: bygg ned til 10×, fiende og alarm til 1×');
+ok(F.hviler([{ type: 'bygg' }], { bygg: 100 }, 150).length === 0 && F.hviler([{ type: 'bygg' }], { bygg: 100 }, 230).length === 1 && F.hviler([{ type: 'alarm' }], { alarm: 100 }, 101).length === 1, 'auto: et nytt ferdig bygg innen to spilltimer senker ikke farten igjen (alarm alltid)');
 console.log(feil ? feil + ' FEIL' : 'alle flyttestene ok'); process.exit(feil ? 1 : 0);
