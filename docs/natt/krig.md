@@ -414,12 +414,13 @@ få» (av) eller «Send 3 lag» (sender alle i `t.flere`), og `send()` sier fra 
 ### 4. Røvervarselet kom 50 m unna – RETTET
 - Røverne starter 3–4 km unna (før 1,4–2,2 km; `Trussel.VARSEL.start`), ca. 40–55 spillminutter fra leiren. Lag som ennå ikke har vært innen
   2,5 km av leiren, teller som «på vei», ikke «unna» (høyst 4 t, `VARSEL.kommerMaks`; `e.startTid`, `e.nærVært` lagres med angrepet).
-- Varselet sier «Ventet om ca. 80 min.» (0,75 m/s i terrenget, `VARSEL.fart` – målt i gjennomspillingen: 3,7 km tok over 80 min; med 1,3 m/s sa
-  banneret «kan være framme når som helst» i en halv time). Når ruta deres er lagt, bruker anslaget tida som er igjen av marsjen (`timerIgjen`).
+- Varselet sier «Ventet om ca. 85 min.»: `angrep()` venter høyst 3 s på ruta deres og bruker tida den tar (`timerIgjen`, rundet til 5 min); uten
+  rute 0,75 m/s i terrenget (`VARSEL.fart` – målt i gjennomspillingen: 3,7 km tok over 80 min; med 1,3 m/s sa banneret «kan være framme når som
+  helst» i en halv time). Banneret bruker det samme (tida som er igjen av marsjen), så de sier det samme.
 - Banneret viser **anslaget** («ikke sett ennå · ventet om ca. 39 min (anslag) – vakttårn og kameraer ser
   dem før», `Trussel.anslag`) til noen ser dem, og så «2,1 km unna · framme om ca. 27 min · sett fra vakttårnet».
 - **Vakttårnet har verdi**: et bemannet vakttårn ser røverne på 1,5 km (`VARSEL.tårn`, KROKER.ser i forsvar-visning.js; vaktene ellers 400/800 m).
-- Senest ca. 10 min før de er framme (`VARSEL.snart`): melding i loggen og farten ned (hendelsen «riksbrudd-hendelse» type alarm til flyt.js) – én
+- Senest ca. 10 min før de er framme (`VARSEL.snart`): «Røverne er snart framme (ca. 7 min) – trykk «Forsvar leiren».» i loggen og farten ned (hendelsen «riksbrudd-hendelse» type alarm til flyt.js) – én
   gang per bølge, ikke i testene.
 
 ### 5. «Ikke sett ennå» mens Vaktlaget er under ild – RETTET
