@@ -216,7 +216,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', kortKø); else setTimeout(kortKø, 0);
   // et kort som står oppe når du begynner å gå, går tilbake i køen (det venter på deg)
   function kortTilbake() {
-    const K = window.Kortkø; if (!K || !K.åpent) return; const id = K.åpent(); if (id !== 'hendelse' && id !== 'samfunnkort') return;
+    const K = window.Kortkø; if (!K || !K.åpent || (navigator.webdriver && window.Gange.test !== true)) return; const id = K.åpent(); if (id !== 'hendelse' && id !== 'samfunnkort') return;
     const e = document.getElementById(id); if (!e) return; e.classList.remove('på'); K.ferdig(id); K.be(id, null, { først: true });
   }
   function kortVarsel() {
