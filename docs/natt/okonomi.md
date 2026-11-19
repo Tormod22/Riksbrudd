@@ -148,7 +148,7 @@ Punktene fra `docs/anmeldelse-2026-11-19.md` som er mine. Alle nye tall er **Cla
    felt 70 m fra leiren, 46 m³, 19 m³ i lageret etter 6 spilltimer med én på hogst og én på frakt.
 3. **Dieselprognosene – rettet.** Én beregning: `Leir.dieselMål` (leir-visning måler hvor mye tanken synker per spilltime – aggregat og
    fyring) og `Leir.dieselRekker(L, nå)` = snittet av de siste 24 spilltimene (før tre hele timer: forbruket nå). `LeirSpill.diesel()` brukes
-   av dagsrapporten (dagbok.js), Lager (lager-visning.js) og varselbrikkene (narhud.js). Prøvd: Lager «Rekker ca. 70 døgn», rapporten
+   av dagsrapporten (dagbok.js), Lager (lager-visning.js), varselbrikkene (narhud.js) og strømdelen (strom-visning.js). Prøvd: Lager «Rekker ca. 70 døgn», rapporten
    «rekker ca. 69,5 døgn» på samme tid.
 4. **Strømtekstene – rettet.** «Alle bygg har strøm» står bare når noe bruker strøm («Alle 3 byggene som bruker strøm, har strøm · fra
    strømnettet 5 kW (virker bare de første døgnene), aggregat 20 kW»); uten forbrukere: «Ingen bygg bruker strøm ennå · strøm fra …».
@@ -178,6 +178,8 @@ Punktene fra `docs/anmeldelse-2026-11-19.md` som er mine. Alle nye tall er **Cla
 **Fellesfiler endret (små, samlet):** `index.html` (én skripttagg: penger-visning.js rett etter okonomi-visning.js), `spill/dagbok.js`
 (rapporten bruker `d.rekkerDøgn`, nå() leser `LeirSpill.diesel()`), `spill/lager-visning.js` (prognosen fra `LeirSpill.diesel()`),
 `spill/narhud.js` (dieselbrikken: felles prognose + `b.knapp` = egen knapp ved siden av en brikke, CSS `.rad`/`.handling`),
+`spill/strom-visning.js` (linja «Aggregatene bruker diesel … rekker» bruker den felles prognosen), `spill/spillet.js`/`spillet-visning.js`
+(markedets kjøpere, oppdragstakt, første oppdrag «hent», høyst én ledig røverpost – markedsdelen er min),
 `spill/maal.js` (`nå` på målet «tank», `Maal.tekstNå`), `spill/maal-visning.js` (bruker `tekstNå`), `spill/lagring.js` (oftere lagring).
 
 ### Gjennomspillingen (19. nov, /rogaland, leir i Ryfylke 15607, 6622779)

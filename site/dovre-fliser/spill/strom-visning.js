@@ -23,7 +23,8 @@
       knapp('Kjøp 500 l', () => { const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { id: 'aggkjop' })));
     if (s.batKap > 0) boks.append(el('div', {}, `Batteri: ${tall(s.batteri)} av ${tall(s.batKap)} kWt` + (s.batKW < -.05 ? ` (lader ${tall(-s.batKW)} kW)` : s.batKW > .05 ? ` (tappes ${tall(s.batKW)} kW – rekker ${timer(s.batteri / s.batKW)})` : '')), el('div', { klasse: 'linje' }, el('i', { klasse: 'bat', style: `width:${Math.min(100, s.batteri / s.batKap * 100)}%` })));
     else boks.append(el('small', {}, 'Ingen batteribank: overskudd fra sol og nett går tapt. En batteribank lagrer det til natta. '));
-    if (agg > 0) boks.append(el('div', {}, `Aggregatene bruker diesel: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l rekker ${timer(LB.dieselTimer(L, agg))}.`));
+    // (runde 6) samme prognose som dagsrapporten, Lager og varslene (LeirSpill.diesel – forbruket det siste døgnet)
+    if (agg > 0) { const P = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null, t = P ? P.timer : LB.dieselTimer(L, agg); boks.append(el('div', {}, `Aggregatene bruker diesel: ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l rekker ${t === Infinity ? 'lenge' : 'ca. ' + timer(t)}.`)); }
     // brukerne i den rekkefølgen de får strøm, med bryter
     const brukere = L.bygg.filter(b => LB.BYGG[b.type].kw < 0 && LB.virker(b)).sort((a, b) => LB.PRIORITET.indexOf(a.type) - LB.PRIORITET.indexOf(b.type));
     if (brukere.length) boks.append(el('small', {}, 'Byggene får strøm i denne rekkefølgen. Slå av det du kan unnvære når det er for lite:'));
