@@ -97,6 +97,11 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
   dor-knapp-pc/mobil, dor-inne-pc/mobil, esc-sekk-pc, kort-venter-pc, kort-varsel-snik-mobil, fjellmark-hoyt-pc, vaer-3d/vaer-gaar (før).
 - Kontrollforsøk for døra: samme gange mot veggen 0,45 m til siden uten trekket → står fast mot veggen; med trekket → inne.
 
+### Kontrollen
+- `SJEKK_PROFIL=mobil` og `SJEKK_PROFIL=PC` (PORT 8906, 19. nov ca. 10:30 og 10:50 UTC): 117 ok, 0 FEIL i begge. Første mobilkjøring hadde
+  4 feil (sjekk.js trykker på «Gå» og fikk valget; fjellmarka ga +4 geometrier i interiørvakta; vakta prøvde døra etter et nytt utsnitt) –
+  rettet. I sjekk.js står karakteren utenfor 3D-utsnittet, så vakta hopper over valget og reisen der (de er prøvd i egne kjøringer).
+
 ### Ikke gjort
 - Mykere figurer (soldater3d i index.html, folk3d.js, karakter.js og våpenet i hånda i narhud.js er ikke mine).
 - Reisen går i rett linje (omvegen er bare regnet inn i tiden); den sjekker ikke fiender underveis utover at spillet senker farten.
