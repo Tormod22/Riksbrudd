@@ -176,6 +176,23 @@
     for (const side of SIDER) { økonomi(side, t); if (!planlegg(side)) rute(side); vogner(side); }
   });
 
+  // ---------- kartet: samlingsstedet og pila mot målet for angrep du er varslet om ----------
+  KROKER.tegn.push((gc, vx0, vy1) => {
+    if (!på()) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    for (const side of SIDER) { const G = S.gruppe[side]; if (!G || !G.varslet) continue;
+      const x = sx(G.sted.x), y = sy(G.sted.y), mx = sx(G.mål.x), my = sy(G.mål.y), r = Math.max(14, ER.plan.samleR / m);
+      if (Math.max(x, mx) < -60 || Math.min(x, mx) > VW + 60 || Math.max(y, my) < -60 || Math.min(y, my) > VH + 60) continue;
+      gc.save(); gc.strokeStyle = sidefarge(side, 'sti'); gc.fillStyle = sidefarge(side, 'lys'); gc.lineWidth = 2; gc.setLineDash([6, 5]);
+      gc.beginPath(); gc.arc(x, y, r, 0, 6.283); gc.stroke();
+      // pila: fra kanten av ringen mot målet
+      const a = Math.atan2(my - y, mx - x), x0 = x + Math.cos(a) * r, y0 = y + Math.sin(a) * r, d = Math.hypot(mx - x0, my - y0);
+      if (d > 20) { const x1 = mx - Math.cos(a) * 14, y1 = my - Math.sin(a) * 14; gc.beginPath(); gc.moveTo(x0, y0); gc.lineTo(x1, y1); gc.stroke(); gc.setLineDash([]);
+        gc.beginPath(); gc.moveTo(x1 + Math.cos(a) * 10, y1 + Math.sin(a) * 10); gc.lineTo(x1 + Math.cos(a + 2.5) * 10, y1 + Math.sin(a + 2.5) * 10); gc.lineTo(x1 + Math.cos(a - 2.5) * 10, y1 + Math.sin(a - 2.5) * 10); gc.closePath(); gc.fill(); }
+      gc.setLineDash([]); gc.font = '600 13px "Cormorant Garamond", serif'; gc.textAlign = 'center'; gc.lineWidth = 3; gc.strokeStyle = 'rgba(20,16,12,.85)';
+      const t = `${navn(side)}: ${G.lag.length} lag ${G.fase === 'samler' ? 'samles' : 'angriper'}`, ty = window.Etikett ? Etikett.tekst(gc, t, x, y - r - 6, -1) : y - r - 6;
+      gc.strokeText(t, x, ty); gc.fillText(t, x, ty); gc.restore(); }
+  });
+
   // ---------- krigskartet: hva motstanderne har ----------
   { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.side = KT.side || [];
     KT.side.push(side => { if (!SIDER.includes(side) || !på()) return null; const n = ENHETER.filter(e => e.ai && e.side === side && levende(e)).length, G = S.gruppe[side];

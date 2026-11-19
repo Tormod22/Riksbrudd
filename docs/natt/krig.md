@@ -472,3 +472,15 @@ rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(
 - Bannerets anslag bruker tida ruta deres tar (spillet vet den); det er et anslag, men det er ikke «usikkert» – kan gjøres grovere (±) hvis det føles som juks.
 - Fiendens lag går nå mot en fiende de vet står i tettstedet; spillerens garnison i et tettsted blir dermed angrepet oftere enn før.
 - Kortet «… har overtaket» sier ikke at spillet står på pause (strategi-visning.js, ikke rettet).
+
+## Runde 7 (20. nov natt)
+Oppdraget: motstanderne skal bli farligere over tid, angripe spilleren (tettsteder, handelsruter og – med varsel – leiren), slåss seg imellom,
+og krigen skal kunne vinnes av dem rundt dag 10–14 på «Vanlig» når spilleren ikke gjør noe. Alle tall er **Claudes forslag** og står samlet i
+`Eskalering.REGLER` (spill/eskalering.js). Prøveskript og logger: scratchpad `natt/krig7/` (vakt.js, gjennom7.js, g*.log); bilder: scratchpad `natt7/krig/`.
+
+### Filer
+- **Nye:** `spill/eskalering.js` (regler uten DOM, `pipeline/fliser/test_eskalering.js`), `spill/eskalering-visning.js` (`window.EskaleringSpill`).
+  Skripttaggene står rett etter `krig-visning.js` i index.html.
+- **Endret (mine):** `fraksjoner-visning.js` (kroken `AI.styr`, `AI.leirMedVarsel`, `AI.inne`, flere lastebiler via `AI.ekstraBiler`, unike lagnavn
+  etter omlasting), `krig-visning.js` (kilden «fra speidere» i etterretningslista), `vakter/krig.js` (del «RUNDE 7»), `krig-hjelp.json` (fem emner).
+- **Fellesfil:** `index.html` – bare de to skripttaggene og versjonsmerkene (versjon.py).
