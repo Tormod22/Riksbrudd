@@ -15,7 +15,7 @@
   const NAVN = { bakke: 'bakken', trær: 'trær og busker', hus: 'husene', smått: 'biler, flagg og gatelys', liv3d: 'veger, trafikk og folk',
     vegetasjon3d: 'blomster, bregner og siv', gard3d: 'gjerder og rundballer', kraft3d: 'kraftledninger', infra3d: 'bruer og ferjekaier',
     bane3d: 'jernbane', gate3d: 'gatemøbler', dyr3d: 'dyr', kyst3d: 'båter, brygger og naust', ferje3d: 'ferjer', natt3d: 'stjerner, måne og nattlys',
-    vind3d: 'vind og tåke', 'vaer-visning': 'regn og snø', fjern3d: 'fjernterrenget', byhus: 'gatetrær', anlegg3d: 'idrettsanlegg og bensin',
+    vind3d: 'vind og tåke', 'vaer-visning': 'regn og snø', fjellmark3d: 'fjellmark nær deg', fjern3d: 'fjernterrenget', byhus: 'gatetrær', anlegg3d: 'idrettsanlegg og bensin',
     portal3d: 'tunnelportaler', olje3d: 'oljeplattformer', 'bekker-visning': 'bekker', 'leir-visning': 'leiren', 'byggesett-visning': 'byggesettet',
     'ressurser-visning': 'hogst og ruiner', index: 'gress, soldater og himmel', annet: 'alt det andre' };
   const median = L => { if (!L.length) return 0; const s = [...L].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };

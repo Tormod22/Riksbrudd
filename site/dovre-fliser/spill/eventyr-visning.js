@@ -243,10 +243,18 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       g.restore(); } });
 
   // ---------- 3D: snikemåler, feller og hunden ----------
+  // Første gang måleren vises (i denne nettleseren): en kort forklaring («riksbrudd-snikforklart»). Teksten står også i hjelpen.
+  let snikForklart = false; try { snikForklart = !!localStorage.getItem('riksbrudd-snikforklart'); } catch (e) { /* privat vindu */ }
+  function snikForklar() { if (snikForklart) return; snikForklart = true; try { localStorage.setItem('riksbrudd-snikforklart', '1'); } catch (e) { /* privat vindu */ }
+    si('Snikemåleren', 'Måleren under siktet viser om fienden i nærheten har merket deg: Skjult → Mistenkt (han har hørt eller sett noe) → Sett (han vet hvor du er og skyter). Gå på huk eller ligg (C/Z), hold deg i skog og mørke, og ikke løp, så tar det lenger tid før du blir sett.'); }
   KROKER.tegn3d.push((g, proj3) => { if (!klar || !går()) return; const Q = r3(); g.save();
     if (auto() && isFinite(snikSteg.nær) && snikSteg.nær < 700) { const n = snikSteg.nivå || 0, w = 96, x = VW / 2 - w / 2, y = VH / 2 + 46, farge = n >= 1 ? '#e0604a' : n > .05 ? '#e8c46a' : '#9fc46a';
       g.globalAlpha = .85; g.fillStyle = 'rgba(20,16,10,.6)'; g.fillRect(x - 1, y - 1, w + 2, 7); g.fillStyle = farge; g.fillRect(x, y, w * Math.max(.04, n), 5);
-      g.font = '600 12px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const t = E.Snik.ord(n); g.strokeText(t, VW / 2, y + 20); g.fillStyle = farge; g.fillText(t, VW / 2, y + 20); }
+      g.font = '600 12px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const t = E.Snik.ord(n); g.strokeText(t, VW / 2, y + 20); g.fillStyle = farge; g.fillText(t, VW / 2, y + 20);
+      // (runde 6, 19. nov, kritikken: «Skjult» → «Mistenkt» dukket opp uten forklaring) en linje under: hvem det gjelder, og hvor nær
+      g.font = '11px sans-serif'; const t2 = `fiende ${Math.round(snikSteg.nær / 10) * 10} m unna` + (n > .05 && n < 1 ? ' – han har hørt noe' : n >= 1 ? ' – du er oppdaget' : '');
+      g.strokeText(t2, VW / 2, y + 34); g.fillStyle = 'rgba(231,220,195,.85)'; g.fillText(t2, VW / 2, y + 34);
+      snikForklar(); }
     g.globalAlpha = 1; g.font = 'bold 12px sans-serif'; g.textAlign = 'center';
     for (const f of T.feller) { const d = Math.hypot(f.x - Q.ut.cx - Q.bane.x, f.y - Q.ut.cy - Q.bane.y); if (d > 250) continue; const p = proj3(f.x, f.y); if (!p) continue; const t = d < R.felle.nær ? 'Felle' : `Felle ${Math.round(d / 5) * 5} m`; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, p[0], p[1] - 8); g.fillStyle = '#f0e2b0'; g.fillText(t, p[0], p[1] - 8); }
     g.restore(); });
