@@ -49,7 +49,8 @@
   if (typeof document === 'undefined') return;
   const T = 'env(safe-area-inset-top,0px)', B = 'env(safe-area-inset-bottom,0px)', L = 'env(safe-area-inset-left,0px)', Rt = 'env(safe-area-inset-right,0px)';
   // liggende telefon: disse panelene blir sidepaneler med full høyde (13)
-  const SIDE = { venstre: ['krig', 'region', 'samfunnmeny'], høyre: ['sjopanel', 'verdenpanel', 'tropppanel', 'karakterark', 'stridpanel', 'evpanel', 'krigpanel'] };
+  // (runde 6) samme regel som på PC (paneler.js): det fra bunnmenyen til venstre, det som hører til et panel til høyre
+  const SIDE = { venstre: ['krig', 'region', 'samfunnmeny', 'sjopanel', 'verdenpanel', 'tropppanel', 'karakterark'], høyre: ['stridpanel', 'evpanel', 'krigpanel'] };
   const css = document.createElement('style'); css.id = 'telefoncss';
   css.textContent = `
 body.kort.smal .knapper button{ height:40px; min-width:38px; }

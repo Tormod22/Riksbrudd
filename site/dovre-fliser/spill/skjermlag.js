@@ -40,7 +40,13 @@
   css.textContent = `#kortpause{ position:fixed; z-index:${REGLER.pausemerke}; display:none; box-sizing:border-box; padding:4px 10px; background:#2a2215; border:1px solid #c9b26a; border-radius:3px; color:#f0dc9a; font-size:13.5px; text-align:center; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,.5); }
 #kortpause.på{ display:block; } #kortpause::before{ content:'❚❚'; margin-right:7px; font-size:11px; letter-spacing:-1px; }
 body.mkomalltid #mkom{ z-index:${REGLER.bunnmeny}; } body.mkomalltid #mkommer{ z-index:${REGLER.bunnmeny + 1}; }
-#tips{ z-index:${REGLER.tips}; } #oppring{ z-index:${REGLER.ring}; }`;
+#tips{ z-index:${REGLER.tips}; } #oppring{ z-index:${REGLER.ring}; }
+/* angrepsbanneret på PC: tekst og knapper på én rad (etter «Forsvar leiren» brøt «Opphev» og «Vis» ned på en egen linje – kritikeren så en
+   tom grå boks under banneret der kortet dekket «Vis») */
+body.spill #alarm.på{ flex-wrap:nowrap; max-width:min(980px, calc(100vw - 150px)); } body.spill #alarm > *{ flex:none; } body.spill #alarm > span:first-child{ flex:0 1 auto; min-width:0; }
+#alarm > :empty:not(button){ display:none; }
+/* telefon: banneret sto i en smal stripe (left:50 % gir bare halve bredden å krympe i) */
+body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); box-sizing:border-box; }`;
   document.head.appendChild(css);
 
   // ---------- 1: rekkefølgen ----------

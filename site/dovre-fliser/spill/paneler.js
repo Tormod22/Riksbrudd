@@ -11,7 +11,10 @@
 (function (rot) {
   // RUNDE 4: lagpanelet (#panel) står også til venstre (nede) – målt: Leir, Folk og Samfunn lå oppå det (skript natt/ui4/paneler.js)
   // og gruppa av lag (#flytgruppe, nede til venstre på PC der lagpanelet står) – den lå under Leir-menyen og krigskartet
-  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe'], høyre: ['karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
+  // RUNDE 6 (kritikeren: «Leir og Folk åpnes til venstre, Tropper og Deg til høyre – uten system»). REGELEN NÅ: alt du åpner fra bunnmenyen
+  // (Leir, Folk, Tropper, Krig, Deg – og Region, Verden og Sjø under «Mer») åpnes til VENSTRE, ett om gangen; det som hører til et panel
+  // eller et lag (Stridsregler, Tiltak, Sekken fra Deg) og tegnforklaringen åpnes til HØYRE ved siden av; kort med valg står i midten.
+  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe', 'karakterark', 'tropppanel', 'verdenpanel', 'sjopanel'], høyre: ['krigpanel', 'sekk', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
   const plass = id => Object.keys(PLASS).find(p => PLASS[p].includes(id)) || null;
   // hvilke åpne paneler som må vike når «ny» åpnes (smal = telefon: venstre og høyre er samme plass)
   function viker(ny, åpne, smal) { const p = plass(ny); if (!p) return []; const samme = q => q === p || (smal && p !== 'midt' && q !== 'midt' && q !== null); return åpne.filter(id => id !== ny && samme(plass(id))); }
@@ -30,6 +33,10 @@ ${sel(' .lukk', ':hover')}{ border-color:#e8d48a; }
 ${sel(' button:not(.lukk)')}{ background:#241c10; border:1px solid #5a4a2a; color:var(--ink,#e7dcc3); border-radius:3px; font:inherit; } ${sel(' button:not(.lukk):not(:disabled)', ':hover')}{ border-color:#c9b26a; } ${sel(' button', ':disabled')}{ opacity:.45; }
 body.spill #region, body.spill #samfunnmeny{ left:10px; top:calc(var(--topp,58px) + 6px); z-index:7; max-height:calc(100% - var(--topp,58px) - 76px); overflow-y:auto; }
 body.spill #verdenpanel, body.spill #sjopanel, body.spill #krigpanel, body.spill #karakterark, body.spill #tropppanel, body.spill #sekk{ right:64px; left:auto; top:calc(var(--topp,58px) + 6px); z-index:11; max-height:calc(100% - var(--topp,58px) - 130px); overflow-y:auto; }
+/* runde 6: panelene fra bunnmenyen til venstre (samme plass som Leir og Folk) */
+body.spill #verdenpanel, body.spill #sjopanel, body.spill #karakterark, body.spill #tropppanel{ left:10px; right:auto; }
+/* runde 6: Leir-menyen – fanene Bygg/Lager/Plan/Mål rulles aldri ut av syne (toppen av panelet står fast med bare fanene synlige) */
+#leirmeny > .hode{ position:sticky; top:var(--hodetopp,0px); z-index:3; background:#1b150d; }
 /* runde 4: panelene til høyre står til venstre for zoomknappene (de lå over dem) og slutter over kommandolinja */
 body.spill #stridpanel{ right:64px; max-height:calc(100% - var(--topp,58px) - 200px); }
 body #region .lukk, body #krigpanel .lukk, body #verdenpanel .lukk, body #sjopanel .lukk, body #evpanel .lukk, body #personkort .lukk{ position:absolute; right:8px; top:8px; }
@@ -63,6 +70,10 @@ body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; } b
     // KORT MED VALG (hendelse, samfunnskort, spillformkort, flytkort, krigskort – køen i window.Kortkø sørger for ett om gangen):
     // mens et slikt kort står oppe, viker panelene i midten (personkort, «Lag noe»/tilflukt) og kommer tilbake når kortet er besvart
     const kort = KORT.some(vises); if (document.body.classList.contains('kortoppe') !== kort) document.body.classList.toggle('kortoppe', kort);
+    // RUNDE 6 (kritikeren kjøpte Kontrollrom til 9 mill. i stedet for Vakttårn): Leir-menyen husket hvor langt du hadde rullet, så neste
+    // klikk traff et annet bygg. Den starter nå alltid øverst (fanen er den du sist brukte), og toppen står fast med fanene synlige.
+    if (nye.includes('leirmeny')) { const m = $('leirmeny'); if (m) m.scrollTop = 0; }
+    { const m = $('leirmeny'); if (m && vises('leirmeny')) { const h = m.querySelector(':scope > .hode'), f = h && h.querySelector('.faner'); const v = h && f && f.offsetParent === h ? -Math.max(0, Math.round(f.offsetTop)) + 'px' : '0px'; if (m.style.getPropertyValue('--hodetopp') !== v) m.style.setProperty('--hodetopp', v); } }
     før = new Set(ALLE.filter(vises)); vik(); }
   // RUNDE 4 (målt på PC 1400 × 820 og 1920 × 1080): et panel til venstre dekket målestokken og nordpila nede til venstre, og et panel
   // til høyre dekket oversikten (#mini2d) og minikartet i 3D nede til høyre. Målestokk og nordpil flyttes til høyre for panelet når det er
