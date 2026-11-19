@@ -299,3 +299,15 @@ Regeltest: `node pipeline/fliser/test_skjermlag.js` (båndene, rekkefølgen, «f
   `Skjermlag.test` på (vakta «ui» gjør det i del «runde6» og setter det tilbake).
 - Navnelappene som klumper seg rundt leiren i 2D, og at røvernes markør ligger under egne lapper, er pakka «kart» sin.
 - Hendelseskortet midt i førsteperson (stopper styringen) er ikke endret – det står nå på pause med lapp, som andre kort.
+
+## Prøvd (runde 6)
+- Regeltester: test_skjermlag.js (ny), test_paneler.js, test_opplaering.js, test_merker.js – alle ok.
+- Vakta «ui» alene: PC og telefon ok (runde6-delen ca. 5 s).
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil`): første gang 115 ok / 1 FEIL – min egen vakt («spillet går ikke videre i samme fart når kortet er
+  besvart»: farten var satt av en tidligere vakt utenom knappene, og ▶ ga knappens fart). Rettet i skjermlag.js (nøyaktig samme fart) og vakta.
+  Andre gang 115 ok / 1 FEIL: bare «versjonsmerker» (versjon.py var ikke kjørt etter siste endring – kjørt og committet straks etter).
+  `SJEKK_DEL=rask` på PC etterpå: versjonsmerker og ui ok; «krig» feilet der (knust lag/fanger/etterretning false) mens en annen kontroll gikk
+  samtidig – krig-vakta alene på denne grenen er ok.
+- Nettleser som spiller (webdriver = false), bilder i scratchpad `natt6/ui/`: for-*.png (før), etter*-*.png, opp-*.png, leir-*.png, fane-*.png,
+  hjelp-*.png, ligg-*.png, stats-*.png/crop-stats-*.png, forside-*.png, ga-tlf.png (gåmodus telefon). 0 sidefeil i alle.
+
