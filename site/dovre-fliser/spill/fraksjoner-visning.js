@@ -5,7 +5,8 @@
   const F = Fraksjoner, R = F.REGLER, AI = { på: true, sider: ['rød', 'grønn'] }, nr = { rød: 0, grønn: 0 }, sist = { rød: 0, grønn: 0 };
   const HJEM = { rød: [185600, 6902600], grønn: [204000, 6887400] };   // Kystalliansen fra Lesja-kanten i vest, Folkefronten fra Dovre-bygda i sør
   window.AI = AI;
-  function nytt(side, x, y) { const s = nyttLag(`${F.FRAKSJONER[side].eieform} ${++nr[side]}. lag`, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
+  // (runde 7) navnet er alltid nytt: etter en omlasting begynner telleren på nytt, mens de lagrede lagene har sine navn
+  function nytt(side, x, y) { let navn; do navn = `${F.FRAKSJONER[side].eieform} ${++nr[side]}. lag`; while (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.navn === navn)); const s = nyttLag(navn, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
   for (const side of AI.sider) { const [x, y] = HJEM[side]; nytt(side, x, y); nytt(side, x + 220, y - 180); }
   AI.nytt = nytt;   // spill/lagring.js lager lagene som fantes da spillet ble lagret
   // KJØRETØY OG STILLINGER (17. nov): hver fraksjon har en lastebil som lagene bruker når målet er langt unna (bare når vegnettet er
@@ -83,6 +84,7 @@
     skitten = true; return ut;
   };
   AI.hjem = () => ({ rød: HJEM.rød.slice(), grønn: HJEM.grønn.slice() });
+  AI.inne = inne;   // (runde 7) punktet lagene går til i et tettsted (spill/eskalering-visning.js)
   // STARTSTEDET ER DERES (19. nov): i et nytt spill (de første tre spilltimene) får hver motstander tettstedet den holder til i, når det
   // er nøytralt og fraksjonen ikke holder noe annet. ut: { side: { id } } fra AI.flytt; uten ut: tettstedet der HJEM ligger (Dovre).
   // Ikke i testene (navigator.webdriver) uten AI.test. Gir { side: true } for dem som fikk det.
@@ -157,7 +159,9 @@
       const byHer = byer.find(b => b.inni(s.x, s.y)), iByFiende = byHer ? ENHETER.filter(e => e !== s && e.side !== s.side && levende(e) && Array.isArray(e.menn) && !F.slåttUt(e) && !hvile(s.side, e.side) && byHer.inni(e.x, e.y))
         .map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) })).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] : null;
       const v = F.velg(s, { overtakF: vmF, fred: regionFred(), småFørst: småFørst(), mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
-        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !AI.leirMedVarsel && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+      // (runde 7) lag i en angrepsgruppe følger gruppa (spill/eskalering-visning.js) – unntatt når laget er slått ut eller angriper en fiende det ser
+      if (AI.styr) { const o = AI.styr(s, v); if (o) { delete v.mål; Object.assign(v, o); } }
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst) ? (byer.find(b => b.inni(s.x, s.y)) || {}).id : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
       if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }
@@ -173,7 +177,9 @@
       // (19. nov) mot en fiende i tettstedet går laget helt inntil (ellers blir korte flytt over 150 m)
       if (Math.hypot(v.x - s.x, v.y - s.y) < (v.hva === 'jakt' && iByFiende ? R.inntil : 150)) continue;
       // langt unna og lastebilen står like ved: kjør (laget følger kjøretøyet – spill/tropper-visning.js)
-      { const k = BIL[s.side], dk = k && KJORETOY.includes(k) && !bærer(k) && !k.sti ? Math.hypot(k.x - s.x, k.y - s.y) : null;
+      // (runde 7) motstanderne kan ha kjøpt flere lastebiler (AI.ekstraBiler, spill/eskalering-visning.js): den nærmeste ledige
+      { const ledig = q => q && KJORETOY.includes(q) && !bærer(q) && !q.sti, kand = [BIL[s.side]].concat((AI.ekstraBiler && AI.ekstraBiler[s.side]) || []).filter(ledig),
+          k = kand.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0], dk = k ? Math.hypot(k.x - s.x, k.y - s.y) : null;
         if (F.kjør(v.hva, Math.hypot(v.x - s.x, v.y - s.y), dk)) { const g = vegnett(); if (g) { let r = null; try { r = Kjoretoy.planlegg(k, g, [v.x, v.y]); } catch (e) { r = { feil: e.message }; }
             if (r && !r.feil) { s.ombord = k; s.sti = null; s.ai.mål = [v.x, v.y]; s.ai.neste = 60; if (synlig(s)) logg(`${s.navn} kjører i lastebil.`); continue; } } } }
       s.ai.mål = [v.x, v.y]; ordre(s, v.x, v.y, true);
