@@ -13,6 +13,11 @@
     ring: 55,            // meter mellom lagene når flere lag får samme mål
     køMaks: 8,           // høyst så mange punkter i køen til ett lag
     sakteFart: 'sp1',    // farten spolingen og auto-stoppen går ned til (1×)
+    // (runde 6, kritikken: «600× faller tilbake til 1× ved hvert ferdig bygg – man må trykke 600× hele tiden») Den automatiske
+    // nedbremsingen går nå bare ned til 1× når det haster (fienden i sikte, ildkamp, alarm, et lag slått ut). Et ferdig bygg og et
+    // kort som venter på svar senker farten bare til 10× (HENDELSER[type].til), og et nytt ferdig bygg senker den ikke igjen før det er
+    // gått to spilltimer (autoHvile, i spillminutter). Spolingen (⏭) stopper fortsatt på 1× som før. Claudes forslag.
+    autoHvile: { bygg: 120, kort: 60 },
     spolFart: 'sp4',     // farten det spoles i (600×)
     visSek: 9,           // sekunder kortet «Stoppet: …» står
   };
@@ -21,13 +26,13 @@
     framme: { spol: true, auto: false },
     kontakt: { spol: true, auto: true },
     alarm: { spol: true, auto: true },
-    bygg: { spol: true, auto: true },
+    bygg: { spol: true, auto: true, til: 'sp2' },
     dag: { spol: true, auto: false },
     mål: { spol: true, auto: false },
     tettsted: { spol: true, auto: false },
     tapt: { spol: true, auto: true },
     // fra andre moduler (hendelsen «riksbrudd-hendelse», se under) og kort som venter på svar
-    kort: { spol: true, auto: true },
+    kort: { spol: true, auto: true, til: 'sp2' },
     natur: { spol: true, auto: false },
     brann: { spol: true, auto: false },
     fanger: { spol: true, auto: false },
@@ -65,6 +70,11 @@
   }
   // det som skal stoppe tiden: hva = 'spol' eller 'auto'
   const stopper = (liste, hva) => liste.filter(h => HENDELSER[h.type] && HENDELSER[h.type][hva]);
+  // farten den automatiske nedbremsingen går ned til: den laveste blant hendelsene ('sp1' = 1×, 'sp2' = 10×)
+  const FARTER = ['sp0', 'sp1', 'sp2', 'sp3', 'sp4'];
+  const autoFart = (liste, R = REGLER) => liste.reduce((m, h) => { const t = (HENDELSER[h.type] && HENDELSER[h.type].til) || R.sakteFart; return FARTER.indexOf(t) < FARTER.indexOf(m) ? t : m; }, 'sp4');
+  // hendelser som har senket farten nylig, senker den ikke igjen: sist = { type: spillminutt }, nå = spillminutt
+  const hviler = (liste, sist, nå, R = REGLER) => liste.filter(h => !(R.autoHvile[h.type] && sist && sist[h.type] !== undefined && nå - sist[h.type] < R.autoHvile[h.type]));
   // Grovt anslag for en marsj på d meter i luftlinje: { km, timer }
   const anslag = (d, R = REGLER) => ({ km: d * R.omveg / 1000, timer: d * R.omveg / 1000 / R.gangfart });
   // «2 t 15 min», «35 min», «under 5 min»
@@ -93,7 +103,7 @@
   }
   // lagene innenfor en ramme i kartet (hjørnene i hvilken som helst rekkefølge)
   function iRamme(lag, x0, y0, x1, y1) { const a = Math.min(x0, x1), b = Math.max(x0, x1), c = Math.min(y0, y1), d = Math.max(y0, y1); return lag.filter(s => s.x >= a && s.x <= b && s.y >= c && s.y <= d); }
-  const api = { REGLER, HENDELSER, hendelser, stopper, anslag, tidTekst, kmTekst, leggIKø, nesteIKø, tømKø, køLengde, plasser, iRamme };
+  const api = { REGLER, HENDELSER, FARTER, autoFart, hviler, hendelser, stopper, anslag, tidTekst, kmTekst, leggIKø, nesteIKø, tømKø, køLengde, plasser, iRamme };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Flyt = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -155,11 +165,16 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     kort.classList.add('på'); clearTimeout(kortTid); kortTid = setTimeout(() => kort.classList.remove('på'), R.visSek * 1000);
   }
   function merk() { if (spolKnapp) { spolKnapp.classList.toggle('på', spoler); spolKnapp.setAttribute('aria-pressed', String(spoler)); } }
+  const NAVN = { sp1: '1×', sp2: '10×', sp3: '60×', sp4: '600×' }, sistAuto = {};
   function stopp(liste, hva) {
-    const tekst = liste.map(h => h.tekst).join(', '); sistStopp = { hva, liste, tid };
-    spoler = false; merk(); settFart(R.sakteFart);
+    // automatisk: bare ned (aldri opp), til 10× for et ferdig bygg og til 1× når det haster – og ingen melding når farten alt er så lav
+    const mål = hva === 'auto' ? F.autoFart(liste) : R.sakteFart;
+    if (hva === 'auto' && F.FARTER.indexOf(fartId()) <= F.FARTER.indexOf(mål)) return;
+    if (hva === 'auto') for (const h of liste) sistAuto[h.type] = tid;
+    const tekst = liste.map(h => h.tekst).join(', '); sistStopp = { hva, liste, tid, fart: mål };
+    spoler = false; merk(); settFart(mål);
     const t = tekst.charAt(0).toUpperCase() + tekst.slice(1);
-    visKort((hva === 'spol' ? 'Stoppet: ' : 'Senket farten: ') + t + '.', true); logg((hva === 'spol' ? 'Spolingen stoppet: ' : 'Farten er senket: ') + tekst + '.');
+    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true); logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
   }
   function spol() {
     if (spoler) { spoler = false; merk(); settFart(R.sakteFart); return false; }
@@ -189,7 +204,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     if (!spoler && !(autoPå() && tempo > 1)) { før = null; innboks.length = 0; return; }
     const b = bilde(); if (!før) { før = b; innboks.length = 0; return; }
     const h = F.hendelser(før, b).concat(innboks.splice(0)); før = b; if (!h.length) return;
-    const st = F.stopper(h, spoler ? 'spol' : 'auto'); if (st.length) stopp(st, spoler ? 'spol' : 'auto');
+    const st = spoler ? F.stopper(h, 'spol') : F.hviler(F.stopper(h, 'auto'), sistAuto, tid); if (st.length) stopp(st, spoler ? 'spol' : 'auto');
   });
 
   // ---------- marsjtid før ordren ----------

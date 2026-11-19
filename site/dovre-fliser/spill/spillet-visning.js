@@ -104,6 +104,11 @@
       const r = km(l, type, kan, betal); if (!r.feil) { Marked.ta(M, type, r.mengde); husk(); if (r.mengde < mengde - 1e-6 && kan < mengde - 1e-6) logg(`Markedet hadde bare ${String(r.mengde).replace('.', ',')} ${LB.MATERIALER[type].enhet} ${LB.MATERIALER[type].navn.toLowerCase()} igjen. Hyllene fylles litt hvert døgn (${Marked.LAGER[type].fyll} ${LB.MATERIALER[type].enhet}) – resten får du ved hogst, riving eller fra tettsteder du holder.`); } return r; };
     LB.kjøpDrivstoff = (l, liter, betal) => { if (!knapt()) return kd(l, liter, betal); const kan = Marked.kan(M, 'diesel', liter); if (!(kan > 0)) return { feil: Marked.tomt('diesel') };
       const r = kd(l, kan, betal); if (!r.feil) { Marked.ta(M, 'diesel', r.liter); husk(); } return r; };
+    // (runde 6) salget går gjennom markedets kjøpere: høyst Marked.KJØPER per materiale og døgn
+    const sm = LB.selgMateriale;
+    LB.selgMateriale = (l, type, mengde, gi) => { if (!knapt() || !Marked.KJØPER[type]) return sm(l, type, mengde, gi); const kan = Marked.kanSelge(M, type, mengde);
+      if (!(kan > 0)) return { feil: Marked.fulltSalg(LB.MATERIALER[type].navn.toLowerCase(), type) };
+      const r = sm(l, type, kan, gi); if (!r.feil) { Marked.selg(M, type, r.mengde); husk(); } return r; };
     FR.kjøpMat = (f, rasjoner, betal) => { if (!knapt()) return kf(f, rasjoner, betal); const kan = Marked.kan(M, 'mat', rasjoner); if (!(kan > 0)) return { feil: Marked.tomt('mat') };
       const r = kf(f, kan, betal); if (!r.feil) { Marked.ta(M, 'mat', r.rasjoner); husk(); } return r; };
   }
@@ -111,7 +116,16 @@
 
   // ================= OPPDRAG =================
   let O = null, lager = false;
-  async function fyllOppdrag() { if (lager || !auto()) return; lager = true; try { const leir = S().leir; for (let k = 0; k < 12 && O.liste.length < 3; k++) { const o = Oppdrag.lag(leir, ++O.nr, Math.random, tid); if (await påLand(o.x, o.y)) O.liste.push(o); } skriv('riksbrudd-oppdrag', O); meny(); } finally { lager = false; } }
+  // (runde 6) to oppdrag ved start, så ett nytt om gangen etter Oppdrag.TAKT (6–10 spilltimer eller 8–14 minutter spilling) – før kom
+  // et nytt straks et var gjort, og én tropp kunne tjene 5 mill. kr på et døgn
+  async function fyllOppdrag() { if (lager || !auto()) return; const T = Oppdrag.TAKT, start = (O.nr || 0) < T.start;
+    if (O.liste.length >= (start ? T.start : T.maks)) return;
+    if (!start && O.nesteSpill !== undefined && tid < O.nesteSpill && ekte < (O.nesteEkte || 0)) return;
+    lager = true; try { const leir = S().leir, mål = start ? T.start : O.liste.length + 1;
+      // høyst én ledig røverpost om gangen – ellers kunne tre poster sperre for trygge oppdrag i tre døgn (gjennomspillingen 19. nov)
+      for (let k = 0; k < 12 && O.liste.length < mål; k++) { const o = Oppdrag.lag(leir, ++O.nr, Math.random, tid); if (o.type === 'post' && O.liste.some(q => q.type === 'post' && !q.tatt)) continue; if (await påLand(o.x, o.y)) O.liste.push(o); }
+      if (!start) { const v = Oppdrag.vent(Math.random); O.nesteSpill = tid + v.spill; O.nesteEkte = ekte + v.ekte; }
+      skriv('riksbrudd-oppdrag', O); meny(); } finally { lager = false; } }
   function ta(id) { const o = O.liste.find(q => q.id === id); if (!o || o.tatt) return false; o.tatt = true; o.frist = Math.max(o.frist, tid + 2 * 1440);
     if (o.type === 'post') for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}${o.fiender > 1 ? '.' + (i + 1) : ''}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); }
     skriv('riksbrudd-oppdrag', O); logg(`Oppdrag tatt: ${Oppdrag.TYPER[o.type].navn.toLowerCase()}, ${meter(o.meter)} mot ${o.retning}.`); skitten = true; meny(); return true; }
@@ -280,7 +294,7 @@
     else if (avbrutt) { T.bølge = avbrutt - 1; T.nesteSpill = tid + 20; T.nesteEkte = 60; if (auto()) logg('Røverne som angrep leiren, har samlet seg igjen – de kommer tilbake om litt.'); }
     else { T.nesteSpill = tid + (T.bølge ? Trussel.vent(T.bølge + 1).spill / 2 : Trussel.BALANSE.først.spill); T.nesteEkte = (T.bølge ? Trussel.vent(T.bølge + 1).ekte / 2 : Trussel.BALANSE.først.ekte) * 60; }
     M = les('riksbrudd-marked') || Marked.ny(); M.spilldag = Math.floor(tid / 1440); M.ekte = 0; if (auto()) settPriser();
-    O = les('riksbrudd-oppdrag') || { nr: 0, liste: [], gjort: 0 }; for (const o of O.liste) if (o.type === 'post' && o.tatt && !ENHETER.some(e => e.post === o.id)) { for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); } }
+    O = les('riksbrudd-oppdrag') || { nr: 0, liste: [], gjort: 0 }; if (O.nesteEkte !== undefined) O.nesteEkte = Math.min(O.nesteEkte, Oppdrag.TAKT.ventEkte[1]); for (const o of O.liste) if (o.type === 'post' && o.tatt && !ENHETER.some(e => e.post === o.id)) { for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); } }
     H = les('riksbrudd-hendelser') || { sist: null, åpen: null }; H.nesteSpill = tid + 8 * 60; H.nesteEkte = 9 * 60; lesV(); vennFraAdressen(); klar = true; visHendelse(); fyllOppdrag(); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setInterval(() => { if (performance.now() > varselTil) varselEl.classList.remove('på'); if (!klar || !S() || !S().leir) return; if (tempo > 0 && !document.hidden) ekte++;

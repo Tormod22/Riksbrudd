@@ -23,9 +23,11 @@
 
   // Stillingen: en linje per ting. { id, navn, enhet, har, plass, andel, tilstand: '' | 'tomt' | 'lite' | 'fullt' | 'null', merk }
   function stilling() { const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste && LeirSpill.siste(); if (!L) return null; const ut = [];
-    const tank = LB.kapasitet(L), d = L.drivstoff || 0, bruker = (s && s.aggInst > 0) || L.bygg.some(b => b.type === 'aggregat'), kw = s ? s.agg || 0 : 0, rekker = kw > 0 && d > 0 ? LB.dieselTimer(L, kw) : Infinity;
+    // (runde 6) prognosen er den samme som i dagsrapporten og varselbrikkene: LeirSpill.diesel() (Leir.dieselRekker)
+    const P = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null;
+    const tank = LB.kapasitet(L), d = L.drivstoff || 0, bruker = (s && s.aggInst > 0) || L.bygg.some(b => b.type === 'aggregat'), kw = s ? s.agg || 0 : 0, rekker = d > 0 ? (P ? P.timer : kw > 0 ? LB.dieselTimer(L, kw) : Infinity) : Infinity;
     ut.push({ id: 'diesel', navn: 'Diesel', ikon: 'tank', enhet: 'l', har: d, plass: tank, tilstand: tank <= 0 ? 'null' : d <= 0 ? (bruker ? 'tomt' : 'null') : rekker < 6 ? 'lite' : d >= tank - .5 ? 'fullt' : '',
-      merk: tank <= 0 ? 'Ingen tank: bygg en dieseltank eller et aggregat.' : d <= 0 ? (bruker ? 'Tomt – aggregatene står. Kjøp diesel.' : 'Tomt.') : rekker < Infinity ? `Rekker ${timer(rekker)} med dagens forbruk.` : d >= tank - .5 ? 'Fulle tanker.' : '' });
+      merk: tank <= 0 ? 'Ingen tank: bygg en dieseltank eller et aggregat.' : d <= 0 ? (bruker ? 'Tomt – aggregatene står. Kjøp diesel.' : 'Tomt.') : rekker < Infinity ? `Rekker ca. ${timer(rekker)} med ${P && P.målt ? 'forbruket det siste døgnet' : 'forbruket nå'}.` : d >= tank - .5 ? 'Fulle tanker.' : '' });
     const plass = LB.lagerplass(L);
     for (const [k, M] of Object.entries(LB.MATERIALER)) { const har = (L.lager && L.lager[k]) || 0; ut.push({ id: k, navn: M.navn, ikon: { tre: 'tommer', betong: 'betong', stål: 'staal' }[k] || 'kasse', enhet: M.enhet, har, plass, tilstand: har >= plass - .05 ? 'fullt' : har <= 0 ? 'null' : '', merk: har >= plass - .05 ? 'Lageret er fullt – bygg lagertelt eller container for mer plass.' : '' }); }
     const F = window.FolkSpill && FolkSpill.tilstand(); if (F && window.FolkRegler && F.personer && F.personer.length) { let B = null; try { B = FolkRegler.behov(F, L, FolkSpill.valg()); } catch (e) { B = null; }

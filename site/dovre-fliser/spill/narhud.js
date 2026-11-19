@@ -25,6 +25,7 @@ body.kort #nhud .vapen{ right:12px; bottom:auto; top:calc(var(--topp,44px) + 222
 body.foto #nhud, body.foto #varsler{ display:none !important; }
 #varsler{ position:fixed; left:10px; top:calc(var(--topp,58px) + 8px); z-index:6; display:flex; flex-direction:column; gap:5px; align-items:flex-start; max-width:min(320px,70vw); }
 #varsler button{ pointer-events:auto; display:flex; align-items:center; gap:7px; background:rgba(22,18,12,.9); border:1px solid #6a5f42; border-left:4px solid #c9b26a; color:var(--ink,#e7dcc3); font:inherit; font-size:13.5px; padding:4px 10px 4px 8px; min-height:30px; cursor:pointer; text-align:left; }
+#varsler .rad{ display:flex; flex-wrap:wrap; gap:5px; align-items:stretch; } #varsler .rad > button:first-child span{ white-space:nowrap; } #varsler button.handling{ border-left-color:#9fc46a; font-weight:600; white-space:nowrap; }
 #varsler button.fare{ border-left-color:#e0604a; } #varsler button.god{ border-left-color:#9fc46a; } #varsler button small{ color:var(--ink-dim,#a99); }
 body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)); max-width:62vw; } body.kort #varsler button{ font-size:12px; min-height:28px; padding:3px 8px 3px 6px; } body.kort.gaar #varsler, body.bygger2d #varsler{ display:none; }`;
   document.head.appendChild(css);
@@ -114,8 +115,9 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
     // karakteren din: tørst, sulten eller trøtt (spill/karakter.js)
     if (window.KarakterSpill && KarakterSpill.klar()) for (const v of KarakterSpill.varsler()) ut.push({ i: v.id === 'søvn' ? 'seng' : v.id === 'sult' ? 'mat' : 'vann', k: 'fare', t: 'Du er ' + v.tekst, s: v.råd.toLowerCase().replace(/\.$/, ''), f: () => KarakterSpill.åpne() });
     // tom eller snart tom for diesel (bare når du har aggregat som trenger den)
-    if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, rekker = s.agg > 0 && d > 0 ? Leir.dieselTimer(L, s.agg) : Infinity;
-      if (d <= 0) ut.push({ i: 'tank', k: 'fare', t: 'Tom for diesel', s: 'aggregatene står – kjøp diesel', f: () => åpneLeir('lager') }); else if (rekker < 6) ut.push({ i: 'tank', k: '', t: 'Lite diesel', s: `rekker ${rekker >= 1 ? Math.round(rekker) + ' t' : Math.max(1, Math.round(rekker * 60)) + ' min'}`, f: () => åpneLeir('lager') }); }
+    // (runde 6) samme prognose som dagsrapporten og Lager (LeirSpill.diesel), og en egen knapp som kjøper diesel (LeirSpill.kjøpDiesel)
+    if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, P = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null, rekker = d > 0 ? (P ? P.timer : s.agg > 0 ? Leir.dieselTimer(L, s.agg) : Infinity) : Infinity;
+      if (d <= 0) ut.push({ i: 'tank', k: 'fare', t: 'Tom for diesel', s: 'aggregatene står', f: () => åpneLeir('lager'), knapp: window.LeirSpill && LeirSpill.kjøpDiesel && Leir.kapasitet(L) > 0 ? { t: `Kjøp 500 l (${Leir.kroner(500 * Leir.DRIVSTOFF.prisPerLiter)})`, f: () => LeirSpill.kjøpDiesel(500) } : null }); else if (rekker < 6) ut.push({ i: 'tank', k: '', t: 'Lite diesel', s: `rekker ${rekker >= 1 ? Math.round(rekker) + ' t' : Math.max(1, Math.round(rekker * 60)) + ' min'}`, f: () => åpneLeir('lager') }); }
     const OS = window.OverlevSpill && OverlevSpill.klar && OverlevSpill.klar() ? OverlevSpill : null, D = OS && OS.D();
     if (D && !navigator.webdriver) { if (D.strøm.varslet && !D.strøm.nede && !egenStrøm()) ut.push({ i: 'strom', k: '', t: 'Strømnettet svikter snart', s: 'bygg aggregat eller solceller', f: () => åpneLeir('bygg') }); if (D.vann.varslet && !D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: '', t: 'Vannet svikter snart', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); if (D.vann.nede && !OS.brønner()) ut.push({ i: 'vann', k: 'fare', t: 'Leiren mangler vann', s: 'bygg en brønn', f: () => åpneLeir('bygg') }); }
     const F = window.FolkSpill && FolkSpill.tilstand(); if (F && F.personer.length && L && window.FolkRegler) { let B = null; try { B = FolkRegler.behov(F, L, FolkSpill.valg()); } catch (e) { B = null; }
@@ -125,7 +127,9 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
     return ut.slice(0, 5); }
   function tegnVarsler() { { const åpen = ['leirmeny', 'folkmeny', 'hjelp', 'lagmeny'].some(id => $(id) && $(id).classList.contains('på')) && VW < 1500; varsler.style.display = åpen ? 'none' : ''; }
     if ($('oppstart') && $('oppstart').classList.contains('på')) { if (brikkeNøkkel) { varsler.innerHTML = ''; brikkeNøkkel = ''; } return; } const B = brikker(), nøkkel = B.map(b => b.k + b.t + b.s).join('|'); if (nøkkel === brikkeNøkkel) return; if (window.pekerNede && pekerNede(varsler)) return; brikkeNøkkel = nøkkel; varsler.innerHTML = '';
-    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f; varsler.appendChild(k); } }
+    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f;
+      // en brikke kan ha en egen knapp ved siden av seg (b.knapp = { t, f }), f.eks. «Kjøp 500 l» ved «Tom for diesel» (runde 6)
+      if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
   setInterval(tegnVarsler, 1000);
   window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm };
 })();
