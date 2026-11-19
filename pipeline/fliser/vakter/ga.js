@@ -8,16 +8,16 @@ module.exports = {
     const data = await pg.evaluate(async () => {
       const d = { feil: [] }, krev = (b, t) => { if (!b) d.feil.push(t); }, vent = ms => new Promise(r => setTimeout(r, ms));
       if (!window.Gaavalg || !window.Gange || !window.VaerSpill) { d.feil.push('Gaavalg, Gange eller VaerSpill mangler'); return d; }
-      const G = Gaavalg, før = { tid, vær: JSON.stringify(VaerSpill.S), varsel: localStorage.getItem('riksbrudd-grafikkvarsel'), fart: (document.querySelector('[id^=sp].på') || {}).id };
+      const G = Gaavalg, før = { tid, vær: JSON.stringify(VaerSpill.S), varsel: localStorage.getItem('riksbrudd-grafikkvarsel'), fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
       const kar = ENHETER.find(e => e.karakter), karFør = kar ? { x: kar.x, y: kar.y } : null;
       // 1. reglene
       krev(G.valg(30).type === 'her' && G.valg(800).type === 'spør' && G.valg(G.REGLER.maks + 1).type === 'forLangt', 'Gaavalg.valg: her/spør/forLangt stemmer ikke');
       // 2. været: statuslinja sier «Klart → regn» i første halvdel av overgangen, og 3D-kopien følger reglene utenfor 3D
       try {
-        const S = VaerSpill.S; Vaer.låsVær(S, 'auto'); S.vær = 'klart'; S.fra = null; S.fraVær = null; S.til = tid; Vaer.steg(S, tid, (() => { let n = 0; return () => (n++ ? .3 : .7); })());
+        const S = VaerSpill.S; Vaer.låsVær(S, 'auto'); S.vær = 'klart'; S.fra = null; S.fraVær = null; S.til = tid; Vaer.steg(S, tid, (() => { let n = 0; return () => (n++ === 1 ? .6 : .5); })());
         const nytt = S.vær; VaerSpill.oppdater(); const tekst1 = document.getElementById('sVaer').textContent;
         S.start = tid - S.varighet * .7; VaerSpill.oppdater(); const tekst2 = document.getElementById('sVaer').textContent;
-        d.vær = [tekst1, tekst2]; krev(nytt === 'klart' || (/→/.test(tekst1) && !/→/.test(tekst2)), `statuslinja under overgangen: «${tekst1}» / «${tekst2}»`);
+        d.vær = [tekst1, tekst2]; krev(nytt !== 'klart' && /→/.test(tekst1) && !/→/.test(tekst2), `statuslinja under overgangen: «${tekst1}» / «${tekst2}»`);
         const i3d = typeof på3d !== 'undefined' && på3d && R3 && R3.ut; if (!i3d) krev(Math.abs(VAER.sky - VAER.regel.sky) < 1e-9 && Math.abs(VAER.regn - VAER.regel.regn) < 1e-9, '3D-kopien av været følger ikke reglene i 2D');
       } finally { Object.keys(VaerSpill.S).forEach(k => delete VaerSpill.S[k]); Object.assign(VaerSpill.S, JSON.parse(før.vær)); VaerSpill.straks(); }
       // 3. maskinvarevarselet: lite, ute av midten, husket
@@ -46,7 +46,7 @@ module.exports = {
         // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
         b.x = kar.x - u.cx + 150; b.y = kar.y - u.cy; const t0 = tid, mål = [kar.x + 150, kar.y]; Gange.startValg(); document.querySelector('#gaavalg button').click();
         for (let q = 0; q < 80 && !R.fot; q++) await vent(100);
-        d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('[id^=sp].på') || {}).id };
+        d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
         krev(R.fot && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));
         // døra: et prøvehus foran deg (dør mot sør); du står 2,5 m ute og 0,45 m til siden
         for (let q = 0; q < 50 && R.bygger; q++) await vent(200);
@@ -78,7 +78,7 @@ module.exports = {
         if (hus) for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); }
         if (Gange.reiser()) await vent(1500); Gange.lukkValg(); if (R.fot && !gikk) Gange.stopp(); else if (!R.fot && gikk) Gange.start();
         Interior3d.oppdater(true); if (karFør) { kar.x = karFør.x; kar.y = karFør.y; kar.sti = null; } tid = før.tid;
-        if (før.fart && (document.querySelector('[id^=sp].på') || {}).id !== før.fart) document.getElementById(før.fart).click();
+        if (før.fart && (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id !== før.fart) document.getElementById(før.fart).click();
         if (!gikk) Object.assign(b, bane); skitten = true;
       }
       return d;

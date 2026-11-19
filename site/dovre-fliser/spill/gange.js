@@ -120,7 +120,7 @@
     if (!R3.bygger && iUt(kar)) { lukkValg(); start(); }
   }
   // Fartsknappen som er valgt nå (sp0 = pause)
-  const fartNå = () => { const b = document.querySelector('.knapper [id^=sp].på, [id^=sp].på'); return b ? b.id : (typeof tempo !== 'undefined' && tempo === 0 ? 'sp0' : 'sp1'); };
+  const fartNå = () => { const b = document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på'); return b ? b.id : (typeof tempo !== 'undefined' && tempo === 0 ? 'sp0' : 'sp1'); };
   const klikk = id => { const e = document.getElementById(id); if (e) e.click(); };
   // Reisen: karakteren går i rett linje (omvegen er regnet inn i tiden) mens spillet spoles; framme starter du der
   function reis(kar, X, Y, min) {
@@ -141,13 +141,18 @@
     r.p.textContent = `${Math.round(k * r.min)} av ${r.min} min`; r.i.style.width = Math.round(k * 100) + '%';
     // noe skjedde (spolingen ble senket av spillet: fienden i sikte, alarm …): stopp der du er kommet
     if (tempo !== r.tempo && tempo !== 0) { slutt(true, 'Reisen stoppet underveis – noe skjedde (se meldingene). Du går videre selv herfra.'); return; }
+    // satt på pause underveis (av deg eller spillet) i over 2 s: stopp der du er kommet
+    if (tempo === 0) { if (!r.pauseFra) r.pauseFra = performance.now(); else if (performance.now() - r.pauseFra > 2000) { slutt(true, 'Reisen stoppet: spillet står på pause. Du går videre selv herfra.'); return; } } else r.pauseFra = 0;
     if (k >= 1 && performance.now() - r.start > G.REGLER.minVis * 1000) { slutt(true, null); return; }
     requestAnimationFrame(reiseSteg);
   }
   function slutt(gå, melding) {
     const r = reise; reise = null; if (!r) return;
     // farten tilbake slik den var (også pausen)
-    if (r.fart === 'sp0') { klikk(r.før); klikk('sp0'); } else if (fartNå() !== r.fart) klikk(r.fart);
+    // (står spillet på pause nå – satt av noen andre underveis –, beholdes pausen, men ▶ går videre i farten du hadde, ikke 600×)
+    if (r.fart === 'sp0') { klikk(r.før); klikk('sp0'); }
+    else if (tempo === 0) { try { fartFør = r.fart; } catch (e) { /* ingen fartsknapper */ } for (const id of ['sp1', 'sp2', 'sp3', 'sp4']) { const e = document.getElementById(id); if (e) e.classList.toggle('sist', id === r.fart); } }
+    else if (fartNå() !== r.fart) klikk(r.fart);
     lukkValg(); if (melding) logg(melding);
     if (gå && r3() && R3.ut && typeof på3d !== 'undefined' && på3d) { const u = R3.ut; R3.bane.x = r.kar.x - u.cx; R3.bane.y = r.kar.y - u.cy; start(); }
   }
