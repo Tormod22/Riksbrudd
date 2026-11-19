@@ -112,7 +112,9 @@
   const Oppdrag = {
     TYPER: OPPDRAG,
     // et nytt oppdrag: type etter rekkefølgen, sted i en ring rundt leiren, belønning etter avstand
-    lag(leir, nr, rng, tid) { const type = ['hent', 'redd', 'post'][Math.floor(rng() * 3)], T = OPPDRAG[type], v = rng() * 6.2832, d = T.avst[0] + rng() * (T.avst[1] - T.avst[0]);
+    // (runde 6, kritikken: «ingen inntekt i sikte») det første oppdraget i et nytt spill er alltid «Hent forsyninger» i den nære
+    // halvdelen av avstanden (700–1650 m), så en ny spiller har en trygg inntekt å gå etter de første døgnene. Claudes forslag.
+    lag(leir, nr, rng, tid) { const type = nr <= 1 ? 'hent' : ['hent', 'redd', 'post'][Math.floor(rng() * 3)], T = OPPDRAG[type], v = rng() * 6.2832, d = T.avst[0] + rng() * (T.avst[1] - T.avst[0]) * (nr <= 1 ? .5 : 1);
       const o = { id: nr, type, x: Math.round(leir.x + Math.cos(v) * d), y: Math.round(leir.y + Math.sin(v) * d), meter: Math.round(d), retning: retning(Math.cos(v), Math.sin(v)), frist: tid + 3 * 1440, tatt: false };
       if (type === 'hent') o.gir = { penger: Math.round((4e5 + d * 300) / 1e5) * 1e5, mat: 4 + Math.floor(rng() * 8), tre: Math.floor(rng() * 6), stål: Math.round(rng() * 20) / 10 };
       if (type === 'redd') o.gir = { folk: 1 + Math.floor(rng() * 3), penger: 3e5 };
