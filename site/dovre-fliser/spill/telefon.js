@@ -36,6 +36,14 @@
  *     når du har trykket. Kort du ikke har råd til, er dempet. Tallene (34 px tegning, tre kolonner) er Claudes forslag.
  * 17. Lagpanelet nede dekket laget du nettopp valgte: når panelet åpnes for et lag som havner under det, flyttes kartet så laget står
  *     midt i den frie delen (over panelet stående, til høyre for det liggende). Bare én gang per valg, og ikke i testene.
+ *
+ * Runde 5 (18.–19. nov kveld, pakke «test2», spilt som ny spiller fra startskjermen):
+ * 19. Stoppkortet («⏭ Stoppet: …») øverst la seg oppå alarmen («Angrep: …» med «Forsvar leiren») og oppå spørsmålskortet fra folket
+ *     («Silje foreslår en fest …»), så du ikke så hva som var galt eller hva du ble spurt om. Varselet «Angrepet er slått tilbake!» lå
+ *     oppå skadebanneret («Ett bygg er skadet … Reparer alle»), så «Lukk» der så ut til å høre til varselet (også på PC). Nå flyttes
+ *     varselet og så stoppkortet ned under kort som står øverst (lavere enn 60 % av skjermen), så lenge det er plass til det.
+ * 20. Lagpanelet (valgt lag) ble stående åpent når du trykket 3D og Gå, under Skyt, Huk, Hopp og våpenbyttet (på PC under helsestreken).
+ *     Det er skjult mens du går (body.gaar, regelen står i spillhud.js) og kommer tilbake når du slutter å gå.
  */
 (() => {
   if (typeof document === 'undefined') return;
@@ -103,8 +111,18 @@ ${[...SIDE.venstre, ...SIDE.høyre].map(id => `body.kort.tlfligg #${id}`).join('
     // når loggen alt er skjult, har den fortsatt mål (visibility) – den blir skjult til kortet er borte
     if (b.classList.contains('flytvik') && k && k.classList.contains('på')) vik = true;
     if (b.classList.contains('flytvik') !== vik) b.classList.toggle('flytvik', vik); }
+  // 19: stoppkortet og varselet («Angrepet er slått tilbake!») under alarmen og spørsmålskortene som står øverst. Varselet står like høyt
+  // som alarmen også på PC, så det gjelder alle skjermer; det som ikke overlapper noe, står der det står.
+  function ned(id) { const k = document.getElementById(id), b = document.body; if (!k) return;
+    if (!k.classList.contains('på')) { if (k.style.top) k.style.top = ''; return; }
+    const før = k.style.top; k.style.top = ''; const a = k.getBoundingClientRect(), H = window.innerHeight; if (a.height < 1) { k.style.top = før; return; }
+    const kort = [...b.children].filter(e => e !== k && e.tagName === 'DIV' && e.classList.contains('på') && !IKKE.has(e.id) && e.id !== 'flytkort').map(e => e.getBoundingClientRect())
+      .filter(r => r.width > 100 && r.height > 20 && r.height < H * .6 && r.top < H / 2 && r.left < a.right && a.left < r.right).sort((x, y) => x.top - y.top);
+    let y = a.top; for (const r of kort) if (r.top < y + a.height && y < r.bottom) y = r.bottom + 6;
+    k.style.top = y !== a.top && y + a.height < H - 60 ? Math.round(y) + 'px' : ''; }
+  function stoppkortNed() { ned('varsel'); ned('flytkort'); }
   function pass() {
-    flyt();
+    flyt(); stoppkortNed();
     const b = document.body; if (!b.classList.contains('kort')) { for (const k of ['mkomfull', 'tlfdekk', 'tlfopp', 'tlfligg']) if (b.classList.contains(k)) b.classList.remove(k); return; }
     const H = window.innerHeight, W = window.innerWidth, m = document.getElementById('mkom');
     // 13: liggende telefon
