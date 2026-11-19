@@ -65,7 +65,11 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
         // (19. nov, test2) et lag innen 30 m av trykket går foran båten (trykk3d svarer da false med vilje) – hvor lagene står etter de
         // andre vaktene, avhenger av hvor mye spilltid som har gått, så lag ved båten flyttes bort mens vakta trykker, og settes tilbake
         const v0 = valgt, ved = ENHETER.filter(e => Math.abs(e.x - bt.x - 3) < 40 && Math.abs(e.y - bt.y) < 40 && !e.påBåt).map(e => [e, e.x]); ved.forEach(([e]) => { e.x += 1e5; });
-        try { valgt = null; SjoSpill.vis(false); ok(SjoSpill.trykk3d(bt.x + 3, bt.y) && SjoSpill.erÅpen() && SjoSpill.valgt() && SjoSpill.valgt().båt === bt, 'trykk på båten i 3D åpner den'); } finally { ved.forEach(([e, x]) => { e.x = x; }); }
+        // (19. nov) andre båter like ved (fra delene over) kan ligge nærmere trykket enn sjarken – de flyttes også bort mens vakta trykker
+        const andre = S.båter.filter(b => b !== bt && Math.hypot(b.x - bt.x - 3, b.y - bt.y) < 60).map(b => [b, b.x]); andre.forEach(([b]) => { b.x += 1e5; });
+        try { valgt = null; SjoSpill.vis(false); const sv = SjoSpill.trykk3d(bt.x + 3, bt.y), vb = SjoSpill.valgt();
+          ok(sv && SjoSpill.erÅpen() && vb && vb.båt === bt, `trykk på båten i 3D åpner den (svar ${sv}, åpen ${SjoSpill.erÅpen()}, valgt ${vb && vb.båt ? vb.båt.type : 'ingen'}, sjarken i lista ${S.båter.includes(bt)})`); }
+        finally { ved.forEach(([e, x]) => { e.x = x; }); andre.forEach(([b, x]) => { b.x = x; }); }
         SjoSpill.vis(false); valgt = v0;
         ok(Array.isArray(SjoSpill.tatteFerjer()), 'listen over tatte ferjer');
         o.leirvalg = Kaier.leirTekst(KaierSpill.data(), L.x, L.y); ok(/Prøvehavn, stor \(500 m\) – leirens egen kai/.test(o.leirvalg), 'leirvalget viser nærmeste kai: ' + o.leirvalg);

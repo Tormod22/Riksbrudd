@@ -106,7 +106,7 @@ module.exports = {
                 krev(MS.settNed() && !MS.bærer() && !MS.spøkelse(), 'kjøleskapet ble ikke satt ned');
                 const ny = pl().møbler.find(m => m.nk === nk); krev(!!ny && Math.abs(ny.x - mål[2]) < .05 && Math.abs(ny.y - mål[3]) < .05, 'kjøleskapet står ikke der det ble satt');
                 if (ny) { krev(Interior.blokkert(pl(), ny.x, ny.y), 'det nye stedet sperrer ikke når du går');
-                  sett(mål[0], mål[1], 0); const bh = LS.beholdere().find(q => q.nk === nk); krev(!!bh && bh.B.t.brunost === 2, 'innholdet (brunosten) fulgte ikke med kjøleskapet');
+                  const g2 = Mobler.foran(0, 0, 0, b, 0, 0, Mobler.REGLER.foran); sett(ny.x, ny.y - g2.y, 0); const bh = LS.beholdere().find(q => q.nk === nk); krev(!!bh && bh.B.t.brunost === 2, 'innholdet (brunosten) fulgte ikke med kjøleskapet');
                   const lag = JSON.parse(localStorage.getItem('riksbrudd-mobler') || '{}'); krev(!!(lag.F && lag.F[nk] && lag.F[nk].i === P.bygg.i), 'flyttet er ikke lagret');
                   Interior3d.bygOm(P.bygg.i); const igjen = P.inne.møbler.find(m => m.nk === nk); krev(!!igjen && Math.abs(igjen.x - ny.x) < .01, 'bygget på nytt: kjøleskapet står ikke der det ble satt');
                   d.møbel = `kjøleskap ${kj.x.toFixed(1)},${kj.y.toFixed(1)} -> ${ny.x.toFixed(1)},${ny.y.toFixed(1)}`; } } } }
