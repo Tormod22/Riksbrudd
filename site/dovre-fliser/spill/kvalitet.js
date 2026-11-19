@@ -115,7 +115,7 @@
     if (typeof logg === 'function') logg('3D går tregt: nettleseren tegner uten grafikkortet. ' + RÅD);
     const husk = () => { try { localStorage.setItem('riksbrudd-grafikkvarsel', 'lukket'); } catch (e) { /* privat vindu */ } };
     if (!document.getElementById('grafikkvarselcss')) { const css = document.createElement('style'); css.id = 'grafikkvarselcss';
-      css.textContent = `#grafikkvarsel{ position:fixed; right:12px; top:calc(var(--topp,58px) + 56px); z-index:9; width:min(290px,60vw); padding:7px 30px 7px 10px; background:rgba(28,23,15,.9);
+      css.textContent = `#grafikkvarsel{ position:fixed; box-sizing:border-box; right:12px; top:calc(var(--topp,58px) + 56px); z-index:9; width:min(290px,60vw); padding:7px 30px 7px 10px; background:rgba(28,23,15,.9);
   border:1px solid #6b5a36; color:#d8ccb0; font-size:12.5px; line-height:1.3; } #grafikkvarsel b{ color:#f0d79a; font-weight:600; }
 #grafikkvarsel button{ position:absolute; right:3px; top:3px; width:24px; height:24px; padding:0; background:none; border:0; color:#e7dcc3; font-size:16px; cursor:pointer; }
 body.kort #grafikkvarsel{ right:auto; left:8px; top:38%; width:min(180px,45vw); font-size:12px; } body.foto #grafikkvarsel{ display:none; }`; document.head.appendChild(css); }
