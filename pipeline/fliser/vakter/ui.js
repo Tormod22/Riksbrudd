@@ -128,12 +128,12 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
           KarakterSpill.åpne(); await vent(250); Hjelp.vis(true); await vent(250); const zk = +getComputedStyle($('karakterark')).zIndex, zh = +getComputedStyle($('hjelp')).zIndex; r6.z = [zk, zh];
           krev(zh > zk, `hjelpen åpnes under Deg-panelet (z ${zh} mot ${zk})`); Hjelp.vis(false); KarakterSpill.lukk(); await vent(200); }
         // (3) et kort som venter på svar, setter spillet på pause og sier det – og spillet går videre når kortet er borte
-        const hk = $('hendelse'); if (hk && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && $('sp1')) { $('sp1').click(); await vent(60); const inn0 = hk.innerHTML;
+        const hk = $('hendelse'); if (hk && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && $('sp0')) { if (tempo === 0) $('sp0').click(); await vent(60); const førKort = tempo, inn0 = hk.innerHTML;
           if (!hk.textContent.trim()) hk.innerHTML = '<h3>Prøvekort</h3><button>Svar</button>'; hk.classList.add('på'); await vent(450);
           r6.pause = { tempo, merke: Skjermlag.merke(), z: [+getComputedStyle(hk).zIndex] };
           krev(tempo === 0 && Skjermlag.merke() && /pause til du svarer/.test($('kortpause').textContent), 'kortet setter ikke spillet på pause med lapp');
           const al = $('alarm'); if (al) r6.pause.z.push(+getComputedStyle(al).zIndex || 0);
-          hk.classList.remove('på'); hk.innerHTML = inn0; await vent(450); r6.pause.etter = tempo; krev(tempo === 1 && !Skjermlag.merke(), 'spillet går ikke videre når kortet er besvart'); }
+          hk.classList.remove('på'); hk.innerHTML = inn0; await vent(450); r6.pause.etter = tempo; krev(førKort > 0 && tempo === førKort && !Skjermlag.merke(), 'spillet går ikke videre (i samme fart) når kortet er besvart'); }
         // (4) telefon: bunnmenyen står med et panel åpent, og panelet slutter over den
         if (!spill && !går6 && !i36 && window.FolkSpill && SpillHud.telefon && !Paneler.åpne().length) { FolkSpill.åpne(true); await vent(500); SpillHud.oppdater(); await vent(400);
           const mk = $('mkom'), fm = $('folkmeny'), mr = mk.getBoundingClientRect(), fr = fm.getBoundingClientRect(); r6.bunn = { mkom: mk.classList.contains('på') && getComputedStyle(mk).display !== 'none', folkBunn: Math.round(fr.bottom), mkomTopp: Math.round(mr.top) };

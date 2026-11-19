@@ -215,3 +215,81 @@ paneler.js = måling, bilder.js/bygg.js/tips.js/etter.js/tre.js = bilder, vakt.j
 - Plasseringsbanneret («Brakke: trykk der bygget skal stå») har ingen tegning (panelet for bygg og for planlagte skisser har).
 - Rammen i 3D virker bare med mus (telefon: «Velg lag» velger alle på skjermen).
 - Kortene i midten på telefon ligger fortsatt oppå arkene (med vilje, se 1).
+
+# Runde 6 (19. nov, kritikken)
+
+Gren `claude/natt18-ui`, port 8902. Alle tall er Claudes forslag. Prøveskript og bilder: scratchpad `natt6/ui/` (start.js = felles oppstart,
+`ekte: true` = som spiller med webdriver = false; for.js/etter.js = angrep + kort + paneler, opp.js = opplæringen, leir.js = Leir-menyen,
+panelplassene og banneret, hjelp.js, ga.js = gåmodus i 3D med måling av alle ruter mot hverandre, stats.js = toppstripa).
+
+| # | Punkt | Status |
+|---|---|---|
+| 1 | Toppstripa: tall uten forklaring, kuttet på telefon | rettet |
+| 2 | Bunnmenyen borte liggende og under angrep (telefon) | rettet |
+| 3 | Vinduer i feil rekkefølge | rettet (se under hva som er med) |
+| 4 | Kort som venter på svar stopper ikke spillet / sier ikke at det er pause | rettet |
+| 5 | Opplæringen: for høy på telefon, hopper videre, «Hopp over» 6 → 8 | rettet |
+| 6 | Leir-panelet husker rulleposisjonen | rettet |
+| 7 | Paneler til venstre/høyre uten system | rettet (regel under) |
+| 8 | Tom grå boks under angrepsbanneret | rettet (årsak under) |
+| 9 | Hjelpen er en flat liste | rettet |
+| 10 | Knapper oppå hverandre i gåmodus | rettet (målt på telefon og PC) |
+| 11 | Forsiden: prototypen først, ingen «Spill nå» | rettet |
+
+1. **Toppstripa** (`spillhud.js`): hver flis har et kort ord foran tallet (`ETIKETT`: Dag, Diesel, Tre, Betong, Stål, Strøm, Olje, Folk, Mål,
+   Kontroll, Du er; vises med `data-ord`) og enheten bak et rent tall (`ENHET` → `b[data-enhet]`: Tre/Betong m³, Stål/Olje t, Høyde moh.).
+   Klokka, kassa og været forklarer seg selv (ikon + enhet). «+3» heter nå «MER +3». Telefon: raden rulles/kuttes ikke lenger – `passInn()`
+   virker også der (måler `scrollWidth`) og legger det minst viktige bak «Mer» (`UT_TLF`; rekkefølgen `REKKE_TLF`: klokke, kasse, folk, diesel,
+   mål, kontroll …). Tekniske tall (FPS, moh., MB) er skjult på telefon som på PC. Målt: 390 px viser klokke, kasse, Folk og «Mer +8» uten kutt;
+   844 px liggende klokke, kasse, Folk, Diesel, Mål og «Mer +6»; PC 1400 klokke, vær, kasse, Diesel, Tre, Folk og «Mer +5».
+2. **Bunnmenyen på telefon** (`spillhud.js` + ny `spill/skjermlag.js`): for spilleren står raden alltid på kartet – under angrep, med et kort
+   oppe og liggende. Den viker bare for det som tar hele skjermen (`HELSKJERM`: hjelpen, kontrollrommet, byggesettet, etterspillet, krigskortet,
+   spillformkortet, startskjermen) og som før når du går, bygger eller velger leir. Panelene som når ned dit, får makshøyde/bunn satt inline så
+   de slutter 6 px over raden (`Skjermlag.løft`, tas bort igjen når panelet lukkes), og zoomknappene skjules bak et løftet panel (`body.mkomloft`).
+   Årsaken før: `#alarm` og `#hendelse` sto i `DEKKER`-lista. I testene (webdriver) som før til `Skjermlag.test = true` (`body.mkomalltid`).
+3. **Rekkefølgen** (`skjermlag.js`, inline z-index i bånd): kort som venter på svar 20 < stoppkort/varsel 21 < pausemerket 23 < angrepsbanneret 24
+   < panelene du åpner selv 30–66 (det sist åpnede øverst; trykk i et panel løfter det) < bunnmenyen på telefon 70 < verktøytipset 80 < ringen
+   fra opplæringen 85. Står et kort under angrepsbanneret, flyttes det ned under banneret (begge kan leses). Verktøytipset legger seg over/ved
+   siden av opplæringsruta (`flistips.js`), og opplæringsruta flytter seg over «Mer»-raden når den er åpen. Målt: hjelpen over Deg (z 31 mot 30),
+   ☰ over tegnforklaringen (sist åpnet). Bare for spilleren (eller `Skjermlag.test`).
+4. **Pause ved kort** (`skjermlag.js`): står `#hendelse`, `#samfunnkort`, `#formkort` eller `#krigkort` oppe, trykkes ❚❚ og lappen
+   `#kortpause` «❚❚ Spillet står på pause til du svarer» står under kortet. Når kortet er borte, trykkes ▶ (farten du hadde). Hadde du selv satt
+   på pause, blir det stående; krigskortet som pauset selv, gjenkjennes (farten var > 0 i forrige runde) og får lappen og ▶ etterpå.
+5. **Opplæringen** (`opplaering.js`): et steg som blir gjort, står «✓ Gjort» i `VIS_GJORT` = 3,5 s («Neste ›» går videre straks) – også steg som
+   alt var gjort når de kom for tur. «Hopp over» på steg 6 gikk «rett til 8» fordi steg 7 (mat til tre døgn) var oppfylt fra start og ble merket
+   gjort i samme runde uten å vises; nå står det med ✓. Telefon: 124 px høy (før ca. 200) – tre linjer tekst, små knapper på én rad («Slå av»,
+   «Hjelp»), uten prikkene; – / + oppe til høyre legger ruta sammen til én linje (55 px telefon, 32 px PC; «riksbrudd-opplaering-sammen»).
+   «Opplæringen er ferdig» lukker seg selv etter 12 s. `OpplaeringSpill.gjort()`, `.sammen()`, `.VIS_GJORT`.
+6. **Leir-menyen** (`paneler.js`): starter alltid øverst når den åpnes (fanen er den du sist brukte – å tvinge Bygg ville ødelagt «trykk på
+   diesel = fanen Lager»). Toppen (`#leirmeny > .hode`) er sticky med `top = −(fanenes offsetTop)`, så fanene Bygg/Lager/Plan/Mål står fast øverst
+   når du ruller. Målt: rullet 900 px → fanene 1 px fra toppen; åpnet igjen → scrollTop 0.
+7. **Panelplassene** (`paneler.js`, `telefon.js`): REGELEN – alt fra bunnmenyen (Leir, Folk, Tropper, Krig, Deg, og Region, Verden, Sjø under
+   «Mer») åpnes til VENSTRE, ett om gangen; det som hører til et panel eller lag (Stridsregler, Tiltak, Sekken, krigskortpanelet) og
+   tegnforklaringen åpnes til HØYRE ved siden av; kort i midten. Valgt fordi bunnmenyen er én ting man bytter mellom (som faner), og fordi
+   panelet man åpner fra (Deg → Sekk, lag → Stridsregler) da står ved siden av det nye. Liggende telefon følger samme regel (`Telefon.SIDE`).
+8. **Banneret** (`skjermlag.js`, bare CSS): etter «Forsvar leiren» får banneret «lagene holder stillingen», «Opphev» og «Vis» – på PC brøt de ned
+   på en ny linje under teksten, og hendelseskortet dekket «Vis», så det så ut som en tom grå boks. Nå én rad på PC (opptil 980 px), og på telefon
+   full bredde (før en smal stripe på 195 px: `left:50%` ga bare halve bredden å krympe i). Tomme barn skjules.
+9. **Hjelpen** (`hjelp.js`): 11 grupper som foldes ut (Kom i gang 16, Skjermen og knappene 24, Leiren og bygging 21, Angrep og forsvar 9, Folk og
+   samfunn 18, Mat, penger og handel 8, Lag og strid 34, Krigen og regionen 14, Sjøen 9, I 3D 28, Vær, lyd og bilde 14), bare «Kom i gang» åpen,
+   antallet emner ved hver gruppe, søkefeltet står fast øverst og åpner gruppene med treff. Emner fra pakkene som står i en liste i GRUPPER,
+   havner der; ellers i gruppa pakken oppga. Nye emner bør legges inn i GRUPPER.
+10. **Gåmodus** (`narhud.js`): PC – venstreraden fra eventyr-visning.js («Flaske …», «Legg deg ned», «Lag noe») står nede til venstre over helsa
+    (før midt i himmelen der navnelappene er), våpenruta 296 px fra kanten. Telefon – «Sett deg inn i feltbilen» 272 px fra bunnen (lå under
+    «Automatgevær»), Krig er borte fra knapperaden mens du går og knappene er 33 px (3D-knappen var kuttet i venstre kant), venstreraden står
+    under loggen. Navnelappene i 3D tegnes ikke under rutene (`window.UI_HULL3D`, hull i klippingen i tegn3d). Målt med ga.js på telefon:
+    0 ruter utenfor skjermen og 0 overlapp mellom 21 ruter (knapperaden 60–384 px).
+11. **Forsiden** (`site/index.html`): «Spill nå» øverst med «Spill i Rogaland» (start her) og «Spill i hele Norge» som store kort med knapp,
+    «Spill på Dovre» under, en linje om at hvert kart har sin egen lagring, og «Tidlige prototyper» (kommunekartet 1986, Dovre 1987) nederst.
+
+## Fellesfiler endret i runde 6
+- `site/dovre-fliser/index.html`: (1) én skript-tagg `spill/skjermlag.js` rett etter telefon.js; (2) tegn3d: klippingen tar også hull for
+  `window.UI_HULL3D` (to linjer: `const klipp …` og `if (klipp || hull.length) g.restore();`). versjon.py er kjørt.
+- `pipeline/fliser/test_paneler.js`: plassene til karakterark/tropppanel/verdenpanel/sjopanel er nå venstre (tre tester byttet til stridpanel/sekk, to nye).
+- Ellers egne filer: spillhud.js, telefon.js, paneler.js, narhud.js, opplaering.js, flistips.js, hjelp.js (eid i dag), skjermlag.js (ny), site/index.html.
+
+## Ikke gjort / til den som samler
+- Kortpausen, rekkefølgen og «bunnmenyen alltid» gjelder bare spilleren (`!navigator.webdriver`) – sjekk.js ser det gamle til en vakt slår
+  `Skjermlag.test` på (vakta «ui» gjør det i del «runde6» og setter det tilbake).
+- Navnelappene som klumper seg rundt leiren i 2D, og at røvernes markør ligger under egne lapper, er pakka «kart» sin.
+- Hendelseskortet midt i førsteperson (stopper styringen) er ikke endret – det står nå på pause med lapp, som andre kort.
