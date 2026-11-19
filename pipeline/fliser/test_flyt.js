@@ -14,6 +14,10 @@ ok(F.stopper(F.hendelser(B({ marsj: { A: true } }), B({})), 'auto').length === 0
 h = F.hendelser(B({ alarm: true, byggTall: 4 }), B({ alarm: true, byggTall: 3 }));
 ok(h.some(q => q.type === 'alarm' && /ødelagt/.test(q.tekst)), 'et bygg som blir borte under et angrep, stopper spolingen');
 ok(F.hendelser(B({ alarm: true, skadd: 0 }), B({ alarm: true, skadd: 1 })).some(q => /hardt skadet/.test(q.tekst)), 'et hardt skadet bygg under et angrep stopper spolingen');
+h = F.hendelser(B({ alarm: true, marsj: { A: true }, strid: 0, fiender: 1 }), B({ alarm: true, marsj: {}, strid: 2, fiender: 3 }));
+ok(!h.some(q => q.type === 'framme' || q.type === 'kontakt'), 'midt i et angrep stopper ikke hvert lag som er framme eller i ildkamp');
+ok(F.hendelser(B({ alarm: true, lag: 2 }), B({ alarm: true, lag: 1 })).some(q => q.type === 'tapt'), 'et lag som slås ut midt i et angrep, stopper fortsatt');
+ok(F.hendelser(B({ marsj: { A: true } }), B({ marsj: {} })).some(q => q.type === 'framme'), 'utenom angrep stopper et lag som er framme som før');
 ok(F.hendelser(B({ byggTall: 4 }), B({ byggTall: 3 })).length === 0, 'riving uten angrep stopper ingenting');
 ok(F.hendelser(B({ strid: 0 }), B({ strid: 1 }))[0].tekst === 'et lag er i ildkamp', 'ildkamp');
 ok(F.hendelser(B({ tettsteder: 2 }), B({ tettsteder: 1 }))[0].tekst === 'du har mistet et tettsted', 'mistet tettsted');

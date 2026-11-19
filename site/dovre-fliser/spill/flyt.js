@@ -40,10 +40,14 @@
   // hendelser(før, nå) gir lista over det som har skjedd mellom to bilder: [{ type, tekst }]
   function hendelser(før, nå) {
     const ut = []; if (!før || !nå) return ut;
-    const framme = Object.keys(før.marsj || {}).filter(n => !(nå.marsj || {})[n] && (nå.navn || []).includes(n));
+    // Mens et angrep alt pågår (alarm før og nå), stopper ikke hvert lag som kommer fram eller kommer i ildkamp: forsvaret flytter lagene
+    // hele tida, og spolingen stoppet hvert 0–2 spillminutt (gjennomspillingen 19. nov). Alarmen, tap og ødelagte bygg stopper fortsatt.
+    const midtIAngrep = !!(nå.alarm && før.alarm);
+    const framme = midtIAngrep ? [] : Object.keys(før.marsj || {}).filter(n => !(nå.marsj || {})[n] && (nå.navn || []).includes(n));
     if (framme.length) ut.push({ type: 'framme', tekst: framme.length === 1 ? framme[0] + ' er framme' : framme.length + ' lag er framme' });
     if (nå.alarm && !før.alarm) ut.push({ type: 'alarm', tekst: 'leiren angripes' });
-    if ((nå.strid || 0) > (før.strid || 0)) ut.push({ type: 'kontakt', tekst: 'et lag er i ildkamp' });
+    if (midtIAngrep) { /* kontakt meldes ikke på nytt midt i et angrep */ }
+    else if ((nå.strid || 0) > (før.strid || 0)) ut.push({ type: 'kontakt', tekst: 'et lag er i ildkamp' });
     else if ((nå.fiender || 0) > (før.fiender || 0)) ut.push({ type: 'kontakt', tekst: 'fienden er i sikte' });
     if ((nå.lag || 0) < (før.lag || 0)) ut.push({ type: 'tapt', tekst: 'et lag er slått ut' });
     // leiren raseres: et bygg er borte, eller enda et bygg er under halv helse (bare mens leiren angripes – ikke når du river selv)

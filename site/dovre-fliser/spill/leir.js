@@ -405,7 +405,8 @@
   const plasser = L => L.bygg.reduce((s, b) => s + effekt(b).plasser, 0);
   const mastRekkevidde = L => L.bygg.filter(b => b.type === 'radiomast').reduce((m, b) => Math.max(m, effekt(b).rekkevidde), 0);
   const framdrift = b => (b.igjen > 0 ? (b.totalt ? Math.max(0, Math.min(1, 1 - b.igjen / b.totalt)) : 1) : b.arbeid ? Math.max(0, Math.min(1, 1 - b.arbeid.igjen / b.arbeid.totalt)) : 1);
-  function kroner(n) { const nf = (v, d) => v.toLocaleString('nb-NO', { maximumFractionDigits: d }); return Math.abs(n) >= 1e6 ? nf(n / 1e6, 1) + ' mill. kr' : nf(Math.round(n), 0) + ' kr'; }
+  // hardt mellomrom før «mill.» og «kr», så «kr» aldri står alene på ny linje (gjennomspillingen 19. nov)
+  function kroner(n) { const nf = (v, d) => v.toLocaleString('nb-NO', { maximumFractionDigits: d }); return Math.abs(n) >= 1e6 ? nf(n / 1e6, 1) + '\u00a0mill.\u00a0kr' : nf(Math.round(n), 0) + '\u00a0kr'; }
   const tilJSON = L => JSON.stringify(L);
   // Leser lagringen (versjon 1 fra K2 gjøres om: nivå 1, helt, tomt lager)
   function fraJSON(t) {

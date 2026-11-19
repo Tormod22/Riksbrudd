@@ -226,7 +226,7 @@
   // ---------- panelet ----------
   const css = document.createElement('style');
   css.textContent = `#lutpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 44px); z-index:12; display:none; width:min(900px,95vw); max-height:calc(100vh - var(--topp,58px) - 160px);
-  flex-direction:column; padding:8px 10px 6px; background:rgba(24,20,13,.97); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; box-sizing:border-box; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  flex-direction:column; padding:8px 10px 6px; background:#18140d; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; box-sizing:border-box; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 #lutpanel.på{ display:flex; } #lutpanel .topp{ display:flex; align-items:center; gap:8px; } #lutpanel .topp h2{ margin:0; font-size:18px; flex:1; }
 #lutpanel button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:32px; padding:2px 9px; font:inherit; font-size:13px; cursor:pointer; } #lutpanel button:disabled{ opacity:.45; }
 #lutpanel .kol{ display:flex; gap:8px; min-height:0; flex:1; margin-top:6px; } #lutpanel .side{ flex:1; min-width:0; display:flex; flex-direction:column; border:1px solid #3a3224; background:rgba(0,0,0,.18); }
