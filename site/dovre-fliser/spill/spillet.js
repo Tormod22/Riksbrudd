@@ -34,14 +34,21 @@
     menn: (nr, soldater, n = 1, faktor = 1) => klem(Math.min(4 + 2 * nr, Math.ceil(((soldater === undefined ? 99 : soldater) * (faktor || 1) + Trussel.BALANSE.ekstra) / Math.max(1, n || 1))), 5, 12),
     // ventetiden til neste bølge: spillminutter og ekte minutter med spilling (det som kommer først, gjelder)
     vent: nr => ({ spill: klem(27 - nr, 16, 26) * 60, ekte: klem(30 - nr * 2, 16, 28) }),
-    // hvor de kommer fra: 1,4–2,2 km unna i en tilfeldig retning
-    start: (leir, r1, r2) => { const v = r1 * 6.2832, d = 1400 + r2 * 800; return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
+    // hvor de kommer fra: 3–4 km unna i en tilfeldig retning (19. nov, kritikken: «varselet kom da de var 50 m unna, framme om ca. 1 min».
+    // Før 1,4–2,2 km = 20–30 spillminutter; nå ca. 40–60, så det er tid til å reagere. Claudes forslag.)
+    start: (leir, r1, r2) => { const v = r1 * 6.2832, d = Trussel.VARSEL.start[0] + r2 * (Trussel.VARSEL.start[1] - Trussel.VARSEL.start[0]); return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
     belønning: nr => Math.min(Trussel.BALANSE.bytte.tak, Trussel.BALANSE.bytte.fast + Trussel.BALANSE.bytte.perBølge * nr),
     // NÅR ER BØLGEN OVER? (18. nov: røvere som var slått, trakk seg 3,9 km unna og ble stående – bølgen var «aktiv» for alltid, og det
     // kom aldri nye.) Et lag kan kjempe når det lever og ikke er slått ut. Bølgen er over når ingen kan kjempe ('slått'), eller når de
     // som kan, har holdt seg mer enn «borte» meter fra leiren i «borteMin» spillminutter ('unna'). Lag som venter på mørket (venter),
     // teller ikke som unna. lag: [{ lever, slåttUt, avstand, venter }], minutter: hvor lenge alle har vært unna. Tallene er Claudes forslag.
     borte: 2500, borteMin: 30,
+    // VARSELET (19. nov, Claudes forslag): start = meter fra leiren røverne starter (3–4 km); kommerMaks = spillminutter et lag som ennå ikke
+    // har vært innen «borte» m, teller som «på vei» (ikke «unna»); snart = minutter før ankomst farten senkes og det varsles igjen;
+    // tårn = meter et bemannet vakttårn ser røverne på (vaktene uten tårn ser 400 m, med tårn 800 m – nå ser tårnet røverne alt på 1,5 km)
+    VARSEL: { start: [3000, 4000], kommerMaks: 240, snart: 10, tårn: 1500 },
+    // anslaget: minutter til et lag som startet «meter» unna for «gått» spillminutter siden, er framme (fart m/s som Forsvar.R.fart)
+    anslag: (meter, gått, fart = 1.3) => Math.max(0, (meter - Math.max(0, gått) * fart * 60) / fart / 60),
     // (runde 4) Lag som har herjet og trekker seg ut med byttet (trekker), kjemper ikke lenger: er ingen andre igjen, er bølgen over
     // som 'herjet' – ikke slått tilbake, og ingen belønning.
     ferdig: (lag, minutter) => { const k = (lag || []).filter(q => q.lever && !q.slåttUt && !q.trekker); if (!k.length) return (lag || []).some(q => q.trekker) ? 'herjet' : 'slått';

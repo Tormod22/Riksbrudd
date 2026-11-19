@@ -42,8 +42,8 @@
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     const mann = Trussel.menn(nr, soldater, n, window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1);
-    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
-    varsel(Trussel.varsel(nr, n, s)); skitten = true; meny(); return true; }
+    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    varsel(Trussel.varsel(nr, n, s) + ` Ventet om ca. ${Math.round(Trussel.anslag(s.meter, 0))} min.`); skitten = true; meny(); return true; }
   // ---------- (runde 4) RØVERE SOM HAR HERJET trekker seg ut med byttet (Trussel.HERJ) ----------
   // tiden hvert røverlag er inne i leiren (innen Trussel.HERJ.radius fra midten), i spillminutter
   KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
@@ -76,7 +76,10 @@
       else if (Trussel.herjet(e)) trekkUt(e); }
     // (18. nov) bølgen er over når røverne er slått ut ELLER har holdt seg unna leiren en halv spilltime (Trussel.ferdig)
     // (runde 4) … eller når de som er igjen, har trukket seg ut med byttet ('herjet': ingen belønning)
-    const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn) || !!e.flykter, avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt, trekker: !!e.trekker })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
+    // (19. nov) røverne starter 3–4 km unna: et lag som ennå ikke har vært nær leiren, er «på vei» og teller ikke som unna (høyst VARSEL.kommerMaks)
+    for (const e of lag) if (!e.nærVært && Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.borte) e.nærVært = true;
+    const påVei = e => !e.nærVært && Number.isFinite(e.startTid) && tid - e.startTid < Trussel.VARSEL.kommerMaks;
+    const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn) || !!e.flykter, avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt || påVei(e), trekker: !!e.trekker })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
     if (st === 'trekker') { if (T.borteFra === undefined || T.borteFra === null) T.borteFra = tid; } else T.borteFra = null;
     if (st === 'herjet') { const f = F(); if (f) f.moral = Math.max(0, f.moral - Trussel.HERJ.moral);
       varsel(`Bølge ${T.aktiv} er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gangen – reparer byggene og gjør leiren klar til neste bølge.`);
