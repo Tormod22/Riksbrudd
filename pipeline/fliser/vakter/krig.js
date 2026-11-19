@@ -135,12 +135,12 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
         catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
         finally { Object.assign(E, { x: e0.x, y: e0.y, sett: e0.sett, sti: e0.sti, steg: e0.steg, seg: e0.seg, prog: e0.prog, timerIgjen: e0.timerIgjen }); delete E.målLagret; if (E.ai) E.ai.mål = e0.mål; E.siktSkitten = true; } } }
     // krigskartet: «Skjul» gjør panelet til en stripe og «Vis mer» henter det fram igjen (telefon: kartet passes inn i den frie delen)
-    if (window.StrategiSpill && StrategiSpill.skjul && StrategiSpill.bilde()) { const var0 = StrategiSpill.erÅpen(), kam0 = { x: kam.x, y: kam.y, m: kam.m }; let lagret = null; try { lagret = localStorage.getItem('riksbrudd-krigpanel'); } catch (e) { lagret = null; }
+    if (window.StrategiSpill && StrategiSpill.skjul && StrategiSpill.bilde()) { const var0 = StrategiSpill.erÅpen(), kam0 = { x: kam.x, y: kam.y, m: kam.m }, d30 = typeof på3d !== 'undefined' && på3d; let lagret = null; try { lagret = localStorage.getItem('riksbrudd-krigpanel'); } catch (e) { lagret = null; }
       try { if (!var0) StrategiSpill.åpne(); const p = document.getElementById('krig'); StrategiSpill.skjul(true);
         const st = p.querySelector('.stripe'), side = p.querySelector('.side'); ut.stripe = p.classList.contains('inn') && !!st && getComputedStyle(st).display !== 'none' && (!side || getComputedStyle(side).display === 'none');
         ut.høyStripe = Math.round(p.getBoundingClientRect().height); StrategiSpill.skjul(false); ut.visIgjen = !p.classList.contains('inn') && !!p.querySelector('.side .stolpe') && getComputedStyle(p.querySelector('.side')).display !== 'none'; }
       catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
-      finally { if (!var0) StrategiSpill.lukk(); Object.assign(kam, kam0); try { if (lagret === null) localStorage.removeItem('riksbrudd-krigpanel'); else localStorage.setItem('riksbrudd-krigpanel', lagret); } catch (e) { /* uten lagring */ } skitten = true; } }
+      finally { if (!var0) StrategiSpill.lukk(); Object.assign(kam, kam0); if (d30 && !på3d && typeof slå3d === 'function') { slå3d(true); for (let i = 0; i < 1800 && (!R3 || !R3.ut || R3.bygger); i++) await new Promise(r => setTimeout(r, 100)); } try { if (lagret === null) localStorage.removeItem('riksbrudd-krigpanel'); else localStorage.setItem('riksbrudd-krigpanel', lagret); } catch (e) { /* uten lagring */ } skitten = true; } }
     return ut; });
   Object.assign(d, { r4: d4, r5: d5 });
   const ok4 = !d4.feil && d4.dekning < .7 && Math.abs(d4.dekningAv - 1) < 1e-9 && d4.dekningTekst && d4.bytt && (d4.byttEgne === undefined || (d4.byttEgne && d4.arbeid && d4.ikkeEnnå && d4.spør && d4.forslag)) && d4.lagring && d4.krig3d && d4.ryddet && (d4.svarer === undefined || (d4.svarer && d4.ikkeUtenGrunn));
