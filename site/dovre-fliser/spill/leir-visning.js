@@ -157,7 +157,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   let fane = 'bygg';
   // delene i fanene: rekkefølge, og hvilke som er lagt sammen til du åpner dem (Claudes forslag)
   const FANEREKKE = ['bygg', 'lager', 'plan', 'mål'], DELREKKE = { bygg: [/^Byggelag/, /^Strøm$/, /^Byggesett/, /^Forsvar/, /^Tropper/, /^Kameravakt/, /^Sjøen/, /^Strømnett/],
-    lager: [/^Materialer$/, /^Oversikt/, /^Materialer fra verden/, /^Markedet/, /^Region/, /^Sjø/, /^Våpen/], plan: [/^Planlegg/],
+    lager: [/^Penger inn/, /^Materialer$/, /^Oversikt/, /^Materialer fra verden/, /^Markedet/, /^Region/, /^Sjø/, /^Våpen/], plan: [/^Planlegg/],
     mål: [/^Oppdrag/, /^Mål$/, /^Trusselen/, /^Ukas|^Scenario/, /^Etterretning/, /^Vær og verden/, /^Samfunn/, /^Dagbok/, /^Venner/, /tid og flyt/, /spillform/, /^Opplæring/] };
   const DEL_LUKKET = /^(Forsvar|Tropper|Strømnett|Byggesett|Kameravakt|Sjøen|Våpen og utstyr|Markedet|Venner|Etterretning|Vær og verden|Mål · |Opplæring|Region|Samfunn)/;
   let DELVALG = {}; try { DELVALG = JSON.parse(localStorage.getItem('riksbrudd-leirdeler') || '{}') || {}; } catch (e) { DELVALG = {}; }
