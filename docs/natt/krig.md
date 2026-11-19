@@ -369,25 +369,35 @@ Alle tall under er Claudes forslag (samlet i REGLER-objektene som står nevnt).
 - **Startstedet er ikke storbyen** (`Fraksjoner.REGLER.startMaks = 8000`): byer over 8000 innbyggere velges sist som startsted.
 
 #### Gjennomspilling på /rogaland (19. nov, webdriver av, nytt spill på Vanlig, leiren midt mellom Sviland og Oltedal, spilleren gjør ingenting i krigen)
-Skript: scratchpad `natt/krig/gjennom6.js` (ekte klokke på 600×, dev.py med ekte kartdata) og `natt/krig/rask6.js` (samme start, men spoler med
-`sim(.1)` i biter fordi 600× bare ga ca. 240× på denne maskinen). Tallene: andel av folket i området (41 tettsteder, 47 km), tettstedene hver side holder.
+Skript: scratchpad `natt/krig/gjennom6.js` (ekte klokke på 600×, dev.py med ekte kartdata; 600× ga bare ca. 240× på denne maskinen, så den kom til
+dag 2) og `natt/krig/rask6.js` (samme start, men spoler med `sim(.1)` i biter – samme regler). Tallene: andel av folket i området (41 tettsteder,
+47 km), tettstedene hver side holder. Siste kjøring (rask7, med alle rettingene under):
 
 | Tid | Kystalliansen (rød) | Folkefronten (grønn) | Hva skjer |
 |---|---|---|---|
 | dag 1 06:00 | Oltedal (1 011) – «under 1 %» | Sviland (742) – «under 1 %» | startstedene er deres; «samler styrker» |
-| dag 1 14:00 (der kritikeren tapte) | Oltedal | Sviland | ingenting tatt; 3 lag hver |
-| dag 2 06:00 | Oltedal | Sviland | 4 lag hver; første røverbølge varslet 3,7 km unna, «ventet om ca. 45 min» |
-| dag 3 18:00 | Oltedal | Sviland | fredstiden slutter |
-| dag 4 00:00–18:00 | Oltedal | Sviland | begge går mot Stavanger/Sandnes og slåss der – ingen tar den («Kamp om …»); 5–7 lag |
-| dag 5 | Oltedal | Sviland | det samme; Kystalliansen prøver Sviland |
-| dag 6 12:00 | + Ålgård/Figgjo, Hommersåk – 5,8 % | Sviland – 0,2 % | Folkefronten har 12–14 % av inntaket i Stavanger, avbrutt av kamp |
-| dag 6 18:00 | + Kvernaland – 8,1 % | Sviland | senere også Jørpeland (loggen) |
+| dag 1 14:00 (der kritikeren tapte) | Oltedal | Sviland | ingenting tatt; 3 lag hver (også med ekte klokke) |
+| dag 2 06:00 | Oltedal | Sviland | 4 lag hver; første røverbølge, «ventet om ca. 85–90 min (anslag)» |
+| dag 3 18:00 | Oltedal | Sviland | fredstiden slutter; ingen seier mulig før dag 4 06:00 |
+| dag 4 06:00 | + Kvernaland, Høle – 2,7 % | + Ålgård/Figgjo, Vatne – 4 % | småstedene først |
+| dag 4 12:00 | 2,7 % | + Hommersåk – 6 % | |
+| dag 6 12:00 | + Kleppe/Verdalen, Bryne – 9,5 % | 6 % | 6 lag hver |
+| dag 9 06:00 | 9,5 % | 6 % | ingen tar Stavanger/Sandnes: med 6 lag og en garnison per tettsted har ingen 35 frie mann |
 
-Før (kritikeren, samme område): Stavanger/Sandnes tatt kl. 14:19 dag 1, «Kystalliansen har overtaket – 69 %». Etter: ingen side over 10 % på seks
-døgn når spilleren ikke gjør noe; spilleren har 2,5 døgn i fred og kan ta de små stedene rundt leiren med Vaktlaget (4 mann holder til steder under
-ca. 1500 innbyggere). Motstanderne hindrer hverandre i Stavanger – det gir spilleren tid, men er ikke planlagt: kommer bare én av dem dit med 3 lag,
-tar den byen på 7–8 timer. Bilder: scratchpad `natt6/krig/gjennom-etter-*.png`, `gjennom-rask-*.png`, `rask-rask-krig-start.png` (krigskartet ved start:
-«Stavanger/Sandnes … trenger ca. 69 mann (minst 35) – dere har 4», knappen «For få»), `rask-rask-banner-*.png`.
+Før (kritikeren, samme område): Stavanger/Sandnes tatt kl. 14:19 dag 1, «Kystalliansen har overtaket – 69 %». Etter: ingen side over 10 % på åtte
+døgn når spilleren ikke gjør noe; spilleren har 2,5 døgn i fred og kan ta småstedene rundt leiren med Vaktlaget (4 mann holder til steder under ca.
+1500 innbyggere). Krigen avgjøres i praksis av Stavanger/Sandnes (78 % av folket i området): den som får 35–69 mann dit. Mellomkjøringene fant tre
+AI-feil som er rettet (se under): begge gikk rett mot Stavanger da freden var over (→ småstedene først), lag fra to sider sto i hver sin kant av
+Ålgård og 51 m fra hverandre i skogen i Sviland i flere døgn uten å se hverandre (→ inn mot midten, og mot en fiende de vet står i tettstedet), og
+slåtte lag talte ikke mot taket, så Kystalliansen hadde 26 lag på dag 8 (→ de teller, og et slått lag i et eget tettsted samles til det nye).
+Bilder: scratchpad `natt6/krig/gjennom-etter-*.png` (ekte klokke), `gjennom-rask7-*.png`, `rask-rask-krig-start.png` (krigskartet ved start:
+«Stavanger/Sandnes … trenger ca. 69 mann (minst 35) – dere har 4», knappen «For få»), `rask-rask*-banner-*.png`. Loggene: scratchpad `natt/krig/gj-*.log`.
+
+#### AI-rettinger funnet i gjennomspillingene (fraksjoner.js / fraksjoner-visning.js)
+- `REGLER.midten = 150`: et lag som tar et tettsted, går inn til 150 m fra midten før det blir stående (før stoppet det i kanten).
+- `v.iByFiende` / `REGLER.inntil = 25`: en fiende som står i tettstedet laget vil ta, vet laget om; er laget sterkt nok (som ved angrep), går det helt
+  inntil den («går mot … i …»), også når skogen skjuler dem. Visningen gir da også korte flytt (under 150 m).
+- Forsterkninger: slåtte lag teller mot taket; er alle plassene brukt, samles et slått lag som står i et eget tettsted, til det nye laget (ikke i testene).
 
 ### 2. «Kystalliansen holder til i Vatne», men 0 tettsteder – RETTET
 `AI.startEie(ut)` (fraksjoner-visning.js): i et nytt spill (de første tre spilltimene) får hver motstander tettstedet den holder til i, når det er
