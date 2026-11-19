@@ -1,11 +1,11 @@
-/* Riksbrudd – FJELLMARK NÆR DEG I 3D (runde 6, 19. nov, kritikken på telefon: «3D fra snaufjellet er nesten tomt: flat, brun mark»).
+/* Riksbrudd – FJELLMARK NÆR DEG I 3D (runde 6, 19. nov, kritikken på telefon: «3D fra snaufjellet er nesten tomt: flat, brun mark»). Prøvd ved 1665 moh. på Dovre (bilde i scratchpad natt6/ga/fjellmark-hoyt-pc.png).
  * Over tregrensen var bakken nær kameraet bare kartfargen med noen få store steiner (smått3d: ca. én stein per 150 m²). Når du går
  * (eller er under 110 m over bakken), legges det nå småstein, lav og mose, lyngtuer og snøflekker rundt deg – som gresset (gress3d):
  * fordelt på nytt når du har gått 12 m, innen REGLER.rad meter, og bare der det er fjellmark: over tregrensen (Vegetasjon.tregrense)
  * eller på grått/brunt snaufjell i kartet. Snøflekkene ligger der det er høyt nok etter årstiden (VAER.snøgrense) og ikke om vinteren
  * (da ligger snøen overalt). Aldri i vann, bekk, veg, spor, hus eller leirens bygg.
- * Fire instansnett med hjørnefarger (ingen teksturer, ingen nye lys): stein (20 trekanter), lav/mose (åttekantet pute, 16), lyngtue
- * (kryss av to flak, 4) og snøflekk (flat, ujevn skive, 14). Ca. 13 000 trekanter på PC når alt er fullt. Mengden følger
+ * Fire instansnett med hjørnefarger (ingen teksturer, ingen nye lys): stein (20 trekanter), lav/mose (åttekantet pute, 32), lyngtue
+ * (samme pute, mørk og ujevn) og snøflekk (flat, ujevn skive, 7). Ca. 50 000 trekanter på PC når alt er fullt (bare rundt deg). Mengden følger
  * grafikknivået (KVAL.p.gress; Lav = av). Reglene øverst er uten DOM (Node: require('./fjellmark3d'), test_fjellmark3d.js).
  */
 (function (rot) {
@@ -16,8 +16,8 @@
     rad: 48, flytt: 12,
     // høyst så mange per slag [PC, mobil]
     maks: { stein: [520, 220], lav: [700, 280], lyng: [520, 200], snø: [26, 10] },
-    // størrelser (m): stein (radius), lav/mose (radius), lyng (høyde), snøflekk (radius)
-    str: { stein: [.07, .42], lav: [.18, .6], lyng: [.12, .3], snø: [1.2, 4.2] },
+    // størrelser (m, radius): stein, lav/mose, lyngtue, snøflekk
+    str: { stein: [.07, .42], lav: [.18, .6], lyng: [.2, .55], snø: [1.2, 4.2] },
     // fjellmark: så mange meter under tregrensen begynner den (glir inn), og snøflekker fra så mange meter under snøgrensen
     underTregrensen: 60, snøUnder: 420,
     // andelen forsøk som blir snøflekk der det er høyt nok (de ligger i søkk og på le-sider – her bare spredt)
@@ -56,18 +56,14 @@
     // lav og mose: lav, åttekantet pute (kjegle med flat topp)
     const gl = new T.CylinderGeometry(.55, 1, .12, 8, 1).toNonIndexed(); gl.rotateX(Math.PI / 2); gl.translate(0, 0, .04); gl.computeVertexNormals();
     farg(gl, (x, y, z) => (z > .05 ? [.8, .82, .7] : [.62, .64, .52]));
-    // lyngtue: to kryssede flak, mørk nede og rødbrun/grønn oppe
-    const f1 = new T.PlaneGeometry(1, 1); f1.rotateX(Math.PI / 2); f1.translate(0, 0, .5); const f2 = f1.clone(); f2.rotateZ(Math.PI / 2);
-    const gy = new T.BufferGeometry(); gy.setAttribute('position', new T.BufferAttribute(new Float32Array([...f1.toNonIndexed().attributes.position.array, ...f2.toNonIndexed().attributes.position.array]), 3)); f1.dispose(); f2.dispose();
-    gy.setAttribute('normal', new T.BufferAttribute(new Float32Array(36).map((_, i) => (i % 3 === 2 ? 1 : 0)), 3));
-    farg(gy, (x, y, z) => (z > .5 ? [.42, .3, .22] : [.2, .17, .12]));
+    // lyngtue: en lav, mørk pute (som lav-puten, men brun/olivengrønn og ujevn – to kryssede flak så ut som små kasser på avstand)
+    const gy = gl.clone(); farg(gy, (x, y, z) => (z > .05 ? [.36, .3, .2] : [.22, .18, .12]));
     // snøflekk: flat skive med ujevn kant, litt over bakken
     const gn = new T.CircleGeometry(1, 7).toNonIndexed(); { const p = gn.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), r = Math.hypot(x, y); if (r > .5) { const a = Math.atan2(y, x), k = .75 + .25 * Math.sin(a * 3 + 1) + .12 * Math.sin(a * 5); p.setXY(i, x * k, y * k); } } }
     gn.translate(0, 0, .04); gn.computeVertexNormals(); farg(gn, (x, y) => (Math.hypot(x, y) > .6 ? [.82, .84, .88] : [.93, .94, .97]));
     const mk = (g, m, n, navn) => { const im = new T.InstancedMesh(g, m, n); im.count = 0; im.frustumCulled = false; im.name = 'fjellmark-' + navn; im.instanceColor = new T.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3); R.scene.add(im); return im; };
     const Q = REGLER.maks, k = mob ? 1 : 0, snøMat = mat(); snøMat.polygonOffset = true; snøMat.polygonOffsetFactor = -2; snøMat.polygonOffsetUnits = -2;
-    const lyngMat = mat(); lyngMat.side = T.DoubleSide;
-    M = { stein: mk(gs, mat(), Q.stein[k], 'stein'), lav: mk(gl, mat(), Q.lav[k], 'lav'), lyng: mk(gy, lyngMat, Q.lyng[k], 'lyng'), snø: mk(gn, snøMat, Q.snø[k], 'snø') };
+        M = { stein: mk(gs, mat(), Q.stein[k], 'stein'), lav: mk(gl, mat(), Q.lav[k], 'lav'), lyng: mk(gy, mat(), Q.lyng[k], 'lyng'), snø: mk(gn, snøMat, Q.snø[k], 'snø') };
   }
   function bort(R) { if (!M) return; for (const m of Object.values(M)) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } M = null; senter = null; }
   // er det lov å legge noe på (x, y) i utsnittets meter?
@@ -101,12 +97,12 @@
       d.position.set(x, y, z - (s === 'stein' ? r * .3 : 0)); d.rotation.set(0, 0, rnd() * 6.283);
       if (s === 'snø') { const e = .6; const hx = typeof nettHoyde === 'function' ? nettHoyde(u, x + e, y) - nettHoyde(u, x - e, y) : 0, hy = typeof nettHoyde === 'function' ? nettHoyde(u, x, y + e) - nettHoyde(u, x, y - e) : 0;
         d.rotation.set(Math.atan2(hy, 2 * e), -Math.atan2(hx, 2 * e), rnd() * 6.283, 'ZXY'); d.position.z = z + .02; }
-      d.scale.set(r, r * (s === 'lyng' ? 1.2 : 1) * (.8 + rnd() * .4), r * (s === 'lyng' ? 1 : 1)); if (s === 'lyng') d.scale.set(r * 1.3, r * 1.3, r);
+      d.scale.set(r * (.75 + rnd() * .5), r * (.75 + rnd() * .5), r * (s === 'lyng' ? 1.6 : 1));
       d.updateMatrix(); M[s].setMatrixAt(n[s], d.matrix);
       // fargen per ting: steinene i grått/brunt, lav fra lys reinlav til mørk mose, lyng fra rødbrun til grønn
       if (s === 'stein') { const v = .8 + rnd() * .35, b = rnd() < .3 ? .9 : 1; col.setRGB(v, v * b, v * b * .97); }
-      else if (s === 'lav') { const m = rnd(); m < .5 ? col.setRGB(1, 1, .92) : m < .8 ? col.setRGB(.55, .7, .42) : col.setRGB(.42, .48, .3); }
-      else if (s === 'lyng') { const m = rnd(); col.setRGB(.8 + m * .5, .75 + (1 - m) * .5, .7); }
+      else if (s === 'lav') { const m = rnd(); m < .55 ? col.setRGB(1, 1, .92) : m < .8 ? col.setRGB(.62, .7, .5) : col.setRGB(.5, .54, .4); }
+      else if (s === 'lyng') { const m = rnd(); col.setRGB(.85 + m * .35, .8 + (1 - m) * .3, .75); }
       else col.setRGB(1, 1, 1);
       M[s].setColorAt(n[s], col); n[s]++;
     }
