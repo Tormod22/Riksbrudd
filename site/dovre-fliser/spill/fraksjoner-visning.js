@@ -103,6 +103,9 @@
     if (!AI.regionSlutt && tid >= slutt && tid < slutt + 60) { AI.regionSlutt = true; logg('Motstanderne har samlet seg og begynner å ta tettsteder. Hold garnison i det du har.'); }
     return tid < slutt; };
   AI.regionFred = regionFred;
+  // et døgn etter fredstiden (Fraksjoner.REGLER.storEtter) tar de bare tettsteder ett lag kan ta
+  const småFørst = () => { if (navigator.webdriver && !AI.test) return false; const f = window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende || 1; return tid < (F.fredDøgn(f) + R.storEtter) * 1440; };
+  AI.småFørst = småFørst;
   const byerRundt = (s, r) => ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > s.x - r && b.bb[0] < s.x + r && b.bb[3] > s.y - r && b.bb[1] < s.y + r && (!window.OMRÅDE_OK || OMRÅDE_OK((b.bb[0] + b.bb[2]) / 2, (b.bb[1] + b.bb[3]) / 2)));
   const eier = by => Garnison.tilstand(TETTSTEDER, by.e.id).eier;
 
@@ -150,7 +153,7 @@
       const hjelp = venner.filter(f => f !== s && f.beskuttTid !== undefined && tid - f.beskuttTid < 15).map(f => ({ x: f.x, y: f.y, navn: f.navn, lag: f }));
       // (18. nov) førerens væremåte (spill/krig.js) flytter terskelen for når laget angriper
       const vmF = window.Krig && window.KrigSpill && KrigSpill.auto() && !s.raid ? (Krig.væremåte((s.menn[s.leder] || s.menn[0]).navn).overtak || 1) : 1;
-      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), mot, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
+      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), småFørst: småFørst(), mot, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
         minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst) ? (byer.find(b => b.inni(s.x, s.y)) || {}).id : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på

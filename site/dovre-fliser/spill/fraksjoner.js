@@ -38,7 +38,9 @@
     //    ingen andre – de forsvarer seg, men går ikke ut for å ta tettsteder;
     //  lagPerDøgn: taket for antall lag vokser med ett lag for hvert andre døgn (de bygger seg opp over dager);
     //  startMaks: startstedet er helst et tettsted med høyst så mange innbyggere (ikke storbyen ved siden av leiren).
-    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000,
+    //  storEtter: tettsteder som trenger mer enn ett lag (minst over «ettLag» mann) blir mål først så mange døgn etter fredstiden –
+    //    de tar småstedene først (gjennomspillingen 19. nov: rett etter fredstiden gikk begge mot Stavanger/Sandnes)
+    regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12,
   };
   // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
   const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
@@ -87,7 +89,7 @@
     const sty = f => styrke(f, f.ammo === undefined ? 1 : f.ammo), garn = f => v.byer.some(b => b.eier === v.side && b.inni(f.x, f.y) && !andre.concat([s]).some(g => g !== f && b.inni(g.x, g.y) && !slåttUt(g) && g.navn < f.navn));
     const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
-    const mulig = b => !(b.minst > 0) || fri >= b.minst;
+    const mulig = b => !(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag));
     if (iBy && iBy.eier !== v.side && mulig(iBy)) return { hva: 'hold', x: s.x, y: s.y, tekst: !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}` };
     // ta det nærmeste tettstedet som ikke er vårt (større tettsteder teller som nærmere)
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;

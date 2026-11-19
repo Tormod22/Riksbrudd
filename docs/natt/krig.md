@@ -356,6 +356,9 @@ Alle tall under er Claudes forslag (samlet i REGLER-objektene som står nevnt).
 - **Fredstid i regionkrigen** (`Fraksjoner.REGLER.regionFred = 2.5` døgn på Vanlig, delt på fiendens faktor, 1,5–4 døgn; `Fraksjoner.fredDøgn`):
   motstanderne samler seg i sitt eget tettsted (eller hjemme) og tar ingen andre tettsteder. De forsvarer seg fortsatt. Melding i loggen ved start
   og når fredstiden er over (`AI.regionFred` i fraksjoner-visning.js). Ikke i testene (navigator.webdriver) uten `AI.test`.
+- **Småstedene først** (`Fraksjoner.REGLER.storEtter = 1`, `ettLag = 12`): det første døgnet etter fredstiden går motstanderne bare mot tettsteder ett
+  lag kan ta (minst ≤ 12 mann); storbyene blir mål etterpå (`v.småFørst`, `AI.småFørst`). Lagt inn etter den første gjennomspillingen, der begge gikk
+  rett mot Stavanger/Sandnes da freden var over.
 - **Motstanderne bygger seg opp over dager**: `Fraksjoner.lagTak(byer, dag)` = 3 + ½ per tettsted + ½ per døgn (høyst 6).
 - **AI-en regner med styrken** (`Fraksjoner.velg`): et tettsted med `b.minst` tas bare når lagets og de frie vennenes styrke (ikke eneste garnison)
   er minst `minst`; laget venter i byen («venter på flere for å ta …») når vennene er på vei, og ellers velger det noe annet. Store tettsteder er
