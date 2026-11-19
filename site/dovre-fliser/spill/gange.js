@@ -231,7 +231,8 @@
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (valgÅpen() && !reise) { lukkValg(); e.preventDefault(); e.stopImmediatePropagation(); return; }
-      if (!r3() || !R3.fot) return;
+      // (i et kamera i kameravakta går Esc ut av kameraet – spill/kameravakt-visning.js)
+      if (!r3() || !R3.fot || document.body.classList.contains('ikamera')) return;
       const K = window.Kortkø, kort = K && K.åpent ? K.åpent() : null;
       if (kort === 'hendelse' || kort === 'samfunnkort') { kortTilbake(); e.preventDefault(); e.stopImmediatePropagation(); return; }
       // noe er åpent: det lukker seg selv på Esc (sekken, panelene) – ikke gå ut av førsteperson
