@@ -16,6 +16,8 @@ module.exports = {
       if (ut.feil.length) return ut;
       const før = KVAL.effekterPå, nivå = KVAL.valg; ut.før = før;
       ok(før || KVAL.fx.skygge[0] === 0, 'effektene skal være av til de slås på');
+      // (19. nov: en vakt før denne kan ha satt i gang en ombygging – vent på den, ellers prøves skyggene aldri)
+      for (let q = 0; q < 150 && typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && (R3.bygger || !R3.ut); q++) await new Promise(r => setTimeout(r, 200));
       const R = typeof R3 !== 'undefined' && R3, i3d = !!(R && R.ut && R.mesh && typeof på3d !== 'undefined' && på3d && !R.bygger);
       ut.i3d = i3d;
       try {

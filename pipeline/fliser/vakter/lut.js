@@ -99,7 +99,7 @@ module.exports = {
               // en ledig plass minst 1,5 m fra der det sto, og stå slik at spøkelset havner der
               const b = MS.bæres(); let mål = null;
               for (let x = x0 + .5; x < x0 + 9.5 && !mål; x += .25) for (let y = y0 + .5; y < y0 + 7.5 && !mål; y += .25) { if (Math.hypot(x - kj.x, y - kj.y) < 1.5) continue; const q = { type: b.type, x, y, a: 0, b: b.b, d: b.d };
-                if (!Mobler.kanSettes(pl(), q, Interior, nk).ok) continue; const g = Mobler.foran(0, 0, 0, b, 0, 0), px = x, py = y - g.y; if (!Interior.blokkert(pl(), px, py) && Interior.inni(P, px, py)) mål = [px, py, x, y]; }
+                if (!Mobler.kanSettes(pl(), q, Interior, nk).ok) continue; const smal = typeof VW !== 'undefined' && typeof VH !== 'undefined' && (VW < 700 || VW < VH), g = Mobler.foran(0, 0, 0, b, 0, 0, smal ? Mobler.REGLER.foranSmal : Mobler.REGLER.foran), px = x, py = y - g.y; if (!Interior.blokkert(pl(), px, py) && Interior.inni(P, px, py)) mål = [px, py, x, y]; }
               krev(!!mål, 'fant ingen ledig plass til kjøleskapet');
               if (mål) { b.k = 0; sett(mål[0], mål[1], 0); for (let q = 0; q < 4; q++) { KROKER.ramme3d.forEach(f => f(R3)); await new Promise(r => setTimeout(r, 130)); }
                 d.spøkelse = !!MS.spøkelse() && MS.spøkelse().parent === R3.scene; krev(d.spøkelse && b.mål && b.mål.ok, 'spøkelset står ikke grønt i scenen (' + (b.mål ? b.mål.grunn : 'ingen plass') + ')');
