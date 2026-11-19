@@ -36,7 +36,8 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
 { // mange navn på samme punkt (/norge, 200 km-zoom): ingen lang søyle – de som ikke får plass innen to linjer, skjules
   const ls = []; for (let i = 0; i < 9; i++) ls.push(Object.assign(lapp('Lag ' + i, 700, 400, 3), { nr: i })); E.plasser(ls, []);
   const vist = ls.filter(L => L.vis), maks = Math.max(...vist.map(L => Math.abs(L.py - 400)));
-  ok(vist.length >= 3 && vist.length < 9 && maks <= 2 * E.LINJE + 40, `${vist.length} av 9 vises, høyst ${maks} px fra plassen (ingen søyle)`); }
+  ok(vist.length >= 3 && vist.length < 9 && maks <= 2 * E.LINJE + 40, `${vist.length} av 9 vises, høyst ${maks} px fra plassen (ingen søyle)`);
+  const flere = vist.reduce((a, L) => a + L.flere, 0); ok(flere === 9 - vist.length, `de skjulte telles som «+${flere}» ved navnene som står`); }
 { // bygg/steder skjules når det ikke er plass; de viktigste (fiender) står likevel, oppå kartnavn men ikke oppå merker
   const kart = [{ r: [0, 0, 2000, 2000], prio: .5, tekst: true }], s = lapp('Brakke', 300, 300, 1, 1), fi = lapp('Røvere', 300, 300, 6);
   E.plasser([s, fi], kart); ok(!s.vis && fi.vis && !fi.tvunget, 'et sted skjules under kartnavn, fienden står oppå kartnavnet'); }

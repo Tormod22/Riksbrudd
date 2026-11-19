@@ -34,7 +34,8 @@ Punktene fra `docs/anmeldelse-2026-11-19.md`. Alle tall er Claudes forslag (saml
 7. **«Brakke −1 kW · 8 senger» oppå bygget – RETTET.** byggevisning.js: nøkkeltallene står under byggets omriss (laveste hjørne + 13 px),
    ikke oppå taket.
 8. **«Leiren her?» 100 px fra flagget – RETTET.** Navnet har høy viktighet (regel i kartlapper.js), så det står under flagget selv om
-   kartnavn er i veien (det ble skjøvet ned av navnene på infrastrukturen). Prøvd på /rogaland.
+   kartnavn er i veien (det ble skjøvet ned av navnene på infrastrukturen). Prøvd på /rogaland. (Pakka «start» har samtidig latt
+   forslaget tegne navnet rett under flagget uten Etikett – det virker sammen; regelen gjelder da bare om det går gjennom Etikett igjen.)
 9. **2D-kartet viser verken natt eller regn – RETTET.** `spill/kartlys.js` (`KartLys.tone`, test_kartlys.js): kartet ganges med en blå
    farge etter solhøyden (`Vaer.solHøyde`, samme myke overgang som lys3d: dag fra −8° til 8°; de lyse sommernettene gir litt lys tilbake,
    `tussmørke` 0,35), høyst 0,62; regn og snø trekker fargene mot grått (metning, høyst 0,45) og gjør kartet litt mørkere. Tegnes rett etter
@@ -69,6 +70,7 @@ Punktene fra `docs/anmeldelse-2026-11-19.md`. Alle tall er Claudes forslag (saml
 
 ### Ikke gjort / svakheter
 - Krig-visning.js tegner fortsatt sin egen tekst for meldte fiender under navnene; kartlapper.js tegner den på nytt øverst (samme sted).
-- Navn som skjules, får ikke noe «+3»-merke. Langt ute med mange lag på samme sted vises de viktigste 3–5.
+- Langt ute med mange lag på samme sted vises de som får plass (høyst sju plasser rundt merket); lag og kjøretøy som skjules,
+  telles som «+3» etter navnet som står nærmest (innen 30 punkter, `REGLER.klynge`).
 - Mønsteret i bakken ligger også på vann (svakt). Trærne på nær zoom er fortsatt uskarpe.
 - Oljetekst på terminalene («300 t olje», okonomi-visning.js) går ikke gjennom Etikett.

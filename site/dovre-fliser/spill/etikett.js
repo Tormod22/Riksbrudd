@@ -23,6 +23,8 @@
     linjer: 2,
     // luft mellom et navn og et merke ved siden av (px)
     side: 6,
+    // skjulte lag/kjøretøy innen så mange punkter fra et navn som står, telles som «+3» etter det
+    klynge: 30,
     // tall i navn: en skrift der 0 ikke ser ut som o (Cormorant Garamond har gammeldagse tall)
     tallSkrift: '"Times New Roman", Times, "Liberation Serif", "Noto Serif", "DejaVu Serif", serif', tallSkala: .94,
   };
@@ -70,6 +72,13 @@
       if (!funnet && L.prio >= R.tving) { funnet = [L.x, L.y, ramme(L.x, L.y, L.w, h)]; L.tvunget = true; }
       if (!funnet) continue;
       L.vis = true; L.px = funnet[0]; L.py = funnet[1]; L.ramme = funnet[2]; satt.push(L); }
+    // skjulte navn rett ved et navn som står (samme sted på skjermen, langt ute): «+3» etter det, så du vet at det er flere der
+    // (bare lag og kjøretøy – ikke tettsteder, leiren, bygg og steder)
+    const P = R.prio, enhet = p => p === P.kjøretøy || p === P.egne || p === P.valgt || p === P.fiende;
+    for (const L of satt) L.flere = 0;
+    for (const L of lapper) { if (L.vis || !enhet(L.prio)) continue; let best = null, bd = R.klynge;
+      for (const q of satt) { if (!enhet(q.prio)) continue; const d = Math.hypot(q.x - L.x, (q.y + q.retning * 16) - (L.y + L.retning * 16)); if (d < bd) { bd = d; best = q; } }
+      if (best) best.flere++; }
     return lapper; }
 
   // ---------- tegnerne: tekst() fanger navnet, og strokeText/fillText(t, x, NaN) gir fargene ----------
@@ -112,7 +121,9 @@
     if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false })))); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
       if (g) { g.save(); for (const L of rek) { g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
         if (L.strek) { g.lineWidth = L.bredde || 3; g.lineJoin = 'round'; g.strokeStyle = L.strek; skriv(g, L, L.px, L.py, false); }
-        g.fillStyle = L.fyll || '#e7dcc3'; skriv(g, L, L.px, L.py, true); } g.restore(); }
+        g.fillStyle = L.fyll || '#e7dcc3'; skriv(g, L, L.px, L.py, true);
+        if (L.flere > 0) { const t = '+' + L.flere, x0 = L.align === 'center' ? L.px + L.w / 2 + 4 : L.px + L.w + 4; g.save(); g.textAlign = 'left'; g.font = '600 11px ' + REGLER.tallSkrift; g.globalAlpha = .85;
+          g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; (g.__etikettS || g.strokeText).call(g, t, x0, L.py); g.fillStyle = '#f0d79a'; (g.__etikettF || g.fillText).call(g, t, x0, L.py); g.restore(); } } g.restore(); }
       for (const L of rek) { vist.push(L); tatt.push(L.ramme); }
       kø.length = 0; }
     if (g) g.__etikettSiste = null;
@@ -126,7 +137,7 @@
     for (let i = 0; i < tatt.length; i++) for (let j = i + 1; j < tatt.length; j++) { const r = tatt[i], q = tatt[j];
       if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
   // for vakten: navnene som ble tegnet i siste ramme ({ t, x, y, prio }) og merkene
-  const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, ramme: L.ramme.slice() }));
+  const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, flere: L.flere || 0, ramme: L.ramme.slice() }));
   const E = { nullstill, plass, merk, tekst, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
     aktiv: () => aktiv, antall: () => tatt.length, overlapp, LINJE, MAKS, REGLER };
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else rot.Etikett = E;
