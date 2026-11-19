@@ -12,8 +12,16 @@
 (function () {
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
   const NÆR = 30, BORT = 50, MAKS = 10;
-  const aktive = new Map();
-  let forU = null, sist = 0, M = null;
+  // BYGGING I BITER (20. nov natt, hakk når du går: ett bygg tok 160–370 ms i ett strekk). Byggingen er en generator (byggG) som
+  // gjøres noen millisekunder per bilde i en egen requestAnimationFrame (etter spilløkka, før bildet tegnes). Interiører som du har
+  // gått fra (over BORT), hviler en stund uten å bli kastet, så de kommer tilbake straks når du snur. Huset blir likt bit for bit
+  // med det som bygges i ett strekk (bygg = byggG kjørt ferdig, som bygOm, vaktene og oppdater(true) bruker).
+  // Tallene er Claudes forslag: ms = arbeid per bilde, hvile = hvor mange interiører som hviler (PC/telefon), foran = hvor langt
+  // foran deg (i blikkets retning) et hus regnes som nært, så husene du går mot bygges først.
+  const BIT = { ms: 6, hvile: 6, hvileMobil: 3, foran: 8 };
+  const aktive = new Map(), hvile = new Map();
+  let forU = null, sist = 0, M = null, jobb = null, rafNr = 0, versjon = 0, FUNN_GEO = null;
+  const STAT = { bygget: 0, biter: 0, lengst: 0, gjenbrukt: 0, kastet: 0, steg: {}, sist: null };
   // stoffene i hovednettet og hvor mange meter mønsteret dekker
   const STOFFER = ['glatt', 'parkett', 'flis', 'betong', 'malt', 'panel', 'tre', 'tøy'], NR = Object.fromEntries(STOFFER.map((n, i) => [n, i]));
   const TRE = [.56, .4, .25], LYST_TRE = [.8, .66, .46], HVIT = [.93, .93, .91], GRÅ = [.55, .56, .57], MØRK = [.16, .16, .18], STÅL = [.66, .68, .7], MESSING = [.8, .68, .3];
@@ -53,10 +61,15 @@
       g.save(); g.beginPath(); g.rect(n / 2, 0, n / 2, n); g.clip(); g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = n * .13; g.shadowOffsetX = n; g.fillStyle = '#000'; g.fillRect(n * .5 + n * .13 - n, n * .26, n * .24, n * .48); g.restore(); },
   };
   const METER = { glatt: 1, parkett: 1, flis: 1.2, betong: 2.4, malt: 2, panel: 1.12, tre: 1, tøy: .4 };
-  function stoffene() {
+  // stoffene lages første gang et interiør bygges – ett mønster per bit (de tegnes i koden og tar litt tid)
+  function* stoffeneG() {
     if (M) return M;
     const tex = (navn, n, gjenta) => { const t = new THREE.CanvasTexture(lerret(n, MØNSTER[navn])); if (gjenta) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
-    M = { hoved: STOFFER.map(n => new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0x201e1b, map: n === 'glatt' ? null : tex(n, 256, true) })),
+    const hoved = [];
+    for (const n of STOFFER) { hoved.push(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0x201e1b, map: n === 'glatt' ? null : tex(n, 256, true) })); yield 'mønster'; }
+    // (et bygg som ble bygget i ett strekk imens, har alt laget dem)
+    if (M) { for (const m of hoved) { if (m.map) m.map.dispose(); m.dispose(); } return M; }
+    M = { hoved,
       vindu: new THREE.MeshBasicMaterial({ color: 0xdfeaf2, transparent: true, opacity: .1, depthWrite: false, side: THREE.DoubleSide, fog: false }),
       skygge: new THREE.MeshBasicMaterial({ map: tex('skygge', 64), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
       lampe: new THREE.MeshBasicMaterial({ map: tex('glød', 64), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x6a5a3a }),
@@ -64,6 +77,9 @@
       dag: new THREE.MeshBasicMaterial({ map: M_GLØD(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, color: 0x404040 }) };
     return M;
   }
+  // en generator kjørt ferdig i ett strekk
+  const iEtt = it => { let r; while (!(r = it.next()).done); return r.value; };
+  function stoffene() { return M || iEtt(stoffeneG()); }
   let glødTex = null; function M_GLØD() { if (!glødTex) glødTex = new THREE.CanvasTexture(lerret(64, MØNSTER.glød)); return glødTex; }
 
   // ---------- møblene: kasser [x0, x1, y0, y1, z0, z1, farge, stoff, rund] i meter i møbelets akser (y fra ryggen −d/2 til fronten +d/2) ----------
@@ -267,16 +283,25 @@
     return S;
   }
 
-  function bygg(R, u, P) {
+  // Bygger interiøret i P og gir { plan, nett, ytre, funn, trekanter } – nettene er IKKE lagt i scenen (legg() gjør det).
+  // yield mellom stegene (navnet på steget, så målingen ser hvilket steg som er lengst); ingenting fra three.js lages før siste steg
+  // utenom stoffene, så en jobb som avbrytes, etterlater ingenting.
+  function bygg(R, u, P) { return iEtt(byggG(R, u, P)); }
+  function* byggG(R, u, P) {
     const terr = (x, y) => (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX, D = P.dør;
     // døra må ligge på omrisset (saltakshus tegnes som et rettet rektangel): flytt den til nærmeste kant
     let best = null; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1.4) continue;
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, w = Math.min(D.w, L * .7), t = Math.max(w / 2 + .1, Math.min(L - w / 2 - .1, (D.x - a[0]) * ex + (D.y - a[1]) * ey)), x = a[0] + ex * t, y = a[1] + ey * t, av = Math.hypot(x - D.x, y - D.y);
       if (!best || av < best.av) best = { av, x, y, ux: ex, uy: ey, w }; }
     if (!best) return null;
-    const pl = Interior.plan(P, { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger });
+    if (!M) yield* stoffeneG();
+    yield 'start';
+    // planen i biter (Interior.planG), ellers i ett strekk
+    const info = { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger }, pl = Interior.planG ? yield* Interior.planG(P, info) : Interior.plan(P, info);
+    yield 'plan';
     // (18. nov kveld) krokene får planen før den bygges: møbler som er flyttet (spill/mobler-visning.js) tas ut eller settes inn her
     for (const f of window.INTERIOR_PLAN || []) { try { f(pl, P, u); } catch (e) { console.warn('interiør-krok:', e); } }
+    yield 'kroker';
     const I = pl.inngang, A = pl.akse;
     let maks = -Infinity, mx = 0, my = 0; for (const [x, y] of P) { maks = Math.max(maks, terr(x, y)); mx += x; my += y; } maks = Math.max(maks, terr(mx / P.length, my / P.length));
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
@@ -334,7 +359,7 @@
     const klipp = (S, akse, grense, større) => { const ut = [], inne = p => større ? p[akse] >= grense : p[akse] <= grense;
       for (let i = 0; i < S.length; i++) { const a = S[i], b = S[(i + 1) % S.length], ia = inne(a), ib = inne(b);
         if (ia) ut.push(a); if (ia !== ib) { const t = (grense - a[akse]) / (b[akse] - a[akse]); ut.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } } return ut; };
-    for (const r of pl.rom) { let S = klipp(klipp(klipp(klipp(Puv, 0, r.u0, true), 0, r.u1, false), 1, r.v0, true), 1, r.v1, false); if (S.length < 3) continue;
+    for (const r of pl.rom) { yield 'gulv'; let S = klipp(klipp(klipp(klipp(Puv, 0, r.u0, true), 0, r.u1, false), 1, r.v0, true), 1, r.v1, false); if (S.length < 3) continue;
       const [st, f] = stiler.get(r).gulv, g = G[NR[st]], m = METER[st] * (st === 'flis' && (r.rolle === 'butikk' || r.rolle === 'terminal') ? 1.6 : 1); let T;
       try { T = THREE.ShapeUtils.triangulateShape(S.map(p => new THREE.Vector2(p[0], p[1])), []); } catch (e) { continue; }
       const xy = p => [p[0] * A.ux + p[1] * A.vx, p[0] * A.uy + p[1] * A.vy, g0];
@@ -345,7 +370,8 @@
 
     // ytterveggenes innside (3 cm innenfor veggen), delt der skilleveggene møter dem, med åpning ved inngangen og vinduer
     const dørH = Math.min(tak - .1, Math.max(2, D.hh || 2.1)), ender = pl.vegger.flatMap(v => [[v.ax, v.ay], [v.bx, v.by]]), dagslys = kl !== 'låve';
-    for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
+    yield 'himling';
+    for (let i = 0; i < P.length; i++) { yield 'yttervegg'; const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, nx = -ey, ny = ex, pt = (t, inn) => [a[0] + ex * t + nx * inn, a[1] + ey * t + ny * inn];
       // taklist langs ytterveggene i boliger, kontorer og hytter (gir rommene en avslutning mot taket)
       if (/^(hus|leil|kontor|hytte|skole|sykehus)$/.test(kl) && L > .6) { const tm = pt(L / 2, .055); kasse(tm[0], tm[1], Math.atan2(ey, ex), [-L / 2 + .03, L / 2 - .03, -.025, .025, tak - .07, tak - .002, [.96, .96, .94]]); }
@@ -379,7 +405,7 @@
           if (hash(pl.i, 63) < .6) { const vk = pt(td - I.w / 2 - .3, .3); kasse(vk[0], vk[1], va, [-.2, .2, -.1, .1, 0, .3, TØY[Math.floor(hash(pl.i, 64) * TØY.length)], 'tøy']); kasse(vk[0], vk[1], va, [-.12, .12, -.02, .02, .3, .42, MØRK]); } }
       }
       const z0 = vz0, z1 = vz1;
-      for (const t of vinduer) {
+      for (const t of vinduer) { yield 'vindu';
         // glasset: en svak, lys hinne (ingen bilde – du ser det som faktisk er utenfor)
         const w0 = pt(t - bw / 2, .02), w1 = pt(t + bw / 2, .02);
         fk(V, [w0[0], w0[1], g0 + z0], [w1[0], w1[1], g0 + z0], [w1[0], w1[1], g0 + z1], [w0[0], w0[1], g0 + z1], null, UV0);
@@ -400,7 +426,7 @@
       }
     }
     // skilleveggene: 10 cm tykke, hver side i sitt roms farge, og bilder på noen av dem
-    for (const [vn, v] of pl.vegger.entries()) { const L = Math.hypot(v.bx - v.ax, v.by - v.ay); if (L < .05) continue; const ex = (v.bx - v.ax) / L, ey = (v.by - v.ay) / L, nx = -ey, ny = ex, va = Math.atan2(ey, ex);
+    for (const [vn, v] of pl.vegger.entries()) { yield 'skillevegg'; const L = Math.hypot(v.bx - v.ax, v.by - v.ay); if (L < .05) continue; const ex = (v.bx - v.ax) / L, ey = (v.by - v.ay) / L, nx = -ey, ny = ex, va = Math.atan2(ey, ex);
       for (const s of [1, -1]) { const ox = nx * .05 * s, oy = ny * .05 * s, mid = [(v.ax + v.bx) / 2 + nx * .4 * s, (v.ay + v.by) / 2 + ny * .4 * s], S = stilVed(mid[0], mid[1]);
         const fri = e => !pl.dører.some(d => Math.hypot(d[0] - e[0], d[1] - e[1]) < d[4] / 2 + .2);
         veggflate(v.ax + ox, v.ay + oy, v.bx + ox, v.by + oy, 0, tak, S.vegg, fri([v.ax, v.ay]), fri([v.bx, v.by]), true); veggskygge(v.ax + ox, v.ay + oy, v.bx + ox, v.by + oy, nx * s, ny * s);
@@ -414,7 +440,7 @@
         fk(G[NR.malt], [x - nx * .05, y - ny * .05, g0], [x + nx * .05, y + ny * .05, g0], [x + nx * .05, y + ny * .05, g0 + tak], [x - nx * .05, y - ny * .05, g0 + tak], mørk(f, .85), UV0); }
     }
     // døråpningene mellom rommene: overstykke opp til taket, karm, og et dørblad som står åpent
-    for (const [dn, d] of pl.dører.entries()) { const [x, y, ex, ey, w] = d, va = Math.atan2(ey, ex), nx = -ey, ny = ex, H = Math.min(2.05, tak - .15);
+    for (const [dn, d] of pl.dører.entries()) { yield 'dør'; const [x, y, ex, ey, w] = d, va = Math.atan2(ey, ex), nx = -ey, ny = ex, H = Math.min(2.05, tak - .15);
       for (const s of [1, -1]) { const S = stilVed(x + nx * .4 * s, y + ny * .4 * s); veggflate(x - ex * w / 2 + nx * .05 * s, y - ey * w / 2 + ny * .05 * s, x + ex * w / 2 + nx * .05 * s, y + ey * w / 2 + ny * .05 * s, H, tak, S.vegg, false, false, false); }
       fk(G[0], [x - ex * w / 2 - nx * .05, y - ey * w / 2 - ny * .05, g0 + H], [x + ex * w / 2 - nx * .05, y + ey * w / 2 - ny * .05, g0 + H], [x + ex * w / 2 + nx * .05, y + ey * w / 2 + ny * .05, g0 + H], [x - ex * w / 2 + nx * .05, y - ey * w / 2 + ny * .05, g0 + H], [.7, .7, .68], UV0);
       if (w > 1.4 || kl === 'låve' || kl === 'uthus') continue;
@@ -429,23 +455,24 @@
     if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = pl.trapp / n;
       for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, ute - g0 - .4, (ute - g0) + (pl.gulv - ute) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
     // møblene, med skygge under og teppe under salongbordet
-    for (const m of pl.møbler) { for (const K of deler(m)) kasse(m.x, m.y, m.a, K);
+    for (const m of pl.møbler) { yield 'møbel'; for (const K of deler(m)) kasse(m.x, m.y, m.a, K);
       if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger') blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
       if (m.type === 'salongbord') { const tf = TØY[Math.floor(hash(pl.i, 41) * TØY.length)], tw = Math.min(1.1, m.b / 2 + .5), td2 = .8;
         kasse(m.x, m.y, m.a, [-tw, tw, -td2, td2, .004, .014, tf, 'tøy']); kasse(m.x, m.y, m.a, [-tw + .12, tw - .12, -td2 + .12, td2 - .12, .014, .017, mørk(tf, 1.25), 'tøy']); } }
     // FORLATT (17. nov): spor etter at folk dro – ark og esker på gulvet og en mørk flekk her og der. Fast per bygg og rom; ikke i leiren din.
-    if (!P.leir) pl.rom.forEach((r, n) => { if (r.andel < .6 || r.areal < 5) return; const rh = q => hash(pl.i, 700 + n * 17 + q);
+    if (!P.leir) for (const [n, r] of pl.rom.entries()) { yield 'forlatt'; if (r.andel < .6 || r.areal < 5) continue; const rh = q => hash(pl.i, 700 + n * 17 + q);
       const punkt = q => { for (let f = 0; f < 6; f++) { const pu = r.u0 + .5 + rh(q * 7 + f) * Math.max(.1, r.u1 - r.u0 - 1), pv = r.v0 + .5 + rh(q * 7 + f + 3) * Math.max(.1, r.v1 - r.v0 - 1), x = pu * A.ux + pv * A.vx, y = pu * A.uy + pv * A.vy; if (Interior.inni(P, x, y) && Interior.avstKant(P, x, y) > .4 && !Interior.blokkert(pl, x, y)) return [x, y]; } return null; };
       const papir = /kontor|klasserom|stue|gang|resepsjon|butikk/.test(r.rolle) ? 2 + Math.floor(rh(1) * 4) : rh(1) < .4 ? 1 : 0;
       for (let q = 0; q < papir; q++) { const p = punkt(q); if (p) kasse(p[0], p[1], rh(40 + q) * 6.28, [-.105, .105, -.15, .15, .003, .006, [.93, .92, .88]]); }
       if (rh(2) < .5) { const p = punkt(11); if (p) blob(p[0], p[1], rh(3) * 6.28, .5 + rh(4) * .6, .35 + rh(5) * .5, .008); }
       const esker = /stue|soverom|bod|lager|kontor|garasje|verksted/.test(r.rolle) ? Math.floor(rh(6) * 3) : 0;
-      for (let q = 0; q < esker; q++) { const p = punkt(20 + q); if (!p) continue; const e = .2 + rh(60 + q) * .15, v = rh(50 + q) * 6.28; kasse(p[0], p[1], v, [-e, e, -e * .8, e * .8, 0, e * 1.3, [.66, .52, .36], 'tøy']); kasse(p[0], p[1], v, [-e, e, -.025, .025, e * 1.3, e * 1.3 + .004, [.82, .72, .52]]); blob(p[0], p[1], v, e + .12, e * .8 + .12); } });
+      for (let q = 0; q < esker; q++) { const p = punkt(20 + q); if (!p) continue; const e = .2 + rh(60 + q) * .15, v = rh(50 + q) * 6.28; kasse(p[0], p[1], v, [-e, e, -e * .8, e * .8, 0, e * 1.3, [.66, .52, .36], 'tøy']); kasse(p[0], p[1], v, [-e, e, -.025, .025, e * 1.3, e * 1.3 + .004, [.82, .72, .52]]); blob(p[0], p[1], v, e + .12, e * .8 + .12); } }
     // takbjelker i hytter, låver og uthus (rom som er hele firkanter)
     if (/^(hytte|låve|uthus)$/.test(kl)) for (const r of pl.rom) { if (r.andel < .97) continue; const lv = r.v1 - r.v0, vb = Math.atan2(A.vy, A.vx);
       for (let pu = r.u0 + .8; pu < r.u1 - .4; pu += 1.5) { const pv = (r.v0 + r.v1) / 2; kasse(pu * A.ux + pv * A.vx, pu * A.uy + pv * A.vy, vb, [-lv / 2 + .04, lv / 2 - .04, -.06, .06, tak - .17, tak - .005, [.36, .26, .17], 'tre']); } }
     // taklamper: én midt i hvert rom (haller: lysrør i rekker), med varmt lys på gulvet under
-    for (const r of pl.rom) { if (r.andel < .5) continue; const S = stiler.get(r), lu = r.u1 - r.u0, lv = r.v1 - r.v0, sted = [];
+    yield 'bjelker';
+    for (const r of pl.rom) { yield 'lampe'; if (r.andel < .5) continue; const S = stiler.get(r), lu = r.u1 - r.u0, lv = r.v1 - r.v0, sted = [];
       if (S.lampe === 2) { for (let pu = r.u0 + 3; pu < r.u1 - 1.5; pu += 6) for (let pv = r.v0 + 3; pv < r.v1 - 1.5; pv += 6) sted.push([pu, pv]); if (!sted.length) sted.push([(r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2]); }
       else sted.push([(r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2]);
       for (const [pu, pv] of sted) { const x = pu * A.ux + pv * A.vx, y = pu * A.uy + pv * A.vy; if (!Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) continue; const va = Math.atan2(A.uy, A.ux);
@@ -453,29 +480,46 @@
         else if (tak > 2.9) { kasse(x, y, va, [-.012, .012, -.012, .012, tak - .6, tak, MØRK]); kasse(x, y, va, [-.2, .2, -.2, .2, tak - .85, tak - .6, [1, .95, .8], 'glatt', true]); flekk(LA, x, y, va, Math.min(2.4, lu * .55), Math.min(2.4, lv * .55), .024); }
         else { kasse(x, y, va, [-.19, .19, -.19, .19, tak - .09, tak - .01, [1, .97, .86], 'glatt', true]); kasse(x, y, va, [-.21, .21, -.21, .21, tak - .02, tak, STÅL, 'glatt', true]); flekk(LA, x, y, va, Math.min(2.2, lu * .55), Math.min(2.2, lv * .55), .024); } } }
 
-    // sett sammen: hovednettet med en gruppe per stoff
-    const pos = [], kol = [], uv = [], grupper = []; for (const [n, g] of G.entries()) { if (!g.pos.length) continue; grupper.push([pos.length / 3, g.pos.length / 3, n]); for (const v of g.pos) pos.push(v); for (const v of g.kol) kol.push(v); for (const v of g.uv) uv.push(v); }
-    const ST = stoffene(), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(kol, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    for (const [fra, antall, n] of grupper) geo.addGroup(fra, antall, n); geo.computeVertexNormals();
+    yield 'sett sammen';
+    // sett sammen: hovednettet med en gruppe per stoff (rett i tallrekker – samme tall som før)
+    let nPos = 0, nUv = 0; for (const g of G) { nPos += g.pos.length; nUv += g.uv.length; }
+    const pos = new Float32Array(nPos), kol = new Float32Array(nPos), uv = new Float32Array(nUv), grupper = [];
+    { let o3 = 0, o2 = 0; for (const [n, g] of G.entries()) { if (!g.pos.length) continue; grupper.push([o3 / 3, g.pos.length / 3, n]); pos.set(g.pos, o3); kol.set(g.kol, o3); uv.set(g.uv, o2); o3 += g.pos.length; o2 += g.uv.length; } }
+    const ST = stoffene(), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    for (const [fra, antall, n] of grupper) geo.addGroup(fra, antall, n);
+    yield 'normaler';
+    geo.computeVertexNormals();
     const nett = [new THREE.Mesh(geo, ST.hoved)]; nett[0].userData.interior = true;
     const lite = (d, mat, orden) => { if (!d.pos.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2)); const m = new THREE.Mesh(g, mat); m.renderOrder = orden; nett.push(m); return m; };
     lite(V, ST.vindu, 0); lite(SK, ST.skygge, 2); lite(LA, ST.lampe, 3); lite(DA, ST.dag, 3); const ytre = lite(YT, ST.åpning, 0) || null;
-    // FORSYNINGSKASSA: i hus som kan gjennomsøkes, står en kasse innenfor døra til huset er gjennomsøkt (o.funn skjules da i oppdater())
+    // FORSYNINGSKASSA: i hus som kan gjennomsøkes, står en kasse innenfor døra til huset er gjennomsøkt (o.funn skjules da i oppdater()).
+    // Kassa er lik i alle hus: én geometri (FUNN_GEO) som deles, flyttet og dreid med nettets plass.
     let funn = null;
-    if (!P.leir && window.MODELLER) { const d = [], b3 = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }, gr = [.3, .36, .24];
-      b3(0, 0, 0, .62, .4, .3, gr); b3(0, 0, .3, .66, .44, .05, [.24, .29, .19]); for (const sx of [-.24, .24]) b3(sx, 0, .02, .05, .42, .3, [.18, .2, .15]); b3(0, .205, .12, .22, .01, .1, [.85, .8, .6]); for (const sx of [-.33, .33]) b3(sx, 0, .16, .03, .16, .03, [.12, .12, .12]);
-      b3(.5, .1, 0, .2, .2, .22, [.66, .52, .36]); b3(-.48, -.05, 0, .12, .12, .16, [.75, .76, .78]);
+    if (!P.leir && window.MODELLER) { const d = FUNN_GEO ? null : [], b3 = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); }, gr = [.3, .36, .24];
+      if (d) { b3(0, 0, 0, .62, .4, .3, gr); b3(0, 0, .3, .66, .44, .05, [.24, .29, .19]); for (const sx of [-.24, .24]) b3(sx, 0, .02, .05, .42, .3, [.18, .2, .15]); b3(0, .205, .12, .22, .01, .1, [.85, .8, .6]); for (const sx of [-.33, .33]) b3(sx, 0, .16, .03, .16, .03, [.12, .12, .12]);
+      b3(.5, .1, 0, .2, .2, .22, [.66, .52, .36]); b3(-.48, -.05, 0, .12, .12, .16, [.75, .76, .78]); FUNN_GEO = MODELLER.samle(d); for (const g of d) g.dispose(); }
       const side = hash(pl.i, 77) > .5 ? 1 : -1, fx = I.inn[0] - I.nx * 1.1 + I.ny * side * .9, fy = I.inn[1] - I.ny * 1.1 - I.nx * side * .9, ok = Interior.inni(P, fx, fy) && Interior.avstKant(P, fx, fy) > .35, x = ok ? fx : I.inn[0] - I.nx * .9, y = ok ? fy : I.inn[1] - I.ny * .9;
-      if (!STfunn) STfunn = new THREE.MeshLambertMaterial({ vertexColors: true }); funn = new THREE.Mesh(MODELLER.samle(d), STfunn); funn.position.set(x, y, g0); funn.rotation.z = hash(pl.i, 78) * 6.28; nett.push(funn); }
-    for (const m of nett) R.scene.add(m);
+      if (!STfunn) STfunn = new THREE.MeshLambertMaterial({ vertexColors: true }); funn = new THREE.Mesh(FUNN_GEO, STfunn); funn.userData.delt = true; funn.position.set(x, y, g0); funn.rotation.z = hash(pl.i, 78) * 6.28; nett.push(funn); }
+    for (const m of nett) m.userData.kilde = 'interior3d';
     return { plan: pl, nett, ytre, funn, trekanter: (pos.length + V.pos.length + SK.pos.length + LA.pos.length + DA.pos.length) / 9 };
   }
   let skjultId = -1;
   function modellSynlig(R, id) { if (id === skjultId && id < 0) return; for (const m of R.scene.children) if (m.userData && !m.userData.plan && (m.userData.id === skjultId || m.userData.id === id)) m.visible = m.userData.id !== id; skjultId = id; }
   function husSide(R, side) { for (const m of R.husMesh || []) for (const mat of [].concat(m.material)) if (mat && mat.side !== side) { mat.side = side; mat.needsUpdate = true; } }
   let STfunn = null;
-  function fjern(R, P) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) { R.scene.remove(m); m.geometry.dispose(); } delete P.inne; aktive.delete(P); }
-  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); if (R.scene) modellSynlig(R, -1); }
+  // frigjør nettene i et interiør (kassa deler geometri med de andre – den frigjøres i tøm)
+  function kast(o) { for (const m of o.nett) if (!m.userData.delt) m.geometry.dispose(); STAT.kastet++; }
+  // legg et ferdig interiør i scenen
+  function legg(R, P, o) { for (const m of o.nett) R.scene.add(m); aktive.set(P, o); P.inne = o.plan; }
+  // ta interiøret ut av scenen; hvil = la det hvile (ikke frigjort), så det kan settes inn igjen straks når du kommer tilbake
+  function fjern(R, P, hvil) { const o = aktive.get(P); if (!o) return; for (const m of o.nett) R.scene.remove(m); delete P.inne; aktive.delete(P);
+    if (!hvil) { kast(o); return; }
+    hvile.delete(P); hvile.set(P, { o, versjon });
+    const maks = typeof VW !== 'undefined' && VW < 900 ? BIT.hvileMobil : BIT.hvile;
+    while (hvile.size > maks) { const [eldst, h] = hvile.entries().next().value; hvile.delete(eldst); kast(h.o); } }
+  function glemHvile() { for (const [, h] of hvile) kast(h.o); hvile.clear(); }
+  function tøm(R) { for (const P of [...aktive.keys()]) fjern(R, P); glemHvile(); jobb = null; if (FUNN_GEO) { FUNN_GEO.dispose(); FUNN_GEO = null; }
+    forU = null; if (typeof THREE !== 'undefined') husSide(R, THREE.DoubleSide); if (R.scene) modellSynlig(R, -1); }
   const avstand = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, Interior.avstSeg(x, y, a[0], a[1], b[0], b[1])); } return Interior.inni(P, x, y) ? 0 : d; };
 
   // LEIRENS EGNE BYGG (16. nov: «alle bygg skal ha interiør» gjelder også leiren): brakka, kontrollrommet, sykestua, kjøkkenet,
@@ -511,9 +555,12 @@
     if (u && R.hindre) leirbygg(R, u);
     if (!R.fot || !u || !R.hindre) { if (aktive.size) tøm(R); return; }
     if (forU !== u) { tøm(R); forU = u; }
+    // oppdater(true) (vaktene, møbelflytting): en jobb som er i gang, gjøres ferdig nå, og det neste bygget bygges i ett strekk
+    if (tving && jobb) steg(R, Infinity);
     const nå = performance.now(); if (!tving && nå - sist < 250) return; sist = nå;
     const x = R.bane.x, y = R.bane.y;
-    for (const [P] of [...aktive]) if (avstand(P, x, y) > BORT) fjern(R, P);
+    for (const [P] of [...aktive]) if (avstand(P, x, y) > BORT) fjern(R, P, true);
+    for (const [P, h] of [...hvile]) if (h.versjon !== versjon || avstand(P, x, y) > BORT * 2) { hvile.delete(P); kast(h.o); }
     // lyset følger dagen: utsikten og dagslyset på gulvet etter himmelen, lampene sterkere når det er mørkt
     if (M) { const mørke = window.NATT && typeof NATT.mørke === 'number' ? Math.max(0, Math.min(1, NATT.mørke)) : 0, dag = 1 - mørke;
       M.vindu.opacity = .06 + .1 * mørke; M.dag.color.setScalar(.26 * dag); M.lampe.color.setRGB(.2 + .34 * mørke, .17 + .27 * mørke, .1 + .14 * mørke); }
@@ -522,16 +569,42 @@
     { const her = inne(x, y); husSide(R, her ? THREE.FrontSide : THREE.DoubleSide); for (const [P, o] of aktive) { if (o.ytre) o.ytre.visible = P !== her; if (o.funn) o.funn.visible = !(window.LeteSpill && P.bygg && LeteSpill.lett().has(P.bygg.i)); }
       // modeller med skiver tvers gjennom (containerens ribber, drivhusets spanter) skjules mens du står inne i dem
       modellSynlig(R, her && her.leir && LEIRBYGG[her.leir].skjul ? her.bygg.i - 9000000 : -1); }
-    // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer())
-    let best = null, bd = NÆR; const sett = new Set();
+    // ett bygg om gangen: mens en jobb går, letes det ikke etter flere
+    if (jobb) return;
+    // nærmeste bygg uten interiør innen NÆR (rutenettet på 20 m fra hindringer()). Et hus BIT.foran meter foran deg (der du ser)
+    // regnes som like nært, så det du går mot, er klart før du kommer dit.
+    const f = R.fot, fx = f ? -Math.sin(f.a) * BIT.foran : 0, fy = f ? Math.cos(f.a) * BIT.foran : 0;
+    let best = null, bd = NÆR, bv = NÆR; const sett = new Set();
     for (let a = Math.floor((x - NÆR) / 20); a <= Math.floor((x + NÆR) / 20); a++) for (let c = Math.floor((y - NÆR) / 20); c <= Math.floor((y + NÆR) / 20); c++)
-      for (const o of R.hindre.get(a + ',' + c) || []) { const P = o.P; if (!P || sett.has(P) || aktive.has(P) || !P.dør || !P.bygg || P.utenInne) continue; sett.add(P); const d = avstand(P, x, y); if (d < bd) { bd = d; best = P; } }
+      for (const o of R.hindre.get(a + ',' + c) || []) { const P = o.P; if (!P || sett.has(P) || aktive.has(P) || !P.dør || !P.bygg || P.utenInne) continue; sett.add(P);
+        const d = avstand(P, x, y); if (d >= NÆR) continue; const v = Math.min(d, avstand(P, x + fx, y + fy)); if (v < bv) { bv = v; bd = d; best = P; } }
     if (!best) return;
-    if (aktive.size >= MAKS) { let lengst = null, ld = bd; for (const [P] of aktive) { const d = avstand(P, x, y); if (d > ld) { ld = d; lengst = P; } } if (!lengst) return; fjern(R, lengst); }
-    let o = null; try { o = bygg(R, u, best); } catch (e) { console.warn('interiør:', e); }
-    if (!o) { best.utenInne = true; return; }
-    aktive.set(best, o); best.inne = o.plan;
+    if (aktive.size >= MAKS) { let lengst = null, ld = bd; for (const [P] of aktive) { const d = avstand(P, x, y); if (d > ld) { ld = d; lengst = P; } } if (!lengst) return; fjern(R, lengst, true); }
+    // hvilte det, settes det inn igjen straks (samme geometri)
+    const h = hvile.get(best); if (h) { hvile.delete(best); legg(R, best, h.o); STAT.gjenbrukt++; return; }
+    jobb = { P: best, u, it: byggG(R, u, best), biter: 0, ms: 0, lengst: 0, steg: {}, t0: nå };
+    if (tving) steg(R, Infinity); else { steg(R, nå + BIT.ms); planlegg(); }
   }
+  // Én bit av jobben (til fristen): byggG går videre til den er ferdig eller tiden er brukt. Ferdig: nettene legges i scenen.
+  function steg(R, frist) {
+    const j = jobb; if (!j) return;
+    if (!R.fot || R.ut !== j.u || forU !== j.u || aktive.has(j.P)) { jobb = null; return; }
+    const t0 = performance.now(); let t = t0, ferdig = false, o = null;
+    try { for (;;) { const r = j.it.next(), n = performance.now(), navn = r.done ? 'slutt' : r.value; j.steg[navn] = Math.max(j.steg[navn] || 0, n - t); t = n;
+      if (r.done) { ferdig = true; o = r.value; break; } if (n >= frist) break; } }
+    catch (e) { console.warn('interiør:', e); ferdig = true; o = null; }
+    j.biter++; j.ms += t - t0; j.lengst = Math.max(j.lengst, t - t0);
+    if (!ferdig) return;
+    jobb = null;
+    if (!o) { j.P.utenInne = true; return; }
+    if (aktive.size >= MAKS) { kast(o); return; }
+    legg(R, j.P, o);
+    STAT.bygget++; STAT.biter += j.biter; STAT.lengst = Math.max(STAT.lengst, j.lengst);
+    for (const [k, v] of Object.entries(j.steg)) STAT.steg[k] = Math.max(STAT.steg[k] || 0, v);
+    STAT.sist = { kl: o.plan.kl, biter: j.biter, ms: Math.round(j.ms), lengst: Math.round(j.lengst * 10) / 10, varte: Math.round(performance.now() - j.t0), trekanter: o.trekanter };
+  }
+  // neste bit i neste bilde (etter spilløkka, før bildet tegnes)
+  function planlegg() { if (rafNr || !jobb) return; rafNr = requestAnimationFrame(() => { rafNr = 0; const R = r3(); if (!R || !jobb) return; steg(R, performance.now() + BIT.ms); planlegg(); }); }
   KROKER.ramme3d.push(R => oppdater(R));
   // INNGANGENE: når du går ute, får dørene på de nærmeste byggene (innen 28 m) et lite merke «Inngang» (med hake når huset er gjennomsøkt), så du ser hvor du går inn
   KROKER.tegn3d.push((g, proj3) => { const R = r3(); if (!R || !R.fot || !R.ut || !aktive.size) return; const x = R.bane.x, y = R.bane.y; if (inne(x, y)) return;
@@ -550,7 +623,9 @@
   function inne(x, y) { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; }
   // (18. nov kveld) bygg interiøret i bygget med nummer i på nytt nå (et møbel er flyttet): gir sant når bygget hadde interiør
   function bygOm(i) { const R = r3(); if (!R || !R.ut) return false;
-    for (const [P] of [...aktive]) { if (!P.bygg || P.bygg.i !== i) continue; fjern(R, P); let o = null; try { o = bygg(R, R.ut, P); } catch (e) { console.warn('interiør:', e); } if (o) { aktive.set(P, o); P.inne = o.plan; } return true; }
+    // (20. nov) planen kan ha endret seg: hvilende interiører glemmes, og en jobb for dette bygget begynner på nytt senere
+    versjon++; glemHvile(); if (jobb && jobb.P.bygg && jobb.P.bygg.i === i) jobb = null;
+    for (const [P] of [...aktive]) { if (!P.bygg || P.bygg.i !== i) continue; fjern(R, P); let o = null; try { o = bygg(R, R.ut, P); } catch (e) { console.warn('interiør:', e); } if (o) legg(R, P, o); return true; }
     return false; }
   // et møbel som eget nett (spøkelset når du bærer det, møbler ute): midten i origo, gulvet i z = 0, hjørnefarger
   function møbelGeo(m) { const d = [];
@@ -561,7 +636,12 @@
     const ut = MODELLER.samle(d); for (const g of d) g.dispose(); return ut; }
   window.Interior3d = { funn: P => { const o = aktive.get(P); return o && o.funn ? o.funn.visible : null; }, LEIRBYGG, egne: () => egne,
     // sant når (x, y) ligger inne i (eller en halv meter fra) et av leirens bygg – gress og blomster settes ikke der
-    iLeirbygg: (x, y) => { for (const e of egne) { const P = e.P; if (Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) return true; } return false; }, høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), bygOm, møbelGeo, aktivP: () => [...aktive.keys()], aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
+    iLeirbygg: (x, y) => { for (const e of egne) { const P = e.P; if (Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) return true; } return false; }, høyde, inne, påTrapp, oppdater: tving => r3() && oppdater(R3, tving), bygOm, møbelGeo,
+    // (20. nov) byggingen i biter: tall for målingen og vakta (bygget, biter, lengste bit i ms, lengste steg per navn, siste bygg)
+    stat: () => JSON.parse(JSON.stringify(Object.assign({ jobb: !!jobb, hvile: hvile.size }, STAT))), nullstillStat: () => { Object.assign(STAT, { bygget: 0, biter: 0, lengst: 0, gjenbrukt: 0, kastet: 0, steg: {}, sist: null }); },
+    jobb: () => (jobb ? { i: jobb.P.bygg && jobb.P.bygg.i, biter: jobb.biter } : null), BIT, glem: P => { const R = r3(); if (R && aktive.has(P)) fjern(R, P); const h = hvile.get(P); if (h) { hvile.delete(P); kast(h.o); } if (jobb && jobb.P === P) jobb = null; }, drivBit: ms => { const R = r3(); if (R && jobb) steg(R, performance.now() + (ms || BIT.ms)); return !!jobb; },
+    // til vakta: bygg interiøret i P i ett strekk eller i biter (uten scenen) og gi nettene; kast(o) frigjør dem
+    prøvBygg: (P, biter) => { const R = r3(), it = byggG(R, R.ut, P); if (!biter) return { o: iEtt(it), biter: 1 }; let r, n = 0; while (!(r = it.next()).done) n++; return { o: r.value, biter: n }; }, kast, aktivP: () => [...aktive.keys()], aktive: () => [...aktive.values()], antall: () => aktive.size, deler, STOFFER,
     // til vakten: alle interiørene nå – rom, møbler, trekanter, stoffer i bruk, og om inngangen er fri
     sjekk: () => [...aktive.values()].map(o => ({ kl: o.plan.kl, rom: o.plan.rom.length, møbler: o.plan.møbler.length, trekanter: o.trekanter, nett: o.nett.length, stoffer: o.nett[0].geometry.groups.length, gulv: o.plan.gulv, inngang: o.plan.inngang,
       fri: !Interior.blokkert(o.plan, o.plan.inngang.inn[0], o.plan.inngang.inn[1]) })) };

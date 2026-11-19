@@ -130,10 +130,55 @@ module.exports = {
           ut.natt = { lys: P.lys ? P.lys.n : 0, lys2: P.lys2 ? P.lys2.n : 0, forberedt: !!NATT.forberedt };
         }
       } catch (e) { ut.feil.push('unntak (runde 5): ' + (e && e.message || e)); }
+      // RUNDE 7 (20. nov natt, hakk når du går): interiøret bygges i biter, og huset blir likt det som bygges i ett strekk
+      // (samme rom, møbler, trekanter og hvert hjørne). Et prøvehus legges i utsnittet; alt settes tilbake.
+      try {
+        const R = typeof R3 !== 'undefined' && R3;
+        if (R && R.ut && R.hindre && typeof på3d !== 'undefined' && på3d && !R.bygger && window.Interior3d && Interior3d.prøvBygg && window.Gange) {
+          const u = R.ut, x0 = 40, y0 = 60, P = [[x0, y0], [x0 + 10, y0], [x0 + 10, y0 + 8], [x0, y0 + 8]]; P.bygg = { i: 4747, t: 0, h: 6, kl: 'hus' };
+          P.dør = { x: x0 + 5, y: y0, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(u.cx + x0 + 5, u.cy + y0 + 4, u) - u.h0) * R.EX };
+          const o = { P }, nøkler = [], gikk = !!R.fot, bane = { ...R.bane }, kr = gikk && Gange.kropp() ? { ...Gange.kropp() } : null, r7 = {};
+          const tall = q => ({ rom: q.plan.rom.length, møbler: q.plan.møbler.length, trekanter: q.trekanter, nett: q.nett.length, a: q.nett[0].geometry.attributes.position.array });
+          const lik = (A, B) => { if (!A || !B || A.length !== B.length) return false; for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) return false; return true; };
+          const vent = ms => new Promise(r => setTimeout(r, ms));
+          try {
+            // (1) generatoren i ett strekk og steg for steg gir det samme
+            const a = Interior3d.prøvBygg(P, false), b = Interior3d.prøvBygg(P, true), ta = tall(a.o), tb = tall(b.o);
+            r7.steg = b.biter; ok(b.biter > 20, `interiøret har bare ${b.biter} steg`);
+            ok(ta.rom === tb.rom && ta.møbler === tb.møbler && ta.trekanter === tb.trekanter && ta.nett === tb.nett && lik(ta.a, tb.a), 'interiøret steg for steg er ulikt det i ett strekk');
+            // feil med vilje: ett hjørne flyttet blir sett (sammenligningen virker)
+            const kopi = ta.a.slice(); kopi[7] += .01; ok(!lik(kopi, tb.a), 'selvtest: et flyttet hjørne ble ikke sett');
+            Interior3d.kast(b.o);
+            // (2) den ekte veien: du går ved huset, jobben tar én bit om gangen (som hvert bilde gjør), og huset blir likt
+            for (let a2 = Math.floor(x0 / 20); a2 <= Math.floor((x0 + 10) / 20); a2++) for (let c = Math.floor(y0 / 20); c <= Math.floor((y0 + 8) / 20); c++) { const k = a2 + ',' + c; if (!R.hindre.has(k)) R.hindre.set(k, []); R.hindre.get(k).push(o); nøkler.push(k); }
+            if (!gikk) Gange.start();
+            const sett = (x, y) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); if (k) { k.x = x; k.y = y; k.vx = k.vy = 0; } if (R.fot) { R.fot.a = 0; R.fot.pitch = 0; } };
+            for (let q = 0; q < 400 && Interior3d.jobb(); q++) Interior3d.drivBit(20);
+            sett(x0 + 5, y0 - 5); Interior3d.nullstillStat(); await vent(280);
+            if (!P.inne && !Interior3d.jobb()) Interior3d.oppdater(false);
+            let n = 0; while (Interior3d.jobb() && n < 4000) { Interior3d.drivBit(4); n++; }
+            const st = Interior3d.stat(), oo = Interior3d.aktive().find(q => q.plan === P.inne); r7.biter = st.sist ? st.sist.biter : 0; r7.lengst = st.lengst; r7.sist = st.sist;
+            ok(!!oo, 'prøvehuset fikk ikke interiør på den ekte veien');
+            ok(st.sist && st.sist.biter > 3, 'interiøret ble ikke bygget i biter: ' + JSON.stringify(st.sist));
+            if (oo) { const tc = tall(oo); ok(tc.rom === ta.rom && tc.møbler === ta.møbler && tc.trekanter === ta.trekanter && lik(tc.a, ta.a), 'interiøret bygget i biter er ulikt det i ett strekk'); r7.hus = { rom: tc.rom, møbler: tc.møbler, trekanter: tc.trekanter }; }
+            // (3) du går fra huset: det hviler; du snur: det samme nettet kommer tilbake uten ny bygging
+            if (oo) { const g1 = oo.nett[0].geometry; sett(x0 + 5, y0 - 80); Interior3d.oppdater(true); ok(!P.inne && Interior3d.stat().hvile >= 1, 'interiøret hviler ikke når du går fra det');
+              sett(x0 + 5, y0 - 5); Interior3d.oppdater(true); const o2 = Interior3d.aktive().find(q => q.plan === P.inne); ok(!!o2 && o2.nett[0].geometry === g1 && Interior3d.stat().gjenbrukt >= 1, 'interiøret ble bygget på nytt i stedet for å komme tilbake');
+              // møbelflytting (bygOm) glemmer de hvilende og bygger på nytt i ett strekk som før
+              ok(Interior3d.bygOm(4747) === true && !!P.inne && Interior3d.stat().hvile === 0, 'bygOm virket ikke som før'); }
+            Interior3d.kast(a.o);
+          } finally {
+            Interior3d.glem(P); for (const k of nøkler) { const L = R.hindre.get(k), q = L ? L.indexOf(o) : -1; if (q >= 0) L.splice(q, 1); }
+            if (!gikk) Gange.stopp(); else { Object.assign(R.bane, bane); const k = Gange.kropp(); if (k && kr) Object.assign(k, kr); }
+            Interior3d.oppdater(true); Interior3d.nullstillStat();
+          }
+          ut.r7 = r7;
+        }
+      } catch (e) { ut.feil.push('unntak (runde 7): ' + (e && e.message || e)); }
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };
