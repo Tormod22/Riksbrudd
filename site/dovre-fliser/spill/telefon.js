@@ -61,7 +61,7 @@ body.kort.tlfdekk:not(.mkomalltid) #mkom.på{ display:none; }
 #mkom button[hidden]{ display:none; }
 body.kort.gaar .ctl{ display:none; }
 body.kort.gaar #gangeknapper{ right:calc(10px + ${Rt}); }
-body.kort button:not(.knapper *):not(#lagmeny *):not(#minikart *):not(#mkom *):not(.ctl *):not([class*="farge"]):not(.prikk){ min-height:40px; }
+body.kort button:not(.knapper *):not(#lagmeny *):not(#minikart *):not(#mkom *):not(.ctl *):not(#opplaering *):not([class*="farge"]):not(.prikk){ min-height:40px; }
 body.kort button.lukk, body.kort button[aria-label^="Lukk"]{ min-width:40px; }
 body.kort #oppstart, body.kort #hjelp, body.kort #formkort, body.kort #krigkort, body.kort #ytelse{ padding-top:calc(12px + ${T}); padding-bottom:calc(12px + ${B}); padding-left:calc(10px + ${L}); padding-right:calc(10px + ${Rt}); box-sizing:border-box; }
 body.kort #oppstart .ark{ max-height:100%; box-sizing:border-box; } body.kort #hjelp .ark{ max-height:100%; box-sizing:border-box; }

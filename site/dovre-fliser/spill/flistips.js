@@ -71,7 +71,12 @@
     el('b', T.tittel); boks.appendChild(document.createTextNode(T.hva)); if (T.nå) el('i', 'Nå: ' + T.nå, 'naa ' + T.kl); if (T.farge) el('i', T.farge); if (T.påvirkes) el('i', 'Påvirkes av: ' + T.påvirkes, 'pv');
     const r = d.getBoundingClientRect(), w = Math.min(310, window.innerWidth - 12); boks.style.maxWidth = w + 'px'; boks.style.left = '0px'; boks.style.top = '0px'; const h = boks.offsetHeight, bw = boks.offsetWidth;
     boks.style.left = Math.max(6, Math.min(window.innerWidth - bw - 6, r.left + r.width / 2 - bw / 2)) + 'px';
-    boks.style.top = (r.bottom + h + 12 < window.innerHeight ? r.bottom + 7 : Math.max(6, r.top - h - 7)) + 'px';
+    let y = r.bottom + h + 12 < window.innerHeight ? r.bottom + 7 : Math.max(6, r.top - h - 7);
+    // (runde 6, kritikeren: tipsene fra bunnmenyen la seg oppå opplæringsboksen og skjulte teksten og «Hopp over») – står ruta i veien,
+    // legges tipset over den (eller ved siden av når det ikke er plass over)
+    const op = document.getElementById('opplaering'), o = op && op.classList.contains('på') && op.getClientRects().length ? op.getBoundingClientRect() : null, x = parseFloat(boks.style.left);
+    if (o && x < o.right && x + bw > o.left && y < o.bottom && y + h > o.top) { if (o.top - h - 8 > 4) y = o.top - h - 8; else { const v = o.left - bw - 8, hø = o.right + 8; boks.style.left = (hø + bw < window.innerWidth - 4 ? hø : Math.max(4, v)) + 'px'; } }
+    boks.style.top = y + 'px';
     boks.classList.add('på'); viser = d; return true; }
   function skjul() { boks.classList.remove('på'); viser = null; clearTimeout(lukk); }
   const mål = e => e.target && e.target.closest ? e.target.closest('[data-tips], .stats > div') : null;
