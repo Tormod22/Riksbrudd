@@ -986,6 +986,9 @@ function tegnLag(g, proj, mPer) {
     if (px < -200 || py < -200 || px > VW + 200 || py > VH + 200) continue;
     if (s.sti) { g.strokeStyle = sidefarge(s.side, 'sti'); g.lineWidth = 2; g.setLineDash([7, 5]); g.beginPath(); g.moveTo(px, py);
       for (let i = s.seg + 1; i < s.sti.length; i++) { const q = proj(s.sti[i][0], s.sti[i][1]); if (q) g.lineTo(q[0], q[1]); } g.stroke(); g.setLineDash([]); }
+    // (runde 6) toppen av formasjonen på skjermen: navnet står like over den øverste mannen, ikke 30 m over midten (en mann alene fikk
+    // navnet sitt 150 punkter unna på nær zoom)
+    let topp = Infinity;
     if (m < 1.6 && på3d) {
       // i 3D er soldatene egne figurer (soldater3d): her bare navnet
     } else if (m < 1.6) { // hver mann for seg, i formasjon: kolonne på marsj, kile når de står
@@ -998,7 +1001,7 @@ function tegnLag(g, proj, mPer) {
         g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
         g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
         g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); }
-        if (window.Etikett) Etikett.hinder(a - r, b - r, 2 * r, 2 * r);
+        if (window.Etikett) Etikett.hinder(a - r, b - r, 2 * r, 2 * r); topp = Math.min(topp, b - r);
       });
     } else if (window.Merker) { // lagsymbol fra det felles merkesettet (18. nov): eget = rektangel, fiende = rute på spissen
       const v = { forhold: Merker.forhold(s.side), slag: 'lag', farge: sidefarge(s.side, 'farge'), valgt: s === valgt }; Merker.tegn(g, px, py, v);
@@ -1013,7 +1016,7 @@ function tegnLag(g, proj, mPer) {
     g.font = '600 13px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
     // RUNDE 6: viktigheten avgjør hvem som får plassen (fiender > valgt > egne lag > kjøretøy > bygg og steder)
     const P = window.Etikett && Etikett.REGLER.prio, pr = P ? (s.side !== 'blå' ? P.fiende : s === valgt ? P.valgt : P.egne) : 0;
-    const ty0 = py - (m < 1.6 ? Math.max(14, 30 / m) : 16), ty = window.Etikett ? Etikett.tekst(g, s.navn, px, ty0, -1, pr) : ty0; g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
+    const ty0 = isFinite(topp) ? Math.min(py - 14, topp - 5) : py - (m < 1.6 ? Math.max(14, 30 / m) : 16), ty = window.Etikett ? Etikett.tekst(g, s.navn, px, ty0, -1, pr) : ty0; g.strokeText(s.navn, px, ty); g.fillStyle = '#e7dcc3'; g.fillText(s.navn, px, ty);
   }
   if (modus === 'marsj' && peker) { const q = proj(peker[0], peker[1]); if (!q) return; const [a, b] = q; g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(a, b, 9, 0, 6.283); g.stroke(); }
 }
@@ -3420,7 +3423,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
 <script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
 <script src="/dovre-fliser/spill/kartlapper.js?v=28ad119410"></script>
-<script src="/dovre-fliser/spill/kartlys.js?v=3ce022815c"></script>
+<script src="/dovre-fliser/spill/kartlys.js?v=1545b5289c"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=66d2ec420f"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=a76b5426f3"></script>

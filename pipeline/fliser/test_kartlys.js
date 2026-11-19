@@ -15,4 +15,7 @@ ok(litt.grå > 0 && litt.grå < regn.grå, 'lett regn: mindre grått');
 ok(snø.grå > 0, 'snø gjør også kartet gråere');
 { const T = K.tone({ e: -20, regn: 1, sky: 1 }), snitt = T.farge.reduce((a, b) => a + b, 0) / 3 / 255, lys = (1 - T.natt * (1 - snitt)) * (1 - T.mørk);
   ok(lys > .4, `natt og regn sammen: kartet har ${Math.round(lys * 100)} % av lyset igjen (kan leses, ikke svart)`); }
+// nær zoom: mønsteret i bakken kommer gradvis inn, og følger kartet (samme sted gir samme forskyvning)
+ok(K.detalj(5) === 0 && K.detalj(.6) === 0 && K.detalj(.2) === K.REGLER.detaljStyrke && K.detalj(.4) > 0 && K.detalj(.4) < K.detalj(.3), 'mønsteret i bakken bare nær (av ved 0,6 m per punkt, helt ved 0,25)');
+const M = K.REGLER.detaljMeter; ok(Math.abs(K.forskyv(123.4, .2) - K.forskyv(123.4 + 7 * M, .2)) < 1e-6 && K.forskyv(-5, 1) >= 0 && K.forskyv(-5, 1) < M, 'mønsteret følger kartet (forskyvningen gjentar seg hver ' + M + ' m)');
 process.exit(feil ? 1 : 0);
