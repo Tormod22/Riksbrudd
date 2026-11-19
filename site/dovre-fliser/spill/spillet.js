@@ -53,7 +53,7 @@
     // «brudd»: et røverlag gir opp og flykter når så stor del av mennene er falt eller såret (Terreng regner et lag som slått ut
     // først ved 6 ute – et røverlag på 6 måtte slås helt ut). Alle tallene er Claudes forslag (justert etter kjøring 5: 45 min og
     // 800 000 kr var for strengt – bølge 1 endte med herjing mens to lag skjøt på røverne inne i leiren).
-    // (dieselen koster 8000 kr literen: 25 % av en full tank var over 1 mill. kr – nå 10 %)
+    // (dieselen kostet 8000 kr literen: 25 % av en full tank var over 1 mill. kr – nå 10 %; fra runde 6 koster den 3 000 kr)
     // (kjøring 6b: to lag mot seks røvere fikk bare én ute på en time – nå gir røverne opp ved en tredel ute, og herjer i halvannen time)
     HERJ: { radius: 150, min: 90, borte: 1800, maksMin: 90, moral: 4, brudd: 1 / 3, penger: { andel: .05, tak: 5e5 }, lager: .2, diesel: .1, mat: .15 },
     // har røverlaget gitt opp? menn: [{ hp }] – en tredel (brudd) eller flere er falt eller såret

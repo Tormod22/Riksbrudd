@@ -110,9 +110,20 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   const HVA = { bygg: 'bygges', oppgrader: 'oppgraderes', flytt: 'flyttes', reparer: 'repareres' };
   // Forklaringen av de to slagene drivstoff (Leir-menyen og byggpanelet for tank og aggregat). Kjøretøy- og basepanelet og hjelpen sier det samme.
   const DIESEL = 'Leirens diesel (liter, kjøpes for kroner) driver aggregatene og fyrer i brakkene om vinteren. Kjøretøyene bruker den ikke: de fyller olje (tonn) på basen, eller får den kjørt ut med «Forsyn …».';
+  // (runde 6, kritikken: «hvorfor er dieselen så dyr, og hva er alternativet?») – står under kjøpeknappen
+  const dieselHvorfor = () => `Diesel er knapt etter kollapsen og koster ca. ${LB.kroner(LB.DRIVSTOFF.prisPerLiter)} literen. Billigere strøm: solceller og batteribank er gratis i drift, strømnettet virker de første døgnene, og bygg du ikke trenger kan slås av.`;
+  // Kjøp diesel (knappen i Leir-menyen og varselbrikken «Tom for diesel»): så mye som får plass, høyst `liter`
+  function kjøpDiesel(liter = 500) { if (!L) return { feil: 'Ingen leir.' }; const r = LB.kjøpDrivstoff(L, liter, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); lagre(); siste = LB.steg(L, 0, solNå()); visStatus(); if (meny) visMeny(); return r; }
+  // Det et bygg koster i alt når materialene som mangler på lageret, kjøpes til dagens pris (runde 6: menyen sa «Brakke 4 mill. kr», og
+  // etter plasseringen kom «Kjøp materialene (975 000 kr) og bygg» i tillegg)
+  const totalPris = k => k.pris + matPris(k.mat);
   const skadeMeldt = new Set();
+  // dieselforbruket måles som det tanken synker fra steg til steg (aggregatene her, fyringen i folk.js) – Leir.dieselMål/dieselRekker
+  let sistDiesel = null;
+  const målDiesel = () => { const d = L.drivstoff || 0; LB.dieselMål(L, sistDiesel !== null && d < sistDiesel ? sistDiesel - d : 0, tid); sistDiesel = d; };
   KROKER.sim.push(dt => {
     if (!L || !spill()) return;
+    målDiesel();
     siste = LB.steg(L, dt, solNå());
     for (const b of siste.nyFerdig) { if (!LB.BYGG[b.type].del) logg(`${LB.BYGG[b.type].navn} er ferdig bygget.`); bygg3dPåNytt(); }
     for (const [b, hva] of siste.ferdigArbeid) { logg(`${LB.BYGG[b.type].navn} er ${{ oppgrader: `oppgradert til nivå ${b.nivå}`, flytt: 'flyttet', reparer: 'reparert' }[hva]}.`); bygg3dPåNytt(hva === 'flytt'); }
@@ -152,6 +163,18 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   let DELVALG = {}; try { DELVALG = JSON.parse(localStorage.getItem('riksbrudd-leirdeler') || '{}') || {}; } catch (e) { DELVALG = {}; }
   const delNøkkel = t => t.replace(/[\d(].*$/, '').replace(/[:·\s]+$/, '').trim() || t.trim();
   const delLukket = k => (k in DELVALG ? !!DELVALG[k] : (!navigator.webdriver || window.LEIRDELER_TEST === true) && DEL_LUKKET.test(k));
+  // STRØMTEKSTENE (runde 6, kritikken: «Alle bygg har strøm» sto mens ingen bygg brukte strøm, og «bruker 0 av 5 kW» uten aggregat –
+  // de 5 kW kom fra strømnettet, men det sto ingen steder). Nå sier linja hvem som bruker strøm, og hvor den kommer fra.
+  function strømKilde() { if (!siste) return ''; const d = [];
+    if (siste.nett > 0) d.push(`strømnettet ${kw(siste.nett)} kW (virker bare de første døgnene)`); if (siste.sol > 0) d.push(`sola ${kw(siste.sol)} kW`);
+    if (siste.aggInst > 0) d.push(L.drivstoff > 0 ? `aggregat ${kw(siste.aggInst)} kW` : 'aggregatet står (tom for diesel)'); if (siste.batKW > 0) d.push(`batteriet ${kw(siste.batKW)} kW`);
+    return d.join(', '); }
+  function strømLinje() {
+    if (!siste || !(siste.behov || siste.kapasitet)) return '';
+    const n = L.bygg.filter(b => LB.virker(b) && LB.BYGG[b.type].kw < 0 && !b.av).length, k = strømKilde();
+    if (!siste.behov) return 'Ingen bygg bruker strøm ennå' + (k ? ` · strøm fra ${k}` : '') + '.';
+    return (n === 1 ? 'Bygget som bruker strøm, har strøm' : `Alle ${n} byggene som bruker strøm, har strøm`) + (k ? ` · fra ${k}` : '') + '.';
+  }
   function visMeny() {
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
@@ -160,15 +183,14 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const strømTekst = siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå';
     const status = el('div', { klasse: 'status' },
       flis('Kassa', LB.kroner(S.penger)),
-      flis('Strøm', siste.behov || siste.kapasitet ? `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : 'ikke i bruk', strømTekst, siste.mangler.size - (siste.avslått || 0) > 0),
+      flis('Strøm', siste.behov ? `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ikke i bruk', strømTekst + (strømKilde() ? ` – ${strømKilde()}` : ''), siste.mangler.size - (siste.avslått || 0) > 0),
       flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
       flis('Sengeplasser', String(LB.plasser(L))),
-      siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, siste.behov || siste.kapasitet ? 'Alle bygg har strøm' : ''));
-    const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => {
-      const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); }, { id: 'kjopdiesel' });
+      siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, strømLinje()));
+    const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => kjøpDiesel(500), { id: 'kjopdiesel' });
     kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
     // to slags drivstoff (brukeren 12. nov: behold begge, men si tydelig hva som er hva)
-    const dieselTekst = el('small', { id: 'dieseltekst', style: 'display:block; color:var(--ink-dim); font-size:12.5px; line-height:1.35; margin-top:4px' }, DIESEL);
+    const dieselTekst = el('small', { id: 'dieseltekst', style: 'display:block; color:var(--ink-dim); font-size:12.5px; line-height:1.35; margin-top:4px' }, DIESEL + ' ' + dieselHvorfor());
     const hode = el('div', { klasse: 'hode' }, knapp('×', () => leirKnapp.onclick(), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Leiren'), status, el('div', { style: 'margin-top:6px' }, kjøp), kap ? '' : el('div', { klasse: 'igang' }, 'Dieselen trenger en dieseltank (i lista under).'), dieselTekst);
     // folket og oppgavene (spill/folk-visning.js)
     if (window.FolkSpill) hode.appendChild(FolkSpill.menyRad());
@@ -217,13 +239,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
     for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
       if (gruppe) liste.appendChild(el('h4', {}, gruppe));
-      const k = LB.kostnad(id, 1, bonus()), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris)} · ${tidTekst(k.timer * 60)}`;
+      const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ' (materialene har du)') + ` · ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
       const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
       liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.tekst}` }, tegn,
-        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris)), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.tekst)), b));
+        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris', title: B.linje ? '' : mp ? `Arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)}` : 'Materialene har du på lageret' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris + mp) + (mp ? ' i alt' : '')), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
@@ -299,7 +321,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     else {
       // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
       if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
-      if (kan === 'mat') banner.append(knapp(`Kjøp materialene (${LB.kroner(p.matPris)}) og bygg`, () => { if (kjøpManglende(p.mat)) bekreft(); }));
+      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { if (kjøpManglende(p.mat)) bekreft(); }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
     banner.append(knapp('Avbryt', avbryt));
@@ -354,13 +376,13 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     if (plassering !== p) return;
     p.feil = LB.kanBygge(L, b, v, p.flytt, { planUnntatt: p.pid }); p.kart = v;
     const k = LB.kostnad(p.type, B.linje ? LB.lengde(p.punkter, p.lukket) : 0, bonus()); p.mat = p.flytt ? {} : k.mat; p.matPris = matPris(p.mat);
-    const harMat = LB.harMat(L, p.mat), pris = p.flytt ? Math.round(B.pris * LB.REGLER.flyttPris) : k.pris;
+    const harMat = LB.harMat(L, p.mat), pris = p.flytt ? Math.round(B.pris * LB.REGLER.flyttPris) : k.pris; p.pris = pris;
     // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter
     const rs = LB.reiseFor(L, b, p.flytt); p.reise = rs;
     const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
-      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris)}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
+      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? '' : ` i alt (arbeid ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
-    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? '' : ` – mangler for ${LB.kroner(p.matPris)}`) : null].filter(Boolean).join(' · ') || null;
+    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
     visBanner(tekst, p.feil ? false : (harMat || p.plan) ? true : 'mat', ekstra); skisse3d(); skitten = true;
   }
   function trykk(X, Y) {
@@ -672,12 +694,15 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // ---------- start ----------
   function start() {
     const S = spill(); leirKnapp.hidden = !S; if (!S) return;
-    L = les() || LB.ny();
+    L = les() || LB.ny(); sistDiesel = null;
     // leirens midte: herfra reiser byggelagene til utpostene (Leir.reise). Gamle lagrede leirer får den her.
     L.midt = { x: S.leir.x, y: S.leir.y };
     siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
-  window.LeirSpill = { påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
+  window.LeirSpill = { kjøpDiesel, totalPris: type => { const k = LB.kostnad(type, 1, bonus()); return k ? totalPris(k) : null; },
+    // dieselprognosen (Leir.dieselRekker): { timer, perDøgn, målt } – samme tall i dagsrapporten, Lager og varselbrikkene
+    diesel: () => (L ? LB.dieselRekker(L, siste ? siste.agg * LB.DRIVSTOFF.literPerKWt : 0) : null),
+    påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },
     grunn3d,
     angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };

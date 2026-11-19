@@ -31,14 +31,14 @@
     const liten = t => t.charAt(0).toLowerCase() + t.slice(1);
     if (!stille) { const s = Maal.stilling(ferdige), navn = nye.map(id => liten(Maal.finn(id).tekst));
       if (s.krigÅpen && nye.some(id => Maal.GRUNN.some(m => m.id === id))) setTimeout(() => logg('Leiren står. Nå gjelder det krigen om regionen – nye mål står under Leir → Mål, og «Krig» viser kartet.'), 2500);
-      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${liten(s.neste.tekst)}.` : ' Alle målene er nådd.')); }
+      logg(`Mål nådd: ${navn.length > 1 ? navn.slice(0, -1).join(', ') + ' og ' + navn[navn.length - 1] : navn[0]}.` + (s.neste ? ` Neste: ${liten(Maal.tekstNå(s.neste, T))}.` : ' Alle målene er nådd.')); }
     return nye;
   }
   const kort = () => { const s = Maal.stilling(ferdige); return s.kapittel < 0 ? '✓' : `${s.totalt}/${s.alle}`; };
   // Leir-menyen: «Neste mål» øverst (står alltid), og fanen «Mål» med kapitlene
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el, knapp }) => {
-    if (!klar) return; const s = Maal.stilling(ferdige);
-    const neste = el('div', { klasse: 'nestemaal fast', title: s.neste ? s.neste.hjelp : '' }, el('small', {}, s.neste ? `Neste mål (${s.navn.toLowerCase()}, ${s.gjort} av ${s.av}): ` : 'Mål: '), el('b', {}, s.neste ? s.neste.tekst : 'alle målene er nådd'));
+    if (!klar) return; const s = Maal.stilling(ferdige); let T = null; try { T = bilde(); } catch (e) { T = null; }
+    const neste = el('div', { klasse: 'nestemaal fast', title: s.neste ? s.neste.hjelp : '' }, el('small', {}, s.neste ? `Neste mål (${s.navn.toLowerCase()}, ${s.gjort} av ${s.av}): ` : 'Mål: '), el('b', {}, s.neste ? Maal.tekstNå(s.neste, T) : 'alle målene er nådd'));
     neste.onclick = () => { if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); };
     hode.appendChild(neste);
     hode.appendChild(el('h3', {}, 'Mål'));
