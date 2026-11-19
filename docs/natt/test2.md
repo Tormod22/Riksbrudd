@@ -221,3 +221,4 @@ bort mens vakta trykker, og settes tilbake (try/finally). Prøvd med feilen lagt
 prøvebåten hvert 2. ms): gammel vakt FEIL «trykk på båten i 3D åpner den», ny vakt OK, og ny vakt OK uten laget. Hele PC-kjøringen
 er ikke kjørt på nytt etter rettingen (ingen tid).
 Tidtakingen på PC: gå selv 69 s, dyr 64 s, bygging i biter 45 s, bekker 42 s, måling av ytelse 42 s, hogst og riving 39 s.
+PC-profilen på nytt etter rettingen av sjøvakta: 663,6 s (11,1 min), 116 ok, 0 FEIL («hele bildet» 1108 ms).
