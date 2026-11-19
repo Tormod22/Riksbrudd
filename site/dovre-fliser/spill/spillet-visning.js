@@ -42,8 +42,12 @@
     for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     const mann = Trussel.menn(nr, soldater, n, window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1);
-    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
-    varsel(Trussel.varsel(nr, n, s) + ` Ventet om ca. ${Math.round(Trussel.anslag(s.meter, 0))} min.`); skitten = true; meny(); return true; }
+    const planer = [], nye = [];
+    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); nye.push(e); const p = ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); if (p && p.then) planer.push(p.catch(() => {})); }
+    // (19. nov) anslaget i varselet: tida ruta deres tar (venter høyst 3 s på ruta), ellers Trussel.anslag – så varselet og banneret sier det samme
+    if (planer.length) await Promise.race([Promise.all(planer), new Promise(r => setTimeout(r, 3000))]);
+    const ruter = nye.filter(e => e.sti && e.timerIgjen > 0).map(e => e.timerIgjen * 60), min = ruter.length ? Math.min(...ruter) : Trussel.anslag(s.meter, 0);
+    varsel(Trussel.varsel(nr, n, s) + ` Ventet om ca. ${Math.max(5, Math.round(min / 5) * 5)} min.`); skitten = true; meny(); return true; }
   // ---------- (runde 4) RØVERE SOM HAR HERJET trekker seg ut med byttet (Trussel.HERJ) ----------
   // tiden hvert røverlag er inne i leiren (innen Trussel.HERJ.radius fra midten), i spillminutter
   KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;

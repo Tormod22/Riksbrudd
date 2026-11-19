@@ -91,7 +91,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
         liten = an !== null ? (an > .5 ? `ikke sett ennå · ventet om ca. ${Math.max(1, Math.round(an))} min (anslag)` : 'ikke sett ennå · kan være framme når som helst') + hint : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; }
       // (19. nov) senest ca. 10 min før de er framme: farten ned og et varsel til (én gang per bølge; ikke i testene)
       const V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, min = sett2.length ? FO.ankomst(nær) : an, t = T();
-      if (V && t && auto() && snartMeldt !== t.aktiv && min !== null && min <= V.snart && nær > R.mot.inne * .5) { snartMeldt = t.aktiv;
+      if (V && t && auto() && snartMeldt !== t.aktiv && min !== null && min <= V.snart && (!sett2.length || nær > R.mot.inne * .5)) { snartMeldt = t.aktiv;
         const txt = `røverne er snart framme (ca. ${Math.max(1, Math.round(min))} min)`; logg(txt.charAt(0).toUpperCase() + txt.slice(1) + (satt ? '.' : ' – trykk «Forsvar leiren».'));
         window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'alarm', tekst: txt } })); } }
     const nøkkel = [tekst, liten, satt, window.pekerNede && pekerNede(alarm)].join('|'); alarm.classList.add('på'); alarm.classList.toggle('satt', satt); if (nøkkel === sistAlarm) return; if (window.pekerNede && pekerNede(alarm)) return; sistAlarm = nøkkel;
