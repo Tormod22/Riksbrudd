@@ -1,7 +1,7 @@
 [
  [
   "Penger og knapphet",
-  "Et nytt spill starter med 40 millioner kr (før 100). Det rekker til et kontrollrom, strøm og en brakke – resten må du skaffe: tettsteder gir skatt og varer, oppdrag og angrep du slår tilbake gir penger, og hogst, riving og leting i hus gir materialer uten å koste noe. Et spill du alt har lagret, beholder pengene sine.",
+  "Et nytt spill starter med 40 millioner kr. Det rekker til brakke, dieseltank, aggregat, vakttårn og diesel, og litt til – resten må du tjene. Penger kommer fra oppdrag (Leir → Mål: «Hent forsyninger» er trygt og gir 0,5–1,2 mill. kr), salg av tre og materialer dere hogger og river (Leir → Lager, «Selg 10»), skatt fra tettsteder du tar (Mer → Region) og byttet fra røvere du slår tilbake. Leir → Lager → «Penger inn» viser alt, med hva som kom inn og gikk ut i går.",
   "Kom i gang"
  ],
  [
@@ -36,7 +36,7 @@
  ],
  [
   "Svartebørsen",
-  "Av og til kommer en selger til leiren med ting markedet ikke har: medisiner (seks sårede soldater blir kampklare, syke i leiren blir friske), nattsikt (lagene ser 40 % lenger om natta), tunge våpen (lagene treffer 15 % bedre) og smuglerdiesel. Det er dyrt, og han er borte neste døgn. Se «Region».",
+  "Av og til kommer en selger til leiren med ting markedet ikke har: medisiner (seks sårede soldater blir kampklare, syke i leiren blir friske), nattsikt (lagene ser 40 % lenger om natta), tunge våpen (lagene treffer 15 % bedre) og smuglerdiesel. Det er dyrt, og han er borte neste døgn. Når en selger er i leiren, står «Svartebørsen» øverst til venstre – trykk på den, eller åpne Mer → Region.",
   "Leiren"
  ],
  [
@@ -53,5 +53,30 @@
   "Krigskartet: hva et tettsted gir",
   "Trykk på et tettsted i krigskartet: boksen sier hva det gir deg per døgn nå (skatt, varer, olje til basen og om det har strøm) – eller hva det ville gitt hvis du tar det, og hva det gir motstanderen som holder det. Under hver side står hva tettstedene deres gir.",
   "Lag og strid"
+ ],
+ [
+  "Penger inn",
+  "Øverst i fanen Lager i Leir-menyen står «Penger inn»: kassa, hva som kom inn og gikk ut siste døgn, og hver inntekt – oppdragene som venter (nærmeste og best betalte), hogsten, det du kan selge, tettstedene dine og røverne. Knappene der tar deg rett til oppdragene, Folk og Region. Blir kassa lav, kommer en brikke øverst til venstre som tar deg hit.",
+  "Kom i gang"
+ ],
+ [
+  "Diesel: hvorfor dyr, og hva gjør jeg?",
+  "Diesel er knapt etter kollapsen og koster ca. 3 000 kr literen (prisen flytter seg litt hver dag). Et aggregat som gir 9 kW, bruker ca. 65 liter i døgnet. Billigere strøm: solceller og batteribank er gratis i drift, strømnettet virker de første døgnene, og bygg du ikke trenger kan slås av (Leir → Bygg → Strøm). Hvor lenge dieselen rekker, regnes likt overalt – i dagsrapporten, i Lager og i varselet – ut fra forbruket det siste døgnet. Er tanken tom, har varselet øverst til venstre en egen «Kjøp 500 l»-knapp.",
+  "Leiren"
+ ],
+ [
+  "Hogstlaget",
+  "Står noen på «Hogst» under Folk, finner de selv nærmeste skog innen 1,5 km fra leiren og begynner å hogge – loggen sier hvor. Folk på «Frakt» bærer treet til leiren (innen 150 m går det rett i lageret). Vil du velge stedet selv: Leir → Lager → «Hogst …» og trykk i skogen. Tre du ikke trenger, kan selges.",
+  "Leiren"
+ ],
+ [
+  "Hva bygget koster",
+  "Prisen på byggekortene er hele prisen: arbeidet pluss materialene du mangler på lageret, kjøpt til dagens pris. Har du materialene, er bare arbeidet igjen. Pek på prisen for å se hvordan den er delt.",
+  "Leiren"
+ ],
+ [
+  "Farten senkes av seg selv",
+  "Når du har satt opp farten, senkes den av seg selv når noe skjer: til 1× når fienden er i sikte, et lag er i ildkamp eller leiren angripes, men bare til 10× når et bygg er ferdig eller et kort venter på svar – og et nytt ferdig bygg innen to spilltimer senker den ikke igjen. ⏭ spoler til neste hendelse og stopper på 1× som før.",
+  "Kom i gang"
  ]
 ]

@@ -80,7 +80,8 @@
     if (!(S.start > 0)) S.start = s.penger;
     klar = true;
     // én beskjed når et nytt spill starter (ikke i testene)
-    if (!S.meldt && auto()) { S.meldt = true; setTimeout(() => logg(`Pengene: dere har ${kr(s.penger)} og ingen fast inntekt. Penger kommer fra oppdrag (Leir → Mål), salg av tre og materialer dere hogger og river, skatt fra tettsteder dere tar og byttet fra røvere. Leir → Lager → «Penger inn» viser alt.`), 4000); }
+    // (bare i et nytt spill – et lagret spill med tettsteder og oppdrag i gang skal ikke høre «ingen fast inntekt»)
+    if (!S.meldt && auto() && tid < 180) { S.meldt = true; setTimeout(() => logg(`Pengene: dere har ${kr(s.penger)} og ingen fast inntekt. Penger kommer fra oppdrag (Leir → Mål), salg av tre og materialer dere hogger og river, skatt fra tettsteder dere tar og byttet fra røvere. Leir → Lager → «Penger inn» viser alt.`), 4000); }
     lagre();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
@@ -131,7 +132,8 @@
     if (nå - sistKonto > 500) { sistKonto = nå; S.K = P.konto(S.K, s.penger, Math.floor(tid / 1440) + 1); }
     if (s.penger < Math.max(P.REGLER.lavKassaKr, (S.start || 0) * P.REGLER.lavKassa)) { if (!S.lavMeldt && auto()) { S.lavMeldt = true; lagre(); logg(`Kassa er nede i ${kr(s.penger)}. Penger inn: oppdrag (Leir → Mål), salg av tre og materialer (Leir → Lager), skatt fra tettsteder (Mer → Region) og røverbytte.`); } }
     else if (S.lavMeldt && s.penger > 2 * P.REGLER.lavKassaKr) { S.lavMeldt = false; lagre(); }
-    if (auto() && !leter && nå - sistLet > P.REGLER.hogst.hverSek * 1000) { sistLet = nå; finnHogst().catch(e => console.error(e)); }
+    // uten skog i nærheten letes det sjeldnere (hvert femte minutt)
+    if (auto() && !leter && nå - sistLet > (S.ingenSkog ? 300 : P.REGLER.hogst.hverSek) * 1000) { sistLet = nå; finnHogst().catch(e => console.error(e)); }
   });
   setInterval(lagre, 15000); rot.addEventListener('pagehide', lagre);
 
@@ -141,17 +143,21 @@
     if (!s || !s.leir || !R || !rot.Ressurser || !RessursSpill.skogAndel) return null;
     if (!tvang && !(F && rot.FolkRegler && FolkRegler.arbeidere(F, 'hogst') > 0)) return null;
     if (R.jobber.some(j => j.type === 'hogst' && !j.stoppet && j.gjort < j.arbeid)) return null;
+    // et felt spilleren har stoppet selv, venter fortsatt på frakt: da starter ikke hogstlaget et nytt på egen hånd
+    if (!tvang && R.jobber.some(j => j.type === 'hogst' && j.stoppet)) return null;
     // spilleren holder på å velge et felt selv
     if (RessursSpill.velg && RessursSpill.velg()) return null;
     leter = true;
     try {
-      const prøvd = [], H = P.REGLER.hogst; let funnet = null;
+      const prøvd = [], H = P.REGLER.hogst, t0 = performance.now(); let funnet = null;
       for (const k of P.kandidater(s.leir)) {
-        if (funnet && k.ring > funnet.ring) break;
+        // høyst 15 s leting om gangen (kartdataene hentes underveis); neste forsøk kommer om hverSek sekunder
+        if ((funnet && k.ring > funnet.ring) || performance.now() - t0 > 15000) break;
         let skog = 0; try { skog = await RessursSpill.skogAndel(k.x, k.y, H.radius); } catch (e) { skog = 0; }
         prøvd.push({ ...k, skog }); if (!funnet && skog >= H.godSkog) funnet = k;
       }
       const v = P.velgFelt(prøvd); if (!v) { if (!S.ingenSkog) { S.ingenSkog = true; logg('Hogstlaget finner ingen skog innen 1,5 km fra leiren. Sett dem på en annen oppgave under Folk, eller velg et felt selv (Leir → Lager → «Hogst …»).'); lagre(); } return null; }
+      if (S.ingenSkog) { S.ingenSkog = false; lagre(); }
       const R2 = RessursSpill.tilstand(); if (R2.jobber.some(j => j.type === 'hogst' && !j.stoppet && j.gjort < j.arbeid)) return null;
       const r = Ressurser.startHogst(R2, { x: v.x, y: v.y, r: H.radius, skog: v.skog }, { x: s.leir.x, y: s.leir.y }); if (r.feil) return null;
       RessursSpill.lagre(); if (RessursSpill.ryddHogst) try { RessursSpill.ryddHogst(); } catch (e) { /* 3D er ikke åpent */ }

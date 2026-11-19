@@ -56,6 +56,44 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
     LeirSpill.lagre(); skitten = true; o.tilbake = OppstartSpill.tilstand().penger === før.penger && ENHETER.length === før.n && flyttet.every(q => q.e.x === q.x) && !(INFRA && INFRA.tettsted.includes(by));
     return o; });
   if (d.mangler) return { ok: false, tekst: 'RegionSpill mangler eller er ikke startet', data: d };
+  // RUNDE 6 (19. nov, kritikken): dieselprisen, én dieselprognose, «Penger inn», hogstlaget, totalpris, strømlinja, rekruttering, nedbremsing
+  const e = await pg.evaluate(async () => {
+    const o = {}, vent = ms => new Promise(r => setTimeout(r, ms)), L = LeirSpill.tilstand(), s = OppstartSpill.tilstand();
+    const før = { bygg: JSON.stringify(L.bygg), neste: L.neste, nesteJobb: L.nesteJobb, lager: JSON.stringify(L.lager), diesel: L.drivstoff, logg: L.dieselLogg ? JSON.stringify(L.dieselLogg) : null, penger: s.penger,
+      R: JSON.stringify(RessursSpill.tilstand()), meny: document.getElementById('leirmeny').classList.contains('på'), folk: !!document.querySelector('#folkmeny.på'), F: JSON.stringify(FolkSpill.tilstand().personer.map(p => [p.id, p.oppgave])), pt: PengerSpill.test };
+    try {
+      o.pris = Leir.DRIVSTOFF.prisPerLiter; o.prisOk = o.pris >= 1500 && o.pris <= 6000;
+      // én prognose: Lager og dagsrapporten gir samme tall
+      L.dieselLogg = { l: new Array(24).fill(0), h: Math.floor(tid / 60), n: 0 }; for (let k = 1; k <= 6; k++) L.dieselLogg.l[(L.dieselLogg.h - k + 24) % 24] = 2; L.dieselLogg.n = 6; L.drivstoff = 480;
+      const P = LeirSpill.diesel(), rap = Dagbok.rapport(DagbokSpill.nå()).tekst, merk = (LagerSpill.stilling().find(t => t.id === 'diesel') || {}).merk || '';
+      o.prognose = [P.timer, rap.match(/rekker ca\. ([\d,]+) døgn/) ? rap.match(/rekker ca\. ([\d,]+) døgn/)[1] : null, merk];
+      o.prognoseLik = Math.abs(P.timer - 240) < 1 && /rekker ca\. 10 døgn/.test(rap) && /10 døgn/.test(merk);
+      // «Penger inn» i fanen Lager, og totalprisen på byggekortene
+      const m = document.getElementById('leirmeny'); if (!m.classList.contains('på')) document.getElementById('leirknapp').click(); LeirSpill.fane('lager'); await vent(300);
+      o.penger = [...m.querySelectorAll('[data-penger]')].map(x => x.dataset.penger).join(',');
+      LeirSpill.fane('bygg'); await vent(300); L.lager = { tre: 0, betong: 0, stål: 0 }; LeirSpill.visMeny(); await vent(100);
+      const kort = m.querySelector('[data-type="brakke"] .pris'); o.brakke = kort ? kort.textContent : null; o.totalOk = !!kort && /i alt/.test(kort.textContent) && LeirSpill.totalPris('brakke') > Leir.BYGG.brakke.pris;
+      // strømlinja sier aldri «Alle bygg har strøm» når ingen bygg bruker strøm
+      L.bygg = []; LeirSpill.visMeny(); await vent(100); o.strøm = [...m.querySelectorAll('.linje')].map(x => x.textContent).join('|'); o.strømOk = !/Alle bygg har strøm/.test(o.strøm);
+      // rekruttering uten ledig seng: grunnen står som tekst
+      FolkSpill.åpne(true); await vent(300); const g = document.getElementById('rekrutthvorfor'), rk = document.getElementById('rekrutter'); o.rekrutt = g ? g.textContent : (rk && !rk.disabled ? 'kan rekruttere' : null); o.rekruttOk = !!g || (rk && !rk.disabled); FolkSpill.åpne(false);
+      // hogstlaget velger selv: et felt i skog innen 1,5 km (eller beskjed om at det ikke finnes skog)
+      RessursSpill.sett(Ressurser.ny()); const j = await PengerSpill.finnHogst(true); o.hogst = j ? Math.round(Math.hypot(j.x - s.leir.x, j.y - s.leir.y)) + ' m, ' + j.mat.tre + ' m³' : 'ingen skog';
+      o.hogstOk = j ? RessursSpill.tilstand().jobber.length === 1 && Math.hypot(j.x - s.leir.x, j.y - s.leir.y) <= 1550 : true;
+      // nedbremsingen: bygg til 10×, fiende til 1×, og et nytt bygg innen to timer senker ikke
+      o.flyt = Flyt.autoFart([{ type: 'bygg' }]) === 'sp2' && Flyt.autoFart([{ type: 'kontakt' }]) === 'sp1' && Flyt.hviler([{ type: 'bygg' }], { bygg: 0 }, 60).length === 0;
+    } catch (x) { o.feil = String(x && x.message || x); }
+    // tilbake
+    L.bygg = JSON.parse(før.bygg); L.neste = før.neste; L.nesteJobb = før.nesteJobb; L.lager = JSON.parse(før.lager); L.drivstoff = før.diesel; if (før.logg) L.dieselLogg = JSON.parse(før.logg); else delete L.dieselLogg;
+    RessursSpill.sett(JSON.parse(før.R)); PengerSpill.test = før.pt;
+    const F = FolkSpill.tilstand(), opg = new Map(JSON.parse(før.F)); for (const p of F.personer) if (opg.has(p.id)) p.oppgave = opg.get(p.id);
+    const P2 = OppstartSpill.tilstand().penger; if (P2 < før.penger) OppstartSpill.gi(før.penger - P2); else if (P2 > før.penger) OppstartSpill.betal(P2 - før.penger);
+    const m = document.getElementById('leirmeny'); if (m.classList.contains('på') !== før.meny) document.getElementById('leirknapp').click(); if (før.folk) FolkSpill.åpne(true);
+    LeirSpill.lagre(); LeirSpill.oppdater3d(); skitten = true; o.tilbake = OppstartSpill.tilstand().penger === før.penger && LeirSpill.tilstand().bygg.length === JSON.parse(før.bygg).length;
+    return o; });
+  d.runde6 = e;
+  const ok6 = !e.feil && e.prisOk && e.prognoseLik && /oppdrag/.test(e.penger) && /hogst/.test(e.penger) && e.totalOk && e.strømOk && e.rekruttOk && e.hogstOk && e.flyt && e.tilbake;
+  if (!ok6) return { ok: false, tekst: `Runde 6: diesel ${e.pris} kr/l (${e.prisOk}), prognose ${JSON.stringify(e.prognose)} lik ${e.prognoseLik}, Penger inn [${e.penger}], brakke «${e.brakke}» ${e.totalOk}, strøm «${e.strøm}» ${e.strømOk}, rekruttering «${e.rekrutt}», hogst ${e.hogst} ${e.hogstOk}, nedbremsing ${e.flyt}, tilbake ${e.tilbake}` + (e.feil ? ' FEIL ' + e.feil : ''), data: d };
   const ok = !d.feil && !!d.type && d.rute0 === 'åpen' && d.tjent > 0 && d.panel && d.hard && d.hardGirMer && d.rute1 !== 'åpen' && d.rute2 === 'åpen' && d.opprør && d.børs && d.veksle && d.hylle && d.mat && d.fordel && d.tilbake;
-  return { ok, tekst: `Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn med ${d.andre} andre tettsteder), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
+  return { ok, tekst: `Runde 6: diesel ${e.pris} kr/l, én dieselprognose (${Math.round(e.prognose[0] / 24)} døgn), Penger inn [${e.penger}], brakke ${e.brakke}, hogst ${e.hogst}. Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn med ${d.andre} andre tettsteder), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
 } };

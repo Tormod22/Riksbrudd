@@ -118,3 +118,58 @@ Detaljer, filer og prøving står i `docs/natt/sjo.md` (Runde 4, punkt 1–3). K
   `Fraksjoner.lagTak`), og det vises i krigskartet. De har ingen kasse, så penger får de ikke.
 - Fortsatt ikke gjort: rutene bruker vegene, men ikke ferjene som eget ledd (vegnettets ferjelenker brukes slik vegnettet gir dem), og
   vegkrater fra «Spreng vegen her» ER med (se sjo.md, del 2).
+
+## Runde 6 (19. nov, kritikken)
+Punktene fra `docs/anmeldelse-2026-11-19.md` som er mine. Alle nye tall er **Claudes forslag** og står i REGLER-objekter
+(`Leir.DRIVSTOFF`, `Penger.REGLER`, `Flyt.REGLER.autoHvile`/`HENDELSER[..].til`, `LAGRE` i lagring.js).
+
+1. **Økonomien knekker en ny spiller – rettet.**
+   - Dieselen: `Leir.DRIVSTOFF.prisPerLiter` 8 000 → **3 000 kr** (plan-kollaps.md hadde 8 000 da spillet startet med 100 mill. og maten
+     kostet 15 000 kr; nå 40 mill. og 3 000 kr, så dieselen er satt ned i samme forhold). 500 l = 1,5 mill. (før 4–4,6 mill.).
+     Smuglerdieselen på svartebørsen 5 → 3 mill. for 800 l (fortsatt dyrere enn markedet). Lager-fanen sier nå hvorfor den er dyr og hva
+     alternativet er (solceller, batteri, strømnettet de første døgnene, slå av bygg).
+   - **«Penger inn»** (ny fil `spill/penger-visning.js`, `window.PengerSpill`, regler `Penger` + `test_penger.js`): øverst i fanen Lager –
+     kassa, inn/ut i går (eller i dag), oppdragene som venter (nærmeste og best betalte, knapp til fanen Mål), hogsten (knapp til Folk),
+     salg, tettstedene (knapp til Region) og røverbytte. Én beskjed i loggen når et nytt spill starter, og en varselbrikke «Kassa: …» når
+     kassa er under 6 mill. / en firedel av startkassa (+ én loggmelding). Ikke i testene (PengerSpill.test).
+   - **Første oppdrag er alltid «Hent forsyninger»** i den nære halvdelen (700–1 650 m, gir 0,6–0,9 mill. kr) – en trygg inntekt de første
+     døgnene (`Oppdrag.lag`, nr ≤ 1).
+   - Gjennomspilling på /rogaland: se under («Gjennomspillingen»).
+2. **Hogst gir ingenting – rettet.** Årsaken: en person på «Hogst» gjorde ingenting før noen hadde valgt et hogstfelt i kartet
+   (Leir → Lager → «Hogst …»), og det sto ingen steder. Nå finner hogstlaget selv nærmeste skog innen 1,5 km (ringer fra 70 m, 12 punkter
+   per ring, `RessursSpill.skogAndel`, første ring med minst 45 % skog, ellers beste over 20 %; høyst 15 s leting, nytt forsøk hvert 20. s)
+   og starter et felt på 35 m (`Ressurser.startHogst`). Loggen sier hvor og hvor mye. Spilleren kan fortsatt velge selv. Prøvd på Dovre:
+   felt 70 m fra leiren, 46 m³, 19 m³ i lageret etter 6 spilltimer med én på hogst og én på frakt.
+3. **Dieselprognosene – rettet.** Én beregning: `Leir.dieselMål` (leir-visning måler hvor mye tanken synker per spilltime – aggregat og
+   fyring) og `Leir.dieselRekker(L, nå)` = snittet av de siste 24 spilltimene (før tre hele timer: forbruket nå). `LeirSpill.diesel()` brukes
+   av dagsrapporten (dagbok.js), Lager (lager-visning.js) og varselbrikkene (narhud.js). Prøvd: Lager «Rekker ca. 70 døgn», rapporten
+   «rekker ca. 69,5 døgn» på samme tid.
+4. **Strømtekstene – rettet.** «Alle bygg har strøm» står bare når noe bruker strøm («Alle 3 byggene som bruker strøm, har strøm · fra
+   strømnettet 5 kW (virker bare de første døgnene), aggregat 20 kW»); uten forbrukere: «Ingen bygg bruker strøm ennå · strøm fra …».
+   Flisa sier «5 kW ledig» i stedet for «bruker 0 av 5 kW», og «trenger 1, har 0 kW» når det ikke strekker til. «1 bygg mangler strøm»
+   står som før når det er slik (det andre sitatet i kritikken var fra et annet tidspunkt).
+5. **Byggeprisen – rettet.** Byggekortene viser hele prisen (arbeid + materialene du mangler, dagens pris): «Brakke 5 mill. kr i alt»,
+   forklaringen sier delingen. Banneret: «Brakke: 5 mill. kr i alt (arbeid 4 mill. kr + materialer 975 000 kr)» og knappen «Kjøp materialene
+   og bygg: 5 mill. kr i alt». Har du materialene, står bare arbeidet. (`LeirSpill.totalPris(type)`.)
+6. **Målteksten for tanken – rettet.** Mål kan ha `nå(T)` (maal.js) – «Kjøp diesel til tanken» når tanken står (`Maal.tekstNå`, brukt i
+   «Neste mål» og loggen).
+7. **Rekruttering – rettet.** Grunnen står som tekst under knappene (#rekrutthvorfor): «Kan ikke rekruttere nå – ingen ledig seng: bygg en
+   brakke først.» (også for lav moral og for lite penger).
+8. **«Tom for diesel» uten knapp – rettet.** Varselbrikken har en egen knapp «Kjøp 500 l (1,5 mill. kr)» ved siden av
+   (`b.knapp` i narhud.js, `LeirSpill.kjøpDiesel`).
+9. **Svartebørsmeldingen – rettet.** Ikke lenger det store varselet midt øverst (det dekket leiren); bare loggen («Se Mer → Region (eller
+   trykk «Svartebørsen» øverst til venstre)») og en varselbrikke «Svartebørsen» som åpner Region og står til panelet er åpnet eller
+   selgeren drar.
+10. **600× faller til 1× – rettet.** Den automatiske nedbremsingen går til 1× bare når det haster (fiende i sikte, ildkamp, alarm, lag slått
+    ut). Ferdig bygg og kort som venter på svar senker bare til 10×, og samme slag senker ikke igjen før det er gått 2 spilltimer (bygg) /
+    1 spilltime (kort) (`Flyt.autoFart`, `Flyt.hviler`, test_flyt.js). Senkes farten aldri «opp», og det kommer ingen melding når farten
+    alt er lav nok. Spolingen (⏭) stopper på 1× som før. Valget: et ferdig bygg krever sjelden handling straks – 10× gir tid til å se
+    hva som skjedde uten at du må trykke 600× for hvert bygg.
+11. **Omlasting mister spilltid – rettet.** lagring.js lagret hvert 5. ekte sekund (50 spillminutter ved 600×). Nå høyst 2 spillminutter
+    mellom hver lagring, men aldri oftere enn hvert halve sekund (ved 600×: 5 spillminutter), og også ved beforeunload. Prøvd: 600× i
+    3 s, omlasting: 325,8 → 326,8 (ingen tid tapt).
+
+**Fellesfiler endret (små, samlet):** `index.html` (én skripttagg: penger-visning.js rett etter okonomi-visning.js), `spill/dagbok.js`
+(rapporten bruker `d.rekkerDøgn`, nå() leser `LeirSpill.diesel()`), `spill/lager-visning.js` (prognosen fra `LeirSpill.diesel()`),
+`spill/narhud.js` (dieselbrikken: felles prognose + `b.knapp` = egen knapp ved siden av en brikke, CSS `.rad`/`.handling`),
+`spill/maal.js` (`nå` på målet «tank», `Maal.tekstNå`), `spill/maal-visning.js` (bruker `tekstNå`), `spill/lagring.js` (oftere lagring).
