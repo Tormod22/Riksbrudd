@@ -104,15 +104,18 @@
 #leirmeny .penger button{ margin:4px 6px 0 0; }`;
   document.head.appendChild(css);
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => {
-    if (!klar || !Sp()) return; const s = Sp(), K = S.K;
-    hode.appendChild(el('h3', { 'data-fane': 'lager', id: 'pengerinn' }, 'Penger inn'));
+    if (!klar || !Sp()) return; const s = Sp(), K = S.K, ny = [];
+    ny.push(el('h3', { 'data-fane': 'lager', id: 'pengerinn' }, 'Penger inn'));
     const inn = K ? (K.før ? K.før.inn : K.inn) : 0, ut = K ? (K.før ? K.før.ut : K.ut) : 0;
-    hode.appendChild(el('div', { klasse: 'penger sum', 'data-fane': 'lager' }, `Kassa ${kr(s.penger)}. ${K && K.før ? 'I går' : 'I dag'}: ${kr(inn)} inn, ${kr(ut)} ut.`));
+    ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager' }, `Kassa ${kr(s.penger)}. ${K && K.før ? 'I går' : 'I dag'}: ${kr(inn)} inn, ${kr(ut)} ut.`));
     for (const l of P.linjer(bilde(), kr)) { const d = el('div', { klasse: 'penger', 'data-fane': 'lager', 'data-penger': l.id }, l.tekst);
       if (l.id === 'oppdrag' && rot.LeirSpill) d.appendChild(knapp('Vis oppdragene', () => LeirSpill.fane('mål')));
       if (l.id === 'region' && rot.RegionSpill && RegionSpill.åpne) d.appendChild(knapp('Åpne Region', () => RegionSpill.åpne()));
       if (l.id === 'hogst' && rot.FolkSpill && FolkSpill.åpne) d.appendChild(knapp('Folk og oppgaver', () => FolkSpill.åpne(true)));
-      hode.appendChild(d); }
+      ny.push(d); }
+    // øverst i fanen Lager: rett under dieselen, foran «Materialer (lager …)» – der kritikeren lette etter penger
+    const mat = [...hode.children].find(n => n.tagName === 'H3' && /^Materialer \(lager/.test(n.textContent));
+    for (const n of ny) if (mat) hode.insertBefore(n, mat); else hode.appendChild(n);
   });
 
   // ---------- varselbrikken når kassa er lav ----------

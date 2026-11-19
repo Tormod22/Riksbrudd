@@ -183,7 +183,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const strømTekst = siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå';
     const status = el('div', { klasse: 'status' },
       flis('Kassa', LB.kroner(S.penger)),
-      flis('Strøm', siste.behov ? `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ikke i bruk', strømTekst + (strømKilde() ? ` – ${strømKilde()}` : ''), siste.mangler.size - (siste.avslått || 0) > 0),
+      flis('Strøm', siste.behov ? (siste.behov > Math.max(siste.kapasitet, siste.prod) + 1e-6 ? `trenger ${kw(siste.behov)}, har ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW`) : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ikke i bruk', strømTekst + (strømKilde() ? ` – ${strømKilde()}` : ''), siste.mangler.size - (siste.avslått || 0) > 0),
       flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
       flis('Sengeplasser', String(LB.plasser(L))),
       siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, strømLinje()));
