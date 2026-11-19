@@ -25,7 +25,7 @@ body.kort #nhud .vapen{ right:12px; bottom:auto; top:calc(var(--topp,44px) + 222
 body.foto #nhud, body.foto #varsler{ display:none !important; }
 #varsler{ position:fixed; left:10px; top:calc(var(--topp,58px) + 8px); z-index:6; display:flex; flex-direction:column; gap:5px; align-items:flex-start; max-width:min(320px,70vw); }
 #varsler button{ pointer-events:auto; display:flex; align-items:center; gap:7px; background:rgba(22,18,12,.9); border:1px solid #6a5f42; border-left:4px solid #c9b26a; color:var(--ink,#e7dcc3); font:inherit; font-size:13.5px; padding:4px 10px 4px 8px; min-height:30px; cursor:pointer; text-align:left; }
-#varsler .rad{ display:flex; gap:5px; align-items:stretch; } #varsler button.handling{ border-left-color:#9fc46a; font-weight:600; white-space:nowrap; }
+#varsler .rad{ display:flex; flex-wrap:wrap; gap:5px; align-items:stretch; } #varsler .rad > button:first-child span{ white-space:nowrap; } #varsler button.handling{ border-left-color:#9fc46a; font-weight:600; white-space:nowrap; }
 #varsler button.fare{ border-left-color:#e0604a; } #varsler button.god{ border-left-color:#9fc46a; } #varsler button small{ color:var(--ink-dim,#a99); }
 body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)); max-width:62vw; } body.kort #varsler button{ font-size:12px; min-height:28px; padding:3px 8px 3px 6px; } body.kort.gaar #varsler, body.bygger2d #varsler{ display:none; }`;
   document.head.appendChild(css);

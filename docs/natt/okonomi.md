@@ -179,3 +179,27 @@ Punktene fra `docs/anmeldelse-2026-11-19.md` som er mine. Alle nye tall er **Cla
 (rapporten bruker `d.rekkerDøgn`, nå() leser `LeirSpill.diesel()`), `spill/lager-visning.js` (prognosen fra `LeirSpill.diesel()`),
 `spill/narhud.js` (dieselbrikken: felles prognose + `b.knapp` = egen knapp ved siden av en brikke, CSS `.rad`/`.handling`),
 `spill/maal.js` (`nå` på målet «tank», `Maal.tekstNå`), `spill/maal-visning.js` (bruker `tekstNå`), `spill/lagring.js` (oftere lagring).
+
+### Gjennomspillingen (19. nov, /rogaland, leir i Ryfylke 15607, 6622779)
+Skript: `<scratchpad>/natt6/okonomi/spill.js` (webdriver = false, Vanlig, ekte data via dev.py; utskrift i `spill-ut.txt`, bilder
+`spill-dag1.png` … `spill-dag7.png`). Spilleren følger spillets råd: bygger brakke, dieseltank, aggregat og vakttårn med knappen «Kjøp
+materialene og bygg» i banneret, kjøper 500 l diesel, lager en tropp på tre, og når dag 2 begynner også kontrollrom og radiomast (målene i
+kapittel 2 – og det kritikeren kjøpte). Troppen tar det nærmeste «Hent forsyninger»/«Redd overlevende» (ikke røverposter), hendelseskort
+besvares med valget som ikke koster penger, «Forsvar leiren» trykkes ved angrep, tre over 40 m³ selges 10 om gangen, diesel kjøpes når tanken
+er under 80 l. OBS: maskinen klarer ikke 600× i sanntid (hovedløkka tar høyst 0,25 s per bilde), så tiden ble drevet fram med spillets egen
+`sim()` i steg på 0,25 spillminutt (30 spillminutter per runde) – alt annet skjer som i spillet.
+
+| Dag (kl. 06) | Kassa | Hendelser |
+|---|---|---|
+| 1 | 17,5 mill. | etter de fire byggene (22,5 mill. inkl. materialer); 500 l diesel 1,5 mill. |
+| 2 | 18,7 mill. | 4 oppdrag gjort, 0,4 mill. solgt tre; så kontrollrom + radiomast → 5,9 mill. |
+| 3 | 6,7 mill. | 7 oppdrag, strømnettet ute → aggregatet går (diesel rekker 5,3 døgn) |
+| 4 | 9,3 mill. | 9 oppdrag |
+| 5 | 9,3 mill. | 12 oppdrag, røverne herjet |
+| 6 | 9,9 mill. | 15 oppdrag, diesel 228 l (2,6 døgn), 3 500 kr/l |
+| 7 | 10,5 mill. | 18 oppdrag, 2,4 mill. solgt tre i alt, mat til 4,9 døgn |
+
+Ikke blakk, men heller ikke rik: etter kontrollrommet øker kassa med 0,5–2,5 mill. i døgnet – ett nytt bygg hvert par døgn.
+Før takten og salgstaket (første kjøring, samme oppsett uten kontrollrom): 17,5 → 22,4 mill. første døgn (åtte oppdrag) og 2,65 mill. i
+tresalg på tre døgn – derfor `Oppdrag.TAKT` og `Marked.KJØPER`. 0 sidefeil. Farten måtte settes opp igjen 20 ganger på seks døgn (ferdige
+bygg til 10×, fiender/angrep/kort til 1×).
