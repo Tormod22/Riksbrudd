@@ -25,7 +25,9 @@
     const sek = akk; akk = 0;
     for (const h of G.steg(S, byer(), ENHETER, sek)) {
       const navn = h.by.e.navn, blå = h.side === 'blå';
-      if (h.hva === 'inntar' && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
+      // (19. nov) for få mann: meldingen «For få til å ta …» under sier det i stedet
+      const forFå = h.hva === 'inntar' && blå && !isFinite(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk));
+      if (h.hva === 'inntar' && !forFå && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
         if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
       // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite
       if (h.hva === 'forFå' && blå) logg(`For få til å ta ${navn} (${nf.format(h.by.e.folk || 0)} innb.): det trengs minst ${h.trengs} mann, dere har ${Math.floor(h.har)}. Send flere lag.`);
