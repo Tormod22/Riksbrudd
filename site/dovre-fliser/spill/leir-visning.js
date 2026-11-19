@@ -512,6 +512,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function farge() { const S = spill(); return S ? Oppstart.hovedfarge(S.fraksjon.flagg) : '#5b7ea8'; }
   KROKER.tegn.push((g, vx0, vy1) => {
     if (!L) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    // RUNDE 7 (kritikken: «leiren er bare grå bokser»): byggene tegnes som bygg sett ovenfra av spill/leir2d.js (tak, skygge, tilstand);
+    // R2 = rammens nattfarge og lys, J2/n2 = jobblista (hvilke byggeplasser som er i arbeid nå). Uten Leir2d: boksene som før.
+    const R2 = window.Leir2d && !Leir2d.av ? Leir2d.ramme() : null, J2 = R2 ? LB.jobber(L) : [], n2 = R2 ? LB.byggelag(L) : 0;
+    const aktiv2 = b => { const i = J2.findIndex(j => j.b === b); return i < 0 ? true : i < n2 && !(J2[i].reise > 0); };
     const linje = (ledd, farge2, stipl) => { g.save(); g.strokeStyle = farge2; g.lineWidth = Math.max(1.5, 1.2 / m); if (stipl) g.setLineDash([6, 3]);
       for (const [a, b] of ledd) { g.beginPath(); g.moveTo(sx(a[0]), sy(a[1])); g.lineTo(sx(b[0]), sy(b[1])); g.stroke(); } g.restore(); };
     const tegn1 = (b, skisse, ok) => {
@@ -525,7 +529,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
           linje(ledd, ok ? '#7fd17a' : '#e0604a', true); for (const q of b.punkter) { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(q[0]), sy(q[1]), 4, 0, 6.283); g.fill(); } return; }
         linje(LB.gjerdeLedd(L, b), b.id === valgtBygg ? '#f0d79a' : LB.ferdig(b) ? '#cfc6b0' : 'rgba(207,198,176,.5)', !LB.ferdig(b)); return; }
       const P = LB.hjørner(b).map(([x, y]) => [sx(x), sy(y)]); if (P.every(([x, y]) => x < -50 || y < -50 || x > VW + 50 || y > VH + 50)) return;
-      g.save(); g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath();
+      g.save();
+      const ny2 = R2 && Leir2d.bygg(g, b, { sx, sy, m, skisse, ok, valgt: b.id === valgtBygg, mangler: siste.mangler.has(b.id), aktiv: aktiv2(b), fraksjon: farge(), lys: R2.lys });
+      if (!ny2) { g.beginPath(); g.moveTo(...P[0]); for (const q of P.slice(1)) g.lineTo(...q); g.closePath();
       g.fillStyle = skisse ? (ok ? 'rgba(110,200,105,.45)' : 'rgba(224,96,74,.45)') : farge(); g.globalAlpha = skisse ? 1 : LB.virker(b) ? .85 : .35 + .5 * LB.framdrift(b);
       // (en myk skygge under bygget, så det løfter seg fra kartet)
       if (!skisse && m < 1.5) { g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 7; g.shadowOffsetX = 2; g.shadowOffsetY = 3; } g.fill(); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; g.globalAlpha = 1;
@@ -535,13 +541,15 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
         if (Math.min(l01, l12) > 9) { const [a, c] = l01 >= l12 ? [mid(P[0], P[3]), mid(P[1], P[2])] : [mid(P[0], P[1]), mid(P[3], P[2])];
           g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0] + (c[0] - a[0]) * .12, a[1] + (c[1] - a[1]) * .12); g.lineTo(a[0] + (c[0] - a[0]) * .88, a[1] + (c[1] - a[1]) * .88); g.stroke();
           const f = mid(P[1], P[2]), t = [(P[2][0] - P[1][0]) / (l12 || 1), (P[2][1] - P[1][1]) / (l12 || 1)], w = Math.min(5, l12 * .22);
-          g.strokeStyle = '#f0d79a'; g.lineWidth = 3; g.beginPath(); g.moveTo(f[0] - t[0] * w, f[1] - t[1] * w); g.lineTo(f[0] + t[0] * w, f[1] + t[1] * w); g.stroke(); } }
+          g.strokeStyle = '#f0d79a'; g.lineWidth = 3; g.beginPath(); g.moveTo(f[0] - t[0] * w, f[1] - t[1] * w); g.lineTo(f[0] + t[0] * w, f[1] + t[1] * w); g.stroke(); } } }
       // (skissen har ikke navn i byggevisningen: der står målene rundt den, og navnet står i banneret)
       if (m < 1.2 && !(skisse && window.BYGGEVISNING && BYGGEVISNING.på())) { g.font = '600 14px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
         const J = LB.jobber(L), i = J.findIndex(j => j.b === b), kø = i >= LB.byggelag(L);
         const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : J[i].reise > 0 ? ' (laget på vei)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
         const ty = window.Etikett ? Etikett.tekst(g, t, sx(b.x), sy(b.y) + 4, 1) : sy(b.y) + 4; g.strokeText(t, sx(b.x), ty); g.fillText(t, sx(b.x), ty); }
       g.restore(); };
+    // skyggene først, så ingen skygge faller oppå et nabotak
+    if (R2) for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) Leir2d.skygge(g, b, sx, sy, m);
     for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) tegn1(b, false);
     // planen: blå stiplede omriss med navnet
     g.save(); g.setLineDash([5, 4]);
@@ -562,6 +570,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   });
 
   KROKER.tegn[KROKER.tegn.length - 1].bygg = true;   // tegnes øverst i byggevisningen (spill/byggevisning.js)
+  // (runde 7) og over tåka og siktfeltet ellers (index.html tegn: f.over) – byggene var bleke under det lyse siktfeltet
+  KROKER.tegn[KROKER.tegn.length - 1].over = true;
 
   // ---------- 3D ----------
   // egne enkle modeller (vertex-farger, origo midt på bunnen, fronten mot +x) for byggene som ikke finnes i spill/modeller.js
