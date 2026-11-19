@@ -83,6 +83,7 @@ body.kort #folkmeny select, body.kort #samfunnmeny select, body.kort #stridpanel
 body.kort #flytkort{ left:calc(12px + ${L}); right:calc(12px + ${Rt}); transform:none; width:fit-content; max-width:min(560px, calc(100vw - 24px)); margin:0 auto; box-sizing:border-box; flex-wrap:nowrap; } body.kort #flytkort > span{ flex:1 1 auto; min-width:0; }
 body.kort #lagmeny.på button{ height:auto; min-height:40px; }
 body.flytvik #logg{ visibility:hidden; }
+body.kort:has(#alarm.på) #logg{ visibility:hidden; }
 body.kort.smal #panel{ max-height:52vh; }
 body.kort.tlfligg.smal #minikart{ width:80px; height:80px; }
 body.kort.tlfligg.smal #skytknapp{ right:calc(96px + ${Rt}); } body.kort.tlfligg.smal #byttvapen{ right:calc(180px + ${Rt}); }
