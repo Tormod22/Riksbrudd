@@ -29,7 +29,7 @@
       const S = window.OppstartSpill && OppstartSpill.tilstand(), sx = p.x !== null && p.x !== undefined ? p.x : null;
       // midten: skissen når den står, ellers midten av kartet (leiren når kartet er langt unna)
       const x = sx !== null ? p.x : kam.x, y = sx !== null ? p.y : kam.y;
-      const L = S && S.leir && Math.hypot(x - S.leir.x, y - S.leir.y) > 5000 ? S.leir : { x, y };
+      const L = sx === null && S && S.leir && Math.hypot(x - S.leir.x, y - S.leir.y) > 5000 ? S.leir : { x, y };
       return { type: p.type, ret: p.ret || 0, x: L.x, y: L.y, hvor: 'bygg', ...skala() };
     }
     const f = window.OppstartSpill && OppstartSpill.forslag && OppstartSpill.forslag();
@@ -98,8 +98,19 @@
 
   // Nivået ved et punkt (vakten og banneret): HL.FLATT … eller null når kartet ikke er regnet ut der
   function ved(x, y) { if (!klar) return null; const i = Math.floor((x - klar.x0) / klar.c), j = Math.floor((klar.y1 - y) / klar.c); return i < 0 || j < 0 || i >= klar.n || j >= klar.n ? null : klar.nivå[j * klar.n + i]; }
+  // Når skissen står for bratt: går det med bygget dreid 90°, og hvor er nærmeste sted (innen 150 m) der det går med samme retning?
+  // -> { drei: true|false, sted: { x, y, m, retning } | null } eller null når hellingskartet ikke er klart for dette bygget
+  function forslag(type, ret, x, y) {
+    if (!klar || klar.type !== type || Math.abs(klar.ret - ret) > 1e-6) return null;
+    const ok = nv => nv === HL.FLATT || nv === HL.SKRÅTT, v = HL.vurderer(type, ret, klar.høyde, klar.tørt);
+    const drei = ok(HL.vurderer(type, ret + Math.PI / 2, klar.høyde, klar.tørt)(x, y)); let sted = null;
+    // stedet må gå også 1,25 m til hver side (rutenettet i leiren flytter skissen opptil så mye)
+    const trygt = (X, Y) => ok(v(X, Y)) && ok(v(X - 1.25, Y - 1.25)) && ok(v(X + 1.25, Y - 1.25)) && ok(v(X - 1.25, Y + 1.25)) && ok(v(X + 1.25, Y + 1.25));
+    for (const [dx, dy, m] of HL.ringer(150, 2)) if (m > 0 && trygt(x + dx, y + dy)) { sted = { x: x + dx, y: y + dy, m, retning: HL.retning(dx, dy) }; break; }
+    return { drei, sted };
+  }
   // nøyaktig nivå for bygget i kartet ved (x, y) – med de samme høydene som bildet (vakten sammenligner med kanBygge)
   const nivåVed = (x, y) => (klar ? HL.vurderer(klar.type, klar.ret, klar.høyde, klar.tørt)(x, y) : null);
-  window.HellingVis = { REGLER, test: false, ved, nivåVed, oppdater, tilstand: () => (klar ? { type: klar.type, ret: klar.ret, x: klar.x, y: klar.y, hvor: klar.hvor, flatt: klar.tell[0], skrått: klar.tell[1], bratt: klar.tell[2], vann: klar.tell[4], vises: !!mål && sammeBygg(klar, mål) && kam.m <= REGLER.maksM } : null),
+  window.HellingVis = { REGLER, test: false, ved, nivåVed, forslag, oppdater, tilstand: () => (klar ? { type: klar.type, ret: klar.ret, x: klar.x, y: klar.y, hvor: klar.hvor, flatt: klar.tell[0], skrått: klar.tell[1], bratt: klar.tell[2], vann: klar.tell[4], vises: !!mål && sammeBygg(klar, mål) && kam.m <= REGLER.maksM } : null),
     venter: () => !!regner, av: v => { av = !!v; skitten = true; }, forklaring: () => HL.FORKLARING, ekte };
 })();

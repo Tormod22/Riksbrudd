@@ -7,7 +7,7 @@ Kritiker D (telefon, /norge, `scratchpad/kritikk2/tlf/anmeldelse.md`). Alle tall
 
 ### 1. Bratt leirplass godtas uten varsel (alvor høy) – RETTET
 Ved Aurland fikk det første bygget «For bratt her (11 m høydeforskjell under bygget)», og eneste vei ut var nytt spill.
-- **Regler uten DOM: `spill/helling.js`** (ny, rett etter leirvalg.js; test `pipeline/fliser/test_helling.js`, 31 sjekker).
+- **Regler uten DOM: `spill/helling.js`** (ny, rett etter leirvalg.js; test `pipeline/fliser/test_helling.js`, 25 sjekker).
   Samme bratt-regel som `Leir.kanBygge`: den er trukket ut av kanBygge som `Leir.bratt(b, høyde)` / `Leir.brattGrense(b)` (samme svar –
   testen sjekker 63 steder, og test_leir.js er grønn).
   - `vurder(b, høyde, tørt)` / `vurderer(type, ret, høyde, tørt)`: FLATT (høydeforskjell under hjørnene ≤ halve grensa), SKRÅTT (opp til
@@ -44,6 +44,9 @@ nordvest) og høydekurver hver 2 m (hver 10. m sterkere; de svake tas bort der d
 - Banneret forklarer fargene («Bakken for brakke: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.»), eller «Zoom inn for å
   se i kartet hvor det er flatt nok.» Står bygget skrått: «skrå grunn: 5 m grunnmur».
 - «For bratt» ved skissen: byggevisning.js skriver alt årsaken ved skissen, og på PC følger skissen musa før du trykker.
+  Nytt: står skissen for bratt, gir banneret «Drei 90° (da går det)» når det går med bygget dreid, og «Flytt skissen 12 m nord» til
+  nærmeste sted innen 150 m der bygget ikke står for bratt (også 1,25 m til hver side, så rutenettet ikke flytter den tilbake) –
+  `HellingVis.forslag(type, ret, x, y)`.
 - Trykk på leirflagget mens du plasserer, plasserer bygget (før åpnet det basepanelet «Leiren til …» – sett på telefon). leir-visning.js
   legger en krok først i KROKER.trykk/trykk3d (etter at alle skriptene er lastet) som bare gjelder mens en plassering pågår (og ikke når
   byggesettet er åpent).

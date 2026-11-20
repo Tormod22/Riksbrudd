@@ -316,6 +316,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       banner.append(a, r);
     } else if (p && p.x !== null) {
       banner.append(knapp('⟲ 15°', () => roter(1)), knapp('⟳ 15°', () => roter(-1)));
+      // (runde 8) for bratt: drei bygget, eller flytt skissen til nærmeste sted der det går (fra hellingskartet, helling-visning.js)
+      const bf = p.feil && /For bratt/.test(p.feil) ? p.brattForslag : null;
+      if (bf && bf.drei) banner.append(knapp('Drei 90° (da går det)', () => roter(6), { id: 'brattdrei' }));
+      if (bf && bf.sted) banner.append(knapp(`Flytt skissen ${Math.round(bf.sted.m)} m ${bf.sted.retning}`, () => { p.rx = p.x = bf.sted.x; p.ry = p.y = bf.sted.y; p.svever = false; prøv(); }, { id: 'brattflytt', title: 'Nærmeste sted der bygget ikke står for bratt' }));
     }
     if (p && !p.mal) banner.append(knapp(rutenett ? 'Rutenett: på' : 'Rutenett: av', () => { rutenett = !rutenett; if (p.x !== null) { p.x = p.rx; p.y = p.ry; } prøv(); }));
     if (p && !p.mal && !LB.BYGG[p.type].linje) banner.append(knapp(inntil ? 'Inntil naboen: på' : 'Inntil naboen: av', () => { inntil = !inntil; prøv(); }));
@@ -380,6 +384,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const punkter = B.linje ? LB.gjerdePunkter(p.punkter, p.lukket) : [...LB.hjørner(b), [b.x, b.y]], v = await kartFor(punkter);
     if (plassering !== p) return;
     p.feil = LB.kanBygge(L, b, v, p.flytt, { planUnntatt: p.pid }); p.kart = v;
+    p.brattForslag = p.feil && /For bratt/.test(p.feil) && window.HellingVis && HellingVis.forslag ? HellingVis.forslag(p.type, p.ret, b.x, b.y) : null;
     const k = LB.kostnad(p.type, B.linje ? LB.lengde(p.punkter, p.lukket) : 0, bonus()); p.mat = p.flytt ? {} : k.mat; p.matPris = matPris(p.mat);
     const harMat = LB.harMat(L, p.mat), pris = p.flytt ? Math.round(B.pris * LB.REGLER.flyttPris) : k.pris; p.pris = pris;
     // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter

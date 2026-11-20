@@ -60,6 +60,15 @@ module.exports = {
           const n = HellingVis.nivåVed(p.x, p.y); if (n === null || n === Helling.UKJENT || n === Helling.VANN) continue; sjekket++;
           if ((n === Helling.BRATT) !== /For bratt/.test(p.feil || '')) uenig++; }
         krev(sjekket >= 3 && !uenig, `hellingskartet og kanBygge er uenige (${uenig} av ${sjekket})`); ut.sjekket = sjekket;
+        // 3b. skissen i den bratte lia: «For bratt», og «Flytt skissen …» flytter den dit det går
+        if (bratt) { LeirSpill.trykk(bratt[0], bratt[1]); kam.x = bratt[0]; kam.y = bratt[1]; HellingVis.oppdater();
+          for (let i = 0; i < 80 && (HellingVis.venter() || !HellingVis.tilstand() || Math.hypot(HellingVis.tilstand().x - bratt[0], HellingVis.tilstand().y - bratt[1]) > 60); i++) { await vent(100); HellingVis.oppdater(); }
+          await LeirSpill.prøv(); const p = LeirSpill.plassering(); ut.skisseBratt = p && p.feil;
+          krev(p && /For bratt/.test(p.feil || '') && p.brattForslag, 'skissen i lia sier ikke «For bratt» eller har ikke noe forslag: ' + (p && p.feil));
+          const fk = el('brattflytt'), dk = el('brattdrei'); ut.brattKnapper = [!!fk, !!dk];
+          if (fk) { fk.click(); for (let i = 0; i < 40 && LeirSpill.plassering() && /For bratt/.test(LeirSpill.plassering().feil || ''); i++) await vent(100); await LeirSpill.prøv();
+            const q = LeirSpill.plassering(); ut.etterFlytt = q && q.feil; krev(q && !/For bratt/.test(q.feil || ''), '«Flytt skissen» ga fortsatt «For bratt»'); }
+          else krev(!!dk, 'verken «Flytt skissen» eller «Drei 90°» for den bratte skissen'); }
         // 4. «Kjøp materialene og bygg»: loggen sier det samme som knappen
         L.lager.tre = 0; L.lager.betong = 0; let fri = null;
         for (const [dx, dy] of [[40, 30], [-45, 35], [45, -40], [-50, -45], [70, 0], [0, 75]]) { LeirSpill.trykk(S.leir.x + dx, S.leir.y + dy); await LeirSpill.prøv(); const p = LeirSpill.plassering(); if (p && !p.feil) { fri = p; break; } }
@@ -91,6 +100,6 @@ module.exports = {
     }, profil);
     if (d.mangler) return { ok: true, tekst: 'terreng: modulene mangler (hoppet over)', data: d };
     const ok = !d.feil.length;
-    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
+    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
   },
 };
