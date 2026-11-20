@@ -102,7 +102,8 @@ maal.js/maal2.js (målingene over), tell.js (trekanter per figur i Node). Bilder
 38-ga-start.png; etter: v4-pc-ga.png, v3/v4-pc-naer.png, v4-pc-vapen0.png (gevær), v4-pc-vapen1.png (pistol), v4-pc-utenfra.png (karakteren
 bakfra, en såret soldat på kne som sikter), v5-mobil-naer.png, v5-mobil-utenfra.png, v5-mobil-vapen0/1.png. Før og etter med samme kamera:
 sammenligning-naer.png (øverst før, nederst etter) og sammenligning-vapen.png (venstre før, høyre etter); de gamle bildene for-pc-*.png. Ingen sidefeil, GL-feil 0, vakten
-grønn på PC (0,3–4 s) og telefon (1,1 s), stillingen i krig3d gir 3 soldater.
+grønn på PC (0,3–4 s) og telefon (1,1 s), stillingen i krig3d gir 3 soldater. Hele kontrollen `SJEKK_PROFIL=mobil` på siste versjon:
+120 ok, 0 FEIL (karakteren 6094 trekanter, soldaten 1753 = nær + fjern på telefon).
 
 ### Ikke gjort
 - Folk på fortauene i byene (liv3d.js) er fortsatt de gamle formene – ikke min fil. Den kan bruke `Figur3d.flokk` direkte (samme API
