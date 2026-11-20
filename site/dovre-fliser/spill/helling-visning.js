@@ -22,7 +22,7 @@
     // (runde 12, kritikk E: «grensene for flatt/skrått er hakkete trappetrinn, og hele kartet blir grønnfarget») fargene blandes mykt
     // mellom rutene, og de vises bare rundt det du plasserer: fullt innen fargeInne meter (minst fargeInnePx skjermpunkter), så tones de
     // ut til fargeUt × den avstanden. Skyggeleggingen og høydekurvene dekker fortsatt hele flekken.
-    fargeInne: 45, fargeInnePx: 80, fargeUt: 2.4 };
+    fargeInne: 18, fargeInnePx: 70, fargeUt: 2.4 };
   const FARGE = { [HL.FLATT]: [96, 205, 104, .26], [HL.SKRÅTT]: [236, 198, 64, .2], [HL.BRATT]: [228, 72, 52, .32], [HL.VANN]: [70, 130, 210, .12] };
   let mål = null, klar = null, regner = null, teller = 0, av = false;
   const ekte = () => !navigator.webdriver || HellingVis.test === true;

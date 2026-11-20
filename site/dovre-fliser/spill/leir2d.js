@@ -37,7 +37,8 @@
     // (runde 12, kritikk F/E: «brakka synes ikke på 1 km-målestokk, bare flagget»; «leiren ser nesten lik ut etter tre døgn») lenger ute
     // enn «fra» meter per punkt tegnes leiren som en liten klynge: byggene står som om kartet var tegnet med meter per punkt
     // fra + (m − fra) · vekst (avstandene i leiren og byggene forstørres), og hvert bygg er minst kort × lang punkter; over maks: ikke tegnet
-    klynge: { fra: 1.6, vekst: .12, kort: 4, lang: 6.5, maks: 150 },
+    // luft: lagene og flagget står midt i leiren, så byggene skyves ut til minst så mange punkter fra midten (gradvis fra «fra»)
+    klynge: { fra: 1.6, vekst: .12, kort: 4, lang: 6.5, maks: 150, luft: 20 },
   };
   // klyngeM(m): meter per punkt leiren tegnes med når kartet har m (ren regel; = m helt nær, vokser sakte lenger ute)
   const klyngeM = (m, K = REGLER.klynge) => (m <= K.fra ? m : K.fra + (m - K.fra) * K.vekst);
@@ -344,7 +345,8 @@
     const p = rot.LeirSpill && LeirSpill.plassering && LeirSpill.plassering(); return !p; }
   const leirMidt = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
   function klyngeBygg(g, b, o, St) { const K = REGLER.klynge, m = o.m; if (m > K.maks) return true; const L = leirMidt(); if (!L) return false;
-    const me = klyngeM(m), cx = o.sx(L.x) + (b.x - L.x) / me, cy = o.sy(L.y) - (b.y - L.y) / me, t = tilstand(b, { aktiv: o.aktiv });
+    const me = klyngeM(m), dx = b.x - L.x, dy = b.y - L.y, d = Math.hypot(dx, dy), r = d / me + Math.min(K.luft, (m - K.fra) * 5) * Math.min(1, d / 4);
+    const cx = o.sx(L.x) + (d ? dx / d * r : 0), cy = o.sy(L.y) - (d ? dy / d * r : 0), t = tilstand(b, { aktiv: o.aktiv });
     if (cx < -30 || cy < -30 || cx > VW + 30 || cy > VH + 30) return true;
     const [x0, x1, y0, y1] = St.kropp; let a = (x1 - x0) / me, c = (y1 - y0) / me; const lang = a >= c;
     // minst kort × lang punkter (langs byggets lengste side)

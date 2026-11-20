@@ -190,7 +190,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     if (!best) return false; valgtBy = best; vis(true); skitten = true; return true; });
 
   // ---------- kartet ----------
-  const KART_LØFT = 'rgba(120,110,88,.5)';
+  const KART_LØFT = 'rgba(140,128,100,.6)';
   const tegn = (g, vx0, vy1) => { const m = kam.m, ute = m >= 18; if (!åpen && !ute) return; const B = område(); if (!B.length) return;
     const sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, inn = (x, y, r) => x > -r && y > -r && x < VW + r && y < VH + r; g.save();
     // (runde 12, kritikk F: «krigskartet er så mørkt at bare stedsnavnene kan leses») kartet under løftes (lysere skygger, «screen»)
