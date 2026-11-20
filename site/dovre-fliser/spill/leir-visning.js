@@ -523,10 +523,12 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       if (B.veg) { if (!b.punkter || !b.punkter.length) return; const w = Math.max(2.5, B.bredde / m), strek = (farge2, bredde, stipl) => { g.save(); g.strokeStyle = farge2; g.lineWidth = bredde; g.lineJoin = g.lineCap = 'round'; if (stipl) g.setLineDash(stipl);
           g.beginPath(); b.punkter.forEach(([x, y], i) => (i ? g.lineTo(sx(x), sy(y)) : g.moveTo(sx(x), sy(y)))); g.stroke(); g.restore(); };
         if (skisse) { strek(ok ? 'rgba(110,200,105,.55)' : 'rgba(224,96,74,.55)', w); for (const q of b.punkter) { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(q[0]), sy(q[1]), 4, 0, 6.283); g.fill(); } return; }
-        const fer = LB.ferdig(b); strek(b.id === valgtBygg ? '#f0d79a' : 'rgba(60,50,36,.9)', w + 2); strek(fer ? '#a89878' : 'rgba(168,152,120,.45)', w, fer ? null : [8, 6]); return; }
+        const fer = LB.ferdig(b); if (R2) { Leir2d.veg(g, b.punkter, sx, sy, m, { ferdig: fer, valgt: b.id === valgtBygg, bredde: B.bredde }); return; }
+        strek(b.id === valgtBygg ? '#f0d79a' : 'rgba(60,50,36,.9)', w + 2); strek(fer ? '#a89878' : 'rgba(168,152,120,.45)', w, fer ? null : [8, 6]); return; }
       if (B.linje) { if (!b.punkter || !b.punkter.length) return;
         if (skisse) { const P = b.lukket ? [...b.punkter, b.punkter[0]] : b.punkter, ledd = []; for (let i = 1; i < P.length; i++) ledd.push([P[i - 1], P[i]]);
           linje(ledd, ok ? '#7fd17a' : '#e0604a', true); for (const q of b.punkter) { g.fillStyle = '#f0d79a'; g.beginPath(); g.arc(sx(q[0]), sy(q[1]), 4, 0, 6.283); g.fill(); } return; }
+        if (R2) { Leir2d.gjerde(g, LB.gjerdeLedd(L, b), sx, sy, m, { ferdig: LB.ferdig(b), valgt: b.id === valgtBygg }); return; }
         linje(LB.gjerdeLedd(L, b), b.id === valgtBygg ? '#f0d79a' : LB.ferdig(b) ? '#cfc6b0' : 'rgba(207,198,176,.5)', !LB.ferdig(b)); return; }
       const P = LB.hjørner(b).map(([x, y]) => [sx(x), sy(y)]); if (P.every(([x, y]) => x < -50 || y < -50 || x > VW + 50 || y > VH + 50)) return;
       g.save();

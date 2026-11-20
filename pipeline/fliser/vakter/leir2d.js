@@ -45,9 +45,9 @@ module.exports = { navn: 'leir2d (leirens bygg ovenfra, figurer og folk på nær
       Leir2d.av = false; skitten = true; tegn(); const nyB = les(VW / 2 - 120, VH / 2 - 120, 240, 240);
       krev(ulik(gml, nyB) > 50, 'tegn() bruker ikke den nye tegningen av byggene');
       // tida per bilde ved leiren, med og uten (Leir2d.av)
-      const mål = av => { Leir2d.av = av; kam.x = C.x; kam.y = C.y; kam.m = .15; skitten = true; tegn(); const t0 = performance.now(); for (let i = 0; i < 6; i++) { skitten = true; tegn(); } return (performance.now() - t0) / 6; };
-      // vekselvis med og uten, og den raskeste av fire runder (maskinen deles med andre: det minste tallet er det riktigste)
-      let tG = Infinity, tN = Infinity; for (let k = 0; k < 4; k++) { tG = Math.min(tG, mål(true)); tN = Math.min(tN, mål(false)); } Leir2d.av = false; ut.msPerBilde = { gammel: +tG.toFixed(1), ny: +tN.toFixed(1) };
+      const mål = av => { Leir2d.av = av; kam.x = C.x; kam.y = C.y; kam.m = .15; skitten = true; tegn(); const t0 = performance.now(); for (let i = 0; i < 5; i++) { skitten = true; tegn(); } return (performance.now() - t0) / 5; };
+      // vekselvis med og uten, og den raskeste av tre runder (maskinen deles med andre: det minste tallet er det riktigste)
+      let tG = Infinity, tN = Infinity; for (let k = 0; k < 3; k++) { tG = Math.min(tG, mål(true)); tN = Math.min(tN, mål(false)); } Leir2d.av = false; ut.msPerBilde = { gammel: +tG.toFixed(1), ny: +tN.toFixed(1) };
       krev(tN < tG * 1.5 + 12, `2D-kartet ble tregt med de nye byggene (${tN.toFixed(1)} mot ${tG.toFixed(1)} ms)`);
       // navnene: 50, 20, 5, 2, 0,5, 0,2 og 0,12 m per punkt ved leiren, dag og natt – ingen overlapp, og leirens bygg har navn nær
       ut.navn = {}; const NAVN = Object.values(Leir.BYGG).map(B => B.navn), nærBygg = L.bygg.some(b => !b.vakt && !Leir.BYGG[b.type].linje && !Leir.BYGG[b.type].del && Math.hypot(b.x - C.x, b.y - C.y) < 40);

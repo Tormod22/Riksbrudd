@@ -350,6 +350,26 @@
       L = { k, c: lerret, ax, ay, w, h }; LAGER.set(b.id, L); }
     const x = Math.round((cx + L.ax) * D) / D, y = Math.round((cy + L.ay) * D) / D;
     g.save(); nullstill(g); g.drawImage(L.c, x, y, L.c.width / D, L.c.height / D); g.restore(); return true; }
+  // GJERDET: skygge, nettingen og stolper hver 2,5 m (nær); under bygging stiplet og blekt; valgt = gult
+  function gjerde(g, ledd, sx, sy, m, o = {}) { g.save(); nullstill(g); g.lineCap = 'round';
+    const strek = (farge2, w, dx = 0, stipl) => { g.strokeStyle = farge2; g.lineWidth = w; g.setLineDash(stipl || []); g.beginPath(); for (const [a, c] of ledd) { g.moveTo(sx(a[0]) + dx, sy(a[1]) + dx); g.lineTo(sx(c[0]) + dx, sy(c[1]) + dx); } g.stroke(); };
+    const w = Math.max(1.4, .12 / m);
+    if (o.ferdig) strek('rgba(6,5,3,.35)', w + 1, Math.min(4, .9 / m));
+    strek(o.valgt ? '#f0d79a' : o.ferdig ? farge('#cfc6b0') : 'rgba(207,198,176,.55)', w, 0, o.ferdig ? null : [6, 3]);
+    if (o.ferdig && m < REGLER.middels) { const r = Math.max(1.6, .1 / m); g.fillStyle = farge('#4f4132');
+      for (const [a, c] of ledd) { const L = Math.hypot(c[0] - a[0], c[1] - a[1]), n = Math.max(1, Math.round(L / 2.5));
+        for (let i = 0; i <= n; i++) { const x = sx(a[0] + (c[0] - a[0]) * i / n), y = sy(a[1] + (c[1] - a[1]) * i / n); if (x < -5 || y < -5 || x > VW + 5 || y > VH + 5) continue; g.fillRect(x - r / 2, y - r / 2, r, r); } } }
+    g.restore(); }
+  // GRUSVEGEN: kant, grus, to hjulspor og lysere midtrygg (nær); under bygging stiplet som før
+  function veg(g, P, sx, sy, m, o = {}) { if (!P || P.length < 2) return; g.save(); nullstill(g); g.lineJoin = g.lineCap = 'round';
+    const strek = (farge2, bredde, stipl) => { g.strokeStyle = farge2; g.lineWidth = Math.max(1, bredde); g.setLineDash(stipl || []); g.beginPath(); P.forEach(([x, y], i) => (i ? g.lineTo(sx(x), sy(y)) : g.moveTo(sx(x), sy(y)))); g.stroke(); };
+    const B = o.bredde || 5, w = Math.max(2.5, B / m);
+    strek(o.valgt ? '#f0d79a' : farge('#3c3224', 1, .9), w + 2);
+    if (!o.ferdig) { strek('rgba(168,152,120,.45)', w, [8, 6]); g.restore(); return; }
+    strek(farge('#a08f70'), w);
+    if (m < REGLER.middels) { strek(farge('#86765a'), (B * .64) / m); strek(farge('#ab9b7c'), (B * .36) / m);
+      if (m < REGLER.nær) strek(farge('#b8a988', 1, .6), (B * .12) / m); }
+    g.restore(); }
   // én ramme: nattfargen og lyset i vinduene (kalles før byggene tegnes)
   function ramme() { forrigeM = api._m === undefined ? 0 : api._m; api._m = typeof kam !== 'undefined' ? kam.m : 0; T = null; let natt = 0; try { if (rot.KartLys && !KartLys.av && (!navigator.webdriver || KartLys.test)) { T = KartLys.nå(); natt = T.natt; if (T.natt < .01 && T.grå < .01 && T.mørk < .01) T = null; } } catch (e) { T = null; }
     tNøkkel = T ? [T.natt, T.grå, T.mørk].map(v => Math.round(v * 100)).join(',') : '';
@@ -375,7 +395,7 @@
     // et lite lysskjær på hodet fra nordvest
     if (r >= 3.6) { g.fillStyle = 'rgba(255,255,240,.22)'; g.beginPath(); g.arc(x + Math.cos(v) * r * .05 - r * .17, y + Math.sin(v) * r * .05 - r * .17, r * .18, 0, 6.283); g.fill(); }
   }
-  const JAKKER = ['#5a6b4c', '#7f5238', '#405470', '#8c8059', '#6b4040', '#4d4d52', '#9e7634', '#33594d', '#7a7080'], HÅR = ['#382b1f', '#1a1412', '#9e8050', '#5c3319', '#4d3d2e'];
+  const JAKKER = ['#6f8a4f', '#a0603c', '#5577a3', '#b09a5a', '#9a4c48', '#7a7a84', '#c08a3a', '#3f7a66', '#8a7aa0'], HÅR = ['#382b1f', '#1a1412', '#9e8050', '#5c3319', '#4d3d2e'];
   // folkene i leiren (FolkSpill): der de arbeider, bare på nær zoom og ikke i 3D
   function tegnFolk(g, vx0, vy1) { const m = kam.m; if (api.av || m >= REGLER.folkUnder || (typeof på3d !== 'undefined' && på3d) || !rot.FolkSpill || !rot.LeirSpill || !rot.Leir) return;
     const F = FolkSpill.tilstand && FolkSpill.tilstand(), L = LeirSpill.tilstand(), S = rot.OppstartSpill && OppstartSpill.tilstand(); if (!F || !L || !S || !S.leir || !F.personer) return;
@@ -430,6 +450,6 @@
     const gammel = KROKER.tegn[i], ny = (g, vx0, vy1) => (!api.av && kam.m < REGLER.bilUnder && !(typeof på3d !== 'undefined' && på3d) ? tegnKjør(g, vx0, vy1) : gammel(g, vx0, vy1));
     ny.leir2d = true; ny.bygg = gammel.bygg; ny.over = true; KROKER.tegn[i] = ny; api.kjørKrok = true; });
 
-  Object.assign(api, { bygg, tegnBygg, lager: () => LAGER.size, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
+  Object.assign(api, { bygg, tegnBygg, gjerde, veg, lager: () => LAGER.size, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
   rot.Leir2d = api;
 })(typeof window !== 'undefined' ? window : globalThis);
