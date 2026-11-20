@@ -42,7 +42,8 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
    og etter hvor tett tåka er. (b) lys3d.js (tåka i dalene i skyggeleggeren): lyset går bare gjennom den delen av tålaget som ligger
    mellom kameraet og punktet (snittet av tettheten langs strålen), og aldri mer enn før – rett ned gjennom laget er det lite tåke, mot
    horisonten omtrent som før, nede ved bakken det samme. Prøvd på telefon over Jæren kl. 06:05, Høy grafikk: `sammen-dal2.png`
-   (venstre før: grått slør; høyre: jorder, vann og veger synes). I Lærdal: dalbunnen er klarere (`sammen-halv-fiks2.png`).
+   (venstre før: grått slør; høyre: jorder, vann og veger synes). I Lærdal: dalbunnen er klarere (`sammen-halv-fiks2.png`). PC over Jæren
+   kl. 04:15 i regn (kritikerens tilfelle), Høy grafikk: `sammen-regn-0416-pc.png` (venstre før, høyre etter – vann og jorder til horisonten).
 4. **3D-lia ved leiren: glatt, gul flate med bregner, ingen trær – RETTET.** To ting:
    - Hovedårsaken: utsnittet ovenfra var over 4200 m (trær3d lager bare trær når utsnittet er høyst 4200 m), og når du trykker Gå, bygges et
      mindre utsnitt med trær – på kritikerens maskin tok det over ett minutt, og så lenge sto du i en tom li (lyngtuene rundt kameraet fra
