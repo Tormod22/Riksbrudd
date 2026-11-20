@@ -115,7 +115,12 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     const h = document.createElement('h3'), p = document.createElement('p'); h.textContent = 'Hvor vil du gå?';
     p.textContent = `Kameraet ser på et sted ${d >= 1000 ? (d / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(d / 10) * 10 + ' m'} fra deg.` + (v.type === 'forLangt' ? ' Det er for langt å gå i ett strekk – gå i etapper, eller send et lag med en ordre.' : '');
     const valg = [];
-    if (v.type === 'spør') valg.push(kn(`Reis hit (${G.tidTekst(v.min)} til fots)`, 'Du går dit, og spilltiden går så lenge turen tar.', () => reis(kar, X, Y, v.min), true));
+    // (runde 8) ser kameraet på et hus (dør innen 25 m fra midten av bildet): «Gå inn i huset» først
+    const hus = v.type === 'spør' ? nærmesteInngang(b.x, b.y, 25) : null;
+    if (hus) { const P = hus.P; let mx = 0, my = 0; for (const [x, y] of P) { mx += x; my += y; } mx = u.cx + mx / P.length; my = u.cy + my / P.length;
+      const min = G.reiseMin(Math.hypot(mx - kar.x, my - kar.y));
+      valg.push(kn(`Gå inn i huset (${G.tidTekst(min)} til fots)`, 'Du går dit, og du settes ved døra og går inn.', () => { lukkValg(); gåInn({ i: P.bygg.i, P: P.map(([x, y]) => [u.cx + x, u.cy + y]), mx, my }); }, true)); }
+    if (v.type === 'spør') valg.push(kn(`Reis hit (${G.tidTekst(v.min)} til fots)`, 'Du går dit, og spilltiden går så lenge turen tar.', () => reis(kar, X, Y, v.min), !hus));
     valg.push(kn('Gå her, der du står', 'Start ved karakteren din' + (iUt(kar) ? '.' : ' (kameraet flyr dit først).'), () => gåHer(kar), v.type !== 'spør'));
     valg.push(kn('Avbryt', '', lukkValg));
     valgEl.replaceChildren(h, p, ...valg); valgEl.classList.add('på');

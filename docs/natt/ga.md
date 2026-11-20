@@ -143,6 +143,8 @@ Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-ga
   åpner 3D med kartet midt på huset i målestokken som gir gangens utsnitt (ingen dobbel bygging), finner huset (`P.bygg.i`, ellers
   nærmeste med dør), setter deg 2,4 m foran døra med blikket mot den, og når interiøret er laget, **rett innenfor døra** (med dørhjelpen
   tok de tre metrene over et minutt med programvare-grafikk). Avbrytes reisen underveis, går du ikke inn.
+- **Også i «Hvor vil du gå?»**: ser kameraet på et hus (en dør innen 25 m fra midten av bildet), står «Gå inn i huset (ca. 9 min til
+  fots)» først i valget. Prøvd på /rogaland: kritikerens vei (kartet over en gård 500 m unna, 3D, Gå) → inne i uthuset 9 s etter trykket.
 - Prøvd på /rogaland (ekte data, Ryfylke-leiren): låve 257 m unna – PC inne etter 139 s (før rett-innenfor-døra; bildene tok sekunder),
   telefon (webdriver av, trykk på knappen) inne etter 24 s: reisen 11 s, 3D 9 s, inne 4 s. Bilder inn-panel/-reiser/-inne (pc, mobil).
 

@@ -119,11 +119,11 @@ module.exports = {
         if (iUt) {
           b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; Gange.startValg();
           const knapper = [...document.querySelectorAll('#gaavalg button')].map(e => e.textContent); d.valg = knapper;
-          krev(Gange.valgÅpen() && /^Reis hit \(ca\. \d+ min til fots\)/.test(knapper[0] || '') && knapper.some(t => /^Gå her/.test(t)), 'valget «Reis hit / Gå her» kom ikke');
+          krev(Gange.valgÅpen() && knapper.some(t => /^Reis hit \(ca\. \d+ min til fots\)/.test(t)) && knapper.some(t => /^Gå her/.test(t)), 'valget «Reis hit / Gå her» kom ikke');
           // Esc lukker valget
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!Gange.valgÅpen() && !R.fot, 'Esc lukket ikke valget');
           // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
-          b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); document.querySelector('#gaavalg button').click();
+          b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); [...document.querySelectorAll('#gaavalg button')].find(e => /^Reis hit/.test(e.textContent)).click();
           for (let q = 0; q < 80 && !R.fot; q++) await vent(100);
           for (let q = 0; q < 150 && !R.fot && Gange.venter(); q++) await vent(200);
           d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
@@ -141,6 +141,6 @@ module.exports = {
       return d;
     });
     const ok = !data.feil.length;
-    return { ok, tekst: ok ? `gå: ${data.i3d ? `valget «${(data.valg || [])[0]}», reisen ${data.reise ? data.reise.min : '?'} min, «${data.dørknapp}» → inne, Esc lukker sekken, kortet venter, snudd ${data.snudd}° med fingeren, banneret ${data.banner} px, pila «${data.pil}», «Gå inn i huset» ${JSON.stringify(data.gåInn)}, byggeplassen ${data.byggeplass}, leiren ${JSON.stringify(data.leirting || '-')}` : 'uten 3D: regler'}, panelknappen «${data.innKnapp}», været «${(data.vær || []).join('» → «')}», varselet ${JSON.stringify(data.varsel)}` : data.feil.join('; '), data };
+    return { ok, tekst: ok ? `gå: ${data.i3d ? `valget «${(data.valg || []).join(' | ')}», reisen ${data.reise ? data.reise.min : '?'} min, «${data.dørknapp}» → inne, Esc lukker sekken, kortet venter, snudd ${data.snudd}° med fingeren, banneret ${data.banner} px, pila «${data.pil}», «Gå inn i huset» ${JSON.stringify(data.gåInn)}, byggeplassen ${data.byggeplass}, leiren ${JSON.stringify(data.leirting || '-')}` : 'uten 3D: regler'}, panelknappen «${data.innKnapp}», været «${(data.vær || []).join('» → «')}», varselet ${JSON.stringify(data.varsel)}` : data.feil.join('; '), data };
   },
 };
