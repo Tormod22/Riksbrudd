@@ -265,7 +265,65 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     return ut; });
   const ok8 = d8.uten || (!d8.feil && d8.sett && d8.sist && d8.glatt && d8.brikke && d8.rapport && d8.eskalering !== false && d8.hjemme !== false && d8.garnison !== false && d8.garnisonUt !== false && d8.lapp !== false && d8.tilbake);
   const tekst8 = `RUNDE 8: ${d8.uten ? 'ikke prøvd' : `sett ${d8.sett}, sist sett ${d8.sist} («${d8.sistTekst}»), anslag uten hopp ${d8.glatt} (${d8.anslag}), brikka som banneret ${d8.brikke}, rapport ${d8.rapport}, ekte angrep i banneret ${d8.eskalering}, lag hjemme vist ${d8.hjemme}, garnison holder ${d8.garnison}/${d8.garnisonUt}, én lapp ${d8.lapp}, satt tilbake ${d8.tilbake}${d8.feil ? ' FEIL ' + d8.feil : ''}`} · `;
-  Object.assign(d, { r4: d4, r5: d5, r6: d6, r7: d7, r8: d8 });
+  // RUNDE 12 (PC-kritiker F og telefon-kritiker E): radioadvarsel før «Send», Send med kjøretøyet, garnisonen melder seg fra tettstedet,
+  // troppelista, leiren forsvares av seg selv under spoling, oppsummering på seiersskjermen, reprisen står på pause, pausen holder straks.
+  const d12 = await pg.evaluate(async () => {
+    const ut = {}; if (!window.StrategiSpill || !window.KontrollromSpill || !KontrollromSpill.kanNå || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return { uten: true };
+    const S0 = OppstartSpill.tilstand(), L = S0.leir, penger0 = S0.penger, tid0 = tid, tempo0 = tempo, kam0 = { x: kam.x, y: kam.y, m: kam.m }, ant0 = ENHETER.length, valgt0 = valgt, krpFør = KontrollromSpill.på();
+    const st0 = StrategiSpill.test, fs0 = window.ForsvarSpill ? ForsvarSpill.test : false, sl0 = window.Skjermlag ? Skjermlag.test : false, plass = ENHETER.map(e => [e, e.x, e.y, e.sti, e.radio, e.ombord]);
+    const nyBy = (id, dx, dy, folk) => { const x = L.x + dx, y = L.y + dy, r = 300; return { lag: 'tettsted', e: { id, navn: 'Vakt ' + id, folk }, bb: [x - r, y - r, x + r, y + r], deler: [[x - r, y - r, x + r, y - r, x + r, y + r, x - r, y + r]] }; };
+    const nye = [nyBy('v12a', 6000, -2000, 900), nyBy('v12b', -5000, 4000, 700)]; INFRA.tettsted.push(...nye); TETTSTEDER.set('v12b', { eier: 'blå', inntar: null });
+    const lag = []; const nytt = (n, dx, dy) => { const s = nyttLag(n, L.x + dx, L.y + dy, 'blå'); ENHETER.push(s); lag.push(s); return s; };
+    try {
+      KontrollromSpill.av(false); StrategiSpill.test = true;
+      const a = nytt('Vakt12 A', 200, 0); await KontrollromSpill.sjekkKontakt(a);
+      // 1: advarsel før et lag sendes ut av rekkevidden (6,3 km, håndradio 3 km)
+      // (i 3D åpnes ikke krigskartet og reprisen – de går til 2D; da prøves bare reglene)
+      const i3d = typeof på3d !== 'undefined' && på3d; ut.i3d = i3d;
+      const by = StrategiSpill.område().find(b => b.id === 'v12a'); if (!i3d) StrategiSpill.åpne(); StrategiSpill.velg('v12a');
+      ut.sendt = StrategiSpill.send(by, a); const A = StrategiSpill.advarsel(); await new Promise(r => setTimeout(r, 50));
+      ut.advarsel = !!A && !a.sti && !a.planlegger && (i3d || (!!document.getElementById('krigadvarsel') && !!document.querySelector('[data-advarsel=likevel]') && !!document.querySelector('[data-advarsel=feltradio]')));
+      if (!i3d) document.querySelector('[data-advarsel=avbryt]').click(); else StrategiSpill.send(by, a, { likevel: true }) && (a.sti = null); ut.avbrutt = !StrategiSpill.advarsel();
+      // 2: et lag uten kontakt (9 km ute) er ikke «ledig med kontakt»
+      const u = nytt('Vakt12 U', -9000, 0); await KontrollromSpill.sjekkKontakt(u); ut.utenKontakt = !KontrollromSpill.kanNå(u) && StrategiSpill.bilde().ledige.find(q => q.lag === u).kontakt === false;
+      // 3: garnisonen i et tettsted du holder melder seg derfra (kontakt, vist der den er)
+      const g = nytt('Vakt12 G', -5000, 4000); await KontrollromSpill.sjekkKontakt(g); ut.garnison = KontrollromSpill.kanNå(g) && !KROKER.skjul.some(f => f(g)) && !!KontrollromSpill.garnisonI(g);
+      // 4: et lag om bord sendes med kjøretøyet (ordren går til kjøretøyet, troppen går av når det er framme)
+      const k = (window.KJORETOY || []).find(q => q.side === 'blå' && !q.sti && !q.oppdrag && window.TropperSpill && !TropperSpill.bærer(q));
+      if (k && window.TropperSpill) { const kx = k.x, ky = k.y; k.x = a.x + 5; k.y = a.y; a.menn = a.menn.slice(0, 4); const om = TropperSpill.gåOmBord(a, k); const lok = StrategiSpill.område().find(b => b.id === 'v12b');
+        window.kjørTil0 = window.kjørTil; let kjørt = null; window.kjørTil = (kk, X, Y) => { kjørt = [kk, X, Y]; };
+        StrategiSpill.send(lok, a, { likevel: true }); window.kjørTil = window.kjørTil0; delete window.kjørTil0;
+        ut.kjøretøy = om && !!kjørt && kjørt[0] === k && !!a.avstigning && !a.sti; delete a.avstigning; TropperSpill.gåAv(a); k.x = kx; k.y = ky; }
+      if (!i3d) StrategiSpill.lukk();
+      // 5: troppelista øverst i Tropper-panelet
+      if (window.TropperSpill) { TropperSpill.åpne(); await new Promise(r => setTimeout(r, 50)); const rader = [...document.querySelectorAll('#troppliste [data-tropp]')].map(e => e.getAttribute('data-tropp'));
+        ut.liste = rader.includes('Vakt12 A') && rader.includes('Vakt12 G') && !!document.querySelector('#troppliste [data-velg]') && !!document.querySelector('#tropppanel [data-mal]'); TropperSpill.lukk(); }
+      // 6: leiren forsvares av seg selv når du spoler
+      if (window.ForsvarSpill && ForsvarSpill.autoForsvar && window.SpilletSpill && SpilletSpill.T && SpilletSpill.T()) { ForsvarSpill.test = true; const T = SpilletSpill.T(), akt0 = T.aktiv, nr = 900 + Math.floor(Math.random() * 90);
+        T.aktiv = nr; const r = nyttLag('Røvere vakt', L.x + 2500, L.y, 'rød'); r.raid = nr; ENHETER.push(r); lag.push(r); tempo = 60;
+        ForsvarSpill.autoForsvar(ForsvarSpill.angrep()); ut.selvForsvar = ForsvarSpill.erSatt(); tempo = 0; ForsvarSpill.opphev(false); T.aktiv = akt0; }
+      // 7: oppsummering på seiersskjermen, og panelene under sløret
+      if (window.ScenarioSpill && ScenarioSpill.oppsumElement) { const o = ScenarioSpill.oppsummering(); ScenarioSpill.visKort('Vakt', 'Prøve', [['OK', null]], ScenarioSpill.oppsumElement());
+        ut.oppsum = !!o && o.tall.length >= 4 && document.querySelectorAll('#oppsummering dt').length >= 4 && document.body.classList.contains('formkortpå'); ScenarioSpill.kortLukk(); ut.oppsumLukk = !document.body.classList.contains('formkortpå'); }
+      // 8: reprisen holder spillet på pause, og farten kommer tilbake etterpå
+      if (!i3d && window.ScenarioSpill && ScenarioSpill.etterspill) { document.getElementById('sp2').click(); const t1 = tempo; if (ScenarioSpill.etterspill()) { document.getElementById('sp2').click(); await new Promise(r => setTimeout(r, 400));
+          ut.reprisePause = tempo === 0 && !!document.querySelector('#etterspill .forkl'); ScenarioSpill.etterspillLukk(); ut.repriseFart = tempo === t1; } }
+      // 9: pausen holder straks når et kort venter (sjekken i simuleringen)
+      if (window.Skjermlag) { const h = document.getElementById('hendelse'), f = KROKER.sim.find(q => String(q).includes('KORT_ID'));
+        if (h && f) { Skjermlag.test = true; document.getElementById('sp2').click(); const hadde = h.classList.contains('på'), tekst = h.innerHTML; if (!h.textContent.trim()) h.textContent = 'Vakt'; h.classList.add('på'); f(.01); ut.kortPause = tempo === 0; if (!hadde) h.classList.remove('på'); h.innerHTML = tekst; Skjermlag.test = sl0; } }
+    } catch (e) { ut.feil = e.message; }
+    finally {
+      for (const s of lag) { const i = ENHETER.indexOf(s); if (i >= 0) ENHETER.splice(i, 1); }
+      for (const [e, x, y, sti, radio, om] of plass) { e.x = x; e.y = y; e.sti = sti; if (radio === undefined) delete e.radio; else e.radio = radio; e.ombord = om; }
+      for (const b of nye) { const i = INFRA.tettsted.indexOf(b); if (i >= 0) INFRA.tettsted.splice(i, 1); } TETTSTEDER.delete('v12a'); TETTSTEDER.delete('v12b');
+      StrategiSpill.test = st0; if (window.ForsvarSpill) ForsvarSpill.test = fs0; if (window.Skjermlag) Skjermlag.test = sl0; if (!krpFør) KontrollromSpill.av(true);
+      S0.penger = penger0; tid = tid0; if (tempo !== tempo0) { if (tempo0 === 0) { if (tempo > 0) document.getElementById('sp0').click(); } else tempo = tempo0; }
+      kam.x = kam0.x; kam.y = kam0.y; kam.m = kam0.m; valgt = valgt0; skitten = true; ut.tilbake = ENHETER.length === ant0 && tid === tid0 && OppstartSpill.tilstand().penger === penger0; }
+    return ut; });
+  const ok12 = d12.uten || (!d12.feil && d12.advarsel && d12.avbrutt && d12.sendt === false && d12.utenKontakt && d12.garnison && d12.kjøretøy !== false && d12.liste !== false && d12.selvForsvar !== false
+    && d12.oppsum !== false && d12.oppsumLukk !== false && d12.reprisePause !== false && d12.repriseFart !== false && d12.kortPause !== false && d12.tilbake);
+  const tekst12 = `RUNDE 12: ${d12.uten ? 'ikke prøvd' : `advarsel før Send utenfor radioen ${d12.advarsel} (avbryt ${d12.avbrutt}), lag uten kontakt grått ${d12.utenKontakt}, garnison melder seg ${d12.garnison}, Send med kjøretøyet ${d12.kjøretøy}, troppelista ${d12.liste}, forsvar av seg selv ${d12.selvForsvar}, oppsummering ${d12.oppsum}/${d12.oppsumLukk}, reprisen på pause ${d12.reprisePause}/${d12.repriseFart}, kortpausen straks ${d12.kortPause}, satt tilbake ${d12.tilbake}`}${d12.feil ? ' FEIL ' + d12.feil : ''} · `;
+  Object.assign(d, { r4: d4, r5: d5, r6: d6, r7: d7, r8: d8, r12: d12 });
   const ok6 = d6.uten || (!d6.feil && d6.i3d !== false && (d6.ettLag === undefined || (d6.ettLag && d6.treLag && d6.trenger && d6.boks && d6.entall)) && d6.tidlig && d6.fred && (d6.anslag === undefined || (d6.anslag && d6.underIld && d6.lagretSatt && d6.gjenopprett)));
   const tekst6 = `RUNDE 6: storby med ett lag tatt: ${d6.ettLag === false ? 'JA (feil)' : 'nei'}, med tre lag: ${d6.treLag}, «${d6.krav}», boksen ${d6.boks}, entall ${d6.entall}, ingen vinner dag 1: ${d6.tidlig}, fred/lagtak ${d6.fred}, banner med anslag ${d6.anslag}, under ild ${d6.underIld}, forsvaret lagres ${d6.lagretSatt}/${d6.gjenopprett}${d6.feil ? ' FEIL ' + d6.feil : ''} · `;
   const ok4 = !d4.feil && d4.dekning < .7 && Math.abs(d4.dekningAv - 1) < 1e-9 && d4.dekningTekst && d4.bytt && (d4.byttEgne === undefined || (d4.byttEgne && d4.arbeid && d4.ikkeEnnå && d4.spør && d4.forslag)) && d4.lagring && d4.krig3d && d4.ryddet && (d4.svarer === undefined || (d4.svarer && d4.ikkeUtenGrunn));
@@ -274,5 +332,5 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   const tekst4 = ` · RUNDE 4: dekning bak egen brakke ×${(d4.dekning || 0).toFixed(2)}, bytte ${!!d4.bytt}/${d4.byttEgne}, fanger i arbeid ${d4.arbeid}, rekruttering ${d4.spør}, forslag om bytte ${d4.forslag}, svarer kjøretøy som skyter ${d4.svarer}, lagring ${d4.lagring}${d4.feil ? ' FEIL ' + d4.feil : ''}`;
   const ok5 = d5.uten || (!d5.feil && (!d5.skjult || (d5.meldt && d5.skuddMeldt === 0 && d5.skuddNabo > 0)) && (d5.pakket === undefined || (d5.pakket && d5.settTilbake && d5.marsjIgjen)) && (d5.stripe === undefined || (d5.stripe && d5.visIgjen && d5.høyStripe < 120)));
   const tekst5 = ` · RUNDE 5: stridsvogna skyter på et meldt mål den ikke ser: ${d5.skuddMeldt === 0 ? 'nei' : d5.skuddMeldt} (meldt: ${d5.meldt}), med et eget lag ved som ser det: ${d5.skuddNabo}${d5.skjult === false ? ' (fant ikke skjult punkt)' : ''}, fienden lagres («sist sett» ${d5.settTilbake}, marsjen fortsetter ${d5.marsjIgjen}), krigskartet kan skjules: ${d5.stripe === undefined ? 'ikke prøvd (ingen tettsteder)' : d5.stripe && d5.visIgjen ? 'ja (' + d5.høyStripe + ' px)' : 'NEI'}${d5.feil ? ' FEIL ' + d5.feil : ''}`;
-  return { ok: ok && ok4 && ok5 && ok6 && ok7 && ok8, tekst: tekst8 + tekst7 + tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
+  return { ok: ok && ok4 && ok5 && ok6 && ok7 && ok8 && ok12, tekst: tekst12 + tekst8 + tekst7 + tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
 } };

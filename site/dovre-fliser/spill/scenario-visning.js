@@ -125,7 +125,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     const nb = nærmesteBy(), iLag = egneLag().filter(s => s.fraFolk).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0);
     return { tid, egne, tettsteder: egne, holder: id => eier(id) === 'blå', mål: nb ? nb.e.id : null, målNavn: nb ? nb.e.navn : null, folk: (F ? F.personer.length : 0) + iLag, andel, leirTapt: !!(T && T.tapt),
       penger: S ? S.penger : 0, bygg: L && window.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b) && !Leir.BYGG[b.type].del).length : 0,
-      angrep: T && kreverAngrep() ? { slått: !!T.sc.slått, pågår: !!(T.sc.angrep && T.sc.angrep.pågår), ingen: !!T.sc.ingen } : undefined };
+      angrep: T && kreverAngrep() ? { slått: !!T.sc.slått, pågår: !!(T.sc.angrep && T.sc.angrep.pågår), samler: !!(T.sc.angrep && !T.sc.angrep.pågår), ingen: !!T.sc.ingen } : undefined };
   }
 
   // ---------- scenariet ----------
@@ -173,7 +173,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   // ---------- (runde 12) «HOLD BYEN»: MOTANGREPET ----------
   // Kritikken: «Svorkmo tatt på 30 minutter uten en fiende i nærheten, seieren kom dag 4 uten kamp». Når fredstiden er over og du holder byen,
   // ber scenariet en motstander (spill/eskalering-visning.js, planlegg med tving og bare) om å samle lag mot nettopp den byen. Du vinner
-  // først når du har holdt den i tre døgn OG slått motangrepet tilbake. Kan ingen motstander angripe på et døgn, holder de tre døgnene.
+  // først når du har holdt den i tre døgn OG slått motangrepet tilbake. Kan ingen motstander angripe på to døgn, holder de tre døgnene.
   // Claudes forslag. Ikke i testene (auto) – der er scenariet som før.
   const kreverAngrep = () => { const r = window.SPILLREGLER; return !!(r && r.scenario === 'hold' && auto() && window.EskaleringSpill && EskaleringSpill.planlegg && window.AI && AI.på !== false); };
   function holdAngrep() {
@@ -187,10 +187,12 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     const fred = EskaleringSpill.fredSlutt ? EskaleringSpill.fredSlutt() : 0; if (tid < fred || (sc.nesteForsøk && tid < sc.nesteForsøk)) return null;
     if (sc.forsøkFra == null) sc.forsøkFra = Math.round(tid);
     const sider = ['rød', 'grønn'].sort((a, b) => ENHETER.filter(e => e.side === b && e.ai && levende(e)).length - ENHETER.filter(e => e.side === a && e.ai && levende(e)).length);
-    for (const side of sider) { let G = null; try { G = EskaleringSpill.planlegg(side, { tving: true, bare: B.mål }); } catch (e) { G = null; }
+    // (døgn: 99 = dagsgrensene for når dine tettsteder og storbyer kan bli mål, gjelder ikke dette motangrepet)
+    for (const side of sider) { let G = null; try { G = EskaleringSpill.planlegg(side, { tving: true, bare: B.mål, døgn: 99 }); } catch (e) { G = null; }
       if (G) { sc.angrep = { side, start: Math.round(tid), pågår: false }; logg(`Scenariet «Hold byen»: ${fNavn(side)} vil ta ${B.målNavn} tilbake og samler lag. Hold byen!`); statHendelse(`${fNavn(side)} samlet lag mot ${B.målNavn}`, 2); lagre(); return sc.angrep; } }
     sc.nesteForsøk = Math.round(tid) + 60;
-    if (tid - sc.forsøkFra > SC.DØGN) { sc.ingen = true; logg(`Scenariet «Hold byen»: ingen av motstanderne har krefter til et motangrep på ${B.målNavn}.`); }
+    // Claudes forslag: to døgn uten at noen motstander kan angripe = de har ikke krefter til det
+    if (tid - sc.forsøkFra > 2 * SC.DØGN) { sc.ingen = true; logg(`Scenariet «Hold byen»: ingen av motstanderne har krefter til et motangrep på ${B.målNavn}.`); }
     lagre(); return null; }
 
   // ---------- tap av leiren ----------

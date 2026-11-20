@@ -65,7 +65,7 @@
         if (!T.mål) return { status: 'pågår', tekst: 'Det er ikke noe tettsted i nærheten ennå.' };
         if (T.holder(T.mål)) { if (st.holdtFra == null) st.holdtFra = T.tid; const d = (T.tid - st.holdtFra) / DØGN, A = T.angrep, slått = !A || A.slått || A.ingen;
           if (d >= 3 && slått) return { status: 'vunnet', tekst: A && A.slått ? 'Du holdt byen i tre døgn og slo tilbake motangrepet.' : 'Du holdt byen i tre døgn.' };
-          const ang = !A ? '' : A.slått ? ' Motangrepet er slått tilbake.' : A.pågår ? ' Motangrepet er i gang – hold byen!' : ' Motangrepet er ikke kommet ennå.';
+          const ang = !A ? '' : A.slått ? ' Motangrepet er slått tilbake.' : A.pågår ? ' Motangrepet er i gang – hold byen!' : A.samler ? ' Fienden samler lag til et motangrep.' : ' Motangrepet er ikke kommet ennå.';
           if (d >= 3) return { status: 'pågår', tekst: `Du har holdt byen i tre døgn.${ang} Slå det tilbake for å vinne.`, andel: .95 };
           return { status: 'pågår', tekst: `Du holder byen: ${des(d)} av 3 døgn.${ang}`, andel: Math.min(.95, d / 3) }; }
         st.holdtFra = null; return { status: 'pågår', tekst: 'Ta tettstedet: flytt et lag inn og hold det.', andel: 0 }; } },
