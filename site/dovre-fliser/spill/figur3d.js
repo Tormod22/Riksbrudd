@@ -193,9 +193,10 @@ vec3 figur(vec3 p, float w) {
     { const h = kule(N.hode, .109, 0, 0, 0, 1.04, .94, 1.08, .56); h.rotateY(-.42); h.translate(.0, 0, 1.645); put(h, hv, L.hode, K.hår, DEL.hår); }
     { const b = kapsel(lm, .05, .06, 1.42, 1.62, .8, 1.5, e); b.translate(-.075, 0, 0); put(b, hv, L.hode, K.hår, DEL.langt); }
     put(kule(N.hode, .115, 0, 0, 1.655, 1.02, .95, 1.15, .52), [.9, .9, .9], L.hode, K.jakke, DEL.lue); put(ring(N.hode, .118, 1.64, 1.69, 1.02, .95), [.75, .75, .75], L.hode, K.jakke, DEL.lue);
-    put(kule(N.hode, .13, -.008, 0, 1.655, 1.06, 1, .95, .5), [.62, .62, .62], L.hode, K.jakke, DEL.hjelm); put(ring(N.hode, .14, 1.64, 1.655, 1.04, 1), [.5, .5, .5], L.hode, K.jakke, DEL.hjelm);
+    // hjelmen i mørk oliven (som en ekte stålhjelm), kanten i sidens farge
+    put(kule(N.hode, .13, -.008, 0, 1.655, 1.06, 1, .95, .5), [.27, .29, .22], L.hode, K.fast, DEL.hjelm); put(ring(N.hode, .14, 1.64, 1.655, 1.04, 1), [.55, .55, .55], L.hode, K.jakke, DEL.hjelm);
     // sekk med sovepose på toppen
-    put(kule(kl, .1, -.2, 0, 1.18, .95, 1.55, 1.85), [.29, .32, .23], L.kropp, K.fast, DEL.sekk);
+    put(kapsel(Math.max(6, kl + 2), .085, .085, 1.07, 1.31, 1.05, 1.75, e).translate(-.205, 0, 0), [.29, .32, .23], L.kropp, K.fast, DEL.sekk);
     if (dt) put(langs(kapsel(lm, .052, .052, -.15, .15, 1, 1, 1), 'y').translate(-.21, 0, 1.43), [.34, .3, .22], L.kropp, K.fast, DEL.sekk);
     // kassen du bærer foran deg
     { const b = new THREE.BoxGeometry(.3, .22, .24); b.translate(.37, 0, 1.06); put(b, [.45, .34, .2], L.kropp, K.fast, DEL.kasse); }

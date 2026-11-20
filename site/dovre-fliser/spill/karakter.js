@@ -102,11 +102,14 @@
   // RUNDE 7 (20. nov, kritikerne: «kantete klosser»): kropp, lemmer, hender og støvler er avrundede (kapsler og dreide profiler fra
   // spill/figur3d.js, myke normaler); uten Figur3d blir de kasser som før. kap: kapsel langs z fra z0 (radius r0) til z1 (r1).
   const kap = (d, x, y, z0, z1, r0, r1, c, seg = 10, sx = 1, sy = 1) => { if (!rot.Figur3d) { boks(d, x, y, z0 - r0, 2 * Math.max(r0, r1) * sx, 2 * Math.max(r0, r1) * sy, z1 - z0 + r0 + r1, c); return; } const g = Figur3d.form.kapsel(seg, r0, r1, z0, z1, sx, sy, 2); g.translate(x, y, 0); d.push(farg(g, c)); };
+  // kapsel langs x (våpenet): fra x0 (radius r0) til x1 (r1), sentrum i (y, z), tverrsnittet sy (sideveis) og sz (høyde)
+  const kx = (d, x0, x1, y, z, r0, r1, c, sy = 1, sz = 1) => { if (!rot.Figur3d) { const r = Math.max(r0, r1); boks(d, (x0 + x1) / 2, y, z - r * sz, x1 - x0, 2 * r * sy, 2 * r * sz, c); return; } const g = Figur3d.form.kapsel(8, r0, r1, x0, x1, sz, sy, 1); g.rotateY(Math.PI / 2); g.translate(0, y, z); d.push(farg(g, c)); };
   const drei = (d, prof, sx, sy, c, seg = 14) => { if (!rot.Figur3d) return false; const g = Figur3d.form.dreid(seg, prof, sx, sy); d.push(farg(g, c)); return true; };
   function våpenDeler(id) { const d = [], st = [.1, .1, .11], st2 = [.17, .17, .18], tre = [.34, .23, .13], lang = { mp: .32, gevær: .5, hagle: .56, rifle: .66 }[id];
     if (!lang) { boks(d, .05, 0, -.02, .17, .03, .045, st); boks(d, -.02, 0, -.1, .045, .028, .1, st2); return d; }
-    const tr = id === 'hagle' || id === 'rifle'; boks(d, 0, 0, -.03, .26, .045, .075, st); rør(d, .13 + lang / 2, 0, .012, .011, lang, 'x', st2, 6); boks(d, .13 + lang * .3, 0, -.035, lang * .55, .042, .045, tr ? tre : st2);
-    boks(d, -.25, 0, -.045, .26, .04, .07, tr ? tre : st); boks(d, -.39, 0, -.07, .025, .045, .11, st2); boks(d, -.04, 0, -.13, .045, .035, .1, tr ? tre : st2);
+    // (runde 7) kassa, forskjeftet og kolben er avrundet; kolben vider seg ut mot en gummiplate
+    const tr = id === 'hagle' || id === 'rifle'; kx(d, -.12, .12, 0, .007, .034, .034, st, .66, 1.1); rør(d, .13 + lang / 2, 0, .012, .011, lang, 'x', st2, 8); kx(d, .13 + lang * .04, .13 + lang * .56, 0, -.012, .021, .021, tr ? tre : st2, 1, 1.05);
+    kx(d, -.37, -.13, 0, -.012, .042, .027, tr ? tre : st, .52, 1); kx(d, -.392, -.378, 0, -.014, .044, .044, [.07, .07, .07], .54, 1); kap(d, -.04, 0, -.12, -.045, .018, .021, tr ? tre : st2, 8, 1.1, .8);
     if (id === 'gevær' || id === 'mp') { const m = new THREE.BoxGeometry(.05, .03, id === 'mp' ? .2 : .16).toNonIndexed(); m.rotateY(.25); m.translate(.07, 0, -.13); d.push(farg(m, st2)); }
     if (id === 'rifle') { rør(d, .0, 0, .075, .017, .22, 'x', st, 8); for (const x of [-.06, .06]) boks(d, x, 0, .035, .014, .02, .03, st2); } else boks(d, .13 + lang - .03, 0, .02, .008, .008, .035, st);
     if (id === 'hagle') rør(d, .13 + lang * .4, 0, -.018, .011, lang * .75, 'x', st2, 6); return d; }
@@ -129,7 +132,7 @@
     // beltet: lommer, feltflaske og kniv
     boks(k, .06, -.2 * by, .93, .09, .05, .11, mørk(sekk)); boks(k, -.04, -.2 * by, .93, .08, .05, .1, mørk(sekk)); rør(k, -.02, .215 * by, .93, .045, .15, 'z', [.3, .36, .26], 8); rør(k, -.02, .215 * by, 1.02, .018, .03, 'z', [.1, .1, .1], 6); boks(k, .09, .21 * by, .84, .03, .025, .2, lær); boks(k, .09, .21 * by, 1.02, .028, .03, .07, [.1, .1, .1]);
     // sekken: hovedrom, lokk, lommer, remmer, sovepose og tau
-    boks(k, -.25, 0, 1.0, .2, .34, .48, sekk); boks(k, -.25, 0, 1.47, .22, .36, .07, mørk(sekk)); boks(k, -.365, 0, 1.06, .06, .24, .22, mørk(sekk)); boks(k, -.39, 0, 1.2, .012, .1, .02, stål); for (const sy of [-1, 1]) { boks(k, -.25, sy * .2, 1.06, .14, .06, .24, mørk(sekk)); boks(k, .03, sy * .15 * by, 1.28, .28, .04, .26, mørk(sekk, .8)); boks(k, .135, sy * .15 * by, 1.3, .012, .045, .03, stål); boks(k, -.25, sy * .12, 1.0, .205, .02, .5, mørk(sekk, .8)); }
+    kap(k, -.25, 0, 1.09, 1.39, .1, .1, sekk, 12, 1, 1.7); { const l = new THREE.SphereGeometry(.11, 12, 8); l.scale(1.05, 1.62, .42); l.translate(-.25, 0, 1.49); k.push(farg(l, mørk(sekk))); } kap(k, -.36, 0, 1.08, 1.16, .045, .045, mørk(sekk), 10, 1, 2.3); boks(k, -.39, 0, 1.2, .012, .1, .02, stål); for (const sy of [-1, 1]) { kap(k, -.25, sy * .2, 1.1, 1.22, .05, .05, mørk(sekk), 8, 1.35, 1); boks(k, .03, sy * .15 * by, 1.28, .28, .04, .26, mørk(sekk, .8)); boks(k, .135, sy * .15 * by, 1.3, .012, .045, .03, stål); boks(k, -.25, sy * .12, 1.0, .205, .02, .5, mørk(sekk, .8)); }
     rør(k, -.25, 0, 1.6, .085, .42, 'y', [.34, .22, .17], 10); for (const sy of [-1, 1]) rør(k, -.25, sy * .12, 1.6, .088, .02, 'y', [.12, .1, .09], 10); rør(k, -.25, 0, .96, .06, .3, 'y', [.5, .46, .36], 8);
     nett(k, kropp);
     // hodet: rundt, med kjeve, ører, øyne i din farge, bryn, nese, munn – og hår, skjegg, briller og hodeplagg fra portrettet
