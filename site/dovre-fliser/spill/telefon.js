@@ -111,9 +111,9 @@ body.kort.tlfligg #tropppanel .kol{ display:block; overflow-y:auto; min-height:0
 body.kort.tlfligg #tropppanel .kol > h3:first-child{ margin-top:2px; } body.kort.tlfligg #tropppanel h3{ margin:8px 0 3px; }
 body.kort.tlfligg #tropppanel label{ grid-template-columns:78px 1fr; margin:3px 0; }
 body.kort.tlfligg #tropppanel .maler{ gap:4px; } body.kort.tlfligg #tropppanel .maler button{ padding:3px 7px; min-height:0; line-height:1.2; }
-body.kort.tlfligg #tropppanel .maler button b{ font-size:13.5px; font-weight:600; } body.kort.tlfligg #tropppanel .maler button small{ font-size:11.5px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+body.kort.tlfligg #tropppanel .maler button b{ font-size:13.5px; font-weight:600; } body.kort.tlfligg #tropppanel .maler button small{ font-size:11.5px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; overflow:hidden; }
 body.kort.tlfligg #tropppanel small.hold{ font-size:12px; }
-body.kort.tlfligg #tropppanel .p, body.kort.tlfligg #tropppanel .u{ padding:3px 4px; }
+body.kort.tlfligg #tropppanel .p, body.kort.tlfligg #tropppanel .u{ padding:3px 4px; } body.kort.tlfligg #tropppanel .p select{ min-height:32px; padding:0 4px; } body.kort.tlfligg #tropppanel .p small{ line-height:1.2; }
 body.kort.tlfligg #tropppanel .opprett{ position:static; flex:none; margin:6px -12px 0; padding:6px 12px calc(6px + ${B}); }
 /* RUNDE 10: bunnmenyen er ugjennomsiktig (tekst bak skinte gjennom), og hogstfelt-/rivelappen står over den, ikke bak */
 body.kort #mkom button:not(.på){ background:linear-gradient(180deg,#2e2516,#191309); }

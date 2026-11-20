@@ -410,7 +410,7 @@ vakt.js = kjører vakta). Før-bilder: `foer-*.png`, `sv1-*.png`, `gaa-foer-bil.
 1. **«Lag ny tropp»** (`tropper-visning.js` oppsettet, CSS i `telefon.js`): innholdet ligger i `.kolonner` > `.kol1` (navn, forslag, bevæpning,
    kjøretøy) og `.kol2` (folk, utstyr, pris, advarsel). På PC og stående telefon er de `display:contents` (ser ut som før). På liggende telefon
    (`body.kort.tlfligg`) er panelet min(760 px, hele bredden), fra knapperaden ned til bunnmenyen (skjermlag løfter det), to kolonner som rulles
-   hver for seg (rullingen huskes når panelet tegnes på nytt), forslagene som små kort (navn + to linjer), og «Opprett» (`.opprett`) står
+   hver for seg (rullingen huskes når panelet tegnes på nytt), forslagene som små kort (navn + én linje; hele teksten står i stående og på PC), og «Opprett» (`.opprett`) står
    alltid nederst. På PC og stående er `.opprett` klebrig nederst i panelet (sticky). Gjelder også «Bruk endringene» i Våpen og utstyr.
 2. **Én ting nederst** (`opplaering.js`, `telefon.js`, `skjermlag.js`, `spillhud.js`):
    - Liggende telefon med en meny åpen (Leir, Folk, Tropper, Deg, sekk, krig): opplæringslinja står øverst ved siden av menyen (`ved()`,
