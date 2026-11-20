@@ -381,7 +381,12 @@ og `spill/lut-visning.js` (bare teksten i sekken), `docs/natt/spillform-hjelp.js
 vær, tips), Flyt.HENDELSER, `ordre.flyt`, kort + ⏭ + fartsknapp gir fortsatt pause og farten du valgte etter svaret, `angrepvent` skjuler
 kortet, hjelpeemnene i riktig gruppe, «Nytt spill» øverst, byttSkrift. Grønn på PC og telefon (ca. 1,5–2 s for runde 8). Prøvd med feil
 lagt inn med vilje (vaktfeil.js: natur stopper ⏭, rutineregelen av, «Nytt spill» nederst) – vakta fant alle tre. Vaktene balanse, lagring,
-krig, folk, lut og spillform er også grønne på grenen.
+krig, folk, lut og spillform er også grønne på grenen. Hele mobilkontrollen (`SJEKK_PROFIL=mobil PORT=8924`): 121 ok, 0 feil, «Alt i orden» (641 s).
+
+Bilder (scratchpad `natt8/ui/`): r8-etter-pc-logg/kort/angrep.png og r8-etter-tlf-*.png (logg ×4, kort + ⏭ «Svar på kortet først», angrep med
+skjult kort og stoppkortet som linje), r8-pc-etter-angrep-kort.png (kortet kommer med pause når angrepet er over), r8-tlf-meny.png (Nytt spill
+øverst), r8-tlf-sekk.png, r8-tlf-angrep-varsel.png (brikken over kompasset, «ikke sett ennå»), r8-tlf-hjelp-3d.png, r8-tlf-forside.png,
+r8-pc-forside.png, r8-tlf-norge-kilde.png, r8-pc-3d-navn.png (leirnavnet i Cormorant). Før-bildene er kritikernes (kritikk2/pc og kritikk2/tlf).
 
 **Ikke gjort / gjenstår:** opplæringsboksen under angrep (annen hjelper), angrepsbannerets tekst/anslag (krig). Flom/ras NÆR leiren stopper
 ikke ⏭ før `verden-visning.js` sender x/y med «riksbrudd-hendelse» (flyt.js tar imot det). Bølge 2 uten utfallsmelding (PC-kritikeren) er ikke
