@@ -35,7 +35,14 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
    i bildet lå bak disens ytterkant. `Vaer.dis3d(near, far, dis, D)` (spill/vaer.js, test i test_vaer.js) brukes i vaer-visning.js: nede ved
    bakken (går, kjører, lavt kamera) som før; høyt oppe (overgang 160–1400 m kameraavstand) begynner disen ved 0,45–0,9 × avstanden til
    bakken midt i bildet og tetner bortover. Regn: bakken midt i bildet 29 % inn i disen (før over 100 %), tåke 46 %. Målt i Lærdal fra 5,4 km:
-   disen [2791, 11165] -> [3410, 18462] m. Lyset (lys3d.js: grå himmel i regn) er ikke rørt (ytelse eide fila).
+   disen [2791, 11165] -> [3410, 18462] m. Lyset (grå himmel i regn) er ikke rørt.
+   I tillegg (etter kl. 03:45, da ytelse slapp filene): morgentåka i dalene la et grått teppe over lavlandet sett ovenfra – også i klarvær
+   (PC-kritikeren: «fra lufta er Jæren pen, men disig»; kl. 04:16 i regn kom begge deler). (a) natt3d.js trakk disens begynnelse inn til
+   0,3 × ytterkanten så snart det var litt morgentåke, uansett høyde – nå bare nede ved bakken (samme trinn(3000, 300, høyde) som ytterkanten)
+   og etter hvor tett tåka er. (b) lys3d.js (tåka i dalene i skyggeleggeren): lyset går bare gjennom den delen av tålaget som ligger
+   mellom kameraet og punktet (snittet av tettheten langs strålen), og aldri mer enn før – rett ned gjennom laget er det lite tåke, mot
+   horisonten omtrent som før, nede ved bakken det samme. Prøvd på telefon over Jæren kl. 06:05, Høy grafikk: `sammen-dal2.png`
+   (venstre før: grått slør; høyre: jorder, vann og veger synes). I Lærdal: dalbunnen er klarere (`sammen-halv-fiks2.png`).
 4. **3D-lia ved leiren: glatt, gul flate med bregner, ingen trær – RETTET.** To ting:
    - Hovedårsaken: utsnittet ovenfra var over 4200 m (trær3d lager bare trær når utsnittet er høyst 4200 m), og når du trykker Gå, bygges et
      mindre utsnitt med trær – på kritikerens maskin tok det over ett minutt, og så lenge sto du i en tom li (lyngtuene rundt kameraet fra
@@ -49,13 +56,13 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
      (I Lærdal utgjorde dette lite – 2374 mot 2420 trær nær – men det gjelder all gulbrun skog.)
 5. **Mørk, halvmåneformet «skyggestripe» ved leiren i 3D ovenfra – RETTET (lys3d.js, etter at ytelse slapp fila kl. 03:45).** Gjenskapt i
    Lærdal kl. 06:00 (sola 7,8° over horisonten), Høy grafikk: en skarp, mørk, tilspisset stripe ca. 1,1 km vest for leiren. Borte med
-   skyggekartet av, borte kl. 09 (sola 28°), men IKKE borte når alle skyggekasterne (kraft3d, infra3d, portal3d) er skjult. Den forsvinner når
-   skyggekameraets fjerne plan flyttes 6 km lenger ut: det er der planet skjærer terrenget. Med lav sol dekker skyggekartets boks (±700 m)
-   en stripe på flere km langs sola (700 / tan 7,8° ≈ 5,1 km), men dybden går bare 1370 m forbi midten (far = lz + halv · 1,6 + 250), og
-   punktene like innenfor planet blir mørke (VSM-presisjon ved z ≈ 1). Rettet med `skyggeDybde(halv, v)` i lys3d.js (`Lys3d.skyggeDybde`):
-   dybden rekker (halv + REGLER.solMargin = 1000 m) / tan(solhøyden), høyst REGLER.solMaks = 20 km, og aldri kortere enn før (halv · 1,6) –
-   midt på dagen er alt som før. Prøvd på en kopi kl. 06 (sola 7,8°): stripa er borte (`sammen-halv-fiks.png`); skyggene når du går kl. 12
-   er like før og etter (`sammen-skygge-gaa.png`). Lyset ellers er ikke rørt.
+   skyggekartet av, borte kl. 09 (sola 28°), men IKKE borte når alle skyggekasterne (kraft3d, infra3d, portal3d) var skjult. Årsaken:
+   three.js r128 tegner med VSM også det som bare TAR IMOT skygge inn i skyggekartet (`receiveShadow && VSMShadowMap` i WebGLShadowMap),
+   så terrenget kastet skygge på seg selv – med lav sol ble en kolle innenfor skyggekartets område (høyst ca. 1,4 km) en skarp stripe, og
+   bare der. lys3d.js sa selv at «terrenget kaster ikke». Nå får alt som tar imot uten å kaste en tom dybdetegning (`tomDybde` i `merk()`:
+   en ShaderMaterial som ikke tegner noe) – `Lys3d.tomDybde()` teller dem. Prøvd i Lærdal kl. 06, Høy grafikk: stripa er borte, 26 av 26
+   mottakere har den tomme tegningen, 0 GL-feil (`sammen-halv-tomdybde.png`). (Et første forsøk – lengre dybde i skyggekartet – virket i
+   to kjøringer, men ikke i den tredje; det er tatt ut.)
 6. **«Fodnestunnelen hovedløp» – RETTET.** spill/kartnavn.js (`KartNavn.vis/rens`, test_kartnavn.js med 30 navn fra NVDB): tunneler mister
    «hovedløp», «løp mot …», «nordgående», «rampe …», «-arm …», «sekundær- og fellesløp» (kutt etter selve tunnelnavnet, nummer beholdes:
    «Breimsfjelltunnelen 2»); bruer bare retning og «rampe» («Åbrua Flomløp» og «Mesna Rampebru» er ekte navn). `lesInfra` i index.html kaller
@@ -70,9 +77,11 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
 - `site/dovre-fliser/spill/vaer-visning.js` – disen i ramme3d bruker `Vaer.dis3d`; `VaerSpill.treVær` eksportert (nærskogen får årstid).
 - `site/dovre-fliser/spill/vegetasjon.js` – `TREFARGE`, `trePåFarge`. Test: `pipeline/fliser/test_vegetasjon.js` (4 nye).
 - `site/dovre-fliser/spill/vegetasjon3d.js` – nærskogen (`NÆRSKOG`, `lagSkog`, `fjernSkog`, ramme3d/sett3d), `Vegetasjon3d.nærskog()`.
-- `site/dovre-fliser/spill/lys3d.js` (eid av pakka ytelse til kl. 03:45) – `REGLER.solMargin/solMaks`, `skyggeDybde`, én linje i `skygger()` (k.far).
+- `site/dovre-fliser/spill/lys3d.js` (eid av pakka ytelse til kl. 03:45) – `tomDybde` + to linjer i `merk()`, `L.tomDybde()`, og daltåka i
+  `C.fog_fragment` (snittet av tettheten langs strålen, `cameraPosition`).
+- `site/dovre-fliser/spill/natt3d.js` (eid av ytelse til kl. 03:45) – én linje i ramme3d: disen trekkes inn bare nede ved bakken.
 - Vakt: `pipeline/fliser/vakter/utseende.js` (ca. 0,7 s): navneregelen og INFRA-tunnelene, `Vaer.dis3d`, `trePåFarge`, nærskogen finnes,
-  `Lys3d.skyggeDybde` med lav og høy sol, og 2D på et hjørne av Dovre som ikke er vist nær: grov flis først, ingen tomme fliser etter høyst 9 s, myke kanter underveis
+  `Lys3d.tomDybde` (med skyggene på: alle som bare tar imot har den tomme tegningen), og 2D på et hjørne av Dovre som ikke er vist nær: grov flis først, ingen tomme fliser etter høyst 9 s, myke kanter underveis
   (reserven settes midlertidig til fire nivåer, kameraet settes tilbake). Prøvd PC og mobil: ok.
 - Bilder: `scratchpad/natt8/utseende/` – `for-liggende-7s-liten.png` / `etter-liggende-7s-liten.png` / `etter-liggende-12s-liten.png`
   (punkt 1–2), `sammen-z2.png` (navnet), `sammen-regn-pc.png` (punkt 3), `sammen-gaa2.png` (punkt 4), `sammen-halv*.png` (punkt 5).

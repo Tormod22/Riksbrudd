@@ -42,7 +42,11 @@
     C.fog_pars_vertex = C.fog_pars_vertex.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vDalZ;');
     C.fog_vertex = C.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = - mvPosition.z;\n\tvDalZ = dot(viewMatrix[2].xyz, mvPosition.xyz - viewMatrix[3].xyz);');
     C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vDalZ;\n\tuniform vec4 uDalT;\n\tuniform vec3 uDalF;');
-    C.fog_fragment = C.fog_fragment.replace('#ifdef USE_FOG', '#ifdef USE_FOG\n\tif (uDalT.x > 0.0) {\n\tfloat dalT = uDalT.x * exp(-max(vDalZ - uDalT.y, 0.0) / max(uDalT.z, 1.0)) * (1.0 - exp(-fogDepth * uDalT.w));\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uDalF, clamp(dalT, 0.0, 1.0));\n\t}');
+    // (runde 8, pakke «utseende», kritikken på PC: «fra lufta er Jæren pen, men disig» – morgentåka la et grått teppe over hele lavlandet
+    // sett ovenfra.) Før ble tåketettheten der punktet ligger brukt over hele veien fra kameraet. Nå: tettheten avtar oppover (samme
+    // eksponentielle lag), og lyset går bare gjennom den delen av laget som ligger mellom kameraet og punktet – rett ned gjennom
+    // laget er det lite tåke, mot horisonten omtrent som før. Aldri mer enn før (min med den gamle formelen), og nede ved bakken det samme.
+    C.fog_fragment = C.fog_fragment.replace('#ifdef USE_FOG', '#ifdef USE_FOG\n\tif (uDalT.x > 0.0) {\n\tfloat dalH = max(uDalT.z, 1.0);\n\tfloat dalP = exp(-max(vDalZ - uDalT.y, 0.0) / dalH);\n\tfloat dalC = exp(-max(cameraPosition.z - uDalT.y, 0.0) / dalH);\n\tfloat dalDz = abs(cameraPosition.z - vDalZ);\n\tfloat dalRho = dalDz > 2.0 ? dalH * abs(dalP - dalC) / dalDz : dalP;\n\tfloat dalT = uDalT.x * min(dalP * (1.0 - exp(-fogDepth * uDalT.w)), 1.0 - exp(-fogDepth * uDalT.w * dalRho));\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uDalF, clamp(dalT, 0.0, 1.0));\n\t}');
     // (verdiene er tallrekker, som three.js ikke kopierer per materiale: alle materialer deler de samme. Uten tåke i dalene – Lav, eller
     // «Lys og skygger» av – er uDalT.x = 0, og skyggeleggeren hopper over regningen.)
     for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) { lib.uniforms.uDalT = { value: DAL }; lib.uniforms.uDalF = { value: DALF }; }
@@ -127,6 +131,13 @@
   // Hvem kaster skygge? Terrenget, trærne, husene, småtingene og det som står stille fra disse filene (userData.kilde, spill/ytelse.js).
   const STILLE = /^(infra3d|kraft3d|leir-visning|anlegg3d|portal3d|gard3d|byhus|bane3d|kyst3d|vegetasjon3d)$/;
   const lyssatt = m => !!m && (m.isMeshLambertMaterial || m.isMeshPhongMaterial || m.isMeshStandardMaterial);
+  // (runde 8, pakke «utseende», kritikken: «mørk, halvmåneformet skyggestripe over terrenget ved leirflagget» kl. 06) three.js r128
+  // tegner med VSM også det som bare TAR IMOT skygge inn i skyggekartet (receiveShadow && VSMShadowMap i WebGLShadowMap). Terrenget
+  // kastet derfor skygge på seg selv likevel: med lav sol (under ca. 10°) ble en kolle eller kant innenfor skyggekartets område en skarp,
+  // mørk stripe – og bare der (skyggekartet dekker høyst 1,4 km), så den så ut som en feil. Det som tar imot uten å kaste, får nå en
+  // dybdetegning som ikke tegner noe (tomDybde), slik merknaden under alltid har ment.
+  let ingenDybde = null;
+  const tomDybde = () => ingenDybde || (ingenDybde = new THREE.ShaderMaterial({ vertexShader: 'void main() { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }', fragmentShader: 'void main() { discard; }' }));
   function merk(R, på) {
     // (terrenget selv kaster ikke: med VSM tegnes forsidene i skyggekartet, og bratte lier ville skygge for seg selv i striper)
     const kast = new Set([R.bruMesh, ...(R.treMesh || []), ...(R.husMesh || []), ...(R.småMesh || [])]);
@@ -140,6 +151,7 @@
       // Heller ikke innsiden av hus: taket og veggene ville lagt alt der inne i skygge – interiøret har sitt eget lys.)
       const k = på && !gjennom && (kast.has(o) || STILLE.test(kilde || '')), t = på && o !== R.gressMesh && kilde !== 'interior3d';
       if (o.castShadow !== k) o.castShadow = k; if (o.receiveShadow !== t) { o.receiveShadow = t; for (const mm of [].concat(o.material)) mm.needsUpdate = true; }
+      if (t && !k) { if (!o.customDepthMaterial) o.customDepthMaterial = tomDybde(); } else if (ingenDybde && o.customDepthMaterial === ingenDybde) o.customDepthMaterial = undefined;
       if (k) nk++; if (t) nt++;
     });
     L.kaster = nk; L.tar = nt;
@@ -229,6 +241,8 @@
     skygger(R); dalen(R);
   });
   // Tall for vakta og testene
+  // (runde 8) hvor mange som bare tar imot skygge og har den tomme dybdetegningen (vakta «utseende»)
+  L.tomDybde = () => { let n = 0, tar = 0; const R = typeof R3 !== 'undefined' && R3; if (R && R.scene) R.scene.traverse(o => { if (o.isMesh && o.receiveShadow && !o.castShadow) { tar++; if (ingenDybde && o.customDepthMaterial === ingenDybde) n++; } }); return { n, tar }; };
   L.sjekk = () => { const R = typeof R3 !== 'undefined' && R3; if (!R) return null; const s = R.sol.shadow;
     return { på: L.på, mørkt: !!L.mørkt, kart: s && s.map ? s.map.width : 0, kaster: L.kaster, tar: L.tar, tegnet: L.tegnet, halv: L.halv, dal: Array.from(DAL), atlas: !!atlasTex,
       glFeil: R.renderer.getContext().getError() }; };

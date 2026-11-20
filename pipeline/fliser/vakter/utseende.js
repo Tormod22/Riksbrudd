@@ -21,6 +21,10 @@ module.exports = { navn: 'utseende (kartet mens det lastes, navn uten NVDB-tille
     krev(Vegetasjon.trePåFarge(150, 135, 70, true) && !Vegetasjon.trePåFarge(150, 135, 70, false) && !Vegetasjon.trePåFarge(110, 112, 108, true) && !Vegetasjon.trePåFarge(218, 176, 102, true),
       'Vegetasjon.trePåFarge svarer feil');
     krev(!!(window.Vegetasjon3d && Vegetasjon3d.NÆRSKOG && 'nærskog' in Vegetasjon3d), 'nærskogen (Vegetasjon3d.nærskog) mangler');
+    // 3b) det som bare tar imot skygge (terrenget m.m.), tegnes ikke i skyggekartet – ellers kaster terrenget skygge på seg selv med VSM
+    // (den mørke «halvmånen» ved leiren med lav sol). Med skyggene på i 3D: alle slike har den tomme dybdetegningen.
+    if (window.Lys3d && Lys3d.tomDybde) { const L = Lys3d.tomDybde(); ut.tomDybde = L; if (Lys3d.på) krev(L.n === L.tar, `${L.tar - L.n} av ${L.tar} som bare tar imot skygge, tegnes i skyggekartet`); }
+    else krev(false, 'Lys3d.tomDybde mangler (lys3d.js)');
     // 4) 2D-kartet mens det lastes: et sted som ikke er vist på nær zoom – først en grov flis for hele bildet, så ingen tomme fliser
     // reserven leter bare så langt opp som den grove flisen ligger (ellers dekker oversiktsflisene fra oppstarten alt, og den grove trengs ikke)
     const kam0 = { x: kam.x, y: kam.y, m: kam.m }, O = OMRÅDE, S0 = OppstartSpill.tilstand(), L = S0 && S0.leir, dypt0 = FLISLAST.dypt; FLISLAST.dypt = FLISLAST.grov;
