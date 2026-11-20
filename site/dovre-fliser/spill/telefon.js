@@ -126,6 +126,7 @@ body.kort #flytkort.ibanner button{ min-height:32px; padding:0 8px; font-size:12
 body.kort.tlfligg.mkomved #mkom{ right:auto; left:var(--mkomx); justify-content:flex-start; gap:3px; }
 body.kort.tlfligg.mkomved.mkomvedh #mkom{ left:auto; right:var(--mkomx); justify-content:flex-end; }
 body.kort.tlfligg.mkomved #mkom button{ flex:0 0 46px; width:46px; max-width:46px; height:42px; font-size:0; letter-spacing:0; }
+body.kort.tlfligg.mkomved #mkommer{ left:var(--mkomx); right:calc(60px + ${Rt}); bottom:calc(54px + ${B}); } body.kort.tlfligg.mkomved.mkomvedh #mkommer{ left:calc(8px + ${L}); right:var(--mkomx); }
 body.kort.tlfligg.mkomved #mkom button::before{ width:21px; height:21px; } body.kort.tlfligg.mkomved #mkom button .merke{ font-size:9.5px; }
 /* RUNDE 12: klyping med to fingre på et panel zoomet hele nettsiden (iPhone bryr seg ikke om user-scalable=no). Siden kan bare rulles;
    kartet (touch-action:none) tar klypingen selv. */
