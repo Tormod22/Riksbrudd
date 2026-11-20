@@ -798,6 +798,8 @@ Per kilde («Hvor i koden» i «Mål hakk», sum / antall / lengste):
   scratchpad `natt8/lys/stavanger-etter-PC.png` (hus, veger, trær, terreng og navn som før).
 - Vakta lys (Dovre-testsiden): PC grønn (runde 9-delen 0,5 s), telefon 390 × 844 grønn (0,2 s; hele vakta 12 s), begge med den endelige koden.
   Med ekte data i Stavanger: runde 9-delen grønn (hus 549 940 trekanter, 13 vegnett, 35 bruer), se «Vakt» over.
+- Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8928 node pipeline/fliser/sjekk.js` i en kopi av 561f666, kl. 16.22 norsk tid):
+  **124 ok, 0 FEIL**, 384 s. Vakta lys der: grønn, 122,8 s (det meste er skyggene med programvare-grafikk), runde 9-delen 0,2 s.
 - Regeltester: test_tallrekke (ny), test_ytelse, test_veg, test_kyst, test_fjern3d, test_vegetasjon, test_bruer, test_interior_biter,
   test_kvalitet, test_grense3d grønne; `node --check` på filene og hovedskriptet i index.html.
 
