@@ -109,6 +109,7 @@
   // Teksten i leirvalget når stedet ikke går: r = førsteBygg(…)
   function brattTekst(r) {
     if (!r || r.ok) return '';
+    if (r.mangler === LB.BYGG[REGLER.første[0]].navn && r.nivå === VANN) return `For nær vannet – ingen tørr, flat plass for en ${r.mangler.toLowerCase()} her.`;
     if (r.mangler === LB.BYGG[REGLER.første[0]].navn) return `Bratt – ingen flat plass for en ${r.mangler.toLowerCase()} her` + (r.d > 0 && r.nivå === BRATT ? ` (${Math.round(r.d)} m høydeforskjell under den)` : '') + '.';
     return `For lite flat plass: det er ikke plass til ${r.mangler.toLowerCase()} ved siden av brakka innen ${meter(REGLER.nær)}.`;
   }

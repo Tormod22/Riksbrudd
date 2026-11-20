@@ -54,6 +54,9 @@ const tørt = () => true;
   const hylle = (x, y) => (Math.abs(x) < 5 && Math.abs(y) < 8 ? 50 : 50 + 3 * Math.max(Math.abs(x) - 5, Math.abs(y) - 8, 0));
   const hy = H.førsteBygg(hylle, tørt, 0, 0);
   ok(!hy.ok && hy.plasser.length === 1 && /For lite flat plass/.test(H.brattTekst(hy)), `smal hylle: ${H.brattTekst(hy)}`);
+  // ved vannet i en bratt li: teksten sier vann, ikke bratt
+  const vt = H.førsteBygg(li, x => x > -3, 0, 0, { nær: 4 });
+  ok(!vt.ok && /For nær vannet/.test(H.brattTekst(vt)), `ved vannet: ${H.brattTekst(vt)}`);
   // vann: et punkt i elva er ikke tørt, men land like ved gir plass
   const elv = x => Math.abs(x) > 20;
   ok(H.førsteBygg(flatt, elv, 0, 0).ok, 'i elva: tørt land innen 80 m gir plass');
