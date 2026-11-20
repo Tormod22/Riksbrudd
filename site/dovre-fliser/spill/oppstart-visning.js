@@ -275,8 +275,11 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     const kanFlytte = grunn && window.Helling && ekte() && (kl === 3 || /tettsted/.test(grunn));
     visBanner(først, !grunn && !forslag.sjekker, grunn ? (kanFlytte ? { venter: 'Ser etter nærmeste sted der leiren får plass …' } : null)
       : { kai: window.Leirvalg ? '' : til.join(' '), venter: forslag.sjekker ? 'Sjekker om det er flatt nok for de første byggene …' : '' });
-    if (!grunn && window.Leirvalg) vurderSted(x, y, h, til);
-    else if (kanFlytte) foreslå(x, y, grunn, kl === 3);
+    // feiler målingen, eller tar den over 25 s (tregt nett), kan leiren legges her likevel – ellers ville spilleren stått fast
+    const fs = forslag, slipp = () => { if (forslag !== fs || !fs.sjekker || !velger) return; fs.sjekker = false; skitten = true;
+      visBanner(først, fs.ok, { adv: ['Fikk ikke sjekket terrenget rundt stedet. Du kan legge leiren her likevel.'], kai: til.join(' ') }); };
+    if (!grunn && window.Leirvalg) { vurderSted(x, y, h, til).catch(e => { console.error(e); slipp(); }); if (fs.sjekker) setTimeout(slipp, 25000); }
+    else if (kanFlytte) foreslå(x, y, grunn, kl === 3).catch(e => console.error(e));
     return grunn;
   }
   // (runde 8) Flat plass for de første byggene (Helling.førsteBygg) rundt stedet; går det ikke, nærmeste sted der det går (finnPlass).
