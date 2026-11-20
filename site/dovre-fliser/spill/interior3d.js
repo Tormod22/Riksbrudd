@@ -455,7 +455,7 @@
     if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = pl.trapp / n;
       for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, ute - g0 - .4, (ute - g0) + (pl.gulv - ute) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
     // møblene, med skygge under og teppe under salongbordet
-    for (const m of pl.møbler) { yield 'møbel'; for (const K of deler(m)) kasse(m.x, m.y, m.a, K);
+    for (const m of pl.møbler) { yield 'møbel'; let nK = 0; for (const K of deler(m)) { kasse(m.x, m.y, m.a, K); if (++nK % 48 === 0) yield 'møbeldel'; }
       if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger') blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
       if (m.type === 'salongbord') { const tf = TØY[Math.floor(hash(pl.i, 41) * TØY.length)], tw = Math.min(1.1, m.b / 2 + .5), td2 = .8;
         kasse(m.x, m.y, m.a, [-tw, tw, -td2, td2, .004, .014, tf, 'tøy']); kasse(m.x, m.y, m.a, [-tw + .12, tw - .12, -td2 + .12, td2 - .12, .014, .017, mørk(tf, 1.25), 'tøy']); } }
@@ -484,11 +484,12 @@
     // sett sammen: hovednettet med en gruppe per stoff (rett i tallrekker – samme tall som før)
     let nPos = 0, nUv = 0; for (const g of G) { nPos += g.pos.length; nUv += g.uv.length; }
     const pos = new Float32Array(nPos), kol = new Float32Array(nPos), uv = new Float32Array(nUv), grupper = [];
-    { let o3 = 0, o2 = 0; for (const [n, g] of G.entries()) { if (!g.pos.length) continue; grupper.push([o3 / 3, g.pos.length / 3, n]); pos.set(g.pos, o3); kol.set(g.kol, o3); uv.set(g.uv, o2); o3 += g.pos.length; o2 += g.uv.length; } }
+    { let o3 = 0, o2 = 0; for (const [n, g] of G.entries()) { if (!g.pos.length) continue; grupper.push([o3 / 3, g.pos.length / 3, n]); pos.set(g.pos, o3); kol.set(g.kol, o3); uv.set(g.uv, o2); o3 += g.pos.length; o2 += g.uv.length; yield 'tallrekker'; } }
     const ST = stoffene(), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(kol, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     for (const [fra, antall, n] of grupper) geo.addGroup(fra, antall, n);
     yield 'normaler';
-    geo.computeVertexNormals();
+    // normalene i biter (normalerG i index.html = three.js sin computeVertexNormals, bit for bit – vakta lys sjekker det)
+    if (typeof normalerG === 'function') { for (const v of normalerG(geo)) yield v || 'normaler'; } else geo.computeVertexNormals();
     const nett = [new THREE.Mesh(geo, ST.hoved)]; nett[0].userData.interior = true;
     const lite = (d, mat, orden) => { if (!d.pos.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2)); const m = new THREE.Mesh(g, mat); m.renderOrder = orden; nett.push(m); return m; };
     lite(V, ST.vindu, 0); lite(SK, ST.skygge, 2); lite(LA, ST.lampe, 3); lite(DA, ST.dag, 3); const ytre = lite(YT, ST.åpning, 0) || null;
