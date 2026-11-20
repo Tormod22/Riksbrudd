@@ -132,7 +132,7 @@
     const hvor = o.leir && o.sted ? `, ${String(Math.round(avst(o.sted, o.leir) / 100) / 10).replace('.', ',')} km ${retning(o.sted.x - o.leir.x, o.sted.y - o.leir.y)} for leiren` : '';
     const mot = o.mål.leir ? 'Målet er leiren din' : `Målet er trolig ${o.mål.navn}${o.mål.eier === 'blå' ? ' (ditt)' : ''}`;
     return `Etterretning: ${o.fraksjon} samler ${o.antall} lag (ca. ${Math.round(o.mann)} mann) ${ved}${hvor}. ${mot} – angrep tidligst om ${omTekst(o.om)}.`
-      + (o.mål.leir ? ' Hold tropper hjemme og bemann vakttårnet.' : ' Send flere lag dit, eller grav ned garnisonen.');
+      + (o.mål.leir ? ' Hold tropper hjemme og bemann vakttårnet.' : ' Send flere lag dit, grav ned garnisonen og sett stridsreglene til «kjemp» – ellers trekker den seg når den er underlegen.');
   }
   const api = { REGLER, grad, inntekt, nyØkonomi, tjen, kjøp, betal, tak, behov, gruppemål, tillatt, velgMål, samlested, fase, rutePunkt, omTekst, retning, varselTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

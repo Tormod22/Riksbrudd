@@ -529,3 +529,12 @@ og krigen skal kunne vinnes av dem rundt dag 10–14 på «Vanlig» når spiller
   handelsruta fra Vatne. Sett et lag ved ruta som vakt, eller jag dem bort.»
 - Krigskartet: hver motstander får «12 lag · samler 3 lag ved Oltedal mot Vatne» (KRIG_TILLEGG.side), lagpanelet «i angrepsgruppa mot Vatne».
 - Lagres per leir i «riksbrudd-eskalering» (kasse, grupper, ruteoppdrag, kjøpte kjøretøy med plass og skade); leses 2,5 s etter «riksbrudd-spill».
+
+### Vakt (vakter/krig.js, del «RUNDE 7»)
+På Dovre-testsiden (med infrastrukturen, som i sjekk.js): Dombås gjøres til ditt med en garnison, tre lag fra Kystalliansen settes 4 km unna og tida
+settes til etter fredstiden. Vakta krever: en gruppe på minst to lag mot Dombås og etterretningen «Kystalliansen samler … Dombås (ditt)» i loggen,
+at lagene går til samlingsstedet (AI.styr), at angrepet IKKE går før varselet er ute selv om lagene er samlet, og at det går etterpå (AI.styr gir
+«ta» mot Dombås); at motstanderen kjøper (lag/lastebil/stridsvogn) med penger i kassa; at et leirangrep varsles med minst fire timers frist og
+«Målet er leiren din» (fire lag til, siden lagene dine ved leiren teller); og at storbyplanen går gjennom (Dombås som storby). Alt settes tilbake:
+tid, tempo, lagene (også de AI.nytt og kjøpet laget), TETTSTEDER, frø, AI.angripLeir, AI.minne, etterretningslista, «riksbrudd-eskalering» og
+EskaleringSpill.test. Tar ca. 2 s (PC). Ute av testene (navigator.webdriver) skjer ingenting av seg selv: EskaleringSpill.test = true slår det på.
