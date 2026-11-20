@@ -355,7 +355,8 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
   let bannerHelt = false;
   const KORT_NAVN = [[/^⟲ 15°$/, '⟲'], [/^⟳ 15°$/, '⟳'], [/^Rutenett: .*$/, '▦'], [/^Inntil naboen: .*$/, '⇤'], [/^Fortsett: .*$/, '⧉'], [/^Avbryt$/, '✕'], [/^Legg i planen$/, 'Til planen'],
     [/^Kjøp materialene og bygg: (.*) i alt$/, 'Kjøp og bygg · $1']];
-  function kortBanner() { const f = banner.firstElementChild; if (f && f.tagName === 'DIV') { f.classList.add('btekst'); f.onclick = () => { bannerHelt = !bannerHelt; banner.classList.toggle('helt', bannerHelt); }; }
+  // på telefon lukkes også forklaringsruta fra byggekortet (den ble liggende over kartet mens du plasserte bygget, kritiker E bilde 13)
+  function kortBanner() { if (window.FlisTips && FlisTips.skjul && document.body.classList.contains('kort')) FlisTips.skjul(); const f = banner.firstElementChild; if (f && f.tagName === 'DIV') { f.classList.add('btekst'); f.onclick = () => { bannerHelt = !bannerHelt; banner.classList.toggle('helt', bannerHelt); }; }
     banner.classList.toggle('helt', bannerHelt); banner.classList.toggle('harsmå', !!banner.querySelector(':scope > small'));
     for (const b of banner.querySelectorAll(':scope > button')) { const t = b.textContent.trim(), k = KORT_NAVN.find(([r]) => r.test(t)); if (!k) continue; b.dataset.kort = t.replace(k[0], k[1]);
       if (!b.title) b.title = t; b.setAttribute('aria-label', t); if (/: på$/.test(t)) b.classList.add('slått'); } }
