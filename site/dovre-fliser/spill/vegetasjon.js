@@ -116,14 +116,15 @@
   // Lærdal er bildet gulbrunt, så 3D hadde ingen trær der 2D tegner dem (2D spør bare etter skogklassen). trePåFarge(R, G, B, skog):
   // grønt som før; i skogklassen også gult og brunt – men ikke grått (veg, hus), blått (vann), rødt (tak) eller vegfargene i
   // kartbildet (VEGFARGER = VEG i kartflis.js; vegene tegnes i 3D-bildet når utsnittet er stort). Claudes forslag (alle tallene):
-  // grå = summen av fargeforskjellene under dette er grått; rød = R − G over dette er tak/rødt; vegNær = avstand (sum av tre kanaler) til en vegfarge.
-  const TREFARGE = { grå: 14, rød: 45, vegNær: 36 };
+  // grå = summen av fargeforskjellene under dette er grått; rød = R − G over dette er tak/rødt; vegNær = avstand (sum av tre kanaler) til en vegfarge;
+  // mørk = gulbrunt mørkere enn dette (snitt av R, G, B) er vegens mørke kant i kartbildet, ikke skog.
+  const TREFARGE = { grå: 14, rød: 45, vegNær: 36, mørk: 40 };
   const VEGFARGER = [[230, 189, 108], [218, 176, 102], [208, 190, 148], [196, 184, 154], [178, 166, 138]];
   function trePåFarge(R, G, B, skog) {
     if (Math.abs(R - G) + Math.abs(G - B) < TREFARGE.grå) return false;
     if (B > R + 18 && B > G + 4) return false;
     if (G >= R - 4 && G >= B) return true;
-    if (!skog || R - G > TREFARGE.rød || B > G) return false;
+    if (!skog || R - G > TREFARGE.rød || B > G || (R + G + B) / 3 < TREFARGE.mørk) return false;
     for (const [a, b, c] of VEGFARGER) if (Math.abs(R - a) + Math.abs(G - b) + Math.abs(B - c) < TREFARGE.vegNær) return false;
     return true;
   }

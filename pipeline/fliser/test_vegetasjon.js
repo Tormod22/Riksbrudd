@@ -59,5 +59,6 @@ sjekk(V.stedIHøyden('eng', .8) === 'eng' && V.stedIHøyden('veikant', 1.2) === 
   sjekk(f(60, 90, 40, false) && f(60, 90, 40, true), 'grønt: tre (som før)');
   sjekk(f(150, 135, 70, true) && f(118, 104, 62, true) && !f(150, 135, 70, false), 'gulbrun skog: tre bare i skogklassen');
   sjekk(!f(110, 112, 108, true) && !f(44, 74, 102, true) && !f(160, 80, 60, true), 'grått, blått (vann) og rødt tak: aldri tre');
-  sjekk(!f(230, 189, 108, true) && !f(218, 176, 102, true) && !f(208, 190, 148, true) && !f(178, 166, 138, true), 'vegfargene i kartbildet: aldri tre'); }
+  sjekk(!f(230, 189, 108, true) && !f(218, 176, 102, true) && !f(208, 190, 148, true) && !f(178, 166, 138, true), 'vegfargene i kartbildet: aldri tre');
+  sjekk(!f(40, 33, 22, true), 'vegens mørke kant (mørk brun): aldri tre'); }
 console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);
