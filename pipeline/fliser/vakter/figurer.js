@@ -69,7 +69,9 @@ module.exports = {
             ut.hjul = d.map(x => +x.toFixed(2)); krev(Math.min(...d) > -.08 && Math.min(...d) < .25, 'hjulene i bakken: ' + JSON.stringify(ut.hjul)); } }
         finally { KJORETOY.splice(KJORETOY.indexOf(k), 1); kjøretøy3d(); } }
       if (window.Liv3d && Liv3d.trafikk && u.S <= 2200) { const T = Liv3d.trafikk(); ut.trafikk = { biler: T.biler.length, folk: T.folk.length };
-        if (T.folk.length) { KROKER.ramme3d.forEach(f => { if (/folkFlokk/.test(f.toString())) f(R); }); krev(!!T.flokk && T.flokk.antall() === T.folk.length, 'folkene på fortauet er ikke figurer: ' + (T.flokk ? T.flokk.antall() : 'ingen flokk')); }
+        if (T.folk.length) { KROKER.ramme3d.forEach(f => { if (/folkFlokk/.test(f.toString())) f(R); }); // (folk lenger unna enn ca. 320 m tegnes ikke)
+          const c = R.cam.position, nære = T.folk.filter(o => { const p = T.punkt(o.v, o.s, (o.side || 1.7) * o.dir); return Math.hypot(p[0] - c.x, p[1] - c.y) < 250 && Math.abs(p[2] - c.z) < 60; }).length; ut.trafikk.figurer = T.flokk ? T.flokk.antall() : 0;
+          krev(!!T.flokk && T.flokk.nær.isInstancedMesh && T.flokk.antall() <= T.folk.length && T.flokk.antall() >= nære, 'folkene på fortauet er ikke figurer: ' + ut.trafikk.figurer + ' av ' + T.folk.length + ' (nære ' + nære + ')'); }
         if (T.biler.length) { const g = T.bilNett[0].geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3 + (T.bilNett[1] ? T.bilNett[1].geometry.attributes.position.count / 3 : 0); ut.trafikk.tri = n;
           krev(n > 300 && n < 1500, 'trekanter per bil i trafikken: ' + n); } }
       return ut;

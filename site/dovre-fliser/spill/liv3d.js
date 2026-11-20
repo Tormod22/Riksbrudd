@@ -332,18 +332,18 @@
   function bilNett(R, n) {
     if (!window.Kjoretoy3d || !Kjoretoy3d.form || !window.MODELLER) { const hjul = []; for (const [x, y] of [[1.35, .82], [1.35, -.82], [-1.35, .82], [-1.35, -.82]]) { const g = new THREE.CylinderGeometry(.33, .33, .22, 10); g.translate(x, y, .33); hjul.push(g); }
       return instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], n); }
-    const F = Kjoretoy3d.form, H = [1, 1, 1], GL = [.16, .19, .23], SV = [.07, .07, .08], GR = [.2, .2, .21], FE = [.55, .56, .58], A = [], B = [];
+    const F = Kjoretoy3d.form, H = [1, 1, 1], GL = [.16, .19, .23], SV = [.07, .07, .08], GR = [.2, .2, .21], FE = [.34, .35, .37], A = [], B = [];
     // karosseriet: lavt og langt, fronten heller litt bakover; panseret og bagasjelokket litt lavere enn beltelinja
     F.rundBoks(A, 0, 0, .36, 4.4, 1.78, .54, .2, H, { skrå: .35 });
     // glasshuset (smalner oppover, skrå frontrute og bakrute) og taket
-    F.rundBoks(B, -.32, 0, .9, 2.4, 1.6, .5, .18, GL, { smal: .84, skrå: .95 }); F.rundBoks(A, -.5, 0, 1.36, 1.6, 1.36, .1, .05, H);
+    F.rundBoks(B, -.32, 0, .9, 2.4, 1.6, .5, .18, GL, { smal: .84, skrå: .95 }); F.rundBoks(A, -.5, 0, 1.34, 1.62, 1.4, .13, .06, H);
     // støtfangere, grill og dekk (felgen bare på yttersiden)
     const kl = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); B.push(F.farg(g, c)); };
     for (const e of [-1, 1]) kl(e * 2.17, 0, .3, .14, 1.74, .18, SV);
     kl(2.18, 0, .52, .06, .8, .14, GR);
     // dekkene er for det meste skjult av karosseriet: en enkel sylinder med felgen som skive på yttersiden
     for (const [x, y] of [[1.35, .8], [1.35, -.8], [-1.35, .8], [-1.35, -.8]]) { const g = new THREE.CylinderGeometry(.33, .33, .24, 10); g.translate(x, y, .33); B.push(F.farg(g, SV));
-      const f = new THREE.CircleGeometry(.2, 8); f.rotateX(-Math.sign(y) * Math.PI / 2); f.translate(x, y + Math.sign(y) * .125, .33); B.push(F.farg(f, FE)); }
+      const f = new THREE.CircleGeometry(.17, 8); f.rotateX(-Math.sign(y) * Math.PI / 2); f.translate(x, y + Math.sign(y) * .125, .33); B.push(F.farg(f, FE)); }
     const lakk = MODELLER.samle(A), rest = MODELLER.samle(B), mA = new THREE.InstancedMesh(lakk, new THREE.MeshLambertMaterial(), n), mB = new THREE.InstancedMesh(rest, new THREE.MeshLambertMaterial({ vertexColors: true }), n);
     mA.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
     for (const m of [mA, mB]) { m.frustumCulled = false; m.count = 0; m.userData.kilde = 'liv3d.js'; R.scene.add(m); liv.mesh.push(m); }
@@ -353,7 +353,9 @@
   // Claudes forslag: klær, hår og hud å velge mellom, og hvor mange som har lue, langt hår eller sekk
   const FOLK = { jakker: [[.6, .12, .1], [.15, .25, .45], [.85, .78, .6], [.25, .35, .2], [.2, .2, .22], [.7, .55, .2], [.5, .5, .55], [.35, .15, .35], [.12, .3, .32], [.78, .78, .74]],
     bukser: [[.16, .18, .24], [.12, .12, .13], [.3, .27, .22], [.22, .26, .36], [.4, .38, .34]], hår: [[.18, .13, .09], [.32, .22, .12], [.08, .07, .06], [.62, .5, .3], [.5, .48, .45]],
-    hud: [[.88, .71, .58], [.8, .62, .48], [.62, .44, .32], [.42, .3, .22], [.92, .76, .64]], lue: .2, langt: .3, sekk: .25 };
+    hud: [[.88, .71, .58], [.8, .62, .48], [.62, .44, .32], [.42, .3, .22], [.92, .76, .64]], lue: .2, langt: .3, sekk: .25,
+    // folk lenger unna kameraet enn dette (m) tegnes ikke – de er knapt et punkt, og bevegelsen i skyggeleggeren koster per hjørne
+    synlig: 320 };
   function startLiv(u, R) {
     let f = 4242; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296, mob = VW < 700;
     // biler: lakk (instansfarge), ruter, hjul
@@ -446,7 +448,7 @@
       liv.lys.front.material.color.setRGB(.7 + .3 * m, .7 + .27 * m, .68 + .17 * m); liv.lys.bak.material.color.setRGB(.44 + .56 * m, .055 + .07 * m, .04 + .05 * m);
       liv.lys.kjegle.visible = m > .01; liv.lys.kjegle.material.opacity = m * .42; }
     if (liv.biler) { flytt(liv.biler, liv.bilMesh, false); for (const m of liv.bilMesh) { m.count = liv.biler.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
-    if (liv.folk && liv.folkFlokk) { const fl = liv.folkFlokk; fl.start(); flytt(liv.folk, null, true, (o, m) => { o.fase += o.fart * dt * 4.2; fl.legg(m, { fase: o.fase, sving: 1, maske: o.maske, farger: o.farger }); }); fl.slutt(); }
+    if (liv.folk && liv.folkFlokk) { const fl = liv.folkFlokk; fl.start(); flytt(liv.folk, null, true, (o, m) => { o.fase += o.fart * dt * 4.2; const e = m.elements, c = R.cam.position; if ((e[12] - c.x) ** 2 + (e[13] - c.y) ** 2 + (e[14] - c.z) ** 2 > FOLK.synlig * FOLK.synlig) return; fl.legg(m, { fase: o.fase, sving: 1, maske: o.maske, farger: o.farger }); }); fl.slutt(); }
     else if (liv.folk) { flytt(liv.folk, liv.folkMesh, true); for (const m of liv.folkMesh) { m.count = liv.folk.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
     if (liv.fugler) { liv.fugler.forEach((f, k) => { const F = liv.flokker[f.flokk], a = nå * F.v + f.nr * .05, rr = F.r + (f.nr % 3) * 6;
         d.position.set(F.x + Math.cos(a) * rr - (f.nr % 2) * 4, F.y + Math.sin(a) * rr, (hoyde3d(F.x + u.cx, F.y + u.cy) - u.h0) * R.EX + F.h + Math.sin(nå + f.nr) * 2);
