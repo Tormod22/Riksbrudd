@@ -96,7 +96,7 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
   const tilbake = e => { const v = løftet.get(e); if (!v) return; e.style.bottom = v.bottom; e.style.maxHeight = v.maxHeight; e.style.overflowY = v.overflowY; løftet.delete(e); };
   function løft() { const B = document.body, m = $('mkom'), alltid = aktiv(); if (B.classList.contains('mkomalltid') !== alltid) B.classList.toggle('mkomalltid', alltid);
     const på = alltid && B.classList.contains('kort') && !!m && m.classList.contains('på') && vises(m);
-    let grense = på ? m.getBoundingClientRect().top : Infinity; const op = $('opplaering'); if (på && op && op.classList.contains('liten') && vises(op)) grense = Math.min(grense, op.getBoundingClientRect().top);
+    let grense = på ? m.getBoundingClientRect().top : Infinity; const op = $('opplaering'); if (på && op && op.classList.contains('liten') && vises(op) && op.getBoundingClientRect().top > window.innerHeight / 2) grense = Math.min(grense, op.getBoundingClientRect().top);
     grense -= REGLER.luft; const H = window.innerHeight;
     for (const id of LØFT) { const e = $(id); if (!e) continue; if (!på || !vises(e)) { tilbake(e); continue; }
       const r = e.getBoundingClientRect(); if (r.bottom <= grense + 1 || r.height < 40) continue;

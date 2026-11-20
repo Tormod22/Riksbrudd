@@ -100,6 +100,25 @@ body.kort #opplaering .rad{ flex-wrap:wrap; }
 ${SIDE.venstre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ left:calc(8px + ${L}); right:auto; }
 ${SIDE.høyre.map(id => `body.kort.tlfligg #${id}`).join(', ')}{ right:calc(8px + ${Rt}); left:auto; }
 ${[...SIDE.venstre, ...SIDE.høyre].map(id => `body.kort.tlfligg #${id}`).join(', ')}{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); width:min(400px, 50vw); max-width:none; height:auto; max-height:none; transform:none; overflow-y:auto; box-sizing:border-box; border-width:1px; border-style:solid; }
+/* RUNDE 10 (20. nov, brukerens iPhone liggende, «Lag ny tropp»): panelet fyller høyden fra knapperaden til bunnmenyen, er bredt nok til to
+   kolonner (forslag, navn, bevæpning og kjøretøy til venstre; folkene, utstyret og prisen til høyre – hver kolonne rulles for seg), og
+   «Opprett» står alltid nederst. Forslagene er små kort i rutenett. 760 px og tallene under er Claudes forslag. */
+html body.kort.tlfligg #tropppanel:has(> .kolonner){ width:min(760px, calc(100vw - 16px - ${L} - ${Rt})); display:flex; flex-direction:column; overflow:hidden; padding:8px 12px 0; }
+html body.kort.tlfligg #tropppanel:not(.på){ display:none; }
+body.kort.tlfligg #tropppanel h2{ font-size:17px; margin:0 40px 0 0; padding-bottom:3px; margin-bottom:2px; } body.kort.tlfligg #tropppanel > small{ display:block; font-size:12px; line-height:1.25; }
+body.kort.tlfligg #tropppanel .kolonner{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:14px; flex:1 1 auto; min-height:0; margin-top:4px; }
+body.kort.tlfligg #tropppanel .kol{ display:block; overflow-y:auto; min-height:0; padding-right:3px; overscroll-behavior:contain; }
+body.kort.tlfligg #tropppanel .kol > h3:first-child{ margin-top:2px; } body.kort.tlfligg #tropppanel h3{ margin:8px 0 3px; }
+body.kort.tlfligg #tropppanel label{ grid-template-columns:78px 1fr; margin:3px 0; }
+body.kort.tlfligg #tropppanel .maler{ gap:4px; } body.kort.tlfligg #tropppanel .maler button{ padding:3px 7px; min-height:0; line-height:1.2; }
+body.kort.tlfligg #tropppanel .maler button b{ font-size:13.5px; font-weight:600; } body.kort.tlfligg #tropppanel .maler button small{ font-size:11.5px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+body.kort.tlfligg #tropppanel small.hold{ font-size:12px; }
+body.kort.tlfligg #tropppanel .p, body.kort.tlfligg #tropppanel .u{ padding:3px 4px; }
+body.kort.tlfligg #tropppanel .opprett{ position:static; flex:none; margin:6px -12px 0; padding:6px 12px calc(6px + ${B}); }
+/* RUNDE 10: bunnmenyen er ugjennomsiktig (tekst bak skinte gjennom), og hogstfelt-/rivelappen står over den, ikke bak */
+body.kort #mkom button:not(.på){ background:linear-gradient(180deg,#2e2516,#191309); }
+body.kort.mkom #ressursvalg{ bottom:calc(64px + ${B}); }
+body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw - 24px - ${L} - ${Rt})); max-height:calc(100% - var(--topp,44px) - 80px - ${B}); overflow-y:auto; }
 `;
   document.head.appendChild(css);
 
@@ -123,8 +142,18 @@ ${[...SIDE.venstre, ...SIDE.høyre].map(id => `body.kort.tlfligg #${id}`).join('
     let y = a.top; for (const r of kort) if (r.top < y + a.height && y < r.bottom) y = r.bottom + 6;
     k.style.top = y !== a.top && y + a.height < H - 60 ? Math.round(y) + 'px' : ''; }
   function stoppkortNed() { ned('varsel'); ned('flytkort'); }
+  // RUNDE 10: liggende telefon – hogstfelt-/rivelappen og byggebanneret står midt nede; er en meny åpen til venstre (eller høyre), står de
+  // i den frie delen ved siden av menyen, så de ikke ligger oppå den
+  const VED = ['ressursvalg', 'byggvalg'], MENY = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel'];
+  function vedMeny() { const b = document.body, W = window.innerWidth, ligg = b.classList.contains('kort') && W > window.innerHeight * 1.2;
+    for (const id of VED) { const e = document.getElementById(id); if (!e) continue; const vis = e.classList.contains('på') && e.getClientRects().length > 0;
+      const m = ligg && vis ? MENY.map(q => document.getElementById(q)).find(q => q && q.classList.contains('på') && q.getClientRects().length > 0 && q.getBoundingClientRect().width < W * .6) : null;
+      if (!m) { if (e.dataset.ved) { for (const k of ['left', 'right', 'transform', 'max-width']) e.style.removeProperty(k); delete e.dataset.ved; } continue; }
+      const r = m.getBoundingClientRect(), høyre = r.left < W / 2; e.dataset.ved = '1'; e.style.transform = 'none';
+      if (høyre) { e.style.left = Math.round(r.right + 8) + 'px'; e.style.right = 'auto'; e.style.maxWidth = Math.max(160, W - r.right - 64) + 'px'; }
+      else { e.style.right = Math.round(W - r.left + 8) + 'px'; e.style.left = 'auto'; e.style.maxWidth = Math.max(160, r.left - 16) + 'px'; } } }
   function pass() {
-    flyt(); stoppkortNed();
+    flyt(); stoppkortNed(); try { vedMeny(); } catch (e) { /* neste runde */ }
     const b = document.body; if (!b.classList.contains('kort')) { for (const k of ['mkomfull', 'tlfdekk', 'tlfopp', 'tlfligg']) if (b.classList.contains(k)) b.classList.remove(k); return; }
     const H = window.innerHeight, W = window.innerWidth, m = document.getElementById('mkom');
     // 13: liggende telefon
