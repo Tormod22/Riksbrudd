@@ -560,7 +560,7 @@
     const u = R.ut;
     // (leirens bygg registreres også når du ikke går: gress og blomster skal ikke stå inne i dem)
     if (u && R.hindre) leirbygg(R, u);
-    if (!R.fot || !u || !R.hindre) { if (aktive.size) tøm(R); return; }
+    if (!R.fot || !u || !R.hindre) { if (aktive.size || hvile.size || jobb || FUNN_GEO) tøm(R); return; }
     if (forU !== u) { tøm(R); forU = u; }
     // oppdater(true) (vaktene, møbelflytting): en jobb som er i gang, gjøres ferdig nå, og det neste bygget bygges i ett strekk
     if (tving && jobb) steg(R, Infinity);

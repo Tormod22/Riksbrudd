@@ -130,6 +130,7 @@ module.exports = {
           ut.natt = { lys: P.lys ? P.lys.n : 0, lys2: P.lys2 ? P.lys2.n : 0, forberedt: !!NATT.forberedt };
         }
       } catch (e) { ut.feil.push('unntak (runde 5): ' + (e && e.message || e)); }
+      const t7 = performance.now();
       // RUNDE 7 (20. nov natt, hakk når du går): interiøret bygges i biter, og huset blir likt det som bygges i ett strekk
       // (samme rom, møbler, trekanter og hvert hjørne). Et prøvehus legges i utsnittet; alt settes tilbake.
       try {
@@ -182,6 +183,8 @@ module.exports = {
         // (ingen await her: et utsnitt som bygges imens, kan ikke byttes inn midt i prøven – derfor ikke krav om !R.bygger)
         if (R && R.ut && R.ut.bunn && typeof på3d !== 'undefined' && på3d && typeof gressG === 'function' && window.Gange && (!window.KVAL || KVAL.p.gress > 0)) {
           const gikk = !!R.fot; if (!gikk) Gange.start();
+          // kameraet i øyehøyde der du står (ellers kan det stå over kanten av utsnittet, og da blir det ingen tuster)
+          if (!gikk && Gange.kamera) Gange.kamera(R);
           try {
             R.gressSenter = null; R.gressJobb = null; gress3d(); let biter = 1; while (R.gressJobb && biter < 20000) { gressBit(R, .5); biter++; }
             const m = R.gressMesh, kopi = () => ({ n: m.count, M: m.instanceMatrix.array.slice(0, m.count * 16), C: m.instanceColor ? m.instanceColor.array.slice(0, m.count * 3) : null });
@@ -196,10 +199,11 @@ module.exports = {
         }
         else ut.gressUt = !R || !R.ut ? 'uten 3D' : !R.ut.bunn ? 'uten bunnkart' : window.KVAL && !(KVAL.p.gress > 0) ? 'grafikk uten gress' : 'ikke prøvd';
       } catch (e) { ut.feil.push('unntak (gresset): ' + (e && e.message || e)); }
+      ut.ms7 = Math.round(performance.now() - t7);
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };

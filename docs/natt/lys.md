@@ -552,6 +552,10 @@ kjerner – sju hjelpere): pausene er fulle av tid der tråden bare ventet på e
   fila: 1008 bygg, 0 ulike, 2,3–2,8× raskere. Ny test: `node pipeline/fliser/test_interior_biter.js` (planG = plan for 324 bygg,
   lagerhallen gir yield i rutenettet, nærKant = avstKant < g for 20 000 punkter, inniR/nærKantR = inni/nærKant for 180 000 punkter i 30
   store omriss også rett ved kantene, selvtest).
+- SØPPELTØMMING: kassene (det meste av nettet – møbler, karmer, lister) skrives rett i tallrekkene (`firkant`) uten de ca. 60 små
+  tabellene per kasse som p/flate/fk/tri lagde (samme tall i samme rekkefølge). Prøvd i Node (scratchpad `natt7/lys/node3d.js`: three.js
+  i Node, lerretet byttet ut, gammel og ny interior3d.js bygger 56 bygg i alle klasser): 17,9 mill. verdier, 0 ulike, hele byggingen
+  (med planen) ca. 2,4× raskere enn før.
 - LIKT: seks prøvebygg (hus, skole, lager, butikk, låve, kontor – 1332 til 25 480 trekanter) bygget med den gamle fila og den nye, i ett
   strekk og steg for steg: alle nettene like verdi for verdi (posisjon, farge, uv, normaler, grupper, plass og dreiing – 3,0 mill. verdier,
   0 ulike). Skript: scratchpad `natt7/lys/prov.js`.
