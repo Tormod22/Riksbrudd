@@ -16,7 +16,7 @@
   // (m, andel av radien) midten kan flytte seg før kartet regnes på nytt; celle: m mellom stedene som vurderes; kurve/kurveSterk:
   // høydekurvene (m); styrke: hvor sterke fargene er (0–1).
   const REGLER = { radius: 240, px: 1, nærM: .45, nærRadius: 150, nærPx: .5, fjernM: 2, fjernRadius: 500, fjernPx: 2, fjernCelle: 4, maksM: 6, flytt: .33, celle: 2, kurve: 2, kurveSterk: 10, styrke: 1 };
-  const FARGE = { [HL.FLATT]: [96, 205, 104, .26], [HL.SKRÅTT]: [236, 198, 64, .2], [HL.BRATT]: [228, 72, 52, .32], [HL.VANN]: [70, 130, 210, .2] };
+  const FARGE = { [HL.FLATT]: [96, 205, 104, .26], [HL.SKRÅTT]: [236, 198, 64, .2], [HL.BRATT]: [228, 72, 52, .32], [HL.VANN]: [70, 130, 210, .12] };
   let mål = null, klar = null, regner = null, teller = 0, av = false;
   const ekte = () => !navigator.webdriver || HellingVis.test === true;
 
