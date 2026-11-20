@@ -19,8 +19,9 @@
     maksStigning: .47, maksSide: .37,
     // brattere enn dette (tangens) kjører den ikke inn i: ca. 31° opp/ned og 28° på skrå
     tanOpp: .6, tanSide: .53,
-    // står den der det er brattere enn dette (tangens, ca. 37°), sklir den nedover med denne farten (m/s)
-    tanGli: .75, gliFart: 1.6,
+    // står den der det er brattere enn dette (tangens, ca. 37°), sklir den nedover med denne farten (m/s); krabbe = høyeste fart (m/s)
+    // bratt nedover eller på skrå
+    tanGli: .75, gliFart: 1.6, krabbe: 2.5,
     // hvor fort vinklene i visningen følger bakken (per sekund)
     glatt: 9,
   };
@@ -55,17 +56,18 @@
     else { const z0 = verden.høyde(k.x, k.y), z1 = verden.høyde(nx, ny), d = Math.hypot(nx - k.x, ny - k.y);
       // motbakke bremser, og brattere enn ca. 35° kommer du ikke opp
       if (d > 1e-6) { const st = (z1 - z0) / d * Math.sign(k.v); if (st > .7) { k.v *= .5; return { krasj: false, bratt: true }; } k.v -= Math.sign(k.v) * Math.max(0, st) * 9.81 * .5 * dt; }
-      // (runde 10) bakken under hjulene der bilen ville stått: for bratt opp/ned eller på skrå -> bilen stopper i stedet for å vippe
-      // (står den alt for bratt, får den kjøre dit det blir slakere, så den ikke setter seg fast)
-      const S = STILLING, sg = Math.sign(k.v || 1), p = stilling(nx, ny, k.a, verden.høyde), p0 = stilling(k.x, k.y, k.a, verden.høyde), bakke = p.tanFram * sg, bakke0 = p0.tanFram * sg;
-      const forBratt = (b, sd) => b > S.tanOpp || -b > S.tanOpp * 1.25 || Math.abs(sd) > S.tanSide, verre = Math.abs(p.tanSide) > Math.abs(p0.tanSide) + 1e-3 || bakke > bakke0 + 1e-3 || -bakke > -bakke0 + 1e-3;
-      if (forBratt(bakke, p.tanSide) && (!forBratt(bakke0, p0.tanSide) || verre)) { k.v *= .3; if (Math.abs(k.v) < .3) k.v = 0; k.z = verden.høyde(k.x, k.y); gli(k, dt, verden); return { krasj: false, bratt: true }; }
+      // (runde 10) bakken under hjulene der bilen ville stått: for bratt opp -> bilen stopper (og sklir tilbake der det er svært bratt);
+      // bratt ned eller på skrå -> den kryper (høyst STILLING.krabbe m/s) og sklir sidelengs nedover i stedet for å vippe. Slik kan du
+      // alltid kjøre deg løs igjen (nedover eller langs), og bilen vises aldri med mer helling enn den tåler.
+      const S = STILLING, p = stilling(nx, ny, k.a, verden.høyde), bakke = p.tanFram * Math.sign(k.v || 1);
+      if (bakke > S.tanOpp) { k.v = 0; k.z = verden.høyde(k.x, k.y); gli(k, dt, verden); return { krasj: false, bratt: true }; }
+      if (-bakke > S.tanOpp || Math.abs(p.tanSide) > S.tanSide) { if (Math.abs(k.v) > S.krabbe) k.v = Math.sign(k.v) * Math.max(S.krabbe, Math.abs(k.v) - 8 * dt); k.x = nx; k.y = ny; k.z = verden.høyde(k.x, k.y); gli(k, dt, verden, S.tanSide); return { krasj, bratt: true }; }
       k.x = nx; k.y = ny; }
     k.z = verden.høyde(k.x, k.y); if (Math.abs(k.v) < .5) gli(k, dt, verden); return { krasj };
   }
   // Står bilen der det er brattere enn STILLING.tanGli, sklir den sakte nedover (ikke inn i hindringer eller vann).
-  function gli(k, dt, verden) { const e = 1.5, gx = (verden.høyde(k.x + e, k.y) - verden.høyde(k.x - e, k.y)) / (2 * e), gy = (verden.høyde(k.x, k.y + e) - verden.høyde(k.x, k.y - e)) / (2 * e), g = Math.hypot(gx, gy);
-    if (g <= STILLING.tanGli) return false; const s = STILLING.gliFart * dt / g, nx = k.x - gx * s, ny = k.y - gy * s;
+  function gli(k, dt, verden, grense = STILLING.tanGli) { const e = 1.5, gx = (verden.høyde(k.x + e, k.y) - verden.høyde(k.x - e, k.y)) / (2 * e), gy = (verden.høyde(k.x, k.y + e) - verden.høyde(k.x, k.y - e)) / (2 * e), g = Math.hypot(gx, gy);
+    if (g <= grense) return false; const s = STILLING.gliFart * dt / g, nx = k.x - gx * s, ny = k.y - gy * s;
     if (verden.hindring(nx, ny) || verden.vann(nx, ny)) return false; k.x = nx; k.y = ny; k.z = verden.høyde(nx, ny); k.glir = true; return true; }
   // Helikopteret ett steg. h = { x, y, z, a, vx, vy, vz, rotor 0..1, motor }, inn = { fram, side, gir (1 = høyre), opp −1..1 }.
   // Rotoren spoler opp på HELI.spol sekunder; under 90 % løfter den ikke. På bakken står det stille. Gir { landet, hardt, stanget }.
@@ -194,9 +196,17 @@
   // på det du ser (hoyde3d er jevnere enn nettet, og et hjul kunne stå i lufta eller under bakken)
   function verdenFor(R, u, k) { const terr = typeof nettHoyde === 'function' ? (x, y) => nettHoyde(u, x, y) : (x, y) => (hoyde3d(u.cx + x, u.cy + y) - u.h0) * R.EX, vann = rot.Gange && Gange.vannVed ? Gange.vannVed(u) : () => false;
     const dekke = (x, y) => (rot.Liv3d && Liv3d.dekke ? Liv3d.dekke(u, x, y) : null);
-    return { høyde: (x, y) => { const t = terr(x, y), d = k.type === 'bil' ? dekke(x, y) : null; return d !== null && d > t && d - t < 30 ? d : t; },
+    // (runde 10) vegbanen ligger ofte litt over terrengnettet (målt 0,7 m ved Dombås). Et hjul på asfalten og et ved siden av ga bilen
+    // på skrå (brukerens bilde 3). For bilen skrår bakken nå jevnt ned fra vegkanten over VEGSKULDER meter (bredere når
+    // vegen ligger høyt: aldri brattere enn 1 : 2,5), som en vegfylling.
+    const vegFylling = (x, y, t) => { const V = u.vegRute; if (!V || !V.ru) return t; const b = V.ru.nærmest(x, y, 14); if (!b) return t; const v = V.alle[b.li], kant = v.w + .3;
+      const p = v.P[b.i - 1], q = v.P[b.i]; if (!p || !q) return t; const z = p[2] + (q[2] - p[2]) * b.f; if (!(z > t) || z - t > 3) return t;
+      const br = Math.max(VEGSKULDER, (z - t) * 2.5); if (b.d > kant + br) return t; let w = b.d <= kant ? 1 : 1 - (b.d - kant) / br; w = w * w * (3 - 2 * w); return t + (z - t) * w; };
+    return { høyde: (x, y) => { const t = terr(x, y), d = k.type === 'bil' ? dekke(x, y) : null; return d !== null && d > t && d - t < 30 ? d : k.type === 'bil' ? vegFylling(x, y, t) : t; },
       hindring: (x, y) => typeof hindring3d === 'function' && !!hindring3d(x, y), vann: (x, y) => (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && !(k.type === 'bil' && dekke(x, y) !== null),
       vei: (x, y) => !!(u.påVeg && u.påVeg(x, y)) || dekke(x, y) !== null || !!(rot.LeirSpill && LeirSpill.påEgenVeg && LeirSpill.påEgenVeg(u.cx + x, u.cy + y)) }; }
+  // hvor bred vegfyllingen er for bilen (m) – Claudes forslag
+  const VEGSKULDER = 2.5;
   // første gang kjøretøyene er i utsnittet: flytt dem til et fritt sted (ikke i hus, trær eller vann), helikopteret til helikopterplassen hvis den finnes
   function plasser(R, u) { const L = rot.LeirSpill && LeirSpill.tilstand();
     for (const k of K) { if (!k.ny) continue; let x = k.X - u.cx, y = k.Y - u.cy; if (Math.abs(x) > u.S * .9 || Math.abs(y) > u.S * .9) return false;
