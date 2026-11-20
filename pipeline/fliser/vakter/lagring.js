@@ -58,7 +58,8 @@ module.exports = {
       } catch (e) { d.feil.push('kastet: ' + e.message); }
       finally {
         // sett alt tilbake: lagringen slik den var, låsen, lagringen av verden og panelet
-        LS.simuler(null); LS.lås(false); if (window.LagringSpill && varAktiv) LagringSpill.av(false); if (!varÅpen) M.lukk();
+        LS.simuler(null); LS.lås(false); if (!varÅpen) M.lukk();
+        if (window.LagringSpill) { if (varAktiv) LagringSpill.av(false); else if (LagringSpill.aktiv()) LagringSpill.av(true); }
         for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /^riksbrudd-/.test(k) && !(k in før)) LS.rå.del(k); }
         for (const [k, v] of Object.entries(før)) LS.rå.set(k, v);
         let likt = true; for (const [k, v] of Object.entries(før)) if (LS.rå.get(k) !== v) likt = false; krev(likt, 'lagringen ble ikke satt tilbake');

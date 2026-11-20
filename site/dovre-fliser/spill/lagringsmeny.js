@@ -89,8 +89,11 @@
   }
 
   // ---------- status: «Lagret 12:04» ----------
-  function status() {
-    const v = LS.virker(), f = LS.feil(), s = rot.LagringSpill && LagringSpill.sist ? LagringSpill.sist() : { ok: 0, feil: 0 };
+  // rask: knappen i ☰ spør hvert femte sekund – da brukes svaret fra prøveskrivingen (LagringSide.virker) i inntil 30 s
+  let virkerSist = { t: 0, v: 'ok' };
+  function status(rask) {
+    if (!rask || Date.now() - virkerSist.t > 30000) virkerSist = { t: Date.now(), v: LS.virker() };
+    const v = virkerSist.v, f = LS.feil(), s = rot.LagringSpill && LagringSpill.sist ? LagringSpill.sist() : { ok: 0, feil: 0 };
     const nyFeil = (f && Date.now() - f.t < 10 * 60000 && (!s.ok || f.t > s.ok)) || (s.feil && s.feil > s.ok);
     if (v !== 'ok') return { tilstand: v, kort: 'ikke lagret', tekst: feilTekst({ name: v === 'fullt' ? 'QuotaExceededError' : 'SecurityError' }) };
     if (!harSpill()) return { tilstand: 'tom', kort: '–', tekst: 'Ingen spill i gang. Du kan laste inn et lagret spill eller en fil.' };
@@ -215,7 +218,7 @@
   function startKnapp() { settInnKnapp(); const m = document.getElementById('lagmeny'); if (m) new MutationObserver(() => { if (!m.contains(menyKn)) settInnKnapp(); }).observe(m, { childList: true }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startKnapp); else setTimeout(startKnapp, 0);
   let sistKnapp = '';
-  function oppdaterKnapp() { const t = status().kort; if (t === sistKnapp) return; sistKnapp = t; menyKn.lastChild.textContent = t; menyKn.classList.toggle('feil', /ikke|feilet/.test(t)); }
+  function oppdaterKnapp() { const t = status(true).kort; if (t === sistKnapp) return; sistKnapp = t; menyKn.lastChild.textContent = t; menyKn.classList.toggle('feil', /ikke|feilet/.test(t)); }
   setInterval(oppdaterKnapp, 5000);
   (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'lagre', navn: 'Lagre', tast: '', tittel: 'Lagre og last: lagringsplasser og fil',
     ikon: "<path d='M5 4h11l3 3v13H5z'/><path d='M8 4v5h7V4'/><path d='M8 20v-6h8v6'/>", fins: () => true, på: () => åpen, trykk: () => (åpen ? lukk() : åpne()) });

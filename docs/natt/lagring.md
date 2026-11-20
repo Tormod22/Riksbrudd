@@ -89,6 +89,8 @@ En fil fra en annen side avvises med «Spillet er lagret på Norge (/norge). Åp
   `dovre-start-pc.png`).
 - Sperret localStorage (oppslaget kaster) og full lagring (setItem kaster QuotaExceededError): ingen sidefeil, melding i loggen og i
   panelet, «Last ned som fil» har hele spillet også når lagringen er sperret (`sperret-pc.png`, `fullt-pc.png`).
+- ☰ før/etter, PC og telefon: `hamburger-for-pc.png`, `hamburger-for-mobil.png`, `hamburger-etter-pc.png`, `hamburger-etter-mobil.png`
+  (knappen i overskriften; utsnitt `hode-pc.png`, `hode-mobil.png`).
 - Vakten på PC og telefon (under 1 s), to ganger etter hverandre; vaktene «start», «spillform» og «ui» er grønne med endringene.
 
 ### IKKE gjort / begrensninger
