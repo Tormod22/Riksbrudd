@@ -37,8 +37,9 @@
     // rykte: m fra leiren – angrep motstanderne imellom nærmere enn dette, får du høre om (etterretning i loggen)
     // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående;
     // blåOvervekt: mot tettstedene dine tar gruppa bare med seg til 1,2 × behovet – du skal kunne holde dem hvis du forsterker i tide;
+    // storbyVekt: en storby som er lov, veier så mye mer (den avgjør krigen – gjennomspillingen på Hard: gruppene var opptatt med småsteder i to døgn);
     // småsted: innbyggere – garnisoner i egne tettsteder under dette kan tas med til et storbyangrep (spill/eskalering-visning.js)
-    plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 3000, storbyVekt: 3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };
@@ -89,7 +90,7 @@
     for (const by of o.byer || []) {
       if (by.eier === o.side || !gruppemål(by) || !tillatt(by, o.døgn, g, o.storFra, o.blåOpptatt)) continue; const d = avst(by, midt); if (d > P.rekkevidde) continue;
       const b = behov(by, g); if (b > sum) continue;
-      const vekt = Math.sqrt(Math.max(1, by.folk || 0)) * (by.eier === 'blå' ? P.blåVekt : 1) * (by.tapt ? P.taptVekt : 1);
+      const vekt = Math.sqrt(Math.max(1, by.folk || 0)) * (by.eier === 'blå' ? P.blåVekt : 1) * (by.tapt ? P.taptVekt : 1) * (by.folk >= REGLER.storby ? P.storbyVekt : 1);
       kand.push({ mål: { id: by.id, navn: by.navn, x: by.x, y: by.y, eier: by.eier || null, leir: false }, behov: b, poeng: vekt / (d / 1000 + 4) });
     }
     kand.sort((a, b) => b.poeng - a.poeng);
