@@ -1,6 +1,6 @@
 /* Riksbrudd – FOLKENE I LEIREN SOM FIGURER (16. nov, brukeren: «mer detaljerte karakterer»).
  * Hver person i gjengen (høyst 14) er en figur med kropp, hode med hår eller lue, sekk på noen, og armer og bein som svinger når de går.
- * Fem instansnett: jakke (farget per person), fast (hode, belte, støvler i hofta), hår (farget per person), bein og armer (to per person).
+ * (Runde 7: figuren er den felles, avrundede figuren i spill/figur3d.js – se nederst. Før: fem instansnett av kasser.)
  * De går mellom byggene, stopper opp, og går rundt hindringer. Erstatter de enkle klossfigurene fra spillet-visning.js.
  * RUNDE 4 (18. nov dag): barna og de gamle (SamfunnSpill.tilstand().avhengige, høyst 8) er også figurer – barna mindre og raskere, de
  * gamle krumme (overkroppen bøyd fram) og langsomme. Operatørene står INNE i kontrollrommet, kokken i kjøkkenet, stell og syke i
@@ -18,7 +18,7 @@
   const BARNJAKKER = [[.75, .22, .2], [.2, .45, .75], [.85, .7, .2], [.3, .62, .35], [.7, .35, .6]], GAMLEJAKKER = [[.42, .4, .38], [.38, .3, .24], [.3, .32, .3], [.5, .46, .4]];
   // Claudes forslag: fart (m/s), størrelse og hvor krum overkroppen er (radianer fram) per slags figur
   const SLAG = { voksen: { fart: 1.25, s: 1, krum: 0 }, barn: { fart: 1.7, s: .62, krum: 0 }, gammel: { fart: .75, s: .95, krum: .32 } };
-  let nett = null, figurer = null, nøkkel = '', hjelp = null;
+  let figurer = null, nøkkel = '';
   // PÅ PLASS (18. nov): folk holder seg ved bygget der oppgaven deres hører hjemme (vakta ved tårnet, kokken ved kjøkkenet,
   // operatørene ved kontrollrommet, byggelaget ved byggeplassen). De som er syke i karantene, står ved sykestua eller brakka.
   const ARBEIDSSTED = { vakt: ['vakttårn', 'port'], kjøkken: ['kjøkken'], stell: ['sykestue'], verksted: ['verksted'], overvåking: ['kontrollrom'], frakt: ['lagertelt', 'container'] };
@@ -63,49 +63,32 @@
   }
   function plassVed(b, i, R, u) { if (!b || b.igjen > 0) return null; if (b.type === 'vakttårn') return tårnPlass(b, i, R, u); return INNE.has(b.type) ? innePlass(b, i, R, u) : null; }
 
-  const farg = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); return g; };
-  const boks = (d, x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); g.translate(x, y, z + sz / 2); d.push(farg(g, c)); };
-  // figuren ser mot +x, føttene i origo. Lemmene har origo i leddet (hofta / skulderen) og henger nedover.
-  function deler() { const jakke = [], fast = [], bein = [], arm = [], hår = [], hud = [.86, .69, .56], hv = [1, 1, 1];
-    boks(jakke, 0, 0, .86, .26, .44, .58, hv); boks(jakke, 0, 0, 1.4, .2, .3, .06, hv); boks(jakke, -.02, 0, .8, .28, .46, .1, [.8, .8, .8]);          // overkropp, krage, nederkant
-    boks(fast, 0, 0, 1.45, .12, .13, .08, hud); boks(fast, .01, 0, 1.52, .21, .2, .23, hud); boks(fast, .1, 0, 1.6, .03, .06, .06, [.8, .62, .5]);       // hals, hode, nese
-    // håret er et eget nett (runde 4), så det kan farges per person – grått og hvitt på de gamle
-    boks(hår, -.02, 0, 1.7, .24, .22, .08, hv); boks(hår, -.1, 0, 1.56, .08, .21, .16, hv);
-    boks(fast, 0, 0, .8, .27, .45, .06, [.16, .13, .1]); boks(fast, .13, 0, .81, .03, .08, .05, [.6, .55, .4]);                                           // belte og spenne
-    boks(bein, 0, 0, -.82, .17, .17, .82, hv); boks(bein, .04, 0, -.86, .27, .18, .12, [.3, .3, .3]);                                                       // bukse og støvel (mørkere)
-    boks(arm, 0, 0, -.56, .12, .12, .56, hv); boks(arm, .01, 0, -.66, .1, .1, .1, [.35, .3, .28]);                                                          // erme og hanske
-    // (17. nov: «gjør alt mer detaljert») øyne, bryn, ører og munn, glidelås, brystlommer, skulderklaffer, mansjetter, knelapper og såler
-    const mørk = [.12, .1, .09], dus = [.72, .72, .72];
-    for (const sy of [-1, 1]) { boks(fast, .112, sy * .05, 1.64, .012, .035, .022, [.95, .95, .93]); boks(fast, .118, sy * .05, 1.645, .008, .016, .016, [.15, .2, .25]); boks(fast, .112, sy * .05, 1.672, .014, .05, .012, [.22, .17, .12]);
-      boks(fast, .0, sy * .105, 1.6, .05, .02, .07, [.8, .62, .5]); boks(jakke, .132, sy * .11, 1.18, .012, .13, .12, dus); boks(jakke, .14, sy * .11, 1.28, .012, .14, .025, [.62, .62, .62]);
-      boks(jakke, 0, sy * .19, 1.42, .14, .1, .025, dus); boks(jakke, .1, sy * .07, 1.4, .06, .09, .07, [.9, .9, .9]); }
-    boks(fast, .112, 0, 1.565, .012, .07, .012, [.6, .36, .32]); boks(jakke, .134, 0, .9, .01, .02, .5, [.5, .5, .5]); boks(jakke, -.135, 0, 1.0, .012, .3, .34, [.86, .86, .86]);
-    boks(bein, .09, 0, -.46, .02, .15, .14, dus); boks(bein, .05, 0, -.87, .3, .19, .03, mørk); boks(bein, -.085, 0, -.3, .012, .12, .12, dus);
-    boks(arm, 0, 0, -.57, .13, .13, .04, dus); boks(arm, .065, 0, -.2, .012, .08, .08, [.8, .8, .8]); boks(arm, .05, .03, -.7, .05, .03, .05, [.32, .27, .25]);
-    return { jakke: MODELLER.samle(jakke), fast: MODELLER.samle(fast), bein: MODELLER.samle(bein), arm: MODELLER.samle(arm), hår: MODELLER.samle(hår) }; }
-  // Leddene: hoftene på rot, overkroppen (jakke og fast) dreier om hofta (z 0,82) – de gamle er krumme – og skuldrene sitter på overkroppen.
-  function lag(R) { const G = deler(), mat = new THREE.MeshLambertMaterial({ vertexColors: true }), mk = (g, n) => { const m = new THREE.InstancedMesh(g, mat, n); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3); m.frustumCulled = false; m.count = 0; m.userData.kilde = 'folk3d.js'; R.scene.add(m); return m; };
-    nett = { jakke: mk(G.jakke, ALLE), fast: mk(G.fast, ALLE), hår: mk(G.hår, ALLE), bein: mk(G.bein, ALLE * 2), arm: mk(G.arm, ALLE * 2), scene: R.scene };
-    const rot = new THREE.Object3D(), over = new THREE.Object3D(); over.position.set(0, 0, .82); rot.add(over);
-    const ledd = [[0, -.1, .82], [0, .1, .82]].map(([x, y, z]) => { const o = new THREE.Object3D(); o.position.set(x, y, z); rot.add(o); return o; });
-    for (const y of [-.28, .28]) { const o = new THREE.Object3D(); o.position.set(0, y, 1.4 - .82); over.add(o); ledd.push(o); }
-    hjelp = { rot, over, ledd, ned: new THREE.Matrix4().makeTranslation(0, 0, -.82), m: new THREE.Matrix4() }; figurer = null; nøkkel = ''; }
-  KROKER.ramme3d.push(R => { if (!R.ut || typeof THREE === 'undefined' || !window.MODELLER || !window.FolkSpill || !window.OppstartSpill) return; const F = FolkSpill.tilstand(), S = OppstartSpill.tilstand(), leir = S && S.leir, u = R.ut; if (!F || !leir) return;
-    if (!nett || nett.scene !== R.scene || nett.jakke.parent !== R.scene) lag(R);
+  // RUNDE 7 (20. nov, kritikerne: «menneskene er kantete klosser»): figurene er den felles, avrundede figuren i spill/figur3d.js – én
+  // flokk (to nett: nær og fjern). Bevegelsen (beina og armene svinger, armene fram med en kasse når de bærer, krum overkropp for de
+  // gamle, større hode på barna, vakta med gevær) regnes i skyggeleggeren; her settes bare plass, retning og stilling per figur.
+  const HUD = [[.86, .69, .56], [.8, .62, .49], [.66, .48, .36], [.92, .79, .68], [.47, .33, .25]];
+  // Claudes forslag: hvor mange som har langt hår, lue og sekk
+  const ANDEL = { langt: .3, lue: .2, sekk: .15 };
+  let flokk = null, obj = null;
+  function lag(R) { if (flokk) flokk.kast(); const D = Figur3d.DEL; flokk = Figur3d.flokk(R, { maks: ALLE, kilde: 'folk3d.js', deler: D.hår | D.langt | D.lue | D.sekk | D.kasse | D.gevær }); obj = new THREE.Object3D(); figurer = null; nøkkel = ''; }
+  KROKER.ramme3d.push(R => { if (!R.ut || typeof THREE === 'undefined' || !window.Figur3d || !window.FolkSpill || !window.OppstartSpill) return; const F = FolkSpill.tilstand(), S = OppstartSpill.tilstand(), leir = S && S.leir, u = R.ut; if (!F || !leir) return;
+    if (!flokk || flokk.scene !== R.scene || !flokk.nær.parent) lag(R);
     const SS = window.SamfunnSpill && SamfunnSpill.tilstand && SamfunnSpill.tilstand(), AVH = SS && SS.avhengige ? SS.avhengige.slice(0, MAKS_AVH) : [];
-    const nV = Math.min(MAKS, F.personer.length), n = nV + AVH.length, nær = Math.abs(leir.x - u.cx) < u.S - 60 && Math.abs(leir.y - u.cy) < u.S - 60, vis = nær && n > 0; for (const k of ['jakke', 'fast', 'hår', 'bein', 'arm']) nett[k].visible = vis; if (!vis) return;
-    const pers = i => (i < nV ? F.personer[i] : AVH[i - nV]);
+    const nV = Math.min(MAKS, F.personer.length), n = nV + AVH.length, nær = Math.abs(leir.x - u.cx) < u.S - 60 && Math.abs(leir.y - u.cy) < u.S - 60, vis = nær && n > 0; flokk.synlig(vis); if (!vis) return;
+    const pers = i => (i < nV ? F.personer[i] : AVH[i - nV]), D = Figur3d.DEL;
     const ny = F.personer.slice(0, nV).map(p => p.id).join(',') + '|' + AVH.map(a => a.id).join(',');
-    if (!figurer || ny !== nøkkel) { const gamle = new Map((figurer || []).map(p => [p.nøkkel, p])); figurer = []; nøkkel = ny; const c = new THREE.Color();
+    if (!figurer || ny !== nøkkel) { const gamle = new Map((figurer || []).map(p => [p.nøkkel, p])); figurer = []; nøkkel = ny;
       for (let i = 0; i < n; i++) { const p = pers(i), slag = i < nV ? 'voksen' : p.type === 'barn' ? 'barn' : 'gammel', id = (i < nV ? 'p' : 'a') + (p.id || i), h = (((p.id || i) + (i < nV ? 0 : 977)) * 2654435761) >>> 0;
         const liste = slag === 'barn' ? BARNJAKKER : slag === 'gammel' ? GAMLEJAKKER : JAKKER, j = liste[h % liste.length], bk = BUKSER[(h >>> 8) % BUKSER.length], før = gamle.get(id);
-        figurer.push(før || { nøkkel: id, slag, x: leir.x + (Math.random() - .5) * 40, y: leir.y + (Math.random() - .5) * 40, tx: 0, ty: 0, vent: Math.random() * 6, a: Math.random() * 6.28, fase: 0, går: 0, s: SLAG[slag].s * (.94 + ((h >>> 16) % 13) / 100), inne: null, mål: null });
-        const hf = (slag === 'gammel' ? HÅR_GAMMEL : HÅR)[(h >>> 12) % (slag === 'gammel' ? HÅR_GAMMEL : HÅR).length]; c.setRGB(hf[0], hf[1], hf[2]); nett.hår.setColorAt(i, c);
-        c.setRGB(j[0], j[1], j[2]); nett.jakke.setColorAt(i, c); nett.arm.setColorAt(i * 2, c); nett.arm.setColorAt(i * 2 + 1, c); c.setRGB(bk[0], bk[1], bk[2]); nett.bein.setColorAt(i * 2, c); nett.bein.setColorAt(i * 2 + 1, c); }
-      for (const k of ['jakke', 'hår', 'arm', 'bein']) nett[k].instanceColor.needsUpdate = true; }
-    const L = window.LeirSpill && LeirSpill.tilstand(), bygg = L && window.Leir ? L.bygg.filter(b => b.x !== undefined && !Leir.BYGG[b.type].del && Math.hypot(b.x - leir.x, b.y - leir.y) < 150) : [], dt = tempo > 0 ? .016 : 0, { rot, over, ledd, ned, m } = hjelp;
+        const f = før || { nøkkel: id, slag, x: leir.x + (Math.random() - .5) * 40, y: leir.y + (Math.random() - .5) * 40, tx: 0, ty: 0, vent: Math.random() * 6, a: Math.random() * 6.28, fase: 0, går: 0, s: SLAG[slag].s * (.94 + ((h >>> 16) % 13) / 100), inne: null, mål: null };
+        // utseendet står fast per person: hårfarge (grått og hvitt på de gamle), hud, langt hår, lue eller sekk
+        const HL = slag === 'gammel' ? HÅR_GAMMEL : HÅR, hf = HL[(h >>> 12) % HL.length], r = k => hash(h % 100000, k);
+        f.farger = Figur3d.farger(j, bk, hf, HUD[(h >>> 20) % HUD.length]);
+        f.maske = (r(1) < ANDEL.lue && slag !== 'barn' ? D.lue : r(2) < ANDEL.langt && slag !== 'gammel' ? D.hår | D.langt : D.hår) | (slag === 'voksen' && r(3) < ANDEL.sekk ? D.sekk : 0);
+        figurer.push(f); } }
+    const L = window.LeirSpill && LeirSpill.tilstand(), bygg = L && window.Leir ? L.bygg.filter(b => b.x !== undefined && !Leir.BYGG[b.type].del && Math.hypot(b.x - leir.x, b.y - leir.y) < 150) : [], dt = tempo > 0 ? .016 : 0;
     const brakker = bygg.filter(b => b.type === 'brakke' && !(b.igjen > 0));
-    nett.jakke.count = nett.fast.count = nett.hår.count = n; nett.bein.count = nett.arm.count = n * 2;
+    flokk.start();
     figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
       // et nytt utsnitt: plassen inne gjelder ikke lenger (høyden er regnet fra det gamle) – gå ut døra
       if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; p.tx = 0; }
@@ -120,12 +103,15 @@
             if (p.mål && (p.omveg || 0) < 4) { p.omveg = (p.omveg || 0) + 1; if (!p.etter) p.etter = [p.tx, p.ty]; const sd = p.omveg % 2 ? 1 : -1; p.tx = p.x - dy / d * 3 * sd; p.ty = p.y + dx / d * 3 * sd; }
             else { p.tx = 0; p.mål = null; p.etter = null; p.omveg = 0; } } else { p.x = nx; p.y = ny; let da = Math.atan2(dy, dx) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 6); p.fase += v * dt * 4.2; går = 1; } } }
       p.går += (går - p.går) * Math.min(1, dt * 8 + (dt ? 0 : 1));
+      if (q && q.borte) return;
       // vakta i tårnet speider sakte fram og tilbake; de som står inne, snur seg litt innimellom
-      const a = p.inne ? p.inne.a + Math.sin(performance.now() / (p.inne.tårn ? 4000 : 7000) + i) * (p.inne.tårn ? .7 : .4) : p.a;
-      const sv = Math.sin(p.fase) * .6 * p.går, z = p.inne ? p.inne.z : (hoyde3d(p.x, p.y) - u.h0) * R.EX; rot.position.set(p.x - u.cx, p.y - u.cy, z); rot.rotation.set(0, 0, a); rot.scale.setScalar(q && q.borte ? .001 : p.s);
-      over.rotation.y = G.krum + (syk ? .12 : 0); ledd[0].rotation.y = sv; ledd[1].rotation.y = -sv; ledd[2].rotation.y = -sv * .7 - G.krum * .6; ledd[3].rotation.y = sv * .7 - G.krum * .6; rot.updateMatrixWorld(true);
-      m.multiplyMatrices(over.matrixWorld, ned); nett.jakke.setMatrixAt(i, m); nett.fast.setMatrixAt(i, m); nett.hår.setMatrixAt(i, m); nett.bein.setMatrixAt(i * 2, ledd[0].matrixWorld); nett.bein.setMatrixAt(i * 2 + 1, ledd[1].matrixWorld); nett.arm.setMatrixAt(i * 2, ledd[2].matrixWorld); nett.arm.setMatrixAt(i * 2 + 1, ledd[3].matrixWorld); });
-    for (const k of ['jakke', 'fast', 'hår', 'bein', 'arm']) nett[k].instanceMatrix.needsUpdate = true; });
+      const a = p.inne ? p.inne.a + Math.sin(performance.now() / (p.inne.tårn ? 4000 : 7000) + i) * (p.inne.tårn ? .7 : .4) : p.a, z = p.inne ? p.inne.z : (hoyde3d(p.x, p.y) - u.h0) * R.EX;
+      // de som frakter eller bygger, bærer en kasse når de går; vakta har gevær (lavt når hun går, klart når hun står)
+      const oppg = q && !q.karantene && p.slag === 'voksen' ? q.oppgave : '', bær = (oppg === 'frakt' || oppg === 'bygg') && !p.inne ? p.går : 0, vakt = oppg === 'vakt';
+      obj.position.set(p.x - u.cx, p.y - u.cy, z); obj.rotation.set(0, 0, a); obj.scale.setScalar(p.s); obj.updateMatrix();
+      flokk.legg(obj.matrix, { fase: p.fase, sving: p.går, bære: vakt ? 0 : bær, sikte: vakt ? .45 * (1 - p.går) : 0, krum: G.krum + (syk ? .12 : 0), barn: p.slag === 'barn' ? 1 : 0,
+        maske: p.maske | (bær > .5 && !vakt ? D.kasse : 0) | (vakt ? D.gevær : 0), farger: p.farger }); });
+    flokk.slutt(); });
   // hvor en figur går nå: til arbeidsplassen (inn i bygget eller opp i tårnet), et tilfeldig bygg, eller (barn og gamle) rundt brakka
   function velgMål(p, i, q, bygg, brakker, leir, R, u) {
     const rnd = Math.random; let b = null, r = 0, hos = false;
@@ -138,5 +124,5 @@
     const v = rnd() * 6.283; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.mål = null;
     p.etter = null; p.omveg = 0; p.vent = p.slag === 'gammel' ? 10 + rnd() * 40 : hos ? 8 + rnd() * 30 : 2 + rnd() * 14; p.hos = hos && b ? b.type : '';
   }
-  window.Folk3d = { antall: () => (nett && nett.jakke.visible ? nett.jakke.count : 0), figurer: () => figurer, nett: () => nett, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
+  window.Folk3d = { antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
 })();

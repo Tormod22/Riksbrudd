@@ -74,46 +74,70 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
   // ---------- våpenet i hånda (førsteperson) ----------
   // Kameraets rom: x mot høyre, y opp, −z framover. Hvert våpen er noen få klosser; hånda holder rundt grepet.
   let vm = null;
-  // (17. nov: «gjør alt mer detaljert») rundt løp, munningsbrems, forskjefte med kjøleslisser, skinne, utkasterluke, ladegrep, buet
-  // magasin, skrått pistolgrep, avtrekker i bøyle, sikter med vinger, kolbe med kappe og kinnstøtte; hagla har pumpe og rørmagasin,
-  // rifla sluttstykke og kikkert på ringer, pistolen sleide med riller og hane. Hanskene har fingre, ermet mansjett.
-  function vmGeo(id) { const d = [], st = [.13, .13, .14], st2 = [.2, .2, .21], blank = [.34, .35, .36], tre = [.36, .25, .15], tre2 = [.28, .19, .11], hud2 = [.3, .27, .24], erme = [.3, .36, .26], erme2 = [.24, .29, .2];
-    const farg = (g, c) => { const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); };
-    // b: kloss (rx = vippet om x-aksen), r: rør langs z
-    const b = (x, y, z, sx, sy, sz, c, rx) => { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); if (rx) g.rotateX(rx); g.translate(x, y, z); farg(g, c); };
-    const r = (x, y, z, rad, l, c, seg) => { const g = new THREE.CylinderGeometry(rad, rad, l, seg || 8).toNonIndexed(); g.rotateX(Math.PI / 2); g.translate(x, y, z); farg(g, c); };
+  // RUNDE 7 (20. nov, kritikerne: «geværet er en kantete kloss»): våpenet er bygget av avrundede former med myke normaler (kapsler og
+  // dreide profiler fra spill/figur3d.js): kasse og forskjefte med runde kanter, rundt løp med munningsbrems, kolbe som vider seg ut mot
+  // en gummiplate, skrått pistolgrep, avtrekker i bøyle, buet magasin, korn med vinger og hullsikte (rifla har kikkert på ringer, hagla
+  // pumpe og rørmagasin, pistolen sleide). Hansken har avrundet håndflate, fingre rundt grepet og tommel; ermet er rundt med mansjett.
+  // Kameraets rom: x mot høyre, y opp, −z framover.
+  function vmGeo(id) { if (!window.Figur3d || !window.MODELLER) return null;
+    const d = [], Fo = Figur3d.form, st = [.13, .13, .14], st2 = [.2, .2, .21], blank = [.34, .35, .36], tre = [.36, .25, .15], tre2 = [.28, .19, .11], svart = [.07, .07, .075], hans = [.3, .27, .24], hans2 = [.25, .22, .19], erme = [.3, .36, .26], erme2 = [.24, .29, .2];
+    const farg = (g, c) => { if (g.attributes.uv) g.deleteAttribute('uv'); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let q = 0; q < n; q++) f.set(c, q * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); return g; };
+    // kapsel langs z (fra z0 til z1), ovalt tverrsnitt (sx, sy), vippet rx om x-aksen; kapsel langs y (loddrett) med tverrsnitt sx, sz
+    const kz = (x, y, z0, z1, r0, r1, c, sx = 1, sy = 1, rx = 0, seg = 10, ender = 2) => { const g = Fo.kapsel(seg, r0, r1, z0, z1, sx, sy, ender); if (rx) { g.translate(0, 0, -(z0 + z1) / 2); g.rotateX(rx); g.translate(0, 0, (z0 + z1) / 2); } g.translate(x, y, 0); return farg(g, c); };
+    const ky = (x, y0, y1, z, r0, r1, c, sx = 1, sz = 1, rx = 0, seg = 8) => { const g = Fo.kapsel(seg, r0, r1, y0, y1, sx, sz, 2); g.rotateX(-Math.PI / 2); if (rx) { g.translate(0, -(y0 + y1) / 2, 0); g.rotateX(rx); g.translate(0, (y0 + y1) / 2, 0); } g.translate(x, 0, z); return farg(g, c); };
+    // dreid profil [[radius, z], ...] langs z
+    const pz = (x, y, prof, c, sx = 1, sy = 1, rx = 0, seg = 12) => { const g = Fo.dreid(seg, prof, sx, sy); if (rx) g.rotateX(rx); g.translate(x, y, 0); return farg(g, c); };
+    // kapsel fra punkt A til punkt B (ermene går ned og ut av bildet mot albuen)
+    const kab = (A, B, r0, r1, c, seg = 12) => { const v = new THREE.Vector3(B[0] - A[0], B[1] - A[1], B[2] - A[2]), l = v.length(), g = Fo.kapsel(seg, r0, r1, 0, l, 1, 1, 1); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), v.normalize()))); g.translate(A[0], A[1], A[2]); return farg(g, c); };
+    const kule = (x, y, z, r, c, sx = 1, sy = 1, sz = 1, seg = 10) => { const g = new THREE.SphereGeometry(r, seg, Math.max(4, seg - 3)); g.scale(sx, sy, sz); g.translate(x, y, z); return farg(g, c); };
     const V = { pistol: { løp: .1, kolbe: 0, mag: .09, tykk: .03 }, mp: { løp: .16, kolbe: .12, mag: .16, tykk: .04 }, gevær: { løp: .3, kolbe: .24, mag: .13, tykk: .045 }, hagle: { løp: .36, kolbe: .26, mag: 0, tykk: .05, tre: true }, rifle: { løp: .46, kolbe: .28, mag: .06, tykk: .045, tre: true, kikkert: true } }[id] || { løp: .3, kolbe: .24, mag: .13, tykk: .045 };
-    const T = V.tykk, L = V.løp, sk = V.tre ? tre : st, ende = -.18 - L;
-    if (id === 'pistol') { b(0, .012, -.1, T, .034, .2, st); b(0, -.012, -.09, T * .9, .02, .16, st2); for (let q = 0; q < 5; q++) b(0, .012, -.02 + q * .008, T + .003, .03, .003, st2);
-      r(0, .012, -.205, .008, .02, blank, 8); b(0, .005, -.07, T + .002, .012, .03, blank); b(0, .03, .0, .008, .016, .012, st2); b(0, .034, -.19, .005, .012, .006, st2); b(0, .034, -.01, .016, .01, .005, st2);
-      b(0, -.07, -.015, T * .9, .11, .045, st2, -.2); for (let q = 0; q < 4; q++) b(0, -.045 - q * .016, -.012 - q * .0033, T * .9 + .003, .006, .04, st, -.2); b(0, -.125, -.027, T * .8, .012, .05, st);
-      b(0, -.035, -.06, .006, .004, .05, st); b(0, -.023, -.085, .006, .028, .004, st); b(0, -.022, -.058, .005, .02, .005, blank, .3); }
-    else { b(0, 0, -.08, T, .06, .2, st); b(0, .033, -.08, T * .5, .008, .2, st2); for (let q = 0; q < 8; q++) b(0, .039, -.17 + q * .024, T * .5, .004, .012, st);
-      b(T / 2 + .001, .008, -.09, .002, .018, .05, blank); b(T / 2 + .006, .014, -.045, .012, .008, .012, st2); b(-T / 2 - .002, -.002, -.1, .003, .012, .02, st2);
-      r(0, .012, -.18 - L / 2, .0095, L, st2, 8); r(0, .012, ende - .012, .014, .04, st, 8); for (let q = 0; q < 2; q++) b(0, .012, ende - .004 - q * .014, .03, .005, .005, [.05, .05, .05]);
-      if (id === 'hagle') { r(0, -.012, -.2 - L * .42, .0095, L * .8, st2, 8); b(0, -.012, -.22 - L * .35, T * .95, .04, L * .32, tre); for (let q = 0; q < 6; q++) b(0, -.012, -.22 - L * .35 - L * .13 + q * L * .052, T * .95 + .003, .042, .006, tre2); r(0, .028, ende + .01, .004, .008, [.8, .7, .3], 6); }
-      else { b(0, -.008, -.2 - L * .32, T * .92, .046, L * .6, sk); for (let q = 0; q < 5; q++) b(0, .0, -.2 - L * .08 - q * L * .11, T * .92 + .003, .012, L * .06, V.tre ? tre2 : [.05, .05, .06]); b(0, -.034, -.2 - L * .3, T * .5, .008, L * .4, st2); }
-      // sikter: kornet med vinger foran, hullsikte bak (rifla har kikkert i stedet)
-      if (V.kikkert) { r(0, .066, -.1, .016, .2, st, 10); r(0, .066, -.215, .022, .04, st, 10); r(0, .066, .01, .019, .03, st, 10); r(0, .066, -.237, .019, .004, [.25, .4, .55], 10); r(0, .066, .027, .015, .004, [.2, .3, .4], 10);
-        for (const z of [-.15, -.05]) { b(0, .045, z, .014, .026, .014, st2); } b(0, .09, -.1, .012, .012, .016, st2); b(.022, .066, -.1, .016, .012, .012, st2);
-        b(T / 2 + .012, .006, -.03, .03, .008, .008, blank); r(T / 2 + .03, .006, -.03, .009, .014, blank, 6); }
-      else { b(0, .034, ende + .03, .006, .034, .006, st); for (const sx of [-1, 1]) b(sx * .01, .03, ende + .03, .003, .028, .012, st); b(0, .046, -.01, .022, .022, .008, st); b(0, .05, -.01, .008, .008, .01, [.05, .05, .05]); }
-      // kolbe med kappe og kinnstøtte, grep, avtrekkerbøyle, magasin (buet i to ledd)
-      if (V.kolbe) { const K = V.kolbe; b(0, -.02, .02 + K / 2, T * .8, .058, K, sk, -.06); b(0, -.03, .025 + K, T * .9, .1, .016, [.07, .07, .07]); b(0, .014, .03 + K * .55, T * .6, .014, K * .5, V.tre ? tre2 : st2); if (!V.tre) b(0, -.02, .06 + K * .4, T * .82, .03, K * .3, [.05, .05, .06]); b(-T / 2, -.02, .04 + K * .8, .006, .016, .02, blank); }
-      b(0, -.07, -.015, T * .8, .1, .04, sk, -.25); if (!V.tre) for (let q = 0; q < 4; q++) b(0, -.045 - q * .016, -.012 - q * .004, T * .8 + .003, .005, .036, st2, -.25);
-      b(0, -.035, -.065, .005, .004, .06, st); b(0, -.025, -.095, .005, .024, .004, st); b(0, -.024, -.062, .004, .02, .004, blank, .3);
-      if (V.mag) { const m = V.mag; b(0, -.03 - m * .3, -.105, T * .7, m * .6, .045, st2, .08); b(0, -.03 - m * .78, -.112 - m * .08, T * .7, m * .5, .045, st2, .28); for (let q = 0; q < 3; q++) b(0, -.04 - m * (.2 + q * .22), -.105 - q * m * .05, T * .7 + .003, .004, .046, st, .1 + q * .08); b(0, -.03 - m, -.118 - m * .12, T * .74, .008, .05, st, .3); } }
-    // hanske med fingre og knokevern, erme med mansjett
-    b(.005, -.085, -.02, .066, .09, .078, hud2); for (let q = 0; q < 4; q++) b(.005, -.062 - q * .019, -.058, .07, .016, .02, [.26, .23, .2]); b(-.03, -.05, -.02, .014, .05, .03, [.26, .23, .2]); b(.005, -.06, .02, .068, .05, .012, [.16, .16, .17]);
-    b(.03, -.11, .06, .08, .08, .2, erme); b(.03, -.11, -.035, .086, .086, .02, erme2); b(.072, -.1, .08, .004, .05, .06, erme2);
-    if (id !== 'pistol') { const z = -.24 - L * .3; b(-.02, -.05, z, .07, .06, .08, hud2); for (let q = 0; q < 4; q++) b(-.02, -.018, z - .03 + q * .02, .072, .012, .016, [.26, .23, .2]); b(.018, -.03, z + .02, .012, .04, .03, [.26, .23, .2]);
-      b(-.07, -.1, -.14 - L * .2, .08, .08, .22, erme); b(-.045, -.076, z + .06, .084, .07, .02, erme2); }
-    return window.MODELLER ? MODELLER.samle(d) : null; }
+    const T = V.tykk, L = V.løp, sk = V.tre ? tre : st, sk2 = V.tre ? tre2 : st2, ende = -.18 - L;
+    if (id === 'pistol') {
+      // sleiden med avrundede kanter og riller bak, rammen under, løpsmunning, sikter, skrått grep med plater, bøyle og avtrekker
+      kz(0, .014, -.205, -.005, .016, .016, st, T / .034, 1.15, 0, 10, 1); kz(0, -.008, -.19, -.02, .013, .013, st2, T / .03, 1, 0, 8, 1);
+      for (let q = 0; q < 4; q++) kz(0, .016, -.03 + q * .007, -.028 + q * .007, .0175, .0175, st2, T / .034, 1.12, 0, 8, 1);
+      kz(0, .012, -.215, -.205, .0075, .0075, blank, 1, 1, 0, 8, 1); kz(0, .034, -.195, -.185, .003, .003, st2, 1, 1.4, 0, 6, 1); kz(0, .034, -.012, -.004, .004, .004, st2, 2.5, 1.2, 0, 6, 1);
+      ky(0, -.115, -.02, -.016, .02, .021, st2, T / .042, 1.15, -.2); for (const sx of [-1, 1]) ky(sx * T * .42, -.105, -.03, -.016, .012, .013, [.1, .09, .085], .35, 1.25, -.2);
+      kz(0, -.03, -.08, -.04, .004, .004, st, 1, 1, 0, 6, 1); ky(0, -.035, -.022, -.075, .004, .004, st, 1, 1, 0, 6); ky(0, -.036, -.022, -.058, .003, .003, blank, 1, 1, .3, 6); }
+    else {
+      // kassa: avrundet, litt høyere enn den er bred, med skinne på toppen, utkasterluke og ladegrep
+      kz(0, 0, -.17, .01, .027, .027, st, T / .054, 1.25, 0, 10, 2); kz(0, .036, -.17, .0, .006, .006, st2, T / .02, .9, 0, 6, 1);
+      kz(T / 2 + .001, .008, -.115, -.065, .007, .007, blank, .3, 1.3, 0, 6, 1); kz(T / 2 + .007, .014, -.05, -.038, .006, .006, st2, 1, 1, 0, 6, 1);
+      // løpet med munningsbrems (to riller), forskjeftet (eller pumpa og rørmagasinet på hagla)
+      pz(0, .012, [[.0095, -.18], [.0095, ende + .03], [.012, ende + .028], [.014, ende + .01], [.014, ende - .012], [.009, ende - .014]], st2, 1, 1, 0, 12);
+      for (let q = 0; q < 2; q++) kz(0, .012, ende - .008 + q * .012, ende - .004 + q * .012, .0145, .0145, svart, 1, 1, 0, 10, 1);
+      if (id === 'hagle') { kz(0, -.014, -.2, -.2 - L * .82, .0095, .0095, st2, 1, 1, 0, 10, 1); pz(0, -.012, [[.022, -.2 - L * .2], [.03, -.21 - L * .2], [.031, -.2 - L * .5], [.022, -.21 - L * .5]], tre, T / .06, 1.3, 0, 12);
+        for (let q = 0; q < 6; q++) kz(0, -.012, -.22 - L * .23 - q * L * .045, -.215 - L * .23 - q * L * .045, .0315, .0315, tre2, T / .06, 1.32, 0, 10, 1); kule(0, .028, ende + .012, .005, [.8, .7, .3], 1, 1, 1, 6); }
+      else { pz(0, -.006, [[.02, -.17], [.029, -.18], [.03, -.2 - L * .3], [.028, -.2 - L * .6], [.02, -.21 - L * .62]], sk, T / .062, 1.18, 0, 12);
+        for (let q = 0; q < 5; q++) kz(0, -.004, -.2 - L * .08 - q * L * .11, -.2 - L * .05 - q * L * .11, .031, .031, V.tre ? tre2 : svart, T / .064, .5, 0, 8, 1); }
+      // sikter: korn med vinger foran og hullsikte bak – rifla har kikkert på ringer
+      if (V.kikkert) { pz(0, .066, [[.019, .025], [.02, .015], [.016, -.0], [.016, -.19], [.021, -.205], [.023, -.235], [.02, -.24]], st, 1, 1, 0, 14);
+        kz(0, .066, -.241, -.239, .019, .019, [.25, .4, .55], 1, 1, 0, 12, 1); kz(0, .066, .023, .026, .016, .016, [.2, .3, .4], 1, 1, 0, 12, 1);
+        for (const z of [-.15, -.05]) { ky(0, .03, .05, z, .01, .01, st2, 1.4, .8); kz(0, .066, z - .007, z + .007, .019, .019, st2, 1, 1, 0, 12, 1); } ky(0, .08, .095, -.1, .008, .008, st2); kz(.024, .066, -.106, -.094, .008, .008, st2, 1, 1, 0, 8, 1);
+        kz(T / 2 + .015, .006, -.035, -.025, .007, .007, blank, 2.2, .6, 0, 6, 1); kule(T / 2 + .032, .006, -.03, .009, blank, 1, 1, 1, 8); }
+      else { ky(0, .02, .05, ende + .03, .003, .003, st, 1, 1, 0, 6); for (const sx of [-1, 1]) ky(sx * .011, .018, .046, ende + .03, .003, .004, st, .8, 2.2, 0, 6);
+        kz(0, .046, -.016, -.004, .012, .012, st, 1, .9, 0, 10, 1); kz(0, .046, -.018, -.002, .004, .004, svart, 1, 1, 0, 8, 1); }
+      // kolbe som vider seg ut bakover med gummiplate og kinnstøtte, pistolgrep, bøyle og avtrekker
+      if (V.kolbe) { const K = V.kolbe; pz(0, -.02, [[.022, .0], [.024, .03], [.03, K * .55], [.036, K * .9], [.038, K - .008], [.034, K]], sk, T * .82 / .07, 1.25, -.06, 12);
+        kz(0, -.03, .02 + K - .01, .02 + K + .012, .036, .036, svart, T * .86 / .07, 1.3, -.06, 10, 1); kz(0, .012, .04 + K * .25, .02 + K * .8, .009, .01, sk2, T * .6 / .02, 1, 0, 8, 1); }
+      ky(0, -.115, -.02, -.016, .019, .02, sk, T * .8 / .04, 1.15, -.25);
+      kz(0, -.032, -.09, -.04, .004, .004, st, 1, 1, 0, 6, 1); ky(0, -.034, -.024, -.093, .0035, .0035, st, 1, 1, 0, 6); ky(0, -.036, -.022, -.062, .003, .003, blank, 1, 1, .3, 6);
+      if (V.mag) { const m = V.mag; ky(0, -.03 - m * .6, -.025, -.106, .02, .02, st2, T * .7 / .04, 1.15, .08, 8); ky(0, -.03 - m * 1.02, -.03 - m * .52, -.114 - m * .07, .02, .02, st2, T * .7 / .04, 1.15, .3, 8);
+        ky(0, -.04 - m * 1.06, -.03 - m * 1.0, -.12 - m * .13, .021, .021, st, T * .74 / .04, 1.2, .3, 8); } }
+    // hansken: avrundet håndflate rundt grepet, fire fingre og tommel, knokevern; ermet rundt med mansjett
+    kule(.006, -.085, -.02, .04, hans, .85, 1.15, 1.05); for (let q = 0; q < 4; q++) kz(.008, -.062 - q * .019, -.07, -.04, .0105, .0095, hans2, 3.2, .95, 0, 8, 1);
+    ky(-.03, -.07, -.035, -.025, .012, .011, hans2, 1, 1.2, .5, 8); kz(.006, -.058, .012, .028, .03, .03, [.16, .16, .17], 1.15, .8, 0, 10, 1);
+    kab([.02, -.1, .0], [.1, -.32, .22], .036, .043, erme); kab([.016, -.094, -.012], [.024, -.114, .012], .041, .041, erme2);
+    if (id !== 'pistol') { const z = -.24 - L * .3;
+      // venstre hånd under forskjeftet
+      kule(-.018, -.046, z, .038, hans, 1.05, .9, 1.15); for (let q = 0; q < 4; q++) kz(.02, -.02, z - .032 + q * .02, z - .015 + q * .02, .0105, .0095, hans2, 1.1, 1.6, 0, 8, 1); ky(-.035, -.03, -.005, z + .025, .011, .01, hans2, 1, 1.3, 0, 8);
+      kab([-.035, -.07, z + .045], [-.3, -.4, z + .26], .034, .041, erme); kab([-.03, -.063, z + .033], [-.042, -.08, z + .06], .039, .039, erme2); }
+    return MODELLER.samle(d); }
   KROKER.ramme3d.push(R => { if (typeof THREE === 'undefined' || !R.cam) return; const U = window.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill : null, SS = window.SpilletSpill, K = SS && SS.K ? SS.K() : null, går = !!R.fot && !(window.KjorSpill && KjorSpill.fører());
     if (!vm) { if (!U || !går) return; if (!R.cam.parent) R.scene.add(R.cam); vm = { g: new THREE.Group(), id: '', mesh: null, mat: new THREE.MeshLambertMaterial({ vertexColors: true }) }; R.cam.add(vm.g); }
     if (vm.g.parent !== R.cam) { if (!R.cam.parent) R.scene.add(R.cam); R.cam.add(vm.g); }
     vm.g.visible = går && !!U && !document.body.classList.contains('foto') && !window.TREDJE && !(window.MoblerSpill && MoblerSpill.hender()); if (!vm.g.visible) return;
-    const id = U.aktivt().v.id; if (id !== vm.id) { if (vm.mesh) { vm.g.remove(vm.mesh); vm.mesh.geometry.dispose(); } const geo = vmGeo(id); vm.id = id; vm.mesh = geo ? new THREE.Mesh(geo, vm.mat) : null; if (vm.mesh) { vm.mesh.frustumCulled = false; vm.mesh.renderOrder = 5; vm.g.add(vm.mesh); } vm.bytte = performance.now(); }
+    const id = U.aktivt().v.id; if (id !== vm.id) { if (vm.mesh) { vm.g.remove(vm.mesh); vm.mesh.geometry.dispose(); } let geo = null; try { geo = vmGeo(id); } catch (e) { geo = null; } vm.id = id; vm.mesh = geo ? new THREE.Mesh(geo, vm.mat) : null; if (vm.mesh) { vm.mesh.frustumCulled = false; vm.mesh.renderOrder = 5; vm.g.add(vm.mesh); } vm.bytte = performance.now(); }
     const nå = performance.now(), kr = window.Gange && Gange.kropp && Gange.kropp(), fart = kr ? Math.min(6, kr.fart || 0) : 0, rek = K ? Math.max(0, 1 - (nå - K.sist) / 130) : 0, lader = K && nå < K.lader ? 1 : 0, opp = Math.min(1, (nå - (vm.bytte || 0)) / 250), smal = VW < 700 ? .8 : 1;
     vm.ned = (vm.ned || 0) + ((lader ? 1 : 0) - (vm.ned || 0)) * .15;
     // lite og nede til høyre, så det ikke dekker det du ser på eller tallene i hjørnet
