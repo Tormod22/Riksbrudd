@@ -150,6 +150,11 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
   // Har leiren alt et ferdig aggregat eller solceller, er rådet «bygg aggregat eller solceller» feil – da vises ikke varselet
   const egenStrøm = () => { try { return LeirSpill.tilstand().bygg.some(b => (b.type === 'aggregat' || b.type === 'solcelle') && Leir.ferdig(b)); } catch (e) { return false; } };
   function brikker() { const ut = [], S = window.OppstartSpill && OppstartSpill.tilstand(), leir = S && S.leir; if (!leir) return ut; const SS = window.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill : null;
+    // (runde 8) et angrep fra en motstander mot et tettsted du holder (eller leiren, mens de samles): egen brikke – trykk viser stedet
+    { const ES = window.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null;
+      if (ES && ES.gruppe) for (const side of Object.keys(ES.gruppe)) { const G = ES.gruppe[side]; if (!G || !G.mål || !(G.mål.eier === 'blå' || (G.mål.leir && G.fase !== 'angriper'))) continue;
+        const nf = window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden', om = Math.max(0, (G.angripFra || 0) - tid), mål = G.mål.leir ? 'leiren' : G.mål.navn;
+        ut.push({ i: 'varsel', k: 'fare', t: `${G.fase === 'angriper' ? 'Angrep på' : 'Varslet angrep på'} ${mål}`, s: G.fase === 'angriper' ? `${nf}, ${G.lag.length} lag` : `${nf} samler ${G.lag.length} lag${om > 30 ? ' · tidligst om ca. ' + Math.round(om / 60) + ' t' : ''}`, f: () => gåTil(G.mål.x, G.mål.y, 6) || logg(`${nf} ${G.fase === 'angriper' ? 'angriper' : 'samler lag mot'} ${mål}.`) }); } }
     // (runde 8, krig: «angrepsinformasjonen motsier seg selv») brikka bruker den samme statusen som banneret (ForsvarSpill.status: sett nå,
     // sist sett, eller et anslag som spenn) – og gjelder også et angrep på leiren fra en motstander, ikke bare røverne
     const FS = window.ForsvarSpill && ForsvarSpill.status ? ForsvarSpill.status() : null;
