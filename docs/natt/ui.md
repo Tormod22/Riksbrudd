@@ -391,3 +391,56 @@ r8-pc-forside.png, r8-tlf-norge-kilde.png, r8-pc-3d-navn.png (leirnavnet i Cormo
 **Ikke gjort / gjenstår:** opplæringsboksen under angrep (annen hjelper), angrepsbannerets tekst/anslag (krig). Flom/ras NÆR leiren stopper
 ikke ⏭ før `verden-visning.js` sender x/y med «riksbrudd-hendelse» (flyt.js tar imot det). Bølge 2 uten utfallsmelding (PC-kritikeren) er ikke
 min del. Loggdempingen gjelder det som vises – «les alt» viser fortsatt bare de seks siste linjene, ingen full historikk.
+
+# Runde 10 (20. nov kveld, brukerens bilder)
+
+Pakke «liggende» (skjermbildet på liggende telefon, 2D og gåmodus). Gren `claude/natt18-ui`, port 8933. Fasit: brukerens iPhone liggende
+(ca. 844 × 390), `bruker20/1-tropp-liggende.png` og `2-ga-ved-bil.png`. Alle tall er Claudes forslag. Prøveskript og bilder: scratchpad
+`natt10/ui/` (start.js = oppstart som spiller, foer.js = kart/Leir/Folk/Deg/Mer/Krig/Tropp/hogst, sveip.js = sekk/lut/morgenmøtet/angrep/☰/hjelp,
+gaa.js = gåmodus ved feltbilen (W/H i miljøet), gaa-rog.js = gåmodus på /rogaland med ekte hus, andre.js = tropp/hogst på PC/stående/liggende,
+vakt.js = kjører vakta). Før-bilder: `foer-*.png`, `sv1-*.png`, `gaa-foer-bil.png`; etter: `etter2-*.png`, `sv2-*.png`, `gaa-etter-*.png`, `rog-gaa.png`, `li-/st-/pc-*.png`.
+
+| # | Punkt | Status |
+|---|---|---|
+| 1 | «Lag ny tropp» trangt og kuttet | rettet |
+| 2 | Opplæringen, hogstlappen og bunnmenyen oppå hverandre, tekst bak bunnmenyen | rettet |
+| 3 | Gåmodus: «Sett deg inn» midt i bildet, «Inngang» over vegen, våpenruta over armen, ti knapper øverst, «Flaske/Lag noe» over styrespaken | rettet |
+| 4 | Gjennomgang av de vanlige skjermene på 844 × 390 | rettet det som overlappet (se under) |
+
+1. **«Lag ny tropp»** (`tropper-visning.js` oppsettet, CSS i `telefon.js`): innholdet ligger i `.kolonner` > `.kol1` (navn, forslag, bevæpning,
+   kjøretøy) og `.kol2` (folk, utstyr, pris, advarsel). På PC og stående telefon er de `display:contents` (ser ut som før). På liggende telefon
+   (`body.kort.tlfligg`) er panelet min(760 px, hele bredden), fra knapperaden ned til bunnmenyen (skjermlag løfter det), to kolonner som rulles
+   hver for seg (rullingen huskes når panelet tegnes på nytt), forslagene som små kort (navn + to linjer), og «Opprett» (`.opprett`) står
+   alltid nederst. På PC og stående er `.opprett` klebrig nederst i panelet (sticky). Gjelder også «Bruk endringene» i Våpen og utstyr.
+2. **Én ting nederst** (`opplaering.js`, `telefon.js`, `skjermlag.js`, `spillhud.js`):
+   - Liggende telefon med en meny åpen (Leir, Folk, Tropper, Deg, sekk, krig): opplæringslinja står øverst ved siden av menyen (`ved()`,
+     `body.oppved`), ikke nederst; menyen går da helt ned til bunnmenyen. Er det under `VED_MIN` = 200 px ved siden av (tropppanelet), viker linja.
+   - `ressursvalg` (hogst-/rivelappen) er med i `DEKKER`: opplæringen viker mens lappen står. Lappen står over bunnmenyen (`body.kort.mkom
+     #ressursvalg{ bottom:64px }`), kan rulles, og står ved siden av en åpen meny på liggende telefon (`vedMeny()` i telefon.js – også
+     byggebanneret og angrepsbanneret `#alarm`).
+   - Bunnmenyens knapper er ugjennomsiktige; opplæringsruta er ugjennomsiktig på telefon (kildeteksten, målestokken og kompassrosa skinte gjennom).
+   - `skjermlag.js løft()`: opplæringslinja regnes bare som «gulv» når den står nederst; `morgenkort` løftes over bunnmenyen; pauselappen vises
+     ikke når den ellers ville lagt seg over knapperaden (liggende, kortet fyller høyden).
+   - Opplæringen viker for morgenmøtet, samfunnskortet og personkortet på telefon (den lå under morgenkortet).
+   - `spillhud.js`: `lutpanel` er med i `HELSKJERM` – bunnmenyen viker for inventaret (den lå oppå den nederste delen).
+   - `narhud.js løftVarsler()`: varselbrikkene står også over opplæringsruta.
+3. **Gåmodus på telefon** (`narhud.js`, CSS + én takt): knapperaden har bare Gå, Deg, ☰, pause, farten og ny knapp «⋯» (`#gaamer`); 3D, Leir,
+   Krig, ⏭, ? og alt annet kommer fram bak «⋯» (raden blir lengre; lukkes ved neste trykk). `NarHud.BEHOLD` er lista. Bare utenfor testene
+   (`body.gaarydd`; `NarHud.test = true` slår det på med webdriver). Liggende (`tlfligg`, ikke når du kjører): «Flaske …»/«Lag noe» (#evrad) i
+   en rad øverst til venstre (venstre for kompasset), loggen rett under den (2 linjer), «Sett deg inn …» (#kjorknapp) nede til høyre over Huk/Hopp,
+   helse- og våpenruta små til høyre for styrespaken (x 152 px), kildeteksten kort (136 px). Inngangspila (`gange.js`, to tall): på telefon 30 px
+   under siktet (før 54), 12 px skrift, lavere boks. Prøvd på /rogaland med ekte hus («Inngang 30 m · rundt huset»).
+4. **Gjennomgått på 844 × 390 som spiller**: kart, Leir, Folk, Deg, Mer, Krig, Tropper, sekken, lutpanelet, morgenmøtet, angrep (banner + Leir),
+   ☰, hjelpen, gåmodus (Dovre og Rogaland), og PC 1400 × 820 / stående 390 × 844 for tropppanelet, hogstlappen og gåmodus (uendret på PC).
+
+**Fellesfiler endret:** `spill/gange.js` (inngangspila: plass og størrelse på telefon, 4 linjer). Ellers bare mine filer (tropper-visning.js
+bare oppsettet: kolonner, `.opprett`, rullingen i `vis()`).
+
+**Vakt** (`vakter/ui.js`, «runde 10»): setter vinduet til 844 × 390 en kort stund og sjekker tropppanelet (høyde, to kolonner, folk og Opprett
+synlige, ikke bak bunnmenyen), opplæringen ved siden av Leir-menyen, hogstlappen over bunnmenyen med opplæringen borte, og gåmodus (knapperaden
+⊆ BEHOLD med «⋯», «Sett deg inn» nede til høyre, helse/våpen ved styrespaken). Setter vinduet, Skjermlag.test, OpplaeringSpill.test og
+opplæringens lagring tilbake. Grønn på PC og telefon (ca. 15–18 s for hele ui-vakta). Prøvd med tre feil lagt inn (kolonnene av, ressursvalg ute
+av DEKKER, kjøreknappens plass borte) – vakta fant alle.
+
+**Ikke gjort / gjenstår:** «3D går tregt»-ruta (bare uten grafikkort) ligger over styrespaken; kjøreknappene (gass/brems/ratt, bildene 3–5) er
+kjøring-hjelperens; Krig-knappen manglet i bunnmenyen på Dovre-testsiden (finnes ikke der – ingen tettsteder lastet). `versjon.py` er ikke kjørt.
