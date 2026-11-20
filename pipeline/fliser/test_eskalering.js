@@ -21,7 +21,7 @@ assert(R.grad.lett.leirFra > R.grad.vanlig.leirFra && R.grad.vanlig.leirFra > R.
   assert.equal(E.kjøp({ kr: 5e6, folk: 60 }, { lag: 7, tak: 10, lastebiler: 2, døgn: 8, g }), null, 'sparer til stridsvogna'); assert.equal(E.kjøp({ kr: 5e6, folk: 60 }, { lag: 4, tak: 10, døgn: 8, g }), 'lag', 'få lag: lag først');
   const Ø = rik(); E.betal(Ø, 'lag'); assert(Ø.kr === 20e6 - R.pris.lag.kr && Ø.folk === 60 - 12 && Ø.kjøpt.lag === 1); }
 // taket vokser etter freden
-assert.equal(E.tak(6, 0), 6); assert.equal(E.tak(6, 3.5), 9); assert.equal(E.tak(6, 40), R.grad.vanlig.tak); assert.equal(E.tak(6, 40, E.grad({ vanskelighet: 'lett' })), R.grad.lett.tak);
+assert.equal(E.tak(6, 40, E.grad(), 14), R.grad.vanlig.tak + 7, 'flere tettsteder gir flere lag'); assert.equal(E.tak(6, 0), 6); assert.equal(E.tak(6, 3.5), 9); assert.equal(E.tak(6, 40), R.grad.vanlig.tak); assert.equal(E.tak(6, 40, E.grad({ vanskelighet: 'lett' })), R.grad.lett.tak);
 // behov og mål
 const by = (id, navn, x, y, folk, eier, forsvar = 0) => ({ id, navn, x, y, folk, eier, forsvar, minst: Math.ceil(Math.max(4, Math.round(Math.sqrt(folk) / 7)) * .5) });
 const fri = n => Array.from({ length: n }, (_, i) => ({ id: 'L' + i, x: i * 300, y: 0, styrke: 12 }));

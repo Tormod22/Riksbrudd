@@ -29,6 +29,7 @@
     // «stridsvognMaks»; motstanderen sparer til den når den har minst «vognEtter» lag
     kjøretøy: { lastebilPer: 4, lastebilMaks: 3, stridsvognFra: 7, stridsvognMaks: 1, vognEtter: 6 },
     storby: 50000,       // innbyggere: fra dette er tettstedet en storby (grad.storbyFra)
+    lagPerBy: .5,        // taket for lag vokser med så mange lag per tettsted motstanderen holder (Eskalering.tak)
     ettLag: 12,          // mann: tettsteder som trenger mer enn dette (Garnison.minstFor), er store (som Fraksjoner.REGLER.ettLag)
     // Angrepsgruppene (planlegges hvert «hver» spillminutt): behov = minst (garnison.js) + margin × forsvarernes styrke; samlingen er over
     // når «samleAndel» av styrken står innen «samleR» m av samlingsstedet, eller etter «samleMaks» minutter; gruppa gir opp under
@@ -39,7 +40,7 @@
     // blåOvervekt: mot tettstedene dine tar gruppa bare med seg til 1,2 × behovet – du skal kunne holde dem hvis du forsterker i tide;
     // storbyVekt: en storby som er lov, veier så mye mer (den avgjør krigen – gjennomspillingen på Hard: gruppene var opptatt med småsteder i to døgn);
     // småsted: innbyggere – garnisoner i egne tettsteder under dette (og uten fiender innen 5 km) kan tas med til et storbyangrep (spill/eskalering-visning.js)
-    plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 3000, storbyVekt: 3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 15000, storbyVekt: 3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };
@@ -65,7 +66,10 @@
   // betal for det som ble kjøpt
   function betal(Ø, hva) { const P = REGLER.pris; if (hva === 'lag') { Ø.kr -= P.lag.kr; Ø.folk -= P.lag.folk; } else if (P[hva]) Ø.kr -= P[hva]; Ø.kjøpt[hva] = (Ø.kjøpt[hva] || 0) + 1; return Ø; }
   // taket for antall lag etter fredstiden: grunntaket (Fraksjoner.lagTak) og ett lag til per døgn etter freden, høyst g.tak
-  const tak = (grunn, døgnEtterFred, g = grad()) => Math.max(grunn, Math.min(g.tak, grunn + Math.floor(Math.max(0, døgnEtterFred))));
+  // (runde 7, gjennomspillingen: Kystalliansen holdt 14 tettsteder med 12 lag – alle var garnison, og ingen kunne gå mot storbyen) – taket
+  // vokser også med et halvt lag per tettsted de holder (byer)
+  const tak = (grunn, døgnEtterFred, g = grad(), byer = 0) => { const b = Math.floor(Math.max(0, byer || 0) * REGLER.lagPerBy);
+    return Math.max(grunn, Math.min(g.tak + b, grunn + Math.floor(Math.max(0, døgnEtterFred)) + b)); };
   // styrken et mål krever: by = { minst, forsvar } (forsvar = styrken til de andre sidenes lag i tettstedet)
   const behov = (by, g = grad()) => Math.max(REGLER.plan.minBehov, ((by.minst || 0) + REGLER.plan.margin * (by.forsvar || 0)) * (g.mot || 1));
   // er målet stort nok til en gruppe? Små nøytrale tettsteder tar lagene selv (Fraksjoner.velg)
