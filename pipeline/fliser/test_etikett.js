@@ -58,4 +58,8 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
   const H = []; for (let k = -8; k <= 8; k++) H.push({ r: [0, 100 + k * 15 - 12, 300, 14], prio: 9, tekst: false });
   E.plasser(L, H); const vis = L.filter(q => q.vis && q.prio === 6), over = (a, b) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
   ok(vis.length >= 1 && !vis.some((a, i) => vis.some((b, j) => j > i && over(a.ramme, b.ramme))) && vis.reduce((a, q) => a + q.flere, 0) + vis.length === 2, 'to fiendelag nær hverandre: ingen lapper oppå hverandre, den ene står som «+1»'); }
+// (runde 12) én skrift i kartet: sans-serif blir kartets skrift (litt større, minst halvfet), andre skrifter er som før
+{ const K = E.kartFont; ok(/Cormorant/.test(K('11px sans-serif')) && /^600 12\.6px/.test(K('11px sans-serif')), '«11px sans-serif» blir kartets skrift: ' + K('11px sans-serif'));
+  ok(/^bold 15px .*Cormorant/.test(K('bold 13px sans-serif')) && /^italic 600 /.test(K('italic 12px Arial')), 'fet og kursiv beholdes: ' + K('bold 13px sans-serif') + ' / ' + K('italic 12px Arial'));
+  ok(K('600 13px "Cormorant Garamond", serif') === '600 13px "Cormorant Garamond", serif' && K('12px Georgia, serif') === '12px Georgia, serif', 'skrifter med seriffer røres ikke'); }
 process.exit(feil ? 1 : 0);

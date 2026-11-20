@@ -2,7 +2,7 @@
 // øverst, ingen søyle av navn langt ute, «0 t olje» og «Leiren til …» skjult ved leiren, kaiene i krigskartet bare ved leiren, krigskartets
 // utsnitt på Dovre, og natt/regn i 2D (spill/kartlys.js). Tegner 2D-kartet direkte med tegn() i samme synkrone blokk (3D kan være på –
 // da tegnes bare det skjulte 2D-lerretet), og setter alt tilbake: kameraet, tida, tåka, lagene og krigskartet.
-module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krigskartet, natt og regn i 2D)', kjør: async (pg, profil) => {
+module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krigskartet, natt og regn i 2D, én skrift, leiren som klynge langt ute)', kjør: async (pg, profil) => {
   const d = await pg.evaluate(() => {
     const ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
     if (!window.Etikett || !Etikett.tegnAlle || !window.KartLapper || !window.KartLys) return { feil: ['Etikett/KartLapper/KartLys mangler'] };
@@ -52,9 +52,21 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
         krev(Math.abs(regn[0] - regn[2]) < 60 - 5 && regn[0] + regn[1] + regn[2] < 520, 'regnet gjør ikke kartet gråere: ' + regn);
         // og med KartLys på i selve kartet tegnes det uten feil, med navnene oppå
         KartLys.test = true; const N = tegnNå(L.x, L.y, .3); krev(N.navn.length > 0 && N.overlapp === 0, 'navnene forsvant med kartlyset på'); KartLys.test = kl0; }
+      // 6) RUNDE 12: én skrift i kartet – sans-serif blir kartets skrift mens rammen tegnes (og bare da)
+      { Etikett.nullstill(); ctx.font = '11px sans-serif'; const iRamme = ctx.font; Etikett.tegnAlle(ctx); ctx.font = '11px sans-serif'; const etter = ctx.font; ut.skrift = [iRamme, etter];
+        krev(/Cormorant/.test(iRamme), 'sans-serif i kartet blir ikke kartets skrift: ' + iRamme); krev(!/Cormorant/.test(etter), 'skriften byttes også utenom rammen: ' + etter); }
+      // 7) RUNDE 12: leiren synes som en klynge bygg på 1 km-målestokk (8 m per punkt): et ferdig bygg 25 m øst for flagget blir et merke
+      //    minst kort × lang punkter, ute av lagmerkene midt i leiren; og småtallene for hogst/riving står ikke ved leiren på 2 m per punkt
+      { const LS = window.LeirSpill && LeirSpill.tilstand(); if (LS && window.Leir2d && Leir2d.klyngeM) { const K = Leir2d.REGLER.klynge, t = (Leir.BYGG.brakke.tid || 1) * 60;
+          const b = { id: LS.neste++, type: 'brakke', x: L.x + 25, y: L.y, ret: 0, igjen: 0, totalt: t, pris: 0, mat: {}, nivå: 1, hp: 1, nr: LS.nesteJobb++, arbeid: null, vakt: true };
+          const før = tegnNå(L.x, L.y, 8).hindre.length; LS.bygg.push(b);
+          try { const T = tegnNå(L.x, L.y, 8), [bx, by] = skjerm(L.x, L.y), H = T.hindre.filter(h => h[0] > bx + 4 && Math.abs(h[1] + h[3] / 2 - by) < 20 && h[2] >= K.kort && h[2] < 30);
+            ut.klynge = { før, etter: T.hindre.length, merke: H[0] }; krev(T.hindre.length > før && H.length, 'brakka synes ikke på 1 km-målestokk: ' + JSON.stringify(ut.klynge)); }
+          finally { const i = LS.bygg.indexOf(b); if (i >= 0) LS.bygg.splice(i, 1); LS.neste--; LS.nesteJobb--; } }
+        const T2 = tegnNå(L.x, L.y, 2); krev(!T2.navn.some(n => /^(hogst|riving) /.test(n.t)), 'hogst/riving-tallene står ved leiren på 2 m per punkt'); }
     } catch (e) { ut.feil.push('kastet: ' + e.message); }
     finally { for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } VIS.taake = taake0; valgt = valgt0; tid = tid0; frø = frø0; KartLys.test = kl0; Object.assign(kam, kam0); skitten = true; }
     return ut; });
   const ok = !d.feil.length;
-  return { ok, data: d, tekst: ok ? `leiren uten overlapp (${(d.m5 || []).length} navn ved 5 m), fiendens merke øverst, langt ute ${(d.fjern || []).length} navn nær merket, kaier i krigskartet bare ved leiren, krigskartet ${d.boks ? d.boks.map(v => Math.round(v / 1000)).join(' × ') + ' km' : '–'}, natt i 2D ${d.lys ? d.lys.natt.join('/') + ' (dag ' + d.lys.dag.join('/') + ')' : ''}` : d.feil.join('; ') };
+  return { ok, data: d, tekst: ok ? `leiren uten overlapp (${(d.m5 || []).length} navn ved 5 m), fiendens merke øverst, langt ute ${(d.fjern || []).length} navn nær merket, kaier i krigskartet bare ved leiren, krigskartet ${d.boks ? d.boks.map(v => Math.round(v / 1000)).join(' × ') + ' km' : '–'}, natt i 2D ${d.lys ? d.lys.natt.join('/') + ' (dag ' + d.lys.dag.join('/') + ')' : ''}, én skrift i kartet, brakka som klynge på 1 km${d.klynge && d.klynge.merke ? ' (' + d.klynge.merke.slice(2).map(Math.round).join(' × ') + ' px)' : ''}` : d.feil.join('; ') };
 } };

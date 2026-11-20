@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=857b0c3418"></script>
+<script src="/dovre-fliser/kartflis.js?v=9db5fa55e5"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=58fce7f9c0');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40906e9c5e');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -3395,7 +3395,7 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=88b4d3ee4b"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=359dbf82e9"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c4be8fd592"></script>
@@ -3454,17 +3454,17 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=6bbeab1fdb"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
-<script src="/dovre-fliser/spill/helling-visning.js?v=b8dad1a03d"></script>
+<script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=97fd90fca1"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=680d5d7d69"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=f53f5d59f9"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=687fec0932"></script>
-<script src="/dovre-fliser/spill/byggevisning.js?v=dcc1b8514e"></script>
-<script src="/dovre-fliser/spill/leir2d.js?v=1b9f97551d"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=3343bf6c80"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=40dfc0dea8"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=c0bc49b440"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
@@ -3524,9 +3524,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/karakter.js?v=f998390bfe"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=5f07d1bfc0"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=8a0899fb60"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=9fc6353fd3"></script>
 <script src="/dovre-fliser/spill/region.js?v=c413865888"></script>
-<script src="/dovre-fliser/spill/region-visning.js?v=a6026146a1"></script>
+<script src="/dovre-fliser/spill/region-visning.js?v=e624dc4d85"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
 <script src="/dovre-fliser/spill/samfunn.js?v=4c2d58a0e9"></script>
