@@ -84,11 +84,21 @@ per bølge, +1 døgn / +20 ekte minutter, nekt = moral +3; karavanen 500 l diese
   neste bølge og kom hjem med funn, jakta ga 16 og 21 rasjoner, «Ingen endring i dag» lukket kortet. Kortet ventet mens bølge 2 pågikk.
   Bølge 1 kom dag 2 mens dobbel vakt sto: «Bølge 1 slått tilbake» sto i neste morgens rapport. 0 sidefeil.
   (For å få matvalgene ble maten satt til 8 rasjoner før dag 4 – det er et oppsett for prøven, ikke spill.)
+- Våpenøvelsen (scratchpad `natt8/morgen/ov.js`): kortet tilbød «Våpenøvelse for to», de to var borte dagen, og neste morgen hadde
+  begge 15 min kamperfaring («Bjørn og Lars øvde med våpen hele dagen og er mer erfarne nå.»). I spill som spiller kom den på de rolige
+  morgenene (dag 2: vakt/speid/øv, dag 3: speid/øv/skift).
 - `natt8/morgen/prov2.js`: tankbilen kom i kartet og som brikke, røverne kom da laget nærmet seg, dieselen ble hentet når de var slått;
   beskyttelsen flyttet neste bølge et døgn og trakk 2 mill. kr; folk som var ute, var fortsatt ute etter omlasting, og et ubesvart kort
   kom tilbake etter omlasting.
 - Bilder: scratchpad `natt8/morgen/pc-2a-kort.png`, `pc-2b-valgt.png` (steg 2: nabogården), `pc-4a-kort.png` (lite mat), `pc-5-leirmeny-maal.png`,
   `pc-6-tankbil-kart.png`, `tlf-2a-kort.png`, `tlf-4a-kort.png` m.fl.
+
+### Kontrollen (sjekk.js, mobil)
+- Første kjøring (natt, før våpenøvelsen): 124 ok, 1 FEIL – vakta «ui»: «farten du valgte med kortet oppe, gjelder ikke etter svaret (10)».
+  Prøvd A/B i egen side (scratchpad `natt8/morgen/ui-ab.js`, vakta «ui» alene, med og uten `morgen-visning.js`): feilen kommer også UTEN
+  morgenmøtet (2 av 2 ganger), og med det gikk den én gang og feilet én gang – den kommer ikke fra denne pakka, men ser ut som et
+  tidsløp mellom vakta og ⏭-logikken (flyt.js setter 10× når et kort dukker opp). Vakta «morgenmøtet» var ok.
+- Andre kjøring (20. nov ettermiddag, etter våpenøvelsen): 125 ok, 0 FEIL (også «ui» og «morgenmøtet»).
 
 ### Ikke gjort / svakheter
 - Sannsynligheter og mengder er ikke balansert mot resten av økonomien over mange døgn (bare 4–5 døgn er spilt).
