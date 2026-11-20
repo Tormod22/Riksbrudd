@@ -69,3 +69,9 @@ Kritiker F (PC, «Hold byen»): «Når du ikke kan stole på regnskapet, slutter
 ### Ikke gjort
 - Leirvakta som ikke ble forsvart automatisk ved bølge 2 (krig/forsvar – annen pakke).
 - De døde i Samfunn skiller ikke «falt» og «døde» etter begravelsen (gravlagte er bare navn).
+
+### Kontrollert
+- Regeltestene: test_folk, test_leir, test_samfunn, test_forsvar_oppgjor, test_leting, test_maal, test_morgen, test_dagbok, test_forsvar, test_tropper – alle ok.
+- Nettleser (Playwright, 1400 × 820 og 844 × 390 mobil): vakten «regnskap» ok på begge (ca. 6 s); klokka står på 0 spillminutter fra
+  «Nytt spill» til leiren er bekreftet (med `OppstartSpill.test = true`), og farten er 1× igjen etterpå.
+- Hele mobilkontrollen (sjekk.js, SJEKK_PROFIL=mobil, kopi av treet ved commit 0527897): 129 ok, 0 FEIL (626 s).
