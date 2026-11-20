@@ -38,7 +38,7 @@
     // enn «fra» meter per punkt tegnes leiren som en liten klynge: byggene står som om kartet var tegnet med meter per punkt
     // fra + (m − fra) · vekst (avstandene i leiren og byggene forstørres), og hvert bygg er minst kort × lang punkter; over maks: ikke tegnet
     // luft: lagene og flagget står midt i leiren, så byggene skyves ut til minst så mange punkter fra midten (gradvis fra «fra»)
-    klynge: { fra: 1.6, vekst: .12, kort: 4, lang: 6.5, maks: 150, luft: 20 },
+    klynge: { fra: 1.6, vekst: .12, kort: 5, lang: 8.5, maks: 150, luft: 20 },
   };
   // klyngeM(m): meter per punkt leiren tegnes med når kartet har m (ren regel; = m helt nær, vokser sakte lenger ute)
   const klyngeM = (m, K = REGLER.klynge) => (m <= K.fra ? m : K.fra + (m - K.fra) * K.vekst);
@@ -345,7 +345,7 @@
     const p = rot.LeirSpill && LeirSpill.plassering && LeirSpill.plassering(); return !p; }
   const leirMidt = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
   function klyngeBygg(g, b, o, St) { const K = REGLER.klynge, m = o.m; if (m > K.maks) return true; const L = leirMidt(); if (!L) return false;
-    const me = klyngeM(m), dx = b.x - L.x, dy = b.y - L.y, d = Math.hypot(dx, dy), r = d / me + Math.min(K.luft, (m - K.fra) * 5) * Math.min(1, d / 4);
+    const me = klyngeM(m), dx = b.x - L.x, dy = b.y - L.y, d = Math.hypot(dx, dy), r = d / me + Math.min(K.luft, (m - K.fra) * 12) * Math.min(1, d / 4);
     const cx = o.sx(L.x) + (d ? dx / d * r : 0), cy = o.sy(L.y) - (d ? dy / d * r : 0), t = tilstand(b, { aktiv: o.aktiv });
     if (cx < -30 || cy < -30 || cx > VW + 30 || cy > VH + 30) return true;
     const [x0, x1, y0, y1] = St.kropp; let a = (x1 - x0) / me, c = (y1 - y0) / me; const lang = a >= c;
@@ -361,7 +361,9 @@
     g.fillStyle = t.navn === 'ødelagt' ? farge('#2a2620') : farge(St.tak, ferdig ? 1.12 : 1.3, ferdig ? 1 : .55); g.fillRect(...halv);
     if (ferdig && (St.form === 'sal' || St.form === 'telt') && Math.min(a, c) >= 4) { g.strokeStyle = farge(St.tak, .7); g.lineWidth = 1; g.beginPath(); if (lang) { g.moveTo(-a / 2 + 1, 0); g.lineTo(a / 2 - 1, 0); } else { g.moveTo(0, -c / 2 + 1); g.lineTo(0, c / 2 - 1); } g.stroke(); }
     if (St.kors && ferdig) { g.fillStyle = '#c8322a'; g.fillRect(-1.5, -.5, 3, 1); g.fillRect(-.5, -1.5, 1, 3); }
-    g.strokeStyle = o.valgt ? '#f0d79a' : o.mangler ? '#e0604a' : 'rgba(20,16,10,.9)'; g.lineWidth = o.valgt ? 2 : 1; if (!ferdig && t.navn !== 'ødelagt') g.setLineDash([2, 1.5]);
+    // lys kant (som lagmerkene), så byggene skiller seg fra skogen; under bygging stiplet
+    g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = 2.6; g.strokeRect(...halv);
+    g.strokeStyle = o.valgt ? '#f0d79a' : o.mangler ? '#e0604a' : 'rgba(239,230,207,.92)'; g.lineWidth = o.valgt ? 1.6 : 1.1; if (!ferdig && t.navn !== 'ødelagt') g.setLineDash([2, 1.5]);
     g.strokeRect(...halv); g.setLineDash([]); g.restore();
     if (rot.Etikett) { const r = Math.max(a, c) / 2 + 1; Etikett.hinder(cx - r, cy - r, 2 * r, 2 * r); }
     return true; }

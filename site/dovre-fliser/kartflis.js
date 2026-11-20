@@ -426,8 +426,16 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
       g.strokeStyle = pass ? (mellom ? 'rgba(206,194,166,.6)' : '#d9cdb0') : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? (mellom ? w * .6 : w) : w + (z <= 7 ? 1.4 : mellom ? 1.4 : 2.2);
       if (pass && mellom) g.setLineDash([10, 8]); else if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
       // spor i tunnel (u = 1 i nyere data) tegnes for seg under, fra z10; lenger ute er de med i streken så banen ikke får hull
-      g.beginPath(); for (const o of uv.t.bane.obj) { if (o.e.u && z > 9) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } }
-      g.stroke(); g.setLineDash([]);
+      // (runde 12, kritikk F: skjøter i kartet) stiplene begynte på nytt i hver flis, så banen fikk et hakk i hver flisskjøt: nå står
+      // stiplene fast i verden – fasen er hvor langt det første punktet ligger langs strekens retning, regnet i hele kartets punkter
+      const D = g.getLineDash(), per = D.length ? D[0] + D[1] : 0;
+      if (!per) { g.beginPath(); for (const o of uv.t.bane.obj) { if (o.e.u && z > 9) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } } g.stroke(); }
+      else for (const o of uv.t.bane.obj) { if (o.e.u && z > 9) continue; for (const d of o.deler) { const q = d.map(uP); if (q.length < 2) continue;
+        const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1], l = Math.hypot(dx, dy) || 1, ux = Math.abs(dx) >= Math.abs(dy) ? Math.sign(dx) || 1 : 0, uy = ux ? 0 : Math.sign(dy) || 1;
+        // fasen langs den akse streken går mest langs (samme fortegn i begge fliser), målt fra kartets nullpunkt
+        const a = ((q[0][0] + x * T) * ux + (q[0][1] + y * T) * uy) * l / Math.max(1e-6, Math.abs(ux ? dx : dy));
+        g.lineDashOffset = ((a % per) + per) % per; g.beginPath(); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); g.stroke(); } }
+      g.setLineDash([]); g.lineDashOffset = 0;
     }
     if (z > 9) { g.strokeStyle = 'rgba(20,15,9,.5)'; g.lineWidth = w; g.setLineDash([Math.max(3, 7 / r), Math.max(3, 7 / r)]);
       g.beginPath(); for (const o of uv.t.bane.obj) { if (!o.e.u) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } }
@@ -771,13 +779,16 @@ function traer(g, z, x, y, tr, E, N, VK) {
   const zt = tr.zz, rt = res(zt), tx0 = G.x0 + (x >> (z - zt)) * span(zt), ty0 = G.y0 - (y >> (z - zt)) * span(zt), A = tr.t.a;
   const klasse = (X, Y) => { const px = Math.floor((X - tx0) / rt), py = Math.floor((ty0 - Y) / rt);
     return A[Math.max(0, Math.min(T - 1, py)) * T + Math.max(0, Math.min(T - 1, px))]; };
-  const i0 = Math.floor((minx - 6) / S), i1 = Math.ceil((minx + span(z) + 6) / S), j0 = Math.floor((maxy - span(z) - 6) / S), j1 = Math.ceil((maxy + 6) / S);
+  // (runde 12, kritikk F: «synlige skjøter mellom kartflisene ved nær zoom») en trekrone med skygge rekker opptil ca. 12 m fra stammen: trær
+  // så langt utenfor flisen tas med (før 6 m og 12 punkter – kronene nær kanten ble kuttet rett av i flisskjøten)
+  const KANT = 13, kp = KANT / r + 2;
+  const i0 = Math.floor((minx - KANT) / S), i1 = Math.ceil((minx + span(z) + KANT) / S), j0 = Math.floor((maxy - span(z) - KANT) / S), j1 = Math.ceil((maxy + KANT) / S);
   const liten = z <= 12, skygge = [], kroner = [], kratt = [];
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const t = treVed(i, j, klasse); if (!t) continue; const X = t.X, Y = t.Y, k = t.k;
     if (VK && t.t >= vektVed(VK, (X - minx) / span(z), (maxy - Y) / span(z))) continue;
     const px = (X - minx) / r, py = (maxy - Y) / r;
-    if (px < -12 || py < -12 || px > T + 12 || py > T + 12) continue;
+    if (px < -kp || py < -kp || px > T + kp || py > T + kp) continue;
     let hoy = 0; if (E) { const ix = Math.max(0, Math.min(N - 1, Math.round(px) + 1)), iy = Math.max(0, Math.min(N - 1, Math.round(py) + 1)); hoy = E[iy * N + ix]; }
     const bjork = k !== 1 || hoy > 880 || hash(i, j, 5) < .15;
     // langt ute tegnes alle som en jevn skogtekstur; nær tegnes de ekte trærne (de som står i 3D) store, resten som svakt kratt
