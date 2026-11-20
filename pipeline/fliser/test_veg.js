@@ -41,6 +41,16 @@ const fl = { pos: [], uv: [], idx: [] }; V.kryssFlate(kryss[0], veger, fl);
 let maks = 0, utenfor = 0; for (let q = 0; q < fl.pos.length; q += 3) { const x = fl.pos[q], y = fl.pos[q + 1]; maks = Math.max(maks, Math.hypot(x, y));
   const dE = Math.abs(y), dK = Math.abs(x - y) / Math.SQRT2; if (Math.min(dE, dK) > 4.2 + 2.6) utenfor++; }
 sjekk(fl.idx.length > 0 && maks < kryss[0].d + 6 && utenfor === 0, `kryssflaten følger armene (lengst ${maks.toFixed(1)} m fra midten, ${utenfor} punkter utenfor vegene)`);
+// (runde 10) hjørnene: med bakken flat får T-krysset hjørner; der bakken faller bort (hjørnet ville svevd) og mot en innkjørsel (P) ingen
+{ const tri = (vg, bakke) => { const f = { pos: [], uv: [], idx: [] }; V.kryssFlate(V.finnKryss(vg)[0], vg, f, bakke); return f.idx.length / 3; };
+  // hjørnene er enkelttrekanter i tillegg til armene: antallet = alle trekanter minus dem uten hjørner (bakke langt unna slipper ingen hjørner)
+  const hjørner = (vg, bakke) => tri(vg, bakke) - tri(vg, () => 1e6);
+  const vg = [{ k: 'E', w: 4, P: z0(V.jevn([[-100, 0], [0, 0]])) }, { k: 'E', w: 4, P: z0(V.jevn([[0, 0], [100, 0]])) }, { k: 'K', w: 2.75, P: z0(V.jevn([[0, 0], [0, 60]])) }];
+  const flat = hjørner(vg, () => 0), faller = hjørner(vg, (x, y) => (y > 0 ? -y * .4 : 0)), inn = hjørner(vg.map((v, i) => (i === 2 ? { ...v, k: 'P' } : v)), () => 0);
+  sjekk(flat > 0 && faller === 0 && inn === 0, `kryss: hjørner på flat bakke (${flat}), ingen der de ville svevd (${faller}) eller mot en innkjørsel (${inn})`);
+  // innkjørselen (P) får ingen asfaltstump: færre trekanter enn med en K-veg i samme retning
+  const utenHj = vg2 => tri(vg2, () => 1e6), medK = utenHj(vg), medP = utenHj(vg.map((v, i) => (i === 2 ? { ...v, k: 'P' } : v)));
+  sjekk(medP < medK && medP > 0, `kryss: ingen asfaltstump inn i en innkjørsel (${medP} mot ${medK} trekanter)`); }
 // selvtest: det gamle konvekse skallet hadde punkter langt fra begge vegene – kontrollen over ville slått ut på (20, 12)
 sjekk(Math.min(Math.abs(12), Math.abs(20 - 12) / Math.SQRT2) > 4.2, 'selvtest: et punkt i det gamle skallet ligger utenfor vegene');
 
