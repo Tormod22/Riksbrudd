@@ -94,7 +94,8 @@
     const sty = f => styrke(f, f.ammo === undefined ? 1 : f.ammo), garn = f => v.byer.some(b => b.eier === v.side && b.inni(f.x, f.y) && !andre.concat([s]).some(g => g !== f && b.inni(g.x, g.y) && !slåttUt(g) && g.navn < f.navn));
     const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
-    const mulig = b => !(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag));
+    // (runde 7) storbyene er stengt til eskaleringen sier de er lov (v.storbyStengt = innbyggere fra der det gjelder – spill/eskalering-visning.js)
+    const mulig = b => (!(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag))) && !(v.storbyStengt > 0 && (b.folk || 0) >= v.storbyStengt);
     // (19. nov, gjennomspillingen: et rødt lag sto 51 m fra Folkefrontens garnison i Sviland i fire døgn – skogen skjulte dem, og ingen
     // tok noe) en fiende som står i tettstedet laget vil ta, vet laget om (v.iByFiende): er laget sterkt nok, går det rett mot den
     const fb = v.iByFiende;

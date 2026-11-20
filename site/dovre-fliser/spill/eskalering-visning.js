@@ -175,6 +175,10 @@
     for (const k of KJORETOY) { if (k.side !== side || k.type !== 'stridsvogn' || k.sti || avst(k, G.mål) < 800) continue;
       try { Kjoretoy.planlegg(k, window.VEGNETT, [G.mål.x, G.mål.y]); } catch (e) { /* ingen veg dit */ } } }
 
+  // (runde 7, gjennomspillingen: med flere lag gikk enkeltlagene selv mot Stavanger/Sandnes dag 7–8, før storbyene var lov) – Fraksjoner.velg
+  // får innbyggertallet storbyene begynner på så lenge de er stengt (0 = åpne; i testene alltid åpne som før)
+  AI.storbyStengt = () => (på() && typeof tid !== 'undefined' && døgn() < g().storbyFra ? ER.storby : 0);
+
   // ---------- simuleringen ----------
   let akk = 0, timeAkk = 0;
   KROKER.sim.push(dt => {

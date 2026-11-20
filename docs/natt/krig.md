@@ -646,3 +646,11 @@ fikk stridsvogn dag 6, Folkefronten dag 7 (de skjøt på hverandre). 8 · 00:32 
 leiren – «angrep tidligst om ca. 4 t»; 04:35 angriper; 11:19 trekker seg bort. Kassa til Kystalliansen vokste til 20 mill. kr (taket på 15 lag
 nådd, stridsvogna kjøpt). **Kystalliansen tok Stavanger/Sandnes og vant dag 10 kl. 14** – ikke tidligere enn på Vanlig, fordi gruppene var
 opptatt med Ålgård og Kvernaland i to døgn etter at storbyen var lov. Derfor: en storby som er lov, veier nå tre ganger (`plan.storbyVekt`).
+
+#### (a) med storbyer fra døgn 10 og storbyVekt (logg `natt/krig7/ga4-v1.log`) – INGEN seier innen dag 14
+Kystalliansen tok nesten alt rundt (18,7 % – 14 tettsteder) og fikk stridsvogner, Folkefronten holdt seg i live (0,2–0,5 %) og angrep leiren dag 9
+(etterretning 15:34, angrep 21:41, trakk seg 10 · 06:11) og igjen dag 13–14. Kystalliansen gikk mot Stavanger/Sandnes dag 12 med bare 3 lag
+og ga opp. Årsak: 12 lag (taket på Vanlig) og 14 tettsteder – alle lagene var garnison, kassa sto på 20–29 mill. kr uten noe å kjøpe, og
+småstedsregelen (under 3000 innbyggere) slapp ingen garnisoner fri. RETTET: taket vokser med et halvt lag per tettsted de holder
+(`REGLER.lagPerBy`, `Eskalering.tak(grunn, døgnEtterFred, g, byer)`), og til storbyen kan de ta med garnisoner fra tettsteder under 15 000
+innbyggere uten fiender innen 5 km (`plan.småsted`).
