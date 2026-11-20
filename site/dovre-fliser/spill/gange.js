@@ -215,8 +215,10 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     // (runde 8) framme: det reisen skulle gjøre (gå inn i huset), ellers begynn å gå der du er – når kartet rundt deg er klart
     // (avbrutt underveis – melding satt –: du står der du kom, og går videre selv i 3D; i kartet skjer ikke mer)
     if (r.ferdig && !melding) { r.ferdig(r); return; }
-    if (r3() && R3.ut && typeof på3d !== 'undefined' && på3d) klarGå(r.kar.x, r.kar.y, start);
+    if (r3() && R3.ut && typeof på3d !== 'undefined' && på3d) klarGå(r.kar.x, r.kar.y, () => { start(); etterReise = performance.now(); });
   }
+  // (runde 8) rett etter «Reis hit»: står det et hus nær, sier loggen én gang hvor inngangen er
+  let etterReise = 0;
   // farten tilbake slik den var (også pausen)
   // (står spillet på pause nå – satt av noen andre underveis –, beholdes pausen, men ▶ går videre i farten du hadde, ikke 600×)
   function fartTilbake(r) {
@@ -541,6 +543,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     pekerNå = null; if (!r3() || !R3.fot || !kropp || fører || !window.Gaavalg || reise) return;
     if (window.Interior3d && Interior3d.inne && Interior3d.inne(kropp.x, kropp.y)) return;
     pekerNå = nærmesteInngang(kropp.x, kropp.y, Gaavalg.REGLER.peker.maks);
+    if (etterReise && performance.now() - etterReise > 10000) etterReise = 0;
+    if (etterReise && pekerNå && pekerNå.d < 40) { etterReise = 0; logg(`Nærmeste inngang er ${Math.round(pekerNå.d)} m unna – følg pila under siktet. Nær døra kommer «Gå inn».`); }
   }
   // Flytt deg til et annet sted i utsnittet mens du går (x, y i utsnittets meter): kroppen lages på nytt der
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
