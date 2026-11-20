@@ -180,7 +180,49 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       if (!var0) StrategiSpill.lukk(); Object.assign(kam, kam0); skitten = true;
       ut.i3d = typeof på3d === 'undefined' || på3d === d30; }
     return ut; });
-  Object.assign(d, { r4: d4, r5: d5, r6: d6 });
+  // RUNDE 7 (20. nov natt): eskaleringen – lag samles til et angrep på en garnison (med etterretning), angrepet går først etter varselet,
+  // og leiren varsles før et ekte angrep. Tida settes fram og tilbake; lagene, tettstedene, minnet og eskaleringen settes tilbake.
+  const d7 = await pg.evaluate(async () => {
+    const ut = {}; if (!window.EskaleringSpill || !window.Eskalering || !window.AI || !AI.nytt || !AI.styr) return { uten: true };
+    const ES = EskaleringSpill, by = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted && INFRA.tettsted.find(t => t.e.navn === 'Dombås');
+    if (!by) return { uten: true };
+    const tid0 = tid, tempo0 = tempo, test0 = ES.test, T7 = new Map(TETTSTEDER), frø0 = frø, angrip0 = AI.angripLeir, leir0 = AI.minne && AI.minne.rød ? AI.minne.rød.leir : false, lagret0 = localStorage.getItem('riksbrudd-eskalering');
+    const ai0 = ENHETER.filter(e => e.ai).map(e => [e, e.ai.neste, e.ai.mål, e.ai.hva, e.ai.tekst, e.x, e.y]), nye = [], loggTekst = () => [...document.querySelectorAll('#logg > *')].map(e => e.textContent).join(' | ');
+    try {
+      ES.test = true; ES.nullstill();
+      const [bx, by0] = AI.inne(by), blå = nyttLag('Vakt sju garnison', bx, by0, 'blå'); ENHETER.push(blå); nye.push(blå); TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null });
+      for (let i = 0; i < 3; i++) nye.push(AI.nytt('rød', bx + 4200 + i * 250, by0 + 300 * i));
+      // etter fredstiden, før leirangrepene er lov
+      tid = ES.fredSlutt() + 2.5 * 1440;
+      const G = ES.planlegg('rød', { tving: true, bare: by.e.id }); ut.gruppe = !!G && G.mål.id === by.e.id && G.lag.length >= 2 && G.angripFra - G.start >= 4 * 60; ut.lag = G ? G.lag.length : 0;
+      ut.varsel = /Etterretning: Kystalliansen samler \d+ lag/.test(loggTekst()) && /Dombås \(ditt\)/.test(loggTekst());
+      const m = G && ENHETER.find(e => e.navn === G.lag[0]); const v1 = m ? AI.styr(m, { hva: 'ta', x: 0, y: 0, tekst: '' }) : null; ut.samles = !!v1 && /^(samle|hold)$/.test(v1.hva);
+      // angrepet går ikke før varselet er ute, selv når lagene er samlet
+      if (G) { for (const e of ENHETER) if (G.lag.includes(e.navn)) { e.x = G.sted.x + 20; e.y = G.sted.y + 20; }
+        tid = G.angripFra - 30; ut.venter = ES.oppdater('rød') === 'samler';
+        tid = G.angripFra + 1; ut.angriper = ES.oppdater('rød') === 'angriper' && /angriper nå/.test(loggTekst());
+        const v2 = AI.styr(m, { hva: 'ta', x: 0, y: 0, tekst: '' }); ut.mot = !!v2 && v2.hva === 'ta' && v2.mål === by.e.id; }
+      // leiren: et ekte angrep varsles i god tid
+      // økonomien: med penger og folk kjøper motstanderen et nytt lag (eller sparer til stridsvogna) – det nye tas bort igjen
+      { const før = new Set(ENHETER), kfør = new Set(KJORETOY), Ø = ES.S().øk.rød; Ø.kr = 30e6; Ø.folk = 100; const hva = ES.økonomi('rød', 60);
+        ut.kjøp = hva; for (const e of ENHETER.slice()) if (!før.has(e)) nye.push(e); for (const k of KJORETOY.slice()) if (!kfør.has(k)) { KJORETOY.splice(KJORETOY.indexOf(k), 1); for (const sd of ['rød', 'grønn']) { const i = AI.ekstraBiler[sd].indexOf(k); if (i >= 0) AI.ekstraBiler[sd].splice(i, 1); } } }
+      // (lagene dine ved leiren teller: med fire lag hjemme trengs det flere angripere)
+      ES.nullstill(); AI.angripLeir = true; tid = Eskalering.grad(window.SPILLREGLER).leirFra * 1440 + 60; for (let i = 0; i < 4; i++) nye.push(AI.nytt('rød', bx + 3000, by0 - 300 * i));
+      const H = ES.planlegg('rød', { tving: true, leir: true }); ut.leir = !!H && H.mål.leir && H.angripFra - tid >= 4 * 60 && /Målet er leiren din/.test(loggTekst());
+      // storbyen (Dombås gjort til 235 000 innbyggere, nøytral): planen går gjennom uten feil, med eller uten garnisonene fra småstedene
+      { const folk0 = by.e.folk; try { ES.nullstill(); by.e.folk = 235000; TETTSTEDER.delete(by.e.id); tid = Eskalering.grad(window.SPILLREGLER).storbyFra * 1440 + 60;
+        const K = ES.planlegg('rød', { tving: true, utenLeir: true }); ut.storby = K ? K.mål.navn + ' ' + K.lag.length + ' lag' : 'ingen gruppe'; } finally { by.e.folk = folk0; } }
+    } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
+    finally { tid = tid0; tempo = tempo0; ES.nullstill(); ES.test = test0; AI.angripLeir = angrip0; if (AI.minne && AI.minne.rød) AI.minne.rød.leir = leir0;
+      for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } for (const [e, n, mm, h, t, x, y] of ai0) Object.assign(e.ai, { neste: n, mål: mm, hva: h, tekst: t }), (e.x = x), (e.y = y);
+      TETTSTEDER.clear(); for (const [k, v] of T7) TETTSTEDER.set(k, v); frø = frø0;
+      if (window.KrigSpill && KrigSpill.T) { const T = KrigSpill.T(); if (T && T.etter) for (let i = T.etter.length - 1; i >= 0; i--) if (T.etter[i].kilde === 'speidere') T.etter.splice(i, 1); }
+      try { if (lagret0 === null) localStorage.removeItem('riksbrudd-eskalering'); else localStorage.setItem('riksbrudd-eskalering', lagret0); } catch (e) { /* uten lagring */ }
+      skitten = true; ut.tilbake = tid === tid0 && !ENHETER.some(e => nye.includes(e)); }
+    return ut; });
+  const ok7 = d7.uten || (!d7.feil && d7.gruppe && d7.varsel && d7.samles && d7.venter && d7.angriper && d7.mot && d7.leir && d7.tilbake && /^(lag|lastebil|stridsvogn)$/.test(d7.kjøp) && !!d7.storby);
+  const tekst7 = `RUNDE 7: ${d7.uten ? 'ikke prøvd (mangler Dombås eller eskaleringen)' : `lag samles mot garnisonen i Dombås: ${d7.gruppe} (${d7.lag} lag), etterretning ${d7.varsel}, lagene går til samlingsstedet ${d7.samles}, venter på varselet ${d7.venter}, angriper etterpå ${d7.angriper}/${d7.mot}, leiren varsles ${d7.leir}, kjøper ${d7.kjøp}, storby: ${d7.storby}, satt tilbake ${d7.tilbake}`}${d7.feil ? ' FEIL ' + d7.feil : ''} · `;
+  Object.assign(d, { r4: d4, r5: d5, r6: d6, r7: d7 });
   const ok6 = d6.uten || (!d6.feil && d6.i3d !== false && (d6.ettLag === undefined || (d6.ettLag && d6.treLag && d6.trenger && d6.boks && d6.entall)) && d6.tidlig && d6.fred && (d6.anslag === undefined || (d6.anslag && d6.underIld && d6.lagretSatt && d6.gjenopprett)));
   const tekst6 = `RUNDE 6: storby med ett lag tatt: ${d6.ettLag === false ? 'JA (feil)' : 'nei'}, med tre lag: ${d6.treLag}, «${d6.krav}», boksen ${d6.boks}, entall ${d6.entall}, ingen vinner dag 1: ${d6.tidlig}, fred/lagtak ${d6.fred}, banner med anslag ${d6.anslag}, under ild ${d6.underIld}, forsvaret lagres ${d6.lagretSatt}/${d6.gjenopprett}${d6.feil ? ' FEIL ' + d6.feil : ''} · `;
   const ok4 = !d4.feil && d4.dekning < .7 && Math.abs(d4.dekningAv - 1) < 1e-9 && d4.dekningTekst && d4.bytt && (d4.byttEgne === undefined || (d4.byttEgne && d4.arbeid && d4.ikkeEnnå && d4.spør && d4.forslag)) && d4.lagring && d4.krig3d && d4.ryddet && (d4.svarer === undefined || (d4.svarer && d4.ikkeUtenGrunn));
@@ -189,5 +231,5 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   const tekst4 = ` · RUNDE 4: dekning bak egen brakke ×${(d4.dekning || 0).toFixed(2)}, bytte ${!!d4.bytt}/${d4.byttEgne}, fanger i arbeid ${d4.arbeid}, rekruttering ${d4.spør}, forslag om bytte ${d4.forslag}, svarer kjøretøy som skyter ${d4.svarer}, lagring ${d4.lagring}${d4.feil ? ' FEIL ' + d4.feil : ''}`;
   const ok5 = d5.uten || (!d5.feil && (!d5.skjult || (d5.meldt && d5.skuddMeldt === 0 && d5.skuddNabo > 0)) && (d5.pakket === undefined || (d5.pakket && d5.settTilbake && d5.marsjIgjen)) && (d5.stripe === undefined || (d5.stripe && d5.visIgjen && d5.høyStripe < 120)));
   const tekst5 = ` · RUNDE 5: stridsvogna skyter på et meldt mål den ikke ser: ${d5.skuddMeldt === 0 ? 'nei' : d5.skuddMeldt} (meldt: ${d5.meldt}), med et eget lag ved som ser det: ${d5.skuddNabo}${d5.skjult === false ? ' (fant ikke skjult punkt)' : ''}, fienden lagres («sist sett» ${d5.settTilbake}, marsjen fortsetter ${d5.marsjIgjen}), krigskartet kan skjules: ${d5.stripe === undefined ? 'ikke prøvd (ingen tettsteder)' : d5.stripe && d5.visIgjen ? 'ja (' + d5.høyStripe + ' px)' : 'NEI'}${d5.feil ? ' FEIL ' + d5.feil : ''}`;
-  return { ok: ok && ok4 && ok5 && ok6, tekst: tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
+  return { ok: ok && ok4 && ok5 && ok6 && ok7, tekst: tekst7 + tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
 } };

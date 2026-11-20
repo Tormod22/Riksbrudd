@@ -60,6 +60,9 @@
     const behov = ute(s) >= R.såret || (v.ammo !== undefined && v.ammo < R.ammoLav);
     if (behov && egne.length && !(fi && avstand(fi, her) < 600)) { const b = nærmest(egne);
       return b.inni(s.x, s.y) ? { hva: 'hold', x: s.x, y: s.y, tekst: `får stell og forsyninger i ${b.navn}` } : { hva: 'forsyn', x: b.x, y: b.y, tekst: `henter forsyninger i ${b.navn}` }; }
+    // (runde 7) uten egne tettsteder: forsyninger hjemme (hovedkvarteret gir ammunisjon – fraksjoner-visning.js)
+    if (behov && !egne.length && v.hjem && !fi) { const h = { x: v.hjem[0], y: v.hjem[1] };
+      return avstand(h, her) > 300 ? { hva: 'forsyn', x: h.x, y: h.y, tekst: 'henter forsyninger hjemme' } : { hva: 'hold', x: s.x, y: s.y, tekst: 'får forsyninger hjemme' }; }
     const overtak = (R.stil[v.side] ? R.stil[v.side].overtak : R.overtak) * (v.overtakF > 0 ? v.overtakF : 1), min = styrke(s, v.ammo), andre = v.venner.filter(f => f !== s && !slåttUt(f));
     if (fi) {
       // de forsiktige ligger i bakhold når de står i skog og fienden ennå er et stykke unna (den som blir oppdaget sist, skyter best)
@@ -91,7 +94,8 @@
     const sty = f => styrke(f, f.ammo === undefined ? 1 : f.ammo), garn = f => v.byer.some(b => b.eier === v.side && b.inni(f.x, f.y) && !andre.concat([s]).some(g => g !== f && b.inni(g.x, g.y) && !slåttUt(g) && g.navn < f.navn));
     const fri = min + andre.filter(f => !garn(f)).reduce((a, f) => a + sty(f), 0), mot = b => (v.mot && v.mot.get(b.id)) || [];
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
-    const mulig = b => !(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag));
+    // (runde 7) storbyene er stengt til eskaleringen sier de er lov (v.storbyStengt = innbyggere fra der det gjelder – spill/eskalering-visning.js)
+    const mulig = b => (!(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag))) && !(v.storbyStengt > 0 && (b.folk || 0) >= v.storbyStengt);
     // (19. nov, gjennomspillingen: et rødt lag sto 51 m fra Folkefrontens garnison i Sviland i fire døgn – skogen skjulte dem, og ingen
     // tok noe) en fiende som står i tettstedet laget vil ta, vet laget om (v.iByFiende): er laget sterkt nok, går det rett mot den
     const fb = v.iByFiende;
@@ -104,7 +108,9 @@
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;
     // tettsteder fraksjonen har mistet, vil den ha tilbake; og vet den hvor spillerens leir er, er leiren også et mål
     const vekt = b => avstand(b, her) / Math.sqrt(1 + b.folk / 1000) / (b.tapt ? R.tapt : 1);
-    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b)).map(b => ({ b, v: vekt(b), leir: false }));
+    // (runde 7) dine tettsteder angripes bare av angrepsgrupper med etterretning først (v.blåMedVarsel – spill/eskalering-visning.js);
+    // et enkelt lag går ikke dit av seg selv (gjennomspillingen: småstedene ble tatt uten varsel av enkeltlag)
+    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b) && !(v.blåMedVarsel && b.eier === 'blå')).map(b => ({ b, v: vekt(b), leir: false }));
     if (v.leir && avstand(v.leir, her) <= R.rekkevidde) kand.push({ b: { id: 'leir', navn: v.leir.navn || 'leiren', x: v.leir.x, y: v.leir.y, folk: R.leirVekt }, v: avstand(v.leir, her) / Math.sqrt(1 + R.leirVekt / 1000), leir: true });
     kand.sort((a, b) => a.v - b.v);
     // (19. nov) et stort tettsted er «ledig» til de som går dit, er mange nok for full fart (b.mann)

@@ -472,3 +472,256 @@ rettet; runde 5-delen venter nå også på at 3D er bygget igjen (`await slå3d(
 - Bannerets anslag bruker tida ruta deres tar (spillet vet den); det er et anslag, men det er ikke «usikkert» – kan gjøres grovere (±) hvis det føles som juks.
 - Fiendens lag går nå mot en fiende de vet står i tettstedet; spillerens garnison i et tettsted blir dermed angrepet oftere enn før.
 - Kortet «… har overtaket» sier ikke at spillet står på pause (strategi-visning.js, ikke rettet).
+
+## Runde 7 (20. nov natt)
+Oppdraget: motstanderne skal bli farligere over tid, angripe spilleren (tettsteder, handelsruter og – med varsel – leiren), slåss seg imellom,
+og krigen skal kunne vinnes av dem rundt dag 10–14 på «Vanlig» når spilleren ikke gjør noe. Alle tall er **Claudes forslag** og står samlet i
+`Eskalering.REGLER` (spill/eskalering.js). Prøveskript og logger: scratchpad `natt/krig7/` (vakt.js, gjennom7.js, g*.log); bilder: scratchpad `natt7/krig/`.
+
+**Kort:** motstanderne har nå en økonomi (inntekt fra tettstedene), kjøper lag, lastebiler og stridsvogner, samler 2–7 lag til ett angrep mot
+store tettsteder, hverandres tettsteder, dine tettsteder og (fra dag 8 på Vanlig) leiren din, sender lag mot handelsrutene dine, og tar
+storbyen fra dag 11 på Vanlig. Angrep mot noe av ditt varsles med etterretning 4–8 timer før (ring og pil i kartet). Gjennomspilt på /rogaland:
+uten innsats vinner en motstander dag 12 på Vanlig; med to småsteder holdt spilleren det ene og slo tilbake et gruppeangrep.
+
+### Filer
+- **Nye:** `spill/eskalering.js` (regler uten DOM, `pipeline/fliser/test_eskalering.js`), `spill/eskalering-visning.js` (`window.EskaleringSpill`).
+  Skripttaggene står rett etter `krig-visning.js` i index.html.
+- **Endret (mine):** `fraksjoner-visning.js` (kroken `AI.styr`, `AI.leirMedVarsel`, `AI.inne`, flere lastebiler via `AI.ekstraBiler`, unike lagnavn
+  etter omlasting), `krig-visning.js` (kilden «fra speidere» i etterretningslista), `vakter/krig.js` (del «RUNDE 7»), `krig-hjelp.json` (fem emner).
+- **Fellesfil:** `index.html` – bare de to skripttaggene og versjonsmerkene (versjon.py).
+
+### 1. Motstanderne blir farligere over tid
+- **Økonomi** (`Eskalering.inntekt/tjen`, REGLER.økonomi): hver motstander har en kasse (start 1 mill. kr) og folk (start 12). Per døgn 1,6 mill. kr
+  og 10 folk fra hovedkvarteret + 0,1 mill. kr og 1 person per 1000 innbyggere i tettstedene den holder (× `grad.kr`: Lett 0,7, Hard 1,4); tak 30 mill.
+  kr og 120 folk. Tjenes hver spilltime (også i fredstiden), men brukes først når fredstiden er over.
+- **Kjøp** (`Eskalering.kjøp`, hver spilltime): et lag koster 2,5 mill. kr + 12 folk og settes i tettstedet med flest innbyggere de holder
+  (`AI.nytt`). Taket (`Eskalering.tak`) = det gamle taket (`Fraksjoner.lagTak`, høyst 6) + ett lag per døgn etter fredstiden, høyst
+  `grad.tak` (Lett 9, Vanlig 12, Hard 15). Ved taket: lastebiler (1,5 mill., én per fire lag, høyst 3 – `AI.ekstraBiler`, lagene bruker den
+  nærmeste ledige) og fra døgn 7 (Lett 9, Hard 5) sparer en motstander med minst seks lag til **én stridsvogn** (7 mill.), som kjører med
+  angrepsgruppa mot målet når vegnettet er lastet (kanonen skyter etter samme regler som din).
+- Den gamle forsterkningen (et nytt lag hver 6. spilltime opp til `lagTak`) står som før.
+
+### 2. Angrepsgrupper («flere lag sammen mot et stort mål»)
+- Hver spilltime etter fredstiden planlegger hver motstander (`EskaleringSpill.planlegg` -> `Eskalering.velgMål`) én angrepsgruppe av de **frie**
+  lagene (ikke eneste garnison i et eget tettsted, ikke slått ut, minst 30 % ammunisjon, færre enn tre sårede). Mål: tettsteder som trenger mer
+  enn ett lag (minst > 12 mann), tettsteder en annen side holder (også dine – de veier 1,6 ganger, `plan.blåVekt`), tettsteder de har mistet
+  (1,4), og – fra et visst døgn – leiren din. Poeng = √innbyggere × vekt / (km + 4). **Behov** = minst (garnison.js) + 1,3 × styrken som står i
+  tettstedet (× `grad.mot`: Lett 1,15, Hard 0,85); gruppa tar med lag til 1,5 × behovet (`plan.overvekt`), minst to og høyst `grad.gruppeMaks`
+  (4/6/7). **Storbyer** (over 50 000 innbyggere) først fra døgn `grad.storbyFra` (Lett 14, Vanlig 10, Hard 7,5 = dag 15 / dag 11 / dag 8 kl. 18); er de for få,
+  tar de med garnisonene fra egne småsteder (under 3000 innbyggere, ingen fiender innen 5 km).
+- **Faser** (`Eskalering.fase`, hvert tiende spillminutt): `samler` – lagene går til samlingsstedet (`Eskalering.samlested`: et eget, ellers
+  nøytralt tettsted 2,5–15 km fra målet, ellers laget nærmest målet); når 75 % av styrken er der (eller etter 10 t) – og tidligst når varselet
+  er ute – `angriper`: alle går mot målet (leiren: mot det høyeste punktet 110 m fra den). Gruppa gir opp under 45 % av behovet eller etter
+  30 t; den er ferdig når tettstedet er deres (leiren: etter 4 t inne ved den).
+- Lagene følger gruppa gjennom kroken `AI.styr(s, v)` i fraksjoner-visning.js: unntatt når laget er slått ut, angriper en fiende det ser,
+  eller (mens gruppa samles) trenger forsyninger. En fiende i måltettstedet går de rett mot (Fraksjoner.velg «jakt»).
+- **Motstanderne mot hverandre**: tettsteder den andre motstanderen holder, er like gode mål; skjer det innen 20 km fra leiren, sier loggen
+  «Etterretning: Kystalliansen samler 2 lag ved Bryne – trolig mot Folkefronten i Kvernaland.»
+
+### 3. Angrep på spilleren og etterretning
+- **Dine tettsteder**: når en gruppe samles mot et tettsted du holder, kommer etterretningen med en gang: «Etterretning: Kystalliansen samler 3
+  lag (ca. 35 mann) ved Oltedal. Målet er trolig Vatne (ditt) – angrep tidligst om ca. 6 t. Send flere lag dit, eller grav ned garnisonen.»,
+  meldingen stopper spolingen («riksbrudd-hendelse» alarm), lagene står i etterretningslista (Leir → Mål, «fra speidere»), og kartet viser
+  samlingsstedet som en stiplet ring med «Kystalliansen: 3 lag samles» og en pil mot målet. Angrepet går tidligst `grad.varsel` etter
+  (Lett 8 t, Vanlig 6 t, Hard 4 t); når det starter: «Kystalliansen angriper nå: 3 lag går fra Oltedal mot Vatne (ca. 6,4 km).»
+  Mister du tettstedet: «Vi har mistet Vatne – Kystalliansen har tatt det.»; gir de opp: «Angrepet på Vatne er slått tilbake …».
+- **Leiren** (ekte tropper, ikke røvere): fra døgn `grad.leirFra` (Lett 10, Vanlig 7, Hard 5 = dag 11/8/6 – det samme som da den gamle «fredstida for
+  leiren» sluttet) og høyst hvert `grad.leirHver` døgn (4/3/2) per motstander. Behov: minst `grad.leirLag` lag (2/3/4), og 1,3 × lagene dine innen
+  1,5 km fra leiren. Uten varsel går ingen AI-lag løs på leiren lenger i et ekte spill (`AI.leirMedVarsel`); i testene som før.
+- **Handelsruter og oljekolonner** (`EskaleringSpill.rute`): hver 6. spilltime er det `grad.rute` (20/35/50 %) sjanse for at en motstander med minst to frie
+  lag sender ett mot et punkt midt på en handelsrute (RegionSpill.status) eller ruta til en oljekolonne du har (k.oppdrag), minst 2,5 km fra leiren,
+  og blir der i 12 t (Region-reglene stenger ruta når en fiende står innen 1,5 km). Loggen: «Etterretning: et lag fra Kystalliansen er på vei mot
+  handelsruta fra Vatne. Sett et lag ved ruta som vakt, eller jag dem bort.»
+- Krigskartet: hver motstander får «12 lag · samler 3 lag ved Oltedal mot Vatne» (KRIG_TILLEGG.side), lagpanelet «i angrepsgruppa mot Vatne».
+- Lagres per leir i «riksbrudd-eskalering» (kasse, grupper, ruteoppdrag, kjøpte kjøretøy med plass og skade); leses 2,5 s etter «riksbrudd-spill».
+
+### Vakt (vakter/krig.js, del «RUNDE 7»)
+På Dovre-testsiden (med infrastrukturen, som i sjekk.js): Dombås gjøres til ditt med en garnison, tre lag fra Kystalliansen settes 4 km unna og tida
+settes til etter fredstiden. Vakta krever: en gruppe på minst to lag mot Dombås og etterretningen «Kystalliansen samler … Dombås (ditt)» i loggen,
+at lagene går til samlingsstedet (AI.styr), at angrepet IKKE går før varselet er ute selv om lagene er samlet, og at det går etterpå (AI.styr gir
+«ta» mot Dombås); at motstanderen kjøper (lag/lastebil/stridsvogn) med penger i kassa; at et leirangrep varsles med minst fire timers frist og
+«Målet er leiren din» (fire lag til, siden lagene dine ved leiren teller); og at storbyplanen går gjennom (Dombås gjort til en storby på 235 000, uten leirangrep). Alt settes tilbake:
+tid, tempo, lagene (også de AI.nytt og kjøpet laget), TETTSTEDER, frø, AI.angripLeir, AI.minne, etterretningslista, «riksbrudd-eskalering» og
+EskaleringSpill.test. Tar 2–5 s (PC og mobil, prøvd med scratchpad `natt/krig7/vakt.js`, også MOBIL=1). Ute av testene (navigator.webdriver) skjer ingenting av seg selv: EskaleringSpill.test = true slår det på.
+
+### 4. Gjennomspillinger på /rogaland (nytt spill på «Vanlig», webdriver av, leiren midt mellom Sviland og Oltedal som i runde 6)
+Skript: scratchpad `natt/krig7/gjennom7.js` (SCENARIO=a|b, GRAD=lett|vanlig|hard; dev.py med ekte kartdata; spoler med `sim(.2)` i biter à 60
+spillminutter – samme regler som klokka, raskere enn 600×; vegnettet hentes som på PC, så motstanderne kjører lastebil). Loggene: `natt/krig7/g*.log`,
+tabellene laget med `natt/krig7/tabell.py`. Andel = andel av folket i området (41 tettsteder, 47 km); «angrep på deg» = etterretning om en gruppe
+mot noe av ditt (tettsted, leiren) eller et lag mot en handelsrute det døgnet.
+
+#### (b) Spilleren tar småsteder og forsvarer dem (endelig regel, logg `natt/krig7/gb-v4.log`)
+Spilleren (skriptet) bygger opp med en gang: 15 rekrutter (betalt; sengene regnet som bygget og betalt – snarvei i skriptet), tre tropper på åtte
+(«Tropp Nord», «Tropp Sør», «Reserven») + Vaktlaget (4). Tropp Nord tar Vatne (936), Tropp Sør Høle (426), Vaktlaget prøver Forsand (529), Reserven
+blir hjemme. Garnisonene settes til stridsreglene «kjemp, aldri retrett» (som en spiller som vil holde dem). Ved etterretning om angrep på et
+tettsted: Reserven går dit og garnisonen graver seg ned (skriptet satte `nedgravd` direkte – i spillet tar det en time); er angrepet over, går
+Reserven hjem; ved etterretning om angrep på leiren går Reserven hjem. Spilleren rekrutterer ikke mer og bygger ikke forsvar i leiren.
+
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Dine soldater | Du holder | Hendelser mot deg den dagen | Tap |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 0 % | 0,3 % | 0,2 % | 2/2 | 26 | – | – | – |
+| 2 | 0,4 % | 0,3 % | 0,2 % | 4/4 | 22 | Vatne, Høle | røvere (slått tilbake) | dag 1: 3 av Vaktlaget mot bygdevernet i Forsand («For få til å ta Forsand») |
+| 3 | 0,4 % | 0,3 % | 0,2 % | 4/4 | 22 | Vatne, Høle | røvere i leiren | – |
+| 4 | 0,4 % | 0,3 % | 3,7 % | 4/5 | 21 | Vatne, Høle | lag mot handelsruta fra Vatne | – |
+| 5 | 0,4 % | 0 % | 6,3 % | 1/7 | 21 | Vatne, Høle | enkeltlag tar Vatne kl. 11; 20:06 etterretning: 2 lag (22 mann) samles ved Oltedal mot Høle | Vatne (8 mann) |
+| 6 | 0,1 % | 0,3 % | 9,2 % | 1/8 | 13 | Høle | 04:11 angrepet går; Reserven er der; 09:14 «Angrepet på Høle er slått tilbake» | – |
+| 7 | 0,1 % | 0,3 % | 15,2 % | 6/8 | 14 | Høle | lag mot handelsruta fra Høle | – |
+| 8 | 0,1 % | 0,3 % | 16,2 % | 7/10 | 11 | Høle | røvere i leiren | 3 (røvere i leiren) |
+| 9 | 0,1 % | 0,3 % | 16,2 % | 7/10 | 7 | Høle | lag mot handelsruta; Folkefronten får stridsvogn | 4 (røvere) |
+| 10 | 0,1 % | 0,5 % | 16,1 % | 6/12 | 7 | Høle | Folkefrontens stridsvogn ødelagt (av Kystalliansen); Folkefronten samler 4 lag mot Stavanger/Sandnes | – |
+| 11 | 0,1 % | 0,8 % | 16 % | 6/10 | 7 | Høle | 15:27 etterretning: 4 lag (47 mann) samles ved Kvernaland mot leiren; 21:31 angrepet går | – |
+| 12 | 0,1 % | 0,8 % | 16 % | 6/12 | 7 | Høle | 07:26 «Folkefronten trekker seg bort fra leiren» (4 t ved leiren); to lag mot handelsruta | – |
+| 13 00:07 | 0,1 % | 3,1 % | **82,6 %** | 6/12 | 7 | Høle | **Folkefronten tok Stavanger/Sandnes 12 · 23:47 og vant** | – |
+
+Spilleren holdt Høle hele veien og slo tilbake gruppeangrepet på det (med Reserven og nedgravd garnison), men mistet Vatne til enkeltlag før
+gruppene mot ham begynte, og leiren ble herjet av røverne flere ganger (ingen hjemme). **Mål (b): oppfylt** – han måtte kjempe for det han hadde,
+kunne holde ett av to, og motstanderne vant likevel krigen på dag 13 fordi han ikke gjorde noe med storbyen.
+
+Tidligere kjøringer av (b) som førte til endringer (loggene `gb-2.log`, `gb-3.log`):
+- **Garnisonene forlot tettstedene** (`gb-2.log`): med standard stridsregler («balansert»: trekker seg når den er underlegen) gikk Tropp Nord og
+  Tropp Sør ut av Vatne og Høle da 2 + 2 lag kom, og begge ble tatt uten kamp på dag 4. Det er spillets regel (spilleren velger), men nå sier
+  etterretningen det: «… sett stridsreglene til «kjemp» – ellers trekker den seg når den er underlegen.»
+- **Alt falt på et døgn** (`gb-3.log`): med «kjemp» gikk begge motstanderne løs på spillerens tre steder samtidig rett etter freden (dag 4 kl. 00),
+  og 18 av 25 soldater falt på seks timer, alle på et døgn. Rettet: gruppeangrep på dine tettsteder først fra døgn `grad.blåFra` (Lett 6,5, Vanlig 4,5,
+  Hard 3,5 – dag 7/5/4), bare én motstander om gangen mot deg (`blåOpptatt`), mindre overvekt mot deg (1,2 i stedet for 1,5), og lagene dine like
+  utenfor tettstedet (innen 1 km) teller som forsvarere.
+
+#### (a) Spilleren gjør ingenting i krigen (første kjøring, logg `natt/krig7/gprof.log` – før overvekt/storby-reglene/stridsvogna)
+Bare Vaktlaget (4) og Kari er blå; spilleren holder ingenting. Røverne kommer som før.
+
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Hva skjer |
+|---|---|---|---|---|---|
+| 1–3 | 0 % | 0,3 % | 0,2 % | 2/2 → 4/4 | fredstid; kassene vokser (4,4 mill. kr dag 3) |
+| 4 | 0 % | 0,4 % | 0,2 % | 5/4 | freden over 3 · 18:00; første grupper: begge mot Ålgård/Figgjo, så mot hverandres startsted |
+| 5 | 0 % | 0,3 % | 6,4 % | 6/7 | Folkefronten tar Ålgård, Vatne, Kvernaland, Oltedal; Kystalliansen tar Høle og Sviland |
+| 6 | 0 % | 7,1 % | 9,2 % | 6/8 | Bryne, Kleppe/Verdalen og Kvernaland skifter eier fram og tilbake |
+| 7 | 0 % | 5,6 % | 10,8 % | 8/9 | «Om et døgn kan de gå løs på leiren din» (det gamle varselet) |
+| 8 | 0 % | 2,7 % | 13,7 % | 9/10 | |
+| 9 | 0 % | 4,2 % | 12,1 % | 10/11 | 06:45 og 10:48 etterretning: begge samler 3 lag mot leiren (12,8 og 6,4 km unna); 16:51 begge angriper; Kystalliansen gir opp 23:54 |
+| 10 | 0 % | 7,3 % | 9,2 % | 10/12 | 01:04 Folkefronten trekker seg fra leiren; Folkefronten samler 3 lag mot Stavanger/Sandnes; **14:01 tar den og vinner (78 %)** |
+
+**Mål (a): oppfylt (dag 10, nedre kant).** Etter denne kjøringen ble storbyene flyttet fra døgn 8,5 til 9 på Vanlig, og gruppene fikk overvekt 1,5
+og lov til å ta med småstedsgarnisoner til storbyen – se den endelige kjøringen under.
+
+### Fellesfiler endret i runde 7
+- `site/dovre-fliser/index.html`: to skripttagger rett etter `krig-visning.js` (`spill/eskalering.js`, `spill/eskalering-visning.js`) og versjonsmerkene
+  (versjon.py). Ingenting annet.
+- Ellers bare pakkas egne filer: `fraksjoner.js` (forsyninger hjemme uten tettsteder), `fraksjoner-visning.js` (AI.styr, AI.leirMedVarsel, AI.inne,
+  AI.ekstraBiler, unike lagnavn, påfyll ved hovedkvarteret), `garnison-visning.js` («Vi har mistet …», «… fra Folkefronten»), `krig-visning.js`
+  (kilden «fra speidere»), `pipeline/fliser/vakter/krig.js`, `pipeline/fliser/test_fraksjoner.js` (én ny sjekk), `docs/natt/krig*.{md,json}`.
+
+#### (a) igjen med alle reglene (storbyer fra døgn 9, forsyninger hjemme; logg `natt/krig7/ga3.log`)
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Hva skjer (døgnet før) |
+|---|---|---|---|---|---|
+| 2–3 | 0 % | 0,3 % | 0,2 % | 4/4 | fredstid; røverbølge 1 (2 av Vaktlaget falt) |
+| 4 | 0 % | 0,3 % | 0,2 % | 5/5 | 3 · 19:34/21:36 begge samler 3 lag mot hverandres startsted |
+| 5 | 0 % | 0,3 % | 6 % | 5/6 | Folkefronten tar Ålgård/Figgjo og Kvernaland |
+| 6 | 0 % | 0,3 % | 9,2 % | 6/7 | Folkefronten tar Kleppe/Verdalen, Vatne |
+| 7 | 0 % | 0,5 % | 9,7 % | 6/9 | Lyefjell, Malmheim til Folkefronten; Kystalliansen tar Sviland |
+| 8 | 0 % | 3,7 % | 6,6 % | 7/10 | Kystalliansen tar Ålgård/Figgjo tilbake, Folkefronten tar Oltedal |
+| 9 | 0 % | 3,7 % | 6,6 % | 7/10 | 05:48 etterretning: Kystalliansen samler 3 lag (36 mann) ved Sviland mot leiren; 11:52 angriper; 18:36 trekker seg bort |
+| 10 | 0 % | 0,2 % | 10 % | 6/10 | Folkefronten får stridsvogn (dag 9), Kystalliansen også (dag 10); stridsvognene skyter på hverandre |
+| 10 kl. 22 | 0 % | 0 % | **≥ 60 %** | 6/11 | Folkefronten samler 3 lag ved Vatne mot Stavanger/Sandnes (12:04), angriper 18:04, **tar den 21:37 og vinner** |
+
+Begge kjøringene på «Vanlig» endte dag 10, i nedre kant av målet. Storbyene ble derfor flyttet til døgn 10 (dag 11) – se kjøringen under.
+
+### IKKE gjort / svakheter (runde 7)
+- **Én angrepsgruppe per motstander om gangen** (pluss ett lag på ruteoppdrag). Med 10–12 lag kunne de hatt to; da må `S.gruppe[side]` bli en liste.
+- **Enkeltlag** går fortsatt løs på småstedene dine rett etter freden (den gamle Fraksjoner.velg-regelen: dine tettsteder er mål som alle andre) –
+  i (b) mistet spilleren Vatne til ett lag dag 5, før gruppene mot ham begynte, og uten egen etterretning (bare «Vi har mistet Vatne»).
+- **Garnisoner trekker seg** med standard stridsregler når de er underlegne (spillets regel). Etterretningen sier det nå, men ingenting endres
+  av seg selv; en spiller som ikke leser loggen, mister tettsteder uten kamp.
+- **Leirangrepet** med ekte tropper bruker ikke røverbanneret (#alarm) eller «Forsvar leiren»-knappen (de følger SpilletSpill.T().aktiv = røvere) –
+  spilleren får etterretning i loggen, hendelsen «alarm» (stopper spolingen) og ringen med pila i kartet. «Øv: sett lagene i stilling» virker.
+  Gruppa «er ferdig» etter 4 timer ved leiren og trekker seg; skaden på leiren kommer fra reglene som fantes (fiender skader bygg innen 120 m,
+  tap av leiren etter scenario.js).
+- **Samlingsstedet** er et tettsted 2,5–15 km fra målet – i Ryfylke kan det ligge på andre siden av en fjord (Forsand), og lagene går rundt.
+- **Stridsvogna** kjører med angrepet bare når vegnettet er lastet (PC; på telefon først når kjoretoy-visning henter det). Ellers står den der den
+  ble kjøpt og forsvarer det tettstedet.
+- **Kystalliansen ble nesten slått ut** i flere kjøringer (0 % i fem døgn) – Folkefronten vinner alle fire kjøringene på /rogaland. Det kommer av
+  startstedene (Folkefronten fikk Ålgård/Kvernaland-kanten) og at den som har flest folk, tjener mest. Det kan være verdt å gi den svakeste en
+  «underdog»-bonus, men det er ikke gjort.
+- **Gjennomspillingene er på PC** (1400 × 820) og spoler med `sim(.2)`; ikke prøvd på telefon (vakta er prøvd på mobil).
+- Et lagret spill fra før runde 7 starter eskaleringen med tom kasse den dagen det lastes (ingen ting ødelegges).
+- Lett er ikke spilt gjennom (bare regeltestene).
+
+#### (a) på «Hard» (storbyer fra døgn 7,5, før storbyVekt; logg `natt/krig7/gah-v1.log`)
+Fredstiden 1,9 døgn. Vaktlaget var borte dag 3 (røverne er større på Hard). Kystalliansen tok Kvernaland, Bryne og Ålgård/Figgjo (16 % dag 7),
+fikk stridsvogn dag 6, Folkefronten dag 7 (de skjøt på hverandre). 8 · 00:32 etterretning: Folkefronten samler 4 lag (47 mann) ved Sviland mot
+leiren – «angrep tidligst om ca. 4 t»; 04:35 angriper; 11:19 trekker seg bort. Kassa til Kystalliansen vokste til 20 mill. kr (taket på 15 lag
+nådd, stridsvogna kjøpt). **Kystalliansen tok Stavanger/Sandnes og vant dag 10 kl. 14** – ikke tidligere enn på Vanlig, fordi gruppene var
+opptatt med Ålgård og Kvernaland i to døgn etter at storbyen var lov. Derfor: en storby som er lov, veier nå tre ganger (`plan.storbyVekt`).
+
+#### (a) med storbyer fra døgn 10 og storbyVekt (logg `natt/krig7/ga4-v1.log`) – INGEN seier innen dag 14
+Kystalliansen tok nesten alt rundt (18,7 % – 14 tettsteder) og fikk stridsvogner, Folkefronten holdt seg i live (0,2–0,5 %) og angrep leiren dag 9
+(etterretning 15:34, angrep 21:41, trakk seg 10 · 06:11) og igjen dag 13–14. Kystalliansen gikk mot Stavanger/Sandnes dag 12 med bare 3 lag
+og ga opp. Årsak: 12 lag (taket på Vanlig) og 14 tettsteder – alle lagene var garnison, kassa sto på 20–29 mill. kr uten noe å kjøpe, og
+småstedsregelen (under 3000 innbyggere) slapp ingen garnisoner fri. RETTET: taket vokser med et halvt lag per tettsted de holder
+(`REGLER.lagPerBy`, `Eskalering.tak(grunn, døgnEtterFred, g, byer)`), og til storbyen kan de ta med garnisoner fra tettsteder under 15 000
+innbyggere uten fiender innen 5 km (`plan.småsted`).
+
+#### (a) med det nye lagtaket (logg `natt/krig7/ga5-v1.log`) – for TIDLIG
+Med flere lag fikk Folkefronten nok frie mann til at enkeltlagene selv gikk mot Stavanger/Sandnes (den gamle regelen i Fraksjoner.velg: et stort
+tettsted tas når de frie er mange nok) – **seier dag 8 kl. 10**, før storbyene var lov for gruppene. RETTET: `Fraksjoner.velg` får `storbyStengt`
+(innbyggertallet storbyene begynner på, fra `AI.storbyStengt()` i eskalering-visning.js) så lenge døgnet er før `grad.storbyFra`; i testene 0 (som før).
+
+#### (a) ENDELIG – alle reglene (logg `natt/krig7/ga6.log`): Kystalliansen vinner dag 12
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Angrep på deg det døgnet | Hva skjer |
+|---|---|---|---|---|---|---|
+| 1–3 | 0 % | 0,3 % | 0,2 % | 2/2 → 4/4 | – | fredstid, kassene vokser; røverne som før |
+| 4 | 0 % | 0,3 % | 0,2 % | 5/5 | – | freden over 3 · 18:00; begge samler 3 lag mot hverandres startsted |
+| 5 | 0 % | 6,3 % | 0 % | 7/5 | – | Kystalliansen tar Sviland, Ålgård/Figgjo, Kvernaland … |
+| 6 | 0 % | 12 % | 0,3 % | 8/6 | – | |
+| 7 | 0 % | 18,3 % | 0,3 % | 11/6 | – | taket vokser med tettstedene (11 lag) |
+| 8 | 0 % | 19,4 % | 0,3 % | 14/7 | 1 | Kystalliansen får stridsvogn (19:44); 22:46 etterretning: Folkefronten samler 3 lag (34 mann) ved Vatne mot leiren |
+| 9 | 0 % | 19,6 % | 0,3 % | 15/7 | (angrepet) | 04:49 angriper; 13:14 trekker seg bort fra leiren |
+| 10 | 0 % | 19,6 % | 0,6 % | 18/6 | – | Folkefronten angriper Hommersåk |
+| 11 | 0 % | 16,2 % | 4,1 % | 16/6 | – | stridsvogner til begge (11 · 06–07) |
+| 12 | 0 % | 15,9 % | 4,4 % | 17/7 | 1 | Kystalliansen samler 5 lag ved Stenebyen mot Stavanger/Sandnes (00:05), angriper 06:06, **tar den 13:20 og vinner**; 13:35 ny etterretning mot leiren |
+
+**Mål (a) på Vanlig: oppfylt (dag 12).** Over de fem kjøringene på Vanlig: dag 10, 10, ingen (rettet), dag 8 (rettet) og dag 12 med de endelige reglene.
+
+#### (b) med de nesten endelige reglene (logg `natt/krig7/gb6.log`) – tettstedene tatt av enkeltlag uten varsel
+(Skriptet hadde før dette en feil: personene fra FolkRegler.rekrutter ble lagt i lista to ganger, og samfunn.js krasjet på en dobbelt syk person
+dag 9 i `gb5-krasj.log` – skriptets feil, ikke spillets.) Spilleren tok Vatne og Høle (Vaktlaget kom ikke til Forsand). Vatne ble tatt 6 · 07:39
+av enkeltlag fra Folkefronten uten etterretning; gruppeangrepet på Høle (etterretning 6 · 18:17, angrep 7 · 01:52) ble **slått tilbake 7 · 08:33**,
+men et enkeltlag fra Kystalliansen tok Høle 7 · 18:56 (garnisonen var nede i noen få mann). Leiren varslet 11 · 01:14, angrep 09:19; Folkefronten
+tok Stavanger og vant 11 · 16:05. RETTET: i et ekte spill går enkeltlag ikke løs på dine tettsteder (`v.blåMedVarsel` i Fraksjoner.velg) – bare
+angrepsgrupper, som alltid varsles. (Et lag som ser garnisonen din, slåss fortsatt med den.)
+
+#### (b) med bare varslede angrep på deg (logg `natt/krig7/gb7.log`)
+Alle angrepene på spillerens tettsteder kom nå med etterretning først. Vatne: etterretning 5 · 20:01 (2 lag, 24 mann ved Kvernaland), angrep
+6 · 02:04, **slått tilbake 06:47**; ny etterretning 6 · 12:11, angrep 18:15, **slått tilbake 22:58**; tredje gang (etterretning 7 · 23:30,
+angrep 8 · 05:33) **tatt 8 · 10:03**. Høle: etterretning 8 · 10:36, angrep 17:30, tatt 9 · 00:14 (Reserven var borte). Leiren: varslet og angrepet
+dag 9 og dag 13 (trakk seg etter 4–7 t). Folkefronten tok Stavanger og vant 14 · 04:05. Spilleren (skriptet) rekrutterte ikke og fikk ingen nye
+tropper, så tre angrep på to døgn slet ham ned. RETTET: etter et angrep på deg som er slått tilbake, venter den motstanderen et døgn
+(`plan.blåPause`, lagres) – se den siste kjøringen.
+
+#### (b) ENDELIG – alle reglene (logg `natt/krig7/gb8.log`)
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Dine soldater | Du holder | Hendelser mot deg | Tap |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 0 % | 0,3 % | 0,2 % | 2/2 | 28 | – | bygdevernet i Vatne, Høle og Forsand gir opp | – |
+| 2–4 | 0,6 % | 0,3 % | 0,2 % | 4/4 → 5/5 | 27–28 | Vatne, Forsand, Høle | røverne som før | 1 |
+| 5 | 0,6 % | 8,9 % | 0,3 % | 7/4 | 27 | Vatne, Forsand, Høle | | – |
+| 6 | 0,3 % | 10,9 % | 0,6 % | 8/6 | 19 | Forsand, Høle | 03:39 lag fra Folkefronten på vei forbi støter på garnisonen i Vatne og tar den (ingen gruppe, ingen etterretning) | Vatne (8) |
+| 7–9 | 0,3 % | 11,6–17,6 % | 0,6 % | 8/7 → 11/8 | 19 | Forsand, Høle | motstanderne slåss om Hommersåk, Kvernaland, Oltedal | – |
+| 10 | 0,3 % | 18 % | 0,6 % | 14/8 | 19 | Forsand, Høle | lag mot handelsruta fra Høle | – |
+| 11 | 0,3 % | 19,1 % | 0,6 % | 14/8 | 19 | Forsand, Høle | 11:24 etterretning: Folkefronten samler 4 lag (46 mann) ved Oltedal mot leiren; 18:58 angriper | – |
+| 12 00:05 | 0,3 % | **≥ 60 %** | 0,6 % | | 19 | Forsand, Høle | **Kystalliansen tok Stavanger/Sandnes 11 · 23:37 og vant** | – |
+
+**Mål (b): delvis.** Spilleren holdt to av tre steder til slutt. Men i denne kjøringen kom ingen gruppe mot tettstedene hans (motstanderne var
+opptatt med hverandre, og småstedene hans veier lite – √innbyggere), og Vatne gikk tapt i et sammenstøt uten varsel. Over de fire siste
+(b)-kjøringene: 0–3 gruppeangrep på spillerens tettsteder; når de kom, ble 4 av 6 slått tilbake med Reserven og nedgravd garnison
+(gb-v4, gb6, gb7); det som falt, falt for det tredje angrepet på to døgn (gb7, rettet med `blåPause`) eller for enkeltlag uten varsel (gb6,
+rettet med `blåMedVarsel`) eller for lag som støtte på garnisonen underveis (gb8, ikke rettet – det er vanlig kamp).
+
+### Kontroll (runde 7)
+- Regeltestene: test_eskalering (ny), test_fraksjoner (to nye sjekker), test_garnison, test_strategi, test_krig, test_spillet, test_trussel_lagring,
+  test_forsvar, test_tropper, test_strid – ok. `node --check` på alle endrede skript.
+- Krig-vakta (alle delene, også runde 4–6) på Dovre-testsiden med infrastrukturen: PC og mobil ok (2–10 s). Med feilen lagt inn med vilje
+  (angrepet går uten varseltid) slo vakta til (leirvarselet, og nå også garnisonsangrepet: «minst fire timer»).
+- Bilder: scratchpad `natt7/krig/samles-1400x820.png`, `samles-390x844.png` (ringen og pila ved samlingsstedet, etterretningen i loggen),
+  `krigskart-1400x820.png`, `krigskart-390x844.png` («5 lag · samler 2 lag i terrenget mot Dombås»), og fra gjennomspillingene
+  `g7-*-dagN.png` og `g7-*-krig-slutt.png` (krigskartet med «Folkefronten har overtaket – 78 %»).
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil PORT=8913 node pipeline/fliser/sjekk.js`, 20. nov kl. 02:19 UTC): **119 ok, 0 FEIL** (373 s), også
+  «krig» med RUNDE 7-delen og «krigskartet». Logg: scratchpad `natt7/krig/sjekk-mobil.log`.

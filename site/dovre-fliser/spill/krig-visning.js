@@ -534,7 +534,7 @@
   window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) { modus = null; skitten = true; } if (P.classList.contains('på')) lukk(); } });
 
   // ---------- Leir-menyen: etterretning og avtaler (fanen Mål) ----------
-  const KILDE = { sett: 'sett av egne', radio: 'oppfanget på radio', avhør: 'fra avhør', drone: 'sett av drone' };
+  const KILDE = { sett: 'sett av egne', radio: 'oppfanget på radio', avhør: 'fra avhør', drone: 'sett av drone', speidere: 'fra speidere' };
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp: kn }) => {
     if (!klar || !leir()) return;
     // (runde 4) fangene: avhør, bytte, arbeid, behandling og rekruttering
