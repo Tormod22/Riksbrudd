@@ -714,3 +714,12 @@ opptatt med hverandre, og småstedene hans veier lite – √innbyggere), og Vat
 (b)-kjøringene: 0–3 gruppeangrep på spillerens tettsteder; når de kom, ble 4 av 6 slått tilbake med Reserven og nedgravd garnison
 (gb-v4, gb6, gb7); det som falt, falt for det tredje angrepet på to døgn (gb7, rettet med `blåPause`) eller for enkeltlag uten varsel (gb6,
 rettet med `blåMedVarsel`) eller for lag som støtte på garnisonen underveis (gb8, ikke rettet – det er vanlig kamp).
+
+### Kontroll (runde 7)
+- Regeltestene: test_eskalering (ny), test_fraksjoner (to nye sjekker), test_garnison, test_strategi, test_krig, test_spillet, test_trussel_lagring,
+  test_forsvar, test_tropper, test_strid – ok. `node --check` på alle endrede skript.
+- Krig-vakta (alle delene, også runde 4–6) på Dovre-testsiden med infrastrukturen: PC og mobil ok (2–10 s). Med feilen lagt inn med vilje
+  (angrepet går uten varseltid) slo vakta til (leirvarselet, og nå også garnisonsangrepet: «minst fire timer»).
+- Bilder: scratchpad `natt7/krig/samles-1400x820.png`, `samles-390x844.png` (ringen og pila ved samlingsstedet, etterretningen i loggen),
+  `krigskart-1400x820.png`, `krigskart-390x844.png` («5 lag · samler 2 lag i terrenget mot Dombås»), og fra gjennomspillingene
+  `g7-*-dagN.png` og `g7-*-krig-slutt.png` (krigskartet med «Folkefronten har overtaket – 78 %»).
