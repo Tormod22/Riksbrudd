@@ -1357,3 +1357,12 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   banner, garnisoner holder stillingen, Krig.klynger (én lapp for fiender nær hverandre). RUNDE 9: MORGEN – spill/morgen.js (+visning):
   morgenmøtet kl. 06 fra dag 2 med 2–3 valg ut fra leiren (jakt, dobbel vakt, kjøp mat, speidertur, fridag …) og rapport neste morgen,
   større beslutninger hver tredje dag (nabogården, forlatt tankbil, beskyttelsespenger, karavane). Hjelpen: 213 emner (samle_hjelp.py).
+  RUNDE 10 (20. nov kveld, brukerens iPhone-bilder liggende: «Dette ser ikke bra nok ut»; bildene i scratchpad/bruker20/). KJØRING:
+  Kjor.stilling/hjulHøyder (helling fra fire hjul, høyst ca. 34°/26°, glattet), vegFylling (bakken skrår fra vegkanten for bilen), for bratt
+  = stopp/kryp/skli; knappene Gå ut/Brems/Gass nede til høyre (Brems rygger når bilen står), penere avrundet feltbil (Kjoretoy3d.form),
+  kameraet 9,6 m bak / 3 m opp. BAKKE: de svarte kilene var kryssflaten i veg.js (avskåret hjørne mot innkjørsel som svevde) –
+  KRYSS_REGLER (avvik .35, ikke hjørne mot P/S), skyggene aldri helt svarte og tonet ut langs strålen (uSkF i lys3d), forsideLys for gress/
+  planter (baksidene ble svarte), GRESS_FARGE, lysere asfalt med tekstur, LOD-bias på kartbildet på avstand. LIGGENDE: tropppanelet i to
+  kolonner med «Opprett» alltid synlig, én ting om gangen nederst (opplæring/hogstlapp/bannere viker), bunnmenyen ugjennomsiktig, gåmodus på
+  telefon med fem knapper + «⋯», knapper og ruter flyttet ut av midten. GL-feil 1282 på mobil: tomDybde er nå MeshDepthMaterial med
+  colorWrite/depthWrite av. Kontroll: PC 128/128, mobil 128/128.

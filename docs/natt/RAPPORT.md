@@ -219,3 +219,10 @@ ukegrensen for bruk, og ble gjort ferdig etter kl. 16 da grensen var nullstilt. 
 - Funnet ved flettingen: «Lys og skygger» ga GL-feil 1282 på mobil første gang hvert nett ble tegnet i skyggekartet (den egne «tomme»
   dybdetegningen fra utseende-pakka). Byttet til three.js sin MeshDepthMaterial med colorWrite/depthWrite av – samme virkning, ingen feil.
 - Hjelpen samlet på nytt (213 emner).
+
+# Runde 10 (20. nov kveld): brukerens bilder fra iPhone
+Brukeren sendte fem bilder (liggende iPhone) og skrev «Dette ser ikke bra nok ut». Rettet: bilen står på fire hjul i bakker, riktige
+kjøreknapper (Gå ut/Brems/Gass), penere feltbil, de svarte kilene (en svevende kryssflate i vegen), mykere skygger, gresset uten svarte
+baksider, lysere asfalt, tropppanelet og overlapp på liggende telefon, ryddigere gåmodus. Kontroll: PC 128/128, mobil 128/128.
+Står igjen: vegen står 2–4 m over bakken i bratte lier (på fylling), kameraet kan gå inn i trekroner, kornete fjellsider er ikke
+gjenskapt her (krever ekte iPhone).
