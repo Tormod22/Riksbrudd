@@ -33,7 +33,8 @@
     // når «samleAndel» av styrken står innen «samleR» m av samlingsstedet, eller etter «samleMaks» minutter; gruppa gir opp under
     // «oppgi» av behovet, eller etter «angrepMaks» minutter; samlingsstedet er et eget (eller nøytralt) tettsted innen «nær» m av målet;
     // mål lenger enn «rekkevidde» m fra lagene tas ikke; dine tettsteder veier «blåVekt», tettsteder de har mistet «taptVekt»
-    plan: { hver: 60, margin: 1.3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500 },
+    // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };
@@ -74,7 +75,7 @@
     const P = REGLER.plan, g = o.g || grad(), fri = (o.fri || []).filter(f => f.styrke > 0); if (fri.length < 2) return null;
     const midt = { x: fri.reduce((a, f) => a + f.x, 0) / fri.length, y: fri.reduce((a, f) => a + f.y, 0) / fri.length }, sum = fri.reduce((a, f) => a + f.styrke, 0);
     const lagFor = (m, b) => { const L = fri.slice().sort((p, q) => avst(p, m) - avst(q, m)), ut = []; let s = 0;
-      for (const f of L) { if (ut.length >= g.gruppeMaks) break; if (s >= b && ut.length >= 2) break; ut.push(f); s += f.styrke; }
+      for (const f of L) { if (ut.length >= g.gruppeMaks) break; if (s >= b * P.overvekt && ut.length >= 2) break; ut.push(f); s += f.styrke; }
       return s >= b && ut.length >= 2 ? { lag: ut.map(f => f.id), styrke: s } : null; };
     const kand = [];
     if (o.leir) { const b = Math.max(g.leirLag * P.minBehov, P.margin * (o.leir.forsvar || 0) * (g.mot || 1)); kand.push({ mål: { id: 'leir', navn: 'leiren din', x: o.leir.x, y: o.leir.y, eier: 'blå', leir: true }, behov: b, poeng: Infinity, antall: g.leirLag }); }
