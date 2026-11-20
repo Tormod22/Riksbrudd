@@ -54,7 +54,11 @@ bildet over bilen, to knapper het «Brems», en lys strek lå over bilen, og bil
   ved en bru/rampe) ga med den gamle regelen 49° sidehelling – akkurat som brukerens bilde 3. Nå 18°/21° (taket). Fant også at vegfyllingen
   må ta med ALLE veger innen 20 m (den nærmeste kan ligge lavere enn en annen rett ved siden av), og at kameraet kunne havne inne i en høy
   vegbane (holdes nå over `V.høyde`). Bilder `r*-mob-*.png`. Et sted i en 38° li (VANLIG=1): bilen står på 21° og kryper.
-- Kontrollen (mobil) i en kopi: se rapporten.
+- **Kontrollen (mobil)** i en kopi (scratchpad `snap-r10kjor`): første gang 126 ok, 1 FEIL – «kjørbare biler og helikopter»: speiderbilen
+  kom ikke opp lia ved Dombås (34° og glid fra 37°: den gled 11 m baklengs). Grensene ble gjort slakere (se over); andre gang
+  **127 ok, 0 FEIL** (speiderbilen kjørte 19 m, vakten «kjoring» ok på 0,3 s). PC-kontrollen: se rapporten.
+- Kameraet når et hus står bak bilen (HUS=1 på /rogaland): kameraet kommer til 2,5–2,8 m og lavere (før: inne i veggen).
+  `husMellom(R, x0, y0, x1, y1)` i kjor.js leser husomrissene i R.hindre (trær teller ikke).
 
 7. **Kolonnekjøretøyene** (`spill/kjoretoy3d.js`): alle hjul er runde dekk med felg og nav (`rundHjul` med 10 kanter), førerhuset på
    lastebil/rakettartilleri/radarbil er avrundet og smalner mot taket, og speiderbilen har avrundet kropp/panser og skjermer over hjulene.
