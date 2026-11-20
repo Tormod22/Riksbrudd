@@ -89,8 +89,8 @@
   // (runde 10, brukerens bilder: «vegen er en flat, mørk stripe») grunnfargen på asfalten var 62/255 – i skyggen nesten svart. Nå en
   // middels grå asfalt; kryssflaten har samme farge som asfalten (før mørkere: «mørke rektangler» i kryssene). Claudes forslag (fargene):
   const VEG_FARGE = { asfalt: [84, 85, 88], kommunal: [88, 87, 86], gs: [92, 86, 82] };
-  // bakkens farge (0–1) i lokale meter fra u.bunn (512 × 512, kartbildets farger), snitt av 3 × 3 punkter, litt lysere (Claudes forslag: 1,08)
-  function bunnFarge(u) { const B = u.bunn, W = B.W, f = 1.08 / 255 / 9;
+  // bakkens farge (0–1) i lokale meter fra u.bunn (512 × 512, kartbildets farger), snitt av 3 × 3 punkter, lysere (Claudes forslag: 1,22 – bakkens skyggelegger gjør gresset nær deg lysere enn kartfargen)
+  function bunnFarge(u) { const B = u.bunn, W = B.W, f = 1.22 / 255 / 9;
     return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); let r = 0, g = 0, b = 0;
       for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const k = (Math.min(W - 1, Math.max(0, j + dj)) * W + Math.min(W - 1, Math.max(0, i + di))) * 3; r += B.rgb[k]; g += B.rgb[k + 1]; b += B.rgb[k + 2]; }
       return [Math.min(1, r * f), Math.min(1, g * f), Math.min(1, b * f)]; }; }
@@ -98,7 +98,7 @@
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? VEG_FARGE.gs : type === 'fylling' ? [86, 88, 62] : type === 'fyllingLys' ? [214, 212, 204] : type === 'bykant' ? [112, 109, 103] : type === 'kommunal' ? VEG_FARGE.kommunal : VEG_FARGE.asfalt, v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? VEG_FARGE.gs : type === 'fylling' ? [86, 88, 62] : type === 'fyllingLys' ? [226, 224, 216] : type === 'bykant' ? [112, 109, 103] : type === 'kommunal' ? VEG_FARGE.kommunal : VEG_FARGE.asfalt, v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
     g.putImageData(im, 0, 0); g.scale(2, 2);
@@ -165,7 +165,8 @@
   // vegen (fylling i en skråning), går kanten skrått ned til bakken (1 : 1,5), så vegen ikke svever. bareFall: bare der den svever.
   // Skulderen (flat) legges i «ut»; fyllingen (skråningen) i «fyll» med jord- og gressfarge – før var hele kilen lys grus og sto
   // som brune flak ved gangvegene og rundkjøringen (14. nov).
-  function kant(P, sd, a, bredde, løft, ut, zf, bareFall, fyll) {
+  // (runde 10) fri(x, y): fyllingen legges bare der foten ikke står på en annen veg – en innkjørsels fylling lå som et grønt bånd over vegen
+  function kant(P, sd, a, bredde, løft, ut, zf, bareFall, fyll, fri) {
     let L = 0, forrige = -1, forrigeF = -1; const F = fyll || ut;
     for (let i = 0; i < P.length; i++) {
       const p = P[i], q = P[Math.min(P.length - 1, i + 1)], o = P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * sd, ny = dx / l * sd;
@@ -173,7 +174,8 @@
       const zi = p[2] + løft, x0 = p[0] + nx * (a + bredde), y0 = p[1] + ny * (a + bredde), fall = p[3] ? 0 : zi - zf(x0, y0);
       if (bredde > 0 && !bareFall) { const n0 = ut.pos.length / 3; ut.pos.push(p[0] + nx * a, p[1] + ny * a, zi, x0, y0, zi); ut.uv.push(0, L / 12, 1, L / 12);
         if (forrige >= 0) ut.idx.push(forrige, n0, forrige + 1, forrige + 1, n0, n0 + 1); forrige = n0; }
-      if (fall > (bareFall ? .25 : .12)) { const e = Math.min(6, fall * 1.5), x1 = x0 + nx * e, y1 = y0 + ny * e, z1 = Math.min(zi, zf(x1, y1) + .02), n0 = F.pos.length / 3;
+      const e = Math.min(6, fall * 1.5), x1 = x0 + nx * e, y1 = y0 + ny * e;
+      if (fall > (bareFall ? .25 : .12) && (!fri || fri(x1, y1))) { const z1 = Math.min(zi, zf(x1, y1) + .02), n0 = F.pos.length / 3;
         F.pos.push(x0, y0, zi, x1, y1, z1); F.uv.push(0, L / 12, 1, L / 12); if (F.col) { const a = F.farge(x0, y0), b = F.farge(x1, y1); F.col.push(a[0], a[1], a[2], b[0], b[1], b[2]); } if (forrigeF >= 0) F.idx.push(forrigeF, n0, forrigeF + 1, forrigeF + 1, n0, n0 + 1); forrigeF = n0; }
       else forrigeF = -1;
     }
@@ -201,7 +203,8 @@
       const w = v.w, type = v.t ? 'rampe' : 'ERF'.includes(v.k) ? 'asfalt' : v.k === 'K' ? 'kommunal' : 'grus';
       // rette strekk i jevn stigning trenger ikke et punkt hver 2,5 m (Veg.tynn): vegene var 142 000 av 640 000 trekanter ved Dombås
       bånd(Veg.tynn(v.P), -w, w, 0, grupper[type], false);
-      if (!Veg.vanlig(v) || !'ERFK'.includes(v.k)) { for (const sd of [1, -1]) kant(v.P, sd, w, 0, -.02, grupper.skulder, zf, true, grupper.fylling); continue; }
+      const friFot = (x, y) => ru.klaring(x, y, li, 8) > .6;
+      if (!Veg.vanlig(v) || !'ERFK'.includes(v.k)) { for (const sd of [1, -1]) kant(v.P, sd, w, 0, -.02, grupper.skulder, zf, true, grupper.fylling, friFot); continue; }
       if (v.by && 'RFK'.includes(v.k)) for (const sd of [1, -1]) {
         // fortauet stopper ved kryssene og der det ville ligget på en annen veg eller gang- og sykkelveg; korte rester (under 6 m) droppes
         const biter = []; let b = [];
@@ -212,7 +215,7 @@
         for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), .15, grupper.fortau, true);
           // skråkanten bak fortauet er grå i tettstedene (15. nov: den var gressgrønn midt i Oslo sentrum)
           kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true, grupper.bykant); }
-      } else { const Pt = Veg.tynn(v.P, .06, .05, 7.5); for (const sd of [1, -1]) kant(Pt, sd, w, .8, -.04, grupper.skulder, zf, false, grupper.fylling); }
+      } else { const Pt = Veg.tynn(v.P, .06, .05, 7.5); for (const sd of [1, -1]) kant(Pt, sd, w, .8, -.04, grupper.skulder, zf, false, grupper.fylling, friFot); }
     }
     // gang- og sykkelvegene: smal asfalt uten oppmerking (gangfeltene, t = 5, er striper og ikke asfalt)
     for (const v of gang) if (v.t !== 5) { yield; bånd(Veg.tynn(v.P), -v.w, v.w, 0, grupper.gs, false); for (const sd of [1, -1]) kant(v.P, sd, v.w, 0, -.02, grupper.skulder, zf, true, grupper.fylling); }
