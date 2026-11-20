@@ -21,7 +21,8 @@ module.exports = {
         const hj = (v, bakke) => tri(v, bakke) - tri(v, () => 1e6), faller = (x, y) => (y > 0 ? -y * .4 : 0);
         const flat = hj(vg, () => 0), svev = hj(vg, faller), innk = hj(vg.map((v, i) => (i === 2 ? { ...v, k: 'P' } : v)), () => 0);
         const gammel = V.KRYSS_REGLER.avvik; let selv = 0;
-        try { V.KRYSS_REGLER.avvik = 1e9; selv = hj(vg, faller); } finally { V.KRYSS_REGLER.avvik = gammel; }
+        const utenHj = tri(vg, () => 1e6);
+        try { V.KRYSS_REGLER.avvik = 1e9; selv = tri(vg, faller) - utenHj; } finally { V.KRYSS_REGLER.avvik = gammel; }
         ut.kryss = { flat, svev, innk, selv };
         ok(flat > 0, 'kryss på flat bakke skal ha avskårne hjørner');
         ok(svev === 0, 'et kryss der bakken faller bort fikk svevende hjørner (' + svev + ')');
