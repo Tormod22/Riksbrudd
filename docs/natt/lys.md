@@ -737,7 +737,7 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
 ### Likt før og etter
 - **Alle nettene i scenen** (scratchpad `natt9/lys/fp.js` + `cmpfp.js`, Stavanger, utsnitt 3,0 km, 327–329 nett fra 16–18 kilder: bakken,
   husene, vegene, bruene, kysten, gatemøblene, trærne …): avtrykk av alle attributter og indekser bit for bit. Gammel kode (644ecfa) mot
-  ny: 0 ulike nett. Ny kode, samme utsnitt bygget på nytt etter et annet (lagrene fulle av gamle tall): 0 ulike. (Røyken i liv3d, dyrenes
+  ny – både den første (24e6415) og den endelige (561f666, `fp-ny3.json`): 0 ulike nett. Ny kode, samme utsnitt bygget på nytt etter et annet (lagrene fulle av gamle tall): 0 ulike. (Røyken i liv3d, dyrenes
   gange og ferjas kjølvann endrer seg fra bilde til bilde også i den gamle koden og er tatt ut av sammenligningen.)
 - **Vakta** (se under) med ekte data i Stavanger (scratchpad `natt9/lys/vakt-rog.js`): husene 549 940 trekanter, 13 vegnett og 35 bruer
   like med tallrekkene, med brukt plass og med vanlige lister; flaten = PlaneGeometry; hindringene i biter like (16 494 ruter).
@@ -750,8 +750,9 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
   L-form og rundt bygg) midt i utsnittet (`hentFlis` byttes ut for laget «hus» mens prøven går); i byer med over 400 hus brukes også
   prøveflisa (hele byen tre ganger tok 12 minutter med programvare-grafikk). Utsnittets egenskaper og brumodellenes søyler settes tilbake,
   nettene frigjøres, og bildene tegnes ikke mens prøven går (renderer.render settes tilbake i finally).
-- `planG` = `THREE.PlaneGeometry` (289, 225 og 4 punkt per side: tall, indekstype, type og parameters) og `hindringerG` i biter =
-  `hindringer` i ett strekk (samme ruter, samme ting i samme rekkefølge).
+- `planG` = `THREE.PlaneGeometry` (289, 225 og 4 punkt per side: tall, indekstype, type og parameters), `hindringerG` i biter =
+  `hindringer` i ett strekk (samme ruter, samme ting i samme rekkefølge), og avstanden til vann (`Vegetasjon3d.vannAvstandG`) i biter med
+  pust = i ett strekk i 2000 punkter.
 - Prøvd på Dovre-testsiden (PC 1400 × 820): grønn, runde 9-delen 0,5 s («prøvehus 556 trekanter, 7 vegnett, 0 bruer, flaten =
   PlaneGeometry, hindringene i biter like»). I Stavanger var runde 9-delen grønn, men runde 7-delen («prøvehuset fikk ikke interiør på den
   ekte veien») feilet der (trolig fordi byen er full av ekte hus nærmere deg enn prøvehuset – ikke prøvd med den gamle koden i Stavanger); på
@@ -815,6 +816,8 @@ Per kilde («Hvor i koden» i «Mål hakk», sum / antall / lengste):
   scratchpad `natt8/lys/stavanger-etter-PC.png` (hus, veger, trær, terreng og navn som før).
 - Vakta lys (Dovre-testsiden): PC grønn (runde 9-delen 0,5 s), telefon 390 × 844 grønn (0,2 s; hele vakta 12 s), begge med den endelige koden.
   Med ekte data i Stavanger: runde 9-delen grønn (hus 549 940 trekanter, 13 vegnett, 35 bruer), se «Vakt» over.
+- Telefon (390 × 844, isMobile) i Stavanger med den endelige koden: bilde scratchpad `natt8/lys/stavanger-etter-mobil.png`, og samme utsnitt
+  bygget på nytt med brukt plass i lagrene ga de samme nettene (`fp-ny3-mob.json`).
 - Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8928 node pipeline/fliser/sjekk.js` i en kopi av 561f666, kl. 16.22 norsk tid):
   **124 ok, 0 FEIL**, 384 s. Vakta lys der: grønn, 122,8 s (det meste er skyggene med programvare-grafikk), runde 9-delen 0,2 s.
 - Regeltester: test_tallrekke (ny), test_ytelse, test_veg, test_kyst, test_fjern3d, test_vegetasjon, test_bruer, test_interior_biter,
