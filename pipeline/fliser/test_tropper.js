@@ -26,4 +26,18 @@ assert.ok(/kjører/.test(T.ombordFeil({ menn: t.menn.slice(0, 3) }, { ...bil, st
   lag.menn[0].hp = .5; assert.strictEqual(T.pleie(lag, 10), false, 'uten utstyr'); lag.utstyr = { sanitet: true }; assert.strictEqual(T.pleie(lag, 3), false, 'for tidlig'); assert.strictEqual(T.pleie(lag, 6), true, 'en såret blir kampklar'); assert.strictEqual(lag.menn[0].hp, 1);
   assert.strictEqual(T.pleie(lag, 6), false, 'ingen sårede'); lag.menn[0].hp = .5; lag.menn.find(m => m.rolle === 'sanitet').hp = 0; assert.strictEqual(T.pleie(lag, 6), false, 'uten sanitet');
   for (const [id, M] of Object.entries(T.MALER)) { assert.ok(M.n >= T.R.min && M.n <= T.R.maks && M.våpen.every(w => T.VÅPEN[w]) && M.utstyr.every(u => T.UTSTYR[u]), 'malen ' + id); } }
-console.log('ok   tropper: sammensetning, roller, oppløsning og plass i kjøretøy');
+// RUNDE 8 (kritiker D): forslagene lar to bli igjen og bygge, teksten følger antallet, og advarslene sier fra når leiren mister byggerne
+{ const q = (id, oppgave, bygg = 1, vakt = 1) => ({ id, navn: 'N' + id, ferd: { vakt, bygg }, oppgave, helse: 1 });
+  const seks = [q(1, 'frakt', 1, 1.4), q(2, 'kjøkken', .8, 1.3), q(3, 'bygg', 1.2, .8), q(4, 'bygg', 1.1, .7), q(5, 'hogst', 1, 1.2), q(6, 'vakt', 1, 1.1)];
+  assert.deepStrictEqual(T.behold(seks).sort(), [3, 4], 'de to på «bygg» blir igjen');
+  const v = T.foreslå(seks, 6, T.behold(seks)); assert.strictEqual(v.length, 4, 'Vaktlag (6) med seks igjen gir fire'); assert.ok(!v.includes(3) && !v.includes(4), 'forslaget tar ikke byggerne');
+  assert.deepStrictEqual(T.behold([q(1, 'fri', .7), q(2, 'fri', 1.4), q(3, 'kjøkken', 1.1)]).sort(), [2, 3], 'ingen på «bygg»: de beste byggerne blir igjen');
+  assert.strictEqual(T.foreslå(seks, 4).length, 4, 'uten hold som før');
+  assert.strictEqual(T.malTekst('storm', 6).split(' ')[0], 'Seks', 'teksten følger antallet: ' + T.malTekst('storm', 6)); assert.ok(/^Åtte /.test(T.malTekst('storm')) && /^Fire /.test(T.malTekst('speider', 4)) && !/\{N\}/.test(T.malTekst('vakt', 2)));
+  for (const id of Object.keys(T.MALER)) assert.ok(T.MALER[id].tekst.includes('{N}'), 'malteksten har {N}: ' + id);
+  const a = T.advarsler(seks, [1, 2, 3, 4, 5, 6], { jobber: 1 }); assert.ok(a.length === 1 && /tom/.test(a[0]), 'alle seks: leiren blir tom ' + a);
+  const b = T.advarsler(seks, [3, 4, 1], { jobber: 2 }); assert.ok(b.some(t => /«bygg»/.test(t) && /2 jobbene/.test(t)), 'byggerne tas: advarsel ' + b);
+  assert.ok(T.advarsler(seks, [1, 2], { jobber: 1, kjøkken: true }).some(t => /kokk/.test(t)) && !T.advarsler(seks, [1, 2], { jobber: 1, kjøkken: false }).length, 'kokken: bare når leiren har kjøkken');
+  assert.deepStrictEqual(T.advarsler(seks, [1, 5, 6], { jobber: 3 }), [], 'byggerne og kokken blir igjen: ingen advarsel');
+  assert.ok(T.advarsler(seks, [3, 1], {}).some(t => /halvt så fort/.test(t)), 'én bygger igjen: halvt så fort'); }
+console.log('ok   tropper: sammensetning, roller, oppløsning og plass i kjøretøy; forslagene lar to bygge (runde 8)');

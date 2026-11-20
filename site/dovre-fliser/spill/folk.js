@@ -58,6 +58,7 @@
     arbeidsfør: .4,
     nød: 3,                     // færre enn tre i gjengen: nye kan alltid rekrutteres (ingen krav om seng eller moral), så spillet ikke låser seg
     nødMoral: 50,               // en tom gjeng henter seg inn til dette, og de første nye starter ikke på bunnen
+    nødBygg: 2,                 // (runde 8, Claudes forslag) i nød går nye rett på «bygg» til to bygger (ett byggelag)
     rasjonAvh: .6,              // barn og gamle (spill/samfunn.js) spiser litt mindre enn en voksen i arbeid
   };
   // Enkel, fast tilfeldighet (samme frø gir samme folk)
@@ -224,8 +225,8 @@
     const iNød = nød(F), tom = !F.personer.length; let pris = R.rekruttPris;
     if (!betal(pris)) { if (!iNød) return { feil: `Ikke nok penger (${LB.kroner(pris)}).` }; pris = 0; }
     const r = rng(F.frø); const p = nyPerson(F, r); F.frø = Math.floor(r() * 4294967296);
-    // i nød: den nye går rett på «bygg» når ingen bygger, og en ny gjeng starter ikke med bunnmoral
-    if (iNød) { if (!arbeidere(F, 'bygg')) p.oppgave = 'bygg'; F.moral = Math.max(F.moral, R.nødMoral); F.misnøye = 0; }
+    // i nød: den nye går rett på «bygg» når færre enn R.nødBygg bygger (runde 8: to = ett helt byggelag), og en ny gjeng starter ikke med bunnmoral
+    if (iNød) { if (arbeidere(F, 'bygg') < R.nødBygg) p.oppgave = 'bygg'; F.moral = Math.max(F.moral, R.nødMoral); F.misnøye = 0; }
     if (tom) F.sist = { ...F.sist, tom: false };
     return { person: p, pris, nød: iNød };
   }

@@ -105,6 +105,7 @@ ok(L0.BYGG.kjøkken && L0.kostnad('kjøkken').pris === 3e6 && L0.PRIORITET.inclu
   ok(r1.person && r1.pris === 0 && r1.nød && r1.person.oppgave === 'bygg' && L0.byggelag(L) === 1, 'første nye uten penger: gratis, går rett på «bygg» (ett byggelag igjen)');
   const før = penger, r2 = F0.rekrutter(F, L, betal), r3 = F0.rekrutter(F, L, betal);
   ok(r2.person && r3.person && før - penger === 2 * F0.R.rekruttPris && F.personer.length === 3, 'nummer to og tre: vanlig pris, fortsatt uten seng');
+  ok(r2.person.oppgave === 'bygg' && r3.person.oppgave !== 'bygg' && L0.byggelag(L) === 1, 'runde 8: nummer to går også på «bygg» (to = ett helt byggelag), nummer tre ikke');
   const r4 = F0.rekrutter(F, L, betal); ok(r4.feil && /seng/.test(r4.feil) && F0.kanRekruttere(F, L), 'fra tre personer gjelder kravet om ledig seng igjen');
   // brakken blir ferdig med det ene byggelaget, og gjengen overlever med mat
   F0.kjøpMat(F, 200, betal); const b = (fyll(L), L0.bygg(L, { type: 'brakke', x: 0, y: 0 }, betal).bygg);
