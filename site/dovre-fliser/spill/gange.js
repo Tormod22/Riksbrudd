@@ -156,6 +156,10 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function utSteg() {
     const v = venterUt; if (!v) return; if (!r3() || !R3.ut || typeof på3d === 'undefined' || !på3d) { venterUt = null; overlegg(true); lukkValg(); return; }
     const u = R3.ut, s = (performance.now() - v.t0) / 1000;
+    // kameraet holdes der utsnittet skal bygges (rulles det imens, ville tegn3d bygget et annet utsnitt, og du hadde ventet for alltid);
+    // og etter vent sekunder går du uansett (byggingen fortsetter da mens du går, som før)
+    const b = R3.bane; b.x = v.X - u.cx; b.y = v.Y - u.cy; b.avst = GÅ_AVST;
+    if (s > Gaavalg.REGLER.inn.maksVent) { venterUt = null; overlegg(true); lukkValg(); logg('Kartet rundt deg bygges fortsatt – du går imens.'); v.ferdig(); return; }
     v.p.textContent = (R3.bygger && R3.steg ? R3.steg.charAt(0).toUpperCase() + R3.steg.slice(1) + ' … ' : 'Bygger … ') + Math.round(s) + ' s';
     v.i.style.width = Math.min(95, Math.round(100 * (1 - Math.exp(-s / 25)))) + '%';
     if (R3.bygger || trengerNytt(u, v.X - u.cx, v.Y - u.cy)) return;

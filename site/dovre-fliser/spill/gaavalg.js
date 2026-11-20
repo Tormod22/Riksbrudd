@@ -35,9 +35,9 @@
     // pila mot nærmeste inngang («Inngang 14 m →»): bygg med dør innen maks meter; vises ikke nærmere enn min (da kommer «Gå inn»),
     // og ikke når døra er rett foran deg (innen rett grader) og vender mot deg innen synlig meter (da står «Inngang»-merket over døra)
     peker: { maks: 70, min: 4.5, rett: 25, synlig: 28 },
-    // «Gå inn i huset» fra kartet: du reiser til et punkt så mange meter utenfor huset, 3D bygges med kartet i denne målestokken (m per
-    // punkt), og du settes så mange meter foran døra; nærmere enn nær meter reiser du ikke, du bare går inn. Venter så lenge (s) på interiøret.
-    inn: { ute: 5, kamM: .6, foran: 2.4, nær: 40, vent: 8 },
+    // «Gå inn i huset» fra kartet: du reiser til et punkt så mange meter utenfor huset (ute), og du settes så mange meter foran døra; nærmere enn nær meter reiser du ikke, du bare går inn. Venter så lenge (s) på interiøret,
+    // og høyst maksVent sekunder på at kartet rundt deg er bygget før du begynner å gå (gjelder all gange)
+    inn: { ute: 5, foran: 2.4, nær: 40, vent: 8, maksVent: 120 },
     // reisen: høyst så mange spillminutter per bilde (sim får små steg som ellers), og 3D tegnes ikke mens du reiser eller mens kartet
     // rundt målet bygges (det var tegningen av hvert bilde med programvare-grafikk som gjorde at siden svarte tregt i minutter)
     reise: { maksPerBilde: 3 },
