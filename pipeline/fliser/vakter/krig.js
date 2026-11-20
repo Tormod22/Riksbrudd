@@ -193,7 +193,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       const [bx, by0] = AI.inne(by), blå = nyttLag('Vakt sju garnison', bx, by0, 'blå'); ENHETER.push(blå); nye.push(blå); TETTSTEDER.set(by.e.id, { eier: 'blå', inntar: null });
       for (let i = 0; i < 3; i++) nye.push(AI.nytt('rød', bx + 4200 + i * 250, by0 + 300 * i));
       // etter fredstiden, før leirangrepene er lov
-      tid = ES.fredSlutt() + 2 * 1440;
+      tid = ES.fredSlutt() + 2.5 * 1440;
       const G = ES.planlegg('rød', { tving: true, bare: by.e.id }); ut.gruppe = !!G && G.mål.id === by.e.id && G.lag.length >= 2; ut.lag = G ? G.lag.length : 0;
       ut.varsel = /Etterretning: Kystalliansen samler \d+ lag/.test(loggTekst()) && /Dombås \(ditt\)/.test(loggTekst());
       const m = G && ENHETER.find(e => e.navn === G.lag[0]); const v1 = m ? AI.styr(m, { hva: 'ta', x: 0, y: 0, tekst: '' }) : null; ut.samles = !!v1 && /^(samle|hold)$/.test(v1.hva);

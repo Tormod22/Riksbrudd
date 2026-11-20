@@ -33,7 +33,8 @@
     const L = leir(), h = AI.hjem ? AI.hjem()[side] : null, m = L || (h ? { x: h[0], y: h[1] } : { x: 0, y: 0 }), r = ER.plan.rekkevidde + 20000, ute = ENHETER.filter(kjemper);
     return alle().filter(b => b.bb[2] > m.x - r && b.bb[0] < m.x + r && b.bb[3] > m.y - r && b.bb[1] < m.y + r).map(b => {
       const [x, y] = AI.inne ? AI.inne(b) : [(b.bb[0] + b.bb[2]) / 2, (b.bb[1] + b.bb[3]) / 2], eier = eierAv(b), folk = b.e.folk || 0;
-      const forsvar = ute.filter(e => e.side !== side && !hvile(side, e.side) && iBy(b, e.x, e.y)).reduce((a, e) => a + sty(e), 0);
+      // forsvarerne: de andre sidenes lag i tettstedet, og like utenfor (innen 1 km av midten – de kommer til)
+      const forsvar = ute.filter(e => e.side !== side && !hvile(side, e.side) && (iBy(b, e.x, e.y) || Math.hypot(e.x - x, e.y - y) <= 1000)).reduce((a, e) => a + sty(e), 0);
       return { id: b.e.id, navn: b.e.navn, x, y, folk, eier, minst: Garnison.minstFor(folk), mann: Garnison.mannFor(folk), forsvar, tapt: !!(AI.minne && AI.minne[side] && AI.minne[side].hatt.has(b.e.id) && eier !== side), by: b };
     });
   }
@@ -62,7 +63,9 @@
     const gr = g(), B = byer(side), frie = fri(side, B), L = leir();
     const leirOk = L && !hvile(side, 'blå') && AI.angripLeir !== false && (o.leir || (døgn() >= gr.leirFra && tid - S.sistLeir[side] >= gr.leirHver * 1440));
     const forsvarLeir = L ? ENHETER.filter(e => e.side === 'blå' && kjemper(e) && avst(e, L) <= ER.plan.leirForsvar).reduce((a, e) => a + sty(e), 0) : 0;
-    let v = E.velgMål({ side, døgn: o.døgn !== undefined ? o.døgn : døgn(), g: gr, storFra: F.fredDøgn(fiendeF()) + F.REGLER.storEtter, byer: o.bare ? B.filter(b => b.id === o.bare) : B, fri: frie, leir: leirOk ? { x: L.x, y: L.y, forsvar: forsvarLeir } : null });
+    // den andre motstanderen angriper noe av ditt nå: da venter denne (du skal ikke få to angrep samtidig)
+    const andre = SIDER.filter(sd => sd !== side).map(sd => S.gruppe[sd]).find(G => G && (G.mål.leir || G.mål.eier === 'blå')), blåOpptatt = !!andre && !o.tving;
+    let v = E.velgMål({ side, døgn: o.døgn !== undefined ? o.døgn : døgn(), g: gr, storFra: F.fredDøgn(fiendeF()) + F.REGLER.storEtter, byer: o.bare ? B.filter(b => b.id === o.bare) : B, fri: frie, leir: leirOk ? { x: L.x, y: L.y, forsvar: forsvarLeir } : null, blåOpptatt });
     // storbyen: er de for få, tar de med garnisonene fra småstedene sine (bare mot en storby som er lov nå)
     let alleFrie = frie;
     if (!v && !o.bare) { const store = B.filter(b => b.folk >= ER.storby && b.eier !== side && E.tillatt(b, o.døgn !== undefined ? o.døgn : døgn(), gr, 0));

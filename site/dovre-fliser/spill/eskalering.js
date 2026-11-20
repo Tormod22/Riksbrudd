@@ -13,12 +13,13 @@
     //  tak: høyst så mange lag per motstander; kr: faktor på inntekten; leirFra: døgn før de angriper leiren med ekte tropper
     //  (døgn 7 = dag 8), leirHver: døgn mellom hvert leirangrep, leirLag: lag i et leirangrep; varsel: spillminutter fra
     //  etterretningen kommer til angrepet tidligst går; storbyFra: døgn før en storby (over REGLER.storby innbyggere) blir mål;
+    //  blåFra: døgn før de samler en angrepsgruppe mot et tettsted du holder (de første døgnene etter freden går bare enkeltlag løs på dem);
     //  gruppeMaks: høyst så mange lag i én angrepsgruppe; rute: sjansen hver sjette time for at en motstander sender et lag mot
     //  en handelsrute eller oljekolonne du har; mot: faktor på styrken de krever før de angriper (lavere = dristigere)
     grad: {
-      lett: { navn: 'Lett', tak: 9, kr: .7, leirFra: 10, leirHver: 4, leirLag: 2, varsel: 8 * 60, storbyFra: 13, gruppeMaks: 4, rute: .2, mot: 1.15 },
-      vanlig: { navn: 'Vanlig', tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 9, gruppeMaks: 6, rute: .35, mot: 1 },
-      hard: { navn: 'Hard', tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 7, gruppeMaks: 7, rute: .5, mot: .85 },
+      lett: { navn: 'Lett', blåFra: 6.5, tak: 9, kr: .7, leirFra: 10, leirHver: 4, leirLag: 2, varsel: 8 * 60, storbyFra: 13, gruppeMaks: 4, rute: .2, mot: 1.15 },
+      vanlig: { navn: 'Vanlig', blåFra: 4.5, tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 9, gruppeMaks: 6, rute: .35, mot: 1 },
+      hard: { navn: 'Hard', blåFra: 3.5, tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 7, gruppeMaks: 7, rute: .5, mot: .85 },
     },
     // Økonomien per døgn: grunnKr/grunnFolk fra hovedkvarteret, krPerTusen/folkPerTusen per 1000 innbyggere i tettstedene de holder
     // (skatt, mat, folk som slutter seg til). Lag koster penger og folk, kjøretøy bare penger. Kassa og folket har et tak.
@@ -35,8 +36,9 @@
     // mål lenger enn «rekkevidde» m fra lagene tas ikke; dine tettsteder veier «blåVekt», tettsteder de har mistet «taptVekt»;
     // rykte: m fra leiren – angrep motstanderne imellom nærmere enn dette, får du høre om (etterretning i loggen)
     // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående;
+    // blåOvervekt: mot tettstedene dine tar gruppa bare med seg til 1,2 × behovet – du skal kunne holde dem hvis du forsterker i tide;
     // småsted: innbyggere – garnisoner i egne tettsteder under dette kan tas med til et storbyangrep (spill/eskalering-visning.js)
-    plan: { hver: 60, margin: 1.3, overvekt: 1.5, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };
@@ -68,21 +70,24 @@
   // er målet stort nok til en gruppe? Små nøytrale tettsteder tar lagene selv (Fraksjoner.velg)
   const gruppemål = by => (by.minst || 0) > REGLER.ettLag || !!by.eier || (by.forsvar || 0) > 0;
   // kan det bli et mål nå? (storbyer først fra g.storbyFra, store tettsteder fra storFra = døgnet småstedene ikke lenger kommer først)
-  const tillatt = (by, døgn, g, storFra) => (by.folk >= REGLER.storby ? døgn >= g.storbyFra : (by.minst || 0) > REGLER.ettLag ? døgn >= storFra : true);
+  // (runde 7, gjennomspilling b: begge motstanderne gikk løs på spillerens to småsteder samtidig rett etter freden, og alle 25 soldatene falt
+  // på et døgn) dine tettsteder blir gruppemål først fra g.blåFra, og bare når den andre motstanderen ikke alt angriper deg (blåOpptatt)
+  const tillatt = (by, døgn, g, storFra, blåOpptatt) => (by.eier === 'blå' && (døgn < (g.blåFra || 0) || blåOpptatt) ? false
+    : by.folk >= REGLER.storby ? døgn >= g.storbyFra : (by.minst || 0) > REGLER.ettLag ? døgn >= storFra : true);
   // Velg mål og lag for en ny angrepsgruppe.
   // o = { side, døgn, g, storFra, byer: [{ id, navn, x, y, folk, eier, minst, forsvar, tapt }], fri: [{ id, x, y, styrke }],
-  //   leir: { x, y, forsvar } | null (bare når et leirangrep er lov nå) }
+  //   leir: { x, y, forsvar } | null (bare når et leirangrep er lov nå), blåOpptatt: den andre motstanderen angriper noe av ditt nå }
   // Gir { mål: { id, navn, x, y, eier, leir }, behov, lag: [id …], styrke } eller null.
   function velgMål(o) {
     const P = REGLER.plan, g = o.g || grad(), fri = (o.fri || []).filter(f => f.styrke > 0); if (fri.length < 2) return null;
     const midt = { x: fri.reduce((a, f) => a + f.x, 0) / fri.length, y: fri.reduce((a, f) => a + f.y, 0) / fri.length }, sum = fri.reduce((a, f) => a + f.styrke, 0);
-    const lagFor = (m, b) => { const L = fri.slice().sort((p, q) => avst(p, m) - avst(q, m)), ut = []; let s = 0;
-      for (const f of L) { if (ut.length >= g.gruppeMaks) break; if (s >= b * P.overvekt && ut.length >= 2) break; ut.push(f); s += f.styrke; }
+    const lagFor = (m, b) => { const L = fri.slice().sort((p, q) => avst(p, m) - avst(q, m)), ut = [], ov = m.eier === 'blå' ? P.blåOvervekt : P.overvekt; let s = 0;
+      for (const f of L) { if (ut.length >= g.gruppeMaks) break; if (s >= b * ov && ut.length >= 2) break; ut.push(f); s += f.styrke; }
       return s >= b && ut.length >= 2 ? { lag: ut.map(f => f.id), styrke: s } : null; };
     const kand = [];
-    if (o.leir) { const b = Math.max(g.leirLag * P.minBehov, P.margin * (o.leir.forsvar || 0) * (g.mot || 1)); kand.push({ mål: { id: 'leir', navn: 'leiren din', x: o.leir.x, y: o.leir.y, eier: 'blå', leir: true }, behov: b, poeng: Infinity, antall: g.leirLag }); }
+    if (o.leir && !o.blåOpptatt) { const b = Math.max(g.leirLag * P.minBehov, P.margin * (o.leir.forsvar || 0) * (g.mot || 1)); kand.push({ mål: { id: 'leir', navn: 'leiren din', x: o.leir.x, y: o.leir.y, eier: 'blå', leir: true }, behov: b, poeng: Infinity, antall: g.leirLag }); }
     for (const by of o.byer || []) {
-      if (by.eier === o.side || !gruppemål(by) || !tillatt(by, o.døgn, g, o.storFra)) continue; const d = avst(by, midt); if (d > P.rekkevidde) continue;
+      if (by.eier === o.side || !gruppemål(by) || !tillatt(by, o.døgn, g, o.storFra, o.blåOpptatt)) continue; const d = avst(by, midt); if (d > P.rekkevidde) continue;
       const b = behov(by, g); if (b > sum) continue;
       const vekt = Math.sqrt(Math.max(1, by.folk || 0)) * (by.eier === 'blå' ? P.blåVekt : 1) * (by.tapt ? P.taptVekt : 1);
       kand.push({ mål: { id: by.id, navn: by.navn, x: by.x, y: by.y, eier: by.eier || null, leir: false }, behov: b, poeng: vekt / (d / 1000 + 4) });

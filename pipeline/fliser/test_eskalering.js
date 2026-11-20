@@ -34,6 +34,9 @@ const fri = n => Array.from({ length: n }, (_, i) => ({ id: 'L' + i, x: i * 300,
   // blått tettsted før storbyen er lov
   const v = E.velgMål({ side: 'rød', døgn: 5, g, storFra: 3.5, byer: [stor, lite, blå], fri: fri(4) });
   assert(v && v.mål.id === 3 && v.lag.length >= 2 && v.styrke >= v.behov, 'går mot spillerens tettsted med flere lag');
+  assert.equal(E.velgMål({ side: 'rød', døgn: 3, g, storFra: 3.5, byer: [blå], fri: fri(4) }), null, 'dine tettsteder først fra blåFra');
+  assert.equal(E.velgMål({ side: 'rød', døgn: 5, g, storFra: 3.5, byer: [blå], fri: fri(4), blåOpptatt: true }), null, 'ikke to angrep på deg samtidig');
+  assert(v.styrke <= Math.max(2 * 12, v.behov * R.plan.blåOvervekt + 12), 'mindre overvekt mot deg');
   // storbyen når den er lov og de er mange nok
   const w = E.velgMål({ side: 'rød', døgn: 9, g, storFra: 3.5, byer: [stor], fri: fri(5) }); assert(w && w.mål.id === 1 && w.styrke >= stor.minst, 'storbyen');
   assert.equal(E.velgMål({ side: 'rød', døgn: 9, g, storFra: 3.5, byer: [stor], fri: fri(2) }), null, 'for få til storbyen');
