@@ -36,7 +36,12 @@
   const inneMedStrøm = () => { if (!inne) return false; const b = vedKontrollrom(); return !!b && harStrøm(b); };
   const modus = () => (aktiv() ? K.modus(inneMedStrøm(), T.nettbrett) : null);
   const nær = s => deg && Math.hypot(s.x - deg.x, s.y - deg.y) <= R.nær;
-  const syn = s => K.innsyn(modus(), { karakter: s.karakter, nær: nær(s), kontakt: lagInfo(s).kontakt });
+  // (runde 8, PC-kritikeren: lagene i leiren sto som «meldt 23:54» mens røverne angrep, og røverne de så, ble ikke vist) – egne lag i og ved
+  // leiren er hjemme: de vises der de er, og det de ser, står på kartet. Claudes forslag: innen HJEMME meter fra leirens midte (lag 1 km
+  // ute er fortsatt «sist meldt» – K3-testen i sjekk.js). Karakteren som går i 3D (Gange) eller lastes på nytt, finnes igjen i ENHETER.
+  const HJEMME = 600;
+  const hjemme = s => { if (s.side !== 'blå') return false; const S = spill(); return !!(S && S.leir) && Math.hypot(s.x - S.leir.x, s.y - S.leir.y) <= HJEMME; };
+  const syn = s => K.innsyn(modus(), { karakter: s.karakter, nær: nær(s) || hjemme(s), kontakt: lagInfo(s).kontakt });
   KROKER.innsyn.push(s => !aktiv() || syn(s).fiender);
   KROKER.skjul.push(s => aktiv() && s.side === 'blå' && !s.karakter && !syn(s).live);
   KROKER.kanOrdre.push(s => { if (!aktiv() || s.karakter || nær(s) || lagInfo(s).kontakt) return true;
@@ -90,6 +95,7 @@
     for (const x of tekster) radio(s, x);
   }
   KROKER.sim.push(dt => {
+    if (deg && !ENHETER.includes(deg)) deg = ENHETER.find(s => s.karakter) || deg;
     if (!aktiv()) return; const t = tid;
     akk += dt; kontaktAkk += dt;
     if (kontaktAkk >= 3) { kontaktAkk = 0; for (const s of ENHETER) if (s.side === 'blå' && !s.karakter && levende(s)) sjekkKontakt(s); }

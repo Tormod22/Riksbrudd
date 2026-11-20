@@ -26,3 +26,16 @@ console.log('ok   forsvar: beredskap, stillinger, fordeling, ankomst, leirvakt o
   assert.deepStrictEqual(F.velgReparasjon(B, 3, 3.5e5), [], 'reserven (300 000 kr) blir alltid igjen'); assert.deepStrictEqual(F.velgReparasjon(B, 0, 5e6), []);
   const s = F.skadet(B); assert.strictEqual(s.n, 4); assert.strictEqual(s.pris, 1e5 + 7e5 + 2e4); assert.strictEqual(s.tekst, '4 bygg er skadet'); assert.strictEqual(F.skadet([{ hp: .5, pris: 1 }]).tekst, 'Ett bygg er skadet'); }
 console.log('ok   forsvar: mot røverne i leiren, reparasjon og skadevarsel');
+// (runde 8) én kilde for angrepet: glattet anslag som ikke hopper, spenn når ingen ser dem, og rapporten etter hver bølge
+{ let e = F.glatt(null, 70, 0, false); assert.strictEqual(e.v, 70);
+  e = F.glatt(e, 60, 10, false); assert.ok(Math.abs(e.v - 60) < 1e-9, 'teller ned med tida');
+  const før = e.v; e = F.glatt(e, 231, 20, false); assert.ok(e.v > før - 10 && e.v < 120, `hopper ikke til 231 (${e.v.toFixed(0)})`);
+  e = F.glatt(e, 15, 20, true); assert.strictEqual(e.v, 15, 'sett: avstanden gjelder');
+  assert.strictEqual(F.glatt(null, null, 5, false), null); assert.strictEqual(F.glatt({ v: 30, t: 0 }, null, 10, false).v, 20);
+  assert.strictEqual(F.spenn(3), null); assert.strictEqual(F.spenn(50), 'ca. 35–65 min'); assert.strictEqual(F.spenn(90), 'ca. 1–2 timer'); assert.strictEqual(F.spenn(200), 'ca. 2–5 timer');
+  assert.strictEqual(F.rapport({ fiender: 1, fienderUte: 1, falne: 0, sårede: 0, bygg: 0 }), 'røverlaget er slått ut, ingen tap hos oss.', 'ikke «alle 1 røverlag»');
+  let r = F.sluttRapport({ hvem: 'Røverne', nr: 2, utfall: 'unna', tok: '450 000 kr', fiender: 2, fienderUte: 1, falne: 1, sårede: 2, skadet: 1 });
+  assert.ok(r.god && /Bølge 2 er slått tilbake/.test(r.tittel) && /Dere tok 450 000 kr/.test(r.tekst) && /1 av 2 røverlag/.test(r.tekst) && /1 falt og 2 såret/.test(r.tekst) && /1 bygg skadet/.test(r.tekst), JSON.stringify(r));
+  r = F.sluttRapport({ hvem: 'Røverne', nr: 3, utfall: 'herjet', tapte: '1,2 mill. kr og 40 m³ tre', fiender: 1, fienderUte: 0 }); assert.ok(!r.god && /herjet/.test(r.tittel) && /De tok 1,2 mill/.test(r.tekst) && /Ingen tap/.test(r.tekst));
+  r = F.sluttRapport({ hvem: 'Kystalliansen', utfall: 'oppgitt', fiender: 3, fienderUte: 2, ødelagt: 1 }); assert.ok(r.god && /Angrepet fra Kystalliansen er slått tilbake/.test(r.tittel) && /2 av 3 lag fra Kystalliansen/.test(r.tekst) && /1 ødelagt/.test(r.tekst)); }
+console.log('ok   forsvar (runde 8): glattet anslag, spenn, «røverlaget» i entall og rapport etter hver bølge');

@@ -34,7 +34,7 @@
   const ankomst = (meter, fart = R.fart) => Math.max(0, meter / fart / 60);   // minutter
   const vaktStørrelse = vakter => (vakter >= R.vakt.min ? Math.min(R.vakt.maks, vakter) : 0);
   // Rapporten etter angrepet. før/etter: { fiender, egne (friske), bygg (snitt hp · antall) }
-  function rapport(t) { const d = []; d.push(t.fienderUte >= t.fiender ? `alle ${t.fiender} røverlag er slått ut` : `${t.fienderUte} av ${t.fiender} røverlag slått ut`);
+  function rapport(t) { const d = []; d.push(t.fienderUte >= t.fiender ? (t.fiender === 1 ? 'røverlaget er slått ut' : `alle ${t.fiender} røverlag er slått ut`) : `${t.fienderUte} av ${t.fiender} røverlag slått ut`);
     d.push(t.falne || t.sårede ? `vi har ${t.falne ? t.falne + ' falne' : ''}${t.falne && t.sårede ? ' og ' : ''}${t.sårede ? t.sårede + ' sårede' : ''}` : 'ingen tap hos oss'); if (t.bygg > 0) d.push(`${t.bygg} bygg ble skadet`);
     return d.join(', ') + '.'; }
   // ---------- (runde 4, 18. nov) MOT RØVERNE I LEIREN og REPARASJON ----------
@@ -66,7 +66,46 @@
     return ut; }
   // varselet etter et angrep: «3 bygg er skadet» (hp under rep.varsel), og hva det koster å reparere alle
   function skadet(bygg) { const s = bygg.filter(q => q.hp > 0 && q.hp < R.rep.varsel); return { n: s.length, pris: s.reduce((t, q) => t + (q.opptatt ? 0 : q.pris || 0), 0), tekst: s.length === 1 ? 'Ett bygg er skadet' : `${s.length} bygg er skadet` }; }
-  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet };
+  // ---------- (runde 8, 20. nov natt: to nye kritikere) ÉN KILDE FOR ANGREPET ----------
+  // Banneret, varselbrikka og kartet sa hver sitt («ikke sett ennå» mens kartet viste røverne i leiren for 2 min siden, «10,0 km» når de
+  // var 720 m unna), og anslaget hoppet 70 → 231 → 15 min på en spilltime. Nå regner forsvar-visning.js ut én status (ForsvarSpill.status)
+  // som alle tre bruker, og anslaget glattes (det teller ned, og et nytt rått anslag trekker det bare litt om gangen) og vises som et spenn
+  // når ingen ser angriperne. Tallene er Claudes forslag:
+  const STATUS = {
+    sistSett: 45,      // spillminutter: så gammel en observasjon (kartet, radioen, etterretningen) kan være og fortsatt stå som «sist sett»
+    glatt: 25,         // tidskonstant (spillminutter) når anslaget glattes og ingen ser angriperne
+    usikker: .3,       // ± denne andelen i spennet («ca. 45–75 min») når ingen ser dem
+    nårSomHelst: 5,    // minutter: under dette står «kan være framme når som helst» når ingen ser dem
+    timer: 75,         // minutter: over dette står spennet i hele timer («ca. 1–2 timer»)
+  };
+  // glatt(før, rå, tid, sett): før = { v, t } (minutter igjen, spilltida da), rå = nytt anslag. Teller ned med tida; et nytt rått anslag
+  // trekker det med andelen 1 − e^(−dt/glatt). Ser noen angriperne, gjelder det rå anslaget (avstanden er kjent).
+  function glatt(før, rå, t, sett, R2 = STATUS) {
+    if (rå === null || rå === undefined || !Number.isFinite(rå)) return før ? { v: Math.max(0, før.v - Math.max(0, t - før.t)), t } : null;
+    if (!før || sett) return { v: Math.max(0, rå), t };
+    const dt = Math.max(0, t - før.t), pred = Math.max(0, før.v - dt), k = 1 - Math.exp(-dt / R2.glatt);
+    return { v: Math.max(0, pred + (rå - pred) * k), t };
+  }
+  // spenn(min): teksten for et usikkert anslag – null under nårSomHelst («kan være framme når som helst»), ellers «ca. 45–75 min» / «ca. 1–2 timer»
+  function spenn(min, R2 = STATUS) { if (min === null || min === undefined || !Number.isFinite(min) || min <= R2.nårSomHelst) return null;
+    const lo = min * (1 - R2.usikker), hi = min * (1 + R2.usikker);
+    if (min >= R2.timer) { const a = Math.max(1, Math.floor(lo / 60)), b = Math.max(a + 1, Math.ceil(hi / 60)); return `ca. ${a}–${b} timer`; }
+    const a = Math.max(5, Math.round(lo / 5) * 5), b = Math.max(a + 5, Math.round(hi / 5) * 5); return `ca. ${a}–${b} min`; }
+  // ---------- (runde 8) RAPPORTEN ETTER HVER BØLGE OG HVERT ANGREP PÅ LEIREN ----------
+  // PC-kritikeren: «bølge 2 fikk ingen melding om hvordan det gikk». u: { hvem ('Røverne' | navnet på motstanderen), nr (bølgen, røvere),
+  //  utfall: 'slått' | 'unna' | 'herjet' | 'slapp' (røvere) | 'oppgitt' | 'ferdig' (en motstander), tok (tekst: det dere tok fra dem),
+  //  tapte (tekst: det de tok fra dere), fiender, fienderUte (lag), falne, sårede, skadet, ødelagt (bygg) }. Gir { tittel, tekst, god }.
+  function sluttRapport(u) { const rø = u.hvem === 'Røverne', hva = rø ? `Bølge ${u.nr}` : `Angrepet fra ${u.hvem}`;
+    const T = { slått: `${hva} er slått tilbake`, unna: rø ? `${hva} er slått tilbake – røverne trakk seg unna` : `${hva} er slått tilbake`, herjet: rø ? `${hva}: røverne herjet i leiren og dro med byttet` : `${hva}: de herjet i leiren`,
+      slapp: `${hva}: sabotørene slapp unna`, oppgitt: `${hva} er slått tilbake – ${u.hvem} ga opp`, ferdig: `${u.hvem} trakk seg bort fra leiren etter angrepet` };
+    const god = u.utfall === 'slått' || u.utfall === 'unna' || u.utfall === 'oppgitt', d = [];
+    if (u.tok) d.push(`Dere tok ${u.tok}.`); if (u.tapte) d.push(`De tok ${u.tapte}.`);
+    if (u.fiender > 0) d.push(rø ? (u.fienderUte >= u.fiender ? (u.fiender === 1 ? 'Røverlaget ble slått ut.' : `Alle ${u.fiender} røverlag ble slått ut.`) : u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} røverlag ble slått ut.` : '')
+      : (u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} lag fra ${u.hvem} ble slått ut.` : ''));
+    const f = u.falne || 0, s2 = u.sårede || 0; d.push(f || s2 ? `Hos oss: ${f ? f + ' falt' : ''}${f && s2 ? ' og ' : ''}${s2 ? s2 + ' såret' : ''}.` : 'Ingen tap hos oss.');
+    const b = []; if (u.skadet) b.push(`${u.skadet} bygg skadet`); if (u.ødelagt) b.push(`${u.ødelagt} ødelagt`); if (b.length) d.push(b.join(', ') + '.');
+    return { tittel: T[u.utfall] || `${hva} er over`, tekst: d.filter(Boolean).join(' '), god }; }
+  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
