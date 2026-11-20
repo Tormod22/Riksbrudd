@@ -443,4 +443,7 @@ opplæringens lagring tilbake. Grønn på PC og telefon (ca. 15–18 s for hele 
 av DEKKER, kjøreknappens plass borte) – vakta fant alle.
 
 **Ikke gjort / gjenstår:** «3D går tregt»-ruta (bare uten grafikkort) ligger over styrespaken; kjøreknappene (gass/brems/ratt, bildene 3–5) er
-kjøring-hjelperens; Krig-knappen manglet i bunnmenyen på Dovre-testsiden (finnes ikke der – ingen tettsteder lastet). `versjon.py` er ikke kjørt.
+kjøring-hjelperens; Krig-knappen manglet i bunnmenyen på Dovre-testsiden (finnes ikke der – ingen tettsteder lastet).
+
+**Mobilkontrollen** (`SJEKK_PROFIL=mobil PORT=8933`, 523 s): 125 ok, 1 feil = versjonsmerkene (versjon.py var ikke kjørt). `versjon.py` er kjørt
+etterpå (bare `?v=`-merkene i index.html endret) – må kjøres på nytt etter flettingen uansett.
