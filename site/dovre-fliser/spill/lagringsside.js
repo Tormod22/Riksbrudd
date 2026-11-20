@@ -106,11 +106,11 @@
   api.låst = () => låst;
   api.feil = () => sistFeil;
   api.nårFeil = f => { lyttere.push(f); };
-  // simuler('fullt' | 'sperret' | null): rå.set feiler som om nettleseren var full eller sperret (bare for vakten)
+  // simuler('fullt' | 'sperret' | null): rå.set feiler som om nettleseren var full eller sperret (bare for vakten – uten melding i loggen)
   let simulert = null; api.simuler = t => { simulert = t || null; };
   // rå tilgang (nøkkelen som den står, uten ending og lås) – kaster ved feil, så lagringsmenyen kan si fra
   api.rå = { get: rg,
-    set: (k, v) => { try { if (simulert) throw new DOMException('Simulert', simulert === 'fullt' ? 'QuotaExceededError' : 'SecurityError'); rs(k, v); } catch (e) { feilet(e, k); throw e; } },
+    set: (k, v) => { if (simulert) throw new DOMException('Simulert', simulert === 'fullt' ? 'QuotaExceededError' : 'SecurityError'); try { rs(k, v); } catch (e) { feilet(e, k); throw e; } },
     del: rd,
     // alle nøklene for denne siden: { navn uten ending: verdi }
     alle: (s = S) => { const ut = {}; if (!L) return ut; for (let i = 0; i < L.length; i++) { const k = L.key(i), h = hvem(k); if (h && h.side === s) ut[h.navn] = rg(k); } return ut; } };

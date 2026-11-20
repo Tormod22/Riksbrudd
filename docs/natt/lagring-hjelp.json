@@ -1,0 +1,6 @@
+[
+ ["Lagre og last", "Spillet lagres av seg selv i nettleseren, hele tiden. «Lagre og last» i ☰ (eller «Lagre» bak «Mer» nederst) viser når det sist ble lagret, og har tre lagringsplasser du kan lagre i, laste inn og slette, med navn, dag, fraksjon og kasse. Når du laster en plass, legges spillet du hadde i «Automatisk» først, så du kan gå tilbake. «Automatisk» tas også hvert tiende minutt du spiller.", "Kom i gang"],
+ ["Ta spillet med deg", "«Last ned som fil» lager en fil med hele spillet (JSON). På en annen maskin: åpne samme side (/dovre-fliser, /norge eller /rogaland), trykk «Last inn et lagret spill …» på startskjermen eller «Lagre og last» i ☰, og velg «Hent fra fil».", "Kom i gang"],
+ ["Hver side sitt spill", "/dovre-fliser, /norge og /rogaland har hvert sitt lagrede spill og lagringsplasser. De rører ikke hverandre. Startskjermen sier fra hvis du har et spill på en annen side.", "Kom i gang"],
+ ["Når spillet ikke kan lagres", "I et privat vindu eller med blokkert lagring, eller når nettleseren er full, sier spillet fra i loggen og i «Lagre og last». Spillet virker likevel – last det ned som fil før du lukker siden, eller slett en lagringsplass for å få plass.", "Kom i gang"]
+]
