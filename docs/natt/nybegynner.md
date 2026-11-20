@@ -70,6 +70,17 @@ over leiren da røverne kom.
 - (c) **Mens leiren angripes** (SpilletSpill.T().aktiv eller #alarm synlig) står opplæringen som én linje. + under angrepet holder den oppe
   til angrepet er over.
 
+### Funnet under gjennomspillingen – RETTET
+- Steg 8 «Sett lagene i forsvar» sier «Leir → Bygg → Forsvar → «Øv»», men delen Forsvar står nederst i fanen Bygg og er ofte lagt
+  sammen – skriptet (og en ny spiller) fant ikke «Øv». Nå: teksten sier «rull ned til Forsvar», ringen står rundt overskriften Forsvar
+  (eller fanen Bygg), menyen rulles dit én gang per åpning (etter 0,9 s – paneler.js setter menyen øverst når den åpnes), og når delen
+  er åpnet, flytter ringen seg til «Øv: sett lagene i stilling». Ringen tegnes ikke rundt noe som er rullet ut av menyen (den sto over
+  bunnmenyen).
+
+### Hjelpen (til den som samler hjelp-natt.js)
+- Emnet «To tropper før dag 4» (balanse-hjelp.json) og «Opplæringen» (ui-hjelp.json) bør byttes ut med «Mer forsvar før dag 4» og
+  «Opplæringen» i nybegynner-hjelp.json. «Lagene» i hjelp.js: «gjøre ham til lagfører» → «velge ny lagfører» (ny tekst i json-fila).
+
 ### Ikke gjort
 - Ekstra trykk/bekreftelse på «Opprett likevel» (bare advarsel og ny tekst på knappen – se over).
 - `spill/hjelp.js` (emnet «Lagene» sier fortsatt «gjøre ham til lagfører») – ny tekst i hjelpefila.
