@@ -48,7 +48,13 @@
     const d = []; for (const slag of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) if (f[slag] > 0) d.push(tall(f[slag]) + ' ' + ENHET[slag][f[slag] === 1 ? 0 : 1]);
     return 'Du fant ' + (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0]) + '.';
   }
-  const api = { KLASSER, OVERLEVENDE, funn, tid, tekst };
+  // (runde 12, kritiker F: «Du fant 17 rasjoner», men HUD-en viste «rasjoner 2» og ingenting sa hvor de ble av) – hvor funnet havnet.
+  // tot.mat = rasjonene i leirens matlager etterpå (FolkSpill). Feltrasjonene i sekken er noe annet enn leirens matlager.
+  function hvor(f, tot = {}) { const d = [];
+    if (f.mat > 0) d.push('rasjonene i leirens matlager' + (Number.isFinite(tot.mat) ? ` (${tall(Math.round(tot.mat))} i alt)` : ''));
+    if (f.tre > 0 || f.betong > 0 || f.stål > 0) d.push('materialene på lageret'); if (f.diesel > 0) d.push('dieselen på tankene'); if (f.penger > 0) d.push('pengene i kassa');
+    if (!d.length) return ''; return 'Lagt i leiren: ' + (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0]) + (f.mat > 0 ? ' – ikke i sekken din' : '') + '.'; }
+  const api = { KLASSER, OVERLEVENDE, funn, tid, tekst, hvor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leting = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
