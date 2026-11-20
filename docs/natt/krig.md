@@ -776,6 +776,13 @@ kjemp også som underlegen, ingen retrett etter tap, ikke fram) – loggen sier 
 Går laget ut, får det reglene tilbake (hvis du ikke endret dem). Lagpanelet: «garnison i Dombås · holder stillingen». Ikke i testene uten
 `GarnisonSpill.test` (eksisterende vakter uendret). Ikke lagret egen nøkkel: reglene lagres med laget som før.
 
+**Prøvd som spiller (esk2.js, webdriver av, AI på, ⏭):** Dombås gjort til ditt med Vaktlaget (4 mann) som garnison, Kystalliansen samler 2 lag og
+angriper etter varselet (6 t). Vaktlaget fikk «holder stillingen», ble stående i Dombås og skjøt til siste mann (14:07 ildkamp på 890 m → 14:56 slått ut);
+først da tok Kystalliansen Dombås (15:25). Før trakk en balansert garnison seg ut. ⏭ stoppet ved «Kystalliansen angriper Dombås», «et lag er i ildkamp»,
+«et lag er slått ut» og «du har mistet et tettsted». **Svakhet:** Dombås lå 3,8 km fra leiren – utenfor håndradioens 3 km – så Vaktlaget sto som «ingen
+kontakt, sist 06:00» og kampen synes ikke i kartet (K3-regelen; feltradio løser det). Ny varselbrikke (narhud.js) mens det står på: «Varslet angrep på
+Dombås – Kystalliansen samler 2 lag · tidligst om ca. 6 t», så «Angrep på Dombås – Kystalliansen, 2 lag»; trykk viser stedet (`brikke-tlf-*.png`).
+
 ### 6. Lappene til fiendelag oppå hverandre – RETTET
 Lappene i bildet (`natt7/krig/samles-1400x820.png`) var de meldte fiendene som spill/kartlapper.js tegner på nytt over alle navn (ikke Etikett). Nå:
 `Krig.klynger` (regel, test_krig.js) – merker av samme side innen 46 px får én lapp «Kystalliansen: 2 lag · nå» (`Krig.klyngeTekst`), og en lapp som ville
@@ -794,7 +801,8 @@ balanse ok (3,3 s; den fant at rapporten skjulte skadevarselet – nå står «E
 ### Fellesfiler endret i runde 8
 - `spill/etikett.js` (eies ikke av noen): i `plasser()` – flere linjer for viktige navn og «sammen» (+1) i stedet for overlapp; `REGLER.ekstra = 3`.
 - `spill/kartlapper.js` (kart-pakka): bare `meldt()` – klynger og ingen lapper oppå hverandre (bruker Krig.klynger/klyngeTekst).
-- `spill/narhud.js`: bare varselbrikka for angrep (ForsvarSpill.status; den gamle koden står som reserve).
+- `spill/narhud.js`: bare varselbrikkene for angrep (ForsvarSpill.status; den gamle koden står som reserve; ny brikke for angrep fra en motstander på et
+  tettsted du holder, og mens en gruppe samles mot leiren).
 - `spill/spillet-visning.js`: angrepsdelen – `sumBytte`, `rapport()` og de tre stedene bølgen er over.
 - `index.html`: bare versjonsmerkene (versjon.py).
 
