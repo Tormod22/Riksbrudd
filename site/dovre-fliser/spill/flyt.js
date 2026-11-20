@@ -25,6 +25,8 @@
     // fienden stopper ikke igjen før det er gått huskSett spillminutter. Claudes forslag.
     fiendeNær: 2000,
     huskSett: 180,
+    // flom eller ras nærmere leiren enn dette (meter) stopper likevel – når hendelsen har med stedet (detail.x, detail.y)
+    naturNær: 3000,
   };
   // Hvilke hendelser som stopper hva: spol = «spol til neste hendelse», auto = automatisk nedbremsing når du selv har satt opp farten
   const HENDELSER = {
@@ -214,7 +216,10 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   // type er en nøkkel i Flyt.HENDELSER (natur, fanger, båt, tog … – ukjente regnes som «annet»); tekst står i kortet «Stoppet: …».
   // Branner meldes av spill/verden-visning.js som «riksbrudd-brann»: en ny brann innen 3 km fra leiren stopper spolingen.
   const innboks = []; let branner = 0;
-  window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (d.tekst) innboks.push({ type: F.HENDELSER[d.type] ? d.type : 'annet', tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
+  window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (!d.tekst) return; let type = F.HENDELSER[d.type] ? d.type : 'annet';
+    // (runde 8) natur nær leiren stopper som «annet» (verden-visning.js kan sende x og y med)
+    if (type === 'natur' && typeof d.x === 'number' && typeof d.y === 'number') { const S = rot.OppstartSpill && OppstartSpill.tilstand(); if (S && S.leir && Math.hypot(d.x - S.leir.x, d.y - S.leir.y) < R.naturNær) type = 'annet'; }
+    innboks.push({ type, tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
   window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);
   KROKER.sim.push(() => {
@@ -235,10 +240,14 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   });
 
   // ---------- (runde 8) hvem som sendte laget ----------
-  // ordre(s, X, Y, stille): stille = true når et lag går av seg selv (hjem for å hvile, rykker fram, trekker seg, går til forsvarsplassen)
-  // eller med køordrene dine (s.køGår). Lag som går av seg selv, merkes s.flytSelv – de stopper ikke spolingen når de er framme.
+  // Lag som går av seg selv – hjem for å hvile og fylle ammunisjon (forsvar-hjemme.js), til forsvarsplassen eller mot herjere
+  // (forsvar-visning.js), eget initiativ i strid (strid-visning.js) – merkes s.flytSelv og stopper ikke spolingen når de er framme.
+  // Disse modulene gir ordren med ordre(s, X, Y, stille = true), men det gjør også ordre som er dine (køordrene, en marsj som fortsetter
+  // etter lasting, en ingeniør som går til en bru) – derfor avgjør fila som ga ordren (kallstakken), ikke stille alene.
+  const AUTO_FILER = /(forsvar-visning|forsvar-hjemme|strid-visning)\.js/;
   if (typeof rot.ordre === 'function' && !rot.ordre.flyt) { const før = rot.ordre;
-    const ny = function (s, X, Y, stille) { if (s && typeof s === 'object') s.flytSelv = !!stille && !s.køGår; return før.apply(this, arguments); };
+    const ny = function (s, X, Y, stille) { if (s && typeof s === 'object' && s.side === 'blå') { let selv = false; if (stille && !s.køGår) { try { selv = AUTO_FILER.test(String(new Error().stack || '')); } catch (e) { selv = false; } } s.flytSelv = selv; }
+      return før.apply(this, arguments); };
     ny.flyt = true; rot.ordre = ny; }
 
   // ---------- marsjtid før ordren ----------
