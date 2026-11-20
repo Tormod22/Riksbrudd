@@ -55,6 +55,8 @@
     const tell = [0, 0, 0, 0, 0];
     for (const v of nivå) tell[v]++;
     for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+      // en rund flekk med myk kant de siste 40 m, så fargene ikke slutter i en skarp firkant
+      const kant = W / 2 - Math.hypot(i - W / 2, j - W / 2); if (kant <= 0) continue; const tone = kant < kantPx ? kant / kantPx : 1;
       const k = j * (W + 1) + i, h = z[k], hx = z[k + 1], hy = z[k + W + 1], o = (j * W + i) * 4;
       if (h !== h) continue;
       // skygge: lys fra nordvest – en side som stiger mot øst (gx > 0) eller mot sør (gy < 0) vender mot lyset
@@ -70,8 +72,6 @@
       const sterk = (hx === hx && fS !== Math.floor(hx / KS)) || (hy === hy && fS !== Math.floor(hy / KS));
       const svak = !sterk && steil < .6 && ((hx === hx && f !== Math.floor(hx / K)) || (hy === hy && f !== Math.floor(hy / K)));
       if (sterk || svak) { const al = sterk ? .42 : .22, ao = al + a * (1 - al); r = (40 * al + r * a * (1 - al)) / ao; gg = (30 * al + gg * a * (1 - al)) / ao; b = (20 * al + b * a * (1 - al)) / ao; a = ao; }
-      // myk kant de siste 40 m, så fargene ikke slutter i en skarp firkant
-      const kant = Math.min(i, j, W - 1 - i, W - 1 - j), tone = kant < kantPx ? kant / kantPx : 1;
       d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = Math.round(a * tone * 255);
     }
     g.putImageData(im, 0, 0);
