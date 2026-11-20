@@ -133,7 +133,8 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
     const noePå = samle && T.some(K => K.el.classList.contains('på')); for (const b of merKn) { b.hidden = !samle; b.classList.toggle('på', noePå || komMerÅpen); let m = b.querySelector('.merke'); if (samle) { if (!m) { m = document.createElement('span'); m.className = 'merke'; m.style.background = '#5a4a2a'; b.appendChild(m); } if (m.textContent !== String(T.length)) m.textContent = String(T.length); } else if (m) m.remove(); } }
   // paneler som ligger nederst eller dekker skjermen på telefon: mens ett av dem vises, viker raden
   const DEKKER = ['panel', 'leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'stridpanel', 'sekk', 'hjelp', 'kontrollrom', 'hendelse', 'lagmeny', 'byggvalg', 'byggesett', 'alarm', 'degmeny', 'region', 'samfunnmeny', 'personkort', 'samfunnkort', 'krigpanel', 'verdenpanel', 'sjopanel', 'evpanel', 'flytkort', 'flytgruppe', 'marsjvalg', 'formkort', 'krigkort', 'etterspill'];
-  const HELSKJERM = ['hjelp', 'kontrollrom', 'byggesett', 'etterspill', 'krigkort', 'formkort', 'oppstart'];
+  // (runde 10) lutpanelet (inventar og beholdere) tar hele skjermen på telefon – bunnmenyen lå oppå det nederste
+  const HELSKJERM = ['hjelp', 'kontrollrom', 'byggesett', 'etterspill', 'krigkort', 'formkort', 'oppstart', 'lutpanel'];
   const vises = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).opacity !== '0';
   // «MER»-FLISA (18. nov): ressursene skal stå på én rad. Får de ikke plass, går de minst viktige inn bak en flis «+3» som åpner resten.
   const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sFolk', 'sStrom', 'sDiesel'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };

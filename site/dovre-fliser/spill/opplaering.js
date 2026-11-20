@@ -96,6 +96,8 @@ html body #opplaering.liten .t, html body #opplaering.liten .rad, html body #opp
 html body #opplaering.sammen .t, html body #opplaering.sammen .rad, html body #opplaering.sammen small, html body #opplaering.sammen .prikker{ display:none; }
 /* (runde 8) menyen får plass under linja nederst: innholdet kan rulles opp over den */
 body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #sekk){ padding-bottom:46px; scroll-padding-bottom:46px; }
+/* (runde 10) på telefon er ruta ugjennomsiktig – kildeteksten, målestokken og kompassrosa skinte gjennom */
+body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } body.kort #opplaering.liten{ opacity:1; }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
@@ -156,10 +158,26 @@ body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #
   // (runde 8, kritiker D: på telefon la lagpanelet seg over opplæringen, og opplæringen over lista og «Opprett» i «Lag ny tropp»)
   // MENYER = store paneler der ruta står som én linje nederst (og panelet får plass under linja: body.oppliten); DEKKER = paneler der
   // ruta viker helt på telefon – også mens «✓ Gjort» vises.
-  const MENYER = ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'], DEKKER = ['panel', 'stridpanel', 'byggvalg'];
+  const MENYER = ['leirmeny', 'folkmeny', 'tropppanel', 'krig', 'karakterark', 'sekk'], DEKKER = ['panel', 'stridpanel', 'byggvalg', 'ressursvalg'];
   function skjul() { boks.classList.remove('på'); ring.classList.remove('på'); document.body.classList.remove('oppliten'); }
-  function kjør() {
-    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp')));
+  // RUNDE 10 (20. nov, brukerens iPhone liggende): opplæringslinja, hogstfelt-lappen og bunnmenyen lå oppå hverandre nederst. Nå står
+  // bare én ting nederst: med en meny åpen på liggende telefon står linja øverst ved siden av menyen (body.oppved), og menyen går helt ned
+  // til bunnmenyen. Er det ikke plass ved siden av (tropppanelet er bredt), viker linja. Lappene for hogst/riving og bygging (DEKKER) har
+  // forrang nederst. VED_MIN (Claudes forslag): så bred må plassen ved siden av menyen være.
+  const VED_MIN = 200;
+  function kjør() { kjørInn(); try { ved(); } catch (e) { /* neste runde */ } }
+  function ved() { const b = document.body, W = window.innerWidth, ligg = b.classList.contains('kort') && W > window.innerHeight * 1.2, på = boks.classList.contains('på') && boks.classList.contains('liten');
+    const meny = på && ligg ? MENYER.map($).find(e => synlig(e) && e.classList.contains('på')) || MENYER.map($).find(e => synlig(e)) : null;
+    const nullstill = () => { if (!b.classList.contains('oppved')) return; for (const k of ['left', 'right', 'top', 'bottom', 'max-width', 'width']) boks.style.removeProperty(k); b.classList.remove('oppved'); };
+    if (!meny) { nullstill(); return; }
+    const r = meny.getBoundingClientRect(), t = document.querySelector('.top'), topp = Math.round((t ? t.getBoundingClientRect().bottom : 44) + 6), høyre = r.left < W / 2, plass = høyre ? W - r.right - 16 : r.left - 16;
+    if (plass < VED_MIN) { nullstill(); skjul(); return; }
+    const sett = (k, v) => boks.style.setProperty(k, v, 'important');
+    sett('top', topp + 'px'); sett('bottom', 'auto'); sett('width', 'auto'); sett('max-width', Math.min(440, plass) + 'px');
+    if (høyre) { sett('left', Math.round(r.right + 8) + 'px'); sett('right', 'auto'); } else { sett('left', 'auto'); sett('right', Math.round(W - r.left + 8) + 'px'); }
+    b.classList.add('oppved'); b.classList.remove('oppliten'); }
+  function kjørInn() {
+    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp'))) || (document.body.classList.contains('kort') && ['morgenkort', 'samfunnkort', 'personkort'].some(id => $(id) && $(id).classList.contains('på') && synlig($(id))));
     if (!klar || start || kort) { skjul(); return; }
     if (T.leir !== leirNøkkel()) last();
     const bl = bilde(), nye = Opplaering.oppdater(T, bl); if (nye.length) { lagre(); gjortKø.push(...nye); }

@@ -48,6 +48,38 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
     if (i3) for (const s of HULL) for (const e of document.querySelectorAll(s)) { if (!e.getClientRects().length) continue; const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || +cs.opacity < .05) continue;
       const r = e.getBoundingClientRect(), y0 = Math.max(topp, r.top - 4), y1 = r.bottom + 4; if (r.width > 2 && y1 > y0) ut.push([Math.round(r.left - 4), Math.round(y0), Math.round(r.width + 8), Math.round(y1 - y0)]); }
     window.UI_HULL3D = ut; }, 400);
+  // RUNDE 10 (20. nov, brukerens iPhone liggende i gåmodus): (1) knapperaden øverst hadde ti knapper – på telefon står nå bare Gå, Deg,
+  // ☰, pause og farten, resten (3D, Leir, Krig, ⏭, ? og det andre legger til) ligger bak «⋯»; (2) «Flaske …»/«Lag noe» lå over styrespaken –
+  // raden står øverst til venstre (ved siden av kompasset) og loggen rett under den; (3) «Sett deg inn i feltbilen» sto midt i bildet – den
+  // står nede til høyre over Huk/Hopp; (4) helse- og våpenruta lå oppå armen og våpenet – de står små til høyre for styrespaken.
+  // Bare når du går (ikke når du kjører – de knappene hører til kjøringen). Tallene er Claudes forslag.
+  const BEHOLD = ['gaaknapp', 'karakterknapp', 'meny', 'sp0', 'sp1', 'sp2', 'sp3', 'sp4', 'gaamer'];
+  const L = 'env(safe-area-inset-left,0px)', Rt = 'env(safe-area-inset-right,0px)', Bn = 'env(safe-area-inset-bottom,0px)';
+  const css10 = document.createElement('style');
+  css10.textContent = `#gaamer{ display:none; } body.gaarydd #gaamer{ display:inline-block; font-size:17px; letter-spacing:1px; } body.gaarydd.gaamer #gaamer{ border-color:#e8d48a; color:#fff3c8; }
+body.gaarydd:not(.gaamer) .knapper > ${BEHOLD.map(id => `:not(#${id})`).join('')}{ display:none; }
+body.kort.tlfligg.gaar:not(.kjorer) #evrad{ top:calc(var(--topp,40px) + 6px); left:calc(8px + ${L}); flex-direction:row; flex-wrap:wrap; align-items:center; max-width:min(186px, 24vw); }
+body.kort.tlfligg.gaar:not(.kjorer) #evrad .lapp{ font-size:11.5px; padding:2px 6px; } body.kort.tlfligg.gaar:not(.kjorer) #evrad button{ min-height:30px; font-size:11.5px; padding:1px 7px; }
+body.kort.tlfligg.gaar:not(.kjorer) #kilde:not(.åpen){ max-width:136px; } body.kort.tlfligg.gaar #logg{ width:min(186px, 24vw); font-size:11.5px; } body.kort.tlfligg.gaar #logg div:nth-child(n+3){ display:none; } body.kort.tlfligg.gaar #logg div{ -webkit-line-clamp:2; }
+html body.kort.tlfligg.gaar:not(.kjorer) #kjorknapp{ left:auto; right:calc(10px + ${Rt}); top:auto; bottom:calc(66px + ${Bn}); transform:none; min-width:0; max-width:250px; min-height:40px; padding:4px 12px; font-size:14px; white-space:nowrap; }
+html body.kort.tlfligg.gaar:not(.kjorer) #nhud .helse{ left:calc(152px + ${L}); right:auto; transform:none; margin:0; top:auto; bottom:calc(8px + ${Bn}); width:150px; box-sizing:border-box; padding:3px 7px; }
+html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ left:calc(152px + ${L}); right:auto; transform:none; margin:0; top:auto; bottom:calc(46px + ${Bn}); width:150px; min-width:0; box-sizing:border-box; padding:3px 7px; text-align:left; }
+body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen .vbilde{ float:right; width:46px; height:24px; margin:1px 0 0 4px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen small{ font-size:11px; }
+body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen span{ font-size:12px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen em{ font-size:11px; min-height:0; }`;
+  document.head.appendChild(css10);
+  { const rad = document.querySelector('.knapper'), m = document.createElement('button'); m.id = 'gaamer'; m.type = 'button'; m.textContent = '⋯'; m.title = 'Flere knapper'; m.setAttribute('aria-label', 'Flere knapper'); m.setAttribute('aria-expanded', 'false');
+    const sett = på => { document.body.classList.toggle('gaamer', på); m.setAttribute('aria-expanded', String(på)); };
+    m.onclick = e => { e.stopPropagation(); sett(!document.body.classList.contains('gaamer')); };
+    if (rad) { rad.appendChild(m); rad.addEventListener('click', e => { if (e.target !== m && document.body.classList.contains('gaamer')) setTimeout(() => sett(false), 0); }); }
+    document.addEventListener('pointerdown', e => { if (document.body.classList.contains('gaamer') && rad && !rad.contains(e.target)) sett(false); });
+    // loggen rett under raden øverst til venstre; slutter du å gå, settes alt tilbake
+    setInterval(() => { const b = document.body, lg = $('logg'), ev = $('evrad'), på = b.classList.contains('kort') && b.classList.contains('tlfligg') && b.classList.contains('gaar') && !b.classList.contains('kjorer');
+      if (!b.classList.contains('gaar') && b.classList.contains('gaamer')) sett(false);
+      // i testene (navigator.webdriver) står alle knappene som før, til NarHud.test = true
+      const rydd = b.classList.contains('kort') && b.classList.contains('gaar') && (!navigator.webdriver || (window.NarHud && NarHud.test === true)); if (b.classList.contains('gaarydd') !== rydd) b.classList.toggle('gaarydd', rydd);
+      if (!lg) return; if (!på) { if (lg.dataset.r10) { lg.style.removeProperty('top'); delete lg.dataset.r10; } return; }
+      const y = ev && ev.getClientRects().length ? Math.round(ev.getBoundingClientRect().bottom + 6) : null; if (y === null) { if (lg.dataset.r10) { lg.style.removeProperty('top'); delete lg.dataset.r10; } return; }
+      if (lg.style.getPropertyValue('top') !== y + 'px') lg.style.setProperty('top', y + 'px', 'important'); lg.dataset.r10 = '1'; }, 300); }
   // ---------- skjermbildet når du går eller kjører ----------
   const hud = el('div', { id: 'nhud' }), hp = el('i'), hpTall = el('b', {}, '100'), hpStrek = el('div', { klasse: 'strek' }, hp), pust = el('i'), kjHp = el('i');
   const helse = el('div', { klasse: 'boks helse' }, el('div', { klasse: 'rad' }, el('span', { 'data-ikon': 'hjerte' }), hpStrek, hpTall), el('div', { klasse: 'strek puste' }, pust));
@@ -188,8 +220,9 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
       if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
   // (runde 8, telefonkritikeren: «varselboksen nede til venstre ligger over kompasset og målestokken») – på telefon står brikkene over
   // nordpila, målestokken og kildeteksten (de som står nede til venstre), ikke oppå dem
+  // (runde 10) også over opplæringsruta når den står nede til venstre (de lå oppå hverandre på liggende telefon)
   function løftVarsler() { if (!document.body.classList.contains('kort')) { if (varsler.style.bottom) varsler.style.bottom = ''; return; }
-    let topp = Infinity; for (const id of ['nordpil', 'skala', 'kilde']) { const e = $(id); if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue; const r = e.getBoundingClientRect(); if (r.left < 220 && r.height > 0 && r.top > innerHeight / 2) topp = Math.min(topp, r.top); }
+    let topp = Infinity; for (const id of ['nordpil', 'skala', 'kilde', 'opplaering']) { const e = $(id); if (id === 'opplaering' && e && !e.classList.contains('på')) continue; if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue; const r = e.getBoundingClientRect(); if (r.left < 220 && r.height > 0 && r.top > innerHeight / 2) topp = Math.min(topp, r.top); }
     const b = topp < Infinity ? Math.round(innerHeight - topp + 6) + 'px' : ''; if (varsler.style.bottom !== b) varsler.style.bottom = b; }
   setInterval(() => { tegnVarsler(); løftVarsler(); }, 1000);
   // ---------- (runde 8) samme skrift på navnelappene i 3D ----------
@@ -201,5 +234,5 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
     const vekt = m[2] === 'bold' ? 700 : Math.max(600, +(m[2] || 600)); return `${m[1] ? 'italic ' : ''}${vekt} ${Math.round(+m[3] * SKRIFT.skala * 10) / 10}px ${SKRIFT.navn}`; }
   { const ov = document.getElementById('c3o'), g = ov && ov.getContext('2d'), d = window.CanvasRenderingContext2D && Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font');
     if (g && d && d.set && !Object.prototype.hasOwnProperty.call(g, 'font')) Object.defineProperty(g, 'font', { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, byttSkrift(v)); } }); }
-  window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm, byttSkrift };
+  window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm, byttSkrift, test: false, BEHOLD };
 })();
