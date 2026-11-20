@@ -538,3 +538,9 @@ at lagene går til samlingsstedet (AI.styr), at angrepet IKKE går før varselet
 «Målet er leiren din» (fire lag til, siden lagene dine ved leiren teller); og at storbyplanen går gjennom (Dombås som storby). Alt settes tilbake:
 tid, tempo, lagene (også de AI.nytt og kjøpet laget), TETTSTEDER, frø, AI.angripLeir, AI.minne, etterretningslista, «riksbrudd-eskalering» og
 EskaleringSpill.test. Tar ca. 2 s (PC). Ute av testene (navigator.webdriver) skjer ingenting av seg selv: EskaleringSpill.test = true slår det på.
+
+### 4. Gjennomspillinger på /rogaland (nytt spill på «Vanlig», webdriver av, leiren midt mellom Sviland og Oltedal som i runde 6)
+Skript: scratchpad `natt/krig7/gjennom7.js` (SCENARIO=a|b, GRAD=lett|vanlig|hard; dev.py med ekte kartdata; spoler med `sim(.2)` i biter à 60
+spillminutter – samme regler som klokka, raskere enn 600×; vegnettet hentes som på PC, så motstanderne kjører lastebil). Loggene: `natt/krig7/g*.log`,
+tabellene laget med `natt/krig7/tabell.py`. Andel = andel av folket i området (41 tettsteder, 47 km); «angrep på deg» = etterretning om en gruppe
+mot noe av ditt (tettsted, leiren) eller et lag mot en handelsrute det døgnet.

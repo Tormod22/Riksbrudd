@@ -211,7 +211,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       const H = ES.planlegg('rød', { tving: true, leir: true }); ut.leir = !!H && H.mål.leir && H.angripFra - tid >= 4 * 60 && /Målet er leiren din/.test(loggTekst());
       // storbyen (Dombås gjort til 235 000 innbyggere, nøytral): planen går gjennom uten feil, med eller uten garnisonene fra småstedene
       { const folk0 = by.e.folk; try { ES.nullstill(); by.e.folk = 235000; TETTSTEDER.delete(by.e.id); tid = Eskalering.grad(window.SPILLREGLER).storbyFra * 1440 + 60;
-        const K = ES.planlegg('rød', { tving: true }); ut.storby = K ? K.mål.navn + ' ' + K.lag.length + ' lag' : 'ingen gruppe'; } finally { by.e.folk = folk0; } }
+        const K = ES.planlegg('rød', { tving: true, utenLeir: true }); ut.storby = K ? K.mål.navn + ' ' + K.lag.length + ' lag' : 'ingen gruppe'; } finally { by.e.folk = folk0; } }
     } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
     finally { tid = tid0; tempo = tempo0; ES.nullstill(); ES.test = test0; AI.angripLeir = angrip0; if (AI.minne && AI.minne.rød) AI.minne.rød.leir = leir0;
       for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } for (const [e, n, mm, h, t, x, y] of ai0) Object.assign(e.ai, { neste: n, mål: mm, hva: h, tekst: t }), (e.x = x), (e.y = y);

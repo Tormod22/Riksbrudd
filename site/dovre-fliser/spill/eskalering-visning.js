@@ -61,7 +61,7 @@
   function planlegg(side, o = {}) {
     if (S.gruppe[side] || (!o.tving && tid < fredSlutt())) return null;
     const gr = g(), B = byer(side), frie = fri(side, B), L = leir();
-    const leirOk = L && !hvile(side, 'blå') && AI.angripLeir !== false && (o.leir || (døgn() >= gr.leirFra && tid - S.sistLeir[side] >= gr.leirHver * 1440));
+    const leirOk = !o.utenLeir && L && !hvile(side, 'blå') && AI.angripLeir !== false && (o.leir || (døgn() >= gr.leirFra && tid - S.sistLeir[side] >= gr.leirHver * 1440));
     const forsvarLeir = L ? ENHETER.filter(e => e.side === 'blå' && kjemper(e) && avst(e, L) <= ER.plan.leirForsvar).reduce((a, e) => a + sty(e), 0) : 0;
     // den andre motstanderen angriper noe av ditt nå: da venter denne (du skal ikke få to angrep samtidig)
     const andre = SIDER.filter(sd => sd !== side).map(sd => S.gruppe[sd]).find(G => G && (G.mål.leir || G.mål.eier === 'blå')), blåOpptatt = !!andre && !o.tving;
@@ -199,14 +199,16 @@
       if (d > 20) { const x1 = mx - Math.cos(a) * 14, y1 = my - Math.sin(a) * 14; gc.beginPath(); gc.moveTo(x0, y0); gc.lineTo(x1, y1); gc.stroke(); gc.setLineDash([]);
         gc.beginPath(); gc.moveTo(x1 + Math.cos(a) * 10, y1 + Math.sin(a) * 10); gc.lineTo(x1 + Math.cos(a + 2.5) * 10, y1 + Math.sin(a + 2.5) * 10); gc.lineTo(x1 + Math.cos(a - 2.5) * 10, y1 + Math.sin(a - 2.5) * 10); gc.closePath(); gc.fill(); }
       gc.setLineDash([]); gc.font = '600 13px "Cormorant Garamond", serif'; gc.textAlign = 'center'; gc.lineWidth = 3; gc.strokeStyle = 'rgba(20,16,12,.85)';
-      const t = `${navn(side)}: ${G.lag.length} lag ${G.fase === 'samler' ? 'samles' : 'angriper'}`, ty = window.Etikett ? Etikett.tekst(gc, t, x, y - r - 6, -1) : y - r - 6;
-      gc.strokeText(t, x, ty); gc.fillText(t, x, ty); gc.restore(); }
+      // teksten holdes inne på skjermen (på telefon står ringen ofte ved kanten)
+      const t = `${navn(side)}: ${G.lag.length} lag ${G.fase === 'samler' ? 'samles' : 'angriper'}`, w = gc.measureText(t).width, lx = Math.max(w / 2 + 8, Math.min(VW - w / 2 - 8, x)), ly = Math.max(70, y - r - 6);
+      const ty = window.Etikett ? Etikett.tekst(gc, t, lx, ly, -1) : ly;
+      gc.strokeText(t, lx, ty); gc.fillText(t, lx, ty); gc.restore(); }
   });
 
   // ---------- krigskartet: hva motstanderne har ----------
   { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.side = KT.side || [];
     KT.side.push(side => { if (!SIDER.includes(side) || !på()) return null; const n = ENHETER.filter(e => e.ai && e.side === side && levende(e)).length, G = S.gruppe[side];
-      return `${n} lag` + (G && G.varslet ? ` · samler ${G.lag.length} lag ved ${G.sted.navn || 'et sted'} mot ${G.mål.leir ? 'leiren din' : G.mål.navn}` : '') + (tid < fredSlutt() ? ' · samler styrker (fredstid)' : ''); }); }
+      return `${n} lag` + (G && G.varslet ? ` · samler ${G.lag.length} lag ${G.sted.navn ? 'ved ' + G.sted.navn : 'i terrenget'} mot ${G.mål.leir ? 'leiren din' : G.mål.navn}` : '') + (tid < fredSlutt() ? ' · samler styrker (fredstid)' : ''); }); }
   KROKER.lagTekst.push(s => (s.ai && iGruppe(s) ? `i angrepsgruppa mot ${gruppeAv(s.side).mål.navn}` : null));
 
   // ---------- lagring per leir ----------
