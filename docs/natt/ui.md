@@ -339,8 +339,11 @@ simlogg.js = mater PC-kritikerens logg-spill.txt gjennom dempingen).
    - Simulert på PC-kritikerens logg: 68 meldinger inn, 53 vist; alle regn/klarner-meldingene og 9 av 12 hogstmeldinger borte.
    - `flyt.js stopp()`: står grunnen alt i de tre øverste linjene («Røverne er snart framme (ca. 9 min).»), skrives ikke «Spolingen stoppet: …» i tillegg.
 2. **⏭** (`flyt.js`): `HENDELSER` – `mål`, `natur` (flom/ras) og `tog` stopper ikke lenger (står i loggen). «Framme» gjelder bare lag DU
-   sendte: flyt.js pakker inn `ordre()` og merker `s.flytSelv` når ordren er `stille` (lag som går hjem, rykker fram/trekker seg av eget
-   initiativ, forsvarsplasser) – køordrene dine teller som dine. «Fienden i sikte» bare når fienden er nærmere enn `fiendeNær` = 2 km fra
+   sendte: flyt.js pakker inn `ordre()` og merker `s.flytSelv` når ordren er `stille` OG kommer fra forsvar-visning.js, forsvar-hjemme.js eller
+   strid-visning.js (kallstakken, `AUTO_FILER`) – lag som går hjem for å hvile, til forsvarsplassen, mot herjere eller rykker fram/trekker seg
+   av eget initiativ. Køordrene dine, en marsj som fortsetter etter lasting (lagring.js) og ingeniøren som går til en bru (odeleggelse-visning.js)
+   er også `stille`, men teller som dine (prøvd: forsvarsplassene merkes, en vanlig ordre ikke). Flom/ras nærmere leiren enn `naturNær` = 3 km
+   stopper likevel når hendelsen har `x`/`y` med (verden-visning.js sender det ikke ennå). «Fienden i sikte» bare når fienden er nærmere enn `fiendeNær` = 2 km fra
    leiren eller et eget lag, og den samme fienden stopper ikke igjen før etter `huskSett` = 180 spillminutter (før 90). Kort, alarm, brann,
    båt, fanger, krigshendelser («annet»), tap, ny dag og ferdig bygg stopper som før. Spolt et døgn som spiller på Dovre: 2 stopp (ny dag, alarm).
    Teksten i Leir → Mål og hjelpen («Spol til neste hendelse», i `docs/natt/spillform-hjelp.json`) er oppdatert.
@@ -376,8 +379,10 @@ og `spill/lut-visning.js` (bare teksten i sekken), `docs/natt/spillform-hjelp.js
 
 **Vakt** (`vakter/ui.js`, «runde 8»): 3 like meldinger = én linje med ×3 (loggen settes tilbake), reglene i en egen LoggDemp-utgave (rutine,
 vær, tips), Flyt.HENDELSER, `ordre.flyt`, kort + ⏭ + fartsknapp gir fortsatt pause og farten du valgte etter svaret, `angrepvent` skjuler
-kortet, hjelpeemnene i riktig gruppe, «Nytt spill» øverst, byttSkrift. Grønn på PC og telefon (ca. 1,5–2 s for runde 8).
+kortet, hjelpeemnene i riktig gruppe, «Nytt spill» øverst, byttSkrift. Grønn på PC og telefon (ca. 1,5–2 s for runde 8). Prøvd med feil
+lagt inn med vilje (vaktfeil.js: natur stopper ⏭, rutineregelen av, «Nytt spill» nederst) – vakta fant alle tre. Vaktene balanse, lagring,
+krig, folk, lut og spillform er også grønne på grenen.
 
 **Ikke gjort / gjenstår:** opplæringsboksen under angrep (annen hjelper), angrepsbannerets tekst/anslag (krig). Flom/ras NÆR leiren stopper
-heller ikke ⏭ nå (meldingen har ikke sted med seg – `verden-visning.js` kunne sende x/y). Bølge 2 uten utfallsmelding (PC-kritikeren) er ikke
+ikke ⏭ før `verden-visning.js` sender x/y med «riksbrudd-hendelse» (flyt.js tar imot det). Bølge 2 uten utfallsmelding (PC-kritikeren) er ikke
 min del. Loggdempingen gjelder det som vises – «les alt» viser fortsatt bare de seks siste linjene, ingen full historikk.
