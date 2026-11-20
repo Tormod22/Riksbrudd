@@ -198,10 +198,14 @@
     const dekke = (x, y) => (rot.Liv3d && Liv3d.dekke ? Liv3d.dekke(u, x, y) : null);
     // (runde 10) vegbanen ligger ofte litt over terrengnettet (målt 0,7 m ved Dombås). Et hjul på asfalten og et ved siden av ga bilen
     // på skrå (brukerens bilde 3). For bilen skrår bakken nå jevnt ned fra vegkanten over VEGSKULDER meter (bredere når
-    // vegen ligger høyt: aldri brattere enn 1 : 2,5), som en vegfylling.
-    const vegFylling = (x, y, t) => { const V = u.vegRute; if (!V || !V.ru) return t; const b = V.ru.nærmest(x, y, 14); if (!b) return t; const v = V.alle[b.li], kant = v.w + .3;
-      const p = v.P[b.i - 1], q = v.P[b.i]; if (!p || !q) return t; const z = p[2] + (q[2] - p[2]) * b.f; if (!(z > t) || z - t > 3) return t;
-      const br = Math.max(VEGSKULDER, (z - t) * 2.5); if (b.d > kant + br) return t; let w = b.d <= kant ? 1 : 1 - (b.d - kant) / br; w = w * w * (3 - 2 * w); return t + (z - t) * w; };
+    // vegen ligger høyt: aldri brattere enn 1 : 2,5; opptil 6 m – så kjører du ikke inn under en høy veg), som en vegfylling.
+    // Alle vegene innen 20 m teller (den høyeste fyllingen vinner): ved en rampe eller bru kan den nærmeste vegen ligge lavere enn en
+    // annen rett ved siden av.
+    const vegFylling = (x, y, t) => { const V = u.vegRute; if (!V || !V.ru) return t; const linjer = new Set(); V.ru.nærmest(x, y, 20, li => { linjer.add(li); return false; }); let h = t;
+      for (const li of linjer) { const b = V.ru.nærmest(x, y, 20, l => l === li); if (!b) continue; const v = V.alle[b.li], kant = v.w + .3, p = v.P[b.i - 1], q = v.P[b.i]; if (!p || !q) continue;
+        const z = p[2] + (q[2] - p[2]) * b.f; if (!(z > t) || z - t > 6) continue; const br = Math.max(VEGSKULDER, (z - t) * 2.5); if (b.d > kant + br) continue;
+        let w = b.d <= kant ? 1 : 1 - (b.d - kant) / br; w = w * w * (3 - 2 * w); h = Math.max(h, t + (z - t) * w); }
+      return h; };
     return { høyde: (x, y) => { const t = terr(x, y), d = k.type === 'bil' ? dekke(x, y) : null; return d !== null && d > t && d - t < 30 ? d : k.type === 'bil' ? vegFylling(x, y, t) : t; },
       hindring: (x, y) => typeof hindring3d === 'function' && !!hindring3d(x, y), vann: (x, y) => (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && !(k.type === 'bil' && dekke(x, y) !== null),
       vei: (x, y) => !!(u.påVeg && u.påVeg(x, y)) || dekke(x, y) !== null || !!(rot.LeirSpill && LeirSpill.påEgenVeg && LeirSpill.påEgenVeg(u.cx + x, u.cy + y)) }; }
@@ -272,11 +276,11 @@
     // (runde 10, brukerens bilde 5: «nesten ok») bilen: kameraet litt høyere og lenger bak, ser på et punkt litt foran bilen, og glir mykt
     // etter (KAMERA_BIL – Claudes forslag), så både bilen og vegen foran synes.
     const KB = KAMERA_BIL, avst = k.type === 'bil' ? KB.avst : 17, opp = k.type === 'bil' ? KB.opp : 3.2, cp = Math.cos(f.pitch), c = R.cam;
-    let cx = x + Math.sin(f.a) * cp * avst, cy = y - Math.cos(f.a) * cp * avst, cz = k.z + opp - Math.sin(f.pitch) * avst; const bak = (hoyde3d(u.cx + cx, u.cy + cy) - u.h0) * R.EX + 1; if (cz < bak) cz = bak;
+    let cx = x + Math.sin(f.a) * cp * avst, cy = y - Math.cos(f.a) * cp * avst, cz = k.z + opp - Math.sin(f.pitch) * avst; const bak = Math.max((hoyde3d(u.cx + cx, u.cy + cy) - u.h0) * R.EX, V.høyde(cx, cy)) + 1; if (cz < bak) cz = bak;
     const [mx, my] = fram(f.a), mål = k.type === 'bil' ? [x + mx * KB.foran, y + my * KB.foran, k.z + KB.siktOpp] : [x, y, k.z + opp * .7];
     if (!kamP || Math.hypot(kamP.p[0] - cx, kamP.p[1] - cy) > 60) kamP = { p: [cx, cy, cz], m: mål.slice(), ok: true };
     else { const w = Math.min(1, dt * (k.type === 'bil' ? KB.følg : 8)); for (let q = 0; q < 3; q++) { kamP.p[q] += ([cx, cy, cz][q] - kamP.p[q]) * w; kamP.m[q] += (mål[q] - kamP.m[q]) * w; }
-      const b2 = (hoyde3d(u.cx + kamP.p[0], u.cy + kamP.p[1]) - u.h0) * R.EX + 1; if (kamP.p[2] < b2) kamP.p[2] = b2; }
+      const b2 = Math.max((hoyde3d(u.cx + kamP.p[0], u.cy + kamP.p[1]) - u.h0) * R.EX, V.høyde(kamP.p[0], kamP.p[1])) + 1; if (kamP.p[2] < b2) kamP.p[2] = b2; }
     c.position.set(kamP.p[0], kamP.p[1], kamP.p[2]); c.up.set(0, 0, 1); c.lookAt(kamP.m[0], kamP.m[1], kamP.m[2]);
     R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = 62 + Math.min(10, fart * .25); c.aspect = VW / VH; c.near = .3; c.far = u.S * 4 + 3000; c.updateProjectionMatrix(); b.yaw = f.a;
     lyd(k); if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
@@ -356,5 +360,5 @@ body.kjorer #kjorknapp{ left:auto; right:296px; transform:none; bottom:calc(136p
       g.fillStyle = 'rgba(22,18,12,.8)'; g.strokeStyle = '#d8c98a'; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); g.stroke(); g.fillStyle = '#d8c98a'; g.textBaseline = 'middle'; g.fillText(k.type === 'bil' ? 'B' : 'H', x, y + .5); g.textBaseline = 'alphabetic';
       if (kam.m < 1.2) { const t = NAVN[k.type], ty = rot.Etikett ? Etikett.tekst(g, t, x, y + 20, 1) : y + 20; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); } }
     g.restore(); });
-  rot.KjorSpill = { innEgen, egneNær: () => (r3() && R3.fot ? egneNær(R3, 9) : null), reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
+  rot.KjorSpill = { verden: k => { const R = r3(), f = k || fører() || K[0]; return R && R.ut && f ? verdenFor(R, R.ut, f) : null; }, innEgen, egneNær: () => (r3() && R3.fot ? egneNær(R3, 9) : null), reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
 })(typeof window !== 'undefined' ? window : globalThis);
