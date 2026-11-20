@@ -88,29 +88,33 @@
   // motsatt takt, diagonalt som når dyr går), hofte (høyden beinet svinger om), hode (1 = følger hodet ned når dyret beiter)
   const kasse = (x, y, z, sx, sy, sz) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); return g; };
   const kule = (x, y, z, rx, ry, rz, a = 8, b = 6) => { const g = new THREE.SphereGeometry(1, a, b); g.scale(rx, ry, rz); g.translate(x, y, z); return g; };
+  // (runde 11, «kantete klosser»): hodene, snutene, ørene og halene er avlange kuler som fyller den samme boksen (egg), beina er runde og
+  // smalner nedover (lår tykkere enn hasen), hovene runde; normalene beholdes myke (før ble alle flatene regnet flate etter toNonIndexed)
+  const egg = (x, y, z, sx, sy, sz, a = 7, b = 5) => kule(x, y, z + sz / 2, sx * .58, sy * .58, sz * .58, a, b);
+  const rundt = (x, y, z, r0, r1, h, seg = 6) => { const g = new THREE.CylinderGeometry(r1, r0, h, seg); g.rotateX(Math.PI / 2); g.translate(x, y, z + h / 2); return g; };
   const bein = (xs, ys, h, t, farge, pels, hov) => { const ut = [];
-    for (const x of xs) for (const y of ys) { const s = (x > 0) === (y > 0) ? 1 : -1; ut.push([kasse(x, y, 0, t, t, h), farge, { pels, bein: s, hofte: h }]);
-      if (hov) ut.push([kasse(x, y, 0, t * 1.15, t * 1.15, .07), hov, { pels: 0, bein: s, hofte: h }]); }
+    for (const x of xs) for (const y of ys) { const s = (x > 0) === (y > 0) ? 1 : -1; ut.push([rundt(x, y, 0, t * .42, t * .66, h), farge, { pels, bein: s, hofte: h }]);
+      if (hov) ut.push([rundt(x, y, 0, t * .58, t * .5, .07), hov, { pels: 0, bein: s, hofte: h }]); }
     return ut; };
   const MODELL = {
     sau: () => ({ nakke: [.36, .64], vinkel: 1.25, senk: .18, deler: [
       [kule(0, 0, .66, .52, .31, .28), (x, y, z) => { const n = .5 + .5 * Math.sin(x * 31 + y * 23 + z * 41); return [.9 + .06 * n, .88 + .06 * n, .82 + .05 * n]; }, { pels: 1 }],
       [kule(-.32, 0, .64, .26, .28, .25, 6, 4), [.9, .88, .82], { pels: 1 }],
       [kule(.38, 0, .76, .2, .15, .15, 6, 4), [.9, .88, .82], { pels: 1, hode: 1 }],
-      [kasse(.6, 0, .7, .28, .15, .17), [.86, .82, .76], { pels: .55, hode: 1 }],
-      [kasse(.75, 0, .7, .05, .11, .09), [.28, .22, .21], { pels: 0, hode: 1 }],
-      [kasse(.52, .1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }], [kasse(.52, -.1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }],
-      [kasse(-.55, 0, .52, .07, .07, .16), [.85, .82, .76], { pels: 1 }],
+      [egg(.6, 0, .7, .28, .15, .17), [.86, .82, .76], { pels: .55, hode: 1 }],
+      [egg(.75, 0, .7, .05, .11, .09), [.28, .22, .21], { pels: 0, hode: 1 }],
+      [egg(.52, .1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }], [egg(.52, -.1, .82, .07, .13, .03), [.8, .74, .68], { pels: .55, hode: 1 }],
+      [egg(-.55, 0, .52, .07, .07, .16), [.85, .82, .76], { pels: 1 }],
       ...bein([.28, -.3], [.13, -.13], .47, .075, [.74, .7, .64], .55, [.2, .17, .15])] }),
     ku: () => ({ nakke: [.8, 1.18], vinkel: 1, senk: .4, deler: [
       [kule(0, 0, 1.08, .92, .37, .4), [.94, .92, .88], { pels: (x, y, z) => z < .86 || (Math.sin(x * 4.3 + y * 2) > .6 && z < 1.2) ? 0 : 1 }],
       [kule(-.55, 0, 1.08, .42, .36, .38, 6, 4), [.94, .92, .88], { pels: (x, y, z) => z < .86 ? 0 : 1 }],
       [kule(.75, 0, 1.18, .3, .3, .3, 6, 4), [1, 1, 1], { pels: 1, hode: 1 }],
-      [kasse(1.08, 0, .98, .5, .3, .34), [.95, .93, .9], { pels: .8, hode: 1 }],
-      [kasse(1.35, 0, .98, .1, .27, .2), [.72, .54, .5], { pels: 0, hode: 1 }],
-      [kasse(.98, .2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }], [kasse(.98, -.2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }],
-      [kasse(-.5, 0, .56, .32, .26, .14), [.82, .6, .56], { pels: 0 }],
-      [kasse(-.89, 0, .82, .05, .05, .58), [1, 1, 1], { pels: 1 }],
+      [egg(1.08, 0, .98, .5, .3, .34), [.95, .93, .9], { pels: .8, hode: 1 }],
+      [egg(1.35, 0, .98, .1, .27, .2), [.72, .54, .5], { pels: 0, hode: 1 }],
+      [egg(.98, .2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }], [egg(.98, -.2, 1.24, .06, .18, .07), [1, 1, 1], { pels: 1, hode: 1 }],
+      [egg(-.5, 0, .56, .32, .26, .14), [.82, .6, .56], { pels: 0 }],
+      [egg(-.89, 0, .82, .05, .05, .58), [1, 1, 1], { pels: 1 }],
       ...bein([.68, -.68], [.23, -.23], .72, .13, [.93, .9, .86], .3, [.15, .13, .12])] }),
     rein: () => {
       const gevir = []; for (const s of [1, -1]) {
@@ -120,9 +124,9 @@
       return { nakke: [.58, 1.12], vinkel: 1.15, senk: .45, deler: [
         [kule(0, 0, 1.05, .75, .3, .32), (x, y, z) => z < .92 ? [.8, .77, .7] : x < -.55 ? [.86, .84, .78] : [.47, .42, .35], { pels: 1 }],
         [kule(.65, 0, 1.2, .3, .17, .2, 6, 4), [.76, .73, .66], { pels: .6, hode: 1 }],
-        [kasse(.98, 0, 1.18, .4, .18, .2), (x, y, z) => x > 1.1 ? [.32, .28, .24] : [.46, .41, .34], { pels: .5, hode: 1 }],
-        [kasse(.84, .11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }], [kasse(.84, -.11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }],
-        [kasse(-.76, 0, 1, .06, .1, .14), [.9, .88, .84], { pels: 0 }],
+        [egg(.98, 0, 1.18, .4, .18, .2), (x, y, z) => x > 1.1 ? [.32, .28, .24] : [.46, .41, .34], { pels: .5, hode: 1 }],
+        [egg(.84, .11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }], [egg(.84, -.11, 1.38, .06, .14, .04), [.46, .41, .34], { pels: .5, hode: 1 }],
+        [egg(-.76, 0, 1, .06, .1, .14), [.9, .88, .84], { pels: 0 }],
         ...gevir,
         ...bein([.5, -.5], [.14, -.14], .88, .075, [.5, .45, .38], .5, [.18, .16, .14])] };
     },
@@ -138,9 +142,9 @@
         [k, (x, y, z) => z < .6 ? [.14, .1, .07] : [.21, .16, .11], { pels: 1 }],
         [kule(.38, 0, 1.25, .62, .44, .3, 6, 4), [.28, .22, .15], { pels: 1 }],
         [kule(-.38, 0, 1.25, .5, .38, .14, 6, 4), [.52, .44, .33], { pels: .6 }],
-        [kasse(1, 0, .52, .46, .44, .44), (x, y, z) => x > 1.15 && z < .7 ? [.3, .26, .22] : [.17, .13, .09], { pels: 1, hode: 1 }],
-        [kasse(.94, 0, .9, .22, .5, .1), [.6, .55, .46], { pels: 0, hode: 1 }],
-        [kasse(.98, .3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }], [kasse(.98, -.3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }],
+        [egg(1, 0, .52, .46, .44, .44), (x, y, z) => x > 1.15 && z < .7 ? [.3, .26, .22] : [.17, .13, .09], { pels: 1, hode: 1 }],
+        [egg(.94, 0, .9, .22, .5, .1), [.6, .55, .46], { pels: 0, hode: 1 }],
+        [egg(.98, .3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }], [egg(.98, -.3, .68, .1, .09, .3), [.55, .5, .42], { pels: 0, hode: 1 }],
         ...bein([.6, -.6], [.28, -.28], .42, .14, [.72, .66, .55], 0, [.15, .13, .11])] };
     },
     elg: () => {
@@ -150,10 +154,10 @@
         [kule(0, 0, 1.68, 1.05, .38, .46), [.25, .18, .12], { pels: 1 }],
         [kule(.55, 0, 1.95, .48, .33, .36, 6, 4), [.22, .16, .1], { pels: 1 }],
         [kule(1, 0, 1.86, .36, .2, .24, 6, 4), [.22, .16, .1], { pels: 1, hode: 1 }],
-        [kasse(1.38, 0, 1.6, .62, .24, .32), [.21, .15, .1], { pels: 1, hode: 1 }],
-        [kasse(1.66, 0, 1.52, .2, .28, .3), [.26, .2, .14], { pels: 1, hode: 1 }],
-        [kasse(1.2, 0, 1.32, .08, .06, .26), [.18, .13, .09], { pels: 1, hode: 1 }],
-        [kasse(1.18, .16, 1.94, .07, .2, .05), [.22, .16, .1], { pels: 1, hode: 1 }], [kasse(1.18, -.16, 1.94, .07, .2, .05), [.22, .16, .1], { pels: 1, hode: 1 }],
+        [egg(1.38, 0, 1.6, .62, .24, .32), [.21, .15, .1], { pels: 1, hode: 1 }],
+        [egg(1.66, 0, 1.52, .2, .28, .3), [.26, .2, .14], { pels: 1, hode: 1 }],
+        [egg(1.2, 0, 1.32, .08, .06, .26), [.18, .13, .09], { pels: 1, hode: 1 }],
+        [egg(1.18, .16, 1.94, .07, .2, .05), [.22, .16, .1], { pels: 1, hode: 1 }], [egg(1.18, -.16, 1.94, .07, .2, .05), [.22, .16, .1], { pels: 1, hode: 1 }],
         ...skovl,
         ...bein([.75, -.75], [.2, -.2], 1.22, .13, [.58, .53, .46], 0, [.12, .1, .09])] };
     },
@@ -167,7 +171,7 @@
   const GEO = {};
   function geometri(art) {
     if (GEO[art]) return GEO[art];
-    const M = MODELL[art](), deler = M.deler.map(([g, farge, o]) => { g = g.index ? g.toNonIndexed() : g; g.computeVertexNormals(); return [g, farge, o]; });
+    const M = MODELL[art](), deler = M.deler.map(([g, farge, o]) => { g = g.index ? g.toNonIndexed() : g; if (!g.attributes.normal) g.computeVertexNormals(); return [g, farge, o]; });
     const n = deler.reduce((a, [g]) => a + g.attributes.position.count, 0), A = { position: 3, normal: 3, color: 3, aPels: 1, aBein: 1, aHofte: 1, aHode: 1 }, ut = {};
     for (const k in A) ut[k] = new Float32Array(n * A[k]);
     let o = 0;
