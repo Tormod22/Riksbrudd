@@ -177,7 +177,7 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
     if (høyre) { sett('left', Math.round(r.right + 8) + 'px'); sett('right', 'auto'); } else { sett('left', 'auto'); sett('right', Math.round(W - r.left + 8) + 'px'); }
     b.classList.add('oppved'); b.classList.remove('oppliten'); }
   function kjørInn() {
-    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp')));
+    const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp'))) || (document.body.classList.contains('kort') && ['morgenkort', 'samfunnkort', 'personkort'].some(id => $(id) && $(id).classList.contains('på') && synlig($(id))));
     if (!klar || start || kort) { skjul(); return; }
     if (T.leir !== leirNøkkel()) last();
     const bl = bilde(), nye = Opplaering.oppdater(T, bl); if (nye.length) { lagre(); gjortKø.push(...nye); }

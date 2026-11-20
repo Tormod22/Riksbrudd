@@ -82,7 +82,9 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
       const r = ((k.id === 'krigkort' || k.id === 'formkort') && k.firstElementChild ? k.firstElementChild : k).getBoundingClientRect(), H = window.innerHeight;
       if (fart() === 0 && r.width > 40) { merke.classList.add('på'); const h = merke.offsetHeight || 26, w = Math.min(Math.max(r.width, 250), window.innerWidth - 12);
         merke.style.width = w + 'px'; merke.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + (r.width - w) / 2)) + 'px';
-        merke.style.top = (r.bottom + h + 6 < H - 70 ? r.bottom + 4 : Math.max(4, r.top - h - 4)) + 'px'; } else merke.classList.remove('på'); }
+        // (runde 10, liggende telefon) er det ikke plass under kortet, og over det ligger knapperaden, vises ikke lappen (den dekket 3D, ☰ og ▶)
+        const tb = document.querySelector('.top'), ttop = tb && document.body.classList.contains('kort') ? tb.getBoundingClientRect().bottom : 0, under = r.bottom + h + 6 < H - 70;
+        if (!under && r.top - h - 4 < ttop) merke.classList.remove('på'); else merke.style.top = (under ? r.bottom + 4 : Math.max(4, r.top - h - 4)) + 'px'; } else merke.classList.remove('på'); }
     else { if (pauset && fart() === 0 && p) { p.click();
         // samme fart som før kortet (▶ gir farten på knappen; en fart satt på annen måte, f.eks. av spolingen, settes tilbake her)
         if (typeof tempo !== 'undefined' && tempoFør > 0 && tempo !== tempoFør) tempo = tempoFør; }
@@ -91,7 +93,7 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
 
   // ---------- 3: bunnmenyen på telefon står alltid; panelene slutter over den ----------
   const LØFT = ['panel', 'leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'stridpanel', 'sekk', 'degmeny', 'region', 'samfunnmeny', 'personkort', 'samfunnkort', 'krigpanel',
-    'verdenpanel', 'sjopanel', 'evpanel', 'flytgruppe', 'marsjvalg', 'forklaring', 'lagmeny', 'hendelse', 'flismerliste'];
+    'verdenpanel', 'sjopanel', 'evpanel', 'flytgruppe', 'marsjvalg', 'forklaring', 'lagmeny', 'hendelse', 'flismerliste', 'morgenkort'];
   const løftet = new Map();
   const tilbake = e => { const v = løftet.get(e); if (!v) return; e.style.bottom = v.bottom; e.style.maxHeight = v.maxHeight; e.style.overflowY = v.overflowY; løftet.delete(e); };
   function løft() { const B = document.body, m = $('mkom'), alltid = aktiv(); if (B.classList.contains('mkomalltid') !== alltid) B.classList.toggle('mkomalltid', alltid);

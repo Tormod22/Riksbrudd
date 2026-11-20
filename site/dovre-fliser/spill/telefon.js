@@ -144,7 +144,7 @@ body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw -
   function stoppkortNed() { ned('varsel'); ned('flytkort'); }
   // RUNDE 10: liggende telefon – hogstfelt-/rivelappen og byggebanneret står midt nede; er en meny åpen til venstre (eller høyre), står de
   // i den frie delen ved siden av menyen, så de ikke ligger oppå den
-  const VED = ['ressursvalg', 'byggvalg'], MENY = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel'];
+  const VED = ['ressursvalg', 'byggvalg', 'alarm'], MENY = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel'];
   function vedMeny() { const b = document.body, W = window.innerWidth, ligg = b.classList.contains('kort') && W > window.innerHeight * 1.2;
     for (const id of VED) { const e = document.getElementById(id); if (!e) continue; const vis = e.classList.contains('på') && e.getClientRects().length > 0;
       const m = ligg && vis ? MENY.map(q => document.getElementById(q)).find(q => q && q.classList.contains('på') && q.getClientRects().length > 0 && q.getBoundingClientRect().width < W * .6) : null;

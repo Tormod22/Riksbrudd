@@ -442,10 +442,11 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
       g.fillStyle = 'rgba(28,23,15,.85)'; g.fillRect(x - w / 2, y - 62, w, 22); g.fillStyle = '#f0e2b0'; g.fillText(t, x, y - 51); }
     // (runde 8) pila mot nærmeste inngang: «Inngang 14 m» med en pil som peker dit (opp = rett fram), under siktet
     const q = pekerNå && kropp && R3.fot ? Gaavalg.pekerMot(pekerNå.I, kropp.x, kropp.y, R3.fot.a) : null; if (q && q.vis && !fører && !dørEl.classList.contains('på') && !document.body.classList.contains('foto')) {
-      const cx2 = VW / 2, cy2 = VH / 2 + (VW < 900 ? 54 : 48), t = Gaavalg.pekerTekst(q); g.globalAlpha = .92; g.font = '600 14px "Cormorant Garamond",serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
-      const w = g.measureText(t).width + 44, x0 = cx2 - w / 2; g.fillStyle = 'rgba(28,23,15,.86)'; g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.fillRect(x0, cy2 - 12, w, 24); g.strokeRect(x0 + .5, cy2 - 11.5, w - 1, 23);
-      g.fillStyle = '#f0e2b0'; g.fillText(t, x0 + 10, cy2 + .5);
-      g.save(); g.translate(x0 + w - 17, cy2); g.rotate(q.rel); g.fillStyle = '#f0d79a'; g.beginPath(); g.moveTo(0, -9); g.lineTo(6.5, 3); g.lineTo(2.2, 3); g.lineTo(2.2, 9); g.lineTo(-2.2, 9); g.lineTo(-2.2, 3); g.lineTo(-6.5, 3); g.closePath(); g.fill(); g.restore(); }
+      // (runde 10, brukerens iPhone liggende: lappen sto over vegen midt nede) på telefon mindre og tettere under siktet
+      const sm = VW < 900, cy2 = VH / 2 + (sm ? 30 : 48), cx2 = VW / 2, hh = sm ? 9 : 12, t = Gaavalg.pekerTekst(q); g.globalAlpha = .92; g.font = `600 ${sm ? 12 : 14}px "Cormorant Garamond",serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      const w = g.measureText(t).width + (sm ? 34 : 44), x0 = cx2 - w / 2; g.fillStyle = 'rgba(28,23,15,.86)'; g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.fillRect(x0, cy2 - hh, w, hh * 2); g.strokeRect(x0 + .5, cy2 - hh + .5, w - 1, hh * 2 - 1);
+      g.fillStyle = '#f0e2b0'; g.fillText(t, x0 + (sm ? 7 : 10), cy2 + .5);
+      g.save(); g.translate(x0 + w - (sm ? 13 : 17), cy2); if (sm) g.scale(.75, .75); g.rotate(q.rel); g.fillStyle = '#f0d79a'; g.beginPath(); g.moveTo(0, -9); g.lineTo(6.5, 3); g.lineTo(2.2, 3); g.lineTo(2.2, 9); g.lineTo(-2.2, 9); g.lineTo(-2.2, 3); g.lineTo(-6.5, 3); g.closePath(); g.fill(); g.restore(); }
     g.restore();
   });
   // ---------- «GÅ INN I HUSET» FRA KARTET (runde 8, kritikken: husene lå 500–600 m fra leiren, og det fantes ingen rask vei inn) ----------
