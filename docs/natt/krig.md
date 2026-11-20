@@ -478,6 +478,11 @@ Oppdraget: motstanderne skal bli farligere over tid, angripe spilleren (tettsted
 og krigen skal kunne vinnes av dem rundt dag 10–14 på «Vanlig» når spilleren ikke gjør noe. Alle tall er **Claudes forslag** og står samlet i
 `Eskalering.REGLER` (spill/eskalering.js). Prøveskript og logger: scratchpad `natt/krig7/` (vakt.js, gjennom7.js, g*.log); bilder: scratchpad `natt7/krig/`.
 
+**Kort:** motstanderne har nå en økonomi (inntekt fra tettstedene), kjøper lag, lastebiler og stridsvogner, samler 2–7 lag til ett angrep mot
+store tettsteder, hverandres tettsteder, dine tettsteder og (fra dag 8 på Vanlig) leiren din, sender lag mot handelsrutene dine, og tar
+storbyen fra dag 11 på Vanlig. Angrep mot noe av ditt varsles med etterretning 4–8 timer før (ring og pil i kartet). Gjennomspilt på /rogaland:
+uten innsats vinner en motstander dag 12 på Vanlig; med to småsteder holdt spilleren det ene og slo tilbake et gruppeangrep.
+
 ### Filer
 - **Nye:** `spill/eskalering.js` (regler uten DOM, `pipeline/fliser/test_eskalering.js`), `spill/eskalering-visning.js` (`window.EskaleringSpill`).
   Skripttaggene står rett etter `krig-visning.js` i index.html.
@@ -535,9 +540,9 @@ På Dovre-testsiden (med infrastrukturen, som i sjekk.js): Dombås gjøres til d
 settes til etter fredstiden. Vakta krever: en gruppe på minst to lag mot Dombås og etterretningen «Kystalliansen samler … Dombås (ditt)» i loggen,
 at lagene går til samlingsstedet (AI.styr), at angrepet IKKE går før varselet er ute selv om lagene er samlet, og at det går etterpå (AI.styr gir
 «ta» mot Dombås); at motstanderen kjøper (lag/lastebil/stridsvogn) med penger i kassa; at et leirangrep varsles med minst fire timers frist og
-«Målet er leiren din» (fire lag til, siden lagene dine ved leiren teller); og at storbyplanen går gjennom (Dombås som storby). Alt settes tilbake:
+«Målet er leiren din» (fire lag til, siden lagene dine ved leiren teller); og at storbyplanen går gjennom (Dombås gjort til en storby på 235 000, uten leirangrep). Alt settes tilbake:
 tid, tempo, lagene (også de AI.nytt og kjøpet laget), TETTSTEDER, frø, AI.angripLeir, AI.minne, etterretningslista, «riksbrudd-eskalering» og
-EskaleringSpill.test. Tar ca. 2 s (PC). Ute av testene (navigator.webdriver) skjer ingenting av seg selv: EskaleringSpill.test = true slår det på.
+EskaleringSpill.test. Tar 2–5 s (PC og mobil, prøvd med scratchpad `natt/krig7/vakt.js`, også MOBIL=1). Ute av testene (navigator.webdriver) skjer ingenting av seg selv: EskaleringSpill.test = true slår det på.
 
 ### 4. Gjennomspillinger på /rogaland (nytt spill på «Vanlig», webdriver av, leiren midt mellom Sviland og Oltedal som i runde 6)
 Skript: scratchpad `natt/krig7/gjennom7.js` (SCENARIO=a|b, GRAD=lett|vanlig|hard; dev.py med ekte kartdata; spoler med `sim(.2)` i biter à 60
