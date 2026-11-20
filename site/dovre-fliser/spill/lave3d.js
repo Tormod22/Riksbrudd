@@ -101,7 +101,9 @@
     return ut;
   }
 
-  const Lave = { REGLER, slag, plasser };
+  // (runde 12) møblene fra interiøret som tegnes her (avrundet) i stedet for som klosser i spill/interior3d.js
+  const TEGNER = { høyball: 1, traktor: 1 };
+  const Lave = { REGLER, slag, plasser, tegner: TEGNER };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Lave; return; }
   rot.Lave3d = Lave;
 
@@ -151,7 +153,12 @@
   function lagNett(plan, p) {
     const g = bygger(), z0 = plan.gulv, A = plan.akse, frø = plan.i | 0, tilXY = (u, v) => [u * A.ux + v * A.vx, u * A.uy + v * A.vy], vinkel = Math.atan2(A.uy, A.ux);
     for (const [x, y, r, h] of p.hauger || []) g.haug(x, y, z0, r, h, HØY, Math.round(x * 31 + y * 17));
-    for (const [x, y, r, v] of p.høy) g.flak(x, y, z0 + .012, r, v, hash(frø, x * 7 + y) < .3 ? HØY_MØRK : HØY, Math.round(x * 13 + y * 7));
+    // (runde 12, kritikken: «høyet er gule flekker malt rett på gulvet») – strødd høy er små, lave dotter i 3D (annenhver), ikke flate flak
+    for (const [n, [x, y, r, v]] of p.høy.entries()) { if (n % 2) continue; const f = hash(frø, x * 7 + y) < .3 ? HØY_MØRK : HØY; g.haug(x, y, z0, r * .55, .06 + .1 * hash(frø, x + y * 3), f, Math.round(x * 13 + y * 7)); void v; }
+    // takåser langs låven (under sperrene fra interiøret) – to rekker i største rommet
+    { const rom = plan.rom.filter(r => r.andel > .3).sort((a, b) => b.areal - a.areal)[0];
+      if (rom && plan.tak > 2.6) for (const t of [1 / 3, 2 / 3]) { const v = rom.v0 + (rom.v1 - rom.v0) * t, [ax, ay] = tilXY(rom.u0 + .1, v), [bx, by] = tilXY(rom.u1 - .1, v);
+        g.stav([ax, ay, z0 + plan.tak - .27], [bx, by, z0 + plan.tak - .27], .18, TRE_MØRK); } }
     if (p.loft) { const L = p.loft, z = z0 + L.z, uM = (L.u0 + L.u1) / 2, vM = (L.v0 + L.v1) / 2, [mx, my] = tilXY(uM, vM), du = L.u1 - L.u0, dv = L.v1 - L.v0;
       // dekket (bord på bjelker) og kantbjelken
       g.boks(mx, my, vinkel, dv - .1, du - .05, z - .06, z + .06, [.5, .38, .25]);
@@ -188,20 +195,97 @@
       const [hx, hy] = P(.62, 0); g.prisme([hx, hy, z0 + .2], [-s, c, 0], .2, .05, 8, JERN);
       for (const b of [-.24, .24]) { const [ax, ay] = P(.55, b), [bx, by] = P(-.85, b * 1.2); g.stav([ax, ay, z0 + .28], [bx, by, z0 + .62], .04, TRE); const [fx, fy] = P(-.3, b); g.stav([fx, fy, z0], [fx, fy, z0 + .34], .04, JERN); } }
     for (const [x, y] of p.spann) { g.prisme([x, y, z0 + .3], [0, 0, 1], .17, .3, 8, [.74, .75, .74]); g.prisme([x, y, z0 + .66], [0, 0, 1], .1, .06, 8, [.68, .69, .68]); }
-    // gråtassen (gammel grå traktor): store bakhjul, små forhjul, smalt motorpanser, sete, ratt, eksosrør og skjermer
-    if (p.traktor) { const T = p.traktor, c = Math.cos(T.a), s = Math.sin(T.a), P = (a, b) => [T.x + a * c - b * s, T.y + a * s + b * c], aks = [-s, c, 0], GT = [.58, .6, .58], MØRK = [.12, .12, .12];
-      for (const sd of [-1, 1]) { const [bx, by] = P(-.75, sd * .72); g.prisme([bx, by, z0 + .6], aks, .6, .15, 12, MØRK); g.prisme([bx, by, z0 + .6], aks, .36, .16, 8, [.62, .2, .14]);
-        const [fx, fy] = P(.95, sd * .62); g.prisme([fx, fy, z0 + .33], aks, .33, .09, 10, MØRK);
-        const [sx, sy] = P(-.75, sd * .72); g.boks(sx, sy, T.a, .36, 1.1, z0 + 1.08, z0 + 1.16, GT); }
-      { const [mx, my] = P(.45, 0); g.boks(mx, my, T.a, .5, 1.25, z0 + .55, z0 + 1.08, GT); const [nx, ny] = P(1.12, 0); g.boks(nx, ny, T.a, .56, .14, z0 + .5, z0 + 1.1, [.4, .42, .4]);
-        const [gx, gy] = P(-.3, 0); g.boks(gx, gy, T.a, .7, .9, z0 + .5, z0 + .9, [.35, .36, .34]); const [ax, ay] = P(.95, 0); g.boks(ax, ay, T.a, 1.24, .14, z0 + .26, z0 + .4, JERN);
-        const [ex, ey] = P(.85, .18); g.stav([ex, ey, z0 + 1.05], [ex, ey, z0 + 1.65], .06, MØRK);
-        const [sx, sy] = P(-.78, 0); g.boks(sx, sy, T.a, .44, .36, z0 + 1.12, z0 + 1.2, [.2, .2, .2]); g.stav([sx, sy, z0 + .9], [sx, sy, z0 + 1.12], .07, JERN);
-        const [rx, ry] = P(-.2, 0), [rq, rr] = P(.1, 0); g.stav([rq, rr, z0 + 1.08], [rx, ry, z0 + 1.42], .04, JERN); g.prisme([rx, ry, z0 + 1.44], [Math.cos(T.a) * .6, Math.sin(T.a) * .6, .8], .2, .02, 10, MØRK); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(g.kol, 3)); geo.computeVertexNormals();
     if (!mat) mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const m = new THREE.Mesh(geo, mat); m.userData.låve = true; m.frustumCulled = true; return m;
+    const m = new THREE.Mesh(geo, mat); m.userData.låve = true; m.frustumCulled = true;
+    // (runde 12) de avrundede tingene: traktorer, høyballer og lysstråler som egne små nett under hovednettet
+    try { avrundet(m, plan, p); } catch (e) { console.warn('låve (avrundet):', e); }
+    return m;
   }
+
+  // ---------- (runde 12, kritikken: «traktoren er fire klosser», «høyet er gule flekker på gulvet», «flate vegger», ingen lys) ----------
+  // Traktorene bygges én gang (Kjoretoy3d.form: avrundede bokser, runde dekk, skjermer og lykter – fronten mot +x, origo midt på bakken)
+  // og deles av alle låvene; høyballene er avrundede firkantballer med to snorer og løst høy oppå; gjennom sprekkene i veggene faller
+  // lysstråler (to kryssede flater med myk tone, additive – ingen nye lys). Tallene er Claudes forslag.
+  const TRAKTOR = { rød: [.72, .12, .08], rødMørk: [.5, .08, .06], grå: [.56, .58, .56] };
+  const geoer = {};
+  function traktorGeo(type) {
+    if (geoer[type]) return geoer[type]; const F = window.Kjoretoy3d && Kjoretoy3d.form; if (!F || !window.MODELLER) return null;
+    const d = [], FA = F.FARGE, SV = FA.SV, STÅL = FA.STÅL, GL = FA.GL, LYKT = FA.LYKT;
+    if (type === 'rød') { const R = TRAKTOR.rød, RM = TRAKTOR.rødMørk;
+      // bakhjul og forhjul, skjermer over bakhjulene
+      for (const s of [-1, 1]) { F.rundHjul(d, -.85, s * .8, .78, .46, [.75, .62, .1], SV, 16); F.rundHjul(d, 1.2, s * .7, .44, .3, [.75, .62, .1], SV, 12); F.skjerm(d, -.85, s * .82, .82, .86, .5, R); }
+      // ramme, motorpanser som smalner fram, grill, lykter, eksosrør
+      F.rundBoks(d, .15, 0, .42, 2.6, .62, .42, .1, SV); F.rundBoks(d, .72, 0, .78, 1.75, .78, .72, .16, R, { fin: true, smal: .86 });
+      F.rundBoks(d, 1.6, 0, .82, .1, .62, .58, .04, [.12, .12, .12]); for (const s of [-1, 1]) F.lykt(d, 1.63, s * .22, 1.32, .07, LYKT);
+      F.rundBoks(d, 1.0, .25, 1.48, .08, .08, .06, .03, SV); { const g = new THREE.CylinderGeometry(.045, .05, .9, 8); g.rotateX(Math.PI / 2); g.translate(1.0, .25, 1.95); d.push(F.farg(g, SV)); }
+      // hytta: gulv, fire stolper, glass på alle sider, tak med skjerm
+      F.rundBoks(d, -.75, 0, .78, 1.3, 1.3, .62, .1, RM);
+      for (const [x, y] of [[-1.35, -.6], [-1.35, .6], [-.15, -.6], [-.15, .6]]) F.rundBoks(d, x, y, 1.4, .07, .07, 1.0, .03, SV);
+      F.rundBoks(d, -.15, 0, 1.45, .04, 1.14, .92, .02, GL); F.rundBoks(d, -1.35, 0, 1.45, .04, 1.14, .92, .02, GL);
+      for (const s of [-1, 1]) F.rundBoks(d, -.75, s * .6, 1.45, 1.14, .04, .92, .02, GL);
+      F.rundBoks(d, -.75, 0, 2.4, 1.46, 1.42, .14, .06, R); F.rundBoks(d, -.75, 0, 2.38, 1.52, 1.48, .04, .02, [.85, .85, .82]);
+      // sete og ratt inne i hytta
+      F.rundBoks(d, -1.0, 0, 1.4, .4, .44, .12, .05, SV); F.rundBoks(d, -1.18, 0, 1.52, .08, .42, .42, .04, SV);
+      { const g = new THREE.TorusGeometry(.16, .022, 6, 14); g.rotateY(Math.PI / 2 - .5); g.translate(-.5, 0, 1.75); d.push(F.farg(g, SV)); }
+      // trekkstang bak
+      F.rundBoks(d, -1.65, 0, .55, .3, .5, .16, .05, STÅL); }
+    else { const G = TRAKTOR.grå;
+      // gråtassen: store bakhjul, små forhjul, smalt panser, sete på stang, ratt, eksosrør og skjermer over bakhjulene
+      for (const s of [-1, 1]) { F.rundHjul(d, -.75, s * .72, .6, .3, [.62, .2, .14], SV, 14); F.rundHjul(d, .95, s * .62, .33, .18, [.62, .2, .14], SV, 12); F.skjerm(d, -.75, s * .74, .62, .66, .34, G); }
+      F.rundBoks(d, .4, 0, .5, 1.4, .52, .56, .14, G, { fin: true, smal: .9 }); F.rundBoks(d, 1.12, 0, .5, .12, .56, .58, .05, [.4, .42, .4]);
+      F.rundBoks(d, -.3, 0, .45, .8, .7, .45, .1, [.35, .36, .34]); F.rundBoks(d, .95, 0, .26, .14, 1.24, .14, .04, STÅL);
+      { const g = new THREE.CylinderGeometry(.03, .035, .6, 8); g.rotateX(Math.PI / 2); g.translate(.85, .18, 1.35); d.push(F.farg(g, SV)); }
+      F.rundBoks(d, -.78, 0, 1.12, .44, .4, .1, .05, [.2, .2, .2]); F.rundBoks(d, -.78, 0, .9, .07, .07, .22, .03, STÅL);
+      { const g = new THREE.TorusGeometry(.18, .02, 6, 14); g.rotateY(Math.PI / 2 - .7); g.translate(-.2, 0, 1.42); d.push(F.farg(g, SV)); } }
+    return (geoer[type] = MODELLER.samle(d));
+  }
+  // en firkantball: avrundet, to snorer rundt, litt løst høy oppå (fast per ball)
+  function ballGeo() {
+    if (geoer.ball) return geoer.ball; const F = window.Kjoretoy3d && Kjoretoy3d.form; if (!F || !window.MODELLER) return null; const d = [];
+    F.rundBoks(d, 0, 0, 0, 1.0, 1.0, 1.0, .09, [1, 1, 1], { fin: true });
+    for (const x of [-.24, .24]) F.rundBoks(d, x, 0, -.004, .025, 1.012, 1.01, .01, [.5, .42, .24]);
+    return (geoer.ball = MODELLER.samle(d));
+  }
+  let strålMat = null;
+  function stråleMat() {
+    if (strålMat) return strålMat; const c = document.createElement('canvas'); c.width = 32; c.height = 128; const q = c.getContext('2d');
+    // lysest midt på tvers og øverst, borte ved kantene og nederst
+    const a = q.createLinearGradient(0, 0, 32, 0); a.addColorStop(0, 'rgba(0,0,0,1)'); a.addColorStop(.5, 'rgba(255,255,255,1)'); a.addColorStop(1, 'rgba(0,0,0,1)'); q.fillStyle = a; q.fillRect(0, 0, 32, 128);
+    q.globalCompositeOperation = 'multiply'; const b = q.createLinearGradient(0, 0, 0, 128); b.addColorStop(0, '#fff'); b.addColorStop(.75, '#888'); b.addColorStop(1, '#000'); q.fillStyle = b; q.fillRect(0, 0, 32, 128);
+    const t = new THREE.CanvasTexture(c);
+    return (strålMat = new THREE.MeshBasicMaterial({ map: t, color: 0x5c4c30, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  }
+  const LYS = { stråler: [3, 6], bredde: [.18, .45] };
+  function avrundet(m, plan, p) {
+    const z0 = plan.gulv, frø = plan.i | 0;
+    if (!m.userData.barn) m.userData.barn = [];
+    const legg = (geo, mat2, x, y, z, a, sk) => { if (!geo) return null; const c = new THREE.Mesh(geo, mat2); c.position.set(x, y, z); c.rotation.z = a; if (sk) c.scale.set(...sk); c.userData.delt = true; m.add(c); m.userData.barn.push(c); return c; };
+    // traktorene: den røde fra interiøret (møbelets fremside er +y i møbelets akser) og gråtassen
+    const låve = slag(plan) === 'låve';
+    for (const mb of plan.møbler) if (låve && mb.type === 'traktor') legg(traktorGeo('rød'), mat, mb.x, mb.y, z0, mb.a + Math.PI / 2, [.95, .95, .95]);
+    if (p.traktor) legg(traktorGeo('grå'), mat, p.traktor.x, p.traktor.y, z0, p.traktor.a);
+    // høyballene: farge per ball (eget materiale per tone – tre toner), litt skjeve
+    const BALL = [[.84, .72, .4], [.78, .67, .36], [.72, .64, .38]];
+    if (!m.userData.ballMat) m.userData.ballMat = BALL.map(f => new THREE.MeshLambertMaterial({ vertexColors: true, color: new THREE.Color(f[0], f[1], f[2]) }));
+    for (const [n, mb] of plan.møbler.entries()) if (låve && mb.type === 'høyball') { const h = hash(frø, 500 + n);
+      legg(ballGeo(), m.userData.ballMat[Math.floor(h * 3) % 3], mb.x, mb.y, z0, mb.a + (h - .5) * .12, [mb.b * .96, mb.d * .96, mb.h * .95]); }
+    // lysstråler gjennom sprekkene: fra høyt på en yttervegg og ned på gulvet et par meter inn
+    const S = plan.ytre.filter(w => Math.hypot(w.bx - w.ax, w.by - w.ay) > 3), n = LYS.stråler[0] + Math.floor(hash(frø, 600) * (LYS.stråler[1] - LYS.stråler[0] + 1));
+    const mx = (plan.bb[0] + plan.bb[2]) / 2, my = (plan.bb[1] + plan.bb[3]) / 2, pos = [], uv = [];
+    for (let i = 0; i < n && S.length; i++) { const w = S[Math.floor(hash(frø, 610 + i) * S.length)], L = Math.hypot(w.bx - w.ax, w.by - w.ay), ex = (w.bx - w.ax) / L, ey = (w.by - w.ay) / L, t = 1 + (L - 2) * hash(frø, 620 + i);
+      let nx = -ey, ny = ex; if ((mx - w.ax) * nx + (my - w.ay) * ny < 0) { nx = -nx; ny = -ny; }
+      const top = [w.ax + ex * t + nx * .05, w.ay + ey * t + ny * .05, z0 + plan.tak - .3], inn = 2 + hash(frø, 630 + i) * 2.5, skrå = (hash(frø, 640 + i) - .5) * 1.5;
+      const bunn = [top[0] + nx * inn + ex * skrå, top[1] + ny * inn + ey * skrå, z0 + .02];
+      if (!Interior.inni(plan.P, bunn[0], bunn[1])) continue; const b = LYS.bredde[0] + (LYS.bredde[1] - LYS.bredde[0]) * hash(frø, 650 + i);
+      // to kryssede flater (langs veggen og på tvers), så strålen synes fra alle kanter
+      for (const [ax, ay] of [[ex, ey], [nx * .4 + ex * .6, ny * .4 + ey * .6]]) { const q = [[top[0] - ax * b * .3, top[1] - ay * b * .3, top[2]], [top[0] + ax * b * .3, top[1] + ay * b * .3, top[2]], [bunn[0] + ax * b, bunn[1] + ay * b, bunn[2]], [bunn[0] - ax * b, bunn[1] - ay * b, bunn[2]]];
+        for (const k of [0, 1, 2, 0, 2, 3]) pos.push(...q[k]); uv.push(0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0); } }
+    if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      const c = new THREE.Mesh(g, stråleMat()); c.renderOrder = 3; c.frustumCulled = false; m.add(c); m.userData.barn.push(c); }
+  }
+  // nettet og barna (de delte geometriene for traktor og ball frigjøres ikke)
+  function kast(m) { m.geometry.dispose(); for (const c of m.userData.barn || []) if (!c.userData.delt) c.geometry.dispose(); for (const b of m.userData.ballMat || []) b.dispose(); }
 
   function oppdater(R) {
     const u = R.ut; if (!u || !window.Interior3d || !window.Interior) return;
@@ -216,9 +300,9 @@
       if (p.traktor && !pl.møbler.some(m => m.type === 'gråtass')) { const T = p.traktor; pl.møbler.push({ type: 'gråtass', x: T.x, y: T.y, a: T.a, b: T.d, d: T.b, h: 1.6, sperrer: true }); }
       let m = null; try { m = lagNett(pl, p); } catch (e) { console.warn('låve:', e); }
       if (m) { R.scene.add(m); laget.set(pl, m); trekanter += m.geometry.attributes.position.count / 3; } }
-    for (const [pl, m] of [...laget]) if (!aktive.has(pl)) { R.scene.remove(m); m.geometry.dispose(); trekanter -= m.geometry.attributes.position.count / 3; laget.delete(pl); }
+    for (const [pl, m] of [...laget]) if (!aktive.has(pl)) { R.scene.remove(m); kast(m); trekanter -= m.geometry.attributes.position.count / 3; laget.delete(pl); }
   }
-  function tøm(R) { for (const [, m] of laget) { R.scene.remove(m); m.geometry.dispose(); } laget.clear(); trekanter = 0; }
+  function tøm(R) { for (const [, m] of laget) { R.scene.remove(m); kast(m); } laget.clear(); trekanter = 0; }
   KROKER.ramme3d.push(R => { if (R.fot || laget.size) oppdater(R); });
   Lave.antall = () => laget.size;
   Lave.trekanter = () => Math.round(trekanter);
@@ -226,6 +310,8 @@
   // til vakten: lag nettet for en plan (uten scenen) og gi antall trekanter og om alle hjørnene er tall; nettet frigjøres straks
   Lave.prøvNett = plan => { const p = plasser(plan, (x, y) => Interior.blokkert(plan, x, y), (x, y) => Interior.inni(plan.P, x, y)); if (!p) return null;
     const m = lagNett(plan, p), a = m.geometry.attributes.position.array; let ok = true; for (let i = 0; i < a.length; i++) if (!(a[i] === a[i])) { ok = false; break; }
-    const ut = { trekanter: a.length / 9, tall: ok, loft: !!p.loft, traktor: !!p.traktor, hauger: (p.hauger || []).length }; m.geometry.dispose(); return ut; };
+    const barn = (m.userData.barn || []).length, ut = { trekanter: a.length / 9, tall: ok, loft: !!p.loft, traktor: !!p.traktor, hauger: (p.hauger || []).length, barn }; kast(m); return ut; };
+  // til vakten (pipeline/fliser/vakter/3d.js): hva låvene viser nå – traktorer, baller og stråler som egne nett
+  Lave.barn = () => [...laget.values()].map(m => (m.userData.barn || []).map(c => c.material === strålMat ? 'stråle' : c.geometry === geoer.ball ? 'ball' : c.geometry === geoer.rød ? 'traktor' : c.geometry === geoer.grå ? 'gråtass' : 'annet'));
   Lave.sjekk = () => [...laget].map(([pl, m]) => ({ kl: pl.kl, areal: Math.round(pl.areal), trekanter: m.geometry.attributes.position.count / 3, gulv: pl.gulv }));
 })(typeof globalThis !== 'undefined' ? globalThis : this);

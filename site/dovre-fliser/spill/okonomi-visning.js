@@ -98,7 +98,9 @@
       const tx = Math.floor(t.beholdning).toLocaleString('nb-NO') + ' t olje'; g.strokeText(tx, x, y + 20); g.fillStyle = '#f0d79a'; g.fillText(tx, x, y + 20);
       if (hentModus) { g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 14, 0, 6.283); g.stroke(); } }
   });
-  KROKER.tegn3d.push((g, proj) => { for (const b of BASER) { const q = proj(b.x, b.y); if (q) baseSymbol(g, b, q[0], q[1] - 20, b === valgtBase); } });
+  // (runde 12, pakke 3d) til fots ved leiren står det ekte flagget der – ikke det flate merket oppå (innen 150 m, Claudes forslag)
+  const nærTilFots = b => { const R = typeof R3 !== 'undefined' ? R3 : null; if (!R || !R.fot || !R.ut) return false; const c = R.cam.position; return Math.hypot(b.x - R.ut.cx - c.x, b.y - R.ut.cy - c.y) < 150; };
+  KROKER.tegn3d.push((g, proj) => { for (const b of BASER) { if (nærTilFots(b)) continue; const q = proj(b.x, b.y); if (q) baseSymbol(g, b, q[0], q[1] - 20, b === valgtBase); } });
   // Basesymbol: rektangel med flaggstang og vimpel, oljelageret under.
   function baseSymbol(g, b, x, y, valgtNå) {
     const r = 12; g.fillStyle = '#3b5878'; g.strokeStyle = valgtNå ? '#f0d79a' : '#e7dcc3'; g.lineWidth = valgtNå ? 2.5 : 1.4;

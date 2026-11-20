@@ -156,14 +156,32 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.
       kz(0, -.032, -.09, -.04, .004, .004, st, 1, 1, 0, 6, 1); ky(0, -.034, -.024, -.093, .0035, .0035, st, 1, 1, 0, 6); ky(0, -.036, -.022, -.062, .003, .003, blank, 1, 1, .3, 6);
       if (V.mag) { const m = V.mag; ky(0, -.03 - m * .6, -.025, -.106, .02, .02, st2, T * .7 / .04, 1.15, .08, 8); ky(0, -.03 - m * 1.02, -.03 - m * .52, -.114 - m * .07, .02, .02, st2, T * .7 / .04, 1.15, .3, 8);
         ky(0, -.04 - m * 1.06, -.03 - m * 1.0, -.12 - m * .13, .021, .021, st, T * .74 / .04, 1.2, .3, 8); } }
-    // hansken: avrundet håndflate rundt grepet, fire fingre og tommel, knokevern; ermet rundt med mansjett
-    kule(.006, -.085, -.02, .04, hans, .85, 1.15, 1.05); for (let q = 0; q < 4; q++) kz(.008, -.062 - q * .019, -.07, -.04, .0105, .0095, hans2, 3.2, .95, 0, 8, 1);
-    ky(-.03, -.07, -.035, -.025, .012, .011, hans2, 1, 1.2, .5, 8); kz(.006, -.058, .012, .028, .03, .03, [.16, .16, .17], 1.15, .8, 0, 10, 1);
-    kab([.02, -.1, .0], [.1, -.32, .22], .036, .043, erme); kab([.016, -.094, -.012], [.024, -.114, .012], .041, .041, erme2);
+    // (runde 12, kritikken: «geværet holdes av et grønt rør som stikker inn fra bildekanten, med skjev vinkel og ingen hånd»)
+    // ARMEN: hanske i lyst lær med håndrygg, knoker, fire bøyde fingre rundt grepet og tommel over; mansjett med strikk; underarmen
+    // smalner mot håndleddet og er bredest ved albuen, med en knekk ved albuen, folder i stoffet og flekker i kamuflasje. Armen går
+    // bakover og litt ned og ut mot hjørnet (som når du holder et våpen foran deg), ikke rett ned. Fargene er Claudes forslag.
+    const HANS = [.44, .35, .24], HANS2 = [.35, .27, .18], HANS3 = [.52, .43, .31], STRIKK = [.17, .19, .15], KAM = [[.2, .24, .15], [.36, .33, .22], [.15, .17, .12]];
+    // en arm fra håndleddet A gjennom albuen E og ut av bildet til U; r = radius ved håndleddet; folder og flekker langs underarmen
+    const arm = (A, E, U, r, frø) => {
+      kab(A, E, r * .96, r * 1.28, erme, 12); kab(E, U, r * 1.3, r * 1.42, erme, 12); kule(E[0], E[1], E[2], r * 1.3, erme, 1, 1, 1, 10);
+      const d = [E[0] - A[0], E[1] - A[1], E[2] - A[2]];
+      // folder: tre ringer som er litt tykkere og mørkere
+      for (const t of [.3, .52, .74]) { const p = [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t], q = [A[0] + d[0] * (t + .05), A[1] + d[1] * (t + .05), A[2] + d[2] * (t + .05)], rr = r * (1 + .28 * t) * 1.05; kab(p, q, rr, rr * .98, erme2, 10); }
+      // kamuflasjeflekker: flate ellipser like utenpå stoffet
+      for (let q = 0; q < 6; q++) { const t = .15 + q * .14, vin = (frø + q * 2.4) % 6.283, p = [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t], rr = r * (1 + .28 * t) * .93;
+        kule(p[0] + Math.cos(vin) * rr * .55, p[1] + Math.sin(vin) * rr * .55, p[2], rr * .5, KAM[q % 3], 1.1, 1.1, 1.6, 7); }
+      // mansjett med strikk ved håndleddet
+      const m2 = [A[0] + d[0] * .08, A[1] + d[1] * .08, A[2] + d[2] * .08]; kab(A, m2, r * .9, r * .92, STRIKK, 10); };
+    // høyre hånd rundt pistolgrepet: håndryggen (litt flat), knoker, fire fingre som går rundt grepet, tommel over på venstre side
+    kule(.012, -.07, -.004, .038, HANS, .95, 1.25, 1.1, 12); kule(.03, -.06, -.01, .03, HANS3, .7, 1.1, 1.05, 10);
+    for (let q = 0; q < 4; q++) { const yq = -.05 - q * .019; kz(.02, yq, -.06, -.025, .0115, .0105, HANS2, 1.4, .95, 0, 8, 1); kz(-.002, yq, -.072, -.05, .0105, .0098, HANS, 1.9, .95, 0, 8, 1); kule(.03, yq, -.03, .012, HANS3, 1, .9, 1, 6); }
+    kab([-.02, -.05, -.012], [-.028, -.034, -.05], .012, .011, HANS2, 8); kule(-.028, -.033, -.052, .011, HANS, 1, 1, 1, 6);
+    arm([.022, -.088, .022], [.13, -.21, .25], [.3, -.42, .62], .034, 1);
     if (id !== 'pistol') { const z = -.24 - L * .3;
-      // venstre hånd under forskjeftet
-      kule(-.018, -.046, z, .038, hans, 1.05, .9, 1.15); for (let q = 0; q < 4; q++) kz(.02, -.02, z - .032 + q * .02, z - .015 + q * .02, .0105, .0095, hans2, 1.1, 1.6, 0, 8, 1); ky(-.035, -.03, -.005, z + .025, .011, .01, hans2, 1, 1.3, 0, 8);
-      kab([-.035, -.07, z + .045], [-.3, -.4, z + .26], .034, .041, erme); kab([-.03, -.063, z + .033], [-.042, -.08, z + .06], .039, .039, erme2); }
+      // venstre hånd under forskjeftet: håndflaten under, fingrene opp langs høyre side, tommelen langs venstre side
+      kule(-.012, -.05, z, .036, HANS, 1.1, .85, 1.25, 12); for (let q = 0; q < 4; q++) kz(.024, -.022, z - .034 + q * .021, z - .017 + q * .021, .0115, .0105, HANS2, 1.05, 1.7, 0, 8, 1);
+      ky(-.034, -.034, -.006, z + .022, .012, .011, HANS2, 1, 1.25, .45, 8);
+      arm([-.03, -.075, z + .04], [-.16, -.2, z + .3], [-.34, -.44, z + .7], .032, 3); }
     return MODELLER.samle(d); }
   KROKER.ramme3d.push(R => { if (typeof THREE === 'undefined' || !R.cam) return; const U = window.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill : null, SS = window.SpilletSpill, K = SS && SS.K ? SS.K() : null, går = !!R.fot && !(window.KjorSpill && KjorSpill.fører());
     if (!vm) { if (!U || !går) return; if (!R.cam.parent) R.scene.add(R.cam); vm = { g: new THREE.Group(), id: '', mesh: null, mat: new THREE.MeshLambertMaterial({ vertexColors: true }) }; R.cam.add(vm.g); }

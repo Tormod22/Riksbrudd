@@ -31,22 +31,38 @@
   const NIVÅ = {
     høy: { navn: 'Høy', pr: [1.5, 1.25], tre: 1, gress: 1, blomster: true, tekstur: true, vann: 1, fx: FX.høy },
     middels: { navn: 'Middels', pr: [1, 1], tre: .6, gress: .5, blomster: true, tekstur: false, vann: 1, nett: .92, fx: FX.middels },
-    lav: { navn: 'Lav', pr: [.75, .75], tre: .35, gress: 0, blomster: false, tekstur: false, vann: 0, bakke: 'enkel', nett: .83 },
+    // (runde 12, kritikken: «leiren sto på en flat, kakigul flate» etter at grafikken gikk ned av seg selv) – også Lav har litt gress og
+    // blomstene rundt deg, og den enkle bakken har korn og flekker (enkelBakke i index.html). Claudes forslag: 0,3 av gresset.
+    lav: { navn: 'Lav', pr: [.75, .75], tre: .35, gress: .3, blomster: true, tekstur: false, vann: 0, bakke: 'enkel', nett: .83 },
   };
   const REKKE = ['høy', 'middels', 'lav'];
   // Auto: ms = snittid per bilde, skala = oppløsningsfaktoren (1 = full, 0,6 = laveste), nå/sist i sekunder.
-  // Ned: over 24 ms når oppløsningen alt er senket (eller over 40 ms uansett), høyst hvert 4. s. Opp: under 18 ms (60 bilder/s) i 20 s med full oppløsning,
-  // men ikke tilbake til et nivå som var for tungt det siste minuttet.
-  function neste(s, ms, skala, nå) {
+  // Ned: over 24 ms når oppløsningen alt er senket, høyst hvert 4. s. Opp: under 18 ms (60 bilder/s) i 20 s med full oppløsning,
+  // men ikke tilbake til et nivå som var for tungt det siste minuttet, og aldri over s.maks (programvare-grafikk: Lav).
+  // (runde 12, kritikken: grafikken gikk ned av seg selv etter et halvt minutt mens du sto stille) – oppløsningen senkes alltid først
+  // (før gikk nivået ned «uansett» over 40 ms), og varig = false (ikke tregt lenge nok, se vedvarende) holder nivået.
+  function neste(s, ms, skala, nå, varig) {
     const i = REKKE.indexOf(s.nivå);
     if (nå - (s.endret || -99) < 4) return s.nivå;
-    if ((ms > 24 && skala <= .65) || ms > 40) { if (i < REKKE.length - 1) { s.endret = nå; s.forTungt = { nivå: s.nivå, ved: nå }; s.lett = null; return REKKE[i + 1]; } return s.nivå; }
+    if (ms > 24 && skala <= .65) { if (varig !== false && i < REKKE.length - 1) { s.endret = nå; s.forTungt = { nivå: s.nivå, ved: nå }; s.lett = null; s.tregFra = null; return REKKE[i + 1]; } return s.nivå; }
     if (ms < 18 && skala >= 1) {
       if (s.lett == null) s.lett = nå;
-      const opp = REKKE[i - 1];
-      if (i > 0 && nå - s.lett > 20 && !(s.forTungt && s.forTungt.nivå === opp && nå - s.forTungt.ved < 60)) { s.endret = nå; s.lett = null; return opp; }
+      const opp = REKKE[i - 1], tak = REKKE.indexOf(s.maks || 'høy');
+      if (i > 0 && i - 1 >= tak && nå - s.lett > 20 && !(s.forTungt && s.forTungt.nivå === opp && nå - s.forTungt.ved < 60)) { s.endret = nå; s.lett = null; return opp; }
     } else s.lett = null;
     return s.nivå;
+  }
+  // VEDVARENDE TREGT (runde 12). Grafikken settes bare ned når bildene har gått tregt sammenhengende i AUTO.varig sekunder mens noe
+  // skjer (tida går eller kameraet flytter seg – aktiv), ikke mens et utsnitt bygges og ikke de første AUTO.etterBygg sekundene etter
+  // (da lages trær, gress og hus, og bildene er trege en stund uansett). Claudes forslag:
+  const AUTO = { varig: 10, etterBygg: 8, ms: 24, skala: .65 };
+  function vedvarende(s, v) {
+    if (v.bygger) { s.byggSlutt = v.nå; s.tregFra = null; return false; }
+    if (s.byggSlutt != null && v.nå - s.byggSlutt < AUTO.etterBygg) { s.tregFra = null; return false; }
+    if (!v.aktiv) return false;
+    if (!(v.ms > AUTO.ms && v.skala <= AUTO.skala)) { s.tregFra = null; return false; }
+    if (s.tregFra == null) s.tregFra = v.nå;
+    return v.nå - s.tregFra >= AUTO.varig;
   }
   // Er navnet nettleseren oppgir en programvare-tegner (ikke et grafikkort)?
   const programvare = navn => /swiftshader|llvmpipe|softpipe|software|basic render|warp/i.test(navn || '');
@@ -56,7 +72,7 @@
     if (m) { const d = m[1].split(','); t = (d.length >= 2 ? d[1] : d[0]).trim(); }
     return t.replace(/\s*(Direct3D|OpenGL|vs_\d|ps_\d|D3D\d+).*$/i, '').replace(/\(0x[0-9a-f]+\)/ig, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'ukjent';
   }
-  const Kvalitet = { NIVÅ, REKKE, FX, neste, programvare, kortNavn };
+  const Kvalitet = { NIVÅ, REKKE, FX, AUTO, neste, vedvarende, programvare, kortNavn };
   if (typeof module !== 'undefined') { module.exports = Kvalitet; return; }
   rot.Kvalitet = Kvalitet;
 
@@ -64,7 +80,10 @@
   let valg = 'auto'; try { const v = localStorage.getItem('riksbrudd-grafikk'); if (v && (v === 'auto' || NIVÅ[v])) valg = v; } catch (e) { /* privat vindu */ }
   const S = { nivå: valg === 'auto' ? 'høy' : valg };
   // KVAL: det andre deler av spillet leser (index.html: størrelse3d, lodTrær, gress3d, bygg3d; vegetasjon3d.js; vind3d.js)
-  const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { return NIVÅ[S.nivå]; },
+  // (runde 12) programvare-grafikk: bildet er tregt uansett oppløsning (målt ca. 200 ms per bilde både på 0,45 og 0,75), så det tegnes
+  // skarpt (pikseltetthet 1, ingen nedskalering – se ramme3d under) i stedet for grøtete og nesten like tregt. Claudes forslag.
+  const PROG_PR = [1, 1], PROG_P = {};
+  const KVAL = window.KVAL = { get nivå() { return S.nivå; }, get valg() { return valg; }, v: 0, get p() { const n = NIVÅ[S.nivå]; return KVAL.programvare && valg === 'auto' && !navigator.webdriver ? (PROG_P[S.nivå] || (PROG_P[S.nivå] = Object.assign({}, n, { pr: PROG_PR }))) : n; },
     // fx: de nye effektene på dette nivået (FX.ingen når de er slått av, på Lav og i testene – se under)
     get fx() { const f = fxPå && NIVÅ[S.nivå].fx; return !f ? FX.ingen : fxTrinn >= 2 ? FX.billig : fxTrinn === 1 ? FX.middels : f; }, get effekterPå() { return fxPå; }, get fxTrinn() { return fxTrinn; } };
   let fxTrinn = 0;
@@ -100,7 +119,8 @@
     KVAL.kort = navn; KVAL.programvare = programvare(navn); settKnapp();
     if (typeof logg === 'function') logg('Grafikkort: ' + kortNavn(navn) + (KVAL.programvare ? ' (programvare – ikke et grafikkort)' : '') + '.');
     if (!KVAL.programvare || navigator.webdriver) return;
-    if (valg === 'auto') bytt('lav');
+    // (runde 12) programvare: Auto går ikke over Lav igjen (før målte den feil og gikk opp til Høy, og så ned igjen midt i bildet)
+    if (valg === 'auto') { S.maks = 'lav'; bytt('lav'); }
     programvareVarsel();
   });
   // MASKINVAREVARSELET (runde 6, 19. nov, kritikken: varselet la seg midt i bildet ved hver åpning av 3D, også over siktet når du gikk,
@@ -127,19 +147,22 @@ body.kort #grafikkvarsel{ right:auto; left:8px; top:38%; width:min(180px,45vw); 
   }
   KVAL.programvareVarsel = programvareVarsel;
   KROKER.ramme3d.push(R => {
+    // programvare-grafikk: ingen nedskalering (se PROG_PR)
+    if (KVAL.programvare && valg === 'auto' && !navigator.webdriver && !R.måler) R.skala = 1;
     // (R.måler: spill/ytelse.js måler – da står nivået stille)
     if (valg !== 'auto' || R.rammeSnitt == null || R.måler) return;
     const nå = performance.now() / 1000; if (!S.start) S.start = nå;
     // de første sekundene etter at 3D er åpnet bygges alt: ikke mål da
-    if (nå - S.start < 6 || R.bygger) return;
-    // for tregt (samme grense som Kvalitet.neste): først de dyre effektene, så nivået
-    const ms = R.rammeSnitt, skala = R.skala || 1;
-    if (fxPå && fxTrinn < 2 && NIVÅ[S.nivå].fx && nå - (S.endret || -99) >= 4 && ((ms > 24 && skala <= .65) || ms > 40)) {
-      fxTrinn++; S.endret = nå; S.lett = null; KVAL.v++; if (typeof byttBakke === 'function') byttBakke();
+    if (nå - S.start < 6) return;
+    // for tregt lenge nok (Kvalitet.vedvarende): først oppløsningen (størrelse3d i index.html), så de dyre effektene, så nivået
+    const ms = R.rammeSnitt, skala = R.skala || 1, varig = vedvarende(S, { ms, skala, nå, bygger: !!R.bygger, aktiv: R.aktivRamme !== false });
+    if (R.bygger) return;
+    if (varig && fxPå && fxTrinn < 2 && NIVÅ[S.nivå].fx && nå - (S.endret || -99) >= 4) {
+      fxTrinn++; S.endret = nå; S.lett = null; S.tregFra = null; KVAL.v++; if (typeof byttBakke === 'function') byttBakke();
       if (typeof logg === 'function') logg(fxTrinn === 1 ? 'Grafikk: enklere skygger (bildet gikk tregt).' : 'Grafikk: uten skygger og fargesetting (bildet gikk tregt).');
       return;
     }
-    const ny = neste(S, R.rammeSnitt, R.skala || 1, nå); if (ny !== S.nivå) bytt(ny);
+    const ny = neste(S, ms, skala, nå, varig); if (ny !== S.nivå) bytt(ny);
   });
   KVAL.bytt = n => { valg = n; bytt(n === 'auto' ? 'høy' : n); settKnapp(); };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
