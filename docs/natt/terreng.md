@@ -76,12 +76,16 @@ nordvest) og høydekurver hver 2 m (hver 10. m sterkere; de svake tas bort der d
 - Vakten `pipeline/fliser/vakter/terreng.js` (Dovre-testsiden, PC og telefon): ok på 4–10 s; start-vakta grønn etterpå. Den prøver
   reglene, leirvalget i en bratt li vest for Dombås (stopp, ingen bekreftelse, «Flytt hit» gir et sted der alt får plass), et trykk i
   vann (forslag), hellingskartet i leirvalget og ved plassering (og at det er enig med kanBygge på 6 steder), «Flytt skissen» for en
-  bratt skisse, prisen i loggen = knappen = kassa, og fargeprøvene/fokus. Den slår ikke 3D av eller på.
+  bratt skisse, et ferdig hus (brakke 3 × 4) i lia avvises og ved leiren godtas, prisen i loggen = knappen = kassa, og
+  fargeprøvene/fokus. Den slår ikke 3D av eller på og går uten 3D-tegning (`utenTegning` fra sjekk.js) – 3–4 s også med 3D på.
 - Som ny spiller (webdriver = false) på /norge med ekte data (dev.py), telefon 390 × 844 og PC 1400 × 820: Aurland (trykk i lia sør
   for Aurlandsvangen og i den bratte lia lenger vest), Lærdalsøyri. Bilder i `scratchpad/natt8/terreng/`.
 
 ### IKKE gjort
 - Hellingen vises ikke i 3D (der sier skissen og banneret «For bratt» etter trykket som før).
-- Byggesettet får ikke hellingskart (delene er 2,4 m og nesten alltid «flate» etter regelen; et ferdig hus står på felles grunnmur).
+- Byggesettet får ikke hellingskart (delene er 2,4 m og nesten alltid «flate» etter regelen). Men et ferdig hus (hytte, brakke,
+  betongbu) sjekkes nå som ett bygg i `byggesett-visning.js` oppdater(): høydeforskjellen under alle delene mot samme grense som
+  leirens bygg (Leir.BRATT eller 35 % av diagonalen) – «For bratt for huset (9 m høydeforskjell under det).» Før ble hver del godtatt
+  for seg, og huset fikk en mange meter høy sokkel. Rader av gulv/vegger sjekkes fortsatt del for del.
 - Retningen: leirvalget regner brakka med retning 0 (den du får uten å rotere). Et sted som bare går med brakka dreid, regnes som bratt.
 - Hus fra kartet (forlatte hus) og leirens egne bygg er ikke med i hellingskartet (kanBygge sier fra ved skissen).

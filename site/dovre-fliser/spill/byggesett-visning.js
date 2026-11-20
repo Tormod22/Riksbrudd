@@ -130,6 +130,12 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       const ok = forslag.filter(q => !q.feil), pkt = ok.flatMap(q => [...LB.hjørner(somBygg(o, q.d)), [BS.midt(o, q.d).x, BS.midt(o, q.d).y]]);
       const v = await kartFor(pkt); if (nr !== teller) return; kart = v;
       for (const q of ok) { const f = LB.kanBygge(l, somBygg(o, q.d), v); if (f) q.feil = f; }
+      // (runde 8) et ferdig hus står på én felles grunnmur: hele huset sjekkes som ett bygg (samme regel som leirens bygg, Leir.BRATT eller
+      // 35 % av diagonalen) – før kunne hver del godtas for seg, og en hytte i en bratt li fikk en mange meter høy sokkel
+      const hel = forslag.filter(q => !q.feil);
+      if (V.fane === 'hus' && hel.length && v.høyde) { const P = hel.flatMap(q => LB.hjørner(somBygg(o, q.d))), hz = P.map(([x, y]) => v.høyde(x, y)).filter(z => z !== null && z === z);
+        const xs = P.map(p => p[0]), ys = P.map(p => p[1]), diag = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)), d = hz.length > 1 ? Math.max(...hz) - Math.min(...hz) : 0;
+        if (d > Math.max(LB.BRATT, .35 * diag)) for (const q of hel) q.feil = `For bratt for huset (${Math.round(d)} m høydeforskjell under det).`; }
     }
     const ok = forslag.filter(q => !q.feil), feil = forslag.filter(q => q.feil), s = sum();
     if (V.fane === 'riv') tekst = ok.length ? `Riv ${ok.length} ${ok.length === 1 ? D[ok[0].d.type].navn.toLowerCase() : 'deler'}.` : 'Ingen deler her.';

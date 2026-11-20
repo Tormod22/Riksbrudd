@@ -69,6 +69,12 @@ module.exports = {
           if (fk) { fk.click(); for (let i = 0; i < 40 && LeirSpill.plassering() && /For bratt/.test(LeirSpill.plassering().feil || ''); i++) await vent(100); await LeirSpill.prøv();
             const q = LeirSpill.plassering(); ut.etterFlytt = q && q.feil; krev(q && !/For bratt/.test(q.feil || ''), '«Flytt skissen» ga fortsatt «For bratt»'); }
           else krev(!!dk, 'verken «Flytt skissen» eller «Drei 90°» for den bratte skissen'); }
+        // 3c. byggesettet: et ferdig hus (brakke 3 × 4) i den bratte lia avvises som helhet («For bratt for huset»), ved leiren går det
+        if (bratt && window.Byggesett) { LeirSpill.avbryt(); Byggesett.åpne(); Byggesett.velg({ fane: 'hus', hus: 'brakke', rot: 0 });
+          Byggesett.trykk(bratt[0], bratt[1]); await Byggesett.oppdater(); const Fb = Byggesett.forslag();
+          ut.husBratt = Fb.length ? Fb[0].feil : 'ingen deler'; krev(Fb.length && Fb.every(q => q.feil) && Fb.some(q => /For bratt for huset/.test(q.feil || '')), 'huset i den bratte lia ble ikke avvist: ' + ut.husBratt);
+          Byggesett.trykk(S.leir.x - 12, S.leir.y - 36); await Byggesett.oppdater(); ut.husLeir = Byggesett.forslag().filter(q => /For bratt/.test(q.feil || '')).length;
+          krev(ut.husLeir === 0, 'huset ved leiren ble avvist som for bratt'); Byggesett.lukk(); LeirSpill.startPlassering('brakke'); }
         // 4. «Kjøp materialene og bygg»: loggen sier det samme som knappen
         L.lager.tre = 0; L.lager.betong = 0; let fri = null;
         for (const [dx, dy] of [[40, 30], [-45, 35], [45, -40], [-50, -45], [70, 0], [0, 75]]) { LeirSpill.trykk(S.leir.x + dx, S.leir.y + dy); await LeirSpill.prøv(); const p = LeirSpill.plassering(); if (p && !p.feil) { fri = p; break; } }
@@ -86,6 +92,7 @@ module.exports = {
       } catch (e) { ut.feil.push('unntak: ' + e.message); }
       finally {
         try { if (LeirSpill.plassering()) LeirSpill.avbryt(); } catch (e) { /* ingen plassering */ }
+        try { if (window.Byggesett && Byggesett.tilstand().åpen) Byggesett.lukk(); } catch (e) { /* uten byggesett */ }
         OS.lukk(); OS.test = test0; HellingVis.test = htest0;
         // leiren og kassa som før (bygget fra prøven og materialene tas bort)
         const L1 = JSON.parse(L0); for (const k of Object.keys(L)) if (!(k in L1)) delete L[k]; Object.assign(L, L1); S.penger = penger0; OS.lagre(); if (LeirSpill.lagre) LeirSpill.lagre();
@@ -99,6 +106,6 @@ module.exports = {
     }), profil);
     if (d.mangler) return { ok: true, tekst: 'terreng: modulene mangler (hoppet over)', data: d };
     const ok = !d.feil.length;
-    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
+    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», hus i lia «${(d.husBratt || '').slice(0, 40)}», pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
   },
 };
