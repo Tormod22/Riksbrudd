@@ -103,7 +103,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   const iUt = p => !!p && r3() && R3.ut && Math.abs(p.x - R3.ut.cx) < R3.ut.S * .95 && Math.abs(p.y - R3.ut.cy) < R3.ut.S * .95;
   let reise = null, venterKart = null;
   const valgÅpen = () => valgEl.classList.contains('på');
-  function lukkValg() { if (reise) return; valgEl.classList.remove('på'); valgEl.replaceChildren(); venterKart = null; }
+  // (runde 8) lukkes kortet mens kartet rundt deg bygges (Avbryt, Esc, «Gå» en gang til), går du ikke – og 3D tegnes igjen
+  function lukkValg() { if (reise) return; valgEl.classList.remove('på'); valgEl.replaceChildren(); venterKart = null; if (venterUt) { venterUt = null; overlegg(true); } }
   function kn(tekst, liten, fn, hoved) { const b = document.createElement('button'); b.type = 'button'; if (hoved) b.className = 'hoved'; b.append(tekst); if (liten) { const sm = document.createElement('small'); sm.textContent = liten; b.append(sm); } b.onclick = fn; return b; }
   function startValg() {
     if (!r3() || !R3.ut) return; const G = window.Gaavalg, kar = karakter(), b = R3.bane, u = R3.ut;
@@ -443,17 +444,21 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     const H = document.getElementById('handl'); if (!H || typeof finnBygg !== 'function') return; const b = await finnBygg(X, Y); if (!b || !b.o || !b.P) return;
     const kar = karakter(), G = window.Gaavalg, P = b.P, i = b.o.e && b.o.e.i; if (!G) return;
     let mx = 0, my = 0; for (const [x, y] of P) { mx += x; my += y; } mx /= P.length; my /= P.length;
-    const hint = document.getElementById('hint'), lapp = document.createElement('div'); lapp.className = 'gaainn'; lapp.style.cssText = 'margin:0 0 6px;color:#d8ccb0;font-size:13.5px';
-    if (!kar) { lapp.textContent = 'Bygget har en innside. Du trenger en karakter for å gå inn (Nytt spill).'; H.before(lapp); return; }
+    // (lappen og knappen ligger i #handl, som tømmes når panelet brukes til noe annet – et lag, et kjøretøy)
+    const lapp = document.createElement('div'); lapp.className = 'gaainn'; lapp.style.cssText = 'flex:1 0 100%;margin:0;color:#d8ccb0;font-size:13.5px';
+    if (!kar) { lapp.textContent = 'Bygget har en innside. Du trenger en karakter for å gå inn (Nytt spill).'; H.prepend(lapp); return; }
+    // runde bygg (tank, fyr – 4πA/O² over 0,85 som rund() i index.html) har ingen innside
+    let A = 0, O = 0; for (let k = 0, j = P.length - 1; k < P.length; j = k++) { A += P[j][0] * P[k][1] - P[k][0] * P[j][1]; O += Math.hypot(P[k][0] - P[j][0], P[k][1] - P[j][1]); }
+    if (O > 0 && 4 * Math.PI * Math.abs(A / 2) / (O * O) > .85) { lapp.textContent = 'Runde bygg (tank, fyr) har ingen innside.'; H.prepend(lapp); return; }
     const d = Math.hypot(mx - kar.x, my - kar.y), v = G.valg(d);
-    lapp.textContent = 'Bygget har en innside – du kan gå inn og lete.'; H.before(lapp);
+    lapp.textContent = 'Bygget har en innside – du kan gå inn og lete.'; H.prepend(lapp);
     if (kar.ombord) { const s = document.createElement('small'); s.textContent = ' (Gå av kjøretøyet først.)'; lapp.append(s); return; }
     if (v.type === 'forLangt') { const s = document.createElement('small'); s.textContent = ` Det er ${(d / 1000).toFixed(1).replace('.', ',')} km dit – for langt å gå i ett strekk.`; lapp.append(s); return; }
     const kn2 = document.createElement('button'); kn2.id = 'gaainnknapp'; kn2.type = 'button';
     kn2.textContent = d < G.REGLER.inn.nær ? 'Gå inn i huset' : `Gå inn i huset (${G.tidTekst(v.min)} til fots)`;
     kn2.title = 'Du går dit, og spilltiden går så lenge turen tar. Så settes du ved døra og går inn.';
     kn2.onclick = () => gåInn({ i, P, mx, my });
-    H.prepend(kn2);
+    lapp.after(kn2);
   }
   // Reis til huset (i kartets meter: P omrisset, mx/my midten, i byggets nummer) og gå inn
   function gåInn(h) {
