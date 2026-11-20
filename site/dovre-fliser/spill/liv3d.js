@@ -325,6 +325,37 @@
   function instanser(R, deler, n) { return deler.map(([g, farge]) => { const m = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial(farge ? { color: farge } : {}), n);
     if (!farge) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3); m.frustumCulled = false; m.count = 0; R.scene.add(m); liv.mesh.push(m); return m; }); }
   let kjegleBilde = null;
+  // (runde 11, brukerens bilder: «ser ikke bra nok ut») bilene i trafikken: avrundet karosseri (lakken i instansfargen), glasshus som
+  // smalner oppover med skrå frontrute, tak, støtfangere og runde dekk (Kjoretoy3d.form, samme former som feltbilen). To nett: lakken
+  // (instansfarge) og resten (hjørnefarger: glass, dekk, støtfangere, grill). Ca. 800 trekanter per bil (før ca. 200 i klosser).
+  // Uten Kjoretoy3d: klossene som før.
+  function bilNett(R, n) {
+    if (!window.Kjoretoy3d || !Kjoretoy3d.form || !window.MODELLER) { const hjul = []; for (const [x, y] of [[1.35, .82], [1.35, -.82], [-1.35, .82], [-1.35, -.82]]) { const g = new THREE.CylinderGeometry(.33, .33, .22, 10); g.translate(x, y, .33); hjul.push(g); }
+      return instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], n); }
+    const F = Kjoretoy3d.form, H = [1, 1, 1], GL = [.16, .19, .23], SV = [.07, .07, .08], GR = [.2, .2, .21], FE = [.34, .35, .37], A = [], B = [];
+    // karosseriet: lavt og langt, fronten heller litt bakover; panseret og bagasjelokket litt lavere enn beltelinja
+    F.rundBoks(A, 0, 0, .36, 4.4, 1.78, .54, .2, H, { skrå: .35 });
+    // glasshuset (smalner oppover, skrå frontrute og bakrute) og taket
+    F.rundBoks(B, -.32, 0, .9, 2.4, 1.6, .5, .18, GL, { smal: .84, skrå: .95 }); F.rundBoks(A, -.5, 0, 1.34, 1.62, 1.4, .13, .06, H);
+    // støtfangere, grill og dekk (felgen bare på yttersiden)
+    const kl = (x, y, z, sx, sy, sz, c) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z + sz / 2); B.push(F.farg(g, c)); };
+    for (const e of [-1, 1]) kl(e * 2.17, 0, .3, .14, 1.74, .18, SV);
+    kl(2.18, 0, .52, .06, .8, .14, GR);
+    // dekkene er for det meste skjult av karosseriet: en enkel sylinder med felgen som skive på yttersiden
+    for (const [x, y] of [[1.35, .8], [1.35, -.8], [-1.35, .8], [-1.35, -.8]]) { const g = new THREE.CylinderGeometry(.33, .33, .24, 10); g.translate(x, y, .33); B.push(F.farg(g, SV));
+      const f = new THREE.CircleGeometry(.17, 8); f.rotateX(-Math.sign(y) * Math.PI / 2); f.translate(x, y + Math.sign(y) * .125, .33); B.push(F.farg(f, FE)); }
+    const lakk = MODELLER.samle(A), rest = MODELLER.samle(B), mA = new THREE.InstancedMesh(lakk, new THREE.MeshLambertMaterial(), n), mB = new THREE.InstancedMesh(rest, new THREE.MeshLambertMaterial({ vertexColors: true }), n);
+    mA.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+    for (const m of [mA, mB]) { m.frustumCulled = false; m.count = 0; m.userData.kilde = 'liv3d.js'; R.scene.add(m); liv.mesh.push(m); }
+    return [mA, mB];
+  }
+  // folkene på fortauene er den felles, avrundede figuren (spill/figur3d.js) – én flokk (nær og fjern), gangen i skyggeleggeren.
+  // Claudes forslag: klær, hår og hud å velge mellom, og hvor mange som har lue, langt hår eller sekk
+  const FOLK = { jakker: [[.6, .12, .1], [.15, .25, .45], [.85, .78, .6], [.25, .35, .2], [.2, .2, .22], [.7, .55, .2], [.5, .5, .55], [.35, .15, .35], [.12, .3, .32], [.78, .78, .74]],
+    bukser: [[.16, .18, .24], [.12, .12, .13], [.3, .27, .22], [.22, .26, .36], [.4, .38, .34]], hår: [[.18, .13, .09], [.32, .22, .12], [.08, .07, .06], [.62, .5, .3], [.5, .48, .45]],
+    hud: [[.88, .71, .58], [.8, .62, .48], [.62, .44, .32], [.42, .3, .22], [.92, .76, .64]], lue: .2, langt: .3, sekk: .25,
+    // folk lenger unna kameraet enn dette (m) tegnes ikke – de er knapt et punkt, og bevegelsen i skyggeleggeren koster per hjørne
+    synlig: 320 };
   function startLiv(u, R) {
     let f = 4242; const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296, mob = VW < 700;
     // biler: lakk (instansfarge), ruter, hjul
@@ -333,8 +364,7 @@
     // ender i en tunnelportal eller ved kanten av utsnittet: bilen kommer inn igjen et annet slikt sted i stedet for å snu
     liv.åpne = []; for (const v of veg) for (const e of [0, 1]) if (v.åpen && v.åpen[e]) liv.åpne.push([v, e]);
     if (veg.length) {
-      const hjul = []; for (const [x, y] of [[1.35, .82], [1.35, -.82], [-1.35, .82], [-1.35, -.82]]) { const g = new THREE.CylinderGeometry(.33, .33, .22, 10); g.translate(x, y, .33); hjul.push(g); }
-      liv.bilMesh = instanser(R, [[samle([kasse(0, 0, .3, 4.4, 1.78, .62), kasse(-.25, 0, 1.45, 2.2, 1.6, .08), kasse(1.55, 0, .88, 1.2, 1.7, .12)])], [kasse(-.25, 0, .9, 2.3, 1.66, .55), 0x1f262e], [samle(hjul), 0x101010]], mob ? 12 : 32);
+      liv.bilMesh = bilNett(R, mob ? 12 : 32);
       // (17. nov, brukeren: «det er for mye biltrafikk på øde veier») antall biler følger vegene: mest i tettstedene, noe på riks- og
       // europaveger, nesten ingenting på øde veger – og bilene velger veg etter samme vekt (tak som før: 32 PC / 12 mobil).
       const vekt = veg.map(v => { const q = v.P && v.P[v.P.length >> 1], by = !!(q && u.iBy && u.iBy(q[0], q[1])); return v.L / 1000 * (by ? 4 : v.k === 'E' ? .5 : v.k === 'R' ? .3 : .06); }), sumV = vekt.reduce((a, b) => a + b, 0), nBil = Math.max(1, Math.min(mob ? 12 : 32, Math.round(sumV)));
@@ -356,12 +386,14 @@
     // folk på fortauene i tettstedene: klær i tilfeldige farger
     const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, u.gangveger || []));
     if (gate.length) {
-      const bein = samle([kasse(0, .1, 0, .14, .14, .84), kasse(0, -.1, 0, .14, .14, .84)]), kropp = kasse(0, 0, .84, .26, .42, .62), hode = new THREE.SphereGeometry(.11, 10, 8); hode.translate(0, 0, 1.6);
-      const hår = new THREE.SphereGeometry(.115, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.2); hår.rotateX(Math.PI / 2); hår.translate(-.01, 0, 1.62);
-      liv.folkMesh = instanser(R, [[bein, 0x2a2c33], [kropp], [hode, 0xd2a888], [hår, 0x3a2a1c]], mob ? 16 : 45);
-      const KLÆR = [[.6, .12, .1], [.15, .25, .45], [.85, .78, .6], [.25, .35, .2], [.2, .2, .22], [.7, .55, .2], [.5, .5, .55], [.35, .15, .35]];
-      liv.folk = Array.from({ length: mob ? 16 : 45 }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
-      liv.folk.forEach((p, k) => liv.folkMesh[1].setColorAt(k, new THREE.Color(...KLÆR[k % KLÆR.length])));
+      const N = mob ? 16 : 45;
+      liv.folk = Array.from({ length: N }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
+      if (window.Figur3d) { const D = Figur3d.DEL, valg = l => l[Math.floor(rnd() * l.length)];
+        liv.folkFlokk = Figur3d.flokk(R, { maks: N, kilde: 'liv3d.js', deler: D.hår | D.langt | D.lue | D.sekk });
+        liv.folk.forEach(p => { p.farger = Figur3d.farger(valg(FOLK.jakker), valg(FOLK.bukser), valg(FOLK.hår), valg(FOLK.hud)); p.str = .93 + rnd() * .13;
+          p.maske = (rnd() < FOLK.lue ? D.lue : rnd() < FOLK.langt ? D.hår | D.langt : D.hår) | (rnd() < FOLK.sekk ? D.sekk : 0); }); }
+      else { const bein = samle([kasse(0, .1, 0, .14, .14, .84), kasse(0, -.1, 0, .14, .14, .84)]), kropp = kasse(0, 0, .84, .26, .42, .62), hode = new THREE.SphereGeometry(.11, 10, 8); hode.translate(0, 0, 1.6);
+        liv.folkMesh = instanser(R, [[bein, 0x2a2c33], [kropp], [hode, 0xd2a888]], N); liv.folk.forEach((p, k) => liv.folkMesh[1].setColorAt(k, new THREE.Color(...FOLK.jakker[k % FOLK.jakker.length]))); }
     }
     liv.start = JSON.stringify([(liv.biler || []).map(b => [b.v.k, b.v.L.toFixed(2), b.s.toFixed(3), b.dir]), (liv.folk || []).map(p => [p.v.k, p.v.L.toFixed(2), p.s.toFixed(3), p.dir])]);
     // fugler: tre flokker som sirkler over utsnittet
@@ -392,7 +424,7 @@
     }
   }
   // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
-  function fjern(R) { if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
+  function fjern(R) { if (liv && liv.folkFlokk) liv.folkFlokk.kast(); if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
   if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null;
     u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, u.gangveger || []))) } : null; });
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); u.vegD = null; });
@@ -402,20 +434,22 @@
   KROKER.ramme3d.push(R => {
     if (!liv || !R.ut) return; if (!d) d = new THREE.Object3D(); const nå = performance.now() / 1000, dt = Math.min(.1, nå - (sist || nå)); sist = nå; const u = R.ut;
     for (const sh of liv.vind || []) sh.uniforms.uTid.value = nå;
-    const flytt = (liste, mesh, høyde) => liste.forEach((o, k) => {
+    // fig: (person, matrise) for figurene (Figur3d-flokken) i stedet for mesh; de går uten hopp (gangen er i skyggeleggeren)
+    const flytt = (liste, mesh, høyde, fig) => liste.forEach((o, k) => {
       o.s += o.fart * dt * o.dir;
       if (o.s > o.v.L || o.s < 0) { const e = o.s < 0 ? 0 : 1;
         if (!høyde && o.v.åpen && o.v.åpen[e] && liv.åpne.length > 1) { const [v2, e2] = liv.åpne[Math.floor(Math.random() * liv.åpne.length)]; o.v = v2; o.s = e2 ? v2.L : 0; o.dir = e2 ? -1 : 1; }
         else { o.s = e ? o.v.L : 0; o.dir = e ? -1 : 1; } }
-      const [x, y, z, v] = punkt(o.v, o.s, (o.side || 1.7) * o.dir), bob = høyde ? Math.abs(Math.sin(nå * 7 + (o.fase || 0))) * .04 : 0;
+      const [x, y, z, v] = punkt(o.v, o.s, (o.side || 1.7) * o.dir), bob = høyde && !fig ? Math.abs(Math.sin(nå * 7 + (o.fase || 0))) * .04 : 0;
       // z er vegbanens høyde (flat på tvers, løftet opp på bruene av infra3d.js); fortauet ligger 15 cm over
-      d.position.set(x, y, z + (høyde && !o.gs ? .17 : .02) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.set(1, 1, 1); d.updateMatrix();
-      for (const m of mesh) m.setMatrixAt(k, d.matrix); });
+      d.position.set(x, y, z + (høyde && !o.gs ? .17 : .02) + bob); d.rotation.set(0, 0, v + (o.dir < 0 ? Math.PI : 0)); d.scale.setScalar(o.str || 1); d.updateMatrix();
+      if (fig) fig(o, d.matrix); else for (const m of mesh) m.setMatrixAt(k, d.matrix); });
     if (liv.lys) { const m = window.NATT ? Math.max(0, Math.min(1, (NATT.mørke - .25) / .4)) : 0;
       liv.lys.front.material.color.setRGB(.7 + .3 * m, .7 + .27 * m, .68 + .17 * m); liv.lys.bak.material.color.setRGB(.44 + .56 * m, .055 + .07 * m, .04 + .05 * m);
       liv.lys.kjegle.visible = m > .01; liv.lys.kjegle.material.opacity = m * .42; }
     if (liv.biler) { flytt(liv.biler, liv.bilMesh, false); for (const m of liv.bilMesh) { m.count = liv.biler.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
-    if (liv.folk) { flytt(liv.folk, liv.folkMesh, true); for (const m of liv.folkMesh) { m.count = liv.folk.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
+    if (liv.folk && liv.folkFlokk) { const fl = liv.folkFlokk; fl.start(); flytt(liv.folk, null, true, (o, m) => { o.fase += o.fart * dt * 4.2; const e = m.elements, c = R.cam.position; if ((e[12] - c.x) ** 2 + (e[13] - c.y) ** 2 + (e[14] - c.z) ** 2 > FOLK.synlig * FOLK.synlig) return; fl.legg(m, { fase: o.fase, sving: 1, maske: o.maske, farger: o.farger }); }); fl.slutt(); }
+    else if (liv.folk) { flytt(liv.folk, liv.folkMesh, true); for (const m of liv.folkMesh) { m.count = liv.folk.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } }
     if (liv.fugler) { liv.fugler.forEach((f, k) => { const F = liv.flokker[f.flokk], a = nå * F.v + f.nr * .05, rr = F.r + (f.nr % 3) * 6;
         d.position.set(F.x + Math.cos(a) * rr - (f.nr % 2) * 4, F.y + Math.sin(a) * rr, (hoyde3d(F.x + u.cx, F.y + u.cy) - u.h0) * R.EX + F.h + Math.sin(nå + f.nr) * 2);
         d.rotation.set(0, 0, a + (F.v > 0 ? Math.PI : 0)); d.scale.set(1.2, 1.2, 1 + Math.sin(nå * 9 + f.fase) * 2.5); d.updateMatrix(); liv.fuglMesh[0].setMatrixAt(k, d.matrix); });
@@ -434,5 +468,7 @@
     return z;
   }
   // start(): hvor bilene og folkene startet i siste utsnitt (veg, plass, retning) – for prøvene (likt utsnitt før og etter)
-  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger, VEG_FARGE };
+  // trafikk(): bilene og folkene nå (for vakten pipeline/fliser/vakter/figurer.js og prøvene), punkt(): plassen langs en linje
+  const trafikk = () => ({ biler: (liv && liv.biler) || [], folk: (liv && liv.folk) || [], bilNett: (liv && liv.bilMesh) || [], flokk: (liv && liv.folkFlokk) || null, punkt });
+  window.Liv3d = { trafikk, finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger, VEG_FARGE };
 })();

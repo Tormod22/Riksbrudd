@@ -56,10 +56,28 @@ module.exports = {
         soldater3d(); ut.tilbake = (R.solMesh || []).map(m => m.count);
       }
       krev(JSON.stringify(ut.tilbake) === JSON.stringify(ut.inst.før), 'ikke satt tilbake: ' + JSON.stringify(ut.tilbake) + ' mot ' + JSON.stringify(ut.inst.før));
+      // (runde 11) kjøretøyene: avrundede modeller innenfor taket, og en kolonne står på fire hjul i bakken (ingen hjul under bakken, minst
+      // ett på den – samme regel som feltbilen, Kjor.stilling); bilene og folkene i trafikken er de avrundede formene / figurene
+      if (window.Kjoretoy3d && window.Kjor && typeof kjøretøy3d === 'function') { ut.kj = {}; for (const t of Kjoretoy3d.typer) ut.kj[t] = Math.round(Kjoretoy3d.trekanter(t));
+        krev(Object.values(ut.kj).every(n => n > 400 && n < 6000), 'trekanter per kjøretøy: ' + JSON.stringify(ut.kj));
+        const k = Kjoretoy.ny({ navn: 'Prøve hjul', type: 'lastebil', antall: 1, x: X + 30, y: Y + 25, retning: .7 }); KJORETOY.push(k);
+        try { kjøretøy3d(); const m = R.kjMesh.lastebil, M = new THREE.Matrix4(), T = Kjoretoy.TYPER.lastebil, hx = T.lengde * .35, hy = T.bredde * .4; let i = -1;
+          for (let j = 0; j < m.count; j++) { m.getMatrixAt(j, M); if (Math.abs(M.elements[12] - (k.x - u.cx)) < .01 && Math.abs(M.elements[13] - (k.y - u.cy)) < .01) i = j; }
+          krev(i >= 0, 'prøvekolonnen er ikke tegnet');
+          if (i >= 0) { m.getMatrixAt(i, M); const v = new THREE.Vector3(), d = [];
+            for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) { v.set(sx * hx, sy * hy, 0).applyMatrix4(M); d.push(v.z - (hoyde3d(u.cx + v.x, u.cy + v.y) - u.h0) * R.EX); }
+            ut.hjul = d.map(x => +x.toFixed(2)); krev(Math.min(...d) > -.08 && Math.min(...d) < .25, 'hjulene i bakken: ' + JSON.stringify(ut.hjul)); } }
+        finally { KJORETOY.splice(KJORETOY.indexOf(k), 1); kjøretøy3d(); } }
+      if (window.Liv3d && Liv3d.trafikk && u.S <= 2200) { const T = Liv3d.trafikk(); ut.trafikk = { biler: T.biler.length, folk: T.folk.length };
+        if (T.folk.length) { KROKER.ramme3d.forEach(f => { if (/folkFlokk/.test(f.toString())) f(R); }); // (folk lenger unna enn ca. 320 m tegnes ikke)
+          const c = R.cam.position, nære = T.folk.filter(o => { const p = T.punkt(o.v, o.s, (o.side || 1.7) * o.dir); return Math.hypot(p[0] - c.x, p[1] - c.y) < 250 && Math.abs(p[2] - c.z) < 60; }).length; ut.trafikk.figurer = T.flokk ? T.flokk.antall() : 0;
+          krev(!!T.flokk && T.flokk.nær.isInstancedMesh && T.flokk.antall() <= T.folk.length && T.flokk.antall() >= nære, 'folkene på fortauet er ikke figurer: ' + ut.trafikk.figurer + ' av ' + T.folk.length + ' (nære ' + nære + ')'); }
+        if (T.biler.length) { const g = T.bilNett[0].geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3 + (T.bilNett[1] ? T.bilNett[1].geometry.attributes.position.count / 3 : 0); ut.trafikk.tri = n;
+          krev(n > 300 && n < 1500, 'trekanter per bil i trafikken: ' + n); } }
       return ut;
     });
     const ok = !d.feil || !d.feil.length;
-    return { ok: ok && !d.mangler, tekst: ok ? (d.i3d ? `figurer: ${d.tri ? d.tri.join('/') : '?'} trekanter (nær/fjern), prøvelagene ${JSON.stringify(d.inst)}, stilling ${JSON.stringify(d.stilling)}, folk ${d.folk === undefined ? '–' : d.folk}, program ${d.program}, GL ${d.gl}`
+    return { ok: ok && !d.mangler, tekst: ok ? (d.i3d ? `figurer: ${d.tri ? d.tri.join('/') : '?'} trekanter (nær/fjern), prøvelagene ${JSON.stringify(d.inst)}, stilling ${JSON.stringify(d.stilling)}, folk ${d.folk === undefined ? '–' : d.folk}, kjøretøy ${JSON.stringify(d.kj || {})}, hjul ${JSON.stringify(d.hjul || [])}, trafikk ${JSON.stringify(d.trafikk || {})}, program ${d.program}, GL ${d.gl}`
       : `reglene og geometrien (${d.tri ? d.tri.join('/') : 'uten THREE'} trekanter; 3D er av)`) : 'FEIL: ' + d.feil.join('; '), data: d };
   },
 };

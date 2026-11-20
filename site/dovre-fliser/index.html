@@ -2696,13 +2696,15 @@ function kjøretøy3d() {
   const d = new THREE.Object3D(), c = new THREE.Color(), n = {}, MAKS = 200;
   const nett = type => { if (!R.kjMesh[type]) { const m = new THREE.InstancedMesh(Kjoretoy3d.modell(type), new THREE.MeshLambertMaterial({ vertexColors: true }), MAKS);
     m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3).fill(1), 3); m.frustumCulled = false; m.count = 0; m.castShadow = true; R.scene.add(m); R.kjMesh[type] = m; } return R.kjMesh[type]; };
-  const zVed = (X, Y) => (hoyde3d(X, Y) - u.h0) * R.EX;
+  const zVed = (X, Y) => (hoyde3d(X, Y) - u.h0) * R.EX, SK = window.Kjor ? Object.assign({}, Kjor.STILLING) : null;
   for (const k of KJORETOY) { const T = Kjoretoy.TYPER[k.type]; if (!T) continue; if (k.side !== 'blå' && !synlig(k)) continue; const m = nett(k.type), egen = k.side === 'blå';
     if (!egen) { const v = parseInt(sidefarge(k.side, 'lys').slice(1), 16); c.setRGB(.6 + .5 * (v >> 16) / 255, .6 + .5 * ((v >> 8) & 255) / 255, .6 + .5 * (v & 255) / 255); } else c.setRGB(1, 1, 1);
     for (let i = 0; i < k.antall; i++) { const nr = n[k.type] || 0; if (nr >= MAKS) break;
       const p = Kjoretoy.posisjon(k, i * T.avstand); if (Math.abs(p.x - u.cx) > u.S || Math.abs(p.y - u.cy) > u.S) continue;
-      const v = p.retning, cv = Math.cos(v), sv = Math.sin(v), h = T.lengde * .35, zf = zVed(p.x + cv * h, p.y + sv * h), zb = zVed(p.x - cv * h, p.y - sv * h);
-      d.position.set(p.x - u.cx, p.y - u.cy, (zf + zb) / 2); d.rotation.set(0, -Math.atan2(zf - zb, 2 * h), v, 'ZYX'); d.updateMatrix(); m.setMatrixAt(nr, d.matrix); m.setColorAt(nr, c); n[k.type] = nr + 1; } }
+      // (runde 11) på fire hjul som feltbilen (Kjor.stilling): stigning og sidehelling fra høyden under hjulene, ingen hjul under bakken
+      const v = p.retning; let st, sd, z; if (window.Kjor && Kjor.stilling) { SK.hx = T.lengde * .35; SK.hy = (T.bredde || 2.5) * .4; const q = Kjor.stilling(p.x, p.y, v - Math.PI / 2, zVed, SK); st = q.stigning; sd = q.side; z = q.z; }
+      else { const cv = Math.cos(v), sv = Math.sin(v), h = T.lengde * .35, zf = zVed(p.x + cv * h, p.y + sv * h), zb = zVed(p.x - cv * h, p.y - sv * h); st = -Math.atan2(zf - zb, 2 * h); sd = 0; z = (zf + zb) / 2; }
+      d.position.set(p.x - u.cx, p.y - u.cy, z); d.rotation.set(sd, st, v, 'ZYX'); d.updateMatrix(); m.setMatrixAt(nr, d.matrix); m.setColorAt(nr, c); n[k.type] = nr + 1; } }
   for (const type in R.kjMesh) { const m = R.kjMesh[type]; m.count = n[type] || 0; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
 }
 // Terrengnettet slik det tegnes (sett3d): M punkter hver veg, tettest i midten. nettHoyde(u, x, y) gir høyden i selve nettet (lokale
@@ -3415,7 +3417,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=41a7104ffe"></script>
 <script src="/dovre-fliser/spill/veg.js?v=d84f7343dd"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=3250620810"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=06d815dd03"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
@@ -3466,7 +3468,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=845f0a5982"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
-<script src="/dovre-fliser/spill/dyr3d.js?v=c98ba036b6"></script>
+<script src="/dovre-fliser/spill/dyr3d.js?v=5d58ce1732"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=19519c5762"></script>
@@ -3489,7 +3491,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gaavalg.js?v=58163dd566"></script>
 <script src="/dovre-fliser/spill/byggeplass3d.js?v=ad1fc5113c"></script>
 <script src="/dovre-fliser/spill/fjellmark3d.js?v=e25429c40a"></script>
-<script src="/dovre-fliser/spill/kjoretoy3d.js?v=6423daf186"></script>
+<script src="/dovre-fliser/spill/kjoretoy3d.js?v=7a6698c11e"></script>
 <script src="/dovre-fliser/spill/kjor.js?v=1013239dba"></script>
 <script src="/dovre-fliser/spill/maal.js?v=6032414942"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=b6b39ca88a"></script>
@@ -3499,7 +3501,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/spillet-visning.js?v=81d8373269"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=51ef9105a2"></script>
-<script src="/dovre-fliser/spill/figur3d.js?v=5bcfa7605f"></script>
+<script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=497482f54d"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=8e7180270d"></script>

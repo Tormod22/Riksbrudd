@@ -1,4 +1,94 @@
-# Pakke «figurer» – folk, soldater og karakteren i 3D
+# Pakke «figurer» (runde 11: «modeller») – folk, soldater, kjøretøy og dyr i 3D
+
+## Runde 11 (20. nov kveld)
+
+Oppdrag: de siste kantete modellene i 3D. Brukerens fem bilder fra iPhone (bruker20/) sa «Dette ser ikke bra nok ut». ALLE TALL ER
+CLAUDES FORSLAG (målene i modellene, `FOLK` i liv3d.js, hjulavstanden for kolonnene).
+
+### Hva er laget
+1. **Folk på fortauene** (spill/liv3d.js, `startLiv` og hver ramme): den felles, avrundede figuren (`Figur3d.flokk`, delene hår, langt
+   hår, lue og sekk) i stedet for to klosser og en kule. Klær, hår og hud trekkes fra `FOLK` (10 jakker, 5 bukser, 5 hårfarger, 5 hudfarger;
+   20 % lue, 30 % langt hår, 25 % sekk), størrelse 0,93–1,06. Gangen er i skyggeleggeren (fase følger farten), ingen hopping. Folk lenger
+   unna kameraet enn `FOLK.synlig` = 320 m tegnes ikke (de er knapt et punkt, og bevegelsen koster per hjørne i skyggeleggeren).
+   Uten Figur3d: klossene som før. Flokken kastes i `fjern()`.
+2. **Bilene i trafikken** (liv3d.js, ny `bilNett`): avrundet karosseri som heller litt bakover foran, glasshus som smalner oppover med
+   skrå frontrute/bakrute, avrundet tak i lakkfargen, støtfangere, grill, dekk med felgskive på yttersiden. To nett: lakken (instansfarge)
+   og resten (hjørnefarger) – før tre. 804 trekanter per bil (før ca. 200). Lysene (front/bak/lyskjegle) er som før.
+3. **Kolonnenes kjøretøy** (spill/kjoretoy3d.js):
+   - stridsvogna: skroget avrundet med skrå front, beltet en lang, rund løkke rundt hjulene, løpehjulene som skiver, skjørtet ett avrundet
+     panel med skjøter, tårnet en avrundet form som smalner oppover og heller bakover foran, rund kanonkappe, avrundede kasser.
+   - lastebilene: kalesjen er én avrundet form (buet tak) med svake ribber, i stedet for flate plater og bøyler.
+   - rakettartilleriet: rørpakken avrundet, rørmunningene som mørke skiver (før 30 sylindre med lokk = 1200 trekanter), avrundet
+     dreieskive, støtter og førerhusbak.
+   - radarbilen: hytta, taket, antenneflaten og aggregatet avrundet.
+   - hjulene: felg og nav bare på yttersiden (`rundHjul` fikk et valgfritt 9. argument `ytre`; feltbilen i kjor.js kaller uten og er
+     uendret), og doble hjul bak er ett bredt dekk med en rille. Det sparte nok trekanter til alt over.
+   Trekanter per type (før → etter): lastebil 4940 → 3768, speiderbil 2936 → 2568, stridsvogn 2792 → 3724, rakettartilleri 5784 → 4504,
+   radar 4980 → 4900 (sjekk.js krever 400–6000).
+4. **Kolonnene heller til siden** (`kjøretøy3d()` i index.html): stillingen regnes med `Kjor.stilling` som feltbilen – fire hjul
+   (halv akselavstand 0,35 × lengden, halv sporvidde 0,4 × bredden), stigning og sidehelling begrenset som feltbilen, z slik at ingen hjul
+   står under bakken. Før: bare stigning fra to punkter, midt mellom dem i høyden. Uten Kjor: som før.
+5. **Dyrene** (spill/dyr3d.js, bare formene): hoder, snuter, ører, haler og juret er avlange kuler (`egg`, fyller samme boks som før),
+   beina runde og smalere nederst (`rundt`), hovene runde. Og den viktigste: `geometri()` regnet normalene på nytt ETTER `toNonIndexed`,
+   så alle kulene ble flatskygget (kantete) – nå beholdes de myke normalene. Bevegelsen og reglene er uendret.
+
+### Målt (SwiftShader, delt maskin – sju hjelpere på fire kjerner; regn med ±30 %)
+Scenen: Dombås-utsnittet (S 1006 m PC / 800 m telefon), fem prøvekjøretøy (ett av hver type) i lia, trafikken i gatene (gangvegene
+merket «by» i prøven – testsiden har ingen folk på fortauene ellers; 45 folk, 3 biler PC / 2 telefon), samme kamera før og etter.
+«Alene» = kjøretøyene + trafikken (biler og folk) tegnet uten resten av scenen, minus tomt bilde (median av 9). Skript:
+scratchpad natt11/modeller/bilde.js (`node bilde.js <før|etter> <pc|mobil>`; «før» = git archive av grenen før endringene).
+
+| PC 1400 × 820 | trekanter alene før → etter | tid alene (ms) før → etter | hele bildet (ms) før → etter |
+|---|---|---|---|
+| fra lufta over kjøretøyene | 34 926 → 26 036 | 69 → 54 | 730 → 591 |
+| til fots ved stridsvogna | 34 926 → 26 036 | 71 → 47 | 1408 → 1163 |
+| ved lastebilene | 34 926 → 26 036 | 105 → 48 | 1262 → 1253 |
+| i gata, åtte folk rett foran | 34 926 → 36 300 | 58 → 72 | 1359 → 1184 |
+| ved en bil i trafikken | 34 926 → 27 596 | 46 → 39 | 861 → 891 |
+| ved en elg på heia | 34 926 → 24 476 | 47 → 32 | 1084 → 1206 |
+
+| Telefon 844 × 390 (før folk-taket på 320 m) | trekanter alene | tid alene (ms) | hele bildet (ms) |
+|---|---|---|---|
+| fra lufta | 34 718 → 27 312 | 54 → 52 | 489 → 406 |
+| ved stridsvogna | 34 718 → 27 832 | 54 → 38 | 673 → 672 |
+| ved lastebilene | 34 718 → 27 312 | 59 → 62 | 660 → 682 |
+| i gata | 34 718 → 39 136 | 43 → 68 | 675 → 823 |
+| ved bilen | 34 718 → 22 632 | 55 → 42 | 768 → 824 |
+| ved dyret | 34 718 → 28 352 | 42 → 35 | 561 → 630 |
+
+Kjøretøyene alene: 21 432 → 19 464 trekanter (de fem typene). Bilene: 3 × 202 → 3 × 804. Folkene: 45 × 4 klosser (ca. 260) →
+figurene innen 320 m (518 fjern, 1648 nær; høyst 12 nær på PC / 6 på telefon). Første PC-måling uten taket på 320 m ga 45 276
+trekanter og 89 ms alene fra lufta – derfor taket. Telefonmålingen ble gjort før taket, så tallene der er de verste.
+Hele bildet varierer mer enn forskjellen (delt maskin); hovedbildet: like raskt eller raskere, færre trekanter unntatt når mange folk
+står rett ved kameraet.
+
+Telefonen er 844 × 390 (liggende, DPR 2) – den er bredere enn 700 punkter, så den regnes som PC i liv3d.js (45 folk), som før.
+
+### Bilder (scratchpad natt11/modeller/)
+før-/etter-<pc|mobil>-<lufta|stridsvogn|lastebiler|gata|bil|dyr>.png, og sammenligning-*.png (før øverst/venstre, etter under/høyre).
+
+### Vakt (pipeline/fliser/vakter/figurer.js, utvidet)
+I tillegg til runde 7: trekanter per kjøretøytype 400–6000; en prøvelastebil i 3D står på fire hjul i bakken (hjulene 0–0,25 m over
+terrenget, ingen under); når utsnittet har trafikk: folkene er figurer i flokken (alle innen 250 m tegnes), bilen har 300–1500 trekanter.
+Prøvd på PC: ok på ca. 2 s.
+
+### Kontrollen (SJEKK_PROFIL=mobil, hele)
+Første kjøring: 127 ok, 1 FEIL – «minne i 3D»: + 2 geometrier hver gang 3D ble slått av og på (samme kontroll på grenen før mine endringer:
+128 ok, 0 FEIL). Årsaken: `Figur3d.flokk().kast()` frigjorde aldri geometrien – før ble flokkene nesten aldri kastet, nå lager trafikken
+en ny flokk for hvert utsnitt. Rettet i figur3d.js (`kast` kaller `geometry.dispose()`). Andre kjøring: «minne i 3D» ok (99 -> 99),
+eneste FEIL var versjonsmerkene (figur3d.js endret etter versjon.py – kjørt etterpå).
+
+### Filer
+- `site/dovre-fliser/spill/figur3d.js` (`kast` frigjør geometrien), `site/dovre-fliser/spill/kjoretoy3d.js` (modellene, `rundHjul` med `ytre`), `spill/liv3d.js` (bare trafikken og folkene: `bilNett`,
+  `FOLK`, `startLiv`-delen for biler og folk, `flytt` med `fig`, `fjern` kaster flokken, ny `Liv3d.trafikk()`), `spill/dyr3d.js` (formene
+  og normalene), `index.html` (`kjøretøy3d()`, samlet), `pipeline/fliser/vakter/figurer.js`, `docs/natt/figurer-hjelp.json`.
+
+### Ikke gjort
+- Bilene i trafikken heller ikke med bakken (de følger vegbanen, som er flat på tvers) og har ingen detaljnivå (alle 800 trekanter).
+- Kolonnenes kjøretøy har ingen detaljnivå og ingen glatting av vinklene over tid (de kjører sakte; en hump kan gi et lite rykk).
+- Feltbilen i brukerens bilder 3–5 (kjor.js) er ikke min fil i denne runden – den ble avrundet i runde 10.
+- Speiderbilen og lastebilenes førerhus var allerede avrundet (runde 10) og er uendret utenom hjulene.
+
 
 ## Runde 7 (20. nov natt)
 

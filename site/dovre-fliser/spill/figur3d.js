@@ -250,7 +250,9 @@ void figur(inout vec3 p, inout vec3 n) {
       antall: () => N.n + F.n, nærAntall: () => N.n,
       // trekanter per figur (nær, fjern)
       trekanter: () => [N.m.geometry.index.count / 3, F.m.geometry.index.count / 3],
-      kast() { for (const T of [N, F]) { if (T.m.parent) T.m.parent.remove(T.m); for (const k in T.A) T.m.geometry.deleteAttribute(k); T.m.dispose && T.m.dispose(); } flokker.delete(fl); },
+      // (runde 11) geometrien frigjøres også (før ble to geometrier liggende igjen på grafikkortet hver gang en flokk ble kastet); de felles
+      // hjørnelistene lastes opp igjen av den neste flokken som bruker dem
+      kast() { for (const T of [N, F]) { if (T.m.parent) T.m.parent.remove(T.m); for (const k in T.A) T.m.geometry.deleteAttribute(k); T.m.geometry.dispose(); T.m.dispose && T.m.dispose(); } flokker.delete(fl); },
     };
     flokker.add(fl); return fl;
   }
