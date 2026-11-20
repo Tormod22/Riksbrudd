@@ -221,15 +221,32 @@ module.exports = {
         const u = R && R.ut;
         if (T && u && typeof på3d !== 'undefined' && på3d) {
           const r9 = {};
+          // (bildene tegnes ikke mens prøven går – hver pust venter ellers på et helt bilde med programvare-grafikk; settes tilbake under)
+          const rr = R.renderer, tegn0 = rr.render; rr.render = function () {};
+          try {
           const bits = a => a instanceof Float32Array ? new Uint32Array(a.buffer, a.byteOffset, a.length) : a;
           const likT = (a, b) => { if (!a || !b || a.constructor !== b.constructor || a.length !== b.length) return false; const x = bits(a), y = bits(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; };
           const likGeo = (g, h) => { if (!g || !h) return g === h; const ka = Object.keys(g.attributes).sort(), kb = Object.keys(h.attributes).sort(); if (ka.join() !== kb.join()) return false;
             for (const k of ka) if (g.attributes[k].itemSize !== h.attributes[k].itemSize || !likT(g.attributes[k].array, h.attributes[k].array)) return false;
             return !g.index === !h.index && (!g.index || likT(g.index.array, h.index.array)); };
           const kjør = async (på, f) => { T.Rekke.på = på; try { return await f(); } finally { T.Rekke.på = true; } };
-          // husene
-          if (u.hus && typeof hus3d === 'function') {
-            const H = på => kjør(på, () => hus3d(u)), A = await H(true), B = await H(true), C = await H(false);
+          // husene: Dovre-testsiden har ingen husdata – da lages en prøveflis med 14 bygg av alle slag og former midt i utsnittet
+          // (hentFlis byttes ut for laget «hus» så lenge prøven går). I byer med mange hus (over 400) prøves det med prøveflisa også –
+          // hele byen tre ganger tar minutter med programvare-grafikk.
+          const ekteHus = u.hus && u.hus.antall > 0 && u.hus.antall <= 400, orig = typeof hentFlis === 'function' ? hentFlis : null;
+          if (!ekteHus && orig) {
+            const z = 13, sp = span(z), fx = Math.floor((u.cx - G.x0) / sp), fy = Math.floor((G.y0 - u.cy) / sp), k = sp / 4096, minx = G.x0 + fx * sp, maxy = G.y0 - fy * sp, obj = [];
+            const ring = P => { const r = P.map(([X, Y]) => [(X - minx) / k, (maxy - Y) / k]); r.push(r[0].slice()); return [r]; };
+            const typer = [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 0], X0 = Math.max(minx + 60, Math.min(minx + sp - 260, u.cx - 100)), Y0 = Math.max(maxy - sp + 60, Math.min(maxy - 260, u.cy - 100));
+            typer.forEach((t, n) => { const x = X0 + (n % 5) * 45, y = Y0 + Math.floor(n / 5) * 50, w = 9 + (n * 7) % 14, d = 7 + (n * 5) % 11;
+              const P = n === 13 ? [...Array(16)].map((_, q) => [x + 6 * Math.cos(q / 16 * 6.283), y + 6 * Math.sin(q / 16 * 6.283)]) : n % 4 === 3 ? [[x, y], [x + w, y], [x + w, y + d / 2], [x + w / 2, y + d / 2], [x + w / 2, y + d], [x, y + d]] : [[x, y], [x + w, y], [x + w, y + d], [x, y + d]];
+              obj.push({ e: { i: 990000 + n, t, h: 4 + (n * 3) % 20, k: n === 6 ? 1 : undefined }, deler: ring(P) }); });
+            hentFlis = (lag, zz, x, y) => lag === 'hus' ? Promise.resolve(zz === z && x === fx && y === fy ? { hus: { obj } } : null) : orig(lag, zz, x, y);
+          }
+          if ((ekteHus || orig) && typeof hus3d === 'function') {
+            let A, B, C;
+            try { const H = på => kjør(på, () => hus3d(u)); A = await H(true); B = await H(true); C = await H(false); } finally { if (!ekteHus && orig) hentFlis = orig; }
+            r9.prøveHus = !ekteHus;
             const likHus = (x, y) => { if (!x || !y) return x === y; const kx = Object.keys(x.deler).sort(), ky = Object.keys(y.deler).sort(); if (kx.join() !== ky.join() || x.antall !== y.antall) return false;
               for (const k of kx) for (const f of ['pos', 'kol', 'uv']) if (!likT(x.deler[k][f], y.deler[k][f])) return false;
               return likT(x.biler, y.biler) && likT(x.flagg, y.flagg) && x.omriss.length === y.omriss.length; };
@@ -237,7 +254,8 @@ module.exports = {
             ok(likHus(B, C), 'husene med brukt plass i lageret er ulike');
             if (A) { const k = Object.keys(A.deler)[0], d = A.deler[k].pos.slice(); d[d.length >> 1] += .5; const kopi = { ...A, deler: { ...A.deler, [k]: { ...A.deler[k], pos: d } } }; ok(!likHus(kopi, C), 'selvtest: et flyttet hushjørne ble ikke sett'); }
             r9.hus = A ? Object.values(A.deler).reduce((s, d) => s + d.pos.length / 9, 0) : 0;
-          } else r9.husUt = 'ingen hus i utsnittet';
+            ok(r9.hus > 500, `husene ble ikke prøvd (${Math.round(r9.hus)} trekanter)`);
+          } else r9.husUt = 'hus3d mangler';
           // vegene og bruene: u settes tilbake etterpå (byggVeger setter u.kryss, u.vegRute, u.gangfelt …)
           const før = Object.assign({}, u), tilbake = () => { for (const k of Object.keys(u)) if (!(k in før)) delete u[k]; Object.assign(u, før); };
           const frigjør = L => { for (const m of L) { if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); } };
@@ -268,6 +286,7 @@ module.exports = {
           if (typeof hindringerG === 'function') { const a = hindringer(u), b = await kjørAsynk(hindringerG(u)); let lik = a.size === b.size;
             for (const [k, l] of a) { const m = b.get(k); if (!m || m.length !== l.length || l.some((o, i) => (o.P || o.x) !== (m[i].P || m[i].x) || o.y !== m[i].y)) { lik = false; break; } }
             ok(lik && [...a.keys()].join() === [...b.keys()].join(), 'hindringene i biter er ulike'); r9.hindre = a.size; }
+          } finally { rr.render = tegn0; }
           ut.r9 = r9;
         } else ut.r9ut = 'uten 3D';
       } catch (e) { ut.feil.push('unntak (runde 9): ' + (e && e.message || e)); if (window.Tallrekke) Tallrekke.Rekke.på = true; }
@@ -275,7 +294,7 @@ module.exports = {
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : '', r.r9 ? `tallrekkene gir like nett (hus ${Math.round(r.r9.hus || 0)} trekanter, ${r.r9.vegnett || 0} vegnett, ${r.r9.bruer || 0} bruer${r.r9.plan ? ', flaten = PlaneGeometry' : ''}${r.r9.hindre ? ', hindringene i biter like' : ''}; ${(r.ms9 / 1000).toFixed(1)} s)` : r.r9ut ? `tallrekkene: ${r.r9ut}` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : '', r.r9 ? `tallrekkene gir like nett (${r.r9.prøveHus ? 'prøvehus' : 'hus'} ${Math.round(r.r9.hus || 0)} trekanter, ${r.r9.vegnett || 0} vegnett, ${r.r9.bruer || 0} bruer${r.r9.plan ? ', flaten = PlaneGeometry' : ''}${r.r9.hindre ? ', hindringene i biter like' : ''}; ${(r.ms9 / 1000).toFixed(1)} s)` : r.r9ut ? `tallrekkene: ${r.r9ut}` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };
