@@ -16,7 +16,7 @@ module.exports = {
     // 2) for bratt opp: bilen stopper; langs et for bratt sideheng: kryper, sitter ikke fast
     { const flat = { høyde: () => 0, hindring: () => false, vann: () => false, vei: () => false }, k = { x: 0, y: 0, z: 0, a: -Math.PI / 2, v: 0 };
       for (let t = 0; t < 5; t += .02) K.bilSteg(k, { gass: 1 }, .02, { ...flat, høyde: x => Math.max(0, x - 3) }); if (k.x > 4.5) feil.push('kjører rett opp en 45° bakke');
-      const s = { x: 0, y: 0, z: 0, a: 0, v: 0 }; for (let t = 0; t < 4; t += .02) K.bilSteg(s, { gass: 1 }, .02, { ...flat, høyde: x => -x * .65 }); if (!(s.y > 4)) feil.push('setter seg fast i et sideheng'); data.sideheng = +s.y.toFixed(1); }
+      const s = { x: 0, y: 0, z: 0, a: 0, v: 0 }; for (let t = 0; t < 4; t += .02) K.bilSteg(s, { gass: 1 }, .02, { ...flat, høyde: x => -x * .7 }); if (!(s.y > 4)) feil.push('setter seg fast i et sideheng'); data.sideheng = +s.y.toFixed(1); }
     // 3) knappene på telefonen: Gå ut, Brems, Gass i raden nede til høyre (Huk/Hopp skjult) mens du kjører bil
     { const mk = document.getElementById('gangeknapper'), ped = mk ? [...mk.querySelectorAll('.pedal')] : [];
       data.pedaler = ped.map(b => b.textContent);

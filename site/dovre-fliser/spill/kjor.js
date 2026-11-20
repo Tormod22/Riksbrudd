@@ -15,13 +15,14 @@
   const STILLING = {
     // hjulene i modellen: halv akselavstand (fram +x) og halv sporvidde (venstre +y), i meter
     hx: 1.33, hy: .86,
-    // største vinkel bilen vises med (radianer): ca. 27° stigning og 21° sidehelling
-    maksStigning: .47, maksSide: .37,
-    // brattere enn dette (tangens) kjører den ikke inn i: ca. 31° opp/ned og 28° på skrå
-    tanOpp: .6, tanSide: .53,
-    // står den der det er brattere enn dette (tangens, ca. 37°), sklir den nedover med denne farten (m/s); krabbe = høyeste fart (m/s)
+    // største vinkel bilen vises med (radianer): ca. 34° stigning og 26° sidehelling
+    maksStigning: .6, maksSide: .45,
+    // brattere enn dette (tangens) kjører den ikke opp: ca. 37° (en terrenggående bil klarer ca. 35–40°); på skrå over ca. 31° og
+    // bratt nedover kryper den
+    tanOpp: .75, tanSide: .6,
+    // står den der det er brattere enn dette (tangens, ca. 42°), sklir den nedover med denne farten (m/s); krabbe = høyeste fart (m/s)
     // bratt nedover eller på skrå
-    tanGli: .75, gliFart: 1.6, krabbe: 2.5,
+    tanGli: .9, gliFart: 1.6, krabbe: 3,
     // hvor fort vinklene i visningen følger bakken (per sekund)
     glatt: 9,
   };

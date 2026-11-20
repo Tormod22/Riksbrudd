@@ -7,9 +7,10 @@ bildet over bilen, to knapper het «Brems», en lys strek lå over bilen, og bil
 
 ### Hva som er gjort
 1. **Bilen står på fire hjul** (`spill/kjor.js`, reglene øverst uten DOM):
-   - `Kjor.STILLING` (Claudes tall): hjulene ±1,33 m / ±0,86 m, største helling som vises 0,47 rad (ca. 27°) fram/bak og 0,37 rad
-     (ca. 21°) til siden, `tanOpp` 0,6 (ca. 31°), `tanSide` 0,53 (ca. 28°), `tanGli` 0,75 (ca. 37°), `gliFart` 1,6 m/s, `krabbe` 2,5 m/s,
-     `glatt` 9/s.
+   - `Kjor.STILLING` (Claudes tall): hjulene ±1,33 m / ±0,86 m, største helling som vises 0,6 rad (ca. 34°) fram/bak og 0,45 rad
+     (ca. 26°) til siden, `tanOpp` 0,75 (ca. 37°), `tanSide` 0,6 (ca. 31°), `tanGli` 0,9 (ca. 42°), `gliFart` 1,6 m/s, `krabbe` 3 m/s,
+     `glatt` 9/s. (Først strengere – 31° opp og glid fra 37° – men da kom ikke speiderbilen opp lia ved Dombås i kontrollen, som den
+     gjorde før; en terrenggående bil klarer ca. 35–40°.)
    - `Kjor.hjulHøyder(x, y, a, høyde)` gir høyden under hvert hjul, `Kjor.stilling(...)` gir `{ stigning, side, z }` med vinklene
      begrenset og z slik at ingen hjul står under bakken (minst ett står på den), `Kjor.zFor(h, st, sd)`.
    - Visningen (ramme3d i kjor.js) glatter vinklene over tid (`k.sSt`, `k.sSd`, `k.sZ`). Før ble nesa og siden regnet fra to punkter

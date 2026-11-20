@@ -20,8 +20,9 @@ const kjør = (k, inn, sek, v = flat) => { let r = {}; for (let t = 0; t < sek; 
 { const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => (x < -3 ? (-3 - x) * 1.0 : 0); let maks = 0; for (let t = 0; t < 6; t += .02) { K.bilSteg(k, { gass: 1, sving: -1 }, .02, { ...flat, høyde: h }); if (k.x < -4) maks = Math.max(maks, Math.abs(k.v)); }
   ok(maks <= K.STILLING.krabbe + .01, `inn i et sideheng på 45°: bare krabbefart (${maks.toFixed(1)} m/s)`); }
 { const k = { x: 0, y: 0, z: 0, a: -Math.PI / 2, v: 0 }, h = (x, y) => Math.max(0, x - 3) * 1.0; kjør(k, { gass: 1 }, 6, { ...flat, høyde: h }); ok(k.x < 4.5, `rett opp en 45° bakke: stopper (x = ${k.x.toFixed(1)})`); }
-{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * .8; kjør(k, {}, 3, { ...flat, høyde: h }); ok(k.x > 2, `står i 39° heng: sklir nedover (${k.x.toFixed(1)} m)`); }
-{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * .65; const x0 = k.x; kjør(k, { gass: 1 }, 4, { ...flat, høyde: h }); ok(k.y > 5 && k.x > x0, `langs et 33° sideheng: kryper fram og sklir litt ned (y ${k.y.toFixed(1)}, x ${k.x.toFixed(1)}) – sitter ikke fast`);
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * 1.1; kjør(k, {}, 3, { ...flat, høyde: h }); ok(k.x > 2, `står i 48° heng: sklir nedover (${k.x.toFixed(1)} m)`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => Math.max(0, y) * .68; kjør(k, { gass: 1 }, 4, { ...flat, høyde: h }); ok(k.y > 5, `en 34° bakke klarer den (${k.y.toFixed(0)} m på 4 s)`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * .7; const x0 = k.x; kjør(k, { gass: 1 }, 4, { ...flat, høyde: h }); ok(k.y > 5 && k.x > x0, `langs et 35° sideheng: kryper fram og sklir litt ned (y ${k.y.toFixed(1)}, x ${k.x.toFixed(1)}) – sitter ikke fast`);
   const y1 = k.y; kjør(k, { gass: -1 }, 3, { ...flat, høyde: h }); ok(k.y < y1 - 2, 'og kan rygge ut igjen'); }
 const fly = (h, inn, sek, v = flat) => { let r = {}; for (let t = 0; t < sek; t += .02) r = K.heliSteg(h, inn, .02, v); return r; };
 const ny = () => ({ x: 0, y: 0, z: 0, a: 0, vx: 0, vy: 0, vz: 0, rotor: 0, motor: true });
