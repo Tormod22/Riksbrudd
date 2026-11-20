@@ -618,7 +618,8 @@ høyst tre interiører, og gresset har 5000 tuster.
 - Søppeltømming 100–250 ms av og til. Interiøret lager fortsatt mange små tabeller per hjørne (`kasse`/`fk`/`tri`); det ble ikke skrevet om
   (risiko for et annet utseende) – hvilende interiører betyr at det skjer sjeldnere.
 - `tegnInfra3d` → `mPer3` (hoyde3d per infrastrukturobjekt hvert bilde): 494 ms i én oppgave da infrastrukturen kom inn i Bergen.
-- lave3d.js (låvens innhold, natur-pakka) bygger alle låver i ett strekk hver 400 ms – ikke endret (ingen låver i Bergen sentrum).
+- lave3d.js (låvens innhold, natur-pakka – ingen eier den i natt): bygde alle låvene i samme runde; nå høyst én per runde (hver 400 ms).
+  Prøvd: to prøvelåver – én etter første runde, begge etter andre, borte etterpå (scratchpad `natt7/lys/prov9.js`); test_lave3d.js grønn.
 - Ikke gjort i denne runden: fjern3d `bygg` (er alt i biter fra runde 4) og infra3d med store bruer (flyr/kjører) – ikke målt på nytt.
 
 ### Vakt (pipeline/fliser/vakter/lys.js, runde 7-delen – bare med 3D på)
@@ -634,10 +635,12 @@ høyst tre interiører, og gresset har 5000 tuster.
 Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `sjekk()`. interior.js: `planG`, `nærKant`, `inniR`, `nærKantR`.
 
 ### Fellesfiler endret i runde 7
-- `site/dovre-fliser/index.html`: bare `gress3d` (gressG/gressBit; nettet starter med count 0) og versjonsmerkene (versjon.py).
+- `site/dovre-fliser/index.html`: bare `gress3d` (gressG/gressBit; nettet starter med count 0; gressBit teller R3.nærtNr) og versjonsmerkene (versjon.py).
 - `site/dovre-fliser/spill/interior.js` (regelfila for interiøret): planG/del/rutenett som generatorer, prøv med billige sjekker først og
   uten mellomtabeller, nærKant, ruter/inniR/nærKantR. Samme planer (prøvd mot den gamle fila for 1008 bygg).
-- Mine: `spill/interior3d.js`, `spill/lut-visning.js` (bare 3D-tingene: mal/tingMal/våpenMal, 4 ms per runde), `pipeline/fliser/vakter/lys.js`,
+- `site/dovre-fliser/spill/lave3d.js` (natur-pakka): høyst én låve per runde i `oppdater` (flagget `bygget`), ellers uendret.
+- Mine: `spill/interior3d.js`, `spill/ytelse.js` («Mål hakk»: gruppen «mens innsiden av et hus eller gresset rundt deg ble laget», R3.nærtNr;
+  test i test_ytelse.js), `spill/lut-visning.js` (bare 3D-tingene: mal/tingMal/våpenMal, 4 ms per runde), `pipeline/fliser/vakter/lys.js`,
   `pipeline/fliser/test_interior_biter.js` (ny), `docs/natt/lys-hjelp.json` («Jevnt når du går inn i hus»).
 
 ### Prøvd i nettleser (runde 7)
@@ -645,7 +648,9 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
   på tre steder – likt; vakta lys med 3D på: grønn på 20 s (interiøret i 14 biter, gresset i 25 biter, 12 000 tuster).
 - Telefon 390 × 844: vakta lys grønn på 22,6 s (runde 7-delen 4,1 s: interiøret i 11 biter, gresset 5000 tuster i 14 biter).
 - Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8915 node pipeline/fliser/sjekk.js`, kl. 01:04, før de to siste små endringene i
-  interior3d.js – kassen uten mellomtabeller og tømmingen – som er prøvd i Node og med vakta etterpå): 119 ok, 0 FEIL, 700 s. Vakta lys
+  interior3d.js – kassen uten mellomtabeller og tømmingen – som er prøvd i Node og med vakta etterpå): 119 ok, 0 FEIL, 700 s.
+  Siste prøve på den endelige koden (kl. 01:40, PC): gammel mot ny for de seks prøvebyggene i nettleseren igjen likt (med normalerG),
+  vakta lys grønn (24 s; interiøret i 13 biter, gresset i 36 biter) og vakta natur grønn. Vakta lys
   tok 231 s der (skyggene tegnes tre ganger med programvare-grafikk i telefonens oppløsning under last ca. 20 – runde 7-delen er ca. 4 s).
   `interiør` og `interiør i leirens bygg` i sjekk.js grønne (de kaller oppdater(true) og bygger i ett strekk som før).
 - Bilder (scratchpad `natt7/lys/`): `inne-før-PC.png` og `inne-etter-PC.png` (inne i prøvehuset, samme utsikt – kjøkkenet gjennom døra,
