@@ -342,6 +342,8 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (fl && !fl.ok) { stopp = HL.brattTekst(fl.r); f.ok = false; f.bratt = true;
       if (fl.f) { fl.f.h = høydeHer(fl.f.x, fl.f.y); f.flytt = fl.f; flytt = { ...fl.f, tekst: flyttTekst(fl.f, 'Nærmeste flate sted') }; }
       else vu.advarsler.unshift(`Fant ikke noe flatt nok sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted – en dalbunn eller et platå.`); }
+    // når grunnen ikke er flat: hva fargene i kartet betyr (helling-visning.js viser dem når du zoomer inn)
+    if ((stopp || flytt) && window.HellingVis) vu.fakta.push(kam.m <= HellingVis.REGLER.maksM ? 'i kartet: grønt = flatt, gult = skrått, rødt = for bratt' : 'zoom inn for å se i kartet hvor det er flatt');
     f.sjekker = false; skitten = true;
     visBanner(h != null ? `Her? ${Math.round(h)} moh.` : 'Her?', f.ok, { stopp, flytt, adv: vu.advarsler, fakta: vu.fakta, kai: kai.map(t => Leirvalg.kaiTekst(t, m.sjø)).filter(Boolean).join(' ') });
   }
