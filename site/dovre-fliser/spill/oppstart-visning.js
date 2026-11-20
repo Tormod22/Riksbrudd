@@ -79,9 +79,9 @@
 /* PC: over kommandolinja nederst */
 body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
 /* RUNDE 12 (21. nov, kritiker E og F): boksen lå midt over kartet (Stavanger/Jæren) der de fleste leter. Den står nå langs kanten: øverst til
-   høyre under knapperaden på PC og liggende telefon (venstre for zoomknappene), tekst venstrestilt. Mål (380/320 px) er Claudes forslag. */
-body:not(.smal) #leirvalg{ top:calc(var(--topp,58px) + 10px); bottom:auto; left:auto; right:calc(64px + env(safe-area-inset-right,0px)); transform:none; width:max-content; max-width:min(380px, 44vw); text-align:left; max-height:calc(100% - var(--topp,58px) - 24px); overflow-y:auto; box-sizing:border-box; box-shadow:0 6px 20px rgba(0,0,0,.55); }
-body.kort:not(.smal) #leirvalg{ top:calc(var(--topp,44px) + 4px); right:calc(56px + env(safe-area-inset-right,0px)); max-width:min(320px, 42vw); padding:6px 9px; font-size:13.5px; line-height:1.3; }
+   venstre under klokka på PC (loggen står til høyre), øverst til høyre på liggende telefon (loggen står til venstre), tekst venstrestilt. Mål (380/320 px) er Claudes forslag. */
+body:not(.smal) #leirvalg{ top:calc(var(--topp,58px) + 10px); bottom:auto; left:14px; right:auto; transform:none; width:max-content; max-width:min(380px, 44vw); text-align:left; max-height:calc(100% - var(--topp,58px) - 24px); overflow-y:auto; box-sizing:border-box; box-shadow:0 6px 20px rgba(0,0,0,.55); }
+body.kort:not(.smal) #leirvalg{ top:calc(var(--topp,44px) + 4px); left:auto; right:calc(56px + env(safe-area-inset-right,0px)); max-width:min(320px, 42vw); padding:6px 9px; font-size:13.5px; line-height:1.3; }
 body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
 #leirvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:42px; padding:4px 14px; margin:6px 4px 0; cursor:pointer; font:inherit; }`;
   document.head.appendChild(css);
