@@ -118,7 +118,22 @@
     return { vær: S.vær, navn: V.navn, navnNå, overgang: k, årstid: S.årstid, årstidNavn: Å.navn, dag: Å.dag, dato: Å.dag + dagNr, dagNr, sikt: b.sikt, dis: b.dis, sky: b.sky, nedbør,
       regn: b.regn, snø: b.snø, snøgrense, høst: Å.høst, temp, vind: vind(t || 0, b.vind), våt: S.våt || 0, dalTåke, torden, styrke: S.styrke };
   }
-  const api = { VÆR, ÅRSTIDER, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, overgang, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn };
+  // DISEN I 3D OVENFRA (runde 8, 20. nov, kritikken: «3D-kartet ovenfra er nesten helt grått i regn»). Før ble disens avstander
+  // ganget med været (regn 0,4) også når kameraet var høyt oppe: bakken midt i bildet lå da bak disens ytterkant, og alt ble grått.
+  // Nå: nede ved bakken (går, lavt kamera) som før; høyt oppe begynner disen et stykke før bakken midt i bildet og tetner bortover,
+  // så landskapet synes, med mer dis jo lenger unna. D = avstanden fra kameraet til punktet det ser på (meter).
+  // Claudes forslag (alle tallene): lav/høy = kameraavstanden der overgangen begynner og er ferdig; nær = disens begynnelse som andel
+  // av D (bunn + dis × nærDis); fjern = hvor mye av rommet bak bakken som beholdes (bunn + (1 − bunn) × dis).
+  const DIS3D = { lav: 160, høy: 1400, nærBunn: .45, nærDis: .45, fjernBunn: .3 };
+  // dis3d(near, far, dis, D): disens nye { near, far } når været gir faktoren dis (1 = klart). near/far er kameraets egne (uten vær).
+  function dis3d(near, far, dis, D) {
+    if (!(dis < 1)) return { near, far };
+    const lavFar = Math.max(140, far * dis), lavNear = Math.min(near * dis, lavFar * .25), w = trinn(DIS3D.lav, DIS3D.høy, D || 0);
+    if (w <= 0) return { near: lavNear, far: lavFar };
+    const hNear = D * (DIS3D.nærBunn + DIS3D.nærDis * dis), hFar = D + Math.max(50, far - D) * (DIS3D.fjernBunn + (1 - DIS3D.fjernBunn) * dis);
+    return { near: lavNear + (hNear - lavNear) * w, far: lavFar + (hFar - lavFar) * w };
+  }
+  const api = { VÆR, ÅRSTIDER, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, overgang, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn, DIS3D, dis3d };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vaer = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

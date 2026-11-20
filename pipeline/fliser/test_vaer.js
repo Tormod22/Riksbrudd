@@ -45,4 +45,12 @@ ok(V.mørke(30) === 0 && V.mørke(-10) === 1, 'mørke: 0 midt på dagen, 1 dypt 
   ok(nytt !== 'klart' && T0.navnNå === 'Klart → ' + V.VÆR[nytt].navn.toLowerCase() && T1.navnNå === V.VÆR[nytt].navn && T0.overgang < .1 && T1.overgang > .5,
     `overgangen i statuslinja: «${T0.navnNå}» -> «${T1.navnNå}» (${Math.round(S.varighet)} min)`);
   V.låsVær(S, 'tåke'); ok(V.tilstand(S, 12, 12).navnNå === 'Tåke', 'låst vær kommer straks i statuslinja'); }
+// (runde 8, 20. nov) disen i 3D ovenfra: bakken midt i bildet synes i regn og tåke, nede ved bakken som før
+{ const D = 3000, near = D * .9 + 2000, far = D + 4800, klar = V.dis3d(near, far, 1, D);
+  ok(klar.near === near && klar.far === far, 'klart vær: disen urørt');
+  const r = V.dis3d(near, far, V.VÆR.regn.dis, D), t = V.dis3d(near, far, V.VÆR.tåke.dis, D), andel = o => (D - o.near) / (o.far - o.near);
+  ok(r.near < D && r.far > D && andel(r) < .35, `regn ovenfra: bakken midt i bildet ${Math.round(andel(r) * 100)} % inn i disen (før: helt grå)`);
+  ok(t.far > D && andel(t) < .55 && andel(t) > andel(r), `tåke ovenfra: ${Math.round(andel(t) * 100)} % – tettere enn regn, men bakken synes`);
+  const lav = V.dis3d(120, 3800, .4, 0); ok(lav.far === Math.max(140, 3800 * .4) && lav.near === Math.min(120 * .4, lav.far * .25), 'nede ved bakken (går): som før');
+  const m = V.dis3d(near, far, .4, 700); ok(m.near < m.far && m.far > 0, 'mellom lavt og høyt: gyldig dis'); }
 process.exit(feil ? 1 : 0);
