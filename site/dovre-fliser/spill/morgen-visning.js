@@ -144,6 +144,8 @@
 #morgenkort button.mingen{ min-height:38px; text-align:center; background:none; color:var(--ink-dim,#b5a888); }
 #morgenkort .mstor{ border:1px solid #8a6a2a; background:rgba(80,60,20,.25); padding:8px 10px; margin:8px 0 2px; }
 #morgenkort .mstor p{ margin:0 0 4px; line-height:1.35; }
+#morgenkort button[data-tast]{ position:relative; padding-right:34px; } body:not(.kort) #morgenkort button[data-tast]::after{ content:attr(data-tast); position:absolute; right:10px; top:8px; min-width:18px; height:18px; line-height:18px; text-align:center; font-size:12px; border:1px solid #6a5a3a; border-radius:3px; color:var(--ink-dim,#b5a888); }
+body.kort #morgenkort button[data-tast]{ padding-right:10px; }
 body.kort #morgenkort{ top:calc(var(--topp,44px) + 6px); max-height:calc(100vh - var(--topp,44px) - 76px - env(safe-area-inset-bottom,0px)); padding:10px 12px; }
 body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.på) #logg{ visibility:hidden; } body.kort #morgenkort button{ min-height:42px; padding:5px 10px; }`;
   document.head.appendChild(css);
@@ -160,12 +162,12 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     if (K.rapport && K.rapport.length) kort.append(el('div', { klasse: 'mrapport' }, ...K.rapport.map(r => el('p', { klasse: /^I går/.test(r) ? 'igaar' : '' }, r))));
     if (K.steg === 0) {
       kort.append(el('div', { klasse: 'msp' }, K.valg.length ? 'Hva gjør dere i dag?' : 'Ingenting som haster i dag.'));
-      K.valg.forEach((v, i) => kort.append(knappEl(v.t, v.følge, () => velg(i))));
+      K.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); kort.append(b); });
       kort.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
     } else {
       const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, 'I dag: ' + K.valgt)));
       kort.append(el('div', { klasse: 'mstor' }, el('h3', {}, 'Viktig beslutning: ' + st.tittel), el('p', {}, st.tekst)));
-      st.valg.forEach((v, i) => kort.append(knappEl(v.t, v.følge, () => velgStor(i))));
+      st.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velgStor(i)); b.setAttribute('data-tast', String(i + 1)); kort.append(b); });
     }
     kort.classList.add('på'); kort.scrollTop = 0;
   }
@@ -176,6 +178,11 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     lagre(); lagreLeir(); vis(); }
   function velgStor(i) { const K = S.kort; if (!K || K.steg !== 1) return; const v = K.stor.valg[i]; const t = brukStor(K.stor, v); logg(K.stor.tittel + ': ' + t);
     S.storSist = K.dag; S.storId = K.stor.id; K.ferdig = true; lagre(); lagreLeir(); vis(); }
+
+  // PC: tastene 1–3 velger på kortet (fanges før hurtigtastene, så «3» ikke slår på 3D mens kortet står oppe; ikke mens du går eller skriver)
+  rot.addEventListener('keydown', e => { if (!kort.classList.contains('på') || !kort.getClientRects().length || e.ctrlKey || e.altKey || e.metaKey) return;
+    const t = e.target, skriver = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable); if (skriver || (typeof R3 !== 'undefined' && R3 && R3.fot)) return;
+    const b = kort.querySelector(`button[data-tast="${e.key}"]`); if (!b) return; e.preventDefault(); e.stopImmediatePropagation(); b.click(); }, true);
 
   // ---------- ny morgen ----------
   function snapOppgjør() { try { return rot.OppgjorSpill && OppgjorSpill.bilde ? OppgjorSpill.bilde() : null; } catch (e) { return null; } }
