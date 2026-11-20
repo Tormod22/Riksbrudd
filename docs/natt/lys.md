@@ -586,6 +586,21 @@ Ikke målt hver for seg (lut-tingene finnes bare med et startet spill og møbler
   er 140–317 ms under last fordi tråden blir stående uten kjerne midt i en bit – CPU-profilen viser høyst 8 ms interiør i én oppgave.
 - Mål nådd for interiøret på PC: ingen lang oppgave der interiøret er hoveddelen (før: opptil 574 ms bygg i én oppgave under last).
 
+### Sluttmåling med alt (kl. 01:27, commit d1dace7, last 17–20, nice −10; `slutt-pc.log`, `slutt-mobil.log`)
+| Bergen, går 30 s og inn i hus | før (c4be9eb, last 23) | etter |
+|---|---|---|
+| PC: lange oppgaver ≥ 50 ms (antall, sum, lengste) | 60, 9,5 s, 709 ms | 16, 1,1 s, 107 ms |
+| PC: pauser > 50 ms (antall, sum, lengste) | 89, 17,4 s, 1880 ms | 39, 3,2 s, 288 ms |
+| PC: interiøret i lange oppgaver | 2270 ms | ca. 100 ms (én oppgave på 86 ms med en møbelbit – trolig tråden uten kjerne) |
+| PC: gresset i lange oppgaver | 2135 ms | 60 ms |
+| telefon: lange oppgaver ≥ 50 ms | 39, 5,7 s, 792 ms | 22, 2,4 s, 485 ms (den lengste uten kode i profilen – ventet på kjerne) |
+| telefon: interiøret i lange oppgaver | 1835 ms | ca. 350 ms (romdelingen 253 i én oppgave og tallrekkene 86 – se under) |
+- 52 interiører bygget på 30 s på PC (199 biter, 17 kom tilbake fra hvile), 61 på telefon (157 biter, 17 fra hvile).
+- Under så tung last står profilen full av tid der tråden ikke fikk kjøre (samplene havner i funksjonen som sto sist), så enkeltstegene
+  over 50 ms i interiøret er ikke sikre. I Node var det lengste steget i planen 30–45 ms for svært store bygg (100 × 70 m) og noen
+  få ms for vanlige. `measureText` brukte 284 ms første gang «Inngang» ble skrevet på telefon (skriften lastes første gang den brukes i et
+  lerret – én gang per økt).
+
 ### Målt – telefonstørrelse (390 × 844, samme tur, `mobil-før/etter.log`, last ca. 22, nice −10)
 | | før | etter (før romdelingen i biter og rutenettet) |
 |---|---|---|
