@@ -20,8 +20,8 @@ over leiren da røverne kom.
   jobbene i leiren stopper. La minst to stå på «bygg».», «Bare én igjen på «bygg» …», «Ingen kokk igjen …» (bare når leiren har kjøkken).
   Advarselen står i rødt rett over knappen, og knappen heter da «Opprett likevel (N)». Ingen ekstra trykk (kontrollskriptet trykker
   «Opprett» og skal virke som før) – men du ser det før du trykker.
-- **Steg 6 er rimelig og sier hva det koster.** Nå «Mer forsvar før dag 4»: «Røverbølgene vokser. Lag en liten tropp til (2–4 holder),
-  eller sett to på Vakt i Folk. La minst to stå på Bygg. Flere folk: Rekrutter i Folk (krever ledig seng).» (kortere tekst på telefon,
+- **Steg 6 er rimelig og sier hva det koster.** Nå «Mer forsvar før dag 4»: «Røverbølgene vokser. Lag en liten tropp til (2–4) eller sett to
+  på Vakt i Folk. Hver soldat er en arbeider mindre: la minst to stå på Bygg. Flere folk: Rekrutter i Folk.» (kortere tekst på telefon,
   `kort` på steget). Ferdig når du har to tropper, **eller** én tropp og minst to på «vakt» (Leirvakta forsvarer leiren når røverne kommer).
 - **«Ingen bygger» i Leir-menyen** (folk-visning.js, LEIR_MENY, klassen «fast» – står over fanene i alle faner): når jobber venter og ingen
   står på «bygg»: «⚠ Ingen på «bygg» – jobben står stille.» med knappen **«Sett to på Bygg»** (FolkRegler.pluss), eller når gjengen er

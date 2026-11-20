@@ -19,7 +19,7 @@
     // (runde 8, kritiker C og D) «Ha to tropper før dag 4» fikk nye spillere til å gjøre alle folkene til soldater (brakka ble aldri
     // bygget). Nå holder det med en liten tropp til ELLER to på Vakt i Folk (Leirvakta forsvarer leiren når røverne kommer), og teksten
     // sier hva det koster i arbeidskraft og hvordan du får flere folk. kort = teksten på telefon (tre linjer).
-    { id: 'tropp2', tittel: 'Mer forsvar før dag 4', tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4 holder), eller sett to på Vakt i Folk. La minst to stå på Bygg. Flere folk: Rekrutter i Folk (krever ledig seng).',
+    { id: 'tropp2', tittel: 'Mer forsvar før dag 4', tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4) eller sett to på Vakt i Folk. Hver soldat er en arbeider mindre: la minst to stå på Bygg. Flere folk: Rekrutter i Folk.',
       kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || (b.tropper >= 1 && b.påVakt >= 2) },
     { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3 },
     { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → rull ned til Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
