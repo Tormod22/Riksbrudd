@@ -107,3 +107,101 @@ telefon: 88/89-gatt-*, 37-3d-40s, 39-ga-50s). Alle tall er Claudes forslag og st
 - Reisen går i rett linje (omvegen er bare regnet inn i tiden); den sjekker ikke fiender underveis utover at spillet senker farten.
 - Med programvare-grafikk kan reisen bli noen minutter lengre enn sagt (600× og trege bilder: opptil 2,5 spillminutter per bilde).
 - «Gå inn» gjelder byggene som har interiør (de nærmeste innen 30 m når du går), ikke byggesettets egne hus.
+
+## Runde 8 (20. nov natt, ny kritikk)
+
+Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-gard, 35-ga-40s) og `kritikk2/tlf/anmeldelse.md`
+(24-gaa-start, 24-snudd, 32-reist). Alle tall er Claudes forslag og står i `Gaavalg.REGLER` (berøring, peker, inn, reise, snu) og
+`Byggeplass.REGLER`. Bilder: scratchpad `natt8/ga/` (se lista nederst).
+
+### 1. «Reis hit» hang, og bildet frøs når du snudde deg – RETTET (det meste)
+- **Målt først** (Dovre, PC, last 10–20 på fire kjerner): selve reisen tok 13 s (8 bilder på 1–4 s – 3D ble tegnet hvert bilde, og
+  `kar.siktSkitten` ga ny siktberegning og nytt tåkebilde hvert bilde). Det tunge kom ETTERPÅ: «Gå» satte `avst = 1000`, så det
+  grove utsnittet (S 3828) ble bygget på nytt (S 1700) i bakgrunnen MENS du gikk – og hvert bilde i førsteperson tok sekunder, så
+  byggingen kom ett lite stykke fram per bilde. Etter 9 minutter bygget den fortsatt (målingen ble stoppet). Det var kritikerens heng.
+- Nå (`gange.js`):
+  - **3D tegnes ikke mens du reiser** (`KROKER.bilde3d` svarer true – bildet står, navnene i overlegget går videre). Karakteren
+    flyttes hvert bilde, men siktfeltet regnes først når han er framme. I 2D viser kartet både deg og målet og flyttes bare når
+    karakteren er på vei ut av bildet (å flytte kartet hvert bilde gjorde hvert bilde tungt: en tur på 5 min tok 12 s).
+  - **Farten settes tilbake straks du er framme** (før gikk 600× videre til kortet hadde stått i 1,2 s: en tur på 2 min ble 15).
+  - **`klarGå(X, Y, ferdig)`: kartet rundt deg bygges FØR du begynner å gå** når utsnittet ikke passer (samme regel som tegn3d,
+    `utsnittS(1000)`): kameraet flyttes dit, 3D tegnes ikke, navnene skjules, og kortet «Henter kartet rundt deg … (trinnet) 12 s»
+    med Avbryt står til utsnittet er satt inn. Brukes av «Gå» (her), «Gå her, der du står», «Reis hit» og «Gå inn i huset».
+    `Gange.start()` (testene, andre moduler) går som før med en gang.
+  - **Rask snuing**: tar bildene over 120 ms (eget snitt i `Gange.kamera`, `rammeSnitt` teller ikke bilder over 240 ms), tegnes 3D
+    i halv oppløsning (`R3.målPr = .5`, `R3.snuPr`) mens du snur deg, og full igjen 0,7 s etter. Ikke mens ytelsen måles.
+  - Musa på PC: får nettleseren ikke låst musa (eller før låsen kommer), ser du rundt ved å dra med knappen nede.
+- **Målt etter** (samme maskin og sted): «Reis hit» 11 min → framme etter 9,8 s, går etter 29 s (før: over 9 min). På /rogaland
+  med ekte data som spiller (webdriver av), kritikerens vei: kartet over en gård 500 m unna, 3D, Gå, Reis hit → framme 6 s, går 8 s.
+  Snu med musa (ti drag): 0,6–2,1 s per drag på /rogaland (last 11); på Dovre 3–11 s per drag under last 20 (før: 20 drag over
+  4,5 min, stoppet). Hvert bilde i førsteperson med programvare-grafikk er fortsatt tregt – det er tegningen selv (ytelse-pakka).
+
+### 2. Rask vei inn i et hus fra 2D-kartet – RETTET
+- `visByggVed` (index.html) pakkes inn i gange.js: panelet for et bygg sier «Bygget har en innside – du kan gå inn og lete.» og har
+  **«Gå inn i huset (ca. 5 min til fots)»** (`#gaainnknapp`). Runde bygg (tank, fyr) sier at de ikke har innside; uten karakter / om
+  bord / over 6 km står det hvorfor. Lappen og knappen ligger i `#handl` (de forsvant ikke da panelet byttet til et kjøretøy – rettet).
+- `Gange.gåInn(h)`: reiser til et punkt 5 m utenfor huset (`Gaavalg.utenfor`, spilltid som «Reis hit»; nærmere enn 40 m: ingen reise),
+  åpner 3D med kartet midt på huset i målestokken som gir gangens utsnitt (ingen dobbel bygging), finner huset (`P.bygg.i`, ellers
+  nærmeste med dør), setter deg 2,4 m foran døra med blikket mot den, og når interiøret er laget, **rett innenfor døra** (med dørhjelpen
+  tok de tre metrene over et minutt med programvare-grafikk). Avbrytes reisen underveis, går du ikke inn.
+- **Også i «Hvor vil du gå?»**: ser kameraet på et hus (en dør innen 25 m fra midten av bildet), står «Gå inn i huset (ca. 9 min til
+  fots)» først i valget. Prøvd på /rogaland: kritikerens vei (kartet over en gård 500 m unna, 3D, Gå) → inne i uthuset 9 s etter trykket.
+- Prøvd på /rogaland (ekte data, Ryfylke-leiren): låve 257 m unna – PC inne etter 139 s (før rett-innenfor-døra; bildene tok sekunder),
+  telefon (webdriver av, trykk på knappen) inne etter 24 s: reisen 11 s, 3D 9 s, inne 4 s. Bilder inn-panel/-reiser/-inne (pc, mobil).
+
+### 3. Fant ikke «Gå inn» etter «Reis hit» – RETTET
+- **Pila mot inngangen**: under siktet står «Inngang 14 m» med en pil som peker dit (opp = rett fram, dreier når du snur deg), og
+  «· rundt huset» når døra er på den andre siden. Nærmeste bygg med dør (P.dør fra hus3d, også leirens bygg) innen 70 m, ikke nærmere
+  enn 4,5 m (da kommer «Gå inn»), og ikke når døra er rett foran deg og synlig innen 28 m (da står «Inngang»-merket over døra).
+  Reglene: `Gaavalg.inngang/pekerMot/pekerTekst`. Ikke i kompasset (kompass.js er ikke min, og har ingen krok for egne merker).
+- Hvilke bygg som har innside: panelet sier det (2.). Alle bygg med dør i 3D har innside (interior3d), runde bygg ikke.
+
+### 4. Snu seg med én finger på telefon – RETTET
+- Årsak: hele nedre venstre firedel av skjermen var styrespak (`x < 45 % og y > 50 %`). Kritikerens drag fra (150, 450) til (300, 450)
+  på 390 × 844 startet altså i spak-sonen og flyttet ham i stedet for å snu ham. Nå er bare et trykk innen 110 punkter fra spaken
+  (90, høyden − 120) eller helt nede til venstre (nederste 220 punkter, venstre 42 %) styrespak (`Gaavalg.erSpak`).
+- Tilbakemelding: mens du drar for å se, står en ring med piler der fingeren er og kursen («065°») over den.
+- Prøvd med CDP-berøring nøyaktig som kritikeren: snudd 43°, kompasset viser 065° (bilde mobil-snur-mobil.png).
+
+### 5. Leiren i 3D: tomt jorde og flat plate – RETTET
+- Ny fil `spill/byggeplass3d.js` (regler øverst, `test_byggeplass3d.js` 17 ok; modellene nederst):
+  - **Byggeplassen i trinn** som leir2d.js: under 2 %: stikker og snor; grunnmur som støpes (0–20 %, med forskaling); reisverket reises
+    (25–45 %: andelen stendere, svill og toppsvill); taket legges fra den ene enden (45–95 %, sperrer først); kledningen nedenfra
+    (60–97 %, døra åpen); stillas med to stolperader, rekkverk og plankedekke (8–97 %); plankestabel og pall med sekker (til 90 %).
+    For hus-formene i leir2d (`Leir2d.HUS`; saltak for «sal», ellers flatt) – ikke tanken, porten og små kasser (aggregat, batteri).
+    Andre bygg reiser seg som før. Modellen lages på nytt
+    for hvert 5. prosent (`Byggeplass.nøkkel`, i leir-visning.js sin sekund-løkke). Ca. 240–1700 trekanter.
+  - **Den nye leiren**: bål (steinring, ved, flammer som flakker og en glød som er sterkere om natta – MeshBasicMaterial og en
+    sprite, ingen nye lys), vedstabel, kasser og oljefat (MODELLER.kasser/fatpall), tre telt (ett når den første brakka eller et
+    egenbygd rom er ferdig) og en presenning over kasser – i ringer på 8/12,5/17 m rundt flaggstanga, ikke i bygg, skisser, vann eller
+    på vegen, fast per leir (`Byggeplass.leirting`). Telt, kasser og presenning står i `R3.hindre` (du går ikke gjennom dem).
+- `leir-visning.js` (3D-delen, min): `byggeplassHus`, `leirting3d`, lagLeir3d bruker byggeplassen, sekund-løkka bytter modell.
+
+### 6. Angrepsbanneret i førsteperson – RETTET
+- CSS i gange.js (`html body.gaar #alarm …`): én linje – «Angrep: ett røverlag fra sør» og «Forsvar leiren»; «Vis» er borte, avstanden
+  står på PC (kuttes med …), ikke på telefon. Telefon: 255 × 48 px (knappen er 40 px – telefon.js gir alle knapper 40 px), under
+  kompasstavla. PC: 38 px. Før: en tredjedel av skjermen.
+
+### Fellesfiler
+- `index.html`: én skripttagg rett etter gaavalg.js (`spill/byggeplass3d.js`) + versjonsmerkene fra versjon.py. Ellers ingenting.
+
+### Vakt og prøver
+- `pipeline/fliser/vakter/ga.js` (runde 8 i tillegg): erSpak, panelknappen «Gå inn i huset» (finnBygg byttes ut med et prøvehus en
+  stund), byggeplassens trinn og leirtingene (regler); i 3D: drag med fingeren midt på skjermen snur deg, banneret er én linje mens du
+  går, pila mot et prøvehus bak deg, «Gå inn i huset» → inne (hele veien når utsnittet passer, ellers siste del – `Gange.vedDøra`),
+  byggeplassen i 3D (grunnmur på bakken, reiser seg), telt og bål i scenen. Etter reisen godtas også «kartet rundt deg bygges» (navnene
+  skjult), og Avbryt slipper ventingen – vakten venter ikke på det nye utsnittet. Grønn: PC 2D 0,1 s, PC 3D 8,9 s, mobil 3D 2,9 s.
+- Flettet inn origin/claude/nattfiks etter ytelse-hjelperen (interiøret bygges i biter): «Gå inn i huset» kaller `Interior3d.oppdater(true)`
+  én gang ved døra, så huset du står ved bygges ferdig med en gang (med trege bilder tok bitene mange bilder). interior3d.js er ikke endret.
+- Regeltester: `test_gaavalg.js` (29 ok), `test_byggeplass3d.js` (17 ok).
+- Prøveskript: scratchpad `natt8/ga/` – kjor.js (Dovre), kjor_rog.js (/rogaland via dev.py), e_reise.js (måling med profil),
+  e_leir.js, e_mobil.js, e_inn.js, e_reis_rog.js, e_vakt.js. Logger: reise-for.log (før), reise-etter*.log.
+
+### Kontrollen
+- `SJEKK_PROFIL=mobil PORT=8923 node pipeline/fliser/sjekk.js` i en kopi (scratchpad natt8/ga/snap.sh), 20. nov 02:25–02:32 UTC, etter
+  fletten med nattfiks: 123 ok, 0 FEIL (383 s). Gå-vakta 2,7 s («Gå inn i huset» → inne, del «ved døra»; leiren lå utenfor utsnittet der).
+
+### Ikke gjort
+- Selve tegningen i førsteperson er fortsatt treg med programvare-grafikk (hvert bilde 1–10 s under last). Rask snuing hjelper litt.
+- Pila står ikke i kompasset. Reisen går fortsatt i rett linje.
+- Byggeplass for byggesettets deler og for ikke-hus (voll, mast …): som før (reiser seg).

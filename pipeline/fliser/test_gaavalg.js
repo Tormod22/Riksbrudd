@@ -22,4 +22,24 @@ ok(G.dørTrekk(I, .4, -.5, 0, -1, .05) === 0, 'inne, går innover: ingen trekk')
 const [a, b] = G.dørVei(I, true); ok(a[1] > 0 && b[1] < 0 && a[0] === 0 && b[0] === 0, '«Gå inn»: først midt foran døra, så innenfor');
 const [c, d] = G.dørVei(I, false); ok(c[1] < 0 && d[1] > 0, '«Gå ut»: motsatt');
 const k = G.kurs(0, 0, 0, 5), k2 = G.kurs(0, 0, -5, 0); ok(Math.abs(k) < 1e-9 && Math.abs(k2 - Math.PI / 2) < 1e-9, 'kursen: nord = 0, vest = π/2 (som Gange: ser mot (−sin a, cos a))');
+// ---------- runde 8 ----------
+// styrespaken: bare rundt spaken og helt nede til venstre (kritikerens drag fra (150, 450) på 390 × 844 skal være «se rundt»)
+ok(!G.erSpak(150, 450, 390, 844) && !G.erSpak(300, 450, 390, 844), 'telefon: drag midt på skjermen (150, 450) er å se rundt, ikke styrespak');
+ok(G.erSpak(90, 724, 390, 844) && G.erSpak(40, 800, 390, 844), 'telefon: på spaken (90, 724) og helt nede til venstre er styrespak');
+ok(!G.erSpak(300, 760, 390, 844), 'telefon: nede til høyre (Skyt/Huk/Hopp) er ikke styrespak');
+// inngangen: normalen peker ut av huset
+{ const P = [[0, 0], [10, 0], [10, 8], [0, 8]], In = G.inngang(P, { x: 5, y: 0, ux: 1, uy: 0, w: 1 }); ok(In.nx === 0 && In.ny === -1, 'inngang: døra i sørveggen peker mot sør (ut av huset)');
+  const In2 = G.inngang(P, { x: 10, y: 4, ux: 0, uy: 1, w: 1 }); ok(In2.nx === 1 && Math.abs(In2.ny) < 1e-9, 'inngang: døra i østveggen peker mot øst');
+  // pila: du ser sør, døra er nord for deg – peker bakover, vises
+  const q = G.pekerMot(In, 5, -20, Math.PI); ok(q.vis && Math.abs(Math.abs(q.rel) - Math.PI) < .05 && q.vender, `pila: døra 19 m rett bak deg peker bakover (rel ${q.rel.toFixed(2)})`);
+  // døra rett foran og vender mot deg innen 28 m: ingen pil («Inngang»-merket står over døra)
+  const q2 = G.pekerMot(In, 5, -12, 0); ok(!q2.vis, 'pila: døra rett foran deg og synlig – ingen pil');
+  // på andre siden av huset: «rundt huset»
+  const q3 = G.pekerMot(In, 5, 20, Math.PI); ok(q3.vis && !q3.vender && /rundt huset/.test(G.pekerTekst(q3)), 'pila: døra på andre siden – «' + G.pekerTekst(q3) + '»');
+  const q4 = G.pekerMot(In, 25, -1, 0); ok(q4.vis && q4.rel < 0, `pila: døra til venstre for deg (rel ${q4.rel.toFixed(2)} < 0)`);
+  ok(!G.pekerMot(In, 5, -3, 0).vis && !G.pekerMot(In, 5, -200, 0).vis, 'pila: ikke nærmere enn ' + R.peker.min + ' m eller lenger enn ' + R.peker.maks + ' m');
+  // punktet utenfor huset nærmest karakteren
+  const [ux, uy] = G.utenfor(P, 5, -100, 5); ok(Math.abs(ux - 5) < 1e-9 && Math.abs(uy + 5) < 1e-9, `utenfor: 5 m sør for sørveggen (${ux}, ${uy})`);
+  const [vx, vy] = G.utenfor(P, 30, 30, 5); ok(Math.hypot(vx - 10, vy - 8) > 4.9 && Math.hypot(vx - 10, vy - 8) < 5.1, 'utenfor: 5 m ut fra hjørnet mot nordøst'); }
+ok(G.reiseSteg(.25, 600) === 2.5 && G.reiseSteg(10, 600) === R.reise.maksPerBilde && G.reiseSteg(-1, 600) === 0, 'reisesteg: sanntid × fart, høyst ' + R.reise.maksPerBilde + ' spillminutter per bilde');
 process.exit(feil ? 1 : 0);

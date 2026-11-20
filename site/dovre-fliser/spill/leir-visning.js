@@ -656,6 +656,31 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const mur = new THREE.BoxGeometry(w, d, h, Math.max(1, Math.round(w / 1.2)), Math.max(1, Math.round(d / 1.2)), Math.max(1, Math.round(h / .5))).toNonIndexed(); mur.translate(cx, cy, -h / 2 + .02); farg(mur, [.47, .46, .43]);
     const kant = new THREE.BoxGeometry(w + .16, d + .16, .14).toNonIndexed(); kant.translate(cx, cy, -.05); farg(kant, [.62, .61, .58]);
     const m = new THREE.Mesh(MODELLER.samle([mur, kant]), mat); m.position.set(b.x - u.cx, b.y - u.cy, G.topp - .05); m.rotation.z = b.ret || 0; return m; }
+  // Er bygget et hus som skal stå som byggeplass i 3D? 'saltak' / 'flatt' (formene i leir2d.js), ellers false
+  function byggeplassHus(b) {
+    const BP = window.Byggeplass, B = LB.BYGG[b.type]; if (!BP || !B || !B.fot || B.linje || B.del) return false;
+    const L2 = window.Leir2d, st = L2 && L2.stil ? L2.stil(b.type, B) : null; if (st && L2.HUS && !L2.HUS.has(st.form)) return false;
+    // (tanken og porten reiser seg som før; små kasser – aggregat, batteri – også)
+    if (st && (st.form === 'tank' || st.form === 'port' || (st.form === 'kasse' && (B.fot[1] - B.fot[0]) * (B.fot[3] - B.fot[2]) < 12))) return false;
+    return st && st.form === 'sal' ? 'saltak' : st ? 'flatt' : 'saltak';
+  }
+  // Leirens ting (telt, bål …) – lages på nytt med leirens nett
+  let leirTing = null;
+  function leirting3d(u, R) {
+    const BP = window.Byggeplass, S = spill(); if (leirTing && BP) { BP.fjernLeir(R, leirTing); leirTing = null; }
+    if (!BP || !S || !S.leir || !L || !window.MODELLER) return;
+    const brakker = L.bygg.filter(b => b.type === 'brakke' && LB.ferdig(b)).length + ((window.Byggesett && Byggesett.rom && (() => { try { return Byggesett.rom().length; } catch (e) { return 0; } })()) || 0);
+    const vann = window.Gange && Gange.vannVed ? Gange.vannVed(u) : null, sx = S.leir.x, sy = S.leir.y;
+    const bygg = L.bygg.filter(b => !LB.BYGG[b.type].linje).map(b => ({ b, f: LB.BYGG[b.type].fot || [-2, 2, -2, 2], c: Math.cos(b.ret || 0), s: Math.sin(b.ret || 0) }));
+    const plan = (L.plan || []).filter(a => !LB.BYGG[a.type].linje).map(b => ({ b, f: LB.BYGG[b.type].fot || [-2, 2, -2, 2], c: Math.cos(b.ret || 0), s: Math.sin(b.ret || 0) }));
+    // opptatt: bygg og skisser (fotavtrykket + tingens radius + 1,5 m til stillaset), flaggstanga, vann og vegen
+    const opptatt = (x, y, r) => { const X = sx + x, Y = sy + y; if (Math.hypot(x, y) < r + 1.5) return true;
+      for (const q of [...bygg, ...plan]) { const dx = X - q.b.x, dy = Y - q.b.y, a = dx * q.c + dy * q.s, d = -dx * q.s + dy * q.c, m = r + 2.5;
+        if (a > q.f[0] - m && a < q.f[1] + m && d > q.f[2] - m && d < q.f[3] + m) return true; }
+      if (vann && vann(X - u.cx, Y - u.cy)) return true;
+      return !!(L.bygg.some(b => LB.BYGG[b.type].veg) && LB.vegAvstand && LB.vegAvstand(L, X, Y, false) < LB.BYGG.veg.bredde / 2 + r); };
+    leirTing = BP.lagLeir(u, R, [sx, sy], BP.antallTelt(brakker), BP.hash(Math.round(sx), Math.round(sy)), opptatt);
+  }
   function lagLeir3d(u, R) {
     for (const m of mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.userData.plan) m.material.dispose(); } mesh = [];
     if (!L || !window.MODELLER) return; const mat = MODELLER.materiale();
@@ -668,9 +693,16 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       m.position.set(x, y, z - .05); m.rotation.z = b.ret || 0;
       if (G.forskjell > .35 && !LB.BYGG[b.type].del) { const gm = grunnmur(b, G, mat, u); if (gm) { gm.userData.id = b.id; gm.userData.grunnmur = true; R.scene.add(gm); mesh.push(gm); } }
       // under bygging: reiser seg etter framdriften (minst en grunnmur); oppgradert: litt større
-      m.scale.z = LB.ferdig(b) ? 1 : Math.max(.08, LB.framdrift(b)); const k = 1 + ((b.nivå || 1) - 1) * .08; m.scale.x = m.scale.y = k; m.scale.z *= k;
+      // (runde 8, kritikken: «den uferdige brakka er en svevende, mørk, flat plate») – hus står som byggeplass i trinn (spill/byggeplass3d.js:
+      // stikker, grunnmur, reisverk, tak, kledning, stillas, materialer), andre bygg reiser seg som før
+      const k = 1 + ((b.nivå || 1) - 1) * .08, plass = !LB.ferdig(b) && byggeplassHus(b);
+      if (plass) { g.computeBoundingBox(); const H = g.boundingBox.max.z, p = LB.framdrift(b); g.dispose();
+        m.geometry = window.Byggeplass.byggeplassGeo(LB.BYGG[b.type].fot.map(v => v * k), H * k, p, plass === 'flatt'); m.userData.byggeplass = window.Byggeplass.nøkkel(p); }
+      else { m.scale.z = LB.ferdig(b) ? 1 : Math.max(.08, LB.framdrift(b)); m.scale.x = m.scale.y = k; m.scale.z *= k; }
       m.userData.id = b.id; R.scene.add(m); mesh.push(m);
     }
+    // (runde 8, kritikken: «leiren i 3D er et tomt jorde ved start») telt, bål, kasser, fat, ved og presenning rundt flaggstanga
+    leirting3d(u, R);
     // planen: gjennomsiktige blå skisser (gjerdet som stykker)
     if (!(L.plan || []).length) return; const pm = new THREE.MeshBasicMaterial({ color: 0x6fa8dc, transparent: true, opacity: .32, depthWrite: false });
     for (const a of L.plan) {
@@ -722,7 +754,12 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // når et bygg settes opp, flyttes eller blir ferdig: bare leirens nett lages på nytt (og trærne der ryddes)
   function bygg3dPåNytt(nytt) { const R = r3(); if (!R || !R.ut || !window.THREE) return; lagLeir3d(R.ut, R); if (nytt) ryddTrær(R); }
   // byggene vokser mens de bygges (oppdateres hvert sekund)
-  setInterval(() => { const R = r3(); if (!R || !L) return; for (const m of mesh) { const b = L.bygg.find(q => q.id === m.userData.id); if (b && b.igjen > 0 && !LB.BYGG[b.type].veg) m.scale.z = Math.max(.08, LB.framdrift(b)); } }, 1000);
+  // (runde 8) byggeplassene lages på nytt når de er kommet et trinn (5 %) lenger
+  setInterval(() => { const R = r3(); if (!R || !L) return; for (const m of mesh) { const b = L.bygg.find(q => q.id === m.userData.id); if (!b || !(b.igjen > 0) || LB.BYGG[b.type].veg || m.userData.grunnmur) continue;
+    if (m.userData.byggeplass === undefined) { m.scale.z = Math.max(.08, LB.framdrift(b)) * (1 + ((b.nivå || 1) - 1) * .08); continue; }
+    const p = LB.framdrift(b), n = window.Byggeplass.nøkkel(p); if (n === m.userData.byggeplass) continue;
+    const k = 1 + ((b.nivå || 1) - 1) * .08, g0 = modell(b); if (!g0) continue; g0.computeBoundingBox(); const H = g0.boundingBox.max.z; g0.dispose();
+    m.geometry.dispose(); m.geometry = window.Byggeplass.byggeplassGeo(LB.BYGG[b.type].fot.map(v => v * k), H * k, p, byggeplassHus(b) === 'flatt'); m.userData.byggeplass = n; } }, 1000);
 
   // ---------- start ----------
   function start() {
