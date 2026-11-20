@@ -133,9 +133,10 @@ body.kort.tlfligg.mkomved #mkom button::before{ width:21px; height:21px; } body.
 html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tropppanel, #karakterark, #sekk, #krig, #panel, #opplaering, #varsler, #alarm, #morgenkort, #hendelse, #samfunnkort, #byggvalg){ touch-action:pan-y; }
 `;
   document.head.appendChild(css);
-  // RUNDE 12: iPhone (Safari) zoomer siden med to fingre uansett meta-taggen – gesturestart stoppes (kartet bruker pekerhendelser, ikke denne)
+  // RUNDE 12: iPhone (Safari) zoomer siden med to fingre uansett meta-taggen – gesturestart stoppes (kartet bruker pekerhendelser, ikke denne).
+  // To fingre som beveger seg utenfor kartet stoppes også – men ikke når du går (styrespaken og blikket brukes med to fingre samtidig).
   document.addEventListener('gesturestart', e => { e.preventDefault(); }, { passive: false });
-  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1 && !(e.target && e.target.closest && e.target.closest('canvas'))) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1 && !document.body.classList.contains('gaar') && !(e.target && e.target.closest && e.target.closest('canvas'))) e.preventDefault(); }, { passive: false });
 
   // paneler som aldri skal regnes som «dekker raden nederst»
   const IKKE = new Set(['mkom', 'kommando', 'opplaering', 'logg', 'nhud', 'kontrollrom', 'oppstart', 'feil', 'kilde', 'skala', 'nordpil', 'minikart', 'kompass']);
