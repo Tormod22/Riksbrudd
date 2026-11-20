@@ -544,8 +544,14 @@ kjerner – sju hjelpere): pausene er fulle av tid der tråden bare ventet på e
   rom og hver 8. plass i rutenettene; `plan()` kjører den ferdig), og i `prøv()` står de billige sjekkene (døråpninger, gangveier,
   andre møbler) før hjørnene mot omrisset, og `nærKant(P, x, y, g)` stopper ved første kant (= `avstKant < g`). Ingenting endres før
   møbelet settes, så svaret er det samme. Prøvd i Node mot den gamle fila: 1008 bygg i alle klasser og fire former, 0 ulike planer,
-  2× raskere (4725 -> 2450 ms), lengste steg 30 ms. Ny test: `node pipeline/fliser/test_interior_biter.js` (planG = plan for 324 bygg,
-  lagerhallen gir yield i rutenettet, nærKant = avstKant < g for 20 000 punkter, selvtest).
+  2× raskere (4725 -> 2450 ms), lengste steg 30 ms. Etter telefonmålingen (et stort bygg brukte 155 ms på romdelingen før første yield):
+  romdelingen `del` er også en generator (yield før hver skillevegg og for hvert rom som måles), og store omriss (≥ 12 hjørner) får et
+  RUTENETT (`ruter(P)`, høyst ca. 900 ruter, lagret per omriss i en WeakMap): en rute er «sikkert inne»/«sikkert ute» når midten ligger
+  lenger fra alle kanter enn rutens halve diagonal + 0,15 m, og da svarer `inniR`/`nærKantR` uten å gå gjennom kantene (ellers som før).
+  `prøv` bruker dem, uten mellomliggende tabeller (`TOM`, `HJØRNER`, `PLASSER`, `SIDER` – mindre søppeltømming). Prøvd igjen mot den gamle
+  fila: 1008 bygg, 0 ulike, 2,3–2,8× raskere. Ny test: `node pipeline/fliser/test_interior_biter.js` (planG = plan for 324 bygg,
+  lagerhallen gir yield i rutenettet, nærKant = avstKant < g for 20 000 punkter, inniR/nærKantR = inni/nærKant for 180 000 punkter i 30
+  store omriss også rett ved kantene, selvtest).
 - LIKT: seks prøvebygg (hus, skole, lager, butikk, låve, kontor – 1332 til 25 480 trekanter) bygget med den gamle fila og den nye, i ett
   strekk og steg for steg: alle nettene like verdi for verdi (posisjon, farge, uv, normaler, grupper, plass og dreiing – 3,0 mill. verdier,
   0 ulike). Skript: scratchpad `natt7/lys/prov.js`.
@@ -575,3 +581,42 @@ Ikke målt hver for seg (lut-tingene finnes bare med et startet spill og møbler
 - Interiøret i tall (etter): 48 bygg på 30 s, 262 biter, 11 kom tilbake fra hvile; hvert bygg 3–30 biter på 6 ms. «Lengste bit» (STAT.lengst)
   er 140–317 ms under last fordi tråden blir stående uten kjerne midt i en bit – CPU-profilen viser høyst 8 ms interiør i én oppgave.
 - Mål nådd for interiøret på PC: ingen lang oppgave der interiøret er hoveddelen (før: opptil 574 ms bygg i én oppgave under last).
+
+### Målt – telefonstørrelse (390 × 844, samme tur, `mobil-før/etter.log`, last ca. 22, nice −10)
+| | før | etter (før romdelingen i biter og rutenettet) |
+|---|---|---|
+| interiøret i lange oppgaver | 1835 ms, lengste oppgave 792 ms (bygg 752) | ca. 325 ms; én oppgave på 157 ms (romdelingen i planG for ett stort bygg – rettet etterpå) |
+| gresset (gress3d) i lange oppgaver | 790 ms (lengste 361 ms i én oppgave) | ikke blant de lange |
+| lange oppgaver ≥ 50 ms (antall, sum, lengste) | 39, 5,7 s, 792 ms | 23, 2,3 s, 255 ms |
+| pauser > 50 ms (antall, sum, lengste) | 83, 13,5 s, 890 ms | 88, 12,1 s, 630 ms (mest tråden som ventet på en kjerne) |
+Programvare-grafikk og tegningen slått av: det er pausene fra JavaScript som er målt, ikke telefonens grafikkort. På telefon hviler
+høyst tre interiører, og gresset har 5000 tuster.
+
+### Det som står igjen når du går (de største i profilen etter endringene, ikke mine filer – ikke endret)
+- `vegetasjon3d.js` `oppdaterVekst` → `fri` → `leirFot`/`iLeir`/`nærHus` (blomstene rundt deg): opptil 459 ms i én oppgave under last.
+- `fjellmark3d.js` `fordel` (småstein og lyng rundt deg), 100–330 ms samlet.
+- `liv3d.js` `flytt` (trafikken) og `kyst3d.js` `gyng` (båtene, setFromEuler per båt per bilde): 300–350 ms samlet på 30 s under last.
+- Søppeltømming 100–250 ms av og til. Interiøret lager fortsatt mange små tabeller per hjørne (`kasse`/`fk`/`tri`); det ble ikke skrevet om
+  (risiko for et annet utseende) – hvilende interiører betyr at det skjer sjeldnere.
+- `tegnInfra3d` → `mPer3` (hoyde3d per infrastrukturobjekt hvert bilde): 494 ms i én oppgave da infrastrukturen kom inn i Bergen.
+- lave3d.js (låvens innhold, natur-pakka) bygger alle låver i ett strekk hver 400 ms – ikke endret (ingen låver i Bergen sentrum).
+- Ikke gjort i denne runden: fjern3d `bygg` (er alt i biter fra runde 4) og infra3d med store bruer (flyr/kjører) – ikke målt på nytt.
+
+### Vakt (pipeline/fliser/vakter/lys.js, runde 7-delen – bare med 3D på)
+- Prøvehus 10 × 8 m: generatoren i ett strekk og steg for steg gir samme rom, møbler, trekanter, nett og hvert hjørne (selvtest: et
+  flyttet hjørne blir sett); den ekte veien (oppdater uten tving, `Interior3d.drivBit` som bildene gjør) bygger huset i flere biter
+  (`stat().sist.biter > 3`) og likt; går du 80 m unna, hviler det, og når du snur, kommer samme geometri tilbake (`gjenbrukt`);
+  `bygOm` virker som før (bygger straks, glemmer de hvilende). Alt ryddes (`Interior3d.glem`, hindringene, Gange av/på som før).
+- Gresset: `gress3d` i små biter (0,5 ms) og i ett strekk gir like tuster (matriser og farger), flere biter, selvtest med en flyttet tust.
+
+### API (spill/interior3d.js)
+`Interior3d.stat()` (bygget, biter, lengst, gjenbrukt, kastet, steg = lengste steg per navn, sist), `nullstillStat()`, `jobb()`, `BIT`
+(ms, hvile, hvileMobil, foran – Claudes forslag), `drivBit(ms)`, `prøvBygg(P, biter)` → `{ o, biter }`, `kast(o)`, `glem(P)`.
+Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `sjekk()`. interior.js: `planG`, `nærKant`, `inniR`, `nærKantR`.
+
+### Fellesfiler endret i runde 7
+- `site/dovre-fliser/index.html`: bare `gress3d` (gressG/gressBit; nettet starter med count 0) og versjonsmerkene (versjon.py).
+- `site/dovre-fliser/spill/interior.js` (regelfila for interiøret): planG/del/rutenett som generatorer, prøv med billige sjekker først og
+  uten mellomtabeller, nærKant, ruter/inniR/nærKantR. Samme planer (prøvd mot den gamle fila for 1008 bygg).
+- Mine: `spill/interior3d.js`, `spill/lut-visning.js` (bare 3D-tingene: mal/tingMal/våpenMal, 4 ms per runde), `pipeline/fliser/vakter/lys.js`,
+  `pipeline/fliser/test_interior_biter.js` (ny), `docs/natt/lys-hjelp.json` («Jevnt når du går inn i hus»).

@@ -137,7 +137,7 @@ module.exports = {
         if (R && R.ut && R.hindre && typeof på3d !== 'undefined' && på3d && !R.bygger && window.Interior3d && Interior3d.prøvBygg && window.Gange) {
           const u = R.ut, x0 = 40, y0 = 60, P = [[x0, y0], [x0 + 10, y0], [x0 + 10, y0 + 8], [x0, y0 + 8]]; P.bygg = { i: 4747, t: 0, h: 6, kl: 'hus' };
           P.dør = { x: x0 + 5, y: y0, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(u.cx + x0 + 5, u.cy + y0 + 4, u) - u.h0) * R.EX };
-          const o = { P }, nøkler = [], gikk = !!R.fot, bane = { ...R.bane }, kr = gikk && Gange.kropp() ? { ...Gange.kropp() } : null, r7 = {};
+          const o = { P }, nøkler = [], gikk = !!R.fot, bane = { ...R.bane }, kr = gikk && Gange.kropp() ? { ...Gange.kropp() } : null, r7 = {}, bitMs = Interior3d.BIT.ms;
           const tall = q => ({ rom: q.plan.rom.length, møbler: q.plan.møbler.length, trekanter: q.trekanter, nett: q.nett.length, a: q.nett[0].geometry.attributes.position.array });
           const lik = (A, B) => { if (!A || !B || A.length !== B.length) return false; for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) return false; return true; };
           const vent = ms => new Promise(r => setTimeout(r, ms));
@@ -154,9 +154,10 @@ module.exports = {
             if (!gikk) Gange.start();
             const sett = (x, y) => { R.bane.x = x; R.bane.y = y; const k = Gange.kropp(); if (k) { k.x = x; k.y = y; k.vx = k.vy = 0; } if (R.fot) { R.fot.a = 0; R.fot.pitch = 0; } };
             for (let q = 0; q < 400 && Interior3d.jobb(); q++) Interior3d.drivBit(20);
-            sett(x0 + 5, y0 - 5); Interior3d.nullstillStat(); await vent(280);
+            // (små biter, så delingen synes også på en rask maskin – settes tilbake i finally)
+            Interior3d.BIT.ms = .5; sett(x0 + 5, y0 - 5); Interior3d.nullstillStat(); await vent(280);
             if (!P.inne && !Interior3d.jobb()) Interior3d.oppdater(false);
-            let n = 0; while (Interior3d.jobb() && n < 4000) { Interior3d.drivBit(4); n++; }
+            let n = 0; while (Interior3d.jobb() && n < 20000) { Interior3d.drivBit(.5); n++; }
             const st = Interior3d.stat(), oo = Interior3d.aktive().find(q => q.plan === P.inne); r7.biter = st.sist ? st.sist.biter : 0; r7.lengst = st.lengst; r7.sist = st.sist;
             ok(!!oo, 'prøvehuset fikk ikke interiør på den ekte veien');
             ok(st.sist && st.sist.biter > 3, 'interiøret ble ikke bygget i biter: ' + JSON.stringify(st.sist));
@@ -168,7 +169,7 @@ module.exports = {
               ok(Interior3d.bygOm(4747) === true && !!P.inne && Interior3d.stat().hvile === 0, 'bygOm virket ikke som før'); }
             Interior3d.kast(a.o);
           } finally {
-            Interior3d.glem(P); for (const k of nøkler) { const L = R.hindre.get(k), q = L ? L.indexOf(o) : -1; if (q >= 0) L.splice(q, 1); }
+            Interior3d.BIT.ms = bitMs; Interior3d.glem(P); for (const k of nøkler) { const L = R.hindre.get(k), q = L ? L.indexOf(o) : -1; if (q >= 0) L.splice(q, 1); }
             if (!gikk) Gange.stopp(); else { Object.assign(R.bane, bane); const k = Gange.kropp(); if (k && kr) Object.assign(k, kr); }
             Interior3d.oppdater(true); Interior3d.nullstillStat();
           }
@@ -178,7 +179,8 @@ module.exports = {
       // RUNDE 7: gresset rundt deg settes i biter (gressG i index.html) – like tuster i små biter og i ett strekk
       try {
         const R = typeof R3 !== 'undefined' && R3;
-        if (R && R.ut && R.ut.bunn && typeof på3d !== 'undefined' && på3d && !R.bygger && typeof gressG === 'function' && window.Gange && (!window.KVAL || KVAL.p.gress > 0)) {
+        // (ingen await her: et utsnitt som bygges imens, kan ikke byttes inn midt i prøven – derfor ikke krav om !R.bygger)
+        if (R && R.ut && R.ut.bunn && typeof på3d !== 'undefined' && på3d && typeof gressG === 'function' && window.Gange && (!window.KVAL || KVAL.p.gress > 0)) {
           const gikk = !!R.fot; if (!gikk) Gange.start();
           try {
             R.gressSenter = null; R.gressJobb = null; gress3d(); let biter = 1; while (R.gressJobb && biter < 20000) { gressBit(R, .5); biter++; }
@@ -188,13 +190,16 @@ module.exports = {
             ok(A.n === B.n && lik(A.M, B.M) && lik(A.C, B.C), `gresset i biter er ulikt gresset i ett strekk (${A.n} / ${B.n} tuster)`);
             if (A.n > 0) { ok(biter > 2, `gresset ble ikke satt i biter (${biter})`); const K = A.M.slice(); K[12] += .5; ok(!lik(K, B.M), 'selvtest: en flyttet tust ble ikke sett'); }
             ut.gress = { tuster: A.n, biter };
+            // tilbake til vanlig gress: neste bilde setter det på nytt der du står
+            R.gressSenter = null; R.gressJobb = null;
           } finally { if (!gikk) Gange.stopp(); }
         }
+        else ut.gressUt = !R || !R.ut ? 'uten 3D' : !R.ut.bunn ? 'uten bunnkart' : window.KVAL && !(KVAL.p.gress > 0) ? 'grafikk uten gress' : 'ikke prøvd';
       } catch (e) { ut.feil.push('unntak (gresset): ' + (e && e.message || e)); }
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };
