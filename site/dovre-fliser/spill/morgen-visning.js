@@ -145,7 +145,7 @@
 #morgenkort .mstor{ border:1px solid #8a6a2a; background:rgba(80,60,20,.25); padding:8px 10px; margin:8px 0 2px; }
 #morgenkort .mstor p{ margin:0 0 4px; line-height:1.35; }
 body.kort #morgenkort{ top:calc(var(--topp,44px) + 6px); max-height:calc(100vh - var(--topp,44px) - 76px - env(safe-area-inset-bottom,0px)); padding:10px 12px; }
-body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort #morgenkort button{ min-height:42px; padding:5px 10px; }`;
+body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.på) #logg{ visibility:hidden; } body.kort #morgenkort button{ min-height:42px; padding:5px 10px; }`;
   document.head.appendChild(css);
   const kort = el('div', { id: 'morgenkort', role: 'dialog', 'aria-label': 'Morgenmøtet' }); document.body.appendChild(kort);
   let vistNøkkel = '';
