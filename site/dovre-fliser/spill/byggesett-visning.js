@@ -161,7 +161,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function kjøpManglende(mat) { const l = L(); for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil((v - (l.lager[k] || 0)) * 10) / 10; if (m > 0) { const r = LB.kjøpMateriale(l, k, m, OppstartSpill.betal); if (r.feil) { logg(r.feil); return false; } } } return true; }
   function bekreft(kjøp) {
     const l = L(), o = opphav(); if (!l || V.fane === 'riv') return 0; const ok = forslag.filter(q => !q.feil); if (!ok.length) return 0;
+    // (runde 8) det materialene kostet, står også i loggen (før sa den bare arbeidet, mens knappen sa prisen i alt)
+    const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
     if (kjøp && !kjøpManglende(sum().mat)) { oppdater(); return 0; }
+    const kjøpt = kjøp ? Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)) : 0;
     let n = 0, pris = 0, stopp = null;
     for (const q of ok) {
       if (q.bytt) { const r = LB.riv(l, q.bytt); if (!r.feil) OppstartSpill.gi(r.penger); }
@@ -169,7 +172,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       if (r.feil) { stopp = r.feil; break; }
       r.bygg.bs = { i: q.d.i, j: q.d.j, a: q.d.a, n: q.d.n, ...(q.d.r !== undefined ? { r: q.d.r } : {}) }; n++; pris += r.bygg.pris;
     }
-    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
+    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${kjøpt ? `${LB.kroner(pris + kjøpt)} i alt (arbeid ${LB.kroner(pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
     else if (stopp) logg(stopp);
     ferdigEndret(); if (V.fane === 'hus' || !stopp) { A = null; B = null; forslag = []; } oppdater(); return n;
   }

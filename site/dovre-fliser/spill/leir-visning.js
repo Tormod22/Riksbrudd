@@ -307,6 +307,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function visBanner(tekst, kan, ekstra) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst)); if (ekstra) banner.append(el('small', {}, ekstra));
     const p = plassering;
+    // (runde 8) hellingen i kartet: hva fargene betyr for bygget du holder (bare i 2D, og bare nær nok til at de vises)
+    if (p && p.type && !p.mal && !LB.BYGG[p.type].linje && window.HellingVis && (typeof på3d === 'undefined' || !på3d))
+      banner.append(el('small', { klasse: 'hellingtekst' }, kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.'));
     if (p && p.type && LB.BYGG[p.type].linje) {
       const a = knapp('Angre punkt', () => { p.punkter.pop(); prøv(); }); a.disabled = !p.punkter.length;
       const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;
@@ -321,7 +324,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     else {
       // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
       if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
-      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { if (kjøpManglende(p.mat)) bekreft(); }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
+      // (runde 8, kritikken: loggen sa «Brakke bestilt: 4 mill. kr» mens knappen sa «5 mill. kr i alt») – det materialene faktisk kostet, huskes til loggen
+      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
+        if (kjøpManglende(p.mat)) { p.kjøpt = Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)); bekreft(); } }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
     banner.append(knapp('Avbryt', avbryt));
@@ -382,7 +387,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
       : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? '' : ` i alt (arbeid ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
-    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
+    // (runde 8) skrå grunn: hvor høy grunnmuren blir (samme regel som hellingskartet: over halve grensa = gult)
+    const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;
+    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, mur, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
     visBanner(tekst, p.feil ? false : (harMat || p.plan) ? true : 'mat', ekstra); skisse3d(); skitten = true;
   }
   function trykk(X, Y) {
@@ -420,7 +427,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       logg(`${LB.BYGG[p.type].navn} flyttes: ${LB.kroner(r.pris)}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); }
     else { const r = LB.bygg(L, sp(p), OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
       const kø = LB.jobber(L).length > LB.byggelag(L);
-      logg(`${LB.BYGG[p.type].navn} bestilt: ${LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
+      const kjøpt = p.kjøpt > 0 ? p.kjøpt : 0; p.kjøpt = 0;
+      logg(`${LB.BYGG[p.type].navn} bestilt: ${kjøpt ? `${LB.kroner(r.bygg.pris + kjøpt)} i alt (arbeid ${LB.kroner(r.bygg.pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
     ferdigPlassert(p);
   }
   // Etter et bygg eller en skisse: med «Fortsett» står samme bygg klart (samme retning), ellers er plasseringen ferdig

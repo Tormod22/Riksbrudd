@@ -12,13 +12,14 @@
   'use strict';
   const LB = typeof module !== 'undefined' && module.exports ? require('./leir') : rot.Leir;
   // Alle tallene er Claudes forslag:
-  // nær: meter rundt leirpunktet der de første byggene må få plass (godt innenfor de 300 m uten reisetid i Leir.REGLER.reise.fri);
+  // nær: meter rundt leirpunktet der de første byggene må få plass (flagget står i leiren, og alt er godt innenfor de 300 m uten
+  // reisetid i Leir.REGLER.reise.fri);
   // søk: hvor langt unna vi leter etter et flatere eller tørt sted; celle: meter mellom prøvepunktene (høydedataene har 8 m);
   // første: byggene som må få plass (opplæringen ber om brakke, tank, aggregat og vakttårn først), med mellomrom meter mellom dem;
   // flatAndel: høydeforskjell under flatAndel × grensa = «flatt» (grønt), opp til grensa = «skrått» (gult, grunnmur), over = rødt;
   // kartCelle/kartRadius: rutene i hellingskartet (meter) og hvor langt ut fra midten det regnes; maksForsøk: hvor mange steder
   // finnPlass prøver hele leiren på før den gir opp (holder søket raskt).
-  const REGLER = { nær: 150, søk: 2000, celle: 8, første: ['brakke', 'drivstofftank', 'vakttårn', 'aggregat'], mellomrom: 2,
+  const REGLER = { nær: 80, søk: 2000, celle: 8, første: ['brakke', 'drivstofftank', 'vakttårn', 'aggregat'], mellomrom: 2,
     flatAndel: .5, kartCelle: 4, kartRadius: 320, maksForsøk: 600 };
   const FLATT = 0, SKRÅTT = 1, BRATT = 2, UKJENT = 3, VANN = 4;
 

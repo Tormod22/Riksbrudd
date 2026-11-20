@@ -48,15 +48,15 @@ const tørt = () => true;
   ok(lov === 4, `alle fire kan bygges med Leir.bygg etter hverandre (${lov})`);
   const ri = H.førsteBygg(li, tørt, 400, 0);
   ok(!ri.ok && ri.mangler === 'Brakke' && /Bratt – ingen flat plass for en brakke/.test(H.brattTekst(ri)), `midt i lia: ${H.brattTekst(ri)}`);
-  // nær flata (100 m øst for kanten): brakka får plass innen 150 m
-  ok(H.førsteBygg(li, tørt, 100, 0).ok, '100 m inn i lia: flata innen 150 m holder');
+  // nær flata (60 m øst for kanten): brakka får plass innen 80 m, men ikke 120 m inn i lia
+  ok(H.førsteBygg(li, tørt, 60, 0).ok && !H.førsteBygg(li, tørt, 120, 0).ok, '60 m inn i lia: flata innen 80 m holder; 120 m inn: nei');
   // en smal hylle: brakka får plass, dieseltanken ikke
   const hylle = (x, y) => (Math.abs(x) < 5 && Math.abs(y) < 8 ? 50 : 50 + 3 * Math.max(Math.abs(x) - 5, Math.abs(y) - 8, 0));
   const hy = H.førsteBygg(hylle, tørt, 0, 0);
   ok(!hy.ok && hy.plasser.length === 1 && /For lite flat plass/.test(H.brattTekst(hy)), `smal hylle: ${H.brattTekst(hy)}`);
   // vann: et punkt i elva er ikke tørt, men land like ved gir plass
   const elv = x => Math.abs(x) > 20;
-  ok(H.førsteBygg(flatt, elv, 0, 0).ok, 'i elva: tørt land innen 150 m gir plass');
+  ok(H.førsteBygg(flatt, elv, 0, 0).ok, 'i elva: tørt land innen 80 m gir plass');
 }
 
 // 4. forslaget: nærmeste sted der brakka selv står flatt nok (leirens midte), og de andre får plass rundt
@@ -71,7 +71,7 @@ const tørt = () => true;
   ok(H.finnPlass((x) => 2 * x, tørt, 0, 0, { søk: 300 }) === null, 'bratt overalt: ingen forslag');
   // vann: nærmeste tørre sted
   const f3 = H.finnPlass(flatt, x => x > 60, 0, 0);
-  ok(f3 && f3.retning === 'øst' && f3.m < 150, `fra vann: ${f3 && Math.round(f3.m)} m ${f3 && f3.retning}`);
+  ok(f3 && f3.retning === 'øst' && f3.m < 100, `fra vann: ${f3 && Math.round(f3.m)} m ${f3 && f3.retning}`);
   // raskt nok for et vindu på 4 km
   const t0 = Date.now(); H.finnPlass(li, tørt, 2100, 0); const ms = Date.now() - t0;
   ok(ms < 1500, `søk fra 2 km inn i lia: ${ms} ms`);
