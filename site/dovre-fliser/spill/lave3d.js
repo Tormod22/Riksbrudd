@@ -207,9 +207,10 @@
     const u = R.ut; if (!u || !window.Interior3d || !window.Interior) return;
     if (forU !== u) { tøm(R); forU = u; }
     const nå = performance.now(); if (nå - sist < 400) return; sist = nå;
-    const aktive = new Set();
+    // (20. nov natt, hakk – pakka «lys»: før ble alle låvene laget i samme runde) høyst én låve per runde (hver 400 ms)
+    const aktive = new Set(); let bygget = false;
     for (const o of Interior3d.aktive()) { const pl = o.plan; if (!slag(pl) || pl.gulv === undefined) continue; aktive.add(pl);
-      if (laget.has(pl)) continue;
+      if (laget.has(pl) || bygget) continue; bygget = true;
       const p = plasser(pl, (x, y) => Interior.blokkert(pl, x, y), (x, y) => Interior.inni(pl.P, x, y)); if (!p) continue;
       // gråtassen stopper deg som møblene (en ny type – lut.js kjenner den ikke, så den blir ingen beholder)
       if (p.traktor && !pl.møbler.some(m => m.type === 'gråtass')) { const T = p.traktor; pl.møbler.push({ type: 'gråtass', x: T.x, y: T.y, a: T.a, b: T.d, d: T.b, h: 1.6, sperrer: true }); }
