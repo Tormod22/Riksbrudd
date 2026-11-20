@@ -53,16 +53,20 @@ module.exports = {
         kn('slett').click(); kn('ja-slett').click(); krev(!M.plass('2'), '«Ja, slett» slettet ikke');
         d.status = document.querySelector('#lagremeny .status').textContent; krev(/Lagret \d\d:\d\d/.test(d.status), 'panelet viser ikke «Lagret 12:04»: ' + d.status);
         M.lukk();
-        const mk = document.getElementById('lagreknapp'); d.knapp = mk && mk.textContent; krev(mk && /^Lagre og last/.test(mk.textContent) && mk.closest('#lagmeny'), '«Lagre og last» mangler i ☰');
+        const mk = document.getElementById('lagreknapp'); d.knapp = mk && [...mk.children].map(e => e.textContent).join(' · '); krev(mk && /^Lagre og last/.test(mk.textContent) && mk.closest('#lagmeny'), '«Lagre og last» mangler i ☰');
         krev(document.querySelector('[data-k="lagre"]'), '«Lagre» mangler i kommandolinja');
       } catch (e) { d.feil.push('kastet: ' + e.message); }
       finally {
         // sett alt tilbake: lagringen slik den var, låsen, lagringen av verden og panelet
         LS.simuler(null); LS.lås(false); if (!varÅpen) M.lukk();
         if (window.LagringSpill) { if (varAktiv) LagringSpill.av(false); else if (LagringSpill.aktiv()) LagringSpill.av(true); }
-        for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /^riksbrudd-/.test(k) && !(k in før)) LS.rå.del(k); }
+        // (nøklene samles først: rekkefølgen til localStorage.key kan endres når noe slettes)
+        const nå = []; for (let i = 0; i < localStorage.length; i++) nå.push(localStorage.key(i));
+        for (const k of nå) if (k && /^riksbrudd-/.test(k) && !(k in før)) LS.rå.del(k);
         for (const [k, v] of Object.entries(før)) LS.rå.set(k, v);
-        let likt = true; for (const [k, v] of Object.entries(før)) if (LS.rå.get(k) !== v) likt = false; krev(likt, 'lagringen ble ikke satt tilbake');
+        let likt = true; for (const [k, v] of Object.entries(før)) if (LS.rå.get(k) !== v) likt = false;
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^riksbrudd-/.test(k) && !(k in før)) likt = false; }
+        krev(likt, 'lagringen ble ikke satt tilbake');
       }
       return d;
     });

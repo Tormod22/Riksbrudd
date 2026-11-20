@@ -92,6 +92,8 @@ En fil fra en annen side avvises med «Spillet er lagret på Norge (/norge). Åp
 - ☰ før/etter, PC og telefon: `hamburger-for-pc.png`, `hamburger-for-mobil.png`, `hamburger-etter-pc.png`, `hamburger-etter-mobil.png`
   (knappen i overskriften; utsnitt `hode-pc.png`, `hode-mobil.png`).
 - Vakten på PC og telefon (under 1 s), to ganger etter hverandre; vaktene «start», «spillform» og «ui» er grønne med endringene.
+- Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8914 node pipeline/fliser/sjekk.js`): «Alt i orden», 120 ok, 0 FEIL (778 s),
+  med vakten «lagre og last (lagring)» (0,3 s) og ☰-vakten (knappen i overskriften telles ikke som løs knapp).
 
 ### IKKE gjort / begrensninger
 - Plassene ligger i samme localStorage som spillet (5–10 MB for hele riksbrudd.vercel.app, alle tre sidene). Et spill er ca. 20 kB
