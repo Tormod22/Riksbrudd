@@ -550,7 +550,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
         const t = B.navn + ((b.nivå || 1) > 1 ? ` ${b.nivå}` : '') + (i >= 0 ? (kø ? ' (kø)' : J[i].reise > 0 ? ' (laget på vei)' : ` ${Math.round(LB.framdrift(b) * 100)} %`) : '') + (b.hp < 1 ? ` · ${Math.round(b.hp * 100)} % helt` : '');
         const ty = window.Etikett ? Etikett.tekst(g, t, sx(b.x), sy(b.y) + 4, 1) : sy(b.y) + 4; g.strokeText(t, sx(b.x), ty); g.fillText(t, sx(b.x), ty); }
       g.restore(); };
-    // skyggene først, så ingen skygge faller oppå et nabotak
+    // skyggene først, så ingen skygge faller oppå et nabotak (slitt jord og stier tegner leir2d.js under alt annet)
     if (R2) for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) Leir2d.skygge(g, b, sx, sy, m);
     for (const b of L.bygg) if (b.id !== (plassering && plassering.flytt) && !LB.BYGG[b.type].del) tegn1(b, false);
     // planen: blå stiplede omriss med navnet

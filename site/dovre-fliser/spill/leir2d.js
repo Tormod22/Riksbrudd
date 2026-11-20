@@ -350,6 +350,26 @@
       L = { k, c: lerret, ax, ay, w, h }; LAGER.set(b.id, L); }
     const x = Math.round((cx + L.ax) * D) / D, y = Math.round((cy + L.ay) * D) / D;
     g.save(); nullstill(g); g.drawImage(L.c, x, y, L.c.width / D, L.c.height / D); g.restore(); return true; }
+  // TRÅKK (leiren skal se brukt ut, ikke som bygg på urørt mark): en slitt plass rundt leirens midte (omtrent halvveis ut til byggene,
+  // 8–26 m), slitt jord rundt hvert ferdige bygg og en sti fra døra (forsiden, +x) inn mot plassen når stien ikke går gjennom et annet bygg.
+  // Fast form per leir (hash av byggets nummer), bare under «middels», i nattfargen.
+  function tråkk(g, bygg, leir, sx, sy, m) { if (!leir || m >= REGLER.middels || !rot.Leir) return; g.save(); nullstill(g);
+    const ferdige = bygg.filter(b => { const B = Leir.BYGG[b.type]; return B && !B.linje && !B.del && B.fot && !(b.igjen > 0) && !(b.hp <= 0); });
+    const inni = (b, x, y) => { const f = Leir.BYGG[b.type].fot, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), dx = x - b.x, dy = y - b.y, u = dx * c + dy * s, v = -dx * s + dy * c; return u > f[0] - .5 && u < f[1] + .5 && v > f[2] - .5 && v < f[3] + .5; };
+    let R = 0; for (const b of ferdige) { const d = Math.hypot(b.x - leir.x, b.y - leir.y); if (d < 120) R = Math.max(R, d); } R = Math.max(8, Math.min(26, R * .5));
+    const jord = farge('#7a6a4e', 1, .3), jord2 = farge('#6f5f45', 1, .22), rx = sx(leir.x), ry = sy(leir.y);
+    // plassen: en ujevn ring av punkter (fast per leir) fylt to ganger for myk kant
+    for (const [k, f] of [[1.15, jord2], [.9, jord]]) { g.fillStyle = f; g.beginPath();
+      for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283, r = R * k * (.8 + .4 * hash(Math.round(leir.x) + i, Math.round(leir.y))) / m, x = rx + Math.cos(a) * r, y = ry + Math.sin(a) * r * .85; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.closePath(); g.fill(); }
+    for (const b of ferdige) { const f = Leir.BYGG[b.type].fot, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), w = (f[1] - f[0]) / 2 + 1.6, h = (f[3] - f[2]) / 2 + 1.6, mx = (f[0] + f[1]) / 2, my = (f[2] + f[3]) / 2;
+      g.fillStyle = jord2; g.beginPath(); g.ellipse(sx(b.x + mx * c - my * s), sy(b.y + mx * s + my * c), w / m, h / m, -(b.ret || 0), 0, 6.283); g.fill();
+      // stien fra døra mot plassen
+      const dx = b.x + (f[1] + .6) * c, dy = b.y + (f[1] + .6) * s, L = Math.hypot(leir.x - dx, leir.y - dy); if (L < R * .9 || L > 140) continue;
+      const ex = leir.x + (dx - leir.x) * R * .8 / L, ey = leir.y + (dy - leir.y) * R * .8 / L;
+      let fri = true; for (let k = 1; k < 8 && fri; k++) { const x = dx + (ex - dx) * k / 8, y = dy + (ey - dy) * k / 8; if (ferdige.some(q => inni(q, x, y))) fri = false; } if (!fri) continue;
+      g.strokeStyle = jord; g.lineCap = 'round'; g.lineWidth = Math.max(2, 1.8 / m); g.beginPath(); g.moveTo(sx(dx), sy(dy)); g.lineTo(sx(ex), sy(ey)); g.stroke(); }
+    g.restore(); }
   // GJERDET: skygge, nettingen og stolper hver 2,5 m (nær); under bygging stiplet og blekt; valgt = gult
   function gjerde(g, ledd, sx, sy, m, o = {}) { g.save(); nullstill(g); g.lineCap = 'round';
     const strek = (farge2, w, dx = 0, stipl) => { g.strokeStyle = farge2; g.lineWidth = w; g.setLineDash(stipl || []); g.beginPath(); for (const [a, c] of ledd) { g.moveTo(sx(a[0]) + dx, sy(a[1]) + dx); g.lineTo(sx(c[0]) + dx, sy(c[1]) + dx); } g.stroke(); };
@@ -371,7 +391,8 @@
       if (m < REGLER.nær) strek(farge('#b8a988', 1, .6), (B * .12) / m); }
     g.restore(); }
   // én ramme: nattfargen og lyset i vinduene (kalles før byggene tegnes)
-  function ramme() { forrigeM = api._m === undefined ? 0 : api._m; api._m = typeof kam !== 'undefined' ? kam.m : 0; T = null; let natt = 0; try { if (rot.KartLys && !KartLys.av && (!navigator.webdriver || KartLys.test)) { T = KartLys.nå(); natt = T.natt; if (T.natt < .01 && T.grå < .01 && T.mørk < .01) T = null; } } catch (e) { T = null; }
+  function ramme() { forrigeM = api._m === undefined ? 0 : api._m; api._m = typeof kam !== 'undefined' ? kam.m : 0; return toneNå(); }
+  function toneNå() { T = null; let natt = 0; try { if (rot.KartLys && !KartLys.av && (!navigator.webdriver || KartLys.test)) { T = KartLys.nå(); natt = T.natt; if (T.natt < .01 && T.grå < .01 && T.mørk < .01) T = null; } } catch (e) { T = null; }
     tNøkkel = T ? [T.natt, T.grå, T.mørk].map(v => Math.round(v * 100)).join(',') : '';
     return { lys: natt > REGLER.vinduNatt ? Math.min(1, (natt - REGLER.vinduNatt) / .3) * .55 : 0 }; }
 
@@ -408,6 +429,9 @@
   let sistFolk = -1;
   if (typeof KROKER !== 'undefined') {
     KROKER.tegn.push(tegnFolk); KROKER.tegn[KROKER.tegn.length - 1].bygg = true; KROKER.tegn[KROKER.tegn.length - 1].over = true;
+    // slitt jord og stier: først av tegnekrokene (under flagget, merkene, tåka og alt annet)
+    KROKER.tegn.unshift((g, vx0, vy1) => { if (api.av || typeof kam === 'undefined' || kam.m >= REGLER.middels || !rot.LeirSpill || !rot.OppstartSpill) return; const L = LeirSpill.tilstand(), S = OppstartSpill.tilstand();
+      if (!L || !S || !S.leir) return; toneNå(); tråkk(g, L.bygg, S.leir, X => (X - vx0) / kam.m, Y => (vy1 - Y) / kam.m, kam.m); });
     KROKER.sim.push(() => { if (api.av || typeof kam === 'undefined' || kam.m >= REGLER.folkUnder || (typeof på3d !== 'undefined' && på3d)) return; const k = Math.floor((typeof tid === 'number' ? tid : 0) * 2); if (k !== sistFolk) { sistFolk = k; skitten = true; } });
   }
 
@@ -450,6 +474,6 @@
     const gammel = KROKER.tegn[i], ny = (g, vx0, vy1) => (!api.av && kam.m < REGLER.bilUnder && !(typeof på3d !== 'undefined' && på3d) ? tegnKjør(g, vx0, vy1) : gammel(g, vx0, vy1));
     ny.leir2d = true; ny.bygg = gammel.bygg; ny.over = true; KROKER.tegn[i] = ny; api.kjørKrok = true; });
 
-  Object.assign(api, { bygg, tegnBygg, gjerde, veg, lager: () => LAGER.size, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
+  Object.assign(api, { bygg, tegnBygg, gjerde, veg, tråkk, lager: () => LAGER.size, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
   rot.Leir2d = api;
 })(typeof window !== 'undefined' ? window : globalThis);
