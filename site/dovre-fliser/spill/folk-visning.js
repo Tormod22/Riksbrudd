@@ -228,7 +228,27 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     F = (Lr.folk && FR.fraJSON(Lr.folk)) || FR.ny(frø); Lr.folk = F; meldt.clear(); forsvarNå = null; lagre(); visStatus(); vis();
   }
   window.addEventListener('riksbrudd-spill', start);
-  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar() };
+
+  // ---------- INGEN BYGGER (runde 8, kritiker D: «Brakke bygges – venter i kø · Byggelag: 0» i tre døgn, Folk 0) ----------
+  // Når jobber venter og ingen står på «bygg», står en tydelig linje øverst i Leir-menyen (klassen «fast»: synlig i alle faner) med
+  // det som hjelper: «Sett to på Bygg» (henter fra de andre oppgavene) eller, når gjengen er nesten tom, «Ring etter arbeidere»
+  // (nødrekrutteringen i folk.js: ingen krav om seng når dere er færre enn tre, vanlig pris – gratis når kassa er tom). VALG: ingen
+  // gratis «nødbyggelag» av seg selv – da kunne alle gjøres til soldater og nye arbeidere hentes gratis igjen og igjen.
+  function hjelpBygg() { const Lr = L(); if (!F || !Lr) return { feil: 'Ingen leir.' }; const før = FR.arbeidere(F, 'bygg'), mål = 2; let flyttet = 0, nye = 0;
+    while (FR.arbeidere(F, 'bygg') < mål && F.personer.some(p => p.oppgave !== 'bygg' && FR.arbeidsfør(p))) { const p = FR.pluss(F, 'bygg'); if (!p) break; flyttet++; }
+    while (FR.arbeidere(F, 'bygg') < mål && FR.nød(F)) { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg()); if (r.feil) break; if (r.person.oppgave !== 'bygg') r.person.oppgave = 'bygg'; nye++; }
+    if (flyttet || nye) logg((flyttet ? `${flyttet} satt på «bygg»` : '') + (flyttet && nye ? ', og ' : '') + (nye ? `${nye} ${nye === 1 ? 'ny arbeider er' : 'nye arbeidere er'} med i gjengen` : '') + `: ${FR.byggelag(F)} byggelag.`);
+    else logg(F.personer.length ? 'Ingen ledige å sette på «bygg» – rekrutter i Folk (krever ledig seng), eller oppløs en tropp ved leiren.' : 'Fikk ikke tak i arbeidere nå.');
+    endret(); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); return { før, etter: FR.arbeidere(F, 'bygg'), flyttet, nye }; }
+  (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp: k2 }) => { const Lr = L(); if (!F || !Lr || !window.Leir || !LB.jobber) return; let J = 0; try { J = LB.jobber(Lr).length; } catch (er) { J = 0; }
+    if (!J || FR.byggelag(F) > 0) return; const andre = F.personer.filter(p => p.oppgave !== 'bygg' && FR.arbeidsfør(p)).length, nød = FR.nød(F);
+    const tekst = !F.personer.length ? `Ingen i leiren – ${J === 1 ? 'jobben' : `de ${J} jobbene`} står stille. Ring etter arbeidere, eller oppløs en tropp ved leiren.` : `Ingen på «bygg» – ${J === 1 ? 'jobben' : `de ${J} jobbene`} står stille.`;
+    const k = andre ? k2('Sett to på Bygg', hjelpBygg, { id: 'hjelpbygg' }) : nød ? k2(`Ring etter arbeidere (${OppstartSpill.tilstand().penger >= FR.R.rekruttPris ? LB.kroner(FR.R.rekruttPris) + ' per person' : 'gratis: kassa er tom'})`, hjelpBygg, { id: 'hjelpbygg' }) : null;
+    const boks = e('div', { klasse: 'fast ingenbygger', role: 'alert' }, e('span', {}, '⚠ ' + tekst), k || e('small', {}, ' Rekrutter i Folk (krever ledig seng), eller oppløs en tropp ved leiren.'));
+    const rad = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); if (rad) rad.before(boks); else hode.appendChild(boks); });
+  { const c2 = document.createElement('style'); c2.textContent = `#leirmeny .ingenbygger{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0 2px; padding:7px 9px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:14px; line-height:1.35; }
+#leirmeny .ingenbygger button{ min-height:36px; border-color:#e0804a; } #leirmeny .ingenbygger small{ color:#e8c0a0; }`; document.head.appendChild(c2); }
+  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar(), hjelpBygg };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

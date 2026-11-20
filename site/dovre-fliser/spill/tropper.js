@@ -32,15 +32,37 @@
     feltradio: { navn: 'Feltradio', pris: 1000000, tekst: 'Kontakt med leiren like langt som leirens radio rekker (ellers håndradio, 3 km).' },
   };
   // Ferdige forslag: antall, våpen etter plass i troppen (resten rifle), utstyr og kjøretøy.
+  // (runde 8, kritikken: «Stormtropp (6)» sto over «Åtte for kamp …») {N} i teksten er antallet forslaget faktisk gir – se malTekst.
   const MALER = {
-    speider: { navn: 'Speidertropp', n: 4, våpen: ['rifle', 'presisjonsrifle', 'rifle', 'rifle'], utstyr: ['kikkert', 'feltradio'], bil: 'speiderbil', tekst: 'Fire med kikkert og feltradio i en speiderbil: finner fienden uten å slåss.' },
-    storm: { navn: 'Stormtropp', n: 8, våpen: ['maskinpistol', 'maskinpistol', 'hagle', 'maskinpistol', 'maskingevær', 'maskinpistol', 'hagle', 'maskinpistol'], utstyr: ['ammo', 'sanitet'], bil: 'lastebil', tekst: 'Åtte for kamp på kort hold: tar tettsteder og stillinger.' },
-    vakt: { navn: 'Vaktlag', n: 6, våpen: ['rifle', 'rifle', 'maskingevær', 'rifle', 'rifle', 'rifle'], utstyr: [], bil: null, tekst: 'Seks med rifler og ett maskingevær: billig garnison.' },
-    støtte: { navn: 'Ildstøtte', n: 6, våpen: ['presisjonsrifle', 'maskingevær', 'maskingevær', 'presisjonsrifle', 'rifle', 'rifle'], utstyr: ['kikkert', 'ammo'], bil: null, tekst: 'Seks med maskingevær og presisjonsrifler: holder fienden nede på lang avstand, helst fra høyden.' },
+    speider: { navn: 'Speidertropp', n: 4, våpen: ['rifle', 'presisjonsrifle', 'rifle', 'rifle'], utstyr: ['kikkert', 'feltradio'], bil: 'speiderbil', tekst: '{N} med kikkert og feltradio i en speiderbil: finner fienden uten å slåss.' },
+    storm: { navn: 'Stormtropp', n: 8, våpen: ['maskinpistol', 'maskinpistol', 'hagle', 'maskinpistol', 'maskingevær', 'maskinpistol', 'hagle', 'maskinpistol'], utstyr: ['ammo', 'sanitet'], bil: 'lastebil', tekst: '{N} for kamp på kort hold: tar tettsteder og stillinger.' },
+    vakt: { navn: 'Vaktlag', n: 6, våpen: ['rifle', 'rifle', 'maskingevær', 'rifle', 'rifle', 'rifle'], utstyr: [], bil: null, tekst: '{N} med rifler og ett maskingevær: billig garnison.' },
+    støtte: { navn: 'Ildstøtte', n: 6, våpen: ['presisjonsrifle', 'maskingevær', 'maskingevær', 'presisjonsrifle', 'rifle', 'rifle'], utstyr: ['kikkert', 'ammo'], bil: null, tekst: '{N} med maskingevær og presisjonsrifler: holder fienden nede på lang avstand, helst fra høyden.' },
   };
+  const ORD = ['Ingen', 'Én', 'To', 'Tre', 'Fire', 'Fem', 'Seks', 'Sju', 'Åtte', 'Ni', 'Ti', 'Elleve', 'Tolv'];
+  const tallOrd = n => ORD[n] || String(n);
+  // Forslagsteksten for n personer (n = det forslaget faktisk gir, ikke malens fulle antall)
+  const malTekst = (id, n) => { const M = MALER[id]; return M ? M.tekst.replace('{N}', tallOrd(n === undefined ? M.n : n)) : ''; };
   // Hvem bør med? De beste i strid først, men den som alt har en jobb i leiren, trekkes litt ned (fri og vakt først), og syke sist.
   const egnet = p => vakt(p) + (p.oppgave === 'fri' ? .25 : p.oppgave === 'vakt' ? .15 : 0) - (p.helse !== undefined && p.helse < .6 ? .5 : 0);
-  function foreslå(personer, n) { return (personer || []).filter(p => p && p.navn).slice().sort((a, b) => egnet(b) - egnet(a)).slice(0, Math.max(0, n)).map(p => p.id); }
+  // hold (valgfri): id-er som skal bli igjen i leiren (se behold)
+  function foreslå(personer, n, hold) { const H = new Set(hold || []); return (personer || []).filter(p => p && p.navn && !H.has(p.id)).slice().sort((a, b) => egnet(b) - egnet(a)).slice(0, Math.max(0, n)).map(p => p.id); }
+  // (runde 8, kritiker D: forslaget «Vaktlag (6)» tok alle seks som var igjen, også byggerne – brakka sto «venter i kø» i to døgn.)
+  // Forslagene og «Velg de best egnede» lar alltid R.behold personer bli igjen i leiren: helst dem som står på «bygg», ellers de
+  // beste byggerne. Claudes forslag: to = ett byggelag. Svarer id-ene som skal bli igjen.
+  R.behold = 2;
+  const bygger = p => (p.ferd && p.ferd.bygg) || .9;
+  function behold(personer, n = R.behold) { return (personer || []).filter(p => p && p.navn).slice().sort((a, b) => ((b.oppgave === 'bygg') - (a.oppgave === 'bygg')) || ((b.helse >= .6) - (a.helse >= .6)) || (bygger(b) - bygger(a))).slice(0, Math.max(0, n)).map(p => p.id); }
+  // Hvordan leiren står etter at de valgte går: { igjen, bygg, kjøkken, byggFør, kjøkkenFør }. advarsler(...) gir tekstene.
+  function leirEtter(personer, valgte) { const V = new Set(valgte || []), P = (personer || []).filter(p => p && p.navn), rest = P.filter(p => !V.has(p.id)), på = (L, o) => L.filter(p => p.oppgave === o).length;
+    return { igjen: rest.length, bygg: på(rest, 'bygg'), kjøkken: på(rest, 'kjøkken'), byggFør: på(P, 'bygg'), kjøkkenFør: på(P, 'kjøkken') }; }
+  // o.jobber: antall byggejobber som venter eller pågår i leiren; o.kjøkken = false når leiren ikke har noe kjøkken
+  function advarsler(personer, valgte, o = {}) { const e = leirEtter(personer, valgte), ut = [], jobber = o.jobber || 0;
+    if (!e.igjen) ut.push('Leiren blir tom: ingen igjen til å bygge, lage mat eller holde vakt.');
+    else if (!e.bygg && (e.byggFør || jobber)) ut.push(`Ingen igjen på «bygg»: ${jobber ? (jobber === 1 ? 'jobben i leiren stopper' : `de ${jobber} jobbene i leiren stopper`) : 'ingenting blir bygget'}. La minst to stå på «bygg».`);
+    else if (e.bygg === 1 && e.byggFør >= 2) ut.push('Bare én igjen på «bygg»: byggingen går halvt så fort.');
+    if (e.igjen && e.kjøkkenFør && !e.kjøkken && o.kjøkken !== false) ut.push('Ingen kokk igjen: maten lages på bål (mer svinn).');
+    return ut; }
   // Prisen for våpnene (liste med våpen-id-er) og utstyret (liste med utstyr-id-er).
   function pris(våpen, utstyr) { return (våpen || []).reduce((s, v) => s + ((VÅPEN[v] && VÅPEN[v].pris) || 0), 0) + (utstyr || []).reduce((s, u) => s + ((UTSTYR[u] && UTSTYR[u].pris) || 0), 0); }
   // Hva leiren mister: { oppgave: antall } for dem som tas ut.
@@ -53,7 +75,7 @@
   const friske = lag => lag.menn.filter(m => m.hp > 0).length;
   // Kan troppen gå om bord? avstand i meter. Gir null når det går, ellers grunnen.
   function ombordFeil(lag, k, avstand, opptatt) { if (!plass(k)) return 'Kjøretøyet frakter ikke folk.'; if (opptatt) return 'Kjøretøyet frakter alt en tropp.'; if (friske(lag) > plass(k)) return `Det er bare plass til ${plass(k)} i ${k.navn}.`; if (avstand > R.bord) return `For langt unna (${Math.round(avstand)} m – må være innen ${R.bord} m).`; if (k.sti) return 'Kjøretøyet kjører.'; return null; }
-  const api = { VÅPEN, UTSTYR, MALER, foreslå, pris, mister, utrust, pleie, egnet, R, ROLLER, opprett, oppløs, plass, friske, ombordFeil };
+  const api = { VÅPEN, UTSTYR, MALER, foreslå, behold, leirEtter, advarsler, malTekst, tallOrd, pris, mister, utrust, pleie, egnet, R, ROLLER, opprett, oppløs, plass, friske, ombordFeil };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Tropper = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

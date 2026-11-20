@@ -1091,7 +1091,7 @@ function visPanel() {
     if (q.hp <= 0) b.style.opacity = '.45';
     b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
   document.getElementById('hint').textContent = s.side !== 'blå' ? (s.ai && window.Fraksjoner ? Fraksjoner.FRAKSJONER[s.side].navn + ' – motstander, styrt av AI-en.' : 'Fiendtlig patrulje.') : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
-    modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
+    modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å velge ny lagfører. Gult felt er hva laget ser.';
   P.classList.add('på');
 }
 
@@ -3325,14 +3325,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=2e5d565ba5"></script>
 <script src="/dovre-fliser/spill/leir.js?v=cf54b3f15a"></script>
-<script src="/dovre-fliser/spill/folk.js?v=36b2b3ba41"></script>
+<script src="/dovre-fliser/spill/folk.js?v=76613f1969"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=6bbeab1fdb"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=b8dad1a03d"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=b398c1138e"></script>
-<script src="/dovre-fliser/spill/folk-visning.js?v=f9cdb3aefc"></script>
+<script src="/dovre-fliser/spill/folk-visning.js?v=680d5d7d69"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
@@ -3362,7 +3362,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leting.js?v=0fdd1bbf02"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=a514e8c8ff"></script>
 <script src="/dovre-fliser/spill/lut.js?v=2f6a7b0b3f"></script>
-<script src="/dovre-fliser/spill/lut-visning.js?v=2d3cbb02fb"></script>
+<script src="/dovre-fliser/spill/lut-visning.js?v=726843a598"></script>
 <script src="/dovre-fliser/spill/mobler.js?v=43f0e722ac"></script>
 <script src="/dovre-fliser/spill/mobler-visning.js?v=c6ceb2f309"></script>
 <script src="/dovre-fliser/spill/lykt.js?v=b7bc87e946"></script>
@@ -3374,14 +3374,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/maal-visning.js?v=b6b39ca88a"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=e97d6f2982"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=27e2d7fd1e"></script>
-<script src="/dovre-fliser/spill/utstyr.js?v=ace961000e"></script>
+<script src="/dovre-fliser/spill/utstyr.js?v=88b80209aa"></script>
 <script src="/dovre-fliser/spill/spillet-visning.js?v=60c0fea472"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=51ef9105a2"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=5bcfa7605f"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=95a5f6c834"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
-<script src="/dovre-fliser/spill/panelpynt.js?v=20284f4f18"></script>
+<script src="/dovre-fliser/spill/panelpynt.js?v=8e7180270d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/strid.js?v=76235e3a9c"></script>
 <script src="/dovre-fliser/spill/strid-visning.js?v=2df0cae0a2"></script>
@@ -3390,8 +3390,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/trussel-lagring.js?v=ce5eea747c"></script>
 <script src="/dovre-fliser/spill/forsvar-oppgjor.js?v=3bbffd11aa"></script>
 <script src="/dovre-fliser/spill/forsvar-hjemme.js?v=0ff458940c"></script>
-<script src="/dovre-fliser/spill/tropper.js?v=77bff43d43"></script>
-<script src="/dovre-fliser/spill/tropper-visning.js?v=d5dbd6b758"></script>
+<script src="/dovre-fliser/spill/tropper.js?v=d290afac08"></script>
+<script src="/dovre-fliser/spill/tropper-visning.js?v=d1eeb6534a"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=f998390bfe"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=5f07d1bfc0"></script>
@@ -3425,13 +3425,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
-<script src="/dovre-fliser/spill/knapper.js?v=030eff4f9a"></script>
+<script src="/dovre-fliser/spill/knapper.js?v=952462e96e"></script>
 <script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
 <script src="/dovre-fliser/spill/kartlapper.js?v=a50c3a9998"></script>
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=5532e70297"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=c7596d4af1"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=4ecba19a8b"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=4142f566bb"></script>
 <script src="/dovre-fliser/spill/paneler.js?v=7c30488bdb"></script>
