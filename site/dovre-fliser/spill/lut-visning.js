@@ -73,6 +73,7 @@
 
   // ---------- beholderne ----------
   const minne = new Map();
+  let helHus = null;
   // (runde 5) nær = en bolig nær leiren (aldri ransaket, noe nyttig i den første beholderen). Et bygg som er ransaket (S.ran), har mindre
   // i beholderne (de lagres da), og butikker og lagre fylles litt på igjen med tiden (S.fylt).
   const flyttetMøbel = nk => !!(rot.MoblerSpill && MoblerSpill.F && MoblerSpill.F()[nk]);
@@ -109,9 +110,12 @@
     const Q = r3(); if (!Q || !Q.fot || !rot.Interior3d) return { P: null, liste: [] };
     const x = Q.bane.x, y = Q.bane.y, P = Interior3d.inne(x, y); if (!P || !P.inne || !P.bygg) return { P, liste: [] };
     const kl = P.leir ? (L.LEIR[P.bygg.kl] ? P.bygg.kl : 'brakke') : P.bygg.kl, liste = [];
-    for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær) continue; const nk = b.nk;
+    // (runde 12) «Se i skapene» etter letingen: alle beholderne i bygget, ikke bare de innen rekkevidde (helHus = byggets nummer)
+    const hel = helHus !== null && helHus === P.bygg.i;
+    for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær && !hel) continue; const nk = b.nk;
       liste.push({ nk, type: b.type, navn: b.navn, tittel: b.tittel, kg: b.kg, kald: !!b.kald, av, P, B: innholdAv(nk, P.leir ? 'brakke' : kl, b.type, P.bygg.i, b.k, nærLeir(P)), m: b.m }); }
-    liste.sort((a, b) => a.av - b.av);
+    // (i hele huset: de med noe i først, så de tomme)
+    if (hel) liste.sort((a, b) => (L.kg(a.B, VEKT) > 0 ? 0 : 1) - (L.kg(b.B, VEKT) > 0 ? 0 : 1) || a.av - b.av); else liste.sort((a, b) => a.av - b.av);
     // to like møbler får nummer i fanen («Reol 2»)
     const tel = {}; for (const c of liste) tel[c.tittel] = (tel[c.tittel] || 0) + 1; const nr = {}; for (const c of liste) if (tel[c.tittel] > 1) { nr[c.tittel] = (nr[c.tittel] || 0) + 1; c.fane = c.tittel + ' ' + nr[c.tittel]; } else c.fane = c.tittel;
     return { P, liste };
@@ -341,7 +345,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const rulle = [...panel.querySelectorAll('.liste')].map(e => e.scrollTop); panel.replaceChildren(...ny.childNodes); panel.querySelectorAll('.liste').forEach((e, i) => { e.scrollTop = rulle[i] || 0; });
   }
   function åpne(v, nk) {
-    const kan = !!v && klar && !!sekk(); åpen = kan; panel.classList.toggle('på', åpen); valgt = null; melding = '';
+    const kan = !!v && klar && !!sekk(); if (!kan) helHus = null; åpen = kan; panel.classList.toggle('på', åpen); valgt = null; melding = '';
     if (åpen) { if (nk) fane = nk; if (document.pointerLockElement) document.exitPointerLock(); if (rot.UtstyrSpill && UtstyrSpill.erÅpen && UtstyrSpill.erÅpen()) UtstyrSpill.åpne(false); sistListe = []; sistHtml = ''; vis(true); }
     oppdaterKnapp(); return åpen;
   }
@@ -393,7 +397,9 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if ((k === 'e' || k === 'E') && (åpen || (går() && nærmeste()))) { e.preventDefault(); e.stopImmediatePropagation(); if (åpen) åpne(false); else { const c = nærmeste(); åpne(true, c && c.nk); } }
     else if (k === 'Tab' && (åpen || går())) { e.preventDefault(); åpne(!åpen); }
     else if (k === 'Escape' && åpen) { e.preventDefault(); e.stopImmediatePropagation(); åpne(false); } }, true);
-  setInterval(() => { oppdaterKnapp(); if (åpen) { if (!går() && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); else { sistListe = []; vis(false); } } }, 400);
+  // (runde 12) går du ut av bygget, gjelder «hele huset» ikke lenger
+  const iHelHus = () => { const Q = r3(), P = Q && Q.fot && rot.Interior3d ? Interior3d.inne(Q.bane.x, Q.bane.y) : null; return !!(P && P.bygg && P.bygg.i === helHus); };
+  setInterval(() => { if (helHus !== null && !iHelHus()) helHus = null; oppdaterKnapp(); if (åpen) { if (!går() && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); else { sistListe = []; vis(false); } } }, 400);
 
   // ---------- inn i sekken (#sekk, spill/utstyr.js) ----------
   // knapper på tingene i sekken: Spis/Drikk, Til beltet, Ta på (feltrasjonen og vannet har sine fra spill/eventyr-visning.js)
@@ -534,6 +540,12 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     gulv: () => S.gulv, strømTil, oppdaterKnapp, ramme3, gulvMesh: () => gulvMesh, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
     // til vakten: glem det som er endret i beholderne for et bygg, og sett sekken på ryggen tilbake
     glemBygg: i => { for (const k of Object.keys(S.b)) if (k.startsWith(i + ':')) delete S.b[k]; for (const k of [...minne.keys()]) if (k.startsWith(i + ':')) minne.delete(k); lagre(); },
-    settS: d => { S = { ...nyS(), ...d }; lagre(); } });
+    settS: d => { S = { ...nyS(), ...d }; lagre(); },
+    // (runde 12) «Se i skapene» fra letingen: panelet med alle beholderne i bygget du står i (null når det ikke er noen)
+    åpneHele: () => { const Q = r3(), P = Q && Q.fot && rot.Interior3d ? Interior3d.inne(Q.bane.x, Q.bane.y) : null; if (!P || !P.inne || !P.bygg) return false; helHus = P.bygg.i; const h = beholdereHer(); if (!h.liste.length) { helHus = null; return false; } return åpne(true, h.liste[0].nk); },
+    // hvor mange beholdere bygget har, og hvor mange av dem det ligger noe i (uten å åpne noe): { antall, medTing, kg }
+    husOversikt: P => { if (!klar || !P || !P.inne || !P.bygg) return { antall: 0, medTing: 0, kg: 0 }; const kl = P.leir ? 'brakke' : P.bygg.kl; let antall = 0, medTing = 0, kgSum = 0;
+      for (const b of L.beholdere(P.inne, P.bygg.i)) { antall++; const k = L.kg(innholdAv(b.nk, kl, b.type, P.bygg.i, b.k, nærLeir(P)), VEKT); if (k > 0) { medTing++; kgSum += k; } } return { antall, medTing, kg: Math.round(kgSum * 10) / 10 }; },
+    helHus: () => helHus });
   rot.LutSpill = ut;
 })(typeof window !== 'undefined' ? window : globalThis);

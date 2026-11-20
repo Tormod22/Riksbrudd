@@ -94,8 +94,11 @@ module.exports = {
         { sett(x0 - 9, y0 - 11); const k2 = Gange.kropp(), x1 = Math.round(k2.x) - 5, y1 = Math.round(k2.y) - 28, P2 = [[x1, y1], [x1 + 10, y1], [x1 + 10, y1 + 8], [x1, y1 + 8]]; P2.bygg = { i: 4247, t: 0, h: 6, kl: 'hus' };
           P2.dør = { x: x1 + 5, y: y1 + 8, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(U.cx + x1 + 5, U.cy + y1 + 4, U) - U.h0) * R.EX }; hus = { o: { P: P2 }, nøkler: [] };
           for (let a = Math.floor(x1 / 20); a <= Math.floor((x1 + 10) / 20); a++) for (let q = Math.floor(y1 / 20); q <= Math.floor((y1 + 8) / 20); q++) { const n = a + ',' + q; if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push(hus.o); hus.nøkler.push(n); }
-          R.fot.a = 0; Gange.oppdaterPil(); const pil = Gange.inngangPil(); d.pil = pil ? pil.tekst + ' ' + (pil.rel * 180 / Math.PI).toFixed(0) + '°' : '(ingen)';
-          krev(!!pil && pil.vis && /^Inngang \d+ m/.test(pil.tekst) && Math.abs(Math.abs(pil.rel) - Math.PI) < .4, 'pila mot inngangen bak deg: ' + d.pil);
+          // (runde 12, kritiker E) huset bak deg: ingen pil; snur du deg delvis mot det (40°), kommer «Bolig 20 m» med pila
+          R.fot.a = 0; Gange.oppdaterPil(); const bak = Gange.inngangPil(); d.pilBak = bak ? bak.tekst + (bak.vis ? ' (vises)' : ' (skjult)') : '(ingen)';
+          krev(!bak || !bak.vis, 'pila sto mens huset var bak deg: ' + d.pilBak);
+          R.fot.a = Math.PI + .7; Gange.oppdaterPil(); const pil = Gange.inngangPil(); d.pil = pil ? pil.tekst + ' ' + (pil.rel * 180 / Math.PI).toFixed(0) + '°' : '(ingen)';
+          krev(!!pil && pil.vis && /^Bolig \d+ m/.test(pil.tekst), 'pila mot inngangen når huset er foran til siden: ' + d.pil);
           // «Gå inn i huset»: du settes foran døra og går inn av deg selv
           // (bare når utsnittet ikke må bygges på nytt for å gå her – ellers forsvinner prøvehuset med det gamle utsnittet)
           const X2 = U.cx + x1 + 5, Y2 = U.cy + y1 + 4, S1 = typeof utsnittS === 'function' ? utsnittS(1000) : U.S, kanInn = R.ut === U && !R.bygger && Math.hypot(x1 + 5, y1 + 4) <= U.S * .45 && S1 <= U.S * 1.6 && S1 >= U.S * .45;

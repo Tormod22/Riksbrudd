@@ -81,9 +81,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function engang(id, på, tekst) { if (på && !meldt[id]) { meldt[id] = true; logg(tekst); } else if (!på) delete meldt[id]; }
 
   // ---------- A1: vann og mat på tur ----------
-  function drikk() { const t = ting(), B = behov(); if (!t || !B) return false; if (B.tørst > 92) { logg('Du er ikke tørst.'); return false; }
-    const f = E.Tur.drikk(t); if (!f) { logg('Feltflaska er tom. Fyll den ved et vann eller i leiren.'); return false; }
-    B.tørst = Math.min(100, B.tørst + f); lagreSekk(); logg(`Du drikker av feltflaska (${t.vann || 0} slurker igjen).`); oppdater(); return true; }
+  // selv = true: karakteren drakk av seg selv (spill/karakter.js, runde 12) – da ingen melding når det ikke gikk
+  function drikk(selv) { const t = ting(), B = behov(); if (!t || !B) return false; if (B.tørst > 92) { if (selv !== true) logg('Du er ikke tørst.'); return false; }
+    const f = E.Tur.drikk(t); if (!f) { if (selv !== true) logg('Feltflaska er tom. Fyll den ved et vann eller i leiren.'); return false; }
+    B.tørst = Math.min(100, B.tørst + f); lagreSekk(); logg(selv === true ? `Du var tørst og drakk av feltflaska (${t.vann || 0} slurker igjen).` : `Du drikker av feltflaska (${t.vann || 0} slurker igjen).`); oppdater(); return true; }
   const spis = () => (rot.KarakterSpill ? KarakterSpill.spisRasjon() : false);
   // (runde 5) ved vann: vannmasken eller en bekk (u.iBekk) i 3D; i 2D der karakteren står, når 3D-utsnittet dekker stedet
   function vedVann() { const Q = r3(); if (!Q || !Q.ut || !rot.Gange || !Gange.vannVed) return false; const u = Q.ut, v = Gange.vannVed(u), b = u.iBekk || (() => false);

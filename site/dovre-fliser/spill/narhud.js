@@ -201,7 +201,7 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.
     const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste(), uten = s && s.mangler ? s.mangler.size - (s.avslått || 0) : 0, åpneLeir = fane => { if (window.LeirSpill) { const m = $('leirmeny'); if (m && !m.classList.contains('på')) $('leirknapp').click(); LeirSpill.fane(fane); } };
     if (L && uten > 0) ut.push({ i: 'strom', k: 'fare', t: `${uten} bygg uten strøm`, s: 'se strømmen', f: () => åpneLeir('bygg') });
     // karakteren din: tørst, sulten eller trøtt (spill/karakter.js)
-    if (window.KarakterSpill && KarakterSpill.klar()) for (const v of KarakterSpill.varsler()) ut.push({ i: v.id === 'søvn' ? 'seng' : v.id === 'sult' ? 'mat' : 'vann', k: 'fare', t: 'Du er ' + v.tekst, s: v.råd.toLowerCase().replace(/\.$/, ''), f: () => KarakterSpill.åpne() });
+    if (window.KarakterSpill && KarakterSpill.klar()) for (const v of KarakterSpill.varsler()) ut.push({ i: v.id === 'søvn' ? 'seng' : v.id === 'sult' ? 'mat' : 'vann', k: 'fare', t: 'Du er ' + v.tekst, s: v.råd.toLowerCase().replace(/\.$/, ''), f: () => KarakterSpill.åpne(), knapp: v.knapp || null });
     // tom eller snart tom for diesel (bare når du har aggregat som trenger den)
     // (runde 6) samme prognose som dagsrapporten og Lager (LeirSpill.diesel), og en egen knapp som kjøper diesel (LeirSpill.kjøpDiesel)
     if (L && s && s.aggInst > 0 && window.Leir) { const d = L.drivstoff || 0, P = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null, rekker = d > 0 ? (P ? P.timer : s.agg > 0 ? Leir.dieselTimer(L, s.agg) : Infinity) : Infinity;

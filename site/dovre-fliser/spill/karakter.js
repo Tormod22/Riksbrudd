@@ -16,7 +16,9 @@
   };
   // (runde 5) spoling = farten 60× eller mer; vedLeir = så nær leiren du steller deg av leirens lager mens du spoler; brems = det leiren
   // ikke har (vann, mat), går så mye saktere da (du sparer på det og venter). Claudes forslag.
-  const R = { lav: 25, greit: 60, løpTørst: 1.6, hvile: 12, skade: 4, minTreff: .7, minLøp: .6, rasjon: 50, nær: 150, spoling: 60, vedLeir: 600, brems: .3 };
+  // (runde 12, kritiker E: «uttørket i et døgn med full feltflaske») autoDrikk/autoSpis: under dette drikker du av feltflaska og spiser en
+  // feltrasjon av deg selv, hvor du enn er (også når karakteren står i 2D). Claudes forslag.
+  const R = { lav: 25, greit: 60, løpTørst: 1.6, hvile: 12, skade: 4, minTreff: .7, minLøp: .6, rasjon: 50, nær: 150, spoling: 60, vedLeir: 600, brems: .3, autoDrikk: 40, autoSpis: 35 };
   const ny = () => ({ tørst: 100, sult: 100, søvn: 100 });
   // t spilltimer går: behovene synker. o.løper: tørsten går fortere.
   function steg(B, t, o = {}) { if (!(t > 0)) return B; for (const [k, D] of Object.entries(BEHOV)) B[k] = Math.max(0, (B[k] === undefined ? 100 : B[k]) - 100 / D.timer * t * (k === 'tørst' && o.løper ? R.løpTørst : 1) * (o.faktor && o.faktor[k] !== undefined ? o.faktor[k] : 1)); return B; }
@@ -64,8 +66,14 @@
   const harVann = () => { const O = rot.OverlevSpill, D = O && O.D && O.D(); return !D || !D.vann.nede || (O.brønner && O.brønner() > 0); };
   const ting = () => (rot.UtstyrSpill && UtstyrSpill.klar() ? UtstyrSpill.tilstand().ting : null);
   // (18. nov: rasjonen heter «rasjon» i sekken – før sto det «feltrasjon» her, så knappen virket aldri)
-  function spisRasjon() { const t = ting(); if (!t || !(t.rasjon > 0)) { logg('Du har ingen feltrasjon i sekken.'); return false; } if (T.behov.sult > 95) { logg('Du er ikke sulten.'); return false; }
-    t.rasjon--; if (!t.rasjon) delete t.rasjon; K.fyll(T.behov, 'sult', K.R.rasjon); UtstyrSpill.lagre(); UtstyrSpill.vis(); lagre(); logg('Du spiser en feltrasjon.'); vis(true); return true; }
+  function spisRasjon(selv) { selv = selv === true; const t = ting(); if (!t || !(t.rasjon > 0)) { if (!selv) logg('Du har ingen feltrasjon i sekken.'); return false; } if (T.behov.sult > 95) { if (!selv) logg('Du er ikke sulten.'); return false; }
+    t.rasjon--; if (!t.rasjon) delete t.rasjon; K.fyll(T.behov, 'sult', K.R.rasjon); UtstyrSpill.lagre(); UtstyrSpill.vis(); lagre(); logg(selv ? `Du var sulten og spiste en feltrasjon fra sekken (${t.rasjon || 0} igjen).` : 'Du spiser en feltrasjon.'); vis(true); return true; }
+  // (runde 12) varslene om behovene: rådet sier «drikk fra flaska» når det er vann i den, og har en knapp (Drikk / Spis) når det går nå
+  function råd(k) { const t = ting();
+    if (k === 'tørst' && t && t.vann > 0 && rot.EventyrSpill && EventyrSpill.drikk) return { råd: `Drikk fra feltflaska (${t.vann} slurk${t.vann > 1 ? 'er' : ''} igjen).`, knapp: { t: 'Drikk', f: () => { EventyrSpill.drikk(); vis(true); if (rot.NarHud && NarHud.tegnVarsler) NarHud.tegnVarsler(); } } };
+    if (k === 'sult' && t && t.rasjon > 0) return { råd: `Spis en feltrasjon fra sekken (${t.rasjon} igjen).`, knapp: { t: 'Spis', f: () => { spisRasjon(); if (rot.NarHud && NarHud.tegnVarsler) NarHud.tegnVarsler(); } } };
+    if (k === 'tørst' && t && rot.EventyrSpill) return { råd: 'Feltflaska er tom – drikk i leiren eller ved et vann.' };
+    return { råd: K.BEHOV[k].råd }; }
 
   // hvert sekund: behovene synker med spilltiden, og fylles der det går
   function takt() { if (!klar || !T) return; const nå = typeof tid !== 'undefined' ? tid : 0; if (sistTid === null) sistTid = nå; const t = Math.max(0, Math.min(6, (nå - sistTid) / TIME)); sistTid = nå;
@@ -80,13 +88,16 @@
         // «utslitt» når du spolte de første timene.
         if (L && rot.Leir) K.fyll(T.behov, 'søvn', K.R.hvile * t * (Leir.plasser(L) > 0 ? 1 : .5)); }
       else if (rot.OverlevSpill && OverlevSpill.iTilflukt && går() && OverlevSpill.iTilflukt()) K.fyll(T.behov, 'søvn', K.R.hvile * t);
+      // (runde 12) ellers: drikk av feltflaska og spis en feltrasjon av deg selv når det trengs (én linje i loggen hver gang)
+      if (!st.ved) { const t0 = ting(); if (T.behov.tørst < K.R.autoDrikk && t0 && t0.vann > 0 && rot.EventyrSpill && EventyrSpill.drikk) EventyrSpill.drikk(true);
+        if (T.behov.sult < K.R.autoSpis && t0 && t0.rasjon > 0) spisRasjon(true); }
       // ute: drikk når du står ved vann
       const Q = r3(); if (går() && !fører() && T.behov.tørst < 80 && Q.ut && rot.Gange && Gange.vannVed && performance.now() - sistDrakk > 20000) { const k = Gange.kropp(), v = Gange.vannVed(Q.ut);
         if (k && [[2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]].some(([dx, dy]) => v(k.x + dx, k.y + dy))) { sistDrakk = performance.now(); T.behov.tørst = 100; logg('Du drikker av vannet.'); } }
       const V = K.virkning(T.behov), SS = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.K() : null; if (V.skade > 0 && SS && SS.hp > 5) SS.hp = Math.max(5, SS.hp - V.skade * t);
       // løpingen (Bevegelse.REGLER.løpTid settes av overlev.js fra ferdigheten; her ganges behovene inn, og tung last fra spill/lut-visning.js)
       if (rot.Bevegelse && Bevegelse.REGLER) { if (!takt.løp0 || Math.abs(Bevegelse.REGLER.løpTid - takt.satt) > 1e-9) takt.løp0 = Bevegelse.REGLER.løpTid; takt.satt = takt.løp0 * V.løp * (rot.LutSpill && LutSpill.løp ? LutSpill.løp() : 1); Bevegelse.REGLER.løpTid = takt.satt; }
-      for (const k of Object.keys(K.BEHOV)) { const til = K.tilstand(T.behov[k]); if ((til === 'lite' || til === 'tomt') && (takt.meldt = takt.meldt || {})[k] !== til) { takt.meldt[k] = til; logg(`Du er ${K.ord(k, T.behov[k])}. ${K.BEHOV[k].råd}`); } else if (!til && takt.meldt) delete takt.meldt[k]; } }
+      for (const k of Object.keys(K.BEHOV)) { const til = K.tilstand(T.behov[k]); if ((til === 'lite' || til === 'tomt') && (takt.meldt = takt.meldt || {})[k] !== til) { takt.meldt[k] = til; logg(`Du er ${K.ord(k, T.behov[k])}. ${råd(k).råd}`); } else if (!til && takt.meldt) delete takt.meldt[k]; } }
     if (performance.now() - sistLagret > 15000) { sistLagret = performance.now(); lagre(); } vis(false); }
   setInterval(takt, 1000);
 
@@ -233,6 +244,6 @@ body.smal #karakterark, body.kort #karakterark{ left:0; right:0; top:auto; botto
   function åpne() { if (!klar) return; åpen = true; panel.classList.add('på'); kn.classList.add('på'); sistHtml = ''; vis(true); }
   function lukk() { åpen = false; panel.classList.remove('på'); kn.classList.remove('på'); }
   setInterval(() => { kn.hidden = !klar; tk.hidden = !(klar && går() && !fører()); }, 500);
-  Object.assign(ut, { start, åpne, lukk, vis, iLeiren, sted, harVann, erÅpen: () => åpen, T: () => T, klar: () => klar, treff: () => (klar && T ? K.virkning(T.behov).treff : 1), tredje: () => tredje, settTredje, figur: () => figur, spisRasjon, takt, lagre, varsler: () => (klar && T ? Object.keys(K.BEHOV).filter(k => T.behov[k] < K.R.lav).map(k => ({ id: k, tekst: K.ord(k, T.behov[k]), råd: K.BEHOV[k].råd })) : []) });
+  Object.assign(ut, { start, åpne, lukk, vis, iLeiren, sted, harVann, erÅpen: () => åpen, T: () => T, klar: () => klar, treff: () => (klar && T ? K.virkning(T.behov).treff : 1), tredje: () => tredje, settTredje, figur: () => figur, spisRasjon, takt, lagre, varsler: () => (klar && T ? Object.keys(K.BEHOV).filter(k => T.behov[k] < K.R.lav).map(k => ({ id: k, tekst: K.ord(k, T.behov[k]), ...råd(k) })) : []) });
   rot.KarakterSpill = ut;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
