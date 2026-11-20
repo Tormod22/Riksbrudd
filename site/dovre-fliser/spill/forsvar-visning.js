@@ -149,7 +149,8 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   function visRapport() { const r = rapportNå; if (!r || performance.now() > r.til) { rapportNå = null; return false; }
     const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS)) : { n: 0 }, ventende = LS ? repListe(LS).filter(q => !q.opptatt && q.hp < FO.R.rep.varsel) : [];
     const nøkkel = ['rapport', r.tittel, ventende.length].join('|'); alarm.classList.add('på'); alarm.classList.add('satt'); alarm.classList.toggle('god', !!r.god); if (nøkkel === sistAlarm || (window.pekerNede && pekerNede(alarm))) return true; sistAlarm = nøkkel;
-    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst)));
+    // (skadevarselet etter angrepet står i rapporten når rapporten ikke alt sier det)
+    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/bygg skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
     if (sk.n && ventende.length) alarm.append(kn(`Reparer alle (${Leir.kroner(ventende.reduce((t, q) => t + q.pris, 0))})`, () => { reparerAlle(); rapportNå = null; vis(); }, { id: 'reparerknapp' }));
     alarm.append(kn('Lukk', () => { rapportNå = null; skade = null; alarm.classList.remove('god'); sistAlarm = ''; vis(); }, { klasse: 'rolig', id: 'rapportlukk' })); return true; }
 
@@ -191,7 +192,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
         for (const dv of [-.45, 0, .45]) { g.beginPath(); g.moveTo(x + Math.cos(v + dv) * r0, y + Math.sin(v + dv) * r0); g.lineTo(x + Math.cos(v + dv) * (r0 + l), y + Math.sin(v + dv) * (r0 + l)); g.stroke(); }
         g.fillStyle = 'rgba(255,214,120,.9)'; g.beginPath(); g.arc(x + Math.cos(v) * r0, y + Math.sin(v) * r0, 2.6, 0, 6.283); g.fill(); skitten = true; }
       const puls = .55 + .45 * Math.sin(nå / 160);
-      for (const s of iKamp) { if (!levende(s)) continue; const x = sx(s.x), y = sy(s.y); if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue;
+      for (const s of iKamp) { if (!Array.isArray(s.menn) || !levende(s)) continue; const x = sx(s.x), y = sy(s.y); if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue;
         g.strokeStyle = s.side === 'blå' ? `rgba(255,200,120,${.5 + .4 * puls})` : `rgba(240,110,80,${.5 + .4 * puls})`; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 15 + 3 * puls, 0, 6.283); g.stroke();
         if (s.side === 'blå') { g.font = '600 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(40,14,8,.9)'; const t = 'I ildkamp', ty = window.Etikett ? Etikett.tekst(g, t, x, y + 30, 1, Etikett.REGLER.prio.viktig) : y + 30; g.strokeText(t, x, ty); g.fillStyle = '#ffb49a'; g.fillText(t, x, ty); } skitten = true; } }
     if (satt) for (const s of ENHETER) { if (!s.forsvar || s.side !== 'blå') continue; const x = sx(s.forsvar.x), y = sy(s.forsvar.y); if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) continue; g.strokeStyle = s.forsvar.voll ? 'rgba(240,215,154,.95)' : 'rgba(150,190,235,.95)'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, 6.283); g.stroke(); g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 4, y); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.stroke(); }

@@ -32,6 +32,7 @@
       if (id && s.garnisonHold !== id) { if (s.garnisonHold === undefined || s.garnisonHold === null) s.garnisonFør = { ...StridSpill.regel(s) }; s.garnisonHold = id;
         if (!holder(s)) { s.strid = window.Strid ? Strid.ren({ ...StridSpill.regel(s), ...HOLD }) : { ...StridSpill.regel(s), ...HOLD }; logg(`${s.navn} er garnison i ${by.e.navn} og holder stillingen (kjemper også mot en sterkere fiende). Vil du at laget skal trekke seg: lagpanelet → Stridsregler.`); } }
       else if (!id && s.garnisonHold) { if (holder(s) && s.garnisonFør) s.strid = s.garnisonFør; s.garnisonHold = null; delete s.garnisonFør; } } }
+  window.GarnisonSpill.holdStilling = holdStilling;
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
     holdStilling();
