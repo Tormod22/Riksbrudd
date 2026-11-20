@@ -308,8 +308,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst)); if (ekstra) banner.append(el('small', {}, ekstra));
     const p = plassering;
     // (runde 8) hellingen i kartet: hva fargene betyr for bygget du holder (bare i 2D, og bare nær nok til at de vises)
-    if (p && p.type && !p.mal && !LB.BYGG[p.type].linje && window.HellingVis && (typeof på3d === 'undefined' || !på3d))
-      banner.append(el('small', { klasse: 'hellingtekst' }, kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.'));
+    if (p && p.type && !p.mal && !LB.BYGG[p.type].linje && window.HellingVis)
+      banner.append(el('small', { klasse: 'hellingtekst' }, typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
+        : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.'));
     if (p && p.type && LB.BYGG[p.type].linje) {
       const a = knapp('Angre punkt', () => { p.punkter.pop(); prøv(); }); a.disabled = !p.punkter.length;
       const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;

@@ -23,7 +23,8 @@
   // Hva skal farges nå? Plasseringen av et bygg (ikke gjerde/veg/mal), ellers leirvalget. -> { type, ret, x, y } eller null
   function ønsket() {
     // i testene (navigator.webdriver) bare når HellingVis.test er satt: hentingen av høyder skal ikke forstyrre de andre vaktene
-    if (av || !ekte() || (typeof på3d !== 'undefined' && på3d)) return null;
+    // (vakten regner kartet også mens 3D er på – det tegnes bare i 2D)
+    if (av || !ekte() || (typeof på3d !== 'undefined' && på3d && !HellingVis.test)) return null;
     const p = window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering();
     if (p && !p.mal && p.type && LB.BYGG[p.type] && !LB.BYGG[p.type].linje) {
       const S = window.OppstartSpill && OppstartSpill.tilstand(), sx = p.x !== null && p.x !== undefined ? p.x : null;

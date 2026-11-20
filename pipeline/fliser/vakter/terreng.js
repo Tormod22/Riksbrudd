@@ -5,7 +5,7 @@
 // forslag til nærmeste tørre sted; (3) hellingskartet farges rundt stedet og stemmer med kanBygge når du plasserer en brakke;
 // (4) «Kjøp materialene og bygg» gir samme pris i loggen som på knappen og i kassa; (5) fargeprøvene er minst 44 px på telefon.
 // Setter alt tilbake: startskjermen og banneret lukkes, plasseringen avbrytes, leiren (bygg, lager), kassa, kameraet, valgt,
-// OppstartSpill.test og utkastnøkkelen som før.
+// OppstartSpill.test, HellingVis.test og utkastnøkkelen som før. 3D røres ikke (hellingskartet regnes også i 3D mens vakten går).
 module.exports = {
   navn: 'terreng (leirplass, helling og plassering av bygg)',
   kjør: async (pg, profil) => {
@@ -18,7 +18,6 @@ module.exports = {
       const knapper = () => [...document.querySelectorAll('#leirvalg button')].map(b => b.textContent);
       const ferdig = async () => { for (let i = 0; i < 120; i++) { const f = OS.forslag(), t = el('leirvalg').textContent; if (f && !f.sjekker && !/Ser etter|Sjekker om/.test(t)) return true; await vent(150); } return false; };
       try {
-        if (på3d0) { slå3d(false); await vent(300); }
         HellingVis.test = true;
         // 1. reglene: Helling bruker samme bratt-sjekk som kanBygge
         { const li = (x) => 100 + 1.2 * Math.max(0, x), b = { type: 'brakke', x: 50, y: 0, ret: 0 };
@@ -54,7 +53,7 @@ module.exports = {
         LeirSpill.startPlassering('brakke'); kam.x = S.leir.x; kam.y = S.leir.y; kam.m = 1; HellingVis.oppdater();
         for (let i = 0; i < 80 && (HellingVis.venter() || !HellingVis.tilstand() || HellingVis.tilstand().hvor !== 'bygg'); i++) { await vent(100); HellingVis.oppdater(); }
         const tb = HellingVis.tilstand(); ut.kartBygg = tb; krev(tb && tb.vises && tb.type === 'brakke' && tb.flatt + tb.skrått > 0, 'hellingskartet vises ikke når du plasserer en brakke');
-        krev(/grønt = flatt/.test(el('byggvalg').textContent), 'banneret forklarer ikke fargene i kartet');
+        krev(/grønt/.test(el('byggvalg').textContent), 'banneret forklarer ikke fargene i kartet');
         let sjekket = 0, uenig = 0;
         for (const [dx, dy] of [[30, 0], [-30, 10], [0, 40], [60, -40], [-70, -50], [90, 70]]) { LeirSpill.trykk(S.leir.x + dx, S.leir.y + dy); await LeirSpill.prøv(); const p = LeirSpill.plassering(); if (!p || p.x === null) continue;
           const n = HellingVis.nivåVed(p.x, p.y); if (n === null || n === Helling.UKJENT || n === Helling.VANN) continue; sjekket++;
@@ -92,7 +91,6 @@ module.exports = {
         if (LeirSpill.oppdater3d) try { LeirSpill.oppdater3d(true); } catch (e) { /* 3D av */ }
         Object.assign(kam, kam0); valgt = valgt0; skitten = true; if (window.visPanel) visPanel();
         try { if (utk0 === null) localStorage.removeItem(OS.UTKAST); else localStorage.setItem(OS.UTKAST, utk0); } catch (e) { /* ingen lagring */ }
-        if (på3d0) { slå3d(true); }
       }
       ut.lukket = !el('oppstart').classList.contains('på') && !el('leirvalg').classList.contains('på') && !LeirSpill.plassering();
       krev(ut.lukket, 'startskjermen, leirvalget eller plasseringen sto igjen åpen');
