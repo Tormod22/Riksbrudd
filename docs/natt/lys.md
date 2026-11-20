@@ -565,7 +565,10 @@ Den nest største pausen når du går: hver 12. meter ble opptil 36 000 kandidat
 plasseringen en generator `gressG` (samme tilfeldighet i samme rekkefølge, yield hver 128. kandidat) som skriver i midlertidige
 tallrekker (`m.userData.tmp`, laget én gang) og legges inn i nettet når alt er regnet; `gressBit(R, 4)` – ca. 4 ms per bilde – og det
 gamle gresset står til det nye er klart. Nytt utsnitt eller `gressSenter = null` (vegetasjon3d.js ved nye hus, kvalitet.js ved nytt nivå)
-begynner på nytt. Nettet starter med `count = 0` (ellers sto 12 000 tuster i origo til første jobb var ferdig). Prøvd: tre steder ved
+begynner på nytt. Nettet starter med `count = 0` (ellers sto 12 000 tuster i origo til første jobb var ferdig) og med `instanceColor` i
+full størrelse: three.js r128 lager ikke skyggeleggeren på nytt når instanceColor kommer etter første tegning – på bildet gjennom vinduet
+mistet tustene bakkens farge (bleke) til det ble rettet (scratchpad `natt7/lys/vindu-sammen.png`: før, feilen, rettet – snittfarge 69/73/60,
+84/88/74, 69/73/61). Vakta krever nå instanceColor i full størrelse. Prøvd: tre steder ved
 Dombås, gammel gress3d (fra c4be9eb) mot ny: 12 000 tuster, matrisene, fargene og aFelt like (0 ulike), 3–8 biter.
 
 ### 3. Tingene i husene (spill/lut-visning.js, bare 3D-nettet)

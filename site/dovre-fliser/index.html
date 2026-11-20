@@ -2501,7 +2501,9 @@ function gress3d() {
     const idx = [...g1.index.array, ...g2.index.array.map(i => i + 4)], geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(24).map((_, i) => i % 3 === 2 ? 1 : 0), 3)); geo.setIndex(idx);
     geo.setAttribute('aFelt', new THREE.InstancedBufferAttribute(new Float32Array(MAKS), 1));
-    R.gressMesh = new THREE.InstancedMesh(geo, gressMateriale(), MAKS); R.gressMesh.frustumCulled = false; R.gressMesh.count = 0; R.scene.add(R.gressMesh); }
+    R.gressMesh = new THREE.InstancedMesh(geo, gressMateriale(), MAKS); R.gressMesh.frustumCulled = false; R.gressMesh.count = 0;
+    // fargene per tust finnes fra start: three.js (r128) lager ikke skyggeleggeren på nytt når instanceColor kommer etter første tegning
+    R.gressMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3), 3); R.scene.add(R.gressMesh); }
   const m = R.gressMesh; m.visible = true;
   // (20. nov natt, hakk når du går: opptil 36 000 kandidater i ett strekk hver 12. meter) gresset settes i biter – gressG, ca. 4 ms
   // per bilde – og det gamle står til det nye er klart. Nytt utsnitt, eller gressSenter nullstilt (nye hus, nytt grafikknivå): begynn på nytt.

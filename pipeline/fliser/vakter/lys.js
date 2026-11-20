@@ -191,6 +191,8 @@ module.exports = {
             const A = kopi(); R.gressSenter = null; R.gressJobb = null; m.count = 0; gress3d(); if (R.gressJobb) gressBit(R, Infinity); const B = kopi();
             const lik = (a, b) => { if (!a || !b || a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
             ok(A.n === B.n && lik(A.M, B.M) && lik(A.C, B.C), `gresset i biter er ulikt gresset i ett strekk (${A.n} / ${B.n} tuster)`);
+            // fargene per tust må finnes før første tegning (ellers lager three.js skyggeleggeren uten dem, og tustene mister bakkens farge)
+            ok(m.instanceColor && m.instanceColor.count === m.instanceMatrix.count, 'gresset mangler instanceColor i full størrelse');
             if (A.n > 0) { ok(biter > 2, `gresset ble ikke satt i biter (${biter})`); const K = A.M.slice(); K[12] += .5; ok(!lik(K, B.M), 'selvtest: en flyttet tust ble ikke sett'); }
             ut.gress = { tuster: A.n, biter };
             // tilbake til vanlig gress: neste bilde setter det på nytt der du står
