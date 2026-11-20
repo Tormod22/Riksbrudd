@@ -50,6 +50,10 @@ I tillegg til runde 10: skjæringen på et prøvegitter med en li på 40 % (selv
 bakken ikke over vegbanen), trekronene med et prøvetre (inne/ute, kameraet kommer nærmere, fritt = 1), og i 3D: høyst 1 % av vegkantene under
 bakken. Prøvd: Dovre mobil med 3D – ok (2406 vegkanter, 0 under; skjæring 2773 punkter, 96 ms), 1,3 s.
 
+### Kontroll
+Mobilkontrollen (`SJEKK_PROFIL=mobil`, sjekk.js, i en kopi av arbeidstreet ved commit eddd3ef): 128 ok, 0 FEIL (607 s) – også «veger i 3D»,
+«3D uten rare ting» (0 i hus/svevende), «kjørbare biler og helikopter» og «bakke, veg og gress» (uten 3D-delen der: 3D var av da vakta kjørte).
+
 ### Tester
 `node pipeline/fliser/test_veg.js` (11 nye sjekker for senterHøyder/skjær/tversMaks/maksSkjær), `test_kjor.js` grønn.
 
