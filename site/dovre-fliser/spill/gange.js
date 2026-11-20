@@ -428,7 +428,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   // SVEIP SOM BEGYNNER PÅ EN KNAPP (runde 12): kritikerens raske sveip begynte på våpenbyttet («Automatgevær»), som ga nettleseren
   // draget (pointercancel) – derfor snudde ingenting. Nå: et drag over 12 punkter som begynner på en av knappene i synsfeltet, blir et
   // blikk-drag, og knappen trykkes ikke når du slipper. (Skyt-knappen skyter som før mens du drar fra den.)
-  const GJENNOM = new Set(['byttvapen', 'skytknapp', 'kjorknapp', 'letknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']);
+  const GJENNOM = new Set(['byttvapen', 'skytknapp', 'kjorknapp', 'letknapp', 'skapknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']);
   let kand = null, dempKlikk = 0;
   const gjennomCss = document.createElement('style'); gjennomCss.textContent = '#byttvapen, #kjorknapp, #inneknapper > button{ touch-action:none; }'; document.head.appendChild(gjennomCss);
   window.addEventListener('pointerdown', e => { kand = null; if (!r3() || !R3.fot || e.pointerType === 'mouse' || se) return; const b = e.target && e.target.closest ? e.target.closest('button') : null;

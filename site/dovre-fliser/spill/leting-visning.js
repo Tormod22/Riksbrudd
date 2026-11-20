@@ -12,12 +12,12 @@
   const css = document.createElement('style');
   css.textContent = `#letknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:210px; min-height:44px; padding:6px 18px;
   background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; overflow:hidden; }
-#letknapp.på{ display:block; } #letknapp i{ position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(201,178,106,.28); pointer-events:none; } #letknapp span{ position:relative; }
+#letknapp.på, #skapknapp.på{ display:block; } #skapknapp{ display:none; min-height:40px; padding:5px 16px; background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:15px; font-weight:600; cursor:pointer; } #letknapp i{ position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(201,178,106,.28); pointer-events:none; } #letknapp span{ position:relative; }
 #innelapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; padding:2px 12px; background:rgba(22,18,12,.78); color:var(--ink-dim); font-size:14px; white-space:nowrap; pointer-events:none; }
 #innelapp.på{ display:block; } #innelapp.funn{ color:#f0e2b0; background:rgba(28,23,15,.94); border:1px solid #c9b26a; font-size:16px; padding:6px 16px; white-space:normal; max-width:min(520px, 86vw); text-align:center; } body.kort #innelapp{ bottom:calc(196px + env(safe-area-inset-bottom,0px)); font-size:13px; }
 body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:180px; }
 #inneknapper{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:6; display:flex; flex-direction:column-reverse; align-items:center; gap:8px; pointer-events:none; }
-#inneknapper > button{ pointer-events:auto; } #inneknapper > #sikreknapp{ order:2; } #inneknapper > #lutknapp{ order:3; } #inneknapper > #mobelknapp{ order:4; } #inneknapper > #dorknapp{ order:5; } #inneknapper > #letknapp, #inneknapper > #sikreknapp, #inneknapper > #lutknapp, #inneknapper > #mobelknapp, #inneknapper > #dorknapp{ position:relative; left:auto; right:auto; top:auto; bottom:auto; transform:none; margin:0; }
+#inneknapper > button{ pointer-events:auto; } #inneknapper > #skapknapp{ order:1; } #inneknapper > #sikreknapp{ order:2; } #inneknapper > #lutknapp{ order:3; } #inneknapper > #mobelknapp{ order:4; } #inneknapper > #dorknapp{ order:5; } #inneknapper > #letknapp, #inneknapper > #skapknapp, #inneknapper > #sikreknapp, #inneknapper > #lutknapp, #inneknapper > #mobelknapp, #inneknapper > #dorknapp{ position:relative; left:auto; right:auto; top:auto; bottom:auto; transform:none; margin:0; }
 body.kort #inneknapper{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); gap:6px; }
 @media (max-height:560px){ body.kort #inneknapper{ top:calc(var(--topp,40px) + 50px); bottom:auto; flex-direction:row; flex-wrap:wrap; justify-content:center; width:min(560px,62vw); }
   body.kort #inneknapper > button{ min-width:0; min-height:38px; font-size:14px; padding:4px 12px; } }
@@ -43,6 +43,14 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   const rekke = document.createElement('div'); rekke.id = 'inneknapper'; document.body.appendChild(rekke);
   const funn = document.createElement('div'); funn.id = 'funnpanel'; funn.setAttribute('role', 'dialog'); funn.setAttribute('aria-label', 'Det du fant'); document.body.appendChild(funn);
   const hint = document.createElement('div'); hint.id = 'innehint'; hint.setAttribute('role', 'status'); document.body.appendChild(hint);
+  // «Se i skapene (5)» i et bygg du har lett gjennom, så skapene er like lette å nå etter at resultatpanelet er lukket
+  const skapKn = document.createElement('button'); skapKn.id = 'skapknapp'; skapKn.type = 'button'; rekke.appendChild(skapKn);
+  skapKn.addEventListener('click', e => { e.preventDefault(); if (window.LutSpill && LutSpill.åpneHele) LutSpill.åpneHele(); });
+  let skapSjekk = 0, skapN = 0, skapFor = null;
+  function skapSteg(P) { const LS = window.LutSpill, vis = klar && P && P.bygg && P.inne && !P.leir && lett.has(P.bygg.i) && !jobb && LS && LS.husOversikt && !(LS.erÅpen && LS.erÅpen()) && !(window.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()) && !funn.classList.contains('på');
+    if (!vis) { skapKn.classList.remove('på'); return; }
+    if (skapFor !== P || performance.now() - skapSjekk > 1500) { skapSjekk = performance.now(); skapFor = P; skapN = LS.husOversikt(P).medTing; }
+    const t = `Se i skapene (${skapN})`; if (skapKn.textContent !== t) skapKn.textContent = t; skapKn.classList.toggle('på', skapN > 0); }
   function samle() { for (const id of ['letknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']) { const e = document.getElementById(id); if (e && e.parentNode !== rekke) rekke.appendChild(e); } }
   samle(); document.addEventListener('DOMContentLoaded', samle); window.addEventListener('riksbrudd-spill', () => setTimeout(samle, 0));
   const NAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Leilighetsbygg', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Garasje eller uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal', brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet' };
@@ -155,6 +163,7 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   function ramme(R) {
     const her = R.fot && window.Interior3d ? Interior3d.inne(R.bane.x, R.bane.y) : null; visLapp(her);
     if (funnFor !== null && !(her && her.bygg && her.bygg.i === funnFor)) lukkFunn();
+    skapSteg(her);
     if (hintFor !== null && (performance.now() > hintTil || !(her && her.bygg && her.bygg.i === hintFor))) lukkHint();
     if (klar && her && her.bygg && her.inne && !her.leir && hintFor === null && (!navigator.webdriver || window.LeteSpill.test) && !hintVist()) visHint(her);
     const P = klar ? her : null;
@@ -177,7 +186,7 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     for (const p of lett.values()) { if (!p) continue; const [x, y] = tilSkjerm(p[0], p[1], vx0, vy1); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
       g.fillStyle = 'rgba(22,18,12,.78)'; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); const f = p[2] ? '#e0b24a' : '#9fc46a'; g.strokeStyle = f; g.lineWidth = 1; g.stroke(); g.fillStyle = f; g.fillText(p[2] ? '+' : '✓', x, y + .5); }
     g.restore(); });
-  setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); if (funnFor !== null) lukkFunn(); if (hintFor !== null) lukkHint(); } }, 500);
+  setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); if (funnFor !== null) lukkFunn(); if (hintFor !== null) lukkHint(); skapKn.classList.remove('på'); } }, 500);
   function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   window.LeteSpill = { test: false, visResultat, lukkFunn, funnÅpent: () => funn.classList.contains('på'), lukkHint, start, ferdig, ta, hent, restAv, plassTil, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
