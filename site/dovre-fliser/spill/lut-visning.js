@@ -269,7 +269,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const evne = b.evne, tung = b.tung, maksBar = Math.max(tung * 1.15, b.vekt), A = Utstyr.aktivt(I);
     f.append(el('h3', {}, 'Du bærer'), el('div', { klasse: 'maal' }, el('div', {}, `Vekt ${L.tall(Math.round(b.vekt * 10) / 10)} av ${L.tall(evne)} kg`, ' ', el('span', { klasse: b.status === 'lett' ? '' : b.status === 'tungt' ? 'tung' : 'svært' }, b.status === 'lett' ? '· lett' : b.status === 'tungt' ? '· tungt' : '· svært tungt')),
       el('div', { klasse: 'bar ' + b.status }, el('i', { style: `width:${Math.min(100, b.vekt / maksBar * 100)}%` }), el('u', { style: `left:${evne / maksBar * 100}%` }), el('u', { style: `left:${tung / maksBar * 100}%` })),
-      el('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg (lommer ${L.tall(R.lommer)}${S.rygg ? ' + ' + navn(S.rygg).toLowerCase() + ' ' + L.tall(G[S.rygg].sekk.plass) : ''})${b.status !== 'lett' ? ' · ' + L.STATUS[b.status].replace(/^[^–]*– /, '') : ''}`)));
+      el('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt (lommer ${L.tall(R.lommer)}${S.rygg ? ' + ' + navn(S.rygg).toLowerCase() + ' ' + L.tall(G[S.rygg].sekk.plass) : ''})${b.status !== 'lett' ? ' · ' + L.STATUS[b.status].replace(/^[^–]*– /, '') : ''}`)));
     li.append(el('h4', {}, 'Utstyrt'));
     li.append(el('div', { klasse: 'rad utst' + (valgt && valgt.utst === 'hånd' ? ' valgt' : ''), 'data-side': 'deg', 'data-utst': 'hånd', 'data-belte': String(I.aktiv) }, el('b', {}, el('i', {}, 'Hånd'), A.def.navn), el('small', {}, `${A.v.mag}/${A.def.magasin}`)));
     li.append(el('div', { klasse: 'rad utst' + (valgt && valgt.utst === 'rygg' ? ' valgt' : ''), 'data-side': 'deg', 'data-utst': 'rygg' }, el('b', {}, el('i', {}, 'Rygg'), S.rygg ? navn(S.rygg) : 'ingen sekk'), el('small', {}, S.rygg ? `+${L.tall(G[S.rygg].sekk.plass)} kg, −${Math.round(G[S.rygg].sekk.lettere * 100)} %` : 'bare lommene')));
@@ -404,7 +404,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if (id === 'batterier' && rot.LyktSpill && LyktSpill.har()) return ['Lad lykta', () => LyktSpill.bytt()];
     return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
-    p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg · ${L.STATUS[b.status]}`))),
+    p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt · ${L.STATUS[b.status]}`), e('small', { style: 'display:block;opacity:.8;margin-top:2px' }, 'Vekt (øverst) er alt du bærer, også våpnene – plass er hvor mye lommene og sekken rommer.'))),
       kn('Inventar og beholdere (Tab)', () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------

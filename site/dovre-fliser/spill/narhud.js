@@ -151,7 +151,10 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
   const egenStrøm = () => { try { return LeirSpill.tilstand().bygg.some(b => (b.type === 'aggregat' || b.type === 'solcelle') && Leir.ferdig(b)); } catch (e) { return false; } };
   function brikker() { const ut = [], S = window.OppstartSpill && OppstartSpill.tilstand(), leir = S && S.leir; if (!leir) return ut; const SS = window.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill : null;
     if (SS && SS.T() && SS.T().aktiv) { const lag = ENHETER.filter(e => e.raid === SS.T().aktiv && levende(e)); if (lag.length) { const d = Math.min(...lag.map(e => Math.hypot(e.x - leir.x, e.y - leir.y))), nær = lag.reduce((a, e) => (Math.hypot(e.x - leir.x, e.y - leir.y) < Math.hypot(a.x - leir.x, a.y - leir.y) ? e : a));
-        ut.push({ i: 'varsel', k: 'fare', t: `Angrep: ${lag.length} røverlag`, s: `${meter(d)} fra leiren`, f: () => gåTil(nær.x, nær.y, 4) || logg(`Røverne er ${meter(d)} fra leiren.`) }); } }
+        // (runde 8, telefonkritikeren: brikken sa «10,0 km fra leiren» mens banneret sa «ikke sett ennå» og røverne var 720 m unna) – avstanden
+        // står bare når noen ser røverne (som banneret), og da til den nærmeste som er sett
+        const sett = lag.filter(e => typeof synlig !== 'function' || synlig(e)), ds = sett.length ? Math.min(...sett.map(e => Math.hypot(e.x - leir.x, e.y - leir.y))) : null;
+        ut.push({ i: 'varsel', k: 'fare', t: `Angrep: ${lag.length} røverlag`, s: ds !== null ? `${meter(ds)} fra leiren` : 'ikke sett ennå', f: () => gåTil(nær.x, nær.y, 4) || logg(ds !== null ? `Røverne er ${meter(ds)} fra leiren.` : 'Ingen ser røverne ennå – bygg vakttårn eller send et lag ut.') }); } }
     if (SS && SS.O()) for (const o of SS.O().liste) if (o.tatt) ut.push({ i: 'oppdrag', k: '', t: Spillet.Oppdrag.TYPER[o.type].navn, s: `${meter(o.meter)} mot ${o.retning}`, f: () => gåTil(o.x, o.y, 4) || logg(`Oppdraget ligger ${meter(o.meter)} mot ${o.retning} for leiren.`) });
     const L = window.LeirSpill && LeirSpill.tilstand(), s = window.LeirSpill && LeirSpill.siste(), uten = s && s.mangler ? s.mangler.size - (s.avslått || 0) : 0, åpneLeir = fane => { if (window.LeirSpill) { const m = $('leirmeny'); if (m && !m.classList.contains('på')) $('leirknapp').click(); LeirSpill.fane(fane); } };
     if (L && uten > 0) ut.push({ i: 'strom', k: 'fare', t: `${uten} bygg uten strøm`, s: 'se strømmen', f: () => åpneLeir('bygg') });
@@ -173,6 +176,20 @@ body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;
     for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f;
       // en brikke kan ha en egen knapp ved siden av seg (b.knapp = { t, f }), f.eks. «Kjøp 500 l» ved «Tom for diesel» (runde 6)
       if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
-  setInterval(tegnVarsler, 1000);
-  window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm };
+  // (runde 8, telefonkritikeren: «varselboksen nede til venstre ligger over kompasset og målestokken») – på telefon står brikkene over
+  // nordpila, målestokken og kildeteksten (de som står nede til venstre), ikke oppå dem
+  function løftVarsler() { if (!document.body.classList.contains('kort')) { if (varsler.style.bottom) varsler.style.bottom = ''; return; }
+    let topp = Infinity; for (const id of ['nordpil', 'skala', 'kilde']) { const e = $(id); if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue; const r = e.getBoundingClientRect(); if (r.left < 220 && r.height > 0 && r.top > innerHeight / 2) topp = Math.min(topp, r.top); }
+    const b = topp < Infinity ? Math.round(innerHeight - topp + 6) + 'px' : ''; if (varsler.style.bottom !== b) varsler.style.bottom = b; }
+  setInterval(() => { tegnVarsler(); løftVarsler(); }, 1000);
+  // ---------- (runde 8) samme skrift på navnelappene i 3D ----------
+  // PC-kritikeren: «navnelappene i 3D bruker en annen skrift (hvit, uten seriffer) enn resten av spillet («Vestlandsvakta»)». Modulene
+  // tegner navn i overlegget (#c3o) med «bold 13px sans-serif»; her byttes en slik skrift i overleggets tegneflate til spillets egen
+  // (Cormorant Garamond, litt større fordi den er smalere, og aldri tynnere enn 600). Andre skrifter (tall, ikoner) står som før.
+  const SKRIFT = { skala: 1.12, navn: '"Cormorant Garamond", serif' };
+  function byttSkrift(v) { const m = typeof v === 'string' && /^\s*(?:(italic)\s+)?(?:(bold|[1-9]00)\s+)?(\d+(?:\.\d+)?)px\s+sans-serif\s*$/.exec(v); if (!m) return v;
+    const vekt = m[2] === 'bold' ? 700 : Math.max(600, +(m[2] || 600)); return `${m[1] ? 'italic ' : ''}${vekt} ${Math.round(+m[3] * SKRIFT.skala * 10) / 10}px ${SKRIFT.navn}`; }
+  { const ov = document.getElementById('c3o'), g = ov && ov.getContext('2d'), d = window.CanvasRenderingContext2D && Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font');
+    if (g && d && d.set && !Object.prototype.hasOwnProperty.call(g, 'font')) Object.defineProperty(g, 'font', { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, byttSkrift(v)); } }); }
+  window.NarHud = { tegnHud, tegnVarsler, brikker, hud, varsler, vm: () => vm, byttSkrift };
 })();

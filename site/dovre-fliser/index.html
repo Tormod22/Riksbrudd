@@ -81,6 +81,8 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 </div>
 <div id="skala"><div id="skalaStrek"></div><span id="skalaTekst"></span></div>
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
+<!-- (runde 8, telefonkritikeren: på /norge sto Dovre-kildene de første sekundene) -->
+<script>if (/^\/(norge|rogaland)\/?$/.test(location.pathname)) document.getElementById('kilde').textContent = 'Høyde: Kartverket DTM (CC BY 4.0) · Kartdata: Sentinel-2, NVDB og OpenStreetMap – lastes …';</script>
 <div id="feil" role="alert"><span id="feilTekst"></span><button class="lukk" id="feilLukk" aria-label="Lukk meldingen">×</button><button class="gjør" id="feilKnapp" hidden></button></div>
 <script>
 // Et mindre spillkart (/rogaland, spill/omraade.js) har sitt eget lagrede spill. Hver side (/dovre-fliser, /norge, /rogaland) har egne
@@ -1058,7 +1060,12 @@ function trykkPå(cx, cy) {
 
 // ---------- panel og logg ----------
 const loggLinjer = [];
-function logg(t) { loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
+// RUNDE 8 (20. nov, kritikerne: «loggen gjentar seg og drukner det viktige»): spill/loggdemp.js slår sammen like meldinger («×4»), holder
+// tilbake rutinemeldinger og små værskifter og viser tips bare første gang (null = holdes tilbake; fjern = en gammel linje som slås sammen)
+function logg(t) { let nå = 0; try { nå = tid; } catch (e) { /* før tida finnes */ }
+  const d = typeof LoggDemp !== 'undefined' && LoggDemp.vurder ? LoggDemp.vurder(t, loggLinjer, nå) : { tekst: t, fjern: -1 }; if (!d) return;
+  if (d.fjern >= 0) loggLinjer.splice(d.fjern, 1); t = d.tekst;
+  loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
   document.getElementById('logg').innerHTML = loggLinjer.map((x, i) => '<div style="opacity:' + (1 - i * .15) + '"></div>').join('');
   document.querySelectorAll('#logg div').forEach((d, i) => { d.textContent = loggLinjer[i]; }); }
 function knapp(tekst, på, fn) { const b = document.createElement('button'); b.textContent = tekst; if (på) b.className = 'på'; b.onclick = fn; return b; }
@@ -3267,8 +3274,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=47a26f294e"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp-natt.js?v=43c689d2ce"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=9e05e40906"></script>
+<script src="/dovre-fliser/spill/hjelp-natt.js?v=ed82ba660e"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=0ad8ac2c2f"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=de74345409"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
@@ -3336,7 +3343,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leting.js?v=0fdd1bbf02"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=a514e8c8ff"></script>
 <script src="/dovre-fliser/spill/lut.js?v=2f6a7b0b3f"></script>
-<script src="/dovre-fliser/spill/lut-visning.js?v=b6c74987e8"></script>
+<script src="/dovre-fliser/spill/lut-visning.js?v=7b9cef805f"></script>
 <script src="/dovre-fliser/spill/mobler.js?v=43f0e722ac"></script>
 <script src="/dovre-fliser/spill/mobler-visning.js?v=c6ceb2f309"></script>
 <script src="/dovre-fliser/spill/lykt.js?v=b7bc87e946"></script>
@@ -3348,12 +3355,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/maal-visning.js?v=b6b39ca88a"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=e97d6f2982"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=27e2d7fd1e"></script>
-<script src="/dovre-fliser/spill/utstyr.js?v=f95c267b0d"></script>
+<script src="/dovre-fliser/spill/utstyr.js?v=90c6d31427"></script>
 <script src="/dovre-fliser/spill/spillet-visning.js?v=60c0fea472"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=51ef9105a2"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=5bcfa7605f"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=dc0778eec4"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=95a5f6c834"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=20284f4f18"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
@@ -3390,8 +3397,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=8ca4ddf882"></script>
-<script src="/dovre-fliser/spill/meny.js?v=a0f36fa091"></script>
-<script src="/dovre-fliser/spill/flyt.js?v=066d37d0e8"></script>
+<script src="/dovre-fliser/spill/meny.js?v=4dccb12614"></script>
+<script src="/dovre-fliser/spill/flyt.js?v=98831c2b06"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=8dd27fc47f"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=29dde9b7fe"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
@@ -3412,6 +3419,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/spillhud.js?v=31fbadf972"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 <script src="/dovre-fliser/spill/telefon.js?v=2d9c19e6b5"></script>
-<script src="/dovre-fliser/spill/skjermlag.js?v=fb298a3485"></script>
+<script src="/dovre-fliser/spill/skjermlag.js?v=1a01b6b8b4"></script>
+<script src="/dovre-fliser/spill/loggdemp.js?v=c43bd0c7c1"></script>
 </body>
 </html>
