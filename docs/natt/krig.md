@@ -680,3 +680,11 @@ tettsted tas når de frie er mange nok) – **seier dag 8 kl. 10**, før storbye
 | 12 | 0 % | 15,9 % | 4,4 % | 17/7 | 1 | Kystalliansen samler 5 lag ved Stenebyen mot Stavanger/Sandnes (00:05), angriper 06:06, **tar den 13:20 og vinner**; 13:35 ny etterretning mot leiren |
 
 **Mål (a) på Vanlig: oppfylt (dag 12).** Over de fem kjøringene på Vanlig: dag 10, 10, ingen (rettet), dag 8 (rettet) og dag 12 med de endelige reglene.
+
+#### (b) med de nesten endelige reglene (logg `natt/krig7/gb6.log`) – tettstedene tatt av enkeltlag uten varsel
+(Skriptet hadde før dette en feil: personene fra FolkRegler.rekrutter ble lagt i lista to ganger, og samfunn.js krasjet på en dobbelt syk person
+dag 9 i `gb5-krasj.log` – skriptets feil, ikke spillets.) Spilleren tok Vatne og Høle (Vaktlaget kom ikke til Forsand). Vatne ble tatt 6 · 07:39
+av enkeltlag fra Folkefronten uten etterretning; gruppeangrepet på Høle (etterretning 6 · 18:17, angrep 7 · 01:52) ble **slått tilbake 7 · 08:33**,
+men et enkeltlag fra Kystalliansen tok Høle 7 · 18:56 (garnisonen var nede i noen få mann). Leiren varslet 11 · 01:14, angrep 09:19; Folkefronten
+tok Stavanger og vant 11 · 16:05. RETTET: i et ekte spill går enkeltlag ikke løs på dine tettsteder (`v.blåMedVarsel` i Fraksjoner.velg) – bare
+angrepsgrupper, som alltid varsles. (Et lag som ser garnisonen din, slåss fortsatt med den.)

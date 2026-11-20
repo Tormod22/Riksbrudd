@@ -12,7 +12,7 @@
   window.EskaleringSpill = api;
   const på = () => !navigator.webdriver || api.test === true;
   const auto = () => på() && AI.på;
-  const ny = () => ({ v: 1, øk: { rød: E.nyØkonomi(), grønn: E.nyØkonomi() }, gruppe: { rød: null, grønn: null }, sistLeir: { rød: -1e9, grønn: -1e9 }, sistRute: { rød: 0, grønn: 0 }, rute: { rød: null, grønn: null }, biler: [], sett: {}, ferdig: [] });
+  const ny = () => ({ v: 1, øk: { rød: E.nyØkonomi(), grønn: E.nyØkonomi() }, gruppe: { rød: null, grønn: null }, sistLeir: { rød: -1e9, grønn: -1e9 }, sistRute: { rød: 0, grønn: 0 }, rute: { rød: null, grønn: null }, biler: [], sett: {}, ferdig: [], blåPause: { rød: 0, grønn: 0 } });
   let S = ny();
   const navn = side => (F.FRAKSJONER[side] ? F.FRAKSJONER[side].navn : 'Fienden');
   const g = () => E.grad(window.SPILLREGLER);
@@ -64,7 +64,8 @@
     const leirOk = !o.utenLeir && L && !hvile(side, 'blå') && AI.angripLeir !== false && (o.leir || (døgn() >= gr.leirFra && tid - S.sistLeir[side] >= gr.leirHver * 1440));
     const forsvarLeir = L ? ENHETER.filter(e => e.side === 'blå' && kjemper(e) && avst(e, L) <= ER.plan.leirForsvar).reduce((a, e) => a + sty(e), 0) : 0;
     // den andre motstanderen angriper noe av ditt nå: da venter denne (du skal ikke få to angrep samtidig)
-    const andre = SIDER.filter(sd => sd !== side).map(sd => S.gruppe[sd]).find(G => G && (G.mål.leir || G.mål.eier === 'blå')), blåOpptatt = !!andre && !o.tving;
+    // … og etter et angrep på deg som ble slått tilbake, venter denne motstanderen et døgn (plan.blåPause) før neste angrep på deg
+    const andre = SIDER.filter(sd => sd !== side).map(sd => S.gruppe[sd]).find(G => G && (G.mål.leir || G.mål.eier === 'blå')), blåOpptatt = (!!andre || tid < (S.blåPause[side] || 0)) && !o.tving;
     let v = E.velgMål({ side, døgn: o.døgn !== undefined ? o.døgn : døgn(), g: gr, storFra: F.fredDøgn(fiendeF()) + F.REGLER.storEtter, byer: o.bare ? B.filter(b => b.id === o.bare) : B, fri: frie, leir: leirOk ? { x: L.x, y: L.y, forsvar: forsvarLeir } : null, blåOpptatt });
     // storbyen: er de for få, tar de med garnisonene fra småstedene sine (bare mot en storby som er lov nå)
     let alleFrie = frie;
@@ -103,6 +104,7 @@
       if (G.mål.leir && nå === 'oppgitt') logg(`${navn(side)} har gitt opp angrepet på leiren din.`);
       else if (G.mål.leir) logg(`${navn(side)} trekker seg bort fra leiren.`);
       else if (G.mål.eier === 'blå' && nå === 'oppgitt') logg(`Angrepet på ${G.mål.navn} er slått tilbake – ${navn(side)} har gitt opp.`);
+      if ((G.mål.leir || G.mål.eier === 'blå') && nå === 'oppgitt') S.blåPause[side] = tid + ER.plan.blåPause;
       lagre(); }
     return nå;
   }
@@ -217,7 +219,7 @@
 
   // ---------- lagring per leir ----------
   const leirId = () => { const L = leir(); return L ? Math.round(L.x) + ',' + Math.round(L.y) : null; };
-  function pakk() { return { v: 1, leir: leirId(), øk: S.øk, gruppe: S.gruppe, sistLeir: S.sistLeir, sistRute: S.sistRute, rute: S.rute, ferdig: S.ferdig,
+  function pakk() { return { v: 1, leir: leirId(), øk: S.øk, gruppe: S.gruppe, sistLeir: S.sistLeir, sistRute: S.sistRute, rute: S.rute, ferdig: S.ferdig, blåPause: S.blåPause,
     biler: KJORETOY.filter(k => S.biler.includes(k.navn)).map(k => ({ navn: k.navn, type: k.type, side: k.side, x: Math.round(k.x), y: Math.round(k.y), skade: k.skade || 0, antall: k.antall })) }; }
   let lagreTid = 0;
   function lagre(tving) { if (!på() || !leirId()) return; if (!tving && performance.now() - lagreTid < 3000) return; lagreTid = performance.now(); try { localStorage.setItem(NØKKEL, JSON.stringify(pakk())); } catch (e) { /* fullt eller sperret */ } }
@@ -225,7 +227,7 @@
     let o = null; try { o = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { o = null; }
     S = ny(); if (!o || o.leir !== leirId()) return false;
     for (const sd of SIDER) { if (o.øk && o.øk[sd]) Object.assign(S.øk[sd], o.øk[sd]); if (o.gruppe && o.gruppe[sd] && o.gruppe[sd].mål) S.gruppe[sd] = o.gruppe[sd];
-      if (o.sistLeir && isFinite(o.sistLeir[sd])) S.sistLeir[sd] = o.sistLeir[sd]; if (o.sistRute && isFinite(o.sistRute[sd])) S.sistRute[sd] = o.sistRute[sd]; if (o.rute && o.rute[sd]) S.rute[sd] = o.rute[sd]; }
+      if (o.sistLeir && isFinite(o.sistLeir[sd])) S.sistLeir[sd] = o.sistLeir[sd]; if (o.sistRute && isFinite(o.sistRute[sd])) S.sistRute[sd] = o.sistRute[sd]; if (o.rute && o.rute[sd]) S.rute[sd] = o.rute[sd]; if (o.blåPause && isFinite(o.blåPause[sd])) S.blåPause[sd] = o.blåPause[sd]; }
     S.ferdig = Array.isArray(o.ferdig) ? o.ferdig.slice(-30) : [];
     for (const b of Array.isArray(o.biler) ? o.biler : []) { if (!SIDER.includes(b.side) || KJORETOY.some(k => k.navn === b.navn) || !isFinite(b.x) || !isFinite(b.y)) continue;
       const k = lagBil(b.side, b.type, b.x, b.y, b.navn); if (k) { k.skade = b.skade || 0; S.biler.push(k.navn); } }
