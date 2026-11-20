@@ -100,7 +100,60 @@
     for (const d of lagret) { let e = finnes.find(q => q.navn === d.navn && !brukt.has(q)); if (!e && lagNy) e = lagNy(d); if (!e) continue; brukt.add(e); bruk(e, d); n++; }
     return n;
   }
-  const api = { VERSJON, pakk, fraJSON, pakkLag, brukLag, pakkKj, brukKj, settTilbake, pakkMinne, brukMinne };
+  // ---------- lagringsplasser og filer (runde 7, 20. nov natt: «Lagre og last», spill/lagringsmeny.js) ----------
+  // En plass er et øyeblikksbilde av ALLE spillnøklene for siden (LagringSide.erSpill): { spill: 'Riksbrudd', type: 'lagring', versjon,
+  // side, navn, laget (ms), info, nøkler: { 'riksbrudd-k1': tekst, … } }. Fila man laster ned, er det samme. Innstillingene følger ikke med.
+  const LS = typeof module !== 'undefined' && module.exports ? require('./lagringsside') : rot.LagringSide;
+  // Claudes forslag: en fil eller plass over 8 millioner tegn avvises (localStorage har som regel 5–10 MB for hele siden)
+  const PLASS = { versjon: 1, maksTegn: 8e6, navnMaks: 40 };
+  const SIDENAVN = { dovre: 'Dovre (/dovre-fliser)', norge: 'Norge (/norge)', rogaland: 'Rogaland (/rogaland)' };
+  const tekst2 = (v, n) => String(v === undefined || v === null ? '' : v).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+  // det menyen viser om et spill: fraksjon, karakter, dag og klokke (som klokka i spillet: tid 0 = dag 1 kl. 06:00), kassa, leiren
+  function plassInfo(n) {
+    const ut = { fraksjon: '', karakter: '', dag: 1, klokke: '06:00', penger: null, leir: null, tid: 0 }; if (!n) return ut;
+    try { const S = JSON.parse(n['riksbrudd-k1']); if (S) { ut.fraksjon = tekst2(S.fraksjon && S.fraksjon.navn, 40); ut.karakter = tekst2(S.karakter && S.karakter.navn, 30);
+      ut.penger = Number.isFinite(S.penger) ? Math.round(S.penger) : null; ut.leir = S.leir && Number.isFinite(S.leir.x) && Number.isFinite(S.leir.y) ? { x: Math.round(S.leir.x), y: Math.round(S.leir.y) } : null; } } catch (e) { /* uten k1 */ }
+    try { const V = JSON.parse(n['riksbrudd-verden']); if (V && Number.isFinite(V.tid)) ut.tid = Math.max(0, V.tid); } catch (e) { /* uten verden */ }
+    const h = 6 + ut.tid / 60; ut.dag = Math.floor(h / 24) + 1; ut.klokke = String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0');
+    return ut;
+  }
+  // nøkler: { navn: tekst } (bare spillnøklene). o: { side, navn, nå }
+  function pakkPlass(nøkler, o = {}) {
+    const n = {}; for (const [k, v] of Object.entries(nøkler || {})) if (typeof v === 'string' && LS.erSpill(k, v)) n[k] = v;
+    const info = plassInfo(n), navn = tekst2(o.navn, PLASS.navnMaks) || standardNavn(info);
+    return { spill: 'Riksbrudd', type: 'lagring', versjon: PLASS.versjon, side: o.side || 'dovre', navn, laget: Math.round(o.nå || 0), info, nøkler: n };
+  }
+  const standardNavn = info => (info.fraksjon ? `${info.fraksjon}, dag ${info.dag}` : `Dag ${info.dag}`);
+  // Leser en plass eller en fil. side: siden den skal lastes på. Gir { d } eller { feil: tekst, side? }
+  function lesPlass(t, side) {
+    if (typeof t === 'string' && t.length > PLASS.maksTegn) return { feil: 'Fila er for stor til å være et lagret spill.' };
+    let d = null; try { d = typeof t === 'string' ? JSON.parse(t) : t; } catch (e) { return { feil: 'Fila er ikke et lagret spill (kan ikke leses).' }; }
+    if (!d || typeof d !== 'object' || d.spill !== 'Riksbrudd' || d.type !== 'lagring') return { feil: 'Fila er ikke et lagret spill fra Riksbrudd.' };
+    if (d.versjon !== PLASS.versjon) return { feil: 'Fila er fra en annen utgave av spillet og kan ikke leses.' };
+    if (!d.nøkler || typeof d.nøkler !== 'object') return { feil: 'Fila mangler selve spillet.' };
+    const n = {}; for (const [k, v] of Object.entries(d.nøkler)) { if (typeof v !== 'string' || !LS.erSpill(k, v)) return { feil: 'Fila har noe som ikke hører til et spill (' + tekst2(k, 40) + ').' }; n[k] = v; }
+    const S = (() => { try { return JSON.parse(n['riksbrudd-k1']); } catch (e) { return null; } })();
+    if (!S || !S.ferdig || !S.leir || !Number.isFinite(S.leir.x) || !Number.isFinite(S.leir.y)) return { feil: 'Fila har ikke et ferdig satt opp spill (leiren mangler).' };
+    const fra = Object.prototype.hasOwnProperty.call(SIDENAVN, d.side) ? d.side : 'dovre';
+    if (side && fra !== side) return { feil: `Spillet er lagret på ${SIDENAVN[fra]}. Åpne den siden og hent det der.`, side: fra };
+    const info = plassInfo(n);
+    return { d: { spill: 'Riksbrudd', type: 'lagring', versjon: PLASS.versjon, side: fra, navn: tekst2(d.navn, PLASS.navnMaks) || standardNavn(info), laget: Number.isFinite(d.laget) ? d.laget : 0, info, nøkler: n } };
+  }
+  // Hva som skal skje når plassen lastes inn: nå = spillnøklene på siden nå ({ navn: tekst }). Alt fra før tas bort (også det plassen
+  // ikke har – det hører til spillet som byttes ut), så settes plassens nøkler.
+  function byttPlan(nå, plass) {
+    const sett = Object.entries(plass.nøkler || {}), har = new Set(sett.map(([k]) => k));
+    return { fjern: Object.keys(nå || {}).filter(k => !har.has(k)), sett };
+  }
+  const tilFil = plass => JSON.stringify(plass);
+  // filnavn: riksbrudd-<fraksjon>-dag-3-2026-11-20.json (bare a–z, 0–9 og bindestrek)
+  function filnavn(plass, dato) {
+    const ren = s => String(s || '').toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+    const d = dato instanceof Date ? dato : new Date(plass && plass.laget || 0);
+    return ['riksbrudd', ren(plass && plass.info && plass.info.fraksjon) || 'spill', 'dag', plass && plass.info ? plass.info.dag : 1, d.toISOString().slice(0, 10)].join('-') + '.json';
+  }
+  const Plass = { REGLER: PLASS, SIDENAVN, info: plassInfo, pakk: pakkPlass, les: lesPlass, byttPlan, tilFil, filnavn, standardNavn };
+  const api = { VERSJON, pakk, fraJSON, pakkLag, brukLag, pakkKj, brukKj, settTilbake, pakkMinne, brukMinne, Plass };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Lagring = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -110,6 +163,8 @@
   const spill = () => rot.OppstartSpill && OppstartSpill.tilstand();
   // et lagret spill fantes da siden ble lastet: da leses verden inn igjen ved første «riksbrudd-spill» (ikke når et nytt spill settes opp)
   let fortsetter = !!spill(), aktiv = false, sist = 0, av = false;
+  // (runde 7) når verden sist ble lagret, og når det sist feilet (Date.now()) – lagringsmenyen viser «Lagret 12:04»
+  let sistOk = 0, sistFeil = 0;
   const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.ai && !s.karakter && !s.leirvakt);   // leirvakta (spill/forsvar.js) finnes bare mens angrepet varer
   const egneKj = () => (rot.KJORETOY || []).filter(k => k.side === 'blå');
   // (18. nov) fiendens lag: motstandernes AI-lag og patruljen. Røverne i et angrep og sivile vern lagres ikke.
@@ -134,7 +189,7 @@
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;
     try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir,
       tettsteder: rot.TETTSTEDER || null, infra: rot.INFRA_TILSTAND || null, olje: rot.OLJE && OLJE.BASER[0] ? OLJE.BASER[0].beholdning : null,
-      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [] }))); return true; } catch (e) { return false; }
+      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [] }))); sistOk = Date.now(); return true; } catch (e) { sistFeil = Date.now(); return false; }
   }
   function les() {
     const S = spill(); if (!S || !S.leir) return false; let d = null;
@@ -165,5 +220,5 @@
     if (nå - sist < hver) return; sist = nå; lagre(); });
   window.addEventListener('pagehide', lagre); window.addEventListener('beforeunload', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  rot.LagringSpill = { NØKKEL, lagre, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av };
+  rot.LagringSpill = { NØKKEL, lagre, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av, sist: () => ({ ok: sistOk, feil: sistFeil }) };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

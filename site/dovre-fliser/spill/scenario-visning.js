@@ -17,10 +17,12 @@
   let flyttet = null;
   try { const f = JSON.parse(localStorage.getItem(FLYTT) || 'null');
     if (f && f.fra && f.til) { flyttet = f; const [tx, ty] = f.til.split(',').map(Number), [fx, fy] = f.fra.split(',').map(Number);
-      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!/^riksbrudd-/.test(k) || k === FLYTT) continue;
+      // (runde 7) bare nøklene til denne siden (spill/lagringsside.js) – ikke et spill med samme leir på en annen side
+      const egen = k => !window.LagringSide || LagringSide.egen(k), navn = k => (window.LagringSide && LagringSide.hvem(k) ? LagringSide.hvem(k).navn : k);
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!/^riksbrudd-/.test(k) || navn(k) === FLYTT || !egen(k)) continue;
         try { const d = JSON.parse(localStorage.getItem(k)); if (!d || typeof d !== 'object') continue;
           if (d.leir === f.fra) { d.leir = f.til; localStorage.setItem(k, JSON.stringify(d)); }
-          else if (d.leir && typeof d.leir === 'object' && Math.round(d.leir.x) === fx && Math.round(d.leir.y) === fy && k !== 'riksbrudd-k1') { d.leir = { x: tx, y: ty }; localStorage.setItem(k, JSON.stringify(d)); }
+          else if (d.leir && typeof d.leir === 'object' && Math.round(d.leir.x) === fx && Math.round(d.leir.y) === fy && navn(k) !== 'riksbrudd-k1') { d.leir = { x: tx, y: ty }; localStorage.setItem(k, JSON.stringify(d)); }
         } catch (e) { /* ikke JSON */ } }
       localStorage.removeItem(FLYTT); } } catch (e) { flyttet = null; }
 

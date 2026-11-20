@@ -111,15 +111,15 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (påDovre()) return { navn: 'Dovre', hvor: 'på Dovre-kartet', bb: DOVRE };
     return { navn: 'Norge', hvor: 'i Norge', bb: null };
   }
-  // Hver side har sitt eget lagrede spill (/rogaland får nøklene med «@rogaland»; /dovre-fliser og /norge deler). Startskjermen sier
-  // fra når det finnes et spill på en annen side (kritikken: «/rogaland startet et helt nytt spill uten å si fra»). Nøklene leses rått
-  // (localStorage.key / localStorage[nøkkel]) fordi getItem på /rogaland alltid legger til endingen.
+  // Hver side har sitt eget lagrede spill (spill/lagringsside.js: /rogaland og /norge får nøklene med «@rogaland»/«@norge», /dovre-fliser
+  // uten ending; runde 7). Startskjermen sier fra når det finnes et spill på en annen side (kritikken: «/rogaland startet et helt nytt spill
+  // uten å si fra»). Nøklene leses rått (localStorage.key / localStorage[nøkkel]) fordi getItem alltid legger til endingen for siden.
   function andreSpill() {
-    const her = typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE ? PÅ_OMRÅDE : null, ute = [];
+    const her = window.LagringSide && LagringSide.her ? (LagringSide.her === 'dovre' ? null : LagringSide.her) : typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE ? PÅ_OMRÅDE : null, ute = [];
     try { for (let i = 0; i < localStorage.length; i++) { const n = localStorage.key(i), m = /^riksbrudd-k1(?:@(\w+))?$/.exec(n || ''); if (!m || (m[1] || null) === her) continue;
       const T = O.fraJSON(localStorage[n]); if (!T || !T.ferdig) continue;
       const dovre = T.leir && typeof DOVRE !== 'undefined' && T.leir.x >= DOVRE[0] && T.leir.x <= DOVRE[2] && T.leir.y >= DOVRE[1] && T.leir.y <= DOVRE[3];
-      const hvor = m[1] ? `i ${m[1][0].toUpperCase() + m[1].slice(1)} (/${m[1]})` : dovre ? 'på Dovre (/dovre-fliser)' : 'på Norgeskartet (/norge)';
+      const hvor = m[1] ? `i ${m[1][0].toUpperCase() + m[1].slice(1)} (/${m[1]})` : dovre || window.LagringSide ? 'på Dovre (/dovre-fliser)' : 'på Norgeskartet (/norge)';
       ute.push(`«${T.fraksjon.navn}» ${hvor}`); } } catch (e) { return ''; }
     const st = sted(), eget = `Dette er et eget spill ${st.hvor}. `;
     if (!ute.length) return her ? eget + 'Det lagres i denne nettleseren, for seg.' : '';
@@ -398,7 +398,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;
-  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } location.reload(); };
+  // (runde 7) spillet du har, legges først i «Automatisk» under «Lagre og last» (spill/lagringsmeny.js), så «Nytt spill» kan angres
+  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.' + (window.LagringMeny ? ' Spillet du har nå, legges i «Automatisk» under «Lagre og last» i ☰.' : ''))) return;
+    if (window.LagringMeny) LagringMeny.taAuto('Før «Nytt spill»'); try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } location.reload(); };
   document.getElementById('lagmeny').appendChild(nyKnapp);
   const visNyttKnapp = () => { nyKnapp.hidden = !S; };
 
