@@ -641,6 +641,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function byggeplassHus(b) {
     const BP = window.Byggeplass, B = LB.BYGG[b.type]; if (!BP || !B || !B.fot || B.linje || B.del) return false;
     const L2 = window.Leir2d, st = L2 && L2.stil ? L2.stil(b.type, B) : null; if (st && L2.HUS && !L2.HUS.has(st.form)) return false;
+    // (tanken og porten reiser seg som før; små kasser – aggregat, batteri – også)
+    if (st && (st.form === 'tank' || st.form === 'port' || (st.form === 'kasse' && (B.fot[1] - B.fot[0]) * (B.fot[3] - B.fot[2]) < 12))) return false;
     return st && st.form === 'sal' ? 'saltak' : st ? 'flatt' : 'saltak';
   }
   // Leirens ting (telt, bål …) – lages på nytt med leirens nett
