@@ -1,7 +1,7 @@
 'use strict';
 /* Riksbrudd – «LAGRE OG LAST» (runde 7, 20. nov natt, pakke «lagring»). Kritikken: hver side hadde sin egen lagring uten at spilleren
  * kunne se eller styre den. Nå:
- *   - «Lagre og last: lagret 12:04» i ☰ (gruppen «Annet») og «Lagre» bak «Mer» i kommandolinja åpner panelet #lagremeny;
+ *   - «Lagre og last · lagret 12:04» øverst i ☰ (ved «Innstillinger») og «Lagre» bak «Mer» i kommandolinja åpner panelet #lagremeny;
  *     på startskjermen står «Last inn et lagret spill» nederst (der finnes ikke ☰).
  *   - Panelet: spillet nå (lagres av seg selv, «Lagret 12:04»), tre lagringsplasser og «Automatisk» med navn, dag, fraksjon, kasse og
  *     når de ble lagret; «Lagre her», «Last», «Slett» (bekreftes i raden), «Last ned som fil» og «Hent fra fil» (JSON).
@@ -127,6 +127,8 @@
 #lagremeny .filrad{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; } #lagremeny .filrad small{ color:var(--ink-dim,#a99); flex:1 1 200px; }
 #lagremeny .melding{ min-height:1.2em; margin:8px 0 0; color:#e9d79a; } #lagremeny .melding.feil{ color:#f0a890; }
 #oppstart .lastinn{ margin:2px 0 10px; padding:6px 9px; border:1px solid var(--rule,#3a3226); background:rgba(0,0,0,.18); border-radius:4px; font-size:13.5px; color:var(--ink-dim,#a99); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#lagmeny .mtopp button#lagreknapp{ width:auto; height:32px; min-height:32px; padding:0 10px; margin:0 8px 0 auto; font-size:14px; line-height:1; display:inline-flex; align-items:center; align-self:center; gap:6px; white-space:nowrap; }
+#lagreknapp small{ font-size:12px; color:var(--ink-dim,#a99); } #lagreknapp.feil small{ color:#f0a890; }
 #oppstart .lastinn button{ background:#2a2318; border:1px solid #c9b26a; color:#f0e2b0; min-height:34px; padding:2px 12px; font:inherit; font-size:13.5px; cursor:pointer; border-radius:4px; }
 #oppstart .lastinn button:hover{ filter:brightness(1.15); }
 @media (max-width:480px){ #lagremeny{ padding:6px; align-items:flex-start; } #lagremeny .ark{ padding:10px; } #lagremeny .plass{ padding:7px 8px; } }`;
@@ -203,13 +205,17 @@
     const r = new FileReader(); r.onload = () => { const s = hentFil(String(r.result || '')); if (s.feil) { filPlass = null; melding(s.feil, true); } else { filPlass = s.d; melding(''); } tegn(true); };
     r.onerror = () => melding('Fila kunne ikke leses.', true); r.readAsText(f); });
 
-  // ---------- knappen i ☰ (gruppen «Annet»; lastes før meny.js, så meny.js ordner den inn) og «Lagre» bak «Mer» ----------
-  const menyKn = el('button', { type: 'button', id: 'lagreknapp', title: 'Lagre, last og flytt spillet' }, 'Lagre og last: –');
+  // ---------- knappen øverst i ☰ (ved siden av «Innstillinger», synlig med en gang – nederst i «Annet» måtte man bla på PC) ----------
+  // meny.js ordner knappene i #lagmeny og hopper over dem i overskriften (.mtopp). Knappen settes inn der når siden er lastet, og på nytt
+  // hvis meny.js bygger menyen om (da forsvinner overskriften). Den legges ALDRI rett i #lagmeny mens meny.js finnes (det ville gått i ring).
+  const menyKn = el('button', { type: 'button', id: 'lagreknapp', title: 'Lagre, last og flytt spillet (det lagres også av seg selv)' }, el('span', {}, 'Lagre og last'), el('small', {}, '–'));
   menyKn.onclick = () => (åpen ? lukk() : åpne());
-  const lagmeny = document.getElementById('lagmeny'); if (lagmeny) lagmeny.appendChild(menyKn);
+  function settInnKnapp() { const m = document.getElementById('lagmeny'); if (!m) return; const topp = m.querySelector('.mtopp');
+    if (topp) { if (menyKn.parentNode !== topp) topp.insertBefore(menyKn, topp.lastElementChild); } else if (!menyKn.parentNode) m.appendChild(menyKn); }
+  function startKnapp() { settInnKnapp(); const m = document.getElementById('lagmeny'); if (m) new MutationObserver(() => { if (!m.contains(menyKn)) settInnKnapp(); }).observe(m, { childList: true }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startKnapp); else setTimeout(startKnapp, 0);
   let sistKnapp = '';
-  function oppdaterKnapp() { const t = 'Lagre og last: ' + status().kort; if (t === sistKnapp) return; sistKnapp = t;
-    const v = menyKn.querySelector('.verdi'); if (v) v.textContent = status().kort; else menyKn.textContent = t; }
+  function oppdaterKnapp() { const t = status().kort; if (t === sistKnapp) return; sistKnapp = t; menyKn.lastChild.textContent = t; menyKn.classList.toggle('feil', /ikke|feilet/.test(t)); }
   setInterval(oppdaterKnapp, 5000);
   (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'lagre', navn: 'Lagre', tast: '', tittel: 'Lagre og last: lagringsplasser og fil',
     ikon: "<path d='M5 4h11l3 3v13H5z'/><path d='M8 4v5h7V4'/><path d='M8 20v-6h8v6'/>", fins: () => true, på: () => åpen, trykk: () => (åpen ? lukk() : åpne()) });

@@ -398,7 +398,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;
-  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.')) return; try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } location.reload(); };
+  // (runde 7) spillet du har, legges først i «Automatisk» under «Lagre og last» (spill/lagringsmeny.js), så «Nytt spill» kan angres
+  nyKnapp.onclick = () => { if (!confirm('Starte et nytt spill? Karakteren, fraksjonen og leiren slettes.' + (window.LagringMeny ? ' Spillet du har nå, legges i «Automatisk» under «Lagre og last» i ☰.' : ''))) return;
+    if (window.LagringMeny) LagringMeny.taAuto('Før «Nytt spill»'); try { localStorage.removeItem(NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } location.reload(); };
   document.getElementById('lagmeny').appendChild(nyKnapp);
   const visNyttKnapp = () => { nyKnapp.hidden = !S; };
 

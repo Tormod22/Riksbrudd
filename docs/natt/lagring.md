@@ -15,7 +15,9 @@ deler fortsatt ett lagret spill», og hver side hadde sin egen lagring uten at s
    Norge-spill: spillnøklene tas bort fra Dovre-siden (innstillingene blir), og Dovre-siden viser startskjermen med «Spillet ditt
    «X» i Norge (/norge) er lagret for seg». Ligger leiren på Dovre, har begge sidene spillet etterpå og går hver sin vei.
    Har /norge alt et spill (`riksbrudd-k1@norge`), røres ingenting.
-2. **«Lagre og last»** (`spill/lagringsmeny.js`, rett etter lagring.js): knappen «Lagre og last: lagret 12:04» i ☰ (gruppen «Annet»),
+2. **«Lagre og last»** (`spill/lagringsmeny.js`, rett etter lagring.js): knappen «Lagre og last · lagret 12:04» øverst i ☰ (i overskriften
+   ved «Innstillinger», `.mtopp` – meny.js hopper over knapper der; knappen settes inn ved DOMContentLoaded og på nytt hvis meny.js bygger
+   menyen om, aldri rett i #lagmeny; i «Annet» nederst måtte man bla på PC),
    «Lagre» bak «Mer» i kommandolinja (PC og telefon), og «Last inn et lagret spill …» rett under «Steg 1 av 3» på startskjermen
    (der kan ☰ ikke nås). Panelet `#lagremeny`: status («Spillet lagres av seg selv … Lagret 12:04» eller en rød melding), «Spillet nå»
    (fraksjon, dag og klokke, karakter, kasse, «Last ned som fil»), navnefelt, **Plass 1–3** og **Automatisk** med navn, dag, fraksjon,
@@ -71,6 +73,8 @@ En fil fra en annen side avvises med «Spillet er lagret på Norge (/norge). Åp
   `spill/lagringsmeny.js` står rett etter `spill/lagring.js`. `versjon.py` er kjørt.
 - `site/dovre-fliser/spill/oppstart-visning.js` `andreSpill()`: «her» = `LagringSide.her` (/norge har nå egen ending), og et spill uten
   ending er alltid Dovre-siden (to linjer + kommentar).
+- `site/dovre-fliser/spill/oppstart-visning.js` «Nytt spill» i ☰: legger spillet du har i «Automatisk» først (`LagringMeny.taAuto`), og
+  spørsmålet sier det (to linjer). «Nytt spill» kan altså angres.
 - `site/dovre-fliser/spill/scenario-visning.js` (leir som flyttes, `FLYTT`): går bare over nøklene til denne siden (`LagringSide.egen`)
   og sammenligner `riksbrudd-k1` uten ending (før kunne et spill med samme leir på en annen side bli flyttet med, og på /rogaland ble
   `riksbrudd-k1@rogaland` ikke holdt utenfor).
@@ -94,5 +98,4 @@ En fil fra en annen side avvises med «Spillet er lagret på Norge (/norge). Åp
 - «Last» laster hele siden på nytt (tryggest: alle modulene leser sitt eget). Det tar like lang tid som å åpne spillet.
 - Lagringen i minnet ved sperret localStorage bygger på at nettleseren lar `window.localStorage` byttes ut; går ikke det, sier spillet
   fra, men kan da ikke lage fila.
-- «Nytt spill» i ☰ tar ikke en automatisk kopi først (fila er oppstart-visning.js) – lagre i en plass før, om du vil beholde spillet.
 - Innstillingene (grafikk, lyd, filter …) følger siden (hver side har sine, /norge fikk en kopi), men følger ikke med i en plass eller fil.
