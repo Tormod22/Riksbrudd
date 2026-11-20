@@ -159,7 +159,8 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   // og en angriper skyter på hverandre i et angrep: en linje i loggen og hendelsen «alarm» (flyt.js stopper spolingen og går ned til 1×).
   let kampMeldt = '', snartMeldt = '', snartAkk = 0;
   KROKER.sim.push(dt => { if (!auto()) return; const A = angrep(); if (!A) return;
-    if (kampMeldt !== A.id) { const e = A.lag.find(q => iStrid(q)); if (e) { kampMeldt = A.id; const b = iStrid(e);
+    // (bare kamp innen 3 km av leiren – R.hent – teller: en patrulje som møter angriperne langt unna, er ikke kampen om leiren)
+    if (kampMeldt !== A.id) { const L = leir(), e = L && A.lag.find(q => Math.hypot(q.x - L.x, q.y - L.y) <= R.hent && iStrid(q)); if (e) { kampMeldt = A.id; const b = iStrid(e);
       logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`); } }
     // senest ca. 10 min før de er framme (Trussel.VARSEL.snart): farten ned og et varsel til – én gang per angrep (sjekkes hvert spillminutt)
     snartAkk += dt; if (snartAkk < 1 || snartMeldt === A.id) return; snartAkk = 0;
@@ -171,7 +172,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   // (runde 8) angrepet identifiseres med en nøkkel (røverbølgen «r2», en motstanders angrepsgruppe «erød…»): når den skifter, er angrepet over –
   // da kommer rapporten (om spillet.js ikke alt har gitt den), og forsvaret oppheves uten den gamle «Etter angrepet»-linja (rapporten sier det)
   setInterval(() => { const t = T(), A = angrep(), aktiv = A ? A.id : t && t.aktiv ? 'r' + t.aktiv : '';
-    if (sistAktiv && sistAktiv !== aktiv) { if (!gitt.has(sistAktiv)) sluttAvSeg(sistAktiv); if (satt || snap || vakt) opphev(false); motFerdig(); if (auto()) etterAngrep(); }
+    if (sistAktiv && sistAktiv !== aktiv) { if (!gitt.has(sistAktiv) && auto()) sluttAvSeg(sistAktiv); if (satt || snap || vakt) opphev(false); motFerdig(); if (auto()) etterAngrep(); }
     if (aktiv && aktiv !== sistAktiv) startAngrep(A, aktiv); sistAktiv = aktiv;
     if (typeof tempo === 'undefined' || tempo > 0) { motSteg(); repSteg(); hjemSteg(); }
     if (satt && window.Feltarbeid) for (const s of ENHETER) if (s.forsvar && s.side === 'blå' && !s.sti && !s.planlegger && !s.nedgravd && s.graver == null && !s.forsvar.voll && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) < 25) Feltarbeid.startGrav(s);
