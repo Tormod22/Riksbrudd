@@ -723,3 +723,5 @@ rettet med `blåMedVarsel`) eller for lag som støtte på garnisonen underveis (
 - Bilder: scratchpad `natt7/krig/samles-1400x820.png`, `samles-390x844.png` (ringen og pila ved samlingsstedet, etterretningen i loggen),
   `krigskart-1400x820.png`, `krigskart-390x844.png` («5 lag · samler 2 lag i terrenget mot Dombås»), og fra gjennomspillingene
   `g7-*-dagN.png` og `g7-*-krig-slutt.png` (krigskartet med «Folkefronten har overtaket – 78 %»).
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil PORT=8913 node pipeline/fliser/sjekk.js`, 20. nov kl. 02:19 UTC): **119 ok, 0 FEIL** (373 s), også
+  «krig» med RUNDE 7-delen og «krigskartet». Logg: scratchpad `natt7/krig/sjekk-mobil.log`.
