@@ -68,12 +68,13 @@
   const nokTegninger = (takt, ganger, rammetid) => rammetid >= 4 * takt || ganger >= 64;
   // HAKK: oppsummering av pausene mellom bildene. pauser = [{ dt (ms), hva: 'bytte' | 'bygging' | 'ellers' }], bilder = antall bilder,
   // sek = hvor lenge det ble målt. Gir linjene til rapporten.
-  const HVA = { bytte: 'da et nytt område ble satt inn', bygging: 'mens et nytt område ble bygget', ellers: 'ellers' };
+  // (20. nov) nært = en bit av husenes innside eller gresset rundt deg ble laget i det bildet (R3.nærtNr – interior3d.js og gress3d)
+  const HVA = { bytte: 'da et nytt område ble satt inn', bygging: 'mens et nytt område ble bygget', nært: 'mens innsiden av et hus eller gresset rundt deg ble laget', ellers: 'ellers' };
   function hakkTekst(hode, pauser, bilder, sek) {
     const L = [...(hode || []), '', `Bilder: ${hel(bilder)} på ${des(sek, 0)} s (${des(bilder / Math.max(1, sek), 0)} per sekund i snitt)`], P = pauser.slice().sort((a, b) => b.dt - a.dt);
     if (!P.length) { L.push('Ingen pauser over 50 ms – bildet gikk jevnt hele tiden.'); return L.join('\n'); }
     L.push(`Pauser over 50 ms: ${P.length} – den lengste ${des(P[0].dt, 0)} ms (sum ${des(P.reduce((s, p) => s + p.dt, 0), 0)} ms)`);
-    for (const k of ['bytte', 'bygging', 'ellers']) { const G = P.filter(p => p.hva === k); if (G.length) L.push(`  ${HVA[k]}: ${G.length} (lengste ${des(G[0].dt, 0)} ms)`); }
+    for (const k of ['bytte', 'bygging', 'nært', 'ellers']) { const G = P.filter(p => p.hva === k); if (G.length) L.push(`  ${HVA[k]}: ${G.length} (lengste ${des(G[0].dt, 0)} ms)`); }
     L.push('De lengste: ' + P.slice(0, 10).map(p => `${des(p.dt, 0)} ms (${p.hva})`).join(', '));
     // hvor i koden (p.sted): summert per sted, de tyngste først
     const S = new Map(); for (const p of P) if (p.sted) { const o = S.get(p.sted) || { n: 0, sum: 0, maks: 0 }; o.n++; o.sum += p.dt; o.maks = Math.max(o.maks, p.dt); S.set(p.sted, o); }
@@ -218,13 +219,13 @@
   async function målHakk(valg) {
     const R = typeof R3 !== 'undefined' && R3, v = Object.assign({ sek: 20 }, valg || {});
     if (!R || !på3d || !R.ut || R.måler) return null;
-    R.måler = true; const pauser = [], t0 = performance.now(); let sistT = t0, bilder = 0, sett0 = R.settNr || 0, bygget = !!R.bygger, pust0 = R.pustNr || 0;
+    R.måler = true; const pauser = [], t0 = performance.now(); let sistT = t0, bilder = 0, sett0 = R.settNr || 0, bygget = !!R.bygger, pust0 = R.pustNr || 0, nært0 = R.nærtNr || 0;
     try {
       while (performance.now() - t0 < v.sek * 1000) {
         await new Promise(r => requestAnimationFrame(r)); const nå = performance.now(), dt = nå - sistT; sistT = nå; bilder++;
-        if (dt > 50) pauser.push({ dt, ved: (nå - t0) / 1000, hva: (R.settNr || 0) !== sett0 ? 'bytte' : bygget || R.bygger ? 'bygging' : 'ellers',
+        if (dt > 50) pauser.push({ dt, ved: (nå - t0) / 1000, hva: (R.settNr || 0) !== sett0 ? 'bytte' : bygget || R.bygger ? 'bygging' : (R.nærtNr || 0) !== nært0 ? 'nært' : 'ellers',
           sted: (R.pustNr || 0) !== pust0 ? (R.pustFør || '?') + ' → ' + (R.pustSted || '?') : (bygget || R.bygger ? 'uten pust' + (R.steg ? ' (' + R.steg + ')' : '') : '') });
-        sett0 = R.settNr || 0; bygget = !!R.bygger; pust0 = R.pustNr || 0;
+        sett0 = R.settNr || 0; bygget = !!R.bygger; pust0 = R.pustNr || 0; nært0 = R.nærtNr || 0;
         if (hakkKnapp) hakkKnapp.textContent = `Måler hakk … ${Math.max(0, Math.ceil(v.sek - (nå - t0) / 1000))} s`;
       }
       const gl = R.renderer.getContext(), c = R.renderer.domElement, K = window.KVAL;

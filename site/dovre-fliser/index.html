@@ -2398,7 +2398,8 @@ async function ryddHus(u) {
   if (!u.hus || !u.hus.omriss) return;
   // (med pust underveis: i byene er det mange ting å sjekke mot mange hus)
   const rens = async (data, steg, presis) => { if (!data || !data.length) return data; const ut = [];
-    for (let k = 0; k < data.length; k += steg) { if ((k & 1023) < steg && børPuste()) await pust();
+    // (20. nov natt: i tette byer tok ca. 200 ting mellom hver sjekk opptil 245 ms – nå sjekkes klokka for hver 32. ting)
+    for (let k = 0, n = 0; k < data.length; k += steg, n++) { if ((n & 31) === 0 && børPuste()) await pust();
       if (!(presis ? hindring3d(data[k], data[k + 1], u.husRute) : nærHus(u, data[k], data[k + 1]))) for (let i = 0; i < steg; i++) ut.push(data[k + i]); }
     return ut.length === data.length ? data : Array.isArray(data) ? ut : new Float32Array(ut); };
   if (u.trær) for (const art of Object.keys(u.trær)) u.trær[art] = await rens(u.trær[art], 5);
@@ -2504,20 +2505,33 @@ function gressMateriale() {
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
   const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
-  if (!nær) { if (R.gressMesh) R.gressMesh.visible = false; return; }
+  if (!nær) { if (R.gressMesh) R.gressMesh.visible = false; R.gressJobb = null; return; }
   if (!R.gressMesh) { const MAKS = VW < 700 ? 5000 : 12000, g1 = new THREE.PlaneGeometry(1, 1); g1.rotateX(Math.PI / 2); g1.translate(0, 0, .5);
     const g2 = g1.clone(); g2.rotateZ(Math.PI / 2); const pos = new Float32Array([...g1.attributes.position.array, ...g2.attributes.position.array]), uv = new Float32Array([...g1.attributes.uv.array, ...g2.attributes.uv.array]);
     const idx = [...g1.index.array, ...g2.index.array.map(i => i + 4)], geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(24).map((_, i) => i % 3 === 2 ? 1 : 0), 3)); geo.setIndex(idx);
     geo.setAttribute('aFelt', new THREE.InstancedBufferAttribute(new Float32Array(MAKS), 1));
-    R.gressMesh = new THREE.InstancedMesh(geo, gressMateriale(), MAKS); R.gressMesh.frustumCulled = false; R.scene.add(R.gressMesh); }
+    R.gressMesh = new THREE.InstancedMesh(geo, gressMateriale(), MAKS); R.gressMesh.frustumCulled = false; R.gressMesh.count = 0;
+    // fargene per tust finnes fra start: three.js (r128) lager ikke skyggeleggeren på nytt når instanceColor kommer etter første tegning
+    R.gressMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS * 3), 3); R.scene.add(R.gressMesh); }
   const m = R.gressMesh; m.visible = true;
+  // (20. nov natt, hakk når du går: opptil 36 000 kandidater i ett strekk hver 12. meter) gresset settes i biter – gressG, ca. 4 ms
+  // per bilde – og det gamle står til det nye er klart. Nytt utsnitt, eller gressSenter nullstilt (nye hus, nytt grafikknivå): begynn på nytt.
+  if (R.gressJobb && (R.gressJobb.u !== u || R.gressJobb.m !== m || R.gressSenter === null)) R.gressJobb = null;
+  if (R.gressJobb) { gressBit(R, 4); return; }
   if (R.gressSenter && Math.hypot(c.x - R.gressSenter[0], c.y - R.gressSenter[1]) < 12) return;
   R.gressSenter = [c.x, c.y];
-  const MAKS = Math.round(m.instanceMatrix.count * (window.KVAL ? KVAL.p.gress : 1)), RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W, FELT = m.geometry.attributes.aFelt.array; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
+  R.gressJobb = { u, m, it: gressG(R, u, m, c.x, c.y) }; gressBit(R, 4);
+}
+function gressBit(R, ms) { const J = R.gressJobb, slutt = performance.now() + ms; R.nærtNr = (R.nærtNr || 0) + 1; while (!J.it.next().done) if (performance.now() > slutt) return; if (R.gressJobb === J) R.gressJobb = null; }
+// Samme regning som før (samme tilfeldighet i samme rekkefølge), men i midlertidige tallrekker som legges inn når alt er regnet.
+function* gressG(R, u, m, cx, cy) {
+  const c = { x: cx, y: cy }, T = m.userData.tmp || (m.userData.tmp = { M: new Float32Array(m.instanceMatrix.count * 16), C: new Float32Array(m.instanceMatrix.count * 3), F: new Float32Array(m.instanceMatrix.count) });
+  const MAKS = Math.round(m.instanceMatrix.count * (window.KVAL ? KVAL.p.gress : 1)), RAD = R.fot ? 55 : 80, d = new THREE.Object3D(), col = new THREE.Color(), B = u.bunn, W = B.W, FELT = T.F; let n = 0, f = (Math.floor(c.x) * 73856093 ^ Math.floor(c.y) * 19349663) >>> 0;
   const tg = window.Vegetasjon ? Vegetasjon.tregrense(u.cy, u.cx) : 1100;
   const rnd = () => (f = (f * 1664525 + 1013904223) >>> 0) / 4294967296;
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
+    if ((t & 127) === 127) yield;
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), 1.05), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
     const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
     // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
@@ -2535,12 +2549,15 @@ function gress3d() {
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
-    d.position.set(x, y, z); d.rotation.set((rnd() - .5) * (lyng ? .6 : .7), (rnd() - .5) * (lyng ? .6 : .7), rnd() * 3.14); d.scale.set((lyng ? .75 : .4) + rnd() * .35, (lyng ? .75 : .4) + rnd() * .35, h); d.updateMatrix(); m.setMatrixAt(n, d.matrix); FELT[n] = lyng ? 1 : 0;
+    d.position.set(x, y, z); d.rotation.set((rnd() - .5) * (lyng ? .6 : .7), (rnd() - .5) * (lyng ? .6 : .7), rnd() * 3.14); d.scale.set((lyng ? .75 : .4) + rnd() * .35, (lyng ? .75 : .4) + rnd() * .35, h); d.updateMatrix(); d.matrix.toArray(T.M, n * 16); FELT[n] = lyng ? 1 : 0;
     if (lyng) { const br = rnd() < .3; col.setRGB(br ? .34 + rnd() * .08 : .19 + rnd() * .07, br ? .29 + rnd() * .05 : .32 + rnd() * .09, br ? .18 : .12);
       // (runde 5) lyng på åpen hei: halvt bakkens egen farge, så tustene ikke blir mørke prikker sett ovenfra
-      if (type === 3) col.setRGB((col.r + B.rgb[k] / 255 * 1.15) / 2, (col.g + B.rgb[k + 1] / 255 * 1.12) / 2, (col.b + B.rgb[k + 2] / 255 * 1.05) / 2); } else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); m.setColorAt(n, col); n++;
+      if (type === 3) col.setRGB((col.r + B.rgb[k] / 255 * 1.15) / 2, (col.g + B.rgb[k + 1] / 255 * 1.12) / 2, (col.b + B.rgb[k + 2] / 255 * 1.05) / 2); } else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); col.toArray(T.C, n * 3); n++;
   }
-  m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.geometry.attributes.aFelt.needsUpdate = true;
+  // inn i nettet (som setMatrixAt/setColorAt gjorde én og én)
+  if (!m.instanceColor || m.instanceColor.count < m.instanceMatrix.count) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(m.instanceMatrix.count * 3), 3);
+  m.instanceMatrix.array.set(T.M.subarray(0, n * 16)); m.instanceColor.array.set(T.C.subarray(0, n * 3)); m.geometry.attributes.aFelt.array.set(T.F.subarray(0, n));
+  m.count = n; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; m.geometry.attributes.aFelt.needsUpdate = true;
 }
 // Soldatene i 3D: hver mann i laget som en figur i formasjonen fra kartet: kolonne på marsj, kile når laget står. Sårede kneler,
 // falne ligger. Bare lag du ser (tåka), og bare innenfor utsnittet.
@@ -3302,7 +3319,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kvalitet.js?v=259dda2ea8"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=07968fde8f"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=88b44806a5"></script>
-<script src="/dovre-fliser/spill/lave3d.js?v=a84657a2f5"></script>
+<script src="/dovre-fliser/spill/lave3d.js?v=99245979f9"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
@@ -3328,13 +3345,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
 <script src="/dovre-fliser/spill/lagringsmeny.js?v=2b3528b257"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=b4890b7d18"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=845f0a5982"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=c98ba036b6"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
-<script src="/dovre-fliser/spill/interior.js?v=e4c7eb43c3"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=8fe3cb3355"></script>
+<script src="/dovre-fliser/spill/interior.js?v=19519c5762"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=c0c590e3cb"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
@@ -3345,7 +3362,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leting.js?v=0fdd1bbf02"></script>
 <script src="/dovre-fliser/spill/leting-visning.js?v=a514e8c8ff"></script>
 <script src="/dovre-fliser/spill/lut.js?v=2f6a7b0b3f"></script>
-<script src="/dovre-fliser/spill/lut-visning.js?v=7b9cef805f"></script>
+<script src="/dovre-fliser/spill/lut-visning.js?v=2d3cbb02fb"></script>
 <script src="/dovre-fliser/spill/mobler.js?v=43f0e722ac"></script>
 <script src="/dovre-fliser/spill/mobler-visning.js?v=c6ceb2f309"></script>
 <script src="/dovre-fliser/spill/lykt.js?v=b7bc87e946"></script>

@@ -46,8 +46,29 @@
   function inni(P, X, Y) { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if ((yi > Y) !== (yj > Y) && X < (xj - xi) * (Y - yi) / (yj - yi) + xi) inn = !inn; } return inn; }
   function avstSeg(x, y, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0; return Math.hypot(x - ax - dx * t, y - ay - dy * t); }
   const avstKant = (P, x, y) => { let d = Infinity; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; d = Math.min(d, avstSeg(x, y, a[0], a[1], b[0], b[1])); } return d; };
+  // RUTER PÅ OMRISSET (20. nov natt, hakk i store bygg med mange hjørner): et rutenett over omrisset der hver rute er merket «sikkert inne»
+  // (1) eller «sikkert ute» (2) når midten ligger lenger fra alle kanter enn rutens halve diagonal + SIKKER. Hele ruta ligger da på samme
+  // side av omrisset og lenger enn SIKKER fra kanten, så inni() og nærKant(…, g ≤ SIKKER) har samme svar for alle punkter i ruta.
+  // Ellers (0, nær en kant, eller utenfor rutenettet) regnes det som før. Bare for omriss med minst 12 hjørner. Tallene er Claudes forslag.
+  const SIKKER = .15, RUTE = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  function ruter(P) {
+    if (!RUTE || P.length < 12) return null; let G = RUTE.get(P); if (G !== undefined) return G;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+    const c = Math.max(.5, Math.sqrt((x1 - x0) * (y1 - y0) / 900)), W = Math.max(1, Math.ceil((x1 - x0) / c)), H = Math.max(1, Math.ceil((y1 - y0) / c)), k = new Uint8Array(W * H), hd = c * Math.SQRT1_2 + SIKKER;
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const cx = x0 + (i + .5) * c, cy = y0 + (j + .5) * c; if (avstKant(P, cx, cy) > hd) k[j * W + i] = inni(P, cx, cy) ? 1 : 2; }
+    G = { x0, y0, c, W, H, k }; RUTE.set(P, G); return G;
+  }
+  const ruteKode = (G, x, y) => { const i = Math.floor((x - G.x0) / G.c), j = Math.floor((y - G.y0) / G.c); return i < 0 || j < 0 || i >= G.W || j >= G.H ? 0 : G.k[j * G.W + i]; };
+  // samme svar som inni(P, x, y) og nærKant(P, x, y, g), raskere i store omriss
+  function inniR(P, x, y) { const G = ruter(P), q = G ? ruteKode(G, x, y) : 0; return q === 1 ? true : q === 2 ? false : inni(P, x, y); }
+  function nærKantR(P, x, y, g) { if (g <= SIKKER) { const G = ruter(P); if (G && ruteKode(G, x, y)) return false; } return nærKant(P, x, y, g); }
+  // (20. nov) sant når (x, y) er nærmere enn g fra en kant: samme svar som avstKant(P, x, y) < g, men stopper ved første treff
+  const nærKant = (P, x, y, g) => { for (let i = 0, n = P.length; i < n; i++) { const a = P[i], b = P[i + 1 === n ? 0 : i + 1]; if (avstSeg(x, y, a[0], a[1], b[0], b[1]) < g) return true; } return false; };
 
-  function plan(P, info) {
+  // (20. nov natt, hakk) planen er en generator (yield mellom rommene og i rutenettene), så interiøret i 3D kan lages i biter.
+  // plan() kjører den ferdig i ett strekk – samme svar.
+  function plan(P, info) { const it = planG(P, info); let r; while (!(r = it.next()).done); return r.value; }
+  function* planG(P, info) {
     const kl = KLASSE[info.kl] ? info.kl : 'hus', K = KLASSE[kl], frø = info.i | 0; let teller = 0; const tilf = () => hash(frø, ++teller);
     // aksene: u langs byggets lengste side, v på tvers
     let best = 0, ux = 1, uy = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > best) { best = l; ux = (b[0] - a[0]) / l; uy = (b[1] - a[1]) / l; } }
@@ -56,7 +77,8 @@
     for (let i = 0; i < P.length; i++) { const [x, y] = P[i], [bx, by] = P[(i + 1) % P.length], [u, v] = tilUV(x, y); areal += x * by - bx * y;
       u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     areal = Math.abs(areal) / 2;
-    const iUV = (u, v) => { const [x, y] = tilXY(u, v); return inni(P, x, y); };
+    // (20. nov: uten mellomliggende tabeller – samme regning som tilXY – så søppeltømmingen får mindre å gjøre)
+    const iUV = (u, v) => inniR(P, u * ux + v * vx, u * uy + v * vy);
     // inngangen: punktet rett innenfor døra, og åpningen i ytterveggen
     const d = info.dør, nx = d.uy, ny = -d.ux, w = Math.max(1.1, d.w), inn = [d.x - nx * .7, d.y - ny * .7];
     const åpninger = [tilUV(inn[0], inn[1])], vegger = [], dører = [];
@@ -64,7 +86,8 @@
     const skille = (langsU, fast, a, b) => {
       const pkt = (t, side = 0) => langsU ? [t, fast + side] : [fast + side, t], biter = [], løp = []; let start = null, ds = null;
       // veggen står der linja er inne i omrisset; døra må ha rom på begge sider (0,6 m ut til hver side er også inne)
-      for (let t = a; t <= b + 1e-6; t += .2) { const tt = Math.min(b, t), inne = iUV(...pkt(tt)), begge = inne && iUV(...pkt(tt, .6)) && iUV(...pkt(tt, -.6));
+      const iP = (t, side) => (langsU ? iUV(t, fast + side) : iUV(fast + side, t));
+      for (let t = a; t <= b + 1e-6; t += .2) { const tt = Math.min(b, t), inne = iP(tt, 0), begge = inne && iP(tt, .6) && iP(tt, -.6);
         if (inne && start === null) start = tt; if (!inne && start !== null) { biter.push([start, t - .2]); start = null; }
         if (begge && ds === null) ds = tt; if (!begge && ds !== null) { løp.push([ds, t - .2]); ds = null; } }
       if (start !== null) biter.push([start, b]); if (ds !== null) løp.push([ds, b]);
@@ -80,16 +103,17 @@
     // et skille i fast = uS (langs v) er lov når ingen åpning ligger der skilleveggen møter romveggene
     const lov = (langsU, fast, a, b) => !åpninger.some(([ou, ov]) => { const o = langsU ? [ov, ou] : [ou, ov]; return Math.abs(o[0] - fast) < 1 && (Math.abs(o[1] - a) < .5 || Math.abs(o[1] - b) < .5 || (o[1] > a && o[1] < b && Math.abs(o[0] - fast) < .45)); });
     const rom = [];
-    const del = (r, dybde) => {
+    // (generator: yield før hver skillevegg, så store bygg med mange rom kan deles i biter; brukes med yield*)
+    const del = function* (r, dybde) {
       const lu = r.u1 - r.u0, lv = r.v1 - r.v0;
       if (K.hall || lu * lv <= K.maks || dybde > 7 || Math.max(lu, lv) < 2 * K.min) { rom.push(r); return; }
       const iU = lu >= lv, len = iU ? lu : lv, lo = iU ? r.u0 : r.v0;
       for (let k = 0; k < 8; k++) {
         const s = lo + Math.max(K.min, Math.min(len - K.min, len * (.36 + .28 * tilf())));
         if (!lov(!iU, s, iU ? r.v0 : r.u0, iU ? r.v1 : r.u1)) continue;
-        skille(!iU, s, iU ? r.v0 : r.u0, iU ? r.v1 : r.u1);
-        if (iU) { del({ u0: r.u0, u1: s, v0: r.v0, v1: r.v1 }, dybde + 1); del({ u0: s, u1: r.u1, v0: r.v0, v1: r.v1 }, dybde + 1); }
-        else { del({ u0: r.u0, u1: r.u1, v0: r.v0, v1: s }, dybde + 1); del({ u0: r.u0, u1: r.u1, v0: s, v1: r.v1 }, dybde + 1); }
+        yield 'skille'; skille(!iU, s, iU ? r.v0 : r.u0, iU ? r.v1 : r.u1);
+        if (iU) { yield* del({ u0: r.u0, u1: s, v0: r.v0, v1: r.v1 }, dybde + 1); yield* del({ u0: s, u1: r.u1, v0: r.v0, v1: r.v1 }, dybde + 1); }
+        else { yield* del({ u0: r.u0, u1: r.u1, v0: r.v0, v1: s }, dybde + 1); yield* del({ u0: r.u0, u1: r.u1, v0: s, v1: r.v1 }, dybde + 1); }
         return;
       }
       rom.push(r);
@@ -101,9 +125,9 @@
       skille(false, s, v0, v1);
       const a = { u0, u1: s, v0, v1 }, b = { u0: s, u1, v0, v1 }, innA = iu < s;
       (innA ? b : a).bak = true; rom.push(a, b);
-    } else del(hele, 0);
+    } else yield* del(hele, 0);
     // rommenes mål og hvor mye av dem som ligger inne i omrisset (rom utenfor et skjevt omriss brukes ikke)
-    for (const r of rom) { let inne = 0, n = 0; for (let a = .5; a < 4; a++) for (let b = .5; b < 4; b++) { n++; if (iUV(r.u0 + (r.u1 - r.u0) * a / 4, r.v0 + (r.v1 - r.v0) * b / 4)) inne++; }
+    for (const r of rom) { yield 'mål'; let inne = 0, n = 0; for (let a = .5; a < 4; a++) for (let b = .5; b < 4; b++) { n++; if (iUV(r.u0 + (r.u1 - r.u0) * a / 4, r.v0 + (r.v1 - r.v0) * b / 4)) inne++; }
       r.andel = inne / n; r.areal = (r.u1 - r.u0) * (r.v1 - r.v0) * r.andel; }
     const [iu, iv] = åpninger[0], innRom = rom.find(r => iu >= r.u0 && iu <= r.u1 && iv >= r.v0 && iv <= r.v1) || rom[0];
     roller(kl, rom, innRom, info, w);
@@ -117,7 +141,8 @@
     const pl = { P, kl, i: frø, areal, bb: [x0, y0, x1, y1], akse: { ux, uy, vx, vy }, rom, vegger, ytre, dører, møbler: [],
       inngang: { x: d.x, y: d.y, nx, ny, ux: d.ux, uy: d.uy, w, inn }, tak: K.tak || Math.max(2.4, Math.min(7, (info.h || 6) - .6)), gulv: 0 };
     pl.senger = info.senger;   // brakka i leiren: så mange sengeplasser bygget har (to per køyeseng)
-    møbler(pl, tilXY, åpninger, tilf);
+    yield 'rom';
+    yield* møblerG(pl, tilXY, åpninger, tilf);
     for (const r of rom) delete r.veier;
     return pl;
   }
@@ -147,19 +172,22 @@
 
   // Møblene. Et møbel står med ryggen mot en romvegg (side 0: v0, 1: u1, 2: v1, 3: u0) eller fritt i rommet; a = retningen
   // møbelets bredde går i, og fronten vender inn i rommet.
-  function møbler(pl, tilXY, åpninger, tilf) {
+  // hjørnene og midten som prøv() sjekker mot omrisset, i denne rekkefølgen
+  const HJØRNER = [-1, -1, 1, -1, 1, 1, -1, 1, 0, 0], TOM = Object.freeze({}), PLASSER = [.5, .15, .85, 0, 1, .3, .7], SIDER = [0, 1, 2, 3];
+  function* møblerG(pl, tilXY, åpninger, tilf) {
     const { ux, uy, vx, vy } = pl.akse, P = pl.P, satt = [];
     // rektangel i uv: midt (cu, cv), halv bredde langs (du, dv-retning), gyldig = inne i rommet og omrisset, ikke i en åpning, ikke oppå noe
-    const prøv = (r, type, cu, cv, langsU, snu, o) => { o = o || {};
-      const [b0, d0, h, sperrer] = MØBLER[type], b = o.b || b0, dd = o.d || d0, hu = (langsU ? b : dd) / 2, hv = (langsU ? dd : b) / 2, m = o.margin === undefined ? .06 : o.margin;
+    const prøv = (r, type, cu, cv, langsU, snu, o) => { o = o || TOM;
+      const MB = MØBLER[type], b0 = MB[0], d0 = MB[1], h = MB[2], sperrer = MB[3], b = o.b || b0, dd = o.d || d0, hu = (langsU ? b : dd) / 2, hv = (langsU ? dd : b) / 2, m = o.margin === undefined ? .06 : o.margin;
       if (cu - hu < r.u0 + m || cu + hu > r.u1 - m || cv - hv < r.v0 + m || cv + hv > r.v1 - m) return null;
-      for (const [su, sv] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, 0]]) { const [x, y] = tilXY(cu + su * hu, cv + sv * hv); if (!inni(P, x, y) || avstKant(P, x, y) < .1) return null; }
+      // (20. nov: de billige sjekkene først, hjørnene mot omrisset til slutt – ingenting endres før møbelet settes, så svaret er det samme)
       const fri = o.fri === undefined ? .75 : o.fri;
-      for (const [ou, ov] of åpninger) if (Math.abs(ou - cu) < hu + fri && Math.abs(ov - cv) < hv + fri) return null;
+      for (let q = 0; q < åpninger.length; q++) { const ou = åpninger[q][0], ov = åpninger[q][1]; if (Math.abs(ou - cu) < hu + fri && Math.abs(ov - cv) < hv + fri) return null; }
       // store møbler står aldri i gangveien fra en døråpning til rommets midte (ellers kan to møbler stenge et rom)
-      if (sperrer && !o.iVeien) for (const [a0, b0, a1, b1] of r.veier || []) if (cu + hu > a0 && cu - hu < a1 && cv + hv > b0 && cv - hv < b1) return null;
+      if (sperrer && !o.iVeien && r.veier) for (let q = 0; q < r.veier.length; q++) { const V = r.veier[q]; if (cu + hu > V[0] && cu - hu < V[2] && cv + hv > V[1] && cv - hv < V[3]) return null; }
       const luft = o.luft === undefined ? .08 : o.luft;
-      for (const s of satt) if (!(o.på && s === o.på) && Math.abs(s.cu - cu) < s.hu + hu + luft && Math.abs(s.cv - cv) < s.hv + hv + luft) return null;
+      for (let q = 0; q < satt.length; q++) { const s = satt[q]; if (!(o.på && s === o.på) && Math.abs(s.cu - cu) < s.hu + hu + luft && Math.abs(s.cv - cv) < s.hv + hv + luft) return null; }
+      for (let q = 0; q < 5; q++) { const su = HJØRNER[q * 2], sv = HJØRNER[q * 2 + 1], pu = cu + su * hu, pv = cv + sv * hv, x = pu * ux + pv * vx, y = pu * uy + pv * vy; if (!inniR(P, x, y) || nærKantR(P, x, y, .1)) return null; }
       const [x, y] = tilXY(cu, cv), a = Math.atan2(langsU ? uy : vy, langsU ? ux : vx) + (snu ? Math.PI : 0);
       // (i rom som er skåret av omrisset, stemmer ikke gangveiene: der sperrer ikke møblene)
       const it = { type, x, y, a, b, d: dd, h: o.h || h, sperrer: !!sperrer && r.andel > .97, cu, cv, hu, hv, f: tilf() }; satt.push(it); pl.møbler.push(it); return it;
@@ -171,14 +199,16 @@
       if (side === 1) return prøv(r, type, r.u1 - k, r.v0 + b / 2 + .1 + t * Math.max(0, lv - b - .2), false, false, o);
       return prøv(r, type, r.u0 + k, r.v0 + b / 2 + .1 + t * Math.max(0, lv - b - .2), false, true, o); };
     // prøv veggene i en fast, tilfeldig rekkefølge og noen plasser langs hver
-    const etSted = (r, type, o, sider) => { const s0 = Math.floor(tilf() * 4), L = sider || [0, 1, 2, 3];
-      for (let k = 0; k < L.length; k++) for (const t of [.5, .15, .85, 0, 1, .3, .7]) { const it = vegg(r, type, L[(k + s0) % L.length], t, o); if (it) { it.side = L[(k + s0) % L.length]; return it; } } return null; };
+    const etSted = (r, type, o, sider) => { const s0 = Math.floor(tilf() * 4), L = sider || SIDER;
+      for (let k = 0; k < L.length; k++) for (const t of PLASSER) { const it = vegg(r, type, L[(k + s0) % L.length], t, o); if (it) { it.side = L[(k + s0) % L.length]; return it; } } return null; };
     // foran et møbel (inn i rommet), avstand fra fronten
     const foran = (r, it, type, avst, o) => { const [, d0] = MØBLER[type], dd = (o && o.d) || d0, s = it.side, q = it[s === 0 || s === 2 ? 'hv' : 'hu'] + avst + dd / 2;
       const cu = it.cu + (s === 3 ? q : s === 1 ? -q : 0), cv = it.cv + (s === 0 ? q : s === 2 ? -q : 0); const ny = prøv(r, type, cu, cv, s === 0 || s === 2, s === 0 || s === 3, o); if (ny) ny.side = s; return ny; };
     // rader i et rutenett: u-retningen er radene; du/dv = avstand mellom midtene
-    const rutenett = (r, type, o) => { const [b0, d0] = MØBLER[type], mU = o.mU || 1.2, mV = o.mV || 1.2, ut = [];
+    // (generator: yield for hver åttende plass, så store haller kan planlegges i biter; brukes med yield*)
+    const rutenett = function* (r, type, o) { const [b0, d0] = MØBLER[type], mU = o.mU || 1.2, mV = o.mV || 1.2, ut = []; let n = 0;
       for (let cv = r.v0 + mV + (o.langsU ? d0 : b0) / 2; cv < r.v1 - mV; cv += o.dv) for (let cu = r.u0 + mU + (o.langsU ? b0 : d0) / 2; cu < r.u1 - mU; cu += o.du) {
+        if (++n % 8 === 0) yield 'rutenett';
         if (o.hopp && o.hopp(cu, cv)) continue; if (ut.length >= (o.maks || 60)) return ut; const it = prøv(r, type, cu, cv, !!o.langsU, !!o.snu, o); if (it) ut.push(it); }
       return ut; };
     const bord = (r, n) => { const it = prøv(r, 'spisebord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, r.u1 - r.u0 >= r.v1 - r.v0, false) || prøv(r, 'spisebord', r.u0 + (r.u1 - r.u0) * .35, r.v0 + (r.v1 - r.v0) * .6, true, false);
@@ -189,7 +219,7 @@
       for (const [ou, ov] of åpninger) { if (ou < r.u0 - .3 || ou > r.u1 + .3 || ov < r.v0 - .3 || ov > r.v1 + .3) continue;
         const vFørst = Math.abs(ov - r.v0) < .8 || Math.abs(ov - r.v1) < .8, bo = (a0, b0, a1, b1) => r.veier.push([Math.min(a0, a1) - q, Math.min(b0, b1) - q, Math.max(a0, a1) + q, Math.max(b0, b1) + q]);
         if (vFørst) { bo(ou, ov, ou, cv); bo(ou, cv, cu, cv); } else { bo(ou, ov, cu, ov); bo(cu, ov, cu, cv); } } }
-    for (const r of pl.rom) {
+    for (const r of pl.rom) { yield 'rom';
       const A = r.areal, lu = r.u1 - r.u0, lv = r.v1 - r.v0, lang = lu >= lv ? [0, 2] : [1, 3], kort = lu >= lv ? [1, 3] : [0, 2];
       switch (r.rolle) {
         case 'stue': case 'allrom': {
@@ -207,18 +237,18 @@
         case 'kontor': { const n = Math.max(1, Math.min(6, Math.floor(A / 7))); for (let k = 0; k < n; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'arkivskap'); etSted(r, 'bokhylle'); etSted(r, 'plante', { fri: .5 }); break; }
         case 'resepsjon': { const s = etSted(r, 'skranke', null, kort) || etSted(r, 'skranke'); if (s) foran(r, s, 'kontorstol', -1.3, { fri: .2, luft: -1 }); etSted(r, 'benk'); etSted(r, 'benk'); etSted(r, 'plante', { fri: .5 }); etSted(r, 'plante', { fri: .5 }); break; }
         case 'klasserom': { const t = etSted(r, 'tavle', { fri: .3 }, kort); etSted(r, 'kateter', null, t ? [t.side] : kort);
-          rutenett(r, 'skolepult', { du: 1.5, dv: 1.3, mU: lu >= lv ? 2.4 : 1, mV: lu >= lv ? 1 : 2.4, langsU: lu < lv, maks: 24 }); etSted(r, 'bokhylle'); break; }
+          yield* rutenett(r, 'skolepult', { du: 1.5, dv: 1.3, mU: lu >= lv ? 2.4 : 1, mV: lu >= lv ? 1 : 2.4, langsU: lu < lv, maks: 24 }); etSted(r, 'bokhylle'); break; }
         case 'sykerom': { const s = etSted(r, 'sykeseng'); if (s) { const lU = s.side === 0 || s.side === 2; prøv(r, 'nattbord', s.cu + (lU ? s.hu + .3 : 0), s.cv + (lU ? 0 : s.hv + .3), lU, false, { fri: .3 }); }
           if (A > 14) etSted(r, 'sykeseng'); etSted(r, 'stol', { fri: .4 }); etSted(r, 'vask', { fri: .5 }); break; }
-        case 'butikk': { const k = etSted(r, 'kasse', { fri: 1.2 }); rutenett(r, 'reol', { du: lu >= lv ? 3 : 2.6, dv: lu >= lv ? 2.6 : 3, mU: 1.6, mV: 1.6, langsU: lu >= lv, fri: 1.6, maks: 40 });
+        case 'butikk': { const k = etSted(r, 'kasse', { fri: 1.2 }); yield* rutenett(r, 'reol', { du: lu >= lv ? 3 : 2.6, dv: lu >= lv ? 2.6 : 3, mU: 1.6, mV: 1.6, langsU: lu >= lv, fri: 1.6, maks: 40 });
           etSted(r, 'kjøledisk', null, lang); etSted(r, 'kjøledisk', null, lang); if (!k) etSted(r, 'kasse'); break; }
         case 'lager': { for (let k = 0; k < Math.min(10, Math.floor(A / 5)); k++) etSted(r, k % 3 ? 'pall' : 'hylle'); break; }
         case 'verksted': { for (let k = 0; k < Math.min(6, 1 + Math.floor(A / 60)); k++) etSted(r, 'arbeidsbenk');
-          rutenett(r, 'maskin', { du: 7, dv: 6, mU: 3, mV: 3, langsU: lu >= lv, fri: 2, maks: 12 }); for (let k = 0; k < Math.min(8, Math.floor(A / 40)); k++) etSted(r, k % 2 ? 'pall' : 'tønne'); break; }
-        case 'lagerhall': { const høy = pl.tak > 4.6; const satt = rutenett(r, høy ? 'pallereol' : 'pall', { du: lu >= lv ? 3 : 4.2, dv: lu >= lv ? 4.2 : 3, mU: 2.5, mV: 2.5, langsU: lu >= lv, fri: 2.5, maks: 60, h: høy ? Math.min(4, pl.tak - .6) : undefined });
+          yield* rutenett(r, 'maskin', { du: 7, dv: 6, mU: 3, mV: 3, langsU: lu >= lv, fri: 2, maks: 12 }); for (let k = 0; k < Math.min(8, Math.floor(A / 40)); k++) etSted(r, k % 2 ? 'pall' : 'tønne'); break; }
+        case 'lagerhall': { const høy = pl.tak > 4.6; const satt = yield* rutenett(r, høy ? 'pallereol' : 'pall', { du: lu >= lv ? 3 : 4.2, dv: lu >= lv ? 4.2 : 3, mU: 2.5, mV: 2.5, langsU: lu >= lv, fri: 2.5, maks: 60, h: høy ? Math.min(4, pl.tak - .6) : undefined });
           // små lager (telt, boder): paller og hyller langs veggene i stedet
           if (!satt.length) for (let k = 0; k < Math.min(8, Math.floor(A / 4)); k++) etSted(r, k % 3 ? 'pall' : 'hylle'); break; }
-        case 'låve': { rutenett(r, 'høyball', { du: 1.45, dv: 1.45, mU: 1, mV: 1, maks: 14, fri: 2, hopp: (cu, cv) => cu > r.u0 + lu * .45 }); for (let k = 0; k < Math.min(4, Math.floor(A / 40)); k++) etSted(r, 'bås', { fri: 1.5 });
+        case 'låve': { yield* rutenett(r, 'høyball', { du: 1.45, dv: 1.45, mU: 1, mV: 1, maks: 14, fri: 2, hopp: (cu, cv) => cu > r.u0 + lu * .45 }); for (let k = 0; k < Math.min(4, Math.floor(A / 40)); k++) etSted(r, 'bås', { fri: 1.5 });
           if (A > 90) prøv(r, 'traktor', r.u0 + lu * .7, (r.v0 + r.v1) / 2, lu < lv, false, { fri: 1.5 }); etSted(r, 'tønne'); break; }
         case 'garasje': { const i = pl.inngang, cu = i.inn[0] * ux + i.inn[1] * uy, cv = i.inn[0] * vx + i.inn[1] * vy, tvers = Math.abs(i.nx * ux + i.ny * uy) > .7;
           // bilen står rett innenfor porten, med nesa innover
@@ -229,19 +259,19 @@
           // alteret i enden lengst fra inngangen, benkerader på hver side av midtgangen
           const fjern = iU ? (cu - r.u0 < r.u1 - cu ? 1 : 3) : (cv - r.v0 < r.v1 - cv ? 2 : 0); vegg(r, 'alter', fjern, .5, { fri: .5 });
           const midt = iU ? (r.v0 + r.v1) / 2 : (r.u0 + r.u1) / 2, bb = Math.max(1.4, Math.min(3.4, (iU ? lv : lu) / 2 - 1.5));
-          rutenett(r, 'kirkebenk', { b: bb, du: iU ? 1.25 : bb + 1.4, dv: iU ? bb + 1.4 : 1.25, mU: iU ? 3.5 : 1, mV: iU ? 1 : 3.5, langsU: !iU, snu: fjern === 1 || fjern === 2, maks: 44, fri: .9,
+          yield* rutenett(r, 'kirkebenk', { b: bb, du: iU ? 1.25 : bb + 1.4, dv: iU ? bb + 1.4 : 1.25, mU: iU ? 3.5 : 1, mV: iU ? 1 : 3.5, langsU: !iU, snu: fjern === 1 || fjern === 2, maks: 44, fri: .9,
             hopp: (a, b) => Math.abs((iU ? b : a) - midt) < .75 }); etSted(r, 'prekestol', { fri: .6 }, [fjern]); break; }
         case 'hangar': { if (lu > 14 && lv > 12) prøv(r, 'fly', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { fri: 2 }); for (let k = 0; k < 4; k++) etSted(r, k % 2 ? 'verktøyvogn' : 'arbeidsbenk'); break; }
         // leirens bygg: brakka har køyesenger langs langveggene, kontrollrommet kartbord og radio, kjøkkenet benker og langbord
         // drivhus: plantebed i rekker langs huset med gang mellom, vanntønne ved døra
-        case 'drivhus': { const satt = rutenett(r, 'plantebed', { du: lu >= lv ? 2.9 : 1.75, dv: lu >= lv ? 1.75 : 2.9, mU: .7, mV: .6, langsU: lu >= lv, fri: .8, maks: 16 });
+        case 'drivhus': { const satt = yield* rutenett(r, 'plantebed', { du: lu >= lv ? 2.9 : 1.75, dv: lu >= lv ? 1.75 : 2.9, mU: .7, mV: .6, langsU: lu >= lv, fri: .8, maks: 16 });
           if (!satt.length) for (let k = 0; k < Math.min(6, Math.floor(A / 6)); k++) etSted(r, 'plantebed', { fri: .8 }, lang); etSted(r, 'tønne'); break; }
         case 'brakke': { for (let k = 0; k < (pl.senger ? Math.ceil(pl.senger / 2) : Math.min(12, Math.floor(A / 6))); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
         case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
           for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); break; }
         case 'storkjøkken': { etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(lu, lv) - 2) }, lang); etSted(r, 'komfyr'); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); etSted(r, 'kjøleskap'); etSted(r, 'hylle');
-          rutenett(r, 'langbord', { du: lu >= lv ? 3.4 : 2.4, dv: lu >= lv ? 2.4 : 3.4, mU: 1.6, mV: 1.6, langsU: lu >= lv, maks: 3, fri: 1.2 }); break; }
-        case 'terminal': { rutenett(r, 'seterad', { du: lu >= lv ? 3.4 : 2.2, dv: lu >= lv ? 2.2 : 3.4, mU: 3, mV: 3, langsU: lu >= lv, maks: 30, fri: 2 }); etSted(r, 'skranke'); etSted(r, 'skranke'); break; }
+          yield* rutenett(r, 'langbord', { du: lu >= lv ? 3.4 : 2.4, dv: lu >= lv ? 2.4 : 3.4, mU: 1.6, mV: 1.6, langsU: lu >= lv, maks: 3, fri: 1.2 }); break; }
+        case 'terminal': { yield* rutenett(r, 'seterad', { du: lu >= lv ? 3.4 : 2.2, dv: lu >= lv ? 2.2 : 3.4, mU: 3, mV: 3, langsU: lu >= lv, maks: 30, fri: 2 }); etSted(r, 'skranke'); etSted(r, 'skranke'); break; }
       }
     }
   }
@@ -266,7 +296,7 @@
   }
   // På trappa foran døra eller i selve døråpningen
   function påTrapp(pl, x, y) { const i = pl.inngang, dx = x - i.x, dy = y - i.y, ut = dx * i.nx + dy * i.ny; return ut >= -.8 && ut < (pl.trapp || 1.5) + .3 && Math.abs(dx * i.ux + dy * i.uy) < i.w / 2 + .15; }
-  const api = { KLASSE, MØBLER, VEGG, plan, blokkert, høyde, påTrapp, inni, avstSeg, avstKant };
+  const api = { KLASSE, MØBLER, VEGG, plan, planG, nærKant, inniR, nærKantR, blokkert, høyde, påTrapp, inni, avstSeg, avstKant };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Interior = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
