@@ -811,6 +811,11 @@ Telefonkritikeren: «den røde angrepsbanneren dekker øverste tredjedel av bild
 (`body.gaar`) er banneret nå én smal linje (12,5 px, knappene 28 px høye), og når ingen har sett angriperne og de er over en time unna (klassen `fjern`),
 står bare varselbrikka.
 
+### Kontroll (runde 8)
+- Regeltestene: test_forsvar (ny del), test_krig (klynger), test_etikett (ny del), test_garnison, test_spillet, test_trussel_lagring – ok.
+- Vaktene i nettleseren (scratchpad `natt8/krig/vakt.js`): krig og balanse ok på PC og mobil (2D), kart og leir2d ok etter Etikett-endringen.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil`): **124 ok, 0 FEIL** (540 s), logg i scratchpad `natt8/krig/sjekk-mobil.txt`.
+
 ### IKKE gjort / svakheter (runde 8)
 - Er en røverbølge og et angrep fra en motstander i gang samtidig, viser banneret røverne (de kommer først); motstanderens angrep vises når bølgen er over.
 - Kampen i bølge 1 er ofte over på 1–2 spillminutter (få røvere): den stopper på 1×, men er kort.
