@@ -77,7 +77,7 @@
     const mann = lag.reduce((a, f) => a + f.lag.menn.filter(m => m.hp > 0).length, 0);
     if (blå) { const t = E.varselTekst({ fraksjon: navn(side), antall: lag.length, mann, sted, mål: v.mål, leir: L, om: gr.varsel });
       logg(t); hend('alarm', `${navn(side)} samler ${lag.length} lag mot ${v.mål.leir ? 'leiren' : v.mål.navn}`); intel(G, side); G.varslet = true; }
-    else if (v.mål.eier && sted.navn) logg(`Etterretning: ${navn(side)} samler ${lag.length} lag ved ${sted.navn} – trolig mot ${navn(v.mål.eier)} i ${v.mål.navn}.`);
+    else if (v.mål.eier && sted.navn && L && Math.min(avst(sted, L), avst(v.mål, L)) <= ER.plan.rykte) logg(`Etterretning: ${navn(side)} samler ${lag.length} lag ved ${sted.navn} – trolig mot ${navn(v.mål.eier)} i ${v.mål.navn}.`);
     lagre(); skitten = true; return G;
   }
 

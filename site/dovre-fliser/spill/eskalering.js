@@ -17,8 +17,8 @@
     //  en handelsrute eller oljekolonne du har; mot: faktor på styrken de krever før de angriper (lavere = dristigere)
     grad: {
       lett: { navn: 'Lett', tak: 9, kr: .7, leirFra: 10, leirHver: 4, leirLag: 2, varsel: 8 * 60, storbyFra: 13, gruppeMaks: 4, rute: .2, mot: 1.15 },
-      vanlig: { navn: 'Vanlig', tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 8.5, gruppeMaks: 6, rute: .35, mot: 1 },
-      hard: { navn: 'Hard', tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 6.5, gruppeMaks: 7, rute: .5, mot: .85 },
+      vanlig: { navn: 'Vanlig', tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 9, gruppeMaks: 6, rute: .35, mot: 1 },
+      hard: { navn: 'Hard', tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 7, gruppeMaks: 7, rute: .5, mot: .85 },
     },
     // Økonomien per døgn: grunnKr/grunnFolk fra hovedkvarteret, krPerTusen/folkPerTusen per 1000 innbyggere i tettstedene de holder
     // (skatt, mat, folk som slutter seg til). Lag koster penger og folk, kjøretøy bare penger. Kassa og folket har et tak.
@@ -32,10 +32,11 @@
     // Angrepsgruppene (planlegges hvert «hver» spillminutt): behov = minst (garnison.js) + margin × forsvarernes styrke; samlingen er over
     // når «samleAndel» av styrken står innen «samleR» m av samlingsstedet, eller etter «samleMaks» minutter; gruppa gir opp under
     // «oppgi» av behovet, eller etter «angrepMaks» minutter; samlingsstedet er et eget (eller nøytralt) tettsted innen «nær» m av målet;
-    // mål lenger enn «rekkevidde» m fra lagene tas ikke; dine tettsteder veier «blåVekt», tettsteder de har mistet «taptVekt»
+    // mål lenger enn «rekkevidde» m fra lagene tas ikke; dine tettsteder veier «blåVekt», tettsteder de har mistet «taptVekt»;
+    // rykte: m fra leiren – angrep motstanderne imellom nærmere enn dette, får du høre om (etterretning i loggen)
     // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående;
     // småsted: innbyggere – garnisoner i egne tettsteder under dette kan tas med til et storbyangrep (spill/eskalering-visning.js)
-    plan: { hver: 60, margin: 1.3, overvekt: 1.5, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500 },
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };
