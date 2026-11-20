@@ -124,8 +124,11 @@
   // index.html, samme svar som computeVertexNormals; nett() gjør alt i ett)
   function nett(ut, type, offset) { return kjørRett(nettG(ut, type, offset)); }
   function* nettG(ut, type, offset) {
-    if (!ut.idx.length) return null;
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(ut.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(ut.uv, 2)); g.setIndex(ut.idx);
+    if (!ut.idx.length) { if (ut.idx.slipp) { ut.pos.slipp(); ut.uv.slipp(); ut.idx.slipp(); } return null; }
+    const g = new THREE.BufferGeometry();
+    // (runde 9) gruppene er Tallrekke.Rekke (se tomR): de samme tallene, uten store vanlige lister
+    if (ut.idx.ferdigIndeks) { g.setAttribute('position', new THREE.BufferAttribute(ut.pos.ferdig(), 3)); g.setAttribute('uv', new THREE.BufferAttribute(ut.uv.ferdig(), 2)); g.setIndex(new THREE.BufferAttribute(ut.idx.ferdigIndeks(), 1)); }
+    else { g.setAttribute('position', new THREE.Float32BufferAttribute(ut.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(ut.uv, 2)); g.setIndex(ut.idx); }
     if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
     const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: vegTekstur(type), polygonOffset: true, polygonOffsetFactor: offset, polygonOffsetUnits: offset, side: THREE.DoubleSide }));
     return m;
@@ -148,12 +151,17 @@
     }
   }
   const tom = () => ({ pos: [], uv: [], idx: [] });
+  // RUNDE 9 (20. nov, hakk når du flyr): de store vegnettene samles i Tallrekke.Rekke (spill/tallrekke.js) – voksende tallrekker med
+  // plass som gjenbrukes til neste utsnitt – i stedet for vanlige lister, som var store søppelhauger for hvert utsnitt. Samme tall ut
+  // (ferdig/ferdigIndeks gir det new Float32Array(liste) og setIndex(liste) ga). Skinnene i vegutstyr endres etterpå (pos[k] -= …) og
+  // står derfor fortsatt i vanlige lister (tom).
+  const tomR = () => typeof Tallrekke !== 'undefined' ? { pos: new Tallrekke.Rekke('F'), uv: new Tallrekke.Rekke('F'), idx: new Tallrekke.Rekke('U') } : tom();
   // (15. nov) Vegene bygges som en generator (yield mellom vegene), så det tunge kan gjøres i små biter FØR utsnittet byttes
   // (KROKER.forbered3d, kjørAsynk i index.html). Gir { nett: ferdige nett, ruter: [data, deler] til ruteNett }; settVeger() legger dem
   // inn i scenen. I Bergen tok dette 0,2–0,3 s midt i byttet, og bildet sto stille så lenge.
   function* byggVeger(u) {
     const ut = { nett: [], ruter: [] };
-    const grupper = { fylling: tom(), bykant: tom(), skulder: tom(), gs: tom(), grus: tom(), kommunal: tom(), asfalt: tom(), rampe: tom(), kryss: tom(), fortau: tom() };
+    const grupper = { fylling: tomR(), bykant: tomR(), skulder: tomR(), gs: tomR(), grus: tomR(), kommunal: tomR(), asfalt: tomR(), rampe: tomR(), kryss: tomR(), fortau: tomR() };
     const gang = u.gangveger || [], alle = u.veger.concat(gang), ru = Veg.rute(alle), zf = (x, y) => nettHoyde(u, x, y);
     const kryss = Veg.finnKryssG ? yield* Veg.finnKryssG(u.veger) : Veg.finnKryss(u.veger); u.kryss = kryss; u.vegRute = { ru, alle };
     for (let li = 0; li < u.veger.length; li++) { const v = u.veger[li]; yield;
@@ -189,7 +197,7 @@
     const OFF = { fylling: -1.5, bykant: -1.5, skulder: -2, gs: -3, grus: -3.5, kommunal: -4, asfalt: -5, rampe: -5, kryss: -6, fortau: -7 };
     for (const [type, g] of Object.entries(grupper)) { yield; const m = yield* nettG(g, type, OFF[type]); if (m) ut.nett.push(m); }
     // kryssene: asfalt uten oppmerking langs hver arm (grusveger møtes på grus), og fotgjengerfeltene som hvite striper
-    const flate = tom(), grusflate = tom(), felt = { pos: [], idx: [] };
+    const flate = tomR(), grusflate = tomR(), felt = { pos: [], idx: [] };
     for (const n of kryss) { yield; Veg.kryssFlate(n, u.veger, n.armer.some(a => 'ERFK'.includes(a.k)) ? flate : grusflate); }
     for (const [g, type] of [[flate, 'kryss'], [grusflate, 'grusflate']]) { const m = yield* nettG(g, type, -10); if (m) ut.nett.push(m); }
     yield;
