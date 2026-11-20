@@ -235,7 +235,15 @@
   const forslagBytte = (dineFanger, deresFanger) => Math.max(0, Math.min(Math.floor(dineFanger || 0), Math.floor(deresFanger || 0)));
   function spør(n, moral, rng) { const s = jaSjanse(moral), ut = { ja: 0, forrædere: [] }; for (let i = 0; i < n; i++) if (rng() < s) { if (rng() < REGLER.fange.forræder) ut.forrædere.push(ut.ja); ut.ja++; } return ut; }
 
-  const api = { REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
+  // (runde 8, «lappene til fiendelag ligger oppå hverandre») meldte fiender som står nær hverandre på skjermen, får én lapp. merker: [{ x, y, side,
+  // navn, t }] (skjermpunkter). Gir grupper [{ x, y (det nederste merket), side, n, navn (ett lag), t (nyeste) }]; r = KLYNGE px (Claudes forslag 46).
+  function klynger(merker, r = 46) { const brukt = new Set(), ut = [];
+    for (const a of merker) { if (brukt.has(a)) continue; const gr = merker.filter(b => !brukt.has(b) && b.side === a.side && Math.hypot(b.x - a.x, b.y - a.y) <= r); gr.forEach(b => brukt.add(b));
+      ut.push({ x: gr.reduce((s, b) => s + b.x, 0) / gr.length, y: Math.max(...gr.map(b => b.y)), side: a.side, n: gr.length, navn: a.navn, t: Math.max(...gr.map(b => b.t)) }); }
+    return ut; }
+  // teksten til en gruppe: «Kystalliansens 3. lag · nå» eller «Kystalliansen: 2 lag · 5 min siden»
+  const klyngeTekst = (k, tid, fraksjon) => (k.n === 1 ? `${k.navn} · ${alder(tid - k.t)}` : `${fraksjon || 'Fienden'}: ${k.n} lag · ${alder(tid - k.t)}`);
+  const api = { klynger, klyngeTekst, REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
     røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder,
     inni, polyAvst, krysser, byggDekning, leirVern, byttePris, arbeidF, rømSjanse, rømmer, kanSpørres, jaSjanse, spør, forslagBytte };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;

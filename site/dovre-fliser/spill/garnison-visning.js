@@ -15,13 +15,27 @@
   // (19. nov) hva et tettsted krever: «trenger ca. 69 mann (minst 35) og ca. 3,8 t»
   const kravTekst = folk => `${G.mannFor(folk) <= 6 ? 'Et lag på ' + G.mannFor(folk) + ' mann' : 'Ca. ' + G.mannFor(folk) + ' mann (minst ' + G.minstFor(folk) + ')'} tar det på ${tidTekst(G.inntaTid(folk))} uten fiender der`;
   // for regionen (spill/region-visning.js): strømmen til et tettsted og kraftverkene
-  window.GarnisonSpill = { strømFor, kraft, byFor, byer, kravTekst, tidTekst };
+  window.GarnisonSpill = { strømFor, kraft, byFor, byer, kravTekst, tidTekst, test: false };
   // krigskartet (spill/strategi-visning.js): hva det valgte tettstedet krever
   { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.by = KT.by || [];
     KT.by.push((by, eier) => (eier === 'blå' || !by || !by.e ? null : kravTekst(by.e.folk || 0) + '.')); }
 
+  // ---------- (runde 8) GARNISONENE HOLDER STILLINGEN ----------
+  // Kritikken: garnisoner med standardreglene («balansert»: trekk deg når laget er underlegent, eller etter 5 ute) trakk seg ut uten kamp,
+  // så tettstedet ble tatt uten kamp. Nå får et eget lag som blir garnison i et tettsted dere holder, reglene «hold stillingen» (kjemp også
+  // som underlegne, ingen retrett etter tap, ikke fram) – én gang per opphold, så du kan endre det i lagpanelet (Stridsregler), og det du
+  // velger, står. Går laget ut av tettstedet, får det reglene sine tilbake (hvis du ikke har endret dem). Ikke i testene uten GarnisonSpill.test.
+  const HOLD = { ild: 'fri', underlegen: 'kjemp', tap: 0, fram: 'nei' }, holder = s => !!s.strid && Object.entries(HOLD).every(([k, v]) => String(s.strid[k]) === String(v));
+  const gAuto = () => !navigator.webdriver || !!window.GarnisonSpill.test;
+  function holdStilling() { if (!gAuto() || !window.StridSpill || !StridSpill.regel) return;
+    for (const s of ENHETER) { if (s.side !== 'blå' || s.karakter || !levende(s) || s.leirvakt || s.forsvar) continue; const by = byFor(s), t = by ? G.tilstand(S, by.e.id) : null, id = t && t.eier === 'blå' ? by.e.id : null;
+      if (id && s.garnisonHold !== id) { if (s.garnisonHold === undefined || s.garnisonHold === null) s.garnisonFør = { ...StridSpill.regel(s) }; s.garnisonHold = id;
+        if (!holder(s)) { s.strid = window.Strid ? Strid.ren({ ...StridSpill.regel(s), ...HOLD }) : { ...StridSpill.regel(s), ...HOLD }; logg(`${s.navn} er garnison i ${by.e.navn} og holder stillingen (kjemper også mot en sterkere fiende). Vil du at laget skal trekke seg: lagpanelet → Stridsregler.`); } }
+      else if (!id && s.garnisonHold) { if (holder(s) && s.garnisonFør) s.strid = s.garnisonFør; s.garnisonHold = null; delete s.garnisonFør; } } }
+  window.GarnisonSpill.holdStilling = holdStilling;
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
+    holdStilling();
     const sek = akk; akk = 0;
     for (const h of G.steg(S, byer(), ENHETER, sek)) {
       const navn = h.by.e.navn, blå = h.side === 'blå';
@@ -52,7 +66,7 @@
 
   // ---------- panelene ----------
   KROKER.lagTekst.push(s => { const by = byFor(s); if (!by) return null; const t = G.tilstand(S, by.e.id);
-    return t.eier === s.side ? `garnison i ${by.e.navn}` : t.inntar && t.inntar.side === s.side ? `tar ${by.e.navn} (${Math.round(100 * t.inntar.sek / R.innta)} %)` : `i ${by.e.navn}`; });
+    return t.eier === s.side ? `garnison i ${by.e.navn}` + (s.side === 'blå' && s.garnisonHold === by.e.id && holder(s) ? ' · holder stillingen' : '') : t.inntar && t.inntar.side === s.side ? `tar ${by.e.navn} (${Math.round(100 * t.inntar.sek / R.innta)} %)` : `i ${by.e.navn}`; });
   KROKER.info.push((o) => {
     if (o.lag === 'kraft') { const t = window.INFRA_TILSTAND ? Odeleggelse.tilstand(INFRA_TILSTAND, 'kraft', o.e.id) : 'hel', x = o.deler[0][0], y = o.deler[0][1];
       const n = byer().filter(by => Math.hypot((by.bb[0] + by.bb[2]) / 2 - x, (by.bb[1] + by.bb[3]) / 2 - y) <= R.strøm.radius).length;

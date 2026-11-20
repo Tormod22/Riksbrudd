@@ -99,3 +99,8 @@ console.log(`ok   krig: ${n} sjekker`);
 { const Fr = require('../../site/dovre-fliser/spill/fraksjoner.js'), lag = (ute = 0) => ({ navn: 'A', x: 0, y: 0, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });
   const v = f => Fr.velg(lag(3), { side: 'grønn', byer: [], fiender: [{ x: 500, y: 0, navn: 'F', styrke: 10 }], venner: [], hjem: [-9000, 0], ammo: 1, overtakF: f }).hva;
   assert.ok(v(.85) === 'angrip' && v(1.25) !== 'angrip', `pågående angriper (${v(.85)}), forsiktig ikke (${v(1.25)})`); console.log('ok   væremåten i AI-ens valg'); }
+// (runde 8) meldte fiender nær hverandre på skjermen får én lapp
+{ const K2 = require('../../site/dovre-fliser/spill/krig'), a = require('assert');
+  const g = K2.klynger([{ x: 100, y: 100, side: 'rød', navn: 'Kystalliansens 3. lag', t: 10 }, { x: 120, y: 110, side: 'rød', navn: 'Kystalliansens 4. lag', t: 12 }, { x: 300, y: 100, side: 'rød', navn: 'Kystalliansens 5. lag', t: 5 }, { x: 105, y: 100, side: 'grønn', navn: 'Folkefrontens 1. lag', t: 12 }]);
+  a.strictEqual(g.length, 3); a.strictEqual(g[0].n, 2); a.strictEqual(g[0].y, 110); a.strictEqual(K2.klyngeTekst(g[0], 12, 'Kystalliansen'), 'Kystalliansen: 2 lag · nå'); a.strictEqual(K2.klyngeTekst(g[1], 12, 'Kystalliansen'), 'Kystalliansens 5. lag · 7 min siden');
+  console.log('ok   krig (runde 8): meldte fiender nær hverandre får én lapp'); }

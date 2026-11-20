@@ -74,6 +74,12 @@
     for (const e of ENHETER.filter(q => q.trekker || q.flykter)) { const d = Math.hypot(e.x - leir.x, e.y - leir.y);
       if (!levende(e) || d > H.borte || tid - (e.trekkerFra || 0) > H.maksMin) { if (e.raid > 0 && e.raid === T.aktiv) continue; const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); skitten = true; continue; }
       if (!e.sti && !e.planlegger && Math.random() < .25) bort(e, Math.random() < .5); } }
+  // (runde 8, PC-kritikeren: «bølge 2 fikk ingen melding om hvordan det gikk») når bølgen er over, gir spill/forsvar-visning.js én rapport
+  // (utfallet, det dere tok eller tapte, tapene hos oss og byggene) i loggen og i banneret – også under spoling. Uten den: varselet som før.
+  const sumBytte = lag => { const s = { penger: 0, lager: {}, diesel: 0, mat: 0 }; let n = 0;
+    for (const e of lag) { const b = e.bytte; if (!b) continue; n++; s.penger += b.penger || 0; s.diesel += b.diesel || 0; s.mat += b.mat || 0; for (const [k, v] of Object.entries(b.lager || {})) s.lager[k] = Math.round(((s.lager[k] || 0) + v) * 10) / 10; }
+    return n ? Trussel.bytteTekst(s) : ''; };
+  const rapport = (u, tekst, god) => { if (window.ForsvarSpill && ForsvarSpill.slutt) ForsvarSpill.slutt(u); else varsel(tekst, god); };
   function angrepSteg() { if (!T.aktiv) { if (auto() && (tid >= T.nesteSpill || ekte >= T.nesteEkte)) { T.nesteSpill = T.nesteEkte = Infinity; angrep(); } return; }
     const lag = ENHETER.filter(e => e.raid === T.aktiv), leir = S().leir;
     if (auto()) for (const e of lag) { if (e.trekker || e.flykter || !levende(e) || Terreng.slattUt(e.menn)) continue;
@@ -88,14 +94,14 @@
     const st = Trussel.ferdig(lag.map(e => ({ lever: levende(e), slåttUt: Terreng.slattUt(e.menn) || !!e.flykter, avstand: Math.hypot(e.x - leir.x, e.y - leir.y), venter: !!e.venterNatt || påVei(e), trekker: !!e.trekker })), T.borteFra === undefined || T.borteFra === null ? 0 : tid - T.borteFra);
     if (st === 'trekker') { if (T.borteFra === undefined || T.borteFra === null) T.borteFra = tid; } else T.borteFra = null;
     if (st === 'herjet') { const f = F(); if (f) f.moral = Math.max(0, f.moral - Trussel.HERJ.moral);
-      varsel(`Bølge ${T.aktiv} er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gangen – reparer byggene og gjør leiren klar til neste bølge.`);
+      rapport({ nr: T.aktiv, utfall: 'herjet', tapte: sumBytte(lag) }, `Bølge ${T.aktiv} er over: røverne har trukket seg ut med byttet. Det ble ingen belønning denne gangen – reparer byggene og gjør leiren klar til neste bølge.`);
       // lagene som trekker seg ut, går videre bort (utSteg fjerner dem); resten fjernes nå
       for (const e of lag) { if (e.trekker && levende(e)) { e.raid = -T.aktiv; continue; } const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); }
       T.aktiv = 0; T.borteFra = null; T.herjet = (T.herjet || 0) + 1; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     if (st === 'slått' || st === 'unna') { const b = Trussel.belønning(T.aktiv), f = F(), slapp = !!(window.KrigSpill && KrigSpill.slapp && KrigSpill.slapp(T.aktiv));
       // sabotører som fikk gjort sitt og slapp unna (spill/krig-visning.js): ingen belønning
-      if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); varsel('Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
-      else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); varsel(st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
+      if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); rapport({ nr: T.aktiv, utfall: 'slapp', tapte: sumBytte(lag) }, 'Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
+      else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
       for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
     for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }

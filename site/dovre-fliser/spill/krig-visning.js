@@ -587,9 +587,17 @@
     for (const q of STØY) { g.strokeStyle = 'rgba(255,200,90,.9)'; g.lineWidth = 2; for (const r of [8, 15, 22]) { g.beginPath(); g.arc(px(q.x), py(q.y), r, -.9, .9); g.stroke(); } }
     // etterretning: lag du ikke ser nå, der de sist ble meldt
     g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center';
-    for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (e && synlig(e)) continue; const x = px(q.x), y = py(q.y); if (x < -40 || y < -40 || x > g.canvas.width + 40 || y > g.canvas.height + 40) continue;
+    // (runde 8, «lappene til fiendelag ligger oppå hverandre»: «Kystalliansens 3. lag · nå» oppå «… 4. lag») lag som ikke finnes lenger
+    // (en røverbølge som er over), tegnes ikke; merkene som ligger nær hverandre på skjermen (KLYNGE px), får ÉN lapp – «Kystalliansen: 2 lag · nå» –
+    // og lappene går gjennom Etikett med fiendens prioritet, så de ikke legges oppå andre navn. Claudes forslag: KLYNGE = 46 px.
+    const KLYNGE = 46, merker = [];
+    for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (!e || synlig(e)) continue; const x = px(q.x), y = py(q.y); if (x < -40 || y < -40 || x > g.canvas.width + 40 || y > g.canvas.height + 40) continue;
       g.strokeStyle = sidefarge(q.side, 'lys') || '#b5503d'; g.fillStyle = 'rgba(20,16,10,.55)'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 9, y); g.lineTo(x, y + 9); g.lineTo(x - 9, y); g.closePath(); g.fill(); g.stroke(); g.setLineDash([]);
-      g.fillStyle = '#e7dcc3'; g.fillText('?', x, y + 4); if (m < 40) g.fillText(`${q.navn} · ${K.alder(tid - q.t)}`, x, y + 23); }
+      g.fillStyle = '#e7dcc3'; g.fillText('?', x, y + 4); merker.push({ q, x, y }); }
+    // (lappene tegnes av spill/kartlapper.js over alle navn – her bare når den mangler)
+    if (m < 40 && !window.KartLapper) for (const k of K.klynger(merker.map(o => ({ x: o.x, y: o.y, side: o.q.side, navn: o.q.navn, t: o.q.t })), KLYNGE)) {
+      const t = K.klyngeTekst(k, tid, window.Fraksjoner && Fraksjoner.FRAKSJONER[k.side] ? Fraksjoner.FRAKSJONER[k.side].navn : null);
+      g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#e7dcc3'; g.fillText(t, k.x, k.y + 23); }
     // beleirede tettsteder
     for (const by of byer()) { if (T.beleiring[by.e.id] === undefined) continue; const c = midt(by); g.strokeStyle = 'rgba(120,170,225,.85)'; g.lineWidth = 2; g.setLineDash([10, 7]); g.beginPath(); g.arc(px(c.x), py(c.y), R.beleiring.ring / m, 0, 6.283); g.stroke(); g.setLineDash([]); }
     // helikopteret

@@ -725,3 +725,98 @@ rettet med `blåMedVarsel`) eller for lag som støtte på garnisonen underveis (
   `g7-*-dagN.png` og `g7-*-krig-slutt.png` (krigskartet med «Folkefronten har overtaket – 78 %»).
 - Hele mobilkontrollen (`SJEKK_PROFIL=mobil PORT=8913 node pipeline/fliser/sjekk.js`, 20. nov kl. 02:19 UTC): **119 ok, 0 FEIL** (373 s), også
   «krig» med RUNDE 7-delen og «krigskartet». Logg: scratchpad `natt7/krig/sjekk-mobil.log`.
+
+## Runde 8 (20. nov natt, ny kritikk)
+Kritikken: scratchpad `kritikk2/pc/anmeldelse.md` (PC, /rogaland) og `kritikk2/tlf/anmeldelse.md` (telefon, /norge). Bilder og prøveskript: scratchpad
+`natt8/krig/` (raid.js = røverangrep fra varsel til rapport som spiller, esk.js = ekte angrep på leiren + garnison + lapper, anslag.js = anslaget over tid,
+vakt.js = vaktene som i sjekk.js; FEIL=glatt|hjemme legger inn en feil med vilje). Alle tall er Claudes forslag.
+
+### 1. Røverangrepet avgjøres uten at spilleren ser noe – RETTET
+- **Egne lag ved leiren vises der de er** (kontrollrom-visning.js): et eget lag innen `HJEMME = 600` m fra leiren regnes som «nær» i innsynsreglene (K3):
+  det tegnes der det er (ikke «meldt 23:54»), og det det ser, står på kartet – det var derfor røverne ikke synes (synlig() krever innsyn i laget som ser).
+  Lag 1 km ute er fortsatt «sist meldt» (K3-testen i sjekk.js). Karakteren (`deg`) finnes igjen i ENHETER hvis objektet er byttet (omlasting/gange).
+  Tårn og kameraer gikk alt gjennom KROKER.ser.
+- **Kampen synes i 2D** (forsvar-visning.js, KROKER.tegn): munningsglimt ved den som skyter (de første 0,35 s av hver salve i SKUDD), og en pulserende
+  ring rundt lagene i kamp – egne lag får lappen «I ildkamp» (Etikett, prioritet «viktig»).
+- **⏭ stopper når kampen begynner**: første gang et eget lag og en angriper skyter på hverandre i et angrep → loggen «Kampen om leiren er i gang: …» og
+  hendelsen `alarm` (flyt.js stopper spolingen og går ned til 1×; den automatiske nedbremsingen også). Varselet «snart framme» (VARSEL.snart) sjekkes nå
+  hvert spillminutt i simuleringen (før hvert ekte sekund – ved 600× gikk det forbi), og gjelder også et angrep fra en motstander.
+- Prøvd som spiller (webdriver av, Dovre, 600×/⏭): stopp ved «snart framme (ca. 9 min)» med røverne i kartet 390 m unna, stopp ved «Kampen om leiren har
+  begynt», ring og «I ildkamp» (bilder `etter-pc-2-stopp1.png`, `etter-tlf-2-stopp0.png`).
+
+### 2. Ingen melding om utfallet av røverbølge 2 – RETTET
+- Én rapport per bølge og per angrep på leiren: `Forsvar.sluttRapport(u)` (regel, test_forsvar.js) gir tittel + tekst: «Bølge 2 er slått tilbake. Dere tok
+  450 000 kr fra røverne. 1 av 2 røverlag ble slått ut. Hos oss: 1 falt og 2 såret. 1 bygg skadet.», «Bølge 3: røverne herjet i leiren og dro med byttet. De
+  tok …», «Angrepet fra Kystalliansen er slått tilbake – Kystalliansen ga opp …».
+- spillet-visning.js kaller `ForsvarSpill.slutt({ nr, utfall, tok, tapte })` i stedet for varselet når bølgen er over (alle utfall: slått, unna, herjet,
+  slapp; byttet de tok summeres). Er den der ikke, varselet som før. Et angrep som slutter uten melding (en motstanders gruppe), får rapporten når
+  angrepsnøkkelen skifter (setInterval). Øyeblikksbildet tas når angrepet starter (friske og falne – også karakteren –, byggene, angriperne).
+- Rapporten står i loggen, og (ikke i testene) i banneret til du lukker den (2,5 min ekte tid), grønn når angrepet ble slått tilbake, med «Reparer alle» når
+  bygg er skadet; ⏭ stopper («angrepet er over», type `annet` – bare spolingen). Den gamle «Etter angrepet: …»-linja kommer bare når du opphever selv
+  (sjekk.js prøver den). «alle 1 røverlag» → «røverlaget er slått ut».
+
+### 3. Angrepsinformasjonen motsier seg selv – RETTET
+- **Én kilde:** `ForsvarSpill.status()` → `{ overskrift, tekst, kort, sett, sist, nær, min, iLeiren, strid, … }`. Banneret, varselbrikka (narhud.js – bare
+  brikka) og rapporten bruker den. Rekkefølgen: sett nå (avstand og «framme om ca. N min»), ellers **sist sett** (kartet – `e.sett` –, radioen eller
+  etterretningen `KrigSpill.T().etter`, høyst 45 spillminutter gammel: «sist sett i leiren for 2 min siden · framme om ca. 20–35 min»), ellers anslaget.
+- **Anslaget hopper ikke:** `Forsvar.glatt` teller ned med tida, og et nytt rått anslag (ruta deres, avstanden) trekker det med 1 − e^(−dt/25 min); ser
+  noen dem, gjelder avstanden. Når ingen ser dem, står det som et spenn (`Forsvar.spenn`: ±30 %, «ca. 45–75 min», over 75 min «ca. 1–2 timer»). Samme fart
+  (Trussel.VARSEL.fart 0,75 m/s) både sett og ikke sett (før 1,3 m/s når de var sett – også et hopp). Målt med anslag.js (600×): 106 → 86 → 65 → 45 → 24 →
+  9 (sett, 400 m) → i leiren.
+- Retningen («fra sørøst») står når de er inne i leiren (før ble den «sørvest» når de kom inn).
+
+### 4. Ekte angrep på leiren bruker banneret og «Forsvar leiren» – RETTET
+`ForsvarSpill.angrep()`: røverbølgen, ellers en motstanders angrepsgruppe (EskaleringSpill.S().gruppe) med mål = leiren i fasen «angriper». Banneret:
+«Angrep: Kystalliansen med 3 lag fra sørøst …», samme «Forsvar leiren», «Vis», brikka «Angrep: Kystalliansen», kampstopp og rapport. Mens gruppa samles
+(med varsel 4–8 t før) står det som før i loggen og som ring i kartet. Prøvd i esk.js (`esk-pc-2-angrep.png`, `esk-pc-4-rapport.png`).
+
+### 5. Garnisoner holder stillingen – RETTET
+garnison-visning.js (`holdStilling`, hvert spillminutt): et eget lag i et tettsted dere holder får én gang per opphold reglene «hold stillingen» (ild fri,
+kjemp også som underlegen, ingen retrett etter tap, ikke fram) – loggen sier det og hvor du endrer det (lagpanelet → Stridsregler); det du velger, står.
+Går laget ut, får det reglene tilbake (hvis du ikke endret dem). Lagpanelet: «garnison i Dombås · holder stillingen». Ikke i testene uten
+`GarnisonSpill.test` (eksisterende vakter uendret). Ikke lagret egen nøkkel: reglene lagres med laget som før.
+
+**Prøvd som spiller (esk2.js, webdriver av, AI på, ⏭):** Dombås gjort til ditt med Vaktlaget (4 mann) som garnison, Kystalliansen samler 2 lag og
+angriper etter varselet (6 t). Vaktlaget fikk «holder stillingen», ble stående i Dombås og skjøt til siste mann (14:07 ildkamp på 890 m → 14:56 slått ut);
+først da tok Kystalliansen Dombås (15:25). Før trakk en balansert garnison seg ut. ⏭ stoppet ved «Kystalliansen angriper Dombås», «et lag er i ildkamp»,
+«et lag er slått ut» og «du har mistet et tettsted». **Svakhet:** Dombås lå 3,8 km fra leiren – utenfor håndradioens 3 km – så Vaktlaget sto som «ingen
+kontakt, sist 06:00» og kampen synes ikke i kartet (K3-regelen; feltradio løser det). Ny varselbrikke (narhud.js) mens det står på: «Varslet angrep på
+Dombås – Kystalliansen samler 2 lag · tidligst om ca. 6 t», så «Angrep på Dombås – Kystalliansen, 2 lag»; trykk viser stedet (`brikke-tlf-*.png`).
+
+### 6. Lappene til fiendelag oppå hverandre – RETTET
+Lappene i bildet (`natt7/krig/samles-1400x820.png`) var de meldte fiendene som spill/kartlapper.js tegner på nytt over alle navn (ikke Etikett). Nå:
+`Krig.klynger` (regel, test_krig.js) – merker av samme side innen 46 px får én lapp «Kystalliansen: 2 lag · nå» (`Krig.klyngeTekst`), og en lapp som ville
+ligget oppå en annen meldt lapp, flyttes en linje ned. Lag som ikke finnes lenger (røverbølgen er over), tegnes ikke. I Etikett: et viktig navn (fiender)
+som ikke får plass, prøver tre linjer til (`REGLER.ekstra`), og ligger det fortsatt oppå et annet navn, slås det sammen med det («+1») i stedet for å
+legges oppå (test_etikett.js). Prøvd: `esk-pc-1-samles.png`.
+
+### Vakt (vakter/krig.js, del «RUNDE 8»)
+Sett på 1,2 km gir avstanden; sett i leiren for 2 min siden gir «sist sett i leiren for 2 min siden» (ikke «ikke sett ennå»); anslaget 70 → (231 rått) 116
+etter 10 min; brikka sier det samme som banneret; rapporten etter bølgen; et ekte angrep (gruppe i fasen angriper) gir banneret med navnet og
+«Forsvar leiren»; et lag 270 m fra leiren er ikke skjult («ute»); garnisonen holder stillingen og får reglene tilbake ute; én lapp for to nære merker.
+Ingen await inne i den (forsvar-visning sitt sekundur ser ikke mellomtilstandene). Runde 6-delen godtar spennet («ventet om ca. 35–65 min»).
+**Prøvd med feil lagt inn:** uten glatting («70 → 231») og med egne lag skjult – vakta slo til begge ganger. PC og mobil (2D): krig ok (ca. 2 s),
+balanse ok (3,3 s; den fant at rapporten skjulte skadevarselet – nå står «Ett bygg er skadet» i rapporten).
+
+### Fellesfiler endret i runde 8
+- `spill/etikett.js` (eies ikke av noen): i `plasser()` – flere linjer for viktige navn og «sammen» (+1) i stedet for overlapp; `REGLER.ekstra = 3`.
+- `spill/kartlapper.js` (kart-pakka): bare `meldt()` – klynger og ingen lapper oppå hverandre (bruker Krig.klynger/klyngeTekst).
+- `spill/narhud.js`: bare varselbrikkene for angrep (ForsvarSpill.status; den gamle koden står som reserve; ny brikke for angrep fra en motstander på et
+  tettsted du holder, og mens en gruppe samles mot leiren).
+- `spill/spillet-visning.js`: angrepsdelen – `sumBytte`, `rapport()` og de tre stedene bølgen er over.
+- `index.html`: bare versjonsmerkene (versjon.py).
+
+### Ekstra: banneret når du går selv
+Telefonkritikeren: «den røde angrepsbanneren dekker øverste tredjedel av bildet i førsteperson, også når angrepet er over 3 timer unna». Når du går selv
+(`body.gaar`) er banneret nå én smal linje (12,5 px, knappene 28 px høye), og når ingen har sett angriperne og de er over en time unna (klassen `fjern`),
+står bare varselbrikka.
+
+### Kontroll (runde 8)
+- Regeltestene: test_forsvar (ny del), test_krig (klynger), test_etikett (ny del), test_garnison, test_spillet, test_trussel_lagring – ok.
+- Vaktene i nettleseren (scratchpad `natt8/krig/vakt.js`): krig og balanse ok på PC og mobil (2D), kart og leir2d ok etter Etikett-endringen.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil`): **124 ok, 0 FEIL** (540 s), logg i scratchpad `natt8/krig/sjekk-mobil.txt`.
+
+### IKKE gjort / svakheter (runde 8)
+- Er en røverbølge og et angrep fra en motstander i gang samtidig, viser banneret røverne (de kommer først); motstanderens angrep vises når bølgen er over.
+- Kampen i bølge 1 er ofte over på 1–2 spillminutter (få røvere): den stopper på 1×, men er kort.
+- Ruten for «sist sett» bruker den siste observasjonen av hvem som helst i angrepet (ikke per lag).
