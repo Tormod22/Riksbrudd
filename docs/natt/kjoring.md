@@ -49,9 +49,20 @@ bildet over bilen, to knapper het «Brems», en lys strek lå over bilen, og bil
   På vegen: før rettingen ble bilen stående på skrå i vegkanten og satt fast; etter: kjører 110 m langs/av vegen og rygger 50 m.
 - `modell.js` – bilder av den nye feltbilen forfra, fra siden og bakfra (`m-*.png`).
 - `vakt.js` (VAKT=1) – vakten: ok på 0,7 s.
-- IKKE prøvd på /rogaland eller /norge med ekte data (brukerens bakke var trolig der) – Dovre-testsiden har den samme vegbanken over terrenget.
+- **/rogaland med ekte data** (ROG=1, dev.py, leir i Ryfylke 15607, 6622779): det verste vegstedet innen 1,5 km (to veger i ulik høyde
+  ved en bru/rampe) ga med den gamle regelen 49° sidehelling – akkurat som brukerens bilde 3. Nå 18°/21° (taket). Fant også at vegfyllingen
+  må ta med ALLE veger innen 20 m (den nærmeste kan ligge lavere enn en annen rett ved siden av), og at kameraet kunne havne inne i en høy
+  vegbane (holdes nå over `V.høyde`). Bilder `r*-mob-*.png`. Et sted i en 38° li (VANLIG=1): bilen står på 21° og kryper.
+- Kontrollen (mobil) i en kopi: se rapporten.
+
+7. **Kolonnekjøretøyene** (`spill/kjoretoy3d.js`): alle hjul er runde dekk med felg og nav (`rundHjul` med 10 kanter), førerhuset på
+   lastebil/rakettartilleri/radarbil er avrundet og smalner mot taket, og speiderbilen har avrundet kropp/panser og skjermer over hjulene.
+   Trekanter (Node, `scratchpad natt10/kjoring/tell.js`): lastebil 3080 -> 4940, speiderbil 1340 -> 2936, rakettartilleri 3924 -> 5784,
+   radar 3120 -> 4980, stridsvogn uendret 2792 (sjekk.js krever 400–6000 per type).
 
 ### Ikke gjort
-- De andre kjøretøyene (lastebil, speiderbil, stridsvogn …) har fortsatt kantete modeller – se under hvis det ble rukket.
+- Stridsvogna og resten av lastebilenes påbygg er fortsatt klosser (bare hjul og førerhus er avrundet).
+- Bilen kan ikke kjøre under en bru: `Liv3d.dekke` gir brudekket (det høyeste) – slik var det før også.
+- Kameraet bak bilen kan havne inne i trekroner (ingen kollisjon med trær for kameraet).
 - Kolonnenes kjøretøy (kjøretøy3d i index.html) følger fortsatt bare stigningen fra to punkter (ikke sidehelling) – ikke rørt.
 - Helikopteret er uendret.
