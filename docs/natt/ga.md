@@ -197,6 +197,10 @@ Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-ga
 - Prøveskript: scratchpad `natt8/ga/` – kjor.js (Dovre), kjor_rog.js (/rogaland via dev.py), e_reise.js (måling med profil),
   e_leir.js, e_mobil.js, e_inn.js, e_reis_rog.js, e_vakt.js. Logger: reise-for.log (før), reise-etter*.log.
 
+### Kontrollen
+- `SJEKK_PROFIL=mobil PORT=8923 node pipeline/fliser/sjekk.js` i en kopi (scratchpad natt8/ga/snap.sh), 20. nov 02:25–02:32 UTC, etter
+  fletten med nattfiks: 123 ok, 0 FEIL (383 s). Gå-vakta 2,7 s («Gå inn i huset» → inne, del «ved døra»; leiren lå utenfor utsnittet der).
+
 ### Ikke gjort
 - Selve tegningen i førsteperson er fortsatt treg med programvare-grafikk (hvert bilde 1–10 s under last). Rask snuing hjelper litt.
 - Pila står ikke i kompasset. Reisen går fortsatt i rett linje.
