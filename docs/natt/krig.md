@@ -688,3 +688,29 @@ av enkeltlag fra Folkefronten uten etterretning; gruppeangrepet på Høle (etter
 men et enkeltlag fra Kystalliansen tok Høle 7 · 18:56 (garnisonen var nede i noen få mann). Leiren varslet 11 · 01:14, angrep 09:19; Folkefronten
 tok Stavanger og vant 11 · 16:05. RETTET: i et ekte spill går enkeltlag ikke løs på dine tettsteder (`v.blåMedVarsel` i Fraksjoner.velg) – bare
 angrepsgrupper, som alltid varsles. (Et lag som ser garnisonen din, slåss fortsatt med den.)
+
+#### (b) med bare varslede angrep på deg (logg `natt/krig7/gb7.log`)
+Alle angrepene på spillerens tettsteder kom nå med etterretning først. Vatne: etterretning 5 · 20:01 (2 lag, 24 mann ved Kvernaland), angrep
+6 · 02:04, **slått tilbake 06:47**; ny etterretning 6 · 12:11, angrep 18:15, **slått tilbake 22:58**; tredje gang (etterretning 7 · 23:30,
+angrep 8 · 05:33) **tatt 8 · 10:03**. Høle: etterretning 8 · 10:36, angrep 17:30, tatt 9 · 00:14 (Reserven var borte). Leiren: varslet og angrepet
+dag 9 og dag 13 (trakk seg etter 4–7 t). Folkefronten tok Stavanger og vant 14 · 04:05. Spilleren (skriptet) rekrutterte ikke og fikk ingen nye
+tropper, så tre angrep på to døgn slet ham ned. RETTET: etter et angrep på deg som er slått tilbake, venter den motstanderen et døgn
+(`plan.blåPause`, lagres) – se den siste kjøringen.
+
+#### (b) ENDELIG – alle reglene (logg `natt/krig7/gb8.log`)
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Dine soldater | Du holder | Hendelser mot deg | Tap |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 0 % | 0,3 % | 0,2 % | 2/2 | 28 | – | bygdevernet i Vatne, Høle og Forsand gir opp | – |
+| 2–4 | 0,6 % | 0,3 % | 0,2 % | 4/4 → 5/5 | 27–28 | Vatne, Forsand, Høle | røverne som før | 1 |
+| 5 | 0,6 % | 8,9 % | 0,3 % | 7/4 | 27 | Vatne, Forsand, Høle | | – |
+| 6 | 0,3 % | 10,9 % | 0,6 % | 8/6 | 19 | Forsand, Høle | 03:39 lag fra Folkefronten på vei forbi støter på garnisonen i Vatne og tar den (ingen gruppe, ingen etterretning) | Vatne (8) |
+| 7–9 | 0,3 % | 11,6–17,6 % | 0,6 % | 8/7 → 11/8 | 19 | Forsand, Høle | motstanderne slåss om Hommersåk, Kvernaland, Oltedal | – |
+| 10 | 0,3 % | 18 % | 0,6 % | 14/8 | 19 | Forsand, Høle | lag mot handelsruta fra Høle | – |
+| 11 | 0,3 % | 19,1 % | 0,6 % | 14/8 | 19 | Forsand, Høle | 11:24 etterretning: Folkefronten samler 4 lag (46 mann) ved Oltedal mot leiren; 18:58 angriper | – |
+| 12 00:05 | 0,3 % | **≥ 60 %** | 0,6 % | | 19 | Forsand, Høle | **Kystalliansen tok Stavanger/Sandnes 11 · 23:37 og vant** | – |
+
+**Mål (b): delvis.** Spilleren holdt to av tre steder til slutt. Men i denne kjøringen kom ingen gruppe mot tettstedene hans (motstanderne var
+opptatt med hverandre, og småstedene hans veier lite – √innbyggere), og Vatne gikk tapt i et sammenstøt uten varsel. Over de fire siste
+(b)-kjøringene: 0–3 gruppeangrep på spillerens tettsteder; når de kom, ble 4 av 6 slått tilbake med Reserven og nedgravd garnison
+(gb-v4, gb6, gb7); det som falt, falt for det tredje angrepet på to døgn (gb7, rettet med `blåPause`) eller for enkeltlag uten varsel (gb6,
+rettet med `blåMedVarsel`) eller for lag som støtte på garnisonen underveis (gb8, ikke rettet – det er vanlig kamp).
