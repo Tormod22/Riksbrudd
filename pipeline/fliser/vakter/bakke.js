@@ -6,6 +6,8 @@
 // (3) Gresset og plantene: forsideLys tar bort baksidens lys (gl_FrontFacing-valget) i Lambert-skyggeleggeren. Selvtest: originalen har det.
 // (4) Asfalten er ikke nesten svart (grunnfargen minst 75 av 255).
 // (5) I 3D (hvis på): kryssflatene i utsnittet – ingen hjørnetrekant (enkelttrekant utenfor armene) svever mer enn 0,6 m over bakken.
+// (6) Runde 11: vegen skåret inn i lia (Veg.skjær; selvtest: den gamle regelen gir høy fylling), kameraet utenfor trekronene
+//     (KjorSpill.kroneU med et prøvetre), og i 3D: vegkantene ligger ikke under bakken.
 // Endrer ingenting i spillet (KRYSS_REGLER.avvik settes tilbake).
 module.exports = {
   navn: 'bakke, veg og gress',
@@ -62,9 +64,39 @@ module.exports = {
         ut.i3d = { hjørner: n, svever };
         ok(svever === 0, svever + ' hjørnetrekanter i kryssene svever mer enn 0,6 m over bakken');
       }
+      // (runde 11) vegen skåret inn i lia: reglene på et lite gitter med en li på 40 % (selvtest: den gamle regelen gir høy fylling)
+      if (V && V.skjær) {
+        const N = 41, steg = 5, x0 = -100, y1 = 100, H = new Float32Array(N * N); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) H[j * N + i] = (y1 - j * steg) * .4;
+        const bil = (x, y) => { const fx = (x - x0) / steg, fy = (y1 - y) / steg, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j, k = j * N + i; return (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b; };
+        const P = V.jevn([[-50, 2], [50, 2]]), w = 2.75, m = Math.floor(P.length / 2), gml = V.høyder(P, w, bil)[m], ny = V.senterHøyder(P, w, bil);
+        const fyllFør = gml - bil(0, 2 - w), krav = V.skjærKrav(P, w, ny); V.skjær(H, N, steg, x0, y1, krav);
+        let over = 0; for (let q = 0; q < krav.length; q += 3) over = Math.max(over, bil(krav[q], krav[q + 1]) - krav[q + 2]);
+        const fyll = ny[m] - bil(0, 2 - w);
+        ut.skjær = { fyllFør: +fyllFør.toFixed(2), fyll: +fyll.toFixed(2), over: +over.toFixed(3) };
+        ok(fyllFør > 2, 'selvtest: den gamle regelen skulle gitt over 2 m fylling i lia (' + fyllFør.toFixed(2) + ')');
+        ok(fyll < fyllFør * .7, 'vegen står fortsatt høyt over bakken på nedsiden (' + fyll.toFixed(2) + ' m mot ' + fyllFør.toFixed(2) + ')');
+        ok(over < .03, 'bakken stikker opp gjennom vegbanen etter skjæringen (' + over.toFixed(3) + ' m)');
+      }
+      // (runde 11) kameraet bak bilen og trekronene: et prøvetre (gran, 20 m) – kameraet inne i kronen skal komme nærmere, fritt bak = som før
+      const KS = window.KjorSpill;
+      ok(KS && KS.kroneU && KS.KRONE, 'KjorSpill.kroneU / KRONE mangler (kjor.js)');
+      if (KS && KS.kroneU) { const fu = { trær: { gran: new Float32Array([14, 0, 0, 20, .5]) } }, K = KS.kroneU;
+        const inne = K.iKrone(fu, 16, 0, 4), ute = K.iKrone(fu, 24, 0, 4), t1 = K.treMellom(fu, 0, 0, 1.6, 14, 0, 4.5), t2 = K.treMellom(fu, 0, 0, 1.6, -9.6, 0, 4.5);
+        ut.krone = { inne, ute, t1: +t1.toFixed(2), t2 };
+        ok(inne && !ute, 'iKrone: punktet 2 m fra stammen skal være inne i kronen, 10 m unna ikke');
+        ok(t1 < 1 && !K.iKrone(fu, 14 * t1, 0, 1.6 + 2.9 * t1), 'kameraet i trekronen kommer ikke nærmere bilen / står fortsatt i kronen (' + t1.toFixed(2) + ')');
+        ok(t2 === 1, 'kameraet uten trær i veien skal stå der det står (' + t2 + ')'); }
+      // i 3D: vegbanen ligger over bakken slik den tegnes (høyst 1 % av punktene med bakken mer enn 0,1 m over vegkanten)
+      if (R && u && typeof på3d !== 'undefined' && på3d && u.veger && u.veger.length && typeof nettHoyde === 'function') {
+        let n = 0, under = 0;
+        for (const v of u.veger) { if (v.g || v.t) continue; for (let i = 1; i < v.P.length - 1; i += 3) { const p = v.P[i]; if (p[3]) continue; const a = v.P[i - 1], b = v.P[i + 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+          for (const o of [-1, 1]) { n++; if (nettHoyde(u, p[0] - (b[1] - a[1]) / l * v.w * o, p[1] + (b[0] - a[0]) / l * v.w * o) > p[2] + .1) under++; } } }
+        ut.vegkant = { n, under, skjær: u.skjær ? { punkter: u.skjær.punkter, maks: u.skjær.maks, ms: u.skjær.ms } : null };
+        ok(n === 0 || under / n < .01, under + ' av ' + n + ' vegkanter ligger under bakken');
+      }
       return ut;
     });
     const ok = r.feil.length === 0;
-    return { ok, tekst: ok ? `kryss ${JSON.stringify(r.kryss)}${r.i3d ? ' · 3D ' + JSON.stringify(r.i3d) : ''}` : r.feil.join('; '), data: r };
+    return { ok, tekst: ok ? `kryss ${JSON.stringify(r.kryss)} · skjær ${JSON.stringify(r.skjær)} · krone ${JSON.stringify(r.krone)}${r.vegkant ? ' · vegkant ' + JSON.stringify(r.vegkant) : ''}${r.i3d ? ' · 3D ' + JSON.stringify(r.i3d) : ''}` : r.feil.join('; '), data: r };
   },
 };

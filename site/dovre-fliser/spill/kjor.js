@@ -278,12 +278,19 @@
     // etter (KAMERA_BIL – Claudes forslag), så både bilen og vegen foran synes.
     const KB = KAMERA_BIL, avst = k.type === 'bil' ? KB.avst : 17, opp = k.type === 'bil' ? KB.opp : 3.2, cp = Math.cos(f.pitch), c = R.cam;
     // står et hus mellom bilen og kameraet, kommer kameraet nærmere (ikke inne i veggen)
-    const hus = k.type === 'bil' ? husMellom(R, x, y, x + Math.sin(f.a) * cp * avst, y - Math.cos(f.a) * cp * avst) : 1, avstH = Math.max(2.6, avst * hus - (hus < 1 ? 1 : 0)), oppH = opp * (.55 + .45 * avstH / avst);
+    // (runde 11, brukeren: kameraet gikk inn i trekronene i skogen) står en trekrone mellom bilen og kameraet, kommer kameraet også
+    // nærmere – mykt: fort inn (treFor), sakte ut igjen (KAMERA_TRE)
+    const hus = k.type === 'bil' ? husMellom(R, x, y, x + Math.sin(f.a) * cp * avst, y - Math.cos(f.a) * cp * avst) : 1;
+    const treF = k.type === 'bil' ? treMellom(u, x, y, k.z + 1.6, x + Math.sin(f.a) * cp * avst, y - Math.cos(f.a) * cp * avst, k.z + opp - Math.sin(f.pitch) * avst) : 1;
+    kamTre += (treF - kamTre) * Math.min(1, dt * (treF < kamTre ? KAMERA_TRE.inn : KAMERA_TRE.ut));
+    const avstH = Math.max(2.6, avst * Math.min(hus, kamTre) - (hus < 1 ? 1 : 0)), oppH = opp * (.55 + .45 * avstH / avst);
     let cx = x + Math.sin(f.a) * cp * avstH, cy = y - Math.cos(f.a) * cp * avstH, cz = k.z + oppH - Math.sin(f.pitch) * avstH; const bak = Math.max((hoyde3d(u.cx + cx, u.cy + cy) - u.h0) * R.EX, V.høyde(cx, cy)) + 1; if (cz < bak) cz = bak;
     const [mx, my] = fram(f.a), mål = k.type === 'bil' ? [x + mx * KB.foran, y + my * KB.foran, k.z + KB.siktOpp] : [x, y, k.z + opp * .7];
     if (!kamP || Math.hypot(kamP.p[0] - cx, kamP.p[1] - cy) > 60) kamP = { p: [cx, cy, cz], m: mål.slice(), ok: true };
     else { const w = Math.min(1, dt * (k.type === 'bil' ? KB.følg : 8)); for (let q = 0; q < 3; q++) { kamP.p[q] += ([cx, cy, cz][q] - kamP.p[q]) * w; kamP.m[q] += (mål[q] - kamP.m[q]) * w; }
-      const b2 = Math.max((hoyde3d(u.cx + kamP.p[0], u.cy + kamP.p[1]) - u.h0) * R.EX, V.høyde(kamP.p[0], kamP.p[1])) + 1; if (kamP.p[2] < b2) kamP.p[2] = b2; }
+      const b2 = Math.max((hoyde3d(u.cx + kamP.p[0], u.cy + kamP.p[1]) - u.h0) * R.EX, V.høyde(kamP.p[0], kamP.p[1])) + 1; if (kamP.p[2] < b2) kamP.p[2] = b2;
+      // henger kameraet etter inne i en trekrone, tar det igjen målet fort (ellers glir det gjennom greinene)
+      if (k.type === 'bil' && iKrone(u, kamP.p[0], kamP.p[1], kamP.p[2])) { const w2 = Math.min(1, dt * KAMERA_TRE.ta); for (let q = 0; q < 3; q++) kamP.p[q] += ([cx, cy, cz][q] - kamP.p[q]) * w2; } }
     c.position.set(kamP.p[0], kamP.p[1], kamP.p[2]); c.up.set(0, 0, 1); c.lookAt(kamP.m[0], kamP.m[1], kamP.m[2]);
     R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = 62 + Math.min(10, fart * .25); c.aspect = VW / VH; c.near = .3; c.far = u.S * 4 + 3000; c.updateProjectionMatrix(); b.yaw = f.a;
     lyd(k); if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
@@ -294,6 +301,37 @@
     for (let q = 1; q <= n; q++) { const t = q / n, X = x0 + (x1 - x0) * t, Y = y0 + (y1 - y0) * t;
       for (const o of H.get(Math.floor(X / 20) + ',' + Math.floor(Y / 20)) || []) { if (!o.P) continue; const b = o.bb; if (b && (X < b[0] || X > b[2] || Y < b[1] || Y > b[3])) continue; if (inni(o.P, X, Y)) return t; } }
     return 1; }
+  // TREKRONENE (runde 11): trærne i utsnittet (u.trær: x, y, z, høyde, …) i ruter på 10 m, laget første gang de trengs per utsnitt.
+  // KRONE per treslag (i trærnes egne mål, lest av modellene i index.html treGeo og spill/vegetasjon3d.js): kronen fra – til (andel av
+  // høyden), radius (andel av høyden) og om den er en kjegle (gran: bredest nede) eller en klump (bredest midt i). Under kronen er
+  // stammen (0,55 m). Claudes forslag (KAMERA_TRE): margin rundt kronen (m), inn/ut = hvor fort kameraet kommer nærmere / går tilbake
+  // per sekund, ta = tar igjen målet når det henger etter inne i en krone.
+  const KAMERA_TRE = { rute: 10, margin: .6, inn: 7, ut: 1.1, ta: 12 };
+  const KRONE = { gran: [.08, 1, .33, 1], furu: [.55, 1, .28, 0], løv: [.35, 1, .25, 0], osp: [.45, 1, .3, 0], rogn: [.33, .92, .45, 0], fjellbjørk: [.3, .95, .4, 0],
+    selje: [.22, .88, .45, 0], einer: [0, 1, .22, 0] };
+  const KRONER = Object.keys(KRONE);
+  const treMinne = new WeakMap();
+  function treRute(u) { let T = treMinne.get(u); if (T) return T; T = new Map();
+    for (const art in u.trær || {}) { const d = u.trær[art], nr = Math.max(0, KRONER.indexOf(art)); if (!d || !d.length) continue;
+      for (let q = 0; q + 4 < d.length; q += 5) { if (!(d[q + 3] > 1.2)) continue; const key = Math.floor(d[q] / KAMERA_TRE.rute) * 65536 + Math.floor(d[q + 1] / KAMERA_TRE.rute); let l = T.get(key); if (!l) T.set(key, l = []); l.push(d[q], d[q + 1], d[q + 2], d[q + 3], nr); } }
+    treMinne.set(u, T); return T; }
+  // radius (m) til et tre i høyden z (andel t av treets høyde h), eller −1 over treet
+  function kroneR(nr, h, t) { const [a, b, r, kjegle] = KRONE[KRONER[nr]]; if (t < -.1 || t > b + .05) return -1; if (t < a) return .55;
+    if (kjegle) return r * h * (1 - t) / (1 - a) + KAMERA_TRE.margin;
+    const c = (a + b) / 2, hh = (b - a) / 2, s = 1 - ((t - c) / hh) ** 2; return Math.max(.55, r * h * Math.sqrt(Math.max(0, s)) + KAMERA_TRE.margin); }
+  function iKrone(u, x, y, z) { const T = treRute(u), C = KAMERA_TRE.rute, i0 = Math.floor(x / C), j0 = Math.floor(y / C);
+    for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) { const l = T.get(i * 65536 + j); if (!l) continue;
+      for (let q = 0; q < l.length; q += 5) { const dx = x - l[q], dy = y - l[q + 1], h = l[q + 3]; if (dx * dx + dy * dy > h * h * .25 + 4) continue;
+        const r = kroneR(l[q + 4], h, (z - l[q + 2]) / h); if (r > 0 && dx * dx + dy * dy < r * r) return true; } }
+    return false; }
+  // Hvor langt (0–1) fra bilen (x0, y0, z0) mot kameraet (x1, y1, z1) kameraet kan stå uten å være inne i en trekrone eller stamme
+  // (også ca. 1 m foran og bak, så nærplanet ikke skjærer greinene). 1 = der det skal. Et tre MELLOM bilen og kameraet er greit (du ser
+  // forbi det som i andre spill) – å trekke kameraet helt inn til taket for hver grein ga et dårligere bilde (prøvd).
+  function treMellom(u, x0, y0, z0, x1, y1, z1) { if (!u || !u.trær) return 1; const L = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 1, e = 1 / L;
+    const fri = t => ![t, t + e, t - e].some(v => iKrone(u, x0 + (x1 - x0) * v, y0 + (y1 - y0) * v, z0 + (z1 - z0) * v));
+    for (let t = 1; t > .2; t -= .04) if (fri(t)) return t;
+    return .2; }
+  let kamTre = 1;
   // kameraet bak bilen (Claudes forslag): avstand og høyde (m), punktet det ser på (m foran bilen, m over bakken), hvor fort det følger (per s)
   const KAMERA_BIL = { avst: 9.6, opp: 3.0, foran: 5, siktOpp: 1.3, følg: 7 };
   let kamP = null;
@@ -369,5 +407,5 @@ body.kjorer #kjorknapp{ left:auto; right:296px; transform:none; bottom:calc(136p
       g.fillStyle = 'rgba(22,18,12,.8)'; g.strokeStyle = '#d8c98a'; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); g.stroke(); g.fillStyle = '#d8c98a'; g.textBaseline = 'middle'; g.fillText(k.type === 'bil' ? 'B' : 'H', x, y + .5); g.textBaseline = 'alphabetic';
       if (kam.m < 1.2) { const t = NAVN[k.type], ty = rot.Etikett ? Etikett.tekst(g, t, x, y + 20, 1) : y + 20; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); } }
     g.restore(); });
-  rot.KjorSpill = { verden: k => { const R = r3(), f = k || fører() || K[0]; return R && R.ut && f ? verdenFor(R, R.ut, f) : null; }, innEgen, egneNær: () => (r3() && R3.fot ? egneNær(R3, 9) : null), reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
+  rot.KjorSpill = { KAMERA_TRE, KRONE, kroneU: { iKrone, treMellom }, iKrone: (x, y, z) => (r3() && R3.ut ? iKrone(R3.ut, x, y, z) : false), treMellom: (...a) => (r3() && R3.ut ? treMellom(R3.ut, ...a) : 1), kamTre: () => kamTre, verden: k => { const R = r3(), f = k || fører() || K[0]; return R && R.ut && f ? verdenFor(R, R.ut, f) : null; }, innEgen, egneNær: () => (r3() && R3.fot ? egneNær(R3, 9) : null), reparer, skad, repPris, start, liste: () => K, fører, inn, ut, nær: () => (r3() ? nær(R3) : null), lagre, plassert: () => sett };
 })(typeof window !== 'undefined' ? window : globalThis);

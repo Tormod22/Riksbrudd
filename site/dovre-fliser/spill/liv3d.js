@@ -15,6 +15,44 @@
   const tunnelLinjer = u => { const ut = []; if (!u.infra) return ut;
     for (const o of u.infra) if (o.lag === 'tunnel') for (const d of o.deler) { const P = []; for (let i = 0; i < d.length; i += 2) P.push([d[i] - u.cx, d[i + 1] - u.cy]); if (P.length > 1) ut.push(Veg.tunnel(P)); }
     return ut; };
+  // (runde 11) Senker høydegitteret u.H under vegene (Veg.skjær) og flytter det som alt står på bakken der (trær, steiner, busker,
+  // parkerte biler, flagg) like mye ned. Gitterpunkter inntil et hus (nærHus) senkes ikke – da løftes heller vegen (se over).
+  // Etterpå lages nettHoyde sitt nett på nytt (u.nett), og terrengnettet som tegnes (terrengGeo) leser det endrede gitteret.
+  // SKJÆR_PÅ.på = false gir vegene som før (høyeste punkt under vegbanen) – for sammenligning og vaktas selvtest.
+  const SKJÆR_PÅ = { på: true };
+  // Terrengnettet slik det tegnes (nettHoyde i index.html) som vekter på gitterpunktene: trekanten i nettet (tre hjørner), og hvert
+  // hjørne bilineært i gitteret – så skjær() kan kreve at det TEGNEDE nettet ligger under vegen (nettet er grovere enn gitteret ute).
+  function nettVekter(u) {
+    const { M, gt } = nett3d(u), X = new Float64Array(M), bil = Veg.bilineær(u.N, u.steg, -u.S, u.S), k4 = new Int32Array(4), w4 = new Float64Array(4);
+    for (let i = 0; i < M; i++) X[i] = u.S * gt(-1 + 2 * i / (M - 1));
+    const finn = v => { let a = 0, b = M - 1; while (b - a > 1) { const m = (a + b) >> 1; if (X[m] <= v) a = m; else b = m; } return a; };
+    return (x, y, K, W) => {
+      const i = finn(Math.max(-u.S, Math.min(u.S, x))), j = finn(Math.max(-u.S, Math.min(u.S, -y)));
+      const fx = Math.max(0, Math.min(1, (x - X[i]) / (X[i + 1] - X[i]))), fy = Math.max(0, Math.min(1, (-y - X[j]) / (X[j + 1] - X[j])));
+      const hj = fx + fy <= 1 ? [[i, j, 1 - fx - fy], [i + 1, j, fx], [i, j + 1, fy]] : [[i + 1, j + 1, fx + fy - 1], [i, j + 1, 1 - fx], [i + 1, j, 1 - fy]];
+      let n = 0;
+      for (const [a, b, beta] of hj) { if (beta <= 0) continue; bil(X[a], -X[b], k4, w4);
+        for (let m = 0; m < 4; m++) { const v = beta * w4[m]; if (v <= 0) continue; let q = 0; while (q < n && K[q] !== k4[m]) q++; if (q === n) { K[n] = k4[m]; W[n++] = v; } else W[q] += v; } }
+      return n; };
+  }
+  async function skjærBakken(u, biter) {
+    const EX = (typeof R3 !== 'undefined' && R3 && R3.EX) || 1, krav = [], t0 = performance.now();
+    for (const b of biter) Veg.skjærKrav(b.B, b.w, Array.from(b.h, z => z / EX + u.h0), krav);
+    if (børPuste()) await pust();
+    // et gitterpunkt nærmere et hus enn ca. 0,6 rute + 2 m senkes ikke: bakken mellom punktene er lineær, så et senket punkt et stykke
+    // fra huset drar også bakken ved husveggen ned (huset ville stått på en sokkel av luft)
+    const sh = u.steg * .6, låst = u.hus && u.hus.omriss && typeof nærHus === 'function' ? (i, j) => { const x = -u.S + i * u.steg, y = u.S - j * u.steg;
+      return nærHus(u, x, y) || nærHus(u, x + sh, y + sh) || nærHus(u, x - sh, y + sh) || nærHus(u, x + sh, y - sh) || nærHus(u, x - sh, y - sh); } : null;
+    const vekter = [Veg.bilineær(u.N, u.steg, -u.S, u.S)]; if (typeof nett3d === 'function') vekter.push(nettVekter(u));
+    const endret = typeof kjørAsynk === 'function' ? await kjørAsynk(Veg.skjærG(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter)) : Veg.skjær(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter);
+    u.nett = null;
+    let maks = 0; for (const d of endret.values()) if (d > maks) maks = d;
+    if (endret.size) { const flytt = (data, st) => { if (!data) return; for (let k = 0; k < data.length; k += st) { const d = Veg.senket(endret, u.N, u.steg, -u.S, u.S, data[k], data[k + 1]); if (d) data[k + 2] -= d * EX; } };
+      if (u.trær) for (const a in u.trær) flytt(u.trær[a], 5);
+      if (u.smått) { flytt(u.smått.stein, 5); flytt(u.smått.busk, 5); }
+      if (u.hus) { flytt(u.hus.biler, 5); flytt(u.hus.flagg, 4); } }
+    return { punkter: endret.size, krav: krav.length / 3, maks: +maks.toFixed(2), ms: Math.round(performance.now() - t0), endret };
+  }
   KROKER.bygg3d.push(async u => {
     if (u.S > 2200 || !VIS.veg) return;
     const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde([u.cx - u.S, u.cy - u.S, u.cx + u.S, u.cy + u.S], z), rå = [];
@@ -39,7 +77,7 @@
     const byMinne = new Map(), iBy = (x, y) => { const k = Math.floor(x / 4) * 65536 + Math.floor(y / 4); let v = byMinne.get(k);
       if (v === undefined) { v = byer.some(b => Garnison.inni(b, x + u.cx, y + u.cy)); byMinne.set(k, v); } return v; };
     const tun = VIS.infra ? tunnelLinjer(u) : [], zf = (x, y) => nettHoyde(u, x, y);
-    const veger = [], gang = [];
+    const veger = [], gang = [], biter2 = [], skjærInn = !!(Veg.skjær && u.H && SKJÆR_PÅ.på);
     for (const v of hele) { if (børPuste()) await pust(); const w = Veg.halv(v);
       for (const T of Veg.utenTunnel(v.P, tun)) {
         // klipp ved kanten av utsnittet (utenfor finnes ikke terreng), del opp i biter som ligger inne
@@ -50,13 +88,19 @@
           // i tettsted eller ikke (prøves hver 10. m); et skifte kortere enn 25 m teller ikke
           const by = B.map((p, i) => i % 4 ? null : iBy(p[0], p[1])); for (let i = 0; i < by.length; i++) if (by[i] === null) by[i] = by[i - (i % 4)];
           for (let i = 0; i < by.length;) { let j = i; while (j < by.length && by[j] === by[i]) j++; if (j - i < 10 && i > 0) by.fill(by[i - 1], i, j); i = j; }
-          const h = Veg.høyder(B, w, zf);
-          for (let i = 0; i < B.length;) { let j = i; while (j < B.length && by[j] === by[i]) j++; const til = Math.min(B.length, j + 1);
-            if (til - i > 1) (v.g ? gang : veger).push({ k: v.k, g: v.g, t: v.t, by: !!by[i], w, P: B.slice(i, til).map(([a, b], q) => [a, b, h[i + q] + LØFT[v.k]]),
-              åpen: [i === 0 && (i0 > 0 || T.kutt[0]), til === B.length && (i0 + B.length < T.P.length || T.kutt[1])] });
-            i = j; }
+          biter2.push({ v, w, B, i0, T, by, h: skjærInn ? Veg.senterHøyder(B, w, zf) : Veg.høyder(B, w, zf) });
         }
       }
+    }
+    // (runde 11) vegen skåret inn i lia: høydegitteret senkes under og like ved vegbanen (Veg.skjær), så bakken ikke stikker opp gjennom
+    // asfalten – så legges vegbanen i den endelige høyden: senterhøyden, eller høyere der bakken (slik nettet tegnes) fortsatt ligger over.
+    if (skjærInn) { await pust(); if (window.SKJÆR_DEBUG) { u.Hfør = u.H.slice(); u.biterDbg = biter2; biter2.forEach(b => { b.mål = Float64Array.from(b.h); }); } u.skjær = await skjærBakken(u, biter2); await pust();
+      for (const b of biter2) { if (børPuste()) await pust(); const etter = Veg.tversMaks(b.B, b.w, zf); for (let i = 0; i < b.h.length; i++) if (etter[i] > b.h[i]) b.h[i] = etter[i]; } }
+    for (const { v, w, B, i0, T, by, h } of biter2) {
+      for (let i = 0; i < B.length;) { let j = i; while (j < B.length && by[j] === by[i]) j++; const til = Math.min(B.length, j + 1);
+        if (til - i > 1) (v.g ? gang : veger).push({ k: v.k, g: v.g, t: v.t, by: !!by[i], w, P: B.slice(i, til).map(([a, b], q) => [a, b, h[i + q] + LØFT[v.k]]),
+          åpen: [i === 0 && (i0 > 0 || T.kutt[0]), til === B.length && (i0 + B.length < T.P.length || T.kutt[1])] });
+        i = j; }
     }
     u.veger = veger; u.gangveger = gang;
     const alle = veger.concat(gang);
@@ -470,5 +514,5 @@
   // start(): hvor bilene og folkene startet i siste utsnitt (veg, plass, retning) – for prøvene (likt utsnitt før og etter)
   // trafikk(): bilene og folkene nå (for vakten pipeline/fliser/vakter/figurer.js og prøvene), punkt(): plassen langs en linje
   const trafikk = () => ({ biler: (liv && liv.biler) || [], folk: (liv && liv.folk) || [], bilNett: (liv && liv.bilMesh) || [], flokk: (liv && liv.folkFlokk) || null, punkt });
-  window.Liv3d = { trafikk, finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger, VEG_FARGE };
+  window.Liv3d = { trafikk, finnKryss: v => Veg.finnKryss(v), dekke, SKJÆR_PÅ, start: () => liv && liv.start, byggVeger, VEG_FARGE };
 })();

@@ -250,6 +250,80 @@
     return ut;
   }
 
+  // ---------- vegen skåret inn i lia (runde 11) ----------
+  // Brukeren (bilder 20. nov): i bratt sideterreng sto vegen 2–4 m over bakken på en høy fylling, fordi høyder() legger vegbanen i
+  // høyden til det HØYESTE punktet under den. En ekte veg i en li er skåret inn: skjæring på oversiden, fylling på nedsiden. Nå:
+  // senterHøyder() legger vegbanen omtrent i bakkens høyde midt i vegen (litt opp mot overkanten), glattet langs vegen, og skjær()
+  // senker høydegitteret under og like ved vegen, så bakken aldri stikker opp gjennom asfalten. Fyllingen på nedsiden lages som før
+  // (spill/liv3d.js kant), men er bare halvparten så høy.
+  // Claudes forslag (tallene): opp = hvor høyt mellom midten (0) og høyeste punkt på tvers (1) vegbanen legges; glatt = punkter hver
+  // veg i snittet langs vegen (punktene ligger ca. 2,5 m fra hverandre); maksSkjær = aldri dypere skjæring i vegkanten enn dette (m) –
+  // ellers løftes vegen; ekstra = så langt utenfor vegkanten (m) bakken også skal ligge under vegen (skulderen); under = bakken minst
+  // så langt under vegbanen (m; vegen tegnes i tillegg 0,11–0,16 m over den); runder = ganger kravene gås gjennom.
+  const SKJÆR = { opp: .25, glatt: 3, maksSkjær: 3, ekstra: .9, under: 0, runder: 8 };
+  const TVERS = [-1, -.5, 0, .5, 1];
+  function senterHøyder(P, w, z, R = SKJÆR) {
+    const n = P.length, rå = new Float64Array(n), gulv = new Float64Array(n), ut = new Float64Array(n);
+    for (let i = 0; i < n; i++) { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
+      let s = 0, h = -Infinity; for (const o of TVERS) { const t = z(P[i][0] + nx * w * o, P[i][1] + ny * w * o); s += t; h = Math.max(h, t); }
+      const m = s / TVERS.length; rå[i] = m + R.opp * (h - m); gulv[i] = h - R.maksSkjær; }
+    for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let k = Math.max(0, i - R.glatt); k <= Math.min(n - 1, i + R.glatt); k++) { s += rå[k]; c++; } ut[i] = Math.max(s / c, gulv[i]); }
+    return ut;
+  }
+  // Det høyeste punktet på tvers av vegbanen (fem punkter, uten glatting langs vegen) – etter skjær(): der bakken slik den tegnes
+  // fortsatt ligger over vegbanen (et hus låser gitteret, eller nettet er grovere enn gitteret langt ute), løftes vegen dit.
+  function tversMaks(P, w, z) {
+    const n = P.length, ut = new Float64Array(n);
+    for (let i = 0; i < n; i++) { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
+      let h = -Infinity; for (const o of TVERS) h = Math.max(h, z(P[i][0] + nx * w * o, P[i][1] + ny * w * o)); ut[i] = h; }
+    return ut;
+  }
+  // Kravene til bakken langs en veg: [x, y, z] for punktene på tvers (vegbanen og «ekstra» utenfor kanten) – z = vegbanens høyde h[i].
+  function skjærKrav(P, w, h, ut = [], R = SKJÆR) {
+    const n = P.length, e = w + R.ekstra;
+    for (let i = 0; i < n; i++) { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
+      for (const o of TVERS) ut.push(P[i][0] + nx * e * o, P[i][1] + ny * e * o, h[i]); }
+    return ut;
+  }
+  // Vektene til bakken i et punkt: de fire gitterpunktene rundt (bilineært). Skriver indeksene i K og vektene i W, gir antallet.
+  function bilineær(N, steg, x0, y1) {
+    return (x, y, K, W) => { const fx = (x - x0) / steg, fy = (y1 - y) / steg;
+      const i = Math.max(0, Math.min(N - 2, Math.floor(fx))), j = Math.max(0, Math.min(N - 2, Math.floor(fy))), a = Math.max(0, Math.min(1, fx - i)), b = Math.max(0, Math.min(1, fy - j)), k = j * N + i;
+      K[0] = k; K[1] = k + 1; K[2] = k + N; K[3] = k + N + 1; W[0] = (1 - a) * (1 - b); W[1] = a * (1 - b); W[2] = (1 - a) * b; W[3] = a * b; return 4; };
+  }
+  // Senker høydegitteret H (N × N, rad 0 øverst; punkt (i, j) ligger i x = x0 + i·steg, y = y1 − j·steg) så bakken ligger minst
+  // R.under under hvert krav [x, y, z, x, y, z, …] (z i samme enhet som H). «Bakken» er en eller flere måter å lese gitteret på
+  // (vekter: liste med funksjoner som bilineær over – spill/liv3d.js gir også terrengnettet slik det tegnes, som er grovere enn
+  // gitteret langt fra midten). låst(i, j) = true: punktet senkes ikke (inntil et hus). Hvert krav som brytes, fordeles på punktene
+  // etter vekten (den minste endringen som oppfyller det), og kravene gås gjennom flere ganger. Bakken senkes bare – aldri heves –,
+  // bare punkter over vegbanen og aldri under den, og høyst R.maksSkjær + 1 m i ett punkt (et krav der bare et punkt med liten vekt kan senkes, ga før 190 m). Krav som da ikke
+  // oppfylles, løfter vegen i stedet (tversMaks). Gir Map(indeks → hvor mye punktet ble senket).
+  function skjær(H, N, steg, x0, y1, krav, låst, R = SKJÆR, vekter) { const it = skjærG(H, N, steg, x0, y1, krav, låst, R, vekter); let r; while (!(r = it.next()).done); return r.value; }
+  // det samme som generator (yield for hvert 2000. krav): målt 0,1–0,47 s i ett strekk i Ryfylke og Aurland – spill/liv3d.js tar pust
+  function* skjærG(H, N, steg, x0, y1, krav, låst, R = SKJÆR, vekter) {
+    const endret = new Map(), lås = new Int8Array(N * N).fill(-1), erLåst = k => { if (lås[k] < 0) lås[k] = låst && låst(k % N, Math.floor(k / N)) ? 1 : 0; return lås[k] === 1; };
+    const V = vekter || [bilineær(N, steg, x0, y1)], K = new Int32Array(32), W = new Float64Array(32), tak = R.maksSkjær + 1;
+    for (let r = 0; r < R.runder; r++) { let brudd = 0;
+      for (let q = 0; q < krav.length; q += 3) { if (q % 6000 === 5997) yield; for (const vf of V) {
+        const n = vf(krav[q], krav[q + 1], K, W); let z = 0; for (let m = 0; m < n; m++) z += W[m] * H[K[m]];
+        const mål = krav[q + 2] - R.under, e = z - mål; if (e <= .005) continue;
+        // bare punkter som ligger over vegbanen senkes, og aldri under den: ellers drar et punkt med vekt på begge sider av vegen
+        // (gitteret er 2–10 m) hele bakken ned, og vegen står like høyt over bakken som før (prøvd: 2,4 m under midten av vegen)
+        const kan = m => W[m] > 0 && !erLåst(K[m]) && (endret.get(K[m]) || 0) < tak && H[K[m]] > mål + .001;
+        let s = 0; for (let m = 0; m < n; m++) if (kan(m)) s += W[m] * W[m]; if (s < 1e-6) continue; brudd++;
+        for (let m = 0; m < n; m++) { if (!kan(m)) continue; const før = endret.get(K[m]) || 0;
+          const d = Math.min(e * W[m] / s, 2 * e, tak - før, H[K[m]] - mål); H[K[m]] -= d; endret.set(K[m], før + d); } } }
+      if (!brudd) break; }
+    return endret;
+  }
+  // Hvor mye bakken ble senket i et punkt (bilineært i endringene fra skjær) – for ting som alt står på bakken (trær, steiner, biler).
+  function senket(endret, N, steg, x0, y1, x, y) {
+    if (!endret.size) return 0; const fx = (x - x0) / steg, fy = (y1 - y) / steg;
+    const i = Math.max(0, Math.min(N - 2, Math.floor(fx))), j = Math.max(0, Math.min(N - 2, Math.floor(fy))), a = Math.max(0, Math.min(1, fx - i)), b = Math.max(0, Math.min(1, fy - j)), k = j * N + i;
+    const g = m => endret.get(m) || 0;
+    return (g(k) * (1 - a) + g(k + 1) * a) * (1 - b) + (g(k + N) * (1 - a) + g(k + N + 1) * a) * b;
+  }
+
   // ---------- vegkryss ----------
   // Kryss = minst tre vegarmer møtes: ender som ligger innen 3 m av hverandre, eller en ende som treffer midt på en annen veg (T-kryss).
   // To ender alene er bare en skjøt og ikke et kryss. Hvert kryss får armene sine med retning ut fra krysset.
@@ -377,6 +451,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, finnKryssG, utenomKryss, kryssFlate, KRYSS_REGLER, striper, gangfelt, lykter, lykterG };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, SKJÆR, senterHøyder, tversMaks, skjærKrav, skjær, skjærG, bilineær, senket, finnKryss, finnKryssG, utenomKryss, kryssFlate, KRYSS_REGLER, striper, gangfelt, lykter, lykterG };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

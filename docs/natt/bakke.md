@@ -1,5 +1,69 @@
 # Pakke «bakke» – bakken, vegen, gresset og skyggene nær deg i 3D
 
+## Runde 11 (20. nov kveld)
+
+Oppdraget: (1) vegbanen lå i høyden til det HØYESTE punktet under den, så i bratt sideterreng sto den 2–4 m over bakken på en fylling;
+(2) kameraet bak bilen gikk inn i trekronene i skogen. Prøvd på /rogaland (dev.py, Kleivane ved leiren 15607, 6622779) og /norge
+(Aurlandsvangen, kommunal veg i lia ved 77321, 6777623), mobil liggende 844 × 390 og PC 1400 × 820, webdriver av, før/etter-bilder.
+
+### 1. Vegen skåret inn i lia – LAGET (bedre, ikke perfekt)
+- `spill/veg.js` (regler uten DOM): `SKJÆR = { opp: .25, glatt: 3, maksSkjær: 3, ekstra: .9, under: 0, runder: 8 }` (Claudes forslag).
+  - `senterHøyder(P, w, z)`: vegbanen i snittet av fem punkter på tvers, en firedel opp mot det høyeste (opp), glattet ±3 punkter (ca. 7,5 m)
+    langs vegen, og aldri mer enn maksSkjær under det høyeste punktet i vegkanten (ellers løftes vegen).
+  - `skjærKrav(P, w, h)`: kravene [x, y, z] på tvers (vegbanen og 0,9 m utenfor kanten = skulderen).
+  - `skjær(H, N, steg, x0, y1, krav, låst, R, vekter)` / `skjærG` (generator, yield for hvert 2000. krav): senker høydegitteret så bakken
+    ligger under hvert krav. Kaczmarz: et krav som brytes, fordeles på punktene etter vekten. Bare punkter som ligger OVER vegbanen senkes,
+    og aldri under den, høyst maksSkjær + 1 m; låste punkter senkes ikke (liv3d.js: nærmere et hus enn ca. 0,6 rute + 2 m – ellers sto huset på en sokkel av luft). Uten «aldri under vegbanen» dro et punkt med vekt på
+    begge sider av vegen hele bakken ned (prøvd: bakken 2,4 m under midten av vegen – vegen sto like høyt som før).
+  - `bilineær(N, steg, x0, y1)` (vekter for gitteret), `tversMaks(P, w, z)` (høyeste punkt på tvers uten glatting), `senket(endret, …)`.
+- `spill/liv3d.js` (bygg3d-kroken): alle vegbitene samles først (`biter2`), får `senterHøyder`, så `skjærBakken(u, biter)`: kravene
+  sjekkes både mot gitteret (bilineært = `hoyde3d`, det gange.js går på) og mot terrengnettet slik det tegnes (`nettVekter(u)`: trekanten i
+  nettet, hvert hjørne bilineært i gitteret – nettet er grovere enn gitteret ute). Endrer `u.H` (så `terrengGeo` i forbered3d tegner skjæringen),
+  setter `u.nett = null` (nettHoyde lages på nytt), og flytter det som alt står der (u.trær alle slag, steiner, busker, parkerte biler, flagg)
+  like mye ned. Til slutt løftes vegen der bakken slik den tegnes fortsatt ligger over (`tversMaks`). `u.skjær = { punkter, krav, maks, ms, endret }`.
+  `Liv3d.SKJÆR_PÅ.på = false` gir den gamle regelen (sammenligning). `window.SKJÆR_DEBUG = 1` før byggingen legger `u.Hfør` og `u.biterDbg` på
+  utsnittet (bare for feilsøking).
+- Bilen (kjor.js `verdenFor`: nettHoyde + Liv3d.dekke + vegFylling) og gange (hoyde3d + Liv3d.dekke) følger den nye vegen uten endring:
+  de leser gitteret/nettet og vegens z. Bruene: infra3d løfter vegen opp på dekket etterpå som før (ikke endret).
+- MÅLT (andel av vegpunktene E/R/F/K med bakken > 2 m under vegen 1 m utenfor kanten; samme utsnitt): Kleivane mobil 41 % → 33 %,
+  største 9,9 → 8,3 m; Aurland PC 62 % → 48 %, største 14,7 → 8,8 m. Ved bilen i Aurland: vegen 1,1 → 0,65 m over bakken midt under,
+  fyllingen i nedre kant 1,7 → 1,3 m. Ved Kleivane (feilsøking, ett punkt): før 1,66 m bakke over midten i øvre kant → vegen la seg ca. 2 m
+  over, nå 0,35 m over midten, øvre kant ligger i vegens høyde (skjæring), nedre kant 1,9 m under (før ca. 3,4).
+- BEGRENSNING (ærlig): høydegitteret og terrengnettet har 5–10 m mellom punktene (mobil ca. 9,8 m ved Kleivane), og en veg er 5–8 m bred.
+  Skjæringen blir derfor en benk som går ut til neste gitterpunkt (opptil ca. 10 m) før lia stiger, og bakken midt under vegen dras litt ned
+  (lineært mellom punktene). Mange veger ligger også på ekte fyllinger i høydedataene. En skarp skjæring krever et tettere nett langs vegene
+  (eget nett for vegkorridoren eller hull i bakken) – IKKE gjort.
+- Tid: 0,1–0,47 s per utsnitt, nå i biter med pust (kjørAsynk). Ingen nye nett, lys eller oppslag per bilde.
+
+### 2. Kameraet utenfor trekronene – LAGET
+- `spill/kjor.js` (bare kameraet): `KRONE` per treslag (lest av modellene: gran kjegle fra 8 % av høyden, furu krone fra 55 %, bjørk 35 %,
+  osp, rogn, fjellbjørk, selje, einer), stammen 0,55 m under kronen, `KAMERA_TRE = { rute: 10, margin: .6, inn: 7, ut: 1.1, ta: 12 }`
+  (Claudes forslag). Trærne (u.trær) i ruter på 10 m, laget første gang per utsnitt (WeakMap). `treMellom(u, bil, kamera)` gir den største
+  andelen av avstanden der kameraet (og 1 m foran/bak) ikke står i en krone; `kamTre` glir dit fort (7/s) og tilbake sakte (1,1/s); henger
+  kameraet etter inne i en krone, tar det igjen målet fort (12/s). Et tre MELLOM bilen og kameraet er greit – første utkast trakk kameraet
+  helt inn til taket for hver grein (prøvd, dårligere bilde).
+- MÅLT (24 retninger rundt bilen i skogen ved Kleivane, mobil): kameraet i en krone 9 av 24 før (med den første, grovere kronemodellen) → 0 av 24.
+- `KjorSpill.KAMERA_TRE`, `KRONE`, `kroneU: { iKrone, treMellom }` (tar u), `iKrone(x, y, z)` / `treMellom(...)` (R3.ut), `kamTre()`.
+
+### Vakt «bakke» (utvidet)
+I tillegg til runde 10: skjæringen på et prøvegitter med en li på 40 % (selvtest: den gamle regelen gir over 2 m fylling; ny under 70 % av det;
+bakken ikke over vegbanen), trekronene med et prøvetre (inne/ute, kameraet kommer nærmere, fritt = 1), og i 3D: høyst 1 % av vegkantene under
+bakken. Prøvd: Dovre mobil med 3D – ok (2406 vegkanter, 0 under; skjæring 2773 punkter, 96 ms), 1,3 s.
+
+### Kontroll
+Mobilkontrollen (`SJEKK_PROFIL=mobil`, sjekk.js, i en kopi av arbeidstreet ved commit eddd3ef): 128 ok, 0 FEIL (607 s) – også «veger i 3D»,
+«3D uten rare ting» (0 i hus/svevende), «kjørbare biler og helikopter» og «bakke, veg og gress» (uten 3D-delen der: 3D var av da vakta kjørte).
+
+### Tester
+`node pipeline/fliser/test_veg.js` (11 nye sjekker for senterHøyder/skjær/tversMaks/maksSkjær), `test_kjor.js` grønn.
+
+### Fellesfiler
+`index.html`: bare versjonsmerkene (versjon.py). Ingen andre fellesfiler endret.
+
+### Bilder (scratchpad/natt11/bakke/)
+`cmp-0.png`, `cmp-180.png` (Kleivane mobil, øverst før, nederst etter), `cmpnorge-0.png` (Aurland PC), `cmpskog-90.png`, `cmpskog3-270.png`
+(kameraet i skogen før/etter), `skogetter3-*.png`. Skript: `kjor.js` (fører), `bratt.js`, `skog.js`, `dbg.js`, `vakt.js`.
+
 ## Runde 10 (20. nov kveld, brukerens bilder)
 
 Brukerens bilder fra iPhone (liggende, kl. 06:06, ved feltbilen ved **Kleivane** på /rogaland – samme sted som standardleiren

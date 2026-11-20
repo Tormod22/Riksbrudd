@@ -1,4 +1,17 @@
 [
-  ["Skygger tidlig og sent", "Når sola står lavt (morgen og kveld), er skyggene myke og blir svakere et stykke fra treet eller huset som kaster dem – de strekker seg ikke over hele jordet. Midt på dagen er de tydeligere. Slå av skyggene med «Lys og skygger» i ☰ hvis bildet går tregt.", "Vær, lyd og bilde"],
-  ["Vegene i 3D", "Vegene har grå asfalt med hjulspor og kantlinjer på riksveger og fylkesveger. Der vegen ligger høyere enn bakken, går en gresskledd fylling ned til bakken.", "I 3D"]
+  [
+    "Skygger tidlig og sent",
+    "Når sola står lavt (morgen og kveld), er skyggene myke og blir svakere et stykke fra treet eller huset som kaster dem – de strekker seg ikke over hele jordet. Midt på dagen er de tydeligere. Slå av skyggene med «Lys og skygger» i ☰ hvis bildet går tregt.",
+    "Vær, lyd og bilde"
+  ],
+  [
+    "Vegene i 3D",
+    "Vegene har grå asfalt med hjulspor og kantlinjer på riksveger og fylkesveger. I en bratt li er vegen skåret inn i lia som en ekte veg: en skjæring på oversiden og en lav, gresskledd fylling ned til bakken på nedsiden.",
+    "I 3D"
+  ],
+  [
+    "Kameraet når du kjører",
+    "Kameraet ligger bak bilen. Kjører du i skogen og et tre står der kameraet skulle vært, glir kameraet nærmere bilen så du ikke ser gjennom greinene, og tilbake når det er fritt.",
+    "I 3D"
+  ]
 ]

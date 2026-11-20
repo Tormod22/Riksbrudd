@@ -32,6 +32,42 @@ sjekk(V.utenTunnel(rett, []).length === 1, 'uten tunneler: hele vegen');
 const skrå = (x, y) => y * .3, h = V.høyder(rett, 4, skrå);
 sjekk(h.every(z => z >= 4 * .3 - 1e-9), `høyder: vegbanen ligger i høyden til overkanten av skråningen (${h[10].toFixed(2)} m)`);
 
+// (runde 11) skåret inn i lia: senterHøyder legger vegen nær bakken midt i vegen, skjær senker gitteret så bakken (bilineært)
+// aldri ligger over vegbanen, punkter lenger unna røres ikke, låste punkter (hus) senkes ikke, og flat bakke endres ikke
+{
+  const N = 81, steg = 5, x0 = -200, y1 = 200, H0 = new Float32Array(N * N);
+  // terrenget stiger 0,4 m per m mot nord (y), vegen går øst–vest gjennom y = 2
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) H0[j * N + i] = (y1 - j * steg) * .4;
+  const bil = (H, x, y) => { const fx = (x - x0) / steg, fy = (y1 - y) / steg, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j, k = j * N + i;
+    return (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b; };
+  const P = V.jevn([[-100, 2], [100, 2]]), w = 2.75, H = H0.slice(), z = (x, y) => bil(H, x, y);
+  const gml = V.høyder(P, w, z), ny = V.senterHøyder(P, w, z), m = Math.floor(P.length / 2);
+  sjekk(ny[m] < gml[m] - .5 && ny[m] > z(P[m][0], 2) - .01, `senterHøyder: vegen ${ny[m].toFixed(2)} m (før ${gml[m].toFixed(2)}, bakken midt i vegen ${z(P[m][0], 2).toFixed(2)})`);
+  sjekk(gml[m] - z(P[m][0], 2 - w - 1) > 2, `selvtest: med den gamle regelen står vegen ${(gml[m] - z(P[m][0], 2 - w - 1)).toFixed(2)} m over bakken på nedsiden`);
+  const krav = V.skjærKrav(P, w, ny), endret = V.skjær(H, N, steg, x0, y1, krav);
+  let over = 0; for (let q = 0; q < krav.length; q += 3) over = Math.max(over, bil(H, krav[q], krav[q + 1]) - krav[q + 2]);
+  sjekk(endret.size > 0 && over < .02, `skjær: bakken ligger ikke over vegbanen etterpå (${endret.size} punkter senket, verst ${over.toFixed(3)} m)`);
+  let fjern = 0; for (const k of endret.keys()) { const y = y1 - Math.floor(k / N) * steg; if (Math.abs(y - 2) > w + V.SKJÆR.ekstra + steg) fjern++; }
+  sjekk(fjern === 0, `skjær: bare punkter like ved vegen er senket (${fjern} lenger unna)`);
+  sjekk([...endret.values()].every(d => d > 0), 'skjær: bakken senkes, aldri heves');
+  const under = ny[m] - bil(H, P[m][0], 2), nede = ny[m] - bil(H, P[m][0], 2 - w);
+  sjekk(under < .8 && under > -.02, `skjær: bakken midt under vegen er ikke dratt langt ned (gitteret er 5 m: lineært mellom punktene) (${under.toFixed(2)} m), ikke dratt ned`);
+  sjekk(nede < (gml[m] - z(P[m][0], 2 - w)) * .7, `skjær: fyllingen i nedre vegkant er lavere enn før (${nede.toFixed(2)} m mot ${(gml[m] - bil(H0, P[m][0], 2 - w)).toFixed(2)})`);
+  sjekk(Math.abs(V.senket(endret, N, steg, x0, y1, 0, 2 + w + 1) - (H0[0] - H[0])) >= 0 && V.senket(endret, N, steg, x0, y1, 0, 60) === 0, 'senket: null langt fra vegen');
+  // låst: et hus rett ved vegen på oversiden – punktene der senkes ikke
+  const H2 = H0.slice(), låst = (i, j) => { const x = x0 + i * steg, y = y1 - j * steg; return x > -10 && x < 10 && y > 2 && y < 15; };
+  const e2 = V.skjær(H2, N, steg, x0, y1, krav, låst);
+  sjekk([...e2.keys()].every(k => !låst(k % N, Math.floor(k / N))), 'skjær: låste punkter (hus) senkes ikke');
+  sjekk(V.tversMaks(P, w, (x, y) => bil(H2, x, y))[m] > ny[m] + .1, 'tversMaks: der bakken ikke kunne senkes, ligger den over senterhøyden (vegen løftes dit)');
+  // flat bakke: ingenting endres
+  const F = new Float32Array(N * N).fill(10), fz = (x, y) => bil(F, x, y), fh = V.senterHøyder(P, w, fz);
+  sjekk(V.skjær(F, N, steg, x0, y1, V.skjærKrav(P, w, fh)).size === 0 && Math.abs(fh[m] - 10) < 1e-9, 'flat bakke: vegen i bakkens høyde, ingenting senkes');
+  // maksSkjær: i en svært bratt li (100 %) blir skjæringen i vegkanten aldri dypere enn maksSkjær
+  const B = new Float32Array(N * N); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) B[j * N + i] = (y1 - j * steg) * 1.0;
+  const bh = V.senterHøyder(P, 4, (x, y) => bil(B, x, y));
+  sjekk(bil(B, 0, 2 + 4) - bh[m] <= V.SKJÆR.maksSkjær + 1e-9, `maksSkjær: skjæringen i overkanten ${(bil(B, 0, 6) - bh[m]).toFixed(2)} m`);
+}
+
 // kryss: T-kryss gir ett kryss; flaten holder seg innenfor armene (før: konvekst skall = store flak)
 const z0 = P => P.map(([x, y]) => [x, y, 0]);
 const veger = [{ k: 'E', P: z0(V.jevn([[-100, 0], [0, 0]])) }, { k: 'E', P: z0(V.jevn([[0, 0], [100, 0]])) }, { k: 'K', P: z0(V.jevn([[0, 0], [60, 60]])) }];
