@@ -304,7 +304,13 @@
   // punkter og i vegens høyde – og et avskåret hjørne (trekant) mellom to naboarmer som står 40–140° på hverandre.
   // Før var flaten det konvekse skallet rundt alle armene: store svarte flak ut over gresset der veger møtes i spiss vinkel.
   // veger: som i finnKryss. Legger trekanter i ut = { pos, uv, idx }.
-  function kryssFlate(n, veger, ut) {
+  // RUNDE 10 (20. nov, brukerens bilder fra iPhone ved Kleivane kl. 06: «store, skarpe, svarte trekanter over vegen og bakken»): det var
+  // ikke skygger, men de avskårne hjørnene i kryssene. Hjørnet ligger flatt i kryssets høyde, og der bakken faller bort (vegen på fylling,
+  // innkjørsel ned til et tun) svevde det opptil 2 m over bakken som et mørkt asfaltflak. Nå: (1) ingen avskåret hjørne mot en privat veg
+  // eller skogsbilveg (P, S – innkjørsler har ikke slike hjørner), (2) med «bakke» (bakken slik den tegnes, lokale meter) droppes et hjørne
+  // som svever eller ligger begravd mer enn KRYSS_REGLER.avvik meter et sted på hjørnet. Claudes forslag (tallene):
+  const KRYSS_REGLER = { avvik: .35, utenHjørne: 'PS' };
+  function kryssFlate(n, veger, ut, bakke) {
     for (const a of n.armer) { if (a.t === 3) continue;   // ringen i en rundkjøring har sin egen vegbane med kantlinjer
       const P = veger[a.li].P, w = a.w + .12, r = a.j1 >= a.j0 ? 1 : -1, n0 = ut.pos.length / 3; let rader = 0;
       for (let j = a.j0; ; j += r) { const p = P[j], q = P[Math.min(P.length - 1, j + 1)], o = P[Math.max(0, j - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
@@ -315,11 +321,15 @@
     const A = n.armer.map(a => ({ ...a, v: Math.atan2(a.dy, a.dx) })).sort((p, q) => p.v - q.v);
     for (let i = 0; i < A.length; i++) { const a = A[i], b = A[(i + 1) % A.length]; if (a === b) continue;
       let dv = b.v - a.v; if (dv <= 0) dv += 2 * Math.PI; if (dv < .7 || dv > 2.45) continue;
+      if (KRYSS_REGLER.utenHjørne.includes(a.k) !== KRYSS_REGLER.utenHjørne.includes(b.k)) continue;
       // a sin venstre kant (mot b) og b sin høyre kant (mot a): skjæringspunktet er det indre hjørnet
       const ax = n.x - a.dy * a.w, ay = n.y + a.dx * a.w, bx = n.x + b.dy * b.w, by = n.y - b.dx * b.w, det = a.dx * b.dy - a.dy * b.dx; if (Math.abs(det) < .3) continue;
       const t = ((bx - ax) * b.dy - (by - ay) * b.dx) / det, s = ((bx - ax) * a.dy - (by - ay) * a.dx) / det; if (t < 0 || s < 0 || t > n.d + 3 || s > n.d + 3) continue;
       const qx = ax + a.dx * t, qy = ay + a.dy * t, ra = Math.min(2.5, Math.max(0, a.L - t)), rb = Math.min(2.5, Math.max(0, b.L - s)); if (ra < .5 || rb < .5) continue;
       const n0 = ut.pos.length / 3, z = n.z + .03;
+      if (bakke) { const H = [[qx, qy], [qx + a.dx * ra, qy + a.dy * ra], [qx + b.dx * rb, qy + b.dy * rb]], mx = (H[0][0] + H[1][0] + H[2][0]) / 3, my = (H[0][1] + H[1][1] + H[2][1]) / 3;
+        H.push([mx, my], [(H[1][0] + H[2][0]) / 2, (H[1][1] + H[2][1]) / 2]);
+        if (H.some(([x, y]) => Math.abs(z - bakke(x, y)) > KRYSS_REGLER.avvik)) continue; }
       ut.pos.push(qx, qy, z, qx + a.dx * ra, qy + a.dy * ra, z, qx + b.dx * rb, qy + b.dy * rb, z);
       ut.uv.push(qx / 12, qy / 12, (qx + a.dx * ra) / 12, (qy + a.dy * ra) / 12, (qx + b.dx * rb) / 12, (qy + b.dy * rb) / 12); ut.idx.push(n0, n0 + 1, n0 + 2); }
   }
@@ -363,6 +373,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, finnKryssG, utenomKryss, kryssFlate, striper, gangfelt, lykter, lykterG };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, finnKryss, finnKryssG, utenomKryss, kryssFlate, KRYSS_REGLER, striper, gangfelt, lykter, lykterG };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

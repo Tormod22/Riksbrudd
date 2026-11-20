@@ -198,8 +198,11 @@
     for (const [type, g] of Object.entries(grupper)) { yield; const m = yield* nettG(g, type, OFF[type]); if (m) ut.nett.push(m); }
     // kryssene: asfalt uten oppmerking langs hver arm (grusveger møtes på grus), og fotgjengerfeltene som hvite striper
     const flate = tomR('flate'), grusflate = tomR('grusflate'), felt = { pos: [], idx: [] };
-    for (const n of kryss) { yield; Veg.kryssFlate(n, u.veger, n.armer.some(a => 'ERFK'.includes(a.k)) ? flate : grusflate); }
-    for (const [g, type] of [[flate, 'kryss'], [grusflate, 'grusflate']]) { const m = yield* nettG(g, type, -10); if (m) ut.nett.push(m); }
+    // (runde 10: hjørner som ville svevd over bakken eller ligget begravd droppes – Veg.kryssFlate med bakken slik den tegnes)
+    for (const n of kryss) { yield; Veg.kryssFlate(n, u.veger, n.armer.some(a => 'ERFK'.includes(a.k)) ? flate : grusflate, zf); }
+    // (runde 10: forskyvningen var −10 – så mye at flaten kunne tegnes gjennom en liten kul i bakken foran den når du ser langs bakken.
+    // −6 er nok til å ligge over vegbanen (−5) og under fortauet (−7).)
+    for (const [g, type] of [[flate, 'kryss'], [grusflate, 'grusflate']]) { const m = yield* nettG(g, type, -6); if (m) ut.nett.push(m); }
     yield;
     // gangfeltene fra NVDB (t = 5): stripene der gangfeltet ligger i en vegbane. Uten vegtype i dataene: felt ved kryssene i tettstedene.
     u.gangfelt = [];
