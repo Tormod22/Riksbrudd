@@ -160,7 +160,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
       const k = ktx(), ledig = k.B.senger - k.B.n - k.B.avh; kort.append(el('p', { style: 'font-size:13px;color:var(--ink-dim,#b5a888)' }, `Ledige senger: ${Math.max(0, ledig)} · mat: ${Math.round(f.mat)} rasjoner`));
       for (const v of SR.flyktValg(c)) { const b = knapp(v.t, () => svarFlykt(v.id), { 'data-valg': v.id }); if (v.id === 'mat' && f.mat < (c.voksne + c.barn + c.gamle) * SR.REGLER.flyktMat) b.disabled = true; kort.append(b); } }
     else if (c.type === 'spion') { kort.append(el('h3', {}, 'Forræder avslørt'), el('p', {}, `${c.navn} har lekket til fienden. Hva gjør dere?`),
-      knapp('Utvis hen fra leiren', () => svarSpion('utvis'), { 'data-valg': 'utvis' }), knapp('Gi hen en sjanse til', () => svarSpion('tilgi'), { 'data-valg': 'tilgi' })); }
+      knapp(SR.medPron('Utvis hen fra leiren', { navn: c.navn }), () => svarSpion('utvis'), { 'data-valg': 'utvis' }), knapp(SR.medPron('Gi hen en sjanse til', { navn: c.navn }), () => svarSpion('tilgi'), { 'data-valg': 'tilgi' })); }
     else { const T = SR.kortTekst(S, f, c, ktx()); kort.append(el('h3', {}, T.tittel), el('p', {}, T.tekst)); T.valg.forEach((v, i) => { const b = knapp(v.t, () => svarKort(i), { 'data-valg': String(i) }); b.disabled = !v.kan; kort.append(b); }); }
     kort.classList.add('på');
   }

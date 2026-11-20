@@ -11,4 +11,5 @@ T.inne = true; T.går = true; ok(M.vurder(T, F).sort().join() === 'gå,inne' && 
 for (const m of M.ALLE) F.add(m.id); ok(M.stilling(F).kapittel === -1 && M.stilling(F).neste === null && M.stilling(F).totalt === M.ALLE.length, 'alt nådd');
 ok(new Set(M.ALLE.map(m => m.id)).size === M.ALLE.length && M.ALLE.every(m => m.tekst && m.hjelp), 'alle mål har egen id, tekst og hjelp (' + M.ALLE.length + ')');
 ok(M.vurder({}, new Set()).length === 0, 'tomt øyeblikksbilde gir ingen mål og ingen feil');
+{ const m = M.finn('brakke'); ok(M.tekstNå(m, { bygg: {}, bestilt: { brakke: 1 } }) !== m.tekst && M.tekstNå(m, { bygg: {} }) === m.tekst, '(runde 12) brakka bestilt: målet sier «vent», ikke «bygg en brakke»'); }
 console.log(feil ? feil + ' FEIL' : 'alle måltestene ok'); process.exit(feil ? 1 : 0);

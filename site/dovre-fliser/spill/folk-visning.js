@@ -111,8 +111,6 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     // lav skjerm (telefon): status som ett avsnitt og høyst to ting som mangler, så oppgavene synes uten å bla langt
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
     panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
-    for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
-    if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
     const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(Math.round(matN * FR.R.matPris * matF()))})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal, matF()); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
     const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg());
       logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
@@ -122,6 +120,10 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
     panel.append(el('div', { klasse: 'rad' }, kjøp, rek, window.SamfunnSpill && SamfunnSpill.tilstand() ? knapp('Samfunn ›', () => SamfunnSpill.åpne(true), { id: 'samfunn-fra-folk' }) : ''));
     if (hvorfor) panel.append(el('div', { klasse: 'mangler', id: 'rekrutthvorfor' }, 'Kan ikke rekruttere nå – ' + hvorfor.charAt(0).toLowerCase() + hvorfor.slice(1)));
+    // (runde 12, kritiker F: «Rekrutter» flyttet seg etter første trykk – linja «Bare 2 igjen …» over knappene forsvant) – det som mangler,
+    // står nå under knappene, så knappene ikke flytter seg når en linje kommer eller går
+    for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
+    if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
     if (B.avh) panel.append(el('div', { klasse: 'status' }, `Barn og gamle: ${B.avh} (arbeider ikke, men spiser og trenger seng)`));
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));

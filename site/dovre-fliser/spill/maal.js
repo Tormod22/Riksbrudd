@@ -10,7 +10,7 @@
   const b = (T, t) => (T.bygg && T.bygg[t]) || 0;
   const KAPITLER = [
     { navn: 'Få leiren i gang', mål: [
-      { id: 'brakke', tekst: 'Bygg en brakke', hjelp: 'Leir → Bygg → Brakke. Folkene sover i telt til de får senger.', ferdig: T => b(T, 'brakke') > 0 },
+      { id: 'brakke', tekst: 'Bygg en brakke', nå: T => (T.bestilt && T.bestilt.brakke ? 'Vent til brakka er ferdig (byggelaget er i gang)' : null), hjelp: 'Leir → Bygg → Brakke. Folkene sover i telt til de får senger.', ferdig: T => b(T, 'brakke') > 0 },
       // (runde 6, kritikken: «Neste: bygg en dieseltank og kjøp diesel» sto etter at tanken var bygget) – nå() gir teksten for det som gjenstår
       { id: 'tank', tekst: 'Bygg en dieseltank og kjøp diesel', nå: T => (b(T, 'drivstofftank') > 0 ? 'Kjøp diesel til tanken' : null), hjelp: 'Leir → Bygg → Dieseltank, så Leir → Lager → «Kjøp 500 l diesel».', ferdig: T => b(T, 'drivstofftank') > 0 && T.diesel > 0 },
       { id: 'strøm', tekst: 'Få strøm: bygg et aggregat eller solceller', hjelp: 'Aggregatet bruker diesel, solcellene gir mindre, men er gratis i drift.', ferdig: T => !!T.strøm },
