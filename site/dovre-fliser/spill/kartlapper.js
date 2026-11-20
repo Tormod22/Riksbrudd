@@ -22,17 +22,23 @@
   E.regel(t => (t === 'Leiren her?' ? P.valgt : undefined));
   E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? P.leir : undefined; });
 
+  // (runde 8, krig: «Kystalliansens 3. lag · nå» lå oppå «… 4. lag») merkene tegnes hver for seg, men lag som står nær hverandre på skjermen
+  // får én lapp (Krig.klynger: «Kystalliansen: 2 lag · nå»), og en lapp som ville ligget oppå en annen meldt lapp, flyttes en linje ned
   function meldt(g, sx, sy) {
-    const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); if (!T || !T.etter || !T.etter.length) return;
-    for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (e && synlig(e)) continue; const x = sx(q.x), y = sy(q.y); if (x < -40 || y < -40 || x > VW + 40 || y > VH + 40) continue;
-      const tekst = kam.m < 40 && window.Krig && Krig.alder ? `${q.navn} · ${Krig.alder(tid - q.t)}` : null;
-      g.save(); g.font = '13px "Cormorant Garamond", serif'; const w = tekst ? g.measureText(tekst).width : 0; g.restore();
-      E.hinder(x - 10, y - 10, 20, 20); if (tekst) E.hinder(x - w / 2 - 3, y + 11, w + 6, 16);
-      // på nytt over alle navn: samme rute og «?» som krig-visning.js, og navnet med mørk kant så det kan leses
+    const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); if (!T || !T.etter || !T.etter.length) return; const merker = [];
+    for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (!e || synlig(e)) continue; const x = sx(q.x), y = sy(q.y); if (x < -40 || y < -40 || x > VW + 40 || y > VH + 40) continue;
+      merker.push({ x, y, side: q.side, navn: q.navn, t: q.t }); E.hinder(x - 10, y - 10, 20, 20);
       E.øverst(() => { g.save(); g.strokeStyle = sidefarge(q.side, 'lys') || '#b5503d'; g.fillStyle = 'rgba(20,16,10,.7)'; g.lineWidth = 2; g.setLineDash([4, 3]);
         g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 9, y); g.lineTo(x, y + 9); g.lineTo(x - 9, y); g.closePath(); g.fill(); g.stroke(); g.setLineDash([]);
-        g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e7dcc3'; g.fillText('?', x, y + 4);
-        if (tekst) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; E.skrivTekst(g, tekst, x, y + 23, false); E.skrivTekst(g, tekst, x, y + 23, true); } g.restore(); }); }
+        g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e7dcc3'; g.fillText('?', x, y + 4); g.restore(); }); }
+    if (!(kam.m < 40) || !window.Krig || !Krig.alder) return; const brukt = [];
+    for (const k of (Krig.klynger ? Krig.klynger(merker) : merker.map(o => ({ ...o, n: 1 })))) {
+      const tekst = Krig.klyngeTekst ? Krig.klyngeTekst(k, tid, window.Fraksjoner && Fraksjoner.FRAKSJONER[k.side] ? Fraksjoner.FRAKSJONER[k.side].navn : null) : `${k.navn} · ${Krig.alder(tid - k.t)}`;
+      g.save(); g.font = '13px "Cormorant Garamond", serif'; const w = g.measureText(tekst).width; g.restore();
+      let ty = k.y + 23; for (let i = 0; i < 6 && brukt.some(r => Math.abs(r.x - k.x) < (r.w + w) / 2 + 4 && Math.abs(r.y - ty) < 15); i++) ty += 15;
+      brukt.push({ x: k.x, y: ty, w }); E.hinder(k.x - w / 2 - 3, ty - 12, w + 6, 16);
+      E.øverst(() => { g.save(); g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.fillStyle = '#e7dcc3';
+        E.skrivTekst(g, tekst, k.x, ty, false); E.skrivTekst(g, tekst, k.x, ty, true); g.restore(); }); }
   }
   // 2D: merkene som skal ligge over navnene (tegnes av andre filer; her bare meldt inn)
   KROKER.tegn.push((g, vx0, vy1) => { const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, S = leir();
