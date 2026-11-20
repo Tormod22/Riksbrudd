@@ -148,7 +148,7 @@ body.kort #grafikkvarsel{ right:auto; left:8px; top:38%; width:min(180px,45vw); 
   KVAL.programvareVarsel = programvareVarsel;
   KROKER.ramme3d.push(R => {
     // programvare-grafikk: ingen nedskalering (se PROG_PR)
-    if (KVAL.programvare && valg === 'auto' && !navigator.webdriver && !R.måler) R.skala = 1;
+    R.skalaMin = KVAL.programvare && valg === 'auto' && !navigator.webdriver ? 1 : null; if (R.skalaMin && !R.måler && R.skala < 1) R.skala = 1;
     // (R.måler: spill/ytelse.js måler – da står nivået stille)
     if (valg !== 'auto' || R.rammeSnitt == null || R.måler) return;
     const nå = performance.now() / 1000; if (!S.start) S.start = nå;
