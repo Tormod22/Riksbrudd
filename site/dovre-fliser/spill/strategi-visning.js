@@ -68,7 +68,7 @@
     if (!k || !levende(s)) { delete s.avstigning; continue; } if (k.sti) { a.kjørt = true; continue; }
     if (!a.kjørt) { if (tid - a.t > 30) { delete s.avstigning; logg(`${k.navn} kom ikke av gårde mot ${a.navn} (finner ingen veg dit). ${s.navn} sitter fortsatt på.`); } continue; }
     delete s.avstigning; if (window.TropperSpill && TropperSpill.gåAv) TropperSpill.gåAv(s); else s.ombord = null;
-    if (Math.hypot(s.x - a.x, s.y - a.y) > 60) ordre(s, a.x, a.y, true); logg(`${s.navn} har gått av ved ${a.navn} og går inn i tettstedet.`); } });
+    const inn = Math.hypot(s.x - a.x, s.y - a.y) > 60; if (inn) ordre(s, a.x, a.y, true); logg(`${s.navn} er framme ved ${a.navn}` + (inn ? ' og går inn i tettstedet.' : '.')); } });
 
   // ---------- ordre ----------
   // o.likevel = sendt etter advarselen om radioen
