@@ -298,11 +298,13 @@
   // etter vekten (den minste endringen som oppfyller det), og kravene gås gjennom flere ganger. Bakken senkes bare – aldri heves –,
   // bare punkter over vegbanen og aldri under den, og høyst R.maksSkjær + 1 m i ett punkt (et krav der bare et punkt med liten vekt kan senkes, ga før 190 m). Krav som da ikke
   // oppfylles, løfter vegen i stedet (tversMaks). Gir Map(indeks → hvor mye punktet ble senket).
-  function skjær(H, N, steg, x0, y1, krav, låst, R = SKJÆR, vekter) {
+  function skjær(H, N, steg, x0, y1, krav, låst, R = SKJÆR, vekter) { const it = skjærG(H, N, steg, x0, y1, krav, låst, R, vekter); let r; while (!(r = it.next()).done); return r.value; }
+  // det samme som generator (yield for hvert 2000. krav): målt 0,1–0,47 s i ett strekk i Ryfylke og Aurland – spill/liv3d.js tar pust
+  function* skjærG(H, N, steg, x0, y1, krav, låst, R = SKJÆR, vekter) {
     const endret = new Map(), lås = new Int8Array(N * N).fill(-1), erLåst = k => { if (lås[k] < 0) lås[k] = låst && låst(k % N, Math.floor(k / N)) ? 1 : 0; return lås[k] === 1; };
     const V = vekter || [bilineær(N, steg, x0, y1)], K = new Int32Array(32), W = new Float64Array(32), tak = R.maksSkjær + 1;
     for (let r = 0; r < R.runder; r++) { let brudd = 0;
-      for (let q = 0; q < krav.length; q += 3) for (const vf of V) {
+      for (let q = 0; q < krav.length; q += 3) { if (q % 6000 === 5997) yield; for (const vf of V) {
         const n = vf(krav[q], krav[q + 1], K, W); let z = 0; for (let m = 0; m < n; m++) z += W[m] * H[K[m]];
         const mål = krav[q + 2] - R.under, e = z - mål; if (e <= .005) continue;
         // bare punkter som ligger over vegbanen senkes, og aldri under den: ellers drar et punkt med vekt på begge sider av vegen
@@ -310,7 +312,7 @@
         const kan = m => W[m] > 0 && !erLåst(K[m]) && (endret.get(K[m]) || 0) < tak && H[K[m]] > mål + .001;
         let s = 0; for (let m = 0; m < n; m++) if (kan(m)) s += W[m] * W[m]; if (s < 1e-6) continue; brudd++;
         for (let m = 0; m < n; m++) { if (!kan(m)) continue; const før = endret.get(K[m]) || 0;
-          const d = Math.min(e * W[m] / s, 2 * e, tak - før, H[K[m]] - mål); H[K[m]] -= d; endret.set(K[m], før + d); } }
+          const d = Math.min(e * W[m] / s, 2 * e, tak - før, H[K[m]] - mål); H[K[m]] -= d; endret.set(K[m], før + d); } } }
       if (!brudd) break; }
     return endret;
   }
@@ -449,6 +451,6 @@
     return ut;
   }
 
-  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, SKJÆR, senterHøyder, tversMaks, skjærKrav, skjær, bilineær, senket, finnKryss, finnKryssG, utenomKryss, kryssFlate, KRYSS_REGLER, striper, gangfelt, lykter, lykterG };
+  const API = { BREDDE, halv, vanlig, lengde, klipp, skjøt, jevn, tynn, rute, tunnel, utenTunnel, gjett, gjettSteg, sirkel, rundkjøringer, kanal, høyder, SKJÆR, senterHøyder, tversMaks, skjærKrav, skjær, skjærG, bilineær, senket, finnKryss, finnKryssG, utenomKryss, kryssFlate, KRYSS_REGLER, striper, gangfelt, lykter, lykterG };
   if (typeof module !== 'undefined') module.exports = API; else rot.Veg = API;
 })(typeof window !== 'undefined' ? window : globalThis);

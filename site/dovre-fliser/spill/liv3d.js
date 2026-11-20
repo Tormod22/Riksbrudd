@@ -41,7 +41,7 @@
     if (børPuste()) await pust();
     const låst = u.hus && u.hus.omriss && typeof nærHus === 'function' ? (i, j) => nærHus(u, -u.S + i * u.steg, u.S - j * u.steg) : null;
     const vekter = [Veg.bilineær(u.N, u.steg, -u.S, u.S)]; if (typeof nett3d === 'function') vekter.push(nettVekter(u));
-    const endret = Veg.skjær(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter);
+    const endret = typeof kjørAsynk === 'function' ? await kjørAsynk(Veg.skjærG(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter)) : Veg.skjær(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter);
     u.nett = null;
     let maks = 0; for (const d of endret.values()) if (d > maks) maks = d;
     if (endret.size) { const flytt = (data, st) => { if (!data) return; for (let k = 0; k < data.length; k += st) { const d = Veg.senket(endret, u.N, u.steg, -u.S, u.S, data[k], data[k + 1]); if (d) data[k + 2] -= d * EX; } };
