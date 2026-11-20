@@ -789,6 +789,23 @@ Per kilde («Hvor i koden» i «Mål hakk», sum / antall / lengste):
   109 ms; 2 lange oppgaver (0,2 s, lengste 107 ms – veg.js i liv3d); søppeltømming 0,9 s i alt, ingen bit over 17 ms; 6 nye utsnitt på 40 s.
   MEN lasten på maskinen hadde falt (58 bilder i sekundet mot 35–38 og «klar etter» 35 s), så den er ikke rett sammenlignbar med «før» –
   se «Etter 2, samme last» under.
+- **Etter 2, samme last** (kl. 16.35–16.45 norsk tid, lasten hadde falt til 2–5; før = 644ecfa og etter = den endelige 561f666 rett etter
+  hverandre, `p-*.log`):
+
+| | pauser > 50 ms: antall, sum, lengste | lange oppgaver: antall, sum, lengste | søppeltømming: sum, biter ≥ 20 / ≥ 50 ms, lengste |
+|---|---|---|---|
+| Stavanger PC før | 14, 1,04 s, 126 ms | 14, 0,91 s, 79 ms | 1,04 s, 8 / 0, 32 ms (0,18 s i lange oppgaver) |
+| Stavanger PC etter | 9, 0,64 s, 106 ms | 9, 0,55 s, 72 ms | 0,59 s, 0 / 0, 17 ms (0,01 s) |
+| Bergen PC før | 17, 1,18 s, 101 ms | 16, 1,01 s, 78 ms | 0,75 s, 2 / 0, 32 ms (0,05 s) |
+| Bergen PC etter | 11, 0,77 s, 102 ms | 10, 0,65 s, 76 ms | 0,48 s, 0 / 0, 17 ms (0,002 s) |
+| Stavanger telefon før | 14, 0,97 s, 124 ms | 10, 0,69 s, 121 ms | 1,25 s, 8 / 0, 37 ms (0,25 s) |
+| Stavanger telefon etter | 4, 0,25 s, 70 ms | 2, 0,13 s, 68 ms | 0,77 s, 1 / 0, 23 ms (0,004 s) |
+
+  Bergen per kilde etter: byttet 333 ms / 4 / 102 ms, kartbildet til grafikkortet 263 ms / 4 / 74 ms, trær3d → bygg3d 67 ms, bekkene 52 ms.
+  Per kilde etter (PC, Stavanger): byttet (sett3d, «fjern3d → bygg3d») 289 ms / 3 / 106 ms, kartbildet til grafikkortet 182 ms / 3 / 64 ms (programvare-
+  grafikk), liv3d (veg.js) 62 ms, vegetasjon3d 51 ms. Før (PC): byttet 320 ms / 3 / 126 ms, lastOppIBiter 133 ms / 2, hus3d → bygg3d 129 ms / 2,
+  bygg3d 83 ms, hus3d 68 ms, liv3d 64 ms. Telefon etter: liv3d (veg.js gangfelt) 127 ms / 2 / 70 ms og byttet 123 ms / 2 / 62 ms – ingenting
+  annet over 50 ms. Med lav last er pausene få både før og etter; søppeltømmingen er nesten halvert, og ingen søppelbit er lenger over 23 ms.
 - Tallene varierer mye med lasten på maskinen (samme tur gav «klar etter» 35–135 s); det som er sikkert, er at de store søppelpausene
   (over 50 ms) er nesten borte på PC, og at husene ikke lenger lager store lister.
 
