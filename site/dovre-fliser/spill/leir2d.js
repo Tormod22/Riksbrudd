@@ -402,6 +402,9 @@
     g.save(); nullstill(g); g.fillStyle = 'rgba(0,0,0,.38)'; g.beginPath(); g.ellipse(x + r * .4, y + r * .45, r * 1.05, r * .8, v, 0, 6.283); g.fill();
     g.translate(x, y); g.rotate(v);
     const kropp = o.leder ? '#f0d79a' : o.farge || '#5b7ea8';
+    // på marsj: føttene stikker fram og tilbake under kroppen (fasen per mann)
+    if (o.går && r >= 3.6) { const f = Math.sin(performance.now() / 160 + (o.fase || 0)) * r * .55; g.fillStyle = '#23211c';
+      g.beginPath(); g.ellipse(f, -r * .42, r * .3, r * .2, 0, 0, 6.283); g.ellipse(-f, r * .42, r * .3, r * .2, 0, 0, 6.283); g.fill(); }
     if (o.sekk !== false && !o.sivil && r >= 4.5) { g.fillStyle = '#3a4030'; g.fillRect(-r * .95, -r * .5, r * .55, r); }
     g.beginPath(); g.ellipse(0, 0, r * .62, r * 1.1, 0, 0, 6.283);
     if (o.såret) { g.strokeStyle = kropp; g.lineWidth = 1.6; g.stroke(); }
@@ -423,7 +426,7 @@
     const r = Math.max(3, figurR(m) * .85), t = typeof tid === 'number' ? tid : 0; g.save(); nullstill(g);
     F.personer.forEach((p, i) => { if (p.død || p.borte || p.helse <= 0) return; const q = folkPlass(p, i, L.bygg, S.leir, t, Leir.BYGG); if (!q) return;
       const x = (q.x - vx0) / m, y = (vy1 - q.y) / m; if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) return;
-      api.mann(g, x, y, r, -q.a, { sivil: true, farge: JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length] }); });
+      api.mann(g, x, y, r, -q.a, { sivil: true, farge: JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length], går: p.oppgave === 'frakt', fase: i }); });
     g.restore(); }
   // tegn på nytt når folkene har flyttet seg (hvert halve spillminutt) og de synes
   let sistFolk = -1;

@@ -1001,7 +1001,7 @@ function tegnLag(g, proj, mPer) {
       levende.forEach((q, n) => {
         const [fx, fy] = FORMPLASS(s, n);
         const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2, leder = s.menn.indexOf(q) === s.leder;
-        if (window.Leir2d && !Leir2d.av) Leir2d.mann(g, a, b, r, -s.retning, { farge: sidefarge(s.side, 'lys'), leder, valgt: s === valgt, såret: q.hp < 1 });
+        if (window.Leir2d && !Leir2d.av) Leir2d.mann(g, a, b, r, -s.retning, { farge: sidefarge(s.side, 'lys'), leder, valgt: s === valgt, såret: q.hp < 1, går: !!s.sti && !s.nedgravd, fase: n * 1.7 });
         else { g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
         g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
         g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); } }
@@ -3346,7 +3346,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=2888ca022f"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=dcc1b8514e"></script>
-<script src="/dovre-fliser/spill/leir2d.js?v=ab28fd6a6b"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=aab80181d3"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=05561e1f9d"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=b14f8480dc"></script>
