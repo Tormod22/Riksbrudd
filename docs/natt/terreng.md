@@ -75,7 +75,8 @@ nordvest) og høydekurver hver 2 m (hver 10. m sterkere; de svake tas bort der d
 - `index.html`: bare de to skripttaggene.
 
 ### Prøvd
-- Hele mobilkontrollen (`SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, kopi av treet 01:50 UTC): 122 ok, 0 FEIL (425 s).
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, kopi av treet): 01:50 UTC 122 ok, 0 FEIL (425 s); igjen
+  02:05 UTC etter de siste endringene (kurver nær leiren, husene i byggesettet): 122 ok, 0 FEIL (424 s).
 - `node pipeline/fliser/test_helling.js`, test_leir.js, test_oppstart.js, test_leirvalg.js, test_byggesett.js: grønne.
 - Vakten `pipeline/fliser/vakter/terreng.js` (Dovre-testsiden, PC og telefon): ok på 2–10 s; start-vakta grønn etterpå. Den prøver
   reglene, leirvalget i en bratt li vest for Dombås (stopp, ingen bekreftelse, «Flytt hit» gir et sted der alt får plass), et trykk i
