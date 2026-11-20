@@ -72,8 +72,14 @@ I tillegg til runde 7: trekanter per kjøretøytype 400–6000; en prøvelastebi
 terrenget, ingen under); når utsnittet har trafikk: folkene er figurer i flokken (alle innen 250 m tegnes), bilen har 300–1500 trekanter.
 Prøvd på PC: ok på ca. 2 s.
 
+### Kontrollen (SJEKK_PROFIL=mobil, hele)
+Første kjøring: 127 ok, 1 FEIL – «minne i 3D»: + 2 geometrier hver gang 3D ble slått av og på (samme kontroll på grenen før mine endringer:
+128 ok, 0 FEIL). Årsaken: `Figur3d.flokk().kast()` frigjorde aldri geometrien – før ble flokkene nesten aldri kastet, nå lager trafikken
+en ny flokk for hvert utsnitt. Rettet i figur3d.js (`kast` kaller `geometry.dispose()`). Andre kjøring: «minne i 3D» ok (99 -> 99),
+eneste FEIL var versjonsmerkene (figur3d.js endret etter versjon.py – kjørt etterpå).
+
 ### Filer
-- `site/dovre-fliser/spill/kjoretoy3d.js` (modellene, `rundHjul` med `ytre`), `spill/liv3d.js` (bare trafikken og folkene: `bilNett`,
+- `site/dovre-fliser/spill/figur3d.js` (`kast` frigjør geometrien), `site/dovre-fliser/spill/kjoretoy3d.js` (modellene, `rundHjul` med `ytre`), `spill/liv3d.js` (bare trafikken og folkene: `bilNett`,
   `FOLK`, `startLiv`-delen for biler og folk, `flytt` med `fig`, `fjern` kaster flokken, ny `Liv3d.trafikk()`), `spill/dyr3d.js` (formene
   og normalene), `index.html` (`kjøretøy3d()`, samlet), `pipeline/fliser/vakter/figurer.js`, `docs/natt/figurer-hjelp.json`.
 
