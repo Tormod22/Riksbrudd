@@ -666,4 +666,5 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
   `interiør` og `interiør i leirens bygg` i sjekk.js grønne (de kaller oppdater(true) og bygger i ett strekk som før).
 - Bilder (scratchpad `natt7/lys/`): `inne-før-PC.png` og `inne-etter-PC.png` (inne i prøvehuset, samme utsikt – kjøkkenet gjennom døra,
   gresset utenfor vinduet), `inne-etter-mobil.png`. Huset er likt; gresset utenfor står litt annerledes fordi det settes rundt kameraet
-  der jobben startet (i det nye kommer det noen bilder senere).
+  der jobben startet (i det nye kommer det noen bilder senere). Etter rettingen av gressfargene: før- og etter-bildet på PC er nesten like
+  (snittforskjell 0,06 av 255; 446 av 1,15 mill. punkter skiller mer enn 24).
