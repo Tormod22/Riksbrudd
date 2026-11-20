@@ -42,6 +42,11 @@
 #leirvalg .adv{ color:#e8b06a; text-align:left; margin-top:4px; font-size:15px; }
 #leirvalg .fakta{ color:var(--ink-dim); font-size:14px; margin-top:4px; }
 #leirvalg .kai{ font-size:14px; margin-top:4px; }
+#leirvalg .stopp{ color:#f0a090; text-align:left; margin-top:6px; font-size:16px; font-weight:600; }
+#leirvalg .flytt{ color:#bfe6b4; text-align:left; margin-top:4px; font-size:15px; }
+#leirvalg .venter{ font-style:italic; }
+/* (runde 8) telefon: banneret tar mindre plass, så flagget synes over det */
+@media (max-width:700px){ #leirvalg{ padding:8px 10px; } #leirvalg .fakta, #leirvalg .kai{ font-size:13px; } #leirvalg .stopp{ font-size:15px; } #leirvalg .flytt, #leirvalg .adv{ font-size:14px; } #leirvalg button{ min-height:44px; margin:5px 3px 0; } }
 #oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:1; background:#16120c; text-align:center; padding:22px 0 6px; border-bottom:1px solid var(--rule); }
   #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
@@ -49,6 +54,8 @@
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
 #oppstart button.farge{ width:34px; height:34px; min-height:0; padding:0; border:2px solid #0006; cursor:pointer; }
 #oppstart button.farge.på{ outline:3px solid var(--hover); outline-offset:1px; }
+/* (runde 8, kritikken: fargeprøvene var 34 × 34 px) – minst 44 px å trykke på med finger */
+@media (pointer:coarse), (max-width:700px){ #oppstart button.farge{ width:44px; height:44px; } #oppstart .rad{ gap:7px; } }
 #oppstart button.ikon{ width:44px; height:44px; padding:2px; background:#2a2318; border:1px solid var(--rule); cursor:pointer; }
 #oppstart button.ikon.på{ border-color:var(--hover); box-shadow:inset 0 0 0 2px var(--hover); }
 #oppstart .bakgrunn{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:6px; }
@@ -178,7 +185,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
       ark.append(el('div', { klasse: 'to' }, el('div', {}, el('h3', {}, 'Navn'), navn, el('h3', { style: 'margin-top:18px' }, 'Utseende'), valg, el('h3', {}, 'Bakgrunn (gir en liten bonus)'), bg),
         el('div', { klasse: 'bilde' }, bilde)), melding,
         el('div', { klasse: 'bunn' }, el('span'), knapp('Neste: fraksjonen →', false, () => { if (k.navn.trim().length < 2) { melding.textContent = 'Skriv et navn (minst 2 tegn).'; return; } vis(2); })));
-      setTimeout(() => navn.focus(), 50);
+      // (runde 8, kritikken: på telefon spratt tastaturet opp før man hadde sett skjermen) – fokus i navnefeltet bare med mus og tastatur
+      const berøring = window.matchMedia && (matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches);
+      if (!berøring) setTimeout(() => navn.focus(), 50);
     } else if (steg === 2) {
       ark.append(el('h2', {}, 'Din fraksjon'), el('div', { klasse: 'steg' }, 'Steg 2 av 3: navn og flagg. Fargen i flagget blir fargen til lagene dine på kartet.'));
       const navn = el('input', { type: 'text', maxlength: 40, placeholder: 'Navnet på fraksjonen', value: fr.navn, 'aria-label': 'Navnet på fraksjonen' }); navn.oninput = () => { fr.navn = navn.value; };
@@ -211,54 +220,135 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
         const u = el('div', { klasse: 'bakgrunn' }); for (const [id, U] of Object.entries(SC.REGLER.utfordringer)) { const på = rg.utfordringer.includes(id), kn = knapp('', på, () => { if (på) rg.utfordringer = rg.utfordringer.filter(q => q !== id); else rg.utfordringer.push(id); lagForm(); }); kn.dataset.utfordring = id; kn.setAttribute('aria-pressed', String(på)); kn.append(el('b', {}, (på ? '☑ ' : '☐ ') + U.navn), el('small', {}, U.tekst)); u.appendChild(kn); } form.append(u);
         form.append(el('div', { klasse: 'steg' }, 'Du starter med ' + O.kroner(Math.round((O.STARTPENGER + (O.BAKGRUNNER[k.bakgrunn].bonus.penger || 0)) * SC.regler(rg).faktor.penger)) + ', ti personer og et lite vaktlag. Troppene lager du selv av folkene dine (Leir → Tropper).')); };
       lagForm();
-      ark.append(el('h2', {}, 'Spillform og plass til leiren'), el('div', { klasse: 'steg' }, `Steg 3 av 3: velg hvordan du vil spille, og trykk så på kartet der leiren skal ligge. Hvor som helst ${sted().hvor} – men ikke inne i et tettsted eller i vann.`), form,
+      ark.append(el('h2', {}, 'Spillform og plass til leiren'), el('div', { klasse: 'steg' }, `Steg 3 av 3: velg hvordan du vil spille, og trykk så på kartet der leiren skal ligge. Hvor som helst ${sted().hvor} – men ikke inne i et tettsted, i vann eller i en bratt li: de første byggene (brakke, dieseltank, aggregat og vakttårn) trenger flat grunn.`), form,
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(2)), knapp('Velg på kartet', false, startVelg)));
     }
   }
   // ---------- velge leirplass på kartet ----------
   function startVelg() { bak.classList.remove('på'); if (window.visHjelp) visHjelp(false); velger = true; forslag = null; gjemStart(); visOmrådet(false);
-    visBanner(`Trykk på kartet der leiren skal ligge – hvor som helst ${sted().hvor}. Zoom og flytt kartet som vanlig.`); }
+    visBanner(`Trykk på kartet der leiren skal ligge – hvor som helst ${sted().hvor}. Velg et flatt sted, gjerne i en dalbunn. Zoom og flytt kartet som vanlig.`); }
   function visBanner(tekst, kanBekrefte, mer) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst));
-    if (mer) { for (const a of mer.adv || []) banner.append(el('div', { klasse: 'adv' }, '⚠ ' + a));
+    if (mer) {
+      // (runde 8) hvorfor stedet ikke går (bratt, vann), og forslaget med «Flytt hit» – først, det er det viktigste
+      if (mer.stopp) banner.append(el('div', { klasse: 'stopp' }, '✋ ' + mer.stopp));
+      if (mer.flytt) banner.append(el('div', { klasse: 'flytt' }, mer.flytt.tekst));
+      for (const a of mer.adv || []) banner.append(el('div', { klasse: 'adv' }, '⚠ ' + a));
       if (mer.fakta && mer.fakta.length) banner.append(el('div', { klasse: 'fakta' }, mer.fakta.join(' · ')));
-      if (mer.kai) banner.append(el('div', { klasse: 'kai' }, mer.kai)); }
+      if (mer.kai) banner.append(el('div', { klasse: 'kai' }, mer.kai));
+      if (mer.venter) banner.append(el('div', { klasse: 'fakta venter' }, mer.venter)); }
+    if (mer && mer.flytt) { const b = knapp('Flytt hit', false, () => flyttHit(mer.flytt), 'valg'); b.id = 'flytthit'; banner.append(b); }
     if (kanBekrefte) banner.append(knapp('Legg leiren her', false, bekreft, 'valg'));
     banner.append(knapp('Tilbake til valgene', false, () => { velger = false; forslag = null; banner.classList.remove('på'); vis(2); skitten = true; }, 'valg'));
+    synligForslag();
+  }
+  // (runde 8, kritikken på telefon: banneret dekket flagget midt på skjermen) – ligger stedet under banneret eller statuslinja, flyttes
+  // kartet så det står midt i det frie feltet over banneret
+  function synligForslag() {
+    if (!velger || !forslag || !ekte()) return; const br = banner.getBoundingClientRect(), c = document.getElementById('c'), cr = c ? c.getBoundingClientRect() : { top: 0, left: 0 };
+    const topp = (document.querySelector('.top') || { getBoundingClientRect: () => ({ bottom: 60 }) }).getBoundingClientRect().bottom;
+    const sy = cr.top + VH / 2 + (kam.y - forslag.y) / kam.m, sx = cr.left + VW / 2 + (forslag.x - kam.x) / kam.m, under = sy > br.top - 50 && sx > br.left - 30 && sx < br.right + 30;
+    if (!under && sy > topp + 30) return; const mål = (topp + br.top) / 2;
+    if (br.top - topp < 120) return;
+    kam.y = forslag.y + (mål - cr.top - VH / 2) * kam.m; skitten = true;
   }
   // klassen (vann = 3, utenfor kartet = 255) i 32 m-rutenettet rundt punktet
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   const iTettsted = (x, y) => { const by = ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []).find(b => b.bb[0] <= x && x <= b.bb[2] && b.bb[1] <= y && y <= b.bb[3] && window.Garnison && Garnison.inni(b, x, y)); return by ? by.e.navn : null; };
+  const riksgrense = () => (typeof RIKSGRENSE !== 'undefined' && RIKSGRENSE && window.Riksgrense ? RIKSGRENSE : null);   // RIKSGRENSE er en let i index.html
+  // Kan leiren ligge her (uten å se på arealklassen – den sjekkes for seg)? Brukes for forslagene (Flytt hit).
+  function lovligLeir(X, Y) { const rg = riksgrense();
+    return !O.gyldigLeir(X, Y, { iTettsted, klasse: () => 2, iNorge: rg ? (A, B) => Riksgrense.iNorge(rg, A, B) : null }) && !(window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, X, Y)); }
   async function prøvLeir(x, y) {
-    const rg = typeof RIKSGRENSE !== 'undefined' && RIKSGRENSE && window.Riksgrense ? RIKSGRENSE : null;   // RIKSGRENSE er en let i index.html
+    const rg = riksgrense();
     const kl = await klasseVed(x, y); let grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
     // et mindre spillkart (/rogaland): leiren må ligge innenfor
     if (!grunn && window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, x, y)) grunn = `Leiren må ligge i ${SPILLOMRÅDE.navn}. Dette er utenfor spillkartet.`;
-    forslag = { x, y, ok: !grunn }; skitten = true;
+    // (runde 8) for vanlige spillere kan leiren først bekreftes når terrenget er sjekket (sjekker = true til da); testene som før
+    forslag = { x, y, ok: !grunn, sjekker: !grunn && !!window.Helling && ekte() }; skitten = true;
     let h = null; try { h = hoydeVed(x, y); } catch (e) { /* ingen høyde her */ }
     // (18. nov, runde 4) andre moduler kan si noe om stedet: window.LEIRVALG_TILLEGG = [(x, y) => tekst] (kaier.js: nærmeste kai)
     const til = grunn ? [] : (window.LEIRVALG_TILLEGG || []).map(f => { try { return f(x, y) || ''; } catch (e) { return ''; } }).filter(Boolean);
     // (runde 6) kaiteksten bare der det betyr noe; vurderingen av stedet (høyfjell, skog, veg, folk) kommer når terrenget er målt
     const først = grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?');
-    visBanner(først, !grunn, grunn ? null : { kai: window.Leirvalg ? '' : til.join(' ') });
-    if (!grunn && window.Leirvalg) vurderSted(x, y, h, til);
+    // (runde 8, kritikken: et trykk i en tynn elvestrek ga bare «Leiren kan ikke ligge i vann») – vann og tettsted: forslag til nærmeste sted
+    const kanFlytte = grunn && window.Helling && ekte() && (kl === 3 || /tettsted/.test(grunn));
+    visBanner(først, !grunn && !forslag.sjekker, grunn ? (kanFlytte ? { venter: 'Ser etter nærmeste sted der leiren får plass …' } : null)
+      : { kai: window.Leirvalg ? '' : til.join(' '), venter: forslag.sjekker ? 'Sjekker om det er flatt nok for de første byggene …' : '' });
+    // feiler målingen, eller tar den over 25 s (tregt nett), kan leiren legges her likevel – ellers ville spilleren stått fast
+    const fs = forslag, slipp = () => { if (forslag !== fs || !fs.sjekker || !velger) return; fs.sjekker = false; skitten = true;
+      visBanner(først, fs.ok, { adv: ['Fikk ikke sjekket terrenget rundt stedet. Du kan legge leiren her likevel.'], kai: til.join(' ') }); };
+    if (!grunn && window.Leirvalg) { vurderSted(x, y, h, til).catch(e => { console.error(e); slipp(); }); if (fs.sjekker) setTimeout(slipp, 25000); }
+    else if (kanFlytte) foreslå(x, y, grunn, kl === 3).catch(e => console.error(e));
     return grunn;
   }
+  // (runde 8) Flat plass for de første byggene (Helling.førsteBygg) rundt stedet; går det ikke, nærmeste sted der det går (finnPlass).
+  // kv: et vindu med arealklassene (32 m) som dekker søket. -> { ok, r, f (forslag eller null), søkt } eller null uten høydedata.
+  async function flatSjekk(x, y, kv) {
+    // i testene (navigator.webdriver) bare når OppstartSpill.test er satt – kontrollskriptet bekrefter leiren straks, som før
+    const HL = window.Helling; if (!HL || !ekte()) return null;
+    const R = HL.REGLER, nær = R.nær + 30, tørt = HL.tørtFra(HL.klasseFra(kv));
+    let hv = null; try { hv = await lagVindu([x - nær, y - nær, x + nær, y + nær], false, 11); } catch (e) { return null; }
+    const høyde = HL.høydeFra(hv), r = HL.førsteBygg(høyde, tørt, x, y, { flatFørst: true });
+    // uten høyder midt på stedet kan vi ikke si noe – leiren godtas som før
+    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde };
+    const S = R.søk + nær; let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
+    const f = hs ? HL.finnPlass(HL.høydeFra(hs), tørt, x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
+    return { ok: false, r, f, søkt: true };
+  }
+  const flyttTekst = (f, hva) => `${hva}: ${Helling.meter(f.m)} ${f.retning}${f.h != null ? ` (${Math.round(f.h)} moh.)` : ''}. Det grønne flagget («Plass her») viser stedet.`;
+  // høyden på et forslag (fra kartet, ellers ingen)
+  const høydeHer = (X, Y) => { try { return hoydeVed(X, Y); } catch (e) { return null; } };
+  // vann eller tettsted: let etter nærmeste lovlige sted med plass til de første byggene
+  async function foreslå(x, y, grunn, vann) {
+    const fs = forslag, HL = Helling, S = HL.REGLER.søk + HL.REGLER.nær + 30;
+    let kv = null; try { kv = await lagVindu([x - S, y - S, x + S, y + S], false); } catch (e) { kv = null; }
+    if (!velger || forslag !== fs || !kv) return;
+    let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
+    if (!velger || forslag !== fs) return;
+    const f = hs ? HL.finnPlass(HL.høydeFra(hs), HL.tørtFra(HL.klasseFra(kv)), x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
+    if (f) { f.h = høydeHer(f.x, f.y); fs.flytt = f; skitten = true; }
+    visBanner(grunn, false, f ? { flytt: { ...f, tekst: flyttTekst(f, vann ? 'Nærmeste tørre sted med plass til leiren' : 'Nærmeste sted utenfor tettstedet med plass til leiren') } }
+      : { adv: [`Fant ikke noe tørt, flatt sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted i kartet.`] });
+  }
+  // «Flytt hit»: kartet går dit, og stedet prøves på nytt (samme sjekk som et trykk)
+  function flyttHit(f) { if (!velger) return; kam.x = f.x; kam.y = f.y; skitten = true; return prøvLeir(f.x, f.y); }
   // Måler terrenget rundt stedet (Leirvalg.REGLER.radius) og viser advarslene i banneret – bare hvis forslaget fortsatt står
   async function vurderSted(x, y, h, kai) {
     const R = Leirvalg.REGLER.radius, f = forslag;
     let v = null; try { v = await lagVindu([x - R, y - R, x + R, y + R], true); } catch (e) { v = null; }
+    if (!velger || forslag !== f) return;
+    // (runde 8) helling: får de første byggene plass på flat, tørr grunn? (vinduet over dekker søket: radius 2500 m)
+    let fl = null; try { fl = await flatSjekk(x, y, v); } catch (e) { console.error(e); fl = null; }
     if (!velger || forslag !== f) return;
     // høyden fra vinduet når kartet ikke hadde den (stedet utenfor bildet eller ikke lastet ennå)
     if (h == null && v && window.Terreng) try { const [i, j] = Terreng.rute(v, x, y), z = v.H[j * v.w + i]; if (z === z) h = z; } catch (e) { /* utenfor vinduet */ }
     const m = Leirvalg.måle(v, x, y), tg = window.Vegetasjon && Vegetasjon.tregrense ? Vegetasjon.tregrense(y, x) : null;
     let by = null; for (const b of ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [])) { const dx = Math.max(b.bb[0] - x, 0, x - b.bb[2]), dy = Math.max(b.bb[1] - y, 0, y - b.bb[3]), d = Math.hypot(dx, dy);
       if (!by || d < by.m) by = { navn: b.e.navn, m: d }; }
-    const vu = Leirvalg.vurder(m, { h, tregrense: tg, by });
-    visBanner(h != null ? `Her? ${Math.round(h)} moh.` : 'Her?', true, { adv: vu.advarsler, fakta: vu.fakta, kai: kai.map(t => Leirvalg.kaiTekst(t, m.sjø)).filter(Boolean).join(' ') });
+    const vu = Leirvalg.vurder(m, { h, tregrense: tg, by }), HL = window.Helling;
+    // grunnen der leiren står (flat / skrå med grunnmur) står først i faktalinja; går det ikke, kan leiren ikke bekreftes her
+    let stopp = null, flytt = null;
+    if (fl && fl.ok && fl.r && HL) {
+      // flagget står bratt eller i vann, men brakka får plass like ved: si hvor, og tilby å flytte flagget dit (ikke nødvendig)
+      const b0 = fl.r.plasser && fl.r.plasser[0], m0 = b0 ? Math.hypot(b0.x - x, b0.y - y) : 0;
+      const skråHer = fl.r.nivå === HL.SKRÅTT && b0 && HL.vurderer(b0.type, 0, fl.høyde, null)(b0.x, b0.y) === HL.FLATT;
+      if (b0 && m0 > 1 && (fl.r.nivå === HL.BRATT || fl.r.nivå === HL.VANN || skråHer)) { const g = { x: b0.x, y: b0.y, m: m0, retning: HL.retning(b0.x - x, b0.y - y) };
+        const hva = fl.r.nivå === HL.VANN ? 'vått' : fl.r.nivå === HL.BRATT ? 'bratt' : 'skrått (byggene får grunnmur)';
+        if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${hva} der flagget står, men ${skråHer ? 'flatt' : 'flatt nok'} ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
+        vu.fakta.unshift(skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved'); }
+      else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
+      else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); }
+    if (fl && !fl.ok) { stopp = HL.brattTekst(fl.r); f.ok = false; f.bratt = true;
+      if (fl.f) { fl.f.h = høydeHer(fl.f.x, fl.f.y); f.flytt = fl.f; flytt = { ...fl.f, tekst: flyttTekst(fl.f, 'Nærmeste flate sted') }; }
+      else vu.advarsler.unshift(`Fant ikke noe flatt nok sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted – en dalbunn eller et platå.`); }
+    // når grunnen ikke er flat: hva fargene i kartet betyr (helling-visning.js viser dem når du zoomer inn)
+    if ((stopp || flytt) && window.HellingVis) vu.fakta.push(kam.m <= HellingVis.REGLER.maksM ? 'i kartet: grønt = flatt, gult = skrått, rødt = for bratt' : 'zoom inn for å se i kartet hvor det er flatt');
+    f.sjekker = false; skitten = true;
+    visBanner(h != null ? `Her? ${Math.round(h)} moh.` : 'Her?', f.ok, { stopp, flytt, adv: vu.advarsler, fakta: vu.fakta, kai: kai.map(t => Leirvalg.kaiTekst(t, m.sjø)).filter(Boolean).join(' ') });
   }
   function bekreft() {
-    if (!forslag || !forslag.ok) return;
+    if (!forslag || !forslag.ok || forslag.sjekker) return;
     // nye spill starter uten ferdige lag (brukeren 17. nov: «jeg skal selv måtte lage troppene») – i testene som før, til OppstartSpill.test er satt
     utkast.utenLag = !navigator.webdriver || window.OppstartSpill.test === true;
     // lett start (balansen 18. nov, Claudes forslag): nye spill har bare lastebil og speiderbil – stridsvogna og rakettartilleriet
@@ -372,7 +462,12 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     g.restore();
   }
   KROKER.tegn.push((g, vx0, vy1) => {
-    if (forslag) { const [x, y] = tilSkjerm(forslag.x, forslag.y, vx0, vy1); tegnLeir(g, x, y, forslag.ok, forslag.ok ? 'Leiren her?' : null); }
+    if (forslag) { const [x, y] = tilSkjerm(forslag.x, forslag.y, vx0, vy1); tegnLeir(g, x, y, forslag.ok, forslag.ok ? 'Leiren her?' : null);
+      // (runde 8) forslaget fra «Flytt hit»: et grønt flagg og en stiplet strek dit
+      const fl = forslag.flytt; if (fl) { const [fx, fy] = tilSkjerm(fl.x, fl.y, vx0, vy1);
+        g.save(); g.strokeStyle = 'rgba(191,230,180,.8)'; g.lineWidth = 1.5; g.setLineDash([6, 5]); g.beginPath(); g.moveTo(x, y); g.lineTo(fx, fy); g.stroke(); g.setLineDash([]);
+        g.strokeStyle = '#e7dcc3'; g.lineWidth = 2; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 30); g.stroke(); g.fillStyle = '#6fc46a'; g.fillRect(fx + 1, fy - 30, 20, 13);
+        g.font = '600 14px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText('Plass her', fx, fy + 15); g.fillStyle = '#d9f2cf'; g.fillText('Plass her', fx, fy + 15); g.restore(); } }
     else if (S && S.leir) { const [x, y] = tilSkjerm(S.leir.x, S.leir.y, vx0, vy1); if (x > -60 && y > -60 && x < VW + 60 && y < VH + 60) tegnLeir(g, x, y, true, S.fraksjon.navn + (typeof leirTillegg === 'function' ? leirTillegg() : '')); }
   });
   KROKER.tegn3d.push((g, proj3) => {
@@ -413,7 +508,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
   // lukk(): startskjermen og leirvalget bort uten å starte (vakten bruker den); gjemt()/gjemStart/gjemTilbake: lagene fra Dovre-piloten
   function lukk() { bak.classList.remove('på'); banner.classList.remove('på'); velger = false; forslag = null; skitten = true; }
-  window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL,
+  window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, forslag: () => (velger ? forslag : null), flyttHit, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL,
     UTKAST, lukk, sted, andreSpill, lesUtkast, lagreUtkast, glemUtkast, gjemStart, gjemTilbake, gjemt: () => ({ lag: GJEMT.lag.length, kj: GJEMT.kj.length, base: !!GJEMT.base }), visOmrådet };
   S = les(); if (S && !S.ferdig) S = null;
   // Et lagret spill tas i bruk når ALLE skriptene på siden er kjørt (DOMContentLoaded). Før var det setTimeout(0), som kan slå til mellom
