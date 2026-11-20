@@ -669,3 +669,9 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
   gresset utenfor vinduet), `inne-etter-mobil.png`. Huset er likt; gresset utenfor står litt annerledes fordi det settes rundt kameraet
   der jobben startet (i det nye kommer det noen bilder senere). Etter rettingen av gressfargene: før- og etter-bildet på PC er nesten like
   (snittforskjell 0,06 av 255; 446 av 1,15 mill. punkter skiller mer enn 24).
+
+### Ikke rukket
+- Hele kontrollen på telefon ble ikke kjørt på nytt med den aller siste koden: fra kl. 01:40 til 02:18 gikk det hele tiden en annen
+  kontroll på maskinen (natt-verden, nybegynner, terreng, rb-vind). Den siste hele kjøringen (kl. 01:04) var grønn (119 ok, 0 FEIL);
+  endringene etter den er prøvd med vaktene lys og natur (PC og telefon), Node-sammenligningene og bildene over.
+
