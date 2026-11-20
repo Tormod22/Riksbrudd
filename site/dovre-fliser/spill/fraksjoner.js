@@ -108,7 +108,9 @@
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;
     // tettsteder fraksjonen har mistet, vil den ha tilbake; og vet den hvor spillerens leir er, er leiren også et mål
     const vekt = b => avstand(b, her) / Math.sqrt(1 + b.folk / 1000) / (b.tapt ? R.tapt : 1);
-    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b)).map(b => ({ b, v: vekt(b), leir: false }));
+    // (runde 7) dine tettsteder angripes bare av angrepsgrupper med etterretning først (v.blåMedVarsel – spill/eskalering-visning.js);
+    // et enkelt lag går ikke dit av seg selv (gjennomspillingen: småstedene ble tatt uten varsel av enkeltlag)
+    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b) && !(v.blåMedVarsel && b.eier === 'blå')).map(b => ({ b, v: vekt(b), leir: false }));
     if (v.leir && avstand(v.leir, her) <= R.rekkevidde) kand.push({ b: { id: 'leir', navn: v.leir.navn || 'leiren', x: v.leir.x, y: v.leir.y, folk: R.leirVekt }, v: avstand(v.leir, her) / Math.sqrt(1 + R.leirVekt / 1000), leir: true });
     kand.sort((a, b) => a.v - b.v);
     // (19. nov) et stort tettsted er «ledig» til de som går dit, er mange nok for full fart (b.mann)
