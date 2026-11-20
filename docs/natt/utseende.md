@@ -14,7 +14,14 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
    - en ferdig flis som står inntil en synlig flis som ikke er ferdig, får **myk kant** mot den (FLISLAST.kant = 36 punkter, grov -> skarp),
      tegnet via et lite lerret (`mykFlis`, destination-in med lineære overganger) – ingen rette sømmer;
    - **reserven** leter seks nivåer opp (før fire) og bruker de **fire finere flisene** når du zoomer ut (`tegnReserve`).
-   Lyse/mørke rektangler som kommer av dataene selv (Sentinel-mosaikken) er ikke rørt – ingen slike ble funnet i Lærdal.
+   - reserven leter **ni nivåer** opp (rett etter lasting er oversikten over landet det eneste som finnes – bedre enn blått), og de grove
+     flisene **slipper foran** i køen (`kø(…, forrang)`, høyst FLISLAST.forrang = 10 i arbeid) når den er full av fliser som ikke lenger vises.
+   **Ikke rettet – sømmer i selve satellittmosaikken:** ved Bryne (/rogaland, 1 km-målestokk, alle fliser ferdige) står et lysere rektangel
+   med rette kanter. Den vannrette kanten følger en z7-blokkant (Y = 6 547 488): spranget er 25 % på den 2 km lange biten som synes, men bare
+   3–4 % i median langs hele kanten (opptakene skifter langs kanten); den loddrette kanten (X ≈ −36 540) følger ingen blokkant i flisnettet
+   (trolig kanten av et Sentinel-opptak). En retting i visningen ble prøvd (sprang målt bit for bit langs blokkantene på z8, fordelt over
+   2,5 km på hver side) og tatt ut igjen: den fjernet ikke rektangelet (den andre kanten er ikke en blokkant) og kostet flere kartfliser.
+   Dette må rettes når kartet bygges (blokk.py/sammen.py: mykere overgang mellom opptak) – bilde `scratchpad/natt8/utseende/sammen-mosaikk.png`.
 2. **Liggende telefon: blekt og tomt kart de første sekundene – RETTET.** «Blått og hvitt» var bakgrunnen (havblått på /norge) med det lyse
    siktfeltet oppå: ingen flis var laget ennå, og reserven fantes ikke rett etter lasting. Nå bes en **grov flis for hele bildet** (fire
    nivåer opp, FLISLAST.grov) om FØRST, før de skarpe, så kartet fylles uskarpt på et øyeblikk. Målt med samme tregt-nett-oppsett: etter 4 s
@@ -31,7 +38,8 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
      gress3d kommer straks – det var «bregnene»). Nå: **nærskog** i spill/vegetasjon3d.js – når du går i et utsnitt uten trær, settes trærne
      innen 240 m rundt deg med en gang (samme 5 m-gitter og regel som trær3d og 2D-kartet: treVed, TRE_TETT, treIHøyden; ikke i vann, på
      veg, inntil hus, i leirens bygg eller innen 30 m fra leirens midte), regnes på nytt når du har gått 80 m, og tas bort så snart
-     utsnittet har egne trær. Prøvd: 296 trær rundt deg 4 s etter Gå, før det nye utsnittet er ferdig, på samme steder som etterpå.
+     utsnittet har egne trær, og bare når kameraet er under 30 m over bakken (ikke en ring av skog under helikopteret). Prøvd: 296 trær rundt
+     deg 4 s etter Gå, før det nye utsnittet er ferdig, på samme steder som etterpå (`sammen-gaa2.png`).
    - I tillegg satte trær3d (index.html) bare trær der satellittbildet var grønt; i tørr, gulbrun skog ble trær borte. Nå
      `Vegetasjon.trePåFarge(R, G, B, skog)`: i skogklassen også gult/brunt, aldri grått, blått, rødt tak eller kartets vegfarger.
      (I Lærdal utgjorde dette lite – 2374 mot 2420 trær nær – men det gjelder all gulbrun skog.)
