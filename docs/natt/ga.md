@@ -188,8 +188,11 @@ Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-ga
 ### Vakt og prøver
 - `pipeline/fliser/vakter/ga.js` (runde 8 i tillegg): erSpak, panelknappen «Gå inn i huset» (finnBygg byttes ut med et prøvehus en
   stund), byggeplassens trinn og leirtingene (regler); i 3D: drag med fingeren midt på skjermen snur deg, banneret er én linje mens du
-  går, pila mot et prøvehus bak deg, «Gå inn i huset» → inne (bare når utsnittet ikke må bygges på nytt), byggeplassen i 3D (grunnmur
-  på bakken, reiser seg), telt og bål i scenen. Reisen venter på kartet rundt målet. Grønn: PC 2D 0,1 s, PC 3D 16 s, mobil 3D 2,9 s.
+  går, pila mot et prøvehus bak deg, «Gå inn i huset» → inne (hele veien når utsnittet passer, ellers siste del – `Gange.vedDøra`),
+  byggeplassen i 3D (grunnmur på bakken, reiser seg), telt og bål i scenen. Etter reisen godtas også «kartet rundt deg bygges» (navnene
+  skjult), og Avbryt slipper ventingen – vakten venter ikke på det nye utsnittet. Grønn: PC 2D 0,1 s, PC 3D 8,9 s, mobil 3D 2,9 s.
+- Flettet inn origin/claude/nattfiks etter ytelse-hjelperen (interiøret bygges i biter): «Gå inn i huset» kaller `Interior3d.oppdater(true)`
+  én gang ved døra, så huset du står ved bygges ferdig med en gang (med trege bilder tok bitene mange bilder). interior3d.js er ikke endret.
 - Regeltester: `test_gaavalg.js` (29 ok), `test_byggeplass3d.js` (17 ok).
 - Prøveskript: scratchpad `natt8/ga/` – kjor.js (Dovre), kjor_rog.js (/rogaland via dev.py), e_reise.js (måling med profil),
   e_leir.js, e_mobil.js, e_inn.js, e_reis_rog.js, e_vakt.js. Logger: reise-for.log (før), reise-etter*.log.
