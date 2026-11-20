@@ -59,11 +59,11 @@ Skript: scratchpad natt7/figurer/maal2.js (`R=<mappe>` for gammel kode, `DPR=1` 
 | PC, fra lufta, etter | 56 624 (alle i fjernnettet) | 95 ms |
 | PC, til fots midt i leiren og røverne, før | 106 848 | 167 ms |
 | PC, til fots, etter (25 m, uten tak på antallet nær) | 117 672 (52 nær) | 255 ms |
-| PC, til fots, etter (med tak 12 nær) | FYLLES INN | FYLLES INN |
+| PC, til fots, etter (med tak: de 12 nærmeste i full detalj) | 84 992 (24 nær) | 160 ms |
 | Telefon 390 × 844 (DPR 1), fra lufta, før | 106 848 | 109 ms |
 | Telefon, fra lufta, etter | 51 692 | 77 ms |
 | Telefon, til fots, før | 106 848 | 109 ms |
-| Telefon, til fots, etter (18 m, uten tak) | 81 622 (36 nær) | 126 ms |
+| Telefon, til fots, etter (18 m, uten tak) | 81 622 (36 nær) | 126 ms (taket på 6 nær er ikke målt på telefon) |
 
 JavaScript per bilde for alle figurene (soldater3d + folk3d-kroken): ca. 0,1 ms både før og etter.
 Hvorfor ikke raskere per trekant: bevegelsen regnes nå i skyggeleggeren for hvert hjørne (før: armene/beina til folkene som matriser i
@@ -90,6 +90,13 @@ Reglene (fargepakking, hendene på geværet) og trekanttaket (nær < 2200, fjern
 nyttLag så tilfeldighetsrekka ikke røres) – ett 8 m foran kameraet som skyter (én såret, én fallen) og ett 300 m unna på marsj: antallet
 i flokken øker med 10, laget foran havner i nær-nettet når kameraet er nede (ellers fjern), sikter/kneler/uten gevær/går stemmer,
 folkene i leiren er figurer (antall = personer + barn/gamle), ett bilde uten GL-feil, programmet «figur3d» finnes, og alt tas bort igjen.
+
+### Prøvd i nettleser (Chromium, SwiftShader)
+Skript i scratchpad natt7/figurer/: naer.js (leiren full av folk + tre røverlag; til fots, nærbilde, våpenet i hånda, utenfra, vakten),
+maal.js/maal2.js (målingene over), tell.js (trekanter per figur i Node). Bilder (samme mappe): før: for-pc-leir.png og kritikernes
+38-ga-start.png; etter: v4-pc-ga.png, v3/v4-pc-naer.png, v4-pc-vapen0.png (gevær), v4-pc-vapen1.png (pistol), v4-pc-utenfra.png (karakteren
+bakfra, en såret soldat på kne som sikter), v5-mobil-naer.png, v5-mobil-utenfra.png, v5-mobil-vapen0/1.png. Ingen sidefeil, GL-feil 0, vakten
+grønn på PC (0,3–4 s) og telefon (1,1 s), stillingen i krig3d gir 3 soldater.
 
 ### Ikke gjort
 - Folk på fortauene i byene (liv3d.js) er fortsatt de gamle formene – ikke min fil. Den kan bruke `Figur3d.flokk` direkte (samme API
