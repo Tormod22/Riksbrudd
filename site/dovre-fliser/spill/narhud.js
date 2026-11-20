@@ -160,13 +160,13 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.
     // ARMEN: hanske i lyst lær med håndrygg, knoker, fire bøyde fingre rundt grepet og tommel over; mansjett med strikk; underarmen
     // smalner mot håndleddet og er bredest ved albuen, med en knekk ved albuen, folder i stoffet og flekker i kamuflasje. Armen går
     // bakover og litt ned og ut mot hjørnet (som når du holder et våpen foran deg), ikke rett ned. Fargene er Claudes forslag.
-    const HANS = [.44, .35, .24], HANS2 = [.35, .27, .18], HANS3 = [.52, .43, .31], STRIKK = [.17, .19, .15], KAM = [[.2, .24, .15], [.36, .33, .22], [.15, .17, .12]];
+    const HANS = [.44, .35, .24], HANS2 = [.35, .27, .18], HANS3 = [.52, .43, .31], STRIKK = [.13, .15, .11], KAM = [[.14, .17, .1], [.33, .3, .2], [.1, .12, .08]], ERME = [.21, .26, .17], ERME2 = [.16, .2, .13];
     // en arm fra håndleddet A gjennom albuen E og ut av bildet til U; r = radius ved håndleddet; folder og flekker langs underarmen
     const arm = (A, E, U, r, frø) => {
-      kab(A, E, r * .96, r * 1.28, erme, 12); kab(E, U, r * 1.3, r * 1.42, erme, 12); kule(E[0], E[1], E[2], r * 1.3, erme, 1, 1, 1, 10);
+      kab(A, E, r * .96, r * 1.28, ERME, 12); kab(E, U, r * 1.3, r * 1.42, ERME, 12); kule(E[0], E[1], E[2], r * 1.3, ERME, 1, 1, 1, 10);
       const d = [E[0] - A[0], E[1] - A[1], E[2] - A[2]];
       // folder: tre ringer som er litt tykkere og mørkere
-      for (const t of [.3, .52, .74]) { const p = [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t], q = [A[0] + d[0] * (t + .05), A[1] + d[1] * (t + .05), A[2] + d[2] * (t + .05)], rr = r * (1 + .28 * t) * 1.05; kab(p, q, rr, rr * .98, erme2, 10); }
+      for (const t of [.3, .52, .74]) { const p = [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t], q = [A[0] + d[0] * (t + .05), A[1] + d[1] * (t + .05), A[2] + d[2] * (t + .05)], rr = r * (1 + .28 * t) * 1.05; kab(p, q, rr, rr * .98, ERME2, 10); }
       // kamuflasjeflekker: flate ellipser like utenpå stoffet
       for (let q = 0; q < 6; q++) { const t = .15 + q * .14, vin = (frø + q * 2.4) % 6.283, p = [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t], rr = r * (1 + .28 * t) * .93;
         kule(p[0] + Math.cos(vin) * rr * .55, p[1] + Math.sin(vin) * rr * .55, p[2], rr * .5, KAM[q % 3], 1.1, 1.1, 1.6, 7); }
