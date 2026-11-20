@@ -30,7 +30,7 @@ body.kort #inneknapper{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); ga
 #innehint{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 62px); z-index:7; display:none; width:min(460px,92vw); box-sizing:border-box; padding:8px 12px; background:rgba(24,20,13,.94); border:1px solid #8fa86a; color:var(--ink,#e7dcc3); font-size:14px; cursor:pointer; }
 #innehint.på{ display:block; } #innehint b{ color:#e3efc9; } #innehint small{ display:block; color:var(--ink-dim,#a99); margin-top:3px; }
 @media (max-height:560px){ body.kort #funnpanel{ top:calc(var(--topp,40px) + 4px); width:min(430px,60vw); max-height:calc(100vh - var(--topp,40px) - 16px); padding:6px 10px 8px; font-size:13px; } body.kort #funnpanel h3{ font-size:15px; margin-bottom:2px; }
-  body.kort #funnpanel .kn{ margin-top:6px; } body.kort #funnpanel .kn button{ min-height:36px; font-size:14px; } body.kort #innehint{ top:calc(var(--topp,40px) + 96px); width:min(430px,60vw); font-size:13px; padding:5px 10px; } }
+  body.kort #funnpanel .kn{ margin-top:6px; } body.kort #funnpanel .kn button{ min-height:36px; font-size:14px; } body.kort #innehint{ top:auto; bottom:calc(8px + env(safe-area-inset-bottom,0px)); left:310px; right:130px; transform:none; width:auto; font-size:12.5px; padding:5px 10px; } }
 body.bærermøbel #funnpanel, body.bærermøbel #innehint{ display:none; }`;
   document.head.appendChild(css);
   const knapp = document.createElement('button'); knapp.id = 'letknapp'; knapp.type = 'button'; knapp.innerHTML = '<i></i><span></span>'; document.body.appendChild(knapp);

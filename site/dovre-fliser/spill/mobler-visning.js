@@ -165,7 +165,8 @@ body.bærermøbel #skytknapp, body.bærermøbel #byttvapen, body.bærermøbel #l
   function oppdaterKnapp() {
     const lutÅpen = rot.LutSpill && LutSpill.erÅpen && LutSpill.erÅpen(), c = !lutÅpen ? nærmeste() : null; knappFor = c;
     if (!c) { knapp.classList.remove('på'); return; }
-    const t = `Plukk opp ${M.navn(c.m.type)}${grov() ? '' : ' (P)'}`; if (knapp.textContent !== t) knapp.textContent = t; knapp.classList.add('på');
+    // (runde 12) et møbel du ikke orker alene (høyballen, traktoren), sier det på knappen i stedet for «Plukk opp»
+    const k = M.kanBære(c.m, 0), t = k.ok ? `Plukk opp ${M.navn(c.m.type)}${grov() ? '' : ' (P)'}` : `${stor1(M.navn(c.m.type))} er for tung å bære`; if (knapp.textContent !== t) knapp.textContent = t; knapp.classList.add('på');
   }
   knapp.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); plukkOpp(knappFor || nærmeste()); oppdaterKnapp(); });
   function visBar() {

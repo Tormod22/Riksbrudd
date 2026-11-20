@@ -244,6 +244,7 @@
 #lutpanel .maal .bar.tungt i{ background:#e0b24a; } #lutpanel .maal .bar.svært i{ background:#d0583f; } #lutpanel .maal .bar u{ position:absolute; top:-2px; bottom:-2px; width:2px; background:#e7dcc3; }
 #lutpanel .maal small{ color:var(--ink-dim,#a99); display:block; } #lutpanel .maal .tung{ color:#e0b24a; } #lutpanel .maal .svært{ color:#f08a70; }
 #lutpanel .faner{ display:flex; flex-wrap:wrap; gap:3px; padding:4px 4px 0; } #lutpanel .faner button{ min-height:28px; padding:1px 8px; font-size:12px; } #lutpanel .faner button.på{ background:#c9b26a; color:#1c170f; border-color:#c9b26a; }
+@media (max-height:560px){ #lutpanel .faner{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:3px; } #lutpanel .faner button{ flex:none; white-space:nowrap; } }
 #lutpanel .info{ font-size:12px; color:var(--ink-dim,#a99); margin:3px 6px 0; } #lutpanel .tom{ color:var(--ink-dim,#a99); font-size:13px; padding:10px 6px; }
 #lutpanel .bunn{ display:flex; gap:6px; padding:4px 6px 6px; } #lutpanel .bunn button{ flex:1; }
 #lutpanel .detalj{ margin-top:6px; padding:6px 8px; border:1px solid #3a3224; background:rgba(0,0,0,.25); min-height:104px; max-height:34vh; overflow:auto; box-sizing:border-box; flex:none; } #lutpanel .detalj b{ font-size:15px; } #lutpanel .detalj p{ margin:2px 0 4px; font-size:13px; color:var(--ink-dim,#a99); }
