@@ -175,7 +175,10 @@ const KLAR = (async () => {
   if (!m) { try { m = (await hentMedFrist(DATA + 'manifest.json', FRIST_MANIFEST, 'json')).data; } catch (e) { m = null; }
     if (ER_NORGE) norgeMangler(); }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
-  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInnHele('åpning'); }
+  // (runde 8, pakke «utseende») et lagret spill har alt lagt kartet over leiren (oppstart-visning.js, «Velkommen tilbake»); kom manifestet
+  // etterpå, ble kartet flyttet tilbake til hele landet – og flisene for hele landet ble laget før leirens (blått kart de første sekundene)
+  const lagretLeir = !navigator.webdriver && !/[#&?](x|kart|pos)=/.test(location.href) && window.OppstartSpill && OppstartSpill.tilstand() && OppstartSpill.tilstand().leir;
+  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE && !(lagretLeir && kam.m <= 8)) passInnHele('åpning'); }
   // (et mindre spillkart – /rogaland – åpner på sitt eget område, se passInnHele)   // /norge åpner med hele landet (telefon: Sør-Norge)
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
