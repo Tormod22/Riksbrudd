@@ -6,6 +6,8 @@
  *   lar dem grave seg ned, og gir dem regelen «hold stillingen» til angrepet er over. Folk på «vakt» blir Leirvakta, et eget lag.
  *  BEREDSKAPEN står i Leir-menyen (fanen Bygg): poeng, hva som mangler, og hva som hjelper mest.
  *  RAPPORTEN kommer i loggen når angrepet er over. window.ForsvarSpill. Alarmen setter ikke forsvaret av seg selv – du trykker.
+ *  RUNDE 12: unntaket er når du spoler (60× eller mer, også ⏭) mens angrepet pågår, eller angriperne er nesten i leiren: da gjør lagene
+ *   hjemme det selv (autoForsvar).
  */
 (function () {
   const FO = window.Forsvar; if (!FO) return;
@@ -67,6 +69,8 @@
   const css = document.createElement('style');
   css.textContent = `#alarm{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 54px); z-index:9; display:none; max-width:min(560px,94vw); padding:7px 10px; background:#2a120d; border:1px solid #e0714f; color:#f3e3d6; font-size:14.5px; box-shadow:0 4px 14px rgba(0,0,0,.5); }
 #alarm.på{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:center; } #alarm.satt.god{ background:#17200f; border-color:#8fb86a; } #alarm.god b{ color:#cfe8a8; } #alarm .rapport small{ color:#e7dcc3; } #alarm b{ color:#ffb49a; } #alarm small{ color:#d8b8a8; } #alarm button{ background:#4a1d14; border:1px solid #e0714f; color:#fff; min-height:36px; padding:2px 12px; font:inherit; font-size:14px; cursor:pointer; } #alarm button.rolig{ background:#2a2318; border-color:var(--rule,#4a4030); color:var(--ink,#e7dcc3); } #alarm.satt{ background:#1c170f; border-color:#c9b26a; }
+body:not(.gaar) #alarm.på > span:first-child{ white-space:normal; overflow:visible; text-overflow:clip; min-width:12em; }
+body:not(.gaar) #alarm.på > span:first-child small{ white-space:normal; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
 body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
@@ -178,10 +182,23 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   setInterval(() => { const t = T(), A = angrep(), aktiv = A ? A.id : t && t.aktiv ? 'r' + t.aktiv : '';
     if (sistAktiv && sistAktiv !== aktiv) { if (!gitt.has(sistAktiv) && auto()) sluttAvSeg(sistAktiv); if (satt || snap || vakt) opphev(false); motFerdig(); if (auto()) etterAngrep(); }
     if (aktiv && aktiv !== sistAktiv) startAngrep(A, aktiv); sistAktiv = aktiv;
+    autoForsvar(A);
     if (typeof tempo === 'undefined' || tempo > 0) { motSteg(); repSteg(); hjemSteg(); }
     if (satt && window.Feltarbeid) for (const s of ENHETER) if (s.forsvar && s.side === 'blå' && !s.sti && !s.planlegger && !s.nedgravd && s.graver == null && !s.forsvar.voll && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) < 25) Feltarbeid.startGrav(s);
     vis(); }, 1000);
 
+  // ---------- (runde 12) LEIREN FORSVARES AV SEG SELV NÅR DU SPOLER ----------
+  // PC-kritiker F: «Den andre bølgen tapte jeg fordi den kom mens jeg spolte, og "Forsvar leiren" må trykkes manuelt» (67-krig-dag3.png).
+  // Står farten på 60× eller mer (også ⏭) mens et angrep på leiren er i gang – eller er angriperne nærmere enn AUTO.nær – setter lagene
+  // hjemme seg i forsvar av seg selv, akkurat som «Forsvar leiren», og loggen sier det. Én gang per angrep: opphever du, står det.
+  // Claudes forslag. Ikke i testene uten ForsvarSpill.test.
+  const AUTO = { fart: 60, nær: 600 }, autoGjort = new Set(), spolt = new Set();
+  function autoForsvar(A) { if (!auto() || !A || satt || autoGjort.has(A.id)) return null; const L = leir(); if (!L) return null;
+    if (typeof tempo !== 'undefined' && tempo >= AUTO.fart) spolt.add(A.id);
+    const nær = A.lag.some(e => Math.hypot(e.x - L.x, e.y - L.y) <= AUTO.nær); if (!spolt.has(A.id) && !nær) return null;
+    autoGjort.add(A.id); const hvem = A.røvere ? 'Røverne' : A.navn;
+    logg(spolt.has(A.id) ? `${hvem} kom mens du spolte: lagene hjemme forsvarer leiren av seg selv (som «Forsvar leiren»).` : `${hvem} er nesten i leiren: lagene hjemme forsvarer den av seg selv (som «Forsvar leiren»).`);
+    const r = sett(false); if (r && !r.lag && !r.vakt) logg('Ingen lag er hjemme til å forsvare leiren – send et lag hjem, eller sett folk på vakt.'); return r; }
   // ---------- kartet: pil fra røverne mot leiren, og stillingene ----------
   KROKER.tegn.push((g, vx0, vy1) => { const L = leir(); if (!L) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; g.save();
     for (const e of røvere()) { if (!synlig(e)) continue; const x0 = sx(e.x), y0 = sy(e.y), x1 = sx(L.x), y1 = sy(L.y), d = Math.hypot(x1 - x0, y1 - y0); if (d < 30) continue; const ux = (x1 - x0) / d, uy = (y1 - y0) / d, l = Math.min(d - 16, 90);
@@ -293,6 +310,6 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const f = fsv(); return !!(f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)); });
   // etter omlasting (spill/trussel-lagring.js): forsvaret var satt – lagene har plassen og reglene sine igjen
   function gjenopprett() { const t = T(); if (!t || !t.aktiv || satt) return false; satt = true; sistAlarm = ''; vis(); return true; }
-  window.ForsvarSpill = { beredskap, sett, opphev, gjenopprett, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
+  window.ForsvarSpill = { beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

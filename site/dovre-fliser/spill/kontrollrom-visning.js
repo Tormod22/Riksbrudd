@@ -41,10 +41,22 @@
   // ute er fortsatt «sist meldt» – K3-testen i sjekk.js). Karakteren som går i 3D (Gange) eller lastes på nytt, finnes igjen i ENHETER.
   const HJEMME = 600;
   const hjemme = s => { if (s.side !== 'blå') return false; const S = spill(); return !!(S && S.leir) && Math.hypot(s.x - S.leir.x, s.y - S.leir.y) <= HJEMME; };
-  const syn = s => K.innsyn(modus(), { karakter: s.karakter, nær: nær(s) || hjemme(s), kontakt: lagInfo(s).kontakt });
+  // RUNDE 12 (PC-kritiker F: «Stormtropp 1 vises ved leiren som "ingen kontakt, sist 06:07" i flere døgn, mens Krig-panelet sier garnison
+  // i Svorkmo»): et lag som står i et tettsted dere holder, er garnison og bruker radioen i tettstedet – det melder seg derfra, vises der det
+  // er og kan få ordre. (Claudes forslag: tettstedets radio når leiren uansett avstand.) Svaret huskes et par sekunder per lag.
+  const garnCache = new WeakMap();
+  function garnisonI(s) {
+    if (!s || s.side !== 'blå' || s.karakter || !window.Garnison || typeof TETTSTEDER === 'undefined' || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return null;
+    const c = garnCache.get(s), nå = performance.now(); if (c && nå - c.t < 2000 && Math.abs(c.x - s.x) < 5 && Math.abs(c.y - s.y) < 5) return c.by;
+    let by = null; for (const b of INFRA.tettsted) { if (s.x < b.bb[0] || s.x > b.bb[2] || s.y < b.bb[1] || s.y > b.bb[3]) continue;
+      if (Garnison.inni(b, s.x, s.y) && Garnison.tilstand(TETTSTEDER, b.e.id).eier === 'blå') { by = b; break; } }
+    garnCache.set(s, { t: nå, x: s.x, y: s.y, by }); return by; }
+  const syn = s => K.innsyn(modus(), { karakter: s.karakter, nær: nær(s) || hjemme(s) || !!garnisonI(s), kontakt: lagInfo(s).kontakt });
+  // stille sjekk (uten melding i loggen): når en ordre fram til laget nå? (krigskartet og troppelista bruker den)
+  const kanNå = s => !aktiv() || s.karakter || s.side !== 'blå' || nær(s) || hjemme(s) || !!garnisonI(s) || lagInfo(s).kontakt;
   KROKER.innsyn.push(s => !aktiv() || syn(s).fiender);
   KROKER.skjul.push(s => aktiv() && s.side === 'blå' && !s.karakter && !syn(s).live);
-  KROKER.kanOrdre.push(s => { if (!aktiv() || s.karakter || nær(s) || lagInfo(s).kontakt) return true;
+  KROKER.kanOrdre.push(s => { if (!aktiv() || s.karakter || nær(s) || lagInfo(s).kontakt || garnisonI(s)) return true;
     logg(`${s.navn}: ingen radiokontakt – ordren når ikke fram. ${stor(hvorfor(s))}.`); return false; });
 
   // ---------- radioen ----------
@@ -65,6 +77,9 @@
   async function sjekkKontakt(s) {
     const S = spill(), I = lagInfo(s), L = S.leir, d = Math.hypot(s.x - L.x, s.y - L.y), m = mast(), r = K.rekkevidde(s.radio || 'hånd', m);
     let k = d <= r;
+    // (runde 12) garnisonen i et tettsted dere holder, melder seg over tettstedets radio
+    if (!k && garnisonI(s)) { if (!I.kontakt && I.før) radio(s, `Kontakt over radioen i ${garnisonI(s).e.navn}.`, true); I.kontakt = true; I.garnison = garnisonI(s).e.navn; I.rekkevidde = r; return; }
+    I.garnison = null;
     if (k && d > 1200) { try {
       const v = await lagVindu([Math.min(s.x, L.x) - 300, Math.min(s.y, L.y) - 300, Math.max(s.x, L.x) + 300, Math.max(s.y, L.y) + 300], false, 7), n = 24, P = [];
       for (let i = 0; i <= n; i++) P.push(høyde(v, s.x + (L.x - s.x) * i / n, s.y + (L.y - s.y) * i / n));
@@ -122,7 +137,7 @@
 
   // ---------- lagpanelet ----------
   KROKER.lagTekst.push(s => { if (!aktiv() || s.side !== 'blå') return null; if (s.karakter) return 'deg · ' + { kontrollrom: 'i kontrollrommet', nettbrett: `nettbrett ${(+T.nettbrett.batteri).toFixed(1).replace('.', ',')} t`, ute: 'ute' }[modus()];
-    const I = lagInfo(s); return `${K.RADIO[s.radio || 'hånd'].navn.toLowerCase()} ${K.km(K.rekkevidde(s.radio || 'hånd', mast()))} · ${I.kontakt ? 'radiokontakt' : 'ingen radiokontakt: ' + hvorfor(s)}`; });
+    const I = lagInfo(s), gb = garnisonI(s); return `${K.RADIO[s.radio || 'hånd'].navn.toLowerCase()} ${K.km(K.rekkevidde(s.radio || 'hånd', mast()))} · ${gb && !(I.kontakt && !I.garnison) ? 'radiokontakt over radioen i ' + gb.e.navn : I.kontakt ? 'radiokontakt' : 'ingen radiokontakt: ' + hvorfor(s)}`; });
   KROKER.lagKnapper.push((s, H) => {
     if (!aktiv()) return;
     if (s.karakter) {
@@ -218,6 +233,8 @@ body.kort #kontrollrom .topp{ font-size:12px; letter-spacing:.03em; padding:5px 
     kontaktAkk = 99; visStatus(); skitten = true;
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.KontrollromSpill = { girRadio: (s, t) => { s.radio = t; T.radio[s.navn] = t; lagre(); }, start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport, mast, radioStatus, hvorfor,
+  window.KontrollromSpill = { girRadio: (s, t) => { s.radio = t; T.radio[s.navn] = t; lagre(); }, start, gåInn, gåUt, åpneFeed, lukkFeed, modus, deg: () => deg, info: lagInfo, radiolog: () => radiolog, sjekkKontakt, rapport, mast, radioStatus, hvorfor, kanNå, garnisonI, på: () => aktiv(),
+    // (runde 12) hvor langt ordrene når fram for et lag (radioen laget har nå, eller r = 'felt'/'hånd'): meter fra leiren, uten terrenget
+    rekkevidde: (s, r) => K.rekkevidde(r || (s && s.radio) || 'hånd', mast()),
     av: v => { av = v !== false; skitten = true; }, lagre, NØKKEL };
 })();
