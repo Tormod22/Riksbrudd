@@ -176,6 +176,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     const fart = fartNå(), før = typeof fartFør !== 'undefined' ? fartFør : 'sp1';
     reise = { kar, fra: [kar.x, kar.y], til: [t.x + (u ? u.cx : 0), t.y + (u ? u.cy : 0)], t0: tid, min, fart, før, start: performance.now(), ferdig, bilder: 0, i3d: !!u };
     kar.sti = null; venterKart = null;
+    // i kartet: vis både deg og målet
+    if (!u && typeof kam !== 'undefined') { const [ax, ay] = reise.fra, [bx, by] = reise.til; kam.x = (ax + bx) / 2; kam.y = (ay + by) / 2; kam.m = Math.min(60, Math.max(kam.m, Math.hypot(bx - ax, by - ay) * 1.4 / Math.max(200, Math.min(VW, VH)))); skitten = true; }
     const h = document.createElement('h3'), p = document.createElement('p'), gang = document.createElement('div'), i = document.createElement('i');
     h.textContent = tittel || 'Du går dit …'; p.textContent = `0 av ${min} min`; gang.className = 'gang spol'; gang.append(i); valgEl.replaceChildren(h, gang, p); valgEl.classList.add('på'); reise.p = p; reise.i = i;
     klikk('sp4'); reise.tempo = typeof tempo !== 'undefined' ? tempo : G.REGLER.spol;
@@ -188,7 +190,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     // (runde 8) karakteren flyttes, men siktfeltet regnes ikke på nytt hvert bilde (spilløkka gjør det når han har gått 150 m),
     // og i 2D følger kartet ham
     kar.sti = null; kar.x = r.fra[0] + (r.til[0] - r.fra[0]) * k; kar.y = r.fra[1] + (r.til[1] - r.fra[1]) * k;
-    if (!r.i3d && typeof kam !== 'undefined') { kam.x = kar.x; kam.y = kar.y; skitten = true; }
+    // (kartet flyttes bare når han er på vei ut av midten av bildet – å flytte det hvert bilde gjorde hvert bilde tungt)
+    if (!r.i3d && typeof kam !== 'undefined') { if (Math.abs(kar.x - kam.x) > VW * kam.m * .3 || Math.abs(kar.y - kam.y) > VH * kam.m * .3) { kam.x = kar.x; kam.y = kar.y; } skitten = true; }
     const p = `${Math.round(k * r.min)} av ${r.min} min`; if (r.p.textContent !== p) r.p.textContent = p; r.i.style.width = Math.round(k * 100) + '%';
     // noe skjedde (spolingen ble senket av spillet: fienden i sikte, alarm …): stopp der du er kommet
     if (!r.tilbake && tempo !== r.tempo && tempo !== 0) { slutt(true, 'Reisen stoppet underveis – noe skjedde (se meldingene). Du går videre selv herfra.'); return; }
