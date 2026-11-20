@@ -426,5 +426,5 @@
     for (const [type, tg] of typer) {
       const tm = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: tekstur(type), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide })); R.scene.add(tm); mesh.push(tm); }
   });
-  window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok };
+  window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok, lagGeo };
 })();

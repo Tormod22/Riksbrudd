@@ -202,10 +202,80 @@ module.exports = {
         else ut.gressUt = !R || !R.ut ? 'uten 3D' : !R.ut.bunn ? 'uten bunnkart' : window.KVAL && !(KVAL.p.gress > 0) ? 'grafikk uten gress' : 'ikke prøvd';
       } catch (e) { ut.feil.push('unntak (gresset): ' + (e && e.message || e)); }
       ut.ms7 = Math.round(performance.now() - t7);
+      // RUNDE 9 (hakk når du flyr): tallrekkene som gjenbrukes (spill/tallrekke.js) gir de samme nettene som vanlige lister – husene
+      // (hus3d), vegene (Liv3d.byggVeger) og bruene (Infra3d.lagGeo) bygges med lagrene på (to ganger: andre gang med brukt plass full
+      // av gamle tall) og med Tallrekke.Rekke.på = false (vanlige lister som før), og alle tallene sammenlignes bit for bit. Selvtest:
+      // ett endret tall blir sett. Utsnittet settes tilbake som det var (u-ens egenskaper, brumodellenes søyler), nettene frigjøres.
+      const t9 = performance.now();
+      try {
+        const R = typeof R3 !== 'undefined' && R3, T = window.Tallrekke;
+        ok(T && T.Rekke && typeof T.taPunkter === 'function', 'Tallrekke mangler');
+        if (T && T.Rekke) {
+          // tallrekka alene: plass fra lageret med søppel i gir likevel de samme tallene
+          for (let k = 0; k < 4; k++) { const a = T.ta('F', 8192); a.fill(123.25); T.gi('F', a); }
+          const l = [], q = new T.Rekke('F'); for (let i = 0; i < 30000; i++) { const v = Math.sin(i) * 1e4 + i / 7; l.push(v); if (i % 3) q.push(v); else q.pushL([v]); }
+          const fa = q.ferdig(), fb = new Float32Array(l); let lik = fa.length === fb.length; for (let i = 0; lik && i < fa.length; i++) if (!Object.is(fa[i], fb[i])) lik = false;
+          ok(lik, 'Tallrekke: brukt plass ga andre tall');
+          ok(T.lager().MB <= (VW < 700 ? T.REGLER.lagerMobil : T.REGLER.lager) / 1048576 + .01, 'Tallrekke: lageret over grensa ' + JSON.stringify(T.lager()));
+        }
+        const u = R && R.ut;
+        if (T && u && typeof på3d !== 'undefined' && på3d) {
+          const r9 = {};
+          const bits = a => a instanceof Float32Array ? new Uint32Array(a.buffer, a.byteOffset, a.length) : a;
+          const likT = (a, b) => { if (!a || !b || a.constructor !== b.constructor || a.length !== b.length) return false; const x = bits(a), y = bits(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; };
+          const likGeo = (g, h) => { if (!g || !h) return g === h; const ka = Object.keys(g.attributes).sort(), kb = Object.keys(h.attributes).sort(); if (ka.join() !== kb.join()) return false;
+            for (const k of ka) if (g.attributes[k].itemSize !== h.attributes[k].itemSize || !likT(g.attributes[k].array, h.attributes[k].array)) return false;
+            return !g.index === !h.index && (!g.index || likT(g.index.array, h.index.array)); };
+          const kjør = async (på, f) => { T.Rekke.på = på; try { return await f(); } finally { T.Rekke.på = true; } };
+          // husene
+          if (u.hus && typeof hus3d === 'function') {
+            const H = på => kjør(på, () => hus3d(u)), A = await H(true), B = await H(true), C = await H(false);
+            const likHus = (x, y) => { if (!x || !y) return x === y; const kx = Object.keys(x.deler).sort(), ky = Object.keys(y.deler).sort(); if (kx.join() !== ky.join() || x.antall !== y.antall) return false;
+              for (const k of kx) for (const f of ['pos', 'kol', 'uv']) if (!likT(x.deler[k][f], y.deler[k][f])) return false;
+              return likT(x.biler, y.biler) && likT(x.flagg, y.flagg) && x.omriss.length === y.omriss.length; };
+            ok(likHus(A, C), 'husene med tallrekker er ulike husene med vanlige lister');
+            ok(likHus(B, C), 'husene med brukt plass i lageret er ulike');
+            if (A) { const k = Object.keys(A.deler)[0], d = A.deler[k].pos.slice(); d[d.length >> 1] += .5; const kopi = { ...A, deler: { ...A.deler, [k]: { ...A.deler[k], pos: d } } }; ok(!likHus(kopi, C), 'selvtest: et flyttet hushjørne ble ikke sett'); }
+            r9.hus = A ? Object.values(A.deler).reduce((s, d) => s + d.pos.length / 9, 0) : 0;
+          } else r9.husUt = 'ingen hus i utsnittet';
+          // vegene og bruene: u settes tilbake etterpå (byggVeger setter u.kryss, u.vegRute, u.gangfelt …)
+          const før = Object.assign({}, u), tilbake = () => { for (const k of Object.keys(u)) if (!(k in før)) delete u[k]; Object.assign(u, før); };
+          const frigjør = L => { for (const m of L) { if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); } };
+          try {
+            if (window.Liv3d && Liv3d.byggVeger && u.veger && u.veger.length) {
+              const V = på => kjør(på, () => kjørRett(Liv3d.byggVeger(u))), A = await V(true), B = await V(true), C = await V(false);
+              const likV = (x, y) => x.nett.length === y.nett.length && x.nett.every((m, i) => likGeo(m.geometry, y.nett[i].geometry));
+              ok(likV(A, C), `vegene med tallrekker er ulike vegene med vanlige lister (${A.nett.length} / ${C.nett.length} nett)`);
+              ok(likV(B, C), 'vegene med brukt plass i lageret er ulike');
+              if (A.nett[0]) { const g = A.nett[0].geometry.clone(); g.attributes.position.array[1] += .25; ok(!likGeo(g, C.nett[0].geometry), 'selvtest: et flyttet veghjørne ble ikke sett'); g.dispose(); }
+              r9.vegnett = A.nett.length; for (const x of [A, B, C]) frigjør(x.nett);
+            }
+            if (window.Infra3d && Infra3d.lagGeo && u.bruer3d && (u.bruer3d.length || (u.kaier3d && u.kaier3d.length))) {
+              const søyler = u.bruer3d.map(m => m.søyler);
+              const I = på => kjør(på, () => kjørRett(Infra3d.lagGeo(u))), A = await I(true), B = await I(true), C = await I(false);
+              u.bruer3d.forEach((m, i) => { m.søyler = søyler[i]; });
+              const likI = (x, y) => likGeo(x.g, y.g) && x.typer.length === y.typer.length && x.typer.every(([t, g], i) => t === y.typer[i][0] && likGeo(g, y.typer[i][1]));
+              ok(likI(A, C), 'bruene med tallrekker er ulike bruene med vanlige lister');
+              ok(likI(B, C), 'bruene med brukt plass i lageret er ulike');
+              r9.bruer = u.bruer3d.length; for (const x of [A, B, C]) { x.g.dispose(); for (const [, g] of x.typer) g.dispose(); }
+            }
+          } finally { tilbake(); }
+          // terrengets flate i biter (planG i index.html) = THREE.PlaneGeometry tall for tall (PC 289 og telefon 225 punkt, og en liten)
+          if (typeof planG === 'function') { for (const [W, g] of [[3120, 288], [2400, 224], [10, 3]]) { const a = kjørRett(planG(W, W, g, g)), b = new THREE.PlaneGeometry(W, W, g, g);
+              ok(likGeo(a, b) && a.type === b.type && JSON.stringify(a.parameters) === JSON.stringify(b.parameters), 'planG er ulik THREE.PlaneGeometry for ' + g + ' ruter'); a.dispose(); b.dispose(); }
+            r9.plan = true; }
+          // hindringene i biter (hindringerG) = i ett strekk: samme ruter, samme ting i samme rekkefølge
+          if (typeof hindringerG === 'function') { const a = hindringer(u), b = await kjørAsynk(hindringerG(u)); let lik = a.size === b.size;
+            for (const [k, l] of a) { const m = b.get(k); if (!m || m.length !== l.length || l.some((o, i) => (o.P || o.x) !== (m[i].P || m[i].x) || o.y !== m[i].y)) { lik = false; break; } }
+            ok(lik && [...a.keys()].join() === [...b.keys()].join(), 'hindringene i biter er ulike'); r9.hindre = a.size; }
+          ut.r9 = r9;
+        } else ut.r9ut = 'uten 3D';
+      } catch (e) { ut.feil.push('unntak (runde 9): ' + (e && e.message || e)); if (window.Tallrekke) Tallrekke.Rekke.på = true; }
+      ut.ms9 = Math.round(performance.now() - t9);
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : '', r.r9 ? `tallrekkene gir like nett (hus ${Math.round(r.r9.hus || 0)} trekanter, ${r.r9.vegnett || 0} vegnett, ${r.r9.bruer || 0} bruer${r.r9.plan ? ', flaten = PlaneGeometry' : ''}${r.r9.hindre ? ', hindringene i biter like' : ''}; ${(r.ms9 / 1000).toFixed(1)} s)` : r.r9ut ? `tallrekkene: ${r.r9ut}` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };

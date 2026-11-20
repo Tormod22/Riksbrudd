@@ -1437,7 +1437,8 @@ async function bygg3d(cx, cy, S) {
     zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS;
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
-  const bunn = (async () => { for (let y = 0; y < TW; y += 512) { g.fillRect(0, y, TW, Math.min(512, TW - y)); if (børPuste()) await pust(); } })();
+  // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
+  const bunn = (async () => { for (let y = 0; y < TW; y += 256) { g.fillRect(0, y, TW, Math.min(256, TW - y)); if (børPuste()) await pust(); } })();
   const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
@@ -1952,7 +1953,8 @@ async function hus3d(u) {
       }
     }
   }
-  const deler = {}; for (const [n, b] of Object.entries(B)) if (b.pos.length) deler[n] = { pos: b.pos.ferdig(), kol: b.kol.ferdig(), uv: b.uv.ferdig() }; else { b.pos.slipp(); b.kol.slipp(); b.uv.slipp(); }
+  // (runde 9: pust mellom gruppene – å kopiere ut de største tok 40 ms i ett strekk i Stavanger)
+  const deler = {}; for (const [n, b] of Object.entries(B)) { if (børPuste()) await pust(); if (b.pos.length) deler[n] = { pos: b.pos.ferdig(), kol: b.kol.ferdig(), uv: b.uv.ferdig() }; else { b.pos.slipp(); b.kol.slipp(); b.uv.slipp(); } }
   return Object.keys(deler).length ? { deler, biler: new Float32Array(biler), flagg: new Float32Array(flagg), omriss, piper, skilt, antall: sett.size, stat } : null;
 }
 // Teksturer for byggtypene (hvit = veggfargen): leilighet (vindu med balkong), industri (blikk med ribber og et vindusbånd øverst),
@@ -2235,6 +2237,8 @@ async function smått3d(u, px, b) {
   const kv = await lagVindu(b, false, 9), TW = u.TW, mpp = 2 * u.S / TW, X0 = u.cx - u.S, Y1 = u.cy + u.S, stein = [], busk = [];
   const MAKS = VW < 700 ? 14000 : 34000, hash = n => { n = (n ^ 61) ^ (n >>> 16); n = Math.imul(n, 9); n ^= n >>> 4; n = Math.imul(n, 0x27d4eb2d); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
   const TETTHET = { 0: [7, .5], 2: [2.5, 6], 6: [.3, 4], 4: [1.5, 0] };   // klasse: [steiner, busker] per rute (snaufjell, hei, myr, snø)
+  // (runde 9) husenes rutenett i biter før første nærHus (som ellers lager det i ett strekk – 100–180 ms i byene); det samme rutenettet
+  if (!u.husRute && u.hus && u.hus.omriss) u.husRute = await kjørAsynk(hindringerG({ hus: u.hus }));
   for (let j = 0; j < kv.h; j++) for (let i = 0; i < kv.w; i++) {
     const t = TETTHET[kv.K[j * kv.w + i]]; if (!t) continue;
     const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) continue;
@@ -2393,10 +2397,14 @@ function treGeo(type) {
   return (TREGEO[type] = geo);
 }
 // Hindringer når du går: husomrissene og trestammene i et rutenett (20 m). hindring3d(x, y) = true når du ikke kan stå der.
-function hindringer(u) {
+function hindringer(u) { return kjørRett(hindringerG(u)); }
+// (runde 9, hakk når du flyr: rutenettet for 40 000 trær og husene tok 70–180 ms i ett strekk i Stavanger) som generator – samme ruter i
+// samme rekkefølge, yield for hvert 64. hus og hver 512. tre; kjørAsynk i forbered3d og smått3d, kjørRett (hindringer) ellers
+function* hindringerG(u) {
   const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
-  for (const P of (u.hus && u.hus.omriss) || []) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P, bb: [x0, y0, x1, y1] }); }
-  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] });
+  let n = 0;
+  for (const P of (u.hus && u.hus.omriss) || []) { if ((++n & 63) === 0) yield; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P, bb: [x0, y0, x1, y1] }); }
+  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) { if ((++n & 511) === 0) yield; legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] }); }
   return rute;
 }
 // Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
@@ -2710,10 +2718,25 @@ function frigjørTerreng(R) {
   R.scene.remove(R.mesh); R.mesh.geometry.dispose();
   R.bakkeVar = null; R.bakkeSett = null; R.bakkeDel = null; if (R.tex) R.tex.dispose(); R.mesh = null; R.tex = null;
 }
+// FLATEN I BITER (runde 9, hakk når du flyr: new THREE.PlaneGeometry for terrenget – 289 × 289 punkt – tok 40–50 ms i ett strekk, med
+// store vanlige lister). Det samme som three.js r128 sin PlaneGeometry (samme punkter, normaler, uv og indeks i samme rekkefølge, Uint32
+// når største indeks er over 65535 – som setIndex(liste); type og parameters som PlaneGeometry, delBakken leser widthSegments), skrevet
+// rett i tabellene, med yield for hver 16. rad. Vakta lys sammenligner den med PlaneGeometry tall for tall.
+function* planG(width, height, gx, gy) {
+  const g = new THREE.BufferGeometry(); g.type = 'PlaneGeometry'; g.parameters = { width, height, widthSegments: gx, heightSegments: gy };
+  const wh = width / 2, hh = height / 2, gx1 = gx + 1, gy1 = gy + 1, sw = width / gx, sh = height / gy, n = gx1 * gy1;
+  const P = new Float32Array(n * 3), N = new Float32Array(n * 3), T = new Float32Array(n * 2), I = new (n - 1 > 65535 ? Uint32Array : Uint16Array)(gx * gy * 6);
+  for (let iy = 0, q = 0; iy < gy1; iy++) { if ((iy & 15) === 15) yield; const y = iy * sh - hh;
+    for (let ix = 0; ix < gx1; ix++, q++) { P[q * 3] = ix * sw - wh; P[q * 3 + 1] = - y; P[q * 3 + 2] = 0; N[q * 3 + 2] = 1; T[q * 2] = ix / gx; T[q * 2 + 1] = 1 - (iy / gy); } }
+  for (let iy = 0, q = 0; iy < gy; iy++) { if ((iy & 15) === 15) yield;
+    for (let ix = 0; ix < gx; ix++) { const a = ix + gx1 * iy, b = ix + gx1 * (iy + 1), c = (ix + 1) + gx1 * (iy + 1), d = (ix + 1) + gx1 * iy; I[q++] = a; I[q++] = b; I[q++] = d; I[q++] = b; I[q++] = c; I[q++] = d; } }
+  g.setIndex(new THREE.BufferAttribute(I, 1)); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.BufferAttribute(T, 2));
+  return g;
+}
 // Terrengnettet for et utsnitt (se sett3d). Generator: kan lages i små biter på forhånd (forbered3d).
 function* terrengGeo(u, R) {
   const { M, gt } = nett3d(u);
-  const geo = new THREE.PlaneGeometry(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv; yield;
+  const geo = yield* planG(2 * u.S, 2 * u.S, M - 1, M - 1), pos = geo.attributes.position, uv = geo.attributes.uv; yield;
   for (let k = 0; k < pos.count; k++) { const x = u.S * gt(pos.getX(k) / u.S), y = u.S * gt(pos.getY(k) / u.S);
     pos.setXYZ(k, x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX); uv.setXY(k, (x + u.S) / (2 * u.S), (y + u.S) / (2 * u.S)); if ((k & 2047) === 2047) yield; }
   yield; yield* normalerG(geo); yield;
@@ -2771,7 +2794,7 @@ async function forbered3d(u) {
   for (const [data, smal, valg, lod] of [[u.trær && u.trær.gran, .3, null, true], [u.trær && u.trær.løv, .5, null, true], [u.smått && u.smått.stein, 1, null, false], [u.smått && u.smått.busk, 1.3, BUSKVALG(), true]])
     if (data && data.length) K.tre.set(data, await kjørAsynk(treMatriser(data, smal, valg, lod)));
   if (u.hus) { K.hus = {}; for (const [n, d] of Object.entries(u.hus.deler)) { await pust(); K.hus[n] = await kjørAsynk(husGeometri(d)); } }
-  await pust(); K.hindre = hindringer(u); await pust();
+  await pust(); K.hindre = await kjørAsynk(hindringerG(u)); await pust();
   u.klar = K;
   for (const f of KROKER.forbered3d) { await pust(); await f(u, R); }
   // Kartbildet og vannmasken sendes til grafikkortet her – hver i sitt bilde, og ikke i samme bilde som byttet. Opplastingen av et
@@ -3307,13 +3330,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=4ce1c3bec4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=d24c9fcef6"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=36a304cf73"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=134fd452b4"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=3eb79ba996"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=4b39a82118"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=4ca063b25a"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=7a66cf0db4"></script>
@@ -3324,7 +3347,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=7176406ece"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=4104fed9da"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=c1f96f0f47"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=337d80d22f"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=259dda2ea8"></script>

@@ -396,5 +396,5 @@
     return z;
   }
   // start(): hvor bilene og folkene startet i siste utsnitt (veg, plass, retning) – for prøvene (likt utsnitt før og etter)
-  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start };
+  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger };
 })();
