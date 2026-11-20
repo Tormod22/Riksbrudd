@@ -127,7 +127,7 @@
       else u.tekst = `${og(navn)} holdt vakt for nabogården og kom hjem med ${kr(u.penger)}.`; }
     else if (p.id === 'speid') { u.tre = Math.round(mellom(rng, R.speid.tre) * 10) / 10; u.stål = Math.round(mellom(rng, R.speid.stål) * 10) / 10; u.mat = Math.round(mellom(rng, R.speid.mat));
       if (f.length && rng() < R.speid.skade) { u.skadet.push(hvem().navn); u.helse = R.speid.helse; }
-      const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei.' : `De så røverne samle seg: neste angrep kommer om ca. ${Math.max(1, Math.round(o.røverTimer))} ${Math.max(1, Math.round(o.røverTimer)) === 1 ? 'time' : 'timer'}.`;
+      const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei mot leiren.' : `De så røverne samle seg: de drar ut mot leiren om ca. ${Math.max(1, Math.round(o.røverTimer))} ${Math.max(1, Math.round(o.røverTimer)) === 1 ? 'time' : 'timer'}.`;
       u.tekst = `Speiderne er tilbake fra ${p.sted || 'turen'}. ${røv} De fant ${u.mat} rasjoner, ${des(u.tre)} m³ tre` + (u.stål > 0 ? ` og ${des(u.stål)} t stål.` : '.') + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} vrikket foten.` : ''); }
     else if (p.id === 'tankbil') { const T = R.tankbil.fots; if (rng() < T.lykkes) { u.diesel = Math.round(mellom(rng, T.diesel) / 10) * 10; u.tekst = `${og(navn)} fant tankbilen og bar hjem ${u.diesel} l diesel i kanner.`; }
       else u.tekst = `${og(navn)} fant tankbilen, men noen hadde tømt den før dem.`;

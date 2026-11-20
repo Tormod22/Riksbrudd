@@ -67,7 +67,7 @@ const leieBorte = M.utfall({ id: 'leie', folk: to }, {}, fast(.01));
 ok(leieBorte.borte.length === 1 && /kom ikke tilbake/.test(leieBorte.tekst), 'leie: en sjelden gang kommer en ikke tilbake: ' + leieBorte.tekst);
 ok(typeof leieSår.tekst === 'string' && leieSår.penger >= 8e5 && leieSår.penger <= 1.6e6, 'leie: betalingen ligger i spennet: ' + leieSår.penger);
 const sp = M.utfall({ id: 'speid', folk: to, sted: 'Dombås' }, { røverTimer: 14.4 }, fast(.5));
-ok(/Speiderne er tilbake fra Dombås\. De så røverne samle seg: neste angrep kommer om ca\. 14 timer\./.test(sp.tekst) && sp.mat > 0 && sp.tre > 0, 'speidertur: melder røverne og tar med funn: ' + sp.tekst);
+ok(/Speiderne er tilbake fra Dombås\. De så røverne samle seg: de drar ut mot leiren om ca\. 14 timer\./.test(sp.tekst) && sp.mat > 0 && sp.tre > 0, 'speidertur: melder røverne og tar med funn: ' + sp.tekst);
 ok(/ingen tegn til røverne/.test(M.utfall({ id: 'speid', folk: to }, { røverTimer: null }, fast(.5)).tekst), 'speidertur uten kjent bølge');
 const tb = M.utfall({ id: 'tankbil', folk: to }, {}, fast(.3)), tbTom = M.utfall({ id: 'tankbil', folk: to }, {}, fast(.9));
 ok(tb.diesel >= 250 && tb.diesel <= 450 && tbTom.diesel === 0 && /tømt/.test(tbTom.tekst), 'tankbil til fots: diesel eller ingenting: ' + tb.tekst + ' / ' + tbTom.tekst);

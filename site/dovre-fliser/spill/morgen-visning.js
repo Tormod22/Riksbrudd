@@ -133,7 +133,7 @@
   // ---------- kortet ----------
   const css = document.createElement('style');
   css.textContent = `#morgenkort{ position:fixed; left:50%; transform:translateX(-50%); top:14%; z-index:13; display:none; width:min(500px,92vw); max-height:calc(86vh - 70px); overflow-y:auto; box-sizing:border-box; padding:14px 16px;
-  background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); box-shadow:0 8px 30px rgba(0,0,0,.6); overscroll-behavior:contain; }
+  background-color:#1c170f; background-image:linear-gradient(var(--panel,#1c170f), var(--panel,#1c170f)); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); box-shadow:0 8px 30px rgba(0,0,0,.6); overscroll-behavior:contain; }
 #morgenkort.på{ display:block; } body.angrepvent #morgenkort.på{ display:none; }
 #morgenkort h3{ margin:0 0 6px; font-size:17px; color:#f0d79a; } #morgenkort h3 small{ font-weight:400; color:var(--ink-dim,#a99); font-size:13px; }
 #morgenkort .mrapport{ font-size:13px; line-height:1.4; color:var(--ink-dim,#b5a888); border-left:2px solid #4a4030; padding:2px 0 2px 8px; margin:0 0 8px; }
