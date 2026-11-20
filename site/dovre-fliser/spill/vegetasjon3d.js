@@ -73,8 +73,10 @@
       } }
     // einer, vier og fjellbjørk på åpen mark (hei, myr, beite, vannkanten): bare nær (S ≤ 2200), med tak på antallet
     if (u.S <= 2200) {
-      const MAKS = mob() ? 1500 : 4000, mpp = 2 * u.S / TW; let n = 0;
+      const MAKS = mob() ? 1500 : 4000, mpp = 2 * u.S / TW; let n = 0, arb2 = 0;
+      // (runde 9: pust for hver 128. rute – einer, vier og fjellbjørk på åpen mark ble satt i ett strekk; samme rekkefølge, samme svar)
       for (let j = 0; j < kv.h && n < MAKS; j++) for (let i = 0; i < kv.w && n < MAKS; i++) {
+        if ((++arb2 & 127) === 0 && børPuste()) await pust();
         const K = kv.K[j * kv.w + i]; if (K === 1 || K === 3 || K === 255) continue;
         const X = kv.x0 + (i + .5) * kv.r, Y = kv.y0 - (j + .5) * kv.r; if (Math.abs(X - u.cx) > u.S - 20 || Math.abs(Y - u.cy) > u.S - 20) continue;
         const moh = hoyde3d(X, Y, u), rel = moh / tg;
