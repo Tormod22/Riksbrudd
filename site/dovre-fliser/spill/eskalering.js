@@ -33,8 +33,9 @@
     // når «samleAndel» av styrken står innen «samleR» m av samlingsstedet, eller etter «samleMaks» minutter; gruppa gir opp under
     // «oppgi» av behovet, eller etter «angrepMaks» minutter; samlingsstedet er et eget (eller nøytralt) tettsted innen «nær» m av målet;
     // mål lenger enn «rekkevidde» m fra lagene tas ikke; dine tettsteder veier «blåVekt», tettsteder de har mistet «taptVekt»
-    // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående
-    plan: { hver: 60, margin: 1.3, overvekt: 1.5, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500 },
+    // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående;
+    // småsted: innbyggere – garnisoner i egne tettsteder under dette kan tas med til et storbyangrep (spill/eskalering-visning.js)
+    plan: { hver: 60, margin: 1.3, overvekt: 1.5, småsted: 3000, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
   };

@@ -40,13 +40,16 @@
   const gruppeAv = side => S.gruppe[side];
   const iGruppe = s => { const G = gruppeAv(s.side); return !!(G && G.lag.includes(s.navn)); };
   // lagene som kan sendes: ikke slått ut, ikke eneste garnison i et eget tettsted, ikke i en gruppe eller på ruteoppdrag, nok ammunisjon
-  function fri(side, B) {
+  // o.småGarnison: også garnisonene i egne småsteder (under REGLER.plan.småsted innbyggere) uten fiender innen 5 km – til et storbyangrep
+  // tar motstanderen dem med (tettstedet er fortsatt deres uten garnison, men står åpent)
+  function fri(side, B, o = {}) {
     const lag = ENHETER.filter(e => e.ai && e.side === side && kjemper(e) && !F.slåttUt(e));
-    const egne = B.filter(b => b.eier === side);
+    const egne = B.filter(b => b.eier === side), fiender = ENHETER.filter(e => e.side !== side && kjemper(e) && !hvile(side, e.side));
     return lag.filter(s => {
       if (iGruppe(s) || (S.rute[side] && S.rute[side].lag === s.navn) || Forsyning.ammo(s) < .3 || s.menn.filter(m => m.hp < 1).length >= 3 || s.ombord) return false;
       const her = egne.find(b => iBy(b.by, s.x, s.y));
-      return !her || lag.some(f => f !== s && iBy(her.by, f.x, f.y) && f.navn < s.navn);
+      if (!her || lag.some(f => f !== s && iBy(her.by, f.x, f.y) && f.navn < s.navn)) return true;
+      return !!o.småGarnison && her.folk < ER.plan.småsted && !fiender.some(e => avst(e, s) < 5000);
     }).map(s => ({ id: s.navn, x: s.x, y: s.y, styrke: sty(s), lag: s }));
   }
   const medlemmer = G => ENHETER.filter(e => e.ai && kjemper(e) && G.lag.includes(e.navn));
@@ -60,8 +63,12 @@
     const leirOk = L && !hvile(side, 'blå') && AI.angripLeir !== false && (o.leir || (døgn() >= gr.leirFra && tid - S.sistLeir[side] >= gr.leirHver * 1440));
     const forsvarLeir = L ? ENHETER.filter(e => e.side === 'blå' && kjemper(e) && avst(e, L) <= ER.plan.leirForsvar).reduce((a, e) => a + sty(e), 0) : 0;
     const v = E.velgMål({ side, døgn: o.døgn !== undefined ? o.døgn : døgn(), g: gr, storFra: F.fredDøgn(fiendeF()) + F.REGLER.storEtter, byer: o.bare ? B.filter(b => b.id === o.bare) : B, fri: frie, leir: leirOk ? { x: L.x, y: L.y, forsvar: forsvarLeir } : null });
+    // storbyen: er de for få, tar de med garnisonene fra småstedene sine (bare mot en storby som er lov nå)
+    let alleFrie = frie;
+    if (!v && !o.bare) { const store = B.filter(b => b.folk >= ER.storby && b.eier !== side && E.tillatt(b, o.døgn !== undefined ? o.døgn : døgn(), gr, 0));
+      if (store.length) { alleFrie = fri(side, B, { småGarnison: true }); v = E.velgMål({ side, døgn: o.døgn !== undefined ? o.døgn : døgn(), g: gr, storFra: 0, byer: store, fri: alleFrie }); } }
     if (!v) return null;
-    const lag = frie.filter(f => v.lag.includes(f.id)), sted = E.samlested(v.mål, B, side, lag);
+    const lag = alleFrie.filter(f => v.lag.includes(f.id)), sted = E.samlested(v.mål, B, side, lag);
     const blå = v.mål.leir || v.mål.eier === 'blå';
     const G = { mål: v.mål, lag: v.lag.slice(), behov: v.behov, sted, fase: 'samler', start: tid, angripFra: blå ? tid + gr.varsel : tid, side };
     S.gruppe[side] = G;
