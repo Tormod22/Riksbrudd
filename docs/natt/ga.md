@@ -121,7 +121,8 @@ Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-ga
   byggingen kom ett lite stykke fram per bilde. Etter 9 minutter bygget den fortsatt (målingen ble stoppet). Det var kritikerens heng.
 - Nå (`gange.js`):
   - **3D tegnes ikke mens du reiser** (`KROKER.bilde3d` svarer true – bildet står, navnene i overlegget går videre). Karakteren
-    flyttes hvert bilde, men siktfeltet regnes først når han er framme. I 2D følger kartet ham.
+    flyttes hvert bilde, men siktfeltet regnes først når han er framme. I 2D viser kartet både deg og målet og flyttes bare når
+    karakteren er på vei ut av bildet (å flytte kartet hvert bilde gjorde hvert bilde tungt: en tur på 5 min tok 12 s).
   - **Farten settes tilbake straks du er framme** (før gikk 600× videre til kortet hadde stått i 1,2 s: en tur på 2 min ble 15).
   - **`klarGå(X, Y, ferdig)`: kartet rundt deg bygges FØR du begynner å gå** når utsnittet ikke passer (samme regel som tegn3d,
     `utsnittS(1000)`): kameraet flyttes dit, 3D tegnes ikke, navnene skjules, og kortet «Henter kartet rundt deg … (trinnet) 12 s»
@@ -167,7 +168,8 @@ Grunnlag: scratchpad `kritikk2/pc/anmeldelse.md` (40-ga-gard-start, 53-ga-ved-ga
   - **Byggeplassen i trinn** som leir2d.js: under 2 %: stikker og snor; grunnmur som støpes (0–20 %, med forskaling); reisverket reises
     (25–45 %: andelen stendere, svill og toppsvill); taket legges fra den ene enden (45–95 %, sperrer først); kledningen nedenfra
     (60–97 %, døra åpen); stillas med to stolperader, rekkverk og plankedekke (8–97 %); plankestabel og pall med sekker (til 90 %).
-    For hus-formene i leir2d (`Leir2d.HUS`; saltak for «sal», ellers flatt). Andre bygg reiser seg som før. Modellen lages på nytt
+    For hus-formene i leir2d (`Leir2d.HUS`; saltak for «sal», ellers flatt) – ikke tanken, porten og små kasser (aggregat, batteri).
+    Andre bygg reiser seg som før. Modellen lages på nytt
     for hvert 5. prosent (`Byggeplass.nøkkel`, i leir-visning.js sin sekund-løkke). Ca. 240–1700 trekanter.
   - **Den nye leiren**: bål (steinring, ved, flammer som flakker og en glød som er sterkere om natta – MeshBasicMaterial og en
     sprite, ingen nye lys), vedstabel, kasser og oljefat (MODELLER.kasser/fatpall), tre telt (ett når den første brakka eller et
