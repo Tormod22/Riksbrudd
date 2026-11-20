@@ -88,12 +88,17 @@
   const tekst = {};
   // (runde 10, brukerens bilder: «vegen er en flat, mørk stripe») grunnfargen på asfalten var 62/255 – i skyggen nesten svart. Nå en
   // middels grå asfalt; kryssflaten har samme farge som asfalten (før mørkere: «mørke rektangler» i kryssene). Claudes forslag (fargene):
-  const VEG_FARGE = { asfalt: [92, 93, 96], kommunal: [96, 95, 94], gs: [98, 92, 88] };
+  const VEG_FARGE = { asfalt: [84, 85, 88], kommunal: [88, 87, 86], gs: [92, 86, 82] };
+  // bakkens farge (0–1) i lokale meter fra u.bunn (512 × 512, kartbildets farger), snitt av 3 × 3 punkter, litt lysere (Claudes forslag: 1,08)
+  function bunnFarge(u) { const B = u.bunn, W = B.W, f = 1.08 / 255 / 9;
+    return (x, y) => { const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); let r = 0, g = 0, b = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const k = (Math.min(W - 1, Math.max(0, j + dj)) * W + Math.min(W - 1, Math.max(0, i + di))) * 3; r += B.rgb[k]; g += B.rgb[k + 1]; b += B.rgb[k + 2]; }
+      return [Math.min(1, r * f), Math.min(1, g * f), Math.min(1, b * f)]; }; }
   function vegTekstur(type) {
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? VEG_FARGE.gs : type === 'fylling' ? [86, 88, 62] : type === 'bykant' ? [112, 109, 103] : type === 'kommunal' ? VEG_FARGE.kommunal : VEG_FARGE.asfalt, v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? VEG_FARGE.gs : type === 'fylling' ? [86, 88, 62] : type === 'fyllingLys' ? [214, 212, 204] : type === 'bykant' ? [112, 109, 103] : type === 'kommunal' ? VEG_FARGE.kommunal : VEG_FARGE.asfalt, v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
     g.putImageData(im, 0, 0); g.scale(2, 2);
@@ -107,6 +112,10 @@
       g.fillStyle = 'rgba(40,34,26,.35)'; g.beginPath(); g.ellipse(x + .25, y + .35, r, r * .75, 0, 0, 6.283); g.fill();
       g.fillStyle = `rgb(${l + 8},${l + 1},${l - 10})`; g.beginPath(); g.ellipse(x, y, r, r * (.55 + rnd() * .35), rnd() * 3, 0, 6.283); g.fill(); }
     if (type === 'grus') { g.fillStyle = 'rgba(70,90,40,.35)'; g.fillRect(28, 0, 8, 256); }   // gress i midten
+    // (runde 10) den lyse fyllingen (fargen fra bakken per hjørne): korte strå og noen mørkere flekker, ganges med bakkens farge
+    if (type === 'fyllingLys') { for (let k = 0; k < 1400; k++) { const x = rnd() * 64, y = rnd() * 256, l = 150 + rnd() * 105, a = rnd() * 3.14;
+        g.strokeStyle = `rgba(${l | 0},${l | 0},${(l * .9) | 0},.6)`; g.lineWidth = .4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 1.6, y - 1 - rnd() * 2); g.stroke(); }
+      for (let k = 0; k < 40; k++) { g.fillStyle = 'rgba(40,40,30,.08)'; g.beginPath(); g.ellipse(rnd() * 64, rnd() * 256, 2 + rnd() * 6, 3 + rnd() * 9, 0, 0, 6.283); g.fill(); } }
     // (runde 10) asfalten: svake, store flekker (lappet og slitt asfalt), litt mørkere i hjulsporene og noen tynne sprekker – så vegen
     // ikke er en flat stripe. Bare på asfalt (ikke i kryssflaten, som skal gå i ett med vegen den ligger på).
     if (['asfalt', 'rampe', 'kommunal', 'gs'].includes(type)) {
@@ -136,13 +145,20 @@
   // index.html, samme svar som computeVertexNormals; nett() gjør alt i ett)
   function nett(ut, type, offset) { return kjørRett(nettG(ut, type, offset)); }
   function* nettG(ut, type, offset) {
-    if (!ut.idx.length) { if (ut.idx.slipp) { ut.pos.slipp(); ut.uv.slipp(); ut.idx.slipp(); } return null; }
-    const g = new THREE.BufferGeometry();
+    if (!ut.idx.length) { if (ut.idx.slipp) { ut.pos.slipp(); ut.uv.slipp(); ut.idx.slipp(); } if (ut.col && ut.col.slipp) ut.col.slipp(); return null; }
+    const g = new THREE.BufferGeometry(), medFarge = !!(ut.col && ut.col.length && ut.col.length === ut.pos.length);
     // (runde 9) gruppene er Tallrekke.Rekke (se tomR): de samme tallene, uten store vanlige lister
     if (ut.idx.ferdigIndeks) { g.setAttribute('position', new THREE.BufferAttribute(ut.pos.ferdig(), 3)); g.setAttribute('uv', new THREE.BufferAttribute(ut.uv.ferdig(), 2)); g.setIndex(new THREE.BufferAttribute(ut.idx.ferdigIndeks(), 1)); }
     else { g.setAttribute('position', new THREE.Float32BufferAttribute(ut.pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(ut.uv, 2)); g.setIndex(ut.idx); }
+    // (runde 10) fyllingen: bakkens farge per hjørne (se byggVeger)
+    if (medFarge) g.setAttribute('color', ut.col.ferdig ? new THREE.BufferAttribute(ut.col.ferdig(), 3) : new THREE.Float32BufferAttribute(ut.col, 3)); else if (ut.col && ut.col.slipp) ut.col.slipp();
     if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
-    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: vegTekstur(type), polygonOffset: true, polygonOffsetFactor: offset, polygonOffsetUnits: offset, side: THREE.DoubleSide }));
+    // (runde 10) fyllingen er bratt (1 : 1,5) og lå mørk i skyggesiden som et felt i gresset: normalene bøyes mot loddrett (Claudes
+    // forslag: 0,35 av skråningens egen + loddrett), så den får omtrent lyset til bakken rundt
+    if (medFarge) { const N = g.attributes.normal.array; for (let k = 0; k < N.length; k += 3) { const x = N[k] * .35, y = N[k + 1] * .35, z = Math.abs(N[k + 2] * .35) + 1, l = Math.hypot(x, y, z); N[k] = x / l; N[k + 1] = y / l; N[k + 2] = z / l; } }
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: vegTekstur(medFarge ? 'fyllingLys' : type), vertexColors: medFarge, polygonOffset: true, polygonOffsetFactor: offset, polygonOffsetUnits: offset, side: THREE.DoubleSide }));
+    // (normalene peker alltid opp nå: begge sider får forsidens lys – forsideLys i index.html)
+    if (medFarge && typeof forsideLys === 'function') { m.material.onBeforeCompile = forsideLys; m.material.customProgramCacheKey = () => 'fylling-forside'; }
     return m;
   }
   // Kanten utenfor vegbanen: fra a meter fra midtlinjen (i vegens høyde + løft) og «bredde» meter ut. Der bakken ligger lavere enn
@@ -158,7 +174,7 @@
       if (bredde > 0 && !bareFall) { const n0 = ut.pos.length / 3; ut.pos.push(p[0] + nx * a, p[1] + ny * a, zi, x0, y0, zi); ut.uv.push(0, L / 12, 1, L / 12);
         if (forrige >= 0) ut.idx.push(forrige, n0, forrige + 1, forrige + 1, n0, n0 + 1); forrige = n0; }
       if (fall > (bareFall ? .25 : .12)) { const e = Math.min(6, fall * 1.5), x1 = x0 + nx * e, y1 = y0 + ny * e, z1 = Math.min(zi, zf(x1, y1) + .02), n0 = F.pos.length / 3;
-        F.pos.push(x0, y0, zi, x1, y1, z1); F.uv.push(0, L / 12, 1, L / 12); if (forrigeF >= 0) F.idx.push(forrigeF, n0, forrigeF + 1, forrigeF + 1, n0, n0 + 1); forrigeF = n0; }
+        F.pos.push(x0, y0, zi, x1, y1, z1); F.uv.push(0, L / 12, 1, L / 12); if (F.col) { const a = F.farge(x0, y0), b = F.farge(x1, y1); F.col.push(a[0], a[1], a[2], b[0], b[1], b[2]); } if (forrigeF >= 0) F.idx.push(forrigeF, n0, forrigeF + 1, forrigeF + 1, n0, n0 + 1); forrigeF = n0; }
       else forrigeF = -1;
     }
   }
@@ -175,6 +191,10 @@
     const ut = { nett: [], ruter: [] };
     const grupper = {}; for (const n of ['fylling', 'bykant', 'skulder', 'gs', 'grus', 'kommunal', 'asfalt', 'rampe', 'kryss', 'fortau']) grupper[n] = tomR(n);
     const gang = u.gangveger || [], alle = u.veger.concat(gang), ru = Veg.rute(alle), zf = (x, y) => nettHoyde(u, x, y);
+    // (runde 10, brukerens bilder: «mørke felt» langs vegen) fyllingen (skråningen fra vegkanten ned til bakken) hadde én fast mørk
+    // olivenfarge og lå som mørke bånd i gresset. Nå får hvert hjørne bakkens farge der det ligger (u.bunn, snitt av 3 × 3 punkter), og
+    // teksturen er lys og nøytral med strå – fyllingen går i ett med bakken rundt.
+    if (u.bunn) { const F = grupper.fylling; F.col = typeof Tallrekke !== 'undefined' ? new Tallrekke.Rekke('F', 'veg.col.fylling') : []; F.farge = bunnFarge(u); }
     const kryss = Veg.finnKryssG ? yield* Veg.finnKryssG(u.veger) : Veg.finnKryss(u.veger); u.kryss = kryss; u.vegRute = { ru, alle };
     for (let li = 0; li < u.veger.length; li++) { const v = u.veger[li]; yield;
       // ramper, svingefelt og ringen i en rundkjøring: asfalt med hvite kantlinjer, uten midtlinje
@@ -411,5 +431,5 @@
     return z;
   }
   // start(): hvor bilene og folkene startet i siste utsnitt (veg, plass, retning) – for prøvene (likt utsnitt før og etter)
-  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger };
+  window.Liv3d = { finnKryss: v => Veg.finnKryss(v), dekke, start: () => liv && liv.start, byggVeger, VEG_FARGE };
 })();
