@@ -299,7 +299,7 @@
 
   // ---------- ett bygg ----------
   // o: { sx, sy, m, skisse, ok, valgt, mangler (uten strøm), aktiv (i arbeid nå), fraksjon (farge) }
-  function bygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
+  function tegnBygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
     const m = o.m, detalj = m < REGLER.nær ? 2 : m < REGLER.middels ? 1 : 0, t = o.skisse ? { navn: 'ferdig', p: 1 } : tilstand(b, { aktiv: o.aktiv }), K = St.kropp, id = (b.id || 0) + 7;
     iBygget(g, b, o.sx, o.sy, m, () => {
       // det som hører til bygget på bakken: trapp/forplass i betong
@@ -328,8 +328,31 @@
       const k = St.form === 'mast' ? 1.2 : t.navn === 'kø' || t.navn === 'bygges' ? 1.2 : 0; rekt(g, K[0] - k, K[1] + k, K[2] - k, K[3] + k); g.stroke(); g.globalAlpha = 1;
     });
     return true; }
+  // HURTIGLAGER (ytelse): et bygg som ser likt ut som i forrige bilde (samme målestokk, tilstand, natt …), tegnes én gang på et eget
+  // lite lerret og så bare limes inn – kartet tegnes på nytt mange ganger i sekundet når lagene går. Mens du zoomer (målestokken
+  // endrer seg fra bilde til bilde), tegnes byggene rett på kartet. Lageret tømmes når målestokken endres.
+  const LAGER = new Map(); let lagerM = 0, forrigeM = 0, tNøkkel = '';
+  function bygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
+    const m = o.m; if (o.skisse || m >= REGLER.middels || m !== forrigeM || typeof document === 'undefined') return tegnBygg(g, b, o);
+    if (m !== lagerM) { LAGER.clear(); lagerM = m; }
+    const t = tilstand(b, { aktiv: o.aktiv }), k = [b.id, b.type, b.ret || 0, b.nivå || 1, t.navn, Math.round(t.p * 40), Math.round((b.hp === undefined ? 1 : b.hp) * 20), b.arbeid ? b.arbeid.hva : '',
+      o.valgt ? 1 : 0, o.mangler ? 1 : 0, b.av ? 1 : 0, o.fraksjon, Math.round((o.lys || 0) * 40), tNøkkel].join('|');
+    const D = typeof dpr === 'number' ? dpr : 1, cx = o.sx(b.x), cy = o.sy(b.y); let L = LAGER.get(b.id);
+    if (!L || L.k !== k) {
+      // utstrekningen: kroppen og fotavtrykket + 4 m (stillas, materialer, lys på bakken), radiomastens barduner, i skjermpunkter
+      const f = B.fot || St.kropp, e = 4 + (St.barduner || 0), x0 = Math.min(f[0], St.kropp[0]) - e, x1 = Math.max(f[1], St.kropp[1], St.vindpose ? St.vindpose[0] + 3 : -1e9) + e, y0 = Math.min(f[2], St.kropp[2]) - e, y1 = Math.max(f[3], St.kropp[3]) + e;
+      const c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([u, v]) => [(c * u - s * v) / m, (-s * u - c * v) / m]);
+      const ax = Math.floor(Math.min(...P.map(q => q[0]))), ay = Math.floor(Math.min(...P.map(q => q[1]))), w = Math.ceil(Math.max(...P.map(q => q[0]))) - ax + 1, h = Math.ceil(Math.max(...P.map(q => q[1]))) - ay + 1;
+      if (w * h * D * D > 4e6) return tegnBygg(g, b, o);
+      const lerret = L && L.c.width >= w * D && L.c.height >= h * D && L.c.width <= w * D * 1.5 ? L.c : document.createElement('canvas'); lerret.width = Math.ceil(w * D); lerret.height = Math.ceil(h * D);
+      const q = lerret.getContext('2d'); q.setTransform(D, 0, 0, D, -ax * D, -ay * D);
+      tegnBygg(q, { ...b, x: 0, y: 0 }, { ...o, sx: X => X / m, sy: Y => -Y / m });
+      L = { k, c: lerret, ax, ay, w, h }; LAGER.set(b.id, L); }
+    const x = Math.round((cx + L.ax) * D) / D, y = Math.round((cy + L.ay) * D) / D;
+    g.save(); nullstill(g); g.drawImage(L.c, x, y, L.c.width / D, L.c.height / D); g.restore(); return true; }
   // én ramme: nattfargen og lyset i vinduene (kalles før byggene tegnes)
-  function ramme() { T = null; let natt = 0; try { if (rot.KartLys && !KartLys.av && (!navigator.webdriver || KartLys.test)) { T = KartLys.nå(); natt = T.natt; if (T.natt < .01 && T.grå < .01 && T.mørk < .01) T = null; } } catch (e) { T = null; }
+  function ramme() { forrigeM = api._m === undefined ? 0 : api._m; api._m = typeof kam !== 'undefined' ? kam.m : 0; T = null; let natt = 0; try { if (rot.KartLys && !KartLys.av && (!navigator.webdriver || KartLys.test)) { T = KartLys.nå(); natt = T.natt; if (T.natt < .01 && T.grå < .01 && T.mørk < .01) T = null; } } catch (e) { T = null; }
+    tNøkkel = T ? [T.natt, T.grå, T.mørk].map(v => Math.round(v * 100)).join(',') : '';
     return { lys: natt > REGLER.vinduNatt ? Math.min(1, (natt - REGLER.vinduNatt) / .3) * .55 : 0 }; }
 
   // ---------- figurene: folk sett ovenfra ----------
@@ -359,7 +382,7 @@
     const r = Math.max(3, figurR(m) * .85), t = typeof tid === 'number' ? tid : 0; g.save(); nullstill(g);
     F.personer.forEach((p, i) => { if (p.død || p.borte || p.helse <= 0) return; const q = folkPlass(p, i, L.bygg, S.leir, t, Leir.BYGG); if (!q) return;
       const x = (q.x - vx0) / m, y = (vy1 - q.y) / m; if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) return;
-      mann(g, x, y, r, -q.a, { sivil: true, farge: JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length] }); });
+      api.mann(g, x, y, r, -q.a, { sivil: true, farge: JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length] }); });
     g.restore(); }
   // tegn på nytt når folkene har flyttet seg (hvert halve spillminutt) og de synes
   let sistFolk = -1;
@@ -407,6 +430,6 @@
     const gammel = KROKER.tegn[i], ny = (g, vx0, vy1) => (!api.av && kam.m < REGLER.bilUnder && !(typeof på3d !== 'undefined' && på3d) ? tegnKjør(g, vx0, vy1) : gammel(g, vx0, vy1));
     ny.leir2d = true; ny.bygg = gammel.bygg; ny.over = true; KROKER.tegn[i] = ny; api.kjørKrok = true; });
 
-  Object.assign(api, { bygg, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
+  Object.assign(api, { bygg, tegnBygg, lager: () => LAGER.size, skygge, ramme, mann, tegnFolk, iBygget, slutt: () => { T = null; } });
   rot.Leir2d = api;
 })(typeof window !== 'undefined' ? window : globalThis);
