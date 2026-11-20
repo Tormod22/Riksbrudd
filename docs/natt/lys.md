@@ -707,8 +707,9 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
 ### Hva som er endret (samme utsnitt som før – se «Likt før og etter»)
 1. **`spill/tallrekke.js` (ny, regler uten DOM, test `pipeline/fliser/test_tallrekke.js`)**: `Tallrekke.Rekke` er en voksende Float32Array
    (eller Uint32Array for indekser) med samme bruk som en liste – `push(...)`, `length` – pluss `p2`/`p3`/`pushL(liste)`. Plassen ligger i et
-   lager (`ta`/`gi`) og brukes om igjen av neste utsnitt (høyst 64 MB på PC og 24 MB på telefon mellom utsnittene – de minste kastes først;
-   Claudes tall, i `REGLER`). `ferdig()` gir en ny Float32Array med nøyaktig tallene – samme verdier som `new Float32Array(liste)` (tallet
+   lager (`ta`/`gi`) og brukes om igjen av neste utsnitt (først høyst 64 MB på PC og 24 MB på telefon; etter målingen på telefon 96 / 40 MB,
+   og en rekke med navn – `new Rekke('F', 'hus.pos.tak')` – starter i størrelsen samme navn endte på sist, rundet opp til en toerpotens,
+   `Tallrekke.STØRRELSE`; de minste kastes først; Claudes tall, i `REGLER`). `ferdig()` gir en ny Float32Array med nøyaktig tallene – samme verdier som `new Float32Array(liste)` (tallet
    rundes til 32 bit én gang) – og `ferdigIndeks()` Uint16/Uint32 slik three.js `setIndex(liste)` velger. `Rekke.på = false` gir vanlige
    lister som før (vakta sammenligner de to). `taPunkter`/`giPunkter`: lerretspunktene til kartbildet (én i lageret). `Tallrekke.tøm()`
    når 3D slås av. Skripttaggen står rett etter lykt.js.
@@ -753,4 +754,70 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
   `hindringer` i ett strekk (samme ruter, samme ting i samme rekkefølge).
 - Prøvd på Dovre-testsiden (PC 1400 × 820): grønn, runde 9-delen 0,5 s («prøvehus 556 trekanter, 7 vegnett, 0 bruer, flaten =
   PlaneGeometry, hindringene i biter like»). I Stavanger var runde 9-delen grønn, men runde 7-delen («prøvehuset fikk ikke interiør på den
-  ekte veien») feilet der – den kjører i en by full av ekte hus som ligger nærmere; på Dovre-testsiden (der sjekk.js kjører den) er den grønn.
+  ekte veien») feilet der (trolig fordi byen er full av ekte hus nærmere deg enn prøvehuset – ikke prøvd med den gamle koden i Stavanger); på
+  Dovre-testsiden, der sjekk.js kjører vakta, er den grønn.
+
+### Målt før og etter (20. nov kl. 16–16.30 norsk tid, `natt9/lys/batch.sh`, loggene `b-*.log`; last 8–14 – andre hjelpere kjørte samtidig)
+Flytur 40 s, 150 m/s, 900 m over bakken, utsnitt 3,1 km, tegningen slått av. «Før» = 644ecfa, «etter» = 676f650 (alt over unntatt punkt 9s
+to siste og navnene på rekkene – se under). Pauser = «Mål hakk» (mellom bildene), lange oppgaver = over 50 ms, søppeltømming = profilens
+«(garbage collector)» i sammenhengende biter.
+
+| | pauser > 50 ms: antall, sum, lengste | lange oppgaver: antall, sum, lengste | søppeltømming: sum, biter ≥ 20 / ≥ 50 ms, lengste |
+|---|---|---|---|
+| Stavanger PC før | 143, 13,6 s, 549 ms | 104, 9,3 s, 559 ms | 2,2 s, 23 / 5, 113 ms (1,3 s inne i lange oppgaver) |
+| Stavanger PC etter | 102, 8,1 s, 286 ms | 79, 6,7 s, 300 ms | 0,8 s, 4 / 0, 48 ms (0,3 s) |
+| Bergen PC før | 124, 13,1 s, 534 ms | 95, 9,1 s, 281 ms | 1,3 s, 12 / 2, 91 ms (0,7 s) |
+| Bergen PC etter | 43, 3,2 s, 169 ms | 24, 1,9 s, 162 ms | 0,6 s, 2 / 0, 27 ms (0,04 s) |
+| Stavanger telefon før (390 × 844) | 104, 8,6 s, 293 ms | 79, 6,4 s, 336 ms | 2,2 s, 12 / 1, 106 ms (0,8 s) |
+| Stavanger telefon etter (676f650) | 97, 8,4 s, 198 ms | 68, 5,6 s, 194 ms | 1,6 s, 16 / 4, 95 ms (0,6 s) |
+
+Per kilde («Hvor i koden» i «Mål hakk», sum / antall / lengste):
+- Stavanger PC før: «uten pust (henter høydene og kartet)» 5,9 s / 61 / 273 ms; hus3d → hus3d 2,2 s / 23 / 226 ms; bygg3d (getImageData-
+  stripene, kartbildet) 1,3 s / 13 / 315 ms; «? → bygg3d:1440» 549 ms (søppeltømming midt i).
+- Stavanger PC etter: «uten pust» 1,3 s / 20 / 100 ms; bygg3d:1502 (relieffG i kartbilde.js) 1,1 s / 11 / 226 ms; gate3d.js 1,0 s / 9 /
+  286 ms (Gate.plasserG – ikke min fil); liv3d.js (byggVeger: veg.js gangfelt/striper) 0,7 s / 7 / 174 ms; hus3d 0,4 s / 6 / 104 ms.
+- Bergen PC før: «uten pust» 4,3 s / 37 / 534 ms; hus3d 2,3 s / 23 / 187 ms; bygg3d 1,3 s; liv3d 0,4 s / 5 / 143 ms.
+- Bergen PC etter: «uten pust» 0,5 s / 8 / 123 ms; bygg3d:1502 (relieffG) 0,3 s / 3 / 169 ms; lastOppIBiter 0,2 s / 3 / 91 ms;
+  byttet (fjern3d → bygg3d) 0,2 s / 2 / 127 ms; ryddHus `rens` 153 ms (én).
+- Telefon før: hus3d 1,4 s / 16 / 293 ms; «uten pust» 1,1 s / 14; liv3d 0,8 s / 11; byttet (fjern3d → bygg3d) 0,5 s / 3 / 267 ms;
+  anlegg3d 0,4 s / 2 / 289 ms. Telefon etter: «uten pust» 1,7 s / 21 / 194 ms; hus3d 1,6 s / 18 / 141 ms; liv3d 0,7 s / 8; anlegg3d 0,3 s / 2 /
+  198 ms; byttet 0,3 s / 3 / 120 ms.
+- I de lange oppgavene etter: `spill/tallrekke.js` 0,2 s på PC og 0,4 s på telefon – på telefon var lageret (24 MB) for lite for husene i
+  Stavanger, så rekkene vokste gjennom 4096, 8192 … og fikk nye tabeller hver gang (210 MB nye Float32Array på 40 s). Derfor (561f666):
+  rekker med navn starter i størrelsen de endte på sist, og lageret er 40 MB på telefon / 96 MB på PC – se måling «etter 2» under.
+- Tallene varierer mye med lasten på maskinen (samme tur gav «klar etter» 35–135 s); det som er sikkert, er at de store søppelpausene
+  (over 50 ms) er nesten borte på PC, og at husene ikke lenger lager store lister.
+
+### Prøvd i nettleser (runde 9)
+- Avtrykk av alle nettene (Stavanger, /rogaland, ekte data): gammel kode mot den endelige (561f666) – 0 ulike av 327 nett, og 0 ulike når
+  samme utsnitt bygges på nytt med brukt plass i lagrene (`fp-head.json`, `fp-ny3.json`). Bilde av 3D med den endelige koden:
+  scratchpad `natt8/lys/stavanger-etter-PC.png` (hus, veger, trær, terreng og navn som før).
+- Vakta lys (Dovre-testsiden): PC grønn (runde 9-delen 0,5 s), telefon 390 × 844 grønn (0,2 s; hele vakta 12 s), begge med den endelige koden.
+  Med ekte data i Stavanger: runde 9-delen grønn (hus 549 940 trekanter, 13 vegnett, 35 bruer), se «Vakt» over.
+- Regeltester: test_tallrekke (ny), test_ytelse, test_veg, test_kyst, test_fjern3d, test_vegetasjon, test_bruer, test_interior_biter,
+  test_kvalitet, test_grense3d grønne; `node --check` på filene og hovedskriptet i index.html.
+
+### Fellesfiler endret i runde 9
+- `site/dovre-fliser/index.html` (hus3d og «i biter»-maskineriet): hus3d (Rekke-gruppene, `tri3`/`tri`/`firkant` uten små lister, `ferdig`
+  med pust mellom gruppene), bygg3d (`Tallrekke.taPunkter`, bunnfargen i striper på 256 rader), forbered3d (`giPunkter` etter opplastingen,
+  `hindringerG` med kjørAsynk), `kastForberedt` og `sett3d` (`giPunkter`), `slå3d` (av: `Tallrekke.tøm()`), `planG` (ny) og `terrengGeo`,
+  `hindringerG` (ny) og `hindringer`, smått3d (husenes rutenett i biter først), `treMatriser`, `småting`, `lodTrær` (`kopierTall`, ny),
+  `delBakkenG`, `lastOppIBiter` (128 rader); skripttaggen for tallrekke.js rett etter lykt.js; versjonsmerkene (versjon.py).
+- Mine: `spill/tallrekke.js` (ny), `spill/liv3d.js` (tomR, nettG, `Liv3d.byggVeger`), `spill/infra3d.js` (lagGeo, `Infra3d.lagGeo`),
+  `spill/natt3d.js` (lysflekkene uten subarray), `spill/vegetasjon3d.js` (pust på åpen mark, `vannAvstandG`, `Vegetasjon3d.vannAvstandG`), `pipeline/fliser/test_tallrekke.js` (ny),
+  `pipeline/fliser/vakter/lys.js` (runde 9-delen), `docs/natt/lys-hjelp.json` («Jevnere når du flyr»).
+- IKKE endret: veg.js, kyst.js, bruer.js, anlegg3d.js, kartflis.js, kartbilde.js, vaer-visning.js.
+
+### Ikke gjort
+- `Math.hypot` lager en liten tabell per kall i V8 (190–490 MB på 40 s), men å bytte til `Math.sqrt(x * x + y * y)` gir andre siste
+  siffer (hypot skalerer) – da blir utsnittene ikke bit for bit like. Ikke endret.
+- Søppel og enkeltkall på 30–45 ms i andres filer: `spill/veg.js` (`gå`, `iTunnel`/`utenTunnel`, `gangfelt`, `gjettSteg`), `spill/bruer.js`
+  (`projiser`), `spill/kyst.js` (`plasserG`), `spill/anlegg3d.js` i byttet (`samle`/`toNonIndexed`, ca. 70 ms), `kartbilde.js` (`relieffG`,
+  ca. 80 ms) og `kartflis.js` (`hoyde`, ca. 65 ms – utseende-hjelperen eide disse i natt).
+- Byttet (sett3d) er fortsatt én bit: 120–160 ms på testmaskinen (three.js, kildemerkingen i `scene.add` ca. 19 ms, modulenes sett3d-kroker).
+- fjern3d er alt i biter (rader med pust, normalene i biter) og var ikke blant de lange oppgavene for seg; infra3d bruker nå tallrekkene og
+  bygger én bru per bit – én svært stor bru deles ikke videre. fjellmark3d (småstein og lyng rundt deg når du går) er ikke målt denne runden
+  (flyging), og `vegRuteAsynk`/`naboerAsynk` lager fortsatt mange små lister.
+- Normalene og de ferdige tabellene til hvert nett lages fortsatt nye per utsnitt (nettet eier dem).
+- Lagrene holder plass mens 3D er på: høyst 96 MB tallrekker + ett kartbilde (64 MB ved 4096²) på PC, 40 MB + 16 MB på telefon; alt slippes
+  når 3D slås av. Før lå husenes lister midlertidig på mer enn dette (8 byte per tall + kopiene når de vokste), men bare mens de ble bygget.
