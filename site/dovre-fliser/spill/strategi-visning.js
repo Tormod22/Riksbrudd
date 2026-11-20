@@ -252,7 +252,8 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
   // ---------- kartet ----------
   const tegn = (g, vx0, vy1) => { const m = kam.m, ute = m >= 18; if (!åpen && !ute) return; const B = område(); if (!B.length) return;
     const sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, inn = (x, y, r) => x > -r && y > -r && x < VW + r && y < VH + r; g.save();
-    if (åpen) { g.fillStyle = 'rgba(12,10,6,.3)'; g.fillRect(0, 0, VW, VH); }
+    // (runde 12, PC-kritiker F: «krigskartet er så mørkt at bare stedsnavnene kan leses») lettere slør
+    if (åpen) { g.fillStyle = 'rgba(12,10,6,.16)'; g.fillRect(0, 0, VW, VH); }
     // området hver side rår over
     for (const b of B) { const e = eierAv(b.id); if (!e) continue; const x = sx(b.x), y = sy(b.y), r = S.rekkevidde(b.folk) / m; if (r < 4 || !inn(x, y, r)) continue;
       const gr = g.createRadialGradient(x, y, 0, x, y, r), c = sidefarge(e, 'lys'); g.globalAlpha = åpen ? .62 : .4; gr.addColorStop(0, c); gr.addColorStop(.7, c); gr.addColorStop(1, 'rgba(0,0,0,0)');
