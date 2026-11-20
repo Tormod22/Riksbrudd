@@ -484,3 +484,48 @@ og krigen skal kunne vinnes av dem rundt dag 10–14 på «Vanlig» når spiller
 - **Endret (mine):** `fraksjoner-visning.js` (kroken `AI.styr`, `AI.leirMedVarsel`, `AI.inne`, flere lastebiler via `AI.ekstraBiler`, unike lagnavn
   etter omlasting), `krig-visning.js` (kilden «fra speidere» i etterretningslista), `vakter/krig.js` (del «RUNDE 7»), `krig-hjelp.json` (fem emner).
 - **Fellesfil:** `index.html` – bare de to skripttaggene og versjonsmerkene (versjon.py).
+
+### 1. Motstanderne blir farligere over tid
+- **Økonomi** (`Eskalering.inntekt/tjen`, REGLER.økonomi): hver motstander har en kasse (start 1 mill. kr) og folk (start 12). Per døgn 1,6 mill. kr
+  og 10 folk fra hovedkvarteret + 0,1 mill. kr og 1 person per 1000 innbyggere i tettstedene den holder (× `grad.kr`: Lett 0,7, Hard 1,4); tak 30 mill.
+  kr og 120 folk. Tjenes hver spilltime (også i fredstiden), men brukes først når fredstiden er over.
+- **Kjøp** (`Eskalering.kjøp`, hver spilltime): et lag koster 2,5 mill. kr + 12 folk og settes i tettstedet med flest innbyggere de holder
+  (`AI.nytt`). Taket (`Eskalering.tak`) = det gamle taket (`Fraksjoner.lagTak`, høyst 6) + ett lag per døgn etter fredstiden, høyst
+  `grad.tak` (Lett 9, Vanlig 12, Hard 15). Ved taket: lastebiler (1,5 mill., én per fire lag, høyst 3 – `AI.ekstraBiler`, lagene bruker den
+  nærmeste ledige) og fra døgn 7 (Lett 9, Hard 5) sparer en motstander med minst seks lag til **én stridsvogn** (7 mill.), som kjører med
+  angrepsgruppa mot målet når vegnettet er lastet (kanonen skyter etter samme regler som din).
+- Den gamle forsterkningen (et nytt lag hver 6. spilltime opp til `lagTak`) står som før.
+
+### 2. Angrepsgrupper («flere lag sammen mot et stort mål»)
+- Hver spilltime etter fredstiden planlegger hver motstander (`EskaleringSpill.planlegg` -> `Eskalering.velgMål`) én angrepsgruppe av de **frie**
+  lagene (ikke eneste garnison i et eget tettsted, ikke slått ut, minst 30 % ammunisjon, færre enn tre sårede). Mål: tettsteder som trenger mer
+  enn ett lag (minst > 12 mann), tettsteder en annen side holder (også dine – de veier 1,6 ganger, `plan.blåVekt`), tettsteder de har mistet
+  (1,4), og – fra et visst døgn – leiren din. Poeng = √innbyggere × vekt / (km + 4). **Behov** = minst (garnison.js) + 1,3 × styrken som står i
+  tettstedet (× `grad.mot`: Lett 1,15, Hard 0,85); gruppa tar med lag til 1,5 × behovet (`plan.overvekt`), minst to og høyst `grad.gruppeMaks`
+  (4/6/7). **Storbyer** (over 50 000 innbyggere) først fra døgn `grad.storbyFra` (Lett 13, Vanlig 9, Hard 7 = dag 14/10/8); er de for få,
+  tar de med garnisonene fra egne småsteder (under 3000 innbyggere, ingen fiender innen 5 km).
+- **Faser** (`Eskalering.fase`, hvert tiende spillminutt): `samler` – lagene går til samlingsstedet (`Eskalering.samlested`: et eget, ellers
+  nøytralt tettsted 2,5–15 km fra målet, ellers laget nærmest målet); når 75 % av styrken er der (eller etter 10 t) – og tidligst når varselet
+  er ute – `angriper`: alle går mot målet (leiren: mot det høyeste punktet 110 m fra den). Gruppa gir opp under 45 % av behovet eller etter
+  30 t; den er ferdig når tettstedet er deres (leiren: etter 4 t inne ved den).
+- Lagene følger gruppa gjennom kroken `AI.styr(s, v)` i fraksjoner-visning.js: unntatt når laget er slått ut, angriper en fiende det ser,
+  eller (mens gruppa samles) trenger forsyninger. En fiende i måltettstedet går de rett mot (Fraksjoner.velg «jakt»).
+- **Motstanderne mot hverandre**: tettsteder den andre motstanderen holder, er like gode mål; skjer det innen 20 km fra leiren, sier loggen
+  «Etterretning: Kystalliansen samler 2 lag ved Bryne – trolig mot Folkefronten i Kvernaland.»
+
+### 3. Angrep på spilleren og etterretning
+- **Dine tettsteder**: når en gruppe samles mot et tettsted du holder, kommer etterretningen med en gang: «Etterretning: Kystalliansen samler 3
+  lag (ca. 35 mann) ved Oltedal. Målet er trolig Vatne (ditt) – angrep tidligst om ca. 6 t. Send flere lag dit, eller grav ned garnisonen.»,
+  meldingen stopper spolingen («riksbrudd-hendelse» alarm), lagene står i etterretningslista (Leir → Mål, «fra speidere»), og kartet viser
+  samlingsstedet som en stiplet ring med «Kystalliansen: 3 lag samles» og en pil mot målet. Angrepet går tidligst `grad.varsel` etter
+  (Lett 8 t, Vanlig 6 t, Hard 4 t); når det starter: «Kystalliansen angriper nå: 3 lag går fra Oltedal mot Vatne (ca. 6,4 km).»
+  Mister du tettstedet: «Vi har mistet Vatne – Kystalliansen har tatt det.»; gir de opp: «Angrepet på Vatne er slått tilbake …».
+- **Leiren** (ekte tropper, ikke røvere): fra døgn `grad.leirFra` (Lett 10, Vanlig 7, Hard 5 = dag 11/8/6 – det samme som da den gamle «fredstida for
+  leiren» sluttet) og høyst hvert `grad.leirHver` døgn (4/3/2) per motstander. Behov: minst `grad.leirLag` lag (2/3/4), og 1,3 × lagene dine innen
+  1,5 km fra leiren. Uten varsel går ingen AI-lag løs på leiren lenger i et ekte spill (`AI.leirMedVarsel`); i testene som før.
+- **Handelsruter og oljekolonner** (`EskaleringSpill.rute`): hver 6. spilltime er det `grad.rute` (20/35/50 %) sjanse for at en motstander med minst to frie
+  lag sender ett mot et punkt midt på en handelsrute (RegionSpill.status) eller ruta til en oljekolonne du har (k.oppdrag), minst 2,5 km fra leiren,
+  og blir der i 12 t (Region-reglene stenger ruta når en fiende står innen 1,5 km). Loggen: «Etterretning: et lag fra Kystalliansen er på vei mot
+  handelsruta fra Vatne. Sett et lag ved ruta som vakt, eller jag dem bort.»
+- Krigskartet: hver motstander får «12 lag · samler 3 lag ved Oltedal mot Vatne» (KRIG_TILLEGG.side), lagpanelet «i angrepsgruppa mot Vatne».
+- Lagres per leir i «riksbrudd-eskalering» (kasse, grupper, ruteoppdrag, kjøpte kjøretøy med plass og skade); leses 2,5 s etter «riksbrudd-spill».
