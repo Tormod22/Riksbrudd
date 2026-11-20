@@ -71,7 +71,7 @@
     try { const p = ordre(s, L.x + Math.cos(v) * 30, L.y + Math.sin(v) * 30); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ordren feilet: laget blir stående */ }
     logg(`${s.navn} går hjem til leiren og oppløses når de er framme (en ny ordre avbryter det).`); if (valgt === s) visPanel(); return true; }
   KROKER.lagKnapper.push((s, H) => { if (!kanOppløses(s)) return; const n = TR.friske(s), nær = vedLeir(s), klar = spør && spør.s === s && performance.now() < spør.til;
-    if (nær) { const b = knapp(klar ? `Bekreft: oppløs (${n} til leiren)` : 'Oppløs troppen', klar, () => { if (spør && spør.s === s && performance.now() < spør.til) { spør = null; const r = oppløs(s); if (r.feil) logg(r.feil); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); return; }
+    if (nær) { const b = knapp(klar ? `Bekreft: oppløs (${n} til leiren)` : 'Oppløs troppen', false, () => { if (spør && spør.s === s && performance.now() < spør.til) { spør = null; const r = oppløs(s); if (r.feil) logg(r.feil); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); return; }
         spør = { s, til: performance.now() + BEKREFT_MS }; logg(`Trykk «Bekreft» for å oppløse ${s.navn}: de ${n} som lever, går tilbake til arbeid i leiren (som «fri» i Folk)${s.utstyr || s.menn.some(m => m.valgt && m.valgt !== 'rifle') ? '. Kjøpte våpen og utstyr følger ikke med' : ''}.`); visPanel();
         setTimeout(() => { if (spør && spør.s === s && performance.now() >= spør.til) { spør = null; if (valgt === s) visPanel(); } }, BEKREFT_MS + 50); });
       b.id = 'opplosknapp'; b.title = 'De som lever, går tilbake til arbeid i leiren'; if (klar) b.classList.add('oppløs-klar'); H.appendChild(b); return; }
@@ -95,7 +95,7 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
 #tropppanel .p select{ width:auto; min-height:30px; padding:0 4px; font-size:13px; } #tropppanel .u{ display:grid; grid-template-columns:26px 1fr auto; gap:6px; align-items:center; padding:5px 4px; border-bottom:1px solid #2e281e; cursor:pointer; } #tropppanel .u.på{ background:#2f2819; } #tropppanel .u .h{ width:20px; height:20px; border:1px solid #c9b26a; text-align:center; line-height:18px; } #tropppanel .u small{ display:block; }
 #tropppanel .sum{ margin-top:10px; padding:8px 9px; border:1px solid #5a4a2a; background:#241d12; font-size:13.5px; line-height:1.45; } #tropppanel .sum b{ color:#e8d48a; } #tropppanel .sum .advar{ color:#e8b06a; }
 #tropppanel .stopp{ margin-top:10px; padding:8px 10px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:13.5px; line-height:1.4; } #tropppanel .stopp div + div{ margin-top:3px; }
-#tropppanel small.hold{ color:#c9b98a; } #panel button.oppløs-klar{ border-color:#e0804a; color:#f2c9a8; }
+#tropppanel small.hold{ color:#c9b98a; } #panel button.oppløs-klar{ border-color:#e0804a; background:#4a2414; color:#f6d2b4; }
 #leirmeny .tropper .t{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #2e281e; font-size:14px; } #leirmeny .tropper .t small{ display:block; color:var(--ink-dim,#a99); }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'tropppanel', role: 'dialog', 'aria-label': 'Lag ny tropp' }); document.body.appendChild(panel);

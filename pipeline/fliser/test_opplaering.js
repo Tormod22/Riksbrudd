@@ -22,4 +22,10 @@ ok(O.ferdig(T) && O.neste(T) === null && O.nr(T) === 9, 'alle steg tatt: ferdig'
 { const g = O.fra('{"leir":"1,2","gjort":["leir","brakke","bygg2","tropp","gaa"],"slutt":true}'), n = O.fra('{"leir":"1,2","gjort":["leir"]}'), v2 = O.fra(O.til(O.fra('{"v":2,"gjort":["leir","brakke","bygg2","tropp","gaa"],"slutt":true}')));
   ok(O.ferdig(g) && g.hoppet.join() === 'tropp2,mat,forsvar,reparer' && !O.ferdig(n) && O.neste(v2).id === 'tropp2', 'en opplæring som alt var ferdig og lukket, får ikke de nye stegene; en som pågår, får dem'); }
 ok(O.STEG.every(s => s.tittel && s.tekst.length > 20 && s.tekst.length < 170), 'alle steg har kort tekst');
+// RUNDE 8 (kritiker C og D): steg 6 holder med én tropp + to på vakt, reparasjonen vises bare når noe er skadet, et steg som står lenge legges sammen
+{ const T6 = O.fra('{"leir":"1,2","gjort":["leir","brakke","bygg2","tropp","gaa"]}'), s6 = O.neste(T6);
+  ok(s6.id === 'tropp2' && O.oppdater(T6, { ...tomt, tropper: 1, påVakt: 1 }).length === 0 && O.oppdater(T6, { ...tomt, tropper: 1, påVakt: 2, matDøgn: 0 }).join() === 'tropp2', 'steg 6: én tropp og to på vakt holder, én på vakt gjør ikke');
+  ok(/Bygg/.test(s6.tekst) && /Rekrutter/.test(s6.tekst) && s6.kort && s6.kort.length < 120, 'steg 6 sier at to skal bygge og hvordan du får folk (kort tekst på telefon)');
+  const rep = O.STEG.find(s => s.id === 'reparer'); ok(!O.vises(rep, { ...tomt, skadet: 0 }) && O.vises(rep, { ...tomt, skadet: 1 }) && O.vises(O.STEG[0], tomt) && !O.vises(null, tomt), 'reparasjonen vises bare når noe er skadet');
+  const fra = { ms: 1000, tid: 600 }; ok(!O.lenge(fra, { ms: 1000 + O.LENGE.ms - 1, tid: 600 + O.LENGE.min - 1 }) && O.lenge(fra, { ms: 1000 + O.LENGE.ms + 1, tid: 600 }) && O.lenge(fra, { ms: 2000, tid: 600 + O.LENGE.min + 1 }) && !O.lenge(null, fra), 'et steg som står lenge (ekte tid eller spilltid) legges sammen'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);
