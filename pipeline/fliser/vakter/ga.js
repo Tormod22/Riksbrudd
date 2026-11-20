@@ -88,10 +88,10 @@ module.exports = {
         // RUNDE 8: angrepsbanneret er én linje mens du går
         { const al = document.getElementById('alarm'), gaar = document.body.classList.contains('gaar'); document.body.classList.add('gaar');
           if (al) { const før2 = [al.className, al.innerHTML]; al.innerHTML = '<span><b>Angrep: ett røverlag fra sør</b> <small>ikke sett ennå · ventet om ca. 203 min (anslag) – vakttårn og kameraer ser dem før</small></span><button>Forsvar leiren</button><button class="rolig">Vis</button>'; al.classList.add('på');
-            const h = al.getBoundingClientRect().height; d.banner = Math.round(h); al.className = før2[0]; al.innerHTML = før2[1]; krev(h < 46, 'angrepsbanneret er ' + Math.round(h) + ' px høyt mens du går (skal være én linje)'); }
+            const h = al.getBoundingClientRect().height; d.banner = Math.round(h); al.className = før2[0]; al.innerHTML = før2[1]; krev(h < 56, 'angrepsbanneret er ' + Math.round(h) + ' px høyt mens du går (skal være én linje; på telefon er knappen 40 px)'); }
           if (!gaar) document.body.classList.remove('gaar'); }
-        // RUNDE 8: pila mot inngangen – et prøvehus 20 m bak deg med døra mot deg
-        { const k2 = Gange.kropp(), x1 = Math.round(k2.x) - 5, y1 = Math.round(k2.y) - 28, P2 = [[x1, y1], [x1 + 10, y1], [x1 + 10, y1 + 8], [x1, y1 + 8]]; P2.bygg = { i: 4247, t: 0, h: 6, kl: 'hus' };
+        // RUNDE 8: pila mot inngangen – et prøvehus 20 m bak deg med døra mot deg (du står først ute, 14 m sørvest for det første prøvehuset)
+        { sett(x0 - 9, y0 - 11); const k2 = Gange.kropp(), x1 = Math.round(k2.x) - 5, y1 = Math.round(k2.y) - 28, P2 = [[x1, y1], [x1 + 10, y1], [x1 + 10, y1 + 8], [x1, y1 + 8]]; P2.bygg = { i: 4247, t: 0, h: 6, kl: 'hus' };
           P2.dør = { x: x1 + 5, y: y1 + 8, ux: 1, uy: 0, w: 1, hh: 2.1, z0: (hoyde3d(U.cx + x1 + 5, U.cy + y1 + 4, U) - U.h0) * R.EX }; hus = { o: { P: P2 }, nøkler: [] };
           for (let a = Math.floor(x1 / 20); a <= Math.floor((x1 + 10) / 20); a++) for (let q = Math.floor(y1 / 20); q <= Math.floor((y1 + 8) / 20); q++) { const n = a + ',' + q; if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push(hus.o); hus.nøkler.push(n); }
           R.fot.a = 0; Gange.oppdaterPil(); const pil = Gange.inngangPil(); d.pil = pil ? pil.tekst + ' ' + (pil.rel * 180 / Math.PI).toFixed(0) + '°' : '(ingen)';

@@ -37,7 +37,7 @@ html body.gaar #alarm.på{ flex-wrap:nowrap; gap:8px; padding:3px 4px 3px 10px; 
 html body.gaar #alarm > span:first-child{ flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 html body.gaar #alarm > small, html body.gaar #alarm button.rolig:not(#opphevknapp){ display:none; }
 html body.gaar #alarm button{ min-height:30px; padding:0 10px; font-size:13px; flex:none; }
-html body.gaar.kort #alarm > span:first-child small{ display:none; }
+html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.gaar.kort #alarm.på{ top:calc(var(--topp,58px) + 56px); }
 #gaavalg .gang.spol i{ transition:width .25s linear; }`;
   document.head.appendChild(css);
   const mk = document.createElement('div'); mk.id = 'gangeknapper'; const hb = document.createElement('button'), kb = document.createElement('button');
@@ -185,26 +185,31 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; }
     if (!r.i3d && typeof kam !== 'undefined') { kam.x = kar.x; kam.y = kar.y; skitten = true; }
     const p = `${Math.round(k * r.min)} av ${r.min} min`; if (r.p.textContent !== p) r.p.textContent = p; r.i.style.width = Math.round(k * 100) + '%';
     // noe skjedde (spolingen ble senket av spillet: fienden i sikte, alarm …): stopp der du er kommet
-    if (tempo !== r.tempo && tempo !== 0) { slutt(true, 'Reisen stoppet underveis – noe skjedde (se meldingene). Du går videre selv herfra.'); return; }
+    if (!r.tilbake && tempo !== r.tempo && tempo !== 0) { slutt(true, 'Reisen stoppet underveis – noe skjedde (se meldingene). Du går videre selv herfra.'); return; }
     // satt på pause underveis (av deg eller spillet) i over 2 s: stopp der du er kommet
-    if (tempo === 0) { if (!r.pauseFra) r.pauseFra = performance.now(); else if (performance.now() - r.pauseFra > 2000) { slutt(true, 'Reisen stoppet: spillet står på pause. Du går videre selv herfra.'); return; } } else r.pauseFra = 0;
+    if (tempo === 0 && !r.tilbake) { if (!r.pauseFra) r.pauseFra = performance.now(); else if (performance.now() - r.pauseFra > 2000) { slutt(true, 'Reisen stoppet: spillet står på pause. Du går videre selv herfra.'); return; } } else r.pauseFra = 0;
+    // framme: farten tilbake med en gang (før gikk 600× videre til kortet hadde stått i minVis sekunder – en tur på 2 min ble 15)
+    if (k >= 1 && !r.tilbake) { r.tilbake = true; fartTilbake(r); r.tempo = tempo; }
     if (k >= 1 && performance.now() - r.start > G.REGLER.minVis * 1000) { slutt(true, null); return; }
     requestAnimationFrame(reiseSteg);
   }
   function slutt(gå, melding) {
     const r = reise; reise = null; if (!r) return;
     kar2sikt(r.kar);
-    // farten tilbake slik den var (også pausen)
-    // (står spillet på pause nå – satt av noen andre underveis –, beholdes pausen, men ▶ går videre i farten du hadde, ikke 600×)
-    if (r.fart === 'sp0') { klikk(r.før); klikk('sp0'); }
-    else if (tempo === 0) { try { fartFør = r.fart; } catch (e) { /* ingen fartsknapper */ } for (const id of ['sp1', 'sp2', 'sp3', 'sp4']) { const e = document.getElementById(id); if (e) e.classList.toggle('sist', id === r.fart); } }
-    else if (fartNå() !== r.fart) klikk(r.fart);
+    if (!r.tilbake) fartTilbake(r);
     lukkValg(); if (melding) logg(melding);
     if (!gå) return;
     // (runde 8) framme: det reisen skulle gjøre (gå inn i huset), ellers begynn å gå der du er – når kartet rundt deg er klart
     // (avbrutt underveis – melding satt –: du står der du kom, og går videre selv i 3D; i kartet skjer ikke mer)
     if (r.ferdig && !melding) { r.ferdig(r); return; }
     if (r3() && R3.ut && typeof på3d !== 'undefined' && på3d) klarGå(r.kar.x, r.kar.y, start);
+  }
+  // farten tilbake slik den var (også pausen)
+  // (står spillet på pause nå – satt av noen andre underveis –, beholdes pausen, men ▶ går videre i farten du hadde, ikke 600×)
+  function fartTilbake(r) {
+    if (r.fart === 'sp0') { klikk(r.før); klikk('sp0'); }
+    else if (tempo === 0) { try { fartFør = r.fart; } catch (e) { /* ingen fartsknapper */ } for (const id of ['sp1', 'sp2', 'sp3', 'sp4']) { const e = document.getElementById(id); if (e) e.classList.toggle('sist', id === r.fart); } }
+    else if (fartNå() !== r.fart) klikk(r.fart);
   }
   // siktfeltet til karakteren regnes på nytt når han er framme (ikke underveis)
   function kar2sikt(kar) { if (kar) kar.siktSkitten = true; }
@@ -485,12 +490,17 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; }
     start(); if (!R3.fot) return;
     const k = kropp; if (k) R3.fot.a = G.kurs(k.x, k.y, I.x, I.y); R3.fot.pitch = -.05;
     innVent = { P, t0: performance.now() };
-    logg('Du står ved døra. Du går inn …');
+    logg('Du står ved døra og går inn …');
   }
   // venter på at interiøret er bygget (interior3d.js lager det for det nærmeste bygget), så går dørhjelpen inn for deg
   function innSteg() {
     const v = innVent; if (!v) return; if (!r3() || !R3.fot || !kropp) { innVent = null; return; }
-    if (v.P.inne && v.P.inne.inngang) { const q = dørNå(); if (q && q.inn && q.P === v.P && !dørHjelp) { innVent = null; dørEl.onclick(new Event('click')); return; } }
+    // interiøret er laget: du settes rett innenfor døra med blikket inn i huset (med programvare-grafikk tok det over et minutt å gå de
+    // tre metrene gjennom døra med dørhjelpen); er plassen innenfor sperret, går dørhjelpen inn som før
+    if (v.P.inne && v.P.inne.inngang) { const I = v.P.inne.inngang, inn = I.inn || Gaavalg.dørVei(I, true)[1];
+      if (!(typeof hindring3d === 'function' && hindring3d(inn[0], inn[1]))) { innVent = null; kropp.x = inn[0]; kropp.y = inn[1]; kropp.vx = kropp.vy = 0; R3.bane.x = inn[0]; R3.bane.y = inn[1];
+        R3.fot.a = Gaavalg.kurs(I.x, I.y, inn[0], inn[1]); R3.fot.pitch = -.05; logg('Du er inne. Let gjennom huset (E), eller gå ut gjennom døra bak deg.'); return; }
+      const q = dørNå(); if (q && q.inn && q.P === v.P && !dørHjelp) { innVent = null; dørEl.onclick(new Event('click')); return; } }
     if (v.P.utenInne || performance.now() - v.t0 > Gaavalg.REGLER.inn.vent * 1000) { innVent = null; logg(v.P.utenInne ? 'Dette bygget har ingen innside du kan gå inn i.' : 'Døra er der «Inngang»-merket står – gå mot den, eller trykk «Gå inn».'); }
   }
   // ---------- PILA MOT INNGANGEN (runde 8, kritikken: «fant ikke Gå inn ved låven etter Reis hit») ----------
