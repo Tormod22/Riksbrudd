@@ -15,15 +15,16 @@
   'use strict';
   // Claudes forslag: mål for en voksen figur (skala 1, meter), detaljnivå og gange – samlet her
   const REGLER = {
-    hofteY: .1, hofteZ: .92, kneZ: .5, livZ: .98, skulderY: .205, skulderZ: 1.42, albueZ: 1.13, hånd: .27, nakkeZ: 1.5,
+    hofteY: .1, hofteZ: .92, kneZ: .5, livZ: .98, skulderY: .205, skulderZ: 1.42, albueZ: 1.13, hånd: .3, nakkeZ: 1.5,
     // hvor langt fra kameraet en figur får full detalj (m); kantene per detaljnivå står i NIVÅ under
-    nærPC: 40, nærMobil: 26,
+    nærPC: 25, nærMobil: 18,
     // gangen (radianer): lårene, kneet, armene og albuen
     lår: .5, kne: .85, arm: .45, albue: .35,
     // knele (sårede): kroppen senkes så høyre kne står i bakken
     senk: .43,
     // geværet: grepet (der høyre hånd er) og vinklene, lavt på marsj og oppe ved skulderen når laget skyter; venstre hånd på forskjeftet
-    lav: { G: [.17, -.1, 1.12], helling: -.35, gir: .3 }, opp: { G: [.28, -.08, 1.38], helling: 0, gir: 0 }, forskjefte: [.18, 0, .02],
+    // (kolben skal ligge i skulderen når laget sikter: grepet langt nok fram og litt til høyre, løpet litt inn mot midten)
+    lav: { G: [.17, -.1, 1.12], helling: -.35, gir: .3 }, opp: { G: [.34, -.11, 1.38], helling: 0, gir: .05 }, forskjefte: [.16, 0, .02],
     // bære: overarmen fram, underarmen vannrett, hendene litt innover
     bære: [.35, 1.25, .25],
   };
@@ -64,43 +65,47 @@
   // skyggelegger-kode: leddene, armene og våpenet (vinklene for geværet regnes én gang her og settes inn som tall)
   function glsl() {
     const L = armer(REGLER.lav), O = armer(REGLER.opp), R = REGLER, v3 = a => `vec3(${a.map(f6).join(',')})`;
+    // (målt med programvare-grafikk: hvert hjørne regnes for hver trekant, så sinus/cosinus regnes én gang per vinkel og brukes for både
+    // punktet og normalen; hofta og faste deler hopper rett ut)
     return `attribute vec3 aLem;
 attribute vec4 aGang;
 attribute vec4 aPose;
 attribute vec4 aFarge;
-vec3 fRot(vec3 p, vec3 o, float a, float w) { vec3 q = p - o * w; float c = cos(a), s = sin(a); return vec3(q.x * c - q.z * s, q.y, q.x * s + q.z * c) + o * w; }
-vec3 fGir(vec3 p, vec3 o, float a, float w) { vec3 q = p - o * w; float c = cos(a), s = sin(a); return vec3(q.x * c - q.y * s, q.x * s + q.y * c, q.z) + o * w; }
+vec2 fCS(float a) { return vec2(cos(a), sin(a)); }
+void fR(inout vec3 p, inout vec3 n, vec3 o, vec2 cs) { vec3 q = p - o; p = vec3(q.x * cs.x - q.z * cs.y, q.y, q.x * cs.y + q.z * cs.x) + o; n = vec3(n.x * cs.x - n.z * cs.y, n.y, n.x * cs.y + n.z * cs.x); }
+void fG(inout vec3 p, inout vec3 n, vec3 o, vec2 cs) { vec3 q = p - o; p = vec3(q.x * cs.x - q.y * cs.y, q.x * cs.y + q.y * cs.x, q.z) + o; n = vec3(n.x * cs.x - n.y * cs.y, n.x * cs.y + n.y * cs.x, n.z); }
 float fBit(float m, float b) { return mod(floor(m / b + 0.001), 2.0); }
 vec3 fPakk(float v) { float r = floor(v / 65536.0 + 0.00001); float g = floor((v - r * 65536.0) / 256.0 + 0.00001); return vec3(r, g, v - r * 65536.0 - g * 256.0) / 255.0; }
-vec3 figur(vec3 p, float w) {
-  float lem = aLem.x, f = aGang.x, A = aGang.y, sikt = aGang.z, baer = aGang.w, krum = aPose.x, kne = aPose.y;
-  bool vapen = fBit(aPose.z, 8.0) > 0.5;
+void figur(inout vec3 p, inout vec3 n) {
+  float lem = aLem.x, f = aGang.x, A = aGang.y, sikt = aGang.z, kne = aPose.y;
   if (lem > 2.5 && lem < 6.5) {
     float side = mod(lem, 2.0) > 0.5 ? 1.0 : -1.0, fs = side > 0.0 ? f : f + 3.14159;
-    float laar = mix(sin(fs) * ${f6(R.lår)} * A, side > 0.0 ? 1.45 : 0.22, kne), legg = mix(-max(0.0, cos(fs + 0.5)) * ${f6(R.kne)} * A, side > 0.0 ? -1.45 : -1.75, kne);
-    if (lem > 4.5) p = fRot(p, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.kneZ)}), legg, w);
-    p = fRot(p, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.hofteZ)}), laar, w);
+    if (lem > 4.5) fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.kneZ)}), fCS(mix(-max(0.0, cos(fs + 0.5)) * ${f6(R.kne)} * A, side > 0.0 ? -1.45 : -1.75, kne)));
+    fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.hofteZ)}), fCS(mix(sin(fs) * ${f6(R.lår)} * A, side > 0.0 ? 1.45 : 0.22, kne)));
   } else if (lem > 0.5) {
+    float krum = aPose.x;
     if (lem > 6.5 && lem < 10.5) {
-      float side = mod(lem, 2.0) > 0.5 ? 1.0 : -1.0, fs = side > 0.0 ? f + 3.14159 : f, sv = sin(fs) * A;
-      vec3 v = vec3(sv * ${f6(R.arm)}, 0.12 + max(0.0, sv) * ${f6(R.albue)}, 0.0);
-      v = mix(v, vec3(${f6(R.bære[0])}, ${f6(R.bære[1])}, -side * ${f6(R.bære[2])}), baer);
-      if (vapen) v = side > 0.0 ? mix(${v3(L[0])}, ${v3(O[0])}, sikt) : mix(${v3(L[1])}, ${v3(O[1])}, sikt);
+      float side = mod(lem, 2.0) > 0.5 ? 1.0 : -1.0;
+      vec3 v;
+      if (fBit(aPose.z, 8.0) > 0.5) v = side > 0.0 ? mix(${v3(L[0])}, ${v3(O[0])}, sikt) : mix(${v3(L[1])}, ${v3(O[1])}, sikt);
+      else { float sv = sin(side > 0.0 ? f + 3.14159 : f) * A; v = mix(vec3(sv * ${f6(R.arm)}, 0.12 + max(0.0, sv) * ${f6(R.albue)}, 0.0), vec3(${f6(R.bære[0])}, ${f6(R.bære[1])}, -side * ${f6(R.bære[2])}), aGang.w); }
       vec3 S = vec3(0.0, side * ${f6(R.skulderY)}, ${f6(R.skulderZ)});
-      if (lem > 8.5) p = fRot(p, vec3(0.0, side * ${f6(R.skulderY)}, ${f6(R.albueZ)}), v.y, w);
-      p = fGir(fRot(p, S, v.x, w), S, v.z, w);
+      if (lem > 8.5) fR(p, n, vec3(0.0, side * ${f6(R.skulderY)}, ${f6(R.albueZ)}), fCS(v.y));
+      fR(p, n, S, fCS(v.x));
+      if (v.z != 0.0) fG(p, n, S, fCS(v.z));
     } else if (lem > 10.5) {
-      float hel = mix(${f6(R.lav.helling)}, ${f6(R.opp.helling)}, sikt), gir = mix(${f6(R.lav.gir)}, ${f6(R.opp.gir)}, sikt);
-      p = fGir(fRot(p, vec3(0.0), hel, w), vec3(0.0), gir, w) + mix(${v3(R.lav.G)}, ${v3(R.opp.G)}, sikt) * w;
+      fR(p, n, vec3(0.0), fCS(mix(${f6(R.lav.helling)}, ${f6(R.opp.helling)}, sikt)));
+      fG(p, n, vec3(0.0), fCS(mix(${f6(R.lav.gir)}, ${f6(R.opp.gir)}, sikt)));
+      p += mix(${v3(R.lav.G)}, ${v3(R.opp.G)}, sikt);
     } else if (lem > 1.5) {
       vec3 N = vec3(0.0, 0.0, ${f6(R.nakkeZ)});
-      p = fRot(p, N, -krum * 0.6 + sikt * 0.18 * (vapen ? 1.0 : 0.0), w);
-      p = N * w + (p - N * w) * (1.0 + 0.22 * aPose.w * w);
+      float hk = -krum * 0.6 + sikt * 0.18 * fBit(aPose.z, 8.0);
+      if (hk != 0.0) fR(p, n, N, fCS(hk));
+      p = N + (p - N) * (1.0 + 0.22 * aPose.w);
     }
-    p = fRot(p, vec3(0.0, 0.0, ${f6(R.livZ)}), krum, w);
+    if (krum != 0.0) fR(p, n, vec3(0.0, 0.0, ${f6(R.livZ)}), fCS(krum));
   }
-  p.z -= ${f6(R.senk)} * kne * w;
-  return p;
+  p.z -= ${f6(R.senk)} * kne;
 }
 `;
   }
@@ -114,12 +119,13 @@ vec3 figur(vec3 p, float w) {
         .replace('#include <color_vertex>', `#include <color_vertex>
   { float fk = aLem.y; if (fk > 0.5) vColor.xyz *= fk < 1.5 ? fPakk(aFarge.x) : fk < 2.5 ? fPakk(aFarge.y) : fk < 3.5 ? fPakk(aFarge.z) : fPakk(aFarge.w); }`)
         .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-  objectNormal = figur(objectNormal, 0.0);`)
+  vec3 fPos = vec3(position);
+  figur(fPos, objectNormal);`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
-  transformed = figur(transformed, 1.0);
+  transformed = fPos;
   if (aLem.z > 0.5 && fBit(aPose.z, aLem.z) < 0.5) transformed = vec3(0.0);`);
     };
-    m.customProgramCacheKey = () => 'figur3d-1';
+    m.customProgramCacheKey = () => 'figur3d-2';
     m.userData.figur = true; MAT = m; return m;
   }
 
@@ -196,7 +202,7 @@ vec3 figur(vec3 p, float w) {
     // hjelmen i mørk oliven (som en ekte stålhjelm), kanten i sidens farge
     put(kule(N.hode, .13, -.008, 0, 1.655, 1.06, 1, .95, .5), [.27, .29, .22], L.hode, K.fast, DEL.hjelm); put(ring(N.hode, .14, 1.64, 1.655, 1.04, 1), [.55, .55, .55], L.hode, K.jakke, DEL.hjelm);
     // sekk med sovepose på toppen
-    put(kapsel(Math.max(6, kl + 2), .085, .085, 1.07, 1.31, 1.05, 1.75, e).translate(-.205, 0, 0), [.29, .32, .23], L.kropp, K.fast, DEL.sekk);
+    put(kapsel(Math.max(6, kl + 2), .085, .085, 1.07, 1.31, 1.05, 1.75, e).translate(-.195, 0, 0), [.29, .32, .23], L.kropp, K.fast, DEL.sekk);
     if (dt) put(langs(kapsel(lm, .052, .052, -.15, .15, 1, 1, 1), 'y').translate(-.21, 0, 1.43), [.34, .3, .22], L.kropp, K.fast, DEL.sekk);
     // kassen du bærer foran deg
     { const b = new THREE.BoxGeometry(.3, .22, .24); b.translate(.37, 0, 1.06); put(b, [.45, .34, .2], L.kropp, K.fast, DEL.kasse); }
@@ -204,7 +210,7 @@ vec3 figur(vec3 p, float w) {
     { const st = [.11, .11, .12], sv = [.17, .16, .14], gs = Math.max(4, lm);
       put(langs(kapsel(gs, .028, .03, -.05, .17, 1, 1, 1), 'x').scale(1, .8, 1.25).translate(0, 0, .06), st, L.våpen, K.fast, DEL.gevær);
       put(langs(kapsel(Math.max(4, gs - 1), .01, .01, .17, .64, 1, 1, 1), 'x').translate(0, 0, .065), st, L.våpen, K.fast, DEL.gevær);
-      put(langs(dreid(gs, dt ? [[.026, .04], [.034, .1], [.046, .24], [.05, .3], [.008, .305]] : [[.026, .04], [.05, .3], [.008, .305]]), 'x').rotateY(Math.PI).scale(1, .45, 1).rotateY(.05).translate(-.03, 0, .045), sv, L.våpen, K.fast, DEL.gevær);
+      put(langs(dreid(gs, dt ? [[.026, .04], [.034, .09], [.046, .2], [.05, .25], [.008, .255]] : [[.026, .04], [.05, .25], [.008, .255]]), 'x').rotateY(Math.PI).scale(1, .45, 1).rotateY(.05).translate(-.03, 0, .045), sv, L.våpen, K.fast, DEL.gevær);
       if (dt) { put(langs(dreid(gs, [[.026, .17], [.03, .2], [.029, .38], [.022, .41]]), 'x').scale(1, .85, 1.05).translate(0, 0, .055), sv, L.våpen, K.fast, DEL.gevær);
         const gr = kapsel(4, .017, .019, -.06, .02, 1, .8, 1); gr.rotateY(-.3); put(gr, sv, L.våpen, K.fast, DEL.gevær);
         const mg = new THREE.BoxGeometry(.045, .024, .13); mg.rotateY(.3); mg.translate(.1, 0, -.01); put(mg, st, L.våpen, K.fast, DEL.gevær);
