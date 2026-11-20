@@ -806,8 +806,12 @@ balanse ok (3,3 s; den fant at rapporten skjulte skadevarselet – nå står «E
 - `spill/spillet-visning.js`: angrepsdelen – `sumBytte`, `rapport()` og de tre stedene bølgen er over.
 - `index.html`: bare versjonsmerkene (versjon.py).
 
+### Ekstra: banneret når du går selv
+Telefonkritikeren: «den røde angrepsbanneren dekker øverste tredjedel av bildet i førsteperson, også når angrepet er over 3 timer unna». Når du går selv
+(`body.gaar`) er banneret nå én smal linje (12,5 px, knappene 28 px høye), og når ingen har sett angriperne og de er over en time unna (klassen `fjern`),
+står bare varselbrikka.
+
 ### IKKE gjort / svakheter (runde 8)
-- Banneret dekker fortsatt en del av bildet i førsteperson (telefonkritikeren) – ikke i oppdraget.
 - Er en røverbølge og et angrep fra en motstander i gang samtidig, viser banneret røverne (de kommer først); motstanderens angrep vises når bølgen er over.
 - Kampen i bølge 1 er ofte over på 1–2 spillminutter (få røvere): den stopper på 1×, men er kort.
 - Ruten for «sist sett» bruker den siste observasjonen av hvem som helst i angrepet (ikke per lag).

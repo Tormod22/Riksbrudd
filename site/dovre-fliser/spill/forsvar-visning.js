@@ -68,6 +68,8 @@
   css.textContent = `#alarm{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 54px); z-index:9; display:none; max-width:min(560px,94vw); padding:7px 10px; background:#2a120d; border:1px solid #e0714f; color:#f3e3d6; font-size:14.5px; box-shadow:0 4px 14px rgba(0,0,0,.5); }
 #alarm.på{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:center; } #alarm.satt.god{ background:#17200f; border-color:#8fb86a; } #alarm.god b{ color:#cfe8a8; } #alarm .rapport small{ color:#e7dcc3; } #alarm b{ color:#ffb49a; } #alarm small{ color:#d8b8a8; } #alarm button{ background:#4a1d14; border:1px solid #e0714f; color:#fff; min-height:36px; padding:2px 12px; font:inherit; font-size:14px; cursor:pointer; } #alarm button.rolig{ background:#2a2318; border-color:var(--rule,#4a4030); color:var(--ink,#e7dcc3); } #alarm.satt{ background:#1c170f; border-color:#c9b26a; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
+body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
 #leirmeny .forsvar .sum{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; } #leirmeny .forsvar .strek{ height:11px; background:#2e281e; margin:3px 0 6px; } #leirmeny .forsvar .strek i{ display:block; height:100%; background:#8fc46a; } #leirmeny .forsvar.svak .strek i{ background:#e8a46a; } #leirmeny .forsvar.middels .strek i{ background:#c9b26a; }
 #leirmeny .forsvar .p{ display:grid; grid-template-columns:20px 1fr auto; gap:6px; padding:2px 0; font-size:14px; } #leirmeny .forsvar .p small{ color:var(--ink-dim,#a99); } #leirmeny .forsvar .p.ok .h{ color:#9fd08a; } #leirmeny .forsvar .p:not(.ok) .h{ color:#e8a46a; } #leirmeny .forsvar .raad{ margin:6px 0; font-size:13px; color:#e8d7a8; }`;
   document.head.appendChild(css);
@@ -111,10 +113,12 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
     if (V && f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)) return 'sett fra vakttårnet';
     if (window.KameraSpill && KameraSpill.kameraer().some(c => Math.hypot(c.x - e.x, c.y - e.y) <= c.r)) return 'sett av et kamera';
     if (f.varsling && Math.hypot(e.x - L.x, e.y - L.y) < f.varsling) return 'sett av vaktene'; return ''; }
-  function vis() { const L = leir(), r = røvere(); if (L && !r.length && !satt && rapportNå && visRapport()) return; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
+  function vis() { const L = leir(), r = røvere(); if (!r.length) alarm.classList.remove('fjern'); if (L && !r.length && !satt && rapportNå && visRapport()) return; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
     const sett2 = r.filter(e => kjent(e)), nær = sett2.length ? Math.min(...sett2.map(e => Math.hypot(e.x - L.x, e.y - L.y))) : 0, v = retningMotFienden(); let tekst, liten;
     if (!r.length) { tekst = 'Øvelse: forsvaret er satt'; liten = `mot ${FO.retning(v)}`; }
-    else { const st = status(); tekst = st.overskrift; liten = st.tekst;
+    // (runde 8, telefonkritikeren: «banneret dekker en tredel av bildet når du går selv, også når angrepet er over 3 timer unna») når du går selv
+    // (body.gaar), er banneret én smal linje, og er ingen sett og de er over en time unna, står bare varselbrikka (klassen «fjern»)
+    else { const st = status(); tekst = st.overskrift; liten = st.tekst; alarm.classList.toggle('fjern', !st.sett && !st.sist && st.min !== null && st.min > 60);
       // (på små skjermer uten forklaringen om tårn og kameraer, så banneret ikke blir høyt)
       if (!st.sett && !st.sist && st.min !== null && !document.body.classList.contains('kort')) liten += ' – vakttårn og kameraer ser dem før'; }
     const nøkkel = [tekst, liten, satt, window.pekerNede && pekerNede(alarm)].join('|'); alarm.classList.add('på'); alarm.classList.toggle('satt', satt); if (nøkkel === sistAlarm) return; if (window.pekerNede && pekerNede(alarm)) return; sistAlarm = nøkkel;
