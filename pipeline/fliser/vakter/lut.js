@@ -71,6 +71,21 @@ module.exports = {
           // legg i beholderen igjen (og tilbake til sekken)
           krev(LS.leggI(c, 'verktøy', null, 4) === 4 && !I.ting.verktøy && c.B.t.verktøy === 4, 'verktøyet ble ikke lagt i beholderen');
         }
+        // RUNDE 12 (kritiker E/F): knappene inne står samlet i #inneknapper, resultatet av letingen er et panel med «Se i skapene», og den
+        // åpner alle beholderne i huset (ikke bare de innen rekkevidde)
+        if (i3d && P && P.inne) { LS.åpne(false);
+          const rk = document.getElementById('inneknapper'); krev(!!rk && ['letknapp', 'lutknapp', 'mobelknapp', 'dorknapp'].every(id => document.getElementById(id) && document.getElementById(id).parentNode === rk), 'knappene inne står ikke samlet i #inneknapper');
+          const O = LS.husOversikt(P); d.oversikt = `${O.medTing} av ${O.antall}`; krev(O.antall >= 2 && O.medTing >= 1, 'husOversikt fant ikke beholderne i prøvehuset: ' + d.oversikt);
+          LeteSpill.visResultat(P, { fikk: { mat: 3, tre: 1 }, sekken: ['Deler til håndverk: 1 tau.'] }); const fp = document.getElementById('funnpanel'), ft = fp.innerText;
+          krev(fp.classList.contains('på') && /3 rasjoner/.test(ft) && /leirens mat/.test(ft) && /lageret/.test(ft) && /I sekken/i.test(ft), 'resultatpanelet viser ikke hva som gikk hvor: ' + ft.replace(/\s+/g, ' ').slice(0, 140));
+          const seKn = [...fp.querySelectorAll('button')].find(b => /Se i skapene/.test(b.textContent)); krev(!!seKn, '«Se i skapene» mangler i resultatpanelet');
+          if (seKn) { seKn.click(); d.alle = LS.beholdere().length - 1; krev(pn.classList.contains('på') && !fp.classList.contains('på') && d.alle === O.antall, `«Se i skapene» åpnet ikke alle beholderne (${d.alle} av ${O.antall})`); }
+          LS.åpne(false); LeteSpill.lukkFunn(); }
+        // RUNDE 12: varselet om tørst sier «feltflaska» og har «Drikk», som drikker av flaska
+        { const v0 = I.ting.vann; I.ting.vann = 2; B.tørst = 10; const v = KarakterSpill.varsler().find(q => q.id === 'tørst'); d.drikk = v ? v.råd + (v.knapp ? ' [' + v.knapp.t + ']' : '') : '(ingen varsel)';
+          krev(!!v && /feltflaska/.test(v.råd) && v.knapp && v.knapp.t === 'Drikk', 'tørst-varselet har ikke «Drikk» / «drikk fra feltflaska»: ' + d.drikk);
+          if (v && v.knapp) { v.knapp.f(); krev(I.ting.vann === 1 && B.tørst > 10, '«Drikk» i varselet drakk ikke av flaska'); }
+          if (v0 === undefined) delete I.ting.vann; else I.ting.vann = v0; B.tørst = før.B.tørst; }
         // VEKT: tung last gjør deg treg, svært tung = ingen løping
         for (const k of Object.keys(I.ting)) delete I.ting[k]; I.våpen.length = 2; I.aktiv = 0; LS.S().rygg = 'tursekk';
         const lett = { fart: LS.fart(), løp: LS.kanLøpe() }; I.ting.verktøy = 5; const tungt = { fart: LS.fart(), status: LS.bær().status }; I.ting.verktøy = 9; const svært = { fart: LS.fart(), løp: LS.kanLøpe(), status: LS.bær().status };
@@ -122,6 +137,6 @@ module.exports = {
       UtstyrSpill.vis(); return d;
     });
     const ok = !data.feil.length;
-    return { ok, tekst: ok ? `${data.i3d ? `«${data.knapp}» i prøvehuset, panelet med ${(data.beholdere || []).join(' og ')}, trykk-flytt, valg (${(data.valg || []).slice(0, 3).join(', ')} …), gått ${(data.gått || []).join(' mot ')} m lett/tungt${data.møbel ? `, møbel flyttet (${data.møbel}, fart ${data.møbelFart} i armene)` : ''}` : 'uten 3D (bare reglene)'}; brunost mettet, råtten melk −12 helse, jaktrifle i beltet og ladet, melka råtten etter ti døgn, sekken full, tungt ${data.vekt ? data.vekt.tungt.fart.toFixed(2) : '?'} / svært tungt uten løping (${profil})` : data.feil.join('; '), data };
+    return { ok, tekst: ok ? `${data.i3d ? `«${data.knapp}» i prøvehuset, panelet med ${(data.beholdere || []).join(' og ')}, trykk-flytt, valg (${(data.valg || []).slice(0, 3).join(', ')} …), gått ${(data.gått || []).join(' mot ')} m lett/tungt${data.møbel ? `, møbel flyttet (${data.møbel}, fart ${data.møbelFart} i armene)` : ''}` : 'uten 3D (bare reglene)'}; brunost mettet, råtten melk −12 helse, jaktrifle i beltet og ladet, melka råtten etter ti døgn, sekken full, tungt ${data.vekt ? data.vekt.tungt.fart.toFixed(2) : '?'} / svært tungt uten løping${data.alle !== undefined ? `, «Se i skapene» åpnet ${data.alle} beholdere (${data.oversikt} med ting)` : ''}, varselet: ${data.drikk} (${profil})` : data.feil.join('; '), data };
   },
 };

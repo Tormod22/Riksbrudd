@@ -425,6 +425,20 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function blikk(x, y, t) { const k = window.Gaavalg ? Gaavalg.REGLER.berøring.følsom : .005, dx = x - se.x, dy = y - se.y, dt = Math.max(8, (t || 0) - (se.t || 0));
     const f = se.berøring ? 1 + BLIKK.aks * Math.min(1, Math.hypot(dx, dy) / dt / BLIKK.fullFart) : 1;
     R3.fot.a -= dx * k * f; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - dy * k * Math.min(f, 1.5))); se.x = x; se.y = y; se.t = t; se.flyttet = true; snuRask(); }
+  // SVEIP SOM BEGYNNER PÅ EN KNAPP (runde 12): kritikerens raske sveip begynte på våpenbyttet («Automatgevær»), som ga nettleseren
+  // draget (pointercancel) – derfor snudde ingenting. Nå: et drag over 12 punkter som begynner på en av knappene i synsfeltet, blir et
+  // blikk-drag, og knappen trykkes ikke når du slipper. (Skyt-knappen skyter som før mens du drar fra den.)
+  const GJENNOM = new Set(['byttvapen', 'skytknapp', 'kjorknapp', 'letknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']);
+  let kand = null, dempKlikk = 0;
+  const gjennomCss = document.createElement('style'); gjennomCss.textContent = '#byttvapen, #kjorknapp, #inneknapper > button{ touch-action:none; }'; document.head.appendChild(gjennomCss);
+  window.addEventListener('pointerdown', e => { kand = null; if (!r3() || !R3.fot || e.pointerType === 'mouse' || se) return; const b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (b && GJENNOM.has(b.id)) kand = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp }; }, true);
+  window.addEventListener('pointermove', e => { if (!kand || kand.id !== e.pointerId || se || !r3() || !R3.fot) return; if (Math.hypot(e.clientX - kand.x, e.clientY - kand.y) < 12) return;
+    const c = document.getElementById('c3'), r = c ? c.getBoundingClientRect() : { left: 0, top: 0 };
+    se = { id: e.pointerId, x: kand.x - r.left, y: kand.y - r.top, x0: kand.x - r.left, y0: kand.y - r.top, a0: R3.fot.a, berøring: true, t: kand.t, el: c }; kand = null; dempKlikk = performance.now() + 2000;
+    blikk(e.clientX - r.left, e.clientY - r.top, e.timeStamp); }, true);
+  for (const t of ['pointerup', 'pointercancel']) window.addEventListener(t, e => { if (kand && kand.id === e.pointerId) kand = null; }, true);
+  window.addEventListener('click', e => { if (dempKlikk && performance.now() < dempKlikk && e.target && e.target.closest && e.target.closest('button')) { e.preventDefault(); e.stopImmediatePropagation(); } dempKlikk = 0; }, true);
   // pekeren følges på hele vinduet mens du ser rundt (slippes fingeren over en knapp eller utenfor lerretet, får lerretet det ikke alltid med seg)
   for (const t of ['pointermove', 'pointerup', 'pointercancel']) window.addEventListener(t, e => { if (!se || se.id !== e.pointerId || !se.el || e.target === se.el || !r3() || !R3.fot) return;
     const r = se.el.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; if (t === 'pointermove') blikk(x, y, e.timeStamp); else { if (t === 'pointerup' && (x !== se.x || y !== se.y)) blikk(x, y, e.timeStamp); se = null; } }, true);
