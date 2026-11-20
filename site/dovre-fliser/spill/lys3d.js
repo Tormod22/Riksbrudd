@@ -137,7 +137,8 @@
   // mørk stripe – og bare der (skyggekartet dekker høyst 1,4 km), så den så ut som en feil. Det som tar imot uten å kaste, får nå en
   // dybdetegning som ikke tegner noe (tomDybde), slik merknaden under alltid har ment.
   let ingenDybde = null;
-  const tomDybde = () => ingenDybde || (ingenDybde = new THREE.ShaderMaterial({ vertexShader: 'void main() { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }', fragmentShader: 'void main() { discard; }' }));
+  // (20. nov) skyggeleggeren må bruke «position»: i WebGL1 gir instanstegning uten et aktivt punktattributt (divisor 0) GL-feil 1282
+  const tomDybde = () => ingenDybde || (ingenDybde = new THREE.ShaderMaterial({ vertexShader: 'void main() { gl_Position = vec4(2.0, 2.0, 2.0, 1.0) + vec4(position * 1e-30, 0.0); }', fragmentShader: 'void main() { discard; }' }));
   function merk(R, på) {
     // (terrenget selv kaster ikke: med VSM tegnes forsidene i skyggekartet, og bratte lier ville skygge for seg selv i striper)
     const kast = new Set([R.bruMesh, ...(R.treMesh || []), ...(R.husMesh || []), ...(R.småMesh || [])]);
