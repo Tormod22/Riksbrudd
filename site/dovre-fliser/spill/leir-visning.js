@@ -61,7 +61,19 @@
 #byggvalg small.forklar{ margin-top:3px; line-height:1.35; }
 body.kort #byggvalg{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); transform:none; max-width:none; bottom:calc(6px + env(safe-area-inset-bottom,0px));
   padding:6px 8px; font-size:13.5px; max-height:44vh; overflow-y:auto; }
-body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; }`;
+body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; }
+/* RUNDE 12: liggende telefon – Leir-menyen går helt ned (telefon.js/skjermlag.js), og de fire tallene står på én smal rad så byggekortene
+   kommer høyere opp (før måtte lista rulles fram). Strømlinja er én linje. */
+body.kort.tlfligg #leirmeny .status{ grid-template-columns:repeat(4, minmax(0,1fr)); gap:3px; margin-top:2px; } body.kort.tlfligg #leirmeny h2{ margin:0; font-size:19px; }
+body.kort.tlfligg #leirmeny .flis{ padding:2px 5px; } body.kort.tlfligg #leirmeny .flis small{ font-size:9.5px; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } body.kort.tlfligg #leirmeny .flis b{ font-size:12.5px; display:block; overflow:hidden; text-overflow:ellipsis; }
+body.kort.tlfligg #leirmeny .status .linje{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* RUNDE 12: liggende telefon – én linje tekst og én rad knapper (se kortBanner) */
+body.kort.tlfligg #byggvalg.på{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; left:calc((100vw - 52px) / 2); right:auto; transform:translateX(-50%); width:max-content; max-width:min(640px, calc(100vw - 72px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))); padding:4px 6px; max-height:none; overflow:visible; }
+body.kort.tlfligg #byggvalg .btekst{ flex:1 1 100%; min-width:0; font-size:13px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; cursor:pointer; }
+body.kort.tlfligg #byggvalg.harsmå:not(.helt) .btekst::after{ content:' ⓘ'; color:var(--ink-dim); }
+body.kort.tlfligg #byggvalg:not(.helt) > small{ display:none; } body.kort.tlfligg #byggvalg.helt .btekst{ white-space:normal; } body.kort.tlfligg #byggvalg > small{ flex:1 1 100%; font-size:12px; }
+body.kort.tlfligg #byggvalg button{ margin:0; flex:none; min-height:36px; } body.kort.tlfligg #byggvalg button[data-kort]{ font-size:0; min-width:40px; padding:0 9px; }
+body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); font-size:14px; } body.kort.tlfligg #byggvalg button.slått{ border-color:#c9b26a; color:#f0dc9a; background:#3a3020; }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
@@ -335,7 +347,18 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
     banner.append(knapp('Avbryt', avbryt));
+    kortBanner();
   }
+  // RUNDE 12 (21. nov, kritiker E): på liggende telefon dekket byggebanneret en tredjedel av kartet. Der er det én linje tekst (trykk på den
+  // for alle detaljene) og én rad med små knapper: veksleknappene som ikoner (hele navnet i title/aria-label), og kortere tekst på kjøpeknappen.
+  // Knappene beholder teksten sin (kontrollskriptet trykker etter den); bare CSS-en viser data-kort. Tegnene er Claudes forslag.
+  let bannerHelt = false;
+  const KORT_NAVN = [[/^⟲ 15°$/, '⟲'], [/^⟳ 15°$/, '⟳'], [/^Rutenett: .*$/, '▦'], [/^Inntil naboen: .*$/, '⇤'], [/^Fortsett: .*$/, '⧉'], [/^Avbryt$/, '✕'], [/^Legg i planen$/, 'Til planen'],
+    [/^Kjøp materialene og bygg: (.*) i alt$/, 'Kjøp og bygg · $1']];
+  function kortBanner() { const f = banner.firstElementChild; if (f && f.tagName === 'DIV') { f.classList.add('btekst'); f.onclick = () => { bannerHelt = !bannerHelt; banner.classList.toggle('helt', bannerHelt); }; }
+    banner.classList.toggle('helt', bannerHelt); banner.classList.toggle('harsmå', !!banner.querySelector(':scope > small'));
+    for (const b of banner.querySelectorAll(':scope > button')) { const t = b.textContent.trim(), k = KORT_NAVN.find(([r]) => r.test(t)); if (!k) continue; b.dataset.kort = t.replace(k[0], k[1]);
+      if (!b.title) b.title = t; b.setAttribute('aria-label', t); if (/: på$/.test(t)) b.classList.add('slått'); } }
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   // Kartets klasse (vann) og eksisterende hus for punktene i bygget (hentes før regelsjekken, som er uten nettverk)
   async function kartFor(punkter) {

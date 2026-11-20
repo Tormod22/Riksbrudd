@@ -98,9 +98,14 @@ html body #opplaering.sammen .t, html body #opplaering.sammen .rad, html body #o
 body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #sekk){ padding-bottom:46px; scroll-padding-bottom:46px; }
 /* (runde 10) på telefon er ruta ugjennomsiktig – kildeteksten, målestokken og kompassrosa skinte gjennom */
 body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } body.kort #opplaering.liten{ opacity:1; }
+/* RUNDE 12: liggende telefon – lagt sammen er ruta en smal brikke (nummer, tittel, +) nede til venstre over bunnmenyen; hele brikka kan trykkes */
+body.kort.tlfligg #opplaering.sammen:not(.liten){ right:auto; width:max-content; max-width:min(380px, calc(100vw - 130px)); cursor:pointer; pointer-events:auto; }
+body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
+  // RUNDE 12: liggende telefon – trykk hvor som helst på den smale brikka åpner steget (som +)
+  boks.addEventListener('click', e => { if (!boks.classList.contains('sammen') || boks.classList.contains('liten') || (e.target.closest && e.target.closest('button'))) return; const f = document.getElementById('oppfold'); if (f && document.body.classList.contains('tlfligg')) f.click(); });
   const leirNøkkel = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : null; };
   function last() { const k = leirNøkkel(), o = fra(les(NØKKEL)); T = k && o.leir === k ? o : tom(); T.leir = k || undefined; sett = { leir: false, folk: false, forsvar: false }; }
   const lagre = () => { if (T.leir) skriv(NØKKEL, til(T)); };
@@ -151,7 +156,9 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
   // –/+ oppe til høyre: legg ruta sammen til én linje (huskes for alle spill)
   function fold() { const f = document.createElement('button'); f.id = 'oppfold'; f.textContent = foldetNå ? '+' : '–'; f.setAttribute('aria-label', foldetNå ? 'Vis hele opplæringen' : 'Legg sammen opplæringen'); f.title = f.getAttribute('aria-label');
     // lagt sammen av seg selv (Senere, lenge, angrep): + viser det igjen nå uten å endre valget ditt; ellers bytter + / – valget (huskes)
-    f.onclick = e => { e.stopPropagation(); if (foldetNå && !sammen) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; oppeAngrep = angrepNå(); }
+    f.onclick = e => { e.stopPropagation(); const nå0 = Opplaering.neste(T);
+      if (liggTlf() && !sammen) { åpnetLigg = foldetNå ? (nå0 ? nå0.id : 'slutt') : null; if (foldetNå) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; oppeAngrep = angrepNå(); } sistSteg = null; kjør(); return; }
+      if (foldetNå && !sammen) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; oppeAngrep = angrepNå(); }
       else { sammen = !sammen; skriv('riksbrudd-opplaering-sammen', sammen ? '1' : null); if (!sammen) { utsatt = null; oppeAngrep = angrepNå(); if (stegFra) stegFra = { id: stegFra.id, ms: performance.now(), tid: spilltid() }; } }
       sistSteg = null; kjør(); }; boks.appendChild(f); }
   function slå(på) { av = !på; skriv(AV, av ? '1' : null); if (på && Opplaering.ferdig(T)) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); } if (!på && typeof logg === 'function') logg('Opplæringen er slått av. Du finner den igjen i Leir-menyen under Mål.'); sistSteg = null; kjør(); }
@@ -165,6 +172,10 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
   // til bunnmenyen. Er det ikke plass ved siden av (tropppanelet er bredt), viker linja. Lappene for hogst/riving og bygging (DEKKER) har
   // forrang nederst. VED_MIN (Claudes forslag): så bred må plassen ved siden av menyen være.
   const VED_MIN = 200;
+  // RUNDE 12 (21. nov, kritiker E – liggende telefon): ruta tok ca. 27 % av høyden. Liggende står den som én tynn linje (nummer og tittel)
+  // til du trykker + (da vises hele steget til det er gjort eller du trykker –). åpnetLigg = steget du har åpnet. Gjelder bare liggende telefon.
+  let åpnetLigg = null;
+  const liggTlf = () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2;
   function kjør() { kjørInn(); try { ved(); } catch (e) { /* neste runde */ } }
   function ved() { const b = document.body, W = window.innerWidth, ligg = b.classList.contains('kort') && W > window.innerHeight * 1.2, på = boks.classList.contains('på') && boks.classList.contains('liten');
     const meny = på && ligg ? MENYER.map($).find(e => synlig(e) && e.classList.contains('på')) || MENYER.map($).find(e => synlig(e)) : null;
@@ -192,7 +203,7 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
     if (gjortKø.length) { const nå = performance.now(); if (!gjortTil) gjortTil = nå + VIS_GJORT;
       if (nå >= gjortTil) { gjortKø.shift(); gjortTil = gjortKø.length ? nå + VIS_GJORT : 0; }
       if (gjortKø.length && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) { if (dekker) { skjul(); return; }
-        foldetNå = sammen || (angrep && !oppeAngrep); tegn(null, null, g); boks.classList.add('på'); ring.classList.remove('på'); liten(tlf && meny); return; } } }
+        foldetNå = sammen || (angrep && !oppeAngrep) || (liggTlf() && !åpnetLigg); tegn(null, null, g); boks.classList.add('på'); ring.classList.remove('på'); liten(tlf && meny); return; } } }
     const s = Opplaering.neste(T);
     if (!s) { if (T.slutt) { skjul(); return; }
       // «Opplæringen er ferdig» lukker seg selv etter en stund (den ble stående under «Mer»)
@@ -206,11 +217,15 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
     if (dekker) { skjul(); return; }
     // (runde 8) hvor lenge steget har stått: ugjort lenge, «Senere» eller et angrep legger ruta sammen til én linje
     const nå = { ms: performance.now(), tid: spilltid() }; if (!stegFra || stegFra.id !== s.id) { stegFra = { id: s.id, ms: nå.ms, tid: nå.tid }; if (utsatt !== s.id) utsatt = null; }
-    foldetNå = sammen || utsatt === s.id || Opplaering.lenge(stegFra, nå) || (angrep && !oppeAngrep);
+    if (åpnetLigg && åpnetLigg !== s.id) åpnetLigg = null;
+    const lengeNå = Opplaering.lenge(stegFra, nå);
+    foldetNå = sammen || utsatt === s.id || lengeNå || (angrep && !oppeAngrep) || (liggTlf() && åpnetLigg !== s.id);
     tegn(s); boks.classList.add('på'); liten(tlf && meny);
     const m = pekPå(s), inni = e => { const p = e && e.closest && e.closest('#leirmeny, #folkmeny, #tropppanel'); if (!p) return true; const a = e.getBoundingClientRect(), b = p.getBoundingClientRect(); return a.bottom > b.top + 4 && a.top < b.bottom - 4; };
     // (runde 8) ringen tegnes ikke rundt noe som er rullet ut av menyen (den sto over bunnmenyen)
-    if (m && synlig(m) && inni(m)) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
+    // RUNDE 12: ringen lyste rundt Tropper i flere spilldøgn mens steget var lagt sammen – den står ikke når steget er utsatt, har stått lenge
+    // eller du har lagt opplæringen sammen selv (den korte linja liggende viser den fortsatt)
+    if (m && synlig(m) && inni(m) && !sammen && utsatt !== s.id && !lengeNå) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
   setInterval(kjør, 400); window.addEventListener('riksbrudd-spill', () => { last(); setTimeout(kjør, 600); }); window.addEventListener('resize', kjør);
   // Leir-menyen, fanen Mål: slå opplæringen av og på, eller ta den en gang til
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));

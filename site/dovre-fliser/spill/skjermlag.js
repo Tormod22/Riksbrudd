@@ -102,6 +102,8 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
     grense -= REGLER.luft; const H = window.innerHeight;
     for (const id of LØFT) { const e = $(id); if (!e) continue; if (!på || !vises(e)) { tilbake(e); continue; }
       const r = e.getBoundingClientRect(); if (r.bottom <= grense + 1 || r.height < 40) continue;
+      // (runde 12) liggende telefon: bunnmenyen står ved siden av panelet – da går panelet helt ned
+      { const mr = m.getBoundingClientRect(); if (B.classList.contains('tlfligg') && (r.right <= mr.left + 1 || r.left >= mr.right - 1)) { tilbake(e); continue; } }
       if (!løftet.has(e)) løftet.set(e, { bottom: e.style.bottom, maxHeight: e.style.maxHeight, overflowY: e.style.overflowY });
       e.style.maxHeight = Math.max(90, Math.round(grense - Math.max(r.top, 0))) + 'px'; e.style.overflowY = 'auto';
       // står panelet fast i bunnen, flyttes det opp (toppen blir der den var)

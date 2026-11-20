@@ -29,6 +29,14 @@
   border-bottom:1px solid var(--rule); display:flex; justify-content:center; } #oppstart .bilde img{ width:92px; max-height:none; } }
 /* liggende telefon (lav skjerm): hele portrettet synlig ved siden av valgene */
 @media (max-height:500px) and (min-width:701px){ #oppstart .bilde img{ height:calc(92vh - 110px); max-height:none; width:auto; } }
+/* RUNDE 12 (21. nov, kritiker E): liggende telefon – portrettet (og flagget) står til venstre og følger med når du ruller, overskriften er
+   kortere, og knappene nederst («Neste …») står alltid synlige i bunnen av vinduet. */
+@media (orientation:landscape) and (max-height:500px){ #oppstart{ padding:6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left)); } #oppstart .ark{ max-width:900px; padding:8px 14px 0; max-height:100%; box-sizing:border-box; }
+  #oppstart h2{ font-size:20px; } #oppstart .steg{ font-size:12.5px; margin-bottom:4px; line-height:1.3; } #oppstart h3{ margin:8px 0 4px; }
+  #oppstart .to{ flex-wrap:nowrap; gap:14px; } #oppstart .to>.bilde, #oppstart .to>.flaggboks{ order:-1; position:sticky; top:4px; }
+  #oppstart .bilde img{ height:calc(100vh - 128px); max-height:260px; width:auto; max-width:190px; }
+  #oppstart .bunn{ position:sticky; bottom:0; z-index:3; margin:8px -14px 0; padding:6px 14px calc(6px + env(safe-area-inset-bottom,0px)); background:var(--panel); border-top:1px solid var(--rule); }
+  #oppstart .bunn button{ min-height:40px; padding:4px 16px; } }
 #oppstart .faner{ display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--rule); margin:2px 0 4px; }
 #oppstart .faner button{ background:transparent; border:0; border-bottom:3px solid transparent; color:var(--ink-dim); min-height:40px; padding:4px 14px; cursor:pointer; font:inherit; font-size:16px; }
 #oppstart .faner button.på{ color:var(--hover); border-bottom-color:var(--hover); }
@@ -70,6 +78,11 @@
 #leirvalg.på{ display:block; }
 /* PC: over kommandolinja nederst */
 body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px)); }
+/* RUNDE 12 (21. nov, kritiker E og F): boksen lå midt over kartet (Stavanger/Jæren) der de fleste leter. Den står nå langs kanten: øverst til
+   høyre under knapperaden på PC og liggende telefon (venstre for zoomknappene), tekst venstrestilt. Mål (380/320 px) er Claudes forslag. */
+body:not(.smal) #leirvalg{ top:calc(var(--topp,58px) + 10px); bottom:auto; left:auto; right:calc(64px + env(safe-area-inset-right,0px)); transform:none; width:max-content; max-width:min(380px, 44vw); text-align:left; max-height:calc(100% - var(--topp,58px) - 24px); overflow-y:auto; box-sizing:border-box; box-shadow:0 6px 20px rgba(0,0,0,.55); }
+body.kort:not(.smal) #leirvalg{ top:calc(var(--topp,44px) + 4px); right:calc(56px + env(safe-area-inset-right,0px)); max-width:min(320px, 42vw); padding:6px 9px; font-size:13.5px; line-height:1.3; }
+body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
 #leirvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:42px; padding:4px 14px; margin:6px 4px 0; cursor:pointer; font:inherit; }`;
   document.head.appendChild(css);
 
@@ -209,8 +222,11 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
         el('div', { klasse: 'bunn' }, knapp('← Tilbake', false, () => vis(1)), knapp('Neste: plass til leiren →', false, () => { const f = O.feil(utkast); if (f.length) { melding.textContent = f.join(' '); return; } vis(3); })));
     } else {
       // spillformen (spill/scenario.js): vanskelighetsgrad, utfordringer og scenario velges her, før leiren
-      const SC = window.Scenario, rg = utkast.regler || (utkast.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: null }), form = el('div', { id: 'formvalg' });
-      const lagForm = () => { form.innerHTML = ''; if (!SC) return;
+      const rg = utkast.regler || (utkast.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: null }), form = el('div', { id: 'formvalg' });
+      // RUNDE 12 (kritiker E: «etter omlasting i steg 3 er valgene borte»): et påbegynt utkast åpnes i steg 3 før scenario.js er lastet
+      // (den står lenger ned i index.html). Valgene tegnes nå når Scenario finnes – det prøves igjen et lite øyeblikk senere.
+      let forsøk = 0;
+      const lagForm = () => { form.innerHTML = ''; const SC = window.Scenario; if (!SC) { if (forsøk++ < 100) setTimeout(() => { if (form.isConnected) lagForm(); }, 150); return; }
         form.append(el('h3', {}, 'Vanskelighetsgrad'));
         const v = el('div', { klasse: 'bakgrunn' }); for (const [id, V] of Object.entries(SC.REGLER.vanskelighet)) { const kn = knapp('', rg.vanskelighet === id, () => { rg.vanskelighet = id; lagForm(); }); kn.dataset.vansk = id; kn.append(el('b', {}, V.navn), el('small', {}, V.tekst)); v.appendChild(kn); } form.append(v);
         form.append(el('h3', {}, 'Scenario (mål med tidsfrist)'));
