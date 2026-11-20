@@ -327,11 +327,11 @@ function tegn() {
   tegnInfra(vx0, vy1);
   // BYGGEVISNING (spill/byggevisning.js): mens du bygger i 2D, dempes kartet, lagene og navnene, og byggene tegnes øverst
   if (window.BYGGEVISNING && BYGGEVISNING.på()) {
-    for (const f of KROKER.tegn) if (!f.bygg) f(ctx, vx0, vy1);
-    tegnEnheter(vx0, vy1); if (window.Etikett) Etikett.tegnAlle(ctx, true); BYGGEVISNING.under(ctx, vx0, vy1);
+    for (const f of KROKER.tegn) if (!f.bygg && !f.over) f(ctx, vx0, vy1);
+    tegnEnheter(vx0, vy1, () => { for (const f of KROKER.tegn) if (!f.bygg && f.over) f(ctx, vx0, vy1); }); if (window.Etikett) Etikett.tegnAlle(ctx, true); BYGGEVISNING.under(ctx, vx0, vy1);
     for (const f of KROKER.tegn) if (f.bygg) f(ctx, vx0, vy1);
     if (window.Etikett) Etikett.tegnAlle(ctx); BYGGEVISNING.over(ctx, vx0, vy1);
-  } else { for (const f of KROKER.tegn) f(ctx, vx0, vy1); tegnEnheter(vx0, vy1); if (window.Etikett) Etikett.tegnAlle(ctx); }
+  } else { for (const f of KROKER.tegn) if (!f.over) f(ctx, vx0, vy1); tegnEnheter(vx0, vy1, () => { for (const f of KROKER.tegn) if (f.over) f(ctx, vx0, vy1); }); if (window.Etikett) Etikett.tegnAlle(ctx); }
   tegnHud();
 }
 
@@ -942,7 +942,7 @@ let valgt = null, modus = null;
 function tilSkjerm(X, Y, vx0, vy1) { return [(X - vx0) / kam.m, (vy1 - Y) / kam.m]; }
 // Tegner lagene, skudd og «sist sett» med en projeksjon: i 2D rett ned, i 3D gjennom kameraet.
 // g = 2D-tegneflate, proj(X, Y) -> [x, y] i CSS-piksler (eller null bak kameraet), mPer(X, Y) = meter per piksel der.
-function tegnEnheter(vx0, vy1) {
+function tegnEnheter(vx0, vy1, mellom) {
   const proj = (X, Y) => tilSkjerm(X, Y, vx0, vy1);
   if (VIS.taake) tegnTåke(vx0, vy1);
   const m = kam.m;
@@ -954,6 +954,8 @@ function tegnEnheter(vx0, vy1) {
     ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .17) : .2; ctx.imageSmoothingEnabled = true;
     ctx.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); ctx.globalAlpha = 1;
   } for (const f of KROKER.siktlys) f(ctx, vx0, vy1, m); }
+  // (runde 7) tegnekroker med f.over = true (leirens bygg, folkene, feltbilen) tegnes over tåka og siktfeltet, men under lagene
+  if (mellom) mellom();
   tegnLag(ctx, proj, () => kam.m);
 }
 // Fargene per side (fraksjonene i spill/fraksjoner.js; reserve: blå/rød).
@@ -991,15 +993,17 @@ function tegnLag(g, proj, mPer) {
     if (m < 1.6 && på3d) {
       // i 3D er soldatene egne figurer (soldater3d): her bare navnet
     } else if (m < 1.6) { // hver mann for seg, i formasjon: kolonne på marsj, kile når de står
-      const levende = s.menn.filter(q => q.hp > 0), ca = Math.cos(s.retning), sa = Math.sin(s.retning), r = Math.max(3.4, .35 / m);
+      // (runde 7) folk sett ovenfra (spill/leir2d.js: skuldre i sidens farge, hjelm, sekk og gevær) i stedet for runde prikker
+      const levende = s.menn.filter(q => q.hp > 0), ca = Math.cos(s.retning), sa = Math.sin(s.retning), r = window.Leir2d && !Leir2d.av ? Leir2d.figurR(m) : Math.max(3.4, .35 / m);
       s.menn.filter(q => q.hp <= 0).forEach((q, n) => { const X = s.x - (n + 1) * 2.5 * ca + 6 * sa, Y = s.y - (n + 1) * 2.5 * sa - 6 * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2;
         g.strokeStyle = 'rgba(40,30,20,.85)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(a - r, b - r); g.lineTo(a + r, b + r); g.moveTo(a + r, b - r); g.lineTo(a - r, b + r); g.stroke(); });
       levende.forEach((q, n) => {
         const [fx, fy] = FORMPLASS(s, n);
         const X = s.x + fx * ca - fy * sa, Y = s.y + fx * sa + fy * ca, q2 = proj(X, Y); if (!q2) return; const [a, b] = q2, leder = s.menn.indexOf(q) === s.leder;
-        g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
+        if (window.Leir2d && !Leir2d.av) Leir2d.mann(g, a, b, r, -s.retning, { farge: sidefarge(s.side, 'lys'), leder, valgt: s === valgt, såret: q.hp < 1, går: !!s.sti && !s.nedgravd, fase: n * 1.7 });
+        else { g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(a + r * .35, b + r * .35, r, 0, 6.283); g.fill();
         g.fillStyle = leder ? '#f0d79a' : sidefarge(s.side, 'lys'); g.strokeStyle = s === valgt ? '#f0d79a' : '#1a1710'; g.lineWidth = 1;
-        g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); }
+        g.beginPath(); g.arc(a, b, r, 0, 6.283); if (q.hp < 1) { g.lineWidth = 1.6; g.strokeStyle = g.fillStyle; g.stroke(); } else { g.fill(); g.stroke(); } }
         if (window.Etikett) Etikett.hinder(a - r, b - r, 2 * r, 2 * r); topp = Math.min(topp, b - r);
       });
     } else if (window.Merker) { // lagsymbol fra det felles merkesettet (18. nov): eget = rektangel, fiende = rute på spissen
@@ -3333,14 +3337,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=2f932d05b7"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=7f50441337"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=7cf5c4f80e"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=f9cdb3aefc"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=2888ca022f"></script>
-<script src="/dovre-fliser/spill/byggevisning.js?v=22e1743458"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=dcc1b8514e"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=1b9f97551d"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=05561e1f9d"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>

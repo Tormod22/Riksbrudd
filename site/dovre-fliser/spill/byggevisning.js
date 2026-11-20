@@ -131,12 +131,15 @@
       if (sterk && rp > 40) skrift(g, `${R0[1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); };
     // nøkkeltall under navnet på hvert bygg når du er nær nok: strøm, senger, lager, diesel – og rødt når bygget står uten strøm
     if (m < .45) { const uten = LeirSpill.siste() && LeirSpill.siste().mangler; g.font = '10px sans-serif'; g.textAlign = 'center';
+      // (runde 7) tallene går under navnene som alt står (Etikett.tegnet) og under hverandre, ikke oppå dem
+      const opptatt = window.Etikett && Etikett.tegnet ? Etikett.tegnet().map(n => n.ramme) : [], over2 = (r, q) => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3];
       for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (B.linje || B.del || !LB.ferdig(b)) continue; const x = sx(b.x), y = sy(b.y); if (x < 0 || y < 0 || x > VW || y > VH) continue;
         const e = LB.effekt(b), d = []; if (uten && uten.has(b.id)) d.push('uten strøm'); else if (e.kw > 0) d.push('+' + tall(e.kw) + ' kW'); else if (e.kw < 0) d.push('−' + tall(-e.kw) + ' kW');
         if (e.plasser) d.push(e.plasser + ' senger'); if (e.lager) d.push('lager ' + e.lager); if (e.liter) d.push(tall(e.liter) + ' l'); if (!d.length) continue;
         // RUNDE 6 (kritikken: «Brakke −1 kW · 8 senger» lå oppå bygget og så ut som en feil): tallene står under byggets omriss, ikke oppå taket
         let yb = y + 18; try { const H = LB.hjørner(b); if (H && H.length) yb = Math.max(...H.map(q => sy(q[1]))) + 13; } catch (e) { yb = y + 18; }
-        const t = d.join(' · '); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, yb); g.fillText(t, x, yb); } }
+        const t = d.join(' · '), tw = g.measureText(t).width + 4; for (let k = 0; k < 3; k++) { const r = [x - tw / 2, yb - 10, tw, 13]; if (!opptatt.some(q => q && over2(r, q))) break; yb += 13; }
+        opptatt.push([x - tw / 2, yb - 10, tw, 13]); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, yb); g.fillText(t, x, yb); } }
     const type = p && !p.mal ? p.type : null;
     if (type && RING[type]) for (const b of L.bygg) if (b.type === type && b.id !== p.flytt) ring(b, false);
     if (p && !p.mal) { const B = LB.BYGG[p.type];
