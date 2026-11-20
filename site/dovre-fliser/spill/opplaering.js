@@ -22,7 +22,7 @@
     { id: 'tropp2', tittel: 'Mer forsvar før dag 4', tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4 holder), eller sett to på Vakt i Folk. La minst to stå på Bygg. Flere folk: Rekrutter i Folk (krever ledig seng).',
       kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || (b.tropper >= 1 && b.påVakt >= 2) },
     { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3 },
-    { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
+    { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → rull ned til Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
     // (runde 8, kritiker D: steget sto oppe under angrepet selv om leiren ikke hadde ferdige bygg) vises bare når noe er skadet;
     // et angrep som er over uten skade, gjør steget ferdig uten at det har vært vist
     { id: 'reparer', tittel: 'Reparer byggene etter et angrep', tekst: 'Etter et angrep er byggene skadet. Trykk «Reparer alle» i banneret, eller velg et bygg og Reparer. Ledige byggelag reparerer også av seg selv.', mål: 'reparer', ferdig: b => b.angrep && b.skadet === 0, vises: b => b.skadet > 0 },
@@ -61,7 +61,7 @@
   const VIS_GJORT = 3500, FERDIG_LUKK = 12000; let gjortKø = [], gjortTil = 0, ferdigFra = 0, sammen = les('riksbrudd-opplaering-sammen') === '1';
   // (runde 8) foldetNå = ruta står som én linje nå: valget ditt (sammen, huskes), «Senere» (utsatt = stegets id), steget har stått
   // ugjort lenge (Opplaering.lenge – stegFra), eller leiren angripes. + under et angrep holder ruta oppe til angrepet er over (oppeAngrep).
-  let foldetNå = sammen, utsatt = null, stegFra = null, oppeAngrep = false;
+  let foldetNå = sammen, utsatt = null, stegFra = null, oppeAngrep = false, rulletTil = false, menyFra = 0;
   const spilltid = () => (typeof tid !== 'undefined' && isFinite(tid) ? tid : 0);
   const angrepNå = () => { if (API.angrepTest !== undefined) return !!API.angrepTest; try { const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null; return !!(T0 && T0.aktiv) || synlig($('alarm')); } catch (e) { return false; } };
   const css = document.createElement('style');
@@ -121,7 +121,13 @@ body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #
     if (s.mål === 'folk') { const fm = $('folkmeny'); if (fm && fm.classList.contains('på')) return null; return kn('folk') || $('folkknapp'); }
     if (s.mål === 'tropper') { const tp = $('tropppanel'); if (tp && tp.classList.contains('på')) return null; return kn('tropper') || $('nytropp'); }
     if (s.mål === '3d') return typeof på3d !== 'undefined' && på3d ? $('gaaknapp') : $('v3d');
-    if (s.mål === 'forsvar') { if (synlig($('forsvarknapp'))) return $('forsvarknapp'); if (åpen) return synlig($('forsvarov')) ? $('forsvarov') : null; return kn('leir') || $('leirknapp'); }
+    // (runde 8: gjennomspillingen fant ikke «Øv» – delen Forsvar står langt nede og kan være lagt sammen) ringen står rundt overskriften
+    // når knappen ikke synes, og menyen rulles én gang (per åpning) så Forsvar kommer til syne
+    // (paneler.js setter menyen øverst like etter at den åpnes – derfor rulles den først når den har vært åpen et knapt sekund)
+    if (s.mål === 'forsvar') { if (synlig($('forsvarknapp'))) return $('forsvarknapp'); if (!åpen) { rulletTil = false; menyFra = 0; return kn('leir') || $('leirknapp'); }
+      if (!menyFra) menyFra = performance.now(); const ov = $('forsvarov'), h = [...lm.querySelectorAll('h3')].find(q => /^Forsvar/.test(q.textContent.trim())), m = synlig(ov) ? ov : synlig(h) ? h : null;
+      const hva = m === ov ? 'øv' : 'overskrift'; if (m && rulletTil !== hva && performance.now() - menyFra > 900) { rulletTil = hva; try { m.scrollIntoView({ block: 'center' }); } catch (e) { /* eldre nettleser */ } }
+      if (m) return m; const fb = [...lm.querySelectorAll('.faner button, [data-fane-knapp]')].find(b => /^Bygg/.test(b.textContent.trim())); return synlig(fb) ? fb : null; }
     if (s.mål === 'reparer') return synlig($('reparerknapp')) ? $('reparerknapp') : null;
     return null; }
   function tegn(s, okTekst, gjort) { const kort = document.body.classList.contains('kort'), n = gjort ? STEG.indexOf(gjort) + 1 : Opplaering.nr(T), sig = (gjort ? 'gjort:' + gjort.id : s ? s.id : 'slutt') + '|' + (okTekst || '') + '|' + kort + '|' + foldetNå; if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
@@ -184,7 +190,9 @@ body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #
     const nå = { ms: performance.now(), tid: spilltid() }; if (!stegFra || stegFra.id !== s.id) { stegFra = { id: s.id, ms: nå.ms, tid: nå.tid }; if (utsatt !== s.id) utsatt = null; }
     foldetNå = sammen || utsatt === s.id || Opplaering.lenge(stegFra, nå) || (angrep && !oppeAngrep);
     tegn(s); boks.classList.add('på'); liten(tlf && meny);
-    const m = pekPå(s); if (m && synlig(m)) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
+    const m = pekPå(s), inni = e => { const p = e && e.closest && e.closest('#leirmeny, #folkmeny, #tropppanel'); if (!p) return true; const a = e.getBoundingClientRect(), b = p.getBoundingClientRect(); return a.bottom > b.top + 4 && a.top < b.bottom - 4; };
+    // (runde 8) ringen tegnes ikke rundt noe som er rullet ut av menyen (den sto over bunnmenyen)
+    if (m && synlig(m) && inni(m)) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
   setInterval(kjør, 400); window.addEventListener('riksbrudd-spill', () => { last(); setTimeout(kjør, 600); }); window.addEventListener('resize', kjør);
   // Leir-menyen, fanen Mål: slå opplæringen av og på, eller ta den en gang til
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
