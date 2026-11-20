@@ -18,5 +18,10 @@
     "Jevnt når du går inn i hus",
     "Når du går, lages innsiden av husene rundt deg litt om gangen, så bildet ikke stopper opp. Husene du går mot, gjøres klare først, og et hus du nettopp gikk fra, kommer tilbake med en gang når du snur. Står et hus du vil inn i, fortsatt stengt, så vent et øyeblikk – innsiden er på vei.",
     "I 3D"
+  ],
+  [
+    "Jevnere når du flyr",
+    "Når du flyr eller kjører langt, bygges et nytt stykke 3D-landskap i bakgrunnen mens du ser på det gamle. Det gjøres nå i mindre biter, og spillet bruker den samme plassen i minnet om igjen fra stykke til stykke – derfor blir det færre og kortere stopp i bildet. Hakker det fortsatt, prøv «Mål hakk» i ☰ (i 3D) og send teksten.",
+    "I 3D"
   ]
 ]

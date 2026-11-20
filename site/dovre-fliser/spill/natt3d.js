@@ -188,7 +188,7 @@
   function* nattPlass(u, R, lys2På, mobil) {
     const ut = { lys2På, mobil, lys: null, lys2: null }, hz = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX;
     if (u.lys) { const n = u.lys.length / 4, d = new THREE.Object3D(), gp = new Float32Array(n * 3), mat = new Float32Array(n * 16);
-      for (let k = 0; k < n; k++) { const [x, y, z, v] = u.lys.subarray(k * 4, k * 4 + 4), hx = x + Math.cos(v) * 1.6, hy = y + Math.sin(v) * 1.6;
+      for (let k = 0; k < n; k++) { const q = k * 4, x = u.lys[q], y = u.lys[q + 1], z = u.lys[q + 2], v = u.lys[q + 3], hx = x + Math.cos(v) * 1.6, hy = y + Math.sin(v) * 1.6;
         d.position.set(hx, hy, (hoyde3d(hx + u.cx, hy + u.cy, u) - u.h0) * R.EX + .45); d.updateMatrix(); d.matrix.toArray(mat, k * 16); gp.set([hx, hy, z + 7.6], k * 3);
         if ((k & 127) === 127) yield; }
       ut.lys = { n, mat, gp }; }

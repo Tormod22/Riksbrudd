@@ -396,16 +396,22 @@
   // i biter (én bru eller kai per bit, normalene ca. 10 000 trekanter om gangen), og sett3d legger bare nettene i scenen. Uten
   // forberedelsen kjører sett3d den samme generatoren i ett (kjørRett) – samme nett.
   function* lagGeo(u) {
-    const G = ny(), T = { veg: { pos: [], uv: [], idx: [] }, plain: { pos: [], uv: [], idx: [] }, gs: { pos: [], uv: [], idx: [] }, plass: { pos: [], uv: [], idx: [] } };
+    // (runde 9, hakk når du flyr) hjørnene samles i Tallrekke.Rekke (spill/tallrekke.js: plassen gjenbrukes til neste utsnitt, samme
+    // tall ut som new Float32Array(liste) og setIndex(liste) ga) – store bruer ga store vanlige lister
+    const RK = typeof Tallrekke !== 'undefined' ? Tallrekke.Rekke : null, tomT = n => RK ? { pos: new RK('F', 'bru.pos.' + n), uv: new RK('F', 'bru.uv.' + n), idx: new RK('U', 'bru.idx.' + n) } : { pos: [], uv: [], idx: [] };
+    const G = RK ? { pos: new RK('F', 'bru.pos'), kol: new RK('F', 'bru.kol') } : ny(), T = { veg: tomT('veg'), plain: tomT('plain'), gs: tomT('gs'), plass: tomT('plass') };
     for (const m of u.bruer3d) { m.søyler = []; byggBru(u, m, G, T); yield; }
     for (const k of u.kaier3d) { byggKai(u, k, G, T); yield; }
-    const pos = new Float32Array(G.pos); yield; const kol = new Float32Array(G.kol); G.pos = G.kol = null; yield;
+    const pos = RK ? G.pos.ferdig() : new Float32Array(G.pos); yield; const kol = RK ? G.kol.ferdig() : new Float32Array(G.kol); G.pos = G.kol = null; yield;
     // normalene i biter (normalerG i index.html: samme regning som three.js sin computeVertexNormals)
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(kol, 3));
     if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
     const typer = [];
-    for (const [type, t] of Object.entries(T)) { if (!t.idx.length) continue; yield;
-      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); tg.computeVertexNormals();
+    for (const [type, t] of Object.entries(T)) { if (!t.idx.length) { if (RK) { t.pos.slipp(); t.uv.slipp(); t.idx.slipp(); } continue; } yield;
+      const tg = new THREE.BufferGeometry();
+      if (RK) { tg.setAttribute('position', new THREE.BufferAttribute(t.pos.ferdig(), 3)); tg.setAttribute('uv', new THREE.BufferAttribute(t.uv.ferdig(), 2)); tg.setIndex(new THREE.BufferAttribute(t.idx.ferdigIndeks(), 1)); }
+      else { tg.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2)); tg.setIndex(t.idx); }
+      tg.computeVertexNormals();
       typer.push([type, tg]); }
     return { g, typer };
   }
@@ -420,5 +426,5 @@
     for (const [type, tg] of typer) {
       const tm = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: tekstur(type), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide })); R.scene.add(tm); mesh.push(tm); }
   });
-  window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok };
+  window.Infra3d = { bruModell, modeller, F, ferjeGeo, ferjeLengde, iVann, zLok, lagGeo };
 })();
