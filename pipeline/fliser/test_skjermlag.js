@@ -15,4 +15,7 @@ ok(S.zFor('ukjent', o) === null && S.zFor('sekk', []) === null, 'ukjente og lukk
 const mange = Array.from({ length: 60 }, (_, i) => 'p' + i);
 ok(S.zFor('p59', mange) <= R.selvMaks, 'mange paneler går ikke over bunnmenyen');
 ok(['hendelse', 'samfunnkort', 'formkort', 'krigkort'].every(id => S.KORT.includes(id)), 'kortene som setter spillet på pause');
+// runde 8: hendelseskortet og spørsmålene fra folket venter mens leiren angripes; seier/tap og krigskortet kommer straks
+ok(S.venter(true).join() === 'hendelse,samfunnkort' && S.venter(false).length === 0, 'kortene som venter til angrepet er over');
+ok(!S.venter(true).includes('formkort') && !S.venter(true).includes('krigkort'), 'spillformkortet og krigskortet venter ikke');
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

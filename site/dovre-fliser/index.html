@@ -1058,7 +1058,12 @@ function trykkPå(cx, cy) {
 
 // ---------- panel og logg ----------
 const loggLinjer = [];
-function logg(t) { loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
+// RUNDE 8 (20. nov, kritikerne: «loggen gjentar seg og drukner det viktige»): spill/loggdemp.js slår sammen like meldinger («×4»), holder
+// tilbake rutinemeldinger og små værskifter og viser tips bare første gang (null = holdes tilbake; fjern = en gammel linje som slås sammen)
+function logg(t) { let nå = 0; try { nå = tid; } catch (e) { /* før tida finnes */ }
+  const d = typeof LoggDemp !== 'undefined' && LoggDemp.vurder ? LoggDemp.vurder(t, loggLinjer, nå) : { tekst: t, fjern: -1 }; if (!d) return;
+  if (d.fjern >= 0) loggLinjer.splice(d.fjern, 1); t = d.tekst;
+  loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
   document.getElementById('logg').innerHTML = loggLinjer.map((x, i) => '<div style="opacity:' + (1 - i * .15) + '"></div>').join('');
   document.querySelectorAll('#logg div').forEach((d, i) => { d.textContent = loggLinjer[i]; }); }
 function knapp(tekst, på, fn) { const b = document.createElement('button'); b.textContent = tekst; if (på) b.className = 'på'; b.onclick = fn; return b; }
@@ -3299,8 +3304,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
 <script src="/dovre-fliser/spill/flom.js?v=47a26f294e"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
-<script src="/dovre-fliser/spill/hjelp-natt.js?v=43c689d2ce"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=9e05e40906"></script>
+<script src="/dovre-fliser/spill/hjelp-natt.js?v=ed82ba660e"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=0ad8ac2c2f"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=de74345409"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
@@ -3422,7 +3427,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=8ca4ddf882"></script>
 <script src="/dovre-fliser/spill/meny.js?v=a0f36fa091"></script>
-<script src="/dovre-fliser/spill/flyt.js?v=066d37d0e8"></script>
+<script src="/dovre-fliser/spill/flyt.js?v=079c3a06a4"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=8dd27fc47f"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=29dde9b7fe"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
@@ -3443,6 +3448,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/spillhud.js?v=31fbadf972"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 <script src="/dovre-fliser/spill/telefon.js?v=2d9c19e6b5"></script>
-<script src="/dovre-fliser/spill/skjermlag.js?v=fb298a3485"></script>
+<script src="/dovre-fliser/spill/skjermlag.js?v=1a01b6b8b4"></script>
+<script src="/dovre-fliser/spill/loggdemp.js?v=c43bd0c7c1"></script>
 </body>
 </html>
