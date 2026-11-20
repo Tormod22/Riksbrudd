@@ -675,3 +675,58 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
   kontroll på maskinen (natt-verden, nybegynner, terreng, rb-vind). Den siste hele kjøringen (kl. 01:04) var grønn (119 ok, 0 FEIL);
   endringene etter den er prøvd med vaktene lys og natur (PC og telefon), Node-sammenligningene og bildene over.
 
+
+## Runde 9 (20. nov natt) – hakk når du flyr og nye 3D-utsnitt bygges
+
+Oppdraget (fra «Ikke gjort» i runde 7): søppeltømmingen når nye utsnitt lages var den største pausen når du flyr (396, 329 og 239 ms i
+Stavanger). Mål flyturer over Stavanger og Bergen, ta de største kildene (gjenbruk store tabeller mellom utsnitt, del opp, pust), få like
+utsnitt før og etter, og mål igjen på PC og telefon.
+
+### Slik er det målt
+Scratchpad `natt9/lys/fly.js`: ekte kartdata via `feiljakt/teknisk/skript/dev.py`, /rogaland (Stavanger −33500 6573500) og /norge (Bergen
+−32117 6734202), kameraet 900 m oppe og 150 m/s i 40 s (ca. ett nytt utsnitt på 3,1 km), grafikk Høy, tegningen slått av
+(`R3.renderer.render` tom – programvare-grafikken fyller ellers hovedtråden). Det som telles: `Ytelse.målHakk` («Mål hakk», samme rapport
+som spilleren får: pauser over 50 ms, sum, lengste, «hvor i koden»), lange oppgaver (PerformanceObserver) med CPU-profil per oppgave,
+søppeltømmingen fra profilen (sammenhengende biter av «(garbage collector)»), hvem som lager store tabeller (Float32Array osv. ≥ 64 KB, telt
+med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med også det som er ryddet bort). «Før» = en kopi av grenen fra
+644ecfa (det som var flettet inn i kveld, `natt9/lys/head`), «etter» = en kopi av den nye koden (`natt9/lys/ny`), kjørt etter hverandre
+(`natt9/lys/batch.sh`). Maskinen var delt med andre hjelpere (last 8–14 på fire kjerner), så enkeltpausene varierer mye.
+
+### Hva som var tyngst før (heap-sampling, 40 s flyging)
+- **Husene (hus3d)**: hjørnene ble samlet i vanlige lister (`cur.pos.push(...a, ...b, ...c)`) – `firkant`/`tri` + `push` laget
+  **ca. 1,2 GB** lister på 40 s i Stavanger (743 + 494 MB) og ca. 1,2 GB i Bergen. Listene vokser ved å kopieres, så det meste ble store
+  lister som må ryddes med full søppeltømming – det var de lange søppelpausene. I tillegg en ny liste med tre små lister per trekant
+  (`t = [P0, P0, P0]`) og per firkant.
+- **Kartbildets punkter**: `new Uint8ClampedArray(TW · TW · 4)` = 64 MB per utsnitt på PC (4096²), laget på nytt hver gang.
+- **Vegene (liv3d)** og **bruene (infra3d)**: samme slags vanlige lister (`kant` 59 MB, `bånd` 31, `kvad`/`kloss` 54–85 MB).
+- Små tabeller per tre/lykt: `data.subarray(k * 5, …)` med destrukturering i `treMatriser`, `småting`, `lodTrær` (hver gang trærne fordeles
+  på nytt), `delBakkenG` og natt3d sine lysflekker – 100–160 MB.
+- `Math.hypot` (190–490 MB – V8 lager en liten tabell per kall), vegreglene i `spill/veg.js` (`gå` 130–270 MB, `iTunnel` 130–190 MB),
+  `spill/bruer.js` `projiser` (100–140 MB), `spill/kyst.js` `plasserG` (90–130 MB) – ikke mine filer / ikke endret (se «Ikke gjort»).
+
+### Hva som er endret (samme utsnitt som før – se «Likt før og etter»)
+1. **`spill/tallrekke.js` (ny, regler uten DOM, test `pipeline/fliser/test_tallrekke.js`)**: `Tallrekke.Rekke` er en voksende Float32Array
+   (eller Uint32Array for indekser) med samme bruk som en liste – `push(...)`, `length` – pluss `p2`/`p3`/`pushL(liste)`. Plassen ligger i et
+   lager (`ta`/`gi`) og brukes om igjen av neste utsnitt (høyst 64 MB på PC og 24 MB på telefon mellom utsnittene – de minste kastes først;
+   Claudes tall, i `REGLER`). `ferdig()` gir en ny Float32Array med nøyaktig tallene – samme verdier som `new Float32Array(liste)` (tallet
+   rundes til 32 bit én gang) – og `ferdigIndeks()` Uint16/Uint32 slik three.js `setIndex(liste)` velger. `Rekke.på = false` gir vanlige
+   lister som før (vakta sammenligner de to). `taPunkter`/`giPunkter`: lerretspunktene til kartbildet (én i lageret). `Tallrekke.tøm()`
+   når 3D slås av. Skripttaggen står rett etter lykt.js.
+2. **hus3d** (index.html): de 18 gruppene er Rekke-er; `tri3` legger inn de samme tallene i samme rekkefølge uten de små listene per
+   trekant/firkant; `ferdig()` per gruppe med pust mellom gruppene (kopien av de største tok 40 ms i ett strekk).
+3. **liv3d.js**: vegnettene (de ti gruppene og kryssflatene) er Rekke-er (`tomR`), `nettG` lager attributtene av `ferdig()`/`ferdigIndeks()`.
+   Skinnene i vegutstyret endres etter at de er lagt inn (`pos[k] -= .3`) og står fortsatt i vanlige lister (ellers ville tallet blitt
+   rundet to ganger). `Liv3d.byggVeger` er eksportert for vakta. `Veg.kryssFlate` (veg.js) skriver i rekkene med push/length som før.
+4. **infra3d.js** `lagGeo` (bruer og ferjekaier): G og de fire teksturgruppene er Rekke-er; `Infra3d.lagGeo` eksportert for vakta.
+5. **Kartbildets punkter** (bygg3d): `Tallrekke.taPunkter(TW · TW · 4)` – alle punktene skrives over av getImageData-stripene før de leses –
+   og tilbake i lageret når kartbildet er sendt til grafikkortet (forbered3d), i sett3d og i kastForberedt.
+6. **Flaten i biter** (`planG` i index.html): terrengets `new THREE.PlaneGeometry(…, 288, 288)` (40–50 ms i ett strekk, med store lister)
+   er byttet ut med det samme skrevet rett i tabellene med yield for hver 16. rad – samme punkter, normaler, uv, indeks (Uint32 over 65535
+   punkter), `type` og `parameters` (delBakken og bekkene leser `widthSegments`).
+7. **Hindringene i biter** (`hindringerG`): rutenettet for husene og 40 000 trær ble laget i ett strekk i forbered3d (70–110 ms), og
+   husenes rutenett ved første `nærHus` i smått3d (100–180 ms i byene). Nå generator med yield for hvert 64. hus og 512. tre (samme ruter i
+   samme rekkefølge); `hindringer(u)` = den kjørt i ett, forbered3d og smått3d bruker `kjørAsynk`.
+8. Uten små tabeller per ting: `treMatriser`, `småting`, `lodTrær` (`kopierTall` i stedet for `set(subarray(…))`), `delBakkenG` og
+   natt3d.js (lysflekkene) leser tallene rett fra tabellen (samme verdier; `fi` er `undefined` når `per = 4`, som før).
+9. Pust: vegetasjon3d.js (einer/vier/fjellbjørk på åpen mark – løkka over rutene hadde ingen), bunnfargen i bygg3d i striper på 256 rader
+   (512 tok 35–40 ms per stripe).
