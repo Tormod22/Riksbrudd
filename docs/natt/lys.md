@@ -661,7 +661,8 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
 - Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8915 node pipeline/fliser/sjekk.js`, kl. 01:04, før de to siste små endringene i
   interior3d.js – kassen uten mellomtabeller og tømmingen – som er prøvd i Node og med vakta etterpå): 119 ok, 0 FEIL, 700 s.
   Siste prøve på den endelige koden (kl. 01:40, PC): gammel mot ny for de seks prøvebyggene i nettleseren igjen likt (med normalerG),
-  vakta lys grønn (24 s; interiøret i 13 biter, gresset i 36 biter) og vakta natur grønn. Vakta lys
+  vakta lys grønn (24 s; interiøret i 13 biter, gresset i 36 biter) og vakta natur grønn. Telefon med den endelige koden (kl. 02:05, etter
+  gressfargene og ryddHus): vakta lys grønn på 10,8 s (interiøret i 12 biter, gresset 5000 tuster i 10 biter), natur grønn. Vakta lys
   tok 231 s der (skyggene tegnes tre ganger med programvare-grafikk i telefonens oppløsning under last ca. 20 – runde 7-delen er ca. 4 s).
   `interiør` og `interiør i leirens bygg` i sjekk.js grønne (de kaller oppdater(true) og bygger i ett strekk som før).
 - Bilder (scratchpad `natt7/lys/`): `inne-før-PC.png` og `inne-etter-PC.png` (inne i prøvehuset, samme utsikt – kjøkkenet gjennom døra,
