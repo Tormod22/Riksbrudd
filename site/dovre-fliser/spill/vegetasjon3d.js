@@ -328,10 +328,13 @@
   function lagVekst(R) {
     const lag = (type, plan, maks) => {
       const mat = new THREE.MeshLambertMaterial({ map: tekstur(type), alphaTest: .45, side: THREE.DoubleSide });
+      // (runde 10) begge sider får forsidens lys (forsideLys i index.html): baksiden var mørk som en flate som vender ned
+      const fs = sh => { if (typeof forsideLys === 'function') forsideLys(sh); };
       // blomstene: bare de lyse blomsterhodene får blomstens farge, stilkene beholder sitt grønne
-      if (type === 'blomst') { mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#ifdef USE_COLOR
+      if (type === 'blomst') { mat.onBeforeCompile = sh => { fs(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#ifdef USE_COLOR
         diffuseColor.rgb *= mix(vec3(1.0), vColor, step(0.55, min(diffuseColor.r, diffuseColor.b)));
-        #endif`); }; mat.customProgramCacheKey = () => 'blomst'; }
+        #endif`); }; mat.customProgramCacheKey = () => 'blomst-forside'; }
+      else { mat.onBeforeCompile = fs; mat.customProgramCacheKey = () => 'vekst-forside'; }
       const m = new THREE.InstancedMesh(kryss(plan), mat, maks); m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maks * 3), 3);
       m.count = 0; m.frustumCulled = false; m.userData.vekst = type; R.scene.add(m); return m; };
     return { blomst: lag('blomst', 2, mob() ? 2200 : 6000), bregne: lag('bregne', 3, mob() ? 260 : 700), siv: lag('siv', 2, mob() ? 600 : 1600) };

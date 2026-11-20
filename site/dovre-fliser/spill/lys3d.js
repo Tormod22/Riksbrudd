@@ -24,11 +24,14 @@
     minLys: .09,
     // dalens tåke: svak dis om dagen, tett morgentåke; tykkelsen på laget (meter) og hvor fort den tetner med avstanden (per meter)
     disDag: .1, disMorgen: .8, lagTykkelse: 70, perMeter: 1 / 380,
+    // (runde 10) skyggenes styrke: så mye lysere enn full skygge med sola lavt (lysLav, under solLav grader) og høyt (lysHøy, over solHøy);
+    // og avstanden langs lysstrålen (m) der skyggen begynner å tones ut og der den er borte – lange skygger fra lav sol blir korte og myke
+    lysLav: .5, lysHøy: .18, solLav: 4, solHøy: 25, toneFra: 12, toneTil: 75,
   };
   // delte uniformer: U for skyggeleggere som kobler seg på selv; DAL/DALF ligger i three.js sitt bibliotek (alle innebygde materialer)
   const U = { uFxTid: { value: 0 }, uNakenS: { value: 0 } };
-  const DAL = new Float32Array(4), DALF = new Float32Array(3);
-  const L = { REGLER, U, DAL, DALF, på: false, tegnet: 0, kaster: 0, tar: 0, halv: 0 };
+  const DAL = new Float32Array(4), DALF = new Float32Array(3), SKF = new Float32Array(4);
+  const L = { REGLER, U, DAL, DALF, SKF, på: false, tegnet: 0, kaster: 0, tar: 0, halv: 0 };
   window.Lys3d = L;
 
   // ---------- three.js sine skyggeleggere ----------
@@ -37,7 +40,14 @@
     const C = THREE.ShaderChunk;
     // skyggen tones ut mot kanten av skyggekartet
     C.shadowmap_pars_fragment = C.shadowmap_pars_fragment.replace('return shadow;',
-      'vec2 skKant = abs(shadowCoord.xy * 2.0 - 1.0);\n\t\tshadow = mix(shadow, 1.0, smoothstep(0.8, 1.0, max(skKant.x, skKant.y)));\n\t\treturn shadow;');
+      'vec2 skKant = abs(shadowCoord.xy * 2.0 - 1.0);\n\t\tshadow = mix(shadow, 1.0, smoothstep(0.8, 1.0, max(skKant.x, skKant.y)));\n\t\tshadow = mix(shadow, 1.0, uSkF.x);\n\t\treturn shadow;');
+    // (runde 10, brukerens bilder kl. 06: skyggene skal være myke og ikke helt svarte, og ikke urimelig lange når sola står lavt.)
+    // uSkF = (hvor mye lysere enn full skygge, avstand langs lysstrålen der skyggen begynner å tones ut og der den er borte (m),
+    // skyggekartets dybde i meter). Avstanden fra den som kaster til punktet er det VSM alt har (compare − middeldybden). Står uSkF.w
+    // på 0 (et materiale uten verdien), er alt som før.
+    C.shadowmap_pars_fragment = C.shadowmap_pars_fragment.replace('#ifdef USE_SHADOWMAP', '#ifdef USE_SHADOWMAP\n\tuniform vec4 uSkF;')
+      .replace('occlusion = clamp( max( hard_shadow, softness_probability ), 0.0, 1.0 );',
+        'occlusion = clamp( max( hard_shadow, softness_probability ), 0.0, 1.0 );\n\t\t\tif (uSkF.w > 0.0) occlusion = mix(occlusion, 1.0, smoothstep(uSkF.y, uSkF.z, distance * uSkF.w));');
     // tåke i dalene: høyden over havet (i scenens mål) regnes ut fra kameramatrisen, så det virker for alle slags nett
     C.fog_pars_vertex = C.fog_pars_vertex.replace('varying float fogDepth;', 'varying float fogDepth;\n\tvarying float vDalZ;');
     C.fog_vertex = C.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = - mvPosition.z;\n\tvDalZ = dot(viewMatrix[2].xyz, mvPosition.xyz - viewMatrix[3].xyz);');
@@ -49,7 +59,7 @@
     C.fog_fragment = C.fog_fragment.replace('#ifdef USE_FOG', '#ifdef USE_FOG\n\tif (uDalT.x > 0.0) {\n\tfloat dalH = max(uDalT.z, 1.0);\n\tfloat dalP = exp(-max(vDalZ - uDalT.y, 0.0) / dalH);\n\tfloat dalC = exp(-max(cameraPosition.z - uDalT.y, 0.0) / dalH);\n\tfloat dalDz = abs(cameraPosition.z - vDalZ);\n\tfloat dalRho = dalDz > 2.0 ? dalH * abs(dalP - dalC) / dalDz : dalP;\n\tfloat dalT = uDalT.x * min(dalP * (1.0 - exp(-fogDepth * uDalT.w)), 1.0 - exp(-fogDepth * uDalT.w * dalRho));\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uDalF, clamp(dalT, 0.0, 1.0));\n\t}');
     // (verdiene er tallrekker, som three.js ikke kopierer per materiale: alle materialer deler de samme. Uten tåke i dalene – Lav, eller
     // «Lys og skygger» av – er uDalT.x = 0, og skyggeleggeren hopper over regningen.)
-    for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) { lib.uniforms.uDalT = { value: DAL }; lib.uniforms.uDalF = { value: DALF }; }
+    for (const lib of Object.values(THREE.ShaderLib)) if (lib.uniforms && lib.uniforms.fogColor) { lib.uniforms.uDalT = { value: DAL }; lib.uniforms.uDalF = { value: DALF }; lib.uniforms.uSkF = { value: SKF }; }
     DAL[2] = REGLER.lagTykkelse; DAL[3] = REGLER.perMeter;
     // et mindre spillkart (/rogaland): alt utenfor området mørklegges også i 3D (spill/grense3d.js lager masken). Bare der – ellers som før.
     if (typeof PÅ_OMRÅDE !== 'undefined' && PÅ_OMRÅDE) koblGrense(C);
@@ -221,6 +231,9 @@
     const tex = 2 * halv / n, lx = Math.round(v3.dot(vx) / tex) * tex, ly = Math.round(v3.dot(vy) / tex) * tex, lz = -v3.dot(vz), k = sol.shadow.camera;
     k.left = lx - halv; k.right = lx + halv; k.top = ly + halv; k.bottom = ly - halv; k.near = lz - REGLER.motSola; k.far = lz + halv * 1.6 + 250; k.updateProjectionMatrix();
     const dybde = k.far - k.near; sol.shadow.bias = -(.22 + tex * .6) / dybde; sol.shadow.normalBias = Math.max(.25, tex * 1.6);
+    // (runde 10) skyggenes styrke etter solhøyden, og dybden for avstanden langs lysstrålen (se uSkF)
+    const e = Math.asin(Math.max(-1, Math.min(1, v2.z))) * 180 / Math.PI, t = Math.max(0, Math.min(1, (e - REGLER.solLav) / (REGLER.solHøy - REGLER.solLav)));
+    SKF[0] = REGLER.lysLav + (REGLER.lysHøy - REGLER.lysLav) * t * t * (3 - 2 * t); SKF[1] = REGLER.toneFra; SKF[2] = REGLER.toneTil; SKF[3] = dybde;
     r.shadowMap.needsUpdate = true; L.tegnet++;
   }
 

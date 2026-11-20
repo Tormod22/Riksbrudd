@@ -86,11 +86,14 @@
 
   // ---------- teksturer ----------
   const tekst = {};
+  // (runde 10, brukerens bilder: «vegen er en flat, mørk stripe») grunnfargen på asfalten var 62/255 – i skyggen nesten svart. Nå en
+  // middels grå asfalt; kryssflaten har samme farge som asfalten (før mørkere: «mørke rektangler» i kryssene). Claudes forslag (fargene):
+  const VEG_FARGE = { asfalt: [92, 93, 96], kommunal: [96, 95, 94], gs: [98, 92, 88] };
   function vegTekstur(type) {
     if (tekst[type]) return tekst[type];
     const c = document.createElement('canvas'); c.width = 128; c.height = 512; const g = c.getContext('2d'), im = g.createImageData(128, 512); let f = 7 + type.length;
     const rnd = () => (f = (f * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff, grus = type === 'grus' || type === 'grusflate', fortau = type === 'fortau';
-    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? [78, 70, 68] : type === 'fylling' ? [86, 88, 62] : type === 'bykant' ? [112, 109, 103] : [62, 63, 65], v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
+    for (let q = 0; q < 128 * 512; q++) { const n = rnd(), base = type === 'skulder' ? [128, 118, 100] : grus ? [118, 104, 82] : fortau ? [150, 148, 142] : type === 'gs' ? VEG_FARGE.gs : type === 'fylling' ? [86, 88, 62] : type === 'bykant' ? [112, 109, 103] : type === 'kommunal' ? VEG_FARGE.kommunal : VEG_FARGE.asfalt, v = (n - .5) * (grus || type === 'skulder' ? 46 : 18);
       im.data[q * 4] = base[0] + v; im.data[q * 4 + 1] = base[1] + v; im.data[q * 4 + 2] = base[2] + v; im.data[q * 4 + 3] = 255; }
     // dobbel oppløsning (128 × 512); tegningen under er i de gamle enhetene (64 × 256)
     g.putImageData(im, 0, 0); g.scale(2, 2);
@@ -104,6 +107,15 @@
       g.fillStyle = 'rgba(40,34,26,.35)'; g.beginPath(); g.ellipse(x + .25, y + .35, r, r * .75, 0, 0, 6.283); g.fill();
       g.fillStyle = `rgb(${l + 8},${l + 1},${l - 10})`; g.beginPath(); g.ellipse(x, y, r, r * (.55 + rnd() * .35), rnd() * 3, 0, 6.283); g.fill(); }
     if (type === 'grus') { g.fillStyle = 'rgba(70,90,40,.35)'; g.fillRect(28, 0, 8, 256); }   // gress i midten
+    // (runde 10) asfalten: svake, store flekker (lappet og slitt asfalt), litt mørkere i hjulsporene og noen tynne sprekker – så vegen
+    // ikke er en flat stripe. Bare på asfalt (ikke i kryssflaten, som skal gå i ett med vegen den ligger på).
+    if (['asfalt', 'rampe', 'kommunal', 'gs'].includes(type)) {
+      for (let k = 0; k < 26; k++) { const lys = rnd() < .45; g.fillStyle = lys ? 'rgba(255,255,250,.05)' : 'rgba(10,10,14,.07)';
+        g.beginPath(); g.ellipse(rnd() * 64, rnd() * 256, 4 + rnd() * 12, 6 + rnd() * 26, 0, 0, 6.283); g.fill(); }
+      if (type !== 'gs') { g.fillStyle = 'rgba(20,20,24,.07)'; for (const x of [10, 22, 38, 50]) g.fillRect(x, 0, 5, 256); }
+      g.strokeStyle = 'rgba(25,25,28,.35)'; g.lineWidth = .35;
+      for (let k = 0; k < 9; k++) { let x = rnd() * 64, y = rnd() * 256; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 6; j++) { x += (rnd() - .5) * 5; y += 2 + rnd() * 4; g.lineTo(x, y); } g.stroke(); }
+    }
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return (tekst[type] = t);
   }
 

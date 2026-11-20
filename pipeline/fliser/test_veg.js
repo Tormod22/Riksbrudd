@@ -47,7 +47,10 @@ sjekk(fl.idx.length > 0 && maks < kryss[0].d + 6 && utenfor === 0, `kryssflaten 
   const hjørner = (vg, bakke) => tri(vg, bakke) - tri(vg, () => 1e6);
   const vg = [{ k: 'E', w: 4, P: z0(V.jevn([[-100, 0], [0, 0]])) }, { k: 'E', w: 4, P: z0(V.jevn([[0, 0], [100, 0]])) }, { k: 'K', w: 2.75, P: z0(V.jevn([[0, 0], [0, 60]])) }];
   const flat = hjørner(vg, () => 0), faller = hjørner(vg, (x, y) => (y > 0 ? -y * .4 : 0)), inn = hjørner(vg.map((v, i) => (i === 2 ? { ...v, k: 'P' } : v)), () => 0);
-  sjekk(flat > 0 && faller === 0 && inn === 0, `kryss: hjørner på flat bakke (${flat}), ingen der de ville svevd (${faller}) eller mot en innkjørsel (${inn})`); }
+  sjekk(flat > 0 && faller === 0 && inn === 0, `kryss: hjørner på flat bakke (${flat}), ingen der de ville svevd (${faller}) eller mot en innkjørsel (${inn})`);
+  // innkjørselen (P) får ingen asfaltstump: færre trekanter enn med en K-veg i samme retning
+  const utenHj = vg2 => tri(vg2, () => 1e6), medK = utenHj(vg), medP = utenHj(vg.map((v, i) => (i === 2 ? { ...v, k: 'P' } : v)));
+  sjekk(medP < medK && medP > 0, `kryss: ingen asfaltstump inn i en innkjørsel (${medP} mot ${medK} trekanter)`); }
 // selvtest: det gamle konvekse skallet hadde punkter langt fra begge vegene – kontrollen over ville slått ut på (20, 12)
 sjekk(Math.min(Math.abs(12), Math.abs(20 - 12) / Math.SQRT2) > 4.2, 'selvtest: et punkt i det gamle skallet ligger utenfor vegene');
 

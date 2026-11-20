@@ -311,7 +311,11 @@
   // som svever eller ligger begravd mer enn KRYSS_REGLER.avvik meter et sted på hjørnet. Claudes forslag (tallene):
   const KRYSS_REGLER = { avvik: .35, utenHjørne: 'PS' };
   function kryssFlate(n, veger, ut, bakke) {
+    // (runde 10) en innkjørsel (P, S) inn til en vanlig veg får ingen asfaltstump: den lå som et mørkt flak oppå grusvegen og svevde
+    // over bakken der innkjørselen går ned fra vegen. Møtes bare P og S, får alle armene sin stump (grus).
+    const vanligArm = n.armer.some(a => !KRYSS_REGLER.utenHjørne.includes(a.k));
     for (const a of n.armer) { if (a.t === 3) continue;   // ringen i en rundkjøring har sin egen vegbane med kantlinjer
+      if (vanligArm && KRYSS_REGLER.utenHjørne.includes(a.k)) continue;
       const P = veger[a.li].P, w = a.w + .12, r = a.j1 >= a.j0 ? 1 : -1, n0 = ut.pos.length / 3; let rader = 0;
       for (let j = a.j0; ; j += r) { const p = P[j], q = P[Math.min(P.length - 1, j + 1)], o = P[Math.max(0, j - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
         ut.pos.push(p[0] + nx * w, p[1] + ny * w, p[2] + .03, p[0] - nx * w, p[1] - ny * w, p[2] + .03); ut.uv.push((p[0] + nx * w) / 12, (p[1] + ny * w) / 12, (p[0] - nx * w) / 12, (p[1] - ny * w) / 12); rader++;

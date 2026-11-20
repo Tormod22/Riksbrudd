@@ -1389,7 +1389,14 @@ function detaljIBakken(mat, side) {
     if (mat.userData.fx && window.Lys3d) { sh.uniforms.bakkeAtlas = { value: Lys3d.atlas() }; sh.uniforms.uFxTid = Lys3d.U.uFxTid; }
     sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = '#ifdef BAKKE_FX\nuniform sampler2D bakkeAtlas;\nuniform float uFxTid;\n#endif\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `#include <map_fragment>
+    sh.fragmentShader = '#ifdef BAKKE_FX\nuniform sampler2D bakkeAtlas;\nuniform float uFxTid;\n#endif\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `
+      // (runde 10, brukerens bilder: «fjellsidene i bakgrunnen er kornete/støyete») kartbildet slås opp ett mipmap-trinn grovere langt
+      // unna (150 m og ut, helt fra 550 m): med anisotropi på et ekte grafikkort ga hvert punkt i lia sin egen nabofarge – flimmer og prikker.
+      #ifdef USE_MAP
+      vec4 texelColor = texture2D( map, vUv, clamp((length(vViewPosition) - 150.0) / 400.0, 0.0, 1.0) );
+      texelColor = mapTexelToLinear( texelColor );
+      diffuseColor *= texelColor;
+      #endif
       ${TAAKE_GLSL}
       float detAvst = length(vViewPosition), detVekt = 1.0 - smoothstep(120.0, 900.0, detAvst);
       vec2 fUv = vUv * detaljSkala;
@@ -2571,16 +2578,25 @@ function gressTekstur() {
 }
 // Gressets materiale: instansen velger felt i teksturen (aFelt: 0 gress, 1 lyng), og stråene svaier i vinden (Vind3d) – mest i toppen,
 // lyngen nesten ikke. Uten Vind3d står gresset stille.
+// RUNDE 10 (20. nov, brukerens bilder: gresset var «mørke kruseduller»): tustene er tosidige flater med normalen rett opp, men
+// MeshLambertMaterial gir baksiden lyset for en flate som vender NED (bare bakkens lys i halvkulelyset, ingen sol) – halvparten av
+// stråene ble nesten svarte. forsideLys(sh) i onBeforeCompile: begge sider får forsidens lys (lyset til bakken under tusten).
+function forsideLys(sh) {
+  sh.fragmentShader = sh.fragmentShader.replace('( gl_FrontFacing ) ? vIndirectFront : vIndirectBack', 'vIndirectFront').replace('( gl_FrontFacing ) ? vLightFront : vLightBack', 'vLightFront');
+}
 function gressMateriale() {
   const m = new THREE.MeshLambertMaterial({ map: gressTekstur(), alphaTest: .45, side: THREE.DoubleSide }), vind = window.Vind3d && Vind3d.U && Vind3d.DEKL;
-  m.onBeforeCompile = sh => { if (vind) Object.assign(sh.uniforms, Vind3d.U());
+  m.onBeforeCompile = sh => { if (vind) Object.assign(sh.uniforms, Vind3d.U()); forsideLys(sh);
     sh.vertexShader = (vind ? Vind3d.DEKL : '') + 'attribute float aFelt;\n' + sh.vertexShader
       .replace('#include <uv_vertex>', '#include <uv_vertex>\n  vUv.x = vUv.x * 0.5 + aFelt * 0.5;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (vind ? `  float gvH = transformed.z * transformed.z * (1.0 - 0.75 * aFelt), gvF = instanceMatrix[3].x * 0.31 + instanceMatrix[3].y * 0.23;
   transformed.x += (sin(uVindT * 2.3 + gvF) * 0.14 + sin(uVindT * 5.1 + gvF * 2.7) * 0.05) * uVindK * gvH; transformed.y += cos(uVindT * 1.9 + gvF * 1.3) * 0.1 * uVindK * gvH;` : '')); };
-  m.customProgramCacheKey = () => 'gress-vind-' + !!vind;
+  m.customProgramCacheKey = () => 'gress-vind-forside-' + !!vind;
   return m;
 }
+// (runde 10) gressets farger, Claudes forslag: gresset litt grønnere og lysere enn bakken under (før 1,3/1,42/1,15 – for mettet), lite
+// variasjon mellom tustene, lyngen 3/4 bakkens farge (før mørkegrønn: «svart støy»), og tustene ytterst «lavere» (andel) lavere.
+const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35 };
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
   const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
@@ -2624,14 +2640,18 @@ function* gressG(R, u, m, cx, cy) {
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     // høyt gress i flekker (enga er ikke klippet): flekkene står fast i kartet
     const eng = Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45;
-    const k = (j * W + i) * 3, lyng = type === 2 || type === 3, h = (lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk), z = (moh - u.h0) * R.EX - .05;
+    // (runde 10) lavere lenger unna (ytterst 2/3 av høyden): tustene langt ute ble mørke flekker over bakken
+    const k = (j * W + i) * 3, lyng = type === 2 || type === 3, h = (lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk) * (1 - GRESS_FARGE.lavere * rr / RAD), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
     d.position.set(x, y, z); d.rotation.set((rnd() - .5) * (lyng ? .6 : .7), (rnd() - .5) * (lyng ? .6 : .7), rnd() * 3.14); d.scale.set((lyng ? .75 : .4) + rnd() * .35, (lyng ? .75 : .4) + rnd() * .35, h); d.updateMatrix(); d.matrix.toArray(T.M, n * 16); FELT[n] = lyng ? 1 : 0;
     if (lyng) { const br = rnd() < .3; col.setRGB(br ? .34 + rnd() * .08 : .19 + rnd() * .07, br ? .29 + rnd() * .05 : .32 + rnd() * .09, br ? .18 : .12);
       // (runde 5) lyng på åpen hei: halvt bakkens egen farge, så tustene ikke blir mørke prikker sett ovenfra
-      if (type === 3) col.setRGB((col.r + B.rgb[k] / 255 * 1.15) / 2, (col.g + B.rgb[k + 1] / 255 * 1.12) / 2, (col.b + B.rgb[k + 2] / 255 * 1.05) / 2); } else col.setRGB(Math.min(1, B.rgb[k] / 255 * 1.3), Math.min(1, B.rgb[k + 1] / 255 * 1.42), Math.min(1, B.rgb[k + 2] / 255 * 1.15)); col.toArray(T.C, n * 3); n++;
+      // (runde 10: all lyng – ikke bare på åpen hei – er nå mest bakkens egen farge, se GRESS_FARGE)
+      const bl = type === 3 ? .5 : GRESS_FARGE.lyngBakke; col.setRGB(col.r * (1 - bl) + B.rgb[k] / 255 * 1.15 * bl, col.g * (1 - bl) + B.rgb[k + 1] / 255 * 1.12 * bl, col.b * (1 - bl) + B.rgb[k + 2] / 255 * 1.05 * bl); }
+    else { const [fr, fg, fb] = GRESS_FARGE.gress, v = 1 + (rnd() - .5) * GRESS_FARGE.variasjon; col.setRGB(Math.min(1, B.rgb[k] / 255 * fr * v), Math.min(1, B.rgb[k + 1] / 255 * fg * v), Math.min(1, B.rgb[k + 2] / 255 * fb * v)); }
+    col.toArray(T.C, n * 3); n++;
   }
   // inn i nettet (som setMatrixAt/setColorAt gjorde én og én)
   if (!m.instanceColor || m.instanceColor.count < m.instanceMatrix.count) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(m.instanceMatrix.count * 3), 3);
