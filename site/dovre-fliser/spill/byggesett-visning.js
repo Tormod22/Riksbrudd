@@ -94,7 +94,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   const sum = () => { const ut = { pris: 0, timer: 0, mat: {} };
     for (const q of forslag) { if (q.feil) continue; const k = LB.kostnad(q.d.type, 0, bonus()); ut.pris += k.pris; ut.timer += k.timer; for (const [m, v] of Object.entries(k.mat)) ut.mat[m] = Math.round(((ut.mat[m] || 0) + v) * 10) / 10; }
     return ut; };
-  const matMangler = () => { const l = L(); if (!l || V.fane === 'riv') return 0; return Object.entries(sum().mat).reduce((s, [k, v]) => s + Math.max(0, v - (l.lager[k] || 0)) * LB.MATERIALER[k].pris, 0); };
+  const matMangler = () => { const l = L(); if (!l || V.fane === 'riv') return 0; return LB.manglerPris ? LB.manglerPris(l, sum().mat) : Object.entries(sum().mat).reduce((s, [k, v]) => s + Math.max(0, v - (l.lager[k] || 0)) * LB.MATERIALER[k].pris, 0); };
   const matTekst = mat => Object.entries(mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
   const tidTekst = min => (min >= 60 ? `${(min / 60).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} t` : `${Math.ceil(min)} min`);
   function rivPenger() { const l = L(); return forslag.filter(q => !q.feil).reduce((s, q) => { const b = LB.finn(l, q.d.id); return s + (b ? Math.round(b.pris * (b.igjen > 0 ? LB.REGLER.rivUferdig : LB.REGLER.rivFerdig)) : 0); }, 0); }

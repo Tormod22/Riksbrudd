@@ -32,7 +32,7 @@ Kritiker F (PC, «Hold byen»): «Når du ikke kan stole på regnskapet, slutter
 - **Nå:** `Leir.manglerMat(L, mat)` (det som mangler, rundet opp til 0,1) og `Leir.manglerPris(L, mat)` (summen kjøpMateriale tar) i
   leir.js; leir-visning.js bruker dem både for tallene og for kjøpet. Banner = betalt = logg (prøvd: 644 000 kr alle tre steder med
   0,37 m³ tre på lageret). Prisen flytter seg bare når lageret får en hel tidel mer eller markedet setter nye priser (en gang i døgnet).
-- **Ikke endret:** byggesett-visning.js (ikke min fil) regner fortsatt `matMangler` med brøker – samme retting der: bruk `Leir.manglerPris`.
+- byggesett-visning.js (ikke min fil, én linje): `matMangler` bruker også `Leir.manglerPris` (kjøpet der rundet alt opp til 0,1).
 
 ### 4. Uklare tekster
 - Senger: «8 senger, 2 i bruk» / «8 senger, 8 i bruk – 4 sover i telt» / «Ingen senger – 9 sover i telt» (før «Senger: 2 av 2 (6 ledige)»).
@@ -63,10 +63,9 @@ Kritiker F (PC, «Hold byen»): «Når du ikke kan stole på regnskapet, slutter
   medPron), samfunn-visning.js (soldatFalt/SamfunnSpill.falt i stedet for soldater()), leir.js (manglerMat, manglerPris), leir-visning.js
   (matPris, kjøpManglende), lagringsmeny.js, oppstart-visning.js (holdTid).
 - Fellesfiler (små endringer): index.html (kamprundens treff-logg -> treffLogg), enheter-visning.js (samme), forsvar-visning.js (opphev
-  kaller FolkSpill.falne), forsvar-oppgjor.js (tekstene og bildet), leting.js/leting-visning.js (hvor), maal.js/maal-visning.js (bestilt).
+  kaller FolkSpill.falne), forsvar-oppgjor.js (tekstene og bildet), byggesett-visning.js (matMangler), leting.js/leting-visning.js (hvor), maal.js/maal-visning.js (bestilt).
 - Tester: test_folk.js, test_leir.js, test_samfunn.js, test_forsvar_oppgjor.js, test_leting.js, test_maal.js. Vakt: pipeline/fliser/vakter/regnskap.js.
 
 ### Ikke gjort
-- byggesett-visning.js sin materialpris (se over).
 - Leirvakta som ikke ble forsvart automatisk ved bølge 2 (krig/forsvar – annen pakke).
 - De døde i Samfunn skiller ikke «falt» og «døde» etter begravelsen (gravlagte er bare navn).
