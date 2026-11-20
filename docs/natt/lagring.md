@@ -89,6 +89,9 @@ En fil fra en annen side avvises med «Spillet er lagret på Norge (/norge). Åp
   `dovre-start-pc.png`).
 - Sperret localStorage (oppslaget kaster) og full lagring (setItem kaster QuotaExceededError): ingen sidefeil, melding i loggen og i
   panelet, «Last ned som fil» har hele spillet også når lagringen er sperret (`sperret-pc.png`, `fullt-pc.png`).
+- Som vanlig spiller med ekte klikk (PC, webdriver av): ☰ → «Lagre og last» → navn «Før jeg kjøpte noe» → «Lagre her» (plass 2) → Esc
+  lukker → kjøp for 7 mill. kr → «Mer» → «Lagre» → «Last» → «Ja, last» → siden lastes på nytt med 40 mill. kr igjen, «Automatisk» har
+  spillet med 33 mill. kr, meldingen i loggen (`klikk-sporsmal-pc.png`, `klikk-etter-pc.png`).
 - ☰ før/etter, PC og telefon: `hamburger-for-pc.png`, `hamburger-for-mobil.png`, `hamburger-etter-pc.png`, `hamburger-etter-mobil.png`
   (knappen i overskriften; utsnitt `hode-pc.png`, `hode-mobil.png`).
 - Vakten på PC og telefon (under 1 s), to ganger etter hverandre; vaktene «start», «spillform» og «ui» er grønne med endringene.
