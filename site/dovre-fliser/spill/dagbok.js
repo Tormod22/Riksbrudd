@@ -50,5 +50,7 @@
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   // noter(tekst): en linje i dagboka utenom morgenrapporten (seier, tap av leiren, scenarier)
   function noter(tekst) { if (!klar || !S) return false; S.liste.unshift(`Dag ${dag(tid)}: ${tekst}`); S.liste.length = Math.min(S.liste.length, 7); lagre(); return true; }
-  rot.DagbokSpill = { start, nå, noter, tilstand: () => S };
+  // siste(): den siste rapporten (morgenmøtet viser den øverst på kortet, spill/morgen-visning.js)
+  const siste = () => (klar && S && S.liste.length && /^(.*! )?Dag \d+:/.test(S.liste[0]) ? S.liste[0] : null);
+  rot.DagbokSpill = { start, nå, noter, siste, tilstand: () => S };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
