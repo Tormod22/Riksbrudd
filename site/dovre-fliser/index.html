@@ -309,12 +309,13 @@ function kø(z, x, y, k, forrang = false) {
 // Skjøtene var lastingen: en ferdig skarp flis sto rett ved siden av en grov reserve (fire nivåer opp, forstørret), med rett kant og
 // ofte litt annen tone (skyggen overdrives mer på grove nivåer). Og rett etter lasting fantes ingen grove fliser i det hele tatt, så
 // kartet var bakgrunnen (blått på /norge) med det lyse siktfeltet oppå. Nå: (1) en grov flis for hele bildet bes om FØRST, så kartet
-// fylles ut på et øyeblikk (uskarpt) før de skarpe kommer; (2) reserven leter lenger opp (seks nivåer) og bruker de fire finere flisene
+// fylles ut på et øyeblikk (uskarpt) før de skarpe kommer; (2) reserven leter lenger opp (ni nivåer: rett etter lasting er oversikten
+// over landet det eneste som finnes – bedre enn blått) og bruker de fire finere flisene
 // når du zoomer ut; (3) en ny flis tones inn; (4) en ferdig flis som står inntil en som ikke er ferdig, får en myk kant mot den
 // (grov -> skarp over FLISLAST.kant punkter), så det ikke blir en rett søm. Claudes forslag (alle tallene):
 // inn = toningen (ms), kant = myk kant (CSS-punkter), grov = hvor mange nivåer opp den første grove flisen ligger, dypt = reserven,
 // forrang = så mange fliser kan være i arbeid når en grov flis slipper foran (ellers 6).
-const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 6, forrang: 10 };
+const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 9, forrang: 10 };
 let MYK = null;   // lerret til flisene med myk kant
 function flisReserve(z, x, y) {
   for (let d = 1; d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
