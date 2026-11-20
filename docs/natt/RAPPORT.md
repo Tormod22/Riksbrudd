@@ -213,3 +213,9 @@ ukegrensen for bruk, og ble gjort ferdig etter kl. 16 da grensen var nullstilt. 
 - Bare én angrepsgruppe per motstander om gangen; den svakeste motstanderen får ingen hjelp.
 - Morgenmøtet er spilt i 4–5 døgn, ikke balansert over lang tid.
 - Ingen ny kritikerrunde på den nye versjonen ennå.
+
+## Kontroll (20. nov kl. 18)
+- **Hele `sjekk.js` på den endelige versjonen: PC 126 av 126 og mobil 126 av 126, «Alt i orden».**
+- Funnet ved flettingen: «Lys og skygger» ga GL-feil 1282 på mobil første gang hvert nett ble tegnet i skyggekartet (den egne «tomme»
+  dybdetegningen fra utseende-pakka). Byttet til three.js sin MeshDepthMaterial med colorWrite/depthWrite av – samme virkning, ingen feil.
+- Hjelpen samlet på nytt (213 emner).
