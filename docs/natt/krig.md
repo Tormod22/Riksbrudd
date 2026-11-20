@@ -654,3 +654,24 @@ og ga opp. Årsak: 12 lag (taket på Vanlig) og 14 tettsteder – alle lagene va
 småstedsregelen (under 3000 innbyggere) slapp ingen garnisoner fri. RETTET: taket vokser med et halvt lag per tettsted de holder
 (`REGLER.lagPerBy`, `Eskalering.tak(grunn, døgnEtterFred, g, byer)`), og til storbyen kan de ta med garnisoner fra tettsteder under 15 000
 innbyggere uten fiender innen 5 km (`plan.småsted`).
+
+#### (a) med det nye lagtaket (logg `natt/krig7/ga5-v1.log`) – for TIDLIG
+Med flere lag fikk Folkefronten nok frie mann til at enkeltlagene selv gikk mot Stavanger/Sandnes (den gamle regelen i Fraksjoner.velg: et stort
+tettsted tas når de frie er mange nok) – **seier dag 8 kl. 10**, før storbyene var lov for gruppene. RETTET: `Fraksjoner.velg` får `storbyStengt`
+(innbyggertallet storbyene begynner på, fra `AI.storbyStengt()` i eskalering-visning.js) så lenge døgnet er før `grad.storbyFra`; i testene 0 (som før).
+
+#### (a) ENDELIG – alle reglene (logg `natt/krig7/ga6.log`): Kystalliansen vinner dag 12
+| Dag (kl. 06) | Du | Kystalliansen | Folkefronten | AI-lag r/g | Angrep på deg det døgnet | Hva skjer |
+|---|---|---|---|---|---|---|
+| 1–3 | 0 % | 0,3 % | 0,2 % | 2/2 → 4/4 | – | fredstid, kassene vokser; røverne som før |
+| 4 | 0 % | 0,3 % | 0,2 % | 5/5 | – | freden over 3 · 18:00; begge samler 3 lag mot hverandres startsted |
+| 5 | 0 % | 6,3 % | 0 % | 7/5 | – | Kystalliansen tar Sviland, Ålgård/Figgjo, Kvernaland … |
+| 6 | 0 % | 12 % | 0,3 % | 8/6 | – | |
+| 7 | 0 % | 18,3 % | 0,3 % | 11/6 | – | taket vokser med tettstedene (11 lag) |
+| 8 | 0 % | 19,4 % | 0,3 % | 14/7 | 1 | Kystalliansen får stridsvogn (19:44); 22:46 etterretning: Folkefronten samler 3 lag (34 mann) ved Vatne mot leiren |
+| 9 | 0 % | 19,6 % | 0,3 % | 15/7 | (angrepet) | 04:49 angriper; 13:14 trekker seg bort fra leiren |
+| 10 | 0 % | 19,6 % | 0,6 % | 18/6 | – | Folkefronten angriper Hommersåk |
+| 11 | 0 % | 16,2 % | 4,1 % | 16/6 | – | stridsvogner til begge (11 · 06–07) |
+| 12 | 0 % | 15,9 % | 4,4 % | 17/7 | 1 | Kystalliansen samler 5 lag ved Stenebyen mot Stavanger/Sandnes (00:05), angriper 06:06, **tar den 13:20 og vinner**; 13:35 ny etterretning mot leiren |
+
+**Mål (a) på Vanlig: oppfylt (dag 12).** Over de fem kjøringene på Vanlig: dag 10, 10, ingen (rettet), dag 8 (rettet) og dag 12 med de endelige reglene.
