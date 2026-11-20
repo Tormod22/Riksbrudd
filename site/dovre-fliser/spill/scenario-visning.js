@@ -92,6 +92,8 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   // ekstra = et element som står mellom teksten og knappene (oppsummeringen på seiersskjermen)
   // (runde 12) body.formkortpå: krigspanelet og de andre panelene legges under det mørke sløret mens kortet står (d4-modal-13.png)
   const kortAv = () => { kort.classList.remove('på'); document.body.classList.remove('formkortpå'); };
+  // det samme for krigskortene («Området er ditt», spill/strategi-visning.js)
+  setInterval(() => { const k2 = document.getElementById('krigkort'), på = kort.classList.contains('på') || !!(k2 && k2.classList.contains('på')); if (document.body.classList.contains('formkortpå') !== på) document.body.classList.toggle('formkortpå', på); }, 300);
   function visKort(tittel, tekst, valg, ekstra) {
     const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst)); if (ekstra) d.append(ekstra);
     const kn = el('div', { klasse: 'valg' }); d.append(kn);
@@ -99,6 +101,15 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     kort.replaceChildren(d); kort.classList.add('på'); document.body.classList.add('formkortpå');
     if (typeof tempo !== 'undefined' && tempo > 0 && document.getElementById('sp0')) document.getElementById('sp0').click();
   }
+
+  // ---------- (runde 12) PAUSEN HOLDER MED EN GANG ----------
+  // PC-kritiker F: «"Spillet står på pause til du svarer" mens klokka går (14:07 → 14:14)» (47-hvorfor-sakte.png). Årsaken: spill/skjermlag.js
+  // ser etter kort hvert 150. ms, men på 600× går ett bilde 2,5 spillminutter fram, og med treg grafikk (0,75 bilder i sekundet) rakk flere
+  // bilder å gå før pausen kom. Nå sjekkes det i hvert steg av simuleringen: står et kort som venter på svar, settes pausen straks
+  // (Skjermlag.pause – samme regler, samme lapp), og løkka i index.html stopper resten av bildet når farten er 0.
+  const KORT_ID = (window.Skjermlag && Skjermlag.KORT) || ['hendelse', 'samfunnkort', 'formkort', 'krigkort'];
+  KROKER.sim.unshift(() => { if (typeof tempo === 'undefined' || tempo <= 0 || !window.Skjermlag || !Skjermlag.pause || (navigator.webdriver && Skjermlag.test !== true)) return;
+    for (const id of KORT_ID) { const e = document.getElementById(id); if (e && e.classList.contains('på') && e.getClientRects().length) { Skjermlag.pause(); return; } } });
 
   // ---------- øyeblikksbildet for scenarier og ukas oppdrag ----------
   const byer = () => (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [];
@@ -303,7 +314,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   const tegnE = (g, vx0, vy1) => {
     if (!eÅpen) return; const b = E[eNr]; if (!b) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; g.save();
     // (runde 12) lysere slør, så kartet under synes (før .72: «nesten svart»)
-    g.fillStyle = 'rgba(14,11,7,.4)'; g.fillRect(0, 0, VW, VH);
+    g.fillStyle = 'rgba(14,11,7,.45)'; g.fillRect(0, 0, VW, VH);
     // leirens bygg (lyse ruter; ser du nærmere, får de typens farge), kampstedene (flammer etter hvor mye det ble skutt)
     { const bb = SC.byggI(E, eNr), r = Math.max(2.5, Math.min(7, 14 / m)); g.fillStyle = 'rgba(240,226,176,.75)'; g.strokeStyle = 'rgba(20,16,10,.9)'; g.lineWidth = 1;
       for (const [x0, y0] of bb) { const x = sx(x0), y = sy(y0); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue; g.fillRect(x - r, y - r, r * 2, r * 2); g.strokeRect(x - r, y - r, r * 2, r * 2); } }
@@ -327,6 +338,10 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     g.restore(); };
   // mens etterspillet er åpent, gjør trykk i kartet ingenting
   KROKER.trykk.unshift(() => eÅpen);
+  // (runde 12) kartet under er lysere nå – da skal ikke lagene slik de står NÅ blandes med bildet fra den gang: egne lag skjules, og ingen
+  // fiender vises (KROKER.skjul / KROKER.innsyn) så lenge reprisen er åpen
+  KROKER.skjul.push(s => eÅpen && s.side === 'blå');
+  KROKER.innsyn.push(() => !eÅpen);
 
   // ---------- ukas oppdrag ----------
   const ukeNå = () => SC.ukasOppdrag(SC.uke(new Date()));

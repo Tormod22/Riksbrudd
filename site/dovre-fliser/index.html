@@ -3380,7 +3380,7 @@ function trengerTegning3d(nå) {
 }
 (function loop(nå) {
   const tLøkke = R3 && R3.måler ? performance.now() : 0;
-  if (nå) { let r = Math.min(.25, (nå - sist) / 1000) * tempo / 60; sist = nå; while (r > 1e-12) { const d = Math.min(.1, r); sim(d); r -= d; } }   // sanntid ved 1×, små steg hver ramme (jevn bevegelse)
+  if (nå) { let r = Math.min(.25, (nå - sist) / 1000) * tempo / 60; sist = nå; while (r > 1e-12 && tempo > 0) { const d = Math.min(.1, r); sim(d); r -= d; } }   // sanntid ved 1×, små steg hver ramme (jevn bevegelse)
   // høyst tre nye siktberegninger per ramme (resten tas i neste ramme), så mange lag som flytter seg samtidig ikke gir hakk
   let nySikt = 0; for (const s of ENHETER) if (nySikt < 3 && !s.siktJobb && (!s.siktVed || s.siktSkitten || Math.hypot(s.x - s.siktVed[0], s.y - s.siktVed[1]) > 150)) { oppdaterSikt(s); nySikt++; }
   if (på3d) { if (trengerTegning3d(nå)) tegn3d(); } else tegn();
@@ -3459,7 +3459,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=687fec0932"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=dcc1b8514e"></script>
 <script src="/dovre-fliser/spill/leir2d.js?v=1b9f97551d"></script>
-<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=c0bc49b440"></script>
+<script src="/dovre-fliser/spill/kontrollrom-visning.js?v=9b5d7044fe"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
 <script src="/dovre-fliser/spill/lagringsmeny.js?v=2b3528b257"></script>
@@ -3506,19 +3506,19 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/strid.js?v=76235e3a9c"></script>
 <script src="/dovre-fliser/spill/strid-visning.js?v=2df0cae0a2"></script>
-<script src="/dovre-fliser/spill/forsvar.js?v=7469970049"></script>
-<script src="/dovre-fliser/spill/forsvar-visning.js?v=af83dc51af"></script>
+<script src="/dovre-fliser/spill/forsvar.js?v=37bf52b50c"></script>
+<script src="/dovre-fliser/spill/forsvar-visning.js?v=9b63476722"></script>
 <script src="/dovre-fliser/spill/trussel-lagring.js?v=ce5eea747c"></script>
 <script src="/dovre-fliser/spill/forsvar-oppgjor.js?v=3bbffd11aa"></script>
 <script src="/dovre-fliser/spill/morgen.js?v=8f797ffc02"></script>
 <script src="/dovre-fliser/spill/morgen-visning.js?v=2f1c07b7d4"></script>
 <script src="/dovre-fliser/spill/forsvar-hjemme.js?v=0ff458940c"></script>
 <script src="/dovre-fliser/spill/tropper.js?v=d290afac08"></script>
-<script src="/dovre-fliser/spill/tropper-visning.js?v=217cf4989d"></script>
+<script src="/dovre-fliser/spill/tropper-visning.js?v=72798d34ef"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=f998390bfe"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=5f07d1bfc0"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=8a0899fb60"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=338d6434a0"></script>
 <script src="/dovre-fliser/spill/region.js?v=c413865888"></script>
 <script src="/dovre-fliser/spill/region-visning.js?v=a6026146a1"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
@@ -3543,8 +3543,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=8ca4ddf882"></script>
 <script src="/dovre-fliser/spill/meny.js?v=4dccb12614"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=98831c2b06"></script>
-<script src="/dovre-fliser/spill/scenario.js?v=8dd27fc47f"></script>
-<script src="/dovre-fliser/spill/scenario-visning.js?v=29dde9b7fe"></script>
+<script src="/dovre-fliser/spill/scenario.js?v=07160498ce"></script>
+<script src="/dovre-fliser/spill/scenario-visning.js?v=e6f04f16fb"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
 <script src="/dovre-fliser/spill/lys3d.js?v=9a7e1bb68e"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
