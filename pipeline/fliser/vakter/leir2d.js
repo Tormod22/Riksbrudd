@@ -33,6 +33,10 @@ module.exports = { navn: 'leir2d (leirens bygg ovenfra, figurer og folk på nær
       krev(ulik(bilde(kø).d, ferdig) > 20, 'byggeplassen i kø ser lik ut som det ferdige bygget');
       krev(ulik(bilde(rn).d, ferdig) > 20, 'ruinen ser lik ut som det ferdige bygget');
       krev(ulik(bilde(sk).d, bilde({ type: 'sykestue', igjen: 0, hp: 1 }).d) > 5, 'det skadde bygget ser helt ut');
+      // gjerdet og grusvegen (egne tegnere) tegner noe og kaster ikke
+      { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#2050a0'; g.fillRect(0, 0, 160, 160); const sx = X => X / .1 + 80, sy = Y => 80 - Y / .1;
+        Leir2d.gjerde(g, [[[-5, -5], [5, -5]], [[5, -5], [5, 5]]], sx, sy, .1, { ferdig: true }); Leir2d.veg(g, [[-6, 2], [0, 4], [6, 2]], sx, sy, .1, { ferdig: true, bredde: 5 });
+        krev(ulik(g.getImageData(0, 0, 160, 160).data, tom) > 10, 'gjerdet og vegen ble ikke tegnet'); }
       // kontrollrommets tak er mørkt (svart saltak som i 3D, ikke en lys boks)
       { const d = bilde({ type: 'kontrollrom', igjen: 0, hp: 1 }).d, i = (40 * 160 + 60) * 4; ut.takKontrollrom = [d[i], d[i + 1], d[i + 2]]; krev(d[i] + d[i + 1] + d[i + 2] < 250, `kontrollrommets tak er ikke mørkt (${ut.takKontrollrom})`); }
       // natt (KartLys): mørkere tak og lys i vinduene på bygg med strøm

@@ -30,6 +30,10 @@ på 0,5, 0,2 og 0,12 m per punkt, dag og natt.
 - **Natt** (KartLys): byggene får samme nattfarge som kartet (`Leir2d.tonet`, samme regning som lagene i kartlys.js), og bygg med
   vinduer, strøm og som ikke er avslått, har varmt lys på bakken langs langveggene og ved døra.
 - **Gjerde**: skygge, netting og stolper hver 2,5 m. **Grusveg**: kant, grus, to hjulspor og lysere midtrygg.
+- **Tråkk**: slitt jord på en ujevn plass rundt leirens midte (halvveis ut til byggene, 8–26 m), svakt rundt hvert ferdige bygg
+  (ikke småting under 12 m²) og stier fra dørene inn mot plassen (ikke gjennom andre bygg). Egen tegnekrok først i KROKER.tegn
+  (under flagget, merkene og tåka).
+- **Navnet under bygget** helt nær (under 0,35 m per punkt), så taket synes; lenger ute midt på som før.
 - Skissen når du plasserer: taket svakt + grønt/rødt omriss som før.
 - Byggene (og folkene og feltbilen) tegnes nå **over tåka og det lyse siktfeltet** (`f.over` i index.html) – før ble leiren bleik
   og utvasket der flere lag så.
@@ -37,7 +41,8 @@ på 0,5, 0,2 og 0,12 m per punkt, dag og natt.
 ### 2. Folk og kjøretøy på nær zoom – LAGET
 - **Lagene** (index.html tegnLag, under 1,6 m per punkt som før): hver mann er en figur ovenfra (`Leir2d.mann`): skuldre i sidens farge
   (lagføreren gul som før), hjelm, sekk og gevær med armene fram (fra radius 4,2–4,5 punkter), skygge, i retningen laget ser. Såret =
-  bare omrisset (som før). Figurradius 2 / √m, 3,4–6,5 punkter (før 3,4 eller 0,35 / m). Falne er fortsatt kryss.
+  bare omrisset (som før). Figurradius 2 / √m, 3,4–6,5 punkter (før 3,4 eller 0,35 / m). Falne er fortsatt kryss. På marsj går
+  føttene fram og tilbake under kroppen (fasen per mann).
 - **Folkene i leiren** (`Leir2d.folkPlass`, under 0,6 m per punkt): byggelaget står rundt byggeplassen og ser inn mot den, vakta ved
   porten/vakttårnet, frakt går mellom lageret og leirens midte, hogst i skogkanten 38–48 m ute, fri rundt leirens midte; de som arbeider
   inne (kontrollrom, kjøkken, sykestue, verksted) og syke i karantene synes ikke. Sivile figurer: jakke i egen farge, hår og ansikt.
@@ -59,11 +64,15 @@ PC 64,5 ms per bilde mot 63,3 uten (Leir2d.av), 71,8 mot 76,2 i en annen kjørin
 i prøveskriptet: 191 mot 190 ms og 202 mot 269 ms. (Alle tallene er programvare-grafikk på en full maskin.) Vakten feiler hvis
 den nye tegningen er mer enn 1,5 × + 12 ms tregere.
 
+### Kontrollen
+`SJEKK_PROFIL=mobil PORT=8912 node pipeline/fliser/sjekk.js` (commit 39729c4): 120 ok, 0 FEIL, 691 s. Leir2d-vakta der: 3,7 s
+(3D var på – figurene og folkene telles da ikke). Kart-, lys-, start- og ui-vaktene er også kjørt sammen med leir2d på PC og telefon: grønne.
+
 ### Filer
 - `site/dovre-fliser/spill/leir2d.js` (ny) – reglene øverst uten DOM: `REGLER`, `STIL`, `HUS`, `stil`, `tilstand`, `tonet`, `hex`,
   `figurR`, `folkPlass`, `hash`; visningen: `Leir2d.bygg/tegnBygg/skygge/ramme/mann/gjerde/veg/tegnFolk/lager/av/kjørKrok`.
   Test: `pipeline/fliser/test_leir2d.js` (103 sjekker).
-- Vakt: `pipeline/fliser/vakter/leir2d.js` (ca. 12 s på en full maskin): alle byggtyper tegnes, tilstandene ser ulike ut,
+- Vakt: `pipeline/fliser/vakter/leir2d.js` (4–12 s på en full maskin): alle byggtyper tegnes, gjerde og veg tegnes, tilstandene ser ulike ut,
   kontrollrommets tak er mørkt, natt gir mørkere tak og lys, tegn() bruker den nye tegningen, tid per bilde, navn uten overlapp på
   sju målestokker dag og natt, soldater og folk som figurer. Legger inn prøvebygg 300 m øst for leiren og tar dem bort igjen
   (også L.neste/L.nesteJobb), setter kameraet, tida, kartlyset og Leir2d.av tilbake. Rører ikke lagene eller frø.
@@ -73,13 +82,15 @@ den nye tegningen er mer enn 1,5 × + 12 ms tregere.
 - `index.html`: skripttaggen for leir2d.js rett etter byggevisning.js; `tegn()` – kroker med `f.over = true` tegnes inne i
   `tegnEnheter` etter tåka og siktfeltet og før lagene (ny parameter `mellom` i `tegnEnheter(vx0, vy1, mellom)`; i byggevisningen bare
   de uten f.bygg); `tegnLag` – figurradius og `Leir2d.mann` i stedet for sirkelen (den gamle sirkelen står som reserve).
-- `spill/leir-visning.js` (2D-tegningen, min del): tegn1 kaller Leir2d.bygg/veg/gjerde, skyggene tegnes først, kroken har `over = true`.
+  NB: leir2d.js legger tråkk-kroken FØRST i KROKER.tegn (unshift).
+- `spill/leir-visning.js` (2D-tegningen, min del): tegn1 kaller Leir2d.bygg/veg/gjerde, skyggene tegnes først, navnet under bygget
+  helt nær, kroken har `over = true`.
 - `spill/byggevisning.js`: nøkkeltallene under navnene.
 
 ### Ikke gjort / svakheter
 - Kartflisene på helt nær zoom (z17) er fortsatt myke (trærne er runde klatter) – kartflis.js er ikke min fil; mønsteret i bakken
   (kartlys.js, runde 6) er som før.
 - Byggesettets deler (byggesett-visning.js) og fiendens stillinger tegnes som før.
-- Folkene i leiren har ingen gange-animasjon (de glir), og barna/de gamle (Samfunn) er ikke med i 2D.
+- Folkene i leiren glir (bare de på frakt har føtter som går), og barna/de gamle (Samfunn) er ikke med i 2D.
 - Kameramast og vakttårn er små på 0,3–0,5 m per punkt.
 - Hurtiglageret holder ett lite lerret per bygg i synet (tømmes når målestokken endres) – på telefon med mange bygg kan det bli noen MB.
