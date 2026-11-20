@@ -785,6 +785,10 @@ Per kilde («Hvor i koden» i «Mål hakk», sum / antall / lengste):
 - I de lange oppgavene etter: `spill/tallrekke.js` 0,2 s på PC og 0,4 s på telefon – på telefon var lageret (24 MB) for lite for husene i
   Stavanger, så rekkene vokste gjennom 4096, 8192 … og fikk nye tabeller hver gang (210 MB nye Float32Array på 40 s). Derfor (561f666):
   rekker med navn starter i størrelsen de endte på sist, og lageret er 40 MB på telefon / 96 MB på PC – se måling «etter 2» under.
+- **Telefon etter 2** (561f666 – med navnene på rekkene og 40 MB lager, `b-stav-mob-etter2.log`): 7 pauser over 50 ms, sum 0,5 s, lengste
+  109 ms; 2 lange oppgaver (0,2 s, lengste 107 ms – veg.js i liv3d); søppeltømming 0,9 s i alt, ingen bit over 17 ms; 6 nye utsnitt på 40 s.
+  MEN lasten på maskinen hadde falt (58 bilder i sekundet mot 35–38 og «klar etter» 35 s), så den er ikke rett sammenlignbar med «før» –
+  se «Etter 2, samme last» under.
 - Tallene varierer mye med lasten på maskinen (samme tur gav «klar etter» 35–135 s); det som er sikkert, er at de store søppelpausene
   (over 50 ms) er nesten borte på PC, og at husene ikke lenger lager store lister.
 
