@@ -35,7 +35,7 @@
 #lagmeny button.handling{ justify-content:center; }
 #lagmeny .spillrad{ display:flex; gap:6px; margin:0 0 10px; } #lagmeny .spillrad button.fare{ min-height:34px; font-size:14px; }
 #lagmeny button.fare{ width:100%; justify-content:center; text-align:center; border-color:#8a4a3a; color:#e7b3a3; background:#2a1a16; }
-#lagmeny button:hover{ filter:brightness(1.18); } #lagmeny button:focus-visible{ outline:2px solid #e9d79a; outline-offset:1px; }
+#lagmeny p.mkilder{ margin:8px 0 0; font-size:12px; line-height:1.35; color:var(--ink-dim); font-style:italic; } #lagmeny button:hover{ filter:brightness(1.18); } #lagmeny button:focus-visible{ outline:2px solid #e9d79a; outline-offset:1px; }
 body.kort #lagmeny.på{ width:min(360px, calc(100vw - 16px)); padding:8px 9px 9px; } body.kort #lagmeny h3 small{ display:none; }
 @media (max-width:360px){ #lagmeny .rute{ grid-template-columns:1fr; } }`;
   document.head.appendChild(css);
@@ -66,7 +66,11 @@ body.kort #lagmeny.på{ width:min(360px, calc(100vw - 16px)); padding:8px 9px 9p
     seksjon('Annet', '', knapper.filter(b => !brukt.has(b)));
     // RUNDE 8 (telefonkritikeren: «"Nytt spill" ligger nederst i ☰, under fold»): «Nytt spill» står øverst, rett under «Lagre og last»
     if (fare.length) { const rad = document.createElement('div'); rad.className = 'spillrad'; for (const b of fare) { b.classList.add('fare'); rad.appendChild(b); } topp.after(rad); }
+    // RUNDE 12 (pakke «ui», kritiker E): kildeteksten er skjult når du går i 3D på telefon – den står her nederst i stedet (alltid)
+    const kp = document.createElement('p'); kp.className = 'mkilder'; meny.appendChild(kp); kilder();
   }
+  function kilder() { const k = document.getElementById('kilde'), p = meny.querySelector('p.mkilder'); if (k && p && p.textContent !== 'Kilder: ' + k.textContent) p.textContent = 'Kilder: ' + k.textContent; }
+  åpner.addEventListener('click', kilder);
   function lukk() { if (!meny.classList.contains('på')) return; meny.classList.remove('på'); åpner.classList.remove('på'); åpner.setAttribute('aria-expanded', 'false'); }
   ordne(); åpner.title = 'Innstillinger';
   // knapper som kommer til senere (en modul som lastes etter denne), og tekst som settes på nytt

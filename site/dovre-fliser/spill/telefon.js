@@ -119,6 +119,8 @@ body.kort.tlfligg #tropppanel .opprett{ position:static; flex:none; margin:6px -
 body.kort #mkom button:not(.på){ background:linear-gradient(180deg,#2e2516,#191309); }
 body.kort.mkom #ressursvalg{ bottom:calc(64px + ${B}); }
 body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw - 24px - ${L} - ${Rt})); max-height:calc(100% - var(--topp,44px) - 80px - ${B}); overflow-y:auto; }
+body.kort #flytkort.ibanner{ margin:0; transform:none; padding:2px 6px 3px 8px; font-size:12.5px; line-height:1.25; background:#22100b; border-color:#e0714f; border-top:1px dashed #6a3426; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+body.kort #flytkort.ibanner button{ min-height:32px; padding:0 8px; font-size:12.5px; } body.kort #flytkort.ibanner > span{ overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 /* RUNDE 12 (21. nov, kritiker E – liggende telefon): med et høyt panel åpent til venstre (Leir, Folk, Deg …) eller til høyre står bunnmenyen
    som en smal rad med ikoner ved siden av panelet (body.mkomved, --mkomx), og panelet går helt ned. Tallene (46 × 42 px) er Claudes forslag. */
 body.kort.tlfligg.mkomved #mkom{ right:auto; left:var(--mkomx); justify-content:flex-start; gap:3px; }
@@ -153,7 +155,13 @@ html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tro
       .filter(r => r.width > 100 && r.height > 20 && r.height < H * .6 && r.top < H / 2 && r.left < a.right && a.left < r.right).sort((x, y) => x.top - y.top);
     let y = a.top; for (const r of kort) if (r.top < y + a.height && y < r.bottom) y = r.bottom + 6;
     k.style.top = y !== a.top && y + a.height < H - 60 ? Math.round(y) + 'px' : ''; }
-  function stoppkortNed() { ned('varsel'); ned('flytkort'); }
+  // RUNDE 12 (kritiker E: sju bokser oppå hverandre under angrepet): på telefon henger stoppkortet («⏭ Stoppet: … Spol videre ×») seg rett
+  // under angrepsbanneret som en smal linje i samme bredde, så de leses som én boks. Bare for spilleren (Telefon.test i testene).
+  function iBanner() { const k = document.getElementById('flytkort'), a = document.getElementById('alarm'), b = document.body;
+    const på = b.classList.contains('kort') && (!navigator.webdriver || Telefon.test === true) && k && a && k.classList.contains('på') && a.classList.contains('på') && a.getClientRects().length > 0 && k.getClientRects().length > 0;
+    if (!på) { if (k && k.classList.contains('ibanner')) { k.classList.remove('ibanner'); for (const q of ['left', 'width', 'top', 'right', 'max-width']) k.style.removeProperty(q); } return false; }
+    const r = a.getBoundingClientRect(); k.classList.add('ibanner'); k.style.setProperty('left', Math.round(r.left) + 'px'); k.style.setProperty('right', 'auto'); k.style.setProperty('width', Math.round(r.width) + 'px'); k.style.setProperty('max-width', 'none'); k.style.setProperty('top', Math.round(r.bottom - 1) + 'px'); return true; }
+  function stoppkortNed() { ned('varsel'); if (!iBanner()) ned('flytkort'); }
   // RUNDE 10: liggende telefon – hogstfelt-/rivelappen og byggebanneret står midt nede; er en meny åpen til venstre (eller høyre), står de
   // i den frie delen ved siden av menyen, så de ikke ligger oppå den
   const VED = ['ressursvalg', 'byggvalg', 'alarm'], MENY = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel'];
@@ -212,6 +220,12 @@ html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tro
     if (r.width > W * .6) kam.y = s.y - (H / 2 - (topp + r.top) / 2) * kam.m; else kam.x = s.x - ((r.right + W) / 2 - W / 2) * kam.m;
     if (typeof skitten !== 'undefined') skitten = true; }
   setInterval(() => { if (document.body.classList.contains('kort')) seLag(); }, 250);
+  // RUNDE 12 (kritiker E: «tastaturhint på telefon», f.eks. «… (Tab)», «Gå ut (F)»): på berøringsskjerm tas en tastetekst i parentes på
+  // slutten av knappeteksten bort (bare den siste tekstbiten i knappen endres). Bare for spilleren – kontrollskriptet trykker etter teksten.
+  const TAST = /\s*\((?:Tab|Esc|Enter|Shift|Mellomrom|Ctrl\+\w|F\d{0,2}|[A-ZÆØÅ])\)\s*$/;
+  function utenTaster() { if (navigator.webdriver && Telefon.test !== true) return; if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) return;
+    for (const b of document.querySelectorAll('button')) { const t = b.lastChild; if (!t || t.nodeType !== 3 || !TAST.test(t.nodeValue)) continue; t.nodeValue = t.nodeValue.replace(TAST, ''); } }
+  setInterval(utenTaster, 1500);
   setInterval(pass, 350); window.addEventListener('resize', pass); pass();
   window.Telefon = { pass, seLag, test: false, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
 })();

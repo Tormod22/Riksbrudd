@@ -196,6 +196,8 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     { const km = [$('kommer'), $('mkommer')].find(e => e && e.classList.contains('på') && synlig(e)), b = km ? Math.round(window.innerHeight - km.getBoundingClientRect().top + 8) + 'px' : ''; if (boks.style.bottom !== b) boks.style.bottom = b; }
     const tlf = document.body.classList.contains('kort'), meny = MENYER.some(id => synlig($(id))), dekker = tlf && !meny && DEKKER.some(id => synlig($(id))), angrep = angrepNå();
     if (!angrep) oppeAngrep = false;
+    // RUNDE 12: under et angrep på liggende telefon viker ruta helt (banneret, stoppkortet og varslene trenger plassen) – til du åpner den med +
+    if (angrep && !oppeAngrep && liggTlf() && !åpnetLigg) { skjul(); return; }
     // på telefon med en meny åpen: én linje nederst, og menyen får plass under den (body.oppliten); med lagpanelet o.l. åpent viker ruta helt
     const liten = (på) => { boks.classList.toggle('liten', på); document.body.classList.toggle('oppliten', på); };
     // (runde 6) et steg som nettopp ble gjort, står med ✓ en stund (før hoppet det videre før man rakk å lese, og et steg som alt var gjort,
