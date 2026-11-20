@@ -622,6 +622,13 @@ høyst tre interiører, og gresset har 5000 tuster.
   Prøvd: to prøvelåver – én etter første runde, begge etter andre, borte etterpå (scratchpad `natt7/lys/prov9.js`); test_lave3d.js grønn.
 - Ikke gjort i denne runden: fjern3d `bygg` (er alt i biter fra runde 4) og infra3d med store bruer (flyr/kjører) – ikke målt på nytt.
 
+### Når du flyr (Stavanger, /rogaland −33500 6573500, 40 s, 150 m/s, 900 m; `fly-stavanger.log`, etter endringene)
+Lange oppgaver 74, sum 8,2 s, lengste 414 ms – det største er SØPPELTØMMINGEN (2,1 s i lange oppgaver; enkeltpauser 396, 329 og 239 ms
+mens hus3d og vegene i liv3d ble bygget – store tabeller per utsnitt). Ikke rettet: å gjenbruke tabellene mellom utsnittene (husene,
+terrengnettet, vegene) er en større omskriving av index.html og liv3d.js. Andre: `ryddHus` (index.html) – én bit tok 245 ms fordi klokka
+ble sjekket bare for hver ca. 200. ting (5 hindring3d per ting i tett by): nå for hver 32. (samme svar, bare oftere pust); kartbildet i
+bakgrunnstråden (Blob 239 ms), kompassets tekst (fillText 99 ms), vegetasjon3d `iVann` 198 ms (ikke mine).
+
 ### Vakt (pipeline/fliser/vakter/lys.js, runde 7-delen – bare med 3D på)
 - Prøvehus 10 × 8 m: generatoren i ett strekk og steg for steg gir samme rom, møbler, trekanter, nett og hvert hjørne (selvtest: et
   flyttet hjørne blir sett); den ekte veien (oppdater uten tving, `Interior3d.drivBit` som bildene gjør) bygger huset i flere biter
@@ -635,7 +642,8 @@ høyst tre interiører, og gresset har 5000 tuster.
 Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `sjekk()`. interior.js: `planG`, `nærKant`, `inniR`, `nærKantR`.
 
 ### Fellesfiler endret i runde 7
-- `site/dovre-fliser/index.html`: bare `gress3d` (gressG/gressBit; nettet starter med count 0; gressBit teller R3.nærtNr) og versjonsmerkene (versjon.py).
+- `site/dovre-fliser/index.html`: `gress3d` (gressG/gressBit; nettet starter med count 0; gressBit teller R3.nærtNr), `ryddHus` (pust-sjekk
+  for hver 32. ting) og versjonsmerkene (versjon.py).
 - `site/dovre-fliser/spill/interior.js` (regelfila for interiøret): planG/del/rutenett som generatorer, prøv med billige sjekker først og
   uten mellomtabeller, nærKant, ruter/inniR/nærKantR. Samme planer (prøvd mot den gamle fila for 1008 bygg).
 - `site/dovre-fliser/spill/lave3d.js` (natur-pakka): høyst én låve per runde i `oppdater` (flagget `bygget`), ellers uendret.
