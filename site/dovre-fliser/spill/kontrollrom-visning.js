@@ -85,6 +85,8 @@
       for (let i = 0; i <= n; i++) P.push(høyde(v, s.x + (L.x - s.x) * i / n, s.y + (L.y - s.y) * i / n));
       k = K.kontakt(d, r, K.blokkert(P, P[0] + R.antenne, P[n] + (m ? R.mastHøyde : 4), d));
     } catch (e) { /* uten terrengdata: bare avstanden */ } }
+    // (runde 12) også når terrenget står i veien: garnisonen bruker radioen i tettstedet
+    if (!k && garnisonI(s)) { if (!I.kontakt && I.før) radio(s, `Kontakt over radioen i ${garnisonI(s).e.navn}.`, true); I.kontakt = true; I.garnison = garnisonI(s).e.navn; I.rekkevidde = r; return; }
     if (I.kontakt && !k) radio(s, 'Kontakten er brutt.', true);
     if (!I.kontakt && k && I.før) radio(s, 'Kontakt igjen.', true);
     I.kontakt = k; I.rekkevidde = r;
