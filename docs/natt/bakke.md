@@ -36,8 +36,11 @@ på gresset, plantene og fyllingen. Fargene (Claudes forslag, `GRESS_FARGE`): gr
 - `liv3d.js` `VEG_FARGE`: asfalt 84/85/88 (før 62/63/65), kommunal 88/87/86, gang- og sykkelveg 92/86/82. Svake store flekker
   (lappet/slitt), litt mørkere hjulspor, noen tynne sprekker i teksturen. Kryssflaten har asfaltens farge (før mørkere = «mørke rektangler»).
 - Fyllingen (skråningen fra vegkanten ned til bakken, 1 : 1,5) var én fast mørk olivenfarge og lå som mørke felt i gresset. Nå:
-  bakkens farge per hjørne (u.bunn, snitt av 3 × 3), lys nøytral tekstur med strå, normalene bøyd mot loddrett (0,35 + loddrett) og
-  forsidens lys – får omtrent lyset til bakken rundt.
+  bakkens farge per hjørne (u.bunn, snitt av 3 × 3, × 1,22), lys nøytral tekstur med strå, normalene bøyd mot loddrett (0,35 +
+  loddrett) og forsidens lys – får omtrent lyset til bakken rundt. Foten av fyllingen legges ikke på en annen veg (`kant(..., fri)`,
+  klaring > 0,6 m): innkjørselens fylling lå som et grønt bånd tvers over den kommunale vegen ved Kleivane.
+- Igjen ved Kleivane (mobil, kl. 06): et mørkere grønt felt nede til venstre bak bilen (bakken i skyggen av trærne – nå lysere, men
+  synlig). Ikke undersøkt videre.
 - IKKE gjort: vegbanen legges i høyden til det *høyeste* punktet under den (veg.js `høyder`). I bratt sideterreng står vegen derfor
   2–4 m over bakken på fylling på den ene siden. En skjæring på oversiden ville vært riktigere, men endrer mye (vegen kan bli begravd).
 
@@ -65,6 +68,9 @@ innkjørsel nei, `uSkF` i skyggekoden, `forsideLys` tar bort baksidevalget (selv
 I 3D med veger i utsnittet: ingen hjørnetrekant i kryssflatene svever mer enn 0,6 m over bakken. Prøvd: mobil med 3D (5 hjørner, 0 svever),
 PC uten 3D. Ca. 0,1–0,6 s.
 
+### Kontroll
+Mobilkontrollen (`SJEKK_PROFIL=mobil`, sjekk.js) etter siste endring: 127 ok, 0 feil (273 s). `test_veg.js` og `test_kartbilde.js` grønne.
+
 ### Bilder (scratchpad/natt10/bakke/)
 `for-bil-rogaland-mobil-*.png` (før) / `etter2-bil-rogaland-mobil-*.png` (etter) og `cmp-bil-*.png` (side om side): kilene borte.
-`ab-cmp.png`: kl. 06, skyggene etter / som før / uten skygger. `cmp-pc-0.png` (PC før/etter kl. 06), `etter12d-rogaland-pc-180.png` (PC kl. 12).
+`cmp4-bil-120.png` (siste, med lysere fylling). `ab-cmp.png`: kl. 06, skyggene etter / som før / uten skygger. `cmp-pc-0.png` (PC før/etter kl. 06), `etter12d-rogaland-pc-180.png` (PC kl. 12).
