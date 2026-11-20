@@ -243,6 +243,10 @@ const VEG = { E: [10, 2.6, '#e6bd6c'], R: [9, 2.3, '#dab066'], F: [7, 1.9, '#d0b
 // nesten urørt) og litt mer metning, og skyggesidene er ikke lenger nesten svarte (KARTLYS_SKYGGE = laveste lysfaktor, før 0,3).
 // Gjelder bare 2D-kartet (der skyggen tegnes); 3D-bakken lages uten skygge og er urørt. Tallene er Claudes forslag.
 const KARTLYS_GAMMA = .74, KARTLYS_SKYGGE = .46, KARTLYS_METNING = 1.12, KARTLYS_TABELL = new Uint8Array(256);
+// (runde 12, kritikk E: «2D-kartet på mellomzoom ser utvasket ut, med store gulhvite flekker») solsidene ble ganget med opptil 1,35, så
+// lyse jorder ble hvite. Nå løftes lyset mindre jo lysere punktet alt er: faktoren over 1 ganges med min(1, KARTLYS_TAK · (1 − lyshet)).
+// Claudes forslag: 1,4 (et mørkt punkt løftes som før, et lyst jorde med lyshet 0,8 får en firedel av løftet).
+const KARTLYS_TAK = 1.4;
 for (let kl_i = 0; kl_i < 256; kl_i++) KARTLYS_TABELL[kl_i] = Math.round(255 * Math.pow(kl_i / 255, KARTLYS_GAMMA));
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
 // Nær (fra z14, 1 m per punkt): vegen som den ser ut – asfalt med Statens vegvesens oppmerking, forenklet.
@@ -381,10 +385,11 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
         const i = (py + 1) * N + px + 1, gx = GX[i] * ve, gy = GY[i] * ve;
         if (gx !== gx || gy !== gy) continue;
         const n = Math.hypot(gx, gy, 1), s = Math.max(0, (-gx * Lx + gy * Ly + Lz) / n) / Lz, o = (py * T + px) * 4, wv = vann[py * T + px];
-        const f = (KARTLYS_SKYGGE + (1 - KARTLYS_SKYGGE) * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
+        let f = (KARTLYS_SKYGGE + (1 - KARTLYS_SKYGGE) * Math.min(1.35, s)) * (1 - wv) + wv;   // vannflaten er flat: ingen skygge på innsjøer og hav
         // landet løftes (gamma) og får litt mer farge; vann beholder fargen sin
         let lr = KARTLYS_TABELL[d[o]], lg = KARTLYS_TABELL[d[o + 1]], lb = KARTLYS_TABELL[d[o + 2]]; const gr = (lr + lg + lb) / 3;
         lr = gr + (lr - gr) * KARTLYS_METNING; lg = gr + (lg - gr) * KARTLYS_METNING; lb = gr + (lb - gr) * KARTLYS_METNING;
+        if (f > 1) f = 1 + (f - 1) * Math.min(1, KARTLYS_TAK * (1 - gr / 255));
         d[o] = Math.max(0, Math.min(255, (d[o] * wv + lr * (1 - wv)) * f)); d[o + 1] = Math.max(0, Math.min(255, (d[o + 1] * wv + lg * (1 - wv)) * f)); d[o + 2] = Math.max(0, Math.min(255, (d[o + 2] * wv + lb * (1 - wv)) * f));
       }
       g.putImageData(im, 0, 0);
@@ -414,9 +419,12 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   if (valg.bane && uv && uv.t.bane) {   // jernbane: mørk strek med lys stiplet kjerne, som på gamle kart
     const w = z <= 7 ? 1 : z <= 10 ? 1.5 : Math.max(1.8, 3 / r);
     g.lineCap = 'butt'; g.lineJoin = 'round';
+    // (runde 12, kritikk E: «sjakkbrettmønster i en bred stripe langs kysten ved Varhaug–Vigrestad» – det var Jærbanen: lys/mørk stiplet
+    // strek på 4 punkter, forstørret) på mellomzoom (z 8–10) en mørk strek med en tynnere, dempet og lengre stiplet kjerne
+    const mellom = z > 7 && z <= 10;
     for (const pass of [0, 1]) {
-      g.strokeStyle = pass ? '#d9cdb0' : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? w : w + (z <= 7 ? 1.4 : 2.2);
-      if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
+      g.strokeStyle = pass ? (mellom ? 'rgba(206,194,166,.6)' : '#d9cdb0') : 'rgba(20,15,9,.92)'; g.lineWidth = pass ? (mellom ? w * .6 : w) : w + (z <= 7 ? 1.4 : mellom ? 1.4 : 2.2);
+      if (pass && mellom) g.setLineDash([10, 8]); else if (pass && z > 7) g.setLineDash([Math.max(4, 14 / r), Math.max(4, 14 / r)]);
       // spor i tunnel (u = 1 i nyere data) tegnes for seg under, fra z10; lenger ute er de med i streken så banen ikke får hull
       g.beginPath(); for (const o of uv.t.bane.obj) { if (o.e.u && z > 9) continue; for (const d of o.deler) { const q = d.map(uP); g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } }
       g.stroke(); g.setLineDash([]);
