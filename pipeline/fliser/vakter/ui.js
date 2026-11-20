@@ -237,6 +237,70 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
     } catch (e) { r10 = { feil: ['runde 10: ' + e.message] }; }
     finally { await pg.setViewportSize(vp); await pg.waitForTimeout(500); }
     d.r10 = r10; for (const f of r10.feil || []) d.feil.push(f); }
+  // RUNDE 12 (21. nov, kritiker E – liggende telefon 844 × 390): opplæringen som én tynn linje til du trykker, Leir-menyen i full høyde med
+  // bunnmenyen som ikonrad ved siden av, byggebanneret som én smal rad, varslene samlet i én brikke, stoppkortet i angrepsbanneret, kort som
+  // venter på svar over panelene (og et varsel åpner ikke et panel over dem), ingen klypezoom (meta + touch-action), tastehint borte på
+  // berøringsskjerm, og gåmodus: kildene skjult, «Gå ut» ikke på minikartet. Vinduet settes til 844 × 390 en liten stund. Alt settes tilbake.
+  { const vp = pg.viewportSize(); let r12 = null;
+    try { await pg.setViewportSize({ width: 844, height: 390 }); await pg.waitForTimeout(700);
+      r12 = await pg.evaluate(async () => { const u = { feil: [] }, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id), krev = (b, t) => { if (!b) u.feil.push(t); }, B = document.body;
+        const over = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+        if (window.Telefon) Telefon.pass(); await vent(400); if (!B.classList.contains('tlfligg')) { u.feil.push('liggende telefon gir ikke body.tlfligg'); return u; }
+        const går = B.classList.contains('gaar'), i3 = typeof på3d !== 'undefined' && på3d;
+        const st0 = window.Skjermlag ? Skjermlag.test : undefined, ot0 = window.OpplaeringSpill ? OpplaeringSpill.test : undefined, nt0 = window.NarHud ? NarHud.test : undefined, tt0 = Telefon.test, lsv = localStorage.getItem('riksbrudd-opplaering'), sam0 = localStorage.getItem('riksbrudd-opplaering-sammen');
+        try {
+          // (7) ingen klypezoom
+          { const m = document.querySelector('meta[name=viewport]'); u.meta = m && m.content; krev(!!m && /user-scalable=no/.test(m.content) && /maximum-scale=1/.test(m.content), 'meta viewport tillater zoom'); krev(/pan-x pan-y|pan-y pan-x/.test(getComputedStyle(B).touchAction), 'siden mangler touch-action: pan-x pan-y'); }
+          // (5) kort som venter på svar over panelene
+          if (window.Skjermlag) krev(Skjermlag.zFor('morgenkort', ['karakterark']) > Skjermlag.zFor('karakterark', ['karakterark']) && Skjermlag.zFor('hendelse', ['leirmeny']) > Skjermlag.zFor('leirmeny', ['leirmeny']), 'kort som venter på svar ligger under panelene');
+          if (window.Skjermlag) Skjermlag.test = true; Telefon.test = true; if (window.SpillHud) SpillHud.oppdater(); await vent(300);
+          // (1a) opplæringen: én tynn linje liggende, + åpner hele steget
+          if (window.OpplaeringSpill && !går && !i3 && !Paneler.åpne().length) { localStorage.removeItem('riksbrudd-opplaering-sammen'); if (OpplaeringSpill.av()) OpplaeringSpill.slå(true); OpplaeringSpill.test = true; OpplaeringSpill.tilSteg('bygg2'); await vent(500); const o = $('opplaering');
+            if (o.classList.contains('på')) { const h0 = o.getBoundingClientRect().height; u.oppl = { h: Math.round(h0), sammen: o.classList.contains('sammen') }; krev(u.oppl.sammen && h0 < 46, `opplæringen er ikke én linje liggende (${Math.round(h0)} px)`);
+              o.click(); await vent(450); const h1 = o.getBoundingClientRect().height; u.oppl.åpen = Math.round(h1); krev(h1 > h0 + 20 && !o.classList.contains('sammen'), 'et trykk på linja åpner ikke steget');
+              const f = $('oppfold'); if (f) f.click(); await vent(450); krev(o.classList.contains('sammen'), '– legger ikke steget sammen igjen'); krev(localStorage.getItem('riksbrudd-opplaering-sammen') === null, '– liggende endret det lagrede valget'); } }
+          // (1b) Leir-menyen i full høyde, bunnmenyen som ikoner ved siden av
+          { const lm = $('leirmeny'), lk = $('leirknapp'), mk = $('mkom'); if (!går && !i3 && lm && lk && !lk.hidden && mk && mk.classList.contains('på') && window.LeirSpill && LeirSpill.tilstand()) { const var0 = lm.classList.contains('på'); if (!var0) lk.click(); await vent(500); Telefon.pass(); await vent(450); if (window.Skjermlag) Skjermlag.løft(); await vent(100);
+            const r = lm.getBoundingClientRect(), mr = mk.getBoundingClientRect(); u.leir = { bunn: Math.round(r.bottom), h: Math.round(r.height), ved: B.classList.contains('mkomved'), mkom: [Math.round(mr.left), Math.round(mr.right)] };
+            krev(u.leir.ved, 'bunnmenyen står ikke ved siden av Leir-menyen'); krev(r.bottom >= innerHeight - 20, `Leir-menyen går ikke helt ned (${u.leir.bunn} av ${innerHeight})`); krev(!over(r, mr), 'Leir-menyen og bunnmenyen ligger oppå hverandre');
+            if (!var0) lk.click(); await vent(350); Telefon.pass(); await vent(50); krev(!B.classList.contains('mkomved'), 'bunnmenyen står igjen ved siden av når menyen er lukket'); } }
+          // (1c) byggebanneret: én smal rad med ikoner
+          if (!går && !i3 && window.LeirSpill && LeirSpill.tilstand() && !LeirSpill.plassering()) { const L0 = OppstartSpill.tilstand().leir; LeirSpill.startPlassering('brakke'); await vent(150); LeirSpill.trykk(L0.x + 40, L0.y + 30); await vent(1500);
+            const bv = $('byggvalg'), r = bv.getBoundingClientRect(); u.banner = { h: Math.round(r.height), ikoner: bv.querySelectorAll('button[data-kort]').length };
+            krev(bv.classList.contains('på') && r.height <= 96, `byggebanneret er for høyt liggende (${u.banner.h} px)`); krev(u.banner.ikoner >= 3, 'veksleknappene i byggebanneret er ikke ikoner');
+            krev([...bv.querySelectorAll('button')].some(b => /^Avbryt$/.test(b.textContent.trim())), 'knappene i banneret har mistet teksten sin'); LeirSpill.avbryt(); await vent(100); }
+          // (6) varslene samles i én brikke + «+n», og et varsel åpner ikke et panel over et kort som venter
+          if (window.NarHud && window.KarakterSpill && KarakterSpill.klar()) { NarHud.test = true; const T = KarakterSpill.T(), b0 = { ...T.behov }; T.behov.tørst = 3; T.behov.sult = 3; T.behov.søvn = 3;
+            const VT = (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []), ekstra = () => [{ i: 'varsel', k: 'fare', t: 'Prøvevarsel', s: 'vakt', f: () => {} }]; VT.push(ekstra);
+            NarHud.tegnVarsler(); await vent(50); const kn = [...$('varsler').querySelectorAll('button')]; u.varsler = kn.map(b => b.textContent.slice(0, 24));
+            krev(kn.length === 2 && kn[1].classList.contains('flere'), 'varslene er ikke samlet i én brikke + «+n» (' + kn.length + ')');
+            if (kn[1]) { kn[1].click(); await vent(50); krev($('varsler').querySelectorAll('button').length >= 3, '«+n» folder ikke ut varslene'); }
+            const hk = $('hendelse'), s12 = window.Skjermlag ? Skjermlag.test : false; if (window.Skjermlag) Skjermlag.test = false; if (hk && !hk.classList.contains('på') && window.KarakterSpill) { const inn0 = hk.innerHTML, kar0 = $('karakterark') && $('karakterark').classList.contains('på'); hk.innerHTML = '<p>Prøvekort</p><button>Svar</button>'; hk.classList.add('på'); await vent(30);
+              NarHud.tegnVarsler(); const kv = [...$('varsler').querySelectorAll('button')].find(b => /Du er/.test(b.textContent)); if (kv) { kv.click(); await vent(250); u.kortVarsel = { åpnet: !kar0 && $('karakterark').classList.contains('på'), blink: hk.classList.contains('kortblink') }; krev(!u.kortVarsel.åpnet && u.kortVarsel.blink, 'et varsel åpnet et panel over kortet som venter på svar'); }
+              hk.classList.remove('på', 'kortblink'); hk.innerHTML = inn0; if (!kar0 && $('karakterark').classList.contains('på') && window.KarakterSpill.åpne) KarakterSpill.åpne(); } if (window.Skjermlag) Skjermlag.test = s12;
+            VT.splice(VT.indexOf(ekstra), 1); Object.assign(T.behov, b0); NarHud.test = nt0; NarHud.tegnVarsler(); }
+          // (6b) stoppkortet henger under angrepsbanneret som én boks
+          // (alt i samme slag: angrepsbanneret og stoppkortet styres ellers av sine egne takter)
+          { const a = $('alarm'), k = $('flytkort'); if (a && k && !a.classList.contains('på') && !k.classList.contains('på')) { const ai = a.innerHTML, ki = k.innerHTML; a.innerHTML = '<span>Angrep: prøve</span><button>Forsvar leiren</button>'; a.classList.add('på'); k.innerHTML = '<span>⏭ Stoppet: prøve.</span><button>Spol videre</button>'; k.classList.add('på');
+            Telefon.pass(); const ar = a.getBoundingClientRect(), kr = k.getBoundingClientRect(); u.stopp = { a: [Math.round(ar.left), Math.round(ar.bottom)], k: [Math.round(kr.left), Math.round(kr.top)] };
+            krev(k.classList.contains('ibanner') && Math.abs(kr.left - ar.left) < 2 && Math.abs(kr.top - ar.bottom) < 3, 'stoppkortet henger ikke under angrepsbanneret');
+            a.classList.remove('på'); k.classList.remove('på'); a.innerHTML = ai; k.innerHTML = ki; Telefon.pass(); } }
+          // (8) gåmodus: kildene skjult, «Gå ut» ikke oppå minikartet
+          { const før = ['gaar'].filter(c => B.classList.contains(c)); B.classList.add('gaar'); const d = $('dorknapp'), mini = $('minikart'); u.kilde = getComputedStyle($('kilde')).display; krev(u.kilde === 'none', 'kildeteksten vises i gåmodus på telefon');
+            if (d && mini) { const dp = d.classList.contains('på'); d.classList.add('på'); const dr = d.getBoundingClientRect(); mini.style.display = 'block'; const mr2 = mini.getBoundingClientRect(); mini.style.display = ''; u.dør = [Math.round(dr.left), Math.round(dr.top)]; if (mr2.width) krev(!over(dr, mr2), '«Gå ut» ligger oppå minikartet'); krev(dr.top > innerHeight / 2, '«Gå ut» står ikke nede'); if (!dp) d.classList.remove('på'); }
+            if (!før.includes('gaar')) B.classList.remove('gaar'); }
+          // (9) tastehint: tas bort på berøringsskjerm (bare når skjermen er det)
+          { krev(Telefon.TAST.test('Inventar (Tab)') && Telefon.TAST.test('Gå ut (F)') && !Telefon.TAST.test('Speidertropp (4)'), 'regelen for tastehint stemmer ikke'); }
+          krev(!!document.querySelector('#lagmeny p.mkilder'), 'kildene står ikke i ☰');
+        } finally {
+          if (window.Skjermlag && st0 !== undefined) Skjermlag.test = st0; Telefon.test = tt0; if (window.NarHud && nt0 !== undefined) NarHud.test = nt0;
+          if (sam0 === null) localStorage.removeItem('riksbrudd-opplaering-sammen'); else localStorage.setItem('riksbrudd-opplaering-sammen', sam0);
+          if (window.OpplaeringSpill && ot0 !== undefined) { OpplaeringSpill.test = ot0; if (lsv === null) localStorage.removeItem('riksbrudd-opplaering'); else localStorage.setItem('riksbrudd-opplaering', lsv); OpplaeringSpill.last(); OpplaeringSpill.kjør(); }
+          if (window.SpillHud) SpillHud.oppdater(); Telefon.pass(); }
+        return u; });
+    } catch (e) { r12 = { feil: ['runde 12: ' + e.message] }; }
+    finally { await pg.setViewportSize(vp); await pg.waitForTimeout(500); }
+    d.r12 = r12; for (const f of r12.feil || []) d.feil.push(f); }
   const ok = d.feil.length === 0;
   return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') + (d.runde8 ? ` · runde 8: like meldinger slås sammen, ⏭ venter på kortet${d.runde8.kort ? ' og fartsknappen også' : ''}, ${d.runde8.hjelp} hjelpeemner fra pakkene i riktig gruppe, «Nytt spill» øverst` : '') : d.feil.join('; '), data: d };
 } };

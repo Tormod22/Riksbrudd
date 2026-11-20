@@ -72,6 +72,7 @@ html body.kort.tlfligg.gaar:not(.kjorer) #nhud .helse, html body.kort.tlfligg.ga
 html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ bottom:calc(38px + ${Bn}); } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen .vbilde{ width:36px; height:18px; }
 body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen small{ display:none; } body.kort.tlfligg.gaar:not(.kjorer) #byttvapen{ min-height:30px; padding:2px 8px; font-size:11px; opacity:.85; }
 html body.kort.tlfligg.gaar:not(.kjorer) #dorknapp{ left:auto; right:calc(10px + ${Rt}); top:auto; bottom:calc(66px + ${Bn}); transform:none; min-height:40px; padding:4px 14px; font-size:14px; }
+html body.kort.tlfligg.gaar:not(.kjorer):has(#kjorknapp.på) #dorknapp{ bottom:calc(116px + ${Bn}); }
 body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen span{ font-size:12px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen em{ font-size:11px; min-height:0; }`;
   document.head.appendChild(css10);
   { const rad = document.querySelector('.knapper'), m = document.createElement('button'); m.id = 'gaamer'; m.type = 'button'; m.textContent = '⋯'; m.title = 'Flere knapper'; m.setAttribute('aria-label', 'Flere knapper'); m.setAttribute('aria-expanded', 'false');
@@ -245,7 +246,7 @@ body.kort #varsler button{ max-width:62vw; } body.kort #varsler button small{ ov
     for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = () => { const kort = forSpiller() ? venteKort() : null; if (kort) { blink(kort); return; } varslerÅpne = 0; b.f(); };
       // en brikke kan ha en egen knapp ved siden av seg (b.knapp = { t, f }), f.eks. «Kjøp 500 l» ved «Tom for diesel» (runde 6)
       if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); }
-    if (samlet) { const f = el('button', { type: 'button', klasse: 'flere', 'data-ikon': 'varsel', 'aria-expanded': String(åpne) }, el('span', {}, åpne ? 'Færre varsler' : `+${alle.length - 1} varsl${alle.length > 2 ? 'er' : 'el'}`));
+    if (samlet) { const f = el('button', { type: 'button', klasse: 'flere', 'data-ikon': 'varsel', 'aria-expanded': String(åpne) }, el('span', {}, åpne ? 'Færre varsler' : `+${alle.length - 1} ${alle.length > 2 ? 'varsler' : 'varsel'}`));
       f.onclick = () => { varslerÅpne = åpne ? 0 : performance.now() + VARSEL_ÅPEN; brikkeNøkkel = ''; tegnVarsler(); løftVarsler(); }; varsler.appendChild(f); } }
   // (runde 8, telefonkritikeren: «varselboksen nede til venstre ligger over kompasset og målestokken») – på telefon står brikkene over
   // nordpila, målestokken og kildeteksten (de som står nede til venstre), ikke oppå dem

@@ -158,7 +158,7 @@ html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tro
   // RUNDE 12 (kritiker E: sju bokser oppå hverandre under angrepet): på telefon henger stoppkortet («⏭ Stoppet: … Spol videre ×») seg rett
   // under angrepsbanneret som en smal linje i samme bredde, så de leses som én boks. Bare for spilleren (Telefon.test i testene).
   function iBanner() { const k = document.getElementById('flytkort'), a = document.getElementById('alarm'), b = document.body;
-    const på = b.classList.contains('kort') && (!navigator.webdriver || Telefon.test === true) && k && a && k.classList.contains('på') && a.classList.contains('på') && a.getClientRects().length > 0 && k.getClientRects().length > 0;
+    const på = b.classList.contains('kort') && (!navigator.webdriver || (window.Telefon && Telefon.test === true)) && k && a && k.classList.contains('på') && a.classList.contains('på') && a.getClientRects().length > 0 && k.getClientRects().length > 0;
     if (!på) { if (k && k.classList.contains('ibanner')) { k.classList.remove('ibanner'); for (const q of ['left', 'width', 'top', 'right', 'max-width']) k.style.removeProperty(q); } return false; }
     const r = a.getBoundingClientRect(); k.classList.add('ibanner'); k.style.setProperty('left', Math.round(r.left) + 'px'); k.style.setProperty('right', 'auto'); k.style.setProperty('width', Math.round(r.width) + 'px'); k.style.setProperty('max-width', 'none'); k.style.setProperty('top', Math.round(r.bottom - 1) + 'px'); return true; }
   function stoppkortNed() { ned('varsel'); if (!iBanner()) ned('flytkort'); }
@@ -223,9 +223,9 @@ html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tro
   // RUNDE 12 (kritiker E: «tastaturhint på telefon», f.eks. «… (Tab)», «Gå ut (F)»): på berøringsskjerm tas en tastetekst i parentes på
   // slutten av knappeteksten bort (bare den siste tekstbiten i knappen endres). Bare for spilleren – kontrollskriptet trykker etter teksten.
   const TAST = /\s*\((?:Tab|Esc|Enter|Shift|Mellomrom|Ctrl\+\w|F\d{0,2}|[A-ZÆØÅ])\)\s*$/;
-  function utenTaster() { if (navigator.webdriver && Telefon.test !== true) return; if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) return;
+  function utenTaster() { if (navigator.webdriver && !(window.Telefon && Telefon.test === true)) return; if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) return;
     for (const b of document.querySelectorAll('button')) { const t = b.lastChild; if (!t || t.nodeType !== 3 || !TAST.test(t.nodeValue)) continue; t.nodeValue = t.nodeValue.replace(TAST, ''); } }
   setInterval(utenTaster, 1500);
   setInterval(pass, 350); window.addEventListener('resize', pass); pass();
-  window.Telefon = { pass, seLag, test: false, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
+  window.Telefon = { pass, seLag, test: false, SIDE, mkomVed, iBanner, utenTaster, TAST, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
 })();
