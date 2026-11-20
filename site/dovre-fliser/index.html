@@ -1412,7 +1412,11 @@ function detaljIBakken(mat, side) {
       float skraaV = 1.0 - smoothstep(0.3, 0.65, abs(dot(normalize(vViewPosition), oppV)));
       vec4 texelColor = texture2D( map, vUv, clamp((length(vViewPosition) - 150.0) / 400.0, 0.0, 1.0) * skraaV );
       texelColor = mapTexelToLinear( texelColor );
-      float kontrastV = smoothstep(200.0, 900.0, length(vViewPosition)) * 0.1;
+      // uskarp maske: forskjellen mot et grovere oppslag (to mipmap-trinn opp) legges til, så kanter (veg, skogkant, vann) blir
+      // tydeligere ovenfra; ikke på skrå (der ville det flimre) og ikke helt nær (der tar detaljene over). Claudes forslag: 0,85.
+      float skarpV = 0.85 * (1.0 - skraaV) * smoothstep(80.0, 400.0, length(vViewPosition));
+      if (skarpV > 0.01) { vec4 grovT = mapTexelToLinear(texture2D(map, vUv, 2.0)); texelColor.rgb = max(vec3(0.0), texelColor.rgb + (texelColor.rgb - grovT.rgb) * skarpV); }
+      float kontrastV = smoothstep(200.0, 900.0, length(vViewPosition)) * 0.14;
       float lumT = dot(texelColor.rgb, vec3(0.3, 0.59, 0.11));
       texelColor.rgb = max(vec3(0.0), mix(vec3(lumT), texelColor.rgb, 1.0 + kontrastV * 1.2) * (1.0 + kontrastV) - kontrastV * 0.06);
       diffuseColor *= texelColor;
