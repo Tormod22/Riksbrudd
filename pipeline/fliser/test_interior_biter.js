@@ -20,6 +20,14 @@ ok(stegMaks > 30, `de største byggene deles i mange steg (høyst ${stegMaks})`)
 { let ulikK = 0, sanne = 0; const P = [[0, 0], [10, 0], [10, 3], [4, 3], [4, 8], [0, 8]];
   for (let k = 0; k < 20000; k++) { const x = rnd() * 14 - 2, y = rnd() * 12 - 2, g = rnd() * .6, a = I.avstKant(P, x, y) < g, b = I.nærKant(P, x, y, g); if (a !== b) ulikK++; if (a) sanne++; }
   ok(ulikK === 0 && sanne > 100, `nærKant svarer som avstKant < g (${ulikK} ulike, ${sanne} sanne)`); }
+// inniR / nærKantR (rutenettet på omrisset) = inni / nærKant for store omriss med mange hjørner, også rett ved kantene
+{ let ulikI = 0, ulikK = 0, inne = 0;
+  for (let h = 0; h < 30; h++) { const n = 12 + Math.floor(rnd() * 140), w = 10 + rnd() * 120, hh = 8 + rnd() * 70, P = [];
+    for (let q = 0; q < n; q++) { const v = q / n * 6.283, r = 1 + .25 * Math.sin(v * (2 + h % 5)) * rnd(); P.push([w / 2 + Math.cos(v) * w / 2 * r, hh / 2 + Math.sin(v) * hh / 2 * r]); }
+    for (let k = 0; k < 6000; k++) { let x, y; if (k % 3 === 0) { const e = Math.floor(rnd() * n), a = P[e], b = P[(e + 1) % n], t = rnd(), d = (rnd() - .5) * .5; x = a[0] + (b[0] - a[0]) * t + d; y = a[1] + (b[1] - a[1]) * t - d; }
+      else { x = -5 + rnd() * (w * 1.4 + 10); y = -5 + rnd() * (hh * 1.4 + 10); }
+      const a = I.inni(P, x, y); if (a !== I.inniR(P, x, y)) ulikI++; if (a) inne++; for (const g of [.05, .1, .15, .3]) if (I.nærKant(P, x, y, g) !== I.nærKantR(P, x, y, g)) ulikK++; } }
+  ok(ulikI === 0 && ulikK === 0 && inne > 1000, `inniR = inni og nærKantR = nærKant for 180 000 punkter i 30 store omriss (${ulikI} / ${ulikK} ulike, ${inne} inne)`); }
 // selvtest: en endret plan blir sett av sammenligningen
 { const P = [[0, 0], [10, 0], [10, 8], [0, 8]], info = { i: 42, kl: 'hus', h: 6, dør: { x: 5, y: 0, ux: 1, uy: 0, w: 1 } }, A = I.plan(P, info), B = I.plan(P, info); B.møbler[0].x += .01;
   ok(JSON.stringify(A) !== JSON.stringify(B), 'selvtest: et flyttet møbel blir sett'); }

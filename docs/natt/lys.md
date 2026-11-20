@@ -515,3 +515,63 @@ Ikke målt i denne runden (tiden gikk til 1–3, og maskinen ble startet på nyt
   `hindring3d()` – boksen først og omrisstesten uten destrukturering; `naboerAsynk` – pust hvert 8. senter; `trær3d` – pust hver rad.
 - Mine: `spill/lys3d.js` (koblGrense, `Lys3d.RG`), `spill/natt3d.js` (nattPlass, forbered3d-krok, `NATT.plass`, `NATT.forberedt`),
   `spill/grense3d.js` (ny), `pipeline/fliser/test_grense3d.js` (ny), `pipeline/fliser/vakter/lys.js` (runde 5-delen), `docs/natt/lys-hjelp.json`.
+
+## Runde 7 (20. nov natt) – hakk når du går og når husenes innside bygges
+
+Oppdraget: ingen enkeltpause over ca. 50 ms fra interiøret, de andre lange pausene når du går, telefonen, og en vakt.
+Målt med scratchpad `natt7/lys/mr.js` (ekte data via dev.py, /norge, Bergen sentrum −32117 6734202, tegningen slått av, du går 4 m hver
+0,4 s og hopper inn gjennom døra på et av de nære husene hver 2,4 s; lange oppgaver + CPU-profil). «Før» = en kopi av siden fra
+c4be9eb (det som ble flettet inn i kveld), kjørt rett før «etter» (`natt7/lys/par.sh`). MASKINEN VAR SVÆRT TUNGT LASTET (last 17–25 på fire
+kjerner – sju hjelpere): pausene er fulle av tid der tråden bare ventet på en kjerne, så tallene for selve koden står i profilen
+(«i lange oppgaver»), ikke i antall pauser.
+
+### 1. Interiøret i biter (spill/interior3d.js)
+- `byggG(R, u, P)` er byggingen som generator: `yield` mellom stegene (planen, kroker, hvert gulv, hver yttervegg og vindu, hver
+  skillevegg og dør, hvert møbel – og hver 48. del i store møbler –, hvert rom med «forlatt»-ting, lampene, tallrekkene per stoff og
+  normalene i biter med `normalerG` fra index.html). Ingenting fra three.js lages før siste steg (utenom stoffene, ett mønster per
+  steg første gang), så en jobb som avbrytes, etterlater ingenting. `bygg()` = generatoren kjørt ferdig (som før) – brukes av
+  `bygOm` (møbelflytting, må være straks), `oppdater(true)` (vaktene) og vakta.
+- Jobben drives av en egen `requestAnimationFrame` (etter spilløkka, før bildet tegnes): `BIT.ms` = 6 ms arbeid per bilde. Ett bygg
+  om gangen; ny jobb starter fra `oppdater` (hvert kvarte sekund som før). Er jobben ugyldig (nytt utsnitt, du går ikke lenger, bygget
+  har alt interiør), kastes den. `oppdater(true)` gjør en jobb som er i gang ferdig og bygger det neste i ett strekk (vaktene i
+  sjekk.js kaller den 12 ganger og venter ikke på bilder – de oppfører seg som før).
+- FORBERED: et hus `BIT.foran` = 8 m foran deg (blikkets retning) regnes som like nært, så huset du går mot, bygges først.
+- GJENBRUK: et interiør du går fra (over 50 m, eller det tiende når taket er nådd) HVILER (ut av scenen, ikke frigjort; høyst 6 på PC,
+  3 på telefon) og settes inn igjen straks når du snur – samme geometri, ingen ny bygging. `bygOm` (planen er endret) glemmer de
+  hvilende (`versjon`). Forsyningskassa er én delt geometri (`FUNN_GEO`, frigjøres i `tøm`). `userData.kilde` settes selv (ingen
+  stakk i scene.add). Tallrekkene settes rett i Float32Array (samme tall).
+- interior.js (ikke min fil, men ingen andre endrer den i natt – liten og samlet endring): `planG` = `plan` som generator (yield per
+  rom og hver 8. plass i rutenettene; `plan()` kjører den ferdig), og i `prøv()` står de billige sjekkene (døråpninger, gangveier,
+  andre møbler) før hjørnene mot omrisset, og `nærKant(P, x, y, g)` stopper ved første kant (= `avstKant < g`). Ingenting endres før
+  møbelet settes, så svaret er det samme. Prøvd i Node mot den gamle fila: 1008 bygg i alle klasser og fire former, 0 ulike planer,
+  2× raskere (4725 -> 2450 ms), lengste steg 30 ms. Ny test: `node pipeline/fliser/test_interior_biter.js` (planG = plan for 324 bygg,
+  lagerhallen gir yield i rutenettet, nærKant = avstKant < g for 20 000 punkter, selvtest).
+- LIKT: seks prøvebygg (hus, skole, lager, butikk, låve, kontor – 1332 til 25 480 trekanter) bygget med den gamle fila og den nye, i ett
+  strekk og steg for steg: alle nettene like verdi for verdi (posisjon, farge, uv, normaler, grupper, plass og dreiing – 3,0 mill. verdier,
+  0 ulike). Skript: scratchpad `natt7/lys/prov.js`.
+
+### 2. Gresset rundt deg i biter (index.html gress3d)
+Den nest største pausen når du går: hver 12. meter ble opptil 36 000 kandidater prøvd i ett strekk (hindring3d for hver). Nå er
+plasseringen en generator `gressG` (samme tilfeldighet i samme rekkefølge, yield hver 128. kandidat) som skriver i midlertidige
+tallrekker (`m.userData.tmp`, laget én gang) og legges inn i nettet når alt er regnet; `gressBit(R, 4)` – ca. 4 ms per bilde – og det
+gamle gresset står til det nye er klart. Nytt utsnitt eller `gressSenter = null` (vegetasjon3d.js ved nye hus, kvalitet.js ved nytt nivå)
+begynner på nytt. Nettet starter med `count = 0` (ellers sto 12 000 tuster i origo til første jobb var ferdig). Prøvd: tre steder ved
+Dombås, gammel gress3d (fra c4be9eb) mot ny: 12 000 tuster, matrisene, fargene og aFelt like (0 ulike), 3–8 biter.
+
+### 3. Tingene i husene (spill/lut-visning.js, bare 3D-nettet)
+Samme ting = samme geometri: hver ting (melk, patroneske, våpen …) lages én gang (`mal`, MODELLER.samle) og kopieres der den står
+(før ble alle klossene laget på nytt for hver). Har en runde (hver 300 ms) brukt over 4 ms, tas resten av husene i neste runde.
+Ikke målt hver for seg (lut-tingene finnes bare med et startet spill og møbler med innhold; de kom ikke med blant de lange oppgavene).
+
+### Målt – Bergen, går 30 s og inn i hus (PC 1400 × 800)
+| | før | etter |
+|---|---|---|
+| lav last (kl. 23:40, før/etter1): interiøret i lange oppgaver | 1606 ms, lengste oppgave 369 ms (bygg 296) | 143 ms (én oppgave: planen for ett stort bygg, 140 ms – før planG) |
+| lav last: lange oppgaver ≥ 50 ms (antall, sum, lengste) | 22, 2730 ms, 369 ms | 17, 1486 ms, 145 ms |
+| lav last: pauser > 50 ms (antall, sum, lengste) | 35, 3,7 s, 369 ms | 24, 2,0 s, 159 ms |
+| last 23 (nice −10, `bergen-før/etter.log`): interiøret i lange oppgaver | 2270 ms | ca. 200 ms (steg + rAF; høyst 8 ms i én oppgave) |
+| last 23: gresset (gress3d) i lange oppgaver | 2135 ms (lengste oppgave 709 ms, 635 av dem gress3d) | 283 ms |
+| last 23: lange oppgaver ≥ 50 ms | 60, 9,5 s, 709 ms | 42, 5,9 s, 677 ms (liv3d, søppeltømming, tegnInfra3d – ikke interiøret) |
+- Interiøret i tall (etter): 48 bygg på 30 s, 262 biter, 11 kom tilbake fra hvile; hvert bygg 3–30 biter på 6 ms. «Lengste bit» (STAT.lengst)
+  er 140–317 ms under last fordi tråden blir stående uten kjerne midt i en bit – CPU-profilen viser høyst 8 ms interiør i én oppgave.
+- Mål nådd for interiøret på PC: ingen lang oppgave der interiøret er hoveddelen (før: opptil 574 ms bygg i én oppgave under last).
