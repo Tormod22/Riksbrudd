@@ -50,7 +50,9 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
   function hent(P) { const p = lett.get(P.bygg.i), rest = restAv(P); if (!rest) return null;
     const fikk = ta(rest), ny = {}; for (const m of ['tre', 'betong', 'stål', 'diesel']) { const r = (rest[m] || 0) - (fikk[m] || 0); if (r > (m === 'diesel' ? .5 : .05)) ny[m] = Math.round(r * 10) / 10; }
     if (Object.keys(ny).length) p[2] = ny; else p.length = 2; lagre();
-    const melding = Leting.tekst(fikk).replace(/^Du fant/, 'Du hentet') + (Object.keys(ny).length ? ' Noe ligger fortsatt igjen.' : ' Nå er huset tomt.'); logg(melding); visFunn(melding); return { fikk, rest: restAv(P) }; }
+    const melding = Leting.tekst(fikk).replace(/^Du fant/, 'Du hentet') + hvorTekst(fikk) + (Object.keys(ny).length ? ' Noe ligger fortsatt igjen.' : ' Nå er huset tomt.'); logg(melding); visFunn(melding); return { fikk, rest: restAv(P) }; }
+  // (runde 12) hvor funnet havnet – rasjonene i leirens matlager (med tallet etterpå), ikke i sekken
+  const hvorTekst = fikk => { const F = window.FolkSpill && FolkSpill.tilstand(), t = Leting.hvor ? Leting.hvor(fikk, { mat: F ? F.mat : undefined }) : ''; return t ? ' ' + t : ''; };
   function ferdig(P) {
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
     // (balansen 18. nov, Claudes forslag) det første huset du leter i, er aldri tomt: fire rasjoner og 20 000 kr når det ellers var tomt
@@ -59,7 +61,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
-    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
+    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) + hvorTekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     // våpen, ammunisjon og førstehjelp går i sekken din (spill/utstyr.js)
     // (18. nov kveld) med beholderne (spill/lut-visning.js) ligger våpen, ammunisjon, mat og utstyr i skapene og skuffene i stedet –

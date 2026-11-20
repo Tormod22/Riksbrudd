@@ -15,4 +15,5 @@ ok(L.tekst({ tomt: true }) === 'Huset var tomt – noen har vært her før.' && 
   ok(n / 4000 > .04 && n / 4000 < .08 && k / 4000 > .11 && b === 0, `overlevende i ca. ${Math.round(n / 40)} % av boligene og ${Math.round(k / 40)} % av kirkene, ingen i butikker`);
   ok(L.tekst({ tomt: true, person: true }) === 'Huset var tømt for alt av verdi.', 'tomt hus med en overlevende får egen tekst'); }
 ok(L.funn('ukjent', 100, 4) && typeof L.funn('ukjent', 100, 4).mat === 'number', 'ukjent klasse regnes som bolig');
+ok(L.hvor({ mat: 17 }, { mat: 63 }) === 'Lagt i leiren: rasjonene i leirens matlager (63 i alt) – ikke i sekken din.' && L.hvor({ tomt: true }) === '', '(runde 12) funnet sier hvor det havnet');
 console.log(feil ? feil + ' FEIL' : 'alle letetestene ok'); process.exit(feil ? 1 : 0);

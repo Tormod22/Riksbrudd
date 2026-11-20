@@ -9,9 +9,17 @@ const r = O.tekst(før, nå);
 ok(/^Siste døgn: Bølge 3 slått tilbake/.test(r.tekst), 'bølgen slått tilbake', r.tekst);
 ok(/2 nye sårede, 1 falt/.test(r.tekst) && /Ett lag er slått ut/.test(r.tekst), 'sårede, falne og lag');
 ok(/Brakke ødelagt/.test(r.tekst) && !/Lagertelt/.test(r.tekst) && /1 bygg skadet/.test(r.tekst), 'brakka (skadet før) ødelagt, lagerteltet (helt) revet nevnes ikke, aggregatet skadet');
-ok(/2 hus gjennomsøkt/.test(r.tekst) && /1 har dratt/.test(r.tekst), 'hus og folk');
+ok(/2 hus gjennomsøkt/.test(r.tekst) && /1 har forlatt leiren/.test(r.tekst), 'hus og folk');
 ok(/Mat til 1,5 døgn – kjøp eller skaff mat/.test(r.tekst), 'maten med råd når den er lav');
 const h = O.tekst({ ...før, bølge: 3, aktiv: 3 }, { ...før, bølge: 4, aktiv: 4, herjet: 1, matDøgn: null });
-ok(/slapp unna \(herjet eller sabotasje\)/.test(h.tekst) && /Bølge 4 pågår/.test(h.tekst) && !/slått tilbake/.test(h.tekst) && !/Mat til/.test(h.tekst), 'herjet, ny bølge pågår, uten mat (dagboka har den)', h.tekst);
+ok(/kom seg unna – de herjet i leiren eller fikk gjort sabotasje/.test(h.tekst) && /Bølge 4 pågår/.test(h.tekst) && !/slått tilbake/.test(h.tekst) && !/Mat til/.test(h.tekst), 'herjet, ny bølge pågår, uten mat (dagboka har den)', h.tekst);
+// (runde 12) herjet og sabotasje hver for seg når bildene har «slapp»
+const hs = O.tekst({ ...før, slapp: 0 }, { ...før, bølge: 4, herjet: 2, slapp: 1 });
+ok(/Røverne kom inn i leiren og dro med bytte/.test(hs.tekst) && /Sabotører gjorde skade og slapp unna/.test(hs.tekst) && !/herjet eller/.test(hs.tekst), 'herjet og sabotasje skilt', hs.tekst);
+// (runde 12) hvem som dro og hvorfor
+const fN = { ...før, navn: ['Håkon Rønning', 'Silje Berg', 'Per Lie', 'Ola Dahl', 'Eva Moe'], borte: 0 };
+const nN = { ...før, navn: ['Eva Moe', 'Nina Ås'], borte: 1, tropp: { 'Per Lie': 'Stormtropp 1' }, døde: { 'Håkon Rønning': 'falt', 'Silje Berg': 'falt' } };
+const fr = O.tekst(fN, nN);
+ok(/Per Lie gikk inn i Stormtropp 1/.test(fr.tekst) && /Håkon Rønning og Silje Berg falt/.test(fr.tekst) && /Ola Dahl forlot gjengen fordi moralen var for lav/.test(fr.tekst) && /Nina Ås er ny i gjengen/.test(fr.tekst) && !/har dratt/.test(fr.tekst), 'navn og grunn', fr.tekst);
 ok(O.tekst(null, nå) === null, 'uten bilde fra i går: ingenting');
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

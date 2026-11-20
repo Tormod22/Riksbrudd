@@ -255,7 +255,24 @@
     LB.folkLag = L => (L.folk && Array.isArray(L.folk.personer) ? byggelag(L.folk) : null);
     LB.folkTempo = L => (L.folk && Array.isArray(L.folk.personer) ? byggTempo(L.folk) : 1);
   }
-  const api = { oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  // ---------- (runde 12, kritiker F) FALNE OG SÅREDE: én kilde for teksten og for hvem som går ut av folket ----------
+  // Kritikken: «Håkon Rønning (Leirvakta) er falt» to ganger på rad, «Kari Kritiker (lagfører, Kari Kritiker (deg)) er såret», og de
+  // falne sto i Folk med helse 15 % (folketallet sto på 12 etter fire døde).
+  // treffTekst(m, lag, hva, ekstra): loggteksten når en av dine er truffet. Karakteren din er «du»; ellers navn (lagfører i laget).
+  function treffTekst(m, lag, hva, ekstra) {
+    const e = ekstra ? ' ' + ekstra : '';
+    if (lag && lag.karakter) return hva === 'falt' ? `Du er slått ut${e}.` : `Du er såret${e}.`;
+    const ln = (lag && lag.navn) || '', hvor = m && m.rolle === 'lagfører' ? `lagfører i ${ln}` : ln;
+    return `${(m && m.navn) || 'En soldat'}${hvor ? ' (' + hvor + ')' : ''} er ${hva}${e}.`;
+  }
+  // falneTekst(navn[], lag): én linje for alle som falt i samme lag samtidig
+  function falneTekst(navn, lag) { const n = navn.length; if (!n) return ''; const liste = n === 1 ? navn[0] : navn.slice(0, -1).join(', ') + ' og ' + navn[n - 1];
+    return `${liste}${lag ? ' (' + lag + ')' : ''} ${n === 1 ? 'er falt' : 'har falt'}.`; }
+  // fjern(F, id): en person som er død (falt i Leirvakta e.l.) går ut av folket – svarer personen eller null
+  function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
+  // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
+  const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
+  const api = { treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

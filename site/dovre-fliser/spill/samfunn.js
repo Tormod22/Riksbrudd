@@ -118,6 +118,10 @@
   };
   const beste = p => Object.entries(p.ferd || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || 'fri';
   const kvinne = p => { const i = FR.FORNAVN ? FR.FORNAVN.indexOf(String(p.navn).split(' ')[0]) : -1; return i >= 0 ? i % 2 === 1 : hash(p.navn) % 2 === 1; };
+  // (runde 12, kritiker F: «Hen takket og gikk tilbake» om Sindre Vik) – han/hun etter kjønnet portrettet også bruker (kvinne(p));
+  // medPron(tekst, p) bytter «Hen»/«hen» i en tekst om personen p. Uten person (ukjent) står «hen» igjen.
+  const pron = p => (p && p.navn ? (kvinne(p) ? 'hun' : 'han') : 'hen');
+  const medPron = (t, p) => { if (typeof t !== 'string') return t; const h = pron(p); return h === 'hen' ? t : t.replace(/\b(La|la|Utvis|utvis|Gi|gi) hen\b/g, '$1 ' + (h === 'hun' ? 'henne' : 'ham')).replace(/\bHen\b/g, h[0].toUpperCase() + h.slice(1)).replace(/\bhen\b/g, h); };
   // Fast profil per person (fra navnet, alderen og yrket – id-en kan skifte når en person kommer tilbake fra en tropp)
   function profil(p) {
     const h = hash(p.navn + '|' + p.yrke), r = FR.rng(h), v = a => a[Math.floor(r() * a.length)], k = kvinne(p);
@@ -125,7 +129,7 @@
     const spes = p.spes && SPES[p.spes] ? SPES[p.spes].navn.toLowerCase() : null;
     // p.fra: stedet personen kom fra (rekrutter fra byene, spill/region-visning.js); p.fange: fraksjonen hen kjempet for (spill/krig-visning.js)
     const hvor = p.fra ? `i ${p.fra}` : `${sted === 'Hjerkinn' ? 'på' : 'i'} ${sted}`;
-    const historie = `Var ${spes && spes !== p.yrke ? p.yrke + ' og ' + spes : p.yrke} ${hvor} før kollapsen. ` + (p.fange ? `Kjempet for ${p.fange} til hen ble tatt til fange.` : p.fra ? `Kom med handelsruta fra ${p.fra}.` : tap);
+    const historie = `Var ${spes && spes !== p.yrke ? p.yrke + ' og ' + spes : p.yrke} ${hvor} før kollapsen. ` + (p.fange ? `Kjempet for ${p.fange} til ${pron(p)} ble tatt til fange.` : p.fra ? `Kom med handelsruta fra ${p.fra}.` : tap);
     // portrettet: bare kjente valg (motoren renser dem i normalize)
     const pal = PM && PM.palettes, P = { gender: k ? 'kvinne' : 'mann', role: p.yrke === 'tidligere soldat' ? 'militaer' : 'politisk', age: klem(p.alder || 30, 20, 80) };
     if (PM) {
@@ -204,7 +208,7 @@
     const alle = g.voksne + g.barn + g.gamle, nye = []; let tekst = '';
     const taVoksne = () => { for (let i = 0; i < g.voksne; i++) { const p = i === 0 && g.spes ? nySpesialist(F, r, g.spes) : FR.nyPerson(F, r); p.lojal = Math.round((.5 + r() * .3) * 100) / 100; nye.push(p); } };
     const smitte = () => { if (!g.smittet || !nye.length) return ''; const p = nye[nye.length - 1];
-      if (harSpes(F, 'lege')) { p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; p.karantene = true; S.karantene = true; return ` Legen fant at ${p.navn} bærer Grålungen: hen er satt rett i karantene.`; }
+      if (harSpes(F, 'lege')) { p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; p.karantene = true; S.karantene = true; return ` Legen fant at ${p.navn} bærer Grålungen: ${pron(p)} er satt rett i karantene.`; }
       p.syk = { dag: 0, lengde: mellom(r, REGLER.sykLengde) }; S.sistUtbrudd = k.tid || 0; return ''; };
     if (valg === 'alle') { taVoksne(); const etter = nye[0] ? nye[0].navn.split(' ').slice(1).join(' ') : '';
       for (let i = 0; i < g.barn; i++) nyAvhengig(S, r, 'barn', etter); for (let i = 0; i < g.gamle; i++) nyAvhengig(S, r, 'gammel', etter);
@@ -232,7 +236,7 @@
     // nytt utbrudd av seg selv (aldri i testene: k.auto)
     if (k.auto && !syke.length && !avhSyke.length && F.personer.length >= 4 && (k.tid - S.sistUtbrudd) / REGLER.døgn > REGLER.utbruddPause
       && r() < 1 - Math.exp(-REGLER.utbrudd * (trangt ? 2 : 1) * (k.utenVann ? 2 : 1) * d)) {
-      const ny = smitt(S, F, r, 1, k.tid); if (ny.length) H.push(`${ny[0].navn} hoster og har grå lepper: Grålungen er i leiren! ` + (S.karantene ? 'Hen er satt i karantene.' : 'Sett på karantene i Samfunn-panelet, ellers smitter det fort.')); }
+      const ny = smitt(S, F, r, 1, k.tid); if (ny.length) H.push(`${ny[0].navn} hoster og har grå lepper: Grålungen er i leiren! ` + (S.karantene ? medPron('Hen er satt i karantene.', ny[0]) : 'Sett på karantene i Samfunn-panelet, ellers smitter det fort.')); }
     if (!syke.length && !avhSyke.length) return H;
     // smitte: hver syk (også barn og gamle) gir et smittepress; i karantene bare en brøkdel
     const press = [...syke, ...avhSyke].reduce((s, p) => s + (p.karantene ? REGLER.karanteneSmitte : 1), 0) * REGLER.smitte * (trangt ? REGLER.trangt : 1) * (k.sprengkulde ? REGLER.kuldeSmitte : 1) * (k.kald > .3 ? REGLER.fryserSmitte : 1)
@@ -394,7 +398,7 @@
     return { type: 'kort', id: q.id, a: a.id, b: b.id };
   }
   function kortTekst(S, F, c, k) { const q = KORT.find(x => x.id === c.id), a = F.personer.find(p => p.id === c.a) || { navn: 'Noen', ferd: {} }, b = F.personer.find(p => p.id === c.b) || { navn: 'en annen', ferd: {} };
-    return { tittel: 'I leiren', tekst: q.tekst(a, b, k), valg: q.valg.map(v => ({ t: typeof v.t === 'function' ? v.t(a, b) : v.t, kan: !(v.f.mat < 0 && F.mat < -v.f.mat) })) }; }
+    return { tittel: 'I leiren', tekst: medPron(q.tekst(a, b, k), a), valg: q.valg.map(v => ({ t: medPron(typeof v.t === 'function' ? v.t(a, b) : v.t, a), kan: !(v.f.mat < 0 && F.mat < -v.f.mat) })) }; }
   function brukFølge(S, F, f, a, b, k, r, ut) {
     if (f.sjanse) return brukFølge(S, F, r() < f.sjanse.p * (S.lover.våpen && f.sjanse.da.helse ? 1.3 : 1) ? f.sjanse.da : f.sjanse.ellers, a, b, k, r, ut);
     if (f.moral) F.moral = klem(F.moral + f.moral, 0, 100); if (f.mat) F.mat = Math.max(0, F.mat + f.mat); if (f.penger) ut.penger += f.penger;
@@ -405,7 +409,7 @@
     if (f.borte && a) a.borte = (k.tid || 0) + f.borte * REGLER.døgn;
     if (f.utvis && a) F.personer = F.personer.filter(p => p !== a);
     if (f.løfte && a) S.løfter.push({ id: a.id, navn: a.navn, til: (k.tid || 0) + REGLER.løfteDøgn * REGLER.døgn });
-    if (f.tekst) ut.tekst = f.tekst + ut.tekst; return ut;
+    if (f.tekst) ut.tekst = medPron(f.tekst, a) + ut.tekst; return ut;
   }
   // valget i et kort tas. Gir { tekst, penger } (penger: kroner inn, betales/gis av visningen)
   function kortSvar(S, F, c, i, k, r) {
@@ -435,8 +439,8 @@
     // ønsker: lojaliteten følger om ønsket er oppfylt; løfter som holdes eller brytes
     for (const p of F.personer) p.lojal = klem(p.lojal + (ønskeOppfylt(p, kk) ? REGLER.ønskeLojal : -REGLER.ønskeUlojal) * d);
     for (let i = S.løfter.length - 1; i >= 0; i--) { const l = S.løfter[i], p = F.personer.find(q => q.id === l.id); if (!p) { S.løfter.splice(i, 1); continue; }
-      if (ønskeOppfylt(p, kk)) { p.lojal = klem(p.lojal + REGLER.løfteHoldt); ut.hendelser.push(`Du holdt løftet til ${p.navn}: hen fikk ${profil(p).ønskeTekst}.`); S.løfter.splice(i, 1); }
-      else if (l.til <= nå) { p.lojal = klem(p.lojal - REGLER.løfteBrutt); ut.hendelser.push(`Du brøt løftet til ${p.navn}. Hen stoler mindre på deg nå.`); S.løfter.splice(i, 1); } }
+      if (ønskeOppfylt(p, kk)) { p.lojal = klem(p.lojal + REGLER.løfteHoldt); ut.hendelser.push(`Du holdt løftet til ${p.navn}: ${pron(p)} fikk ${profil(p).ønskeTekst}.`); S.løfter.splice(i, 1); }
+      else if (l.til <= nå) { p.lojal = klem(p.lojal - REGLER.løfteBrutt); ut.hendelser.push(`Du brøt løftet til ${p.navn}. ${medPron('Hen', p)} stoler mindre på deg nå.`); S.løfter.splice(i, 1); } }
     // lovene
     if (S.lover.rasjonering) for (const p of F.personer) p.helse = Math.max(.3, p.helse - LOVER.rasjonering.helse * d);
     if (S.lover.arbeidsplikt) for (const p of F.personer) if (p.lojal < .6) p.lojal = klem(p.lojal - LOVER.arbeidsplikt.lojal * d);
@@ -455,7 +459,7 @@
     ut.kort = S.kort; return ut;
   }
 
-  const api = { REGLER, ny, fraJSON, tilf, profil, portrettSVG, ØNSKER, LYNNE, ønskeOppfylt, ønskeAndel, beste, SPES, gjørSpesialist, nySpesialist, harSpes, funnet, oppdragSpes, oppdragSpesTekst, ankommet, fangerInn, nyAvhengig, avhengigMoral,
+  const api = { pron, medPron, REGLER, ny, fraJSON, tilf, profil, portrettSVG, ØNSKER, LYNNE, ønskeOppfylt, ønskeAndel, beste, SPES, gjørSpesialist, nySpesialist, harSpes, funnet, oppdragSpes, oppdragSpesTekst, ankommet, fangerInn, nyAvhengig, avhengigMoral,
     nyeFlyktninger, flyktTekst, flyktValg, flyktSvar, sykeI, sykeAvh, smitt, settKarantene, sykdomSteg, LOVER, settLov, lovMoral, snittLojal, spionSteg, saboter, etterforsk, dom,
     lærerNivå, kanLære, lærere, startOpplæring, stoppOpplæring, opplæringSteg, død, gravlegg, minneMoral, virkning, KORT, velgKort, kortTekst, kortSvar, valg, steg };
   if (node) module.exports = api; else rot.Samfunn = api;

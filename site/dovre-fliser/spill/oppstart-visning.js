@@ -153,8 +153,13 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     kam.x = (b[0] + b[2]) / 2; kam.m = dekk || VH > VW ? Math.min(mx, my) : Math.max(mx, my) * 1.04;
     kam.y = (b[1] + b[3]) / 2 + (dekk ? 0 : (topp - bunn) / 2 * kam.m); skitten = true;
   }
+  // (runde 12, kritiker F: klokka gikk 06:00 → 06:02 mens karakteren ble laget) – tiden står fra startskjermen åpnes til leiren er lagt
+  // (bekreft) eller skjermen lukkes. Bruker pauseknappen (sp0), så knappene viser det samme. Ikke i testene (de styrer tiden selv).
+  let holdt = false;
+  function holdTid(på) { if (navigator.webdriver && !window.OppstartSpill.test) return; const p0 = document.getElementById('sp0'); if (!p0 || typeof tempo === 'undefined') return;
+    if (på && !holdt && tempo > 0) { holdt = true; p0.click(); } else if (!på && holdt) { holdt = false; if (tempo === 0) p0.click(); } }
   function vis(steg) {
-    steget = steg; visOmrådet(true); lagreUtkast();
+    holdTid(true); steget = steg; visOmrådet(true); lagreUtkast();
     ark.innerHTML = ''; ark.scrollTop = 0; bak.classList.add('på');
     const k = utkast.karakter, fr = utkast.fraksjon, fl = fr.flagg, melding = el('div', { klasse: 'feil', 'aria-live': 'polite' });
     if (steg === 1) {
@@ -355,7 +360,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     // bar forsvaret alene de første døgnene. De kan bygges på basen for olje senere.
     utkast.lettStart = utkast.utenLag;
     const f = O.fullfør(utkast, forslag, window.Scenario ? Scenario.regler(utkast.regler).faktor.penger : 1); if (f.length) { visBanner(f.join(' ')); return; }
-    S = utkast; velger = false; forslag = null; banner.classList.remove('på'); glemUtkast(); gjemTilbake(); lagre(); bruk(true); skitten = true;
+    S = utkast; velger = false; forslag = null; banner.classList.remove('på'); glemUtkast(); gjemTilbake(); lagre(); bruk(true); skitten = true; holdTid(false);
     // (17. nov) kartet går inn på leiren når den er lagt – før sto det igjen på hele landsdelen, og du så ikke leiren din
     if (typeof på3d === 'undefined' || !på3d) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, 3); skitten = true; }
   }
@@ -507,7 +512,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   // gi(beløp): penger tilbake (for eksempel når et bygg rives)
   function gi(b) { if (!S || !(b > 0)) return; S.penger += b; lagre(); visPenger(); }
   // lukk(): startskjermen og leirvalget bort uten å starte (vakten bruker den); gjemt()/gjemStart/gjemTilbake: lagene fra Dovre-piloten
-  function lukk() { bak.classList.remove('på'); banner.classList.remove('på'); velger = false; forslag = null; skitten = true; }
+  function lukk() { bak.classList.remove('på'); banner.classList.remove('på'); velger = false; forslag = null; skitten = true; holdTid(false); }
   window.OppstartSpill = { test: false, lagre: () => lagre(), nytt, vis, prøvLeir, bekreft, forslag: () => (velger ? forslag : null), flyttHit, betal, gi, påLand, tilstand: () => S, bonus: () => O.bonus(S), utkast: () => utkast, NØKKEL,
     UTKAST, lukk, sted, andreSpill, lesUtkast, lagreUtkast, glemUtkast, gjemStart, gjemTilbake, gjemt: () => ({ lag: GJEMT.lag.length, kj: GJEMT.kj.length, base: !!GJEMT.base }), visOmrådet };
   S = les(); if (S && !S.ferdig) S = null;

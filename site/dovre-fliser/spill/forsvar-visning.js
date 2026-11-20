@@ -56,7 +56,8 @@
     logg(`${øvelse ? 'Øvelse' : 'Forsvar'}: ${fordelt.length} lag går i stilling mot ${FO.retning(v)}` + (fordelt.some(q => q.plass.voll) ? ' – bak sandsekkvollene først' : '') + (lv ? `, og Leirvakta (${lv.menn.length} fra vakta) tar opp våpen` : '') + '. De holder stillingen til angrepet er over.'); vis(); skitten = true;
     return { lag: fordelt.length, sendt, vakt: lv ? lv.menn.length : 0, voller: fordelt.filter(q => q.plass.voll).length }; }
   // angrepet er over (eller øvelsen oppheves): reglene tilbake, Leirvakta går hjem, rapport
-  function opphev(rapport) { for (const s of ENHETER) { if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; }
+  // (runde 12) de falne i Leirvakta går ut av folket før laget tas bort (FolkSpill.falne i folk-visning.js) – ellers sto de i Folk med helse 15 %
+  function opphev(rapport) { if (window.FolkSpill && FolkSpill.falne) FolkSpill.falne(); for (const s of ENHETER) { if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; }
     if (vakt) { const F = folk(); for (const m of vakt.menn) { const p = F && F.personer.find(q => q.id === m.person); if (p && m.hp < 1) p.helse = Math.min(p.helse, m.hp <= 0 ? .15 : .4); } const i = ENHETER.indexOf(vakt); if (i >= 0) ENHETER.splice(i, 1); if (valgt === vakt) { valgt = null; if (window.lukkPanel) lukkPanel(); } vakt = null; }
     if (rapport && snap) { const nå = ENHETER.filter(e => e.side === 'blå' && !e.karakter), friske = nå.reduce((a, s) => a + s.menn.filter(m => m.hp >= 1).length, 0), falne = nå.reduce((a, s) => a + s.menn.filter(m => m.hp <= 0).length, 0) - snap.falne, L = window.LeirSpill && LeirSpill.tilstand();
       const bygg = L ? snap.bygg.filter(([id, hp]) => { const b = L.bygg.find(q => q.id === id); return !b || b.hp < hp - .01; }).length : 0;

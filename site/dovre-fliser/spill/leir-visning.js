@@ -72,9 +72,10 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   leirKnapp.onclick = () => { meny = !meny; menyEl.classList.toggle('på', meny); leirKnapp.classList.toggle('på', meny); if (meny) { if (window.lukkPanel) lukkPanel(); visMeny(); } };
   const st = el('div', {}, el('b', { id: 'sStrom' }, '–'), ' ', el('span', {}, 'strøm')); st.hidden = true; document.querySelector('.stats').appendChild(st);
   const matTekst = mat => Object.entries(mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
-  const matPris = mat => Object.entries(mat || {}).reduce((s, [k, v]) => s + Math.max(0, v - (L.lager[k] || 0)) * LB.MATERIALER[k].pris, 0);
+  // (runde 12) samme regel som kjøpet: det som mangler, rundet opp til 0,1 (Leir.manglerPris) – så banneret, byggemenyen og loggen sier det samme
+  const matPris = mat => LB.manglerPris(L, mat);
   // Kjøper det som mangler av materialene (når det er plass), gir true når alt finnes
-  function kjøpManglende(mat) { for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil((v - (L.lager[k] || 0)) * 10) / 10; if (m > 0) { const r = LB.kjøpMateriale(L, k, m, OppstartSpill.betal); if (r.feil) { logg(r.feil); return false; } } } return true; }
+  function kjøpManglende(mat) { for (const [k, m] of Object.entries(LB.manglerMat(L, mat))) { if (m > 0) { const r = LB.kjøpMateriale(L, k, m, OppstartSpill.betal); if (r.feil) { logg(r.feil); return false; } } } return true; }
 
   // ---------- angre/gjør om (planen) og maler ----------
   const øyeblikk = () => JSON.stringify({ plan: L.plan, nestePlan: L.nestePlan });

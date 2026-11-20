@@ -163,4 +163,8 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
   ok(/Kjempet for Kystalliansen/.test(S0.profil(nye[0]).historie), 'fangens historie: ' + S0.profil(nye[0]).historie);
   const kjør = o => { let sum = 0; for (let frø = 1; frø <= 12; frø++) { const F2 = F0.ny(), L = nyLeir(), S = S0.ny(frø), r = S0.tilf(S); S0.smitt(S, F2, r, 1, 0); for (let t = 0; t < 2 * 24; t++) S0.sykdomSteg(S, F2, 60, { B: F0.behov(F2, L, {}), tid: t * 60, auto: false, ...o }, r); sum += F2.personer.filter(q => q.syk || q.immun).length; } return sum; };
   const mild = kjør({}), kaldt = kjør({ sprengkulde: true, kald: .6 }); ok(kaldt > mild, `Grålungen smitter lettere i sprengkulde når folk fryser (${mild} mot ${kaldt} smittede på to døgn, tolv forsøk)`); }
+// (runde 12) riktig pronomen: «Hen takket» om Sindre Vik ble «Han takket»; «La hen dra» -> «La ham/henne dra»
+{ const han = { navn: 'Sindre Vik' }, hun = { navn: 'Kari Berg' };
+  ok(S0.medPron('Hen takket og gikk tilbake til arbeidet.', han) === 'Han takket og gikk tilbake til arbeidet.' && S0.medPron('La hen dra (borte i to døgn)', hun) === 'La henne dra (borte i to døgn)', 'han/hun og ham/henne etter navnet');
+  ok(S0.medPron('Nei, vi trenger alle hender', han) === 'Nei, vi trenger alle hender' && S0.medPron('Hen nikket.', null) === 'Hen nikket.', '«hender» røres ikke, ukjent person beholder «hen»'); }
 console.log(feil ? `\n${feil} FEIL` : '\nAlt i orden.'); process.exit(feil ? 1 : 0);

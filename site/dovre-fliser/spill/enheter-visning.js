@@ -74,7 +74,7 @@
     if (Math.floor((tid + dt) / Terreng.KAMPRUNDE_MIN) !== Math.floor(tid / Terreng.KAMPRUNDE_MIN)) { for (const k of av('stridsvogn')) kanon(k); motKjøretøy(); }
   });
   function treffPå(b, treff, hva) {
-    for (const [m, h] of Terreng.fordelTreff(b.menn, treff, rng)) if (b.side === 'blå') logg(`${m.navn} (${m.rolle}, ${b.navn}) er ${h}${hva ? ' ' + hva : ''}.`);
+    for (const [m, h] of Terreng.fordelTreff(b.menn, treff, rng)) if (b.side === 'blå') { if (window.treffLogg) treffLogg(m, b, h, hva); else logg(`${m.navn} (${b.navn}) er ${h}${hva ? ' ' + hva : ''}.`); }
     if (b.menn[b.leder].hp < 1) { const ny = b.menn.findIndex(m => m.hp >= 1); if (ny >= 0) b.leder = ny; }
     if (Terreng.slattUt(b.menn) && !b.slattUtMeldt) { b.slattUtMeldt = true; logg(b.navn + ' er slått ut av kamp (' + Terreng.uteAvKamp(b.menn) + ' av 12 falt eller såret).');
       if (b.side !== 'blå') ordre(b, b.x + (rng() - .5) * 6000, b.y + (rng() - .5) * 6000, true); }

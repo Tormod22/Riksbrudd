@@ -223,4 +223,12 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   const P = L0.dieselRekker(L, 99); ok(P.målt && Math.abs(P.perDøgn - 48) < 1e-6 && Math.abs(P.timer - 240) < 1e-6, 'dieselprognosen: snittet av hele timer (1 l/t i tre timer, 3 l/t i tre = 2 l/t, 48 l i døgnet) – ikke forbruket nå');
   L0.dieselMål(L, 0, 2 * 60); ok(L.dieselLogg.n === 0, 'dieselloggen begynner på nytt når tiden går bakover (eldre lagret spill)');
   ok(L0.DRIVSTOFF.prisPerLiter === 3000, 'dieselen koster 3 000 kr literen (runde 6)'); }
+// (runde 12) materialprisen: det banneret sier, er det kjøpet koster – også med en brøkdel på lageret
+{ const L = L0.ny(); L.lager = { tre: 0.37, betong: 0, stål: 0 }; const mat = { tre: 25, betong: 5 };
+  const m = L0.manglerMat(L, mat), pris = L0.manglerPris(L, mat); let betalt = 0; const bet = p => { betalt += p; return true; };
+  ok(Math.abs(m.tre - 24.7) < 1e-9 && m.betong === 5, 'manglerMat runder opp til 0,1: 24,63 -> 24,7 m³ tre');
+  for (const [k, v] of Object.entries(m)) L0.kjøpMateriale(L, k, v, bet);
+  ok(betalt === pris, `prisen før kjøpet (${pris}) = det som ble betalt (${betalt})`);
+  ok(L0.manglerPris(L, mat) === 0 && Object.keys(L0.manglerMat(L, mat)).length === 0, 'etter kjøpet mangler ingenting');
+  L.lager.tre = 24.99; ok(L0.manglerPris(L, { tre: 25 }) === Math.round(0.1 * L0.MATERIALER.tre.pris), '0,01 m³ som mangler, koster en tidel'); }
 process.exit(feil ? 1 : 0);
