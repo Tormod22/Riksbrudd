@@ -39,7 +39,7 @@
   }
   const skala = () => (kam.m < REGLER.nærM ? { R: REGLER.nærRadius, px: REGLER.nærPx, c: REGLER.celle } : kam.m >= REGLER.fjernM ? { R: REGLER.fjernRadius, px: REGLER.fjernPx, c: REGLER.fjernCelle } : { R: REGLER.radius, px: REGLER.px, c: REGLER.celle });
   const sammeBygg = (a, b) => a && b && a.type === b.type && Math.abs(a.ret - b.ret) < 1e-6 && a.px === b.px;
-  // Regner ut bildet for målet: høydene (8 m) og arealklassene (32 m) rundt, så nivået per 4 m-rute, skygge og kurver per meter
+  // Regner ut bildet for målet: høydene (8 m) og arealklassene (32 m) rundt, så nivået per rute (2 eller 4 m), skygge og kurver per punkt
   async function regn(m) {
     const nr = ++teller, R = m.R, px = m.px, bb = [m.x - R - 24, m.y - R - 24, m.x + R + 24, m.y + R + 24];
     let hv = null, kv = null; try { [hv, kv] = await Promise.all([lagVindu(bb, false, 11), lagVindu(bb, false)]); } catch (e) { hv = null; }
