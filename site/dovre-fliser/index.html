@@ -295,10 +295,72 @@ function kø(z, x, y, k) {
   lagFlis(z, x, y).then(t => { const gml = FERDIG.get(k);
       // en flis som ble laget mens noe ikke lot seg hente (nettbrudd), vises som den er og lages på nytt: etter 4 s, 8 s, 16 s … (høyst hvert minutt)
       if (t.ufull) { t.forsøk = (gml && gml.forsøk || 0) + 1; t.igjen = performance.now() + Math.min(60000, 4000 * 2 ** (t.forsøk - 1)); }
-      FERDIG.set(k, t); if (gml && gml !== t && gml.c.close) gml.c.close();
+      // (runde 8) den nye flisen tones inn over den gamle (eller den grove) – den gamle lukkes når toningen er ferdig
+      t.inn = performance.now(); if (gml && gml !== t) { t.gml = gml; setTimeout(() => { if (t.gml === gml) t.gml = null; if (gml.c.close) gml.c.close(); }, FLISLAST.inn + 50); }
+      FERDIG.set(k, t);
       if (FERDIG.size > 320) { const [gk, gt] = FERDIG.entries().next().value; FERDIG.delete(gk); if (gt.c.close) gt.c.close(); } })
     .catch(e => { console.error(e); visFeil(e); })
     .finally(() => { VENTER.delete(k); aktive--; skitten = true; });
+}
+// ---------- KARTFLISENE I 2D MENS DE LASTES (runde 8, 20. nov, kritikken: «skarpe striper ved siden av uskarpe, rektangulære lyse og
+// mørke felt», «blekt, nesten tomt kart i liggende modus rett etter lasting») ----------
+// Skjøtene var lastingen: en ferdig skarp flis sto rett ved siden av en grov reserve (fire nivåer opp, forstørret), med rett kant og
+// ofte litt annen tone (skyggen overdrives mer på grove nivåer). Og rett etter lasting fantes ingen grove fliser i det hele tatt, så
+// kartet var bakgrunnen (blått på /norge) med det lyse siktfeltet oppå. Nå: (1) en grov flis for hele bildet bes om FØRST, så kartet
+// fylles ut på et øyeblikk (uskarpt) før de skarpe kommer; (2) reserven leter lenger opp (seks nivåer) og bruker de fire finere flisene
+// når du zoomer ut; (3) en ny flis tones inn; (4) en ferdig flis som står inntil en som ikke er ferdig, får en myk kant mot den
+// (grov -> skarp over FLISLAST.kant punkter), så det ikke blir en rett søm. Claudes forslag (alle tallene):
+// inn = toningen (ms), kant = myk kant (CSS-punkter), grov = hvor mange nivåer opp den første grove flisen ligger, dypt = reserven.
+const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 6 };
+let MYK = null;   // lerret til flisene med myk kant
+function flisReserve(z, x, y) {
+  for (let d = 1; d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
+  return null;
+}
+// tegnReserve: den beste grovere flisen, og oppå den de finere flisene som finnes (når du zoomer ut). Svarer om noe ble tegnet.
+function tegnReserve(z, x, y, sx, sy, px) {
+  const r = flisReserve(z, x, y); let noe = false;
+  if (r) { const d = r.d, w = G.T / 2 ** d; ctx.drawImage(r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; }
+  if (z < ZMAX) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const b = FERDIG.get((z + 1) + '/' + (2 * x + i) + '/' + (2 * y + j));
+    if (b) { ctx.drawImage(b.c, sx + i * px / 2, sy + j * px / 2, px / 2 + .5, px / 2 + .5); noe = true; } }
+  return noe;
+}
+// mykFlis: flisen med myk kant mot sidene i «sider» ([dx, dy]) og gjennomsiktighet a, tegnet oppå det som alt står der
+function mykFlis(t, sx, sy, px, sider, a) {
+  const n = Math.max(2, Math.ceil(px * dpr));
+  if (!MYK) MYK = document.createElement('canvas');
+  if (MYK.width < n || MYK.height < n) { MYK.width = Math.max(MYK.width, n); MYK.height = Math.max(MYK.height, n); }
+  const g = MYK.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.clearRect(0, 0, n, n); g.imageSmoothingEnabled = true; g.drawImage(t.c, 0, 0, n, n);
+  if (sider.length) { g.globalCompositeOperation = 'destination-in'; const k = Math.min(n / 2, FLISLAST.kant * dpr);
+    for (const [dx, dy] of sider) {
+      const gr = dx < 0 ? g.createLinearGradient(0, 0, k, 0) : dx > 0 ? g.createLinearGradient(n, 0, n - k, 0) : dy < 0 ? g.createLinearGradient(0, 0, 0, k) : g.createLinearGradient(0, n, 0, n - k);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }
+    g.globalCompositeOperation = 'source-over'; }
+  ctx.globalAlpha = a; ctx.drawImage(MYK, 0, 0, n, n, sx, sy, px + .5, px + .5); ctx.globalAlpha = 1;
+}
+function tegnFliser(z, s, px, liste, vx0, vy1) {
+  ctx.imageSmoothingEnabled = true;
+  const nå = performance.now(), synlig = new Set(liste.map(([x, y]) => x + ',' + y)), ferdig = (x, y) => FERDIG.has(z + '/' + x + '/' + y);
+  // (1) grove fliser først: der verken flisen eller noen reserve finnes, bes den grove om før de skarpe (de får de første plassene i køen)
+  const zg = Math.max(ZMIN, z - FLISLAST.grov);
+  if (zg < z) { const grove = new Set();
+    for (const [x, y] of liste) if (!ferdig(x, y) && !flisReserve(z, x, y)) grove.add((x >> (z - zg)) + '/' + (y >> (z - zg)));
+    for (const g of grove) { const [gx, gy] = g.split('/').map(Number); kø(zg, gx, gy, zg + '/' + g); } }
+  let toner = false; FLISLAST.sist = { myke: 0, toner: 0, reserve: 0, mangler: 0 };
+  for (const [x, y] of liste) {
+    const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
+    if (!t) { kø(z, x, y, k); if (tegnReserve(z, x, y, sx, sy, px)) FLISLAST.sist.reserve++; else FLISLAST.sist.mangler++; continue; }
+    if (t.ufull && t.forsøk < FORSØK_MAKS && nå > t.igjen) kø(z, x, y, k);
+    const alder = t.inn ? nå - t.inn : Infinity, a = alder < FLISLAST.inn ? Math.max(0, alder / FLISLAST.inn) : 1;
+    const sider = []; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (synlig.has((x + dx) + ',' + (y + dy)) && !ferdig(x + dx, y + dy)) sider.push([dx, dy]);
+    if (a >= 1 && !sider.length) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); continue; }
+    // under: den gamle utgaven av flisen (ny utgave etter et nettbrudd), ellers reserven
+    if (t.gml) ctx.drawImage(t.gml.c, sx, sy, px + .5, px + .5); else tegnReserve(z, x, y, sx, sy, px);
+    if (sider.length) { mykFlis(t, sx, sy, px, sider, a); FLISLAST.sist.myke++; } else { ctx.globalAlpha = a; ctx.drawImage(t.c, sx, sy, px + .5, px + .5); ctx.globalAlpha = 1; }
+    if (a < 1) { toner = true; FLISLAST.sist.toner++; }
+  }
+  if (toner) skitten = true;   // tegnes igjen i neste bilde til toningen er ferdig
 }
 function tegn() {
   if (!skitten) return; skitten = false;
@@ -312,16 +374,7 @@ function tegn() {
   for (let y = Math.max(y0, ty0); y <= Math.min(y1, ty1); y++) for (let x = Math.max(x0, tx0); x <= Math.min(x1, tx1); x++) liste.push([x, y]);
   liste.sort((a, b) => Math.hypot(a[0] - midt[0], a[1] - midt[1]) - Math.hypot(b[0] - midt[0], b[1] - midt[1]));
   tegnVest(vx0, vy1);
-  ctx.imageSmoothingEnabled = true;
-  for (const [x, y] of liste) {
-    const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
-    if (t) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); if (t.ufull && t.forsøk < FORSØK_MAKS && performance.now() > t.igjen) kø(z, x, y, k); continue; }
-    kø(z, x, y, k);
-    for (let d = 1; d <= 4; d++) { // vis en grovere flis i mellomtiden
-      const f = 2 ** d, a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d));
-      if (a) { const w = G.T / f; ctx.drawImage(a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); break; }
-    }
-  }
+  tegnFliser(z, s, px, liste, vx0, vy1);
   // natt og regn i 2D-kartet (spill/kartlys.js, runde 6): kartet mørkere og blåere om natta, gråere i regn – under navn og merker
   if (window.KartLys) KartLys.tegn(ctx);
   if (window.Etikett) Etikett.nullstill();   // navnene på lag, kjøretøy, base og leir får hver sin plass (spill/etikett.js)
