@@ -276,7 +276,9 @@
     // (runde 10, brukerens bilde 5: «nesten ok») bilen: kameraet litt høyere og lenger bak, ser på et punkt litt foran bilen, og glir mykt
     // etter (KAMERA_BIL – Claudes forslag), så både bilen og vegen foran synes.
     const KB = KAMERA_BIL, avst = k.type === 'bil' ? KB.avst : 17, opp = k.type === 'bil' ? KB.opp : 3.2, cp = Math.cos(f.pitch), c = R.cam;
-    let cx = x + Math.sin(f.a) * cp * avst, cy = y - Math.cos(f.a) * cp * avst, cz = k.z + opp - Math.sin(f.pitch) * avst; const bak = Math.max((hoyde3d(u.cx + cx, u.cy + cy) - u.h0) * R.EX, V.høyde(cx, cy)) + 1; if (cz < bak) cz = bak;
+    // står et hus mellom bilen og kameraet, kommer kameraet nærmere (ikke inne i veggen)
+    const hus = k.type === 'bil' ? husMellom(R, x, y, x + Math.sin(f.a) * cp * avst, y - Math.cos(f.a) * cp * avst) : 1, avstH = Math.max(2.6, avst * hus - (hus < 1 ? 1 : 0)), oppH = opp * (.55 + .45 * avstH / avst);
+    let cx = x + Math.sin(f.a) * cp * avstH, cy = y - Math.cos(f.a) * cp * avstH, cz = k.z + oppH - Math.sin(f.pitch) * avstH; const bak = Math.max((hoyde3d(u.cx + cx, u.cy + cy) - u.h0) * R.EX, V.høyde(cx, cy)) + 1; if (cz < bak) cz = bak;
     const [mx, my] = fram(f.a), mål = k.type === 'bil' ? [x + mx * KB.foran, y + my * KB.foran, k.z + KB.siktOpp] : [x, y, k.z + opp * .7];
     if (!kamP || Math.hypot(kamP.p[0] - cx, kamP.p[1] - cy) > 60) kamP = { p: [cx, cy, cz], m: mål.slice(), ok: true };
     else { const w = Math.min(1, dt * (k.type === 'bil' ? KB.følg : 8)); for (let q = 0; q < 3; q++) { kamP.p[q] += ([cx, cy, cz][q] - kamP.p[q]) * w; kamP.m[q] += (mål[q] - kamP.m[q]) * w; }
@@ -285,6 +287,12 @@
     R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = 62 + Math.min(10, fart * .25); c.aspect = VW / VH; c.near = .3; c.far = u.S * 4 + 3000; c.updateProjectionMatrix(); b.yaw = f.a;
     lyd(k); if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
     return true; }
+  // Hvor langt (0–1) fra (x0, y0) mot (x1, y1) det er til første husvegg (husomrissene i R.hindre; trær teller ikke). 1 = fritt.
+  function husMellom(R, x0, y0, x1, y1) { const H = R.hindre; if (!H || !H.get) return 1; const L = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(L));
+    const inni = (P, X, Y) => { let inn = false; for (let a = 0, b = P.length - 1; a < P.length; b = a++) { const p = P[a], q = P[b]; if ((p[1] > Y) !== (q[1] > Y) && X < (q[0] - p[0]) * (Y - p[1]) / (q[1] - p[1]) + p[0]) inn = !inn; } return inn; };
+    for (let q = 1; q <= n; q++) { const t = q / n, X = x0 + (x1 - x0) * t, Y = y0 + (y1 - y0) * t;
+      for (const o of H.get(Math.floor(X / 20) + ',' + Math.floor(Y / 20)) || []) { if (!o.P) continue; const b = o.bb; if (b && (X < b[0] || X > b[2] || Y < b[1] || Y > b[3])) continue; if (inni(o.P, X, Y)) return t; } }
+    return 1; }
   // kameraet bak bilen (Claudes forslag): avstand og høyde (m), punktet det ser på (m foran bilen, m over bakken), hvor fort det følger (per s)
   const KAMERA_BIL = { avst: 9.6, opp: 3.0, foran: 5, siktOpp: 1.3, følg: 7 };
   let kamP = null;
