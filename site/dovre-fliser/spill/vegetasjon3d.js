@@ -378,8 +378,9 @@
   // straks, så det så ut som bregner på en bar flate). Nå settes trærne rundt deg med en gang når utsnittet ikke har egne trær: samme
   // 5 m-gitter og samme regel som trær3d og 2D-kartet (treVed, TRE_TETT, treIHøyden), så det er de samme trærne som kommer med det nye
   // utsnittet. De tas bort så snart utsnittet har trær. Claudes forslag: radius (m), flytt (m før de regnes på nytt), nær (m med alle
-  // greinene, enklere form lenger ute), maks antall [PC, mobil], leir (m ryddet rundt leirens midte, som leir-visning.js).
-  const NÆRSKOG = { radius: 240, flytt: 80, nær: 70, maks: [7000, 3000], leir: 30 };
+  // greinene, enklere form lenger ute), maks antall [PC, mobil], leir (m ryddet rundt leirens midte, som leir-visning.js), høyde (m over
+  // bakken kameraet høyst kan være).
+  const NÆRSKOG = { radius: 240, flytt: 80, nær: 70, maks: [7000, 3000], leir: 30, høyde: 30 };
   let skog = null, skogArb = false;
   function fjernSkog(R) { if (!skog) return; for (const m of skog.mesh) { R.scene.remove(m); m.material.dispose(); if (m.dispose) m.dispose(); } skog = null; }
   async function lagSkog(R, u, cx, cy) {
@@ -418,8 +419,9 @@
   KROKER.ramme3d.push(R => {
     const u = R.ut; if (!u || !window.THREE) return;
     const harTrær = !!u.trær && Object.values(u.trær).some(d => d && d.length);
-    if (!R.fot || harTrær || !VIS.traer) { if (skog) fjernSkog(R); return; }
-    const c = R.cam.position;
+    // bare nede ved bakken (ikke i helikopteret – der ville det stått en ring av skog under deg i et utsnitt uten trær)
+    const c = R.cam.position, over = R.fot ? c.z - (hoyde3d(u.cx + c.x, u.cy + c.y, u) - u.h0) * R3.EX : Infinity;
+    if (!R.fot || harTrær || !VIS.traer || over > NÆRSKOG.høyde) { if (skog) fjernSkog(R); return; }
     if (skogArb || (skog && skog.u === u && Math.hypot(c.x - skog.x, c.y - skog.y) < NÆRSKOG.flytt)) return;
     skogArb = true; lagSkog(R, u, c.x, c.y).catch(e => console.warn('nærskog:', e)).finally(() => { skogArb = false; });
   });
