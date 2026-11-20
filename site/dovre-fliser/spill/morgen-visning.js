@@ -218,7 +218,12 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
   KROKER.tegn3d.push((g, proj3) => { const b = S && S.tankbil; if (!klar || !b) return; const p = proj3(b.x, b.y); if (!p) return; g.save(); g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; const t = '◆ Tankbil (diesel)';
     g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, p[0], p[1] - 14); g.fillStyle = '#f6d28a'; g.fillText(t, p[0], p[1] - 14); g.restore(); });
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => { const b = S && S.tankbil; if (!klar || !b) return [];
-    return [{ i: 'tank', k: '', t: 'Tankbil med diesel', s: `${meter(b.meter)} mot ${b.retning} · ${Math.max(1, Math.round((b.frist - tid) / 60))} t igjen`, f: () => { if (rot.kartTil && !(typeof på3d !== 'undefined' && på3d)) kartTil(b.x, b.y, 4); else logg(`Tankbilen står ${meter(b.meter)} mot ${b.retning} for leiren.`); } }]; });
+    const lag = nesteLag(b); return [{ i: 'tank', k: '', t: 'Tankbil med diesel', s: `${meter(b.meter)} mot ${b.retning} · ${Math.max(1, Math.round((b.frist - tid) / 60))} t igjen`, f: () => { if (rot.kartTil && !(typeof på3d !== 'undefined' && på3d)) kartTil(b.x, b.y, 4); else logg(`Tankbilen står ${meter(b.meter)} mot ${b.retning} for leiren.`); },
+      knapp: lag ? { t: `Send ${lag.navn}`, f: () => sendLag(b) } : null }]; });
+  // det nærmeste egne laget som kan sendes (ikke deg selv, leirvakta, et lag om bord eller i forsvarsstilling), høyst 30 km unna
+  function nesteLag(b) { let best = null, bd = 30000; for (const e of ENHETER) { if (e.side !== 'blå' || e.karakter || e.leirvakt || e.raid || e.ombord || e.forsvar || !levende(e)) continue;
+      const d = Math.hypot(e.x - b.x, e.y - b.y); if (d < bd) { bd = d; best = e; } } return best; }
+  function sendLag(b) { const e = nesteLag(b); if (!e) return logg('Ingen lag kan sendes til tankbilen nå.'); if (typeof ordre === 'function') { ordre(e, b.x, b.y); logg(`${e.navn} er sendt mot tankbilen (${meter(Math.hypot(e.x - b.x, e.y - b.y))}).`); skitten = true; } }
 
   // ---------- Leir-menyen (fanen Mål): det morgenmøtet bestemte for i dag ----------
   const PLANTEKST = { jakt: 'på jakt og fiske', speid: 'på speidertur', leie: 'leid ut som vakter', tankbil: 'til fots mot tankbilen', vakt: 'på dobbel vakt' };
