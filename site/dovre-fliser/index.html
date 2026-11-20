@@ -1679,7 +1679,7 @@ async function hus3d(u) {
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
   // (20. nov, runde 9: hjørnene samles i Tallrekke.Rekke – voksende Float32Array med plass som gjenbrukes til neste utsnitt – i stedet
   // for vanlige lister; de var det største søppelet når du flyr. Samme tall ut: se spill/tallrekke.js og vakta lys.)
-  const RK = Tallrekke.Rekke, B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'lager', 'glass', 'dør', 'murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard']) B[n] = { pos: new RK('F'), kol: new RK('F'), uv: new RK('F') }; let cur = B.mur;
+  const RK = Tallrekke.Rekke, B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'lager', 'glass', 'dør', 'murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard']) B[n] = { pos: new RK('F', 'hus.pos.' + n), kol: new RK('F', 'hus.kol.' + n), uv: new RK('F', 'hus.uv.' + n) }; let cur = B.mur;
   // Hva slags bygg (OSM-typen, ellers anslag fra størrelse og høyde) og hvordan veggene ser ut: [gruppe/tekstur, meter per felt langs, meter per felt opp (0 = hele veggen)]
   const klasse = (t, A, h) => t === 10 ? (A < 150 && h < 9 ? 'hus' : 'leil') : t === 0 ? (h >= 10 || A > 350 ? 'leil' : 'hus') : t === 1 ? 'uthus' : t === 6 ? 'industri'
     : t === 7 ? 'butikk' : t === 8 ? 'kirke' : t === 9 || t === 3 ? 'skole' : t === 4 ? 'låve' : t === 11 ? 'hytte'
@@ -3331,13 +3331,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=4ce1c3bec4"></script>
 <script src="/dovre-fliser/spill/veg.js?v=4eb76c3f77"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=36a304cf73"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=6bf6dc1b54"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=134fd452b4"></script>
 <script src="/dovre-fliser/spill/bruer.js?v=9373fb9b08"></script>
-<script src="/dovre-fliser/spill/infra3d.js?v=4b39a82118"></script>
+<script src="/dovre-fliser/spill/infra3d.js?v=b488c6b5cf"></script>
 <script src="/dovre-fliser/spill/portal3d.js?v=4ca063b25a"></script>
 <script src="/dovre-fliser/spill/olje3d.js?v=27ad1017c8"></script>
 <script src="/dovre-fliser/spill/kyst.js?v=7a66cf0db4"></script>
@@ -3401,7 +3401,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/mobler.js?v=43f0e722ac"></script>
 <script src="/dovre-fliser/spill/mobler-visning.js?v=c6ceb2f309"></script>
 <script src="/dovre-fliser/spill/lykt.js?v=b7bc87e946"></script>
-<script src="/dovre-fliser/spill/tallrekke.js?v=adb71d5226"></script>
+<script src="/dovre-fliser/spill/tallrekke.js?v=9acb597826"></script>
 <script src="/dovre-fliser/spill/gaavalg.js?v=58163dd566"></script>
 <script src="/dovre-fliser/spill/byggeplass3d.js?v=ad1fc5113c"></script>
 <script src="/dovre-fliser/spill/fjellmark3d.js?v=e25429c40a"></script>

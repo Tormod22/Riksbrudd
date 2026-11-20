@@ -398,8 +398,8 @@
   function* lagGeo(u) {
     // (runde 9, hakk når du flyr) hjørnene samles i Tallrekke.Rekke (spill/tallrekke.js: plassen gjenbrukes til neste utsnitt, samme
     // tall ut som new Float32Array(liste) og setIndex(liste) ga) – store bruer ga store vanlige lister
-    const RK = typeof Tallrekke !== 'undefined' ? Tallrekke.Rekke : null, tomT = () => RK ? { pos: new RK('F'), uv: new RK('F'), idx: new RK('U') } : { pos: [], uv: [], idx: [] };
-    const G = RK ? { pos: new RK('F'), kol: new RK('F') } : ny(), T = { veg: tomT(), plain: tomT(), gs: tomT(), plass: tomT() };
+    const RK = typeof Tallrekke !== 'undefined' ? Tallrekke.Rekke : null, tomT = n => RK ? { pos: new RK('F', 'bru.pos.' + n), uv: new RK('F', 'bru.uv.' + n), idx: new RK('U', 'bru.idx.' + n) } : { pos: [], uv: [], idx: [] };
+    const G = RK ? { pos: new RK('F', 'bru.pos'), kol: new RK('F', 'bru.kol') } : ny(), T = { veg: tomT('veg'), plain: tomT('plain'), gs: tomT('gs'), plass: tomT('plass') };
     for (const m of u.bruer3d) { m.søyler = []; byggBru(u, m, G, T); yield; }
     for (const k of u.kaier3d) { byggKai(u, k, G, T); yield; }
     const pos = RK ? G.pos.ferdig() : new Float32Array(G.pos); yield; const kol = RK ? G.kol.ferdig() : new Float32Array(G.kol); G.pos = G.kol = null; yield;

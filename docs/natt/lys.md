@@ -728,8 +728,10 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
    samme rekkefølge); `hindringer(u)` = den kjørt i ett, forbered3d og smått3d bruker `kjørAsynk`.
 8. Uten små tabeller per ting: `treMatriser`, `småting`, `lodTrær` (`kopierTall` i stedet for `set(subarray(…))`), `delBakkenG` og
    natt3d.js (lysflekkene) leser tallene rett fra tabellen (samme verdier; `fi` er `undefined` når `per = 4`, som før).
-9. Pust: vegetasjon3d.js (einer/vier/fjellbjørk på åpen mark – løkka over rutene hadde ingen), bunnfargen i bygg3d i striper på 256 rader
-   (512 tok 35–40 ms per stripe).
+9. Pust: vegetasjon3d.js (einer/vier/fjellbjørk på åpen mark – løkka over rutene hadde ingen; avstanden til vann `vannAvstandG` som
+   generator, 50 ms i ett strekk), bunnfargen i bygg3d i striper på 256 rader (512 tok 35–40 ms per stripe), kartbildet til grafikkortet
+   (`lastOppIBiter`) 128 rader om gangen (256 rader av 4096 tok 60–135 ms med programvare-grafikk). De to siste (vannavstanden og stripene på
+   128 rader, commit f59b200) kom etter måleserien under og er ikke med i tallene der – de er prøvd med vakta og avtrykkene.
 
 ### Likt før og etter
 - **Alle nettene i scenen** (scratchpad `natt9/lys/fp.js` + `cmpfp.js`, Stavanger, utsnitt 3,0 km, 327–329 nett fra 16–18 kilder: bakken,

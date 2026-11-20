@@ -11,7 +11,12 @@
 (function (rot) {
   // Claudes forslag: første plass 4096 tall, dobles når den er full; lageret mellom utsnittene høyst 64 MB på PC og 24 MB på telefon
   // (de minste kastes først). Lerretspunktene (kartbildet, opptil 4096² · 4 = 64 MB) har eget lager med plass til ett (ta/giPunkter).
-  const REGLER = { start: 4096, lager: 64 * 1048576, lagerMobil: 24 * 1048576, punkter: 1 };
+  // (runde 9, etter målingen på telefon: 24 MB var for lite – husene i Stavanger trengte nye tabeller hver gang; nå 40 MB på telefon og
+  // 96 MB på PC, og en rekke med navn starter i den størrelsen samme rekke endte på sist – STØRRELSE –, rundet opp til en toerpotens,
+  // så den ikke vokser gjennom 4096, 8192 … hver gang, og lageret har tabeller i de samme størrelsene neste gang)
+  const REGLER = { start: 4096, lager: 96 * 1048576, lagerMobil: 40 * 1048576, punkter: 1 };
+  const STØRRELSE = new Map();
+  const toerpotens = n => { let L = REGLER.start; while (L < n) L *= 2; return L; };
   const STAT = { nye: 0, gjenbrukt: 0, nyeMB: 0, kastet: 0, punkterNye: 0, punkterGjenbrukt: 0 };
   const LAGER = { F: [], U: [] }, PUNKTER = [];
   let bytes = 0;
@@ -36,13 +41,14 @@
       bytes -= LAGER[tT][ti].byteLength; LAGER[tT].splice(ti, 1); STAT.kastet++;
     }
   }
-  function Rekke(T) { this.T = T === 'U' ? 'U' : 'F'; this.a = null; this.n = 0; this.l = Rekke.på ? null : []; }
+  // navn (valgfritt): rekker med samme navn starter i størrelsen den forrige endte på (bare plassen – tallene blir de samme)
+  function Rekke(T, navn) { this.T = T === 'U' ? 'U' : 'F'; this.a = null; this.n = 0; this.l = Rekke.på ? null : []; this.navn = navn || null; }
   Rekke.på = true;
   Object.defineProperty(Rekke.prototype, 'length', { get() { return this.l ? this.l.length : this.n; } });
   // plass til k tall til (vokser ved å doble)
   Rekke.prototype.plass = function (k) {
     const m = this.n + k; if (this.a !== null && m <= this.a.length) return this.a;
-    let L = this.a ? this.a.length * 2 : REGLER.start; while (L < m) L *= 2;
+    let L = this.a ? this.a.length * 2 : toerpotens(this.navn ? STØRRELSE.get(this.navn) || 0 : 0); while (L < m) L *= 2;
     const b = ta(this.T, L); if (this.a) { b.set(this.a.subarray(0, this.n)); gi(this.T, this.a); }
     return (this.a = b);
   };
@@ -86,7 +92,7 @@
     this.slipp(); return r;
   };
   // Uten ferdig (jobben ble avbrutt eller er brukt opp): plassen tilbake i lageret.
-  Rekke.prototype.slipp = function () { if (this.a) gi(this.T, this.a); this.a = null; this.n = 0; if (this.l) this.l = []; };
+  Rekke.prototype.slipp = function () { if (this.navn) STØRRELSE.set(this.navn, this.length); if (this.a) gi(this.T, this.a); this.a = null; this.n = 0; if (this.l) this.l = []; };
   // Lerretspunktene til kartbildet (Uint8ClampedArray, bygg3d: TW · TW · 4): samme størrelse om igjen fra lageret. Alle punktene
   // skrives over av bygg3d før de leses, så gamle tall blir ikke med.
   function taPunkter(n) {
@@ -97,9 +103,9 @@
     if (!a || !Rekke.på || PUNKTER.includes(a)) return;
     PUNKTER.push(a); while (PUNKTER.length > (mobil() ? 1 : REGLER.punkter)) PUNKTER.shift();
   }
-  const tøm = () => { LAGER.F.length = 0; LAGER.U.length = 0; PUNKTER.length = 0; bytes = 0; };
+  const tøm = () => { LAGER.F.length = 0; LAGER.U.length = 0; PUNKTER.length = 0; bytes = 0; STØRRELSE.clear(); };
   const lager = () => ({ F: LAGER.F.length, U: LAGER.U.length, MB: Math.round(bytes / 1048576 * 10) / 10, punkter: PUNKTER.length });
-  const Tallrekke = { REGLER, STAT, Rekke, ta, gi, taPunkter, giPunkter, tøm, lager };
+  const Tallrekke = { REGLER, STAT, STØRRELSE, Rekke, ta, gi, taPunkter, giPunkter, tøm, lager };
   if (typeof module !== 'undefined') module.exports = Tallrekke;
   rot.Tallrekke = Tallrekke;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

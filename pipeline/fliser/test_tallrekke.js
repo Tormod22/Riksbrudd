@@ -35,6 +35,9 @@ T.Rekke.på = false; ok(prøv(20000, true), 'av: likt'); { const R = new T.Rekke
 { const R = new T.Rekke('F'); R.p3(1, 2, 3); R.slipp(); ok(R.length === 0 && R.a === null, 'slipp'); }
 // lerretspunkter: samme størrelse fra lageret
 { const a = T.taPunkter(4096); T.giPunkter(a); const b = T.taPunkter(4096); ok(a === b, 'punktene brukes om igjen'); const c = T.taPunkter(4096); ok(c !== b, 'to i bruk samtidig er ulike'); }
+// navn: rekka starter i størrelsen samme navn endte på sist (rundet opp til toerpotens), og tallene er de samme
+{ const R = new T.Rekke('F', 'prøve'); const l = []; for (let i = 0; i < 70000; i++) { R.push(i / 3); l.push(i / 3); } ok(likT(R.ferdig(), new Float32Array(l)), 'navn: likt');
+  ok(T.STØRRELSE.get('prøve') === 70000, 'navn: størrelsen huskes'); const Q = new T.Rekke('F', 'prøve'); Q.p3(1, 2, 3); ok(Q.a.length >= 70000 && Q.a.length === 131072, 'navn: starter stort nok (' + Q.a.length + ')'); ok(likT(Q.ferdig(), new Float32Array([1, 2, 3])), 'navn: tallene like'); }
 // SELVTEST: en rekke som ikke runder til 32 bit, blir sett
 { const l = [0.1, 1 / 3], a = new Float64Array(l); ok(!likT(new Float32Array(a), a), 'selvtest: Float64 er ikke Float32'); const R = new T.Rekke('F'); R.push(0.1); R.a[0] = 0.2; ok(!likT(R.ferdig(), new Float32Array([0.1])), 'selvtest: endret tall blir sett'); }
 console.log(feil ? `${feil} FEIL` : 'test_tallrekke: alt ok', JSON.stringify(T.STAT));
