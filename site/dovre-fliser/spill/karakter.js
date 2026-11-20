@@ -241,7 +241,9 @@ body.smal #karakterark, body.kort #karakterark{ left:0; right:0; top:auto; botto
     f.append(el('div', { klasse: 'tips' }, 'I leiren drikker, spiser og hviler du av deg selv. Ute blir du tørst og sulten av å gå: ta med vann i feltflaska og rasjoner, drikk ved et vann, og sov i et hus du har sikret. Når du går, viser knappen «Utenfra» (V) deg selv i tredjeperson.'));
     return f; }
   function vis(tving) { if (!åpen || !klar) return; if (!tving && rot.pekerNede && pekerNede(panel)) return; const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sistHtml) return; sistHtml = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }
-  function åpne() { if (!klar) return; åpen = true; panel.classList.add('på'); kn.classList.add('på'); sistHtml = ''; vis(true); }
+  // (runde 12, kritiker E: et trykk på varselet «Du er veldig tørst» åpnet karakterpanelet oppå morgenmøtet, så møtet ble skjult mens
+  // spillet sto på pause) – mens morgenmøtet venter på svar, åpnes ikke panelet fra varslene
+  function åpne() { if (!klar) return; const mk = document.getElementById('morgenkort'); if (mk && mk.classList.contains('på') && getComputedStyle(mk).display !== 'none') { logg('Svar på morgenmøtet først.'); return; } åpen = true; panel.classList.add('på'); kn.classList.add('på'); sistHtml = ''; vis(true); }
   function lukk() { åpen = false; panel.classList.remove('på'); kn.classList.remove('på'); }
   setInterval(() => { kn.hidden = !klar; tk.hidden = !(klar && går() && !fører()); }, 500);
   Object.assign(ut, { start, åpne, lukk, vis, iLeiren, sted, harVann, erÅpen: () => åpen, T: () => T, klar: () => klar, treff: () => (klar && T ? K.virkning(T.behov).treff : 1), tredje: () => tredje, settTredje, figur: () => figur, spisRasjon, takt, lagre, varsler: () => (klar && T ? Object.keys(K.BEHOV).filter(k => T.behov[k] < K.R.lav).map(k => ({ id: k, tekst: K.ord(k, T.behov[k]), ...råd(k) })) : []) });

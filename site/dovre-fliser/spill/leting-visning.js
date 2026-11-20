@@ -21,17 +21,18 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
 body.kort #inneknapper{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); gap:6px; }
 @media (max-height:560px){ body.kort #inneknapper{ top:calc(var(--topp,40px) + 50px); bottom:auto; flex-direction:row; flex-wrap:wrap; justify-content:center; width:min(560px,62vw); }
   body.kort #inneknapper > button{ min-width:0; min-height:38px; font-size:14px; padding:4px 12px; } }
-#funnpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 62px); z-index:8; display:none; width:min(440px,92vw); max-height:calc(100vh - var(--topp,58px) - 190px); overflow:auto; box-sizing:border-box; padding:10px 14px 12px;
+#funnpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 90px); z-index:8; display:none; width:min(440px,92vw); max-height:calc(100vh - var(--topp,58px) - 190px); overflow:auto; box-sizing:border-box; padding:10px 14px 12px;
   background:rgba(24,20,13,.96); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:15px; }
 #funnpanel.på{ display:block; } #funnpanel h3{ margin:0 28px 6px 0; font-size:18px; color:#f0e2b0; } #funnpanel h4{ margin:8px 0 2px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); font-weight:600; }
 #funnpanel ul{ margin:0; padding:0 0 0 2px; list-style:none; } #funnpanel li{ padding:2px 0; } #funnpanel li b{ color:#f0e2b0; } #funnpanel li small{ color:var(--ink-dim,#a99); } #funnpanel p{ margin:4px 0; }
 #funnpanel .kn{ display:flex; gap:8px; margin-top:10px; } #funnpanel .kn button{ flex:1; min-height:40px; background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); font:inherit; font-size:15px; cursor:pointer; } #funnpanel .kn button.hoved{ border-color:#c9b26a; color:#f0e2b0; }
 #funnpanel .x{ position:absolute; right:4px; top:2px; background:none; border:0; color:inherit; font-size:22px; min-width:36px; min-height:36px; cursor:pointer; }
-#innehint{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 62px); z-index:7; display:none; width:min(460px,92vw); box-sizing:border-box; padding:8px 12px; background:rgba(24,20,13,.94); border:1px solid #8fa86a; color:var(--ink,#e7dcc3); font-size:14px; cursor:pointer; }
+#innehint{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 90px); z-index:7; display:none; width:min(460px,92vw); box-sizing:border-box; padding:8px 12px; background:rgba(24,20,13,.94); border:1px solid #8fa86a; color:var(--ink,#e7dcc3); font-size:14px; cursor:pointer; }
 #innehint.på{ display:block; } #innehint b{ color:#e3efc9; } #innehint small{ display:block; color:var(--ink-dim,#a99); margin-top:3px; }
 @media (max-height:560px){ body.kort #funnpanel{ top:calc(var(--topp,40px) + 4px); width:min(430px,60vw); max-height:calc(100vh - var(--topp,40px) - 16px); padding:6px 10px 8px; font-size:13px; } body.kort #funnpanel h3{ font-size:15px; margin-bottom:2px; }
   body.kort #funnpanel .kn{ margin-top:6px; } body.kort #funnpanel .kn button{ min-height:36px; font-size:14px; } body.kort #innehint{ top:auto; bottom:calc(8px + env(safe-area-inset-bottom,0px)); left:310px; right:130px; transform:none; width:auto; font-size:12.5px; padding:5px 10px; } }
-body.bærermøbel #funnpanel, body.bærermøbel #innehint{ display:none; }`;
+body.bærermøbel #funnpanel, body.bærermøbel #innehint{ display:none; }
+body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   document.head.appendChild(css);
   const knapp = document.createElement('button'); knapp.id = 'letknapp'; knapp.type = 'button'; knapp.innerHTML = '<i></i><span></span>'; document.body.appendChild(knapp);
   // merkelappen under knappen: hva slags bygg du står i, og om det er gjennomsøkt

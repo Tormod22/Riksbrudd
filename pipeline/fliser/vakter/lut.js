@@ -73,14 +73,14 @@ module.exports = {
         }
         // RUNDE 12 (kritiker E/F): knappene inne står samlet i #inneknapper, resultatet av letingen er et panel med «Se i skapene», og den
         // åpner alle beholderne i huset (ikke bare de innen rekkevidde)
-        if (i3d && P && P.inne) { LS.åpne(false);
+        if (i3d && P && P.inne) { const varÅpen = pn.classList.contains('på'), fane0 = LS.aktiv() ? LS.aktiv().nk : undefined; LS.åpne(false);
           const rk = document.getElementById('inneknapper'); krev(!!rk && ['letknapp', 'lutknapp', 'mobelknapp', 'dorknapp'].every(id => document.getElementById(id) && document.getElementById(id).parentNode === rk), 'knappene inne står ikke samlet i #inneknapper');
           const O = LS.husOversikt(P); d.oversikt = `${O.medTing} av ${O.antall}`; krev(O.antall >= 2 && O.medTing >= 1, 'husOversikt fant ikke beholderne i prøvehuset: ' + d.oversikt);
           LeteSpill.visResultat(P, { fikk: { mat: 3, tre: 1 }, sekken: ['Deler til håndverk: 1 tau.'] }); const fp = document.getElementById('funnpanel'), ft = fp.innerText;
           krev(fp.classList.contains('på') && /3 rasjoner/.test(ft) && /leirens mat/.test(ft) && /lageret/.test(ft) && /I sekken/i.test(ft), 'resultatpanelet viser ikke hva som gikk hvor: ' + ft.replace(/\s+/g, ' ').slice(0, 140));
           const seKn = [...fp.querySelectorAll('button')].find(b => /Se i skapene/.test(b.textContent)); krev(!!seKn, '«Se i skapene» mangler i resultatpanelet');
           if (seKn) { seKn.click(); d.alle = LS.beholdere().length - 1; krev(pn.classList.contains('på') && !fp.classList.contains('på') && d.alle === O.antall, `«Se i skapene» åpnet ikke alle beholderne (${d.alle} av ${O.antall})`); }
-          LS.åpne(false); LeteSpill.lukkFunn(); }
+          LS.åpne(false); LeteSpill.lukkFunn(); if (varÅpen) LS.åpne(true, fane0); }
         // RUNDE 12: varselet om tørst sier «feltflaska» og har «Drikk», som drikker av flaska
         { const v0 = I.ting.vann; I.ting.vann = 2; B.tørst = 10; const v = KarakterSpill.varsler().find(q => q.id === 'tørst'); d.drikk = v ? v.råd + (v.knapp ? ' [' + v.knapp.t + ']' : '') : '(ingen varsel)';
           krev(!!v && /feltflaska/.test(v.råd) && v.knapp && v.knapp.t === 'Drikk', 'tørst-varselet har ikke «Drikk» / «drikk fra feltflaska»: ' + d.drikk);

@@ -20,6 +20,8 @@
   const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (v === undefined || v === null || v === false) continue; if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (tekst, fn, a = {}) => { const b = el('button', { type: 'button', ...a }, tekst); b.onclick = e => { e.stopPropagation(); fn(e); }; return b; };
   const kg = v => L.tall(Math.round(v * 10) / 10) + ' kg';
+  // berøringsskjerm: ingen tastaturhint («(E)», «(Tab)») – runde 12, kritiker E så «(Tab)» på telefonen
+  const grovPek = () => !!((rot.matchMedia && matchMedia('(pointer: coarse)').matches) || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && rot.matchMedia && !matchMedia('(hover: hover)').matches));
   const ut = { test: false };
 
   // ---------- tingene inn i sekkens tabeller ----------
@@ -389,7 +391,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   function oppdaterKnapp() {
     const c = klar && går() && !åpen && !(rot.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()) ? nærmeste() : null; knappFor = c;
     if (!c) { åpneKnapp.classList.remove('på'); return; }
-    const t = `Åpne ${c.navn}${rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
+    const t = `Åpne ${c.navn}${grovPek() ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
   }
   åpneKnapp.addEventListener('click', e => { e.preventDefault(); const c = knappFor || nærmeste(); if (c) åpne(true, c.nk); });
   // E: åpne beholderen du står ved (eller lukk panelet); Tab: panelet med det som er her; Esc lukker
@@ -412,7 +414,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
     p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt · ${L.STATUS[b.status]}`), e('small', { style: 'display:block;opacity:.8;margin-top:2px' }, 'Vekt (øverst) er alt du bærer, også våpnene – plass er hvor mye lommene og sekken rommer.'))),
-      kn('Inventar og beholdere' + (rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (Tab)'), () => åpne(true), { id: 'lutfrasekk' })); });
+      kn('Inventar og beholdere' + (grovPek() ? '' : ' (Tab)'), () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------
   // (bærer du et stort møbel i armene, går du tregere og kan ikke løpe – spill/mobler-visning.js)
