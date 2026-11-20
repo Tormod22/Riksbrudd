@@ -639,3 +639,10 @@ Begge kjøringene på «Vanlig» endte dag 10, i nedre kant av målet. Storbyene
 - **Gjennomspillingene er på PC** (1400 × 820) og spoler med `sim(.2)`; ikke prøvd på telefon (vakta er prøvd på mobil).
 - Et lagret spill fra før runde 7 starter eskaleringen med tom kasse den dagen det lastes (ingen ting ødelegges).
 - Lett er ikke spilt gjennom (bare regeltestene).
+
+#### (a) på «Hard» (storbyer fra døgn 7,5, før storbyVekt; logg `natt/krig7/gah-v1.log`)
+Fredstiden 1,9 døgn. Vaktlaget var borte dag 3 (røverne er større på Hard). Kystalliansen tok Kvernaland, Bryne og Ålgård/Figgjo (16 % dag 7),
+fikk stridsvogn dag 6, Folkefronten dag 7 (de skjøt på hverandre). 8 · 00:32 etterretning: Folkefronten samler 4 lag (47 mann) ved Sviland mot
+leiren – «angrep tidligst om ca. 4 t»; 04:35 angriper; 11:19 trekker seg bort. Kassa til Kystalliansen vokste til 20 mill. kr (taket på 15 lag
+nådd, stridsvogna kjøpt). **Kystalliansen tok Stavanger/Sandnes og vant dag 10 kl. 14** – ikke tidligere enn på Vanlig, fordi gruppene var
+opptatt med Ålgård og Kvernaland i to døgn etter at storbyen var lov. Derfor: en storby som er lov, veier nå tre ganger (`plan.storbyVekt`).

@@ -38,7 +38,7 @@
     // overvekt: gruppa tar med seg lag til den har så mange ganger behovet (når de finnes) – et angrep skal avgjøre, ikke bli stående;
     // blåOvervekt: mot tettstedene dine tar gruppa bare med seg til 1,2 × behovet – du skal kunne holde dem hvis du forsterker i tide;
     // storbyVekt: en storby som er lov, veier så mye mer (den avgjør krigen – gjennomspillingen på Hard: gruppene var opptatt med småsteder i to døgn);
-    // småsted: innbyggere – garnisoner i egne tettsteder under dette kan tas med til et storbyangrep (spill/eskalering-visning.js)
+    // småsted: innbyggere – garnisoner i egne tettsteder under dette (og uten fiender innen 5 km) kan tas med til et storbyangrep (spill/eskalering-visning.js)
     plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, småsted: 3000, storbyVekt: 3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
