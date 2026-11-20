@@ -744,6 +744,12 @@ vakt.js = vaktene som i sjekk.js; FEIL=glatt|hjemme legger inn en feil med vilje
 - Prøvd som spiller (webdriver av, Dovre, 600×/⏭): stopp ved «snart framme (ca. 9 min)» med røverne i kartet 390 m unna, stopp ved «Kampen om leiren har
   begynt», ring og «I ildkamp» (bilder `etter-pc-2-stopp1.png`, `etter-tlf-2-stopp0.png`).
 
+- Prøvd på **/rogaland** (PC, webdriver av, AI på, leiren mellom Sviland og Oltedal, `rogaland.js`): varsel «3,9 km unna · framme om ca. 86 min» →
+  ⏭ stoppet 07:33 «snart framme» (banneret: «sist sett 1,1 km vest for leiren for 13 min siden · framme om ca. 10–15 min», brikka det samme) → ⏭
+  stoppet 07:51 «Kampen om leiren har begynt» (røverne og «I ildkamp» i kartet, `rogaland-2-stopp1.png`) → ⏭ stoppet 09:30 «Angrepet er over» med
+  rapporten «Bølge 1: røverne herjet i leiren og dro med byttet. De tok 500 000 kr, 2,2 m³ tre og 7 rasjoner. Hos oss: 1 såret.»
+  (`rogaland-3-rapport.png`). 0 sidefeil. (Brikka oppdateres litt sjeldnere enn banneret: 180 m mot 150 m i samme bilde.)
+
 ### 2. Ingen melding om utfallet av røverbølge 2 – RETTET
 - Én rapport per bølge og per angrep på leiren: `Forsvar.sluttRapport(u)` (regel, test_forsvar.js) gir tittel + tekst: «Bølge 2 er slått tilbake. Dere tok
   450 000 kr fra røverne. 1 av 2 røverlag ble slått ut. Hos oss: 1 falt og 2 såret. 1 bygg skadet.», «Bølge 3: røverne herjet i leiren og dro med byttet. De
