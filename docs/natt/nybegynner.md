@@ -95,4 +95,8 @@ over leiren da røverne kom.
 
 ### Tester
 - `node pipeline/fliser/test_tropper.js`, `test_opplaering.js`, `test_folk.js` (nye prøver for runde 8).
-- Vakten `nybegynner` prøvd på PC og telefon i nettleser (4–8 s, to ganger på rad, alt satt tilbake).
+- Vakten `nybegynner` prøvd på PC og telefon i nettleser (under 1 s, også med 3D på; to ganger på rad, alt satt tilbake).
+- Mobilkontrollen (`SJEKK_PROFIL=mobil`, kopi av arbeidstreet): 122 ok, «Alt i orden» (før flettingen av nattfiks kl. 03 norsk tid).
+  En tidligere kjøring hadde 1 FEIL i «måling av ytelse» (halv oppløsning 390 av 390 punkter) – ikke rørt av denne pakka, grønn neste gang.
+- Bilder (scratchpad `natt8/nybegynner/`): `flyt-*.png`, `flyt2-*.png`, `full-*.png` (telefon, vanlig spiller, opplæringen steg 1–9 med
+  3D og Gå), `steg8-*.png`, `pc-*.png` (PC 1400 × 820), `ligg-*.png` (liggende telefon). Før-bildene er kritikernes (`kritikk2/tlf` og `kritikk2/pc`).
