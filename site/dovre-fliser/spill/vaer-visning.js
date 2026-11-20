@@ -142,5 +142,6 @@
       fall.snø.geometry.attributes.position.needsUpdate = true; }
   });
   // straks(): 3D viser været med en gang (testene og skjermbildene)
-  window.VaerSpill = { S, oppdater, straks() { vist = null; oppdater(); } };
+  // treVær(m, slag): snø, høst og nakne løvtrær også på trær som legges til etter at utsnittet er satt (nærskogen i vegetasjon3d.js)
+  window.VaerSpill = { S, oppdater, straks() { vist = null; oppdater(); }, treVær };
 })();
