@@ -12,6 +12,7 @@ assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal
 { const v = F.velg(lag('A', 0, 0, 6), verden({ byer: [] })); assert.deepEqual([v.hva, v.x], ['trekk', -9000], 'uten tettsted: hjem'); }
 { const v = F.velg(lag('A', 0, 0, 3), verden()); assert.equal(v.hva, 'forsyn'); assert.equal(v.x, -4000); }
 { const v = F.velg(lag('A', 0, 0), verden({ ammo: .1 })); assert.equal(v.hva, 'forsyn', 'lite ammunisjon'); }
+{ const v = F.velg(lag('A', 0, 0), verden({ ammo: .1, byer: [] })); assert.deepEqual([v.hva, v.x], ['forsyn', -9000], 'uten tettsteder: forsyninger hjemme'); }
 { const v = F.velg(lag('A', -4000, 0, 3), verden()); assert.equal(v.hva, 'hold', 'stell i eget tettsted'); }
 { const fi = { x: 800, y: 0, navn: 'Blå', styrke: 12 };
   assert.equal(F.velg(lag('A', 0, 0), verden({ fiender: [fi] })).hva, 'angrip');

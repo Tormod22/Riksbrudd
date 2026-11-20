@@ -60,6 +60,9 @@
     const behov = ute(s) >= R.såret || (v.ammo !== undefined && v.ammo < R.ammoLav);
     if (behov && egne.length && !(fi && avstand(fi, her) < 600)) { const b = nærmest(egne);
       return b.inni(s.x, s.y) ? { hva: 'hold', x: s.x, y: s.y, tekst: `får stell og forsyninger i ${b.navn}` } : { hva: 'forsyn', x: b.x, y: b.y, tekst: `henter forsyninger i ${b.navn}` }; }
+    // (runde 7) uten egne tettsteder: forsyninger hjemme (hovedkvarteret gir ammunisjon – fraksjoner-visning.js)
+    if (behov && !egne.length && v.hjem && !(fi && avstand(fi, her) < 600)) { const h = { x: v.hjem[0], y: v.hjem[1] };
+      return avstand(h, her) > 300 ? { hva: 'forsyn', x: h.x, y: h.y, tekst: 'henter forsyninger hjemme' } : { hva: 'hold', x: s.x, y: s.y, tekst: 'får forsyninger hjemme' }; }
     const overtak = (R.stil[v.side] ? R.stil[v.side].overtak : R.overtak) * (v.overtakF > 0 ? v.overtakF : 1), min = styrke(s, v.ammo), andre = v.venner.filter(f => f !== s && !slåttUt(f));
     if (fi) {
       // de forsiktige ligger i bakhold når de står i skog og fienden ennå er et stykke unna (den som blir oppdaget sist, skyter best)

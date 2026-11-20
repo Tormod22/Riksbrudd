@@ -123,7 +123,9 @@
     akk += dt * 3600 / TIME; if (akk < 60) return; const sek = akk; akk = 0;   // ett steg per spillminutt
     // ammunisjon i egne tettsteder (alle sider): tettstedet forsyner garnisonen
     for (const s of ENHETER) { if (Forsyning.ammo(s) >= 1) continue; const by = byerRundt(s, 1).find(b => Garnison.inni(b, s.x, s.y));
-      if (by && eier(by) === s.side) s.ammo = Math.min(1, Forsyning.ammo(s) + R.påfyll * sek / 3600); }
+      // (runde 7, gjennomspillingen: Kystalliansen mistet alle tettstedene, og sju lag sto uten ammunisjon i fem døgn) – motstanderne får
+      // også påfyll ved hovedkvarteret sitt (innen 800 m av HJEM)
+      if ((by && eier(by) === s.side) || (s.ai && HJEM[s.side] && Math.hypot(s.x - HJEM[s.side][0], s.y - HJEM[s.side][1]) < 800)) s.ammo = Math.min(1, Forsyning.ammo(s) + R.påfyll * sek / 3600); }
     if (!AI.på) return;
     for (const s of ENHETER) {
       if (!s.ai || !levende(s) || s.planlegger) continue;
