@@ -597,3 +597,10 @@ Bare Vaktlaget (4) og Kari er blå; spilleren holder ingenting. Røverne kommer 
 
 **Mål (a): oppfylt (dag 10, nedre kant).** Etter denne kjøringen ble storbyene flyttet fra døgn 8,5 til 9 på Vanlig, og gruppene fikk overvekt 1,5
 og lov til å ta med småstedsgarnisoner til storbyen – se den endelige kjøringen under.
+
+### Fellesfiler endret i runde 7
+- `site/dovre-fliser/index.html`: to skripttagger rett etter `krig-visning.js` (`spill/eskalering.js`, `spill/eskalering-visning.js`) og versjonsmerkene
+  (versjon.py). Ingenting annet.
+- Ellers bare pakkas egne filer: `fraksjoner.js` (forsyninger hjemme uten tettsteder), `fraksjoner-visning.js` (AI.styr, AI.leirMedVarsel, AI.inne,
+  AI.ekstraBiler, unike lagnavn, påfyll ved hovedkvarteret), `garnison-visning.js` («Vi har mistet …», «… fra Folkefronten»), `krig-visning.js`
+  (kilden «fra speidere»), `pipeline/fliser/vakter/krig.js`, `pipeline/fliser/test_fraksjoner.js` (én ny sjekk), `docs/natt/krig*.{md,json}`.

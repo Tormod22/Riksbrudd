@@ -17,9 +17,9 @@
     //  gruppeMaks: høyst så mange lag i én angrepsgruppe; rute: sjansen hver sjette time for at en motstander sender et lag mot
     //  en handelsrute eller oljekolonne du har; mot: faktor på styrken de krever før de angriper (lavere = dristigere)
     grad: {
-      lett: { navn: 'Lett', blåFra: 6.5, tak: 9, kr: .7, leirFra: 10, leirHver: 4, leirLag: 2, varsel: 8 * 60, storbyFra: 13, gruppeMaks: 4, rute: .2, mot: 1.15 },
-      vanlig: { navn: 'Vanlig', blåFra: 4.5, tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 9, gruppeMaks: 6, rute: .35, mot: 1 },
-      hard: { navn: 'Hard', blåFra: 3.5, tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 7, gruppeMaks: 7, rute: .5, mot: .85 },
+      lett: { navn: 'Lett', blåFra: 6.5, tak: 9, kr: .7, leirFra: 10, leirHver: 4, leirLag: 2, varsel: 8 * 60, storbyFra: 14, gruppeMaks: 4, rute: .2, mot: 1.15 },
+      vanlig: { navn: 'Vanlig', blåFra: 4.5, tak: 12, kr: 1, leirFra: 7, leirHver: 3, leirLag: 3, varsel: 6 * 60, storbyFra: 10, gruppeMaks: 6, rute: .35, mot: 1 },
+      hard: { navn: 'Hard', blåFra: 3.5, tak: 15, kr: 1.4, leirFra: 5, leirHver: 2, leirLag: 4, varsel: 4 * 60, storbyFra: 7.5, gruppeMaks: 7, rute: .5, mot: .85 },
     },
     // Økonomien per døgn: grunnKr/grunnFolk fra hovedkvarteret, krPerTusen/folkPerTusen per 1000 innbyggere i tettstedene de holder
     // (skatt, mat, folk som slutter seg til). Lag koster penger og folk, kjøretøy bare penger. Kassa og folket har et tak.
