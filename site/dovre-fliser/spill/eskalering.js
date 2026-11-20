@@ -24,8 +24,9 @@
     // (skatt, mat, folk som slutter seg til). Lag koster penger og folk, kjøretøy bare penger. Kassa og folket har et tak.
     økonomi: { grunnKr: 1.6e6, krPerTusen: 1e5, grunnFolk: 10, folkPerTusen: 1, maksKr: 30e6, maksFolk: 120, startKr: 1e6, startFolk: 12 },
     pris: { lag: { kr: 2.5e6, folk: 12 }, lastebil: 1.5e6, stridsvogn: 7e6 },
-    // én lastebil per «lastebilPer» lag; stridsvogn tidligst døgn «stridsvognFra» (etter vanskelighetsgraden: lett +2, hard −2), høyst «stridsvognMaks»
-    kjøretøy: { lastebilPer: 4, lastebilMaks: 3, stridsvognFra: 7, stridsvognMaks: 1 },
+    // én lastebil per «lastebilPer» lag; stridsvogn tidligst døgn «stridsvognFra» (etter vanskelighetsgraden: lett +2, hard −2), høyst
+    // «stridsvognMaks»; motstanderen sparer til den når den har minst «vognEtter» lag
+    kjøretøy: { lastebilPer: 4, lastebilMaks: 3, stridsvognFra: 7, stridsvognMaks: 1, vognEtter: 6 },
     storby: 50000,       // innbyggere: fra dette er tettstedet en storby (grad.storbyFra)
     ettLag: 12,          // mann: tettsteder som trenger mer enn dette (Garnison.minstFor), er store (som Fraksjoner.REGLER.ettLag)
     // Angrepsgruppene (planlegges hvert «hver» spillminutt): behov = minst (garnison.js) + margin × forsvarernes styrke; samlingen er over
@@ -49,11 +50,11 @@
   function tjen(Ø, folk, minutter, g) { const i = inntekt(folk, g), d = Math.max(0, minutter || 0) / 1440;
     Ø.kr = Math.min(REGLER.økonomi.maksKr, Ø.kr + i.kr * d); Ø.folk = Math.min(REGLER.økonomi.maksFolk, Ø.folk + i.folk * d); return Ø; }
   // hva motstanderen kjøper nå: o = { lag, tak, lastebiler, stridsvogner, døgn, g }. Gir 'lag' | 'lastebil' | 'stridsvogn' | null.
-  function kjøp(Ø, o) { const P = REGLER.pris, K = REGLER.kjøretøy, g = o.g || grad();
+  function kjøp(Ø, o) { const P = REGLER.pris, K = REGLER.kjøretøy, g = o.g || grad(), fra = K.stridsvognFra + (g.id === 'lett' ? 2 : g.id === 'hard' ? -2 : 0);
+    // fra «stridsvognFra» sparer en motstander med minst «vognEtter» lag til en stridsvogn før den kjøper flere lag
+    if (o.døgn >= fra && (o.stridsvogner || 0) < K.stridsvognMaks && o.lag >= K.vognEtter) return Ø.kr >= P.stridsvogn ? 'stridsvogn' : null;
     if (o.lag < o.tak) return Ø.kr >= P.lag.kr && Ø.folk >= P.lag.folk ? 'lag' : null;
     if ((o.lastebiler || 0) < Math.min(K.lastebilMaks, Math.ceil(o.lag / K.lastebilPer)) && Ø.kr >= P.lastebil) return 'lastebil';
-    const fra = K.stridsvognFra + (g.id === 'lett' ? 2 : g.id === 'hard' ? -2 : 0);
-    if (o.døgn >= fra && (o.stridsvogner || 0) < K.stridsvognMaks && Ø.kr >= P.stridsvogn) return 'stridsvogn';
     return null; }
   // betal for det som ble kjøpt
   function betal(Ø, hva) { const P = REGLER.pris; if (hva === 'lag') { Ø.kr -= P.lag.kr; Ø.folk -= P.lag.folk; } else if (P[hva]) Ø.kr -= P[hva]; Ø.kjøpt[hva] = (Ø.kjøpt[hva] || 0) + 1; return Ø; }

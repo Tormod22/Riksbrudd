@@ -18,6 +18,7 @@ assert(R.grad.lett.leirFra > R.grad.vanlig.leirFra && R.grad.vanlig.leirFra > R.
   assert.equal(E.kjøp({ kr: 20e6, folk: 3 }, { lag: 5, tak: 8, døgn: 4, g }), null, 'for få folk');
   assert.equal(E.kjøp(rik(), { lag: 8, tak: 8, lastebiler: 1, døgn: 4, g }), 'lastebil'); assert.equal(E.kjøp(rik(), { lag: 8, tak: 8, lastebiler: 2, døgn: 4, g }), null, 'ingen stridsvogn tidlig');
   assert.equal(E.kjøp(rik(), { lag: 8, tak: 8, lastebiler: 2, døgn: 8, g }), 'stridsvogn'); assert.equal(E.kjøp(rik(), { lag: 8, tak: 8, lastebiler: 2, stridsvogner: 1, døgn: 9, g }), null, 'høyst én');
+  assert.equal(E.kjøp({ kr: 5e6, folk: 60 }, { lag: 7, tak: 10, lastebiler: 2, døgn: 8, g }), null, 'sparer til stridsvogna'); assert.equal(E.kjøp({ kr: 5e6, folk: 60 }, { lag: 4, tak: 10, døgn: 8, g }), 'lag', 'få lag: lag først');
   const Ø = rik(); E.betal(Ø, 'lag'); assert(Ø.kr === 20e6 - R.pris.lag.kr && Ø.folk === 60 - 12 && Ø.kjøpt.lag === 1); }
 // taket vokser etter freden
 assert.equal(E.tak(6, 0), 6); assert.equal(E.tak(6, 3.5), 9); assert.equal(E.tak(6, 40), R.grad.vanlig.tak); assert.equal(E.tak(6, 40, E.grad({ vanskelighet: 'lett' })), R.grad.lett.tak);
