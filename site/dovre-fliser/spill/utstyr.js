@@ -68,7 +68,7 @@
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
   const kg = v => String(Math.round(v * 10) / 10).replace('.', ',') + ' kg';
   const css = document.createElement('style');
-  css.textContent = `#sekk{ position:fixed; right:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(330px,92vw); max-height:70vh; overflow:auto; padding:10px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
+  css.textContent = `#sekk{ position:fixed; right:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(330px,92vw); max-height:70vh; overflow:auto; padding:10px 12px; background:#1c170f; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #sekk.på{ display:block; } #sekk h2{ margin:0 0 4px; font-size:18px; } #sekk h3{ margin:10px 0 2px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
 #sekk .rad{ display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #2e281e; } #sekk .rad > div{ flex:1; min-width:0; } #sekk .rad small{ display:block; color:var(--ink-dim,#a99); } #sekk .rad.aktiv b{ color:#f0d79a; }
 #sekk button, #leirmeny .utstyr button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 9px; font:inherit; font-size:13px; cursor:pointer; } #sekk button:disabled{ opacity:.45; }
