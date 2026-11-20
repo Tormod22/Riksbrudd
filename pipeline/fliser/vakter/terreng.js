@@ -9,7 +9,8 @@
 module.exports = {
   navn: 'terreng (leirplass, helling og plassering av bygg)',
   kjør: async (pg, profil) => {
-    const d = await pg.evaluate(async (profil) => {
+    // (utenTegning fra sjekk.js: 3D-scenen tegnes ikke mens vakta går – vakta ser ikke på 3D, og hvert bilde tar ellers ~1 s i programvare-grafikk)
+    const d = await pg.evaluate(profil => (window.utenTegning || (f => f()))(async () => {
       const OS = window.OppstartSpill, ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
       if (!OS || !window.Helling || !window.HellingVis || !window.Leir || !window.LeirSpill) return { mangler: true };
       const S = OS.tilstand(), L = LeirSpill.tilstand(); if (!S || !S.leir || !L) return { feil: ['ingen leir'] };
@@ -95,7 +96,7 @@ module.exports = {
       ut.lukket = !el('oppstart').classList.contains('på') && !el('leirvalg').classList.contains('på') && !LeirSpill.plassering();
       krev(ut.lukket, 'startskjermen, leirvalget eller plasseringen sto igjen åpen');
       return ut;
-    }, profil);
+    }), profil);
     if (d.mangler) return { ok: true, tekst: 'terreng: modulene mangler (hoppet over)', data: d };
     const ok = !d.feil.length;
     return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
