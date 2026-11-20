@@ -63,8 +63,13 @@ Skript: scratchpad natt7/figurer/maal2.js (`R=<mappe>` for gammel kode, `DPR=1` 
 | Telefon 390 × 844 (DPR 1), fra lufta, før | 106 848 | 109 ms |
 | Telefon, fra lufta, etter | 51 692 | 77 ms |
 | Telefon, til fots, før | 106 848 | 109 ms |
-| Telefon, til fots, etter (18 m, uten tak) | 81 622 (36 nær) | 126 ms (taket på 6 nær er ikke målt på telefon) |
+| Telefon, til fots, etter (18 m, uten tak) | 81 622 (36 nær) | 126 ms |
+| Telefon, til fots, etter (med tak: de 6 nærmeste i full detalj) | 61 766 (12 nær) | 104 ms |
 
+Usikkerhet: to kjøringer av samme kode fra lufta på telefon ga 77 og 96 ms – regn med ±20 %. Hovedbildet: like raskt eller raskere
+enn før med færre trekanter (fra lufta −45 %), og en folkemengde rett ved deg koster ikke mer enn før takket være taket på antallet nær.
+
+Tegnekall for figurene: før 10 (fem nett for soldatene, fem for folkene), nå 4 (to + to), og 2 til for stillingene når de vises.
 JavaScript per bilde for alle figurene (soldater3d + folk3d-kroken): ca. 0,1 ms både før og etter.
 Hvorfor ikke raskere per trekant: bevegelsen regnes nå i skyggeleggeren for hvert hjørne (før: armene/beina til folkene som matriser i
 JavaScript), og programvare-grafikken regner hjørnene på prosessoren. På et grafikkort er dette lite – der teller trekantene og punktene.
@@ -95,7 +100,8 @@ folkene i leiren er figurer (antall = personer + barn/gamle), ett bilde uten GL-
 Skript i scratchpad natt7/figurer/: naer.js (leiren full av folk + tre røverlag; til fots, nærbilde, våpenet i hånda, utenfra, vakten),
 maal.js/maal2.js (målingene over), tell.js (trekanter per figur i Node). Bilder (samme mappe): før: for-pc-leir.png og kritikernes
 38-ga-start.png; etter: v4-pc-ga.png, v3/v4-pc-naer.png, v4-pc-vapen0.png (gevær), v4-pc-vapen1.png (pistol), v4-pc-utenfra.png (karakteren
-bakfra, en såret soldat på kne som sikter), v5-mobil-naer.png, v5-mobil-utenfra.png, v5-mobil-vapen0/1.png. Ingen sidefeil, GL-feil 0, vakten
+bakfra, en såret soldat på kne som sikter), v5-mobil-naer.png, v5-mobil-utenfra.png, v5-mobil-vapen0/1.png. Før og etter med samme kamera:
+sammenligning-naer.png (øverst før, nederst etter) og sammenligning-vapen.png (venstre før, høyre etter); de gamle bildene for-pc-*.png. Ingen sidefeil, GL-feil 0, vakten
 grønn på PC (0,3–4 s) og telefon (1,1 s), stillingen i krig3d gir 3 soldater.
 
 ### Ikke gjort
