@@ -105,8 +105,12 @@
     const ok = nv => nv === HL.FLATT || nv === HL.SKRÅTT, v = HL.vurderer(type, ret, klar.høyde, klar.tørt);
     const drei = ok(HL.vurderer(type, ret + Math.PI / 2, klar.høyde, klar.tørt)(x, y)); let sted = null;
     // stedet må gå også 1,25 m til hver side (rutenettet i leiren flytter skissen opptil så mye)
-    const trygt = (X, Y) => ok(v(X, Y)) && ok(v(X - 1.25, Y - 1.25)) && ok(v(X + 1.25, Y - 1.25)) && ok(v(X - 1.25, Y + 1.25)) && ok(v(X + 1.25, Y + 1.25));
-    for (const [dx, dy, m] of HL.ringer(150, 2)) if (m > 0 && trygt(x + dx, y + dy)) { sted = { x: x + dx, y: y + dy, m, retning: HL.retning(dx, dy) }; break; }
+    // – og helst flatt (uten høy grunnmur): et flatt sted vinner når det ligger høyst 30 m lenger unna enn det nærmeste som går
+    const trygt = (X, Y, f = ok) => f(v(X, Y)) && f(v(X - 1.25, Y - 1.25)) && f(v(X + 1.25, Y - 1.25)) && f(v(X - 1.25, Y + 1.25)) && f(v(X + 1.25, Y + 1.25));
+    const flat = nv => nv === HL.FLATT; let grense = Infinity;
+    for (const [dx, dy, m] of HL.ringer(150, 2)) { if (m === 0 || m > grense) continue;
+      if (!sted && trygt(x + dx, y + dy)) { sted = { x: x + dx, y: y + dy, m, retning: HL.retning(dx, dy) }; grense = m + 30; if (trygt(x + dx, y + dy, flat)) break; continue; }
+      if (sted && trygt(x + dx, y + dy, flat)) { sted = { x: x + dx, y: y + dy, m, retning: HL.retning(dx, dy) }; break; } }
     return { drei, sted };
   }
   // nøyaktig nivå for bygget i kartet ved (x, y) – med de samme høydene som bildet (vakten sammenligner med kanBygge)
