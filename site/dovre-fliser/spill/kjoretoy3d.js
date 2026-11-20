@@ -124,7 +124,38 @@
     boks(d, -3.6, 0, 1.34, 1.3, 1.6, 1.0, M); for (let q = 0; q < 5; q++) boks(d, -4.26, 0, 1.5 + q * .15, .03, 1.2, .05, SV); rør(d, -3.6, .5, 2.5, .05, .4, 'z', SV, 6);
     rør(d, .9, -.9, 4.4, .012, 2.0, 'z', SV, 4); return MODELLER.samle(d); }
 
+  // ---------- AVRUNDEDE FORMER (runde 10, 20. nov, brukeren: «bilen ser kantete og billig ut») ----------
+  // I stil med de avrundede figurene (spill/figur3d.js): myke normaler, få kanter. Brukes av feltbilen i spill/kjor.js og modellene her.
+  // rundBoks: boks med avrundede kanter (radius r) – grid-punktene legges tett inntil kantene og skyves ut på en kule rundt det indre
+  // hjørnet, normalen peker rett ut fra det indre. fin = 6 deler per side (ellers 4). Valg: smal = topp-bredden (0..1 av sy),
+  // skrå = hvor mye fronten (+x) heller bakover per meter høyde. Bunnen i z, midten i (x, y).
+  function rundBoks(d, x, y, z, sx, sy, sz, r, c, valg = {}) {
+    r = Math.min(r, sx / 2 - .001, sy / 2 - .001, sz / 2 - .001); const n = valg.fin ? 6 : 4, g = new THREE.BoxGeometry(sx, sy, sz, n, n, n), P = g.attributes.position, N = g.attributes.normal;
+    const hx = sx / 2, hy = sy / 2, hz = sz / 2, flytt = (v, h) => { const t = Math.abs(v) / h; if (t > .999) return v; const sg = Math.sign(v);
+      if (n === 4) return t > .4 ? sg * (h - r) : v; return t > .55 ? sg * (h - (t > .8 ? .29 * r : r)) : v; };
+    for (let i = 0; i < P.count; i++) { let px = flytt(P.getX(i), hx), py = flytt(P.getY(i), hy), pz = flytt(P.getZ(i), hz);
+      const cx = Math.max(-hx + r, Math.min(hx - r, px)), cy = Math.max(-hy + r, Math.min(hy - r, py)), cz = Math.max(-hz + r, Math.min(hz - r, pz));
+      let dx = px - cx, dy = py - cy, dz = pz - cz; const l = Math.hypot(dx, dy, dz);
+      if (l > 1e-6) { dx /= l; dy /= l; dz /= l; px = cx + dx * r; py = cy + dy * r; pz = cz + dz * r; N.setXYZ(i, dx, dy, dz); }
+      const tz = (pz + hz) / sz; if (valg.smal) py *= 1 - (1 - valg.smal) * tz; if (valg.skrå && px > 0) px -= valg.skrå * (pz + hz) * (px / hx);
+      P.setXYZ(i, px, py, pz); }
+    if (valg.vri) g.rotateY(valg.vri); g.translate(x, y, z + hz); d.push(farg(g, c)); return g; }
+  // hjulet langs y: dekk med runde skuldre (dreid profil), felg med kant og nav, og noen mønsterklosser i slitebanen
+  function rundHjul(d, x, y, r, b, felg = STÅL, nav = M) { const V = THREE.Vector2, h = b / 2, k = Math.min(r * .22, h * .8), P = [];
+    P.push(new V(r * .62, -h)); for (let i = 0; i <= 3; i++) { const a = -Math.PI / 2 + i / 3 * Math.PI / 2; P.push(new V(r - k + Math.cos(a) * k, -h + k + Math.sin(a) * k)); }
+    for (let i = 0; i <= 3; i++) { const a = i / 3 * Math.PI / 2; P.push(new V(r - k + Math.cos(a) * k, h - k + Math.sin(a) * k)); } P.push(new V(r * .62, h));
+    const g = new THREE.LatheGeometry(P, 16); g.translate(0, 0, 0); g.translate(x, y, r); d.push(farg(g, SV));
+    // felgen: en skive med kant, og navet som stikker litt ut (begge sider)
+    for (const s of [-1, 1]) { const f = new THREE.CylinderGeometry(r * .6, r * .64, .05, 14); f.translate(x, y + s * (h - .02), r); d.push(farg(f, felg));
+      const nv = new THREE.CylinderGeometry(r * .2, r * .26, .08, 8); nv.translate(x, y + s * (h + .02), r); d.push(farg(nv, nav)); } }
+  // skjerm over hjulet: en avrundet bue (halv torus med flatt, ovalt tverrsnitt) langs hjulet, over navet i høyden zc
+  function skjerm(d, x, y, zc, r, b, c) { const g = new THREE.TorusGeometry(r, .09, 6, 12, Math.PI); g.scale(1, 1, b / .18); g.rotateX(Math.PI / 2); g.translate(x, y, zc); d.push(farg(g, c)); }
+  // lykt: rund glassflate med mørk ring rundt, langs x (fronten) eller −x (baken)
+  function lykt(d, x, y, z, r, c, ret = 1) { const ring = new THREE.CylinderGeometry(r * 1.25, r * 1.3, .08, 12); ring.rotateZ(-Math.PI / 2); ring.translate(x, y, z); d.push(farg(ring, SV));
+    const gl = new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2); gl.scale(1, .45, 1); gl.rotateZ(-ret * Math.PI / 2); gl.translate(x + ret * .04, y, z); d.push(farg(gl, c)); }
+  const form = { rundBoks, rundHjul, skjerm, lykt, farg, FARGE: { O, M, LYS_O, SV, STÅL, GL, LYKT, RØD, DUK, DUK2 } };
+
   const LAG = { lastebil, speiderbil, stridsvogn, rakettartilleri, radar }, G = {};
   function modell(type) { if (!G[type]) G[type] = (LAG[type] || lastebil)(); return G[type]; }
-  rot.Kjoretoy3d = { modell, typer: Object.keys(LAG), trekanter: type => modell(type).attributes.position.count / 3 };
+  rot.Kjoretoy3d = { modell, form, typer: Object.keys(LAG), trekanter: type => modell(type).attributes.position.count / 3 };
 })(window);
