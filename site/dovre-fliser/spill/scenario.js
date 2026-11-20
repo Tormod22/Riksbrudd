@@ -57,11 +57,17 @@
   //       eller null når kartet ikke har noe), folk, andel (0–1 av folket i området), leirTapt }
   // st = det scenariet husker: { holdtFra }
   const SCENARIER = {
-    hold: { navn: 'Hold byen', dager: 8, tekst: 'Ta det nærmeste tettstedet og hold det i tre døgn i strekk. Frist: dag 8.',
+    // RUNDE 12 (PC-kritiker F: «"Hold byen" vunnet uten motstand»): når spillet kan sende et motangrep (T.angrep finnes – spill/scenario-visning.js
+    // sender ett når fredstiden er over), må du også slå det tilbake: T.angrep = { slått: bool, pågår: bool, ingen: bool (ingen motstander
+    // har krefter til det) }. Uten T.angrep (testene, eller uten motstandere) er det som før: tre døgn holder.
+    hold: { navn: 'Hold byen', dager: 8, tekst: 'Ta det nærmeste tettstedet, hold det i tre døgn i strekk og slå tilbake motangrepet. Frist: dag 8.',
       vurder(T, st) {
         if (!T.mål) return { status: 'pågår', tekst: 'Det er ikke noe tettsted i nærheten ennå.' };
-        if (T.holder(T.mål)) { if (st.holdtFra == null) st.holdtFra = T.tid; const d = (T.tid - st.holdtFra) / DØGN; if (d >= 3) return { status: 'vunnet', tekst: 'Du holdt byen i tre døgn.' };
-          return { status: 'pågår', tekst: `Du holder byen: ${des(d)} av 3 døgn.`, andel: d / 3 }; }
+        if (T.holder(T.mål)) { if (st.holdtFra == null) st.holdtFra = T.tid; const d = (T.tid - st.holdtFra) / DØGN, A = T.angrep, slått = !A || A.slått || A.ingen;
+          if (d >= 3 && slått) return { status: 'vunnet', tekst: A && A.slått ? 'Du holdt byen i tre døgn og slo tilbake motangrepet.' : 'Du holdt byen i tre døgn.' };
+          const ang = !A ? '' : A.slått ? ' Motangrepet er slått tilbake.' : A.pågår ? ' Motangrepet er i gang – hold byen!' : ' Motangrepet er ikke kommet ennå.';
+          if (d >= 3) return { status: 'pågår', tekst: `Du har holdt byen i tre døgn.${ang} Slå det tilbake for å vinne.`, andel: .95 };
+          return { status: 'pågår', tekst: `Du holder byen: ${des(d)} av 3 døgn.${ang}`, andel: Math.min(.95, d / 3) }; }
         st.holdtFra = null; return { status: 'pågår', tekst: 'Ta tettstedet: flytt et lag inn og hold det.', andel: 0 }; } },
     tre: { navn: 'Tre på fem døgn', dager: 5, tekst: 'Hold tre tettsteder samtidig før fem døgn er gått.',
       vurder(T) { return T.egne >= 3 ? { status: 'vunnet', tekst: 'Du holder tre tettsteder.' } : { status: 'pågår', tekst: `Du holder ${T.egne} av 3 tettsteder.`, andel: T.egne / 3 }; } },
@@ -178,7 +184,18 @@
   function ukeBedre(o, a, b) { if (a.klart !== b.klart) return a.klart; if (a.verdi !== b.verdi) return o.lavest ? a.verdi < b.verdi : a.verdi > b.verdi; return a.dager < b.dager; }
   function ukeTekst(o, navn, st) { return `Riksbrudd, ukas oppdrag (uke ${o.uke}): ${o.tekst} ${navn}: ${st.tekst} på ${String(st.dager).replace('.', ',')} døgn – ${st.klart ? 'klart' : 'ikke klart'}. Kode: ${ukeKode(o, navn, st)}`; }
 
-  const api = { REGLER, SCENARIER, DØGN, dag, regler, beskriv, vurder, fristTekst, truet, tapSteg, utpost, etterTap, bilde, leggTil, stillingVed, eierI, byggI, sammeBygg, kampsted, uke, ukasOppdrag, ukeStatus, ukeKode, lesUkeKode, ukeBedre, ukeTekst };
+  // ---------- (runde 12) oppsummeringen på seiers- og tapsskjermen ----------
+  // stat = { start: { penger, tid }, falne, sårede, maksByer, hendelser: [{ t, tekst, vekt }] }, nå = { tid, penger, byer (antall), folk }
+  // -> [[«Døgn», «3,7»], …] og de viktigste hendelsene (vekt først, så tid), høyst n
+  function oppsummering(stat, nå, n = 6) {
+    const S0 = (stat && stat.start) || { penger: nå.penger, tid: 0 }, dp = Math.round(nå.penger - S0.penger), kr = v => (Math.abs(v) >= 1e6 ? (Math.round(v / 1e5) / 10).toString().replace('.', ',') + ' mill. kr' : Math.round(v).toLocaleString('nb-NO') + ' kr');
+    const tall = [['Døgn spilt', des(Math.max(0, nå.tid - (S0.tid || 0)) / DØGN)], ['Tettsteder', `${nå.byer} nå (flest: ${Math.max(nå.byer, (stat && stat.maksByer) || 0)})`],
+      ['Tap', `${(stat && stat.falne) || 0} falne, ${(stat && stat.sårede) || 0} sårede`], ['Penger', `${kr(nå.penger)} (${dp >= 0 ? '+' : '−'}${kr(Math.abs(dp))})`]];
+    if (nå.folk != null) tall.push(['Folk', String(nå.folk)]);
+    const h = ((stat && stat.hendelser) || []).slice().sort((a, b) => (b.vekt || 1) - (a.vekt || 1) || a.t - b.t).slice(0, n).sort((a, b) => a.t - b.t);
+    return { tall, hendelser: h.map(q => `Dag ${dag(q.t)}: ${q.tekst}`) };
+  }
+  const api = { REGLER, SCENARIER, DØGN, dag, regler, beskriv, vurder, oppsummering, fristTekst, truet, tapSteg, utpost, etterTap, bilde, leggTil, stillingVed, eierI, byggI, sammeBygg, kampsted, uke, ukasOppdrag, ukeStatus, ukeKode, lesUkeKode, ukeBedre, ukeTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Scenario = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

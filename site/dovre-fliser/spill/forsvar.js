@@ -95,6 +95,8 @@
   // PC-kritikeren: «bølge 2 fikk ingen melding om hvordan det gikk». u: { hvem ('Røverne' | navnet på motstanderen), nr (bølgen, røvere),
   //  utfall: 'slått' | 'unna' | 'herjet' | 'slapp' (røvere) | 'oppgitt' | 'ferdig' (en motstander), tok (tekst: det dere tok fra dem),
   //  tapte (tekst: det de tok fra dere), fiender, fienderUte (lag), falne, sårede, skadet, ødelagt (bygg) }. Gir { tittel, tekst, god }.
+  // «A», «A og B», «A, B og C»
+  const og = l => (l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' og ' + l[l.length - 1]);
   function sluttRapport(u) { const rø = u.hvem === 'Røverne', hva = rø ? `Bølge ${u.nr}` : `Angrepet fra ${u.hvem}`;
     const T = { slått: `${hva} er slått tilbake`, unna: rø ? `${hva} er slått tilbake – røverne trakk seg unna` : `${hva} er slått tilbake`, herjet: rø ? `${hva}: røverne herjet i leiren og dro med byttet` : `${hva}: de herjet i leiren`,
       slapp: `${hva}: sabotørene slapp unna`, oppgitt: `${hva} er slått tilbake – ${u.hvem} ga opp`, ferdig: `${u.hvem} trakk seg bort fra leiren etter angrepet` };
@@ -102,8 +104,12 @@
     if (u.tok) d.push(`Dere tok ${u.tok}.`); if (u.tapte) d.push(`De tok ${u.tapte}.`);
     if (u.fiender > 0) d.push(rø ? (u.fienderUte >= u.fiender ? (u.fiender === 1 ? 'Røverlaget ble slått ut.' : `Alle ${u.fiender} røverlag ble slått ut.`) : u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} røverlag ble slått ut.` : '')
       : (u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} lag fra ${u.hvem} ble slått ut.` : ''));
-    const f = u.falne || 0, s2 = u.sårede || 0; d.push(f || s2 ? `Hos oss: ${f ? f + ' falt' : ''}${f && s2 ? ' og ' : ''}${s2 ? s2 + ' såret' : ''}.` : 'Ingen tap hos oss.');
-    const b = []; if (u.skadet) b.push(`${u.skadet} bygg skadet`); if (u.ødelagt) b.push(`${u.ødelagt} ødelagt`); if (b.length) d.push(b.join(', ') + '.');
+    // (runde 12, kritiker E: «1 såret. 1 bygg skadet» uten navn) – med navnene når de finnes: u.falneNavn, u.sårNavn, u.skadetNavn, u.ødelagtNavn
+    const f = u.falne || 0, s2 = u.sårede || 0, fN = u.falneNavn && u.falneNavn.length === f && f ? u.falneNavn : null, sN = u.sårNavn && u.sårNavn.length === s2 && s2 ? u.sårNavn : null;
+    const fT = fN ? `${og(fN)} falt` : f ? f + ' falt' : '', sT = sN ? `${og(sN)} ble såret` : s2 ? s2 + ' såret' : '';
+    d.push(f || s2 ? `Hos oss: ${fT}${f && s2 ? (fN || sN ? ', og ' : ' og ') : ''}${sT}.` : 'Ingen tap hos oss.');
+    const b = []; if (u.skadet) b.push(u.skadetNavn && u.skadetNavn.length === u.skadet ? `${og(u.skadetNavn)} skadet` : `${u.skadet} bygg skadet`); if (u.ødelagt) b.push(u.ødelagtNavn && u.ødelagtNavn.length === u.ødelagt ? `${og(u.ødelagtNavn)} ødelagt` : `${u.ødelagt} ødelagt`);
+    if (b.length) { const t = b.join(', '); d.push(t.charAt(0).toUpperCase() + t.slice(1) + '.'); }
     return { tittel: T[u.utfall] || `${hva} er over`, tekst: d.filter(Boolean).join(' '), god }; }
   const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

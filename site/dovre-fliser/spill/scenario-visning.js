@@ -36,7 +36,7 @@
     const S = spill(); if (!S || !S.leir) return; leirId = idAv(S.leir); settRegler();
     try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); T = d && d.leir === leirId ? { ...tom(), ...d } : tom(); } catch (e) { T = tom(); }
     try { const d = JSON.parse(localStorage.getItem(NØKKEL_E) || 'null'); E = d && d.leir === leirId && Array.isArray(d.liste) ? d.liste : []; } catch (e) { E = []; }
-    klar = true; pakkAlle(); setTimeout(pakkAlle, 600);
+    klar = true; pakkAlle(); setTimeout(pakkAlle, 600); statStart();
     // start uten ferdige lag: litt mer mat, så de første dagene går opp (én gang per spill)
     if (S.utenLag && !T.mat) { const F = window.FolkSpill && FolkSpill.tilstand(); if (F) { F.mat += R.startmat; T.mat = true; lagre(); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); } }
     const r = window.SPILLREGLER;
@@ -68,6 +68,11 @@
   // ---------- kortet midt på skjermen ----------
   const css = document.createElement('style');
   css.textContent = `#formkort{ position:fixed; inset:0; z-index:41; display:none; align-items:center; justify-content:center; background:rgba(10,8,5,.72); } #formkort.på{ display:flex; }
+body.formkortpå #krig, body.formkortpå #panel, body.formkortpå #leirmeny, body.formkortpå #folkmeny, body.formkortpå #tropppanel{ z-index:19 !important; }
+#formkort .oppsum{ margin:0 0 14px; text-align:left; font-size:14px; } #formkort .oppsum dl{ display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0 0 8px; padding:8px 10px; background:#241d12; border:1px solid #4a4030; }
+#formkort .oppsum dt{ color:var(--ink-dim,#a99); } #formkort .oppsum dd{ margin:0; color:#f0e2b0; } #formkort .oppsum h3{ margin:8px 0 3px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
+#formkort .oppsum ul{ margin:0; padding-left:18px; line-height:1.4; } #formkort > div{ max-height:92vh; overflow:auto; }
+body.kort #formkort .oppsum{ font-size:13px; } body.kort #formkort h2{ font-size:21px; }
 #formkort > div{ width:min(440px,90vw); padding:18px 20px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); text-align:center; } #formkort h2{ margin:0 0 8px; font-size:26px; } #formkort p{ margin:0 0 14px; }
 #formkort button, #etterspill button{ background:#2a2318; border:1px solid #c9b26a; color:inherit; min-height:38px; padding:4px 16px; margin:3px; font:inherit; cursor:pointer; }
 #leirmeny .spillform{ margin:6px 0; padding:6px 8px; border:1px solid #3a3226; background:#1e1911; font-size:13.5px; line-height:1.35; } #leirmeny .spillform b{ color:#f0e2b0; } #leirmeny .spillform small{ display:block; color:var(--ink-dim); }
@@ -75,15 +80,23 @@
 #leirmeny .spillform.vunnet{ border-color:#7fa04a; } #leirmeny .spillform.tapt{ border-color:#a0523a; }
 #etterspill{ position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:13; display:none; width:min(560px,96vw); padding:8px 12px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; text-align:center; }
 #etterspill.på{ display:block; } #etterspill input[type=range]{ width:100%; margin:6px 0 2px; } #etterspill b{ color:#f0e2b0; } #etterspill small{ display:block; color:var(--ink-dim,#a99); }
+#etterspill .forkl{ display:flex; flex-wrap:wrap; justify-content:center; gap:2px 12px; margin:5px 0 0; font-size:12.5px; color:var(--ink-dim,#a99); } #etterspill .forkl span{ white-space:nowrap; }
+#etterspill .prøve{ display:inline-block; width:10px; height:10px; margin:0 3px -1px 0; border:1px solid #e7dcc3; vertical-align:baseline; } #etterspill .prøve.rund{ border-radius:50%; } #etterspill .prøve.rute{ transform:rotate(45deg) scale(.8); }
+#etterspill .prøve.tom{ border-color:rgba(231,220,195,.55); } #etterspill .prøve.ring{ border:2px solid #f0c878; border-radius:50%; background:none; } #etterspill small.byttet{ color:#f0c878; }
+body.kort #etterspill .forkl{ font-size:11.5px; gap:0 8px; } body.kort #etterspill{ bottom:6px; padding:5px 8px 6px; }
 #etterlerret{ position:fixed; z-index:8; pointer-events:none; display:none; } body.etterspill #etterlerret{ display:block; }
 body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.etterspill #varsler, body.etterspill #flytgruppe{ display:none; }`;
   document.head.appendChild(css);
   // (id-en må ikke begynne på «sp»: fartsknappene i index.html slår klassen «på» av og på for alle [id^=sp])
   const kort = el('div', { id: 'formkort', role: 'alertdialog' }); document.body.appendChild(kort);
-  function visKort(tittel, tekst, valg) {
-    const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst));
-    for (const [t, fn] of valg && valg.length ? valg : [['Fortsett', null]]) { const b = el('button', {}, t); b.onclick = () => { kort.classList.remove('på'); if (fn) fn(); }; d.append(b); }
-    kort.replaceChildren(d); kort.classList.add('på');
+  // ekstra = et element som står mellom teksten og knappene (oppsummeringen på seiersskjermen)
+  // (runde 12) body.formkortpå: krigspanelet og de andre panelene legges under det mørke sløret mens kortet står (d4-modal-13.png)
+  const kortAv = () => { kort.classList.remove('på'); document.body.classList.remove('formkortpå'); };
+  function visKort(tittel, tekst, valg, ekstra) {
+    const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst)); if (ekstra) d.append(ekstra);
+    const kn = el('div', { klasse: 'valg' }); d.append(kn);
+    for (const [t, fn] of valg && valg.length ? valg : [['Fortsett', null]]) { const b = el('button', {}, t); b.onclick = () => { kortAv(); if (fn) fn(); }; kn.append(b); }
+    kort.replaceChildren(d); kort.classList.add('på'); document.body.classList.add('formkortpå');
     if (typeof tempo !== 'undefined' && tempo > 0 && document.getElementById('sp0')) document.getElementById('sp0').click();
   }
 
@@ -100,7 +113,8 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     let andel = 0; try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) andel = K.st.sider.blå.andel; } catch (e) { andel = 0; }
     const nb = nærmesteBy(), iLag = egneLag().filter(s => s.fraFolk).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0);
     return { tid, egne, tettsteder: egne, holder: id => eier(id) === 'blå', mål: nb ? nb.e.id : null, målNavn: nb ? nb.e.navn : null, folk: (F ? F.personer.length : 0) + iLag, andel, leirTapt: !!(T && T.tapt),
-      penger: S ? S.penger : 0, bygg: L && window.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b) && !Leir.BYGG[b.type].del).length : 0 };
+      penger: S ? S.penger : 0, bygg: L && window.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b) && !Leir.BYGG[b.type].del).length : 0,
+      angrep: T && kreverAngrep() ? { slått: !!T.sc.slått, pågår: !!(T.sc.angrep && T.sc.angrep.pågår), ingen: !!T.sc.ingen } : undefined };
   }
 
   // ---------- scenariet ----------
@@ -109,10 +123,64 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     const s = scenarioNå(); if (!s || s.status === 'pågår' || T.scMeldt === s.status) return s; T.scMeldt = s.status; lagre();
     if (window.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(`Scenariet «${s.navn}» er ${s.status}. ${s.tekst}`);
     logg(`Scenariet «${s.navn}»: ${s.status === 'vunnet' ? 'klart!' : 'tapt.'} ${s.tekst}`);
+    if (s.status === 'vunnet') statHendelse(`Scenariet «${s.navn}» er klart`, 2);
     visKort(s.status === 'vunnet' ? 'Scenariet er klart' : 'Scenariet er tapt', `«${s.navn}»: ${s.tekst} Du kan spille videre i fritt spill, eller starte et nytt spill fra ☰.`,
-      [['Spill videre', null], ...(E.length > 1 ? [['Se krigen på nytt', () => etterspill()]] : [])]);
+      [['Spill videre', null], ...(E.length > 1 ? [['Se krigen på nytt', () => etterspill()]] : [])], oppsumElement());
     return s;
   }
+
+  // ---------- (runde 12) OPPSUMMERINGEN: tall og de viktigste hendelsene for seiers- og tapsskjermen ----------
+  // T.stat = { start: { penger, tid }, falne, sårede, maksByer, hendelser: [{ t, tekst, vekt }] } – lagres med spillformen (per leir).
+  // Falne og sårede er egne soldater i lagene (ikke karakteren); tettstedene som skifter eier og angrep som slås tilbake eller lykkes, blir hendelser.
+  const taltFall = new WeakSet(), taltSår = new WeakSet(); let eiere = new Map(), sistFerdig = 0;
+  const byNavn = id => { const b = byer().find(q => String(q.e.id) === String(id)); return b ? b.e.navn : 'et tettsted'; };
+  const fNavn = side => (window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : side);
+  function statHendelse(tekst, vekt = 1) { if (!T) return; const st = T.stat || (T.stat = { start: null, falne: 0, sårede: 0, maksByer: 0, hendelser: [] });
+    st.hendelser.push({ t: Math.round(tid), tekst, vekt }); if (st.hendelser.length > 60) { st.hendelser.sort((a, b) => b.vekt - a.vekt || b.t - a.t); st.hendelser.length = 40; st.hendelser.sort((a, b) => a.t - b.t); } }
+  function statStart() { if (!T) return; const S = spill(); if (!T.stat) T.stat = { start: { penger: S ? S.penger : 0, tid: Math.round(tid) }, falne: 0, sårede: 0, maksByer: 0, hendelser: [] };
+    // det som alt har skjedd (et lagret spill som lastes), telles ikke på nytt
+    for (const s of ENHETER) if (s.side === 'blå' && Array.isArray(s.menn)) for (const m of s.menn) { if (m.hp <= 0) taltFall.add(m); else if (m.hp < 1) taltSår.add(m); }
+    eiere = new Map(); if (window.TETTSTEDER) for (const [id, t] of TETTSTEDER) eiere.set(String(id), t && t.eier);
+    const ES = window.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null; sistFerdig = ES && ES.ferdig ? ES.ferdig.length : 0; lagre(); }
+  function statSteg() { if (!T || !T.stat) return; const st = T.stat; let endret = false;
+    for (const s of ENHETER) { if (s.side !== 'blå' || s.karakter || !Array.isArray(s.menn)) continue;
+      for (const m of s.menn) { if (m.hp <= 0 && !taltFall.has(m)) { taltFall.add(m); st.falne++; endret = true; } else if (m.hp > 0 && m.hp < 1 && !taltSår.has(m)) { taltSår.add(m); st.sårede++; endret = true; } } }
+    if (window.TETTSTEDER) { let egne = 0; for (const [id0, t] of TETTSTEDER) { const id = String(id0), e = t && t.eier, før = eiere.get(id); if (e === 'blå') egne++;
+        if (e !== før) { if (e === 'blå') statHendelse(`Tok ${byNavn(id)}`, 3); else if (før === 'blå') statHendelse(`Mistet ${byNavn(id)}` + (e ? ` til ${fNavn(e)}` : ''), 3); eiere.set(id, e); endret = true; } }
+      if (egne > (st.maksByer || 0)) { st.maksByer = egne; endret = true; } }
+    const ES = window.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null, F = ES && ES.ferdig;
+    if (F) { if (F.length < sistFerdig) sistFerdig = 0; for (const q of F.slice(sistFerdig)) { if (!q.leir && q.eier !== 'blå') continue;
+        statHendelse(q.utfall === 'oppgitt' ? `Slo tilbake ${fNavn(q.side)} ${q.leir ? 'ved leiren' : 'i ' + q.mål}` : q.leir ? `${fNavn(q.side)} herjet i leiren` : `${fNavn(q.side)} angrep ${q.mål}`, 3); endret = true; }
+      sistFerdig = F.length; }
+    if (endret) lagre(); }
+  function oppsumElement() { if (!T) return null; const S = spill(), B = nå(), o = SC.oppsummering(T.stat, { tid, penger: S ? S.penger : 0, byer: B.egne, folk: B.folk });
+    const dl = el('dl'); for (const [k, v] of o.tall) dl.append(el('dt', {}, k), el('dd', {}, v));
+    const boks = el('div', { klasse: 'oppsum', id: 'oppsummering' }, dl);
+    if (o.hendelser.length) { const ul = el('ul'); for (const h of o.hendelser) ul.append(el('li', {}, h)); boks.append(el('h3', {}, 'Det viktigste som skjedde'), ul); }
+    return boks; }
+
+  // ---------- (runde 12) «HOLD BYEN»: MOTANGREPET ----------
+  // Kritikken: «Svorkmo tatt på 30 minutter uten en fiende i nærheten, seieren kom dag 4 uten kamp». Når fredstiden er over og du holder byen,
+  // ber scenariet en motstander (spill/eskalering-visning.js, planlegg med tving og bare) om å samle lag mot nettopp den byen. Du vinner
+  // først når du har holdt den i tre døgn OG slått motangrepet tilbake. Kan ingen motstander angripe på et døgn, holder de tre døgnene.
+  // Claudes forslag. Ikke i testene (auto) – der er scenariet som før.
+  const kreverAngrep = () => { const r = window.SPILLREGLER; return !!(r && r.scenario === 'hold' && auto() && window.EskaleringSpill && EskaleringSpill.planlegg && window.AI && AI.på !== false); };
+  function holdAngrep() {
+    if (!T || !kreverAngrep()) return null; const sc = T.sc, B = nå(); if (sc.ferdig || sc.slått || sc.ingen || !B.mål || !B.holder(B.mål)) return null;
+    const ES = EskaleringSpill.S();
+    if (sc.angrep) { const G = ES.gruppe && ES.gruppe[sc.angrep.side];
+      if (G && G.mål && String(G.mål.id) === String(B.mål)) { const p = G.fase === 'angriper'; if (p !== !!sc.angrep.pågår) { sc.angrep.pågår = p; lagre(); } return sc.angrep; }
+      const f = (ES.ferdig || []).filter(q => q.side === sc.angrep.side && q.mål === B.målNavn && q.t >= sc.angrep.start).pop();
+      if (f && f.utfall === 'oppgitt') { sc.slått = true; logg(`Scenariet «Hold byen»: motangrepet på ${B.målNavn} er slått tilbake!`); }
+      sc.angrep = null; lagre(); return null; }
+    const fred = EskaleringSpill.fredSlutt ? EskaleringSpill.fredSlutt() : 0; if (tid < fred || (sc.nesteForsøk && tid < sc.nesteForsøk)) return null;
+    if (sc.forsøkFra == null) sc.forsøkFra = Math.round(tid);
+    const sider = ['rød', 'grønn'].sort((a, b) => ENHETER.filter(e => e.side === b && e.ai && levende(e)).length - ENHETER.filter(e => e.side === a && e.ai && levende(e)).length);
+    for (const side of sider) { let G = null; try { G = EskaleringSpill.planlegg(side, { tving: true, bare: B.mål }); } catch (e) { G = null; }
+      if (G) { sc.angrep = { side, start: Math.round(tid), pågår: false }; logg(`Scenariet «Hold byen»: ${fNavn(side)} vil ta ${B.målNavn} tilbake og samler lag. Hold byen!`); statHendelse(`${fNavn(side)} samlet lag mot ${B.målNavn}`, 2); lagre(); return sc.angrep; } }
+    sc.nesteForsøk = Math.round(tid) + 60;
+    if (tid - sc.forsøkFra > SC.DØGN) { sc.ingen = true; logg(`Scenariet «Hold byen»: ingen av motstanderne har krefter til et motangrep på ${B.målNavn}.`); }
+    lagre(); return null; }
 
   // ---------- tap av leiren ----------
   function fiendeILeiren() { const S = spill(); if (!S || !S.leir) return false; return SC.truet(S.leir, ENHETER.filter(e => e.side !== 'blå' && levende(e)), ENHETER.filter(e => e.side === 'blå' && levende(e))); }
@@ -179,17 +247,27 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     const b = E[eNr]; if (!b) return; const st = SC.stillingVed(b), navn = s => (s === 'blå' ? 'du' : (window.Fraksjoner && Fraksjoner.FRAKSJONER[s] ? Fraksjoner.FRAKSJONER[s].navn : s));
     const n = b.n, kr = v => (v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace('.', ',') + ' mill. kr' : Math.round(v).toLocaleString('nb-NO') + ' kr'), kampN = (b.s || []).length;
     const linje2 = n ? [`${n.l} lag (${n.m} mann)`, n.k ? `${n.k} kjøretøy` : '', `${n.b} bygg`, n.f != null ? `${n.f} folk i leiren` : '', n.p != null ? kr(n.p) : ''].filter(Boolean).join(' · ') : '';
+    // (runde 12) tettstedene som skiftet eier siden forrige bilde, står i teksten (og får en ring i kartet)
+    const byttet = skifter(eNr).map(q => `${navn(q.ny)} tok ${navnAv.get(q.id) || 'et tettsted'}`.replace(/^du tok/, 'Du tok').replace(/^null tok/, 'Ingen holder'));
     ep.querySelector('.tekst').replaceChildren(el('b', {}, klokke2(b.t)), ` · ${navn('blå')} ${st.blå} · ${navn('rød')} ${st.rød} · ${navn('grønn')} ${st.grønn} tettsteder · bilde ${eNr + 1} av ${E.length}`,
-      el('small', {}, (linje2 ? 'Dere: ' + linje2 : 'Bildet er fra før bygg og kjøretøy ble tatt med.') + (kampN ? ` · kamper siden forrige bilde: ${kampN} ${kampN === 1 ? 'sted' : 'steder'}` : '')));
+      el('small', {}, (linje2 ? 'Dere: ' + linje2 : 'Bildet er fra før bygg og kjøretøy ble tatt med.') + (kampN ? ` · kamper siden forrige bilde: ${kampN} ${kampN === 1 ? 'sted' : 'steder'}` : '')),
+      byttet.length ? el('small', { klasse: 'byttet' }, 'Siden forrige bilde: ' + byttet.join(', ') + '.') : '');
     ep.querySelector('input').value = String(eNr); skitten = true;
   }
+  // (runde 12) tettstedene som har skiftet eier fra bildet før: [{ id, før, ny }]
+  function skifter(i) { const b = E[i], a = E[i - 1]; if (!b || !a) return []; const ut = [], ider = new Set([...Object.keys(a.e || {}), ...Object.keys(b.e || {})]);
+    for (const id of ider) { const f = SC.eierI(a, id), n = SC.eierI(b, id); if (f !== n) ut.push({ id, før: f, ny: n }); } return ut; }
+  // (runde 12, PC-kritiker F: «tiden går mens reprisen vises») tiden står så lenge reprisen er åpen – også når et kort som lukkes, ville startet
+  // den igjen (spill/skjermlag.js gir farten tilbake når kortet er besvart). Farten du hadde, kommer tilbake når du lukker.
+  let ePause = 0;
+  function holdPause() { if (!eÅpen) { clearInterval(ePause); ePause = 0; return; } if (typeof tempo !== 'undefined' && tempo > 0) { if (eFør) eFør.fart = tempo; const p = document.getElementById('sp0'); if (p) p.click(); } }
   function etterspill() {
     if (!klar) return false; if (auto() || !E.length) taBildeTving();
     if (E.length < 1) { logg('Det er ikke tatt noen bilder av krigen ennå.'); return false; }
     if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
     if (window.StrategiSpill && StrategiSpill.erÅpen()) StrategiSpill.lukk();
-    const S = spill(); eFør = { x: kam.x, y: kam.y, m: kam.m, fart: tempo > 0 };
-    if (tempo > 0) document.getElementById('sp0').click();
+    const S = spill(); eFør = { x: kam.x, y: kam.y, m: kam.m, fart: tempo > 0 ? tempo : 0 };
+    if (tempo > 0) document.getElementById('sp0').click(); clearInterval(ePause); ePause = setInterval(holdPause, 120);
     // utsnittet: alle tettstedene og lagene som er med i bildene
     byRef = new Map(byer().map(b => [String(b.e.id), midt(b)])); navnAv = new Map(byer().map(b => [String(b.e.id), b.e.navn])); let x0 = S.leir.x, x1 = S.leir.x, y0 = S.leir.y, y1 = S.leir.y;
     const ta = (x, y) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
@@ -201,11 +279,17 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     spill2.onclick = () => { if (eSpiller) { clearInterval(eSpiller); eSpiller = 0; spill2.textContent = '▶ Spill av'; return; } if (eNr >= E.length - 1) eNr = 0; spill2.textContent = '❚❚ Stopp';
       eSpiller = setInterval(() => { if (eNr >= E.length - 1) { clearInterval(eSpiller); eSpiller = 0; spill2.textContent = '▶ Spill av'; return; } eNr++; eVis(); }, 450); };
     lukk.onclick = () => etterspillLukk();
-    ep.replaceChildren(el('div', {}, el('b', {}, 'Krigen din på nytt'), el('small', {}, 'Fargene viser hvem som holdt tettstedene. Fiendens lag og kjøretøy vises bare der dere så dem; flammene er steder det ble kjempet siden forrige bilde.')), sl, el('div', { klasse: 'tekst' }), el('div', {}, spill2, lukk));
+    // tegnforklaringen (runde 12: «uforklarte prikker»): fargene til sidene, tettsteder uten eier, kamp og leiren
+    const prøve = (farge, form) => el('i', { klasse: 'prøve ' + form, style: `background:${farge}` });
+    const fk = el('div', { klasse: 'forkl' }, el('span', {}, prøve(sidefarge('blå', 'farge'), 'firk'), 'dine lag'), el('span', {}, prøve(sidefarge('rød', 'farge'), 'rute'), 'fiender dere så'),
+      el('span', {}, prøve(sidefarge('blå', 'farge'), 'rund'), prøve(sidefarge('rød', 'farge'), 'rund'), prøve(sidefarge('grønn', 'farge'), 'rund'), 'tettsted (farge = hvem som holdt det)'),
+      el('span', {}, prøve('rgba(60,52,40,.95)', 'rund tom'), 'ingen holdt det'), el('span', {}, prøve('#e8783c', 'rund'), 'kamp'), el('span', {}, prøve('#f0e2b0', 'firk'), 'leiren og byggene'),
+      el('span', {}, el('i', { klasse: 'prøve ring' }), 'skiftet eier'));
+    ep.replaceChildren(el('div', {}, el('b', {}, 'Krigen din på nytt'), el('small', {}, 'Tiden står mens du ser. Spol med glideren eller ▶. Fiendens lag og kjøretøy vises bare der dere så dem.')), fk, sl, el('div', { klasse: 'tekst' }), el('div', {}, spill2, lukk));
     ep.classList.add('på'); eVis(); requestAnimationFrame(eRamme); return true;
   }
-  function etterspillLukk() { if (!eÅpen) return; eÅpen = false; if (eSpiller) { clearInterval(eSpiller); eSpiller = 0; } ep.classList.remove('på'); document.body.classList.remove('etterspill');
-    if (eFør) { kam.x = eFør.x; kam.y = eFør.y; kam.m = eFør.m; if (eFør.fart && tempo === 0) document.getElementById('sp0').click(); eFør = null; } skitten = true; }
+  function etterspillLukk() { if (!eÅpen) return; eÅpen = false; clearInterval(ePause); ePause = 0; if (eSpiller) { clearInterval(eSpiller); eSpiller = 0; } ep.classList.remove('på'); document.body.classList.remove('etterspill');
+    if (eFør) { kam.x = eFør.x; kam.y = eFør.y; kam.m = eFør.m; if (eFør.fart && tempo === 0) { document.getElementById('sp0').click(); if (typeof tempo !== 'undefined' && tempo !== eFør.fart) tempo = eFør.fart; } eFør = null; } skitten = true; }
   function taBildeTving() { const sist = E[E.length - 1]; if (sist && tid - sist.t < 1) return; const b = nyttBilde(); if (SC.sammeBygg(E, b)) delete b.b; E.push(b); kamper = new Map(); lagreE(); }
   window.addEventListener('keydown', e => { if (e.key === 'Escape' && eÅpen) etterspillLukk(); });
   // Etterspillet tegnes på et eget lerret oppå kartet (mørkt slør), så lagene og navnene som står der nå, ikke blandes med bildet fra den gang.
@@ -218,16 +302,22 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   }
   const tegnE = (g, vx0, vy1) => {
     if (!eÅpen) return; const b = E[eNr]; if (!b) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; g.save();
-    g.fillStyle = 'rgba(14,11,7,.72)'; g.fillRect(0, 0, VW, VH);
+    // (runde 12) lysere slør, så kartet under synes (før .72: «nesten svart»)
+    g.fillStyle = 'rgba(14,11,7,.4)'; g.fillRect(0, 0, VW, VH);
     // leirens bygg (lyse ruter; ser du nærmere, får de typens farge), kampstedene (flammer etter hvor mye det ble skutt)
     { const bb = SC.byggI(E, eNr), r = Math.max(2.5, Math.min(7, 14 / m)); g.fillStyle = 'rgba(240,226,176,.75)'; g.strokeStyle = 'rgba(20,16,10,.9)'; g.lineWidth = 1;
       for (const [x0, y0] of bb) { const x = sx(x0), y = sy(y0); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue; g.fillRect(x - r, y - r, r * 2, r * 2); g.strokeRect(x - r, y - r, r * 2, r * 2); } }
     for (const [x0, y0, n] of b.s || []) { const x = sx(x0), y = sy(y0), r = 7 + Math.min(10, Math.sqrt(n) * 2); g.fillStyle = 'rgba(232,120,60,.28)'; g.beginPath(); g.arc(x, y, r * 1.5, 0, 6.283); g.fill();
       g.fillStyle = '#e8783c'; g.strokeStyle = '#2a1408'; g.lineWidth = 1; g.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283, rr = i % 2 ? r * .45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); g.stroke(); }
     g.font = '600 13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'top';
-    for (const [id, p] of byRef) { const e = SC.eierI(b, id), x = sx(p[0]), y = sy(p[1]); if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue; if (!e && m > 60) continue;
-      g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(60,52,40,.9)'; g.strokeStyle = '#e7dcc3'; g.lineWidth = e ? 2 : 1; g.beginPath(); g.arc(x, y, e ? 9 : 5, 0, 6.283); g.fill(); g.stroke();
-      if (e && navnAv.get(id)) { g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(navnAv.get(id), x, y + 11); g.fillStyle = '#e7dcc3'; g.fillText(navnAv.get(id), x, y + 11); } }
+    const nyEier = new Map(skifter(eNr).map(q => [String(q.id), q])), puls = .5 + .5 * Math.sin(performance.now() / 220);
+    for (const [id, p] of byRef) { const e = SC.eierI(b, id), x = sx(p[0]), y = sy(p[1]); if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue; if (!e && m > 60 && !nyEier.has(id)) continue;
+      g.fillStyle = e ? sidefarge(e, 'farge') : 'rgba(60,52,40,.95)'; g.strokeStyle = e ? '#e7dcc3' : 'rgba(231,220,195,.55)'; g.lineWidth = e ? 2 : 1; g.beginPath(); g.arc(x, y, e ? 9 : 4.5, 0, 6.283); g.fill(); g.stroke();
+      // skiftet eier siden forrige bilde: en pulserende ring i den nye eierens farge og «tatt av …»
+      const q = nyEier.get(id); if (q) { g.strokeStyle = q.ny ? sidefarge(q.ny, 'lys') : '#e7dcc3'; g.lineWidth = 2.5; g.globalAlpha = .5 + .5 * puls; g.beginPath(); g.arc(x, y, 14 + 5 * puls, 0, 6.283); g.stroke(); g.globalAlpha = 1; }
+      const navnet = navnAv.get(id); if (navnet && (e || q || m < 25)) { const t = navnet + (q ? (q.ny === 'blå' ? ' · tatt av deg' : q.ny ? ' · tatt av ' + (window.Fraksjoner && Fraksjoner.FRAKSJONER[q.ny] ? Fraksjoner.FRAKSJONER[q.ny].navn : q.ny) : ' · tapt') : '');
+        g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)'; g.strokeText(t, x, y + 11); g.fillStyle = e || q ? '#e7dcc3' : 'rgba(231,220,195,.7)'; g.fillText(t, x, y + 11); } }
+    if (nyEier.size) skitten = true;
     // lag og kjøretøy med det felles merkesettet (spill/merker.js): formen sier hvem, tegnet inni hva
     const side = s => (s === 'b' ? 'blå' : s === 'g' ? 'grønn' : 'rød');
     for (const [x0, y0, s, type] of b.k || []) { const x = sx(x0), y = sy(y0); if (window.Merker) Merker.tegn(g, x, y, { forhold: Merker.forhold(side(s)), slag: 'kjøretøy', type: type || 'lastebil', farge: sidefarge(side(s), 'farge'), r: 7 }); }
@@ -258,7 +348,8 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   KROKER.sim.push(() => {
     if (!klar) return; const min = Math.floor(tid); if (min === sistMin) return; sistMin = min;
     ukeSteg();
-    if (window.SPILLREGLER.scenario && auto()) scenarioSteg();
+    if (auto()) statSteg();
+    if (window.SPILLREGLER.scenario && auto()) { holdAngrep(); scenarioSteg(); }
     if (!auto()) return;
     taBilde();
     if (SC.tapSteg(T.tap, fiendeILeiren(), tid)) { T.tap = {}; tapLeiren(); }
@@ -290,6 +381,6 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   function sterkere() { const S = spill(); if (!S) return null; S.regler = S.regler || { vanskelighet: 'vanlig', utfordringer: [], scenario: null }; S.regler.styrke = (S.regler.styrke || 0) + 1; OppstartSpill.lagre(); return settRegler().faktor.fiende; }
 
   const api = { test: false, start, regler: () => window.SPILLREGLER, settRegler, nå, tilstand: () => T, scenario: scenarioNå, scenarioSteg, fiendeILeiren, utpostPlan, tapLeiren, taBilde, bilder: () => E, etterspill, etterspillLukk, etterspillÅpen: () => eÅpen,
-    etterspillVis: n => { eNr = Math.max(0, Math.min(E.length - 1, n)); eVis(); return eNr; }, uke: ukeNå, ukeStart, ukeStatus, ukeDel, ukeSammenlign, ukeAvbryt: () => { if (T) { T.uke = null; lagre(); } }, sterkere, visKort, kortLukk: () => kort.classList.remove('på') };
+    etterspillVis: n => { eNr = Math.max(0, Math.min(E.length - 1, n)); eVis(); return eNr; }, uke: ukeNå, ukeStart, ukeStatus, ukeDel, ukeSammenlign, ukeAvbryt: () => { if (T) { T.uke = null; lagre(); } }, sterkere, visKort, kortLukk: kortAv, holdAngrep, oppsummering: () => (T ? SC.oppsummering(T.stat, { tid, penger: spill() ? spill().penger : 0, byer: nå().egne, folk: nå().folk }) : null), oppsumElement, statHendelse };
   window.ScenarioSpill = api;
 })();
