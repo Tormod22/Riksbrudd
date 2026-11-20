@@ -13,11 +13,12 @@
   // boks med bunnen i z (kan vris om z og vippes om y), rør langs en akse med midten i (x, y, z), hjul med felg og nav
   function boks(d, x, y, z, sx, sy, sz, c, rz, ry) { const g = new THREE.BoxGeometry(sx, sy, sz).toNonIndexed(); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x, y, z + sz / 2); d.push(farg(g, c)); }
   function rør(d, x, y, z, r, l, akse, c, seg, r2) { const g = new THREE.CylinderGeometry(r2 === undefined ? r : r2, r, l, seg || 8).toNonIndexed(); if (akse === 'x') g.rotateZ(-Math.PI / 2); else if (akse === 'z') g.rotateX(Math.PI / 2); g.translate(x, y, z); d.push(farg(g, c)); }
-  function hjul(d, x, y, r, b) { rør(d, x, y, r, r, b, 'y', SV, 14); rør(d, x, y, r, r * .56, b + .03, 'y', STÅL, 10); rør(d, x, y, r, r * .2, b + .07, 'y', M, 6); }
+  // (runde 10) hjulene er runde dekk med felg og nav (rundHjul under), med færre kanter enn feltbilens (mange av dem står i kolonnene)
+  function hjul(d, x, y, r, b) { rundHjul(d, x, y, r, b, STÅL, M, 10); }
 
   // FØRERHUSET på lastebilene (frambygd): x0 = fronten, B = bredden. Ruter, grill, lykter, støtfanger, speil, trinn, dørsprekk, taklys.
   function førerhus(d, x0, B) { const b = B / 2, L = 2.3, xm = x0 - L / 2;
-    boks(d, xm, 0, 1.0, L, B - .1, 1.05, O); boks(d, xm - .05, 0, 2.05, L - .1, B - .16, .9, O); boks(d, xm - .05, 0, 2.95, L - .3, B - .3, .08, M);
+    rundBoks(d, xm, 0, 1.0, L, B - .1, 1.05, .12, O); rundBoks(d, xm - .05, 0, 2.0, L - .1, B - .16, .98, .16, O, { smal: .93 }); rundBoks(d, xm - .05, 0, 2.95, L - .3, B - .3, .1, .04, M);
     boks(d, x0 - .06, 0, 2.1, .08, B - .5, .72, GL, 0, -.12); boks(d, x0 - .03, 0, 2.1, .05, .06, .74, O, 0, -.12);
     for (const s of [-1, 1]) { boks(d, xm + .25, s * (b - .07), 2.12, 1.0, .04, .62, GL); boks(d, xm - .75, s * (b - .07), 2.2, .5, .04, .5, GL);
       boks(d, xm - .3, s * (b - .05), 1.05, .04, .03, 1.85, SV); boks(d, xm + .55, s * (b - .03), 1.75, .16, .04, .05, SV);
@@ -57,11 +58,11 @@
 
   // SPEIDERBIL (5,2 m): åpen terrengbil med panser, skrå frontrute, veltebøyle, maskingevær på ring, kanner, reservehjul, antenne
   function speiderbil() { const d = [], b = 1.1;
-    boks(d, 0, 0, .55, 4.9, 2.0, .55, O); boks(d, 0, 0, .46, 4.4, 1.5, .12, SV);
-    boks(d, 1.6, 0, 1.1, 1.6, 1.86, .3, O); boks(d, 1.6, 0, 1.4, 1.2, .6, .04, M); boks(d, -.7, 0, 1.1, 3.0, 2.0, .4, O);
+    rundBoks(d, 0, 0, .55, 4.9, 2.0, .58, .16, O); boks(d, 0, 0, .46, 4.4, 1.5, .12, SV);
+    rundBoks(d, 1.6, 0, 1.08, 1.6, 1.86, .3, .12, O); boks(d, 1.6, 0, 1.4, 1.2, .6, .04, M); rundBoks(d, -.7, 0, 1.08, 3.0, 2.0, .42, .12, O);
     boks(d, .72, 0, 1.44, .06, 1.8, .62, GL, 0, -.3); boks(d, .72, 0, 1.44, .08, .06, .64, O, 0, -.3);
     for (const s of [-1, 1]) { boks(d, -.2, s * (b - .1), 1.5, .9, .05, .1, M); boks(d, -.3, s * (b - .08), 1.1, .04, .03, .4, SV);
-      for (const x of [1.55, -1.55]) { boks(d, x, s * (b - .1), .98, 1.3, .32, .1, SV); }
+      for (const x of [1.55, -1.55]) skjerm(d, x, s * (b - .14), .46, .56, .36, M);
       boks(d, 2.46, s * .7, .84, .06, .3, .24, LYKT); boks(d, 2.46, s * .34, .88, .05, .14, .14, [.9, .55, .1]); boks(d, -2.46, s * .78, .9, .06, .2, .24, RØD);
       boks(d, .8, s * (b + .08), 1.56, .1, .06, .2, SV); boks(d, .78, s * (b + .16), 1.62, .05, .16, .22, M);
       boks(d, -.5, s * (b - .14), 1.5, .07, .07, .75, SV); boks(d, -1.9, s * (b - .14), 1.5, .07, .07, .75, SV); boks(d, -1.2, s * (b - .14), 2.24, 1.5, .07, .07, SV);
@@ -124,7 +125,38 @@
     boks(d, -3.6, 0, 1.34, 1.3, 1.6, 1.0, M); for (let q = 0; q < 5; q++) boks(d, -4.26, 0, 1.5 + q * .15, .03, 1.2, .05, SV); rør(d, -3.6, .5, 2.5, .05, .4, 'z', SV, 6);
     rør(d, .9, -.9, 4.4, .012, 2.0, 'z', SV, 4); return MODELLER.samle(d); }
 
+  // ---------- AVRUNDEDE FORMER (runde 10, 20. nov, brukeren: «bilen ser kantete og billig ut») ----------
+  // I stil med de avrundede figurene (spill/figur3d.js): myke normaler, få kanter. Brukes av feltbilen i spill/kjor.js og modellene her.
+  // rundBoks: boks med avrundede kanter (radius r) – grid-punktene legges tett inntil kantene og skyves ut på en kule rundt det indre
+  // hjørnet, normalen peker rett ut fra det indre. fin = 6 deler per side (ellers 4). Valg: smal = topp-bredden (0..1 av sy),
+  // skrå = hvor mye fronten (+x) heller bakover per meter høyde. Bunnen i z, midten i (x, y).
+  function rundBoks(d, x, y, z, sx, sy, sz, r, c, valg = {}) {
+    r = Math.min(r, sx / 2 - .001, sy / 2 - .001, sz / 2 - .001); const n = valg.fin ? 6 : 4, g = new THREE.BoxGeometry(sx, sy, sz, n, n, n), P = g.attributes.position, N = g.attributes.normal;
+    const hx = sx / 2, hy = sy / 2, hz = sz / 2, flytt = (v, h) => { const t = Math.abs(v) / h; if (t > .999) return v; const sg = Math.sign(v);
+      if (n === 4) return t > .4 ? sg * (h - r) : v; return t > .55 ? sg * (h - (t > .8 ? .29 * r : r)) : v; };
+    for (let i = 0; i < P.count; i++) { let px = flytt(P.getX(i), hx), py = flytt(P.getY(i), hy), pz = flytt(P.getZ(i), hz);
+      const cx = Math.max(-hx + r, Math.min(hx - r, px)), cy = Math.max(-hy + r, Math.min(hy - r, py)), cz = Math.max(-hz + r, Math.min(hz - r, pz));
+      let dx = px - cx, dy = py - cy, dz = pz - cz; const l = Math.hypot(dx, dy, dz);
+      if (l > 1e-6) { dx /= l; dy /= l; dz /= l; px = cx + dx * r; py = cy + dy * r; pz = cz + dz * r; N.setXYZ(i, dx, dy, dz); }
+      const tz = (pz + hz) / sz; if (valg.smal) py *= 1 - (1 - valg.smal) * tz; if (valg.skrå && px > 0) px -= valg.skrå * (pz + hz) * (px / hx);
+      P.setXYZ(i, px, py, pz); }
+    if (valg.vri) g.rotateY(valg.vri); g.translate(x, y, z + hz); d.push(farg(g, c)); return g; }
+  // hjulet langs y: dekk med runde skuldre (dreid profil), felg med kant og nav, og noen mønsterklosser i slitebanen
+  function rundHjul(d, x, y, r, b, felg = STÅL, nav = M, seg = 16) { const V = THREE.Vector2, h = b / 2, k = Math.min(r * .22, h * .8), P = [];
+    const ka = seg < 12 ? 2 : 3; P.push(new V(r * .62, -h)); for (let i = 0; i <= ka; i++) { const a = -Math.PI / 2 + i / ka * Math.PI / 2; P.push(new V(r - k + Math.cos(a) * k, -h + k + Math.sin(a) * k)); }
+    for (let i = 0; i <= ka; i++) { const a = i / ka * Math.PI / 2; P.push(new V(r - k + Math.cos(a) * k, h - k + Math.sin(a) * k)); } P.push(new V(r * .62, h));
+    const g = new THREE.LatheGeometry(P, seg); g.translate(x, y, r); d.push(farg(g, SV));
+    // felgen: en skive med kant, og navet som stikker litt ut (begge sider)
+    for (const s of [-1, 1]) { const f = new THREE.CylinderGeometry(r * .6, r * .64, .05, seg - 2); f.translate(x, y + s * (h - .02), r); d.push(farg(f, felg));
+      const nv = new THREE.CylinderGeometry(r * .2, r * .26, .08, seg < 12 ? 6 : 8); nv.translate(x, y + s * (h + .02), r); d.push(farg(nv, nav)); } }
+  // skjerm over hjulet: en avrundet bue (halv torus med flatt, ovalt tverrsnitt) langs hjulet, over navet i høyden zc
+  function skjerm(d, x, y, zc, r, b, c) { const g = new THREE.TorusGeometry(r, .09, 6, 12, Math.PI); g.scale(1, 1, b / .18); g.rotateX(Math.PI / 2); g.translate(x, y, zc); d.push(farg(g, c)); }
+  // lykt: rund glassflate med mørk ring rundt, langs x (fronten) eller −x (baken)
+  function lykt(d, x, y, z, r, c, ret = 1) { const ring = new THREE.CylinderGeometry(r * 1.25, r * 1.3, .08, 12); ring.rotateZ(-Math.PI / 2); ring.translate(x, y, z); d.push(farg(ring, SV));
+    const gl = new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2); gl.scale(1, .45, 1); gl.rotateZ(-ret * Math.PI / 2); gl.translate(x + ret * .04, y, z); d.push(farg(gl, c)); }
+  const form = { rundBoks, rundHjul, skjerm, lykt, farg, FARGE: { O, M, LYS_O, SV, STÅL, GL, LYKT, RØD, DUK, DUK2 } };
+
   const LAG = { lastebil, speiderbil, stridsvogn, rakettartilleri, radar }, G = {};
   function modell(type) { if (!G[type]) G[type] = (LAG[type] || lastebil)(); return G[type]; }
-  rot.Kjoretoy3d = { modell, typer: Object.keys(LAG), trekanter: type => modell(type).attributes.position.count / 3 };
+  rot.Kjoretoy3d = { modell, form, typer: Object.keys(LAG), trekanter: type => modell(type).attributes.position.count / 3 };
 })(window);

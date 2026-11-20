@@ -10,6 +10,20 @@ const kjør = (k, inn, sek, v = flat) => { let r = {}; for (let t = 0; t < sek; 
 { const k = { x: 0, y: 0, z: 0, a: 0, v: 15 }; const r = kjør(k, { gass: 1 }, 3, { ...flat, hindring: (x, y) => y > 20 }); ok(k.y < 20 && Math.abs(k.v) < 3, 'en vegg stopper bilen'); }
 { const k = { x: 0, y: 0, z: 0, a: 0, v: 5 }; kjør(k, { gass: 1 }, 5, { ...flat, vann: (x, y) => y > 10 }); ok(k.y < 10, 'bilen kjører ikke ut i vann'); }
 { const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }; kjør(k, { gass: 1 }, 10, { ...flat, høyde: (x, y) => Math.max(0, y) }); ok(k.y < 3, 'for bratt (45°): kommer ikke opp'); }
+// (runde 10) stillingen på fire hjul: flat, bakke, sideheng; aldri mer vinkel enn bilen tåler, ingen hjul under bakken
+{ const S = K.STILLING, p = K.stilling(0, 0, 0, () => 3); ok(p.stigning === 0 && p.side === 0 && Math.abs(p.z - 3) < 1e-9, 'flat bakke: står rett'); }
+{ const S = K.STILLING, p = K.stilling(0, 0, 0, (x, y) => y * .2); ok(p.stigning < -.15 && p.stigning > -.25 && Math.abs(p.side) < 1e-9, `motbakke 20 %: nesa opp ${(-p.stigning * 57.3).toFixed(0)}°`); }
+{ const S = K.STILLING, h = (x, y) => -x * 1.2, p = K.stilling(0, 0, 0, h), off = (sx, sy) => -sx * S.hx * Math.sin(p.stigning) + sy * S.hy * Math.sin(p.side) * Math.cos(p.stigning);
+  const hj = K.hjulHøyder(0, 0, 0, h), under = [[1, 1], [1, -1], [-1, 1], [-1, -1]].some(([sx, sy], n) => p.z + off(sx, sy) < hj[n] - 1e-9);
+  ok(Math.abs(p.side) <= S.maksSide + 1e-9 && p.side > 0, `bratt sideheng (50°): vipper bare ${(p.side * 57.3).toFixed(0)}°, venstre side opp`); ok(!under, 'ingen hjul under bakken'); }
+{ const S = K.STILLING, p = K.stilling(0, 0, 0, (x, y) => (x > .5 ? 2 : 0)); ok(Math.abs(p.side) <= S.maksSide + 1e-9 && p.z >= 0, `kant (2 m) under ett hjulpar: ${(Math.abs(p.side) * 57.3).toFixed(0)}°, ikke på siden`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => (x < -3 ? (-3 - x) * 1.0 : 0); let maks = 0; for (let t = 0; t < 6; t += .02) { K.bilSteg(k, { gass: 1, sving: -1 }, .02, { ...flat, høyde: h }); if (k.x < -4) maks = Math.max(maks, Math.abs(k.v)); }
+  ok(maks <= K.STILLING.krabbe + .01, `inn i et sideheng på 45°: bare krabbefart (${maks.toFixed(1)} m/s)`); }
+{ const k = { x: 0, y: 0, z: 0, a: -Math.PI / 2, v: 0 }, h = (x, y) => Math.max(0, x - 3) * 1.0; kjør(k, { gass: 1 }, 6, { ...flat, høyde: h }); ok(k.x < 4.5, `rett opp en 45° bakke: stopper (x = ${k.x.toFixed(1)})`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * 1.1; kjør(k, {}, 3, { ...flat, høyde: h }); ok(k.x > 2, `står i 48° heng: sklir nedover (${k.x.toFixed(1)} m)`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => Math.max(0, y) * .68; kjør(k, { gass: 1 }, 4, { ...flat, høyde: h }); ok(k.y > 5, `en 34° bakke klarer den (${k.y.toFixed(0)} m på 4 s)`); }
+{ const k = { x: 0, y: 0, z: 0, a: 0, v: 0 }, h = (x, y) => -x * .7; const x0 = k.x; kjør(k, { gass: 1 }, 4, { ...flat, høyde: h }); ok(k.y > 5 && k.x > x0, `langs et 35° sideheng: kryper fram og sklir litt ned (y ${k.y.toFixed(1)}, x ${k.x.toFixed(1)}) – sitter ikke fast`);
+  const y1 = k.y; kjør(k, { gass: -1 }, 3, { ...flat, høyde: h }); ok(k.y < y1 - 2, 'og kan rygge ut igjen'); }
 const fly = (h, inn, sek, v = flat) => { let r = {}; for (let t = 0; t < sek; t += .02) r = K.heliSteg(h, inn, .02, v); return r; };
 const ny = () => ({ x: 0, y: 0, z: 0, a: 0, vx: 0, vy: 0, vz: 0, rotor: 0, motor: true });
 { const h = ny(); fly(h, { opp: 1 }, 1.5); ok(h.z === 0 && h.rotor < .9, 'rotoren må spole opp før helikopteret letter'); fly(h, { opp: 1 }, 6); ok(h.z > 20, `så stiger det (${h.z.toFixed(0)} m)`); }
