@@ -1,9 +1,57 @@
 [
-  ["Gå hit eller gå her", "Trykk «Gå» (G) i 3D. Ser kameraet på et sted langt fra karakteren din, får du velge: «Reis hit» – karakteren går dit, og spilltiden går så lenge turen tar (ca. 4 km/t, litt omveg regnet med) – eller «Gå her, der du står». Merket «Hit» midt i bildet viser hvor du havner. Lenger enn 6 km går du i etapper. Har du valgt et lag, starter du ved laget.", "I 3D"],
-  ["Gå inn i et hus", "Merket «Inngang» står over døra. Gå mot døra, så trekkes du inn mot midten av åpningen. På telefon (og med mus) kommer knappen «Gå inn» når du står nær døra – den går gjennom døra for deg. Inne kommer «Gå ut». Styrer du selv underveis, slipper knappen taket.", "I 3D"],
-  ["Esc når du går", "Esc lukker først det som er åpent (sekken, lutpanelet, karakterarket, menyer). Et kort med valg går tilbake og venter. Er ingenting åpent, slipper Esc musa, og Esc en gang til flyr deg opp i lufta igjen.", "I 3D"],
-  ["Kort som venter mens du går", "Mens du går selv, kommer ikke hendelseskortene midt i bildet. Øverst står i stedet «Et kort venter». Trykk på det (eller Enter på PC) for å se det nå – ellers kommer det når du slutter å gå.", "I 3D"],
-  ["Snikemåleren", "Når en fiende er nær (under 700 m) og du går selv, står en måler under siktet: Skjult → Mistenkt (han har hørt eller sett noe) → Sett (han vet hvor du er og skyter). Linja under sier hvor nær han er. Gå på huk eller ligg (C/Z), hold deg i skog og mørke, og ikke løp, så tar det lenger tid før du blir sett.", "I 3D"],
-  ["Været i 3D", "Toppstripa viser været: mens det skifter, står det for eksempel «Klart → regn», og himmelen i 3D blir gradvis grå i løpet av 25–45 spillminutter. Når det står «Regn», regner det også i 3D.", "Vær, lyd og bilde"],
-  ["3D går tregt", "Tegner nettleseren 3D uten grafikkortet (programvare), kommer en liten lapp i hjørnet én gang: slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt. Rådet står også i loggen og på knappen «Grafikk» i ☰.", "Vær, lyd og bilde"]
+[
+"Gå hit eller gå her",
+"Trykk «Gå» (G) i 3D. Ser kameraet på et sted langt fra karakteren din, får du velge: «Reis hit» – karakteren går dit, og spilltiden går så lenge turen tar (ca. 4 km/t, litt omveg regnet med) – eller «Gå her, der du står». Merket «Hit» midt i bildet viser hvor du havner. Lenger enn 6 km går du i etapper. Har du valgt et lag, starter du ved laget.",
+"I 3D"
+],
+[
+"Gå inn i et hus",
+"Trykk på et bygg i kartet (eller i 3D): panelet sier om bygget har en innside, og har knappen «Gå inn i huset». Da reiser du dit (spilltiden går så lenge turen tar), 3D bygges rundt huset, og du settes ved døra og går inn av deg selv. Går du selv: pila under siktet («Inngang 14 m» med en pil) peker mot nærmeste dør, også når døra er på andre siden av huset. Merket «Inngang» står over døra. Nær døra kommer knappen «Gå inn» – den går gjennom døra for deg. Inne kommer «Gå ut».",
+"I 3D"
+],
+[
+"Esc når du går",
+"Esc lukker først det som er åpent (sekken, lutpanelet, karakterarket, menyer). Et kort med valg går tilbake og venter. Er ingenting åpent, slipper Esc musa, og Esc en gang til flyr deg opp i lufta igjen.",
+"I 3D"
+],
+[
+"Kort som venter mens du går",
+"Mens du går selv, kommer ikke hendelseskortene midt i bildet. Øverst står i stedet «Et kort venter». Trykk på det (eller Enter på PC) for å se det nå – ellers kommer det når du slutter å gå.",
+"I 3D"
+],
+[
+"Snikemåleren",
+"Når en fiende er nær (under 700 m) og du går selv, står en måler under siktet: Skjult → Mistenkt (han har hørt eller sett noe) → Sett (han vet hvor du er og skyter). Linja under sier hvor nær han er. Gå på huk eller ligg (C/Z), hold deg i skog og mørke, og ikke løp, så tar det lenger tid før du blir sett.",
+"I 3D"
+],
+[
+"Været i 3D",
+"Toppstripa viser været: mens det skifter, står det for eksempel «Klart → regn», og himmelen i 3D blir gradvis grå i løpet av 25–45 spillminutter. Når det står «Regn», regner det også i 3D.",
+"Vær, lyd og bilde"
+],
+[
+"3D går tregt",
+"Tegner nettleseren 3D uten grafikkortet (programvare), kommer en liten lapp i hjørnet én gang: slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt. Rådet står også i loggen og på knappen «Grafikk» i ☰.",
+"Vær, lyd og bilde"
+],
+[
+"Se rundt på telefon",
+"Dra med én finger hvor som helst utenom styrespaken nede til venstre. En ring med piler følger fingeren og viser kursen (f.eks. 045°), så du ser at du snur deg. Styrespaken er bare rundt sirkelen nede til venstre.",
+"I 3D"
+],
+[
+"Når du reiser eller begynner å gå",
+"Mens du reiser (Reis hit / Gå inn i huset) står bildet i 3D stille, og bare tiden og karakteren går – det går mye fortere. Før du begynner å gå, bygges kartet rundt deg ferdig («Henter kartet rundt deg …»). På trege maskiner tegnes 3D i halv oppløsning mens du snur deg.",
+"I 3D"
+],
+[
+"Leiren i 3D",
+"En ny leir har telt, bål, kasser, oljefat og ved rundt flaggstanga fra første stund. Bygg som er under arbeid står som byggeplass: først stikker og snor, så grunnmur, reisverk, tak og kledning, med stillas rundt og materialer ved siden av – som i kartet.",
+"Leiren"
+],
+[
+"Angrep mens du går",
+"Mens du går selv, er angrepsbanneret én linje øverst med «Forsvar leiren», så det ikke dekker bildet.",
+"Lag og strid"
+]
 ]
