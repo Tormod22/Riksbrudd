@@ -12,7 +12,7 @@ module.exports = {
       if (!window.Morgen || !window.MorgenSpill || !MorgenSpill.tilstand() || !window.FolkSpill || !FolkSpill.tilstand() || !window.LeirSpill || !LeirSpill.tilstand()) { ut.feil.push('mangler moduler eller spill'); return ut; }
       const F = FolkSpill.tilstand(), L = LeirSpill.tilstand(), S = OppstartSpill.tilstand(), DB = window.DagbokSpill && DagbokSpill.tilstand();
       const før = { personer: F.personer.slice(), felt: F.personer.map(p => [p, p.oppgave, p.helse, p.borte, p.morgen]), mat: F.mat, moral: F.moral, frø: F.frø, neste: F.neste, penger: S.penger, lager: JSON.stringify(L.lager), diesel: L.drivstoff,
-        morgen: localStorage.getItem('riksbrudd-morgen'), dagbok: DB ? DB.liste.slice() : null, test: MorgenSpill.test, oppTest: window.OpplaeringSpill ? OpplaeringSpill.test : undefined };
+        morgen: localStorage.getItem('riksbrudd-morgen'), dagbokLS: localStorage.getItem('riksbrudd-dagbok'), dagbok: DB ? DB.liste.slice() : null, test: MorgenSpill.test, oppTest: window.OpplaeringSpill ? OpplaeringSpill.test : undefined };
       // kort fra tidligere vakter som står oppe, får stå (kortet står da i kortkøen) – vi trykker på knappene uansett
       const knapper = () => [...document.querySelectorAll('#morgenkort button')];
       const klikk = rx => { const b = knapper().find(q => rx.test(q.textContent)); if (b) b.click(); return !!b; };
@@ -63,6 +63,7 @@ module.exports = {
         F.personer = før.personer; for (const [p, o, h, b, m] of før.felt) { p.oppgave = o; p.helse = h; if (b === undefined) delete p.borte; else p.borte = b; if (m === undefined) delete p.morgen; else p.morgen = m; }
         F.mat = før.mat; F.moral = før.moral; F.frø = før.frø; F.neste = før.neste; S.penger = før.penger; L.lager = JSON.parse(før.lager); L.drivstoff = før.diesel;
         if (DB && før.dagbok) { DB.liste.length = 0; DB.liste.push(...før.dagbok); }
+        if (før.dagbokLS === null) localStorage.removeItem('riksbrudd-dagbok'); else localStorage.setItem('riksbrudd-dagbok', før.dagbokLS);
         if (før.morgen === null) localStorage.removeItem('riksbrudd-morgen'); else localStorage.setItem('riksbrudd-morgen', før.morgen); MorgenSpill.start(); MorgenSpill.lukk();
         if (LeirSpill.lagre) LeirSpill.lagre(); ut.tilbake = F.personer.length === før.personer.length && !F.personer.some(p => p.morgen);
       }
