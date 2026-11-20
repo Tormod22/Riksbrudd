@@ -18,6 +18,8 @@
     hofteY: .1, hofteZ: .92, kneZ: .5, livZ: .98, skulderY: .205, skulderZ: 1.42, albueZ: 1.13, hånd: .3, nakkeZ: 1.5,
     // hvor langt fra kameraet en figur får full detalj (m); kantene per detaljnivå står i NIVÅ under
     nærPC: 25, nærMobil: 18,
+    // høyst så mange figurer med full detalj samtidig (de nærmeste)
+    maksNærPC: 12, maksNærMobil: 6,
     // gangen (radianer): lårene, kneet, armene og albuen
     lår: .5, kne: .85, arm: .45, albue: .35,
     // knele (sårede): kroppen senkes så høyre kne står i bakken
@@ -230,15 +232,20 @@ void figur(inout vec3 p, inout vec3 n) {
       const A = { aGang: new THREE.InstancedBufferAttribute(new Float32Array(maks * 4), 4), aPose: new THREE.InstancedBufferAttribute(new Float32Array(maks * 4), 4), aFarge: new THREE.InstancedBufferAttribute(new Float32Array(maks * 4), 4) };
       for (const k in A) { A[k].setUsage(THREE.DynamicDrawUsage); g.setAttribute(k, A[k]); }
       const m = new THREE.InstancedMesh(g, materiale(), maks); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.count = 0; m.userData.kilde = kilde; m.userData.figur = true; R.scene.add(m); return { m, A, n: 0 }; };
-    const N = lag(true), F = lag(false), mob = typeof VW !== 'undefined' && VW < 700, nær2 = (mob ? REGLER.nærMobil : REGLER.nærPC) ** 2;
+    const N = lag(true), F = lag(false), mob = typeof VW !== 'undefined' && VW < 700, nær2 = (mob ? REGLER.nærMobil : REGLER.nærPC) ** 2, maksNær = mob ? REGLER.maksNærMobil : REGLER.maksNærPC;
+    // figurene innenfor nær-avstanden venter til slutt(): de nærmeste maksNær får full detalj, resten fjernnettet (en folkemengde rett ved
+    // deg skal ikke koste mer enn noen få detaljerte figurer). Gjenbrukte poster, ingen nye objekter per bilde.
+    const vent = [], post = () => ({ d: 0, e: new Float32Array(16), v: new Float32Array(12) }); let nv = 0;
+    const skriv = (T, e, v) => { const i = T.n++, k = i * 4; T.m.instanceMatrix.array.set(e, i * 16); T.A.aGang.array.set(v.subarray(0, 4), k); T.A.aPose.array.set(v.subarray(4, 8), k); T.A.aFarge.array.set(v.subarray(8, 12), k); };
     const fl = { maks, nær: N.m, fjern: F.m, scene: R.scene, n: 0,
-      start() { N.n = F.n = 0; fl.n = 0; },
+      start() { N.n = F.n = 0; fl.n = 0; nv = 0; },
       // m: THREE.Matrix4 (figurens plass, retning og størrelse). o: { fase, sving, sikte, bære, krum, kne, maske, barn, farger: [jakke, bukse, hår, hud] pakket }
-      legg(m, o) { if (fl.n >= maks) return -1; const e = m.elements, c = R.cam.position, dx = e[12] - c.x, dy = e[13] - c.y, dz = e[14] - c.z, T = dx * dx + dy * dy + dz * dz < nær2 ? N : F, i = T.n++; fl.n++;
-        m.toArray(T.m.instanceMatrix.array, i * 16); const g = T.A.aGang.array, p = T.A.aPose.array, f = T.A.aFarge.array, k = i * 4, fa = o.farger;
-        g[k] = o.fase || 0; g[k + 1] = o.sving || 0; g[k + 2] = o.sikte || 0; g[k + 3] = o.bære || 0; p[k] = o.krum || 0; p[k + 1] = o.kne || 0; p[k + 2] = o.maske || 0; p[k + 3] = o.barn || 0;
-        f[k] = fa[0]; f[k + 1] = fa[1]; f[k + 2] = fa[2]; f[k + 3] = fa[3]; return i; },
-      slutt() { for (const T of [N, F]) { T.m.count = T.n; T.m.instanceMatrix.needsUpdate = true; for (const k in T.A) T.A[k].needsUpdate = true; } },
+      legg(m, o) { if (fl.n >= maks) return false; fl.n++; const e = m.elements, c = R.cam.position, dx = e[12] - c.x, dy = e[13] - c.y, dz = e[14] - c.z, d = dx * dx + dy * dy + dz * dz;
+        const q = d < nær2 ? (vent[nv] || (vent[nv] = post())) : (fl.tmp || (fl.tmp = post())), v = q.v, fa = o.farger; if (d < nær2) nv++; q.d = d; q.e.set(e);
+        v[0] = o.fase || 0; v[1] = o.sving || 0; v[2] = o.sikte || 0; v[3] = o.bære || 0; v[4] = o.krum || 0; v[5] = o.kne || 0; v[6] = o.maske || 0; v[7] = o.barn || 0; v[8] = fa[0]; v[9] = fa[1]; v[10] = fa[2]; v[11] = fa[3];
+        if (d >= nær2) skriv(F, q.e, v); return true; },
+      slutt() { if (nv > maksNær) { const L = vent.slice(0, nv).sort((a, b) => a.d - b.d); for (let i = 0; i < nv; i++) skriv(i < maksNær ? N : F, L[i].e, L[i].v); } else for (let i = 0; i < nv; i++) skriv(N, vent[i].e, vent[i].v);
+        for (const T of [N, F]) { T.m.count = T.n; T.m.instanceMatrix.needsUpdate = true; for (const k in T.A) T.A[k].needsUpdate = true; } },
       synlig(v) { N.m.visible = F.m.visible = !!v; },
       antall: () => N.n + F.n, nærAntall: () => N.n,
       // trekanter per figur (nær, fjern)

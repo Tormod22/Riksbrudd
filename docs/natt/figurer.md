@@ -31,8 +31,12 @@ helt annet spill». ALLE TALL ER CLAUDES FORSLAG (samlet i `Figur3d.REGLER` og `
    underarm/fingre som kapsler, hender og føtter som ovale kuler, sekken avrundet med lokk og lommer, våpenet på ryggen/i hendene
    med avrundet kasse, forskjefte og kolbe. Leddene (grupper) og tredjeperson er uendret.
 5. **Ytelse**: to InstancedMesh per flokk (nær og fjern, samme materiale) = to tegnekall (før: fem for soldatene og fem for folkene).
-   Figurer nærmere enn 40 m (PC) / 26 m (telefon) får nær-nettet, resten fjern-nettet. Hver flokk tar bare med delene den bruker
-   (soldatene: hjelm, sekk, gevær; folkene: hår, langt hår, lue, sekk, kasse, gevær). Geometrien er indeksert (færre hjørner).
+   Figurer nærmere enn 25 m (PC) / 18 m (telefon) får nær-nettet, men høyst de 12 (PC) / 6 (telefon) nærmeste – resten fjern-nettet
+   (`REGLER.nærPC/nærMobil/maksNærPC/maksNærMobil`). Hver flokk tar bare med delene den bruker (soldatene: hjelm, sekk, gevær; folkene:
+   hår, langt hår, lue, sekk, kasse, gevær). Geometrien er indeksert. Skyggeleggeren regner sinus/cosinus én gang per vinkel for både
+   punktet og normalen, og hopper over overkroppens bøy når den er 0.
+6. **Soldatene i fiendens stillinger** (krig3d.js, liten og samlet endring): de tre soldatene bak vollen er den samme figuren – på kne og
+   siktende, hjelm, sekk og gevær, jakken i oliven med et skjær av sidens farge (`figurerRunde`). Uten Figur3d: kassene som før.
 
 ### Trekanter per figur (renderer-tall)
 | | før | nær PC | fjern PC | nær telefon | fjern telefon |
@@ -43,8 +47,27 @@ helt annet spill». ALLE TALL ER CLAUDES FORSLAG (samlet i `Figur3d.REGLER` og `
 (Folkenes nett har alle delene de kan bruke – hår, langt hår, lue, kasse, gevær – men bare én frisyre/lue vises; skjulte deler blir
 trekanter uten flate.)
 
-### Målt (SwiftShader, 1400 × 820, leiren med 14 voksne + 8 barn/gamle, 3 røverlag à 12 (36) + startlagene)
-FYLLES INN – se under.
+### Målt (SwiftShader – programvare-grafikk, delt maskin, medianer)
+Scenen: leiren med 14 voksne + 8 barn/gamle, 3 røverlag à 12 (36) ved leiren (ett står, ett går, ett skyter; én fallen og én såret)
++ startlagene. «Figurene alene» = bare figurnettene tegnes (resten av scenen skjult), minus et tomt bilde; 10 vekselvise målinger.
+Hele bildet med/uten figurene varierte mer enn forskjellen (maskinen deles av sju), så tallene under er figurene alene.
+Skript: scratchpad natt7/figurer/maal2.js (`R=<mappe>` for gammel kode, `DPR=1` på telefon).
+
+| | trekanter i figurene | tid for figurene alene |
+|---|---|---|
+| PC 1400 × 820, fra lufta (34 m), før | 106 848 | 108 ms |
+| PC, fra lufta, etter | 56 624 (alle i fjernnettet) | 95 ms |
+| PC, til fots midt i leiren og røverne, før | 106 848 | 167 ms |
+| PC, til fots, etter (25 m, uten tak på antallet nær) | 117 672 (52 nær) | 255 ms |
+| PC, til fots, etter (med tak 12 nær) | FYLLES INN | FYLLES INN |
+| Telefon 390 × 844 (DPR 1), fra lufta, før | 106 848 | 109 ms |
+| Telefon, fra lufta, etter | 51 692 | 77 ms |
+| Telefon, til fots, før | 106 848 | 109 ms |
+| Telefon, til fots, etter (18 m, uten tak) | 81 622 (36 nær) | 126 ms |
+
+JavaScript per bilde for alle figurene (soldater3d + folk3d-kroken): ca. 0,1 ms både før og etter.
+Hvorfor ikke raskere per trekant: bevegelsen regnes nå i skyggeleggeren for hvert hjørne (før: armene/beina til folkene som matriser i
+JavaScript), og programvare-grafikken regner hjørnene på prosessoren. På et grafikkort er dette lite – der teller trekantene og punktene.
 
 ### Filer
 - NY `site/dovre-fliser/spill/figur3d.js` (reglene øverst uten DOM, visningen under), test `pipeline/fliser/test_figur3d.js`.
@@ -52,7 +75,8 @@ FYLLES INN – se under.
 - Endret (mine): `spill/folk3d.js` (tegningen – bevegelsen/målene er som før), `soldater3d()` i index.html, `spill/narhud.js`
   (bare `vmGeo` og try/catch rundt den).
 - FELLESFILER endret: `index.html` (soldater3d() byttet ut, samlet; skripttaggen for figur3d.js rett etter folk3d.js),
-  `spill/karakter.js` (byggFigur/våpenDeler: hjelperne kap/kx/drei og formene – ellers uendret), `pipeline/fliser/vakter/natur.js`
+  `spill/karakter.js` (byggFigur/våpenDeler: hjelperne kap/kx/drei og formene – ellers uendret), `spill/krig3d.js` (figurer():
+  kameraets plass i nøkkelen og `figurerRunde`; frigjør/antall kjenner `G.figFlokk`), `pipeline/fliser/vakter/natur.js`
   (soldatene har nå to nett i stedet for fem: `R.solMesh.length >= 1` i stedet for `=== 5`).
 
 ### API
@@ -68,8 +92,8 @@ i flokken øker med 10, laget foran havner i nær-nettet når kameraet er nede (
 folkene i leiren er figurer (antall = personer + barn/gamle), ett bilde uten GL-feil, programmet «figur3d» finnes, og alt tas bort igjen.
 
 ### Ikke gjort
-- Folk på fortauene i byene (liv3d.js) og soldatene i stillingene (krig3d.js) er fortsatt de gamle formene – ikke mine filer. De kan
-  bruke `Figur3d.flokk` direkte (samme API som soldater3d).
+- Folk på fortauene i byene (liv3d.js) er fortsatt de gamle formene – ikke min fil. Den kan bruke `Figur3d.flokk` direkte (samme API
+  som soldater3d).
 - Ingen egne ansikter/hender med fingre på figurene (bare på karakteren din), ingen ansiktsuttrykk.
 - Skyggen: figurene kaster ikke skygge (som før – lys3d bestemmer), og ville kastet den i grunnstillingen (ingen egen dybdeskygge-
   legger for bevegelsen).

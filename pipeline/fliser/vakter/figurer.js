@@ -32,7 +32,9 @@ module.exports = {
         const etter = tellNå(); ut.inst = { før, etter }; krev(fl && fl.antall() === førN + 10, 'antall figurer: ' + (fl && fl.antall()) + ' (ventet ' + (førN + 10) + ')');
         // laget foran kameraet havner i nær-nettet når kameraet er nede ved bakken (ellers i fjernnettet), laget 300 m unna i fjernnettet
         const bakke = (hoyde3d(nær.x, nær.y) - u.h0) * R.EX, nærVent = Math.hypot(8, 8, c.z - bakke) < (VW < 700 ? F.REGLER.nærMobil : F.REGLER.nærPC); ut.nærVent = nærVent;
-        krev(nærVent ? etter[0] - før[0] >= 6 && etter[1] - før[1] >= 4 : etter[1] - før[1] >= 10, 'nær/fjern: ' + JSON.stringify(ut.inst));
+        // (høyst maksNær figurer får full detalj – de nærmeste – resten går til fjernnettet)
+        const maksNær = VW < 700 ? F.REGLER.maksNærMobil : F.REGLER.maksNærPC;
+        krev(etter[0] + etter[1] === før[0] + før[1] + 10 && etter[0] <= maksNær && (nærVent ? etter[0] >= Math.min(før[0] + 6, maksNær) : etter[1] - før[1] >= 10), 'nær/fjern: ' + JSON.stringify(ut.inst));
         // stillingen: noen sikter (1), én kneler, én ligger uten gevær, og fire går
         let sikter = 0, kneler = 0, utenGevær = 0, går = 0;
         for (const m of R.solMesh) { const A = m.geometry.attributes, gA = A.aGang.array, pA = A.aPose.array;
