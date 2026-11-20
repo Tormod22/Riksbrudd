@@ -220,8 +220,9 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.
       if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
   // (runde 8, telefonkritikeren: «varselboksen nede til venstre ligger over kompasset og målestokken») – på telefon står brikkene over
   // nordpila, målestokken og kildeteksten (de som står nede til venstre), ikke oppå dem
+  // (runde 10) også over opplæringsruta når den står nede til venstre (de lå oppå hverandre på liggende telefon)
   function løftVarsler() { if (!document.body.classList.contains('kort')) { if (varsler.style.bottom) varsler.style.bottom = ''; return; }
-    let topp = Infinity; for (const id of ['nordpil', 'skala', 'kilde']) { const e = $(id); if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue; const r = e.getBoundingClientRect(); if (r.left < 220 && r.height > 0 && r.top > innerHeight / 2) topp = Math.min(topp, r.top); }
+    let topp = Infinity; for (const id of ['nordpil', 'skala', 'kilde', 'opplaering']) { const e = $(id); if (id === 'opplaering' && e && !e.classList.contains('på')) continue; if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue; const r = e.getBoundingClientRect(); if (r.left < 220 && r.height > 0 && r.top > innerHeight / 2) topp = Math.min(topp, r.top); }
     const b = topp < Infinity ? Math.round(innerHeight - topp + 6) + 'px' : ''; if (varsler.style.bottom !== b) varsler.style.bottom = b; }
   setInterval(() => { tegnVarsler(); løftVarsler(); }, 1000);
   // ---------- (runde 8) samme skrift på navnelappene i 3D ----------
