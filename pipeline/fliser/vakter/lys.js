@@ -175,10 +175,26 @@ module.exports = {
           ut.r7 = r7;
         }
       } catch (e) { ut.feil.push('unntak (runde 7): ' + (e && e.message || e)); }
+      // RUNDE 7: gresset rundt deg settes i biter (gressG i index.html) – like tuster i små biter og i ett strekk
+      try {
+        const R = typeof R3 !== 'undefined' && R3;
+        if (R && R.ut && R.ut.bunn && typeof på3d !== 'undefined' && på3d && !R.bygger && typeof gressG === 'function' && window.Gange && (!window.KVAL || KVAL.p.gress > 0)) {
+          const gikk = !!R.fot; if (!gikk) Gange.start();
+          try {
+            R.gressSenter = null; R.gressJobb = null; gress3d(); let biter = 1; while (R.gressJobb && biter < 20000) { gressBit(R, .5); biter++; }
+            const m = R.gressMesh, kopi = () => ({ n: m.count, M: m.instanceMatrix.array.slice(0, m.count * 16), C: m.instanceColor ? m.instanceColor.array.slice(0, m.count * 3) : null });
+            const A = kopi(); R.gressSenter = null; R.gressJobb = null; m.count = 0; gress3d(); if (R.gressJobb) gressBit(R, Infinity); const B = kopi();
+            const lik = (a, b) => { if (!a || !b || a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
+            ok(A.n === B.n && lik(A.M, B.M) && lik(A.C, B.C), `gresset i biter er ulikt gresset i ett strekk (${A.n} / ${B.n} tuster)`);
+            if (A.n > 0) { ok(biter > 2, `gresset ble ikke satt i biter (${biter})`); const K = A.M.slice(); K[12] += .5; ok(!lik(K, B.M), 'selvtest: en flyttet tust ble ikke sett'); }
+            ut.gress = { tuster: A.n, biter };
+          } finally { if (!gikk) Gange.stopp(); }
+        }
+      } catch (e) { ut.feil.push('unntak (gresset): ' + (e && e.message || e)); }
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };
