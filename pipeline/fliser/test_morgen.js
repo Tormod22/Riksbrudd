@@ -50,6 +50,9 @@ ok(vern && vern.valg[0].pris === 2.5e6 && /2,5 mill\. kr/.test(vern.valg[0].t), 
 const kar = [...Array(40)].map((_, i) => M.storBeslutning(grunn, rekke(i + 5), null)).find(s => s && s.id === 'karavane');
 ok(kar && kar.valg.find(v => v.id === 'kjøp').pris === Math.round((500 * 3000 + 30 * 3000) * .7 / 1e4) * 1e4 && kar.valg.some(v => v.id === 'selg') && kar.valg.some(v => v.id === 'nei'), 'karavanen: pakken til 70 % av prisen, kjøper tre');
 
+const karTom = [...Array(60)].map((_, i) => M.storBeslutning({ ...grunn, dieselPlass: 0, diesel: 0 }, rekke(i + 21), null)).find(s => s && s.id === 'karavane');
+ok(karTom && karTom.valg[0].diesel === 0 && /^Kjøp 30 rasjoner \(/.test(karTom.valg[0].t) && karTom.valg[0].pris === Math.round(30 * 3000 * .7 / 1e4) * 1e4, 'karavanen uten dieseltank: bare mat, og prisen bare for maten: ' + (karTom && karTom.valg[0].t));
+
 // --- utfallet neste morgen ---
 const to = [{ navn: 'Kari Lien', ferd: { hogst: 1 } }, { navn: 'Per Holm', ferd: { hogst: 1.45 } }];
 const j = M.utfall({ id: 'jakt', folk: to }, { årstid: 'sommer' }, fast(.5));

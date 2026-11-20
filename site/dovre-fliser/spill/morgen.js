@@ -75,7 +75,7 @@
       if (s.post) legg(5.5, { id: 'post', t: `Ta et risikabelt oppdrag: røverposten (${kr(s.post.gir)})`, følge: `Røverposten ${s.post.meter >= 1000 ? des(s.post.meter / 1000) + ' km' : Math.round(s.post.meter / 10) * 10 + ' m'} mot ${s.post.retning} kommer i kartet. Send en tropp dit: farlig, men godt betalt.`, oppdrag: s.post.id });
       else if (kan) legg(5, { id: 'leie', t: 'Lei ut to som vakter til en nabogård', følge: `To er borte i dag. I morgen: ${kr(R.leie.penger[0])}–${kr(R.leie.penger[1])} – men omtrent hver tredje gang kommer en av dem såret hjem, og en sjelden gang ikke i det hele tatt.` });
     }
-    if (kan && s.arbeidsføre >= R.folkNok) legg(3, { id: 'speid', t: `Send to på speidertur mot ${s.sted || 'nærmeste tettsted'}`, følge: 'To er borte i dag. I morgen melder de når røverne kommer neste gang, og tar med det de finner av mat og materialer.' });
+    if (kan && s.arbeidsføre >= R.folkNok) legg(3, { id: 'speid', t: s.sted ? `Send to på speidertur mot ${s.sted}` : 'Send to på speidertur rundt leiren', sted: s.sted || null, følge: 'To er borte i dag. I morgen melder de når røverne kommer neste gang, og tar med det de finner av mat og materialer.' });
     if (s.folk > 0 && s.moral < R.lavMoral) legg(4 + (R.lavMoral - s.moral) / 10, { id: 'fri', t: 'Fridag for alle', følge: `Moralen stiger (+${R.fri.moral} i dag), men alt arbeid går halvt så fort i dag.` });
     if (s.folk > 0 && s.moral >= R.godMoral) legg(2, { id: 'skift', t: 'Ekstra skift i dag', følge: `Alt arbeid går ${Math.round((R.skift.tempo - 1) * 100)} % raskere i dag, men folk blir slitne (moral ${R.skift.moral} i dag).` });
     // for få: fyll på med fridag/ekstra skift (det som passer moralen)
@@ -101,9 +101,11 @@
     if ((s.bølge || 0) >= 1 && s.røverTimer > 3 && s.penger >= vernPris) mulige.push({ id: 'vern', tittel: 'Røverne vil ha betalt', tekst: `En budbærer fra røverne: betal, så lar de dere være i fred et døgn lenger enn ellers. Neste bølge ventes om ca. ${Math.round(s.røverTimer)} timer.`,
       valg: [{ id: 'betal', t: `Betal ${kr(vernPris)}`, følge: `Neste bølge kommer ett døgn senere. Kassa går ned med ${kr(vernPris)}.`, pris: vernPris },
         { id: 'nei', t: 'Nekt', følge: `Folk liker at dere står imot (moral +${R.vern.nektMoral}). Røverne kommer som før.` }] });
-    const pakke = Math.round((R.karavane.diesel * (s.dieselPris || 0) + R.karavane.mat * (s.matPris || 0)) * R.karavane.rabatt / 1e4) * 1e4, treSalg = Math.round(R.karavane.tre * (s.trePris || 0) * R.karavane.trePris / 1e3) * 1e3;
+    // dieselen i pakken: bare så mye som får plass i tankene (hele 50 l; under 50 l: bare mat)
+    const dl = Math.max(0, Math.min(R.karavane.diesel, Math.floor(((s.dieselPlass || 0) - (s.diesel || 0)) / 50) * 50));
+    const pakke = Math.round((dl * (s.dieselPris || 0) + R.karavane.mat * (s.matPris || 0)) * R.karavane.rabatt / 1e4) * 1e4, treSalg = Math.round(R.karavane.tre * (s.trePris || 0) * R.karavane.trePris / 1e3) * 1e3;
     const kv = [];
-    if (s.penger >= pakke && pakke > 0) kv.push({ id: 'kjøp', t: `Kjøp ${R.karavane.diesel} l diesel og ${R.karavane.mat} rasjoner (${kr(pakke)})`, følge: `Omtrent ${Math.round((1 - R.karavane.rabatt) * 100)} % billigere enn markedet. Dieselen får plass bare så langt tanken rekker.`, pris: pakke });
+    if (s.penger >= pakke && pakke > 0) kv.push({ id: 'kjøp', t: dl ? `Kjøp ${dl} l diesel og ${R.karavane.mat} rasjoner (${kr(pakke)})` : `Kjøp ${R.karavane.mat} rasjoner (${kr(pakke)})`, følge: `Omtrent ${Math.round((1 - R.karavane.rabatt) * 100)} % billigere enn markedet.` + (dl < R.karavane.diesel ? ' Dere har ikke plass til mer diesel (bygg en dieseltank).' : ''), pris: pakke, diesel: dl });
     if ((s.lager && s.lager.tre || 0) >= R.karavane.tre && treSalg > 0) kv.push({ id: 'selg', t: `Selg ${R.karavane.tre} m³ tre (${kr(treSalg)})`, følge: `Bedre betalt enn på markedet (${Math.round((R.karavane.trePris - 1) * 100)} % mer).`, pris: treSalg });
     if (kv.length) mulige.push({ id: 'karavane', tittel: 'En handelskaravane', tekst: 'En karavane med lastebiler har slått leir ved vegen i dag. De selger billig og kjøper tre.', valg: kv.concat([{ id: 'nei', t: 'Ingen handel', følge: 'Karavanen drar videre i kveld.' }]) });
     const valg = mulige.filter(m => m.id !== sist);
@@ -125,7 +127,7 @@
       else u.tekst = `${og(navn)} holdt vakt for nabogården og kom hjem med ${kr(u.penger)}.`; }
     else if (p.id === 'speid') { u.tre = Math.round(mellom(rng, R.speid.tre) * 10) / 10; u.stål = Math.round(mellom(rng, R.speid.stål) * 10) / 10; u.mat = Math.round(mellom(rng, R.speid.mat));
       if (f.length && rng() < R.speid.skade) { u.skadet.push(hvem().navn); u.helse = R.speid.helse; }
-      const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei.' : `De så røverne samle seg: neste angrep kommer om ca. ${Math.max(1, Math.round(o.røverTimer))} timer.`;
+      const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei.' : `De så røverne samle seg: neste angrep kommer om ca. ${Math.max(1, Math.round(o.røverTimer))} ${Math.max(1, Math.round(o.røverTimer)) === 1 ? 'time' : 'timer'}.`;
       u.tekst = `Speiderne er tilbake fra ${p.sted || 'turen'}. ${røv} De fant ${u.mat} rasjoner, ${des(u.tre)} m³ tre` + (u.stål > 0 ? ` og ${des(u.stål)} t stål.` : '.') + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} vrikket foten.` : ''); }
     else if (p.id === 'tankbil') { const T = R.tankbil.fots; if (rng() < T.lykkes) { u.diesel = Math.round(mellom(rng, T.diesel) / 10) * 10; u.tekst = `${og(navn)} fant tankbilen og bar hjem ${u.diesel} l diesel i kanner.`; }
       else u.tekst = `${og(navn)} fant tankbilen, men noen hadde tømt den før dem.`;

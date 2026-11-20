@@ -69,7 +69,7 @@
         ut.push(o ? `Røverposten står fortsatt (frist om ${Math.max(1, Math.round((o.frist - tid) / 60))} t). Send en tropp dit.` : 'Røverposten er ikke lenger i lista (tatt eller utløpt).'); if (o) S.planer2.push(p); continue; }
       if (p.id === 'vern') { ut.push(T.bølge > p.bølge ? 'Røverne holdt ikke avtalen – de angrep likevel.' : 'Røverne holdt avtalen: ingen angrep i natt.'); continue; }
       if (p.id === 'nabo') { let B = null; try { B = l && f ? FR().behov(f, l, FolkSpill.valg ? FolkSpill.valg() : {}) : null; } catch (e) { B = null; }
-        ut.push(`De nye fra nabogården har funnet seg til rette.` + (B && B.utenSeng ? ` ${B.utenSeng} mangler seng – bygg en brakke, ellers faller moralen.` : '')); continue; }
+        ut.push(`De nye fra nabogården har funnet seg til rette.` + (B && B.utenSeng ? ` Leiren har senger til ${Math.max(0, B.senger)} av ${B.n + B.avh} – bygg brakker, ellers faller moralen.` : '')); continue; }
       if (!['jakt', 'leie', 'speid', 'tankbil'].includes(p.id)) continue;
       const u = M.utfall({ ...p, folk }, { årstid: (rot.VAER && VAER.årstid) || 'sommer', røverTimer: T.timer }, Math.random);
       for (const q of folk) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
@@ -88,7 +88,7 @@
   // ---------- valgene ----------
   function brukDag(v) { const f = F(), l = L(), Lb = LB(); let t = '';
     if (v.id === 'jakt') { const p = sendUt('jakt', 'hogst'); t = p ? `${og(p.navn.map(fornavn))} går på jakt og fiske. De er tilbake i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
-    else if (v.id === 'speid') { const p = sendUt('speid', 'frakt', { sted: v.t.replace(/^.* mot /, '') }); t = p ? `${og(p.navn.map(fornavn))} drar på speidertur. De melder fra i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
+    else if (v.id === 'speid') { const p = sendUt('speid', 'frakt', { sted: v.sted || null }); t = p ? `${og(p.navn.map(fornavn))} drar på speidertur. De melder fra i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'leie') { const p = sendUt('leie', 'vakt'); t = p ? `${og(p.navn.map(fornavn))} holder vakt for en nabogård i dag. Betalingen kommer i morgen.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'kjøp') { const r = FR().kjøpMat(f, R.kjøp, OppstartSpill.betal, rot.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1); t = r.feil ? r.feil : `Kjøpte ${r.rasjoner} rasjoner for ${kr(r.pris)}.`; }
     else if (v.id === 'rasjon') { S.effekter.push({ kilde: 'rasjon', mat: R.rasjon.mat, moral: R.rasjon.moral }); t = 'Halve rasjoner i dag. Folk murrer, men maten rekker lenger.'; }
@@ -122,8 +122,8 @@
         else { utsett(T); S.vernTil = T.nesteSpill; S.planer.push({ id: 'vern', folk: [], bølge: T.bølge || 0 }); t = `Dere betalte røverne ${kr(v.pris)}. Neste angrep kommer et døgn senere enn ventet.`; } }
       else { f.moral = Math.min(100, f.moral + R.vern.nektMoral); t = 'Dere nektet å betale røverne. Folk er stolte av det.'; } }
     else if (st.id === 'karavane') { if (v.id === 'kjøp') { if (!OppstartSpill.betal(v.pris)) t = `Ikke nok penger (${kr(v.pris)}).`;
-        else { const plass = Math.max(0, (Lb.kapasitet ? Lb.kapasitet(l) : 0) - (l.drivstoff || 0)), d = Math.min(R.karavane.diesel, Math.floor(plass)); l.drivstoff = (l.drivstoff || 0) + d; f.mat += R.karavane.mat;
-          t = `Kjøpte ${R.karavane.mat} rasjoner og ${d} l diesel av karavanen for ${kr(v.pris)}.` + (d < R.karavane.diesel ? ` Resten av dieselen fikk ikke plass i tanken.` : ''); } }
+        else { const plass = Math.max(0, (Lb.kapasitet ? Lb.kapasitet(l) : 0) - (l.drivstoff || 0)), ønsket = v.diesel === undefined ? R.karavane.diesel : v.diesel, d = Math.min(ønsket, Math.floor(plass)); l.drivstoff = (l.drivstoff || 0) + d; f.mat += R.karavane.mat;
+          t = `Kjøpte ${R.karavane.mat} rasjoner${d ? ` og ${d} l diesel` : ''} av karavanen for ${kr(v.pris)}.` + (d < ønsket ? ` ${ønsket - d} l fikk ikke plass i tanken.` : ''); } }
       else if (v.id === 'selg') { if ((l.lager.tre || 0) < R.karavane.tre) t = 'Dere har ikke nok tre lenger.'; else { l.lager.tre -= R.karavane.tre; OppstartSpill.gi(v.pris); t = `Solgte ${R.karavane.tre} m³ tre til karavanen for ${kr(v.pris)}.`; } }
       else t = 'Ingen handel i dag. Karavanen drar videre.'; }
     return t; }
@@ -163,7 +163,7 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort #morgenkort butto
       K.valg.forEach((v, i) => kort.append(knappEl(v.t, v.følge, () => velg(i))));
       kort.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
     } else {
-      const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, K.valgt)));
+      const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, 'I dag: ' + K.valgt)));
       kort.append(el('div', { klasse: 'mstor' }, el('h3', {}, 'Viktig beslutning: ' + st.tittel), el('p', {}, st.tekst)));
       st.valg.forEach((v, i) => kort.append(knappEl(v.t, v.følge, () => velgStor(i))));
     }
@@ -186,11 +186,13 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort #morgenkort butto
     const igår = hjem(); S.planer = S.planer2; delete S.planer2; S.dag = d;
     // et kort som aldri ble besvart (spilleren lukket ikke), regnes som «ingen endring»
     if (S.kort && !S.kort.ferdig) { S.kort.ferdig = true; lukk(); }
+    // dagbokas rapport for i dag (før gårsdagens utfall skrives inn i dagboka)
+    const db = rot.DagbokSpill && DagbokSpill.siste ? DagbokSpill.siste() : null;
     for (const t of igår) { logg('Morgenmøtet: ' + t); if (rot.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(t); }
     const nå = snapOppgjør(); let oppgjør = null; try { if (S.oppFør && nå && rot.Oppgjor) { const r = Oppgjor.tekst(S.oppFør, nå); oppgjør = r ? r.tekst : null; } } catch (e) { oppgjør = null; } S.oppFør = nå;
     if (!(auto() || tving)) { lagre(); return { igår }; }
     const s = situasjon(); if (!s || !s.folk) { lagre(); return { igår }; }
-    const rapport = [], db = rot.DagbokSpill && DagbokSpill.siste ? DagbokSpill.siste() : null;
+    const rapport = [];
     if (db) rapport.push(db); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
     let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
     S.kort = { dag: d, rapport, valg: M.dagensValg(s, Math.random).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };
