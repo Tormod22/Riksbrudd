@@ -40,7 +40,8 @@
 
   // ---------- sett forsvaret ----------
   // (19. nov) retningen fra dem du kjenner til; ellers fra startstedet i varselet (så banneret og varselet sier det samme, og ikke røper hvor de er)
-  function retningMotFienden() { const L = leir(), r0 = røvere(); if (r0.length) { const k = r0.filter(e => kjent(e)), r = k.length ? k.map(e => ({ x: e.x, y: e.y })) : r0.map(e => e.fra || e);
+  // (runde 8) inne i leiren sier stedet ingenting om retningen («fra sørøst» ble «fra sørvest» når de kom inn): da står den forrige
+  function retningMotFienden() { const L = leir(), r0 = røvere(); if (r0.length) { const k = r0.filter(e => kjent(e) && Math.hypot(e.x - L.x, e.y - L.y) > R.mot.inne), r = k.length ? k.map(e => ({ x: e.x, y: e.y })) : r0.some(e => kjent(e)) ? null : r0.map(e => e.fra || e); if (!r) return sistV;
       const x = r.reduce((a, e) => a + e.x, 0) / r.length, y = r.reduce((a, e) => a + e.y, 0) / r.length; sistV = Math.atan2(y - L.y, x - L.x); } return sistV; }
   function leirvakt(plass) { const F = folk(), L = leir(); if (!F || vakt || !window.FolkRegler) return null; const vakter = F.personer.filter(p => p.oppgave === 'vakt' && FolkRegler.arbeidsfør(p)), n = FO.vaktStørrelse(vakter.length); if (!n) return null;
     const s = nyttLag('Leirvakta', plass ? plass.x : L.x + 12, plass ? plass.y : L.y, 'blå'); s.menn = vakter.slice(0, n).map((p, i) => ({ navn: p.navn, rolle: i === 0 ? 'lagfører' : 'rifle', hp: 1, loy: p.lojal || .7, person: p.id })); s.leder = 0; s.leirvakt = true; s.strid = { ...HOLD, bev: 'standard' }; s.forsvar = plass || { x: s.x, y: s.y, voll: false };
@@ -125,7 +126,7 @@ body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5
   // Ved starten tas et øyeblikksbilde (friske og falne hos oss, byggene, angriperne). Når angrepet er over, kommer én rapport (Forsvar.sluttRapport):
   // i loggen, og (ikke i testene) i banneret til du lukker den, også når det skjer under spoling – og ⏭ stopper («angrepet er over»).
   let fra = null, rapportNå = null; const gitt = new Set();
-  const blåTall = () => { const nå = ENHETER.filter(e => e.side === 'blå' && !e.karakter && Array.isArray(e.menn)); return { friske: nå.reduce((a, s) => a + s.menn.filter(m => m.hp >= 1).length, 0), falne: nå.reduce((a, s) => a + s.menn.filter(m => m.hp <= 0).length, 0) }; };
+  const blåTall = () => { const nå = ENHETER.filter(e => e.side === 'blå' && Array.isArray(e.menn)); return { friske: nå.reduce((a, s) => a + s.menn.filter(m => m.hp >= 1).length, 0), falne: nå.reduce((a, s) => a + s.menn.filter(m => m.hp <= 0).length, 0) }; };
   const byggNå = () => (window.LeirSpill && LeirSpill.tilstand() ? LeirSpill.tilstand().bygg.map(b => [b.id, b.hp]) : []);
   const hend = (type, tekst) => { if (!auto()) return; try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
   function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; }

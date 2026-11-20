@@ -52,4 +52,10 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
   ok(!E.aktiv(), 'rammen er ferdig etter tegnAlle');
   E.regel(t => (t === 'skjul meg' ? false : undefined)); E.nullstill(); E.tekst(g, 'skjul meg', 10, 10, 1); E.tekst(g, 'vis meg', 10, 10, 1); g.fillText('vis meg', 10, NaN); tegnet.length = 0; E.tegnAlle(g);
   ok(!tegnet.some(q => q[1] === 'skjul meg') && tegnet.some(q => /vis/.test(q[1])), 'en regel kan skjule et navn'); }
+// (runde 8) to fiendelag på nesten samme sted, omringet av merker og andre navn: lappene legges ikke oppå hverandre – den ene slås sammen («+1»)
+{ const L = []; for (let i = 0; i < 12; i++) L.push({ t: 'egen' + i, x: 100 + (i % 3) * 10, y: 40 + Math.floor(i / 3) * 15, w: 60, h: 15, retning: -1, prio: 3, nr: i });
+  L.push({ t: 'Kystalliansens 3. lag · nå', x: 100, y: 100, w: 140, h: 15, retning: 1, prio: 6, nr: 20 }, { t: 'Kystalliansens 4. lag · nå', x: 110, y: 100, w: 140, h: 15, retning: 1, prio: 6, nr: 21 });
+  const H = []; for (let k = -8; k <= 8; k++) H.push({ r: [0, 100 + k * 15 - 12, 300, 14], prio: 9, tekst: false });
+  E.plasser(L, H); const vis = L.filter(q => q.vis && q.prio === 6), over = (a, b) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
+  ok(vis.length >= 1 && !vis.some((a, i) => vis.some((b, j) => j > i && over(a.ramme, b.ramme))) && vis.reduce((a, q) => a + q.flere, 0) + vis.length === 2, 'to fiendelag nær hverandre: ingen lapper oppå hverandre, den ene står som «+1»'); }
 process.exit(feil ? 1 : 0);

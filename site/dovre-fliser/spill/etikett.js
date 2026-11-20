@@ -21,6 +21,8 @@
     tving: 4,
     // høyst så mange linjer opp eller ned fra plassen sin
     linjer: 2,
+    // (runde 8) så mange linjer til (opp eller ned) et viktig navn prøver før det slås sammen med navnet det ville ligget oppå
+    ekstra: 3,
     // luft mellom et navn og et merke ved siden av (px)
     side: 6,
     // skjulte lag/kjøretøy innen så mange punkter fra et navn som står, telles som «+3» etter det
@@ -64,19 +66,22 @@
   function plasser(lapper, hindringer, R = REGLER) {
     const rek = lapper.slice().sort((a, b) => b.prio - a.prio || a.nr - b.nr), satt = [];
     const ledig = (r, utenTekst, minPrio) => !satt.some(q => over(r, q.ramme)) && !hindringer.some(o => (!utenTekst || !o.tekst) && over(r, o.r));
-    for (const L of rek) { L.vis = false; L.tvunget = false; const K = kandidater(L, R), h = L.h || LINJE;
+    for (const L of rek) { L.vis = false; L.tvunget = false; L.sammen = null; const K = kandidater(L, R), h = L.h || LINJE;
       let funnet = null;
       for (const [x, y] of K) { const r = ramme(x, y, L.w, h); if (ledig(r, false)) { funnet = [x, y, r]; break; } }
       // de viktigste kan stå oppå kartnavnene (byer, bruer), men ikke oppå merker eller andre lag
       if (!funnet && L.prio >= R.tving) for (const [x, y] of K) { const r = ramme(x, y, L.w, h); if (ledig(r, true)) { funnet = [x, y, r]; break; } }
-      if (!funnet && L.prio >= R.tving) { funnet = [L.x, L.y, ramme(L.x, L.y, L.w, h)]; L.tvunget = true; }
+      // (runde 8, krig: to fiendelag nær hverandre fikk lappene oppå hverandre) et viktig navn som ikke får plass: prøv flere linjer opp og ned;
+      // ligger det fortsatt oppå et annet navn, slås det sammen med det («+1» etter navnet som står) i stedet for å legges oppå
+      if (!funnet && L.prio >= R.tving) for (let k = R.linjer + 1; k <= R.linjer + R.ekstra && !funnet; k++) for (const d of [L.retning < 0 ? -1 : 1, L.retning < 0 ? 1 : -1]) { const y = L.y + d * k * h, r = ramme(L.x, y, L.w, h); if (ledig(r, true)) { funnet = [L.x, y, r]; break; } }
+      if (!funnet && L.prio >= R.tving) { const r0 = ramme(L.x, L.y, L.w, h), q = satt.find(o => over(r0, o.ramme)); if (q) { L.sammen = q; continue; } funnet = [L.x, L.y, r0]; L.tvunget = true; }
       if (!funnet) continue;
       L.vis = true; L.px = funnet[0]; L.py = funnet[1]; L.ramme = funnet[2]; satt.push(L); }
     // skjulte navn rett ved et navn som står (samme sted på skjermen, langt ute): «+3» etter det, så du vet at det er flere der
     // (bare lag og kjøretøy – ikke tettsteder, leiren, bygg og steder)
     const P = R.prio, enhet = p => p === P.kjøretøy || p === P.egne || p === P.valgt || p === P.fiende;
     for (const L of satt) L.flere = 0;
-    for (const L of lapper) { if (L.vis || !enhet(L.prio)) continue; let best = null, bd = R.klynge;
+    for (const L of lapper) { if (L.vis) continue; if (L.sammen) { L.sammen.flere++; continue; } if (!enhet(L.prio)) continue; let best = null, bd = R.klynge;
       for (const q of satt) { if (!enhet(q.prio)) continue; const d = Math.hypot(q.x - L.x, (q.y + q.retning * 16) - (L.y + L.retning * 16)); if (d < bd) { bd = d; best = q; } }
       if (best) best.flere++; }
     return lapper; }
