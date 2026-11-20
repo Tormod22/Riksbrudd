@@ -39,7 +39,10 @@
     const EX = (typeof R3 !== 'undefined' && R3 && R3.EX) || 1, krav = [], t0 = performance.now();
     for (const b of biter) Veg.skjærKrav(b.B, b.w, Array.from(b.h, z => z / EX + u.h0), krav);
     if (børPuste()) await pust();
-    const låst = u.hus && u.hus.omriss && typeof nærHus === 'function' ? (i, j) => nærHus(u, -u.S + i * u.steg, u.S - j * u.steg) : null;
+    // et gitterpunkt nærmere et hus enn ca. 0,6 rute + 2 m senkes ikke: bakken mellom punktene er lineær, så et senket punkt et stykke
+    // fra huset drar også bakken ved husveggen ned (huset ville stått på en sokkel av luft)
+    const sh = u.steg * .6, låst = u.hus && u.hus.omriss && typeof nærHus === 'function' ? (i, j) => { const x = -u.S + i * u.steg, y = u.S - j * u.steg;
+      return nærHus(u, x, y) || nærHus(u, x + sh, y + sh) || nærHus(u, x - sh, y + sh) || nærHus(u, x + sh, y - sh) || nærHus(u, x - sh, y - sh); } : null;
     const vekter = [Veg.bilineær(u.N, u.steg, -u.S, u.S)]; if (typeof nett3d === 'function') vekter.push(nettVekter(u));
     const endret = typeof kjørAsynk === 'function' ? await kjørAsynk(Veg.skjærG(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter)) : Veg.skjær(u.H, u.N, u.steg, -u.S, u.S, krav, låst, Veg.SKJÆR, vekter);
     u.nett = null;

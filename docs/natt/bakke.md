@@ -13,7 +13,7 @@ Oppdraget: (1) vegbanen lå i høyden til det HØYESTE punktet under den, så i 
   - `skjærKrav(P, w, h)`: kravene [x, y, z] på tvers (vegbanen og 0,9 m utenfor kanten = skulderen).
   - `skjær(H, N, steg, x0, y1, krav, låst, R, vekter)` / `skjærG` (generator, yield for hvert 2000. krav): senker høydegitteret så bakken
     ligger under hvert krav. Kaczmarz: et krav som brytes, fordeles på punktene etter vekten. Bare punkter som ligger OVER vegbanen senkes,
-    og aldri under den, høyst maksSkjær + 1 m; låste punkter (inntil hus) senkes ikke. Uten «aldri under vegbanen» dro et punkt med vekt på
+    og aldri under den, høyst maksSkjær + 1 m; låste punkter senkes ikke (liv3d.js: nærmere et hus enn ca. 0,6 rute + 2 m – ellers sto huset på en sokkel av luft). Uten «aldri under vegbanen» dro et punkt med vekt på
     begge sider av vegen hele bakken ned (prøvd: bakken 2,4 m under midten av vegen – vegen sto like høyt som før).
   - `bilineær(N, steg, x0, y1)` (vekter for gitteret), `tversMaks(P, w, z)` (høyeste punkt på tvers uten glatting), `senket(endret, …)`.
 - `spill/liv3d.js` (bygg3d-kroken): alle vegbitene samles først (`biter2`), får `senterHøyder`, så `skjærBakken(u, biter)`: kravene
