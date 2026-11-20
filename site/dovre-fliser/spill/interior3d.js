@@ -600,7 +600,7 @@
     try { for (;;) { const r = j.it.next(), n = performance.now(), navn = r.done ? 'slutt' : r.value; j.steg[navn] = Math.max(j.steg[navn] || 0, n - t); t = n;
       if (r.done) { ferdig = true; o = r.value; break; } if (n >= frist) break; } }
     catch (e) { console.warn('interiør:', e); ferdig = true; o = null; }
-    j.biter++; j.ms += t - t0; j.lengst = Math.max(j.lengst, t - t0);
+    j.biter++; j.ms += t - t0; j.lengst = Math.max(j.lengst, t - t0); R.nærtNr = (R.nærtNr || 0) + 1;
     if (!ferdig) return;
     jobb = null;
     if (!o) { j.P.utenInne = true; return; }

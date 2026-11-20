@@ -624,3 +624,15 @@ Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `
   uten mellomtabeller, nærKant, ruter/inniR/nærKantR. Samme planer (prøvd mot den gamle fila for 1008 bygg).
 - Mine: `spill/interior3d.js`, `spill/lut-visning.js` (bare 3D-tingene: mal/tingMal/våpenMal, 4 ms per runde), `pipeline/fliser/vakter/lys.js`,
   `pipeline/fliser/test_interior_biter.js` (ny), `docs/natt/lys-hjelp.json` («Jevnt når du går inn i hus»).
+
+### Prøvd i nettleser (runde 7)
+- Dovre-testsiden, PC 1400 × 820: gammel mot ny interior3d.js for seks prøvebygg – likt verdi for verdi (se over); gammel mot ny gress3d
+  på tre steder – likt; vakta lys med 3D på: grønn på 20 s (interiøret i 14 biter, gresset i 25 biter, 12 000 tuster).
+- Telefon 390 × 844: vakta lys grønn på 22,6 s (runde 7-delen 4,1 s: interiøret i 11 biter, gresset 5000 tuster i 14 biter).
+- Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8915 node pipeline/fliser/sjekk.js`, kl. 01:04, før de to siste små endringene i
+  interior3d.js – kassen uten mellomtabeller og tømmingen – som er prøvd i Node og med vakta etterpå): 119 ok, 0 FEIL, 700 s. Vakta lys
+  tok 231 s der (skyggene tegnes tre ganger med programvare-grafikk i telefonens oppløsning under last ca. 20 – runde 7-delen er ca. 4 s).
+  `interiør` og `interiør i leirens bygg` i sjekk.js grønne (de kaller oppdater(true) og bygger i ett strekk som før).
+- Bilder (scratchpad `natt7/lys/`): `inne-før-PC.png` og `inne-etter-PC.png` (inne i prøvehuset, samme utsikt – kjøkkenet gjennom døra,
+  gresset utenfor vinduet), `inne-etter-mobil.png`. Huset er likt; gresset utenfor står litt annerledes fordi det settes rundt kameraet
+  der jobben startet (i det nye kommer det noen bilder senere).

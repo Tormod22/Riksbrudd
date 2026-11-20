@@ -2510,7 +2510,7 @@ function gress3d() {
   R.gressSenter = [c.x, c.y];
   R.gressJobb = { u, m, it: gressG(R, u, m, c.x, c.y) }; gressBit(R, 4);
 }
-function gressBit(R, ms) { const J = R.gressJobb, slutt = performance.now() + ms; while (!J.it.next().done) if (performance.now() > slutt) return; if (R.gressJobb === J) R.gressJobb = null; }
+function gressBit(R, ms) { const J = R.gressJobb, slutt = performance.now() + ms; R.nærtNr = (R.nærtNr || 0) + 1; while (!J.it.next().done) if (performance.now() > slutt) return; if (R.gressJobb === J) R.gressJobb = null; }
 // Samme regning som før (samme tilfeldighet i samme rekkefølge), men i midlertidige tallrekker som legges inn når alt er regnet.
 function* gressG(R, u, m, cx, cy) {
   const c = { x: cx, y: cy }, T = m.userData.tmp || (m.userData.tmp = { M: new Float32Array(m.instanceMatrix.count * 16), C: new Float32Array(m.instanceMatrix.count * 3), F: new Float32Array(m.instanceMatrix.count) });
@@ -3360,13 +3360,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=b14f8480dc"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
-<script src="/dovre-fliser/spill/ytelse.js?v=b4890b7d18"></script>
+<script src="/dovre-fliser/spill/ytelse.js?v=845f0a5982"></script>
 <script src="/dovre-fliser/spill/dyr.js?v=a132dce7d5"></script>
 <script src="/dovre-fliser/spill/dyr3d.js?v=c98ba036b6"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=19519c5762"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=e8570f9124"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=c0c590e3cb"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>

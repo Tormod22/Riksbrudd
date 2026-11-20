@@ -42,4 +42,7 @@ ok(Y.stedFraStakk('pusterom@https://x/norge:1417:60\npust@https://x/norge:1423:7
 { const t = Y.hakkTekst([], [{ dt: 300, hva: 'bygging', sted: 'a → b' }, { dt: 200, hva: 'bygging', sted: 'a → b' }, { dt: 90, hva: 'bygging', sted: 'c → d' }], 800, 20);
   ok(/Hvor i koden/.test(t) && /  500 ms, 2, 300 ms: a → b\n  90 ms, 1, 90 ms: c → d/.test(t), 'hakk: summen per sted, tyngst først'); }
 ok(/Ingen pauser over 50 ms/.test(Y.hakkTekst([], [], 1200, 20)), 'hakk: uten pauser sier rapporten at bildet gikk jevnt');
+// (20. nov) pauser mens husenes innside eller gresset ble laget får sin egen linje
+{ const t = Y.hakkTekst([], [{ dt: 80, hva: 'nært' }, { dt: 60, hva: 'ellers' }], 900, 20);
+  ok(/mens innsiden av et hus eller gresset rundt deg ble laget: 1 \(lengste 80 ms\)/.test(t) && /ellers: 1/.test(t), 'hakk: egen linje for innsiden av hus og gresset'); }
 process.exit(feil ? 1 : 0);
