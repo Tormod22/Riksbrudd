@@ -730,3 +730,25 @@ med en Proxy i siden) og hvem som lager mest i det hele tatt (heap-sampling med 
    natt3d.js (lysflekkene) leser tallene rett fra tabellen (samme verdier; `fi` er `undefined` når `per = 4`, som før).
 9. Pust: vegetasjon3d.js (einer/vier/fjellbjørk på åpen mark – løkka over rutene hadde ingen), bunnfargen i bygg3d i striper på 256 rader
    (512 tok 35–40 ms per stripe).
+
+### Likt før og etter
+- **Alle nettene i scenen** (scratchpad `natt9/lys/fp.js` + `cmpfp.js`, Stavanger, utsnitt 3,0 km, 327–329 nett fra 16–18 kilder: bakken,
+  husene, vegene, bruene, kysten, gatemøblene, trærne …): avtrykk av alle attributter og indekser bit for bit. Gammel kode (644ecfa) mot
+  ny: 0 ulike nett. Ny kode, samme utsnitt bygget på nytt etter et annet (lagrene fulle av gamle tall): 0 ulike. (Røyken i liv3d, dyrenes
+  gange og ferjas kjølvann endrer seg fra bilde til bilde også i den gamle koden og er tatt ut av sammenligningen.)
+- **Vakta** (se under) med ekte data i Stavanger (scratchpad `natt9/lys/vakt-rog.js`): husene 549 940 trekanter, 13 vegnett og 35 bruer
+  like med tallrekkene, med brukt plass og med vanlige lister; flaten = PlaneGeometry; hindringene i biter like (16 494 ruter).
+
+### Vakt (pipeline/fliser/vakter/lys.js, runde 9-delen – bare med 3D på)
+- `Tallrekke.Rekke` med plass fra lageret som er fylt med søppel, gir de samme tallene som `new Float32Array(liste)`; lageret er under grensa.
+- `hus3d`, `Liv3d.byggVeger` og `Infra3d.lagGeo` bygges tre ganger på utsnittet: tallrekkene, tallrekkene igjen (brukt plass) og
+  `Tallrekke.Rekke.på = false` (vanlige lister som før) – alle attributter og indekser sammenlignes bit for bit, med selvtest (et flyttet
+  hushjørne og et flyttet veghjørne blir sett). Dovre-testsiden har ingen husdata: da lages en prøveflis med 14 bygg (alle typer, rektangel,
+  L-form og rundt bygg) midt i utsnittet (`hentFlis` byttes ut for laget «hus» mens prøven går); i byer med over 400 hus brukes også
+  prøveflisa (hele byen tre ganger tok 12 minutter med programvare-grafikk). Utsnittets egenskaper og brumodellenes søyler settes tilbake,
+  nettene frigjøres, og bildene tegnes ikke mens prøven går (renderer.render settes tilbake i finally).
+- `planG` = `THREE.PlaneGeometry` (289, 225 og 4 punkt per side: tall, indekstype, type og parameters) og `hindringerG` i biter =
+  `hindringer` i ett strekk (samme ruter, samme ting i samme rekkefølge).
+- Prøvd på Dovre-testsiden (PC 1400 × 820): grønn, runde 9-delen 0,5 s («prøvehus 556 trekanter, 7 vegnett, 0 bruer, flaten =
+  PlaneGeometry, hindringene i biter like»). I Stavanger var runde 9-delen grønn, men runde 7-delen («prøvehuset fikk ikke interiør på den
+  ekte veien») feilet der – den kjører i en by full av ekte hus som ligger nærmere; på Dovre-testsiden (der sjekk.js kjører den) er den grønn.

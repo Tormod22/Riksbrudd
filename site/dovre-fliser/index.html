@@ -2840,9 +2840,10 @@ async function lastOppIBiter(data, W, R, kilde, utenAniso) {
     if (!utenAniso) tex.anisotropy = r.capabilities.getMaxAnisotropy();
     r.initTexture(tex);
     const glTex = r.properties.get(tex).__webglTexture; if (!glTex) throw new Error('ingen tekstur');
-    for (let y0 = 0; y0 < W; y0 += 256) {
+    // (runde 9: 128 rader om gangen – 256 rader av 4096 tok 60–135 ms på testmaskinen)
+    for (let y0 = 0; y0 < W; y0 += 128) {
       if (børPuste()) await pust();
-      const y1 = Math.min(W, y0 + 256);
+      const y1 = Math.min(W, y0 + 128);
       r.state.bindTexture(gl.TEXTURE_2D, glTex);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, W - y1, W, y1 - y0, gl.RGBA, gl.UNSIGNED_BYTE, data.subarray(y0 * W * 4, y1 * W * 4));
@@ -3352,7 +3353,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=259dda2ea8"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=07968fde8f"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=893c94a5df"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=7542ed10af"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=99245979f9"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>

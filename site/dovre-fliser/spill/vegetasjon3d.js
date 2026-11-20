@@ -21,15 +21,18 @@
   const iVann = (u, x, y) => { if (u.iBekk && u.iBekk(x, y)) return true; const D = vannData(u); if (!D.W) return false; const i = Math.floor((x + u.S) / (2 * u.S) * D.W), j = Math.floor((u.S - y) / (2 * u.S) * D.W);
     return i >= 0 && j >= 0 && i < D.W && j < D.W && D.d[(j * D.W + i) * 4] > 127; };
   // avstand til nærmeste vann i meter, i et rutenett på 256 × 256 (to omganger med «chamfer»-avstand)
-  function vannAvstand(u) {
+  // (runde 9: som generator – yield for hver 32. rad og mellom omgangene; 50 ms i ett strekk i Stavanger. vannAvstand = den kjørt i ett.)
+  function vannAvstand(u) { return kjørRett(vannAvstandG(u)); }
+  function* vannAvstandG(u) {
     const D = vannData(u), G = 256, c = 2 * u.S / G, A = new Float32Array(G * G).fill(1e9);
     if (D.W) { const st = D.W / G;
-      for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { let v = false;
+      for (let j = 0; j < G; j++) { if ((j & 31) === 31) yield; for (let i = 0; i < G; i++) { let v = false;
         for (let b = 0; b < st && !v; b += Math.max(1, st >> 2)) for (let a = 0; a < st && !v; a += Math.max(1, st >> 2)) if (D.d[((Math.floor(j * st + b)) * D.W + Math.floor(i * st + a)) * 4] > 127) v = true;
-        if (v) A[j * G + i] = 0; } }
-    const d2 = c * Math.SQRT2;
+        if (v) A[j * G + i] = 0; } } }
+    yield; const d2 = c * Math.SQRT2;
     for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const k = j * G + i; let v = A[k];
       if (i) v = Math.min(v, A[k - 1] + c); if (j) { v = Math.min(v, A[k - G] + c); if (i) v = Math.min(v, A[k - G - 1] + d2); if (i < G - 1) v = Math.min(v, A[k - G + 1] + d2); } A[k] = v; }
+    yield;
     for (let j = G - 1; j >= 0; j--) for (let i = G - 1; i >= 0; i--) { const k = j * G + i; let v = A[k];
       if (i < G - 1) v = Math.min(v, A[k + 1] + c); if (j < G - 1) { v = Math.min(v, A[k + G] + c); if (i < G - 1) v = Math.min(v, A[k + G + 1] + d2); if (i) v = Math.min(v, A[k + G - 1] + d2); } A[k] = v; }
     return (x, y) => { const i = Math.max(0, Math.min(G - 1, Math.floor((x + u.S) / c))), j = Math.max(0, Math.min(G - 1, Math.floor((u.S - y) / c))); return A[j * G + i]; };
@@ -61,7 +64,7 @@
     // andel myr og hei i de ni rutene rundt (ca. 100 × 100 m)
     const rundt = (X, Y) => { let myr = 0, hei = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const k = klasse(X + a * kv.r, Y + b * kv.r); if (k === 6) myr++; else if (k === 2 || k === 0) hei++; } return [myr / 9, hei / 9]; };
     const helning = (X, Y) => { const dx = hoyde3d(X + 6, Y, u) - hoyde3d(X - 6, Y, u), dy = hoyde3d(X, Y + 6, u) - hoyde3d(X, Y - 6, u); return Math.atan(Math.hypot(dx, dy) / 12) * 180 / Math.PI; };
-    await pust(); const vann = vannAvstand(u), tg = V.tregrense(u.cy, u.cx), ut = {}; for (const k of V.REKKE) ut[k] = []; await pust();
+    await pust(); const vann = await kjørAsynk(vannAvstandG(u)), tg = V.tregrense(u.cy, u.cx), ut = {}; for (const k of V.REKKE) ut[k] = []; await pust();
     let arb = 0;
     for (const kilde of ['gran', 'løv']) { const d = u.trær[kilde];
       for (let k = 0; k < d.length; k += 5) {
@@ -386,6 +389,8 @@
   window.Vegetasjon3d = {
     // vegRuteAsynk(veger): som Vegetasjon.vegRute, i biter (vakta lys sammenligner svarene)
     vegRuteAsynk,
+    // vannAvstandG(u): avstanden til vann som generator (runde 9; vakta lys: i biter = i ett strekk)
+    vannAvstandG,
     treslag: () => { const R = r3(); const s = new Set(); if (R && R.treMesh) for (const m of R.treMesh) { const g = m.geometry, a = m.userData.treslag || (g === TREGEO.gran || g === TREGEO.granEnkel ? 'gran' : g === TREGEO['løv'] || g === TREGEO['løvEnkel'] ? 'løv' : null); if (a && m.count > 0) s.add(a); } return [...s]; },
     antall: () => { const R = r3(), u = R && R.ut; if (!u || !u.trær) return {}; return Object.fromEntries(Object.entries(u.trær).map(([k, v]) => [k, v.length / 5])); },
     // utvalg: [x, y, art] for trær (alle slag) og planter (blomster, bregner, siv) slik de står i scenen nå

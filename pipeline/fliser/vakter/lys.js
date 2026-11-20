@@ -286,6 +286,10 @@ module.exports = {
           if (typeof hindringerG === 'function') { const a = hindringer(u), b = await kjørAsynk(hindringerG(u)); let lik = a.size === b.size;
             for (const [k, l] of a) { const m = b.get(k); if (!m || m.length !== l.length || l.some((o, i) => (o.P || o.x) !== (m[i].P || m[i].x) || o.y !== m[i].y)) { lik = false; break; } }
             ok(lik && [...a.keys()].join() === [...b.keys()].join(), 'hindringene i biter er ulike'); r9.hindre = a.size; }
+          // avstanden til vann (vegetasjon3d) i biter med pust = i ett strekk, i 2000 punkter
+          if (window.Vegetasjon3d && Vegetasjon3d.vannAvstandG) { const a = kjørRett(Vegetasjon3d.vannAvstandG(u)), b = await kjørAsynk(Vegetasjon3d.vannAvstandG(u)); let f = 11, ulik = 0;
+            for (let q = 0; q < 2000; q++) { f = (f * 16807) % 2147483647; const x = (f / 2147483647 * 2 - 1) * u.S; f = (f * 16807) % 2147483647; const y = (f / 2147483647 * 2 - 1) * u.S; if (!Object.is(a(x, y), b(x, y))) ulik++; }
+            ok(!ulik, `avstanden til vann i biter er ulik (${ulik} av 2000)`); r9.vann = true; }
           } finally { rr.render = tegn0; }
           ut.r9 = r9;
         } else ut.r9ut = 'uten 3D';
@@ -294,7 +298,7 @@ module.exports = {
       return ut;
     });
     const ok = r.feil.length === 0;
-    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : '', r.r9 ? `tallrekkene gir like nett (${r.r9.prøveHus ? 'prøvehus' : 'hus'} ${Math.round(r.r9.hus || 0)} trekanter, ${r.r9.vegnett || 0} vegnett, ${r.r9.bruer || 0} bruer${r.r9.plan ? ', flaten = PlaneGeometry' : ''}${r.r9.hindre ? ', hindringene i biter like' : ''}; ${(r.ms9 / 1000).toFixed(1)} s)` : r.r9ut ? `tallrekkene: ${r.r9ut}` : ''].filter(Boolean).join(', ');
+    const r4 = [r.normaler ? 'normaler i biter like' : '', r.vegRute ? `vegRute i biter lik (${r.vegRute.veger} veger)` : '', r.tekstur ? 'kartbildet i striper likt lerretet' : '', r.grense ? 'grensemasken riktig' : '', r.hindring ? 'hindring3d med boks lik' : '', r.natt ? `lysflekkene på plass (${r.natt.lys})` : '', r.r7 ? `interiøret i ${r.r7.biter} biter likt det i ett strekk (${r.r7.hus ? r.r7.hus.trekanter : '?'} trekanter, lengste bit ${Math.round(r.r7.lengst || 0)} ms), hviler og kommer tilbake` : '', r.gress ? `gresset i ${r.gress.biter} biter likt (${r.gress.tuster} tuster)` : r.gressUt ? `gresset ikke prøvd (${r.gressUt})` : '', r.ms7 !== undefined ? `runde 7 på ${(r.ms7 / 1000).toFixed(1)} s` : '', r.r9 ? `tallrekkene gir like nett (${r.r9.prøveHus ? 'prøvehus' : 'hus'} ${Math.round(r.r9.hus || 0)} trekanter, ${r.r9.vegnett || 0} vegnett, ${r.r9.bruer || 0} bruer${r.r9.plan ? ', flaten = PlaneGeometry' : ''}${r.r9.hindre ? ', hindringene i biter like' : ''}${r.r9.vann ? ', avstanden til vann i biter lik' : ''}; ${(r.ms9 / 1000).toFixed(1)} s)` : r.r9ut ? `tallrekkene: ${r.r9ut}` : ''].filter(Boolean).join(', ');
     return { ok, tekst: ok ? `lys og skygger (${profil}): ${r.i3d ? 'skygger, fargesetting, bakke, tåke og skyer slås på og av uten GL-feil' : 'innstillingene virker (3D var av – skyggene ble ikke prøvd)'}${r4 ? '; ' + r4 : ''}` : 'lys og skygger: ' + r.feil.join('; '), data: r };
   },
 };
