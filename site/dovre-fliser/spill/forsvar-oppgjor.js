@@ -20,7 +20,13 @@
     const deler = [], ferdig = b => (b.bølge || 0) - (b.aktiv ? 1 : 0);
     const nyeFerdig = Math.max(0, ferdig(nå) - ferdig(før)), nyeHerjet = Math.max(0, (nå.herjet || 0) - (før.herjet || 0)), slått = Math.max(0, nyeFerdig - nyeHerjet);
     if (slått) deler.push(slått === 1 ? `bølge ${ferdig(nå) - nyeHerjet} slått tilbake` : `${slått} bølger slått tilbake`);
-    if (nyeHerjet) deler.push(nyeHerjet === 1 ? 'røverne slapp unna (herjet eller sabotasje)' : `røverne slapp unna ${nyeHerjet} ganger (herjet eller sabotasje)`);
+    // (runde 12, kritiker F: «Røverne slapp unna (herjet eller sabotasje)» er uklart) – si hva som skjedde: herjet = røverne kom inn i
+    // leiren og tok med seg bytte; sabotasje = sabotører gjorde skade og kom seg unna. Gamle bilder uten «slapp» får den gamle summen.
+    const nyeSab = Number.isFinite(nå.slapp) && Number.isFinite(før.slapp) ? Math.max(0, Math.min(nyeHerjet, nå.slapp - før.slapp)) : null;
+    if (nyeHerjet && nyeSab === null) deler.push(nyeHerjet === 1 ? 'røverne kom seg unna – de herjet i leiren eller fikk gjort sabotasje' : `røverne kom seg unna ${nyeHerjet} ganger – de herjet i leiren eller fikk gjort sabotasje`);
+    else if (nyeHerjet) { const herj = nyeHerjet - nyeSab;
+      if (herj) deler.push(herj === 1 ? 'røverne kom inn i leiren og dro med bytte' : `røverne kom inn i leiren og dro med bytte ${herj} ganger`);
+      if (nyeSab) deler.push(nyeSab === 1 ? 'sabotører gjorde skade og slapp unna' : `sabotører gjorde skade og slapp unna ${nyeSab} ganger`); }
     if (nå.aktiv) deler.push(`bølge ${nå.aktiv} pågår`);
     const såret = Math.max(0, (nå.såret || 0) - (før.såret || 0)), falne = Math.max(0, (nå.falne || 0) - (før.falne || 0)), ute = Math.max(0, (nå.slåttUt || 0) - (før.slåttUt || 0));
     if (såret || falne) deler.push([såret ? `${såret} ${såret === 1 ? 'ny såret' : 'nye sårede'}` : '', falne ? `${falne} falt` : ''].filter(Boolean).join(', '));
@@ -30,14 +36,33 @@
     if (ødelagt.length) deler.push(`${ødelagt.length > REGLER.maksBygg ? ødelagt.length + ' bygg' : ødelagt.join(', ')} ødelagt`);
     if (skadet) deler.push(`${skadet} ${skadet === 1 ? 'bygg' : 'bygg'} skadet`);
     const hus = Math.max(0, (nå.hus || 0) - (før.hus || 0)); if (hus) deler.push(`${hus} ${hus === 1 ? 'hus' : 'hus'} gjennomsøkt`);
-    const folk = (nå.folk || 0) - (før.folk || 0); if (folk) deler.push(folk > 0 ? `${folk} ${folk === 1 ? 'ny' : 'nye'} i gjengen` : `${-folk} har dratt`);
+    // (runde 12, kritiker F: «2 har dratt» sier ikke hvem eller hvorfor) – med navnene i bildene: hvem som gikk inn i en tropp, døde/falt
+    // eller forlot gjengen (lav moral når folk.js telte dem i F.borte); uten navn (gamle bilder) som før
+    if (Array.isArray(før.navn) && Array.isArray(nå.navn)) deler.push(...folkTekst(før, nå));
+    else { const folk = (nå.folk || 0) - (før.folk || 0); if (folk) deler.push(folk > 0 ? `${folk} ${folk === 1 ? 'ny' : 'nye'} i gjengen` : `${-folk} har forlatt leiren`); }
     const hendte = deler.length;
     const stor = s => s.charAt(0).toUpperCase() + s.slice(1);
     let t = hendte ? 'Siste døgn: ' + deler.map(stor).join('. ') + '.' : 'Siste døgn: Et rolig døgn.';
     if (nå.folk > 0 && Number.isFinite(nå.matDøgn)) t += ` Mat til ${des(Math.max(0, nå.matDøgn))} døgn${nå.matDøgn < 2 ? ' – kjøp eller skaff mat' : ''}.`;
     return { tekst: t, hendte };
   }
-  const api = { REGLER, tekst };
+  const og = l => (l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' og ' + l[l.length - 1]);
+  const kort = l => (l.length > 4 ? og([...l.slice(0, 3), `${l.length - 3} til`]) : og(l));
+  // folkTekst(før, nå): før/nå.navn = navnene i folket; nå.tropp = { navn: lagnavn } (folk som står i en tropp), nå.døde = { navn: 'falt'|'døde' }
+  // (lista over døde i Samfunn), før/nå.borte = folk.js sin teller for dem som har forlatt gjengen fordi moralen var for lav
+  function folkTekst(før, nå) {
+    const ut = [], nå1 = new Set(nå.navn), før1 = new Set(før.navn), gått = før.navn.filter(n => !nå1.has(n)), nye = nå.navn.filter(n => !før1.has(n));
+    const tropp = {}, falt = [], døde = [], dro = [];
+    for (const n of gått) { const t = nå.tropp && nå.tropp[n], d = nå.døde && nå.døde[n];
+      if (t) (tropp[t] = tropp[t] || []).push(n); else if (d === 'falt') falt.push(n); else if (d) døde.push(n); else dro.push(n); }
+    for (const [t, l] of Object.entries(tropp)) ut.push(`${kort(l)} gikk inn i ${t}`);
+    if (falt.length) ut.push(`${kort(falt)} falt`);
+    if (døde.length) ut.push(`${kort(døde)} døde`);
+    if (dro.length) { const moral = Math.max(0, (nå.borte || 0) - (før.borte || 0)); ut.push(`${kort(dro)} forlot gjengen` + (moral >= dro.length ? ' fordi moralen var for lav' : moral ? ' (lav moral eller annen grunn)' : '')); }
+    if (nye.length) ut.push(`${kort(nye)} ${nye.length === 1 ? 'er ny' : 'er nye'} i gjengen`);
+    return ut;
+  }
+  const api = { REGLER, tekst, folkTekst };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Oppgjor = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -59,8 +84,15 @@
     return { bølge: T.bølge || 0, aktiv: T.aktiv || 0, herjet: (T.herjet || 0) + slapp, friske: menn.filter(m => m.hp >= 1).length, såret: menn.filter(m => m.hp > 0 && m.hp < 1).length, falne: menn.filter(m => m.hp <= 0).length,
       slåttUt: egne.filter(e => !levende(e) || (rot.Terreng && Terreng.slattUt(e.menn))).length,
       bygg: L ? L.bygg.filter(b => !b.del && !(b.igjen > 0)).map(b => ({ id: b.id, navn: Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type, hp: Math.round((b.hp === undefined ? 1 : b.hp) * 100) / 100 })) : [],
-      hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, folk: F ? F.personer.length : 0, mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };
+      hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, folk: F ? F.personer.length : 0, slapp, ...hvem(F), mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };
   }
+  // (runde 12) navnene i folket, hvem som står i en tropp nå, og hvem som er døde (Samfunn) – så oppgjøret kan si hvem og hvorfor
+  function hvem(F) { if (!F) return {}; const tropp = {}, døde = {};
+    for (const e of ENHETER) if (e.side === 'blå' && !e.karakter && !e.leirvakt && Array.isArray(e.menn)) for (const m of e.menn) if (m.hp > 0 && m.navn) tropp[m.navn] = e.navn;
+    const S = rot.SamfunnSpill && SamfunnSpill.tilstand ? SamfunnSpill.tilstand() : null;
+    if (S) { for (const d of S.døde || []) døde[d.navn] = d.hvem === 'soldat' ? 'falt' : 'døde'; for (const n of S.gravlagte || []) if (!døde[n]) døde[n] = 'døde'; }
+    for (const e of ENHETER) if (e.side === 'blå' && Array.isArray(e.menn)) for (const m of e.menn) if (m.hp <= 0 && m.navn) døde[m.navn] = 'falt';
+    return { navn: F.personer.map(p => p.navn), tropp, døde, borte: F.borte || 0 }; }
   const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: leirId(), d: S })); } catch (e) { /* fullt eller sperret */ } };
   function start() { const id = leirId(); if (!id) return; let d = null; try { const o = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); d = o && o.leir === id ? o.d : null; } catch (e) { d = null; }
     S = d && d.før && Number.isFinite(d.dag) ? d : { dag: dag(tid), før: bilde() }; klar = true; lagre(); }

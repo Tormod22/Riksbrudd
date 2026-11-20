@@ -55,7 +55,8 @@
   function slett(id) { try { LS.rå.del(plassNøkkel(id)); } catch (e) { /* sperret */ } return { ok: true }; }
   // automatisk kopi (hvert tiende minutt med spilling, og før et annet spill lastes inn)
   let sistAuto = 0; { const a = plass(AUTO); if (a && a.laget) sistAuto = a.laget; }
-  const taAuto = (navn) => lagreHer(AUTO, navn || `Automatisk: ${(spill() && spill().fraksjon && spill().fraksjon.navn) || 'spillet'}`);
+  // (runde 12, kritiker F: «Automatisk: Automatisk: Kritikerlauget») raden har alt tittelen «Automatisk», så navnet er bare fraksjonen
+  const taAuto = (navn) => lagreHer(AUTO, navn || ((spill() && spill().fraksjon && spill().fraksjon.navn) || 'spillet'));
   // Laster inn en plass eller en fil (plass-objekt fra hentFil). lastInn: false bytter bare nøklene (vakten) – ellers lastes siden på nytt.
   function last(kilde, o = {}) {
     const lastInn = o.lastInn !== false, pl = typeof kilde === 'string' ? plass(kilde) : kilde;
@@ -151,7 +152,7 @@
   function melding(t, feil) { meldingEl.textContent = t || ''; meldingEl.classList.toggle('feil', !!feil); }
   // én rad: id, plass (eller null), tittel
   function rad(id, p, tittel) {
-    const tom = !p, ødelagt = p && p.ødelagt, i = p && !ødelagt ? p.info : null, navn = p && !ødelagt ? p.navn : '';
+    const tom = !p, ødelagt = p && p.ødelagt, i = p && !ødelagt ? p.info : null, navn = p && !ødelagt ? String(p.navn || '').replace(new RegExp('^' + tittel + ':\\s*'), '') : '';
     if (spør && spør.id === id) {
       const T = { slett: [`Slette «${navn}»?`, 'Ja, slett', 'fare'], last: [`Laste «${navn}»? Spillet du har nå, legges i «Automatisk» først, så du kan gå tilbake.`, 'Ja, last', 'ja'],
         over: [`Skrive over «${navn}» med spillet du har nå?`, 'Ja, lagre', 'ja'] }[spør.hva];

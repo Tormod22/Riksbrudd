@@ -113,5 +113,15 @@ ok(L0.BYGG.kjøkken && L0.kostnad('kjøkken').pris === 3e6 && L0.PRIORITET.inclu
   ok(b.igjen === 0 && F.personer.length === 3 && F.moral > 40 && !F0.kanRekruttere(F, L), 'gjengen bygger brakke igjen og kan rekruttere videre (moral ' + Math.round(F.moral) + ')');
   // en gammel lagring med tom gjeng og moral 5 (låst før rettelsen) kommer også løs
   const G = F0.fraJSON({ personer: [], moral: 5, mål: 5, mat: 0, neste: 11, frø: 7 }); ok(F0.rekrutter(G, L0.ny(), tomKasse).person && G.moral >= F0.R.nødMoral, 'gammel lagring med tom gjeng og moral 5: kan rekruttere'); }
+// (runde 12) falne og sårede: tekstene uten dobling, og de falne går ut av folket
+{ const kar = { navn: 'Kari Kritiker (deg)', karakter: true }, lv = { navn: 'Leirvakta' };
+  ok(F0.treffTekst({ navn: 'Kari Kritiker', rolle: 'lagfører' }, kar, 'såret') === 'Du er såret.', 'karakteren: «Du er såret.» – ikke navnet to ganger');
+  ok(F0.treffTekst({ navn: 'Håkon Rønning', rolle: 'rifle' }, lv, 'falt') === 'Håkon Rønning (Leirvakta) er falt.', 'soldat: «Håkon Rønning (Leirvakta) er falt.»');
+  ok(F0.treffTekst({ navn: 'Silje Berg', rolle: 'lagfører' }, lv, 'såret', 'av granaten') === 'Silje Berg (lagfører i Leirvakta) er såret av granaten.', 'lagfører med årsak');
+  ok(F0.falneTekst(['Håkon Rønning', 'Silje Berg'], 'Leirvakta') === 'Håkon Rønning og Silje Berg (Leirvakta) har falt.', 'to falne i én linje');
+  const G = F0.ny(5), n = G.personer.length, id = G.personer[2].id, p = F0.fjern(G, id);
+  ok(p && p.id === id && G.personer.length === n - 1 && !G.personer.some(q => q.id === id), 'fjern: den falne er ute av folket');
+  ok(F0.fjern(G, id) === null && G.personer.length === n - 1, 'fjern to ganger tar ikke en til');
+  ok(F0.personId({ person: 7 }) === 7 && F0.personId({ person: { id: 7 } }) === null && F0.personId({}) === null, 'personId: bare Leirvaktas tall peker inn i folket'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for folk.js er ok');
 process.exit(feil ? 1 : 0);

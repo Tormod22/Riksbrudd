@@ -269,19 +269,17 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     if (u.ødelagt && window.LeirSpill) { if (LeirSpill.oppdater3d) LeirSpill.oppdater3d(); if (LeirSpill.lagre) LeirSpill.lagre(); skitten = true; }
     if (u.hendelser.length || u.kort) lagre();
   });
-  // hvert sekund: kort, panel, falne soldater, mekanikeren
+  // hvert sekund: kort, panel, mekanikeren
   setInterval(() => {
     if (!S || !spill()) return; const f = F(); if (!f) return;
-    if (auto()) { soldater(); mekaniker(); }
+    if (auto()) mekaniker();
     visKort();
     if (åpen && !(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis();
   }, 1000);
-  // soldater som faller i egne lag skal også tas farvel med
-  function soldater() {
-    const sett = new Set(); for (const s of ENHETER) if (s.side === 'blå' && !s.karakter) for (const m of s.menn || []) if (m.hp <= 0 && m.navn) sett.add(s.navn + '|' + m.navn);
-    if (falne) for (const n of sett) if (!falne.has(n)) { SR.død(S, n.split('|')[1], 'soldat', S.klokke || 0); logg(`${n.split('|')[1]} (${n.split('|')[0]}) er falt. Ta farvel i Samfunn-panelet.`); lagre(); }
-    falne = sett;
-  }
+  // soldater som faller i egne lag skal også tas farvel med. (runde 12) Det er folk-visning.js (FolkSpill.falne) som ser hvem som
+  // falt – én gang per mann, med én linje i loggen – og som tar dem ut av folket; her blir de bare satt på lista over døde.
+  // Før meldte både index.html og denne funksjonen «… er falt», og en mann kunne meldes på nytt når Leirvakta ble satt opp igjen.
+  function soldatFalt(navn) { if (!S || !auto() || !navn) return false; SR.død(S, navn, 'soldat', S.klokke || 0); lagre(); return true; }
   // mekanikeren reparerer skadde kjøretøy innen 200 m fra leiren
   function mekaniker() {
     const sp = spill(), f = F(); if (!sp || !sp.leir || typeof KJORETOY === 'undefined' || !SR.harSpes(f, 'mekaniker') || !har('verksted')) return;
@@ -353,7 +351,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     falne = null; akk = 0; sistEkte = performance.now(); sistKort = ''; sistHtml = ''; visKort(); vis();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, leirFrø, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, funnet, varsling, lagre, tilstand: () => S, ktx,
+  Object.assign(api, { våken: () => !!S && auto(), start, åpne, vis, valg, visPerson, visKort, nyttKort, ankommet, fraOppdrag, oppdragMedSpes, leirFrø, taFanger, fanger, svarFlykt, svarSpion, svarKort, døde, falt: soldatFalt, funnet, varsling, lagre, tilstand: () => S, ktx,
     // for testene og vakten: sett en ny, tom tilstand
     nullstill: () => { const sp = spill(); S = SR.ny(1); S.klokke = typeof tid === 'number' ? tid : 0; sistKort = ''; falne = null; if (sp) lagre(); visKort(); vis(); } });
   window.SamfunnSpill = api;

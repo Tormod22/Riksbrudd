@@ -102,7 +102,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     panel.append(el('div', { klasse: 'moral' }, el('span', {}, `Moral ${Math.round(F.moral)}${pil}`), strek));
     const varme = B.fyring ? (s.kald > .05 ? 'mangler' : `${nf(B.ved, 1)} m³ ved eller ${nf(B.drivstoff)} l diesel per døgn`) : 'trengs ikke nå';
     const sh = F.personer.reduce((a, p) => a + p.helse, 0) / Math.max(1, n);
-    const linjer = [`Senger: ${Math.min(n, B.senger)} av ${n}` + (B.senger > n ? ` (${B.senger - n} ledige)` : ''),
+    // (runde 12, kritiker F: «Senger: 2 av 2 (6 ledige)» var uklart) – si sengene først, så hvor mange som bruker dem
+    const sover = n + (B.avh || 0), iBruk = Math.min(sover, B.senger);
+    const linjer = [B.senger ? `${B.senger} ${B.senger === 1 ? 'seng' : 'senger'}, ${iBruk} i bruk` + (B.utenSeng ? ` – ${B.utenSeng} sover i telt` : '') : `Ingen senger – ${sover} sover i telt`,
       `Mat: ${nf(F.mat)} rasjoner` + (B.dager === Infinity ? ' (drivhusene holder)' : ` (ca. ${nf(B.dager, 1)} døgn)`) + (B.drivhus ? ` · drivhus +${nf(B.drivhus, 1)}/døgn` : '') + (B.varmMat ? ' · varm mat' : ''),
       `Varme: ${varme}`, `Helse: ${n ? Math.round(sh * 100) + ' %' : '–'}` + (B.syke ? ` · ${B.syke} syke/skadet` : '') + (B.sykestue ? ' · sykestue' : ''),
       `Vakttårn: ${B.bemannedeTårn} av ${B.tårn} bemannet` + (F.borte ? ` · ${F.borte} har forlatt gjengen` : '')];
@@ -169,9 +171,30 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); akk = 0;
       for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre();
       if (r.døde && r.døde.length && window.SamfunnSpill) SamfunnSpill.døde(r.døde); }
-    soldater(dt); vakter();
+    soldater(dt); vakter(); falne();
     if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
   });
+  // ---------- (runde 12, kritiker F) DE FALNE: én kilde for loggen, folket og begravelsen ----------
+  // Kritikken: «Håkon Rønning og Silje Berg er falt» og «2 døde venter på begravelse», men begge sto i Folk med helse 15 %, og
+  // folketallet sto på 12 også etter «4 døde». Leirvakta (forsvar-visning.js) er folk på «vakt» som tar opp våpen: mennene peker på
+  // personen med m.person = p.id, og når angrepet var over, fikk en falt vakt bare lav helse. Nå: hver mann som faller i et eget lag,
+  // merkes m.falt (én gang), går ut av folket hvis han hører til der, meldes i én linje per lag og settes på lista over døde
+  // (SamfunnSpill.falt). Tropper har personene utenfor folket (Tropper.opprett), så der er det bare meldingen og begravelsen.
+  // Rett etter start/lasting merkes de som alt er falt, uten melding (lagring.js tar ikke vare på m.falt).
+  let stilleTil = 0;
+  function falne() {
+    if (typeof ENHETER === 'undefined') return 0; const stille = performance.now() < stilleTil; let n = 0, ut = false;
+    for (const s of ENHETER) { if (s.side !== 'blå' || s.karakter || !Array.isArray(s.menn)) continue; const nye = [];
+      for (const m of s.menn) { if (!(m.hp <= 0) || m.falt) continue; m.falt = true; n++;
+        if (F && FR.fjern(F, FR.personId(m))) ut = true;
+        if (!stille && m.navn) nye.push(m.navn); }
+      if (nye.length) { const farvel = window.SamfunnSpill && SamfunnSpill.falt ? nye.map(navn => SamfunnSpill.falt(navn)).some(Boolean) : false;
+        logg(FR.falneTekst(nye, s.navn) + (farvel ? ' Ta farvel i Samfunn-panelet.' : '')); } }
+    if (ut) { lagre(); visStatus(); vis(); }
+    return n;
+  }
+  // loggteksten når en av dine er truffet (index.html og enheter-visning.js): de som faller, meldes av falne() over
+  window.treffLogg = (m, lag, hva, ekstra) => { if (!lag || lag.side !== 'blå' || hva === 'falt' && !lag.karakter) return; logg(FR.treffTekst(m, lag, hva, ekstra)); };
   // sykestua med folk på «stell» leger sårede soldater i egne lag innen 150 m (fra 50 % til helt på ca. 5 timer)
   function soldater(dt) {
     const Lr = L(), stell = FR.arbeidere(F, 'stell'); if (!stell) return;
@@ -225,7 +248,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const Lr = L(); if (!Lr || !spill()) { F = null; visStatus(); return; }
     // samme frø per leir (fra leirens plass), så en ny leir et annet sted får andre folk
     const S = spill(), frø = S.leir ? (Math.round(S.leir.x) * 31 + Math.round(S.leir.y)) >>> 0 : 1987;
-    F = (Lr.folk && FR.fraJSON(Lr.folk)) || FR.ny(frø); Lr.folk = F; meldt.clear(); forsvarNå = null; lagre(); visStatus(); vis();
+    F = (Lr.folk && FR.fraJSON(Lr.folk)) || FR.ny(frø); Lr.folk = F; meldt.clear(); forsvarNå = null; stilleTil = performance.now() + 2500; lagre(); visStatus(); vis();
   }
   window.addEventListener('riksbrudd-spill', start);
 
@@ -248,7 +271,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const rad = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); if (rad) rad.before(boks); else hode.appendChild(boks); });
   { const c2 = document.createElement('style'); c2.textContent = `#leirmeny .ingenbygger{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0 2px; padding:7px 9px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:14px; line-height:1.35; }
 #leirmeny .ingenbygger button{ min-height:36px; border-color:#e0804a; } #leirmeny .ingenbygger small{ color:#e8c0a0; }`; document.head.appendChild(c2); }
-  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar(), hjelpBygg };
+  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

@@ -939,7 +939,7 @@ function kamprunde() {
       SKUDD.push({ a, b, til: performance.now() + 1400 }); nå.add(b);
       if (!a.skyterPå.has(b)) { if (a.side === 'blå') logg(a.navn + ' skyter mot ' + (synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
       if (!treff) continue;
-      for (const [m, hva] of Terreng.fordelTreff(b.menn, treff, KRNG)) if (b.side === 'blå') logg(m.navn + ' (' + m.rolle + ', ' + b.navn + ') er ' + hva + '.');
+      for (const [m, hva] of Terreng.fordelTreff(b.menn, treff, KRNG)) if (b.side === 'blå') { if (window.treffLogg) treffLogg(m, b, hva); else logg(m.navn + ' (' + b.navn + ') er ' + hva + '.'); }
       if (b.side !== 'blå' && synlig(b)) logg(b.navn + ': ' + treff + ' treff.');
       if (b.menn[b.leder].hp < 1) { const ny = b.menn.findIndex(m => m.hp >= 1); if (ny >= 0) { b.leder = ny; if (b.side === 'blå') logg(b.menn[ny].navn + ' tar over som lagfører i ' + b.navn + '.'); } }
       if (Terreng.slattUt(b.menn) && !b.slattUtMeldt) { b.slattUtMeldt = true;
