@@ -20,6 +20,8 @@
     const ren = w => w.replace(/^[,–-]+|[,–-]+$/g, '');
     let k = -1; for (let i = 1; i < ord.length; i++) if (re.test(ren(ord[i]))) { k = i; break; }
     if (k < 0) return navn;
+    // «Tag vestgående bru» -> «Tag bru»: står ordet «bru» etter retningen, tas bare retningen bort
+    if (lag === 'bru' && k + 1 < ord.length && /^bru(a|en)?$/i.test(ren(ord[k + 1]))) return ord.filter((_, q) => q !== k).join(' ');
     let kutt = k; for (let j = 0; j < k; j++) if (NAVNEORD.test(ren(ord[j]))) { kutt = j + 1; break; }
     // et nummer rett etter navnet hører til navnet («Breimsfjelltunnelen 2 hovedløp»)
     while (kutt < k && /^(\d+|[IVX]+)$/.test(ren(ord[kutt]))) kutt++;

@@ -8,13 +8,13 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
 1. **Synlige skjøter i 2D-kartet – RETTET.** Årsaken var lastingen, ikke dataene: Norge-kartet har én fil per lag uten skjøter (manifestet:
    kart-0 z0–10, hoyde-0/-1, terreng-0, vektor-0), og bildene etter 8 s (tlf 09-etter-trykk-8s.png) er skarpe overalt. Mens flisene kommer,
    sto en ferdig skarp flis rett ved siden av en grov reserve (opptil fire nivåer opp, forstørret), med rett kant og litt annen tone
-   (skyggen overdrives mer på grove nivåer). Gjenskapt på /norge i Lærdal med tregt nett (CDP 120 ms, 2,5 MB/s): «før»-bildet etter 7 s har
-   en skarp loddrett stripe midt i et blekt, grovt kart – akkurat som kritikerens. Nå (`tegnFliser` i index.html, rett før `tegn()`):
+   (skyggen overdrives mer på grove nivåer). PC-bilder: `sammen-pc-last.png` (venstre før, høyre etter, 2 s etter zoom). Gjenskapt på /norge i Lærdal med tregt nett (CDP 120 ms, 2,5 MB/s): «før»-bildet etter 7 s har
+   en skarp loddrett stripe midt i et blekt, grovt kart – akkurat som kritikerens (`for-liggende-7s-liten.png`). Nå (`tegnFliser` i index.html, rett før `tegn()`):
    - en ny flis **tones inn** (FLISLAST.inn = 320 ms) over reserven / den gamle utgaven (en ny utgave etter et nettbrudd tones over den gamle);
    - en ferdig flis som står inntil en synlig flis som ikke er ferdig, får **myk kant** mot den (FLISLAST.kant = 36 punkter, grov -> skarp),
      tegnet via et lite lerret (`mykFlis`, destination-in med lineære overganger) – ingen rette sømmer;
-   - **reserven** leter seks nivåer opp (før fire) og bruker de **fire finere flisene** når du zoomer ut (`tegnReserve`).
-   - reserven leter **ni nivåer** opp (rett etter lasting er oversikten over landet det eneste som finnes – bedre enn blått), og de grove
+   - **reserven** leter **ni nivåer** opp (før fire; rett etter lasting er oversikten over landet det eneste som finnes – bedre enn blått) og
+     bruker de **fire finere flisene** når du zoomer ut (`tegnReserve`), og de grove
      flisene **slipper foran** i køen (`kø(…, forrang)`, høyst FLISLAST.forrang = 10 i arbeid) når den er full av fliser som ikke lenger vises.
    **Ikke rettet – sømmer i selve satellittmosaikken:** ved Bryne (/rogaland, 1 km-målestokk, alle fliser ferdige) står et lysere rektangel
    med rette kanter. Den vannrette kanten følger en z7-blokkant (Y = 6 547 488): spranget er 25 % på den 2 km lange biten som synes, men bare
@@ -47,12 +47,15 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
    - I tillegg satte trær3d (index.html) bare trær der satellittbildet var grønt; i tørr, gulbrun skog ble trær borte. Nå
      `Vegetasjon.trePåFarge(R, G, B, skog)`: i skogklassen også gult/brunt, aldri grått, blått, rødt tak eller kartets vegfarger.
      (I Lærdal utgjorde dette lite – 2374 mot 2420 trær nær – men det gjelder all gulbrun skog.)
-5. **Mørk, halvmåneformet «skyggestripe» ved leiren i 3D ovenfra – FUNNET, se under (rettes i lys3d.js etter kl. 03:45).** Gjenskapt i
+5. **Mørk, halvmåneformet «skyggestripe» ved leiren i 3D ovenfra – RETTET (lys3d.js, etter at ytelse slapp fila kl. 03:45).** Gjenskapt i
    Lærdal kl. 06:00 (sola 7,8° over horisonten), Høy grafikk: en skarp, mørk, tilspisset stripe ca. 1,1 km vest for leiren. Borte med
    skyggekartet av, borte kl. 09 (sola 28°), men IKKE borte når alle skyggekasterne (kraft3d, infra3d, portal3d) er skjult. Den forsvinner når
    skyggekameraets fjerne plan flyttes 6 km lenger ut: det er der planet skjærer terrenget. Med lav sol dekker skyggekartets boks (±700 m)
    en stripe på flere km langs sola (700 / tan 7,8° ≈ 5,1 km), men dybden går bare 1370 m forbi midten (far = lz + halv · 1,6 + 250), og
-   punktene like innenfor planet blir mørke (VSM-presisjon ved z ≈ 1).
+   punktene like innenfor planet blir mørke (VSM-presisjon ved z ≈ 1). Rettet med `skyggeDybde(halv, v)` i lys3d.js (`Lys3d.skyggeDybde`):
+   dybden rekker (halv + REGLER.solMargin = 1000 m) / tan(solhøyden), høyst REGLER.solMaks = 20 km, og aldri kortere enn før (halv · 1,6) –
+   midt på dagen er alt som før. Prøvd på en kopi kl. 06 (sola 7,8°): stripa er borte (`sammen-halv-fiks.png`); skyggene når du går kl. 12
+   er like før og etter (`sammen-skygge-gaa.png`). Lyset ellers er ikke rørt.
 6. **«Fodnestunnelen hovedløp» – RETTET.** spill/kartnavn.js (`KartNavn.vis/rens`, test_kartnavn.js med 30 navn fra NVDB): tunneler mister
    «hovedløp», «løp mot …», «nordgående», «rampe …», «-arm …», «sekundær- og fellesløp» (kutt etter selve tunnelnavnet, nummer beholdes:
    «Breimsfjelltunnelen 2»); bruer bare retning og «rampe» («Åbrua Flomløp» og «Mesna Rampebru» er ekte navn). `lesInfra` i index.html kaller
@@ -67,8 +70,9 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
 - `site/dovre-fliser/spill/vaer-visning.js` – disen i ramme3d bruker `Vaer.dis3d`; `VaerSpill.treVær` eksportert (nærskogen får årstid).
 - `site/dovre-fliser/spill/vegetasjon.js` – `TREFARGE`, `trePåFarge`. Test: `pipeline/fliser/test_vegetasjon.js` (4 nye).
 - `site/dovre-fliser/spill/vegetasjon3d.js` – nærskogen (`NÆRSKOG`, `lagSkog`, `fjernSkog`, ramme3d/sett3d), `Vegetasjon3d.nærskog()`.
+- `site/dovre-fliser/spill/lys3d.js` (eid av pakka ytelse til kl. 03:45) – `REGLER.solMargin/solMaks`, `skyggeDybde`, én linje i `skygger()` (k.far).
 - Vakt: `pipeline/fliser/vakter/utseende.js` (ca. 0,7 s): navneregelen og INFRA-tunnelene, `Vaer.dis3d`, `trePåFarge`, nærskogen finnes,
-  og 2D på et hjørne av Dovre som ikke er vist nær: grov flis først, ingen tomme fliser etter høyst 9 s, myke kanter underveis
+  `Lys3d.skyggeDybde` med lav og høy sol, og 2D på et hjørne av Dovre som ikke er vist nær: grov flis først, ingen tomme fliser etter høyst 9 s, myke kanter underveis
   (reserven settes midlertidig til fire nivåer, kameraet settes tilbake). Prøvd PC og mobil: ok.
 - Bilder: `scratchpad/natt8/utseende/` – `for-liggende-7s-liten.png` / `etter-liggende-7s-liten.png` / `etter-liggende-12s-liten.png`
   (punkt 1–2), `sammen-z2.png` (navnet), `sammen-regn-pc.png` (punkt 3), `sammen-gaa2.png` (punkt 4), `sammen-halv*.png` (punkt 5).

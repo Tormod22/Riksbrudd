@@ -17,7 +17,7 @@ const T = [
   ['tunnel', 'Løpstunnelen', 'Løpstunnelen'],
   // bruer: «Flomløp» og «Rampebru» er ekte navn
   ['bru', 'Åbrua Flomløp', 'Åbrua Flomløp'], ['bru', 'Mesna Rampebru', 'Mesna Rampebru'], ['bru', 'Baserud sørgående', 'Baserud'],
-  ['bru', 'Torsbuåsen nordgående-utløp', 'Torsbuåsen'], ['bru', 'Sørlibrua ramper', 'Sørlibrua'], ['bru', 'Tvetenveien X E6, Rampe 32', 'Tvetenveien X E6'],
+  ['bru', 'Torsbuåsen nordgående-utløp', 'Torsbuåsen'], ['bru', 'Tag vestgående bru', 'Tag bru'], ['bru', 'Holt bru sørgående', 'Holt bru'], ['bru', 'Sørlibrua ramper', 'Sørlibrua'], ['bru', 'Tvetenveien X E6, Rampe 32', 'Tvetenveien X E6'],
   // andre lag røres ikke
   ['tettsted', 'Lærdalsøyri', 'Lærdalsøyri'], ['kraft', 'Aurland 1', 'Aurland 1'],
 ];
