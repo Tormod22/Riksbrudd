@@ -130,6 +130,12 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       const ok = forslag.filter(q => !q.feil), pkt = ok.flatMap(q => [...LB.hjørner(somBygg(o, q.d)), [BS.midt(o, q.d).x, BS.midt(o, q.d).y]]);
       const v = await kartFor(pkt); if (nr !== teller) return; kart = v;
       for (const q of ok) { const f = LB.kanBygge(l, somBygg(o, q.d), v); if (f) q.feil = f; }
+      // (runde 8) et ferdig hus står på én felles grunnmur: hele huset sjekkes som ett bygg (samme regel som leirens bygg, Leir.BRATT eller
+      // 35 % av diagonalen) – før kunne hver del godtas for seg, og en hytte i en bratt li fikk en mange meter høy sokkel
+      const hel = forslag.filter(q => !q.feil);
+      if (V.fane === 'hus' && hel.length && v.høyde) { const P = hel.flatMap(q => LB.hjørner(somBygg(o, q.d))), hz = P.map(([x, y]) => v.høyde(x, y)).filter(z => z !== null && z === z);
+        const xs = P.map(p => p[0]), ys = P.map(p => p[1]), diag = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)), d = hz.length > 1 ? Math.max(...hz) - Math.min(...hz) : 0;
+        if (d > Math.max(LB.BRATT, .35 * diag)) for (const q of hel) q.feil = `For bratt for huset (${Math.round(d)} m høydeforskjell under det).`; }
     }
     const ok = forslag.filter(q => !q.feil), feil = forslag.filter(q => q.feil), s = sum();
     if (V.fane === 'riv') tekst = ok.length ? `Riv ${ok.length} ${ok.length === 1 ? D[ok[0].d.type].navn.toLowerCase() : 'deler'}.` : 'Ingen deler her.';
@@ -161,7 +167,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function kjøpManglende(mat) { const l = L(); for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil((v - (l.lager[k] || 0)) * 10) / 10; if (m > 0) { const r = LB.kjøpMateriale(l, k, m, OppstartSpill.betal); if (r.feil) { logg(r.feil); return false; } } } return true; }
   function bekreft(kjøp) {
     const l = L(), o = opphav(); if (!l || V.fane === 'riv') return 0; const ok = forslag.filter(q => !q.feil); if (!ok.length) return 0;
+    // (runde 8) det materialene kostet, står også i loggen (før sa den bare arbeidet, mens knappen sa prisen i alt)
+    const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
     if (kjøp && !kjøpManglende(sum().mat)) { oppdater(); return 0; }
+    const kjøpt = kjøp ? Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)) : 0;
     let n = 0, pris = 0, stopp = null;
     for (const q of ok) {
       if (q.bytt) { const r = LB.riv(l, q.bytt); if (!r.feil) OppstartSpill.gi(r.penger); }
@@ -169,7 +178,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       if (r.feil) { stopp = r.feil; break; }
       r.bygg.bs = { i: q.d.i, j: q.d.j, a: q.d.a, n: q.d.n, ...(q.d.r !== undefined ? { r: q.d.r } : {}) }; n++; pris += r.bygg.pris;
     }
-    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
+    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${kjøpt ? `${LB.kroner(pris + kjøpt)} i alt (arbeid ${LB.kroner(pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
     else if (stopp) logg(stopp);
     ferdigEndret(); if (V.fane === 'hus' || !stopp) { A = null; B = null; forslag = []; } oppdater(); return n;
   }

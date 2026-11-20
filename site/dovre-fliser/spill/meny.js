@@ -1,7 +1,7 @@
 'use strict';
 // ☰-menyen i grupper (brukeren 16. nov: «forbedre det som allerede er, f.eks. menyene»). Modulene legger knappene sine rett i
 // menyen etter hvert som de lastes. Her sorteres de i grupper med overskrift, av/på-knappene får en bryter, valgene viser navnet
-// til venstre og verdien til høyre, og «Nytt spill» står for seg selv nederst. Knappene er de samme (ingen ny oppførsel) – de
+// til venstre og verdien til høyre, og «Nytt spill» står for seg selv øverst under «Lagre og last» (runde 8; før nederst). Knappene er de samme (ingen ny oppførsel) – de
 // flyttes bare, så modulene og testene finner dem som før. Menyen lukkes med Esc eller et trykk utenfor.
 // Lastes etter alle modulene som har knapper i menyen. En ny knapp som ikke står i GRUPPER, havner under «Annet».
 (function () {
@@ -33,6 +33,7 @@
 #lagmeny button .kolon{ display:none; }
 #lagmeny button.valg .verdi::after{ content:' ›'; opacity:.6; }
 #lagmeny button.handling{ justify-content:center; }
+#lagmeny .spillrad{ display:flex; gap:6px; margin:0 0 10px; } #lagmeny .spillrad button.fare{ min-height:34px; font-size:14px; }
 #lagmeny button.fare{ width:100%; justify-content:center; text-align:center; border-color:#8a4a3a; color:#e7b3a3; background:#2a1a16; }
 #lagmeny button:hover{ filter:brightness(1.18); } #lagmeny button:focus-visible{ outline:2px solid #e9d79a; outline-offset:1px; }
 body.kort #lagmeny.på{ width:min(360px, calc(100vw - 16px)); padding:8px 9px 9px; } body.kort #lagmeny h3 small{ display:none; }
@@ -63,7 +64,8 @@ body.kort #lagmeny.på{ width:min(360px, calc(100vw - 16px)); padding:8px 9px 9p
       seksjon(overskrift, forklaring, liste); }
     const fare = knapper.filter(b => !brukt.has(b) && begynner(navn(b), FARE)); for (const b of fare) brukt.add(b);
     seksjon('Annet', '', knapper.filter(b => !brukt.has(b)));
-    for (const b of fare) { b.classList.add('fare'); meny.appendChild(b); }
+    // RUNDE 8 (telefonkritikeren: «"Nytt spill" ligger nederst i ☰, under fold»): «Nytt spill» står øverst, rett under «Lagre og last»
+    if (fare.length) { const rad = document.createElement('div'); rad.className = 'spillrad'; for (const b of fare) { b.classList.add('fare'); rad.appendChild(b); } topp.after(rad); }
   }
   function lukk() { if (!meny.classList.contains('på')) return; meny.classList.remove('på'); åpner.classList.remove('på'); åpner.setAttribute('aria-expanded', 'false'); }
   ordne(); åpner.title = 'Innstillinger';

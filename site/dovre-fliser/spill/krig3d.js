@@ -37,6 +37,7 @@
   function frigjør(G) {
     for (const m of G.mat) m.dispose(); for (const s of G.røyk.concat(G.lys)) if (s.parent) s.parent.remove(s);
     if (G.st) { if (G.st.parent) G.st.parent.remove(G.st); G.st = null; } if (G.stGeo) { G.stGeo.dispose(); G.stGeo = null; }
+    if (G.figFlokk) { G.figFlokk.kast(); G.figFlokk = null; }
     if (G.fig) { if (G.fig.parent) G.fig.parent.remove(G.fig); G.fig = null; } if (G.figGeo) { G.figGeo.dispose(); G.figGeo = null; } if (G.figMat) { G.figMat.dispose(); G.figMat = null; }
   }
   const leir = () => { const s = window.OppstartSpill && OppstartSpill.tilstand(); return s && s.leir ? s.leir : null; };
@@ -80,9 +81,11 @@
     const L = leir(), Q = [];
     for (const q of window.STILLINGER || []) { if (!q.kjent || Math.abs(q.x - u.cx) > u.S || Math.abs(q.y - u.cy) > u.S) continue;
       const e = ENHETER.find(s => s.side === q.side && Array.isArray(s.menn) && levende(s) && Math.hypot(s.x - q.x, s.y - q.y) <= 25 && synlig(s)); if (e) Q.push(q); }
-    const nøkkel = Q.map(q => Math.round(q.x) + ',' + Math.round(q.y)).join(';') + '|' + u.cx + ',' + u.cy + ',' + R.EX;
+    // (runde 7, pakka «figurer») med Figur3d: kameraets plass (10 m) er med i nøkkelen – nær kameraet får figurene full detalj
+    const cp = R.cam.position, nøkkel = Q.map(q => Math.round(q.x) + ',' + Math.round(q.y)).join(';') + '|' + u.cx + ',' + u.cy + ',' + R.EX + (window.Figur3d ? '|' + Math.round(cp.x / 10) + ',' + Math.round(cp.y / 10) + ',' + Math.round(cp.z / 10) : '');
     if (nøkkel === G.figNøkkel) return; G.figNøkkel = nøkkel;
-    if (!Q.length) { if (G.fig) G.fig.count = 0; return; }
+    if (!Q.length) { if (G.fig) G.fig.count = 0; if (G.figFlokk) { G.figFlokk.start(); G.figFlokk.slutt(); } return; }
+    if (window.Figur3d) return figurerRunde(R, G, u, z, Q, leir());
     const maks = ST.maks * FIG.per;
     if (!G.fig) { G.figGeo = soldatGeo(); G.figMat = new THREE.MeshLambertMaterial({ vertexColors: true }); G.fig = new THREE.InstancedMesh(G.figGeo, G.figMat, maks);
       G.fig.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maks * 3), 3); G.fig.userData.kilde = 'krig3d.js'; G.fig.frustumCulled = false; R.scene.add(G.fig); }
@@ -92,6 +95,17 @@
         e.set(0, 0, a); q4.setFromEuler(e); p.set(X - u.cx, Y - u.cy, z(X, Y)); m.compose(p, q4, sk); G.fig.setMatrixAt(n, m);
         c.setRGB(1, 1, 1).lerp(new THREE.Color(farge), FIG.skjær); G.fig.setColorAt(n, c); n++; } }
     G.fig.count = n; G.fig.instanceMatrix.needsUpdate = true; G.fig.instanceColor.needsUpdate = true;
+  }
+  // RUNDE 7 (20. nov, pakka «figurer»): soldatene i stillingene er den felles, avrundede figuren (spill/figur3d.js) – på kne og siktende
+  // over vollen, med hjelm, sekk og gevær; jakken i oliven med et skjær av sidens farge som før.
+  function figurerRunde(R, G, u, z, Q, L) {
+    const D = Figur3d.DEL; if (!G.figFlokk || G.figFlokk.scene !== R.scene) { if (G.figFlokk) G.figFlokk.kast(); G.figFlokk = Figur3d.flokk(R, { maks: ST.maks * FIG.per, kilde: 'krig3d.js', deler: D.hjelm | D.sekk | D.gevær }); G.figFarger = new Map(); }
+    const F = G.figFlokk, o = G.figObj || (G.figObj = new THREE.Object3D()), c = new THREE.Color(); F.start();
+    for (const q of Q.slice(0, ST.maks)) { const v = L ? Math.atan2(L.y - q.y, L.x - q.x) : 0, farge = (typeof sidefarge === 'function' && sidefarge(q.side, 'farge')) || '#b5503d';
+      let fa = G.figFarger.get(farge); if (!fa) { c.setRGB(.3, .33, .25).lerp(new THREE.Color(farge), FIG.skjær); fa = Figur3d.farger([c.r, c.g, c.b], [.23, .25, .19], [.2, .16, .12], [.79, .64, .5]); G.figFarger.set(farge, fa); }
+      for (let k = 0; k < FIG.per; k++) { const a = v + (k - (FIG.per - 1) / 2) * FIG.spredning, X = q.x + Math.cos(a) * FIG.radius, Y = q.y + Math.sin(a) * FIG.radius;
+        o.position.set(X - u.cx, Y - u.cy, z(X, Y)); o.rotation.set(0, 0, a); o.updateMatrix(); F.legg(o.matrix, { sikte: 1, kne: 1, maske: D.hjelm | D.sekk | D.gevær, farger: fa }); } }
+    F.slutt();
   }
   // helikopteret på tur: modellen fra spill/kjor.js flyttes dit helikopteret er (kjor.js setter det på plassen igjen hver ramme)
   function helikopter(R, u, z) {
@@ -125,5 +139,5 @@
     g.restore(); if (window.Krig3d) Krig3d.merker = n;
   });
   window.Krig3d = { merker: 0,
-    antall: () => { const G = typeof R3 !== 'undefined' && R3 ? R3.krig3d : null; return G ? { røyk: G.røyk.filter(s => s.visible).length, lys: G.lys.filter(s => s.visible).length, stillinger: G.st ? G.st.count : 0, heli: !!G.heli, merker: window.Krig3d.merker, soldater: G.fig ? G.fig.count : 0 } : { røyk: 0, lys: 0, stillinger: 0, heli: false, merker: 0, soldater: 0 }; } };
+    antall: () => { const G = typeof R3 !== 'undefined' && R3 ? R3.krig3d : null; return G ? { røyk: G.røyk.filter(s => s.visible).length, lys: G.lys.filter(s => s.visible).length, stillinger: G.st ? G.st.count : 0, heli: !!G.heli, merker: window.Krig3d.merker, soldater: G.figFlokk ? G.figFlokk.antall() : G.fig ? G.fig.count : 0 } : { røyk: 0, lys: 0, stillinger: 0, heli: false, merker: 0, soldater: 0 }; } };
 })();

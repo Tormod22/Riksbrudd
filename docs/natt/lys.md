@@ -515,3 +515,163 @@ Ikke målt i denne runden (tiden gikk til 1–3, og maskinen ble startet på nyt
   `hindring3d()` – boksen først og omrisstesten uten destrukturering; `naboerAsynk` – pust hvert 8. senter; `trær3d` – pust hver rad.
 - Mine: `spill/lys3d.js` (koblGrense, `Lys3d.RG`), `spill/natt3d.js` (nattPlass, forbered3d-krok, `NATT.plass`, `NATT.forberedt`),
   `spill/grense3d.js` (ny), `pipeline/fliser/test_grense3d.js` (ny), `pipeline/fliser/vakter/lys.js` (runde 5-delen), `docs/natt/lys-hjelp.json`.
+
+## Runde 7 (20. nov natt) – hakk når du går og når husenes innside bygges
+
+Oppdraget: ingen enkeltpause over ca. 50 ms fra interiøret, de andre lange pausene når du går, telefonen, og en vakt.
+Målt med scratchpad `natt7/lys/mr.js` (ekte data via dev.py, /norge, Bergen sentrum −32117 6734202, tegningen slått av, du går 4 m hver
+0,4 s og hopper inn gjennom døra på et av de nære husene hver 2,4 s; lange oppgaver + CPU-profil). «Før» = en kopi av siden fra
+c4be9eb (det som ble flettet inn i kveld), kjørt rett før «etter» (`natt7/lys/par.sh`). MASKINEN VAR SVÆRT TUNGT LASTET (last 17–25 på fire
+kjerner – sju hjelpere): pausene er fulle av tid der tråden bare ventet på en kjerne, så tallene for selve koden står i profilen
+(«i lange oppgaver»), ikke i antall pauser.
+
+### 1. Interiøret i biter (spill/interior3d.js)
+- `byggG(R, u, P)` er byggingen som generator: `yield` mellom stegene (planen, kroker, hvert gulv, hver yttervegg og vindu, hver
+  skillevegg og dør, hvert møbel – og hver 48. del i store møbler –, hvert rom med «forlatt»-ting, lampene, tallrekkene per stoff og
+  normalene i biter med `normalerG` fra index.html). Ingenting fra three.js lages før siste steg (utenom stoffene, ett mønster per
+  steg første gang), så en jobb som avbrytes, etterlater ingenting. `bygg()` = generatoren kjørt ferdig (som før) – brukes av
+  `bygOm` (møbelflytting, må være straks), `oppdater(true)` (vaktene) og vakta.
+- Jobben drives av en egen `requestAnimationFrame` (etter spilløkka, før bildet tegnes): `BIT.ms` = 6 ms arbeid per bilde. Ett bygg
+  om gangen; ny jobb starter fra `oppdater` (hvert kvarte sekund som før). Er jobben ugyldig (nytt utsnitt, du går ikke lenger, bygget
+  har alt interiør), kastes den. `oppdater(true)` gjør en jobb som er i gang ferdig og bygger det neste i ett strekk (vaktene i
+  sjekk.js kaller den 12 ganger og venter ikke på bilder – de oppfører seg som før).
+- FORBERED: et hus `BIT.foran` = 8 m foran deg (blikkets retning) regnes som like nært, så huset du går mot, bygges først.
+- GJENBRUK: et interiør du går fra (over 50 m, eller det tiende når taket er nådd) HVILER (ut av scenen, ikke frigjort; høyst 6 på PC,
+  3 på telefon) og settes inn igjen straks når du snur – samme geometri, ingen ny bygging. `bygOm` (planen er endret) glemmer de
+  hvilende (`versjon`). Forsyningskassa er én delt geometri (`FUNN_GEO`, frigjøres i `tøm`). `userData.kilde` settes selv (ingen
+  stakk i scene.add). Tallrekkene settes rett i Float32Array (samme tall).
+- interior.js (ikke min fil, men ingen andre endrer den i natt – liten og samlet endring): `planG` = `plan` som generator (yield per
+  rom og hver 8. plass i rutenettene; `plan()` kjører den ferdig), og i `prøv()` står de billige sjekkene (døråpninger, gangveier,
+  andre møbler) før hjørnene mot omrisset, og `nærKant(P, x, y, g)` stopper ved første kant (= `avstKant < g`). Ingenting endres før
+  møbelet settes, så svaret er det samme. Prøvd i Node mot den gamle fila: 1008 bygg i alle klasser og fire former, 0 ulike planer,
+  2× raskere (4725 -> 2450 ms), lengste steg 30 ms. Etter telefonmålingen (et stort bygg brukte 155 ms på romdelingen før første yield):
+  romdelingen `del` er også en generator (yield før hver skillevegg og for hvert rom som måles), og store omriss (≥ 12 hjørner) får et
+  RUTENETT (`ruter(P)`, høyst ca. 900 ruter, lagret per omriss i en WeakMap): en rute er «sikkert inne»/«sikkert ute» når midten ligger
+  lenger fra alle kanter enn rutens halve diagonal + 0,15 m, og da svarer `inniR`/`nærKantR` uten å gå gjennom kantene (ellers som før).
+  `prøv` bruker dem, uten mellomliggende tabeller (`TOM`, `HJØRNER`, `PLASSER`, `SIDER` – mindre søppeltømming). Prøvd igjen mot den gamle
+  fila: 1008 bygg, 0 ulike, 2,3–2,8× raskere. Ny test: `node pipeline/fliser/test_interior_biter.js` (planG = plan for 324 bygg,
+  lagerhallen gir yield i rutenettet, nærKant = avstKant < g for 20 000 punkter, inniR/nærKantR = inni/nærKant for 180 000 punkter i 30
+  store omriss også rett ved kantene, selvtest).
+- SØPPELTØMMING: kassene (det meste av nettet – møbler, karmer, lister) skrives rett i tallrekkene (`firkant`) uten de ca. 60 små
+  tabellene per kasse som p/flate/fk/tri lagde (samme tall i samme rekkefølge). Prøvd i Node (scratchpad `natt7/lys/node3d.js`: three.js
+  i Node, lerretet byttet ut, gammel og ny interior3d.js bygger 56 bygg i alle klasser): 17,9 mill. verdier, 0 ulike, hele byggingen
+  (med planen) ca. 2,4× raskere enn før.
+- LIKT: seks prøvebygg (hus, skole, lager, butikk, låve, kontor – 1332 til 25 480 trekanter) bygget med den gamle fila og den nye, i ett
+  strekk og steg for steg: alle nettene like verdi for verdi (posisjon, farge, uv, normaler, grupper, plass og dreiing – 3,0 mill. verdier,
+  0 ulike). Skript: scratchpad `natt7/lys/prov.js`.
+
+### 2. Gresset rundt deg i biter (index.html gress3d)
+Den nest største pausen når du går: hver 12. meter ble opptil 36 000 kandidater prøvd i ett strekk (hindring3d for hver). Nå er
+plasseringen en generator `gressG` (samme tilfeldighet i samme rekkefølge, yield hver 128. kandidat) som skriver i midlertidige
+tallrekker (`m.userData.tmp`, laget én gang) og legges inn i nettet når alt er regnet; `gressBit(R, 4)` – ca. 4 ms per bilde – og det
+gamle gresset står til det nye er klart. Nytt utsnitt eller `gressSenter = null` (vegetasjon3d.js ved nye hus, kvalitet.js ved nytt nivå)
+begynner på nytt. Nettet starter med `count = 0` (ellers sto 12 000 tuster i origo til første jobb var ferdig) og med `instanceColor` i
+full størrelse: three.js r128 lager ikke skyggeleggeren på nytt når instanceColor kommer etter første tegning – på bildet gjennom vinduet
+mistet tustene bakkens farge (bleke) til det ble rettet (scratchpad `natt7/lys/vindu-sammen.png`: før, feilen, rettet – snittfarge 69/73/60,
+84/88/74, 69/73/61). Vakta krever nå instanceColor i full størrelse. Prøvd: tre steder ved
+Dombås, gammel gress3d (fra c4be9eb) mot ny: 12 000 tuster, matrisene, fargene og aFelt like (0 ulike), 3–8 biter.
+
+### 3. Tingene i husene (spill/lut-visning.js, bare 3D-nettet)
+Samme ting = samme geometri: hver ting (melk, patroneske, våpen …) lages én gang (`mal`, MODELLER.samle) og kopieres der den står
+(før ble alle klossene laget på nytt for hver). Har en runde (hver 300 ms) brukt over 4 ms, tas resten av husene i neste runde.
+Ikke målt hver for seg (lut-tingene finnes bare med et startet spill og møbler med innhold; de kom ikke med blant de lange oppgavene).
+
+### Målt – Bergen, går 30 s og inn i hus (PC 1400 × 800)
+| | før | etter |
+|---|---|---|
+| lav last (kl. 23:40, før/etter1): interiøret i lange oppgaver | 1606 ms, lengste oppgave 369 ms (bygg 296) | 143 ms (én oppgave: planen for ett stort bygg, 140 ms – før planG) |
+| lav last: lange oppgaver ≥ 50 ms (antall, sum, lengste) | 22, 2730 ms, 369 ms | 17, 1486 ms, 145 ms |
+| lav last: pauser > 50 ms (antall, sum, lengste) | 35, 3,7 s, 369 ms | 24, 2,0 s, 159 ms |
+| last 23 (nice −10, `bergen-før/etter.log`): interiøret i lange oppgaver | 2270 ms | ca. 200 ms (steg + rAF; høyst 8 ms i én oppgave) |
+| last 23: gresset (gress3d) i lange oppgaver | 2135 ms (lengste oppgave 709 ms, 635 av dem gress3d) | 283 ms |
+| last 23: lange oppgaver ≥ 50 ms | 60, 9,5 s, 709 ms | 42, 5,9 s, 677 ms (liv3d, søppeltømming, tegnInfra3d – ikke interiøret) |
+- Interiøret i tall (etter): 48 bygg på 30 s, 262 biter, 11 kom tilbake fra hvile; hvert bygg 3–30 biter på 6 ms. «Lengste bit» (STAT.lengst)
+  er 140–317 ms under last fordi tråden blir stående uten kjerne midt i en bit – CPU-profilen viser høyst 8 ms interiør i én oppgave.
+- Mål nådd for interiøret på PC: ingen lang oppgave der interiøret er hoveddelen (før: opptil 574 ms bygg i én oppgave under last).
+
+### Sluttmåling med alt (kl. 01:27, commit d1dace7, last 17–20, nice −10; `slutt-pc.log`, `slutt-mobil.log`)
+| Bergen, går 30 s og inn i hus | før (c4be9eb, last 23) | etter |
+|---|---|---|
+| PC: lange oppgaver ≥ 50 ms (antall, sum, lengste) | 60, 9,5 s, 709 ms | 16, 1,1 s, 107 ms |
+| PC: pauser > 50 ms (antall, sum, lengste) | 89, 17,4 s, 1880 ms | 39, 3,2 s, 288 ms |
+| PC: interiøret i lange oppgaver | 2270 ms | ca. 100 ms (én oppgave på 86 ms med en møbelbit – trolig tråden uten kjerne) |
+| PC: gresset i lange oppgaver | 2135 ms | 60 ms |
+| telefon: lange oppgaver ≥ 50 ms | 39, 5,7 s, 792 ms | 22, 2,4 s, 485 ms (den lengste uten kode i profilen – ventet på kjerne) |
+| telefon: interiøret i lange oppgaver | 1835 ms | ca. 350 ms (romdelingen 253 i én oppgave og tallrekkene 86 – se under) |
+- 52 interiører bygget på 30 s på PC (199 biter, 17 kom tilbake fra hvile), 61 på telefon (157 biter, 17 fra hvile).
+- Under så tung last står profilen full av tid der tråden ikke fikk kjøre (samplene havner i funksjonen som sto sist), så enkeltstegene
+  over 50 ms i interiøret er ikke sikre. I Node var det lengste steget i planen 30–45 ms for svært store bygg (100 × 70 m) og noen
+  få ms for vanlige. `measureText` brukte 284 ms første gang «Inngang» ble skrevet på telefon (skriften lastes første gang den brukes i et
+  lerret – én gang per økt).
+
+### Målt – telefonstørrelse (390 × 844, samme tur, `mobil-før/etter.log`, last ca. 22, nice −10)
+| | før | etter (før romdelingen i biter og rutenettet) |
+|---|---|---|
+| interiøret i lange oppgaver | 1835 ms, lengste oppgave 792 ms (bygg 752) | ca. 325 ms; én oppgave på 157 ms (romdelingen i planG for ett stort bygg – rettet etterpå) |
+| gresset (gress3d) i lange oppgaver | 790 ms (lengste 361 ms i én oppgave) | ikke blant de lange |
+| lange oppgaver ≥ 50 ms (antall, sum, lengste) | 39, 5,7 s, 792 ms | 23, 2,3 s, 255 ms |
+| pauser > 50 ms (antall, sum, lengste) | 83, 13,5 s, 890 ms | 88, 12,1 s, 630 ms (mest tråden som ventet på en kjerne) |
+Programvare-grafikk og tegningen slått av: det er pausene fra JavaScript som er målt, ikke telefonens grafikkort. På telefon hviler
+høyst tre interiører, og gresset har 5000 tuster.
+
+### Det som står igjen når du går (de største i profilen etter endringene, ikke mine filer – ikke endret)
+- `vegetasjon3d.js` `oppdaterVekst` → `fri` → `leirFot`/`iLeir`/`nærHus` (blomstene rundt deg): opptil 459 ms i én oppgave under last.
+- `fjellmark3d.js` `fordel` (småstein og lyng rundt deg), 100–330 ms samlet.
+- `liv3d.js` `flytt` (trafikken) og `kyst3d.js` `gyng` (båtene, setFromEuler per båt per bilde): 300–350 ms samlet på 30 s under last.
+- Søppeltømming 100–250 ms av og til. Interiøret lager fortsatt mange små tabeller per hjørne (`kasse`/`fk`/`tri`); det ble ikke skrevet om
+  (risiko for et annet utseende) – hvilende interiører betyr at det skjer sjeldnere.
+- `tegnInfra3d` → `mPer3` (hoyde3d per infrastrukturobjekt hvert bilde): 494 ms i én oppgave da infrastrukturen kom inn i Bergen.
+- lave3d.js (låvens innhold, natur-pakka – ingen eier den i natt): bygde alle låvene i samme runde; nå høyst én per runde (hver 400 ms).
+  Prøvd: to prøvelåver – én etter første runde, begge etter andre, borte etterpå (scratchpad `natt7/lys/prov9.js`); test_lave3d.js grønn.
+- Ikke gjort i denne runden: fjern3d `bygg` (er alt i biter fra runde 4) og infra3d med store bruer (flyr/kjører) – ikke målt på nytt.
+
+### Når du flyr (Stavanger, /rogaland −33500 6573500, 40 s, 150 m/s, 900 m; `fly-stavanger.log`, etter endringene)
+Lange oppgaver 74, sum 8,2 s, lengste 414 ms – det største er SØPPELTØMMINGEN (2,1 s i lange oppgaver; enkeltpauser 396, 329 og 239 ms
+mens hus3d og vegene i liv3d ble bygget – store tabeller per utsnitt). Ikke rettet: å gjenbruke tabellene mellom utsnittene (husene,
+terrengnettet, vegene) er en større omskriving av index.html og liv3d.js. Andre: `ryddHus` (index.html) – én bit tok 245 ms fordi klokka
+ble sjekket bare for hver ca. 200. ting (5 hindring3d per ting i tett by): nå for hver 32. (samme svar, bare oftere pust); kartbildet i
+bakgrunnstråden (Blob 239 ms), kompassets tekst (fillText 99 ms), vegetasjon3d `iVann` 198 ms (ikke mine).
+
+### Vakt (pipeline/fliser/vakter/lys.js, runde 7-delen – bare med 3D på)
+- Prøvehus 10 × 8 m: generatoren i ett strekk og steg for steg gir samme rom, møbler, trekanter, nett og hvert hjørne (selvtest: et
+  flyttet hjørne blir sett); den ekte veien (oppdater uten tving, `Interior3d.drivBit` som bildene gjør) bygger huset i flere biter
+  (`stat().sist.biter > 3`) og likt; går du 80 m unna, hviler det, og når du snur, kommer samme geometri tilbake (`gjenbrukt`);
+  `bygOm` virker som før (bygger straks, glemmer de hvilende). Alt ryddes (`Interior3d.glem`, hindringene, Gange av/på som før).
+- Gresset: `gress3d` i små biter (0,5 ms) og i ett strekk gir like tuster (matriser og farger), flere biter, selvtest med en flyttet tust.
+
+### API (spill/interior3d.js)
+`Interior3d.stat()` (bygget, biter, lengst, gjenbrukt, kastet, steg = lengste steg per navn, sist), `nullstillStat()`, `jobb()`, `BIT`
+(ms, hvile, hvileMobil, foran – Claudes forslag), `drivBit(ms)`, `prøvBygg(P, biter)` → `{ o, biter }`, `kast(o)`, `glem(P)`.
+Uendret: `INTERIOR_PLAN`, `bygOm`, `møbelGeo`, `oppdater(tving)`, `aktive()`, `sjekk()`. interior.js: `planG`, `nærKant`, `inniR`, `nærKantR`.
+
+### Fellesfiler endret i runde 7
+- `site/dovre-fliser/index.html`: `gress3d` (gressG/gressBit; nettet starter med count 0; gressBit teller R3.nærtNr), `ryddHus` (pust-sjekk
+  for hver 32. ting) og versjonsmerkene (versjon.py).
+- `site/dovre-fliser/spill/interior.js` (regelfila for interiøret): planG/del/rutenett som generatorer, prøv med billige sjekker først og
+  uten mellomtabeller, nærKant, ruter/inniR/nærKantR. Samme planer (prøvd mot den gamle fila for 1008 bygg).
+- `site/dovre-fliser/spill/lave3d.js` (natur-pakka): høyst én låve per runde i `oppdater` (flagget `bygget`), ellers uendret.
+- Mine: `spill/interior3d.js`, `spill/ytelse.js` («Mål hakk»: gruppen «mens innsiden av et hus eller gresset rundt deg ble laget», R3.nærtNr;
+  test i test_ytelse.js), `spill/lut-visning.js` (bare 3D-tingene: mal/tingMal/våpenMal, 4 ms per runde), `pipeline/fliser/vakter/lys.js`,
+  `pipeline/fliser/test_interior_biter.js` (ny), `docs/natt/lys-hjelp.json` («Jevnt når du går inn i hus»).
+
+### Prøvd i nettleser (runde 7)
+- Dovre-testsiden, PC 1400 × 820: gammel mot ny interior3d.js for seks prøvebygg – likt verdi for verdi (se over); gammel mot ny gress3d
+  på tre steder – likt; vakta lys med 3D på: grønn på 20 s (interiøret i 14 biter, gresset i 25 biter, 12 000 tuster).
+- Telefon 390 × 844: vakta lys grønn på 22,6 s (runde 7-delen 4,1 s: interiøret i 11 biter, gresset 5000 tuster i 14 biter).
+- Hele kontrollen på telefon (`SJEKK_PROFIL=mobil PORT=8915 node pipeline/fliser/sjekk.js`, kl. 01:04, før de to siste små endringene i
+  interior3d.js – kassen uten mellomtabeller og tømmingen – som er prøvd i Node og med vakta etterpå): 119 ok, 0 FEIL, 700 s.
+  Siste prøve på den endelige koden (kl. 01:40, PC): gammel mot ny for de seks prøvebyggene i nettleseren igjen likt (med normalerG),
+  vakta lys grønn (24 s; interiøret i 13 biter, gresset i 36 biter) og vakta natur grønn. Telefon med den endelige koden (kl. 02:05, etter
+  gressfargene og ryddHus): vakta lys grønn på 10,8 s (interiøret i 12 biter, gresset 5000 tuster i 10 biter), natur grønn. Vakta lys
+  tok 231 s der (skyggene tegnes tre ganger med programvare-grafikk i telefonens oppløsning under last ca. 20 – runde 7-delen er ca. 4 s).
+  `interiør` og `interiør i leirens bygg` i sjekk.js grønne (de kaller oppdater(true) og bygger i ett strekk som før).
+- Bilder (scratchpad `natt7/lys/`): `inne-før-PC.png` og `inne-etter-PC.png` (inne i prøvehuset, samme utsikt – kjøkkenet gjennom døra,
+  gresset utenfor vinduet), `inne-etter-mobil.png`. Huset er likt; gresset utenfor står litt annerledes fordi det settes rundt kameraet
+  der jobben startet (i det nye kommer det noen bilder senere). Etter rettingen av gressfargene: før- og etter-bildet på PC er nesten like
+  (snittforskjell 0,06 av 255; 446 av 1,15 mill. punkter skiller mer enn 24).
+
+### Ikke rukket
+- Hele kontrollen på telefon ble ikke kjørt på nytt med den aller siste koden: fra kl. 01:40 til 02:18 gikk det hele tiden en annen
+  kontroll på maskinen (natt-verden, nybegynner, terreng, rb-vind). Den siste hele kjøringen (kl. 01:04) var grønn (119 ok, 0 FEIL);
+  endringene etter den er prøvd med vaktene lys og natur (PC og telefon), Node-sammenligningene og bildene over.
+

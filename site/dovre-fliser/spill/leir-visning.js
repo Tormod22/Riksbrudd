@@ -307,12 +307,20 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   function visBanner(tekst, kan, ekstra) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst)); if (ekstra) banner.append(el('small', {}, ekstra));
     const p = plassering;
+    // (runde 8) hellingen i kartet: hva fargene betyr for bygget du holder (bare i 2D, og bare nær nok til at de vises)
+    if (p && p.type && !p.mal && !LB.BYGG[p.type].linje && window.HellingVis)
+      banner.append(el('small', { klasse: 'hellingtekst' }, typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
+        : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.'));
     if (p && p.type && LB.BYGG[p.type].linje) {
       const a = knapp('Angre punkt', () => { p.punkter.pop(); prøv(); }); a.disabled = !p.punkter.length;
       const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;
       banner.append(a, r);
     } else if (p && p.x !== null) {
       banner.append(knapp('⟲ 15°', () => roter(1)), knapp('⟳ 15°', () => roter(-1)));
+      // (runde 8) for bratt: drei bygget, eller flytt skissen til nærmeste sted der det går (fra hellingskartet, helling-visning.js)
+      const bf = p.feil && /For bratt/.test(p.feil) ? p.brattForslag : null;
+      if (bf && bf.drei) banner.append(knapp('Drei 90° (da går det)', () => roter(6), { id: 'brattdrei' }));
+      if (bf && bf.sted) banner.append(knapp(`Flytt skissen ${Math.round(bf.sted.m)} m ${bf.sted.retning}`, () => { p.rx = p.x = bf.sted.x; p.ry = p.y = bf.sted.y; p.svever = false; prøv(); }, { id: 'brattflytt', title: 'Nærmeste sted der bygget ikke står for bratt' }));
     }
     if (p && !p.mal) banner.append(knapp(rutenett ? 'Rutenett: på' : 'Rutenett: av', () => { rutenett = !rutenett; if (p.x !== null) { p.x = p.rx; p.y = p.ry; } prøv(); }));
     if (p && !p.mal && !LB.BYGG[p.type].linje) banner.append(knapp(inntil ? 'Inntil naboen: på' : 'Inntil naboen: av', () => { inntil = !inntil; prøv(); }));
@@ -321,7 +329,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     else {
       // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
       if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
-      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { if (kjøpManglende(p.mat)) bekreft(); }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
+      // (runde 8, kritikken: loggen sa «Brakke bestilt: 4 mill. kr» mens knappen sa «5 mill. kr i alt») – det materialene faktisk kostet, huskes til loggen
+      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
+        if (kjøpManglende(p.mat)) { p.kjøpt = Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)); bekreft(); } }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
     banner.append(knapp('Avbryt', avbryt));
@@ -375,6 +385,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const punkter = B.linje ? LB.gjerdePunkter(p.punkter, p.lukket) : [...LB.hjørner(b), [b.x, b.y]], v = await kartFor(punkter);
     if (plassering !== p) return;
     p.feil = LB.kanBygge(L, b, v, p.flytt, { planUnntatt: p.pid }); p.kart = v;
+    p.brattForslag = p.feil && /For bratt/.test(p.feil) && window.HellingVis && HellingVis.forslag ? HellingVis.forslag(p.type, p.ret, b.x, b.y) : null;
     const k = LB.kostnad(p.type, B.linje ? LB.lengde(p.punkter, p.lukket) : 0, bonus()); p.mat = p.flytt ? {} : k.mat; p.matPris = matPris(p.mat);
     const harMat = LB.harMat(L, p.mat), pris = p.flytt ? Math.round(B.pris * LB.REGLER.flyttPris) : k.pris; p.pris = pris;
     // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter
@@ -382,7 +393,9 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
       : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? '' : ` i alt (arbeid ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
-    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
+    // (runde 8) skrå grunn: hvor høy grunnmuren blir (samme regel som hellingskartet: over halve grensa = gult)
+    const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;
+    const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, mur, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
     visBanner(tekst, p.feil ? false : (harMat || p.plan) ? true : 'mat', ekstra); skisse3d(); skitten = true;
   }
   function trykk(X, Y) {
@@ -406,6 +419,11 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
     return null;
   }
   KROKER.trykk.push(trykk); KROKER.trykk3d.push(trykk);
+  // (runde 8, kritikken på telefon: trykket på leirflagget for å sette brakka der åpnet basepanelet «Leiren til …») – mens du
+  // plasserer et bygg, går trykket på kartet først til plasseringen. Legges først i lista når alle skriptene er lastet (andre
+  // moduler legger seg først med unshift).
+  const førstPlassering = () => { const f = (X, Y) => (plassering && !(window.Byggesett && Byggesett.tilstand && Byggesett.tilstand().åpen) ? trykk(X, Y) : false); KROKER.trykk.unshift(f); KROKER.trykk3d.unshift(f); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', førstPlassering); else setTimeout(førstPlassering, 0);
   // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
   const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));
   function bekreft() {
@@ -420,7 +438,8 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
       logg(`${LB.BYGG[p.type].navn} flyttes: ${LB.kroner(r.pris)}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); }
     else { const r = LB.bygg(L, sp(p), OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
       const kø = LB.jobber(L).length > LB.byggelag(L);
-      logg(`${LB.BYGG[p.type].navn} bestilt: ${LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
+      const kjøpt = p.kjøpt > 0 ? p.kjøpt : 0; p.kjøpt = 0;
+      logg(`${LB.BYGG[p.type].navn} bestilt: ${kjøpt ? `${LB.kroner(r.bygg.pris + kjøpt)} i alt (arbeid ${LB.kroner(r.bygg.pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
     ferdigPlassert(p);
   }
   // Etter et bygg eller en skisse: med «Fortsett» står samme bygg klart (samme retning), ellers er plasseringen ferdig

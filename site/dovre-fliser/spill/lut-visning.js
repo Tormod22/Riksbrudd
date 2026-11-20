@@ -269,7 +269,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const evne = b.evne, tung = b.tung, maksBar = Math.max(tung * 1.15, b.vekt), A = Utstyr.aktivt(I);
     f.append(el('h3', {}, 'Du bærer'), el('div', { klasse: 'maal' }, el('div', {}, `Vekt ${L.tall(Math.round(b.vekt * 10) / 10)} av ${L.tall(evne)} kg`, ' ', el('span', { klasse: b.status === 'lett' ? '' : b.status === 'tungt' ? 'tung' : 'svært' }, b.status === 'lett' ? '· lett' : b.status === 'tungt' ? '· tungt' : '· svært tungt')),
       el('div', { klasse: 'bar ' + b.status }, el('i', { style: `width:${Math.min(100, b.vekt / maksBar * 100)}%` }), el('u', { style: `left:${evne / maksBar * 100}%` }), el('u', { style: `left:${tung / maksBar * 100}%` })),
-      el('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg (lommer ${L.tall(R.lommer)}${S.rygg ? ' + ' + navn(S.rygg).toLowerCase() + ' ' + L.tall(G[S.rygg].sekk.plass) : ''})${b.status !== 'lett' ? ' · ' + L.STATUS[b.status].replace(/^[^–]*– /, '') : ''}`)));
+      el('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt (lommer ${L.tall(R.lommer)}${S.rygg ? ' + ' + navn(S.rygg).toLowerCase() + ' ' + L.tall(G[S.rygg].sekk.plass) : ''})${b.status !== 'lett' ? ' · ' + L.STATUS[b.status].replace(/^[^–]*– /, '') : ''}`)));
     li.append(el('h4', {}, 'Utstyrt'));
     li.append(el('div', { klasse: 'rad utst' + (valgt && valgt.utst === 'hånd' ? ' valgt' : ''), 'data-side': 'deg', 'data-utst': 'hånd', 'data-belte': String(I.aktiv) }, el('b', {}, el('i', {}, 'Hånd'), A.def.navn), el('small', {}, `${A.v.mag}/${A.def.magasin}`)));
     li.append(el('div', { klasse: 'rad utst' + (valgt && valgt.utst === 'rygg' ? ' valgt' : ''), 'data-side': 'deg', 'data-utst': 'rygg' }, el('b', {}, el('i', {}, 'Rygg'), S.rygg ? navn(S.rygg) : 'ingen sekk'), el('small', {}, S.rygg ? `+${L.tall(G[S.rygg].sekk.plass)} kg, −${Math.round(G[S.rygg].sekk.lettere * 100)} %` : 'bare lommene')));
@@ -404,7 +404,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if (id === 'batterier' && rot.LyktSpill && LyktSpill.har()) return ['Lad lykta', () => LyktSpill.bytt()];
     return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
-    p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg · ${L.STATUS[b.status]}`))),
+    p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt · ${L.STATUS[b.status]}`), e('small', { style: 'display:block;opacity:.8;margin-top:2px' }, 'Vekt (øverst) er alt du bærer, også våpnene – plass er hvor mye lommene og sekken rommer.'))),
       kn('Inventar og beholdere (Tab)', () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------
@@ -452,6 +452,11 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   function våpen3(d, vid) { const V = rot.Utstyr && Utstyr.VÅPEN[vid], lang = vid === 'pistol' ? .22 : vid === 'mp' ? .6 : .95 + (V && V.rekkevidde > 400 ? .15 : 0), tre = /hagle|rifle/.test(vid), st = [.12, .12, .13], tr = [.38, .25, .14];
     kloss(d, -lang * .32, 0, 0, lang * .36, .045, .1, tre ? tr : st); kloss(d, 0, 0, .01, lang * .2, .04, .07, st); rull(d, lang * .28, 0, .03, .011, lang * .5, st, 6, true); if (vid === 'jaktrifle' || vid === 'rifle') rull(d, .02, 0, .085, .018, .26, [.08, .08, .09], 8, true); }
   function tingTil(d, id) { const vid = våpenAv(id); if (vid) { våpen3(d, vid); return; } (FORM[id] || (q => kloss(q, 0, 0, 0, .12, .08, .08, [.6, .55, .45])))(d); }
+  // (20. nov natt, hakk) samme ting = samme geometri: hver ting lages én gang (samlet til ett stykke) og kopieres der den står,
+  // i stedet for at alle klossene lages på nytt for hver melk og hver patroneske. Kopien dreies og flyttes som før.
+  const MALER = new Map();
+  function mal(nøkkel, lag) { let g = MALER.get(nøkkel); if (!g) { const d = []; lag(d); g = MODELLER.samle(d); for (const q of d) q.dispose(); MALER.set(nøkkel, g); } return g.clone(); }
+  const tingMal = id => [mal('t:' + id, d => tingTil(d, id))], våpenMal = vid => [mal('v:' + vid, d => våpen3(d, vid))];
   // legg geometriene i d (laget i tingens ramme) inn i bygget: dreid a, flyttet til (x, y, z)
   const plasser = (ut, d, a, x, y, z, vipp) => { for (const g of d) { if (vipp) g.rotateY(vipp); g.rotateZ(a); g.translate(x, y, z); ut.push(g); } };
   // bakveggen bak et møbel: den siden (±dybden) som er sperret
@@ -467,12 +472,12 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const ut = [];
     for (const { b, vis } of liste) { const m = b.m, ca = Math.cos(m.a || 0), sa = Math.sin(m.a || 0), bredde = m.b || .6;
       if (b.type === 'skap') { const sd = bak(pl, m), nx = -sa * sd, ny = ca * sd;
-        vis.forEach((r, q) => { const side = q ? -1 : 1, px = m.x + ca * side * (bredde / 2 + .18) + nx * ((m.d || .58) / 2 - .05), py = m.y + sa * side * (bredde / 2 + .18) + ny * ((m.d || .58) / 2 - .05), d = []; våpen3(d, våpenAv(r.id));
+        vis.forEach((r, q) => { const side = q ? -1 : 1, px = m.x + ca * side * (bredde / 2 + .18) + nx * ((m.d || .58) / 2 - .05), py = m.y + sa * side * (bredde / 2 + .18) + ny * ((m.d || .58) / 2 - .05), d = våpenMal(våpenAv(r.id));
           // reist mot veggen: løpet opp, litt hellende inn mot veggen
           for (const g of d) { g.rotateY(-Math.PI / 2 + .14); g.rotateZ(Math.atan2(ny, nx)); g.translate(px, py, pl.gulv + .5); ut.push(g); } });
         continue; }
       const z = pl.gulv + (m.h || .9) * OPPÅ[b.type] + .005, steg = bredde / (vis.length + 1);
-      vis.forEach((r, q) => { const t = -bredde / 2 + steg * (q + 1), n = Math.min(2, r.n); for (let e = 0; e < n; e++) { const d = []; tingTil(d, r.id); const off = e * .09, vri = L.hash(pl.i + q, e) * .6 - .3;
+      vis.forEach((r, q) => { const t = -bredde / 2 + steg * (q + 1), n = Math.min(2, r.n); for (let e = 0; e < n; e++) { const d = tingMal(r.id); const off = e * .09, vri = L.hash(pl.i + q, e) * .6 - .3;
         plasser(ut, d, (m.a || 0) + vri, m.x + ca * (t + off * .5) - sa * (off - .04), m.y + sa * (t + off * .5) + ca * (off - .04), z); } }); }
     return ut;
   }
@@ -482,7 +487,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     gulvSig = sig; if (gulvMesh) { R.scene.remove(gulvMesh); gulvMesh.geometry.dispose(); gulvMesh = null; } if (!nær.length) return;
     const terr = (x, y) => (hoyde3d(u.cx + x, u.cy + y, u) - u.h0) * R.EX;
     for (const h of nær) { const x = h.x - u.cx, y = h.y - u.cy, z0 = rot.Interior3d ? Interior3d.høyde(x, y, terr) : null, z = z0 === null ? terr(x, y) : z0; let q = 0;
-      for (const [id, n] of Object.entries(h.t)) { if (!(n > 0) || q >= 8) continue; const d = []; tingTil(d, id); const v = q * 2.4, rr = q ? .12 + q * .06 : 0; plasser(ut, d, L.hash(Math.round(h.x), q) * 6.28, x + Math.cos(v) * rr, y + Math.sin(v) * rr, z + .005); q++; } }
+      for (const [id, n] of Object.entries(h.t)) { if (!(n > 0) || q >= 8) continue; const d = tingMal(id); const v = q * 2.4, rr = q ? .12 + q * .06 : 0; plasser(ut, d, L.hash(Math.round(h.x), q) * 6.28, x + Math.cos(v) * rr, y + Math.sin(v) * rr, z + .005); q++; } }
     if (!ut.length) return; if (!mat3) mat3 = new THREE.MeshLambertMaterial({ vertexColors: true });
     gulvMesh = new THREE.Mesh(MODELLER.samle(ut), mat3); gulvMesh.userData.lut = true; R.scene.add(gulvMesh); for (const g of ut) g.dispose();
   }
@@ -494,7 +499,9 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     for (const o of Interior3d.aktive()) { if (!o.plan || !o.nett) continue; const { liste, sig } = visesI(o.plan); if (o.lutSig === sig) continue; o.lutSig = sig;
       const gammel = o.nett.find(m => m.userData && m.userData.lut); if (gammel) { R.scene.remove(gammel); gammel.geometry.dispose(); o.nett.splice(o.nett.indexOf(gammel), 1); }
       const ut = byggTing(o.plan, liste); if (!ut.length) continue; if (!mat3) mat3 = new THREE.MeshLambertMaterial({ vertexColors: true });
-      const m = new THREE.Mesh(MODELLER.samle(ut), mat3); m.userData.lut = true; R.scene.add(m); o.nett.push(m); for (const g of ut) g.dispose(); }
+      const m = new THREE.Mesh(MODELLER.samle(ut), mat3); m.userData.lut = true; R.scene.add(m); o.nett.push(m); for (const g of ut) g.dispose();
+      // (20. nov natt, hakk) har denne runden brukt over 4 ms, tas resten av husene i neste runde (300 ms senere)
+      if (performance.now() - t > 4) break; }
     haugene(R, R.ut);
   }
   KROKER.ramme3d.push(ramme3);

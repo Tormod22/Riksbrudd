@@ -68,7 +68,7 @@
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
   const kg = v => String(Math.round(v * 10) / 10).replace('.', ',') + ' kg';
   const css = document.createElement('style');
-  css.textContent = `#sekk{ position:fixed; right:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(330px,92vw); max-height:70vh; overflow:auto; padding:10px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
+  css.textContent = `#sekk{ position:fixed; right:10px; top:calc(var(--topp,58px) + 56px); z-index:11; display:none; width:min(330px,92vw); max-height:70vh; overflow:auto; padding:10px 12px; background:#1c170f; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; }
 #sekk.på{ display:block; } #sekk h2{ margin:0 0 4px; font-size:18px; } #sekk h3{ margin:10px 0 2px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); }
 #sekk .rad{ display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #2e281e; } #sekk .rad > div{ flex:1; min-width:0; } #sekk .rad small{ display:block; color:var(--ink-dim,#a99); } #sekk .rad.aktiv b{ color:#f0d79a; }
 #sekk button, #leirmeny .utstyr button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 9px; font:inherit; font-size:13px; cursor:pointer; } #sekk button:disabled{ opacity:.45; }
@@ -83,7 +83,7 @@
   function velg(n) { if (!I.våpen[n] || n === I.aktiv) return false; I.aktiv = n; lagre(); vis(); if (rot.SpilletSpill && SpilletSpill.K) SpilletSpill.K().lader = performance.now() + 500; return true; }
   function helbred(id) { const K = rot.SpilletSpill && SpilletSpill.K && SpilletSpill.K(); if (K && K.hp >= 99.5 && id === 'forbinding') { logg('Du er ikke skadet.'); return false; } const h = bruk(I, id); if (!h) return false; if (K) K.hp = Math.min(100, K.hp + h); lagre(); vis(); logg(`${TING[id].navn} brukt${K ? `: helsa er ${Math.round(K.hp)} %` : ''}.`); return true; }
   function fyll(p) { const A = aktivt(I), v = vekt(I);
-    p.append(knapp('×', () => åpne(false), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Sekken'), el('div', {}, `${kg(v)} av ${maks()} kg`), el('div', { klasse: 'vekt' }, el('i', { style: `width:${Math.min(100, v / maks() * 100)}%` })), el('h3', {}, `Våpen (${I.våpen.length} av ${MAKS_VÅPEN})`));
+    p.append(knapp('×', () => åpne(false), { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Sekken'), el('div', { title: 'Vekt er alt du bærer, også våpnene. Over bæreevnen går du tregere og blir fortere sliten.' }, `Vekt ${kg(v)} · du bærer lett opptil ${maks()} kg`), el('div', { klasse: 'vekt' }, el('i', { style: `width:${Math.min(100, v / maks() * 100)}%` })), el('h3', {}, `Våpen (${I.våpen.length} av ${MAKS_VÅPEN})`));
     I.våpen.forEach((w, n) => { const V = VÅPEN[w.id]; p.append(el('div', { klasse: 'rad' + (n === I.aktiv ? ' aktiv' : '') }, el('div', {}, el('b', {}, `${n + 1}. ${V.navn}`), el('small', {}, `${w.mag} av ${V.magasin} i magasinet · ${I.ting[V.ammo] || 0} ${TING[V.ammo].navn} i sekken · ${kg(V.vekt)}`)),
       n === I.aktiv ? el('span', {}, 'framme') : knapp('Ta fram', () => velg(n)), (() => { const b = knapp('Kast', () => { if (kastVåpen(I, n)) { lagre(); vis(); } }); b.disabled = I.våpen.length <= 1; return b; })())); });
     p.append(el('h3', {}, 'I sekken')); const T = Object.entries(I.ting); if (!T.length) p.append(el('small', {}, 'Tom.'));

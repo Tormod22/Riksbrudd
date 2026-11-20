@@ -122,11 +122,16 @@
     // delene i byggesettet (del: true) står inntil og oppå hverandre; plassene deres sjekkes i byggesett.js
     if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
-    if (!B.linje && v.høyde) { const h = P.map(([x, y]) => v.høyde(x, y)).filter(z => z !== null && z !== undefined && z === z);
-      // store bygg tåler litt mer høydeforskjell (planering): 3 m, eller 18 % av diagonalen
-      const diag = Math.hypot(P[2][0] - P[0][0], P[2][1] - P[0][1]), grense = Math.max(BRATT, .35 * diag), d = h.length > 1 ? Math.max(...h) - Math.min(...h) : 0;
+    if (!B.linje && v.høyde) { const { d, grense } = bratt(b, v.høyde);
       if (d > grense) return `For bratt her (${Math.round(d)} m høydeforskjell under bygget).`; }
     return null;
+  }
+  // Bratt-sjekken for seg (runde 8: helling i kartet og leirvalget, spill/helling.js, bruker den samme regelen): høydeforskjellen d mellom
+  // hjørnene og grensa for bygget – BRATT, eller 35 % av diagonalen for store bygg (planering). d > grense = «For bratt her».
+  function brattGrense(b) { const P = hjørner(b); return Math.max(BRATT, .35 * Math.hypot(P[2][0] - P[0][0], P[2][1] - P[0][1])); }
+  function bratt(b, høyde) {
+    const P = hjørner(b), h = P.map(([x, y]) => høyde(x, y)).filter(z => z !== null && z !== undefined && z === z);
+    return { d: h.length > 1 ? Math.max(...h) - Math.min(...h) : 0, grense: brattGrense(b), n: h.length };
   }
   // ---------- lager og materialer ----------
   const virker = b => b.igjen <= 0 && !(b.arbeid && b.arbeid.hva === 'flytt') && b.hp > 0;
@@ -460,7 +465,7 @@
   function grunn(b, høyde) { const z = [...hjørner(b), [b.x, b.y]].map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); if (!z.length) return { topp: 0, bunn: 0, forskjell: 0 }; const topp = Math.max(...z), bunn = Math.min(...z); return { topp, bunn, forskjell: topp - bunn }; }
   const api = { grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
-    harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
+    harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leir = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

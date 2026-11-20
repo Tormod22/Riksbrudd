@@ -514,6 +514,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   // venter på at interiøret er bygget (interior3d.js lager det for det nærmeste bygget), så går dørhjelpen inn for deg
   function innSteg() {
     const v = innVent; if (!v) return; if (!r3() || !R3.fot || !kropp) { innVent = null; return; }
+    // (interior3d.js bygger interiøret i biter – med trege bilder tar det mange bilder; her venter du ved døra, så huset bygges ferdig med en gang)
+    if (!v.P.inne && !v.tvang && window.Interior3d && Interior3d.oppdater) { v.tvang = true; Interior3d.oppdater(true); }
     // interiøret er laget: du settes rett innenfor døra med blikket inn i huset (med programvare-grafikk tok det over et minutt å gå de
     // tre metrene gjennom døra med dørhjelpen); er plassen innenfor sperret, går dørhjelpen inn som før
     if (v.P.inne && v.P.inne.inngang) { const I = v.P.inne.inngang, inn = I.inn || Gaavalg.dørVei(I, true)[1];
