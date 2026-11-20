@@ -317,21 +317,27 @@
     // firkant: f er én farge eller fire (en per hjørne), t er fire uv-par
     const fk = (g, a, b, c, d, f, t) => { const F = f && f.length === 4 && f[0].length ? f : [f, f, f, f]; tri(g, a, b, c, F[0], F[1], F[2], t[0], t[1], t[2]); tri(g, a, c, d, F[0], F[2], F[3], t[0], t[2], t[3]); };
     const UV0 = [[0, 0], [1, 0], [1, 1], [0, 1]], mørk = (f, v) => [f[0] * v, f[1] * v, f[2] * v];
+    // firkant med én farge (f ganget med sk) som to trekanter – det fk(g, a, b, c, d, mørk(f, sk), uv) gjorde, uten tabeller
+    const firkant = (g, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, f, sk, u1, v1, u2, v2, u3, v3, u4, v4) => { const r = f[0] * sk, gr = f[1] * sk, b = f[2] * sk;
+      g.pos.push(x1, y1, z1, x2, y2, z2, x3, y3, z3, x1, y1, z1, x3, y3, z3, x4, y4, z4); g.kol.push(r, gr, b, r, gr, b, r, gr, b, r, gr, b, r, gr, b, r, gr, b); g.uv.push(u1, v1, u2, v2, u3, v3, u1, v1, u3, v3, u4, v4); };
     // en kasse i møbelets akser: midt (x, y), retning a, sidene litt mørkere enn toppen
     const kasse = (x, y, a, [x0, x1, y0, y1, z0, z1, f, st = 'glatt', rund = false]) => {
       // hvitmalt tre har ingen synlige årer
       if (st === 'tre' && f[0] > .84 && f[2] > .84) st = 'malt';
-      const c = Math.cos(a), s = Math.sin(a), p = (lx, ly, z) => [x + lx * c - ly * s, y + lx * s + ly * c, g0 + z], g = G[NR[st]], m = METER[st];
-      if (rund) { const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2, n = 8, T = p(cx, cy, z1);
+      const c = Math.cos(a), s = Math.sin(a), g = G[NR[st]], m = METER[st];
+      if (rund) { const p = (lx, ly, z) => [x + lx * c - ly * s, y + lx * s + ly * c, g0 + z], cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2, n = 8, T = p(cx, cy, z1);
         for (let i = 0; i < n; i++) { const v0 = i / n * 6.2832, v1 = (i + 1) / n * 6.2832, a0 = [cx + Math.cos(v0) * rx, cy + Math.sin(v0) * ry], a1 = [cx + Math.cos(v1) * rx, cy + Math.sin(v1) * ry], sk = .78 + .2 * Math.abs(Math.cos(v0 + .6));
           fk(g, p(a0[0], a0[1], z0), p(a1[0], a1[1], z0), p(a1[0], a1[1], z1), p(a0[0], a0[1], z1), mørk(f, sk), UV0); tri(g, T, p(a0[0], a0[1], z1), p(a1[0], a1[1], z1), f, f, f, [.5, .5], [0, 0], [1, 0]); } return; }
-      const flate = (P4, uv, sk) => fk(g, P4[0], P4[1], P4[2], P4[3], mørk(f, sk), uv.map(q => [q[0] / m, q[1] / m]));
-      flate([p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)], [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], 1);
-      flate([p(x0, y0, z0), p(x1, y0, z0), p(x1, y0, z1), p(x0, y0, z1)], [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], .8);
-      flate([p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)], [[y0, z0], [y1, z0], [y1, z1], [y0, z1]], .9);
-      flate([p(x1, y1, z0), p(x0, y1, z0), p(x0, y1, z1), p(x1, y1, z1)], [[x1, z0], [x0, z0], [x0, z1], [x1, z1]], .86);
-      flate([p(x0, y1, z0), p(x0, y0, z0), p(x0, y0, z1), p(x0, y1, z1)], [[y1, z0], [y0, z0], [y0, z1], [y1, z1]], .93);
-      if (z0 > .3) flate([p(x0, y0, z0), p(x1, y0, z0), p(x1, y1, z0), p(x0, y1, z0)], [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], .6);
+      // (20. nov natt, søppeltømming) kassen uten mellomtabeller: de samme tallene i samme rekkefølge som p/flate/fk/tri ga før
+      // (hjørnene A = (x0, y0), B = (x1, y0), C = (x1, y1), D = (x0, y1); zA nede, zB oppe; fargen = mørk(f, sk), uv = mål / m)
+      const ax = x + x0 * c - y0 * s, ay = y + x0 * s + y0 * c, bx = x + x1 * c - y0 * s, by = y + x1 * s + y0 * c, cx = x + x1 * c - y1 * s, cy = y + x1 * s + y1 * c,
+        dx = x + x0 * c - y1 * s, dy = y + x0 * s + y1 * c, zA = g0 + z0, zB = g0 + z1, X0 = x0 / m, X1 = x1 / m, Y0 = y0 / m, Y1 = y1 / m, Z0 = z0 / m, Z1 = z1 / m;
+      firkant(g, ax, ay, zB, bx, by, zB, cx, cy, zB, dx, dy, zB, f, 1, X0, Y0, X1, Y0, X1, Y1, X0, Y1);
+      firkant(g, ax, ay, zA, bx, by, zA, bx, by, zB, ax, ay, zB, f, .8, X0, Z0, X1, Z0, X1, Z1, X0, Z1);
+      firkant(g, bx, by, zA, cx, cy, zA, cx, cy, zB, bx, by, zB, f, .9, Y0, Z0, Y1, Z0, Y1, Z1, Y0, Z1);
+      firkant(g, cx, cy, zA, dx, dy, zA, dx, dy, zB, cx, cy, zB, f, .86, X1, Z0, X0, Z0, X0, Z1, X1, Z1);
+      firkant(g, dx, dy, zA, ax, ay, zA, ax, ay, zB, dx, dy, zB, f, .93, Y1, Z0, Y0, Z0, Y0, Z1, Y1, Z1);
+      if (z0 > .3) firkant(g, ax, ay, zA, bx, by, zA, cx, cy, zA, dx, dy, zA, f, .6, X0, Y0, X1, Y0, X1, Y1, X0, Y1);
     };
     // en skygge på gulvet: myk firkant rundt et fotavtrykk (midt, retning, halve mål)
     const blob = (x, y, a, hb, hd, z = .012) => { const c = Math.cos(a), s = Math.sin(a), p = (lx, ly) => [x + lx * c - ly * s, y + lx * s + ly * c, g0 + z];
