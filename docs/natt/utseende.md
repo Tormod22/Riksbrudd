@@ -88,6 +88,10 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
   (punkt 1–2), `sammen-z2.png` (navnet), `sammen-regn-pc.png` (punkt 3), `sammen-gaa2.png` (punkt 4), `sammen-halv*.png` (punkt 5).
   Skript: `last2d.js`, `tre3d.js`, `halvmane.js` (ROT=<site-mappe> UT=<navn>; `for/site` er koden før runde 8).
 
+### Kontroll
+- `SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js` på en kopi av grenen (20. nov 15:17 UTC, etter lys3d.js/natt3d.js): **123 ok, 0 FEIL**
+  (også «lys og skygger»: skygger, tåke og skyer på og av uten GL-feil). Vakta «utseende» ok på PC og mobil. Alle 93 test_*.js og stubtestene ok.
+
 ### Ikke gjort / svakheter
 - De første ~2 s etter at et lagret spill lastes er 2D fortsatt tomt (oversiktsflisene for hele Norge lages før kameraet flyttes til leiren).
 - Nærskogen har ikke stammer å kollidere med, ikke vind i greinene og bare enkle former utenfor 70 m – den står bare til det nye utsnittet er ferdig.
