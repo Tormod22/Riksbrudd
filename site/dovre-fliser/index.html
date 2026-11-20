@@ -288,9 +288,11 @@ const HENTET = new Set();   // fliser vi allerede har bedt om data til
 const FORSØK_MAKS = 8;
 setInterval(() => { if (på3d) return; for (const t of FERDIG.values()) if (t.ufull && t.forsøk < FORSØK_MAKS) { skitten = true; return; } }, 4000);
 window.addEventListener('online', () => { for (const t of FERDIG.values()) if (t.ufull) { t.forsøk = 0; t.igjen = 0; } skitten = true; });
-function kø(z, x, y, k) {
+// forrang (runde 8): de grove flisene for bildet (tegnFliser) slipper foran når køen er full av fliser som ikke lenger vises
+// (rett etter lasting: oversikten over hele landet, før kameraet flyttes til leiren) – høyst FLISLAST.forrang i arbeid samtidig
+function kø(z, x, y, k, forrang = false) {
   if (!HENTET.has(k) && KLAR_FERDIG) { HENTET.add(k); if (HENTET.size > 2000) HENTET.delete(HENTET.keys().next().value); forhent(z, x, y); }   // nettet jobber mens køen venter
-  if (VENTER.has(k) || aktive >= 6) return;
+  if (VENTER.has(k) || aktive >= (forrang ? FLISLAST.forrang : 6)) return;
   VENTER.add(k); aktive++;
   lagFlis(z, x, y).then(t => { const gml = FERDIG.get(k);
       // en flis som ble laget mens noe ikke lot seg hente (nettbrudd), vises som den er og lages på nytt: etter 4 s, 8 s, 16 s … (høyst hvert minutt)
@@ -310,8 +312,9 @@ function kø(z, x, y, k) {
 // fylles ut på et øyeblikk (uskarpt) før de skarpe kommer; (2) reserven leter lenger opp (seks nivåer) og bruker de fire finere flisene
 // når du zoomer ut; (3) en ny flis tones inn; (4) en ferdig flis som står inntil en som ikke er ferdig, får en myk kant mot den
 // (grov -> skarp over FLISLAST.kant punkter), så det ikke blir en rett søm. Claudes forslag (alle tallene):
-// inn = toningen (ms), kant = myk kant (CSS-punkter), grov = hvor mange nivåer opp den første grove flisen ligger, dypt = reserven.
-const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 6 };
+// inn = toningen (ms), kant = myk kant (CSS-punkter), grov = hvor mange nivåer opp den første grove flisen ligger, dypt = reserven,
+// forrang = så mange fliser kan være i arbeid når en grov flis slipper foran (ellers 6).
+const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 6, forrang: 10 };
 let MYK = null;   // lerret til flisene med myk kant
 function flisReserve(z, x, y) {
   for (let d = 1; d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
@@ -346,7 +349,7 @@ function tegnFliser(z, s, px, liste, vx0, vy1) {
   const zg = Math.max(ZMIN, z - FLISLAST.grov);
   if (zg < z) { const grove = new Set();
     for (const [x, y] of liste) if (!ferdig(x, y) && !flisReserve(z, x, y)) grove.add((x >> (z - zg)) + '/' + (y >> (z - zg)));
-    for (const g of grove) { const [gx, gy] = g.split('/').map(Number); kø(zg, gx, gy, zg + '/' + g); } }
+    for (const g of grove) { const [gx, gy] = g.split('/').map(Number); kø(zg, gx, gy, zg + '/' + g, true); } }
   let toner = false; FLISLAST.sist = { myke: 0, toner: 0, reserve: 0, mangler: 0 };
   for (const [x, y] of liste) {
     const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
