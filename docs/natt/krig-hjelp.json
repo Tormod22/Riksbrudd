@@ -188,5 +188,25 @@
   "Handelsrutene",
   "Motstanderne sender av og til et lag for å stenge en handelsrute eller ruta til oljekolonnen din. Loggen sier fra. Sett et lag ved ruta som vakt, eller jag dem bort.",
   "Lag og strid"
+ ],
+ [
+  "Angrepsbanneret",
+  "Når noen angriper leiren – røvere eller en av motstanderne – står et rødt banner øverst med hvem, hvor mange og fra hvilken kant. Ser ett av lagene dine, et vakttårn, et kamera eller vakta dem, står avstanden og når de er framme. Har noen sett dem nylig, står «sist sett … for N min siden». Ellers står et anslag som et spenn («ca. 1–2 timer»), fordi ingen vet nøyaktig hvor de er. Varselbrikka øverst til venstre sier det samme. «Forsvar leiren» sender lagene i stilling.",
+  "Leiren"
+ ],
+ [
+  "Når kampen begynner",
+  "⏭ og farten stopper når røverne er snart framme, og igjen når kampen begynner (et av lagene dine og en angriper skyter på hverandre). Da går tida på 1×, så du kan følge kampen: skuddene står som stiplede streker med munningsglimt, og lagene i kamp får en rød ring og «I ildkamp». Lagene i og ved leiren (innen 600 m) vises der de er, og det de ser, står på kartet.",
+  "Lag og strid"
+ ],
+ [
+  "Rapporten etter et angrep",
+  "Når en røverbølge eller et angrep på leiren er over, kommer en kort rapport i banneret og i loggen: om angrepet ble slått tilbake eller om de herjet, hva dere tok fra dem eller de tok fra dere, tap hos dere (falne og sårede) og skadde bygg. ⏭ stopper så du ser den. «Reparer alle» står i rapporten når bygg er skadet.",
+  "Leiren"
+ ],
+ [
+  "Garnisonen holder stillingen",
+  "Et lag som blir garnison i et tettsted dere holder, kjemper som standard også mot en sterkere fiende og trekker seg ikke etter tap – ellers ble tettstedet tatt uten kamp. Vil du at laget heller skal trekke seg, endrer du det i lagpanelet → Stridsregler. Går laget ut av tettstedet, får det reglene sine tilbake.",
+  "Lag og strid"
  ]
 ]
