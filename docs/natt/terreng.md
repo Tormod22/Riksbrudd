@@ -50,6 +50,9 @@ nordvest) og høydekurver hver 2 m (hver 10. m sterkere; de svake tas bort der d
 - Trykk på leirflagget mens du plasserer, plasserer bygget (før åpnet det basepanelet «Leiren til …» – sett på telefon). leir-visning.js
   legger en krok først i KROKER.trykk/trykk3d (etter at alle skriptene er lastet) som bare gjelder mens en plassering pågår (og ikke når
   byggesettet er åpent).
+- **Uten bygging, helt nær leiren** (under 0,8 m per punkt, kartets midte innen 400 m fra leiren): bare skyggesiden og høydekurvene,
+  svakere og uten farger («gjerne svak skyggelegging/høydekurver i leirområdet på nær zoom»). Ingen lyse flekker (de ville lyst om
+  natta – hellingsbildet tegnes etter kartlyset). `tilstand().hvor === 'terreng'`.
 - I 3D sier banneret «I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).»
 - I testene bare med `HellingVis.test = true` (da regnes kartet også mens 3D er på, men det tegnes bare i 2D). API: `tilstand()` (type, ret, midte, antall ruter per nivå, vises), `ved(x, y)`,
   `nivåVed(x, y)`, `oppdater()`, `venter()`, `av(bool)`.
@@ -72,12 +75,13 @@ nordvest) og høydekurver hver 2 m (hver 10. m sterkere; de svake tas bort der d
 - `index.html`: bare de to skripttaggene.
 
 ### Prøvd
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, kopi av treet 01:50 UTC): 122 ok, 0 FEIL (425 s).
 - `node pipeline/fliser/test_helling.js`, test_leir.js, test_oppstart.js, test_leirvalg.js, test_byggesett.js: grønne.
-- Vakten `pipeline/fliser/vakter/terreng.js` (Dovre-testsiden, PC og telefon): ok på 4–10 s; start-vakta grønn etterpå. Den prøver
+- Vakten `pipeline/fliser/vakter/terreng.js` (Dovre-testsiden, PC og telefon): ok på 2–10 s; start-vakta grønn etterpå. Den prøver
   reglene, leirvalget i en bratt li vest for Dombås (stopp, ingen bekreftelse, «Flytt hit» gir et sted der alt får plass), et trykk i
   vann (forslag), hellingskartet i leirvalget og ved plassering (og at det er enig med kanBygge på 6 steder), «Flytt skissen» for en
   bratt skisse, et ferdig hus (brakke 3 × 4) i lia avvises og ved leiren godtas, prisen i loggen = knappen = kassa, og
-  fargeprøvene/fokus. Den slår ikke 3D av eller på og går uten 3D-tegning (`utenTegning` fra sjekk.js) – 3–4 s også med 3D på.
+  fargeprøvene/fokus, og at kurvene vises nær leiren uten bygging. Den slår ikke 3D av eller på og går uten 3D-tegning (`utenTegning` fra sjekk.js) – 3–4 s også med 3D på.
 - Som ny spiller (webdriver = false) på /norge med ekte data (dev.py), telefon 390 × 844 og PC 1400 × 820: Aurland (trykk i lia sør
   for Aurlandsvangen og i den bratte lia lenger vest), Lærdalsøyri. Bilder i `scratchpad/natt8/terreng/`.
 

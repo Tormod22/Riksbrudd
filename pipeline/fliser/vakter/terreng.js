@@ -60,6 +60,11 @@ module.exports = {
           const n = HellingVis.nivåVed(p.x, p.y); if (n === null || n === Helling.UKJENT || n === Helling.VANN) continue; sjekket++;
           if ((n === Helling.BRATT) !== /For bratt/.test(p.feil || '')) uenig++; }
         krev(sjekket >= 3 && !uenig, `hellingskartet og kanBygge er uenige (${uenig} av ${sjekket})`); ut.sjekket = sjekket;
+        // 3a. uten bygging, helt nær leiren: skygge og høydekurver uten farger (hvor = 'terreng')
+        { const p0 = LeirSpill.plassering(); LeirSpill.avbryt(); kam.x = S.leir.x; kam.y = S.leir.y; kam.m = .5; HellingVis.oppdater();
+          for (let i = 0; i < 80 && (HellingVis.venter() || !HellingVis.tilstand() || HellingVis.tilstand().hvor !== 'terreng'); i++) { await vent(100); HellingVis.oppdater(); }
+          const tt = HellingVis.tilstand(); ut.terreng = !!tt && tt.hvor === 'terreng' && tt.vises; krev(ut.terreng, 'skygge og høydekurver vises ikke nær leiren');
+          if (p0) { LeirSpill.startPlassering('brakke'); kam.m = 1; } }
         // 3b. skissen i den bratte lia: «For bratt», og «Flytt skissen …» flytter den dit det går
         if (bratt) { LeirSpill.trykk(bratt[0], bratt[1]); kam.x = bratt[0]; kam.y = bratt[1]; HellingVis.oppdater();
           for (let i = 0; i < 80 && (HellingVis.venter() || !HellingVis.tilstand() || Math.hypot(HellingVis.tilstand().x - bratt[0], HellingVis.tilstand().y - bratt[1]) > 60); i++) { await vent(100); HellingVis.oppdater(); }
@@ -106,6 +111,6 @@ module.exports = {
     }), profil);
     if (d.mangler) return { ok: true, tekst: 'terreng: modulene mangler (hoppet over)', data: d };
     const ok = !d.feil.length;
-    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», hus i lia «${(d.husBratt || '').slice(0, 40)}», pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
+    return { ok, tekst: `terreng: bratt «${(d.bratt || '').slice(0, 70)}», Flytt hit «${(d.flyttet || '').slice(0, 50)}», vann «${(d.vann || '').slice(0, 50)}», hellingskart leir ${d.kartLeir ? d.kartLeir.bratt + ' bratte' : '–'} / bygg ${d.kartBygg ? d.kartBygg.flatt + ' flate' : '–'}, kanBygge enig på ${d.sjekket}, bratt skisse: knapper flytt/drei ${JSON.stringify(d.brattKnapper)} → «${d.etterFlytt || 'ok'}», hus i lia «${(d.husBratt || '').slice(0, 40)}», kurver ved leiren ${d.terreng}, pris ${d.pris ? d.pris.brukt : '–'}, fargeprøve ${d.farge} px` + (ok ? '' : ' – FEIL: ' + d.feil.join('; ')), data: d };
   },
 };

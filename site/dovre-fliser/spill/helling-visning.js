@@ -15,7 +15,10 @@
   // ute (meter per punkt) det vises; flytt: hvor langt
   // (m, andel av radien) midten kan flytte seg før kartet regnes på nytt; celle: m mellom stedene som vurderes; kurve/kurveSterk:
   // høydekurvene (m); styrke: hvor sterke fargene er (0–1).
-  const REGLER = { radius: 240, px: 1, nærM: .45, nærRadius: 150, nærPx: .5, fjernM: 2, fjernRadius: 500, fjernPx: 2, fjernCelle: 4, maksM: 6, flytt: .33, celle: 2, kurve: 2, kurveSterk: 10, styrke: 1 };
+  // terrengM/terrengAvstand/terrengStyrke: helt nær leiren (under terrengM meter per punkt, kartets midte innen terrengAvstand m) vises
+  // skygge og høydekurver også når du ikke bygger, svakere (terrengStyrke).
+  const REGLER = { radius: 240, px: 1, nærM: .45, nærRadius: 150, nærPx: .5, fjernM: 2, fjernRadius: 500, fjernPx: 2, fjernCelle: 4, maksM: 6, flytt: .33, celle: 2, kurve: 2, kurveSterk: 10, styrke: 1,
+    terrengM: .8, terrengAvstand: 400, terrengStyrke: .55 };
   const FARGE = { [HL.FLATT]: [96, 205, 104, .26], [HL.SKRÅTT]: [236, 198, 64, .2], [HL.BRATT]: [228, 72, 52, .32], [HL.VANN]: [70, 130, 210, .12] };
   let mål = null, klar = null, regner = null, teller = 0, av = false;
   const ekte = () => !navigator.webdriver || HellingVis.test === true;
@@ -35,10 +38,14 @@
     }
     const f = window.OppstartSpill && OppstartSpill.forslag && OppstartSpill.forslag();
     if (f && f.x !== undefined) return { type: HL.REGLER.første[0], ret: 0, x: f.x, y: f.y, hvor: 'leir', ...skala() };
+    // ellers, helt nær leiren: bare skyggeleggingen og høydekurvene (ingen farger), så du ser formen på terrenget rundt leiren
+    const S = window.OppstartSpill && OppstartSpill.tilstand();
+    if (S && S.leir && kam.m <= REGLER.terrengM && Math.hypot(kam.x - S.leir.x, kam.y - S.leir.y) < REGLER.terrengAvstand)
+      return { type: HL.REGLER.første[0], ret: 0, x: S.leir.x, y: S.leir.y, hvor: 'terreng', bare: true, ...skala() };
     return null;
   }
   const skala = () => (kam.m < REGLER.nærM ? { R: REGLER.nærRadius, px: REGLER.nærPx, c: REGLER.celle } : kam.m >= REGLER.fjernM ? { R: REGLER.fjernRadius, px: REGLER.fjernPx, c: REGLER.fjernCelle } : { R: REGLER.radius, px: REGLER.px, c: REGLER.celle });
-  const sammeBygg = (a, b) => a && b && a.type === b.type && Math.abs(a.ret - b.ret) < 1e-6 && a.px === b.px;
+  const sammeBygg = (a, b) => a && b && a.type === b.type && Math.abs(a.ret - b.ret) < 1e-6 && a.px === b.px && !a.bare === !b.bare;
   // Regner ut bildet for målet: høydene (8 m) og arealklassene (32 m) rundt, så nivået per rute (2 eller 4 m), skygge og kurver per punkt
   async function regn(m) {
     const nr = ++teller, R = m.R, px = m.px, bb = [m.x - R - 24, m.y - R - 24, m.x + R + 24, m.y + R + 24];
@@ -62,9 +69,10 @@
       if (h !== h) continue;
       // skygge: lys fra nordvest – en side som stiger mot øst (gx > 0) eller mot sør (gy < 0) vender mot lyset
       const gx = hx === hx ? (hx - h) / px : 0, gy = hy === hy ? (h - hy) / px : 0, lys = Math.max(-1, Math.min(1, (gx - gy) * .9));
-      let r = lys > 0 ? 255 : 0, gg = r, b = r, a = Math.abs(lys) * .32;
+      // (uten bygging, m.bare: bare skyggesiden – kartet er alt lyst, og lyse flekker ville lyse om natta)
+      let r = lys > 0 ? 255 : 0, gg = r, b = r, a = m.bare && lys > 0 ? 0 : Math.abs(lys) * .32;
       // nivået for bygget i denne ruta
-      const nv = nivå[Math.min(n - 1, Math.floor(j / cp)) * n + Math.min(n - 1, Math.floor(i / cp))], F = FARGE[nv];
+      const nv = nivå[Math.min(n - 1, Math.floor(j / cp)) * n + Math.min(n - 1, Math.floor(i / cp))], F = m.bare ? null : FARGE[nv];
       // rødt får skravur (striper hver 8. m), så det ikke bare er en farge
       if (F) { const at = F[3] * REGLER.styrke * (nv === HL.BRATT && ((i + j) % (2 * skrav)) < Math.max(1, skrav >> 1) ? 1.9 : 1), ao = at + a * (1 - at);
         r = (F[0] * at + r * a * (1 - at)) / ao; gg = (F[1] * at + gg * a * (1 - at)) / ao; b = (F[2] * at + b * a * (1 - at)) / ao; a = ao; }
@@ -73,7 +81,7 @@
       const sterk = (hx === hx && fS !== Math.floor(hx / KS)) || (hy === hy && fS !== Math.floor(hy / KS));
       const svak = !sterk && steil < .6 && ((hx === hx && f !== Math.floor(hx / K)) || (hy === hy && f !== Math.floor(hy / K)));
       if (sterk || svak) { const al = sterk ? .42 : .22, ao = al + a * (1 - al); r = (40 * al + r * a * (1 - al)) / ao; gg = (30 * al + gg * a * (1 - al)) / ao; b = (20 * al + b * a * (1 - al)) / ao; a = ao; }
-      d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = Math.round(a * tone * 255);
+      d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = Math.round(a * tone * (m.bare ? REGLER.terrengStyrke : 1) * 255);
     }
     g.putImageData(im, 0, 0);
     klar = { ...m, x0, y1, W, M: 2 * R, cv, nivå, n, c, tell, høyde, tørt };
@@ -90,10 +98,11 @@
   // tegnes først av krokene (under byggene, skissen og leirflagget) og i byggevisningen over sløret
   const tegn = (g, vx0, vy1) => {
     oppdater();
-    if (!klar || !mål || klar.type !== mål.type || Math.abs(klar.ret - mål.ret) > 1e-6 || kam.m > REGLER.maksM) return;
+    if (!klar || !mål || klar.type !== mål.type || Math.abs(klar.ret - mål.ret) > 1e-6 || !klar.bare !== !mål.bare || kam.m > (mål.bare ? REGLER.terrengM : REGLER.maksM)) return;
     const s = 1 / kam.m, x = (klar.x0 - vx0) * s, y = (vy1 - klar.y1) * s, w = klar.M * s;
     if (x > VW || y > VH || x + w < 0 || y + w < 0) return;
-    g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = Math.min(1, (REGLER.maksM - kam.m) / 1 + .25); g.drawImage(klar.cv, x, y, w, w); g.restore();
+    const maks = mål.bare ? REGLER.terrengM : REGLER.maksM;
+    g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = Math.min(1, (maks - kam.m) / (mål.bare ? .3 : 1) + .25); g.drawImage(klar.cv, x, y, w, w); g.restore();
   };
   tegn.bygg = true; KROKER.tegn.unshift(tegn);
 
