@@ -75,26 +75,31 @@
     return [[x0 - m, y0 - m], [x1 + m, y0 - m], [x1 + m, y1 + m], [x0 - m, y1 + m]].map(([u, v]) => [b.x + u * c - v * s, b.y + u * s + v * c]); }
   // Får de første byggene plass rundt (x, y)? Grådig: det største først, hvert på den nærmeste ruta (fra midten) der det er tørt, ikke for
   // bratt og ikke oppå de andre. -> { ok, plasser: [{ type, x, y, ret }], mangler: navnet på bygget som ikke fikk plass, d (brakkas
-  // høydeforskjell midt på punktet), grense }. o: { nær, celle, typer, ret }
+  // høydeforskjell midt på punktet), grense }. o: { nær, celle, typer, ret, flatFørst (det første bygget helst på flat grunn – uten
+  // grunnmur – når det finnes innen nær; ellers skrått som før) }
   function førsteBygg(høyde, tørt, x, y, o = {}) {
     const R = REGLER, nær = o.nær || R.nær, celle = o.celle || R.celle, typer = o.typer || R.første, ret = o.ret || 0, plasser = [], omriss = [];
     const midt = vurder({ type: typer[0], x, y, ret }, høyde, tørt);
     for (const type of typer) { let funnet = null; const vt = vurderer(type, ret, høyde, tørt);
-      for (const [dx, dy] of ringer(nær, celle)) { const nv = vt(x + dx, y + dy); if (nv === BRATT || nv === VANN) continue;
-        const b = { type, x: x + dx, y: y + dy, ret }, P = LB.hjørner(b); if (omriss.some(Q => LB.overlapper(P, Q))) continue; funnet = b; break; }
+      const godta = () => (o.flatFørst && type === typer[0] && !plasser.length ? [[FLATT], [FLATT, SKRÅTT]] : [[FLATT, SKRÅTT, UKJENT]]);
+      for (const lov of godta()) { for (const [dx, dy] of ringer(nær, celle)) { const nv = vt(x + dx, y + dy); if (!lov.includes(nv)) continue;
+        const b = { type, x: x + dx, y: y + dy, ret }, P = LB.hjørner(b); if (omriss.some(Q => LB.overlapper(P, Q))) continue; funnet = b; break; } if (funnet) break; }
       if (!funnet) return { ok: false, plasser, mangler: LB.BYGG[type].navn, d: midt.d, grense: midt.grense, nivå: midt.nivå };
       plasser.push(funnet); omriss.push(utvidet(funnet, R.mellomrom)); }
     return { ok: true, plasser, mangler: null, d: midt.d, grense: midt.grense, nivå: midt.nivå };
   }
   // Nærmeste sted (innen o.søk meter) der leiren får plass til de første byggene: punktet er der brakka kan stå, og lovlig(x, y) (ikke i et
   // tettsted, i Norge, i spillområdet) må si ja. -> { x, y, m (meter unna), retning ('nordøst' …), forsøk } eller null.
+  // o.flatFørst: helst et sted der brakka står flatt (uten grunnmur) – da letes det først etter det, og skrått godtas bare når det
+  // ikke finnes flatt innen søket.
   function finnPlass(høyde, tørt, x, y, o = {}) {
     const R = REGLER, søk = o.søk || R.søk, celle = o.celle || R.celle, typer = o.typer || R.første, lovlig = o.lovlig || (() => true), maks = o.maksForsøk || R.maksForsøk;
     let forsøk = 0; const v0 = vurderer(typer[0], 0, høyde, tørt);
-    for (const [dx, dy, d] of ringer(søk, celle)) { const cx = x + dx, cy = y + dy, nv = v0(cx, cy);
-      if (nv !== FLATT && nv !== SKRÅTT) continue; if (!lovlig(cx, cy)) continue;
-      if (++forsøk > maks) return null;
-      if (førsteBygg(høyde, tørt, cx, cy, o).ok) return { x: cx, y: cy, m: d, retning: retning(dx, dy), forsøk }; }
+    for (const lov of o.flatFørst ? [[FLATT], [FLATT, SKRÅTT]] : [[FLATT, SKRÅTT]]) {
+      for (const [dx, dy, d] of ringer(søk, celle)) { const cx = x + dx, cy = y + dy, nv = v0(cx, cy);
+        if (!lov.includes(nv)) continue; if (!lovlig(cx, cy)) continue;
+        if (++forsøk > maks) break;
+        if (førsteBygg(høyde, tørt, cx, cy, o).ok) return { x: cx, y: cy, m: d, retning: retning(dx, dy), forsøk, flat: nv === FLATT }; } }
     return null;
   }
   // kompassretningen fra et punkt til et annet (y er nord)

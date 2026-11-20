@@ -72,6 +72,10 @@ const tørt = () => true;
   // vann: nærmeste tørre sted
   const f3 = H.finnPlass(flatt, x => x > 60, 0, 0);
   ok(f3 && f3.retning === 'øst' && f3.m < 100, `fra vann: ${f3 && Math.round(f3.m)} m ${f3 && f3.retning}`);
+  // helst flatt: skrått ved punktet, flatt 50 m øst – med flatFørst velges det flate (uten grunnmur)
+  const sf = (x) => (x < 50 ? .7 * x : 35), u1 = H.finnPlass(sf, tørt, 0, 0), u2 = H.finnPlass(sf, tørt, 0, 0, { flatFørst: true });
+  const b1 = H.førsteBygg(sf, tørt, 0, 0, { flatFørst: true });
+  ok(u1 && u1.m === 0 && !u1.flat && u2 && u2.x >= 40 && u2.flat && b1.ok && b1.plasser[0].x >= 40, `flatFørst: uten ${u1 && u1.x} (skrått), med ${u2 && u2.x} (flatt), brakka i førsteBygg ved x ${b1.plasser[0] && b1.plasser[0].x}`);
   // raskt nok for et vindu på 4 km
   const t0 = Date.now(); H.finnPlass(li, tørt, 2100, 0); const ms = Date.now() - t0;
   ok(ms < 1500, `søk fra 2 km inn i lia: ${ms} ms`);

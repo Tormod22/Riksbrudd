@@ -45,6 +45,8 @@
 #leirvalg .stopp{ color:#f0a090; text-align:left; margin-top:6px; font-size:16px; font-weight:600; }
 #leirvalg .flytt{ color:#bfe6b4; text-align:left; margin-top:4px; font-size:15px; }
 #leirvalg .venter{ font-style:italic; }
+/* (runde 8) telefon: banneret tar mindre plass, så flagget synes over det */
+@media (max-width:700px){ #leirvalg{ padding:8px 10px; } #leirvalg .fakta, #leirvalg .kai{ font-size:13px; } #leirvalg .stopp{ font-size:15px; } #leirvalg .flytt, #leirvalg .adv{ font-size:14px; } #leirvalg button{ min-height:44px; margin:5px 3px 0; } }
 #oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:1; background:#16120c; text-align:center; padding:22px 0 6px; border-bottom:1px solid var(--rule); }
   #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
@@ -238,6 +240,17 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (mer && mer.flytt) { const b = knapp('Flytt hit', false, () => flyttHit(mer.flytt), 'valg'); b.id = 'flytthit'; banner.append(b); }
     if (kanBekrefte) banner.append(knapp('Legg leiren her', false, bekreft, 'valg'));
     banner.append(knapp('Tilbake til valgene', false, () => { velger = false; forslag = null; banner.classList.remove('på'); vis(2); skitten = true; }, 'valg'));
+    synligForslag();
+  }
+  // (runde 8, kritikken på telefon: banneret dekket flagget midt på skjermen) – ligger stedet under banneret eller statuslinja, flyttes
+  // kartet så det står midt i det frie feltet over banneret
+  function synligForslag() {
+    if (!velger || !forslag || !ekte()) return; const br = banner.getBoundingClientRect(), c = document.getElementById('c'), cr = c ? c.getBoundingClientRect() : { top: 0, left: 0 };
+    const topp = (document.querySelector('.top') || { getBoundingClientRect: () => ({ bottom: 60 }) }).getBoundingClientRect().bottom;
+    const sy = cr.top + VH / 2 + (kam.y - forslag.y) / kam.m, sx = cr.left + VW / 2 + (forslag.x - kam.x) / kam.m, under = sy > br.top - 50 && sx > br.left - 30 && sx < br.right + 30;
+    if (!under && sy > topp + 30) return; const mål = (topp + br.top) / 2;
+    if (br.top - topp < 120) return;
+    kam.y = forslag.y + (mål - cr.top - VH / 2) * kam.m; skitten = true;
   }
   // klassen (vann = 3, utenfor kartet = 255) i 32 m-rutenettet rundt punktet
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
@@ -272,14 +285,14 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     const HL = window.Helling; if (!HL) return null;
     const R = HL.REGLER, nær = R.nær + 30, tørt = HL.tørtFra(HL.klasseFra(kv));
     let hv = null; try { hv = await lagVindu([x - nær, y - nær, x + nær, y + nær], false, 11); } catch (e) { return null; }
-    const r = HL.førsteBygg(HL.høydeFra(hv), tørt, x, y);
+    const høyde = HL.høydeFra(hv), r = HL.førsteBygg(høyde, tørt, x, y, { flatFørst: true });
     // uten høyder midt på stedet kan vi ikke si noe – leiren godtas som før
-    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r };
+    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde };
     const S = R.søk + nær; let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
-    const f = hs ? HL.finnPlass(HL.høydeFra(hs), tørt, x, y, { lovlig: lovligLeir }) : null;
+    const f = hs ? HL.finnPlass(HL.høydeFra(hs), tørt, x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
     return { ok: false, r, f, søkt: true };
   }
-  const flyttTekst = (f, hva) => `${hva}: ${Helling.meter(f.m)} ${f.retning}${f.h != null ? `, ${Math.round(f.h)} moh.` : ''}. Det grønne flagget («Plass her») viser stedet.`;
+  const flyttTekst = (f, hva) => `${hva}: ${Helling.meter(f.m)} ${f.retning}${f.h != null ? ` (${Math.round(f.h)} moh.)` : ''}. Det grønne flagget («Plass her») viser stedet.`;
   // høyden på et forslag (fra kartet, ellers ingen)
   const høydeHer = (X, Y) => { try { return hoydeVed(X, Y); } catch (e) { return null; } };
   // vann eller tettsted: let etter nærmeste lovlige sted med plass til de første byggene
@@ -289,7 +302,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (!velger || forslag !== fs || !kv) return;
     let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
     if (!velger || forslag !== fs) return;
-    const f = hs ? HL.finnPlass(HL.høydeFra(hs), HL.tørtFra(HL.klasseFra(kv)), x, y, { lovlig: lovligLeir }) : null;
+    const f = hs ? HL.finnPlass(HL.høydeFra(hs), HL.tørtFra(HL.klasseFra(kv)), x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
     if (f) { f.h = høydeHer(f.x, f.y); fs.flytt = f; skitten = true; }
     visBanner(grunn, false, f ? { flytt: { ...f, tekst: flyttTekst(f, vann ? 'Nærmeste tørre sted med plass til leiren' : 'Nærmeste sted utenfor tettstedet med plass til leiren') } }
       : { adv: [`Fant ikke noe tørt, flatt sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted i kartet.`] });
@@ -315,9 +328,11 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     if (fl && fl.ok && fl.r && HL) {
       // flagget står bratt eller i vann, men brakka får plass like ved: si hvor, og tilby å flytte flagget dit (ikke nødvendig)
       const b0 = fl.r.plasser && fl.r.plasser[0], m0 = b0 ? Math.hypot(b0.x - x, b0.y - y) : 0;
-      if (b0 && m0 > 1 && (fl.r.nivå === HL.BRATT || fl.r.nivå === HL.VANN)) { const g = { x: b0.x, y: b0.y, m: m0, retning: HL.retning(b0.x - x, b0.y - y) };
-        if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${fl.r.nivå === HL.VANN ? 'vått' : 'bratt'} der flagget står, men flatt nok ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
-        vu.fakta.unshift('grunnen: bratt ved flagget, flat like ved'); }
+      const skråHer = fl.r.nivå === HL.SKRÅTT && b0 && HL.vurderer(b0.type, 0, fl.høyde, null)(b0.x, b0.y) === HL.FLATT;
+      if (b0 && m0 > 1 && (fl.r.nivå === HL.BRATT || fl.r.nivå === HL.VANN || skråHer)) { const g = { x: b0.x, y: b0.y, m: m0, retning: HL.retning(b0.x - x, b0.y - y) };
+        const hva = fl.r.nivå === HL.VANN ? 'vått' : fl.r.nivå === HL.BRATT ? 'bratt' : 'skrått (byggene får grunnmur)';
+        if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${hva} der flagget står, men ${skråHer ? 'flatt' : 'flatt nok'} ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
+        vu.fakta.unshift(skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved'); }
       else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
       else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); }
     if (fl && !fl.ok) { stopp = HL.brattTekst(fl.r); f.ok = false; f.bratt = true;
