@@ -362,8 +362,10 @@
     for (const [k, f] of [[1.15, jord2], [.9, jord]]) { g.fillStyle = f; g.beginPath();
       for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283, r = R * k * (.8 + .4 * hash(Math.round(leir.x) + i, Math.round(leir.y))) / m, x = rx + Math.cos(a) * r, y = ry + Math.sin(a) * r * .85; i ? g.lineTo(x, y) : g.moveTo(x, y); }
       g.closePath(); g.fill(); }
+    const jord3 = farge('#6f5f45', 1, .14);
     for (const b of ferdige) { const f = Leir.BYGG[b.type].fot, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), w = (f[1] - f[0]) / 2 + 1.6, h = (f[3] - f[2]) / 2 + 1.6, mx = (f[0] + f[1]) / 2, my = (f[2] + f[3]) / 2;
-      g.fillStyle = jord2; g.beginPath(); g.ellipse(sx(b.x + mx * c - my * s), sy(b.y + mx * s + my * c), w / m, h / m, -(b.ret || 0), 0, 6.283); g.fill();
+      // småting (brønn, mast, minnesmerke) får ingen slitt flekk – den så ut som en glorie
+      if ((f[1] - f[0]) * (f[3] - f[2]) >= 12) { g.fillStyle = jord3; g.beginPath(); g.ellipse(sx(b.x + mx * c - my * s), sy(b.y + mx * s + my * c), w / m, h / m, -(b.ret || 0), 0, 6.283); g.fill(); }
       // stien fra døra mot plassen
       const dx = b.x + (f[1] + .6) * c, dy = b.y + (f[1] + .6) * s, L = Math.hypot(leir.x - dx, leir.y - dy); if (L < R * .9 || L > 140) continue;
       const ex = leir.x + (dx - leir.x) * R * .8 / L, ey = leir.y + (dy - leir.y) * R * .8 / L;
