@@ -99,12 +99,13 @@ module.exports = {
           // «Gå inn i huset»: du settes foran døra og går inn av deg selv
           // (bare når utsnittet ikke må bygges på nytt for å gå her – ellers forsvinner prøvehuset med det gamle utsnittet)
           const X2 = U.cx + x1 + 5, Y2 = U.cy + y1 + 4, S1 = typeof utsnittS === 'function' ? utsnittS(1000) : U.S, kanInn = R.ut === U && !R.bygger && Math.hypot(x1 + 5, y1 + 4) <= U.S * .45 && S1 <= U.S * 1.6 && S1 >= U.S * .45;
-          if (kanInn) { Gange.stopp(); Gange.gåInn({ i: 4247, P: P2.map(([x, y]) => [U.cx + x, U.cy + y]), mx: X2, my: Y2 });
+          // (må utsnittet bygges på nytt, prøves bare siste del: du settes ved døra og går inn – Gange.vedDøra)
+          { const h2 = { i: 4247, P: P2.map(([x, y]) => [U.cx + x, U.cy + y]), mx: X2, my: Y2 }; Gange.stopp(); if (kanInn) Gange.gåInn(h2); else Gange.vedDøra(h2);
           for (let q = 0; q < 100 && (Gange.venter() || !R.fot); q++) await vent(100);
           for (let q = 0; q < 40 && Gange.innVenter(); q++) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(60); }
           for (let q = 0; q < 120 && Gange.dørHjelp(); q++) Gange.kamera(R, .06);
-          const k3 = Gange.kropp(); d.gåInn = { går: !!R.fot, inne: !!(k3 && Interior3d.inne(k3.x, k3.y) === P2) }; krev(d.gåInn.går && d.gåInn.inne, '«Gå inn i huset» førte deg ikke inn: ' + JSON.stringify(d.gåInn)); }
-          else d.gåInn = '(ikke prøvd: utsnittet må bygges på nytt for å gå her)';
+          const k3 = Gange.kropp(); d.gåInn = { går: !!R.fot, inne: !!(k3 && Interior3d.inne(k3.x, k3.y) === P2) }; krev(d.gåInn.går && d.gåInn.inne, '«Gå inn i huset» førte deg ikke inn: ' + JSON.stringify(d.gåInn));
+          d.gåInn.del = kanInn ? 'hele' : 'ved døra'; }
           for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); } hus = null; Interior3d.oppdater(true); }
         // RUNDE 8: byggeplassen i 3D har grunnmur på bakken og reiser seg (ikke en flat plate), og den nye leiren har ting rundt flaggstanga
         if (window.Byggeplass && window.MODELLER) { const geo = p => { const g = Byggeplass.byggeplassGeo([-3.1, 3.1, -6.1, 6.1], 4.6, p, false); g.computeBoundingBox(); const r = { z0: g.boundingBox.min.z, z1: g.boundingBox.max.z, n: g.attributes.position.count / 3 }; g.dispose(); return r; };
@@ -124,15 +125,17 @@ module.exports = {
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); krev(!Gange.valgÅpen() && !R.fot, 'Esc lukket ikke valget');
           // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
           b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); [...document.querySelectorAll('#gaavalg button')].find(e => /^Reis hit/.test(e.textContent)).click();
-          for (let q = 0; q < 80 && !R.fot; q++) await vent(100);
-          for (let q = 0; q < 150 && !R.fot && Gange.venter(); q++) await vent(200);
-          d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
-          krev(R.fot && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));
+          // (runde 8: framme går du – eller kartet rundt deg bygges først, kortet «Henter kartet rundt deg»; det ventes ikke på her)
+          for (let q = 0; q < 80 && Gange.reiser(); q++) await vent(100);
+          for (let q = 0; q < 20 && !R.fot && !Gange.venter(); q++) await vent(100);
+          d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, venter: Gange.venter(), fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
+          krev((R.fot || d.reise.venter) && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));
+          if (d.reise.venter) { krev(!R3.ut || !!document.getElementById('c3o').style.visibility, 'navnene i 3D er ikke skjult mens kartet bygges'); Gange.lukkValg(); krev(!Gange.venter() && !document.getElementById('c3o').style.visibility, 'Avbryt slapp ikke ventingen'); }
         } else d.valg = ['(karakteren står utenfor utsnittet – valget og reisen ikke prøvd)'];
       } finally {
         Gange.test = false; if (kort) { kort.remove(); Kortkø.ferdig('gaavaktkort'); }
         if (hus) for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); }
-        if (Gange.reiser()) await vent(1500); if (Gange.venter()) for (let q = 0; q < 100 && Gange.venter(); q++) await vent(200); Gange.lukkValg(); if (R.fot && !gikk) Gange.stopp(); else if (!R.fot && gikk) Gange.start();
+        if (Gange.reiser()) await vent(1500); Gange.lukkValg(); if (R.fot && !gikk) Gange.stopp(); else if (!R.fot && gikk) Gange.start();
         Interior3d.oppdater(true); if (karFør) { kar.x = karFør.x; kar.y = karFør.y; kar.sti = null; } tid = før.tid;
         if (før.fart && (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id !== før.fart) document.getElementById(før.fart).click();
         // kameraet tilbake der det var (i kartets meter: utsnittet kan ha byttet underveis)
@@ -141,6 +144,6 @@ module.exports = {
       return d;
     });
     const ok = !data.feil.length;
-    return { ok, tekst: ok ? `gå: ${data.i3d ? `valget «${(data.valg || []).join(' | ')}», reisen ${data.reise ? data.reise.min : '?'} min, «${data.dørknapp}» → inne, Esc lukker sekken, kortet venter, snudd ${data.snudd}° med fingeren, banneret ${data.banner} px, pila «${data.pil}», «Gå inn i huset» ${JSON.stringify(data.gåInn)}, byggeplassen ${data.byggeplass}, leiren ${JSON.stringify(data.leirting || '-')}` : 'uten 3D: regler'}, panelknappen «${data.innKnapp}», været «${(data.vær || []).join('» → «')}», varselet ${JSON.stringify(data.varsel)}` : data.feil.join('; '), data };
+    return { ok, tekst: ok ? `gå: ${data.i3d ? `valget «${(data.valg || []).join(' | ')}», reisen ${data.reise ? data.reise.min + ' min' + (data.reise.venter ? ' (så kartet rundt deg)' : '') : '?'}, «${data.dørknapp}» → inne, Esc lukker sekken, kortet venter, snudd ${data.snudd}° med fingeren, banneret ${data.banner} px, pila «${data.pil}», «Gå inn i huset» ${JSON.stringify(data.gåInn)}, byggeplassen ${data.byggeplass}, leiren ${JSON.stringify(data.leirting || '-')}` : 'uten 3D: regler'}, panelknappen «${data.innKnapp}», været «${(data.vær || []).join('» → «')}», varselet ${JSON.stringify(data.varsel)}` : data.feil.join('; '), data };
   },
 };

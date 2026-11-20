@@ -552,7 +552,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
   // (runde 8) gåInn(h) – reis til huset og gå inn; venter() – kartet rundt deg bygges før du går; inngangPil() – pila mot nærmeste inngang
   // ({ d, rel, vender, vis, tekst } eller null); klarGå(X, Y, ferdig) – bygg utsnittet for gange først når det trengs
-  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
+  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
     inngangPil: () => { const n = pekerNå; if (!n || !kropp || !r3() || !R3.fot) return null; const q = Gaavalg.pekerMot(n.I, kropp.x, kropp.y, R3.fot.a); return { ...q, tekst: Gaavalg.pekerTekst(q) }; }, oppdaterPil: pekerSteg, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
