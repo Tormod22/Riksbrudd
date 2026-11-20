@@ -26,8 +26,8 @@ module.exports = { navn: 'spillform: flyt, scenarier, seier og tap', kjør: asyn
       // ---- hendelser og spoling ----
       const b0 = FlytSpill.bilde(); ut.bilde = b0.lag >= 1 && typeof b0.dag === 'number';
       const t0 = tid; ut.spol = FlytSpill.spol() && tempo === 600 && FlytSpill.spoler(); document.getElementById('sp1').click(); ut.avbrutt = !FlytSpill.spoler() && tempo === 1; tid = t0;
-      { FlytSpill.spol(); await vent(150); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'tog', tekst: 'prøvetoget er framme' } })); for (let i = 0; i < 20 && FlytSpill.spoler(); i++) await vent(100);
-        const st = FlytSpill.sistStopp(); ut.hendelse = !FlytSpill.spoler() && tempo === 1 && !!st && st.liste.some(h => /prøvetoget/.test(h.tekst)); tid = t0; }
+      { FlytSpill.spol(); await vent(150); window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'båt', tekst: 'prøvebåten er framme' } })); for (let i = 0; i < 20 && FlytSpill.spoler(); i++) await vent(100);
+        const st = FlytSpill.sistStopp(); ut.hendelse = !FlytSpill.spoler() && tempo === 1 && !!st && st.liste.some(h => /prøvebåten/.test(h.tekst)); tid = t0; }
       // ---- marsj med bekreftelse (telefon og 3D): første trykk gir avstand og tid, «Gå» gir ordren ----
       { const ft = FlytSpill.test; FlytSpill.test = true; document.body.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })); document.body.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true })); valgt = s; modus = 'marsj'; const brukt = FlytSpill.trykk(s.x + 300, s.y + 100); await vent(350);
         const mv = document.getElementById('marsjvalg'); ut.bekreftTekst = mv.textContent.slice(0, 60); const ventet = brukt && !s.sti && mv.classList.contains('på') && /km/.test(mv.textContent); document.getElementById('marsjgaa').click(); for (let i = 0; i < 60 && s.planlegger; i++) await vent(100);

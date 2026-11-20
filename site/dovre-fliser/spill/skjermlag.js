@@ -13,6 +13,11 @@
  *  3. BUNNMENYEN PÅ TELEFON (Leir, Folk, Tropper, Krig, Deg, Mer) står alltid på kartet – også under angrep, med et kort oppe og når
  *     telefonen ligger (før forsvant den da). Panelene som når ned dit, slutter over den (makshøyde/bunn settes her og tas bort igjen når
  *     panelet lukkes). Den viker bare for det som tar hele skjermen: hjelpen, kontrollrommet, byggingen, etterspillet og krigskortet.
+ *  RUNDE 8 (20. nov natt, ny kritikk): (a) PAUSEN HOLDER: startet noen tiden igjen mens kortet sto oppe (⏭ «Spol videre», en fartsknapp),
+ *     settes spillet på pause igjen (og lappen blinker) – farten du valgte, brukes når kortet er besvart. Før gikk tiden fra dag 3 16:52 til dag 4
+ *     05:06 med kortet åpent, men etter omlasting sto det på pause. (b) KORT VENTER TIL ANGREPET ER OVER: mens leiren angripes (angrepet er
+ *     i gang, eller banneret varsler røvere på vei), er hendelseskortet og spørsmålene fra folket skjult (body.angrepvent) – de kommer fram når
+ *     angrepet er over. Før sto fire bokser oppå hverandre midt over leiren (banneret, «fest?», «⏭ Stoppet», opplæringen).
  *  Alt dette gjelder spilleren. I testene (navigator.webdriver) er alt som før til Skjermlag.test = true (vakta «ui» slår det på og av).
  *  Reglene øverst er uten DOM (Skjermlag.orden/zFor – test_skjermlag.js). Tallene er Claudes forslag. window.Skjermlag.
  */
@@ -20,6 +25,10 @@
   // båndene (Claudes forslag): alt annet på kartet (logg, varsler, zoomknapper …) ligger under 20 som før
   const REGLER = { kort: 20, status: 21, pausemerke: 23, alarm: 24, selv: 30, selvMaks: 66, bunnmeny: 70, tips: 80, ring: 85, luft: 6 };
   const KORT = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'], STATUS = ['flytkort', 'varsel'], ALARM = ['alarm'];
+  // (runde 8) kortene som venter til et angrep er over (krigskortet og spillformkortet – seier/tap – kommer straks som før)
+  const VENTER = ['hendelse', 'samfunnkort'];
+  // venter(angrep) gir id-ene som skal skjules nå (uten DOM: test_skjermlag.js)
+  const venter = angrep => (angrep ? VENTER.slice() : []);
   // panelene spilleren åpner selv (fra bunnmenyen, ☰, ?, kartet eller et annet panel)
   const SELV = ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe', 'karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel',
     'forklaring', 'personkort', 'evpanel', 'hjelp', 'lagmeny', 'degmeny', 'kommer', 'mkommer', 'flismerliste', 'marsjvalg'];
@@ -29,7 +38,7 @@
   const fram = (o, id) => (o.includes(id) ? o.filter(x => x !== id).concat(id) : o);
   function zFor(id, o) { if (KORT.includes(id)) return REGLER.kort; if (STATUS.includes(id)) return REGLER.status; if (ALARM.includes(id)) return REGLER.alarm;
     const i = o.indexOf(id); return i < 0 ? null : Math.min(REGLER.selvMaks, REGLER.selv + i); }
-  const Skjermlag = { REGLER, KORT, SELV, orden, fram, zFor, test: false };
+  const Skjermlag = { REGLER, KORT, SELV, VENTER, venter, orden, fram, zFor, test: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Skjermlag; return; }
   rot.Skjermlag = Skjermlag;
   if (typeof document === 'undefined') return;
@@ -39,6 +48,8 @@
   const css = document.createElement('style');
   css.textContent = `#kortpause{ position:fixed; z-index:${REGLER.pausemerke}; display:none; box-sizing:border-box; padding:4px 10px; background:#2a2215; border:1px solid #c9b26a; border-radius:3px; color:#f0dc9a; font-size:13.5px; text-align:center; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,.5); }
 #kortpause.på{ display:block; } #kortpause::before{ content:'❚❚'; margin-right:7px; font-size:11px; letter-spacing:-1px; }
+#kortpause.blink{ animation:kortblink .9s ease-out 2; } @keyframes kortblink{ 40%{ background:#6a5320; color:#fff3c8; } }
+body.angrepvent #hendelse.på, body.angrepvent #samfunnkort.på{ display:none; }
 body.mkomalltid #mkom{ z-index:${REGLER.bunnmeny}; } body.mkomalltid #mkommer{ z-index:${REGLER.bunnmeny + 1}; }
 #tips{ z-index:${REGLER.tips}; } #oppring{ z-index:${REGLER.ring}; }
 /* angrepsbanneret på PC: tekst og knapper på én rad (etter «Forsvar leiren» brøt «Opphev» og «Vis» ned på en egen linje – kritikeren så en
@@ -65,6 +76,8 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
   function kortOppe() { for (const id of KORT) { const e = $(id); if (e && e.classList.contains('på') && vises(e)) return e; } return null; }
   function pause() { const t = fart(), k = aktiv() ? kortOppe() : null, p = $('sp0');
     if (k) { if (!pauset) { if (t > 0 && p) { tempoFør = t; p.click(); pauset = true; } else if (sistTempo > 0) { tempoFør = sistTempo; pauset = true; } }
+      // (runde 8) tiden ble startet igjen med kortet oppe: pause igjen, og den nye farten gjelder når kortet er besvart
+      else if (t > 0 && p) { tempoFør = t; p.click(); merke.classList.remove('blink'); void merke.offsetWidth; merke.classList.add('blink'); }
       // lappen under kortet (over når det ikke er plass under); for krigskortet (hele skjermen) under ruta i midten
       const r = ((k.id === 'krigkort' || k.id === 'formkort') && k.firstElementChild ? k.firstElementChild : k).getBoundingClientRect(), H = window.innerHeight;
       if (fart() === 0 && r.width > 40) { merke.classList.add('på'); const h = merke.offsetHeight || 26, w = Math.min(Math.max(r.width, 250), window.innerWidth - 12);
@@ -105,6 +118,10 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
       if (!flyttet.has(e)) flyttet.set(e, e.style.top); e.style.top = Math.round(ar.bottom + REGLER.luft) + 'px'; } }
   // telefon: zoomknappene til høyre står ellers i glipen mellom et løftet panel og bunnmenyen
   const ctlCss = document.createElement('style'); ctlCss.textContent = 'body.kort.mkomloft .ctl{ visibility:hidden; }'; document.head.appendChild(ctlCss);
-  setInterval(() => { try { lag(); underAlarm(); pause(); løft(); const l = løftet.size > 0; if (document.body.classList.contains('mkomloft') !== l) document.body.classList.toggle('mkomloft', l); } catch (e) { /* neste runde */ } }, 150);
-  Object.assign(Skjermlag, { lag, pause, løft, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
+  // ---------- 5 (runde 8): kortene venter til angrepet er over ----------
+  function angrepPågår() { const T = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() && SpilletSpill.T ? SpilletSpill.T() : null, a = $('alarm');
+    return !!(T && T.aktiv) || (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.raid && e.menn && e.menn.some(m => m.hp > 0))) || !!(a && a.classList.contains('på') && !a.classList.contains('satt') && vises(a)); }
+  function vent() { const v = aktiv() && venter(angrepPågår()).length > 0; if (document.body.classList.contains('angrepvent') !== v) document.body.classList.toggle('angrepvent', v); }
+  setInterval(() => { try { vent(); lag(); underAlarm(); pause(); løft(); const l = løftet.size > 0; if (document.body.classList.contains('mkomloft') !== l) document.body.classList.toggle('mkomloft', l); } catch (e) { /* neste runde */ } }, 150);
+  Object.assign(Skjermlag, { lag, pause, løft, vent, angrepPågår, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -8,7 +8,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Røverne og byttet",
-"Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, kommer den samme bølgen tilbake litt senere.",
+"Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Til sammen har røverne i en bølge på det meste omtrent like mange mann som soldatene dine + 2 (på «Vanlig»; flere på «Hard», færre på «Lett»). Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, fortsetter angrepet der det var: røverne står der de sto, med de sårede og det de alt har tatt.",
 "Lag og strid"
 ],
 [
@@ -30,6 +30,16 @@ window.HJELP_TILLEGG = [
 "To tropper før dag 4",
 "Røverbølgene vokser med dagene. Lag en tropp til før dag 4 (Leir → Tropper). Har du for få folk, rekrutter i Folk – det trengs ledige senger, så oppgrader brakka eller bygg en til. Hold minst to på «Bygg» (ett byggelag) så byggene blir reparert, og én på «Vakt».",
 "Kom i gang"
+],
+[
+"Siste døgn",
+"Hver morgen kl. 06, rett etter dagboka, kommer en linje i loggen om det som hendte siste døgn: bølger som ble slått tilbake eller som herjet i leiren, nye sårede og falne, lag som ble slått ut, bygg som ble ødelagt eller skadet, hus dere lette gjennom, og folk som kom eller dro.",
+"Kom i gang"
+],
+[
+"Ammunisjon og hvile hjemme",
+"Et lag som står stille hjemme i leiren (innen ca. 250 m) mellom angrepene, fyller ammunisjon av seg selv: gratis når basen har olje, ellers fra kassa (en full last koster 200 000 kr, og 300 000 kr blir alltid igjen). De sårede i laget blir sakte bedre – fra hardt såret til frisk på omtrent et døgn. Med sykestue og folk på «Stell» går det fortere. Falne blir ikke friske: lag nye tropper av folkene dine.",
+"Lag og strid"
 ],
 [
 "Folk som personer",
@@ -132,6 +142,41 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Gå hit eller gå her",
+"Trykk «Gå» (G) i 3D. Ser kameraet på et sted langt fra karakteren din, får du velge: «Reis hit» – karakteren går dit, og spilltiden går så lenge turen tar (ca. 4 km/t, litt omveg regnet med) – eller «Gå her, der du står». Merket «Hit» midt i bildet viser hvor du havner. Lenger enn 6 km går du i etapper. Har du valgt et lag, starter du ved laget.",
+"I 3D"
+],
+[
+"Gå inn i et hus",
+"Merket «Inngang» står over døra. Gå mot døra, så trekkes du inn mot midten av åpningen. På telefon (og med mus) kommer knappen «Gå inn» når du står nær døra – den går gjennom døra for deg. Inne kommer «Gå ut». Styrer du selv underveis, slipper knappen taket.",
+"I 3D"
+],
+[
+"Esc når du går",
+"Esc lukker først det som er åpent (sekken, lutpanelet, karakterarket, menyer). Et kort med valg går tilbake og venter. Er ingenting åpent, slipper Esc musa, og Esc en gang til flyr deg opp i lufta igjen.",
+"I 3D"
+],
+[
+"Kort som venter mens du går",
+"Mens du går selv, kommer ikke hendelseskortene midt i bildet. Øverst står i stedet «Et kort venter». Trykk på det (eller Enter på PC) for å se det nå – ellers kommer det når du slutter å gå.",
+"I 3D"
+],
+[
+"Snikemåleren",
+"Når en fiende er nær (under 700 m) og du går selv, står en måler under siktet: Skjult → Mistenkt (han har hørt eller sett noe) → Sett (han vet hvor du er og skyter). Linja under sier hvor nær han er. Gå på huk eller ligg (C/Z), hold deg i skog og mørke, og ikke løp, så tar det lenger tid før du blir sett.",
+"I 3D"
+],
+[
+"Været i 3D",
+"Toppstripa viser været: mens det skifter, står det for eksempel «Klart → regn», og himmelen i 3D blir gradvis grå i løpet av 25–45 spillminutter. Når det står «Regn», regner det også i 3D.",
+"Vær, lyd og bilde"
+],
+[
+"3D går tregt",
+"Tegner nettleseren 3D uten grafikkortet (programvare), kommer en liten lapp i hjørnet én gang: slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt. Rådet står også i loggen og på knappen «Grafikk» i ☰.",
+"Vær, lyd og bilde"
+],
+[
 "Vann og mat på tur",
 "Når du går selv utenfor leiren, blir du tørst og sulten av meterne du går – mest når du løper. Feltflaska har fire slurker og fylles av seg selv i leiren og når du står ved et vann. Knappene «Drikk» (X) og «Spis» (N) kommer til venstre når du trenger dem. I karakterarket (Deg) kan du «Pakke for tur» i leiren: full flaske og rasjoner fra leirens mat.",
 "I 3D"
@@ -175,6 +220,21 @@ window.HJELP_TILLEGG = [
 "Jakt til fots",
 "Skyter du et dyr når du er langt fra leiren, bærer du kjøttet selv: det som får plass i sekken, blir rasjoner. Nær leiren bæres alt hjem som før.",
 "I 3D"
+],
+[
+"Navn i kartet",
+"Navnene i kartet legger seg der det er plass, og de viktigste får plassen først: fiender, så det du har valgt, så lagene dine, kjøretøyene og til sist bygg og steder. Merkene ligger alltid over navnene. Er det for trangt, skjules de minst viktige – zoom inn for å se alle.",
+"Lag og strid"
+],
+[
+"Natt og regn i kartet",
+"Om natta blir kartet mørkere og blåere, og i regn og snø blir det gråere. Lagene, fiendene og navnene er like tydelige som om dagen.",
+"Vær, lyd og bilde"
+],
+[
+"Krigskartet",
+"Krigskartet viser tettstedene, hvem som holder dem og fronten mellom sidene. Kaiene vises ikke der – bare leirens egen kai – så byene kan leses. På telefon fyller kartet plassen over panelet.",
+"Lag og strid"
 ],
 [
 "Flanke og rygg",
@@ -287,6 +347,146 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Stridsvogna ser selv",
+"Stridsvogna skyter bare på fiender den ser selv fra tårnet, eller som et av lagene dine rett ved vogna ser. Det vaktene, kameraene og dronene melder, ser du på kartet, men vogna skyter ikke på det. Står det «er meldt, men vogna ser dem ikke» i loggen, trykk «Kjør mot …» i panelet til vogna, eller send et lag dit.",
+"Lag og strid"
+],
+[
+"Artilleri trenger en som ser",
+"Rakettartilleriet treffer mye bedre når noen ser målet: en drone, eller et lag som har radiokontakt med deg. Uten det blir spredningen stor.",
+"Lag og strid"
+],
+[
+"Krigskartet på telefon",
+"Trykk «Skjul» øverst i krigskartet, så blir panelet en smal stripe og du ser hele kartet. Trykk på et tettsted for å se det i stripa – og «Send» et lag dit med en gang. «Vis mer» henter panelet tilbake.",
+"Lag og strid"
+],
+[
+"Fienden husker",
+"Når du lagrer og kommer tilbake, er fienden der den var: lagene, stillingene du har sett, der du sist så dem, marsjene de var på og lastebilene deres.",
+"Lag og strid"
+],
+[
+"Store tettsteder tar tid",
+"Et lite tettsted (opptil ca. 4000 innbyggere) tas av et lag som står 30 minutter der uten fiender. Større steder trenger flere mann og lengre tid: Stavanger/Sandnes trenger ca. 69 mann for full fart (ca. 4 timer) og minst 35 for at det går i det hele tatt. Med færre går det saktere, og under minstetallet skjer ingenting. Trykk på tettstedet (eller se «Neste trekk» i krigskartet) for å se hva det krever.",
+"Lag og strid"
+],
+[
+"Motstanderne samler seg først",
+"De første døgnene (2,5 på Vanlig, lenger på Lett, kortere på Hard) holder Kystalliansen og Folkefronten seg i sitt eget tettsted og bygger seg opp – de tar ingen andre tettsteder. Det neste døgnet tar de bare småsteder, og først etter det går de mot byene. Bruk tida: lag tropper og ta tettstedene nær leiren. De får et nytt lag omtrent hver sjette spilltime, og flere jo lenger spillet varer.",
+"Lag og strid"
+],
+[
+"Seier tidligst dag 4",
+"Ingen side kan vinne krigen eller «ha overtaket» før det har gått tre døgn. Krigskartet sier når krigen tidligst kan avgjøres.",
+"Lag og strid"
+],
+[
+"Send flere lag",
+"«Neste trekk» i krigskartet sier hvor mange mann et tettsted trenger. Er ett lag for lite, står det «Send 3 lag» – da sendes de nærmeste lagene sammen. Har du for få, står det «For få».",
+"Lag og strid"
+],
+[
+"Varsel om røvere",
+"Røverne starter 3–4 km fra leiren. Banneret sier fra hvilken kant de kommer og når de ventes (et anslag) til noen ser dem. Et bemannet vakttårn ser dem på 1,5 km, kameramaster innenfor sin sirkel, og vaktene nær leiren. Omtrent ti minutter før de er framme, senkes farten og du får et varsel til.",
+"Leiren"
+],
+[
+"Forsvaret huskes",
+"Har du trykket «Forsvar leiren», husker spillet det selv om du laster siden på nytt midt i angrepet: lagene står i stillingene og banneret sier «lagene holder stillingen».",
+"Leiren"
+],
+[
+"Ildkraft i troppsoppsettet",
+"Troppsoppsettet viser treff per salve på 100, 400 og 800 m (de faller med avstanden) og hvor mye det er mot et vanlig lag på tolv. Prosenten kan stige på langt hold fordi maskingeværene i et vanlig lag treffer dårlig der.",
+"Lag og strid"
+],
+[
+"Lagre og last",
+"Spillet lagres av seg selv i nettleseren, hele tiden. «Lagre og last» i ☰ (eller «Lagre» bak «Mer» nederst) viser når det sist ble lagret, og har tre lagringsplasser du kan lagre i, laste inn og slette, med navn, dag, fraksjon og kasse. Når du laster en plass, legges spillet du hadde i «Automatisk» først, så du kan gå tilbake. «Automatisk» tas også hvert tiende minutt du spiller.",
+"Kom i gang"
+],
+[
+"Ta spillet med deg",
+"«Last ned som fil» lager en fil med hele spillet (JSON). På en annen maskin: åpne samme side (/dovre-fliser, /norge eller /rogaland), trykk «Last inn et lagret spill …» på startskjermen eller «Lagre og last» i ☰, og velg «Hent fra fil».",
+"Kom i gang"
+],
+[
+"Hver side sitt spill",
+"/dovre-fliser, /norge og /rogaland har hvert sitt lagrede spill og lagringsplasser. De rører ikke hverandre. Startskjermen sier fra hvis du har et spill på en annen side.",
+"Kom i gang"
+],
+[
+"Når spillet ikke kan lagres",
+"I et privat vindu eller med blokkert lagring, eller når nettleseren er full, sier spillet fra i loggen og i «Lagre og last». Spillet virker likevel – last det ned som fil før du lukker siden, eller slett en lagringsplass for å få plass.",
+"Kom i gang"
+],
+[
+"Leiren på nær zoom",
+"Zoom helt inn på leiren i 2D-kartet, så ser du byggene ovenfra: blikktak på brakkene, svart tak og antenne på kontrollrommet, rødt kors på sykestua, presenning på lagerteltet, panelene på solcellene og H-en på helikopterplassen. Skyggen viser hvor høyt bygget er. En tynn kant i fraksjonens farge betyr at bygget er ditt; gul kant = valgt, rød kant = uten strøm eller hardt skadet.",
+"Leiren"
+],
+[
+"Hvordan bygget har det",
+"Stikker og snor: bygget står i kø, eller byggelaget er på vei. Grunnmur, reisverk og stillas: bygget er under bygging, og taket legges etter hvert som arbeidet går fram. Sot og hull i taket: bygget er skadet – reparer det. Brent tomt med murrester: bygget er ødelagt. Stillas rundt et ferdig bygg: det repareres eller oppgraderes.",
+"Leiren"
+],
+[
+"Folk og lag på nær zoom",
+"Helt inne i kartet er lagene soldater sett ovenfra – skuldre i sidens farge, hjelm og gevær – i formasjonen sin. Lagføreren er gul, sårede har bare omriss. Folkene i leiren står der de arbeider: byggelaget rundt byggeplassen, vakta ved porten eller tårnet. De som arbeider inne (kontrollrom, kjøkken, sykestue, verksted), ser du ikke. Feltbilen og helikopteret vises som kjøretøy.",
+"Lag og strid"
+],
+[
+"Leiren om natta",
+"Om natta blir kartet mørkere, og byggene med strøm har varmt lys fra vinduene på bakken rundt seg. Mangler et bygg strøm, er det mørkt.",
+"Vær, lyd og bilde"
+],
+[
+"Lut i husene",
+"Inne i husene ligger det ting i møblene: mat og drikke i kjøleskapet og kjøkkenskapene, klær, sekker og av og til et jaktvåpen i garderoben, medisin i baderomsskapet og på nattbordet, verktøy på verktøybenken, mye mat i butikkenes reoler. Står du ved et møbel, kommer knappen «Åpne kjøleskapet (E)». Hvert møbel har sitt eget innhold, og det du legger igjen der, blir liggende. Ransakede hus har lite igjen.",
+"I 3D"
+],
+[
+"Inventaret",
+"Panelet har det du bærer til venstre og møblene du står ved til høyre – én fane per møbel, og «Gulvet» der du står. Trykk en ting og så den andre siden for å flytte den (på telefonen), eller dra og slipp med musa. Dobbeltklikk flytter med en gang. Høyreklikk eller hold inne for valgene: Spis, Drikk, Utstyr, Ta på, Legg fra deg, Flytt til …, Bruk og Lad. «Ta alt» og «Legg alt» flytter alt på én gang. Tab åpner og lukker panelet når du går.",
+"I 3D"
+],
+[
+"Vekt, lommer og sekk",
+"Lommene rommer 5 kg. Sekken på ryggen gir mer plass og gjør vekten lettere å bære: handlenett 7 kg, skolesekk 12 kg, tursekk 22 kg og militærsekk 30 kg. Du starter med en tursekk. Bærer du mer enn bæreevnen (22 kg, mer med styrke), går du tregere og blir fortere sliten; ved halvannen gang så mye kan du ikke løpe. Våpnene i beltet (1–4) teller i vekten, men tar ikke plass i sekken.",
+"I 3D"
+],
+[
+"Fersk mat",
+"Melk, brød, pølser, egg og epler blir gamle og så råtne etter noen døgn. Gammel mat metter mindre, råtten mat gjør deg dårlig (minus helse). Hermetikk, knekkebrød, tørrfisk og saft holder; brunost holder lenge, men ikke evig. Et kjøleskap holder maten fersk fire ganger så lenge – men bare så lenge det er strøm. I leiren kan du gi mat til folket («Gi til leiren»): den blir rasjoner i matlageret.",
+"I 3D"
+],
+[
+"Flytte møbler",
+"Står du ved et møbel (inne i et hus, i leirens bygg eller ute), kommer knappen «Plukk opp …» (P på PC). Et gjennomsiktig bilde av møbelet står foran deg og følger blikket: grønt = her kan det stå, rødt = ikke plass (vegg, et annet møbel, døråpning, vann eller hus). R dreier det, E (eller «Sett her») setter det ned, «Sett tilbake» legger det der det sto. Det som ligger i et skap eller kjøleskap, følger med – opptil 20 kg, ellers må du ta ut noe først. Store møbler bærer du i armene: du går tregere og kan verken løpe eller skyte. Traktorer, biler og fly er for tunge. Et kjøleskap i en brakke med strøm holder maten kald.",
+"Leiren"
+],
+[
+"Lommelykt",
+"Har du en lommelykt i sekken, slår L (eller knappen «Lykt» til venstre når du går) den på og av. Om natta lyser den opp bakken foran deg, og du ser lenger – men fiendene ser deg også mye lenger unna, og mørket skjuler deg ikke lenger. Et sett batterier varer i 8 spilltimer; «Bytt batterier» bruker én pakke batterier fra sekken.",
+"I 3D"
+],
+[
+"Sove ute og sovepose",
+"Er du trøtt ute, kommer knappen «Sov her». Med en sovepose i sekken sover du like godt som i et sikret hus. Uten sovepose sover du halvt så godt – og om vinteren fryser du: lite søvn, du blir sulten og mister litt helse. Soveposer finner du i garderober og hytter.",
+"I 3D"
+],
+[
+"Feltflasker",
+"Flaska di rommer fire slurker. Hver ekstra feltflaske du finner i husene, gir fire slurker til («Flaske 3/8»). Flaskene fylles av seg selv i leiren (når leiren har vann) og når du står ved et vann eller en bekk.",
+"I 3D"
+],
+[
+"Ransakede hus",
+"Røvere og fiendelag som går forbi et hus, tar med seg det som ligger i det – jo lenger de er der, jo mindre blir igjen. I panelet står det «huset er ransaket». Butikker og lagre fylles litt på igjen hvert tredje døgn. Husene nærmest en ny leir er aldri tomme.",
+"I 3D"
+],
+[
 "Lys og skygger",
 "På Høy og Middels grafikk kaster sola (og månen) skygger fra trær, hus, bruer og leirens bygg, bildet får en lett fargesetting (varm kveld, kald vinter), bakken er skarpere nært, vannet er lysere på grunna, skyene henger sammen med skyggene sine, og tåka ligger i dalbunnen. Går bildet tregt, slår du alt av med «Lys og skygger» i ☰ – eller velger lavere grafikk.",
 "Vær, lyd og bilde"
@@ -295,6 +495,11 @@ window.HJELP_TILLEGG = [
 "Lys om natta",
 "Gatelys og vinduer lyser opp bakken rundt seg om natta. Skyggene kommer da fra månen når den er oppe.",
 "Vær, lyd og bilde"
+],
+[
+"Grensa i 3D (Rogaland)",
+"På Rogaland-kartet er alt utenfor fylket mørklagt også i 3D – terrenget, husene og trærne – med en myk overgang og en stiplet gul strek der grensa går. Du kan se ut over grensa, men spillet holder seg innenfor.",
+"I 3D"
 ],
 [
 "Trær, gress og lyng",
@@ -322,8 +527,23 @@ window.HJELP_TILLEGG = [
 "Vær, lyd og bilde"
 ],
 [
+"Strender og vannkant",
+"Innsjøer og elver har en myk, ujevn strandkant som følger terrenget, med en lys sone av stein og grus og en mørk, fuktig kant helt nede ved vannet. Der du ser vann, kan du ikke gå – og der du ser land, kan du gå.",
+"I 3D"
+],
+[
+"Lyng på heia",
+"Brun og grønn hei er lyng og gress når du går på den. Stein ligger der fjellet er grått.",
+"I 3D"
+],
+[
+"Låver og uthus",
+"Låvene har høy på gulvet, et høyloft med stige, redskap langs veggen, trillebår, melkespann og ofte en gammel grå traktor. Uthus har redskap og trillebår. Traktoren må du gå rundt.",
+"I 3D"
+],
+[
 "Penger og knapphet",
-"Et nytt spill starter med 40 millioner kr (før 100). Det rekker til et kontrollrom, strøm og en brakke – resten må du skaffe: tettsteder gir skatt og varer, oppdrag og angrep du slår tilbake gir penger, og hogst, riving og leting i hus gir materialer uten å koste noe. Et spill du alt har lagret, beholder pengene sine.",
+"Et nytt spill starter med 40 millioner kr. Det rekker til brakke, dieseltank, aggregat, vakttårn og diesel, og litt til – resten må du tjene. Penger kommer fra oppdrag (Leir → Mål: «Hent forsyninger» er trygt og gir 0,5–1,2 mill. kr), salg av tre og materialer dere hogger og river (Leir → Lager, «Selg 10»), skatt fra tettsteder du tar (Mer → Region) og byttet fra røvere du slår tilbake. Leir → Lager → «Penger inn» viser alt, med hva som kom inn og gikk ut i går.",
 "Kom i gang"
 ],
 [
@@ -358,7 +578,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Svartebørsen",
-"Av og til kommer en selger til leiren med ting markedet ikke har: medisiner (seks sårede soldater blir kampklare, syke i leiren blir friske), nattsikt (lagene ser 40 % lenger om natta), tunge våpen (lagene treffer 15 % bedre) og smuglerdiesel. Det er dyrt, og han er borte neste døgn. Se «Region».",
+"Av og til kommer en selger til leiren med ting markedet ikke har: medisiner (seks sårede soldater blir kampklare, syke i leiren blir friske), nattsikt (lagene ser 40 % lenger om natta), tunge våpen (lagene treffer 15 % bedre) og smuglerdiesel. Det er dyrt, og han er borte neste døgn. Når en selger er i leiren, står «Svartebørsen» øverst til venstre – trykk på den, eller åpne Mer → Region.",
 "Leiren"
 ],
 [
@@ -375,6 +595,31 @@ window.HJELP_TILLEGG = [
 "Krigskartet: hva et tettsted gir",
 "Trykk på et tettsted i krigskartet: boksen sier hva det gir deg per døgn nå (skatt, varer, olje til basen og om det har strøm) – eller hva det ville gitt hvis du tar det, og hva det gir motstanderen som holder det. Under hver side står hva tettstedene deres gir.",
 "Lag og strid"
+],
+[
+"Penger inn",
+"Øverst i fanen Lager i Leir-menyen står «Penger inn»: kassa, hva som kom inn og gikk ut siste døgn, og hver inntekt – oppdragene som venter (nærmeste og best betalte), hogsten, det du kan selge, tettstedene dine og røverne. Knappene der tar deg rett til oppdragene, Folk og Region. Blir kassa lav, kommer en brikke øverst til venstre som tar deg hit. Nye oppdrag kommer med noen timers mellomrom (høyst tre om gangen), og markedet kjøper høyst 25 m³ tre, 15 m³ betong og 6 t stål per døgn.",
+"Kom i gang"
+],
+[
+"Diesel: hvorfor dyr, og hva gjør jeg?",
+"Diesel er knapt etter kollapsen og koster ca. 3 000 kr literen (prisen flytter seg litt hver dag). Et aggregat som gir 9 kW, bruker ca. 65 liter i døgnet. Billigere strøm: solceller og batteribank er gratis i drift, strømnettet virker de første døgnene, og bygg du ikke trenger kan slås av (Leir → Bygg → Strøm). Hvor lenge dieselen rekker, regnes likt overalt – i dagsrapporten, i Lager og i varselet – ut fra forbruket det siste døgnet. Er tanken tom, har varselet øverst til venstre en egen «Kjøp 500 l»-knapp.",
+"Leiren"
+],
+[
+"Hogstlaget",
+"Står noen på «Hogst» under Folk, finner de selv nærmeste skog innen 1,5 km fra leiren og begynner å hogge – loggen sier hvor. Folk på «Frakt» bærer treet til leiren (innen 150 m går det rett i lageret). Vil du velge stedet selv: Leir → Lager → «Hogst …» og trykk i skogen. Tre du ikke trenger, kan selges.",
+"Leiren"
+],
+[
+"Hva bygget koster",
+"Prisen på byggekortene er hele prisen: arbeidet pluss materialene du mangler på lageret, kjøpt til dagens pris. Har du materialene, er bare arbeidet igjen. Pek på prisen for å se hvordan den er delt.",
+"Leiren"
+],
+[
+"Farten senkes av seg selv",
+"Når du har satt opp farten, senkes den av seg selv når noe skjer: til 1× når fienden er i sikte, et lag er i ildkamp eller leiren angripes, men bare til 10× når et bygg er ferdig eller et kort venter på svar – og et nytt ferdig bygg innen to spilltimer senker den ikke igjen. ⏭ spoler til neste hendelse og stopper på 1× som før.",
+"Kom i gang"
 ],
 [
 "Sjøen og båter",
@@ -438,12 +683,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Spol til neste hendelse",
-"Knappen ⏭ ved fartsknappene lar tiden gå fort (600×) til noe skjer: et lag er framme, et bygg er ferdig, fienden er i sikte, leiren angripes, det blir ny dag, et mål er nådd, noe venter på svaret ditt (flyktninger, hendelser), flom eller ras, brann nær leiren, en fiende gir seg, en båt eller et tog er framme. Da går farten ned til 1×, og et kort øverst sier hva den stoppet for. Trykk ⏭ igjen for å spole videre.",
-"Kom i gang"
-],
-[
-"Farten senkes av seg selv",
-"Har du satt opp farten, går den ned til 1× når leiren angripes, når et lag får kontakt med fienden og når et bygg er ferdig. Det kan slås av under Leir → Mål → «Tid og flyt».",
+"Knappen ⏭ ved fartsknappene lar tiden gå fort (600×) til noe skjer som krever deg: et lag du sendte er framme, et bygg er ferdig, fienden er nær leiren eller lagene dine, leiren angripes, det blir ny dag, noe venter på svaret ditt (flyktninger, hendelser), brann nær leiren, en fiende gir seg eller en båt er framme. Da går farten ned til 1×, og et kort øverst sier hva den stoppet for. Trykk ⏭ igjen for å spole videre. Småting – mat og drikke, været, et nådd mål, flom og ras langt unna, toget som kommer – står bare i meldingene. Står et kort og venter på svar, må du svare før du kan spole.",
 "Kom i gang"
 ],
 [
@@ -497,23 +737,43 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Lag karakteren din",
+"Steg 1 på startskjermen: skriv navnet, og velg utseendet i fanene Ansikt, Øyne, Hår og Klær. Velger du «Kvinne» eller «Mann», får portrettet en frisyre som passer og (for kvinner) ikke skjegg – det du selv velger etterpå, blir stående. «Tilfeldig utseende» lager et nytt portrett. Portrettet står fast mens du blar. Bakgrunnen nederst gir en liten bonus.",
+"Kom i gang"
+],
+[
+"Startskjermen husker hvor du var",
+"Laster du siden på nytt mens du lager karakteren, fraksjonen eller velger spillform, fortsetter du på samme steg med alt du hadde valgt. Utkastet slettes når leiren er lagt.",
+"Kom i gang"
+],
+[
+"Velg plass til leiren",
+"Trykk på kartet der leiren skal ligge. Banneret sier høyden og advarer om det som gjør stedet vanskelig: høyfjell over tregrensen (kaldt, ingen skog å hogge), ingen veg i nærheten (lastebilene kommer ikke fram) og langt til nærmeste tettsted (få hus å lete i). Ligger det sjø i nærheten, står det hvor nærmeste kai er – en kai innen 3 km gir leiren båter, fiske og varer sjøveien. Du starter med ti personer og et lite vaktlag; ingen andre lag står på kartet før leiren er lagt.",
+"Kom i gang"
+],
+[
+"Ett lagret spill per kart",
+"Spillet lagres i nettleseren, for seg for hvert kart: Rogaland (/rogaland) har sitt eget spill, og Dovre og hele Norge deler ett. Startskjermen sier fra når du har et spill lagret på et annet kart – det blir ikke rørt.",
+"Kom i gang"
+],
+[
 "Opplæringen",
-"Første gang får du fem små oppgaver nederst på skjermen: åpne Leir, bygg en brakke, sett to på bygg, lag en tropp og gå i 3D. En lysende ring viser hvor du skal trykke. «Hopp over» tar neste oppgave, «Slå av» fjerner ruta. Du finner den igjen i Leir → Mål → Opplæring.",
+"Ni korte steg i en rute nederst: Åpne Leir, Bygg en brakke, Sett to på bygg, Lag en tropp, Gå i 3D, Lag en tropp til, Ha mat til tre døgn, Sett lagene i forsvar og Reparer etter et angrep. En ring viser hva du skal trykke på. Når et steg er gjort, står det «✓ Gjort» en liten stund før neste steg kommer («Neste ›» går videre med en gang) – også når steget alt var gjort fra før. «Hopp over» tar ett steg, «Slå av» tar bort alt (slå den på igjen i Leir-menyen under Mål). Med – oppe til høyre legger du ruta sammen til én linje; + åpner den igjen.",
 "Kom i gang"
 ],
 [
 "Tallene øverst",
-"Hver flis er én ting: klokke, vær, kassa, diesel, tre, betong, stål, strøm, folk og mål. Pek på en flis (på telefon: trykk, eller hold fingeren på flisa – da åpnes ikke det flisa ellers åpner) for å se hva tallet er, hvorfor det er rødt eller gult, og hvordan det står nå. Får ikke alle plass, ligger resten bak flisa med tre prikker. Linja «Påvirkes av» sier hva som gjør tallet større eller mindre.",
+"Øverst står klokka, været og kassa, og så det leiren har: Diesel (liter, eller «ingen tank»), Tre og Betong (m³), Stål (t), Strøm (kW), Folk, Mål og Kontroll (din andel av folket i området). Hver flis har et kort ord foran tallet og enheten bak. Det som ikke får plass, står bak «Mer» – trykk der for resten. Pek (PC) eller trykk lenge (telefon) på en flis for å se hva tallet betyr og hva som påvirker det.",
 "Kom i gang"
 ],
 [
 "Knappene nederst",
-"Leir, Folk, Tropper, Krig og Deg står samlet nederst – også på telefon. «Mer» åpner resten: Region, Verden, Sjø og Velg lag. Raden er borte mens du går, bygger eller har et panel åpent.",
+"Leir, Folk, Tropper, Krig og Deg står nederst – på telefon også under angrep, med et kort oppe og når telefonen ligger. «Mer» åpner resten (Region, Verden, Sjø …). Panelene du åpner herfra, åpnes alltid til venstre og ett om gangen; det som hører til et panel (Stridsregler, Tiltak, Sekken) åpnes til høyre ved siden av.",
 "Kom i gang"
 ],
 [
 "Meldingene",
-"Meldingene øverst til høyre har et ikon og er kortet ned til to linjer. Røde er varsler. Trykk på «les alt» under dem for å lese hele teksten (på telefon: trykk på meldingen).",
+"Meldingene øverst til høyre har et ikon og er kortet ned til to linjer. Røde er varsler. Trykk på «les alt» under dem for å lese hele teksten (på telefon: trykk på meldingen). Samme melding flere ganger står bare én gang, med «×4» bak. Rutinemeldinger (hogstlaget, din egen mat og drikke, ammunisjon hjemme) kommer høyst noen ganger i døgnet, været bare ved store skifter (tåke, snø, storm – og når det er over), og tips som «Vil du velge stedet selv …» bare første gang.",
 "Kom i gang"
 ],
 [
@@ -538,7 +798,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Paneler og plasser",
-"Menyene åpner seg til venstre, arkene (Deg, Verden, Sjø, Tiltak) til høyre og små kort i midten. Åpner du et nytt panel på samme plass, lukkes det som sto der.",
+"Alt du åpner fra knappene nederst (Leir, Folk, Tropper, Krig, Deg, og Region, Verden og Sjø under «Mer»), står til venstre – åpner du et nytt, lukkes det som sto der. Stridsregler, Tiltak, Sekken og tegnforklaringen står til høyre. Kort som venter på svar står i midten. Det du åpnet sist, ligger alltid øverst, og et trykk i et panel henter det fram.",
 "Kom i gang"
 ],
 [
@@ -565,6 +825,26 @@ window.HJELP_TILLEGG = [
 "Flere lag i 3D",
 "Shift + dra med musa i 3D (og i 2D) tegner en ramme rundt lagene du vil velge. Shift + trykk på et lag tar det med eller ut. «Velg lag» i kommandolinja velger alle lagene på skjermen. Høyre museknapp dreier kameraet. Når du velger mål, står marsjtida ved pekeren før du gir ordren.",
 "Lag og strid"
+],
+[
+"Spillet står på pause til du svarer",
+"Når et kort venter på svar – en hendelse i leiren, et spørsmål fra folket eller et kort om krigen – settes spillet på pause, og under kortet står «Spillet står på pause til du svarer». Når du har svart, går spillet videre i farten du hadde. Hadde du satt spillet på pause selv, blir det stående. Røverangrepet kommer aldri bak et kort: banneret øverst ligger over kortene, og kortet flyttes ned under banneret. Trykker du ⏭ eller en fart mens kortet står, blir spillet stående på pause (lappen blinker), og farten du valgte, gjelder når du har svart. Mens leiren angripes, venter hendelseskortene og spørsmålene fra folket til angrepet er over, og «⏭ Stoppet …» er en liten linje under banneret.",
+"Kom i gang"
+],
+[
+"Hvilket vindu ligger øverst",
+"Kort som venter på svar ligger nederst, så varsler og angrepsbanneret, og øverst panelene du åpner selv – det siste du åpnet ligger øverst (åpner du hjelpen mens Deg er åpen, ligger hjelpen over). Trykk i et panel for å hente det fram.",
+"Kom i gang"
+],
+[
+"Leir-menyen",
+"Leir-menyen åpnes alltid øverst, i fanen du brukte sist, så et trykk treffer det samme bygget hver gang. Fanene Bygg, Lager, Plan og Mål står fast øverst når du ruller nedover.",
+"Leiren"
+],
+[
+"Hjelpen",
+"Hjelpen (?) er delt i grupper – Kom i gang, Skjermen og knappene, Leiren og bygging, Angrep og forsvar, Folk og samfunn, Mat, penger og handel, Lag og strid, Krigen og regionen, Sjøen, I 3D og Vær, lyd og bilde. Trykk på en gruppe for å åpne den, eller skriv i søkefeltet øverst.",
+"Kom i gang"
 ],
 [
 "Verden rundt dere",

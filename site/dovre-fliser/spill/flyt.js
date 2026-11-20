@@ -20,24 +20,34 @@
     autoHvile: { bygg: 120, kort: 60 },
     spolFart: 'sp4',     // farten det spoles i (600×)
     visSek: 9,           // sekunder kortet «Stoppet: …» står
+    // RUNDE 8 (20. nov, kritikeren på telefon: «⏭ stopper omtrent hver spilltime på småting – 22 trykk for ett døgn»): ⏭ stopper bare for det
+    // som krever spilleren. En fiende i sikte stopper bare når den er nærmere enn fiendeNær meter fra leiren eller et eget lag, og den samme
+    // fienden stopper ikke igjen før det er gått huskSett spillminutter. Claudes forslag.
+    fiendeNær: 2000,
+    huskSett: 180,
+    // flom eller ras nærmere leiren enn dette (meter) stopper likevel – når hendelsen har med stedet (detail.x, detail.y)
+    naturNær: 3000,
   };
   // Hvilke hendelser som stopper hva: spol = «spol til neste hendelse», auto = automatisk nedbremsing når du selv har satt opp farten
   const HENDELSER = {
+    // framme: bare lag DU sendte (ikke lag som går hjem, rykker fram eller trekker seg av seg selv – ordre(…, stille), se «ordre» under)
     framme: { spol: true, auto: false },
     kontakt: { spol: true, auto: true },
     alarm: { spol: true, auto: true },
     bygg: { spol: true, auto: true, til: 'sp2' },
     dag: { spol: true, auto: false },
-    mål: { spol: true, auto: false },
+    // (runde 8) et nådd mål står i loggen og i Leir → Mål, men stopper ikke spolingen (det krever ikke noe av deg)
+    mål: { spol: false, auto: false },
     tettsted: { spol: true, auto: false },
     tapt: { spol: true, auto: true },
     // fra andre moduler (hendelsen «riksbrudd-hendelse», se under) og kort som venter på svar
     kort: { spol: true, auto: true, til: 'sp2' },
-    natur: { spol: true, auto: false },
+    // (runde 8) flom og ras langt unna står i loggen; toget som kommer fram, legger lasten i leiren av seg selv
+    natur: { spol: false, auto: false },
     brann: { spol: true, auto: false },
     fanger: { spol: true, auto: false },
     båt: { spol: true, auto: false },
-    tog: { spol: true, auto: false },
+    tog: { spol: false, auto: false },
     annet: { spol: true, auto: false },
   };
   // Øyeblikksbildet B: { dag, marsj: { navn: true }, strid (egne lag i ildkamp), fiender (fiender du ser), bygg (ferdige bygg),
@@ -122,25 +132,30 @@
   // igjen, telte før som «ny fiende i sikte» hver gang (spolingen stoppet hvert 2.–9. spillminutt under et angrep). Nå regnes en fiende som
   // sett, og et lag som i strid, i HUSK spillminutter etter sist gang (Claudes forslag).
   const HUSK = 90, sistSett = new Map(), sistStrid = new Map();
-  function nylig(kart, nå, alle) {
+  function nylig(kart, nå, alle, husk = HUSK) {
     for (const e of nå) kart.set(e, tid);
-    let n = 0; for (const [e, t] of kart) { if (tid - t > HUSK || tid < t || !alle.includes(e)) kart.delete(e); else n++; }
+    let n = 0; for (const [e, t] of kart) { if (tid - t > husk || tid < t || !alle.includes(e)) kart.delete(e); else n++; }
     return n;
   }
+  // (runde 8) en fiende teller bare når den er nær leiren eller et eget lag (R.fiendeNær)
+  function nærFiende(e, lag) { const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir, n = R.fiendeNær;
+    if (L && Math.hypot(e.x - L.x, e.y - L.y) < n) return true; return lag.some(s => Math.hypot(e.x - s.x, e.y - s.y) < n); }
+  // et kort som venter på svar og SYNES (et hendelseskort som venter til angrepet er over, er skjult og teller ikke)
+  const kortOppe = () => ['hendelse', 'samfunnkort', 'krigkort', 'formkort'].some(id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på') && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden'); });
   function bilde() {
     const L = rot.LeirSpill && LeirSpill.tilstand(), lag = egne(), marsj = {};
-    for (const s of lag) if (s.sti || s.planlegger || (s.kø && s.kø.length)) marsj[s.navn] = true;
+    for (const s of lag) if ((s.sti || s.planlegger || (s.kø && s.kø.length)) && !s.flytSelv) marsj[s.navn] = true;
     let tettsteder = 0; if (rot.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') tettsteder++;
     const al = document.getElementById('alarm');
     return { dag: Math.floor((6 + tid / 60) / 24) + 1, marsj, navn: lag.map(s => s.navn), lag: lag.length,
       strid: nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
-      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e))),
+      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
       mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
       // et kort midt på skjermen som venter på svar (hendelser i gjengen, flyktninger ved porten, seier, scenario)
-      kort: ['hendelse', 'samfunnkort', 'krigkort', 'formkort'].some(id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på')); }) };
+      kort: kortOppe() };
   }
 
   // ---------- spol til neste hendelse og automatisk stopp ----------
@@ -148,6 +163,9 @@
   css.textContent = `#nesteh{ min-width:38px; } #nesteh.på{ background:#6a5a2e; color:#fff; }
 body.kort .knapper #nesteh{ min-width:34px; padding:0 6px; }
 #flytkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; max-width:min(520px,94vw); padding:6px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; }
+#flytkort.liten{ padding:2px 6px 2px 9px; font-size:12.5px; gap:6px; flex-wrap:nowrap; max-width:min(440px,94vw); background:rgba(28,23,15,.92); border-color:#6a5a34; }
+#flytkort.liten b{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #flytkort.liten > span{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+#flytkort.liten button{ min-height:24px; padding:0 7px; font-size:12px; white-space:nowrap; flex:none; }
 #flytkort.på{ display:flex; } #flytkort b{ color:#f0e2b0; } #flytkort button, #flytgruppe button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; min-height:34px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; }
 #marsjvalg{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; max-width:min(440px,94vw); padding:7px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; gap:8px; align-items:center; }
 #marsjvalg.på{ display:flex; } #marsjvalg b{ color:#f0e2b0; } #marsjvalg small{ display:block; color:var(--ink-dim,#a99); font-size:12px; } #marsjvalg button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; min-height:40px; min-width:64px; padding:2px 12px; font:inherit; cursor:pointer; } #marsjvalg button.hoved{ border-color:#c9b26a; background:#4a3f22; } #marsjvalg button:disabled{ opacity:.45; }
@@ -158,11 +176,16 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   const kort = el('div', { id: 'flytkort', role: 'status' }); document.body.appendChild(kort);
   let spoler = false, før = null, sistBilde = 0, kortTid = 0, sistStopp = null;
   const spolKnapp = document.getElementById('nesteh');
+  // RUNDE 8 (PC-kritikeren: «fire bokser oppå hverandre når røverne kommer»): mens angrepsbanneret står, er stoppkortet en liten linje
+  // rett under banneret (ikke en boks midt over leiren)
+  const alarmOppe = () => { const a = document.getElementById('alarm'); return !!(a && a.classList.contains('på') && a.getClientRects().length && getComputedStyle(a).visibility !== 'hidden'); };
+  function plasserKort() { const a = document.getElementById('alarm'), liten = alarmOppe() && (!navigator.webdriver || api2.test === true);
+    kort.classList.toggle('liten', liten); kort.style.top = liten ? Math.round(a.getBoundingClientRect().bottom + 4) + 'px' : ''; }
   function visKort(tekst, medSpol) {
     kort.replaceChildren(el('span', {}, '⏭ ', el('b', {}, tekst)));
     if (medSpol) { const b = el('button', {}, 'Spol videre'); b.onclick = () => spol(); kort.append(b); }
     const x = el('button', { 'aria-label': 'Lukk' }, '×'); x.onclick = () => kort.classList.remove('på'); kort.append(x);
-    kort.classList.add('på'); clearTimeout(kortTid); kortTid = setTimeout(() => kort.classList.remove('på'), R.visSek * 1000);
+    kort.classList.add('på'); plasserKort(); clearTimeout(kortTid); kortTid = setTimeout(() => kort.classList.remove('på'), R.visSek * 1000);
   }
   function merk() { if (spolKnapp) { spolKnapp.classList.toggle('på', spoler); spolKnapp.setAttribute('aria-pressed', String(spoler)); } }
   const NAVN = { sp1: '1×', sp2: '10×', sp3: '60×', sp4: '600×' }, sistAuto = {};
@@ -174,10 +197,16 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     const tekst = liste.map(h => h.tekst).join(', '); sistStopp = { hva, liste, tid, fart: mål };
     spoler = false; merk(); settFart(mål);
     const t = tekst.charAt(0).toUpperCase() + tekst.slice(1);
-    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true); logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
+    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true);
+    // (runde 8) står grunnen alt øverst i loggen («Røverne er snart framme (ca. 9 min).»), skrives den ikke en gang til
+    const nyLinje = !(typeof loggLinjer !== 'undefined' && liste.every(h => loggLinjer.slice(0, 3).some(l => l.toLowerCase().includes(h.tekst.toLowerCase()))));
+    if (nyLinje) logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
   }
   function spol() {
     if (spoler) { spoler = false; merk(); settFart(R.sakteFart); return false; }
+    // RUNDE 8 (PC-kritikeren: et hendelseskort sto åpent fra dag 3 16:52 til dag 4 05:06 mens ⏭ spolte): et kort som venter på svar,
+    // stopper spolingen – også når det alt står oppe når du trykker ⏭
+    if (kortOppe() && (!navigator.webdriver || api2.test === true)) { visKort('Svar på kortet først – spillet står på pause til du svarer.', false); return false; }
     kort.classList.remove('på'); før = bilde(); spoler = true; merk(); settFart(R.spolFart); return true;
   }
   if (spolKnapp) spolKnapp.onclick = () => spol();
@@ -187,7 +216,10 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   // type er en nøkkel i Flyt.HENDELSER (natur, fanger, båt, tog … – ukjente regnes som «annet»); tekst står i kortet «Stoppet: …».
   // Branner meldes av spill/verden-visning.js som «riksbrudd-brann»: en ny brann innen 3 km fra leiren stopper spolingen.
   const innboks = []; let branner = 0;
-  window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (d.tekst) innboks.push({ type: F.HENDELSER[d.type] ? d.type : 'annet', tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
+  window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (!d.tekst) return; let type = F.HENDELSER[d.type] ? d.type : 'annet';
+    // (runde 8) natur nær leiren stopper som «annet» (verden-visning.js kan sende x og y med)
+    if (type === 'natur' && typeof d.x === 'number' && typeof d.y === 'number') { const S = rot.OppstartSpill && OppstartSpill.tilstand(); if (S && S.leir && Math.hypot(d.x - S.leir.x, d.y - S.leir.y) < R.naturNær) type = 'annet'; }
+    innboks.push({ type, tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
   window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);
   KROKER.sim.push(() => {
@@ -206,6 +238,17 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     const h = F.hendelser(før, b).concat(innboks.splice(0)); før = b; if (!h.length) return;
     const st = spoler ? F.stopper(h, 'spol') : F.hviler(F.stopper(h, 'auto'), sistAuto, tid); if (st.length) stopp(st, spoler ? 'spol' : 'auto');
   });
+
+  // ---------- (runde 8) hvem som sendte laget ----------
+  // Lag som går av seg selv – hjem for å hvile og fylle ammunisjon (forsvar-hjemme.js), til forsvarsplassen eller mot herjere
+  // (forsvar-visning.js), eget initiativ i strid (strid-visning.js) – merkes s.flytSelv og stopper ikke spolingen når de er framme.
+  // Disse modulene gir ordren med ordre(s, X, Y, stille = true), men det gjør også ordre som er dine (køordrene, en marsj som fortsetter
+  // etter lasting, en ingeniør som går til en bru) – derfor avgjør fila som ga ordren (kallstakken), ikke stille alene.
+  const AUTO_FILER = /(forsvar-visning|forsvar-hjemme|strid-visning)\.js/;
+  if (typeof rot.ordre === 'function' && !rot.ordre.flyt) { const før = rot.ordre;
+    const ny = function (s, X, Y, stille) { if (s && typeof s === 'object' && s.side === 'blå') { let selv = false; if (stille && !s.køGår) { try { selv = AUTO_FILER.test(String(new Error().stack || '')); } catch (e) { selv = false; } } s.flytSelv = selv; }
+      return før.apply(this, arguments); };
+    ny.flyt = true; rot.ordre = ny; }
 
   // ---------- marsjtid før ordren ----------
   let forh = null, forhNøkkel = '', forhJobb = 0;
@@ -394,7 +437,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   // ---------- Leir-menyen (fanen Mål): av/på for automatisk stopp ----------
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e2, knapp: kn }) => {
     hode.appendChild(e2('h3', { 'data-fane': 'mål' }, 'Mål · tid og flyt'));
-    hode.appendChild(e2('div', { klasse: 'dagbok' }, '⏭ ved fartsknappene spoler til neste hendelse (lag framme, bygg ferdig, fienden i sikte, alarm, ny dag, mål nådd) og går så ned til 1×.'));
+    hode.appendChild(e2('div', { klasse: 'dagbok' }, '⏭ ved fartsknappene spoler til neste hendelse som krever deg (et lag du sendte er framme, bygg ferdig, fienden nær, alarm, ny dag, et kort som venter på svar) og går så ned til 1×.'));
     const b = kn('Senk farten selv ved alarm, kontakt og ferdig bygg: ' + (valg.auto ? 'på' : 'av'), valg.auto, () => { valg.auto = !valg.auto; lagre(); if (rot.LeirSpill && LeirSpill.vis) LeirSpill.vis(); b.textContent = 'Senk farten selv ved alarm, kontakt og ferdig bygg: ' + (valg.auto ? 'på' : 'av'); });
     b.id = 'flytauto'; hode.appendChild(b);
   });

@@ -151,7 +151,49 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       { const gr = document.querySelectorAll('#hjelp details.gruppe'), åpne = [...gr].filter(g => g.open).length; r6.hjelp = { grupper: gr.length, åpne }; krev(gr.length >= 8 && åpne <= 1, 'hjelpen er ikke delt i grupper som foldes ut');
         const sk = document.querySelector('#hjelp .sok'); if (sk) { sk.value = 'ferje'; sk.dispatchEvent(new Event('input')); const n = [...document.querySelectorAll('#hjelp details:not(.gruppe):not([hidden])')].length; sk.value = ''; sk.dispatchEvent(new Event('input')); r6.hjelp.søk = n; krev(n >= 1 && n < 40, 'søket i hjelpen virker ikke'); } }
       r6.ms = Math.round(performance.now() - t6); }
+    // RUNDE 8 (20. nov natt, ny kritikk): loggen demper gjentakelser, ⏭ stopper bare for det som krever deg, kortpausen holder også når
+    // noen starter tiden, kortene venter mens leiren angripes, hjelpen har alle pakkene, «Nytt spill» øverst i ☰, spillets skrift i 3D
+    { const r8 = ut.runde8 = {}, t8 = performance.now();
+      for (const n of ['LoggDemp', 'Flyt', 'FlytSpill', 'Skjermlag', 'NarHud']) krev(!!window[n], 'mangler ' + n);
+      if (window.LoggDemp && typeof loggLinjer !== 'undefined') {
+        // (1) samme melding tre ganger = én linje med «×3» (loggen settes tilbake etterpå)
+        const L0 = loggLinjer.slice(), T = 'Prøvemelding fra vakta «ui» (runde 8).'; logg(T); logg(T); logg(T);
+        r8.logg = loggLinjer.filter(l => l.startsWith(T)); krev(r8.logg.length === 1 && /\(×3\)$/.test(r8.logg[0]) && loggLinjer[0] === r8.logg[0], 'like meldinger slås ikke sammen: ' + JSON.stringify(r8.logg));
+        loggLinjer.length = 0; loggLinjer.push(...L0); const LL = $('logg'); LL.innerHTML = L0.map((x, i) => '<div style="opacity:' + (1 - i * .15) + '"></div>').join(''); [...LL.children].forEach((q, i) => { q.textContent = L0[i]; });
+        // (2) reglene i en egen utgave (rører ikke spillets logg): rutine, vær og tips
+        const D = LoggDemp.lag(LoggDemp.REGLER, new Set()), v = (t, n) => !!D.vurder(t, [], n);
+        r8.regler = [v('Du drikker deg utørst i leiren.', 0), v('Du drikker deg utørst i leiren.', 60), v('Det begynner å regne. Sikten er 95 % av vanlig.', 70), v('Tåka kommer sigende.', 80), v('Det klarner opp.', 400)].map(Number).join('');
+        krev(r8.regler === '10011', 'loggreglene (rutine, vær) stemmer ikke: ' + r8.regler);
+        const h1 = D.vurder('Hogstlaget fant skog 70 m øst for leiren. Vil du velge stedet selv: Leir → Lager → «Hogst …».', [], 0), h2 = D.vurder('Lageret er fullt. Vil du velge stedet selv: Leir → Lager → «Hogst …».', [], 10);
+        krev(h1 && /Vil du/.test(h1.tekst) && h2 && !/Vil du/.test(h2.tekst), 'tipset vises mer enn første gang'); }
+      // (3) ⏭: flom/ras, toget og et nådd mål stopper ikke; lag som går av seg selv merkes
+      if (window.Flyt) { const H = Flyt.HENDELSER; krev(!H.natur.spol && !H.tog.spol && !H['mål'].spol && H.kort.spol && H.alarm.spol && H.framme.spol, '⏭ stopper fortsatt på småting'); }
+      krev(typeof ordre === 'function' && ordre.flyt === true, 'ordre() merker ikke lag som går av seg selv');
+      // (4) kortpausen holder: ⏭ og en fartsknapp mens kortet står gir fortsatt pause, og farten du valgte gjelder etter svaret
+      const hk = $('hendelse');
+      if (window.Skjermlag && window.FlytSpill && hk && $('sp0') && $('sp2') && $('sp3') && !Skjermlag.KORT.some(id => $(id) && $(id).classList.contains('på')) && !(Skjermlag.angrepPågår && Skjermlag.angrepPågår())) {
+        const st0 = Skjermlag.test, ft0 = FlytSpill.test, tempo0 = tempo, fart0 = [...document.querySelectorAll('[id^=sp].på')].map(b => b.id)[0], inn0 = hk.innerHTML;
+        Skjermlag.test = true; FlytSpill.test = true; if (tempo === 0) $('sp0').click(); $('sp2').click(); await vent(80);
+        if (!hk.textContent.trim()) hk.innerHTML = '<h3>Prøvekort</h3><button>Svar</button>'; hk.classList.add('på'); await vent(450);
+        const p = { før: tempo }; p.spol = FlytSpill.spol(); await vent(60); p.etterSpol = tempo; p.spoler = FlytSpill.spoler(); $('sp3').click(); await vent(450); p.etterFart = tempo; p.merke = Skjermlag.merke();
+        // (5) mens leiren angripes venter hendelseskortet (klassen settes av Skjermlag.vent hvert 0,15 s – prøves med en gang)
+        document.body.classList.add('angrepvent'); p.skjult = hk.getClientRects().length === 0; document.body.classList.remove('angrepvent');
+        hk.classList.remove('på'); hk.innerHTML = inn0; await vent(450); p.svart = tempo; r8.kort = p;
+        krev(p.før === 0 && p.spol === false && p.etterSpol === 0 && !p.spoler, '⏭ spoler med et kort som venter på svar');
+        krev(p.etterFart === 0 && p.merke, 'en fartsknapp starter tiden med et kort oppe');
+        krev(p.svart === 60, 'farten du valgte med kortet oppe, gjelder ikke etter svaret (' + p.svart + ')'); krev(p.skjult, 'hendelseskortet står oppe mens leiren angripes');
+        Skjermlag.test = st0; FlytSpill.test = ft0; if (fart0 && $(fart0)) $(fart0).click(); if (tempo0 === 0 && tempo !== 0) $('sp0').click(); if (tempo !== tempo0) tempo = tempo0; }
+      // (6) hjelpen: emnene fra pakkene står i riktig gruppe (når de finnes i HJELP_TILLEGG)
+      { const har = t => (window.HJELP_TILLEGG || []).some(q => q[0] === t), iGruppe = (t, g) => [...document.querySelectorAll('#hjelp section')].some(sec => sec.dataset.gruppe === g && [...sec.querySelectorAll('details:not(.gruppe) h3')].some(h => h.textContent === t));
+        const PRØV = [['Flytte møbler', 'I 3D'], ['Lommelykt', 'I 3D'], ['Lagre og last', 'Kom i gang'], ['Leiren på nær zoom', 'Leiren og bygging'], ['Gå inn i et hus', 'I 3D'], ['Seier tidligst dag 4', 'Krigen og regionen']].filter(([t]) => har(t));
+        r8.hjelp = PRØV.length; const feilG = PRØV.filter(([t, g]) => !iGruppe(t, g)).map(q => q[0]); krev(feilG.length === 0, 'hjelpeemner i feil gruppe: ' + feilG.join(', '));
+        const annet = document.querySelector('#hjelp section[data-gruppe="Annet"]'); r8.annet = annet ? annet.querySelectorAll('details:not(.gruppe)').length : 0; }
+      // (7) ☰: «Nytt spill» rett under overskriften
+      { const m = $('lagmeny'), rad = m && m.querySelector('.mtopp + .spillrad'); r8.nyttSpill = !!rad && /Nytt spill/.test(rad.textContent); krev(!m || !m.querySelector('button.fare') || r8.nyttSpill, '«Nytt spill» står ikke øverst i ☰'); }
+      // (8) navnelappene i 3D får spillets skrift
+      if (window.NarHud && NarHud.byttSkrift) krev(/Cormorant/.test(NarHud.byttSkrift('bold 13px sans-serif')) && NarHud.byttSkrift('12px monospace') === '12px monospace', 'navnene i 3D får ikke spillets skrift');
+      r8.ms = Math.round(performance.now() - t8); }
     ut.var3d = var3d; return ut; });
   const ok = d.feil.length === 0;
-  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') + (d.runde8 ? ` · runde 8: like meldinger slås sammen, ⏭ venter på kortet${d.runde8.kort ? ' og fartsknappen også' : ''}, ${d.runde8.hjelp} hjelpeemner fra pakkene i riktig gruppe, «Nytt spill» øverst` : '') : d.feil.join('; '), data: d };
 } };

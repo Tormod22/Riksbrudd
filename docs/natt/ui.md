@@ -311,3 +311,83 @@ Regeltest: `node pipeline/fliser/test_skjermlag.js` (båndene, rekkefølgen, «f
 - Nettleser som spiller (webdriver = false), bilder i scratchpad `natt6/ui/`: for-*.png (før), etter*-*.png, opp-*.png, leir-*.png, fane-*.png,
   hjelp-*.png, ligg-*.png, stats-*.png/crop-stats-*.png, forside-*.png, ga-tlf.png (gåmodus telefon). 0 sidefeil i alle.
 
+
+# Runde 8 (20. nov natt, ny kritikk)
+
+Pakke «flyt» (loggen, spolingen, kortene og hjelpen). Gren `claude/natt18-ui`, port 8924. Alle tall er Claudes forslag. Prøveskript og bilder:
+scratchpad `natt8/ui/` (start.js = felles oppstart, `ekte: true` = som spiller; spol.js = spoler et døgn med ⏭ og skriver hvorfor den stopper,
+p8.js = logg + kort + ⏭ + angrep, bilder.js = ☰/sekken/varsel/hjelpen/forsiden, norgekilde.js, tre.js = 3D-navn, vakt.js = kjører vaktene,
+simlogg.js = mater PC-kritikerens logg-spill.txt gjennom dempingen).
+
+| # | Punkt | Status |
+|---|---|---|
+| 1 | Loggen gjentar seg og drukner det viktige | rettet (ny `spill/loggdemp.js`) |
+| 2 | ⏭ stopper på småting | rettet (flyt.js: bare det som krever spilleren) |
+| 3 | Kort pauser ulikt (ikke under spoling) | rettet (skjermlag.js + flyt.js) |
+| 4 | Fire bokser oppå hverandre når røverne kommer | rettet for kortet og stoppkortet (opplæringen er en annen hjelper) |
+| 5 | Hjelpen mangler pakkenes emner (møbler, lykt, lagring …) | rettet (hjelp.js + hjelp-natt.js samlet på nytt) |
+| 6 | Småting: Nytt spill, forsiden, kildeteksten, skriften i 3D, varselboksen, sekken | rettet alle seks |
+
+1. **Loggdemping** (`spill/loggdemp.js`, regler uten DOM + `test_loggdemp.js`; `logg()` i index.html spør `LoggDemp.vurder(tekst, loggLinjer, tid)`):
+   - samme melding (tall og «×n» regnes ikke med) innen `vindu` = 120 spillminutter blir én linje «… (×4)» øverst, med den nyeste teksten;
+   - rutine (`RUTINE`): «Du drikker deg utørst / Du spiser i leiren» høyst én gang per døgn, hogst («Hogstlaget fant skog», «Hogstfeltet er
+     hogd») én gang per 8 t, «fyller ammunisjon i leiren» én gang per 6 t;
+   - været: bare store skifter (tåke, snø, storm) – det samme høyst hver 6. t – og «Det klarner opp» etter et stort skifte; «Det begynner å
+     regne. Sikten er 95 %» og «Det skyer over» holdes tilbake (statuslinja viser været uansett). Valg fra ☰ («Været: regn.») vises som før;
+   - tips («Vil du …», «Tips: …») bare første gang (huskes i `riksbrudd-loggtips`), og en forklarende setning uten tall som alt er vist siste
+     døgn, tas bort fra en ny melding («Folk på «Frakt» bærer treet til leiren.»). Den første setningen tas aldri bort.
+   - Simulert på PC-kritikerens logg: 68 meldinger inn, 53 vist; alle regn/klarner-meldingene og 9 av 12 hogstmeldinger borte.
+   - `flyt.js stopp()`: står grunnen alt i de tre øverste linjene («Røverne er snart framme (ca. 9 min).»), skrives ikke «Spolingen stoppet: …» i tillegg.
+2. **⏭** (`flyt.js`): `HENDELSER` – `mål`, `natur` (flom/ras) og `tog` stopper ikke lenger (står i loggen). «Framme» gjelder bare lag DU
+   sendte: flyt.js pakker inn `ordre()` og merker `s.flytSelv` når ordren er `stille` OG kommer fra forsvar-visning.js, forsvar-hjemme.js eller
+   strid-visning.js (kallstakken, `AUTO_FILER`) – lag som går hjem for å hvile, til forsvarsplassen, mot herjere eller rykker fram/trekker seg
+   av eget initiativ. Køordrene dine, en marsj som fortsetter etter lasting (lagring.js) og ingeniøren som går til en bru (odeleggelse-visning.js)
+   er også `stille`, men teller som dine (prøvd: forsvarsplassene merkes, en vanlig ordre ikke). Flom/ras nærmere leiren enn `naturNær` = 3 km
+   stopper likevel når hendelsen har `x`/`y` med (verden-visning.js sender det ikke ennå). «Fienden i sikte» bare når fienden er nærmere enn `fiendeNær` = 2 km fra
+   leiren eller et eget lag, og den samme fienden stopper ikke igjen før etter `huskSett` = 180 spillminutter (før 90). Kort, alarm, brann,
+   båt, fanger, krigshendelser («annet»), tap, ny dag og ferdig bygg stopper som før. Spolt et døgn som spiller på Dovre: 2 stopp (ny dag, alarm).
+   Teksten i Leir → Mål og hjelpen («Spol til neste hendelse», i `docs/natt/spillform-hjelp.json`) er oppdatert.
+3. **Kortpausen holder** (`skjermlag.js` pause()): starter noen tiden mens et kort står (⏭ «Spol videre», en fartsknapp), settes pausen
+   igjen og lappen blinker; farten du valgte, gjelder når kortet er besvart. `FlytSpill.spol()` med et kort oppe spoler ikke, men sier «Svar på
+   kortet først – spillet står på pause til du svarer.» (Årsaken hos kritikeren: pausen ble bare satt én gang per kort; etter «Spol videre» gikk
+   tiden med kortet åpent.)
+4. **Under angrep** (`skjermlag.js` vent(), `Skjermlag.VENTER`/`venter()`): mens et angrep pågår (`SpilletSpill.T().aktiv`, røverlag i live,
+   eller banneret varsler røvere på vei) får body klassen `angrepvent`, og `#hendelse`/`#samfunnkort` er skjult – de kommer fram (og setter
+   spillet på pause) når angrepet er over. Spillformkortet (seier/tap) og krigskortet kommer som før. flyt.js teller bare kort som SYNES
+   (`kortOppe()`), så et skjult kort stopper ikke spolingen. Stoppkortet (`#flytkort.liten`) er en liten linje under/ved banneret mens alarmen står.
+5. **Hjelpen** (`hjelp.js`): alle emnene i `docs/natt/*-hjelp.json` har fast plass i `GRUPPER` (lut/møbler/lykt/sovepose/feltflasker/ransakede
+   hus/figurer/natur under «I 3D», lagring og start under «Kom i gang», leir2d og hogst under «Leiren og bygging», krig under «Lag og strid» /
+   «Angrep og forsvar» / «Krigen og regionen», økonomi under «Mat, penger og handel» …). Pakkenes gruppenavn går gjennom `GRUPPENAVN`
+   («Leiren» → «Leiren og bygging»); ukjente havner under «Annet» (før havnet alt med gruppa «Leiren» under «Vær, lyd og bilde»).
+   `hjelp-natt.js` er samlet på nytt (180 emner). `figurer-hjelp.json` ligger på grenen natt18-folk – emnene står alt i GRUPPER og havner
+   riktig når hjelpen samles etter flettingen. «Meldingene» og «Spillet står på pause til du svarer» i `ui-hjelp.json` forklarer det nye.
+6. **Småting:**
+   - ☰ (`meny.js`): «Nytt spill» står øverst rett under «Innstillinger / Lagre og last» (`.spillrad`), ikke nederst under fold.
+   - Forsiden (`site/index.html`): «Spill på Dovre» har «Spill nå ›» (mindre knapp enn hovedkortene).
+   - Kildeteksten (`index.html` rett etter `#kilde`): på /norge og /rogaland står «Høyde: Kartverket DTM · Kartdata: Sentinel-2, NVDB og
+     OpenStreetMap – lastes …» til manifestet setter de ekte kildene (før: Dovre-teksten «Landsat 5, 13. aug. 1987»). Prøvd med /norge rutet til siden.
+   - Navnelappene i 3D (`narhud.js` byttSkrift): overleggets tegneflate (#c3o) bytter «… px sans-serif» til spillets Cormorant Garamond
+     (×1,12, minst 600 i vekt) – leirnavnet, oppdrag, tilfluktssted osv. Andre skrifter står.
+   - Varselbrikkene på telefon (`narhud.js` løftVarsler): står over nordpila, målestokken og kildeteksten. Angrepsbrikken viser avstand
+     bare når noen ser røverne (ellers «ikke sett ennå», som banneret) – før sto «10,0 km fra leiren» mens røverne var 720 m unna.
+   - Sekken: øverst «Vekt 10,3 kg · du bærer lett opptil 22 kg» (`utstyr.js`), nederst «Plass i lommer og sekk: 4,1 av 27 kg brukt» med en
+     linje som sier forskjellen (`lut-visning.js`, to tekstlinjer – filene er ikke mine, endringen er bare tekst).
+
+**Fellesfiler endret:** `index.html` (logg() + skripttaggen `loggdemp.js` rett etter skjermlag.js + én linje etter `#kilde`), `spill/utstyr.js`
+og `spill/lut-visning.js` (bare teksten i sekken), `docs/natt/spillform-hjelp.json` («Spol til neste hendelse»), `pipeline/fliser/vakter/spillform.js`
+(hendelsen i spoleprøven er en båt i stedet for toget, siden toget ikke stopper ⏭ lenger), `spill/hjelp-natt.js` (samlet på nytt).
+
+**Vakt** (`vakter/ui.js`, «runde 8»): 3 like meldinger = én linje med ×3 (loggen settes tilbake), reglene i en egen LoggDemp-utgave (rutine,
+vær, tips), Flyt.HENDELSER, `ordre.flyt`, kort + ⏭ + fartsknapp gir fortsatt pause og farten du valgte etter svaret, `angrepvent` skjuler
+kortet, hjelpeemnene i riktig gruppe, «Nytt spill» øverst, byttSkrift. Grønn på PC og telefon (ca. 1,5–2 s for runde 8). Prøvd med feil
+lagt inn med vilje (vaktfeil.js: natur stopper ⏭, rutineregelen av, «Nytt spill» nederst) – vakta fant alle tre. Vaktene balanse, lagring,
+krig, folk, lut og spillform er også grønne på grenen. Hele mobilkontrollen (`SJEKK_PROFIL=mobil PORT=8924`): 121 ok, 0 feil, «Alt i orden» (641 s).
+
+Bilder (scratchpad `natt8/ui/`): r8-etter-pc-logg/kort/angrep.png og r8-etter-tlf-*.png (logg ×4, kort + ⏭ «Svar på kortet først», angrep med
+skjult kort og stoppkortet som linje), r8-pc-etter-angrep-kort.png (kortet kommer med pause når angrepet er over), r8-tlf-meny.png (Nytt spill
+øverst), r8-tlf-sekk.png, r8-tlf-angrep-varsel.png (brikken over kompasset, «ikke sett ennå»), r8-tlf-hjelp-3d.png, r8-tlf-forside.png,
+r8-pc-forside.png, r8-tlf-norge-kilde.png, r8-pc-3d-navn.png (leirnavnet i Cormorant). Før-bildene er kritikernes (kritikk2/pc og kritikk2/tlf).
+
+**Ikke gjort / gjenstår:** opplæringsboksen under angrep (annen hjelper), angrepsbannerets tekst/anslag (krig). Flom/ras NÆR leiren stopper
+ikke ⏭ før `verden-visning.js` sender x/y med «riksbrudd-hendelse» (flyt.js tar imot det). Bølge 2 uten utfallsmelding (PC-kritikeren) er ikke
+min del. Loggdempingen gjelder det som vises – «les alt» viser fortsatt bare de seks siste linjene, ingen full historikk.

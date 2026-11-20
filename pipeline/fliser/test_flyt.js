@@ -8,7 +8,11 @@ ok(h.length === 1 && h[0].type === 'framme' && /A er framme/.test(h[0].tekst), '
 ok(F.hendelser(B({ marsj: { A: true } }), B({ navn: ['B'], lag: 1 })).every(q => q.type !== 'framme'), 'et lag som er borte, er ikke «framme»');
 h = F.hendelser(B({}), B({ alarm: true, bygg: 1, dag: 2, mål: 1, fiender: 1, tettsteder: 1 }));
 ok(['alarm', 'kontakt', 'bygg', 'tettsted', 'mål', 'dag'].every(t => h.some(q => q.type === t)), 'alarm, kontakt, bygg, tettsted, mål og ny dag meldes');
-ok(F.stopper(h, 'spol').length === h.length, 'spolingen stopper for alle');
+ok(F.stopper(h, 'spol').map(q => q.type).sort().join() === 'alarm,bygg,dag,kontakt,tettsted', 'spolingen stopper for alt unntatt et nådd mål (runde 8)');
+// runde 8: bare det som krever spilleren stopper ⏭ – flom/ras langt unna og toget som er framme gjør det ikke
+ok(F.stopper([{ type: 'natur', tekst: 'flom' }, { type: 'tog', tekst: 'toget er framme' }, { type: 'mål', tekst: 'et mål er nådd' }], 'spol').length === 0, 'natur, tog og mål stopper ikke spolingen');
+ok(['kort', 'alarm', 'brann', 'båt', 'fanger', 'annet', 'framme', 'tapt'].every(t => F.stopper([{ type: t, tekst: t }], 'spol').length === 1), 'kort, alarm, brann, båt, fanger, annet, framme og tap stopper fortsatt');
+ok(F.REGLER.fiendeNær > 0 && F.REGLER.huskSett >= 90, 'fienden i sikte bare nær, og huskes lenger');
 ok(F.stopper(h, 'auto').map(q => q.type).sort().join() === 'alarm,bygg,kontakt', 'auto-stopp bare for alarm, kontakt og bygg');
 ok(F.stopper(F.hendelser(B({ marsj: { A: true } }), B({})), 'auto').length === 0, 'auto-stopp ikke når et lag er framme');
 h = F.hendelser(B({ alarm: true, byggTall: 4 }), B({ alarm: true, byggTall: 3 }));
