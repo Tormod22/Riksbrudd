@@ -27,11 +27,6 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
-"To tropper før dag 4",
-"Røverbølgene vokser med dagene. Lag en tropp til før dag 4 (Leir → Tropper). Har du for få folk, rekrutter i Folk – det trengs ledige senger, så oppgrader brakka eller bygg en til. Hold minst to på «Bygg» (ett byggelag) så byggene blir reparert, og én på «Vakt».",
-"Kom i gang"
-],
-[
 "Siste døgn",
 "Hver morgen kl. 06, rett etter dagboka, kommer en linje i loggen om det som hendte siste døgn: bølger som ble slått tilbake eller som herjet i leiren, nye sårede og falne, lag som ble slått ut, bygg som ble ødelagt eller skadet, hus dere lette gjennom, og folk som kom eller dro.",
 "Kom i gang"
@@ -40,6 +35,16 @@ window.HJELP_TILLEGG = [
 "Ammunisjon og hvile hjemme",
 "Et lag som står stille hjemme i leiren (innen ca. 250 m) mellom angrepene, fyller ammunisjon av seg selv: gratis når basen har olje, ellers fra kassa (en full last koster 200 000 kr, og 300 000 kr blir alltid igjen). De sårede i laget blir sakte bedre – fra hardt såret til frisk på omtrent et døgn. Med sykestue og folk på «Stell» går det fortere. Falne blir ikke friske: lag nye tropper av folkene dine.",
 "Lag og strid"
+],
+[
+"Folk og soldater i 3D",
+"Folkene i leiren, barna og de gamle, soldatene på alle sider og karakteren din er avrundede figurer som går, står, bærer og sikter. Jakken viser hvilken side en soldat hører til; hjelmen og sekken er feltutstyr. Nær kameraet får figurene flere detaljer enn langt unna.",
+"I 3D"
+],
+[
+"Hva figurene gjør",
+"På marsj går soldatene med geværet lavt; når laget skyter, løfter de det til skulderen. Sårede kneler, falne ligger. I leiren bærer folk på «frakt» og «bygg» en kasse når de går, vakta har gevær, og de gamle går litt krumme.",
+"I 3D"
 ],
 [
 "Folk som personer",
@@ -148,7 +153,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Gå inn i et hus",
-"Merket «Inngang» står over døra. Gå mot døra, så trekkes du inn mot midten av åpningen. På telefon (og med mus) kommer knappen «Gå inn» når du står nær døra – den går gjennom døra for deg. Inne kommer «Gå ut». Styrer du selv underveis, slipper knappen taket.",
+"Trykk på et bygg i kartet (eller i 3D): panelet sier om bygget har en innside, og har knappen «Gå inn i huset». Da reiser du dit (spilltiden går så lenge turen tar), 3D bygges rundt huset, og du settes ved døra og går inn av deg selv. Går du selv: pila under siktet («Inngang 14 m» med en pil) peker mot nærmeste dør, også når døra er på andre siden av huset. Merket «Inngang» står over døra. Nær døra kommer knappen «Gå inn» – den går gjennom døra for deg. Inne kommer «Gå ut».",
 "I 3D"
 ],
 [
@@ -175,6 +180,26 @@ window.HJELP_TILLEGG = [
 "3D går tregt",
 "Tegner nettleseren 3D uten grafikkortet (programvare), kommer en liten lapp i hjørnet én gang: slå på «maskinvareakselerasjon» i nettleserens innstillinger (Edge og Chrome: Innstillinger → System → «Bruk grafikkakselerasjon når tilgjengelig») og start nettleseren på nytt. Rådet står også i loggen og på knappen «Grafikk» i ☰.",
 "Vær, lyd og bilde"
+],
+[
+"Se rundt på telefon",
+"Dra med én finger hvor som helst utenom styrespaken nede til venstre. En ring med piler følger fingeren og viser kursen (f.eks. 045°), så du ser at du snur deg. Styrespaken er bare rundt sirkelen nede til venstre.",
+"I 3D"
+],
+[
+"Når du reiser eller begynner å gå",
+"Mens du reiser (Reis hit / Gå inn i huset) står bildet i 3D stille, og bare tiden og karakteren går – det går mye fortere. Før du begynner å gå, bygges kartet rundt deg ferdig («Henter kartet rundt deg …»). På trege maskiner tegnes 3D i halv oppløsning mens du snur deg.",
+"I 3D"
+],
+[
+"Leiren i 3D",
+"En ny leir har telt, bål, kasser, oljefat og ved rundt flaggstanga fra første stund. Bygg som er under arbeid står som byggeplass: først stikker og snor, så grunnmur, reisverk, tak og kledning, med stillas rundt og materialer ved siden av – som i kartet.",
+"Leiren"
+],
+[
+"Angrep mens du går",
+"Mens du går selv, er angrepsbanneret én linje øverst med «Forsvar leiren», så det ikke dekker bildet.",
+"Lag og strid"
 ],
 [
 "Vann og mat på tur",
@@ -402,6 +427,51 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Motstanderne blir sterkere",
+"Etter fredstiden tjener Kystalliansen og Folkefronten penger og får folk fra tettstedene de holder. De kjøper nye lag, lastebiler og etter hvert en stridsvogn. Jo mer de holder, jo fortere vokser de – ta tettsteder fra dem, så bremser du dem. På «Lett» går det saktere, på «Hard» fortere.",
+"Lag og strid"
+],
+[
+"Angrep med flere lag",
+"Motstanderne samler flere lag på ett sted før de angriper et stort tettsted eller et tettsted noen holder – også dine (fra dag 5 på «Vanlig», og bare én av dem om gangen). Storbyene blir mål først etter noen dager (dag 11 på «Vanlig», dag 15 på «Lett», dag 8–9 på «Hard»). De kjemper også mot hverandre om tettstedene.",
+"Lag og strid"
+],
+[
+"Etterretning om angrep",
+"Når et angrep mot noe av ditt samles, sier loggen det: «Etterretning: Kystalliansen samler 3 lag ved Oltedal. Målet er trolig Høle (ditt) – angrep tidligst om ca. 6 t.» Kartet viser samlingsstedet med en stiplet ring og en pil. Bruk tida: send flere lag dit, grav ned garnisonen og sett stridsreglene til «kjemp» – ellers trekker garnisonen seg når den er underlegen.",
+"Lag og strid"
+],
+[
+"Angrep på leiren",
+"Fra dag 8 på «Vanlig» (dag 11 på «Lett», dag 6 på «Hard») kan motstanderne sende ekte tropper mot leiren – sjeldnere enn røverne, og alltid med varsel noen timer før. Jo flere lag du har hjemme, jo flere må de samle.",
+"Leiren"
+],
+[
+"Handelsrutene",
+"Motstanderne sender av og til et lag for å stenge en handelsrute eller ruta til oljekolonnen din. Loggen sier fra. Sett et lag ved ruta som vakt, eller jag dem bort.",
+"Lag og strid"
+],
+[
+"Angrepsbanneret",
+"Når noen angriper leiren – røvere eller en av motstanderne – står et rødt banner øverst med hvem, hvor mange og fra hvilken kant. Ser ett av lagene dine, et vakttårn, et kamera eller vakta dem, står avstanden og når de er framme. Har noen sett dem nylig, står «sist sett … for N min siden». Ellers står et anslag som et spenn («ca. 1–2 timer»), fordi ingen vet nøyaktig hvor de er. Varselbrikka øverst til venstre sier det samme. «Forsvar leiren» sender lagene i stilling.",
+"Leiren"
+],
+[
+"Når kampen begynner",
+"⏭ og farten stopper når røverne er snart framme, og igjen når kampen begynner (et av lagene dine og en angriper skyter på hverandre). Da går tida på 1×, så du kan følge kampen: skuddene står som stiplede streker med munningsglimt, og lagene i kamp får en rød ring og «I ildkamp». Lagene i og ved leiren (innen 600 m) vises der de er, og det de ser, står på kartet.",
+"Lag og strid"
+],
+[
+"Rapporten etter et angrep",
+"Når en røverbølge eller et angrep på leiren er over, kommer en kort rapport i banneret og i loggen: om angrepet ble slått tilbake eller om de herjet, hva dere tok fra dem eller de tok fra dere, tap hos dere (falne og sårede) og skadde bygg. ⏭ stopper så du ser den. «Reparer alle» står i rapporten når bygg er skadet.",
+"Leiren"
+],
+[
+"Garnisonen holder stillingen",
+"Et lag som blir garnison i et tettsted dere holder, kjemper som standard også mot en sterkere fiende og trekker seg ikke etter tap – ellers ble tettstedet tatt uten kamp. Vil du at laget heller skal trekke seg, endrer du det i lagpanelet → Stridsregler. Går laget ut av tettstedet, får det reglene sine tilbake.",
+"Lag og strid"
+],
+[
 "Lagre og last",
 "Spillet lagres av seg selv i nettleseren, hele tiden. «Lagre og last» i ☰ (eller «Lagre» bak «Mer» nederst) viser når det sist ble lagret, og har tre lagringsplasser du kan lagre i, laste inn og slette, med navn, dag, fraksjon og kasse. Når du laster en plass, legges spillet du hadde i «Automatisk» først, så du kan gå tilbake. «Automatisk» tas også hvert tiende minutt du spiller.",
 "Kom i gang"
@@ -502,6 +572,41 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Jevnt når du går inn i hus",
+"Når du går, lages innsiden av husene rundt deg litt om gangen, så bildet ikke stopper opp. Husene du går mot, gjøres klare først, og et hus du nettopp gikk fra, kommer tilbake med en gang når du snur. Står et hus du vil inn i, fortsatt stengt, så vent et øyeblikk – innsiden er på vei.",
+"I 3D"
+],
+[
+"Jevnere når du flyr",
+"Når du flyr eller kjører langt, bygges et nytt stykke 3D-landskap i bakgrunnen mens du ser på det gamle. Det gjøres nå i mindre biter, og spillet bruker den samme plassen i minnet om igjen fra stykke til stykke – derfor blir det færre og kortere stopp i bildet. Hakker det fortsatt, prøv «Mål hakk» i ☰ (i 3D) og send teksten.",
+"I 3D"
+],
+[
+"Morgenmøtet",
+"Hver morgen kl. 06 (fra dag 2) kommer et kort: øverst dagboka, døgnoppgjøret og hvordan gårsdagens valg gikk («I går: …»), så 2–3 valg for dagen ut fra det som står på i leiren – lite mat, røvere på vei, lite penger, godt med folk eller lav moral. Hvert valg sier hva det koster og hva det gir (på PC: tastene 1–3). Spillet står på pause til du svarer. «Ingen endring i dag» lukker kortet. Under et angrep venter kortet til angrepet er over. Det dere har bestemt for i dag, står under «Morgenmøtet» i Leir → Mål.",
+"Leiren"
+],
+[
+"Folk som sendes ut",
+"Jakt og fiske, speidertur, våpenøvelse, leie ut to som vakter og tankbilen til fots tar to personer bort til neste morgen – de arbeider ikke den dagen (Folk viser «borte»). Neste morgen kommer de hjem med det de fikk: rasjoner, penger, materialer, diesel eller kamperfaring (våpenøvelsen: +15 min hver, den følger dem inn i en tropp) – og av og til er en av dem skadet. Spillet sender aldri den eneste som har en oppgave (for eksempel den eneste kokken).",
+"Leiren"
+],
+[
+"Dobbel vakt, fridag og ekstra skift",
+"Dobbel vakt i natt: to til går på vakt til neste morgen – vaktene ser røverne tidligere, og lagene innen 450 m fra leiren treffer bedre. Dagen etter er folk slitne (moral −8, litt saktere arbeid). Fridag: moral +12, men alt arbeid går halvt så fort den dagen. Ekstra skift: arbeidet går 25 % raskere, men moral −10. Halve rasjoner: 40 % mindre matforbruk og moral −12. Alt varer til neste morgen.",
+"Leiren"
+],
+[
+"Viktige beslutninger",
+"Fra dag 2 og så hver tredje dag får morgenmøtet en større beslutning som steg 2 på kortet: et nabogårdsfolk vil bli med (folk +4 og litt mat – men de trenger senger og mat hver dag), en forlatt tankbil med diesel (send en tropp dit – den står i kartet i to døgn, og det kan være røvere der – eller to til fots), røverne vil ha betalt for å la dere være et døgn til, eller en handelskaravane som selger billig og kjøper tre.",
+"Leiren"
+],
+[
+"Tankbilen",
+"Velger du «Send en tropp dit», står tankbilen i kartet (oransje merke) og som brikke øverst til venstre med «Send …» for det nærmeste laget. Kommer et eget lag innen 60 m, fraktes dieselen til leiren – så langt det er plass i tankene. Omtrent hver tredje gang ligger det røvere der: slå dem først. Etter to døgn er bilen borte.",
+"Lag og strid"
+],
+[
 "Trær, gress og lyng",
 "Trærne har kroner av blader og nåler, og granene har hengende greiner. Går du selv, står det høyt gress i flekker på enga og lyng i skogen, og alt svaier i vinden. Om vinteren mister løvtrærne nesten alt løvet.",
 "I 3D"
@@ -540,6 +645,36 @@ window.HJELP_TILLEGG = [
 "Låver og uthus",
 "Låvene har høy på gulvet, et høyloft med stige, redskap langs veggen, trillebår, melkespann og ofte en gammel grå traktor. Uthus har redskap og trillebår. Traktoren må du gå rundt.",
 "I 3D"
+],
+[
+"Opplæringen",
+"Ni korte steg i en rute nederst: Åpne Leir, Bygg en brakke, Sett to på bygg, Lag en tropp, Gå i 3D, Mer forsvar før dag 4, Ha mat til tre døgn, Sett lagene i forsvar og Reparer etter et angrep. En ring viser hva du skal trykke på. «Senere» legger steget sammen til én linje (trykk + for å se det igjen). Et steg som står ugjort lenge, og opplæringen mens leiren angripes, legges sammen av seg selv. «Reparer» kommer først når noe faktisk er skadet.",
+"Kom i gang"
+],
+[
+"Mer forsvar før dag 4",
+"Røverbølgene vokser. Lag en liten tropp til (to til fire holder), eller sett to på Vakt i Folk – de blir Leirvakta og forsvarer leiren når røverne kommer. Hver soldat er en arbeider mindre: la alltid minst to stå på Bygg, ellers stopper byggingen.",
+"Kom i gang"
+],
+[
+"Lag en tropp",
+"Tropper (eller Leir → Bygg → Tropper → «Lag ny tropp»): velg et forslag eller kryss av folk selv, gi troppen navn, våpen og utstyr. Forslagene tar aldri de to siste byggerne – de blir igjen og bygger. Velger du dem selv, sier panelet fra i rødt («Ingen igjen på «bygg»») og knappen heter «Opprett likevel».",
+"Lag og strid"
+],
+[
+"Oppløs en tropp",
+"Trykk på troppen og «Oppløs troppen» i panelet (trykk to ganger for å bekrefte). De som lever, går tilbake til arbeid i leiren som «fri» i Folk – sett dem på Bygg eller en annen oppgave. Er troppen ute, heter knappen «Send hjem og oppløs»: troppen marsjerer hjem og oppløses ved leiren. En ny ordre avbryter det. Kjøpte våpen og utstyr følger ikke med.",
+"Lag og strid"
+],
+[
+"Ingen bygger",
+"Står det «Ingen på «bygg» – jobben står stille» øverst i Leir-menyen, trykk «Sett to på Bygg». Er gjengen tom eller nesten tom, heter knappen «Ring etter arbeidere»: når dere er færre enn tre, kan nye bli med uten ledig seng (500 000 kr hver, gratis når kassa er tom), og de går rett på Bygg til to bygger.",
+"Leiren"
+],
+[
+"Lagene",
+"Trykk på et lag og så «Marsjer» og et sted på kartet – ruten følger veger og terreng. Trykk på en soldat for å velge ny lagfører. «Grav ned» gir halvparten så mange treff.",
+"Lag og strid"
 ],
 [
 "Penger og knapphet",
@@ -757,9 +892,24 @@ window.HJELP_TILLEGG = [
 "Kom i gang"
 ],
 [
-"Opplæringen",
-"Ni korte steg i en rute nederst: Åpne Leir, Bygg en brakke, Sett to på bygg, Lag en tropp, Gå i 3D, Lag en tropp til, Ha mat til tre døgn, Sett lagene i forsvar og Reparer etter et angrep. En ring viser hva du skal trykke på. Når et steg er gjort, står det «✓ Gjort» en liten stund før neste steg kommer («Neste ›» går videre med en gang) – også når steget alt var gjort fra før. «Hopp over» tar ett steg, «Slå av» tar bort alt (slå den på igjen i Leir-menyen under Mål). Med – oppe til høyre legger du ruta sammen til én linje; + åpner den igjen.",
+"Flat plass til leiren",
+"Når du trykker der leiren skal ligge, sjekker spillet om det er flatt nok for de første byggene (brakke, dieseltank, aggregat og vakttårn) innen 80 m fra flagget. Er det for bratt eller vått, står det i rødt, og et grønt flagg «Plass her» viser nærmeste sted som går. Trykk «Flytt hit», så prøves det stedet. En dalbunn eller et platå er tryggest.",
 "Kom i gang"
+],
+[
+"Hvor er det flatt?",
+"Mens du plasserer et bygg (og mens du velger leirplass) farges bakken rundt for akkurat det bygget du holder: grønt = flatt, gult = skrått (bygget får grunnmur), rødt med striper = for bratt, blått = vann. Tynne streker er høydekurver hver 2 m. Zoom inn for å se fargene. Roterer du bygget, regnes fargene på nytt.",
+"Leiren"
+],
+[
+"Grunnmur i skråning",
+"Et bygg kan stå i en skråning med opptil 8 m høydeforskjell under seg (store bygg litt mer). Det står da på en grunnmur. Banneret sier hvor høy grunnmuren blir («skrå grunn: 5 m grunnmur»). Er det brattere, sier skissen «For bratt her», og banneret foreslår «Drei 90°» eller «Flytt skissen …» til nærmeste sted som går. Et ferdig hus fra byggesettet står på én felles grunnmur og sjekkes som helhet.",
+"Leiren"
+],
+[
+"Hva kostet bygget?",
+"Mangler du materialer, kjøper «Kjøp materialene og bygg» det som mangler. Prisen på knappen er arbeid og materialer til sammen, og loggen sier det samme: «Brakke bestilt: 5 mill. kr i alt (arbeid 4 mill. kr + materialer …)».",
+"Leiren"
 ],
 [
 "Tallene øverst",
@@ -845,6 +995,21 @@ window.HJELP_TILLEGG = [
 "Hjelpen",
 "Hjelpen (?) er delt i grupper – Kom i gang, Skjermen og knappene, Leiren og bygging, Angrep og forsvar, Folk og samfunn, Mat, penger og handel, Lag og strid, Krigen og regionen, Sjøen, I 3D og Vær, lyd og bilde. Trykk på en gruppe for å åpne den, eller skriv i søkefeltet øverst.",
 "Kom i gang"
+],
+[
+"Kartet mens det lastes",
+"Når du zoomer eller åpner spillet, kommer kartet først uskarpt for hele skjermen, og så blir det skarpt bit for bit. De skarpe bitene tones inn og glir mykt over i de uskarpe, så du ser ikke rette kanter. Venter du et par sekunder, er alt skarpt.",
+"Vær, lyd og bilde"
+],
+[
+"3D i regn og tåke",
+"Ovenfra blir landskapet disig i regn og tåke, mest langt unna – men det du ser på, synes fortsatt. Nede på bakken ser du kortere i dårlig vær.",
+"I 3D"
+],
+[
+"Skogen når du går",
+"Trykker du Gå, bygges et mer detaljert område rundt deg. Mens det skjer, står trærne rundt deg allerede – de samme som i 2D-kartet.",
+"I 3D"
 ],
 [
 "Verden rundt dere",
