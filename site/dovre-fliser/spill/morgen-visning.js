@@ -70,12 +70,13 @@
       if (p.id === 'vern') { ut.push(T.bølge > p.bølge ? 'Røverne holdt ikke avtalen – de angrep likevel.' : 'Røverne holdt avtalen: ingen angrep i natt.'); continue; }
       if (p.id === 'nabo') { let B = null; try { B = l && f ? FR().behov(f, l, FolkSpill.valg ? FolkSpill.valg() : {}) : null; } catch (e) { B = null; }
         ut.push(`De nye fra nabogården har funnet seg til rette.` + (B && B.utenSeng ? ` Leiren har senger til ${Math.max(0, B.senger)} av ${B.n + B.avh} – bygg brakker, ellers faller moralen.` : '')); continue; }
-      if (!['jakt', 'leie', 'speid', 'tankbil'].includes(p.id)) continue;
+      if (!['jakt', 'leie', 'speid', 'tankbil', 'øv'].includes(p.id)) continue;
       const u = M.utfall({ ...p, folk }, { årstid: (rot.VAER && VAER.årstid) || 'sommer', røverTimer: T.timer }, Math.random);
       for (const q of folk) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
       if (f && u.mat) f.mat += u.mat; if (u.penger) OppstartSpill.gi(u.penger);
       if (l && Lb) { if (u.tre) Lb.leggInn(l, 'tre', u.tre); if (u.stål) Lb.leggInn(l, 'stål', u.stål);
         if (u.diesel) { const plass = Math.max(0, (Lb.kapasitet ? Lb.kapasitet(l) : 0) - (l.drivstoff || 0)), d = Math.min(u.diesel, Math.floor(plass)); l.drivstoff = (l.drivstoff || 0) + d; if (d < u.diesel) u.tekst += ` Bare ${d} l fikk plass i tanken.`; } }
+      if (u.erf) for (const q of folk) q.erf = Math.round(((q.erf || 0) + u.erf) * 10) / 10;
       for (const n of u.skadet) { const q = folk.find(x => x.navn === n); if (q) q.helse = Math.max(.15, q.helse - u.helse); }
       for (const n of u.borte) { const q = folk.find(x => x.navn === n); if (q && f) f.personer.splice(f.personer.indexOf(q), 1); }
       ut.push(u.tekst);
@@ -89,6 +90,7 @@
   function brukDag(v) { const f = F(), l = L(), Lb = LB(); let t = '';
     if (v.id === 'jakt') { const p = sendUt('jakt', 'hogst'); t = p ? `${og(p.navn.map(fornavn))} går på jakt og fiske. De er tilbake i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'speid') { const p = sendUt('speid', 'frakt', { sted: v.sted || null }); t = p ? `${og(p.navn.map(fornavn))} drar på speidertur. De melder fra i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
+    else if (v.id === 'øv') { const p = sendUt('øv', 'vakt'); t = p ? `${og(p.navn.map(fornavn))} har våpenøvelse i dag.` : 'Det var ingen ledige til øvelsen.'; }
     else if (v.id === 'leie') { const p = sendUt('leie', 'vakt'); t = p ? `${og(p.navn.map(fornavn))} holder vakt for en nabogård i dag. Betalingen kommer i morgen.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'kjøp') { const r = FR().kjøpMat(f, R.kjøp, OppstartSpill.betal, rot.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1); t = r.feil ? r.feil : `Kjøpte ${r.rasjoner} rasjoner for ${kr(r.pris)}.`; }
     else if (v.id === 'rasjon') { S.effekter.push({ kilde: 'rasjon', mat: R.rasjon.mat, moral: R.rasjon.moral }); t = 'Halve rasjoner i dag. Folk murrer, men maten rekker lenger.'; }
@@ -233,7 +235,7 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
   function sendLag(b) { const e = nesteLag(b); if (!e) return logg('Ingen lag kan sendes til tankbilen nå.'); if (typeof ordre === 'function') { ordre(e, b.x, b.y); logg(`${e.navn} er sendt mot tankbilen (${meter(Math.hypot(e.x - b.x, e.y - b.y))}).`); skitten = true; } }
 
   // ---------- Leir-menyen (fanen Mål): det morgenmøtet bestemte for i dag ----------
-  const PLANTEKST = { jakt: 'på jakt og fiske', speid: 'på speidertur', leie: 'leid ut som vakter', tankbil: 'til fots mot tankbilen', vakt: 'på dobbel vakt' };
+  const PLANTEKST = { øv: 'på våpenøvelse', jakt: 'på jakt og fiske', speid: 'på speidertur', leie: 'leid ut som vakter', tankbil: 'til fots mot tankbilen', vakt: 'på dobbel vakt' };
   const EFFTEKST = { fri: 'fridag', skift: 'ekstra skift', rasjon: 'halve rasjoner', sliten: 'slitne etter dobbel vakt' };
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar || !S) return; const linjer = [], f = F();
     for (const p of S.planer || []) if (PLANTEKST[p.id]) { const n = f ? p.folk.map(i => f.personer.find(q => q.id === i)).filter(Boolean).map(q => fornavn(q.navn)) : []; linjer.push(`${og(n) || 'To'} ${PLANTEKST[p.id]} – tilbake i morgen kl. 06.`); }

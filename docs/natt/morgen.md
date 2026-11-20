@@ -20,6 +20,7 @@ avgjøre de første døgnene.» (Det verste nr. 13.)
     røvere ventet innen 20 t eller angrep i gang → «Dobbel vakt i natt (folk blir slitne)»;
     kassa under 12 mill. → «Selg N m³ tre» og «Ta et risikabelt oppdrag: røverposten» (et ledig oppdrag fra SpilletSpill) eller
     «Lei ut to som vakter til en nabogård»; minst seks arbeidsføre → «Send to på speidertur mot <tettsted>»;
+    minst seks arbeidsføre → også «Våpenøvelse for to (bedre soldater)» (+15 min kamperfaring hver, `p.erf`, som følger dem inn i en tropp);
     moral under 45 → «Fridag for alle»; moral over 62 → «Ekstra skift i dag». Står ingenting på, fylles det med fridag/ekstra skift.
   - `Morgen.erStorDag(dag, sist)` (dag 2, så hver tredje dag) og `Morgen.storBeslutning(s, rng, sist)`: nabo, tankbil, vern, karavane
     (aldri den samme to ganger på rad; tankbilen bare med plass i tankene, beskyttelsen bare etter første bølge, karavanen selger bare den
@@ -64,7 +65,7 @@ avgjøre de første døgnene.» (Det verste nr. 13.)
 Mat lav < 3 døgn; røvere innen 20 t; lite penger < 12 mill. kr; speidertur fra 6 arbeidsføre; lav moral < 45, god > 62; to personer per
 utsending; jakt 4–8 rasjoner per person (× hogst-ferdighet, × årstid 0,6–1,2), 10 % skade; kjøp 20 rasjoner; halve rasjoner mat ×0,6 og
 moral −12; dobbel vakt +2 vakter, ild ×1,2 innen 450 m, dagen etter tempo ×0,9 og moral −8; selg halvparten av treet (4–20 m³); leie ut
-0,8–1,6 mill. kr, 30 % såret, 6 % kommer ikke tilbake; speidertur 1–4 m³ tre, 0–1,2 t stål, 2–7 rasjoner, 8 % skade; fridag tempo ×0,5
+0,8–1,6 mill. kr, 30 % såret, 6 % kommer ikke tilbake; speidertur 1–4 m³ tre, 0–1,2 t stål, 2–7 rasjoner, 8 % skade; våpenøvelse +15 min erfaring, 5 % liten skade; fridag tempo ×0,5
 og moral +12; ekstra skift tempo ×1,25 og moral −10; stor beslutning dag 2 og hver 3. dag; nabogården 4 folk og 8 rasjoner (avvist moral −3);
 tankbil 2,4–3,4 km, 600–1000 l, frist 2 døgn, 35 % røvere (4 mann), til fots 55 % 250–450 l og 25 % skade; beskyttelse 1,5 mill. + 0,5 mill.
 per bølge, +1 døgn / +20 ekte minutter, nekt = moral +3; karavanen 500 l diesel + 30 rasjoner til 70 % av markedsprisen, kjøper 15 m³ tre til
@@ -93,5 +94,6 @@ per bølge, +1 døgn / +20 ekte minutter, nekt = moral +3; karavanen 500 l diese
 - Sannsynligheter og mengder er ikke balansert mot resten av økonomien over mange døgn (bare 4–5 døgn er spilt).
 - Jakta/fisket ser ikke på terrenget (vann/skog rundt leiren) – bare årstiden og ferdigheten.
 - Tankbilens røverlag får ingen ordre (de står ved bilen), lagres ikke ved omlasting, og bilen har ingen 3D-modell (bare merke og navn).
-- Valgene har ingen hurtigtaster.
+- Tastene 1–3 velger på PC (ikke mens du går); telefonen har bare knappene.
+- Ved 1× (sanntid) kommer kortet bare én gang per ekte døgn – det følger klokka i spillet, ikke ekte minutter.
 - Dagbokas linje på kortet er tatt før gårsdagens utfall er lagt inn (maten i linja kan være litt lavere enn etter at jegerne kom hjem).

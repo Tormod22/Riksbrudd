@@ -72,6 +72,10 @@ ok(/ingen tegn til røverne/.test(M.utfall({ id: 'speid', folk: to }, { røverTi
 const tb = M.utfall({ id: 'tankbil', folk: to }, {}, fast(.3)), tbTom = M.utfall({ id: 'tankbil', folk: to }, {}, fast(.9));
 ok(tb.diesel >= 250 && tb.diesel <= 450 && tbTom.diesel === 0 && /tømt/.test(tbTom.tekst), 'tankbil til fots: diesel eller ingenting: ' + tb.tekst + ' / ' + tbTom.tekst);
 
+const øv = M.utfall({ id: 'øv', folk: to }, {}, fast(.5));
+ok(øv.erf === 15 && !øv.skadet.length && /øvde med våpen/.test(øv.tekst), 'våpenøvelse: +15 min erfaring: ' + øv.tekst);
+ok(ids(M.dagensValg({ ...grunn, arbeidsføre: 6 }, fast())).includes('øv') && !ids(M.dagensValg({ ...grunn, arbeidsføre: 5, folk: 5 }, fast())).includes('øv'), 'våpenøvelse bare med godt med folk');
+
 // --- hvem som går ---
 const folk = [{ id: 1, oppgave: 'bygg', helse: 1, ferd: { hogst: 1.4 } }, { id: 2, oppgave: 'bygg', helse: 1, ferd: { hogst: .8 } }, { id: 3, oppgave: 'fri', helse: 1, ferd: { hogst: .9 } },
   { id: 4, oppgave: 'kjøkken', helse: 1, ferd: { hogst: 1.45 } }, { id: 5, oppgave: 'fri', helse: .2, ferd: { hogst: 1.4 } }, { id: 6, oppgave: 'hogst', helse: 1, ferd: { hogst: 1.2 }, borte: 99 }];

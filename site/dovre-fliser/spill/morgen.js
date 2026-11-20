@@ -38,6 +38,8 @@
     leie: { penger: [8e5, 1.6e6], såret: .3, helse: .45, borte: .06 },
     // speidertur: det de finner, sjansen for skade
     speid: { tre: [1, 4], stål: [0, 1.2], mat: [2, 7], skade: .08, helse: .3 },
+    // våpenøvelse for to: erfaring (minutter i kamp, spill/formasjon.js: «erfaren» fra 30) per person, og sjansen for en liten skade
+    øv: { erf: 15, skade: .05, helse: .2 },
     // fridag for alle / ekstra skift: tempo og moral (en dag)
     fri: { tempo: .5, moral: 12 }, skift: { tempo: 1.25, moral: -10 },
     // den store beslutningen: første dag, så hver «hver» dag
@@ -76,6 +78,7 @@
       else if (kan) legg(5, { id: 'leie', t: 'Lei ut to som vakter til en nabogård', følge: `To er borte i dag. I morgen: ${kr(R.leie.penger[0])}–${kr(R.leie.penger[1])} – men omtrent hver tredje gang kommer en av dem såret hjem, og en sjelden gang ikke i det hele tatt.` });
     }
     if (kan && s.arbeidsføre >= R.folkNok) legg(3, { id: 'speid', t: s.sted ? `Send to på speidertur mot ${s.sted}` : 'Send to på speidertur rundt leiren', sted: s.sted || null, følge: 'To er borte i dag. I morgen melder de når røverne kommer neste gang, og tar med det de finner av mat og materialer.' });
+    if (kan && s.arbeidsføre >= R.folkNok) legg(2.5, { id: 'øv', t: 'Våpenøvelse for to (bedre soldater)', følge: `To øver hele dagen og arbeider ikke. I morgen er de mer erfarne (+${R.øv.erf} min kamperfaring hver – følger dem inn i en tropp).` });
     if (s.folk > 0 && s.moral < R.lavMoral) legg(4 + (R.lavMoral - s.moral) / 10, { id: 'fri', t: 'Fridag for alle', følge: `Moralen stiger (+${R.fri.moral} i dag), men alt arbeid går halvt så fort i dag.` });
     if (s.folk > 0 && s.moral >= R.godMoral) legg(2, { id: 'skift', t: 'Ekstra skift i dag', følge: `Alt arbeid går ${Math.round((R.skift.tempo - 1) * 100)} % raskere i dag, men folk blir slitne (moral ${R.skift.moral} i dag).` });
     // for få: fyll på med fridag/ekstra skift (det som passer moralen)
@@ -116,7 +119,7 @@
   // p: { id ('jakt' | 'leie' | 'speid' | 'tankbil'), folk: [{ navn, ferd: { hogst } }] }, o: { årstid, røverTimer }. Gir { mat, penger, diesel,
   // tre, stål, skadet: [navn], borte: [navn] (kom ikke tilbake), tekst }.
   function utfall(p, o = {}, rng = Math.random) {
-    const R = REGLER, u = { mat: 0, penger: 0, diesel: 0, tre: 0, stål: 0, skadet: [], borte: [], helse: 0 }, f = p.folk || [], navn = f.map(q => q.navn.split(' ')[0]), hvem = () => f[Math.floor(rng() * f.length)];
+    const R = REGLER, u = { mat: 0, penger: 0, diesel: 0, tre: 0, stål: 0, erf: 0, skadet: [], borte: [], helse: 0 }, f = p.folk || [], navn = f.map(q => q.navn.split(' ')[0]), hvem = () => f[Math.floor(rng() * f.length)];
     const og = a => (a.length > 1 ? a.slice(0, -1).join(', ') + ' og ' + a[a.length - 1] : a[0] || 'De');
     if (p.id === 'jakt') { const å = R.jakt.årstid[o.årstid] || 1; u.mat = Math.round(f.reduce((s, q) => s + mellom(rng, R.jakt.per) * klem((q.ferd && q.ferd.hogst) || 1, .7, 1.45), 0) * å);
       if (f.length && rng() < R.jakt.skade) { u.skadet.push(hvem().navn); u.helse = R.jakt.helse; }
@@ -129,6 +132,8 @@
       if (f.length && rng() < R.speid.skade) { u.skadet.push(hvem().navn); u.helse = R.speid.helse; }
       const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei mot leiren.' : `De så røverne samle seg: de drar ut mot leiren om ca. ${Math.max(1, Math.round(o.røverTimer))} ${Math.max(1, Math.round(o.røverTimer)) === 1 ? 'time' : 'timer'}.`;
       u.tekst = `Speiderne er tilbake fra ${p.sted || 'turen'}. ${røv} De fant ${u.mat} rasjoner, ${des(u.tre)} m³ tre` + (u.stål > 0 ? ` og ${des(u.stål)} t stål.` : '.') + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} vrikket foten.` : ''); }
+    else if (p.id === 'øv') { u.erf = R.øv.erf; if (f.length && rng() < R.øv.skade) { u.skadet.push(hvem().navn); u.helse = R.øv.helse; }
+      u.tekst = `${og(navn)} øvde med våpen hele dagen og er mer erfarne nå.` + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} fikk en smell og må ta det rolig.` : ''); }
     else if (p.id === 'tankbil') { const T = R.tankbil.fots; if (rng() < T.lykkes) { u.diesel = Math.round(mellom(rng, T.diesel) / 10) * 10; u.tekst = `${og(navn)} fant tankbilen og bar hjem ${u.diesel} l diesel i kanner.`; }
       else u.tekst = `${og(navn)} fant tankbilen, men noen hadde tømt den før dem.`;
       if (f.length && rng() < T.skade) { u.skadet.push(hvem().navn); u.helse = T.helse; u.tekst += ` ${u.skadet[0].split(' ')[0]} skadet seg på vegen.`; } }
@@ -148,7 +153,7 @@
 
   // ---------- KORT TEKST om valget som ble tatt ----------
   const VALGT = { jakt: 'to på jakt og fiske', kjøp: 'kjøpte mat', rasjon: 'halve rasjoner', vakt: 'dobbel vakt', selg: 'solgte tre', post: 'tok røverposten', leie: 'leide ut to som vakter',
-    speid: 'speidertur', fri: 'fridag', skift: 'ekstra skift', ingen: 'ingen endring' };
+    speid: 'speidertur', øv: 'våpenøvelse', fri: 'fridag', skift: 'ekstra skift', ingen: 'ingen endring' };
 
   const api = { REGLER, dagensValg, erStorDag, storBeslutning, utfall, velgFolk, VALGT, kr, des };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Morgen = api;
