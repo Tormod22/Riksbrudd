@@ -79,8 +79,8 @@
   KROKER.lagTekst.push(s => (s.hjemOppløs ? 'på vei hjem for å oppløses' : null));
   KROKER.kanOrdre.push(s => { if (s.hjemOppløs) { delete s.hjemOppløs; logg(`${s.navn} oppløses ikke likevel – de følger den nye ordren.`); } return true; });
   let hjemAkk = 0;
-  KROKER.sim.push(dt => { hjemAkk += dt; if (hjemAkk < .5) return; hjemAkk = 0;
-    for (const s of ENHETER.slice()) { if (!s.hjemOppløs) continue; if (!levende(s)) { delete s.hjemOppløs; continue; } if (vedLeir(s)) { delete s.hjemOppløs; const r = oppløs(s); if (r.feil) logg(r.feil); } } });
+  function hjemSteg() { let n = 0; for (const s of ENHETER.slice()) { if (!s.hjemOppløs) continue; if (!levende(s)) { delete s.hjemOppløs; continue; } if (vedLeir(s)) { delete s.hjemOppløs; const r = oppløs(s); if (r.feil) logg(r.feil); else n++; } } return n; }
+  KROKER.sim.push(dt => { hjemAkk += dt; if (hjemAkk < .5) return; hjemAkk = 0; hjemSteg(); });
 
   // ---------- panelet ----------
   const css = document.createElement('style');
@@ -172,5 +172,5 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     const boks = e('div', { klasse: 'tropper' }, e('small', { style: 'display:block;color:var(--ink-dim,#a99);margin-bottom:4px' }, 'Sett sammen egne tropper av folk fra leiren, med bevæpning og kjøretøy. Oppløs en tropp ved leiren for å få folkene hjem.'), k2('Lag ny tropp', åpne, { id: 'nytropp' }));
     for (const s of egne()) { const n = TR.friske(s), nær = vedLeir(s); boks.append(e('div', { klasse: 't' }, e('div', {}, e('b', {}, s.navn), e('small', {}, `${n} mann` + (s.fraFolk ? ' · egen tropp' : '') + (s.ombord ? ` · om bord i ${s.ombord.navn}` : '') + (nær ? '' : ' · ute'))), k2('Oppløs', () => { if (!confirm(`Oppløse ${s.navn}? De ${n} som lever, går tilbake til leiren.`)) return; const r = oppløs(s); if (r.feil) logg(r.feil); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, nær ? { 'data-opplos': s.navn } : { disabled: '', title: `Må stå innen ${R.nær} m fra leiren` }))); }
     hode.append(boks); });
-  window.TropperSpill = { opprett, oppløs, gåOmBord, gåAv, åpne, lukk, bærer, endre, brukEndring, settEndring: (i, v) => { nyVåpen[i] = v; }, settUtstyr: (u, på) => { if (på) nyUtstyr.add(u); else nyUtstyr.delete(u); }, endrePris: () => (endrer ? endrePris(endrer) : 0), brukMal, valg: () => ({ valgte: [...valgte], våpen: { ...våpen }, utstyr: [...utstyr], bil }) };
+  window.TropperSpill = { sendHjem, hjemSteg, opprett, oppløs, gåOmBord, gåAv, åpne, lukk, bærer, endre, brukEndring, settEndring: (i, v) => { nyVåpen[i] = v; }, settUtstyr: (u, på) => { if (på) nyUtstyr.add(u); else nyUtstyr.delete(u); }, endrePris: () => (endrer ? endrePris(endrer) : 0), brukMal, valg: () => ({ valgte: [...valgte], våpen: { ...våpen }, utstyr: [...utstyr], bil }) };
 })();

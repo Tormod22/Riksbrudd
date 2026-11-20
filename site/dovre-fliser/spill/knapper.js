@@ -13,6 +13,7 @@
 ${Object.entries(IKON).map(([id, d]) => `#${id}{ --kn:${svg(d)}; }`).join('\n')}
 body.kort .knapper button[data-kn]{ font-size:0; padding:0 6px; } body.kort .knapper button[data-kn]::before{ width:19px; height:19px; margin:0; vertical-align:middle; }
 .knapper #sekkknapp, .knapper #tredjeknapp{ display:none; }
+/* (runde 8, kritiker D) tastene (O, I, V) står ikke i Deg-menyen på berøringsskjerm */ @media (hover:none) and (pointer:coarse){ #degmeny button small{ display:none; } }
 #degmeny{ position:fixed; z-index:31; display:none; min-width:190px; padding:4px; background:#1c170f; border:1px solid #c9b26a; box-shadow:0 6px 18px rgba(0,0,0,.5); } #degmeny.på{ display:block; }
 #degmeny button{ display:flex; justify-content:space-between; gap:14px; width:100%; min-height:42px; padding:4px 12px; background:none; border:0; border-bottom:1px solid #2e281e; color:var(--ink,#e7dcc3); font:inherit; font-size:15px; text-align:left; cursor:pointer; align-items:center; } #degmeny button:last-child{ border-bottom:0; } #degmeny button small{ color:var(--ink-dim,#a99); } #degmeny button.på b{ color:#e8d48a; }`;
   document.head.appendChild(css);

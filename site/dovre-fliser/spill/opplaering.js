@@ -63,7 +63,7 @@
   // ugjort lenge (Opplaering.lenge – stegFra), eller leiren angripes. + under et angrep holder ruta oppe til angrepet er over (oppeAngrep).
   let foldetNå = sammen, utsatt = null, stegFra = null, oppeAngrep = false;
   const spilltid = () => (typeof tid !== 'undefined' && isFinite(tid) ? tid : 0);
-  const angrepNå = () => { try { const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null; return !!(T0 && T0.aktiv) || synlig($('alarm')); } catch (e) { return false; } };
+  const angrepNå = () => { if (API.angrepTest !== undefined) return !!API.angrepTest; try { const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null; return !!(T0 && T0.aktiv) || synlig($('alarm')); } catch (e) { return false; } };
   const css = document.createElement('style');
   css.textContent = `#opplaering{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:7; display:none; box-sizing:border-box; width:min(490px, calc(100vw - 16px)); padding:9px 12px 10px 46px; background:linear-gradient(180deg,rgba(42,33,20,.97),rgba(23,18,10,.97)); border:1px solid #c9b26a; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.6); border-radius:5px; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; }
 #opplaering.på{ display:block; animation:oppinn .3s ease-out; } @keyframes oppinn{ from{ opacity:0; transform:translate(-50%, 12px); } }
@@ -190,8 +190,10 @@ body.kort.oppliten :is(#leirmeny, #folkmeny, #tropppanel, #krig, #karakterark, #
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
     const ferdig = Opplaering.ferdig(T), tekst = av ? 'Opplæringen er slått av.' : ferdig ? 'Opplæringen er ferdig.' : `Steg ${Opplaering.nr(T)} av ${STEG.length}: ${Opplaering.neste(T).tittel}.`;
     hode.appendChild(el('div', { klasse: 'rad' }, el('span', {}, tekst), knapp(av ? 'Slå på' : ferdig ? 'Ta den en gang til' : 'Slå av', () => { if (av) slå(true); else if (ferdig) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); sistSteg = null; kjør(); } else slå(false); }))); });
-  const API = { test: false, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
-    nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; kjør(); } };
+  const API = { test: false, angrepTest: undefined, foldet: () => foldetNå, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
+    nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; gjortKø = []; gjortTil = 0; kjør(); },
+    // (runde 8, for vakten) gå rett til steget id: stegene foran regnes som gjort, uten «✓ Gjort»-køen; lagres ikke
+    tilSteg: id => { const i = STEG.findIndex(q => q.id === id); if (i < 0) return false; T.gjort = STEG.slice(0, i).map(q => q.id); T.hoppet = []; T.slutt = false; gjortKø = []; gjortTil = 0; utsatt = null; stegFra = null; sistSteg = null; kjør(); return true; } };
   rot.OpplaeringSpill = API;
   // (balansen 18. nov) steget «Gå i 3D»: Gå setter deg ved karakteren din i leiren (Gange starter ved det valgte laget). Før startet du
   // der kameraet så, ofte et stykke fra leiren. Lytter i fangstfasen, så valget er gjort før gange.js får trykket.

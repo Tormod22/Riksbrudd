@@ -91,7 +91,7 @@
     // tillegg fra andre moduler (spill/lut-visning.js: sekken på ryggen, vekten og knappen til beholderne): window.SEKK_TILLEGG.push((p, el, knapp) => …)
     for (const fn of rot.SEKK_TILLEGG || []) { try { fn(p, el, knapp); } catch (e) { console.error(e); } }
     if (rot.OverlevSpill && OverlevSpill.klar()) OverlevSpill.fyllSekk(p, el);
-    p.append(el('small', {}, 'Utstyr kjøper du i Leir-menyen (fanen Lager), og du finner det i husene. Tastene 1–4 bytter våpen, R lader.')); }
+    p.append(el('small', {}, 'Utstyr kjøper du i Leir-menyen (fanen Lager), og du finner det i husene.' + (window.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' Tastene 1–4 bytter våpen, R lader.'))); }
   function vis() { bytt.textContent = klar ? aktivt(I).def.navn : ''; if (!åpen) return; const ny2 = el('div'); fyll(ny2); if (ny2.innerHTML === sistHtml && panel.firstChild) return; sistHtml = ny2.innerHTML; panel.innerHTML = ''; panel.append(...ny2.childNodes); }
   function åpne(v) { åpen = !!v && klar; panel.classList.toggle('på', åpen); sekkKnapp.classList.toggle('på', åpen); sistHtml = ''; vis(); }
   bytt.onclick = () => velg((I.aktiv + 1) % I.våpen.length);

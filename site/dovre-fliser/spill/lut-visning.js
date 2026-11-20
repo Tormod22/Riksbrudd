@@ -405,7 +405,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
     p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg · ${L.STATUS[b.status]}`))),
-      kn('Inventar og beholdere (Tab)', () => åpne(true), { id: 'lutfrasekk' })); });
+      kn('Inventar og beholdere' + (rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (Tab)'), () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------
   // (bærer du et stort møbel i armene, går du tregere og kan ikke løpe – spill/mobler-visning.js)

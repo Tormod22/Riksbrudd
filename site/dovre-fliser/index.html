@@ -1084,7 +1084,7 @@ function visPanel() {
     if (q.hp <= 0) b.style.opacity = '.45';
     b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
   document.getElementById('hint').textContent = s.side !== 'blå' ? (s.ai && window.Fraksjoner ? Fraksjoner.FRAKSJONER[s.side].navn + ' – motstander, styrt av AI-en.' : 'Fiendtlig patrulje.') : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
-    modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å gjøre ham til lagfører. Gult felt er hva laget ser.';
+    modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å velge ny lagfører. Gult felt er hva laget ser.';
   P.classList.add('på');
 }
 
