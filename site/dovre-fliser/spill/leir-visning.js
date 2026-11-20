@@ -416,7 +416,7 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
   // (runde 8, kritikken på telefon: trykket på leirflagget for å sette brakka der åpnet basepanelet «Leiren til …») – mens du
   // plasserer et bygg, går trykket på kartet først til plasseringen. Legges først i lista når alle skriptene er lastet (andre
   // moduler legger seg først med unshift).
-  const førstPlassering = () => { const f = (X, Y) => (plassering ? trykk(X, Y) : false); KROKER.trykk.unshift(f); KROKER.trykk3d.unshift(f); };
+  const førstPlassering = () => { const f = (X, Y) => (plassering && !(window.Byggesett && Byggesett.tilstand && Byggesett.tilstand().åpen) ? trykk(X, Y) : false); KROKER.trykk.unshift(f); KROKER.trykk3d.unshift(f); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', førstPlassering); else setTimeout(førstPlassering, 0);
   // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
   const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));

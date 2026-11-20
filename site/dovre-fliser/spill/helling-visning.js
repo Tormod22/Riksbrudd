@@ -22,7 +22,8 @@
 
   // Hva skal farges nå? Plasseringen av et bygg (ikke gjerde/veg/mal), ellers leirvalget. -> { type, ret, x, y } eller null
   function ønsket() {
-    if (av || (typeof på3d !== 'undefined' && på3d)) return null;
+    // i testene (navigator.webdriver) bare når HellingVis.test er satt: hentingen av høyder skal ikke forstyrre de andre vaktene
+    if (av || !ekte() || (typeof på3d !== 'undefined' && på3d)) return null;
     const p = window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering();
     if (p && !p.mal && p.type && LB.BYGG[p.type] && !LB.BYGG[p.type].linje) {
       const S = window.OppstartSpill && OppstartSpill.tilstand(), sx = p.x !== null && p.x !== undefined ? p.x : null;
@@ -97,6 +98,8 @@
 
   // Nivået ved et punkt (vakten og banneret): HL.FLATT … eller null når kartet ikke er regnet ut der
   function ved(x, y) { if (!klar) return null; const i = Math.floor((x - klar.x0) / klar.c), j = Math.floor((klar.y1 - y) / klar.c); return i < 0 || j < 0 || i >= klar.n || j >= klar.n ? null : klar.nivå[j * klar.n + i]; }
-  window.HellingVis = { REGLER, test: false, ved, oppdater, tilstand: () => (klar ? { type: klar.type, ret: klar.ret, x: klar.x, y: klar.y, hvor: klar.hvor, flatt: klar.tell[0], skrått: klar.tell[1], bratt: klar.tell[2], vann: klar.tell[4], vises: !!mål && sammeBygg(klar, mål) && kam.m <= REGLER.maksM } : null),
+  // nøyaktig nivå for bygget i kartet ved (x, y) – med de samme høydene som bildet (vakten sammenligner med kanBygge)
+  const nivåVed = (x, y) => (klar ? HL.vurderer(klar.type, klar.ret, klar.høyde, klar.tørt)(x, y) : null);
+  window.HellingVis = { REGLER, test: false, ved, nivåVed, oppdater, tilstand: () => (klar ? { type: klar.type, ret: klar.ret, x: klar.x, y: klar.y, hvor: klar.hvor, flatt: klar.tell[0], skrått: klar.tell[1], bratt: klar.tell[2], vann: klar.tell[4], vises: !!mål && sammeBygg(klar, mål) && kam.m <= REGLER.maksM } : null),
     venter: () => !!regner, av: v => { av = !!v; skitten = true; }, forklaring: () => HL.FORKLARING, ekte };
 })();

@@ -272,7 +272,7 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
     // (runde 6) kaiteksten bare der det betyr noe; vurderingen av stedet (høyfjell, skog, veg, folk) kommer når terrenget er målt
     const først = grunn || (h != null ? `Her? ${Math.round(h)} moh.` : 'Her?');
     // (runde 8, kritikken: et trykk i en tynn elvestrek ga bare «Leiren kan ikke ligge i vann») – vann og tettsted: forslag til nærmeste sted
-    const kanFlytte = grunn && window.Helling && (kl === 3 || /tettsted/.test(grunn));
+    const kanFlytte = grunn && window.Helling && ekte() && (kl === 3 || /tettsted/.test(grunn));
     visBanner(først, !grunn && !forslag.sjekker, grunn ? (kanFlytte ? { venter: 'Ser etter nærmeste sted der leiren får plass …' } : null)
       : { kai: window.Leirvalg ? '' : til.join(' '), venter: forslag.sjekker ? 'Sjekker om det er flatt nok for de første byggene …' : '' });
     if (!grunn && window.Leirvalg) vurderSted(x, y, h, til);
@@ -282,7 +282,8 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
   // (runde 8) Flat plass for de første byggene (Helling.førsteBygg) rundt stedet; går det ikke, nærmeste sted der det går (finnPlass).
   // kv: et vindu med arealklassene (32 m) som dekker søket. -> { ok, r, f (forslag eller null), søkt } eller null uten høydedata.
   async function flatSjekk(x, y, kv) {
-    const HL = window.Helling; if (!HL) return null;
+    // i testene (navigator.webdriver) bare når OppstartSpill.test er satt – kontrollskriptet bekrefter leiren straks, som før
+    const HL = window.Helling; if (!HL || !ekte()) return null;
     const R = HL.REGLER, nær = R.nær + 30, tørt = HL.tørtFra(HL.klasseFra(kv));
     let hv = null; try { hv = await lagVindu([x - nær, y - nær, x + nær, y + nær], false, 11); } catch (e) { return null; }
     const høyde = HL.høydeFra(hv), r = HL.førsteBygg(høyde, tørt, x, y, { flatFørst: true });
