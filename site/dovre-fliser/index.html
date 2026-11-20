@@ -128,6 +128,7 @@ function skjulMelding(type) {
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script src="/dovre-fliser/spill/kartbilde.js?v=3eddf8856b"></script>
+<script src="/dovre-fliser/spill/kartnavn.js?v=e352eba43d"></script>
 <script>
 'use strict';
 // ---------- flisnettet (samme som pipeline/fliser/felles.py) ----------
@@ -176,7 +177,10 @@ const KLAR = (async () => {
   if (!m) { try { m = (await hentMedFrist(DATA + 'manifest.json', FRIST_MANIFEST, 'json')).data; } catch (e) { m = null; }
     if (ER_NORGE) norgeMangler(); }
   const filer = m && m.filer ? m.filer : Object.fromEntries(['hoyde', 'terreng', 'kart', 'vektor'].map(n => [n, [{ fil: n + '.pmtiles', zmin: 0, zmax: 99, x6: null }]]));
-  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE) passInnHele('åpning'); }
+  // (runde 8, pakke «utseende») et lagret spill har alt lagt kartet over leiren (oppstart-visning.js, «Velkommen tilbake»); kom manifestet
+  // etterpå, ble kartet flyttet tilbake til hele landet – og flisene for hele landet ble laget før leirens (blått kart de første sekundene)
+  const lagretLeir = !navigator.webdriver && !/[#&?](x|kart|pos)=/.test(location.href) && window.OppstartSpill && OppstartSpill.tilstand() && OppstartSpill.tilstand().leir;
+  if (m && m.omrade) { OMRÅDE = m.omrade; if (ER_NORGE && !(lagretLeir && kam.m <= 8)) passInnHele('åpning'); }
   // (et mindre spillkart – /rogaland – åpner på sitt eget område, se passInnHele)   // /norge åpner med hele landet (telefon: Sør-Norge)
   if (m && m.år >= 2017) {   // 2023-kartet: andre kilder (lisensene krever kreditering)
     ÅRSTALL = m.år;
@@ -289,17 +293,83 @@ const HENTET = new Set();   // fliser vi allerede har bedt om data til
 const FORSØK_MAKS = 8;
 setInterval(() => { if (på3d) return; for (const t of FERDIG.values()) if (t.ufull && t.forsøk < FORSØK_MAKS) { skitten = true; return; } }, 4000);
 window.addEventListener('online', () => { for (const t of FERDIG.values()) if (t.ufull) { t.forsøk = 0; t.igjen = 0; } skitten = true; });
-function kø(z, x, y, k) {
+// forrang (runde 8): de grove flisene for bildet (tegnFliser) slipper foran når køen er full av fliser som ikke lenger vises
+// (rett etter lasting: oversikten over hele landet, før kameraet flyttes til leiren) – høyst FLISLAST.forrang i arbeid samtidig
+function kø(z, x, y, k, forrang = false) {
   if (!HENTET.has(k) && KLAR_FERDIG) { HENTET.add(k); if (HENTET.size > 2000) HENTET.delete(HENTET.keys().next().value); forhent(z, x, y); }   // nettet jobber mens køen venter
-  if (VENTER.has(k) || aktive >= 6) return;
+  if (VENTER.has(k) || aktive >= (forrang ? FLISLAST.forrang : 6)) return;
   VENTER.add(k); aktive++;
   lagFlis(z, x, y).then(t => { const gml = FERDIG.get(k);
       // en flis som ble laget mens noe ikke lot seg hente (nettbrudd), vises som den er og lages på nytt: etter 4 s, 8 s, 16 s … (høyst hvert minutt)
       if (t.ufull) { t.forsøk = (gml && gml.forsøk || 0) + 1; t.igjen = performance.now() + Math.min(60000, 4000 * 2 ** (t.forsøk - 1)); }
-      FERDIG.set(k, t); if (gml && gml !== t && gml.c.close) gml.c.close();
+      // (runde 8) den nye flisen tones inn over den gamle (eller den grove) – den gamle lukkes når toningen er ferdig
+      t.inn = performance.now(); if (gml && gml !== t) { t.gml = gml; setTimeout(() => { if (t.gml === gml) t.gml = null; if (gml.c.close) gml.c.close(); }, FLISLAST.inn + 50); }
+      FERDIG.set(k, t);
       if (FERDIG.size > 320) { const [gk, gt] = FERDIG.entries().next().value; FERDIG.delete(gk); if (gt.c.close) gt.c.close(); } })
     .catch(e => { console.error(e); visFeil(e); })
     .finally(() => { VENTER.delete(k); aktive--; skitten = true; });
+}
+// ---------- KARTFLISENE I 2D MENS DE LASTES (runde 8, 20. nov, kritikken: «skarpe striper ved siden av uskarpe, rektangulære lyse og
+// mørke felt», «blekt, nesten tomt kart i liggende modus rett etter lasting») ----------
+// Skjøtene var lastingen: en ferdig skarp flis sto rett ved siden av en grov reserve (fire nivåer opp, forstørret), med rett kant og
+// ofte litt annen tone (skyggen overdrives mer på grove nivåer). Og rett etter lasting fantes ingen grove fliser i det hele tatt, så
+// kartet var bakgrunnen (blått på /norge) med det lyse siktfeltet oppå. Nå: (1) en grov flis for hele bildet bes om FØRST, så kartet
+// fylles ut på et øyeblikk (uskarpt) før de skarpe kommer; (2) reserven leter lenger opp (ni nivåer: rett etter lasting er oversikten
+// over landet det eneste som finnes – bedre enn blått) og bruker de fire finere flisene
+// når du zoomer ut; (3) en ny flis tones inn; (4) en ferdig flis som står inntil en som ikke er ferdig, får en myk kant mot den
+// (grov -> skarp over FLISLAST.kant punkter), så det ikke blir en rett søm. Claudes forslag (alle tallene):
+// inn = toningen (ms), kant = myk kant (CSS-punkter), grov = hvor mange nivåer opp den første grove flisen ligger, dypt = reserven,
+// forrang = så mange fliser kan være i arbeid når en grov flis slipper foran (ellers 6).
+const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 9, forrang: 10 };
+let MYK = null;   // lerret til flisene med myk kant
+function flisReserve(z, x, y) {
+  for (let d = 1; d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
+  return null;
+}
+// tegnReserve: den beste grovere flisen, og oppå den de finere flisene som finnes (når du zoomer ut). Svarer om noe ble tegnet.
+function tegnReserve(z, x, y, sx, sy, px) {
+  const r = flisReserve(z, x, y); let noe = false;
+  if (r) { const d = r.d, w = G.T / 2 ** d; ctx.drawImage(r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; }
+  if (z < ZMAX) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const b = FERDIG.get((z + 1) + '/' + (2 * x + i) + '/' + (2 * y + j));
+    if (b) { ctx.drawImage(b.c, sx + i * px / 2, sy + j * px / 2, px / 2 + .5, px / 2 + .5); noe = true; } }
+  return noe;
+}
+// mykFlis: flisen med myk kant mot sidene i «sider» ([dx, dy]) og gjennomsiktighet a, tegnet oppå det som alt står der
+function mykFlis(t, sx, sy, px, sider, a) {
+  const n = Math.max(2, Math.ceil(px * dpr));
+  if (!MYK) MYK = document.createElement('canvas');
+  if (MYK.width < n || MYK.height < n) { MYK.width = Math.max(MYK.width, n); MYK.height = Math.max(MYK.height, n); }
+  const g = MYK.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.clearRect(0, 0, n, n); g.imageSmoothingEnabled = true; g.drawImage(t.c, 0, 0, n, n);
+  if (sider.length) { g.globalCompositeOperation = 'destination-in'; const k = Math.min(n / 2, FLISLAST.kant * dpr);
+    for (const [dx, dy] of sider) {
+      const gr = dx < 0 ? g.createLinearGradient(0, 0, k, 0) : dx > 0 ? g.createLinearGradient(n, 0, n - k, 0) : dy < 0 ? g.createLinearGradient(0, 0, 0, k) : g.createLinearGradient(0, n, 0, n - k);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)'); g.fillStyle = gr; g.fillRect(0, 0, n, n); }
+    g.globalCompositeOperation = 'source-over'; }
+  ctx.globalAlpha = a; ctx.drawImage(MYK, 0, 0, n, n, sx, sy, px + .5, px + .5); ctx.globalAlpha = 1;
+}
+function tegnFliser(z, s, px, liste, vx0, vy1) {
+  ctx.imageSmoothingEnabled = true;
+  const nå = performance.now(), synlig = new Set(liste.map(([x, y]) => x + ',' + y)), ferdig = (x, y) => FERDIG.has(z + '/' + x + '/' + y);
+  // (1) grove fliser først: der verken flisen eller noen reserve finnes, bes den grove om før de skarpe (de får de første plassene i køen)
+  const zg = Math.max(ZMIN, z - FLISLAST.grov);
+  if (zg < z) { const grove = new Set();
+    for (const [x, y] of liste) if (!ferdig(x, y) && !flisReserve(z, x, y)) grove.add((x >> (z - zg)) + '/' + (y >> (z - zg)));
+    for (const g of grove) { const [gx, gy] = g.split('/').map(Number); kø(zg, gx, gy, zg + '/' + g, true); } }
+  let toner = false; FLISLAST.sist = { myke: 0, toner: 0, reserve: 0, mangler: 0 };
+  for (const [x, y] of liste) {
+    const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
+    if (!t) { kø(z, x, y, k); if (tegnReserve(z, x, y, sx, sy, px)) FLISLAST.sist.reserve++; else FLISLAST.sist.mangler++; continue; }
+    if (t.ufull && t.forsøk < FORSØK_MAKS && nå > t.igjen) kø(z, x, y, k);
+    const alder = t.inn ? nå - t.inn : Infinity, a = alder < FLISLAST.inn ? Math.max(0, alder / FLISLAST.inn) : 1;
+    const sider = []; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (synlig.has((x + dx) + ',' + (y + dy)) && !ferdig(x + dx, y + dy)) sider.push([dx, dy]);
+    if (a >= 1 && !sider.length) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); continue; }
+    // under: den gamle utgaven av flisen (ny utgave etter et nettbrudd), ellers reserven
+    if (t.gml) ctx.drawImage(t.gml.c, sx, sy, px + .5, px + .5); else tegnReserve(z, x, y, sx, sy, px);
+    if (sider.length) { mykFlis(t, sx, sy, px, sider, a); FLISLAST.sist.myke++; } else { ctx.globalAlpha = a; ctx.drawImage(t.c, sx, sy, px + .5, px + .5); ctx.globalAlpha = 1; }
+    if (a < 1) { toner = true; FLISLAST.sist.toner++; }
+  }
+  if (toner) skitten = true;   // tegnes igjen i neste bilde til toningen er ferdig
 }
 function tegn() {
   if (!skitten) return; skitten = false;
@@ -313,16 +383,7 @@ function tegn() {
   for (let y = Math.max(y0, ty0); y <= Math.min(y1, ty1); y++) for (let x = Math.max(x0, tx0); x <= Math.min(x1, tx1); x++) liste.push([x, y]);
   liste.sort((a, b) => Math.hypot(a[0] - midt[0], a[1] - midt[1]) - Math.hypot(b[0] - midt[0], b[1] - midt[1]));
   tegnVest(vx0, vy1);
-  ctx.imageSmoothingEnabled = true;
-  for (const [x, y] of liste) {
-    const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
-    if (t) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); if (t.ufull && t.forsøk < FORSØK_MAKS && performance.now() > t.igjen) kø(z, x, y, k); continue; }
-    kø(z, x, y, k);
-    for (let d = 1; d <= 4; d++) { // vis en grovere flis i mellomtiden
-      const f = 2 ** d, a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d));
-      if (a) { const w = G.T / f; ctx.drawImage(a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); break; }
-    }
-  }
+  tegnFliser(z, s, px, liste, vx0, vy1);
   // natt og regn i 2D-kartet (spill/kartlys.js, runde 6): kartet mørkere og blåere om natta, gråere i regn – under navn og merker
   if (window.KartLys) KartLys.tegn(ctx);
   if (window.Etikett) Etikett.nullstill();   // navnene på lag, kjøretøy, base og leir får hver sin plass (spill/etikett.js)
@@ -410,6 +471,8 @@ function lesInfra(d) {
     const felt = d.felt[lag], ng = felt.length - 1; ut[lag] = [];
     for (const r of liste) {
       const e = {}; for (let i = 0; i < ng; i++) e[felt[i]] = r[i];
+      // (runde 8) navnet uten NVDB-tillegg i kartet: «Fodnestunnelen hovedløp» blir «Fodnestunnelen» (spill/kartnavn.js)
+      if (window.KartNavn) KartNavn.rens(lag, e);
       const bb = [Infinity, Infinity, -Infinity, -Infinity];
       const deler = r[ng].map(q => { const a = new Float64Array(q.length); let x = 0, y = 0;
         for (let i = 0; i < q.length; i += 2) { x += q[i]; y += q[i + 1]; a[i] = x; a[i + 1] = y;
@@ -1646,7 +1709,8 @@ async function trær3d(u, px, b) {
     for (let i = i0; i <= i1; i++) {
       if (hash(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue; const x = t.X, y = t.Y; if (Math.abs(x - u.cx) >= u.S - 1 || Math.abs(y - u.cy) >= u.S - 1) continue;
       const q = ((Math.floor((Y1 - y) / mpp)) * TW + Math.floor((x - X0) / mpp)) * 4, R = px[q], G = px[q + 1], B = px[q + 2];
-      if (!(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;   // ikke grått (veg, hus) eller blått (vann)
+      // ikke grått (veg, hus) eller blått (vann); (runde 8) i skogklassen også trær der satellittbildet er gulbrunt (Vegetasjon.trePåFarge)
+      if (window.Vegetasjon && Vegetasjon.trePåFarge ? !Vegetasjon.trePåFarge(R, G, B, t.k === 1) : !(G >= R - 4 && G >= B) || Math.abs(R - G) + Math.abs(G - B) < 14) continue;
       const moh = hoyde3d(x, y, u); if (!treIHøyden(t.d, moh)) continue;
       const fjell = Math.max(0, Math.min(1, (moh - 900) / 250)), d = t.d, h = (1 - fjell * .55) * (8 + d * 12), z = (moh - u.h0) * R3.EX, ty = t.k === 1 && hash(i, j, 5) >= .15 && moh < 880 ? 0 : 1;
       (Math.hypot(x - u.cx, y - u.cy) <= NÆR ? nær : fjern).push([x - u.cx, y - u.cy, z, h, d, ty, hash(i, j, 8)]); } }
@@ -3311,14 +3375,14 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
-<script src="/dovre-fliser/spill/vaer.js?v=7176406ece"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=4104fed9da"></script>
-<script src="/dovre-fliser/spill/natt3d.js?v=c1f96f0f47"></script>
+<script src="/dovre-fliser/spill/vaer.js?v=08d3105031"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
+<script src="/dovre-fliser/spill/natt3d.js?v=c0bf1147c3"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=259dda2ea8"></script>
-<script src="/dovre-fliser/spill/vegetasjon.js?v=07968fde8f"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=88b44806a5"></script>
+<script src="/dovre-fliser/spill/vegetasjon.js?v=ba29a3df5b"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=b581d1586f"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=99245979f9"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
@@ -3426,7 +3490,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=8dd27fc47f"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=29dde9b7fe"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=0bdb7f9553"></script>
-<script src="/dovre-fliser/spill/lys3d.js?v=5ffbf58287"></script>
+<script src="/dovre-fliser/spill/lys3d.js?v=5494875fdb"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>

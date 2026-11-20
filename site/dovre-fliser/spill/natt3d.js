@@ -359,7 +359,9 @@
         const dd = Math.hypot(s.position.x - c.x, s.position.y - c.y, s.position.z - c.z);
         s.material.opacity = Math.min(.6, dt * s.userData.a * .7) * trinn(40, 220, dd) * ovenfra; s.visible = s.material.opacity > .01;
         s.material.color.setRGB((fc.r * .5 + .5) * lys, (fc.g * .5 + .5) * lys, (fc.b * .5 + .52) * lys); }
-      const fog = R.scene.fog; fog.far = Math.max(160, fog.far * (1 - .3 * dt * trinn(3000, 300, høyde))); fog.near = Math.min(fog.near, fog.far * .3);
+      // (runde 8, pakke «utseende», kritikken: «fra lufta er Jæren pen, men disig» / «nesten helt grått») disen trekkes inn bare nede ved
+      // bakken, og etter hvor tett morgentåka er – før ble begynnelsen satt til 0,3 × ytterkanten uansett høyde så snart det var litt tåke
+      const fog = R.scene.fog, lavt = trinn(3000, 300, høyde); fog.far = Math.max(160, fog.far * (1 - .3 * dt * lavt)); fog.near = Math.min(fog.near, fog.far * (1 - .7 * lavt * Math.min(1, dt * 4)));
     } else for (const s of R.nattTåke || []) s.visible = false;
     // lyn: i kraftig regn av og til et kort, dobbelt glimt som lyser opp himmelen og bakken
     if ((V.torden || 0) > .4 && nå > nesteLyn) { if (nesteLyn) lynStart = nå; nesteLyn = nå + (7 + Math.random() * 25) / V.torden; }

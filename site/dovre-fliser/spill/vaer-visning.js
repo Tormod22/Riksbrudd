@@ -114,8 +114,9 @@
     // den glattede kopien tar igjen reglene (ca. 1,5 s), uavhengig av tempoet – regnet i ekte tid (før høyst 0,1 s per bilde, så med
     // ett bilde i sekundet tok det femten ganger så lang tid); etter en pause på over 3 s (3D nettopp åpnet) kommer været straks
     if (vist && V.regel) { const k = dtEkte > 3 ? 1 : Math.min(1, dtEkte / 1.5); for (const f of VIST) vist[f] += (V.regel[f] - vist[f]) * k; settVist(); }
-    // dis: tåke og nedbør trekker disen inn mot kameraet (kamera3d setter den på nytt hver ramme)
-    if (V.dis < 1) { const fog = R.scene.fog; fog.far = Math.max(140, fog.far * V.dis); fog.near = Math.min(fog.near * V.dis, fog.far * .25); }
+    // dis: tåke og nedbør trekker disen inn mot kameraet (kamera3d setter den på nytt hver ramme). Høyt oppe (runde 8) etter avstanden
+    // til bakken midt i bildet (Vaer.dis3d): landskapet synes, med mer dis bortover – før ble 3D-kartet ovenfra nesten helt grått i regn.
+    if (V.dis < 1) { const fog = R.scene.fog, D = !R.fot && R.bane ? R.bane.avst : 0, n = Vaer.dis3d(fog.near, fog.far, V.dis, D); fog.near = n.near; fog.far = n.far; }
     const c = R.cam.position, bakke = hoyde3d(R.ut.cx + c.x, R.ut.cy + c.y) ;
     if (R.gressMesh && bakke > V.snøgrense) R.gressMesh.visible = false;   // gresset ligger under snøen
     if (!fall && (V.regn > .02 || V.snø > .02)) fall = lagFall(R);
@@ -141,5 +142,6 @@
       fall.snø.geometry.attributes.position.needsUpdate = true; }
   });
   // straks(): 3D viser været med en gang (testene og skjermbildene)
-  window.VaerSpill = { S, oppdater, straks() { vist = null; oppdater(); } };
+  // treVær(m, slag): snø, høst og nakne løvtrær også på trær som legges til etter at utsnittet er satt (nærskogen i vegetasjon3d.js)
+  window.VaerSpill = { S, oppdater, straks() { vist = null; oppdater(); }, treVær };
 })();

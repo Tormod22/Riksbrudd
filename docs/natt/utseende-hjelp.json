@@ -1,0 +1,5 @@
+[
+  ["Kartet mens det lastes", "Når du zoomer eller åpner spillet, kommer kartet først uskarpt for hele skjermen, og så blir det skarpt bit for bit. De skarpe bitene tones inn og glir mykt over i de uskarpe, så du ser ikke rette kanter. Venter du et par sekunder, er alt skarpt.", "Vær, lyd og bilde"],
+  ["3D i regn og tåke", "Ovenfra blir landskapet disig i regn og tåke, mest langt unna – men det du ser på, synes fortsatt. Nede på bakken ser du kortere i dårlig vær.", "I 3D"],
+  ["Skogen når du går", "Trykker du Gå, bygges et mer detaljert område rundt deg. Mens det skjer, står trærne rundt deg allerede – de samme som i 2D-kartet.", "I 3D"]
+]

@@ -371,6 +371,61 @@
     for (const [type, m] of Object.entries(vekst)) { m.count = n[type]; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
   }
 
+  // ---------- NÆRSKOG MENS DU GÅR (runde 8, 20. nov) ----------
+  // Kritikken: «3D-lia ved leiren var en glatt, gul flate med bregner og ingen trær, selv om leirvalget og 2D sa skog: mye». Utsnittet
+  // du så ovenfra var for stort til trær (trær3d bare når utsnittet er høyst 4200 m), og når du trykker Gå, bygges et mindre utsnitt
+  // med trær – på en treg maskin tok det over ett minutt, og så lenge sto du i en tom li (gresset og lyngtuene rundt kameraet kommer
+  // straks, så det så ut som bregner på en bar flate). Nå settes trærne rundt deg med en gang når utsnittet ikke har egne trær: samme
+  // 5 m-gitter og samme regel som trær3d og 2D-kartet (treVed, TRE_TETT, treIHøyden), så det er de samme trærne som kommer med det nye
+  // utsnittet. De tas bort så snart utsnittet har trær. Claudes forslag: radius (m), flytt (m før de regnes på nytt), nær (m med alle
+  // greinene, enklere form lenger ute), maks antall [PC, mobil], leir (m ryddet rundt leirens midte, som leir-visning.js), høyde (m over
+  // bakken kameraet høyst kan være).
+  const NÆRSKOG = { radius: 240, flytt: 80, nær: 70, maks: [7000, 3000], leir: 30, høyde: 30 };
+  let skog = null, skogArb = false;
+  function fjernSkog(R) { if (!skog) return; for (const m of skog.mesh) { R.scene.remove(m); m.material.dispose(); if (m.dispose) m.dispose(); } skog = null; }
+  async function lagSkog(R, u, cx, cy) {
+    const r = NÆRSKOG.radius, X = cx + u.cx, Y = cy + u.cy, S5 = TRE_RUTE, G3 = window.hash;
+    const kv = await lagVindu([X - r - 40, Y - r - 40, X + r + 40, Y + r + 40], false, 9);
+    if (R.ut !== u || !R.fot) return;
+    const klasse = (A, B) => { const i = Math.floor((A - kv.x0) / kv.r), j = Math.floor((kv.y0 - B) / kv.r); return i < 0 || j < 0 || i >= kv.w || j >= kv.h ? 255 : kv.K[j * kv.w + i]; };
+    const sp = window.OppstartSpill && OppstartSpill.tilstand(), L = sp && sp.leir, maks = NÆRSKOG.maks[mob() ? 1 : 0];
+    const ut = { granN: [], granF: [], løvN: [], løvF: [] }; let n = 0;
+    for (let j = Math.floor((Y - r) / S5); j <= Math.ceil((Y + r) / S5) && n < maks; j++) {
+      if (børPuste()) await pust(); if (R.ut !== u) return;
+      for (let i = Math.floor((X - r) / S5); i <= Math.ceil((X + r) / S5); i++) {
+        if (G3(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue;
+        const x = t.X - u.cx, y = t.Y - u.cy, d = Math.hypot(x - cx, y - cy); if (d > r || Math.abs(x) >= u.S - 1 || Math.abs(y) >= u.S - 1) continue;
+        if (iVann(u, x, y) || (u.påVeg && u.påVeg(x, y)) || (u.vegNær && u.vegNær(x, y, 1)) || iLeir(u, x, y)) continue;
+        if (typeof nærHus === 'function' && u.hus && u.hus.omriss && nærHus(u, x, y)) continue;
+        if (L && Math.hypot(t.X - L.x, t.Y - L.y) < NÆRSKOG.leir) continue;
+        const moh = hoyde3d(t.X, t.Y, u); if (!treIHøyden(t.d, moh)) continue;
+        const fjell = Math.max(0, Math.min(1, (moh - 900) / 250)), h = (1 - fjell * .55) * (8 + t.d * 12), z = (moh - u.h0) * R3.EX;
+        const gran = t.k === 1 && G3(i, j, 5) >= .15 && moh < 880, nær = d < NÆRSKOG.nær;
+        (gran ? (nær ? ut.granN : ut.granF) : (nær ? ut.løvN : ut.løvF)).push(x, y, z, h, t.d); n++;
+      } }
+    if (R.ut !== u || !R.fot) return;
+    fjernSkog(R); const mesh = [];
+    for (const [data, smal, navn, slag] of [[ut.granN, .3, 'gran', 'gran'], [ut.granF, .3, 'granEnkel', 'gran'], [ut.løvN, .5, 'løv', 'løv'], [ut.løvF, .5, 'løvEnkel', 'løv']]) {
+      const k = data.length / 5; if (!k) continue;
+      const geo = treGeo(navn), { M, C } = kjørRett(treMatriser(new Float32Array(data), smal, null, false));
+      const m = new THREE.InstancedMesh(geo, TreDeler.materiale(new THREE.MeshLambertMaterial({ vertexColors: true }), geo), k);
+      m.instanceMatrix.array.set(M); m.instanceMatrix.needsUpdate = true; m.instanceColor = new THREE.InstancedBufferAttribute(C, 3);
+      m.frustumCulled = false; m.userData.nærskog = true; m.userData.treslag = slag; R.scene.add(m); mesh.push(m);
+      if (window.VaerSpill && VaerSpill.treVær) VaerSpill.treVær(m, slag);
+    }
+    skog = { mesh, u, x: cx, y: cy, n };
+  }
+  KROKER.sett3d.push((u, R) => fjernSkog(R));
+  KROKER.ramme3d.push(R => {
+    const u = R.ut; if (!u || !window.THREE) return;
+    const harTrær = !!u.trær && Object.values(u.trær).some(d => d && d.length);
+    // bare nede ved bakken (ikke i helikopteret – der ville det stått en ring av skog under deg i et utsnitt uten trær)
+    const c = R.cam.position, over = R.fot ? c.z - (hoyde3d(u.cx + c.x, u.cy + c.y, u) - u.h0) * R3.EX : Infinity;
+    if (!R.fot || harTrær || !VIS.traer || over > NÆRSKOG.høyde) { if (skog) fjernSkog(R); return; }
+    if (skogArb || (skog && skog.u === u && Math.hypot(c.x - skog.x, c.y - skog.y) < NÆRSKOG.flytt)) return;
+    skogArb = true; lagSkog(R, u, c.x, c.y).catch(e => console.warn('nærskog:', e)).finally(() => { skogArb = false; });
+  });
+
   // ---------- hver ramme ----------
   KROKER.ramme3d.push(R => {
     if (!R.ut) return;
@@ -399,5 +454,7 @@
     fri: (x, y) => { const R = r3(); return !!(R && R.ut && fri(R.ut, x, y)); },
     // (runde 5) inne i et av leirens bygg (gress3d i index.html spør også her)
     iLeir: (x, y) => { const R = r3(); return !!(R && R.ut && iLeir(R.ut, x, y)); },
+    // (runde 8) trærne som står rundt deg mens et utsnitt uten trær vises: { n, x, y } eller null
+    nærskog: () => (skog ? { n: skog.n, x: Math.round(skog.x), y: Math.round(skog.y) } : null), NÆRSKOG,
   };
 })();
