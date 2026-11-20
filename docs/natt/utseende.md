@@ -25,8 +25,12 @@ Alle tall er Claudes forslag (samlet i `FLISLAST` i index.html, `Vaer.DIS3D`, `V
 2. **Liggende telefon: blekt og tomt kart de første sekundene – RETTET.** «Blått og hvitt» var bakgrunnen (havblått på /norge) med det lyse
    siktfeltet oppå: ingen flis var laget ennå, og reserven fantes ikke rett etter lasting. Nå bes en **grov flis for hele bildet** (fire
    nivåer opp, FLISLAST.grov) om FØRST, før de skarpe, så kartet fylles uskarpt på et øyeblikk. Målt med samme tregt-nett-oppsett: etter 4 s
-   et helt (grovt) kart i stedet for blått; etter 12 s skarpt i midten med myke overganger. (De første ~2 s etter lasting er det fortsatt blått:
-   da lager tråden flisene for hele Norge-oversikten som siden åpner med, før kameraet flyttes til leiren – oppstarten er ikke min fil.)
+   et helt (grovt) kart i stedet for blått; etter 12 s skarpt i midten med myke overganger.
+   Også: et lagret spill la kartet over leiren («Velkommen tilbake»), men kom manifestet etterpå (treg linje), flyttet `KLAR` i index.html
+   kartet tilbake til hele landet – og flisene for hele landet ble laget før leirens. Nå blir kartet stående over leiren (`lagretLeir`,
+   ikke i testene og ikke når adressen sier hvor kartet skal stå). Prøvd: etter omlasting står kartet på leiren (m 8) fra første sekund.
+   På den overbelastede testmaskinen (manifestet tok 9 s) kom det første grove kartet likevel først etter ca. 7 s; før det er bakgrunnen
+   mørk og så (fra ni nivåer opp) en jevn landfarge.
 3. **3D-kartet ovenfra nesten helt grått i regn – RETTET.** Før ble disens avstander ganget med været (regn 0,4) også høyt oppe, så bakken midt
    i bildet lå bak disens ytterkant. `Vaer.dis3d(near, far, dis, D)` (spill/vaer.js, test i test_vaer.js) brukes i vaer-visning.js: nede ved
    bakken (går, kjører, lavt kamera) som før; høyt oppe (overgang 160–1400 m kameraavstand) begynner disen ved 0,45–0,9 × avstanden til
