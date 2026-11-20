@@ -184,3 +184,32 @@ feillistene; detaljer under «Runde 6» i `docs/natt/kart.md`, `ui.md`, `krig.md
 - Motstanderne tar ikke Stavanger/Sandnes av seg selv; krigen står på ca. 15 % fra dag 6 hvis spilleren ikke gjør noe.
 - Balansen er prøvd med automatiske gjennomspillinger, ikke av et menneske over mange døgn.
 - /dovre-fliser og /norge deler fortsatt ett lagret spill.
+
+# Natt til 20. nov: runde 7–9
+Brukeren: «Fortsett utviklingen og forbedringer fram til imorgen klokken 10:30.» Arbeidet stoppet ca. kl. 04:10 fordi kontoen nådde
+ukegrensen for bruk, og ble gjort ferdig etter kl. 16 da grensen var nullstilt. To nye kritikere spilte versjonen fra 19. nov
+(`docs/anmeldelse-2026-11-20.md`): PC 4 (opp fra 3), telefon 3.
+
+## Gjort
+| Pakke | Hva |
+|---|---|
+| Figurer | Avrundede folk og soldater med gange, sikting, bæring; nytt gevær i hånda. Færre trekanter enn før. |
+| Leiren i 2D | Bygg som tak ovenfra etter type, byggestadier, skader, lys om natta; soldater som figurer ovenfra. |
+| Motstanderne | Bygger seg opp, samler seg til angrep, tar storbyer, angriper dine tettsteder og leiren med varsel, slåss seg imellom. |
+| Lagring | Eget spill per kart, «Lagre og last» med tre plasser og fil. |
+| Hakk | Husene og gresset bygges i biter; gjenbrukte tabeller når du flyr (færre og kortere pauser). |
+| Nybegynner | Troppforslagene tar aldri de siste som bygger, advarsel, oppløs tropp, «Ring etter arbeidere», enklere steg 6. |
+| Terreng | Leirvalget nekter bratt grunn og foreslår flat; hellingen synes når du bygger. |
+| Gang | «Reis hit» uten heng, «Gå inn i huset» fra kartet, pil mot døra, snu med én finger, leiren i 3D fra start. |
+| Flyt | Loggen maser mindre, ⏭ stopper bare for det viktige, kort pauser også under spoling, hjelpen samlet. |
+| Utseende | Ingen harde skjøter i kartet, mindre grått i regn, trær ved leiren, halvmåne-stripa borte. |
+| Angrep | Røverne og kampen synes, rapport etter hver bølge, én kilde for status og anslag, garnisoner holder. |
+| Morgenmøtet | Valg hver morgen med følger, rapport neste dag, større beslutninger av og til. |
+
+## Står igjen
+- Lyse felt i selve satellittmosaikken (ved Bryne) – må rettes når kartet bygges.
+- Byttet til et nytt 3D-utsnitt er fortsatt én bit (ca. 0,1 s); første bilde i førsteperson er tregt med programvare-grafikk.
+- Folk på fortauene i byene har gamle former; ingen skygge fra figurer.
+- Bare én angrepsgruppe per motstander om gangen; den svakeste motstanderen får ingen hjelp.
+- Morgenmøtet er spilt i 4–5 døgn, ikke balansert over lang tid.
+- Ingen ny kritikerrunde på den nye versjonen ennå.

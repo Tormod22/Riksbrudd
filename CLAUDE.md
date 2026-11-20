@@ -1330,3 +1330,30 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   «Klart → regn»), maskinvarevarselet én gang som liten lapp, snikemåleren forklart, kort venter mens du går, spill/fjellmark3d.js (stein,
   lav, lyng, snøflekker på fjellet). Etter flettingen: røvervarselet bare i loggen (banneret sier det samme), loggen skjult bak banneret på
   telefon. Kontroll: PC og mobil 119/119.
+  NATT TIL 20. NOV, RUNDE 7–9 (brukeren: «fortsett utviklingen og forbedringer fram til imorgen klokken 10:30»; arbeidet stoppet ca. 04:10
+  fordi kontoen nådde ukegrensen, og ble gjort ferdig etter kl. 16. To nye kritikere: docs/anmeldelse-2026-11-20.md – PC 4, telefon 3).
+  Notater under «Runde 7/8/9» i docs/natt/<pakke>.md. FIGURER: spill/figur3d.js – avrundede figurer (kapsler, dreide profiler) for folk,
+  soldater, fiendens stillinger og karakteren; gå/sikte/bære/knele/ligge i skyggeleggeren; nær-/fjernnett (Folk3d.nett() = {nær, fjern},
+  R3.solMesh = [nær, fjern]); geværet i hånda (narhud.js) med detaljer. LEIR2D: spill/leir2d.js – byggene som tak ovenfra etter type,
+  stadier (kø, grunnmur/reisverk/stillas, skadet, ødelagt), lys i vinduene om natta, soldater som figurer ovenfra og folk der de arbeider;
+  kroker med f.over = true tegnes etter tåka. AI: spill/eskalering.js (+visning) – motstanderne har kasse og folk, kjøper lag/lastebiler/
+  stridsvogn, samler 2–7 lag til angrep, storbyer fra dag 11 (Vanlig), angriper dine tettsteder fra dag 5 og leiren fra dag 8 – alltid med
+  etterretning (Vanlig 6 t før) og ring/pil i kartet; motstanderne slåss seg imellom; gjennomspilt: Kystalliansen vinner dag 12 om du ikke
+  gjør noe. LAGRING: spill/lagringsside.js (egen ending per side: Dovre ingen, /norge @norge, /rogaland @rogaland; gamle spill gjort om
+  én gang, «riksbrudd-sider») og spill/lagringsmeny.js (LagringMeny: plass 1–3 + automatisk, last ned / hent fra fil, full/sperret lagring
+  meldes). YTELSE: interiøret og gresset bygges i biter (interior3d byggG, interior.js planG), spill/tallrekke.js (gjenbrukte tabeller i
+  hus3d, liv3d-veger, infra3d-bruer; kartbildets punkter fra lager) – Bergen gående 9,5 s → 1,1 s lange pauser. RUNDE 8 (ny kritikk):
+  NYBEGYNNER – Tropper.behold: forslagene lar alltid to bli igjen, advarsel og «Opprett likevel», «Oppløs troppen»/«Send hjem og oppløs»,
+  «Ring etter arbeidere», steg 6 «Mer forsvar før dag 4», opplæringen viker for paneler/angrep, «Senere», tastaturhint skjult på
+  berøringsskjerm. TERRENG – spill/helling.js (+visning): leirvalget nekter umulige leirer og foreslår «Flytt hit» til flat grunn,
+  vann/tettsted gir forslag; plassering farger bakken grønn/gul/rød med høydekurver, «Drei 90°»/«Flytt skissen»; Leir.bratt/brattGrense.
+  GANG – «Reis hit» uten heng (3D tegnes ikke under reisen, kartet bygges før du går), «Gå inn i huset» fra 2D-panelet, pil mot inngangen,
+  snu med én finger på telefon, spill/byggeplass3d.js (telt, bål, byggestadier i 3D), smalt angrepsbanner i gåmodus. FLYT – spill/loggdemp.js
+  (like meldinger ×N, rutiner sjeldnere, vær bare ved store skifter, tips én gang), ⏭ stopper bare for det som krever spilleren, kortpausen
+  holder under spoling, kort venter under angrep, «Nytt spill» øverst i ☰, hjelpen samlet. UTSEENDE – flisene tones inn og får myk kant
+  (ingen harde skjøter), grov flis først, Vaer.dis3d (mindre grått ovenfra i regn), nærskog i vegetasjon3d, tomDybde i lys3d (halvmåne-
+  stripa), spill/kartnavn.js («hovedløp» bort). ANGREP – ForsvarSpill.status() én kilde (sett/sist sett/glatt anslag), egne lag ved leiren
+  vises der de er, kampen synes i 2D (glimt, ring, «I ildkamp»), ⏭ stopper når kampen begynner, rapport etter hver bølge, ekte angrep i samme
+  banner, garnisoner holder stillingen, Krig.klynger (én lapp for fiender nær hverandre). RUNDE 9: MORGEN – spill/morgen.js (+visning):
+  morgenmøtet kl. 06 fra dag 2 med 2–3 valg ut fra leiren (jakt, dobbel vakt, kjøp mat, speidertur, fridag …) og rapport neste morgen,
+  større beslutninger hver tredje dag (nabogården, forlatt tankbil, beskyttelsespenger, karavane). Hjelpen: 213 emner (samle_hjelp.py).
