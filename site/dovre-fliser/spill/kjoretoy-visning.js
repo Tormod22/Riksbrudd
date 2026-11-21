@@ -22,7 +22,8 @@
     lasting = (async () => {
       const m = await (await fetch(`/api/kart/${VEGNETT_TAG}/manifest.json/0/1048576`)).json();
       const gz = typeof DecompressionStream !== 'undefined', fil = gz ? 'vegnett.bin.gz' : 'vegnett.bin', byte = gz ? m.gzip_byte : m.byte;
-      logg(VEG_TLF.boks() ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – på telefon beholdes bare vegene rundt leiren …` : `Laster vegnettet for hele Norge (${Math.round(byte / 1048576)} MB) …`);
+      const O = VEG_TLF.område();
+      logg(O ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – bare vegene i ${O.navn || 'spillområdet'} beholdes …` : VEG_TLF.boks() ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – på telefon beholdes bare vegene rundt leiren …` : `Laster vegnettet for hele Norge (${Math.round(byte / 1048576)} MB) …`);
       const deler = [], kø = []; for (let fra = 0; fra < byte; fra += BIT) kø.push(fra);
       let ferdig = 0;
       await Promise.all(Array.from({ length: 4 }, async () => { for (let fra; (fra = kø.shift()) !== undefined;) {
@@ -35,7 +36,7 @@
       else { data = new Uint8Array(byte); let p = 0; for (const d of deler) { data.set(d, p); p += d.byteLength; } deler.length = 0; }
       // på telefon bare vegene rundt leiren (VEG_TLF.boks): ca. 20 MB i minnet i stedet for ca. 210 MB for hele landet
       const boks = VEG_TLF.boks(); graf = Vegnett.les(data, boks ? { boks } : {}); data = null; window.VEGNETT = graf;
-      logg(boks ? `Vegnettet er lastet for området rundt leiren (${Math.round((boks[2] - boks[0]) / 1000)} × ${Math.round((boks[3] - boks[1]) / 1000)} km): ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`
+      logg(O ? `Vegnettet er lastet for ${O.navn || 'spillområdet'}: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).` : boks ? `Vegnettet er lastet for området rundt leiren (${Math.round((boks[2] - boks[0]) / 1000)} × ${Math.round((boks[3] - boks[1]) / 1000)} km): ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`
         : `Vegnettet er lastet: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`);
       return graf;
     })();
@@ -60,8 +61,13 @@
   // Tallene er Claudes forslag.
   const UTSNITT_HALV = 150000, UTSNITT_KANT = 20000;
   VEG_TLF.telefon = () => VEG_TLF.tvingTelefon || innerWidth < 900 || matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900;
-  VEG_TLF.boks = () => { if (!VEG_TLF.telefon() || (navigator.webdriver && !VEG_TLF.test)) return null; const S = window.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir;
-    const [x, y] = L && Number.isFinite(L.x) ? [L.x, L.y] : [kam.x, kam.y], b = [x - UTSNITT_HALV, y - UTSNITT_HALV, x + UTSNITT_HALV, y + UTSNITT_HALV];
+  // (runde 13, kritikk H: «/rogaland laster vegnettet for hele Norge (24 MB) ved hver åpning») på et mindre spillkart (window.SPILLOMRÅDE,
+  // spill/omraade.js) beholdes bare vegene i området (+ UTSNITT_KANT) – også på PC: spillet holder seg innenfor grensa. Fila er fortsatt
+  // én for hele landet (24 MB nedlasting); bare minnet og meldingen blir mindre. Et vegnett per fylke krever en ny release (se docs/natt/kart.md).
+  VEG_TLF.område = () => { const O = window.SPILLOMRÅDE; return O && O.bb && !(navigator.webdriver && !VEG_TLF.test) ? O : null; };
+  VEG_TLF.boks = () => { const Ø = VEG_TLF.område(); if (!Ø && (!VEG_TLF.telefon() || (navigator.webdriver && !VEG_TLF.test))) return null; const S = window.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir;
+    const [x, y] = L && Number.isFinite(L.x) ? [L.x, L.y] : [kam.x, kam.y], b = Ø ? [Ø.bb[0] - UTSNITT_KANT, Ø.bb[1] - UTSNITT_KANT, Ø.bb[2] + UTSNITT_KANT, Ø.bb[3] + UTSNITT_KANT]
+      : [x - UTSNITT_HALV, y - UTSNITT_HALV, x + UTSNITT_HALV, y + UTSNITT_HALV];
     const O = window.OLJE || {}, ta = p => { if (!p || !Number.isFinite(p.x)) return; b[0] = Math.min(b[0], p.x - UTSNITT_KANT); b[1] = Math.min(b[1], p.y - UTSNITT_KANT); b[2] = Math.max(b[2], p.x + UTSNITT_KANT); b[3] = Math.max(b[3], p.y + UTSNITT_KANT); };
     for (const p of O.BASER || []) ta(p);
     ta((O.TERMINALER || []).slice().sort((a, c) => Math.hypot(a.x - x, a.y - y) - Math.hypot(c.x - x, c.y - y))[0]);
