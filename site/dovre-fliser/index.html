@@ -1985,7 +1985,7 @@ async function hus3d(u) {
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
       if (bs && !(o.e.vf > 0)) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
       // (runde 15) hvitmalte trehus og teglrøde tak i tette strøk (Byhus.husFarge/husTak), når OSM ikke har fargen
-      if (BY && BY.husFarge && !bs && !(o.e.vf > 0)) { const hf = BY.husFarge(kl, i, tettI); if (hf) for (let q = 0; q < 3; q++) veggF[q] = hf[q]; }
+      if (BY && BY.husFarge && !bs && !(o.e.vf > 0)) { const hf = BY.husFarge(kl, i, tettI, mx + u.cx); if (hf) for (let q = 0; q < 3; q++) veggF[q] = hf[q]; }
       if (BY && BY.husTak && !bs && !(o.e.tf > 0)) { const ht = BY.husTak(kl, i, tettI); if (ht) for (let q = 0; q < 3; q++) tak[q] = ht[q]; }
       // steinkirker (store kirker): naturstein, lavere vegger og bratt tak; et sammensatt omriss får valmtak langs hovedretningen
       const stein = kl === 'kirke' && BY && BY.steinKirke && BY.steinKirke(f.areal, i);
@@ -3654,7 +3654,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
-<script src="/dovre-fliser/spill/byhus.js?v=49a38b44ae"></script>
+<script src="/dovre-fliser/spill/byhus.js?v=6c2683f531"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=2d853eaf08"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>

@@ -58,6 +58,8 @@
     // (21. nov, runde 15) helsebygg: sykehjem i lys puss med altaner (eller tegl), legevakt/legesenter som nyere plate/kontor
     else if (kl === 'sykehjem') fasade = velg(r, [['pleie', 70], ['tegl', 20], ['funkis', 10]]);
     else if (kl === 'legevakt') fasade = velg(r, [['plate', 45], ['kontor', 35], ['tegl', 20]]);
+    // sykehus (bilde av Stavanger universitetssjukehus): lyse betongbånd med vindusbånd (funkis), nyere fløyer i plate/glass
+    else if (kl === 'sykehus') fasade = velg(r, [['funkis', 55], ['plate', 30], ['tegl', 15]]);
     if (!fasade) return null;
     // etasjene: høyden fra dataene delt i hele etasjer (vinduene passer etasjehøyden)
     const gate = h >= 7.5 && (kl === 'butikk' || (sentrum && kl !== 'skole' && fasade !== 'plate' && r2 < .7));
@@ -164,10 +166,12 @@
   // Hvitmalte trehus: i eldre småbyer og tette strøk (Gamle Stavanger, Bryggen-området, kystbyene) er nesten alle trehus hvite, på
   // landet er rødt, gult og grått vanligere. husFarge(kl, i, tett) gir en hvit nyanse for andelen HVIT etter tettheten (bygg innen 100 m),
   // ellers null (= typens vanlige farger). Tallene er Claudes forslag.
-  const HVIT = { tett: [[40, .78], [15, .66], [6, .5], [0, .38]], farger: ['#eeebe3', '#f2f0ea', '#e7e3d8', '#ebe8df'] };
-  function husFarge(kl, i, tett) {
+  // Vestlandet og Sørlandet (X under VEST i EPSG:25833 – Rogaland, Hordaland, Agder-kysten) har hvite hus også på landet (Hå gamle prestegard).
+  const HVIT = { tett: [[40, .78], [15, .66], [6, .5], [0, .38]], vest: .62, VEST: 80000, farger: ['#eeebe3', '#f2f0ea', '#e7e3d8', '#ebe8df'] };
+  function husFarge(kl, i, tett, X) {
     if (kl !== 'hus') return null;
     let a = 0; for (const [n, v] of HVIT.tett) if (tett >= n) { a = v; break; }
+    if (X !== undefined && X < HVIT.VEST) a = Math.max(a, HVIT.vest);
     return hash(i, 41, 13) < a ? rgb(HVIT.farger[Math.floor(hash(i, 43, 3) * HVIT.farger.length)]) : null;
   }
   // Takene på småhusene i tette strøk: teglrødt (oransjerødt) tak på ca. halvparten, som i Gamle Stavanger og andre eldre trehusstrøk;

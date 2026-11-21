@@ -49,6 +49,8 @@ const andel = (fn, tett) => { let n = 0; for (let i = 1; i <= 4000; i++) if (fn(
 const hBy = andel(B.husFarge, 50), hLand = andel(B.husFarge, 0), tBy = andel(B.husTak, 50), tLand = andel(B.husTak, 0);
 sjekk(hBy > .7 && hBy < .86 && hLand > .3 && hLand < .46, `hvite trehus: by ${hBy.toFixed(2)}, land ${hLand.toFixed(2)}`);
 sjekk(tBy > .42 && tBy < .58 && tLand < .2, `teglrøde tak: by ${tBy.toFixed(2)}, land ${tLand.toFixed(2)}`);
+const hVest = (() => { let n = 0; for (let i = 1; i <= 4000; i++) if (B.husFarge('hus', i, 0, -30000)) n++; return n / 4000; })();
+sjekk(hVest > .55 && hVest < .7 && hLand < hVest, `hvite trehus på landet på Vestlandet: ${hVest.toFixed(2)}`);
 sjekk(B.husFarge('leil', 3, 50) === null && B.husTak('kontor', 3, 50) === null && B.husFarge('hytte', 3, 50) === null, 'bare småhus («hus») får hvit farge/teglrødt tak');
 let hvitFeil = 0; for (let i = 1; i < 500; i++) { const f = B.husFarge('hus', i, 50); if (f && !(f[0] > .88 && f[1] > .86 && f[2] > .83)) hvitFeil++; }
 sjekk(hvitFeil === 0, 'de hvite fargene er hvite');
