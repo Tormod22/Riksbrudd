@@ -523,3 +523,52 @@ ui-vakta). Prøvd med feil: med den gamle skjermlag.js fant den «kort som vente
 ned (326 av 390)»; med den gamle opplaering.js «opplæringen er ikke én linje liggende (124 px)».
 **Ustabil sjekk som var der før:** «farten du valgte med kortet oppe, gjelder ikke etter svaret (10)» (runde 8-delen) slår av og til feil både
 med og uten endringene mine – flyt.js sin automatiske nedbremsing for «kort» rekker iblant å slå inn. Ikke endret.
+
+## Runde 13 (21. nov, kritikk G/H)
+
+Mål: knapper, tall og symboler skal kunne forstås uten å lese koden. Prøvd i 844 × 390 (isMobile, hasTouch, webdriver av) og 1400 × 820;
+bildene ligger i scratchpad `natt13/ui/` (`m-*.png` telefon, `pc-*.png` PC; prøveskriptet `prov.js`, vakta `vakt.js`).
+
+1. **Byggelinja** (`leir-visning.js`, `KORT_NAVN` har nå et tredje ledd = ordet): på liggende telefon står hvert ikon med et kort ord under
+   seg – ⟲ Venstre, ⟳ Høyre, ▦ Rutenett, ⇤ Inntil, + Fortsett, ✕ Avbryt (`data-tegn` + `data-etikett`, vist med `::before`/`::after`;
+   knappeteksten er uendret, så alt som trykker etter teksten virker). ⧉ er byttet ut med + (⧉ så ut som «kopier»). På PC står hele teksten
+   som før, med det samme tegnet foran («▦ Rutenett: på»). Slått på = lys kant og gull tekst. Ordene er Claudes forslag.
+2. **Hjelpen over morgenmøtet** (`skjermlag.js`): hjelpen har eget bånd `REGLER.hjelp = 69` – over kortene (67) og pauselappen (68), under
+   bunnmenyen (70, som viker for hjelpen), tipsene og ringen. Satt med CSS (`body #hjelp`), så det gjelder også i testene; `hjelp` er tatt ut
+   av lista over paneler du åpner selv. `test_skjermlag.js` har en ny linje.
+3. **«Mer» bare ett sted** (`spillhud.js`): flisa øverst heter nå «+8 tall» (tallet først, ordet etter), og forklaringen sier hvilke tall som
+   står bak («6 tall fikk ikke plass på raden: olje, du er, tre …»). Knappen nederst heter fortsatt «Mer», men uten tallmerket (det så ut som
+   uleste meldinger); forklaringen/aria sier «3 kommandoer til: Lagre, Region, Verden». **Boblen** (`flistips.js`): et kort trykk på en flis
+   som åpner noe (Folk, kassa, strøm, diesel/tre/betong/stål, mål, kontroll, «+n tall», kommandoknappene) viser ingen boble; ellers vises den
+   bare når trykket ikke åpnet eller lukket et panel (venter 140 ms og sammenligner). Langt trykk viser den som før. Med mus kommer boblen ikke
+   tilbake på samme flis etter et klikk før pekeren har vært et annet sted.
+4. **Tallboksene i Leir** (`leir-visning.js`): hver flis har en kort utgave (`data-kort` på ordet og tallet): KASSA «40 mill. kr», STRØM
+   «0/5 kW» eller «5 kW ledig», DIESEL «0/0 l», SENGER «0». Liggende vises den korte utgaven, ikonet i flisa er skjult (det tok ca. 16 px), og
+   teksten bryter heller enn å kuttes. Strømlinja under bryter også (ingen «…»). Målt: alle fire 69 × 33 px uten kutt.
+5. **Topplinja** (`spillhud.js`): Folk går sist inn bak «+n tall» på PC (UT-lista: Folk etter strøm og diesel) – i 3D tok knappen «Gå» plassen.
+   Før leiren er lagt, står bare klokka og været der (`FØR_LEIR`; spilleren: når det ikke finnes noen leir, testene: bare mens startskjermen
+   eller leirvalget står). Steg 3 viser nå «1 · 06:00» og «Klart, 8 °C». **Varseltrekanten** (`flistips.js folkÅrsak()`): samme regler som
+   setter trekanten (folk-visning.js), skrevet ut under «Nå»: «ingen seng: 10 sover i telt – bygg en brakke», «maten er tom: folk sulter»,
+   «maten rekker bare 5 timer», «folk fryser …», «lav moral (30) …».
+6. **Hendelseskortet** (`skjermlag.js`): #hendelse, #samfunnkort og #morgenkort har tett mørk bakgrunn og glir 10 px opp i 0,2 s (`translate`)
+   i stedet for å tones inn fra gjennomsiktig (tema.js sin `panelopp`). Målt: opasitet 1 fra første bilde.
+7. **Oppstarten**: ørna (`oppstart.js tegnSymbol`, liten endring i en fellesfil) har hode med krokete nebb, løftede vinger med fjærspisser,
+   kropp, føtter og vifte (bilde `m-01-steg2-orn.png`). **Kinnene** (`oppstart-visning.js`): de fire flatene som former kinnbeina i
+   portrettmotoren har skarpe kanter og sto som skjolder under øynene. Motoren er uendret; `RiksbruddPortrait.renderSVG` pakkes inn én gang og
+   legger motorens egen myke uskarphet (`skinSoft`) på de fire flatene (gjelder også karakterarket). Bilder: `portrett.png` / `portrett-myk.png`.
+
+**Fellesfiler endret:** `spill/oppstart.js` (bare `case 'ørn'` i `tegnSymbol`), `pipeline/fliser/test_skjermlag.js` (én linje),
+`site/dovre-fliser/index.html` (bare versjonsmerker fra versjon.py). `spill/flistips.js` er fra ui-pakken i runde 4. Hjelpetekstene i
+`docs/natt/ui-hjelp.json` er oppdatert («Tallene øverst», «Knappene nederst», «Telefonen liggende») og har to nye emner
+(«Varseltrekanten på Folk», «Knappene når du bygger») – `samle_hjelp.py` må kjøres (hjelp-natt.js har fortsatt ⧉ i teksten til da).
+
+**Vakt** (`vakter/ui.js`, «runde 13», 844 × 390 og et smalt PC-vindu 960 × 700): ord under hvert ikon og ingen ⧉, hjelpen øverst over et
+morgenmøte (elementFromPoint), «+n tall» og «Mer» uten tall, ingen boble etter et kort trykk på «+n tall», tallboksene uten kutt, bare klokke
+og vær med leirvalget oppe, årsaken bak trekanten, hendelseskortet tett fra første bilde, Folk ikke bak «+n tall» før strøm/diesel/tre.
+**Prøvd med feil:** mot koden før runde 13 (en kopi i scratchpad `natt13/ui/base`) fant vakta alle ni feilene. To eldre sjekker er rettet:
+runde 12 teller nå også `data-etikett` som ikon, og «Gå ut»-sjekken hopper over en tom (skjult) dørknapp – den slo feil også før mine
+endringer (knappen er tom når du ikke står ved en dør). Grønn på PC og mobil (30–37 s for hele ui-vakta).
+
+**Ikke gjort / ikke prøvd:** Folk i toppstripa er ikke prøvd i ekte 3D (for tregt her) – bare med et smalt PC-vindu, som gir samme mangel på
+plass. Morgenmøtet er fortsatt høyt på liggende telefon (ikke min fil). Varseltrekanten står fortsatt alene i flisa; årsaken står i boblen og i
+Folk-panelet.
