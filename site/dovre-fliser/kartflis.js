@@ -581,7 +581,8 @@ function harFall(t, areal, h, i, tett) {
   // (runde 15) sykehjem har oftest saltak (lange fløyer i 2–3 etasjer), legesentre/legevakter oftest flatt tak – Claudes forslag
   else if (t === 15) c = h > 14 ? .25 : .7;
   else if (t === 16) c = areal < 400 ? .5 : .2;
-  else { c = areal < 300 ? .97 : areal < 800 ? .85 : areal < 2000 ? .55 : .2; if (t === 4 && areal < 3500) c = Math.max(c, .93); }
+  // (runde 15) låver og fjøs under 3500 m² har alltid tak med fall (Hå, Ryfylke) – før 0,93, så noen store låver fikk flatt tak
+  else { c = areal < 300 ? .97 : areal < 800 ? .85 : areal < 2000 ? .55 : .2; if (t === 4 && areal < 3500) c = 1; }
   if (c > 0 && c < 1 && t !== 8) c = tett < 6 ? 1 - (1 - c) * .2 : tett < 15 ? 1 - (1 - c) * .5 : tett > 40 ? c * .75 : c;
   return hash(i, 7, 3) < c;
 }

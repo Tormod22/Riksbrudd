@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=bef3280737"></script>
+<script src="/dovre-fliser/kartflis.js?v=17149437de"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=0d6ea5781f');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=6014599d63');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1990,7 +1990,8 @@ async function hus3d(u) {
       // steinkirker (store kirker): naturstein, lavere vegger og bratt tak; et sammensatt omriss får valmtak langs hovedretningen
       const stein = kl === 'kirke' && BY && BY.steinKirke && BY.steinKirke(f.areal, i);
       if (stein && !(o.e.vf > 0)) { veggF[0] = .96; veggF[1] = .95; veggF[2] = .93; }
-      if (kl === 'kirke' && fall0 && !enkel && !dTak) { const r2 = Math.max(0, f.lu / 2 - f.lv / 2); dTak = { valm: { a: [f.sx - f.ux * r2, f.sy - f.uy * r2], b: [f.sx + f.ux * r2, f.sy + f.uy * r2] } }; fall = true; }
+      // (låver: OSM-omrisset med låvebru/tilbygg er sjelden et rent rektangel – flatt tak på en låve så rart ut, Ryfylke 21. nov)
+      if ((kl === 'kirke' || (kl === 'låve' && f.rekt > .45)) && fall0 && !enkel && !dTak) { const r2 = Math.max(0, f.lu / 2 - f.lv / 2); dTak = { valm: { a: [f.sx - f.ux * r2, f.sy - f.uy * r2], b: [f.sx + f.ux * r2, f.sy + f.uy * r2] } }; fall = true; }
       if (kl === 'kirke' && fall && BY && BY.KIRKE) { const mk = mønFor('kirke', dTak && dTak.rekt ? Math.max(...dTak.rekt.map(q => q.lv)) : f.lv, h * 1.6), vg = Math.max(5, Math.min(h - mk, BY.KIRKE.maksVegg)); topp = bunn + 1 + vg + mk; P.topp = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX + vg + mk; }
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge (i bygårder bare butikkfronten) og et skilt over døra
       if (kj && !(bs && bs.gate)) { const c = rgb(kj[1]), a = bs ? .25 : .6; for (let q = 0; q < 3; q++) veggF[q] = veggF[q] * (1 - a) + c[q] * a; }
