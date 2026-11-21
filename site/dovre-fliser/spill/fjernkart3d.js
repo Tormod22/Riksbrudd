@@ -33,7 +33,7 @@
     // fine), straks; de som mangler på nivå zt lages etterpå i bakgrunnen og tegnes inn i bildet etter hvert (etterFyll)
     const tegnFlis = (z, x, y, t) => { const sp = span(z); g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); };
     const mangler = [];
-    for (let z = Math.max(ZMIN, zt - 4); z <= zt; z++) { const [x0, y0, x1, y1] = flisområde(b, z), [ax, ay, bx, by] = flisområde(OMRÅDE, z);
+    for (let z = Math.max(ZMIN, zt - 4); z <= Math.min(ZMAX, zt + 3); z++) { const [x0, y0, x1, y1] = flisområde(b, z), [ax, ay, bx, by] = flisområde(OMRÅDE, z);
       for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) {
         const t = typeof FERDIG !== 'undefined' ? FERDIG.get(z + '/' + x + '/' + y) : null; if (t && t.c) tegnFlis(z, x, y, t); else if (z === zt) mangler.push([x, y]); } }
     const valg = { ...VIS, skygge: false, koter: false, traer: false, asfalt: true };
@@ -41,9 +41,19 @@
     if (typeof naturfarger === 'function') { const im = g.getImageData(0, 0, TW, TW); naturfarger(im.data, TW); g.putImageData(im, 0, 0); }
     const v = await høyder, H = new Float32Array(N * N);
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const h = bilin(v, cx - S + i * steg, cy + S - j * steg); H[j * N + i] = h === h ? h : 0; }
+    relieff(g, H, N, steg, TW);
     return { cx, cy, S, N, H, c, etter: { zt, mangler, valg, tegnFlis, mpp } };
   }
 
+  // relieff: lier mot nordvest lysere, mot sørøst mørkere (fra høydene, strukket over bildet) – så et grovt eller ensfarget kartbilde
+  // (bare grove 2D-fliser) ikke blir en flat flate. Claudes forslag: styrke ±35 %.
+  function relieff(g, H, N, steg, TW) {
+    const c = document.createElement('canvas'); c.width = c.height = N; const cg = c.getContext('2d'), im = cg.createImageData(N, N);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const h = (a, b) => H[Math.max(0, Math.min(N - 1, b)) * N + Math.max(0, Math.min(N - 1, a))];
+      const dx = (h(i + 1, j) - h(i - 1, j)) / (2 * steg), dy = (h(i, j - 1) - h(i, j + 1)) / (2 * steg), l = Math.max(-1, Math.min(1, (-dx + dy) * 2.2)), q = (j * N + i) * 4;
+      const v = 128 + l * 128 * .35; im.data[q] = im.data[q + 1] = im.data[q + 2] = v; im.data[q + 3] = 255; }
+    cg.putImageData(im, 0, 0); g.save(); g.globalCompositeOperation = 'overlay'; g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, TW, TW); g.restore();
+  }
   function sett(d) {
     const R = R3, geo = new THREE.PlaneGeometry(2 * d.S, 2 * d.S, d.N - 1, d.N - 1), pos = geo.attributes.position;
     // PlaneGeometry: rad for rad ovenfra (y = +S først), venstre til høyre – samme rekkefølge som H
@@ -56,9 +66,17 @@
     mat.onBeforeCompile = sh => {
       sh.uniforms.uInn = uInn;
       sh.vertexShader = 'varying vec2 vFjernW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vFjernW = (modelMatrix * vec4(transformed, 1.0)).xy;');
-      sh.fragmentShader = 'uniform vec3 uInn;\nvarying vec2 vFjernW;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n  if (max(abs(vFjernW.x - uInn.x), abs(vFjernW.y - uInn.y)) < uInn.z) discard;');
+      // skog sett ovenfra: grønne punkter får mørke prikker (kroner og skygger) (runde kroner i ruter på 7 m, flekker på 23 m), så skogen ikke er en flat
+      // grønn flate (det detaljerte utsnittet har ekte trær) – Claudes forslag (styrke 0,3 og 0,15)
+      sh.fragmentShader = 'uniform vec3 uInn;\nvarying vec2 vFjernW;\nfloat fjHash(vec2 p) { return fract(sin(dot(floor(p), vec2(12.9898, 78.233))) * 43758.5453); }\n' + sh.fragmentShader
+        .replace('void main() {', 'void main() {\n  if (max(abs(vFjernW.x - uInn.x), abs(vFjernW.y - uInn.y)) < uInn.z) discard;')
+        .replace('#include <map_fragment>', `#include <map_fragment>
+  float fjGr = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 9.0, 0.0, 1.0);
+  vec2 fjC = vFjernW / 7.0, fjF = fract(fjC) - 0.5 - (vec2(fjHash(fjC), fjHash(fjC + 3.1)) - 0.5) * 0.45;
+  float fjKrone = (1.0 - smoothstep(0.22, 0.42, length(fjF))) * step(0.3, fjHash(fjC + 9.0));
+  diffuseColor.rgb *= 1.0 - fjGr * (0.32 * fjKrone + 0.12 * step(0.6, fjHash(vFjernW / 23.0 + 7.0)));`);
     };
-    mat.customProgramCacheKey = () => 'fjernkart-1';
+    mat.customProgramCacheKey = () => 'fjernkart-3';
     const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.renderOrder = 1; mesh.name = 'fjernkart';
     kast(); R.scene.add(mesh); F.mesh = mesh; F.tex = tex; F.uInn = uInn; F.cx = d.cx; F.cy = d.cy; F.S = d.S; F.nr = (F.nr || 0) + 1; plasser(R);
     etterFyll(d, F.nr);
