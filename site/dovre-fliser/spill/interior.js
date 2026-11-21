@@ -142,7 +142,7 @@
     venterom: [['vegg', 'skranke', 1, { sider: 'kort' }], ['rad', 'benk', 6, { fri: 1 }], ['vegg', 'plante', 2, { fri: .5 }]],
     behandlingsrom: [['vegg', 'undersøkelsesbenk', 1], ['vegg', 'pult', 1], ['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'medisinskap', 1], ['vegg', 'stol', 1, { fri: .4 }]],
     // fjøset: båsrekker langs langveggene (gjødselkanal bak, fôrbrett foran mot fôrgangen i midten), melkerommet med tank og vask
-    fjøs: [['rad', 'båsrekke', 8, { sider: 'lang', fri: 1.4 }], ['vegg', 'fôrvogn', 1, { fri: 1.2, sider: 'kort' }], ['vegg', 'høyball', 2, { fri: 1.4, sider: 'kort' }], ['vegg', 'tønne', 1], ['vegg', 'melketank', 1, { fri: 1.2 }], ['midt', 'traktor', A => A > 90 ? 1 : 0, { fri: 1.5 }]],
+    fjøs: [['rad', 'båsrekke', 8, { sider: 'lang', fri: 1.4, iVeien: true }], ['vegg', 'fôrvogn', 1, { fri: 1.2, sider: 'kort' }], ['vegg', 'høyball', 2, { fri: 1.4, sider: 'kort' }], ['vegg', 'tønne', 1], ['vegg', 'melketank', 1, { fri: 1.2 }], ['midt', 'traktor', A => A > 90 ? 1 : 0, { fri: 1.5 }]],
     melkerom: [['vegg', 'melketank', 1, { fri: .6 }], ['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'hylle', 1]],
     // industri: sag (sagbenk, plank, tørkestativ), maskinhall (maskiner, traverskran, sveisebås, stålplater), prosesshall (tanker, rør, ventiler)
     sag: [['midt', 'sagbenk', 1, { fri: 2 }], ['rad', 'plankestabel', A => Math.min(8, Math.floor(A / 50)), { fri: 1.6 }], ['vegg', 'arbeidsbenk', 1], ['vegg', 'vedstabel', 2]],
@@ -385,7 +385,10 @@
         if (k.velg === 'størst') r = F.reduce((a, b) => b.areal > a.areal ? b : a);
         else if (k.velg === 'minst') r = F.reduce((a, b) => b.areal < a.areal ? b : a);
         else if (k.velg === 'nær') r = F.reduce((a, b) => Math.hypot(...midt(b).map((v, i) => v - dørPkt[i])) < Math.hypot(...midt(a).map((v, i) => v - dørPkt[i])) ? b : a);
-        else if (/^ved:/.test(k.velg)) { const mål = L.find(x => x.rolle === k.velg.slice(4)); const V = mål ? F.filter(x => ved(x, mål)) : []; r = (V.length ? V : F).reduce((a, b) => b.areal > a.areal ? b : a); }
+        else if (/^ved:/.test(k.velg)) { const mål = L.find(x => x.rolle === k.velg.slice(4));
+          // vegg i vegg i samme bånd, ellers rett over korridoren (overlapper langs), ellers det største
+          const V = mål ? F.filter(x => ved(x, mål)) : [], O = mål ? F.filter(x => x.bånd !== mål.bånd && Math.min(x.u1, mål.u1) - Math.max(x.u0, mål.u0) > 1) : [];
+          r = (V.length ? V : O.length ? O : F).reduce((a, b) => b.areal > a.areal ? b : a); }
         if (r) r.rolle = k.rolle; } }
   }
 
@@ -604,7 +607,7 @@
       rad(r, 'kjøledisk', Math.max(1, Math.floor(bred / 3)), { fri: 1.2 }, [bak]); if (A > 150) rad(r, 'kjøledisk', 2, { fri: 1.2 }, [dybdeV ? (mot > 0 ? 3 : 1) : (mot > 0 ? 0 : 2)]);
       // reolene: rader innover fra fronten, 2,7 m mellom radene, midtgang på tvers, fri sone foran og ved bakveggen
       const midt = dyp * .55;
-      yield* rutenett(r, 'reol', { du: dybdeV ? 2.7 : 2.5, dv: dybdeV ? 2.5 : 2.7, mU: 1.6, mV: 1.6, langsU: !dybdeV, fri: 1.4, maks: 40,
+      yield* rutenett(r, 'reol', { du: dybdeV ? 2.7 : 2.5, dv: dybdeV ? 2.5 : 2.7, mU: 1.6, mV: 1.6, langsU: !dybdeV, fri: 1.4, maks: 48, iVeien: true,
         hopp: (cu, cv) => { const a = inn(cu, cv); return a < front + 2.2 || a > dyp - 2.4 || Math.abs(a - midt) < 1.3; } });
       if (!pl.møbler.some(m => m.type === 'kasse')) etSted(r, 'kasse');
     }
