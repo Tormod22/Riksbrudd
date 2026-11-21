@@ -447,3 +447,79 @@ kjøring-hjelperens; Krig-knappen manglet i bunnmenyen på Dovre-testsiden (finn
 
 **Mobilkontrollen** (`SJEKK_PROFIL=mobil PORT=8933`, 523 s): 125 ok, 1 feil = versjonsmerkene (versjon.py var ikke kjørt). `versjon.py` er kjørt
 etterpå (bare `?v=`-merkene i index.html endret) – må kjøres på nytt etter flettingen uansett.
+
+# Runde 12 (21. nov natt, kritikk E/F)
+
+Pakke «plass» (skjermplassen på liggende telefon – brukeren spiller selv slik). Gren `claude/natt18-ui`, port 8963. Fasit: kritiker E
+(`kritikk3/tlf/`, 844 × 390, berøring) og feillista til kritiker F (PC). Alle tall er Claudes forslag. Prøveskript og bilder: scratchpad
+`natt12/ui/` (start.js = oppstart som spiller, bilder.js = kart/Leir/brakke/morgenmøtet, start2.js = forside/karakterskaper/steg 3 etter
+omlasting/leirvalg, angrep.js = angrep med varsler og stoppkort, gaa.js = gåmodus, vakt.js = vakta). Før: `foer-*.png` (+ kritikerens bilder);
+etter: `e1-*`, `e2-*`, `e3-*`, `e1gaa-*`, `pc-*` (1400 × 820).
+
+| # | Punkt | Status |
+|---|---|---|
+| 1 | Over halve skjermen dekket (opplæring, Leir-panelet, byggebanneret) | rettet |
+| 2 | Leirvalg-boksen midt over kartet | rettet (PC og telefon) |
+| 3 | Forsiden og karakterskaperen liggende | rettet |
+| 4 | Omlasting i steg 3 mistet valgene | rettet (feilen var rekkefølgen på skriptene) |
+| 5 | Morgenmøtet under Deg-panelet | rettet |
+| 6 | Sju bokser under angrep / overlevelsesvarsler fast | rettet (telefon) |
+| 7 | Klyping zoomet hele siden | rettet (meta + touch-action + gesturestart) |
+| 8 | Gåmodus dekker det meste, «Gå ut» på minikartet | delvis (se under) |
+| 9 | Tastaturhint på telefon, Tropper lyste i dager | rettet |
+
+1. **Opplæringen** (`opplaering.js`): liggende telefon (`liggTlf()`) står ruta lagt sammen som én tynn brikke (nummer + tittel, 36 px) nede til
+   venstre; trykk på brikka eller + åpner steget (`åpnetLigg` = steget du åpnet; – legger det sammen uten å endre det lagrede valget
+   «riksbrudd-opplaering-sammen»). «✓ Gjort» er også én linje. Under et angrep viker ruta helt på liggende telefon.
+   **Leir-menyen og de andre høye panelene** (`telefon.js mkomVed()`, `skjermlag.js løft()`): med et panel som er høyere enn 45 % av skjermen og
+   smalere enn 62 % (Leir, Folk, Deg, sekken, Region, krigskartet …) står bunnmenyen som en smal rad med ikoner (46 × 42 px, uten tekst) ved
+   siden av panelet (`body.mkomved`, `--mkomx`; `mkomvedh` når panelet står til høyre), og `løft()` slipper panelet helt ned når det ikke
+   overlapper bunnmenyen. De fire tallene øverst i Leir-menyen står på én smal rad (`leir-visning.js`, bare CSS), så byggekortene kommer
+   høyere opp: Leir-menyen 339 px høy (før 281), tre byggekort synlige uten å rulle (før 0).
+   **Byggebanneret** (`leir-visning.js kortBanner()`): liggende én linje tekst (trykk for alle detaljene, ⓘ) og én rad små knapper: ⟲ ⟳ ▦
+   (rutenett) ⇤ (inntil naboen) ⧉ (fortsett) og «Kjøp og bygg · 5 mill. kr», «Til planen», ✕. Knappene beholder teksten (`textContent`), bare
+   CSS-en viser `data-kort`; veksleknapper som er på, har klassen `slått`. 71 px høyt (før ca. 140 px). PC uendret.
+2. **Leirvalget** (`oppstart-visning.js`, CSS): boksen står øverst til venstre under klokka på PC (loggen er til høyre), øverst til høyre på
+   liggende telefon (venstre for zoomknappene), tekst venstrestilt, maks 380/320 px. Stående telefon som før (nede).
+3. **Forsiden** (`site/index.html`): liggende og lav skjerm (`orientation:landscape and max-height:560px`) i to kolonner – logo og tekst til
+   venstre, «Spill nå»-kortene til høyre; «Spill i Rogaland» står 49–199 px ned (før under bretten). PC uendret.
+   **Karakterskaperen liggende** (`oppstart-visning.js`, `@media (orientation:landscape) and (max-height:500px)`): portrettet (og flagget i
+   steg 2) står til venstre og følger med når du ruller, overskriften er mindre, og knappene nederst («Neste: fraksjonen →») står alltid i
+   bunnen (sticky). Målt etter rulling: portrettet 25–287 px, «Neste» 331–371 px av 390.
+4. **Steg 3 etter omlasting**: et påbegynt utkast åpnes i steg 3 før `scenario.js` er lastet (den står lenger ned i index.html), og
+   `lagForm` ga opp. Nå leses `window.Scenario` når skjemaet tegnes og prøves igjen hvert 0,15 s (maks 100 ganger). Prøvd: 3 vanskelighetsgrader
+   og 4 scenarier etter omlasting.
+5. **Kort som venter på svar øverst** (`skjermlag.js`): båndene er nå alarm 24 < egne paneler 30–66 < kort 67 (hendelse, folket, spillform,
+   krigskort, og `ØVERST` = morgenmøtet) < pauselappen 68 < bunnmenyen 70. `test_skjermlag.js` er oppdatert. Et trykk på et varsel mens et
+   slikt kort står (`narhud.js`, `venteKort()`), åpner ikke panelet – kortet blinker (`kortblink`). PC også.
+6. **Varslene** (`narhud.js samle()`, bare telefon og bare for spilleren / `NarHud.test`): karakterens varsler («Du er uttørket», «… utsultet»,
+   «… utslitt») slås sammen til én brikke; står det mer enn én brikke, vises den viktigste + «+3 varsler», som folder ut lista i 9 s
+   (`VARSEL_ÅPEN`). **Stoppkortet** (`telefon.js iBanner()`): på telefon henger «⏭ Stoppet …» rett under angrepsbanneret i samme bredde som én
+   boks (`#flytkort.ibanner`). Opplæringen viker under angrep (1). Den motstridende teksten i banneret («framme om 22 min» / «kampen har
+   begynt») er ikke min fil (krig).
+7. **Klypezoom**: `<meta viewport>` har `maximum-scale=1, user-scalable=no`; `html, body{ touch-action:pan-x pan-y }` og `pan-y` på panelene
+   (telefon.js); iPhone bryr seg ikke om meta-taggen, så `gesturestart` og `touchmove` med to fingre utenfor et canvas stoppes. Kartet
+   (canvas, `touch-action:none`) klyper som før. Ikke prøvd på ekte iPhone (Playwright har ikke Safari-gestene).
+8. **Gåmodus** (`narhud.js` CSS, `meny.js`): kildeteksten er skjult når du går på telefon og står nederst i ☰ («Kilder: …», alltid, `p.mkilder`);
+   helse- og våpenruta er 122 px brede (før 150) uten våpennavnet (det står på våpenbyttet), våpenbyttet er en liten knapp; «Gå inn/ut»
+   (`#dorknapp`) står nede til høyre over Huk/Hopp (over «Sett deg inn» når begge vises), ikke oppå minikartet. Ikke gjort: kompassbåndet,
+   minikartet og Skyt er like store (andres filer), stedsnavnet i lufta og «3D går tregt»-ruta.
+9. **Tastaturhint** (`telefon.js utenTaster()`): på berøringsskjerm tas en tastetekst i parentes på slutten av knappeteksten bort («… (Tab)»,
+   «Gå ut (F)», «(Esc)» – ikke tall som «(4)»); bare den siste tekstbiten, bare for spilleren. **Opplæringsringen** lyser ikke når steget er
+   utsatt («Senere»), har stått lenge (`Opplaering.lenge`) eller du har lagt opplæringen sammen selv (Tropper lyste i dager).
+
+**Feil funnet underveis:** `iBanner()` brukte `Telefon.test` før `window.Telefon` fantes – på en telefon (body.kort fra start) stoppet hele
+telefon.js ved lasting. Rettet (`window.Telefon && …`), og vakta fant den (mobilprofilen).
+
+**Fellesfiler endret:** `site/dovre-fliser/index.html` (bare `<meta viewport>`), `spill/meny.js` (kildelinja nederst i ☰ + én CSS-regel – står
+i oppdraget mitt), `pipeline/fliser/test_skjermlag.js` (de nye båndene). Ellers bare mine filer (leir-visning.js: bare banneret og CSS for
+statusraden; oppstart-visning.js: CSS for leirvalg og liggende karakterskaper + `lagForm` i steg 3).
+
+**Vakt** (`vakter/ui.js`, «runde 12»): setter vinduet til 844 × 390 og sjekker meta/touch-action, kort over panelene (zFor), opplæringen som én
+linje + trykk åpner/– lukker (uten å endre lagret valg), Leir-menyen helt ned med bunnmenyen ved siden av (og tilbake når den lukkes),
+byggebanneret ≤ 96 px med ikoner og knappetekstene beholdt, varslene samlet + «+n» folder ut, et varsel åpner ikke Deg over et kort (blink),
+stoppkortet under banneret, kildene skjult og «Gå ut» nede når du går, tastehint-regelen og kildene i ☰. Grønn på PC og mobil (24 s for hele
+ui-vakta). Prøvd med feil: med den gamle skjermlag.js fant den «kort som venter på svar ligger under panelene» og «Leir-menyen går ikke helt
+ned (326 av 390)»; med den gamle opplaering.js «opplæringen er ikke én linje liggende (124 px)».
+**Ustabil sjekk som var der før:** «farten du valgte med kortet oppe, gjelder ikke etter svaret (10)» (runde 8-delen) slår av og til feil både
+med og uten endringene mine – flyt.js sin automatiske nedbremsing for «kort» rekker iblant å slå inn. Ikke endret.

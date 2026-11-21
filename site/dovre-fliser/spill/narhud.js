@@ -65,7 +65,15 @@ html body.kort.tlfligg.gaar:not(.kjorer) #kjorknapp{ left:auto; right:calc(10px 
 html body.kort.tlfligg.gaar:not(.kjorer) #nhud .helse{ left:calc(152px + ${L}); right:auto; transform:none; margin:0; top:auto; bottom:calc(8px + ${Bn}); width:150px; box-sizing:border-box; padding:3px 7px; }
 html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ left:calc(152px + ${L}); right:auto; transform:none; margin:0; top:auto; bottom:calc(46px + ${Bn}); width:150px; min-width:0; box-sizing:border-box; padding:3px 7px; text-align:left; }
 body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen .vbilde{ float:right; width:46px; height:24px; margin:1px 0 0 4px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen small{ font-size:11px; }
-body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen span{ font-size:12px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen em{ font-size:11px; min-height:0; }`;
+body.kort.gaar #kilde{ display:none; }
+/* RUNDE 12 (21. nov, kritiker E: «grensesnittet i gåmodus dekker det meste»): kildeteksten står i ☰ når du går på telefon, helse- og
+   våpenruta er mindre (120 px), våpenbyttet en liten knapp, og «Gå ut»/«Gå inn» står nede til høyre over Huk/Hopp – ikke oppå minikartet. */
+html body.kort.tlfligg.gaar:not(.kjorer) #nhud .helse, html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ width:122px; padding:2px 6px; }
+html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ bottom:calc(38px + ${Bn}); } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen .vbilde{ width:36px; height:18px; }
+body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen small{ display:none; } body.kort.tlfligg.gaar:not(.kjorer) #byttvapen{ min-height:30px; padding:2px 8px; font-size:11px; opacity:.85; }
+html body.kort.tlfligg.gaar:not(.kjorer) #dorknapp{ left:auto; right:calc(10px + ${Rt}); top:auto; bottom:calc(66px + ${Bn}); transform:none; min-height:40px; padding:4px 14px; font-size:14px; }
+html body.kort.tlfligg.gaar:not(.kjorer):has(#kjorknapp.på) #dorknapp{ bottom:calc(116px + ${Bn}); }
+body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen span{ font-size:12px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen em{ font-size:11px; min-height:0; }`;
   document.head.appendChild(css10);
   { const rad = document.querySelector('.knapper'), m = document.createElement('button'); m.id = 'gaamer'; m.type = 'button'; m.textContent = '⋯'; m.title = 'Flere knapper'; m.setAttribute('aria-label', 'Flere knapper'); m.setAttribute('aria-expanded', 'false');
     const sett = på => { document.body.classList.toggle('gaamer', på); m.setAttribute('aria-expanded', String(på)); };
@@ -213,11 +221,33 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:18px; } body.kort.
     // brikker fra andre moduler: window.VARSEL_TILLEGG = [() => [{ i: ikon, k: 'fare' | '' | 'god', t: tekst, s: undertekst, f: ved trykk }]]
     for (const fn of window.VARSEL_TILLEGG || []) { try { for (const b of fn() || []) ut.push(b); } catch (e) { /* et tillegg som feiler, skal ikke stoppe de andre varslene */ } }
     return ut.slice(0, 5); }
+  // RUNDE 12 (21. nov, kritiker E – liggende telefon): (a) et trykk på et varsel mens et kort venter på svar (morgenmøtet, en hendelse …)
+  // åpnet et panel over kortet – nå blinker kortet i stedet; (b) under angrep lå fire varsler oppå banneret, stoppkortet og opplæringen, og
+  // «uttørket/utsultet/utslitt» lå fast et døgn og dekket kartet: på telefon slås karakterens varsler sammen til én brikke, og står det flere
+  // enn én brikke, vises bare den viktigste + en brikke «+3 varsler» som folder ut lista (folder seg sammen igjen etter VARSEL_ÅPEN ms).
+  // Bare for spilleren (ikke i testene før NarHud.test = true). Tallet er Claudes forslag.
+  const VARSEL_ÅPEN = 9000, VENTEKORT = ['morgenkort', 'hendelse', 'samfunnkort', 'formkort', 'krigkort'];
+  let varslerÅpne = 0;
+  const forSpiller = () => !navigator.webdriver || (window.NarHud && NarHud.test === true);
+  function venteKort() { for (const id of VENTEKORT) { const e = $(id); if (e && e.classList.contains('på') && e.getClientRects().length) return e; } return null; }
+  function blink(e) { e.classList.remove('kortblink'); void e.offsetWidth; e.classList.add('kortblink'); }
+  { const st = document.createElement('style'); st.textContent = `.kortblink{ animation:kortblink2 .8s ease-out 2; } @keyframes kortblink2{ 40%{ box-shadow:0 0 0 3px #f0dc9a, 0 0 22px rgba(240,220,154,.8); } }
+#varsler button.flere{ border-left-color:#c9b26a; font-weight:600; } #varsler button.flere::after{ content:' ▾'; } #varsler.åpne button.flere::after{ content:' ▴'; }
+body.kort #varsler button{ max-width:62vw; } body.kort #varsler button small{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }`; document.head.appendChild(st); }
+  function samle(B) { if (!forSpiller() || !document.body.classList.contains('kort')) return B;
+    const meg = B.filter(b => /^Du er /.test(b.t)), andre = B.filter(b => !/^Du er /.test(b.t));
+    if (meg.length > 1) andre.push({ i: meg[0].i, k: 'fare', t: 'Du er ' + meg.map(b => b.t.slice(6)).join(', '), s: 'drikk, spis og hvil – trykk for Deg', f: meg[0].f });
+    else andre.push(...meg);
+    return andre; }
   function tegnVarsler() { { const åpen = ['leirmeny', 'folkmeny', 'hjelp', 'lagmeny'].some(id => $(id) && $(id).classList.contains('på')) && VW < 1500; varsler.style.display = åpen ? 'none' : ''; }
-    if ($('oppstart') && $('oppstart').classList.contains('på')) { if (brikkeNøkkel) { varsler.innerHTML = ''; brikkeNøkkel = ''; } return; } const B = brikker(), nøkkel = B.map(b => b.k + b.t + b.s).join('|'); if (nøkkel === brikkeNøkkel) return; if (window.pekerNede && pekerNede(varsler)) return; brikkeNøkkel = nøkkel; varsler.innerHTML = '';
-    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = b.f;
+    if ($('oppstart') && $('oppstart').classList.contains('på')) { if (brikkeNøkkel) { varsler.innerHTML = ''; brikkeNøkkel = ''; } return; }
+    const alle = samle(brikker()), samlet = forSpiller() && document.body.classList.contains('kort') && alle.length > 1, åpne = samlet && performance.now() < varslerÅpne;
+    const B = samlet && !åpne ? alle.slice(0, 1) : alle, nøkkel = B.map(b => b.k + b.t + b.s).join('|') + (samlet ? '|+' + alle.length + (åpne ? 'å' : '') : ''); if (nøkkel === brikkeNøkkel) return; if (window.pekerNede && pekerNede(varsler)) return; brikkeNøkkel = nøkkel; varsler.innerHTML = ''; varsler.classList.toggle('åpne', åpne);
+    for (const b of B) { const k = el('button', { type: 'button', klasse: b.k, 'data-ikon': b.i || 'varsel' }, el('span', {}, b.t), el('small', {}, b.s)); k.onclick = () => { const kort = forSpiller() ? venteKort() : null; if (kort) { blink(kort); return; } varslerÅpne = 0; b.f(); };
       // en brikke kan ha en egen knapp ved siden av seg (b.knapp = { t, f }), f.eks. «Kjøp 500 l» ved «Tom for diesel» (runde 6)
-      if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); } }
+      if (b.knapp) { const kk = el('button', { type: 'button', klasse: 'handling' }, b.knapp.t); kk.onclick = b.knapp.f; varsler.appendChild(el('div', { klasse: 'rad' }, k, kk)); } else varsler.appendChild(k); }
+    if (samlet) { const f = el('button', { type: 'button', klasse: 'flere', 'data-ikon': 'varsel', 'aria-expanded': String(åpne) }, el('span', {}, åpne ? 'Færre varsler' : `+${alle.length - 1} ${alle.length > 2 ? 'varsler' : 'varsel'}`));
+      f.onclick = () => { varslerÅpne = åpne ? 0 : performance.now() + VARSEL_ÅPEN; brikkeNøkkel = ''; tegnVarsler(); løftVarsler(); }; varsler.appendChild(f); } }
   // (runde 8, telefonkritikeren: «varselboksen nede til venstre ligger over kompasset og målestokken») – på telefon står brikkene over
   // nordpila, målestokken og kildeteksten (de som står nede til venstre), ikke oppå dem
   // (runde 10) også over opplæringsruta når den står nede til venstre (de lå oppå hverandre på liggende telefon)

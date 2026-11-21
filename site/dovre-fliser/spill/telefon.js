@@ -119,8 +119,24 @@ body.kort.tlfligg #tropppanel .opprett{ position:static; flex:none; margin:6px -
 body.kort #mkom button:not(.på){ background:linear-gradient(180deg,#2e2516,#191309); }
 body.kort.mkom #ressursvalg{ bottom:calc(64px + ${B}); }
 body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw - 24px - ${L} - ${Rt})); max-height:calc(100% - var(--topp,44px) - 80px - ${B}); overflow-y:auto; }
+body.kort #flytkort.ibanner{ margin:0; transform:none; padding:2px 6px 3px 8px; font-size:12.5px; line-height:1.25; background:#22100b; border-color:#e0714f; border-top:1px dashed #6a3426; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+body.kort #flytkort.ibanner button{ min-height:32px; padding:0 8px; font-size:12.5px; } body.kort #flytkort.ibanner > span{ overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+/* RUNDE 12 (21. nov, kritiker E – liggende telefon): med et høyt panel åpent til venstre (Leir, Folk, Deg …) eller til høyre står bunnmenyen
+   som en smal rad med ikoner ved siden av panelet (body.mkomved, --mkomx), og panelet går helt ned. Tallene (46 × 42 px) er Claudes forslag. */
+body.kort.tlfligg.mkomved #mkom{ right:auto; left:var(--mkomx); justify-content:flex-start; gap:3px; }
+body.kort.tlfligg.mkomved.mkomvedh #mkom{ left:auto; right:var(--mkomx); justify-content:flex-end; }
+body.kort.tlfligg.mkomved #mkom button{ flex:0 0 46px; width:46px; max-width:46px; height:42px; font-size:0; letter-spacing:0; }
+body.kort.tlfligg.mkomved #mkommer{ left:var(--mkomx); right:calc(60px + ${Rt}); bottom:calc(54px + ${B}); } body.kort.tlfligg.mkomved.mkomvedh #mkommer{ left:calc(8px + ${L}); right:var(--mkomx); }
+body.kort.tlfligg.mkomved #mkom button::before{ width:21px; height:21px; } body.kort.tlfligg.mkomved #mkom button .merke{ font-size:9.5px; }
+/* RUNDE 12: klyping med to fingre på et panel zoomet hele nettsiden (iPhone bryr seg ikke om user-scalable=no). Siden kan bare rulles;
+   kartet (touch-action:none) tar klypingen selv. */
+html, body{ touch-action:pan-x pan-y; } body.kort :is(#leirmeny, #folkmeny, #tropppanel, #karakterark, #sekk, #krig, #panel, #opplaering, #varsler, #alarm, #morgenkort, #hendelse, #samfunnkort, #byggvalg){ touch-action:pan-y; }
 `;
   document.head.appendChild(css);
+  // RUNDE 12: iPhone (Safari) zoomer siden med to fingre uansett meta-taggen – gesturestart stoppes (kartet bruker pekerhendelser, ikke denne).
+  // To fingre som beveger seg utenfor kartet stoppes også – men ikke når du går (styrespaken og blikket brukes med to fingre samtidig).
+  document.addEventListener('gesturestart', e => { e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1 && !document.body.classList.contains('gaar') && !(e.target && e.target.closest && e.target.closest('canvas'))) e.preventDefault(); }, { passive: false });
 
   // paneler som aldri skal regnes som «dekker raden nederst»
   const IKKE = new Set(['mkom', 'kommando', 'opplaering', 'logg', 'nhud', 'kontrollrom', 'oppstart', 'feil', 'kilde', 'skala', 'nordpil', 'minikart', 'kompass']);
@@ -141,7 +157,13 @@ body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw -
       .filter(r => r.width > 100 && r.height > 20 && r.height < H * .6 && r.top < H / 2 && r.left < a.right && a.left < r.right).sort((x, y) => x.top - y.top);
     let y = a.top; for (const r of kort) if (r.top < y + a.height && y < r.bottom) y = r.bottom + 6;
     k.style.top = y !== a.top && y + a.height < H - 60 ? Math.round(y) + 'px' : ''; }
-  function stoppkortNed() { ned('varsel'); ned('flytkort'); }
+  // RUNDE 12 (kritiker E: sju bokser oppå hverandre under angrepet): på telefon henger stoppkortet («⏭ Stoppet: … Spol videre ×») seg rett
+  // under angrepsbanneret som en smal linje i samme bredde, så de leses som én boks. Bare for spilleren (Telefon.test i testene).
+  function iBanner() { const k = document.getElementById('flytkort'), a = document.getElementById('alarm'), b = document.body;
+    const på = b.classList.contains('kort') && (!navigator.webdriver || (window.Telefon && Telefon.test === true)) && k && a && k.classList.contains('på') && a.classList.contains('på') && a.getClientRects().length > 0 && k.getClientRects().length > 0;
+    if (!på) { if (k && k.classList.contains('ibanner')) { k.classList.remove('ibanner'); for (const q of ['left', 'width', 'top', 'right', 'max-width']) k.style.removeProperty(q); } return false; }
+    const r = a.getBoundingClientRect(); k.classList.add('ibanner'); k.style.setProperty('left', Math.round(r.left) + 'px'); k.style.setProperty('right', 'auto'); k.style.setProperty('width', Math.round(r.width) + 'px'); k.style.setProperty('max-width', 'none'); k.style.setProperty('top', Math.round(r.bottom - 1) + 'px'); return true; }
+  function stoppkortNed() { ned('varsel'); if (!iBanner()) ned('flytkort'); }
   // RUNDE 10: liggende telefon – hogstfelt-/rivelappen og byggebanneret står midt nede; er en meny åpen til venstre (eller høyre), står de
   // i den frie delen ved siden av menyen, så de ikke ligger oppå den
   const VED = ['ressursvalg', 'byggvalg', 'alarm'], MENY = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel'];
@@ -152,8 +174,17 @@ body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw -
       const r = m.getBoundingClientRect(), høyre = r.left < W / 2; e.dataset.ved = '1'; e.style.transform = 'none';
       if (høyre) { e.style.left = Math.round(r.right + 8) + 'px'; e.style.right = 'auto'; e.style.maxWidth = Math.max(160, W - r.right - 64) + 'px'; }
       else { e.style.right = Math.round(W - r.left + 8) + 'px'; e.style.left = 'auto'; e.style.maxWidth = Math.max(160, r.left - 16) + 'px'; } } }
+  // RUNDE 12: bunnmenyen ved siden av et høyt panel på liggende telefon (se CSS over). Panelene som kan stå slik:
+  const HØYE = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'sekk', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'panel', 'stridpanel', 'evpanel', 'krigpanel', 'degmeny', 'tropppanel'];
+  function mkomVed() { const b = document.body, W = window.innerWidth, H = window.innerHeight, m = document.getElementById('mkom');
+    let ved = null; if (b.classList.contains('tlfligg') && m && m.classList.contains('på')) for (const id of HØYE) { const e = document.getElementById(id); if (!e || !e.classList.contains('på') || !e.getClientRects().length) continue;
+      const r = e.getBoundingClientRect(); if (r.height < H * .45 || r.width > W * .62) continue; const venstre = r.left < W - r.right;
+      // så mye plass er det ved siden av panelet (zoomknappene til høyre tar 52 px)
+      const plass = venstre ? W - r.right - 60 : r.left - 16; if (plass < 150) continue; ved = { x: Math.round(venstre ? r.right + 8 : W - r.left + 8), h: !venstre }; break; }
+    if (b.classList.contains('mkomved') !== !!ved) b.classList.toggle('mkomved', !!ved);
+    if (ved) { b.classList.toggle('mkomvedh', ved.h); const v = ved.x + 'px'; if (b.style.getPropertyValue('--mkomx') !== v) b.style.setProperty('--mkomx', v); } else b.classList.remove('mkomvedh'); }
   function pass() {
-    flyt(); stoppkortNed(); try { vedMeny(); } catch (e) { /* neste runde */ }
+    flyt(); stoppkortNed(); try { vedMeny(); } catch (e) { /* neste runde */ } try { mkomVed(); } catch (e) { /* neste runde */ }
     const b = document.body; if (!b.classList.contains('kort')) { for (const k of ['mkomfull', 'tlfdekk', 'tlfopp', 'tlfligg']) if (b.classList.contains(k)) b.classList.remove(k); return; }
     const H = window.innerHeight, W = window.innerWidth, m = document.getElementById('mkom');
     // 13: liggende telefon
@@ -191,6 +222,12 @@ body.kort #ressursvalg{ box-sizing:border-box; max-width:min(560px, calc(100vw -
     if (r.width > W * .6) kam.y = s.y - (H / 2 - (topp + r.top) / 2) * kam.m; else kam.x = s.x - ((r.right + W) / 2 - W / 2) * kam.m;
     if (typeof skitten !== 'undefined') skitten = true; }
   setInterval(() => { if (document.body.classList.contains('kort')) seLag(); }, 250);
+  // RUNDE 12 (kritiker E: «tastaturhint på telefon», f.eks. «… (Tab)», «Gå ut (F)»): på berøringsskjerm tas en tastetekst i parentes på
+  // slutten av knappeteksten bort (bare den siste tekstbiten i knappen endres). Bare for spilleren – kontrollskriptet trykker etter teksten.
+  const TAST = /\s*\((?:Tab|Esc|Enter|Shift|Mellomrom|Ctrl\+\w|F\d{0,2}|[A-ZÆØÅ])\)\s*$/;
+  function utenTaster() { if (navigator.webdriver && !(window.Telefon && Telefon.test === true)) return; if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) return;
+    for (const b of document.querySelectorAll('button')) { const t = b.lastChild; if (!t || t.nodeType !== 3 || !TAST.test(t.nodeValue)) continue; t.nodeValue = t.nodeValue.replace(TAST, ''); } }
+  setInterval(utenTaster, 1500);
   setInterval(pass, 350); window.addEventListener('resize', pass); pass();
-  window.Telefon = { pass, seLag, test: false, SIDE, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
+  window.Telefon = { pass, seLag, test: false, SIDE, mkomVed, iBanner, utenTaster, TAST, ligg: () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2 };
 })();

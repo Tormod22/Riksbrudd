@@ -1,9 +1,9 @@
 'use strict';
 /* Riksbrudd – LAGENE PÅ SKJERMEN (19. nov, runde 6: det kritikerne sa om vinduer oppå hverandre og spill som går mens et kort venter).
  *  1. ÉN REKKEFØLGE for vinduene (z-index settes her, i bånd):
- *       kort som venter på svar (hendelse, folket, krigskort)  <  stoppkort og varsler  <  pausemerket  <  angrepsbanneret (alarm)
- *       <  panelene du åpner selv (Leir, Folk, Tropper, Deg, hjelpen ?, ☰, tegnforklaringen …): det du åpnet sist, ligger øverst,
- *          og et trykk i et panel løfter det fram  <  bunnmenyen på telefon  <  verktøytipset  <  ringen fra opplæringen.
+ *       stoppkort og varsler  <  angrepsbanneret (alarm)  <  panelene du åpner selv (Leir, Folk, Tropper, Deg, hjelpen ?, ☰, tegnforklaringen …): det du åpnet sist, ligger øverst,
+ *          og et trykk i et panel løfter det fram  <  kort som venter på svar (hendelse, folket, krigskort, morgenmøtet – runde 12)
+ *       <  pausemerket  <  bunnmenyen på telefon  <  verktøytipset  <  ringen fra opplæringen.
  *     Før: hendelseskortet «I LEIREN» lå oppå angrepsbanneret og «Forsvar leiren», hjelpen åpnet seg under Deg-panelet, og ☰ åpnet seg bak
  *     tegnforklaringen (liggende telefon) – alt etter tilfeldige z-index-tall i hver fil.
  *  2. KORT SOM VENTER PÅ SVAR SETTER SPILLET PÅ PAUSE: står et kort oppe (hendelse, spørsmål fra folket, spillformkort, krigskort som
@@ -23,7 +23,12 @@
  */
 (function (rot) {
   // båndene (Claudes forslag): alt annet på kartet (logg, varsler, zoomknapper …) ligger under 20 som før
-  const REGLER = { kort: 20, status: 21, pausemerke: 23, alarm: 24, selv: 30, selvMaks: 66, bunnmeny: 70, tips: 80, ring: 85, luft: 6 };
+  // RUNDE 12 (21. nov, kritiker E: «morgenmøtet havnet under Deg-panelet» – et trykk på varselet «Du er veldig tørst» åpnet Deg over møtet,
+  // og spillet sto på pause bak et panel man ikke så): kort som venter på svar ligger nå ØVERST, over panelene du åpner selv (men under
+  // bunnmenyen og tipsene), og pauselappen over kortet. Før: kort 20, pausemerke 23.
+  const REGLER = { kort: 67, status: 21, pausemerke: 68, alarm: 24, selv: 30, selvMaks: 66, bunnmeny: 70, tips: 80, ring: 85, luft: 6 };
+  // morgenmøtet venter også på svar (det setter selv spillet på pause, så det er ikke med i KORT, som styrer pausen her)
+  const ØVERST = ['morgenkort'];
   const KORT = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'], STATUS = ['flytkort', 'varsel'], ALARM = ['alarm'];
   // (runde 8) kortene som venter til et angrep er over (krigskortet og spillformkortet – seier/tap – kommer straks som før)
   const VENTER = ['hendelse', 'samfunnkort'];
@@ -36,9 +41,9 @@
   function orden(gammel, åpne) { const ny = gammel.filter(id => åpne.includes(id)); for (const id of åpne) if (!ny.includes(id)) ny.push(id); return ny; }
   // et panel spilleren trykket i, løftes fram
   const fram = (o, id) => (o.includes(id) ? o.filter(x => x !== id).concat(id) : o);
-  function zFor(id, o) { if (KORT.includes(id)) return REGLER.kort; if (STATUS.includes(id)) return REGLER.status; if (ALARM.includes(id)) return REGLER.alarm;
+  function zFor(id, o) { if (KORT.includes(id) || ØVERST.includes(id)) return REGLER.kort; if (STATUS.includes(id)) return REGLER.status; if (ALARM.includes(id)) return REGLER.alarm;
     const i = o.indexOf(id); return i < 0 ? null : Math.min(REGLER.selvMaks, REGLER.selv + i); }
-  const Skjermlag = { REGLER, KORT, SELV, VENTER, venter, orden, fram, zFor, test: false };
+  const Skjermlag = { REGLER, KORT, ØVERST, SELV, VENTER, venter, orden, fram, zFor, test: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Skjermlag; return; }
   rot.Skjermlag = Skjermlag;
   if (typeof document === 'undefined') return;
@@ -66,7 +71,7 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
   function settZ(e, z) { if (!satt.has(e)) satt.set(e, e.style.zIndex); const v = String(z); if (e.style.zIndex !== v) e.style.zIndex = v; }
   function lag() { if (!aktiv()) { for (const [e, z] of satt) e.style.zIndex = z; satt.clear(); o = []; return; }
     const åpne = SELV.filter(id => vises($(id))); o = orden(o, åpne);
-    for (const id of [...KORT, ...STATUS, ...ALARM, ...SELV]) { const e = $(id); if (!e) continue; const z = zFor(id, o); if (z !== null && vises(e)) settZ(e, z); else if (satt.has(e)) { e.style.zIndex = satt.get(e); satt.delete(e); } } }
+    for (const id of [...KORT, ...ØVERST, ...STATUS, ...ALARM, ...SELV]) { const e = $(id); if (!e) continue; const z = zFor(id, o); if (z !== null && vises(e)) settZ(e, z); else if (satt.has(e)) { e.style.zIndex = satt.get(e); satt.delete(e); } } }
   document.addEventListener('pointerdown', e => { if (!aktiv() || !e.target || !e.target.closest) return; const p = e.target.closest(SELV.map(id => '#' + id).join(',')); if (p && o.includes(p.id) && o[o.length - 1] !== p.id) { o = fram(o, p.id); lag(); } }, true);
 
   // ---------- 2: kort som venter på svar setter spillet på pause ----------
@@ -101,7 +106,10 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
     let grense = på ? m.getBoundingClientRect().top : Infinity; const op = $('opplaering'); if (på && op && op.classList.contains('liten') && vises(op) && op.getBoundingClientRect().top > window.innerHeight / 2) grense = Math.min(grense, op.getBoundingClientRect().top);
     grense -= REGLER.luft; const H = window.innerHeight;
     for (const id of LØFT) { const e = $(id); if (!e) continue; if (!på || !vises(e)) { tilbake(e); continue; }
-      const r = e.getBoundingClientRect(); if (r.bottom <= grense + 1 || r.height < 40) continue;
+      const r = e.getBoundingClientRect();
+      // (runde 12) liggende telefon: bunnmenyen står ved siden av panelet – da går panelet helt ned (et panel som alt var løftet, slippes)
+      { const mr = m.getBoundingClientRect(); if (B.classList.contains('tlfligg') && B.classList.contains('mkomved') && (r.right <= mr.left + 1 || r.left >= mr.right - 1)) { tilbake(e); continue; } }
+      if (r.bottom <= grense + 1 || r.height < 40) continue;
       if (!løftet.has(e)) løftet.set(e, { bottom: e.style.bottom, maxHeight: e.style.maxHeight, overflowY: e.style.overflowY });
       e.style.maxHeight = Math.max(90, Math.round(grense - Math.max(r.top, 0))) + 'px'; e.style.overflowY = 'auto';
       // står panelet fast i bunnen, flyttes det opp (toppen blir der den var)
