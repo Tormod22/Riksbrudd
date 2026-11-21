@@ -293,5 +293,15 @@
   "Tankbilen: laget går hjem",
   "Sender du et lag til tankbilen, får du samme radiovarsel som i Krig. Lappen viser «Vaktlaget på vei (43 min)», og når dieselen er hentet, går laget hjem til leiren av seg selv.",
   "Lag og strid"
+ ],
+ [
+  "Scenariets by",
+  "I «Hold byen» står byen du skal ta med navn i Krig («Ta Røysland (Kystalliansens, 9 km NV)»), med en gyllen ring i kartet og «Scenariets by» i tettstedspanelet. Holder du den, teller Krig døgnene («1,0 av 3 døgn» etter 24 timer). Mister du den, sier loggen at telleren starter på nytt.",
+  "Lag og strid"
+ ],
+ [
+  "Hvorfor tar ikke laget byen?",
+  "Krig viser kjent forsvar i mann før du sender et lag, og fredstiden (motstanderne slåss ikke om byer de første døgnene). Er forsvaret større enn laget, er Send rød. Står et lag ved et sted det ikke kan ta, skriver loggen hvorfor og spolingen stopper.",
+  "Lag og strid"
  ]
 ]

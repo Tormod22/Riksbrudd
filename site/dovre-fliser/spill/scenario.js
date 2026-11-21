@@ -63,12 +63,19 @@
     hold: { navn: 'Hold byen', dager: 8, tekst: 'Ta det nærmeste tettstedet, hold det i tre døgn i strekk og slå tilbake motangrepet. Frist: dag 8.',
       vurder(T, st) {
         if (!T.mål) return { status: 'pågår', tekst: 'Det er ikke noe tettsted i nærheten ennå.' };
-        if (T.holder(T.mål)) { if (st.holdtFra == null) st.holdtFra = T.tid; const d = (T.tid - st.holdtFra) / DØGN, A = T.angrep, slått = !A || A.slått || A.ingen;
+        // (runde 14, kritiker J: «Hold byen» navngir aldri byen) navnet, eieren og retningen fra leiren står i teksten når de er kjent
+        const by = T.målNavn || 'byen', om = T.målOm ? ` (${T.målOm})` : '';
+        // (runde 14, kritiker J: «0,9 av 3 døgn» etter 43 timer) telleren nullstilles bare når en annen side faktisk har tatt byen –
+        // ikke når eieren ennå ikke er lest inn etter en omlasting (T.mistet(id) = eieren er kjent og er ikke din)
+        const mistet = T.mistet ? T.mistet(T.mål) : !T.holder(T.mål);
+        if (T.holder(T.mål) || (st.holdtFra != null && !mistet)) { if (st.holdtFra == null) st.holdtFra = T.tid; const d = (T.tid - st.holdtFra) / DØGN, A = T.angrep, slått = !A || A.slått || A.ingen;
           if (d >= 3 && slått) return { status: 'vunnet', tekst: A && A.slått ? 'Du holdt byen i tre døgn og slo tilbake motangrepet.' : 'Du holdt byen i tre døgn.' };
           const ang = !A ? '' : A.slått ? ' Motangrepet er slått tilbake.' : A.pågår ? ' Motangrepet er i gang – hold byen!' : A.samler ? ' Fienden samler lag til et motangrep.' : ' Motangrepet er ikke kommet ennå.';
-          if (d >= 3) return { status: 'pågår', tekst: `Du har holdt byen i tre døgn.${ang} Slå det tilbake for å vinne.`, andel: .95 };
-          return { status: 'pågår', tekst: `Du holder byen: ${des(d)} av 3 døgn.${ang}`, andel: Math.min(.95, d / 3) }; }
-        st.holdtFra = null; return { status: 'pågår', tekst: 'Ta tettstedet: flytt et lag inn og hold det.', andel: 0 }; } },
+          if (d >= 3) return { status: 'pågår', tekst: `Du har holdt ${by} i tre døgn.${ang} Slå det tilbake for å vinne.`, andel: .95 };
+          return { status: 'pågår', tekst: `Du holder ${by}: ${des(d)} av 3 døgn.${ang}`, andel: Math.min(.95, d / 3) }; }
+        // byen er tapt etter at du holdt den: st.mistetVed = når (visningen melder det én gang og setter st.mistetMeldt)
+        if (st.holdtFra != null) { st.mistetVed = T.tid; st.mistetMeldt = false; }
+        st.holdtFra = null; return { status: 'pågår', tekst: `Ta ${by}${om}: flytt et lag inn og hold det i tre døgn.`, andel: 0 }; } },
     tre: { navn: 'Tre på fem døgn', dager: 5, tekst: 'Hold tre tettsteder samtidig før fem døgn er gått.',
       vurder(T) { return T.egne >= 3 ? { status: 'vunnet', tekst: 'Du holder tre tettsteder.' } : { status: 'pågår', tekst: `Du holder ${T.egne} av 3 tettsteder.`, andel: T.egne / 3 }; } },
     overlev: { navn: 'Sju døgn', dager: 7, seierVedFrist: true, tekst: 'Overlev i sju døgn uten å miste leiren, og ha minst fem personer igjen.',

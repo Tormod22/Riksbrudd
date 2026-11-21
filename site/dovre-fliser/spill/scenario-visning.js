@@ -123,15 +123,30 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     const S = spill(), L = window.LeirSpill && LeirSpill.tilstand(), F = window.FolkSpill && FolkSpill.tilstand(); let egne = 0; if (window.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') egne++;
     let andel = 0; try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) andel = K.st.sider.blå.andel; } catch (e) { andel = 0; }
     const nb = nærmesteBy(), iLag = egneLag().filter(s => s.fraFolk).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0);
-    return { tid, egne, tettsteder: egne, holder: id => eier(id) === 'blå', mål: nb ? nb.e.id : null, målNavn: nb ? nb.e.navn : null, folk: (F ? F.personer.length : 0) + iLag, andel, leirTapt: !!(T && T.tapt),
+    return { tid, egne, tettsteder: egne, holder: id => eier(id) === 'blå', mistet: id => { const t = window.TETTSTEDER && TETTSTEDER.get(id); return !!(t && t.eier && t.eier !== 'blå'); },
+      mål: nb ? nb.e.id : null, målNavn: nb ? nb.e.navn : null, målOm: nb ? målOm(nb) : null, folk: (F ? F.personer.length : 0) + iLag, andel, leirTapt: !!(T && T.tapt),
       penger: S ? S.penger : 0, bygg: L && window.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b) && !Leir.BYGG[b.type].del).length : 0,
       angrep: T && kreverAngrep() ? { slått: !!T.sc.slått, pågår: !!(T.sc.angrep && T.sc.angrep.pågår), samler: !!(T.sc.angrep && !T.sc.angrep.pågår), ingen: !!T.sc.ingen } : undefined };
   }
 
+  // (runde 14, kritiker J) «Kystalliansens, 9 km NV»: eieren og retningen fra leiren til scenariets by
+  const RETNING = ['Ø', 'NØ', 'N', 'NV', 'V', 'SV', 'S', 'SØ'];
+  function målOm(b) { const S = spill(), [x, y] = midt(b), e = eier(b.e.id), d = S && S.leir ? Math.hypot(x - S.leir.x, y - S.leir.y) : 0;
+    const eierT = e === 'blå' ? 'ditt' : e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].eieform : 'fiendens') : 'nøytralt';
+    if (!S || !S.leir || d < 300) return eierT;
+    const r = RETNING[((Math.round(Math.atan2(y - S.leir.y, x - S.leir.x) / (Math.PI / 4)) % 8) + 8) % 8], km = d < 10000 ? String(Math.round(d / 100) / 10).replace('.', ',') : String(Math.round(d / 1000));
+    return `${eierT}, ${km} km ${r}`; }
   // ---------- scenariet ----------
-  function scenarioNå() { const r = window.SPILLREGLER; if (!klar || !r.scenario) return null; const B = nå(), s = SC.vurder(r.scenario, B, T.sc); s.navn = SC.SCENARIER[r.scenario].navn; s.målNavn = B.målNavn; return s; }
+  // (runde 14) holdtFra lagres straks den endres (før ble den bare lagret når scenariet var ferdig, så en omlasting startet telleren på nytt)
+  function scenarioNå() { const r = window.SPILLREGLER; if (!klar || !r.scenario) return null; const B = nå(), før = T.sc.holdtFra, s = SC.vurder(r.scenario, B, T.sc); s.navn = SC.SCENARIER[r.scenario].navn; s.målNavn = B.målNavn; s.mål = B.mål; s.målOm = B.målOm;
+    if (T.sc.holdtFra !== før) lagre(); return s; }
   function scenarioSteg() {
-    const s = scenarioNå(); if (!s || s.status === 'pågår' || T.scMeldt === s.status) return s; T.scMeldt = s.status; lagre();
+    const s = scenarioNå(); if (!s) return s;
+    // (runde 14, kritiker J: «ingen melding når framgangen nullstilles») byen gikk tapt: én linje i loggen og i dagboka
+    if (T.sc.mistetVed != null && !T.sc.mistetMeldt) { T.sc.mistetMeldt = true; lagre(); const fr = SC.SCENARIER[window.SPILLREGLER.scenario], t = `Scenariet: ${s.målNavn || 'byen'} er tapt – telleren starter på nytt (frist dag ${fr ? fr.dager : 8})`;
+      logg(t + '.'); statHendelse(`Mistet scenariets by ${s.målNavn || ''}`.trim(), 2); if (window.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(t + '.');
+      try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'annet', tekst: `${s.målNavn || 'scenariets by'} er tapt – scenariets teller starter på nytt` } })); } catch (e) { /* uten flyt */ } }
+    if (s.status === 'pågår' || T.scMeldt === s.status) return s; T.scMeldt = s.status; lagre();
     if (window.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(`Scenariet «${s.navn}» er ${s.status}. ${s.tekst}`);
     logg(`Scenariet «${s.navn}»: ${s.status === 'vunnet' ? 'klart!' : 'tapt.'} ${s.tekst}`);
     if (s.status === 'vunnet') statHendelse(`Scenariet «${s.navn}» er klart`, 2);
@@ -373,6 +388,21 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     else if (T.tap.fra != null && !T.tap.sagt) { T.tap.sagt = true; logg(`Fienden står i leiren, og ingen av dine er der! Få et lag hjem innen ${R.tap.minutter} minutter, ellers er leiren tapt.`); }
     else if (T.tap.fra == null && T.tap.sagt) T.tap.sagt = false;
   });
+
+  // ---------- (runde 14, kritiker J) SCENARIETS BY I KARTET OG I TETTSTEDSPANELET ----------
+  // en dobbel gyllen ring rundt byen scenariet «Hold byen» gjelder, med «Scenariets by» under; tettstedspanelet sier det samme
+  const scBy = () => { const r = window.SPILLREGLER; if (!klar || !r || r.scenario !== 'hold' || (T && T.sc && T.sc.ferdig)) return null; return nærmesteBy(); };
+  KROKER.tegn.push((g, vx0, vy1) => { const b = scBy(); if (!b) return; const [X, Y] = midt(b), m = kam.m, x = (X - vx0) / m, y = (vy1 - Y) / m;
+    if (x < -80 || y < -80 || x > VW + 80 || y > VH + 80) return;
+    const r = Math.max(16, Math.min(60, Math.hypot(b.bb[2] - b.bb[0], b.bb[3] - b.bb[1]) * .35 / m));
+    g.save(); g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke();
+    g.strokeStyle = '#f0c878'; g.lineWidth = 2.5; g.setLineDash([10, 5]); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.setLineDash([]);
+    g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, r + 5, 0, 6.283); g.stroke();
+    // teksten står over ringen (stedsnavnet står under merket)
+    g.font = '700 12px "Times New Roman", Times, serif'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.9)';
+    g.strokeText('Scenariets by', x, y - r - 8); g.fillStyle = '#f0c878'; g.fillText('Scenariets by', x, y - r - 8); if (window.Etikett && Etikett.hinder) Etikett.hinder(x - 40, y - r - 22, 80, 14); g.restore(); });
+  if (KROKER.info) KROKER.info.push(o => { if (!o || o.lag !== 'tettsted') return; const b = scBy(); if (!b || String(b.e.id) !== String(o.e.id)) return; const sub = document.getElementById('psub'); if (sub) sub.textContent += ' · Scenariets by («Hold byen»)'; });
+  window.SCENARIO_BY = () => { const b = scBy(); return b ? b.e.id : null; };
 
   // ---------- Leir-menyen, fanen Mål ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => {

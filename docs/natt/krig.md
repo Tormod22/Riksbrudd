@@ -995,3 +995,24 @@ Feil lagt inn med vilje (forslaget uten terrenget, slik det var): vakta slo til 
 - Terrengsjekken gjelder linja leiren → målet; lag som går omveier kan miste kontakt underveis (kontrollrommet regner det ut som før).
 - Advarselen «leiren uten vakt» gjelder bare Send i Krig og tankbilen, ikke ordre gitt rett i kartet.
 - Kamp utenfor radio, ⏭ som stopper for kamp og angrepsbanneret er kamp-pakkas.
+
+
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+Mål: krigen og scenariet sier hva som gjelder, og hvorfor ingenting skjer. Alle tall er Claudes forslag.
+
+| # | Punkt | Løsning | Filer |
+|---|---|---|---|
+| 1 | «Hold byen» navngir aldri byen | Scenarioteksten: «Ta Røysland (Kystalliansens, 9 km NV): flytt et lag inn og hold det i tre døgn» / «Du holder Røysland: 1,0 av 3 døgn» (T.målNavn, T.målOm = eier, km, retning fra leiren). Dobbel gyllen ring med «Scenariets by» over i kartet (KROKER.tegn), « · Scenariets by («Hold byen»)» i tettstedspanelet (KROKER.info). `window.SCENARIO_BY()` gir id-en. | scenario.js, scenario-visning.js |
+| 2 | Telleren for sakte (0,9 etter 43 t) | Årsak: `holdtFra` ble bare lagret når scenariet var ferdig, og etter en omlasting var eieren ikke lest inn ennå, så telleren startet på nytt. Nå lagres den straks den endres, og den nullstilles bare når eieren er KJENT og ikke din (`T.mistet(id)`). 24 t = «1,0 av 3 døgn» (test). | scenario.js, scenario-visning.js |
+| 3 | Byen tapt uten melding | `st.mistetVed` settes når byen går tapt; scenarioSteg skriver én gang «Scenariet: Røysland er tapt – telleren starter på nytt (frist dag 8).» i loggen og dagboka, legger en hendelse i oppsummeringen og sender «riksbrudd-hendelse» (stopper ⏭; morgenmøtet leser ikke dette direkte). | scenario-visning.js |
+| 4 | Laget sto et døgn ved Rognan uten melding | KROKER.sim i strategi-visning.js: står et eget lag stille i/ved (600 m fra kanten) et tettsted det ikke holder i 20 spillminutter uten at inntaket går, skrives grunnen én gang: «Vaktlaget er ved Rognan, men byen holdes av 3 lag (36 mann, Kystalliansen) – fredstid til dag 3 kl. 18:00 – ingen kamp om byen før det.» (eller for svakt / bygdevern / for få / utenfor kanten), og ⏭ stopper («riksbrudd-hendelse», type annet). Lagpanelet: «venter ved … – tar det ikke». `StrategiSpill.hvorforIkkeTar(lag, by)`. | strategi-visning.js |
+| 5 | «tar stedet» om en by med 36 mann | `kjentForsvar(by)`: fiendelag dere ser, fiendelag sist sett (e.sett, høyst et døgn gammelt) innen 2,5 km, og i en by fienden holder et ANSLAG over garnisonen (lagene i byen, rundet til 5 – valg: fiendens byer er kjent fra starten), pluss bygdevern. `Strategi.kravFor(t, lag, forsvar)`: forsvar ≥ laget gir «For svakt: 4 mann mot et forsvar på ca. 35 – laget tar ikke stedet»; «tar stedet» står bare uten kjent forsvar. Fredstid «fredstid til dag 3 kl. 18:00 – ingen kamp om byen før det» (Fraksjoner.fredDøgn). Neste trekk og valgt by: «Forsvar: ca. 35 mann (garnison 3 lag, anslått ca. 35 mann) · fredstid …». Send/«Send likevel» røde (klasse `rød`) når forsvaret er større enn laget. | strategi.js, strategi-visning.js |
+| 6 | Radiovarselet over toppen av panelet | `rullTilVarsel()`: panelet rulles til toppen når varselet kommer (scrollTop ble beholdt fra før). Prøvd 844 × 390: «Send likevel» y 112–152. | strategi-visning.js |
+| 7 | Stripa dekker «⏭ Stoppet» | Når #flytkort står der stripa ligger, flyttes stripa ned under kortet (hvert 250. ms), og tilbake når kortet er borte. Prøvd 844 × 390 og 1400 × 820: ingen overlapp. | strategi-visning.js |
+| 8 | Vikeså-loggen motsier seg selv | Bygdevernet holder dine lag ute: inntaket står på null mens vernet har mann (bare for blå – AI-ens balanse er uendret), og «Våre lag tar …» er byttet med «Vaktlaget har gått inn i Vikeså. Står laget der i ca. 38 min uten fiender, blir stedet ditt.» (skrives ikke mens vernet holder dem ute). Et lag på marsj gjennom et sted (målet utenfor) blir ikke garnison og nevnes ikke i «… er vårt» («på vei gjennom X» i lagpanelet). | garnison-visning.js |
+| 9 | Speiderbilen kan ikke velges | Biler innen 800 m (BIL_NÆR, før 300) kan velges i Opprett tropp, og forslaget «Speidertropp» velger bilen. Andre biler står som grå valg med grunnen («1,2 km fra leiren – kjør den hjem først», «Vaktlaget sitter i den», «på oppdrag»). | tropper-visning.js |
+
+Ikke gjort: morgenmøtet nevner ikke tapet av scenariets by (eier: morgen-pakka – loggen og dagboka har det); opplæringslappen i samme hjørne som stripa er ikke flyttet; «sist sett» i 3D og kartlappen «Leiren: …» er andre pakkers.
+Vakt: `vakter/krig.js` del «RUNDE 14» (navn, ring, boks, forsvar i mann, aldri «tar stedet», laget sier hvorfor, 24 t = 1,0, omlasting, tapt i loggen). Feil lagt inn med vilje (gammel kravFor-tekst) → vakta feiler.
+Tester: test_scenario.js (navn, 24 t, ukjent eier, tapt), test_strategi.js (kravFor med forsvar).
