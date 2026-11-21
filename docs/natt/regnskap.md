@@ -150,3 +150,65 @@ Oppdraget: «ingenting skal gå tapt, og tekstene skal stemme». Alle tall er Cl
 ### Ikke gjort
 - «Forsvar leiren» og anslaget lagres ikke (forsvar-pakka), tankbilbanneret «Send Vaktlaget» etter at laget er sendt (morgen-pakka),
   morgenmøtet to ganger (morgen-pakka – men klokka går ikke lenger tilbake over 06:00, som var én av årsakene).
+
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+Oppdraget: «ingenting skal gå tapt, vinduer skal ikke ligge oppå hverandre, og opplæringen skal ikke henge». Alle tall er Claudes forslag.
+
+### 1. Ubesvart kort «forsvant» ved omlasting (I)
+- Årsaken (bildene 34 og 38): kortet ble lagret og vist igjen etter F5 (`riksbrudd-hendelser`, `H.åpen`), men «Velkommen tilbake» kom samtidig,
+  og kortet lå OVER velkomsten. Kritikerens trykk på «Fortsett» traff «La vedkommende gå» i kortet – derfor dro Astrid. Spillet velger ikke selv.
+- Rettet gjennom punkt 2 (én modal om gangen). Prøvd: et hendelseskort («I leiren») og et samfunnskort står oppe -> F5 -> velkomsten alene ->
+  «Fortsett» -> samme kort med samme tekst og valg (også etter fem omlastinger til). Ingen kode velger et standardvalg uten svar (sjekket).
+
+### 2. «Velkommen tilbake» stablet seg (I, J)
+- logglager.js: velkomsten vises STRAKS når spillet er lest (før 1,8 s etter), som `#loggvelkommen.på`, og er med i kortkøen
+  (samfunn-visning.js, `Kortkø`: `KORT_ID` har `loggvelkommen`). Kortene og morgenmøtet venter til den er lukket; et kort som alt sto oppe,
+  viker (`Kortkø.vik()`) og kommer straks etter «Fortsett» (`Kortkø.slipp()` – ingen 2-minutterspause). Står seier/tap, krigskortet eller
+  morgenmøtet oppe, vises den ikke / lukkes den.
+- Spillet står på pause mens den vises (▶ settes på pause, «Fortsett» gir farten tilbake). Den lukkes når spillet går igjen (▶, ⏭, en fart,
+  eller klokka flytter seg).
+- z-index 20: under stoppbanneret/varslene (21) og angrepsbanneret (24).
+
+### 3. Loggspam (I)
+- loggdemp.js: `REGLER.OPPSTART` («Spillform: …», «Velkommen tilbake, …», «… (rød/grønn) holder til …», «Fikk ikke hentet …») holdes tilbake
+  når et lagret spill er åpnet (`LagringSpill.nyttSpill()` er false). I et nytt spill skrives de som før, med eierne som gjelder da.
+  Prøvd: fem omlastinger etter hverandre -> 0 nye linjer i den lagrede loggen. (VALG: filteret ligger i loggdempingen, ikke i
+  fraksjoner-/scenario-/oppstart-visning.js, som jeg ikke eier.)
+
+### 4. Velkomstens innhold (I, J)
+- Bare økta rett før denne (F5 rett etter F5 gir ingen boks), bare når spilltid har gått (`REGLER.minTid` 1 min), aldri «Farten er …»
+  (`REGLER.ALDRI`). Utvalget etter vekt (`REGLER.PRIORITET`: tettsteder 4, tap 4, angrep 3, valg 3, andre viktige 1), så i tidsrekkefølge,
+  eldste først. Teksten sier «de N viktigste meldingene», og N = antall viste linjer.
+
+### 5. Opplæringen
+- «Sett to på bygg»: godkjennes når to er på Bygg – Folk trenger ikke åpnes (kravet sier ikke lenger «åpne Folk»). Sjekkes hvert 0,4 s.
+- «Mer forsvar før dag 4»: tittelen er «Mer forsvar» fra dag 4 kl. 06:00, og har to stått på Vakt én gang (også dobbel vakt fra morgenmøtet),
+  er steget godkjent (`vaktFør`, lagres i `riksbrudd-opplaering`).
+
+### 6. Småting
+- Farten 1× -> 10× av seg selv (I): på telefon blar fartsknappen videre når den valgte farten trykkes (kompakt.js). Når et skript «setter»
+  farten som alt er valgt (f.eks. 1× etter en pause), ble det et trykk som blar til 10×. Nå blar bare ekte trykk (`e.isTrusted`).
+  Ikke gjenskapt med akkurat troppen (jeg fant ikke hvilket skript som trykket da), men mekanismen er prøvd i vakta.
+- Topplinja «FOLK 10 ⚠» mot Folk-knappen 6 (J): `sFolk` ble bare oppdatert mens spillet gikk (KROKER.sim). Nå sjekkes den hvert 0,4 s.
+- Kassekortet: «… I den ligger kontanter, sølvtøy og sigaretter – verdt ca. 800 000 kr.», valgene sier hva de gir, og loggen får summen
+  («800 000 kr er lagt i kassa.» / «Verdiene for ca. 800 000 kr ble delt ut i leiren.»). Ny `valg.logg` i spillet.js.
+- «Utstyr og deler» forklares per bygg i byggemenyen og banneret (leir-visning.js `UTSTYR`/`delNavn`): vakttårnet «lyskaster, radio,
+  våpenfeste og stålfester», brakka «senger, ovn, vinduer og dører» osv. Prisene er uendret. Hjelpetekst i regnskap-hjelp.json.
+
+### Fellesfiler endret
+- samfunn-visning.js (kortdelen): `KORT_ID` + `loggvelkommen`, `Kortkø.slipp`, `Kortkø.vik`, pausen telles ikke for velkomsten.
+- leir-visning.js: `UTSTYR` og `delNavn` øverst, to tekster (menyen og banneret).
+- kompakt.js: én linje (`if (!e.isTrusted) return;`) i fartsknappene.
+- spillet.js / spillet-visning.js: kassekortet og `valg.logg`.
+
+### Tester og vakt
+- test_logglager.js (utvalg, eldste først, «Farten» aldri, F5 etter F5, ingen tid, loggspam), test_opplaering.js (bygg2 uten Folk, vaktFør,
+  tittel dag 4). test_samfunn, test_spillet, test_lagring ok.
+- Vakta `regnskap` har «RUNDE 14»: kort + velkomst = én modal, samme kort etter «Fortsett», lukkes når farten settes, z-index, loggspam,
+  utvalg, opplæring, Folk-tall på pause, kassa, fartsknapp. Feil lagt inn med vilje (velkomsten ut av kortkøen) -> vakta sa false (to
+  modaler); uten feilen true. PC 11 s, mobil 10 s.
+
+### Ikke gjort
+- Hele mobilkontrollen er ikke kjørt (koordinatoren kjører den etter flettingen).
+- Morgenmøtet er ikke laget om (morgen-pakka); det venter i kortkøen mens velkomsten står.
