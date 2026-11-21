@@ -574,3 +574,31 @@ plass. Morgenmøtet er fortsatt høyt på liggende telefon (ikke min fil). Varse
 Folk-panelet.
 **Mobilkontrollen** (`PORT=8985 SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, 21. nov 14:28): «Alt i orden» (489 s). Ui-vakta tok 81 s
 (alle delene; den lengste biten 55,6 s, runde 13-delen ca. 10 s) – mer enn de ca. 20 s briefen ber om.
+
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+1. **Byggelinja (I):** rotasjonsknappene heter «Snu ⟲» og «Snu ⟳» (title: «Snu bygget 15° mot/med klokka»). Liggende telefon: ikonet
+   ⟲/⟳ med «Snu» under. På PC sto det før «⟲ 15°»; nå «Snu ⟲» (tegnet settes ikke dobbelt: `medtegn` når teksten inneholder tegnet).
+   Ingen vakt i sjekk.js søkte etter «15°» eller «Venstre»; ui-vakta runde 13 krever fortsatt etikett ≥ 3 tegn («Snu»). `leir-visning.js`.
+2. **Tallflisene i Leir (I):** flisene var ikke for brede – det var boksen «Velkommen tilbake» (logglager.js) som la seg midt på skjermen
+   oppå Leir-panelet (bilde 17: «DIES» dekket). Valg: mens Leir er åpent står velkomstboksen til høyre for panelet
+   (`body:has(#leirmeny.på) #loggvelkommen` i CSS-en i `leir-visning.js`, ingen endring i logglager.js). Fire fliser på én rad beholdes
+   (to per rad ville skjøvet byggekortene ned). Vakta sjekker at ingen flis er dekket, utenfor panelet eller kuttet.
+3. **⌂ (J):** med leir er ◎-knappen (#dombas) nå ⌂ «Til leiren» (kartet med leirflagget midt på, 3 m/punkt, som før ◎ gjorde), og «hele
+   kartet» (#hele) har fått sitt eget ikon (SVG med fire piler ut, title «Hele kartet»). Før leiren: ◎ = Dombås som før. Id-ene er de samme
+   (sjekk.js bruker dem). `index.html` (linje 80 og hjemKnapp ved #dombas-handleren).
+4. **Leirvalget i steg 3 (I):** på liggende telefon står boksen nede til venstre over havet (left 8 px, bottom 92 px, maks min(280 px, 33vw))
+   – over kompasset og målestokken. Prøvd på /norge 844 × 390: boksen slutter 286 px fra venstre, kysten ved Bergen ligger ved ca. 300 px.
+   Kartutsnittet huskes: utkastet (`riksbrudd-k1-utkast`) får `velger` og `kart: [x, y, m]` mens du velger, og etter F5 åpnes kartvalget
+   igjen med samme utsnitt (prøvd: 245008, 6908063, 49,68 før og etter F5). PC er uendret (oppe til venstre). `oppstart-visning.js`.
+5. **Byggemenyen (J):** verktøytipset for et kort i et panel ved venstre kant (Leir, Folk, Deg, karakterarket) står ved siden av panelet,
+   på høyde med kortet, i stedet for under kortet (der det dekket «Forsvar»). Kortene står på samme plass med og uten tips (vakta måler).
+   `flistips.js`.
+6. **Våpenboksen i gåmodus (J, `narhud.js` – 3d-pakkas fil, én CSS-linje):** `body.gaar:not(.kort) #nhud .vapen{ right:72px; bottom:250px }`
+   (før `right:296px` og bottom 44 px) – over minikartet, langt fra geværet. Prøvd i ekte 3D på PC: boksen 1156–1328 × 462–570, minikartet
+   starter på 586, geværet slutter ca. x 1100. Telefon er uendret.
+
+**Vakt:** `vakter/ui.js` har en runde 14-del (alle seks punktene). Feil lagt inn med vilje (velkomstboksen midt på igjen): vakta meldte
+«en tallflis i Leir er dekket». Hele ui-vakta: PC 36 s, mobil (390 × 844) 38 s.
+**Ikke gjort:** våpenboksen på liggende telefon er ikke flyttet (kritikken gjaldt PC). Hele mobilkontrollen er ikke kjørt (koordinatoren ba
+om det). Velkomstboksen flyttes bare bort fra Leir-panelet, ikke fra Folk/Deg.
