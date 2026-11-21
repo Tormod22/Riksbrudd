@@ -66,7 +66,20 @@
     if (o.falne) return `Kampen${hvor} er over: ${o.lag} mistet ${o.falne} mann (${årsak(o.fiende, '').replace(/ $/, '')}).`;
     return `Kampen${hvor} er over: ${o.lag} er ikke i ildkamp lenger.`;
   }
-  const api = { REGLER, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
+  // ---------- (runde 14, kritiker J: «bølgene var ett lag to ganger, uten tap») RØVERBØLGENE ----------
+  // Claudes forslag: fra bølge «fra» på «Vanlig» og «Hard» (røverfaktor ≥ «faktor») kommer bølgen som minst «lag» lag fra to kanter når
+  // spilleren har minst «soldater» soldater; de deler på mannskapet til ett lag + «ekstra» (bølge 2 med fire soldater: 2 × 4 = 8 mot 6 i
+  // bølge 1), minst «minst» mann per lag. Kantene: lag nr. 2 starter «vinkel» radianer rundt leiren fra det første.
+  const BØLGE = { fra: 2, faktor: .95, soldater: 4, lag: 2, ekstra: 2, minst: 4, vinkel: 1.4 };
+  // antall lag: n = Trussel.lagFor (det gamle), o = { soldater, faktor }. Gir { n, tvunget }.
+  function bølgeLag(nr, n, o = {}, B = BØLGE) { const f = o.faktor || 1;
+    if (nr >= B.fra && f >= B.faktor && (o.soldater || 0) >= B.soldater && n < B.lag) return { n: B.lag, tvunget: true }; return { n, tvunget: false }; }
+  // mann per lag når bølgen er gjort større: én = Trussel.menn for ett lag
+  const bølgeMenn = (én, n, B = BØLGE) => Math.max(B.minst, Math.ceil((én + B.ekstra) / Math.max(1, n)));
+  // (runde 14, kritiker J: «Folkefrontens lastebil er under ild fra fienden» om en kamp mellom motstanderne) – andre siders kamper:
+  // «Folkefronten og Kystalliansen sloss ved Vikeså.» (aldri «fienden»). a, b = navnene på sidene, sted = stedTekst
+  const andreTekst = (a, b, sted) => `${a} og ${b} sloss${sted ? ' ' + sted : ''}.`;
+  const api = { REGLER, BØLGE, bølgeLag, bølgeMenn, andreTekst, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.KampVarsel = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -180,6 +193,32 @@
       g.strokeText(t, x, ty); g.fillStyle = '#ffb49a'; g.fillText(t, x, ty); }
     g.restore(); if (liste.some(q => q.aktiv)) skitten = true; });
 
-  rot.KampSpill = { test: false, kamper: () => [...kamper].map(([s, K]) => ({ lag: s.navn, ...K })), ferdige: () => ferdige.slice(), sjekk, stedFor, fiendeFor,
+  // (runde 14) røverbølgene: Spillet.Trussel.lagFor og .menn pakkes inn (spillet.js er ikke endret) – bølge 2 og senere på «Vanlig» har
+  // flere mann enn bølge 1, fra to kanter (lag nr. 2 flyttes rundt leiren når bølgen starter). Ikke i testene uten KampSpill.test.
+  const TR = rot.Spillet && Spillet.Trussel; let tvunget = 0;
+  if (TR && TR.lagFor && TR.menn && !TR.lagFor.runde14) {
+    const lagFor0 = TR.lagFor, menn0 = TR.menn;
+    TR.lagFor = function (nr, o = {}) { const n = lagFor0.call(this, nr, o); if (!auto()) return n; const v = KV.bølgeLag(nr, n, o); tvunget = v.tvunget ? nr : 0; return v.n; };
+    TR.lagFor.runde14 = true;
+    TR.menn = function (nr, soldater, n = 1, faktor = 1) { if (!auto() || tvunget !== nr) return menn0.call(this, nr, soldater, n, faktor); tvunget = 0;
+      return KV.bølgeMenn(menn0.call(this, nr, soldater, 1, faktor), n); };
+  }
+  // to kanter: et nytt røverlag nr. 2 (Røvere N.2) i en bølge med flere lag flyttes BØLGE.vinkel radianer rundt leiren og får ordren på nytt
+  const flyttet = new Set();
+  KROKER.sim.push(() => { if (!auto()) return; const L = leir(); if (!L) return;
+    for (const e of ENHETER) { if (!e.raid || e.raid < KV.BØLGE.fra || flyttet.has(e.navn) || !/\.2$/.test(e.navn) || !Number.isFinite(e.startTid) || tid - e.startTid > 1) continue;
+      flyttet.add(e.navn);
+      // (bare når lagene starter på samme sted – krig.js sin taktikk «fra to kanter» sprer dem selv)
+      if (!ENHETER.some(q => q !== e && q.raid === e.raid && Math.hypot(q.x - e.x, q.y - e.y) < 300)) continue;
+      const a = Math.atan2(e.y - L.y, e.x - L.x) + (Math.random() < .5 ? -1 : 1) * KV.BØLGE.vinkel, r = Math.hypot(e.x - L.x, e.y - L.y), x = L.x + Math.cos(a) * r, y = L.y + Math.sin(a) * r;
+      // ikke i vann (hoydeVed under 1 moh. regnes som sjø/vann her) – da blir laget der det var
+      const h = typeof hoydeVed === 'function' ? hoydeVed(x, y) : NaN; if (!(h > 1)) continue;
+      e.x = x; e.y = y; e.fra = { x, y }; e.sti = null; const p = ordre(e, L.x + (Math.random() - .5) * 80, L.y + (Math.random() - .5) * 80, true); if (p && p.catch) p.catch(() => {});
+      if (flyttet.size > 60) flyttet.delete(flyttet.values().next().value); } });
+
+  // navnet på en side i loggen: fraksjonen, «røverne» for røverlag
+  const sideNavn = (side, lag) => (lag && lag.raid ? 'røverne' : rot.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'en annen gruppe');
+  const andre = (a, b, x, y) => { const t = KV.andreTekst(sideNavn(a.side, a), sideNavn(b.side, b), KV.stedTekst(stedFor(x, y))); return t.charAt(0).toUpperCase() + t.slice(1); };
+  rot.KampSpill = { test: false, andre, sideNavn, kamper: () => [...kamper].map(([s, K]) => ({ lag: s.navn, ...K })), ferdige: () => ferdige.slice(), sjekk, stedFor, fiendeFor,
     nullstill: () => { kamper.clear(); ferdige.length = 0; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

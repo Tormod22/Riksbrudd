@@ -16,7 +16,9 @@
   // enn to spilltimer «etter» klokka (verden lagres også hvert femte sekund, og i 600× går det 50 spillminutter på fem sekunder;
   // er klokka langt bak, er det et nytt spill på samme sted)
   // (runde 13) nesteMaks: en lagret tid for neste bølge lenger fram enn dette (spillminutter) brukes ikke; nesteSnart: en passert tid gir bølgen om så mange spillminutter
-  const REGLER = { hverMs: 5000, maksAlder: 2 * 1440, framtid: 120, nesteMaks: 3 * 1440, nesteSnart: 20 };
+  const REGLER = { hverMs: 5000, maksAlder: 2 * 1440, framtid: 120, nesteMaks: 3 * 1440, nesteSnart: 1 };
+  // (runde 14, kritiker I: «om under 1 min» ble «om 20 min» etter F5) – en tid som ennå ikke er passert, holdes nøyaktig; en passert tid gir
+  // bølgen om 1 spillminutt (Claudes forslag), så brikka sier det samme før og etter omlasting
   // det angrepet trenger ut over det Lagring.pakkLag tar med
   function pakkEn(e) {
     const d = LB.pakkLag(e);

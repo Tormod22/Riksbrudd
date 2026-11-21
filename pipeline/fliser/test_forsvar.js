@@ -59,3 +59,8 @@ console.log('ok   forsvar (runde 8): glattet anslag, spenn, «røverlaget» i en
   assert.ok(!/\d+ min/.test(F.når(t, t + 200)), 'ingen minutter når ingen ser dem');
   assert.strictEqual(F.nedtelling(1060), '17 t 40 min'); assert.strictEqual(F.nedtelling(45), '45 min'); assert.strictEqual(F.nedtelling(.4), 'under 1 min'); }
 console.log('ok   forsvar (runde 13): anslaget går ikke baklengs, «ikke sett – kommer trolig i natt», nedtelling');
+// (runde 14) «sist sett 3,5 km N kl. 08:53» og brikka før bølgen drar ut
+{ const F = require('../../site/dovre-fliser/spill/forsvar.js'), A = require('assert');
+  A.strictEqual(F.klTekst(173), 'kl. 08:53'); A.strictEqual(F.retningKort(Math.PI / 2), 'N'); A.strictEqual(F.utTekst(0.4), 'Røverne drar ut nå');
+  A.ok(!/under 1 min/.test(F.utTekst(0.2)), 'aldri «under 1 min» før de er på vei'); A.ok(F.STATUS.sistSettLang >= 120, 'sist sett står lenge nok');
+  console.log('ok   forsvar (runde 14): sist sett med klokkeslett, «drar ut nå»'); }

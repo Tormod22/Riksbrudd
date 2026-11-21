@@ -64,6 +64,9 @@
     if (midtIAngrep) { /* kontakt meldes ikke på nytt midt i et angrep */ }
     else if ((nå.strid || 0) > (før.strid || 0)) ut.push({ type: 'kontakt', tekst: 'et lag er i ildkamp' });
     else if ((nå.fiender || 0) > (før.fiender || 0)) ut.push({ type: 'kontakt', tekst: 'fienden er i sikte' });
+    // (runde 14, kritiker I: patruljen stoppet ⏭ fire ganger i fredstid uten at noe skjedde) – en motstanders lag i fredstid stopper høyst én
+    // gang per spilldøgn (bilde(): nå.fred), med en tekst som sier at det ikke angriper
+    else if ((nå.fred || 0) > (før.fred || 0)) ut.push({ type: 'kontakt', tekst: 'fiendens patrulje – fredstid, angriper ikke' });
     if ((nå.lag || 0) < (før.lag || 0)) ut.push({ type: 'tapt', tekst: 'et lag er slått ut' });
     // leiren raseres: et bygg er borte, eller enda et bygg er under halv helse (bare mens leiren angripes – ikke når du river selv)
     if (nå.alarm || før.alarm) {
@@ -140,6 +143,15 @@
   // (runde 8) en fiende teller bare når den er nær leiren eller et eget lag (R.fiendeNær)
   function nærFiende(e, lag) { const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir, n = R.fiendeNær;
     if (L && Math.hypot(e.x - L.x, e.y - L.y) < n) return true; return lag.some(s => Math.hypot(e.x - s.x, e.y - s.y) < n); }
+  // (runde 14) fredstid: motstanderne angriper ikke leiren før dette (samme regel som i spill/fraksjoner-visning.js: 7 døgn / fiendens faktor,
+  // 4–10 døgn). Et lag fra en motstander (ikke røvere, ikke i en angrepsgruppe mot noe av ditt) er da en «patrulje i fredstid», og samme
+  // lag stopper ⏭ høyst én gang per spilldøgn. I testene (navigator.webdriver) er det aldri fredstid – som i fraksjoner-visning.js.
+  const sistFred = new Map(), fredDag = new Map();
+  const fredSlutt = () => { const f = (rot.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende) || 1; return Math.max(4, Math.min(10, Math.round(7 / f))) * 1440; };
+  function fredLag(e) { if (navigator.webdriver && api2.test !== true) return false; if (e.raid || !e.ai || tid >= fredSlutt()) return false;
+    const ES = rot.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null, G = ES && ES.gruppe ? ES.gruppe[e.side] : null;
+    return !(G && G.lag && G.lag.includes(e.navn) && G.mål && (G.mål.leir || G.mål.eier === 'blå')); }
+  function nyFredDag(e) { const d = Math.floor((6 + tid / 60) / 24); if (fredDag.get(e.navn) === d) return false; fredDag.set(e.navn, d); return true; }
   // et kort som venter på svar og SYNES (et hendelseskort som venter til angrepet er over, er skjult og teller ikke)
   const kortOppe = () => ['hendelse', 'samfunnkort', 'krigkort', 'formkort'].some(id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på') && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden'); });
   function bilde() {
@@ -151,7 +163,8 @@
       // (runde 13, kritiker H: «farten ble satt til 1× "Et lag er i ildkamp" over ti ganger») – finnes spill/forsvar-kamp.js, melder den hver
       // kamp ÉN gang med navn, fiende og sted (hendelsen «kontakt»), og bildet teller ikke ildkampene selv
       strid: rot.KampSpill ? 0 : nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
-      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
+      fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag) && !fredLag(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
+      fred: nylig(sistFred, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag) && fredLag(e) && nyFredDag(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
       alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),

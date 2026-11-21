@@ -1,5 +1,67 @@
 # Pakke «kamp»
 
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+Alle tall er Claudes forslag.
+
+### 1. Motangrepet kom 42 min etter «angrep tidligst om ca. 6 t» (J – høy)
+- Årsak: `AI.styr` (eskalering-visning.js) slapp gjennom `angrip` for lag i en angrepsgruppe også mens gruppa samlet seg, og lagene sto
+  alt et par hundre meter fra byen – de gikk løs på garnisonen med en gang.
+- `eskalering.js`: `REGLER.varsel = { ved: 1000, fart: 4000, vern: 3000 }`, `tidligst({ nå, angripFra, sted, mål })` = ventetida + veien fra
+  samlingsstedet (4 km/t), `holdIgjen(G, lag, v, nå)`: før `G.tidligst` går ingen fra siden løs på noe innen 3 km av målet og ingen tar målet
+  (i fasen «angriper» får gruppa gå, men ikke skyte innen sonen før tida) – unntatt et lag som er beskutt (da er det spillerens kamp).
+- Varselet: «… Målet er trolig Røysland (ditt). Fienden er ved byen nå (ca. 300 m unna), men venter på resten. Angrep tidligst om ca. 6,5 t.»
+  når et lag i gruppa står innen 1 km. `G.tidligst` lagres med gruppa (gamle lagringer uten den: som før).
+
+### 2. Banneret sa «ikke sett» etter «Fiende sett: Røvere 2.1, ca. 3,5 km nord» (J)
+- `forsvar.js`: `STATUS.sistSettLang = 360` – en egen observasjon (lag via radio/`e.sett`, krigskartet, tårn, kamera, det banneret selv så) står i
+  6 timer i stedet for 45 min, og den nyeste vinner. Teksten: «sist sett 3,5 km N kl. 08:53 · framme om …» (`retningKort`, `klTekst`).
+
+### 3. Raidanslaget sa fire ting (I)
+- «om under 1 min · trolig innen en time» var brikka for når bølgen DRAR UT. Nå: «Røverne drar ut om 3 t 20 min», og når tida er nådd:
+  «Røverne drar ut nå» (`Forsvar.utTekst`) – «under 1 min» står aldri før de er på vei.
+- «om 20 min» etter F5: `trussel-lagring.js` flyttet alle tider under 20 min fram til 20 min (`Math.max(t + nesteSnart, neste)`). Nå er
+  `nesteSnart = 1`: en tid som ikke er passert, holdes nøyaktig.
+- Loggens «Ventet om ca. N min» (spillet-visning.js) og banneret bruker samme rute (som før). Ikke endret: den teksten i spillet-visning.js.
+
+### 4. Kampen om leiren var avgjort på ett spillminutt (J)
+- `forsvar-visning.js` `KAMP = { nær: 500, innled: 3, ild: .4, minst: 2 }`: under 500 m fra leiren kommer en `alarm`-hendelse («røverne er
+  450 m nord for leiren») – flyt.js senker farten til 1× før første skudd. De første 3 spillminuttene av kampen om leiren skyter begge sider
+  med faktor 0,4 (`KROKER.ild`), og rapporten («Bølge 2 er slått tilbake») kommer tidligst 2 spillminutter etter «kampen har begynt»
+  (`ventRapport`, sluppet i `KROKER.sim`). `ForsvarSpill.kamp14` for vakta.
+
+### 5. Røverbølgene var for små (J)
+- `forsvar-kamp.js` `BØLGE = { fra: 2, faktor: .95, soldater: 4, lag: 2, ekstra: 2, minst: 4, vinkel: 1.4 }`: `Spillet.Trussel.lagFor` og
+  `.menn` pakkes inn (spillet.js er ikke endret). Fra bølge 2 på Vanlig/Hard, med minst 4 soldater, kommer minst 2 lag; de deler på
+  mannskapet til ett lag + 2 (4 eller 8 soldater: bølge 1 = 6 mann, bølge 2 = 2 × 5 = 10). Lag nr. 2 flyttes 80° rundt leiren når bølgen
+  starter (to kanter; ikke når stedet er under 1 moh.). Lett: som før.
+
+### 6. Patruljen i fredstid (I)
+- `flyt.js`: i fredstid (7 døgn / fiendens faktor, 4–10, som fraksjoner-visning.js) er et lag fra en motstander (ikke røvere, ikke i en
+  angrepsgruppe mot noe av ditt) en patrulje: den teller ikke som «fienden er i sikte», men stopper ⏭ høyst én gang per spilldøgn med
+  «fiendens patrulje – fredstid, angriper ikke» (`bilde().fred`). I testene er det aldri fredstid (som før).
+
+### 7. Andre siders kamper (J)
+- `forsvar-kamp.js`: `KampVarsel.andreTekst`, `KampSpill.andre(a, b, x, y)`, `KampSpill.sideNavn`. «Folkefronten og Kystalliansen sloss ved X.»
+
+### Prøvd i nettleser
+- Vakta (PC 1400 × 820 og mobil 844 × 390): ok, ingen sidefeil. Bilde: `natt14/kamp/banner-sist-sett-*.png` («sist sett 3,5 km N kl. …»).
+- Uten webdriver, bølge 2 (leir i Dovre, Vaktlaget på 4): 2 lag × 4 mann (bølge 1 ville vært 1 × 6) fra to kanter; «Vaktene hører noe –
+  røverne kan være under 500 m unna» satte farten ned før første skudd; «Kampen om leiren er i gang» kl. +90, første lag flyktet kl. +95,
+  andre lag var fortsatt i leiren kl. +132 (prøven sluttet før bølgen var over – rapporten ble ikke sett live). Bilde: `raid-slutt-pc.png`.
+- Ikke prøvd live: motangrepet fra Kystalliansen (eskalering) og patruljen i fredstid – bare i vakta/regeltestene.
+- Sett i prøven: Vaktlaget sto 27 m fra Røvere 2.1 i over 15 spillminutter uten skudd («oppdaget uten å bli sett») – ikke undersøkt.
+
+### Filer utenom mine
+- `spill/enheter-visning.js` `motKjøretøy()`: når verken skytteren eller kjøretøyet er ditt, logges `KampSpill.andre(...)` i stedet for
+  «… er under ild fra fienden», og skadeteksten bruker sidens navn (3 linjer).
+- `index.html`: bare versjonsmerker (versjon.py).
+
+### Vakt
+`pipeline/fliser/vakter/kamp.js` har et nytt runde 14-ledd (alle sju punktene). Feil lagt inn med vilje (holdIgjen av, rapporten uten
+venting) ble funnet: «laget i den varslede gruppa angrep før tidligst-tida; «slått tilbake» kom samme minutt som «kampen har begynt»».
+
+
 ## Runde 13 (21. nov, kritikk G/H)
 
 Målet: spilleren skal se og forstå kampene sine. Alle tall er Claudes forslag.
