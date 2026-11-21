@@ -30,7 +30,11 @@
     if (nå.aktiv) deler.push(`bølge ${nå.aktiv} pågår`);
     const såret = Math.max(0, (nå.såret || 0) - (før.såret || 0)), falne = Math.max(0, (nå.falne || 0) - (før.falne || 0)), ute = Math.max(0, (nå.slåttUt || 0) - (før.slåttUt || 0));
     if (såret || falne) deler.push([såret ? `${såret} ${såret === 1 ? 'ny såret' : 'nye sårede'}` : '', falne ? `${falne} falt` : ''].filter(Boolean).join(', '));
-    if (ute) deler.push(ute === 1 ? 'ett lag er slått ut' : `${ute} lag er slått ut`);
+    // (runde 13, kritiker G: morgenmøtet sa bare «4 falt. Ett lag er slått ut» – uten hvem de kjempet mot) kampene siste døgn fra
+    // spill/forsvar-kamp.js (nå.kamper: { lag, fiende, sted, falne, slått, start }) med tap: hvem, mot hvem og hvor
+    const ks = Array.isArray(nå.kamper) ? nå.kamper.filter(k => k && k.lag && (!Number.isFinite(før.tid) || k.start >= før.tid) && (k.falne > 0 || k.slått)) : [];
+    if (ute && ks.filter(k => k.slått).length < ute) deler.push(ute === 1 ? 'ett lag er slått ut' : `${ute} lag er slått ut`);
+    for (const k of ks.slice(0, REGLER.maksBygg)) deler.push(`${k.lag} ${k.slått ? 'ble slått ut' : `mistet ${k.falne}`} i kamp med ${k.fiende || 'en fiende dere ikke så'}${k.sted ? ' ' + k.sted : ''}`);
     const nåId = new Map((nå.bygg || []).map(b => [b.id, b])), ødelagt = (før.bygg || []).filter(b => !nåId.has(b.id) && b.hp < REGLER.ødelagt).map(b => b.navn);
     const skadet = (før.bygg || []).filter(b => nåId.has(b.id) && b.hp - nåId.get(b.id).hp > REGLER.skadet).length;
     if (ødelagt.length) deler.push(`${ødelagt.length > REGLER.maksBygg ? ødelagt.length + ' bygg' : ødelagt.join(', ')} ødelagt`);
@@ -84,8 +88,11 @@
     return { bølge: T.bølge || 0, aktiv: T.aktiv || 0, herjet: (T.herjet || 0) + slapp, friske: menn.filter(m => m.hp >= 1).length, såret: menn.filter(m => m.hp > 0 && m.hp < 1).length, falne: menn.filter(m => m.hp <= 0).length,
       slåttUt: egne.filter(e => !levende(e) || (rot.Terreng && Terreng.slattUt(e.menn))).length,
       bygg: L ? L.bygg.filter(b => !b.del && !(b.igjen > 0)).map(b => ({ id: b.id, navn: Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type, hp: Math.round((b.hp === undefined ? 1 : b.hp) * 100) / 100 })) : [],
-      hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, folk: F ? F.personer.length : 0, slapp, ...hvem(F), mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };
+      hus: rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0, tid, kamper: kamper(), folk: F ? F.personer.length : 0, slapp, ...hvem(F), mat: F ? F.mat : 0, matDøgn: rot.DagbokSpill ? null : matDøgn };
   }
+  // (runde 13) kampene til lagene dine (spill/forsvar-kamp.js), uten kampen om leiren (den står i bølgene)
+  const kamper = () => (rot.KampSpill ? [...KampSpill.ferdige(), ...KampSpill.kamper().map(k => ({ ...k, slått: false }))].filter(k => !k.leir)
+    .map(k => ({ lag: k.lag, fiende: k.fiende, sted: k.sted, falne: k.falne || 0, slått: !!k.slått, start: Math.round(k.start) })).slice(-8) : undefined);
   // (runde 12) navnene i folket, hvem som står i en tropp nå, og hvem som er døde (Samfunn) – så oppgjøret kan si hvem og hvorfor
   function hvem(F) { if (!F) return {}; const tropp = {}, døde = {};
     for (const e of ENHETER) if (e.side === 'blå' && !e.karakter && !e.leirvakt && Array.isArray(e.menn)) for (const m of e.menn) if (m.hp > 0 && m.navn) tropp[m.navn] = e.navn;
