@@ -58,6 +58,10 @@ Alle tall er Claudes forslag til brukeren har bestemt noe annet.
 3. **W2 Kamp på bakken.**
 4. **W3 Kjøretøy i kamp.**
 
-## Åpne spørsmål til brukeren
-- Skal motstanderne hete noe nytt som selskaper, eller beholde Kystalliansen og Folkefronten?
-- Skal spillet bli flerspiller senere? Wardogs er flerspiller. Riksbrudd er alene, med 1–5 spillere nevnt i plan-kollaps.md.
+## Besluttet av brukeren (21. nov)
+- Motstanderne får **nye navn som selskaper**. Kystalliansen (rød) og Folkefronten (grønn) døpes om til oppdiktede private militærselskaper.
+  Navnene er Claudes forslag. Brukeren kan bytte dem, og de skal ikke ligne Wardogs sine selskaper eller ekte firmaer.
+- **Flerspiller kommer senere.** Derfor:
+  - Lag tilstanden for selskap, kontrakter og rykte så den kan deles. Den skal være ren JSON, lagres per leir og være skilt fra visningen.
+  - Ingen regler skal anta at det bare finnes én spiller. Bruk sidens id, ikke «spilleren».
+  - Selve flerspilleren (tjener, innlogging) bygges ikke nå.
