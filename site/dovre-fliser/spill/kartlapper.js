@@ -20,7 +20,8 @@
   E.regel(t => (t === '0 t olje' ? false : undefined));
   E.regel(t => { const b = window.OLJE && OLJE.BASER && OLJE.BASER[0]; return b && t === b.navn && baseILeiren(b) ? false : undefined; });
   E.regel(t => (t === 'Leiren her?' ? P.valgt : undefined));
-  E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? P.leir : undefined; });
+  // (runde 13) leirens navn plasseres før egne lag og samlelappen «Leiren: 3 lag ›» (som står under det)
+  E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? Math.max(P.leir, P.egne + .1) : undefined; });
 
   // (runde 8, krig: «Kystalliansens 3. lag · nå» lå oppå «… 4. lag») merkene tegnes hver for seg, men lag som står nær hverandre på skjermen
   // får én lapp (Krig.klynger: «Kystalliansen: 2 lag · nå»), og en lapp som ville ligget oppå en annen meldt lapp, flyttes en linje ned
@@ -46,5 +47,30 @@
     if (window.OLJE && OLJE.BASER) for (const b of OLJE.BASER) E.hinder(sx(b.x) - 13, sy(b.y) - 10, 26, 20);
     if (m <= 6 && window.KjorSpill && KjorSpill.liste) for (const k of KjorSpill.liste()) if (k && isFinite(k.X)) E.hinder(sx(k.X) - 8, sy(k.Y) - 8, 16, 16);
     meldt(g, sx, sy); });
-  window.KartLapper = { leir, baseILeiren };
+  // (runde 13, kritikk G: «Speidertropp 1», «Gunn Kritiker (deg)» og «1. lastebilkolonne» skrev navnene oppå hverandre ved leiren, og
+  // i 3D sto «Gunn Kritiker (deg) +2») egne lag og kjøretøy ved leiren får én lapp under leirens navn: «Leiren: 3 lag, 1 kjøretøy ›».
+  // Trykk på lappen zoomer inn på leiren, der hvert lag har sitt navn. Det valgte laget har alltid sitt eget navn.
+  // Claudes forslag: samles fra 1,6 m per punkt (der hvert lag blir ett merke) til NAVN_UTE (14; lenger ute står tallet bak leirens navn
+  // som før); trykket zoomer til 1,2 m per punkt
+  const SAMLE = { fra: 1.6, inn: 1.2, luft: 8 };
+  const kjøretøyListe = () => (typeof KJORETOY !== 'undefined' ? KJORETOY : window.KJORETOY) || [];
+  const hvem = t => { const v = typeof valgt !== 'undefined' ? valgt : null;
+    if (ENHETER.some(e => e.navn === t && e.side === 'blå' && e !== v && (typeof levende !== 'function' || levende(e)))) return 'lag';
+    if (kjøretøyListe().some(k => k && k.navn === t && k.side === 'blå' && k !== v)) return 'kjøretøy'; return null; };
+  const ute = typeof NAVN_UTE !== 'undefined' ? NAVN_UTE : 14;
+  KROKER.tegn.push((g, vx0, vy1) => { const m = kam.m, S = leir(); if (!S || !E.samleSted || m < SAMLE.fra || m > ute) return;
+    E.samleSted({ x: (S.leir.x - vx0) / m, y: (vy1 - S.leir.y) / m, hvem }); });
+  if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj, mPer) => { const S = leir(); if (!S || !E.samleSted) return; const p = proj(S.leir.x, S.leir.y); if (!p) return;
+    const m = mPer(S.leir.x, S.leir.y); if (!(m >= SAMLE.fra)) return;
+    E.samleSted({ x: p[0], y: p[1], hvem, tekst: n => E.samleTekst(n).replace(' ›', '') }); });
+  // trykk på «Leiren: 3 lag ›» (før de andre trykkene: lappen ligger over merkene)
+  // legges først i lista når alle skriptene er lastet (andre moduler legger seg også først); plasseringen av et bygg går likevel foran
+  const samleTrykk = (X, Y, cx, cy) => { const s = E.samling && E.samling(); if (!s || typeof på3d !== 'undefined' && på3d) return false;
+    if (window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering()) return false;
+    if (typeof cx !== 'number') { cx = VW / 2 + (X - kam.x) / kam.m; cy = VH / 2 - (Y - kam.y) / kam.m; }
+    const r = s.ramme, l = SAMLE.luft; if (cx < r[0] - l || cx > r[0] + r[2] + l || cy < r[1] - l || cy > r[1] + r[3] + l) return false;
+    const S = leir(); if (!S) return false; kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, SAMLE.inn); skitten = true; return true; };
+  const førstSamle = () => KROKER.trykk.unshift(samleTrykk);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(førstSamle, 0)); else setTimeout(førstSamle, 0);
+  window.KartLapper = { leir, baseILeiren, hvem, SAMLE };
 })();

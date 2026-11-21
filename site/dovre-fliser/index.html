@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=9db5fa55e5"></script>
+<script src="/dovre-fliser/kartflis.js?v=6d62bc704e"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40906e9c5e');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=262f49f7b1');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -327,9 +327,21 @@ function flisReserve(z, x, y) {
   return null;
 }
 // tegnReserve: den beste grovere flisen, og oppå den de finere flisene som finnes (når du zoomer ut). Svarer om noe ble tegnet.
+// (runde 13, kritikk H: «i leirvalget er kartet uskarpt og pikselert med synlige skjøter i 5–10 s») en reserve to eller flere nivåer opp
+// forstørres mye: den tegnes fra en glattet kopi (dobbel størrelse, litt uskarp – flisGlatt) med høy kvalitet, så den ser myk ut i stedet
+// for rutete, og bitene fra samme grove flis henger sammen. Claudes forslag: GLATT.uskarp i kopiens punkter, høyst GLATT.maks kopier.
+const GLATT = { fra: 2, uskarp: 1.6, maks: 14, liste: [] };
+function flisGlatt(t) {
+  if (t.glatt) return t.glatt;
+  try { const n = 2 * G.T, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(t.c, 0, 0, n, n); if ('filter' in g) { g.filter = `blur(${GLATT.uskarp}px)`; g.drawImage(t.c, 0, 0, n, n); g.filter = 'none'; } t.glatt = c; GLATT.liste.push(t);
+    while (GLATT.liste.length > GLATT.maks) { const o = GLATT.liste.shift(); if (o.glatt) { o.glatt.width = o.glatt.height = 0; o.glatt = null; } } return c; }
+  catch (e) { return null; } }
 function tegnReserve(z, x, y, sx, sy, px) {
   const r = flisReserve(z, x, y); let noe = false;
-  if (r) { const d = r.d, w = G.T / 2 ** d; ctx.drawImage(r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; }
+  if (r) { const d = r.d, gl = d >= GLATT.fra ? flisGlatt(r.a) : null, k = gl ? 2 : 1, w = k * G.T / 2 ** d;
+    if (gl) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(gl || r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; if (gl) ctx.imageSmoothingQuality = 'low'; }
   if (z < ZMAX) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const b = FERDIG.get((z + 1) + '/' + (2 * x + i) + '/' + (2 * y + j));
     if (b) { ctx.drawImage(b.c, sx + i * px / 2, sy + j * px / 2, px / 2 + .5, px / 2 + .5); noe = true; } }
   return noe;
@@ -534,6 +546,11 @@ function KAI_VIKTIG(x, y, t, l, m) {
   return Math.hypot(S.leir.x - x, S.leir.y - y) < 5000;
 }
 for (const lag of ['bru', 'tunnel', 'kraft', 'ferjekai', 'dam']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && infraViktig(lag, o, m); }
+// (runde 13, kritikk G: «over 30 like firkanter fra oljeinnretningene i Nordsjøen tar mest oppmerksomhet når du skal velge leirplass») mens du
+// velger leirplass (ingen leir ennå) vises oljeinnretningene, feltene og rørene bare nærmere enn LEIRVALG_OLJE m per punkt (Claudes forslag)
+const LEIRVALG_OLJE = 300;
+function velgerLeir() { if (navigator.webdriver && !INFRA_FOKUS.test) return false; const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return !(S && S.leir); }
+for (const lag of ['olje', 'felt', 'ror']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && !(m > LEIRVALG_OLJE && velgerLeir()); }
 // Navnet på et tettsted står inne i tettbebyggelsen, lengst fra kanten (Kart2d.navnepunkt, regnes én gang per tettsted) – ikke midt i
 // rammen rundt flaten: «Oslo» sto ute i fjorden (12. nov). Brukes av 2D, 3D og trykk i 3D.
 const navnP = o => o.navnP || (o.navnP = Kart2d.navnepunkt(o.deler, o.bb));
@@ -3449,10 +3466,10 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=359dbf82e9"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=e447bd612c"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c4be8fd592"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c026e6ea4c"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=a8c748ba7f"></script>
 <script src="/dovre-fliser/spill/penger-visning.js?v=972e080c76"></script>
@@ -3506,7 +3523,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leir.js?v=4c92228ed2"></script>
 <script src="/dovre-fliser/spill/folk.js?v=d6233b4270"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=ac1148bca6"></script>
-<script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
+<script src="/dovre-fliser/spill/leirvalg.js?v=a4e95aa4c1"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
@@ -3514,11 +3531,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folk-visning.js?v=f35478a20f"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=f53f5d59f9"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=fc1f096ea4"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=a47847efd7"></script>
-<script src="/dovre-fliser/spill/byggevisning.js?v=3343bf6c80"></script>
-<script src="/dovre-fliser/spill/leir2d.js?v=40dfc0dea8"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=832522dbc2"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=9806cfb596"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=20629545e4"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=1794485625"></script>
@@ -3556,7 +3573,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dagbok.js?v=ae1e1488af"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=b712eac185"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=88b80209aa"></script>
-<script src="/dovre-fliser/spill/spillet-visning.js?v=fd6d412d3e"></script>
+<script src="/dovre-fliser/spill/spillet-visning.js?v=be8c4eb695"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=ce475bf4a0"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
@@ -3613,7 +3630,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=952462e96e"></script>
 <script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
-<script src="/dovre-fliser/spill/kartlapper.js?v=b52043fd77"></script>
+<script src="/dovre-fliser/spill/kartlapper.js?v=d1a326fccb"></script>
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=184509949c"></script>

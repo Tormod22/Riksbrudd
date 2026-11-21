@@ -68,5 +68,12 @@ sjekk(L2.REGLER.nær < L2.REGLER.middels && L2.REGLER.folkUnder <= L2.REGLER.mid
   sjekk(L2.klyngeM(8) < 8 / 3 && L2.klyngeM(8) > K.fra && L2.klyngeM(30) > L2.klyngeM(8), 'klyngen: på 1 km-målestokk (8 m per punkt) minst tre ganger forstørret: ' + L2.klyngeM(8).toFixed(2));
   sjekk(6 / L2.klyngeM(8) >= 2 && K.kort >= 4 && K.lang > K.kort, 'klyngen: brakka (6 × 12 m) er minst noen punkter bred på 1 km-målestokk'); }
 
+// (runde 13, kritikk G: brakka synes nesten ikke på 100 m-målestokk) med flate farger forstørres små bygg til minst flat.kort × flat.lang
+{ const F = L2.REGLER.flat, K = [-3.1, 3.1, -6.1, 6.1], f13 = L2.forstørr(K, 1.3);
+  sjekk(f13 > 1 && Math.min(6.2, 12.2) / 1.3 * f13 >= F.kort - 1e-9 || 12.2 / 1.3 * f13 >= F.lang - 1e-9, 'brakka på 1,3 m per punkt forstørres (' + f13.toFixed(2) + ')');
+  sjekk(L2.forstørr(K, .5) === 1 && L2.forstørr(K, 40) === F.maks, 'nær: ingen forstørring; langt ute høyst ' + F.maks);
+  const t = L2.leirTak('#606060', '#3b5878'); sjekk(t[2] > t[0] && t[0] < 96 && t[2] > 96, 'taket blandes med leirens farge: ' + t);
+  sjekk(L2.leirTak('#606060', 'rgb(1,2,3)').length === 3, 'ukjent fraksjonsfarge: blått som reserve'); }
+
 console.log(`test_leir2d: ${ok} ok, ${feil} feil`);
 process.exit(feil ? 1 : 0);

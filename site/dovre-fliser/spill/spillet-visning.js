@@ -272,9 +272,13 @@
 
   // ================= KARTET: oppdragene =================
   KROKER.tegn.push((g, vx0, vy1) => { if (!O || !O.liste.length || kam.m > 40) return; g.save(); g.font = '12px sans-serif'; g.textAlign = 'center';
-    for (const o of O.liste) { const x = (o.x - vx0) / kam.m, y = (vy1 - o.y) / kam.m; if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue; const f = o.tatt ? '#f0d79a' : 'rgba(240,215,154,.5)';
-      g.fillStyle = 'rgba(22,18,12,.8)'; g.strokeStyle = f; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 9, y); g.lineTo(x, y + 9); g.lineTo(x - 9, y); g.closePath(); g.fill(); g.stroke();
-      if (o.tatt || kam.m < 6) { const t = Oppdrag.TYPER[o.type].navn, ty = window.Etikett ? Etikett.tekst(g, t, x, y + 23, 1) : y + 23; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = f; g.fillText(t, x, ty); } }
+    // (runde 13, kritikk H: «diamantene mister navnet og blir svarte ruter uten forklaring» – navnet sto bare under 6 m per punkt) navnet står
+    // alltid (gjennom Etikett: lenger ute med lav viktighet, så det skjules bare når det ikke er plass), og ruta har en lys kjerne
+    for (const o of O.liste) { const x = (o.x - vx0) / kam.m, y = (vy1 - o.y) / kam.m; if (x < -30 || y < -30 || x > VW + 30 || y > VH + 30) continue; const f = o.tatt ? '#f0d79a' : 'rgba(240,215,154,.85)';
+      g.fillStyle = 'rgba(58,46,24,.88)'; g.strokeStyle = f; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y - 9); g.lineTo(x + 9, y); g.lineTo(x, y + 9); g.lineTo(x - 9, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = f; g.beginPath(); g.moveTo(x, y - 3.5); g.lineTo(x + 3.5, y); g.lineTo(x, y + 3.5); g.lineTo(x - 3.5, y); g.closePath(); g.fill();
+      { const P = window.Etikett && Etikett.REGLER.prio, pr = P ? (o.tatt ? P.viktig : kam.m < 6 ? P.kjøretøy : P.sted) : 0, t = Oppdrag.TYPER[o.type] ? Oppdrag.TYPER[o.type].navn : 'Oppdrag';
+        g.font = '600 13px "Cormorant Garamond", serif'; const ty = window.Etikett ? Etikett.tekst(g, t, x, y + 23, 1, pr) : y + 23; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = f; g.fillText(t, x, ty); } }
     g.restore(); });
   KROKER.tegn3d.push((g, proj3) => { if (!O) return; const d = deg(), Q = r3(); if (!Q || !Q.ut) return; g.save(); g.font = 'bold 12px sans-serif'; g.textAlign = 'center';
     for (const o of O.liste) { if (!o.tatt) continue; const p = proj3(o.x, o.y); if (!p) continue; const a = d ? Math.hypot(o.x - d.x, o.y - d.y) : Math.hypot(o.x - Q.ut.cx - Q.bane.x, o.y - Q.ut.cy - Q.bane.y), t = `◆ ${Oppdrag.TYPER[o.type].navn} ${meter(a)}`;

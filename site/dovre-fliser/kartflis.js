@@ -739,22 +739,31 @@ function byggmerke(g, t, x, y, r, k, z) {
   g.restore();
 }
 
+// (runde 13, kritikk G: «vannrette, like striper i lia øst for leiren» – det var høydekurvene: i en bratt li (45°) står 5 m-kurvene 5 punkter
+// fra hverandre og ser ut som terrasser; skyggen og høydedataene er glatte) der kurvene står tettere enn KOTE_TETT.svak flisepunkter, tegnes
+// de vanlige kurvene svakere, og under KOTE_TETT.bort ikke i det hele tatt (bare hver femte, den tykke); de tykke faller bort under
+// KOTE_TETT.tykk (stup); i en bratt li er de tykke tynne. Claudes forslag (flisepunkter, ca. ett skjermpunkt).
+const KOTE_TETT = { svak: 9, bort: 5, tykk: 2.2 };
+// koteAvstand(lo, hi, iv): hvor mange flisepunkter det er mellom to kurver i en rute der høyden går fra lo til hi (ren regel)
+const koteAvstand = (lo, hi, iv) => (hi > lo ? iv / (hi - lo) : Infinity);
 function koter(g, E, N, z) {
   const iv = z <= 8 ? 100 : z === 9 ? 50 : z <= 11 ? 20 : z === 12 ? 10 : 5, tykk = iv * 5;
-  const seg = [[], []];
+  const seg = [[], [], []];
   for (let j = 0; j < N - 1; j++) for (let i = 0; i < N - 1; i++) {
     const a = E[j * N + i], b = E[j * N + i + 1], c = E[(j + 1) * N + i + 1], d = E[(j + 1) * N + i];
     if (a !== a || b !== b || c !== c || d !== d) continue;
-    const lo = Math.min(a, b, c, d), hi = Math.max(a, b, c, d);
+    const lo = Math.min(a, b, c, d), hi = Math.max(a, b, c, d), avst = koteAvstand(lo, hi, iv);
     for (let L = Math.ceil(lo / iv) * iv; L < hi; L += iv) {
+      const erTykk = L % tykk === 0; if (erTykk ? avst * 5 < KOTE_TETT.tykk : avst < KOTE_TETT.bort) continue;
       const kryss = [], X = i - 1, Y = j - 1;  // pikselsenter-koordinater
       const kant = (v1, v2, x1, y1, x2, y2) => { if ((v1 < L) !== (v2 < L)) { const t = (L - v1) / (v2 - v1); kryss.push([x1 + (x2 - x1) * t + .5, y1 + (y2 - y1) * t + .5]); } };
       kant(a, b, X, Y, X + 1, Y); kant(b, c, X + 1, Y, X + 1, Y + 1); kant(c, d, X + 1, Y + 1, X, Y + 1); kant(d, a, X, Y + 1, X, Y);
-      const s = seg[L % tykk === 0 ? 1 : 0];
+      // i en bratt li tegnes også de tykke kurvene (hver femte) som vanlige, tynne kurver
+      const s = seg[erTykk ? (avst < KOTE_TETT.bort ? 0 : 1) : avst < KOTE_TETT.svak ? 2 : 0];
       for (let q = 0; q + 1 < kryss.length; q += 2) s.push(kryss[q], kryss[q + 1]);
     }
   }
-  [[.6, 'rgba(58,40,22,.38)'], [1.1, 'rgba(58,40,22,.6)']].forEach(([w, farge], t) => {
+  [[.6, 'rgba(58,40,22,.38)'], [1.1, 'rgba(58,40,22,.6)'], [.5, 'rgba(58,40,22,.18)']].forEach(([w, farge], t) => {
     g.lineWidth = w; g.strokeStyle = farge; g.beginPath();
     const s = seg[t]; for (let q = 0; q < s.length; q += 2) { g.moveTo(s[q][0], s[q][1]); g.lineTo(s[q + 1][0], s[q + 1][1]); }
     g.stroke();

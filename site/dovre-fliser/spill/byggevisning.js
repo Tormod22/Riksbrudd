@@ -18,19 +18,22 @@
     return LB.virker(b) && strøm && !b.av ? Math.max(uten, LB.effekt(b).rekkevidde || 0) : uten; }
   // rutenettets steg i meter etter målestokken (meter per punkt): 2,5 m helt nær, så 10 m og 50 m; ingen ruter langt ute
   const rutesteg = m => (m <= .18 ? 2.5 : m <= .7 ? 10 : m <= 3 ? 50 : 0);
-  // Kameraet for bygging: rammen rundt leirens midte og byggene (+ luft), aldri nærmere enn 0,2 og aldri lenger ute enn 0,6 m per punkt.
-  // Gir null når kameraet alt er bra (nær nok og leiren i bildet).
+  // Kameraet for bygging: rammen rundt leirens midte og byggene (+ luft), aldri nærmere enn KAMERA.nærmest og aldri lenger ute enn
+  // KAMERA.lengst m per punkt. Gir null når kameraet alt er bra (høyst KAMERA.godNok m per punkt og leiren i bildet).
+  // (runde 13, kritikk H: «når du velger et bygg, zoomer kartet til 20 m og grunnen blir uskarp og brun» – før 0,2–0,6 og 0,8)
+  // Claudes forslag: 0,5–0,9 m per punkt (ca. 50–100 m-målestokk), og zoomen beholdes fra 1,2 m per punkt og nærmere
+  const KAMERA = { nærmest: .5, lengst: .9, godNok: 1.2 };
   function ramme(kam, VW, VH, leir, bygg, luft = 45, friH = VH - 200) {
     let x0 = leir.x - luft, x1 = leir.x + luft, y0 = leir.y - luft, y1 = leir.y + luft;
     for (const b of bygg) { if (Math.hypot(b.x - leir.x, b.y - leir.y) > 400) continue; x0 = Math.min(x0, b.x - luft); x1 = Math.max(x1, b.x + luft); y0 = Math.min(y0, b.y - luft); y1 = Math.max(y1, b.y + luft); }
     const iBildet = Math.abs(leir.x - kam.x) < VW * kam.m / 2 && Math.abs(leir.y - kam.y) < VH * kam.m / 2;
-    if (iBildet && kam.m <= .8) return null;
-    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, m: Math.max(.2, Math.min(.6, Math.max((x1 - x0) / VW, (y1 - y0) / Math.max(120, friH)))) };
+    if (iBildet && kam.m <= KAMERA.godNok) return null;
+    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, m: Math.max(KAMERA.nærmest, Math.min(KAMERA.lengst, Math.max((x1 - x0) / VW, (y1 - y0) / Math.max(120, friH)))) };
   }
   const tall = v => String(Math.round(v * 10) / 10).replace('.', ',');
   const meter = v => (v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + ' km' : v >= 100 ? Math.round(v) + ' m' : String(Math.round(v * 10) / 10).replace('.', ',') + ' m');
   const lengde = P => { let s = 0; for (let i = 1; i < P.length; i++) s += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); return s; };
-  const api = { RING, rutesteg, ramme, meter, lengde };
+  const api = { RING, KAMERA, rutesteg, ramme, meter, lengde };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   // ---------- visningen ----------
