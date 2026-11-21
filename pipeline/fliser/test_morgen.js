@@ -37,11 +37,11 @@ const alt = M.dagensValg({ ...grunn, matDøgn: .5, røverTimer: 0, bølge: 2, pe
 ok(alt.length === 3 && alt[0].id === 'vakt', 'alt på en gang: tre valg, angrepet som pågår først: ' + ids(alt));
 
 // --- den store beslutningen ---
-ok(!M.erStorDag(1, null) && M.erStorDag(2, null) && !M.erStorDag(4, 2) && M.erStorDag(5, 2), 'stor beslutning dag 2, så hver tredje dag');
+ok(!M.erStorDag(1, null) && M.erStorDag(2, null) && M.erStorDag(3, 2) && !M.erStorDag(3, 3), 'stor beslutning fra dag 2, så hver dag (runde 13)');
 const stor = M.storBeslutning({ ...grunn, bølge: 1, røverTimer: 10 }, fast(0), null);
 ok(stor && stor.id && stor.tittel && stor.valg.length >= 2 && stor.valg.every(v => v.id && v.t && v.følge), 'en stor beslutning har tittel og valg: ' + (stor && stor.id));
 const typer = new Set(); for (let i = 0; i < 40; i++) { const s = M.storBeslutning({ ...grunn, bølge: 2, røverTimer: 10 }, rekke(i * 7 + 1), null); if (s) typer.add(s.id); }
-ok(['nabo', 'tankbil', 'vern', 'karavane'].every(t => typer.has(t)), 'alle fire slagene kan komme: ' + [...typer].join(','));
+ok(['nabo', 'tankbil', 'vern', 'karavane', 'handel'].every(t => typer.has(t)), 'alle fem slagene kan komme: ' + [...typer].join(','));
 ok(M.storBeslutning({ ...grunn, bølge: 2, røverTimer: 10 }, fast(0), 'nabo').id !== 'nabo', 'aldri den samme to ganger på rad');
 ok(![...Array(30)].some((_, i) => (M.storBeslutning({ ...grunn, dieselPlass: 100 }, rekke(i + 3), null) || {}).id === 'tankbil'), 'ingen tankbil uten plass til diesel');
 ok(![...Array(30)].some((_, i) => (M.storBeslutning({ ...grunn, bølge: 0 }, rekke(i + 9), null) || {}).id === 'vern'), 'ingen beskyttelse før røverne har kommet');
@@ -52,6 +52,29 @@ ok(kar && kar.valg.find(v => v.id === 'kjøp').pris === Math.round((500 * 3000 +
 
 const karTom = [...Array(60)].map((_, i) => M.storBeslutning({ ...grunn, dieselPlass: 0, diesel: 0 }, rekke(i + 21), null)).find(s => s && s.id === 'karavane');
 ok(karTom && karTom.valg[0].diesel === 0 && /^Kjøp 30 rasjoner \(/.test(karTom.valg[0].t) && karTom.valg[0].pris === Math.round(30 * 3000 * .7 / 1e4) * 1e4, 'karavanen uten dieseltank: bare mat, og prisen bare for maten: ' + (karTom && karTom.valg[0].t));
+
+// --- RUNDE 13: hver dag en sak, pausen per slag, handelsmannen med tidsfrist og svartebørsen ---
+const dager = []; let sistId = null; const hist = {};
+for (let d = 2; d <= 13; d++) { const st = M.storBeslutning({ ...grunn, dag: d, bølge: 2, røverTimer: 10 }, rekke(d * 13), sistId, hist); dager.push(st ? st.id : '-'); if (st) { sistId = st.id; hist[st.id] = d; } }
+ok(dager.every(x => x !== '-'), 'en sak hver dag fra dag 2: ' + dager.join(','));
+ok(dager.every((x, i) => i === 0 || x !== dager[i - 1]), 'aldri samme sak to dager på rad: ' + dager.join(','));
+const nabo = dager.map((x, i) => x === 'nabo' ? i : -1).filter(i => i >= 0); ok(nabo.every((d, i) => i === 0 || d - nabo[i - 1] >= 4), 'nabogården høyst hver fjerde dag: ' + nabo);
+const bare = M.storBeslutning({ ...grunn, dag: 5, lager: { tre: 0 }, diesel: 0, dieselPlass: 0, penger: 0 }, fast(0), 'karavane', { nabo: 4 });
+ok(bare && bare.id === 'nabo', 'pausen brytes når ingenting annet passer: ' + (bare && bare.id));
+const han = [...Array(40)].map((_, i) => M.storBeslutning({ ...grunn, diesel: 800 }, rekke(i + 31), null)).find(s => s && s.id === 'handel');
+ok(han && /kl\. 14/.test(han.tittel) && han.valg.some(v => v.id === 'tre' && v.mengde >= 4 && v.pris > 0 && /kl\. 14/.test(v.t)) && han.valg.some(v => v.id === 'diesel' && v.mengde >= 300) && han.valg.some(v => v.id === 'nei'), 'handelsmannen kl. 14: tre, diesel eller nei: ' + (han && han.valg.map(v => v.t).join(' | ')));
+ok(![...Array(30)].some((_, i) => (M.storBeslutning({ ...grunn, lager: { tre: 2 }, diesel: 100 }, rekke(i + 41), null) || {}).id === 'handel'), 'ingen handelsmann når dere ikke har noe å selge');
+const sv = M.dagensValg(grunn, fast()).find(v => v.id === 'svart');
+ok(sv && sv.vare === 'tre' && sv.mengde === 8 && sv.pris === 1e6 && /svartebørsen/.test(sv.t), 'svartebørsen kjøper tre også når kassa er full: ' + (sv && sv.t));
+const svD = M.svartTilbud({ ...grunn, lager: { tre: 0 }, diesel: 1500 });
+ok(svD && svD.vare === 'diesel' && svD.mengde === 400 && svD.pris === Math.round(400 * 3000 * .75 / 1e4) * 1e4, 'uten tre: diesel under kjøpsprisen: ' + (svD && svD.t));
+ok(!M.svartTilbud({ ...grunn, lager: { tre: 3 }, diesel: 100 }), 'ingenting å selge: intet tilbud');
+ok(!M.dagensValg({ ...grunn, penger: 4e6 }, fast()).some(v => v.id === 'svart' && v.vare === 'tre'), 'ikke tre to ganger (vanlig salg og svartebørs) når kassa er lav');
+// ny dag: aldri samme dag to ganger, aldri bakover (omlasting rett før 06:00)
+ok(M.nyDag(3, 2) && !M.nyDag(3, 3) && !M.nyDag(2, 3) && M.nyDag(1, null), 'nyDag: bare en nyere dag gir møte');
+const tt = M.tapTekst([{ navn: 'Oddvar Aasen', lag: 'Vaktlaget', hva: 'såret' }, { navn: 'Kari Lund', lag: 'Vaktlaget', hva: 'såret', fører: true }, { navn: 'Oddvar Aasen', lag: 'Vaktlaget', hva: 'falt' }]);
+ok(tt === 'Tap i lagene: Vaktlaget: Oddvar Aasen falt, Kari Lund (lagfører) ble såret.', 'tapene med navn, lagfører og falt foran såret: ' + tt);
+ok(M.tapTekst([]) === null && M.tapTekst(null) === null, 'ingen tap: ingen tekst');
 
 // --- utfallet neste morgen ---
 const to = [{ navn: 'Kari Lien', ferd: { hogst: 1 } }, { navn: 'Per Holm', ferd: { hogst: 1.45 } }];
@@ -85,5 +108,5 @@ ok(M.velgFolk(folk, 9, 'hogst').length === 3 && !M.velgFolk(folk, 9, 'hogst').in
 ok(M.velgFolk(folk, 2, 'hogst', [3]).every(id => id !== 3), 'unntatt holdes utenfor');
 
 // --- alle tallene står i REGLER ---
-ok(M.REGLER.borte === 2 && M.REGLER.stor.første === 2 && M.REGLER.stor.hver === 3 && M.REGLER.vakt.ekstra === 2, 'tallene står i REGLER');
+ok(M.REGLER.borte === 2 && M.REGLER.stor.første === 2 && M.REGLER.stor.hver === 1 && M.REGLER.vakt.ekstra === 2, 'tallene står i REGLER');
 console.log(feil ? feil + ' FEIL' : 'alle morgentestene ok'); process.exit(feil ? 1 : 0);

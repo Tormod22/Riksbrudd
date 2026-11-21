@@ -96,6 +96,9 @@
     else if (v.id === 'rasjon') { S.effekter.push({ kilde: 'rasjon', mat: R.rasjon.mat, moral: R.rasjon.moral }); t = 'Halve rasjoner i dag. Folk murrer, men maten rekker lenger.'; }
     else if (v.id === 'fri') { S.effekter.push({ kilde: 'fri', tempo: R.fri.tempo, moral: R.fri.moral }); t = 'Fridag i leiren: arbeidet går sakte i dag, men folk henter seg inn.'; }
     else if (v.id === 'skift') { S.effekter.push({ kilde: 'skift', tempo: R.skift.tempo, moral: R.skift.moral }); t = 'Ekstra skift i dag: alt arbeid går raskere, men folk blir slitne.'; }
+    // RUNDE 13: svartebørsen betaler med en gang (utenom markedets kjøpere – det er derfor den betaler bedre)
+    else if (v.id === 'svart') { if (v.vare === 'tre') { const m = Math.min(v.mengde, Math.floor(l.lager.tre || 0)); if (m < 1) t = 'Dere har ikke tre å selge lenger.'; else { const p = Math.round(v.pris * m / v.mengde); l.lager.tre -= m; OppstartSpill.gi(p); t = `Solgte ${m} m³ tre på svartebørsen for ${kr(p)}.`; } }
+      else { const m = Math.min(v.mengde, Math.floor(l.drivstoff || 0)); if (m < 1) t = 'Dere har ikke diesel å selge lenger.'; else { const p = Math.round(v.pris * m / v.mengde); l.drivstoff -= m; OppstartSpill.gi(p); t = `Solgte ${m} l diesel på svartebørsen for ${kr(p)}.`; } } }
     else if (v.id === 'selg') { const r = Lb.selgMateriale(l, 'tre', v.mengde, OppstartSpill.gi); t = r.feil ? r.feil : `Solgte ${String(r.mengde).replace('.', ',')} m³ tre for ${kr(r.pris)}.`; }
     else if (v.id === 'post') { const SS = rot.SpilletSpill; if (SS && SS.ta && SS.ta(v.oppdrag)) { S.planer.push({ id: 'post', folk: [], oppdrag: v.oppdrag }); t = 'Røverposten er merket i kartet. Send en tropp dit – det er farlig, men godt betalt.'; } else t = 'Oppdraget er ikke ledig lenger.'; }
     else if (v.id === 'vakt') { const ider = M.velgFolk(f.personer.filter(p => p.oppgave !== 'vakt'), R.vakt.ekstra, 'vakt'), tidl = {};
@@ -128,7 +131,20 @@
           t = `Kjøpte ${R.karavane.mat} rasjoner${d ? ` og ${d} l diesel` : ''} av karavanen for ${kr(v.pris)}.` + (d < ønsket ? ` ${ønsket - d} l fikk ikke plass i tanken.` : ''); } }
       else if (v.id === 'selg') { if ((l.lager.tre || 0) < R.karavane.tre) t = 'Dere har ikke nok tre lenger.'; else { l.lager.tre -= R.karavane.tre; OppstartSpill.gi(v.pris); t = `Solgte ${R.karavane.tre} m³ tre til karavanen for ${kr(v.pris)}.`; } }
       else t = 'Ingen handel i dag. Karavanen drar videre.'; }
+    // RUNDE 13: handelsmannen – en avtale med tidsfrist: han kommer kl. 14 i dag (handelSteg i KROKER.sim)
+    else if (st.id === 'handel') { if (v.id === 'nei') t = 'Dere handler ikke med handelsmannen. Han kjører forbi.';
+      else { S.handel = { kl: (dag(tid) - 1) * 1440 + R.handel.timer * 60, vare: v.id, mengde: v.mengde, pris: v.pris };
+        t = v.id === 'tre' ? `Avtalt: handelsmannen henter ${v.mengde} m³ tre kl. ${String(6 + R.handel.timer).padStart(2, '0')} og betaler ${kr(v.pris)}. La treet ligge på lageret til da.`
+          : `Avtalt: handelsmannen henter ${v.mengde} l diesel kl. ${String(6 + R.handel.timer).padStart(2, '0')} og betaler ${kr(v.pris)}. La dieselen stå på tanken til da.`; } }
     return t; }
+  // handelsmannen kommer: han tar det som er avtalt, eller det som er igjen (og betaler for det)
+  function handelSteg() { const h = S && S.handel; if (!klar || !h || tid < h.kl) return; const l = L(); if (!l) return; S.handel = null;
+    const har = h.vare === 'tre' ? Math.floor(l.lager.tre || 0) : Math.floor(l.drivstoff || 0), m = Math.min(h.mengde, har), enh = h.vare === 'tre' ? ' m³ tre' : ' l diesel';
+    let t; if (m < 1) t = `Handelsmannen kom kl. ${String(6 + R.handel.timer).padStart(2, '0')}, men dere hadde ikke ${h.vare === 'tre' ? 'treet' : 'dieselen'} lenger. Han dro tomhendt.`;
+    else { const p = Math.round(h.pris * m / h.mengde / 1e4) * 1e4; if (h.vare === 'tre') l.lager.tre -= m; else l.drivstoff -= m; OppstartSpill.gi(p);
+      t = `Handelsmannen kom og kjøpte ${m}${enh} for ${kr(p)}.` + (m < h.mengde ? ` Avtalen var ${h.mengde}${enh} – resten var brukt.` : ''); }
+    logg(t); if (rot.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(t); lagre(); lagreLeir(); }
+  KROKER.sim.push(handelSteg);
   // beskyttelsen: neste bølge et døgn senere (og like lenge i ekte tid – bølgene kommer også etter ekte minutter med spilling)
   function utsett(T) { T.nesteSpill = (Number.isFinite(T.nesteSpill) ? T.nesteSpill : tid) + R.vern.utsett; if (Number.isFinite(T.nesteEkte)) T.nesteEkte += R.vern.utsettEkte * 60; }
 
@@ -149,37 +165,71 @@
 #morgenkort button[data-tast]{ position:relative; padding-right:34px; } body:not(.kort) #morgenkort button[data-tast]::after{ content:attr(data-tast); position:absolute; right:10px; top:8px; min-width:18px; height:18px; line-height:18px; text-align:center; font-size:12px; border:1px solid #6a5a3a; border-radius:3px; color:var(--ink-dim,#b5a888); }
 body.kort #morgenkort button[data-tast]{ padding-right:10px; }
 body.kort #morgenkort{ top:calc(var(--topp,44px) + 6px); max-height:calc(100vh - var(--topp,44px) - 76px - env(safe-area-inset-bottom,0px)); padding:10px 12px; }
-body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.på) #logg{ visibility:hidden; } body.kort #morgenkort button{ min-height:42px; padding:5px 10px; }`;
+body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.på) #logg{ visibility:hidden; } body.kort #morgenkort button{ min-height:42px; padding:5px 10px; }
+/* RUNDE 13 (kritiker G, liggende telefon: bare første valg syntes): rapporten foldes sammen til én linje når kortet ellers blir for høyt
+   («Vis hele døgnet ›»), og på små skjermer står valgene i to kolonner med følgene på høyst to linjer */
+#morgenkort .msum{ display:none; margin:0 0 6px; font-size:13px; line-height:1.35; color:var(--ink-dim,#b5a888); border-left:2px solid #4a4030; padding:1px 0 1px 8px; }
+#morgenkort .msum span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } #morgenkort .msum span.igaar{ color:#d9e6c2; }
+#morgenkort.foldet .msum{ display:flex; align-items:center; gap:8px; } #morgenkort.foldet .msum span{ flex:1 1 auto; min-width:0; } #morgenkort.foldet .mrapport.mdogn{ display:none; }
+#morgenkort button.mfold{ display:inline-block; width:auto; min-height:28px; margin:0; padding:2px 8px; flex:none; text-align:center; font-size:12.5px; background:none; border-color:#6a5a3a; color:#f0d79a; }
+#morgenkort .mfoldav{ margin:-4px 0 6px; } #morgenkort .mfoldav button.mfold{ min-height:26px; }
+body.kort #morgenkort{ width:min(760px,94vw); } body.kort #morgenkort .mvalg{ display:grid; grid-template-columns:1fr 1fr; gap:6px; } body.kort #morgenkort .mvalg button{ margin-top:0; }
+body.kort #morgenkort .mvalg button small{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+body.kort #morgenkort .mvalg button.mingen{ grid-column:1 / -1; min-height:34px; } body.kort #morgenkort .mvalg:has(> :nth-child(2):last-child) button:first-child{ grid-column:1 / -1; }
+body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morgenkort .msp{ margin:4px 0 4px; }`;
   document.head.appendChild(css);
   const kort = el('div', { id: 'morgenkort', role: 'dialog', 'aria-label': 'Morgenmøtet' }); document.body.appendChild(kort);
   let vistNøkkel = '';
   const knappEl = (t, s, f, klasse) => { const b = el('button', { type: 'button', ...(klasse ? { klasse } : {}) }, el('b', {}, t), s ? el('small', {}, s) : null); if (klasse) b.className = klasse; b.onclick = f; return b; };
-  function lukk() { kort.classList.remove('på'); vistNøkkel = ''; if (rot.Kortkø && Kortkø.ferdig) Kortkø.ferdig('morgenkort'); }
+  function lukk() { const var_ = kort.classList.contains('på'); kort.classList.remove('på'); vistNøkkel = ''; if (rot.Kortkø && Kortkø.ferdig) Kortkø.ferdig('morgenkort'); if (var_) etterSvar(); }
+  // RUNDE 13 (kritiker G: ⏭ spolte 06:00 → 06:33 mens møtet ventet på svar): mens kortet står oppe, stoppes ⏭ og fartsknappene før de virker
+  // (før fanget pausereglene det opp først etter et øyeblikk, og ⏭ så ikke møtet som et kort). Farten du trykket, gjelder når du har svart.
+  let ønsketFart = null;
+  const FARTKNAPPER = ['nesteh', 'sp1', 'sp2', 'sp3', 'sp4'];
+  document.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest(FARTKNAPPER.map(id => '#' + id).join(',')) : null;
+    if (!b || !auto() || !kort.classList.contains('på') || !kort.getClientRects().length) return;
+    e.preventDefault(); e.stopImmediatePropagation(); ønsketFart = b.id;
+    const m = document.getElementById('kortpause'); if (m) { m.classList.remove('blink'); void m.offsetWidth; m.classList.add('blink'); }
+    if (typeof tempo !== 'undefined' && tempo > 0) { const p = document.getElementById('sp0'); if (p) p.click(); } }, true);
+  function etterSvar() { const id = ønsketFart; ønsketFart = null; if (!id || !auto()) return;
+    // pausereglene (skjermlag.js) starter farten fra før kortet; den du trykket mens kortet sto, tar over litt etter
+    setTimeout(() => { if (kort.classList.contains('på')) return; const b = document.getElementById(id); if (b) b.click(); }, 250); }
   function vis() {
     const K = S && S.kort; if (!K || K.ferdig) { lukk(); return; }
     // én kortkø for alle kortene med valg: står et annet kort oppe, venter morgenmøtet (det haster: dagen er i gang)
     if (rot.Kortkø && Kortkø.ta && !Kortkø.ta('morgenkort', true, vis)) { kort.classList.remove('på'); vistNøkkel = ''; Kortkø.be('morgenkort', vis, { tittel: 'Morgenmøtet' }); return; }
     const nøkkel = JSON.stringify([K.dag, K.steg, K.valgt]); if (nøkkel === vistNøkkel && kort.classList.contains('på')) return; vistNøkkel = nøkkel;
     kort.replaceChildren(el('h3', {}, 'Morgenmøtet ', el('small', {}, `· dag ${K.dag}`)));
-    if (K.rapport && K.rapport.length) kort.append(el('div', { klasse: 'mrapport' }, ...K.rapport.map(r => el('p', { klasse: /^I går/.test(r) ? 'igaar' : '' }, r))));
+    // RUNDE 13: hele døgnet (.mdogn) og én linje (.msum) med det viktigste: tapene, ellers det første «I går», ellers første linje
+    const rap = K.steg === 0 ? (K.rapport || []) : [];
+    if (rap.length) { const sum = rap.find(r => /^Tap i lagene/.test(r)) || rap.find(r => /^I går/.test(r)) || rap[0], b = knappEl('Vis hele døgnet ›', '', () => fold(false), 'mfold');
+      b.querySelector('b').style.display = 'inline'; kort.append(el('div', { klasse: 'msum' }, el('span', { klasse: /^I går/.test(sum) ? 'igaar' : '' }, sum), b));
+      kort.append(el('div', { klasse: 'mrapport mdogn' }, ...rap.map(r => el('p', { klasse: /^I går|^Tap i lagene/.test(r) ? 'igaar' : '' }, r)))); }
+    const valg = el('div', { klasse: 'mvalg' });
     if (K.steg === 0) {
       kort.append(el('div', { klasse: 'msp' }, K.valg.length ? 'Hva gjør dere i dag?' : 'Ingenting som haster i dag.'));
-      K.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); kort.append(b); });
-      kort.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
+      K.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
+      valg.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
     } else {
       const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, 'I dag: ' + K.valgt)));
       kort.append(el('div', { klasse: 'mstor' }, el('h3', {}, 'Viktig beslutning: ' + st.tittel), el('p', {}, st.tekst)));
-      st.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velgStor(i)); b.setAttribute('data-tast', String(i + 1)); kort.append(b); });
+      st.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velgStor(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
     }
-    kort.classList.add('på'); kort.scrollTop = 0;
+    kort.append(valg);
+    kort.classList.remove('foldet'); kort.classList.add('på'); kort.scrollTop = 0;
+    // foldes bare når kortet ellers må rulles (PC med god plass: alt står som før)
+    if (rap.length && kort.scrollHeight > kort.clientHeight + 2) fold(true);
   }
+  function fold(på) { kort.classList.toggle('foldet', på); const av = kort.querySelector('.mfoldav'); if (av) av.remove();
+    if (!på) { const b = knappEl('‹ Vis mindre', '', () => fold(true), 'mfold'); b.querySelector('b').style.display = 'inline'; const d = kort.querySelector('.mdogn'); if (d) d.after(el('div', { klasse: 'mfoldav' }, b)); }
+    kort.scrollTop = 0; }
   function velg(i) { const K = S.kort; if (!K || K.steg !== 0) return; const v = i >= 0 ? K.valg[i] : null; let t = '';
     if (v) { t = brukDag(v); logg('Morgenmøtet: ' + t); } else t = 'Ingen endring i dag.';
     S.sistValg = v ? v.id : 'ingen'; K.valgt = t;
     if (K.stor) K.steg = 1; else K.ferdig = true;
     lagre(); lagreLeir(); vis(); }
   function velgStor(i) { const K = S.kort; if (!K || K.steg !== 1) return; const v = K.stor.valg[i]; const t = brukStor(K.stor, v); logg(K.stor.tittel + ': ' + t);
-    S.storSist = K.dag; S.storId = K.stor.id; K.ferdig = true; lagre(); lagreLeir(); vis(); }
+    S.storSist = K.dag; S.storId = K.stor.id; (S.storHist = S.storHist || {})[K.stor.id] = K.dag; K.ferdig = true; lagre(); lagreLeir(); vis(); }
 
   // PC: tastene 1–3 velger på kortet (fanges før hurtigtastene, så «3» ikke slår på 3D mens kortet står oppe; ikke mens du går eller skriver)
   rot.addEventListener('keydown', e => { if (!kort.classList.contains('på') || !kort.getClientRects().length || e.ctrlKey || e.altKey || e.metaKey) return;
@@ -189,10 +239,13 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
   // ---------- ny morgen ----------
   function snapOppgjør() { try { return rot.OppgjorSpill && OppgjorSpill.bilde ? OppgjorSpill.bilde() : null; } catch (e) { return null; } }
   // morgen(tving, o): gårsdagens planer kommer hjem og gir rapporten; så et nytt kort (o.stor = id tvinger en stor beslutning – vakta)
+  // RUNDE 13 (kritiker H): aldri samme dag to ganger og aldri bakover (Morgen.nyDag) – klokka kan stå litt før møtet etter en omlasting
   function morgen(tving, o = {}) {
-    if (!klar || !S) return null; const d = dag(tid); if (!tving && d === S.dag) return null;
+    if (!klar || !S) return null; const d = dag(tid); if (!tving && !M.nyDag(d, S.dag)) return null;
     S.planer2 = []; S.effekter = [];
-    const igår = hjem(); S.planer = S.planer2; delete S.planer2; S.dag = d;
+    const igår = hjem(); S.planer = S.planer2; delete S.planer2; S.dag = Number.isFinite(S.dag) ? Math.max(S.dag, d) : d;
+    // tapene i lagene siden forrige morgen (tapSteg), med navn
+    const tap = M.tapTekst(S.tap || []); S.tap = [];
     // et kort som aldri ble besvart (spilleren lukket ikke), regnes som «ingen endring»
     if (S.kort && !S.kort.ferdig) { S.kort.ferdig = true; lukk(); }
     // dagbokas rapport for i dag (før gårsdagens utfall skrives inn i dagboka)
@@ -202,12 +255,28 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     if (!(auto() || tving)) { lagre(); return { igår }; }
     const s = situasjon(); if (!s || !s.folk) { lagre(); return { igår }; }
     const rapport = [];
-    if (db) rapport.push(db); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
-    let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
+    // døgnoppgjøret ser ikke alltid tapene ute (det sa «Et rolig døgn» samme døgn som en falt): da tas «rolig» bort, og tapene står med navn
+    if (tap && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').trim() || null;
+    if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
+    S.storHist = S.storHist || {};
+    let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
     S.kort = { dag: d, rapport, valg: M.dagensValg(s, Math.random).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };
     lagre(); vistNøkkel = ''; vis(); return { igår, kort: S.kort };
   }
-  KROKER.sim.push(() => { if (klar && S && dag(tid) !== S.dag) morgen(false); });
+  KROKER.sim.push(() => { if (klar && S && M.nyDag(dag(tid), S.dag)) morgen(false); });
+
+  // ---------- RUNDE 13: tap i lagene (kritiker H: «Et rolig døgn» samme døgn som en fra Vaktlaget falt og lagføreren ble såret) ----------
+  // Hver halve sekund: hvem i egne lag (også leirvakta) som har falt (hp til 0) eller blitt såret (fra frisk til under 1) siden sist. Lista
+  // begynner først TAP_VENT ms etter start, så det lagrede spillet (lagring.js setter helsa tilbake) ikke regnes som nye tap. Claudes tall.
+  const TAP_VENT = 4000; let tapKart = null, tapSist = 0, tapFra = 0;
+  function tapSteg(tving) { const nå = performance.now(); if (!klar || !S || (!tving && (nå < tapFra || nå - tapSist < 500))) return; tapSist = nå;
+    const kart = new Map(); let ny = false;
+    for (const e of ENHETER) { if (e.side !== 'blå' || e.karakter || !Array.isArray(e.menn)) continue;
+      e.menn.forEach((m, i) => { if (!m || !m.navn) return; const k = e.navn + '|' + m.navn; kart.set(k, m.hp); const før = tapKart ? tapKart.get(k) : undefined; if (før === undefined) return;
+        const hva = før > 0 && m.hp <= 0 ? 'falt' : før >= 1 && m.hp > 0 && m.hp < 1 ? 'såret' : null;
+        if (hva) { (S.tap = S.tap || []).push({ navn: m.navn, lag: e.leirvakt ? 'Leirvakta' : e.navn, hva, fører: (e.leder || 0) === i && e.menn.length > 1 }); ny = true; } }); }
+    tapKart = kart; if (ny) { if (S.tap.length > 60) S.tap.splice(0, S.tap.length - 60); lagre(); } }
+  KROKER.sim.push(() => tapSteg(false));
 
   // ---------- tankbilen: et lite oppdrag i kartet ----------
   const blåNær = (x, y, r) => ENHETER.some(e => e.side === 'blå' && !e.raid && levende(e) && Math.hypot(e.x - x, e.y - y) <= r);
@@ -226,6 +295,11 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center'; const t = 'Tankbil (diesel)', ty = rot.Etikett ? Etikett.tekst(g, t, x, y + 24, 1) : y + 24; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f6d28a'; g.fillText(t, x, ty); g.restore(); });
   KROKER.tegn3d.push((g, proj3) => { const b = S && S.tankbil; if (!klar || !b) return; const p = proj3(b.x, b.y); if (!p) return; g.save(); g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; const t = '◆ Tankbil (diesel)';
     g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, p[0], p[1] - 14); g.fillStyle = '#f6d28a'; g.fillText(t, p[0], p[1] - 14); g.restore(); });
+  // RUNDE 13: handelsmannen – en brikke med tiden som er igjen, og en linje i Leir → Mål
+  const timerIgjen = t => { const m = Math.max(0, Math.round(t - tid)); return m >= 60 ? `${Math.floor(m / 60)} t ${m % 60 ? (m % 60) + ' min' : ''}`.trim() : `${m} min`; };
+  function handelLinje() { const h = S.handel; return `Handelsmannen kommer kl. ${String(6 + R.handel.timer).padStart(2, '0')} (om ${timerIgjen(h.kl)}) og henter ${h.mengde} ${h.vare === 'tre' ? 'm³ tre' : 'l diesel'} for ${kr(h.pris)} – ${h.vare === 'tre' ? 'la treet ligge på lageret' : 'la dieselen stå på tanken'}.`; }
+  (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => { const h = S && S.handel; if (!klar || !h) return [];
+    return [{ i: 'penger', k: '', t: `Handelsmann kl. ${String(6 + R.handel.timer).padStart(2, '0')}`, s: `henter ${h.mengde} ${h.vare === 'tre' ? 'm³ tre' : 'l diesel'} · om ${timerIgjen(h.kl)}`, f: () => logg(handelLinje()) }]; });
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => { const b = S && S.tankbil; if (!klar || !b) return [];
     const lag = nesteLag(b); return [{ i: 'tank', k: '', t: 'Tankbil med diesel', s: `${meter(b.meter)} mot ${b.retning} · ${Math.max(1, Math.round((b.frist - tid) / 60))} t igjen`, f: () => { if (rot.kartTil && !(typeof på3d !== 'undefined' && på3d)) kartTil(b.x, b.y, 4); else logg(`Tankbilen står ${meter(b.meter)} mot ${b.retning} for leiren.`); },
       knapp: lag ? { t: `Send ${lag.navn}`, f: () => sendLag(b) } : null }]; });
@@ -241,6 +315,7 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     for (const p of S.planer || []) if (PLANTEKST[p.id]) { const n = f ? p.folk.map(i => f.personer.find(q => q.id === i)).filter(Boolean).map(q => fornavn(q.navn)) : []; linjer.push(`${og(n) || 'To'} ${PLANTEKST[p.id]} – tilbake i morgen kl. 06.`); }
     const v = virkning(), ef = (S.effekter || []).map(x => EFFTEKST[x.kilde]).filter(Boolean);
     if (ef.length) linjer.push(`I dag: ${ef.join(', ')} (arbeid ×${String(Math.round(v.tempo * 100) / 100).replace('.', ',')}, moral ${v.moral >= 0 ? '+' : ''}${v.moral}${v.mat !== 1 ? ', mat ×' + String(v.mat).replace('.', ',') : ''}).`);
+    if (S.handel) linjer.push(handelLinje());
     if (S.tankbil) linjer.push(`Tankbilen venter ${meter(S.tankbil.meter)} mot ${S.tankbil.retning} (${Math.max(1, Math.round((S.tankbil.frist - tid) / 60))} t igjen).`);
     const åpent = S.kort && !S.kort.ferdig; if (!linjer.length && !åpent) return;
     hode.append(e('h3', { 'data-fane': 'mål' }, 'Morgenmøtet')); for (const t of linjer) hode.append(e('div', { klasse: 'dagbok' }, t));
@@ -256,6 +331,7 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     // beskyttelsen gjelder etter en omlasting (spillet-visning.js regner neste bølge på nytt ved start)
     const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) T.nesteSpill = S.vernTil;
     if (!S.oppFør) S.oppFør = snapOppgjør();
+    tapKart = null; tapFra = performance.now() + TAP_VENT;
     klar = true; koblValg(); lagre(); vistNøkkel = ''; if (S.kort && !S.kort.ferdig && auto()) vis(); }
   // kortet følger pausereglene (Skjermlag lastes etter denne fila): pause mens det står oppe, skjult under angrep
   function koblSkjermlag() { const Sk = rot.Skjermlag; if (!Sk || !Sk.KORT) return false; if (!Sk.KORT.includes('morgenkort')) Sk.KORT.push('morgenkort'); if (Sk.VENTER && !Sk.VENTER.includes('morgenkort')) Sk.VENTER.push('morgenkort'); return true; }
@@ -267,6 +343,7 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
     // et kort med hastverk fra en annen modul (forræderen) har kommet oppå: morgenmøtet viker og venter
     if (kort.classList.contains('på') && rot.Kortkø) { const a = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'].find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); });
       if (a) { kort.classList.remove('på'); vistNøkkel = ''; Kortkø.ferdig('morgenkort'); Kortkø.be('morgenkort', vis, { tittel: 'Morgenmøtet', først: true }); } } }, 1000);
-  Object.assign(api, { start, morgen, situasjon, vis, velg, velgStor, lukk, tilstand: () => S, virkning, vaktNå, koblSkjermlag, åpen: () => kort.classList.contains('på') });
+  Object.assign(api, { start, morgen, situasjon, vis, velg, velgStor, lukk, tilstand: () => S, virkning, vaktNå, koblSkjermlag, åpen: () => kort.classList.contains('på'),
+    tapSteg, handelSteg, fold, foldet: () => kort.classList.contains('foldet'), fartVenter: () => ønsketFart, glemFart: () => { ønsketFart = null; } });
   rot.MorgenSpill = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

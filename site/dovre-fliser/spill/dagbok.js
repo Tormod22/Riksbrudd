@@ -42,7 +42,8 @@
     return { dag: dag(tid), folk: F ? F.personer.length : 0, moral: F ? F.moral : 0, matDager, diesel: L.drivstoff || 0, dieselBruk: P ? P.perDøgn : bruk, rekkerDøgn: P ? P.timer / 24 : undefined, kassa: O.penger, kassaFør: S.kassa,
       mål: rot.MaalSpill ? [MaalSpill.stilling().totalt, MaalSpill.stilling().alle] : null };
   }
-  KROKER.sim.push(() => { if (!klar || dag(tid) === S.dag) return; const d = nå(); if (!d) return;
+  // RUNDE 13 (kritiker H: etter omlasting kl. 05:59 kom «Dag 2: …» en gang til): bare en NYERE dag gir rapport – klokka kan stå litt bak etter en omlasting
+  KROKER.sim.push(() => { if (!klar || (Number.isFinite(S.dag) && dag(tid) <= S.dag)) return; const d = nå(); if (!d) return;
     const r = rapport(d); logg(r.tekst); S.liste.unshift(r.tekst); S.liste.length = Math.min(S.liste.length, 7); S.dag = d.dag; S.kassa = d.kassa; S.diesel = d.diesel; lagre(); });
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el }) => { if (!klar || !S.liste.length) return; hode.appendChild(el('h3', {}, 'Dagbok'));
     for (const t of S.liste) hode.appendChild(el('div', { klasse: 'dagbok' }, t)); });

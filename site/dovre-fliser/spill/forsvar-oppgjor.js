@@ -98,7 +98,9 @@
     S = d && d.før && Number.isFinite(d.dag) ? d : { dag: dag(tid), før: bilde() }; klar = true; lagre(); }
   rot.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   // ny morgen (samme regel som dagboka: ny dag fra kl. 06): oppgjøret etter dagbokas rapport (denne kroken ligger etter dagboka i lista)
-  function morgen(tving) { if (!klar || !S) return null; if (!tving && dag(tid) === S.dag) return null; const nå = bilde(), r = tekst(S.før, nå); S.dag = dag(tid); S.før = nå; lagre();
+  // RUNDE 13 (pakke «morgen», kritiker H: «Et rolig døgn» samme døgn som en falt): etter en omlasting rett før kl. 06 sto klokka bak dagen som
+  // alt var gjort opp, så oppgjøret ble tatt på nytt og sammenlignet bare de siste minuttene. Nå: bare en NYERE dag (aldri bakover).
+  function morgen(tving) { if (!klar || !S) return null; if (!tving && Number.isFinite(S.dag) && dag(tid) <= S.dag) return null; const nå = bilde(), r = tekst(S.før, nå); S.dag = Math.max(S.dag || 0, dag(tid)); S.før = nå; lagre();
     if (r && (auto() || tving)) logg(r.tekst); return r; }
   KROKER.sim.push(() => { morgen(false); });
   rot.OppgjorSpill = Object.assign(ut, { bilde, morgen, start, tilstand: () => S });
