@@ -264,3 +264,5 @@ Rettet etter femte anmeldelse (kritiker I telefon 4, J PC 4) på 1,5 time med sj
 - **Knapper:** Snu ⟲/⟳, ⌂ til leiren, og boksen i leirvalget ligger ikke over Norge.
 - **Kart:** lagene i leiren telles riktig, og kaier heter etter stedet.
 - **3D:** fjernkart i stedet for tomt bilde når du flyr, lysere planter, leiren i en lysning, og navnet på nærmeste tettsted vises.
+
+Kontroll: PC 130 ok og mobil 130 ok. Den eneste feilen var en sjekk i kamp-vakta. Den er rettet og grønn når den kjøres alene.

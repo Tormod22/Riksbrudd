@@ -1432,4 +1432,4 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   felles underlag når lånte fliser kommer fra flere nivåer (GLATT.fra 1). 3D: spill/fjernkart3d.js – grovt terreng med kartbilde rundt utsnittet
   og «Laster landskapet …» når du flyr; folk flyttes unna de første 2 s av gåmodus; lysere lyng og planter; trær ryddet i leiren (LEIR_RYDD);
   startblikk på skrå; asfaltgrå veger i 3D-kartet (ASFALT3D); «Nærmeste tettsted: X · 8,6 km N» under kompasset; «sist sett» eldre enn 6 t
-  skjules i 3D. Hjelpen: 277 emner.
+  skjules i 3D. Hjelpen: 277 emner. Kontroll: PC 130 ok + mobil 130 ok; eneste FEIL var kamp-vaktas rapportsjekk (vakta rettet, grønn alene på PC og mobil). Merk: en vakt lar 3D være av før skytesjekken – sjekk.js slår det på igjen og skriver «merk:».
