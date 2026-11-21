@@ -81,13 +81,14 @@
   // ligger i midtre 80 % av kartbildet.
   // utsnitt = avstanden utsnittet bygges for (som når du går: 1000 m, ca. 1,7 km til hver side) – da trengs ikke et nytt utsnitt når
   // du trykker «Gå» i leiren etterpå, og bakken er likevel 3–6 ganger skarpere enn i et utsnitt for 2–3 km avstand.
-  const STARTBLIKK = { avst: 340, utsnitt: 1000, over: 700, midt: .4 };
+  // (runde 14, kritiker I: «kameraet ser rett ned») pitch: første bilde litt på skrå (0,55 rad ≈ 32° over bakken; før 0,75 ≈ 43°)
+  const STARTBLIKK = { avst: 340, utsnitt: 1000, over: 700, midt: .4, pitch: .55 };
   function startBlikk(v, B = STARTBLIKK) {
     if (!v || !v.først || !v.leir || !Number.isFinite(v.leir.x)) return null; const L = v.leir;
-    if (v.mål) return v.mål.navn === 'leiren' ? { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt } : null;
+    if (v.mål) return v.mål.navn === 'leiren' ? { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt, pitch: B.pitch } : null;
     const avst = Math.max(300, Math.min(9000, v.m * v.VH * 1.1));
     if (avst <= B.over || Math.abs(L.x - v.x) > v.m * v.VW * B.midt || Math.abs(L.y - v.y) > v.m * v.VH * B.midt) return null;
-    return { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt };
+    return { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt, pitch: B.pitch };
   }
   const Kvalitet = { NIVÅ, REKKE, FX, AUTO, neste, vedvarende, programvare, kortNavn, STARTBLIKK, startBlikk };
   if (typeof module !== 'undefined') { module.exports = Kvalitet; return; }
