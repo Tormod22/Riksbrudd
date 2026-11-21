@@ -19,7 +19,9 @@
   }
   const velg = (r, liste) => { let s = 0; for (const [, w] of liste) s += w; let x = r * s; for (const [n, w] of liste) { x -= w; if (x < 0) return n; } return liste[liste.length - 1][0]; };
   // meter per felt langs veggen og høyden på en etasje (m)
-  const MÅL = { murgard: [3.2, 3.3], tegl: [3, 3.1], funkis: [4, 3], plate: [2.4, 3.3], leil: [7.2, 2.9], kontor: [3.2, 3.4], gate: [4.5, 4.2] };
+  const MÅL = { murgard: [3.2, 3.3], tegl: [3, 3.1], funkis: [4, 3], plate: [2.4, 3.3], leil: [7.2, 2.9], kontor: [3.2, 3.4], gate: [4.5, 4.2],
+    // (21. nov, runde 15) stein = naturstein med spissbuevindu (store kirker), pleie = sykehjem: lys puss, vindu og altan per rom
+    stein: [4.5, 6], pleie: [3.6, 3] };
   // dempede, naturlige farger (norske bygårder): oker, gul, lys grå, rødbrun, hvit, beige, grønngrå, støvrosa, terrakotta.
   // Ingen blåaktige vegger (natt3d.js tenner vinduer der teksturen er blåere enn rød).
   const FARGER = {
@@ -28,7 +30,9 @@
     funkis: ['#e6e2d8', '#d4d0c6', '#ddd2b0', '#d9c6b6', '#c9cbbf'],
     plate: ['#8c8d8b', '#626463', '#a8885f', '#bab7af', '#7c5e4a', '#d2cfc6'],
     leil: ['#d6cfbf', '#bda88a', '#a8a59c', '#c9b28a', '#9e6a55', '#ddd6c6'],
-    kontor: ['#c9c4b8', '#a9a69e', '#b9a48a', '#d8d2c4', '#8e8a82']
+    kontor: ['#c9c4b8', '#a9a69e', '#b9a48a', '#d8d2c4', '#8e8a82'],
+    // fargen ganges med teksturen: stein har sine egne grå, pleie er lys puss eller hvitmalt (Claudes forslag etter bilder fra Fitjar og Vestby)
+    stein: ['#ffffff', '#f2efe8', '#e8e6e0'], pleie: ['#efece4', '#e6dfd0', '#ddd6c4', '#f4f2ec', '#d8cbb4']
   };
   const TAKPAPP = ['#55524e', '#615d57', '#4d4b48', '#68635c', '#5a554e'], GRØNT = ['#5e6c43', '#687547', '#55623d'];
   const BYTAK = ['#3c3b3a', '#4a4440', '#6b4535', '#5a3a30', '#535659'];   // skifer, blikk, tegl på bygårdene
@@ -51,6 +55,9 @@
     } else if (kl === 'butikk' && h > 7.5) {
       fasade = by ? velg(r, [['murgard', 40], ['tegl', 20], ['funkis', 15], ['plate', 25]]) : velg(r, [['plate', 5], ['tegl', 3], ['funkis', 2]]);
     } else if (kl === 'skole') fasade = velg(r, [['tegl', 45], ['kontor', 40], ['funkis', 15]]);
+    // (21. nov, runde 15) helsebygg: sykehjem i lys puss med altaner (eller tegl), legevakt/legesenter som nyere plate/kontor
+    else if (kl === 'sykehjem') fasade = velg(r, [['pleie', 70], ['tegl', 20], ['funkis', 10]]);
+    else if (kl === 'legevakt') fasade = velg(r, [['plate', 45], ['kontor', 35], ['tegl', 20]]);
     if (!fasade) return null;
     // etasjene: høyden fra dataene delt i hele etasjer (vinduene passer etasjehøyden)
     const gate = h >= 7.5 && (kl === 'butikk' || (sentrum && kl !== 'skole' && fasade !== 'plate' && r2 < .7));
@@ -79,7 +86,7 @@
     }
     return ut;
   }
-  const FASADER = ['murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard'];
+  const FASADER = ['murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard', 'stein', 'pleie'];
 
   // ---------- teksturene (bare i nettleseren) ----------
   // Ett felt per tekstur (u = ett felt langs veggen, v = én etasje), hvit = veggens farge (fargen ganges inn per hjørne).
@@ -126,6 +133,22 @@
       g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(20, 14, 26, 36);
       g.fillStyle = '#f4f2ec'; g.fillRect(19, 12, 26, 36); glass(22, 16, 20, 30); g.fillStyle = '#f4f2ec'; g.fillRect(31, 16, 2, 30);
       g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(17, 8, 30, 4);
+    } else if (type === 'stein') {
+      // naturstein i ujevne skift (grå, blågrå og rustbrune steiner, mørke fuger) med et høyt spissbuevindu i blyglass midt i feltet
+      g.fillStyle = '#4e4d4a'; g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; ) { const hh = 3 + Math.floor(rnd() * 4); for (let x = -Math.floor(rnd() * 6); x < W; ) { const ww = 4 + Math.floor(rnd() * 8), v = .62 + rnd() * .3, brun = rnd() < .18;
+          const rr = (brun ? 150 : 128) * v, gg = (brun ? 122 : 128) * v, bb = (brun ? 98 : 124) * v; g.fillStyle = `rgb(${rr | 0},${gg | 0},${bb | 0})`; g.fillRect(x + .5, y + .5, ww - 1, hh - 1); x += ww; } y += hh; }
+      g.fillStyle = '#9a968e'; g.beginPath(); g.moveTo(22, 56); g.lineTo(22, 26); g.quadraticCurveTo(22, 12, 32, 6); g.quadraticCurveTo(42, 12, 42, 26); g.lineTo(42, 56); g.fill();
+      const gr = g.createLinearGradient(0, 8, 0, 56); gr.addColorStop(0, '#7f8fa3'); gr.addColorStop(1, '#2e3540'); g.fillStyle = gr;
+      g.beginPath(); g.moveTo(24, 55); g.lineTo(24, 26); g.quadraticCurveTo(24, 14, 32, 9); g.quadraticCurveTo(40, 14, 40, 26); g.lineTo(40, 55); g.fill();
+      g.fillStyle = 'rgba(160,160,150,.8)'; g.fillRect(31, 12, 2, 43); for (let y = 20; y < 55; y += 7) g.fillRect(24, y, 16, 1);
+    } else if (type === 'pleie') {
+      // sykehjem: lys puss, stort vindu per rom og en altan med hvitt rekkverk i halve feltene (fargen ganges inn)
+      puss(.04);
+      g.fillStyle = '#f6f4ee'; g.fillRect(12, 10, 40, 34); glass(14, 12, 18, 30); glass(34, 12, 16, 22); g.fillStyle = '#f6f4ee'; g.fillRect(32, 12, 2, 30);
+      g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(12, 44, 40, 2);
+      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(8, 46, 48, 3); g.fillStyle = '#f4f3ef'; g.fillRect(8, 49, 48, 11);
+      g.fillStyle = 'rgba(0,0,0,.18)'; for (let x = 10; x < 56; x += 4) g.fillRect(x, 50, 1, 10); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(8, 60, 48, 2);
     } else if (type === 'gate') {
       // butikkfront: fasadebånd øverst (mørkere), stort utstillingsvindu med karm, lav sokkel
       g.fillStyle = '#d8d4cc'; g.fillRect(0, 0, W, 16); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 15, W, 2);
@@ -137,6 +160,44 @@
     }
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return (TEX[type] = t);
   }
+  // ---------- småhus og kirker (21. nov, runde 15: «bygg fra virkeligheten») ----------
+  // Hvitmalte trehus: i eldre småbyer og tette strøk (Gamle Stavanger, Bryggen-området, kystbyene) er nesten alle trehus hvite, på
+  // landet er rødt, gult og grått vanligere. husFarge(kl, i, tett) gir en hvit nyanse for andelen HVIT etter tettheten (bygg innen 100 m),
+  // ellers null (= typens vanlige farger). Tallene er Claudes forslag.
+  const HVIT = { tett: [[40, .78], [15, .66], [6, .5], [0, .38]], farger: ['#eeebe3', '#f2f0ea', '#e7e3d8', '#ebe8df'] };
+  function husFarge(kl, i, tett) {
+    if (kl !== 'hus') return null;
+    let a = 0; for (const [n, v] of HVIT.tett) if (tett >= n) { a = v; break; }
+    return hash(i, 41, 13) < a ? rgb(HVIT.farger[Math.floor(hash(i, 43, 3) * HVIT.farger.length)]) : null;
+  }
+  // Takene på småhusene i tette strøk: teglrødt (oransjerødt) tak på ca. halvparten, som i Gamle Stavanger og andre eldre trehusstrøk;
+  // ellers typens vanlige (mørke) takfarger. Claudes forslag.
+  const TEGLTAK = { andel: [[15, .5], [6, .3], [0, .15]], farger: ['#9a4a34', '#8c4130', '#a5553a', '#83402f'] };
+  function husTak(kl, i, tett) {
+    if (kl !== 'hus') return null;
+    let a = 0; for (const [n, v] of TEGLTAK.andel) if (tett >= n) { a = v; break; }
+    return hash(i, 53, 19) < a ? rgb(TEGLTAK.farger[Math.floor(hash(i, 59, 7) * TEGLTAK.farger.length)]) : null;
+  }
+  // Steinkirker: store kirker (grunnflate over ca. 700 m²: domkirker, byenes langkirker) er murt i stein eller tegl; små kirker er trekirker.
+  // Vegghøyden (til raftet) holdes nede – OSM-høyden for kirker er ofte tårnet eller et anslag (cathedral = 30 m) – og taket er bratt.
+  const KIRKE = { steinAreal: 700, maksVegg: 12, møne: .62, maksMøne: 16 };
+  const steinKirke = (A, i) => A >= KIRKE.steinAreal || (A >= 350 && hash(i, 47, 5) < .35);
+  // Takvinkler per type: møne = halve bredden × faktor (0,84 ≈ 40°), med et tak i meter. Claudes forslag etter bilder.
+  const TAKVINKEL = { hus: [.84, 5.5], hytte: [.6, 3.5], låve: [.72, 8], kirke: [1.24, 16], sykehjem: [.6, 4.5], uthus: [.7, 3.5] };
+
+  // ---------- bensinstasjoner (21. nov, runde 15, brukeren: «mindre steder er ofte bare en pumpestasjon, mens andre kan være med tak») ----------
+  // Tre slags (Claudes forslag etter bilder fra Commons): 'automat' = 1–2 pumper og en betalingsautomat uten tak og butikk (bygda, fylkes-
+  // og kommunale veger), 'vanlig' = tak over to pumpeøyer og en butikk (tettsted, riksveg), 'stor' = langt tak over tre pumpeøyer, butikk
+  // med kafé og vaskehall (E-veg, og noen riksveger utenfor tettsted). k = nærmeste veg (E/R/F/K), by = vegen går i et tettsted, x/y = plassen.
+  const BENSIN_ANDEL = { E: { stor: .8 }, Rby: { vanlig: .8 }, R: { stor: .35, vanlig: .45 }, by: { vanlig: .75 }, bygd: { automat: .7 } };
+  function bensinType(k, by, x, y) {
+    const r = hash(Math.round(x), Math.round(y), 61);
+    if (k === 'E') return r < BENSIN_ANDEL.E.stor ? 'stor' : 'vanlig';
+    if (k === 'R') return by ? (r < BENSIN_ANDEL.Rby.vanlig ? 'vanlig' : 'stor') : (r < BENSIN_ANDEL.R.stor ? 'stor' : r < BENSIN_ANDEL.R.stor + BENSIN_ANDEL.R.vanlig ? 'vanlig' : 'automat');
+    if (by) return r < BENSIN_ANDEL.by.vanlig ? 'vanlig' : 'automat';
+    return r < BENSIN_ANDEL.bygd.automat ? 'automat' : 'vanlig';
+  }
+
   // ---------- gatetrær (bare i nettleseren): løvtrær langs gatene med fortau i tettstedene, der det er plass ----------
   // Hver 12. m på begge sider like bak fortauet (vegbredde/2 + 2,9 m), ikke i/inntil hus, ikke på en annen veg eller i vann.
   // Kroken kjører etter liv3d.js (u.veger, u.påVeg) og vegetasjon3d.js (treslagene) – byhus.js lastes etter dem.
@@ -178,6 +239,6 @@
     const gml = u.trær.løv || new Float32Array(0), alle = new Float32Array(gml.length + ny.length); alle.set(gml); alle.set(ny, gml.length); u.trær.løv = alle;
     gatetrær.antall = ny.length / 5;
   });
-  const Byhus = { gatetrær, stil, takpapp, grøntTak, byTak, takhus, FASADER, MÅL, FARGER, tekstur, TEX, hash };
+  const Byhus = { gatetrær, stil, takpapp, grøntTak, byTak, takhus, FASADER, MÅL, FARGER, tekstur, TEX, hash, husFarge, husTak, TEGLTAK, bensinType, BENSIN_ANDEL, HVIT, KIRKE, steinKirke, TAKVINKEL };
   if (typeof module !== 'undefined' && module.exports) module.exports = Byhus; else rot.Byhus = Byhus;
 })(typeof window !== 'undefined' ? window : this);

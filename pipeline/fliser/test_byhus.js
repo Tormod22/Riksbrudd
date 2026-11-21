@@ -44,5 +44,30 @@ for (let i = 1; i < 1000; i++) { const lu = 10 + (i % 30), lv = 8 + (i % 13); fo
 sjekk(antall > 1000 && utenfor === 0, `takhus inne på taket (${antall} takhus, ${utenfor} utenfor)`);
 sjekk(B.takhus(1, 8, 8, 64).length === 0, 'ingen takhus på små tak');
 
+// (runde 15) hvitmalte trehus og teglrøde tak i tette strøk, færre på landet; bare for småhus
+const andel = (fn, tett) => { let n = 0; for (let i = 1; i <= 4000; i++) if (fn('hus', i, tett)) n++; return n / 4000; };
+const hBy = andel(B.husFarge, 50), hLand = andel(B.husFarge, 0), tBy = andel(B.husTak, 50), tLand = andel(B.husTak, 0);
+sjekk(hBy > .7 && hBy < .86 && hLand > .3 && hLand < .46, `hvite trehus: by ${hBy.toFixed(2)}, land ${hLand.toFixed(2)}`);
+sjekk(tBy > .42 && tBy < .58 && tLand < .2, `teglrøde tak: by ${tBy.toFixed(2)}, land ${tLand.toFixed(2)}`);
+sjekk(B.husFarge('leil', 3, 50) === null && B.husTak('kontor', 3, 50) === null && B.husFarge('hytte', 3, 50) === null, 'bare småhus («hus») får hvit farge/teglrødt tak');
+let hvitFeil = 0; for (let i = 1; i < 500; i++) { const f = B.husFarge('hus', i, 50); if (f && !(f[0] > .88 && f[1] > .86 && f[2] > .83)) hvitFeil++; }
+sjekk(hvitFeil === 0, 'de hvite fargene er hvite');
+// steinkirker: store kirker er murt, små er trekirker
+let små = 0; for (let i = 1; i < 500; i++) if (B.steinKirke(150, i)) små++;
+sjekk(B.steinKirke(1500, 7) && B.steinKirke(800, 9) && små === 0, `steinkirker: store ja, små nei (${små} små i stein)`);
+// takvinkler: kirken brattest, hytta slakere enn huset
+const tv = n => Math.atan(B.TAKVINKEL[n][0]) * 180 / Math.PI;
+sjekk(tv('kirke') > 48 && tv('hus') > 38 && tv('hus') < 42 && tv('hytte') < tv('hus') && tv('låve') < tv('hus'), `takvinkler: kirke ${tv('kirke').toFixed(0)}°, hus ${tv('hus').toFixed(0)}°, hytte ${tv('hytte').toFixed(0)}°, låve ${tv('låve').toFixed(0)}°`);
+// helsebygg: sykehjem får mest «pleie» (altaner), legevakt plate/kontor/tegl; teksturene finnes i MÅL og FASADER
+const tellH = (kl) => { const c = {}; for (let i = 1; i < 2000; i++) { const s = B.stil(kl, 15, i, 9, 1200, 20, true); c[s ? s.fasade : 'ingen'] = (c[s ? s.fasade : 'ingen'] || 0) + 1; } return c; };
+const sh = tellH("sykehjem"), lv = tellH("legevakt");
+sjekk(sh.pleie > 1200 && !sh.ingen && !lv.ingen && !lv.pleie, `sykehjem ${JSON.stringify(sh)}, legevakt ${JSON.stringify(lv)}`);
+sjekk(['stein', 'pleie'].every(n => B.MÅL[n] && B.FARGER[n] && B.FASADER.includes(n)), 'stein og pleie har mål, farger og står i FASADER');
+// bensinstasjoner: E-veg stor, bygda automat, tettsted vanlig – i rimelige andeler
+const bt = (k, by) => { const c = { automat: 0, vanlig: 0, stor: 0 }; for (let i = 0; i < 3000; i++) c[B.bensinType(k, by, i * 37.3, i * 91.7)]++; return c; };
+const bE = bt('E', false), bK = bt('K', false), bBy = bt('F', true);
+sjekk(bE.stor > 2100 && bE.automat === 0 && bK.automat > 1800 && bK.stor === 0 && bBy.vanlig > 1900 && bBy.stor === 0, `bensin: E ${JSON.stringify(bE)}, K ${JSON.stringify(bK)}, tettsted ${JSON.stringify(bBy)}`);
+sjekk(B.bensinType('R', true, 10, 20) === B.bensinType('R', true, 10, 20), 'samme stasjon får samme type');
+
 console.log(feil ? `\n${feil} FEIL` : '\nAlt ok');
 process.exit(feil ? 1 : 0);
