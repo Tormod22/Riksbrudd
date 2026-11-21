@@ -148,7 +148,9 @@
     let tettsteder = 0; if (rot.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') tettsteder++;
     const al = document.getElementById('alarm');
     return { dag: Math.floor((6 + tid / 60) / 24) + 1, marsj, navn: lag.map(s => s.navn), lag: lag.length,
-      strid: nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
+      // (runde 13, kritiker H: «farten ble satt til 1× "Et lag er i ildkamp" over ti ganger») – finnes spill/forsvar-kamp.js, melder den hver
+      // kamp ÉN gang med navn, fiende og sted (hendelsen «kontakt»), og bildet teller ikke ildkampene selv
+      strid: rot.KampSpill ? 0 : nylig(sistStrid, [...lag.filter(s => s.skyterPå && s.skyterPå.size), ...ENHETER.filter(e => e.side !== 'blå' && e.skyterPå && [...e.skyterPå].some(b => b.side === 'blå'))], ENHETER),
       fiender: nylig(sistSett, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
@@ -181,8 +183,13 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   const alarmOppe = () => { const a = document.getElementById('alarm'); return !!(a && a.classList.contains('på') && a.getClientRects().length && getComputedStyle(a).visibility !== 'hidden'); };
   function plasserKort() { const a = document.getElementById('alarm'), liten = alarmOppe() && (!navigator.webdriver || api2.test === true);
     kort.classList.toggle('liten', liten); kort.style.top = liten ? Math.round(a.getBoundingClientRect().bottom + 4) + 'px' : ''; }
-  function visKort(tekst, medSpol) {
+  // (runde 13, kritiker G og H: «banneret hadde ingen Vis-knapp») – har hendelsen et sted (x, y i kartets meter), får kortet «Vis»:
+  // kartet går til 2D og flytter seg dit
+  function visSted(p) { if (!p) return; const gå = () => { kam.x = p.x; kam.y = p.y; kam.m = Math.min(Math.max(kam.m, 1.5), 6); skitten = true; };
+    if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function' && !(typeof R3 !== 'undefined' && R3 && R3.fot)) { Promise.resolve(slå3d(false)).then(gå, gå); } else gå(); }
+  function visKort(tekst, medSpol, sted) {
     kort.replaceChildren(el('span', {}, '⏭ ', el('b', {}, tekst)));
+    if (sted) { const v = el('button', { id: 'flytvis' }, 'Vis'); v.onclick = () => visSted(sted); kort.append(v); }
     if (medSpol) { const b = el('button', {}, 'Spol videre'); b.onclick = () => spol(); kort.append(b); }
     const x = el('button', { 'aria-label': 'Lukk' }, '×'); x.onclick = () => kort.classList.remove('på'); kort.append(x);
     kort.classList.add('på'); plasserKort(); clearTimeout(kortTid); kortTid = setTimeout(() => kort.classList.remove('på'), R.visSek * 1000);
@@ -197,7 +204,8 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     const tekst = liste.map(h => h.tekst).join(', '); sistStopp = { hva, liste, tid, fart: mål };
     spoler = false; merk(); settFart(mål);
     const t = tekst.charAt(0).toUpperCase() + tekst.slice(1);
-    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true);
+    const sted = liste.find(h => Number.isFinite(h.x) && Number.isFinite(h.y));
+    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true, sted ? { x: sted.x, y: sted.y } : null);
     // (runde 8) står grunnen alt øverst i loggen («Røverne er snart framme (ca. 9 min).»), skrives den ikke en gang til
     const nyLinje = !(typeof loggLinjer !== 'undefined' && liste.every(h => loggLinjer.slice(0, 3).some(l => l.toLowerCase().includes(h.tekst.toLowerCase()))));
     if (nyLinje) logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
@@ -219,7 +227,8 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (!d.tekst) return; let type = F.HENDELSER[d.type] ? d.type : 'annet';
     // (runde 8) natur nær leiren stopper som «annet» (verden-visning.js kan sende x og y med)
     if (type === 'natur' && typeof d.x === 'number' && typeof d.y === 'number') { const S = rot.OppstartSpill && OppstartSpill.tilstand(); if (S && S.leir && Math.hypot(d.x - S.leir.x, d.y - S.leir.y) < R.naturNær) type = 'annet'; }
-    innboks.push({ type, tekst: String(d.tekst).slice(0, 120) }); if (innboks.length > 6) innboks.shift(); });
+    const h = { type, tekst: String(d.tekst).slice(0, 120) }; if (Number.isFinite(d.x) && Number.isFinite(d.y)) { h.x = d.x; h.y = d.y; }
+    innboks.push(h); if (innboks.length > 6) innboks.shift(); });
   window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);
   KROKER.sim.push(() => {

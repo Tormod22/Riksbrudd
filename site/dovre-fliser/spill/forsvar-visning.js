@@ -103,15 +103,22 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const kj = r.filter(e => kjent(e)), nær = kj.length ? Math.min(...kj.map(d)) : null, strid = kj.map(iStrid).find(Boolean) || null;
     let sist = null; if (!kj.length) for (const e of r) { const q = sistSettAv(e); if (q && tid - q.tid <= FO.STATUS.sistSett && tid >= q.tid && (!sist || q.tid > sist.tid)) sist = q; }
     const rå = kj.length ? FO.ankomst(nær, fart) : sist ? Math.max(0, FO.ankomst(Math.hypot(sist.x - L.x, sist.y - L.y), fart) - (tid - sist.tid)) : anslag(r);
-    est = FO.glatt(est && est.id === A.id ? est : null, rå, tid, kj.length > 0); if (est) est.id = A.id;
-    const min = est ? est.v : null, iLeiren = kj.length > 0 && nær <= R.mot.inne, syn = kj.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', v = retningMotFienden(), n = r.length;
+    // (runde 13, kritiker G: «5–10 min» ble til «3–7 timer» mens klokka gikk) anslaget med minutter kan bare minke så lenge angriperne ikke
+    // har snudd (Forsvar.monoton). Første gang de er sett, og når de har snudd, gjelder det nye anslaget. Ser ingen dem, står det ingen
+    // minutter i banneret – bare når de trolig kommer (Forsvar.når), regnet fra ruta deres når den finnes.
+    if (!est || est.id !== A.id) est = { id: A.id, v: null, t: tid, minNær: Infinity, sett: false };
+    if (kj.length || sist) { const dNå = kj.length ? nær : Math.hypot(sist.x - L.x, sist.y - L.y), snudd = FO.harSnudd(est.minNær, dNå, r.every(e => e.trekker || e.flykter)), nytt = est.v === null || (kj.length && !est.sett) || snudd || (kj.length > 0 && kj.every(e => !e.sti || e.venterNatt));
+      const m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, nytt); est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
+    // (står de stille eller venter på mørket, gjelder anslaget fra avstanden – ellers ville det telle ned mens de står)
+    else { est.v = Number.isFinite(rå) ? rå : null; est.t = tid; }
+    const min = est.v, iLeiren = kj.length > 0 && nær <= R.mot.inne, syn = kj.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', v = retningMotFienden(), n = r.length;
     const overskrift = A.røvere ? `Angrep: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} fra ${FO.retning(v)}` : `Angrep: ${A.navn} med ${n === 1 ? 'ett lag' : n + ' lag'} fra ${FO.retning(v)}`;
     let tekst, kort;
     if (iLeiren) { tekst = 'i leiren' + (strid ? ` · i ildkamp med ${strid.navn}` : ''); kort = strid ? 'i leiren · ildkamp' : 'i leiren'; }
-    else if (kj.length) { tekst = `${km(nær)} unna · framme om ca. ${Math.max(1, Math.round(min))} min` + (strid ? ` · i ildkamp med ${strid.navn}` : hvem ? ` · ${hvem}` : ''); kort = `${km(nær)} fra leiren` + (strid ? ' · ildkamp' : ''); }
+    else if (kj.length) { tekst = `${km(nær)} unna · ` + (kj.every(e => e.venterNatt) ? 'de venter (trolig på mørket)' : `framme om ca. ${Math.max(1, Math.round(min))} min`) + (strid ? ` · i ildkamp med ${strid.navn}` : hvem ? ` · ${hvem}` : ''); kort = `${km(nær)} fra leiren` + (strid ? ' · ildkamp' : ''); }
     else if (sist) { const ds = Math.hypot(sist.x - L.x, sist.y - L.y), m2 = Math.max(1, Math.round(tid - sist.tid)), sp = FO.spenn(min), hvor = ds <= R.mot.inne ? 'i leiren' : `${km(ds)} ${FO.retning(Math.atan2(sist.y - L.y, sist.x - L.x))} for leiren`;
       tekst = `sist sett ${hvor} for ${m2} min siden · ${sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${ds <= R.mot.inne ? 'i leiren' : km(ds) + ' unna'} for ${m2} min siden`; }
-    else { const sp = FO.spenn(min); tekst = min === null ? 'ikke sett ennå – vakter, tårn og kameraer oppdager dem' : sp ? `ikke sett ennå · ventet om ${sp} (anslag)` : 'ikke sett ennå · kan være framme når som helst'; kort = sp ? `ikke sett · ${sp}` : 'ikke sett ennå'; }
+    else { const n2 = min === null ? null : FO.når(tid, tid + min); tekst = n2 ? `ikke sett – kommer ${n2}` : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; kort = n2 ? `ikke sett · ${n2.replace(/ \(.*\)$/, '')}` : 'ikke sett ennå'; }
     return { id: A.id, røvere: A.røvere, hvem: A.navn, side: A.side || 'rød', antall: n, lag: r, sett: kj.length > 0, kjente: kj, nær, iLeiren, strid, sist, min, overskrift, tekst, kort, retning: FO.retning(v) }; }
   // hvem som så dem: vakttårnet (Trussel.VARSEL.tårn), et kamera, vaktene, eller et lag
   function settAv(e) { const L = leir(), f = fsv(), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL; if (!L) return '';
@@ -137,7 +144,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   let fra = null, rapportNå = null; const gitt = new Set();
   const blåTall = () => { const nå = ENHETER.filter(e => e.side === 'blå' && Array.isArray(e.menn)); return { friske: nå.reduce((a, s) => a + s.menn.filter(m => m.hp >= 1).length, 0), falne: nå.reduce((a, s) => a + s.menn.filter(m => m.hp <= 0).length, 0) }; };
   const byggNå = () => (window.LeirSpill && LeirSpill.tilstand() ? LeirSpill.tilstand().bygg.map(b => [b.id, b.hp]) : []);
-  const hend = (type, tekst) => { if (!auto()) return; try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
+  const hend = (type, tekst, x, y) => { if (!auto()) return; try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: Number.isFinite(x) && Number.isFinite(y) ? { type, tekst, x, y } : { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
   // (runde 12) helsa til hver mann når angrepet starter, så rapporten kan si HVEM som falt og ble såret (kritiker E)
   const mennNå = () => { const m = new Map(); for (const s of ENHETER) if (s.side === 'blå' && Array.isArray(s.menn)) for (const q of s.menn) m.set(q, q.hp); return m; };
   const mannNavn = (q, s) => (s && s.karakter ? s.navn : s ? `${q.navn} (${s.navn})` : q.navn);
@@ -146,7 +153,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
       if (q.hp <= 0 && før > 0) falne.push(mannNavn(q, s)); else if (q.hp > 0 && q.hp < 1 && før >= 1) sår.push(mannNavn(q, s)); } }
     return { falne, sår }; }
   const byggNavn = b => (window.Leir && Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type);
-  function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; }
+  function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; settMeldt = ''; }
   // tapene siden starten: falne, sårede, bygg skadet og ødelagt, og hvor mange av angriperne som er slått ut
   function tap(id) { const F0 = fra && fra.id === id ? fra : null, b = blåTall(); if (!F0) return { falne: 0, sårede: 0, skadet: 0, ødelagt: 0, fiender: 0, fienderUte: 0 };
     const LS = window.LeirSpill && LeirSpill.tilstand(), falne = Math.max(0, b.falne - F0.falne);
@@ -180,7 +187,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   // ---------- (runde 8) KAMPEN SKAL SYNES: ⏭ stopper når kampen begynner, og når de er snart framme ----------
   // PC-kritikeren: «etter én spoling sto det: alle 1 røverlag er slått ut» – spolingen gikk forbi hele kampen. Første gang et av lagene dine
   // og en angriper skyter på hverandre i et angrep: en linje i loggen og hendelsen «alarm» (flyt.js stopper spolingen og går ned til 1×).
-  let kampMeldt = '', snartMeldt = '', snartAkk = 0, kampUte = '';
+  let kampMeldt = '', snartMeldt = '', snartAkk = 0, kampUte = '', settMeldt = '';
   // Claudes forslag: et eget lag så nær leiren (meter) = kampen om leiren
   const KAMP_VED = 700;
   KROKER.sim.push(dt => { if (!auto()) return; const A = angrep(); if (!A) return;
@@ -189,13 +196,19 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // «kampen om leiren» er bare kamp der et eget lag står innen KAMP_VED av leiren; en kamp et annet sted meldes som det den er, én gang
     if (kampMeldt !== A.id) { const L = leir(), e = L && A.lag.find(q => Math.hypot(q.x - L.x, q.y - L.y) <= R.hent && iStrid(q)), b = e && iStrid(e);
       if (b && Math.hypot(b.x - L.x, b.y - L.y) <= KAMP_VED) { kampMeldt = A.id;
-        logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`); }
+        logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`, b.x, b.y); settMeldt = A.id; }
       else if (b && kampUte !== A.id + b.navn) { kampUte = A.id + b.navn; const km2 = km(Math.hypot(b.x - L.x, b.y - L.y));
-        logg(b.karakter ? `Du er i ildkamp med ${e.navn}, ${km2} fra leiren.` : `${b.navn} er i ildkamp med ${e.navn}, ${km2} fra leiren.`); hend('alarm', b.karakter ? `du er i ildkamp med ${e.navn} (${km2} fra leiren)` : `${b.navn} er i ildkamp med ${e.navn} (${km2} fra leiren)`); } }
+        logg(b.karakter ? `Du er i ildkamp med ${e.navn}, ${km2} fra leiren.` : `${b.navn} er i ildkamp med ${e.navn}, ${km2} fra leiren.`); hend('alarm', b.karakter ? `du er i ildkamp med ${e.navn} (${km2} fra leiren)` : `${b.navn} er i ildkamp med ${e.navn} (${km2} fra leiren)`, b.x, b.y); } }
+    // (runde 13, kritiker G: «hele kampen skjedde mens ⏭ spolte») første gang noen ser angriperne: en linje i loggen og hendelsen «alarm» –
+    // ⏭ stopper og farten går ned til 1×, og kortet har «Vis» (flyt.js). Én gang per angrep.
+    if (settMeldt !== A.id) { const L = leir(), kj = L ? A.lag.filter(q => kjent(q)) : [];
+      if (kj.length) { settMeldt = A.id; const e = kj.slice().sort((a, b) => Math.hypot(a.x - L.x, a.y - L.y) - Math.hypot(b.x - L.x, b.y - L.y))[0], d = Math.hypot(e.x - L.x, e.y - L.y), hvem = A.røvere ? 'røverne' : A.navn;
+        const txt = d <= R.mot.inne ? `${hvem} er sett inne i leiren` : `${hvem} er sett ${km(d)} ${FO.retning(Math.atan2(e.y - L.y, e.x - L.x))} for leiren`;
+        logg(txt.charAt(0).toUpperCase() + txt.slice(1) + (satt ? '.' : ' – trykk «Forsvar leiren».')); hend('alarm', txt, e.x, e.y); } }
     // senest ca. 10 min før de er framme (Trussel.VARSEL.snart): farten ned og et varsel til – én gang per angrep (sjekkes hvert spillminutt)
     snartAkk += dt; if (snartAkk < 1 || snartMeldt === A.id) return; snartAkk = 0;
     const V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, st = status(); if (!V || !st || st.min === null || st.min > V.snart || st.iLeiren || (st.sett && st.nær <= R.mot.inne * .5)) return;
-    snartMeldt = A.id; const hvem = A.røvere ? 'røverne' : A.navn, txt = `${hvem} er snart framme (ca. ${Math.max(1, Math.round(st.min))} min)`;
+    snartMeldt = A.id; const hvem = A.røvere ? 'røverne' : A.navn, txt = st.sett || st.sist ? `${hvem} er snart framme (ca. ${Math.max(1, Math.round(st.min))} min)` : `${hvem} kan være framme snart (ikke sett ennå)`;
     logg(txt.charAt(0).toUpperCase() + txt.slice(1) + (satt ? '.' : ' – trykk «Forsvar leiren».')); hend('alarm', txt); });
 
   // hvert sekund: alarmen, graving i stillingene, og slutten på angrepet
