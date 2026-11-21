@@ -18,7 +18,7 @@
     // hvor nær (m) et lag må stå anlegget for å få vernet (skyttergrav: fra linja; bunker: fra midten)
     vernNær: { linje: 4, punkt: 9 },
     // strandkravet: vann innen så mange meter fra punktet (og selve punktet på land); prøvene ligger i ringer rundt punktet
-    strand: { nær: 30, ringer: [8, 16, 24, 30], retninger: 16 },
+    strand: { nær: 40, ringer: [10, 20, 30, 40], retninger: 16 },
     // bratt fjellside (tunnel): portalene på land, lengden mellom min og maks (m), fjellet over linja minst «over» meter på det høyeste og
     // over linja på minst «andel» av strekningen, og bakken stiger minst «stigning» meter de første «inn» metrene innover fra hver portal
     tunnel: { min: 60, maks: 3000, over: 15, andel: .6, stigning: 6, inn: 40, prøver: 24 },
@@ -42,7 +42,8 @@
       tekst: 'Grøft på 1,5 m med sandsekker på kanten. Lag i graven får langt færre treff, og du kan gå ned i den.',
     },
     bunker: {
-      navn: 'Bunker', form: 'punkt', krav: 'tørt', modell: 'bunker', mål: [7, 5.5],
+      // inngang: gropa går så langt (m) bak bunkeren, så du kommer ned til døra
+      navn: 'Bunker', form: 'punkt', krav: 'tørt', modell: 'bunker', mål: [7, 5.5], inngang: 3,
       inngrep: { type: 'grop', dybde: 1.3 }, vern: .15, kapasitet: { lag: 1 },
       pris: () => 3000000, tid: () => 600, mat: () => ({ betong: 40, stål: 8 }),
       tekst: 'Betong, delvis nedgravd, med skyteskår og dør. Plass til ett lag, som får svært få treff.',
@@ -162,7 +163,8 @@
     const A = ANLEGG[a.type], I = A && A.inngrep; if (!I) return [];
     const f = helt ? 1 : andel(a); if (f <= 0) return [];
     if (I.type === 'grav') return [{ form: 'linje', P: a.P, halv: I.bredde / 2, dybde: I.dybde * f, id: a.id }];
-    if (I.type === 'grop') { const [L, B] = målFor(A, a.nivå); return [{ form: 'rekt', x: a.P[0][0], y: a.P[0][1], ret: a.ret || 0, a: L / 2, b: B / 2, dybde: I.dybde * f, id: a.id }]; }
+    if (I.type === 'grop') { const [L, B] = målFor(A, a.nivå), g = A.inngang || 0, r = a.ret || 0;
+      return [{ form: 'rekt', x: a.P[0][0] - Math.cos(r) * g / 2, y: a.P[0][1] - Math.sin(r) * g / 2, ret: r, a: (L + g) / 2, b: B / 2, dybde: I.dybde * f, id: a.id }]; }
     return [];
   }
   const boks = o => (o.form === 'linje' ? o.P.reduce((b, p) => [Math.min(b[0], p[0]), Math.min(b[1], p[1]), Math.max(b[2], p[0]), Math.max(b[3], p[1])], [Infinity, Infinity, -Infinity, -Infinity])
