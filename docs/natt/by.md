@@ -58,6 +58,12 @@ Alle tall er Claudes forslag (REGLER øverst i gagate.js og parkering.js).
 - `index.html`: fire skript-tagger rett etter anlegg3d.js. `kartflis-arbeider.js`: to nye filer i importScripts.
 - `pipeline/fliser/vegtype.py`: `GAAGATE`, g = 2.
 
+### Prøvd i nettleser (dev.py + /rogaland, ekte data; bilder i scratchpad natt15/by/, for-* = før, etter*-* = etter)
+- Stavanger sentrum: 108 gatebiter ble gågater (126 benker, 184 blomsterkasser, 200 lykter, 133 bord), brostein fra vegg til vegg sett
+  når du går (etter5-3d-gaa-*.png). Parkering ved Kvadrat/Sandnes: 24 plasser, 2468 oppmerkede plasser innen 900 m.
+- Trekanter: plassene ved Kvadrat 1,49 -> 1,94 mill. med 1613 biler kl. 13 – derfor tak på bilene (450 PC / 150 mobil). Mobil 0,86 mill.
+- PC 1400 × 820 og mobil 844 × 390 (isMobile, hasTouch): 0 sidefeil. Vakta: ok på PC og mobil (ca. 0,15 s).
+
 ### Ikke gjort / gjenstår
 - Vektorflisene med g = 2 er ikke bygget (krever «Bygg Norge»).
 - Gågatene: ikke heller i mønster som Torgallmenningen (bare brostein), ingen lykter på husveggene, trærne bare i gater over 12 m.
