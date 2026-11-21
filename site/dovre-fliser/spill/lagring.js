@@ -81,6 +81,8 @@
       m.sist = q.sist && Number.isFinite(q.sist.x) && Number.isFinite(q.sist.y) ? { x: q.sist.x, y: q.sist.y, navn: String(q.sist.navn || ''), styrke: tall(q.sist.styrke, 1), t: tall(q.sist.t, 0) } : null; n++; }
     return n; }
   // Leser lagringen. Ødelagt, ukjent versjon eller lagret for en annen leir (et annet spill) gir null.
+  // W1 (21. nov): motstanderne er døpt om til selskaper – lag lagret med de gamle navnene («Kystalliansens 3. lag») får dagens navn
+  const nyttNavn = t => (rot.Fraksjoner && rot.Fraksjoner.nyttNavn ? rot.Fraksjoner.nyttNavn(t) : t);
   function fraJSON(t, leir) {
     try { const d = typeof t === 'string' ? JSON.parse(t) : t; if (!d || d.versjon !== VERSJON) return null;
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
@@ -90,7 +92,7 @@
         tettsteder: (Array.isArray(d.tettsteder) ? d.tettsteder : []).filter(q => Array.isArray(q) && q[0] !== undefined && q[0] !== null && typeof q[1] === 'string' && q[1]),
         infra: (Array.isArray(d.infra) ? d.infra : []).filter(k => typeof k === 'string' && /^[a-zæøå]+:.+/.test(k)),
         olje: Number.isFinite(d.olje) && d.olje >= 0 ? d.olje : null,
-        fiender: (Array.isArray(d.fiender) ? d.fiender : []).filter(q => q && q.navn && typeof q.side === 'string' && q.side !== 'blå' && Number.isFinite(q.x) && Number.isFinite(q.y)),
+        fiender: (Array.isArray(d.fiender) ? d.fiender : []).filter(q => q && q.navn && typeof q.side === 'string' && q.side !== 'blå' && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => Object.assign(q, { navn: nyttNavn(q.navn) })),
         minne: d.minne && typeof d.minne === 'object' ? d.minne : null,
         stillinger: (Array.isArray(d.stillinger) ? d.stillinger : []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && typeof q.side === 'string') };
     } catch (e) { return null; }

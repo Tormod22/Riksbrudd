@@ -5,7 +5,11 @@ const F = require('../../site/dovre-fliser/spill/fraksjoner'), R = F.REGLER;
 const lag = (navn, x, y, ute = 0) => ({ navn, x, y, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });
 const by = (id, navn, x, y, folk, eier) => ({ id, navn, x, y, folk, eier, inni: (X, Y) => Math.hypot(X - x, Y - y) < 500 });
 const verden = (o = {}) => ({ side: 'rød', byer: [by(1, 'Nær', 3000, 0, 500, null), by(2, 'Stor', 6000, 0, 20000, null), by(3, 'Vår', -4000, 0, 800, 'rød')], fiender: [], venner: [], hjem: [-9000, 0], ammo: 1, ...o });
-assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal(F.FRAKSJONER.rød.navn, 'Kystalliansen');
+assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal(F.FRAKSJONER.rød.navn, 'Ravnsund Sikkerhet'); assert.equal(F.FRAKSJONER.grønn.navn, 'Mosevakt Feltoperasjoner');
+// W1: navn fra før 21. nov i lagrede spill byttes ut
+assert.equal(F.nyttNavn('Kystalliansens 3. lag'), 'Ravnsunds 3. lag'); assert.equal(F.nyttNavn('Folkefronten har funnet leiren'), 'Mosevakt Feltoperasjoner har funnet leiren');
+assert.equal(F.nyttNavn('Folkefrontens lastebil'), 'Mosevakts lastebil'); assert.equal(F.nyttNavn('Speiderlag'), 'Speiderlag'); assert.equal(F.lagEie('rød'), 'Ravnsunds');
+assert.ok(['rød', 'grønn'].every(sd => F.FRAKSJONER[sd].selskap && F.FRAKSJONER[sd].beskrivelse.length > 40 && F.FRAKSJONER[sd].stil));
 { const s = lag('A', 0, 0), v = F.velg(s, verden()); assert.equal(v.hva, 'ta'); assert.equal(v.x, 6000, 'større tettsted teller som nærmere'); }
 { const s = lag('A', 0, 0), v = F.velg(s, verden({ byer: [by(1, 'Nær', 3000, 0, 500, null), by(3, 'Vår', -4000, 0, 800, 'rød')] })); assert.equal(v.x, 3000); }
 { const v = F.velg(lag('A', 0, 0, 6), verden()); assert.equal(v.hva, 'trekk'); assert.equal(v.x, -4000, 'slått ut: til eget tettsted'); }

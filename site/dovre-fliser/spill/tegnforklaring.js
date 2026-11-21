@@ -8,9 +8,11 @@
  */
 (function (rot) {
   // [gruppe, nøkkel, tekst] – nøkkelen sier hvordan eksemplet tegnes (se tegnEksempel)
+  // W1: selskapsnavnene står i Fraksjoner.FRAKSJONER (i Node uten dem: bare fargen)
+  const fn = side => (rot.Fraksjoner && rot.Fraksjoner.FRAKSJONER && rot.Fraksjoner.FRAKSJONER[side] ? ' (' + rot.Fraksjoner.FRAKSJONER[side].navn + ')' : '');
   const RADER = [
     ['Hvem', 'eget', 'Eget: liggende rektangel i blått'],
-    ['Hvem', 'fiende', 'Fiende: rute på spissen – rød (Kystalliansen) eller grønn (Folkefronten)'],
+    ['Hvem', 'fiende', 'Fiende: rute på spissen – rød' + fn('rød') + ' eller grønn' + fn('grønn')],
     ['Hvem', 'nøytral', 'Nøytralt eller ingen eier: kvadrat med runde hjørner'],
     ['Hva', 'lag', 'Lag med soldater (kryss inni)'],
     ['Hva', 'k-lastebil', 'Lastebil (kolonne) – tallet er antall biler'],

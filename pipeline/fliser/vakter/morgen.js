@@ -111,7 +111,7 @@ module.exports = {
         // RUNDE 14 (kritiker J): etter et tapt tettsted gir møtet flere soldater (leiesoldatene kjøpes og tas bort igjen)
         const MS14 = MorgenSpill.tilstand(); MS14.taptBy = [{ navn: 'Prøvebyen', eier: 'rød' }]; S.penger = Math.max(S.penger, 5e6); MorgenSpill.morgen(true);
         const tapLinje = [...document.querySelectorAll('#morgenkort .mdogn p, #morgenkort .msum span')].map(e => e.textContent).find(t => /^Tapt siden i går/.test(t)) || '';
-        krev(/Prøvebyen \(nå Kystalliansens\)/.test(tapLinje), 'rapporten sier ikke hvilket tettsted som er tapt: ' + tapLinje);
+        krev(tapLinje.includes('Prøvebyen (nå ' + Fraksjoner.FRAKSJONER.rød.eieform + ')'), 'rapporten sier ikke hvilket tettsted som er tapt: ' + tapLinje);
         const sold = knapper().filter(b => /leiesoldater|vaktlag|Rekrutter|Krisehjelp/.test(b.textContent)); krev(sold.length, 'ingen valg som gir soldater etter et tapt tettsted');
         const leie = sold.find(b => /leiesoldater/.test(b.textContent)), nFør = ENHETER.length;
         if (krev(leie, 'ingen «Kjøp leiesoldater»')) { leie.click(); const ny = ENHETER.slice(nFør).find(e => e.side === 'blå' && /^Leiesoldater/.test(e.navn));

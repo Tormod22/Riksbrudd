@@ -195,7 +195,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       // etter fredstiden, før leirangrepene er lov
       tid = ES.fredSlutt() + 2.5 * 1440;
       const G = ES.planlegg('rød', { tving: true, bare: by.e.id }); ut.gruppe = !!G && G.mål.id === by.e.id && G.lag.length >= 2 && G.angripFra - G.start >= 4 * 60; ut.lag = G ? G.lag.length : 0;
-      ut.varsel = /Etterretning: Kystalliansen samler \d+ lag/.test(loggTekst()) && /Dombås \(ditt\)/.test(loggTekst());
+      ut.varsel = loggTekst().includes('Etterretning: ' + Fraksjoner.FRAKSJONER.rød.navn + ' samler ') && /Dombås \(ditt\)/.test(loggTekst());
       const m = G && ENHETER.find(e => e.navn === G.lag[0]); const v1 = m ? AI.styr(m, { hva: 'ta', x: 0, y: 0, tekst: '' }) : null; ut.samles = !!v1 && /^(samle|hold)$/.test(v1.hva);
       // angrepet går ikke før varselet er ute, selv når lagene er samlet
       if (G) { for (const e of ENHETER) if (G.lag.includes(e.navn)) { e.x = G.sted.x + 20; e.y = G.sted.y + 20; }
@@ -403,7 +403,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       if (ScenarioSpill.tilstand()) ScenarioSpill.tilstand().sc = {};
       TETTSTEDER.set(id, { eier: 'rød', inntar: null });
       for (let i = 0; i < 3; i++) { const f = nyttLag('Vakt14 rød ' + i, mx + i * 30, my, 'rød'); ENHETER.push(f); nye.push(f); }
-      const sc = ScenarioSpill.scenario(); ut.navn = !!sc && sc.tekst.includes(by.e.navn) && /Kystalliansens|fiendens|\d+ km/.test(sc.tekst);
+      const sc = ScenarioSpill.scenario(); ut.navn = !!sc && sc.tekst.includes(by.e.navn) && (sc.tekst.includes(Fraksjoner.FRAKSJONER.rød.eieform) || /fiendens|\d+ km/.test(sc.tekst));
       ut.ring = typeof SCENARIO_BY === 'function' && String(SCENARIO_BY()) === String(id);
       StrategiSpill.åpne(); StrategiSpill.velg(id); await new Promise(r => setTimeout(r, 50));
       const boks = document.getElementById('krigscenario'); ut.boks = !!boks && boks.textContent.includes(by.e.navn);

@@ -1,18 +1,20 @@
 'use strict';
-// S8 i kartet: Kystalliansen (rød) og Folkefronten (grønn) styres av AI-en i spill/fraksjoner.js. Lagene deres tar tettsteder
+// S8 i kartet: motstanderne – selskapene rød og grønn (navnene i Fraksjoner.FRAKSJONER) – styres av AI-en i spill/fraksjoner.js. Lagene deres tar tettsteder
 // (S7), henter ammunisjon i egne tettsteder, angriper og trekker seg unna. «Motstandere» i ☰ slår AI-en av og på.
 (function () {
   const F = Fraksjoner, R = F.REGLER, AI = { på: true, sider: ['rød', 'grønn'] }, nr = { rød: 0, grønn: 0 }, sist = { rød: 0, grønn: 0 };
-  const HJEM = { rød: [185600, 6902600], grønn: [204000, 6887400] };   // Kystalliansen fra Lesja-kanten i vest, Folkefronten fra Dovre-bygda i sør
+  const HJEM = { rød: [185600, 6902600], grønn: [204000, 6887400] };   // rød fra Lesja-kanten i vest, grønn fra Dovre-bygda i sør
   window.AI = AI;
   // (runde 7) navnet er alltid nytt: etter en omlasting begynner telleren på nytt, mens de lagrede lagene har sine navn
-  function nytt(side, x, y) { let navn; do navn = `${F.FRAKSJONER[side].eieform} ${++nr[side]}. lag`; while (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.navn === navn)); const s = nyttLag(navn, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
+  function nytt(side, x, y) { let navn; do navn = `${F.lagEie(side)} ${++nr[side]}. lag`; while (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.navn === navn)); const s = nyttLag(navn, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
   for (const side of AI.sider) { const [x, y] = HJEM[side]; nytt(side, x, y); nytt(side, x + 220, y - 180); }
+  // W1 (21. nov): patruljen i index.html heter «Rød patrulje» til navnene herfra finnes, og navn fra før W1 («Kystalliansens …») byttes ut
+  for (const e of typeof ENHETER !== 'undefined' ? ENHETER : []) { if (e.side === 'rød' && !e.ai && e.navn === 'Rød patrulje') e.navn = F.lagEie('rød') + ' patrulje'; else e.navn = F.nyttNavn(e.navn); }
   AI.nytt = nytt;   // spill/lagring.js lager lagene som fantes da spillet ble lagret
   // KJØRETØY OG STILLINGER (17. nov): hver fraksjon har en lastebil som lagene bruker når målet er langt unna (bare når vegnettet er
   // lastet – på PC hentes det for dette), og en garnison som har holdt et tettsted i to timer, bygger en stilling der.
   const BIL = {}, STILLINGER = []; window.STILLINGER = STILLINGER; AI.biler = BIL;
-  if (window.Kjoretoy && window.KJORETOY) for (const side of AI.sider) { const [x, y] = HJEM[side]; BIL[side] = Kjoretoy.ny({ navn: `${F.FRAKSJONER[side].eieform} lastebil`, type: 'lastebil', antall: 1, x: x + 40, y: y + 30, side }); KJORETOY.push(BIL[side]); }
+  if (window.Kjoretoy && window.KJORETOY) for (const side of AI.sider) { const [x, y] = HJEM[side]; BIL[side] = Kjoretoy.ny({ navn: `${F.lagEie(side)} lastebil`, type: 'lastebil', antall: 1, x: x + 40, y: y + 30, side }); KJORETOY.push(BIL[side]); }
   const bærer = k => ENHETER.find(e => e.ombord === k);
   function avBil(s) { const k = s.ombord; s.ombord = null; if (!k) return; s.x = k.x + 6; s.y = k.y + 4; s.sti = null; s.siktSkitten = true; if (window.Kjoretoy && k.sti) Kjoretoy.stopp(k); skitten = true; }
   let vegBedt = false;
@@ -70,7 +72,7 @@
       if (BIL[side]) { const k = BIL[side]; for (const q of lag) if (q.ombord === k) q.ombord = null; if (k.sti) Kjoretoy.stopp(k); k.x = pl[0][0] + 12; k.y = pl[0][1] + 8; }
       ut[side] = { navn: m.navn, x: m.x, y: m.y, km: Math.round(Math.hypot(m.x - leir.x, m.y - leir.y) / 1000), retning: retning(m.x - leir.x, m.y - leir.y), id: m.by ? m.by.id : null };
     }
-    // patruljen (rød, uten AI): på vegen fra Kystalliansen mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
+    // patruljen (rød, uten AI): på vegen fra rødt startsted mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
     const pat = ENHETER.filter(e => e.side === 'rød' && !e.ai);
     if (ut.rød && pat.length) { const d = Math.hypot(ut.rød.x - leir.x, ut.rød.y - leir.y), t = Math.max(4000, Math.min(12000, d * .5)) / d; let pl = null;
       for (const p of [{ x: leir.x + (ut.rød.x - leir.x) * t, y: leir.y + (ut.rød.y - leir.y) * t }, { x: ut.rød.x, y: ut.rød.y }]) { if (pl) break;
@@ -204,7 +206,7 @@
   KROKER.lagTekst.push(s => s.side !== 'blå' && F.FRAKSJONER[s.side] ? F.FRAKSJONER[s.side].navn : null);
 
   // «Motstandere» i kartlagmenyen
-  const b = document.createElement('button'); b.textContent = 'Motstandere'; b.title = 'AI-en for Kystalliansen og Folkefronten'; b.setAttribute('aria-pressed', 'true');
+  const b = document.createElement('button'); b.textContent = 'Motstandere'; b.title = 'AI-en for ' + F.FRAKSJONER.rød.navn + ' og ' + F.FRAKSJONER.grønn.navn; b.setAttribute('aria-pressed', 'true');
   b.onclick = () => { AI.på = !AI.på; b.classList.toggle('av', !AI.på); b.setAttribute('aria-pressed', String(AI.på)); logg(AI.på ? 'Motstanderne handler igjen.' : 'Motstanderne står stille (AI av).'); };
   document.getElementById('lagmeny').appendChild(b);
 })();

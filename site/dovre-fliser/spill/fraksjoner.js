@@ -1,6 +1,7 @@
 /* S8 – fraksjoner og motstandere: regler og en enkel AI uten DOM (Node: require('./fraksjoner'); nettleser: globalThis.Fraksjoner).
- * Fraksjonene er oppdiktede politiske bevegelser (designdokumentet/HANDOFF.md): spilleren er Riksrådet (blå), AI-en styrer
- * Kystalliansen (rød) og Folkefronten (grønn). AI-en tenker for hvert lag for seg: trekk tilbake når laget er slått ut, hent
+ * Fraksjonene er oppdiktede private militærselskaper (W1, 21. nov, brukeren: «motstanderne blir andre selskaper»): spilleren er
+ * blå (navnet fra oppstarten), AI-en styrer Ravnsund Sikkerhet (rød, het Kystalliansen før) og Mosevakt Feltoperasjoner (grønn, het
+ * Folkefronten før). Navnene står BARE her – resten av spillet slår opp i FRAKSJONER. AI-en tenker for hvert lag for seg: trekk tilbake når laget er slått ut, hent
  * forsyninger/stell i et eget tettsted, angrip fiender laget ser når det er sterkt nok, ellers ta det nærmeste tettstedet som ikke
  * er ditt og hold det med ett lag (garnison). Tallene er forslag.
  */
@@ -8,8 +9,14 @@
   'use strict';
   const FRAKSJONER = {   // akse: [sentralisme, marked, tradisjon] (0–1)
     blå: { navn: 'Riksrådet', eieform: 'Riksrådets', farge: '#3b5878', lys: '#5b7ea8', sti: 'rgba(130,170,220,.9)', akse: [.9, .35, .2] },
-    rød: { navn: 'Kystalliansen', eieform: 'Kystalliansens', farge: '#8f3c2f', lys: '#b5503d', sti: 'rgba(225,125,95,.9)', akse: [.3, .9, .35] },
-    grønn: { navn: 'Folkefronten', eieform: 'Folkefrontens', farge: '#3f6b3a', lys: '#6f9a5f', sti: 'rgba(140,190,120,.9)', akse: [.15, .25, .8] },
+    // W1 (21. nov): oppdiktede selskaper (Claudes forslag; sjekket på nettet at de ikke er ekte firmaer og ikke ligner Wardogs sine
+    // Lonestar/Valkyra/Manticore). kort/korteie brukes i lagnavnene («Ravnsunds 3. lag»), beskrivelse og stil i selskapskortet.
+    rød: { navn: 'Ravnsund Sikkerhet', eieform: 'Ravnsund Sikkerhets', kort: 'Ravnsund', korteie: 'Ravnsunds', selskap: true,
+      beskrivelse: 'Privat militærselskap fra kysten, startet av folk fra offshore-vakthold og fergesambandene. Raske, pågående og tar sjanser for å komme først.',
+      stil: 'pågående', motto: 'Først fram.', farge: '#8f3c2f', lys: '#b5503d', sti: 'rgba(225,125,95,.9)', akse: [.3, .9, .35] },
+    grønn: { navn: 'Mosevakt Feltoperasjoner', eieform: 'Mosevakt Feltoperasjoners', kort: 'Mosevakt', korteie: 'Mosevakts', selskap: true,
+      beskrivelse: 'Privat militærselskap fra innlandet, startet av tidligere jegere og skogsarbeidere. Forsiktige, venter i skogen og slår til fra bakhold.',
+      stil: 'forsiktig', motto: 'Vi venter.', farge: '#3f6b3a', lys: '#6f9a5f', sti: 'rgba(140,190,120,.9)', akse: [.15, .25, .8] },
   };
   const REGLER = {
     tenk: 600,             // spillsekunder mellom hver gang et AI-lag vurderer situasjonen
@@ -28,7 +35,7 @@
     jakt: 6000,            // meter: så langt går et lag for å lete der fienden sist ble sett
     tapt: 2.5,             // et tettsted fraksjonen har mistet, teller så mye «nærmere» (vil ta det tilbake)
     leirVekt: 1500,        // spillerens leir teller som et tettsted med så mange innbyggere når fraksjonen vet hvor den er
-    stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Kystalliansen tar sjanser, Folkefronten gjør det ikke
+    stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Ravnsund (rød) tar sjanser, Mosevakt (grønn) gjør det ikke
     // KJØRETØY OG STILLINGER (17. nov, brukeren: «at fienden bruker kjøretøy eller bygger egne stillinger»)
     bil: { langt: 3000, nær: 200, av: 800 },        // kjør når målet er over 3 km unna og lastebilen står innen 200 m; gå av når en fiende ses innen 800 m
     stilling: { etter: 120, avstand: 300, vern: .6, radius: 25, maks: 4 },   // garnison i 120 min bygger en stilling (treff ×0,6 innen 25 m); høyst 4 per fraksjon
@@ -122,8 +129,8 @@
   // Sympati 0–1 mellom en fraksjon og en folkemening på de samme tre aksene (1 = helt enig).
   const sympati = (side, akse) => 1 - Math.hypot(...FRAKSJONER[side].akse.map((a, i) => a - akse[i])) / Math.sqrt(3);
   // Hvor motstanderne holder til når leiren ligger et annet sted enn Dovre (feilretting 12. nov: på /norge sto fienden bare på Dovre).
-  // leir: { x, y }; byer: [{ x, y, navn }] (tettstedene i nærheten). Kystalliansen (rød) får det nærmeste tettstedet 6–45 km fra leiren,
-  // Folkefronten (grønn) det nærmeste som ligger minst 8 km fra rødt og helst i en annen retning (over 60° fra rødt sett fra leiren).
+  // leir: { x, y }; byer: [{ x, y, navn }] (tettstedene i nærheten). rød (Ravnsund) får det nærmeste tettstedet 6–45 km fra leiren,
+  // grønn (Mosevakt) det nærmeste som ligger minst 8 km fra rødt og helst i en annen retning (over 60° fra rødt sett fra leiren).
   // Finnes det ikke tettsteder, gis et punkt 9 km vest (rød) / sørøst (grønn) for leiren med by = null – visningen må finne land der.
   function startsteder(leir, byer, o = {}) {
     const MIN = o.min || 6000, MAKS = o.maks || 45000, d = b => Math.hypot(b.x - leir.x, b.y - leir.y), vinkel = b => Math.atan2(b.y - leir.y, b.x - leir.x);
@@ -154,7 +161,16 @@
   const byggStilling = (holdt, nærmeste, antall) => holdt >= REGLER.stilling.etter && antall < REGLER.stilling.maks && !(nærmeste < REGLER.stilling.avstand);
   // Vernet et lag har av stillingene: lag = { x, y, side }, stillinger = [{ x, y, side }]
   const stillingVern = (lag, stillinger) => ((stillinger || []).some(q => q.side === lag.side && Math.hypot(q.x - lag.x, q.y - lag.y) <= REGLER.stilling.radius) ? REGLER.stilling.vern : 1);
-  const api = { FRAKSJONER, REGLER, fredDøgn, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
+  // NAVNENE FØR W1 (lagrede spill fra før 21. nov har lag som heter «Kystalliansens 3. lag» osv.): nyttNavn() bytter dem ut med dagens
+  // navn. Lengste først, så «Kystalliansens» ikke blir «Ravnsund Sikkerhets».
+  const GAMLE = [['Kystalliansens', 'rød', 'korteie'], ['Kystalliansen', 'rød', 'navn'], ['Folkefrontens', 'grønn', 'korteie'], ['Folkefronten', 'grønn', 'navn']];
+  function nyttNavn(t) {
+    if (typeof t !== 'string' || !/Kystalliansen|Folkefronten/.test(t)) return t;
+    let u = t; for (const [g, side, k] of GAMLE) u = u.split(g).join(FRAKSJONER[side][k] || FRAKSJONER[side].navn); return u;
+  }
+  // lagnavnet for en side: «Ravnsunds» (kort) når siden har en kort form, ellers eieformen
+  const lagEie = side => (FRAKSJONER[side] && (FRAKSJONER[side].korteie || FRAKSJONER[side].eieform)) || side;
+  const api = { FRAKSJONER, GAMLE, nyttNavn, lagEie, REGLER, fredDøgn, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Fraksjoner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

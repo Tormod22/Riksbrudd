@@ -949,7 +949,7 @@ function nyttLag(navn, x, y, side, speider) {
 }
 // Samme steder som på /dovre (regnet om fra UTM 32 til UTM 33).
 const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2. lag, Dombås', 198872, 6896752, 'blå'),
-  nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Kystalliansens patrulje', 213280, 6908986, 'rød')];
+  nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Rød patrulje', 213280, 6908986, 'rød')];
 // patruljelaget huskes for seg: et nytt spill kan ta bort startlagene (spill/scenario-visning.js), så plassen i lista er ikke fast
 const PATRULJELAG = ENHETER[3];
 const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
@@ -3503,7 +3503,7 @@ window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (modus) m
 window.addEventListener('resize', storrelse);
 storrelse(); passInn(DOVRE);
 // (/norge: motstanderne flytter til tettstedene rundt leiren din – AI.flytt i spill/fraksjoner-visning.js)
-logg((PÅ_OMRÅDE ? 'Rogaland, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir. Spillet holder seg innenfor fylket.' : ER_NORGE ? 'Norge, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram der du slår leir.' : 'Dovre, 2023. Riket har gått i oppløsning. Kystalliansen (rød) og Folkefronten (grønn) rykker fram mot Dombås.') + ' Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
+logg((PÅ_OMRÅDE ? 'Rogaland, 2023. Riket har gått i oppløsning. To private militærselskaper (rød og grønn) rykker fram der du slår leir. Spillet holder seg innenfor fylket.' : ER_NORGE ? 'Norge, 2023. Riket har gått i oppløsning. To private militærselskaper (rød og grønn) rykker fram der du slår leir.' : 'Dovre, 2023. Riket har gått i oppløsning. To private militærselskaper (rød og grønn) rykker fram mot Dombås.') + ' Du ser bare det dine lag ser – resten ligger i tåke. Trykk på et lag for å gi ordre.');
 let sist = performance.now(), rest = 0;
 // Ytelse (12. nov): står tida stille (pause) og kameraet har ikke rørt seg på et sekund, tegnes 3D bare fire ganger i sekundet
 // (vind, vann og lys går da tregere, men mobilen slipper å tegne det samme bildet 60 ganger i sekundet). Trykk og taster vekker den.
