@@ -62,7 +62,7 @@
       if (børPuste()) await pust();
       if (!t || !t.veg) continue; const mx = G.x0 + x * sp - u.cx, my = G.y0 - y * sp - u.cy, e = t.veg.ext;
       for (const o of t.veg.obj) { const k = o.e.k; if (!BREDDE[k] || o.e.t === 4) continue;
-        for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp, my - b / e * sp]), mx, my - sp, mx + sp, my)) rå.push({ k, g: o.e.g ? 1 : 0, t: o.e.t || 0, P });
+        for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp, my - b / e * sp]), mx, my - sp, mx + sp, my)) rå.push({ k, g: o.e.g ? 1 : 0, gå: o.e.g === 2 ? 1 : 0, t: o.e.t || 0, P });
       }
     }
     // hele veger med jevne kurver og punkt hver ~2,5 m; eldre fliser uten vegtype: gjett gang- og sykkelveger og svingefelt
@@ -103,7 +103,9 @@
         i = j; }
     }
     u.veger = veger; u.gangveger = gang;
-    const alle = veger.concat(gang);
+    // (runde 15, by) gågatene (spill/gagate3d.js) tas ut av bilvegene og gangvegene: ingen asfalt, kantlinjer, fortau eller biler der
+    u.gågater = window.Gagate3d ? Gagate3d.skill(u, veger, gang) : [];
+    const alle = veger.concat(gang, u.gågater);
     // vegmaske (1024 × 1024): ingen stein, busker, trær eller gress i vegbanen og på fortauet
     const W = 1024, m = new Uint8Array(W * W), celle = 2 * u.S / W;
     // 1 = grus (P/S), 2 = asfalt/fortau (E/R/F/K og gang- og sykkelveger) – lyd.js lar fottrinnene knase på grus
@@ -433,7 +435,7 @@
       liv.lys.kjegle.material.userData.egetKart = true;
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
-    const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, u.gangveger || []));
+    const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, (u.gangveger || []).concat(u.gågater || [])));
     if (gate.length) {
       const N = mob ? 16 : 45;
       liv.folk = Array.from({ length: N }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
@@ -475,7 +477,7 @@
   // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
   function fjern(R) { if (liv && liv.folkFlokk) liv.folkFlokk.kast(); if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
   if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null;
-    u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, u.gangveger || []))) } : null; });
+    u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, (u.gangveger || []).concat(u.gågater || [])))) } : null; });
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); u.vegD = null; });
 
   // ---------- hver ramme ----------
