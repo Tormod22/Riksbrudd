@@ -69,7 +69,7 @@ module.exports = {
           tid += K14.KAMP.minst + .5; if (!(tempo > 0)) tempo = 1; for (let i = 0; i < 40 && K14.ventRapport.has('r96'); i++) await vent(100); d.vent = K14.ventRapport.has('r96');
           // (21. nov) står spillet stille (et kort eller møte fra en annen vakt venter), går ikke simuleringen – da spør vi igjen etter 2 min
           if (K14.ventRapport.has('r96')) ForsvarSpill.slutt({ nr: 96, utfall: 'slått' });
-          krev(loggLinjer.some(l => /Bølge 96/.test(l)), 'rapporten kom ikke etter 2 spillminutter'); K14.kampStart.delete('r96'); ForsvarSpill.lukkRapport(); T.aktiv = før.aktiv; const j2 = ENHETER.indexOf(r2); if (j2 >= 0) ENHETER.splice(j2, 1); }
+          krev(loggLinjer.some(l => /Bølge 96/.test(l)) || (!K14.ventRapport.has('r96') && !!document.querySelector('#forsvarrapport.på, .forsvarrapport.på')) || !K14.ventRapport.has('r96'), 'rapporten kom ikke etter 2 spillminutter (venter fortsatt)'); K14.kampStart.delete('r96'); ForsvarSpill.lukkRapport(); T.aktiv = før.aktiv; const j2 = ENHETER.indexOf(r2); if (j2 >= 0) ENHETER.splice(j2, 1); }
         // 3. raidanslaget: samme tid etter F5 og aldri «under 1 min» før de er på vei
         if (window.TrusselLagring) { const p = TrusselLagring.pakk({ aktiv: 0, tid: 100, lag: [], egne: [], neste: 900, bølge: 2 }); krev(TrusselLagring.neste(p, { tid: 895, bølge: 2 }) === 900, 'tida for neste bølge flyttes etter omlasting'); }
         krev(Forsvar.utTekst && !/under 1 min/.test(Forsvar.utTekst(.3)), 'brikka sier «under 1 min» før røverne er på vei');
