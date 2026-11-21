@@ -390,8 +390,10 @@
       }
       if (!st || !vk) continue;
       if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.68 * l, .48 * l, .26 * l] : [.46 * l, .64 * l, .34 * l], moh); continue; } }
-      const sted = V.stedIHøyden(STED[st], rel);
-      if (rnd() > V.STEDTETTHET[sted] * bl * vk) continue;
+      // (runde 15) på dyrket mark (beite og slåtteeng – spill/bakkefarge.js) er det eng med flere blomster, ikke hei
+      const dyrk = window.Bakkefarge && Bakkefarge.verdi ? Bakkefarge.verdi(u, x, y) : 0;
+      const sted = dyrk > .5 && (st === 1 || st === 2) ? 'eng' : V.stedIHøyden(STED[st], rel);
+      if (rnd() > V.STEDTETTHET[sted] * bl * vk * (dyrk > .5 ? 1.4 : 1)) continue;
       const art = V.blomst(sted, å, rnd()); if (!art) continue;
       const fa = V.BLOMSTER[art].farge, l = .88 + rnd() * .24, høy = art === 'geitrams' ? .7 + rnd() * .5 : art === 'røsslyng' ? .16 + rnd() * .1 : .2 + rnd() * .22;
       sett('blomst', x, y, art === 'røsslyng' ? .35 : .22 + rnd() * .12, høy * (.6 + .4 * vk), fa.map(v => Math.min(1, v * l)), moh);

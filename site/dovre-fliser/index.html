@@ -1693,7 +1693,7 @@ async function bygg3d(cx, cy, S) {
   // klassifiseringene over (skog, steiner, vann) ser de nye fargene
   if (window.Kartbilde) await kjørAsynk(Kartbilde.relieffG(px, TW, H, N, cx, cy, S, TW >= 4096 ? 768 : 512));
   // (runde 15) dyrket mark (terrengklasse 5) blir grønnere enn heia – spill/bakkefarge.js
-  const dyrk = window.Bakkefarge && Bakkefarge.dyrket ? await Bakkefarge.dyrket(u, b) : null; u.dyrket = dyrk ? dyrk.andel : 0;
+  const dyrk = window.Bakkefarge && Bakkefarge.dyrket ? await Bakkefarge.dyrket(u, b) : null; u.dyrket = dyrk ? dyrk.andel : 0; u.dyrketMaske = dyrk;
   await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1, dyrk));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
@@ -1736,7 +1736,7 @@ function havAvstand(H, N, steg) {
 function naturfarger(px, TW, rad0 = 0, rad1 = TW, dyrk = null) {
   // (runde 15, pakke «natur»: «bakken er litt for sandaktig, litt for gul») gul-oliven eng og beite dreies mot grønt – spill/bakkefarge.js;
   // det gamle under er reserven (og gir samme farge for alt som ikke er vegetasjon)
-  if (window.Bakkefarge) return Bakkefarge.naturfarger(px, TW, rad0, rad1, dyrk);
+  if (window.Bakkefarge && !window.BAKKEFARGE_AV) return Bakkefarge.naturfarger(px, TW, rad0, rad1, dyrk);
   for (let q = rad0 * TW * 4, q1 = rad1 * TW * 4; q < q1; q += 4) {
     let R = px[q], G = px[q + 1], B = px[q + 2];
     // vann: bare 20 % av satellittbildets eget mønster (18. nov: før 45 % – skanne-stripene i bildet sto som lyse streker over innsjøene)
@@ -2774,7 +2774,9 @@ function* gressG(R, u, m, cx, cy) {
     // (runde 15, brukeren: «gressflater – flatmark med gress»; «ingen høye gresstuster på fotballbaner») PLEN: på baner og anlegg
     // (u.påAnlegg, spill/anleggfri.js) og i tettstedene (u.iBy) er gresset klippet – lave tuster i grønt, ingen lyng og ingen eng
     const plen = !!((u.påAnlegg && u.påAnlegg(x, y, 0)) || (u.iBy && u.iBy(x, y)));
-    const eng = !plen && Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45;
+    // på dyrket mark (beite og slåtteeng, spill/bakkefarge.js) står det høye graset i større flekker
+    const dyrket = window.Bakkefarge ? Bakkefarge.verdi(u, x, y) : 0;
+    const eng = !plen && Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45 - .6 * dyrket;
     // (runde 10) lavere lenger unna (ytterst 2/3 av høyden): tustene langt ute ble mørke flekker over bakken
     const k = (j * W + i) * 3, lyng = !plen && (type === 2 || type === 3), h = (plen ? GRESS_FARGE.plen[0] + rnd() * GRESS_FARGE.plen[1] : lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk) * (1 - GRESS_FARGE.lavere * rr / RAD), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke

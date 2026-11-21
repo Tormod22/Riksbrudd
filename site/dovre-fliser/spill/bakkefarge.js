@@ -93,6 +93,9 @@
   const api = { REGLER, hsv, rgb, erVann, vegetasjon, punkt, naturfarger, trinn, dyrketMaske };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Bakkefarge = api;
+  // hvor mye (x, y) – utsnittets meter fra midten – ligger på dyrket mark (0–1); 0 uten maske
+  api.verdi = (u, x, y) => { const M = u && u.dyrketMaske; if (!M) return 0; const i = Math.floor((x + u.S) / (2 * u.S) * M.W), j = Math.floor((u.S - y) / (2 * u.S) * M.W);
+    return i < 0 || j < 0 || i >= M.W || j >= M.W ? 0 : M.v[j * M.W + i] / 255; };
   // visningen: dyrket mark for et 3D-utsnitt (samme terrengklasser som skogmasken og gard3d.js bruker)
   api.dyrket = async (u, b) => {
     if (typeof lagVindu !== 'function') return null;
