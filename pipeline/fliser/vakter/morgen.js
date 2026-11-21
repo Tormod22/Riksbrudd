@@ -19,11 +19,13 @@ module.exports = {
       // kort fra tidligere vakter som står oppe, får stå (kortet står da i kortkøen) – vi trykker på knappene uansett
       const knapper = () => [...document.querySelectorAll('#morgenkort .mvalg button')];
       const klikk = rx => { const b = knapper().find(q => rx.test(q.textContent)); if (b) b.click(); return !!b; };
-      const tidFør = tid, tempoFør = tempo;
+      const tidFør = tid, tempoFør = tempo; let tapFør = null;
       try {
         MorgenSpill.test = true;
         // lite mat: to rasjoner igjen, så kortet har matvalgene; minst seks arbeidsføre
         F.mat = 2; for (const p of F.personer) { p.helse = Math.max(p.helse, 1); delete p.borte; }
+        // (runde 14) tap fra tidligere vakter (tettsteder og tropper) gir valgene etter tap – her prøves den vanlige morgenen
+        const MS0 = MorgenSpill.tilstand(); tapFør = MS0 ? { by: MS0.taptBy, lag: MS0.taptLag } : null; if (MS0) { MS0.taptBy = []; MS0.taptLag = []; }
         const r1 = MorgenSpill.morgen(true, { stor: 'nabo' }), K = MorgenSpill.tilstand().kort;
         krev(r1 && K && !K.ferdig, 'ingen morgenkort');
         const valg = K ? K.valg.map(v => v.id) : []; ut.valg = valg.join(',');
@@ -95,16 +97,17 @@ module.exports = {
           if (h) { const p0 = S.penger, t0 = L.lager.tre; tid = h.kl + 1; MorgenSpill.handelSteg(); tid = tid0;
             ut.handel = `${t0 - L.lager.tre} m³ for ${S.penger - p0} kr`; krev(L.lager.tre === t0 - h.mengde && S.penger === p0 + h.pris && !MorgenSpill.tilstand().handel, 'handelsmannen handlet ikke: ' + ut.handel); } }
         tid = tid0; ut.r13 = true;
-        // RUNDE 14 (kritiker I): røverne om under 1 min står i første linje, og «Forsvar leiren nå» er første valg
+        // RUNDE 14 (kritiker I): røverne om under 1 min (kamp-pakka: «drar ut … nå») står i første linje, og «Forsvar leiren nå» er første valg
         const TT = window.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null;
         if (krev(TT && window.ForsvarSpill && ForsvarSpill.neste, 'ingen trussel/ForsvarSpill å prøve raidet med')) { const nsFør = TT.nesteSpill, aktFør = TT.aktiv;
           try { TT.aktiv = 0; TT.nesteSpill = tid + .5; MorgenSpill.morgen(true);
             const k = document.getElementById('morgenkort'), første = k && k.children[1], valg1 = knapper()[0];
             ut.raid = første ? første.textContent.slice(0, 90) : '';
-            krev(første && første.id === 'morgenraid' && /Røverne/.test(første.textContent) && /under 1 min/.test(første.textContent), 'møtet nevner ikke røverne i første linje: ' + ut.raid);
+            krev(første && første.id === 'morgenraid' && /Røverne/.test(første.textContent) && /under 1 min|drar ut mot leiren nå/.test(første.textContent), 'møtet nevner ikke røverne i første linje: ' + ut.raid);
             krev(valg1 && /^Forsvar leiren nå/.test(valg1.textContent), 'første valg er ikke «Forsvar leiren nå»: ' + (valg1 && valg1.textContent.slice(0, 40)));
             klikk(/Ingen endring i dag/); if (MorgenSpill.tilstand().kort && MorgenSpill.tilstand().kort.steg === 1) knapper().pop().click(); }
-          finally { TT.nesteSpill = nsFør; TT.aktiv = aktFør; } }
+          finally {
+        { const MS1 = MorgenSpill.tilstand(); if (MS1 && tapFør) { MS1.taptBy = tapFør.by; MS1.taptLag = tapFør.lag; } } TT.nesteSpill = nsFør; TT.aktiv = aktFør; } }
         // RUNDE 14 (kritiker J): etter et tapt tettsted gir møtet flere soldater (leiesoldatene kjøpes og tas bort igjen)
         const MS14 = MorgenSpill.tilstand(); MS14.taptBy = [{ navn: 'Prøvebyen', eier: 'rød' }]; S.penger = Math.max(S.penger, 5e6); MorgenSpill.morgen(true);
         const tapLinje = [...document.querySelectorAll('#morgenkort .mdogn p, #morgenkort .msum span')].map(e => e.textContent).find(t => /^Tapt siden i går/.test(t)) || '';

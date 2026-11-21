@@ -342,13 +342,17 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     meny = false; menyEl.classList.remove('på'); leirKnapp.classList.remove('på'); visBanner(`Trykk der midten av «${m.navn}» skal være.`);
   }
   const avbryt = () => { plassering = null; banner.classList.remove('på'); skisse3d(); skitten = true; };
+  const hellingTekst = p => typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
+    : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.';
+  // (21. nov) teksten om fargene følger zoomen: zoomer du inn etter at banneret kom, byttes «Zoom inn …» ut med forklaringen av fargene
+  setInterval(() => { const h = banner.classList.contains('på') && banner.querySelector('.hellingtekst'), p = plassering; if (!h || !p || !p.type || !LB.BYGG[p.type]) return;
+    const t = hellingTekst(p); if (h.textContent !== t) h.textContent = t; }, 400);
   function visBanner(tekst, kan, ekstra) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst)); if (ekstra) banner.append(el('small', {}, ekstra));
     const p = plassering;
     // (runde 8) hellingen i kartet: hva fargene betyr for bygget du holder (bare i 2D, og bare nær nok til at de vises)
     if (p && p.type && !p.mal && !LB.BYGG[p.type].linje && window.HellingVis)
-      banner.append(el('small', { klasse: 'hellingtekst' }, typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
-        : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.'));
+      banner.append(el('small', { klasse: 'hellingtekst' }, hellingTekst(p)));
     if (p && p.type && LB.BYGG[p.type].linje) {
       const a = knapp('Angre punkt', () => { p.punkter.pop(); prøv(); }); a.disabled = !p.punkter.length;
       const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;

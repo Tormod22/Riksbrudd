@@ -230,11 +230,12 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     const FS = ForsvarSpill, S = OppstartSpill.tilstand(), L = S.leir, T = SpilletSpill.T(), aktiv0 = T.aktiv, tid0 = tid, nye = [], ser = [], TT = new Map(TETTSTEDER), frø0 = frø;
     const ES = window.EskaleringSpill, gr0 = ES ? JSON.stringify(ES.S().gruppe) : null, ferdig0 = ES ? ES.S().ferdig.length : 0, GS = window.GarnisonSpill, gtest0 = GS ? GS.test : false;
     try {
+      // (runde 14: banneret bruker den nyeste egne observasjonen i 6 t – her er synet på 1,2 km nyere enn «i leiren for 2 min siden»)
       // (1) røverne: sett på 1,2 km gir avstanden; uten syn, men sett i leiren for 2 min siden: «sist sett i leiren for 2 min siden» (ikke «ikke sett ennå»)
       const rv = nyttLag('Røvere 9.1', L.x + 1200, L.y, 'rød'); rv.raid = 9; rv.fra = { x: L.x + 3500, y: L.y }; rv.startTid = tid - 20; ENHETER.push(rv); nye.push(rv); T.aktiv = 9;
       const f1 = e => e === rv; KROKER.ser.push(f1); ser.push(f1); let st = FS.status(); ut.sett = !!st && st.sett && /1,2 km unna/.test(st.tekst) && /fra leiren/.test(st.kort);
       KROKER.ser.splice(KROKER.ser.indexOf(f1), 1); ser.length = 0; rv.x = L.x + 2400; rv.sett = { x: L.x + 20, y: L.y, tid: tid - 2 }; st = FS.status();
-      ut.sist = !!st && !st.sett && /sist sett i leiren for 2 min siden/.test(st.tekst) && !/ikke sett ennå/.test(st.tekst); ut.sistTekst = st && st.tekst;
+      ut.sist = !!st && !st.sett && /sist sett (i leiren for 2 min siden|1,2 km)/.test(st.tekst) && !/ikke sett ennå/.test(st.tekst); ut.sistTekst = st && st.tekst;
       // anslaget hopper ikke: et rått anslag som går fra ca. 70 til 231 min på ti spillminutter flytter det glattede lite
       delete rv.sett; rv.raid = 10; T.aktiv = 10; rv.fra = { x: L.x + 3150, y: L.y }; rv.startTid = tid; rv.sti = null; FS.status(); const a0 = FS.status().min; tid += 10; rv.sti = [[rv.x, rv.y], [L.x, L.y]]; rv.timerIgjen = 231 / 60; const a1 = FS.status().min; rv.sti = null; delete rv.timerIgjen;
       ut.glatt = a0 !== null && a1 !== null && a1 < a0 + 60; ut.anslag = [a0, a1].map(v => Math.round(v || 0)).join(' → ');
