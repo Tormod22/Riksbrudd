@@ -85,10 +85,13 @@
   // det ene tallet som avgjør om stedet kan tas (minst – under det står inntaket stille) først, og tallet for full fart i parentes.
   const kravTekst = t => (!t.minst ? '' : `trenger minst ${t.minst} mann` + (t.minst < t.mann ? ` (${t.mann} for full fart)` : '') + (t.nok ? '' : ` – dere har ${t.har}`));
   // mennene i lagene som sendes, mot kravet: { har, minst, mann, nok (≥ minst), full (≥ mann), tekst } – «4 av 5 for full fart: tar stedet saktere»
-  function kravFor(t, lagListe) { const har = Math.floor((lagListe || []).reduce((a, s) => a + mennI({ lag: s }), 0)), minst = t.minst || 0, mann = t.mann || 0;
-    const nok = !minst || har >= minst, full = !mann || har >= mann;
-    const tekst = !minst ? '' : !nok ? `For få: ${har} av ${minst} – tar ikke stedet (det trengs minst ${minst} mann)` : !full ? `${har} av ${mann} for full fart – tar stedet, men saktere` : '';
-    return { har, minst, mann, nok, full, tekst }; }
+  // (runde 14, kritiker I: «4 av 7 for full fart – tar stedet, men saktere» om en by som 36 mann forsvarte) forsvar = kjent forsvar i mann
+  // (bygdevern, fiender sett eller anslått). Er forsvaret minst like stort som laget, står det «for svakt» og aldri «tar stedet».
+  function kravFor(t, lagListe, forsvar = 0) { const har = Math.floor((lagListe || []).reduce((a, s) => a + mennI({ lag: s }), 0)), minst = t.minst || 0, mann = t.mann || 0;
+    const nok = !minst || har >= minst, full = !mann || har >= mann, f = Math.round(forsvar || 0), svak = f > 0 && f >= har;
+    const tekst = !minst && !svak ? '' : !nok ? `For få: ${har} av ${minst} – tar ikke stedet (det trengs minst ${minst} mann)`
+      : svak ? `For svakt: ${har} mann mot et forsvar på ca. ${f} – laget tar ikke stedet` : !full ? (f > 0 ? `${har} av ${mann} for full fart, og stedet er forsvart (ca. ${f} mann) – det må slås først` : `${har} av ${mann} for full fart – tar stedet, men saktere`) : '';
+    return { har, minst, mann, nok, full, svak, forsvar: f, tekst }; }
   // Truslene mot det siden holder: tettsteder uten garnison, og tettsteder med en fiende i nærheten. garnison(id) = antall egne lag der.
   function trusler(side, byer, eierAv, garnison, fiender, R = REGLER) {
     const ut = [];
