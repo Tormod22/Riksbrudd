@@ -14,6 +14,7 @@ kaier. Det skal også være båter i spillet.»
 ### Endret i filer jeg ikke eier
 - `site/dovre-fliser/index.html`: to skript-tagger rett etter `sjo-visning.js` (anleggsarbeid.js og anleggsarbeid-visning.js), versjonsmerker via `versjon.py`.
 - `site/dovre-fliser/spill/portal3d.js`: én linje – `window.Portal3d` har nå også `mal` (portalens deler for en bredde), så egne tunneler bruker samme modell.
+- Pakket inn fra min fil (ingen endring i fila selv): `hoydeVed` (index.html), `ordre` (index.html, ytterst – etter flyt.js og lagring.js), `KaierSpill.data`/`Kaier.nær`/`Kaier.iBoks` (kaier.js) og `Interior3d.iLeirbygg` (interior3d.js – så gress, blomster og bregner ikke vokser i graven/bunkeren).
 - Ingen endring i `leir.js`, `leir-visning.js`, `sjo.js`, `sjo-visning.js`, `kaier.js` eller `kyst3d.js`. Byggemenyen utvides med `LEIR_MENY`, og kaiene kobles inn ved å pakke inn `KaierSpill.data`, `Kaier.nær` og `Kaier.iBoks` fra min fil (se under).
 
 ### Tabellen (nye anlegg legges til her)
@@ -50,9 +51,9 @@ Prisen betales når du bekrefter; materialer som mangler på lageret, kjøpes ti
 - Tunnel 195450, 6898921 – 195450, 6899171 godkjent (34 m fjell over), laget går inn og kommer ut på den andre siden og går videre.
 - 3D: modellene i scenen (ca. 5000 trekanter for grav + bunker + kai + tunnel), gitteret senket (graven 1,62 m, bunkeren 1,39 m).
 - Gå selv ned i graven (Gange.flytt til midten av graven): føttene står 1,6 m under bakken før inngrepet (872,5 mot 874,1 moh.); bildet
-  `3d-i-graven.png` viser sandsekkene over hodet. Bregner fra vegetasjonen rundt kameraet vokser i bunnen av graven (gjenstår).
-- Vakta (`vakter/anlegg.js`) gikk grønt på PC og mobil (844 × 390). Bilder i scratchpad `natt15/anlegg/` (pc-/mobil-leirmeny, -plassering,
-  2d, 3d-grav, 3d-grav2, 3d-bunker2, 3d-tunnel, 3d-i-graven).
+  `3d-i-graven.png` viser sandsekkene over hodet. Bregner fra vegetasjonen rundt kameraet vokste i bunnen av graven og inne i bunkeren – rettet med `Interior3d.iLeirbygg`.
+- Vakta (`vakter/anlegg.js`) gikk grønt på PC og mobil (844 × 390). Med feil lagt inn med vilje (dybden satt til 1 m) sa den nei: «graven er ikke 1,5 m dyp i reglene (-1); hoydeVed følger ikke graven». Bilder i scratchpad `natt15/anlegg/` (pc-/mobil-leirmeny, -plassering,
+  2d, pc-2d-anlegg2, 3d-grav (før), 3d-grav3 (etter: sikksakk og gress), 3d-bunker3, 3d-tunnel, 3d-i-graven2, 3d-i-bunkeren2 med skyteskåret sett innenfra; ekte bilder i ekte/).
 - `node pipeline/fliser/test_anleggsarbeid.js` – alle testene går.
 
 ### Sammenlignet med virkeligheten
