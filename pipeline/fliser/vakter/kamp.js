@@ -50,6 +50,38 @@ module.exports = {
           const fk = document.getElementById('forsvarknapp'); if (fk) { const r = fk.getBoundingClientRect(), bt = prøveKnapper.filter(b => { const q = b.getBoundingClientRect(); return !(q.right <= r.left || q.left >= r.right || q.bottom <= r.top || q.top >= r.bottom); }); krev(!bt.length, '«Forsvar leiren» ligger oppå ' + bt.map(b => b.textContent).join(', ')); } } }
       // ---------- neste bølge lagres ----------
       if (T && window.TrusselLagring) { const p = TrusselLagring.pakk({ aktiv: 0, tid: 100, lag: [], egne: [], neste: 900, bølge: 2 }); krev(TrusselLagring.neste(p, { tid: 200, bølge: 2 }) === 900, 'tida for neste bølge holdes ikke fast'); }
+      // ---------- (runde 14, kritiker I og J) ----------
+      { const E = window.Eskalering, ES = window.EskaleringSpill;
+        // 1. motangrepet: «fienden er ved byen nå», og et lag i en varslet gruppe går ikke løs på målet før tidligst-tida
+        krev(E && /ved byen nå/.test(E.varselTekst({ fraksjon: 'K', antall: 2, mann: 24, sted: { navn: 'A', x: 0, y: 5000 }, mål: { navn: 'B', eier: 'blå' }, leir: L, om: 400, nær: 300 })), 'varselet sier ikke «fienden er ved byen nå»');
+        if (E && ES && ES.S && window.AI && AI.styr) { const S2 = ES.S(), g0 = S2.gruppe.rød, t0 = ES.test; ES.test = true;
+          const m = { id: 'vaktprøve-by', navn: 'Vaktprøveby', x: L.x + 3000, y: L.y, eier: 'blå' }, f2 = nyttLag('Vaktprøve motangrep', m.x + 300, m.y, 'rød'); f2.ai = { neste: 1e9 }; nye.push(f2);
+          S2.gruppe.rød = { mål: m, lag: [f2.navn], behov: 10, sted: { x: m.x + 4000, y: m.y, navn: null }, fase: 'samler', start: tid, angripFra: tid + 360, tidligst: tid + 400, side: 'rød', varslet: true };
+          try { const o = AI.styr(f2, { hva: 'angrip', x: m.x + 200, y: m.y, tekst: 'angriper' }); d.motangrep = o; krev(o && o.hva !== 'angrip', 'laget i den varslede gruppa angrep før tidligst-tida');
+            f2.beskuttTid = tid; const o2 = AI.styr(f2, { hva: 'angrip', x: m.x + 200, y: m.y, tekst: 'angriper' }); krev(!o2 || o2.hva === 'angrip', 'et beskutt lag fikk ikke forsvare seg'); }
+          finally { S2.gruppe.rød = g0; ES.test = t0; } }
+        // 2. alarmen: en egen observasjon for 100 min siden står som «sist sett … kl. HH:MM»
+        if (T) { ForsvarSpill.test = true; const r2 = nyttLag('Vaktprøve røver 2', L.x, L.y + 3500, 'rød'); r2.raid = 96; r2.fra = { x: r2.x, y: r2.y }; r2.startTid = tid - 120; r2.sett = { x: r2.x, y: r2.y, tid: tid - 100 }; ENHETER.push(r2); T.aktiv = 96;
+          const st2 = ForsvarSpill.status(); d.sist = st2 && st2.tekst; krev(st2 && /^sist sett 3,5 km N kl\. \d\d:\d\d/.test(st2.tekst), 'banneret bruker ikke observasjonen: ' + (st2 && st2.tekst));
+          // 4. rapporten kommer tidligst 2 spillminutter etter «kampen har begynt»
+          const K14 = ForsvarSpill.kamp14; K14.kampStart.set('r96', tid); ForsvarSpill.slutt({ nr: 96, utfall: 'slått' });
+          const n0 = loggLinjer.filter(l => /Bølge 96/.test(l)).length; krev(n0 === 0 && K14.ventRapport.has('r96'), '«slått tilbake» kom samme minutt som «kampen har begynt»');
+          tid += K14.KAMP.minst + .5; if (!(tempo > 0)) tempo = 1; for (let i = 0; i < 40 && K14.ventRapport.has('r96'); i++) await vent(100); d.vent = K14.ventRapport.has('r96');
+          krev(loggLinjer.some(l => /Bølge 96/.test(l)), 'rapporten kom ikke etter 2 spillminutter'); K14.kampStart.delete('r96'); ForsvarSpill.lukkRapport(); T.aktiv = før.aktiv; const j2 = ENHETER.indexOf(r2); if (j2 >= 0) ENHETER.splice(j2, 1); }
+        // 3. raidanslaget: samme tid etter F5 og aldri «under 1 min» før de er på vei
+        if (window.TrusselLagring) { const p = TrusselLagring.pakk({ aktiv: 0, tid: 100, lag: [], egne: [], neste: 900, bølge: 2 }); krev(TrusselLagring.neste(p, { tid: 895, bølge: 2 }) === 900, 'tida for neste bølge flyttes etter omlasting'); }
+        krev(Forsvar.utTekst && !/under 1 min/.test(Forsvar.utTekst(.3)), 'brikka sier «under 1 min» før røverne er på vei');
+        // 5. bølge 2 på «Vanlig» er større enn bølge 1
+        const TR = window.Spillet && Spillet.Trussel; if (TR) { const o5 = { soldater: 8, tunge: 0, dag: 1, faktor: 1 }, n1 = TR.lagFor(1, o5), m1 = TR.menn(1, 8, n1, 1), n2 = TR.lagFor(2, o5), m2 = TR.menn(2, 8, n2, 1);
+          d.bølger = [n1 + '×' + m1, n2 + '×' + m2]; krev(n2 * m2 > n1 * m1 && n2 >= 2, `bølge 2 (${n2} × ${m2}) er ikke større enn bølge 1 (${n1} × ${m1})`); }
+        // 6. patruljen i fredstid: egen tekst, ikke «fienden er i sikte»
+        { const p6 = nyttLag('Vaktprøve patrulje', L.x + 600, L.y, 'rød'); p6.ai = { neste: 1e9 }; ENHETER.push(p6); nye.push(p6); const ser6 = e => e === p6; KROKER.ser.push(ser6);
+          try { const b6 = FlytSpill.bilde(); d.fred = { fred: b6.fred, fiender: b6.fiender }; krev(b6.fred >= 1, 'patruljen i fredstid telles ikke');
+            const h6 = (window.Flyt || window.FlytRegler || {}).hendelser; if (h6) { const hh = h6({ ...b6, fred: 0, alarm: false }, { ...b6, alarm: false }); d.fredH = hh.map(h => h.tekst); krev(hh.some(h => /fredstid, angriper ikke/.test(h.tekst)) && !hh.some(h => /fienden er i sikte/.test(h.tekst)), 'patruljen gir «fienden er i sikte»'); } }
+          finally { const j = KROKER.ser.indexOf(ser6); if (j >= 0) KROKER.ser.splice(j, 1); } }
+        // 7. andre siders kamper uten «fienden»
+        { const a7 = nyttLag('Vaktprøve rød', L.x, L.y, 'rød'), b7 = nyttLag('Vaktprøve grønn', L.x, L.y, 'grønn'); const t7 = KampSpill.andre(a7, b7, L.x + 5000, L.y); d.andre = t7; krev(/ og .* sloss/.test(t7) && !/fienden/.test(t7), 'andre siders kamp: ' + t7); }
+      }
     } catch (x) { feil.push('feil: ' + String(x && x.stack || x).slice(0, 240)); }
     finally {
       if (toggle) { delete document.body.classList.toggle; document.body.classList.remove('gaar'); }
@@ -63,6 +95,6 @@ module.exports = {
       if (FlytSpill.spoler()) FlytSpill.spol(); tempo = før.tempo; const fart = document.getElementById(før.tempo === 0 ? 'sp0' : 'sp1'); if (fart && før.tempo <= 1 && tempo !== før.tempo) fart.click();
       document.getElementById('flytkort').className = før.flytkort; Object.assign(kam, før.kam);
       if (før.logg) { loggLinjer.length = 0; loggLinjer.push(...før.logg); } ForsvarSpill.vis(); skitten = true; }
-    return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : 'én kamp per ildkamp med lag, fiende og sted, Vis, årsak, anslag uten minutter når ingen ser, stopp ved «sett», lagring og banner uten overlapp ok', data: d };
+    return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : 'én kamp per ildkamp med lag, fiende og sted, Vis, årsak, anslag uten minutter når ingen ser, stopp ved «sett», lagring og banner uten overlapp ok; runde 14: motangrep holdes til tidligst-tida, sist sett med klokkeslett, rapport etter 2 min, bølge 2 større, patrulje i fredstid, andre siders kamper', data: d };
   }),
 };
