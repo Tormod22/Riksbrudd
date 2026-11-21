@@ -1,0 +1,22 @@
+// Test for spill/logglager.js (loggen lagres per leir og oppsummeres når spillet åpnes igjen): node pipeline/fliser/test_logglager.js
+'use strict';
+const LL = require('../../site/dovre-fliser/spill/logglager.js');
+let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
+const leir = '196400,6898900';
+let L = LL.tom(leir);
+for (let i = 0; i < 130; i++) LL.legg(L, 'Melding nr ' + i, i * 2);
+ok(L.linjer.length === LL.REGLER.maks && L.linjer[0][1] === 'Melding nr 30', 'høyst 100 linjer, de eldste går ut');
+LL.legg(L, 'Kamp om Bryne (×2)', 300, true); LL.legg(L, 'Kamp om Bryne (×3)', 301, true);
+ok(L.linjer.filter(q => /Bryne/.test(q[1])).length === 1, 'sammenslått melding (×n) erstatter den forrige linja');
+// lagres og leses, en ny økt
+LL.legg(L, 'Vaktlaget er sendt mot tankbilen (1,2 km).', 590); LL.legg(L, 'Det klarner opp.', 594);
+const t = LL.pakk(L), M = LL.les(t, leir); M.økt += 1;
+ok(M.linjer.length === L.linjer.length, 'leses inn igjen for samme leir');
+ok(LL.les(t, '1,2').linjer.length === 0 && LL.les('{ødelagt', leir).linjer.length === 0, 'annen leir eller ødelagt tekst gir tom logg');
+const o = LL.oppsummer(M);
+ok(o && o.viktige[0].tekst.startsWith('Vaktlaget er sendt') && !o.viktige.some(v => /klarner/.test(v.tekst)), 'oppsummeringen: viktige meldinger, nyeste øverst, uten vær');
+ok(o.til.dag === 1 && o.til.klokke === '15:54' && LL.tittel(o).startsWith('dag 1'), 'klokkeslett: tid 594 = dag 1 kl. 15:54');
+ok(LL.når(1440).dag === 2 && LL.når(1440).klokke === '06:00', 'tid 1440 = dag 2 kl. 06:00');
+LL.legg(M, 'Ny melding i denne økta', 600); ok(LL.oppsummer(M).antall === LL.REGLER.maks - 1, 'oppsummeringen gjelder forrige økt (den nye meldingen telles ikke)');
+ok(LL.oppsummer(LL.tom(leir)) === null, 'ingen tidligere meldinger: ingen oppsummering');
+console.log(feil ? `${feil} FEIL` : 'Alle testene for logglager.js er ok'); process.exit(feil ? 1 : 0);
