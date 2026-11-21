@@ -175,8 +175,8 @@ body.kort #morgenkort .mrapport{ font-size:12.5px; } body.kort:has(#morgenkort.p
 #morgenkort .mfoldav{ margin:-4px 0 6px; } #morgenkort .mfoldav button.mfold{ min-height:26px; }
 body.kort #morgenkort{ width:min(760px,94vw); } body.kort #morgenkort .mvalg{ display:grid; grid-template-columns:1fr 1fr; gap:6px; } body.kort #morgenkort .mvalg button{ margin-top:0; }
 body.kort #morgenkort .mvalg button small{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-body.kort #morgenkort .mvalg button.mingen{ grid-column:1 / -1; min-height:34px; } body.kort #morgenkort .mvalg:has(> :nth-child(2):last-child) button:first-child{ grid-column:1 / -1; }
-body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morgenkort .msp{ margin:4px 0 4px; }`;
+body.kort #morgenkort .mvalg button.mingen{ min-height:34px; } body.kort #morgenkort .mvalg button.mingen:nth-child(odd){ grid-column:1 / -1; }
+body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morgenkort .mstor{ padding:6px 10px; margin:6px 0; } body.kort #morgenkort .mstor p{ font-size:13.5px; margin:0; } body.kort #morgenkort .msp{ margin:4px 0 4px; }`;
   document.head.appendChild(css);
   const kort = el('div', { id: 'morgenkort', role: 'dialog', 'aria-label': 'Morgenmøtet' }); document.body.appendChild(kort);
   let vistNøkkel = '';
@@ -217,9 +217,13 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     }
     kort.append(valg);
     kort.classList.remove('foldet'); kort.classList.add('på'); kort.scrollTop = 0;
-    // foldes bare når kortet ellers må rulles (PC med god plass: alt står som før)
-    if (rap.length && kort.scrollHeight > kort.clientHeight + 2) fold(true);
+    // foldes bare når kortet ellers må rulles (PC med god plass: alt står som før); er kortet skjult nå (angrep), sjekkes det når det synes
+    foldSjekk = rap.length > 0; sjekkFold();
   }
+  let foldSjekk = false;
+  function sjekkFold() { if (!foldSjekk || !kort.classList.contains('på') || !kort.getClientRects().length || kort.clientHeight < 20) return; foldSjekk = false;
+    if (!kort.classList.contains('foldet') && kort.scrollHeight > kort.clientHeight + 2) fold(true); }
+  rot.addEventListener('resize', () => { if (kort.classList.contains('på') && kort.querySelector('.msum')) { foldSjekk = true; if (!kort.classList.contains('foldet')) setTimeout(sjekkFold, 50); } });
   function fold(på) { kort.classList.toggle('foldet', på); const av = kort.querySelector('.mfoldav'); if (av) av.remove();
     if (!på) { const b = knappEl('‹ Vis mindre', '', () => fold(true), 'mfold'); b.querySelector('b').style.display = 'inline'; const d = kort.querySelector('.mdogn'); if (d) d.after(el('div', { klasse: 'mfoldav' }, b)); }
     kort.scrollTop = 0; }
@@ -256,7 +260,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     const s = situasjon(); if (!s || !s.folk) { lagre(); return { igår }; }
     const rapport = [];
     // døgnoppgjøret ser ikke alltid tapene ute (det sa «Et rolig døgn» samme døgn som en falt): da tas «rolig» bort, og tapene står med navn
-    if (tap && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').trim() || null;
+    // og tallene på sårede/falne står ikke to ganger (navnene står i linja over)
+    if (tap && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').replace(/(\d+ (ny såret|nye sårede)(, \d+ falt)?|\d+ falt)\.\s*/, '').replace(/^Siste døgn:\s*$/, '').trim() || null;
     if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
     S.storHist = S.storHist || {};
     let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
@@ -338,7 +343,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   rot.addEventListener('riksbrudd-spill', () => setTimeout(() => { start(); koblSkjermlag(); }, 0));
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(koblSkjermlag, 0)); else setTimeout(koblSkjermlag, 0);
   // et kort som venter (et annet kort sto oppe), kommer fram straks plassen er ledig; SamfunnSpill kan komme etter oss
-  setInterval(() => { if (!klar || !S) return; koblValg(); const K = S.kort;
+  setInterval(() => { if (!klar || !S) return; koblValg(); sjekkFold(); const K = S.kort;
     if (K && !K.ferdig && auto() && !kort.classList.contains('på') && rot.Kortkø && !Kortkø.åpent()) vis();
     // et kort med hastverk fra en annen modul (forræderen) har kommet oppå: morgenmøtet viker og venter
     if (kort.classList.contains('på') && rot.Kortkø) { const a = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'].find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); });

@@ -65,7 +65,7 @@ const han = [...Array(40)].map((_, i) => M.storBeslutning({ ...grunn, diesel: 80
 ok(han && /kl\. 14/.test(han.tittel) && han.valg.some(v => v.id === 'tre' && v.mengde >= 4 && v.pris > 0 && /kl\. 14/.test(v.t)) && han.valg.some(v => v.id === 'diesel' && v.mengde >= 300) && han.valg.some(v => v.id === 'nei'), 'handelsmannen kl. 14: tre, diesel eller nei: ' + (han && han.valg.map(v => v.t).join(' | ')));
 ok(![...Array(30)].some((_, i) => (M.storBeslutning({ ...grunn, lager: { tre: 2 }, diesel: 100 }, rekke(i + 41), null) || {}).id === 'handel'), 'ingen handelsmann når dere ikke har noe å selge');
 const sv = M.dagensValg(grunn, fast()).find(v => v.id === 'svart');
-ok(sv && sv.vare === 'tre' && sv.mengde === 8 && sv.pris === 1e6 && /svartebørsen/.test(sv.t), 'svartebørsen kjøper tre også når kassa er full: ' + (sv && sv.t));
+ok(sv && sv.vare === 'tre' && sv.mengde === 10 && sv.pris === 1.4e6 && /svartebørsen/.test(sv.t), 'svartebørsen kjøper tre også når kassa er full: ' + (sv && sv.t));
 const svD = M.svartTilbud({ ...grunn, lager: { tre: 0 }, diesel: 1500 });
 ok(svD && svD.vare === 'diesel' && svD.mengde === 400 && svD.pris === Math.round(400 * 3000 * .75 / 1e4) * 1e4, 'uten tre: diesel under kjøpsprisen: ' + (svD && svD.t));
 ok(!M.svartTilbud({ ...grunn, lager: { tre: 3 }, diesel: 100 }), 'ingenting å selge: intet tilbud');

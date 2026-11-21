@@ -48,10 +48,11 @@
     stor: { første: 2, hver: 1, pause: { nabo: 4, tankbil: 3, vern: 2, karavane: 3, handel: 2 } },
     // RUNDE 13: handelsmannen kommer til leiren «timer» etter kl. 06 (kl. 14) og kjøper tre (m³) til «trePris» ganger markedets salgspris
     // og diesel (l) til «dieselPris» ganger markedets kjøpspris – det dere har avtalt og fortsatt har på lageret da
-    handel: { timer: 8, tre: [6, 14], minTre: 4, trePris: 1.5, diesel: [200, 500], minDiesel: 300, dieselPris: .9 },
+    handel: { timer: 8, tre: [10, 25], minTre: 4, trePris: 1.8, diesel: [200, 500], minDiesel: 300, dieselPris: .9 },
     // RUNDE 13: svartebørsen (inntekt uten krig, et dagsvalg): selg en andel av treet (m³, høyst maks) til «pris» ganger salgsprisen,
-    // eller diesel (l) til «pris» ganger kjøpsprisen (under kjøpsprisen, så det lønner seg ikke å kjøpe for å selge)
-    svart: { tre: { andel: .4, maks: 12, min: 4, pris: 1.25 }, diesel: { andel: .3, maks: 400, min: 300, pris: .75 } },
+    // eller diesel (l) til «pris» ganger kjøpsprisen. Begge under det markedet tar for å selge (tre: 1,5 × markedet), så det lønner seg
+    // ikke å kjøpe for å selge igjen
+    svart: { tre: { andel: .5, maks: 20, min: 4, pris: 1.4 }, diesel: { andel: .3, maks: 400, min: 300, pris: .75 } },
     // nabogården: så mange folk og så mye mat de har med; avvist gir moral
     nabo: { folk: 4, mat: 8, avvistMoral: -3 },
     // tankbilen: avstand (m), diesel (l), frist (spillminutter), sjansen for røvere ved bilen (lag), og til fots: sjansen for at de får med noe
