@@ -706,11 +706,11 @@ function infraPunkt3(o) {
 }
 // (runde 12, kritikken: «stedsnavnet henger i lufta midt i synsfeltet» når du går) – til fots og i bilen: navn og merker bare langt
 // unna (NAVN_GÅ.min meter), aldri i midten av bildet (andel av bredden/høyden fra midten), og tettstedsnavnene mindre. Claudes forslag:
-const NAVN_GÅ = { min: 600, bredde: .24, høyde: .3, font: 'italic 12px "IM Fell English",serif', farge: 'rgba(231,220,195,.78)', løft: 20, toppMin: 112 };
+const NAVN_GÅ = { min: 600, bredde: .24, høyde: .3, font: 'italic 12px "IM Fell English",serif', farge: 'rgba(231,220,195,.78)', bak: 'rgba(231,220,195,.7)', løft: 20, toppMin: 112 };
 // (runde 13, sjekket ved Vikeså på /rogaland: så du rett mot tettstedet 1,2 km unna, forsvant navnet – det lå i midten av bildet, og
 // ellers skjulte en kolle midt imellom punktet 1,5 m over bakken). Nå til fots: navnet med avstanden («Vikeså · 1,2 km»), regnet fra
 // et punkt NAVN_GÅ.løft m over tettstedet, og ligger det i midten av bildet, står det øverst (under kompasset, minst toppMin punkter
-// ned) i stedet for midt i synsfeltet. Claudes forslag.
+// ned) i stedet for midt i synsfeltet; ligger det bak en ås, står det svakere øverst i den retningen. Claudes forslag.
 const avstTekst = d => (d < 1000 ? Math.round(d / 50) * 50 + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km');
 function tegnInfra3d(g) {
   const u = R3.ut; if (!INFRA || !VIS.infra || !u || !u.infra) return;
@@ -721,7 +721,12 @@ function tegnInfra3d(g) {
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
     if (gå && Math.hypot(X - kx, Y - ky) < NAVN_GÅ.min) continue;
     const m = mPer3(X, Y); if (!VISES[o.lag](o, m)) continue;
-    const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y, gå && o.lag === 'tettsted' ? NAVN_GÅ.løft : 1.5); if (!q) continue; const [px, py] = q, e = o.e;
+    const gåT = gå && o.lag === 'tettsted', q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y, gåT ? NAVN_GÅ.løft : 1.5);
+    // til fots bak en ås: navnet som et skilt øverst i den retningen (svakere), så du vet hvor tettstedet ligger – ikke inne i et hus
+    if (!q && gåT && !(window.Interior3d && Interior3d.inne(R3.bane.x, R3.bane.y)) && Math.abs(X - u.cx) < u.S && Math.abs(Y - u.cy) < u.S) {
+      const p = projFørst(new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + NAVN_GÅ.løft));
+      if (p && p[0] > 20 && p[0] < VW - 20) etiketter.push({ x: p[0], y: Math.max(VH * (.5 - NAVN_GÅ.høyde), NAVN_GÅ.toppMin), tekst: o.e.navn + ' · ' + avstTekst(Math.hypot(X - kx, Y - ky)), prio: 4, font: NAVN_GÅ.font, farge: NAVN_GÅ.bak }); }
+    if (!q) continue; const [px, py] = q, e = o.e;
     const iMidten = gå && Math.abs(px - VW / 2) < VW * NAVN_GÅ.bredde && Math.abs(py - VH / 2) < VH * NAVN_GÅ.høyde;
     if (gå && o.lag === 'tettsted') { etiketter.push({ x: px, y: iMidten ? Math.max(VH * (.5 - NAVN_GÅ.høyde), NAVN_GÅ.toppMin) : py - 4, tekst: e.navn + ' · ' + avstTekst(Math.hypot(X - kx, Y - ky)), prio: 3, font: NAVN_GÅ.font, farge: NAVN_GÅ.farge }); continue; }
     if (iMidten) continue;
