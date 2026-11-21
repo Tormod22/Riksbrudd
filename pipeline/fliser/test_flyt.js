@@ -48,4 +48,10 @@ ok(F.iRamme(lag, 60, 60, -10, -10).length === 2, 'ramme med hjørnene i omvendt 
 // runde 6: ferdig bygg senker bare til 10×, fienden til 1×; et nytt ferdig bygg innen to spilltimer senker ikke igjen
 ok(F.autoFart([{ type: 'bygg' }]) === 'sp2' && F.autoFart([{ type: 'kontakt' }]) === 'sp1' && F.autoFart([{ type: 'bygg' }, { type: 'alarm' }]) === 'sp1', 'auto: bygg ned til 10×, fiende og alarm til 1×');
 ok(F.hviler([{ type: 'bygg' }], { bygg: 100 }, 150).length === 0 && F.hviler([{ type: 'bygg' }], { bygg: 100 }, 230).length === 1 && F.hviler([{ type: 'alarm' }], { alarm: 100 }, 101).length === 1, 'auto: et nytt ferdig bygg innen to spilltimer senker ikke farten igjen (alarm alltid)');
+// (runde 14, kritiker I) en patrulje i fredstid: egen tekst, og den stopper ⏭ (kontakt)
+{ const h14 = F.hendelser(B({}), B({ fred: 1 }));
+  ok(h14.length === 1 && /fredstid, angriper ikke/.test(h14[0].tekst) && h14[0].type === 'kontakt', 'patruljen i fredstid har egen tekst');
+  ok(F.hendelser(B({ fred: 1 }), B({ fred: 1 })).length === 0, 'samme patrulje stopper ikke igjen'); }
+console.log('runde 14: patruljen i fredstid ok');
 console.log(feil ? feil + ' FEIL' : 'alle flyttestene ok'); process.exit(feil ? 1 : 0);
+
