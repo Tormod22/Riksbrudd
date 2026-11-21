@@ -58,6 +58,9 @@ body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); 
   // fartsknappene: på en lav skjerm vises bare den valgte, og et trykk går videre til neste (1× → 10× → 60× → 600× → 1×)
   const fart = ['sp1', 'sp2', 'sp3', 'sp4'].map(id => document.getElementById(id)).filter(Boolean); let blar = false;
   fart.forEach((b, i) => b.addEventListener('click', e => {
+    // RUNDE 14 (kritiker I: farten gikk fra 1× til 10× av seg selv rett etter at en tropp ble laget): bare et ekte trykk blar videre –
+    // når et skript trykker på farten som alt er valgt (f.eks. «sett 1×» etter en pause), blir farten stående
+    if (!e.isTrusted) return;
     if (blar || !document.body.classList.contains('kort') || !b.classList.contains('på')) return;
     e.stopImmediatePropagation(); blar = true; fart[(i + 1) % fart.length].click(); blar = false;
   }, true));

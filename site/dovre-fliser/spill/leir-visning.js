@@ -14,6 +14,14 @@
 // Kroker: KROKER.sim (bygging, strøm, skade), KROKER.trykk/trykk3d (plassering og byggpanel), KROKER.tegn (kartet), KROKER.bygg3d/sett3d (3D).
 (function () {
   const LB = Leir, NØKKEL = 'riksbrudd-k2', r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
+  // RUNDE 14 (kritiker J: «utstyr og deler 5 mill. kr» for et vakttårn i tre var vanskelig å tro på): hva utstyret er, per bygg.
+  // Listene er Claudes forslag; prisene er uendret.
+  const UTSTYR = { vakttårn: 'lyskaster, radio, våpenfeste og stålfester', brakke: 'senger, ovn, vinduer og dører', kontrollrom: 'skjermer, radioer, kart og datamaskiner',
+    port: 'portmotor, bom og vaktbu', batteri: 'batterier og omformer', aggregat: 'dieselaggregat og koblingsskap', solcelle: 'paneler og omformer', verksted: 'verktøy, løftebukk og sveiseapparat',
+    sykestue: 'senger, medisiner og utstyr', drivstofftank: 'tank, pumpe og slanger', kameramast: 'kamera, mast og kabel', radiomast: 'sender, antenne og mast', drivhus: 'glass, lys og varme',
+    helikopterplass: 'lys, drivstoffpumpe og radio', lagertelt: 'telt og reoler', container: 'containeren' };
+  // midt i en setning: «utstyr og deler – lyskaster, radio … – 5 mill. kr»; sist: «utstyr og deler: lyskaster, radio …»
+  const delNavn = (id, sist) => ((LB.PRISDEL || {}).navn || 'utstyr og deler') + (UTSTYR[id] ? (sist ? `: ${UTSTYR[id]}` : ` – ${UTSTYR[id]} –`) : '');
   let L = null, plassering = null, valgtBygg = null, valgtPlan = null, sist = null, akk = 0, meny = false, rutenett = true, inntil = true, planModus = false, fortsett = false;
   const angre = [], gjørOm = [], MALER = 'riksbrudd-maler';
   const spill = () => window.OppstartSpill && OppstartSpill.tilstand();
@@ -266,7 +274,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
     for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
       if (gruppe) liste.appendChild(el('h4', {}, gruppe));
-      const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'}; materialene har du)`) + ` · byggelagene dine: ${tidTekst(k.timer * 60)}`;
+      const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (${delNavn(id)} ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ` (${delNavn(id, true)}; materialene har du)`) + ` · byggelagene dine: ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
@@ -433,7 +441,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter
     const rs = LB.reiseFor(L, b, p.flytt); p.reise = rs;
     const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
-      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'})` : ` i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, byggelagene dine bygger det – ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
+      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? ` (${delNavn(p.type, true)})` : ` i alt (${delNavn(p.type)} ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, byggelagene dine bygger det – ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
     // (runde 8) skrå grunn: hvor høy grunnmuren blir (samme regel som hellingskartet: over halve grensa = gult)
     const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;

@@ -200,6 +200,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     soldater(dt); vakter(); falne();
     if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
   });
+  // RUNDE 14 (kritiker J: «FOLK 10 ⚠» øverst mens Folk-knappen viste 6 etter at en tropp ble laget): tallet øverst oppdateres også når
+  // spillet står på pause (KROKER.sim går ikke da) – samme kilde som knappen (F.personer.length), høyst 0,4 s etter
+  setInterval(() => { try { if (F && document.getElementById('sFolk') && document.getElementById('sFolk').textContent.split(' ')[0] !== String(F.personer.length)) visStatus(); } catch (e) { /* neste runde */ } }, 400);
   // ---------- (runde 12, kritiker F) DE FALNE: én kilde for loggen, folket og begravelsen ----------
   // Kritikken: «Håkon Rønning og Silje Berg er falt» og «2 døde venter på begravelse», men begge sto i Folk med helse 15 %, og
   // folketallet sto på 12 også etter «4 døde». Leirvakta (forsvar-visning.js) er folk på «vakt» som tar opp våpen: mennene peker på
