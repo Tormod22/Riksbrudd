@@ -62,11 +62,12 @@ Bilder fra spillet (før/etter) ligger i scratchpad `natt15/bygg/` (for-*.png = 
 - Etter: `etter-stavanger-domkirke-pc.png` (steinkirke med bratt valmtak), `etter-stavanger-gamlestavanger-pc.png` (hvite hus, teglrøde tak),
   `etter-stavanger-breidablikk-pc.png`, `etter-stavanger-skole-pc.png`, `etter-bygd-gard-pc.png`, `etter-bygd-hytte-pc.png`,
   `etter-algard-bensin*-stor-pc.png` (E39 ved Ålgård: store stasjoner), `etter-bensin-tre-pc.png` / `-mob.png` (automat, vanlig og stor side om side).
+- Mobil (844 × 390): `etter-stavanger-gamlestavanger-mob.png`, `etter-stavanger-domkirke-mob.png`.
 - Vakta `pipeline/fliser/vakter/bygg.js`: ok på PC og mobil, med og uten 3D (ca. 0,1–2,6 s). Lagt inn feil med vilje (ingen steinkirke + navnefeil
   i bensinstasjon) – vakta fant begge. Den fant også en ekte feil: `sk` brukt før den var laget i bensinstasjon() (3D ble aldri ferdig i Stavanger).
 - Tester: test_byhus.js (nye: hvite hus by/land/Vestlandet, teglrøde tak, steinkirker, takvinkler, sykehjem/legevakt, bensinType),
   test_bygninger.py (helsetyper, utseende, feltene i flisa), test_kart2d.js, test_interior.js – alle ok.
-- Låven i Ryfylke er fortsatt flat på etter-bildet fra kl. 21:52 (tatt før harFall-endringen; ikke tatt nytt bilde etter den).
+- Låven i Ryfylke: flat på `etter-bygd-gard-pc.png` (før harFall-endringen), med tak på `etter2-bygd-gard-pc.png` (etter).
 
 ### Ikke gjort / gjenstår
 - 2D-kartet vet ikke om hvite hus/teglrøde tak (bakgrunnstråden laster ikke byhus.js) – takene i 2D har de gamle fargene.
