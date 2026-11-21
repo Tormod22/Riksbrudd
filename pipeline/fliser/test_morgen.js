@@ -107,6 +107,31 @@ ok(v[0] === 3 && v[1] === 1, 'den frie først, så den beste fra oppgaven med fl
 ok(M.velgFolk(folk, 9, 'hogst').length === 3 && !M.velgFolk(folk, 9, 'hogst').includes(4), 'den eneste på en oppgave (kokken) sendes aldri: ' + M.velgFolk(folk, 9, 'hogst'));
 ok(M.velgFolk(folk, 2, 'hogst', [3]).every(id => id !== 3), 'unntatt holdes utenfor');
 
+// --- RUNDE 14 (kritiker I og J) ---
+const raid = M.dagensValg({ ...grunn, røverTimer: 0.01, raid: { aktiv: false, min: 0.5, nedtelling: 'under 1 min', satt: false } }, fast());
+ok(raid[0].id === 'forsvar' && raid[0].t === 'Forsvar leiren nå' && /under 1 min/.test(raid[0].følge), 'røverne om under 1 min: «Forsvar leiren nå» først: ' + ids(raid));
+ok(!/i natt/.test(raid.find(v => v.id === 'vakt').t), 'dobbel vakt sier ikke «i natt» når røverne kommer nå: ' + raid.find(v => v.id === 'vakt').t);
+ok(!ids(M.dagensValg({ ...grunn, raid: { aktiv: false, min: 600, nedtelling: '10 t', satt: false } }, fast())).includes('forsvar'), 'røverne om 10 t: ikke forsvar ennå');
+ok(!ids(M.dagensValg({ ...grunn, raid: { aktiv: true, min: 0, nedtelling: 'nå', satt: true } }, fast())).includes('forsvar'), 'forsvaret står alt: ikke tilbudt igjen');
+const tapBy = M.dagensValg({ ...grunn, penger: 16e6, arbeidsføre: 6, folk: 6, tapt: { byer: [{ navn: 'Egersund' }], lag: [] } }, fast());
+ok(tapBy.some(v => ['leiesold', 'vaktlag', 'rekrutt', 'krise'].includes(v.id)), 'etter et tapt tettsted: minst ett valg som gir soldater: ' + ids(tapBy));
+ok(/Kjøp leiesoldater \(4 mann, 2,5 mill\. kr\)/.test((tapBy.find(v => v.id === 'leiesold') || {}).t || ''), 'leiesoldatene viser prisen');
+const tapLagFattig = M.dagensValg({ ...grunn, penger: 1e5, arbeidsføre: 6, folk: 6, tapt: { byer: [], lag: ['Speidertropp 1'] } }, fast());
+ok(ids(tapLagFattig).includes('vaktlag'), 'tapt tropp og tom kasse: vaktlag av folkene (gratis): ' + ids(tapLagFattig));
+const krise = M.dagensValg({ ...grunn, penger: 0, arbeidsføre: 3, folk: 3, kriseKan: true, soldater: 4 }, fast());
+ok(krise[0].id === 'krise' && /gratis/.test(krise[0].t), 'krisehjelp først når alt er tapt: ' + ids(krise));
+const fiendeBy = M.dagensValg({ ...grunn, sted: 'Røysland', stedEier: 'Kystalliansens' }, fast()).find(v => v.id === 'speid');
+ok(fiendeBy && /mot Røysland \(Kystalliansens nå\)/.test(fiendeBy.t) && /farlig/.test(fiendeBy.følge) && fiendeBy.fiende, 'speidertur mot fiendens by navngir eieren og risikoen: ' + (fiendeBy && fiendeBy.t));
+const kar14 = hist => { for (let k = 0; k < 200; k++) { const r = M.storBeslutning(hist, rekke(k), null); if (r && r.id === 'karavane') return r; } return null; };
+const kfull = kar14({ ...grunn, diesel: 1000, dieselPlass: 1000, lager: { tre: 8 } });
+const matKjøp = kfull && kfull.valg.find(v => v.id === 'kjøp');
+ok(matKjøp && !/diesel/i.test(matKjøp.t + matKjøp.følge), 'karavanen: ordet diesel står ikke under et matkjøp: ' + (matKjøp && matKjøp.t + ' / ' + matKjøp.følge));
+ok(kfull && kfull.valg.some(v => v.id === 'selg' && /Selg 8 m³ tre/.test(v.t)) && /kjøper tre/.test(kfull.tekst), 'karavanen «kjøper tre» – og har knappen (8 m³): ' + (kfull && kfull.valg.map(v => v.t).join(' | ')));
+const klite = kar14({ ...grunn, lager: { tre: 2 } });
+ok(klite && !klite.valg.some(v => v.id === 'selg') && !/og kjøper tre\./.test(klite.tekst), 'for lite tre: ingen salgsknapp, og teksten sier hvorfor: ' + (klite && klite.tekst));
+const fu = M.utfall({ id: 'speid', sted: 'Røysland', fiende: 'Kystalliansens', fiendeTekst: 'I Røysland telte de 2 fiendtlige lag (ca. 9 mann).', folk: [{ navn: 'Ola A' }, { navn: 'Kari B' }] }, { røverTimer: null }, fast(.01));
+ok(/telte de 2/.test(fu.tekst) && (fu.skadet.length || fu.borte.length), 'speidertur mot fiendens by: melder styrken, større fare: ' + fu.tekst);
+
 // --- alle tallene står i REGLER ---
 ok(M.REGLER.borte === 2 && M.REGLER.stor.første === 2 && M.REGLER.stor.hver === 1 && M.REGLER.vakt.ekstra === 2, 'tallene står i REGLER');
 console.log(feil ? feil + ' FEIL' : 'alle morgentestene ok'); process.exit(feil ? 1 : 0);
