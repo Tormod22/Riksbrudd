@@ -225,5 +225,7 @@ etter rettingen kom ingenting (verken etter omlasting eller over 06:00).
 - Vakta (PC og mobil 844 × 390, isMobile): ok – raidlinja først, «Forsvar leiren nå» først, tapt tettsted i rapporten, leiesoldatene kom som lag på 4.
   Feil med vilje (raidlinja tatt bort): vakta svarte «møtet nevner ikke røverne i første linje».
 - Bilder i scratchpad `natt14/morgen/`: `p-raid.png`, `p-tap.png` (PC), `m-raid.png`, `m-tap.png` (telefon). «Lag et vaktlag» ga «Vaktlag 1» på 4. 0 sidefeil.
-- Ikke prøvd i nettleser: ekte tap av tettsted gjennom AI-en (sporet er bare prøvd med `S.taptBy` satt for hånd), karavanen og speiderturen
+- Sporet (`spor.js`): et prøvetettsted satt til «blå» og så «rød», og et eget lag med alle hp = 0 → `taptBy`/`taptLag` fylt, og neste møte hadde
+  «Tapt siden i går …» og valgene for soldater. Prøven fant en feil som er rettet: `S.tap.length` når bare et tettsted var tapt (unntak i KROKER.sim).
+- Ikke prøvd i nettleser: ekte tap av tettsted gjennom AI-en (sporet er prøvd med eierskapet satt for hånd), karavanen og speiderturen
   (bare regeltestene), og en hel mobilkontroll (koordinatoren kjører den etter flettingen).

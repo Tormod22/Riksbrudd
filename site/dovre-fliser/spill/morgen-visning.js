@@ -335,7 +335,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     if (byKart) for (const [id, før] of byKart) { const nå2 = byNå.has(id) ? byNå.get(id) : null; if (før === 'blå' && nå2 !== 'blå') { const t = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted ? INFRA.tettsted.find(q => q.e && q.e.id === id) : null;
       (S.taptBy = S.taptBy || []).push({ navn: t && t.e.navn ? t.e.navn : 'et tettsted', eier: nå2 || null }); ny = true; } }
     byKart = byNå;
-    tapKart = kart; if (ny) { if (S.tap.length > 60) S.tap.splice(0, S.tap.length - 60); lagre(); } }
+    tapKart = kart; if (ny) { if (S.tap && S.tap.length > 60) S.tap.splice(0, S.tap.length - 60); lagre(); } }
   KROKER.sim.push(() => tapSteg(false));
 
   // ---------- tankbilen: et lite oppdrag i kartet ----------
