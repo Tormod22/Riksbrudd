@@ -249,6 +249,8 @@ const KARTLYS_GAMMA = .74, KARTLYS_SKYGGE = .46, KARTLYS_METNING = 1.12, KARTLYS
 const KARTLYS_TAK = 1.4;
 for (let kl_i = 0; kl_i < 256; kl_i++) KARTLYS_TABELL[kl_i] = Math.round(255 * Math.pow(kl_i / 255, KARTLYS_GAMMA));
 const VEGREKKE = ['S', 'P', 'K', 'F', 'R', 'E'];
+// asfalt og grus i 3D-kartet (runde 14) – Claudes forslag (fargene)
+const ASFALT3D = { E: '#6d6e70', R: '#707173', F: '#747472', K: '#787774', P: '#8c8274', S: '#8c8274' };
 // Nær (fra z14, 1 m per punkt): vegen som den ser ut – asfalt med Statens vegvesens oppmerking, forenklet.
 // E-, riks- og fylkesveg: hvite kantlinjer og gul midtlinje; kommunal veg: bare gul midtlinje; privat veg og skogsbilveg: grus.
 // Bredde i meter etter kategori (NVDB-lagene har ikke vegbredde). Midtlinja er skillelinje: 3 m strek, 9 m opphold.
@@ -410,8 +412,10 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
     g.lineCap = g.lineJoin = 'round'; const tynn = z < 8 ? .6 : 1;   // utzoomet: tynnere streker
     for (const pass of [0, 1]) for (const kat of VEGREKKE) {
       if (z < 11 && (kat === 'P' || kat === 'S')) continue;   // småvegene ligger i flisene fra z10 for marsjrutene, men vises fra z11
-      const [m, min, farge] = VEG[kat], w = Math.max(min * tynn, m / r);
-      g.strokeStyle = pass ? farge : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2 * tynn, w * .45);
+      // (runde 14, kritiker J: «gatene i Egersund ser ut som brun gjørme» i 3D på Lav) 3D-kartet (valg.asfalt) får asfaltgrå veger og grus
+      // på småvegene i stedet for kartets gule streker (de ble brune i 3D-fargene); kanten er en myk, mørk skulder
+      const [m, min, farge0] = VEG[kat], w = Math.max(min * tynn, m / r), farge = valg.asfalt ? ASFALT3D[kat] : farge0;
+      g.strokeStyle = pass ? farge : valg.asfalt ? 'rgba(58,56,52,.55)' : 'rgba(30,22,14,.85)'; g.lineWidth = pass ? w : w + Math.max(1.2 * tynn, w * .45);
       g.beginPath(); for (const o of alle) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); }
       g.stroke();
     }

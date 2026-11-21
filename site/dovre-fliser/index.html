@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=6d62bc704e"></script>
+<script src="/dovre-fliser/kartflis.js?v=7f169bb6d7"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=262f49f7b1');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=3b65fdd77b');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -783,6 +783,25 @@ function tegnInfra3d(g) {
   }
   g.save(); tegnEtiketter(g, etiketter.filter(x => x.tekst), VW, VH); g.restore();
 }
+// HVOR ER JEG (runde 14, kritiker I: «ingen stedsnavn – umulig å vite hvor jeg var i landet»): i 3D ovenfra står nærmeste tettsted med
+// avstand og retning fra midten av bildet i en lapp under kompasset, f.eks. «Nærmeste tettsted: Rognan · 8,6 km N». Søket gjøres på nytt
+// når midten har flyttet seg HVOR3D.flytt m. Claudes forslag (tallene).
+const HVOR3D = { flytt: 60, maks: 60000 };
+function nærmesteTettsted(X, Y) {
+  if (typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return null; let best = null, bd = HVOR3D.maks;
+  for (const o of INFRA.tettsted) { if (!o.e || !o.e.navn) continue; const [tx, ty] = navnP(o), d = Math.hypot(tx - X, ty - Y); if (d < bd) { bd = d; best = { navn: o.e.navn, d, dx: tx - X, dy: ty - Y }; } }
+  return best;
+}
+function kompassRetning(dx, dy) { return ['N', 'NØ', 'Ø', 'SØ', 'S', 'SV', 'V', 'NV'][((Math.round(Math.atan2(dx, dy) / (Math.PI / 4)) % 8) + 8) % 8]; }
+function hvorLapp3d(g) {
+  const R = R3, u = R.ut; if (!u || R.fot || (window.KjorSpill && KjorSpill.fører && KjorSpill.fører())) return;
+  const X = u.cx + R.bane.x, Y = u.cy + R.bane.y;
+  if (!R.hvor || Math.hypot(X - R.hvor.X, Y - R.hvor.Y) > HVOR3D.flytt || (!R.hvor.tekst && performance.now() - R.hvor.t > 2000)) { const t = nærmesteTettsted(X, Y); R.hvor = { X, Y, t: performance.now(), tekst: t ? (t.d < 300 ? 'Du er i ' + t.navn : `Nærmeste tettsted: ${t.navn} · ${avstTekst(t.d)} ${kompassRetning(t.dx, t.dy)}`) : '' }; }
+  const tekst = R.hvor.tekst; if (!tekst) return;
+  g.save(); g.font = (VW < 900 ? '13' : '14') + 'px "Cormorant Garamond",serif'; const w = g.measureText(tekst).width + 18, y = (window.UI_TOPP3D || 0) + (VW < 900 ? 6 : 10), x = VW / 2;
+  g.fillStyle = 'rgba(20,16,10,.72)'; g.strokeStyle = 'rgba(214,190,130,.55)'; g.lineWidth = 1; g.beginPath(); g.rect(x - w / 2, y, w, 22); g.fill(); g.stroke();
+  g.fillStyle = '#eadfc4'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tekst, x, y + 11.5); g.restore();
+}
 function brupunkt3(o, X, Y) {   // navnet står over dekket, ikke nede i dalen
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;
   const a = o.deler[0], h = Math.max(hoyde3d(a[0], a[1]), hoyde3d(a[a.length - 2], a[a.length - 1]), hoyde3d(X, Y));
@@ -1102,10 +1121,12 @@ function tegnLag(g, proj, mPer) {
   }
   // sist sett: der fienden var da noen av våre så den. (runde 13, kritiker H: to «sist sett 04:16» oppå hverandre) fiender som sist
   // ble sett på nesten samme sted på skjermen (40 px), får ÉN lapp: «2 lag · sist sett 04:16» (det siste klokkeslettet)
-  const spøk = [];
+  // Claudes forslag: 6 spilltimer
+  const spøk = [], SIST_SETT_3D = 6 * 60;
   for (const s of ENHETER) if (s.side !== 'blå') {
     if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
-    else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
+    // (runde 14, kritiker I: «sist sett 14:39» fra dagen før svevde i lufta i gåmodus) i 3D vises bare «sist sett» fra de siste SIST_SETT_3D min
+    else if (VIS.taake && s.sett) { if (proj === proj3 && tid - s.sett.tid > SIST_SETT_3D) continue; const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
       if (window.Merker) { Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); if (window.Etikett) Etikett.øverst(() => Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true })); }
       else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
       spøk.push({ a, b, t: s.sett.tid }); }
@@ -1607,7 +1628,7 @@ async function bygg3d(cx, cy, S) {
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
   // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
   const bunn = (async () => { for (let y = 0; y < TW; y += 256) { g.fillRect(0, y, TW, Math.min(256, TW - y)); if (børPuste()) await pust(); } })();
-  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, asfalt: true }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
@@ -2668,9 +2689,9 @@ function gressTekstur() {
     g.strokeStyle = `rgb(${215 * l | 0},${235 * l | 0},${170 * l | 0})`; g.lineWidth = 1.4 + rnd() * 1.6; g.beginPath(); g.moveTo(x, 64); g.quadraticCurveTo(x + bøy * .3, 64 - h * .6, x + bøy, 64 - h); g.stroke();
     if (i % 5 === 0) { g.fillStyle = 'rgb(232,222,170)'; g.beginPath(); g.ellipse(x + bøy, 64 - h, 1.6, 4, bøy * .03, 0, 6.283); g.fill(); } }
   for (let i = 0; i < 9; i++) { const x0 = 72 + rnd() * 48, h = 26 + rnd() * 32, bøy = (rnd() - .5) * 22;
-    g.strokeStyle = 'rgb(120,96,70)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, 64); g.quadraticCurveTo(x0 + bøy * .4, 64 - h * .5, x0 + bøy, 64 - h); g.stroke();
+    g.strokeStyle = 'rgb(178,160,128)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, 64); g.quadraticCurveTo(x0 + bøy * .4, 64 - h * .5, x0 + bøy, 64 - h); g.stroke();
     for (let k = 1; k <= 9; k++) { const t = k / 9, x = x0 + bøy * t * t, y = 64 - h * t, l = .7 + rnd() * .4, rosa = rnd() < .14;
-      g.fillStyle = rosa ? 'rgb(255,190,235)' : `rgb(${200 * l | 0},${240 * l | 0},${170 * l | 0})`;
+      g.fillStyle = rosa ? 'rgb(255,190,235)' : `rgb(${Math.min(255, 215 * l) | 0},${Math.min(255, 245 * l) | 0},${Math.min(255, 185 * l) | 0})`;
       for (const s of [-1, 1]) { g.beginPath(); g.ellipse(Math.max(66, Math.min(126, x + s * (2.5 + rnd() * 2))), y + rnd() * 2, 2.6, 1.5, s * .5, 0, 6.283); g.fill(); } } }
   GRESSTEX = new THREE.CanvasTexture(c); return GRESSTEX;
 }
@@ -2694,7 +2715,10 @@ function gressMateriale() {
 }
 // (runde 10) gressets farger, Claudes forslag: gresset litt grønnere og lysere enn bakken under (før 1,3/1,42/1,15 – for mettet), lite
 // variasjon mellom tustene, lyngen 3/4 bakkens farge (før mørkegrønn: «svart støy»), og tustene ytterst «lavere» (andel) lavere.
-const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35 };
+// (runde 14, kritiker I: «bakken er full av svarte X-formede planter» i gåmodus) lyngen er nå bakkens egen farge litt lysere (lyngLys –
+// teksturen er 0,6–0,9 lys, så tusten blir aldri mørkere enn bakken), og nærmere enn nær m står bare nærAndel av tustene (ved føttene
+// er de store kryss). Claudes forslag (tallene).
+const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35, lyngLys: [1.3, 1.34, 1.18], nær: 4, nærAndel: .3 };
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
   const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
@@ -2726,6 +2750,7 @@ function* gressG(R, u, m, cx, cy) {
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     if ((t & 127) === 127) yield;
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), 1.05), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
+    if (rr < GRESS_FARGE.nær && rnd() > GRESS_FARGE.nærAndel + (1 - GRESS_FARGE.nærAndel) * rr / GRESS_FARGE.nær) continue;
     const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
     // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
@@ -2744,10 +2769,8 @@ function* gressG(R, u, m, cx, cy) {
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
     d.position.set(x, y, z); d.rotation.set((rnd() - .5) * (lyng ? .6 : .7), (rnd() - .5) * (lyng ? .6 : .7), rnd() * 3.14); d.scale.set((lyng ? .75 : .4) + rnd() * .35, (lyng ? .75 : .4) + rnd() * .35, h); d.updateMatrix(); d.matrix.toArray(T.M, n * 16); FELT[n] = lyng ? 1 : 0;
-    if (lyng) { const br = rnd() < .3; col.setRGB(br ? .34 + rnd() * .08 : .19 + rnd() * .07, br ? .29 + rnd() * .05 : .32 + rnd() * .09, br ? .18 : .12);
-      // (runde 5) lyng på åpen hei: halvt bakkens egen farge, så tustene ikke blir mørke prikker sett ovenfra
-      // (runde 10: all lyng – ikke bare på åpen hei – er nå mest bakkens egen farge, se GRESS_FARGE)
-      const bl = type === 3 ? .5 : GRESS_FARGE.lyngBakke; col.setRGB(col.r * (1 - bl) + B.rgb[k] / 255 * 1.15 * bl, col.g * (1 - bl) + B.rgb[k + 1] / 255 * 1.12 * bl, col.b * (1 - bl) + B.rgb[k + 2] / 255 * 1.05 * bl); }
+    // (runde 5/10/14) lyngen i bakkens egen farge, lysere (GRESS_FARGE.lyngLys) – før en mørkegrønn grunnfarge: «svarte kryss»
+    if (lyng) { const [lr, lg, lb] = GRESS_FARGE.lyngLys, v = 1 + (rnd() - .5) * GRESS_FARGE.variasjon; col.setRGB(Math.min(1, B.rgb[k] / 255 * lr * v), Math.min(1, B.rgb[k + 1] / 255 * lg * v), Math.min(1, B.rgb[k + 2] / 255 * lb * v)); }
     else { const [fr, fg, fb] = GRESS_FARGE.gress, v = 1 + (rnd() - .5) * GRESS_FARGE.variasjon; col.setRGB(Math.min(1, B.rgb[k] / 255 * fr * v), Math.min(1, B.rgb[k + 1] / 255 * fg * v), Math.min(1, B.rgb[k + 2] / 255 * fb * v)); }
     col.toArray(T.C, n * 3); n++;
   }
@@ -3301,7 +3324,7 @@ function tegn3d() {
   // (runde 6) og ikke under rutene på skjermen (spill/narhud.js setter UI_HULL3D = [[x, y, b, h] …]: våpen, helse, «Flaske …», minikart, loggen)
   const klipp = window.UI_TOPP3D || 0, hull = window.UI_HULL3D || []; if (klipp || hull.length) { g.save(); g.beginPath(); g.rect(0, klipp, VW, VH); for (const h of hull) g.rect(h[0], h[1], h[2], h[3]); g.clip('evenodd'); }
   if (window.Etikett) Etikett.nullstill();
-  tegnInfra3d(g);
+  tegnInfra3d(g); hvorLapp3d(g);
   for (const f of KROKER.tegn3d) f(g, proj3, mPer3);
   tegnLag(g, proj3, mPer3);
   if (window.Etikett) Etikett.tegnAlle(g);
@@ -3335,7 +3358,7 @@ async function slå3d(på) {
     const mål0 = start3d(), sp0 = window.OppstartSpill && OppstartSpill.tilstand(), sb = !startBlikkBrukt && (!navigator.webdriver || window.STARTBLIKK_TEST) && window.Kvalitet && Kvalitet.startBlikk ? Kvalitet.startBlikk({ x: kam.x, y: kam.y, m: kam.m, VW, VH, leir: sp0 && sp0.leir, mål: mål0, først: true }) : null;
     if (sb) startBlikkBrukt = true;
     const tStart = performance.now(), mål = sb ? { x: sb.x, y: sb.y, navn: 'leiren' } : mål0, S = utsnittS(sb ? sb.utsnitt : mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
-    R3.bane = { x: 0, y: 0, avst: sb ? sb.avst : mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
+    R3.bane = { x: 0, y: 0, avst: sb ? sb.avst : mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: sb && sb.pitch ? sb.pitch : .75 };
     if (R3.ut) { frigjørTerreng(R3); R3.ut = null; }
     R3.byggFeil = 0; framdrift('starter', 0);
     // bakkens skyggeprogram lages mens byggingen venter på kartdata (se forvarmBakke)
@@ -3546,14 +3569,15 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
+<script src="/dovre-fliser/spill/fjernkart3d.js?v=9bf1a4a331"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=08d3105031"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
-<script src="/dovre-fliser/spill/kvalitet.js?v=a098df9b8b"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=7d897f33a3"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=ba29a3df5b"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=986f4d81ef"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=5fae12d02a"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=807b267441"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
@@ -3614,7 +3638,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/utstyr.js?v=88b80209aa"></script>
 <script src="/dovre-fliser/spill/spillet-visning.js?v=62f37bf5b1"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
-<script src="/dovre-fliser/spill/folk3d.js?v=ce475bf4a0"></script>
+<script src="/dovre-fliser/spill/folk3d.js?v=c197435ead"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=43ede828d3"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>

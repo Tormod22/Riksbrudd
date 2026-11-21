@@ -5,6 +5,7 @@
 //  - flagget i leiren er et ekte 3D-flagg som blafrer (Flagg3d), stedsnavn i gåmodus bare langt unna (NAVN_GÅ)
 // Runde 13 (kritikk G/H): feltbilknappen med avstand og retning (Kjor.innTekst), folk går unna deg (Folk3d.unna), første 3D-bilde
 // nær leiren (Kvalitet.startBlikk), tettstedsnavn til fots med avstand (avstTekst)
+// Runde 14 (kritikk I/J): fjernkart, asfalt, planter, fri sikt, «sist sett», lysning, tettsted ovenfra, skrått startblikk.
 // Uten 3D prøves bare reglene. Endrer ingenting i spillet (prøvenettene frigjøres straks).
 module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navnene', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => {
@@ -37,6 +38,20 @@ module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navn
       krev(r && r.avst <= 500 && r.x === 100 && r.utsnitt > 0 && !Kvalitet.startBlikk({ ...v, først: false }), 'første 3D-bilde viser ikke leiren nært (Kvalitet.startBlikk)');
     } else krev(false, 'Kvalitet.startBlikk mangler');
     krev(NAVN_GÅ.løft > 5 && typeof avstTekst === 'function' && avstTekst(1156) === '1,2 km' && avstTekst(640) === '650 m', 'tettstedsnavn til fots uten avstand (avstTekst/NAVN_GÅ.løft)');
+    // RUNDE 14 (kritikk I/J): fjernkart når du flyr, asfalt i 3D-kartet, lysere planter, fri sikt ved start, gamle «sist sett», leiren
+    // i en lysning, nærmeste tettsted ovenfra og skrått startblikk
+    krev(window.Fjernkart3d && Fjernkart3d.REGLER && Fjernkart3d.REGLER.TW >= 512, 'fjernkartet (spill/fjernkart3d.js) mangler');
+    krev(typeof ASFALT3D !== 'undefined' && ASFALT3D.E && /asfalt: true/.test(bygg3d.toString()), '3D-kartet ber ikke om asfaltgrå veger (valg.asfalt)');
+    { const h = ASFALT3D && ASFALT3D.R, r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16); krev(Math.max(r, g, b) - Math.min(r, g, b) < 16, 'asfalten i 3D-kartet er ikke grå (' + h + ')'); }
+    krev(GRESS_FARGE.lyngLys.every(v => v >= 1.1) && GRESS_FARGE.nærAndel <= .5, 'lyngtustene kan bli mørkere enn bakken, eller det står for mange ved føttene');
+    krev(window.Folk3d && Folk3d.STARTREGEL && Folk3d.STARTREGEL.inntil >= 2 && Folk3d.unna(0, 0, 0, 1.6, 1, Folk3d.STARTREGEL).flytt, 'folk flyttes ikke 2 m unna når gåmodus starter');
+    krev(/SIST_SETT_3D/.test(tegnLag.toString()), '«sist sett» eldre enn 6 t skjules ikke i 3D');
+    krev(window.Vegetasjon3d && Vegetasjon3d.LEIR_RYDD && Vegetasjon3d.LEIR_RYDD.kant >= 10, 'ingen lysning rundt leirens bygg');
+    krev(Kvalitet.STARTBLIKK.pitch && Kvalitet.STARTBLIKK.pitch < .7, 'første 3D-bilde ser for rett ned');
+    { const gml = INFRA; try {
+        INFRA = { tettsted: [{ e: { navn: 'Prøvebyen' }, navnP: [1000, 5000] }] }; const t = nærmesteTettsted(1000, 0);
+        krev(t && t.navn === 'Prøvebyen' && Math.abs(t.d - 5000) < 1 && kompassRetning(t.dx, t.dy) === 'N', 'nærmeste tettsted ovenfra: feil navn, avstand eller retning');
+      } finally { INFRA = gml; } }
     const R = typeof R3 !== 'undefined' && R3 && R3.ut && på3d ? R3 : null; ut.i3d = !!R;
     if (!R || typeof THREE === 'undefined') return ut;
     // den enkle bakken: skyggeleggeren får detaljteksturen og bruker den
@@ -63,5 +78,5 @@ module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navn
     return ut;
   });
   const ok = !d.feil.length;
-  return { ok, tekst: ok ? `grafikknivå (vedvarende, oppløsning først, Lav med gress), feltbilknapp «${d.knapp}», folk går unna, første 3D-bilde nær leiren, ${d.i3d ? `enkel bakke med detaljer, låve med ${d.låve ? d.låve.barn : '?'} avrundede nett, flagg${d.blafrer != null ? ' som blafrer (' + d.blafrer + ' m)' : ' (ikke i utsnittet)'}` : 'uten 3D (bare reglene)'} (${profil})` : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? `runde 14 (fjernkart, asfalt, planter, fri sikt, sist sett, lysning, tettsted ovenfra), grafikknivå (vedvarende, oppløsning først, Lav med gress), feltbilknapp «${d.knapp}», folk går unna, første 3D-bilde nær leiren, ${d.i3d ? `enkel bakke med detaljer, låve med ${d.låve ? d.låve.barn : '?'} avrundede nett, flagg${d.blafrer != null ? ' som blafrer (' + d.blafrer + ' m)' : ' (ikke i utsnittet)'}` : 'uten 3D (bare reglene)'} (${profil})` : d.feil.join('; '), data: d };
 } };

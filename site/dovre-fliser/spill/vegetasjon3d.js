@@ -314,6 +314,22 @@
       for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [ax, ay] = P[j], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)); if (Math.hypot(ax + dx * t - x, ay + dy * t - y) < .4) return true; } }
     return false;
   }
+  // LEIREN SETT FRA LUFTA (runde 14, kritiker I: «leiren er nesten bare trær, brakka er en grå klump, navnene står i skogen»): når
+  // utsnittet bygges, tas trær, busker og steiner bort innen LEIR_RYDD.kant m fra hvert av leirens bygg og innen LEIR_RYDD.midt m fra
+  // midten av leiren (leir-visning.js rydder bare 5 m og 30 m), så leiren ligger i en lysning. Claudes forslag (meter).
+  const LEIR_RYDD = { kant: 14, midt: 42 };
+  function leirLysning(u) {
+    const sp = window.OppstartSpill && OppstartSpill.tilstand ? OppstartSpill.tilstand() : null, L = sp && sp.leir; if (!L || L.x == null) return null;
+    const lx = L.x - u.cx, ly = L.y - u.cy; if (Math.abs(lx) > u.S + 200 || Math.abs(ly) > u.S + 200) return null;
+    const bb = leirFot(u).map(f => [f.bb[0] - LEIR_RYDD.kant, f.bb[1] - LEIR_RYDD.kant, f.bb[2] + LEIR_RYDD.kant, f.bb[3] + LEIR_RYDD.kant]);
+    return (x, y) => Math.hypot(x - lx, y - ly) < LEIR_RYDD.midt || bb.some(b => x > b[0] && x < b[2] && y > b[1] && y < b[3]);
+  }
+  KROKER.bygg3d.push(async u => {
+    leirLest = 0; const inni = leirLysning(u); if (!inni) return;
+    const sil = d => { if (!d || !d.length) return d; const ut = []; for (let k = 0; k < d.length; k += 5) if (!inni(d[k], d[k + 1])) for (let q = 0; q < 5; q++) ut.push(d[k + q]); return ut.length === d.length ? d : new Float32Array(ut); };
+    if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
+    if (u.smått) { if (u.smått.stein) u.smått.stein = sil(u.smått.stein); if (u.smått.busk) u.smått.busk = sil(u.smått.busk); }
+  });
   // Et lite merke for hindringene (antall ting i R3.hindre): endres det – et hus er lagt til eller tatt bort –, settes plantene og
   // gresset rundt kameraet på nytt (ellers sto de til du hadde gått 12 m). Leses høyst hvert 0,7 s.
   let hindreMerke = -1, hindreLest = 0;
@@ -369,7 +385,7 @@
           sett('siv', x, y, .7 + rnd() * .5, .9 + rnd() * .7, høst ? [.78 * l, .66 * l, .4 * l] : [.55 * l, .66 * l, .38 * l], moh); continue; }
       }
       if (!st || !vk) continue;
-      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.62 * l, .42 * l, .2 * l] : [.32 * l, .48 * l, .24 * l], moh); continue; } }
+      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.68 * l, .48 * l, .26 * l] : [.46 * l, .64 * l, .34 * l], moh); continue; } }
       const sted = V.stedIHøyden(STED[st], rel);
       if (rnd() > V.STEDTETTHET[sted] * bl * vk) continue;
       const art = V.blomst(sted, å, rnd()); if (!art) continue;
@@ -465,6 +481,7 @@
     // (runde 5) inne i et av leirens bygg (gress3d i index.html spør også her)
     iLeir: (x, y) => { const R = r3(); return !!(R && R.ut && iLeir(R.ut, x, y)); },
     // (runde 8) trærne som står rundt deg mens et utsnitt uten trær vises: { n, x, y } eller null
-    nærskog: () => (skog ? { n: skog.n, x: Math.round(skog.x), y: Math.round(skog.y) } : null), NÆRSKOG,
+    nærskog: () => (skog ? { n: skog.n, x: Math.round(skog.x), y: Math.round(skog.y) } : null), NÆRSKOG, LEIR_RYDD,
+    leirLysning: (x, y) => { const R = r3(), f = R && R.ut && leirLysning(R.ut); return !!(f && f(x, y)); },
   };
 })();
