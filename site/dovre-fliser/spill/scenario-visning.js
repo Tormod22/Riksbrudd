@@ -398,8 +398,9 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
     g.save(); g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke();
     g.strokeStyle = '#f0c878'; g.lineWidth = 2.5; g.setLineDash([10, 5]); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.setLineDash([]);
     g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, r + 5, 0, 6.283); g.stroke();
-    g.font = '700 12px "Times New Roman", Times, serif'; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.9)';
-    g.strokeText('Scenariets by', x, y + r + 7); g.fillStyle = '#f0c878'; g.fillText('Scenariets by', x, y + r + 7); g.restore(); });
+    // teksten står over ringen (stedsnavnet står under merket)
+    g.font = '700 12px "Times New Roman", Times, serif'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.9)';
+    g.strokeText('Scenariets by', x, y - r - 8); g.fillStyle = '#f0c878'; g.fillText('Scenariets by', x, y - r - 8); if (window.Etikett && Etikett.hinder) Etikett.hinder(x - 40, y - r - 22, 80, 14); g.restore(); });
   if (KROKER.info) KROKER.info.push(o => { if (!o || o.lag !== 'tettsted') return; const b = scBy(); if (!b || String(b.e.id) !== String(o.e.id)) return; const sub = document.getElementById('psub'); if (sub) sub.textContent += ' · Scenariets by («Hold byen»)'; });
   window.SCENARIO_BY = () => { const b = scBy(); return b ? b.e.id : null; };
 

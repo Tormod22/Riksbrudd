@@ -44,6 +44,9 @@ assert.strictEqual(S.trusler('blå', O, eierAv, () => 1, []).length, 0);
     assert(!k1.nok && /For få: 1 av 3 – tar ikke stedet/.test(k1.tekst), k1.tekst);
     assert(k4.nok && !k4.full && /4 av 5 for full fart/.test(k4.tekst), k4.tekst);
     assert(k5.nok && k5.full && k5.tekst === '', 'to lag på til sammen 5: nok');
+    // (runde 14) et kjent forsvar som er større enn laget: aldri «tar stedet»
+    const ks = S.kravFor({ minst: 4, mann: 7 }, [L(4)], 36); assert(ks.svak && /For svakt: 4 mann mot et forsvar på ca\. 36/.test(ks.tekst) && !/tar stedet/.test(ks.tekst), ks.tekst);
+    const kf = S.kravFor({ minst: 4, mann: 7 }, [L(5)], 3); assert(!kf.svak && !/tar stedet/.test(kf.tekst) && /forsvart \(ca\. 3 mann\)/.test(kf.tekst), kf.tekst);
     assert.equal(S.kravFor(lite, [{ menn: [{ hp: 1 }, { hp: .5 }, { hp: 0 }] }]).har, 1, 'såret teller ½, falt 0'); }
   assert.equal(S.tettsteder(1), '1 tettsted'); assert.equal(S.tettsteder(41), '41 tettsteder'); }
 console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og trusler');

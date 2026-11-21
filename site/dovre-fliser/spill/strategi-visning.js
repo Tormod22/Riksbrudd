@@ -182,7 +182,7 @@
       const L = leir(); if (L && Math.hypot(s.x - L.x, s.y - L.y) < 400) continue;
       if (!s.framVed || s.framVed.id !== by.id) { s.framVed = { id: by.id, t: tid, meldt: false }; continue; }
       if (s.framVed.meldt || tid - s.framVed.t < FRAM.vent) continue;
-      const g = hvorforIkkeTar(s, by); if (!g) continue; s.framVed.meldt = true; logg('⏸ ' + g);
+      const g = hvorforIkkeTar(s, by); if (!g) continue; s.framVed.meldt = true; logg(g);
       try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'annet', tekst: g.replace(/\.$/, ''), x: by.x, y: by.y } })); } catch (e) { /* uten flyt */ } } });
   KROKER.lagTekst.push(s => (s.framVed && s.framVed.meldt && !s.sti && eierAv(s.framVed.id) !== 'blå' ? 'venter ved ' + ((område().find(b => b.id === s.framVed.id) || {}).navn || 'tettstedet') + ' – tar det ikke (se loggen)' : null));
   KROKER.lagTekst.push(s => (s.speid && s.speid.venter ? 'har en speidermelding som venter på radiokontakt' : s.speid ? 'speider mot ' + s.speid.navn : null));
