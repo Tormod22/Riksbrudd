@@ -77,7 +77,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="panel" role="dialog" aria-label="Valgt lag"><button class="lukk" id="lukk" aria-label="Lukk">×</button><h2 id="pnavn"></h2><div class="sub" id="psub"></div><div class="handl" id="handl"></div><div class="menn" id="menn"></div><div class="hint" id="hint"></div></div>
 <div class="ctl">
   <button id="zi" aria-label="Zoom inn">+</button><button id="zo" aria-label="Zoom ut">−</button>
-  <button id="dombas" aria-label="Dombås, 2 m høyde" title="Dombås (2 m høyde)">◎</button><button id="hele" aria-label="Hele området">⌂</button>
+  <button id="dombas" aria-label="Dombås, 2 m høyde" title="Dombås (2 m høyde)">◎</button><button id="hele" aria-label="Hele kartet" title="Hele kartet"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4M2 2l4 4M14 2l-4 4M14 14l-4-4M2 14l4-4"/></svg></button>
 </div>
 <div id="skala"><div id="skalaStrek"></div><span id="skalaTekst"></span></div>
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
@@ -3419,7 +3419,10 @@ document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(
 // ◎: til leiren når du har en (16. nov: knappen gikk alltid til Dombås, også når leiren lå i Ryfylke), ellers Dombås som før
 document.getElementById('dombas').onclick = async () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); if (på3d) await slå3d(false);
   if (S && S.leir) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = 3; skitten = true; } else passInn(DOMBAS); };
-window.addEventListener('riksbrudd-spill', () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } });
+// RUNDE 14 (kritiker J: «⌂ zoomer ut til hele Rogaland i stedet for til leiren»): når du har en leir, er ⌂ knappen til leiren (flagget midt på
+// skjermen), og hele kartet har fått sitt eget ikon (fire piler ut). Før leiren: ◎ går til Dombås som før.
+const hjemKnapp = () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.textContent = '⌂'; b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } };
+window.addEventListener('riksbrudd-spill', hjemKnapp); setTimeout(hjemKnapp, 0);
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
 const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
