@@ -28,4 +28,12 @@ ok(K.NIVÅ.lav.pr[0] < K.NIVÅ.middels.pr[0] && K.NIVÅ.middels.pr[0] < K.NIVÅ.
 ok(K.programvare('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)') && K.programvare('llvmpipe (LLVM 15.0.7, 256 bits)') && K.programvare('ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)'), 'programvare-grafikk kjennes igjen (SwiftShader, llvmpipe, Basic Render Driver)');
 ok(!K.programvare('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)') && !K.programvare('ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 (0x00001F99) Direct3D11 vs_5_0 ps_5_0, D3D11)') && !K.programvare('Apple GPU') && !K.programvare(''), 'ekte grafikkort (Intel, NVIDIA, Apple) og ukjent navn er ikke programvare');
 ok(K.kortNavn('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)') === 'Intel(R) UHD Graphics 620' && K.kortNavn('ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 (0x00001F99) Direct3D11 vs_5_0 ps_5_0, D3D11)') === 'NVIDIA GeForce GTX 1650' && K.kortNavn('Apple GPU') === 'Apple GPU' && K.kortNavn('') === 'ukjent', 'navnet på grafikkortet kortes ned: ' + K.kortNavn('ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)'));
+// (runde 13) første 3D-bilde: leiren på nært hold når den er midt i kartet
+{ const L = { x: 1000, y: 2000 }, v = { x: 1100, y: 2050, m: 8, VW: 844, VH: 390, leir: L, mål: null, først: true }, r = K.startBlikk(v);
+  ok(!!r && r.x === 1000 && r.y === 2000 && r.avst === K.STARTBLIKK.avst, `leiren midt i kartet (8 m/punkt): kameraet ${K.STARTBLIKK.avst} m fra leiren`);
+  ok(K.startBlikk({ ...v, først: false }) === null, 'senere åpninger: som før');
+  ok(K.startBlikk({ ...v, m: 1 }) === null, 'zoomet inn nok (under 700 m): som før');
+  ok(K.startBlikk({ ...v, x: 1000 + 8 * 844 * .45 }) === null, 'leiren ute ved kanten av kartet: som før');
+  ok(K.startBlikk({ ...v, leir: null }) === null, 'ingen leir: som før');
+  ok(K.startBlikk({ ...v, mål: { x: 5, y: 6, navn: 'leiren' } }).avst === K.STARTBLIKK.avst && K.startBlikk({ ...v, mål: { x: 5, y: 6, navn: 'Vaktlaget' } }) === null, 'langt ute: bare når 3D åpnes ved leiren'); }
 process.exit(feil ? 1 : 0);
