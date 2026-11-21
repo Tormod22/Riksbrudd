@@ -272,6 +272,8 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     const ut = {}; if (!window.StrategiSpill || !window.KontrollromSpill || !KontrollromSpill.kanNå || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return { uten: true };
     const S0 = OppstartSpill.tilstand(), L = S0.leir, penger0 = S0.penger, tid0 = tid, tempo0 = tempo, kam0 = { x: kam.x, y: kam.y, m: kam.m }, ant0 = ENHETER.length, valgt0 = valgt, krpFør = KontrollromSpill.på();
     const st0 = StrategiSpill.test, fs0 = window.ForsvarSpill ? ForsvarSpill.test : false, sl0 = window.Skjermlag ? Skjermlag.test : false, plass = ENHETER.map(e => [e, e.x, e.y, e.sti, e.radio, e.ombord]);
+    // (fiks 15) med StrategiSpill.test kan seiers-/tapskortet (#krigkort) dukke opp av seg selv mens prøvebyene finnes – det lukkes etterpå
+    const kk0 = (document.getElementById('krigkort') || { classList: { contains: () => true } }).classList.contains('på'), str0 = localStorage.getItem('riksbrudd-strategi');
     const nyBy = (id, dx, dy, folk) => { const x = L.x + dx, y = L.y + dy, r = 300; return { lag: 'tettsted', e: { id, navn: 'Vakt ' + id, folk }, bb: [x - r, y - r, x + r, y + r], deler: [[x - r, y - r, x + r, y - r, x + r, y + r, x - r, y + r]] }; };
     const nye = [nyBy('v12a', 6000, -2000, 900), nyBy('v12b', -5000, 4000, 700)]; INFRA.tettsted.push(...nye); TETTSTEDER.set('v12b', { eier: 'blå', inntar: null });
     const lag = []; const nytt = (n, dx, dy) => { const s = nyttLag(n, L.x + dx, L.y + dy, 'blå'); ENHETER.push(s); lag.push(s); return s; };
@@ -318,6 +320,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       for (const [e, x, y, sti, radio, om] of plass) { e.x = x; e.y = y; e.sti = sti; if (radio === undefined) delete e.radio; else e.radio = radio; e.ombord = om; }
       for (const b of nye) { if (StrategiSpill.settTerreng) StrategiSpill.settTerreng({ x: (b.bb[0] + b.bb[2]) / 2, y: (b.bb[1] + b.bb[3]) / 2 }, null); const i = INFRA.tettsted.indexOf(b); if (i >= 0) INFRA.tettsted.splice(i, 1); } TETTSTEDER.delete('v12a'); TETTSTEDER.delete('v12b');
       StrategiSpill.test = st0; if (window.ForsvarSpill) ForsvarSpill.test = fs0; if (window.Skjermlag) Skjermlag.test = sl0; if (!krpFør) KontrollromSpill.av(true);
+      { const kk = document.getElementById('krigkort'); if (kk && !kk0) kk.classList.remove('på'); try { if (str0 === null) localStorage.removeItem('riksbrudd-strategi'); else localStorage.setItem('riksbrudd-strategi', str0); } catch (e) { /* sperret */ } }
       S0.penger = penger0; tid = tid0; if (tempo !== tempo0) { if (tempo0 === 0) { if (tempo > 0) document.getElementById('sp0').click(); } else tempo = tempo0; }
       kam.x = kam0.x; kam.y = kam0.y; kam.m = kam0.m; valgt = valgt0; skitten = true; ut.tilbake = ENHETER.length === ant0 && tid === tid0 && OppstartSpill.tilstand().penger === penger0; }
     return ut; });
@@ -330,6 +333,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   const d13 = await pg.evaluate(async () => {
     const ut = {}; if (!window.StrategiSpill || !StrategiSpill.farer || !window.KontrollromSpill || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return { uten: true };
     const S0 = OppstartSpill.tilstand(), L = S0.leir, penger0 = S0.penger, tid0 = tid, kam0 = { x: kam.x, y: kam.y, m: kam.m }, ant0 = ENHETER.length, valgt0 = valgt, krpFør = KontrollromSpill.på(), st0 = StrategiSpill.test;
+    const kk0 = (document.getElementById('krigkort') || { classList: { contains: () => true } }).classList.contains('på'), str0 = localStorage.getItem('riksbrudd-strategi');
     const plass = ENHETER.map(e => [e, e.x, e.y, e.sti, e.radio, e.menn.map(m => m.hp)]), KT = window.KrigSpill && KrigSpill.T ? KrigSpill.T() : null, vern0 = KT ? JSON.stringify(KT.vern) : null;
     const nyBy = (id, dx, dy, folk) => { const x = L.x + dx, y = L.y + dy, r = 300; return { lag: 'tettsted', e: { id, navn: 'Vakt ' + id, folk }, bb: [x - r, y - r, x + r, y + r], deler: [[x - r, y - r, x + r, y - r, x + r, y + r, x - r, y + r]] }; };
     const nye = [nyBy('v13a', 5000, 1500, 1021)]; INFRA.tettsted.push(...nye);
@@ -385,6 +389,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       for (const b of nye) { StrategiSpill.settTerreng({ x: (b.bb[0] + b.bb[2]) / 2, y: (b.bb[1] + b.bb[3]) / 2 }, null); const i = INFRA.tettsted.indexOf(b); if (i >= 0) INFRA.tettsted.splice(i, 1); } TETTSTEDER.delete('v13a');
       if (KT && vern0 !== null) KT.vern = JSON.parse(vern0);
       if (StrategiSpill.erÅpen()) StrategiSpill.lukk(); StrategiSpill.test = st0; if (!krpFør) KontrollromSpill.av(true);
+      { const kk = document.getElementById('krigkort'); if (kk && !kk0) kk.classList.remove('på'); try { if (str0 === null) localStorage.removeItem('riksbrudd-strategi'); else localStorage.setItem('riksbrudd-strategi', str0); } catch (e) { /* sperret */ } }
       S0.penger = penger0; tid = tid0; kam.x = kam0.x; kam.y = kam0.y; kam.m = kam0.m; valgt = valgt0; skitten = true; ut.tilbake = ENHETER.length === ant0 && tid === tid0 && OppstartSpill.tilstand().penger === penger0; }
     return ut; });
   const ok13 = d13.uten || (!d13.feil && d13.ettTall && d13.forsvar !== false && d13.sendtSpeider === false && d13.speidFare && d13.speidKnapp !== false && d13.ikkeForeslått && d13.speid && d13.leirFare && d13.tall
@@ -397,6 +402,9 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     const ut = {}; if (!window.ScenarioSpill || !window.StrategiSpill || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted || !INFRA.tettsted.length) return { uten: true };
     const S = OppstartSpill.tilstand(), regler0 = S.regler, tid0 = tid, ant0 = ENHETER.length, by = INFRA.tettsted[0], id = by.e.id, T0 = TETTSTEDER.has(id) ? { ...TETTSTEDER.get(id) } : null, logg0 = loggLinjer.length;
     const sp0 = localStorage.getItem('riksbrudd-spillform'), sc0 = ScenarioSpill.tilstand() ? JSON.stringify(ScenarioSpill.tilstand().sc) : null, test0 = [ScenarioSpill.test, StrategiSpill.test], åpen0 = StrategiSpill.erÅpen();
+    // (fiks 15) StrategiSpill.åpne() under slår 3D av – det slås på igjen til slutt (før gikk resten av vaktene uten 3D)
+    const d3d0 = typeof på3d !== 'undefined' && på3d;
+    const kk0 = (document.getElementById('krigkort') || { classList: { contains: () => true } }).classList.contains('på'), str0 = localStorage.getItem('riksbrudd-strategi');
     const mx = (by.bb[0] + by.bb[2]) / 2, my = (by.bb[1] + by.bb[3]) / 2, nye = [];
     try {
       S.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: 'hold' }; ScenarioSpill.settRegler(); StrategiSpill.test = true;
@@ -424,7 +432,9 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       for (const f of nye) { const i = ENHETER.indexOf(f); if (i >= 0) ENHETER.splice(i, 1); }
       if (T0) TETTSTEDER.set(id, T0); else TETTSTEDER.delete(id); tid = tid0; S.regler = regler0; ScenarioSpill.settRegler();
       if (ScenarioSpill.tilstand() && sc0 !== null) ScenarioSpill.tilstand().sc = JSON.parse(sc0); if (sp0 === null) localStorage.removeItem('riksbrudd-spillform'); else localStorage.setItem('riksbrudd-spillform', sp0);
-      [ScenarioSpill.test, StrategiSpill.test] = test0; if (!åpen0) StrategiSpill.lukk(); skitten = true; }
+      [ScenarioSpill.test, StrategiSpill.test] = test0; if (!åpen0) StrategiSpill.lukk(); skitten = true;
+      if (d3d0 && !på3d && typeof slå3d === 'function') { await slå3d(true); for (let i = 0; i < 1800 && (!R3 || !R3.ut || R3.bygger); i++) await new Promise(r => setTimeout(r, 100)); }
+      { const kk = document.getElementById('krigkort'); if (kk && !kk0) kk.classList.remove('på'); try { if (str0 === null) localStorage.removeItem('riksbrudd-strategi'); else localStorage.setItem('riksbrudd-strategi', str0); } catch (e) { /* sperret */ } } }
     return ut; });
   const ok14 = d14.uten || (!d14.feil && d14.navn && d14.ring && d14.boks && d14.forsvarMann && d14.ikkeTar && d14.hvorfor && d14.teller && d14.omlast && d14.tapt);
   const tekst14 = `RUNDE 14: ${d14.uten ? 'ikke prøvd' : `byen navngis ${d14.navn}/${d14.boks}, ring ${d14.ring}, forsvar i mann ${d14.forsvarMann}, aldri «tar stedet» ${d14.ikkeTar}, laget sier hvorfor ${d14.hvorfor}, 24 t = 1,0 ${d14.teller}, omlasting nullstiller ikke ${d14.omlast}, tapt i loggen ${d14.tapt}${d14.feil ? ', FEIL ' + d14.feil : ''}`} · `;

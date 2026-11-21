@@ -15,7 +15,7 @@ module.exports = { navn: 'anlegg: skyttergrav, bunker, kai og tunnel', kjør: as
     krev(['skyttergrav', 'bunker', 'kai', 'tunnel'].every(t => Anlegg.ANLEGG[t]), 'tabellen mangler et anlegg');
     const S = OppstartSpill.tilstand(), L = S.leir, penger = S.penger, før = AnleggSpill.liste().slice(), lagret = localStorage.getItem('riksbrudd-anlegg');
     const lag = ENHETER.find(s => s.side === 'blå' && !s.karakter && levende(s)), lx = lag && lag.x, ly = lag && lag.y, lsti = lag && lag.sti;
-    AnleggSpill.utenOmbygging = true;
+    AnleggSpill.utenOmbygging = true; let flyttet3d = null;
     try {
       // graven i vann avvises (prøvekart), på land godtas
       const T = { høyde: () => 100, vann: (x, y) => x < 0 };
@@ -42,12 +42,24 @@ module.exports = { navn: 'anlegg: skyttergrav, bunker, kai og tunnel', kjør: as
       if (lag) { lag.x = L.x + 1500; lag.y = L.y + 1500; AnleggSpill.inn(lag, tu, 0, null); krev(!!lag.iTunnel, 'laget gikk ikke inn i tunnelen');
         AnleggSpill.tunnelSteg(60); krev(!lag.iTunnel && lag.x > L.x + 1800, 'laget kom ikke ut på den andre siden'); }
       // 3D: modellene i scenen og høydegitteret senket i graven
-      if (typeof på3d !== 'undefined' && på3d && R3 && R3.ut) { const s3 = AnleggSpill.sjekk3d(); ut.trekanter = s3.trekanter;
+      // (fiks 15) i hele kjøringen står 3D-utsnittet ofte et annet sted (Snøhetta, S 6000) når vakta kommer: anleggene lages bare i utsnitt
+      // med S ≤ 4200 som har dem inne. Da bygges et lite utsnitt ved graven (kameraet flyttes dit), og det gamle bygges igjen etterpå.
+      if (typeof på3d !== 'undefined' && på3d && R3 && R3.ut) {
+        const R = R3, b = R.bane, gx = x0 + 15, gy = y0, inne = () => R.ut && !R.bygger && R.ut.S <= 4200 && Math.abs(gx - R.ut.cx) < R.ut.S - 60 && Math.abs(gy - R.ut.cy) < R.ut.S - 60;
+        if (!inne()) { const t0 = performance.now(); while (R.bygger && performance.now() - t0 < 60000) await new Promise(r => setTimeout(r, 200));
+          flyttet3d = { X: R.ut.cx + b.x, Y: R.ut.cy + b.y, avst: b.avst, S: R.ut.S };
+          b.x = gx - R.ut.cx; b.y = gy - R.ut.cy; b.avst = 700; await nytt3dUtsnitt(gx, gy, utsnittS(700));
+          const t1 = performance.now(); while (!inne() && performance.now() - t1 < 90000) await new Promise(r => setTimeout(r, 200)); ut.bygd3d = Math.round(performance.now() - t0); }
+        const s3 = AnleggSpill.sjekk3d(); ut.trekanter = s3.trekanter; ut.u3d = { S: Math.round(R3.ut.S), cx: Math.round(R3.ut.cx), cy: Math.round(R3.ut.cy), gx: Math.round(gx), gy: Math.round(gy), bygger: !!R3.bygger };
         krev(s3.iScene && s3.trekanter > 50, 'anleggene finnes ikke i 3D-scenen'); }
     } catch (e) { krev(false, 'feil: ' + e.message); }
     finally {
-      AnleggSpill.utenOmbygging = false;
+      // (flyttet: utsnittet bygges uansett på nytt der kameraet var, så anleggene fjernes uten ombygging her)
+      if (!flyttet3d) AnleggSpill.utenOmbygging = false;
       for (const a of AnleggSpill.liste().slice()) if (!før.includes(a)) AnleggSpill.fjern(a.id);
+      AnleggSpill.utenOmbygging = false;
+      if (flyttet3d && typeof R3 !== 'undefined' && R3 && R3.ut) { const R = R3, b = R.bane, t0 = performance.now(); while (R.bygger && performance.now() - t0 < 60000) await new Promise(r => setTimeout(r, 200));
+        b.x = flyttet3d.X - R.ut.cx; b.y = flyttet3d.Y - R.ut.cy; b.avst = flyttet3d.avst; await nytt3dUtsnitt(flyttet3d.X, flyttet3d.Y, flyttet3d.S); }
       const p = OppstartSpill.tilstand(); if (p.penger !== penger) { if (p.penger < penger) OppstartSpill.gi(penger - p.penger); else p.penger = penger; }
       if (lag) { lag.x = lx; lag.y = ly; lag.sti = lsti; lag.iTunnel = null; lag.anleggVia = null; AnleggSpill.oppdaterVern(); }
       try { if (lagret === null) localStorage.removeItem('riksbrudd-anlegg'); else localStorage.setItem('riksbrudd-anlegg', lagret); } catch (e) { /* sperret */ }

@@ -1,6 +1,6 @@
 // VAKT «elv» (runde 15, 21. nov kveld, brukeren: «Har elver vann som er i bevegelse nedover, eller ikke?»):
 //  - strømmen i brede elver (spill/elvestrom.js) prøves på EKTE data uten 3D: NVE-midtlinjene for Lågen ved Dombås (BEKKER, reservefila
-//    på testsiden), terrenget og vannet fra lagVindu (8 m-ruter, klasse 3 = vann). Krav: strøm finnes, høyden stiger aldri langs
+//    på testsiden), terrenget fra lagVindu (8 m-ruter) og vannet fra terrengklassene (32 m-ruter, klasse 3 = vann). Krav: strøm finnes, høyden stiger aldri langs
 //    strømmen, terrenget i enden er ikke høyere enn i starten, ingen strøm midt i åpent vann (innsjø), fart og skum innenfor rimelige tall.
 //  - er 3D på og utsnittet har strømlaget: Elvestrom3d.sjekk() – nettet i scenen, 0 biter oppover, 0 punkt i innsjø.
 // Endrer ingenting i spillet.
@@ -15,10 +15,12 @@ module.exports = { navn: 'elv: strøm nedover i brede elver', kjør: async (pg, 
     const biter = await BEKKER.hent(bb, [0, 1]), linjer = [];
     for (const B of biter) for (const l of Bekker.i(B, bb)) if (l.type === 1 && l.orden >= 5) linjer.push({ P: l.P, b: l.b, orden: l.orden });
     ut.linjer = linjer.length; krev(linjer.length >= 5, `fant bare ${linjer.length} elvemidtlinjer ved Dombås`);
-    const v = await lagVindu(bb, false, 11);
-    const ruteV = (x, y) => { const i = Math.floor((x - v.x0) / v.r), j = Math.floor((v.y0 - y) / v.r); return i >= 0 && j >= 0 && i < v.w && j < v.h ? j * v.w + i : -1; };
-    const vann = (x, y) => { const k = ruteV(x, y); return k >= 0 && v.K[k] === 3; };
-    const høyde = (x, y) => { const k = ruteV(x, y); return k >= 0 ? v.H[k] : NaN; };
+    // (fiks 15) terrengklassene finnes bare til z9 (32 m-ruter; lagVindu henter dem ikke finere) – med z11 var alt «land» og det ble aldri
+    // strøm. Vannet leses derfor fra z9-vinduet, høyden fra z11 (8 m).
+    const v = await lagVindu(bb, false, 11), vk = await lagVindu(bb, false, 9);
+    const rute = (w, x, y) => { const i = Math.floor((x - w.x0) / w.r), j = Math.floor((w.y0 - y) / w.r); return i >= 0 && j >= 0 && i < w.w && j < w.h ? j * w.w + i : -1; };
+    const vann = (x, y) => { const k = rute(vk, x, y); return k >= 0 && vk.K[k] === 3; };
+    const høyde = (x, y) => { const k = rute(v, x, y); return k >= 0 ? v.H[k] : NaN; };
     // åpent vann: minst 90 % vann innenfor 150 m (prøvepunkter i to ringer)
     const åpent = (x, y) => { let n = 0, s = 0; for (const r of [75, 150]) for (let a = 0; a < 16; a++) { n++; if (vann(x + r * Math.cos(a * Math.PI / 8), y + r * Math.sin(a * Math.PI / 8))) s++; } return s / n >= .9; };
     const elver = Elvestrom.kjede(linjer); ut.elver = elver.length;
