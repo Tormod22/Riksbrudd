@@ -1406,4 +1406,4 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   under byggene, valg av bygg zoomer til 0,5–0,9 m, grove fliser glattet (flisGlatt), diamantene alltid med navn, «skog: mye» aldri over
   tregrensen, olje skjult i leirvalget, høydekurvene tynnes i bratte lier, vegnettet beholder bare spillkartets veger. 3D: første 3D-bilde viser
   leiren nær (Kvalitet.startBlikk), «Sett deg inn i feltbilen (F) · 6 m bak deg» (Kjor.innTekst), folk går unna kameraet (folk3d), stedsnavn
-  med avstand når du går. Hjelpen: 265 emner.
+  med avstand når du går. Hjelpen: 265 emner. Kontroll: PC 131/131, mobil 131/131.

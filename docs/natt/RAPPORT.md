@@ -251,3 +251,5 @@ To nye kritikere (docs/anmeldelse-2026-11-21-dag.md): liggende telefon 4, PC 4. 
 - **Knapper:** ord under ikonene, hjelpen over alt, «Mer» bare ett sted, tall som ikke kuttes, og varseltrekanten sier hva som mangler.
 - **Kart:** én lapp for lagene ved leiren, bygg som synes, ikke rutete fliser, rolige høydekurver i bratte lier, og ingen olje i leirvalget.
 - **3D:** første bilde viser leiren nær, feltbilknappen sier hvor bilen står, folk går unna kameraet, og stedsnavn står med avstand.
+
+Kontroll: PC 131/131, mobil 131/131.
