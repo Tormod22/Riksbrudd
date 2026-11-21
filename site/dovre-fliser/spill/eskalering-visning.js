@@ -75,11 +75,14 @@
     const lag = alleFrie.filter(f => v.lag.includes(f.id)), sted = E.samlested(v.mål, B, side, lag);
     const blå = v.mål.leir || v.mål.eier === 'blå';
     const G = { mål: v.mål, lag: v.lag.slice(), behov: v.behov, sted, fase: 'samler', start: tid, angripFra: blå ? tid + gr.varsel : tid, side };
+    // (runde 14) anslaget ut fra avstanden: ventetida + veien fra samlingsstedet; nærmeste lag i gruppa (for «fienden er ved byen nå»)
+    if (blå) G.tidligst = tid + E.tidligst({ nå: tid, angripFra: G.angripFra, sted, mål: v.mål });
+    const nærMål = lag.reduce((d, f) => Math.min(d, avst(f, v.mål)), Infinity);
     S.gruppe[side] = G;
     for (const f of lag) { f.lag.ai.neste = 0; f.lag.ai.mål = null; }
     if (v.mål.leir) { S.sistLeir[side] = tid; if (AI.minne && AI.minne[side]) AI.minne[side].leir = true; }
     const mann = lag.reduce((a, f) => a + f.lag.menn.filter(m => m.hp > 0).length, 0);
-    if (blå) { const t = E.varselTekst({ fraksjon: navn(side), antall: lag.length, mann, sted, mål: v.mål, leir: L, om: gr.varsel });
+    if (blå) { const t = E.varselTekst({ fraksjon: navn(side), antall: lag.length, mann, sted, mål: v.mål, leir: L, om: G.tidligst - tid, nær: nærMål });
       logg(t); hend('alarm', `${navn(side)} samler ${lag.length} lag mot ${v.mål.leir ? 'leiren' : v.mål.navn}`); intel(G, side); G.varslet = true; }
     else if (v.mål.eier && sted.navn && L && Math.min(avst(sted, L), avst(v.mål, L)) <= ER.plan.rykte) logg(`Etterretning: ${navn(side)} samler ${lag.length} lag ved ${sted.navn} – trolig mot ${navn(v.mål.eier)} i ${v.mål.navn}.`);
     lagre(); skitten = true; return G;
@@ -118,7 +121,13 @@
       if (v.hva === 'angrip' || v.hva === 'trekk' || v.hva === 'forsyn') return null;
       return avst(s, R) > 200 ? { hva: 'samle', x: R.x, y: R.y, tekst: `går mot ${R.navn} for å stenge den` } : { hva: 'hold', x: s.x, y: s.y, tekst: `stenger ${R.navn}` };
     }
-    const G = gruppeAv(s.side); if (!G || !G.lag.includes(s.navn)) return null;
+    const G = gruppeAv(s.side);
+    // (runde 14) et varslet angrep kommer aldri før tidligst-tida: ingen fra siden går løs på målet før da (unntatt når laget blir beskutt)
+    if (G && E.holdIgjen(G, { beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 }, v, tid)) {
+      const ved = G.sted.navn ? `ved ${G.sted.navn}` : 'på samlingsstedet';
+      return G.lag.includes(s.navn) && G.fase === 'samler' ? (avst(s, G.sted) > 300 ? { hva: 'samle', x: G.sted.x, y: G.sted.y, tekst: `samles ${ved} for å angripe ${G.mål.navn}` } : { hva: 'hold', x: s.x, y: s.y, tekst: `venter ${ved} – angrep mot ${G.mål.navn}` })
+        : { hva: 'hold', x: s.x, y: s.y, tekst: `venter på angrepet mot ${G.mål.navn}` }; }
+    if (!G || !G.lag.includes(s.navn)) return null;
     if (F.slåttUt(s)) { G.lag = G.lag.filter(n => n !== s.navn); return null; }
     if (v.hva === 'angrip') return null;
     if (G.fase === 'samler') { if (v.hva === 'forsyn' || v.hva === 'trekk') return null; const ved = G.sted.navn ? `ved ${G.sted.navn}` : 'på samlingsstedet';

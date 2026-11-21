@@ -45,6 +45,11 @@
     plan: { hver: 60, margin: 1.3, overvekt: 1.5, blåOvervekt: 1.2, blåPause: 1440, småsted: 15000, storbyVekt: 3, minBehov: 10, samleR: 1500, samleAndel: .75, samleMaks: 10 * 60, angrepMaks: 30 * 60, oppgi: .45, nær: 15000, minAvstand: 2500, rekkevidde: 35000, blåVekt: 1.6, taptVekt: 1.4, leirForsvar: 1500, rykte: 20000 },
     // handelsruter og oljekolonner: et lag går til et punkt på ruta minst «fraLeir» m fra leiren og blir der i «holdMaks» minutter
     rute: { hver: 6 * 60, avstand: 12000, fraLeir: 2500, holdMaks: 12 * 60 },
+    // (runde 14, kritiker J: motangrepet kom 42 min etter «angrep tidligst om ca. 6 t» – lagene sto alt et par hundre meter fra byen og
+    // gikk løs på garnisonen før gruppa var samlet). Claudes forslag: ved = meter – står et lag i gruppa så nær målet, står det «fienden er
+    // ved byen nå»; fart = meter per spilltime for et lag til fots (anslaget = ventetida + veien fra samlingsstedet); vern = meter rundt
+    // målet der ingen fra samme side går løs på dine før tidligst-tida (med mindre de blir beskutt – da er det din kamp)
+    varsel: { ved: 1000, fart: 4000, vern: 3000 },
   };
   const avst = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   // vanskelighetsgraden fra SPILLREGLER (spill/scenario.js): vanskelighet, ellers fiendens faktor
@@ -143,10 +148,24 @@
     const ved = o.sted && o.sted.navn ? `ved ${o.sted.navn}` : 'i terrenget';
     const hvor = o.leir && o.sted ? `, ${String(Math.round(avst(o.sted, o.leir) / 100) / 10).replace('.', ',')} km ${retning(o.sted.x - o.leir.x, o.sted.y - o.leir.y)} for leiren` : '';
     const mot = o.mål.leir ? 'Målet er leiren din' : `Målet er trolig ${o.mål.navn}${o.mål.eier === 'blå' ? ' (ditt)' : ''}`;
-    return `Etterretning: ${o.fraksjon} samler ${o.antall} lag (ca. ${Math.round(o.mann)} mann) ${ved}${hvor}. ${mot} – angrep tidligst om ${omTekst(o.om)}.`
+    // o.nær: meter fra målet til nærmeste lag i gruppa – innen REGLER.varsel.ved står det at fienden er der nå
+    const nå = Number.isFinite(o.nær) && o.nær <= REGLER.varsel.ved ? ` Fienden er ved ${o.mål.leir ? 'leiren' : 'byen'} nå (ca. ${Math.max(50, Math.round(o.nær / 50) * 50)} m unna), men venter på resten.` : '';
+    return `Etterretning: ${o.fraksjon} samler ${o.antall} lag (ca. ${Math.round(o.mann)} mann) ${ved}${hvor}. ${mot}.${nå} Angrep tidligst om ${omTekst(o.om)}.`
       + (o.mål.leir ? ' Hold tropper hjemme og bemann vakttårnet.' : ' Send flere lag dit, grav ned garnisonen og sett stridsreglene til «kjemp» – ellers trekker den seg når den er underlegen.');
   }
-  const api = { REGLER, grad, inntekt, nyØkonomi, tjen, kjøp, betal, tak, behov, gruppemål, tillatt, velgMål, samlested, fase, rutePunkt, omTekst, retning, varselTekst };
+  // Tidligste angrep i spillminutter fra nå: ventetida (angripFra − nå) + veien fra samlingsstedet til målet. o = { nå, angripFra, sted, mål }
+  function tidligst(o) { const V = REGLER.varsel, vent = Math.max(0, (o.angripFra || 0) - (o.nå || 0)), vei = o.sted && o.mål ? avst(o.sted, o.mål) : 0;
+    return vent + vei / V.fart * 60; }
+  // Skal laget holde seg unna målet nå? G = gruppa (mål, tidligst, fase), lag = { x, y, beskutt }, v = valget til AI-en ({ hva, x, y, mål }).
+  // Før tidligst-tida går ingen fra siden løs på noe innen REGLER.varsel.vern av målet, og ingen tar målet – med mindre laget er beskutt.
+  function holdIgjen(G, lag, v, nå) {
+    if (!G || !G.varslet || !(G.tidligst > nå) || lag.beskutt || !v) return false;
+    // når gruppa alt går mot målet (fase «angriper»), får den gå – men ikke skyte innen vern-sonen før tida
+    const hvaHold = G.fase === 'angriper' ? ['angrip'] : ['angrip', 'leir', 'ta'];
+    if (G.fase !== 'angriper' && v.hva === 'ta' && v.mål === G.mål.id) return true;
+    if (hvaHold.includes(v.hva) && Number.isFinite(v.x) && avst(v, G.mål) <= REGLER.varsel.vern) return true;
+    return false; }
+  const api = { REGLER, grad, tidligst, holdIgjen, inntekt, nyØkonomi, tjen, kjøp, betal, tak, behov, gruppemål, tillatt, velgMål, samlested, fase, rutePunkt, omTekst, retning, varselTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Eskalering = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
