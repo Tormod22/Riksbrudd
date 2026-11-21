@@ -32,6 +32,9 @@
     // (runde 12, kritikk E: «Helikopter», «Feltbil», «hogst 0 %» sto i grå sans midt blant navnene i antikva) all tekst i 2D-kartet
     // skrives i kartets skrift: sans-serif byttes mens rammen tegnes, litt større (Cormorant er lavere) og minst halvfet
     kartSkrift: '"Cormorant Garamond", Georgia, serif', sansSkala: 1.15, sansVekt: 600,
+    // (runde 13, kritikk G: «Speidertropp 1», «Gunn Kritiker (deg)» og «1. lastebilkolonne» oppå hverandre ved leiren) lag og kjøretøy
+    // med merket innen r punkter fra leiren får én lapp («Leiren: 3 lag ›») når minst min av dem står der; lappen står dy under leiren
+    samle: { r: 46, min: 2, dy: 47 },
   };
   // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
@@ -40,8 +43,11 @@
   const kolliderer = r => tatt.some(q => over(r, q));
   // utsatt modus: kø = navnene i denne rammen, hindre = merkene, topp = det som tegnes etter navnene
   const kø = [], hindre = [], topp = [], regler = [], vist = [];
-  let aktiv = false;
-  function nullstill() { tatt.length = 0; kø.length = 0; hindre.length = 0; topp.length = 0; vist.length = 0; aktiv = true; }
+  let aktiv = false, samleS = null, samlet = null;
+  function nullstill() { tatt.length = 0; kø.length = 0; hindre.length = 0; topp.length = 0; vist.length = 0; aktiv = true; samleS = null; samlet = null; }
+  // (runde 13) samleSted(S): i denne rammen samles lag og kjøretøy ved S = { x, y, hvem(t) -> 'lag' | 'kjøretøy' | null, tekst(n) }
+  // (skjermpunkter; n = { lag, kjøretøy, alle }) i én lapp. Settes av spill/kartlapper.js hver ramme; nullstill() tar det bort.
+  function samleSted(S) { if (aktiv) samleS = S || null; }
   // plass(x, y, w, retning, h): y-en teksten skal tegnes i. Plassen blir merket som tatt.
   function plass(x, y, w, retning = -1, h = LINJE) {
     let r = ramme(x, y, w, h), yy = y;
@@ -88,6 +94,15 @@
       for (const q of satt) { if (!enhet(q.prio)) continue; const d = Math.hypot(q.x - L.x, (q.y + q.retning * 16) - (L.y + L.retning * 16)); if (d < bd) { bd = d; best = q; } }
       if (best) best.flere++; }
     return lapper; }
+
+  // (runde 13) samle(lapper, S): lag og kjøretøy med merket (ca. 14 punkter under/over navnet) innen REGLER.samle.r fra S. Er de minst
+  // REGLER.samle.min, merkes de L.samlet = true (vises ikke) og svaret er { inne, n } (n = { lag, kjøretøy, alle }); ellers null.
+  function samle(lapper, S, R = REGLER) {
+    if (!S || !isFinite(S.x) || !isFinite(S.y) || typeof S.hvem !== 'function') return null; const inne = [], n = { lag: 0, kjøretøy: 0, alle: 0 };
+    for (const L of lapper) { let typ = null; try { typ = S.hvem(L.t); } catch (e) { typ = null; } if (typ !== 'lag' && typ !== 'kjøretøy') continue;
+      const d = L.retning < 0 ? -1 : 1; if (Math.hypot(L.x - S.x, L.y - d * 14 - S.y) > (S.r || R.samle.r)) continue; inne.push(L); n[typ]++; n.alle++; }
+    if (n.alle < R.samle.min) return null; for (const L of inne) L.samlet = true; return { inne, n }; }
+  const samleTekst = n => 'Leiren: ' + [n.lag ? n.lag + ' lag' : '', n.kjøretøy ? n.kjøretøy + ' kjøretøy' : ''].filter(Boolean).join(', ') + ' ›';
 
   // ---------- tegnerne: tekst() fanger navnet, og strokeText/fillText(t, x, NaN) gir fargene ----------
   function pakkInn(g) { if (!g || g.__etikett) return; g.__etikett = true; const f0 = g.fillText, s0 = g.strokeText;
@@ -140,6 +155,13 @@
   function tegnAlle(g, fortsett) {
     // navn som tegneren aldri tegnet (ingen farge fanget), tas ut
     for (let i = kø.length - 1; i >= 0; i--) if (!kø[i].fyll && !kø[i].strek && g) kø.splice(i, 1);
+    // (runde 13) lag og kjøretøy ved leiren blir én lapp (samleSted)
+    if (samleS && kø.length) { const s = samle(kø, samleS); if (s) { const f = s.inne[0], t = typeof samleS.tekst === 'function' ? samleS.tekst(s.n) : samleTekst(s.n);
+      for (let i = kø.length - 1; i >= 0; i--) if (kø[i].samlet) kø.splice(i, 1);
+      let w = t.length * 6.5; if (g && g.measureText) { const f0 = g.font; g.font = f.font; w = g.measureText(t).width; g.font = f0; }
+      const L = { t, x: samleS.x, y: samleS.y + REGLER.samle.dy, w, h: LINJE, retning: 1, prio: REGLER.prio.egne, nr: -1, font: f.font, align: 'center', baseline: 'alphabetic', alpha: 1,
+        fyll: '#f0d79a', strek: f.strek || 'rgba(20,16,10,.85)', bredde: f.bredde || 3, samling: true };
+      kø.push(L); samlet = { L, n: s.n, navn: s.inne.map(q => q.t) }; } samleS = null; }
     if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false })))); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
       if (g) { g.save(); for (const L of rek) { g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
         if (L.strek) { g.lineWidth = L.bredde || 3; g.lineJoin = 'round'; g.strokeStyle = L.strek; skriv(g, L, L.px, L.py, false); }
@@ -160,7 +182,9 @@
       if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
   // for vakten: navnene som ble tegnet i siste ramme ({ t, x, y, prio }) og merkene
   const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, flere: L.flere || 0, ramme: L.ramme.slice() }));
-  const E = { nullstill, plass, merk, tekst, kartFont, skrift, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
+  // (runde 13) den samlede lappen i siste ramme: { t, ramme, n, navn } – eller null (ikke samlet, eller den fikk ikke plass)
+  const samling = () => (samlet && samlet.L.vis && samlet.L.ramme ? { t: samlet.L.t, ramme: samlet.L.ramme.slice(), n: { ...samlet.n }, navn: samlet.navn.slice() } : null);
+  const E = { nullstill, plass, merk, tekst, kartFont, skrift, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, samleSted, samle, samleTekst, samling, hindringer: () => hindre.map(o => o.r.slice()),
     aktiv: () => aktiv, antall: () => tatt.length, overlapp, LINJE, MAKS, REGLER };
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else { rot.Etikett = E;
     // hovedkartets lerret (index.html: <canvas id="c">) – samme kontekst som ctx i index.html

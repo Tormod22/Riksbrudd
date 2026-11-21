@@ -38,10 +38,18 @@
     // enn «fra» meter per punkt tegnes leiren som en liten klynge: byggene står som om kartet var tegnet med meter per punkt
     // fra + (m − fra) · vekst (avstandene i leiren og byggene forstørres), og hvert bygg er minst kort × lang punkter; over maks: ikke tegnet
     // luft: lagene og flagget står midt i leiren, så byggene skyves ut til minst så mange punkter fra midten (gradvis fra «fra»)
-    klynge: { fra: 1.6, vekst: .12, kort: 5, lang: 8.5, maks: 150, luft: 20 },
+    klynge: { fra: 1.6, vekst: .12, kort: 6.5, lang: 10.5, maks: 150, luft: 20 },
+    // (runde 13, kritikk G: «brakka synes nesten ikke på 100 m-målestokk: bare navnet og en stiplet sirkel») med flate farger (fra «middels»
+    // og i klyngen) blandes taket så mye med leirens farge, og bygget får mørk kant (px) under den lyse
+    leirTak: .6, mørkKant: 2.4,
+    // og byggene tegnes minst kort × lang punkter (forstørret om midten, høyst maks ganger) – en brakke på 7,6 × 12,8 m var 6 × 10 punkter
+    flat: { kort: 8, lang: 12.5, maks: 2 },
   };
   // klyngeM(m): meter per punkt leiren tegnes med når kartet har m (ren regel; = m helt nær, vokser sakte lenger ute)
   const klyngeM = (m, K = REGLER.klynge) => (m <= K.fra ? m : K.fra + (m - K.fra) * K.vekst);
+  // (runde 13) forstørr(kropp, m): hvor mye et bygg med flate farger forstørres om midten så det blir minst flat.kort × flat.lang punkter (ren regel)
+  const forstørr = (K, m, F = REGLER.flat) => { const a = Math.abs(K[1] - K[0]) / m, c = Math.abs(K[3] - K[2]) / m, kort = Math.min(a, c), lang = Math.max(a, c);
+    return !(kort > 0) ? 1 : Math.max(1, Math.min(F.maks, Math.max(F.kort / kort, F.lang / lang))); };
 
   // byggtypene: form, takfarge, høyde (m), kroppen (taket) i modellens meter [x0, x1, y0, y1] (fronten/døra mot +x) og detaljer.
   // Fargene er fra modeller.js (F.blikk, F.svart, F.presenning …), så 2D og 3D stemmer.
@@ -83,6 +91,8 @@
     return { navn: 'ferdig', p: 1 };
   }
   const hex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  // (runde 13) taket i leirens farge: byggets takfarge blandet med fraksjonens farge (#rrggbb; ellers blå)
+  const leirTak = (tak, fraksjon, k = REGLER.leirTak) => { const a = hex(tak), f = /^#[0-9a-f]{6}$/i.test(fraksjon || '') ? hex(fraksjon) : hex('#5b7ea8'); return a.map((v, i) => Math.round(v * (1 - k) + f[i] * k)); };
   // nattfargen fra KartLys (T = { natt, farge, grå, mørk }) på en farge [r, g, b] – samme regning som lagene over kartet i kartlys.js
   function tonet(c, T) { if (!T) return c; let [r, g, b] = c;
     if (T.grå > 0) { const l = .299 * r + .587 * g + .114 * b; r += (l - r) * T.grå; g += (l - g) * T.grå; b += (l - b) * T.grå; }
@@ -112,7 +122,7 @@
     if (pers.oppgave === 'hogst') { const a = hash(i, 17) * 6.283, r = 38 + hash(i, 5) * 10; return vandre(leir.x + Math.cos(a) * r, leir.y + Math.sin(a) * r, 1.5, hash(i, 3)); }
     const a = hash(i, 11) * 6.283, r = 7 + hash(i, 13) * 9; return vandre(leir.x + Math.cos(a) * r, leir.y + Math.sin(a) * r, 2.2, hash(i, 7));
   }
-  const api = { REGLER, STIL, HUS, stil, tilstand, tonet, hex, figurR, folkPlass, hash, klyngeM, av: false };
+  const api = { REGLER, STIL, HUS, stil, tilstand, tonet, hex, leirTak, forstørr, figurR, folkPlass, hash, klyngeM, av: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   // ---------- visningen ----------
@@ -308,7 +318,9 @@
   // o: { sx, sy, m, skisse, ok, valgt, mangler (uten strøm), aktiv (i arbeid nå), fraksjon (farge) }
   function tegnBygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
     const m = o.m, detalj = m < REGLER.nær ? 2 : m < REGLER.middels ? 1 : 0, t = o.skisse ? { navn: 'ferdig', p: 1 } : tilstand(b, { aktiv: o.aktiv }), K = St.kropp, id = (b.id || 0) + 7;
-    iBygget(g, b, o.sx, o.sy, m, () => {
+    // (runde 13) med flate farger forstørres små bygg om midten (forstørr), så brakka synes på 100 m-målestokk
+    const mT = detalj === 0 && !o.skisse && St.form !== 'mast' ? m / forstørr(K, m) : m;
+    iBygget(g, b, o.sx, o.sy, mT, () => {
       // det som hører til bygget på bakken: trapp/forplass i betong
       if (detalj >= 1 && t.navn !== 'kø' && t.navn !== 'ødelagt') { const pl = St.plass === true ? St.trapp : St.plass; if (pl) { g.fillStyle = farge('#8f8d87', 1, o.skisse ? .5 : 1); rekt(g, pl[0], pl[1], pl[2], pl[3]); g.fill();
           if (St.porter) { g.fillStyle = farge('#2a2c2e', 1, .3); sirkel(g, (pl[0] + pl[1]) / 2, St.porter[0], 1.1); g.fill(); } }
@@ -318,7 +330,8 @@
       if (o.skisse) g.globalAlpha = .6;
       if (t.navn === 'ødelagt') ruin(g, St, K, id, detalj);
       else if (t.navn === 'kø' || t.navn === 'bygges') byggeplass(g, St, K, t, detalj, b);
-      else { if (detalj === 0 && St.form !== 'mast' && St.form !== 'pad' && St.form !== 'åker') { g.fillStyle = farge(St.tak, St.form === 'glass' ? .8 : 1); rekt(g, ...K); g.fill(); if (St.form === 'sal' || St.form === 'telt') saltak(g, St, K, 0, true); }
+      else { if (detalj === 0 && St.form !== 'mast' && St.form !== 'pad' && St.form !== 'åker') { g.fillStyle = farge(leirTak(St.tak, o.fraksjon), St.form === 'glass' ? .8 : 1.1); rekt(g, ...K); g.fill();
+          if (St.form === 'sal' || St.form === 'telt') saltak(g, St, K, 0, true); }
         else (FORM[St.form] || flatt)(g, St, K, detalj);
         if (St.porter && detalj >= 1) { g.fillStyle = farge('#3a3c3e'); for (const v of St.porter) { rekt(g, K[1] - .15, K[1] + .1, v - 2.2, v + 2.2); g.fill(); } }
         if (St.røyk && detalj >= 1 && St.pipe && !o.skisse) { for (let k = 0; k < 3; k++) { g.fillStyle = `rgba(200,198,190,${.22 - k * .06})`; sirkel(g, St.pipe[0] + .6 + k * .9, St.pipe[1] - .3 - k * .5, .45 + k * .3); g.fill(); } }
@@ -331,7 +344,9 @@
       // kanten: valgt = gul, uten strøm eller hardt skadet = rød, ellers fraksjonens farge (tynn)
       if (St.form === 'mast' && !o.valgt) return;
       const rød = o.mangler || (b.hp < .5 && b.hp > 0);
-      g.strokeStyle = o.valgt ? '#f0d79a' : rød ? '#e0604a' : (o.fraksjon || '#5b7ea8'); g.lineWidth = lw(o.valgt ? 2.5 : rød ? 1.6 : 1.1); g.globalAlpha = o.valgt || rød ? 1 : .8;
+      // (runde 13) med flate farger: mørk kant under den lyse, så bygget skiller seg fra skogen og hogstfeltet (som i klyngen)
+      if (detalj === 0 && St.form !== 'mast') { g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = lw(REGLER.mørkKant); rekt(g, K[0], K[1], K[2], K[3]); g.stroke(); }
+      g.strokeStyle = o.valgt ? '#f0d79a' : rød ? '#e0604a' : detalj === 0 ? 'rgba(239,230,207,.92)' : (o.fraksjon || '#5b7ea8'); g.lineWidth = lw(o.valgt ? 2.5 : rød ? 1.6 : 1.1); g.globalAlpha = o.valgt || rød || detalj === 0 ? 1 : .8;
       const k = St.form === 'mast' ? 1.2 : t.navn === 'kø' || t.navn === 'bygges' ? 1.2 : 0; rekt(g, K[0] - k, K[1] + k, K[2] - k, K[3] + k); g.stroke(); g.globalAlpha = 1;
     });
     return true; }
@@ -358,7 +373,7 @@
     const halv = [-a / 2, -c / 2, a, c], ferdig = t.navn !== 'kø' && t.navn !== 'bygges' && t.navn !== 'ødelagt';
     // skygge mot sørøst, taket i byggets farge, mørk kant; under bygging lysere med stiplet kant, ødelagt svart
     g.fillStyle = 'rgba(6,5,3,.45)'; g.fillRect(halv[0] + 1.2, halv[1] + 1.2, a, c);
-    g.fillStyle = t.navn === 'ødelagt' ? farge('#2a2620') : farge(St.tak, ferdig ? 1.12 : 1.3, ferdig ? 1 : .55); g.fillRect(...halv);
+    g.fillStyle = t.navn === 'ødelagt' ? farge('#2a2620') : farge(leirTak(St.tak, o.fraksjon), ferdig ? 1.12 : 1.3, ferdig ? 1 : .55); g.fillRect(...halv);
     if (ferdig && (St.form === 'sal' || St.form === 'telt') && Math.min(a, c) >= 4) { g.strokeStyle = farge(St.tak, .7); g.lineWidth = 1; g.beginPath(); if (lang) { g.moveTo(-a / 2 + 1, 0); g.lineTo(a / 2 - 1, 0); } else { g.moveTo(0, -c / 2 + 1); g.lineTo(0, c / 2 - 1); } g.stroke(); }
     if (St.kors && ferdig) { g.fillStyle = '#c8322a'; g.fillRect(-1.5, -.5, 3, 1); g.fillRect(-.5, -1.5, 1, 3); }
     // lys kant (som lagmerkene), så byggene skiller seg fra skogen; under bygging stiplet

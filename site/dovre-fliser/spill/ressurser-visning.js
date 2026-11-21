@@ -150,7 +150,9 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   if (window.KJ_TEKST) KJ_TEKST.push(k => RS.bilTekst(k));
 
   // ---------- kartet ----------
-  KROKER.tegn.push((g, vx0, vy1) => {
+  // (runde 13, kritikk G: «brakka synes nesten ikke – bare navnet og en stiplet sirkel») hogstfeltene og ruinene ligger på bakken: de tegnes
+  // FØRST (unshift), under leirens bygg (leir-visning.js), merkene og navnene. Haugene og tallene tegnes som før (kroken under).
+  KROKER.tegn.unshift((g, vx0, vy1) => {
     const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, ute = (x, y, r) => sx(x + r) < -20 || sx(x - r) > VW + 20 || sy(y - r) < -20 || sy(y + r) > VH + 20;
     const stubber = (x, y, r, andel) => { if (m > 1.5) return; g.fillStyle = '#6b5a3c'; const st = Math.max(3, 4 * m);
       for (let dy = -r; dy <= r; dy += st) for (let dx = -r; dx <= r; dx += st) { const X = x + dx + (hash(x + dx, y + dy) - .5) * st, Y = y + dy + (hash(y + dy, x + dx) - .5) * st;
@@ -168,6 +170,11 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
       if (m < 1.5) { g.fillStyle = '#7d766a'; const A = RS.areal(q.P), n = Math.min(40, Math.max(4, A / 12)); for (let k = 0; k < n; k++) { const a = hash(q.i, k) * 6.283, d = Math.sqrt(hash(k, q.i)) * Math.sqrt(A) * .3;
         g.beginPath(); g.arc(sx(c.x + Math.cos(a) * d), sy(c.y + Math.sin(a) * d), Math.max(1.2, .6 / m), 0, 6.283); g.fill(); } } }
     for (const j of R.jobber) if (j.type === 'riving') poly(j.hus.P, null, j.id === valgt ? '#f0d79a' : '#e8a25a', true);
+  });
+  KROKER.tegn.push((g, vx0, vy1) => {
+    const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m, ute = (x, y, r) => sx(x + r) < -20 || sx(x - r) > VW + 20 || sy(y - r) < -20 || sy(y + r) > VH + 20;
+    const poly = (P, fyll, strek, stipl) => { g.save(); g.beginPath(); P.forEach(([x, y], i) => (i ? g.lineTo(sx(x), sy(y)) : g.moveTo(sx(x), sy(y)))); g.closePath();
+      if (fyll) { g.fillStyle = fyll; g.fill(); g.strokeStyle = fyll; g.lineWidth = 3; g.stroke(); } if (strek) { if (stipl) g.setLineDash([4, 3]); g.strokeStyle = strek; g.lineWidth = 1.5; g.stroke(); } g.restore(); };
     // haugene som venter på frakt, og prosent/navn nær
     for (const j of R.jobber) { if (ute(j.x, j.y, 10)) continue; const h = RS.iHaug(j);
       if (h > .05) { g.fillStyle = '#8a6a3e'; g.strokeStyle = '#2a2318'; g.lineWidth = 1; g.beginPath(); g.rect(sx(j.x) - 5, sy(j.y) - 4, 10, 8); g.fill(); g.stroke(); }
