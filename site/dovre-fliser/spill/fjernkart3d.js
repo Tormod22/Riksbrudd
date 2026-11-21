@@ -63,13 +63,14 @@
     kast(); R.scene.add(mesh); F.mesh = mesh; F.tex = tex; F.uInn = uInn; F.cx = d.cx; F.cy = d.cy; F.S = d.S; F.nr = (F.nr || 0) + 1; plasser(R);
     etterFyll(d, F.nr);
   }
-  // flisene som manglet, to om gangen (byggingen av det detaljerte utsnittet har forrang: venter mens R3.bygger)
+  // flisene som manglet, tre om gangen (byggingen av det detaljerte utsnittet har forrang: venter mens R3.bygger)
   async function etterFyll(d, nr) {
     const E = d.etter, kø = E.mangler.slice(); let n = 0;
     // de nærmest midten først
     const m = [(d.cx - G.x0) / span(E.zt), (G.y0 - d.cy) / span(E.zt)]; kø.sort((a, b) => Math.hypot(a[0] - m[0], a[1] - m[1]) - Math.hypot(b[0] - m[0], b[1] - m[1]));
-    await Promise.all([0, 1].map(async () => { for (let q; (q = kø.shift());) {
-      while (typeof R3 !== 'undefined' && R3 && R3.bygger && F.nr === nr) await new Promise(r => setTimeout(r, 400));
+    await Promise.all([0, 1, 2].map(async () => { for (let q; (q = kø.shift());) {
+      // (mens du ser utenfor det gamle utsnittet, er fjernkartet det du ser – da venter det ikke)
+      while (typeof R3 !== 'undefined' && R3 && R3.bygger && F.nr === nr && !lasterNå(R3)) await new Promise(r => setTimeout(r, 400));
       if (F.nr !== nr || !F.tex) return; let t; try { t = await lagFlis(E.zt, q[0], q[1], E.valg); } catch (e) { continue; }
       if (F.nr !== nr || !F.tex || !t || !t.c) return;
       const g = d.c.getContext('2d'), sp = span(E.zt), X = (G.x0 + q[0] * sp - (d.cx - d.S)) / E.mpp, Y = ((d.cy + d.S) - (G.y0 - q[1] * sp)) / E.mpp, W = sp / E.mpp + .5;
