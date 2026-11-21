@@ -56,6 +56,8 @@
   function startPlass(type, nivå = 1) {
     if (!klar) { logg('Start spillet først.'); return; }
     if (window.lukkPanel) try { lukkPanel(); } catch (e) { /* uten panel */ }
+    // Leir-menyen lukkes (som når et bygg plasseres), så kartet er fritt
+    { const k = document.getElementById('leirknapp'); if (k && k.classList.contains('på')) k.click(); }
     plass = { type, nivå, P: [], ret: 0, retSatt: false, sjekk: null, nr: 0 }; valgt = null; visValg(); visAnleggPanel(); skitten = true;
   }
   function avbryt() { plass = null; visValg(); skitten = true; }
@@ -435,8 +437,19 @@
       for (const g0 of Portal3d.mal(B)) { const g = g0.clone(); g.rotateZ(v); g.translate(p[0], p[1], z - .3); if (!g.attributes.normal) g.computeVertexNormals(); D.push(g); }
       if (!a.ferdig) { const [x, y] = [p[0] + Math.cos(v) * 8, p[1] + Math.sin(v) * 8]; kasse(D, 4, 3, 1.6, x, y, z - .4, v, FARGE.jord); } }
   }
+  // Bunkerveggene stopper deg når du går selv (R3.hindre, som husene og byggesettet); døråpningen bak er åpen
+  function hindringer(u, R) {
+    if (!R.hindre) return;
+    for (const [k, l] of R.hindre) { const f = l.filter(q => !q.an); if (f.length !== l.length) { if (f.length) R.hindre.set(k, f); else R.hindre.delete(k); } }
+    for (const a0 of liste) { if (a0.type !== 'bunker' || !a0.ferdig || !iU(a0, u)) continue; const a = lok(a0, u), [L, B] = A.ANLEGG.bunker.mål, f = ramme(a.P[0][0], a.P[0][1], a.ret), t = .45;
+      // veggene som rektangler (uu0, uu1, vv0, vv1): forveggen, sidene og bakveggen på hver side av døra (0,6–1,6 m)
+      const biter = [[L / 2 - t, L / 2, -B / 2, B / 2], [-L / 2, L / 2, -B / 2, -B / 2 + t], [-L / 2, L / 2, B / 2 - t, B / 2], [-L / 2, -L / 2 + t, -B / 2, .6], [-L / 2, -L / 2 + t, 1.6, B / 2]];
+      for (const [u0, u1, v0, v1] of biter) { const P = [f(u0, v0), f(u1, v0), f(u1, v1), f(u0, v1)], bb = [Math.min(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[0])), Math.max(...P.map(p => p[1]))];
+        for (const n of new Set(P.map(([x, y]) => Math.floor(x / 20) + ',' + Math.floor(y / 20)))) { if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push({ P, bb, an: true }); } } }
+  }
   function lagModeller(u, R) {
     if (gruppe) { R.scene.remove(gruppe); gruppe.geometry.dispose(); gruppe.material.dispose(); gruppe = null; } trekanter = 0;
+    try { hindringer(u, R); } catch (e) { console.error(e); }
     if (!klar || !liste.length || !window.THREE || u.S > 4200) return; const D = [], Z = u.anleggZ || {}, EX = R.EX || 1;
     for (const a0 of liste) { if (!iU(a0, u)) continue; const a = lok(a0, u);
       try { if (a.type === 'skyttergrav') grav3d(D, a, u, Z, EX); else if (a.type === 'bunker') bunker3d(D, a, u, Z, EX); else if (a.type === 'kai') kai3d(D, a, u, EX); else if (a.type === 'tunnel') tunnel3d(D, a, u, Z, EX); } catch (e) { console.error(e); } }
