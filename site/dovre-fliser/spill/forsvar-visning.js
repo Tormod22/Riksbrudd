@@ -285,7 +285,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   // (Claudes forslag: 12 timer). Ikke i testene uten ForsvarSpill.test.
   const NESTE_BRIKKE = 720;
   (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => { if (!auto()) return []; const n = neste(); if (!n || n.min > NESTE_BRIKKE) return [];
-    return [{ i: 'varsel', k: n.min <= 120 ? 'fare' : '', t: `Røverne om ${n.nedtelling}`, s: n.når.replace(/^trolig /, 'trolig '), f: () => logg(n.tekst + '.') }]; });
+    return [{ i: 'varsel', k: n.min <= 120 ? 'fare' : '', t: `Røverne om ${n.nedtelling}`, s: n.når, f: () => logg(n.tekst + '.') }]; });
   const nesteLinje = e => { const n = neste(); return n ? e('div', { klasse: 'raad', id: 'nestebolge' }, n.tekst + '.') : ''; };
   // ---------- Leir-menyen: beredskapen ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { const B = beredskap(); if (!B) return; const t = T(), neste = t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + 1) : null;
