@@ -2,7 +2,7 @@
 // øverst, ingen søyle av navn langt ute, «0 t olje» og «Leiren til …» skjult ved leiren, kaiene i krigskartet bare ved leiren, krigskartets
 // utsnitt på Dovre, og natt/regn i 2D (spill/kartlys.js). Tegner 2D-kartet direkte med tegn() i samme synkrone blokk (3D kan være på –
 // da tegnes bare det skjulte 2D-lerretet), og setter alt tilbake: kameraet, tida, tåka, lagene og krigskartet.
-module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krigskartet, natt og regn i 2D, én skrift, leiren som klynge langt ute)', kjør: async (pg, profil) => {
+module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krigskartet, natt og regn i 2D, én skrift, leiren som klynge langt ute, samlelapp ved leiren, synlig brakke, høydekurver, leirvalg, vegnett, glatt reserve)', kjør: async (pg, profil) => {
   const d = await pg.evaluate(() => {
     const ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
     if (!window.Etikett || !Etikett.tegnAlle || !window.KartLapper || !window.KartLys) return { feil: ['Etikett/KartLapper/KartLys mangler'] };
@@ -64,6 +64,35 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
             ut.klynge = { før, etter: T.hindre.length, merke: H[0] }; krev(T.hindre.length > før && H.length, 'brakka synes ikke på 1 km-målestokk: ' + JSON.stringify(ut.klynge)); }
           finally { const i = LS.bygg.indexOf(b); if (i >= 0) LS.bygg.splice(i, 1); LS.neste--; LS.nesteJobb--; } }
         const T2 = tegnNå(L.x, L.y, 2); krev(!T2.navn.some(n => /^(hogst|riving) /.test(n.t)), 'hogst/riving-tallene står ved leiren på 2 m per punkt'); }
+      // 8) RUNDE 13 (kritikk G/H): (a) lag og kjøretøy ved leiren blir én lapp «Leiren: … ›» på 1 km-målestokk, uten overlapp, og trykk på den
+      //    zoomer inn; (b) brakka synes på 100 m-målestokk som et rektangel i leirfargen, også under et hogstfelt; (c) høydekurvene tynnes i bratt
+      //    lende; (d) ingen oljeinnretninger langt ute mens du velger leirplass; (e) vegnettet bare for spillområdet; (f) glattet reserveflis
+      { for (const [dx, dy, n] of [[20, 10, 'Samlelag A'], [-15, -10, 'Samlelag B']]) { const e = nyttLag(n, L.x + dx, L.y + dy, 'blå'); ENHETER.push(e); nye.push(e); }
+        const T = tegnNå(L.x, L.y, 8), s = Etikett.samling(); ut.samling = s && { t: s.t, n: s.n };
+        krev(s && /^Leiren: /.test(s.t) && s.n.alle >= 2 && T.navn.some(n => n.t === s.t), '1 km-målestokk: lagene ved leiren er ikke samlet i én lapp: ' + JSON.stringify(ut.samling) + ' / ' + T.navn.map(n => n.t).join(' | '));
+        krev(!T.navn.some(n => /^Samlelag /.test(n.t)), '1 km-målestokk: lagnavnene ved leiren står i tillegg til samlelappen');
+        krev(T.overlapp === 0, `1 km-målestokk: ${T.overlapp} navn oppå hverandre`);
+        if (s) { const r = s.ramme; trykkPå(r[0] + r[2] / 2, r[1] + r[3] / 2); ut.etterTrykk = kam.m; krev(kam.m <= 1.6, 'trykk på samlelappen zoomer ikke inn: ' + kam.m); }
+        for (const e of nye.splice(0)) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } }
+      { const LS = window.LeirSpill && LeirSpill.tilstand(), RS = window.RessursSpill && RessursSpill.tilstand(); if (LS && window.Leir2d && Leir2d.leirTak) {
+          const t = (Leir.BYGG.brakke.tid || 1) * 60, b = { id: LS.neste++, type: 'brakke', x: L.x + 60, y: L.y - 40, ret: 0, igjen: 0, totalt: t, pris: 0, mat: {}, nivå: 1, hp: 1, nr: LS.nesteJobb++, arbeid: null, vakt: true };
+          const j = RS && { id: 'vakt13', type: 'hogst', x: L.x + 60, y: L.y - 40, r: 35, mat: { tre: 1, betong: 0, stål: 0 }, arbeid: 10, gjort: 6, haug: { tre: 0, betong: 0, stål: 0 }, levert: { tre: 0, betong: 0, stål: 0 }, avst: 70, frakt: 'fots' };
+          if (j) RS.jobber.push(j);
+          const snitt = () => { const [x, y] = skjerm(b.x, b.y), p = ctx.getImageData(Math.round(x * dpr) - 2, Math.round(y * dpr) - 2, 5, 5).data; let r = 0, g = 0, bl = 0; for (let k = 0; k < p.length; k += 4) { r += p[k]; g += p[k + 1]; bl += p[k + 2]; } return [r / 25, g / 25, bl / 25]; };
+          try { tegnNå(L.x + 60, L.y - 40, 1.3); const før = snitt(); LS.bygg.push(b); tegnNå(L.x + 60, L.y - 40, 1.3); const med = snitt(), d = Math.abs(med[0] - før[0]) + Math.abs(med[1] - før[1]) + Math.abs(med[2] - før[2]);
+            const St = Leir2d.stil('brakke', Leir.BYGG.brakke), f = Leir2d.forstørr(St.kropp, 1.3); ut.brakke = { før: før.map(Math.round), med: med.map(Math.round), d: Math.round(d), forstørr: +f.toFixed(2) };
+            krev(d > 60, '100 m-målestokk: brakka synes ikke (under hogstfeltet?): ' + JSON.stringify(ut.brakke)); krev(f >= 1.4, '100 m-målestokk: brakka er ikke forstørret: ' + f); }
+          finally { const i = LS.bygg.indexOf(b); if (i >= 0) LS.bygg.splice(i, 1); LS.neste--; LS.nesteJobb--; if (j) { const k = RS.jobber.indexOf(j); if (k >= 0) RS.jobber.splice(k, 1); } } } }
+      if (typeof koter === 'function' && typeof KOTE_TETT !== 'undefined') { const N = 64, E = new Float32Array(N * N); for (let j2 = 0; j2 < N; j2++) for (let i = 0; i < N; i++) E[j2 * N + i] = 400.37 + 1.1 * j2;
+        let w = 0, n = 0; const tall = {}, g = { set lineWidth(v) { w = v; }, set strokeStyle(v) {}, beginPath() { n = 0; }, moveTo() { n++; }, lineTo() {}, stroke() { tall[w] = n; } };
+        koter(g, E, N, 14); ut.koter = tall; krev(!tall[1.1] && (tall[.6] || 0) > 0 && (tall[.6] || 0) < 64 * 6, 'bratt li: høydekurvene står fortsatt tett (striper): ' + JSON.stringify(tall)); }
+      { const tf = OppstartSpill.tilstand, fokus = INFRA_FOKUS.test; INFRA_FOKUS.test = true; OppstartSpill.tilstand = () => ({});
+        try { const o = { e: { type: 2 } }; ut.olje = [VISES.olje(o, 5000), VISES.olje(o, 100)]; krev(!ut.olje[0] && ut.olje[1], 'leirvalget: oljeinnretningene vises på 500 km-målestokk: ' + ut.olje); }
+        finally { OppstartSpill.tilstand = tf; INFRA_FOKUS.test = fokus; } }
+      if (window.VEG_TLF && VEG_TLF.område) { const O0 = window.SPILLOMRÅDE, t0 = VEG_TLF.test; window.SPILLOMRÅDE = { navn: 'Prøve', bb: [L.x - 5000, L.y - 5000, L.x + 5000, L.y + 5000] }; VEG_TLF.test = true;
+        try { const b = VEG_TLF.boks(); ut.vegboks = b && b.map(v => Math.round(v - L.x)); krev(b && b[2] - b[0] < 80000, 'vegnettet på et mindre spillkart: ikke bare området: ' + JSON.stringify(ut.vegboks)); }
+        finally { window.SPILLOMRÅDE = O0; VEG_TLF.test = t0; } }
+      if (typeof flisGlatt === 'function') { const c = document.createElement('canvas'); c.width = c.height = 256; const t = { c }, gl = flisGlatt(t); krev(gl && gl.width === 512 && GLATT.fra <= 2, 'den grove reserveflisen glattes ikke'); if (t.glatt) { const i = GLATT.liste.indexOf(t); if (i >= 0) GLATT.liste.splice(i, 1); t.glatt = null; } }
     } catch (e) { ut.feil.push('kastet: ' + e.message); }
     finally { for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } VIS.taake = taake0; valgt = valgt0; tid = tid0; frø = frø0; KartLys.test = kl0; Object.assign(kam, kam0); skitten = true; }
     return ut; });

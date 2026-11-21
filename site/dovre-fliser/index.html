@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=9db5fa55e5"></script>
+<script src="/dovre-fliser/kartflis.js?v=6d62bc704e"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40906e9c5e');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=262f49f7b1');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -3442,10 +3442,10 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=359dbf82e9"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=e447bd612c"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c4be8fd592"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=7741ba3c2a"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=a8c748ba7f"></script>
 <script src="/dovre-fliser/spill/penger-visning.js?v=972e080c76"></script>
@@ -3499,7 +3499,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leir.js?v=37d18cc005"></script>
 <script src="/dovre-fliser/spill/folk.js?v=bddbdb57be"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=67c4362cf6"></script>
-<script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
+<script src="/dovre-fliser/spill/leirvalg.js?v=a4e95aa4c1"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
@@ -3507,11 +3507,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folk-visning.js?v=2fdfe3c742"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=f53f5d59f9"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=fc1f096ea4"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=97091deae3"></script>
-<script src="/dovre-fliser/spill/byggevisning.js?v=3343bf6c80"></script>
-<script src="/dovre-fliser/spill/leir2d.js?v=40dfc0dea8"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=832522dbc2"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=a70a22480a"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=20629545e4"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
@@ -3549,7 +3549,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dagbok.js?v=b729e20876"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=27e2d7fd1e"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=88b80209aa"></script>
-<script src="/dovre-fliser/spill/spillet-visning.js?v=81d8373269"></script>
+<script src="/dovre-fliser/spill/spillet-visning.js?v=9aa427d6e0"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=51ef9105a2"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
@@ -3605,7 +3605,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=952462e96e"></script>
 <script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
-<script src="/dovre-fliser/spill/kartlapper.js?v=b52043fd77"></script>
+<script src="/dovre-fliser/spill/kartlapper.js?v=ef4a997785"></script>
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=5532e70297"></script>

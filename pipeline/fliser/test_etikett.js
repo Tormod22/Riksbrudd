@@ -62,4 +62,17 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
 { const K = E.kartFont; ok(/Cormorant/.test(K('11px sans-serif')) && /^600 12\.6px/.test(K('11px sans-serif')), '«11px sans-serif» blir kartets skrift: ' + K('11px sans-serif'));
   ok(/^bold 15px .*Cormorant/.test(K('bold 13px sans-serif')) && /^italic 600 /.test(K('italic 12px Arial')), 'fet og kursiv beholdes: ' + K('bold 13px sans-serif') + ' / ' + K('italic 12px Arial'));
   ok(K('600 13px "Cormorant Garamond", serif') === '600 13px "Cormorant Garamond", serif' && K('12px Georgia, serif') === '12px Georgia, serif', 'skrifter med seriffer røres ikke'); }
+// (runde 13, kritikk G) lag og kjøretøy ved leiren blir én lapp «Leiren: 3 lag, 1 kjøretøy ›»; fiender, det valgte og ting langt unna røres ikke
+{ const hvem = t => (/^Lag/.test(t) ? 'lag' : /^Bil/.test(t) ? 'kjøretøy' : null), S = { x: 400, y: 300, hvem };
+  const L = [['Lag 1', 400, 284], ['Lag 2', 420, 290], ['Kari (deg)', 0, 0], ['Lag 3', 390, 270], ['Bil 1', 380, 300], ['Lag fjern', 700, 284], ['Røvere', 405, 284]].map(([t, x, y], i) => ({ t, x, y, w: 60, h: 15, retning: -1, prio: /Røvere/.test(t) ? 6 : 3, nr: i }));
+  const r = E.samle(L, S); ok(r && r.n.lag === 3 && r.n.kjøretøy === 1 && r.inne.every(q => q.samlet) && !L.find(q => q.t === 'Lag fjern').samlet && !L.find(q => q.t === 'Røvere').samlet,
+    'samle: tre lag og ett kjøretøy ved leiren, ikke laget langt unna eller fienden: ' + (r && JSON.stringify(r.n)));
+  ok(E.samleTekst(r.n) === 'Leiren: 3 lag, 1 kjøretøy ›' && E.samleTekst({ lag: 2, kjøretøy: 0 }) === 'Leiren: 2 lag ›', 'teksten: ' + E.samleTekst(r.n));
+  ok(E.samle(L.slice(0, 1), S) === null && E.samle(L, null) === null, 'ett lag alene eller uten leir: ingen samling');
+  // i en ramme: navnene ved leiren tegnes ikke, samlelappen står, og ingenting ligger oppå hverandre
+  const tegnet = [], g = { font: '600 13px serif', textAlign: 'center', textBaseline: 'alphabetic', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000', lineWidth: 1,
+    measureText: t => ({ width: t.length * 7 }), fillText(t, x, y) { tegnet.push(t); }, strokeText() {}, save() {}, restore() {} };
+  E.nullstill(); E.samleSted(S); for (const q of L) { const y = E.tekst(g, q.t, q.x, q.y, -1, q.prio); g.fillText(q.t, q.x, y); } E.tegnAlle(g);
+  const tekst = tegnet.join(''); ok(/Leiren: 3 lag, 1 kjøretøy/.test(tekst) && !/Lag 1/.test(tekst) && /Røvere/.test(tekst) && /Lag fjern/.test(tekst) && E.overlapp() === 0 && E.samling() && E.samling().n.alle === 4,
+    'i rammen: én samlelapp, fienden og laget langt unna står, ingen overlapp (' + E.tegnet().map(n => n.t).join(' | ') + ')'); }
 process.exit(feil ? 1 : 0);
