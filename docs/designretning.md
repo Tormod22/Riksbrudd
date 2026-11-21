@@ -22,12 +22,16 @@ Besluttet: spillet foregår på **2020-tallet** uten faste årstall. Kartet er f
 - `#b0443a` Ravnsund
 - `#5f8a45` Mosevakt
 
-## Merker (logoforslag)
+## Merker (logoforslag, versjon 2 – «enda mer moderne», 21. nov)
 
-Forslagene er laget som SVG i `scratchpad/pitch/logoer.py` og vist i pitchen og planen (PDF, 21. nov):
-- **Riksbrudd:** moderne merke (R i Fell med sprekk, hjørnemarkører) til knapper og app-ikon. Den klassiske logoen beholdes på forsiden.
-- **Ravnsund Sikkerhet (rød):** ravnehode i sekskant.
-- **Mosevakt Feltoperasjoner (grønn):** gran i sirkel.
-- **Ditt selskap (blå):** skjold med flagget fra flaggskaperen.
+Flate merker med negativt rom på et rutenett på 100, ett symbol og én farge, så de kan leses i 16 px. Hvert merke finnes som
+merke (symbolet) og som app-ikon (symbolet på en avrundet flate i selskapets farge). Ordmerkene: navnet i Inter halvfet med
+sperring, undernavn i JetBrains Mono, mottoet i IM Fell kursiv (den gammeldagse aksenten). SVG-ene ligger i scratchpad/pitch/logoer.py
+og vises i pitchen (side «Merkene») og planen (kapittel 9). Claudes forslag – brukeren har ikke bestemt dem.
+- **Riksbrudd:** geometrisk R skåret på skrå (nedre del har sunket), ordmerket RIKS/BRUDD. Den klassiske logoen med fjellene beholdes på forsiden.
+- **Ravnsund Sikkerhet (rød):** sittende ravn i én flate med tungt nebb og kilehale; to streker under er sundet. Motto «Først fram.»
+- **Mosevakt Feltoperasjoner (grønn):** gran i tre lag i et sikte (ring med fire åpninger og trådkors). Motto «Vi venter.»
+- **Ditt selskap (blå):** spilleren velger form (skjold, sekskant, sirkel, kvadrat), symbol og farge.
+- **Merkesett:** kontrakt, rykte, i rute, fare, uten radio, betaling, lag, drone – samme strek på 24-rutenett.
 
-Ikke tatt inn i spillet ennå. Utviklingen står på vent til brukeren har sett planen. Skriftene Inter og JetBrains Mono (OFL) må i så fall legges i `site/fonter/`.
+Ikke tatt inn i spillet ennå. Skriftene Inter og JetBrains Mono (OFL) må i så fall legges i `site/fonter/`.
