@@ -706,7 +706,12 @@ function infraPunkt3(o) {
 }
 // (runde 12, kritikken: «stedsnavnet henger i lufta midt i synsfeltet» når du går) – til fots og i bilen: navn og merker bare langt
 // unna (NAVN_GÅ.min meter), aldri i midten av bildet (andel av bredden/høyden fra midten), og tettstedsnavnene mindre. Claudes forslag:
-const NAVN_GÅ = { min: 600, bredde: .24, høyde: .3, font: 'italic 12px "IM Fell English",serif', farge: 'rgba(231,220,195,.78)' };
+const NAVN_GÅ = { min: 600, bredde: .24, høyde: .3, font: 'italic 12px "IM Fell English",serif', farge: 'rgba(231,220,195,.78)', løft: 20, toppMin: 112 };
+// (runde 13, sjekket ved Vikeså på /rogaland: så du rett mot tettstedet 1,2 km unna, forsvant navnet – det lå i midten av bildet, og
+// ellers skjulte en kolle midt imellom punktet 1,5 m over bakken). Nå til fots: navnet med avstanden («Vikeså · 1,2 km»), regnet fra
+// et punkt NAVN_GÅ.løft m over tettstedet, og ligger det i midten av bildet, står det øverst (under kompasset, minst toppMin punkter
+// ned) i stedet for midt i synsfeltet. Claudes forslag.
+const avstTekst = d => (d < 1000 ? Math.round(d / 50) * 50 + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km');
 function tegnInfra3d(g) {
   const u = R3.ut; if (!INFRA || !VIS.infra || !u || !u.infra) return;
   const etiketter = [], fonter = 'italic 12px "Cormorant Garamond",serif';
@@ -716,9 +721,10 @@ function tegnInfra3d(g) {
     if (o.lag === 'felt' || o.lag === 'ror' || o.lag === 'ferje' || o.lag === 'dam') continue;
     if (gå && Math.hypot(X - kx, Y - ky) < NAVN_GÅ.min) continue;
     const m = mPer3(X, Y); if (!VISES[o.lag](o, m)) continue;
-    const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y); if (!q) continue; const [px, py] = q, e = o.e;
-    if (gå && Math.abs(px - VW / 2) < VW * NAVN_GÅ.bredde && Math.abs(py - VH / 2) < VH * NAVN_GÅ.høyde) continue;
-    if (gå && o.lag === 'tettsted') { etiketter.push({ x: px, y: py - 4, tekst: e.navn, prio: 3, font: NAVN_GÅ.font, farge: NAVN_GÅ.farge }); continue; }
+    const q = o.lag === 'bru' ? brupunkt3(o, X, Y) : proj3(X, Y, gå && o.lag === 'tettsted' ? NAVN_GÅ.løft : 1.5); if (!q) continue; const [px, py] = q, e = o.e;
+    const iMidten = gå && Math.abs(px - VW / 2) < VW * NAVN_GÅ.bredde && Math.abs(py - VH / 2) < VH * NAVN_GÅ.høyde;
+    if (gå && o.lag === 'tettsted') { etiketter.push({ x: px, y: iMidten ? Math.max(VH * (.5 - NAVN_GÅ.høyde), NAVN_GÅ.toppMin) : py - 4, tekst: e.navn + ' · ' + avstTekst(Math.hypot(X - kx, Y - ky)), prio: 3, font: NAVN_GÅ.font, farge: NAVN_GÅ.farge }); continue; }
+    if (iMidten) continue;
     if (o.lag === 'kraft') { const r = symKraft(g, px, py, o); if ((e.mw || 0) >= 50 || m < 40) etiketter.push({ x: px, y: py - r - 6, tekst: e.navn, prio: 6, font: fonter, farge: '#b9d3ea' }); }
     else if (o.lag === 'olje') { const r = symOlje(g, px, py, o); if (e.type !== 1) etiketter.push({ x: px, y: py - r - 6, tekst: e.navn, prio: 2, font: fonter, farge: '#f0d79a' }); }
     else if (o.lag === 'ferjekai') { symKai(g, px, py); if (m < 40) etiketter.push({ x: px, y: py - 10, tekst: e.navn, prio: 7, font: fonter, farge: '#a9c6df' }); }
@@ -3095,11 +3101,12 @@ function bak3d() {   // tåke + siktfelt i tåkebildet (se TAAKE_U) – kartbild
     for (const f of KROKER.siktlys) f(g, X0, Y1, mpp); }
   R3.tåkeTex.needsUpdate = true; R3.bakt = (R3.bakt || 0) + 1;
 }
-function proj3(X, Y) {
+// løft = høyden over bakken (m) – (runde 13) tettstedsnavn når du går: 20 m over husene, så en liten kolle midt imellom ikke skjuler dem
+function proj3(X, Y, løft = 1.5) {
   const u = R3.ut; if (Math.abs(X - u.cx) > u.S || Math.abs(Y - u.cy) > u.S) return null;   // utenfor utsnittet
   // inne i et hus (spill/interior3d.js) vises ingen navn og merker fra kartet – de sto tvers gjennom veggene
   if (R3.fot && window.Interior3d && Interior3d.inne(R3.bane.x, R3.bane.y)) return null;
-  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + 1.5);
+  const v = new THREE.Vector3(X - u.cx, Y - u.cy, (hoyde3d(X, Y) - u.h0) * R3.EX + løft);
   // (projisert først, se brupunkt3 – samme svar, men siktlinjene regnes bare for punkter foran kameraet)
   const p = projFørst(v); if (!p) return null;
   if (bakÅs(v) || bakHus(v)) return null;
@@ -3246,7 +3253,7 @@ function start3d() {
   for (const e of ENHETER) if (e.side === 'blå' && levende(e)) { const d = Math.hypot(e.x - kam.x, e.y - kam.y); if (d < bd) { bd = d; best = e; } }
   return best ? { x: best.x, y: best.y, navn: best.navn } : null;
 }
-let slå3dNr = 0;
+let slå3dNr = 0, startBlikkBrukt = false;
 async function slå3d(på) {
   const knapp = document.getElementById('v3d'), mitt = ++slå3dNr;
   if (på) {
@@ -3257,15 +3264,18 @@ async function slå3d(på) {
     // kartet står til 3D er klart (brukeren 15. nov på iPhone: bare en svart skjerm mens 3D ble bygget) – se visLag3d og framdrift
     // (utsnittet bygges alltid på nytt når 3D slås på – se under – så kartet står til det er klart)
     visLag3d(false); framdrift('starter', 0);
-    const tStart = performance.now(), mål = start3d(), S = utsnittS(mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
-    R3.bane = { x: 0, y: 0, avst: mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
+    // (runde 13) første 3D-bilde i økta: leiren på nært hold når den er midt i kartet (Kvalitet.startBlikk) – ikke i testene (webdriver)
+    const mål0 = start3d(), sp0 = window.OppstartSpill && OppstartSpill.tilstand(), sb = !startBlikkBrukt && (!navigator.webdriver || window.STARTBLIKK_TEST) && window.Kvalitet && Kvalitet.startBlikk ? Kvalitet.startBlikk({ x: kam.x, y: kam.y, m: kam.m, VW, VH, leir: sp0 && sp0.leir, mål: mål0, først: true }) : null;
+    if (sb) startBlikkBrukt = true;
+    const tStart = performance.now(), mål = sb ? { x: sb.x, y: sb.y, navn: 'leiren' } : mål0, S = utsnittS(sb ? sb.utsnitt : mål ? 1300 : kam.m * Math.max(VW, VH) * .6);
+    R3.bane = { x: 0, y: 0, avst: sb ? sb.avst : mål ? 1300 : Math.max(300, Math.min(9000, kam.m * VH * 1.1)), yaw: 0, pitch: .75 };
     if (R3.ut) { frigjørTerreng(R3); R3.ut = null; }
     R3.byggFeil = 0; framdrift('starter', 0);
     // bakkens skyggeprogram lages mens byggingen venter på kartdata (se forvarmBakke)
     setTimeout(() => forvarmBakke(R3), 30);
     logg('Bygger 3D …'); await nytt3dUtsnitt(mål ? mål.x : kam.x, mål ? mål.y : kam.y, S);
     framdrift(null); if (på3d && R3.ut) logg(`3D klart på ${((performance.now() - tStart) / 1000).toFixed(1).replace('.', ',')} s.`);
-    if (på3d && R3.ut) logg((mål ? `3D åpnet ved ${mål.navn} – zoom inn i kartet først for å åpne 3D et annet sted. ` : '3D: ') + 'Dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
+    if (på3d && R3.ut) logg((sb && !mål0 ? '3D åpnet nær leiren – rull/knip for å se lenger ut. ' : mål ? `3D åpnet ved ${mål.navn} – zoom inn i kartet først for å åpne 3D et annet sted. ` : '3D: ') + 'Dra for å flytte, høyreklikk/Shift eller to fingre for å vri, rull/knip for å zoome.');
   } else {
     if (R3 && R3.ut) { const b = R3.bane; kam.x = R3.ut.cx + b.x; kam.y = R3.ut.cy + b.y; kam.m = Math.max(.1, Math.min(60, b.avst / (VH * 1.1))); }
     på3d = false; knapp.classList.remove('på'); knapp.setAttribute('aria-pressed', 'false'); skjulMelding('3d'); if (R3) R3.neste = null;
