@@ -29,6 +29,8 @@
   const TØY = [[.36, .42, .54], [.56, .32, .3], [.42, .48, .36], [.62, .56, .46], [.3, .33, .38], [.68, .5, .32], [.5, .4, .52], [.75, .7, .62]];
   const PARKETT = [[.82, .64, .44], [.64, .46, .3], [.88, .76, .58], [.52, .37, .25]];
   const MALING = [[.94, .91, .85], [.86, .9, .86], [.92, .87, .8], [.85, .88, .92], [.93, .89, .8], [.9, .85, .83], [.88, .9, .84]];
+  // pakkefarger i butikkreolene (sterke, som på ekte hyller)
+  const VARER = [[.86, .12, .1], [.95, .78, .12], [.15, .35, .75], [.96, .96, .94], [.2, .6, .25], [.92, .45, .1], [.55, .2, .5], [.85, .82, .6], [.1, .1, .12], [.3, .65, .85]];
   const UTEN_VINDU = { låve: 1, uthus: 1, lager: 1, hangar: 1 };
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
 
@@ -172,11 +174,15 @@
         k(-b, b, d, d + .07, .84, .86, LYST_TRE, 'tre'); k(-b * .6, -b * .1, d, d + .004, 1.5, 1.52, [.8, .85, .8]); k(-b * .5, b * .3, d, d + .004, 1.3, 1.32, [.8, .85, .8]); break;
       case 'reol': case 'pallereol': { const reol = m.type === 'reol', c = reol ? [.92, .92, .9] : [.88, .46, .1], st = reol ? GRÅ : [.14, .3, .62];
         for (const sx of [-1, 1]) for (const sy of [-1, 1]) k(sx * b - (sx > 0 ? .06 : 0), sx * b + (sx > 0 ? 0 : .06), sy * d - (sy > 0 ? .06 : 0), sy * d + (sy > 0 ? 0 : .06), 0, h, st);
-        const dz = reol ? .42 : 1.3; for (let z = reol ? .12 : .1, n = 0; z < h - .2; z += dz, n++) { k(-b, b, -d, d, z, z + .05, c);
-          const hv = Math.min(dz - .12, reol ? .28 : .95), w = reol ? .2 : 1.1, steg = reol ? .22 : 1.3;
-          for (let x = -b + .08, j = 0; x < b - w; x += steg, j++) if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 6) { const hh = hv * (.6 + ((j + n) % 3) * .2);
-            if (reol) for (const y of [-d + .05, .03]) k(x, x + w - .02, y, y + d - .08, z + .05, z + .05 + hh, TØY[(j * 3 + n * 5 + (y > 0 ? 2 : 0)) % TØY.length]);
-            else { t(x, x + w, -d + .06, d - .06, z + .05, z + .17, LYST_TRE); k(x + .05, x + w - .05, -d + .1, d - .1, z + .17, z + .17 + hh, [.72, .58, .4], 'tøy'); } } } break; }
+        // (runde 15, sammenlignet med bilder fra norske butikker: tette hyller med sterke pakkefarger, hvit bakplate, prislist i hyllekanten)
+        if (reol) k(-b + .06, b - .06, -.015, .015, 0, h, [.94, .94, .92]);
+        const dz = reol ? .33 : 1.3; for (let z = reol ? .12 : .1, n = 0; z < h - .2; z += dz, n++) { k(-b, b, -d, d, z, z + .04, c); if (reol) for (const sy of [-1, 1]) k(-b, b, sy * d - .012, sy * d + .012, z - .03, z + .04, [.18, .2, .24]);
+          // varene i grupper (en vare i 2–4 fjes side om side = én kloss), så en reol ikke blir mange tusen trekanter
+          const hv = Math.min(dz - .1, reol ? .25 : .95), w0 = reol ? .145 : 1.1;
+          for (let x = -b + .08, j = 0; x < b - .1; j++) { const w = reol ? w0 * (2 + (j * 5 + n * 3 + Math.floor(m.f * 7)) % 3) : w0, steg = reol ? w + .015 : 1.3; if (x + w > b - .05) break; const hh = hv * (.6 + ((j + n) % 3) * .2);
+            if (reol) { if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 9) for (const y of [-d + .04, .02]) k(x, x + w, y, y + d - .06, z + .04, z + .04 + hh, VARER[(j * 3 + n * 5 + Math.floor(m.f * 13) + (y > 0 ? 4 : 0)) % VARER.length]); }
+            else if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 6) { t(x, x + w, -d + .06, d - .06, z + .05, z + .17, LYST_TRE); k(x + .05, x + w - .05, -d + .1, d - .1, z + .17, z + .17 + hh, [.72, .58, .4], 'tøy'); }
+            x += steg; } } break; }
       case 'kasse': k(-b, b, -d, d, 0, h - .1, [.34, .36, .4]); k(-b, b * .45, -d + .08, d - .08, h - .1, h - .08, MØRK); k(-b, b, -d - .01, d + .01, h - .1, h - .06, STÅL); k(b * .55, b * .95, -.16, .16, h - .06, h + .28, [.1, .1, .12]);
         k(b * .57, b * .93, -.14, -.135, h - .02, h + .25, [.2, .3, .4]); k(b * .2, b * .45, .1, .3, h - .06, h + .06, [.2, .2, .22]); break;
       case 'kjøledisk': k(-b, b, -d, d, 0, .7, HVIT); k(-b, b, -d, -d + .08, .7, h, HVIT); k(-b, b, -d, d, h - .05, h, HVIT); k(-b + .04, b - .04, -d + .08, d - .04, .7, .78, [.8, .9, .94]);
