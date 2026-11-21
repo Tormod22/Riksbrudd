@@ -3,7 +3,7 @@
 // utsnitt på Dovre, og natt/regn i 2D (spill/kartlys.js). Tegner 2D-kartet direkte med tegn() i samme synkrone blokk (3D kan være på –
 // da tegnes bare det skjulte 2D-lerretet), og setter alt tilbake: kameraet, tida, tåka, lagene og krigskartet.
 module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krigskartet, natt og regn i 2D, én skrift, leiren som klynge langt ute, samlelapp ved leiren, synlig brakke, høydekurver, leirvalg, vegnett, glatt reserve)', kjør: async (pg, profil) => {
-  const d = await pg.evaluate(() => {
+  const d = await pg.evaluate(async () => {
     const ut = { feil: [] }, krev = (ok, t) => { if (!ok) ut.feil.push(t); };
     if (!window.Etikett || !Etikett.tegnAlle || !window.KartLapper || !window.KartLys) return { feil: ['Etikett/KartLapper/KartLys mangler'] };
     const S = OppstartSpill.tilstand(); if (!S || !S.leir) return { feil: ['ingen leir'] };
@@ -93,7 +93,29 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
       if (window.VEG_TLF && VEG_TLF.område) { const O0 = window.SPILLOMRÅDE, t0 = VEG_TLF.test; window.SPILLOMRÅDE = { navn: 'Prøve', bb: [L.x - 5000, L.y - 5000, L.x + 5000, L.y + 5000] }; VEG_TLF.test = true;
         try { const b = VEG_TLF.boks(); ut.vegboks = b && b.map(v => Math.round(v - L.x)); krev(b && b[2] - b[0] < 80000, 'vegnettet på et mindre spillkart: ikke bare området: ' + JSON.stringify(ut.vegboks)); }
         finally { window.SPILLOMRÅDE = O0; VEG_TLF.test = t0; } }
-      if (typeof flisGlatt === 'function') { const c = document.createElement('canvas'); c.width = c.height = 256; const t = { c }, gl = flisGlatt(t); krev(gl && gl.width === 512 && GLATT.fra <= 2, 'den grove reserveflisen glattes ikke'); if (t.glatt) { const i = GLATT.liste.indexOf(t); if (i >= 0) GLATT.liste.splice(i, 1); t.glatt = null; } }
+      // 9) RUNDE 14 (kritikk I/J): (a) samlelappen teller ikke karakteren som et lag og sier hvor mange lag som er ute; (b) en kai oppkalt
+      //    etter et fartøy heter stedsnavnet; (c) reserver fra forskjellige nivåer får et felles underlag (ingen rette skjøter)
+      if (KartLapper.telling) { const deg = ENHETER.find(e => e.karakter && e.side === 'blå'), flytt = deg && [deg.x, deg.y];
+        const a = nyttLag('Telling A', L.x + 30, L.y, 'blå'), b = nyttLag('Telling B', L.x + 3000, L.y, 'blå'); ENHETER.push(a, b); nye.push(a, b); if (deg) { deg.x = L.x - 20; deg.y = L.y; }
+        try { const n = KartLapper.telling(), n0 = { ...n }; ut.telling = n0; const t = Etikett.samleTekst(n);
+          const inne = ENHETER.filter(e => e.side === 'blå' && levende(e) && !e.karakter && Math.hypot(e.x - L.x, e.y - L.y) <= 300).length;
+          a.x = L.x + 3000; const n2 = KartLapper.telling(); ut.telling2 = n2;
+          krev(n2.lag === n0.lag - 1 && n2.ute === n0.ute + 1, 'samlelappen: et lag som går ut av leiren, telles ikke som ute: ' + JSON.stringify([n0, n2]));
+          krev(!deg || (n0.deg === 1 && / \+ deg|deg og|Leiren: deg/.test(t)), 'samlelappen: karakteren står ikke som «deg»: ' + t);
+          krev(n0.ute >= 1 && /lag ute/.test(t), 'samlelappen: lag ute nevnes ikke: ' + t);
+          krev(inne === n0.lag, 'samlelappen: tallet er ikke lagene innen 300 m uten karakteren: ' + JSON.stringify(n0)); }
+        finally { if (deg) { deg.x = flytt[0]; deg.y = flytt[1]; } } }
+      if (window.Kaier && Kaier.stedsnavn) { const k = Kaier.stedsnavn('M/K Ørsdølen II, Odlandstø'); ut.kai = k; krev(k === 'Odlandstø', 'kaien heter fortsatt fartøyet: ' + k); }
+      if (typeof tegnFliser === 'function' && typeof FERDIG !== 'undefined') { const kam1 = { ...kam }, g0 = FERDIG.get, h0 = FERDIG.has, kø0 = window.kø; let z0 = null;
+        try { kam.x = L.x; kam.y = L.y; kam.m = 20; z0 = niva();
+          for (let i = 0; i < 32; i++) { skitten = true; tegn(); if (!FLISLAST.sist.reserve && !FLISLAST.sist.mangler) break; await new Promise(r => setTimeout(r, 250)); }
+          // skjul halvparten av rutene på nivå z0 (sjakkmønster) og alt finere, og zoom tre nivåer inn uten å laste: reserver fra to nivåer
+          const skjult = k => { const [a, x, y] = k.split('/').map(Number); return a > z0 || (a === z0 && (x + y) % 2 === 1); };
+          FERDIG.get = function (k) { return skjult(k) ? undefined : g0.call(this, k); }; FERDIG.has = function (k) { return skjult(k) ? false : h0.call(this, k); }; window.kø = () => {};
+          kam.m = 20 / 8; skitten = true; tegn(); ut.skjøt = { ...FLISLAST.sist };
+          krev(FLISLAST.sist.nivåer < 2 || FLISLAST.sist.underlag > 0, 'reserver fra flere nivåer uten felles underlag (rette skjøter): ' + JSON.stringify(ut.skjøt)); }
+        finally { delete FERDIG.get; delete FERDIG.has; window.kø = kø0; Object.assign(kam, kam1); skitten = true; } }
+      if (typeof flisGlatt === 'function') { const c = document.createElement('canvas'); c.width = c.height = 256; const t = { c }, gl = flisGlatt(t); krev(gl && gl.width === 512 && GLATT.fra <= 1, 'den grove reserveflisen glattes ikke (også nivået rett over)'); if (t.glatt) { const i = GLATT.liste.indexOf(t); if (i >= 0) GLATT.liste.splice(i, 1); t.glatt = null; } }
     } catch (e) { ut.feil.push('kastet: ' + e.message); }
     finally { for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } VIS.taake = taake0; valgt = valgt0; tid = tid0; frø = frø0; KartLys.test = kl0; Object.assign(kam, kam0); skitten = true; }
     return ut; });

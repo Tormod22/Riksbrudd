@@ -387,7 +387,7 @@ function tegnFliser(z, s, px, liste, vx0, vy1) {
   const verre = (x, y, q) => { const v = kval.get(x + ',' + y); return v !== undefined && v > q; };
   const siderMot = (x, y, q) => { const ut = []; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (synlig.has((x + dx) + ',' + (y + dy)) && verre(x + dx, y + dy, q)) ut.push([dx, dy]); return ut; };
   // (2) felles underlag fra nivå D under alle ruter som ikke er ferdige og helt dekket (bare når reservene kommer fra flere nivåer)
-  const underlag = D > 0 && (nivåer.size > 1 || [...kval.values()].some(v => v === 0 || v === Infinity));
+  const underlag = FLISLAST.felles !== false && D > 0 && (nivåer.size > 1 || [...kval.values()].some(v => v === 0 || v === Infinity));
   if (underlag) for (const [x, y] of liste) { const q = kval.get(x + ',' + y), t = q === 0 ? FERDIG.get(z + '/' + x + '/' + y) : null;
     if (t && !t.gml && !(t.inn && nå - t.inn < FLISLAST.inn) && !siderMot(x, y, 0).length) continue;
     const r = flisReserve(z, x, y, D); if (!r) continue; const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m;
