@@ -26,4 +26,5 @@ console.log('ok   forsvar-kamp: én kamp per ildkamp, navn, fiende, sted og års
     A.ok(v2.n * m2 > n1 * m1, `bølge 2 (${v2.n} × ${m2}) mot bølge 1 (${n1} × ${m1}) med ${sold} soldater`); A.ok(v2.n >= 2, 'to kanter'); }
   A.strictEqual(KV.bølgeLag(2, 1, { soldater: 4, faktor: .6 }).n, 1, 'Lett som før');
   A.strictEqual(KV.bølgeLag(2, 1, { soldater: 2, faktor: 1 }).n, 1, 'for få soldater: som før');
-  console.log('ok   forsvar-kamp (runde 14): bølge 2 er større enn bølge 1'); }
+  A.strictEqual(KV.andreTekst('Folkefronten', 'Kystalliansen', 'ved Vikeså'), 'Folkefronten og Kystalliansen sloss ved Vikeså.'); A.ok(!/fienden/.test(KV.andreTekst('A', 'B', '')));
+  console.log('ok   forsvar-kamp (runde 14): bølge 2 er større enn bølge 1, andre siders kamper'); }

@@ -76,7 +76,10 @@
     if (nr >= B.fra && f >= B.faktor && (o.soldater || 0) >= B.soldater && n < B.lag) return { n: B.lag, tvunget: true }; return { n, tvunget: false }; }
   // mann per lag når bølgen er gjort større: én = Trussel.menn for ett lag
   const bølgeMenn = (én, n, B = BØLGE) => Math.max(B.minst, Math.ceil((én + B.ekstra) / Math.max(1, n)));
-  const api = { REGLER, BØLGE, bølgeLag, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
+  // (runde 14, kritiker J: «Folkefrontens lastebil er under ild fra fienden» om en kamp mellom motstanderne) – andre siders kamper:
+  // «Folkefronten og Kystalliansen sloss ved Vikeså.» (aldri «fienden»). a, b = navnene på sidene, sted = stedTekst
+  const andreTekst = (a, b, sted) => `${a} og ${b} sloss${sted ? ' ' + sted : ''}.`;
+  const api = { REGLER, BØLGE, bølgeLag, bølgeMenn, andreTekst, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.KampVarsel = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -211,6 +214,9 @@
       e.x = x; e.y = y; e.fra = { x, y }; e.sti = null; const p = ordre(e, L.x + (Math.random() - .5) * 80, L.y + (Math.random() - .5) * 80, true); if (p && p.catch) p.catch(() => {});
       if (flyttet.size > 60) flyttet.delete(flyttet.values().next().value); } });
 
-  rot.KampSpill = { test: false, kamper: () => [...kamper].map(([s, K]) => ({ lag: s.navn, ...K })), ferdige: () => ferdige.slice(), sjekk, stedFor, fiendeFor,
+  // navnet på en side i loggen: fraksjonen, «røverne» for røverlag
+  const sideNavn = (side, lag) => (lag && lag.raid ? 'røverne' : rot.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'en annen gruppe');
+  const andre = (a, b, x, y) => { const t = KV.andreTekst(sideNavn(a.side, a), sideNavn(b.side, b), KV.stedTekst(stedFor(x, y))); return t.charAt(0).toUpperCase() + t.slice(1); };
+  rot.KampSpill = { test: false, andre, sideNavn, kamper: () => [...kamper].map(([s, K]) => ({ lag: s.navn, ...K })), ferdige: () => ferdige.slice(), sjekk, stedFor, fiendeFor,
     nullstill: () => { kamper.clear(); ferdige.length = 0; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
