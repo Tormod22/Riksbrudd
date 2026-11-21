@@ -227,7 +227,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (!d.tekst) return; let type = F.HENDELSER[d.type] ? d.type : 'annet';
     // (runde 8) natur nær leiren stopper som «annet» (verden-visning.js kan sende x og y med)
     if (type === 'natur' && typeof d.x === 'number' && typeof d.y === 'number') { const S = rot.OppstartSpill && OppstartSpill.tilstand(); if (S && S.leir && Math.hypot(d.x - S.leir.x, d.y - S.leir.y) < R.naturNær) type = 'annet'; }
-    const h = { type, tekst: String(d.tekst).slice(0, 120) }; if (Number.isFinite(d.x) && Number.isFinite(d.y)) { h.x = d.x; h.y = d.y; }
+    const h = { type, tekst: String(d.tekst).slice(0, 200) }; if (Number.isFinite(d.x) && Number.isFinite(d.y)) { h.x = d.x; h.y = d.y; }
     innboks.push(h); if (innboks.length > 6) innboks.shift(); });
   window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);

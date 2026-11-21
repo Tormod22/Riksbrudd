@@ -15,7 +15,8 @@
   // Claudes forslag: lagre hvert femte sekund (som lagring.js), og les ikke et angrep som er eldre enn to spilldøgn – eller lagret mer
   // enn to spilltimer «etter» klokka (verden lagres også hvert femte sekund, og i 600× går det 50 spillminutter på fem sekunder;
   // er klokka langt bak, er det et nytt spill på samme sted)
-  const REGLER = { hverMs: 5000, maksAlder: 2 * 1440, framtid: 120 };
+  // (runde 13) nesteMaks: en lagret tid for neste bølge lenger fram enn dette (spillminutter) brukes ikke; nesteSnart: en passert tid gir bølgen om så mange spillminutter
+  const REGLER = { hverMs: 5000, maksAlder: 2 * 1440, framtid: 120, nesteMaks: 3 * 1440, nesteSnart: 20 };
   // det angrepet trenger ut over det Lagring.pakkLag tar med
   function pakkEn(e) {
     const d = LB.pakkLag(e);
@@ -37,12 +38,24 @@
   // o: { aktiv (bølgen som pågår, 0 = ingen), tid, lag: [røverlagene – også de som går bort fra en bølge som er over],
   //      egne: [egne lag i forsvar – stridsreglene de hadde før forsvaret (stridFør) og plassen (forsvar), som lagring.js ikke tar med] }
   function pakk(o) {
-    return { versjon: VERSJON, aktiv: Math.max(0, Math.round(tall(o.aktiv, 0))), tid: Math.max(0, Math.round(tall(o.tid, 0))), satt: !!o.satt,
+    const ut = { versjon: VERSJON, aktiv: Math.max(0, Math.round(tall(o.aktiv, 0))), tid: Math.max(0, Math.round(tall(o.tid, 0))), satt: !!o.satt,
       lag: (o.lag || []).filter(e => e && e.navn && Array.isArray(e.menn) && Number.isFinite(e.x) && Number.isFinite(e.y)).map(pakkEn),
       egne: (o.egne || []).filter(s => s && s.navn && (s.stridFør || s.forsvar)).map(s => Object.assign({ navn: s.navn },
         s.stridFør && typeof s.stridFør === 'object' ? { stridFør: { ...s.stridFør } } : {},
         s.forsvar && Number.isFinite(s.forsvar.x) && Number.isFinite(s.forsvar.y) ? { forsvar: { ...s.forsvar, x: r1(s.forsvar.x), y: r1(s.forsvar.y) } } : {})) };
+    // (runde 13, kritiker G og H) anslaget i banneret (ForsvarSpill.anslagTilstand) og tida for neste bølge (SpilletSpill.T().nesteSpill)
+    if (rensAnslag(o.anslag)) ut.anslag = rensAnslag(o.anslag);
+    if (Number.isFinite(o.neste)) { ut.neste = Math.round(o.neste); ut.bølge = Math.max(0, Math.round(tall(o.bølge, 0))); }
+    return ut;
   }
+  // anslaget: { id ('r3' …), v (minutter), t (spillminuttet), minNær (meter eller null), sett }
+  function rensAnslag(a) { if (!a || typeof a.id !== 'string' || !/^[a-zæøå0-9.-]{1,40}$/i.test(a.id) || !Number.isFinite(a.v) || !Number.isFinite(a.t)) return null;
+    return { id: a.id, v: r1(Math.max(0, a.v)), t: r1(a.t), minNær: Number.isFinite(a.minNær) ? Math.round(a.minNær) : null, sett: !!a.sett }; }
+  // tida for neste bølge fra lagringen (spillminutter) – bare når ingen bølge pågår, bølgenummeret er det samme, og tida ikke er urimelig
+  // langt fram (REGLER.nesteMaks). Er den passert (klokka gikk videre i en annen fane), kommer bølgen straks (om REGLER.nesteSnart).
+  function neste(d, o = {}) { if (!d || d.versjon !== VERSJON || d.aktiv || !Number.isFinite(d.neste)) return null;
+    if (Number.isFinite(o.bølge) && Math.round(tall(d.bølge, -1)) !== o.bølge) return null; const t = tall(o.tid, NaN); if (!Number.isFinite(t)) return null;
+    if (d.neste - t > REGLER.nesteMaks) return null; return Math.max(t + REGLER.nesteSnart, d.neste); }
   // Leser lagringen for bølgen «aktiv». Ødelagt, ukjent versjon, en annen bølge, eller eldre enn REGLER.maksAlder (o.tid = klokka nå)
   // gir null. Lagene som hører til bølgen (raid === aktiv), og de som gikk bort fra en eldre bølge (raid < 0), kommer med.
   function fraJSON(t, aktiv, o = {}) {
@@ -53,7 +66,7 @@
       if (!lag.some(q => q.raid === aktiv)) return null;
       const egne = (Array.isArray(d.egne) ? d.egne : []).filter(q => q && typeof q.navn === 'string' && q.navn && (q.stridFør === undefined || (q.stridFør && typeof q.stridFør === 'object'))
         && (q.forsvar === undefined || (q.forsvar && Number.isFinite(q.forsvar.x) && Number.isFinite(q.forsvar.y))));
-      return { aktiv, tid: tall(d.tid, 0), lag, egne, satt: !!d.satt };
+      return { aktiv, tid: tall(d.tid, 0), lag, egne, satt: !!d.satt, anslag: rensAnslag(d.anslag) };
     } catch (e) { return null; }
   }
   // Setter et nytt lag (fra nyttLag) slik det ble lagret. Står stille til det får ordren på nytt (målLagret = målet for marsjen).
@@ -67,7 +80,7 @@
     if (Number.isFinite(d.startTid)) s.startTid = d.startTid; if (d.nærVært) s.nærVært = true;
     return s;
   }
-  const api = { VERSJON, REGLER, pakk, pakkEn, fraJSON, brukEn, rensBytte };
+  const api = { VERSJON, REGLER, pakk, pakkEn, fraJSON, brukEn, rensBytte, rensAnslag, neste };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.TrusselLagring = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined' || !LB) return;
@@ -84,7 +97,8 @@
     const lag = ENHETER.filter(e => e.raid && e.side !== 'blå'), egne = t.aktiv ? egneLag().filter(s => s.stridFør || s.forsvar) : [];
     // (19. nov, kritikken: «ordren Forsvar leiren huskes ikke etter omlasting») satt = forsvaret er satt (ForsvarSpill.erSatt)
     const satt = !!(t.aktiv && rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt());
-    try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, d: pakk({ aktiv: t.aktiv || 0, tid, lag, egne, satt }) })); return true; } catch (e) { return false; }
+    const anslag = t.aktiv && rot.ForsvarSpill && ForsvarSpill.anslagTilstand ? ForsvarSpill.anslagTilstand() : null, neste = !t.aktiv && Number.isFinite(t.nesteSpill) ? t.nesteSpill : null;
+    try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, d: pakk({ aktiv: t.aktiv || 0, tid, lag, egne, satt, anslag, neste, bølge: t.bølge || 0 }) })); return true; } catch (e) { return false; }
   }
   function lesLagret() { try { const o = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); return o && o.leir === leirId() ? o.d : null; } catch (e) { return null; } }
   // tilbake(aktiv, tving): legger røverlagene i bølgen «aktiv» tilbake i ENHETER. Gir antallet lag i bølgen som kom tilbake (0 = ingenting
@@ -103,6 +117,8 @@
       if (egneTilbake.length) bølgeTilbake = aktiv;
       // forsvaret var satt: banneret sier «lagene holder stillingen» igjen (og ber ikke om forsvar på nytt)
       if (d.satt && rot.ForsvarSpill && ForsvarSpill.gjenopprett) ForsvarSpill.gjenopprett(); }
+    // (runde 13) anslaget i banneret er det samme som før omlastingen
+    if (n && d.anslag && rot.ForsvarSpill && ForsvarSpill.settAnslag) ForsvarSpill.settAnslag(d.anslag);
     // ordren på nytt når kartet rundt er lastet: de som trakk seg ut eller flyktet, går samme vei ut; de andre fortsetter mot leiren
     setTimeout(() => { const S = spill(); if (!S || !S.leir) return;
       for (const s of nye) { if (!ENHETER.includes(s) || !levende(s)) continue; const m = s.målLagret; delete s.målLagret;
@@ -118,8 +134,15 @@
     if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) { egneTilbake.length = 0; return false; }
     for (const s of egneTilbake.splice(0)) { if (!ENHETER.includes(s)) continue; if (s.stridFør) { s.strid = s.stridFør; delete s.stridFør; delete s.bevSatt; } delete s.forsvar; } return true; }
   // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes
-  KROKER.sim.push(() => { etterBølgen(); const nå = performance.now(); if (nå - sist < REGLER.hverMs) return; sist = nå; lagre(); });
+  // (runde 13, kritiker H: «røverne kom aldri – varselet ble flyttet et døgn fram hver gang») start() i spillet-visning.js setter tida for
+  // neste bølge på nytt ved hver lasting. Første gang SpilletSpill er klar (før den første lagringen), holdes den lagrede tida fast.
+  let nesteHentet = '';
+  function hentNeste() { const id = leirId(), t = T(); if (!id || !t || nesteHentet === id) return null; nesteHentet = id;
+    if (navigator.webdriver && !ut.test) return null; if (t.aktiv) return null;
+    const n = neste(lesLagret(), { tid: typeof tid === 'number' ? tid : NaN, bølge: t.bølge || 0 }); if (n === null) return null;
+    t.nesteSpill = n; return n; }
+  KROKER.sim.push(() => { hentNeste(); etterBølgen(); const nå = performance.now(); if (nå - sist < REGLER.hverMs) return; sist = nå; lagre(); });
   rot.addEventListener('pagehide', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  const ut = rot.TrusselLagringSpill = { test: rot.TRUSSEL_LAGRING_TEST === true, NØKKEL, lagre, tilbake, lesLagret, etterBølgen, glem: () => { bølgeTilbake = 0; egneTilbake.length = 0; }, gjenopprettet: () => gjenopprettet };
+  const ut = rot.TrusselLagringSpill = { test: rot.TRUSSEL_LAGRING_TEST === true, NØKKEL, lagre, tilbake, lesLagret, etterBølgen, hentNeste, glemNeste: () => { nesteHentet = ''; }, glem: () => { bølgeTilbake = 0; egneTilbake.length = 0; }, gjenopprettet: () => gjenopprettet };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

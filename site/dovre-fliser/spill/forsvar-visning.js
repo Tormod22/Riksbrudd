@@ -125,7 +125,21 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (V && f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)) return 'sett fra vakttårnet';
     if (window.KameraSpill && KameraSpill.kameraer().some(c => Math.hypot(c.x - e.x, c.y - e.y) <= c.r)) return 'sett av et kamera';
     if (f.varsling && Math.hypot(e.x - L.x, e.y - L.y) < f.varsling) return 'sett av vaktene'; return ''; }
-  function vis() { const L = leir(), r = røvere(); if (!r.length) alarm.classList.remove('fjern'); if (L && !r.length && !satt && rapportNå && visRapport()) return; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
+  // ---------- (runde 13, kritiker G, 86-skapene.png) banneret skal ikke ligge oppå knappene når du går ----------
+  // Inne i låven la banneret seg over «Se i skapene», «Sikre huset» og «Gå ut» (#inneknapper står under kompasset på liggende telefon).
+  // Når du går (body.gaar): treffer banneret en synlig knapp, prøves plassene under knappene i #inneknapper og så nederst på skjermen;
+  // den første plassen uten overlapp brukes (ellers nederst). På PC står #inneknapper nederst, så banneret blir der det er.
+  const synligKnapp = b => { if (alarm.contains(b) || !b.getClientRects().length) return false; const c = getComputedStyle(b); if (c.visibility === 'hidden' || c.display === 'none' || +c.opacity === 0) return false; const r = b.getBoundingClientRect(); return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight; };
+  const overlapp = (a, r) => !(r.right <= a.left + 1 || r.left >= a.right - 1 || r.bottom <= a.top + 1 || r.top >= a.bottom - 1);
+  function plasserAlarm() { if (alarm.style.top || alarm.style.bottom) { alarm.style.top = ''; alarm.style.bottom = ''; }
+    if (!alarm.classList.contains('på') || !document.body.classList.contains('gaar') || !alarm.getClientRects().length) return null;
+    const knapper = [...document.querySelectorAll('button')].filter(synligKnapp).map(b => b.getBoundingClientRect()), treff = () => { const a = alarm.getBoundingClientRect(); return knapper.some(r => overlapp(a, r)); };
+    if (!treff()) return 'oppe';
+    const inne = [...document.querySelectorAll('#inneknapper > button')].filter(synligKnapp).map(b => b.getBoundingClientRect().bottom);
+    if (inne.length) { alarm.style.top = Math.round(Math.max(...inne) + 6) + 'px'; if (!treff()) return 'under'; }
+    alarm.style.top = 'auto'; alarm.style.bottom = 'calc(8px + env(safe-area-inset-bottom,0px))'; return 'nede'; }
+  function vis() { const svar = vis0(); plasserAlarm(); return svar; }
+  function vis0() { const L = leir(), r = røvere(); if (!r.length) alarm.classList.remove('fjern'); if (L && !r.length && !satt && rapportNå && visRapport()) return; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
     const sett2 = r.filter(e => kjent(e)), nær = sett2.length ? Math.min(...sett2.map(e => Math.hypot(e.x - L.x, e.y - L.y))) : 0, v = retningMotFienden(); let tekst, liten;
     if (!r.length) { tekst = 'Øvelse: forsvaret er satt'; liten = `mot ${FO.retning(v)}`; }
     // (runde 8, telefonkritikeren: «banneret dekker en tredel av bildet når du går selv, også når angrepet er over 3 timer unna») når du går selv
@@ -255,10 +269,21 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (satt) for (const s of ENHETER) { if (!s.forsvar || s.side !== 'blå') continue; const x = sx(s.forsvar.x), y = sy(s.forsvar.y); if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) continue; g.strokeStyle = s.forsvar.voll ? 'rgba(240,215,154,.95)' : 'rgba(150,190,235,.95)'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, 6.283); g.stroke(); g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 4, y); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.stroke(); }
     g.restore(); });
 
+  // ---------- (runde 13, kritiker H: «røverne kom aldri – varselet ble flyttet et døgn fram») NESTE BØLGE: én tid og en nedtelling ----------
+  // Tida er SpilletSpill.T().nesteSpill (spillminutter), som nå lagres og holdes fast etter omlasting (trussel-lagring.js). Med usikkerhet
+  // (Forsvar.når: «trolig i natt (ca. kl. 02–05)») og en nedtelling. Bølgen kan komme før om du spiller lenge i sanntid (spillet-visning.js).
+  function neste() { const t = T(); if (!t || t.aktiv || !Number.isFinite(t.nesteSpill)) return null; const igjen = Math.max(0, t.nesteSpill - tid);
+    return { min: igjen, når: FO.når(tid, t.nesteSpill), nedtelling: FO.nedtelling(igjen), tekst: `Røverne drar ut mot leiren ${FO.når(tid, t.nesteSpill)} – om ${FO.nedtelling(igjen)}` }; }
+  // brikke øverst til venstre (narhud.js, VARSEL_TILLEGG) med nedtellingen når neste bølge er under NESTE_BRIKKE spillminutter unna
+  // (Claudes forslag: 12 timer). Ikke i testene uten ForsvarSpill.test.
+  const NESTE_BRIKKE = 720;
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => { if (!auto()) return []; const n = neste(); if (!n || n.min > NESTE_BRIKKE) return [];
+    return [{ i: 'varsel', k: n.min <= 120 ? 'fare' : '', t: `Røverne om ${n.nedtelling}`, s: n.når.replace(/^trolig /, 'trolig '), f: () => logg(n.tekst + '.') }]; });
+  const nesteLinje = e => { const n = neste(); return n ? e('div', { klasse: 'raad', id: 'nestebolge' }, n.tekst + '.') : ''; };
   // ---------- Leir-menyen: beredskapen ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { const B = beredskap(); if (!B) return; const t = T(), neste = t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + 1) : null;
     hode.append(e('h3', { 'data-fane': 'bygg' }, 'Forsvar'));
-    const boks = e('div', { klasse: 'forsvar ' + (B.sum < 30 ? 'svak' : B.sum < 55 ? 'svak' : B.sum < 80 ? 'middels' : '') }, e('div', { klasse: 'sum' }, e('b', {}, `Beredskap ${B.sum} av 100 – ${B.ord}`), e('small', {}, t && t.aktiv ? 'angrep pågår' : neste ? `neste bølge: ${neste} røverlag` : '')), e('div', { klasse: 'strek' }, e('i', { style: `width:${B.sum}%` })));
+    const boks = e('div', { klasse: 'forsvar ' + (B.sum < 30 ? 'svak' : B.sum < 55 ? 'svak' : B.sum < 80 ? 'middels' : '') }, e('div', { klasse: 'sum' }, e('b', {}, `Beredskap ${B.sum} av 100 – ${B.ord}`), e('small', {}, t && t.aktiv ? 'angrep pågår' : neste ? `neste bølge: ${neste} røverlag` : '')), nesteLinje(e), e('div', { klasse: 'strek' }, e('i', { style: `width:${B.sum}%` })));
     for (const p of B.punkter) boks.append(e('div', { klasse: 'p' + (p.ok ? ' ok' : ''), 'data-punkt': p.id }, e('span', { klasse: 'h' }, p.ok ? '✓' : '○'), e('span', {}, p.navn, ' ', e('small', {}, p.tekst)), e('small', {}, `${p.poeng}/${p.av}`)));
     if (B.råd.length) boks.append(e('div', { klasse: 'raad' }, 'Dette hjelper mest nå: ' + B.råd[0]));
     boks.append(satt ? knapp(røvere().length ? 'Opphev forsvaret' : 'Avslutt øvelsen', () => { opphev(false); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'forsvaropphev' }) : knapp(røvere().length ? 'Forsvar leiren nå' : 'Øv: sett lagene i stilling', () => { sett(!røvere().length); if (LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'forsvarov' }));
@@ -344,7 +369,13 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   KROKER.ser.push(e => { if (!e || !(e.raid > 0) || e.side === 'blå') return false; const V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL; if (!V) return false;
     const f = fsv(); return !!(f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)); });
   // etter omlasting (spill/trussel-lagring.js): forsvaret var satt – lagene har plassen og reglene sine igjen
-  function gjenopprett() { const t = T(); if (!t || !t.aktiv || satt) return false; satt = true; sistAlarm = ''; vis(); return true; }
-  window.ForsvarSpill = { beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
+  // (runde 13, kritiker G: «etter omlasting var Forsvar leiren borte») – TrusselLagringSpill.tilbake kalles fra start() i spillet-visning.js
+  // FØR SpilletSpill er klar, så T() var null og forsvaret ble ikke satt. Nå settes det også da (bare ikke når vi vet at ingen angriper).
+  function gjenopprett() { const t = T(); if ((t && !t.aktiv) || satt) return false; satt = true; sistAlarm = ''; vis(); return true; }
+  // anslaget lagres med angrepet (trussel-lagring.js), så det er det samme etter omlasting
+  const anslagTilstand = () => (est && Number.isFinite(est.v) ? { id: est.id, v: est.v, t: est.t, minNær: Number.isFinite(est.minNær) ? est.minNær : null, sett: !!est.sett } : null);
+  function settAnslag(o) { if (!o || typeof o.id !== 'string' || !Number.isFinite(o.v) || !Number.isFinite(o.t)) return false;
+    est = { id: o.id, v: o.v, t: o.t, minNær: Number.isFinite(o.minNær) ? o.minNær : Infinity, sett: !!o.sett }; sistAlarm = ''; return true; }
+  window.ForsvarSpill = { beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, anslagTilstand, settAnslag, neste, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

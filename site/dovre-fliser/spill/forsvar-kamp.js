@@ -142,7 +142,10 @@
   function kobleFalne() { const FR = rot.FolkRegler; if (!FR || !FR.falneTekst || FR.falneTekst.kamp) return;
     const orig = FR.falneTekst, ny = function (navn, lag) { const t = orig.apply(this, arguments);
       const s = typeof ENHETER !== 'undefined' ? ENHETER.find(e => e.side === 'blå' && e.navn === lag) : null; if (!s || !Array.isArray(navn)) return t;
-      const å = navn.map(n => { const m = s.menn.find(q => q.navn === n); return m && m.årsak; }); return å.length && å[0] && å.every(x => x === å[0]) ? KV.medÅrsak(t, å[0]) : t; };
+      // (falne() i folk-visning.js kan komme før kampen her har merket mannen – da gjelder kampen laget er i)
+      if (!kamper.get(s)) sjekk();
+      const K = kamper.get(s), åK = K && K.fiende ? KV.årsak(K.fiende, K.sted) : null;
+      const å = navn.map(n => { const m = s.menn.find(q => q.navn === n); if (m && !m.årsak && åK) m.årsak = åK; return m && m.årsak; }); return å.length && å[0] && å.every(x => x === å[0]) ? KV.medÅrsak(t, å[0]) : t; };
     ny.kamp = true; FR.falneTekst = ny; }
   kobleFalne(); rot.addEventListener('riksbrudd-spill', () => setTimeout(kobleFalne, 0));
 
