@@ -3269,7 +3269,7 @@ async function nytt3dUtsnitt(cx, cy, S) {
 // skal bygges (der du er når det er ferdig, litt foran deg), og Forut3d.forhentPunkt hvor kartdataene til utsnittet etter skal bes om.
 // R.forutBestilt teller bestillingene (vakta), R.forutSist = siste plan.
 function forut3d(R, u, b, S) {
-  const F3 = window.Forut3d; if (!F3) return; const nå = performance.now() / 1000, F = R.forut || (R.forut = F3.ny());
+  const F3 = window.Forut3d; if (!F3) return; const nå = performance.now() / 1000, F = R.forut || (R.forut = F3.ny(R.byggSek));
   F3.steg(F, u.cx + b.x, u.cy + b.y, R.forutT ? nå - R.forutT : 0, u.S); R.forutT = nå;
   if (!R.bygger && byggVent(R)) { const p = F3.plan(F, u, S);
     if (p) { R.forutBestilt = (R.forutBestilt || 0) + 1; R.forutSist = { ...p, d: Math.hypot(b.x, b.y) / u.S, t: nå }; nytt3dUtsnitt(p.cx, p.cy, S); } }
@@ -3599,8 +3599,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
-<script src="/dovre-fliser/spill/fjernkart3d.js?v=d073dc2315"></script>
-<script src="/dovre-fliser/spill/forut3d.js?v=62eb37f285"></script>
+<script src="/dovre-fliser/spill/fjernkart3d.js?v=5c1ac8c35b"></script>
+<script src="/dovre-fliser/spill/forut3d.js?v=14aab932fc"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=08d3105031"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>

@@ -139,5 +139,5 @@
     g.fillStyle = '#eadfc4'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, x, y + 1); g.restore();
   }
   if (typeof KROKER !== 'undefined') { KROKER.ramme3d.push(ramme); KROKER.tegn3d.push(tegn); }
-  window.Fjernkart3d = { REGLER, tilstand: () => ({ har: !!F.mesh, bygger: F.bygger, cx: F.cx, cy: F.cy, S: F.S, synlig: !!(F.mesh && F.mesh.visible) }), laster: () => harAlt() && lasterNå(R3), kast };
+  window.Fjernkart3d = { REGLER, tilstand: () => ({ har: !!F.mesh, bygger: F.bygger, cx: F.cx, cy: F.cy, S: F.S, synlig: !!(F.mesh && F.mesh.visible) }), laster: () => harAlt() && lasterNå(R3), kast, midten };
 })();

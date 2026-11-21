@@ -17,6 +17,8 @@
     minFart: 6,
     // s: antatt byggetid før den første er målt, og grensene for målingene
     tid0: 12, tidMin: 3, tidMax: 45,
+    // ganger tiden det første utsnittet tok (se ny)
+    første: 1.5,
     // hvor mye en ny måling av byggetiden teller i snittet
     tidVekt: .5,
     // andel av halvsida: bestill når du er så langt fra midten når det nye er ferdig (samme tall som den gamle regelen)
@@ -34,7 +36,10 @@
     // andel av halvsida: punktet for forhentingen høyst så langt foran deg
     forhentMaks: 2.2,
   };
-  function ny() { return { x: null, y: null, vx: 0, vy: 0, tid: REGLER.tid0, målt: 0, fhT: -1e9, fh: null }; }
+  // førsteSek = hvor lenge det første utsnittet tok (3D åpnet). Det bygges uten at 3D tegnes samtidig (store biter), så de neste tar
+  // lenger: målt på testmaskinen 10–42 s først, 16–49 s senere. Derfor × REGLER.første til den første ekte målingen kommer.
+  function ny(førsteSek) { const t = førsteSek > 0 ? Math.max(REGLER.tidMin, Math.min(REGLER.tidMax, førsteSek * REGLER.første)) : REGLER.tid0;
+    return { x: null, y: null, vx: 0, vy: 0, tid: Math.max(REGLER.tid0, t), målt: 0, fhT: -1e9, fh: null }; }
   // Nytt punkt (X, Y i meter) etter dt sekunder: oppdaterer den utjevnede farten. S = halvsida til utsnittet (for hopp).
   function steg(F, X, Y, dt, S) {
     if (F.x === null || !(dt > 0)) { F.x = X; F.y = Y; return F; }
@@ -69,6 +74,22 @@
   }
   // Hvor langt foran deg (meter, x og y) det nye utsnittet ventes å være ferdig – fjernkartet bruker det til å legge midten foran deg
   function ledd(F, S) { const v = fart(F); if (F.x === null || v < REGLER.minFart) return [0, 0]; const L = Math.min(v * F.tid, REGLER.maksFram * S); return [F.vx / v * L, F.vy / v * L]; }
-  const api = { REGLER, ny, steg, fart, byggTid, plan, forhentPunkt, ledd };
+  // Prøveflyging (vakta og testen): rett linje med fart v (m/s) i sek sekunder, hvert utsnitt tar T sekunder å bygge, halvside S.
+  // gammel = true: bare den gamle regelen (nytt utsnitt der du er, når du er 45 % fra midten). Svarer sekundene punktet du ser på er
+  // utenfor det ferdige utsnittet (ute) eller nær kanten (kant: over 75 %), antall utsnitt og hvor langt fra midten det første ble bestilt.
+  function simuler({ v = 45, T = 20, S = 2000, sek = 150, dt = .1, gammel = false } = {}) {
+    const F = ny(); F.tid = T; let u = { cx: 0, cy: 0, S }, bygger = null, ute = 0, kant = 0, antall = 0, første = null;
+    for (let t = 0; t < sek; t += dt) {
+      const x = v * t; steg(F, x, 0, t ? dt : 0, S);
+      if (bygger && t >= bygger.ferdig) { u = { cx: bygger.cx, cy: bygger.cy, S }; bygger = null; antall++; }
+      if (!bygger) { const p = gammel ? null : plan(F, u, S);
+        if (p) bygger = { cx: p.cx, cy: p.cy, ferdig: t + T };
+        else if (Math.hypot(x - u.cx, 0 - u.cy) > .45 * S) bygger = { cx: x, cy: 0, ferdig: t + T };
+        if (bygger && første === null) første = Math.hypot(x - u.cx, u.cy) / S; }
+      const d = Math.max(Math.abs(x - u.cx), Math.abs(u.cy)) / S; if (d > 1) ute += dt; if (d > .75) kant += dt;
+    }
+    return { ute: Math.round(ute * 10) / 10, kant: Math.round(kant * 10) / 10, antall, første };
+  }
+  const api = { REGLER, ny, steg, fart, byggTid, plan, forhentPunkt, ledd, simuler };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Forut3d = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

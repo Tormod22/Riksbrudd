@@ -27,3 +27,12 @@ ok(f1[0] - 117 <= 2.2 * 2000 + 1, 'høyst 2,2 × S foran');
 // ledd: fjernkartets forskyvning i fartsretningen
 const l = F3.ledd(J, 2000); ok(l[0] > 0 && Math.abs(l[1]) < 1e-6, 'ledd ' + l);
 console.log(`test_forut3d: ${n} sjekker OK`);
+// prøveflyging: den nye regelen gir færre sekunder uten detaljer enn den gamle, og bestiller før 45 %
+for (const [v, T] of [[45, 30], [25, 35], [60, 20], [22, 20]]) {
+  const g = F3.simuler({ v, T, gammel: true }), nyR = F3.simuler({ v, T });
+  ok(nyR.ute < g.ute || (g.ute === 0 && nyR.kant <= g.kant), `v ${v} T ${T}: ute ${g.ute} -> ${nyR.ute}, kant ${g.kant} -> ${nyR.kant}`);
+  ok(nyR.første < .45 && g.første >= .45, `første bestilling ${g.første} -> ${nyR.første}`);
+  console.log(`  prøveflyging ${v} m/s, byggetid ${T} s: uten detaljer ${g.ute} -> ${nyR.ute} s, nær kanten ${g.kant} -> ${nyR.kant} s, utsnitt ${g.antall} -> ${nyR.antall}`);
+}
+{ const a = F3.ny(20); ok(a.tid === 30 && a.målt === 0, "første byggetid × 1,5: " + a.tid); ok(F3.ny().tid === F3.REGLER.tid0 && F3.ny(2).tid === F3.REGLER.tid0, "minst tid0"); }
+console.log(`test_forut3d: ${n} sjekker OK i alt`);
