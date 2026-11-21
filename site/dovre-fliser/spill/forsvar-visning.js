@@ -103,10 +103,12 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   function status() { const A = angrep(), L = leir(); if (!A || !L) { if (!A) est = null; return null; }
     const r = A.lag, d = e => Math.hypot(e.x - L.x, e.y - L.y), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, fart = (V && V.fart) || .75;
     const kj = r.filter(e => kjent(e)), nær = kj.length ? Math.min(...kj.map(d)) : null, strid = kj.map(iStrid).find(Boolean) || null;
-    let sist = null; if (!kj.length) for (const e of r) { const q = sistSettAv(e); if (q && tid - q.tid <= FO.STATUS.sistSett && tid >= q.tid && (!sist || q.tid > sist.tid)) sist = q; }
+    // (runde 14, kritiker J) alle egne observasjoner i angrepet (lag, tårn, kamera, radio) står i opptil STATUS.sistSettLang minutter
+    const SL = FO.STATUS.sistSettLang || FO.STATUS.sistSett, iAngrepet = q => !Number.isFinite(A.start) || q.tid >= A.start - 1;
+    let sist = null; if (!kj.length) for (const e of r) { const q = sistSettAv(e); if (q && tid - q.tid <= SL && tid >= q.tid && iAngrepet(q) && (!sist || q.tid > sist.tid)) sist = q; }
     // (runde 13) det banneret selv så sist (vakttårnet, et kamera, vaktene) når kartet og radioen ikke har noe – ellers sa banneret «ikke sett»
     // rett etter «Røverne er sett»
-    if (!kj.length && est && est.id === A.id && est.sistSett && tid - est.sistSett.tid <= FO.STATUS.sistSett && tid >= est.sistSett.tid && !sist) sist = { ...est.sistSett };
+    if (!kj.length && est && est.id === A.id && est.sistSett && tid - est.sistSett.tid <= SL && tid >= est.sistSett.tid && (!sist || est.sistSett.tid > sist.tid)) sist = { ...est.sistSett };
     const rå = kj.length ? FO.ankomst(nær, fart) : sist ? Math.max(0, FO.ankomst(Math.hypot(sist.x - L.x, sist.y - L.y), fart) - (tid - sist.tid)) : anslag(r);
     // (runde 13, kritiker G: «5–10 min» ble til «3–7 timer» mens klokka gikk) anslaget med minutter kan bare minke så lenge angriperne ikke
     // har snudd (Forsvar.monoton). Første gang de er sett, og når de har snudd, gjelder det nye anslaget. Ser ingen dem, står det ingen
@@ -128,7 +130,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (iLeiren) { tekst = 'i leiren' + (strid ? ` · i ildkamp med ${strid.navn}` : ''); kort = strid ? 'i leiren · ildkamp' : 'i leiren'; }
     else if (kj.length) { tekst = `${km(nær)} unna · ` + (kj.every(e => e.venterNatt) ? 'de venter (trolig på mørket)' : `framme om ca. ${Math.max(1, Math.round(min))} min`) + (strid ? ` · i ildkamp med ${strid.navn}` : hvem ? ` · ${hvem}` : ''); kort = `${km(nær)} fra leiren` + (strid ? ' · ildkamp' : ''); }
     else if (sist) { const ds = Math.hypot(sist.x - L.x, sist.y - L.y), m2 = Math.max(1, Math.round(tid - sist.tid)), sp = FO.spenn(min), hvor = ds <= R.mot.inne ? 'i leiren' : `${km(ds)} ${FO.retning(Math.atan2(sist.y - L.y, sist.x - L.x))} for leiren`;
-      tekst = `sist sett ${hvor} for ${m2} min siden · ${sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${ds <= R.mot.inne ? 'i leiren' : km(ds) + ' unna'} for ${m2} min siden`; }
+      // (runde 14) med klokkeslett: «sist sett 3,5 km N kl. 08:53»
+      const hvorK = ds <= R.mot.inne ? 'i leiren' : `${km(ds)} ${FO.retningKort ? FO.retningKort(Math.atan2(sist.y - L.y, sist.x - L.x)) : ''}`.trim(), klS = FO.klTekst ? FO.klTekst(sist.tid) : `for ${m2} min siden`;
+      tekst = `sist sett ${hvorK} ${klS} · ${sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${hvorK} ${klS}`; void hvor; }
     else { const n2 = min === null ? null : FO.når(tid, tid + min); tekst = n2 ? `ikke sett – kommer ${n2}` : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; kort = n2 ? `ikke sett · ${n2.replace(/ \(.*\)$/, '')}` : 'ikke sett ennå'; }
     return { id: A.id, røvere: A.røvere, hvem: A.navn, side: A.side || 'rød', antall: n, lag: r, sett: kj.length > 0, kjente: kj, nær, iLeiren, strid, sist, min, overskrift, tekst, kort, retning: FO.retning(v) }; }
   // hvem som så dem: vakttårnet (Trussel.VARSEL.tårn), et kamera, vaktene, eller et lag
@@ -285,12 +289,13 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   // Tida er SpilletSpill.T().nesteSpill (spillminutter), som nå lagres og holdes fast etter omlasting (trussel-lagring.js). Med usikkerhet
   // (Forsvar.når: «trolig i natt (ca. kl. 02–05)») og en nedtelling. Bølgen kan komme før om du spiller lenge i sanntid (spillet-visning.js).
   function neste() { const t = T(); if (!t || t.aktiv || !Number.isFinite(t.nesteSpill)) return null; const igjen = Math.max(0, t.nesteSpill - tid);
-    return { min: igjen, når: FO.når(tid, t.nesteSpill), nedtelling: FO.nedtelling(igjen), tekst: `Røverne drar ut mot leiren ${FO.når(tid, t.nesteSpill)} – om ${FO.nedtelling(igjen)}` }; }
+    // (runde 14, kritiker I: «om under 1 min · trolig innen en time») – før de er på vei står det når de drar ut, ikke når de er framme
+    return { min: igjen, når: FO.når(tid, t.nesteSpill), nedtelling: FO.nedtelling(igjen), tekst: igjen < 1 ? 'Røverne drar ut mot leiren nå – varselet kommer straks' : `Røverne drar ut mot leiren ${FO.når(tid, t.nesteSpill)} – om ${FO.nedtelling(igjen)}` }; }
   // brikke øverst til venstre (narhud.js, VARSEL_TILLEGG) med nedtellingen når neste bølge er under NESTE_BRIKKE spillminutter unna
   // (Claudes forslag: 12 timer). Ikke i testene uten ForsvarSpill.test.
   const NESTE_BRIKKE = 720;
   (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => { if (!auto()) return []; const n = neste(); if (!n || n.min > NESTE_BRIKKE) return [];
-    return [{ i: 'varsel', k: n.min <= 120 ? 'fare' : '', t: `Røverne om ${n.nedtelling}`, s: n.når, f: () => logg(n.tekst + '.') }]; });
+    return [{ i: 'varsel', k: n.min <= 120 ? 'fare' : '', t: FO.utTekst ? FO.utTekst(n.min) : `Røverne om ${n.nedtelling}`, s: n.min < 1 ? 'snart på vei' : n.når, f: () => logg(n.tekst + '.') }]; });
   const nesteLinje = e => { const n = neste(); return n ? e('div', { klasse: 'raad', id: 'nestebolge' }, n.tekst + '.') : ''; };
   // ---------- Leir-menyen: beredskapen ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { const B = beredskap(); if (!B) return; const t = T(), neste = t && window.Spillet ? Spillet.Trussel.lag((t.bølge || 0) + 1) : null;

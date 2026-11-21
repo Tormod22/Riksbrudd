@@ -77,6 +77,9 @@
     usikker: .3,       // ± denne andelen i spennet («ca. 45–75 min») når ingen ser dem
     nårSomHelst: 5,    // minutter: under dette står «kan være framme når som helst» når ingen ser dem
     timer: 75,         // minutter: over dette står spennet i hele timer («ca. 1–2 timer»)
+    // (runde 14, kritiker J: banneret sa «ikke sett» i to timer etter «Fiende sett: Røvere 2.1, ca. 3,5 km nord») – så lenge en egen
+    // observasjon av angriperne i samme angrep står i banneret (med klokkeslett): 6 timer
+    sistSettLang: 360,
   };
   // glatt(før, rå, tid, sett): før = { v, t } (minutter igjen, spilltida da), rå = nytt anslag. Teller ned med tida; et nytt rått anslag
   // trekker det med andelen 1 − e^(−dt/glatt). Ser noen angriperne, gjelder det rå anslaget (avstanden er kjent).
@@ -148,7 +151,14 @@
   // nedtelling(min): «17 t 40 min», «45 min», «under 1 min»
   function nedtelling(min) { if (!Number.isFinite(min)) return ''; if (min < 1) return 'under 1 min'; const m = Math.round(min);
     if (m < 60) return m + ' min'; const t = Math.floor(m / 60), r = m - t * 60; return r ? `${t} t ${r} min` : `${t} t`; }
-  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
+  // «N», «NØ», «Ø» … for en retning i radianer (som retning(), men kort)
+  const KORT = { 'øst': 'Ø', 'nordøst': 'NØ', 'nord': 'N', 'nordvest': 'NV', 'vest': 'V', 'sørvest': 'SV', 'sør': 'S', 'sørøst': 'SØ' };
+  const retningKort = v => KORT[retning(v)];
+  // «kl. 08:53» for spillminutter t
+  const klTekst = t => { const k = klokke(t), h = Math.floor(k.time), m = Math.floor((k.time - h) * 60 + 1e-6); return `kl. ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; };
+  // brikka før bølgen drar ut: «Røverne drar ut om 3 t 20 min» – «under 1 min» står aldri her (de er ikke på vei ennå): da «drar ut nå»
+  const utTekst = min => (!Number.isFinite(min) || min < 1 ? 'Røverne drar ut nå' : `Røverne drar ut om ${nedtelling(min)}`);
+  const api = { R, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
     monoton, SNUDD, harSnudd, klokke, når, nedtelling };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;

@@ -34,7 +34,8 @@ ok(TL.rensBytte({ penger: -5, lager: { tre: 'x', '<b>': 3 }, diesel: NaN }).peng
 { const TL = require('../../site/dovre-fliser/spill/trussel-lagring'), A2 = require('assert');
   const d = TL.pakk({ aktiv: 0, tid: 1000, lag: [], egne: [], neste: 1900, bølge: 2 });
   A2.strictEqual(TL.neste(d, { tid: 1100, bølge: 2 }), 1900, 'tida holdes fast etter omlasting');
-  A2.strictEqual(TL.neste(d, { tid: 1950, bølge: 2 }), 1970, 'passert tid: bølgen kommer snart');
+  A2.strictEqual(TL.neste(d, { tid: 1950, bølge: 2 }), 1951, 'passert tid: bølgen kommer snart');
+  A2.strictEqual(TL.neste(d, { tid: 1895, bølge: 2 }), 1900, 'runde 14: under 20 min igjen holdes også fast');
   A2.strictEqual(TL.neste(d, { tid: 1100, bølge: 3 }), null, 'en annen bølge'); A2.strictEqual(TL.neste({ ...d, aktiv: 2 }, { tid: 1100, bølge: 2 }), null, 'ikke midt i et angrep');
   A2.strictEqual(TL.neste({ ...d, neste: 1100 + 4 * 1440 }, { tid: 1100, bølge: 2 }), null, 'urimelig langt fram');
   const d2 = TL.pakk({ aktiv: 3, tid: 50, lag: [], egne: [], anslag: { id: 'r3', v: 42.25, t: 50, minNær: 1234.4, sett: true } });
