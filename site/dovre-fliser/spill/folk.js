@@ -63,10 +63,19 @@
   };
   // Enkel, fast tilfeldighet (samme frø gir samme folk)
   function rng(frø) { let a = frø >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  // RUNDE 13 (kritiker G: «Ragnhild Tangen er ny i gjengen» – samme navn som en som falt natta før): ingen to personer i samme spill,
+  // levende eller døde, får likt fullt navn. tatteNavn(F) = gjengen + alle navn gjengen har hatt (F.navnBrukt, lagres med folket) +
+  // det visningen melder inn (api.opptatteNavn: folk i troppene, de døde, karakteren).
+  function tatteNavn(F) { const t = new Set(F.personer.map(p => p.navn)); for (const n of F.navnBrukt || []) t.add(n);
+    if (api.opptatteNavn) { try { for (const n of api.opptatteNavn() || []) if (n) t.add(String(n)); } catch (e) { /* visningen er ikke klar */ } } return t; }
   function nyPerson(F, r, oppgave = 'fri', yrke = null) {
-    // helst ingen like fornavn eller etternavn i gjengen
-    const fb = new Set(F.personer.map(p => p.navn.split(' ')[0])), eb = new Set(F.personer.map(p => p.navn.split(' ').slice(1).join(' '))); let navn;
-    for (let i = 0; i < 60; i++) { const a = FORNAVN[Math.floor(r() * FORNAVN.length)], e = ETTERNAVN[Math.floor(r() * ETTERNAVN.length)]; navn = a + ' ' + e; if (!fb.has(a) && !eb.has(e)) break; }
+    // helst ingen like fornavn eller etternavn i gjengen – og aldri et fullt navn som er brukt i spillet før
+    const fb = new Set(F.personer.map(p => p.navn.split(' ')[0])), eb = new Set(F.personer.map(p => p.navn.split(' ').slice(1).join(' '))), tatt = tatteNavn(F); let navn;
+    for (let i = 0; i < 60; i++) { const a = FORNAVN[Math.floor(r() * FORNAVN.length)], e = ETTERNAVN[Math.floor(r() * ETTERNAVN.length)]; navn = a + ' ' + e; if (!fb.has(a) && !eb.has(e) && !tatt.has(navn)) break; }
+    // fant ikke et helt ledig navn: første ledige fulle navn (fra et tilfeldig sted i lista), og med et mellomnavn når alle er brukt
+    if (tatt.has(navn)) { const N = FORNAVN.length * ETTERNAVN.length, s = Math.floor(r() * N); for (let i = 0; i < N; i++) { const k = (s + i) % N, q = FORNAVN[k % FORNAVN.length] + ' ' + ETTERNAVN[Math.floor(k / FORNAVN.length)]; if (!tatt.has(q)) { navn = q; break; } }
+      for (let i = 2; tatt.has(navn); i++) navn = navn.split(' ')[0] + ' ' + FORNAVN[(i * 7) % FORNAVN.length] + ' ' + navn.split(' ').slice(-1)[0]; }
+    (F.navnBrukt = F.navnBrukt || []).push(navn);
     const y = YRKER.find(q => q.navn === yrke) || YRKER[Math.floor(r() * YRKER.length)], ferd = {};
     for (const o of OPPGAVER) if (o !== 'fri') ferd[o] = Math.round((y.f[o] || (.75 + r() * .3)) * 100) / 100;
     const p = { id: F.neste++, navn, alder: 19 + Math.floor(r() * 44), yrke: y.navn, ferd, oppgave, helse: 1, lojal: Math.round((.3 + r() * .7) * 100) / 100, seng: false };
@@ -241,7 +250,9 @@
     if (!o || !Array.isArray(o.personer)) return null; const F = { ...ny(o.frø || 1987), ...o };
     F.personer = o.personer.filter(p => p && p.navn).map(p => ({ helse: 1, lojal: .6, seng: false, ferd: {}, yrke: 'student', alder: 30, ...p, oppgave: OPPGAVER.includes(p.oppgave) ? p.oppgave : 'fri' }));
     for (const p of F.personer) for (const q of OPPGAVER) if (q !== 'fri' && !p.ferd[q]) p.ferd[q] = .9;
-    F.neste = Math.max(F.neste || 1, ...F.personer.map(p => p.id + 1)); F.sist = F.sist || {}; return F;
+    F.neste = Math.max(F.neste || 1, ...F.personer.map(p => p.id + 1)); F.sist = F.sist || {};
+    // (runde 13) navnene gjengen har hatt: eldre lagringer har bare dem som er med nå (navnene fra ny() over hører ikke til dette spillet)
+    F.navnBrukt = [...new Set([...(Array.isArray(o.navnBrukt) ? o.navnBrukt.filter(n => typeof n === 'string') : []), ...F.personer.map(p => p.navn)])]; return F;
   }
   // Leir.BYGG får et kjøkken, og byggelagene i leir.js hentes fra folket (når leiren har folk)
   if (LB) {
@@ -272,7 +283,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

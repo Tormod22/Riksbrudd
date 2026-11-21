@@ -23,6 +23,13 @@
   const valg = () => (window.SamfunnSpill && SamfunnSpill.valg ? SamfunnSpill.valg(grunn()) : grunn());
   // maten koster mer når butikkene er tomme (forfallet, spill/overlev.js)
   const matF = () => (window.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1);
+  // RUNDE 13 (kritiker G: en ny fikk navnet til en som falt natta før): navnene en ny person ikke kan få – folk i egne lag (levende og
+  // falne), karakteren, de døde og gravlagte i samfunnet, barna og de gamle (spill/folk.js tatteNavn)
+  FR.opptatteNavn = () => { const ut = [];
+    if (typeof ENHETER !== 'undefined') for (const s of ENHETER) if (s && s.side === 'blå' && Array.isArray(s.menn)) for (const m of s.menn) if (m && m.navn) ut.push(m.navn);
+    try { const k = window.OppstartSpill && OppstartSpill.tilstand(); if (k && k.karakter && k.karakter.navn) ut.push(k.karakter.navn); } catch (e) { /* uten karakter */ }
+    try { const S = window.SamfunnSpill && SamfunnSpill.tilstand && SamfunnSpill.tilstand(); if (S) { for (const d of S.døde || []) ut.push(d.navn); for (const n of S.gravlagte || []) ut.push(n); for (const a of S.avhengige || []) ut.push(a.navn); } } catch (e) { /* uten samfunn */ }
+    return ut; };
 
   // ---------- stil ----------
   const css = document.createElement('style');
