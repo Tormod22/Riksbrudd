@@ -8,7 +8,9 @@ Målet: spilleren skal se og forstå kampene sine. Alle tall er Claudes forslag.
 - **Ny fil `spill/forsvar-kamp.js`** (regler øverst uten DOM: `KampVarsel`, test `pipeline/fliser/test_forsvar_kamp.js`; visning nederst: `window.KampSpill`).
   Lastes rett etter `forsvar-visning.js` i `index.html`.
 - En **kamp** begynner ved første skudd eller første tap (helsa går ned) for et eget lag (ikke karakteren, ikke Leirvakta), og er over når det
-  har vært stille i `REGLER.slutt` = 30 spillminutter. Skudd hvert 10. minutt i timevis er altså ÉN kamp.
+  har vært stille i `REGLER.slutt` = 30 spillminutter. Skudd hvert 10. minutt i timevis er altså ÉN kamp. Et tap uten skudd teller bare når det
+  er bygdevern der eller en fiende innen `REGLER.tapFiende` = 2,5 km (ikke flom/ras/ulykker). En kamp med angriperne innen 3 km fra leiren
+  meldes bare av `forsvar-visning.js` (ikke to stopp). Kampmerket tegnes bare for meldte kamper (ikke i testene).
 - Når kampen begynner: én linje i loggen og hendelsen `kontakt` med stedet (x, y), f.eks.
   «⚔ Speidertropp 1 er i kamp med bygdevernet i Lærdalsøyri (7 mann)». Fienden: de som skyter på laget / som laget skyter på (røverne,
   fraksjonens navn), ellers bygdevernet når laget står i et tettsted med bygdevern (`KrigSpill.T().vern`), ellers «en fiende dere ikke ser».
@@ -31,7 +33,8 @@ Målet: spilleren skal se og forstå kampene sine. Alle tall er Claudes forslag.
 - `forsvar-visning.js` `status()`: ser noen røverne, teller anslaget bare ned (nytt anslag første gang de er sett, og når de har snudd); står de
   stille/venter på mørket, står det stille («de venter (trolig på mørket)»). **Ser ingen dem, står det ingen minutter**: «ikke sett – kommer
   trolig i natt (ca. kl. 03–05)»; brikka: «ikke sett · trolig i natt». Anslaget uten syn holdes også fast og teller ned; det byttes bare når ruta
-  deres blir kjent første gang. Banneret husker selv hvor de sist ble sett (`est.sistSett`), så det ikke sier «ikke sett» rett etter «sett».
+  deres blir kjent første gang i de første 5 spillminuttene etter starten (`RUTE_FRIST`). «Sist sett» fra kartet/radioen går foran det banneret
+  selv husker. Banneret husker selv hvor de sist ble sett (`est.sistSett`), så det ikke sier «ikke sett» rett etter «sett».
 - «Snart framme» uten syn: «røverne kan være framme snart (ikke sett ennå)».
 - **H: «røverne kom aldri»** – `spillet-visning.js start()` setter `T.nesteSpill` på nytt ved hver lasting (halv ventetid fram). Nå lagrer
   `trussel-lagring.js` `neste` (og bølgen) og setter den tilbake første gang SpilletSpill er klar (`hentNeste`; passert tid = om 20 min, over tre
