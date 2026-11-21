@@ -101,10 +101,10 @@
     return { d, rel, foran, tekst: foran ? 'foran deg' : g >= R.bak ? 'bak deg' : rel > 0 ? 'til høyre' : 'til venstre' };
   }
   // Teksten på knappen: står kjøretøyet foran deg, som før; ellers med avstand og retning, så du vet hvor du skal snu deg
-  // («Feltbilen 6 m bak deg · Sett deg inn (F)»). navn = «feltbilen», tast = ' (F)' på PC og '' på telefon.
+  // («Sett deg inn i feltbilen (F) · 6 m bak deg»). navn = «feltbilen», tast = ' (F)' på PC og '' på telefon.
   function innTekst(navn, r, tast) {
     if (r.foran) return `Sett deg inn i ${navn}${tast}`;
-    return `${navn.charAt(0).toUpperCase() + navn.slice(1)} ${Math.max(1, Math.round(r.d))} m ${r.tekst} · Sett deg inn${tast}`;
+    return `Sett deg inn i ${navn}${tast} · ${Math.max(1, Math.round(r.d))} m ${r.tekst}`;
   }
   const api = { BIL, HELI, STILLING, bilSteg, heliSteg, fram, stilling, hjulHøyder, zFor, RETNING, retning, innTekst };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }

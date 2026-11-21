@@ -1,5 +1,5 @@
 [["Grafikk som justerer seg selv", "Står grafikken på Auto, senkes først oppløsningen når bildet går tregt over tid, så skyggene, og først til slutt detaljnivået. Det skjer aldri mens et nytt område bygges. Du kan låse nivået i ☰ «Grafikk».", "Vær, lyd og bilde"],
  ["Låver og uthus", "Låvene har plankevegger, høyballer, høyloft, redskap og en gammel traktor. Gjennom sprekkene i veggene faller det lys.", "I 3D"],
- ["Sette seg inn i feltbilen", "Når du går og står ved feltbilen, kommer knappen «Sett deg inn» (F på PC). Står bilen ikke foran deg, sier knappen hvor den er, for eksempel «Feltbilen 6 m bak deg». Snu deg, eller trykk knappen likevel.", "I 3D"],
+ ["Sette seg inn i feltbilen", "Når du går og står ved feltbilen, kommer knappen «Sett deg inn» (F på PC). Står bilen ikke foran deg, sier knappen hvor den er, for eksempel «Sett deg inn i feltbilen · 6 m bak deg». Snu deg, eller trykk knappen likevel.", "I 3D"],
  ["Stedsnavn når du går", "Til fots ser du bare navn på steder som ligger mer enn 600 m unna, med avstanden («Vikeså · 1,2 km»). Ser du rett mot stedet, eller ligger det bak en ås, står navnet øverst i bildet under kompasset.", "I 3D"],
  ["Første gang du åpner 3D", "Første gang du åpner 3D med leiren midt i kartet, ser kameraet ned på leiren fra et par hundre meter, så du ser byggene og teltene. Rull eller knip for å se lenger ut.", "I 3D"]]

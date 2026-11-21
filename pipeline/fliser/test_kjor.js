@@ -35,8 +35,8 @@ const ny = () => ({ x: 0, y: 0, z: 0, a: 0, vx: 0, vy: 0, vz: 0, rotor: 0, motor
 { const h = ny(); h.rotor = 1; h.z = 50; h.motor = false; const r = fly(h, {}, 12); ok(h.z === 0, 'uten motor synker det til bakken'); }
 // (runde 13) hvor bilen står sett fra deg: du ser nordover (a = 0), øst er til høyre
 { const r = K.retning(0, 6, 0); ok(r.foran && r.tekst === 'foran deg' && Math.abs(r.d - 6) < 1e-9, 'bil 6 m nord, du ser nord: foran deg'); ok(K.innTekst('feltbilen', r, ' (F)') === 'Sett deg inn i feltbilen (F)', 'foran: knappen som før'); }
-{ const r = K.retning(0, -6, 0); ok(!r.foran && r.tekst === 'bak deg', 'bil sør for deg: bak deg'); ok(K.innTekst('feltbilen', r, ' (F)') === 'Feltbilen 6 m bak deg · Sett deg inn (F)', 'bak: avstand og retning på knappen'); }
+{ const r = K.retning(0, -6, 0); ok(!r.foran && r.tekst === 'bak deg', 'bil sør for deg: bak deg'); ok(K.innTekst('feltbilen', r, ' (F)') === 'Sett deg inn i feltbilen (F) · 6 m bak deg', 'bak: avstand og retning på knappen'); }
 { ok(K.retning(5, 0, 0).tekst === 'til høyre' && K.retning(-5, 0, 0).tekst === 'til venstre', 'øst = til høyre, vest = til venstre når du ser nord'); }
 { const a = Math.PI / 2, f = K.fram(a), r = K.retning(f[0] * 4, f[1] * 4, a); ok(r.foran, 'bilen rett i synsretningen er foran også når du ser vest'); ok(K.retning(-f[1] * 4, f[0] * 4, a).tekst === 'til venstre', 'og 90° mot klokka er til venstre'); }
-{ ok(K.innTekst('feltbilen', K.retning(0, -.2, 0), '') === 'Feltbilen 1 m bak deg · Sett deg inn', 'telefon: uten (F), minst 1 m'); }
+{ ok(K.innTekst('feltbilen', K.retning(0, -.2, 0), '') === 'Sett deg inn i feltbilen · 1 m bak deg', 'telefon: uten (F), minst 1 m'); }
 console.log(feil ? feil + ' feil' : 'alle kjøretestene ok'); process.exit(feil ? 1 : 0);
