@@ -179,6 +179,8 @@ Etter første mobilkontroll (1 feil, i min vakt): leirens navn kom ikke med når
 – nå plasseres leirens navn før egne lag, `kartlapper.js`), trykket på lappen ble tatt av en annen krok (samletrykket legges nå først i lista når
 alle skriptene er lastet), og vegnettets boks ble utvidet av basene langt unna (på et spillkart brukes bare området).
 
+Mobilkontrollen etter rettingen: 130 ok, 0 feil (477 s).
+
 ### Filer (runde 13)
 - `spill/etikett.js` – samleSted/samle/samleTekst/samling, REGLER.samle. Test: test_etikett.js (+4).
 - `spill/kartlapper.js` – samlelappen i 2D og 3D, trykk, KartLapper.SAMLE/hvem.
