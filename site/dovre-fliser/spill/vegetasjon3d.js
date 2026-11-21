@@ -369,7 +369,7 @@
           sett('siv', x, y, .7 + rnd() * .5, .9 + rnd() * .7, høst ? [.78 * l, .66 * l, .4 * l] : [.55 * l, .66 * l, .38 * l], moh); continue; }
       }
       if (!st || !vk) continue;
-      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.62 * l, .42 * l, .2 * l] : [.32 * l, .48 * l, .24 * l], moh); continue; } }
+      if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.68 * l, .48 * l, .26 * l] : [.46 * l, .64 * l, .34 * l], moh); continue; } }
       const sted = V.stedIHøyden(STED[st], rel);
       if (rnd() > V.STEDTETTHET[sted] * bl * vk) continue;
       const art = V.blomst(sted, å, rnd()); if (!art) continue;

@@ -2643,9 +2643,9 @@ function gressTekstur() {
     g.strokeStyle = `rgb(${215 * l | 0},${235 * l | 0},${170 * l | 0})`; g.lineWidth = 1.4 + rnd() * 1.6; g.beginPath(); g.moveTo(x, 64); g.quadraticCurveTo(x + bøy * .3, 64 - h * .6, x + bøy, 64 - h); g.stroke();
     if (i % 5 === 0) { g.fillStyle = 'rgb(232,222,170)'; g.beginPath(); g.ellipse(x + bøy, 64 - h, 1.6, 4, bøy * .03, 0, 6.283); g.fill(); } }
   for (let i = 0; i < 9; i++) { const x0 = 72 + rnd() * 48, h = 26 + rnd() * 32, bøy = (rnd() - .5) * 22;
-    g.strokeStyle = 'rgb(120,96,70)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, 64); g.quadraticCurveTo(x0 + bøy * .4, 64 - h * .5, x0 + bøy, 64 - h); g.stroke();
+    g.strokeStyle = 'rgb(178,160,128)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x0, 64); g.quadraticCurveTo(x0 + bøy * .4, 64 - h * .5, x0 + bøy, 64 - h); g.stroke();
     for (let k = 1; k <= 9; k++) { const t = k / 9, x = x0 + bøy * t * t, y = 64 - h * t, l = .7 + rnd() * .4, rosa = rnd() < .14;
-      g.fillStyle = rosa ? 'rgb(255,190,235)' : `rgb(${200 * l | 0},${240 * l | 0},${170 * l | 0})`;
+      g.fillStyle = rosa ? 'rgb(255,190,235)' : `rgb(${Math.min(255, 215 * l) | 0},${Math.min(255, 245 * l) | 0},${Math.min(255, 185 * l) | 0})`;
       for (const s of [-1, 1]) { g.beginPath(); g.ellipse(Math.max(66, Math.min(126, x + s * (2.5 + rnd() * 2))), y + rnd() * 2, 2.6, 1.5, s * .5, 0, 6.283); g.fill(); } } }
   GRESSTEX = new THREE.CanvasTexture(c); return GRESSTEX;
 }
@@ -2669,7 +2669,10 @@ function gressMateriale() {
 }
 // (runde 10) gressets farger, Claudes forslag: gresset litt grønnere og lysere enn bakken under (før 1,3/1,42/1,15 – for mettet), lite
 // variasjon mellom tustene, lyngen 3/4 bakkens farge (før mørkegrønn: «svart støy»), og tustene ytterst «lavere» (andel) lavere.
-const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35 };
+// (runde 14, kritiker I: «bakken er full av svarte X-formede planter» i gåmodus) lyngen er nå bakkens egen farge litt lysere (lyngLys –
+// teksturen er 0,6–0,9 lys, så tusten blir aldri mørkere enn bakken), og nærmere enn nær m står bare nærAndel av tustene (ved føttene
+// er de store kryss). Claudes forslag (tallene).
+const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35, lyngLys: [1.3, 1.34, 1.18], nær: 4, nærAndel: .3 };
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
   const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
@@ -2701,6 +2704,7 @@ function* gressG(R, u, m, cx, cy) {
   for (let t = 0; t < MAKS * 3 && n < MAKS; t++) {
     if ((t & 127) === 127) yield;
     const a = rnd() * 6.283, rr = RAD * Math.pow(rnd(), 1.05), x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
+    if (rr < GRESS_FARGE.nær && rnd() > GRESS_FARGE.nærAndel + (1 - GRESS_FARGE.nærAndel) * rr / GRESS_FARGE.nær) continue;
     const i = Math.floor((x + u.S) / (2 * u.S) * W), j = Math.floor((u.S - y) / (2 * u.S) * W); const type = i < 0 || j < 0 || i >= W || j >= W ? 0 : B.gress[j * W + i]; if (!type) continue;
     // ikke i vegbanen eller på fortauet (nøyaktig: u.vegNær fra vegetasjon3d.js), ikke i jernbanesporet, ikke ute i vannet eller bekken (bakkekartet er for grovt
     // til å følge bredden: gresset sto 2–3 m ute i elva, 12. nov), og glisnere og lavere over tregrensen – ingenting i ura høyt til fjells
@@ -2719,10 +2723,8 @@ function* gressG(R, u, m, cx, cy) {
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
     d.position.set(x, y, z); d.rotation.set((rnd() - .5) * (lyng ? .6 : .7), (rnd() - .5) * (lyng ? .6 : .7), rnd() * 3.14); d.scale.set((lyng ? .75 : .4) + rnd() * .35, (lyng ? .75 : .4) + rnd() * .35, h); d.updateMatrix(); d.matrix.toArray(T.M, n * 16); FELT[n] = lyng ? 1 : 0;
-    if (lyng) { const br = rnd() < .3; col.setRGB(br ? .34 + rnd() * .08 : .19 + rnd() * .07, br ? .29 + rnd() * .05 : .32 + rnd() * .09, br ? .18 : .12);
-      // (runde 5) lyng på åpen hei: halvt bakkens egen farge, så tustene ikke blir mørke prikker sett ovenfra
-      // (runde 10: all lyng – ikke bare på åpen hei – er nå mest bakkens egen farge, se GRESS_FARGE)
-      const bl = type === 3 ? .5 : GRESS_FARGE.lyngBakke; col.setRGB(col.r * (1 - bl) + B.rgb[k] / 255 * 1.15 * bl, col.g * (1 - bl) + B.rgb[k + 1] / 255 * 1.12 * bl, col.b * (1 - bl) + B.rgb[k + 2] / 255 * 1.05 * bl); }
+    // (runde 5/10/14) lyngen i bakkens egen farge, lysere (GRESS_FARGE.lyngLys) – før en mørkegrønn grunnfarge: «svarte kryss»
+    if (lyng) { const [lr, lg, lb] = GRESS_FARGE.lyngLys, v = 1 + (rnd() - .5) * GRESS_FARGE.variasjon; col.setRGB(Math.min(1, B.rgb[k] / 255 * lr * v), Math.min(1, B.rgb[k + 1] / 255 * lg * v), Math.min(1, B.rgb[k + 2] / 255 * lb * v)); }
     else { const [fr, fg, fb] = GRESS_FARGE.gress, v = 1 + (rnd() - .5) * GRESS_FARGE.variasjon; col.setRGB(Math.min(1, B.rgb[k] / 255 * fr * v), Math.min(1, B.rgb[k + 1] / 255 * fg * v), Math.min(1, B.rgb[k + 2] / 255 * fb * v)); }
     col.toArray(T.C, n * 3); n++;
   }
