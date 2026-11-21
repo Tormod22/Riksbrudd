@@ -1407,3 +1407,8 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   tregrensen, olje skjult i leirvalget, høydekurvene tynnes i bratte lier, vegnettet beholder bare spillkartets veger. 3D: første 3D-bilde viser
   leiren nær (Kvalitet.startBlikk), «Sett deg inn i feltbilen (F) · 6 m bak deg» (Kjor.innTekst), folk går unna kameraet (folk3d), stedsnavn
   med avstand når du går. Hjelpen: 265 emner. Kontroll: PC 131/131, mobil 131/131.
+  HUS I 3D OG FLAGG (21. nov kveld, brukeren: «når en flyr langt vekk fra der en starter i 3D laster ikke bygg inn», «flaggstenger havner i
+  vegen»): grensen for hus i et utsnitt var S ≤ 3200, men vanlig flyhøyde (avst ca. 2,1 km) gir S ≈ 3260 – alle nye utsnitt ble uten hus, og
+  zoomet du inn, ble utsnittet ikke bygget på nytt. Nå HUS_S() = 4200 PC / 3600 telefon (Claudes forslag), og tegn3d bygger på nytt når
+  utsnittet mangler hus og kameraet er nær nok (manglerHus). Flaggstanga i hagen tas bort i liv3d.js når den står i vegbanen/fortauet eller
+  under 1,2 m fra kanten (u.hus.flaggBort; ved Bryne 37 av 119), og flagg tegnes bare når u.påVeg finnes (S ≤ 2200). VAKT: vakter/3d.js.

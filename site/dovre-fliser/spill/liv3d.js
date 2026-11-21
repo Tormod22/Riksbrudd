@@ -117,6 +117,11 @@
     const sil = data => { const ut = []; for (let k = 0; k < data.length; k += 5) if (!påVeg(data[k], data[k + 1])) for (let q = 0; q < 5; q++) ut.push(data[k + q]); return new Float32Array(ut); };
     if (u.smått) { u.smått.stein = sil(u.smått.stein); u.smått.busk = sil(u.smått.busk); }
     if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
+    // (21. nov, brukeren: «flaggstenger havner i vegen») flaggstanga i hagen (hus3d: 4 tall per stang) tas bort når den står i vegbanen,
+    // på fortauet eller under 1,2 m fra kanten – prøvd i midten og fire punkter rundt
+    if (u.hus && u.hus.flagg && u.hus.flagg.length) { const F = u.hus.flagg, ut = []; for (let k = 0; k < F.length; k += 4) { const x = F[k], y = F[k + 1];
+        if (![[0, 0], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]].some(([dx, dy]) => påVeg(x + dx, y + dy))) for (let q = 0; q < 4; q++) ut.push(F[k + q]); }
+      u.hus.flaggBort = (F.length - ut.length) / 4; if (ut.length !== F.length) u.hus.flagg = new Float32Array(ut); }
     if (u.bunn) { const B = u.bunn; for (let j = 0; j < B.W; j++) for (let i = 0; i < B.W; i++) { const x = -u.S + (i + .5) / B.W * 2 * u.S, y = u.S - (j + .5) / B.W * 2 * u.S; if (påVeg(x, y)) B.gress[j * B.W + i] = 0; } }
     // gatelysene følger de ferdige vegene: aldri i en vegbane, på en gangveg, i et kryss, i et hus eller i vann
     u.lys = null;

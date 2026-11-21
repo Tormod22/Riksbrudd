@@ -1552,6 +1552,10 @@ function detaljIBakken(mat, side) {
 }
 // Hvor stort 3D-utsnittet er (halv side i meter) for en kameraavstand: nær = lite utsnitt med skarpt kart.
 const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
+// (21. nov, brukeren: «når en flyr langt vekk fra der en starter i 3D, laster ikke bygg inn») husene kommer med når utsnittet er høyst
+// HUS_S() meter fra midten til kanten. Før var grensen 3200 – men vanlig flyhøyde (ca. 2,1 km) gir S ≈ 3260, så alle nye utsnitt ble uten hus.
+// Claudes forslag: 4200 på PC, 3600 på telefon (husene koster mer der).
+const HUS_S = () => VW >= 900 ? 4200 : 3600;
 async function bygg3d(cx, cy, S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
   const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
@@ -1601,7 +1605,7 @@ async function bygg3d(cx, cy, S) {
     g.restore();
   }
   framdrift('reiser husene', .5);
-  if (S <= 3200 && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
+  if (S <= HUS_S() && LAGFILER && LAGFILER.hus && VIS.bygg) u.hus = await hus3d(u);
   // kartet under: vann blir blankt, trærne står bare i skog (ikke på veger og hus). Leses og behandles noen rader om gangen (pust).
   // (runde 9: punktene – 64 MB ved 4096² – tas fra lageret i spill/tallrekke.js og gis tilbake når kartbildet er sendt; alle punktene
   // skrives over under, så ingenting fra forrige utsnitt blir med)
@@ -3019,7 +3023,7 @@ function forhent3d(cx, cy, S, b) {
   try {
     be('hoyde', 9, b); be('terreng', 9, b);
     const u = [cx - S, cy - S, cx + S, cy + S];
-    if (S <= 3200 && VIS.bygg && LAGFILER && LAGFILER.hus) be('hus', 13, u);
+    if (S <= HUS_S() && VIS.bygg && LAGFILER && LAGFILER.hus) be('hus', 13, u);
     if (S <= 2200 && VIS.veg) be('vektor', 13, u);
   } catch (e) { console.warn('forhenting:', e); }
 }
@@ -3107,7 +3111,9 @@ function sett3d(u) {
       const m = new THREE.Mesh(hg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, map: tekstur[n]() })); R.scene.add(m); R.husMesh.push(m);
     }
     if (u.hus.skilt && u.hus.skilt.length) for (const m of skilt3d(u.hus.skilt)) { R.scene.add(m); R.husMesh.push(m); }
-    if (u.hus.flagg.length) småting(R, 'flagg', u.hus.flagg);
+    // (21. nov) flaggene tegnes bare når vegene i utsnittet er kjent (u.påVeg, S ≤ 2200) og flagg i vegen er tatt bort (liv3d.js) – høyere oppe
+    // synes en flaggstang uansett ikke, men den kunne stå midt i en veg som er malt i kartet
+    if (u.hus.flagg.length && u.påVeg) småting(R, 'flagg', u.hus.flagg);
     if (u.hus.biler.length) småting(R, 'bil', u.hus.biler);
   }
   if (u.lys) småting(R, 'lykt', u.lys);
@@ -3243,7 +3249,10 @@ function tegn3d() {
   // uten utsnitt (det første feilet etter at 3D ble slått på): prøv det samme igjen
   if (!R.ut) { if (!R.bygger && R.byggFeil && R.ønsket && byggVent(R)) nytt3dUtsnitt(...R.ønsket); return; }
   const b = R.bane, u = R.ut, S = utsnittS(b.avst);
-  if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
+  // (21. nov) et utsnitt uten hus bygges også på nytt når kameraet er kommet så nær at husene skal med (før: zoomet du inn fra høyt oppe,
+  // ble utsnittet stående uten hus til S var under 45 % av det gamle)
+  const manglerHus = !u.hus && u.S > HUS_S() && S <= HUS_S() && VIS.bygg && LAGFILER && LAGFILER.hus;
+  if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45 || manglerHus)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '') + '|' + (window.KAMERA_NOKKEL || '') + '|' + ENHETER.reduce((n, e) => n + (e.side === 'blå' && siktLyser(e) ? 1 : 0), 0);
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
   størrelse3d(R); kamera3d();
@@ -3492,7 +3501,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=d62358fb06"></script>
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
-<script src="/dovre-fliser/spill/liv3d.js?v=0fc636e332"></script>
+<script src="/dovre-fliser/spill/liv3d.js?v=777d268a5f"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>

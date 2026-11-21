@@ -11,6 +11,10 @@ module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navn
     const ut = { feil: [] }, krev = (ok, tekst) => { if (!ok) ut.feil.push(tekst); };
     krev(window.Kvalitet && Kvalitet.vedvarende && window.KVAL, 'Kvalitet.vedvarende mangler');
     if (ut.feil.length) return ut;
+    // (21. nov, brukeren: «når en flyr langt vekk fra der en starter i 3D, laster ikke bygg inn») vanlig flyhøyde (ca. 2,1 km) skal gi hus,
+    // og et utsnitt uten hus skal bygges på nytt når kameraet kommer nær nok
+    krev(typeof HUS_S === 'function' && HUS_S() >= utsnittS(2200), 'utsnittet i vanlig flyhøyde får ikke hus (HUS_S ' + (typeof HUS_S === 'function' ? HUS_S() : '?') + ' < ' + utsnittS(2200) + ')');
+    krev(/manglerHus/.test(tegn3d.toString()), 'tegn3d bygger ikke på nytt når husene mangler');
     // reglene: 10 s sammenhengende tregt mens noe skjer; ikke under bygging og 8 s etter; oppløsningen senkes først
     { const v = { nivå: 'høy' }, T = (nå, o = {}) => Kvalitet.vedvarende(v, { ms: 30, skala: .6, nå, aktiv: true, bygger: false, ...o });
       krev(!T(0) && !T(5) && T(11), 'vedvarende: ikke tregt etter 10 s');
