@@ -1374,6 +1374,10 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     console.log(`${trpok ? 'ok  ' : 'FEIL'} ${navn} egne tropper: ${trp.menn} fra leiren ble en tropp, om bord i speiderbilen ${trp.ombord} og følger den ${trp.følger}, oppløst: ${trp.hjem} kom hjem (én falt)`);
     // VAKT angrep, marked, oppdrag, kamp, hendelser og venner (spill/spillet.js, brukeren 16. nov: «lag alle 7»): hver del gjør sitt
     // når den slås på (i testene skjer ingenting av seg selv), og tilstanden settes tilbake etterpå.
+    // (21. nov) en vakt kan ha latt 3D være av eller midt i bygging – skytesjekken og kompasset under trenger 3D. Skriv hva vi fant, så vi ser hvem.
+    { const før3d = await pg.evaluate(async () => { const f = { på3d: typeof på3d !== 'undefined' && på3d, ut: !!(typeof R3 !== 'undefined' && R3 && R3.ut), bygger: !!(typeof R3 !== 'undefined' && R3 && R3.bygger) };
+        if (!f.på3d) await slå3d(true); const t0 = performance.now(); while ((!R3 || !R3.ut || R3.bygger) && performance.now() - t0 < 120000) await new Promise(r => setTimeout(r, 200)); return f; });
+      if (!før3d.på3d || !før3d.ut) console.log('merk: 3D var av før skytesjekken (' + JSON.stringify(før3d) + ') – slått på igjen'); }
     const sp = await pg.evaluate(async () => { const SS = window.SpilletSpill; if (!SS || !SS.klar()) return { uten: true }; await ventPåBygging();
       const ut = {}, vent = ms => new Promise(q => setTimeout(q, ms)), S = OppstartSpill.tilstand(), leir = S.leir, p0 = S.penger, t0 = tempo, F = FolkSpill.tilstand(), mor0 = F.moral, mat0 = F.mat, n0 = F.personer.length, tre0 = Leir.MATERIALER.tre.pris, salg0 = Leir.REGLER.salg, diesel0 = Leir.DRIVSTOFF.prisPerLiter, matpris0 = FolkRegler.R.matPris;
       ut.stille = !SS.T().aktiv && SS.O().liste.length === 0 && !SS.H().åpen && Leir.REGLER.salg === .5; SS.test = true; tempo = 1;
@@ -1454,7 +1458,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const kr = await pg.evaluate(() => window.KRAFT_SJEKK), krok = kr && kr.lastet && kr.linjer > 100 && kr.master > 5 && kr.spenn > 3 && kr.svever === 0 && kr.iBelte === 0 && kr.trær > 0; if (!krok) feil++;
     console.log(`${krok ? 'ok  ' : 'FEIL'} ${navn} kraftledninger: ${JSON.stringify(kr)}`);
     // kompass og minikart (spill/kompass.js): kameraet mot nord/øst gir N/Ø midt på båndet, også når du går; minikartet er tegnet; ☰ slår av og på
-    const rammer = n => pg.evaluate(n => new Promise(r => { const f0 = R3.renderer.info.render.frame; const f = () => (R3.renderer.info.render.frame - f0 >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+    const rammer = n => pg.evaluate(n => new Promise(r => { const f0 = R3.renderer.info.render.frame, t0 = performance.now(); const f = () => (R3.renderer.info.render.frame - f0 >= n || performance.now() - t0 > 20000 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);   // (21. nov) høyst 20 s – før hang hele kontrollen her når 3D ikke tegnet
     const retn = async (yaw, fot) => { await pg.evaluate(([yaw, fot]) => { if (fot) { if (!R3.fot) Gange.start(); R3.fot.a = yaw; R3.fot.pitch = 0; } else { if (R3.fot) Gange.stopp(); R3.bane.yaw = yaw; } }, [yaw, fot]); await rammer(2);
       return pg.evaluate(() => { const d = R3.cam.getWorldDirection(new THREE.Vector3()), l = Math.hypot(d.x, d.y) || 1, m = Kompass.midt(); return { tekst: m && m.tekst, øst: d.x / l, nord: d.y / l }; }); };
     const kN = await retn(0), kØ = await retn(-Math.PI / 2), kgØ = await retn(-Math.PI / 2, true), kgS = await retn(Math.PI, true); await retn(0);
