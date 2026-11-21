@@ -85,7 +85,10 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   // hverandre. Et kort som venter, vises som brikken «Et kort venter» i #varsler (trykk = vis det nå). #flytkort er en statuslinje uten
   // valg og er ikke med. Claudes forslag: minst KORT_PAUSE sekunder ekte tid fra ett kort lukkes til det neste vises av seg selv
   // (en avslørt forræder slipper pausen; i testene – webdriver – gjelder ingen pause).
-  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'samfunnkort', 'formkort', 'krigkort']; let sistÅpent = -1e9, eier = null, kø = [], straks = null; const visFor = {}, tittelFor = {};
+  // RUNDE 14 (kritiker I og J): «Velkommen tilbake» (#loggvelkommen, spill/logglager.js) er også med: står den oppe, venter kortene og
+  // morgenmøtet til den er lukket (før lå den oppå et kort, og et trykk på «Fortsett» traff valget under). Den teller ikke som et kort i
+  // pausen mellom kortene: når den lukkes (Kortkø.slipp), kommer kortet som ventet med en gang.
+  const KORT_PAUSE = 120, KORT_ID = ['hendelse', 'samfunnkort', 'formkort', 'krigkort', 'loggvelkommen']; let sistÅpent = -1e9, eier = null, kø = [], straks = null; const visFor = {}, tittelFor = {};
   const kortSynlig = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på')); };
   const pauseOk = () => navigator.webdriver || (performance.now() - sistÅpent) / 1000 >= KORT_PAUSE;
   const Kortkø = {
@@ -107,12 +110,16 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     ferdig(id) { kø = kø.filter(q => q.id !== id); if (eier === id) { eier = null; sistÅpent = performance.now(); } },
     // vis det første kortet som venter med en gang (brikken i #varsler)
     nå() { const q = kø[0]; if (!q || !q.vis || Kortkø.åpent()) return false; straks = q.id; try { q.vis(); } finally { straks = null; } return Kortkø.åpent() === q.id; },
+    // velkomsten er lukket: kortet som ventet, kan komme straks (ingen pause)
+    slipp(id) { if (id === 'loggvelkommen') sistÅpent = -1e9; },
+    // kortet i køen som står oppe, viker (skjules og står først i køen) – velkomsten kommer først
+    vik() { if (!eier || eier === 'loggvelkommen' || !kortSynlig(eier)) return null; const id = eier; eier = null; document.getElementById(id).classList.remove('på'); Kortkø.be(id, null, { først: true }); return id; },
     venter: () => kø.map(q => ({ id: q.id, tittel: q.tittel })), eier: () => eier, pause: KORT_PAUSE, sist: () => sistÅpent };
   setInterval(() => {
     if (eier && !kortSynlig(eier)) Kortkø.ferdig(eier);
     // et kort utenfor køen (seier, tap) har kommet oppå: kortet i køen viker og står først i køen igjen
     if (eier && KORT_ID.some(k => k !== eier && kortSynlig(k))) { const id = eier; eier = null; document.getElementById(id).classList.remove('på'); Kortkø.be(id, null, { først: true }); }
-    if (Kortkø.åpent()) { sistÅpent = performance.now(); return; }
+    if (Kortkø.åpent()) { if (Kortkø.åpent() !== 'loggvelkommen') sistÅpent = performance.now(); return; }
     // plassen er ledig: neste i køen får vise seg
     const q = kø[0]; if (q && q.vis && pauseOk()) { try { q.vis(); } catch (e) { kø.shift(); } }
   }, 1000);

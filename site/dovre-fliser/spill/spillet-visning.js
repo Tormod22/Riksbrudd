@@ -242,6 +242,8 @@
       const p = f.personer.find(q => q.navn === å.navn); if (v.helse && p) p.helse = Math.max(.1, p.helse + v.helse);
       if (v.folk < 0 && p) { f.personer.splice(f.personer.indexOf(p), 1); ut = ` ${å.navn} har forlatt gjengen.`; }
       if (v.folk > 0) { const r = l && FR ? FR.rekrutter(f, l, () => true) : {}; ut = r.person ? ` ${r.person.navn} er blitt med i gjengen.` : ' Det var ingen ledig seng, så vandreren gikk videre.'; } }
+    // (runde 14) et valg kan ha sin egen setning i loggen (summen i kassa)
+    if (h.valg[i].logg) ut += ' ' + h.valg[i].logg;
     logg(`${h.tekst(å.navn, å.navn2)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; skriv('riksbrudd-hendelser', H);
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
   // kortkøen (samfunn-visning.js): ett kort om gangen, med pause mellom

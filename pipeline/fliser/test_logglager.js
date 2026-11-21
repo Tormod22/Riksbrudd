@@ -17,6 +17,23 @@ const o = LL.oppsummer(M);
 ok(o && o.viktige[0].tekst.startsWith('Vaktlaget er sendt') && !o.viktige.some(v => /klarner/.test(v.tekst)), 'oppsummeringen: viktige meldinger, nyeste øverst, uten vær');
 ok(o.til.dag === 1 && o.til.klokke === '15:54' && LL.tittel(o).startsWith('dag 1'), 'klokkeslett: tid 594 = dag 1 kl. 15:54');
 ok(LL.når(1440).dag === 2 && LL.når(1440).klokke === '06:00', 'tid 1440 = dag 2 kl. 06:00');
-LL.legg(M, 'Ny melding i denne økta', 600); ok(LL.oppsummer(M).antall === LL.REGLER.maks - 1, 'oppsummeringen gjelder forrige økt (den nye meldingen telles ikke)');
+LL.legg(M, 'Ny melding i denne økta', 600); ok(LL.oppsummer(M).alle === LL.REGLER.maks - 1, 'oppsummeringen gjelder forrige økt (den nye meldingen telles ikke)');
 ok(LL.oppsummer(LL.tom(leir)) === null, 'ingen tidligere meldinger: ingen oppsummering');
+// RUNDE 14 (kritiker I og J)
+{ let A = LL.tom(leir);
+  LL.legg(A, 'Farten er senket til 10×: et bygg er ferdig.', 10); LL.legg(A, 'Kampen om leiren er i gang – røverne angriper.', 20); LL.legg(A, 'Brakke er ferdig.', 25);
+  LL.legg(A, 'Hogstlaget fant skog.', 26); LL.legg(A, 'Røysland er vårt.', 30); LL.legg(A, 'Bølge 1 er slått tilbake.', 40); LL.legg(A, 'Ola Moen falt i kampen.', 45);
+  LL.legg(A, 'Dieseltank er ferdig.', 50); LL.legg(A, 'Aggregat er bestilt.', 55); LL.legg(A, 'Mats Li snakker om å dra sin vei. – betal en bonus.', 60);
+  A = LL.les(LL.pakk(A), leir); A.økt += 1; const o = LL.oppsummer(A);
+  ok(o && !o.viktige.some(v => /Farten/.test(v.tekst)), '«Farten er senket» er aldri med');
+  ok(o.viktige.some(v => /Røysland er vårt/.test(v.tekst)) && o.viktige.some(v => /falt/.test(v.tekst)) && o.viktige.some(v => /bonus/.test(v.tekst)), 'tettsted, tap og valg prioriteres');
+  ok(o.viktige.findIndex(v => /Kampen om leiren/.test(v.tekst)) < o.viktige.findIndex(v => /slått tilbake/.test(v.tekst)), 'eldste melding først');
+  ok(o.antall === o.viktige.length && o.antall <= LL.REGLER.viktigeMaks, 'tallet = antall viste linjer');
+  // F5 rett etter F5: økta før har ingen meldinger -> ingen boks
+  const B = LL.les(LL.pakk(A), leir); B.økt += 1; ok(LL.oppsummer(B) === null, 'F5 rett etter F5 gir ingen velkomst');
+  // ingen tid har gått i forrige økt
+  let C = LL.tom(leir); LL.legg(C, 'Røysland er vårt.', 0); LL.legg(C, 'Ola falt.', 0); C = LL.les(LL.pakk(C), leir); C.økt += 1; ok(LL.oppsummer(C) === null, 'ingen velkomst når ingen tid har gått (06:00–06:00)'); }
+{ const D = require('../../site/dovre-fliser/spill/loggdemp.js').lag();
+  ok(D.vurder('Spillform: Vanlig · Hold byen.', [], 0, true) === null && D.vurder('Kystalliansen (rød) holder til i Rognan, 8 km nord for leiren.', [], 0, true) === null && D.vurder('Velkommen tilbake, Ivar. Har har 3 mill. kr i kassa.', [], 0, true) === null, 'omlasting: innledningen skrives ikke i loggen');
+  ok(!!D.vurder('Spillform: Vanlig · Hold byen.', [], 0, false), 'nytt spill: innledningen skrives'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for logglager.js er ok'); process.exit(feil ? 1 : 0);

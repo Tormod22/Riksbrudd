@@ -1,6 +1,42 @@
-[["Falne og døde", "Faller en i et av lagene dine (også Leirvakta), står det én linje i loggen, og personen er borte fra Folk med en gang – folketallet øverst går ned. De døde står i Samfunn-panelet til dere tar farvel (begravelse). Folk som går inn i en tropp, er ikke borte: de står i troppen og kommer tilbake til Folk når troppen oppløses ved leiren.", "Leiren"],
- ["Hva materialene koster", "Bygger du noe du ikke har materialer til, kjøpes det som mangler (rundet opp til en tidel). Tallet i byggemenyen, i banneret og i loggen er det samme, og det er det du betaler. Prisene på markedet endrer seg en gang i døgnet.", "Leiren"],
- ["Hva prisen på et bygg betaler", "Prisen på et bygg («utstyr og deler») kjøper utstyret og de ferdige delene – aggregatet, lyskasteren, vinduer og beslag. Arbeidet gjør byggelagene dine uten lønn; det koster bare tid. Materialene (tre, betong, stål) kommer i tillegg hvis du ikke har dem.", "Leiren"],
- ["Loggen og «Velkommen tilbake»", "De siste 100 meldingene lagres med spillet. Når du åpner spillet igjen, viser «Velkommen tilbake» det viktigste fra sist du spilte. Spillet står stille mens det er lukket. «Hele loggen» (trykk «les alt» under meldingene, eller Leir → Mål) viser alle meldingene med dag og klokkeslett.", "Kom i gang"],
- ["Lagres ordren?", "Ja. En ordre, et valg på et kort eller i morgenmøtet lagres med en gang, og klokka går aldri tilbake når du åpner spillet igjen.", "Kom i gang"],
- ["Byggelag og + i Folk", "To på Bygg er ett byggelag. Er det et oddetall, har ett lag bare én person, og det går halvt så fort. Trykker du + på en oppgave og ingen har fri, tas en fra oppgaven med flest folk – panelet sier hvem som ble flyttet og hvorfra.", "Leiren"]]
+[
+[
+"Falne og døde",
+"Faller en i et av lagene dine (også Leirvakta), står det én linje i loggen, og personen er borte fra Folk med en gang – folketallet øverst går ned. De døde står i Samfunn-panelet til dere tar farvel (begravelse). Folk som går inn i en tropp, er ikke borte: de står i troppen og kommer tilbake til Folk når troppen oppløses ved leiren.",
+"Leiren"
+],
+[
+"Hva materialene koster",
+"Bygger du noe du ikke har materialer til, kjøpes det som mangler (rundet opp til en tidel). Tallet i byggemenyen, i banneret og i loggen er det samme, og det er det du betaler. Prisene på markedet endrer seg en gang i døgnet.",
+"Leiren"
+],
+[
+"Hva prisen på et bygg betaler",
+"Prisen på et bygg («utstyr og deler») kjøper utstyret og de ferdige delene – aggregatet, lyskasteren, vinduer og beslag. Arbeidet gjør byggelagene dine uten lønn; det koster bare tid. Materialene (tre, betong, stål) kommer i tillegg hvis du ikke har dem.",
+"Leiren"
+],
+[
+"Loggen og «Velkommen tilbake»",
+"De siste 100 meldingene lagres med spillet. Når du åpner spillet igjen, viser «Velkommen tilbake» det viktigste fra sist du spilte. Spillet står stille mens det er lukket. «Hele loggen» (trykk «les alt» under meldingene, eller Leir → Mål) viser alle meldingene med dag og klokkeslett.",
+"Kom i gang"
+],
+[
+"Lagres ordren?",
+"Ja. En ordre, et valg på et kort eller i morgenmøtet lagres med en gang, og klokka går aldri tilbake når du åpner spillet igjen.",
+"Kom i gang"
+],
+[
+"Byggelag og + i Folk",
+"To på Bygg er ett byggelag. Er det et oddetall, har ett lag bare én person, og det går halvt så fort. Trykker du + på en oppgave og ingen har fri, tas en fra oppgaven med flest folk – panelet sier hvem som ble flyttet og hvorfra.",
+"Leiren"
+],
+[
+"Velkommen tilbake",
+"Når du åpner et lagret spill, kommer først en liten boks med det viktigste fra sist du spilte (tettsteder, tap, angrep og valg), eldste først. Spillet står på pause så lenge den vises. Kort og morgenmøtet venter til du har trykket «Fortsett» – det står aldri to vinduer oppå hverandre. Har ingen tid gått siden sist, kommer ingen boks. Et kort du ikke har svart på, kommer igjen etter omlasting med de samme valgene; spillet velger aldri for deg.",
+"Kom i gang"
+],
+[
+"Hva «utstyr og deler» er",
+"Prisen på et bygg kjøper utstyret og de ferdige delene – for et vakttårn lyskaster, radio, våpenfeste og stålfester, for en brakke senger, ovn, vinduer og dører. Byggemenyen sier hva det er for hvert bygg. Arbeidet gjør byggelagene dine uten lønn.",
+"Leiren"
+]
+]

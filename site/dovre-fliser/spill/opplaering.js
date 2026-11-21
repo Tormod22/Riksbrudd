@@ -11,8 +11,9 @@
   const STEG = [
     { id: 'leir', tittel: 'Åpne Leir', tekst: 'Alt i leiren styres herfra: bygg, lager, plan og mål. Trykk på Leir.', mål: 'leir', ferdig: b => b.leirÅpnet },
     { id: 'brakke', tittel: 'Bygg en brakke', tekst: 'Folkene trenger senger. I fanen Bygg: velg Brakke, trykk på et flatt sted ved leiren, og bekreft.', mål: 'brakke', ferdig: b => b.brakker > 0 },
-    { id: 'bygg2', tittel: 'Sett to på bygg', tekst: 'Åpne Folk og se at minst to står på Bygg (bruk + hvis det mangler). To personer er ett byggelag – uten dem blir ingenting bygget.', mål: 'folk', ferdig: b => b.folkÅpnet && b.påBygg >= 2,
-      krav: b => `På Bygg: ${b.påBygg || 0} av 2` + (b.folkÅpnet ? '' : ' · åpne Folk') },
+    { id: 'bygg2', tittel: 'Sett to på bygg', tekst: 'Åpne Folk og se at minst to står på Bygg (bruk + hvis det mangler). To personer er ett byggelag – uten dem blir ingenting bygget.', mål: 'folk', ferdig: b => b.påBygg >= 2,
+      // RUNDE 14 (kritiker I og J: «På Bygg: 4 av 2 · åpne Folk» sto i halvannet døgn): kravet er bare to på Bygg – Folk trenger ikke åpnes
+      krav: b => `På Bygg: ${b.påBygg || 0} av 2` },
     { id: 'tropp', tittel: 'Lag en tropp', tekst: 'Åpne Tropper, velg noen av folkene og gi troppen et navn. Tropper kan du sende ut i kartet.', mål: 'tropper', ferdig: b => b.tropper > 0 },
     { id: 'gaa', tittel: 'Gå i 3D', tekst: 'Trykk 3D for å se landet ovenfra, og så Gå for å gå rundt i leiren selv.', mål: '3d', ferdig: b => b.går },
     // (balansen runde 4, 18. nov) det gjennomspillingen viste at en ny spiller trenger for å klare den første uka: to tropper, mat,
@@ -20,8 +21,10 @@
     // (runde 8, kritiker C og D) «Ha to tropper før dag 4» fikk nye spillere til å gjøre alle folkene til soldater (brakka ble aldri
     // bygget). Nå holder det med en liten tropp til ELLER to på Vakt i Folk (Leirvakta forsvarer leiren når røverne kommer), og teksten
     // sier hva det koster i arbeidskraft og hvordan du får flere folk. kort = teksten på telefon (tre linjer).
-    { id: 'tropp2', tittel: 'Mer forsvar før dag 4', tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4) eller sett to på Vakt i Folk. Hver soldat er en arbeider mindre: la minst to stå på Bygg. Flere folk: Rekrutter i Folk.',
-      kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || b.påVakt >= 2,
+    // RUNDE 14 (kritiker J: «Mer forsvar før dag 4 · 0/2 på vakt» sto på dag 4 selv om dobbel vakt ble valgt dag 2): «før dag 4» tas bort når
+    // fristen er gått (fra dag 4 kl. 06:00), og to på Vakt én gang (også dobbel vakt fra morgenmøtet) holder (b.vaktFør, husket i lagringen)
+    { id: 'tropp2', get tittel() { return typeof tid === 'number' && tid >= 3 * 1440 ? 'Mer forsvar' : 'Mer forsvar før dag 4'; }, tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4) eller sett to på Vakt i Folk. Hver soldat er en arbeider mindre: la minst to stå på Bygg. Flere folk: Rekrutter i Folk.',
+      kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || b.påVakt >= 2 || !!b.vaktFør,
       // RUNDE 13 (kritiker H: steget sto i tre døgn uten at det gikk fram hva som manglet): kravet står konkret, og «eller» betyr eller –
       // to på Vakt holder alene (før krevde det også en tropp, uten at teksten sa det)
       krav: b => `Nå: ${b.påVakt || 0} på Vakt (trenger 2) – eller ${b.tropper || 0} ${b.tropper === 1 ? 'tropp' : 'tropper'} (trenger 2)`,
@@ -37,10 +40,10 @@
   const NYE = ['tropp2', 'mat', 'forsvar', 'reparer'];
   const tom = () => ({ gjort: [], hoppet: [], slutt: false });
   const fra = t => { let o = null; try { o = typeof t === 'string' ? JSON.parse(t) : t; } catch (e) { o = null; } const T = tom(); if (!o || typeof o !== 'object') return T;
-    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined;
+    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined; T.vaktFør = !!o.vaktFør;
     if (T.slutt && !(o.v >= 2)) for (const id of NYE) if (!T.gjort.includes(id) && !T.hoppet.includes(id)) T.hoppet.push(id);
     return T; };
-  const til = T => JSON.stringify({ v: 2, leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt });
+  const til = T => JSON.stringify({ v: 2, leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt, ...(T.vaktFør ? { vaktFør: true } : {}) });
   const tatt = (T, id) => T.gjort.includes(id) || T.hoppet.includes(id);
   // første steg som verken er gjort eller hoppet over
   const neste = T => STEG.find(s => !tatt(T, s.id)) || null;
@@ -125,6 +128,9 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     return { leirÅpnet: sett.leir, brakker: L ? L.bygg.filter(b => b.type === 'brakke').length : 0, folkÅpnet: sett.folk, påBygg: F && F.personer ? F.personer.filter(p => p.oppgave === 'bygg').length : 0,
       tropper: typeof ENHETER !== 'undefined' ? ENHETER.filter(s => s.fraFolk && levende(s)).length : 0, påVakt: F && F.personer ? F.personer.filter(p => p.oppgave === 'vakt').length : 0, går: typeof R3 !== 'undefined' && !!(R3 && R3.fot) && typeof på3d !== 'undefined' && på3d,
       ...bilde4(L, F) }; }
+  // RUNDE 14: har minst to stått på Vakt (dobbel vakt fra morgenmøtet teller), huskes det for steget «Mer forsvar»
+  const bildeFør = bilde;
+  bilde = function () { const b = bildeFør(); if (b.påVakt >= 2 && !T.vaktFør) { T.vaktFør = true; lagre(); } b.vaktFør = !!T.vaktFør; return b; };
   // (runde 4) mat, forsvar og reparasjon: matDøgn (mat per person), forsvarSatt (forsvaret – eller en øvelse – har vært satt),
   // angrep (minst én bølge er over) og skadet (bygg under 98 % som ikke repareres)
   function bilde4(L, F) { if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) sett.forsvar = true; const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null;

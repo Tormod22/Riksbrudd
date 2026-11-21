@@ -168,7 +168,9 @@
     { id: 'krangel', to: true, tekst: (n, m) => `${n} og ${m || 'en annen'} har røket i tottene på hverandre om arbeidsfordelingen.`, valg: [{ t: 'Gi alle en fridag (mister et dagsverk)', v: { moral: 6, hvile: 1 } }, { t: 'Be dem skjerpe seg', v: { moral: -4 } }] },
     { id: 'vilDra', tekst: n => `${n} snakker om å dra sin vei.`, valg: [{ t: 'Betal en bonus (500 000 kr)', v: { penger: -5e5, moral: 2 } }, { t: 'La vedkommende gå', v: { folk: -1, moral: -2 } }], krav: f => f.folk > 4 },
     { id: 'vandrer', tekst: () => 'En sliten vandrer står ved porten og ber om å få bli.', valg: [{ t: 'Ta imot (trenger en ledig seng)', v: { folk: 1, moral: 2 } }, { t: 'Gi mat og send videre', v: { mat: -3, moral: 1 } }] },
-    { id: 'funn', tekst: n => `${n} fant en nedgravd kasse bak leiren.`, valg: [{ t: 'Del med alle', v: { moral: 6 } }, { t: 'Legg det i kassa', v: { penger: 8e5, moral: -2 } }] },
+    // RUNDE 14 (kritiker J: kortet sa ikke hva som var i kassa, og loggen hadde ingen sum): innholdet står i kortet (sum: kroner, Claudes forslag)
+    { id: 'funn', sum: 8e5, tekst: n => `${n} fant en nedgravd kasse bak leiren. I den ligger kontanter, sølvtøy og sigaretter – verdt ca. 800 000 kr.`,
+      valg: [{ t: 'Del med alle (folket får verdiene – bedre moral)', v: { moral: 6 }, logg: 'Verdiene for ca. 800 000 kr ble delt ut i leiren.' }, { t: 'Legg det i kassa (+800 000 kr)', v: { penger: 8e5, moral: -2 }, logg: '800 000 kr er lagt i kassa.' }] },
     { id: 'tyveri', tekst: () => 'Noen har forsynt seg av matlageret i natt.', valg: [{ t: 'Sett ut nattevakt (folk blir slitne)', v: { moral: -2, mat: -2 } }, { t: 'La det passere', v: { mat: -6 } }], krav: f => f.mat > 8 },
     { id: 'fest', tekst: () => 'Folk vil feire at leiren står. Det koster litt mat.', valg: [{ t: 'Ja, la dem feire', v: { mat: -8, moral: 10 } }, { t: 'Ikke nå', v: { moral: -3 } }], krav: f => f.mat > 12 },
     { id: 'handel', tekst: () => 'En omreisende handelsmann tilbyr 20 rasjoner til god pris.', valg: [{ t: 'Kjøp (30 000 kr)', v: { penger: -3e4, mat: 20 } }, { t: 'Nei takk', v: {} }] },

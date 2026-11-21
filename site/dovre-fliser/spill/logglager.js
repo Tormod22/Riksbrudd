@@ -17,6 +17,18 @@
     viktigeMaks: 5,       // så mange meldinger står i velkomstboksen
     VIKTIG: /angrep|angrip|røver|fiende|falt|død|såret|slått ut|tapt|tom for|sulter|kontakten er brutt|i kamp|ildkamp|ferdig|bestilt|sendt|framme|er satt opp:|ny i gjengen|forlatt|rekrutt|kjøpt|solgt|flyttet|⚠/i,
     // stemningsmeldinger, oppskrifter (med «→»), tips og meldingene ved oppstart tas ikke med i velkomstboksen
+    // RUNDE 14 (kritiker J): det som skal med først i velkomstboksen – [mønster, vekt] (Claudes forslag)
+    PRIORITET: [
+      [/tettsted|er vårt|er vår|tok |inntatt|holder byen|mistet|overgitt|erobr/i, 4],
+      [/falt|død|drept|såret|slått ut|tapt|forlot|forlatt|savnet/i, 4],
+      [/angrep|angrip|røver|bølge|fiende|ildkamp|i kamp|kampen/i, 3],
+      [/ – [^.]*\.|morgenmøt|valgte|bestemte/i, 3],
+    ],
+    // aldri i velkomstboksen
+    ALDRI: /farten er|farten settes|spillform:|holder til (i|ved)|velkommen tilbake/i,
+    // så mange spillminutter må ha gått i forrige økt før velkomstboksen vises
+    minTid: 1,
+    // stemningsmeldinger, tips og oppstartsmeldinger
     STØY: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Velkommen tilbake|Pengene:|Tips?:|Vil du|Fikk ikke hentet)|→|Riket har gått i oppløsning|Leiren er satt opp|ingen ferdige lag/,
   };
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
@@ -39,18 +51,22 @@
     L.økt = Math.max(1, Number.isFinite(d.økt) ? d.økt : 1, ...L.linjer.map(q => q[2])); return L;
   }
   const pakk = L => JSON.stringify({ v: 1, leir: L.leir, økt: L.økt, linjer: L.linjer });
-  // det velkomstboksen viser: meldingene fra forrige økt (den siste økta med meldinger før denne), de viktigste først i tid (nyeste øverst)
+  // RUNDE 14 (kritiker I og J): det velkomstboksen viser. Bare meldingene fra økta rett før denne (en F5 rett etter en F5 gir ingenting),
+  // bare når spilltid har gått i den økta (ikke «06:00–06:00»), aldri «Farten er …» eller støy. De viktigste velges etter vekt (PRIORITET:
+  // tettsteder, tap, angrep og valg først), og de vises i tidsrekkefølge – eldste først. antall = antall linjer som vises.
+  function vekt(tekst, R = REGLER) { let v = 0; for (const [re, n] of R.PRIORITET) if (re.test(tekst)) v = Math.max(v, n); if (!v && R.VIKTIG.test(tekst)) v = 1; return v; }
   function oppsummer(L, R = REGLER) {
-    const før = L.linjer.filter(q => q[2] < L.økt); if (!før.length) return null;
-    const økt = Math.max(...før.map(q => q[2])), mine = før.filter(q => q[2] === økt), fra = mine[0][0], til = mine[mine.length - 1][0];
-    let viktige = mine.filter(q => R.VIKTIG.test(q[1]) && !R.STØY.test(q[1]));
-    if (!viktige.length) viktige = mine.filter(q => !R.STØY.test(q[1])).slice(-3);
-    viktige = viktige.slice(-R.viktigeMaks).reverse();
-    return { fra: når(fra), til: når(til), antall: mine.length, viktige: viktige.map(q => ({ ...når(q[0]), tekst: q[1] })) };
+    const mine = L.linjer.filter(q => q[2] === L.økt - 1); if (!mine.length) return null;
+    const fra = mine[0][0], til = mine[mine.length - 1][0]; if (til - fra < R.minTid) return null;
+    const kandidater = mine.map((q, i) => ({ q, i, v: R.ALDRI.test(q[1]) || R.STØY.test(q[1]) ? 0 : vekt(q[1], R) })).filter(k => k.v > 0);
+    if (!kandidater.length) return null;
+    // høyest vekt først, nyeste først ved lik vekt; så tilbake i tidsrekkefølge (eldste øverst)
+    const valgt = kandidater.sort((a, b) => b.v - a.v || b.i - a.i).slice(0, R.viktigeMaks).sort((a, b) => a.i - b.i);
+    return { fra: når(fra), til: når(til), antall: valgt.length, alle: mine.length, viktige: valgt.map(k => ({ ...når(k.q[0]), tekst: k.q[1] })) };
   }
   // tittelen i velkomstboksen
   function tittel(o) { if (!o) return ''; const a = o.fra, b = o.til; return a.dag === b.dag ? `dag ${a.dag}, ${a.klokke}–${b.klokke}` : `dag ${a.dag} ${a.klokke} – dag ${b.dag} ${b.klokke}`; }
-  const api = { REGLER, nøkkel, leirId, når, tom, legg, les, pakk, oppsummer, tittel };
+  const api = { REGLER, nøkkel, leirId, når, tom, legg, les, pakk, vekt, oppsummer, tittel };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   if (typeof document === 'undefined') { rot.LoggLager = api; return; }
 
@@ -71,14 +87,15 @@
     L = nytt ? tom(l) : les(lagret, l); if (L.linjer.length) L.økt += 1;
     // meldingene fra før det lagrede spillet var lest inn, har klokka 06:00 – de får klokka spillet står på nå
     const nå = typeof tid === 'number' && isFinite(tid) ? tid : 0; for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
-    const o = oppsummer(L); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; setTimeout(() => velkommen(o), 1800); }
+    // RUNDE 14: velkomsten vises STRAKS (før kortene og morgenmøtet, som venter i kortkøen til den er lukket – høyst én modal om gangen)
+    const o = oppsummer(L); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; velkommen(o); }
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   window.addEventListener('pagehide', lagre);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
 
   const css = document.createElement('style');
-  css.textContent = `#loggvelkommen{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 10px); z-index:30; width:min(460px, calc(100vw - 24px)); box-sizing:border-box;
+  css.textContent = `#loggvelkommen{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 10px); z-index:20; width:min(460px, calc(100vw - 24px)); box-sizing:border-box;
   background:linear-gradient(180deg,#2a2114,#17120a); border:1px solid #c9b26a; box-shadow:0 10px 28px rgba(0,0,0,.6); color:var(--ink,#e7dcc3); padding:10px 13px 11px; font-size:14px; line-height:1.4; }
 #loggvelkommen h3{ margin:0 0 2px; font-family:"IM Fell English",serif; font-weight:400; font-size:19px; color:#f0dc9a; } #loggvelkommen small{ display:block; color:#a89970; font-size:12px; margin-bottom:6px; }
 #loggvelkommen ul{ margin:0; padding:0; list-style:none; max-height:min(220px, 40vh); overflow-y:auto; } #loggvelkommen li{ padding:3px 0; border-top:1px solid #3a2f1c; } #loggvelkommen li i{ font-style:normal; color:#a89970; font-size:12px; margin-right:6px; white-space:nowrap; }
@@ -95,13 +112,36 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
   const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
   const kn = (t, f, id) => { const b = el('button', '', t); b.type = 'button'; if (id) b.id = id; b.onclick = f; return b; };
 
-  // velkomstboksen
+  // velkomstboksen. RUNDE 14 (kritiker I og J: den lå oppå et kort/morgenmøtet, et trykk på «Fortsett» traff «Selg 15 m³ tre» under, og den
+  // ble liggende over stoppbanneret og angrepsbanneret i timevis):
+  //   - den er med i kortkøen (spill/samfunn-visning.js: Kortkø), så kortene og morgenmøtet venter til den er lukket;
+  //   - står et annet kort (seier/tap, krigskortet, morgenmøtet) oppe likevel, lukkes velkomsten – aldri to oppå hverandre;
+  //   - spillet står på pause mens den vises, og den lukkes når spillet går igjen (▶, ⏭, en fart) eller tiden flytter seg;
+  //   - den ligger under bannere og varsler (z-index REGLER.z).
+  let vakt = 0, tidVed = 0, tempoFør = 0;
+  const nåTid = () => (typeof tid === 'number' && isFinite(tid) ? tid : 0), fart = () => (typeof tempo !== 'undefined' ? tempo : 0);
+  function lukkVelkommen(gjenoppta) { const b = document.getElementById('loggvelkommen'); clearInterval(vakt); vakt = 0; if (!b) return; b.remove();
+    if (rot.Kortkø && Kortkø.slipp) Kortkø.slipp('loggvelkommen');
+    // «Fortsett»: spillet går videre i farten det hadde før velkomsten (bare når den selv satte pause)
+    if (gjenoppta && tempoFør > 0 && fart() === 0) { const p = document.getElementById('sp0'); if (p) p.click(); if (typeof tempo !== 'undefined' && tempo !== tempoFør) tempo = tempoFør; }
+    tempoFør = 0; }
   function velkommen(o) {
-    if (!o) return; let b = document.getElementById('loggvelkommen'); if (b) b.remove(); b = el('div'); b.id = 'loggvelkommen'; b.setAttribute('role', 'status');
-    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Dette skjedde sist du spilte (${tittel(o)}, ${o.antall} ${o.antall === 1 ? 'melding' : 'meldinger'}). Spillet sto stille mens du var borte.`));
+    if (!o) return; lukkVelkommen(false);
+    if (['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); })) return;
+    // et kort i køen (hendelse, folket) som alt står oppe, viker og kommer straks etter velkomsten
+    if (rot.Kortkø && Kortkø.vik) Kortkø.vik();
+    const b = el('div', 'på'); b.id = 'loggvelkommen'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Velkommen tilbake');
+    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Dette skjedde sist du spilte (${tittel(o)}) – ${o.antall === 1 ? 'den viktigste meldingen' : `de ${o.antall} viktigste meldingene`}, eldste først. Spillet sto stille mens du var borte.`));
     const ul = el('ul'); for (const v of o.viktige) { const li = el('li'); li.append(el('i', '', `dag ${v.dag} ${v.klokke}`), document.createTextNode(v.tekst)); ul.appendChild(li); } b.appendChild(ul);
-    const rad = el('div', 'rad'); rad.append(kn('Hele loggen', () => { b.remove(); visHele(true); }, 'loggvelkommen-hele'), kn('Fortsett', () => b.remove(), 'loggvelkommen-ok')); b.appendChild(rad);
+    const rad = el('div', 'rad'); rad.append(kn('Hele loggen', () => { lukkVelkommen(false); visHele(true); }, 'loggvelkommen-hele'), kn('Fortsett', () => lukkVelkommen(true), 'loggvelkommen-ok')); b.appendChild(rad);
     document.body.appendChild(b);
+    // pause mens den står oppe
+    tempoFør = 0; if (fart() > 0) { const p = document.getElementById('sp0'); if (p) { tempoFør = fart(); p.click(); } }
+    tidVed = nåTid();
+    vakt = setInterval(() => { if (!document.getElementById('loggvelkommen')) { clearInterval(vakt); vakt = 0; return; }
+      // et annet kort eller møte står oppe, eller spillet går igjen: velkomsten lukkes
+      const annet = ['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
+      if (annet || nåTid() > tidVed + .01 || fart() > 0) { tempoFør = 0; lukkVelkommen(false); } }, 200);
   }
   // hele loggen: nyeste først, gruppert per dag
   const hel = el('div'); hel.id = 'logghel'; hel.setAttribute('role', 'dialog'); hel.setAttribute('aria-label', 'Hele loggen'); document.body.appendChild(hel);
@@ -122,6 +162,6 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
   // Leir-menyen, fanen Mål
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e, knapp: k }) => { if (!L) return; hode.appendChild(e('h3', { 'data-fane': 'mål' }, 'Loggen'));
     hode.appendChild(e('div', { klasse: 'rad' }, e('span', {}, `${L.linjer.length} meldinger er lagret (de siste ${REGLER.maks}).`), k('Hele loggen', () => visHele(true)))); });
-  const API = Object.assign(api, { test: false, ny, start, lagre, velkommen, visHele, tilstand: () => L, nullstill: () => { L = L ? tom(L.leir) : null; lagre(); helSig = ''; oppdaterPanel(); }, vist: () => !!document.getElementById('loggvelkommen') });
+  const API = Object.assign(api, { test: false, ny, start, lagre, velkommen, lukkVelkommen, visHele, tilstand: () => L, nullstill: () => { L = L ? tom(L.leir) : null; lagre(); helSig = ''; oppdaterPanel(); }, vist: () => !!document.getElementById('loggvelkommen') });
   rot.LoggLager = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -7,7 +7,9 @@ ok(O.STEG.length === 9 && O.neste(T).id === 'leir' && O.nr(T) === 1, 'ni steg, f
 ok(O.oppdater(T, tomt).length === 0 && O.neste(T).id === 'leir', 'ingenting gjort: står på første steg');
 ok(O.oppdater(T, { ...tomt, brakker: 1 }).length === 0, 'et senere steg gjort teller ikke før de foran er tatt');
 ok(O.oppdater(T, { ...tomt, leirÅpnet: true, brakker: 1 }).join() === 'leir,brakke' && O.neste(T).id === 'bygg2', 'to steg på rad blir ferdige samtidig');
-ok(O.oppdater(T, { ...tomt, påBygg: 3 }).length === 0, 'to på bygg teller først når Folk er åpnet');
+ok(O.oppdater(T, { ...tomt, påBygg: 1 }).length === 0, 'én på bygg er ikke nok');
+// RUNDE 14 (kritiker I og J): to på bygg holder – Folk trenger ikke åpnes
+{ const Tx = O.fra(O.til(T)); ok(O.oppdater(Tx, { ...tomt, påBygg: 4 }).join() === 'bygg2', 'to (eller flere) på bygg godkjennes uten at Folk er åpnet'); }
 ok(O.hopp(T) === 'bygg2' && O.neste(T).id === 'tropp' && O.nr(T) === 4, 'hopp over går til neste steg');
 const T2 = O.fra(O.til(Object.assign(T, { leir: '1,2' })));
 ok(T2.leir === '1,2' && T2.gjort.join() === 'leir,brakke' && T2.hoppet.join() === 'bygg2', 'lagring og lesing gir samme tilstand');
@@ -32,4 +34,8 @@ ok(O.STEG.every(s => s.tittel && s.tekst.length > 20 && s.tekst.length < 170), '
 { const s = O.STEG.find(q => q.id === 'tropp2'); ok(s.ferdig({ tropper: 0, påVakt: 2 }) && s.ferdig({ tropper: 2, påVakt: 0 }) && !s.ferdig({ tropper: 1, påVakt: 1 }), 'steg 6: to på Vakt ELLER to tropper');
   ok(O.krav(s, { tropper: 1, påVakt: 1 }) === 'Nå: 1 på Vakt (trenger 2) – eller 1 tropp (trenger 2)' && O.krav(s, { tropper: 1, påVakt: 1 }, true) === '1/2 på vakt', 'steg 6: kravet står konkret');
   ok(O.krav(O.STEG.find(q => q.id === 'bygg2'), { påBygg: 1, folkÅpnet: true }) === 'På Bygg: 1 av 2' && O.krav(O.STEG[0], {}) === '', 'krav for «Sett to på bygg», tomt for steg uten tall'); }
+// RUNDE 14: dobbel vakt tidligere teller, og «før dag 4» tas bort etter fristen
+{ const s6 = O.STEG.find(s => s.id === 'tropp2'); ok(s6.ferdig({ tropper: 1, påVakt: 0, vaktFør: true }), 'to på vakt før (dobbel vakt) godkjenner «Mer forsvar»');
+  globalThis.tid = 3 * 1440 + 10; ok(s6.tittel === 'Mer forsvar', 'dag 4: «før dag 4» er borte'); globalThis.tid = 100; ok(s6.tittel === 'Mer forsvar før dag 4', 'dag 1: «før dag 4» står'); delete globalThis.tid;
+  const Tv = O.tom(); Tv.vaktFør = true; ok(O.fra(O.til(Tv)).vaktFør === true, 'vaktFør lagres'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);
