@@ -2,7 +2,9 @@
 
 Hvert bygg får omriss (polygon i EPSG:25833), høyde h (meter) og type t:
   0 bolig (hus), 1 garasje/uthus, 2 næring/kontor/hotell, 3 offentlig (sykehus, rådhus …), 4 landbruk, 5 annet/ukjent,
-  6 industri, 7 butikk/handel, 8 kirke/kapell, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte, 12 lager, 13 sykehus, 14 flyplass
+  6 industri, 7 butikk/handel, 8 kirke/kapell, 9 skole/barnehage, 10 leilighetsbygg, 11 hytte, 12 lager, 13 sykehus, 14 flyplass,
+  15 sykehjem/omsorgsbolig, 16 legevakt/legesenter (21. nov)
+Utseende (21. nov, når OSM har det): r takform, l etasjer, tf/vf takfarge/veggfarge (0xRRGGBB + 1), m materiale – se utseende().
   (10. nov: finere typer; bygg merket bare building=yes får typen fra amenity/shop/aeroway/office/craft på samme omriss)
 Høyde: OSM `height`, ellers `building:levels` × 3 m + 1 m (tak), ellers anslag etter type (se HØYDE).
 Fliser: z12 (forenklet, bygg over 30 m²) og z13 (alle). Et bygg legges i alle fliser omrisset berører (med margin),
@@ -44,6 +46,9 @@ TYPE = {  # OSM building=* -> vår type
     **dict.fromkeys(['apartments', 'dormitory', 'terrace'], 10),
     **dict.fromkeys(['cabin', 'hut'], 11),
     **dict.fromkeys(['barn', 'farm_auxiliary', 'cowshed', 'stable', 'greenhouse', 'silo', 'sty'], 4),
+    # (21. nov, runde 15: helsebygg) 15 sykehjem/omsorgsbolig, 16 legevakt/legesenter/helsehus
+    **dict.fromkeys(['nursing_home'], 15),
+    **dict.fromkeys(['clinic'], 16),
 }
 HØYDE = {'house': 7, 'detached': 7, 'semidetached_house': 7, 'terrace': 8, 'apartments': 15, 'residential': 9, 'dormitory': 12,
          'cabin': 5, 'hut': 4, 'farm': 8, 'bungalow': 5, 'garage': 3, 'garages': 3, 'shed': 2.5, 'carport': 2.5, 'boathouse': 4,
@@ -55,7 +60,9 @@ HØYDE = {'house': 7, 'detached': 7, 'semidetached_house': 7, 'terrace': 8, 'apa
 def type_fra_merker(tags):
     am, ae = tags.get('amenity'), tags.get('aeroway')
     if ae in ('terminal', 'hangar', 'aerodrome'): return 14
-    if am in ('hospital', 'clinic'): return 13
+    if am == 'hospital': return 13
+    h = helse_type(tags)
+    if h: return h
     if am == 'place_of_worship': return 8
     if am in ('school', 'kindergarten', 'college', 'university'): return 9
     if tags.get('shop') or am in ('marketplace', 'fuel', 'restaurant', 'cafe', 'fast_food', 'pharmacy', 'bank'): return 7
@@ -63,6 +70,60 @@ def type_fra_merker(tags):
     if tags.get('craft') or tags.get('industrial') or tags.get('man_made') == 'works': return 6
     if am in ('townhall', 'fire_station', 'police', 'library', 'community_centre', 'courthouse'): return 3
     return None
+
+# Helsebygg (21. nov, runde 15, brukeren: «eldrehjem er vanlige bygg – sykehjem, legevakter, sykehus»):
+# 15 = sykehjem/omsorgsbolig (amenity=nursing_home, social_facility=nursing_home/assisted_living/group_home),
+# 16 = legevakt, legesenter, tannlege, helsehus (amenity=clinic/doctors/dentist, healthcare=*).
+# De er ofte merket building=residential/apartments/commercial med amenity på samme omriss, så amenity vinner over de vanlige typene.
+HELSE_OVER = {'yes', 'residential', 'apartments', 'commercial', 'public', 'civic', 'office', 'dormitory', 'government', 'house', 'detached'}
+def helse_type(tags):
+    am, sf, hc = tags.get('amenity'), tags.get('social_facility'), tags.get('healthcare')
+    if am == 'nursing_home' or (am == 'social_facility' and sf in (None, 'nursing_home', 'assisted_living', 'group_home')) or hc == 'nursing_home': return 15
+    if am in ('clinic', 'doctors', 'dentist') or hc in ('clinic', 'doctor', 'centre', 'dentist', 'physiotherapist'): return 16
+    return None
+def bygg_type(b, tags):
+    """Vår type for et bygg: building=* (TYPE), helsebygg fra amenity også på vanlige boligtyper, ellers andre merker når building=yes."""
+    t = TYPE.get(b)
+    if b in HELSE_OVER and t != 13:
+        h = helse_type(tags)
+        if h: return h
+    if t is None and b == 'yes': t = type_fra_merker(tags)
+    return t if t is not None else 5
+
+# Tak, etasjer, farger og materiale (21. nov, runde 15, «bygg fra virkeligheten»): det OSM vet om utseendet, når det er merket.
+# r = takform (roof:shape), l = etasjer (building:levels), tf/vf = takfarge/veggfarge som 0xRRGGBB + 1 (roof:colour, building:colour),
+# m = veggmateriale (building:material). Mangler merket, skrives ingenting (fila blir ikke større for bygg uten merker).
+TAKFORM = {'flat': 1, 'gabled': 2, 'hipped': 3, 'half-hipped': 4, 'pyramidal': 5, 'mansard': 6, 'gambrel': 7, 'skillion': 8,
+           'dome': 9, 'onion': 9, 'round': 10, 'saltbox': 2, 'side_hipped': 4, 'cross_gabled': 2}
+MATERIALE = {'wood': 1, 'timber_framing': 1, 'brick': 2, 'stone': 3, 'sandstone': 3, 'granite': 3, 'plaster': 4, 'stucco': 4,
+             'concrete': 5, 'glass': 6, 'metal': 7, 'metal_plates': 7, 'steel': 7, 'cement_block': 5}
+FARGENAVN = {'white': 0xf2f0ea, 'black': 0x2b2b2b, 'grey': 0x8a8a88, 'gray': 0x8a8a88, 'darkgrey': 0x555555, 'darkgray': 0x555555,
+             'lightgrey': 0xc8c8c4, 'lightgray': 0xc8c8c4, 'red': 0x9a3a2c, 'darkred': 0x6e2a22, 'brown': 0x6b4a34, 'maroon': 0x6e2a22,
+             'yellow': 0xd8bb64, 'beige': 0xd9ccaf, 'orange': 0xc0673a, 'green': 0x5a7048, 'darkgreen': 0x3f5236, 'blue': 0x55708a,
+             'silver': 0xb8bcbe, 'tan': 0xc8ae86, 'cream': 0xeee4cc, 'pink': 0xd4a6a0, 'terracotta': 0xb0573a}
+def farge(v):
+    """OSM-farge (#rgb, #rrggbb eller navn) -> 0xRRGGBB + 1 (0 = ukjent)."""
+    if not v: return 0
+    v = str(v).strip().lower().split(';')[0]
+    if v.startswith('#'):
+        h = v[1:]
+        if len(h) == 3: h = ''.join(c * 2 for c in h)
+        try: return int(h, 16) + 1 if len(h) == 6 else 0
+        except ValueError: return 0
+    n = FARGENAVN.get(v.replace(' ', '').replace('_', ''))
+    return n + 1 if n is not None else 0
+def utseende(tags):
+    e = {}
+    r = TAKFORM.get((tags.get('roof:shape') or '').strip().lower())
+    if r: e['r'] = r
+    l = tall(tags.get('building:levels'))
+    if l and 0 < l < 200: e['l'] = int(round(l))
+    for nøkkel, navn in (('roof:colour', 'tf'), ('building:colour', 'vf')):
+        f = farge(tags.get(nøkkel))
+        if f: e[navn] = f
+    m = MATERIALE.get((tags.get('building:material') or '').strip().lower())
+    if m: e['m'] = m
+    return e
 
 # Kjedene (nummeret må stemme med BUTIKKER i site/dovre-fliser/index.html). Første treff vinner (Coop Extra før Coop).
 KJEDER = [(1, 'kiwi'), (2, 'rema'), (3, 'extra'), (4, 'prix'), (5, 'mega'), (6, 'obs'), (7, 'meny'), (8, 'spar'), (9, 'joker'),
@@ -98,7 +159,7 @@ def tall(s):
 class Samler(osmium.SimpleHandler):
     def __init__(s):
         super().__init__(); s.tr = Transformer.from_crs('EPSG:4326', CRS, always_xy=True)
-        s.ringer, s.h, s.t, s.k = [], [], [], []
+        s.ringer, s.h, s.t, s.k, s.u = [], [], [], [], []
         s.anlegg, s.anlegg_t, s.anlegg_r = [], [], []   # ringer, type og banenummer
         s.punkt = []                    # butikkpunkter: (x, y, kjede)
         s.fuel = []                     # bensinstasjoner: (x, y, kjede)
@@ -149,7 +210,7 @@ class Samler(osmium.SimpleHandler):
                 if h is None:
                     l = tall(a.tags.get('building:levels'))
                     h = l * 3 + 1 if l else HØYDE.get(b, 6)
-                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); t = TYPE.get(b); t = t if t is not None else (type_fra_merker(a.tags) if b == 'yes' else None); s.t.append(t if t is not None else 5); s.k.append(kjede(a.tags))
+                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); t = bygg_type(b, a.tags); s.t.append(t if t is not None else 5); s.k.append(kjede(a.tags)); s.u.append(utseende(a.tags))
         except Exception: pass
 
 
@@ -172,7 +233,7 @@ def koble_punkter(ringer, k, punkt):
     return n
 
 
-def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=()):
+def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=(), u=None):
     """Fordeler byggene på z12- og z13-fliser etter omrissets ramme (med margin) og koder MVT."""
     ut = {}
     for z, min_areal, tol in ((12, 30.0, 1.0), (13, 0.0, 0.0)):
@@ -204,6 +265,7 @@ def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=(
                 if len(c) >= 4:
                     e = {'h': h[i], 't': t[i], 'i': i}
                     if k and k[i]: e['k'] = k[i]
+                    if u and u[i]: e.update(u[i])
                     f.append({'geometry': Polygon(c), 'properties': e})
             lag = [{'name': 'hus', 'features': f}] if f else []
             if z == 13 and (tx, ty) in anl:
@@ -242,7 +304,7 @@ def main(inn, utmappe, punktfil=None):
         if nær is None: fuel.append((x, y, kj))
         elif kj and not fuel[nær][2]: fuel[nær] = (fuel[nær][0], fuel[nær][1], kj)
     logg('bensinstasjoner:', len(fuel))
-    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r, fuel)
+    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r, fuel, s.u)
     fil = os.path.join(utmappe, 'hus-0.pmtiles'); l = sorted(fl.items(), key=lambda kv: zxy_to_tileid(*kv[0]))
     with open(fil, 'wb') as f:
         w = Writer(f)
@@ -252,7 +314,7 @@ def main(inn, utmappe, punktfil=None):
                    {'description': 'Byggomriss fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL)', 'crs': CRS})
     b = os.path.getsize(fil); tag = 'kart-hus-' + hashlib.sha256(open(fil, 'rb').read()).hexdigest()[:12]
     man = {'versjon': tag, 'kilde': '© OpenStreetMap-bidragsytere (ODbL)', 'filer': {'hus': [{'fil': 'hus-0.pmtiles', 'zmin': 12, 'zmax': 13, 'x6': None, 'byte': b, 'fliser': len(l)}]},
-           'statistikk': {'bensinstasjoner': len(fuel), 'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None}}
+           'statistikk': {'bensinstasjoner': len(fuel), 'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None, 'med_takform': sum(1 for e in s.u if 'r' in e), 'med_etasjer': sum(1 for e in s.u if 'l' in e), 'med_farge': sum(1 for e in s.u if 'tf' in e or 'vf' in e), 'helse': sum(1 for v in s.t if v in (15, 16))}}
     json.dump(man, open(os.path.join(utmappe, 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
     open(os.path.join(utmappe, 'tag.txt'), 'w').write(tag)
     logg('ferdig:', len(l), 'fliser,', round(b / 1e6, 1), 'MB,', tag)
