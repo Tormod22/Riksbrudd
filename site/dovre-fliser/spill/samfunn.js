@@ -382,7 +382,8 @@
       { t: 'Vi har ikke folk til det', f: { virkning: { navn: 'Ingen skole for barna', moral: -2, døgn: 3 }, tekst: 'Barna løper rundt som før.' } }] },
     { id: 'tyv', krav: k => k.F.mat > 6, tekst: a => `${a.navn} ble tatt i å gjemme unna mat fra lageret.`, valg: [
       { t: 'Straff: ekstra vakter og halv rasjon', f: { lojal: { a: -.2 }, moral: 1, tekst: 'Regler er regler.' } },
-      { t: 'Tilgi – alle er sultne', f: { lojal: { a: .1 }, virkning: { navn: 'Tyveri uten følger', moral: -2, døgn: 1 }, tekst: 'Noen mente du var for snill.' } },
+      // RUNDE 13 (kritiker H: «Tilgi – alle er sultne» mens maten rakk i 17 døgn): teksten følger matlageret (matDøgn: under 3 døgn = sultne)
+      { t: (a, b, k) => (matDøgn(k) < 3 ? 'Tilgi – alle er sultne' : matDøgn(k) < 7 ? 'Tilgi – hen er redd maten tar slutt' : 'Tilgi denne gangen'), f: { lojal: { a: .1 }, virkning: { navn: 'Tyveri uten følger', moral: -2, døgn: 1 }, tekst: 'Noen mente du var for snill.' } },
       { t: 'Utvis hen fra leiren', f: { utvis: true, virkning: { navn: 'En av oss ble utvist', moral: -3, døgn: 2 }, tekst: 'Hen gikk før det ble lyst.' } }] },
     { id: 'ønske', tekst: (a, b, k) => `${a.navn} tar deg til side: «Jeg ønsker meg ${profil(a).ønskeTekst}.»`, krav: (k, a) => !ønskeOppfylt(a, k), valg: [
       { t: 'Lov at det kommer (innen tre døgn)', f: { løfte: true, lojal: { a: .05 }, tekst: 'Hen takket og gikk tilbake til arbeidet.' } },
@@ -391,6 +392,8 @@
       { t: 'Ja, la oss samles', f: { virkning: { navn: 'Minnestund', moral: 4, tempo: .9, døgn: 1 }, lojal: { alle: .01 }, tekst: 'Navnene ble lest opp ett for ett.' } },
       { t: 'Vi får se framover', f: { tekst: 'Arbeidet gikk videre.' } }] },
   ];
+  // hvor mange døgn maten rekker (én rasjon per person per døgn; uten tall: «nok»)
+  const matDøgn = k => { const F = k && k.F; return F && F.personer && F.personer.length ? (+F.mat || 0) / F.personer.length : 99; };
   // velg et kort som passer nå (aldri det samme to ganger på rad). Gir { type: 'kort', id, a, b }
   function velgKort(S, F, k, r) {
     if (F.personer.length < 2) return null; const P = F.personer.filter(p => !p.borte), a = P[Math.floor(r() * P.length)], b = P.filter(p => p !== a)[Math.floor(r() * (P.length - 1))]; if (!a || !b) return null;
@@ -398,7 +401,7 @@
     return { type: 'kort', id: q.id, a: a.id, b: b.id };
   }
   function kortTekst(S, F, c, k) { const q = KORT.find(x => x.id === c.id), a = F.personer.find(p => p.id === c.a) || { navn: 'Noen', ferd: {} }, b = F.personer.find(p => p.id === c.b) || { navn: 'en annen', ferd: {} };
-    return { tittel: 'I leiren', tekst: medPron(q.tekst(a, b, k), a), valg: q.valg.map(v => ({ t: medPron(typeof v.t === 'function' ? v.t(a, b) : v.t, a), kan: !(v.f.mat < 0 && F.mat < -v.f.mat) })) }; }
+    return { tittel: 'I leiren', tekst: medPron(q.tekst(a, b, k), a), valg: q.valg.map(v => ({ t: medPron(typeof v.t === 'function' ? v.t(a, b, { ...k, S, F }) : v.t, a), kan: !(v.f.mat < 0 && F.mat < -v.f.mat) })) }; }
   function brukFølge(S, F, f, a, b, k, r, ut) {
     if (f.sjanse) return brukFølge(S, F, r() < f.sjanse.p * (S.lover.våpen && f.sjanse.da.helse ? 1.3 : 1) ? f.sjanse.da : f.sjanse.ellers, a, b, k, r, ut);
     if (f.moral) F.moral = klem(F.moral + f.moral, 0, 100); if (f.mat) F.mat = Math.max(0, F.mat + f.mat); if (f.penger) ut.penger += f.penger;

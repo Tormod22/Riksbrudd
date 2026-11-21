@@ -164,7 +164,8 @@
   // ---------- HENDELSER i gjengen: små valg som betyr noe ----------
   const HENDELSER = [
     { id: 'syk', tekst: n => `${n} har fått høy feber og hoster stygt.`, valg: [{ t: 'Gi medisiner (300 000 kr)', v: { penger: -3e5, moral: 3 } }, { t: 'La det gå over av seg selv', v: { helse: -.35, moral: -3 } }] },
-    { id: 'krangel', tekst: n => `${n} og en annen har røket i tottene på hverandre om arbeidsfordelingen.`, valg: [{ t: 'Gi alle en fridag (mister et dagsverk)', v: { moral: 6, hvile: 1 } }, { t: 'Be dem skjerpe seg', v: { moral: -4 } }] },
+    // RUNDE 13 (kritiker H: «Ingrid Rønning og en annen …» mens Ingrid var på speidertur): to = kortet gjelder to i leiren, begge navngis
+    { id: 'krangel', to: true, tekst: (n, m) => `${n} og ${m || 'en annen'} har røket i tottene på hverandre om arbeidsfordelingen.`, valg: [{ t: 'Gi alle en fridag (mister et dagsverk)', v: { moral: 6, hvile: 1 } }, { t: 'Be dem skjerpe seg', v: { moral: -4 } }] },
     { id: 'vilDra', tekst: n => `${n} snakker om å dra sin vei.`, valg: [{ t: 'Betal en bonus (500 000 kr)', v: { penger: -5e5, moral: 2 } }, { t: 'La vedkommende gå', v: { folk: -1, moral: -2 } }], krav: f => f.folk > 4 },
     { id: 'vandrer', tekst: () => 'En sliten vandrer står ved porten og ber om å få bli.', valg: [{ t: 'Ta imot (trenger en ledig seng)', v: { folk: 1, moral: 2 } }, { t: 'Gi mat og send videre', v: { mat: -3, moral: 1 } }] },
     { id: 'funn', tekst: n => `${n} fant en nedgravd kasse bak leiren.`, valg: [{ t: 'Del med alle', v: { moral: 6 } }, { t: 'Legg det i kassa', v: { penger: 8e5, moral: -2 } }] },

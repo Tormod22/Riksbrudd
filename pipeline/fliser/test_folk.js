@@ -123,5 +123,14 @@ ok(L0.BYGG.kjøkken && L0.kostnad('kjøkken').pris === 3e6 && L0.PRIORITET.inclu
   ok(p && p.id === id && G.personer.length === n - 1 && !G.personer.some(q => q.id === id), 'fjern: den falne er ute av folket');
   ok(F0.fjern(G, id) === null && G.personer.length === n - 1, 'fjern to ganger tar ikke en til');
   ok(F0.personId({ person: 7 }) === 7 && F0.personId({ person: { id: 7 } }) === null && F0.personId({}) === null, 'personId: bare Leirvaktas tall peker inn i folket'); }
+// RUNDE 13: ingen to personer i samme spill (levende eller døde) får likt fullt navn
+{ const G = F0.ny(7), r = F0.rng(3), døde = G.personer.splice(0, 4).map(p => p.navn); F0.opptatteNavn = () => ['Ragnhild Tangen'];
+  for (let i = 0; i < 300; i++) F0.nyPerson(G, r);
+  const alle = G.personer.map(p => p.navn), unike = new Set(alle);
+  ok(unike.size === alle.length, 'nye navn: ingen like fulle navn blant 306 levende');
+  ok(!alle.some(n => døde.includes(n) || n === 'Ragnhild Tangen'), 'nye navn: ingen får navnet til en som er borte (død) eller meldt inn som opptatt');
+  const H = F0.fraJSON(JSON.parse(JSON.stringify(G))); ok(H.navnBrukt.length >= alle.length + 4 && døde.every(n => H.navnBrukt.includes(n)), 'navnBrukt lagres med folket');
+  const E = F0.fraJSON({ personer: [{ id: 1, navn: 'Ola Haugen' }] }); ok(E.navnBrukt.length === 1 && E.navnBrukt[0] === 'Ola Haugen', 'eldre lagring: navnBrukt = de som er med nå');
+  F0.opptatteNavn = null; }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for folk.js er ok');
 process.exit(feil ? 1 : 0);
