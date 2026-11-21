@@ -38,6 +38,6 @@ ok(TL.rensBytte({ penger: -5, lager: { tre: 'x', '<b>': 3 }, diesel: NaN }).peng
   A2.strictEqual(TL.neste(d, { tid: 1100, bølge: 3 }), null, 'en annen bølge'); A2.strictEqual(TL.neste({ ...d, aktiv: 2 }, { tid: 1100, bølge: 2 }), null, 'ikke midt i et angrep');
   A2.strictEqual(TL.neste({ ...d, neste: 1100 + 4 * 1440 }, { tid: 1100, bølge: 2 }), null, 'urimelig langt fram');
   const d2 = TL.pakk({ aktiv: 3, tid: 50, lag: [], egne: [], anslag: { id: 'r3', v: 42.25, t: 50, minNær: 1234.4, sett: true } });
-  A2.deepStrictEqual(d2.anslag, { id: 'r3', v: 42.3, t: 50, minNær: 1234, sett: true }); A2.strictEqual(TL.rensAnslag({ id: 'r3', v: 'x', t: 1 }), null);
+  A2.deepStrictEqual(d2.anslag, { id: 'r3', v: 42.3, t: 50, minNær: 1234, sett: true, rute: false }); A2.strictEqual(TL.rensAnslag({ id: 'r3', v: 'x', t: 1 }), null);
   console.log('ok   runde 13: neste bølge holdes fast, anslaget lagres'); }
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

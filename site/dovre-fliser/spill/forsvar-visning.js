@@ -107,10 +107,13 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // har snudd (Forsvar.monoton). Første gang de er sett, og når de har snudd, gjelder det nye anslaget. Ser ingen dem, står det ingen
     // minutter i banneret – bare når de trolig kommer (Forsvar.når), regnet fra ruta deres når den finnes.
     if (!est || est.id !== A.id) est = { id: A.id, v: null, t: tid, minNær: Infinity, sett: false };
-    if (kj.length || sist) { const dNå = kj.length ? nær : Math.hypot(sist.x - L.x, sist.y - L.y), snudd = FO.harSnudd(est.minNær, dNå, r.every(e => e.trekker || e.flykter)), nytt = est.v === null || (kj.length && !est.sett) || snudd || (kj.length > 0 && kj.every(e => !e.sti || e.venterNatt));
-      const m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, nytt); est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
-    // (står de stille eller venter på mørket, gjelder anslaget fra avstanden – ellers ville det telle ned mens de står)
-    else { est.v = Number.isFinite(rå) ? rå : null; est.t = tid; }
+    if (kj.length || sist) { const dNå = kj.length ? nær : Math.hypot(sist.x - L.x, sist.y - L.y), snudd = FO.harSnudd(est.minNær, dNå, r.every(e => e.trekker || e.flykter)), nytt = est.v === null || (kj.length && !est.sett) || snudd;
+      // (står de stille eller venter på mørket, teller anslaget ikke ned – men det går heller ikke opp)
+      const står = kj.length > 0 && kj.every(e => !e.sti || e.venterNatt), m = FO.monoton(est.v === null ? null : { v: est.v, t: står ? tid : est.t }, rå, tid, nytt); est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
+    // ser ingen dem: anslaget fra varselet teller ned og holdes fast (også etter omlasting) – det byttes bare når ruta deres blir kjent første
+    // gang (luftlinja sa «5–10 min», ruta over fjellet «5 timer»); da står det uansett bare «trolig i natt» i banneret
+    else { const harRute = r.some(e => e.sti && e.timerIgjen > 0), m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, est.v === null || (harRute && !est.rute));
+      est.v = m ? m.v : null; est.t = tid; if (harRute) est.rute = true; }
     const min = est.v, iLeiren = kj.length > 0 && nær <= R.mot.inne, syn = kj.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', v = retningMotFienden(), n = r.length;
     const overskrift = A.røvere ? `Angrep: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} fra ${FO.retning(v)}` : `Angrep: ${A.navn} med ${n === 1 ? 'ett lag' : n + ' lag'} fra ${FO.retning(v)}`;
     let tekst, kort;
@@ -373,9 +376,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   // FØR SpilletSpill er klar, så T() var null og forsvaret ble ikke satt. Nå settes det også da (bare ikke når vi vet at ingen angriper).
   function gjenopprett() { const t = T(); if ((t && !t.aktiv) || satt) return false; satt = true; sistAlarm = ''; vis(); return true; }
   // anslaget lagres med angrepet (trussel-lagring.js), så det er det samme etter omlasting
-  const anslagTilstand = () => (est && Number.isFinite(est.v) ? { id: est.id, v: est.v, t: est.t, minNær: Number.isFinite(est.minNær) ? est.minNær : null, sett: !!est.sett } : null);
+  const anslagTilstand = () => (est && Number.isFinite(est.v) ? { id: est.id, v: est.v, t: est.t, minNær: Number.isFinite(est.minNær) ? est.minNær : null, sett: !!est.sett, rute: !!est.rute } : null);
   function settAnslag(o) { if (!o || typeof o.id !== 'string' || !Number.isFinite(o.v) || !Number.isFinite(o.t)) return false;
-    est = { id: o.id, v: o.v, t: o.t, minNær: Number.isFinite(o.minNær) ? o.minNær : Infinity, sett: !!o.sett }; sistAlarm = ''; return true; }
+    est = { id: o.id, v: o.v, t: o.t, minNær: Number.isFinite(o.minNær) ? o.minNær : Infinity, sett: !!o.sett, rute: !!o.rute }; sistAlarm = ''; return true; }
   window.ForsvarSpill = { beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, anslagTilstand, settAnslag, neste, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

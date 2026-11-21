@@ -50,7 +50,7 @@
   }
   // anslaget: { id ('r3' …), v (minutter), t (spillminuttet), minNær (meter eller null), sett }
   function rensAnslag(a) { if (!a || typeof a.id !== 'string' || !/^[a-zæøå0-9.-]{1,40}$/i.test(a.id) || !Number.isFinite(a.v) || !Number.isFinite(a.t)) return null;
-    return { id: a.id, v: r1(Math.max(0, a.v)), t: r1(a.t), minNær: Number.isFinite(a.minNær) ? Math.round(a.minNær) : null, sett: !!a.sett }; }
+    return { id: a.id, v: r1(Math.max(0, a.v)), t: r1(a.t), minNær: Number.isFinite(a.minNær) ? Math.round(a.minNær) : null, sett: !!a.sett, rute: !!a.rute }; }
   // tida for neste bølge fra lagringen (spillminutter) – bare når ingen bølge pågår, bølgenummeret er det samme, og tida ikke er urimelig
   // langt fram (REGLER.nesteMaks). Er den passert (klokka gikk videre i en annen fane), kommer bølgen straks (om REGLER.nesteSnart).
   function neste(d, o = {}) { if (!d || d.versjon !== VERSJON || d.aktiv || !Number.isFinite(d.neste)) return null;
