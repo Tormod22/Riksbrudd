@@ -95,7 +95,9 @@
     const mot = ENHETER.filter(e => e.side !== 'blå' && Array.isArray(e.menn) && ((e.skyterPå && e.skyterPå.has(s)) || (s.skyterPå && s.skyterPå.has(e))));
     if (mot.length) { mot.sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y)); const e = mot[0];
       const f = { raid: !!(e.raid || e.post), fraksjon: e.raid || e.post ? null : fraksjon(e.side), navn: e.navn };
-      return { tekst: KV.fiendeTekst(f), mann: mot.filter(q => q.side === e.side).reduce((a, q) => a + friske(q), 0) }; }
+      // angriper: fienden hører til angrepet på leiren (forsvar-visning.js melder kampene innen 3 km fra leiren selv)
+      const A = rot.ForsvarSpill && ForsvarSpill.angrep ? ForsvarSpill.angrep() : null;
+      return { tekst: KV.fiendeTekst(f), mann: mot.filter(q => q.side === e.side).reduce((a, q) => a + friske(q), 0), angriper: !!(A && A.lag.some(q => mot.includes(q))) }; }
     const KT = rot.KrigSpill && KrigSpill.T ? KrigSpill.T() : null;
     if (sted && sted.inne && sted.o && KT && KT.vern && KT.vern[sted.o.e.id] > 0) return { tekst: 'bygdevernet', mann: Math.round(KT.vern[sted.o.e.id]) };
     return { tekst: KV.fiendeTekst(null), mann: 0 };
@@ -124,7 +126,7 @@
   // (et lag som var i live sist og nå er helt borte, teller med: tapet er den siste kampen)
   const levendeLag = (s, før) => levende(s) || !!(før && før.some(h => h > 0));
   function start(s, K) {
-    const st = stedFor(K.x, K.y), f = fiendeFor(s, st); K.fiende = f.tekst; K.mann = f.mann; K.sted = KV.stedTekst(st); K.leir = omLeiren(s);
+    const st = stedFor(K.x, K.y), f = fiendeFor(s, st); K.fiende = f.tekst; K.mann = f.mann; K.sted = KV.stedTekst(st); const L = leir(); K.leir = omLeiren(s) || !!(f.angriper && L && Math.hypot(s.x - L.x, s.y - L.y) <= (rot.Forsvar ? Forsvar.R.hent : 3000));
     if (K.leir || !auto()) return;
     K.meldt = true; const kontakt = !skjult(s);
     const t = KV.tekst({ lag: s.navn, fiende: K.fiende, sted: K.sted, mann: K.mann, kontakt });
