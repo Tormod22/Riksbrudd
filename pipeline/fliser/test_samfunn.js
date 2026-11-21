@@ -167,4 +167,7 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
 { const han = { navn: 'Sindre Vik' }, hun = { navn: 'Kari Berg' };
   ok(S0.medPron('Hen takket og gikk tilbake til arbeidet.', han) === 'Han takket og gikk tilbake til arbeidet.' && S0.medPron('La hen dra (borte i to døgn)', hun) === 'La henne dra (borte i to døgn)', 'han/hun og ham/henne etter navnet');
   ok(S0.medPron('Nei, vi trenger alle hender', han) === 'Nei, vi trenger alle hender' && S0.medPron('Hen nikket.', null) === 'Hen nikket.', '«hender» røres ikke, ukjent person beholder «hen»'); }
+// RUNDE 13: «Tilgi – alle er sultne» bare når maten er knapp (under tre døgn)
+{ const F = F0.ny(5), S = S0.ny(1), L = nyLeir(), c = { type: 'kort', id: 'tyv', a: F.personer[0].id, b: F.personer[1].id }, tilgi = mat => { F.mat = mat; return S0.kortTekst(S, F, c, k0(F, L)).valg[1].t; };
+  ok(!/sultne/.test(tilgi(F.personer.length * 17)) && /sultne/.test(tilgi(F.personer.length * 2)), 'tyveri: «alle er sultne» følger matlageret (17 døgn: nei, 2 døgn: ja) – ' + tilgi(F.personer.length * 17)); }
 console.log(feil ? `\n${feil} FEIL` : '\nAlt i orden.'); process.exit(feil ? 1 : 0);
