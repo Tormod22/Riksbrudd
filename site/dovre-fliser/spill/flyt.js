@@ -182,7 +182,9 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   // rett under banneret (ikke en boks midt over leiren)
   const alarmOppe = () => { const a = document.getElementById('alarm'); return !!(a && a.classList.contains('på') && a.getClientRects().length && getComputedStyle(a).visibility !== 'hidden'); };
   function plasserKort() { const a = document.getElementById('alarm'), liten = alarmOppe() && (!navigator.webdriver || api2.test === true);
-    kort.classList.toggle('liten', liten); kort.style.top = liten ? Math.round(a.getBoundingClientRect().bottom + 4) + 'px' : ''; }
+    // (runde 13) i gåmodus kan banneret stå nederst (forsvar-visning.js flytter det bort fra husknappene) – da står kortet på vanlig plass øverst
+    const ar = liten ? a.getBoundingClientRect() : null, nede = !!ar && ar.top > innerHeight / 2;
+    kort.classList.toggle('liten', liten); kort.style.top = liten && !nede ? Math.round(ar.bottom + 4) + 'px' : ''; }
   // (runde 13, kritiker G og H: «banneret hadde ingen Vis-knapp») – har hendelsen et sted (x, y i kartets meter), får kortet «Vis»:
   // kartet går til 2D og flytter seg dit
   function visSted(p) { if (!p) return; const gå = () => { kam.x = p.x; kam.y = p.y; kam.m = Math.min(Math.max(kam.m, 1.5), 6); skitten = true; };
@@ -242,6 +244,8 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     }
     // hendelsene: høyst ti bilder i sekundet (ved 600× er det ett per spillminutt)
     const nå = performance.now(); if (nå - sistBilde < 100) return; sistBilde = nå;
+    // (runde 13) banneret kan bli høyere etter at kortet ble plassert under det (en knapp til, ny linje) – plasser kortet på nytt
+    if (kort.classList.contains('på')) plasserKort();
     if (!spoler && !(autoPå() && tempo > 1)) { før = null; innboks.length = 0; return; }
     const b = bilde(); if (!før) { før = b; innboks.length = 0; return; }
     const h = F.hendelser(før, b).concat(innboks.splice(0)); før = b; if (!h.length) return;

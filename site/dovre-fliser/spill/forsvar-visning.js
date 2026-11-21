@@ -102,6 +102,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const r = A.lag, d = e => Math.hypot(e.x - L.x, e.y - L.y), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, fart = (V && V.fart) || .75;
     const kj = r.filter(e => kjent(e)), nær = kj.length ? Math.min(...kj.map(d)) : null, strid = kj.map(iStrid).find(Boolean) || null;
     let sist = null; if (!kj.length) for (const e of r) { const q = sistSettAv(e); if (q && tid - q.tid <= FO.STATUS.sistSett && tid >= q.tid && (!sist || q.tid > sist.tid)) sist = q; }
+    // (runde 13) det banneret selv så sist (vakttårnet, et kamera, vaktene) – ellers sa banneret «ikke sett» rett etter «Røverne er sett»
+    if (!kj.length && est && est.id === A.id && est.sistSett && tid - est.sistSett.tid <= FO.STATUS.sistSett && tid >= est.sistSett.tid && (!sist || est.sistSett.tid > sist.tid)) sist = { ...est.sistSett };
     const rå = kj.length ? FO.ankomst(nær, fart) : sist ? Math.max(0, FO.ankomst(Math.hypot(sist.x - L.x, sist.y - L.y), fart) - (tid - sist.tid)) : anslag(r);
     // (runde 13, kritiker G: «5–10 min» ble til «3–7 timer» mens klokka gikk) anslaget med minutter kan bare minke så lenge angriperne ikke
     // har snudd (Forsvar.monoton). Første gang de er sett, og når de har snudd, gjelder det nye anslaget. Ser ingen dem, står det ingen
@@ -109,7 +111,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (!est || est.id !== A.id) est = { id: A.id, v: null, t: tid, minNær: Infinity, sett: false };
     if (kj.length || sist) { const dNå = kj.length ? nær : Math.hypot(sist.x - L.x, sist.y - L.y), snudd = FO.harSnudd(est.minNær, dNå, r.every(e => e.trekker || e.flykter)), nytt = est.v === null || (kj.length && !est.sett) || snudd;
       // (står de stille eller venter på mørket, teller anslaget ikke ned – men det går heller ikke opp)
-      const står = kj.length > 0 && kj.every(e => !e.sti || e.venterNatt), m = FO.monoton(est.v === null ? null : { v: est.v, t: står ? tid : est.t }, rå, tid, nytt); est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
+      const står = kj.length > 0 && kj.every(e => !e.sti || e.venterNatt), m = FO.monoton(est.v === null ? null : { v: est.v, t: står ? tid : est.t }, rå, tid, nytt);
+      if (kj.length) { const q = kj.reduce((a, e) => (Math.hypot(e.x - L.x, e.y - L.y) < Math.hypot(a.x - L.x, a.y - L.y) ? e : a)); est.sistSett = { x: q.x, y: q.y, tid }; } est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
     // ser ingen dem: anslaget fra varselet teller ned og holdes fast (også etter omlasting) – det byttes bare når ruta deres blir kjent første
     // gang (luftlinja sa «5–10 min», ruta over fjellet «5 timer»); da står det uansett bare «trolig i natt» i banneret
     else { const harRute = r.some(e => e.sti && e.timerIgjen > 0), m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, est.v === null || (harRute && !est.rute));
