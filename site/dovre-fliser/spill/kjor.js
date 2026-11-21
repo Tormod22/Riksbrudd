@@ -90,7 +90,23 @@
     if (h.z <= b2) { hardt = h.vz < -4.5; h.z = b2; h.vz = 0; const br = Math.min(1, 6 * dt); h.vx -= h.vx * br; h.vy -= h.vy * br; }
     return { landet: h.z <= b2 + .05, hardt, stanget, over: h.z - b2 };
   }
-  const api = { BIL, HELI, STILLING, bilSteg, heliSteg, fram, stilling, hjulHøyder, zFor };
+  // RUNDE 13 (21. nov, kritiker H: «Sett deg inn i feltbilen (F)» sto midt på skjermen uten at noen bil syntes – bilen sto bak ham).
+  // Hvor kjøretøyet står sett fra deg: (dx, dy) = kjøretøyet minus deg (meter), a = kursen din (du ser mot (−sin a, cos a)).
+  // Gir { d, rel (radianer, + = til høyre), foran, tekst ('foran deg' | 'til høyre' | 'til venstre' | 'bak deg') }.
+  // Claudes forslag: «foran» innenfor 35° til hver side (godt inne i bildet), «bak» fra 130°.
+  const RETNING = { foran: 35, bak: 130 };
+  function retning(dx, dy, a, R = RETNING) {
+    const d = Math.hypot(dx, dy), rel = Math.atan2(dx * Math.cos(a) + dy * Math.sin(a), -dx * Math.sin(a) + dy * Math.cos(a)), g = Math.abs(rel) * 180 / Math.PI;
+    const foran = g <= R.foran;
+    return { d, rel, foran, tekst: foran ? 'foran deg' : g >= R.bak ? 'bak deg' : rel > 0 ? 'til høyre' : 'til venstre' };
+  }
+  // Teksten på knappen: står kjøretøyet foran deg, som før; ellers med avstand og retning, så du vet hvor du skal snu deg
+  // («Feltbilen 6 m bak deg · Sett deg inn (F)»). navn = «feltbilen», tast = ' (F)' på PC og '' på telefon.
+  function innTekst(navn, r, tast) {
+    if (r.foran) return `Sett deg inn i ${navn}${tast}`;
+    return `${navn.charAt(0).toUpperCase() + navn.slice(1)} ${Math.max(1, Math.round(r.d))} m ${r.tekst} · Sett deg inn${tast}`;
+  }
+  const api = { BIL, HELI, STILLING, bilSteg, heliSteg, fram, stilling, hjulHøyder, zFor, RETNING, retning, innTekst };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Kjor = api;
 
@@ -391,7 +407,7 @@ body.kjorer #kjorknapp{ left:auto; right:296px; transform:none; bottom:calc(136p
         if (!k.tStill || k.sSt === undefined || Math.abs(p.z - (k.sZ || 0)) > 6) { k.sSt = p.stigning; k.sSd = p.side; } else { k.sSt += (p.stigning - k.sSt) * w; k.sSd += (p.side - k.sSd) * w; }
         k.tStill = performance.now(); k.sZ = zFor(p.hjul, k.sSt, k.sSd); m.rotation.y = k.sSt; m.rotation.x = k.sSd; m.position.z = k.sZ; }
       if (k.ro) { k.ro.rotation.z += k.rotor * 38 * .016; k.hr.rotation.z += k.rotor * 60 * .016; } }
-    const n = nær(R), f = fører(), ek = !f && n === null && R.fot ? egneNær(R, 9) : null, t = ek ? `Sett deg inn i ${ek.navn}${VW < 900 ? '' : ' (F)'}` : f ? (VW < 900 ? 'Gå ut' : 'Gå ut (F)') : n !== null && K[n].hp < .15 ? `Reparer ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'} (${Math.round(repPris(K[n]) / 1000)} 000 kr)` : n !== null ? `Sett deg inn i ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'}${VW < 900 ? '' : ' (F)'}` : '';
+    const n = nær(R), f = fører(), ek = !f && n === null && R.fot ? egneNær(R, 9) : null, t = ek ? innTekst(ek.navn, retning(ek.x - R.ut.cx - R.bane.x, ek.y - R.ut.cy - R.bane.y, R.fot ? R.fot.a : 0), VW < 900 ? '' : ' (F)') : f ? (VW < 900 ? 'Gå ut' : 'Gå ut (F)') : n !== null && K[n].hp < .15 ? `Reparer ${NAVN[K[n].type].toLowerCase()}${K[n].type === 'bil' ? 'en' : 'et'} (${Math.round(repPris(K[n]) / 1000)} 000 kr)` : n !== null ? innTekst(NAVN[K[n].type].toLowerCase() + (K[n].type === 'bil' ? 'en' : 'et'), retning(K[n].X - R.ut.cx - R.bane.x, K[n].Y - R.ut.cy - R.bane.y, R.fot ? R.fot.a : 0), VW < 900 ? '' : ' (F)') : '';
     // på telefonen står «Gå ut» i knapperaden nede til høyre (pUt) – da vises ikke den store knappen
     const iRaden = !!f && f.type === 'bil' && pUt.offsetParent !== null;
     knapp.classList.toggle('på', !!t && !!R.fot && !iRaden); if (t && knapp.textContent !== t) knapp.textContent = t; });
