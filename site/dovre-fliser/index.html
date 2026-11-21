@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=7f169bb6d7"></script>
+<script src="/dovre-fliser/kartflis.js?v=17149437de"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=3b65fdd77b');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=6014599d63');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1877,15 +1877,21 @@ async function hus3d(u) {
   // tre grupper med hver sin tekstur: mur (betong, store bygg, grunnmur, piper), tre (kledning på småhus), tak (takstein/plater)
   // (20. nov, runde 9: hjørnene samles i Tallrekke.Rekke – voksende Float32Array med plass som gjenbrukes til neste utsnitt – i stedet
   // for vanlige lister; de var det største søppelet når du flyr. Samme tall ut: se spill/tallrekke.js og vakta lys.)
-  const RK = Tallrekke.Rekke, B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'lager', 'glass', 'dør', 'murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard']) B[n] = { pos: new RK('F', 'hus.pos.' + n), kol: new RK('F', 'hus.kol.' + n), uv: new RK('F', 'hus.uv.' + n) }; let cur = B.mur;
+  const RK = Tallrekke.Rekke, B = {}; for (const n of ['mur', 'tre', 'tak', 'leil', 'kontor', 'industri', 'planke', 'butikk', 'kirke', 'lager', 'glass', 'dør', 'murgard', 'tegl', 'funkis', 'plate', 'gate', 'mansard', 'stein', 'pleie']) B[n] = { pos: new RK('F', 'hus.pos.' + n), kol: new RK('F', 'hus.kol.' + n), uv: new RK('F', 'hus.uv.' + n) }; let cur = B.mur;
   // Hva slags bygg (OSM-typen, ellers anslag fra størrelse og høyde) og hvordan veggene ser ut: [gruppe/tekstur, meter per felt langs, meter per felt opp (0 = hele veggen)]
   const klasse = (t, A, h) => t === 10 ? (A < 150 && h < 9 ? 'hus' : 'leil') : t === 0 ? (h >= 10 || A > 350 ? 'leil' : 'hus') : t === 1 ? 'uthus' : t === 6 ? 'industri'
     : t === 7 ? 'butikk' : t === 8 ? 'kirke' : t === 9 || t === 3 ? 'skole' : t === 4 ? 'låve' : t === 11 ? 'hytte'
-    : t === 12 ? 'lager' : t === 13 ? 'sykehus' : t === 14 ? (h <= 16 && A > 1500 ? 'hangar' : 'terminal')
+    : t === 12 ? 'lager' : t === 13 ? 'sykehus' : t === 14 ? (h <= 16 && A > 1500 ? 'hangar' : 'terminal') : t === 15 ? 'sykehjem' : t === 16 ? 'legevakt'
     : t === 2 ? (h <= 11 && A > 700 ? 'industri' : h <= 9 ? 'butikk' : 'kontor') : (A < 60 ? 'uthus' : 'hus');
   const STIL = { hus: ['tre', 3.2, 3], hytte: ['tre', 3.2, 3], leil: ['leil', 7.2, 3], kontor: ['kontor', 3.2, 3], skole: ['kontor', 3.6, 3.4], industri: ['industri', 4, 0],
     låve: ['planke', 2, 0], uthus: ['planke', 2, 0], butikk: ['butikk', 3, 0], kirke: ['kirke', 3, 0],
-    lager: ['lager', 6, 0], sykehus: ['kontor', 3.2, 3.6], hangar: ['industri', 4, 0], terminal: ['glass', 3, 0] };
+    lager: ['lager', 6, 0], sykehus: ['kontor', 3.2, 3.6], hangar: ['industri', 4, 0], terminal: ['glass', 3, 0], sykehjem: ['leil', 7.2, 3], legevakt: ['kontor', 3.2, 3.4], stein: ['stein', 4.5, 6] };
+  // (21. nov, runde 15: «bygg fra virkeligheten») mønehøyden etter typen (Byhus.TAKVINKEL: faktor × halve bredden, tak i meter):
+  // kirker bratt (ca. 50°), hus ca. 40°, hytter og sykehjem slakere; ellers som før (0,42 × bredden, høyst 5 m)
+  const TV = BY0 => (kl, bredde, h) => { const v = BY0 && BY0.TAKVINKEL && BY0.TAKVINKEL[kl]; return v ? Math.min(bredde / 2 * v[0], v[1], h * (kl === 'kirke' ? .7 : .55)) : Math.min(bredde * .42, 5, h * .55); };
+  const mønFor = TV(window.Byhus);
+  // takrenner, vindskier og hjørnekasser på småhusene nær midten av utsnittet (der kameraet er); lenger ute synes de ikke
+  const LIST_R = 700, renneF = [.2, .2, .21];
   const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
   const P0 = [.02, .02];   // et punkt uten vindu i vindusflisen (tak, gavler, lave bygg)
   // (tri3 legger inn de samme tallene i samme rekkefølge som før – push(...a, ...b, ...c) –, uten de små listene per trekant)
@@ -1902,7 +1908,7 @@ async function hus3d(u) {
   // butikk: utstillingsvinduer og skilt i første etasje (4 m), kontorvinduer over
   const veggKl = (kl, a, b, z0, z1, farge) => { if (kl === 'butikk') { vegg(a, b, z0, Math.min(z1, z0 + 4), farge, STIL.butikk); if (z1 > z0 + 4.5) vegg(a, b, z0 + 4, z1, farge, STIL.kontor); } else vegg(a, b, z0, z1, farge, STIL[kl]); };
   // dør eller port midt på en vegg (litt foran veggen); type: 0 husdør, 1 garasjeport, 2 industriport, 3 butikkdør (ruter i dørteksturen)
-  const DØR = { hus: [0, 1, 2.1], hytte: [0, 1, 2], leil: [3, 1.8, 2.3], kontor: [3, 2, 2.4], skole: [3, 2.2, 2.4], industri: [2, 4.5, 4.5], låve: [1, 3, 3.2], uthus: [1, 2.6, 2.2], butikk: [3, 2.2, 2.4], kirke: [0, 1.6, 2.6], lager: [2, 4, 4.2], sykehus: [3, 3, 2.6], hangar: [2, 20, 9], terminal: [3, 3, 2.8] };
+  const DØR = { hus: [0, 1, 2.1], hytte: [0, 1, 2], leil: [3, 1.8, 2.3], kontor: [3, 2, 2.4], skole: [3, 2.2, 2.4], industri: [2, 4.5, 4.5], låve: [1, 3, 3.2], uthus: [1, 2.6, 2.2], butikk: [3, 2.2, 2.4], kirke: [0, 1.6, 2.6], lager: [2, 4, 4.2], sykehus: [3, 3, 2.6], hangar: [2, 20, 9], terminal: [3, 3, 2.8], sykehjem: [3, 2.4, 2.4], legevakt: [3, 2.2, 2.4] };
   // (den første døra huskes på omrisset – P.dør – så interiøret, spill/interior3d.js, vet hvor inngangen er)
   let husP = null;
   const dør = (kl, a, b, z0, f = .5) => { const [r, w0, hh] = DØR[kl], L = Math.hypot(b[0] - a[0], b[1] - a[1]), w = Math.min(w0, L * .6); if (L < 2) return;
@@ -1965,13 +1971,19 @@ async function hus3d(u) {
       if (Math.abs(mx) > u.S || Math.abs(my) > u.S) continue;
       omriss.push(P); husP = P;
       const f = form(P), t = o.e.t, i = o.e.i, h = o.e.h || 6, tak = rgb(takFarge(t, i)), veggF = rgb(veggFarge(t, i));
+      // farger fra OSM når de er merket (bygninger.py: tf/vf = 0xRRGGBB + 1)
+      const fraInt = (v, ut) => { v -= 1; ut[0] = (v >> 16) / 255; ut[1] = ((v >> 8) & 255) / 255; ut[2] = (v & 255) / 255; };
+      if (o.e.tf > 0) fraInt(o.e.tf, tak); if (o.e.vf > 0) fraInt(o.e.vf, veggF);
       // takhøyden følger omrisset (bakHus: navn og merker bak huset skjules)
       P.topp = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX + h;
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge og et skilt med navnet over døra
       const kj = o.e.k ? BUTIKKER[o.e.k] : null;
-      const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1, topp = bunn + 1 + h;
-      const rundt = rund(P, f), fall0 = !rundt && f.lv > 3 && harFall(t, f.areal, h, i, TETT.get(i) || 0), enkel = f.rekt > .82 && P.length <= 10;
-      const dTak = fall0 && !enkel ? takDeler(P, f) : null, fall = fall0 && (enkel || !!dTak);
+      const bunn = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX - 1; let topp = bunn + 1 + h;
+      const rundt = rund(P, f), enkel = f.rekt > .82 && P.length <= 10;
+      let fall0 = !rundt && f.lv > 3 && harFall(t, f.areal, h, i, TETT.get(i) || 0);
+      // takformen fra OSM (r: 1 flatt, 2–8 med fall) vinner over anslaget
+      if (o.e.r === 1) fall0 = false; else if (o.e.r >= 2 && o.e.r <= 8 && !rundt && f.lv > 3) fall0 = true;
+      let dTak = fall0 && !enkel ? takDeler(P, f) : null, fall = fall0 && (enkel || !!dTak);
       // byhus: større bygg i byene (Byhus.stil) får egen fasade og farge, butikkfront mot gata og evt. valmtak/mansard.
       // Store bygg uten type («building=yes») i tett bebyggelse er bygårder/kontorbygg, ikke småhus.
       const tettI = TETT.get(i) || 0; let kl = klasse(t, f.areal, h);
@@ -1979,12 +1991,21 @@ async function hus3d(u) {
       // (veggTopp: der ytterveggen slutter – taket begynner. Interiøret, spill/interior3d.js, holder himlingen under den.)
       P.bygg = { i, t, h, kl }; P.veggTopp = undefined;
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
-      if (bs) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
+      if (bs && !(o.e.vf > 0)) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
+      // (runde 15) hvitmalte trehus og teglrøde tak i tette strøk (Byhus.husFarge/husTak), når OSM ikke har fargen
+      if (BY && BY.husFarge && !bs && !(o.e.vf > 0)) { const hf = BY.husFarge(kl, i, tettI, mx + u.cx); if (hf) for (let q = 0; q < 3; q++) veggF[q] = hf[q]; }
+      if (BY && BY.husTak && !bs && !(o.e.tf > 0)) { const ht = BY.husTak(kl, i, tettI); if (ht) for (let q = 0; q < 3; q++) tak[q] = ht[q]; }
+      // steinkirker (store kirker): naturstein, lavere vegger og bratt tak; et sammensatt omriss får valmtak langs hovedretningen
+      const stein = kl === 'kirke' && BY && BY.steinKirke && BY.steinKirke(f.areal, i);
+      if (stein && !(o.e.vf > 0)) { veggF[0] = .96; veggF[1] = .95; veggF[2] = .93; }
+      // (låver: OSM-omrisset med låvebru/tilbygg er sjelden et rent rektangel – flatt tak på en låve så rart ut, Ryfylke 21. nov)
+      if ((kl === 'kirke' || (kl === 'låve' && f.rekt > .45)) && fall0 && !enkel && !dTak) { const r2 = Math.max(0, f.lu / 2 - f.lv / 2); dTak = { valm: { a: [f.sx - f.ux * r2, f.sy - f.uy * r2], b: [f.sx + f.ux * r2, f.sy + f.uy * r2] } }; fall = true; }
+      if (kl === 'kirke' && fall && BY && BY.KIRKE) { const mk = mønFor('kirke', dTak && dTak.rekt ? Math.max(...dTak.rekt.map(q => q.lv)) : f.lv, h * 1.6), vg = Math.max(5, Math.min(h - mk, BY.KIRKE.maksVegg)); topp = bunn + 1 + vg + mk; P.topp = (hoyde3d(mx + u.cx, my + u.cy, u) - u.h0) * R3.EX + vg + mk; }
       // kjedebutikk (k, BUTIKKER i kartflis.js): veggene i kjedens farge (i bygårder bare butikkfronten) og et skilt over døra
       if (kj && !(bs && bs.gate)) { const c = rgb(kj[1]), a = bs ? .25 : .6; for (let q = 0; q < 3; q++) veggF[q] = veggF[q] * (1 - a) + c[q] * a; }
       const gF = kj ? rgb(kj[1]).map(v => v * .8 + .1) : veggF.map(v => v * .86);
       if (!rundt) { const n = bs ? bs.fasade : (STIL[kl] || STIL.hus)[0]; stat.fasader[n] = (stat.fasader[n] || 0) + 1; stat.bygg++; }
-      const veggX = (a, b, z0, z1, farge) => bs ? byVegg(bs, a, b, z0, z1, farge, gF, motGate) : veggKl(kl, a, b, z0, z1, farge);
+      const veggX = (a, b, z0, z1, farge) => bs ? byVegg(bs, a, b, z0, z1, farge, gF, motGate) : stein ? vegg(a, b, z0, z1, farge, STIL.stein) : veggKl(kl, a, b, z0, z1, farge);
       if (bs && bs.tak && enkel) {
         // eldre bygård i byen: vegger, gesims og valmtak eller mansard (med takvinduer) over rektangelet; lokk under så det aldri blir hull
         const mans = bs.tak === 'mansard', raft = topp - (mans ? 1.2 : .8), rt = BY.byTak(i); let lengst = 0, lj = 0; P.veggTopp = raft;
@@ -2039,8 +2060,8 @@ async function hus3d(u) {
       if (fall && !enkel) {
         // tak med fall på et sammensatt omriss: vinkelrette hus deles i rektangler med hvert sitt saltak (kryssark, tilbygg),
         // andre får valmtak opp mot mønet langs hovedretningen. Felles raft, og under takene et lokk så det aldri blir hull.
-        const st = STIL[kl] || STIL.hus, d = dTak, bred = d.rekt ? Math.max(...d.rekt.map(q => q.lv)) : f.lv;
-        const møne = Math.min(bred * .42, 5, h * .55), raft = topp - møne; P.veggTopp = P.veggTopp === undefined ? raft : Math.min(P.veggTopp, raft);
+        const st = stein ? STIL.stein : STIL[kl] || STIL.hus, d = dTak, bred = d.rekt ? Math.max(...d.rekt.map(q => q.lv)) : f.lv;
+        const møne = kl === 'kirke' ? mønFor('kirke', bred, h * 1.6) : mønFor(kl, bred, h), raft = topp - møne; P.veggTopp = P.veggTopp === undefined ? raft : Math.min(P.veggTopp, raft);
         let lengst = 0, lj = 0;
         for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > lengst) { lengst = l; lj = j; }
           grunnmur(a, b, bunn); veggX(a, b, bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
@@ -2048,7 +2069,7 @@ async function hus3d(u) {
         if (kj) skilt.push([P[lj], P[(lj + 1) % P.length], bunn + 4.2, o.e.k, raft - .3]);
         cur = B.mur; lokk(P, raft, tak.map(v => v * .7)); stat.tak.deler = (stat.tak.deler || 0) + 1;
         if (d.rekt) for (const q of d.rekt) {
-          const hu = q.lu / 2, hv = q.lv / 2, m = Math.min(q.lv * .42, 5, h * .55), p = (du, dv, zz) => [q.sx + q.ux * du + q.vx * dv, q.sy + q.uy * du + q.vy * dv, zz];
+          const hu = q.lu / 2, hv = q.lv / 2, m = Math.min(møne, kl === 'kirke' ? mønFor('kirke', q.lv, h * 1.6) : mønFor(kl, q.lv, h)), p = (du, dv, zz) => [q.sx + q.ux * du + q.vx * dv, q.sy + q.uy * du + q.vy * dv, zz];
           cur = B[st[0]]; tri(p(hu, -hv, raft), p(hu, hv, raft), p(hu, 0, raft + m), veggF); tri(p(-hu, hv, raft), p(-hu, -hv, raft), p(-hu, 0, raft + m), veggF);
           cur = B.tak; const e = .35, eg = .25, zE = raft - m * e / hv, Lu = 2 * (hu + eg), Vs = Math.hypot(hv + e, raft + m - zE) / .4, rader = [[0, 0], [Lu, 0], [Lu, Vs], [0, Vs]];
           firkant(p(-hu - eg, -hv - e, zE), p(hu + eg, -hv - e, zE), p(hu + eg, 0, raft + m), p(-hu - eg, 0, raft + m), tak, rader);
@@ -2060,14 +2081,21 @@ async function hus3d(u) {
           for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ra = R(a), Vs = Math.hypot(Math.hypot(ra[0] - a[0], ra[1] - a[1]), møne) / .4;
             firkant([...a, raft], [...b, raft], R(b), ra, tak, [[0, 0], [L, 0], [L, Vs], [0, Vs]]); }
         }
+        if (kl === 'kirke' && !stein) {
+          // trekirke med sammensatt omriss: tårn med spir ved den ene enden av hovedretningen (som i saltak-grenen)
+          const tw = Math.min(f.lv * .45, 6), q = tw / 2, hu2 = f.lu / 2, pk = (du, dv) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv];
+          const tc = pk(-hu2 + q, 0), tt = topp + tw * 1.1, H = [pk(-hu2, -q), pk(-hu2 + tw, -q), pk(-hu2 + tw, q), pk(-hu2, q)];
+          for (let j = 0; j < 4; j++) vegg(H[j], H[(j + 1) % 4], bunn + 1, tt, veggF, STIL.kirke);
+          cur = B.mur; for (let j = 0; j < 4; j++) tri([H[j][0], H[j][1], tt], [H[(j + 1) % 4][0], H[(j + 1) % 4][1], tt], [tc[0], tc[1], tt + tw * 2.4], tak.map(v => v * .8));
+        }
         continue;
       }
       if (fall) {
         // Saltak på det rettvinklede omrisset: vegger opp til raftet, gavler i veggfargen og to takflater opp til mønet.
-        const møne = Math.min(f.lv * .42, 5, h * .55), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2; P.veggTopp = raft;
+        const møne = kl === 'kirke' ? mønFor('kirke', f.lv, h * 1.6) : mønFor(kl, f.lv, h), raft = topp - møne, hu = f.lu / 2, hv = f.lv / 2; P.veggTopp = raft;
         const p = (du, dv, zz) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv, zz];
         const A = [p(-hu, -hv, bunn), p(hu, -hv, bunn), p(hu, hv, bunn), p(-hu, hv, bunn)], Ar = A.map(q => [q[0], q[1], raft]);
-        const st = STIL[kl] || STIL.hus; stat.tak.sal = (stat.tak.sal || 0) + 1;
+        const st = stein ? STIL.stein : STIL[kl] || STIL.hus; stat.tak.sal = (stat.tak.sal || 0) + 1;
         for (let j = 0; j < 4; j++) { grunnmur(A[j], A[(j + 1) % 4], bunn); veggX(A[j], A[(j + 1) % 4], bunn + 1.5, raft, veggF.map(v => v * (j % 2 ? .92 : 1))); }
         dør(kl, A[0], A[1], bunn + 1, kl === 'låve' ? .5 : .38);
         if (kj) skilt.push([A[0], A[1], bunn + 4.2, o.e.k, raft - møne * .45 / hv - .1]);
@@ -2076,7 +2104,7 @@ async function hus3d(u) {
         // gavlene, med kledning og loftsvindu
         const gv = st[2] ? [[0, g0], [nv, g0], [nv / 2, g1]] : [[0, .2], [nv, .2], [nv / 2, 1]];
         tri(Ar[1], Ar[2], M1, veggF, gv); tri(Ar[3], Ar[0], M0, veggF, gv);
-        if (kl === 'kirke') {
+        if (kl === 'kirke' && !stein) {
           // kirketårn ved den ene gavlen: firkantet tårn og spir
           const tw = Math.min(f.lv * .55, 5), tc = p(-hu + tw / 2, 0, 0), tt = topp + tw * 1.3, q = tw / 2, H = [p(-hu, -q, 0), p(-hu + tw, -q, 0), p(-hu + tw, q, 0), p(-hu, q, 0)];
           for (let j = 0; j < 4; j++) vegg(H[j], H[(j + 1) % 4], bunn + 1, tt, veggF, STIL.kirke);
@@ -2089,6 +2117,18 @@ async function hus3d(u) {
         const Lu = 2 * (hu + eg), Vs = Math.hypot(hv + e, topp - zE) / .4, rader = [[0, 0], [Lu, 0], [Lu, Vs], [0, Vs]];
         firkant(p(-hu - eg, -hv - e, zE), p(hu + eg, -hv - e, zE), mU1, mU0, tak, rader); firkant(p(hu + eg, hv + e, zE), p(-hu - eg, hv + e, zE), mU0, mU1, tak, rader);
         cur = B.mur;
+        if ((kl === 'hus' || kl === 'hytte' || kl === 'sykehjem' || kl === 'låve') && !bs && Math.hypot(mx, my) < LIST_R) {
+          // (runde 15) takrenner langs langveggene, vindskier langs gavlene og hjørnekasser: hvite på malte trehus, ellers en lysere tone
+          const hvitV = veggF[0] > .85 && veggF[2] > .8, list = hvitV || kl === 'låve' ? [.94, .93, .9] : veggF.map(v => Math.min(1, v * 1.35 + .12));
+          if (kl !== 'låve') for (const sd of [-1, 1]) { const a = p(-hu - eg, sd * (hv + e + .07), zE - .16), b = p(hu + eg, sd * (hv + e + .07), zE - .16);
+            firkant(a, b, [b[0], b[1], zE + .03], [a[0], a[1], zE + .03], renneF); }
+          for (const su of [-1, 1]) for (const sd of [-1, 1]) { const a = p(su * (hu + eg + .03), sd * (hv + e), zE), b = p(su * (hu + eg + .03), 0, topp);
+            firkant([a[0], a[1], a[2] - .26], [b[0], b[1], b[2] - .26], b, a, list); }
+          if (!hvitV) for (let j = 0; j < 4; j++) { const c = A[j], fr = A[(j + 3) % 4], ti = A[(j + 1) % 4];
+            for (const nb of [fr, ti]) { const L = Math.hypot(nb[0] - c[0], nb[1] - c[1]) || 1, dx = (nb[0] - c[0]) / L * .16, dy = (nb[1] - c[1]) / L * .16, ox = (c[0] - f.sx) * .004, oy = (c[1] - f.sy) * .004;
+              firkant([c[0] + ox, c[1] + oy, bunn + 1.5], [c[0] + dx + ox, c[1] + dy + oy, bunn + 1.5], [c[0] + dx + ox, c[1] + dy + oy, raft], [c[0] + ox, c[1] + oy, raft], list); } }
+          stat.lister = (stat.lister || 0) + 1;
+        }
         if (f.areal < 260 && h >= 4 && (i * 40503 >>> 0) % 100 < 22) {
           // flaggstang i hagen
           const [fx, fy] = p(-hu - 4, -hv - 3, 0); flagg.push(fx, fy, (hoyde3d(fx + u.cx, fy + u.cy, u) - u.h0) * R3.EX, ((i * 7) % 628) / 100);
@@ -2210,7 +2250,8 @@ function byggTekstur(type) {
 }
 // Hva slags bygg står her? (trykk på et bygg i kartet eller i 3D) – fra byggomrissene (OpenStreetMap).
 const BYGGTYPE = ['Bolig', 'Garasje eller uthus', 'Næringsbygg (kontor, hotell)', 'Offentlig bygg', 'Landbruksbygg (låve, fjøs)', 'Bygg',
-  'Industri', 'Butikk', 'Kirke', 'Skole eller barnehage', 'Leilighetsbygg', 'Hytte', 'Lager', 'Sykehus', 'Flyplass (terminal eller hangar)'];
+  'Industri', 'Butikk', 'Kirke', 'Skole eller barnehage', 'Leilighetsbygg', 'Hytte', 'Lager', 'Sykehus', 'Flyplass (terminal eller hangar)',
+  'Sykehjem', 'Legevakt eller legesenter'];
 async function finnBygg(X, Y) {
   if (!LAGFILER || !LAGFILER.hus) return null;
   const z = 13, sp = span(z), x = Math.floor((X - G.x0) / sp), y = Math.floor((G.y0 - Y) / sp), t = await hentFlis('hus', z, x, y); if (!t || !t.hus) return null;
@@ -3585,7 +3626,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gange.js?v=d62358fb06"></script>
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=777d268a5f"></script>
-<script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
+<script src="/dovre-fliser/spill/anlegg3d.js?v=7f6e8f0460"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/elvestrom.js?v=26c56fde04"></script>
@@ -3646,7 +3687,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
 <script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
-<script src="/dovre-fliser/spill/byhus.js?v=907d2c119a"></script>
+<script src="/dovre-fliser/spill/byhus.js?v=6c2683f531"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=2d853eaf08"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>
