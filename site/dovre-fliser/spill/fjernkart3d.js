@@ -16,7 +16,8 @@
     // punkter langs hver side, kartbildets størrelse (punkter), senket under det detaljerte (m) og bredden på overlappen (ruter)
     N: 65, TW: 1024, senk: .6, overlapp: 1.5,
     // «Laster …» når midten av bildet er lenger ut enn denne andelen av det gamle utsnittets S
-    laster: .55,
+    // (runde 15: .75, før .55 – neste utsnitt bestilles nå tidlig mens du flyr, så meldingen sto midt i et ferdig landskap)
+    laster: .75,
   };
   const F = { mesh: null, tex: null, bygger: false, cx: 0, cy: 0, S: 0, uInn: null, feil: 0, feilVed: 0 };
   const harAlt = () => typeof R3 !== 'undefined' && R3 && R3.ut && typeof THREE !== 'undefined';
@@ -108,13 +109,16 @@
     F.mesh.position.set(F.cx - u.cx, F.cy - u.cy, -u.h0 * R.EX); F.mesh.scale.set(1, 1, R.EX);
     F.uInn.value.set(0, 0, u.S - REGLER.overlapp * u.steg);
   }
-  function midten(R) { const u = R.ut, b = R.bane; return [u.cx + b.x, u.cy + b.y]; }
+  // (runde 15) flyr eller kjører du, legges midten der du er når neste utsnitt er ferdig (Forut3d.ledd), så fjernkartet foran deg er klart
+  function midten(R) { const u = R.ut, b = R.bane, l = R.forut && window.Forut3d ? Forut3d.ledd(R.forut, u.S) : [0, 0]; return [u.cx + b.x + l[0], u.cy + b.y + l[1]]; }
+  // (runde 15) til fots er fjernkartet skjult (du ser ikke så langt), men ikke når du kjører – da kan du komme til kanten av utsnittet
+  const tilFots = R => !!R.fot && !(window.KjorSpill && KjorSpill.fører && KjorSpill.fører());
   function ønsketS(R) { return Math.max(REGLER.min, Math.min(REGLER.maks, REGLER.faktor * utsnittS(R.bane.avst))); }
 
   function ramme(R) {
     if (!harAlt() || !på3d) return;
-    if (F.mesh) { F.mesh.visible = !R.fot; plasser(R); }
-    if (R.fot || F.bygger) return;
+    if (F.mesh) { F.mesh.visible = !tilFots(R); plasser(R); }
+    if (tilFots(R) || F.bygger) return;
     if (F.feil && performance.now() - F.feilVed < Math.min(60000, 4000 * 2 ** F.feil)) return;
     const [X, Y] = midten(R), S = ønsketS(R);
     const trengs = !F.mesh || Math.hypot(X - F.cx, Y - F.cy) > F.S * REGLER.flytt || S > F.S * 1.3 || S < F.S * .5;
@@ -136,5 +140,5 @@
     g.fillStyle = '#eadfc4'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, x, y + 1); g.restore();
   }
   if (typeof KROKER !== 'undefined') { KROKER.ramme3d.push(ramme); KROKER.tegn3d.push(tegn); }
-  window.Fjernkart3d = { REGLER, tilstand: () => ({ har: !!F.mesh, bygger: F.bygger, cx: F.cx, cy: F.cy, S: F.S, synlig: !!(F.mesh && F.mesh.visible) }), laster: () => harAlt() && lasterNå(R3), kast };
+  window.Fjernkart3d = { REGLER, tilstand: () => ({ har: !!F.mesh, bygger: F.bygger, cx: F.cx, cy: F.cy, S: F.S, synlig: !!(F.mesh && F.mesh.visible) }), laster: () => harAlt() && lasterNå(R3), kast, midten };
 })();

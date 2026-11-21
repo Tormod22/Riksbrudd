@@ -1604,9 +1604,18 @@ const utsnittS = avst => Math.max(800, Math.min(6000, avst * 1.4 + 300));
 // HUS_S() meter fra midten til kanten. Før var grensen 3200 – men vanlig flyhøyde (ca. 2,1 km) gir S ≈ 3260, så alle nye utsnitt ble uten hus.
 // Claudes forslag: 4200 på PC, 3600 på telefon (husene koster mer der).
 const HUS_S = () => VW >= 900 ? 4200 : 3600;
-async function bygg3d(cx, cy, S) {
+// Nettet, høydenes nivå (zD), kartbildets størrelse (TW) og kartflisenes nivå (zt) for et utsnitt med halvside S – bygg3d og forhent3d
+// (runde 15: forhentingen foran deg ber om de samme flisene som byggingen bruker)
+function nivå3d(S) {
   // finere nett på PC (449 × 449 punkter) enn på mobil
-  const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg)))), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
+  const N = VW >= 900 ? 449 : 353, steg = 2 * S / (N - 1), zD = Math.min(13, Math.max(6, Math.floor(Math.log2(G.res0 / steg))));
+  // PC nær: 4096 (ca. 0,4 m per punkt)
+  const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3 && R3.renderer && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,
+    zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
+  return { N, steg, zD, TW, mpp, zt };
+}
+async function bygg3d(cx, cy, S) {
+  const { N, steg, zD } = nivå3d(S), b = [cx - S - 60, cy - S - 60, cx + S + 60, cy + S + 60];
   // (15. nov, brukeren på iPhone 5G: «bruker alt for lang tid». Med tregt nett (150 ms forsinkelse) tok den første byggingen 9,3 s, mye
   // av det i hentinger som ventet på hverandre. Nå: alt byggingen trenger av kartdata bes om med en gang (forhent3d), og høydene og
   // kartbildet hentes og lages samtidig.)
@@ -1622,8 +1631,7 @@ async function bygg3d(cx, cy, S) {
     finL = Promise.race([ekte, grovL.then(() => new Promise(ja => setTimeout(() => ja(null), 6000)))]).then(v => { mangler.delete('fine høyder'); visVent(); return v; }); }
   const høyder = Promise.all([grovL, finL]);
   høyder.catch(() => {});   // (feil kommer fram der høydene ventes på under – dette hindrer en melding om «ubehandlet feil» før det)   // 2 m der den finnes (Dombås), ellers 8 m
-  const TW = VW >= 900 && S <= 1700 && (!window.KVAL || KVAL.p.tekstur) && R3.renderer.capabilities.maxTextureSize >= 4096 ? 4096 : 2048, mpp = 2 * S / TW,   // PC nær: 4096 (ca. 0,4 m per punkt)
-    zt = Math.max(ZMIN, Math.min(15, Math.floor(Math.log2(G.res0 / mpp) + .3)));
+  const { TW, mpp, zt } = nivå3d(S);
   const base = document.createElement('canvas'); base.width = base.height = TW; const g = base.getContext('2d'); g.fillStyle = HAV_CSS;
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
   // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
@@ -3066,7 +3074,9 @@ async function lastOppIBiter(data, W, R, kilde, utenAniso) {
 // FORHENTING (15. nov): ber om kartdataene byggingen og modulene trenger senere – terrengklassene og høydene i 32 m (trær, skogbunn, dyr,
 // planter), husene og vegene (z13) – med en gang, så de hentes mens høydene og kartbildet lages. hentFlis husker svarene (RÅ, høyst 900),
 // så de senere kallene får de samme. Bare når antallet er rimelig (høyst 160 biter per lag).
-function forhent3d(cx, cy, S, b) {
+// (runde 15) mer = true (forhenting foran deg i fartsretningen): også høydene i den oppløsningen bygg3d bruker (z ≤ 11) og dataene til
+// kartflisene i kartbildet (forhent – bakgrunnstråden husker dem), så utsnittet bare trenger å regne når det bygges.
+function forhent3d(cx, cy, S, b, mer) {
   const be = (lag, z, bb) => { const c = [Math.max(bb[0], OMRÅDE[0]), Math.max(bb[1], OMRÅDE[1]), Math.min(bb[2], OMRÅDE[2] - 1), Math.min(bb[3], OMRÅDE[3] - 1)];
     if (c[0] > c[2] || c[1] > c[3]) return; const [x0, y0, x1, y1] = flisområde(c, z); if ((x1 - x0 + 1) * (y1 - y0 + 1) > 160) return;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) hentFlis(lag, z, x, y).catch(() => {}); };
@@ -3075,6 +3085,9 @@ function forhent3d(cx, cy, S, b) {
     const u = [cx - S, cy - S, cx + S, cy + S];
     if (S <= HUS_S() && VIS.bygg && LAGFILER && LAGFILER.hus) be('hus', 13, u);
     if (S <= 2200 && VIS.veg) be('vektor', 13, u);
+    if (mer) { const n = nivå3d(S); if (n.zD > 9) be('hoyde', Math.min(n.zD, 11), b);
+      const c = [Math.max(u[0], OMRÅDE[0]), Math.max(u[1], OMRÅDE[1]), Math.min(u[2], OMRÅDE[2] - 1), Math.min(u[3], OMRÅDE[3] - 1)];
+      if (c[0] <= c[2] && c[1] <= c[3]) { const [x0, y0, x1, y1] = flisområde(c, n.zt); if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 64) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) forhent(n.zt, x, y); } }
   } catch (e) { console.warn('forhenting:', e); }
 }
 // FORVARMING (15. nov, brukeren på iPhone: «bruker alt for lang tid på å bygge 3D» første gang). Målt på testmaskinen: etter at det
@@ -3240,8 +3253,10 @@ function kamera3d() {
 // og det som var i arbeid settes ikke inn (før ble 3D stående på stedet der det først ble slått på).
 async function nytt3dUtsnitt(cx, cy, S) {
   if (R3.bygger) { R3.neste = [cx, cy, S]; return; }
-  R3.bygger = true; R3.ønsket = [cx, cy, S];
-  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { framdrift('gjør klar', .92); await forbered3d(u); if (på3d && !R3.neste) sett3d(u); else kastForberedt(u); } R3.byggFeil = 0; skjulMelding('3d'); }
+  R3.bygger = true; R3.ønsket = [cx, cy, S]; const tBygg = performance.now();
+  try { const u = await bygg3d(cx, cy, S); if (på3d && !R3.neste) { framdrift('gjør klar', .92); await forbered3d(u); if (på3d && !R3.neste) { sett3d(u);
+    // (runde 15) byggetiden huskes (spill/forut3d.js: hvor langt foran deg neste utsnitt skal ligge)
+    R3.byggSek = (performance.now() - tBygg) / 1000; if (R3.forut && window.Forut3d) Forut3d.byggTid(R3.forut, R3.byggSek); } else kastForberedt(u); } R3.byggFeil = 0; skjulMelding('3d'); }
   catch (e) {
     console.error(e); framdrift(null); R3.byggFeil = (R3.byggFeil || 0) + 1; R3.feilVed = performance.now();
     const hvorfor = utenNett(e) ? 'ingen kontakt med nettet eller kartlageret' : (e && e.message || e), fast = R3.byggFeil >= 3;
@@ -3249,6 +3264,17 @@ async function nytt3dUtsnitt(cx, cy, S) {
       { type: '3d', knapp: fast ? 'Tilbake til kartet' : null, vedTrykk: () => slå3d(false) });
   } finally { R3.bygger = false; }
   if (R3.neste) { const n = R3.neste; R3.neste = null; if (på3d) await nytt3dUtsnitt(...n); }
+}
+// FORUT (runde 15): farten til punktet du ser på (eller står på) måles hvert bilde i ekte tid; Forut3d.plan sier når og hvor neste utsnitt
+// skal bygges (der du er når det er ferdig, litt foran deg), og Forut3d.forhentPunkt hvor kartdataene til utsnittet etter skal bes om.
+// R.forutBestilt teller bestillingene (vakta), R.forutSist = siste plan.
+function forut3d(R, u, b, S) {
+  const F3 = window.Forut3d; if (!F3) return; const nå = performance.now() / 1000, F = R.forut || (R.forut = F3.ny(R.byggSek));
+  F3.steg(F, u.cx + b.x, u.cy + b.y, R.forutT ? nå - R.forutT : 0, u.S); R.forutT = nå;
+  if (!R.bygger && byggVent(R)) { const p = F3.plan(F, u, S);
+    if (p) { R.forutBestilt = (R.forutBestilt || 0) + 1; R.forutSist = { ...p, d: Math.hypot(b.x, b.y) / u.S, t: nå }; nytt3dUtsnitt(p.cx, p.cy, S); } }
+  const q = F3.forhentPunkt(F, S, nå);
+  if (q) { R.forhentNr = (R.forhentNr || 0) + 1; forhent3d(q[0], q[1], S, [q[0] - S - 60, q[1] - S - 60, q[0] + S + 60, q[1] + S + 60], true); }
 }
 // Ventetiden før neste forsøk etter en feil: 4 s, 8 s, 16 s … høyst 30 s
 function byggVent(R) { return !R.byggFeil || performance.now() - R.feilVed > Math.min(30000, 2000 * 2 ** R.byggFeil); }
@@ -3302,6 +3328,10 @@ function tegn3d() {
   // (21. nov) et utsnitt uten hus bygges også på nytt når kameraet er kommet så nær at husene skal med (før: zoomet du inn fra høyt oppe,
   // ble utsnittet stående uten hus til S var under 45 % av det gamle)
   const manglerHus = !u.hus && u.S > HUS_S() && S <= HUS_S() && VIS.bygg && LAGFILER && LAGFILER.hus;
+  // (runde 15, brukeren: «ting laster litt sent i 3D hvis den flytter seg mye») flyr eller kjører du, bestilles neste utsnitt foran deg
+  // før du er 45 % fra midten, og kartdataene til det etter bes om på forhånd (spill/forut3d.js) – før den gamle regelen, så et utsnitt
+  // som bestilles mens du flyr, alltid legges foran deg
+  forut3d(R, u, b, S);
   if (!R.bygger && byggVent(R) && (Math.hypot(b.x, b.y) > u.S * .45 || S > u.S * 1.6 || S < u.S * .45 || manglerHus)) nytt3dUtsnitt(u.cx + b.x, u.cy + b.y, S);
   const nk = siktVersjon + '|' + VIS.taake + VIS.sikt + '|' + (valgt ? valgt.navn : '') + '|' + (window.KAMERA_NOKKEL || '') + '|' + ENHETER.reduce((n, e) => n + (e.side === 'blå' && siktLyser(e) ? 1 : 0), 0);
   if (nk !== R.nøkkel) { R.nøkkel = nk; bak3d(); }
@@ -3570,7 +3600,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=040362f62d"></script>
 <script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
-<script src="/dovre-fliser/spill/fjernkart3d.js?v=9bf1a4a331"></script>
+<script src="/dovre-fliser/spill/fjernkart3d.js?v=2fb00fc18a"></script>
+<script src="/dovre-fliser/spill/forut3d.js?v=14aab932fc"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=08d3105031"></script>
 <script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>
