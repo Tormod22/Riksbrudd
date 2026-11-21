@@ -244,7 +244,7 @@
   setInterval(() => { if (aktiv && !av && tid !== sistLagretTid) lagre(); }, LAGRE.pauseMs);
   document.addEventListener('click', e => { if (aktiv && e.target && e.target.closest && e.target.closest('button, [role="button"], a, label, input, select')) lagreStraks(); });
   document.addEventListener('change', () => { if (aktiv) lagreStraks(); });
-  document.addEventListener('keydown', () => { if (aktiv) lagreStraks(); });
+  document.addEventListener('keydown', e => { if (aktiv && !e.repeat) lagreStraks(); });
   if (typeof rot.ordre === 'function' && !rot.ordre.lagring) { const før = rot.ordre;
     const ny = function (s, X, Y) { if (s && s.side === 'blå' && Number.isFinite(X) && Number.isFinite(Y)) s.ordreMål = [X, Y];
       let p; try { p = før.apply(this, arguments); } finally { lagreStraks(); }
