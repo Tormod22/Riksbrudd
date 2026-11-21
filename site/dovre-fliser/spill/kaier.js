@@ -18,7 +18,11 @@
   function nær(K, x, y, r, filter) { let best = null; for (let i = fra(K, x - r); i < K.n && K.x[i] <= x + r; i++) { if (filter && !filter(i)) continue; const d = Math.hypot(K.x[i] - x, K.y[i] - y); if (d <= r && (!best || d < best.d)) best = { i, d }; } return best; }
   // Vises stedet ved denne målestokken (m = meter per punkt på skjermen)? Store ting langt ute, småkaier først nær.
   function vises(t, l, m) { if (t >= 3) return m < 160; if (t === 2) return m < 70; return l >= 150 ? m < 70 : l >= 50 ? m < 28 : m < 11; }
-  const navn = (K, i) => (K.ni[i] ? K.navn[K.ni[i] - 1] : ''), tekst = (K, i) => { const n = navn(K, i), t = NAVN[K.t[i]] || 'Kai'; return (n ? `${n} (${t.toLowerCase()})` : t) + (K.l[i] > 0 ? `, ${K.l[i]} m kai` : ''); };
+  // (runde 14, kritikk J: nærmeste kai het «M/K Ørsdølen II, Odlandstø» – navnet på en båt) kaier oppkalt etter et fartøy (M/K, M/S, M/F,
+  // MS, MK, D/S, S/Y …) får stedsnavnet etter kommaet («Odlandstø»); uten stedsnavn brukes typen («Kai»)
+  const FARTØY = /^\s*(?:[MDS]\s?\/\s?[A-ZÆØÅ]{1,2}|M\.\s?[SKFYT]\.?|MS|MK|MF|MY|MT|DS|SY|RS|KNM|Mk|Ms)\s+\S/;
+  function stedsnavn(n) { n = String(n || '').trim(); if (!FARTØY.test(n)) return n; const i = n.lastIndexOf(','); return i >= 0 ? n.slice(i + 1).trim() : ''; }
+  const navn = (K, i) => (K.ni[i] ? stedsnavn(K.navn[K.ni[i] - 1]) : ''), tekst = (K, i) => { const n = navn(K, i), t = NAVN[K.t[i]] || 'Kai'; return (n ? `${n} (${t.toLowerCase()})` : t) + (K.l[i] > 0 ? `, ${K.l[i]} m kai` : ''); };
   // Hvor god er kaien for en leir? Større fartøy trenger lang kai: 'liten' (småbåter), 'middels' (sjark, lekter), 'stor' (lasteskip, ferje).
   const størrelse = (t, l) => (t >= 3 || l >= 150 ? 'stor' : t === 2 || l >= 50 ? 'middels' : 'liten');
   // Tekst for leirvalget (runde 4): nærmeste kai innen 10 km og størrelsen, og nærmeste store kai hvis den nærmeste er mindre.
@@ -31,7 +35,7 @@
     const st = størrelse(K.t[f.i], K.l[f.i]), n = navn(K, f.i), ut = [`Nærmeste kai: ${n ? n + ', ' : ''}${st} (${kmTekst(f.d)})${f.d <= LEIRVALG.leirKai ? ` – leirens egen kai: ${BÅTER[st]}` : ' – for langt til å være leirens kai (over 3 km)'}.`];
     if (st !== 'stor') { const s = nær(K, x, y, LEIRVALG.søk, i => størrelse(K.t[i], K.l[i]) === 'stor'); if (s) ut.push(`Stor kai ${kmTekst(s.d)} unna.`); }
     return ut.join(' '); }
-  const api = { NAVN, les, fra, iBoks, nær, vises, navn, tekst, størrelse, leirTekst, LEIRVALG };
+  const api = { NAVN, stedsnavn, les, fra, iBoks, nær, vises, navn, tekst, størrelse, leirTekst, LEIRVALG };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Kaier = api;
 

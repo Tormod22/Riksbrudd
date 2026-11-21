@@ -30,8 +30,8 @@
   "Leiren"
  ],
  [
-  "Leiren: 3 lag ›",
-  "Når lagene og kjøretøyene dine står samlet i leiren, får de én lapp under leirens navn – «Leiren: 3 lag, 2 kjøretøy ›» – i stedet for navn oppå hverandre. Trykk på lappen, så zoomer kartet inn på leiren, der hvert lag har sitt eget navn. Laget du har valgt, har alltid sitt eget navn.",
+  "Leiren: 1 lag + deg ›",
+  "Når lagene og kjøretøyene dine står samlet i leiren, får de én lapp under leirens navn – «Leiren: 1 lag + deg, 2 kjøretøy ›» – i stedet for navn oppå hverandre. Tallet er lagene innen ca. 450 m fra flagget; «deg» er karakteren din, som ikke telles som et lag. Er noen av lagene dine ute, står det til slutt, for eksempel «· 1 lag ute». Trykk på lappen, så zoomer kartet inn på leiren, der hvert lag har sitt eget navn. Laget du har valgt, har alltid sitt eget navn.",
   "Lag og strid"
  ],
  [
@@ -52,6 +52,11 @@
  [
   "Når du velger leirplass",
   "Kartet er uskarpt et øyeblikk mens de skarpe kartbitene lastes – det er bare midlertidig. Oljeinnretningene i Nordsjøen vises ikke langt ute mens du velger. Står du over tregrensen, sier valget om skogen bare finnes nede i dalen.",
+  "Kom i gang"
+ ],
+ [
+  "Kaier med båtnavn",
+  "Noen kaier er oppkalt etter en båt («M/K …», «M/S …»). Da viser kartet og leirvalget stedsnavnet i stedet – for eksempel «Odlandstø».",
   "Kom i gang"
  ]
 ]

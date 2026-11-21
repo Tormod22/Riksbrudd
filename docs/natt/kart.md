@@ -204,3 +204,32 @@ Mobilkontrollen etter rettingen: 130 ok, 0 feil (477 s).
 - Samlelappen i 3D kan ikke trykkes på.
 - Bygg nær leiren er litt større enn i virkeligheten fra 0,6 m per punkt – trykk på et bygg treffer fortsatt det ekte fotavtrykket.
 - Topplinja viser «OLJE 0 t» i steg 3 (ikke min pakke).
+
+
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+Laget og prøvd:
+- **Samlelappen (I):** «Leiren: 1 lag + deg, 2 kjøretøy · 1 lag ute ›». Tallene regnes av spillet (`KartLapper.telling()`), ikke av navnene som ble
+  skjult: egne levende lag innen `KartLapper.SAMLE.r` fra flagget (også det valgte laget), uten karakteren (`s.karakter`) – den står som «deg»;
+  kjøretøyene innen samme avstand; egne lag lenger unna = «N lag ute». Navnene som skjules bak lappen er de samme (hvem() spør om avstanden i kartet,
+  ikke på skjermen). `Etikett.samle` kjenner typen 'deg', `Etikett.samleTekst({ lag, deg, kjøretøy, ute })`. Uten lag: «Leiren: deg og 2 kjøretøy ›».
+  **Valg:** fasiten sa «ca. 300 m», men startlagene (Vaktlaget) settes 380 m fra flagget (oppstart-visning.js) – med 300 m sto Vaktlaget som «1 lag ute».
+  Derfor 450 m (Claudes forslag, SAMLE.r).
+- **Kainavn (J):** `Kaier.stedsnavn(n)` – et navn som starter med et fartøyprefiks (M/K, M/S, M/F, M/Y, D/S, S/Y, MS, MK, MF, MY, MT, DS, SY, RS, KNM)
+  blir stedsnavnet etter siste komma («M/K Ørsdølen II, Odlandstø» → «Odlandstø»); uten komma: ingen navn (typen «Kai»/«Havn» brukes).
+  `Kaier.navn` bruker den, så det gjelder leirvalget, kartmerkene og trykkpanelet. (kaier.js er ikke min fil – liten, samlet endring.)
+- **Flisskjøter (J):** årsaken var naboruter med reserver fra forskjellige nivåer (én fra nivået rett over, skarp og ikke glattet; én fire nivåer opp,
+  svært uskarp) – rette kanter langs flisnettet. Nå (index.html, tegnFliser/tegnReserve/mykFlis): `GLATT.fra = 1` (også nivået rett over glattes),
+  og når reservene i bildet kommer fra flere nivåer, legges først et felles underlag fra det groveste nivået D under alle ruter som ikke er ferdige;
+  bedre reserver og ferdige fliser legges oppå med myk kant (FLISLAST.kant) mot naboer som er dårligere. `FLISLAST.sist.underlag/nivåer` teller.
+  `FLISLAST.felles = false` slår underlaget av (for vakta). GLATT.maks 14 → 24.
+  Prøvd: Dovre med reserver fra to nivåer i sjakkmønster – før: rett skjøt gjennom vegen; etter: ingen (natt14/kart2d/skjot-for.png / skjot-ny.png).
+- **Vakt** (`vakter/kart.js`, del 9): telling (lag inn/ut, «deg», «lag ute»), kainavnet, og felles underlag når reservene kommer fra to nivåer.
+  Feil lagt inn med vilje (`FLISLAST.felles = false`, `Kaier.stedsnavn = n => n`): vakta fant begge. Grønn på PC og mobil (844 × 390).
+
+Ikke gjort / funnet:
+- På /rogaland (Sokndal/Jøssingfjord, 2 km-målestokk) er det fortsatt en rett skjøt i lysstyrke de første sekundene: to grove fliser på SAMME nivå
+  (z6, begge ferdige) er ulikt lyse (den ene mørkere, som omlandet med OMLAND_LYS), mens de fine flisene (z10) ikke har skjøten. Det er altså de grove
+  flisene for én blokk (satellittmosaikken / omlandsblandingen i kartflis.js), ikke glattingen. Ikke rettet i denne runden (bilder natt14/kart2d/dalane3-3000.png
+  og dalane2-15000.png).
+- Hvor raskt de fine flisene kommer, er ikke endret (på /rogaland via mellomstasjonen tok det 3–15 s her).

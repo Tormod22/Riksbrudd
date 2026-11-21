@@ -19,4 +19,9 @@ ok(K.les(null).n === 0 && K.les({}).n === 0, 'tåler tom fil');
   const t3 = K.leirTekst(S, 250000, 6599600); ok(/^Nærmeste kai: Kaia, middels \(400 m\) – leirens egen kai: småbåt, sjark og lekter\.$/.test(t3), 'leirvalg middels: ' + t3);
   const t2 = K.leirTekst(S, 255000, 6600000); ok(/for langt til å være leirens kai/.test(t2), 'leirvalg langt unna: ' + t2);
   ok(/Ingen kai innen 10 km/.test(K.leirTekst(S, 500000, 7000000)) && K.leirTekst(null, 0, 0) === '', 'leirvalg uten kai'); }
+// (runde 14, kritikk J) kaier oppkalt etter et fartøy får stedsnavnet
+{ const t = ['M/K Ørsdølen II, Odlandstø', 'M/S Fjordbris', 'MS Kong Olav, Stokmarknes', 'D/S Skibladner, Eidsvoll', 'Odlandstø', 'Mosjøen kai', 'MSK-kaia', 'Kai for MS Nordlys, Ørnes'].map(K.stedsnavn);
+  ok(t.join('|') === 'Odlandstø||Stokmarknes|Eidsvoll|Odlandstø|Mosjøen kai|MSK-kaia|Kai for MS Nordlys, Ørnes', 'fartøynavn blir stedsnavn: ' + t.join('|'));
+  const B = K.les({ navn: ['M/K Ørsdølen II, Odlandstø'], d: [5000, 6600000, 1, 60, 1] });
+  ok(K.navn(B, 0) === 'Odlandstø' && /^Nærmeste kai: Odlandstø, /.test(K.leirTekst(B, 5100, 6600000)), 'leirvalget sier «Odlandstø»: ' + K.leirTekst(B, 5100, 6600000)); }
 console.log(`ok   kaier: ${n} sjekker`);
