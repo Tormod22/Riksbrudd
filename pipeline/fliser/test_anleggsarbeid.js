@@ -70,6 +70,9 @@ ok(!A.viaTunnel([tu3], 50, 0, 350, 0), 'uten høyder: rett vei');
 ok(!A.viaTunnel([tu3], 50, 0, 60, 0, høyde), 'kort tur på samme side: ingen tunnel');
 ok(Math.abs(A.reiseMin(tu2, false) - 1000 / 1.3 / 60) < 1e-9 && A.reiseMin(tu2, true) < A.reiseMin(tu2, false), 'reisetiden gjennom tunnelen');
 
+// sikksakk: endene står, bitene går vekselvis til hver side, lengden litt lengre enn rett
+const Zz = A.sikksakk([[0, 0], [40, 0]]);
+ok(Zz[0][0] === 0 && Zz[Zz.length - 1][0] === 40 && Zz.some(p => p[1] > 1.5) && Zz.some(p => p[1] < -1.5) && A.lengde(Zz) > 40 && A.lengde(Zz) < 46, 'sikksakk-graven');
 // lagring
 const J = A.tilJSON([g, b, tu]), L2 = A.fraJSON(JSON.parse(JSON.stringify(J)));
 ok(L2.length === 3 && L2[0].ferdig && L2[1].type === 'bunker' && Math.abs(L2[1].ret - Math.PI / 4) < 1e-3, 'lagres og leses');

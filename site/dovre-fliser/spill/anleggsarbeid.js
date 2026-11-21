@@ -87,6 +87,15 @@
   // et punkt i rektangelets egne koordinater (u langs, v på tvers)
   const lokalt = (o, x, y) => { const c = Math.cos(o.ret || 0), s = Math.sin(o.ret || 0), dx = x - o.x, dy = y - o.y; return [dx * c + dy * s, -dx * s + dy * c]; };
 
+  // Sikksakk (traverser) som ekte skyttergraver: et skudd eller en granat langs graven rammer bare ett stykke. Hver rett strekning deles
+  // i biter på «steg» meter som går vekselvis «ut» meter til hver side (Claudes forslag: 8 og 1,6 m). Endepunktene står der du trykket.
+  function sikksakk(P, steg = 8, ut = 1.6) {
+    const R = [P[0]];
+    for (let i = 1; i < P.length; i++) { const [ax, ay] = P[i - 1], [bx, by] = P[i], l = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(l / steg)); if (l < 1e-6) continue;
+      const nx = -(by - ay) / l, ny = (bx - ax) / l;
+      for (let k = 1; k <= n; k++) { const t = k / n, s = (k % 2 ? 1 : -1) * ut; R.push([ax + (bx - ax) * (t - .5 / n) + nx * s, ay + (by - ay) * (t - .5 / n) + ny * s], [ax + (bx - ax) * t, ay + (by - ay) * t]); } }
+    return R;
+  }
   // ---------- nye anlegg ----------
   const målFor = (A, nivå) => (A.nivåer ? A.nivåer[Math.max(0, Math.min(A.nivåer.length, nivå || 1) - 1)].mål : A.mål);
   // Kostnaden for et anlegg (eller for å oppgradere fra nivå «fra»): { kr, timer (persontimer), mat, lengde }
@@ -244,7 +253,7 @@
     return ut;
   }
 
-  const api = { REGLER, ANLEGG, lengde, avstandLinje, langs, hjørner, lokalt, målFor, kostnad, nytt, andel, arbeidskraft, steg, igjen, midt, kanPlassere,
+  const api = { REGLER, ANLEGG, sikksakk, lengde, avstandLinje, langs, hjørner, lokalt, målFor, kostnad, nytt, andel, arbeidskraft, steg, igjen, midt, kanPlassere,
     inngrep, endringVed, terrengKrav, iAnlegg, plasser, fordel, vern, reiseMin, marsjKost, viaTunnel, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Anlegg = api;

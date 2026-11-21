@@ -58,16 +58,18 @@
     if (window.lukkPanel) try { lukkPanel(); } catch (e) { /* uten panel */ }
     // Leir-menyen lukkes (som når et bygg plasseres), så kartet er fritt
     { const k = document.getElementById('leirknapp'); if (k && k.classList.contains('på')) k.click(); }
-    plass = { type, nivå, P: [], ret: 0, retSatt: false, sjekk: null, nr: 0 }; valgt = null; visValg(); visAnleggPanel(); skitten = true;
+    plass = { type, nivå, P: [], ret: 0, retSatt: false, sjekk: null, nr: 0, sikksakk: type === 'skyttergrav' }; valgt = null; visValg(); visAnleggPanel(); skitten = true;
   }
   function avbryt() { plass = null; visValg(); skitten = true; }
+  // punktene slik graven bygges: med traverser (sikksakk) når det er valgt
+  const eff = p => (p.sikksakk && p.P.length > 1 ? A.sikksakk(p.P) : p.P);
   async function prøv() {
     const p = plass; if (!p) return; const T0 = A.ANLEGG[p.type], nr = ++p.nr; p.sjekk = { venter: true }; visValg();
     if (!p.P.length) { p.sjekk = null; visValg(); return; }
     // bunkeren vender skyteskåret bort fra leiren (til du roterer selv)
     const S = spill(); if (T0.form === 'punkt' && p.type !== 'kai' && !p.retSatt && S && S.leir) p.ret = Math.atan2(p.P[0][1] - S.leir.y, p.P[0][0] - S.leir.x);
     const T = await terrengFor(p.P, 70); if (plass !== p || nr !== p.nr) return;
-    const r = A.kanPlassere(p.type, p.P, T, p.ret); if (r.ret !== undefined && p.type === 'kai') p.ret = r.ret;
+    const r = A.kanPlassere(p.type, eff(p), T, p.ret); if (r.ret !== undefined && p.type === 'kai') p.ret = r.ret;
     // to like anlegg oppå hverandre avvises
     if (r.ok) { const [mx, my] = A.midt({ type: p.type, P: p.P }); if (liste.some(a => a.type === p.type && Math.hypot(A.midt(a)[0] - mx, A.midt(a)[1] - my) < 4)) { r.ok = false; r.feil = 'Det står et anlegg her fra før.'; } }
     p.sjekk = r; visValg(); skitten = true;
@@ -92,9 +94,9 @@
   }
   function bekreft() {
     const p = plass; if (!p || !p.sjekk || !p.sjekk.ok) return false;
-    const k = kostnadMedMat(p.type, p.P, p.nivå);
+    const k = kostnadMedMat(p.type, eff(p), p.nivå);
     if (!betalFor(k)) { logg(`Ikke nok penger: ${navnFor(p)} koster ${kr(k.total)}.`); return false; }
-    const a = A.nytt(p.type, p.P, { ret: p.ret, nivå: p.nivå, tid: typeof tid !== 'undefined' ? tid : 0 }); liste.push(a);
+    const a = A.nytt(p.type, eff(p), { ret: p.ret, nivå: p.nivå, tid: typeof tid !== 'undefined' ? tid : 0 }); liste.push(a);
     logg(`${navnPå(a)} er satt i gang (${kr(k.total)}${k.kjøp ? `, av det ${kr(k.kjøp)} for materialer som manglet` : ''}). ${arbeidTekst(a)}`);
     plass = null; valgt = a.id; lagre(); oppdaterInngrep(); visValg(); visAnleggPanel(); nyeModeller(); skitten = true; return a;
   }
@@ -102,12 +104,13 @@
   function visValg() {
     const e = panelEl('anleggvalg'), p = plass; if (!p) { e.hidden = true; e.innerHTML = ''; return; } e.hidden = false; const T0 = A.ANLEGG[p.type];
     const hjelp = { linje: 'Trykk i kartet der graven skal gå – punkt for punkt.', punkt: p.type === 'kai' ? 'Trykk på land helt i strandkanten. Kaia legger seg mot sjøen.' : 'Trykk der bunkeren skal stå. Skyteskåret vender bort fra leiren (Roter for å snu).', topunkt: 'Trykk to steder ved foten av et fjell: én portal på hver side.' }[T0.form];
-    let info = ''; if (p.P.length && (T0.form !== 'linje' || p.P.length > 1) && (T0.form !== 'topunkt' || p.P.length > 1)) { const k = kostnadMedMat(p.type, p.P, p.nivå);
+    let info = ''; if (p.P.length && (T0.form !== 'linje' || p.P.length > 1) && (T0.form !== 'topunkt' || p.P.length > 1)) { const k = kostnadMedMat(p.type, eff(p), p.nivå);
       info = `${k.lengde ? k.lengde + ' m · ' : ''}${kr(k.total)} · ${k.timer} persontimer (${tidTekst(k.timer / Math.max(1, kraftNå()))} med ${Math.round(kraftNå()) || 'ingen'} arbeidere)${Object.keys(k.mat).length ? ' · ' + matTekst(k.mat) : ''}`; }
     const s = p.sjekk, st = !s ? '' : s.venter ? '<small>Sjekker kartet …</small>' : s.ok ? '<span class="ok">Kan bygges her.</span>' : `<span class="feil">${s.feil}</span>`;
     e.innerHTML = `<h3>${T0.navn}${p.type === 'kai' ? ' – ' + T0.nivåer[p.nivå - 1].navn.toLowerCase() : ''}</h3><small>${hjelp}</small><div>${info}</div><div>${st}</div><div class="rad"></div>`;
     const rad = e.querySelector('.rad'), kn = (t, fn, id) => { const b = document.createElement('button'); b.textContent = t; b.onclick = fn; if (id) b.id = id; rad.appendChild(b); return b; };
     const b = kn('Bygg', () => bekreft(), 'anleggbygg'); b.disabled = !(s && s.ok);
+    if (T0.form === 'linje') kn(`Sikksakk: ${p.sikksakk ? 'på' : 'av'}`, () => { p.sikksakk = !p.sikksakk; prøv(); skitten = true; }, 'anleggsikksakk');
     if (T0.form === 'linje' && p.P.length) kn('Angre punkt', () => { p.P.pop(); prøv(); skitten = true; });
     if (p.type === 'bunker' && p.P.length) kn('Roter', () => { p.ret += Math.PI / 4; p.retSatt = true; prøv(); skitten = true; });
     kn('Avbryt', avbryt, 'anleggavbryt');
@@ -289,7 +292,7 @@
       if (!forslag && m < 8) { const [x, y] = S(...A.midt(a)); const t = navnPå(a) + (ferdig ? '' : ` (${Math.round(f * 100)} %)`), yt = window.Etikett ? Etikett.tekst(g, t, x, y - 12, -1) : y - 12;
         g.font = 'italic 12.5px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(15,11,7,.85)'; g.strokeText(t, x, yt); g.fillStyle = a.id === valgt ? '#f4e2a8' : '#e0d2b4'; g.fillText(t, x, yt); } };
     for (const a of liste) { const [x, y] = S(...A.midt(a)); if (ut(x, y, 2000 / m + 60)) continue; tegnEtt(a, false); }
-    if (plass && plass.P.length) tegnEtt({ type: plass.type, P: plass.P, ret: plass.ret, nivå: plass.nivå, id: '' }, true, plass.sjekk && !plass.sjekk.venter ? !!plass.sjekk.ok : undefined);
+    if (plass && plass.P.length) tegnEtt({ type: plass.type, P: eff(plass), ret: plass.ret, nivå: plass.nivå, id: '' }, true, plass.sjekk && !plass.sjekk.venter ? !!plass.sjekk.ok : undefined);
     g.restore();
   });
 
@@ -329,7 +332,7 @@
   // bakken males: jord rundt graven og bunkeren, grus foran portalene (kartbildet px, TW punkter, lokalt -S..S)
   async function mal(u, px, TW, L) {
     const mpp = 2 * u.S / TW, rnd = (i, j) => { const v = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return v - Math.floor(v); };
-    for (const a of L) { const r = { skyttergrav: 2.6, bunker: 3, kai: 1.5, tunnel: 10 }[a.type], farge = a.type === 'tunnel' || a.type === 'kai' ? [118, 112, 102] : [86, 70, 50];
+    for (const a of L) { const r = { skyttergrav: 1.1, bunker: 2, kai: 1.5, tunnel: 10 }[a.type], farge = a.type === 'tunnel' || a.type === 'kai' ? [118, 112, 102] : [86, 70, 50];
       const xs = a.P.map(p => p[0]), ys = a.P.map(p => p[1]), ek = r + 30;
       const i0 = Math.max(0, Math.floor((Math.min(...xs) - ek + u.S) / mpp)), i1 = Math.min(TW - 1, Math.ceil((Math.max(...xs) + ek + u.S) / mpp)), j0 = Math.max(0, Math.floor((u.S - Math.max(...ys) - ek) / mpp)), j1 = Math.min(TW - 1, Math.ceil((u.S - Math.min(...ys) + ek) / mpp));
       for (let j = j0; j <= j1; j++) { if ((j & 31) === 0 && børPuste()) await pust(); const y = u.S - (j + .5) * mpp;
@@ -356,14 +359,16 @@
 
   // ---------- 3D: modellene ----------
   let gruppe = null, trekanter = 0;
-  const FARGE = { betong: [.6, .59, .56], betongMørk: [.42, .41, .39], betongLys: [.7, .69, .66], plank: [.43, .33, .21], plankMørk: [.3, .23, .15], sekk: [.63, .56, .41], sekk2: [.56, .5, .37], jord: [.34, .28, .2], stål: [.25, .27, .28],
-    svart: [.06, .06, .06], gul: [.86, .72, .2], lampe: [1, .93, .66], kasse: [.27, .31, .2], tre: [.5, .38, .24], stake: [.92, .45, .12], hvit: [.9, .9, .88] };
+  const FARGE = { betong: [.6, .59, .56], betongMørk: [.42, .41, .39], betongLys: [.6, .6, .57], plank: [.43, .33, .21], plankMørk: [.3, .23, .15], sekk: [.63, .56, .41], sekk2: [.56, .5, .37], jord: [.34, .28, .2], stål: [.25, .27, .28],
+    svart: [.06, .06, .06], gress: [.25, .28, .17], torv: [.3, .3, .19], gul: [.86, .72, .2], lampe: [1, .93, .66], kasse: [.27, .31, .2], tre: [.5, .38, .24], stake: [.92, .45, .12], hvit: [.9, .9, .88] };
   function farg(g, f) { const n = g.index ? g.toNonIndexed() : g; if (n !== g) g.dispose(); if (!n.attributes.normal) n.computeVertexNormals(); const p = n.attributes.position, k = new Float32Array(p.count * 3); for (let i = 0; i < p.count; i++) k.set(f, i * 3); n.setAttribute('color', new THREE.BufferAttribute(k, 3)); if (n.attributes.uv) n.deleteAttribute('uv'); return n; }
   // kasse med midten i (x, y) og bunnen i z, dreid rot om z
   function kasse(D, lx, ly, lz, x, y, z, rot, f) { const g = new THREE.BoxGeometry(lx, ly, lz); g.translate(0, 0, lz / 2); if (rot) g.rotateZ(rot); g.translate(x, y, z); D.push(farg(g, f)); }
   function sylinder(D, r, h, x, y, z, f, n = 8) { const g = new THREE.CylinderGeometry(r, r, h, n); g.rotateX(Math.PI / 2); g.translate(x, y, z + h / 2); D.push(farg(g, f)); }
   // firkant av fire hjørner [x, y, z] (rundt)
-  function firkant(D, a, b, c, d, f) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...a, ...b, ...c, ...a, ...c, ...d]), 3)); g.computeVertexNormals(); D.push(farg(g, f)); }
+  // f2: fargen i hjørnene c og d (glir over fra f) – jordvollen går fra jord ved graven til gress ute
+  function firkant(D, a, b, c, d, f, f2) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([...a, ...b, ...c, ...a, ...c, ...d]), 3)); g.computeVertexNormals(); const n = farg(g, f);
+    if (f2) { const k = n.attributes.color.array; for (const i of [2, 4, 5]) k.set(f2, i * 3); } D.push(n); }
   function slå(D) { let n = 0; for (const g of D) n += g.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = new Float32Array(n * 3); let o = 0;
     for (const g of D) { P.set(g.attributes.position.array, o * 3); N.set(g.attributes.normal.array, o * 3); C.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; g.dispose(); }
     const G = new THREE.BufferGeometry(); G.setAttribute('position', new THREE.BufferAttribute(P, 3)); G.setAttribute('normal', new THREE.BufferAttribute(N, 3)); G.setAttribute('color', new THREE.BufferAttribute(C, 3)); return G; }
@@ -376,11 +381,11 @@
     if (!a.ferdig) { staker(D, a.P, (x, y) => zz(hoyde3d(u.cx + x, u.cy + y, u)), 3); return; }
     const n = S.length, nor = i => { const p = S[Math.max(0, i - 1)], q = S[Math.min(n - 1, i + 1)], l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1; return [-(q[1] - p[1]) / l, (q[0] - p[0]) / l]; };
     const pt = (i, o, z) => [S[i][0] + nor(i)[0] * o, S[i][1] + nor(i)[1] * o, z];
-    for (let i = 0; i + 1 < n; i++) { const g0 = zz(S[i][2]), g1 = zz(S[i + 1][2]), f0 = g0 - d * EX, f1 = g1 - d * EX, r0 = g0 + .15, r1 = g1 + .15, pl = i % 2 ? FARGE.plank : FARGE.plankMørk;
+    for (let i = 0; i + 1 < n; i++) { const g0 = zz(S[i][2]), g1 = zz(S[i + 1][2]), f0 = g0 - d * EX, f1 = g1 - d * EX, r0 = g0 + .08, r1 = g1 + .08, pl = i % 2 ? FARGE.plank : FARGE.plankMørk;
       // bunnen (plankegang), veggene (kledning) og jordvollen ut på begge sider
       firkant(D, pt(i, -h, f0 + .03), pt(i + 1, -h, f1 + .03), pt(i + 1, h, f1 + .03), pt(i, h, f0 + .03), FARGE.plankMørk);
       for (const sd of [-1, 1]) { firkant(D, pt(i, sd * h, f0), pt(i + 1, sd * h, f1), pt(i + 1, sd * h, r1), pt(i, sd * h, r0), pl);
-        firkant(D, pt(i, sd * (h + .05), r0), pt(i + 1, sd * (h + .05), r1), pt(i + 1, sd * (h + 2.6), g1 - .55), pt(i, sd * (h + 2.6), g0 - .55), FARGE.jord); } }
+        firkant(D, pt(i, sd * (h + .05), r0), pt(i + 1, sd * (h + .05), r1), pt(i + 1, sd * (h + 1.9), g1 - .35), pt(i, sd * (h + 1.9), g0 - .35), FARGE.jord, FARGE.gress); } }
     for (const [i, sd] of [[0, -1], [n - 1, 1]]) { const g0 = zz(S[i][2]); firkant(D, pt(i, -h, g0 - d * EX), pt(i, h, g0 - d * EX), pt(i, h, g0 + .15), pt(i, -h, g0 + .15), FARGE.plank); void sd; }
     // sandsekker i to lag langs begge kantene (forskjøvet som murstein)
     for (const sd of [-1, 1]) for (const lag of [0, 1]) { const P = A.langs(S.map(s => [s[0], s[1]]), .62);
@@ -400,10 +405,10 @@
     K(t, d0 + B / 2, zc - zf, bu, (d0 - B / 2) / 2, zf, FARGE.betong); K(t, B / 2 - d1, zc - zf, bu, (d1 + B / 2) / 2, zf, FARGE.betong); K(t, d1 - d0, zc - zf - 2, bu, (d0 + d1) / 2, zf + 2, FARGE.betong);
     for (const sd of [-1, 1]) K(L - 2 * t, t, zc - zf, 0, sd * (B / 2 - t / 2), zf, FARGE.betong);
     // taket (overheng) og jord oppå
-    K(L + .5, B + .5, .5, 0, 0, zc, FARGE.betongLys); K(L - 1, B - 1, .25, -.2, 0, zc + .5, FARGE.jord);
+    K(L + .5, B + .5, .5, 0, 0, zc, FARGE.betongLys); K(L - 1, B - 1, .25, -.2, 0, zc + .5, FARGE.torv);
     // jordvoll rundt sidene og foran (under skyteskåret)
-    for (const sd of [-1, 1]) { const p = (uu, vv, z) => [...f(uu, vv), z]; firkant(D, p(-L / 2, sd * (B / 2 + .25), g + .7), p(L / 2, sd * (B / 2 + .25), g + .7), p(L / 2, sd * (B / 2 + 3), g - .5), p(-L / 2, sd * (B / 2 + 3), g - .5), FARGE.jord); }
-    { const p = (uu, vv, z) => [...f(uu, vv), z]; firkant(D, p(L / 2 + .25, -B / 2 - .2, Math.min(g + .2, s0 - .1)), p(L / 2 + .25, B / 2 + .2, Math.min(g + .2, s0 - .1)), p(L / 2 + 3, B / 2 + 2.5, g - .5), p(L / 2 + 3, -B / 2 - 2.5, g - .5), FARGE.jord); }
+    for (const sd of [-1, 1]) { const p = (uu, vv, z) => [...f(uu, vv), z]; firkant(D, p(-L / 2, sd * (B / 2 + .25), g + .7), p(L / 2, sd * (B / 2 + .25), g + .7), p(L / 2, sd * (B / 2 + 3), g - .5), p(-L / 2, sd * (B / 2 + 3), g - .5), FARGE.torv, FARGE.gress); }
+    { const p = (uu, vv, z) => [...f(uu, vv), z]; firkant(D, p(L / 2 + .25, -B / 2 - .2, Math.min(g + .2, s0 - .1)), p(L / 2 + .25, B / 2 + .2, Math.min(g + .2, s0 - .1)), p(L / 2 + 3, B / 2 + 2.5, g - .5), p(L / 2 + 3, -B / 2 - 2.5, g - .5), FARGE.torv, FARGE.gress); }
     // døra i stål (åpen) og trinn ned mot døra
     { const geo = new THREE.BoxGeometry(.06, .95, 1.95); geo.translate(0, -.475, .975); geo.rotateZ(a.ret + 1.15); const [x, y] = f(-L / 2, d1); geo.translate(x, y, zf); D.push(farg(geo, FARGE.stål)); }
     for (let k = 0; k < 3; k++) K(.4, 1.1, (k + 1) * .4, -L / 2 - .3 - (2 - k) * .45, (d0 + d1) / 2, zf, FARGE.betongMørk);
