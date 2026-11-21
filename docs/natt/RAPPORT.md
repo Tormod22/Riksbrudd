@@ -266,3 +266,18 @@ Rettet etter femte anmeldelse (kritiker I telefon 4, J PC 4) på 1,5 time med sj
 - **3D:** fjernkart i stedet for tomt bilde når du flyr, lysere planter, leiren i en lysning, og navnet på nærmeste tettsted vises.
 
 Kontroll: PC 130 ok og mobil 130 ok. Den eneste feilen var en sjekk i kamp-vakta. Den er rettet og grønn når den kjøres alene.
+
+## Runde 15 (21.–22. nov): virkeligheten mot spillet
+
+Brukerens ønsker om utseende og lasting, sammenlignet med ekte bilder. Laget i ni pakker:
+- grønnere bakke og klippede gressflater, og ingen trær eller steiner på baner;
+- betongkaier i havnene;
+- bygg som ligner virkeligheten (domkirken, Gamle Stavanger, låver, helsebygg, bensinstasjoner);
+- gågater, parkering og fortau;
+- raskere lasting i 3D;
+- smartere interiør;
+- skyttergraver, bunkere, egne kaier og tunneler;
+- strøm i brede elver;
+- nye logoer.
+
+Kontroll: mobil 138/138, PC 137/138. Den ene feilen er en ustabil grensesnittsjekk som er grønn når den kjøres alene.

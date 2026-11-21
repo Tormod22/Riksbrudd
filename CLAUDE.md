@@ -1437,3 +1437,21 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   og «Laster landskapet …» når du flyr; folk flyttes unna de første 2 s av gåmodus; lysere lyng og planter; trær ryddet i leiren (LEIR_RYDD);
   startblikk på skrå; asfaltgrå veger i 3D-kartet (ASFALT3D); «Nærmeste tettsted: X · 8,6 km N» under kompasset; «sist sett» eldre enn 6 t
   skjules i 3D. Hjelpen: 277 emner. Kontroll: PC 130 ok + mobil 130 ok; eneste FEIL var kamp-vaktas rapportsjekk (vakta rettet, grønn alene på PC og mobil). Merk: en vakt lar 3D være av før skytesjekken – sjekk.js slår det på igjen og skriver «merk:».
+  RUNDE 15 (21.–22. nov, brukerens ønsker om utseende og lasting; sammenlignet med ekte bilder fra Wikimedia Commons, lenker i
+  docs/natt/*.md; bildene bare i scratchpad/natt15/; rapport-PDF «Virkeligheten mot spillet»). NATUR: spill/bakkefarge.js – gul-oliven
+  vegetasjon dreies mot grønt (dyrket mark sterkere, u.dyrketMaske), lyng/berg/sand/snø uendret (BAKKEFARGE_AV = gammel); Jæren 49° -> 70°
+  (ekte 73°); plen/baner klippet; spill/anleggfri.js – u.påAnlegg: ingen trær/steiner/busker på baner (anlegg 1–5, 7–9). KYST: Kyst.KAI –
+  loddrett kaifront (betong/granitt/tre), kaidekke, gul kant, pullerter, fendere, stiger, lykter ved kaipunkter og i byhavner, terrenget
+  hevet/senket. BYGG: steinkirker (>700 m², bratt tak), hvite hus og teglrøde tak etter tetthet (Byhus.husFarge/husTak), takvinkler per
+  type, takrenner/vindskier, låver alltid skråtak, nye typer t 15 sykehjem og t 16 legevakt (bygninger.py – krever ny husrelease), OSM-utseende
+  (r, l, tf, vf, m), tre bensinstasjoner (Byhus.bensinType). BY: spill/gagate.js/gagate3d.js (brostein vegg til vegg; vegtype g = 2 for
+  NVDB Gågate/Gatetun i vegtype.py – krever ny bygging av vektorflisene; til da en streng gjetteregel), spill/parkering.js/parkering3d.js
+  (plasser 2,5 × 5 m i rader, øyer, lykter, biler etter klokka, tak 450/150 biler), fortau med kantstein 12 cm og nedsenket ved gangfelt,
+  fortau i 2D fra z15. LASTING: spill/forut3d.js – neste utsnitt bestilles i fartsretningen i god tid og legges foran deg, kartdata hentes
+  på forhånd (forhent3d mer); fly 150 s: 30 s -> 0 s uten detaljer (PC). ELV: spill/elvestrom.js – strømlag oppå brede elver i kartets
+  vann (retning fra NVE, aldri oppover, ingen strøm i innsjø/sjø); ikke sett på bilde (Dovre har ingen slik elv). ANLEGG: spill/anleggsarbeid.js
+  (+visning) – tabell Anlegg.ANLEGG: skyttergrav (sikksakk, 1,5 m, vern ×0,4), bunker (×0,15, interiør), egen kai (båtene legger til), tunnel
+  (lenke i ruta), felles terrenginngrep (hoydeVed + Veg.skjærG i 3D), «riksbrudd-anlegg». INNE: interior.js med tabellene TYPER, ROMSETT,
+  TILGANG, ALDRI_VED_DØR, MØBELSETT, STILER – takhøyde per type, gang først, flere innganger (pl.innganger), stil eldre/nyere/moderne, butikk,
+  fjøs, industri (sag/metall/olje), sykehjem/legevakt; P.bygg.tett/k fra hus3d. LOGOER v2 og pitch/plan (PDF) i scratchpad/pitch,
+  docs/designretning.md. Hjelpen: 295 emner. Kontroll: mobil 138/138, PC 137/138 (ui «fanene i Leir-menyen» – grønn alene, ustabil under last).
