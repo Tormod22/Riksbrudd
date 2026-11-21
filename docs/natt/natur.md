@@ -245,3 +245,26 @@ Wikimedia Commons: «Field - Klepp, Norway 2021-08-07.jpg» (åker på Jæren), 
 3. detaljIBakken: to linjer (fG og naerF uten effekter).
 4. GRESS_FARGE.plen og gress3d: plen/dyrket (fire linjer).
 5. Skripttaggene anleggfri.js og bakkefarge.js rett etter anlegg3d.js. versjon.py er kjørt.
+
+### Målt (snittfarge i bakken på skjermbildet, HSV; kl. 13, klart vær, sommer, Høy grafikk, PC 1400 × 820; scratchpad natt15/natur/)
+| Sted og vinkel | Før: tone / metning / lys, andel gul-sand | Etter | Ekte |
+|---|---|---|---|
+| Jæren øst for Bryne, lavt (260 m) – jordet foran | 49° / 0,52 / 0,43, 97 % | 70° / 0,57 / 0,37, 5 % | åker Klepp 73° / 0,81 / 0,45 |
+| Jæren, skrått (900 m) | 53° / 0,57 / 0,49, 89 % | 72° / 0,62 / 0,42, 14 % | Sandnes fra lufta: grønt (dis gjør det blått) |
+| Jæren ovenfra (1400 m) | 53° / 0,54 / 0,47, 81 % | 70° / 0,58 / 0,41, 18 % | – |
+| Jæren til fots, bakken foran | 64° / 0,64 / 0,44, 29 % | 69° / 0,65 / 0,43, 12 % | grønne enger Hovet 75° / 0,57 / 0,48 |
+| Ryfylke, dalbunnen med jorder (skrått) | 58° / 0,45 / 0,55, 64 % | 66° / 0,46 / 0,51, 42 % | – |
+| Ryfylke, lia (hei/skog) | 75° / 0,48 / 0,33 | 77° / 0,49 / 0,31 | Dovre-heia 64° / 0,41 / 0,34 |
+| Ryfylke, skogen | 87° / 0,50 / 0,24 | 88° / 0,50 / 0,22 | (granskog: mørk) |
+«Andel gul-sand» = punkter med tone 30–62° og metning over 0,18. Heia og skogen er nesten uendret (som ønsket); jordene er dreid fra
+gulbrunt til grønt. Ryfylke-målingen er tatt FØR to små rettinger (lyse jorder på dyrket mark, mindre lys langt unna) – dalbunnen der
+var fortsatt 42 % gul (solbelyste jorder lenger unna, og fjernringen – se under).
+Bilder side om side: side-jaeren-lav.png, side-jaeren-gaa.png, side-jaeren-skraa.png, side-ryfylke-skraa.png, side-ryfylke-lav.png.
+
+### Ikke gjort / svakheter (runde 15)
+- Fjernringen (spill/fjernkart3d.js, ikke min) kaller naturfarger() uten masken for dyrket mark: der får eng bare den vanlige dreiningen
+  (16°), ikke den sterkere for dyrket mark. Kan kobles på ved å sende Bakkefarge.dyrketMaske(kv, boks) som femte ledd.
+- 2D-kartet (kartflis.js) er ikke endret: satellittfargene der er som før (gulbrune jorder). Brukerens klage gjaldt 3D.
+- Høsten: bakkeshaderen gjør grønt gult om høsten (uHost); jordene er nå grønnere, så høstfargen på dem blir sterkere. Ikke sett på bilde.
+- Parker/plener utenfor tettstedene og anleggene er ikke kjent i dataene. Slått eng (gulbrun etter slåtten) skilles ikke fra uslått.
+- Lyset (sol/himmel, lys3d) er ikke rørt – eies av pakka «lys».

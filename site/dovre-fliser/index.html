@@ -1687,6 +1687,8 @@ async function bygg3d(cx, cy, S) {
   const skog = await skogmaske(u, b); await pust();
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
+  // (runde 15) også trærne krokene satte (gatetrær, einer …) holdes borte fra banene
+  if (window.AnleggFri) await AnleggFri.rydd(u);
   u.skygger = await treskygger(px, TW, u);
   // omgivelsesskygge ved husene (18. nov, pakke «lys»): mørkere bakke inntil veggene og mørkere vegger nederst
   if (bakkeFx() && u.hus) { u.husSkygger = await husskygger(px, TW, u); await husFot(u); }

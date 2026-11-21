@@ -63,6 +63,6 @@
     const tell = d => (d && d.length) || 0;
     if (u.trær) for (const art of Object.keys(u.trær)) { før += tell(u.trær[art]); u.trær[art] = rens(A, u.trær[art], 5); etter += tell(u.trær[art]); if (typeof pust === 'function') await pust(); }
     if (u.smått) for (const n of ['stein', 'busk']) { før += tell(u.smått[n]); u.smått[n] = rens(A, u.smått[n], 5); etter += tell(u.smått[n]); }
-    u.anleggRyddet = (før - etter) / 5;
+    u.anleggRyddet = (u.anleggRyddet || 0) + (før - etter) / 5;
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
