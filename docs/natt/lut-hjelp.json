@@ -21,7 +21,7 @@
  ],
  [
   "Flytte møbler",
-  "Står du ved et møbel (inne i et hus, i leirens bygg eller ute), kommer knappen «Plukk opp …» (P på PC). Et gjennomsiktig bilde av møbelet står foran deg og følger blikket: grønt = her kan det stå, rødt = ikke plass (vegg, et annet møbel, døråpning, vann eller hus). R dreier det, E (eller «Sett her») setter det ned, «Sett tilbake» legger det der det sto. Det som ligger i et skap eller kjøleskap, følger med – opptil 20 kg, ellers må du ta ut noe først. Store møbler bærer du i armene: du går tregere og kan verken løpe eller skyte. Traktorer, biler og fly er for tunge. Et kjøleskap i en brakke med strøm holder maten kald.",
+  "Står du ved et møbel (inne i et hus, i leirens bygg eller ute), kommer knappen «Plukk opp …» (P på PC) – på telefon i raden med knapper under kompasset. Er det for tungt (høyballer, traktorer), står det på knappen. Står det «ingen møbler du kan bære» under bygget, er det ingenting å flytte der. Et gjennomsiktig bilde av møbelet står foran deg og følger blikket: grønt = her kan det stå, rødt = ikke plass (vegg, et annet møbel, døråpning, vann eller hus). R dreier det, E (eller «Sett her») setter det ned, «Sett tilbake» legger det der det sto. Det som ligger i et skap eller kjøleskap, følger med – opptil 20 kg, ellers må du ta ut noe først. Store møbler bærer du i armene: du går tregere og kan verken løpe eller skyte. Traktorer, biler og fly er for tunge. Et kjøleskap i en brakke med strøm holder maten kald.",
   "Leiren"
  ],
  [
@@ -43,5 +43,15 @@
   "Ransakede hus",
   "Røvere og fiendelag som går forbi et hus, tar med seg det som ligger i det – jo lenger de er der, jo mindre blir igjen. I panelet står det «huset er ransaket». Butikker og lagre fylles litt på igjen hvert tredje døgn. Husene nærmest en ny leir er aldri tomme.",
   "I 3D"
+ ],
+ [
+  "Det du fant i huset",
+  "Når letingen er ferdig, kommer et panel som står til du lukker det: hva som gikk til leiren (mat til leirens mat, materialer til lageret, diesel til tankene, penger til kassa – ikke i sekken din), hva som havnet i sekken, og hva som ble liggende igjen fordi leiren ikke hadde plass. Knappen «Se i skapene» åpner inventaret med alle skapene, skuffene og hyllene i huset – mat, våpen og utstyr tar du selv derfra.",
+  "I 3D"
+ ],
+ [
+  "Drikk og spis av deg selv",
+  "Er det vann i feltflaska og du blir tørst, drikker du av deg selv – også når karakteren står i kartet. Det samme med feltrasjonene i sekken når du blir sulten. Loggen sier fra hver gang. Varselet «Du er tørst» har også knappen «Drikk» (og «Spis» når du er sulten), så du kan gjøre det med en gang.",
+  "Kom i gang"
  ]
 ]

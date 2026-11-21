@@ -20,6 +20,8 @@
   const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (v === undefined || v === null || v === false) continue; if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (tekst, fn, a = {}) => { const b = el('button', { type: 'button', ...a }, tekst); b.onclick = e => { e.stopPropagation(); fn(e); }; return b; };
   const kg = v => L.tall(Math.round(v * 10) / 10) + ' kg';
+  // berøringsskjerm: ingen tastaturhint («(E)», «(Tab)») – runde 12, kritiker E så «(Tab)» på telefonen
+  const grovPek = () => !!((rot.matchMedia && matchMedia('(pointer: coarse)').matches) || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && rot.matchMedia && !matchMedia('(hover: hover)').matches));
   const ut = { test: false };
 
   // ---------- tingene inn i sekkens tabeller ----------
@@ -73,6 +75,7 @@
 
   // ---------- beholderne ----------
   const minne = new Map();
+  let helHus = null;
   // (runde 5) nær = en bolig nær leiren (aldri ransaket, noe nyttig i den første beholderen). Et bygg som er ransaket (S.ran), har mindre
   // i beholderne (de lagres da), og butikker og lagre fylles litt på igjen med tiden (S.fylt).
   const flyttetMøbel = nk => !!(rot.MoblerSpill && MoblerSpill.F && MoblerSpill.F()[nk]);
@@ -109,9 +112,12 @@
     const Q = r3(); if (!Q || !Q.fot || !rot.Interior3d) return { P: null, liste: [] };
     const x = Q.bane.x, y = Q.bane.y, P = Interior3d.inne(x, y); if (!P || !P.inne || !P.bygg) return { P, liste: [] };
     const kl = P.leir ? (L.LEIR[P.bygg.kl] ? P.bygg.kl : 'brakke') : P.bygg.kl, liste = [];
-    for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær) continue; const nk = b.nk;
+    // (runde 12) «Se i skapene» etter letingen: alle beholderne i bygget, ikke bare de innen rekkevidde (helHus = byggets nummer)
+    const hel = helHus !== null && helHus === P.bygg.i;
+    for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær && !hel) continue; const nk = b.nk;
       liste.push({ nk, type: b.type, navn: b.navn, tittel: b.tittel, kg: b.kg, kald: !!b.kald, av, P, B: innholdAv(nk, P.leir ? 'brakke' : kl, b.type, P.bygg.i, b.k, nærLeir(P)), m: b.m }); }
-    liste.sort((a, b) => a.av - b.av);
+    // (i hele huset: de med noe i først, så de tomme)
+    if (hel) liste.sort((a, b) => (L.kg(a.B, VEKT) > 0 ? 0 : 1) - (L.kg(b.B, VEKT) > 0 ? 0 : 1) || a.av - b.av); else liste.sort((a, b) => a.av - b.av);
     // to like møbler får nummer i fanen («Reol 2»)
     const tel = {}; for (const c of liste) tel[c.tittel] = (tel[c.tittel] || 0) + 1; const nr = {}; for (const c of liste) if (tel[c.tittel] > 1) { nr[c.tittel] = (nr[c.tittel] || 0) + 1; c.fane = c.tittel + ' ' + nr[c.tittel]; } else c.fane = c.tittel;
     return { P, liste };
@@ -240,6 +246,7 @@
 #lutpanel .maal .bar.tungt i{ background:#e0b24a; } #lutpanel .maal .bar.svært i{ background:#d0583f; } #lutpanel .maal .bar u{ position:absolute; top:-2px; bottom:-2px; width:2px; background:#e7dcc3; }
 #lutpanel .maal small{ color:var(--ink-dim,#a99); display:block; } #lutpanel .maal .tung{ color:#e0b24a; } #lutpanel .maal .svært{ color:#f08a70; }
 #lutpanel .faner{ display:flex; flex-wrap:wrap; gap:3px; padding:4px 4px 0; } #lutpanel .faner button{ min-height:28px; padding:1px 8px; font-size:12px; } #lutpanel .faner button.på{ background:#c9b26a; color:#1c170f; border-color:#c9b26a; }
+@media (max-height:560px){ body #lutpanel .detalj{ min-height:0; max-height:30vh; } #lutpanel .faner{ flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; flex:none; padding-bottom:3px; } #lutpanel .faner button{ flex:none; white-space:nowrap; } }
 #lutpanel .info{ font-size:12px; color:var(--ink-dim,#a99); margin:3px 6px 0; } #lutpanel .tom{ color:var(--ink-dim,#a99); font-size:13px; padding:10px 6px; }
 #lutpanel .bunn{ display:flex; gap:6px; padding:4px 6px 6px; } #lutpanel .bunn button{ flex:1; }
 #lutpanel .detalj{ margin-top:6px; padding:6px 8px; border:1px solid #3a3224; background:rgba(0,0,0,.25); min-height:104px; max-height:34vh; overflow:auto; box-sizing:border-box; flex:none; } #lutpanel .detalj b{ font-size:15px; } #lutpanel .detalj p{ margin:2px 0 4px; font-size:13px; color:var(--ink-dim,#a99); }
@@ -341,7 +348,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     const rulle = [...panel.querySelectorAll('.liste')].map(e => e.scrollTop); panel.replaceChildren(...ny.childNodes); panel.querySelectorAll('.liste').forEach((e, i) => { e.scrollTop = rulle[i] || 0; });
   }
   function åpne(v, nk) {
-    const kan = !!v && klar && !!sekk(); åpen = kan; panel.classList.toggle('på', åpen); valgt = null; melding = '';
+    const kan = !!v && klar && !!sekk(); if (!kan) helHus = null; åpen = kan; panel.classList.toggle('på', åpen); valgt = null; melding = '';
     if (åpen) { if (nk) fane = nk; if (document.pointerLockElement) document.exitPointerLock(); if (rot.UtstyrSpill && UtstyrSpill.erÅpen && UtstyrSpill.erÅpen()) UtstyrSpill.åpne(false); sistListe = []; sistHtml = ''; vis(true); }
     oppdaterKnapp(); return åpen;
   }
@@ -384,7 +391,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
   function oppdaterKnapp() {
     const c = klar && går() && !åpen && !(rot.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()) ? nærmeste() : null; knappFor = c;
     if (!c) { åpneKnapp.classList.remove('på'); return; }
-    const t = `Åpne ${c.navn}${rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
+    const t = `Åpne ${c.navn}${grovPek() ? '' : ' (E)'}`; if (åpneKnapp.textContent !== t) åpneKnapp.textContent = t; åpneKnapp.classList.add('på');
   }
   åpneKnapp.addEventListener('click', e => { e.preventDefault(); const c = knappFor || nærmeste(); if (c) åpne(true, c.nk); });
   // E: åpne beholderen du står ved (eller lukk panelet); Tab: panelet med det som er her; Esc lukker
@@ -393,7 +400,9 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     if ((k === 'e' || k === 'E') && (åpen || (går() && nærmeste()))) { e.preventDefault(); e.stopImmediatePropagation(); if (åpen) åpne(false); else { const c = nærmeste(); åpne(true, c && c.nk); } }
     else if (k === 'Tab' && (åpen || går())) { e.preventDefault(); åpne(!åpen); }
     else if (k === 'Escape' && åpen) { e.preventDefault(); e.stopImmediatePropagation(); åpne(false); } }, true);
-  setInterval(() => { oppdaterKnapp(); if (åpen) { if (!går() && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); else { sistListe = []; vis(false); } } }, 400);
+  // (runde 12) går du ut av bygget, gjelder «hele huset» ikke lenger
+  const iHelHus = () => { const Q = r3(), P = Q && Q.fot && rot.Interior3d ? Interior3d.inne(Q.bane.x, Q.bane.y) : null; return !!(P && P.bygg && P.bygg.i === helHus); };
+  setInterval(() => { if (helHus !== null && !iHelHus()) helHus = null; oppdaterKnapp(); if (åpen) { if (!går() && !(typeof på3d !== 'undefined' && !på3d)) åpne(false); else { sistListe = []; vis(false); } } }, 400);
 
   // ---------- inn i sekken (#sekk, spill/utstyr.js) ----------
   // knapper på tingene i sekken: Spis/Drikk, Til beltet, Ta på (feltrasjonen og vannet har sine fra spill/eventyr-visning.js)
@@ -405,7 +414,7 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     return null; }
   (rot.SEKK_TILLEGG = rot.SEKK_TILLEGG || []).push((p, e, kn) => { const I = sekk(); if (!klar || !I) return; const b = bær(I);
     p.append(e('h3', {}, 'Ryggen og plassen'), e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, S.rygg ? navn(S.rygg) : 'Ingen sekk på ryggen'), e('small', {}, `Plass i lommer og sekk: ${L.tall(Math.round(b.tingKg * 10) / 10)} av ${L.tall(b.plass)} kg brukt · ${L.STATUS[b.status]}`), e('small', { style: 'display:block;opacity:.8;margin-top:2px' }, 'Vekt (øverst) er alt du bærer, også våpnene – plass er hvor mye lommene og sekken rommer.'))),
-      kn('Inventar og beholdere' + (rot.matchMedia && matchMedia('(pointer: coarse)').matches ? '' : ' (Tab)'), () => åpne(true), { id: 'lutfrasekk' })); });
+      kn('Inventar og beholdere' + (grovPek() ? '' : ' (Tab)'), () => åpne(true), { id: 'lutfrasekk' })); });
 
   // ---------- vekta virker på gangen (gange.js og karakter.js spør her) ----------
   // (bærer du et stort møbel i armene, går du tregere og kan ikke løpe – spill/mobler-visning.js)
@@ -534,6 +543,12 @@ body.kort #lutpanel .maal, body.smal #lutpanel .maal{ font-size:12px; margin:2px
     gulv: () => S.gulv, strømTil, oppdaterKnapp, ramme3, gulvMesh: () => gulvMesh, tarE: () => åpen || (går() && !!nærmeste()), velg: q => { valgt = q; vis(true); }, flyttValgt, endretInnhold, lagreNå,
     // til vakten: glem det som er endret i beholderne for et bygg, og sett sekken på ryggen tilbake
     glemBygg: i => { for (const k of Object.keys(S.b)) if (k.startsWith(i + ':')) delete S.b[k]; for (const k of [...minne.keys()]) if (k.startsWith(i + ':')) minne.delete(k); lagre(); },
-    settS: d => { S = { ...nyS(), ...d }; lagre(); } });
+    settS: d => { S = { ...nyS(), ...d }; lagre(); },
+    // (runde 12) «Se i skapene» fra letingen: panelet med alle beholderne i bygget du står i (null når det ikke er noen)
+    åpneHele: () => { const Q = r3(), P = Q && Q.fot && rot.Interior3d ? Interior3d.inne(Q.bane.x, Q.bane.y) : null; if (!P || !P.inne || !P.bygg) return false; helHus = P.bygg.i; const h = beholdereHer(); if (!h.liste.length) { helHus = null; return false; } return åpne(true, h.liste[0].nk); },
+    // hvor mange beholdere bygget har, og hvor mange av dem det ligger noe i (uten å åpne noe): { antall, medTing, kg }
+    husOversikt: P => { if (!klar || !P || !P.inne || !P.bygg) return { antall: 0, medTing: 0, kg: 0 }; const kl = P.leir ? 'brakke' : P.bygg.kl; let antall = 0, medTing = 0, kgSum = 0;
+      for (const b of L.beholdere(P.inne, P.bygg.i)) { antall++; const k = L.kg(innholdAv(b.nk, kl, b.type, P.bygg.i, b.k, nærLeir(P)), VEKT); if (k > 0) { medTing++; kgSum += k; } } return { antall, medTing, kg: Math.round(kgSum * 10) / 10 }; },
+    helHus: () => helHus });
   rot.LutSpill = ut;
 })(typeof window !== 'undefined' ? window : globalThis);

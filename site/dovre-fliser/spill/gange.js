@@ -120,12 +120,22 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     if (hus) { const P = hus.P; let mx = 0, my = 0; for (const [x, y] of P) { mx += x; my += y; } mx = u.cx + mx / P.length; my = u.cy + my / P.length;
       const min = G.reiseMin(Math.hypot(mx - kar.x, my - kar.y));
       valg.push(kn(`Gå inn i huset (${G.tidTekst(min)} til fots)`, 'Du går dit, og du settes ved døra og går inn.', () => { lukkValg(); gåInn({ i: P.bygg.i, P: P.map(([x, y]) => [u.cx + x, u.cy + y]), mx, my }); }, true)); }
-    if (v.type === 'spør') valg.push(kn(`Reis hit (${G.tidTekst(v.min)} til fots)`, 'Du går dit, og spilltiden går så lenge turen tar.', () => reis(kar, X, Y, v.min), !hus));
+    // (runde 12, kritiker E: etter «Reis hit» til leiren sto feltbilen langt unna, og «Sett deg inn» kom aldri) – står et av leirens
+    // kjøretøy innen bilNær meter fra stedet, går reisen til siden av det, og knappen sier det
+    const bil = v.type === 'spør' ? bilVed(X, Y) : null;
+    if (bil) valg.push(kn(`Reis til ${bil.navn} (${G.tidTekst(bil.min)} til fots)`, `Du settes ved ${bil.navn}, så kan du sette deg inn.`, () => reis(kar, bil.X, bil.Y, bil.min), !hus));
+    else if (v.type === 'spør') valg.push(kn(`Reis hit (${G.tidTekst(v.min)} til fots)`, 'Du går dit, og spilltiden går så lenge turen tar.', () => reis(kar, X, Y, v.min), !hus));
     valg.push(kn('Gå her, der du står', 'Start ved karakteren din' + (iUt(kar) ? '.' : ' (kameraet flyr dit først).'), () => gåHer(kar), v.type !== 'spør'));
     valg.push(kn('Avbryt', '', lukkValg));
     valgEl.replaceChildren(h, p, ...valg); valgEl.classList.add('på');
     if (document.pointerLockElement) document.exitPointerLock();
   }
+  // leirens kjøretøy (spill/kjor.js) nær (X, Y): { navn, X, Y (3,5 m til siden av det), min } eller null – feltbilen før helikopteret. Claudes forslag: 60 m.
+  const BIL_NÆR = 60;
+  function bilVed(X, Y) { const K = window.KjorSpill && KjorSpill.liste ? KjorSpill.liste() : [], kar = karakter(); let best = null, bd = BIL_NÆR;
+    for (const k of K) { if (!k || !Number.isFinite(k.X) || (k.hp !== undefined && k.hp < .15)) continue; const d = Math.hypot(k.X - X, k.Y - Y) + (k.type === 'heli' ? BIL_NÆR : 0); if (d < bd) { bd = d; best = k; } }
+    if (!best || !kar || !window.Gaavalg) return null; const a = best.a || 0, bx = best.X + Math.cos(a) * 3.5, by = best.Y + Math.sin(a) * 3.5;
+    return { navn: best.type === 'heli' ? 'helikopteret' : 'feltbilen', X: bx, Y: by, min: Gaavalg.reiseMin(Math.hypot(bx - kar.x, by - kar.y)) }; }
   // Gå der karakteren står (kartet rundt ham bygges først når det trengs – se klarGå)
   function gåHer(kar) { klarGå(kar.x, kar.y, () => { lukkValg(); start(); }); }
   function venteSteg() {
@@ -398,14 +408,40 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
       // (runde 8, kritikken: hele nedre venstre firedel var styrespak, så et drag midt på skjermen flyttet deg i stedet for å snu deg –
       // nå bare rundt spaken og helt nede til venstre; se Gaavalg.erSpak)
       const G = window.Gaavalg, erSpak = G ? G.erSpak(x, y, VW, VH) : x < VW * .45 && y > VH * .5;
-      if (VW < 900 && erSpak && !spak) spak = { id: e.pointerId, x0: x, y0: y, dx: 0, dy: 0 }; else if (!låst) se = { id: e.pointerId, x, y, x0: x, y0: y, a0: R3.fot.a, berøring: e.pointerType !== 'mouse' }; }
+      if (VW < 900 && erSpak && !spak) spak = { id: e.pointerId, x0: x, y0: y, dx: 0, dy: 0 }; else if (!låst) se = { id: e.pointerId, x, y, x0: x, y0: y, a0: R3.fot.a, berøring: e.pointerType !== 'mouse', t: e.timeStamp, el: e.target }; }
     else if (e.type === 'pointermove') {
       if (låst) { R3.fot.a -= e.movementX * .0025; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - e.movementY * .0025)); if (e.movementX || e.movementY) snuRask(); }
       else if (spak && spak.id === e.pointerId) { spak.dx = Math.max(-60, Math.min(60, x - spak.x0)); spak.dy = Math.max(-60, Math.min(60, y - spak.y0)); }
-      else if (se && se.id === e.pointerId) { const k = window.Gaavalg ? Gaavalg.REGLER.berøring.følsom : .005; R3.fot.a -= (x - se.x) * k; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - (y - se.y) * k)); se.x = x; se.y = y; se.flyttet = true; snuRask(); } }
-    else { if (spak && spak.id === e.pointerId) spak = null; if (se && se.id === e.pointerId) se = null; }
+      else if (se && se.id === e.pointerId) blikk(x, y, e.timeStamp); }
+    else { if (spak && spak.id === e.pointerId) spak = null;
+      // (runde 12) et raskt sveip kan komme fram som bare ned + opp når bildene er trege: resten av draget tas med fra slippet
+      if (se && se.id === e.pointerId) { if (e.type === 'pointerup' && (x !== se.x || y !== se.y)) blikk(x, y, e.timeStamp); se = null; } }
     return true;
   }
+  // SE RUNDT MED FINGEREN (runde 12, kritiker E: «virker bare når du drar sakte – et raskt sveip ble ikke registrert»). Hele draget
+  // regnes fra forrige punkt (ikke per bilde), og raske drag snur mer per punkt: følsom × (1 + aks · min(1, fart / fullFart)),
+  // fart i punkter per millisekund. Claudes forslag: aks 1,6 og fullFart 0,8 (et sveip over halve skjermen på ca. en halv sekund).
+  const BLIKK = { aks: 1.6, fullFart: .8 };
+  function blikk(x, y, t) { const k = window.Gaavalg ? Gaavalg.REGLER.berøring.følsom : .005, dx = x - se.x, dy = y - se.y, dt = Math.max(8, (t || 0) - (se.t || 0));
+    const f = se.berøring ? 1 + BLIKK.aks * Math.min(1, Math.hypot(dx, dy) / dt / BLIKK.fullFart) : 1;
+    R3.fot.a -= dx * k * f; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - dy * k * Math.min(f, 1.5))); se.x = x; se.y = y; se.t = t; se.flyttet = true; snuRask(); }
+  // SVEIP SOM BEGYNNER PÅ EN KNAPP (runde 12): kritikerens raske sveip begynte på våpenbyttet («Automatgevær»), som ga nettleseren
+  // draget (pointercancel) – derfor snudde ingenting. Nå: et drag over 12 punkter som begynner på en av knappene i synsfeltet, blir et
+  // blikk-drag, og knappen trykkes ikke når du slipper. (Skyt-knappen skyter som før mens du drar fra den.)
+  const GJENNOM = new Set(['byttvapen', 'skytknapp', 'kjorknapp', 'letknapp', 'skapknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']);
+  let kand = null, dempKlikk = 0;
+  const gjennomCss = document.createElement('style'); gjennomCss.textContent = '#byttvapen, #kjorknapp, #inneknapper > button{ touch-action:none; }'; document.head.appendChild(gjennomCss);
+  window.addEventListener('pointerdown', e => { kand = null; if (!r3() || !R3.fot || e.pointerType === 'mouse' || se) return; const b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (b && GJENNOM.has(b.id)) kand = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp }; }, true);
+  window.addEventListener('pointermove', e => { if (!kand || kand.id !== e.pointerId || se || !r3() || !R3.fot) return; if (Math.hypot(e.clientX - kand.x, e.clientY - kand.y) < 12) return;
+    const c = document.getElementById('c3'), r = c ? c.getBoundingClientRect() : { left: 0, top: 0 };
+    se = { id: e.pointerId, x: kand.x - r.left, y: kand.y - r.top, x0: kand.x - r.left, y0: kand.y - r.top, a0: R3.fot.a, berøring: true, t: kand.t, el: c }; kand = null; dempKlikk = performance.now() + 2000;
+    blikk(e.clientX - r.left, e.clientY - r.top, e.timeStamp); }, true);
+  for (const t of ['pointerup', 'pointercancel']) window.addEventListener(t, e => { if (kand && kand.id === e.pointerId) kand = null; }, true);
+  window.addEventListener('click', e => { if (dempKlikk && performance.now() < dempKlikk && e.target && e.target.closest && e.target.closest('button')) { e.preventDefault(); e.stopImmediatePropagation(); } dempKlikk = 0; }, true);
+  // pekeren følges på hele vinduet mens du ser rundt (slippes fingeren over en knapp eller utenfor lerretet, får lerretet det ikke alltid med seg)
+  for (const t of ['pointermove', 'pointerup', 'pointercancel']) window.addEventListener(t, e => { if (!se || se.id !== e.pointerId || !se.el || e.target === se.el || !r3() || !R3.fot) return;
+    const r = se.el.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; if (t === 'pointermove') blikk(x, y, e.timeStamp); else { if (t === 'pointerup' && (x !== se.x || y !== se.y)) blikk(x, y, e.timeStamp); se = null; } }, true);
   const BRUKT = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', ' ', 'c', 'control', 'z'];
   window.addEventListener('keydown', e => { if (!r3() || !R3.fot) return; const k = e.key.toLowerCase();
     // (Esc: se lytteren over, som kjører først og lukker det som er åpent før den går ut av førsteperson)
@@ -441,9 +477,9 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
       g.font = '600 15px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const t = String(Math.round(kurs) % 360).padStart(3, '0') + '°', w = g.measureText(t).width + 14;
       g.fillStyle = 'rgba(28,23,15,.85)'; g.fillRect(x - w / 2, y - 62, w, 22); g.fillStyle = '#f0e2b0'; g.fillText(t, x, y - 51); }
     // (runde 8) pila mot nærmeste inngang: «Inngang 14 m» med en pil som peker dit (opp = rett fram), under siktet
-    const q = pekerNå && kropp && R3.fot ? Gaavalg.pekerMot(pekerNå.I, kropp.x, kropp.y, R3.fot.a) : null; if (q && q.vis && !fører && !dørEl.classList.contains('på') && !document.body.classList.contains('foto')) {
+    const q = pekerNå && kropp && R3.fot ? pilNå(pekerNå) : null; if (q && q.vis && !fører && !dørEl.classList.contains('på') && !document.body.classList.contains('foto')) {
       // (runde 10, brukerens iPhone liggende: lappen sto over vegen midt nede) på telefon mindre og tettere under siktet
-      const sm = VW < 900, cy2 = VH / 2 + (sm ? 30 : 48), cx2 = VW / 2, hh = sm ? 9 : 12, t = Gaavalg.pekerTekst(q); g.globalAlpha = .92; g.font = `600 ${sm ? 12 : 14}px "Cormorant Garamond",serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      const sm = VW < 900, cy2 = VH / 2 + (sm ? 30 : 48), cx2 = VW / 2, hh = sm ? 9 : 12, t = q.tekst; g.globalAlpha = .92; g.font = `600 ${sm ? 12 : 14}px "Cormorant Garamond",serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
       const w = g.measureText(t).width + (sm ? 34 : 44), x0 = cx2 - w / 2; g.fillStyle = 'rgba(28,23,15,.86)'; g.strokeStyle = '#c9b26a'; g.lineWidth = 1; g.fillRect(x0, cy2 - hh, w, hh * 2); g.strokeRect(x0 + .5, cy2 - hh + .5, w - 1, hh * 2 - 1);
       g.fillStyle = '#f0e2b0'; g.fillText(t, x0 + (sm ? 7 : 10), cy2 + .5);
       g.save(); g.translate(x0 + w - (sm ? 13 : 17), cy2); if (sm) g.scale(.75, .75); g.rotate(q.rel); g.fillStyle = '#f0d79a'; g.beginPath(); g.moveTo(0, -9); g.lineTo(6.5, 3); g.lineTo(2.2, 3); g.lineTo(2.2, 9); g.lineTo(-2.2, 9); g.lineTo(-2.2, 3); g.lineTo(-6.5, 3); g.closePath(); g.fill(); g.restore(); }
@@ -542,19 +578,34 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
         const I = inngangFor(P), d = Math.hypot(I.x - x, I.y - y); if (d < bd) { bd = d; best = { P, I, d }; } }
     return best;
   }
+  // (runde 12, kritiker E: «Inngang 45 m · rundt huset →» uten noe hus i nærheten – huset sto bak ham) Pila står bare når huset selv
+  // er foran deg (midten innen synVinkel grader fra blikket) eller du står helt inntil det (nær meter), og den sier hvilket bygg:
+  // «Låve 45 m». Claudes forslag.
+  const PIL = { synVinkel: 55, nær: 12 };
+  const BYGGNAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Boligblokk', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal',
+    brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet', sykestue: 'Sykestua', verksted: 'Verkstedet', lagertelt: 'Lagerteltet', container: 'Containeren', drivhus: 'Drivhuset' };
+  const byggNavn = P => BYGGNAVN[P.leir] || BYGGNAVN[P.bygg && P.bygg.kl] || 'Bygg';
+  function pilNå(n) {
+    const q = Gaavalg.pekerMot(n.I, kropp.x, kropp.y, R3.fot.a), a = R3.fot.a, dx = n.mx - kropp.x, dy = n.my - kropp.y;
+    const relM = Math.atan2(dx * Math.cos(a) + dy * Math.sin(a), -dx * Math.sin(a) + dy * Math.cos(a)), synlig = Math.abs(relM) <= PIL.synVinkel * Math.PI / 180 || n.kant < PIL.nær;
+    const d = q.d < 10 ? q.d.toFixed(0) : Math.round(q.d / 5) * 5;
+    return { ...q, vis: q.vis && synlig, synlig, tekst: `${byggNavn(n.P)} ${d} m` + (q.vender ? '' : ' · rundt huset') };
+  }
   function pekerSteg() {
     pekerNå = null; if (!r3() || !R3.fot || !kropp || fører || !window.Gaavalg || reise) return;
     if (window.Interior3d && Interior3d.inne && Interior3d.inne(kropp.x, kropp.y)) return;
     pekerNå = nærmesteInngang(kropp.x, kropp.y, Gaavalg.REGLER.peker.maks);
+    // midten av huset og avstanden til nærmeste hjørne (til pilNå)
+    if (pekerNå) { const P = pekerNå.P; let mx = 0, my = 0, kant = Infinity; for (const [x, y] of P) { mx += x; my += y; kant = Math.min(kant, Math.hypot(x - kropp.x, y - kropp.y)); } pekerNå.mx = mx / P.length; pekerNå.my = my / P.length; pekerNå.kant = kant; }
     if (etterReise && performance.now() - etterReise > 10000) etterReise = 0;
-    if (etterReise && pekerNå && pekerNå.d < 40) { etterReise = 0; logg(`Nærmeste inngang er ${Math.round(pekerNå.d)} m unna – følg pila under siktet. Nær døra kommer «Gå inn».`); }
+    if (etterReise && pekerNå && pekerNå.d < 40) { etterReise = 0; logg(`${byggNavn(pekerNå.P)}: inngangen er ${Math.round(pekerNå.d)} m unna – snu deg mot bygget, så viser pila under siktet veien. Nær døra kommer «Gå inn».`); }
   }
   // Flytt deg til et annet sted i utsnittet mens du går (x, y i utsnittets meter): kroppen lages på nytt der
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
   // (runde 8) gåInn(h) – reis til huset og gå inn; venter() – kartet rundt deg bygges før du går; inngangPil() – pila mot nærmeste inngang
   // ({ d, rel, vender, vis, tekst } eller null); klarGå(X, Y, ferdig) – bygg utsnittet for gange først når det trengs
   window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
-    inngangPil: () => { const n = pekerNå; if (!n || !kropp || !r3() || !R3.fot) return null; const q = Gaavalg.pekerMot(n.I, kropp.x, kropp.y, R3.fot.a); return { ...q, tekst: Gaavalg.pekerTekst(q) }; }, oppdaterPil: pekerSteg, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
+    inngangPil: () => { const n = pekerNå; if (!n || !kropp || !r3() || !R3.fot) return null; return pilNå(n); }, oppdaterPil: pekerSteg, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
     // fører(R, inn) tar over rammen når den svarer true (spill/kjor.js); knappene nede til høyre får navnene [huk, hopp]
