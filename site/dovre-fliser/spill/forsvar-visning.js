@@ -98,12 +98,15 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const KT = window.KrigSpill && KrigSpill.T ? KrigSpill.T() : null, q = KT && KT.etter ? KT.etter.find(o => o.navn === e.navn) : null;
     if (q && Number.isFinite(q.t) && (!s || q.t > s.tid)) s = { x: q.x, y: q.y, tid: q.t }; return s; };
   let est = null;
+  // Claudes forslag: spillminutter etter starten der ruta (når den blir kjent) får erstatte luftlinja i anslaget
+  const RUTE_FRIST = 5;
   function status() { const A = angrep(), L = leir(); if (!A || !L) { if (!A) est = null; return null; }
     const r = A.lag, d = e => Math.hypot(e.x - L.x, e.y - L.y), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, fart = (V && V.fart) || .75;
     const kj = r.filter(e => kjent(e)), nær = kj.length ? Math.min(...kj.map(d)) : null, strid = kj.map(iStrid).find(Boolean) || null;
     let sist = null; if (!kj.length) for (const e of r) { const q = sistSettAv(e); if (q && tid - q.tid <= FO.STATUS.sistSett && tid >= q.tid && (!sist || q.tid > sist.tid)) sist = q; }
-    // (runde 13) det banneret selv så sist (vakttårnet, et kamera, vaktene) – ellers sa banneret «ikke sett» rett etter «Røverne er sett»
-    if (!kj.length && est && est.id === A.id && est.sistSett && tid - est.sistSett.tid <= FO.STATUS.sistSett && tid >= est.sistSett.tid && (!sist || est.sistSett.tid > sist.tid)) sist = { ...est.sistSett };
+    // (runde 13) det banneret selv så sist (vakttårnet, et kamera, vaktene) når kartet og radioen ikke har noe – ellers sa banneret «ikke sett»
+    // rett etter «Røverne er sett»
+    if (!kj.length && est && est.id === A.id && est.sistSett && tid - est.sistSett.tid <= FO.STATUS.sistSett && tid >= est.sistSett.tid && !sist) sist = { ...est.sistSett };
     const rå = kj.length ? FO.ankomst(nær, fart) : sist ? Math.max(0, FO.ankomst(Math.hypot(sist.x - L.x, sist.y - L.y), fart) - (tid - sist.tid)) : anslag(r);
     // (runde 13, kritiker G: «5–10 min» ble til «3–7 timer» mens klokka gikk) anslaget med minutter kan bare minke så lenge angriperne ikke
     // har snudd (Forsvar.monoton). Første gang de er sett, og når de har snudd, gjelder det nye anslaget. Ser ingen dem, står det ingen
@@ -114,8 +117,10 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
       const står = kj.length > 0 && kj.every(e => !e.sti || e.venterNatt), m = FO.monoton(est.v === null ? null : { v: est.v, t: står ? tid : est.t }, rå, tid, nytt);
       if (kj.length) { const q = kj.reduce((a, e) => (Math.hypot(e.x - L.x, e.y - L.y) < Math.hypot(a.x - L.x, a.y - L.y) ? e : a)); est.sistSett = { x: q.x, y: q.y, tid }; } est.v = m ? m.v : null; est.t = tid; est.minNær = snudd ? dNå : Math.min(est.minNær, dNå); if (kj.length) est.sett = true; }
     // ser ingen dem: anslaget fra varselet teller ned og holdes fast (også etter omlasting) – det byttes bare når ruta deres blir kjent første
-    // gang (luftlinja sa «5–10 min», ruta over fjellet «5 timer»); da står det uansett bare «trolig i natt» i banneret
-    else { const harRute = r.some(e => e.sti && e.timerIgjen > 0), m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, est.v === null || (harRute && !est.rute));
+    // gang i de første RUTE_FRIST spillminuttene etter at de startet (luftlinja sa «5–10 min», ruta over fjellet «5 timer»); senere kan det
+    // bare minke, som når de er sett
+    else { const harRute = r.some(e => e.sti && e.timerIgjen > 0), tidlig = r.some(e => Number.isFinite(e.startTid) && tid - e.startTid < RUTE_FRIST);
+      const m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, est.v === null || (harRute && !est.rute && tidlig));
       est.v = m ? m.v : null; est.t = tid; if (harRute) est.rute = true; }
     const min = est.v, iLeiren = kj.length > 0 && nær <= R.mot.inne, syn = kj.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', v = retningMotFienden(), n = r.length;
     const overskrift = A.røvere ? `Angrep: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} fra ${FO.retning(v)}` : `Angrep: ${A.navn} med ${n === 1 ? 'ett lag' : n + ' lag'} fra ${FO.retning(v)}`;

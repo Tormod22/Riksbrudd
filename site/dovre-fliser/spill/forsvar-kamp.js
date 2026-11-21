@@ -18,6 +18,9 @@
     nærBy: 3000,      // meter: et tettsted så nær kalles «ved X»; lenger unna sier stedet retning og avstand fra leiren
     leirKamp: 700,    // meter: et eget lag så nær leiren mens leiren angripes = kampen om leiren (forsvar-visning.js melder den)
     merke: 120,       // spillminutter kampmerket står etter at kampen er over når laget ikke har kontakt (så du ser hvor det skjedde)
+    // meter: et tap uten skudd (bygdevern, artilleri, miner …) regnes som kamp bare når det er bygdevern der eller en fiende så nær –
+    // ellers er det noe annet (flom, ras, ulykke) og meldes av den som gjorde skaden
+    tapFiende: 2500,
   };
   // steg(K, aktiv, t, x, y): K = kampen som pågår (eller null), aktiv = skudd eller tap nå. Gir { K, ny, over }:
   // ny = en kamp begynte nå, over = kampen som nettopp sluttet (stille i R.slutt minutter)
@@ -100,7 +103,10 @@
       return { tekst: KV.fiendeTekst(f), mann: mot.filter(q => q.side === e.side).reduce((a, q) => a + friske(q), 0), angriper: !!(A && A.lag.some(q => mot.includes(q))) }; }
     const KT = rot.KrigSpill && KrigSpill.T ? KrigSpill.T() : null;
     if (sted && sted.inne && sted.o && KT && KT.vern && KT.vern[sted.o.e.id] > 0) return { tekst: 'bygdevernet', mann: Math.round(KT.vern[sted.o.e.id]) };
-    return { tekst: KV.fiendeTekst(null), mann: 0 };
+    // ingen skyter: den nærmeste fienden innen R.tapFiende (artilleri, bakhold, miner)
+    const nær = ENHETER.filter(e => e.side !== 'blå' && Array.isArray(e.menn) && levende(e) && Math.hypot(e.x - s.x, e.y - s.y) <= R.tapFiende).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    if (nær) return { tekst: KV.fiendeTekst({ raid: !!(nær.raid || nær.post), fraksjon: nær.raid || nær.post ? null : fraksjon(nær.side), navn: nær.navn }), mann: friske(nær), gjett: true };
+    return { tekst: KV.fiendeTekst(null), mann: 0, ingen: true };
   }
   const hend = (type, tekst, x, y) => { try { rot.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst, x, y } })); } catch (e) { /* eldre nettlesere */ } };
   // kampen om leiren: leiren angripes (ForsvarSpill.angrep) og laget står nær leiren
@@ -112,7 +118,9 @@
       const nå = s.menn.map(m => (Number.isFinite(m.hp) ? m.hp : 1)), før = hp.get(s); hp.set(s, nå);
       let tap = 0, døde = []; if (før && før.length === nå.length) for (let i = 0; i < nå.length; i++) { if (nå[i] < før[i] - 1e-6) { tap++; if (nå[i] <= 0 && før[i] > 0) døde.push(s.menn[i]); } }
       const skyter = !!(s.skyterPå && [...s.skyterPå].some(e => e && e.side !== 'blå')), beskutt = ENHETER.some(e => e.side !== 'blå' && e.skyterPå && e.skyterPå.has(s));
-      const aktiv = (skyter || beskutt || tap > 0) && levendeLag(s, før);
+      // et tap uten skudd teller bare når det har en kjent fiende (bygdevern eller en fiende nær) – ikke flom, ras eller ulykker
+      const tapKamp = tap > 0 && (kamper.has(s) || !fiendeFor(s, stedFor(s.x, s.y)).ingen);
+      const aktiv = (skyter || beskutt || tapKamp) && levendeLag(s, før);
       const r = KV.steg(kamper.get(s) || null, aktiv, tid, s.x, s.y);
       if (r.over) avslutt(s, r.over);
       if (r.K) kamper.set(s, r.K); else kamper.delete(s);
@@ -133,7 +141,7 @@
     logg(t + '.'); hend('kontakt', t, K.x, K.y); skitten = true;
   }
   function avslutt(s, K) {
-    ferdige.push({ lag: s.navn, fiende: K.fiende, sted: K.sted, falne: K.falne, start: K.start, slutt: K.sist, slått: !levende(s), leir: K.leir, x: K.x, y: K.y, kontakt: !skjult(s) });
+    ferdige.push({ lag: s.navn, fiende: K.fiende, sted: K.sted, falne: K.falne, start: K.start, slutt: K.sist, slått: !levende(s), leir: K.leir, meldt: !!K.meldt, x: K.x, y: K.y, kontakt: !skjult(s) });
     if (ferdige.length > 20) ferdige.shift();
     if (!K.meldt || !auto()) return;
     logg(KV.sluttTekst({ lag: s.navn, fiende: K.fiende, sted: K.sted, falne: K.falne, slåttUt: !levende(s) })); skitten = true;
@@ -152,13 +160,13 @@
   kobleFalne(); rot.addEventListener('riksbrudd-spill', () => setTimeout(kobleFalne, 0));
 
   // ---------- kartet: kampmerket ved lag du ikke ser ----------
-  // Lag med radiokontakt har alt ringen «I ildkamp» (forsvar-visning.js). Uten kontakt tegnes laget «sist meldt» av kontrollrommet, og her
+  // Bare kamper som er meldt (ikke i testene uten KampSpill.test). Lag med radiokontakt har alt ringen «I ildkamp» (forsvar-visning.js). Uten kontakt tegnes laget «sist meldt» av kontrollrommet, og her
   // står et kampmerke (to sverd) der kampen er, med navnet og hvor lenge siden det ble hørt skudd.
   KROKER.tegn.push((g, vx0, vy1) => {
     if (!kamper.size && !ferdige.length) return; const m = kam.m, nå = performance.now(), puls = .55 + .45 * Math.sin(nå / 170);
     const liste = [];
-    for (const [s, K] of kamper) if (!K.leir && skjult(s)) liste.push({ x: K.x, y: K.y, navn: s.navn, aktiv: true, sist: K.sist });
-    for (const f of ferdige) if (!f.leir && !f.kontakt && tid - f.slutt <= R.merke && tid >= f.slutt && !liste.some(q => q.navn === f.lag)) liste.push({ x: f.x, y: f.y, navn: f.lag, aktiv: false, sist: f.slutt, slått: f.slått });
+    for (const [s, K] of kamper) if (K.meldt && skjult(s)) liste.push({ x: K.x, y: K.y, navn: s.navn, aktiv: true, sist: K.sist });
+    for (const f of ferdige) if (f.meldt && !f.kontakt && tid - f.slutt <= R.merke && tid >= f.slutt && !liste.some(q => q.navn === f.lag)) liste.push({ x: f.x, y: f.y, navn: f.lag, aktiv: false, sist: f.slutt, slått: f.slått });
     if (!liste.length) return; g.save();
     for (const q of liste) { const x = (q.x - vx0) / m, y = (vy1 - q.y) / m; if (x < -40 || y < -40 || x > VW + 40 || y > VH + 40) continue;
       const r = 13; g.globalAlpha = q.aktiv ? 1 : .7; g.fillStyle = 'rgba(42,18,13,.88)'; g.strokeStyle = q.aktiv ? `rgba(240,110,80,${.55 + .4 * puls})` : 'rgba(200,150,120,.8)'; g.lineWidth = 2;

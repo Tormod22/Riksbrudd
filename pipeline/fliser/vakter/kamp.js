@@ -19,20 +19,20 @@ module.exports = {
       const e1 = Forsvar.monoton({ v: 30, t: 0 }, 300, 10, false); krev(e1.v === 20, 'anslaget gikk opp uten at røverne snudde');
       krev(!/\d+ min/.test(Forsvar.når(0, 500)), 'tidsrommet har minutter');
       // ---------- én kamp, melding med sted, Vis, årsak ----------
-      KampSpill.test = true; FlytSpill.test = true; KampSpill.nullstill();
+      KampSpill.sjekk(); KampSpill.nullstill(); KampSpill.test = true; FlytSpill.test = true;
       const s = nyttLag('Vaktprøve tropp', L.x + 2400, L.y + 1800, 'blå'), e = nyttLag('Vaktprøve fiende', L.x + 2700, L.y + 1800, 'rød'); ENHETER.push(s, e); nye.push(s, e);
       let hendelser = []; const lytt = ev => hendelser.push(ev.detail); window.addEventListener('riksbrudd-hendelse', lytt);
       tempo = 600; FlytSpill.spol(); await vent(250); e.skyterPå = new Set([s]); await vent(450);
-      const kh = hendelser.filter(h => h.type === 'kontakt'); d.kontakt = kh.map(h => h.tekst);
+      const vår = h => h.type === 'kontakt' && /Vaktprøve tropp/.test(h.tekst), kh = hendelser.filter(vår); d.kontakt = kh.map(h => h.tekst);
       krev(kh.length === 1, `${kh.length} kamphendelser (skal være én)`); krev(kh[0] && /^⚔ Vaktprøve tropp er i kamp med /.test(kh[0].tekst), 'kampmeldingen navngir ikke laget');
       krev(kh[0] && Number.isFinite(kh[0].x) && Number.isFinite(kh[0].y), 'kamphendelsen har ikke stedet');
       krev(tempo === 1 && !FlytSpill.spoler(), '⏭ stoppet ikke for kampen'); krev(!!document.getElementById('flytvis'), 'stoppkortet mangler «Vis»');
       for (let i = 0; i < 6; i++) { e.skyterPå = new Set(); tid += 8; await vent(120); e.skyterPå = new Set([s]); await vent(120); }
-      krev(hendelser.filter(h => h.type === 'kontakt').length === 1, 'samme kamp ble meldt flere ganger');
+      krev(hendelser.filter(vår).length === 1, 'samme kamp ble meldt flere ganger');
       const ft = FolkRegler.falneTekst([s.menn[0].navn], s.navn); d.falne = ft; krev(/falt for /.test(ft), 'årsaken mangler når noen faller: ' + ft);
       window.removeEventListener('riksbrudd-hendelse', lytt);
       // ---------- røverne: uten syn ingen minutter; sett = stopp med Vis ----------
-      if (T) { ForsvarSpill.test = true; const rv = nyttLag('Røvere 9.1', L.x - 3200, L.y - 900, 'rød'); rv.raid = 9; rv.fra = { x: rv.x, y: rv.y }; rv.startTid = tid; ENHETER.push(rv); nye.push(rv); T.aktiv = 9; ForsvarSpill.vis();
+      if (T) { ForsvarSpill.test = true; const rv = nyttLag('Vaktprøve røver', L.x - 3200, L.y - 900, 'rød'); rv.raid = 97; rv.fra = { x: rv.x, y: rv.y }; rv.startTid = tid; ENHETER.push(rv); nye.push(rv); T.aktiv = 97; ForsvarSpill.vis();
         const st = ForsvarSpill.status(); d.uSett = st && st.tekst; krev(st && !st.sett && /^ikke sett – kommer trolig /.test(st.tekst) && !/\d+ min/.test(st.tekst), 'banneret har minutter uten at noen ser røverne: ' + (st && st.tekst));
         tempo = 600; FlytSpill.spol(); await vent(200); KROKER.ser.push(serF); rv.x = L.x - 1000; rv.y = L.y - 300; await vent(600);
         const sk = FlytSpill.sistStopp(); d.sett = sk && sk.liste.map(h => h.tekst); krev(!!sk && sk.liste.some(h => /røverne er sett/.test(h.tekst)) && tempo === 1, '⏭ stoppet ikke ved «røverne er sett»');
@@ -55,6 +55,7 @@ module.exports = {
       if (toggle) { delete document.body.classList.toggle; document.body.classList.remove('gaar'); }
       for (const b of prøveKnapper) b.remove(); const i = KROKER.ser.indexOf(serF); if (i >= 0) KROKER.ser.splice(i, 1);
       for (const q of nye) { const j = ENHETER.indexOf(q); if (j >= 0) ENHETER.splice(j, 1); }
+      { const KT = window.KrigSpill && KrigSpill.T ? KrigSpill.T() : null; if (KT && Array.isArray(KT.etter)) for (let j = KT.etter.length - 1; j >= 0; j--) if (/^Vaktprøve/.test(KT.etter[j].navn || '')) KT.etter.splice(j, 1); }
       if (T) { T.aktiv = før.aktiv; T.bølge = før.bølge; T.nesteSpill = før.neste; }
       if (ForsvarSpill.erSatt() && !før.satt) ForsvarSpill.opphev(false);
       try { if (før.angrep === null) localStorage.removeItem('riksbrudd-angrep'); else localStorage.setItem('riksbrudd-angrep', før.angrep); } catch (x) { /* uten lagring */ }
