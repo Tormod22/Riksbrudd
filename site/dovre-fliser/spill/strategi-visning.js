@@ -190,7 +190,7 @@
     const kn2 = el('div', { klasse: 'kn' });
     const vf = a.farer.find(f => f.id === 'vern'), sp = a.alle.filter(speider), farlig = a.farer.some(f => f.id === 'vern' || f.id === 'fiende');
     if (sp.length && farlig) kn2.append(knapp('Speid og meld', () => speid(a.by, sp), { klasse: 'hoved', 'data-advarsel': 'speid', title: `Stopper før ${a.by.navn} og melder hva som står der` }));
-    if (vf && !a.ute.length) kn2.append(knapp(`Gjør avtale (${kroner(vf.vern.pris)}) og send`, () => { if (!avtale(a.by)) return; send2(); }, { klasse: sp.length ? '' : 'hoved', 'data-advarsel': 'avtale' }));
+    if (vf) kn2.append(knapp(`Gjør avtale (${kroner(vf.vern.pris)}) og send`, () => { if (!avtale(a.by)) return; send2(); }, { klasse: sp.length ? '' : 'hoved', 'data-advarsel': 'avtale' }));
     kn2.append(knapp(a.ute.length || a.farer.some(f => f.alvor >= 1) ? 'Send likevel' : 'Send', send2, { 'data-advarsel': 'likevel' }));
     if (a.ute.length && k && L) { const første = a.ute[0];
       // feltradio til dem som har håndradio, når feltradioen rekker (med terrenget)
@@ -451,7 +451,9 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const KLYNGE = 26, egnePkt = [];
     if (åpen) for (const s of egneLag()) { if (KROKER.skjul.some(f => f(s))) continue; const x = sx(s.x), y = sy(s.y); egnePkt.push([x, y]);
       if (s.sti) { const e = s.sti[s.sti.length - 1]; g.strokeStyle = sidefarge('blå', 'sti'); g.lineWidth = 2; g.setLineDash([4, 5]); g.beginPath(); g.moveTo(x, y); g.lineTo(sx(e[0]), sy(e[1])); g.stroke(); g.setLineDash([]); } }
-    if (åpen) { const brukt = new Set(); for (let i = 0; i < egnePkt.length; i++) { if (brukt.has(i)) continue; const [x, y] = egnePkt[i]; let n = 1;
+    // ved leiren står antallet alt i leirens navn («Har · 3 lag»), så der tegnes ikke et eget tall
+    const Lk = leir(), lx = Lk ? sx(Lk.x) : -1e9, ly = Lk ? sy(Lk.y) : -1e9;
+    if (åpen) { const brukt = new Set(); for (let i = 0; i < egnePkt.length; i++) { if (brukt.has(i)) continue; const [x, y] = egnePkt[i]; let n = 1; if (Math.hypot(x - lx, y - ly) < KLYNGE * 1.5) continue;
       for (let j = i + 1; j < egnePkt.length; j++) if (!brukt.has(j) && Math.hypot(egnePkt[j][0] - x, egnePkt[j][1] - y) < KLYNGE) { brukt.add(j); n++; }
       if (n > 1) { g.font = '700 12px "Times New Roman", Times, serif'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.9)'; g.strokeText(n + ' lag', x + 13, y - 9); g.fillStyle = '#f0c878'; g.fillText(n + ' lag', x + 13, y - 9);
         if (window.Etikett) Etikett.hinder(x + 12, y - 16, 34, 14); } } }
@@ -504,6 +506,6 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       ['Fortsett som nå', null, 'Spill videre uten endringer.'],
       ...(window.ScenarioSpill && ScenarioSpill.etterspill ? [['Se krigen på nytt', () => ScenarioSpill.etterspill(), 'Spol gjennom hvem som holdt hva.']] : [])]); }
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
-  const api = { test: false, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, rekkeviddeTil, farer, vern, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  const api = { test: false, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;
 })();

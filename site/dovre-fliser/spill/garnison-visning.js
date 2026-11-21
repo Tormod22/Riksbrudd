@@ -13,7 +13,8 @@
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
   const tidTekst = sek => (!isFinite(sek) ? 'for få mann' : sek < 5400 ? Math.round(sek / 60) + ' min' : (Math.round(sek / 360) / 10).toString().replace('.', ',') + ' t');
   // (19. nov) hva et tettsted krever: «trenger ca. 69 mann (minst 35) og ca. 3,8 t»
-  const kravTekst = folk => `${G.mannFor(folk) <= 6 ? 'Et lag på ' + G.mannFor(folk) + ' mann' : 'Ca. ' + G.mannFor(folk) + ' mann (minst ' + G.minstFor(folk) + ')'} tar det på ${tidTekst(G.inntaTid(folk))} uten fiender der`;
+  // (runde 13, kritiker H: «trenger 5 mann» og «minst 3 mann» om samme sted) begge tallene står alltid: full fart og minst
+  const kravTekst = folk => `${G.mannFor(folk) <= 6 ? 'Et lag på ' + G.mannFor(folk) + ' mann' : 'Ca. ' + G.mannFor(folk) + ' mann'}${G.minstFor(folk) < G.mannFor(folk) ? ' (minst ' + G.minstFor(folk) + ')' : ''} tar det på ${tidTekst(G.inntaTid(folk))} uten fiender der`;
   // for regionen (spill/region-visning.js): strømmen til et tettsted og kraftverkene
   window.GarnisonSpill = { strømFor, kraft, byFor, byer, kravTekst, tidTekst, test: false };
   // krigskartet (spill/strategi-visning.js): hva det valgte tettstedet krever

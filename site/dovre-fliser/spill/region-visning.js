@@ -215,6 +215,7 @@
 #region button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; } #region button.på{ border-color:#c9b26a; background:#3a3020; color:#f0d79a; } #region button:disabled{ opacity:.45; }
 #region .rad{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid #2e281e; } #region .rad small{ display:block; } #region .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 #region .sum{ border:1px solid #c9b26a; padding:6px 9px; margin:6px 0; background:#221c12; } #region .sum b{ color:#f0d79a; }
+#region h3.blink{ color:#f0c878; text-shadow:0 0 6px rgba(240,200,120,.6); }
 body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:46vh; border-width:1px 0 0; }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'region', role: 'dialog', 'aria-label': 'Regionen' }); document.body.appendChild(panel);
@@ -245,7 +246,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   function bygg() {
     const ut = el('div'), ST = status(true), l = leir(), s = sum();
     ut.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Regionen'));
-    ut.append(el('small', { klasse: 'ingress' }, 'Tettstedene du holder, sender varer og skatt til leiren. Et døgn her er et spilldøgn eller ti minutter spilling.'));
+    ut.append(el('small', { klasse: 'ingress' }, 'Tettstedene du holder, sender varer og skatt til leiren hver time. Tallene «per døgn» regnes i spilldøgn. Står du lenge på 1× (sanntid), går regionens døgn likevel høyst ti minutter ved skjermen – du må ikke vente et ekte døgn.'));
     bestillVegnett();
     if (!ST.size) ut.append(el('div', { klasse: 'sum' }, 'Du holder ingen tettsteder ennå. Et lag som står 30 minutter i et tettsted uten fiender, tar det – se under hva de nærmeste er verdt.'));
     else { ut.append(el('div', { klasse: 'sum', id: 'regionsum' }, `${ST.size} tettsted${ST.size === 1 ? '' : 'er'} gir nå per døgn: `, el('b', {}, RG.girTekst(s, kr)), '.'));
@@ -264,7 +265,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
         rader.push(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, navn), el('small', {}, `holder ${f.antall} tettsted${f.antall === 1 ? '' : 'er'}: treff +${Math.round((f.treff - 1) * 100)} %, garnisonene forsterkes ${Math.round((f.forsterk - 1) * 100)} % raskere`)))); }
       if (rader.length) { ut.append(el('h3', {}, 'Motstanderne')); ut.append(...rader); ut.append(el('small', {}, 'Industristeder, byer og oljebyer gir dem bedre våpen; bygder og havner gir folk. Ta tettstedene fra dem, så mister de fordelen.')); } }
     // svartebørsen
-    ut.append(el('h3', {}, 'Svartebørsen'));
+    ut.append(el('h3', { id: 'regionbors' }, 'Svartebørsen'));
     if (!S.børs.tilbud.length) ut.append(el('small', {}, 'Ingen selger i leiren i dag. Han dukker opp av og til med ting markedet ikke har – dyrt.'));
     for (const id of S.børs.tilbud) { const V = RG.Bors.VARER[id]; ut.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, V.navn), el('small', {}, V.tekst)), kn(`Kjøp (${kr(V.pris)})`, () => { const r = kjøp(id); if (r.feil) logg(r.feil); }, { 'data-bors': id }))); }
     const eid = []; if (S.har.nattsikt) eid.push('nattsikt'); if (S.har.våpen) eid.push(`tunge våpen ×${S.har.våpen} (treff +${Math.round((RG.Bors.treff(S.har) - 1) * 100)} %)`);
@@ -288,10 +289,12 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // varselbrikken for svartebørsen: står til panelet er åpnet eller selgeren har dratt
   let børsSett = true;
   (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => (klar && !børsSett && S.børs && S.børs.tilbud && S.børs.tilbud.length && leir()
-    ? [{ i: 'kasse', k: 'god', t: 'Svartebørsen', s: 'en selger er i leiren i dag', f: () => åpne() }] : []));
-  function åpne() { if (!klar) return; børsSett = true; if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.lukk(); if (window.lukkPanel) lukkPanel();
+    ? [{ i: 'kasse', k: 'god', t: 'Svartebørsen', s: 'en selger er i leiren i dag', f: () => åpne('børs') }] : []));
+  // åpne('børs') (runde 13, kritiker G: «lappen Svartebørsen åpner Region, og selgeren ligger helt nederst»): panelet rulles til Svartebørsen
+  function åpne(del) { if (!klar) return; børsSett = true; if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) StrategiSpill.lukk(); if (window.lukkPanel) lukkPanel();
     const lm = document.getElementById('leirmeny'); if (lm && lm.classList.contains('på')) { const k = document.getElementById('leirknapp'); if (k) k.click(); }
-    åpen = true; åpnet = performance.now(); panel.classList.add('på'); document.body.classList.add('region'); sist = ''; vis(true); skitten = true; }
+    åpen = true; åpnet = performance.now(); panel.classList.add('på'); document.body.classList.add('region'); sist = ''; vis(true); skitten = true;
+    if (del === 'børs') { const h = document.getElementById('regionbors'); if (h) { panel.scrollTop = Math.max(0, h.offsetTop - 8); h.classList.add('blink'); setTimeout(() => h.classList.remove('blink'), 1800); } } }
   function lukk() { if (!åpen) return; åpen = false; panel.classList.remove('på'); document.body.classList.remove('region'); skitten = true; }
   // Kartet: 2D, og zoom så hele ruta synes ved siden av panelet
   function visIKart(q) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false);
