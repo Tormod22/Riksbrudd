@@ -4,6 +4,7 @@ To nye kritikere spilte den publiserte versjonen (med runde 11–12) som nye spi
 
 ---
 
+# Kritiker G – Riksbrudd (hele Norge, liggende telefon, Lærdal): Ryddigere skjerm, men krigen skjer bak ryggen din
 
 **Ingress:** Riksbrudd har tatt kritikken på alvor. På en liggende telefon er skjermen langt ryddigere enn sist, og det er endelig morsomt å lete i hus. Men spillet forklarer fortsatt for dårlig hvorfor ting skjer. Jeg mistet en hel tropp uten å se en eneste kamp, og det anslåtte angrepet flyttet seg bakover i tid mens jeg ventet på det.
 
