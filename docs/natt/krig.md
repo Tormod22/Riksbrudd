@@ -910,3 +910,88 @@ Prøvd med feil lagt inn (advarselen slått av): vakta slo til. PC 2,8 s, mobil 
 - Tettstedets radio når leiren uansett avstand (ingen terrengsjekk for garnisoner).
 - Ikke prøvd i en lang ekte økt på /norge (bare Dovre-testsiden med prøvetettsteder); vegnettet lastes ikke på testsiden, så selve kjøringen
   med troppen ble ikke prøvd til ende.
+
+## Runde 13 (21. nov, kritikk G/H)
+
+Kritiker G (liggende telefon, Lærdalen) og H (PC, Vikeså i Rogaland). Brukerens ønske: tydeligere – spilleren skal skjønne hvorfor.
+Alle tall er Claudes forslag.
+
+### 1. «Send» med for få, og leiren uten vakt – RETTET
+- ETT TALL: `Strategi.kravTekst` sier nå «trenger minst 3 mann (5 for full fart)» – det første tallet er det som avgjør (under det står
+  inntaket stille, som `Garnison.minstFor` og loggens «det trengs minst 3 mann»). `GarnisonSpill.kravTekst` har også begge tallene.
+  Nytt: `Strategi.kravFor(t, lag)` → `{ har, minst, mann, nok, full, tekst }` («For få: 1 av 3 – tar ikke stedet …», «4 av 5 for full
+  fart – tar stedet, men saktere»). Merk: 4 av 5 TAR stedet (saktere) etter reglene, så det er en opplysning, ikke en advarsel.
+- `strategi-visning.js` `farer(by, lag, t)`: for få (alvor 2), bygdevernet (alvor 2, `KrigSpill.T().vern`, `Krig.vernMenn/vernPris`),
+  fiender sett innen 2,5 km (alvor 2), speidere mot et forsvart sted (1), «Leiren står uten vakt» når alle lag innen `VAKT_NÆR` = 600 m
+  som står stille, sendes (1). Alvor ≥ 1 gir advarselsboksen (samme `#krigadvarsel` som radioen) med «Send likevel», «Gjør avtale (… kr) og
+  send» (setter opp vernet først om dere ikke har møtt det, så `KrigSpill.vernAvtale` virker), «Speid og meld» og «Avbryt».
+- «Neste trekk»: «For få (1 av 3)» på knappen.
+
+### 2. Radiovarselets forslag – RETTET
+- `terrengSjekk(p)`: høydeprofilen leiren → målet (lagVindu ZV 7, 24 punkter, `Kontrollrom.blokkert`, antenne 2 m / mast eller 4 m) som
+  i kontrollrommet; svaret huskes per 250 m-rute og mast (`TERRENG`). `rekkeviddeTil(s, p)` = rekkevidden × `Kontrollrom.REGLER.terreng`
+  (0,35) når terrenget står i veien. `utenforRadio` bruker den. `send()` venter på sjekken første gang («Sjekker radiodekningen …»), og
+  `takt()` regner den ut på forhånd for de fire forslagene og det valgte stedet.
+- Overskriften sier «(feltradio 8 km, men terrenget står i veien: 2,8 km)». «Send ⟨lag⟩ i stedet (feltradio)» foreslås bare når laget
+  når fram MED terrenget; ellers «⟨lag⟩ (feltradio) når heller ikke fram (terreng: 2,8 km)», og en linje om hva som hjelper.
+- «Neste trekk» har linja «utenfor radioen for ⟨lag⟩ (…)» før du trykker.
+
+### 3. Speidere skal ikke slåss – RETTET
+- `speider(s)` = `s.mal === 'speider'` (settes av troppebyggeren når malen «Speidertropp» brukes) eller navnet begynner med «Speider».
+- «Neste trekk» og boksen for valgt sted viser forsvaret: «Forsvar: bygdevernet: 7 mann · fiender sett: ca. 6 mann», og boksen har
+  «Avtale med bygdevernet (2 mill. kr)».
+- «Speid og meld» (`StrategiSpill.speid(by, lag)`): laget går til et punkt `SPEID.utenfor` = 400 m utenfor stedet (radius anslått fra bb)
+  og melder `speidRapport` («Speidertropp 1 ved Vikeså: bygdevernet har 7 mann. Gjør en avtale (2 mill. kr) i Krig, eller send flere enn
+  7 mann.»). Uten radiokontakt venter meldingen til kontakten er tilbake (lagteksten sier det).
+- Også ordre gitt i kartet: en speidertropp på marsj som er i ferd med å gå inn (de neste 450 m av ruta) i et sted med bygdevern eller
+  kjente fiender, stopper og melder («speidere går ikke inn i et forsvart sted»). «Send likevel» i Krig slipper den inn (`s.speidLikevel`).
+  Prøvd: stopper 621 m fra midten, utenfor stedet; et vanlig lag går inn.
+
+### 4. Tallene – RETTET
+- `StrategiSpill.mannTekst(s)` = «4 friske av 6, 1 såret, 1 falt» (før «4 av 4»: sårede telte som friske). Brukes i «Lagene dine» og i
+  troppelista (`tropper-visning.js`). Uten kontakt: «· sist meldt dag 2 06:53» (Krig) og «sist meldt dag 2 06:53, … for leiren» (Tropper).
+  De falne trekkes fra med en gang de er meldt (folk-visning.js melder dem uansett radio – så lista stemmer med loggen).
+  Jeg fant ikke hvorfor kritiker H så «4 av 4» etter en falt – med denne koden kan et falt lag ikke stå som friskt.
+- `index.html` `leirTillegg()` teller ikke karakteren og Leirvakta («Fjordvakta · 3 lag» med to lag + deg).
+
+### 5. Tankbilen – RETTET (i `morgen-visning.js`)
+- `sendLag` bruker `StrategiSpill.sendTil(lag, mål, gå)` – samme radiovarsel (med terrenget) og «leiren står uten vakt», i en egen boks
+  `#krigvarsel` når krigskartet ikke er åpent («Send likevel», «Gi feltradio og send», «Send ⟨lag⟩ i stedet», «Avbryt»).
+- `b.sendt = { navn, t }` (lagres med morgenmøtet): lappen sier «Vaktlaget på vei (43 min)» / «planlegger ruta» / «er framme».
+- `hjemFraTankbil(b)`: når tankbilen er tømt (eller borte), får laget ordre hjem til leiren (gitt på forhånd – trenger ikke radio).
+  Prøvd: «1. lag, Dombås går hjem til leiren.»
+
+### 6. Mål – RETTET
+`scenarioBoks()` øverst i Krig (`#krigscenario`): «Scenario: Sju døgn – dag 4 av 7», scenariets tekst og frist, og om krigen teller
+(`KRIGEN_TELLER` per scenario: overlev/hold/tre/lyn). Med et scenario som ikke er «Lynkrig» heter linja under «Krigen: hold 60 % …».
+
+### 7. Krigskartet nær leiren – RETTET
+- `index.html`: «sist sett» for fiender innen 40 px på skjermen får ÉN lapp: «2 lag · sist sett 04:16».
+- Krigskartet tegner ikke lenger et ekstra lagmerke oppå lagene (index.html tegner dem); lag som står samlet (26 px) får «3 lag» ved siden
+  av – ikke ved leiren, der leirens navn alt sier det.
+- Tallene 1–3 legges i det hjørnet av tettstedsmerket som ligger lengst fra lagene, leiren og de andre tallene.
+- «Tegnforklaring» nederst i Krig (`#krigforkl`, små tegninger): eget lag, fiende sett nå, «sist sett», «?» (meldt over radio/av speidere/
+  etterretning – ikke sett nå), tettsted etter eier, 1–3, front, flere lag på samme sted.
+
+### 8. Regionpanelet – RETTET
+Teksten: «… sender varer og skatt til leiren hver time. Tallene «per døgn» regnes i spilldøgn. Står du lenge på 1× (sanntid), går regionens
+døgn likevel høyst ti minutter ved skjermen …» (koden har `døgnEkteSek` = 600, så «ti minutter» var riktig, men uklart). Lappen
+«Svartebørsen» kaller `RegionSpill.åpne('børs')`: panelet rulles til `#regionbors`, som lyser opp et øyeblikk.
+
+### Vakt (vakter/krig.js, del «RUNDE 13»)
+Ett tall, forsvaret i Neste trekk, speidere advares (Speid og meld + avtale + «terrenget står i veien: 2,8 km»), «når heller ikke fram»
+(terrenget satt med `StrategiSpill.settTerreng`), speid og meld stopper før stedet, leiren uten vakt, falne/sårede i Krig og troppelista,
+tegnforklaringen, lagtallet uten deg, tankbilvarselet og Avbryt, scenariet, regionen. Runde 12-delen setter terrenget fritt før den sender.
+Feil lagt inn med vilje (forslaget uten terrenget, slik det var): vakta slo til («når heller ikke fram» false). PC 6,4 s.
+
+### Fellesfiler endret i runde 13
+- `index.html`: «sist sett»-løkka i tegningen av lagene (samlet lapp) og `leirTillegg()` (uten karakter/Leirvakta); versjonsmerkene.
+- `spill/morgen-visning.js` (tankbilen): `sendLag`, `sendtLag`, `påVeiTekst`, `hjemFraTankbil`, lappen i `VARSEL_TILLEGG`, og kallet
+  `hjemFraTankbil(b)` i de to grenene der tankbilen tas bort.
+- `spill/garnison-visning.js` `kravTekst` (begge tallene).
+
+### IKKE gjort / svakheter (runde 13)
+- «4 av 4 mann» etter en falt (H) er ikke gjenskapt – tallene vises nå riktig fra lagets menn, men årsaken i økta er ukjent.
+- Terrengsjekken gjelder linja leiren → målet; lag som går omveier kan miste kontakt underveis (kontrollrommet regner det ut som før).
+- Advarselen «leiren uten vakt» gjelder bare Send i Krig og tankbilen, ikke ordre gitt rett i kartet.
+- Kamp utenfor radio, ⏭ som stopper for kamp og angrepsbanneret er kamp-pakkas.
