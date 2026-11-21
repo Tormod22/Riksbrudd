@@ -25,6 +25,8 @@
     if (s.fanger && s.fanger.n > 0) d.fanger = { n: s.fanger.n, side: s.fanger.side }; if (s.bakhold) d.bakhold = true; if (s.krig) d.krig = s.krig;   // spill/krig-visning.js
     // (18. nov) ordren i gang: målet for marsjen. Fiendens lag: siden, og for AI-lagene hva de holdt på med.
     if (s.sti && s.sti.length > 1) { const m = s.sti[s.sti.length - 1]; d.mål = [r1(m[0]), r1(m[1])]; }
+    // (runde 13) en ordre som er gitt, men der ruta fortsatt planlegges (ordreMål), lagres også – før gikk den tapt ved omlasting
+    else if (Array.isArray(s.ordreMål) && Number.isFinite(s.ordreMål[0]) && Number.isFinite(s.ordreMål[1])) d.mål = [r1(s.ordreMål[0]), r1(s.ordreMål[1])];
     if (s.side && s.side !== 'blå') { d.side = s.side; if (s.ai) d.ai = { hva: s.ai.hva || null, tekst: String(s.ai.tekst || '') }; if (s.slattUtMeldt) d.slåttUt = true; }
     return d;
   }
@@ -195,7 +197,8 @@
     const S = spill(); if (!S || !S.leir) return false; let d = null;
     try { d = fraJSON(localStorage.getItem(NØKKEL), S.leir); } catch (e) { d = null; }
     if (!d) return false;
-    tid = d.tid;
+    // (runde 13) klokka går aldri tilbake: den lille klokkenøkkelen skrives oftere enn verden og kan være litt nyere
+    tid = Math.max(d.tid, klokkeLest(S.leir));
     if (d.vær && rot.VaerSpill) { Object.assign(VaerSpill.S, d.vær); VaerSpill.straks(); }
     settTilbake(d.lag, egneLag(), brukLag, q => { const s = q.ingeniør && rot.nyttIngeniørlag ? nyttIngeniørlag(q.navn, q.x, q.y) : nyttLag(q.navn, q.x, q.y, 'blå', !!q.speider); if (!ENHETER.includes(s)) ENHETER.push(s); return s; });
     settTilbake(d.kjøretøy, egneKj(), brukKj, q => { if (!rot.Kjoretoy || !Kjoretoy.TYPER[q.type] || !(q.antall >= 1)) return null;
@@ -218,7 +221,32 @@
   const LAGRE = { maksMs: 5000, minMs: 500, spillMin: 2 };
   KROKER.sim.push(() => { const nå = performance.now(), t = typeof tempo !== 'undefined' && tempo > 0 ? tempo : 1, hver = Math.max(LAGRE.minMs, Math.min(LAGRE.maksMs, LAGRE.spillMin * 60000 / t));
     if (nå - sist < hver) return; sist = nå; lagre(); });
-  window.addEventListener('pagehide', lagre); window.addEventListener('beforeunload', lagre);
+  window.addEventListener('pagehide', () => lagre()); window.addEventListener('beforeunload', () => lagre());
+  // ---------- RUNDE 13 (kritiker H: «ordre før omlasting går tapt», «klokka gikk tilbake 15:54 → 15:52 og 06:00 → 05:59») ----------
+  // 1. Ordren lagres straks: ordre() merker målet mens ruta planlegges (s.ordreMål) og lagrer verden når den er gitt og når ruta er klar.
+  // 2. Hvert trykk på en knapp (kort, møter, paneler) og hver tast lagrer verden like etterpå (LAGRE.straksMs, slått sammen).
+  // 3. Mens spillet står på pause (morgenmøtet, et kort) går ikke KROKER.sim – da lagres det hvert sekund når klokka har flyttet seg.
+  // 4. Klokka skrives i en egen liten nøkkel («riksbrudd-klokke») høyst hvert LAGRE.klokkeMs millisekund; les() tar den nyeste.
+  //    Tallene er Claudes forslag. (Lukkes nettleseren hardt midt i 600×, kan noen få spillminutter fortsatt gå tapt.)
+  Object.assign(LAGRE, { straksMs: 120, klokkeMs: 250, pauseMs: 1000 });
+  const KLOKKE = 'riksbrudd-klokke', lk = l => Math.round(l.x) + ',' + Math.round(l.y);
+  function klokkeLest(leir) { try { const k = JSON.parse(localStorage.getItem(KLOKKE)); return k && k.leir === lk(leir) && Number.isFinite(k.tid) ? Math.max(0, k.tid) : 0; } catch (e) { return 0; } }
+  let sistKlokke = 0, sistKlokkeTid = -1, straks = 0, sistLagretTid = -1;
+  function skrivKlokke() { const S = spill(); if (!aktiv || av || !S || !S.leir || tid === sistKlokkeTid) return; sistKlokkeTid = tid;
+    try { localStorage.setItem(KLOKKE, JSON.stringify({ leir: lk(S.leir), tid })); } catch (e) { /* fullt eller sperret */ } }
+  const lagre0 = lagre;
+  lagre = function () { const ok = lagre0(); if (ok) { sistLagretTid = tid; skrivKlokke(); } return ok; };
+  function lagreStraks() { clearTimeout(straks); straks = setTimeout(() => { straks = 0; lagre(); }, LAGRE.straksMs); }
+  KROKER.sim.push(() => { const nå = performance.now(); if (nå - sistKlokke >= LAGRE.klokkeMs) { sistKlokke = nå; skrivKlokke(); } });
+  setInterval(() => { if (aktiv && !av && tid !== sistLagretTid) lagre(); }, LAGRE.pauseMs);
+  document.addEventListener('click', e => { if (aktiv && e.target && e.target.closest && e.target.closest('button, [role="button"], a, label, input, select')) lagreStraks(); });
+  document.addEventListener('change', () => { if (aktiv) lagreStraks(); });
+  document.addEventListener('keydown', () => { if (aktiv) lagreStraks(); });
+  if (typeof rot.ordre === 'function' && !rot.ordre.lagring) { const før = rot.ordre;
+    const ny = function (s, X, Y) { if (s && s.side === 'blå' && Number.isFinite(X) && Number.isFinite(Y)) s.ordreMål = [X, Y];
+      let p; try { p = før.apply(this, arguments); } finally { lagreStraks(); }
+      return Promise.resolve(p).finally(() => { if (s && s.ordreMål && s.ordreMål[0] === X && s.ordreMål[1] === Y) delete s.ordreMål; lagreStraks(); }); };
+    ny.lagring = true; ny.flyt = !!før.flyt; rot.ordre = ny; }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  rot.LagringSpill = { NØKKEL, lagre, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av, sist: () => ({ ok: sistOk, feil: sistFeil }) };
+  rot.LagringSpill = { NØKKEL, KLOKKE, LAGRE, lagre: () => lagre(), lagreStraks, klokkeLest, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av, sist: () => ({ ok: sistOk, feil: sistFeil }) };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

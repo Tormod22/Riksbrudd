@@ -65,4 +65,8 @@ ok(LG.fraJSON('{"versjon":99}', leir) === null && LG.fraJSON('ødelagt', leir) =
   const plan = P.byttPlan({ 'riksbrudd-k1': 'a', 'riksbrudd-lut': '{}', 'riksbrudd-k2': 'b' }, pl);
   ok(plan.fjern.join() === 'riksbrudd-lut' && plan.sett.length === 3, 'bytte: det plassen ikke har, tas bort; resten settes');
 }
+// RUNDE 13: en ordre der ruta fortsatt planlegges (ordreMål), lagres som mål og leses inn igjen
+{ const s = nyttLag('Vaktlaget', 100, 200); s.ordreMål = [1500, 2500]; const d = LG.pakkLag(s); ok(d.mål && d.mål[0] === 1500 && d.mål[1] === 2500, 'ordre under planlegging lagres (mål)');
+  const t = nyttLag('Vaktlaget', 0, 0); LG.brukLag(t, JSON.parse(JSON.stringify(d))); ok(t.målLagret && t.målLagret[0] === 1500 && t.x === 100, 'og leses inn som målLagret (laget går videre)');
+  s.sti = [[100, 200], [900, 900]]; ok(LG.pakkLag(s).mål[0] === 900, 'en ferdig rute går foran ordreMål'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for lagring.js er ok'); process.exit(feil ? 1 : 0);
