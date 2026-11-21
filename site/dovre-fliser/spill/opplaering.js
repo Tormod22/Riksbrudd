@@ -11,7 +11,8 @@
   const STEG = [
     { id: 'leir', tittel: 'Åpne Leir', tekst: 'Alt i leiren styres herfra: bygg, lager, plan og mål. Trykk på Leir.', mål: 'leir', ferdig: b => b.leirÅpnet },
     { id: 'brakke', tittel: 'Bygg en brakke', tekst: 'Folkene trenger senger. I fanen Bygg: velg Brakke, trykk på et flatt sted ved leiren, og bekreft.', mål: 'brakke', ferdig: b => b.brakker > 0 },
-    { id: 'bygg2', tittel: 'Sett to på bygg', tekst: 'Åpne Folk og se at minst to står på Bygg (bruk + hvis det mangler). To personer er ett byggelag – uten dem blir ingenting bygget.', mål: 'folk', ferdig: b => b.folkÅpnet && b.påBygg >= 2 },
+    { id: 'bygg2', tittel: 'Sett to på bygg', tekst: 'Åpne Folk og se at minst to står på Bygg (bruk + hvis det mangler). To personer er ett byggelag – uten dem blir ingenting bygget.', mål: 'folk', ferdig: b => b.folkÅpnet && b.påBygg >= 2,
+      krav: b => `På Bygg: ${b.påBygg || 0} av 2` + (b.folkÅpnet ? '' : ' · åpne Folk') },
     { id: 'tropp', tittel: 'Lag en tropp', tekst: 'Åpne Tropper, velg noen av folkene og gi troppen et navn. Tropper kan du sende ut i kartet.', mål: 'tropper', ferdig: b => b.tropper > 0 },
     { id: 'gaa', tittel: 'Gå i 3D', tekst: 'Trykk 3D for å se landet ovenfra, og så Gå for å gå rundt i leiren selv.', mål: '3d', ferdig: b => b.går },
     // (balansen runde 4, 18. nov) det gjennomspillingen viste at en ny spiller trenger for å klare den første uka: to tropper, mat,
@@ -20,8 +21,13 @@
     // bygget). Nå holder det med en liten tropp til ELLER to på Vakt i Folk (Leirvakta forsvarer leiren når røverne kommer), og teksten
     // sier hva det koster i arbeidskraft og hvordan du får flere folk. kort = teksten på telefon (tre linjer).
     { id: 'tropp2', tittel: 'Mer forsvar før dag 4', tekst: 'Røverbølgene vokser. Lag en liten tropp til (2–4) eller sett to på Vakt i Folk. Hver soldat er en arbeider mindre: la minst to stå på Bygg. Flere folk: Rekrutter i Folk.',
-      kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || (b.tropper >= 1 && b.påVakt >= 2) },
-    { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3 },
+      kort: 'En liten tropp til (2–4) eller to på Vakt i Folk. La minst to stå på Bygg – flere folk: Rekrutter i Folk.', mål: 'tropper', ferdig: b => b.tropper >= 2 || b.påVakt >= 2,
+      // RUNDE 13 (kritiker H: steget sto i tre døgn uten at det gikk fram hva som manglet): kravet står konkret, og «eller» betyr eller –
+      // to på Vakt holder alene (før krevde det også en tropp, uten at teksten sa det)
+      krav: b => `Nå: ${b.påVakt || 0} på Vakt (trenger 2) – eller ${b.tropper || 0} ${b.tropper === 1 ? 'tropp' : 'tropper'} (trenger 2)`,
+      kravKort: b => `vakt ${b.påVakt || 0}/2 eller tropper ${b.tropper || 0}/2` },
+    { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3,
+      krav: b => `Mat nå: ${String(Math.floor((b.matDøgn || 0) * 10) / 10).replace('.', ',')} døgn av 3` },
     { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → rull ned til Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
     // (runde 8, kritiker D: steget sto oppe under angrepet selv om leiren ikke hadde ferdige bygg) vises bare når noe er skadet;
     // et angrep som er over uten skade, gjør steget ferdig uten at det har vært vist
@@ -49,14 +55,16 @@
   // LENGE.min spillminutter (det som kommer først), legges sammen til én linje av seg selv. + henter det fram igjen for en ny periode.
   const LENGE = { ms: 120000, min: 180 };
   const lenge = (fra, nå) => !!fra && (nå.ms - fra.ms > LENGE.ms || nå.tid - fra.tid > LENGE.min);
-  const Opplaering = { STEG, LENGE, tom, fra, til, neste, oppdater, hopp, ferdig, nr, vises, lenge };
+  // (runde 13) kravet for steget akkurat nå («På Bygg: 1 av 2»), eller '' når steget ikke har noe tall
+  const krav = (s, bilde, kort) => { const f = s && (kort && s.kravKort ? s.kravKort : s.krav); if (!f || !bilde) return ''; try { return String(f(bilde) || ''); } catch (e) { return ''; } };
+  const Opplaering = { STEG, LENGE, tom, fra, til, neste, oppdater, hopp, ferdig, nr, vises, lenge, krav };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Opplaering; return; }
   rot.Opplaering = Opplaering;
 
   // ---------------- visningen ----------------
   const $ = id => document.getElementById(id), NØKKEL = 'riksbrudd-opplaering', AV = 'riksbrudd-opplaering-av';
   const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, skriv = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* sperret */ } };
-  let T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false, forsvar: false }, sistSteg = null;
+  let sisteBilde = null, T = tom(), av = les(AV) === '1', sett = { leir: false, folk: false, forsvar: false }, sistSteg = null;
   // (runde 6) Claudes forslag: et gjort steg står med ✓ i VIS_GJORT ms før neste vises; «ferdig»-ruta lukker seg selv etter FERDIG_LUKK ms
   const VIS_GJORT = 3500, FERDIG_LUKK = 12000; let gjortKø = [], gjortTil = 0, ferdigFra = 0, sammen = les('riksbrudd-opplaering-sammen') === '1';
   // (runde 8) foldetNå = ruta står som én linje nå: valget ditt (sammen, huskes), «Senere» (utsatt = stegets id), steget har stått
@@ -71,6 +79,7 @@
 #opplaering small{ display:block; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#a89970; } #opplaering b{ display:block; font-family:"IM Fell English",serif; font-weight:400; font-size:18px; color:#f0dc9a; margin:0 0 2px; }
 #opplaering .rad{ display:flex; gap:6px; justify-content:flex-end; margin-top:7px; } #opplaering .rad button{ height:28px; padding:0 10px; background:#241c10; border:1px solid #5a4a2a; color:var(--ink-dim,#a69b82); font:inherit; font-size:12.5px; cursor:pointer; }
 #opplaering .rad button:hover{ color:var(--ink,#e7dcc3); border-color:#c9b26a; } #opplaering .prikker{ position:absolute; left:12px; bottom:12px; display:flex; gap:4px; } #opplaering .prikker i{ width:6px; height:6px; border-radius:50%; background:#4a3d24; } #opplaering .prikker i.g{ background:#c9b26a; } #opplaering .prikker i.n{ background:#fff3c8; box-shadow:0 0 5px #f0dc9a; }
+#opplaering .krav{ display:block; margin-top:4px; font-size:12.5px; color:#f0dc9a; } body #opplaering.sammen .krav, body #opplaering.liten .krav{ display:none; }
 #opplaering.ok b::after{ content:' ✓'; color:#a8d47a; }
 #oppring{ position:fixed; z-index:28; display:none; pointer-events:none; border:2px solid #f0dc9a; border-radius:8px; box-shadow:0 0 0 3px rgba(240,220,154,.25), 0 0 16px rgba(240,220,154,.7); animation:oppring 1.3s ease-in-out infinite; }
 #oppring.på{ display:block; } @keyframes oppring{ 50%{ box-shadow:0 0 0 8px rgba(240,220,154,.08), 0 0 22px rgba(240,220,154,.9); transform:scale(1.06); } }
@@ -137,14 +146,16 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
       if (m) return m; const fb = [...lm.querySelectorAll('.faner button, [data-fane-knapp]')].find(b => /^Bygg/.test(b.textContent.trim())); return synlig(fb) ? fb : null; }
     if (s.mål === 'reparer') return synlig($('reparerknapp')) ? $('reparerknapp') : null;
     return null; }
-  function tegn(s, okTekst, gjort) { const kort = document.body.classList.contains('kort'), n = gjort ? STEG.indexOf(gjort) + 1 : Opplaering.nr(T), sig = (gjort ? 'gjort:' + gjort.id : s ? s.id : 'slutt') + '|' + (okTekst || '') + '|' + kort + '|' + foldetNå; if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
+  function tegn(s, okTekst, gjort) { const kort = document.body.classList.contains('kort'), n = gjort ? STEG.indexOf(gjort) + 1 : Opplaering.nr(T), kv = !gjort && !okTekst ? Opplaering.krav(s, sisteBilde) : '', sig = (gjort ? 'gjort:' + gjort.id : s ? s.id : 'slutt') + '|' + (okTekst || '') + '|' + kort + '|' + foldetNå + '|' + kv; if (sig === sistSteg) return; sistSteg = sig; boks.textContent = '';
     boks.classList.toggle('gjort', !!gjort); boks.classList.toggle('sammen', foldetNå);
     if (gjort) { const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
       boks.append(el('div', 'nr', '✓'), el('small', '', `Opplæring · ${n} av ${STEG.length} · gjort`), el('b', '', '✓ ' + gjort.tittel), el('span', 't', gjortKø.length > 1 ? 'Gjort. Neste steg er også gjort – se under.' : 'Gjort! Neste steg kommer om et øyeblikk.'));
       const rad = el('div', 'rad'), v = el('button', '', 'Neste ›'); v.id = 'oppneste'; v.onclick = () => { gjortTil = 1; kjør(); }; rad.appendChild(v); boks.appendChild(rad); fold(); return; }
     const el = (t, k, x) => { const e = document.createElement(t); if (k) e.className = k; if (x !== undefined) e.textContent = x; return e; };
-    boks.classList.toggle('ok', !!okTekst); boks.append(el('div', 'nr', okTekst ? '✓' : String(n)), el('small', '', `Opplæring · ${okTekst ? 'ferdig' : n + ' av ' + STEG.length}`), el('b', '', okTekst ? okTekst : s.tittel));
+    boks.classList.toggle('ok', !!okTekst); boks.append(el('div', 'nr', okTekst ? '✓' : String(n)), el('small', '', `Opplæring · ${okTekst ? 'ferdig' : n + ' av ' + STEG.length}`), el('b', '', okTekst ? okTekst : s.tittel + (kv && foldetNå ? ' · ' + Opplaering.krav(s, sisteBilde, true) : '')));
     boks.appendChild(el('span', 't', okTekst ? 'Bra. Videre går det etter målene: åpne Leir og velg fanen Mål.' : kort && s.kort ? s.kort : s.tekst));
+    // (runde 13) kravet med tallene akkurat nå
+    if (kv) { const k = el('span', 'krav', kv); k.id = 'oppkrav'; boks.appendChild(k); }
     const rad = el('div', 'rad'); if (!okTekst) { const h = el('button', '', 'Hopp over'); h.id = 'opphopp'; h.onclick = () => { Opplaering.hopp(T); lagre(); gjortKø = []; gjortTil = 0; kjør(); }; rad.appendChild(h);
       // (runde 8, kritiker C) «Senere»: legg dette steget sammen til én linje nå (+ henter det fram igjen)
       const u = el('button', '', 'Senere'); u.id = 'oppsenere'; u.title = 'Legg steget sammen til én linje – trykk + for å se det igjen'; u.onclick = () => { utsatt = s.id; sistSteg = null; kjør(); }; rad.appendChild(u); }
@@ -191,7 +202,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     const klar = !!leirNøkkel() && (!navigator.webdriver || API.test === true) && !av, st = $('oppstart'), start = st && st.classList.contains('på'), kort = ($('hendelse') && synlig($('hendelse'))) || ($('hjelp') && synlig($('hjelp'))) || (document.body.classList.contains('kort') && ['morgenkort', 'samfunnkort', 'personkort'].some(id => $(id) && $(id).classList.contains('på') && synlig($(id))));
     if (!klar || start || kort) { skjul(); return; }
     if (T.leir !== leirNøkkel()) last();
-    const bl = bilde(), nye = Opplaering.oppdater(T, bl); if (nye.length) { lagre(); gjortKø.push(...nye); }
+    const bl = bilde(), nye = Opplaering.oppdater(T, bl); sisteBilde = bl; if (nye.length) { lagre(); gjortKø.push(...nye); }
     // (runde 6) over «Mer»-raden når den er åpen (den la seg oppå ruta)
     { const km = [$('kommer'), $('mkommer')].find(e => e && e.classList.contains('på') && synlig(e)), b = km ? Math.round(window.innerHeight - km.getBoundingClientRect().top + 8) + 'px' : ''; if (boks.style.bottom !== b) boks.style.bottom = b; }
     const tlf = document.body.classList.contains('kort'), meny = MENYER.some(id => synlig($(id))), dekker = tlf && !meny && DEKKER.some(id => synlig($(id))), angrep = angrepNå();
@@ -202,6 +213,9 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     const liten = (på) => { boks.classList.toggle('liten', på); document.body.classList.toggle('oppliten', på); };
     // (runde 6) et steg som nettopp ble gjort, står med ✓ en stund (før hoppet det videre før man rakk å lese, og et steg som alt var gjort,
     // ble aldri vist – «Hopp over» på steg 6 så ut til å gå rett til steg 8)
+    // (runde 13, kritiker G: «4 av 9 Lag en tropp» sto igjen etter at troppen var laget – lagpanelet dekket ruta og ✓ gikk ut før den ble sett)
+    // mens et panel dekker, telles ✓-tiden ikke ned, men innholdet er alt byttet til ✓
+    if (gjortKø.length && dekker && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) tegn(null, null, g); gjortTil = 0; skjul(); return; }
     if (gjortKø.length) { const nå = performance.now(); if (!gjortTil) gjortTil = nå + VIS_GJORT;
       if (nå >= gjortTil) { gjortKø.shift(); gjortTil = gjortKø.length ? nå + VIS_GJORT : 0; }
       if (gjortKø.length && !document.body.classList.contains('gaar')) { const g = STEG.find(x => x.id === gjortKø[0]); if (g) { if (dekker) { skjul(); return; }
@@ -228,6 +242,8 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     // RUNDE 12: ringen lyste rundt Tropper i flere spilldøgn mens steget var lagt sammen – den står ikke når steget er utsatt, har stått lenge
     // eller du har lagt opplæringen sammen selv (den korte linja liggende viser den fortsatt)
     if (m && synlig(m) && inni(m) && !sammen && utsatt !== s.id && !lengeNå) { const r = m.getBoundingClientRect(); ring.style.left = r.left - 4 + 'px'; ring.style.top = r.top - 4 + 'px'; ring.style.width = r.width + 8 + 'px'; ring.style.height = r.height + 8 + 'px'; ring.classList.add('på'); } else ring.classList.remove('på'); }
+  // (runde 13) et steg sjekkes straks etter et trykk (troppen er laget, noen er satt på Vakt …), ikke bare hvert 0,4 s
+  document.addEventListener('click', () => setTimeout(kjør, 60));
   setInterval(kjør, 400); window.addEventListener('riksbrudd-spill', () => { last(); setTimeout(kjør, 600); }); window.addEventListener('resize', kjør);
   // Leir-menyen, fanen Mål: slå opplæringen av og på, eller ta den en gang til
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
