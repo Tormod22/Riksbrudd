@@ -19,7 +19,7 @@ body.kort #letknapp{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); font-
 #inneknapper{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:6; display:flex; flex-direction:column-reverse; align-items:center; gap:8px; pointer-events:none; }
 #inneknapper > button{ pointer-events:auto; } #inneknapper > #skapknapp{ order:1; } #inneknapper > #sikreknapp{ order:2; } #inneknapper > #lutknapp{ order:3; } #inneknapper > #mobelknapp{ order:4; } #inneknapper > #dorknapp{ order:5; } #inneknapper > #letknapp, #inneknapper > #skapknapp, #inneknapper > #sikreknapp, #inneknapper > #lutknapp, #inneknapper > #mobelknapp, #inneknapper > #dorknapp{ position:relative; left:auto; right:auto; top:auto; bottom:auto; transform:none; margin:0; }
 body.kort #inneknapper{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); gap:6px; }
-@media (max-height:560px){ body.kort #inneknapper{ top:calc(var(--topp,40px) + 50px); bottom:auto; flex-direction:row; flex-wrap:wrap; justify-content:center; width:min(560px,62vw); }
+@media (max-height:560px){ body.kort #inneknapper{ top:calc(var(--topp,40px) + 60px); bottom:auto; flex-direction:row; flex-wrap:wrap; justify-content:center; width:min(560px,62vw); }
   body.kort #inneknapper > button{ min-width:0; min-height:38px; font-size:14px; padding:4px 12px; } }
 #funnpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 90px); z-index:8; display:none; width:min(440px,92vw); max-height:calc(100vh - var(--topp,58px) - 190px); overflow:auto; box-sizing:border-box; padding:10px 14px 12px;
   background:rgba(24,20,13,.96); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:15px; }
