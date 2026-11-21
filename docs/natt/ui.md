@@ -572,3 +572,5 @@ endringer (knappen er tom når du ikke står ved en dør). Grønn på PC og mobi
 **Ikke gjort / ikke prøvd:** Folk i toppstripa er ikke prøvd i ekte 3D (for tregt her) – bare med et smalt PC-vindu, som gir samme mangel på
 plass. Morgenmøtet er fortsatt høyt på liggende telefon (ikke min fil). Varseltrekanten står fortsatt alene i flisa; årsaken står i boblen og i
 Folk-panelet.
+**Mobilkontrollen** (`PORT=8985 SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, 21. nov 14:28): «Alt i orden» (489 s). Ui-vakta tok 55,6 s
+der (alle delene; runde 13-delen ca. 10 s) – mer enn de ca. 20 s briefen ber om.
