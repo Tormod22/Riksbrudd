@@ -16,6 +16,13 @@
   const vedLeir = o => { const L = leir(); return !!L && Math.hypot(o.x - L.x, o.y - L.y) <= R.nær; };
   const bærer = k => ENHETER.find(e => e.ombord === k);
   const biler = () => (window.KJORETOY || []).filter(k => k.side === 'blå' && TR.plass(k) > 0 && !k.sti && !k.oppdrag);
+  // (runde 14, kritiker J: forslaget sa «i en speiderbil», men Kjøretøy hadde bare «Til fots» – bilen sto litt over 300 m unna)
+  // Claudes forslag: en bil innen BIL_NÆR meter fra leiren kan velges (troppen settes opp ved bilen). Biler som ikke kan velges, står
+  // i lista som grå valg med grunnen.
+  const BIL_NÆR = 800;
+  const bilNær = (k, L) => !!L && Math.hypot(k.x - L.x, k.y - L.y) <= BIL_NÆR;
+  function bilGrunn(k, L) { if (k.oppdrag) return 'på oppdrag'; if (k.sti) return 'kjører'; const b = bærer(k); if (b) return `${b.navn} sitter i den`; if (k.hp <= 0) return 'ødelagt';
+    if (L) { const d = Math.hypot(k.x - L.x, k.y - L.y); if (d > BIL_NÆR) return `${String(Math.round(d / 100) / 10).replace('.', ',')} km fra leiren – kjør den hjem først`; } return ''; }
   const lagre = () => { if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); if (window.LagringSpill && LagringSpill.lagre) LagringSpill.lagre(); };
   let valgte = new Set(), navn = '', bev = 'standard', bil = '', sist = '', våpen = {}, utstyr = new Set(), malValgt = null;
   // (runde 8) hvem forslagene lar bli igjen og bygge (TR.behold), og advarslene når leiren mister byggerne eller kokken
@@ -160,7 +167,8 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
         ? (alle.length ? `For få folk til et forslag: ${navnH.join(' og ')} blir igjen og bygger. Rekrutter flere i Folk, eller oppløs en tropp ved leiren.` : 'Ingen i leiren. Rekrutter i Folk, eller oppløs en tropp ved leiren.')
         : `Forslagene lar ${navnH.join(' og ')} bli igjen og bygge i leiren. Vil du ha dem med, kryss dem av selv.`)); }
     if (window.Strid && !Object.keys(våpen).length) { const sel = el('select', { id: 'troppbev' }); for (const id of Strid.VALGBARE) { const B = Strid.BEVÆPNING[id], o = el('option', { value: id }, `${B.navn} – ${B.kort}${B.pris ? ' (' + B.pris.toLocaleString('nb-NO') + ' kr)' : ''}`); if (id === bev) o.selected = true; sel.append(o); } sel.onchange = () => { bev = sel.value; }; kol1.append(el('label', {}, el('span', {}, 'Bevæpning'), sel)); }
-    const ledige = biler().filter(k => !bærer(k) && L && Math.hypot(k.x - L.x, k.y - L.y) <= R.nær), sb = el('select', { id: 'troppbil' }); sb.append(el('option', { value: '' }, 'Til fots')); for (const k of ledige) { const o = el('option', { value: k.navn }, `${k.navn} (plass til ${TR.plass(k)})`); if (k.navn === bil) o.selected = true; sb.append(o); } sb.onchange = () => { bil = sb.value; vis(true); }; kol1.append(el('label', {}, el('span', {}, 'Kjøretøy'), sb));
+    const ledige = biler().filter(k => !bærer(k) && bilNær(k, L)), sb = el('select', { id: 'troppbil' }); sb.append(el('option', { value: '' }, 'Til fots')); for (const k of ledige) { const o = el('option', { value: k.navn }, `${k.navn} (plass til ${TR.plass(k)})`); if (k.navn === bil) o.selected = true; sb.append(o); }
+    for (const k of (window.KJORETOY || []).filter(q => q.side === 'blå' && TR.plass(q) > 0 && !ledige.includes(q))) sb.append(el('option', { value: '', disabled: '' }, `${k.navn} – ${bilGrunn(k, L) || 'ikke ledig'}`)); sb.onchange = () => { bil = sb.value; vis(true); }; kol1.append(el('label', {}, el('span', {}, 'Kjøretøy'), sb));
     const P = F ? F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)) : []; valgte = new Set([...valgte].filter(id => P.some(p => p.id === id)));
     const k = ledige.find(q => q.navn === bil), tak = k ? Math.min(R.maks, TR.plass(k)) : R.maks; kol2.append(el('h3', {}, `Folk (${valgte.size} valgt${k ? ', høyst ' + tak + ' i ' + k.navn : ''})`));
     if (!P.length) kol2.append(el('small', {}, 'Ingen arbeidsføre i leiren. Rekrutter flere i Folk.'));
@@ -193,7 +201,7 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     return f; }
   function brukMal(id) { const M = TR.MALER[id], F = folk(), L = leir(); if (!M || !F) return; malValgt = id; const P = F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)), ider = TR.foreslå(P, M.n, holdIgjen(P));
     valgte = new Set(ider); våpen = {}; ider.forEach((pid, i) => { const v = M.våpen[i] || 'rifle'; if (v !== 'rifle') våpen[pid] = v; }); if (!Object.keys(våpen).length && ider.length) våpen[ider[0]] = 'rifle'; utstyr = new Set(M.utstyr);
-    const k = M.bil ? biler().find(q => q.type === M.bil && !bærer(q) && L && Math.hypot(q.x - L.x, q.y - L.y) <= R.nær && TR.plass(q) >= ider.length) : null; bil = k ? k.navn : '';
+    const k = M.bil ? biler().find(q => q.type === M.bil && !bærer(q) && bilNær(q, L) && TR.plass(q) >= ider.length) : null; bil = k ? k.navn : '';
     if (!navn || /^\d+\. tropp$/.test(navn) || Object.values(TR.MALER).some(q => navn.startsWith(q.navn))) navn = `${M.navn} ${egne().filter(e => e.fraFolk).length + 1}`; vis(true); }
   function vis(tving) { if (!panel.classList.contains('på')) return; if (!tving && window.pekerNede && pekerNede(panel)) return; const a = document.activeElement; if (!tving && a && panel.contains(a) && /INPUT|SELECT/.test(a.tagName)) return; const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop, kr = [...panel.querySelectorAll('.kol')].map(k => k.scrollTop); panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; panel.querySelectorAll('.kol').forEach((k, i) => { k.scrollTop = kr[i] || 0; }); }
   function åpne() { endrer = null; if (!navn) navn = `${egne().filter(e => e.fraFolk).length + 1}. tropp`; panel.classList.add('på'); sist = ''; vis(true); }

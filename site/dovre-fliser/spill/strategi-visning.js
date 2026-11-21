@@ -209,7 +209,7 @@
     const s = lag || (t && t.lag && t.lag.lag); if (!s) { logg('Ingen ledige lag å sende. Lag som marsjerer, må komme fram først.'); return false; }
     // (runde 13) radioens rekkevidde med terrenget: sjekkes før advarselen (tar et øyeblikk første gang for et sted)
     if (auto() && !o.likevel && !o.sjekket && KR() && terrengKjent(by) === undefined) { advarsel = { by, lag, ute: [], farer: [], sjekker: true }; if (åpen) { sist = ''; vis(true); }
-      terrengSjekk(by).then(() => { if (advarsel && advarsel.sjekker && advarsel.by === by) { advarsel = null; send(by, lag, { ...o, sjekket: true }); } }); return false; }
+      terrengSjekk(by).then(() => { if (advarsel && advarsel.sjekker && advarsel.by === by) { advarsel = null; send(by, lag, { ...o, sjekket: true }); } }); rullTilVarsel(); return false; }
     // (19. nov, pakke «krig») store tettsteder trenger flere lag: send alle i t.flere, og si fra når det ikke er nok
     if (!lag && t && t.flere && t.flere.length > 1) { const sendt = t.flere.filter(q => q.lag && kanSendes(q.lag));
       if (auto() && !o.likevel) { const ute = sendt.filter(q => utenforRadio(q.lag, by)), fa = farer(by, sendt.map(q => q.lag), t);
@@ -222,7 +222,12 @@
     if (!lag && t && !t.nok) logg(`${by.navn} ${S.kravTekst(t)}. Laget kan ikke ta det alene – samle flere lag først.`);
     if (o.likevel && speider(s)) s.speidLikevel = by.id;
     gi(s, by); if (!s.ombord) logg(`${s.navn} sendes mot ${by.navn}` + (t && t.forsvar > 0 ? ' – tettstedet er forsvart.' : '.')); advarsel = null; valgtBy = by; vis(true); skitten = true; return true; }
-  function visAdvarsel(by, lag, ute, fa, alle) { advarsel = { by, lag, ute, farer: fa || [], alle: alle || (lag ? [lag] : ute) }; valgtBy = by; if (inne) skjul(false); sist = ''; vis(true); skitten = true; }
+  // (runde 14, kritiker I: «Send likevel» lå over toppen av panelet på 844 × 390) panelet rulles til toppen, så varselet alltid synes
+  function visAdvarsel(by, lag, ute, fa, alle) { advarsel = { by, lag, ute, farer: fa || [], alle: alle || (lag ? [lag] : ute) }; valgtBy = by; if (inne) skjul(false); sist = ''; vis(true); rullTilVarsel(); skitten = true; }
+  function rullTilVarsel() { panel.scrollTop = 0; const a = document.getElementById('krigadvarsel'); if (!a) return; const r = a.getBoundingClientRect(), p = panel.getBoundingClientRect();
+    if (r.top < p.top || r.bottom > p.bottom) panel.scrollTop += r.top - p.top - 4;
+    // står panelet selv delvis utenfor skjermen, flyttes det inn
+    const p2 = panel.getBoundingClientRect(); if (p2.top < 0) panel.style.top = Math.round(Math.max(0, parseFloat(getComputedStyle(panel).top) || 0) - p2.top + 2) + 'px'; }
   // advarselsboksen øverst i panelet: radioen (med terrenget) og farene på stedet
   function advarselBoks(T) { const a = advarsel; if (!a) return null; const k = KR(), L = leir();
     if (a.sjekker) return el('div', { klasse: 'by advarsel', id: 'krigadvarsel', role: 'status' }, el('b', {}, `Sjekker radiodekningen mot ${a.by.navn} …`), el('div', {}, 'Terrenget mellom leiren og stedet regnes ut.'));
@@ -475,7 +480,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
   function skjul(ja) { inne = !!ja; try { localStorage.setItem('riksbrudd-krigpanel', inne ? 'inn' : 'ut'); } catch (e) { /* uten lagring */ }
     panel.classList.toggle('inn', inne); sist = ''; vis(true); if (document.body.classList.contains('kort')) passInn(); else skitten = true; }
   let snuTid = 0; window.addEventListener('resize', () => { if (!åpen || !document.body.classList.contains('kort')) return; clearTimeout(snuTid); snuTid = setTimeout(() => { if (åpen) passInn(); }, 350); });
-  function lukk() { if (!åpen) return; åpen = false; valgtBy = null; panel.classList.remove('på'); document.body.classList.remove('krig'); kn.classList.remove('på'); kn.setAttribute('aria-pressed', 'false');
+  function lukk() { if (!åpen) return; åpen = false; valgtBy = null; panel.style.top = ''; panel.style.bottom = ''; panel.classList.remove('på'); document.body.classList.remove('krig'); kn.classList.remove('på'); kn.setAttribute('aria-pressed', 'false');
     if (førKam) { kam.x = førKam.x; kam.y = førKam.y; kam.m = førKam.m; førKam = null; } skitten = true; }
   window.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const t = e.target, tag = t && t.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 'Escape' && åpen) { lukk(); return; } if ((e.key === 't' || e.key === 'T') && !kn.hidden && !(typeof R3 !== 'undefined' && R3 && R3.fot)) { const st = document.getElementById('oppstart'); if (st && st.classList.contains('på')) return; kn.click(); } });
@@ -561,6 +566,13 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       ['Sterkere motstander', sterkere, 'Samme område, men fienden treffer bedre.'],
       ['Fortsett som nå', null, 'Spill videre uten endringer.'],
       ...(window.ScenarioSpill && ScenarioSpill.etterspill ? [['Se krigen på nytt', () => ScenarioSpill.etterspill(), 'Spol gjennom hvem som holdt hva.']] : [])]); }
+  // (runde 14, kritiker I: den kompakte stripa lå oppå «⏭ Stoppet: …» og «Spol videre») står stoppkortet (#flytkort) der stripa ville
+  // ligget, flyttes stripa ned under kortet; når kortet er borte, går den tilbake
+  let flyttetNed = false;
+  setInterval(() => { const fk = document.getElementById('flytkort'), oppe = åpen && inne && fk && fk.classList.contains('på') && fk.getClientRects().length;
+    if (!oppe) { if (flyttetNed) { panel.style.top = ''; panel.style.bottom = ''; flyttetNed = false; } return; }
+    const a = fk.getBoundingClientRect(); if (flyttetNed) { panel.style.top = ''; panel.style.bottom = ''; } const b = panel.getBoundingClientRect();
+    if (a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom) { panel.style.top = Math.round(a.bottom + 6) + 'px'; panel.style.bottom = 'auto'; flyttetNed = true; } else if (flyttetNed) { panel.style.bottom = ''; flyttetNed = false; } }, 250);
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
   const api = { test: false, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, kjentForsvar, fredSlutt, hvorforIkkeTar, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;

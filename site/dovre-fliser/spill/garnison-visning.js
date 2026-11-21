@@ -11,6 +11,11 @@
   const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
   const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
+  // (runde 14, kritiker J: «Vaktlaget ble garnison i Røysland ×3 på vei forbi») et lag på marsj gjennom et tettsted (målet ligger utenfor)
+  // er ikke garnison der og nevnes ikke når stedet tas
+  const passerer = (s, by) => { const m = s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null; return !!m && !G.inni(by, m[0], m[1]); };
+  // bygdevernet (spill/krig-visning.js) slipper ikke dine lag inn: mens det har mann igjen, går ikke inntaket for deg
+  const vernHer = by => { try { const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); return !!(T && T.vern && T.vern[by.e.id] > 0); } catch (e) { return false; } };
   const tidTekst = sek => (!isFinite(sek) ? 'for få mann' : sek < 5400 ? Math.round(sek / 60) + ' min' : (Math.round(sek / 360) / 10).toString().replace('.', ',') + ' t');
   // (19. nov) hva et tettsted krever: «trenger ca. 69 mann (minst 35) og ca. 3,8 t»
   // (runde 13, kritiker H: «trenger 5 mann» og «minst 3 mann» om samme sted) begge tallene står alltid: full fart og minst
@@ -30,6 +35,7 @@
   const gAuto = () => !navigator.webdriver || !!window.GarnisonSpill.test;
   function holdStilling() { if (!gAuto() || !window.StridSpill || !StridSpill.regel) return;
     for (const s of ENHETER) { if (s.side !== 'blå' || s.karakter || !levende(s) || s.leirvakt || s.forsvar) continue; const by = byFor(s), t = by ? G.tilstand(S, by.e.id) : null, id = t && t.eier === 'blå' ? by.e.id : null;
+      if (id && passerer(s, by)) continue;
       if (id && s.garnisonHold !== id) { if (s.garnisonHold === undefined || s.garnisonHold === null) s.garnisonFør = { ...StridSpill.regel(s) }; s.garnisonHold = id;
         if (!holder(s)) { s.strid = window.Strid ? Strid.ren({ ...StridSpill.regel(s), ...HOLD }) : { ...StridSpill.regel(s), ...HOLD }; logg(`${s.navn} er garnison i ${by.e.navn} og holder stillingen (kjemper også mot en sterkere fiende). Vil du at laget skal trekke seg: lagpanelet → Stridsregler.`); } }
       else if (!id && s.garnisonHold) { if (holder(s) && s.garnisonFør) s.strid = s.garnisonFør; s.garnisonHold = null; delete s.garnisonFør; } } }
@@ -38,16 +44,20 @@
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
     holdStilling();
     const sek = akk; akk = 0;
-    for (const h of G.steg(S, byer(), ENHETER, sek)) {
+    const hendelser = G.steg(S, byer(), ENHETER, sek);
+    // (runde 14) bygdevernet holder dine lag ute: inntaket står på null, og «Våre lag tar …» skrives ikke (det sto samtidig med «vil ikke slippe dere inn»)
+    if (gAuto()) for (const by of byer()) { const t = S.get(by.e.id); if (t && t.inntar && t.inntar.side === 'blå' && !t.eier && vernHer(by)) t.inntar.sek = 0; }
+    for (const h of hendelser) {
       const navn = h.by.e.navn, blå = h.side === 'blå';
+      if (blå && h.hva === 'inntar' && gAuto() && vernHer(h.by)) continue;
       // (19. nov) for få mann: meldingen «For få til å ta …» under sier det i stedet
       const forFå = h.hva === 'inntar' && blå && !isFinite(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk));
       if (h.hva === 'inntar' && !forFå && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
-        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `Våre lag tar ${navn} (${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender i tettstedet).` : `${hvem(h.side)} er i ${navn}!`); } }
+        if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).filter(s => !passerer(s, h.by)).map(s => s.navn).join(' og ') || 'Et lag'} har gått inn i ${navn}. Står laget der i ca. ${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender, blir stedet ditt.` : `${hvem(h.side)} er i ${navn}!`); } }
       // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite
       if (h.hva === 'forFå' && blå) logg(`For få til å ta ${navn} (${nf.format(h.by.e.folk || 0)} innb.): det trengs minst ${h.trengs} mann, dere har ${Math.floor(h.har)}. Send flere lag.`);
       // (runde 7) et tettsted du holdt, er tapt: si det tydelig (motstanderne angriper nå garnisonene dine)
-      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt. ${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).map(s => s.navn).join(', ')} er garnison.` : h.fra === 'blå' ? `Vi har mistet ${navn} – ${hvem(h.side)} har tatt det.` : `${hvem(h.side)} har tatt ${navn}${h.fra && h.fra !== h.side ? ' fra ' + hvem(h.fra) : ''}.`);
+      if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt.` + ((g => g.length ? ` ${g.join(', ')} er garnison.` : ' Laget som tok det, er på vei videre – stedet har ingen garnison.')(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).filter(s => !passerer(s, h.by)).map(s => s.navn))) : h.fra === 'blå' ? `Vi har mistet ${navn} – ${hvem(h.side)} har tatt det.` : `${hvem(h.side)} har tatt ${navn}${h.fra && h.fra !== h.side ? ' fra ' + hvem(h.fra) : ''}.`);
       if (h.hva === 'strid') logg(`Kamp om ${navn}: ingen tar tettstedet mens begge sider er der.`);
       skitten = true;
     }
@@ -67,6 +77,7 @@
 
   // ---------- panelene ----------
   KROKER.lagTekst.push(s => { const by = byFor(s); if (!by) return null; const t = G.tilstand(S, by.e.id);
+    if (s.side === 'blå' && passerer(s, by)) return `på vei gjennom ${by.e.navn}`;
     return t.eier === s.side ? `garnison i ${by.e.navn}` + (s.side === 'blå' && s.garnisonHold === by.e.id && holder(s) ? ' · holder stillingen' : '') : t.inntar && t.inntar.side === s.side ? `tar ${by.e.navn} (${Math.round(100 * t.inntar.sek / R.innta)} %)` : `i ${by.e.navn}`; });
   KROKER.info.push((o) => {
     if (o.lag === 'kraft') { const t = window.INFRA_TILSTAND ? Odeleggelse.tilstand(INFRA_TILSTAND, 'kraft', o.e.id) : 'hel', x = o.deler[0][0], y = o.deler[0][1];
