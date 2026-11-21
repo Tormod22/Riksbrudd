@@ -192,7 +192,12 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne);
     return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg,
       falneNavn: N.falne.length === falne ? N.falne : null, sårNavn: N.sår.length === sårede ? N.sår : null }; }
-  function giRapport(id, u) { if (gitt.has(id)) return null; gitt.add(id); if (gitt.size > 40) gitt.delete(gitt.values().next().value);
+  // (runde 14, kritiker J: «kampen har begynt» og «slått tilbake» kom samme spillminutt) – rapporten kommer tidligst KAMP.minst
+  // spillminutter etter at kampen om leiren begynte; til da venter den (ventRapport), og sluttAvSeg gir ingen egen
+  function giRapport(id, u) { if (gitt.has(id)) return null; const k0 = kampStart.get(id);
+    if (Number.isFinite(k0) && tid - k0 < KAMP.minst && auto()) { if (!ventRapport.has(id)) ventRapport.set(id, u); return null; }
+    ventRapport.delete(id); return giRapportNå(id, u); }
+  function giRapportNå(id, u) { if (gitt.has(id)) return null; gitt.add(id); if (gitt.size > 40) gitt.delete(gitt.values().next().value);
     const r = FO.sluttRapport({ ...tap(id), ...u }); logg(`${r.tittel}. ${r.tekst}`);
     if (auto()) { const t0 = tap(id); rapportNå = { ...r, til: performance.now() + 150000, bygg: t0.skadetBygg || [], sår: (t0.sårede || 0) + (t0.falne || 0) }; hend('annet', 'angrepet er over'); } sistAlarm = ''; vis(); return r; }
   // fra spill/spillet-visning.js når en røverbølge er over: { nr, utfall: 'slått' | 'unna' | 'herjet' | 'slapp', tok, tapte }
@@ -218,6 +223,14 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   // PC-kritikeren: «etter én spoling sto det: alle 1 røverlag er slått ut» – spolingen gikk forbi hele kampen. Første gang et av lagene dine
   // og en angriper skyter på hverandre i et angrep: en linje i loggen og hendelsen «alarm» (flyt.js stopper spolingen og går ned til 1×).
   let kampMeldt = '', snartMeldt = '', snartAkk = 0, kampUte = '', settMeldt = '';
+  // (runde 14, kritiker J: kampen om leiren var avgjort på ett spillminutt) Claudes forslag: nær = meter – under dette fra leiren senkes
+  // farten (før første skudd); innled = spillminutter etter at kampen om leiren begynte der begge sider skyter med faktoren «ild» (de søker
+  // dekning, avstanden er stor) – kampen varer lenger; minst = spillminutter fra «kampen har begynt» til rapporten («slått tilbake»)
+  const KAMP = { nær: 500, innled: 3, ild: .4, minst: 2 }, kampStart = new Map(), ventRapport = new Map(); let nærMeldt = '';
+  KROKER.ild.push((a, b) => { if (!kampStart.size) return 1; const A = angrep(); if (!A) return 1; const k0 = kampStart.get(A.id);
+    if (!Number.isFinite(k0) || tid - k0 >= KAMP.innled) return 1;
+    const iA = e => A.lag.includes(e); return (iA(a) && b && b.side === 'blå') || (iA(b) && a && a.side === 'blå') ? KAMP.ild : 1; });
+  KROKER.sim.push(() => { if (!ventRapport.size) return; for (const [id, u] of [...ventRapport]) { const k0 = kampStart.get(id); if (!Number.isFinite(k0) || tid - k0 >= KAMP.minst) { ventRapport.delete(id); giRapportNå(id, u); } } });
   // Claudes forslag: et eget lag så nær leiren (meter) = kampen om leiren
   const KAMP_VED = 700;
   KROKER.sim.push(dt => { if (!auto()) return; const A = angrep(); if (!A) return;
@@ -226,9 +239,14 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // «kampen om leiren» er bare kamp der et eget lag står innen KAMP_VED av leiren; en kamp et annet sted meldes som det den er, én gang
     if (kampMeldt !== A.id) { const L = leir(), e = L && A.lag.find(q => Math.hypot(q.x - L.x, q.y - L.y) <= R.hent && iStrid(q)), b = e && iStrid(e);
       if (b && Math.hypot(b.x - L.x, b.y - L.y) <= KAMP_VED) { kampMeldt = A.id;
+        if (!kampStart.has(A.id)) kampStart.set(A.id, tid); if (kampStart.size > 20) kampStart.delete(kampStart.keys().next().value);
         logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`, b.x, b.y); settMeldt = A.id; }
       else if (b && kampUte !== A.id + b.navn) { kampUte = A.id + b.navn; const km2 = km(Math.hypot(b.x - L.x, b.y - L.y));
         logg(b.karakter ? `Du er i ildkamp med ${e.navn}, ${km2} fra leiren.` : `${b.navn} er i ildkamp med ${e.navn}, ${km2} fra leiren.`); hend('alarm', b.karakter ? `du er i ildkamp med ${e.navn} (${km2} fra leiren)` : `${b.navn} er i ildkamp med ${e.navn} (${km2} fra leiren)`, b.x, b.y); } }
+    // (runde 14) under KAMP.nær m fra leiren: farten ned (hendelsen «alarm» – flyt.js går til 1×) før første skudd, én gang per angrep
+    if (nærMeldt !== A.id) { const L = leir(), q = L ? A.lag.filter(e => !e.flykter && !e.trekker).sort((a, b) => Math.hypot(a.x - L.x, a.y - L.y) - Math.hypot(b.x - L.x, b.y - L.y))[0] : null, dq = q ? Math.hypot(q.x - L.x, q.y - L.y) : Infinity;
+      if (dq <= KAMP.nær) { nærMeldt = A.id; const hvem = A.røvere ? 'røverne' : A.navn, txt = kjent(q) ? `${hvem} er ${km(dq)} ${FO.retning(Math.atan2(q.y - L.y, q.x - L.x))} for leiren` : `vaktene hører noe – ${hvem} kan være under ${KAMP.nær} m unna`;
+        logg(txt.charAt(0).toUpperCase() + txt.slice(1) + '.'); hend('alarm', txt, kjent(q) ? q.x : undefined, kjent(q) ? q.y : undefined); } }
     // (runde 13, kritiker G: «hele kampen skjedde mens ⏭ spolte») første gang noen ser angriperne: en linje i loggen og hendelsen «alarm» –
     // ⏭ stopper og farten går ned til 1×, og kortet har «Vis» (flyt.js). Én gang per angrep.
     if (settMeldt !== A.id) { const L = leir(), kj = L ? A.lag.filter(q => kjent(q)) : [];
