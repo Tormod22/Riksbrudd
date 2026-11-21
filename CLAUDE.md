@@ -24,6 +24,10 @@ NY RETNING (10. nov): spillet handler om din egen semi-lovlige militærgruppe (�
 utlandet – de politiske fraksjonene erstattes av gjenger. Les docs/plan-gjeng.md (faser G1–G6, åpne spørsmål).
 FUNKSJONSPLAN og hvem som eier hvilke filer (to chatter parallelt, kroker KROKER.tegn/sim/trykk, spill/): docs/plan-funksjoner.md.
 SPILLMEKANIKK (forsyning, olje, bruer, ingeniører, detaljnivå – inspirert av WarFront på Steam, ikke kopiert): docs/plan-spillmekanikk.md.
+INSPIRASJON WARDOGS (21. nov, brukeren: «Wardogs er også en inspirasjon til spillet vi lager»): Wardogs (Bulkhead/Team17) er et taktisk
+flerspiller-skytespill om private militære selskaper (PMC-er) som slåss om en oppdiktet region, med kombinerte våpen, bygging og ødeleggelse.
+Passer med plan-gjeng.md (din egen semi-lovlige militærgruppe). Bare inspirasjon: ikke deres navn (selskapene, kart, logoer), våpen-/kartdesign
+eller utseende. Spør brukeren hva ved Wardogs som skal inn før noe stort bygges.
 PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger). ÅRSTALL: spillet foregår i 2023 (brukeren,
 8. nov), ikke 1986 som i HANDOFF/designdokumentet. Bygging: pipeline/fliser/blokk.py + sammen.py, .github/workflows/norge.yml
 (Actions -> «Bygg Norge», input blokker og aar), release kart-norge-<år>-<hash>, tas i bruk på /norge med bruk_norge.py (til da sender /norge til /kommuner-1986).
