@@ -236,6 +236,39 @@
         k(-b + .1, b * .1, d, d + .012, 1.08, 1.22, [.12, .2, .16]); k(b - .08, b - .05, -.03, 0, h, h + 1.1, STÅL); k(b * .3, b * .8, d, d + .03, .3, .6, MØRK); break;
       case 'langbord': t(-b, b, -d, d, h - .05, h, LYST_TRE); bein(h - .05, LYST_TRE, .07, 'tre'); for (const sy of [-1, 1]) { t(-b + .1, b - .1, sy * (d + .38) - .15, sy * (d + .38) + .15, .42, .46, LYST_TRE); for (const x of [-b + .25, b - .31]) t(x, x + .06, sy * (d + .38) - .13, sy * (d + .38) + .13, 0, .42, LYST_TRE); }
         for (const x of [-b * .5, 0, b * .5]) k(x - .1, x + .1, -.1, .1, h, h + .015, HVIT, 'glatt', true); break;
+      // (runde 15) butikk, fjøs, industri, helse, kontor og kirke
+      case 'fruktdisk': t(-b, b, -d, d, 0, .62, LYST_TRE); for (let i = 0; i < 4; i++) { const x = -b + .05 + i * (m.b - .1) / 4, c = [[.78, .12, .1], [.92, .55, .12], [.35, .62, .2], [.92, .82, .2]][(i + Math.floor(m.f * 4)) % 4];
+          t(x, x + (m.b - .1) / 4 - .04, -d + .05, d - .05, .62, .7, [.62, .48, .3]); k(x + .03, x + (m.b - .1) / 4 - .07, -d + .1, d - .1, .7, .8, c, 'tøy'); } t(-b, b, -d, -d + .06, .62, .95, LYST_TRE); break;
+      case 'fryseboks': k(-b, b, -d, d, .05, h - .06, HVIT); k(-b + .04, b - .04, -d + .04, d - .04, h - .06, h, [.62, .76, .86], 'glatt'); k(-b, b, -d, d, 0, .05, MØRK); break;
+      case 'båsrekke': { const kanal = .6, før = .5, n = Math.max(1, Math.round(m.b / 1.2));
+          k(-b, b, -d, -d + kanal, 0, .02, [.24, .21, .17]); k(-b, b, -d + kanal, d - før, 0, .05, [.32, .32, .33], 'tøy');
+          for (let i = 0; i <= n; i++) { const x = -b + i * m.b / n; k(x - .03, x + .03, -d + kanal + .3, d - før - .1, .25, .3, STÅL); k(x - .03, x + .03, -d + kanal + .3, -d + kanal + .36, 0, 1.1, STÅL); k(x - .03, x + .03, d - før - .16, d - før - .1, 0, 1.1, STÅL); }
+          k(-b, b, d - før - .16, d - før - .1, .95, 1.02, STÅL); k(-b, b, d - før - .16, d - før - .1, 1.15, 1.22, STÅL);
+          k(-b, b, d - før, d, 0, .42, [.64, .63, .6], 'betong'); k(-b + .06, b - .06, d - før + .06, d - .06, .42, .5, [.82, .7, .36], 'tøy'); break; }
+      case 'melketank': k(-b, b, -d, d, .35, h, STÅL, 'glatt', true); k(-b * .4, b * .4, -d * .4, d * .4, h, h + .12, STÅL, 'glatt', true); bein(.35, STÅL, .06); break;
+      case 'fôrvogn': k(-b, b, -d, d, .3, h, [.22, .46, .26]); k(-b + .05, b - .05, -d + .05, d - .05, h - .05, h + .05, [.82, .7, .36], 'tøy'); for (const sy of [-d * .6, d * .6]) for (const sx of [-b - .02, b - .08]) k(sx, sx + .1, sy - .2, sy + .2, 0, .4, MØRK); break;
+      case 'sagbenk': k(-b, b, -d * .55, d * .55, .7, .88, [.36, .37, .38]); for (let x = -b + .1; x < b; x += 1.4) for (const sy of [-1, 1]) k(x, x + .1, sy * d * .5 - .05, sy * d * .5 + .05, 0, .7, MØRK);
+          k(-.42, .42, -.012, .012, .62, 1.3, STÅL); k(-.5, .5, -d * .55, -d * .4, .88, 1.5, [.78, .6, .12]); t(-b * .9, b * .25, -.22, .22, .88, 1.28, [.55, .4, .25]); for (let i = 0; i < 3; i++) t(b * .35 + i * .5, b * .35 + i * .5 + .4, -d * .5, d * .5, .88, .92, [.85, .7, .48]); break;
+      case 'plankestabel': for (let z = 0, j = 0; z < h; z += .09, j++) { if (j % 4 === 3) { for (let x = -b; x < b; x += .9) t(x, x + .05, -d, d, z, z + .04, [.45, .34, .22]); continue; } t(-b, b, -d, d, z, z + .05, j % 2 ? [.82, .68, .46] : [.76, .62, .42]); } break;
+      case 'tørkestativ': for (const sx of [-1, 1]) for (const sy of [-1, 1]) t(sx * b - (sx > 0 ? .08 : 0), sx * b + (sx > 0 ? 0 : .08), sy * d - (sy > 0 ? .08 : 0), sy * d + (sy > 0 ? 0 : .08), 0, h, [.45, .34, .22]);
+          for (let z = .4; z < h - .1; z += .45) for (let y = -d + .1; y < d - .1; y += .2) t(-b + .1, b - .1, y, y + .14, z, z + .03, [.85, .72, .5]); break;
+      case 'traverskran': { const z = h; k(-b, b, -.25, .25, z - .7, z - .15, [.86, .66, .12]); for (const sx of [-1, 1]) k(sx * b - (sx > 0 ? .5 : 0), sx * b + (sx > 0 ? 0 : .5), -d, d, z - .6, z - .1, [.86, .66, .12]);
+          const tx = (m.f - .5) * b; k(tx - .45, tx + .45, -.35, .35, z - 1, z - .65, MØRK); k(tx - .02, tx + .02, -.02, .02, Math.max(2.6, z - 4), z - 1, MØRK); k(tx - .12, tx + .12, -.06, .06, Math.max(2.4, z - 4.25), Math.max(2.6, z - 4), [.86, .66, .12]);
+          k(-b * .5, -b * .5 + .6, -.26, .26, z - .55, z - .3, [.1, .1, .1]); break; }
+      case 'sveisebås': k(-b, b, -d, -d + .05, 0, h, [.16, .3, .22]); for (const sx of [-1, 1]) k(sx * b - (sx > 0 ? .05 : 0), sx * b + (sx > 0 ? 0 : .05), -d, d, 0, h, [.16, .3, .22]);
+          k(-b, -b + .7, d - .04, d, .1, h - .1, [.2, .38, .26], 'tøy'); k(-.6, .6, -d * .4, d * .1, .76, .82, STÅL); bein(.76, MØRK, .05); k(b - .6, b - .2, -d + .2, -d + .5, 0, .8, [.72, .14, .12]); k(b - .5, b - .3, -d + .3, -d + .4, .8, 1.3, [.3, .5, .3], 'glatt', true); break;
+      case 'stålplater': k(-b, b, -d, d, 0, .12, [.5, .4, .28], 'tre'); for (let z = .12, j = 0; z < h; z += .04, j++) k(-b + .02 + (j % 3) * .02, b - .02 - (j % 2) * .03, -d + .02, d - .02, z, z + .035, j % 2 ? [.5, .52, .55] : [.42, .44, .47]); break;
+      case 'tank': k(-b, b, -d, d, 0, h, [.84, .84, .82], 'glatt', true); for (const z of [.8, h * .5, h - .6]) k(-b - .03, b + .03, -d - .03, d + .03, z, z + .06, [.6, .6, .6], 'glatt', true);
+          k(-b * .5, b * .5, -d * .5, d * .5, h, h + .25, [.7, .7, .7], 'glatt', true); k(b - .02, b + .06, -.2, .2, 0, h, STÅL); break;
+      case 'rørgate': for (let x = -b + .2; x < b; x += 1.5) { k(x, x + .1, -d, -d + .1, 0, h - .1, [.42, .42, .44]); k(x, x + .1, d - .1, d, 0, h - .1, [.42, .42, .44]); k(x, x + .1, -d, d, h - .45, h - .38, [.42, .42, .44]); }
+          [[.85, .66, .14], [.6, .62, .64], [.7, .16, .12]].forEach((c, i) => k(-b, b, -d + .12 + i * (m.d - .24) / 3, -d + .12 + (i + 1) * (m.d - .24) / 3 - .06, h - .38, h - .1, c, 'glatt')); break;
+      case 'ventil': k(-.11, .11, -.11, .11, 0, h - .3, [.66, .66, .68], 'glatt', true); k(-b * .6, b * .6, -.12, .12, h * .45, h * .45 + .22, [.66, .66, .68]); k(-.06, .06, -.06, .06, h - .3, h - .05, MØRK); k(-.3, .3, -.3, .3, h - .05, h, [.8, .12, .1], 'glatt', true); break;
+      case 'tavlepanel': k(-b, b, -d, d, 0, h, [.74, .76, .78]); for (let i = 0; i < Math.floor(m.b / .6); i++) { const x = -b + .1 + i * .6; k(x, x + .45, d, d + .012, 1.15, 1.55, [.08, .16, .12]); for (let j = 0; j < 3; j++) k(x + .05 + j * .13, x + .1 + j * .13, d, d + .02, .95, 1, j === 1 ? [.2, .8, .3] : j ? [.9, .7, .1] : [.85, .15, .1], 'glatt', true); } break;
+      case 'beboerbad': k(-b, b, -d, d, 0, h, [.93, .93, .9]); k(-.42, .42, d, d + .025, .01, 2.02, [.86, .84, .78], 'tre'); k(.28, .36, d + .025, d + .05, 1, 1.03, STÅL); k(-b - .005, b + .005, -d - .005, d + .005, h - .04, h, [.85, .85, .82]); break;
+      case 'undersøkelsesbenk': k(-b, b, -d, d, .58, .72, [.36, .52, .58], 'tøy'); k(-b + .04, b - .04, -d + .04, -d + .55, .72, .78, [.4, .56, .62], 'tøy'); k(-b + .05, b - .05, -d + .6, d - .05, .72, .725, HVIT); bein(.58, STÅL, .05); break;
+      case 'medisinskap': k(-b, b, -d, d, 0, h, HVIT); k(-.12, .12, d, d + .012, 1.38, 1.44, [.8, .12, .12]); k(-.03, .03, d, d + .012, 1.29, 1.53, [.8, .12, .12]); k(b - .12, b - .08, d, d + .03, .9, 1.1, STÅL); break;
+      case 'døpefont': k(-.22, .22, -.22, .22, 0, .78, [.84, .82, .78], 'glatt', true); k(-b, b, -d, d, .78, h, [.84, .82, .78], 'glatt', true); k(-b * .75, b * .75, -d * .75, d * .75, h - .02, h + .005, [.5, .62, .7], 'glatt', true); break;
+      case 'kopimaskin': k(-b, b, -d, d, 0, h, [.85, .85, .83]); k(-b + .05, b - .05, -d + .05, d - .05, h, h + .06, MØRK); k(-b * .6, b * .2, d - .02, d + .1, h - .3, h - .25, HVIT); break;
       default: k(-b, b, -d, d, 0, h, GRÅ);
     }
     // SMÅTING (17. nov, brukeren: «forbedre innsiden av bygg enda mer»): ting som står på bord og benker – tallerkener, kopper, bøker,
@@ -288,9 +321,22 @@
       case 'kontrollrom': S.gulv = ['betong', [.5, .54, .56]]; S.vegg = ['malt', [.86, .88, .86]]; S.lampe = 2; break;
       case 'drivhus': S.gulv = ['betong', [.5, .46, .4]]; S.vegg = ['malt', [.86, .92, .9]]; break;
       case 'storkjøkken': S.gulv = ['flis', [.8, .78, .72]]; S.vegg = ['malt', [.95, .93, .86]]; break;
+      // (runde 15) nye romtyper
+      case 'vindfang': S.gulv = ['flis', [.56, .54, .5]]; break;
+      case 'vaskerom': case 'melkerom': S.gulv = ['flis', [.7, .72, .72]]; S.vegg = ['flis', [.93, .95, .95]]; break;
+      case 'korridor': S.gulv = ['betong', [.72, .74, .7]]; S.vegg = ['malt', [.93, .92, .88]]; S.lampe = 2; break;
+      case 'møterom': case 'pauserom': case 'kontorlandskap': case 'arkiv': S.gulv = r.rolle === 'arkiv' ? ['betong', [.62, .62, .6]] : ['tøy', [.42, .46, .52]]; S.vegg = ['malt', [.93, .93, .91]]; break;
+      case 'lærerrom': case 'grupperom': S.gulv = ['betong', [.66, .72, .62]]; S.vegg = ['malt', [.95, .92, .8]]; break;
+      case 'beboerrom': case 'dagligstue': S.gulv = ['parkett', [.74, .62, .46]]; S.vegg = ['malt', [.95, .92, .84]]; break;
+      case 'vaktrom': case 'venterom': case 'behandlingsrom': S.gulv = ['betong', [.74, .8, .78]]; S.vegg = ['malt', [.92, .96, .94]]; S.lampe = 2; break;
+      case 'fjøs': S.gulv = ['betong', [.5, .5, .48]]; S.vegg = ['betong', [.86, .85, .8]]; S.lampe = 2; break;
+      case 'sag': case 'tørkeloft': S.gulv = ['betong', [.56, .54, .5]]; S.vegg = ['planke', [.7, .56, .4]]; S.lampe = 2; break;
+      case 'maskinhall': case 'prosesshall': S.gulv = ['betong', [.6, .61, .6]]; S.vegg = ['betong', [.74, .75, .74]]; S.lampe = 2; break;
+      case 'kontrollrom_olje': S.gulv = ['betong', [.5, .54, .56]]; S.vegg = ['malt', [.86, .88, .86]]; S.lampe = 2; break;
+      case 'sakristi': S.gulv = ['parkett', [.46, .32, .22]]; S.vegg = ['malt', [.95, .93, .87]]; break;
       case 'gang': if (kl === 'skole') { S.gulv = ['betong', [.66, .72, .62]]; S.vegg = ['malt', [.95, .92, .8]]; } break;
     }
-    if (kl === 'sykehus' && r.rolle !== 'sykerom') { S.gulv = ['betong', [.74, .8, .78]]; S.vegg = ['malt', [.92, .96, .94]]; }
+    if (kl === 'sykehus' && !/^(sykerom|beboerrom|dagligstue|kjøkken|bad)$/.test(r.rolle)) { S.gulv = ['betong', [.74, .8, .78]]; S.vegg = ['malt', [.92, .96, .94]]; }
     if (kl === 'hytte' && r.rolle !== 'bad') S.vegg = ['panel', [.86, .7, .48]];
     return S;
   }
@@ -309,7 +355,9 @@
     if (!M) yield* stoffeneG();
     yield 'start';
     // planen i biter (Interior.planG), ellers i ett strekk
-    const info = { i: P.bygg.i, kl: P.bygg.kl, h: P.bygg.h, dør: best, senger: P.bygg.senger }, pl = Interior.planG ? yield* Interior.planG(P, info) : Interior.plan(P, info);
+    // (runde 15) det dataene har om bygget går videre til planen: byggeår, OSM-merker, navn, tetthet, kjede og høyden over havet
+    const B = P.bygg, info = { i: B.i, kl: B.kl, h: B.h, dør: best, senger: B.senger, år: B.år, am: B.am, navn: B.navn, industri: B.industri, tett: B.tett, k: B.k,
+      moh: P.leir ? undefined : hoyde3d(u.cx + P[0][0], u.cy + P[0][1], u) }, pl = Interior.planG ? yield* Interior.planG(P, info) : Interior.plan(P, info);
     yield 'plan';
     // (18. nov kveld) krokene får planen før den bygges: møbler som er flyttet (spill/mobler-visning.js) tas ut eller settes inn her
     for (const f of window.INTERIOR_PLAN || []) { try { f(pl, P, u); } catch (e) { console.warn('interiør-krok:', e); } }
@@ -319,9 +367,17 @@
     // gulvet ligger over det høyeste terrenget under bygget (ellers stikker bakken opp gjennom gulvet); trappa foran døra er lang nok
     // til at du kan gå opp (høyst 0,6 m stigning per meter), og høyst 3,5 m høy
     const ute0 = terr(I.x + I.nx * 1.5, I.y + I.ny * 1.5); pl.gulv = P.gulvFast !== undefined ? Math.max(P.gulvFast, Math.min(maks + .06, (P.veggTopp || P.gulvFast + 2.6) - 2)) : Math.min(Math.max(maks + .08, D.z0 + .05), ute0 + 3.5);
-    pl.trapp = Math.max(1.5, Math.min(6, (pl.gulv - ute0) / .6)); const ute = terr(I.x + I.nx * pl.trapp, I.y + I.ny * pl.trapp);
     // himlingen holder seg under der ytterveggen slutter (ellers stikker rommet ut gjennom taket når gulvet er løftet i en skråning)
-    { const topp = P.veggTopp !== undefined ? P.veggTopp : P.topp; if (topp !== undefined && topp === topp) pl.tak = Math.max(1.95, Math.min(pl.tak, topp - pl.gulv - .06)); }
+    // (runde 15, brukeren: «rar takhøyde – det må være skikkelig») Interior.takhøyde: fast spenn per type (bolig 2,4–2,7, butikk/kontor 3–4,
+    // full høyde i haller), aldri over veggtoppen, aldri under 2,2 m; ved saltak rett under veggtoppen. Gulvet senkes heller enn at himlingen
+    // kommer under 2,2 m (høyst 0,6 m under det høyeste terrenget).
+    { const topp = P.veggTopp !== undefined ? P.veggTopp : P.topp, salt = P.veggTopp !== undefined, luft = salt ? .06 : .35;
+      if (topp !== undefined && topp === topp) { const min = (Interior.TAK_MIN || 2.2) + luft; if (topp - pl.gulv < min) pl.gulv = Math.max(Math.min(pl.gulv, topp - min), maks - .6); }
+      if (pl.takRegel && Interior.takhøyde) pl.tak = Interior.takhøyde(pl.takRegel, { vegg: topp !== undefined && topp === topp ? topp - pl.gulv : undefined, saltak: salt, stilTak: pl.stilTak, h: P.bygg.h });
+      else if (topp !== undefined && topp === topp) pl.tak = Math.max(1.95, Math.min(pl.tak, topp - pl.gulv - .06)); }
+    pl.trapp = Math.max(1.5, Math.min(6, (pl.gulv - ute0) / .6)); const ute = terr(I.x + I.nx * pl.trapp, I.y + I.ny * pl.trapp);
+    // trapp foran hver av de andre dørene også (bakdør, vareinngang, nødutgang)
+    for (const q of pl.innganger || []) { if (q === I) continue; const u0q = terr(q.x + q.nx * 1.5, q.y + q.ny * 1.5); q.trapp = Math.max(1.5, Math.min(6, (pl.gulv - u0q) / .6)); q.ute = terr(q.x + q.nx * q.trapp, q.y + q.ny * q.trapp); }
     const g0 = pl.gulv, tak = pl.tak, kl = pl.kl;
     // nettene: hovednettet i åtte stoffer, og de små for vinduer, skygge, lampelys og dagslys
     const G = STOFFER.map(() => ({ pos: [], kol: [], uv: [] })), V = { pos: [], uv: [] }, SK = { pos: [], uv: [] }, LA = { pos: [], uv: [] }, DA = { pos: [], uv: [] }, YT = { pos: [], uv: [] };
@@ -393,33 +449,38 @@
       const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, nx = -ey, ny = ex, pt = (t, inn) => [a[0] + ex * t + nx * inn, a[1] + ey * t + ny * inn];
       // taklist langs ytterveggene i boliger, kontorer og hytter (gir rommene en avslutning mot taket)
       if (/^(hus|leil|kontor|hytte|skole|sykehus)$/.test(kl) && L > .6) { const tm = pt(L / 2, .055); kasse(tm[0], tm[1], Math.atan2(ey, ex), [-L / 2 + .03, L / 2 - .03, -.025, .025, tak - .07, tak - .002, [.96, .96, .94]]); }
-      const td = (I.x - a[0]) * ex + (I.y - a[1]) * ey, avD = Math.abs((I.x - a[0]) * ey - (I.y - a[1]) * ex), harDør = avD < .05 && td > 0 && td < L && Math.abs(ex * I.ux + ey * I.uy) > .99;
-      const p0 = harDør ? Math.max(0, td - I.w / 2) : -1, q0 = harDør ? Math.min(L, td + I.w / 2) : -1;
+      // (runde 15) dørene på denne veggen: hovedinngangen og de andre (bakdør, vareinngang, nødutgang)
+      const HD = []; for (const q of pl.innganger || [I]) { const td = (q.x - a[0]) * ex + (q.y - a[1]) * ey, avD = Math.abs((q.x - a[0]) * ey - (q.y - a[1]) * ex);
+        if (avD < .05 && td > 0 && td < L && Math.abs(ex * q.ux + ey * q.uy) > .99) HD.push({ q, td, p0: Math.max(0, td - q.w / 2), q0: Math.min(L, td + q.w / 2) }); }
       const T = [0, L]; for (const h of ender) { const t = (h[0] - a[0]) * ex + (h[1] - a[1]) * ey, av = Math.abs((h[0] - a[0]) * ey - (h[1] - a[1]) * ex); if (av < .25 && t > .3 && t < L - .3) T.push(t); }
-      if (harDør) T.push(p0, q0);
+      for (const h of HD) T.push(h.p0, h.q0);
       // vinduene på denne veggen (EKTE HULL: ytterveggen tegnes ikke innenfra mens du er inne, så du ser ut – se oppdater())
-      const kirke = kl === 'kirke', butikk = kl === 'butikk' || kl === 'terminal', vz0 = kirke ? 1.2 : butikk ? .5 : .9, vz1 = Math.min(tak - .25, kirke ? 4.5 : butikk ? 2.6 : 2.1), bw = butikk ? 2 : 1.1, vinduer = [];
+      const kirke = kl === 'kirke', butikk = kl === 'butikk' || kl === 'terminal', vz0 = kirke ? 1.2 : butikk ? .5 : P.leir ? .9 : pl.vinduNed || .9,
+        // (runde 15) vinduene etter stilen: eldre smale, nyere bredere, moderne store og lave (pl.vindu, pl.vinduNed fra Interior.STILER)
+        vz1 = Math.min(tak - .25, kirke ? 4.5 : butikk ? 2.6 : pl.stil === 'moderne' && !P.leir ? 2.3 : 2.1), bw = butikk ? 2 : P.leir ? 1.1 : pl.vindu || 1.1, vinduer = [];
       if (!UTEN_VINDU[kl] && L >= 2.6) { const n = Math.max(1, Math.floor(L / 3.2));
-        for (let j = 0; j < n; j++) { const t = L * (j + .5) / n; if (harDør && Math.abs(t - td) < I.w / 2 + bw / 2 + .35) continue;
+        for (let j = 0; j < n; j++) { const t = L * (j + .5) / n; if (HD.some(h => Math.abs(t - h.td) < h.q.w / 2 + bw / 2 + .35)) continue;
           const X = a[0] + ex * t, Y = a[1] + ey * t; if (ender.some(h => Math.hypot(h[0] - X, h[1] - Y) < bw / 2 + .3)) continue; vinduer.push(t); T.push(t - bw / 2, t + bw / 2); } }
       T.sort((x, y) => x - y);
-      for (let k = 0; k < T.length - 1; k++) { const t0 = T[k], t1 = T[k + 1]; if (t1 - t0 < .03) continue; const A0 = pt(t0, .03), B0 = pt(t1, .03), mid = pt((t0 + t1) / 2, .4), S = stilVed(mid[0], mid[1]), iDør = harDør && t0 >= p0 - .01 && t1 <= q0 + .01;
+      for (let k = 0; k < T.length - 1; k++) { const t0 = T[k], t1 = T[k + 1]; if (t1 - t0 < .03) continue; const A0 = pt(t0, .03), B0 = pt(t1, .03), mid = pt((t0 + t1) / 2, .4), S = stilVed(mid[0], mid[1]), iDør = HD.some(h => t0 >= h.p0 - .01 && t1 <= h.q0 + .01);
         const iVindu = vinduer.some(t => t0 >= t - bw / 2 - .01 && t1 <= t + bw / 2 + .01), vkant = t => vinduer.some(v => Math.abs(t - (v - bw / 2)) < .01 || Math.abs(t - (v + bw / 2)) < .01);
-        const hj0 = !(harDør && Math.abs(t0 - q0) < .01) && !vkant(t0), hj1 = !(harDør && Math.abs(t1 - p0) < .01) && !vkant(t1);
+        const hj0 = !HD.some(h => Math.abs(t0 - h.q0) < .01) && !vkant(t0), hj1 = !HD.some(h => Math.abs(t1 - h.p0) < .01) && !vkant(t1);
         if (iDør) veggflate(A0[0], A0[1], B0[0], B0[1], dørH, tak, S.vegg, false, false, false);
         else if (iVindu) { veggflate(A0[0], A0[1], B0[0], B0[1], 0, vz0, S.vegg, false, false, true); veggflate(A0[0], A0[1], B0[0], B0[1], vz1, tak, S.vegg, false, false, false); veggskygge(A0[0], A0[1], B0[0], B0[1], nx, ny); }
         else { veggflate(A0[0], A0[1], B0[0], B0[1], 0, tak, S.vegg, hj0, hj1, true); veggskygge(A0[0], A0[1], B0[0], B0[1], nx, ny); } }
-      if (harDør) {
+      for (const { q: Iq, td, p0, q0 } of HD) { const hoved = Iq === I;
         // døråpningen: dagen utenfor (innenfra), en mørk åpning og et åpent dørblad (utenfra), karm rundt
         // (den mørke åpningen ligger i et eget lite nett som bare vises når du står utenfor – innenfra ser du ut gjennom døra)
         const y0 = pt(p0, -.07), y1 = pt(q0, -.07); fk(YT, [y0[0], y0[1], g0], [y1[0], y1[1], g0], [y1[0], y1[1], g0 + dørH], [y0[0], y0[1], g0 + dørH], null, UV0);
         const va = Math.atan2(ey, ex);
-        for (const t of [p0, q0]) { const c = pt(t, .0); kasse(c[0], c[1], va, [-.05, .05, -.1, .1, 0, dørH, HVIT, 'tre']); } { const c = pt(td, 0); kasse(c[0], c[1], va, [-I.w / 2, I.w / 2, -.1, .1, dørH, dørH + .08, HVIT, 'tre']); }
-        if (I.w < 2.4) { const h = pt(p0 + .05, .06), bw = Math.min(1, I.w) - .1; kasse(h[0], h[1], va + 1.75, [0, bw, -.022, .022, .01, dørH - .03, [.86, .84, .78], 'tre']); kasse(h[0], h[1], va + 1.75, [bw - .13, bw - .03, -.06, .06, 1, 1.03, STÅL]);
-          const hu = pt(q0 - .05, -.09); kasse(hu[0], hu[1], va + Math.PI - 1.9, [0, bw, -.022, .022, D.z0 - g0, D.z0 - g0 + dørH - .03, [.5, .36, .24], 'tre']); }
+        for (const t of [p0, q0]) { const c = pt(t, .0); kasse(c[0], c[1], va, [-.05, .05, -.1, .1, 0, dørH, HVIT, 'tre']); } { const c = pt(td, 0); kasse(c[0], c[1], va, [-Iq.w / 2, Iq.w / 2, -.1, .1, dørH, dørH + .08, HVIT, 'tre']); }
+        if (Iq.w < 2.4) { const h = pt(p0 + .05, .06), bw = Math.min(1, Iq.w) - .1; kasse(h[0], h[1], va + 1.75, [0, bw, -.022, .022, .01, dørH - .03, [.86, .84, .78], 'tre']); kasse(h[0], h[1], va + 1.75, [bw - .13, bw - .03, -.06, .06, 1, 1.03, STÅL]);
+          const hu = pt(q0 - .05, -.09); const zu = hoved ? D.z0 - g0 : Math.min(0, (Iq.ute !== undefined ? Iq.ute : g0) - g0); kasse(hu[0], hu[1], va + Math.PI - 1.9, [0, bw, -.022, .022, zu, zu + dørH - .03, Iq.type === 'nød' ? [.75, .75, .72] : [.5, .36, .24], 'tre']); }
         // dørmatte
-        const dm = pt(td, .55); kasse(dm[0], dm[1], va, [-.4, .4, -.25, .25, .003, .02, [.3, .26, .2], 'tøy']);
-        if (!P.leir && /^(hus|leil|hytte)$/.test(kl)) { const sk = pt(td + I.w / 2 + .25, .28); for (const dx of [-.07, .07]) kasse(sk[0], sk[1], va + hash(pl.i, 61) * .5, [dx - .05, dx + .05, -.13, .13, 0, .09, hash(pl.i, 62) > .5 ? [.25, .17, .12] : MØRK]);
+        const dm = pt(td, .55); if (hoved || Iq.type === 'bak') kasse(dm[0], dm[1], va, [-.4, .4, -.25, .25, .003, .02, [.3, .26, .2], 'tøy']);
+        // nødutgangen: grønt skilt over døra
+        if (Iq.type === 'nød') { const sk = pt(td, .05); kasse(sk[0], sk[1], va, [-.22, .22, -.02, .02, dørH + .12, dørH + .3, [.1, .7, .3], 'glatt']); }
+        if (hoved && !P.leir && /^(hus|leil|hytte)$/.test(kl)) { const sk = pt(td + I.w / 2 + .25, .28); for (const dx of [-.07, .07]) kasse(sk[0], sk[1], va + hash(pl.i, 61) * .5, [dx - .05, dx + .05, -.13, .13, 0, .09, hash(pl.i, 62) > .5 ? [.25, .17, .12] : MØRK]);
           if (hash(pl.i, 63) < .6) { const vk = pt(td - I.w / 2 - .3, .3); kasse(vk[0], vk[1], va, [-.2, .2, -.1, .1, 0, .3, TØY[Math.floor(hash(pl.i, 64) * TØY.length)], 'tøy']); kasse(vk[0], vk[1], va, [-.12, .12, -.02, .02, .3, .42, MØRK]); } }
       }
       const z0 = vz0, z1 = vz1;
@@ -470,7 +531,8 @@
       kasse(hx, hy, åpen, [bw - .14, bw - .04, -.06, .06, 1, 1.025, STÅL]);
     }
     // trapp foran døra når gulvet ligger over bakken: trinn på ca. 18 cm, så langt ut som trappa går
-    if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = pl.trapp / n;
+    // (runde 15) trapp foran alle dørene
+    for (const [I, ute, trappQ] of [[pl.inngang, ute, pl.trapp], ...(pl.innganger || []).filter(q => q !== pl.inngang && q.ute !== undefined).map(q => [q, q.ute, q.trapp])]) if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = trappQ / n;
       for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, ute - g0 - .4, (ute - g0) + (pl.gulv - ute) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
     // møblene, med skygge under og teppe under salongbordet
     // (runde 12) høyballene og traktoren i låven tegnes avrundet av spill/lave3d.js (Lave3d.tegner) – her bare skyggen under dem
