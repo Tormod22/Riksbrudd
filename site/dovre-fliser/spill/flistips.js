@@ -111,12 +111,12 @@
     // RUNDE 13 (kritiker G: «forklaringsboblen legger seg oppå panelet den forklarer»): et kort trykk som åpner noe (Folk, Leir, lista bak
     // «+8 tall», en kommando) viser ingen boble – langt trykk gjør det fortsatt. Flis uten egen handling (klokka, været) forklares som før.
     if (HANDLING.test(d.id || '') || HANDLING.test(d.dataset.s || '') || d.dataset.k) { if (viser) skjul(); return; }
-    const før = åpnePaneler().join(); setTimeout(() => { if (åpnePaneler().join() !== før) { if (viser === d) skjul(); return; } if (vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, ÅPNER_MS); }, true);
+    const før = åpnePaneler().join(); setTimeout(() => { if (åpnePaneler().join() !== før || !d.isConnected || !d.getClientRects().length) { if (viser === d) skjul(); return; } if (vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, ÅPNER_MS); }, true);
   window.addEventListener('blur', skjul);
   // panelene et trykk kan åpne (skjermlaget har lista; reserven er de vanligste), og hvor lenge vi venter på at de kommer (Claudes tall)
   // flisene som åpner noe når du trykker (panelpynt.js, lager-visning.js, maal-visning.js, strategi-visning.js og «+8 tall»)
   const HANDLING = /^(sFolk|sPenger|sStrom|sDiesel|sTre|sBetong|sStaal|sMaal|sKrig|flismer)$/;
-  const ÅPNER_MS = 140, PANELER = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'flismerliste', 'kommer', 'mkommer', 'degmeny', 'region', 'sekk', 'lagmeny', 'hjelp'];
+  const ÅPNER_MS = 140, PANELER = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'flismerliste', 'kommer', 'mkommer', 'degmeny', 'region', 'sekk', 'lagmeny', 'hjelp', 'byggvalg', 'byggesett', 'hendelse', 'morgenkort'];
   const åpnePaneler = () => { const ids = [...new Set([...(window.Skjermlag && Skjermlag.SELV ? Skjermlag.SELV : []), ...PANELER])];
     return ids.filter(id => { const e = $(id); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none'; }); };
   // titlene ryddes jevnlig (andre deler setter dem på nytt hvert sekund), og ruta følger med mens den står oppe

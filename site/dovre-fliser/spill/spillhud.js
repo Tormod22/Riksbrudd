@@ -130,7 +130,8 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   document.addEventListener('pointerdown', e => { if (komMerÅpen && !kommer.contains(e.target) && !mkommer.contains(e.target) && !merKn.includes(e.target)) åpneKomMer(false); });
   // tilleggene som finnes nå, flyttes inn i raden bak «Mer» når de er flere enn én (én alene står i linja)
   function fordel() { const T = KN.filter(K => K.tillegg && !K.el.hidden), samle = T.length > 1; for (const K of KN) if (K.tillegg) { const f1 = samle ? kommer : bar, f2 = samle ? mkommer : mbar; if (K.el.parentNode !== f1) f1.insertBefore(K.el, f1 === bar ? merKn[0] : null); if (K.el2.parentNode !== f2) f2.insertBefore(K.el2, f2 === mbar ? merKn[1] : null); }
-    const noePå = samle && T.some(K => K.el.classList.contains('på'));     // RUNDE 13 (kritiker G: «MER +8» øverst og «Mer 4» nederst betyr to ulike ting): knappen nederst heter «Mer» uten tall (tallet så ut som
+    const noePå = samle && T.some(K => K.el.classList.contains('på'));
+    // RUNDE 13 (kritiker G: «MER +8» øverst og «Mer 4» nederst betyr to ulike ting): knappen nederst heter «Mer» uten tall (tallet så ut som
     // fire uleste meldinger); forklaringen sier hvor mange kommandoer og hvilke. Flisa øverst heter «+8 tall».
     const hva = `Mer|${T.length} kommandoer til: ${T.map(K => K.navn).join(', ')}`;
     for (const b of merKn) { b.hidden = !samle; b.classList.toggle('på', noePå || komMerÅpen); const m = b.querySelector('.merke'); if (m) m.remove(); if (samle) { b.setAttribute('aria-label', hva.split('|')[1]); if (b === merKn[0] && b.dataset.tips !== hva) b.dataset.tips = hva; } } }
