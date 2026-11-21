@@ -71,8 +71,8 @@ body.kort.gaar #kilde{ display:none; }
 html body.kort.tlfligg.gaar:not(.kjorer) #nhud .helse, html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ width:122px; padding:2px 6px; }
 html body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen{ bottom:calc(38px + ${Bn}); } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen .vbilde{ width:36px; height:18px; }
 body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen small{ display:none; } body.kort.tlfligg.gaar:not(.kjorer) #byttvapen{ min-height:30px; padding:2px 8px; font-size:11px; opacity:.85; }
-html body.kort.tlfligg.gaar:not(.kjorer) #dorknapp{ left:auto; right:calc(10px + ${Rt}); top:auto; bottom:calc(66px + ${Bn}); transform:none; min-height:40px; padding:4px 14px; font-size:14px; }
-html body.kort.tlfligg.gaar:not(.kjorer):has(#kjorknapp.på) #dorknapp{ bottom:calc(116px + ${Bn}); }
+html body.kort.tlfligg.gaar:not(.kjorer) > #dorknapp{ left:auto; right:calc(10px + ${Rt}); top:auto; bottom:calc(66px + ${Bn}); transform:none; min-height:40px; padding:4px 14px; font-size:14px; }
+html body.kort.tlfligg.gaar:not(.kjorer):has(#kjorknapp.på) > #dorknapp{ bottom:calc(116px + ${Bn}); }
 body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen span{ font-size:12px; } body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen em{ font-size:11px; min-height:0; }`;
   document.head.appendChild(css10);
   { const rad = document.querySelector('.knapper'), m = document.createElement('button'); m.id = 'gaamer'; m.type = 'button'; m.textContent = '⋯'; m.title = 'Flere knapper'; m.setAttribute('aria-label', 'Flere knapper'); m.setAttribute('aria-expanded', 'false');
