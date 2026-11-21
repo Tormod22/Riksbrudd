@@ -16,11 +16,11 @@
   //  mett/lys: metning og lys for alt annet land (som før: 1,15 og 1,1 – det gamle er beholdt for berg, by og veg).
   const REGLER = {
     dreiMaks: 16, gul0: 34, gul1: 46, grønn0: 84, grønn1: 110, mett0: .1, mett1: .3, lys0: 150, lys1: 205,
-    mettVeg: 1.22, lysVeg: .98, mett: 1.15, lys: 1.1,
+    mettVeg: 1.22, lysVeg: 1, mett: 1.15, lys: 1.1,
     // DYRKET MARK (terrengklasse 5 i 32 m-rutene: eng, beite, åker): grønnere enn annen vegetasjon – også den matte, gulbrune
     // satellittfargen der (Jæren) –, men aldri mer enn at en slått eng fortsatt kan være gulgrønn. dyrketGul0: tonen dreiningen begynner
     // fra på dyrket mark; dyrketDrei/dyrketMett/dyrketLys: dreining (grader), metning og lys der.
-    dyrketGul0: 26, dyrketDrei: 26, dyrketMett: 1.38, dyrketLys: .97, dyrketMett0: .05,
+    dyrketGul0: 26, dyrketDrei: 26, dyrketMett: 1.38, dyrketLys: 1.05, dyrketMett0: .05,
     // vann som før: 20 % av satellittbildets eget mønster, resten fast blågrått
     vann: [92, 126, 152], vannEget: .2,
   };
