@@ -43,7 +43,7 @@
     // og i klyngen) blandes taket så mye med leirens farge, og bygget får mørk kant (px) under den lyse
     leirTak: .6, mørkKant: 2.4,
     // og byggene tegnes minst kort × lang punkter (forstørret om midten, høyst maks ganger) – en brakke på 7,6 × 12,8 m var 6 × 10 punkter
-    flat: { kort: 8, lang: 12.5, maks: 2 },
+    flat: { kort: 8, lang: 12.5, maks: 2, fra: .6 },
   };
   // klyngeM(m): meter per punkt leiren tegnes med når kartet har m (ren regel; = m helt nær, vokser sakte lenger ute)
   const klyngeM = (m, K = REGLER.klynge) => (m <= K.fra ? m : K.fra + (m - K.fra) * K.vekst);
@@ -319,7 +319,7 @@
   function tegnBygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
     const m = o.m, detalj = m < REGLER.nær ? 2 : m < REGLER.middels ? 1 : 0, t = o.skisse ? { navn: 'ferdig', p: 1 } : tilstand(b, { aktiv: o.aktiv }), K = St.kropp, id = (b.id || 0) + 7;
     // (runde 13) med flate farger forstørres små bygg om midten (forstørr), så brakka synes på 100 m-målestokk
-    const mT = detalj === 0 && !o.skisse && St.form !== 'mast' ? m / forstørr(K, m) : m;
+    const mT = tegneM(St, m, o);
     iBygget(g, b, o.sx, o.sy, mT, () => {
       // det som hører til bygget på bakken: trapp/forplass i betong
       if (detalj >= 1 && t.navn !== 'kø' && t.navn !== 'ødelagt') { const pl = St.plass === true ? St.trapp : St.plass; if (pl) { g.fillStyle = farge('#8f8d87', 1, o.skisse ? .5 : 1); rekt(g, pl[0], pl[1], pl[2], pl[3]); g.fill();
@@ -382,17 +382,21 @@
     g.strokeRect(...halv); g.setLineDash([]); g.restore();
     if (rot.Etikett) { const r = Math.max(a, c) / 2 + 1; Etikett.hinder(cx - r, cy - r, 2 * r, 2 * r); }
     return true; }
+  // (runde 13) meter per punkt bygget tegnes med: små bygg forstørres om midten fra flat.fra m per punkt (100 m-målestokk på PC er ca. 1 m per
+  // punkt), men ikke skissen og ikke mens du bygger (da står alt i ekte mål, så avstandene stemmer)
+  function tegneM(St, m, o) { if (o.skisse || m < REGLER.flat.fra || St.form === 'mast' || St.form === 'pad' || St.form === 'åker') return m;
+    if (rot.BYGGEVISNING && BYGGEVISNING.på && BYGGEVISNING.på()) return m; return m / forstørr(St.kropp, m); }
   function bygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
     if (!o.skisse && klyngePå(o.m)) return klyngeBygg(g, b, o, St);
     const m = o.m; if (o.skisse || m >= REGLER.middels || m !== forrigeM || typeof document === 'undefined') return tegnBygg(g, b, o);
     if (m !== lagerM) { LAGER.clear(); lagerM = m; }
     const t = tilstand(b, { aktiv: o.aktiv }), k = [b.id, b.type, b.ret || 0, b.nivå || 1, t.navn, Math.round(t.p * 40), Math.round((b.hp === undefined ? 1 : b.hp) * 20), b.arbeid ? b.arbeid.hva : '',
-      o.valgt ? 1 : 0, o.mangler ? 1 : 0, b.av ? 1 : 0, o.fraksjon, Math.round((o.lys || 0) * 40), tNøkkel].join('|');
+      o.valgt ? 1 : 0, o.mangler ? 1 : 0, b.av ? 1 : 0, o.fraksjon, Math.round((o.lys || 0) * 40), tNøkkel, Math.round(tegneM(St, m, o) * 1000)].join('|');
     const D = typeof dpr === 'number' ? dpr : 1, cx = o.sx(b.x), cy = o.sy(b.y); let L = LAGER.get(b.id);
     if (!L || L.k !== k) {
       // utstrekningen: kroppen og fotavtrykket + 4 m (stillas, materialer, lys på bakken), radiomastens barduner, i skjermpunkter
       const f = B.fot || St.kropp, e = 4 + (St.barduner || 0), x0 = Math.min(f[0], St.kropp[0]) - e, x1 = Math.max(f[1], St.kropp[1], St.vindpose ? St.vindpose[0] + 3 : -1e9) + e, y0 = Math.min(f[2], St.kropp[2]) - e, y1 = Math.max(f[3], St.kropp[3]) + e;
-      const c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([u, v]) => [(c * u - s * v) / m, (-s * u - c * v) / m]);
+      const mE = tegneM(St, m, o), c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), P = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([u, v]) => [(c * u - s * v) / mE, (-s * u - c * v) / mE]);
       const ax = Math.floor(Math.min(...P.map(q => q[0]))), ay = Math.floor(Math.min(...P.map(q => q[1]))), w = Math.ceil(Math.max(...P.map(q => q[0]))) - ax + 1, h = Math.ceil(Math.max(...P.map(q => q[1]))) - ay + 1;
       if (w * h * D * D > 4e6) return tegnBygg(g, b, o);
       const lerret = L && L.c.width >= w * D && L.c.height >= h * D && L.c.width <= w * D * 1.5 ? L.c : document.createElement('canvas'); lerret.width = Math.ceil(w * D); lerret.height = Math.ceil(h * D);
