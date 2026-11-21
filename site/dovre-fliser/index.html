@@ -322,37 +322,47 @@ function kø(z, x, y, k, forrang = false) {
 // forrang = så mange fliser kan være i arbeid når en grov flis slipper foran (ellers 6).
 const FLISLAST = { inn: 320, kant: 36, grov: 4, dypt: 9, forrang: 10 };
 let MYK = null;   // lerret til flisene med myk kant
-function flisReserve(z, x, y) {
-  for (let d = 1; d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
+function flisReserve(z, x, y, fra = 1) {
+  for (let d = Math.max(1, fra); d <= FLISLAST.dypt && z - d >= ZMIN; d++) { const a = FERDIG.get((z - d) + '/' + (x >> d) + '/' + (y >> d)); if (a) return { a, d }; }
   return null;
 }
 // tegnReserve: den beste grovere flisen, og oppå den de finere flisene som finnes (når du zoomer ut). Svarer om noe ble tegnet.
 // (runde 13, kritikk H: «i leirvalget er kartet uskarpt og pikselert med synlige skjøter i 5–10 s») en reserve to eller flere nivåer opp
 // forstørres mye: den tegnes fra en glattet kopi (dobbel størrelse, litt uskarp – flisGlatt) med høy kvalitet, så den ser myk ut i stedet
 // for rutete, og bitene fra samme grove flis henger sammen. Claudes forslag: GLATT.uskarp i kopiens punkter, høyst GLATT.maks kopier.
-const GLATT = { fra: 2, uskarp: 1.6, maks: 14, liste: [] };
+// (runde 14, kritikk J: «synlige rette skjøter i over 6 s» i leirvalget) skjøtene var der to naboruter hadde reserver fra forskjellige nivåer
+// (én skarp fra nivået rett over, én svært uskarp fra fire nivåer opp) – og nivået rett over ble ikke glattet. Nå: GLATT.fra = 1, og
+// tegnFliser legger først ett felles underlag fra det groveste reservenivået i bildet, og så de bedre reservene og de ferdige flisene
+// oppå med myk kant (FLISLAST.kant) mot naboer som er dårligere. Da er det ingen rette kanter mellom nivåene.
+// Claudes forslag: GLATT.maks 24 (felles underlag + reservene trenger flere kopier enn før).
+const GLATT = { fra: 1, uskarp: 1.6, maks: 24, liste: [] };
 function flisGlatt(t) {
   if (t.glatt) return t.glatt;
   try { const n = 2 * G.T, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     g.drawImage(t.c, 0, 0, n, n); if ('filter' in g) { g.filter = `blur(${GLATT.uskarp}px)`; g.drawImage(t.c, 0, 0, n, n); g.filter = 'none'; } t.glatt = c; GLATT.liste.push(t);
     while (GLATT.liste.length > GLATT.maks) { const o = GLATT.liste.shift(); if (o.glatt) { o.glatt.width = o.glatt.height = 0; o.glatt = null; } } return c; }
   catch (e) { return null; } }
-function tegnReserve(z, x, y, sx, sy, px) {
-  const r = flisReserve(z, x, y); let noe = false;
-  if (r) { const d = r.d, gl = d >= GLATT.fra ? flisGlatt(r.a) : null, k = gl ? 2 : 1, w = k * G.T / 2 ** d;
-    if (gl) ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(gl || r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; if (gl) ctx.imageSmoothingQuality = 'low'; }
+// kilde(r, x, y): bildet og utsnittet [kx, ky, kw] av reserven r = { a, d } som dekker ruta x, y
+function reserveKilde(r, x, y) { const d = r.d, gl = d >= GLATT.fra ? flisGlatt(r.a) : null, k = gl ? 2 : 1, w = k * G.T / 2 ** d;
+  return { bilde: gl || r.a.c, glatt: !!gl, u: [(x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w] }; }
+function tegnReserve(z, x, y, sx, sy, px, r = flisReserve(z, x, y), sider = null) {
+  let noe = false;
+  if (r) { const K = reserveKilde(r, x, y);
+    if (sider && sider.length) mykFlis({ c: K.bilde }, sx, sy, px, sider, 1, K.u);
+    else { if (K.glatt) ctx.imageSmoothingQuality = 'high'; ctx.drawImage(K.bilde, K.u[0], K.u[1], K.u[2], K.u[3], sx, sy, px + .5, px + .5); if (K.glatt) ctx.imageSmoothingQuality = 'low'; }
+    noe = true; }
   if (z < ZMAX) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const b = FERDIG.get((z + 1) + '/' + (2 * x + i) + '/' + (2 * y + j));
     if (b) { ctx.drawImage(b.c, sx + i * px / 2, sy + j * px / 2, px / 2 + .5, px / 2 + .5); noe = true; } }
   return noe;
 }
 // mykFlis: flisen med myk kant mot sidene i «sider» ([dx, dy]) og gjennomsiktighet a, tegnet oppå det som alt står der
-function mykFlis(t, sx, sy, px, sider, a) {
+// (runde 14) u = [kx, ky, kw, kh]: bare dette utsnittet av t.c (en reserve er en bit av en grovere flis)
+function mykFlis(t, sx, sy, px, sider, a, u) {
   const n = Math.max(2, Math.ceil(px * dpr));
   if (!MYK) MYK = document.createElement('canvas');
   if (MYK.width < n || MYK.height < n) { MYK.width = Math.max(MYK.width, n); MYK.height = Math.max(MYK.height, n); }
   const g = MYK.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-  g.clearRect(0, 0, n, n); g.imageSmoothingEnabled = true; g.drawImage(t.c, 0, 0, n, n);
+  g.clearRect(0, 0, n, n); g.imageSmoothingEnabled = true; if (u) { g.imageSmoothingQuality = 'high'; g.drawImage(t.c, u[0], u[1], u[2], u[3], 0, 0, n, n); g.imageSmoothingQuality = 'low'; } else g.drawImage(t.c, 0, 0, n, n);
   if (sider.length) { g.globalCompositeOperation = 'destination-in'; const k = Math.min(n / 2, FLISLAST.kant * dpr);
     for (const [dx, dy] of sider) {
       const gr = dx < 0 ? g.createLinearGradient(0, 0, k, 0) : dx > 0 ? g.createLinearGradient(n, 0, n - k, 0) : dy < 0 ? g.createLinearGradient(0, 0, 0, k) : g.createLinearGradient(0, n, 0, n - k);
@@ -368,16 +378,33 @@ function tegnFliser(z, s, px, liste, vx0, vy1) {
   if (zg < z) { const grove = new Set();
     for (const [x, y] of liste) if (!ferdig(x, y) && !flisReserve(z, x, y)) grove.add((x >> (z - zg)) + '/' + (y >> (z - zg)));
     for (const g of grove) { const [gx, gy] = g.split('/').map(Number); kø(zg, gx, gy, zg + '/' + g, true); } }
-  let toner = false; FLISLAST.sist = { myke: 0, toner: 0, reserve: 0, mangler: 0 };
+  let toner = false; FLISLAST.sist = { myke: 0, toner: 0, reserve: 0, mangler: 0, underlag: 0, nivåer: 0 };
+  // (runde 14) kvaliteten per rute: 0 = ferdig flis, d = reserve d nivåer opp, Infinity = ingenting. D = det groveste reservenivået i bildet.
+  const kval = new Map(), res = new Map(); let D = 0; const nivåer = new Set();
+  for (const [x, y] of liste) { const k = z + '/' + x + '/' + y, t = FERDIG.get(k); if (t) { kval.set(x + ',' + y, 0); continue; }
+    const r = flisReserve(z, x, y); res.set(x + ',' + y, r); kval.set(x + ',' + y, r ? r.d : Infinity); if (r) { nivåer.add(r.d); if (r.d > D) D = r.d; } }
+  FLISLAST.sist.nivåer = nivåer.size;
+  const verre = (x, y, q) => { const v = kval.get(x + ',' + y); return v !== undefined && v > q; };
+  const siderMot = (x, y, q) => { const ut = []; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (synlig.has((x + dx) + ',' + (y + dy)) && verre(x + dx, y + dy, q)) ut.push([dx, dy]); return ut; };
+  // (2) felles underlag fra nivå D under alle ruter som ikke er ferdige og helt dekket (bare når reservene kommer fra flere nivåer)
+  const underlag = D > 0 && (nivåer.size > 1 || [...kval.values()].some(v => v === 0 || v === Infinity));
+  if (underlag) for (const [x, y] of liste) { const q = kval.get(x + ',' + y), t = q === 0 ? FERDIG.get(z + '/' + x + '/' + y) : null;
+    if (t && !t.gml && !(t.inn && nå - t.inn < FLISLAST.inn) && !siderMot(x, y, 0).length) continue;
+    const r = flisReserve(z, x, y, D); if (!r) continue; const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m;
+    tegnReserve(ZMAX, x, y, sx, sy, px, { a: r.a, d: r.d }); FLISLAST.sist.underlag++; }
   for (const [x, y] of liste) {
     const sx = (G.x0 + x * s - vx0) / kam.m, sy = (vy1 - (G.y0 - y * s)) / kam.m, k = z + '/' + x + '/' + y, t = FERDIG.get(k);
-    if (!t) { kø(z, x, y, k); if (tegnReserve(z, x, y, sx, sy, px)) FLISLAST.sist.reserve++; else FLISLAST.sist.mangler++; continue; }
+    if (!t) { kø(z, x, y, k); const r = res.get(x + ',' + y);
+      // (3) reserven: med myk kant mot naboer med en grovere reserve (eller ingenting), når den ligger oppå underlaget
+      const sider = underlag && r && r.d < D ? siderMot(x, y, r.d) : null;
+      if (underlag && r && r.d >= D) { if (z < ZMAX) tegnReserve(z, x, y, sx, sy, px, null); FLISLAST.sist.reserve++; continue; }
+      if (tegnReserve(z, x, y, sx, sy, px, r, sider)) FLISLAST.sist.reserve++; else FLISLAST.sist.mangler++; continue; }
     if (t.ufull && t.forsøk < FORSØK_MAKS && nå > t.igjen) kø(z, x, y, k);
     const alder = t.inn ? nå - t.inn : Infinity, a = alder < FLISLAST.inn ? Math.max(0, alder / FLISLAST.inn) : 1;
-    const sider = []; for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (synlig.has((x + dx) + ',' + (y + dy)) && !ferdig(x + dx, y + dy)) sider.push([dx, dy]);
+    const sider = siderMot(x, y, 0);
     if (a >= 1 && !sider.length) { ctx.drawImage(t.c, sx, sy, px + .5, px + .5); continue; }
-    // under: den gamle utgaven av flisen (ny utgave etter et nettbrudd), ellers reserven
-    if (t.gml) ctx.drawImage(t.gml.c, sx, sy, px + .5, px + .5); else tegnReserve(z, x, y, sx, sy, px);
+    // under: den gamle utgaven av flisen (ny utgave etter et nettbrudd), ellers reserven (underlaget ligger der alt)
+    if (t.gml) ctx.drawImage(t.gml.c, sx, sy, px + .5, px + .5); else { const r = flisReserve(z, x, y); tegnReserve(z, x, y, sx, sy, px, r, underlag && r ? siderMot(x, y, r.d) : null); }
     if (sider.length) { mykFlis(t, sx, sy, px, sider, a); FLISLAST.sist.myke++; } else { ctx.globalAlpha = a; ctx.drawImage(t.c, sx, sy, px + .5, px + .5); ctx.globalAlpha = 1; }
     if (a < 1) { toner = true; FLISLAST.sist.toner++; }
   }
@@ -3475,7 +3502,7 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=e447bd612c"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=0ac6f97621"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c026e6ea4c"></script>
@@ -3619,7 +3646,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/eskalering.js?v=80c48443f9"></script>
 <script src="/dovre-fliser/spill/eskalering-visning.js?v=9116f0e706"></script>
 <script src="/dovre-fliser/spill/krig3d.js?v=a9a4afbe8e"></script>
-<script src="/dovre-fliser/spill/kaier.js?v=bcd6f795c1"></script>
+<script src="/dovre-fliser/spill/kaier.js?v=83ace3880c"></script>
 <script src="/dovre-fliser/spill/verden.js?v=1b78423ff3"></script>
 <script src="/dovre-fliser/spill/verden-visning.js?v=ba69985d94"></script>
 <script src="/dovre-fliser/spill/kameravakt.js?v=d6903e035e"></script>
@@ -3639,7 +3666,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=952462e96e"></script>
 <script src="/dovre-fliser/spill/merker.js?v=4fa8dcce21"></script>
-<script src="/dovre-fliser/spill/kartlapper.js?v=d1a326fccb"></script>
+<script src="/dovre-fliser/spill/kartlapper.js?v=2057ffcf41"></script>
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=184509949c"></script>
