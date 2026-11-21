@@ -59,5 +59,6 @@
   }
   if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.portalKlar = VIS.infra && u.infra && window.MODELLER ? await kjørAsynk(lagG(u, R3.EX)) : null; });
   KROKER.sett3d.push((u, R) => { const k = u.portalKlar; u.portalKlar = null; if (VIS.infra) bygg(u, R, k); else if (k && k.geo) k.geo.dispose(); });
-  window.Portal3d = { sjekk: () => ({ antall, iScene: !!(mesh && R3.scene.children.includes(mesh)), portaler }) };
+  // (runde 15, anlegg) mal(B) = portalens deler for bredden B (m), brukes av spill/anleggsarbeid-visning.js til egne tunneler
+  window.Portal3d = { mal, sjekk: () => ({ antall, iScene: !!(mesh && R3.scene.children.includes(mesh)), portaler }) };
 })();
