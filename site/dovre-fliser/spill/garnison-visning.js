@@ -15,7 +15,9 @@
   // er ikke garnison der og nevnes ikke når stedet tas
   const passerer = (s, by) => { const m = s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null; return !!m && !G.inni(by, m[0], m[1]); };
   // bygdevernet (spill/krig-visning.js) slipper ikke dine lag inn: mens det har mann igjen, går ikke inntaket for deg
-  const vernHer = by => { try { const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); return !!(T && T.vern && T.vern[by.e.id] > 0); } catch (e) { return false; } };
+  // (et vern dere ikke har møtt ennå – det settes opp av krig-visning.js i samme minutt – regnes også med, når stedet ikke har eier)
+  const vernHer = by => { try { const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); if (!T || !T.vern) return false; const v = T.vern[by.e.id]; if (v > 0) return true;
+    return v === undefined && !G.tilstand(S, by.e.id).eier && !!(KrigSpill.auto && KrigSpill.auto()) && !!(window.Krig && Krig.vernMenn && Krig.vernMenn(by.e.folk) > 0); } catch (e) { return false; } };
   const tidTekst = sek => (!isFinite(sek) ? 'for få mann' : sek < 5400 ? Math.round(sek / 60) + ' min' : (Math.round(sek / 360) / 10).toString().replace('.', ',') + ' t');
   // (19. nov) hva et tettsted krever: «trenger ca. 69 mann (minst 35) og ca. 3,8 t»
   // (runde 13, kritiker H: «trenger 5 mann» og «minst 3 mann» om samme sted) begge tallene står alltid: full fart og minst
