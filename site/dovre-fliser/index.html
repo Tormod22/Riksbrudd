@@ -1075,10 +1075,12 @@ function tegnLag(g, proj, mPer) {
   }
   // sist sett: der fienden var da noen av våre så den. (runde 13, kritiker H: to «sist sett 04:16» oppå hverandre) fiender som sist
   // ble sett på nesten samme sted på skjermen (40 px), får ÉN lapp: «2 lag · sist sett 04:16» (det siste klokkeslettet)
-  const spøk = [];
+  // Claudes forslag: 6 spilltimer
+  const spøk = [], SIST_SETT_3D = 6 * 60;
   for (const s of ENHETER) if (s.side !== 'blå') {
     if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
-    else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
+    // (runde 14, kritiker I: «sist sett 14:39» fra dagen før svevde i lufta i gåmodus) i 3D vises bare «sist sett» fra de siste SIST_SETT_3D min
+    else if (VIS.taake && s.sett) { if (proj === proj3 && tid - s.sett.tid > SIST_SETT_3D) continue; const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
       if (window.Merker) { Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); if (window.Etikett) Etikett.øverst(() => Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true })); }
       else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
       spøk.push({ a, b, t: s.sett.tid }); }
@@ -1580,7 +1582,7 @@ async function bygg3d(cx, cy, S) {
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
   // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
   const bunn = (async () => { for (let y = 0; y < TW; y += 256) { g.fillRect(0, y, TW, Math.min(256, TW - y)); if (børPuste()) await pust(); } })();
-  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200 }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, asfalt: true }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
