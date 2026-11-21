@@ -112,6 +112,8 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     nå() { const q = kø[0]; if (!q || !q.vis || Kortkø.åpent()) return false; straks = q.id; try { q.vis(); } finally { straks = null; } return Kortkø.åpent() === q.id; },
     // velkomsten er lukket: kortet som ventet, kan komme straks (ingen pause)
     slipp(id) { if (id === 'loggvelkommen') sistÅpent = -1e9; },
+    // kortet i køen som står oppe, viker (skjules og står først i køen) – velkomsten kommer først
+    vik() { if (!eier || eier === 'loggvelkommen' || !kortSynlig(eier)) return null; const id = eier; eier = null; document.getElementById(id).classList.remove('på'); Kortkø.be(id, null, { først: true }); return id; },
     venter: () => kø.map(q => ({ id: q.id, tittel: q.tittel })), eier: () => eier, pause: KORT_PAUSE, sist: () => sistÅpent };
   setInterval(() => {
     if (eier && !kortSynlig(eier)) Kortkø.ferdig(eier);

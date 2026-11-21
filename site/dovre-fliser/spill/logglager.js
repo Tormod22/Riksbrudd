@@ -118,7 +118,6 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
   //   - står et annet kort (seier/tap, krigskortet, morgenmøtet) oppe likevel, lukkes velkomsten – aldri to oppå hverandre;
   //   - spillet står på pause mens den vises, og den lukkes når spillet går igjen (▶, ⏭, en fart) eller tiden flytter seg;
   //   - den ligger under bannere og varsler (z-index REGLER.z).
-  const ANDRE = ['hendelse', 'samfunnkort', 'formkort', 'krigkort', 'morgenkort'];
   let vakt = 0, tidVed = 0, tempoFør = 0;
   const nåTid = () => (typeof tid === 'number' && isFinite(tid) ? tid : 0), fart = () => (typeof tempo !== 'undefined' ? tempo : 0);
   function lukkVelkommen(gjenoppta) { const b = document.getElementById('loggvelkommen'); clearInterval(vakt); vakt = 0; if (!b) return; b.remove();
@@ -128,7 +127,9 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     tempoFør = 0; }
   function velkommen(o) {
     if (!o) return; lukkVelkommen(false);
-    if (ANDRE.some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && (id === 'formkort' || id === 'krigkort' || id === 'morgenkort'); })) return;
+    if (['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); })) return;
+    // et kort i køen (hendelse, folket) som alt står oppe, viker og kommer straks etter velkomsten
+    if (rot.Kortkø && Kortkø.vik) Kortkø.vik();
     const b = el('div', 'på'); b.id = 'loggvelkommen'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Velkommen tilbake');
     b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Dette skjedde sist du spilte (${tittel(o)}) – ${o.antall === 1 ? 'den viktigste meldingen' : `de ${o.antall} viktigste meldingene`}, eldste først. Spillet sto stille mens du var borte.`));
     const ul = el('ul'); for (const v of o.viktige) { const li = el('li'); li.append(el('i', '', `dag ${v.dag} ${v.klokke}`), document.createTextNode(v.tekst)); ul.appendChild(li); } b.appendChild(ul);
@@ -139,7 +140,7 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     tidVed = nåTid();
     vakt = setInterval(() => { if (!document.getElementById('loggvelkommen')) { clearInterval(vakt); vakt = 0; return; }
       // et annet kort eller møte står oppe, eller spillet går igjen: velkomsten lukkes
-      const annet = ANDRE.some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
+      const annet = ['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
       if (annet || nåTid() > tidVed + .01 || fart() > 0) { tempoFør = 0; lukkVelkommen(false); } }, 200);
   }
   // hele loggen: nyeste først, gruppert per dag

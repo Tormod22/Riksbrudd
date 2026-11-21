@@ -30,7 +30,7 @@
     // RUNDE 14 (kritiker I: «hver omlasting skrev Spillform …, Kystalliansen holder til i … og Velkommen tilbake … inn i loggen» – 36 av
     // 61 linjer; kritiker J: etter F5 sto det at fienden holdt en by spilleren holdt): innledningen skrives bare i et NYTT spill.
     // Når et lagret spill åpnes, holdes disse meldingene tilbake (oppsummeringen står i «Velkommen tilbake»-boksen).
-    OPPSTART: /^(Spillform: |Velkommen tilbake, )| \((rød|grønn)\) holder til /,
+    OPPSTART: /^(Spillform: |Velkommen tilbake, |Fikk ikke hentet )| \((rød|grønn)\) holder til /,
   };
   // «Kamp om Bryne … (×4)» og «… (20 m)!» / «… (35 m)!» gir samme nøkkel: tall og «×n» regnes ikke med
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
