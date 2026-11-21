@@ -22,7 +22,17 @@
     const hinder = (x, y) => (u.hus && u.hus.omriss && nærHus(u, x, y)) || (u.påVeg && u.påVeg(x, y)) || kaier.some(q => Math.hypot(q[0] - x, q[1] - y) < 90);
     // (pust innimellom: Kyst.plasserG, 18. nov – i Bergen tok plasseringen 110–150 ms i ett strekk)
     const kv = { S: u.S, cx: u.cx, cy: u.cy, mobil: tak(), sjø, moh, hinder, by: (x, y) => byer.some(b => Garnison.inni(b, x + u.cx, y + u.cy)) };
+    // (runde 15) ekte kaier der kaidataene (spill/kaier.js) sier det: plasseres FØR båtene, og terrenget heves under kaidekket
+    await pust(); const kai = await kaiPlass(u, kv, kaier);
     await pust(); const k = Kyst.plasserG ? await kjørAsynk(Kyst.plasserG(kv)) : Kyst.plasser(kv);
+    k.kai = kai;
+    if (kai && kai.biter.length) {
+      // ingen naust, brygger eller fortøyde båter oppå kaidekket; naust ikke nærmere kaia enn 25 m
+      const på = (x, y, m) => Kyst.påKai(kai.biter, x, y, m);
+      k.naust = k.naust.filter(n => !kai.biter.some(b => Math.hypot(b.x - n.x, b.y - n.y) < 25));
+      k.brygger = k.brygger.filter(b => !på(b.x + Math.cos(b.a) * 3, b.y + Math.sin(b.a) * 3, .5));
+      k.båter = k.båter.filter(b => !på(b.x, b.y, 1));
+    }
     // ikke båter oppå ferjekaiene
     k.båter = k.båter.filter(b => !kaier.some(q => Math.hypot(q[0] - b.x, q[1] - b.y) < 90));
     const zs = (x, y) => (Math.min(.3, moh(x, y)) - u.h0) * R3.EX;
@@ -39,6 +49,62 @@
     k.fri = (x, y) => Math.abs(x) < u.S - 80 && Math.abs(y) < u.S - 80 && sjø(x, y) && R8.every(([dx, dy]) => sjø(x + dx * 15, y + dy * 15) && sjø(x + dx * 30, y + dy * 30));
     u.kyst = k;
   });
+
+  // ---------- KAIENE (runde 15) ----------
+  // Kaipunktene fra spill/kaier.js i utsnittet -> Kyst.plasserKaiG. Hver kaibit får dybden (hvor langt dekket går inn på land): det
+  // stopper før en veg, et hus eller der bakken stiger over dekket (vegbanen og husene ligger alt på terrenget), minst 2,2 m (betongkanten). Så heves høydegitteret
+  // u.H under dekket til like under dekkets høyde, og senkes like foran fronten, så terrenget ikke skrår ned i sjøen der det er kai.
+  const KANT = 2.2;
+  async function kaiPlass(u, kv, ferjeKaier) {
+    if (!window.Kyst || !Kyst.plasserKaiG || !window.KaierSpill || !window.Kaier) return null;
+    const K = KaierSpill.data(); if (!K) return null;
+    const kaier = Kaier.iBoks(K, u.cx - u.S, u.cx + u.S, u.cy - u.S, u.cy + u.S).map(i => ({ x: K.x[i] - u.cx, y: K.y[i] - u.cy, t: K.t[i], l: K.l[i] }));
+    if (!kaier.length) return null;
+    const ferje = (x, y) => ferjeKaier.some(q => Math.hypot(q[0] - x, q[1] - y) < 90);
+    // byhavn: en veg innen 25 m inn på land fra kystpunktet (rett inn og 30° til hver side)
+    const påVeg = u.påVeg, R30 = [0, .52, -.52];
+    const gate = (x, y, nx, ny) => !!påVeg && R30.some(v => { const c = Math.cos(v), s = Math.sin(v), dx = -(nx * c - ny * s), dy = -(nx * s + ny * c); for (let t = 4; t <= Kyst.KAI.gate; t += 3) if (påVeg(x + dx * t, y + dy * t)) return true; return false; });
+    const kai = await kjørAsynk(Kyst.plasserKaiG(Object.assign({}, kv, { kaier, ferje, gate })));
+    if (!kai.biter.length && !kai.stein.length) return null;
+    const veg = (x, y) => (u.påVeg && u.påVeg(x, y)) || (window.Liv3d && Liv3d.dekke && Liv3d.dekke(u, x, y) != null);
+    const hus = (x, y) => u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y);
+    let n = 0;
+    for (const b of kai.biter) {
+      if ((++n & 31) === 0 && børPuste()) await pust();
+      const c = Math.cos(b.a), s = Math.sin(b.a), maks = b.by ? Kyst.KAI.dybdeBy : Kyst.KAI.dybde; let d = maks;
+      for (let t = KANT; t <= maks; t += 1) { let stopp = false;
+        for (const q of [-5, 0, 5]) { const x = b.x - c * t - s * q, y = b.y - s * t + c * q; if (veg(x, y) || hus(x, y) || kv.moh(x, y) > b.z + .1) { stopp = true; break; } }
+        if (stopp) { d = Math.max(KANT, t - .8); break; } }
+      b.d = d;
+      // en veg ut i sjøen (bru, rampe, kulvert): ingen kai her
+      b.vekk = veg(b.x - c * .8, b.y - s * .8) || veg(b.x + c * 2, b.y + s * 2);
+    }
+    kai.biter = kai.biter.filter(b => !b.vekk);
+    // dybden jevnes ut med naboene (det minste av bitene innen 12 m, så dekket ikke får sagtenner mot gata og ikke går inn i vegen)
+    const dj = kai.biter.map(b => { let m = b.d; for (const o of kai.biter) if (Math.abs(o.x - b.x) < 12 && Math.abs(o.y - b.y) < 12 && o.d < m) m = o.d; return m; });
+    kai.biter.forEach((b, i) => { b.d = dj[i]; });
+    // høydegitteret: gitterpunktene under dekket heves (aldri senkes – vegene er alt lagt), punktene rett foran fronten senkes til −0,4 moh.
+    const N = u.N, st = u.steg, H = u.H, B2 = Kyst.KAI.bit / 2; let endret = 0;
+    for (const b of kai.biter) {
+      const c = Math.cos(b.a), s = Math.sin(b.a), r = Math.hypot(b.d + 10, B2) + st;
+      const i0 = Math.max(0, Math.floor((b.x - r + u.S) / st)), i1 = Math.min(N - 1, Math.ceil((b.x + r + u.S) / st));
+      const j0 = Math.max(0, Math.floor((u.S - b.y - r) / st)), j1 = Math.min(N - 1, Math.ceil((u.S - b.y + r) / st));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const x = -u.S + i * st, y = u.S - j * st, dx = x - b.x, dy = y - b.y, l = dx * c + dy * s, q = -dx * s + dy * c; if (Math.abs(q) > B2) continue;
+        const k = j * N + i;
+        // de nærmeste punktene (inntil én rute bak fronten, men under dekket) og 3 m ut senkes til −0,4 moh.: bakken mellom dette punktet
+        // og det neste skrår da under dekket, ikke foran fronten (gitteret har 2–8 m mellom punktene)
+        if (l > -Math.min(st, b.d) && l <= 3 && (l <= 0 || kv.sjø(x, y))) { if (H[k] > -.4) { H[k] = -.4; endret++; } }
+        else if (l <= 0 && l >= -b.d) { const z = b.z - .12; if (H[k] < z && !hus(x, y)) { H[k] = z; endret++; } }
+        // bak dekket skrår bakken ned igjen over 10 m (12 cm per meter), så dekket ikke står som en heller oppå bakken – men ikke under en veg
+        else if (l < -b.d && l >= -b.d - 10) { const z = b.z - .12 - (-b.d - l) * .12; if (H[k] < z && !hus(x, y) && !veg(x, y)) { H[k] = z; endret++; } }
+      }
+    }
+    // nettHoyde sitt nett lages på nytt fra det endrede gitteret
+    if (endret) u.nett = null;
+    kai.endret = endret;
+    return kai;
+  }
 
   // ---------- byggeklosser ----------
   const ny = () => ({ pos: [], kol: [] });
@@ -78,7 +144,7 @@
   let mesh = [], båter = null;
   KROKER.sett3d.push((u, R) => {
     for (const m of mesh) { R.scene.remove(m); m.geometry.dispose(); m.material.dispose(); } mesh = []; båter = null; R.kyst3d = mesh;
-    const k = u.kyst; if (!k || (!k.båter.length && !k.naust.length && !k.brygger.length && !k.bøyer.length)) return;
+    const k = u.kyst; if (!k || (!k.båter.length && !k.naust.length && !k.brygger.length && !k.bøyer.length && !(k.kai && (k.kai.biter.length || k.kai.stein.length)))) return;
     const mat = () => new THREE.MeshLambertMaterial({ vertexColors: true });
     // båtene: skrog (fargen per båt), dekk, styrehus (sjark) og kabin (motorbåt)
     if (k.båter.length) {
@@ -117,7 +183,69 @@
       for (let i = 0; i < 6; i++) { const a0 = i / 6 * 6.283, a1 = (i + 1) / 6 * 6.283, p = (a, r, z) => [b.x + Math.cos(a) * r, b.y + Math.sin(a) * r, z];
         kvad(G, p(a0, .55, b.z - .3), p(a1, .55, b.z - .3), p(a1, .55, b.z + .5), p(a0, .55, b.z + .5), kol); tri(G, p(a0, .55, b.z + .5), p(a1, .55, b.z + .5), [b.x, b.y, b.z + 1.6], kol); } }
     if (G.pos.length) { const m = new THREE.Mesh(geo(G), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); m.name = 'kyst3d'; R.scene.add(m); mesh.push(m); }
+    if (k.kai) kaiNett(u, R, k.kai);
   });
+
+  // ---------- kaiene i 3D (runde 15) ----------
+  // Fargene er Claudes forslag, valgt etter bildene: lys betong i kanten, mørk asfalt bak, gul kant (Bryggen), granittmur (Skudeneshavn),
+  // mørkt fenderverk i tre (Skagenkaien), tang og vått nederst på fronten, gule stiger, sorte fendere, grå lyktestolper.
+  const KF = { betong: [.6, .6, .57], asfalt: [.34, .34, .35], gul: [.88, .7, .1], front: [.52, .52, .5], våt: [.22, .24, .21], stein1: [.5, .49, .46], stein2: [.41, .4, .38],
+    tre1: [.3, .22, .15], tre2: [.24, .17, .11], jern: [.13, .13, .14], fender: [.05, .05, .05], stolpe: [.32, .34, .35], lys: [.97, .93, .8], gråstein: [.55, .54, .51] };
+  const FRONT = 4.5;
+  // forkant: betongkant 2,2 m + gul kantlist + loddrett front ned i sjøen i én av tre stiler; lokalt: x ut mot sjøen, y langs kaia, z = dekket
+  function kantGeo(stil) {
+    const G = ny(), B = Kyst.KAI.bit / 2, P = (l, q, z) => [l, q, z];
+    kvad(G, P(-KANT, -B, 0), P(-.3, -B, 0), P(-.3, B, 0), P(-KANT, B, 0), KF.betong);
+    boks(G, 0, 0, 0, -.3, .02, -B, B, 0, .18, KF.gul, KF.gul);
+    // endene (synes der kaia slutter)
+    for (const q of [-B, B]) kvad(G, P(-KANT, q, -FRONT), P(.02, q, -FRONT), P(.02, q, 0), P(-KANT, q, 0), KF.front);
+    const f = (q0, q1, z0, z1, k) => kvad(G, P(.02, q0, z0), P(.02, q1, z0), P(.02, q1, z1), P(.02, q0, z1), k);
+    if (stil === 'mur') {
+      // granittmur: skift på 0,55 m, kvadre på ca. 1,2 m i forband, mørkere og våt nederst
+      let r = 0; for (let z = 0; z > -FRONT; z -= .55, r++) { const z0 = Math.max(-FRONT, z - .55);
+        for (let q = -B - (r % 2 ? .6 : 0), i = 0; q < B; q += 1.2, i++) { const k = z0 < -1.6 ? KF.våt : (i + r) % 2 ? KF.stein1 : KF.stein2; f(Math.max(-B, q), Math.min(B, q + 1.17), z0, z - .03, k); } }
+    } else if (stil === 'tre') {
+      // fenderverk: loddrette planker på 0,25 m og en vaterbord-bjelke, tang nederst
+      for (let q = -B, i = 0; q < B; q += .25, i++) { f(q, q + .24, -1.6, 0, i % 2 ? KF.tre1 : KF.tre2); f(q, q + .24, -FRONT, -1.6, KF.våt); }
+      boks(G, 0, 0, 0, .02, .2, -B, B, -.55, -.3, KF.tre2);
+    } else { f(-B, B, -1.4, 0, KF.front); f(-B, B, -FRONT, -1.4, KF.våt); }
+    return G;
+  }
+  // resten av dekket (asfalt) med bakkant ned i bakken: lengde 1 innover (skaleres etter dybden), starter ved betongkanten
+  function dekkGeo() { const G = ny(), B = Kyst.KAI.bit / 2; boks(G, 0, 0, 0, -1, 0, -B, B, -FRONT, 0, KF.betong, KF.asfalt); return G; }
+  // åttekant (sylinder) fra z0 til z1
+  function sylinder(G, x, y, r, z0, z1, k, kTopp) { for (let i = 0; i < 8; i++) { const a0 = i / 8 * 6.283, a1 = (i + 1) / 8 * 6.283, p = (a, z) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z];
+    kvad(G, p(a0, z0), p(a1, z0), p(a1, z1), p(a0, z1), k); tri(G, p(a0, z1), p(a1, z1), [x, y, z1], kTopp || k); } }
+  function pullertGeo() { const G = ny(); sylinder(G, 0, 0, .17, 0, .42, KF.jern); sylinder(G, 0, 0, .24, .42, .5, KF.gul); return G; }
+  function fenderGeo() { const G = ny(); sylinder(G, .2, 0, .2, -2.3, -.3, KF.fender); return G; }
+  function stigeGeo() { const G = ny();
+    for (const q of [-.22, .22]) { boks(G, 0, 0, 0, .04, .1, q - .03, q + .03, -3.3, .95, KF.gul); boks(G, 0, 0, 0, -.4, .1, q - .03, q + .03, .89, .95, KF.gul); boks(G, 0, 0, 0, -.4, -.34, q - .03, q + .03, 0, .95, KF.gul); }
+    for (let z = -3.1; z < .1; z += .3) boks(G, 0, 0, 0, .05, .09, -.22, .22, z, z + .04, KF.gul);
+    return G; }
+  function lyktGeo() { const G = ny(); boks(G, 0, 0, 0, -.08, .08, -.08, .08, 0, 8, KF.stolpe); boks(G, 0, 0, 0, 0, 1.4, -.05, .05, 7.8, 7.92, KF.stolpe); boks(G, 0, 0, 0, 1.1, 1.65, -.17, .17, 7.62, 7.82, KF.lys, KF.stolpe); return G; }
+  function kaiNett(u, R, kai) {
+    const EX = R.EX || 1, o = new THREE.Object3D(), mat = () => new THREE.MeshLambertMaterial({ vertexColors: true });
+    const inst = (G, liste, settInn) => { if (!liste.length) return null; const m = new THREE.InstancedMesh(geo(G), mat(), liste.length);
+      liste.forEach((e, i) => { settInn(e, o); o.updateMatrix(); m.setMatrixAt(i, o.matrix); });
+      m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; m.name = 'kyst3d'; m.userData.kai = true; R.scene.add(m); mesh.push(m); return m; };
+    // et punkt (l, q) i kaibitens ramme -> verden; lite løft per bit (0–1 cm) så overlappende biter ikke flimrer
+    const plass = (b, l, q, dz, o) => { const c = Math.cos(b.a), s = Math.sin(b.a); o.position.set(b.x + c * l - s * q, b.y + s * l + c * q, (b.z - u.h0) * EX + (dz || 0) + ((b.X * 7 + b.Y * 13) % 11) * .001); o.rotation.set(0, 0, b.a); o.scale.set(1, 1, 1); };
+    for (const stil of ['betong', 'mur', 'tre']) inst(kantGeo(stil), kai.biter.filter(b => b.stil === stil), (b, o) => plass(b, 0, 0, 0, o));
+    inst(dekkGeo(), kai.biter.filter(b => b.d > KANT + .3), (b, o) => { plass(b, -KANT, 0, -.002, o); o.scale.set(b.d - KANT, 1, 1); });
+    // pullert midt på biten (forskjøvet litt etter frøet), to fendere (ikke på trefront), stige og lykt
+    const pull = kai.biter.filter(b => b.pullert), fend = []; for (const b of kai.biter) if (b.stil !== 'tre') for (const q of [-4, 4]) fend.push([b, q]);
+    inst(pullertGeo(), pull, (b, o) => plass(b, -.7, ((b.X + b.Y) % 5) - 2, 0, o));
+    inst(fenderGeo(), fend, ([b, q], o) => plass(b, 0, q, 0, o));
+    inst(stigeGeo(), kai.biter.filter(b => b.stige), (b, o) => plass(b, 0, 6, 0, o));
+    inst(lyktGeo(), kai.biter.filter(b => b.lykt && b.d > 3), (b, o) => plass(b, -Math.min(b.d - .8, 5), -6, 0, o));
+    // steinsetting (småbåthavner): grå steiner med litt ulik farge
+    if (kai.stein.length) { const G = new THREE.IcosahedronGeometry(1, 0).toNonIndexed(), n = G.attributes.position.count, kol = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) kol.set(KF.gråstein, i * 3); G.setAttribute('color', new THREE.BufferAttribute(kol, 3)); G.computeVertexNormals();
+      const m = new THREE.InstancedMesh(G, mat(), kai.stein.length);
+      kai.stein.forEach((st, i) => { o.position.set(st.x, st.y, (st.z - u.h0) * EX); o.rotation.set(st.r * .3, st.r * .2, st.r); o.scale.set(st.s * 1.1, st.s * .9, st.s * .7); o.updateMatrix(); m.setMatrixAt(i, o.matrix);
+        const v = .82 + ((i * 7919) % 100) / 400; m.setColorAt(i, new THREE.Color(v, v, v * .97)); });
+      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.frustumCulled = false; m.name = 'kyst3d'; m.userData.kai = true; R.scene.add(m); mesh.push(m); }
+  }
 
   // ---------- båtene gynger etter vinden (ute på sjøen mer enn ved kai) og noen kjører rundt ----------
   // Amplituden og takten følger Vind3d.VIND.fart (Ferje.gynging): stille = nesten ingenting, storm = kraftig. Fasen samles opp, så
@@ -139,5 +267,8 @@
   }
   let sist = 0;
   KROKER.ramme3d.push(R => { if (!båter) return; const t = window.Kjølvann ? Kjølvann.nå() : performance.now() / 1000; if (t - sist < (tak() ? .1 : .05)) return; sist = t; gyng(t); });
-  window.Kyst3d = { steg: gyng, antall: () => { const k = typeof R3 !== 'undefined' && R3 && R3.ut && R3.ut.kyst; return k ? { båter: k.båter.length, brygger: k.brygger.length, naust: k.naust.length, bøyer: k.bøyer.length, kjører: k.båter.filter(b => b.kjører).length } : null; } };
+  // kai(): kaibitene i utsnittet (for vakten og prøvene): antall, stiler, utstyr og høyden på dekket mot terrenget der det står
+  const kaiTall = k => { const a = k && k.kai; if (!a) return { biter: 0, stein: 0 }; const st = {}; for (const b of a.biter) st[b.stil] = (st[b.stil] || 0) + 1;
+    return { biter: a.biter.length, stein: a.stein.length, stil: st, pullerter: a.biter.filter(b => b.pullert).length, stiger: a.biter.filter(b => b.stige).length, lykter: a.biter.filter(b => b.lykt && b.d > 3).length, endret: a.endret || 0 }; };
+  window.Kyst3d = { steg: gyng, kaiPlass, kantGeo: s => kantGeo(s), antall: () => { const k = typeof R3 !== 'undefined' && R3 && R3.ut && R3.ut.kyst; return k ? { båter: k.båter.length, brygger: k.brygger.length, naust: k.naust.length, bøyer: k.bøyer.length, kjører: k.båter.filter(b => b.kjører).length, kai: kaiTall(k) } : null; } };
 })();
