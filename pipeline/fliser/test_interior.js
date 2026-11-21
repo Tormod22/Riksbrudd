@@ -99,7 +99,7 @@ ok(prøvebygg.length === nr, nr + ' prøvebygg (' + KART.length + ' klasser × 4
 { let store = 0, enInngang = 0, butikk = 0, vare = 0; const L = [];
   for (const { kl, fn, w, h, pl } of prøvebygg) { if (pl.areal < 150 || kl === 'uthus' || kl === 'hytte') continue; store++; if (pl.innganger.length < 2) { enInngang++; L.push(kl + '/' + fn + ' ' + w.toFixed(0) + '×' + h.toFixed(0)); }
     if (kl === 'butikk') { butikk++; if (pl.innganger.some(i => i.type === 'vare')) vare++; } }
-  ok(enInngang <= store * .03, store + ' store bygg (over 150 m²): ' + (store - enInngang) + ' har minst to innganger (' + enInngang + ' har én: ' + L.slice(0, 4).join(', ') + ')');
+  ok(enInngang === 0, store + ' store bygg (over 150 m²): ' + (store - enInngang) + ' har minst to innganger (' + enInngang + ' har én: ' + L.slice(0, 4).join(', ') + ')');
   ok(vare >= butikk * .9, butikk + ' butikker: ' + vare + ' har vareinngang');
 }
 // stilen: alle tre finnes, fast per bygg, byggeåret går foran

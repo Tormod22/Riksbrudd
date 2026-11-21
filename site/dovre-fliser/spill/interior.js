@@ -36,6 +36,8 @@
   // ---------- TABELLENE (Claudes forslag) ----------
   // Takhøyden (brukeren 21. nov): boliger ca. 2,4–2,7 m, butikker og kontorer 3–4 m, full høyde i haller, låver, kirker og industri,
   // aldri over veggtoppen og aldri under TAK_MIN. 'full' = opp til taket (høyst TAK_FULL_MAKS). Stilen velger hvor i spennet.
+  // største romdybde fra korridoren før bygget deles i flere skiver med hver sin korridor (m)
+  const DYP = 7.5;
   const TAK_MIN = 2.2, TAK_FULL_MAKS = 14, TAK_LUFT = .06, TAK_FLATT = .35;
   // Stilene: [gangbredde-faktor, rombredde-faktor, hvor i takspennet (0–1), vindusbredde (m), vinduets underkant (m)]
   const STILER = {
@@ -51,7 +53,7 @@
     leil: { plan: 'korridor', gang: 1.4, minRom: 2.6, romB: 3.5, vindfang: 2.2, tak: [2.45, 2.7], stil: [.35, .4, .25], romsett: 'bolig', inn: { bak: 140, nød: 500 } },
     hytte: { plan: 'bsp', tak: [2.3, 2.5], stil: [.6, .3, .1], romsett: 'bolig', inn: {} },
     kontor: { plan: 'korridor', gang: 1.9, minRom: 2.8, romB: 3.2, vindfang: 3, tak: [3, 3.5], stil: [.25, .4, .35], romsett: 'kontor', inn: { bak: 150, nød: 400 } },
-    skole: { plan: 'korridor', gang: 2.6, minRom: 5, romB: 7.5, vindfang: 4, tak: [3, 3.5], stil: [.35, .4, .25], romsett: 'skole', inn: { bak: 150, nød: 300 } },
+    skole: { plan: 'korridor', gang: 2.6, minRom: 5, romB: 7.5, dyp: 9, vindfang: 4, tak: [3, 3.5], stil: [.35, .4, .25], romsett: 'skole', inn: { bak: 150, nød: 300 } },
     sykehus: { plan: 'korridor', gang: 2.3, minRom: 3, romB: 3.6, vindfang: 4, tak: [2.8, 3.3], stil: [.3, .45, .25], romsett: 'sykehus', inn: { bak: 150, nød: 400 },
       // helse: eldrehjem/sykehjem («vanlige bygg»), legevakt og sykehus. am fra OSM går foran; ellers etter størrelse og høyde.
       variant: info => /nursing|social_facility|eldre|sykehjem/.test(info.am || info.navn || '') ? 'sykehjem' : /clinic|doctors|legevakt|helsesenter/.test(info.am || info.navn || '') ? 'legevakt'
@@ -331,31 +333,45 @@
     if (L < 4.5 || W < minR + cw || L * W < 30) return null;
     // hvilken side døra er på (i byggets firkant)
     const dS = [Math.abs(iv - v0), Math.abs(u1 - iu), Math.abs(v1 - iv), Math.abs(iu - u0)], side = dS.indexOf(Math.min(...dS)), kortside = side === 1 || side === 3;
-    let c0, c1;
-    if (W >= 2 * minR + cw) {
-      // to bånd: korridoren i midten (døra i gavlen: korridoren rett inn fra døra)
-      const midt = kortside ? iv : (v0 + v1) / 2 + (tilf() - .5) * .6;
-      const cv = Math.max(v0 + minR + cw / 2, Math.min(v1 - minR - cw / 2, midt)); c0 = cv - cw / 2; c1 = cv + cw / 2;
+    // BREDE BYGG (over 2 × DYP + gang per skive): flere skiver, hver med sin korridor i midten, og en tverrkorridor som binder dem sammen
+    // (ellers blir rommene 15 m dype). DYP = største romdybde (Claudes forslag).
+    const dyp = T.dyp || DYP, nSk = W >= 2 * (2 * minR + cw) ? Math.max(1, Math.min(4, Math.round(W / (2 * dyp + cw)))) : 1, bånd = [], korrer = [];
+    let tverr = null;
+    if (nSk >= 2) {
+      const Ws = W / nSk; for (let k = 0; k < nSk; k++) { const a = v0 + k * Ws, e = a + Ws, cv = (a + e) / 2; korrer.push({ u0, u1, v0: cv - cw / 2, v1: cv + cw / 2, korridor: true });
+        bånd.push({ a, b: cv - cw / 2, ved: cv - cw / 2, kc: cv }, { a: cv + cw / 2, b: e, ved: cv + cw / 2, kc: cv }); }
+      const uc = Math.max(u0 + 2.6 + cw / 2, Math.min(u1 - 2.6 - cw / 2, kortside ? (u0 + u1) / 2 : iu)); tverr = { u0: uc - cw / 2, u1: uc + cw / 2, v0, v1, korridor: true, tverr: true };
     } else {
-      // ett bånd: korridoren langs den siden døra er nærmest
-      const lav = kortside ? iv - v0 < v1 - iv : side === 0; if (lav) { c0 = v0; c1 = v0 + cw; } else { c0 = v1 - cw; c1 = v1; }
+      let c0, c1;
+      if (W >= 2 * minR + cw) {
+        // to bånd: korridoren i midten (døra i gavlen: korridoren rett inn fra døra)
+        const midt = kortside ? iv : (v0 + v1) / 2 + (tilf() - .5) * .6;
+        const cv = Math.max(v0 + minR + cw / 2, Math.min(v1 - minR - cw / 2, midt)); c0 = cv - cw / 2; c1 = cv + cw / 2;
+      } else {
+        // ett bånd: korridoren langs den siden døra er nærmest
+        const lav = kortside ? iv - v0 < v1 - iv : side === 0; if (lav) { c0 = v0; c1 = v0 + cw; } else { c0 = v1 - cw; c1 = v1; }
+      }
+      if (c0 - v0 >= minR - 1e-6) bånd.push({ a: v0, b: c0, ved: c0, kc: (c0 + c1) / 2 }); if (v1 - c1 >= minR - 1e-6) bånd.push({ a: c1, b: v1, ved: c1, kc: (c0 + c1) / 2 });
+      korrer.push({ u0, u1, v0: c0, v1: c1, korridor: true });
     }
-    const bånd = []; if (c0 - v0 >= minR - 1e-6) bånd.push({ a: v0, b: c0, ved: c0 }); if (v1 - c1 >= minR - 1e-6) bånd.push({ a: c1, b: v1, ved: c1 });
-    const korr = { u0, u1, v0: c0, v1: c1, korridor: true };
+    const korr = korrer[0], iKorr = (u, v) => korrer.some(k => v >= k.v0 - .05 && v <= k.v1 + .05) || (tverr && u >= tverr.u0 - .05 && u <= tverr.u1 + .05);
     // rommet døra går inn i: korridoren, eller et inngangsrom i båndet (vindfang/resepsjon/venterom) – bredde ew, rundt døra
     let innB = null, innA = null;
-    if (!(iv >= c0 - .05 && iv <= c1 + .05)) { innB = bånd.find(b => iv >= b.a - .05 && iv <= b.b + .05); if (!innB) return null;
+    if (!iKorr(iu, iv)) { innB = bånd.find(b => iv >= b.a - .05 && iv <= b.b + .05); if (!innB) return null;
       const m = kortside ? (side === 3 ? u0 + ew / 2 : u1 - ew / 2) : iu; innA = [Math.max(u0, m - ew / 2), Math.min(u1, m + ew / 2)];
-      if (innA[1] - innA[0] < ew - .01) { if (innA[0] === u0) innA[1] = u0 + ew; else innA[0] = u1 - ew; } }
+      if (innA[1] - innA[0] < ew - .01) { if (innA[0] === u0) innA[1] = u0 + ew; else innA[0] = u1 - ew; }
+      if (tverr && innA[1] > tverr.u0 && innA[0] < tverr.u1) return null; }
     // delingen langs hvert bånd: rom med bredde rundt romB (fast per bygg), aldri smalere enn 2 m
     const rb = T.romB * S.rom, seg = [];
     const delStrekk = (b, a0, a1) => { const len = a1 - a0; if (len < 1.6) return; const n = Math.max(1, Math.round(len / (rb * (.85 + tilf() * .3)))), wSeg = len / n;
       for (let k = 0; k < n; k++) seg.push({ u0: a0 + k * wSeg, u1: a0 + (k + 1) * wSeg, v0: b.a, v1: b.b, bånd: b }); };
-    for (const b of bånd) { if (b === innB) { delStrekk(b, u0, innA[0]); seg.push({ u0: innA[0], u1: innA[1], v0: b.a, v1: b.b, bånd: b, inngang: true }); delStrekk(b, innA[1], u1); } else delStrekk(b, u0, u1); }
+    // (tverrkorridoren deler båndene i to strekk)
+    const strekk = (b, a0, a1) => { if (!tverr) return delStrekk(b, a0, a1); if (a0 < tverr.u0) delStrekk(b, a0, Math.min(a1, tverr.u0)); if (a1 > tverr.u1) delStrekk(b, Math.max(a0, tverr.u1), a1); };
+    for (const b of bånd) { if (b === innB) { strekk(b, u0, innA[0]); seg.push({ u0: innA[0], u1: innA[1], v0: b.a, v1: b.b, bånd: b, inngang: true }); strekk(b, innA[1], u1); } else strekk(b, u0, u1); }
     for (const s of seg) { s.areal = (s.u1 - s.u0) * (s.v1 - s.v0); let inne = 0; for (let a = .5; a < 4; a++) for (let q = .5; q < 4; q++) if (iUV(s.u0 + (s.u1 - s.u0) * a / 4, s.v0 + (s.v1 - s.v0) * q / 4)) inne++; s.andel = inne / 16; s.areal *= s.andel; }
     // rollene etter ROMSETT
     const brukt = seg.filter(s => s.andel > .5 && !s.inngang), dørPkt = [iu, iv];
-    korr.rolle = RS.gang; const innS = seg.find(s => s.inngang); if (innS) innS.rolle = S.åpen === 2 && RS.inngang === 'vindfang' ? 'gang' : RS.inngang;
+    for (const k of korrer) k.rolle = RS.gang; if (tverr) tverr.rolle = RS.gang; const innS = seg.find(s => s.inngang); if (innS) innS.rolle = S.åpen === 2 && RS.inngang === 'vindfang' ? 'gang' : RS.inngang;
     tildel(brukt, RS.rom, dørPkt);
     for (const s of seg) if (!s.rolle) s.rolle = s.andel > .3 ? 'bod' : 'utenfor';
     // veggene: mellom rommene i et bånd (ingen dør; åpent mellom stue og kjøkken i nyere og moderne), og mot korridoren (én dør per rom,
@@ -367,12 +383,16 @@
         // mellom et inngangsrom og nabo: dør bare når naboen kan nås fra den (aldri soverom/bad), ellers tett vegg
         skille(false, A.u1, b.a, b.b, false); }
       for (const s of L2) { yield 'skille'; if (s.rolle === 'utenfor') continue;
-        if (s.inngang || (S.åpen >= 2 && åpneRoller[s.rolle])) { s.åpenMot = (s.åpenMot || []).concat([korr]); continue; }
+        const minKorr = korrer.find(k => Math.abs((k.v0 + k.v1) / 2 - b.kc) < .01) || korr;
+        if (s.inngang || (S.åpen >= 2 && åpneRoller[s.rolle])) { s.åpenMot = (s.åpenMot || []).concat([minKorr]); continue; }
         // veggen mot korridoren med én dør (litt inn fra kanten, så døra ikke kommer der to vegger møtes)
         skille(true, b.ved, s.u0 + .25, s.u1 - .25, true); if (s.u1 - s.u0 > .5) { skille(true, b.ved, s.u0, s.u0 + .25, false); skille(true, b.ved, s.u1 - .25, s.u1, false); } } }
+    // tverrkorridorens vegger mot båndene (uten dør) – rommene har dør til sin egen korridor
+    if (tverr) for (const b of bånd) { yield 'skille'; for (const uu of [tverr.u0, tverr.u1]) if (uu > u0 + .3 && uu < u1 - .3 && !(b === innB && uu > innA[0] - .05 && uu < innA[1] + .05)) skille(false, uu, b.a, b.b, false); }
     // kan alle rom nås? (rom med dør: punktet i døra må være inne i omrisset på begge sider) – grovt: korridoren må være inne der rommet ligger
-    for (const s of seg) { if (s.rolle === 'utenfor' || s.andel < .5) continue; const m = (s.u0 + s.u1) / 2, cv = (c0 + c1) / 2; if (!iUV(m, cv) && !iUV(s.u0 + .6, cv) && !iUV(s.u1 - .6, cv)) return null; }
-    return [korr, ...seg];
+    for (const s of seg) { if (s.rolle === 'utenfor' || s.andel < .5) continue; const m = (s.u0 + s.u1) / 2, cv = s.bånd.kc; if (!iUV(m, cv) && !iUV(s.u0 + .6, cv) && !iUV(s.u1 - .6, cv)) return null; }
+    if (tverr) for (const k of korrer) if (!iUV((tverr.u0 + tverr.u1) / 2, (k.v0 + k.v1) / 2)) return null;
+    return [...korrer, ...(tverr ? [tverr] : []), ...seg];
   }
 
   // Tildel roller til rommene etter en liste fra ROMSETT (se forklaringen over ROMSETT). Rommene er { u0, u1, v0, v1, areal, bånd }.
@@ -435,7 +455,7 @@
     const dører = [[d.x, d.y]];
     for (const [type, bw] of ønsk) {
       let best = null;
-      for (const k of kanter) { if (k.L < bw + 1.6) continue; for (const t of [.5, .3, .7, .18, .82]) {
+      for (const k of kanter) { if (k.L < bw + 1.6) continue; for (const t of [.5, .3, .7, .25, .75, .18, .82, .4, .6, .1, .9]) {
         const x = k.a[0] + k.ex * k.L * t, y = k.a[1] + k.ey * k.L * t, nx = k.ey, ny = -k.ex, ix = x - nx * .7, iy = y - ny * .7;
         if (!inni(P, ix, iy) || avstKant(P, ix, iy) < .5) continue;
         // ikke der en skillevegg møter ytterveggen, og ikke tett på en annen dør

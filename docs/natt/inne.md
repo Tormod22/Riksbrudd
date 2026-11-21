@@ -27,7 +27,8 @@ som er igjen; for små rom får `ellers`). `fraRom` = bare når bygget har minst
 
 **Planene.** Korridorplanen (boliger, leiligheter, kontor, skole, helse): en gang/korridor langs byggets lengde, rommene i ett eller to
 bånd langs den, hvert rom med én dør til korridoren. Døra går inn i korridoren (dør i gavlen) eller i et vindfang/en resepsjon/et
-venterom som er åpent mot den. Smale, skjeve eller L-formede bygg der korridoren ikke når alle rom, faller tilbake til den gamle
+venterom som er åpent mot den. Brede bygg (bredere enn ca. 2 × DYP + gang, DYP = 7,5 m, skole 9 m) deles i 2–4 skiver med hver
+sin korridor og en tverrkorridor ved døra som binder dem sammen (før: sykehjem 46 × 32 m fikk beboerrom på 4 × 15 m). Smale, skjeve eller L-formede bygg der korridoren ikke når alle rom, faller tilbake til den gamle
 delingen (`bsp`) – der får boliger gang ved døra når det er flere enn to rom, og TILGANG-regelen rydder opp. Haller: hovedrom +
 bakrom (lager, tørkeloft, kontrollrom, sakristi) eller forrom (melkerommet i fjøset når døra er i gavlen).
 
@@ -79,7 +80,7 @@ nursing_home, clinic, doctors), `navn` (OSM `name`) og `industri` (OSM `industri
 
 - `node pipeline/fliser/test_interior.js`: 560 nye prøvebygg (14 klasser × 4 former × 10 størrelser) + de gamle 648: alle rom nås, ingen
   møbler i døråpninger, ingen ytterdør inn i soverom/bad/beboerrom/sykerom, alle soverom/bad har dør til gang/korridor/stue, takhøyden
-  innenfor grensene (alle klasser × stiler × saltak/flatt × 10 vegghøyder), 308 av 321 → nå alle store bygg har minst to innganger,
+  innenfor grensene (alle klasser × stiler × saltak/flatt × 10 vegghøyder), alle 321 store bygg har minst to innganger,
   stilene, byggeåret, eldre har flere vegger enn moderne, butikk/fjøs/industri/helse/skole/kontor/kirke/hytte har riktig innhold.
   `test_interior_biter.js`, `test_lave3d.js`, `test_lut.js` ok.
 - Vakt `pipeline/fliser/vakter/inne.js` på PC med 3D (2 s): reglene på 15 prøvebygg, prøvehuset 10 × 8 m 7996 trekanter (grensen i
@@ -87,7 +88,7 @@ nursing_home, clinic, doctors), `navn` (OSM `name`) og `industri` (OSM `industri
   inngang satt til soverom og kontorets innganger fjernet → vakta meldte 5 brudd; med runde 14-filen → «TYPER mangler». Vakta fant
   ikke en feil jeg laget i 3D underveis (trappa ga «Cannot access 'ute'») – den ble funnet i bildeskriptet; derfor bygger vakta nå
   interiøret i 3D og fanger «interiør:»-advarslene.
-- Bilder (scratchpad `natt15/inne/`): `plan-*.png` (romplaner før/etter for 12 bygg), `for-etter-3d.png` (før/etter i 3D: bolig,
+- Bilder (scratchpad `natt15/inne/`): `plan-*.png` (romplaner før/etter for 13 bygg, også et bredt sykehjem 46 × 32 m), `for-etter-3d.png` (før/etter i 3D: bolig,
   butikk, fjøs, industri, sykehjem, 1400 × 820), `etter-*-mobil.png` (844 × 390), `etter-butikk.png` (nye reoler).
 
 ### Sammenlignet med virkeligheten
@@ -102,7 +103,6 @@ nursing_home, clinic, doctors), `navn` (OSM `name`) og `industri` (OSM `industri
 
 ### IKKE gjort / gjenstår
 
-- Svært brede bygg (over ca. 20 m) får dype rom (sykehjem 42 × 32: beboerrom 4 × 15 m) – en andre korridor eller lysgård trengs.
 - L- og T-formede boliger bruker fortsatt den gamle delingen (korridoren når ikke alle rom); TILGANG-regelen gjør da noen rom til
   kontor/bod.
 - Bare første etasje. Ingen kyr i fjøset, ingen gangskilt i butikken, traverskranen har ingen skinner langs veggene.
