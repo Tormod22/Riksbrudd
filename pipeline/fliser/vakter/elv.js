@@ -19,7 +19,18 @@ module.exports = { navn: 'elv: strøm nedover i brede elver', kjør: async (pg, 
     // strøm. Vannet leses derfor fra z9-vinduet, høyden fra z11 (8 m).
     const v = await lagVindu(bb, false, 11), vk = await lagVindu(bb, false, 9);
     const rute = (w, x, y) => { const i = Math.floor((x - w.x0) / w.r), j = Math.floor((w.y0 - y) / w.r); return i >= 0 && j >= 0 && i < w.w && j < w.h ? j * w.w + i : -1; };
-    const vann = (x, y) => { const k = rute(vk, x, y); return k >= 0 && vk.K[k] === 3; };
+    // (fiks 15) På Dovre-testsiden ligger Lågen IKKE i kartets vannflate (3D-utsnittet ved Dombås har u.harVann = false): elva tegnes der
+    // som bekkens vannbånd, som har sin egen rennende krusning. Strømlaget gjelder elver som ligger i kartets vann (Glomma, Nidelva …).
+    // For å prøve reglene på ekte NVE-linjer og ekte terreng regnes derfor elva selv som vann: alt innenfor halve NVE-bredden (+ 3 m)
+    // fra midtlinjene i ruter på 4 m, i tillegg til vannet i terrengklassene.
+    const RB = 4, BW = Math.ceil((bb[2] - bb[0]) / RB), BH = Math.ceil((bb[3] - bb[1]) / RB), band = new Uint8Array(BW * BH);
+    for (const l of linjer) { const r = (l.b || 10) / 2 + 3, rc = Math.ceil(r / RB);
+      for (let k = 1; k < l.P.length; k++) { const [ax, ay] = l.P[k - 1], [bx2, by2] = l.P[k], n = Math.max(1, Math.ceil(Math.hypot(bx2 - ax, by2 - ay) / 2));
+        for (let q = 0; q <= n; q++) { const x = ax + (bx2 - ax) * q / n, y = ay + (by2 - ay) * q / n, ci = Math.floor((x - bb[0]) / RB), cj = Math.floor((bb[3] - y) / RB);
+          for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) { const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= BW || j >= BH) continue;
+            if (Math.hypot((i + .5) * RB + bb[0] - x, bb[3] - (j + .5) * RB - y) <= r) band[j * BW + i] = 1; } } } }
+    const iBand = (x, y) => { const i = Math.floor((x - bb[0]) / RB), j = Math.floor((bb[3] - y) / RB); return i >= 0 && j >= 0 && i < BW && j < BH && band[j * BW + i] === 1; };
+    const vann = (x, y) => { if (iBand(x, y)) return true; const k = rute(vk, x, y); return k >= 0 && vk.K[k] === 3; };
     const høyde = (x, y) => { const k = rute(v, x, y); return k >= 0 ? v.H[k] : NaN; };
     // åpent vann: minst 90 % vann innenfor 150 m (prøvepunkter i to ringer)
     const åpent = (x, y) => { let n = 0, s = 0; for (const r of [75, 150]) for (let a = 0; a < 16; a++) { n++; if (vann(x + r * Math.cos(a * Math.PI / 8), y + r * Math.sin(a * Math.PI / 8))) s++; } return s / n >= .9; };
