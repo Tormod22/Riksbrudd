@@ -1,6 +1,6 @@
 // VAKT «natur» (18. nov): trær med bladtekstur, gress med vind og lyng, soldater som rører seg, effekter (støv, spor, skudd, kratere,
 // brente områder) og fjern skog. Runde 5: stranda (u.strand), planter ikke i hus lagt inn etterpå, låvens innhold (regler). Tåler at 3D er av (da prøves bare reglene og at delene finnes) og setter alt tilbake.
-module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog', kjør: async (pg, profil) => {
+module.exports = { navn: 'natur: trær, gress, figurer, effekter, fjern skog, bakkens farge og frie baner', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => {
     const ut = { feil: [] }, krev = (ok, tekst) => { if (!ok) ut.feil.push(tekst); };
     krev(window.Effekter && window.Effekter3d && window.FjernBy && window.FjernBy3d, 'modulene mangler');
@@ -11,6 +11,15 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
     krev(Effekter.underlag('asfalt', false, 0).støv === 0 && Effekter.underlag('grus', false, 0).støv === 1, 'underlag');
     krev(FjernBy.inneAndel(1) === 0 && FjernBy.inneAndel(.4) > 0, 'inneAndel');
     krev(window.Kartbilde && typeof Kartbilde.strandG === 'function' && window.Lave3d && typeof Lave3d.plasser === 'function', 'strandG eller Lave3d mangler');
+    // RUNDE 15: bakkens farge (gul-oliven eng dreies mot grønt, brun lyng og grått berg som før) og anleggene (ingen trær/steiner på banene)
+    krev(window.Bakkefarge && window.AnleggFri, 'Bakkefarge eller AnleggFri mangler');
+    if (window.Bakkefarge && window.AnleggFri) {
+      const px = new Uint8ClampedArray([120, 115, 70, 255, 105, 90, 70, 255, 130, 128, 122, 255]); naturfarger(px, 3, 0, 1);
+      const h = (r, g, b) => Bakkefarge.hsv(r, g, b)[0]; ut.engTone = Math.round(h(px[0], px[1], px[2]));
+      krev(ut.engTone >= 64, 'gul-oliven eng er ikke dreid mot grønt (' + ut.engTone + '°)');
+      krev(Math.abs(h(px[4], px[5], px[6]) - h(105, 90, 70)) < 3 && Math.abs(px[8] - px[9]) < 6, 'lyng eller berg har fått ny farge');
+      const A = AnleggFri.lag([[[0, 0], [100, 0], [100, 60], [0, 60]]]); krev(AnleggFri.inni(A, 50, 30) && !AnleggFri.inni(A, 120, 30), 'AnleggFri.inni');
+    }
     const R = typeof R3 !== 'undefined' && R3 && R3.ut && på3d ? R3 : null; ut.i3d = !!R;
     if (!R) return ut;
     const ramme = () => new Promise(r => { const t = setTimeout(r, 2500); requestAnimationFrame(() => { clearTimeout(t); r(); }); });
@@ -57,8 +66,27 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter og fjern skog',
       // nettet for to prøvelåver (høy og lav himling) lages uten feil og med få trekanter
       for (const [h, i] of [[8, 5151], [3.4, 77]]) { const pl = Interior.plan([[0, 0], [16, 0], [16, 10], [0, 10]], { i, kl: 'låve', h, dør: { x: 8, y: 0, ux: 1, uy: 0, w: 3 } }); pl.gulv = 0;
         const n = Lave3d.prøvNett(pl); (ut.låveNett = ut.låveNett || []).push(n); krev(n && n.tall && n.trekanter > 300 && n.trekanter < 6000, 'låvenettet: ' + JSON.stringify(n)); } }
+    // RUNDE 15: en prøvebane der det står trær – trærne tas bort av AnleggFri, og planter, einer og fjellmark får ikke stå der
+    { const u2 = R.ut, gran = (u2.trær && (u2.trær.gran || u2.trær['løv'])) || [], før = { a: u2.anleggFri, p: u2.påAnlegg };
+      if (gran.length >= 5) { const x = gran[0], y = gran[1], P = [[x - 30, y - 20], [x + 30, y - 20], [x + 30, y + 20], [x - 30, y + 20]], A = AnleggFri.lag([P]);
+        try {
+          u2.anleggFri = A; u2.påAnlegg = (a, b, k) => AnleggFri.inni(A, a, b, k);
+          let inne = 0, igjen = 0; for (const art of Object.keys(u2.trær)) { const d0 = u2.trær[art]; if (!d0) continue; for (let k = 0; k < d0.length; k += 5) if (AnleggFri.inni(A, d0[k], d0[k + 1])) inne++; const r = AnleggFri.rens(A, d0, 5); for (let k = 0; k < r.length; k += 5) if (AnleggFri.inni(A, r[k], r[k + 1])) igjen++; }
+          ut.prøvebane = { trærFør: inne, igjen }; krev(inne > 0 && igjen === 0, 'prøvebanen: ' + JSON.stringify(ut.prøvebane));
+          // et punkt på banen der en blomst kunne stått uten banen (ikke inntil et tre eller hus), skal ikke være fritt med banen
+          let fritt = null; u2.påAnlegg = null;
+          for (let dx = -24; dx <= 24 && !fritt; dx += 6) for (let dy = -16; dy <= 16 && !fritt; dy += 4) if (Vegetasjon3d.fri(x + dx, y + dy)) fritt = [x + dx, y + dy];
+          u2.påAnlegg = (a, b, k) => AnleggFri.inni(A, a, b, k);
+          ut.friPåBane = fritt ? Vegetasjon3d.fri(fritt[0], fritt[1]) : null;
+          krev(!fritt || ut.friPåBane === false, 'en blomst/busk kan stå midt på en bane');
+        } finally { u2.anleggFri = før.a; u2.påAnlegg = før.p; } }
+      // ekte baner i utsnittet (husdata, ikke på Dovre-testsiden): 0 trær, steiner og busker på dem
+      if (u2.anleggFri) { let n = 0; for (const art of Object.keys(u2.trær || {})) { const d0 = u2.trær[art] || []; for (let k = 0; k < d0.length; k += 5) if (u2.påAnlegg(d0[k], d0[k + 1])) n++; }
+        for (const nv of ['stein', 'busk']) { const d0 = (u2.smått && u2.smått[nv]) || []; for (let k = 0; k < d0.length; k += 5) if (u2.påAnlegg(d0[k], d0[k + 1])) n++; }
+        ut.påBanene = n; krev(n === 0, n + ' trær/steiner/busker står på baner og anlegg'); }
+      ut.dyrket = u2.dyrket; }
     return ut;
   });
   const ok = !d.feil.length;
-  return { ok, tekst: ok ? (d.i3d ? `trær med blad (${d.blad} nett), soldat ${Math.round(d.soldat)} trekanter, effekter, ${d.fjern ? d.fjern.holt : 0} skogholt, strand ${d.strand}, ingen blomst i prøvehus, låve ${(d.låveNett || []).map(n => n && n.trekanter).join('/')} trekanter` : 'reglene (3D var av)') : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? (d.i3d ? `trær med blad (${d.blad} nett), soldat ${Math.round(d.soldat)} trekanter, effekter, ${d.fjern ? d.fjern.holt : 0} skogholt, strand ${d.strand}, ingen blomst i prøvehus, eng ${d.engTone}°, prøvebane ${d.prøvebane ? d.prøvebane.trærFør + "->" + d.prøvebane.igjen : "–"}, låve ${(d.låveNett || []).map(n => n && n.trekanter).join('/')} trekanter` : 'reglene (3D var av)') : d.feil.join('; '), data: d };
 } };

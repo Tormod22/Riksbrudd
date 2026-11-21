@@ -75,6 +75,8 @@
     if (typeof hindring3d === 'function' && hindring3d(x, y)) return false;
     if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) return false;
     if (window.Interior3d && Interior3d.iLeirbygg && Interior3d.iLeirbygg(x, y)) return false;
+    // (runde 15) ikke stein, lav eller lyng på fotballbaner og andre anlegg (spill/anleggfri.js)
+    if (u.påAnlegg && u.påAnlegg(x, y)) return false;
     return true;
   }
   function fordel(R) {
