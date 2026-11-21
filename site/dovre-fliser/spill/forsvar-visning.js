@@ -139,7 +139,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   const overlapp = (a, r) => !(r.right <= a.left + 1 || r.left >= a.right - 1 || r.bottom <= a.top + 1 || r.top >= a.bottom - 1);
   function plasserAlarm() { if (alarm.style.top || alarm.style.bottom) { alarm.style.top = ''; alarm.style.bottom = ''; }
     if (!alarm.classList.contains('på') || !document.body.classList.contains('gaar') || !alarm.getClientRects().length) return null;
-    const knapper = [...document.querySelectorAll('button')].filter(synligKnapp).map(b => b.getBoundingClientRect()), treff = () => { const a = alarm.getBoundingClientRect(); return knapper.some(r => overlapp(a, r)); };
+    // (knappene, og boksene i skjermbildet når du går – helse/våpen nederst, spaken – så banneret ikke legger seg oppå dem nederst)
+    const knapper = [...document.querySelectorAll('button, #nhud .boks, #nhud .vapen, #nhud .helse, #stikke, #spak, .styrespak')].filter(synligKnapp).map(b => b.getBoundingClientRect()), treff = () => { const a = alarm.getBoundingClientRect(); return knapper.some(r => overlapp(a, r)); };
     if (!treff()) return 'oppe';
     const inne = [...document.querySelectorAll('#inneknapper > button')].filter(synligKnapp).map(b => b.getBoundingClientRect().bottom);
     if (inne.length) { alarm.style.top = Math.round(Math.max(...inne) + 6) + 'px'; if (!treff()) return 'under'; }
