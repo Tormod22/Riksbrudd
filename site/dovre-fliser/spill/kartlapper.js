@@ -52,8 +52,9 @@
   // Trykk på lappen zoomer inn på leiren, der hvert lag har sitt navn. Det valgte laget har alltid sitt eget navn.
   // Claudes forslag: samles fra 1,6 m per punkt (der hvert lag blir ett merke) til NAVN_UTE (14; lenger ute står tallet bak leirens navn
   // som før); trykket zoomer til 1,2 m per punkt
-  // (runde 14, kritikk I) Claudes forslag: «ved leiren» = innen 300 m (r) fra flagget, målt i kartet
-  const SAMLE = { fra: 1.6, inn: 1.2, luft: 8, r: 300 };
+  // (runde 14, kritikk I – fasiten sa «ca. 300 m») Claudes forslag: «ved leiren» = innen 450 m (r) fra flagget, målt i kartet. Ikke 300 m:
+  // startlagene (Vaktlaget) settes 380 m fra flagget (oppstart-visning.js), og de står i leiren – med 300 m ble Vaktlaget «1 lag ute»
+  const SAMLE = { fra: 1.6, inn: 1.2, luft: 8, r: 450 };
   const kjøretøyListe = () => (typeof KJORETOY !== 'undefined' ? KJORETOY : window.KJORETOY) || [];
   const lever = e => typeof levende !== 'function' || levende(e);
   const vedLeiren = (x, y) => { const S = leir(); return !!(S && isFinite(x) && isFinite(y) && Math.hypot(x - S.leir.x, y - S.leir.y) <= SAMLE.r); };
@@ -63,8 +64,8 @@
     if (e) return vedLeiren(e.x, e.y) ? (e.karakter ? 'deg' : 'lag') : null;
     const k = kjøretøyListe().find(k => k && k.navn === t && k.side === 'blå' && k !== v);
     if (k) return vedLeiren(k.x != null ? k.x : k.X, k.y != null ? k.y : k.Y) ? 'kjøretøy' : null; return null; };
-  // (runde 14, kritikk I) tallene i lappen regnes av spillet, ikke av navnene som ble skjult: alle egne lag innen 300 m (også det valgte),
-  // uten karakteren; «deg» når karakteren er der; kjøretøyene innen 300 m; og egne lag lenger unna = «ute»
+  // (runde 14, kritikk I) tallene i lappen regnes av spillet, ikke av navnene som ble skjult: alle egne lag innen SAMLE.r (også det valgte),
+  // uten karakteren; «deg» når karakteren er der; kjøretøyene innen SAMLE.r; og egne lag lenger unna = «ute»
   function telling() { const n = { lag: 0, deg: 0, kjøretøy: 0, ute: 0 }; if (!leir()) return n;
     for (const e of ENHETER) { if (!e || e.side !== 'blå' || !lever(e)) continue; const ved = vedLeiren(e.x, e.y);
       if (e.karakter) { if (ved) n.deg = 1; } else if (ved) n.lag++; else n.ute++; }

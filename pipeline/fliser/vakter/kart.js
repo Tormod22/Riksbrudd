@@ -98,12 +98,12 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
       if (KartLapper.telling) { const deg = ENHETER.find(e => e.karakter && e.side === 'blå'), flytt = deg && [deg.x, deg.y];
         const a = nyttLag('Telling A', L.x + 30, L.y, 'blå'), b = nyttLag('Telling B', L.x + 3000, L.y, 'blå'); ENHETER.push(a, b); nye.push(a, b); if (deg) { deg.x = L.x - 20; deg.y = L.y; }
         try { const n = KartLapper.telling(), n0 = { ...n }; ut.telling = n0; const t = Etikett.samleTekst(n);
-          const inne = ENHETER.filter(e => e.side === 'blå' && levende(e) && !e.karakter && Math.hypot(e.x - L.x, e.y - L.y) <= 300).length;
+          const inne = ENHETER.filter(e => e.side === 'blå' && levende(e) && !e.karakter && Math.hypot(e.x - L.x, e.y - L.y) <= KartLapper.SAMLE.r).length;
           a.x = L.x + 3000; const n2 = KartLapper.telling(); ut.telling2 = n2;
           krev(n2.lag === n0.lag - 1 && n2.ute === n0.ute + 1, 'samlelappen: et lag som går ut av leiren, telles ikke som ute: ' + JSON.stringify([n0, n2]));
           krev(!deg || (n0.deg === 1 && / \+ deg|deg og|Leiren: deg/.test(t)), 'samlelappen: karakteren står ikke som «deg»: ' + t);
           krev(n0.ute >= 1 && /lag ute/.test(t), 'samlelappen: lag ute nevnes ikke: ' + t);
-          krev(inne === n0.lag, 'samlelappen: tallet er ikke lagene innen 300 m uten karakteren: ' + JSON.stringify(n0)); }
+          krev(inne === n0.lag, 'samlelappen: tallet er ikke lagene ved leiren uten karakteren: ' + JSON.stringify(n0)); }
         finally { if (deg) { deg.x = flytt[0]; deg.y = flytt[1]; } } }
       if (window.Kaier && Kaier.stedsnavn) { const k = Kaier.stedsnavn('M/K Ørsdølen II, Odlandstø'); ut.kai = k; krev(k === 'Odlandstø', 'kaien heter fortsatt fartøyet: ' + k); }
       if (typeof tegnFliser === 'function' && typeof FERDIG !== 'undefined') { const kam1 = { ...kam }, g0 = FERDIG.get, h0 = FERDIG.has, kø0 = window.kø; let z0 = null;
