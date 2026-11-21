@@ -1,5 +1,32 @@
 [
-  ["Når lagene dine kommer i kamp", "Første gang et av lagene dine skyter eller blir skutt på, stopper ⏭ og farten går ned til 1× – én gang per kamp. Meldingen sier hvem, mot hvem og hvor, f.eks. «⚔ Speidertropp 1 er i kamp med bygdevernet i Lærdalsøyri (7 mann)». Trykk «Vis» for å se stedet. Har laget ikke radiokontakt, står det et merke med to sverd der kampen er. Faller noen, sier loggen hvem de falt for.", "Lag og strid"],
-  ["Når kommer røverne?", "Ser ingen røverne ennå, står det bare omtrent når de kommer («ikke sett – kommer trolig i natt»). Når noen ser dem, står avstanden og minuttene – og anslaget går bare ned så lenge de ikke snur. Tida for neste bølge står i Leir → Forsvar med nedtelling, og øverst til venstre når det er under 12 timer igjen.", "Lag og strid"],
-  ["Spolingen under et angrep", "⏭ stopper når røverne blir sett, når kampen om leiren begynner og når angrepet er over. Alle stoppkort med et sted har «Vis».", "Lag og strid"]
+ [
+  "Når lagene dine kommer i kamp",
+  "Første gang et av lagene dine skyter eller blir skutt på, stopper ⏭ og farten går ned til 1× – én gang per kamp. Meldingen sier hvem, mot hvem og hvor, f.eks. «⚔ Speidertropp 1 er i kamp med bygdevernet i Lærdalsøyri (7 mann)». Trykk «Vis» for å se stedet. Har laget ikke radiokontakt, står det et merke med to sverd der kampen er. Faller noen, sier loggen hvem de falt for.",
+  "Lag og strid"
+ ],
+ [
+  "Når kommer røverne?",
+  "Ser ingen røverne ennå, står det bare omtrent når de kommer («ikke sett – kommer trolig i natt»). Når noen ser dem, står avstanden og minuttene – og anslaget går bare ned så lenge de ikke snur. Tida for neste bølge står i Leir → Forsvar med nedtelling, og øverst til venstre når det er under 12 timer igjen.",
+  "Lag og strid"
+ ],
+ [
+  "Spolingen under et angrep",
+  "⏭ stopper når røverne blir sett, når kampen om leiren begynner og når angrepet er over. Alle stoppkort med et sted har «Vis».",
+  "Lag og strid"
+ ],
+ [
+  "Varslet angrep",
+  "Etterretningen sier «angrep tidligst om ca. 6 t» ut fra hvor fienden står og hvor fort de går. Står de alt nær byen, står det «fienden er ved byen nå». De angriper ikke før tida – med mindre dere skyter på dem først.",
+  "Lag og strid"
+ ],
+ [
+  "Røverne kommer",
+  "Brikka sier når røverne drar ut («Røverne drar ut om 3 t»). Er de sett, viser banneret hvor og når: «sist sett 3,5 km N kl. 08:53». Når de er under 500 m fra leiren, går farten ned til 1×. Fra bølge 2 kommer de oftere fra to kanter.",
+  "Lag og strid"
+ ],
+ [
+  "Patruljer i fredstid",
+  "De første døgnene angriper ikke motstanderne leiren. Ser du en av patruljene deres, stopper spolingen én gang med «fiendens patrulje – fredstid, angriper ikke».",
+  "Lag og strid"
+ ]
 ]
