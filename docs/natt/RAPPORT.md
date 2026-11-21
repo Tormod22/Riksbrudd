@@ -238,3 +238,5 @@ To nye kritikere (docs/anmeldelse-2026-11-21.md): liggende telefon 3 (grafikk 2)
 - **Kart:** én skrift, ingen lapper oppå hverandre, lysere krigskart, leiren synlig langt ute, ingen skjøter i trekronene.
 - **Inne:** resultatpanel etter leting med «Se i skapene», knappene samlet, karakteren drikker og spiser selv, raske sveip virker og pila mot inngangen er riktig.
 - **3D:** grafikken setter seg ikke ned av seg selv (den flate, gule marka), låven er innredet med traktor og høy, ny våpenarm og flaggstang, og stedsnavnene ligger ikke midt i bildet når du går.
+
+Kontroll: PC 130/130, mobil 130/130 (knappen «Gå ut» lå først litt oppå kompasset på telefon – rettet).

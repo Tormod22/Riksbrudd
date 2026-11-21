@@ -1385,4 +1385,4 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   «Reis til feltbilen». 3D: Auto-grafikken senker seg bare etter 10 s sammenhengende tregt (Kvalitet.vedvarende), aldri over Lav på
   programvare-grafikk, Lav har gress og blomster, enkelBakke har korn (ikke flat gul mark); låven med plankevegger, traktor/gråtass av
   Kjoretoy3d.form, høyballer og lysstråler (lave3d.js); våpenarmen med hanske og kamuflasje; stedsnavn i gåmodus bare over 600 m og aldri
-  midt i bildet (NAVN_GÅ); ny flaggstang som blafrer i vinden (window.Flagg3d). Hjelpen: 237 emner.
+  midt i bildet (NAVN_GÅ); ny flaggstang som blafrer i vinden (window.Flagg3d). Hjelpen: 237 emner. Kontroll: PC 130/130, mobil 130/130.
