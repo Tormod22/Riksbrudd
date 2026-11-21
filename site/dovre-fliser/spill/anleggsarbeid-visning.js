@@ -137,7 +137,8 @@
     lagre(); oppdaterInngrep(); panelHtml = ''; visAnleggPanel(); byggPåNytt(a);
   }
   function iUtsnitt(a) { const R = r3(); if (!R || !R.ut) return false; const u = R.ut; return a.P.some(p => Math.abs(p[0] - u.cx) < u.S && Math.abs(p[1] - u.cy) < u.S); }
-  function byggPåNytt(a) { const R = r3(); if (typeof på3d !== 'undefined' && på3d && R && R.ut && !R.bygger && (!a || iUtsnitt(a))) nytt3dUtsnitt(R.ut.cx + R.bane.x, R.ut.cy + R.bane.y, R.ut.S); }
+  // AnleggSpill.utenOmbygging = true (vakta): 3D-utsnittet bygges ikke på nytt, bare modellene
+  function byggPåNytt(a) { const R = r3(); if (window.AnleggSpill && AnleggSpill.utenOmbygging) { nyeModeller(); return; } if (typeof på3d !== 'undefined' && på3d && R && R.ut && !R.bygger && (!a || iUtsnitt(a))) nytt3dUtsnitt(R.ut.cx + R.bane.x, R.ut.cy + R.bane.y, R.ut.S); }
 
   // ---------- vern ----------
   KROKER.ild.push((a, b) => { const an = VERN.get(b); if (!an) return 1; const v = A.vern(an);
@@ -162,17 +163,30 @@
         if (T.mål && s.menn && typeof window.ordre === 'function') window.ordre(s, T.mål[0], T.mål[1], true); }
     }
   }
+  // høydene for marsjen (32 m-rutene, som marsjreglene), hentet for området mellom laget, målet og portalene
+  async function høyderFor(P) {
+    const xs = P.map(p => p[0]), ys = P.map(p => p[1]), b = [Math.min(...xs) - 100, Math.min(...ys) - 100, Math.max(...xs) + 100, Math.max(...ys) + 100];
+    if (b[2] - b[0] > 40000 || b[3] - b[1] > 40000) return null; const v = await lagVindu(b, false);
+    return (x, y) => { const [i, j] = Terreng.rute(v, x, y); if (i < 0 || j < 0 || i >= v.w || j >= v.h) return null; const h = v.H[j * v.w + i]; return h === h ? h : null; };
+  }
   function pakkOrdre() {
     const før = window.ordre; if (typeof før !== 'function' || før.anlegg) return;
     const ny = function (s, X, Y, stille) {
-      try { if (s && typeof s === 'object' && s.menn && s.side === 'blå' && klar) {
-        if (s.iTunnel) { s.iTunnel.mål = [X, Y]; if (!stille) logg(`${s.navn} er i tunnelen og går videre når laget er ute.`); return Promise.resolve(); }
-        s.anleggVia = null; const T = tunneler();
-        if (T.length) { const v = A.viaTunnel(T, s.x, s.y, X, Y, urørt); if (v) { const p = v.a.P[v.inn]; s.anleggVia = { id: v.a.id, inn: v.inn, mål: [X, Y] };
-          if (!stille) logg(`${s.navn} tar ${navnPå(v.a).toLowerCase()} – kortere enn over fjellet.`);
-          if (Math.hypot(s.x - p[0], s.y - p[1]) <= PORTAL_NÆR) { inn(s, v.a, v.inn, [X, Y]); return Promise.resolve(); }
-          return før.call(this, s, p[0], p[1], stille); } } } } catch (e) { console.error(e); }
-      return før.apply(this, arguments); };
+      if (!(s && typeof s === 'object' && s.menn && s.side === 'blå' && klar)) return før.apply(this, arguments);
+      if (s.iTunnel) { s.iTunnel.mål = [X, Y]; if (!stille) logg(`${s.navn} er i tunnelen og går videre når laget er ute.`); return Promise.resolve(); }
+      s.anleggVia = null;
+      // bare tunneler som kan tenkes å lønne seg (med tunnelen under dobbelt så langt som luftlinja)
+      const l = Math.hypot(X - s.x, Y - s.y), T = tunneler().filter(a => [0, 1].some(i => Math.hypot(a.P[i][0] - s.x, a.P[i][1] - s.y) + A.lengde(a.P) + Math.hypot(X - a.P[1 - i][0], Y - a.P[1 - i][1]) < 2 * l));
+      if (!T.length) return før.apply(this, arguments);
+      const selv = this, args = arguments;
+      return (async () => { let v = null;
+        try { v = A.viaTunnel(T, s.x, s.y, X, Y, await høyderFor([[s.x, s.y], [X, Y], ...T.flatMap(a => a.P)])); } catch (e) { v = null; }
+        if (!v) return før.apply(selv, args);
+        const p = v.a.P[v.inn]; s.anleggVia = { id: v.a.id, inn: v.inn, mål: [X, Y] };
+        if (!stille) logg(`${s.navn} tar ${navnPå(v.a).toLowerCase()} – kortere enn over fjellet.`);
+        if (Math.hypot(s.x - p[0], s.y - p[1]) <= PORTAL_NÆR) { inn(s, v.a, v.inn, [X, Y]); return; }
+        return før.call(selv, s, p[0], p[1], stille); })();
+    };
     ny.anlegg = true; ny.flyt = før.flyt; ny.lagring = før.lagring; window.ordre = ny;
   }
   const nærPortal = s => { for (const a of tunneler()) for (const i of [0, 1]) if (Math.hypot(s.x - a.P[i][0], s.y - a.P[i][1]) <= PORTAL_NÆR) return { a, i }; return null; };
@@ -439,6 +453,10 @@
     endring: (x, y) => A.endringVed(INNGREP, x, y), urørt,
     // bakken i 3D før inngrepet (moh.) nær (x, y) – fra prøvene bygg3d-kroken tok
     grunnFør: (id, x, y) => { const u = r3() && r3().ut, Z = u && u.anleggZ && u.anleggZ[id]; if (!Z) return null; let b = null, d = Infinity; for (const [px, py, z] of Z) { const e = Math.hypot(px + u.cx - x, py + u.cy - y); if (e < d) { d = e; b = z; } } return b; }, vern: s => VERN.get(s) || null, oppdaterVern: () => { VERN = A.fordel(liste, ENHETER.filter(s => levende(s) && !s.sti && s.side === 'blå')); return VERN.size; },
+    // krav til terrenget for et anlegg her (asynkront: kartet hentes): { ok, feil, ret }
+    sjekk: async (type, P, ret = 0) => A.kanPlassere(type, P, await terrengFor(P, 70), ret),
+    // marsjen med og uten tunnel (for vakta og feilsøking): { rett, via: { v, inn } | null }
+    rute: async (x, y, X, Y) => { const T = tunneler(), h = await høyderFor([[x, y], [X, Y], ...T.flatMap(a => a.P)]); const v = A.viaTunnel(T, x, y, X, Y, h); return { rett: Math.round(A.marsjKost(h, x, y, X, Y)), via: v ? { v: Math.round(v.v), inn: v.inn, id: v.a.id } : null }; },
     kaier: () => (window.KaierSpill ? KaierSpill.data() : null), kaiPunkt, tunnelSteg, inn, velg: id => { valgt = id; panelHtml = ''; visAnleggPanel(); },
     sjekk3d: () => ({ iScene: !!(gruppe && r3() && r3().scene.children.includes(gruppe)), trekanter, skjær: r3() && r3().ut ? r3().ut.anleggSkjær || 0 : 0 }) };
 })();

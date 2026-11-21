@@ -27,7 +27,7 @@
     // bakken ved terrenginngrep: skråningen ut fra kanten (m) før bakken er urørt (2D-reglene)
     skråning: 1.5,
     // reisetiden i en tunnel: fart til fots og med kjøretøy (m/s); en rute gjennom tunnelen velges når den er kortere enn «spar» × rett vei
-    reise: { fot: 1.3, kjøretøy: 8, spar: .75, opp: 8, ned: 3, prøver: 32 },
+    reise: { fot: 1.3, kjøretøy: 8, spar: .9, opp: 8, ned: 3, prøver: 32 },
   };
   // Tabellen over anlegg (Claudes forslag). form: 'linje' (to eller flere punkter), 'punkt' (ett punkt med retning) eller 'topunkt' (to ender).
   // krav: 'tørt' | 'strand' | 'fjellside'. inngrep: hvordan bakken endres (null = ingen) – 'grav' langs en linje, 'grop' under et rektangel,
