@@ -44,6 +44,8 @@ module.exports = {
         ut.pris = { bannerMat, betaltMat, loggMat }; ut.prisOk = bannerMat > 0 && bannerMat === betaltMat && bannerMat === loggMat;
         // (runde 13) prisen sier hva den kjøper: «utstyr og deler», og at byggelagene gjør arbeidet
         ut.utstyrOk = /utstyr og deler/.test(bt) && /byggelagene dine/.test(bt) && !/\(arbeid /.test(bt);
+        // (runde 14) og hva utstyret er (brakka: senger, ovn …)
+        ut.utstyrForklart = /senger, ovn/.test(bt);
         // (7) brakka er bestilt (ikke ferdig): målet sier «vent»
         if (window.Maal) { const mb = Maal.finn('brakke'); ut.mål = Maal.tekstNå(mb, { bygg: {}, bestilt: { brakke: 1 } }); ut.målOk = /Vent til brakka/.test(ut.mål); } else ut.målOk = true;
         // (4) «Automatisk» én gang
@@ -124,9 +126,52 @@ module.exports = {
       }
       return ut;
     });
+    // ---------- RUNDE 14 (kritiker I og J): høyst én modal, ingen loggspam, opplæringen henger ikke, småting ----------
+    const f = await pg.evaluate(async () => {
+      const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), synlig = id => { const e = document.getElementById(id); return !!(e && e.classList.contains('på') && e.getClientRects().length); };
+      const MOD = ['loggvelkommen', 'hendelse', 'samfunnkort', 'morgenkort', 'formkort', 'krigkort'];
+      const F = FolkSpill.tilstand(), f0 = JSON.stringify(F), SS = window.SamfunnSpill, S0 = SS && SS.tilstand() ? JSON.stringify(SS.tilstand()) : null, tempo0 = tempo;
+      try {
+        // 1+2: et kort står oppe, velkomsten kommer: kortet viker (høyst én modal), og etter «Fortsett» står samme kort med samme valg
+        let kortTekst = null;
+        if (SS && SS.nyttKort && SS.nyttKort('flyktninger')) { await vent(300); kortTekst = synlig('samfunnkort') ? document.getElementById('samfunnkort').innerText : null; }
+        const o = { fra: LoggLager.når(0), til: LoggLager.når(60), antall: 1, alle: 3, viktige: [{ ...LoggLager.når(30), tekst: 'Røysland er vårt.' }] };
+        LoggLager.velkommen(o); await vent(400);
+        ut.modaler = MOD.filter(synlig); ut.énModal = ut.modaler.length === 1 && ut.modaler[0] === 'loggvelkommen';
+        ut.zOk = +getComputedStyle(document.getElementById('loggvelkommen')).zIndex < 21;
+        document.getElementById('loggvelkommen-ok').click(); await vent(1600);
+        ut.etter = MOD.filter(synlig); ut.kortTilbake = kortTekst === null ? null : synlig('samfunnkort') && document.getElementById('samfunnkort').innerText === kortTekst;
+        // velkomsten lukkes når spillet går igjen
+        LoggLager.velkommen(o); await vent(300); const p1 = document.getElementById('sp1'); if (p1) p1.click(); await vent(500); ut.lukketVedFart = !document.getElementById('loggvelkommen');
+        // 3: innledningen skrives ikke ved omlasting (reglene), bare i et nytt spill
+        const D = LoggDemp.lag(); ut.spamOk = D.vurder('Spillform: Vanlig.', [], 0, true) === null && D.vurder('Kystalliansen (rød) holder til i Rognan, 8 km nord.', [], 0, true) === null && !!D.vurder('Spillform: Vanlig.', [], 0, false);
+        // 4: utvalget: aldri «Farten er», eldste først, ingen boks uten tid
+        let A = LoggLager.tom('1,1'); LoggLager.legg(A, 'Farten er senket til 10×: et bygg er ferdig.', 5); LoggLager.legg(A, 'Kampen om leiren er i gang.', 10); LoggLager.legg(A, 'Bølge 1 er slått tilbake.', 40); A.økt += 1;
+        const oa = LoggLager.oppsummer(A); ut.utvalgOk = !!oa && !oa.viktige.some(v => /Farten/.test(v.tekst)) && /Kampen/.test(oa.viktige[0].tekst) && oa.antall === oa.viktige.length;
+        // 5: opplæringen: to på bygg holder uten Folk, dobbel vakt før teller, «før dag 4» borte på dag 4
+        const S2 = Opplaering.STEG.find(s => s.id === 'bygg2'), S6 = Opplaering.STEG.find(s => s.id === 'tropp2'), t0 = tid;
+        tid = 3 * 1440 + 5; const tit4 = S6.tittel; tid = t0;
+        ut.oppOk = S2.ferdig({ påBygg: 2, folkÅpnet: false }) && !/åpne Folk/.test(Opplaering.krav(S2, { påBygg: 4 })) && S6.ferdig({ tropper: 0, påVakt: 0, vaktFør: true }) && tit4 === 'Mer forsvar';
+        // 6: Folk-tallet øverst følger knappen også på pause; kassekortet har innhold og sum; farten blar ikke ved et skriptklikk
+        tempo = 0; const p = F.personer.pop(); await vent(700); ut.folkTall = [document.getElementById('sFolk').textContent, F.personer.length]; F.personer.push(p);
+        ut.folkOk = ut.folkTall[0].split(' ')[0] === String(ut.folkTall[1]);
+        const funn = SpilletSpill && window.Spillet ? Spillet.Hendelser.LISTE.find(h => h.id === 'funn') : null; ut.kasseOk = !!funn && /800 000 kr/.test(funn.tekst('Eli')) && funn.valg.every(v => /kr/.test(v.logg || ''));
+        if (p1) { p1.click(); await vent(100); p1.click(); await vent(100); ut.fart = tempo; ut.fartOk = tempo === 1; }
+      } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
+      finally {
+        if (LoggLager.lukkVelkommen) LoggLager.lukkVelkommen(false);
+        const ny = FolkRegler.fraJSON(JSON.parse(f0)); Object.keys(F).forEach(k => delete F[k]); Object.assign(F, ny);
+        if (SS && S0) { const S = SS.tilstand(); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, JSON.parse(S0)); if (SS.lagre) SS.lagre(); if (SS.vis) SS.vis(); }
+        const sk = document.getElementById('samfunnkort'); if (sk) { sk.classList.remove('på'); sk.innerHTML = ''; } if (window.Kortkø) Kortkø.ferdig('samfunnkort');
+        tempo = tempo0; if (window.LeirSpill) LeirSpill.lagre(); skitten = true;
+      }
+      return ut;
+    });
+    Object.assign(d, { r14: f });
+    const ok14 = !f.feil && f.énModal && f.zOk && f.kortTilbake !== false && f.lukketVedFart && f.spamOk && f.utvalgOk && f.oppOk && f.folkOk && f.kasseOk && f.fartOk !== false && d.utstyrForklart;
     Object.assign(d, { r13: e });
     const ok13 = !e.feil && e.ordreOk === true && e.klokkeOk && e.loggOk && e.tyvOk && e.krangelOk && e.navnOk && e.kravOk && e.folkOk && d.utstyrOk;
-    const ok = ok13 && !d.feil && d.falneOk && d.treffOk && d.prisOk && d.målOk && d.autoOk && d.sengerOk && d.knappOk && d.pronOk && d.letOk;
-    return { ok, tekst: `RUNDE 13: ordre ${JSON.stringify(e.ordre)} ${e.ordreOk}, klokke ${e.klokkeOk}, logg ${e.loggOk}, tyveri ${JSON.stringify(e.tyv)}, navn ${e.navnOk}, krav «${e.krav}», folk ${JSON.stringify(e.folk)}, utstyr ${d.utstyrOk}` + (e.feil ? ' FEIL13: ' + e.feil : '') + ` · falne ${JSON.stringify(d.falne)}, treff ${JSON.stringify(d.treff)}, pris ${JSON.stringify(d.pris)}, senger «${d.senger}», knapp ${JSON.stringify(d.knapp)}, mål «${d.mål}», pronomen «${d.pron}»` + (d.feil ? ' FEIL: ' + d.feil : ''), data: d };
+    const ok = ok13 && ok14 && !d.feil && d.falneOk && d.treffOk && d.prisOk && d.målOk && d.autoOk && d.sengerOk && d.knappOk && d.pronOk && d.letOk;
+    return { ok, tekst: `RUNDE 14: ${JSON.stringify(f)} utstyr forklart ${d.utstyrForklart} · RUNDE 13: ordre ${JSON.stringify(e.ordre)} ${e.ordreOk}, klokke ${e.klokkeOk}, logg ${e.loggOk}, tyveri ${JSON.stringify(e.tyv)}, navn ${e.navnOk}, krav «${e.krav}», folk ${JSON.stringify(e.folk)}, utstyr ${d.utstyrOk}` + (e.feil ? ' FEIL13: ' + e.feil : '') + ` · falne ${JSON.stringify(d.falne)}, treff ${JSON.stringify(d.treff)}, pris ${JSON.stringify(d.pris)}, senger «${d.senger}», knapp ${JSON.stringify(d.knapp)}, mål «${d.mål}», pronomen «${d.pron}»` + (d.feil ? ' FEIL: ' + d.feil : ''), data: d };
   },
 };
