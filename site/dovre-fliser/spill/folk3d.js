@@ -148,5 +148,5 @@
     const v = rnd() * 6.283; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.mål = null;
     p.etter = null; p.omveg = 0; p.vent = p.slag === 'gammel' ? 10 + rnd() * 40 : hos ? 8 + rnd() * 30 : 2 + rnd() * 14; p.hos = hos && b ? b.type : '';
   }
-  window.Folk3d = { antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
+  window.Folk3d = { UNNA, unna, antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
 })();
