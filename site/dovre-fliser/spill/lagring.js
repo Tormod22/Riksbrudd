@@ -213,7 +213,10 @@
     skitten = true; return true;
   }
   // etter K1 (og etter at kontrollrommet har satt inn karakteren): les verden inn én gang, og lagre fra da av
-  window.addEventListener('riksbrudd-spill', () => setTimeout(() => { if (fortsetter) { fortsetter = false; les(); } aktiv = true; lagre(); }, 0));
+  // (runde 13) et nytt spill (ingen lagret spill da siden ble lastet): den gamle klokkenøkkelen tas bort – en ny leir på samme sted
+  // skulle ellers fått klokka fra det forrige spillet
+  const varLagret = fortsetter;
+  window.addEventListener('riksbrudd-spill', () => setTimeout(() => { if (fortsetter) { fortsetter = false; les(); } else if (!varLagret) { try { localStorage.removeItem('riksbrudd-klokke'); } catch (e) { /* sperret */ } } aktiv = true; lagre(); }, 0));
   // lagres hvert femte sekund mens spillet går, og når siden skjules eller lukkes.
   // (runde 6, kritikken: «omlasting mister spilltid: 14:19 → 13:59 og 10:57 → 10:45») Ved 600× gikk det 50 spillminutter mellom hver
   // lagring. Nå lagres det oftere jo fortere tiden går: høyst LAGRE.spillMin spillminutter mellom hver gang, men aldri oftere enn hvert
@@ -248,5 +251,5 @@
       return Promise.resolve(p).finally(() => { if (s && s.ordreMål && s.ordreMål[0] === X && s.ordreMål[1] === Y) delete s.ordreMål; lagreStraks(); }); };
     ny.lagring = true; ny.flyt = !!før.flyt; rot.ordre = ny; }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagre(); });
-  rot.LagringSpill = { NØKKEL, KLOKKE, LAGRE, lagre: () => lagre(), lagreStraks, klokkeLest, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av, sist: () => ({ ok: sistOk, feil: sistFeil }) };
+  rot.LagringSpill = { NØKKEL, KLOKKE, LAGRE, nyttSpill: () => !varLagret, lagre: () => lagre(), lagreStraks, klokkeLest, les, brukFiender, fortsettOrdre, fiendeLag, av(v = true) { av = v; }, aktiv: () => aktiv && !av, sist: () => ({ ok: sistOk, feil: sistFeil }) };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

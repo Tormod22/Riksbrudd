@@ -66,7 +66,9 @@
     const l = leirId(spill() && spill().leir); if (!l) return;
     let lagret = null; try { lagret = localStorage.getItem(NØKKEL); } catch (e) { lagret = null; }
     // et nytt spill eller en ny leir: ny logg. Ellers: neste økt.
-    L = les(lagret, l); if (L.linjer.length) L.økt += 1;
+    // et nytt spill (spill/lagring.js: ingen lagret spill da siden ble lastet) begynner med tom logg, også om leiren ligger der den forrige lå
+    const nytt = rot.LagringSpill && LagringSpill.nyttSpill && LagringSpill.nyttSpill();
+    L = nytt ? tom(l) : les(lagret, l); if (L.linjer.length) L.økt += 1;
     // meldingene fra før det lagrede spillet var lest inn, har klokka 06:00 – de får klokka spillet står på nå
     const nå = typeof tid === 'number' && isFinite(tid) ? tid : 0; for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
     const o = oppsummer(L); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; setTimeout(() => velkommen(o), 1800); }
