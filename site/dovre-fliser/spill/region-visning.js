@@ -382,7 +382,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // ---------- start ----------
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = RG.fraJSON(les()); startTid = performance.now(); STATUS = new Map(); statusTid = -1e9; meldtRute = new Map(); meldtStrøm = new Map(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
+  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
   window.RegionSpill = api;
 })();

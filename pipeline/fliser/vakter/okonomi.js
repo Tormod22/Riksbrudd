@@ -40,9 +40,10 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
       // 7: markedets hyller (bare i det ekte spillet – her slått på for prøven)
       SS.knapphet = true; SS.settPriser(); const H = SS.hyller(); H.tre = 3; const t0 = L.lager.tre || 0, r = Leir.kjøpMateriale(L, 'tre', 10, OppstartSpill.betal);
       o.hylle = !r.feil && Math.abs(r.mengde - 3) < 1e-6 && Math.abs((L.lager.tre || 0) - t0 - 3) < 1e-6 && !!Leir.kjøpMateriale(L, 'tre', 10, OppstartSpill.betal).feil && Leir.REGLER.salg < .6;
-      // 8: leveranse av mat, og motstanderens fordel av et tettsted
+      // 8: leveranse av mat, og motstanderens fordel av et tettsted. (runde 13) fordelen huskes i 3 s – glem den først, ellers kan
+      // svaret være fra før tettstedet fikk ny eier (mobilkontrollen feilet av og til på dette)
       const F = FolkSpill.tilstand(), m0 = F.mat; RS.tilstand().pott.mat = 3.4; RS.lever(); o.mat = F.mat === m0 + 3;
-      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); RS.åpne(); const f = RS.fordel('rød'); o.fordel = f.antall === 1 && (f.treff > 1 || f.forsterk > 1) && RS.fordel('blå').treff === 1;
+      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); RS.åpne(); if (RS.glemFordel) RS.glemFordel(); const f = RS.fordel('rød'); o.fordel = f.antall === 1 && (f.treff > 1 || f.forsterk > 1) && RS.fordel('blå').treff === 1;
     } catch (e) { o.feil = String(e && e.message || e); }
     // tilbake
     if (fiende && ENHETER.includes(fiende)) ENHETER.splice(ENHETER.indexOf(fiende), 1);
