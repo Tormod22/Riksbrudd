@@ -28,17 +28,32 @@
   // ---------- det som står på i leiren (til Morgen.dagensValg / storBeslutning) ----------
   function trussel() { const SS = rot.SpilletSpill; if (!SS || !SS.klar || !SS.klar() || !SS.T) return { timer: null, bølge: 0 }; const T = SS.T(); if (!T) return { timer: null, bølge: 0 };
     if (T.aktiv) return { timer: 0, bølge: T.bølge || 0 }; return { timer: Number.isFinite(T.nesteSpill) ? Math.max(0, (T.nesteSpill - tid) / 60) : null, bølge: T.bølge || 0 }; }
-  function nærmesteSted() { const s = O(); if (!s || !s.leir || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return null; let best = null, bd = Infinity;
-    for (const t of INFRA.tettsted) { const bb = t.bb; if (!bb) continue; const d = Math.hypot((bb[0] + bb[2]) / 2 - s.leir.x, (bb[1] + bb[3]) / 2 - s.leir.y); if (d < bd && t.e && t.e.navn) { bd = d; best = t.e.navn; } } return best; }
+  function nærmesteSted(helt) { const s = O(); if (!s || !s.leir || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return null; let best = null, bd = Infinity;
+    for (const t of INFRA.tettsted) { const bb = t.bb; if (!bb) continue; const x = (bb[0] + bb[2]) / 2, y = (bb[1] + bb[3]) / 2, d = Math.hypot(x - s.leir.x, y - s.leir.y); if (d < bd && t.e && t.e.navn) { bd = d; best = { navn: t.e.navn, id: t.e.id, x, y }; } } return helt ? best : best && best.navn; }
+  // RUNDE 14: hvem som holder et tettsted (null = ingen / oss), med eieform «Kystalliansens»
+  function eierAv(id) { if (!rot.TETTSTEDER || !rot.Garnison || id === undefined) return null; const e = Garnison.tilstand(TETTSTEDER, id).eier; return e && e !== 'blå' ? e : null; }
+  const eieform = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.eieform || F.navn + 's' : 'fiendens'; };
+  const sidenavn = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.navn : 'fienden'; };
+  // RUNDE 14: røverne – samme tid og tekst som varselbrikken (ForsvarSpill.neste), eller angrepet som pågår
+  function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt());
+    if (Tt && Tt.aktiv) return { aktiv: true, min: 0, nedtelling: 'nå', satt, tekst: 'Røverne angriper leiren nå' + (satt ? ' – lagene står i stilling.' : ' – sett lagene i stilling!') };
+    const n = FS.neste ? FS.neste() : null; if (!n || !(n.min <= R.raid.linje)) return null;
+    return { aktiv: false, min: n.min, nedtelling: n.nedtelling, satt, tekst: n.tekst + '.' + (satt ? ' Lagene står i stilling.' : '') }; }
+  // RUNDE 14: egne friske soldater (uten deg selv og Leirvakta) og egne tettsteder – for krisehjelpen
+  const soldater = () => ENHETER.filter(e => e.side === 'blå' && !e.karakter && !e.leirvakt && !e.raid && Array.isArray(e.menn)).reduce((a, e) => a + e.menn.filter(m => m.hp >= 1).length, 0);
+  const egneByer = () => { let n = 0; if (rot.TETTSTEDER) for (const v of TETTSTEDER.values()) if (v && v.eier === 'blå') n++; return n; };
   function situasjon() {
     const s = O(), l = L(), f = F(), Fr = FR(), Lb = LB(); if (!s || !l || !f || !Fr || !Lb) return null;
     let B = null; try { B = Fr.behov(f, l, FolkSpill.valg ? FolkSpill.valg() : {}); } catch (e) { B = null; }
     const arb = f.personer.filter(Fr.arbeidsfør), T = trussel(), SS = rot.SpilletSpill;
     const post = SS && SS.O && SS.O() ? SS.O().liste.find(o => o.type === 'post' && !o.tatt) : null;
+    const st = nærmesteSted(true), sold = soldater(), by = egneByer();
     return { dag: dag(tid), folk: f.personer.length, arbeidsføre: arb.length, frie: arb.filter(p => p.oppgave === 'fri').length, mat: f.mat, matDøgn: B ? B.dager : (f.personer.length ? f.mat / f.personer.length : Infinity),
       moral: f.moral, penger: s.penger, matPris: Fr.R.matPris, trePris: Math.round(Lb.MATERIALER.tre.pris * Lb.REGLER.salg), dieselPris: Lb.DRIVSTOFF.prisPerLiter, lager: { tre: l.lager.tre || 0 },
       diesel: l.drivstoff || 0, dieselPlass: Lb.kapasitet ? Lb.kapasitet(l) : 0, røverTimer: T.timer, bølge: T.bølge, post: post ? { id: post.id, gir: post.gir.penger || 0, meter: post.meter, retning: post.retning } : null,
-      sted: nærmesteSted(), årstid: (rot.VAER && VAER.årstid) || 'sommer' };
+      sted: st ? st.navn : null, stedEier: st && eierAv(st.id) ? eieform(eierAv(st.id)) : null, stedXY: st ? [st.x, st.y] : null, årstid: (rot.VAER && VAER.årstid) || 'sommer',
+      raid: raidNå(), tapt: { byer: (S && S.taptBy || []).slice(), lag: (S && S.taptLag || []).slice() }, soldater: sold, egneByer: by,
+      kriseKan: by === 0 && sold < R.krise.soldater && !(S && Number.isFinite(S.kriseSist) && dag(tid) - S.kriseSist < R.krise.pause) };
   }
 
   // ---------- virkningene som varer til neste morgen (tempo, moral, mat) – gjennom SamfunnSpill.valg ----------
@@ -71,6 +86,8 @@
       if (p.id === 'nabo') { let B = null; try { B = l && f ? FR().behov(f, l, FolkSpill.valg ? FolkSpill.valg() : {}) : null; } catch (e) { B = null; }
         ut.push(`De nye fra nabogården har funnet seg til rette.` + (B && B.utenSeng ? ` Leiren har senger til ${Math.max(0, B.senger)} av ${B.n + B.avh} – bygg brakker, ellers faller moralen.` : '')); continue; }
       if (!['jakt', 'leie', 'speid', 'tankbil', 'øv'].includes(p.id)) continue;
+      if (p.id === 'speid' && p.fiende && p.xy) { const fi = ENHETER.filter(e => e.side !== 'blå' && !e.raid && levende(e) && Math.hypot(e.x - p.xy[0], e.y - p.xy[1]) < 2500), mn = fi.reduce((a, e) => a + e.menn.filter(m => m.hp >= 1).length, 0);
+        p.fiendeTekst = fi.length ? `I ${p.sted} telte de ${fi.length} fiendtlige lag (ca. ${mn} mann).` : `De så ingen fiendtlige lag i ${p.sted} – byen kan være lett å ta tilbake.`; }
       const u = M.utfall({ ...p, folk }, { årstid: (rot.VAER && VAER.årstid) || 'sommer', røverTimer: T.timer }, Math.random);
       for (const q of folk) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
       if (f && u.mat) f.mat += u.mat; if (u.penger) OppstartSpill.gi(u.penger);
@@ -89,7 +106,7 @@
   // ---------- valgene ----------
   function brukDag(v) { const f = F(), l = L(), Lb = LB(); let t = '';
     if (v.id === 'jakt') { const p = sendUt('jakt', 'hogst'); t = p ? `${og(p.navn.map(fornavn))} går på jakt og fiske. De er tilbake i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
-    else if (v.id === 'speid') { const p = sendUt('speid', 'frakt', { sted: v.sted || null }); t = p ? `${og(p.navn.map(fornavn))} drar på speidertur. De melder fra i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
+    else if (v.id === 'speid') { const p = sendUt('speid', 'frakt', { sted: v.sted || null, fiende: v.fiende || null, xy: v.fiende ? (nærmesteSted(true) ? [nærmesteSted(true).x, nærmesteSted(true).y] : null) : null }); t = p ? `${og(p.navn.map(fornavn))} drar på speidertur. De melder fra i morgen tidlig.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'øv') { const p = sendUt('øv', 'vakt'); t = p ? `${og(p.navn.map(fornavn))} har våpenøvelse i dag.` : 'Det var ingen ledige til øvelsen.'; }
     else if (v.id === 'leie') { const p = sendUt('leie', 'vakt'); t = p ? `${og(p.navn.map(fornavn))} holder vakt for en nabogård i dag. Betalingen kommer i morgen.` : 'Det var ingen ledige å sende.'; }
     else if (v.id === 'kjøp') { const r = FR().kjøpMat(f, R.kjøp, OppstartSpill.betal, rot.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1); t = r.feil ? r.feil : `Kjøpte ${r.rasjoner} rasjoner for ${kr(r.pris)}.`; }
@@ -101,6 +118,23 @@
       else { const m = Math.min(v.mengde, Math.floor(l.drivstoff || 0)); if (m < 1) t = 'Dere har ikke diesel å selge lenger.'; else { const p = Math.round(v.pris * m / v.mengde); l.drivstoff -= m; OppstartSpill.gi(p); t = `Solgte ${m} l diesel på svartebørsen for ${kr(p)}.`; } } }
     else if (v.id === 'selg') { const r = Lb.selgMateriale(l, 'tre', v.mengde, OppstartSpill.gi); t = r.feil ? r.feil : `Solgte ${String(r.mengde).replace('.', ',')} m³ tre for ${kr(r.pris)}.`; }
     else if (v.id === 'post') { const SS = rot.SpilletSpill; if (SS && SS.ta && SS.ta(v.oppdrag)) { S.planer.push({ id: 'post', folk: [], oppdrag: v.oppdrag }); t = 'Røverposten er merket i kartet. Send en tropp dit – det er farlig, men godt betalt.'; } else t = 'Oppdraget er ikke ledig lenger.'; }
+    // RUNDE 14: forsvaret, og flere soldater etter tap
+    else if (v.id === 'forsvar') { const FS = rot.ForsvarSpill; const r = FS && FS.sett ? FS.sett(false) : { feil: 'Forsvaret finnes ikke.' };
+      t = r.feil ? r.feil : r.lag || r.vakt ? `Forsvar: ${r.lag} lag går i stilling` + (r.vakt ? `, og Leirvakta (${r.vakt}) tar opp våpen` : '') + '.' : 'Ingen lag er nær leiren. Sett folk på «vakt» i Folk – de blir Leirvakta – eller kjøp leiesoldater.'; }
+    else if (v.id === 'krise' || v.id === 'leiesold') { const T = R.tap, n = v.id === 'krise' ? R.krise.menn : T.leie.menn, o = O();
+      if (v.id === 'leiesold' && !OppstartSpill.betal(T.leie.pris)) t = `Ikke nok penger (${kr(T.leie.pris)}).`;
+      else if (!o || !o.leir || typeof nyttLag !== 'function') t = 'Ingen leir å komme til.';
+      else { const a = Math.random() * 6.283, navn = (v.id === 'krise' ? 'Frivillige' : 'Leiesoldater') + ' ' + (ENHETER.filter(e => e.side === 'blå' && e.navn && e.navn.startsWith(v.id === 'krise' ? 'Frivillige' : 'Leiesoldater')).length + 1);
+        const e = nyttLag(navn, o.leir.x + Math.cos(a) * 30, o.leir.y + Math.sin(a) * 30, 'blå'); e.menn = e.menn.slice(0, n); e.leder = 0;
+        if (v.id === 'krise' && rot.Strid && Strid.bevæpn) { try { Strid.bevæpn(e.menn, 'lett'); e.strid = { ...(e.strid || {}), bev: 'lett' }; } catch (x) { /* bevæpningen finnes ikke */ } }
+        ENHETER.push(e); skitten = true; if (v.id === 'krise') S.kriseSist = dag(tid);
+        t = v.id === 'krise' ? `${navn} (${e.menn.length} mann) har kommet til leiren. Velg laget i kartet for å gi det ordre.` : `${navn} (${e.menn.length} mann) står i leiren. Kassa gikk ned med ${kr(T.leie.pris)}.`; } }
+    else if (v.id === 'vaktlag') { const TS = rot.TropperSpill; const ider = M.velgFolk(f.personer, R.tap.vaktlag, 'vakt');
+      if (!TS || !TS.opprett || ider.length < 2) t = 'Det var ikke nok ledige til et vaktlag.';
+      else { const r = TS.opprett(ider, 'Vaktlag ' + (ENHETER.filter(e => e.side === 'blå' && /^Vaktlag/.test(e.navn || '')).length + 1), 'standard', null); t = r && r.feil ? r.feil : `${r && r.lag ? r.lag.navn : 'Vaktlaget'} er laget av ${ider.length} fra leiren.`; skitten = true; } }
+    else if (v.id === 'rekrutt') { const T = R.tap.rekrutt, Fr = FR(); if (!OppstartSpill.betal(T.pris)) t = `Ikke nok penger (${kr(T.pris)}).`;
+      else { const nye = []; for (let i = 0; i < T.folk; i++) { const r = Fr.rng(f.frø); const p = Fr.nyPerson(f, r, 'fri'); f.frø = Math.floor(r() * 4294967296); nye.push(p.navn); }
+        t = `${og(nye)} fra nabogården er med nå (på «fri»). Lag en tropp av dem i Leir → Tropper.`; } }
     else if (v.id === 'vakt') { const ider = M.velgFolk(f.personer.filter(p => p.oppgave !== 'vakt'), R.vakt.ekstra, 'vakt'), tidl = {};
       for (const i of ider) { const p = f.personer.find(q => q.id === i); tidl[i] = p.oppgave; p.oppgave = 'vakt'; }
       S.planer.push({ id: 'vakt', folk: ider, tidl }); t = ider.length ? `Dobbel vakt i natt: ${og(ider.map(i => fornavn(f.personer.find(q => q.id === i).navn)))} går på vakt til i morgen tidlig.` : 'Det var ingen ledige til vakta.'; }
@@ -129,7 +163,7 @@
     else if (st.id === 'karavane') { if (v.id === 'kjøp') { if (!OppstartSpill.betal(v.pris)) t = `Ikke nok penger (${kr(v.pris)}).`;
         else { const plass = Math.max(0, (Lb.kapasitet ? Lb.kapasitet(l) : 0) - (l.drivstoff || 0)), ønsket = v.diesel === undefined ? R.karavane.diesel : v.diesel, d = Math.min(ønsket, Math.floor(plass)); l.drivstoff = (l.drivstoff || 0) + d; f.mat += R.karavane.mat;
           t = `Kjøpte ${R.karavane.mat} rasjoner${d ? ` og ${d} l diesel` : ''} av karavanen for ${kr(v.pris)}.` + (d < ønsket ? ` ${ønsket - d} l fikk ikke plass i tanken.` : ''); } }
-      else if (v.id === 'selg') { if ((l.lager.tre || 0) < R.karavane.tre) t = 'Dere har ikke nok tre lenger.'; else { l.lager.tre -= R.karavane.tre; OppstartSpill.gi(v.pris); t = `Solgte ${R.karavane.tre} m³ tre til karavanen for ${kr(v.pris)}.`; } }
+      else if (v.id === 'selg') { const m = v.mengde || R.karavane.tre; if ((l.lager.tre || 0) < m) t = 'Dere har ikke nok tre lenger.'; else { l.lager.tre -= m; OppstartSpill.gi(v.pris); t = `Solgte ${m} m³ tre til karavanen for ${kr(v.pris)}.`; } }
       else t = 'Ingen handel i dag. Karavanen drar videre.'; }
     // RUNDE 13: handelsmannen – en avtale med tidsfrist: han kommer kl. 14 i dag (handelSteg i KROKER.sim)
     else if (st.id === 'handel') { if (v.id === 'nei') t = 'Dere handler ikke med handelsmannen. Han kjører forbi.';
@@ -155,7 +189,8 @@
 #morgenkort.på{ display:block; } body.angrepvent #morgenkort.på{ display:none; }
 #morgenkort h3{ margin:0 0 6px; font-size:17px; color:#f0d79a; } #morgenkort h3 small{ font-weight:400; color:var(--ink-dim,#a99); font-size:13px; }
 #morgenkort .mrapport{ font-size:13px; line-height:1.4; color:var(--ink-dim,#b5a888); border-left:2px solid #4a4030; padding:2px 0 2px 8px; margin:0 0 8px; }
-#morgenkort .mrapport p{ margin:0 0 3px; } #morgenkort .mrapport .igaar{ color:#d9e6c2; }
+#morgenkort .mrapport p{ margin:0 0 3px; } #morgenkort .mrapport .igaar{ color:#d9e6c2; } #morgenkort .mrapport .mtapt, #morgenkort .msum span.mtapt{ color:#ffb49a; }
+#morgenkort .mraid{ margin:0 0 8px; padding:6px 9px; background:#2a120d; border:1px solid #e0714f; color:#ffd2c0; font-weight:600; font-size:14px; line-height:1.35; }
 #morgenkort .msp{ margin:6px 0 4px; font-weight:600; }
 #morgenkort button{ display:block; width:100%; margin-top:6px; min-height:44px; background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); font:inherit; cursor:pointer; text-align:left; padding:6px 12px; }
 #morgenkort button:hover{ border-color:#c9b26a; } #morgenkort button b{ display:block; font-weight:600; } #morgenkort button small{ display:block; color:var(--ink-dim,#b5a888); font-size:12.5px; line-height:1.3; margin-top:2px; }
@@ -200,11 +235,15 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     if (rot.Kortkø && Kortkø.ta && !Kortkø.ta('morgenkort', true, vis)) { kort.classList.remove('på'); vistNøkkel = ''; Kortkø.be('morgenkort', vis, { tittel: 'Morgenmøtet' }); return; }
     const nøkkel = JSON.stringify([K.dag, K.steg, K.valgt]); if (nøkkel === vistNøkkel && kort.classList.contains('på')) return; vistNøkkel = nøkkel;
     kort.replaceChildren(el('h3', {}, 'Morgenmøtet ', el('small', {}, `· dag ${K.dag}`)));
+    // RUNDE 14 (kritiker I): røverne står i første linje – med samme tid som varselet – og «Forsvar leiren nå» er første valg
+    const rd = raidNå(); if (rd) kort.append(el('div', { klasse: 'mraid', id: 'morgenraid' }, '⚠ ' + rd.tekst));
+    if (rd && !rd.satt && (rd.aktiv || rd.min <= R.raid.forsvar) && K.steg === 0 && !K.valg.some(v => v.id === 'forsvar'))
+      K.valg.unshift({ id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne kommer om ' + rd.nedtelling + '.'}` });
     // RUNDE 13: hele døgnet (.mdogn) og én linje (.msum) med det viktigste: tapene, ellers det første «I går», ellers første linje
     const rap = K.steg === 0 ? (K.rapport || []) : [];
-    if (rap.length) { const sum = rap.find(r => /^Tap i lagene/.test(r)) || rap.find(r => /^I går/.test(r)) || rap[0], b = knappEl('Vis hele døgnet ›', '', () => fold(false), 'mfold');
-      b.querySelector('b').style.display = 'inline'; kort.append(el('div', { klasse: 'msum' }, el('span', { klasse: /^I går/.test(sum) ? 'igaar' : '' }, sum), b));
-      kort.append(el('div', { klasse: 'mrapport mdogn' }, ...rap.map(r => el('p', { klasse: /^I går|^Tap i lagene/.test(r) ? 'igaar' : '' }, r)))); }
+    if (rap.length) { const sum = rap.find(r => /^Tapt siden/.test(r)) || rap.find(r => /^Tap i lagene/.test(r)) || rap.find(r => /^I går/.test(r)) || rap[0], b = knappEl('Vis hele døgnet ›', '', () => fold(false), 'mfold');
+      b.querySelector('b').style.display = 'inline'; kort.append(el('div', { klasse: 'msum' }, el('span', { klasse: /^Tapt siden/.test(sum) ? 'mtapt' : /^I går/.test(sum) ? 'igaar' : '' }, sum), b));
+      kort.append(el('div', { klasse: 'mrapport mdogn' }, ...rap.map(r => el('p', { klasse: /^Tapt siden/.test(r) ? 'mtapt' : /^I går|^Tap i lagene/.test(r) ? 'igaar' : '' }, r)))); }
     const valg = el('div', { klasse: 'mvalg' });
     if (K.steg === 0) {
       kort.append(el('div', { klasse: 'msp' }, K.valg.length ? 'Hva gjør dere i dag?' : 'Ingenting som haster i dag.'));
@@ -250,6 +289,9 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     const igår = hjem(); S.planer = S.planer2; delete S.planer2; S.dag = Number.isFinite(S.dag) ? Math.max(S.dag, d) : d;
     // tapene i lagene siden forrige morgen (tapSteg), med navn
     const tap = M.tapTekst(S.tap || []); S.tap = [];
+    // RUNDE 14: tapte tettsteder og tropper står i rapporten; valgene som gir soldater, ser på dem (situasjon), så de nullstilles etter kortet
+    const tb = (S.taptBy || []).map(b => b.navn + (b.eier ? ` (nå ${eieform(b.eier)})` : '')), tl = S.taptLag || [];
+    const taptTekst = tb.length || tl.length ? 'Tapt siden i går: ' + [tb.length ? (tb.length > 1 ? 'tettstedene ' : 'tettstedet ') + og(tb) : '', tl.length ? og(tl) + ' er slått ut' : ''].filter(Boolean).join('. ') + '. Se valgene under for flere soldater.' : null;
     // et kort som aldri ble besvart (spilleren lukket ikke), regnes som «ingen endring»
     if (S.kort && !S.kort.ferdig) { S.kort.ferdig = true; lukk(); }
     // dagbokas rapport for i dag (før gårsdagens utfall skrives inn i dagboka)
@@ -262,10 +304,11 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // døgnoppgjøret ser ikke alltid tapene ute (det sa «Et rolig døgn» samme døgn som en falt): da tas «rolig» bort, og tapene står med navn
     // og tallene på sårede/falne står ikke to ganger (navnene står i linja over)
     if (tap && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').replace(/(\d+ (ny såret|nye sårede)(, \d+ falt)?|\d+ falt)\.\s*/, '').replace(/^Siste døgn:\s*$/, '').trim() || null;
-    if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
+    if (taptTekst) rapport.push(taptTekst); if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
     S.storHist = S.storHist || {};
     let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
     S.kort = { dag: d, rapport, valg: M.dagensValg(s, Math.random).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };
+    S.taptBy = []; S.taptLag = [];
     lagre(); vistNøkkel = ''; vis(); return { igår, kort: S.kort };
   }
   KROKER.sim.push(() => { if (klar && S && M.nyDag(dag(tid), S.dag)) morgen(false); });
@@ -273,13 +316,22 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   // ---------- RUNDE 13: tap i lagene (kritiker H: «Et rolig døgn» samme døgn som en fra Vaktlaget falt og lagføreren ble såret) ----------
   // Hver halve sekund: hvem i egne lag (også leirvakta) som har falt (hp til 0) eller blitt såret (fra frisk til under 1) siden sist. Lista
   // begynner først TAP_VENT ms etter start, så det lagrede spillet (lagring.js setter helsa tilbake) ikke regnes som nye tap. Claudes tall.
-  const TAP_VENT = 4000; let tapKart = null, tapSist = 0, tapFra = 0;
+  const TAP_VENT = 4000; let tapKart = null, tapSist = 0, tapFra = 0, lagKart = null, byKart = null;
   function tapSteg(tving) { const nå = performance.now(); if (!klar || !S || (!tving && (nå < tapFra || nå - tapSist < 500))) return; tapSist = nå;
     const kart = new Map(); let ny = false;
     for (const e of ENHETER) { if (e.side !== 'blå' || e.karakter || !Array.isArray(e.menn)) continue;
       e.menn.forEach((m, i) => { if (!m || !m.navn) return; const k = e.navn + '|' + m.navn; kart.set(k, m.hp); const før = tapKart ? tapKart.get(k) : undefined; if (før === undefined) return;
         const hva = før > 0 && m.hp <= 0 ? 'falt' : før >= 1 && m.hp > 0 && m.hp < 1 ? 'såret' : null;
         if (hva) { (S.tap = S.tap || []).push({ navn: m.navn, lag: e.leirvakt ? 'Leirvakta' : e.navn, hva, fører: (e.leder || 0) === i && e.menn.length > 1 }); ny = true; } }); }
+    // RUNDE 14: tapte tropper (alle slått ut eller falt, mens laget fortsatt er i lista) og tapte tettsteder siden forrige morgen
+    const lagNå = new Map(); for (const e of ENHETER) if (e.side === 'blå' && !e.karakter && !e.leirvakt && !e.raid && Array.isArray(e.menn) && e.menn.length)
+      lagNå.set(e.navn, levende(e) && !(rot.Terreng && Terreng.slattUt && Terreng.slattUt(e.menn)));
+    if (lagKart) for (const [n, lev] of lagNå) if (!lev && lagKart.get(n) === true) { (S.taptLag = S.taptLag || []).push(n); ny = true; }
+    lagKart = lagNå;
+    const byNå = new Map(); if (rot.TETTSTEDER) for (const [id, v] of TETTSTEDER) if (v) byNå.set(id, v.eier || null);
+    if (byKart) for (const [id, før] of byKart) { const nå2 = byNå.has(id) ? byNå.get(id) : null; if (før === 'blå' && nå2 !== 'blå') { const t = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted ? INFRA.tettsted.find(q => q.e && q.e.id === id) : null;
+      (S.taptBy = S.taptBy || []).push({ navn: t && t.e.navn ? t.e.navn : 'et tettsted', eier: nå2 || null }); ny = true; } }
+    byKart = byNå;
     tapKart = kart; if (ny) { if (S.tap.length > 60) S.tap.splice(0, S.tap.length - 60); lagre(); } }
   KROKER.sim.push(() => tapSteg(false));
 
@@ -348,7 +400,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // beskyttelsen gjelder etter en omlasting (spillet-visning.js regner neste bølge på nytt ved start)
     const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) T.nesteSpill = S.vernTil;
     if (!S.oppFør) S.oppFør = snapOppgjør();
-    tapKart = null; tapFra = performance.now() + TAP_VENT;
+    tapKart = null; lagKart = null; byKart = null; tapFra = performance.now() + TAP_VENT;
     klar = true; koblValg(); lagre(); vistNøkkel = ''; if (S.kort && !S.kort.ferdig && auto()) vis(); }
   // kortet følger pausereglene (Skjermlag lastes etter denne fila): pause mens det står oppe, skjult under angrep
   function koblSkjermlag() { const Sk = rot.Skjermlag; if (!Sk || !Sk.KORT) return false; if (!Sk.KORT.includes('morgenkort')) Sk.KORT.push('morgenkort'); if (Sk.VENTER && !Sk.VENTER.includes('morgenkort')) Sk.VENTER.push('morgenkort'); return true; }
