@@ -1386,3 +1386,24 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   programvare-grafikk, Lav har gress og blomster, enkelBakke har korn (ikke flat gul mark); låven med plankevegger, traktor/gråtass av
   Kjoretoy3d.form, høyballer og lysstråler (lave3d.js); våpenarmen med hanske og kamuflasje; stedsnavn i gåmodus bare over 600 m og aldri
   midt i bildet (NAVN_GÅ); ny flaggstang som blafrer i vinden (window.Flagg3d). Hjelpen: 237 emner. Kontroll: PC 130/130, mobil 130/130.
+  RUNDE 13 (21. nov dag, brukeren: «se etter enda flere ting som kan forbedres, eller gjøre bedre, eller gjøre tydeligere»; to nye kritikere:
+  docs/anmeldelse-2026-11-21-dag.md – telefon liggende 4, PC 4). Notater under «Runde 13» i docs/natt/<pakke>.md. KAMP: spill/forsvar-kamp.js
+  (KampVarsel uten DOM, window.KampSpill): en kamp = første skudd/tap for et eget lag til 30 spillmin uten skudd; én stopp med «⚔ lag er i kamp med
+  <fiende> i <sted>», «Vis» på stoppkortet (#flytvis), kampmerke for lag uten kontakt, årsak i loggen når noen faller; flyt.js teller ikke
+  ildkamper når KampSpill finnes. Angrepsanslaget kan bare minke (Forsvar.monoton/harSnudd/når/nedtelling), «ikke sett – kommer trolig …»,
+  neste bølge og forsvarsordren lagres (trussel-lagring, riksbrudd-angrep), «Røverne er sett» stopper ⏭, banneret viker for #inneknapper.
+  KRIG: Strategi.kravFor – ett krav («minst 3 mann (5 for full fart)»), advarsel før Send (for få, bygdevern, fiender, leiren uten vakt) med
+  «Send likevel»/«Gjør avtale»/«Speid og meld»; radioforslaget regner med terrenget (terrengSjekk); speidertropper stopper 400 m før et forsvart
+  sted; troppetallene «friske av, såret, falt» og «sist meldt»; tankbilen med samme radiovarsel, «på vei», laget går hjem; scenarioets mål øverst
+  i Krig; «sist sett» samlet; tegnforklaring. MORGEN: Morgen.nyDag – møtet bare når dagen er NYERE (også dagbok og oppgjør), tap i lagene
+  navngitt, to kolonner og «Vis hele døgnet ›» på liggende telefon, tida står mens møtet venter, en sak hver dag fra dag 2, handelsmannen kl. 14
+  (selg tre/diesel), svartebørsen kjøper tre. REGNSKAP: ordre og valg lagres straks, klokka går aldri tilbake (riksbrudd-klokke), spill/logglager.js
+  (siste 100 linjer per leir, «Velkommen tilbake», «Hele loggen»), kortene følger matlageret og velger bare folk hjemme, ingen like navn
+  (FolkRegler.opptatteNavn), opplæringen med krav i tall, «Flyttet: … fra Bygg til Vakt», prisen forklart (utstyr og deler, Leir.PRISDEL).
+  UI: byggelinja med ord under ikonene, hjelpen øverst (Skjermlag hjelp 69), «+n tall» øverst og «Mer» bare nederst, kort trykk uten boble,
+  tallboksene i Leir-menyen bryter, bare klokke og vær før leiren er lagt, varseltrekanten sier årsaken, kortene dekkende fra første bilde, ørn
+  med hode og vinger, myke kinn. KART: «Leiren: 3 lag, 2 kjøretøy ›» (samlelapp ved leiren), små bygg forstørret på 100 m-målestokk, hogstfelt
+  under byggene, valg av bygg zoomer til 0,5–0,9 m, grove fliser glattet (flisGlatt), diamantene alltid med navn, «skog: mye» aldri over
+  tregrensen, olje skjult i leirvalget, høydekurvene tynnes i bratte lier, vegnettet beholder bare spillkartets veger. 3D: første 3D-bilde viser
+  leiren nær (Kvalitet.startBlikk), «Sett deg inn i feltbilen (F) · 6 m bak deg» (Kjor.innTekst), folk går unna kameraet (folk3d), stedsnavn
+  med avstand når du går. Hjelpen: 265 emner.

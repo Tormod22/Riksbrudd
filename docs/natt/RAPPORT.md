@@ -240,3 +240,14 @@ To nye kritikere (docs/anmeldelse-2026-11-21.md): liggende telefon 3 (grafikk 2)
 - **3D:** grafikken setter seg ikke ned av seg selv (den flate, gule marka), låven er innredet med traktor og høy, ny våpenarm og flaggstang, og stedsnavnene ligger ikke midt i bildet når du går.
 
 Kontroll: PC 130/130, mobil 130/130 (knappen «Gå ut» lå først litt oppå kompasset på telefon – rettet).
+
+## Runde 13 (21. nov dag) – «gjøre tydeligere»
+
+To nye kritikere (docs/anmeldelse-2026-11-21-dag.md): liggende telefon 4, PC 4. Rettet i sju pakker:
+- **Kamp:** når egne lag kommer i kamp, stopper spillet én gang og sier hvem, mot hvem og hvor. Meldingen har «Vis», og loggen sier hvem de falt for. Anslaget for røverne kan bare minke, og neste angrep og forsvarsordren huskes etter omlasting.
+- **Krig:** advarsel før du sender for få eller sender bort leirens siste vakt, og når radioen ikke når fram gjennom terrenget. Speidere stopper før et forsvart sted, troppetallene stemmer, og scenarioets mål står øverst.
+- **Morgenmøtet:** kommer aldri to ganger og stopper tida mens det venter. Det navngir falne og sårede og passer på liggende telefon. Det er en sak hver dag, og en handelsmann kjøper tre og diesel.
+- **Lagring og tekster:** ordrer og klokke lagres straks, og loggen huskes med «Velkommen tilbake». Kortene og navnene stemmer, opplæringen viser kravet, og prisen er forklart.
+- **Knapper:** ord under ikonene, hjelpen over alt, «Mer» bare ett sted, tall som ikke kuttes, og varseltrekanten sier hva som mangler.
+- **Kart:** én lapp for lagene ved leiren, bygg som synes, ikke rutete fliser, rolige høydekurver i bratte lier, og ingen olje i leirvalget.
+- **3D:** første bilde viser leiren nær, feltbilknappen sier hvor bilen står, folk går unna kameraet, og stedsnavn står med avstand.
