@@ -16,7 +16,8 @@
     // punkter langs hver side, kartbildets størrelse (punkter), senket under det detaljerte (m) og bredden på overlappen (ruter)
     N: 65, TW: 1024, senk: .6, overlapp: 1.5,
     // «Laster …» når midten av bildet er lenger ut enn denne andelen av det gamle utsnittets S
-    laster: .55,
+    // (runde 15: .75, før .55 – neste utsnitt bestilles nå tidlig mens du flyr, så meldingen sto midt i et ferdig landskap)
+    laster: .75,
   };
   const F = { mesh: null, tex: null, bygger: false, cx: 0, cy: 0, S: 0, uInn: null, feil: 0, feilVed: 0 };
   const harAlt = () => typeof R3 !== 'undefined' && R3 && R3.ut && typeof THREE !== 'undefined';
