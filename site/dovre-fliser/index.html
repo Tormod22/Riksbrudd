@@ -546,6 +546,11 @@ function KAI_VIKTIG(x, y, t, l, m) {
   return Math.hypot(S.leir.x - x, S.leir.y - y) < 5000;
 }
 for (const lag of ['bru', 'tunnel', 'kraft', 'ferjekai', 'dam']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && infraViktig(lag, o, m); }
+// (runde 13, kritikk G: «over 30 like firkanter fra oljeinnretningene i Nordsjøen tar mest oppmerksomhet når du skal velge leirplass») mens du
+// velger leirplass (ingen leir ennå) vises oljeinnretningene, feltene og rørene bare nærmere enn LEIRVALG_OLJE m per punkt (Claudes forslag)
+const LEIRVALG_OLJE = 300;
+function velgerLeir() { if (navigator.webdriver && !INFRA_FOKUS.test) return false; const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return !(S && S.leir); }
+for (const lag of ['olje', 'felt', 'ror']) { const før = VISES[lag]; VISES[lag] = (o, m) => før(o, m) && !(m > LEIRVALG_OLJE && velgerLeir()); }
 // Navnet på et tettsted står inne i tettbebyggelsen, lengst fra kanten (Kart2d.navnepunkt, regnes én gang per tettsted) – ikke midt i
 // rammen rundt flaten: «Oslo» sto ute i fjorden (12. nov). Brukes av 2D, 3D og trykk i 3D.
 const navnP = o => o.navnP || (o.navnP = Kart2d.navnepunkt(o.deler, o.bb));

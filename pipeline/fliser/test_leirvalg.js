@@ -27,4 +27,8 @@ ok(/båter/.test(L.kaiTekst('Ingen kai innen 10 km – leiren får ingen båter.
 ok(/båter, fiske og varer sjøveien/.test(L.kaiTekst('Nærmeste kai: liten (3,9 km) – for langt til å være leirens kai (over 3 km).', true)), 'kaia for langt unna: forklarer hva en kai er godt for');
 ok(L.kaiTekst('Nærmeste kai: stor (1,2 km) – leirens egen kai: lasteskip.', true) === 'Nærmeste kai: stor (1,2 km) – leirens egen kai: lasteskip.', 'leirens egen kai: uendret');
 ok(L.måle(null, 0, 0).land === 0 && L.vurder(L.måle(null, 0, 0), {}).advarsler.length === 1, 'uten vindu: bare «ingen veg» (ingen feil)');
+// (runde 13) over tregrensen med skog nede i dalen: aldri «skog: mye» sammen med «over tregrensen»
+{ const dal = L.måle(vindu(i => (i < 120 ? [1, 300] : [0, 1200])), 3200, 3200), v = L.vurder(dal, { h: 1207, tregrense: 1000 }), alt = v.advarsler.concat(v.fakta).join(' · ');
+  ok(dal.skog >= L.REGLER.skogMye && /over tregrensen/.test(alt) && !/skog: mye/.test(alt) && /skog: bare nede i dalen/.test(alt), 'over tregrensen, skog i dalen: ' + alt);
+  const tom = L.vurder(L.måle(vindu(() => [0, 1300]), 3200, 3200), { h: 1300, tregrense: 1000 }); ok(!tom.fakta.some(f => /^skog/.test(f)) && /ingen skog å hogge/.test(tom.advarsler[0]), 'snaufjell uten skog: bare advarselen'); }
 process.exit(feil ? 1 : 0);

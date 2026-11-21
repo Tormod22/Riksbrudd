@@ -35,7 +35,10 @@
     if (m.vegM === Infinity) adv.push(`Ingen veg innen ${km(R.radius)}: lastebilene kommer ikke fram før dere bygger grusveg.`);
     else if (m.vegM > R.vegLangt) adv.push(`${km(m.vegM)} til nærmeste veg: lastebilene kommer ikke helt fram.`);
     if (o.by && o.by.m > R.byLangt) adv.push(`${km(o.by.m)} til nærmeste tettsted (${o.by.navn}): få hus å lete i og ingen å handle med.`);
-    if (m.land) fakta.push('skog: ' + (m.skog >= R.skogMye ? 'mye' : m.skog >= R.skogLite ? 'noe' : 'nesten ingen'));
+    // (runde 13, kritikk G: «1207 moh., over tregrensen» og «skog: mye» om samme sted – skogen var nede i dalen innen 2,5 km) over
+    // tregrensen sies det hvor skogen er, aldri «mye»; uten skog står det alt i advarselen
+    if (m.land && høyt) { if (m.skog >= R.skogLite) fakta.push(`skog: bare nede i dalen (innen ${km(R.radius)})`); }
+    else if (m.land) fakta.push('skog: ' + (m.skog >= R.skogMye ? 'mye' : m.skog >= R.skogLite ? 'noe' : 'nesten ingen'));
     if (m.vegM < Infinity && m.vegM <= R.vegLangt) fakta.push('veg ' + km(m.vegM) + ' unna');
     if (o.by && o.by.m <= R.byLangt) fakta.push(`${o.by.navn} ${km(o.by.m)}`);
     return { advarsler: adv, fakta };
