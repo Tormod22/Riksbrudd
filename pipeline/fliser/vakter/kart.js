@@ -72,7 +72,8 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
         krev(s && /^Leiren: /.test(s.t) && s.n.alle >= 2 && T.navn.some(n => n.t === s.t), '1 km-målestokk: lagene ved leiren er ikke samlet i én lapp: ' + JSON.stringify(ut.samling) + ' / ' + T.navn.map(n => n.t).join(' | '));
         krev(!T.navn.some(n => /^Samlelag /.test(n.t)), '1 km-målestokk: lagnavnene ved leiren står i tillegg til samlelappen');
         krev(T.overlapp === 0, `1 km-målestokk: ${T.overlapp} navn oppå hverandre`);
-        if (s) { const r = s.ramme; trykkPå(r[0] + r[2] / 2, r[1] + r[3] / 2); ut.etterTrykk = kam.m; krev(kam.m <= 1.6, 'trykk på samlelappen zoomer ikke inn: ' + kam.m); }
+        // trykket: bare i 2D, og ikke mens krigskartet eller en plassering tar trykkene først
+        if (s && !på3d && !(StrategiSpill.erÅpen && StrategiSpill.erÅpen()) && !(LeirSpill.plassering && LeirSpill.plassering())) { const r = s.ramme; trykkPå(r[0] + r[2] / 2, r[1] + r[3] / 2); ut.etterTrykk = kam.m; krev(kam.m <= 1.6, 'trykk på samlelappen zoomer ikke inn: ' + kam.m); }
         for (const e of nye.splice(0)) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); } }
       { const LS = window.LeirSpill && LeirSpill.tilstand(), RS = window.RessursSpill && RessursSpill.tilstand(); if (LS && window.Leir2d && Leir2d.leirTak) {
           const t = (Leir.BYGG.brakke.tid || 1) * 60, b = { id: LS.neste++, type: 'brakke', x: L.x + 60, y: L.y - 40, ret: 0, igjen: 0, totalt: t, pris: 0, mat: {}, nivå: 1, hp: 1, nr: LS.nesteJobb++, arbeid: null, vakt: true };

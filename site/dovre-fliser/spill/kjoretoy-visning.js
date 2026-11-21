@@ -68,6 +68,8 @@
   VEG_TLF.boks = () => { const Ø = VEG_TLF.område(); if (!Ø && (!VEG_TLF.telefon() || (navigator.webdriver && !VEG_TLF.test))) return null; const S = window.OppstartSpill && OppstartSpill.tilstand(), L = S && S.leir;
     const [x, y] = L && Number.isFinite(L.x) ? [L.x, L.y] : [kam.x, kam.y], b = Ø ? [Ø.bb[0] - UTSNITT_KANT, Ø.bb[1] - UTSNITT_KANT, Ø.bb[2] + UTSNITT_KANT, Ø.bb[3] + UTSNITT_KANT]
       : [x - UTSNITT_HALV, y - UTSNITT_HALV, x + UTSNITT_HALV, y + UTSNITT_HALV];
+    // på et mindre spillkart holder spillet seg innenfor grensa: basene og terminalene utenfor utvider ikke boksen
+    if (Ø) return b;
     const O = window.OLJE || {}, ta = p => { if (!p || !Number.isFinite(p.x)) return; b[0] = Math.min(b[0], p.x - UTSNITT_KANT); b[1] = Math.min(b[1], p.y - UTSNITT_KANT); b[2] = Math.max(b[2], p.x + UTSNITT_KANT); b[3] = Math.max(b[3], p.y + UTSNITT_KANT); };
     for (const p of O.BASER || []) ta(p);
     ta((O.TERMINALER || []).slice().sort((a, c) => Math.hypot(a.x - x, a.y - y) - Math.hypot(c.x - x, c.y - y))[0]);
