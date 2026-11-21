@@ -190,6 +190,7 @@
 #morgenkort h3{ margin:0 0 6px; font-size:17px; color:#f0d79a; } #morgenkort h3 small{ font-weight:400; color:var(--ink-dim,#a99); font-size:13px; }
 #morgenkort .mrapport{ font-size:13px; line-height:1.4; color:var(--ink-dim,#b5a888); border-left:2px solid #4a4030; padding:2px 0 2px 8px; margin:0 0 8px; }
 #morgenkort .mrapport p{ margin:0 0 3px; } #morgenkort .mrapport .igaar{ color:#d9e6c2; } #morgenkort .mrapport .mtapt, #morgenkort .msum span.mtapt{ color:#ffb49a; }
+body.kort #morgenkort .mraid{ margin:0 0 5px; padding:4px 8px; font-size:13.5px; }
 #morgenkort .mraid{ margin:0 0 8px; padding:6px 9px; background:#2a120d; border:1px solid #e0714f; color:#ffd2c0; font-weight:600; font-size:14px; line-height:1.35; }
 #morgenkort .msp{ margin:6px 0 4px; font-weight:600; }
 #morgenkort button{ display:block; width:100%; margin-top:6px; min-height:44px; background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); font:inherit; cursor:pointer; text-align:left; padding:6px 12px; }
@@ -247,7 +248,9 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     const valg = el('div', { klasse: 'mvalg' });
     if (K.steg === 0) {
       kort.append(el('div', { klasse: 'msp' }, K.valg.length ? 'Hva gjør dere i dag?' : 'Ingenting som haster i dag.'));
-      K.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
+      // RUNDE 14: på små skjermer (liggende telefon) står høyst tre valg, så «Ingen endring i dag» får den fjerde ruta uten rulling
+      const vis3 = document.body.classList.contains('kort') ? 3 : K.valg.length;
+      K.valg.slice(0, vis3).forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
       valg.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
     } else {
       const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, 'I dag: ' + K.valgt)));
