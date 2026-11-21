@@ -214,7 +214,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren', false, ['Diesel', `${nb(L.drivstoff)}/${nb(kap)} l`]),
       flis('Sengeplasser', String(LB.plasser(L)), '', false, ['Senger', String(LB.plasser(L))]),
       siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, strømLinje()));
-    const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => kjøpDiesel(500), { id: 'kjopdiesel' });
+    const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)} · ${Math.round(LB.DRIVSTOFF.prisPerLiter).toLocaleString('nb-NO')} kr/l)`, () => kjøpDiesel(500), { id: 'kjopdiesel' });
     kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
     // to slags drivstoff (brukeren 12. nov: behold begge, men si tydelig hva som er hva)
     const dieselTekst = el('small', { id: 'dieseltekst', style: 'display:block; color:var(--ink-dim); font-size:12.5px; line-height:1.35; margin-top:4px' }, DIESEL + ' ' + dieselHvorfor());

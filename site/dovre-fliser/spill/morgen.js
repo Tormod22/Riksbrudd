@@ -61,7 +61,18 @@
     // også etter ekte tid), moral når dere nekter
     vern: { fast: 1.5e6, perBølge: 5e5, utsett: 1440, utsettEkte: 20, nektMoral: 3 },
     // handelskaravanen: pakken (diesel l, mat) til «rabatt» av markedsprisen; kjøper tre (m³) til «tre» ganger salgsprisen
-    karavane: { diesel: 500, mat: 30, rabatt: .7, tre: 15, trePris: 1.3 },
+    karavane: { diesel: 500, mat: 30, rabatt: .7, tre: 15, minTre: 5, trePris: 1.3 },
+    // RUNDE 14 (kritiker I: møtet kl. 06:01 nevnte ikke at røverne kom «om under 1 min»): raidet står øverst i møtet når neste bølge er
+    // under «linje» spillminutter unna (som varselbrikken, 12 t), og «Forsvar leiren nå» tilbys når den er under «forsvar» minutter unna
+    raid: { linje: 720, forsvar: 360 },
+    // RUNDE 14 (kritiker J: fire tettsteder tapt på én natt, ett lag på 4 og seks folk igjen – «ingen vei tilbake»): etter et tapt tettsted
+    // eller en tapt tropp tilbyr møtet flere soldater. leie = leiesoldater (et ferdig lag på «menn» mann, pris i kr); rekrutt = folk fra
+    // nabogården (til Folk, så du kan lage en tropp); vaktlag = lag en tropp av så mange av folkene (minst «minFolk» arbeidsføre i leiren først)
+    tap: { leie: { menn: 4, pris: 2.5e6 }, rekrutt: { folk: 2, pris: 6e5 }, vaktlag: 4, minFolk: 6 },
+    // krisehjelp: ingen tettsteder og færre enn «soldater» friske soldater -> bygdevernet sender «menn» frivillige gratis, høyst hver «pause» dag
+    krise: { soldater: 6, menn: 3, pause: 3 },
+    // speidertur mot et tettsted en motstander holder: større fare (skade, og at én blir tatt til fange)
+    speidFiende: { skade: .25, borte: .06 },
   };
 
   // ---------- DAGENS VALG ----------
@@ -72,6 +83,17 @@
   function dagensValg(s, rng = Math.random) {
     const R = REGLER, ut = [], kan = s.arbeidsføre >= R.borte + 2, legg = (vekt, v) => ut.push({ vekt: vekt + rng() * .01, ...v });
     const matKr = Math.round((s.matPris || 3000) * R.kjøp);
+    // RUNDE 14: røverne kommer snart (eller angriper) – forsvaret først
+    const rd = s.raid; if (rd && !rd.satt && (rd.aktiv || rd.min <= R.raid.forsvar) && s.folk > 0)
+      legg(12, { id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne kommer om ' + rd.nedtelling + '.'}` });
+    // RUNDE 14: etter et tapt tettsted eller en tapt tropp – minst ett valg som gir flere soldater (krisehjelp når alt er tapt)
+    const tapt = s.tapt && ((s.tapt.byer || []).length || (s.tapt.lag || []).length), T = R.tap;
+    if (s.kriseKan) legg(11, { id: 'krise', t: `Krisehjelp: bygdevernet sender ${R.krise.menn} frivillige (gratis)`, følge: `Dere har ingen tettsteder og bare ${s.soldater} friske soldater. ${R.krise.menn} frivillige kommer til leiren i dag som et eget lag – lett bevæpnet, men det er en start.` });
+    if (tapt || s.kriseKan) {
+      if (s.penger >= T.leie.pris) legg(10, { id: 'leiesold', t: `Kjøp leiesoldater (${T.leie.menn} mann, ${kr(T.leie.pris)})`, følge: `Et ferdig lag på ${T.leie.menn} med geværer står i leiren i dag. Kassa går ned med ${kr(T.leie.pris)}.`, pris: T.leie.pris });
+      if (s.arbeidsføre >= T.minFolk) legg(9.5, { id: 'vaktlag', t: `Lag et vaktlag av ${T.vaktlag} i leiren (gratis)`, følge: `De ${T.vaktlag} som egner seg best, blir en tropp med geværer. Leiren har ${s.arbeidsføre - T.vaktlag} arbeidsføre igjen.` });
+      if (s.penger >= T.rekrutt.pris) legg(9, { id: 'rekrutt', t: `Rekrutter ${T.rekrutt.folk} fra nabogården (${kr(T.rekrutt.pris)})`, følge: `${T.rekrutt.folk} nye i Folk i dag. Lag en tropp av dem i Leir → Tropper (minst 2 per tropp).`, pris: T.rekrutt.pris });
+    }
     if (s.folk > 0 && s.matDøgn < R.matDøgn) {
       const hast = 3 - s.matDøgn;
       if (kan) legg(5 + hast, { id: 'jakt', t: 'Send to på jakt og fiske', følge: `To er borte i dag og arbeider ikke. I morgen har de med seg mat (ca. ${R.jakt.per[0] * 2}–${R.jakt.per[1] * 2} rasjoner). Liten fare for at én skader seg.` });
@@ -79,7 +101,7 @@
       legg(3 + hast, { id: 'rasjon', t: 'Halve rasjoner i dag', følge: `Maten rekker lenger (${Math.round((1 - R.rasjon.mat) * 100)} % mindre forbruk i dag), men folk blir sure (moral ${R.rasjon.moral} i dag).` });
     }
     if (s.røverTimer !== null && s.røverTimer !== undefined && s.røverTimer <= R.røverTimer && s.folk >= 3)
-      legg(s.røverTimer <= 0 ? 9 : 7, { id: 'vakt', t: 'Dobbel vakt i natt (folk blir slitne)', følge: `${R.vakt.ekstra} til går på vakt til i morgen tidlig: vaktene ser røverne tidligere, og lagene ved leiren treffer bedre. I morgen er folk slitne (moral ${R.vakt.slitenMoral}, litt saktere arbeid).` });
+      legg(s.røverTimer <= 0 ? 9 : 7, { id: 'vakt', t: s.røverTimer <= 6 ? 'Dobbel vakt fra nå til i morgen (folk blir slitne)' : 'Dobbel vakt i natt (folk blir slitne)', følge: `${R.vakt.ekstra} til går på vakt til i morgen tidlig: vaktene ser røverne tidligere, og lagene ved leiren treffer bedre. I morgen er folk slitne (moral ${R.vakt.slitenMoral}, litt saktere arbeid).` });
     if (s.penger < R.litePenger) {
       const tre = Math.min(R.selg.maks, Math.floor((s.lager && s.lager.tre || 0) * R.selg.andel));
       if (tre >= R.selg.min) legg(6, { id: 'selg', t: `Selg ${tre} m³ tre (ca. ${kr(tre * (s.trePris || 0))})`, følge: 'Penger i kassa nå. Mindre tre til bygging og ved.', mengde: tre });
@@ -88,14 +110,19 @@
     }
     // RUNDE 13: inntekt uten krig – svartebørsen kjøper tre (eller diesel) hver dag, ikke bare når kassa er nesten tom
     const sv = s.folk > 0 ? svartTilbud(s) : null; if (sv && !ut.some(v => v.id === 'selg' && sv.vare === 'tre')) legg(3.5, sv);
-    if (kan && s.arbeidsføre >= R.folkNok) legg(3, { id: 'speid', t: s.sted ? `Send to på speidertur mot ${s.sted}` : 'Send to på speidertur rundt leiren', sted: s.sted || null, følge: 'To er borte i dag. I morgen melder de når røverne kommer neste gang, og tar med det de finner av mat og materialer.' });
+    // RUNDE 14 (kritiker J: «speidertur mot Røysland», som fienden nettopp hadde tatt): eieren står i knappen, og risikoen i følgen
+    if (kan && s.arbeidsføre >= R.folkNok) { const fi = s.stedEier || null;
+      legg(fi ? 2.8 : 3, { id: 'speid', t: s.sted ? `Send to på speidertur mot ${s.sted}` + (fi ? ` (${fi} nå)` : '') : 'Send to på speidertur rundt leiren', sted: s.sted || null, fiende: fi,
+        følge: fi ? `${s.sted} holdes av fienden: farlig tur (omtrent hver fjerde gang kommer en skadet hjem, og en sjelden gang blir en tatt). I morgen melder de hvor mange fiender som er der, og når røverne kommer.`
+          : 'To er borte i dag. I morgen melder de når røverne kommer neste gang, og tar med det de finner av mat og materialer.' }); }
     if (kan && s.arbeidsføre >= R.folkNok) legg(2.5, { id: 'øv', t: 'Våpenøvelse for to (bedre soldater)', følge: `To øver hele dagen og arbeider ikke. I morgen er de mer erfarne (+${R.øv.erf} min kamperfaring hver – følger dem inn i en tropp).` });
     if (s.folk > 0 && s.moral < R.lavMoral) legg(4 + (R.lavMoral - s.moral) / 10, { id: 'fri', t: 'Fridag for alle', følge: `Moralen stiger (+${R.fri.moral} i dag), men alt arbeid går halvt så fort i dag.` });
     if (s.folk > 0 && s.moral >= R.godMoral) legg(2, { id: 'skift', t: 'Ekstra skift i dag', følge: `Alt arbeid går ${Math.round((R.skift.tempo - 1) * 100)} % raskere i dag, men folk blir slitne (moral ${R.skift.moral} i dag).` });
     // for få: fyll på med fridag/ekstra skift (det som passer moralen)
     if (ut.length < 2 && s.folk > 0) { if (!ut.some(v => v.id === 'skift') && s.moral >= R.lavMoral) legg(1, { id: 'skift', t: 'Ekstra skift i dag', følge: `Alt arbeid går ${Math.round((R.skift.tempo - 1) * 100)} % raskere i dag, men folk blir slitne (moral ${R.skift.moral} i dag).` });
       if (!ut.some(v => v.id === 'fri')) legg(.5, { id: 'fri', t: 'Fridag for alle', følge: `Moralen stiger (+${R.fri.moral} i dag), men alt arbeid går halvt så fort i dag.` }); }
-    return ut.sort((a, b) => b.vekt - a.vekt).slice(0, 3);
+    // RUNDE 14: når røverne kommer eller noe er tapt, får møtet plass til fire valg (så mat og forsvar ikke skyver hverandre ut)
+    return ut.sort((a, b) => b.vekt - a.vekt).slice(0, (rd && (rd.aktiv || rd.min <= R.raid.forsvar)) || tapt || s.kriseKan ? 4 : 3);
   }
 
   // RUNDE 13: svartebørsens tilbud i dag – tre hvis det er nok på lageret, ellers diesel; null når dere ikke har noe å selge
@@ -130,9 +157,15 @@
     const dl = Math.max(0, Math.min(R.karavane.diesel, Math.floor(((s.dieselPlass || 0) - (s.diesel || 0)) / 50) * 50));
     const pakke = Math.round((dl * (s.dieselPris || 0) + R.karavane.mat * (s.matPris || 0)) * R.karavane.rabatt / 1e4) * 1e4, treSalg = Math.round(R.karavane.tre * (s.trePris || 0) * R.karavane.trePris / 1e3) * 1e3;
     const kv = [];
-    if (s.penger >= pakke && pakke > 0) kv.push({ id: 'kjøp', t: dl ? `Kjøp ${dl} l diesel og ${R.karavane.mat} rasjoner (${kr(pakke)})` : `Kjøp ${R.karavane.mat} rasjoner (${kr(pakke)})`, følge: `Omtrent ${Math.round((1 - R.karavane.rabatt) * 100)} % billigere enn markedet.` + (dl < R.karavane.diesel ? ' Dere har ikke plass til mer diesel (bygg en dieseltank).' : ''), pris: pakke, diesel: dl });
-    if ((s.lager && s.lager.tre || 0) >= R.karavane.tre && treSalg > 0) kv.push({ id: 'selg', t: `Selg ${R.karavane.tre} m³ tre (${kr(treSalg)})`, følge: `Bedre betalt enn på markedet (${Math.round((R.karavane.trePris - 1) * 100)} % mer).`, pris: treSalg });
-    if (kv.length) mulige.push({ id: 'karavane', tittel: 'En handelskaravane', tekst: 'En karavane med lastebiler har slått leir ved vegen i dag. De selger billig og kjøper tre.', valg: kv.concat([{ id: 'nei', t: 'Ingen handel', følge: 'Karavanen drar videre i kveld.' }]) });
+    // RUNDE 14 (kritiker I: «Kjøp 30 rasjoner … Dere har ikke plass til mer diesel»): følgen sier bare det som gjelder varen i knappen; at
+    // tankene er fulle, står i karavanens tekst. Kritiker J: «kjøper tre», men ingen knapp – nå selges det treet dere har (minTre–tre m³),
+    // og teksten sier «kjøper tre» bare når knappen finnes
+    const har = Math.floor(s.lager && s.lager.tre || 0), tm = Math.min(R.karavane.tre, har), tp = Math.round(tm * (s.trePris || 0) * R.karavane.trePris / 1e3) * 1e3;
+    if (s.penger >= pakke && pakke > 0) kv.push({ id: 'kjøp', t: dl ? `Kjøp ${dl} l diesel og ${R.karavane.mat} rasjoner (${kr(pakke)})` : `Kjøp ${R.karavane.mat} rasjoner (${kr(pakke)})`, følge: `Omtrent ${Math.round((1 - R.karavane.rabatt) * 100)} % billigere enn markedet.` + (dl && dl < R.karavane.diesel ? ` Bare ${dl} l får plass i tankene.` : ''), pris: pakke, diesel: dl });
+    if (tm >= R.karavane.minTre && tp > 0) kv.push({ id: 'selg', t: `Selg ${tm} m³ tre (${kr(tp)})`, følge: `Bedre betalt enn på markedet (${Math.round((R.karavane.trePris - 1) * 100)} % mer).`, pris: tp, mengde: tm });
+    const ktekst = 'En karavane med lastebiler har slått leir ved vegen i dag. ' + (kv.some(v => v.id === 'selg') ? 'De selger billig og kjøper tre.' : `De selger billig (de kjøper tre også, men dere har under ${R.karavane.minTre} m³).`)
+      + (kv.some(v => v.id === 'kjøp') && !dl ? ' Dieseltankene er fulle, så dere kan bare kjøpe mat.' : '');
+    if (kv.length) mulige.push({ id: 'karavane', tittel: 'En handelskaravane', tekst: ktekst, valg: kv.concat([{ id: 'nei', t: 'Ingen handel', følge: 'Karavanen drar videre i kveld.' }]) });
     // RUNDE 13: handelsmannen kommer kl. 14 og kjøper det dere legger av til ham (en avtale med tidsfrist)
     const H = R.handel, ht = Math.min(Math.floor(s.lager && s.lager.tre || 0), Math.round(mellom(rng, H.tre))), hd = Math.min(Math.floor((s.diesel || 0) / 50) * 50, Math.round(mellom(rng, H.diesel) / 50) * 50);
     const kl = `kl. ${String(6 + H.timer).padStart(2, '0')}`, hv = [];
@@ -160,9 +193,12 @@
       else if (sår) { u.skadet.push(hvem().navn); u.helse = R.leie.helse; u.tekst = `Nabogården betalte ${kr(u.penger)}. ${u.skadet[0].split(' ')[0]} ble såret i et basketak og må hvile.`; }
       else u.tekst = `${og(navn)} holdt vakt for nabogården og kom hjem med ${kr(u.penger)}.`; }
     else if (p.id === 'speid') { u.tre = Math.round(mellom(rng, R.speid.tre) * 10) / 10; u.stål = Math.round(mellom(rng, R.speid.stål) * 10) / 10; u.mat = Math.round(mellom(rng, R.speid.mat));
-      if (f.length && rng() < R.speid.skade) { u.skadet.push(hvem().navn); u.helse = R.speid.helse; }
+      const SF = p.fiende ? R.speidFiende : null;
+      if (SF && f.length > 1 && rng() < SF.borte) u.borte.push(hvem().navn);
+      if (f.length && rng() < (SF ? SF.skade : R.speid.skade)) { const q = hvem(); if (!u.borte.includes(q.navn)) { u.skadet.push(q.navn); u.helse = R.speid.helse; } }
       const røv = o.røverTimer === null || o.røverTimer === undefined ? 'De så ingen tegn til røverne.' : o.røverTimer <= 0 ? 'Røverne er alt på vei mot leiren.' : `De så røverne samle seg: de drar ut mot leiren om ca. ${Math.max(1, Math.round(o.røverTimer))} ${Math.max(1, Math.round(o.røverTimer)) === 1 ? 'time' : 'timer'}.`;
-      u.tekst = `Speiderne er tilbake fra ${p.sted || 'turen'}. ${røv} De fant ${u.mat} rasjoner, ${des(u.tre)} m³ tre` + (u.stål > 0 ? ` og ${des(u.stål)} t stål.` : '.') + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} vrikket foten.` : ''); }
+      u.tekst = `Speiderne er tilbake fra ${p.sted || 'turen'}. ${røv} De fant ${u.mat} rasjoner, ${des(u.tre)} m³ tre` + (u.stål > 0 ? ` og ${des(u.stål)} t stål.` : '.') + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} ${SF ? 'ble skadet i et sammenstøt med fienden' : 'vrikket foten'}.` : '')
+        + (p.fiendeTekst ? ' ' + p.fiendeTekst : '') + (u.borte.length ? ` ${u.borte[0].split(' ')[0]} ble tatt av fienden og kom ikke tilbake.` : ''); }
     else if (p.id === 'øv') { u.erf = R.øv.erf; if (f.length && rng() < R.øv.skade) { u.skadet.push(hvem().navn); u.helse = R.øv.helse; }
       u.tekst = `${og(navn)} øvde med våpen hele dagen og er mer erfarne nå.` + (u.skadet.length ? ` ${u.skadet[0].split(' ')[0]} fikk en smell og må ta det rolig.` : ''); }
     else if (p.id === 'tankbil') { const T = R.tankbil.fots; if (rng() < T.lykkes) { u.diesel = Math.round(mellom(rng, T.diesel) / 10) * 10; u.tekst = `${og(navn)} fant tankbilen og bar hjem ${u.diesel} l diesel i kanner.`; }
@@ -201,7 +237,7 @@
 
   // ---------- KORT TEKST om valget som ble tatt ----------
   const VALGT = { jakt: 'to på jakt og fiske', kjøp: 'kjøpte mat', rasjon: 'halve rasjoner', vakt: 'dobbel vakt', selg: 'solgte tre', post: 'tok røverposten', leie: 'leide ut to som vakter',
-    speid: 'speidertur', øv: 'våpenøvelse', fri: 'fridag', skift: 'ekstra skift', svart: 'solgte på svartebørsen', ingen: 'ingen endring' };
+    speid: 'speidertur', forsvar: 'forsvarte leiren', krise: 'fikk krisehjelp', leiesold: 'kjøpte leiesoldater', vaktlag: 'laget et vaktlag', rekrutt: 'rekrutterte fra nabogården', øv: 'våpenøvelse', fri: 'fridag', skift: 'ekstra skift', svart: 'solgte på svartebørsen', ingen: 'ingen endring' };
 
   const api = { REGLER, dagensValg, svartTilbud, erStorDag, storBeslutning, tapTekst, nyDag, utfall, velgFolk, VALGT, kr, des };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Morgen = api;

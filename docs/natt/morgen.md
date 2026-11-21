@@ -184,3 +184,48 @@ etter rettingen kom ingenting (verken etter omlasting eller over 06:00).
 ### Kontrollen (sjekk.js, mobil, 21. nov kl. 15:06–15:14, etter fletting av origin/claude/nattfiks med krig-pakkas tankbil)
 - `PORT=8983 SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`: 130 ok, 0 FEIL (461 s). Vakta «morgenmøtet» var ok med alle R13-delene
   (dag, tap med navn, fold, ⏭, handelsmann).
+
+## Runde 14 (21. nov kveld, kritikk I/J)
+
+| Punkt i oppdraget | Status |
+|---|---|
+| 1. Raidet nevnes ikke i møtet kl. 06:01 (I) | **Rettet** (gjenskapt ved å fjerne linja: vakta fant det) |
+| 2. Ingen vei tilbake etter tap (J) + krisehjelp | **Rettet** |
+| 3. Karavanen: «kjøper tre» uten knapp (J), «diesel» under matkjøp (I) | **Rettet** |
+| 4. Speidertur mot fiendens by (J) | **Rettet** |
+| 5. «Kjøp 500 l» uten pris per liter (J) | **Rettet** (tre filer andre pakker eier – se under) |
+
+### Hva som er laget
+- RAIDET: `raidNå()` i morgen-visning.js bruker `ForsvarSpill.neste()` (samme tid og tekst som varselbrikken) eller et aktivt angrep. Når neste bølge
+  er under `REGLER.raid.linje` = 720 min unna, står «⚠ Røverne drar ut mot leiren … – om …» som FØRSTE linje i møtet (`#morgenraid`, rød boks, også i
+  steg 2). Under `REGLER.raid.forsvar` = 360 min (eller under angrep) er «Forsvar leiren nå» første valg (`ForsvarSpill.sett(false)`; ikke når forsvaret
+  alt står). Linja og valget regnes når kortet VISES (kortet kan ha ventet i køen). «Dobbel vakt i natt» heter «Dobbel vakt fra nå til i morgen» når
+  røverne er under 6 t unna.
+- TAP: `tapSteg` (hvert halve sekund) ser også etter tapte tropper (alle slått ut / falt, laget fortsatt i lista – oppløste lag teller ikke) og tapte
+  tettsteder (`TETTSTEDER`: eier fra «blå» til noe annet) → `S.taptBy`, `S.taptLag` (lagres). Neste morgen: «Tapt siden i går: tettstedene Egersund
+  (nå Kystalliansens) … Speidertropp 1 er slått ut. Se valgene under for flere soldater.» først i rapporten (rød), og valgene:
+  «Kjøp leiesoldater (4 mann, 2,5 mill. kr)» (nyttLag ved leiren), «Lag et vaktlag av 4 i leiren (gratis)» (`TropperSpill.opprett`, krever 6 arbeidsføre),
+  «Rekrutter 2 fra nabogården (600 000 kr)» (til Folk). KRISEHJELP: 0 egne tettsteder og under 6 friske soldater → «Krisehjelp: bygdevernet sender 3
+  frivillige (gratis)» (lett bevæpnet lag; høyst hver 3. dag, `S.kriseSist`). Med raid/tap har møtet plass til fire valg (tre på liggende telefon, så
+  «Ingen endring» får plass uten rulling). «Et rolig døgn» tas bort når noe er tapt.
+- KARAVANEN: følgen under matkjøpet nevner aldri diesel; «Dieseltankene er fulle, så dere kan bare kjøpe mat» står i karavanens tekst. Salget tar
+  det treet dere har (5–15 m³, `REGLER.karavane.minTre`), og teksten sier «kjøper tre» bare når knappen finnes. Gikk gjennom de andre kjøp/salg-valgene
+  (handelsmann, svartebørs, selg, kjøp mat, vern): ingen blander varene.
+- SPEIDERTUR: holder en motstander nærmeste tettsted, står «Send to på speidertur mot Røysland (Kystalliansens nå)», følgen sier at turen er farlig
+  (`REGLER.speidFiende`: skade 25 %, 6 % at én blir tatt), og neste morgen melder de hvor mange fiendtlige lag/mann som er der.
+- Alle tallene i `Morgen.REGLER` (raid, tap, krise, speidFiende, karavane.minTre) er Claudes forslag.
+
+### Fellesfiler endret (punkt 5, pris per liter)
+- `spill/leir-visning.js` (`#kjopdiesel`): «Kjøp 500 l diesel (1,5 mill. kr · 3 000 kr/l)».
+- `spill/narhud.js` (brikken «Tom for diesel»): «Kjøp 500 l (3 000 kr/l)».
+- `spill/strom-visning.js` (`#aggkjop`): «Kjøp 500 l (3 000 kr/l)».
+
+### Prøvd
+- `node pipeline/fliser/test_morgen.js`: alle ok (13 nye sjekker for runde 14).
+- Vakta (PC og mobil 844 × 390, isMobile): ok – raidlinja først, «Forsvar leiren nå» først, tapt tettsted i rapporten, leiesoldatene kom som lag på 4.
+  Feil med vilje (raidlinja tatt bort): vakta svarte «møtet nevner ikke røverne i første linje».
+- Bilder i scratchpad `natt14/morgen/`: `p-raid.png`, `p-tap.png` (PC), `m-raid.png`, `m-tap.png` (telefon). «Lag et vaktlag» ga «Vaktlag 1» på 4. 0 sidefeil.
+- Sporet (`spor.js`): et prøvetettsted satt til «blå» og så «rød», og et eget lag med alle hp = 0 → `taptBy`/`taptLag` fylt, og neste møte hadde
+  «Tapt siden i går …» og valgene for soldater. Prøven fant en feil som er rettet: `S.tap.length` når bare et tettsted var tapt (unntak i KROKER.sim).
+- Ikke prøvd i nettleser: ekte tap av tettsted gjennom AI-en (sporet er prøvd med eierskapet satt for hånd), karavanen og speiderturen
+  (bare regeltestene), og en hel mobilkontroll (koordinatoren kjører den etter flettingen).
