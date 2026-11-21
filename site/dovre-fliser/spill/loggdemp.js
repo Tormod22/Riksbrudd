@@ -27,6 +27,10 @@
     vær: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Det blåser opp til storm)\./,
     storVær: /^(Tåka|Det blåser opp til storm|Det begynner å snø)/,
     tips: /^(Vil du|Tips?:)/,
+    // RUNDE 14 (kritiker I: «hver omlasting skrev Spillform …, Kystalliansen holder til i … og Velkommen tilbake … inn i loggen» – 36 av
+    // 61 linjer; kritiker J: etter F5 sto det at fienden holdt en by spilleren holdt): innledningen skrives bare i et NYTT spill.
+    // Når et lagret spill åpnes, holdes disse meldingene tilbake (oppsummeringen står i «Velkommen tilbake»-boksen).
+    OPPSTART: /^(Spillform: |Velkommen tilbake, )| \((rød|grønn)\) holder til /,
   };
   // «Kamp om Bryne … (×4)» og «… (20 m)!» / «… (35 m)!» gir samme nøkkel: tall og «×n» regnes ikke med
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
@@ -39,8 +43,10 @@
     const nær = (a, b, v) => Math.abs(a - b) <= v;
     function glem(kart) { if (kart.size <= R.maks) return; const n = kart.size - R.maks; let i = 0; for (const k of kart.keys()) { if (i++ >= n) break; kart.delete(k); } }
     // svar: null = hold tilbake, ellers { tekst, fjern } (fjern = indeksen til en gammel linje som skal bort, −1 = ingen)
-    function vurder(t, linjer, nå) {
+    // gammelt = et lagret spill er åpnet (ikke et nytt spill): da holdes OPPSTART-meldingene tilbake
+    function vurder(t, linjer, nå, gammelt) {
       t = String(t == null ? '' : t); if (!t.trim()) return null; nå = +nå || 0; linjer = linjer || [];
+      if (gammelt && R.OPPSTART.test(t)) return null;
       // 3: været
       if (R.vær.test(t)) {
         const første = setninger(t)[0], stor = R.storVær.test(t);
@@ -76,7 +82,9 @@
   const NØKKEL = 'riksbrudd-loggtips'; let vist = [];
   try { vist = JSON.parse(localStorage.getItem(NØKKEL) || '[]') || []; } catch (e) { vist = []; }
   const tips = new Set(vist), D = lag(REGLER, tips); let antall = tips.size;
-  rot.LoggDemp = Object.assign(api, { vurder(t, linjer, nå) { const r = D.vurder(t, linjer, nå);
+  // et lagret spill er åpnet: spill/lagring.js sier om spillet var nytt da siden ble lastet (LagringSpill.nyttSpill)
+  const gammelt = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return !!(S && S.leir && rot.LagringSpill && LagringSpill.nyttSpill && !LagringSpill.nyttSpill()); };
+  rot.LoggDemp = Object.assign(api, { vurder(t, linjer, nå) { const r = D.vurder(t, linjer, nå, gammelt());
       if (tips.size !== antall) { antall = tips.size; try { localStorage.setItem(NØKKEL, JSON.stringify([...tips].slice(-100))); } catch (e) { /* fullt eller sperret */ } }
       return r; }, nullstill: D.nullstill, tips });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
