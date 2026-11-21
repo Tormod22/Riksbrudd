@@ -10,7 +10,8 @@
 (function (rot) {
   const BREDDE = { E: 8, R: 7.5, F: 6.5, K: 5.5, P: 4, S: 3.5 };
   // fortauet (liv3d.js) går fra vegkanten (w) til w + 2 m og ligger 15 cm over vegbanen
-  const FORTAU = 2, KANT = .15;
+  // (runde 15) kantsteinen er 12 cm høy (liv3d.js KANTSTEIN)
+  const FORTAU = 2, KANT = .12;
   // hvor mye plass hver ting tar (radius, m) – ingen ting står oppå hverandre
   const RAD = { benk: 1.1, søppel: .5, sykkel: 1.5, skur: 2.1, skilt: .45, postkasse: .7 };
   const SLAG = ['benk', 'søppel', 'sykkel', 'skur', 'skilt', 'postkasse'];

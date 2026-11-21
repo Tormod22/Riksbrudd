@@ -256,10 +256,15 @@ const ASFALT3D = { E: '#6d6e70', R: '#707173', F: '#747472', K: '#787774', P: '#
 // Bredde i meter etter kategori (NVDB-lagene har ikke vegbredde). Midtlinja er skillelinje: 3 m strek, 9 m opphold.
 const VEGBREDDE = { E: 9.5, R: 8.5, F: 7, K: 5.5, P: 3.5, S: 3.2 }, KANTLINJE = 'FRE', MIDTLINJE = 'KFRE';
 function vegerRealistisk(g, veger, r) {
-  const sti = kat => { g.beginPath(); for (const o of veger) if (o.k === kat) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); } };
+  const sti = (kat, f) => { g.beginPath(); for (const o of veger) if (o.k === kat && (!f || f(o))) for (const d of o.deler) { g.moveTo(d[0][0], d[0][1]); for (let i = 1; i < d.length; i++) g.lineTo(d[i][0], d[i][1]); } };
   const strek = m => Math.max(1, m / r), asfalt = k => k !== 'P' && k !== 'S';
   g.save(); g.lineCap = 'butt'; g.lineJoin = 'round';
-  for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#55503f' : '#4b4433'; g.lineWidth = (VEGBREDDE[k] + 1.8) / r; g.stroke(); }   // skulder og grøftekant
+  // (runde 15, brukeren: «ser fortau bra ut?») i tettbebyggelse (o.by, gagaterNær) fra z15: fortau på 2 m i lys betong/asfalt på begge
+  // sider og en lys kantstein (15 cm granitt) mot kjørebanen – ingen mørk skulder der. Bredder som i 3D (liv3d.js: fortau 2 m).
+  const by = o => o.by && 'RFK'.includes(o.k), fortau = r <= .5;
+  if (fortau) { for (const k of 'KFR') { sti(k, by); g.strokeStyle = '#8f8c85'; g.lineWidth = (VEGBREDDE[k] + 2 * 2.15) / r; g.stroke(); }
+    for (const k of 'KFR') { sti(k, by); g.strokeStyle = '#cac7bf'; g.lineWidth = (VEGBREDDE[k] + .36) / r; g.stroke(); } }
+  for (const k of VEGREKKE) { sti(k, fortau ? o => !by(o) : null); g.strokeStyle = asfalt(k) ? '#55503f' : '#4b4433'; g.lineWidth = (VEGBREDDE[k] + 1.8) / r; g.stroke(); }   // skulder og grøftekant
   for (const k of VEGREKKE) { sti(k); g.strokeStyle = asfalt(k) ? '#3f3e3a' : '#837458'; g.lineWidth = VEGBREDDE[k] / r; g.stroke(); }          // asfalt / grus
   for (const k of KANTLINJE) { sti(k); g.strokeStyle = '#d8d4c8'; g.lineWidth = (VEGBREDDE[k] - .4) / r; g.stroke(); }                           // kantlinjene (hvit kant igjen etter neste lag)
   for (const k of VEGREKKE) {   // flaten innenfor kantlinjene; mindre veger tegnes først, så kantlinja brytes der en sideveg kommer inn
@@ -402,11 +407,15 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   let veger = null;
   const flisP = t => { const s = T * t.f / 4096, ox = t.ix * T, oy = t.iy * T; return ([a, b]) => [a * s - ox, b * s - oy]; };
   const P = v ? flisP(v) : null;
-  if (v) veger = (v.t.veg ? v.t.veg.obj : []).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(P)) }));
+  if (v) veger = (v.t.veg ? v.t.veg.obj : []).map(o => ({ k: o.e.k, g: o.e.g || 0, deler: o.deler.map(d => d.map(P)) }));
+  // (runde 15) gågater og fortau nær: hver vegbit vurderes for seg mot husene i hus-flisen (gagaterNær); gågatene tegnes i stein
+  // og tas ut av vegene, gatene i tettbebyggelse får fortau i vegerRealistisk
+  let gå = null; if (veger && hs && hs.t.hus && z >= 14 && typeof Gagate !== 'undefined') { veger = veger.flatMap(o => o.deler.map(d => ({ k: o.k, g: o.g, deler: [d] }))); gå = gagaterNær(veger, hs, z, r); }
   if (hs && hs.t.anlegg) anlegg(g, z, hs);   // fotballbaner, ballbaner, løpebaner, lekeplasser, parkering (under vegene og husene)
   // veger i nabolandene og Norges hovedveger når man zoomer ut (OpenStreetMap); i Norge fra z8 brukes NVDB (n = 1 hoppes over)
   const uP = uv ? flisP(uv) : null, uveger = uv && uv.t.veg ? uv.t.veg.obj.filter(o => !(z >= 8 && o.e.n)).map(o => ({ k: o.e.k, deler: o.deler.map(d => d.map(uP)) })) : [];
-  const alle = (veger || []).concat(uveger);
+  const alle = (veger || []).filter(o => !o.gå).concat(uveger);
+  if (gå && gå.length && valg.veg) tegnGågater(g, gå, r, z);
   if (valg.veg && alle.length && z >= 14) vegerRealistisk(g, alle, r);   // nær: asfalt med oppmerking
   else if (valg.veg && alle.length) {
     g.lineCap = g.lineJoin = 'round'; const tynn = z < 8 ? .6 : 1;   // utzoomet: tynnere streker
@@ -451,6 +460,53 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
   return { c, E, ufull };
 }
 
+// ---------- gågater nær (runde 15, brukeren: «gågater ser bare ut som vanlige gater») ----------
+// Reglene i spill/gagate.js (samme som 3D). Flisen kjenner ikke tettstedene, så «i tettsted» er her minst BY_TETT bygg innen 100 m
+// (Claudes forslag). Setter o.by på vegene (fortau i vegerRealistisk) og o.gå på gågatene; gir gågatene { m, b } i flisens punkter × r.
+const BY_TETT = 15;
+function gagaterNær(veger, hs, z, r) {
+  const T = G.T, s = T * hs.f / 4096, ox = hs.ix * T, oy = hs.iy * T, M = 60 / r, om = [];
+  for (const o of hs.t.hus.obj) { const d = o.deler[0]; if (!d || d.length < 4) continue; const Q = []; let inne = false;
+    for (let i = 0; i < d.length - 1; i++) { const x = d[i][0] * s - ox, y = d[i][1] * s - oy; if (x > -M && y > -M && x < T + M && y < T + M) inne = true; Q.push([x * r, y * r]); }
+    if (inne) om.push(Q); }
+  if (!om.length) return null;
+  const R = Gagate.husRute(om), ut = [];
+  for (const o of veger) { const d = o.deler[0]; if (d.length < 2) continue; const mid = d[d.length >> 1], tett = Gagate.tetthet(R, mid[0] * r, mid[1] * r);
+    o.by = tett >= BY_TETT; if (!(o.k === 'K' || o.g === 2) || (!o.by && o.g !== 2)) continue;
+    const Pm = d.map(([x, y]) => [x * r, y * r]), m = Gagate.mål(Pm, R);
+    if (!Gagate.erGågate({ k: o.k, g: o.g, by: true }, m, tett)) continue;
+    o.gå = true; ut.push({ m, b: Gagate.bredder(m, 2.75) }); }
+  return ut;
+}
+// Lys steinfarge fra vegg til vegg, og nær (z16+) et mønster av heller/brostein (fuger hver 0,8 m) inne i flaten.
+function tegnGågater(g, gå, r, z) {
+  g.save();
+  const sti = q => { g.beginPath(); const m = q.m; for (let i = 0; i < m.length; i++) { const p = m[i]; g.lineTo((p.x + p.nx * q.b.vl[i]) / r, (p.y + p.ny * q.b.vl[i]) / r); }
+    for (let i = m.length - 1; i >= 0; i--) { const p = m[i]; g.lineTo((p.x - p.nx * q.b.vh[i]) / r, (p.y - p.ny * q.b.vh[i]) / r); } g.closePath(); };
+  for (const q of gå) { sti(q); g.fillStyle = '#c4b9a0'; g.fill();
+    if (z >= 16) { g.save(); g.clip(); g.strokeStyle = 'rgba(92,80,62,.35)'; g.lineWidth = 1; const st = Math.max(3, .8 / r);
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of q.m) { x0 = Math.min(x0, p.x / r); x1 = Math.max(x1, p.x / r); y0 = Math.min(y0, p.y / r); y1 = Math.max(y1, p.y / r); }
+      const e = 14 / r; g.beginPath(); for (let x = Math.floor((x0 - e) / st) * st; x < x1 + e; x += st) { g.moveTo(x, y0 - e); g.lineTo(x, y1 + e); }
+      for (let y = Math.floor((y0 - e) / st) * st; y < y1 + e; y += st) { g.moveTo(x0 - e, y); g.lineTo(x1 + e, y); } g.stroke(); g.restore(); } }
+  g.restore();
+}
+
+// ---------- parkeringsplass nær (runde 15, brukeren: «smarte systemer for parkeringsplasser») ----------
+// Fra z15: plassene etter spill/parkering.js (samme plan som i 3D – samme omriss gir samme rader): hvite striper mellom plassene,
+// øyer med kantstein og gress, og lyktestolpene som prikker. P i flisens punkter, r = meter per punkt. Bilene står bare i 3D (de
+// følger klokka, og flisene tegnes ikke på nytt når tida går).
+function parkeringNær(g, P, r, lw) {
+  if (typeof Parkering === 'undefined' || P.length < 3) return;
+  const pl = Parkering.plan(P.map(([x, y]) => [x * r, y * r]), { fyll: 0 }); if (!pl.plasser.length) return;
+  g.save(); g.lineCap = 'butt';
+  for (const ø of pl.øyer) { g.beginPath(); for (const [x, y] of [ø.a, ø.b, ø.c, ø.d]) g.lineTo(x / r, y / r); g.closePath(); g.fillStyle = '#5d7a3c'; g.fill(); g.strokeStyle = '#b9b6ad'; g.lineWidth = Math.max(1, .18 / r); g.stroke(); }
+  g.strokeStyle = 'rgba(236,234,226,.85)'; g.lineWidth = Math.max(.7, .12 / r); g.beginPath();
+  for (const [ax, ay, bx, by] of pl.linjer) { g.moveTo(ax / r, ay / r); g.lineTo(bx / r, by / r); } g.stroke();
+  g.fillStyle = '#2b2c2e'; for (const l of pl.lykter) { g.beginPath(); g.arc(l.x / r, l.y / r, Math.max(1.2, .25 / r), 0, 7); g.fill(); }
+  for (const k of pl.kur) { g.save(); g.translate(k.x / r, k.y / r); g.rotate(k.ret); g.fillStyle = '#6a6f75'; g.fillRect(-2.4 / r, -1.1 / r, 4.8 / r, 2.2 / r); g.restore(); }
+  g.restore();
+}
+
 // ---------- anlegg (OpenStreetMap) ----------
 // a: 1 fotballbane (gress med klipperstriper og oppmerking), 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass
 function anlegg(g, z, hs) {
@@ -464,7 +520,7 @@ function anlegg(g, z, hs) {
       const P = []; for (let i = 0; i < d.length - 1; i++) P.push([d[i][0] * s - ox, d[i][1] * s - oy]);
       const sti = () => { g.beginPath(); g.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) g.lineTo(P[i][0], P[i][1]); g.closePath(); };
       sti(); g.fillStyle = FARGE[a] || '#666'; g.fill();
-      if (a === 6 && z >= 15) { g.strokeStyle = 'rgba(230,228,220,.5)'; g.lineWidth = lw; g.stroke(); }
+      if (a === 6 && z >= 15) { g.strokeStyle = 'rgba(230,228,220,.5)'; g.lineWidth = lw; g.stroke(); parkeringNær(g, P, r, lw); }
       if (a === 5 && z >= 15) { g.strokeStyle = 'rgba(90,70,40,.6)'; g.lineWidth = lw * 1.5; g.stroke(); }
       if ((a === 1 || a === 2 || a === 3) && z >= 14) {
         const f = form(P), L = f.lu * r, W = f.lv * r, m = (du, dv) => [f.sx + f.ux * du + f.vx * dv, f.sy + f.uy * du + f.vy * dv];

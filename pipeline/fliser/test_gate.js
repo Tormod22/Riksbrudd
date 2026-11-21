@@ -62,8 +62,8 @@ const VR = G.vegRute(s.veger); let påVeg = 0, iHus = 0, tett = 0; const alle = 
 for (const k of G.SLAG) for (let q = 0; q < P[k].length; q += 3) { const x = P[k][q], y = P[k][q + 1]; if (VR.nær(x, y, 0)) påVeg++; if (!s.ok(x, y)) iHus++; alle.push([x, y, k]); }
 for (let i = 0; i < alle.length; i++) for (let j = i + 1; j < alle.length; j++) if (Math.hypot(alle[i][0] - alle[j][0], alle[i][1] - alle[j][1]) < G.RAD[alle[i][2]] + G.RAD[alle[j][2]]) tett++;
 sjekk(påVeg === 0 && iHus === 0 && tett === 0, `på kjørebanen ${påVeg}, i/inntil hus ${iHus}, oppå hverandre ${tett}`);
-// høyden: på fortauet (vegbanen + 15 cm) eller på bakken, og ingenting på fortauet i skjæringen
-sjekk(G.SLAG.every(k => { for (let q = 0; q < P[k].length; q += 3) { const z = P[k][q + 2], b = bakke(s)(P[k][q], P[k][q + 1]); if (!(Math.abs(z - .3) < .01 && b === 0 || Math.abs(z - b) < .01)) return false; } return true; }), 'alt står på fortauet eller bakken (ingenting i skjæringen)');
+// høyden: på fortauet (vegbanen + kantsteinen G.KANT) eller på bakken, og ingenting på fortauet i skjæringen
+sjekk(G.SLAG.every(k => { for (let q = 0; q < P[k].length; q += 3) { const z = P[k][q + 2], b = bakke(s)(P[k][q], P[k][q + 1]); if (!(Math.abs(z - (.15 + G.KANT)) < .01 && b === 0 || Math.abs(z - b) < .01)) return false; } return true; }), 'alt står på fortauet eller bakken (ingenting i skjæringen)');
 
 // samme sted gir samme ting: hele scenen flyttet (utsnittets midte et annet sted) gir de samme kartpunktene
 const kart = (u, sc) => G.SLAG.map(k => { const p = G.punkter(u)[k], l = []; for (let q = 0; q < p.length; q += 3) l.push(Math.round(p[q] + sc.cx) + ',' + Math.round(p[q + 1] + sc.cy)); return k + ':' + l.sort().join(' '); }).join('|');

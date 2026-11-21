@@ -62,7 +62,7 @@
       if (børPuste()) await pust();
       if (!t || !t.veg) continue; const mx = G.x0 + x * sp - u.cx, my = G.y0 - y * sp - u.cy, e = t.veg.ext;
       for (const o of t.veg.obj) { const k = o.e.k; if (!BREDDE[k] || o.e.t === 4) continue;
-        for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp, my - b / e * sp]), mx, my - sp, mx + sp, my)) rå.push({ k, g: o.e.g ? 1 : 0, t: o.e.t || 0, P });
+        for (const d of o.deler) for (const P of Veg.klipp(d.map(([a, b]) => [mx + a / e * sp, my - b / e * sp]), mx, my - sp, mx + sp, my)) rå.push({ k, g: o.e.g ? 1 : 0, gå: o.e.g === 2 ? 1 : 0, t: o.e.t || 0, P });
       }
     }
     // hele veger med jevne kurver og punkt hver ~2,5 m; eldre fliser uten vegtype: gjett gang- og sykkelveger og svingefelt
@@ -103,7 +103,9 @@
         i = j; }
     }
     u.veger = veger; u.gangveger = gang;
-    const alle = veger.concat(gang);
+    // (runde 15, by) gågatene (spill/gagate3d.js) tas ut av bilvegene og gangvegene: ingen asfalt, kantlinjer, fortau eller biler der
+    u.gågater = window.Gagate3d ? Gagate3d.skill(u, veger, gang) : [];
+    const alle = veger.concat(gang, u.gågater);
     // vegmaske (1024 × 1024): ingen stein, busker, trær eller gress i vegbanen og på fortauet
     const W = 1024, m = new Uint8Array(W * W), celle = 2 * u.S / W;
     // 1 = grus (P/S), 2 = asfalt/fortau (E/R/F/K og gang- og sykkelveger) – lyd.js lar fottrinnene knase på grus
@@ -178,12 +180,18 @@
   }
 
   // ---------- nettene: vegbånd (u på tvers, v = meter / 12) og fortau (2 m, 15 cm høyt med kantstein) ----------
-  function bånd(P, a, b, løft, ut, kant) {
+  // Fortauet (runde 15, Claudes forslag etter bilder av norske fortau): kantsteinen står 12 cm over vegbanen (vanlig synlig høyde for
+  // granitt-/betongkantstein; 15 cm før), senkes til 2 cm de siste 1,5 m ved kryss og gangfelt (nedsenket kantstein)
+  const KANTSTEIN = .12, NEDSENKET = .02, RAMPE = 1.5;
+  function bånd(P, a, b, løft0, ut, kant, ramp) {
     // a, b: avstand fra midtlinjen (meter, venstre = negativ); ut = { pos, uv, idx }
-    const n0 = ut.pos.length / 3; let L = 0;
+    // ramp (runde 15, brukeren: «ser fortau bra ut?»): de siste ramp meterne i hver ende senkes til NEDSENKET over vegbanen – nedsenket
+    // kantstein der fortauet slutter ved kryss og gangfelt, og ingen åpen kant/glippe under fortauet i enden
+    const n0 = ut.pos.length / 3; let L = 0, Lt = 0; if (ramp) for (let i = 1; i < P.length; i++) Lt += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
     for (let i = 0; i < P.length; i++) {
       const p = P[i], q = P[Math.min(P.length - 1, i + 1)], o = P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
       if (i) L += Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1]);
+      const løft = ramp ? NEDSENKET + (løft0 - NEDSENKET) * Math.min(1, L / ramp, (Lt - L) / ramp) : løft0;
       ut.pos.push(p[0] + nx * a, p[1] + ny * a, p[2] + løft, p[0] + nx * b, p[1] + ny * b, p[2] + løft); ut.uv.push(0, L / 12, 1, L / 12);
       if (kant) { ut.pos.push(p[0] + nx * a, p[1] + ny * a, p[2] - .05, p[0] + nx * a, p[1] + ny * a, p[2] + løft); ut.uv.push(0, L / 12, .08, L / 12); }
     }
@@ -261,7 +269,7 @@
           if ((i & 31) === 31) yield;
           if (kryss.nær(p[0], p[1], 2.2) || ru.klaring(x, y, li, 10) < 1.1) { if (b.length > 1) biter.push(b); b = []; } else b.push(p); }
         if (b.length > 1) biter.push(b);
-        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), .15, grupper.fortau, true);
+        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), KANTSTEIN, grupper.fortau, true, RAMPE);
           // skråkanten bak fortauet er grå i tettstedene (15. nov: den var gressgrønn midt i Oslo sentrum)
           kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true, grupper.bykant); }
       } else { const Pt = Veg.tynn(v.P, .06, .05, 7.5); for (const sd of [1, -1]) kant(Pt, sd, w, .8, -.04, grupper.skulder, zf, false, grupper.fylling, friFot); }
@@ -433,7 +441,7 @@
       liv.lys.kjegle.material.userData.egetKart = true;
     }
     // folk på fortauene i tettstedene: klær i tilfeldige farger
-    const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, u.gangveger || []));
+    const gate = LL ? LL.gate : velgLinjer(u, KRAV_GATE).concat(velgLinjer(u, KRAV_GS, (u.gangveger || []).concat(u.gågater || [])));
     if (gate.length) {
       const N = mob ? 16 : 45;
       liv.folk = Array.from({ length: N }, () => { const v = gate[Math.floor(rnd() * gate.length)]; return { v, s: rnd() * v.L, dir: rnd() < .5 ? 1 : -1, fart: 1.1 + rnd() * .5, side: v.g ? .6 : v.w + .9, gs: !!v.g, fase: rnd() * 6 }; });
@@ -475,7 +483,7 @@
   // teksturene som lages på nytt for hvert utsnitt (lyskjegle, røyk) frigjøres med materialet; de andre teksturene er felles og beholdes
   function fjern(R) { if (liv && liv.folkFlokk) liv.folkFlokk.kast(); if (liv) for (const m of liv.mesh) { R.scene.remove(m); m.geometry.dispose(); if (m.material.userData.egetKart && m.material.map) m.material.map.dispose(); m.material.dispose(); } liv = { mesh: [] }; }
   if (KROKER.forbered3d) KROKER.forbered3d.push(async u => { u.vegKlar = u.veger && u.veger.length ? await kjørAsynk(byggVeger(u)) : null; u.vegD = u.S <= 2200 ? await kjørAsynk(vegAvstander(u)) : null;
-    u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, u.gangveger || []))) } : null; });
+    u.livLinjer = u.S <= 2200 && u.veger ? { veg: await kjørAsynk(velgLinjerG(u, KRAV_BIL)), gate: (await kjørAsynk(velgLinjerG(u, KRAV_GATE))).concat(await kjørAsynk(velgLinjerG(u, KRAV_GS, (u.gangveger || []).concat(u.gågater || [])))) } : null; });
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.veger && u.veger.length) settVeger(u.vegKlar || kjørRett(byggVeger(u)), R); u.vegKlar = null; if (u.S <= 2200) startLiv(u, R.ut === u ? R : R); u.vegD = null; });
 
   // ---------- hver ramme ----------
