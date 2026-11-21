@@ -1989,7 +1989,8 @@ async function hus3d(u) {
       const tettI = TETT.get(i) || 0; let kl = klasse(t, f.areal, h);
       if (kl === 'hus' && t === 5 && tettI >= 15 && (h >= 9 || f.areal > 500)) kl = h > 14 || f.areal > 1200 ? 'kontor' : 'leil';
       // (veggTopp: der ytterveggen slutter – taket begynner. Interiøret, spill/interior3d.js, holder himlingen under den.)
-      P.bygg = { i, t, h, kl }; P.veggTopp = undefined;
+      // (runde 15) tetthet og kjede til interiøret (stil eldre/nyere og butikkens innhold)
+      P.bygg = { i, t, h, kl, tett: tettI, k: o && o.e ? o.e.k : undefined }; P.veggTopp = undefined;
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
       if (bs && !(o.e.vf > 0)) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
       // (runde 15) hvitmalte trehus og teglrøde tak i tette strøk (Byhus.husFarge/husTak), når OSM ikke har fargen
