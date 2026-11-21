@@ -188,3 +188,106 @@ Rogaland. Alle tall er Claudes forslag (REGLER øverst i spill/kartbilde.js og s
   6. Skripttaggen `spill/lave3d.js` rett etter vegetasjon3d.js. versjon.py er kjørt.
 - interior.js / interior3d.js er IKKE endret. lave3d.js legger én møbeloppføring av den nye typen «gråtass» inn i planen (pl.møbler) for
   kollisjon.
+
+## Runde 15 (21. nov kveld)
+
+Oppdraget: (1) bakkens farge («av og til litt for sandaktig, litt for gul»), (2) gressflater (eng, beite, plen), og tillegget
+(3) «trær og steiner skal ikke stå på fotballbaner». Alle tall er Claudes forslag (REGLER øverst i spill/bakkefarge.js og spill/anleggfri.js).
+
+### Ekte bilder (ikke i repoet – lagret i scratchpad natt15/natur/ekte/)
+Wikimedia Commons: «Field - Klepp, Norway 2021-08-07.jpg» (åker på Jæren), «Aerial view of Sandnes, Norway in 2015.jpg» (fra lufta),
+«Field with large round bales in white plastic.jpg» (Hovet, Hol – slått eng og grønne enger, CC BY-SA 4.0, DutchColours),
+«Dovrefjell.jpg» (Fokstua mot Snøhetta, fri, Jensens), «Hardangerviddaflora.jpg», «Vivassvatnet panorama.jpg» (Hardangervidda),
+«Sheep on Korgfjellet 20090628 D.JPG» (beite i fjellet), «Skoger landskap.jpg» (kulturlandskap), «Trondheim-grainfield-tungasletta.jpg»
+(moden kornåker). Snittfarge (HSV) i bakken, målt med scratchpad natt15/natur/hsv.py:
+- Åker/eng på Jæren (Klepp): tone 73°, metning 0,81, lys 0,45. Grønne enger (Hovet): 75°, 0,57, 0,48. Slått eng: 46° (gulbrun – riktig).
+- Heia på Dovre (Fokstua, forgrunn): 64°, 0,41, 0,34. Hardangervidda: 53°, 0,49, 0,39 (lav og gras – brunlig/gulgrå).
+- Moden kornåker: 40° (gul – riktig om høsten).
+
+### Hvor det gule kom fra
+- Kartbildet i 3D er satellittmosaikken fra kartflisene. Den gir enger og beiter på Jæren en gulbrun/oliven farge (ca. 50–55°, matt).
+- naturfarger() (index.html) økte metning og lys likt for alle farger (×1,15 og ×1,1): den gulbrune marka ble mer gul og lysere – «sand».
+- Nærdetaljene i bakkeshaderen (detaljIBakken) ga gresset et skjær av halm: snittet av de to gressfargene tok bort 29 % av det blå
+  (fG 0,6/0,74/0,54 – 1,4/1,36/0,88), og varianten uten effekter likeså (0,8/0,97/0,74 – 1,2/1,12/0,78).
+- Lyset (lys3d: sol 1/0,95/0,88, himmellys blåhvitt) er IKKE endret – det eies av pakka «lys», og med kl. 13 er det nesten nøytralt.
+  Kl. 19 (lav sol, gullys) blir alt gulere – det er riktig.
+
+### 1. Bakkens farge – LAGET (spill/bakkefarge.js, test_bakkefarge.js)
+- Bakkefarge.punkt / naturfarger: gul-oliven vegetasjon (tone 34–84°, med metning, ikke lys) dreies mot grønt (høyst 16°), får mer metning
+  (×1,22) og beholder lyset (×1,0 – før ×1,1 for alt: det gjorde den gulbrune marka lys som sand). Brunt (lyng, myr: under 34°), grått (berg, grus, veg, by), lyst (sand, strand,
+  snø) og vann får nøyaktig samme farge som før (testen sammenligner med den gamle regelen).
+- DYRKET MARK: terrengklasse 5 (32 m-rutene fra lagVindu, utjevnet – Bakkefarge.dyrketMaske/dyrket) gir sterkere dreining (26°) fra 26°,
+  metning ×1,38 og lys ×1,05 – så eng og beite blir grønne mens heia rundt beholder sin grågrønne/brune farge. u.dyrket = andel, u.dyrketMaske = masken
+  (512², 256 KB), Bakkefarge.verdi(u, x, y).
+- Nærdetaljene i bakkeshaderen er grønnere (fG 0,58/0,74/0,6 – 1,3/1,38/1,04; uten effekter 0,8/0,98/0,8 – 1,14/1,14/0,86).
+- window.BAKKEFARGE_AV = true før 3D bygges gir den gamle fargen (til før/etter-bilder).
+- Fart: en stripe på 4096 × 256 punkter tar ca. 50 ms i Node (iStriper tar 64 rader om gangen, ca. 13 ms).
+
+### 2. Gressflater – LAGET (gress3d i index.html, vegetasjon3d.js)
+- PLEN: på baner og anlegg (u.påAnlegg) og i tettstedene (u.iBy) er gresstustene klippet (6–12 cm, GRESS_FARGE.plen), uten lyng og uten
+  høye engflekker. Klipperstriper og oppmerking på fotballbanene står i kartbildet som før (kartflis.js anlegg()).
+- ENG OG BEITE: på dyrket mark står det høye graset i større flekker (terskelen for engflekkene senkes med 0,6 × dyrket), og blomstene
+  regnes som «eng» (ikke hei) med 1,4 × tettheten – smørblomst, hvitkløver, prestekrage osv.
+- Parker og plener utenfor tettstedene og uten anleggsdata vet kartet ikke om (ingen landuse=grass i dataene).
+
+### 3. Ingen trær, steiner eller høyt gress på baner og anlegg – LAGET (spill/anleggfri.js, test_anleggfri.js)
+- AnleggFri.hent(u) (kalt i bygg3d rett før trær3d) leser omrissene for anlegg a 1–5 (fotball, tennis, ballbane, løpebane, lekeplass) og
+  7–9 (rullebane, taksebane, oppstillingsplass) fra husflisene z13 og setter u.påAnlegg(x, y, kant) (kant 2 m, rutenett 50 m).
+  Parkering (a 6) er by-pakkas.
+- AnleggFri.rydd(u) (rett etter ryddHus) tar bort trær (alle treslag) og steiner/busker fra smått3d på anleggene (u.anleggRyddet = antall).
+- vegetasjon3d.js: einer/vier/fjellbjørk på åpen mark, blomster/bregner/siv (fri) og nærskogen sjekker u.påAnlegg; fjellmark3d.js fri()
+  likeså (stein, lav, lyng, snøflekker); gress3d: klippet gress (se 2).
+
+### Fellesfiler endret (index.html)
+1. bygg3d: `if (window.AnleggFri) await AnleggFri.hent(u);` før trær3d; `AnleggFri.rydd(u)` etter ryddHus; dyrket-masken
+   (Bakkefarge.dyrket) og `naturfarger(px, TW, y0, y1, dyrk)`.
+2. naturfarger: tar dyrk og bruker Bakkefarge (BAKKEFARGE_AV = gammel regel); den gamle koden står igjen som reserve.
+3. detaljIBakken: to linjer (fG og naerF uten effekter).
+4. GRESS_FARGE.plen og gress3d: plen/dyrket (fire linjer).
+5. Skripttaggene anleggfri.js og bakkefarge.js rett etter anlegg3d.js. versjon.py er kjørt.
+
+### Målt (snittfarge i bakken på skjermbildet, HSV; kl. 13, klart vær, sommer, Høy grafikk, PC 1400 × 820; scratchpad natt15/natur/)
+| Sted og vinkel | Før: tone / metning / lys, andel gul-sand | Etter | Ekte |
+|---|---|---|---|
+| Jæren øst for Bryne, lavt (260 m) – jordet foran | 49° / 0,52 / 0,43, 97 % | 70° / 0,57 / 0,37, 5 % | åker Klepp 73° / 0,81 / 0,45 |
+| Jæren, skrått (900 m) | 53° / 0,57 / 0,49, 89 % | 72° / 0,62 / 0,42, 14 % | Sandnes fra lufta: grønt (dis gjør det blått) |
+| Jæren ovenfra (1400 m) | 53° / 0,54 / 0,47, 81 % | 70° / 0,58 / 0,41, 18 % | – |
+| Jæren til fots, bakken foran | 64° / 0,64 / 0,44, 29 % | 69° / 0,65 / 0,43, 12 % | grønne enger Hovet 75° / 0,57 / 0,48 |
+| Ryfylke, dalbunnen med jorder (skrått) | 58° / 0,45 / 0,55, 64 % | 66° / 0,46 / 0,51, 42 % | – |
+| Ryfylke, lia (hei/skog) | 75° / 0,48 / 0,33 | 77° / 0,49 / 0,31 | Dovre-heia 64° / 0,41 / 0,34 |
+| Ryfylke, skogen | 87° / 0,50 / 0,24 | 88° / 0,50 / 0,22 | (granskog: mørk) |
+«Andel gul-sand» = punkter med tone 30–62° og metning over 0,18. Heia og skogen er nesten uendret (som ønsket); jordene er dreid fra
+gulbrunt til grønt. Ryfylke-målingen er tatt FØR to små rettinger (lyse jorder på dyrket mark, mindre lys langt unna) – dalbunnen der
+var fortsatt 42 % gul (solbelyste jorder lenger unna, og fjernringen – se under).
+Bilder side om side: side-jaeren-lav.png, side-jaeren-gaa.png, side-jaeren-skraa.png, side-ryfylke-skraa.png, side-ryfylke-lav.png.
+
+### Ikke gjort / svakheter (runde 15)
+- Fjernringen (spill/fjernkart3d.js, ikke min) kaller naturfarger() uten masken for dyrket mark: der får eng bare den vanlige dreiningen
+  (16°), ikke den sterkere for dyrket mark. Kan kobles på ved å sende Bakkefarge.dyrketMaske(kv, boks) som femte ledd.
+- 2D-kartet (kartflis.js) er ikke endret: satellittfargene der er som før (gulbrune jorder). Brukerens klage gjaldt 3D.
+- Høsten: bakkeshaderen gjør grønt gult om høsten (uHost); jordene er nå grønnere, så høstfargen på dem blir sterkere. Ikke sett på bilde.
+- Parker/plener utenfor tettstedene og anleggene er ikke kjent i dataene. Slått eng (gulbrun etter slåtten) skilles ikke fra uslått.
+- Lyset (sol/himmel, lys3d) er ikke rørt – eies av pakka «lys».
+
+### Prøvd i nettleser (runde 15)
+- Rogaland med ekte data (dev.py, /rogaland, PC 1400 × 820, kl. 13, klart, sommer): Jæren øst for Bryne (skrått, lavt, ovenfra, til fots)
+  før og etter, og Ryfylke (leiren 15607 6622779) før/etter i samme økt (window.BAKKEFARGE_AV). Tallene står i tabellen over.
+- Bryne (ekte husdata): 72 omriss av baner/anlegg i utsnittet, 333 trær/steiner/busker tatt bort, 0 trær og 0 steiner/busker igjen på
+  banene. Første forsøk ga 7 trær på banene: gatetrærne fra byhus.js og einer fra vegetasjon3d settes i bygg3d-krokene ETTER ryddingen –
+  derfor ryddes det nå også etter krokene. Nærbilde av banen og telling av gresstustene på banen ble IKKE tatt: utsnittet som skulle
+  bygges ved banen (kamera 110 m) ble ikke ferdig på 15 min på den delte maskinen (to forsøk, «bygging henger» i prøveskriptet) – årsaken
+  er ikke funnet (mistanke: maskinen, sju hjelpere på fire kjerner; samme flytting ved Jæren tok 3–4 min).
+- Dombås-testsiden på telefon (844 × 390, isMobile, hasTouch) før/etter: skogen og heia rundt leiren er nesten uendret (tone 80° -> 82°,
+  andel gul 7 %) – som ønsket (side-mob-dombas.png).
+- Vakta «natur» (pipeline/fliser/vakter/natur.js, utvidet): PC ok på 9 s, mobil ok på 6 s, ingen sidefeil. Med feilen lagt inn med vilje
+  (AnleggFri.rens slipper alt, Vegetasjon3d.fri ser bort fra banene) fant den begge: «prøvebanen: 16 -> 16» og «en blomst/busk kan stå midt på en bane».
+  Nytt i vakta: naturfarger dreier en gul-oliven eng (≥ 64°) og lar lyng/berg være, AnleggFri.inni, en prøvebane rundt et tre i utsnittet
+  (trærne tas bort, blomster får ikke stå der), og 0 trær/steiner på ekte baner når utsnittet har dem.
+- Regeltester: test_bakkefarge.js (27), test_anleggfri.js (17), test_vegetasjon.js og test_kartbilde.js grønne.
+
+### Filer i runde 15
+- Nye: site/dovre-fliser/spill/bakkefarge.js, spill/anleggfri.js, pipeline/fliser/test_bakkefarge.js, test_anleggfri.js.
+- Mine: spill/vegetasjon3d.js (u.påAnlegg i tre sjekker, eng/blomster på dyrket mark), spill/fjellmark3d.js (fri: u.påAnlegg),
+  vakter/natur.js, docs/natt/natur.md, natur-hjelp.json.
+- index.html (se «Fellesfiler endret» over) + andre AnleggFri.rydd rett etter KROKER.bygg3d-løkka, og kontrastV i detaljIBakken
+  (lyset langt unna ×(1 + 0,5·k) i stedet for ×(1 + k): fjerne jorder ble lyse som sand).

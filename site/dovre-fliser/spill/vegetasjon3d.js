@@ -89,6 +89,8 @@
           const R = px[p], G = px[p + 1], B = px[p + 2];
           if ((B > R + 18 && B > G + 4) || Math.abs(R - G) + Math.abs(G - B) < 14 || iVann(u, x, y) || (u.påVeg && u.påVeg(x, y))) continue;   // ikke vann, veg eller hus
           if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) continue;
+          // (runde 15) ikke på fotballbaner og andre anlegg (spill/anleggfri.js)
+          if (u.påAnlegg && u.påAnlegg(x, y)) continue;
           const h = (8 + hash(frø + 3e6) * 12) * (1 - Math.max(0, Math.min(1, (rel - .8) / .3)) * .5) * V.TRESLAG[art].høyde;
           ut[art].push(x, y, (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX, h, hash(frø + 4e6)); n++;
         }
@@ -290,6 +292,8 @@
     if (window.Interior3d && Interior3d.iLeirbygg(x, y)) return false;
     if (iVann(u, x, y) || (u.vegNær && u.vegNær(x, y, .3)) || (u.påVeg && u.påVeg(x, y)) || (u.påBane && u.påBane(x, y))) return false;
     if (u.hus && u.hus.omriss && typeof nærHus === 'function' && nærHus(u, x, y)) return false;
+    // (runde 15) ikke blomster, bregner eller busker på fotballbaner og andre anlegg (spill/anleggfri.js)
+    if (u.påAnlegg && u.påAnlegg(x, y)) return false;
     // (runde 5) også hus som er lagt inn etter at utsnittet ble bygget (prøvehus, leirens bygg, byggesettets vegger): R3.hindre
     const R = r3(); if (R && R.hindre && typeof hindring3d === 'function' && hindring3d(x, y, R.hindre)) return false;
     return !iLeir(u, x, y);
@@ -386,8 +390,10 @@
       }
       if (!st || !vk) continue;
       if (st === 3) { if (r < .14) { const l = .7 + rnd() * .3; sett('bregne', x, y, .5 + rnd() * .5, .35 + rnd() * .4, høst ? [.68 * l, .48 * l, .26 * l] : [.46 * l, .64 * l, .34 * l], moh); continue; } }
-      const sted = V.stedIHøyden(STED[st], rel);
-      if (rnd() > V.STEDTETTHET[sted] * bl * vk) continue;
+      // (runde 15) på dyrket mark (beite og slåtteeng – spill/bakkefarge.js) er det eng med flere blomster, ikke hei
+      const dyrk = window.Bakkefarge && Bakkefarge.verdi ? Bakkefarge.verdi(u, x, y) : 0;
+      const sted = dyrk > .5 && (st === 1 || st === 2) ? 'eng' : V.stedIHøyden(STED[st], rel);
+      if (rnd() > V.STEDTETTHET[sted] * bl * vk * (dyrk > .5 ? 1.4 : 1)) continue;
       const art = V.blomst(sted, å, rnd()); if (!art) continue;
       const fa = V.BLOMSTER[art].farge, l = .88 + rnd() * .24, høy = art === 'geitrams' ? .7 + rnd() * .5 : art === 'røsslyng' ? .16 + rnd() * .1 : .2 + rnd() * .22;
       sett('blomst', x, y, art === 'røsslyng' ? .35 : .22 + rnd() * .12, høy * (.6 + .4 * vk), fa.map(v => Math.min(1, v * l)), moh);
@@ -419,7 +425,7 @@
       for (let i = Math.floor((X - r) / S5); i <= Math.ceil((X + r) / S5); i++) {
         if (G3(i, j, 7) >= TRE_TETT) continue; const t = treVed(i, j, klasse); if (!t) continue;
         const x = t.X - u.cx, y = t.Y - u.cy, d = Math.hypot(x - cx, y - cy); if (d > r || Math.abs(x) >= u.S - 1 || Math.abs(y) >= u.S - 1) continue;
-        if (iVann(u, x, y) || (u.påVeg && u.påVeg(x, y)) || (u.vegNær && u.vegNær(x, y, 1)) || iLeir(u, x, y)) continue;
+        if (iVann(u, x, y) || (u.påVeg && u.påVeg(x, y)) || (u.vegNær && u.vegNær(x, y, 1)) || iLeir(u, x, y) || (u.påAnlegg && u.påAnlegg(x, y))) continue;
         if (typeof nærHus === 'function' && u.hus && u.hus.omriss && nærHus(u, x, y)) continue;
         if (L && Math.hypot(t.X - L.x, t.Y - L.y) < NÆRSKOG.leir) continue;
         const moh = hoyde3d(t.X, t.Y, u); if (!treIHøyden(t.d, moh)) continue;
