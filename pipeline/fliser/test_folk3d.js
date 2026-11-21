@@ -8,5 +8,7 @@ ok(F.unna(0, 0, 0, U.avst + .1) === null, `lenger unna enn ${U.avst} m: står i 
 { const r = F.unna(0, 0, .3, .2); ok(!!r.flytt && Math.abs(Math.hypot(r.flytt[0], r.flytt[1]) - U.inntil) < 1e-9, `inntil deg (0,4 m): skyves ut til ${U.inntil} m`); }
 { const a = F.unna(0, 0, 0, 1.5, 1), b = F.unna(0, 0, 0, 1.5, -1); ok(Math.sign(a.tx) !== Math.sign(b.tx), 'side 1 og −1 går til hver sin side'); }
 { const r = F.unna(5, 5, 5, 5); ok(!!r && !!r.flytt && Number.isFinite(r.tx), 'figuren akkurat der du står: flyttes ut, ingen NaN'); }
+{ const r = F.unna(0, 0, 0, 1.6, 1, F.STARTREGEL); ok(!!r && !!r.flytt && Math.hypot(r.flytt[0], r.flytt[1]) >= 2, 'gåmodus starter: figur 1,6 m foran flyttes straks minst 2 m unna (runde 14)'); }
+ok(F.STARTREGEL.inntil >= 2 && F.UNNA.startTid > 0, 'startregelen gir minst 2 m fri sikt');
 ok(F.dtFra(2000, 1000) === F.DT_MAKS && Math.abs(F.dtFra(1100, 1000) - .1) < 1e-9 && F.dtFra(5, 0) === .016, `tiden per bilde: ekte tid, høyst ${F.DT_MAKS} s`);
 console.log(feil ? feil + ' feil' : 'alle folk3d-testene ok'); process.exit(feil ? 1 : 0);
