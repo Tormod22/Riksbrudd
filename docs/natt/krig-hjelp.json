@@ -208,5 +208,45 @@
   "Garnisonen holder stillingen",
   "Et lag som blir garnison i et tettsted dere holder, kjemper som standard også mot en sterkere fiende og trekker seg ikke etter tap – ellers ble tettstedet tatt uten kamp. Vil du at laget heller skal trekke seg, endrer du det i lagpanelet → Stridsregler. Går laget ut av tettstedet, får det reglene sine tilbake.",
   "Lag og strid"
+ ],
+ [
+  "Radiorekkevidde når du sender et lag",
+  "Krigskartet sier fra før du sender et lag lenger ut enn radioen når (håndradio 3 km, feltradio 8–40 km etter radiomasten): da kan laget ikke få nye ordre der ute. Du kan sende likevel, gi laget feltradio og sende, eller sende et annet lag som har feltradio. Lag du ikke har kontakt med nå, har grå knapper med forklaring.",
+  "Lag og strid"
+ ],
+ [
+  "Garnisonen melder seg fra tettstedet",
+  "Et lag som står i et tettsted du holder, bruker radioen der: det melder seg, vises der det står og kan få ordre, selv om det er langt utenfor håndradioens rekkevidde.",
+  "Lag og strid"
+ ],
+ [
+  "Send en tropp som sitter i et kjøretøy",
+  "Sitter troppen i en lastebil eller speiderbil, sender «Send» kjøretøyet til tettstedet. Troppen går av når de er framme og går inn i tettstedet.",
+  "Lag og strid"
+ ],
+ [
+  "Troppene dine",
+  "«Tropper» viser troppene og lagene du har øverst: hvor mange mann, hvor de er, om du har radiokontakt, og «Velg». «Lag ny tropp» står under.",
+  "Lag og strid"
+ ],
+ [
+  "Leiren forsvarer seg når du spoler",
+  "Spoler du (60×, 600× eller ⏭) mens et angrep på leiren pågår – eller angriperne er nesten i leiren – går lagene hjemme i forsvar av seg selv, som om du trykket «Forsvar leiren». Loggen sier fra.",
+  "Lag og strid"
+ ],
+ [
+  "Hold byen: motangrepet",
+  "I scenariet «Hold byen» må du holde tettstedet i tre døgn og slå tilbake motangrepet som kommer når fredstiden er over. Har ingen motstander krefter til å angripe på to døgn, holder de tre døgnene.",
+  "Kom i gang"
+ ],
+ [
+  "Oppsummeringen når scenariet er over",
+  "Seiers- og tapsskjermen viser døgn, tettsteder, tap (falne og sårede), pengene og det viktigste som skjedde: tettsteder tatt og mistet, angrep slått tilbake.",
+  "Kom i gang"
+ ],
+ [
+  "Krigen din på nytt",
+  "Reprisen står på pause mens du ser. Fargene viser hvem som holdt tettstedene; en ring betyr at tettstedet skiftet eier siden forrige bilde. Tegnforklaringen står i boksen nederst.",
+  "Lag og strid"
  ]
 ]

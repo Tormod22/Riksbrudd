@@ -6,6 +6,8 @@
  *   lar dem grave seg ned, og gir dem regelen «hold stillingen» til angrepet er over. Folk på «vakt» blir Leirvakta, et eget lag.
  *  BEREDSKAPEN står i Leir-menyen (fanen Bygg): poeng, hva som mangler, og hva som hjelper mest.
  *  RAPPORTEN kommer i loggen når angrepet er over. window.ForsvarSpill. Alarmen setter ikke forsvaret av seg selv – du trykker.
+ *  RUNDE 12: unntaket er når du spoler (60× eller mer, også ⏭) mens angrepet pågår, eller angriperne er nesten i leiren: da gjør lagene
+ *   hjemme det selv (autoForsvar).
  */
 (function () {
   const FO = window.Forsvar; if (!FO) return;
@@ -68,6 +70,8 @@
   const css = document.createElement('style');
   css.textContent = `#alarm{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 54px); z-index:9; display:none; max-width:min(560px,94vw); padding:7px 10px; background:#2a120d; border:1px solid #e0714f; color:#f3e3d6; font-size:14.5px; box-shadow:0 4px 14px rgba(0,0,0,.5); }
 #alarm.på{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:center; } #alarm.satt.god{ background:#17200f; border-color:#8fb86a; } #alarm.god b{ color:#cfe8a8; } #alarm .rapport small{ color:#e7dcc3; } #alarm b{ color:#ffb49a; } #alarm small{ color:#d8b8a8; } #alarm button{ background:#4a1d14; border:1px solid #e0714f; color:#fff; min-height:36px; padding:2px 12px; font:inherit; font-size:14px; cursor:pointer; } #alarm button.rolig{ background:#2a2318; border-color:var(--rule,#4a4030); color:var(--ink,#e7dcc3); } #alarm.satt{ background:#1c170f; border-color:#c9b26a; }
+body:not(.gaar) #alarm.på > span:first-child{ white-space:normal; overflow:visible; text-overflow:clip; min-width:12em; }
+body:not(.gaar) #alarm.på > span:first-child small{ white-space:normal; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
 body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
@@ -121,7 +125,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // (body.gaar), er banneret én smal linje, og er ingen sett og de er over en time unna, står bare varselbrikka (klassen «fjern»)
     else { const st = status(); tekst = st.overskrift; liten = st.tekst; alarm.classList.toggle('fjern', !st.sett && !st.sist && st.min !== null && st.min > 60);
       // (på små skjermer uten forklaringen om tårn og kameraer, så banneret ikke blir høyt)
-      if (!st.sett && !st.sist && st.min !== null && !document.body.classList.contains('kort')) liten += ' – vakttårn og kameraer ser dem før'; }
+      if (!st.sett && !st.sist && st.min !== null && !document.body.classList.contains('kort')) liten += ' – vakttårn og kameraer ser dem før de er framme'; }
     const nøkkel = [tekst, liten, satt, window.pekerNede && pekerNede(alarm)].join('|'); alarm.classList.add('på'); alarm.classList.toggle('satt', satt); if (nøkkel === sistAlarm) return; if (window.pekerNede && pekerNede(alarm)) return; sistAlarm = nøkkel;
     alarm.replaceChildren(el('span', {}, el('b', {}, tekst), ' ', el('small', {}, liten)));
     if (!satt) alarm.append(kn('Forsvar leiren', () => sett(false), { id: 'forsvarknapp' })); else alarm.append(el('small', {}, 'lagene holder stillingen'), kn(r.length ? 'Opphev' : 'Avslutt øvelsen', () => opphev(false), { klasse: 'rolig', id: 'opphevknapp' }));
@@ -134,16 +138,26 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   const blåTall = () => { const nå = ENHETER.filter(e => e.side === 'blå' && Array.isArray(e.menn)); return { friske: nå.reduce((a, s) => a + s.menn.filter(m => m.hp >= 1).length, 0), falne: nå.reduce((a, s) => a + s.menn.filter(m => m.hp <= 0).length, 0) }; };
   const byggNå = () => (window.LeirSpill && LeirSpill.tilstand() ? LeirSpill.tilstand().bygg.map(b => [b.id, b.hp]) : []);
   const hend = (type, tekst) => { if (!auto()) return; try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
-  function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; }
+  // (runde 12) helsa til hver mann når angrepet starter, så rapporten kan si HVEM som falt og ble såret (kritiker E)
+  const mennNå = () => { const m = new Map(); for (const s of ENHETER) if (s.side === 'blå' && Array.isArray(s.menn)) for (const q of s.menn) m.set(q, q.hp); return m; };
+  const mannNavn = (q, s) => (s && s.karakter ? s.navn : s ? `${q.navn} (${s.navn})` : q.navn);
+  function navnTap(F0) { const falne = [], sår = []; if (!F0 || !F0.menn) return { falne, sår };
+    for (const s of ENHETER) { if (s.side !== 'blå' || !Array.isArray(s.menn)) continue; for (const q of s.menn) { const før = F0.menn.has(q) ? F0.menn.get(q) : 1;
+      if (q.hp <= 0 && før > 0) falne.push(mannNavn(q, s)); else if (q.hp > 0 && q.hp < 1 && før >= 1) sår.push(mannNavn(q, s)); } }
+    return { falne, sår }; }
+  const byggNavn = b => (window.Leir && Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type);
+  function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; }
   // tapene siden starten: falne, sårede, bygg skadet og ødelagt, og hvor mange av angriperne som er slått ut
   function tap(id) { const F0 = fra && fra.id === id ? fra : null, b = blåTall(); if (!F0) return { falne: 0, sårede: 0, skadet: 0, ødelagt: 0, fiender: 0, fienderUte: 0 };
     const LS = window.LeirSpill && LeirSpill.tilstand(), falne = Math.max(0, b.falne - F0.falne);
-    let skadet = 0, ødelagt = 0; if (LS) for (const [bid, hp] of F0.bygg) { const q = LS.bygg.find(x => x.id === bid); if (!q || q.hp <= 0) { if (hp > 0) ødelagt++; } else if (q.hp < hp - .01) skadet++; }
-    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length;
-    return { falne, sårede: Math.max(0, F0.friske - b.friske - falne), skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute }; }
+    let skadet = 0, ødelagt = 0; const skadetNavn = [], ødelagtNavn = [], skadetBygg = [];
+    if (LS) for (const [bid, hp] of F0.bygg) { const q = LS.bygg.find(x => x.id === bid); if (!q || q.hp <= 0) { if (hp > 0) { ødelagt++; ødelagtNavn.push(q ? byggNavn(q) : 'et bygg'); } } else if (q.hp < hp - .01) { skadet++; skadetNavn.push(byggNavn(q)); skadetBygg.push(q.id); } }
+    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne);
+    return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg,
+      falneNavn: N.falne.length === falne ? N.falne : null, sårNavn: N.sår.length === sårede ? N.sår : null }; }
   function giRapport(id, u) { if (gitt.has(id)) return null; gitt.add(id); if (gitt.size > 40) gitt.delete(gitt.values().next().value);
     const r = FO.sluttRapport({ ...tap(id), ...u }); logg(`${r.tittel}. ${r.tekst}`);
-    if (auto()) { rapportNå = { ...r, til: performance.now() + 150000 }; hend('annet', 'angrepet er over'); } sistAlarm = ''; vis(); return r; }
+    if (auto()) { const t0 = tap(id); rapportNå = { ...r, til: performance.now() + 150000, bygg: t0.skadetBygg || [], sår: (t0.sårede || 0) + (t0.falne || 0) }; hend('annet', 'angrepet er over'); } sistAlarm = ''; vis(); return r; }
   // fra spill/spillet-visning.js når en røverbølge er over: { nr, utfall: 'slått' | 'unna' | 'herjet' | 'slapp', tok, tapte }
   function slutt(u) { return giRapport('r' + u.nr, { hvem: 'Røverne', ...u }); }
   // angrepet er over uten at spillet.js meldte det (en motstanders angrepsgruppe, eller en bølge uten melding)
@@ -157,16 +171,27 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // (skadevarselet etter angrepet står i rapporten når rapporten ikke alt sier det)
     alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/bygg skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
     if (sk.n && ventende.length) alarm.append(kn(`Reparer alle (${Leir.kroner(ventende.reduce((t, q) => t + q.pris, 0))})`, () => { reparerAlle(); rapportNå = null; vis(); }, { id: 'reparerknapp' }));
+    // (runde 12) knapper dit det gjelder: det skadde bygget, og Folk (de sårede)
+    { const LS2 = window.LeirSpill && LeirSpill.tilstand(), bb = LS2 && r.bygg ? r.bygg.map(i => LS2.bygg.find(q => q.id === i)).filter(Boolean) : [];
+      if (bb.length) alarm.append(kn(bb.length === 1 ? `Vis ${byggNavn(bb[0]).toLowerCase()}` : 'Vis byggene', () => { if (typeof på3d !== 'undefined' && på3d) return; kam.x = bb[0].x; kam.y = bb[0].y; kam.m = Math.min(kam.m, 1); if (LeirSpill.velg) LeirSpill.velg(bb[0].id); skitten = true; }, { klasse: 'rolig', id: 'rapportbygg' }));
+      if (r.sår && window.FolkSpill && FolkSpill.åpne) alarm.append(kn('De sårede', () => FolkSpill.åpne(), { klasse: 'rolig', id: 'rapportfolk' })); }
     alarm.append(kn('Lukk', () => { rapportNå = null; skade = null; alarm.classList.remove('god'); sistAlarm = ''; vis(); }, { klasse: 'rolig', id: 'rapportlukk' })); return true; }
 
   // ---------- (runde 8) KAMPEN SKAL SYNES: ⏭ stopper når kampen begynner, og når de er snart framme ----------
   // PC-kritikeren: «etter én spoling sto det: alle 1 røverlag er slått ut» – spolingen gikk forbi hele kampen. Første gang et av lagene dine
   // og en angriper skyter på hverandre i et angrep: en linje i loggen og hendelsen «alarm» (flyt.js stopper spolingen og går ned til 1×).
-  let kampMeldt = '', snartMeldt = '', snartAkk = 0;
+  let kampMeldt = '', snartMeldt = '', snartAkk = 0, kampUte = '';
+  // Claudes forslag: et eget lag så nær leiren (meter) = kampen om leiren
+  const KAMP_VED = 700;
   KROKER.sim.push(dt => { if (!auto()) return; const A = angrep(); if (!A) return;
     // (bare kamp innen 3 km av leiren – R.hent – teller: en patrulje som møter angriperne langt unna, er ikke kampen om leiren)
-    if (kampMeldt !== A.id) { const L = leir(), e = L && A.lag.find(q => Math.hypot(q.x - L.x, q.y - L.y) <= R.hent && iStrid(q)); if (e) { kampMeldt = A.id; const b = iStrid(e);
-      logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`); } }
+    // (runde 12, kritiker E: «Kampen om leiren har begynt (Kari (deg) mot Røvere 1.1)» – kampen var med karakteren i en låve 1 km unna):
+    // «kampen om leiren» er bare kamp der et eget lag står innen KAMP_VED av leiren; en kamp et annet sted meldes som det den er, én gang
+    if (kampMeldt !== A.id) { const L = leir(), e = L && A.lag.find(q => Math.hypot(q.x - L.x, q.y - L.y) <= R.hent && iStrid(q)), b = e && iStrid(e);
+      if (b && Math.hypot(b.x - L.x, b.y - L.y) <= KAMP_VED) { kampMeldt = A.id;
+        logg(`Kampen om leiren er i gang: ${b.navn} er i ildkamp med ${e.navn}.`); hend('alarm', `kampen om leiren har begynt (${b.navn} mot ${e.navn})`); }
+      else if (b && kampUte !== A.id + b.navn) { kampUte = A.id + b.navn; const km2 = km(Math.hypot(b.x - L.x, b.y - L.y));
+        logg(b.karakter ? `Du er i ildkamp med ${e.navn}, ${km2} fra leiren.` : `${b.navn} er i ildkamp med ${e.navn}, ${km2} fra leiren.`); hend('alarm', b.karakter ? `du er i ildkamp med ${e.navn} (${km2} fra leiren)` : `${b.navn} er i ildkamp med ${e.navn} (${km2} fra leiren)`); } }
     // senest ca. 10 min før de er framme (Trussel.VARSEL.snart): farten ned og et varsel til – én gang per angrep (sjekkes hvert spillminutt)
     snartAkk += dt; if (snartAkk < 1 || snartMeldt === A.id) return; snartAkk = 0;
     const V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL, st = status(); if (!V || !st || st.min === null || st.min > V.snart || st.iLeiren || (st.sett && st.nær <= R.mot.inne * .5)) return;
@@ -179,10 +204,23 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   setInterval(() => { const t = T(), A = angrep(), aktiv = A ? A.id : t && t.aktiv ? 'r' + t.aktiv : '';
     if (sistAktiv && sistAktiv !== aktiv) { if (!gitt.has(sistAktiv) && auto()) sluttAvSeg(sistAktiv); if (satt || snap || vakt) opphev(false); motFerdig(); if (auto()) etterAngrep(); }
     if (aktiv && aktiv !== sistAktiv) startAngrep(A, aktiv); sistAktiv = aktiv;
+    autoForsvar(A);
     if (typeof tempo === 'undefined' || tempo > 0) { motSteg(); repSteg(); hjemSteg(); }
     if (satt && window.Feltarbeid) for (const s of ENHETER) if (s.forsvar && s.side === 'blå' && !s.sti && !s.planlegger && !s.nedgravd && s.graver == null && !s.forsvar.voll && Math.hypot(s.x - s.forsvar.x, s.y - s.forsvar.y) < 25) Feltarbeid.startGrav(s);
     vis(); }, 1000);
 
+  // ---------- (runde 12) LEIREN FORSVARES AV SEG SELV NÅR DU SPOLER ----------
+  // PC-kritiker F: «Den andre bølgen tapte jeg fordi den kom mens jeg spolte, og "Forsvar leiren" må trykkes manuelt» (67-krig-dag3.png).
+  // Står farten på 60× eller mer (også ⏭) mens et angrep på leiren er i gang – eller er angriperne nærmere enn AUTO.nær – setter lagene
+  // hjemme seg i forsvar av seg selv, akkurat som «Forsvar leiren», og loggen sier det. Én gang per angrep: opphever du, står det.
+  // Claudes forslag. Ikke i testene uten ForsvarSpill.test.
+  const AUTO = { fart: 60, nær: 600 }, autoGjort = new Set(), spolt = new Set();
+  function autoForsvar(A) { if (!auto() || !A || satt || autoGjort.has(A.id)) return null; const L = leir(); if (!L) return null;
+    if (typeof tempo !== 'undefined' && tempo >= AUTO.fart) spolt.add(A.id);
+    const nær = A.lag.some(e => Math.hypot(e.x - L.x, e.y - L.y) <= AUTO.nær); if (!spolt.has(A.id) && !nær) return null;
+    autoGjort.add(A.id); const hvem = A.røvere ? 'Røverne' : A.navn;
+    logg(spolt.has(A.id) ? `${hvem} kom mens du spolte: lagene hjemme forsvarer leiren av seg selv (som «Forsvar leiren»).` : `${hvem} er nesten i leiren: lagene hjemme forsvarer den av seg selv (som «Forsvar leiren»).`);
+    const r = sett(false); if (r && !r.lag && !r.vakt) logg('Ingen lag er hjemme til å forsvare leiren – send et lag hjem, eller sett folk på vakt.'); return r; }
   // ---------- kartet: pil fra røverne mot leiren, og stillingene ----------
   KROKER.tegn.push((g, vx0, vy1) => { const L = leir(); if (!L) return; const m = kam.m, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m; g.save();
     for (const e of røvere()) { if (!synlig(e)) continue; const x0 = sx(e.x), y0 = sy(e.y), x1 = sx(L.x), y1 = sy(L.y), d = Math.hypot(x1 - x0, y1 - y0); if (d < 30) continue; const ux = (x1 - x0) / d, uy = (y1 - y0) / d, l = Math.min(d - 16, 90);
@@ -294,6 +332,6 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const f = fsv(); return !!(f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)); });
   // etter omlasting (spill/trussel-lagring.js): forsvaret var satt – lagene har plassen og reglene sine igjen
   function gjenopprett() { const t = T(); if (!t || !t.aktiv || satt) return false; satt = true; sistAlarm = ''; vis(); return true; }
-  window.ForsvarSpill = { beredskap, sett, opphev, gjenopprett, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
+  window.ForsvarSpill = { beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

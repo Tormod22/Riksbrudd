@@ -97,10 +97,13 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
 #tropppanel .stopp{ margin-top:10px; padding:8px 10px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:13.5px; line-height:1.4; } #tropppanel .stopp div + div{ margin-top:3px; }
 #tropppanel small.hold{ color:#c9b98a; } #panel button.oppløs-klar{ border-color:#e0804a; background:#4a2414; color:#f6d2b4; }
 #tropppanel .kolonner, #tropppanel .kol{ display:contents; }
+#tropppanel .liste{ margin:6px 0 4px; } #tropppanel .liste .l{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 2px; border-bottom:1px solid #2e281e; }
+#tropppanel .liste .l small{ display:block; line-height:1.3; } #tropppanel .liste .l small.radio{ color:#9fb98a; } #tropppanel .liste .l.uten small.radio{ color:#e8a46a; } #tropppanel .liste .l button{ flex:none; min-height:32px; }
+#tropppanel .kol h2{ font-size:16px; margin:2px 0 1px; } #tropppanel .kol .liste{ margin-bottom:8px; } #tropppanel h2.ny{ margin-top:14px; padding-top:10px; border-top:1px solid #5a4a2a; }
 #tropppanel .opprett{ position:sticky; bottom:-12px; z-index:2; margin:10px -12px -12px; padding:8px 12px; background:#17120a; border-top:1px solid #5a4a2a; } #tropppanel .opprett button{ min-height:40px; }
 #leirmeny .tropper .t{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #2e281e; font-size:14px; } #leirmeny .tropper .t small{ display:block; color:var(--ink-dim,#a99); }`;
   document.head.appendChild(css);
-  const panel = el('div', { id: 'tropppanel', role: 'dialog', 'aria-label': 'Lag ny tropp' }); document.body.appendChild(panel);
+  const panel = el('div', { id: 'tropppanel', role: 'dialog', 'aria-label': 'Tropper' }); document.body.appendChild(panel);
   const lukk = () => { panel.classList.remove('på'); endrer = null; };
   // ---------- bytte våpen og utstyr på en tropp som finnes (17. nov, brukeren) ----------
   // Bare ved leiren. Du betaler for det nye; det som byttes ut, gir ingenting tilbake.
@@ -121,8 +124,30 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     const sum = endrePris(s), kasse = window.OppstartSpill && OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0; f.append(el('div', { klasse: 'sum', id: 'troppsum' }, 'Pris for endringene: ', el('b', {}, sum.toLocaleString('nb-NO') + ' kr'), sum > kasse ? el('span', { klasse: 'advar' }, ' – ikke råd') : ''));
     f.append(el('div', { klasse: 'opprett' }, kn('Bruk endringene', () => { const r = brukEndring(s); if (r.feil) { logg(r.feil); return; } lukk(); if (valgt === s) visPanel(); }, { klasse: 'hoved', id: 'troppbruk' })));
     return f; }
-  function bygg() { if (endrer) { if (!ENHETER.includes(endrer) || !levende(endrer)) endrer = null; else return byggEndre(endrer); } const F = folk(), L = leir(), f = document.createDocumentFragment(); f.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Lag ny tropp'), el('small', {}, `Velg ${R.min}–${R.maks} fra leiren. De slutter å arbeide i leiren og blir soldater.`));
-    const inp = el('input', { type: 'text', maxlength: '30', value: navn, id: 'troppnavn', 'aria-label': 'Navn på troppen' }); inp.oninput = () => { navn = inp.value; }; const kol1 = el('div', { klasse: 'kol kol1' }), kol2 = el('div', { klasse: 'kol kol2' }); f.append(el('div', { klasse: 'kolonner' }, kol1, kol2)); kol1.append(el('label', {}, el('span', {}, 'Navn'), inp));
+  // ---------- (runde 12, PC-kritiker F: «"Tropper"-knappen åpner bare "Lag ny tropp" og viser ikke troppene du har») ----------
+  // Øverst i panelet: troppene og lagene du har – navn, mann, hvor de er, radiokontakt og «Velg». «Lag ny tropp» står under.
+  const KR = () => (window.KontrollromSpill && KontrollromSpill.på && KontrollromSpill.på() ? KontrollromSpill : null);
+  function hvor(s) { const L = leir(), k = KR(), I = k && k.info ? k.info(s) : null, kontakt = !k || !k.kanNå || k.kanNå(s), gb = k && k.garnisonI ? k.garnisonI(s) : null;
+    if (!kontakt && I && I.meldt && L && window.Kontrollrom) return `sist meldt kl. ${typeof klokkeslett === 'function' ? klokkeslett(I.meldt.tid) : ''} ${Kontrollrom.retning(L, I.meldt)} for leiren`;
+    if (!kontakt) return 'ukjent – ikke meldt';
+    if (s.ombord) return (s.ombord.sti ? 'kjører i ' : 'om bord i ') + s.ombord.navn + (s.avstigning ? ' mot ' + s.avstigning.navn : '');
+    if (gb) return 'garnison i ' + gb.e.navn; if (vedLeir(s)) return 'i leiren';
+    const mot = s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null; if (s.planlegger) return 'planlegger marsj';
+    return (s.sti ? 'på marsj · ' : '') + (L && window.Kontrollrom ? Kontrollrom.retning(L, mot ? { x: mot[0], y: mot[1] } : s) + (mot ? ' (målet)' : '') + ' for leiren' : ''); }
+  function velgLag(s) { const k = KR(), I = k && k.info ? k.info(s) : null, ser = !k || !k.kanNå || k.kanNå(s), p = ser || !(I && I.meldt) ? s : I.meldt;
+    valgt = s; kam.x = p.x; kam.y = p.y; if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); lukk(); visPanel(); skitten = true; }
+  function liste(f) { const lag = egne().filter(levende); if (!lag.length) return false; const k = KR();
+    f.append(el('h2', {}, 'Troppene dine'), el('small', {}, `${lag.length} ${lag.length === 1 ? 'lag' : 'lag og tropper'} · trykk «Velg» for å gi ordre i kartet.`));
+    const boks = el('div', { klasse: 'liste', id: 'troppliste' });
+    for (const s of lag) { const n = TR.friske(s), kontakt = !k || !k.kanNå || k.kanNå(s), gb = kontakt && k && k.garnisonI ? k.garnisonI(s) : null;
+      boks.append(el('div', { klasse: 'l' + (kontakt ? '' : ' uten'), 'data-tropp': s.navn }, el('div', {}, el('b', {}, s.navn), el('small', {}, `${n} av ${s.menn.length} mann · ${hvor(s)}`),
+        el('small', { klasse: 'radio' }, !k ? '' : gb ? `radiokontakt over radioen i ${gb.e.navn}` : kontakt ? 'radiokontakt' : 'ingen radiokontakt' + (k.hvorfor ? ': ' + k.hvorfor(s) : ''))), kn('Velg', () => velgLag(s), { 'data-velg': s.navn }))); }
+    f.append(boks); return true; }
+  function bygg() { if (endrer) { if (!ENHETER.includes(endrer) || !levende(endrer)) endrer = null; else return byggEndre(endrer); } const F = folk(), L = leir(), f = document.createDocumentFragment(); f.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }));
+    // liggende telefon (to kolonner i full høyde): lista står øverst i venstre kolonne, så folkene til høyre fortsatt synes
+    const lf = document.createDocumentFragment(), harListe = liste(lf), ligg = document.body.classList.contains('tlfligg'); if (!ligg) f.append(lf);
+    f.append(el('h2', harListe && !ligg ? { klasse: 'ny' } : {}, harListe && ligg ? 'Tropper' : 'Lag ny tropp'), el('small', {}, `Velg ${R.min}–${R.maks} fra leiren. De slutter å arbeide i leiren og blir soldater.`));
+    const inp = el('input', { type: 'text', maxlength: '30', value: navn, id: 'troppnavn', 'aria-label': 'Navn på troppen' }); inp.oninput = () => { navn = inp.value; }; const kol1 = el('div', { klasse: 'kol kol1' }), kol2 = el('div', { klasse: 'kol kol2' }); f.append(el('div', { klasse: 'kolonner' }, kol1, kol2)); if (ligg && harListe) kol1.append(lf, el('h3', {}, 'Lag ny tropp')); kol1.append(el('label', {}, el('span', {}, 'Navn'), inp));
     // ferdige forslag: velger de best egnede, våpen, utstyr og et ledig kjøretøy av riktig type
     // (runde 8) forslagene lar alltid to stå igjen på «bygg» (TR.behold) – teksten følger antallet forslaget faktisk gir
     { const alle = F ? F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)) : [], hold = holdIgjen(alle), ledig = alle.length - hold.length, m = el('div', { klasse: 'maler' });

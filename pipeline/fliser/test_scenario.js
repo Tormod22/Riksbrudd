@@ -18,6 +18,13 @@ S.vurder('hold', T({ tid: 4000 }), st); ok(st.holdtFra === null, 'hold: mister d
 st = {}; S.vurder('hold', T({ tid: 100, holder: () => true }), st); let v = S.vurder('hold', T({ tid: 100 + 3 * 1440, holder: () => true }), st);
 ok(v.status === 'vunnet' && st.ferdig === 'vunnet' && S.vurder('hold', T({ tid: 99999 }), st).status === 'vunnet', 'hold: tre døgn = vunnet, og det står');
 st = {}; ok(S.vurder('hold', T({ tid: 8 * 1440 }), st).status === 'tapt', 'hold: fristen ute = tapt');
+// runde 12: med motangrep må det slås tilbake
+st = {}; S.vurder('hold', T({ tid: 100, holder: () => true, angrep: { slått: false } }), st); v = S.vurder('hold', T({ tid: 100 + 3.2 * 1440, holder: () => true, angrep: { slått: false, pågår: true } }), st);
+ok(v.status === 'pågår' && /Motangrepet er i gang/.test(v.tekst), 'hold: tre døgn uten å slå motangrepet er ikke nok');
+v = S.vurder('hold', T({ tid: 100 + 3.4 * 1440, holder: () => true, angrep: { slått: true } }), st); ok(v.status === 'vunnet' && /slo tilbake/.test(v.tekst), 'hold: motangrepet slått = vunnet');
+st = {}; S.vurder('hold', T({ tid: 100, holder: () => true, angrep: { ingen: true } }), st); ok(S.vurder('hold', T({ tid: 100 + 3 * 1440, holder: () => true, angrep: { ingen: true } }), st).status === 'vunnet', 'hold: ingen motstander igjen = vunnet');
+{ const o = S.oppsummering({ start: { penger: 40e6, tid: 0 }, falne: 2, sårede: 3, maksByer: 2, hendelser: [{ t: 100, tekst: 'Tok Svorkmo', vekt: 3 }, { t: 50, tekst: 'Liten ting', vekt: 1 }, { t: 3000, tekst: 'Slo tilbake motangrepet', vekt: 3 }] }, { tid: 4.5 * 1440, penger: 17e6, byer: 1, folk: 9 }, 2);
+  ok(o.tall.length === 5 && o.tall[0][1] === '4,5' && /−23 mill/.test(o.tall[3][1]) && o.hendelser.length === 2 && /^Dag 1: Tok Svorkmo/.test(o.hendelser[0]) && /^Dag 3: Slo/.test(o.hendelser[1]), 'oppsummering: tall og de viktigste hendelsene i tidsrekkefølge'); }
 // de andre
 ok(S.vurder('tre', T({ egne: 3, tid: 100 }), {}).status === 'vunnet' && S.vurder('tre', T({ egne: 2, tid: 5 * 1440 }), {}).status === 'tapt', 'tre på fem døgn');
 ok(S.vurder('overlev', T({ tid: 7 * 1440 }), {}).status === 'vunnet' && S.vurder('overlev', T({ tid: 100, folk: 4 }), {}).status === 'tapt' && S.vurder('overlev', T({ tid: 100, leirTapt: true }), {}).status === 'tapt', 'sju døgn');

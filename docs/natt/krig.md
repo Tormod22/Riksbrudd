@@ -826,3 +826,87 @@ står bare varselbrikka.
 - Er en røverbølge og et angrep fra en motstander i gang samtidig, viser banneret røverne (de kommer først); motstanderens angrep vises når bølgen er over.
 - Kampen i bølge 1 er ofte over på 1–2 spillminutter (få røvere): den stopper på 1×, men er kort.
 - Ruten for «sist sett» bruker den siste observasjonen av hvem som helst i angrepet (ikke per lag).
+
+## Runde 12 (21. nov natt, kritikk E/F)
+
+Kritiker F (PC, «Hold byen» på /norge ved Svorkmo) og kritiker E (liggende telefon). Alle tall er Claudes forslag.
+
+### 1. «Send» utenfor radiorekkevidden uten advarsel – RETTET
+- `strategi-visning.js`: før et lag sendes til et tettsted lenger fra leiren enn radioen når (`KontrollromSpill.rekkevidde(s)`: håndradio 3 km,
+  feltradio 8/15/25/40 km etter radiomasten), står en advarsel øverst i krigspanelet (`#krigadvarsel`): «Utenfor radiorekkevidde – laget kan ikke
+  få nye ordre der ute (håndradio 3 km)» med forklaring og knappene **Send likevel**, **Gi feltradio (1 mill. kr) og send** (når feltradioen
+  rekker; ellers en linje om å bygge ut radiomasten), **Send ⟨lag⟩ i stedet (feltradio)** (et ledig lag med feltradio og kontakt som rekker) og
+  **Avbryt**. Gjelder også «Send N lag» (store tettsteder). `send(by, lag, { likevel })`, `StrategiSpill.advarsel()`, `.utenforRadio(s, by)`.
+- Lag du ikke har kontakt med nå (`KontrollromSpill.kanNå(s)`, stille – ingen loggmelding), er merket i `ledige()` (`kontakt`), «Neste trekk»
+  foreslår lag med kontakt først, og et lag uten kontakt får grå knapp «Ingen kontakt» med forklaringen (title + linje: «Ingen radiokontakt med
+  X (9 km fra leiren – håndradioen når 3 km …) – ordren når ikke fram»). «Lagene dine» sier «ingen radiokontakt».
+- Bare i spillet (`!navigator.webdriver || StrategiSpill.test`) – sjekk.js sin krigskart-vakt sender som før.
+
+### 2. «Send» når troppen sitter i et kjøretøy – RETTET
+`kanSendes(s)`/`gi(s, by)`: sitter laget om bord (`s.ombord`), får kjøretøyet ordren (`window.kjørTil`), laget får `s.avstigning`; en
+`KROKER.sim`-krok lar troppen gå av når kjøretøyet er framme og gå inn til midten av tettstedet (ordren er gitt på forhånd og trenger ikke radio).
+Kommer kjøretøyet ikke av gårde på 30 spillminutter (ingen veg), sier loggen det. Lag i kjøretøy som kjører, regnes ikke som ledige.
+
+### 3. Lag uten kontakt vist på feil sted – RETTET
+`kontrollrom-visning.js`: `garnisonI(s)` (tettsted dere holder, med `Garnison.inni`; svaret huskes 2 s per lag). Et lag i et slikt tettsted
+bruker radioen der (Claudes forslag: tettstedets radio når leiren): `sjekkKontakt` gir kontakt («Kontakt over radioen i Svorkmo»), laget vises
+der det står (`syn` regner det som «nær»), meldingene kommer, ordre når fram, og lagpanelet sier «radiokontakt over radioen i Svorkmo».
+Nytt i API: `KontrollromSpill.kanNå, garnisonI, på, rekkevidde(s, r)`.
+
+### 4. «Hold byen» uten motstand og tom seiersboks – RETTET
+- `scenario.js` `hold.vurder`: med `T.angrep` (gis bare i spillet når motstanderne finnes) kreves tre døgn OG at motangrepet er slått tilbake
+  (`{ slått, pågår, samler, ingen }`). Uten `T.angrep` som før (testene). Teksten sier om motangrepet samles, er i gang eller er slått.
+- `scenario-visning.js` `holdAngrep()` (hvert spillminutt): når fredstiden er over (`EskaleringSpill.fredSlutt()`) og du holder byen, bes den
+  motstanderen med flest lag om å angripe nettopp den byen (`EskaleringSpill.planlegg(side, { tving, bare, døgn: 99 })` – varsel som andre
+  angrep). Prøves hver spilltime; kan ingen angripe på to døgn, gjelder de tre døgnene (`sc.ingen`). Utfallet leses i `EskaleringSpill.S().ferdig`.
+  Prøvd: gruppe dannet mot Dombås, «oppgitt» → slått → vunnet.
+- Oppsummeringen: `Scenario.oppsummering(stat, nå)` (test_scenario.js) – døgn, tettsteder nå/flest, falne/sårede, penger og endring, folk, og de
+  seks viktigste hendelsene. `T.stat` lagres i «riksbrudd-spillform»: falne/sårede teller egne soldater (ikke det som alt var falt ved lasting),
+  tettsteder tatt/mistet (TETTSTEDER), angrep slått tilbake/lyktes (Eskalering `ferdig`). `visKort(…, ekstra)` viser den på seiers- og tapskortet.
+- `body.formkortpå` (når #formkort eller #krigkort står): krigspanelet og de andre panelene legges under sløret (z-index 19).
+
+### 5. «Krigen din på nytt» – RETTET
+Tiden står mens reprisen er åpen (`holdPause` hvert 120. ms: skjermlag.js startet tiden igjen når kortet bak ble lukket), farten kommer tilbake
+ved Lukk. Sløret er .45 (før .72), lagene slik de står nå skjules (KROKER.skjul/innsyn mens reprisen er åpen), tegnforklaring (dine lag, fiender
+dere så, tettsted etter eier, ingen eier, kamp, leiren, skiftet eier), tettsteder som skiftet eier siden forrige bilde får en pulserende ring og
+«· tatt av …», og teksten sier «Siden forrige bilde: Kystalliansen tok Løkken». Navn på tettsteder uten eier når du zoomer inn (m < 25).
+
+### 6. Leiren forsvares ikke under spoling – RETTET
+`forsvar-visning.js` `autoForsvar(A)`: står farten på 60× eller mer (også ⏭) mens et angrep på leiren pågår, eller er angriperne innen
+600 m av leiren, settes forsvaret av seg selv (som «Forsvar leiren»), én gang per angrep, og loggen sier «Røverne kom mens du spolte: lagene
+hjemme forsvarer leiren av seg selv». Ingen lag hjemme: egen linje. `AUTO = { fart: 60, nær: 600 }`. Ikke i testene uten ForsvarSpill.test.
+
+### 7. «Tropper» viser bare «Lag ny tropp» – RETTET
+`tropper-visning.js`: «Troppene dine» øverst i #tropppanel (`#troppliste`): navn, friske av alle, hvor (i leiren, garnison i X, om bord i X,
+«ca. 3 km nordøst for leiren», på marsj; uten kontakt «sist meldt kl. … »), radiokontakt (grønn) eller hvorfor ikke (oransje), og «Velg»
+(velger laget, går dit i kartet – til siste meldte plass uten kontakt). «Lag ny tropp» står under (alt skjemaet er som før).
+
+### 8. Småting – RETTET
+- Angrepsbanneret: teksten var en halv setning («… vakttårn og kameraer ser dem før») – nå «… ser dem før de er framme», og teksten kan brytes.
+- PAUSEN: årsaken til at klokka gikk 14:07 → 14:14 med kortet oppe: skjermlag.js ser etter kort hvert 150. ms, men på 600× går ett bilde 2,5
+  spillminutter, og med treg grafikk rakk flere bilder å gå. Nå en `KROKER.sim`-krok (scenario-visning.js) som setter pausen i første
+  simuleringssteg (`Skjermlag.pause()`), og løkka i index.html stopper resten av bildet når farten er 0. Målt med 600 ms per bilde på 600×:
+  2,5 → 0,1 spillminutt.
+- Krigskartets slør er lettere (.16, før .3).
+
+### Kritiker E (telefon)
+- «Kampen om leiren har begynt (Kari (deg) mot Røvere 1.1)» om en kamp i en låve 1 km unna: nå bare når det egne laget står innen
+  `KAMP_VED` = 700 m av leiren; ellers «Du er i ildkamp med Røvere 1.1, 1,0 km fra leiren» (eller laget).
+- Rapporten etter bølgen har navn: «Hos oss: Håkon Rønning (Leirvakta) falt, og Kari (deg) ble såret. Brakke skadet.» (`Forsvar.sluttRapport`
+  med `falneNavn/sårNavn/skadetNavn/ødelagtNavn`, helsa per mann huskes når angrepet starter), og knappene «Vis brakke» (går dit og velger bygget)
+  og «De sårede» (Folk).
+
+### Vakt (vakter/krig.js, del «RUNDE 12»)
+Advarsel før Send (og Avbryt), lag uten kontakt, garnison melder seg, Send med kjøretøyet (kjørTil fanget), troppelista, forsvar av seg selv,
+oppsummering og `formkortpå`, reprisen holder pausen og gir farten tilbake, kortpausen straks. I 3D hopper den over det som går til 2D.
+Prøvd med feil lagt inn (advarselen slått av): vakta slo til. PC 2,8 s, mobil 3,1 s.
+
+### Fellesfiler endret i runde 12
+- `index.html`: hovedløkka – `while (r > 1e-12 && tempo > 0)` (stopper resten av bildet når pausen settes), og versjonsmerkene (versjon.py).
+
+### IKKE gjort / svakheter (runde 12)
+- Motangrepet i «Hold byen» kommer bare hvis en motstander har nok lag (Eskaleringens krav); ellers vinner du etter to døgn uten angrep.
+- Hendelsene i oppsummeringen er bare tettsteder og motstandernes angrep (ikke røverbølgene).
+- Tettstedets radio når leiren uansett avstand (ingen terrengsjekk for garnisoner).
+- Ikke prøvd i en lang ekte økt på /norge (bare Dovre-testsiden med prøvetettsteder); vegnettet lastes ikke på testsiden, så selve kjøringen
+  med troppen ble ikke prøvd til ende.

@@ -39,3 +39,7 @@ console.log('ok   forsvar: mot røverne i leiren, reparasjon og skadevarsel');
   r = F.sluttRapport({ hvem: 'Røverne', nr: 3, utfall: 'herjet', tapte: '1,2 mill. kr og 40 m³ tre', fiender: 1, fienderUte: 0 }); assert.ok(!r.god && /herjet/.test(r.tittel) && /De tok 1,2 mill/.test(r.tekst) && /Ingen tap/.test(r.tekst));
   r = F.sluttRapport({ hvem: 'Kystalliansen', utfall: 'oppgitt', fiender: 3, fienderUte: 2, ødelagt: 1 }); assert.ok(r.god && /Angrepet fra Kystalliansen er slått tilbake/.test(r.tittel) && /2 av 3 lag fra Kystalliansen/.test(r.tekst) && /1 ødelagt/.test(r.tekst)); }
 console.log('ok   forsvar (runde 8): glattet anslag, spenn, «røverlaget» i entall og rapport etter hver bølge');
+// runde 12 (kritiker E): navnene på de sårede, de falne og byggene står i rapporten når de er kjent
+{ const r = F.sluttRapport({ hvem: 'Røverne', nr: 2, utfall: 'slått', falne: 1, sårede: 1, falneNavn: ['Håkon Rønning (Leirvakta)'], sårNavn: ['Kari (deg)'], skadet: 2, skadetNavn: ['Brakke', 'Kjøkken'] });
+  require('assert')(/Håkon Rønning \(Leirvakta\) falt, og Kari \(deg\) ble såret\./.test(r.tekst) && /Brakke og Kjøkken skadet\./.test(r.tekst), JSON.stringify(r)); console.log('ok   rapporten har navn på sårede, falne og bygg'); }
+
