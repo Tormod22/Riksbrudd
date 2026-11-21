@@ -411,8 +411,8 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       const blå = nyttLag('Vakt14 blå', mx + 3000, my, 'blå'); blå.menn.length = 4; ENHETER.push(blå); nye.push(blå);
       const B = StrategiSpill.område().find(q => q.id === id), fa = StrategiSpill.farer(B, [blå], { minst: 3, mann: 5, eier: 'rød', by: B });
       ut.ikkeTar = fa.length > 0 && !fa.some(f => /tar stedet/.test(f.tekst)) && fa.some(f => f.id === 'svak');
-      // laget ved byen: grunnen i loggen
-      blå.x = mx + 150; blå.y = my + 80; blå.sti = null; const g = StrategiSpill.hvorforIkkeTar(blå, B); ut.hvorfor = !!g && /holdes av 3 lag/.test(g);
+      // laget ved byen: grunnen i loggen (antall lag kan være flere enn de tre her – andre vakter og AI-en kan ha lag i nærheten)
+      blå.x = mx + 150; blå.y = my + 80; blå.sti = null; const g = StrategiSpill.hvorforIkkeTar(blå, B); ut.hvorfor = !!g && /holdes av \d+ lag/.test(g); ut.hvorforTekst = g;
       // telleren: 24 t = 1,0; ukjent eier nullstiller ikke; tapt gir loggen
       TETTSTEDER.set(id, { eier: 'blå', inntar: null }); const tA = tid; ScenarioSpill.scenarioSteg(); tid = tA + 1440;
       ut.teller = /1,0 av 3 døgn/.test(ScenarioSpill.scenario().tekst);

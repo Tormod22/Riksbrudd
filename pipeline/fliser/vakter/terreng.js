@@ -54,7 +54,9 @@ module.exports = {
         LeirSpill.startPlassering('brakke'); kam.x = S.leir.x; kam.y = S.leir.y; kam.m = 1; HellingVis.oppdater();
         for (let i = 0; i < 80 && (HellingVis.venter() || !HellingVis.tilstand() || HellingVis.tilstand().hvor !== 'bygg'); i++) { await vent(100); HellingVis.oppdater(); }
         const tb = HellingVis.tilstand(); ut.kartBygg = tb; krev(tb && tb.vises && tb.type === 'brakke' && tb.flatt + tb.skrått > 0, 'hellingskartet vises ikke når du plasserer en brakke');
-        krev(/grønt/.test(el('byggvalg').textContent), 'banneret forklarer ikke fargene i kartet');
+        // (21. nov) teksten om fargene følger zoomen hvert 0,4 s – vent litt på den (kam.m ble satt rett etter at banneret kom)
+        for (let i = 0; i < 15 && !/grønt/.test(el('byggvalg').textContent); i++) await vent(100);
+        krev(/grønt/.test(el('byggvalg').textContent), 'banneret forklarer ikke fargene i kartet: ' + el('byggvalg').textContent.slice(0, 160));
         let sjekket = 0, uenig = 0;
         for (const [dx, dy] of [[30, 0], [-30, 10], [0, 40], [60, -40], [-70, -50], [90, 70]]) { LeirSpill.trykk(S.leir.x + dx, S.leir.y + dy); await LeirSpill.prøv(); const p = LeirSpill.plassering(); if (!p || p.x === null) continue;
           const n = HellingVis.nivåVed(p.x, p.y); if (n === null || n === Helling.UKJENT || n === Helling.VANN) continue; sjekket++;
