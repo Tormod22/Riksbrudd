@@ -96,7 +96,7 @@
  ],
  [
   "Telefonen liggende",
-  "Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad – hvert ikon med et ord under: ⟲ Venstre, ⟳ Høyre, ▦ Rutenett, ⇤ Inntil, + Fortsett – og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
+  "Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad – hvert ikon med et ord under: ⟲ Snu, ⟳ Snu, ▦ Rutenett, ⇤ Inntil, + Fortsett – og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
   "Kom i gang"
  ],
  [
@@ -111,7 +111,12 @@
  ],
  [
   "Knappene når du bygger",
-  "Når du plasserer et bygg, har hvert ikon et ord under seg (liggende telefon) eller ved siden av (PC): ⟲ Venstre og ⟳ Høyre dreier bygget 15°, ▦ Rutenett legger det på rutenettet, ⇤ Inntil legger det inntil naboen, + Fortsett lar deg sette ut flere av samme slag etter hverandre, ✕ Avbryt. Et lyst ikon er slått på.",
+  "Når du plasserer et bygg, har hvert ikon et ord under seg (liggende telefon) eller ved siden av (PC): «Snu ⟲» og «Snu ⟳» dreier bygget 15°, ▦ Rutenett legger det på rutenettet, ⇤ Inntil legger det inntil naboen, + Fortsett lar deg sette ut flere av samme slag etter hverandre, ✕ Avbryt. Et lyst ikon er slått på.",
   "Leiren"
+ ],
+ [
+  "Til leiren og hele kartet",
+  "Nede til høyre: ⌂ tar kartet hjem til leiren, med flagget midt på skjermen. Knappen med fire piler ut viser hele kartet. Før du har lagt leiren, går ◎ til Dombås.",
+  "Kom i gang"
  ]
 ]

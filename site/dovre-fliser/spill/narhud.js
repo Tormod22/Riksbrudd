@@ -36,7 +36,7 @@ body.kort #varsler{ top:auto; bottom:calc(74px + env(safe-area-inset-bottom,0px)
   // «Flaske …» – raden står lenger ned. Tallene er Claudes forslag.
   const css6 = document.createElement('style');
   css6.textContent = `body.gaar:not(.kort) #evrad{ top:auto; bottom:calc(98px + env(safe-area-inset-bottom,0px)); }
-body.gaar:not(.kort) #nhud .vapen{ right:296px; }
+body.gaar:not(.kort) #nhud .vapen{ right:72px; bottom:calc(var(--vapenB, 250px) + env(safe-area-inset-bottom,0px)); }
 body.kort.gaar:not(.tlfligg):not(.kjorer) #kjorknapp:not(.x){ bottom:calc(272px + env(safe-area-inset-bottom,0px)); }
 body.kort.smal.gaar .knapper #krigknapp{ display:none; } body.kort.smal.gaar .knapper button{ min-width:33px; padding:0 5px; } body.kort.smal.gaar .knapper{ gap:3px; }
 body.kort.gaar #evrad{ top:calc(var(--topp,40px) + 158px); }`;

@@ -87,6 +87,10 @@
     // legges tipset over den (eller ved siden av når det ikke er plass over)
     const op = document.getElementById('opplaering'), o = op && op.classList.contains('på') && op.getClientRects().length ? op.getBoundingClientRect() : null, x = parseFloat(boks.style.left);
     if (o && x < o.right && x + bw > o.left && y < o.bottom && y + h > o.top) { if (o.top - h - 8 > 4) y = o.top - h - 8; else { const v = o.left - bw - 8, hø = o.right + 8; boks.style.left = (hø + bw < window.innerWidth - 4 ? hø : Math.max(4, v)) + 'px'; } }
+    // RUNDE 14 (kritiker J, bilde 34c: «Container-tipset la seg midt i lista og skjulte Forsvar»): et kort i et panel ved venstre kant
+    // (byggemenyen i Leir, Folk, Deg) får ruta ved siden av panelet, på høyde med kortet – den dekker da ingen knapper i lista.
+    const pan = d.closest && d.closest('#leirmeny, #folkmeny, #degmeny, #karakterark'), pr = pan ? pan.getBoundingClientRect() : null;
+    if (pr && pr.width && pr.right + bw + 14 < window.innerWidth) { boks.style.left = (pr.right + 8) + 'px'; y = Math.max(6, Math.min(window.innerHeight - h - 6, r.top)); }
     boks.style.top = y + 'px';
     boks.classList.add('på'); viser = d; return true; }
   function skjul() { boks.classList.remove('på'); viser = null; clearTimeout(lukk); }

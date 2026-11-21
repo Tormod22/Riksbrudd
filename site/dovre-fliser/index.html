@@ -77,7 +77,7 @@ button:hover{ border-color:var(--hover); } button:focus-visible{ outline:2px sol
 <div id="panel" role="dialog" aria-label="Valgt lag"><button class="lukk" id="lukk" aria-label="Lukk">×</button><h2 id="pnavn"></h2><div class="sub" id="psub"></div><div class="handl" id="handl"></div><div class="menn" id="menn"></div><div class="hint" id="hint"></div></div>
 <div class="ctl">
   <button id="zi" aria-label="Zoom inn">+</button><button id="zo" aria-label="Zoom ut">−</button>
-  <button id="dombas" aria-label="Dombås, 2 m høyde" title="Dombås (2 m høyde)">◎</button><button id="hele" aria-label="Hele området">⌂</button>
+  <button id="dombas" aria-label="Dombås, 2 m høyde" title="Dombås (2 m høyde)">◎</button><button id="hele" aria-label="Hele kartet" title="Hele kartet"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4M2 2l4 4M14 2l-4 4M14 14l-4-4M2 14l4-4"/></svg></button>
 </div>
 <div id="skala"><div id="skalaStrek"></div><span id="skalaTekst"></span></div>
 <div id="kilde">Høyde: Kartverket DTM (CC BY 4.0) · Landsat 5, 13. aug. 1987 (USGS) · Veg: NVDB · Bygg: matrikkelen</div>
@@ -3446,7 +3446,10 @@ document.getElementById('hele').onclick = async () => { if (på3d) await slå3d(
 // ◎: til leiren når du har en (16. nov: knappen gikk alltid til Dombås, også når leiren lå i Ryfylke), ellers Dombås som før
 document.getElementById('dombas').onclick = async () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); if (på3d) await slå3d(false);
   if (S && S.leir) { kam.x = S.leir.x; kam.y = S.leir.y; kam.m = 3; skitten = true; } else passInn(DOMBAS); };
-window.addEventListener('riksbrudd-spill', () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } });
+// RUNDE 14 (kritiker J: «⌂ zoomer ut til hele Rogaland i stedet for til leiren»): når du har en leir, er ⌂ knappen til leiren (flagget midt på
+// skjermen), og hele kartet har fått sitt eget ikon (fire piler ut). Før leiren: ◎ går til Dombås som før.
+const hjemKnapp = () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.textContent = '⌂'; b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } };
+window.addEventListener('riksbrudd-spill', hjemKnapp); setTimeout(hjemKnapp, 0);
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
 const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
@@ -3558,12 +3561,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart.js?v=0b5dc2341a"></script>
 <script src="/dovre-fliser/spill/leir.js?v=4c92228ed2"></script>
 <script src="/dovre-fliser/spill/folk.js?v=d6233b4270"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=ac1148bca6"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=5d4b6ade63"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=a4e95aa4c1"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=c373457ee2"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=156e5409f7"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=f35478a20f"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=bec1ea0553"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
@@ -3613,7 +3616,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=ce475bf4a0"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=896aaafda9"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=43ede828d3"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=8e7180270d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
@@ -3669,7 +3672,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kartlapper.js?v=16643a9668"></script>
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
-<script src="/dovre-fliser/spill/flistips.js?v=184509949c"></script>
+<script src="/dovre-fliser/spill/flistips.js?v=fcce03e02d"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=8158e051c3"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=4142f566bb"></script>

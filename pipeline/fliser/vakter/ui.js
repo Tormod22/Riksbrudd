@@ -362,6 +362,54 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
     } catch (e) { r13 = { feil: ['runde 13: ' + e.message] }; }
     finally { await pg.setViewportSize(vp); await pg.waitForTimeout(500); await pg.evaluate(() => { if (window.Telefon) Telefon.pass(); if (window.SpillHud) { SpillHud.oppdater(); SpillHud.passInn(); } }); }
     d.r13 = r13; for (const f of r13.feil || []) d.feil.push(f); }
+  // RUNDE 14 (21. nov kveld, kritiker I/J): «Snu ⟲/⟳» i byggelinja, ingen tallflis i Leir dekket av velkomstboksen (844 × 390),
+  // ⌂ går til leiren og hele kartet har eget ikon, leirvalget nede til venstre på liggende telefon, byggetipset ved siden av panelet
+  // uten å flytte kortene (PC), og våpenboksen i gåmodus over minikartet (PC). Alt settes tilbake.
+  { const vp = pg.viewportSize(); let r14 = { feil: [] };
+    try { await pg.setViewportSize({ width: 844, height: 390 }); await pg.waitForTimeout(700);
+      const a = await pg.evaluate(async () => { const u = { feil: [] }, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id), krev = (b, t) => { if (!b) u.feil.push(t); }, B = document.body;
+        if (window.Telefon) Telefon.pass(); await vent(300); const går = B.classList.contains('gaar'), i3 = typeof på3d !== 'undefined' && på3d, S = window.OppstartSpill && OppstartSpill.tilstand();
+        // (1) byggelinja: rotasjonen heter «Snu»
+        if (!går && !i3 && S && window.LeirSpill && !LeirSpill.plassering()) { LeirSpill.startPlassering('brakke'); LeirSpill.trykk(S.leir.x + 40, S.leir.y + 30); await vent(1000);
+          const kn = [...document.querySelectorAll('#byggvalg > button')].filter(b => /[⟲⟳]/.test(b.textContent + (b.dataset.tegn || '')));
+          u.snu = kn.map(b => b.textContent.trim() + '/' + (b.dataset.etikett || '')); krev(kn.length === 2 && kn.every(b => /^Snu [⟲⟳]$/.test(b.textContent.trim()) && b.dataset.etikett === 'Snu'), `rotasjonsknappene heter ikke «Snu» (${u.snu})`);
+          krev(!kn.some(b => /Venstre|Høyre/.test(b.textContent + (b.dataset.etikett || ''))), 'byggelinja sier fortsatt «Venstre»/«Høyre»'); LeirSpill.avbryt(); await vent(200); }
+        // (2) Leir-panelet med velkomstboksen oppe: ingen tallflis er dekket eller kuttet
+        if (!går && $('leirknapp') && !$('loggvelkommen')) { const var0 = $('leirmeny').classList.contains('på'); if (!var0) $('leirknapp').click(); await vent(500);
+          const v = document.createElement('div'); v.id = 'loggvelkommen'; v.innerHTML = '<h3>Velkommen tilbake</h3><small>Prøve fra vakta.</small><ul><li>dag 1 06:00 Spillform: Vanlig · Hold byen.</li></ul><div class="rad"><button type="button">Fortsett</button></div>'; B.appendChild(v); await vent(250);
+          const pr = $('leirmeny').getBoundingClientRect(), fl = [...document.querySelectorAll('#leirmeny .flis')].filter(f => f.getClientRects().length);
+          u.fliser = fl.map(f => { const r = f.getBoundingClientRect(), e = document.elementFromPoint(r.right - 3, r.top + r.height / 2); return { synlig: !!e && f.contains(e), inni: r.right <= pr.right + 1 && r.left >= pr.left - 1, kuttet: f.scrollWidth > f.clientWidth + 1 }; });
+          krev(fl.length >= 4 && u.fliser.every(q => q.synlig && q.inni && !q.kuttet), `en tallflis i Leir er dekket eller kuttet (${JSON.stringify(u.fliser)})`);
+          v.remove(); if (!var0) $('leirknapp').click(); await vent(200); }
+        // (3) ⌂ = til leiren, hele kartet har eget ikon
+        if (S && S.leir && !i3 && !går) { const k0 = [kam.x, kam.y, kam.m], h = $('dombas'); krev(h.textContent.trim() === '⌂' && /leiren/i.test(h.title), `⌂-knappen er ikke «til leiren» («${h.textContent}», ${h.title})`);
+          krev($('hele').textContent.trim() !== '⌂' && !!$('hele').querySelector('svg'), 'hele kartet bruker fortsatt ⌂');
+          $('hele').click(); await vent(200); h.click(); await vent(200); u.hjem = [Math.round(kam.x - S.leir.x), Math.round(kam.y - S.leir.y)]; krev(Math.abs(u.hjem[0]) < 1 && Math.abs(u.hjem[1]) < 1, `⌂ går ikke til leiren (${u.hjem})`);
+          kam.x = k0[0]; kam.y = k0[1]; kam.m = k0[2]; skitten = true; }
+        // (4) leirvalget i steg 3: nede til venstre (over havet), ikke oppe til høyre
+        if (B.classList.contains('kort') && !B.classList.contains('smal') && $('leirvalg') && !$('leirvalg').classList.contains('på')) { const lv = $('leirvalg'), h0 = lv.innerHTML; lv.innerHTML = 'Trykk på kartet der leiren skal ligge – prøve fra vakta.<br><button type="button">Tilbake til valgene</button>'; lv.classList.add('på'); await vent(100);
+          const r = lv.getBoundingClientRect(); u.leirvalg = [r.left, r.right, r.top, r.bottom].map(Math.round); lv.classList.remove('på'); lv.innerHTML = h0;
+          krev(r.left < 30 && r.right < innerWidth * .4 && r.top > innerHeight * .35, `leirvalget står ikke nede til venstre (${u.leirvalg})`); }
+        return u; });
+      r14.a = a; for (const f of a.feil) r14.feil.push(f);
+      await pg.setViewportSize({ width: 1400, height: 820 }); await pg.waitForTimeout(700);
+      const b = await pg.evaluate(async () => { const u = { feil: [] }, vent = ms => new Promise(r => setTimeout(r, ms)), $ = id => document.getElementById(id), krev = (b, t) => { if (!b) u.feil.push(t); }, B = document.body;
+        if (window.Telefon) Telefon.pass(); await vent(300); const går = B.classList.contains('gaar'), i3 = typeof på3d !== 'undefined' && på3d;
+        // (5) byggetipset står ved siden av Leir-panelet og flytter ingen kort
+        if (!går && $('leirknapp') && window.FlisTips) { const var0 = $('leirmeny').classList.contains('på'); if (!var0) $('leirknapp').click(); await vent(400);
+          const fane = [...document.querySelectorAll('#leirmeny .faner button')].find(x => /Bygg/.test(x.textContent)); if (fane) fane.click(); await vent(300);
+          const kort = [...document.querySelectorAll('#leirmeny .bygg.kort')].filter(k => k.getClientRects().length), k = kort.find(q => q.dataset.type === 'container') || kort[0];
+          if (k) { const før = kort.map(q => Math.round(q.getBoundingClientRect().top)).join(); FlisTips.vis(k); await vent(200); const t = $('tips').getBoundingClientRect(), p = $('leirmeny').getBoundingClientRect(), etter = kort.map(q => Math.round(q.getBoundingClientRect().top)).join();
+            u.tips = [t.left, t.right, t.top, t.bottom].map(Math.round); krev(før === etter, 'byggetipset flytter kortene i lista'); krev(t.left >= p.right - 1, `byggetipset ligger oppå lista (tips ${u.tips}, panelet slutter ${Math.round(p.right)})`); FlisTips.skjul(); }
+          if (!var0) $('leirknapp').click(); await vent(200); }
+        // (6) våpenboksen i gåmodus (PC) står over minikartet, ikke midt nede der geværet er
+        if (!går && !i3 && $('nhud')) { const v = $('nhud').querySelector('.vapen'); B.classList.add('gaar'); const cs = getComputedStyle(v); u.vapen = [cs.right, cs.bottom]; B.classList.remove('gaar');
+          krev(parseFloat(u.vapen[0]) < 120 && parseFloat(u.vapen[1]) >= 240, `våpenboksen i gåmodus står over geværet (right ${u.vapen[0]}, bottom ${u.vapen[1]})`); }
+        return u; });
+      r14.b = b; for (const f of b.feil) r14.feil.push(f);
+    } catch (e) { r14 = { feil: ['runde 14: ' + e.message] }; }
+    finally { await pg.setViewportSize(vp); await pg.waitForTimeout(500); await pg.evaluate(() => { if (window.Telefon) Telefon.pass(); if (window.SpillHud) { SpillHud.oppdater(); SpillHud.passInn(); } }); }
+    d.r14 = r14; for (const f of r14.feil || []) d.feil.push(f); }
   const ok = d.feil.length === 0;
-  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') + (d.runde8 ? ` · runde 8: like meldinger slås sammen, ⏭ venter på kortet${d.runde8.kort ? ' og fartsknappen også' : ''}, ${d.runde8.hjelp} hjelpeemner fra pakkene i riktig gruppe, «Nytt spill» øverst` : '') + (d.r13 ? ' · runde 13: tekst under ikonene i byggelinja, hjelpen over morgenmøtet, «+n tall» og «Mer» uten tall, ingen boble ved kort trykk, ingen «…» i tallboksene, klokke og vær før leiren, årsaken bak varseltrekanten, tett hendelseskort' + (d.r13.pcSmal ? ', Folk ' + d.r13.pcSmal + ' i smalt PC-vindu' : '') : '') : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? (d.spill ? `PC: ${d.fliser} fliser på én rad (+${d.mer} bak «mer»), alle med forklaring` : `telefon: fliser i ${d.fliser} brikker, kommandolinja nederst ${d.telefon ? 'vises' : 'viker (panel åpent / du går)'}`) + ', opplæringen kan hoppes over og slås av, loggen har ikoner, alle bygg har tegning, fienden har egen form, færre infrastrukturmerker' + (d.bakMer ? `, «Mer» samler ${d.bakMer.length} tillegg, ett panel per plass, ${d.deler === undefined ? 'Leir-delene ikke prøvd' : d.deler + ' deler i Leir-menyen kan legges sammen'}` : '') + (d.runde4 ? ' · runde 4: ' + [d.runde4.lagpanel ? 'Folk viker for lagpanelet' : '', d.runde4.forklaring ? d.runde4.forklaring + ' eksempler i tegnforklaringen' : '', d.runde4.langt ? 'langt trykk viser forklaringen' : '', d.runde4.byggkort ? d.runde4.byggkort.n + ' byggekort med ikon' : '', d.runde4.byggtegn ? 'tegning i byggpanelet' : '', d.runde4.etterspill ? 'etterspillet har tallene' : '', d.runde4.ramme3d !== undefined ? 'ramme i 3D (' + d.runde4.ramme3d + ' lag)' : ''].filter(Boolean).join(', ') : '') + (d.runde8 ? ` · runde 8: like meldinger slås sammen, ⏭ venter på kortet${d.runde8.kort ? ' og fartsknappen også' : ''}, ${d.runde8.hjelp} hjelpeemner fra pakkene i riktig gruppe, «Nytt spill» øverst` : '') + (d.r13 ? ' · runde 13: tekst under ikonene i byggelinja, hjelpen over morgenmøtet, «+n tall» og «Mer» uten tall, ingen boble ved kort trykk, ingen «…» i tallboksene, klokke og vær før leiren, årsaken bak varseltrekanten, tett hendelseskort' + (d.r13.pcSmal ? ', Folk ' + d.r13.pcSmal + ' i smalt PC-vindu' : '') : '') + (d.r14 ? ' · runde 14: «Snu ⟲/⟳», ingen tallflis dekket, ⌂ til leiren, leirvalget nede til venstre, byggetipset ved siden av lista, våpenboksen over minikartet' : '') : d.feil.join('; '), data: d };
 } };

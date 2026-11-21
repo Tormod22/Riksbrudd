@@ -81,7 +81,9 @@ body:not(.kort) #leirvalg{ bottom:calc(100px + env(safe-area-inset-bottom,0px));
 /* RUNDE 12 (21. nov, kritiker E og F): boksen lå midt over kartet (Stavanger/Jæren) der de fleste leter. Den står nå langs kanten: øverst til
    venstre under klokka på PC (loggen står til høyre), øverst til høyre på liggende telefon (loggen står til venstre), tekst venstrestilt. Mål (380/320 px) er Claudes forslag. */
 body:not(.smal) #leirvalg{ top:calc(var(--topp,58px) + 10px); bottom:auto; left:14px; right:auto; transform:none; width:max-content; max-width:min(380px, 44vw); text-align:left; max-height:calc(100% - var(--topp,58px) - 24px); overflow-y:auto; box-sizing:border-box; box-shadow:0 6px 20px rgba(0,0,0,.55); }
-body.kort:not(.smal) #leirvalg{ top:calc(var(--topp,44px) + 4px); left:auto; right:calc(56px + env(safe-area-inset-right,0px)); max-width:min(320px, 42vw); padding:6px 9px; font-size:13.5px; line-height:1.3; }
+body.kort:not(.smal) #leirvalg{ top:auto; bottom:calc(var(--leirvalgB, 92px) + env(safe-area-inset-bottom,0px)); left:calc(8px + env(safe-area-inset-left,0px)); right:auto; max-width:min(280px, 33vw); padding:6px 9px; font-size:13.5px; line-height:1.3; }
+/* RUNDE 14 (kritiker I: boksen dekket Nordland og Troms på oversiktskartet): liggende telefon har boksen nede til venstre over havet
+   (vest for kysten, over kompasset og målestokken). Målene er Claudes forslag. */
 body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
 #leirvalg button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:42px; padding:4px 14px; margin:6px 4px 0; cursor:pointer; font:inherit; }`;
   document.head.appendChild(css);
@@ -155,11 +157,13 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
   // Utkastet lagres underveis (kritikken: «omlasting under oppstarten sletter alt og starter på steg 1»): steget og valgene,
   // i en egen nøkkel som tas bort når leiren er lagt. Leses bare for vanlige spillere (ikke i testene, som starter skjermen selv).
   const UTKAST = NØKKEL + '-utkast'; let steget = 1, sistUtkast = '';
-  function lagreUtkast(tving) { if (!utkast || (S && !tving)) return; const t = JSON.stringify({ steg: steget, utkast });
+  // RUNDE 14 (kritiker I: «lastet jeg siden på nytt i steg 3, startet kartet på hele Skandinavia igjen»): mens du velger leirplass, huskes også
+  // kartutsnittet (kart: [x, y, m]) og at du var på kartet (velger), og begge tas opp igjen etter F5.
+  function lagreUtkast(tving) { if (!utkast || (S && !tving)) return; const t = JSON.stringify(Object.assign({ steg: steget, utkast }, velger && typeof kam !== 'undefined' ? { velger: true, kart: [Math.round(kam.x), Math.round(kam.y), +kam.m.toFixed(3)] } : {}));
     if (t === sistUtkast) return; sistUtkast = t; try { localStorage.setItem(UTKAST, t); } catch (e) { /* privat vindu: huskes ikke */ } }
   function lesUtkast() { try { const d = JSON.parse(localStorage.getItem(UTKAST) || 'null'); if (!d || !d.utkast) return null;
     const u = O.fraJSON(JSON.stringify(d.utkast)); if (!u) return null; u.ferdig = false; u.leir = null; u.karakter.valgt = d.utkast.karakter.valgt || {};
-    if (d.utkast.regler) u.regler = d.utkast.regler; return { steg: [1, 2, 3].includes(d.steg) ? d.steg : 1, utkast: u }; } catch (e) { return null; } }
+    if (d.utkast.regler) u.regler = d.utkast.regler; return { steg: [1, 2, 3].includes(d.steg) ? d.steg : 1, utkast: u, velger: !!d.velger, kart: Array.isArray(d.kart) && d.kart.length === 3 && d.kart.every(Number.isFinite) && d.kart[2] > 0 ? d.kart : null }; } catch (e) { return null; } }
   const glemUtkast = () => { sistUtkast = ''; try { localStorage.removeItem(UTKAST); } catch (e) { /* ingen lagring */ } };
   setInterval(() => { if (bak.classList.contains('på') || velger) lagreUtkast(); }, 1000);
   // Kameraet mens du velger (bare for vanlige spillere og når OppstartSpill.test er satt): spillområdet fyller skjermen.
@@ -575,7 +579,7 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
   if (S) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => bruk(false)); else setTimeout(() => bruk(false), 0); }
   else if (!navigator.webdriver) {
     // (runde 6) et påbegynt utkast tas opp igjen der du slapp (steget og alle valgene)
-    const d = lesUtkast(); if (d) { utkast = d.utkast; vis(d.steg); } else nytt();
+    const d = lesUtkast(); if (d) { utkast = d.utkast; vis(d.steg); if (d.steg === 3 && d.velger && ekte()) { startVelg(); if (d.kart) { kam.x = d.kart[0]; kam.y = d.kart[1]; kam.m = d.kart[2]; skitten = true; } } } else nytt();
     const gjem = () => gjemStart(); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', gjem); else setTimeout(gjem, 0);
   }
 })();

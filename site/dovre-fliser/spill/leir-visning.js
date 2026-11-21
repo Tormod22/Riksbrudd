@@ -84,6 +84,9 @@ body.kort.tlfligg #byggvalg button[data-etikett]{ font-size:0; display:inline-fl
 body.kort.tlfligg #byggvalg button[data-etikett]::before{ content:attr(data-tegn); font-size:16px; line-height:1; }
 body.kort.tlfligg #byggvalg button[data-etikett]::after{ content:attr(data-etikett); font-size:10.5px; letter-spacing:.01em; margin-top:2px; color:var(--ink-dim); }
 body.kort.tlfligg #byggvalg button.slått[data-etikett]::after{ color:#f0dc9a; }
+/* RUNDE 14 (kritiker I, bilde 17: «DIES 0/0 l» – boksen «Velkommen tilbake» la seg oppå tallflisene i Leir): mens Leir-panelet er åpent,
+   står velkomstboksen til høyre for panelet i stedet for midt på skjermen, så ingen flis dekkes. Målene er Claudes forslag. */
+body:has(#leirmeny.på) #loggvelkommen{ left:calc(var(--leirH, 372px) + env(safe-area-inset-left,0px)); transform:none; width:min(440px, calc(100vw - var(--leirH, 372px) - 64px)); }
 body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ content:attr(data-tegn); display:inline-block; margin-right:5px; opacity:.85; }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
@@ -343,7 +346,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       const r = knapp(p.lukket ? 'Åpent gjerde' : 'Lukk ringen', () => { p.lukket = !p.lukket; prøv(); }); r.disabled = p.punkter.length < 3; if (LB.BYGG[p.type].veg) r.hidden = true;
       banner.append(a, r);
     } else if (p && p.x !== null) {
-      banner.append(knapp('⟲ 15°', () => roter(1)), knapp('⟳ 15°', () => roter(-1)));
+      banner.append(knapp('Snu ⟲', () => roter(1), { title: 'Snu bygget 15° mot klokka' }), knapp('Snu ⟳', () => roter(-1), { title: 'Snu bygget 15° med klokka' }));
       // (runde 8) for bratt: drei bygget, eller flytt skissen til nærmeste sted der det går (fra hellingskartet, helling-visning.js)
       const bf = p.feil && /For bratt/.test(p.feil) ? p.brattForslag : null;
       if (bf && bf.drei) banner.append(knapp('Drei 90° (da går det)', () => roter(6), { id: 'brattdrei' }));
@@ -370,13 +373,15 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   let bannerHelt = false;
   // RUNDE 13 (kritiker G: «ikonene ⟲ ⟳ ▦ ⇤ ⧉ har ingen tekst – ⧉ ser ut som kopier»): hvert ikon får en kort tekst under seg (tredje ledd),
   // og «Fortsett» har fått + i stedet for ⧉. På PC står hele teksten som før, med det samme tegnet foran. Ordene er Claudes forslag.
-  const KORT_NAVN = [[/^⟲ 15°$/, '⟲', 'Venstre'], [/^⟳ 15°$/, '⟳', 'Høyre'], [/^Rutenett: .*$/, '▦', 'Rutenett'], [/^Inntil naboen: .*$/, '⇤', 'Inntil'], [/^Fortsett: .*$/, '+', 'Fortsett'],
+  // RUNDE 14 (kritiker I: «Venstre»/«Høyre» kan leses som «flytt til venstre»): rotasjonsknappene heter «Snu ⟲» og «Snu ⟳» på PC,
+  // og ikonet med «Snu» under på liggende telefon.
+  const KORT_NAVN = [[/^Snu ⟲$/, '⟲', 'Snu'], [/^Snu ⟳$/, '⟳', 'Snu'], [/^Rutenett: .*$/, '▦', 'Rutenett'], [/^Inntil naboen: .*$/, '⇤', 'Inntil'], [/^Fortsett: .*$/, '+', 'Fortsett'],
     [/^Avbryt$/, '✕', 'Avbryt'], [/^Legg i planen$/, 'Til planen'], [/^Kjøp materialene og bygg: (.*) i alt$/, 'Kjøp og bygg · $1']];
   // på telefon lukkes også forklaringsruta fra byggekortet (den ble liggende over kartet mens du plasserte bygget, kritiker E bilde 13)
   function kortBanner() { if (window.FlisTips && FlisTips.skjul && document.body.classList.contains('kort')) FlisTips.skjul(); const f = banner.firstElementChild; if (f && f.tagName === 'DIV') { f.classList.add('btekst'); f.onclick = () => { bannerHelt = !bannerHelt; banner.classList.toggle('helt', bannerHelt); }; }
     banner.classList.toggle('helt', bannerHelt); banner.classList.toggle('harsmå', !!banner.querySelector(':scope > small'));
     for (const b of banner.querySelectorAll(':scope > button')) { const t = b.textContent.trim(), k = KORT_NAVN.find(([r]) => r.test(t)); if (!k) continue;
-      if (k[2]) { b.dataset.tegn = k[1]; b.dataset.etikett = k[2]; if (t.startsWith(k[1])) b.dataset.medtegn = '1'; } else b.dataset.kort = t.replace(k[0], k[1]);
+      if (k[2]) { b.dataset.tegn = k[1]; b.dataset.etikett = k[2]; if (t.includes(k[1])) b.dataset.medtegn = '1'; } else b.dataset.kort = t.replace(k[0], k[1]);
       if (!b.title) b.title = t; b.setAttribute('aria-label', t); if (/: på$/.test(t)) b.classList.add('slått'); } }
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   // Kartets klasse (vann) og eksisterende hus for punktene i bygget (hentes før regelsjekken, som er uten nettverk)
