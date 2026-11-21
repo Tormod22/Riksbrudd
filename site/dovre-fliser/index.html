@@ -1574,7 +1574,8 @@ function detaljIBakken(mat, side) {
       vec4 a2 = texture2D(bakkeAtlas, vec2(aUv.x * 0.8 - aUv.y * 0.6, aUv.x * 0.6 + aUv.y * 0.8) * 0.23 + vec2(0.41, 0.09));
       float heltN = 1.0 - smoothstep(5.0, 40.0, detAvst);
       vec4 at = mix(a2, a1 * 0.7 + a2 * 0.3, heltN);
-      vec3 fG = diffuseColor.rgb * mix(vec3(0.6, 0.74, 0.54), vec3(1.4, 1.36, 0.88), at.r);
+      // (runde 15: gresset nær var gulere enn kartet – snittet av de to fargene tok 29 % av det blå; nå grønnere, mindre halm)
+      vec3 fG = diffuseColor.rgb * mix(vec3(0.58, 0.74, 0.6), vec3(1.3, 1.38, 1.04), at.r);
       vec3 fL = diffuseColor.rgb * mix(vec3(0.5, 0.54, 0.5), vec3(1.4, 1.32, 1.08), at.g);
       vec3 fS = diffuseColor.rgb * mix(0.5, 1.42, at.b);
       vec3 fB = diffuseColor.rgb * mix(0.5, 1.36, at.a);
@@ -1588,7 +1589,7 @@ function detaljIBakken(mat, side) {
       float veg = clamp((max(diffuseColor.g, diffuseColor.r * 0.97) - diffuseColor.b - 0.02) * 6.0, 0.0, 1.0);
       float k5 = texture2D(straa, vUv * detaljSkala * 3.0 + vec2(0.53, 0.29)).r, k6 = texture2D(detalj, vUv * detaljSkala * 7.3 + vec2(0.11, 0.83)).r;
       vec3 naerF = diffuseColor.rgb * (0.8 + 0.4 * k2) * mix(0.72 + 0.46 * k3, (0.7 + 0.55 * k5) * (0.85 + 0.3 * k6), veg);
-      naerF = mix(naerF, naerF * mix(vec3(0.8, 0.97, 0.74), vec3(1.2, 1.12, 0.78), k5), veg * (0.45 + 0.55 * k4));
+      naerF = mix(naerF, naerF * mix(vec3(0.8, 0.98, 0.8), vec3(1.14, 1.14, 0.86), k5), veg * (0.45 + 0.55 * k4));
       diffuseColor.rgb = mix(diffuseColor.rgb, naerF, naer * 0.9 * (1.0 - sno * 0.6));
       }
       #endif
@@ -1675,11 +1676,13 @@ async function bygg3d(cx, cy, S) {
   // og på et ekte grafikkort må nettleseren vente på grafikkortet. Punktene finnes alt: u.vannData = { W, d } som modulene bruker.)
   u.vannData = { W: u.vann.width, d: u.vann.piksler };
   framdrift('planter trærne', .6);
+  // (runde 15, pakke «natur»: «trær og steiner skal ikke stå på fotballbaner») omrissene av baner og anlegg – u.påAnlegg(x, y), spill/anleggfri.js
+  if (window.AnleggFri) await AnleggFri.hent(u);
   if (S <= 4200 && VIS.traer) u.trær = await trær3d(u, px, b);
   if (S <= 2200 && VIS.traer) u.smått = await smått3d(u, px, b);
   // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison && !window.Veg) u.lys = await gatelys3d(u);
-  await pust(); await ryddHus(u); await pust();
+  await pust(); await ryddHus(u); if (window.AnleggFri) await AnleggFri.rydd(u); await pust();
   const skog = await skogmaske(u, b); await pust();
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
@@ -1689,7 +1692,9 @@ async function bygg3d(cx, cy, S) {
   // relieff og flekker (spill/kartbilde.js): søkk og daler litt mørkere, rygger litt lysere, lyng og berg i flekker – sist, så ingen av
   // klassifiseringene over (skog, steiner, vann) ser de nye fargene
   if (window.Kartbilde) await kjørAsynk(Kartbilde.relieffG(px, TW, H, N, cx, cy, S, TW >= 4096 ? 768 : 512));
-  await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1));
+  // (runde 15) dyrket mark (terrengklasse 5) blir grønnere enn heia – spill/bakkefarge.js
+  const dyrk = window.Bakkefarge && Bakkefarge.dyrket ? await Bakkefarge.dyrket(u, b) : null; u.dyrket = dyrk ? dyrk.andel : 0;
+  await iStriper(TW, (y0, y1) => naturfarger(px, TW, y0, y1, dyrk));
   await iStriper(TW, (y0, y1) => g.putImageData(new ImageData(px.subarray(y0 * TW * 4, y1 * TW * 4), TW, y1 - y0), 0, y0), 256);
   await pust();
   // punktene beholdes til kartbildet er sendt til grafikkortet i forbered3d (lastOppIBiter); sett3d slipper dem
@@ -1728,7 +1733,10 @@ function havAvstand(H, N, steg) {
   return D;
 }
 // 3D-kartet i naturligere farger: litt mer metning og lys enn papirkartet, og vannet speiler himmelen (lysere blågrått).
-function naturfarger(px, TW, rad0 = 0, rad1 = TW) {
+function naturfarger(px, TW, rad0 = 0, rad1 = TW, dyrk = null) {
+  // (runde 15, pakke «natur»: «bakken er litt for sandaktig, litt for gul») gul-oliven eng og beite dreies mot grønt – spill/bakkefarge.js;
+  // det gamle under er reserven (og gir samme farge for alt som ikke er vegetasjon)
+  if (window.Bakkefarge) return Bakkefarge.naturfarger(px, TW, rad0, rad1, dyrk);
   for (let q = rad0 * TW * 4, q1 = rad1 * TW * 4; q < q1; q += 4) {
     let R = px[q], G = px[q + 1], B = px[q + 2];
     // vann: bare 20 % av satellittbildets eget mønster (18. nov: før 45 % – skanne-stripene i bildet sto som lyse streker over innsjøene)
@@ -2718,7 +2726,8 @@ function gressMateriale() {
 // (runde 14, kritiker I: «bakken er full av svarte X-formede planter» i gåmodus) lyngen er nå bakkens egen farge litt lysere (lyngLys –
 // teksturen er 0,6–0,9 lys, så tusten blir aldri mørkere enn bakken), og nærmere enn nær m står bare nærAndel av tustene (ved føttene
 // er de store kryss). Claudes forslag (tallene).
-const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35, lyngLys: [1.3, 1.34, 1.18], nær: 4, nærAndel: .3 };
+// plen: høyden på klippet gress i meter [minst, + tilfeldig] (runde 15, Claudes forslag)
+const GRESS_FARGE = { gress: [1.16, 1.26, 1.04], variasjon: .12, lyngBakke: .75, lavere: .35, lyngLys: [1.3, 1.34, 1.18], nær: 4, nærAndel: .3, plen: [.06, .06] };
 function gress3d() {
   const R = R3, u = R.ut; if (!u || !u.bunn) return;
   const nær = (R.fot || R.bane.avst < 110) && (!window.KVAL || KVAL.p.gress > 0), c = R.cam.position;
@@ -2762,9 +2771,12 @@ function* gressG(R, u, m, cx, cy) {
     if (window.Vegetasjon3d && Vegetasjon3d.iLeir && Vegetasjon3d.iLeir(x, y)) continue;
     const moh = hoyde3d(x + u.cx, y + u.cy), vk = window.Vegetasjon ? Vegetasjon.vekst(moh / tg) : 1; if (vk < 1 && rnd() > vk) continue;
     // høyt gress i flekker (enga er ikke klippet): flekkene står fast i kartet
-    const eng = Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45;
+    // (runde 15, brukeren: «gressflater – flatmark med gress»; «ingen høye gresstuster på fotballbaner») PLEN: på baner og anlegg
+    // (u.påAnlegg, spill/anleggfri.js) og i tettstedene (u.iBy) er gresset klippet – lave tuster i grønt, ingen lyng og ingen eng
+    const plen = !!((u.påAnlegg && u.påAnlegg(x, y, 0)) || (u.iBy && u.iBy(x, y)));
+    const eng = !plen && Math.sin((x + u.cx) * .071) * Math.cos((y + u.cy) * .063) + .5 * Math.sin((x + u.cx) * .19 + (y + u.cy) * .13) > .45;
     // (runde 10) lavere lenger unna (ytterst 2/3 av høyden): tustene langt ute ble mørke flekker over bakken
-    const k = (j * W + i) * 3, lyng = type === 2 || type === 3, h = (lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk) * (1 - GRESS_FARGE.lavere * rr / RAD), z = (moh - u.h0) * R.EX - .05;
+    const k = (j * W + i) * 3, lyng = !plen && (type === 2 || type === 3), h = (plen ? GRESS_FARGE.plen[0] + rnd() * GRESS_FARGE.plen[1] : lyng ? .2 + rnd() * .22 : eng ? .45 + rnd() * .4 : .18 + rnd() * .3) * (.55 + .45 * vk) * (1 - GRESS_FARGE.lavere * rr / RAD), z = (moh - u.h0) * R.EX - .05;
     // i tettstedene må bakken være tydelig grønn (15. nov: gresset vokste på brostein og grus på Bryggen i Bergen – gulbrun bakke
     // regnes ellers som tørt gress) og ikke ligge helt inntil et hus
     if (u.iBy && u.iBy(x, y) && (!(B.rgb[k + 1] > B.rgb[k] + 6 && B.rgb[k + 1] > B.rgb[k + 2] + 10) || (u.hus && u.hus.omriss && nærHus(u, x, y)))) continue;
@@ -3556,6 +3568,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=777d268a5f"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
+<script src="/dovre-fliser/spill/anleggfri.js?v=b0f0ac5d17"></script>
+<script src="/dovre-fliser/spill/bakkefarge.js?v=0e13759587"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=134fd452b4"></script>
@@ -3577,7 +3591,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=7d897f33a3"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=ba29a3df5b"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=5fae12d02a"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=abeed81ffe"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=807b267441"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
@@ -3628,7 +3642,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/tallrekke.js?v=9acb597826"></script>
 <script src="/dovre-fliser/spill/gaavalg.js?v=58163dd566"></script>
 <script src="/dovre-fliser/spill/byggeplass3d.js?v=ad1fc5113c"></script>
-<script src="/dovre-fliser/spill/fjellmark3d.js?v=e25429c40a"></script>
+<script src="/dovre-fliser/spill/fjellmark3d.js?v=a375b287b8"></script>
 <script src="/dovre-fliser/spill/kjoretoy3d.js?v=7a6698c11e"></script>
 <script src="/dovre-fliser/spill/kjor.js?v=978675e687"></script>
 <script src="/dovre-fliser/spill/maal.js?v=0761659d97"></script>
