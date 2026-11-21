@@ -254,7 +254,7 @@
     const a = q.createLinearGradient(0, 0, 32, 0); a.addColorStop(0, 'rgba(0,0,0,1)'); a.addColorStop(.5, 'rgba(255,255,255,1)'); a.addColorStop(1, 'rgba(0,0,0,1)'); q.fillStyle = a; q.fillRect(0, 0, 32, 128);
     q.globalCompositeOperation = 'multiply'; const b = q.createLinearGradient(0, 0, 0, 128); b.addColorStop(0, '#fff'); b.addColorStop(.75, '#888'); b.addColorStop(1, '#000'); q.fillStyle = b; q.fillRect(0, 0, 32, 128);
     const t = new THREE.CanvasTexture(c);
-    return (strålMat = new THREE.MeshBasicMaterial({ map: t, color: 0x5c4c30, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    return (strålMat = new THREE.MeshBasicMaterial({ map: t, color: 0x7a6640, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   }
   const LYS = { stråler: [3, 6], bredde: [.18, .45] };
   function avrundet(m, plan, p) {
