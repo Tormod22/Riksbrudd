@@ -28,8 +28,8 @@ INSPIRASJON WARDOGS (21. nov, brukeren: «Wardogs er også en inspirasjon til sp
 flerspiller-skytespill om private militære selskaper (PMC-er) som slåss om en oppdiktet region, med kombinerte våpen, bygging og ødeleggelse.
 Passer med plan-gjeng.md (din egen semi-lovlige militærgruppe). Bare inspirasjon: ikke deres navn (selskapene, kart, logoer), våpen-/kartdesign
 eller utseende. Spør brukeren hva ved Wardogs som skal inn før noe stort bygges.
-PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger). ÅRSTALL: spillet foregår i 2023 (brukeren,
-8. nov), ikke 1986 som i HANDOFF/designdokumentet. Bygging: pipeline/fliser/blokk.py + sammen.py, .github/workflows/norge.yml
+PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger). ÅRSTALL: spillet foregår på 2020-TALLET uten faste årstall (brukeren 21. nov; før «2023», 8. nov), ikke 1986 som i
+HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): moderne PMC-merker og teknologi med klassisk skrift – docs/designretning.md. Bygging: pipeline/fliser/blokk.py + sammen.py, .github/workflows/norge.yml
 (Actions -> «Bygg Norge», input blokker og aar), release kart-norge-<år>-<hash>, tas i bruk på /norge med bruk_norge.py (til da sender /norge til /kommuner-1986).
 - pipeline/fliser/ bygger Dovre-piloten (site/dovre-fliser): 01_hent.py (Kartverket DTM via WCS, Landsat) -> arbeid/ (ikke i git),
   02_fliser.py -> site/dovre-fliser/data/*.pmtiles. Flisnettet (EPSG:25833, hele Norge) står i felles.py og må være likt i visningen.
