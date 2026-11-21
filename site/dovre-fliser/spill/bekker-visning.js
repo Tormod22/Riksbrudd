@@ -47,10 +47,31 @@
   // Lages utenfor kroken: en funksjon laget inne i kroken holder på alt kroken bruker – også kartbildet px (67 MB ved 4096²), som da
   // ble liggende i minnet så lenge utsnittet levde (12. nov).
   const lagIBekk = (m, W, S, cel, min = 1) => (x, y) => { const i = Math.floor((x + S) / cel), j = Math.floor((S - y) / cel); return i >= 0 && j >= 0 && i < W && j < W && m[j * W + i] >= min; };
+  // ---------- strøm i brede elver ----------
+  // (21. nov, brukeren: «Har elver vann som er i bevegelse nedover, eller ikke?») Brede elver (Lågen, Glomma, Nidelva) ligger i kartets
+  // vannmaske og ble klippet bort over: der viste bakken bare vindbølger som på en innsjø. Nå får de et gjennomsiktig strømlag oppå
+  // vannflaten langs NVE-midtlinja: krusning og lysrefleks som flyter nedover, skum i stryk, tonet ut mot breddene, innsjøer og sjøen.
+  // Regler (retning, fart, bredde, innsjø/hav) i spill/elvestrom.js. Bølgene i bakken (vind3d.js) er uendret under laget.
+  const STRØM_LINJE = l => l.type === 1 || l.orden >= 4;
+  const ESTAT = window.ELVESTROM_STAT = { elver: 0, biter: 0, punkt: 0, snudd: 0, trekanter: 0, ms: 0 };
+  async function lagStrøm(u, linjer, vd) {
+    const t0 = performance.now(), S = u.S, W = vd.W, d = vd.d, mobil = typeof VW !== 'undefined' && VW < 900;
+    const vann = (x, y) => { const i = Math.floor((x + S) / (2 * S) * W), j = Math.floor((S - y) / (2 * S) * W); return i >= 0 && j >= 0 && i < W && j < W && d[(j * W + i) * 4] > 127; };
+    const høyde = (x, y) => hoyde3d(x + u.cx, y + u.cy, u), steg = Elvestrom.REGLER[mobil ? 'STEG_MOBIL' : 'STEG'], ut = [];
+    const elver = Elvestrom.kjede(linjer.map(l => ({ P: l.P, b: l.b, orden: l.orden })));
+    ESTAT.elver = elver.length; ESTAT.snudd = 0;
+    for (const e of elver) {
+      if (børPuste()) await pust();
+      const P = Bekker.myk(e.P).map(([x, y]) => [x - u.cx, y - u.cy]);
+      for (const b of Elvestrom.bånd(P, { vann, høyde, b: e.b, orden: e.orden, steg })) { if (b.snudd) ESTAT.snudd++; ut.push(b); }
+    }
+    ESTAT.biter = ut.length; ESTAT.punkt = ut.reduce((n, b) => n + b.P.length, 0); ESTAT.ms = Math.round(performance.now() - t0);
+    return ut.length ? ut : null;
+  }
   // Elver som er minst så brede (m), vasser du ikke over når du går selv (u.iElv, gange.js): du må finne en bru.
   const DYP_ELV = 5;
   KROKER.bygg3d.push(async (u, { px, TW }) => {
-    u.bekk = null; u.iBekk = null; u.iElv = null;
+    u.bekk = null; u.iBekk = null; u.iElv = null; u.elvStrøm = null;
     const S = u.S, mpp = 2 * S / TW, mo = mpp <= 1.2 ? 1 : mpp <= 2.5 ? 2 : mpp <= 5 ? 3 : 4, bb = [u.cx - S, u.cy - S, u.cx + S, u.cy + S];
     const biter = await LAG.hent(bb, nivåer(mo)); STAT.biter = biter.length; if (!biter.length) return;
     STAT.linjer = biter.reduce((n, B) => n + B.linjer.length, 0); kreditér();
@@ -67,11 +88,11 @@
     const vannPkt = (x, y) => { const i = Math.floor((x + S) / (2 * S) * vd.W), j = Math.floor((S - y) / (2 * S) * vd.W); return i >= 0 && j >= 0 && i < vd.W && j < vd.W && vd.d[(j * vd.W + i) * 4] > 127; };
     const iVann = l => { const r = l.type === 1 ? Math.max(6, l.b * .6) : 0;
       return (X, Y) => { const x = X - u.cx, y = Y - u.cy; return vannPkt(x, y) || r > 0 && (vannPkt(x + r, y) || vannPkt(x - r, y) || vannPkt(x, y + r) || vannPkt(x, y - r)); }; };
-    const linjer = [], stegV = Math.max(2, mpp * 1.5);
+    const linjer = [], stegV = Math.max(2, mpp * 1.5), strøm = new Set();
     // (18. nov, hakk: kroken holdt hovedtråden 0,27 s i ett strekk i Bergen – pust i alle løkkene under; samme resultat)
     for (const l of iBiter(biter, bb)) { if (børPuste()) await pust(); if (!(l.orden >= mo || l.type === 1)) continue;
       const k = kulvert(l); let deler = k ? k.map(P => ({ ...l, P })) : [l];
-      if (vd) deler = deler.flatMap(d => { const v = Bekker.klipp(d.P, iVann(d), stegV, Math.max(8, d.b)); if (!v) return [d]; STAT.iVann++; return v.map(P => ({ ...d, P })); });
+      if (vd) deler = deler.flatMap(d => { const v = Bekker.klipp(d.P, iVann(d), stegV, Math.max(8, d.b)); if (!v) return [d]; STAT.iVann++; if (STRØM_LINJE(l)) strøm.add(l); return v.map(P => ({ ...d, P })); });
       for (const d of deler) linjer.push(d); }
     // maling i kartet under: våt, mørk kant og vannet i vannfargen (naturfarger() gjør det blankt og lysere etterpå)
     const stemple = (x, y, r, f, a) => {
@@ -105,6 +126,8 @@
     if (u.smått) u.smått.busk = sil(u.smått.busk);
     if (u.bunn) { const Bn = u.bunn; for (let j = 0; j < Bn.W; j++) { if ((j & 31) === 0 && børPuste()) await pust(); for (let i = 0; i < Bn.W; i++) { const x = -S + (i + .5) / Bn.W * 2 * S, y = S - (j + .5) / Bn.W * 2 * S; if (iBekk(x, y)) Bn.gress[j * Bn.W + i] = 0; } } }
     if (S > 2200) return;
+    // strømlaget der brede elver ligger i kartets vannflate (spill/elvestrom.js)
+    if (vd && strøm.size && window.Elvestrom) u.elvStrøm = await lagStrøm(u, [...strøm], vd);
     // vannbåndet: myke svinger, punkt hver ~2 m, høyde fra terrenget; rennretning nedover (v øker med strømmen)
     // punkt hver 2 m i lite utsnitt, opp til 4 m i store (trekanter: ca. 22 000 ved S 800, under ca. 60 000 ved S 1700–2200)
     const bånd = [], stegB = Math.max(2, Math.min(4, 2 + (S - 800) / 600));
@@ -181,4 +204,94 @@
     mesh = new THREE.Mesh(g, mat); mesh.name = 'bekker'; mesh.renderOrder = 1; R.scene.add(mesh); STAT.trekanter = tri; R.bekkMesh = mesh;
   });
   KROKER.ramme3d.push(R => { if (!shader) return; shader.uniforms.uTid.value = (performance.now() / 1000) % 1000; if (R.scene.fog) shader.uniforms.uHimmel.value.copy(R.scene.fog.color); });
+
+  // ---------- 3D: strømlaget i brede elver ----------
+  // Nettet: punktene langs elva (u.elvStrøm fra lagStrøm) med TVERS punkt på tvers fra venstre bredd (dl) til høyre (dr), lagt på
+  // selve terrengnettet + LØFT. aStr = (s: +1 venstre bredd … −1 høyre, L: meter langs elva, t: meter fra midtlinja, tone),
+  // aFlyt = (fart m/s, skum 0–1). Generator som båndGeo: lages i forbered3d, kjørRett i sett3d som reserve.
+  // Claudes forslag: 7 punkt på tvers på PC, 5 på mobil; løftet 0,14 m over vannflaten (polygonOffset gjør resten).
+  const TVERS = [1, .7, .4, 0, -.4, -.7, -1], TVERS_MOBIL = [1, .5, 0, -.5, -1], LØFT = .14;
+  function* strømGeo(u, tg) {
+    const pos = [], st = [], fl = [], idx = [], tv = typeof VW !== 'undefined' && VW < 900 ? TVERS_MOBIL : TVERS, T = tv.length;
+    const Mn = tg && tg.parameters ? tg.parameters.widthSegments + 1 : 0, An = (Mn - 1) / (u.N - 1), zN = tg && tg.attributes.position.array;
+    const bakke = (x, y) => Mn ? Bekker.nettHøyde(zN, Mn, An, u.S, x, y) : (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R3.EX;
+    const kant = u.S - 2;
+    for (const e of u.elvStrøm) {
+      yield;
+      const n0 = pos.length / 3, P = e.P, n = P.length;
+      for (let k = 0; k < n; k++) {
+        const q = P[Math.min(n - 1, k + 1)], o = P[Math.max(0, k - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+        for (const sv of tv) {
+          const dd = sv > 0 ? sv * e.dl[k] : sv * e.dr[k], x = Math.max(-kant, Math.min(kant, P[k][0] + nx * dd)), y = Math.max(-kant, Math.min(kant, P[k][1] + ny * dd));
+          pos.push(x, y, bakke(x, y) + LØFT); st.push(sv, e.L[k], dd, e.tone[k]); fl.push(e.fart[k], e.skum[k]);
+        }
+      }
+      for (let k = 0; k < n - 1; k++) for (let c = 0; c < T - 1; c++) { const a = n0 + k * T + c, b2 = a + T; idx.push(a, b2, a + 1, a + 1, b2, b2 + 1); }
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aStr', new THREE.Float32BufferAttribute(st, 4)); g.setAttribute('aFlyt', new THREE.Float32BufferAttribute(fl, 2)); g.setIndex(idx);
+    if (typeof normalerG === 'function') yield* normalerG(g); else g.computeVertexNormals();
+    return { g, tri: idx.length / 3 };
+  }
+  let sMesh = null, sShader = null;
+  function fjernStrøm(R) { if (sMesh) { R.scene.remove(sMesh); sMesh.geometry.dispose(); sMesh.material.dispose(); sMesh = null; sShader = null; R.elvMesh = null; } }
+  // Skyggeleggeren (GLSL: bare ASCII i navnene). Mønsteret flyttes med L − tid · fart, så alt flyter nedover (aldri mot strømmen);
+  // farten er størst midt i elva (skjær mot breddene). Tre lag støy gir striper langs strømmen, normalen vris etter støyens
+  // helning (lysrefleks som glitrer), skum der aFlyt.y er stor, og alfa går mot 0 ved breddene og der tonen er 0.
+  const STRØM_GLSL = `
+  float elS = vStr.x, elL = vStr.y, elT = vStr.z, elTone = vStr.w;
+  float elKant = (1.0 - smoothstep(0.6, 1.0, abs(elS))) * elTone;
+  float elF = vFlyt.x * (1.0 - 0.45 * elS * elS);
+  float elSk = vFlyt.y;
+  vec2 elA = vec2(elT * 0.16, (elL - uTid * elF) * 0.05);
+  vec2 elB = vec2(elT * 0.55 + 7.0, (elL - uTid * elF * 1.2) * 0.2);
+  vec2 elC = vec2(elT * 1.9 + 3.0, (elL - uTid * elF * 1.45) * 0.75);
+  float elV = elN(elA) * 0.45 + elN(elB) * 0.35 + elN(elC) * 0.2;
+  float elGx = (elN(elB + vec2(0.07, 0.0)) - elN(elB)) * 0.35 + (elN(elC + vec2(0.07, 0.0)) - elN(elC)) * 0.2;
+  float elGy = (elN(elB + vec2(0.0, 0.07)) - elN(elB)) * 0.35 + (elN(elC + vec2(0.0, 0.07)) - elN(elC)) * 0.2;
+  float elSkum = elSk * smoothstep(0.62 - 0.3 * elSk, 0.8 - 0.2 * elSk, elN(elB * vec2(1.0, 1.6)) * 0.55 + elN(elC * 1.3) * 0.45);
+  elSkum = clamp(elSkum + elSk * 0.12, 0.0, 1.0) * elKant;
+  vec3 elFarge = mix(vec3(0.13, 0.2, 0.23), vec3(0.3, 0.39, 0.43), elV);
+  diffuseColor.rgb = mix(elFarge, vec3(0.9, 0.93, 0.95), elSkum);
+  diffuseColor.a = elKant * clamp(0.28 + 0.3 * elV + 0.15 * elSk, 0.0, 1.0);
+  diffuseColor.a = max(diffuseColor.a, elSkum * 0.95);`;
+  KROKER.forbered3d && KROKER.forbered3d.push(async u => { u.strømKlar = u.elvStrøm && u.klar && u.klar.geo ? await kjørAsynk(strømGeo(u, u.klar.geo)) : null; });
+  KROKER.sett3d.push((u, R) => {
+    const klar = u.strømKlar; u.strømKlar = null;
+    fjernStrøm(R); ESTAT.trekanter = 0; if (!u.elvStrøm) { if (klar) klar.g.dispose(); return; }
+    const { g, tri } = klar || kjørRett(strømGeo(u, R.mesh && R.mesh.geometry));
+    const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, specular: 0x4a545c, shininess: 70, transparent: true, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    mat.onBeforeCompile = sh => { sh.uniforms.uTid = { value: 0 }; sh.uniforms.uHimmel = { value: new THREE.Color(.7, .78, .85) }; sShader = sh;
+      sh.vertexShader = 'attribute vec4 aStr;\nattribute vec2 aFlyt;\nvarying vec4 vStr;\nvarying vec2 vFlyt;\n' + sh.vertexShader.replace('void main() {', 'void main() {\n  vStr = aStr; vFlyt = aFlyt;');
+      sh.fragmentShader = 'uniform float uTid;\nuniform vec3 uHimmel;\nvarying vec4 vStr;\nvarying vec2 vFlyt;\n' +
+        'float elH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n' +
+        'float elN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(elH(i), elH(i + vec2(1.0, 0.0)), f.x), mix(elH(i + vec2(0.0, 1.0)), elH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' +
+        sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>' + STRØM_GLSL)
+          .replace('#include <specularmap_fragment>', `#include <specularmap_fragment>
+  specularStrength = elKant * (1.0 - elSkum) * (0.6 + 0.8 * elV);`)
+          .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+  normal = normalize(normal + vec3(elGx, elGy, 0.0) * (2.2 + 2.0 * elSk) * elKant);
+  float elFr = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 4.0);
+  diffuseColor.rgb = mix(diffuseColor.rgb, uHimmel * 0.8, elFr * 0.45 * (1.0 - elSkum));
+  diffuseColor.a = max(diffuseColor.a, elFr * 0.5 * elKant);`); };
+    mat.customProgramCacheKey = () => 'elvestrom';
+    sMesh = new THREE.Mesh(g, mat); sMesh.name = 'elvestrøm'; sMesh.renderOrder = 2; R.scene.add(sMesh); ESTAT.trekanter = tri; R.elvMesh = sMesh;
+  });
+  KROKER.ramme3d.push(R => { if (!sShader) return; sShader.uniforms.uTid.value = (performance.now() / 1000) % 1000; if (R.scene.fog) sShader.uniforms.uHimmel.value.copy(R.scene.fog.color); });
+
+  // For vakta og testene: sjekker det som ligger i utsnittet nå. nedover = 0 biter der høyden stiger langs strømmen,
+  // iSjø = punkt med strøm der vannet er bredere enn en innsjø (skal være 0).
+  window.Elvestrom3d = {
+    sjekk(u = typeof R3 !== 'undefined' && R3 && R3.ut) {
+      const ut = { biter: 0, punkt: 0, oppover: 0, iSjø: 0, medStrøm: 0, skum: 0, maksFart: 0, iScenen: !!(sMesh && sMesh.parent), trekanter: ESTAT.trekanter };
+      if (!u || !u.elvStrøm) return ut;
+      const Rg = Elvestrom.REGLER;
+      for (const e of u.elvStrøm) { ut.biter++;
+        for (let k = 0; k < e.P.length; k++) { ut.punkt++; if (k && e.P[k][2] > e.P[k - 1][2] + 1e-6) ut.oppover++;
+          if (e.tone[k] > 0) { ut.medStrøm++; if (e.dl[k] + e.dr[k] > Math.max(Rg.INNSJØ_M, Rg.INNSJØ_GANGER * (e.b || 30))) ut.iSjø++; }
+          if (e.skum[k] > .3) ut.skum++; ut.maksFart = Math.max(ut.maksFart, e.fart[k]); } }
+      return ut;
+    },
+  };
 })();
