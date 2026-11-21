@@ -327,9 +327,21 @@ function flisReserve(z, x, y) {
   return null;
 }
 // tegnReserve: den beste grovere flisen, og oppå den de finere flisene som finnes (når du zoomer ut). Svarer om noe ble tegnet.
+// (runde 13, kritikk H: «i leirvalget er kartet uskarpt og pikselert med synlige skjøter i 5–10 s») en reserve to eller flere nivåer opp
+// forstørres mye: den tegnes fra en glattet kopi (dobbel størrelse, litt uskarp – flisGlatt) med høy kvalitet, så den ser myk ut i stedet
+// for rutete, og bitene fra samme grove flis henger sammen. Claudes forslag: GLATT.uskarp i kopiens punkter, høyst GLATT.maks kopier.
+const GLATT = { fra: 2, uskarp: 1.6, maks: 14, liste: [] };
+function flisGlatt(t) {
+  if (t.glatt) return t.glatt;
+  try { const n = 2 * G.T, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(t.c, 0, 0, n, n); if ('filter' in g) { g.filter = `blur(${GLATT.uskarp}px)`; g.drawImage(t.c, 0, 0, n, n); g.filter = 'none'; } t.glatt = c; GLATT.liste.push(t);
+    while (GLATT.liste.length > GLATT.maks) { const o = GLATT.liste.shift(); if (o.glatt) { o.glatt.width = o.glatt.height = 0; o.glatt = null; } } return c; }
+  catch (e) { return null; } }
 function tegnReserve(z, x, y, sx, sy, px) {
   const r = flisReserve(z, x, y); let noe = false;
-  if (r) { const d = r.d, w = G.T / 2 ** d; ctx.drawImage(r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; }
+  if (r) { const d = r.d, gl = d >= GLATT.fra ? flisGlatt(r.a) : null, k = gl ? 2 : 1, w = k * G.T / 2 ** d;
+    if (gl) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(gl || r.a.c, (x - ((x >> d) << d)) * w, (y - ((y >> d) << d)) * w, w, w, sx, sy, px + .5, px + .5); noe = true; if (gl) ctx.imageSmoothingQuality = 'low'; }
   if (z < ZMAX) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const b = FERDIG.get((z + 1) + '/' + (2 * x + i) + '/' + (2 * y + j));
     if (b) { ctx.drawImage(b.c, sx + i * px / 2, sy + j * px / 2, px / 2 + .5, px / 2 + .5); noe = true; } }
   return noe;
