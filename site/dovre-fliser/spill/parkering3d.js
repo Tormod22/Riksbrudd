@@ -7,10 +7,11 @@
 // Kroker: KROKER.bygg3d (plan, biler, lykter, trær), KROKER.sett3d (stripene, kantstein, øyer, skur, innkjøring).
 (function () {
   // Claudes forslag: bare plasser innen så mange meter fra midten, og tak på antall plasser per utsnitt (PC / mobil)
-  const R_PARK = { NÆR: 900, TAK_PC: 3000, TAK_MOBIL: 1000, LØFT: .04 };
+  // og på antall parkerte biler (hver bil er ca. 300 trekanter: 1600 biler på plassene ved Kvadrat ga +0,45 mill. trekanter – nå nærmeste først)
+  const R_PARK = { NÆR: 900, TAK_PC: 3000, TAK_MOBIL: 1000, BILER_PC: 450, BILER_MOBIL: 150, LØFT: .04 };
   const mobil = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   let mesh = [];
-  const P3 = { planer: [], antall: () => ({ plasser: P3.planer.reduce((s, p) => s + p.pl.plasser.length, 0), biler: P3.planer.reduce((s, p) => s + p.pl.biler.length, 0), plassene: P3.planer.length }) };
+  const P3 = { planer: [], antall: () => ({ plasser: P3.planer.reduce((s, p) => s + p.pl.plasser.length, 0), biler: P3.planer.reduce((s, p) => s + p.pl.biler.filter(b => !b.bort).length, 0), plassene: P3.planer.length }) };
 
   KROKER.bygg3d.push(async u => {
     u.parkering = null; P3.planer = [];
@@ -44,7 +45,10 @@
       if (!pl.plasser.length && !pl.lykter.length) continue;
       antall += pl.plasser.length; if (antall > tak) break;
       P3.planer.push({ pl, P, butikk: bk });
-      for (const b of pl.biler) biler.push(b.x, b.y, zf(b.x, b.y), b.ret, b.farge);
+      const bilTak = (mobil() ? R_PARK.BILER_MOBIL : R_PARK.BILER_PC) * 5;
+      for (const b of pl.biler) { if (biler.length >= bilTak) { b.bort = true; continue; } biler.push(b.x, b.y, zf(b.x, b.y), b.ret, b.farge); }
+      // plassene der bilen ikke fikk plass under taket, regnes som ledige
+      for (const p of pl.plasser) if (p.bil && pl.biler.some(b => b.bort && b.x === p.x && b.y === p.y)) p.bil = false;
       for (const l of pl.lykter) lys.push(l.x, l.y, zf(l.x, l.y), l.ret);
       for (const t of pl.trær) trær.push(t.x, t.y, zf(t.x, t.y) + .12, 6.5 + t.s * 3, t.s);
     }
