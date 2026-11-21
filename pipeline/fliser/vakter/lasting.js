@@ -22,7 +22,10 @@ module.exports = { navn: 'lasting: neste 3D-utsnitt foran deg når du flyr', kj�
     try {
       nytt3dUtsnitt = (cx, cy, s) => { kall.push([cx, cy, s]); };
       forhent3d = (cx, cy, s, bb, mer) => { hent.push([cx, cy, mer]); };
-      b.x = .2 * u.S; b.y = 0; const F = R.forut = F3.ny(); F.x = u.cx + b.x; F.y = u.cy; F.vx = 50; F.vy = 0; F.tid = 20; R.forutT = performance.now() / 1000;
+      // (fiks 15) farten følger størrelsen på utsnittet: i hele kjøringen står vakta ofte i et utsnitt med S 6000 (Snøhetta), og der er du
+      // med 50 m/s i 20 s fortsatt innenfor 45 % av halvsida – da skal det riktignok ikke bestilles noe. 50 m/s ved S ≤ 2000, ellers S/40.
+      const vF = Math.max(50, u.S / 40); ut.u3d = { S: Math.round(u.S), v: vF, byggFeil: R.byggFeil || 0, bygger: !!R.bygger, vent: byggVent(R) };
+      b.x = .2 * u.S; b.y = 0; const F = R.forut = F3.ny(); F.x = u.cx + b.x; F.y = u.cy; F.vx = vF; F.vy = 0; F.tid = 20; R.forutT = performance.now() / 1000;
       if (!R.bygger) { forut3d(R, u, b, S);
         krev(kall.length === 1, 'ingen bestilling av neste utsnitt når du flyr fort (' + kall.length + ')');
         if (kall[0]) { ut.bestilt = { foran: Math.round(kall[0][0] - (u.cx + b.x)), sidelengs: Math.round(kall[0][1] - u.cy) };

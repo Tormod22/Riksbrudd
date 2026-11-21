@@ -138,8 +138,10 @@ module.exports = {
         const o = { fra: LoggLager.når(0), til: LoggLager.når(60), antall: 1, alle: 3, viktige: [{ ...LoggLager.når(30), tekst: 'Røysland er vårt.' }] };
         LoggLager.velkommen(o); await vent(400);
         ut.modaler = MOD.filter(synlig); ut.énModal = ut.modaler.length === 1 && ut.modaler[0] === 'loggvelkommen';
-        ut.zOk = +getComputedStyle(document.getElementById('loggvelkommen')).zIndex < 21;
-        document.getElementById('loggvelkommen-ok').click(); await vent(1600);
+        // (fiks 15) står et annet kort oppe (f.eks. #krigkort), vises ikke velkomsten – da er det en feil i vakta, ikke et TypeError
+        const lv = document.getElementById('loggvelkommen'), lvOk = document.getElementById('loggvelkommen-ok'); ut.velkommen = !!lv;
+        ut.zOk = !!lv && +getComputedStyle(lv).zIndex < 21;
+        if (lvOk) lvOk.click(); await vent(1600);
         ut.etter = MOD.filter(synlig); ut.kortTilbake = kortTekst === null ? null : synlig('samfunnkort') && document.getElementById('samfunnkort').innerText === kortTekst;
         // velkomsten lukkes når spillet går igjen
         LoggLager.velkommen(o); await vent(300); const p1 = document.getElementById('sp1'); if (p1) p1.click(); await vent(500); ut.lukketVedFart = !document.getElementById('loggvelkommen');
