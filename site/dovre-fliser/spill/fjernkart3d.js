@@ -29,16 +29,19 @@
     // kartbildet: som i bygg3d, men grovt
     const mpp = 2 * S / TW, zt = Math.max(ZMIN, Math.min(13, Math.floor(Math.log2(G.res0 / mpp) + .3)));
     const c = document.createElement('canvas'); c.width = c.height = TW; const g = c.getContext('2d'); g.fillStyle = HAV_CSS; g.fillRect(0, 0, TW, TW);
-    const [x0, y0, x1, y1] = flisområde(b, zt), [ax, ay, bx, by] = flisområde(OMRÅDE, zt), sp = span(zt), kø = [];
+    // (prøvd: å lage alle flisene på nytt tok 20–30 s på en treg maskin) – først de flisene 2D-kartet alt har laget (FERDIG, grove før
+    // fine), straks; de som mangler på nivå zt lages etterpå i bakgrunnen og tegnes inn i bildet etter hvert (etterFyll)
+    const tegnFlis = (z, x, y, t) => { const sp = span(z); g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); };
+    const mangler = [];
+    for (let z = Math.max(ZMIN, zt - 4); z <= zt; z++) { const [x0, y0, x1, y1] = flisområde(b, z), [ax, ay, bx, by] = flisområde(OMRÅDE, z);
+      for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) {
+        const t = typeof FERDIG !== 'undefined' ? FERDIG.get(z + '/' + x + '/' + y) : null; if (t && t.c) tegnFlis(z, x, y, t); else if (z === zt) mangler.push([x, y]); } }
     const valg = { ...VIS, skygge: false, koter: false, traer: false, asfalt: true };
-    for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
-    await Promise.all(Array.from({ length: 4 }, async () => { for (let q; (q = kø.shift());) { const [x, y] = q, t = await lagFlis(zt, x, y, valg);
-      if (t && t.c) g.drawImage(t.c, (G.x0 + x * sp - (cx - S)) / mpp, ((cy + S) - (G.y0 - y * sp)) / mpp, sp / mpp + .5, sp / mpp + .5); } }));
     // samme naturfarger som det detaljerte kartbildet (ellers skiller fargene seg ved kanten)
     if (typeof naturfarger === 'function') { const im = g.getImageData(0, 0, TW, TW); naturfarger(im.data, TW); g.putImageData(im, 0, 0); }
     const v = await høyder, H = new Float32Array(N * N);
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const h = bilin(v, cx - S + i * steg, cy + S - j * steg); H[j * N + i] = h === h ? h : 0; }
-    return { cx, cy, S, N, H, c };
+    return { cx, cy, S, N, H, c, etter: { zt, mangler, valg, tegnFlis, mpp } };
   }
 
   function sett(d) {
@@ -57,7 +60,24 @@
     };
     mat.customProgramCacheKey = () => 'fjernkart-1';
     const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.renderOrder = 1; mesh.name = 'fjernkart';
-    kast(); R.scene.add(mesh); F.mesh = mesh; F.tex = tex; F.uInn = uInn; F.cx = d.cx; F.cy = d.cy; F.S = d.S; plasser(R);
+    kast(); R.scene.add(mesh); F.mesh = mesh; F.tex = tex; F.uInn = uInn; F.cx = d.cx; F.cy = d.cy; F.S = d.S; F.nr = (F.nr || 0) + 1; plasser(R);
+    etterFyll(d, F.nr);
+  }
+  // flisene som manglet, to om gangen (byggingen av det detaljerte utsnittet har forrang: venter mens R3.bygger)
+  async function etterFyll(d, nr) {
+    const E = d.etter, kø = E.mangler.slice(); let n = 0;
+    // de nærmest midten først
+    const m = [(d.cx - G.x0) / span(E.zt), (G.y0 - d.cy) / span(E.zt)]; kø.sort((a, b) => Math.hypot(a[0] - m[0], a[1] - m[1]) - Math.hypot(b[0] - m[0], b[1] - m[1]));
+    await Promise.all([0, 1].map(async () => { for (let q; (q = kø.shift());) {
+      while (typeof R3 !== 'undefined' && R3 && R3.bygger && F.nr === nr) await new Promise(r => setTimeout(r, 400));
+      if (F.nr !== nr || !F.tex) return; let t; try { t = await lagFlis(E.zt, q[0], q[1], E.valg); } catch (e) { continue; }
+      if (F.nr !== nr || !F.tex || !t || !t.c) return;
+      const g = d.c.getContext('2d'), sp = span(E.zt), X = (G.x0 + q[0] * sp - (d.cx - d.S)) / E.mpp, Y = ((d.cy + d.S) - (G.y0 - q[1] * sp)) / E.mpp, W = sp / E.mpp + .5;
+      g.drawImage(t.c, X, Y, W, W);
+      if (typeof naturfarger === 'function') { const x0 = Math.max(0, Math.floor(X)), y0 = Math.max(0, Math.floor(Y)), w = Math.min(d.c.width - x0, Math.ceil(W) + 1), h = Math.min(d.c.height - y0, Math.ceil(W) + 1);
+        if (w > 0 && h > 0) { const im = g.getImageData(x0, y0, w, h); naturfarger(im.data, w, 0, h); g.putImageData(im, x0, y0); } }
+      if (++n % 3 === 0 || !kø.length) F.tex.needsUpdate = true; } }));
+    if (F.nr === nr && F.tex) F.tex.needsUpdate = true;
   }
   function kast() {
     if (!F.mesh) return; const R = R3; if (R && R.scene) R.scene.remove(F.mesh);
