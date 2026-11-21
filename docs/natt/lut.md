@@ -88,6 +88,9 @@ utstyrt, handlinger, ferskhet), ikke spillets utseende, navn eller tekster. Alle
   uten automatikk (webdriver) står «Drikk» og «Spis» ved varslene (t3b-varsel.png).
 - «Reis til feltbilen (ca. 11 min til fots)» (t4): framme 4 m fra bilen, «Sett deg inn i feltbilen» kom.
 - Vaktene «lut og beholdere» (med 3D, 32 s) og «gå» (13 s) grønne på PC.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, port 8965): 128 ok, 0 FEIL (348 s), med «Se i skapene åpnet
+  7 beholdere (5 av 7 med ting)», «Drikk fra feltflaska … [Drikk]» og pila «Bolig 20 m 40°».
+- Lutpanelet på liggende telefon: fanene ruller sidelengs og det tomme detaljfeltet tar ikke plass, så lista får høyden (hus-skapene.png).
 
 ### Ikke gjort / svakheter (runde 12)
 - Pila kunne ikke prøves med ekte hus her (Dovre-testsiden har ingen husdata) – bare med prøvehuset i vakten «gå».
@@ -280,6 +283,9 @@ feltflaske, raske sveip virker ikke, «Inngang 45 m · rundt huset →» uten hu
   uten automatikk (webdriver) står «Drikk» og «Spis» ved varslene (t3b-varsel.png).
 - «Reis til feltbilen (ca. 11 min til fots)» (t4): framme 4 m fra bilen, «Sett deg inn i feltbilen» kom.
 - Vaktene «lut og beholdere» (med 3D, 32 s) og «gå» (13 s) grønne på PC.
+- Hele mobilkontrollen (`SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`, port 8965): 128 ok, 0 FEIL (348 s), med «Se i skapene åpnet
+  7 beholdere (5 av 7 med ting)», «Drikk fra feltflaska … [Drikk]» og pila «Bolig 20 m 40°».
+- Lutpanelet på liggende telefon: fanene ruller sidelengs og det tomme detaljfeltet tar ikke plass, så lista får høyden (hus-skapene.png).
 
 ### Ikke gjort / svakheter (runde 12)
 - Pila kunne ikke prøves med ekte hus her (Dovre-testsiden har ingen husdata) – bare med prøvehuset i vakten «gå».
