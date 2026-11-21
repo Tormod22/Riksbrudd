@@ -29,6 +29,9 @@
     klynge: 30,
     // tall i navn: en skrift der 0 ikke ser ut som o (Cormorant Garamond har gammeldagse tall)
     tallSkrift: '"Times New Roman", Times, "Liberation Serif", "Noto Serif", "DejaVu Serif", serif', tallSkala: .94,
+    // (runde 12, kritikk E: «Helikopter», «Feltbil», «hogst 0 %» sto i grå sans midt blant navnene i antikva) all tekst i 2D-kartet
+    // skrives i kartets skrift: sans-serif byttes mens rammen tegnes, litt større (Cormorant er lavere) og minst halvfet
+    kartSkrift: '"Cormorant Garamond", Georgia, serif', sansSkala: 1.15, sansVekt: 600,
   };
   // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
@@ -104,6 +107,20 @@
       font: g.font, align: g.textAlign, baseline: g.textBaseline, alpha: g.globalAlpha, fyll: null, strek: null, bredde: 3 };
     kø.push(L); g.__etikettSiste = L; return NaN;
   }
+  // ---------- én skrift i kartet (runde 12) ----------
+  // kartFont(font): «11px sans-serif» -> «600 12.7px "Cormorant Garamond", Georgia, serif»; andre skrifter som før (ren regel, testes)
+  const SANS = /(^|[\s,])(sans-serif|Arial|Helvetica|system-ui|-apple-system|"?Segoe UI"?)\s*(,|$)/i, fontLager = new Map();
+  function kartFont(font, R = REGLER) { const f = String(font); if (!SANS.test(f) || /Cormorant|serif\s*$/i.test(f.replace(/sans-serif/ig, ''))) return f;
+    if (fontLager.has(f)) return fontLager.get(f);
+    const m = f.match(/^\s*(.*?)\s*(\d+(?:\.\d+)?)px(?:\/\S+)?\s+(.+)$/); if (!m) return f;
+    let stil = m[1].replace(/\b(normal|lighter)\b/ig, '').trim(); const vekt = stil.match(/\b(bold|bolder|[1-9]00)\b/i);
+    if (!vekt) stil = (stil + ' ' + R.sansVekt).trim(); else if (/^[1-5]00$/.test(vekt[1])) stil = stil.replace(vekt[1], String(R.sansVekt));
+    const ut = `${stil} ${Math.round(+m[2] * R.sansSkala * 10) / 10}px ${R.kartSkrift}`; if (fontLager.size < 200) fontLager.set(f, ut); return ut; }
+  // skrift(g): kartets lerret får en font-egenskap som bytter sans-serif med kartets skrift MENS en ramme pågår (nullstill … tegnAlle);
+  // tegnHud og alt utenom rammen er som før
+  function skrift(g) { if (!g || g.__skrift) return; let o = Object.getPrototypeOf(g), D = null; while (o && !(D = Object.getOwnPropertyDescriptor(o, 'font'))) o = Object.getPrototypeOf(o);
+    if (!D || !D.set || !D.get) return; g.__skrift = true;
+    Object.defineProperty(g, 'font', { configurable: true, get() { return D.get.call(this); }, set(v) { D.set.call(this, aktiv ? kartFont(v) : v); } }); }
   // øverst(fn): tegnes etter navnene (fiendens merker skal alltid synes)
   function øverst(fn) { if (aktiv) topp.push(fn); else fn(); }
   // TALL: skriv sifrene i en skrift med vanlige tall (0 ikke som o, 1 ikke som I) når navnet bruker Cormorant Garamond
@@ -143,7 +160,9 @@
       if (r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3]) n++; } return n; }
   // for vakten: navnene som ble tegnet i siste ramme ({ t, x, y, prio }) og merkene
   const tegnet = () => vist.map(L => ({ t: L.t, x: L.px, y: L.py, prio: L.prio, flere: L.flere || 0, ramme: L.ramme.slice() }));
-  const E = { nullstill, plass, merk, tekst, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
+  const E = { nullstill, plass, merk, tekst, kartFont, skrift, hinder, regel, øverst, tegnAlle, skrivTekst, plasser, kandidater, ramme, tegnet, hindringer: () => hindre.map(o => o.r.slice()),
     aktiv: () => aktiv, antall: () => tatt.length, overlapp, LINJE, MAKS, REGLER };
-  if (typeof module !== 'undefined' && module.exports) module.exports = E; else rot.Etikett = E;
+  if (typeof module !== 'undefined' && module.exports) module.exports = E; else { rot.Etikett = E;
+    // hovedkartets lerret (index.html: <canvas id="c">) – samme kontekst som ctx i index.html
+    try { const c = typeof document !== 'undefined' && document.getElementById('c'); if (c && c.getContext) skrift(c.getContext('2d')); } catch (e) { /* uten lerret */ } }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -74,3 +74,62 @@ Punktene fra `docs/anmeldelse-2026-11-19.md`. Alle tall er Claudes forslag (saml
   telles som «+3» etter navnet som står nærmest (innen 30 punkter, `REGLER.klynge`).
 - Mønsteret i bakken ligger også på vann (svakt). Trærne på nær zoom er fortsatt uskarpe.
 - Oljetekst på terminalene («300 t olje», okonomi-visning.js) går ikke gjennom Etikett.
+
+## Runde 12 (21. nov natt, kritikk E/F) – grenen claude/natt18-spillform
+
+Kritiker E (liggende telefon, Rogaland) og F (PC, Svorkmo). Alle nye tall er Claudes forslag og står i REGLER-objektene som nevnt.
+
+1. **Lappene rundt leiren oppå hverandre – RETTET.** «hogst 100 % · 25,4 t i haug» (ressurser-visning.js) gikk utenom Etikett; nå går den
+   gjennom `Etikett.tekst` med lavest viktighet (sted), og vises bare helt nær (under 0,9 m per punkt) eller når jobben er valgt (da med
+   viktigheten «valgt»). «Helikopter»/«Feltbil», «7 t olje», lagnavnene og byggnavnene gikk alt gjennom Etikett. Prøvd på Dovre (PC og
+   telefon, 0,5/2/8/30 m per punkt) og i Ryfylke: ingen lapper oppå hverandre.
+2. **To skrifttyper i kartet – RETTET.** `Etikett.skrift(g)` gir hovedkartets lerret (`<canvas id="c">`) en `font`-egenskap som bytter
+   sans-serif (og Arial/Helvetica/system-ui) med kartets skrift MENS en ramme tegnes (nullstill … tegnAlle): `Etikett.kartFont` –
+   «11px sans-serif» → «600 12.6px "Cormorant Garamond", Georgia, serif» (`REGLER.kartSkrift`, `sansSkala` 1,15, `sansVekt` 600).
+   Slik får alle tegnekroker samme skrift uten å endre filene deres; tegnHud og 3D-overlegget røres ikke. Leir2d (Feltbil/Helikopter),
+   byggevisningen (nøkkeltall, «5000 l», «+20 kW») og hogstlappen er også satt direkte; byggevisningens tall skrives med vanlige sifre
+   (`Etikett.skrivTekst`).
+3. **Krigskartet for mørkt, infotekst oppå stedsnavn – RETTET.** strategi-visning.js: kartet under løftes med «screen» (`KART_LØFT`
+   rgba(140,128,100,.6)) i stedet for å mørknes (rgba(12,10,6,.3)). Infoteksten i region-visning.js («Bygd: mat · tre · lojalitet 58»)
+   går gjennom Etikett etter stedsnavnene (skjules når den ikke får plass).
+4. **Brakka synes ikke på 1 km-målestokk – RETTET.** leir2d.js: over `REGLER.klynge.fra` (1,6 m per punkt) tegnes leiren som en klynge:
+   byggene står som om kartet hadde `klyngeM(m)` = fra + (m − fra) · 0,12 meter per punkt (på 1 km-målestokk ca. 3,4 × forstørret), hvert
+   bygg minst 5 × 8,5 punkter i takets farge med mørk og lys kant (stiplet under bygging, mørkt når ødelagt, rødt kors på sykestua), og
+   skjøvet ut til minst 20 punkter fra midten (lagmerkene og flagget står der). Byggene meldes som hindringer til Etikett. Ikke mens du
+   bygger/plasserer (da i ekte målestokk). Over 150 m per punkt tegnes de ikke.
+5. **Byggemodus: trappetrinn og hele kartet grønt – RETTET.** helling-visning.js: fargene (flatt/skrått/bratt) ligger i et eget bilde og
+   blandes mykt mellom de fire nærmeste rutene (før: rutene som trappetrinn). De vises bare rundt det du plasserer (skissen, ellers
+   kartets midte): fullt innen `fargeInne` 18 m (minst `fargeInnePx` 70 punkter), tonet ut til 2,4 × den avstanden (rund maske på et
+   lerret like stort som skjermen). Skyggeleggingen og høydekurvene dekker hele flekken som før.
+6. **Kartflisene – DELVIS (det som kunne rettes i visningen).**
+   - *Skjøter ved nær zoom:* trekronene (med skygge) ble kuttet rett av i flisskjøten fordi trær bare 6 m / 12 punkter utenfor flisen
+     ble tatt med. Nå 13 m (`KANT` i traer()). Sett på /norge ved Svorkmo (z16): kuttene ved x ≈ 825/1035/1250 er borte.
+     Jernbanens stipler begynte på nytt i hver flis (hakk i skjøten): fasen står nå fast i verden.
+   - *«Sjakkbrett» ved Varhaug–Vigrestad:* det var Jærbanen (lys/mørk stiplet strek på 4 punkter, forstørret). På z 8–10 er den nå en
+     mørk strek med en tynn, dempet og lengre stiplet kjerne.
+   - *Utvasket mellomzoom med gulhvite flekker:* hovedårsaken var siktfeltene – hvert eget lag la sitt lyse felt (0,17) oppå de andre, så
+     med ti lag ved leiren ble åsene nesten hvite. index.html (tegnEnheter): feltene samles per side i ett bilde (unionen) og legges på
+     én gang (0,17 blå, 0,2 andre, det valgte + 0,09). I kartflis.js løftes solsidene mindre jo lysere punktet er (`KARTLYS_TAK` 1,4).
+   - Ikke funnet: rektangler i annen tone som ikke er trær – kan være fliser som ble laget mens noe ikke lot seg hente (de lages på nytt
+     etter 4 s, 8 s …). Ikke sett i mine bilder etter full lasting.
+
+### Filer (runde 12)
+- `spill/etikett.js` – `kartFont`, `skrift`, REGLER.kartSkrift/sansSkala/sansVekt. Test: `test_etikett.js` (+3).
+- `spill/leir2d.js` – `klyngeM`, klyngeBygg, REGLER.klynge; Feltbil/Helikopter i kartets skrift. Test: `test_leir2d.js` (+3).
+- `spill/helling-visning.js` – fargebildet `cvF` (myk blanding), `tegnFarger` (maske), REGLER.fargeInne/fargeInnePx/fargeUt.
+- `spill/strategi-visning.js` – `KART_LØFT`.
+- `spill/byggevisning.js` – kartets skrift, vanlige sifre.
+- `kartflis.js` – `KARTLYS_TAK`, trær over flisskjøten (`KANT`), jernbanen på mellomzoom og stipler faste i verden.
+- Vakt: `pipeline/fliser/vakter/kart.js` – nye deler 6 (sans-serif blir kartets skrift i rammen, ikke utenom) og 7 (et bygg 25 m øst for
+  flagget blir et merke på 1 km-målestokk; ingen hogst-/rivingstall ved leiren på 2 m per punkt). Selvtest: med `klynge.fra = 1000`
+  og uten skriftbyttet feiler begge.
+
+### Endret i fellesfiler (runde 12)
+- `index.html` (tegnEnheter): siktfeltene samles per side i `siktC` og tegnes én gang (ny `let siktC` over tegnTåke).
+- `spill/ressurser-visning.js` (én blokk i kartkroken): hogst-/rivingslappen gjennom Etikett, bare under 0,9 m per punkt eller valgt.
+- `spill/region-visning.js` (én linje): infoteksten ved tettstedene gjennom Etikett.
+
+### Ikke gjort / svakheter (runde 12)
+- Klyngen langt ute kan ikke trykkes på (trykk på bygg virker som før bare nær). Gjerder og veger i leiren tegnes ikke i klyngen.
+- Skriftbyttet gjelder bare hovedkartet i 2D – navn i 3D-overlegget er som før.
+- Krigskartet utenfor området (øst for sirkelen) er fortsatt mørkere enn inne i det.

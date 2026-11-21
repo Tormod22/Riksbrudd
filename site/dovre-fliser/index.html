@@ -123,7 +123,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=857b0c3418"></script>
+<script src="/dovre-fliser/kartflis.js?v=9db5fa55e5"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=58fce7f9c0');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=40906e9c5e');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1014,11 +1014,16 @@ function tegnEnheter(vx0, vy1, mellom) {
   // (17. nov, brukeren: «det vises bare hva de ser når jeg trykker på dem – det skal vises hele veien så lenge de er innen
   // radiorekkevidde, det samme gjelder kameraene»): det lyse feltet tegnes for alle egne lag du har kontakt med (siktLyser), ikke
   // bare det valgte, og for kameraene (KROKER.siktlys, spill/kamera-visning.js). Det valgte laget er litt lysere.
-  if (VIS.sikt) { for (const s of ENHETER) if (s.sikt && siktLyser(s)) {
-    const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1);
-    ctx.globalAlpha = s.side === 'blå' ? (s === valgt ? .26 : .17) : .2; ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); ctx.globalAlpha = 1;
-  } for (const f of KROKER.siktlys) f(ctx, vx0, vy1, m); }
+  // (runde 12, kritikk E: «utvasket mellomzoom med store gulhvite flekker») ti lag ved leiren la ti lyse felt oppå hverandre (0,17 hver),
+  // så åsene alle så ble nesten hvite. Nå samles feltene per side i ett bilde (unionen) og legges på én gang; det valgte litt lysere.
+  if (VIS.sikt) { const sider = new Map(); for (const s of ENHETER) if (s.sikt && siktLyser(s)) { const k = s.side === 'blå' ? 'blå' : 'andre'; if (!sider.has(k)) sider.set(k, []); sider.get(k).push(s); }
+    if (!siktC || siktC.width !== cv.width || siktC.height !== cv.height) siktC = lerret(cv.width, cv.height);
+    const q = siktC.getContext('2d'); ctx.imageSmoothingEnabled = true;
+    for (const [k, liste] of sider) { q.setTransform(1, 0, 0, 1, 0, 0); q.clearRect(0, 0, siktC.width, siktC.height); q.setTransform(dpr, 0, 0, dpr, 0, 0); q.imageSmoothingEnabled = true;
+      for (const s of liste) { const [sx, sy] = tilSkjerm(s.sikt.x0, s.sikt.y0, vx0, vy1); q.drawImage(s.sikt.c, sx, sy, s.sikt.w / m, s.sikt.h / m); }
+      ctx.globalAlpha = k === 'blå' ? .17 : .2; ctx.drawImage(siktC, 0, 0, VW, VH);
+      if (k === 'blå' && valgt && liste.includes(valgt)) { const [sx, sy] = tilSkjerm(valgt.sikt.x0, valgt.sikt.y0, vx0, vy1); ctx.globalAlpha = .09; ctx.drawImage(valgt.sikt.c, sx, sy, valgt.sikt.w / m, valgt.sikt.h / m); } }
+    ctx.globalAlpha = 1; for (const f of KROKER.siktlys) f(ctx, vx0, vy1, m); }
   // (runde 7) tegnekroker med f.over = true (leirens bygg, folkene, feltbilen) tegnes over tåka og siktfeltet, men under lagene
   if (mellom) mellom();
   tegnLag(ctx, proj, () => kam.m);
@@ -1089,6 +1094,7 @@ function tegnLag(g, proj, mPer) {
   if (modus === 'marsj' && peker) { const q = proj(peker[0], peker[1]); if (!q) return; const [a, b] = q; g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(a, b, 9, 0, 6.283); g.stroke(); }
 }
 let tåkeC = null;
+let siktC = null;   // de lyse siktfeltene samlet (tegnEnheter)
 function tegnTåke() {
   if (!tåkeC || tåkeC.width !== cv.width || tåkeC.height !== cv.height) tåkeC = lerret(cv.width, cv.height);
   const g = tåkeC.getContext('2d'), vx0 = kam.x - VW / 2 * kam.m, vy1 = kam.y + VH / 2 * kam.m;
@@ -3391,7 +3397,7 @@ function trengerTegning3d(nå) {
 })();
 </script>
 <script src="/dovre-fliser/spill/spill.js?v=174a84ec11"></script>
-<script src="/dovre-fliser/spill/etikett.js?v=88b4d3ee4b"></script>
+<script src="/dovre-fliser/spill/etikett.js?v=359dbf82e9"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
 <script src="/dovre-fliser/spill/kjoretoy-visning.js?v=c4be8fd592"></script>
@@ -3450,17 +3456,17 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=c31da860c9"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
-<script src="/dovre-fliser/spill/helling-visning.js?v=b8dad1a03d"></script>
+<script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
 <script src="/dovre-fliser/spill/leir-visning.js?v=83a42c535d"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=2fdfe3c742"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
-<script src="/dovre-fliser/spill/ressurser-visning.js?v=86a9c5f4aa"></script>
+<script src="/dovre-fliser/spill/ressurser-visning.js?v=f53f5d59f9"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
 <script src="/dovre-fliser/spill/byggesett-visning.js?v=97091deae3"></script>
-<script src="/dovre-fliser/spill/byggevisning.js?v=dcc1b8514e"></script>
-<script src="/dovre-fliser/spill/leir2d.js?v=1b9f97551d"></script>
+<script src="/dovre-fliser/spill/byggevisning.js?v=3343bf6c80"></script>
+<script src="/dovre-fliser/spill/leir2d.js?v=40dfc0dea8"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=20629545e4"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
 <script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
@@ -3520,9 +3526,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/karakter.js?v=f998390bfe"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=5f07d1bfc0"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=aabe4bb635"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=42156b3590"></script>
 <script src="/dovre-fliser/spill/region.js?v=c413865888"></script>
-<script src="/dovre-fliser/spill/region-visning.js?v=a6026146a1"></script>
+<script src="/dovre-fliser/spill/region-visning.js?v=e624dc4d85"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
 <script src="/dovre-fliser/spill/samfunn.js?v=bae3dcc449"></script>

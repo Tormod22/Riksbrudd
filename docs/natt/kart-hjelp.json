@@ -13,5 +13,20 @@
   "Krigskartet",
   "Krigskartet viser tettstedene, hvem som holder dem og fronten mellom sidene. Kaiene vises ikke der – bare leirens egen kai – så byene kan leses. På telefon fyller kartet plassen over panelet.",
   "Lag og strid"
+ ],
+ [
+  "Leiren langt ute",
+  "Når du zoomer ut, tegnes leiren som en liten klynge bygg rundt flagget, litt større enn i virkeligheten, så du ser hva som står der også på 1 km-målestokk. Zoom inn for å se byggene i riktig størrelse og trykke på dem.",
+  "Leiren"
+ ],
+ [
+  "Grønt, gult og rødt når du bygger",
+  "Mens du plasserer et bygg, farges bakken rundt skissen: grønt er flatt, gult er skrått (bygget får grunnmur) og rødt er for bratt. Fargene følger skissen når du flytter den – resten av kartet er som vanlig.",
+  "Leiren"
+ ],
+ [
+  "Hogst og haug i kartet",
+  "Hvor langt hogsten eller rivingen har kommet («hogst 40 % · 12 t i haug»), står ved feltet når du zoomer helt inn eller har valgt jobben.",
+  "Leiren"
  ]
 ]

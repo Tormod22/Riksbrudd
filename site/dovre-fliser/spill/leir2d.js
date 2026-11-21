@@ -34,7 +34,14 @@
     sot: .95, hull: .6, rusk: .35,
     // bølgeblikk og ribber tegnes bare når stripene står minst så mange punkter fra hverandre
     stripeMin: 3,
+    // (runde 12, kritikk F/E: «brakka synes ikke på 1 km-målestokk, bare flagget»; «leiren ser nesten lik ut etter tre døgn») lenger ute
+    // enn «fra» meter per punkt tegnes leiren som en liten klynge: byggene står som om kartet var tegnet med meter per punkt
+    // fra + (m − fra) · vekst (avstandene i leiren og byggene forstørres), og hvert bygg er minst kort × lang punkter; over maks: ikke tegnet
+    // luft: lagene og flagget står midt i leiren, så byggene skyves ut til minst så mange punkter fra midten (gradvis fra «fra»)
+    klynge: { fra: 1.6, vekst: .12, kort: 5, lang: 8.5, maks: 150, luft: 20 },
   };
+  // klyngeM(m): meter per punkt leiren tegnes med når kartet har m (ren regel; = m helt nær, vokser sakte lenger ute)
+  const klyngeM = (m, K = REGLER.klynge) => (m <= K.fra ? m : K.fra + (m - K.fra) * K.vekst);
 
   // byggtypene: form, takfarge, høyde (m), kroppen (taket) i modellens meter [x0, x1, y0, y1] (fronten/døra mot +x) og detaljer.
   // Fargene er fra modeller.js (F.blikk, F.svart, F.presenning …), så 2D og 3D stemmer.
@@ -105,7 +112,7 @@
     if (pers.oppgave === 'hogst') { const a = hash(i, 17) * 6.283, r = 38 + hash(i, 5) * 10; return vandre(leir.x + Math.cos(a) * r, leir.y + Math.sin(a) * r, 1.5, hash(i, 3)); }
     const a = hash(i, 11) * 6.283, r = 7 + hash(i, 13) * 9; return vandre(leir.x + Math.cos(a) * r, leir.y + Math.sin(a) * r, 2.2, hash(i, 7));
   }
-  const api = { REGLER, STIL, HUS, stil, tilstand, tonet, hex, figurR, folkPlass, hash, av: false };
+  const api = { REGLER, STIL, HUS, stil, tilstand, tonet, hex, figurR, folkPlass, hash, klyngeM, av: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   // ---------- visningen ----------
@@ -232,7 +239,7 @@
     for (const p of P) { while (H.length >= 2 && k(H[H.length - 2], H[H.length - 1], p) <= 0) H.pop(); H.push(p); }
     for (let i = P.length - 2, t = H.length + 1; i >= 0; i--) { const p = P[i]; while (H.length >= t && k(H[H.length - 2], H[H.length - 1], p) <= 0) H.pop(); H.push(p); }
     H.pop(); return H; }
-  function skygge(g, b, sx, sy, m) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje || B.del) return; const St = stil(b.type, B); if (!St.kropp || St.h < .5) return;
+  function skygge(g, b, sx, sy, m) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje || B.del) return; if (klyngePå(m)) return; const St = stil(b.type, B); if (!St.kropp || St.h < .5) return;
     const t = tilstand(b); if (t.navn === 'kø') return; const h = t.navn === 'ødelagt' ? .6 : t.navn === 'bygges' ? St.h * (.25 + .75 * t.p) : St.h, d = Math.min(REGLER.skyggeMaks, h * REGLER.skygge / m); if (d < .6) return;
     const c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), [x0, x1, y0, y1] = St.kropp, til = (u, v) => [sx(b.x + u * c - v * s), sy(b.y + u * s + v * c)];
     g.save(); nullstill(g); g.fillStyle = 'rgba(6,5,3,.36)';
@@ -332,7 +339,36 @@
   // lite lerret og så bare limes inn – kartet tegnes på nytt mange ganger i sekundet når lagene går. Mens du zoomer (målestokken
   // endrer seg fra bilde til bilde), tegnes byggene rett på kartet. Lageret tømmes når målestokken endres.
   const LAGER = new Map(); let lagerM = 0, forrigeM = 0, tNøkkel = '';
+  // KLYNGEN (runde 12): langt ute er leiren en liten klynge bygg rundt flagget i stedet for usynlige prikker. Ikke mens du bygger
+  // (skissen står i ekte målestokk) – da tegnes alt som før.
+  function klyngePå(m) { if (m < REGLER.klynge.fra || api.av) return false; if (rot.BYGGEVISNING && BYGGEVISNING.på && BYGGEVISNING.på()) return false;
+    const p = rot.LeirSpill && LeirSpill.plassering && LeirSpill.plassering(); return !p; }
+  const leirMidt = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
+  function klyngeBygg(g, b, o, St) { const K = REGLER.klynge, m = o.m; if (m > K.maks) return true; const L = leirMidt(); if (!L) return false;
+    const me = klyngeM(m), dx = b.x - L.x, dy = b.y - L.y, d = Math.hypot(dx, dy), r = d / me + Math.min(K.luft, (m - K.fra) * 12) * Math.min(1, d / 4);
+    const cx = o.sx(L.x) + (d ? dx / d * r : 0), cy = o.sy(L.y) - (d ? dy / d * r : 0), t = tilstand(b, { aktiv: o.aktiv });
+    if (cx < -30 || cy < -30 || cx > VW + 30 || cy > VH + 30) return true;
+    const [x0, x1, y0, y1] = St.kropp; let a = (x1 - x0) / me, c = (y1 - y0) / me; const lang = a >= c;
+    // minst kort × lang punkter (langs byggets lengste side)
+    if (lang) { a = Math.max(a, K.lang); c = Math.max(c, K.kort); } else { a = Math.max(a, K.kort); c = Math.max(c, K.lang); }
+    g.save(); nullstill(g); g.translate(cx, cy); g.rotate(-(b.ret || 0));
+    if (St.form === 'mast') { g.fillStyle = farge('#2a2c2e'); sirkel(g, 0, 0, 2); g.fill(); g.restore(); if (rot.Etikett) Etikett.hinder(cx - 3, cy - 3, 6, 6); return true; }
+    if (St.form === 'pad') { const r = Math.max(4, (x1 - x0) / me / 2); g.fillStyle = farge(St.tak, 1, .9); sirkel(g, 0, 0, r); g.fill(); g.strokeStyle = 'rgba(20,16,10,.8)'; g.lineWidth = 1; g.stroke(); g.restore();
+      if (rot.Etikett) Etikett.hinder(cx - r, cy - r, 2 * r, 2 * r); return true; }
+    const halv = [-a / 2, -c / 2, a, c], ferdig = t.navn !== 'kø' && t.navn !== 'bygges' && t.navn !== 'ødelagt';
+    // skygge mot sørøst, taket i byggets farge, mørk kant; under bygging lysere med stiplet kant, ødelagt svart
+    g.fillStyle = 'rgba(6,5,3,.45)'; g.fillRect(halv[0] + 1.2, halv[1] + 1.2, a, c);
+    g.fillStyle = t.navn === 'ødelagt' ? farge('#2a2620') : farge(St.tak, ferdig ? 1.12 : 1.3, ferdig ? 1 : .55); g.fillRect(...halv);
+    if (ferdig && (St.form === 'sal' || St.form === 'telt') && Math.min(a, c) >= 4) { g.strokeStyle = farge(St.tak, .7); g.lineWidth = 1; g.beginPath(); if (lang) { g.moveTo(-a / 2 + 1, 0); g.lineTo(a / 2 - 1, 0); } else { g.moveTo(0, -c / 2 + 1); g.lineTo(0, c / 2 - 1); } g.stroke(); }
+    if (St.kors && ferdig) { g.fillStyle = '#c8322a'; g.fillRect(-1.5, -.5, 3, 1); g.fillRect(-.5, -1.5, 1, 3); }
+    // lys kant (som lagmerkene), så byggene skiller seg fra skogen; under bygging stiplet
+    g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = 2.6; g.strokeRect(...halv);
+    g.strokeStyle = o.valgt ? '#f0d79a' : o.mangler ? '#e0604a' : 'rgba(239,230,207,.92)'; g.lineWidth = o.valgt ? 1.6 : 1.1; if (!ferdig && t.navn !== 'ødelagt') g.setLineDash([2, 1.5]);
+    g.strokeRect(...halv); g.setLineDash([]); g.restore();
+    if (rot.Etikett) { const r = Math.max(a, c) / 2 + 1; Etikett.hinder(cx - r, cy - r, 2 * r, 2 * r); }
+    return true; }
   function bygg(g, b, o) { const B = rot.Leir && Leir.BYGG[b.type]; if (!B || B.linje) return false; const St = stil(b.type, B); if (!St.kropp) return false;
+    if (!o.skisse && klyngePå(o.m)) return klyngeBygg(g, b, o, St);
     const m = o.m; if (o.skisse || m >= REGLER.middels || m !== forrigeM || typeof document === 'undefined') return tegnBygg(g, b, o);
     if (m !== lagerM) { LAGER.clear(); lagerM = m; }
     const t = tilstand(b, { aktiv: o.aktiv }), k = [b.id, b.type, b.ret || 0, b.nivå || 1, t.navn, Math.round(t.p * 40), Math.round((b.hp === undefined ? 1 : b.hp) * 20), b.arbeid ? b.arbeid.hva : '',
@@ -468,8 +504,8 @@
       const v = Math.atan2(-Math.cos(k.a || 0), -Math.sin(k.a || 0));
       if (k.type === 'bil') feltbil(g, x, y, v, Math.max(18, 4.6 / m), Math.max(8.5, 2 / m)); else helikopter(g, x, y, v, Math.max(5, 1.6 / m), k.rotor || 0);
       if (rot.Etikett && Etikett.hinder) { const h = k.type === 'bil' ? Math.max(18, 4.6 / m) / 2 : Math.max(5, 1.6 / m) * 1.6; Etikett.hinder(x - h, y - h, 2 * h, 2 * h); }
-      if (m < 1.2) { const t = k.type === 'bil' ? 'Feltbil' : 'Helikopter', ty = rot.Etikett ? Etikett.tekst(g, t, x, y + (k.type === 'bil' ? Math.max(14, 3 / m) : Math.max(16, 1.6 / m * 2.2)) + 6, 1) : y + 20;
-        g.font = '11px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); } }
+      if (m < 1.2) { g.font = '600 13px "Cormorant Garamond", serif'; const t = k.type === 'bil' ? 'Feltbil' : 'Helikopter', ty = rot.Etikett ? Etikett.tekst(g, t, x, y + (k.type === 'bil' ? Math.max(14, 3 / m) : Math.max(16, 1.6 / m * 2.2)) + 6, 1) : y + 20;
+        g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f2ead6'; g.fillText(t, x, ty); } }
     g.restore(); T = null; }
   // nattfargen for kjøretøyene (som byggene)
   function ramme0() { ramme(); }

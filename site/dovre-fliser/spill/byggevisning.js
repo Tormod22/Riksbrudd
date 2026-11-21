@@ -101,8 +101,8 @@
   // «Vis rekkevidden»: zoom ut så hele sirkelen synes rundt masten; samme knapp går tilbake dit du var
   function visRekkevidde(b) { if (førRadio) { kam.x = førRadio.x; kam.y = førRadio.y; kam.m = førRadio.m; førRadio = null; skitten = true; return false; }
     førRadio = { x: kam.x, y: kam.y, m: kam.m }; const r = radioRekkevidde(b); kam.x = b.x; kam.y = b.y; kam.m = r * 2.35 / Math.max(200, Math.min(VW, VH - 160)); skitten = true; return true; }
-  const skrift = (g, t, x, y, farge = '#f0e2b0') => { g.font = '11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8;
-    g.fillStyle = 'rgba(16,14,10,.82)'; g.fillRect(x - w / 2, y - 8, w, 16); g.fillStyle = farge; g.fillText(t, x, y + .5); g.textBaseline = 'alphabetic'; };
+  const skrift = (g, t, x, y, farge = '#f0e2b0') => { g.font = '600 12.5px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8;
+    g.fillStyle = 'rgba(16,14,10,.82)'; g.fillRect(x - w / 2, y - 8, w, 16); g.fillStyle = farge; if (rot.Etikett) Etikett.skrivTekst(g, t, x, y + .5, true); else g.fillText(t, x, y + .5); g.textBaseline = 'alphabetic'; };
 
   // UNDER byggene: sløret, rutenettet og sirkelen for fri reise
   function under(g, vx0, vy1) {
@@ -130,7 +130,7 @@
       g.beginPath(); g.arc(x, y, rp, 0, 6.283); g.fillStyle = sterk ? 'rgba(127,209,122,.10)' : 'rgba(127,209,122,.05)'; g.fill(); g.strokeStyle = sterk ? 'rgba(127,209,122,.85)' : 'rgba(127,209,122,.4)'; g.lineWidth = sterk ? 1.6 : 1; g.setLineDash(sterk ? [] : [4, 4]); g.stroke(); g.setLineDash([]);
       if (sterk && rp > 40) skrift(g, `${R0[1]} ${meter(r)}`, x, y - rp, '#bfe6b4'); };
     // nøkkeltall under navnet på hvert bygg når du er nær nok: strøm, senger, lager, diesel – og rødt når bygget står uten strøm
-    if (m < .45) { const uten = LeirSpill.siste() && LeirSpill.siste().mangler; g.font = '10px sans-serif'; g.textAlign = 'center';
+    if (m < .45) { const uten = LeirSpill.siste() && LeirSpill.siste().mangler; g.font = '600 12px "Cormorant Garamond", serif'; g.textAlign = 'center';
       // (runde 7) tallene går under navnene som alt står (Etikett.tegnet) og under hverandre, ikke oppå dem
       const opptatt = window.Etikett && Etikett.tegnet ? Etikett.tegnet().map(n => n.ramme) : [], over2 = (r, q) => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3];
       for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (B.linje || B.del || !LB.ferdig(b)) continue; const x = sx(b.x), y = sy(b.y); if (x < 0 || y < 0 || x > VW || y > VH) continue;
@@ -139,7 +139,7 @@
         // RUNDE 6 (kritikken: «Brakke −1 kW · 8 senger» lå oppå bygget og så ut som en feil): tallene står under byggets omriss, ikke oppå taket
         let yb = y + 18; try { const H = LB.hjørner(b); if (H && H.length) yb = Math.max(...H.map(q => sy(q[1]))) + 13; } catch (e) { yb = y + 18; }
         const t = d.join(' · '), tw = g.measureText(t).width + 4; for (let k = 0; k < 3; k++) { const r = [x - tw / 2, yb - 10, tw, 13]; if (!opptatt.some(q => q && over2(r, q))) break; yb += 13; }
-        opptatt.push([x - tw / 2, yb - 10, tw, 13]); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; g.strokeText(t, x, yb); g.fillText(t, x, yb); } }
+        opptatt.push([x - tw / 2, yb - 10, tw, 13]); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = uten && uten.has(b.id) ? '#f0a090' : '#d8cfae'; if (rot.Etikett) { Etikett.skrivTekst(g, t, x, yb, false); Etikett.skrivTekst(g, t, x, yb, true); } else { g.strokeText(t, x, yb); g.fillText(t, x, yb); } } }
     const type = p && !p.mal ? p.type : null;
     if (type && RING[type]) for (const b of L.bygg) if (b.type === type && b.id !== p.flytt) ring(b, false);
     if (p && !p.mal) { const B = LB.BYGG[p.type];

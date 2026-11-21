@@ -171,8 +171,11 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
     // haugene som venter på frakt, og prosent/navn nær
     for (const j of R.jobber) { if (ute(j.x, j.y, 10)) continue; const h = RS.iHaug(j);
       if (h > .05) { g.fillStyle = '#8a6a3e'; g.strokeStyle = '#2a2318'; g.lineWidth = 1; g.beginPath(); g.rect(sx(j.x) - 5, sy(j.y) - 4, 10, 8); g.fill(); g.stroke(); }
-      if (m < 2.5) { const t = (j.type === 'hogst' ? 'hogst ' : 'riving ') + (j.stoppet ? 'stoppet' : `${Math.round(RS.fram(j) * 100)} %`) + (h > .05 ? ` · ${tall(h)} i haug` : '');
-        g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3; g.strokeText(t, sx(j.x), sy(j.y) - 9); g.fillText(t, sx(j.x), sy(j.y) - 9); } }
+      // (runde 12, kritikk F: «hogst 100 %», «25,4 t haug», «Helikopter», «7 t olje» oppå hverandre rundt leiren) småtallene bare helt nær
+      // eller når jobben er valgt, og gjennom Etikett (spill/etikett.js) med lavest viktighet: får de ikke plass, skjules de
+      if (m < .9 || j.id === valgt) { const t = (j.type === 'hogst' ? 'hogst ' : 'riving ') + (j.stoppet ? 'stoppet' : `${Math.round(RS.fram(j) * 100)} %`) + (h > .05 ? ` · ${tall(h)} i haug` : '');
+        g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
+        const ty = window.Etikett ? Etikett.tekst(g, t, sx(j.x), sy(j.y) - 9, -1, j.id === valgt ? Etikett.REGLER.prio.valgt : Etikett.REGLER.prio.sted) : sy(j.y) - 9; g.strokeText(t, sx(j.x), ty); g.fillText(t, sx(j.x), ty); } }
     // det som velges nå
     const v = velg; if (v && v.x !== null) { const ok = !v.feil;
       if (v.type === 'hogst') { g.save(); g.beginPath(); g.arc(sx(v.x), sy(v.y), v.r / m, 0, 6.283); g.fillStyle = ok ? 'rgba(110,200,105,.3)' : 'rgba(224,96,74,.3)'; g.fill(); g.strokeStyle = ok ? '#7fd17a' : '#e0604a'; g.lineWidth = 2; g.stroke(); g.restore(); }

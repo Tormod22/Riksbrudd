@@ -18,7 +18,11 @@
   // terrengM/terrengAvstand/terrengStyrke: helt nær leiren (under terrengM meter per punkt, kartets midte innen terrengAvstand m) vises
   // skygge og høydekurver også når du ikke bygger, svakere (terrengStyrke).
   const REGLER = { radius: 240, px: 1, nærM: .45, nærRadius: 150, nærPx: .5, fjernM: 2, fjernRadius: 500, fjernPx: 2, fjernCelle: 4, maksM: 6, flytt: .33, celle: 2, kurve: 2, kurveSterk: 10, styrke: 1,
-    terrengM: .8, terrengAvstand: 400, terrengStyrke: .55 };
+    terrengM: .8, terrengAvstand: 400, terrengStyrke: .55,
+    // (runde 12, kritikk E: «grensene for flatt/skrått er hakkete trappetrinn, og hele kartet blir grønnfarget») fargene blandes mykt
+    // mellom rutene, og de vises bare rundt det du plasserer: fullt innen fargeInne meter (minst fargeInnePx skjermpunkter), så tones de
+    // ut til fargeUt × den avstanden. Skyggeleggingen og høydekurvene dekker fortsatt hele flekken.
+    fargeInne: 18, fargeInnePx: 70, fargeUt: 2.4 };
   const FARGE = { [HL.FLATT]: [96, 205, 104, .26], [HL.SKRÅTT]: [236, 198, 64, .2], [HL.BRATT]: [228, 72, 52, .32], [HL.VANN]: [70, 130, 210, .12] };
   let mål = null, klar = null, regner = null, teller = 0, av = false;
   const ekte = () => !navigator.webdriver || HellingVis.test === true;
@@ -56,6 +60,8 @@
     const nivå = HL.kart(m.type, m.ret, høyde, tørt, x0, y1, n, n, c);
     // bildet: ett punkt per px meter
     const W = Math.round(2 * R / px), cv = document.createElement('canvas'); cv.width = cv.height = W; const g = cv.getContext('2d'), im = g.createImageData(W, W), d = im.data;
+    // fargene (flatt/skrått/bratt) i et eget bilde, så de kan tones ut rundt skissen når bildet tegnes
+    const cvF = document.createElement('canvas'); cvF.width = cvF.height = W; const gF = cvF.getContext('2d'), imF = gF.createImageData(W, W), dF = imF.data;
     const z = new Float32Array((W + 1) * (W + 1)); let har = 0;
     for (let j = 0; j <= W; j++) for (let i = 0; i <= W; i++) { const v = høyde(x0 + i * px, y1 - j * px); z[j * (W + 1) + i] = v === null ? NaN : v; if (v !== null) har++; }
     const cp = c / px, kantPx = 40 / px, skrav = Math.max(2, Math.round(4 / px));
@@ -71,11 +77,12 @@
       const gx = hx === hx ? (hx - h) / px : 0, gy = hy === hy ? (h - hy) / px : 0, lys = Math.max(-1, Math.min(1, (gx - gy) * .9));
       // (uten bygging, m.bare: bare skyggesiden – kartet er alt lyst, og lyse flekker ville lyse om natta)
       let r = lys > 0 ? 255 : 0, gg = r, b = r, a = m.bare && lys > 0 ? 0 : Math.abs(lys) * .32;
-      // nivået for bygget i denne ruta
-      const nv = nivå[Math.min(n - 1, Math.floor(j / cp)) * n + Math.min(n - 1, Math.floor(i / cp))], F = m.bare ? null : FARGE[nv];
-      // rødt får skravur (striper hver 8. m), så det ikke bare er en farge
-      if (F) { const at = F[3] * REGLER.styrke * (nv === HL.BRATT && ((i + j) % (2 * skrav)) < Math.max(1, skrav >> 1) ? 1.9 : 1), ao = at + a * (1 - at);
-        r = (F[0] * at + r * a * (1 - at)) / ao; gg = (F[1] * at + gg * a * (1 - at)) / ao; b = (F[2] * at + b * a * (1 - at)) / ao; a = ao; }
+      // nivået for bygget: blandet mykt mellom de fire nærmeste rutene (før: rutene som trappetrinn); rødt får skravur (striper hver 8. m)
+      if (!m.bare) { const fx = Math.max(0, Math.min(n - 1, (i + .5) / cp - .5)), fy = Math.max(0, Math.min(n - 1, (j + .5) / cp - .5)), i0 = Math.min(n - 2, Math.floor(fx)), j0 = Math.min(n - 2, Math.floor(fy)), u = fx - i0, w = fy - j0;
+        let sr = 0, sg = 0, sb = 0, sa = 0; const strek = ((i + j) % (2 * skrav)) < Math.max(1, skrav >> 1);
+        for (const [di, dj, vk] of [[0, 0, (1 - u) * (1 - w)], [1, 0, u * (1 - w)], [0, 1, (1 - u) * w], [1, 1, u * w]]) { const nv = nivå[(j0 + dj) * n + i0 + di], F = FARGE[nv]; if (!F || vk <= 0) continue;
+          const at = F[3] * REGLER.styrke * (nv === HL.BRATT && strek ? 1.9 : 1) * vk; sr += F[0] * at; sg += F[1] * at; sb += F[2] * at; sa += at; }
+        if (sa > 0) { const o2 = (j * W + i) * 4; dF[o2] = sr / sa; dF[o2 + 1] = sg / sa; dF[o2 + 2] = sb / sa; dF[o2 + 3] = Math.round(Math.min(1, sa) * tone * 255); } }
       // høydekurver: der kurvehøyden skifter mot naboen til høyre eller under (tynne der det er bratt, så de ikke blir et teppe)
       const steil = Math.hypot(gx, gy), KS = REGLER.kurveSterk, K = REGLER.kurve, fS = Math.floor(h / KS), f = Math.floor(h / K);
       const sterk = (hx === hx && fS !== Math.floor(hx / KS)) || (hy === hy && fS !== Math.floor(hy / KS));
@@ -83,8 +90,8 @@
       if (sterk || svak) { const al = sterk ? .42 : .22, ao = al + a * (1 - al); r = (40 * al + r * a * (1 - al)) / ao; gg = (30 * al + gg * a * (1 - al)) / ao; b = (20 * al + b * a * (1 - al)) / ao; a = ao; }
       d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = Math.round(a * tone * (m.bare ? REGLER.terrengStyrke : 1) * 255);
     }
-    g.putImageData(im, 0, 0);
-    klar = { ...m, x0, y1, W, M: 2 * R, cv, nivå, n, c, tell, høyde, tørt };
+    g.putImageData(im, 0, 0); gF.putImageData(imF, 0, 0);
+    klar = { ...m, x0, y1, W, M: 2 * R, cv, cvF, nivå, n, c, tell, høyde, tørt };
     skitten = true;
   }
   function oppdater() {
@@ -102,8 +109,19 @@
     const s = 1 / kam.m, x = (klar.x0 - vx0) * s, y = (vy1 - klar.y1) * s, w = klar.M * s;
     if (x > VW || y > VH || x + w < 0 || y + w < 0) return;
     const maks = mål.bare ? REGLER.terrengM : REGLER.maksM;
-    g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = Math.min(1, (maks - kam.m) / (mål.bare ? .3 : 1) + .25); g.drawImage(klar.cv, x, y, w, w); g.restore();
+    g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = Math.min(1, (maks - kam.m) / (mål.bare ? .3 : 1) + .25); g.drawImage(klar.cv, x, y, w, w);
+    if (!mål.bare && klar.cvF) tegnFarger(g, x, y, w); g.restore();
   };
+  // fargene bare rundt det du plasserer (mål = skissen, eller kartets midte før den står): bildet tones ut med en rund maske på et
+  // lerret like stort som skjermen
+  let maske = null;
+  function tegnFarger(g, x, y, w) {
+    if (!maske) maske = document.createElement('canvas'); if (maske.width !== Math.ceil(VW) || maske.height !== Math.ceil(VH)) { maske.width = Math.ceil(VW); maske.height = Math.ceil(VH); }
+    const q = maske.getContext('2d'), s = 1 / kam.m, mx = (mål.x - klar.x0) * s + x, my = (klar.y1 - mål.y) * s + y, rI = Math.max(REGLER.fargeInne * s, REGLER.fargeInnePx), rU = rI * REGLER.fargeUt;
+    q.globalCompositeOperation = 'source-over'; q.clearRect(0, 0, maske.width, maske.height); q.imageSmoothingEnabled = true; q.drawImage(klar.cvF, x, y, w, w);
+    const gr = q.createRadialGradient(mx, my, rI, mx, my, rU); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    q.globalCompositeOperation = 'destination-in'; q.fillStyle = gr; q.fillRect(0, 0, maske.width, maske.height); q.globalCompositeOperation = 'source-over';
+    g.drawImage(maske, 0, 0, VW, VH); }
   tegn.bygg = true; KROKER.tegn.unshift(tegn);
 
   // Nivået ved et punkt (vakten og banneret): HL.FLATT … eller null når kartet ikke er regnet ut der

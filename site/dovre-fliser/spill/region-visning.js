@@ -323,7 +323,9 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
       for (const by of byer()) { const c = midt(by); if (Math.hypot(c.x - l.x, c.y - l.y) > 80000) continue; const x = sx(c.x), y = sy(c.y); if (x < -40 || x > VW + 40 || y < -20 || y > VH + 40) continue;
         const q = ST.get(by.e.id); if (!q && (m > 45 && (by.e.folk || 0) < 1000 || m > 90)) continue; const t = typeAv(by), varer = Object.keys(RG.TYPER[t].gir).map(k => ({ mat: 'mat', tre: 'tre', stål: 'stål', betong: 'betong', diesel: 'diesel', folk: 'folk' })[k]).join(' + ');
         const tekst = `${RG.TYPER[t].navn}: ${varer}` + (q ? ` · lojalitet ${Math.round(q.b.loj)}` : '');
-        g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(tekst, x, y + 30); g.fillStyle = q ? '#f0d79a' : '#d8cdb4'; g.fillText(tekst, x, y + 30); } }
+        // (runde 12, kritikk F: «Bygd: mat · tre · lojalitet 58» lå oppå stedsnavnene) gjennom Etikett, etter navnene: skjules uten plass
+        const ty = window.Etikett ? Etikett.tekst(g, tekst, x, y + 30, 1, Etikett.REGLER.prio.sted) : y + 30;
+        g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(tekst, x, ty); g.fillStyle = q ? '#f0d79a' : '#d8cdb4'; g.fillText(tekst, x, ty); } }
     g.restore();
   });
 

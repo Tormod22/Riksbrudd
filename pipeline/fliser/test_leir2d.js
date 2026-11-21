@@ -63,5 +63,10 @@ sjekk(T({ igjen: 40, totalt: 60, hp: 0 }) === 'ødelagt', 'en ødelagt byggeplas
 // 6. reglene: detaljnivåene i riktig rekkefølge
 sjekk(L2.REGLER.nær < L2.REGLER.middels && L2.REGLER.folkUnder <= L2.REGLER.middels && L2.REGLER.hull < L2.REGLER.sot && L2.REGLER.rusk < L2.REGLER.hull, 'grensene henger sammen');
 
+// 7. (runde 12) klyngen langt ute: helt nær som kartet, så vokser målestokken sakte (leiren forstørres), aldri over kartets
+{ const K = L2.REGLER.klynge; sjekk(L2.klyngeM(.5) === .5 && Math.abs(L2.klyngeM(K.fra) - K.fra) < 1e-9, 'klyngen: som kartet helt nær');
+  sjekk(L2.klyngeM(8) < 8 / 3 && L2.klyngeM(8) > K.fra && L2.klyngeM(30) > L2.klyngeM(8), 'klyngen: på 1 km-målestokk (8 m per punkt) minst tre ganger forstørret: ' + L2.klyngeM(8).toFixed(2));
+  sjekk(6 / L2.klyngeM(8) >= 2 && K.kort >= 4 && K.lang > K.kort, 'klyngen: brakka (6 × 12 m) er minst noen punkter bred på 1 km-målestokk'); }
+
 console.log(`test_leir2d: ${ok} ok, ${feil} feil`);
 process.exit(feil ? 1 : 0);
