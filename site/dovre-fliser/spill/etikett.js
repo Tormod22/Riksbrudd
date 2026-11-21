@@ -34,7 +34,7 @@
     kartSkrift: '"Cormorant Garamond", Georgia, serif', sansSkala: 1.15, sansVekt: 600,
     // (runde 13, kritikk G: «Speidertropp 1», «Gunn Kritiker (deg)» og «1. lastebilkolonne» oppå hverandre ved leiren) lag og kjøretøy
     // med merket innen r punkter fra leiren får én lapp («Leiren: 3 lag ›») når minst min av dem står der; lappen står dy under leiren
-    samle: { r: 46, min: 2, dy: 47 },
+    samle: { r: 56, min: 2, dy: 47 },
   };
   // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
