@@ -27,6 +27,16 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Hvor er jeg i 3D?",
+"Når du ser ovenfra i 3D, står nærmeste tettsted med avstand og retning øverst midt på skjermen, for eksempel «Nærmeste tettsted: Rognan · 8,6 km N». Står du midt i et tettsted, står det «Du er i …».",
+"I 3D"
+],
+[
+"Når du flyr langt i 3D",
+"Flyr du ut av området som er bygget, ser du et grovere kart av landskapet rundt mens det nye området lages, og «Laster landskapet …» står midt på skjermen. Det tar noen sekunder før trær og hus kommer.",
+"I 3D"
+],
+[
 "Skygger tidlig og sent",
 "Når sola står lavt (morgen og kveld), er skyggene myke og blir svakere et stykke fra treet eller huset som kaster dem – de strekker seg ikke over hele jordet. Midt på dagen er de tydeligere. Slå av skyggene med «Lys og skygger» i ☰ hvis bildet går tregt.",
 "Vær, lyd og bilde"
@@ -262,6 +272,21 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Varslet angrep",
+"Etterretningen sier «angrep tidligst om ca. 6 t» ut fra hvor fienden står og hvor fort de går. Står de alt nær byen, står det «fienden er ved byen nå». De angriper ikke før tida – med mindre dere skyter på dem først.",
+"Lag og strid"
+],
+[
+"Røverne kommer",
+"Brikka sier når røverne drar ut («Røverne drar ut om 3 t»). Er de sett, viser banneret hvor og når: «sist sett 3,5 km N kl. 08:53». Når de er under 500 m fra leiren, går farten ned til 1×. Fra bølge 2 kommer de oftere fra to kanter.",
+"Lag og strid"
+],
+[
+"Patruljer i fredstid",
+"De første døgnene angriper ikke motstanderne leiren. Ser du en av patruljene deres, stopper spolingen én gang med «fiendens patrulje – fredstid, angriper ikke».",
+"Lag og strid"
+],
+[
 "Vann og mat på tur",
 "Når du går selv utenfor leiren, blir du tørst og sulten av meterne du går – mest når du løper. Feltflaska har fire slurker og fylles av seg selv i leiren og når du står ved et vann. Knappene «Drikk» (X) og «Spis» (N) kommer til venstre når du trenger dem. I karakterarket (Deg) kan du «Pakke for tur» i leiren: full flaske og rasjoner fra leirens mat.",
 "I 3D"
@@ -337,8 +362,8 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
-"Leiren: 3 lag ›",
-"Når lagene og kjøretøyene dine står samlet i leiren, får de én lapp under leirens navn – «Leiren: 3 lag, 2 kjøretøy ›» – i stedet for navn oppå hverandre. Trykk på lappen, så zoomer kartet inn på leiren, der hvert lag har sitt eget navn. Laget du har valgt, har alltid sitt eget navn.",
+"Leiren: 1 lag + deg ›",
+"Når lagene og kjøretøyene dine står samlet i leiren, får de én lapp under leirens navn – «Leiren: 1 lag + deg, 2 kjøretøy ›» – i stedet for navn oppå hverandre. Tallet er lagene innen ca. 450 m fra flagget; «deg» er karakteren din, som ikke telles som et lag. Er noen av lagene dine ute, står det til slutt, for eksempel «· 1 lag ute». Trykk på lappen, så zoomer kartet inn på leiren, der hvert lag har sitt eget navn. Laget du har valgt, har alltid sitt eget navn.",
 "Lag og strid"
 ],
 [
@@ -359,6 +384,11 @@ window.HJELP_TILLEGG = [
 [
 "Når du velger leirplass",
 "Kartet er uskarpt et øyeblikk mens de skarpe kartbitene lastes – det er bare midlertidig. Oljeinnretningene i Nordsjøen vises ikke langt ute mens du velger. Står du over tregrensen, sier valget om skogen bare finnes nede i dalen.",
+"Kom i gang"
+],
+[
+"Kaier med båtnavn",
+"Noen kaier er oppkalt etter en båt («M/K …», «M/S …»). Da viser kartet og leirvalget stedsnavnet i stedet – for eksempel «Odlandstø».",
 "Kom i gang"
 ],
 [
@@ -667,6 +697,16 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Scenariets by",
+"I «Hold byen» står byen du skal ta med navn i Krig («Ta Røysland (Kystalliansens, 9 km NV)»), med en gyllen ring i kartet og «Scenariets by» i tettstedspanelet. Holder du den, teller Krig døgnene («1,0 av 3 døgn» etter 24 timer). Mister du den, sier loggen at telleren starter på nytt.",
+"Lag og strid"
+],
+[
+"Hvorfor tar ikke laget byen?",
+"Krig viser kjent forsvar i mann før du sender et lag, og fredstiden (motstanderne slåss ikke om byer de første døgnene). Er forsvaret større enn laget, er Send rød. Står et lag ved et sted det ikke kan ta, skriver loggen hvorfor og spolingen stopper.",
+"Lag og strid"
+],
+[
 "Lagre og last",
 "Spillet lagres av seg selv i nettleseren, hele tiden. «Lagre og last» i ☰ (eller «Lagre» bak «Mer» nederst) viser når det sist ble lagret, og har tre lagringsplasser du kan lagre i, laste inn og slette, med navn, dag, fraksjon og kasse. Når du laster en plass, legges spillet du hadde i «Automatisk» først, så du kan gå tilbake. «Automatisk» tas også hvert tiende minutt du spiller.",
 "Kom i gang"
@@ -820,6 +860,11 @@ window.HJELP_TILLEGG = [
 "Handelsmannen og svartebørsen",
 "Penger uten krig: svartebørsen kjøper tre (eller diesel når dere ikke har tre) – det står som et valg på morgenmøtet hver dag dere har noe å selge, og den betaler 40 % mer enn markedet for treet. Handelsmannen kommer kl. 14: velg på morgenmøtet hva du legger av til ham (tre eller diesel). Han betaler 80 % mer enn markedet for treet, men det må ligge på lageret når han kommer – brikken øverst til venstre sier hvor lenge det er igjen. Har dere brukt noe av det, tar han resten og betaler for det.",
 "Leiren"
+],
+[
+"Når det går dårlig",
+"Morgenmøtet hjelper deg tilbake etter et tap. Kommer røverne snart, står det øverst i møtet med samme tid som varselet, og første valg er «Forsvar leiren nå» (lagene går i stilling og graver seg ned). Har dere tapt et tettsted eller en tropp siden i går, står det i rapporten, og møtet tilbyr flere soldater: leiesoldater (et ferdig lag på 4 for 2,5 mill. kr), et vaktlag av folkene i leiren (gratis) eller folk fra nabogården (600 000 kr). Har dere ingen tettsteder og under 6 friske soldater, sender bygdevernet 3 frivillige gratis (høyst hver tredje dag). En speidertur mot et tettsted fienden holder, er farligere, men de melder hvor mange fiender som er der.",
+"Lag og strid"
 ],
 [
 "Trær, gress og lyng",
@@ -994,6 +1039,16 @@ window.HJELP_TILLEGG = [
 [
 "Byggelag og + i Folk",
 "To på Bygg er ett byggelag. Er det et oddetall, har ett lag bare én person, og det går halvt så fort. Trykker du + på en oppgave og ingen har fri, tas en fra oppgaven med flest folk – panelet sier hvem som ble flyttet og hvorfra.",
+"Leiren"
+],
+[
+"Velkommen tilbake",
+"Når du åpner et lagret spill, kommer først en liten boks med det viktigste fra sist du spilte (tettsteder, tap, angrep og valg), eldste først. Spillet står på pause så lenge den vises. Kort og morgenmøtet venter til du har trykket «Fortsett» – det står aldri to vinduer oppå hverandre. Har ingen tid gått siden sist, kommer ingen boks. Et kort du ikke har svart på, kommer igjen etter omlasting med de samme valgene; spillet velger aldri for deg.",
+"Kom i gang"
+],
+[
+"Hva «utstyr og deler» er",
+"Prisen på et bygg kjøper utstyret og de ferdige delene – for et vakttårn lyskaster, radio, våpenfeste og stålfester, for en brakke senger, ovn, vinduer og dører. Byggemenyen sier hva det er for hvert bygg. Arbeidet gjør byggelagene dine uten lønn.",
 "Leiren"
 ],
 [
@@ -1238,7 +1293,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Telefonen liggende",
-"Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad – hvert ikon med et ord under: ⟲ Venstre, ⟳ Høyre, ▦ Rutenett, ⇤ Inntil, + Fortsett – og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
+"Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad – hvert ikon med et ord under: ⟲ Snu, ⟳ Snu, ▦ Rutenett, ⇤ Inntil, + Fortsett – og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
 "Kom i gang"
 ],
 [
@@ -1253,8 +1308,13 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Knappene når du bygger",
-"Når du plasserer et bygg, har hvert ikon et ord under seg (liggende telefon) eller ved siden av (PC): ⟲ Venstre og ⟳ Høyre dreier bygget 15°, ▦ Rutenett legger det på rutenettet, ⇤ Inntil legger det inntil naboen, + Fortsett lar deg sette ut flere av samme slag etter hverandre, ✕ Avbryt. Et lyst ikon er slått på.",
+"Når du plasserer et bygg, har hvert ikon et ord under seg (liggende telefon) eller ved siden av (PC): «Snu ⟲» og «Snu ⟳» dreier bygget 15°, ▦ Rutenett legger det på rutenettet, ⇤ Inntil legger det inntil naboen, + Fortsett lar deg sette ut flere av samme slag etter hverandre, ✕ Avbryt. Et lyst ikon er slått på.",
 "Leiren"
+],
+[
+"Til leiren og hele kartet",
+"Nede til høyre: ⌂ tar kartet hjem til leiren, med flagget midt på skjermen. Knappen med fire piler ut viser hele kartet. Før du har lagt leiren, går ◎ til Dombås.",
+"Kom i gang"
 ],
 [
 "Kartet mens det lastes",

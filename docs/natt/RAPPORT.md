@@ -253,3 +253,14 @@ To nye kritikere (docs/anmeldelse-2026-11-21-dag.md): liggende telefon 4, PC 4. 
 - **3D:** første bilde viser leiren nær, feltbilknappen sier hvor bilen står, folk går unna kameraet, og stedsnavn står med avstand.
 
 Kontroll: PC 131/131, mobil 131/131.
+
+## Runde 14 (21. nov kveld) – «fiks alt i rapporten»
+
+Rettet etter femte anmeldelse (kritiker I telefon 4, J PC 4) på 1,5 time med sju hjelpere:
+- **Krig:** scenarioets by navngis og merkes, telleren stemmer, og tap meldes. Lag ved et sted de ikke kan ta får en forklaring (fredstid, forsvar). Advarselen viser forsvaret i mann.
+- **Kamp:** motangrep kommer aldri før varselet, og «sist sett» brukes i banneret. Ankomsttiden er lik overalt, kampen om leiren varer, og bølgene er større.
+- **Lagring:** «Velkommen tilbake» venter på tur, og kort huskes. Loggen fylles ikke opp ved omlasting, og opplæringen henger ikke.
+- **Morgenmøtet:** raidet står øverst, det kommer hjelp etter tap, og karavanen kjøper tre.
+- **Knapper:** Snu ⟲/⟳, ⌂ til leiren, og boksen i leirvalget ligger ikke over Norge.
+- **Kart:** lagene i leiren telles riktig, og kaier heter etter stedet.
+- **3D:** fjernkart i stedet for tomt bilde når du flyr, lysere planter, leiren i en lysning, og navnet på nærmeste tettsted vises.

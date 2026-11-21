@@ -1412,3 +1412,24 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   zoomet du inn, ble utsnittet ikke bygget på nytt. Nå HUS_S() = 4200 PC / 3600 telefon (Claudes forslag), og tegn3d bygger på nytt når
   utsnittet mangler hus og kameraet er nær nok (manglerHus). Flaggstanga i hagen tas bort i liv3d.js når den står i vegbanen/fortauet eller
   under 1,2 m fra kanten (u.hus.flaggBort; ved Bryne 37 av 119), og flagg tegnes bare når u.påVeg finnes (S ≤ 2200). VAKT: vakter/3d.js.
+  RUNDE 14 (21. nov kveld, brukeren: «fiks alt i rapporten» – docs/anmeldelse-2026-11-21-kveld.md, kritiker I telefon 4, J PC 4; brukeren ba om
+  1,5 t i stedet for 2,5). Notater under «Runde 14» i docs/natt/<pakke>.md. KRIG: «Hold byen» navngir byen (SCENARIO_BY(), dobbel gyllen ring,
+  «Scenariets by»), telleren lagres straks og nullstilles bare når en annen side eier byen, «Scenariet: X er tapt – telleren starter på nytt»;
+  lag ved et sted det ikke tar får forklaring etter 20 min (StrategiSpill.hvorforIkkeTar: fredstid, forsvar, bygdevern) og ⏭ stopper; varselet
+  viser kjent forsvar i mann (kjentForsvar, garnison som anslag) og «For svakt … tar ikke stedet» med røde knapper; radiovarselet rulles inn;
+  krigsstripa viker for stoppkortet; bygdevernet holder dine lag ute, lag på marsj blir ikke garnison; speiderbiler innen 800 m kan velges.
+  KAMP: Eskalering.tidligst/holdIgjen – motangrep aldri før minstetiden; banneret bruker egne observasjoner i 6 t («sist sett 3,5 km N kl.
+  08:53»); «Røverne drar ut om …» (trussel-lagring holder tida nøyaktig); farten ned under 500 m, kampen om leiren varer (ild 0,4 de første 3 min,
+  rapport tidligst 2 min etter); bølge 2+ på Vanlig/Hard minst 2 lag (BØLGE i forsvar-kamp.js); patrulje i fredstid stopper ⏭ høyst én gang per
+  døgn; «X og Y sloss ved …» om andre siders kamper. REGNSKAP: «Velkommen tilbake» i kortkøen (Kortkø.vik/slipp; pause mens den står; aldri
+  sammen med kort/møte), ingen oppstartslinjer i loggen ved omlasting (REGLER.OPPSTART), velkomsten bare for økta før og når tid har gått,
+  viktige linjer først, eldste først; opplæringen godkjennes straks (0,4 s), «Mer forsvar» uten «før dag 4» etter fristen; fartsknappen blar
+  bare ved ekte trykk (e.isTrusted); kassekortet sier verdien; «utstyr og deler» forklart per bygg (UTSTYR). MORGEN: raidet øverst i møtet med
+  «Forsvar leiren nå»; etter tap: leiesoldater, vaktlag, rekrutter, krisehjelp fra bygdevernet; karavanen kjøper tre (knapp); speidertur nevner
+  eieren; diesel med pris per liter. UI: «Snu ⟲/⟳», velkomsten til høyre for Leir-panelet, ⌂ = «Til leiren» (#dombas) og eget ikon for hele
+  kartet (#hele), leirvalgboksen nede til venstre på telefon og kartutsnittet huskes ved F5, tips ved siden av panelet, våpenboksen over
+  minikartet på PC. KART: «Leiren: 1 lag + deg, 2 kjøretøy · 1 lag ute ›» (KartLapper.telling, 450 m), Kaier.stedsnavn (båtnavn → stedet),
+  felles underlag når lånte fliser kommer fra flere nivåer (GLATT.fra 1). 3D: spill/fjernkart3d.js – grovt terreng med kartbilde rundt utsnittet
+  og «Laster landskapet …» når du flyr; folk flyttes unna de første 2 s av gåmodus; lysere lyng og planter; trær ryddet i leiren (LEIR_RYDD);
+  startblikk på skrå; asfaltgrå veger i 3D-kartet (ASFALT3D); «Nærmeste tettsted: X · 8,6 km N» under kompasset; «sist sett» eldre enn 6 t
+  skjules i 3D. Hjelpen: 277 emner.
