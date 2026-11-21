@@ -1045,15 +1045,21 @@ function tegnLag(g, proj, mPer) {
     g.strokeStyle = k.a.side === 'blå' ? `rgba(255,220,140,${.25 + .5 * t * (Math.sin(nå / 40) * .5 + .5)})` : `rgba(255,120,80,${.25 + .5 * t * (Math.sin(nå / 37) * .5 + .5)})`;
     g.lineWidth = 1.5; g.setLineDash([3, 9]); g.lineDashOffset = -nå / 20; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]); skitten = true;
   }
-  for (const s of ENHETER) if (s.side !== 'blå') {   // sist sett: der fienden var da noen av våre så den
+  // sist sett: der fienden var da noen av våre så den. (runde 13, kritiker H: to «sist sett 04:16» oppå hverandre) fiender som sist
+  // ble sett på nesten samme sted på skjermen (40 px), får ÉN lapp: «2 lag · sist sett 04:16» (det siste klokkeslettet)
+  const spøk = [];
+  for (const s of ENHETER) if (s.side !== 'blå') {
     if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
     else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
       if (window.Merker) { Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); if (window.Etikett) Etikett.øverst(() => Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true })); }
       else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
-      // RUNDE 6: «sist sett» er en fiende – navnet plasseres først (Etikett), og merket tegnes på nytt over alle navn
-      g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
-      const tS = 'sist sett ' + klokkeslett(s.sett.tid), yS = window.Etikett ? Etikett.tekst(g, tS, a, b - 13, -1, Etikett.REGLER.prio.fiende) : b - 13; g.fillText(tS, a, yS); }
+      spøk.push({ a, b, t: s.sett.tid }); }
   }
+  for (let i = 0; i < spøk.length; i++) { const q = spøk[i]; if (q.brukt) continue; let n = 1, t = q.t;
+    for (let j = i + 1; j < spøk.length; j++) { const o = spøk[j]; if (!o.brukt && Math.hypot(o.a - q.a, o.b - q.b) < 40) { o.brukt = true; n++; t = Math.max(t, o.t); } }
+    // RUNDE 6: «sist sett» er en fiende – navnet plasseres først (Etikett), og merket tegnes på nytt over alle navn
+    g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
+    const tS = (n > 1 ? n + ' lag · ' : '') + 'sist sett ' + klokkeslett(t), yS = window.Etikett ? Etikett.tekst(g, tS, q.a, q.b - 13, -1, Etikett.REGLER.prio.fiende) : q.b - 13; g.fillText(tS, q.a, yS); }
   for (const s of ENHETER) {
     if (VIS.taake && !synlig(s)) continue;
     // KROKER.skjul (K3): egne lag du ikke vet hvor er nå, tegnes «sist meldt» av kontrollrom-visning.js
@@ -1117,7 +1123,8 @@ function tegnTåke() {
 const NAVN_UTE = 14, NAVN_RADIUS = 2500;
 function vedLeiren(o) { const S = window.OppstartSpill && OppstartSpill.tilstand(); return !!(S && S.leir) && Math.hypot(o.x - S.leir.x, o.y - S.leir.y) < NAVN_RADIUS; }
 function navnSynlig(o) { return !(kam.m > NAVN_UTE && o !== valgt && o.side === 'blå' && vedLeiren(o)); }
-function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER.filter(e => e.side === 'blå' && e !== valgt && levende(e) && vedLeiren(e)).length, kj = (window.KJORETOY || []).filter(k => k.side === 'blå' && k !== valgt && vedLeiren(k)).length;
+// (runde 13, kritiker G: «Fjordvakta · 3 lag» med to lag – karakteren ble telt med) karakteren din og Leirvakta er ikke lag her
+function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER.filter(e => e.side === 'blå' && !e.karakter && !e.leirvakt && e !== valgt && levende(e) && vedLeiren(e)).length, kj = (window.KJORETOY || []).filter(k => k.side === 'blå' && k !== valgt && vedLeiren(k)).length;
   return lag || kj ? ' · ' + [lag ? lag + ' lag' : '', kj ? kj + ' kjøretøy' : ''].filter(Boolean).join(', ') : ''; }
 function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 
@@ -1140,6 +1147,8 @@ const loggLinjer = [];
 function logg(t) { let nå = 0; try { nå = tid; } catch (e) { /* før tida finnes */ }
   const d = typeof LoggDemp !== 'undefined' && LoggDemp.vurder ? LoggDemp.vurder(t, loggLinjer, nå) : { tekst: t, fjern: -1 }; if (!d) return;
   if (d.fjern >= 0) loggLinjer.splice(d.fjern, 1); t = d.tekst;
+  // RUNDE 13: de siste 100 meldingene lagres per leir og kan leses i «Hele loggen» (spill/logglager.js)
+  if (typeof LoggLager !== 'undefined' && LoggLager.ny) { try { LoggLager.ny(t, nå, d.fjern >= 0); } catch (e) { /* loggen virker uten */ } }
   loggLinjer.unshift(t); loggLinjer.length = Math.min(loggLinjer.length, 6);
   document.getElementById('logg').innerHTML = loggLinjer.map((x, i) => '<div style="opacity:' + (1 - i * .15) + '"></div>').join('');
   document.querySelectorAll('#logg div').forEach((d, i) => { d.textContent = loggLinjer[i]; }); }
@@ -3439,7 +3448,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/enheter-visning.js?v=d554f2ad19"></script>
 <script src="/dovre-fliser/spill/odeleggelse-visning.js?v=2fe505429d"></script>
 <script src="/dovre-fliser/spill/garnison.js?v=874e2a5026"></script>
-<script src="/dovre-fliser/spill/garnison-visning.js?v=efd1518ef1"></script>
+<script src="/dovre-fliser/spill/garnison-visning.js?v=a7cf46fe29"></script>
 <script src="/dovre-fliser/spill/fraksjoner.js?v=62cffccd40"></script>
 <script src="/dovre-fliser/spill/fraksjoner-visning.js?v=7b115f9340"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
@@ -3479,25 +3488,25 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>
 <script src="/dovre-fliser/spill/portrett-motor.js?v=7ee137f575"></script>
 <script src="/dovre-fliser/spill/oppstart.js?v=2e5d565ba5"></script>
-<script src="/dovre-fliser/spill/leir.js?v=37d18cc005"></script>
-<script src="/dovre-fliser/spill/folk.js?v=bddbdb57be"></script>
+<script src="/dovre-fliser/spill/leir.js?v=4c92228ed2"></script>
+<script src="/dovre-fliser/spill/folk.js?v=d6233b4270"></script>
 <script src="/dovre-fliser/spill/oppstart-visning.js?v=67c4362cf6"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=8512cc15e4"></script>
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=83a42c535d"></script>
-<script src="/dovre-fliser/spill/folk-visning.js?v=2fdfe3c742"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=71bb15ad1b"></script>
+<script src="/dovre-fliser/spill/folk-visning.js?v=f35478a20f"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=6669d9337c"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=f53f5d59f9"></script>
 <script src="/dovre-fliser/spill/byggesett.js?v=5892c2fdd6"></script>
-<script src="/dovre-fliser/spill/byggesett-visning.js?v=97091deae3"></script>
+<script src="/dovre-fliser/spill/byggesett-visning.js?v=a47847efd7"></script>
 <script src="/dovre-fliser/spill/byggevisning.js?v=3343bf6c80"></script>
 <script src="/dovre-fliser/spill/leir2d.js?v=40dfc0dea8"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=20629545e4"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
-<script src="/dovre-fliser/spill/lagring.js?v=d0f8675822"></script>
+<script src="/dovre-fliser/spill/lagring.js?v=1794485625"></script>
 <script src="/dovre-fliser/spill/lagringsmeny.js?v=1ce3cf1959"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=845f0a5982"></script>
@@ -3530,9 +3539,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/maal.js?v=0761659d97"></script>
 <script src="/dovre-fliser/spill/maal-visning.js?v=164cc6fb9a"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=ae1e1488af"></script>
-<script src="/dovre-fliser/spill/spillet.js?v=27e2d7fd1e"></script>
+<script src="/dovre-fliser/spill/spillet.js?v=b712eac185"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=88b80209aa"></script>
-<script src="/dovre-fliser/spill/spillet-visning.js?v=81d8373269"></script>
+<script src="/dovre-fliser/spill/spillet-visning.js?v=fd6d412d3e"></script>
 <script src="/dovre-fliser/spill/overlev.js?v=591356eba6"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=51ef9105a2"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
@@ -3547,19 +3556,19 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/trussel-lagring.js?v=ce5eea747c"></script>
 <script src="/dovre-fliser/spill/forsvar-oppgjor.js?v=da1538cb0c"></script>
 <script src="/dovre-fliser/spill/morgen.js?v=1189b39b5c"></script>
-<script src="/dovre-fliser/spill/morgen-visning.js?v=a823db08da"></script>
+<script src="/dovre-fliser/spill/morgen-visning.js?v=fe44a33a57"></script>
 <script src="/dovre-fliser/spill/forsvar-hjemme.js?v=0ff458940c"></script>
 <script src="/dovre-fliser/spill/tropper.js?v=d290afac08"></script>
-<script src="/dovre-fliser/spill/tropper-visning.js?v=83f020d64d"></script>
+<script src="/dovre-fliser/spill/tropper-visning.js?v=e854493117"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=1f8f8d7dcc"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
-<script src="/dovre-fliser/spill/strategi.js?v=5f07d1bfc0"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=42156b3590"></script>
+<script src="/dovre-fliser/spill/strategi.js?v=23865c7d3b"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=5b4175739e"></script>
 <script src="/dovre-fliser/spill/region.js?v=c413865888"></script>
-<script src="/dovre-fliser/spill/region-visning.js?v=e624dc4d85"></script>
+<script src="/dovre-fliser/spill/region-visning.js?v=ac7bd85ee1"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
-<script src="/dovre-fliser/spill/samfunn.js?v=bae3dcc449"></script>
+<script src="/dovre-fliser/spill/samfunn.js?v=594eec0211"></script>
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=52c1f10173"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=bb808bd838"></script>
@@ -3592,7 +3601,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=88bee08a79"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=5532e70297"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=0e305c6467"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=8158e051c3"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=4142f566bb"></script>
 <script src="/dovre-fliser/spill/paneler.js?v=7c30488bdb"></script>
@@ -3601,5 +3610,6 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/telefon.js?v=0be9c9f3ec"></script>
 <script src="/dovre-fliser/spill/skjermlag.js?v=1a19bee44a"></script>
 <script src="/dovre-fliser/spill/loggdemp.js?v=c43bd0c7c1"></script>
+<script src="/dovre-fliser/spill/logglager.js?v=e8eb48fc96"></script>
 </body>
 </html>

@@ -288,13 +288,13 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   const røvereVed = b => ENHETER.filter(e => e.tankbil && levende(e) && !(rot.Terreng && Terreng.slattUt && Terreng.slattUt(e.menn)));
   function bortRøvere() { for (let i = ENHETER.length - 1; i >= 0; i--) if (ENHETER[i].tankbil) ENHETER.splice(i, 1); skitten = true; }
   KROKER.sim.push(() => { const b = S && S.tankbil; if (!klar || !b) return;
-    if (tid > b.frist) { logg('Tankbilen er borte – noen andre kom først.'); S.tankbil = null; bortRøvere(); lagre(); return; }
+    if (tid > b.frist) { logg('Tankbilen er borte – noen andre kom først.'); hjemFraTankbil(b); S.tankbil = null; bortRøvere(); lagre(); return; }
     if (b.fare && !b.røvere && blåNær(b.x, b.y, 450) && typeof nyttLag === 'function') { const e = nyttLag('Røvere ved tankbilen', b.x + 110, b.y - 80, 'rød'); e.tankbil = true; if (e.menn.length > R.tankbil.røverMenn) { e.menn = e.menn.slice(0, R.tankbil.røverMenn); e.leder = 0; }
       ENHETER.push(e); b.røvere = true; lagre(); logg('Røvere ved tankbilen! De vil ha dieselen selv.'); skitten = true; }
     if (blåNær(b.x, b.y, 60) && !røvereVed(b).some(e => Math.hypot(e.x - b.x, e.y - b.y) < 250)) { const l = L(), Lb = LB(); if (!l || !Lb) return;
       const plass = Math.max(0, (Lb.kapasitet ? Lb.kapasitet(l) : 0) - (l.drivstoff || 0)), d = Math.min(b.diesel, Math.floor(plass)); l.drivstoff = (l.drivstoff || 0) + d;
       logg(`Tankbilen er tømt: ${d} l diesel er fraktet til leiren.` + (d < b.diesel ? ` ${b.diesel - d} l fikk ikke plass i tanken.` : '')); if (rot.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(`Hentet ${d} l diesel fra den forlatte tankbilen.`);
-      S.tankbil = null; bortRøvere(); lagre(); lagreLeir(); } });
+      hjemFraTankbil(b); S.tankbil = null; bortRøvere(); lagre(); lagreLeir(); } });
   KROKER.tegn.push((g, vx0, vy1) => { const b = S && S.tankbil; if (!klar || !b || kam.m > 60) return; const x = (b.x - vx0) / kam.m, y = (vy1 - b.y) / kam.m; if (x < -40 || y < -40 || x > VW + 40 || y > VH + 40) return;
     g.save(); g.fillStyle = 'rgba(22,18,12,.85)'; g.strokeStyle = '#f0b04a'; g.lineWidth = 1.8; g.fillRect(x - 11, y - 6, 22, 12); g.strokeRect(x - 11, y - 6, 22, 12); g.beginPath(); g.arc(x - 6, y + 7, 2.6, 0, 6.283); g.arc(x + 6, y + 7, 2.6, 0, 6.283); g.fillStyle = '#f0b04a'; g.fill();
     g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center'; const t = 'Tankbil (diesel)', ty = rot.Etikett ? Etikett.tekst(g, t, x, y + 24, 1) : y + 24; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t, x, ty); g.fillStyle = '#f6d28a'; g.fillText(t, x, ty); g.restore(); });
@@ -306,12 +306,24 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => { const h = S && S.handel; if (!klar || !h) return [];
     return [{ i: 'penger', k: '', t: `Handelsmann kl. ${String(6 + R.handel.timer).padStart(2, '0')}`, s: `henter ${h.mengde} ${h.vare === 'tre' ? 'm³ tre' : 'l diesel'} · om ${timerIgjen(h.kl)}`, f: () => logg(handelLinje()) }]; });
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => { const b = S && S.tankbil; if (!klar || !b) return [];
+    // (runde 13, pakke «krig», kritiker H: banneret sto som «Send Vaktlaget» også etter at laget var sendt) laget som er sendt, står i banneret
+    const på = sendtLag(b); if (på) return [{ i: 'tank', k: '', t: 'Tankbil med diesel', s: påVeiTekst(på, b), f: () => { if (rot.kartTil && !(typeof på3d !== 'undefined' && på3d)) kartTil(b.x, b.y, 4); }, knapp: null }];
     const lag = nesteLag(b); return [{ i: 'tank', k: '', t: 'Tankbil med diesel', s: `${meter(b.meter)} mot ${b.retning} · ${Math.max(1, Math.round((b.frist - tid) / 60))} t igjen`, f: () => { if (rot.kartTil && !(typeof på3d !== 'undefined' && på3d)) kartTil(b.x, b.y, 4); else logg(`Tankbilen står ${meter(b.meter)} mot ${b.retning} for leiren.`); },
       knapp: lag ? { t: `Send ${lag.navn}`, f: () => sendLag(b) } : null }]; });
   // det nærmeste egne laget som kan sendes (ikke deg selv, leirvakta, et lag om bord eller i forsvarsstilling), høyst 30 km unna
   function nesteLag(b) { let best = null, bd = 30000; for (const e of ENHETER) { if (e.side !== 'blå' || e.karakter || e.leirvakt || e.raid || e.ombord || e.forsvar || !levende(e)) continue;
       const d = Math.hypot(e.x - b.x, e.y - b.y); if (d < bd) { bd = d; best = e; } } return best; }
-  function sendLag(b) { const e = nesteLag(b); if (!e) return logg('Ingen lag kan sendes til tankbilen nå.'); if (typeof ordre === 'function') { ordre(e, b.x, b.y); logg(`${e.navn} er sendt mot tankbilen (${meter(Math.hypot(e.x - b.x, e.y - b.y))}).`); skitten = true; } }
+  // (runde 13, pakke «krig», kritiker H) samme radiovarsel som i Krig (StrategiSpill.sendTil: med terrenget, og «leiren står uten vakt»),
+  // banneret sier «Vaktlaget på vei (1,8 t)», og laget går hjem av seg selv når oppdraget er ferdig (ordren er gitt på forhånd – trenger ikke radio)
+  function sendLag(b) { const e = nesteLag(b); if (!e) return logg('Ingen lag kan sendes til tankbilen nå.'); if (typeof ordre !== 'function') return;
+    const gå = lag => { if (!S || S.tankbil !== b) return; ordre(lag, b.x, b.y); b.sendt = { navn: lag.navn, t: tid }; lagre(); logg(`${lag.navn} er sendt mot tankbilen (${meter(Math.hypot(lag.x - b.x, lag.y - b.y))}). De går hjem igjen når dieselen er hentet.`); skitten = true; };
+    if (rot.StrategiSpill && StrategiSpill.sendTil) StrategiSpill.sendTil(e, { x: b.x, y: b.y, navn: 'tankbilen' }, gå); else gå(e); }
+  const sendtLag = b => (b && b.sendt ? ENHETER.find(e => e.side === 'blå' && e.navn === b.sendt.navn && levende(e)) || null : null);
+  function påVeiTekst(e, b) { const d = Math.hypot(e.x - b.x, e.y - b.y); if (d <= 80) return `${e.navn} er framme`; if (e.planlegger) return `${e.navn} planlegger ruta`;
+    if (e.sti) { const t = Math.max(0, e.timerIgjen || 0); return `${e.navn} på vei (${t < 1 ? Math.max(1, Math.round(t * 60)) + ' min' : String(Math.round(t * 10) / 10).replace('.', ',') + ' t'})`; }
+    return `${e.navn} står ${meter(d)} fra tankbilen`; }
+  function hjemFraTankbil(b) { const e = sendtLag(b), o = rot.OppstartSpill && OppstartSpill.tilstand(); if (!e || !o || !o.leir || typeof ordre !== 'function') return;
+    const v = Math.random() * 6.283; ordre(e, o.leir.x + Math.cos(v) * 30, o.leir.y + Math.sin(v) * 30, true); logg(`${e.navn} går hjem til leiren.`); }
 
   // ---------- Leir-menyen (fanen Mål): det morgenmøtet bestemte for i dag ----------
   const PLANTEKST = { øv: 'på våpenøvelse', jakt: 'på jakt og fiske', speid: 'på speidertur', leie: 'leid ut som vakter', tankbil: 'til fots mot tankbilen', vakt: 'på dobbel vakt' };

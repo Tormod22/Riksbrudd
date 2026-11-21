@@ -248,5 +248,50 @@
   "Krigen din på nytt",
   "Reprisen står på pause mens du ser. Fargene viser hvem som holdt tettstedene; en ring betyr at tettstedet skiftet eier siden forrige bilde. Tegnforklaringen står i boksen nederst.",
   "Lag og strid"
+ ],
+ [
+  "Før laget går: advarselen i Krig",
+  "Trykker du «Send» i krigskartet, sjekker spillet først hva som venter: for få mann («For få: 1 av 3 – tar ikke stedet»), bygdevernet («Bygdevernet i Vikeså (7 mann) slipper dere ikke inn»), fiender som er sett der, om laget havner utenfor radioen, og om leiren står uten vakt når det siste laget går. Da må du velge: «Send likevel», «Gjør avtale og send», «Speid og meld» eller «Avbryt».",
+  "Lag og strid"
+ ],
+ [
+  "Ett tall: hvor mange som trengs",
+  "«Trenger minst 3 mann (5 for full fart)»: med færre enn 3 står inntaket stille. Med 3 eller 4 tar laget stedet, men saktere enn med 5. Det første tallet er det som avgjør.",
+  "Lag og strid"
+ ],
+ [
+  "Radioen og terrenget",
+  "Radioen når lengst over flatt land. Står en fjellrygg mellom leiren og målet, rekker den bare en tredel (håndradio 3 km blir ca. 1 km, feltradio 8 km blir 2,8 km). Krig regner med terrenget før du sender, og foreslår bare et annet lag med feltradio når det faktisk når fram – ellers står det «når heller ikke fram (terreng: 2,8 km)».",
+  "Lag og strid"
+ ],
+ [
+  "Speid og meld",
+  "En speidertropp skal finne fienden uten å slåss. Sender du den mot et sted med bygdevern eller fiender, stopper den ca. 400 m utenfor og melder hva som står der. Også når du gir ordren rett i kartet, stopper den før et forsvart sted. Uten radiokontakt venter meldingen til kontakten kommer tilbake.",
+  "Lag og strid"
+ ],
+ [
+  "Bygdevernet og avtalen",
+  "Tettsteder uten eier har et bygdevern. «Neste trekk» viser hvor mange de er («bygdevernet: 7 mann»). Med en avtale (knappen ved stedet eller i advarselen) slipper de dere inn uten kamp.",
+  "Lag og strid"
+ ],
+ [
+  "Friske, sårede og falne",
+  "Lagene i Krig og Tropper viser «4 friske av 6, 1 såret, 1 falt». De falne trekkes fra med en gang de er meldt. Har du ikke kontakt med laget, står det når det sist meldte seg («sist meldt dag 2 06:53»).",
+  "Lag og strid"
+ ],
+ [
+  "Scenariet i Krig",
+  "Øverst i Krig står scenariet ditt med dag og frist (for eksempel «Sju døgn – dag 4 av 7»), og om krigen teller for det. I «Sju døgn» vinner du ved å overleve – prosenten i krigen er da bare en bonus.",
+  "Lag og strid"
+ ],
+ [
+  "Tegnforklaringen i krigskartet",
+  "Nederst i Krig står hva merkene betyr: egne lag, fiender dere ser, «sist sett» (stiplet), «?» = fiende meldt over radio eller av speidere, tettsteder etter eier, tallene 1–3 (forslagene) og frontene. Flere lag på samme sted får ett tall («3 lag»).",
+  "Lag og strid"
+ ],
+ [
+  "Tankbilen: laget går hjem",
+  "Sender du et lag til tankbilen, får du samme radiovarsel som i Krig. Lappen viser «Vaktlaget på vei (43 min)», og når dieselen er hentet, går laget hjem til leiren av seg selv.",
+  "Lag og strid"
  ]
 ]

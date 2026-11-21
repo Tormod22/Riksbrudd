@@ -33,9 +33,17 @@ assert.strictEqual(S.trusler('blå', O, eierAv, () => 1, []).length, 0);
   const tre = { x: 0, y: 0, navn: 'Kritikerlaget', lag: { menn: [{ hp: 1 }, { hp: 1 }, { hp: 1 }] } };
   const T = S.trekk('blå', byer, () => null, [tre], []), stor = T.find(t => t.by.id === 1), liten = T.find(t => t.by.id === 2);
   assert(stor.mann >= 60 && stor.minst >= 30 && !stor.nok && stor.har === 3, 'storbyen: for få');
-  assert.match(S.kravTekst(stor), /trenger ca\. \d+ mann \(minst \d+\) – dere har 3/);
+  assert.match(S.kravTekst(stor), /trenger minst \d+ mann \(\d+ for full fart\) – dere har 3/);
   assert(T.indexOf(stor) > 0 && T[0].nok && T[0].by.id === 3, 'det tre mann kan ta (Vatne) står først, storbyen etter');
   const fire = [1, 2, 3, 4].map(i => ({ x: i * 100, y: 0, navn: 'L' + i, lag: { menn: Array.from({ length: 12 }, () => ({ hp: 1 })) } })), T4 = S.trekk('blå', byer, () => null, fire, []), s4 = T4.find(t => t.by.id === 1);
   assert(s4.nok && !s4.ettLag && s4.flere.length >= 3, 'fire lag: nok, men det trengs flere lag sammen');
+  // (runde 13) ett tall: «trenger minst N mann», og kravFor sier hva lagene som sendes, rekker til
+  { const lite = { minst: 3, mann: 5 }, L = n => ({ menn: Array.from({ length: n }, () => ({ hp: 1 })) });
+    assert.match(S.kravTekst({ ...lite, nok: true }), /^trenger minst 3 mann \(5 for full fart\)$/);
+    const k1 = S.kravFor(lite, [L(1)]), k4 = S.kravFor(lite, [L(4)]), k5 = S.kravFor(lite, [L(2), L(3)]);
+    assert(!k1.nok && /For få: 1 av 3 – tar ikke stedet/.test(k1.tekst), k1.tekst);
+    assert(k4.nok && !k4.full && /4 av 5 for full fart/.test(k4.tekst), k4.tekst);
+    assert(k5.nok && k5.full && k5.tekst === '', 'to lag på til sammen 5: nok');
+    assert.equal(S.kravFor(lite, [{ menn: [{ hp: 1 }, { hp: .5 }, { hp: 0 }] }]).har, 1, 'såret teller ½, falt 0'); }
   assert.equal(S.tettsteder(1), '1 tettsted'); assert.equal(S.tettsteder(41), '41 tettsteder'); }
 console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og trusler');

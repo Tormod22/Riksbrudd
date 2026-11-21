@@ -51,6 +51,10 @@
     helikopterplass: { navn: 'Helikopterplass', pris: 10e6, tid: 4, kw: 0, modell: 'helikopterplass', fot: [-10.9, 15.6, -10.9, 10.9], mat: { betong: 60 }, tekst: 'Landingsplass' },
     sandsekkvoll: { navn: 'Sandsekkvoll', pris: 2e5, tid: .5, kw: 0, modell: 'sandsekkvoll', fot: [-.3, .2, -4, 4], mat: {}, tekst: 'Dekning' },
   };
+  // RUNDE 13 (kritiker H: «arbeid 8 mill. kr» av 8,4 mill. kr for et aggregat – «men arbeidet gjøres av mine egne folk»): grunnprisen
+  // (BYGG[t].pris) betaler utstyret og de ferdige delene (aggregatet, lyskasteren, vinduer, beslag) – arbeidet gjør byggelagene dine uten
+  // lønn, det koster bare tid. PRISDEL er navnet og forklaringen visningen bruker. Reglene er uendret.
+  const PRISDEL = { navn: 'utstyr og deler', forklaring: 'Prisen kjøper utstyret og de ferdige delene. Arbeidet gjør byggelagene dine uten lønn – det koster bare tid.', arbeid: 'byggelagene dine' };
   const MATERIALER = { tre: { navn: 'Tre', enhet: 'm³', pris: 20000 }, betong: { navn: 'Betong', enhet: 'm³', pris: 30000 }, stål: { navn: 'Stål', enhet: 't', pris: 60000 } };
   const GRUNNLAGER = 60;   // så mye av hvert materiale leiren kan ha uten lagertelt og containere
   // hvem får strøm først når det er for lite
@@ -470,7 +474,7 @@
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
   const api = { manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
-    harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
+    PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leir = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

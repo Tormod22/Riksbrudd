@@ -252,7 +252,7 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
     for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
       if (gruppe) liste.appendChild(el('h4', {}, gruppe));
-      const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ' (materialene har du)') + ` · ${tidTekst(k.timer * 60)}`;
+      const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'}; materialene har du)`) + ` · byggelagene dine: ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
@@ -416,7 +416,7 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
     // utpost: byggelaget må reise dit først (Leir.reise) – tiden står her før du bekrefter
     const rs = LB.reiseFor(L, b, p.flytt); p.reise = rs;
     const tekst = p.feil || (p.flytt ? `Flytte ${B.navn.toLowerCase()}: ${LB.kroner(pris)}, ferdig om ${tidTekst(B.tid * LB.REGLER.flyttTid / (bonus().bygg || 1) * 60 + rs.min)}.`
-      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? '' : ` i alt (arbeid ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
+      : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? ` (${(LB.PRISDEL || {}).navn || 'utstyr og deler'})` : ` i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, byggelagene dine bygger det – ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
     // (runde 8) skrå grunn: hvor høy grunnmuren blir (samme regel som hellingskartet: over halve grensa = gult)
     const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;
@@ -464,7 +464,7 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
     else { const r = LB.bygg(L, sp(p), OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
       const kø = LB.jobber(L).length > LB.byggelag(L);
       const kjøpt = p.kjøpt > 0 ? p.kjøpt : 0; p.kjøpt = 0;
-      logg(`${LB.BYGG[p.type].navn} bestilt: ${kjøpt ? `${LB.kroner(r.bygg.pris + kjøpt)} i alt (arbeid ${LB.kroner(r.bygg.pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(r.bygg.pris)}, ${tidTekst(r.bygg.totalt)} byggetid` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
+      logg(`${LB.BYGG[p.type].navn} bestilt: ${kjøpt ? `${LB.kroner(r.bygg.pris + kjøpt)} i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(r.bygg.pris)} + materialer ${LB.kroner(kjøpt)})` : `${LB.kroner(r.bygg.pris)} (${(LB.PRISDEL || {}).navn || 'utstyr og deler'})`}, ${tidTekst(r.bygg.totalt)} byggetid for byggelagene dine` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
     ferdigPlassert(p);
   }
   // Etter et bygg eller en skisse: med «Fortsett» står samme bygg klart (samme retning), ellers er plasseringen ferdig

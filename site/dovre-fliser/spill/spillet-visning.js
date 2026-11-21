@@ -227,12 +227,14 @@
   // annenhver gang et kort fra samfunnet (krangler og ønsker med følger som varer, spill/samfunn-visning.js)
   function hendelse() { const f = F(); if (!f || !f.personer.length) return false;
     if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && Math.random() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; return true; }
-    const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h) return false; const p = f.personer[Math.floor(Math.random() * f.personer.length)];
-    H.åpen = { id: h.id, navn: p.navn }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
+    // RUNDE 13 (kritiker H): bare folk som er i leiren nå (ikke på speidertur, jakt eller annet ærend – p.borte), og to forskjellige når kortet gjelder to
+    const hjemme = f.personer.filter(q => q && q.navn && !q.borte); if (!hjemme.length) return false;
+    const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h || (h.to && hjemme.length < 2)) return false; const p = hjemme[Math.floor(Math.random() * hjemme.length)], andre = hjemme.filter(q => q !== p), p2 = h.to ? andre[Math.floor(Math.random() * andre.length)] : null;
+    H.åpen = { id: h.id, navn: p.navn, ...(p2 ? { navn2: p2.navn } : {}) }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
   function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); if (window.Kortkø && Kortkø.ferdig) Kortkø.ferdig('hendelse'); return; }
     // én kortkø for alle kortene med valg (spill/samfunn-visning.js): vent på tur, så står aldri to kort oppå hverandre
     if (window.Kortkø && Kortkø.ta && !Kortkø.ta('hendelse', false, visHendelse)) { kort.classList.remove('på'); Kortkø.be('hendelse', visHendelse, { tittel: 'I leiren' }); return; }
-    kort.append(el('h3', {}, 'I leiren'), el('p', {}, h.tekst(å.navn))); const t = tilstand();
+    kort.append(el('h3', {}, 'I leiren'), el('p', {}, h.tekst(å.navn, å.navn2))); const t = tilstand();
     h.valg.forEach((v, i) => { const b = el('button', { type: 'button' }, v.t); b.disabled = !Hendelser.kan(v.v, t); b.onclick = () => velg(i); kort.appendChild(b); }); kort.classList.add('på'); }
   function velg(i) { const å = H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) return; const v = h.valg[i].v, f = F(), l = L(); let ut = '';
     if (v.penger < 0) OppstartSpill.betal(-v.penger); else if (v.penger > 0) OppstartSpill.gi(v.penger);
@@ -240,7 +242,7 @@
       const p = f.personer.find(q => q.navn === å.navn); if (v.helse && p) p.helse = Math.max(.1, p.helse + v.helse);
       if (v.folk < 0 && p) { f.personer.splice(f.personer.indexOf(p), 1); ut = ` ${å.navn} har forlatt gjengen.`; }
       if (v.folk > 0) { const r = l && FR ? FR.rekrutter(f, l, () => true) : {}; ut = r.person ? ` ${r.person.navn} er blitt med i gjengen.` : ' Det var ingen ledig seng, så vandreren gikk videre.'; } }
-    logg(`${h.tekst(å.navn)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; skriv('riksbrudd-hendelser', H);
+    logg(`${h.tekst(å.navn, å.navn2)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; skriv('riksbrudd-hendelser', H);
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
   // kortkøen (samfunn-visning.js): ett kort om gangen, med pause mellom
   function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (window.Kortkø && !Kortkø.ledig() && (tid >= H.nesteSpill || ekte >= H.nesteEkte)) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }

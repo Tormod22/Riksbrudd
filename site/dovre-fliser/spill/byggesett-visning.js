@@ -178,7 +178,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       if (r.feil) { stopp = r.feil; break; }
       r.bygg.bs = { i: q.d.i, j: q.d.j, a: q.d.a, n: q.d.n, ...(q.d.r !== undefined ? { r: q.d.r } : {}) }; n++; pris += r.bygg.pris;
     }
-    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${kjøpt ? `${LB.kroner(pris + kjøpt)} i alt (arbeid ${LB.kroner(pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
+    if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${kjøpt ? `${LB.kroner(pris + kjøpt)} i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
     else if (stopp) logg(stopp);
     ferdigEndret(); if (V.fane === 'hus' || !stopp) { A = null; B = null; forslag = []; } oppdater(); return n;
   }

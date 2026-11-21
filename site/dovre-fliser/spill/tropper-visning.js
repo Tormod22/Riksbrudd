@@ -17,7 +17,7 @@
   const bærer = k => ENHETER.find(e => e.ombord === k);
   const biler = () => (window.KJORETOY || []).filter(k => k.side === 'blå' && TR.plass(k) > 0 && !k.sti && !k.oppdrag);
   const lagre = () => { if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); if (window.LagringSpill && LagringSpill.lagre) LagringSpill.lagre(); };
-  let valgte = new Set(), navn = '', bev = 'standard', bil = '', sist = '', våpen = {}, utstyr = new Set();
+  let valgte = new Set(), navn = '', bev = 'standard', bil = '', sist = '', våpen = {}, utstyr = new Set(), malValgt = null;
   // (runde 8) hvem forslagene lar bli igjen og bygge (TR.behold), og advarslene når leiren mister byggerne eller kokken
   const holdIgjen = P => TR.behold ? TR.behold(P) : [];
   const jobberNå = () => { const L = window.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(); try { return L && window.Leir && Leir.jobber ? Leir.jobber(L).length : 0; } catch (e) { return 0; } };
@@ -31,7 +31,7 @@
     const B = !egen && window.Strid && Strid.BEVÆPNING[bevId], alt = sum + (B && B.pris > 0 ? B.pris : 0); if (alt > 0 && !(window.OppstartSpill && OppstartSpill.betal(alt))) return { feil: `Ikke råd til våpnene og utstyret (${alt.toLocaleString('nb-NO')} kr).` };
     F.personer = F.personer.filter(p => !ider.includes(p.id)); const v = Math.random() * 6.283, s = nyttLag(r.navn, k ? k.x : L.x + Math.cos(v) * 25, k ? k.y : L.y + Math.sin(v) * 25, 'blå'); s.menn = r.menn; s.leder = 0; s.fraFolk = true;
     if (egen) TR.utrust(s, Object.fromEntries(P.map(q => [q.id, o.våpen[q.id] || 'rifle']))); if (ut.length) { s.utstyr = {}; for (const u of ut) s.utstyr[u] = true; }
-    if (window.StridSpill) { const st = StridSpill.regel(s); if (egen) { s.strid = { ...st, bev: 'egen' }; StridSpill.regel(s); } else if (B && bevId !== 'standard') { s.strid = { ...st, bev: bevId }; StridSpill.regel(s); } } if (k) s.ombord = k; ENHETER.push(s);
+    if (window.StridSpill) { const st = StridSpill.regel(s); if (egen) { s.strid = { ...st, bev: 'egen' }; StridSpill.regel(s); } else if (B && bevId !== 'standard') { s.strid = { ...st, bev: bevId }; StridSpill.regel(s); } } if (k) s.ombord = k; if (o.mal) s.mal = o.mal; ENHETER.push(s);
     if (s.utstyr && s.utstyr.feltradio) { if (window.KontrollromSpill && KontrollromSpill.girRadio) KontrollromSpill.girRadio(s, 'felt'); else s.radio = 'felt'; } lagre(); skitten = true;
     logg(`${r.navn} er satt opp: ${r.menn.length} fra leiren, ${r.menn[0].navn} leder` + (k ? `, om bord i ${k.navn}` : '') + '.'); return { lag: s }; }
   function oppløs(s) { const F = folk(); if (!F) return { feil: 'Leiren har ingen folk-liste.' }; if (!vedLeir(s)) return { feil: `${s.navn} må stå innen ${R.nær} m fra leiren for å oppløses.` };
@@ -128,7 +128,7 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
   // Øverst i panelet: troppene og lagene du har – navn, mann, hvor de er, radiokontakt og «Velg». «Lag ny tropp» står under.
   const KR = () => (window.KontrollromSpill && KontrollromSpill.på && KontrollromSpill.på() ? KontrollromSpill : null);
   function hvor(s) { const L = leir(), k = KR(), I = k && k.info ? k.info(s) : null, kontakt = !k || !k.kanNå || k.kanNå(s), gb = k && k.garnisonI ? k.garnisonI(s) : null;
-    if (!kontakt && I && I.meldt && L && window.Kontrollrom) return `sist meldt kl. ${typeof klokkeslett === 'function' ? klokkeslett(I.meldt.tid) : ''} ${Kontrollrom.retning(L, I.meldt)} for leiren`;
+    if (!kontakt && I && I.meldt && L && window.Kontrollrom) return `sist meldt dag ${Math.floor(I.meldt.tid / 1440) + 1} ${typeof klokkeslett === 'function' ? klokkeslett(I.meldt.tid) : ''}, ${Kontrollrom.retning(L, I.meldt)} for leiren`;
     if (!kontakt) return 'ukjent – ikke meldt';
     if (s.ombord) return (s.ombord.sti ? 'kjører i ' : 'om bord i ') + s.ombord.navn + (s.avstigning ? ' mot ' + s.avstigning.navn : '');
     if (gb) return 'garnison i ' + gb.e.navn; if (vedLeir(s)) return 'i leiren';
@@ -136,11 +136,14 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     return (s.sti ? 'på marsj · ' : '') + (L && window.Kontrollrom ? Kontrollrom.retning(L, mot ? { x: mot[0], y: mot[1] } : s) + (mot ? ' (målet)' : '') + ' for leiren' : ''); }
   function velgLag(s) { const k = KR(), I = k && k.info ? k.info(s) : null, ser = !k || !k.kanNå || k.kanNå(s), p = ser || !(I && I.meldt) ? s : I.meldt;
     valgt = s; kam.x = p.x; kam.y = p.y; if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); lukk(); visPanel(); skitten = true; }
+  // (runde 13, kritiker H: «Vaktlaget 4 av 4 mann» etter at én var falt og én såret) friske, sårede og falne hver for seg – de falne
+  // trekkes fra straks de er meldt i loggen (folk-visning.js melder dem med en gang, også uten radiokontakt)
+  const mannTekst = s => (window.StrategiSpill && StrategiSpill.mannTekst ? StrategiSpill.mannTekst(s) : `${TR.friske(s)} av ${s.menn.length} mann`);
   function liste(f) { const lag = egne().filter(levende); if (!lag.length) return false; const k = KR();
     f.append(el('h2', {}, 'Troppene dine'), el('small', {}, `${lag.length} ${lag.length === 1 ? 'lag' : 'lag og tropper'} · trykk «Velg» for å gi ordre i kartet.`));
     const boks = el('div', { klasse: 'liste', id: 'troppliste' });
     for (const s of lag) { const n = TR.friske(s), kontakt = !k || !k.kanNå || k.kanNå(s), gb = kontakt && k && k.garnisonI ? k.garnisonI(s) : null;
-      boks.append(el('div', { klasse: 'l' + (kontakt ? '' : ' uten'), 'data-tropp': s.navn }, el('div', {}, el('b', {}, s.navn), el('small', {}, `${n} av ${s.menn.length} mann · ${hvor(s)}`),
+      boks.append(el('div', { klasse: 'l' + (kontakt ? '' : ' uten'), 'data-tropp': s.navn }, el('div', {}, el('b', {}, s.navn), el('small', { 'data-mann': s.navn }, `${mannTekst(s)} · ${hvor(s)}`),
         el('small', { klasse: 'radio' }, !k ? '' : gb ? `radiokontakt over radioen i ${gb.e.navn}` : kontakt ? 'radiokontakt' : 'ingen radiokontakt' + (k.hvorfor ? ': ' + k.hvorfor(s) : ''))), kn('Velg', () => velgLag(s), { 'data-velg': s.navn }))); }
     f.append(boks); return true; }
   function bygg() { if (endrer) { if (!ENHETER.includes(endrer) || !levende(endrer)) endrer = null; else return byggEndre(endrer); } const F = folk(), L = leir(), f = document.createDocumentFragment(); f.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }));
@@ -186,9 +189,9 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     // (runde 8, kritiker D) advarsel når leiren står uten byggere eller kokk etter at troppen går – rett over knappen, og knappen sier «likevel»
     const adv = valgte.size ? advarslerNå(F ? F.personer : [], [...valgte]) : [];
     if (adv.length) kol2.append(el('div', { klasse: 'stopp', id: 'troppadvar', role: 'alert' }, ...adv.map(t => el('div', {}, '⚠ ' + t))));
-    const ok = valgte.size >= R.min && valgte.size <= tak; f.append(el('div', { klasse: 'opprett' }, kn(ok ? (adv.length ? `Opprett likevel (${valgte.size})` : `Opprett troppen (${valgte.size})`) : `Velg minst ${R.min}`, () => { const r = opprett([...valgte], navn || 'Tropp', bev, k, { våpen: Object.fromEntries(Object.entries(våpen).filter(([id]) => valgte.has(+id))), utstyr: [...utstyr] }); if (r.feil) { logg(r.feil); return; } valgte = new Set(); våpen = {}; utstyr = new Set(); navn = ''; bil = ''; lukk(); valgt = r.lag; visPanel(); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }, Object.assign({ klasse: 'hoved', id: 'troppopprett' }, ok ? {} : { disabled: '' }))));
+    const ok = valgte.size >= R.min && valgte.size <= tak; f.append(el('div', { klasse: 'opprett' }, kn(ok ? (adv.length ? `Opprett likevel (${valgte.size})` : `Opprett troppen (${valgte.size})`) : `Velg minst ${R.min}`, () => { const r = opprett([...valgte], navn || 'Tropp', bev, k, { våpen: Object.fromEntries(Object.entries(våpen).filter(([id]) => valgte.has(+id))), utstyr: [...utstyr], mal: malValgt && (navn || '').startsWith(TR.MALER[malValgt].navn) ? malValgt : null }); if (r.feil) { logg(r.feil); return; } valgte = new Set(); våpen = {}; utstyr = new Set(); navn = ''; bil = ''; lukk(); valgt = r.lag; visPanel(); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }, Object.assign({ klasse: 'hoved', id: 'troppopprett' }, ok ? {} : { disabled: '' }))));
     return f; }
-  function brukMal(id) { const M = TR.MALER[id], F = folk(), L = leir(); if (!M || !F) return; const P = F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)), ider = TR.foreslå(P, M.n, holdIgjen(P));
+  function brukMal(id) { const M = TR.MALER[id], F = folk(), L = leir(); if (!M || !F) return; malValgt = id; const P = F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)), ider = TR.foreslå(P, M.n, holdIgjen(P));
     valgte = new Set(ider); våpen = {}; ider.forEach((pid, i) => { const v = M.våpen[i] || 'rifle'; if (v !== 'rifle') våpen[pid] = v; }); if (!Object.keys(våpen).length && ider.length) våpen[ider[0]] = 'rifle'; utstyr = new Set(M.utstyr);
     const k = M.bil ? biler().find(q => q.type === M.bil && !bærer(q) && L && Math.hypot(q.x - L.x, q.y - L.y) <= R.nær && TR.plass(q) >= ider.length) : null; bil = k ? k.navn : '';
     if (!navn || /^\d+\. tropp$/.test(navn) || Object.values(TR.MALER).some(q => navn.startsWith(q.navn))) navn = `${M.navn} ${egne().filter(e => e.fraFolk).length + 1}`; vis(true); }
