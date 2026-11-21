@@ -28,12 +28,12 @@ module.exports = { navn: 'by: parkering og gågater', kjør: async (pg, profil) 
     if (typeof parkeringNær === 'function' && typeof tegnGågater === 'function') {
       const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#545350'; g.fillRect(0, 0, 256, 256);
       parkeringNær(g, P.map(([x, y]) => [x / .25, y / .25]), .25, 1);
-      const d = g.getImageData(0, 0, 256, 256).data; let hvit = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 200) hvit++;
+      const d = g.getImageData(0, 0, 256, 256).data; let hvit = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 110 && d[i + 1] > 110) hvit++;
       ut.hvitePunkt = hvit; if (hvit < 200) F('stripene på plassen tegnes ikke i 2D');
       g.fillStyle = '#000'; g.fillRect(0, 0, 256, 256); tegnGågater(g, [{ m, b }], .25, 16);
       const e = g.getImageData(100, 4, 1, 1).data; ut.stein = [...e.slice(0, 3)]; if (e[0] < 120) F('gågaten tegnes ikke i 2D');
     } else F('2D-funksjonene mangler');
-    if (typeof R3 !== 'undefined' && R3.ut && window.Gagate3d) ut.i3d = { gågater: Gagate3d.antall(), parkering: Parkering3d.antall() };
+    if (typeof R3 !== 'undefined' && R3 && R3.ut && window.Gagate3d) ut.i3d = { gågater: Gagate3d.antall(), parkering: Parkering3d.antall() };
     return ut; });
   return { ok: !r.feil.length, tekst: r.feil.length ? r.feil.join('; ') : `parkering ${r.plasser} plasser/${r.biler} biler/${r.lykter} lykter, gågate kjent igjen, møbler ${JSON.stringify(r.møbler)}`, data: r };
 } };

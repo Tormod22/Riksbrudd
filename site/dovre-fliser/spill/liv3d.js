@@ -180,12 +180,18 @@
   }
 
   // ---------- nettene: vegbånd (u på tvers, v = meter / 12) og fortau (2 m, 15 cm høyt med kantstein) ----------
-  function bånd(P, a, b, løft, ut, kant) {
+  // Fortauet (runde 15, Claudes forslag etter bilder av norske fortau): kantsteinen står 12 cm over vegbanen (vanlig synlig høyde for
+  // granitt-/betongkantstein; 15 cm før), senkes til 2 cm de siste 1,5 m ved kryss og gangfelt (nedsenket kantstein)
+  const KANTSTEIN = .12, NEDSENKET = .02, RAMPE = 1.5;
+  function bånd(P, a, b, løft0, ut, kant, ramp) {
     // a, b: avstand fra midtlinjen (meter, venstre = negativ); ut = { pos, uv, idx }
-    const n0 = ut.pos.length / 3; let L = 0;
+    // ramp (runde 15, brukeren: «ser fortau bra ut?»): de siste ramp meterne i hver ende senkes til NEDSENKET over vegbanen – nedsenket
+    // kantstein der fortauet slutter ved kryss og gangfelt, og ingen åpen kant/glippe under fortauet i enden
+    const n0 = ut.pos.length / 3; let L = 0, Lt = 0; if (ramp) for (let i = 1; i < P.length; i++) Lt += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
     for (let i = 0; i < P.length; i++) {
       const p = P[i], q = P[Math.min(P.length - 1, i + 1)], o = P[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
       if (i) L += Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1]);
+      const løft = ramp ? NEDSENKET + (løft0 - NEDSENKET) * Math.min(1, L / ramp, (Lt - L) / ramp) : løft0;
       ut.pos.push(p[0] + nx * a, p[1] + ny * a, p[2] + løft, p[0] + nx * b, p[1] + ny * b, p[2] + løft); ut.uv.push(0, L / 12, 1, L / 12);
       if (kant) { ut.pos.push(p[0] + nx * a, p[1] + ny * a, p[2] - .05, p[0] + nx * a, p[1] + ny * a, p[2] + løft); ut.uv.push(0, L / 12, .08, L / 12); }
     }
@@ -263,7 +269,7 @@
           if ((i & 31) === 31) yield;
           if (kryss.nær(p[0], p[1], 2.2) || ru.klaring(x, y, li, 10) < 1.1) { if (b.length > 1) biter.push(b); b = []; } else b.push(p); }
         if (b.length > 1) biter.push(b);
-        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), .15, grupper.fortau, true);
+        for (const B of biter) { if (Veg.lengde(B) < 6) continue; bånd(Veg.tynn(B), sd * w, sd * (w + 2), KANTSTEIN, grupper.fortau, true, RAMPE);
           // skråkanten bak fortauet er grå i tettstedene (15. nov: den var gressgrønn midt i Oslo sentrum)
           kant(B, sd, w + 2, 0, .13, grupper.skulder, zf, true, grupper.bykant); }
       } else { const Pt = Veg.tynn(v.P, .06, .05, 7.5); for (const sd of [1, -1]) kant(Pt, sd, w, .8, -.04, grupper.skulder, zf, false, grupper.fylling, friFot); }

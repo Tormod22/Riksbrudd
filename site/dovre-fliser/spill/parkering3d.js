@@ -105,7 +105,7 @@
   });
 
   // Ledig plass nærmest et punkt i kartet (X, Y i kartets meter): { X, Y, retning } eller null. Kjøretøyene i spillet kan parkere der.
-  P3.ledig = (X, Y) => { if (typeof R3 === 'undefined' || !R3.ut) return null; const u = R3.ut; let b = null, bd = Infinity;
+  P3.ledig = (X, Y) => { if (typeof R3 === 'undefined' || !R3 || !R3.ut) return null; const u = R3.ut; let b = null, bd = Infinity;
     for (const { pl } of P3.planer) { const p = Parkering.ledig(pl, X - u.cx, Y - u.cy); if (p) { const d = Math.hypot(p.x - X + u.cx, p.y - Y + u.cy); if (d < bd) { bd = d; b = p; } } }
     if (!b) return null; b.opptatt = true; return { X: b.x + u.cx, Y: b.y + u.cy, retning: b.ret }; };
   P3.REGLER = R_PARK;
