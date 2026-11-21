@@ -51,6 +51,21 @@ module.exports = { navn: 'bygg fra virkeligheten (steinkirke, sykehjem/legevakt,
     // teksturene for stein og pleie har glass (natt3d tenner dem) – bare når 3D er åpnet (THREE finnes)
     if (typeof THREE !== 'undefined') for (const n of ['stein', 'pleie']) { const t = Byhus.tekstur(n), c = t.image, g = c.getContext('2d'), dd = g.getImageData(0, 0, c.width, c.height).data; let gl = 0;
       for (let q = 0; q < dd.length; q += 4) if (dd[q + 2] > dd[q] + 8) gl++; krev(gl > 50, `teksturen «${n}» har ikke vindusglass`); }
+    // bensinstasjonene: alle tre slagene lages uten feil (three.js hentes om 3D ikke er åpnet), og automaten er minst
+    if (typeof THREE === 'undefined' && typeof lastThree === 'function') { try { await lastThree(); } catch (e) {} }
+    if (typeof THREE !== 'undefined' && window.Anlegg3d) {
+      const hh1 = window.hoyde3d, r31 = R3; const typer = {};
+      try { window.hoyde3d = () => 0; if (!R3) R3 = { EX: 1 };
+        for (const [kv, by, ventet] of [['E', false, 'stor'], ['K', false, 'automat'], ['F', true, 'vanlig']]) {
+          for (let n = 0; n < 40 && !typer[ventet]; n++) { const st = { x: n * 13.7, y: 20, k: 12 }, u = { cx, cy, S: 200, h0: 0, veger: [{ k: kv, by, P: [[-150, 0], [150, 0]] }], hus: { omriss: [] } };
+            const m = Anlegg3d.bensinstasjon(u, st); if (st.type === ventet) typer[ventet] = m[0].geometry.attributes.position.count;
+            for (const x of m) { x.geometry.dispose(); x.material.dispose(); } } }
+      } catch (e) { ut.feil.push('bensinstasjon kastet: ' + e.message); }
+      finally { window.hoyde3d = hh1; R3 = r31; }
+      ut.bensin = typer;
+      krev(typer.automat && typer.vanlig && typer.stor, `bensinstasjonene: ${JSON.stringify(typer)} (ventet automat, vanlig og stor)`);
+      krev(!(typer.automat >= typer.vanlig) && !(typer.vanlig >= typer.stor), 'automaten skal være minst og den store størst');
+    }
     return ut;
   });
   return { ok: !d.feil.length, tekst: d.feil.length ? d.feil.join('; ') : `steinkirke, sykehjem/legevakt, lister og OSM-farge ok (${JSON.stringify(d.stat && d.stat.fasader)})`, data: d };

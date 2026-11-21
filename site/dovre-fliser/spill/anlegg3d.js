@@ -97,6 +97,7 @@
   // Mål i meter: [halv lengde, dybde fra vegsiden].
   const BENSIN = { automat: [4, 6], vanlig: [9, 22], stor: [17, 28] };
   const bensinType = (k, by, st) => window.Byhus && Byhus.bensinType ? Byhus.bensinType(k, by, st.x, st.y) : 'vanlig';
+  window.Anlegg3d = { bensinstasjon: (u, st) => bensinstasjon(u, st), BENSIN };
   function bensinstasjon(u, st) {
     // langs nærmeste veg (innen 70 m): taket står ved siden av vegen, på samme side som stasjonen
     let ret = 0, cx = st.x, cy = st.y, best = 70, nær = null;
@@ -125,19 +126,19 @@
       fargeboks(deler, x, sg * (y0 - .05), .3, L * .7, .12, H * .62, glassF); fargeboks(deler, x, sg * (y0 - .08), H - 1.1, L + .1, .16, .9, farge); };
     // skiltstolpe ved vegen med kjedens farge og en mørk pristavle under (høyere ved store stasjoner)
     const skilt = (x, hS) => { fargeboks(deler, x, -6 * sg, 0, .3, .3, hS, grå); fargeboks(deler, x, -6 * sg, hS - 3.3, .35, 1.8, 1.6, mørk); fargeboks(deler, x, -6 * sg, hS - 1.6, .4, 2.4, 1.6, farge); return [x, hS]; };
-    let sk;
+    let skp;
     if (type === 'automat') {
       // ubemannet automat: én øy med 1–2 pumper, betalingsautomat og et lite skilt – ingen tak, ingen butikk
       const n = window.Byhus && Byhus.hash && Byhus.hash(Math.round(st.x), Math.round(st.y), 67) < .5 ? 1 : 2; pumpeøy(0, n, n === 1 ? 3.2 : 5.5);
       fargeboks(deler, (n === 1 ? 2.6 : 3.8), 0, .2, .55, .5, 1.6, mørk); fargeboks(deler, (n === 1 ? 2.6 : 3.8), 0, 1.8, .6, .55, .3, farge);
       fargeboks(deler, -3.2, 2.2 * sg, 0, .2, .2, 2.4, grå); fargeboks(deler, -3.2, 2.2 * sg, 2.4, .5, .5, .7, hvit);
-      sk = skilt(5.5, 4.2);
+      skp = skilt(5.5, 4.2);
     } else if (type === 'vanlig') {
       fargeboks(deler, 0, 0, 4.8, 16, 9, .9, farge); fargeboks(deler, 0, 0, 4.75, 15.6, 8.6, .06, hvit);
       for (const [px, py] of [[-6.5, -3], [6.5, -3], [-6.5, 3], [6.5, 3]]) fargeboks(deler, px, py, 0, .35, .35, 4.8, grå);
       for (const py of [-2.2, 2.2]) pumpeøy(py, 2, 8);
       butikk(0, 9.5, 14, 9, 4);
-      sk = skilt(9.5, 7.5);
+      skp = skilt(9.5, 7.5);
     } else {
       // stor stasjon ved hovedvegen: langt tak over tre øyer, butikk med kafé (større glassfelt), vaskehall med port i enden
       fargeboks(deler, 0, 0, 5.2, 28, 13, 1, farge); fargeboks(deler, 0, 0, 5.15, 27.6, 12.6, .06, hvit);
@@ -146,13 +147,13 @@
       butikk(-3, 11.5, 22, 12, 4.5); fargeboks(deler, -3 - 11 + 3.5, sg * 11.4, .3, 6, .14, 3.4, glassF);
       fargeboks(deler, 12.5, sg * (11.5 + 6), 0, 6.5, 12, 4.6, [.8, .8, .79]); fargeboks(deler, 12.5, sg * 11.42, .2, 4, .14, 3.8, [.5, .52, .54]);
       fargeboks(deler, 12.5, sg * 11.4, 4, 6.5, .16, .5, farge);
-      sk = skilt(16.5, 10);
+      skp = skilt(16.5, 10);
     }
     const z0 = (hoyde3d(cx + u.cx, cy + u.cy, u) - u.h0) * R3.EX - .05, mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     const m = new THREE.Mesh(slå(deler), mat); m.position.set(cx, cy, z0); m.rotation.z = ret; const ut = [m];
     if (kj && typeof skiltTekstur === 'function') {
       // navnet på begge sider av skiltet øverst på stolpen
-      for (const sd of [-1, 1]) { const g = new THREE.PlaneGeometry(2.3, .58); g.rotateX(Math.PI / 2); g.rotateZ(sd > 0 ? Math.PI / 2 : -Math.PI / 2); g.translate(sk[0] + sd * .21, -6 * sg, sk[1] - .8);
+      for (const sd of [-1, 1]) { const g = new THREE.PlaneGeometry(2.3, .58); g.rotateX(Math.PI / 2); g.rotateZ(sd > 0 ? Math.PI / 2 : -Math.PI / 2); g.translate(skp[0] + sd * .21, -6 * sg, skp[1] - .8);
         const sk = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: skiltTekstur(st.k), emissive: 0x222222 })); sk.position.set(cx, cy, z0); sk.rotation.z = ret; ut.push(sk); }
     }
     return ut;
