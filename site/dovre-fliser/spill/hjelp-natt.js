@@ -37,6 +37,31 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Anlegg: skyttergraver, bunkere, kaier og tunneler",
+"Leir-menyen, fanen Bygg, «Anlegg». Velg hva du vil bygge og trykk i kartet (også i 3D). Skyttergrav: trykk punkt for punkt der graven skal gå. Bunker: ett trykk – skyteskåret vender bort fra leiren, «Roter» snur den. Kai: trykk på land helt i strandkanten. Tunnel: trykk ved foten av fjellet på begge sider. Grønt = kan bygges, ellers står årsaken. «Bygg» betaler prisen og kjøper materialene som mangler på lageret.",
+"Leiren"
+],
+[
+"Hvem bygger anleggene?",
+"Folk på oppgaven «bygg» arbeider på det første uferdige anlegget, og et ingeniørlag som står innen 400 m arbeider på anlegget der det står (tre ganger så mye per mann). Uten arbeidere står anlegget stille. Trykk på anlegget i kartet for å se hvor langt det er kommet og hvor lang tid det tar.",
+"Leiren"
+],
+[
+"Skyttergrav og bunker",
+"En skyttergrav er 1,5 m dyp med sandsekker på kanten. Et lag som står i graven, får langt færre treff (×0,4); graven har plass til ett lag per 20 m. En bunker i betong er delvis gravd ned, med skyteskår og dør, og gir ett lag svært få treff (×0,15). Du kan gå ned i graven og inn i bunkeren når du går selv.",
+"Lag og strid"
+],
+[
+"Egen kai",
+"En ferdig kai blir en kai som båtene dine kan legge til ved, akkurat som en havn: en liten kai tar småbåt og sjark, en middels kai (oppgrader i panelet) også lekter. Ligger den innen 3 km fra leiren, er den leirens kai.",
+"Leiren"
+],
+[
+"Tunnel",
+"En ferdig tunnel er en snarvei: gir du et lag ordre til et sted på den andre siden av fjellet, og det går fortere gjennom tunnelen, går laget til portalen, gjennom tunnelen og videre av seg selv. Står et lag eller kjøretøy ved en portal, kan du også trykke «Gjennom tunnelen». Tunneler er dyre og tar lang tid å bygge.",
+"Lag og strid"
+],
+[
 "Skygger tidlig og sent",
 "Når sola står lavt (morgen og kveld), er skyggene myke og blir svakere et stykke fra treet eller huset som kaster dem – de strekker seg ikke over hele jordet. Midt på dagen er de tydeligere. Slå av skyggene med «Lys og skygger» i ☰ hvis bildet går tregt.",
 "Vær, lyd og bilde"
@@ -85,6 +110,36 @@ window.HJELP_TILLEGG = [
 "Ammunisjon og hvile hjemme",
 "Et lag som står stille hjemme i leiren (innen ca. 250 m) mellom angrepene, fyller ammunisjon av seg selv: gratis når basen har olje, ellers fra kassa (en full last koster 200 000 kr, og 300 000 kr blir alltid igjen). De sårede i laget blir sakte bedre – fra hardt såret til frisk på omtrent et døgn. Med sykestue og folk på «Stell» går det fortere. Falne blir ikke friske: lag nye tropper av folkene dine.",
 "Lag og strid"
+],
+[
+"Gågater",
+"I sentrum av byene er de smale gatene med hus tett på begge sider gågater: brostein fra vegg til vegg, ingen biler, folk som går, benker, blomsterkasser og lykter – og bord med parasoll om sommeren. I kartet er de lyse med et steinmønster når du zoomer helt inn.",
+"I 3D"
+],
+[
+"Parkeringsplasser",
+"Parkeringsplassene har oppmerkede plasser i rader, kjørefelt mellom radene, kantstein, lyktestolper og øyer med trær på de store. Ved butikker står det et handlevognskur, og det står flere biler der midt på dagen enn om natta. Zoom inn i kartet for å se plassene.",
+"I 3D"
+],
+[
+"Byggene i 3D",
+"Byggene i 3D er laget av omrissene fra OpenStreetMap. Kirker over ca. 700 m² er murt i stein med bratt tak, små kirker er trekirker med tårn. Småhusene i tette strøk og på Vestlandet er oftest hvitmalte, og mange har teglrødt tak. Nær kameraet har husene takrenner, vindskier og hjørnekasser.",
+"I 3D"
+],
+[
+"Sykehjem og legevakt",
+"Sykehjem (lange fløyer med altaner, ofte saltak) og legevakter/legesentre er egne byggtyper. Trykk på et bygg for å se typen. De vises når kartet er bygget på nytt med de nye dataene.",
+"I 3D"
+],
+[
+"Bensinstasjoner",
+"Bensinstasjonene ser forskjellige ut: på bygda ofte bare en automat med én eller to pumper, i tettstedene tak over pumpene og en butikk, og langs E-vegene store stasjoner med tre pumpeøyer, kafé og vaskehall.",
+"I 3D"
+],
+[
+"Elver som renner",
+"Brede elver som Lågen, Glomma og Nidelva renner nedover i 3D: krusningen og lysrefleksene flyter med strømmen, raskest midt i elva. I stryk og fosser blir vannet hvitt av skum. Der elva munner ut i en innsjø eller i sjøen, roer strømmen seg, og vannet ligger stille som på en innsjø. Små bekker har sitt eget rennende vannbånd.",
+"I 3D"
 ],
 [
 "Folk og soldater i 3D",
@@ -255,6 +310,21 @@ window.HJELP_TILLEGG = [
 "Angrep mens du går",
 "Mens du går selv, er angrepsbanneret én linje øverst med «Forsvar leiren», så det ikke dekker bildet.",
 "Lag og strid"
+],
+[
+"Inne i husene",
+"Husene har gang eller vindfang innenfor døra, og soverom og bad går ut fra gangen eller stua – aldri rett fra ytterdøra. Store bygg har flere dører: bakdør, vareinngang (port bak i butikker og industri) og nødutgang med grønt skilt.",
+"I 3D"
+],
+[
+"Eldre og moderne bygg",
+"Eldre hus har mange små rom og smale vinduer. Nyere hus har stue og kjøkken uten vegg mellom. Moderne bygg er åpne mot gangen og har store vinduer.",
+"I 3D"
+],
+[
+"Hva du finner inne",
+"Butikker har reoler i rader, kasser ved utgangen, kjøledisker, frukt og grønt og lager bak. Låvene er fjøs med båsrekker og melkerom. Industrien er sag, mekanisk verksted eller olje og gass. Sykehjem har korridor med beboerrom, dagligstue og vaktrom; legevakta har venterom og behandlingsrom.",
+"I 3D"
 ],
 [
 "Når lagene dine kommer i kamp",
@@ -707,6 +777,11 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Kaier langs sjøen",
+"Der kartet har en kai, havn eller småbåthavn (fra OpenStreetMap), får kysten i 3D en ekte kai: en loddrett betongkant ned i sjøen, flatt dekke med asfalt, gul kantlist, pullerter, fendere, stiger og lyktestolper. Gamle kaier kan ha steinmur eller fenderverk i tre. Småbåthavner får steinsetting i stedet for betong. Resten av kysten er naturlig strand og berg som før.",
+"I 3D"
+],
+[
 "Lagre og last",
 "Spillet lagres av seg selv i nettleseren, hele tiden. «Lagre og last» i ☰ (eller «Lagre» bak «Mer» nederst) viser når det sist ble lagret, og har tre lagringsplasser du kan lagre i, laste inn og slette, med navn, dag, fraksjon og kasse. Når du laster en plass, legges spillet du hadde i «Automatisk» først, så du kan gå tilbake. «Automatisk» tas også hvert tiende minutt du spiller.",
 "Kom i gang"
@@ -725,6 +800,11 @@ window.HJELP_TILLEGG = [
 "Når spillet ikke kan lagres",
 "I et privat vindu eller med blokkert lagring, eller når nettleseren er full, sier spillet fra i loggen og i «Lagre og last». Spillet virker likevel – last det ned som fil før du lukker siden, eller slett en lagringsplass for å få plass.",
 "Kom i gang"
+],
+[
+"Når du flyr eller kjører langt i 3D",
+"3D-landskapet bygges i biter rundt deg. Flyr eller kjører du, regner spillet ut hvor du er om litt og begynner å bygge neste bit der – foran deg – i god tid, og kartet lenger fram hentes på forhånd. Mens en bit bygges, ser du det grove landskapet lenger ute (fjernkartet). Går det veldig fort, kan du fortsatt komme til kanten før neste bit er klar: da står «Laster landskapet …» midt på skjermen, og bilen bremser ved kanten til kartet er klart.",
+"I 3D"
 ],
 [
 "Leiren på nær zoom",
@@ -899,6 +979,16 @@ window.HJELP_TILLEGG = [
 [
 "Lyng på heia",
 "Brun og grønn hei er lyng og gress når du går på den. Stein ligger der fjellet er grått.",
+"I 3D"
+],
+[
+"Grønn eng og brun hei",
+"I 3D er bakken farget etter hva som vokser der: eng, beite og åker (dyrket mark) er grønne om sommeren, heia og fjellet er grågrønne og brunlige, og berg, grus og strand er grå. Om høsten gulner graset, og om vinteren ligger snøen.",
+"I 3D"
+],
+[
+"Baner og plener",
+"På fotballbaner, ballbaner, løpebaner, lekeplasser og rundt rullebanene står det ikke trær, busker eller steiner, og gresset er klippet. I byene og tettstedene er gresset også lavt, som en plen. Ute på enga og beitet står det høyere gress og blomster.",
 "I 3D"
 ],
 [
