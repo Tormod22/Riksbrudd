@@ -175,6 +175,10 @@ Kritiker G (liggende telefon, Lærdal på /norge) og H (PC, Rogaland). Alle nye 
    fila for SPILLOMRÅDE. Lastingen ble ikke satt i gang av seg selv de første 25 s på /rogaland (PC, tempo 0) – den kommer når fienden vil
    kjøre (fraksjoner-visning.js), når kartet er zoomet langt ut / regionpanelet er åpent (region-visning.js), eller ved første ordre.
 
+Etter første mobilkontroll (1 feil, i min vakt): leirens navn kom ikke med når mange lag og kjøretøy sto ved leiren (samlelappen tok plassen
+– nå plasseres leirens navn før egne lag, `kartlapper.js`), trykket på lappen ble tatt av en annen krok (samletrykket legges nå først i lista når
+alle skriptene er lastet), og vegnettets boks ble utvidet av basene langt unna (på et spillkart brukes bare området).
+
 ### Filer (runde 13)
 - `spill/etikett.js` – samleSted/samle/samleTekst/samling, REGLER.samle. Test: test_etikett.js (+4).
 - `spill/kartlapper.js` – samlelappen i 2D og 3D, trykk, KartLapper.SAMLE/hvem.
