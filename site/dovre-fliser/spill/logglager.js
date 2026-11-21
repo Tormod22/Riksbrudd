@@ -15,9 +15,9 @@
   const REGLER = {
     maks: 100,            // så mange meldinger lagres per leir
     viktigeMaks: 5,       // så mange meldinger står i velkomstboksen
-    VIKTIG: /angrep|angrip|røver|fiende|falt|død|såret|slått ut|tapt|tom for|sulter|mangler|kontakten er brutt|i kamp|ildkamp|ferdig|bestilt|sendt|framme|er satt opp|ny i gjengen|forlatt|rekrutt|kjøpt|solgt|hentet|⚠/i,
-    // rene stemningsmeldinger tas ikke med i velkomstboksen
-    STØY: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Velkommen tilbake)/,
+    VIKTIG: /angrep|angrip|røver|fiende|falt|død|såret|slått ut|tapt|tom for|sulter|kontakten er brutt|i kamp|ildkamp|ferdig|bestilt|sendt|framme|er satt opp:|ny i gjengen|forlatt|rekrutt|kjøpt|solgt|flyttet|⚠/i,
+    // stemningsmeldinger, oppskrifter (med «→»), tips og meldingene ved oppstart tas ikke med i velkomstboksen
+    STØY: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Velkommen tilbake|Pengene:|Tips?:|Vil du|Fikk ikke hentet)|→|Riket har gått i oppløsning|Leiren er satt opp|ingen ferdige lag/,
   };
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
   const leirId = l => (l && Number.isFinite(+l.x) && Number.isFinite(+l.y) ? Math.round(l.x) + ',' + Math.round(l.y) : null);
@@ -67,7 +67,8 @@
     let lagret = null; try { lagret = localStorage.getItem(NØKKEL); } catch (e) { lagret = null; }
     // et nytt spill eller en ny leir: ny logg. Ellers: neste økt.
     L = les(lagret, l); if (L.linjer.length) L.økt += 1;
-    for (const [x, t, s] of venter) legg(L, x, t, s); venter = []; lagre();
+    // meldingene fra før det lagrede spillet var lest inn, har klokka 06:00 – de får klokka spillet står på nå
+    const nå = typeof tid === 'number' && isFinite(tid) ? tid : 0; for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
     const o = oppsummer(L); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; setTimeout(() => velkommen(o), 1800); }
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));

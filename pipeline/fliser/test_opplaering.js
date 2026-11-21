@@ -30,6 +30,6 @@ ok(O.STEG.every(s => s.tittel && s.tekst.length > 20 && s.tekst.length < 170), '
   const fra = { ms: 1000, tid: 600 }; ok(!O.lenge(fra, { ms: 1000 + O.LENGE.ms - 1, tid: 600 + O.LENGE.min - 1 }) && O.lenge(fra, { ms: 1000 + O.LENGE.ms + 1, tid: 600 }) && O.lenge(fra, { ms: 2000, tid: 600 + O.LENGE.min + 1 }) && !O.lenge(null, fra), 'et steg som står lenge (ekte tid eller spilltid) legges sammen'); }
 // RUNDE 13: steg 6 godkjennes med to på Vakt alene, og kravet står med tallene
 { const s = O.STEG.find(q => q.id === 'tropp2'); ok(s.ferdig({ tropper: 0, påVakt: 2 }) && s.ferdig({ tropper: 2, påVakt: 0 }) && !s.ferdig({ tropper: 1, påVakt: 1 }), 'steg 6: to på Vakt ELLER to tropper');
-  ok(O.krav(s, { tropper: 1, påVakt: 1 }) === 'Nå: 1 på Vakt (trenger 2) – eller 1 tropp (trenger 2)' && O.krav(s, { tropper: 1, påVakt: 1 }, true) === 'vakt 1/2 eller tropper 1/2', 'steg 6: kravet står konkret');
+  ok(O.krav(s, { tropper: 1, påVakt: 1 }) === 'Nå: 1 på Vakt (trenger 2) – eller 1 tropp (trenger 2)' && O.krav(s, { tropper: 1, påVakt: 1 }, true) === '1/2 på vakt', 'steg 6: kravet står konkret');
   ok(O.krav(O.STEG.find(q => q.id === 'bygg2'), { påBygg: 1, folkÅpnet: true }) === 'På Bygg: 1 av 2' && O.krav(O.STEG[0], {}) === '', 'krav for «Sett to på bygg», tomt for steg uten tall'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

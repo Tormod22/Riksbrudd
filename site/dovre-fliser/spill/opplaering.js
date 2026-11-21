@@ -25,7 +25,7 @@
       // RUNDE 13 (kritiker H: steget sto i tre døgn uten at det gikk fram hva som manglet): kravet står konkret, og «eller» betyr eller –
       // to på Vakt holder alene (før krevde det også en tropp, uten at teksten sa det)
       krav: b => `Nå: ${b.påVakt || 0} på Vakt (trenger 2) – eller ${b.tropper || 0} ${b.tropper === 1 ? 'tropp' : 'tropper'} (trenger 2)`,
-      kravKort: b => `vakt ${b.påVakt || 0}/2 eller tropper ${b.tropper || 0}/2` },
+      kravKort: b => `${b.påVakt || 0}/2 på vakt` },
     { id: 'mat', tittel: 'Ha mat til tre døgn', tekst: 'Hver person spiser én rasjon per døgn. Kjøp mat i Folk, send et lag på jakt eller fiske, så en åker – eller bygg et drivhus.', mål: 'folk', ferdig: b => b.matDøgn >= 3,
       krav: b => `Mat nå: ${String(Math.floor((b.matDøgn || 0) * 10) / 10).replace('.', ',')} døgn av 3` },
     { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → rull ned til Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
