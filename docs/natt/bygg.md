@@ -28,8 +28,9 @@ Bilder fra spillet (før/etter) ligger i scratchpad `natt15/bygg/` (for-*.png = 
 |---|---|---|---|---|
 | Stavanger domkirke | Plassen og grunnflaten (omrisset fra OSM, 41 hjørner) | Spillet: hvit trekirke-kloss, FLATT tak, 30 m høye vegger og et spir på taket. Virkeligheten: gråstein, bratt skifertak (ca. 50°), vegger ca. 10–12 m, ingen høy spir | OSM gir bare omriss og `building=cathedral` (høyden er anslaget 30 m i bygninger.py). Omrisset med støttepilarer er ikke rektangulært, og takDeler ga ikke tak – da ble det flatt. Alle kirker fikk trekirke-teksturen | ✔ Store kirker (≥ 700 m²) er steinkirker (tekstur «stein»: naturstein med spissbuevindu, gavlene i stein), ✔ veggene høyst 12 m og bratt tak (Byhus.KIRKE, TAKVINKEL), ✔ sammensatt omriss får valmtak langs hovedretningen, ✔ ikke spir på steinkirker. Senere: `roof:shape`, `building:material=stone`, ekte `height` fra OSM (pipeline klar) |
 | Gamle Stavanger (trehus) | Små saltakshus tett i tett, gavler og vinduer per etasje, pipe | Spillet: blanding av hvite, grå, gule og røde hus med mørkebrune tak. Virkeligheten: nesten alle hvite, oransjerøde teglstein, hvite vindskier og takrenner | Ingen farger i dataene; VEGGFARGER[0] trakk tilfeldig (ca. 43 % hvite), og takfargene var mørke | ✔ Hvite trehus etter tetthet (78 % i sentrum, 66 % i by, ca. 40 % på landet, 62 % på landet på Vestlandet), ✔ teglrøde tak på ca. halvparten i tette strøk, ✔ takrenner, vindskier og hjørnekasser på småhus nær kameraet. Senere: `building:colour`, `roof:colour` (pipeline klar) |
+| Hytte (Ryfylke) | Brun/tjæret kledning, saltak | Taket var like bratt som på hus (40°); hytter har ofte 25–30° (torv eller shingel) | Felles takvinkel | ✔ Hytter ca. 31°. Ikke gjort: torvtak, terrasse |
 | Enebolig (villastrøk Eiganes) | Saltak, pipe, garasje, bil i innkjørselen | Husene så ut som «klosser» uten detaljer langs takkanten; tilfeldige farger | Som over | ✔ Takrenner/vindskier/hjørnekasser, ✔ hvitere på Vestlandet. Ikke gjort: verandaer, karnapp, kjellerinngang |
-| Gård med låve (Hå gamle prestegard) | Hvitt våningshus med saltak, låve, uthus | Låvene var røde med for slakt/lavt tak (møne høyst 5 m), på Jæren er både hus og låve ofte hvite med mørkt tak | Takhøyden hadde et tak på 5 m for alle; låvefargene er røde (VEGGFARGER[4]) | ✔ Låve: høyere møne (til 8 m, ca. 36°), hvite vindskier. Ikke gjort: hvite låver på Vestlandet, låvebru |
+| Gård med låve (Hå gamle prestegard; prøvd i Ryfylke) | Hvitt våningshus med saltak, låve, uthus | Låven i Ryfylke var en rød KLOSS med flatt tak (488 m², 16 hjørner); møne høyst 5 m. På Jæren er både hus og låve ofte hvite med mørkt tak | harFall ga låver 7 % flate tak, og sammensatte omriss uten takDeler-svar ble flate; takhøyden hadde et tak på 5 m for alle | ✔ Låver og fjøs under 3500 m² har alltid tak med fall (harFall), ✔ valmtak på låver med sammensatt omriss (rekt > 0,45), ✔ høyere møne (til 8 m, ca. 36°), hvite vindskier. Ikke gjort: hvite låver på Vestlandet, låvebru |
 | Hermetikkfabrikk (industri) | Lang murbygning | I dataene er det mange småbygg (`building=yes`), som blir «uthus»/«hus» | OSM-typen mangler; fabrikkene i Gamle Stavanger er merket som vanlige bygg | Trenger `building=industrial`/`historic` i OSM. Ikke gjort |
 | Skole (katedralskolen) / butikk / kontor | Bygårdsfasader i sentrum (murgård, tegl) | Kartpunktet traff et høyhus – skolen ble ikke funnet sikkert i dataene | Koordinatene/typene | Ingen endring (skolene har egne fasader fra runde 12) |
 | Sykehjem (Fitjar, Vestby) | – (fantes ikke som type) | Spillet: sykehjem ble «bolig» eller «leilighetsbygg». Virkeligheten: lange fløyer i 2–3 etasjer, lys puss eller tegl, altan/balkong per rom, ofte saltak | bygninger.py kjente ikke `amenity=nursing_home`/`social_facility`; `clinic` ble sykehus | ✔ Nye typer 15 sykehjem og 16 legevakt/legesenter i bygninger.py (med test), ✔ fasade «pleie» (lys puss, vindu + altan per rom), ✔ saltak på ca. 70 %, ✔ 2D-merke (hjerte / grønt kors). Krever ny husrelease |
@@ -55,8 +56,23 @@ Bilder fra spillet (før/etter) ligger i scratchpad `natt15/bygg/` (for-*.png = 
 - Til inne-pakka: `P.bygg.t` = 15 og `P.bygg.kl` = 'sykehjem'; `P.bygg.t` = 16 og `P.bygg.kl` = 'legevakt' (Interior.plan faller tilbake til
   «hus» for ukjente klasser). Typenavn: BYGGTYPE[15] «Sykehjem», BYGGTYPE[16] «Legevakt eller legesenter».
 
+### Prøvd (bilder i scratchpad natt15/bygg/)
+- Før: `for-domkirke-pc.png`, `for-stavanger-gamlestavanger-pc.png`, `for-breidablikk-pc.png`, `for-stavanger-skole-pc.png`, `for-stavanger-butikk-pc.png`,
+  `for-bygd-gard-pc.png`, `for-bygd-hytte-pc.png`, `for-bygd-enebolig-pc.png`, `for-stavanger-bensin-x-pc.png` (gammel kopi av koden, `gammel/`).
+- Etter: `etter-stavanger-domkirke-pc.png` (steinkirke med bratt valmtak), `etter-stavanger-gamlestavanger-pc.png` (hvite hus, teglrøde tak),
+  `etter-stavanger-breidablikk-pc.png`, `etter-stavanger-skole-pc.png`, `etter-bygd-gard-pc.png`, `etter-bygd-hytte-pc.png`,
+  `etter-algard-bensin*-stor-pc.png` (E39 ved Ålgård: store stasjoner), `etter-bensin-tre-pc.png` / `-mob.png` (automat, vanlig og stor side om side).
+- Vakta `pipeline/fliser/vakter/bygg.js`: ok på PC og mobil, med og uten 3D (ca. 0,1–2,6 s). Lagt inn feil med vilje (ingen steinkirke + navnefeil
+  i bensinstasjon) – vakta fant begge. Den fant også en ekte feil: `sk` brukt før den var laget i bensinstasjon() (3D ble aldri ferdig i Stavanger).
+- Tester: test_byhus.js (nye: hvite hus by/land/Vestlandet, teglrøde tak, steinkirker, takvinkler, sykehjem/legevakt, bensinType),
+  test_bygninger.py (helsetyper, utseende, feltene i flisa), test_kart2d.js, test_interior.js – alle ok.
+- Låven i Ryfylke er fortsatt flat på etter-bildet fra kl. 21:52 (tatt før harFall-endringen; ikke tatt nytt bilde etter den).
+
 ### Ikke gjort / gjenstår
 - 2D-kartet vet ikke om hvite hus/teglrøde tak (bakgrunnstråden laster ikke byhus.js) – takene i 2D har de gamle fargene.
 - Ingen nye trekanter for verandaer, karnapper, takarker på småhus, låvebru.
 - Hermetikkfabrikken og andre gamle industribygg er «uthus»/«hus» fordi OSM-typen mangler.
 - Typene 15/16 og OSM-utseendet krever ny husrelease.
+- Gatene i Gamle Stavanger er brostein i virkeligheten, asfalt i spillet (veg-pakka).
+- Skolene i byen har flatt tak; eldre skoler har ofte valmtak.
+- Bensinstasjonene i byene ligger ofte inneklemt mellom bygg; den store varianten kan bli for stor der (plassen sjekkes, men faller tilbake til første plass når ingen er fri).
