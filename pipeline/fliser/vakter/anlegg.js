@@ -43,8 +43,8 @@ module.exports = { navn: 'anlegg: skyttergrav, bunker, kai og tunnel', kjør: as
         AnleggSpill.tunnelSteg(60); krev(!lag.iTunnel && lag.x > L.x + 1800, 'laget kom ikke ut på den andre siden'); }
       // 3D: modellene i scenen og høydegitteret senket i graven
       // (fiks 15) i hele kjøringen står 3D-utsnittet ofte et annet sted (Snøhetta, S 6000) når vakta kommer: anleggene lages bare i utsnitt
-      // med S ≤ 4200 som har dem inne. Da bygges et lite utsnitt (S 800) ved graven, og kameraet blir stående der (ved leiren, som i et
-      // vanlig spill) – å bygge det store utsnittet igjen tok over ett minutt. 3D er på som før.
+      // med S ≤ 4200 som har dem inne. Da bygges et lite utsnitt (S 800) ved graven, og det gamle utsnittet bygges igjen etterpå (vaktene
+      // etter denne – gå, lasting – venter seg kameraet der det var).
       if (typeof på3d !== 'undefined' && på3d && R3 && R3.ut) {
         const R = R3, b = R.bane, gx = x0 + 15, gy = y0, inne = () => R.ut && !R.bygger && R.ut.S <= 4200 && Math.abs(gx - R.ut.cx) < R.ut.S - 60 && Math.abs(gy - R.ut.cy) < R.ut.S - 60;
         if (!inne()) { const t0 = performance.now(); while (R.bygger && performance.now() - t0 < 60000) await new Promise(r => setTimeout(r, 200));
@@ -59,6 +59,9 @@ module.exports = { navn: 'anlegg: skyttergrav, bunker, kai og tunnel', kjør: as
       if (!flyttet3d) AnleggSpill.utenOmbygging = false;
       for (const a of AnleggSpill.liste().slice()) if (!før.includes(a)) AnleggSpill.fjern(a.id);
       AnleggSpill.utenOmbygging = false;
+      if (flyttet3d && typeof R3 !== 'undefined' && R3 && R3.ut) { const R = R3, b = R.bane, t0 = performance.now(); while (R.bygger && performance.now() - t0 < 60000) await new Promise(r => setTimeout(r, 200));
+        b.x = flyttet3d.X - R.ut.cx; b.y = flyttet3d.Y - R.ut.cy; b.avst = flyttet3d.avst; await nytt3dUtsnitt(flyttet3d.X, flyttet3d.Y, flyttet3d.S);
+        const t1 = performance.now(); while ((R.bygger || !R.ut) && performance.now() - t1 < 120000) await new Promise(r => setTimeout(r, 200)); }
       const p = OppstartSpill.tilstand(); if (p.penger !== penger) { if (p.penger < penger) OppstartSpill.gi(penger - p.penger); else p.penger = penger; }
       if (lag) { lag.x = lx; lag.y = ly; lag.sti = lsti; lag.iTunnel = null; lag.anleggVia = null; AnleggSpill.oppdaterVern(); }
       try { if (lagret === null) localStorage.removeItem('riksbrudd-anlegg'); else localStorage.setItem('riksbrudd-anlegg', lagret); } catch (e) { /* sperret */ }
