@@ -74,22 +74,27 @@
       const c = Math.cos(b.a), s = Math.sin(b.a), maks = b.by ? Kyst.KAI.dybdeBy : Kyst.KAI.dybde; let d = maks;
       for (let t = KANT; t <= maks; t += 1) { let stopp = false;
         for (const q of [-5, 0, 5]) { const x = b.x - c * t - s * q, y = b.y - s * t + c * q; if (veg(x, y) || hus(x, y)) { stopp = true; break; } }
-        if (stopp) { d = Math.max(KANT, t - 1.5); break; } }
+        if (stopp) { d = Math.max(KANT, t - .8); break; } }
       b.d = d;
+      // en veg ut i sjøen (bru, rampe, kulvert): ingen kai her
+      b.vekk = veg(b.x - c * .8, b.y - s * .8) || veg(b.x + c * 2, b.y + s * 2);
     }
-    // dybden jevnes ut med naboene (det minste av bitene innen 18 m, så dekket ikke får sagtenner mot gata og ikke går inn i vegen)
-    const dj = kai.biter.map(b => { let m = b.d; for (const o of kai.biter) if (Math.abs(o.x - b.x) < 18 && Math.abs(o.y - b.y) < 18 && o.d < m) m = o.d; return m; });
+    kai.biter = kai.biter.filter(b => !b.vekk);
+    // dybden jevnes ut med naboene (det minste av bitene innen 12 m, så dekket ikke får sagtenner mot gata og ikke går inn i vegen)
+    const dj = kai.biter.map(b => { let m = b.d; for (const o of kai.biter) if (Math.abs(o.x - b.x) < 12 && Math.abs(o.y - b.y) < 12 && o.d < m) m = o.d; return m; });
     kai.biter.forEach((b, i) => { b.d = dj[i]; });
     // høydegitteret: gitterpunktene under dekket heves (aldri senkes – vegene er alt lagt), punktene rett foran fronten senkes til −0,4 moh.
     const N = u.N, st = u.steg, H = u.H, B2 = Kyst.KAI.bit / 2; let endret = 0;
     for (const b of kai.biter) {
-      const c = Math.cos(b.a), s = Math.sin(b.a), r = Math.hypot(b.d + 3, B2) + st;
+      const c = Math.cos(b.a), s = Math.sin(b.a), r = Math.hypot(b.d + 10, B2) + st;
       const i0 = Math.max(0, Math.floor((b.x - r + u.S) / st)), i1 = Math.min(N - 1, Math.ceil((b.x + r + u.S) / st));
       const j0 = Math.max(0, Math.floor((u.S - b.y - r) / st)), j1 = Math.min(N - 1, Math.ceil((u.S - b.y + r) / st));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
         const x = -u.S + i * st, y = u.S - j * st, dx = x - b.x, dy = y - b.y, l = dx * c + dy * s, q = -dx * s + dy * c; if (Math.abs(q) > B2) continue;
         const k = j * N + i;
         if (l <= 0 && l >= -b.d) { const z = b.z - .12; if (H[k] < z && !hus(x, y)) { H[k] = z; endret++; } }
+        // bak dekket skrår bakken ned igjen over 10 m (12 cm per meter), så dekket ikke står som en heller oppå bakken – men ikke under en veg
+        else if (l < -b.d && l >= -b.d - 10) { const z = b.z - .12 - (-b.d - l) * .12; if (H[k] < z && !hus(x, y) && !veg(x, y)) { H[k] = z; endret++; } }
         else if (l > 0 && l <= 3 && kv.sjø(x, y) && H[k] > -.4) { H[k] = -.4; endret++; }
       }
     }
