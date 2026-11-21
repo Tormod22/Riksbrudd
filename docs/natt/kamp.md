@@ -44,6 +44,14 @@ Alle tall er Claudes forslag.
 ### 7. Andre siders kamper (J)
 - `forsvar-kamp.js`: `KampVarsel.andreTekst`, `KampSpill.andre(a, b, x, y)`, `KampSpill.sideNavn`. «Folkefronten og Kystalliansen sloss ved X.»
 
+### Prøvd i nettleser
+- Vakta (PC 1400 × 820 og mobil 844 × 390): ok, ingen sidefeil. Bilde: `natt14/kamp/banner-sist-sett-*.png` («sist sett 3,5 km N kl. …»).
+- Uten webdriver, bølge 2 (leir i Dovre, Vaktlaget på 4): 2 lag × 4 mann (bølge 1 ville vært 1 × 6) fra to kanter; «Vaktene hører noe –
+  røverne kan være under 500 m unna» satte farten ned før første skudd; «Kampen om leiren er i gang» kl. +90, første lag flyktet kl. +95,
+  andre lag var fortsatt i leiren kl. +132 (prøven sluttet før bølgen var over – rapporten ble ikke sett live). Bilde: `raid-slutt-pc.png`.
+- Ikke prøvd live: motangrepet fra Kystalliansen (eskalering) og patruljen i fredstid – bare i vakta/regeltestene.
+- Sett i prøven: Vaktlaget sto 27 m fra Røvere 2.1 i over 15 spillminutter uten skudd («oppdaget uten å bli sett») – ikke undersøkt.
+
 ### Filer utenom mine
 - `spill/enheter-visning.js` `motKjøretøy()`: når verken skytteren eller kjøretøyet er ditt, logges `KampSpill.andre(...)` i stedet for
   «… er under ild fra fienden», og skadeteksten bruker sidens navn (3 linjer).
