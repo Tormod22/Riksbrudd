@@ -274,6 +274,9 @@ body.kort #krig .by .kn button{ min-height:30px; padding:0 9px; } body.kort #kri
 #krigvarsel{ position:fixed; left:50%; top:calc(var(--topp,58px) + 64px); transform:translateX(-50%); z-index:36; display:none; width:min(440px,94vw); max-height:70vh; overflow:auto; padding:10px 12px; background:#2a1d0e; border:1px solid #e0a050; color:var(--ink,#e7dcc3); font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
 #krigvarsel.på{ display:block; } #krigvarsel > b{ color:#ffcf8a; display:block; margin-bottom:4px; } #krigvarsel .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; } #krigvarsel small{ display:block; margin-top:4px; color:#d9c48a; font-size:12.5px; } #krigvarsel .fare{ margin-top:4px; color:#ffcf8a; }
 #krigvarsel button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:36px; padding:2px 10px; font:inherit; font-size:13px; cursor:pointer; } #krigvarsel button.hoved{ border-color:#c9b26a; }
+/* (runde 13) liggende telefon: knappene i advarselen står rett under overskriften, så de synes uten å rulle */
+body.kort #krigadvarsel{ display:flex; flex-direction:column; } body.kort #krigadvarsel > *{ order:2; } body.kort #krigadvarsel > b{ order:0; } body.kort #krigadvarsel > .kn{ order:1; margin:2px 0 4px; }
+body.kort #krigadvarsel, body.kort #krigvarsel{ font-size:13px; line-height:1.3; } body.kort #krigvarsel{ top:calc(var(--topp,40px) + 8px); max-height:80vh; }
 body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } body.kort #krig small, body.kort #krig .tips, body.kort #krig small.tillegg{ font-size:12.5px; }`;
   document.head.appendChild(css);
   const panel = el('div', { id: 'krig', role: 'dialog', 'aria-label': 'Krigskartet' }); document.body.appendChild(panel);
@@ -304,6 +307,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
   function scenarioBoks() { let sc = null; try { sc = window.ScenarioSpill && ScenarioSpill.scenario ? ScenarioSpill.scenario() : null; } catch (e) { sc = null; } const id = scenarioId(); if (!sc || !id) return null;
     const SC = window.Scenario && Scenario.SCENARIER && Scenario.SCENARIER[id], dager = SC ? SC.dager : 0, dag = Math.min(dager || 99, Math.floor((typeof tid === 'number' ? tid : 0) / 1440) + 1);
     const status = sc.status === 'vunnet' ? ' – klart!' : sc.status === 'tapt' ? ' – tapt' : dager ? ` – dag ${dag} av ${dager}` : '';
+    if (/^Dag \d+ av \d+\. /.test(sc.tekst || '')) sc = { ...sc, tekst: sc.tekst.replace(/^Dag \d+ av \d+\. /, '') };
     const frist = sc.status === 'pågår' && sc.igjen > 0 && window.Scenario && Scenario.fristTekst ? ` (${Scenario.fristTekst(Math.round(sc.igjen / 10) * 10)})` : '';
     return el('div', { klasse: 'scen', id: 'krigscenario' }, el('b', {}, `Scenario: ${sc.navn}${status}`), el('div', {}, (sc.tekst || '') + frist), el('small', {}, KRIGEN_TELLER[id] || '')); }
   // hva tettstedet forsvares med (bygdevernet eller fiender dere har sett)
