@@ -87,7 +87,7 @@ module.exports = {
         const kj = [...document.querySelectorAll('#byggvalg button')].find(b => /Kjøp materialene og bygg/.test(b.textContent));
         if (kj) { const før = S.penger, t = kj.textContent; kj.click(); await vent(50); const brukt = før - S.penger, linje = loggLinjer.find(x => /Brakke bestilt/.test(x)) || '';
           ut.pris = { knapp: t, logg: linje.slice(0, 110), brukt }; const kr = Leir.kroner(brukt);
-          krev(/i alt \(arbeid .* \+ materialer .*\)/.test(linje) && linje.includes(kr) && t.includes(kr), `prisen i loggen (${linje}) / på knappen (${t}) er ikke ${kr}`); }
+          krev(/i alt \((arbeid|utstyr og deler) .* \+ materialer .*\)/.test(linje) && linje.includes(kr) && t.includes(kr), `prisen i loggen (${linje}) / på knappen (${t}) er ikke ${kr}`); }
         else krev(!fri, 'ingen «Kjøp materialene og bygg»-knapp når materialene mangler');
         // 5. fargeprøvene på telefon og ingen autofokus med finger
         OS.nytt(); const berøring = matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches; await vent(120);

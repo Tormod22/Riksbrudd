@@ -134,11 +134,13 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (B.avh) panel.append(el('div', { klasse: 'status' }, `Barn og gamle: ${B.avh} (arbeider ikke, men spiser og trenger seng)`));
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));
+    // RUNDE 13 (kritiker H: «+ på Vakt tok en fra Bygg uten å si det»): siste flytting står her til neste endring
+    if (flyttet) panel.append(el('div', { klasse: 'status', id: 'folkflyttet' }, flyttet));
     for (const o of FR.OPPGAVER) {
       const antall = F.personer.filter(p => p.oppgave === o).length, a = FR.arbeidere(F, o), t = FR.tempo(F, o), O = FR.OPPGAVE[o];
-      const info = o === 'bygg' ? `${FR.byggelag(F)} byggelag` + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `tempo ${nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
-      const minus = knapp('−', () => { FR.minus(F, o); endret(); }, { 'aria-label': `Færre på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'minus' });
-      const pluss = knapp('+', () => { FR.pluss(F, o); endret(); }, { 'aria-label': `Flere på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'pluss' });
+      const info = o === 'bygg' ? lagTekst(a) + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `tempo ${nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
+      const minus = knapp('−', () => flytt(o, FR.minus), { 'aria-label': `Færre på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'minus', title: minusHjelp(o) });
+      const pluss = knapp('+', () => flytt(o, FR.pluss), { 'aria-label': `Flere på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'pluss', title: plussHjelp(o) });
       minus.disabled = !antall; pluss.disabled = o === 'fri' ? n - antall === 0 : antall === n;
       panel.append(el('div', { klasse: 'opp' }, el('div', {}, el('b', {}, O.navn), el('small', {}, info + (antall > a ? ` · ${antall - a} syke` : ''))), minus, el('span', { klasse: 'n' }, String(antall)), pluss));
     }
@@ -159,6 +161,21 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     }
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
+  // ---------- RUNDE 13: hvem − / + flytter, og byggelagene sagt likt overalt ----------
+  let flyttet = '';
+  const oNavn = o => (FR.OPPGAVE[o] ? FR.OPPGAVE[o].navn : o);
+  // + tar en fri; er ingen fri, tar den fra oppgaven med flest (samme regel som FolkRegler.pluss)
+  function plussKilde(o) { if (o === 'fri') { const t = FR.OPPGAVER.filter(q => q !== 'fri').map(q => [q, F.personer.filter(p => p.oppgave === q).length]).sort((a, b) => b[1] - a[1]); return t[0] && t[0][1] ? t[0][0] : null; }
+    if (F.personer.some(p => p.oppgave === 'fri')) return 'fri'; const t = FR.OPPGAVER.filter(q => q !== o && q !== 'fri').map(q => [q, F.personer.filter(p => p.oppgave === q).length]).sort((a, b) => b[1] - a[1]); return t[0] && t[0][1] ? t[0][0] : null; }
+  const plussHjelp = o => { if (!F) return ''; const k = plussKilde(o); return !k ? 'Ingen å flytte' : k === 'fri' ? `Tar en som har fri` : `Ingen har fri – tar en fra ${oNavn(k)}`; };
+  const minusHjelp = o => (o === 'fri' ? 'Den beste av de frie går til Bygg' : 'Den svakeste her får fri');
+  function flytt(o, fn) { const før = new Map(F.personer.map(p => [p.id, p.oppgave])), p = fn(F, o);
+    flyttet = p && før.get(p.id) !== p.oppgave ? `Flyttet: ${p.navn} fra ${oNavn(før.get(p.id))} til ${oNavn(p.oppgave)}.` : '';
+    if (flyttet && før.get(p.id) !== 'fri' && p.oppgave !== 'fri') flyttet += ' (ingen hadde fri)';
+    if (flyttet) logg(flyttet.replace(/^Flyttet: /, '')); endret(); }
+  // to på Bygg = ett byggelag; et lag med bare én går halvt så fort (FolkRegler.byggelag/byggTempo)
+  function lagTekst(n) { const l = FR.byggelag(F); if (!n) return 'ingen byggelag – sett minst én (helst to) her';
+    return n % 2 ? `${n} på bygg = ${l} byggelag (${n === 1 ? 'bare én – halv fart' : 'det ene har bare én – halv fart'})` : `${n} på bygg = ${l} byggelag`; }
   const lagre = () => { if (window.LeirSpill) LeirSpill.lagre(); };
   function visStatus() {
     st.hidden = !F; if (!F) return; const Lr = L(), B = Lr ? FR.behov(F, Lr, valg()) : null;
