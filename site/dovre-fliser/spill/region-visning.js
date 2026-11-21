@@ -171,7 +171,10 @@
     if (performance.now() - fordelTid > 3000) { fordelTid = performance.now(); const T = {}; for (const [id, t] of TETTSTEDER) { if (!t.eier || t.eier === 'blå') continue; const by = byMedId(id); if (by) (T[t.eier] = T[t.eier] || []).push(typeAv(by)); }
       FORDELER = {}; for (const [sd, typer] of Object.entries(T)) FORDELER[sd] = { ...RG.fordel(typer), typer }; }
     return FORDELER[side] || INGEN; }
-  let BYID = null; const byMedId = id => { if (!BYID || BYID.n !== byer().length) { BYID = { n: byer().length, m: new Map(byer().map(by => [by.e.id, by])) }; } return BYID.m.get(id); };
+  // (21. nov) oppslaget huskes så lenge antallet tettsteder er det samme – men ble ett tatt bort og et annet lagt til, sto det gamle igjen
+  // (mobilkontrollen: «motstanderens fordel false»). Finnes ikke id-en, lages oppslaget på nytt (høyst én gang i sekundet – ikke alle id-er er tettsteder her).
+  let BYID = null; const lagBYID = () => { BYID = { n: byer().length, t: performance.now(), m: new Map(byer().map(by => [by.e.id, by])) }; };
+  const byMedId = id => { if (!BYID || BYID.n !== byer().length) lagBYID(); let by = BYID.m.get(id); if (!by && performance.now() - BYID.t > 1000) { lagBYID(); by = BYID.m.get(id); } return by; };
   KROKER.ild.push(a => (a.side !== 'blå' ? fordel(a.side).treff : 1));
 
   // ---------- veksling olje ↔ diesel ----------
@@ -382,7 +385,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // ---------- start ----------
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = RG.fraJSON(les()); startTid = performance.now(); STATUS = new Map(); statusTid = -1e9; meldtRute = new Map(); meldtStrøm = new Map(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
+  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
   window.RegionSpill = api;
 })();
