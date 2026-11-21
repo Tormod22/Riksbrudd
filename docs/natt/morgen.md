@@ -107,3 +107,76 @@ per bølge, +1 døgn / +20 ekte minutter, nekt = moral +3; karavanen 500 l diese
 - Tastene 1–3 velger på PC (ikke mens du går); telefonen har bare knappene.
 - Ved 1× (sanntid) kommer kortet bare én gang per ekte døgn – det følger klokka i spillet, ikke ekte minutter.
 - Dagbokas linje på kortet er tatt før gårsdagens utfall er lagt inn (maten i linja kan være litt lavere enn etter at jegerne kom hjem).
+
+## Runde 13 (21. nov, kritikk G/H)
+
+| Punkt i oppdraget | Status |
+|---|---|
+| 1. Morgenmøtet to ganger samme morgen / «dag 2» etter omlasting kl. 05:59 (H, høy) | **Rettet** (gjenskapt først) |
+| 2. «Siste døgn: Et rolig døgn» samme døgn som en falt og lagføreren ble såret (H, høy) | **Rettet** |
+| 3. For høyt på liggende telefon – bare første valg synes (G) | **Rettet** |
+| 4. ⏭ spolte mens møtet ventet (06:00 → 06:33) (G) | **Rettet** (gjenskapt først) |
+| 5. Dag 3 er tom: ett konkret valg med frist hver dag + inntekt uten krig (H, middels) | **Rettet** (handelsmann kl. 14, svartebørs, sak hver dag) |
+
+### Årsaken til punkt 1 (gjenskapt med scratchpad `natt13/morgen/gjenskap1.js`)
+Spillet lagrer klokka litt etter litt (`riksbrudd-verden`, lagring.js), mens morgenmøtet lagrer straks. Lukkes fanen like etter kl. 06 (før neste
+lagring av klokka), står klokka etter omlasting et par minutter FØR møtet som alt er holdt. Regelen var «ny dag = `dag(tid) !== S.dag`», så et
+møte for GÅRSDAGEN kom straks (med «I går: …» om valget du nettopp tok), og over kl. 06 kom dagens møte en gang til med nye valg. Samme feil
+i dagboka («Dag 2: …» på nytt) og i døgnoppgjøret (det tok et nytt øyeblikksbilde kl. 05:59 og sammenlignet så bare minuttene fram til 06:00 –
+derfor «Et rolig døgn» samme døgn som en falt). Gjenskapt: før rettingen kom «dag 1»-møtet etter omlasting kl. 05:58 og så «dag 2» igjen;
+etter rettingen kom ingenting (verken etter omlasting eller over 06:00).
+
+### Hva som er laget
+- `spill/morgen.js`:
+  - `Morgen.nyDag(d, sist)` – et møte bare når dagen er NYERE enn den siste som er holdt (aldri samme dag to ganger, aldri bakover).
+  - `Morgen.tapTekst(tap)` – «Tap i lagene: Vaktlaget: Oddvar Aasen falt, Kari Lund (lagfører) ble såret.» (falt går foran såret for samme person;
+    over fire navn: «A, B, C og 2 til»).
+  - `Morgen.svartTilbud(s)` og dagsvalget `svart`: svartebørsen kjøper tre (halvparten av lageret, høyst 20 m³, 1,4 × salgsprisen) eller, uten
+    tre, diesel (30 %, høyst 400 l, 0,75 × kjøpsprisen) – hver dag dere har noe å selge, ikke bare når kassa er under 12 mill. Ikke to treslag
+    på samme kort (vanlig salg og svartebørs). Prisene er under det markedet tar (tre 1,5 × markedet), så det lønner seg ikke å kjøpe for å selge.
+  - Den store beslutningen HVER dag fra dag 2 (`REGLER.stor.hver = 1`, før 3) med pause per slag (`REGLER.stor.pause`: nabo 4, tankbil 3,
+    vern 2, karavane 3, handel 2 dager; `storBeslutning(s, rng, sist, hist)`; pausen brytes bare når ingenting annet passer). Ny sak
+    `handel`: «En handelsmann kommer kl. 14» – legg av N m³ tre (10–25, 1,8 × salgsprisen) eller N l diesel (200–500, 0,9 × kjøpsprisen), eller nei.
+  - Alle tallene står i `REGLER.handel`, `REGLER.svart`, `REGLER.stor` (Claudes forslag).
+- `spill/morgen-visning.js`:
+  - `morgen()` og KROKER.sim bruker `Morgen.nyDag`; `S.dag` går aldri bakover.
+  - TAP: `tapSteg()` (KROKER.sim, hvert halve sekund) ser på egne lag (også Leirvakta) og legger i `S.tap` hvem som falt (hp til 0) eller ble
+    såret (fra frisk til under 1), med lag og om det var lagføreren; starter 4 s etter start (så lagring.js sin tilbakesetting av helsa ikke
+    teller). Lagres per leir. Neste morgen står linja «Tap i lagene: …» i rapporten; da tas «Et rolig døgn» og tallene «1 ny såret, 1 falt»
+    bort fra oppgjørets linje (navnene står over).
+  - FOLD: rapporten har en linje (`.msum`: tapene, ellers første «I går», ellers første linje) og hele døgnet (`.mdogn`). Kortet foldes bare når
+    det ellers må rulles (`fold(true)`, sjekkes også når kortet blir synlig etter et angrep og når vinduet endres), «Vis hele døgnet ›» /
+    «‹ Vis mindre». På små skjermer (`body.kort`) er kortet bredere (760 px), valgene står i to kolonner med følgene på høyst to linjer, og
+    «Ingen endring i dag» tar den ledige ruta. Prøvd på 844 × 390: alle valgene synes uten rulling, også med lang rapport.
+  - ⏭ OG FARTEN: en lytter i fangstfasen stopper klikk på ⏭ og 1×–600× mens møtet står oppe (bare spillermodus); pauselappen blinker, og den
+    farten du trykket, klikkes når du har svart (`etterSvar`). Før: flyt.js regnet ikke møtet som et kort, og pausereglene fanget det først
+    etter opptil 150 ms (målt 1,5 spillminutter per ⏭-trykk).
+  - Handelsmannen: `S.handel = { kl, vare, mengde, pris }`, `handelSteg()` kl. 14 (tar det avtalte eller det som er igjen og betaler for det,
+    ellers «dro tomhendt»), brikke i `#varsler` («Handelsmann kl. 14 · henter 17 m³ tre · om 7 t 39 min»), linje i Leir → Mål, dagboka.
+  - `svart` i `brukDag` betaler straks (utenom markedets kjøpere).
+  - API: `MorgenSpill.tapSteg(tving)`, `handelSteg()`, `fold(på)`, `foldet()`, `fartVenter()`, `glemFart()`.
+- `spill/dagbok.js` (denne pakka): samme regel – en NYERE dag gir rapport.
+- `spill/forsvar-oppgjor.js` (pakke «balanse», FELLESFIL – én linje i `morgen(tving)`): `if (!tving && Number.isFinite(S.dag) && dag(tid) <= S.dag)`
+  og `S.dag = Math.max(...)` i stedet for `dag(tid) === S.dag` / `S.dag = dag(tid)`, med kommentar.
+- `pipeline/fliser/test_morgen.js`: 15 nye sjekker (sak hver dag, aldri samme to dager på rad, nabogården høyst hver fjerde dag, pausen brytes,
+  handelsmannen, svartebørsen, nyDag, tapTekst).
+- Vakta `pipeline/fliser/vakter/morgen.js` (utvidet): klokka bak dagen gir ingen nytt møte, samme dag ikke to ganger, tapene med navn og uten
+  «rolig», lang rapport foldes og alle valgene synes, ⏭ står (spillermodus), handelsmannen henter treet og betaler. Prøvd PC og mobil (ok, 0,9 s).
+  Feilen lagt inn med vilje (gammel regel `d !== sist` i nyDag): vakta svarte «møtet kom for gårsdagen da klokka sto bak (omlasting før 06:00);
+  samme dag fikk møtet en gang til».
+
+### Prøvd i nettleser (webdriver av, scratchpad `natt13/morgen/`)
+- `gjenskap1.js` (omlasting rett før 06:00): før – «dag 1»-møte etter omlasting og «dag 2» igjen; etter – ingen nye møter.
+- `gjenskap4.js` / `prov.js`: ⏭ og 600× under møtet – før: 06:00 → 06:01:30; etter: tiden sto (1440,17 → 1440,17), og etter svaret gikk den i 600× som trykket.
+- `prov.js` PC 1400 × 820 (`p1-mote.png`): «Tap i lagene: Vaktlaget: Vidar Opheim falt, Ivar Skogen (lagfører) ble såret.», svartebørsen som valg,
+  handelsmannen avtalt og kl. 14 kjøpte han treet (+500 000 kr, −17 m³), brikken øverst til venstre (`p5-varsel.png`).
+- `prov.js` MOBIL=1 og `fold.js` på 844 × 390 (`m1-mote.png`, `m3-stor.png`, `m6-foldet.png`, `m7-hele.png`): to kolonner, alle valgene synes;
+  lang rapport foldet til én linje med «Vis hele døgnet ›». 0 sidefeil.
+
+### Ikke gjort / svakheter
+- Handelsmannen er ingen figur i kartet eller i 3D – han er et bud og en brikke.
+- Tapene telles bare for lag som finnes i ENHETER; et lag som tas helt bort før neste halve sekund, kan mangle (falne står igjen med hp 0, så det
+  skjer bare hvis en annen modul fjerner hele laget straks).
+- Selve klokka settes ikke fram etter en omlasting: verden står et par minutter før møtet som alt er holdt. Det er bare møtet, dagboka og oppgjøret
+  som ikke tar dagen en gang til.
+- Hjelpen (`spill/hjelp.js`) er ikke endret – nye/endrede emner står i `docs/natt/morgen-hjelp.json`.
