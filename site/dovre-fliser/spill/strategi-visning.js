@@ -120,7 +120,7 @@
     if (k.anslag) d.push(`garnison ${k.lagA === 1 ? '1 lag' : k.lagA + ' lag'}, anslått ca. ${k.anslag} mann`); return d.join(' + '); }
   // fredstiden: motstanderne slåss ikke om tettsteder før den er over (spill/fraksjoner-visning.js, AI.regionFred)
   const fredSlutt = () => { if (!window.Fraksjoner || !Fraksjoner.fredDøgn || !window.AI || AI.på === false || (navigator.webdriver && !AI.test && !api.test)) return 0; const f = (window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende) || 1; return Fraksjoner.fredDøgn(f) * 1440; };
-  const fredTekst = () => { const s = fredSlutt(); return s && tid < s ? `fredstid til ${dagKl(s)} – ingen kamp om byen før det` : ''; };
+  const fredTekst = () => { const s = fredSlutt(); return s && tid < s ? `fredstid til dag ${Math.floor(s / 1440) + 1}${typeof klokkeslett === 'function' ? ' kl. ' + klokkeslett(s) : ''} – ingen kamp om byen før det` : ''; };
   function farer(by, lagListe, t) { const ut = [], e = eierAv(by.id), kf = e === 'blå' ? { mann: 0 } : kjentForsvar(by), fred = e && e !== 'blå' ? fredTekst() : '';
     if (t && e !== 'blå' && (t.minst || kf.mann)) { const k = S.kravFor(t, lagListe, kf.mann); if (k.tekst) ut.push({ id: !k.nok ? 'forfå' : k.svak ? 'svak' : 'sakte', tekst: k.tekst + '.', alvor: k.nok && !k.svak && !kf.mann ? 0 : 2 }); }
     const v = vern(by); if (v && v.mann > 0) ut.push({ id: 'vern', tekst: `Bygdevernet i ${by.navn} (${v.mann} mann) slipper dere ikke inn – laget må slåss, eller dere gjør en avtale først (${kroner(v.pris)}).`, alvor: 2, vern: v });
