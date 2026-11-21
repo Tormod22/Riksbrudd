@@ -51,9 +51,24 @@ Reglene i `spill/kyst.js` (uten DOM, `Kyst.KAI` = alle tallene, Claudes forslag)
 ### Prøvd
 - `node pipeline/fliser/test_kyst.js` – 28 sjekker (13 nye for kaiene, med fasit uten å spørre modulen). Feil med vilje: radius × 3 og
   snudd normal – testen fant begge.
-- Vakt `pipeline/fliser/vakter/kyst.js` (kunstig kyst på Dovre-siden): regler, ingen kai uten data, gitteret hevet/senket, dekket stopper
-  før vegen, geometrien. Se rapporten for kjøringene.
-- Bilder med ekte data (dev.py + /rogaland) i scratchpad natt15/kyst/: før-*/etter-* for Vågen i Stavanger.
+- Vakt `pipeline/fliser/vakter/kyst.js` (kunstig kyst på Dovre-siden, 0,4–2 s): regler, ingen kai uten data, bakken stikker ikke opp
+  gjennom dekket og ligger under vannflaten 1,5 m foran fronten (bilineært som hoyde3d), dekket stopper før vegen, geometrien.
+  OK på PC og mobil, med og uten 3D. Feil med vilje (senkingen foran fronten slått av): vakta fant den («6 av 18 over»).
+  Den første utgaven fant en ekte feil: gitteret har 4 m mellom punktene, så bakken skrådde fra dekket og ut foran fronten –
+  nå senkes punktene inntil én rute bak fronten (under dekket, skjult) og 3 m ut.
+- Bilder med ekte data (dev.py + /rogaland) i scratchpad natt15/kyst/: før-*/etter*-* (Vågen i Stavanger, Skudeneshavn; PC og mobil),
+  ekte/ (bildene fra Commons) og sammenlign-*.png (ekte, før og etter side om side). Tall fra Stavanger-utsnittet (S 2120 m): PC 738
+  kaibiter (507 betong, 118 mur, 113 tre), 422 pullerter, 148 stiger, 156 lykter, 48 steiner, 990 gitterpunkter endret; mobil 279 biter.
+  Skudeneshavn: 406 biter. Byggingen av utsnittet tok like lang tid som før (52–78 s med programvare-grafikk, før 36–66 s – målingene
+  spriker mye her).
+
+### Forskjell som gjenstår (spillet mot bildene)
+- Kanten følger vannmasken (kartbildet, ca. 2–4 m per punkt) og et 12 m-rutenett: kaia blir litt hakkete i svinger (den gule lista
+  knekker der bitene møtes), og kaifronten står ikke alltid der den ekte kaia er.
+- Terrengnettet som tegnes er grovere enn høydegitteret lenger ut fra midten (ca. 15 m), så langt unna kan bakken fortsatt skrå litt
+  ut foran fronten. Bak dekket kan det bli et lite trinn der bakken er lavere enn dekket.
+- Siv fra vegetasjon3d.js (ikke min fil) kan stå på kaikanten – vegetasjon3d bør spørre `Kyst.påKai(u.kyst.kai.biter, x, y)`.
+- Byhavn-regelen (gate langs sjøen) gir kai også langs gater ved vannet der det i virkeligheten er en mur eller strand.
 
 ### Ikke gjort
 - Kailinjene fra OSM finnes ikke i dataene (kaier.py slår alt sammen til punkter). Med linjene (man_made=quay/pier som linje/flate,
