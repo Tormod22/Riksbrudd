@@ -226,3 +226,15 @@ kjøreknapper (Gå ut/Brems/Gass), penere feltbil, de svarte kilene (en svevende
 baksider, lysere asfalt, tropppanelet og overlapp på liggende telefon, ryddigere gåmodus. Kontroll: PC 128/128, mobil 128/128.
 Står igjen: vegen står 2–4 m over bakken i bratte lier (på fylling), kameraet kan gå inn i trekroner, kornete fjellsider er ikke
 gjenskapt her (krever ekte iPhone).
+
+## Runde 11–12 (natt til 21. nov) – «se etter mer som kan forbedres»
+
+To nye kritikere (docs/anmeldelse-2026-11-21.md): liggende telefon 3 (grafikk 2), PC 4. Rettet i sju pakker:
+- **Modeller:** avrundede kolonnekjøretøy med felger, kolonnene på fire hjul, dyrene med runde hoder og bein.
+- **Bakke:** vegen er skåret inn i lia i stedet for å stå på fylling, og kameraet bak bilen holder seg utenfor trekronene (begge sto igjen fra runde 10).
+- **Regnskap:** én regel for materialprisen, de falne går ut av folket, og døgnoppgjøret og letingen sier hvor ting havnet.
+- **Liggende telefon:** kort øverst, varslene samlet, opplæringen på én linje, Leir-menyen i full høyde, forsiden i to kolonner.
+- **Krig:** radioadvarsel før Send, garnisonen melder seg, troppelista, motangrep for å holde byen, oppsummering og bedre reprise.
+- **Kart:** én skrift, ingen lapper oppå hverandre, lysere krigskart, leiren synlig langt ute, ingen skjøter i trekronene.
+- **Inne:** resultatpanel etter leting med «Se i skapene», knappene samlet, karakteren drikker og spiser selv, raske sveip virker og pila mot inngangen er riktig.
+- **3D:** grafikken setter seg ikke ned av seg selv (den flate, gule marka), låven er innredet med traktor og høy, ny våpenarm og flaggstang, og stedsnavnene ligger ikke midt i bildet når du går.

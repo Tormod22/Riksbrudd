@@ -1366,3 +1366,23 @@ PLANEN for hele Norge: docs/plan-hele-norge.md (budsjetter, faser, beslutninger)
   kolonner med «Opprett» alltid synlig, én ting om gangen nederst (opplæring/hogstlapp/bannere viker), bunnmenyen ugjennomsiktig, gåmodus på
   telefon med fem knapper + «⋯», knapper og ruter flyttet ut av midten. GL-feil 1282 på mobil: tomDybde er nå MeshDepthMaterial med
   colorWrite/depthWrite av. Kontroll: PC 128/128, mobil 128/128.
+  RUNDE 11–12 (21. nov natt, brukeren: «se etter mer som kan trenges å forbedres»; to nye kritikere: docs/anmeldelse-2026-11-21.md –
+  telefon liggende 3 (grafikk 2), PC 4). Notater under «Runde 11/12» i docs/natt/<pakke>.md. MODELLER: avrundede kolonnekjøretøy
+  (stridsvogn, kalesje, rakettartilleri, radar), hjul med felg, kolonnene på fire hjul (Kjor.stilling), dyrene med runde hoder/bein, folk
+  over 320 m tegnes ikke. BAKKE: vegen skåret inn i lia (Veg.skjær/skjærG: gitteret senkes under vegen, men ikke nær hus), kameraet bak bilen
+  holder seg utenfor trekronene (KRONE per treslag). REGNSKAP: materialprisen er én regel (Leir.manglerPris), falne går ut av folket (én
+  kilde), døgnoppgjøret sier hvem og hvorfor, leting sier hvor funnet havnet. LIGGENDE TELEFON: kort som venter øverst, varslene i én brikke,
+  opplæringen som én linje, Leir-menyen i full høyde med ikonrad, forsiden/karakterskaperen i to kolonner, steg 3 overlever omlasting, ingen
+  klypezoom (unntatt når du går). KRIG: radioadvarsel før Send, Send med kjøretøyet, garnison melder seg fra tettstedet (kontakt selv bak
+  terreng), troppelista i venstre kolonne, forsvar av seg selv under spoling, «Hold byen» krever motangrep, oppsummering på seiersskjermen,
+  reprisen på pause, lysere og med tegnforklaring, pausen holder straks når et kort venter. KART: én skrift i kartet (Etikett.skrift bytter
+  sans-serif til Cormorant Garamond i 2D-rammen), hogst-/regiontekst gjennom Etikett, krigskartet løftes med «screen» (KART_LØFT) i stedet for
+  å mørknes, leiren som klynge langt ute (leir2d klyngeM), hellingsfargene myke og bare rundt skissen, trekroner 13 m utenfor flisen (ingen
+  kutt i skjøten), roligere jernbane på z8–10, siktfeltene samlet per side (siktC i tegnEnheter).
+  INNE: letingen viser et resultatpanel (#funnpanel: til leiren og hvor, i sekken, igjen i huset, «Se i skapene» = LutSpill.åpneHele for hele
+  bygget), knappene inne samlet i #inneknapper, hint om møbler første gang, karakteren drikker/spiser selv ute (tørst < 40, sult < 35),
+  sveip som begynner på en knapp blir blikk (touch-action:none, akselerasjon), pila mot inngangen bare når huset er foran deg eller innen 12 m,
+  «Reis til feltbilen». 3D: Auto-grafikken senker seg bare etter 10 s sammenhengende tregt (Kvalitet.vedvarende), aldri over Lav på
+  programvare-grafikk, Lav har gress og blomster, enkelBakke har korn (ikke flat gul mark); låven med plankevegger, traktor/gråtass av
+  Kjoretoy3d.form, høyballer og lysstråler (lave3d.js); våpenarmen med hanske og kamuflasje; stedsnavn i gåmodus bare over 600 m og aldri
+  midt i bildet (NAVN_GÅ); ny flaggstang som blafrer i vinden (window.Flagg3d). Hjelpen: 237 emner.
