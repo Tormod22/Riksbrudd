@@ -1509,7 +1509,8 @@ function detaljIBakken(mat, side) {
       if (skarpV > 0.01) { vec4 grovT = mapTexelToLinear(texture2D(map, vUv, 2.0)); texelColor.rgb = max(vec3(0.0), texelColor.rgb + (texelColor.rgb - grovT.rgb) * skarpV); }
       float kontrastV = smoothstep(200.0, 900.0, length(vViewPosition)) * 0.14;
       float lumT = dot(texelColor.rgb, vec3(0.3, 0.59, 0.11));
-      texelColor.rgb = max(vec3(0.0), mix(vec3(lumT), texelColor.rgb, 1.0 + kontrastV * 1.2) * (1.0 + kontrastV) - kontrastV * 0.06);
+      // (runde 15: lyset langt unna bare halvparten – ×1,14 gjorde fjerne jorder lyse som sand)
+      texelColor.rgb = max(vec3(0.0), mix(vec3(lumT), texelColor.rgb, 1.0 + kontrastV * 1.2) * (1.0 + kontrastV * 0.5) - kontrastV * 0.03);
       diffuseColor *= texelColor;
       #endif
       ${TAAKE_GLSL}
@@ -3571,7 +3572,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/liv3d.js?v=777d268a5f"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7cd4c38eb3"></script>
 <script src="/dovre-fliser/spill/anleggfri.js?v=b0f0ac5d17"></script>
-<script src="/dovre-fliser/spill/bakkefarge.js?v=0e13759587"></script>
+<script src="/dovre-fliser/spill/bakkefarge.js?v=386c23870e"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
 <script src="/dovre-fliser/spill/bekker-visning.js?v=134fd452b4"></script>
@@ -3593,7 +3594,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
 <script src="/dovre-fliser/spill/kvalitet.js?v=7d897f33a3"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=ba29a3df5b"></script>
-<script src="/dovre-fliser/spill/vegetasjon3d.js?v=abeed81ffe"></script>
+<script src="/dovre-fliser/spill/vegetasjon3d.js?v=b6a120575f"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=807b267441"></script>
 <script src="/dovre-fliser/spill/kraft.js?v=12cae959d3"></script>
 <script src="/dovre-fliser/spill/kraft3d.js?v=7a2a69c128"></script>

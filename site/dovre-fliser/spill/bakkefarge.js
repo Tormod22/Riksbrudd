@@ -20,7 +20,7 @@
     // DYRKET MARK (terrengklasse 5 i 32 m-rutene: eng, beite, åker): grønnere enn annen vegetasjon – også den matte, gulbrune
     // satellittfargen der (Jæren) –, men aldri mer enn at en slått eng fortsatt kan være gulgrønn. dyrketGul0: tonen dreiningen begynner
     // fra på dyrket mark; dyrketDrei/dyrketMett/dyrketLys: dreining (grader), metning og lys der.
-    dyrketGul0: 26, dyrketDrei: 26, dyrketMett: 1.38, dyrketLys: 1.05, dyrketMett0: .05,
+    dyrketGul0: 26, dyrketDrei: 26, dyrketMett: 1.38, dyrketLys: 1.05, dyrketMett0: .05, dyrketLysTillegg: 35,
     // vann som før: 20 % av satellittbildets eget mønster, resten fast blågrått
     vann: [92, 126, 152], vannEget: .2,
   };
@@ -60,7 +60,8 @@
     const lysV = 1 - trinn(Rg.lys0, Rg.lys1, mx), slipp = 1 - trinn(Rg.grønn0, Rg.grønn1, h);
     let w = trinn(Rg.gul0, Rg.gul1, h) * slipp * trinn(Rg.mett0, Rg.mett1, s) * lysV, dreiMaks = Rg.dreiMaks, mettVeg = Rg.mettVeg, lysVeg = Rg.lysVeg;
     if (d > 0) {
-      const wd = trinn(Rg.dyrketGul0, Rg.gul1, h) * slipp * trinn(Rg.dyrketMett0, Rg.mett1, s) * lysV;
+      // (på dyrket mark er lyse, solbelyste jorder ikke sand: lysgrensen ligger høyere der – dyrketLysTillegg)
+      const wd = trinn(Rg.dyrketGul0, Rg.gul1, h) * slipp * trinn(Rg.dyrketMett0, Rg.mett1, s) * (1 - trinn(Rg.lys0 + Rg.dyrketLysTillegg, Rg.lys1 + Rg.dyrketLysTillegg, mx));
       w += ((wd > w ? wd : w) - w) * d; dreiMaks += (Rg.dyrketDrei - dreiMaks) * d; mettVeg += (Rg.dyrketMett - mettVeg) * d; lysVeg += (Rg.dyrketLys - lysVeg) * d;
     }
     if (w <= 0) return klem(r0, g0, b0, ut);
