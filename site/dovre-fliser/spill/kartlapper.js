@@ -52,17 +52,30 @@
   // Trykk på lappen zoomer inn på leiren, der hvert lag har sitt navn. Det valgte laget har alltid sitt eget navn.
   // Claudes forslag: samles fra 1,6 m per punkt (der hvert lag blir ett merke) til NAVN_UTE (14; lenger ute står tallet bak leirens navn
   // som før); trykket zoomer til 1,2 m per punkt
-  const SAMLE = { fra: 1.6, inn: 1.2, luft: 8 };
+  // (runde 14, kritikk I) Claudes forslag: «ved leiren» = innen 300 m (r) fra flagget, målt i kartet
+  const SAMLE = { fra: 1.6, inn: 1.2, luft: 8, r: 300 };
   const kjøretøyListe = () => (typeof KJORETOY !== 'undefined' ? KJORETOY : window.KJORETOY) || [];
+  const lever = e => typeof levende !== 'function' || levende(e);
+  const vedLeiren = (x, y) => { const S = leir(); return !!(S && isFinite(x) && isFinite(y) && Math.hypot(x - S.leir.x, y - S.leir.y) <= SAMLE.r); };
+  // (runde 14) navnet t hører til karakteren ('deg'), et lag eller et kjøretøy som står ved leiren – ellers null (navnet står for seg)
   const hvem = t => { const v = typeof valgt !== 'undefined' ? valgt : null;
-    if (ENHETER.some(e => e.navn === t && e.side === 'blå' && e !== v && (typeof levende !== 'function' || levende(e)))) return 'lag';
-    if (kjøretøyListe().some(k => k && k.navn === t && k.side === 'blå' && k !== v)) return 'kjøretøy'; return null; };
+    const e = ENHETER.find(e => e.navn === t && e.side === 'blå' && e !== v && lever(e));
+    if (e) return vedLeiren(e.x, e.y) ? (e.karakter ? 'deg' : 'lag') : null;
+    const k = kjøretøyListe().find(k => k && k.navn === t && k.side === 'blå' && k !== v);
+    if (k) return vedLeiren(k.x != null ? k.x : k.X, k.y != null ? k.y : k.Y) ? 'kjøretøy' : null; return null; };
+  // (runde 14, kritikk I) tallene i lappen regnes av spillet, ikke av navnene som ble skjult: alle egne lag innen 300 m (også det valgte),
+  // uten karakteren; «deg» når karakteren er der; kjøretøyene innen 300 m; og egne lag lenger unna = «ute»
+  function telling() { const n = { lag: 0, deg: 0, kjøretøy: 0, ute: 0 }; if (!leir()) return n;
+    for (const e of ENHETER) { if (!e || e.side !== 'blå' || !lever(e)) continue; const ved = vedLeiren(e.x, e.y);
+      if (e.karakter) { if (ved) n.deg = 1; } else if (ved) n.lag++; else n.ute++; }
+    for (const k of kjøretøyListe()) if (k && k.side === 'blå' && vedLeiren(k.x != null ? k.x : k.X, k.y != null ? k.y : k.Y)) n.kjøretøy++;
+    return n; }
   const ute = typeof NAVN_UTE !== 'undefined' ? NAVN_UTE : 14;
   KROKER.tegn.push((g, vx0, vy1) => { const m = kam.m, S = leir(); if (!S || !E.samleSted || m < SAMLE.fra || m > ute) return;
-    E.samleSted({ x: (S.leir.x - vx0) / m, y: (vy1 - S.leir.y) / m, hvem }); });
+    E.samleSted({ x: (S.leir.x - vx0) / m, y: (vy1 - S.leir.y) / m, hvem, r: Infinity, tekst: () => E.samleTekst(telling()) }); });
   if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj, mPer) => { const S = leir(); if (!S || !E.samleSted) return; const p = proj(S.leir.x, S.leir.y); if (!p) return;
     const m = mPer(S.leir.x, S.leir.y); if (!(m >= SAMLE.fra)) return;
-    E.samleSted({ x: p[0], y: p[1], hvem, tekst: n => E.samleTekst(n).replace(' ›', '') }); });
+    E.samleSted({ x: p[0], y: p[1], hvem, r: Infinity, tekst: () => E.samleTekst(telling()).replace(' ›', '') }); });
   // trykk på «Leiren: 3 lag ›» (før de andre trykkene: lappen ligger over merkene)
   // legges først i lista når alle skriptene er lastet (andre moduler legger seg også først); plasseringen av et bygg går likevel foran
   const samleTrykk = (X, Y, cx, cy) => { const s = E.samling && E.samling(); if (!s || typeof på3d !== 'undefined' && på3d) return false;
@@ -72,5 +85,5 @@
     const S = leir(); if (!S) return false; kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, SAMLE.inn); skitten = true; return true; };
   const førstSamle = () => KROKER.trykk.unshift(samleTrykk);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(førstSamle, 0)); else setTimeout(førstSamle, 0);
-  window.KartLapper = { leir, baseILeiren, hvem, SAMLE };
+  window.KartLapper = { leir, baseILeiren, hvem, telling, SAMLE };
 })();

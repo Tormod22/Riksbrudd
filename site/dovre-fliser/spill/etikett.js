@@ -98,11 +98,17 @@
   // (runde 13) samle(lapper, S): lag og kjøretøy med merket (ca. 14 punkter under/over navnet) innen REGLER.samle.r fra S. Er de minst
   // REGLER.samle.min, merkes de L.samlet = true (vises ikke) og svaret er { inne, n } (n = { lag, kjøretøy, alle }); ellers null.
   function samle(lapper, S, R = REGLER) {
-    if (!S || !isFinite(S.x) || !isFinite(S.y) || typeof S.hvem !== 'function') return null; const inne = [], n = { lag: 0, kjøretøy: 0, alle: 0 };
-    for (const L of lapper) { let typ = null; try { typ = S.hvem(L.t); } catch (e) { typ = null; } if (typ !== 'lag' && typ !== 'kjøretøy') continue;
+    if (!S || !isFinite(S.x) || !isFinite(S.y) || typeof S.hvem !== 'function') return null; const inne = [], n = { lag: 0, kjøretøy: 0, deg: 0, alle: 0 };
+    for (const L of lapper) { let typ = null; try { typ = S.hvem(L.t); } catch (e) { typ = null; } if (typ !== 'lag' && typ !== 'kjøretøy' && typ !== 'deg') continue;
       const d = L.retning < 0 ? -1 : 1; if (Math.hypot(L.x - S.x, L.y - d * 14 - S.y) > (S.r || R.samle.r)) continue; inne.push(L); n[typ]++; n.alle++; }
     if (n.alle < R.samle.min) return null; for (const L of inne) L.samlet = true; return { inne, n }; }
-  const samleTekst = n => 'Leiren: ' + [n.lag ? n.lag + ' lag' : '', n.kjøretøy ? n.kjøretøy + ' kjøretøy' : ''].filter(Boolean).join(', ') + ' ›';
+  // (runde 14, kritikk I: «Leiren: 2 lag» talte karakteren som et lag og sa ingenting om lagene som var ute) n = { lag, deg, kjøretøy, ute }:
+  // «Leiren: 1 lag + deg, 2 kjøretøy · 1 lag ute ›». Karakteren (typen 'deg') er aldri et lag.
+  function samleTekst(n) { const lag = n.lag || 0, deg = (n.deg || 0) > 0, kj = n.kjøretøy || 0, ute = n.ute || 0;
+    const først = lag ? lag + ' lag' + (deg ? ' + deg' : '') : deg ? 'deg' : '', deler = [først, kj ? kj + ' kjøretøy' : ''].filter(Boolean);
+    let t = 'Leiren: ' + (lag || !deg ? deler.join(', ') : deler.join(' og '));
+    if (ute > 0) t += (deler.length ? ' · ' : '') + ute + ' lag ute';
+    return t + ' ›'; }
 
   // ---------- tegnerne: tekst() fanger navnet, og strokeText/fillText(t, x, NaN) gir fargene ----------
   function pakkInn(g) { if (!g || g.__etikett) return; g.__etikett = true; const f0 = g.fillText, s0 = g.strokeText;

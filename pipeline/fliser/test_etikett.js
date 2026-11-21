@@ -69,6 +69,11 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
     'samle: tre lag og ett kjøretøy ved leiren, ikke laget langt unna eller fienden: ' + (r && JSON.stringify(r.n)));
   ok(E.samleTekst(r.n) === 'Leiren: 3 lag, 1 kjøretøy ›' && E.samleTekst({ lag: 2, kjøretøy: 0 }) === 'Leiren: 2 lag ›', 'teksten: ' + E.samleTekst(r.n));
   ok(E.samle(L.slice(0, 1), S) === null && E.samle(L, null) === null, 'ett lag alene eller uten leir: ingen samling');
+  // (runde 14, kritikk I) karakteren er ikke et lag, og lag ute telles for seg
+  { const t1 = E.samleTekst({ lag: 1, deg: 1, kjøretøy: 2, ute: 1 }), t2 = E.samleTekst({ lag: 0, deg: 1, kjøretøy: 2 }), t3 = E.samleTekst({ lag: 2, kjøretøy: 0, ute: 0 });
+    ok(t1 === 'Leiren: 1 lag + deg, 2 kjøretøy · 1 lag ute ›' && t2 === 'Leiren: deg og 2 kjøretøy ›' && t3 === 'Leiren: 2 lag ›', 'runde 14-teksten: ' + [t1, t2, t3].join(' | '));
+    const S2 = { ...S, hvem: t => (t === 'Kari (deg)' ? 'deg' : t === 'Lag 1' ? 'lag' : null) }, L2 = [{ t: 'Kari (deg)', x: S.x, y: S.y - 2, retning: -1 }, { t: 'Lag 1', x: S.x + 5, y: S.y - 2, retning: -1 }];
+    const r2 = E.samle(L2, S2); ok(r2 && r2.n.deg === 1 && r2.n.lag === 1 && r2.n.alle === 2, 'samle: karakteren telles som «deg», ikke som lag: ' + (r2 && JSON.stringify(r2.n))); }
   // i en ramme: navnene ved leiren tegnes ikke, samlelappen står, og ingenting ligger oppå hverandre
   const tegnet = [], g = { font: '600 13px serif', textAlign: 'center', textBaseline: 'alphabetic', globalAlpha: 1, fillStyle: '#000', strokeStyle: '#000', lineWidth: 1,
     measureText: t => ({ width: t.length * 7 }), fillText(t, x, y) { tegnet.push(t); }, strokeText() {}, save() {}, restore() {} };
