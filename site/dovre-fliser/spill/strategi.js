@@ -80,8 +80,15 @@
     // det dere har mann nok til, står først (en storby dere ikke kan ta ennå, kommer etter)
     return ut.sort((a, b) => (b.nok ? 1 : 0) - (a.nok ? 1 : 0) || b.poeng - a.poeng);
   }
-  // teksten om hva et trekk krever: «trenger ca. 69 mann (minst 35) – dere har 12»
-  const kravTekst = t => (!t.minst ? '' : `trenger ${t.mann <= 6 ? t.mann : 'ca. ' + t.mann} mann` + (t.minst < t.mann && t.mann > 6 ? ` (minst ${t.minst})` : '') + (t.nok ? '' : ` – dere har ${t.har}`));
+  // teksten om hva et trekk krever: «trenger minst 35 mann (69 for full fart) – dere har 12»
+  // (runde 13, kritiker G/H: «trenger 5 mann» i Krig, men «det trengs minst 3 mann, dere har 1» i loggen – to tall for det samme.) Nå står
+  // det ene tallet som avgjør om stedet kan tas (minst – under det står inntaket stille) først, og tallet for full fart i parentes.
+  const kravTekst = t => (!t.minst ? '' : `trenger minst ${t.minst} mann` + (t.minst < t.mann ? ` (${t.mann} for full fart)` : '') + (t.nok ? '' : ` – dere har ${t.har}`));
+  // mennene i lagene som sendes, mot kravet: { har, minst, mann, nok (≥ minst), full (≥ mann), tekst } – «4 av 5 for full fart: tar stedet saktere»
+  function kravFor(t, lagListe) { const har = Math.floor((lagListe || []).reduce((a, s) => a + mennI({ lag: s }), 0)), minst = t.minst || 0, mann = t.mann || 0;
+    const nok = !minst || har >= minst, full = !mann || har >= mann;
+    const tekst = !minst ? '' : !nok ? `For få: ${har} av ${minst} – tar ikke stedet (det trengs minst ${minst} mann)` : !full ? `${har} av ${mann} for full fart – tar stedet, men saktere` : '';
+    return { har, minst, mann, nok, full, tekst }; }
   // Truslene mot det siden holder: tettsteder uten garnison, og tettsteder med en fiende i nærheten. garnison(id) = antall egne lag der.
   function trusler(side, byer, eierAv, garnison, fiender, R = REGLER) {
     const ut = [];
@@ -95,7 +102,7 @@
   const prosent = a => (a > 0 && a < .005 ? 'under 1' : Math.round(a * 100));
   // entall/flertall: «1 tettsted», «2 tettsteder»
   const tettsteder = n => `${n} tettsted${n === 1 ? '' : 'er'}`;
-  const api = { REGLER, område, stilling, utfall, rekkevidde, fronter, trekk, trusler, prosent, kravTekst, tettsteder };
+  const api = { REGLER, område, stilling, utfall, rekkevidde, fronter, trekk, trusler, prosent, kravTekst, kravFor, tettsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Strategi = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

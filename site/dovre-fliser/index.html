@@ -1045,15 +1045,21 @@ function tegnLag(g, proj, mPer) {
     g.strokeStyle = k.a.side === 'blå' ? `rgba(255,220,140,${.25 + .5 * t * (Math.sin(nå / 40) * .5 + .5)})` : `rgba(255,120,80,${.25 + .5 * t * (Math.sin(nå / 37) * .5 + .5)})`;
     g.lineWidth = 1.5; g.setLineDash([3, 9]); g.lineDashOffset = -nå / 20; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]); skitten = true;
   }
-  for (const s of ENHETER) if (s.side !== 'blå') {   // sist sett: der fienden var da noen av våre så den
+  // sist sett: der fienden var da noen av våre så den. (runde 13, kritiker H: to «sist sett 04:16» oppå hverandre) fiender som sist
+  // ble sett på nesten samme sted på skjermen (40 px), får ÉN lapp: «2 lag · sist sett 04:16» (det siste klokkeslettet)
+  const spøk = [];
+  for (const s of ENHETER) if (s.side !== 'blå') {
     if (synlig(s)) s.sett = { x: s.x, y: s.y, tid };
     else if (VIS.taake && s.sett) { const ps = proj(s.sett.x, s.sett.y); if (!ps) continue; const [a, b] = ps;
       if (window.Merker) { Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true }); if (window.Etikett) Etikett.øverst(() => Merker.tegn(g, a, b, { forhold: Merker.forhold(s.side), stiplet: true })); }
       else { g.strokeStyle = 'rgba(220,120,90,.8)'; g.setLineDash([3, 3]); g.lineWidth = 1.3; g.strokeRect(a - 11, b - 8, 22, 16); g.setLineDash([]); }
-      // RUNDE 6: «sist sett» er en fiende – navnet plasseres først (Etikett), og merket tegnes på nytt over alle navn
-      g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
-      const tS = 'sist sett ' + klokkeslett(s.sett.tid), yS = window.Etikett ? Etikett.tekst(g, tS, a, b - 13, -1, Etikett.REGLER.prio.fiende) : b - 13; g.fillText(tS, a, yS); }
+      spøk.push({ a, b, t: s.sett.tid }); }
   }
+  for (let i = 0; i < spøk.length; i++) { const q = spøk[i]; if (q.brukt) continue; let n = 1, t = q.t;
+    for (let j = i + 1; j < spøk.length; j++) { const o = spøk[j]; if (!o.brukt && Math.hypot(o.a - q.a, o.b - q.b) < 40) { o.brukt = true; n++; t = Math.max(t, o.t); } }
+    // RUNDE 6: «sist sett» er en fiende – navnet plasseres først (Etikett), og merket tegnes på nytt over alle navn
+    g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(231,220,195,.8)';
+    const tS = (n > 1 ? n + ' lag · ' : '') + 'sist sett ' + klokkeslett(t), yS = window.Etikett ? Etikett.tekst(g, tS, q.a, q.b - 13, -1, Etikett.REGLER.prio.fiende) : q.b - 13; g.fillText(tS, q.a, yS); }
   for (const s of ENHETER) {
     if (VIS.taake && !synlig(s)) continue;
     // KROKER.skjul (K3): egne lag du ikke vet hvor er nå, tegnes «sist meldt» av kontrollrom-visning.js
@@ -1117,7 +1123,8 @@ function tegnTåke() {
 const NAVN_UTE = 14, NAVN_RADIUS = 2500;
 function vedLeiren(o) { const S = window.OppstartSpill && OppstartSpill.tilstand(); return !!(S && S.leir) && Math.hypot(o.x - S.leir.x, o.y - S.leir.y) < NAVN_RADIUS; }
 function navnSynlig(o) { return !(kam.m > NAVN_UTE && o !== valgt && o.side === 'blå' && vedLeiren(o)); }
-function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER.filter(e => e.side === 'blå' && e !== valgt && levende(e) && vedLeiren(e)).length, kj = (window.KJORETOY || []).filter(k => k.side === 'blå' && k !== valgt && vedLeiren(k)).length;
+// (runde 13, kritiker G: «Fjordvakta · 3 lag» med to lag – karakteren ble telt med) karakteren din og Leirvakta er ikke lag her
+function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER.filter(e => e.side === 'blå' && !e.karakter && !e.leirvakt && e !== valgt && levende(e) && vedLeiren(e)).length, kj = (window.KJORETOY || []).filter(k => k.side === 'blå' && k !== valgt && vedLeiren(k)).length;
   return lag || kj ? ' · ' + [lag ? lag + ' lag' : '', kj ? kj + ' kjøretøy' : ''].filter(Boolean).join(', ') : ''; }
 function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 
