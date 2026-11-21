@@ -29,7 +29,7 @@
   window.addEventListener('riksbrudd-spill', start);
 
   // ---------- terrenginngrep i 2D-reglene ----------
-  function oppdaterInngrep() { const ut = []; for (const a of liste) for (const o of A.inngrep(a)) ut.push(o); INNGREP = ut; }
+  function oppdaterInngrep() { lokFor = null; const ut = []; for (const a of liste) for (const o of A.inngrep(a)) ut.push(o); INNGREP = ut; }
   const hvOrig = typeof hoydeVed === 'function' ? hoydeVed : null;
   if (hvOrig) window.hoydeVed = function (X, Y) { const h = hvOrig(X, Y); if (h === null || h === undefined || !INNGREP.length) return h; return h + A.endringVed(INNGREP, X, Y); };
   const urørt = (x, y) => (hvOrig ? hvOrig(x, y) : null);
@@ -222,7 +222,14 @@
     Kaier.anlegg = true;
     if (window.KaierSpill && !KaierSpill.data.anlegg) { const d0 = KaierSpill.data; KaierSpill.data = () => kombinert(d0()); KaierSpill.data.anlegg = true; }
   }
-  const pakk = () => { pakkOrdre(); pakkKaier(); };
+  // Planter (gress, blomster, bregner rundt kameraet i vegetasjon3d.js og fjellmark3d.js) skal ikke vokse i graven eller inne i bunkeren:
+  // Interior3d.iLeirbygg (lokale meter i utsnittet) pakkes inn og svarer også ja der.
+  let lokFor = null, lokL = [];
+  function iAnleggLokalt(x, y) { const R = r3(), u = R && R.ut; if (!u || !liste.length) return false;
+    if (lokFor !== u || lokL.n !== liste.length) { lokFor = u; lokL = liste.filter(a => (a.type === 'skyttergrav' || a.type === 'bunker') && A.andel(a) > 0 && iU(a, u)).map(a => lok(a, u)); lokL.n = liste.length; }
+    for (const a of lokL) if (utenfor(a, x, y) < .4) return true; return false; }
+  function pakkPlanter() { const I = window.Interior3d; if (!I || !I.iLeirbygg || I.iLeirbygg.anlegg) return; const f0 = I.iLeirbygg; I.iLeirbygg = (x, y) => f0(x, y) || iAnleggLokalt(x, y); I.iLeirbygg.anlegg = true; }
+  const pakk = () => { pakkOrdre(); pakkKaier(); pakkPlanter(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pakk); else setTimeout(pakk, 0);
 
   // ---------- panelet for et valgt anlegg ----------
