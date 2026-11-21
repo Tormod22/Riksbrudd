@@ -213,7 +213,11 @@
       case 'sol': g.beginPath(); g.arc(0, 0, .45, 0, 6.283); g.fill(); g.lineWidth = .13; for (let i = 0; i < 12; i++) { const v = i * Math.PI / 6; g.beginPath(); g.moveTo(Math.cos(v) * .6, Math.sin(v) * .6); g.lineTo(Math.cos(v) * .92, Math.sin(v) * .92); g.stroke(); } break;
       case 'lyn': P([.2, -.95, -.5, .1, -.05, .1, -.25, .95, .55, -.15, .08, -.15]); break;
       case 'ulv': P([-.55, -.85, -.2, -.4, .2, -.4, .55, -.85, .62, -.2, .85, .1, .3, .9, -.3, .9, -.85, .1, -.62, -.2]); break;
-      case 'ørn': P([0, -.65, .15, -.5, .95, -.75, .55, -.1, .9, .05, .25, .2, .3, .85, 0, .6, -.3, .85, -.25, .2, -.9, .05, -.55, -.1, -.95, -.75, -.15, -.5]); break;
+      // (runde 13, kritiker G: «ørna ser ut som en firetagget stjerne») hode med krokete nebb mot høyre, løftede vinger med fjærspisser, kropp og vifte
+      case 'ørn': for (const s of [-1, 1]) P([.1, -.16, .28, -.32, .5, -.58, .72, -.82, .98, -.9, .94, -.7, 1, -.56, .88, -.46, .93, -.3, .76, -.25, .78, -.08, .58, -.08, .52, .1, .14, .16].map((t, i) => (i % 2 ? t : t * s)));
+        g.beginPath(); g.ellipse(0, .1, .19, .38, 0, 0, 6.283); g.fill(); P([-.15, .38, -.34, .86, -.14, .78, 0, .95, .14, .78, .34, .86, .15, .38]);
+        P([-.18, .36, -.38, .54, -.3, .58, -.12, .46]); P([.18, .36, .38, .54, .3, .58, .12, .46]); P([-.13, -.2, -.11, -.58, .11, -.58, .14, -.2]);
+        g.beginPath(); g.arc(0, -.64, .15, 0, 6.283); g.fill(); P([.1, -.74, .26, -.72, .32, -.64, .3, -.54, .25, -.6, .12, -.57]); break;
       case 'tannhjul': { const p = []; for (let i = 0; i < 16; i++) { const v = i * Math.PI / 8, rr = i % 2 ? .68 : .92; p.push(Math.cos(v - .12) * rr, Math.sin(v - .12) * rr, Math.cos(v + .12) * rr, Math.sin(v + .12) * rr); } P(p);
         g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(0, 0, .3, 0, 6.283); g.fill(); g.globalCompositeOperation = 'source-over'; break; }
       case 'hodeskalle': g.beginPath(); g.arc(0, -.15, .65, 0, 6.283); g.fill(); g.fillRect(-.4, .3, .8, .45); g.globalCompositeOperation = 'destination-out';

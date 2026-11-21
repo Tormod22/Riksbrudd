@@ -97,6 +97,13 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
   const el = (tag, egensk = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(egensk)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (tekst, på, gjør, klasse = 'valg') => { const b = el('button', { klasse: klasse + (på ? ' på' : ''), type: 'button' }, tekst); b.onclick = gjør; return b; };
 
+  // RUNDE 13 (kritiker H: «flekkete, skjoldete kinn med Kjennetegn: Ingen»): de fire flatene som former kinnbeina i portrettmotoren har
+  // skarpe kanter og står som lyse og mørke flekker under øynene. Motoren er brukerens og står uendret; her får de fire flatene den samme
+  // myke uskarpheten (skinSoft) som motoren bruker på rødmen. Gjelder alle portretter (også karakterarket), fordi renderSVG pakkes inn én gang.
+  const KINN = ['M221 356 Q241 367 260 372 Q283 386 285 404 Q260 395 238 413 Q223 401 221 356 Z', 'M381 355 Q361 371 339 374 Q318 385 312 404 Q340 394 363 411 Q377 400 381 355 Z',
+    'M233 383 Q249 371 276 383 Q253 386 240 399 Z', 'M366 384 Q347 373 322 386 Q344 388 359 400 Z'];
+  const mykeKinn = svg => { let ut = String(svg); for (const d of KINN) ut = ut.split(`d="${d}"`).join(`d="${d}" filter="url(#skinSoft)"`); return ut; };
+  if (O.P && O.P.renderSVG && !O.P.renderSVG.mykeKinn) { const rå = O.P.renderSVG; const ny = (...a) => mykeKinn(rå(...a)); ny.mykeKinn = true; ny.rå = rå; try { O.P.renderSVG = ny; } catch (e) { /* frosset: lar være */ } }
   // Portrettet fra portrettmotoren (Karakterstudio v3) som bilde. SVG-en lages bare av kjente valg (normalize), så den er trygg.
   const portrettBilde = (k, bredde = 200) => { const img = el('img', { alt: 'Portrett av karakteren', width: bredde, height: Math.round(bredde * 740 / 600) });
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(O.P.renderSVG(O.portrett(k.portrett, k.navn))); img.style.border = '1px solid var(--rule)'; return img; };
