@@ -4,6 +4,9 @@
 // jegerne hjemme med mat og kortet sier «I går: …», og en dagsvirkning (fridag/ekstra skift) virker gjennom SamfunnSpill.valg til neste morgen.
 // Setter alt tilbake: folket (samme personer, oppgaver, helse, borte), mat, moral, frø, kassa, lageret, dieselen, dagboka, morgenmøtets
 // lagring og MorgenSpill.test.
+// RUNDE 13 (kritiker G/H): møtet kommer aldri to ganger samme dag eller bakover (klokka litt før 06:00 etter omlasting), tapene i lagene
+// står med navn, ⏭ står stille mens møtet venter (spillermodus), handelsmannen kl. 14 kjøper det som er avtalt, og alle valgene synes
+// uten rulling når rapporten er lang (foldet sammen).
 module.exports = {
   navn: 'morgenmøtet (valg hver morgen)',
   kjør: async (pg, profil) => {
@@ -14,8 +17,9 @@ module.exports = {
       const før = { personer: F.personer.slice(), felt: F.personer.map(p => [p, p.oppgave, p.helse, p.borte, p.morgen]), mat: F.mat, moral: F.moral, frø: F.frø, neste: F.neste, penger: S.penger, lager: JSON.stringify(L.lager), diesel: L.drivstoff,
         morgen: localStorage.getItem('riksbrudd-morgen'), dagbokLS: localStorage.getItem('riksbrudd-dagbok'), dagbok: DB ? DB.liste.slice() : null, test: MorgenSpill.test, oppTest: window.OpplaeringSpill ? OpplaeringSpill.test : undefined };
       // kort fra tidligere vakter som står oppe, får stå (kortet står da i kortkøen) – vi trykker på knappene uansett
-      const knapper = () => [...document.querySelectorAll('#morgenkort button')];
+      const knapper = () => [...document.querySelectorAll('#morgenkort .mvalg button')];
       const klikk = rx => { const b = knapper().find(q => rx.test(q.textContent)); if (b) b.click(); return !!b; };
+      const tidFør = tid, tempoFør = tempo;
       try {
         MorgenSpill.test = true;
         // lite mat: to rasjoner igjen, så kortet har matvalgene; minst seks arbeidsføre
@@ -57,8 +61,43 @@ module.exports = {
         MorgenSpill.morgen(true); krev(MorgenSpill.virkning().tempo === 1 && MorgenSpill.virkning().moral === 0, 'dagsvirkningen varer mer enn en dag');
         krev(klikk(/Ingen endring i dag/) && !$('morgenkort').classList.contains('på'), '«Ingen endring i dag» lukker ikke kortet');
         ut.ferdig = true;
+        // ---- RUNDE 13 ----
+        const tid0 = tid, MS = MorgenSpill.tilstand();
+        // (1) omlasting rett før 06:00: klokka står bak dagen som alt er holdt – ingen nytt møte, verken for gårsdagen eller i dag igjen
+        const dagNå = MS.dag, kortFør = MS.kort; tid = (dagNå - 1) * 1440 - 2;
+        krev(MorgenSpill.morgen(false) === null && MorgenSpill.tilstand().kort === kortFør && MorgenSpill.tilstand().dag === dagNå, 'møtet kom for gårsdagen da klokka sto bak (omlasting før 06:00)');
+        tid = (dagNå - 1) * 1440 + 5; krev(MorgenSpill.morgen(false) === null && MorgenSpill.tilstand().kort === kortFør, 'samme dag fikk møtet en gang til');
+        tid = tid0; ut.dag = true;
+        // (2) tapene i lagene med navn (en falt, lagføreren såret)
+        const lag = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && Array.isArray(e.menn) && e.menn.length >= 3);
+        if (krev(lag, 'fant ikke noe eget lag med minst tre mann')) { const hp = lag.menn.map(m => m.hp), l = lag.leder || 0, a = lag.menn[(l + 1) % lag.menn.length];
+          try { for (const m of lag.menn) m.hp = 1; MorgenSpill.tapSteg(true); a.hp = 0; lag.menn[l].hp = .5; MorgenSpill.tapSteg(true);
+            MorgenSpill.morgen(true); const r = MorgenSpill.tilstand().kort.rapport.find(t => /^Tap i lagene/.test(t)) || ''; ut.tap = r;
+            krev(r.includes(lag.navn) && r.includes(a.navn + ' falt') && r.includes(lag.menn[l].navn + ' (lagfører) ble såret'), 'tapene står ikke med navn: ' + r);
+            krev(!MorgenSpill.tilstand().kort.rapport.some(t => /Et rolig døgn/.test(t)), '«Et rolig døgn» står sammen med tapene');
+          } finally { lag.menn.forEach((m, i) => { m.hp = hp[i]; }); MorgenSpill.tapSteg(true); MorgenSpill.tilstand().tap = []; } }
+        // (3) liggende telefon: en lang rapport foldes, og alle valgene synes uten rulling
+        const K3 = MorgenSpill.tilstand().kort; for (let i = 0; i < 14; i++) K3.rapport.push('I går: en lang linje som fyller kortet – speiderne så røverne samle seg nord for leiren, og de fant mat, tre og stål.');
+        MorgenSpill.lukk(); MorgenSpill.vis(); const kk = $('morgenkort');
+        if (kk.classList.contains('på') && kk.getClientRects().length) { const kr = kk.getBoundingClientRect(); ut.foldet = MorgenSpill.foldet();
+          krev([...kk.querySelectorAll('.mvalg button')].every(b => b.getBoundingClientRect().bottom <= kr.bottom + 1), 'valgene må rulles fram (foldet: ' + ut.foldet + ')');
+          krev(ut.foldet && !!kk.querySelector('.msum button'), 'den lange rapporten ble ikke foldet sammen'); ut.fold = true; }
+        else ut.fold = 'kortet sto ikke oppe (annet kort i køen)';
+        // (4) ⏭ mens møtet venter (spillermodus): tiden står
+        if (kk.classList.contains('på') && kk.getClientRects().length && $('nesteh')) { const t1 = tid, før4 = tempo; $('nesteh').click(); await new Promise(r => setTimeout(r, 400));
+          krev(tid === t1 && tempo === 0 && MorgenSpill.fartVenter() === 'nesteh', `⏭ spolte mens møtet ventet (tid ${t1} -> ${tid}, fart ${tempo})`); MorgenSpill.glemFart(); tempo = før4; ut.spol = true; }
+        else ut.spol = 'kortet sto ikke oppe';
+        krev(klikk(/Ingen endring i dag/), 'ingen «Ingen endring» (runde 13)'); if (MorgenSpill.tilstand().kort.steg === 1) knapper().pop().click(); MorgenSpill.glemFart();
+        // (5) handelsmannen kl. 14 henter det avtalte treet og betaler
+        L.lager.tre = 30; MorgenSpill.morgen(true, { stor: 'handel' }); klikk(/Ingen endring i dag/);
+        const legg = knapper().find(b => /^Legg av \d+ m³ tre/.test(b.textContent)); if (krev(legg, 'handelsmannen kom ikke med «Legg av … m³ tre»')) { legg.click();
+          const h = MorgenSpill.tilstand().handel; krev(h && h.vare === 'tre' && h.mengde > 0, 'ingen avtale med handelsmannen');
+          if (h) { const p0 = S.penger, t0 = L.lager.tre; tid = h.kl + 1; MorgenSpill.handelSteg(); tid = tid0;
+            ut.handel = `${t0 - L.lager.tre} m³ for ${S.penger - p0} kr`; krev(L.lager.tre === t0 - h.mengde && S.penger === p0 + h.pris && !MorgenSpill.tilstand().handel, 'handelsmannen handlet ikke: ' + ut.handel); } }
+        tid = tid0; ut.r13 = true;
       } catch (e) { ut.feil.push('unntak: ' + e.message); }
       finally {
+        tid = tidFør; tempo = tempoFør; MorgenSpill.glemFart();
         MorgenSpill.lukk(); MorgenSpill.test = før.test;
         F.personer = før.personer; for (const [p, o, h, b, m] of før.felt) { p.oppgave = o; p.helse = h; if (b === undefined) delete p.borte; else p.borte = b; if (m === undefined) delete p.morgen; else p.morgen = m; }
         F.mat = før.mat; F.moral = før.moral; F.frø = før.frø; F.neste = før.neste; S.penger = før.penger; L.lager = JSON.parse(før.lager); L.drivstoff = før.diesel;
@@ -68,7 +107,7 @@ module.exports = {
         if (LeirSpill.lagre) LeirSpill.lagre(); ut.tilbake = F.personer.length === før.personer.length && !F.personer.some(p => p.morgen);
       }
       return ut; });
-    const krav = ['ferdig', 'tilbake', 'virkning'], mangler = krav.filter(k => !d[k]), feil = (d.feil || []).concat(mangler.map(k => 'ikke prøvd: ' + k));
-    return { ok: !feil.length, tekst: feil.length ? `${profil}: ${feil.join('; ')}` : `${profil}: kortet med ${d.valg}, to på jakt (${d.borte}), nabogården ga to nye, neste morgen «${(d.igår || '').slice(0, 70)}»` + (d.virkning ? `, ${d.virkning}` : ''), data: d };
+    const krav = ['ferdig', 'tilbake', 'virkning', 'dag', 'r13'], mangler = krav.filter(k => !d[k]), feil = (d.feil || []).concat(mangler.map(k => 'ikke prøvd: ' + k));
+    return { ok: !feil.length, tekst: feil.length ? `${profil}: ${feil.join('; ')}` : `${profil}: kortet med ${d.valg}, to på jakt (${d.borte}), nabogården ga to nye, neste morgen «${(d.igår || '').slice(0, 70)}»` + (d.virkning ? `, ${d.virkning}` : '') + ` · R13: dag ok, ${d.tap ? 'tap med navn' : 'tap ikke prøvd'}, fold ${d.fold}, ⏭ ${d.spol}, handel ${d.handel}`, data: d };
   },
 };

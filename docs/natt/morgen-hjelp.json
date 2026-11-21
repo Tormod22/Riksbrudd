@@ -1,7 +1,37 @@
 [
-  ["Morgenmøtet", "Hver morgen kl. 06 (fra dag 2) kommer et kort: øverst dagboka, døgnoppgjøret og hvordan gårsdagens valg gikk («I går: …»), så 2–3 valg for dagen ut fra det som står på i leiren – lite mat, røvere på vei, lite penger, godt med folk eller lav moral. Hvert valg sier hva det koster og hva det gir (på PC: tastene 1–3). Spillet står på pause til du svarer. «Ingen endring i dag» lukker kortet. Under et angrep venter kortet til angrepet er over. Det dere har bestemt for i dag, står under «Morgenmøtet» i Leir → Mål.", "Leiren"],
-  ["Folk som sendes ut", "Jakt og fiske, speidertur, våpenøvelse, leie ut to som vakter og tankbilen til fots tar to personer bort til neste morgen – de arbeider ikke den dagen (Folk viser «borte»). Neste morgen kommer de hjem med det de fikk: rasjoner, penger, materialer, diesel eller kamperfaring (våpenøvelsen: +15 min hver, den følger dem inn i en tropp) – og av og til er en av dem skadet. Spillet sender aldri den eneste som har en oppgave (for eksempel den eneste kokken).", "Leiren"],
-  ["Dobbel vakt, fridag og ekstra skift", "Dobbel vakt i natt: to til går på vakt til neste morgen – vaktene ser røverne tidligere, og lagene innen 450 m fra leiren treffer bedre. Dagen etter er folk slitne (moral −8, litt saktere arbeid). Fridag: moral +12, men alt arbeid går halvt så fort den dagen. Ekstra skift: arbeidet går 25 % raskere, men moral −10. Halve rasjoner: 40 % mindre matforbruk og moral −12. Alt varer til neste morgen.", "Leiren"],
-  ["Viktige beslutninger", "Fra dag 2 og så hver tredje dag får morgenmøtet en større beslutning som steg 2 på kortet: et nabogårdsfolk vil bli med (folk +4 og litt mat – men de trenger senger og mat hver dag), en forlatt tankbil med diesel (send en tropp dit – den står i kartet i to døgn, og det kan være røvere der – eller to til fots), røverne vil ha betalt for å la dere være et døgn til, eller en handelskaravane som selger billig og kjøper tre.", "Leiren"],
-  ["Tankbilen", "Velger du «Send en tropp dit», står tankbilen i kartet (oransje merke) og som brikke øverst til venstre med «Send …» for det nærmeste laget. Kommer et eget lag innen 60 m, fraktes dieselen til leiren – så langt det er plass i tankene. Omtrent hver tredje gang ligger det røvere der: slå dem først. Etter to døgn er bilen borte.", "Lag og strid"]
+  [
+    "Morgenmøtet",
+    "Hver morgen kl. 06 (fra dag 2) kommer et kort: øverst dagboka, døgnoppgjøret og hvordan gårsdagens valg gikk («I går: …»), så 2–3 valg for dagen ut fra det som står på i leiren – lite mat, røvere på vei, lite penger, godt med folk eller lav moral. Hvert valg sier hva det koster og hva det gir (på PC: tastene 1–3). Spillet står på pause til du svarer. «Ingen endring i dag» lukker kortet. Under et angrep venter kortet til angrepet er over. Det dere har bestemt for i dag, står under «Morgenmøtet» i Leir → Mål. Møtet holdes én gang per dag: åpner du spillet igjen rett før kl. 06, kommer ikke gårsdagens møte en gang til. Er kortet for høyt (liggende telefon), står det viktigste på én linje – «Vis hele døgnet ›» viser hele rapporten. Trykker du ⏭ eller en fart mens møtet venter, står tiden til du har svart; så gjelder farten du trykket.",
+    "Leiren"
+  ],
+  [
+    "Folk som sendes ut",
+    "Jakt og fiske, speidertur, våpenøvelse, leie ut to som vakter og tankbilen til fots tar to personer bort til neste morgen – de arbeider ikke den dagen (Folk viser «borte»). Neste morgen kommer de hjem med det de fikk: rasjoner, penger, materialer, diesel eller kamperfaring (våpenøvelsen: +15 min hver, den følger dem inn i en tropp) – og av og til er en av dem skadet. Spillet sender aldri den eneste som har en oppgave (for eksempel den eneste kokken).",
+    "Leiren"
+  ],
+  [
+    "Tap i lagene",
+    "Morgenmøtet sier hvem i lagene dine som falt eller ble såret siste døgn, med navn og lag – også lag som er langt ute – og om det var lagføreren («Tap i lagene: Vaktlaget: Oddvar Aasen falt, Kari Lund (lagfører) ble såret»).",
+    "Lag og strid"
+  ],
+  [
+    "Dobbel vakt, fridag og ekstra skift",
+    "Dobbel vakt i natt: to til går på vakt til neste morgen – vaktene ser røverne tidligere, og lagene innen 450 m fra leiren treffer bedre. Dagen etter er folk slitne (moral −8, litt saktere arbeid). Fridag: moral +12, men alt arbeid går halvt så fort den dagen. Ekstra skift: arbeidet går 25 % raskere, men moral −10. Halve rasjoner: 40 % mindre matforbruk og moral −12. Alt varer til neste morgen.",
+    "Leiren"
+  ],
+  [
+    "Viktige beslutninger",
+    "Fra dag 2 får morgenmøtet hver dag en større sak som steg 2 på kortet: et nabogårdsfolk vil bli med (folk +4 og litt mat – men de trenger senger og mat hver dag), en forlatt tankbil med diesel (send en tropp dit – den står i kartet i to døgn, og det kan være røvere der – eller to til fots), røverne vil ha betalt for å la dere være et døgn til, en handelskaravane som selger billig og kjøper tre, eller en handelsmann som kommer kl. 14. Samme sak kommer aldri to dager på rad, og nabogården høyst hver fjerde dag.",
+    "Leiren"
+  ],
+  [
+    "Tankbilen",
+    "Velger du «Send en tropp dit», står tankbilen i kartet (oransje merke) og som brikke øverst til venstre med «Send …» for det nærmeste laget. Kommer et eget lag innen 60 m, fraktes dieselen til leiren – så langt det er plass i tankene. Omtrent hver tredje gang ligger det røvere der: slå dem først. Etter to døgn er bilen borte.",
+    "Lag og strid"
+  ],
+  [
+    "Handelsmannen og svartebørsen",
+    "Penger uten krig: svartebørsen kjøper tre (eller diesel når dere ikke har tre) – det står som et valg på morgenmøtet hver dag dere har noe å selge, og den betaler 40 % mer enn markedet for treet. Handelsmannen kommer kl. 14: velg på morgenmøtet hva du legger av til ham (tre eller diesel). Han betaler 80 % mer enn markedet for treet, men det må ligge på lageret når han kommer – brikken øverst til venstre sier hvor lenge det er igjen. Har dere brukt noe av det, tar han resten og betaler for det.",
+    "Leiren"
+  ]
 ]
