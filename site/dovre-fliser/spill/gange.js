@@ -80,7 +80,11 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   }
   // Start aldri inne i (eller tett inntil) et hus, et tre eller i vann: let utover i en spiral (høyst 60 m) til et sted der kroppen får plass
   function ledig(u, b) {
-    const vann = vannVed(u), fri = (x, y) => !vann(x, y) && !(u.iElv && u.iElv(x, y)) && ![[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6], [1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [1.1, 1.1], [-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1]].some(([dx, dy]) => typeof hindring3d === 'function' && hindring3d(x + dx, y + dy));
+    // (runde 13: på Rogaland-kartet startet du inne i feltbilen – den står 16 m øst og 12 m sør for flagget, og det gjorde karakteren også)
+    // ikke inne i et kjøretøy: feltbilen 3,6 m, helikopteret 6 m (rotoren), leirens egne kjøretøy 4 m fra midten. Claudes forslag.
+    const kjt = [...(window.KjorSpill && KjorSpill.liste ? KjorSpill.liste() : []).filter(k => k && Number.isFinite(k.X)).map(k => [k.X - u.cx, k.Y - u.cy, k.type === 'heli' ? 6 : 3.6]),
+      ...(typeof KJORETOY !== 'undefined' ? KJORETOY : []).filter(k => k && k.side === 'blå' && Number.isFinite(k.x)).map(k => [k.x - u.cx, k.y - u.cy, 4])];
+    const vann = vannVed(u), fri = (x, y) => !kjt.some(([kx, ky, r]) => Math.hypot(x - kx, y - ky) < r) && !vann(x, y) && !(u.iElv && u.iElv(x, y)) && ![[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6], [1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [1.1, 1.1], [-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1]].some(([dx, dy]) => typeof hindring3d === 'function' && hindring3d(x + dx, y + dy));
     if (fri(b.x, b.y)) return;
     for (let r = 1; r <= 60; r++) for (let k = 0; k < 8 + r * 2; k++) { const v = k / (8 + r * 2) * 6.283, x = b.x + Math.cos(v) * r, y = b.y + Math.sin(v) * r; if (fri(x, y)) { b.x = x; b.y = y; return; } }
   }

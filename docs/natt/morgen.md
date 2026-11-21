@@ -180,3 +180,7 @@ etter rettingen kom ingenting (verken etter omlasting eller over 06:00).
 - Selve klokka settes ikke fram etter en omlasting: verden står et par minutter før møtet som alt er holdt. Det er bare møtet, dagboka og oppgjøret
   som ikke tar dagen en gang til.
 - Hjelpen (`spill/hjelp.js`) er ikke endret – nye/endrede emner står i `docs/natt/morgen-hjelp.json`.
+
+### Kontrollen (sjekk.js, mobil, 21. nov kl. 15:06–15:14, etter fletting av origin/claude/nattfiks med krig-pakkas tankbil)
+- `PORT=8983 SJEKK_PROFIL=mobil node pipeline/fliser/sjekk.js`: 130 ok, 0 FEIL (461 s). Vakta «morgenmøtet» var ok med alle R13-delene
+  (dag, tap med navn, fold, ⏭, handelsmann).

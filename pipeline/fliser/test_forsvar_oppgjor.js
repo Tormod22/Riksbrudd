@@ -22,4 +22,9 @@ const nN = { ...før, navn: ['Eva Moe', 'Nina Ås'], borte: 1, tropp: { 'Per Lie
 const fr = O.tekst(fN, nN);
 ok(/Per Lie gikk inn i Stormtropp 1/.test(fr.tekst) && /Håkon Rønning og Silje Berg falt/.test(fr.tekst) && /Ola Dahl forlot gjengen fordi moralen var for lav/.test(fr.tekst) && /Nina Ås er ny i gjengen/.test(fr.tekst) && !/har dratt/.test(fr.tekst), 'navn og grunn', fr.tekst);
 ok(O.tekst(null, nå) === null, 'uten bilde fra i går: ingenting');
+// (runde 13, kritiker G) kampene siste døgn med hvem og hvor
+{ const O2 = require('../../site/dovre-fliser/spill/forsvar-oppgjor'), A2 = require('assert');
+  const før = { bølge: 0, aktiv: 0, falne: 0, slåttUt: 0, tid: 1000 }, nå = { bølge: 0, aktiv: 0, falne: 4, slåttUt: 1, tid: 2440, kamper: [{ lag: 'Speidertropp 1', fiende: 'bygdevernet', sted: 'i Lærdalsøyri', falne: 4, slått: true, start: 1200 }, { lag: 'Gammel', fiende: 'røverne', falne: 1, slått: false, start: 500 }] };
+  const t = O2.tekst(før, nå).tekst; A2.ok(/Speidertropp 1 ble slått ut i kamp med bygdevernet i Lærdalsøyri/.test(t), t); A2.ok(!/ett lag er slått ut/i.test(t), 'ikke to ganger'); A2.ok(!/Gammel/.test(t), 'bare siste døgn');
+  console.log('ok   oppgjøret sier hvem lagene kjempet mot (runde 13)'); }
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

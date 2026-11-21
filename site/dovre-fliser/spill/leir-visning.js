@@ -67,13 +67,24 @@ body.kort #byggvalg button{ min-height:34px; padding:2px 8px; margin:4px 2px 0; 
 body.kort.tlfligg #leirmeny .status{ grid-template-columns:repeat(4, minmax(0,1fr)); gap:3px; margin-top:2px; } body.kort.tlfligg #leirmeny h2{ margin:0; font-size:19px; }
 body.kort.tlfligg #leirmeny .flis{ padding:2px 5px; } body.kort.tlfligg #leirmeny .flis small{ font-size:9.5px; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } body.kort.tlfligg #leirmeny .flis b{ font-size:12.5px; display:block; overflow:hidden; text-overflow:ellipsis; }
 body.kort.tlfligg #leirmeny .status .linje{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* RUNDE 13: ingen «…» i tallboksene liggende – kort ord og kort tall (data-kort), uten ikonet (det tok plassen), og bryter heller enn å kuttes */
+body.kort.tlfligg #leirmeny .flis[data-ikon]::before{ display:none; }
+body.kort.tlfligg #leirmeny .flis :is(small, b)[data-kort]{ font-size:0; white-space:normal; overflow:visible; text-overflow:clip; }
+body.kort.tlfligg #leirmeny .flis small[data-kort]::after{ content:attr(data-kort); font-size:9.5px; } body.kort.tlfligg #leirmeny .flis b[data-kort]::after{ content:attr(data-kort); font-size:12.5px; line-height:1.15; }
+body.kort.tlfligg #leirmeny .status .linje{ white-space:normal; line-height:1.3; }
 /* RUNDE 12: liggende telefon – én linje tekst og én rad knapper (se kortBanner) */
 body.kort.tlfligg #byggvalg.på{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; left:calc((100vw - 52px) / 2); right:auto; transform:translateX(-50%); width:max-content; max-width:min(640px, calc(100vw - 72px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))); padding:4px 6px; max-height:none; overflow:visible; }
 body.kort.tlfligg #byggvalg .btekst{ flex:1 1 100%; min-width:0; font-size:13px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; cursor:pointer; }
 body.kort.tlfligg #byggvalg.harsmå:not(.helt) .btekst::after{ content:' ⓘ'; color:var(--ink-dim); }
 body.kort.tlfligg #byggvalg:not(.helt) > small{ display:none; } body.kort.tlfligg #byggvalg.helt .btekst{ white-space:normal; } body.kort.tlfligg #byggvalg > small{ flex:1 1 100%; font-size:12px; }
 body.kort.tlfligg #byggvalg button{ margin:0; flex:none; min-height:36px; } body.kort.tlfligg #byggvalg button[data-kort]{ font-size:0; min-width:40px; padding:0 9px; }
-body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); font-size:14px; } body.kort.tlfligg #byggvalg button.slått{ border-color:#c9b26a; color:#f0dc9a; background:#3a3020; }`;
+body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); font-size:14px; } body.kort.tlfligg #byggvalg button.slått{ border-color:#c9b26a; color:#f0dc9a; background:#3a3020; }
+/* RUNDE 13: ikon med en kort tekst under (liggende telefon), og tegnet foran hele teksten ellers */
+body.kort.tlfligg #byggvalg button[data-etikett]{ font-size:0; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:50px; padding:1px 6px; line-height:1.05; }
+body.kort.tlfligg #byggvalg button[data-etikett]::before{ content:attr(data-tegn); font-size:16px; line-height:1; }
+body.kort.tlfligg #byggvalg button[data-etikett]::after{ content:attr(data-etikett); font-size:10.5px; letter-spacing:.01em; margin-top:2px; color:var(--ink-dim); }
+body.kort.tlfligg #byggvalg button.slått[data-etikett]::after{ color:#f0dc9a; }
+body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ content:attr(data-tegn); display:inline-block; margin-right:5px; opacity:.85; }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
@@ -192,13 +203,16 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
     // status som fire små fliser (tall først, forklaringen i tittelen), og en rød linje når noe mangler strøm
-    const flis = (navn, verdi, tittel, fare) => el('div', { klasse: 'flis' + (fare ? ' fare' : ''), title: tittel || '' }, el('small', {}, navn + ': '), el('b', {}, verdi));
+    // RUNDE 13 (kritiker G: «40 mill…», «0 l av …» på liggende telefon): hver flis har også en kort utgave (k = [ord, tall]) som vises der
+    const flis = (navn, verdi, tittel, fare, k) => el('div', { klasse: 'flis' + (fare ? ' fare' : ''), title: tittel || '' }, el('small', k ? { 'data-kort': k[0] } : {}, navn + ': '), el('b', k ? { 'data-kort': k[1] } : {}, verdi));
+    const kapMaks = Math.max(siste.kapasitet, siste.prod), nb = v => Math.floor(v).toLocaleString('nb-NO');
     const strømTekst = siste.behov || siste.kapasitet ? `Strøm: byggene trenger ${kw(siste.behov)} kW og får ${kw(siste.prod)} kW (anleggene kan gi ${kw(siste.kapasitet)} kW)` : 'Strøm: ingen bygg bruker eller lager strøm ennå';
     const status = el('div', { klasse: 'status' },
-      flis('Kassa', LB.kroner(S.penger)),
-      flis('Strøm', siste.behov ? (siste.behov > Math.max(siste.kapasitet, siste.prod) + 1e-6 ? `trenger ${kw(siste.behov)}, har ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW`) : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ikke i bruk', strømTekst + (strømKilde() ? ` – ${strømKilde()}` : ''), siste.mangler.size - (siste.avslått || 0) > 0),
-      flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren'),
-      flis('Sengeplasser', String(LB.plasser(L))),
+      flis('Kassa', LB.kroner(S.penger), '', false, ['Kassa', LB.kroner(S.penger)]),
+      flis('Strøm', siste.behov ? (siste.behov > Math.max(siste.kapasitet, siste.prod) + 1e-6 ? `trenger ${kw(siste.behov)}, har ${kw(Math.max(siste.kapasitet, siste.prod))} kW` : `bruker ${kw(siste.behov)} av ${kw(Math.max(siste.kapasitet, siste.prod))} kW`) : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ikke i bruk', strømTekst + (strømKilde() ? ` – ${strømKilde()}` : ''), siste.mangler.size - (siste.avslått || 0) > 0,
+        ['Strøm', siste.behov ? `${kw(siste.behov)}/${kw(kapMaks)} kW` : siste.kapasitet ? `${kw(siste.kapasitet)} kW ledig` : 'ingen']),
+      flis('Diesel til leiren', `${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l av ${kap.toLocaleString('nb-NO')} l`, 'Driver aggregatene og fyrer i brakkene om vinteren', false, ['Diesel', `${nb(L.drivstoff)}/${nb(kap)} l`]),
+      flis('Sengeplasser', String(LB.plasser(L)), '', false, ['Senger', String(LB.plasser(L))]),
       siste.mangler.size - (siste.avslått || 0) > 0 ? el('div', { klasse: 'linje', style: 'color:#e88a6a' }, `${siste.mangler.size - (siste.avslått || 0)} bygg mangler strøm` + (siste.aggInst > 0 && !(L.drivstoff > 0) ? ' – aggregatene er tomme for diesel' : '')) : el('div', { klasse: 'linje' }, strømLinje()));
     const kjøp = knapp(`Kjøp 500 l diesel (${LB.kroner(500 * LB.DRIVSTOFF.prisPerLiter)})`, () => kjøpDiesel(500), { id: 'kjopdiesel' });
     kjøp.disabled = kap - L.drivstoff < 1; if (kjøp.disabled) kjøp.title = kap ? 'Tankene er fulle' : 'Bygg en dieseltank først';
@@ -354,12 +368,15 @@ body.kort.tlfligg #byggvalg button[data-kort]::after{ content:attr(data-kort); f
   // for alle detaljene) og én rad med små knapper: veksleknappene som ikoner (hele navnet i title/aria-label), og kortere tekst på kjøpeknappen.
   // Knappene beholder teksten sin (kontrollskriptet trykker etter den); bare CSS-en viser data-kort. Tegnene er Claudes forslag.
   let bannerHelt = false;
-  const KORT_NAVN = [[/^⟲ 15°$/, '⟲'], [/^⟳ 15°$/, '⟳'], [/^Rutenett: .*$/, '▦'], [/^Inntil naboen: .*$/, '⇤'], [/^Fortsett: .*$/, '⧉'], [/^Avbryt$/, '✕'], [/^Legg i planen$/, 'Til planen'],
-    [/^Kjøp materialene og bygg: (.*) i alt$/, 'Kjøp og bygg · $1']];
+  // RUNDE 13 (kritiker G: «ikonene ⟲ ⟳ ▦ ⇤ ⧉ har ingen tekst – ⧉ ser ut som kopier»): hvert ikon får en kort tekst under seg (tredje ledd),
+  // og «Fortsett» har fått + i stedet for ⧉. På PC står hele teksten som før, med det samme tegnet foran. Ordene er Claudes forslag.
+  const KORT_NAVN = [[/^⟲ 15°$/, '⟲', 'Venstre'], [/^⟳ 15°$/, '⟳', 'Høyre'], [/^Rutenett: .*$/, '▦', 'Rutenett'], [/^Inntil naboen: .*$/, '⇤', 'Inntil'], [/^Fortsett: .*$/, '+', 'Fortsett'],
+    [/^Avbryt$/, '✕', 'Avbryt'], [/^Legg i planen$/, 'Til planen'], [/^Kjøp materialene og bygg: (.*) i alt$/, 'Kjøp og bygg · $1']];
   // på telefon lukkes også forklaringsruta fra byggekortet (den ble liggende over kartet mens du plasserte bygget, kritiker E bilde 13)
   function kortBanner() { if (window.FlisTips && FlisTips.skjul && document.body.classList.contains('kort')) FlisTips.skjul(); const f = banner.firstElementChild; if (f && f.tagName === 'DIV') { f.classList.add('btekst'); f.onclick = () => { bannerHelt = !bannerHelt; banner.classList.toggle('helt', bannerHelt); }; }
     banner.classList.toggle('helt', bannerHelt); banner.classList.toggle('harsmå', !!banner.querySelector(':scope > small'));
-    for (const b of banner.querySelectorAll(':scope > button')) { const t = b.textContent.trim(), k = KORT_NAVN.find(([r]) => r.test(t)); if (!k) continue; b.dataset.kort = t.replace(k[0], k[1]);
+    for (const b of banner.querySelectorAll(':scope > button')) { const t = b.textContent.trim(), k = KORT_NAVN.find(([r]) => r.test(t)); if (!k) continue;
+      if (k[2]) { b.dataset.tegn = k[1]; b.dataset.etikett = k[2]; if (t.startsWith(k[1])) b.dataset.medtegn = '1'; } else b.dataset.kort = t.replace(k[0], k[1]);
       if (!b.title) b.title = t; b.setAttribute('aria-label', t); if (/: på$/.test(t)) b.classList.add('slått'); } }
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   // Kartets klasse (vann) og eksisterende hus for punktene i bygget (hentes før regelsjekken, som er uten nettverk)

@@ -168,7 +168,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       ut.fred = typeof AI !== 'undefined' && typeof AI.regionFred === 'function' && Fraksjoner.fredDøgn(1) === 2.5 && Fraksjoner.lagTak(0, 4) > Fraksjoner.lagTak(0, 0);
       // banneret: anslag når ingen ser dem, og ikke «ikke sett ennå» når et lag er i ildkamp med dem
       if (T && window.ForsvarSpill && Spillet.Trussel.VARSEL) { const blå = nyttLag('Vakt seks vakt', L.x + 30, L.y, 'blå'), rv = nyttLag('Røvere 7.1', L.x + 30000, L.y + 30000, 'rød'); rv.raid = 7; rv.fra = { x: L.x + 3500, y: L.y }; rv.startTid = tid; ENHETER.push(blå, rv); nye.push(blå, rv); T.aktiv = 7;
-        ForsvarSpill.vis(); const a1 = document.getElementById('alarm').textContent; ut.anslag = /ventet om ca\. \d+(–\d+)? (min|timer)/.test(a1);
+        ForsvarSpill.vis(); const a1 = document.getElementById('alarm').textContent; ut.anslag = /ventet om ca\. \d+(–\d+)? (min|timer)|ikke sett – kommer trolig /.test(a1);
         rv.skyterPå = new Set([blå]); ForsvarSpill.vis(); const a2 = document.getElementById('alarm').textContent; ut.underIld = !/ikke sett ennå/.test(a2) && /ildkamp med Vakt seks vakt/.test(a2); rv.skyterPå = new Set();
         // forsvaret lagres med angrepet og kommer tilbake
         ForsvarSpill.sett(false); TrusselLagringSpill.lagre(); const lag = JSON.parse(localStorage.getItem('riksbrudd-angrep') || '{}'); ut.lagretSatt = !!(lag.d && lag.d.satt);

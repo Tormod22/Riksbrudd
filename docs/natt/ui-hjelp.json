@@ -6,12 +6,12 @@
  ],
  [
   "Tallene øverst",
-  "Øverst står klokka, været og kassa, og så det leiren har: Diesel (liter, eller «ingen tank»), Tre og Betong (m³), Stål (t), Strøm (kW), Folk, Mål og Kontroll (din andel av folket i området). Hver flis har et kort ord foran tallet og enheten bak. Det som ikke får plass, står bak «Mer» – trykk der for resten. Pek (PC) eller trykk lenge (telefon) på en flis for å se hva tallet betyr og hva som påvirker det.",
+  "Øverst står klokka, været og kassa, og så det leiren har: Diesel (liter, eller «ingen tank»), Tre og Betong (m³), Stål (t), Strøm (kW), Folk, Mål og Kontroll (din andel av folket i området). Hver flis har et kort ord foran tallet og enheten bak. Det som ikke får plass, står bak flisa «+3 tall» (tallet sier hvor mange tall som er gjemt) – trykk der for resten. Før leiren er lagt, står bare klokka og været der. Et trykk på en flis som åpner noe (Folk, kassa, lageret, «+3 tall»), åpner panelet uten forklaring oppå. Pek (PC) eller trykk lenge (telefon) på en flis for å se hva tallet betyr og hva som påvirker det.",
   "Kom i gang"
  ],
  [
   "Knappene nederst",
-  "Leir, Folk, Tropper, Krig og Deg står nederst – på telefon også under angrep, med et kort oppe og når telefonen ligger. «Mer» åpner resten (Region, Verden, Sjø …). Panelene du åpner herfra, åpnes alltid til venstre og ett om gangen; det som hører til et panel (Stridsregler, Tiltak, Sekken) åpnes til høyre ved siden av.",
+  "Leir, Folk, Tropper, Krig og Deg står nederst – på telefon også under angrep, med et kort oppe og når telefonen ligger. «Mer» åpner resten (Region, Verden, Sjø …) – det er det eneste stedet ordet «Mer» brukes. Panelene du åpner herfra, åpnes alltid til venstre og ett om gangen; det som hører til et panel (Stridsregler, Tiltak, Sekken) åpnes til høyre ved siden av.",
   "Kom i gang"
  ],
  [
@@ -96,12 +96,22 @@
  ],
  [
   "Telefonen liggende",
-  "Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad: ⟲ ⟳ drei, ▦ rutenett, ⇤ inntil naboen, ⧉ fortsett med flere, og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
+  "Spillet er laget for å spilles med telefonen liggende. Opplæringen står som én tynn linje nede til venstre – trykk på den (eller +) for å lese hele steget, og – for å legge den sammen igjen. Når Leir, Folk eller Deg er åpen, går panelet fra toppen helt ned, og knappene nederst blir en smal rad med ikoner ved siden av. Når du plasserer et bygg, står valgene på én rad – hvert ikon med et ord under: ⟲ Venstre, ⟳ Høyre, ▦ Rutenett, ⇤ Inntil, + Fortsett – og kjøpeknappen; trykk på teksten for alle detaljene. Er det flere varsler, står bare det viktigste og en brikke «+3 varsler» som folder ut resten. To fingre zoomer bare kartet, ikke hele siden.",
   "Kom i gang"
  ],
  [
   "Knappene når du går (telefon)",
   "Når du går, står bare Gå, Deg, ☰, pause og farten øverst – resten ligger bak ⋯. Helse og våpen står små ved styrespaken, «Gå inn»/«Gå ut» nede til høyre over Huk og Hopp, og kildene til kartet står nederst i ☰ i stedet for på skjermen.",
   "I 3D"
+ ],
+ [
+  "Varseltrekanten på Folk",
+  "Står det ⚠ ved Folk øverst, mangler noe i leiren. Pek på flisa (PC) eller trykk lenge (telefon), så står årsaken under «Nå», for eksempel «ingen seng: 10 sover i telt – bygg en brakke» eller «maten rekker bare 5 timer». Et vanlig trykk åpner Folk.",
+  "Leiren"
+ ],
+ [
+  "Knappene når du bygger",
+  "Når du plasserer et bygg, har hvert ikon et ord under seg (liggende telefon) eller ved siden av (PC): ⟲ Venstre og ⟳ Høyre dreier bygget 15°, ▦ Rutenett legger det på rutenettet, ⇤ Inntil legger det inntil naboen, + Fortsett lar deg sette ut flere av samme slag etter hverandre, ✕ Avbryt. Et lyst ikon er slått på.",
+  "Leiren"
  ]
 ]

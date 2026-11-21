@@ -30,4 +30,14 @@ ok(s.raid === 3 && s.x === 1100 && s.trekker === true && s.flykter === false && 
 ok(s.bytte && s.bytte.diesel === 30 && s.bytte.mat === 6, 'byttet følger med');
 ok(Array.isArray(s.målLagret) && s.målLagret[0] === 1150 && s.sti === null, 'står stille med målet husket');
 ok(TL.rensBytte({ penger: -5, lager: { tre: 'x', '<b>': 3 }, diesel: NaN }).penger === 0 && Object.keys(TL.rensBytte({ lager: { '<b>': 3 } }).lager).length === 0, 'byttet renses');
+// (runde 13) tida for neste bølge og anslaget lagres
+{ const TL = require('../../site/dovre-fliser/spill/trussel-lagring'), A2 = require('assert');
+  const d = TL.pakk({ aktiv: 0, tid: 1000, lag: [], egne: [], neste: 1900, bølge: 2 });
+  A2.strictEqual(TL.neste(d, { tid: 1100, bølge: 2 }), 1900, 'tida holdes fast etter omlasting');
+  A2.strictEqual(TL.neste(d, { tid: 1950, bølge: 2 }), 1970, 'passert tid: bølgen kommer snart');
+  A2.strictEqual(TL.neste(d, { tid: 1100, bølge: 3 }), null, 'en annen bølge'); A2.strictEqual(TL.neste({ ...d, aktiv: 2 }, { tid: 1100, bølge: 2 }), null, 'ikke midt i et angrep');
+  A2.strictEqual(TL.neste({ ...d, neste: 1100 + 4 * 1440 }, { tid: 1100, bølge: 2 }), null, 'urimelig langt fram');
+  const d2 = TL.pakk({ aktiv: 3, tid: 50, lag: [], egne: [], anslag: { id: 'r3', v: 42.25, t: 50, minNær: 1234.4, sett: true } });
+  A2.deepStrictEqual(d2.anslag, { id: 'r3', v: 42.3, t: 50, minNær: 1234, sett: true, rute: false }); A2.strictEqual(TL.rensAnslag({ id: 'r3', v: 'x', t: 1 }), null);
+  console.log('ok   runde 13: neste bølge holdes fast, anslaget lagres'); }
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

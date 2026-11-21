@@ -3,6 +3,8 @@
 //  - den enkle bakken (Lav) har korn og flekker fra detaljmønsteret (skyggeleggeren får detaljteksturen)
 //  - låven: avrundet traktor og høyballer og lysstråler som egne nett (Lave3d.prøvNett på en prøvelåve)
 //  - flagget i leiren er et ekte 3D-flagg som blafrer (Flagg3d), stedsnavn i gåmodus bare langt unna (NAVN_GÅ)
+// Runde 13 (kritikk G/H): feltbilknappen med avstand og retning (Kjor.innTekst), folk går unna deg (Folk3d.unna), første 3D-bilde
+// nær leiren (Kvalitet.startBlikk), tettstedsnavn til fots med avstand (avstTekst)
 // Uten 3D prøves bare reglene. Endrer ingenting i spillet (prøvenettene frigjøres straks).
 module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navnene', kjør: async (pg, profil) => {
   const d = await pg.evaluate(async () => {
@@ -17,6 +19,20 @@ module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navn
       krev(Kvalitet.neste({ nivå: 'høy' }, 30, .6, 100, false) === 'høy', 'nivået gikk ned uten at det var tregt lenge');
       krev(Kvalitet.NIVÅ.lav.gress > 0 && Kvalitet.NIVÅ.lav.blomster, 'Lav fjerner gress eller blomster'); }
     krev(typeof NAVN_GÅ === 'object' && NAVN_GÅ.min >= 300 && NAVN_GÅ.bredde > 0, 'NAVN_GÅ (navn i gåmodus) mangler');
+    // (runde 13) feltbilknappen sier avstand og retning når bilen ikke er foran deg
+    if (window.Kjor && Kjor.retning && Kjor.innTekst) {
+      const bak = Kjor.innTekst('feltbilen', Kjor.retning(0, -6, 0), ' (F)'), foran = Kjor.innTekst('feltbilen', Kjor.retning(0, 6, 0), ' (F)');
+      krev(/6 m bak deg/.test(bak) && foran === 'Sett deg inn i feltbilen (F)', `feltbilknappen: «${bak}» / «${foran}»`); ut.knapp = bak;
+    } else krev(false, 'Kjor.retning/innTekst (feltbilknappen) mangler');
+    // (runde 13) folk i leiren går unna når du står inntil dem
+    if (window.Folk3d && Folk3d.unna) { const r = Folk3d.unna(0, 0, 0, 1.5, 1), r2 = Folk3d.unna(0, 0, .2, .1, -1);
+      krev(r && Math.hypot(r.tx, r.ty) >= Folk3d.UNNA.avst && !r.flytt && r2 && r2.flytt && Folk3d.unna(0, 0, 0, 5) === null, 'folk går ikke unna deg (Folk3d.unna)');
+    } else krev(false, 'Folk3d.unna mangler');
+    // (runde 13) første 3D-bilde: leiren nært når den er midt i kartet; tettstedsnavn til fots med avstand
+    if (Kvalitet.startBlikk) { const v = { x: 0, y: 0, m: 8, VW: 844, VH: 390, leir: { x: 100, y: 50 }, mål: null, først: true }, r = Kvalitet.startBlikk(v);
+      krev(r && r.avst <= 500 && r.x === 100 && r.utsnitt > 0 && !Kvalitet.startBlikk({ ...v, først: false }), 'første 3D-bilde viser ikke leiren nært (Kvalitet.startBlikk)');
+    } else krev(false, 'Kvalitet.startBlikk mangler');
+    krev(NAVN_GÅ.løft > 5 && typeof avstTekst === 'function' && avstTekst(1156) === '1,2 km' && avstTekst(640) === '650 m', 'tettstedsnavn til fots uten avstand (avstTekst/NAVN_GÅ.løft)');
     const R = typeof R3 !== 'undefined' && R3 && R3.ut && på3d ? R3 : null; ut.i3d = !!R;
     if (!R || typeof THREE === 'undefined') return ut;
     // den enkle bakken: skyggeleggeren får detaljteksturen og bruker den
@@ -43,5 +59,5 @@ module.exports = { navn: '3d: grafikknivå, enkel bakke, låven, flagget og navn
     return ut;
   });
   const ok = !d.feil.length;
-  return { ok, tekst: ok ? `grafikknivå (vedvarende, oppløsning først, Lav med gress), ${d.i3d ? `enkel bakke med detaljer, låve med ${d.låve ? d.låve.barn : '?'} avrundede nett, flagg${d.blafrer != null ? ' som blafrer (' + d.blafrer + ' m)' : ' (ikke i utsnittet)'}` : 'uten 3D (bare reglene)'} (${profil})` : d.feil.join('; '), data: d };
+  return { ok, tekst: ok ? `grafikknivå (vedvarende, oppløsning først, Lav med gress), feltbilknapp «${d.knapp}», folk går unna, første 3D-bilde nær leiren, ${d.i3d ? `enkel bakke med detaljer, låve med ${d.låve ? d.låve.barn : '?'} avrundede nett, flagg${d.blafrer != null ? ' som blafrer (' + d.blafrer + ' m)' : ' (ikke i utsnittet)'}` : 'uten 3D (bare reglene)'} (${profil})` : d.feil.join('; '), data: d };
 } };

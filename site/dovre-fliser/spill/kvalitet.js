@@ -72,7 +72,24 @@
     if (m) { const d = m[1].split(','); t = (d.length >= 2 ? d[1] : d[0]).trim(); }
     return t.replace(/\s*(Direct3D|OpenGL|vs_\d|ps_\d|D3D\d+).*$/i, '').replace(/\(0x[0-9a-f]+\)/ig, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'ukjent';
   }
-  const Kvalitet = { NIVÅ, REKKE, FX, AUTO, neste, vedvarende, programvare, kortNavn };
+  // RUNDE 13 (21. nov, kritiker G, bilde 34-3d-80s: «ovenfra er leiren bare ikoner»). Det første 3D-bildet i en økt viser leiren på nært
+  // hold når leiren er midt i kartet (eller 3D åpnes ved leiren fordi kartet var zoomet langt ut): kameraet over leiren i ca. 340 m
+  // avstand, så byggene, teltene og folkene synes som modeller – og utsnittet blir mindre, så bakken er skarpere (flere punkter per
+  // meter) og første bilde kommer fortere. Senere åpninger følger kartet som før.
+  // v = { x, y (kartets midte), m (meter per punkt), VW, VH, leir: {x, y} | null, mål: { x, y, navn } | null (start3d), først }.
+  // Gir { x, y, avst, utsnitt } eller null (som før). Claudes forslag: avst 340 m; gjelder når avstanden ellers ville vært over 700 m og leiren
+  // ligger i midtre 80 % av kartbildet.
+  // utsnitt = avstanden utsnittet bygges for (som når du går: 1000 m, ca. 1,7 km til hver side) – da trengs ikke et nytt utsnitt når
+  // du trykker «Gå» i leiren etterpå, og bakken er likevel 3–6 ganger skarpere enn i et utsnitt for 2–3 km avstand.
+  const STARTBLIKK = { avst: 340, utsnitt: 1000, over: 700, midt: .4 };
+  function startBlikk(v, B = STARTBLIKK) {
+    if (!v || !v.først || !v.leir || !Number.isFinite(v.leir.x)) return null; const L = v.leir;
+    if (v.mål) return v.mål.navn === 'leiren' ? { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt } : null;
+    const avst = Math.max(300, Math.min(9000, v.m * v.VH * 1.1));
+    if (avst <= B.over || Math.abs(L.x - v.x) > v.m * v.VW * B.midt || Math.abs(L.y - v.y) > v.m * v.VH * B.midt) return null;
+    return { x: L.x, y: L.y, avst: B.avst, utsnitt: B.utsnitt };
+  }
+  const Kvalitet = { NIVÅ, REKKE, FX, AUTO, neste, vedvarende, programvare, kortNavn, STARTBLIKK, startBlikk };
   if (typeof module !== 'undefined') { module.exports = Kvalitet; return; }
   rot.Kvalitet = Kvalitet;
 

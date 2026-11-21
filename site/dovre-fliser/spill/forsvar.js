@@ -111,7 +111,45 @@
     const b = []; if (u.skadet) b.push(u.skadetNavn && u.skadetNavn.length === u.skadet ? `${og(u.skadetNavn)} skadet` : `${u.skadet} bygg skadet`); if (u.ødelagt) b.push(u.ødelagtNavn && u.ødelagtNavn.length === u.ødelagt ? `${og(u.ødelagtNavn)} ødelagt` : `${u.ødelagt} ødelagt`);
     if (b.length) { const t = b.join(', '); d.push(t.charAt(0).toUpperCase() + t.slice(1) + '.'); }
     return { tittel: T[u.utfall] || `${hva} er over`, tekst: d.filter(Boolean).join(' '), god }; }
-  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport };
+  // ---------- (runde 13, kritiker G og H) ANSLAGET SOM IKKE GÅR BAKLENGS ----------
+  // G: «5–10 min» ble til «3–7 timer» på en halvtime spilltid (luftlinja sa minutter, ruta over fjellet sa timer, og glattingen dro
+  // anslaget oppover). Nå: (1) ser ingen røverne, står det ingen minutter – bare når de trolig kommer («ikke sett – kommer trolig i natt»);
+  // (2) ser noen dem, kan anslaget bare minke så lenge de ikke har snudd. monoton(før, rå, t, nytt): før = { v, t }, rå = nytt anslag i
+  // minutter. nytt = true (første gang de er sett, eller de har snudd) gir rå anslaget; ellers det minste av fortsatt nedtelling og rå.
+  function monoton(før, rå, t, nytt) {
+    const ok = Number.isFinite(rå);
+    if (!før) return ok ? { v: Math.max(0, rå), t } : null;
+    const pred = Math.max(0, før.v - Math.max(0, t - før.t));
+    if (!ok) return { v: pred, t };
+    return { v: nytt ? Math.max(0, rå) : Math.min(pred, Math.max(0, rå)), t };
+  }
+  // Har de snudd? Avstanden til leiren nå mot den minste de har hatt: mer enn SNUDD meter lenger unna (eller de trekker seg/flykter).
+  // Claudes forslag: 250 m.
+  const SNUDD = 250;
+  const harSnudd = (minNær, nær, trekker) => !!trekker || (Number.isFinite(minNær) && Number.isFinite(nær) && nær > minNær + SNUDD);
+  // Klokka i spillet: tid = spillminutter fra dag 1 kl. 06:00. Gir { dag, time (0–23,99) }.
+  const klokke = t => { const h = 6 + t / 60; return { dag: Math.floor(h / 24) + 1, time: ((h % 24) + 24) % 24 }; };
+  const kl = h => String(Math.floor(((h % 24) + 24) % 24)).padStart(2, '0');
+  // når(nå, ankomst): «i natt», «i kveld», «i dag», «i morgen tidlig» … for et tidspunkt i spillminutter (ingen minutter – ingen ser dem).
+  // Natta (kl. 22–05) hører til dagen den begynte. Med klokkeslett i et spenn (usikkerheten er 30 %, minst én time): «i natt (ca. kl. 03–05)».
+  function når(nå, ank) {
+    if (!Number.isFinite(nå) || !Number.isFinite(ank)) return null;
+    const igjen = Math.max(0, ank - nå); if (igjen <= 60) return 'trolig innen en time';
+    const u = Math.max(60, igjen * .3), a = klokke(ank - u), b = klokke(ank + u), m = klokke(ank), n = klokke(nå);
+    const natt = c => c.time >= 22 || c.time < 5, nattDag = c => (c.time < 5 ? c.dag - 1 : c.dag);
+    // klokkeslettene bare når det er under 12 timer igjen (ellers blir spennet for vidt til å si noe)
+    const spennTekst = igjen <= 720 ? ` (ca. kl. ${kl(a.time)}–${kl(Math.ceil(b.time) % 24)})` : '';
+    let ord;
+    if (natt(m)) { const d = nattDag(m) - (natt(n) ? nattDag(n) : n.dag); ord = d <= 0 ? 'i natt' : d === 1 ? (natt(n) ? 'neste natt' : 'i natt') : `om ca. ${Math.max(2, Math.round(igjen / 1440))} døgn`; }
+    else { const del = m.time < 10 ? 'tidlig' : m.time < 17 ? '' : 'kveld', d = m.dag - n.dag;
+      ord = d <= 0 ? (del === 'tidlig' ? 'i dag tidlig' : del === 'kveld' ? 'i kveld' : 'i dag') : d === 1 ? (del === 'tidlig' ? 'i morgen tidlig' : del === 'kveld' ? 'i morgen kveld' : 'i morgen') : `om ca. ${Math.max(2, Math.round(igjen / 1440))} døgn`; }
+    return 'trolig ' + ord + spennTekst;
+  }
+  // nedtelling(min): «17 t 40 min», «45 min», «under 1 min»
+  function nedtelling(min) { if (!Number.isFinite(min)) return ''; if (min < 1) return 'under 1 min'; const m = Math.round(min);
+    if (m < 60) return m + ' min'; const t = Math.floor(m / 60), r = m - t * 60; return r ? `${t} t ${r} min` : `${t} t`; }
+  const api = { R, retning, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
+    monoton, SNUDD, harSnudd, klokke, når, nedtelling };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

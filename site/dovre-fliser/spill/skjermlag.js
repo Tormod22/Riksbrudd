@@ -26,7 +26,9 @@
   // RUNDE 12 (21. nov, kritiker E: «morgenmøtet havnet under Deg-panelet» – et trykk på varselet «Du er veldig tørst» åpnet Deg over møtet,
   // og spillet sto på pause bak et panel man ikke så): kort som venter på svar ligger nå ØVERST, over panelene du åpner selv (men under
   // bunnmenyen og tipsene), og pauselappen over kortet. Før: kort 20, pausemerke 23.
-  const REGLER = { kort: 67, status: 21, pausemerke: 68, alarm: 24, selv: 30, selvMaks: 66, bunnmeny: 70, tips: 80, ring: 85, luft: 6 };
+  // RUNDE 13 (21. nov, kritiker G: «hjelpen (?) åpnet seg bak morgenmøtet og kunne verken leses eller brukes»): hjelpen har sitt eget bånd
+  // over alle kort og pauselappen (69). Den dekker hele skjermen, og bunnmenyen viker for den, så den er alltid øverst og kan brukes.
+  const REGLER = { kort: 67, status: 21, pausemerke: 68, hjelp: 69, alarm: 24, selv: 30, selvMaks: 66, bunnmeny: 70, tips: 80, ring: 85, luft: 6 };
   // morgenmøtet venter også på svar (det setter selv spillet på pause, så det er ikke med i KORT, som styrer pausen her)
   const ØVERST = ['morgenkort'];
   const KORT = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'], STATUS = ['flytkort', 'varsel'], ALARM = ['alarm'];
@@ -36,12 +38,12 @@
   const venter = angrep => (angrep ? VENTER.slice() : []);
   // panelene spilleren åpner selv (fra bunnmenyen, ☰, ?, kartet eller et annet panel)
   const SELV = ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe', 'karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel',
-    'forklaring', 'personkort', 'evpanel', 'hjelp', 'lagmeny', 'degmeny', 'kommer', 'mkommer', 'flismerliste', 'marsjvalg'];
+    'forklaring', 'personkort', 'evpanel', 'lagmeny', 'degmeny', 'kommer', 'mkommer', 'flismerliste', 'marsjvalg'];
   // rekkefølgen på de åpne panelene: de som fortsatt er åpne, beholder plassen, nye legges øverst (sist), i den rekkefølgen de kom
   function orden(gammel, åpne) { const ny = gammel.filter(id => åpne.includes(id)); for (const id of åpne) if (!ny.includes(id)) ny.push(id); return ny; }
   // et panel spilleren trykket i, løftes fram
   const fram = (o, id) => (o.includes(id) ? o.filter(x => x !== id).concat(id) : o);
-  function zFor(id, o) { if (KORT.includes(id) || ØVERST.includes(id)) return REGLER.kort; if (STATUS.includes(id)) return REGLER.status; if (ALARM.includes(id)) return REGLER.alarm;
+  function zFor(id, o) { if (id === 'hjelp') return REGLER.hjelp; if (KORT.includes(id) || ØVERST.includes(id)) return REGLER.kort; if (STATUS.includes(id)) return REGLER.status; if (ALARM.includes(id)) return REGLER.alarm;
     const i = o.indexOf(id); return i < 0 ? null : Math.min(REGLER.selvMaks, REGLER.selv + i); }
   const Skjermlag = { REGLER, KORT, ØVERST, SELV, VENTER, venter, orden, fram, zFor, test: false };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Skjermlag; return; }
@@ -57,6 +59,13 @@
 body.angrepvent #hendelse.på, body.angrepvent #samfunnkort.på{ display:none; }
 body.mkomalltid #mkom{ z-index:${REGLER.bunnmeny}; } body.mkomalltid #mkommer{ z-index:${REGLER.bunnmeny + 1}; }
 #tips{ z-index:${REGLER.tips}; } #oppring{ z-index:${REGLER.ring}; }
+/* RUNDE 13: hjelpen over alle kort (morgenmøtet, hendelser, krigskortet) – også når skjermlaget ikke styrer rekkefølgen */
+body #hjelp{ z-index:${REGLER.hjelp}; }
+/* RUNDE 13 (kritiker H: «hendelseskortet tones inn så sakte at kartnavnene synes gjennom i et sekund»): kortene som venter på svar har en
+   tett, mørk bakgrunn fra første bilde og glir bare litt opp – ingen gjennomsiktig inntoning. (translate virker sammen med transform.) */
+body :is(#hendelse, #samfunnkort, #morgenkort){ background:linear-gradient(180deg,#221a0f,#16110a); opacity:1; }
+body :is(#hendelse, #samfunnkort, #morgenkort).på{ animation:kortinn .2s ease-out; } @keyframes kortinn{ from{ translate:0 10px; } }
+@media (prefers-reduced-motion:reduce){ body :is(#hendelse, #samfunnkort, #morgenkort).på{ animation:none; } }
 /* angrepsbanneret på PC: tekst og knapper på én rad (etter «Forsvar leiren» brøt «Opphev» og «Vis» ned på en egen linje – kritikeren så en
    tom grå boks under banneret der kortet dekket «Vis») */
 body.spill #alarm.på{ flex-wrap:nowrap; max-width:min(980px, calc(100vw - 150px)); } body.spill #alarm > *{ flex:none; } body.spill #alarm > span:first-child{ flex:0 1 auto; min-width:0; }

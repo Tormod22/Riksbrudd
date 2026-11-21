@@ -18,4 +18,6 @@ ok(['hendelse', 'samfunnkort', 'formkort', 'krigkort'].every(id => S.KORT.includ
 // runde 8: hendelseskortet og spørsmålene fra folket venter mens leiren angripes; seier/tap og krigskortet kommer straks
 ok(S.venter(true).join() === 'hendelse,samfunnkort' && S.venter(false).length === 0, 'kortene som venter til angrepet er over');
 ok(!S.venter(true).includes('formkort') && !S.venter(true).includes('krigkort'), 'spillformkortet og krigskortet venter ikke');
+// runde 13: hjelpen ligger over alle kort (morgenmøtet, hendelser) og pauselappen, men under bunnmenyen, tipsene og ringen
+ok(R.pausemerke < R.hjelp && R.hjelp < R.bunnmeny && S.zFor('hjelp', []) === R.hjelp && S.zFor('hjelp', ['hjelp', 'leirmeny']) > S.zFor('morgenkort', []), 'hjelpen øverst over morgenmøtet og alle kort (runde 13)');
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

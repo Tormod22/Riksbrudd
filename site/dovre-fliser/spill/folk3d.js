@@ -9,6 +9,25 @@
  */
 (function () {
   'use strict';
+  // RUNDE 13 (21. nov, kritiker H: «en av folkene står stiv rett foran deg» i gåmodus). Folk i leiren holder avstand til deg når du går:
+  // står eller går en figur nærmere enn UNNA.avst, går den unna til et sted UNNA.til meter fra deg (bort fra deg og litt til siden),
+  // og nærmere enn UNNA.inntil flyttes den straks ut (ellers står den inne i kameraet). Regelen er uten DOM (test_folk3d.js).
+  // Claudes forslag (meter).
+  const UNNA = { avst: 2.6, til: 4.5, inntil: 1.1 };
+  // (px, py) = deg, (fx, fy) = figuren, side = −1/1 (hvilken side den går til). Gir null (lang nok unna) eller
+  // { tx, ty (målet), flytt: [x, y] eller null (skyv ut straks) }.
+  function unna(px, py, fx, fy, side = 1, R = UNNA) {
+    let dx = fx - px, dy = fy - py, d = Math.hypot(dx, dy); if (d >= R.avst) return null;
+    if (d < 1e-3) { dx = 1; dy = 0; d = 1; } const ux = dx / d, uy = dy / d;
+    // bort fra deg, vridd ca. 35° til siden, så den ikke går rett fram i synsfeltet ditt
+    const v = .6 * side, cx = ux * Math.cos(v) - uy * Math.sin(v), cy = ux * Math.sin(v) + uy * Math.cos(v);
+    return { tx: px + cx * R.til, ty: py + cy * R.til, flytt: d < R.inntil ? [px + ux * R.inntil, py + uy * R.inntil] : null };
+  }
+  // tiden siden forrige bilde (sekunder), høyst DT_MAKS: før gikk figurene 0,016 s per bilde – med ett bilde i sekundet (svak maskin)
+  // gikk de 2 cm i sekundet og så ut som de sto stive. Claudes forslag: 0,25 s.
+  const DT_MAKS = .25;
+  const dtFra = (ms, sist) => (sist ? Math.max(0, Math.min(DT_MAKS, (ms - sist) / 1000)) : .016);
+  if (typeof window === 'undefined') { if (typeof module !== 'undefined') module.exports = { UNNA, unna, DT_MAKS, dtFra }; return; }
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null), MAKS = 14, MAKS_AVH = 8, ALLE = MAKS + MAKS_AVH;
   const JAKKER = [[.35, .42, .3], [.5, .32, .22], [.25, .33, .45], [.55, .5, .35], [.42, .25, .25], [.3, .3, .32], [.62, .46, .2], [.2, .36, .3], [.48, .44, .5]];
   const BUKSER = [[.2, .21, .25], [.26, .22, .17], [.16, .2, .16], [.3, .3, .32], [.18, .18, .2]];
@@ -18,7 +37,7 @@
   const BARNJAKKER = [[.75, .22, .2], [.2, .45, .75], [.85, .7, .2], [.3, .62, .35], [.7, .35, .6]], GAMLEJAKKER = [[.42, .4, .38], [.38, .3, .24], [.3, .32, .3], [.5, .46, .4]];
   // Claudes forslag: fart (m/s), størrelse og hvor krum overkroppen er (radianer fram) per slags figur
   const SLAG = { voksen: { fart: 1.25, s: 1, krum: 0 }, barn: { fart: 1.7, s: .62, krum: 0 }, gammel: { fart: .75, s: .95, krum: .32 } };
-  let figurer = null, nøkkel = '';
+  let figurer = null, nøkkel = '', sistMs = 0;
   // PÅ PLASS (18. nov): folk holder seg ved bygget der oppgaven deres hører hjemme (vakta ved tårnet, kokken ved kjøkkenet,
   // operatørene ved kontrollrommet, byggelaget ved byggeplassen). De som er syke i karantene, står ved sykestua eller brakka.
   const ARBEIDSSTED = { vakt: ['vakttårn', 'port'], kjøkken: ['kjøkken'], stell: ['sykestue'], verksted: ['verksted'], overvåking: ['kontrollrom'], frakt: ['lagertelt', 'container'] };
@@ -86,13 +105,18 @@
         f.farger = Figur3d.farger(j, bk, hf, HUD[(h >>> 20) % HUD.length]);
         f.maske = (r(1) < ANDEL.lue && slag !== 'barn' ? D.lue : r(2) < ANDEL.langt && slag !== 'gammel' ? D.hår | D.langt : D.hår) | (slag === 'voksen' && r(3) < ANDEL.sekk ? D.sekk : 0);
         figurer.push(f); } }
-    const L = window.LeirSpill && LeirSpill.tilstand(), bygg = L && window.Leir ? L.bygg.filter(b => b.x !== undefined && !Leir.BYGG[b.type].del && Math.hypot(b.x - leir.x, b.y - leir.y) < 150) : [], dt = tempo > 0 ? .016 : 0;
+    const L = window.LeirSpill && LeirSpill.tilstand(), bygg = L && window.Leir ? L.bygg.filter(b => b.x !== undefined && !Leir.BYGG[b.type].del && Math.hypot(b.x - leir.x, b.y - leir.y) < 150) : [], nåMs = performance.now(), dt = tempo > 0 ? dtFra(nåMs, sistMs) : 0; sistMs = nåMs;
+    // (runde 13) du går selv: her står du (kartets meter)
+    const meg = R.fot && R.bane ? [u.cx + R.bane.x, u.cy + R.bane.y] : null;
     const brakker = bygg.filter(b => b.type === 'brakke' && !(b.igjen > 0));
     flokk.start();
     figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
       // et nytt utsnitt: plassen inne gjelder ikke lenger (høyden er regnet fra det gamle) – gå ut døra
       if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; p.tx = 0; }
       if (p.mål && p.mål.u !== u) p.mål = null;
+      // (runde 13) står den inntil deg ute: gå unna (står tiden, flyttes bare den som er helt inntil deg – du skal ikke se rett inn i en jakke)
+      if (meg && !p.inne) { const un = unna(meg[0], meg[1], p.x, p.y, i % 2 ? 1 : -1);
+        if (un) { if (un.flytt) { p.x = un.flytt[0]; p.y = un.flytt[1]; } p.tx = un.tx; p.ty = un.ty; p.mål = null; p.etter = null; p.omveg = 0; p.vent = 0; p.unna = true; } }
       if (p.inne) { if (p.vent > 0) p.vent -= dt; else { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; p.tx = 0; p.vent = 1 + Math.random() * 3; } }
       else if (p.vent > 0) p.vent -= dt; else { const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
         if (p.tx && d < .6 && p.etter) { p.tx = p.etter[0]; p.ty = p.etter[1]; p.etter = null; }
@@ -124,5 +148,5 @@
     const v = rnd() * 6.283; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.mål = null;
     p.etter = null; p.omveg = 0; p.vent = p.slag === 'gammel' ? 10 + rnd() * 40 : hos ? 8 + rnd() * 30 : 2 + rnd() * 14; p.hos = hos && b ? b.type : '';
   }
-  window.Folk3d = { antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
+  window.Folk3d = { UNNA, unna, antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
 })();
