@@ -72,6 +72,28 @@ utstyrt, handlinger, ferskhet), ikke spillets utseende, navn eller tekster. Alle
 - **Sekken** kan bare tas av når det du bærer, får plass i lommene; bytter du sekk, må alt få plass i den nye.
 - Sekken teller som én samlet plass (ikke hver sekk sin beholder).
 
+### Småting fra anmeldelsene (i mine filer)
+- Karakterpanelet («Deg») åpnes ikke fra varslene mens morgenmøtet venter på svar (E: møtet ble skjult under panelet); loggen sier
+  «Svar på morgenmøtet først.» (`spill/karakter.js`).
+- Ingen tastaturhint («(E)», «(Tab)») på berøringsskjerm også når nettleseren ikke svarer «pointer: coarse» (maxTouchPoints og ikke hover).
+- PC: merkelappen «Låve · ikke gjennomsøkt» står under kompasset, ikke oppå våpenfeltene (F: 79-inne-60s.png).
+
+### Prøvd i nettleser (runde 12; skriptene og bildene i scratchpad natt12/inne/)
+- Telefon 844 × 390 (isMobile, hasTouch, webdriver av): låve (høyballer, båser, tønne) og bolig – knappene i rad under kompasset, hintet
+  nede, «Plukk opp dusjen», «Åpne tønna», letingen → panelet (låve: 1,4 m³ tre og 0,5 t stål → lageret, deler i sekken, 20 l diesel ble
+  igjen, «1 i alt, men de er tomme»; bolig: 3 rasjoner → leirens mat …, «Det ligger ting i 9 av 9», «Se i skapene» → ni faner + Gulvet),
+  etterpå «Se i skapene (9)» i raden. Bilder: låve-*.png, hus-*.png.
+- PC 1400 × 820: samme bolig (huspc-*.png).
+- Sveip med ekte berøring (CDP), se 4. Drikk/spis av seg selv i 2D (t3): tørst 20 → 55 og sult 20 → 70 på ca. 3 s, to linjer i loggen;
+  uten automatikk (webdriver) står «Drikk» og «Spis» ved varslene (t3b-varsel.png).
+- «Reis til feltbilen (ca. 11 min til fots)» (t4): framme 4 m fra bilen, «Sett deg inn i feltbilen» kom.
+- Vaktene «lut og beholdere» (med 3D, 32 s) og «gå» (13 s) grønne på PC.
+
+### Ikke gjort / svakheter (runde 12)
+- Pila kunne ikke prøves med ekte hus her (Dovre-testsiden har ingen husdata) – bare med prøvehuset i vakten «gå».
+- Innsiden av låven (flate vegger, klossetraktor, høy malt på gulvet) er interiør3d.js, ikke min pakke.
+- «Grafikk: middels (automatisk)» og de andre 3D-punktene i anmeldelsene er ikke rørt.
+
 ### Fellesfiler endret (små, samlede endringer)
 - `spill/utstyr.js`: `api.krok` (maks, vekt, plassTil, våpenOk) og `råVekt`; `forTungt()` brukes av nyttVåpen og kjøp;
   `LutSpill.sekkKnapp(id)` spørres før EventyrSpill i sekkens knapper; `window.SEKK_TILLEGG` (lister i sekkpanelet, før ferdighetene).
@@ -198,6 +220,8 @@ feltflaske, raske sveip virker ikke, «Inngang 45 m · rundt huset →» uten hu
   Valg: å ta fra et skap i andre enden av huset etter at du har lett gjennom det, er lov – letingen tok tid, og på telefon med trege
   bilder var det umulig å gå til hvert skap. Loggmeldingene og 5-sekunderslappen er som før (regnskap-hjelperen retter teksten).
 - `LeteSpill.visResultat(P, d)`, `lukkFunn()`, `funnÅpent()`.
+- Etter at panelet er lukket, står «Se i skapene (9)» (`#skapknapp`) blant knappene inne så lenge du er i et gjennomsøkt bygg med ting
+  i skapene (tallet = beholdere med noe i, regnet hvert 1,5 s).
 - Fanene i lutpanelet ruller sidelengs på liggende telefon (de tok halve høyden med ti beholdere).
 
 ### 2. Møblene og knappene inne (`leting-visning.js`, `mobler-visning.js`)
@@ -239,6 +263,28 @@ feltflaske, raske sveip virker ikke, «Inngang 45 m · rundt huset →» uten hu
 ### 6. Feltbilen etter «Reis hit» (`spill/gange.js`)
 - Står et av leirens kjøretøy (feltbilen før helikopteret) innen 60 m fra stedet kameraet ser på, heter knappen «Reis til feltbilen
   (… til fots)», og du settes 3,5 m ved siden av bilen – «Sett deg inn i feltbilen» kommer med en gang.
+
+### Småting fra anmeldelsene (i mine filer)
+- Karakterpanelet («Deg») åpnes ikke fra varslene mens morgenmøtet venter på svar (E: møtet ble skjult under panelet); loggen sier
+  «Svar på morgenmøtet først.» (`spill/karakter.js`).
+- Ingen tastaturhint («(E)», «(Tab)») på berøringsskjerm også når nettleseren ikke svarer «pointer: coarse» (maxTouchPoints og ikke hover).
+- PC: merkelappen «Låve · ikke gjennomsøkt» står under kompasset, ikke oppå våpenfeltene (F: 79-inne-60s.png).
+
+### Prøvd i nettleser (runde 12; skriptene og bildene i scratchpad natt12/inne/)
+- Telefon 844 × 390 (isMobile, hasTouch, webdriver av): låve (høyballer, båser, tønne) og bolig – knappene i rad under kompasset, hintet
+  nede, «Plukk opp dusjen», «Åpne tønna», letingen → panelet (låve: 1,4 m³ tre og 0,5 t stål → lageret, deler i sekken, 20 l diesel ble
+  igjen, «1 i alt, men de er tomme»; bolig: 3 rasjoner → leirens mat …, «Det ligger ting i 9 av 9», «Se i skapene» → ni faner + Gulvet),
+  etterpå «Se i skapene (9)» i raden. Bilder: låve-*.png, hus-*.png.
+- PC 1400 × 820: samme bolig (huspc-*.png).
+- Sveip med ekte berøring (CDP), se 4. Drikk/spis av seg selv i 2D (t3): tørst 20 → 55 og sult 20 → 70 på ca. 3 s, to linjer i loggen;
+  uten automatikk (webdriver) står «Drikk» og «Spis» ved varslene (t3b-varsel.png).
+- «Reis til feltbilen (ca. 11 min til fots)» (t4): framme 4 m fra bilen, «Sett deg inn i feltbilen» kom.
+- Vaktene «lut og beholdere» (med 3D, 32 s) og «gå» (13 s) grønne på PC.
+
+### Ikke gjort / svakheter (runde 12)
+- Pila kunne ikke prøves med ekte hus her (Dovre-testsiden har ingen husdata) – bare med prøvehuset i vakten «gå».
+- Innsiden av låven (flate vegger, klossetraktor, høy malt på gulvet) er interiør3d.js, ikke min pakke.
+- «Grafikk: middels (automatisk)» og de andre 3D-punktene i anmeldelsene er ikke rørt.
 
 ### Fellesfiler endret
 - `spill/narhud.js`: `knapp: v.knapp || null` på brikken for karakterens behov (én linje, ca. linje 204).
