@@ -73,7 +73,12 @@ module.exports = { navn: 'natur: trær, gress, figurer, effekter, fjern skog, ba
           u2.anleggFri = A; u2.påAnlegg = (a, b, k) => AnleggFri.inni(A, a, b, k);
           let inne = 0, igjen = 0; for (const art of Object.keys(u2.trær)) { const d0 = u2.trær[art]; if (!d0) continue; for (let k = 0; k < d0.length; k += 5) if (AnleggFri.inni(A, d0[k], d0[k + 1])) inne++; const r = AnleggFri.rens(A, d0, 5); for (let k = 0; k < r.length; k += 5) if (AnleggFri.inni(A, r[k], r[k + 1])) igjen++; }
           ut.prøvebane = { trærFør: inne, igjen }; krev(inne > 0 && igjen === 0, 'prøvebanen: ' + JSON.stringify(ut.prøvebane));
-          krev(window.Vegetasjon3d && Vegetasjon3d.fri(x, y) === false, 'en blomst/busk kan stå midt på en bane');
+          // et punkt på banen der en blomst kunne stått uten banen (ikke inntil et tre eller hus), skal ikke være fritt med banen
+          let fritt = null; u2.påAnlegg = null;
+          for (let dx = -24; dx <= 24 && !fritt; dx += 6) for (let dy = -16; dy <= 16 && !fritt; dy += 4) if (Vegetasjon3d.fri(x + dx, y + dy)) fritt = [x + dx, y + dy];
+          u2.påAnlegg = (a, b, k) => AnleggFri.inni(A, a, b, k);
+          ut.friPåBane = fritt ? Vegetasjon3d.fri(fritt[0], fritt[1]) : null;
+          krev(!fritt || ut.friPåBane === false, 'en blomst/busk kan stå midt på en bane');
         } finally { u2.anleggFri = før.a; u2.påAnlegg = før.p; } }
       // ekte baner i utsnittet (husdata, ikke på Dovre-testsiden): 0 trær, steiner og busker på dem
       if (u2.anleggFri) { let n = 0; for (const art of Object.keys(u2.trær || {})) { const d0 = u2.trær[art] || []; for (let k = 0; k < d0.length; k += 5) if (u2.påAnlegg(d0[k], d0[k + 1])) n++; }

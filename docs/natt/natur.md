@@ -268,3 +268,26 @@ Bilder side om side: side-jaeren-lav.png, side-jaeren-gaa.png, side-jaeren-skraa
 - Høsten: bakkeshaderen gjør grønt gult om høsten (uHost); jordene er nå grønnere, så høstfargen på dem blir sterkere. Ikke sett på bilde.
 - Parker/plener utenfor tettstedene og anleggene er ikke kjent i dataene. Slått eng (gulbrun etter slåtten) skilles ikke fra uslått.
 - Lyset (sol/himmel, lys3d) er ikke rørt – eies av pakka «lys».
+
+### Prøvd i nettleser (runde 15)
+- Rogaland med ekte data (dev.py, /rogaland, PC 1400 × 820, kl. 13, klart, sommer): Jæren øst for Bryne (skrått, lavt, ovenfra, til fots)
+  før og etter, og Ryfylke (leiren 15607 6622779) før/etter i samme økt (window.BAKKEFARGE_AV). Tallene står i tabellen over.
+- Bryne (ekte husdata): 72 omriss av baner/anlegg i utsnittet, 333 trær/steiner/busker tatt bort, 0 trær og 0 steiner/busker igjen på
+  banene. Første forsøk ga 7 trær på banene: gatetrærne fra byhus.js og einer fra vegetasjon3d settes i bygg3d-krokene ETTER ryddingen –
+  derfor ryddes det nå også etter krokene. Nærbilde av banen og telling av gresstustene på banen ble IKKE tatt: utsnittet som skulle
+  bygges ved banen (kamera 110 m) ble ikke ferdig på 15 min på den delte maskinen (to forsøk, «bygging henger» i prøveskriptet) – årsaken
+  er ikke funnet (mistanke: maskinen, sju hjelpere på fire kjerner; samme flytting ved Jæren tok 3–4 min).
+- Dombås-testsiden på telefon (844 × 390, isMobile, hasTouch) før/etter: skogen og heia rundt leiren er nesten uendret (tone 80° -> 82°,
+  andel gul 7 %) – som ønsket (side-mob-dombas.png).
+- Vakta «natur» (pipeline/fliser/vakter/natur.js, utvidet): PC ok på 9 s, mobil ok på 6 s, ingen sidefeil. Med feilen lagt inn med vilje
+  (AnleggFri.rens slipper alt, Vegetasjon3d.fri ser bort fra banene) fant den begge: «prøvebanen: 16 -> 16» og «en blomst/busk kan stå midt på en bane».
+  Nytt i vakta: naturfarger dreier en gul-oliven eng (≥ 64°) og lar lyng/berg være, AnleggFri.inni, en prøvebane rundt et tre i utsnittet
+  (trærne tas bort, blomster får ikke stå der), og 0 trær/steiner på ekte baner når utsnittet har dem.
+- Regeltester: test_bakkefarge.js (27), test_anleggfri.js (17), test_vegetasjon.js og test_kartbilde.js grønne.
+
+### Filer i runde 15
+- Nye: site/dovre-fliser/spill/bakkefarge.js, spill/anleggfri.js, pipeline/fliser/test_bakkefarge.js, test_anleggfri.js.
+- Mine: spill/vegetasjon3d.js (u.påAnlegg i tre sjekker, eng/blomster på dyrket mark), spill/fjellmark3d.js (fri: u.påAnlegg),
+  vakter/natur.js, docs/natt/natur.md, natur-hjelp.json.
+- index.html (se «Fellesfiler endret» over) + andre AnleggFri.rydd rett etter KROKER.bygg3d-løkka, og kontrastV i detaljIBakken
+  (lyset langt unna ×(1 + 0,5·k) i stedet for ×(1 + k): fjerne jorder ble lyse som sand).
