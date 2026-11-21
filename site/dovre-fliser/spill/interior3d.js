@@ -23,7 +23,8 @@
   let forU = null, sist = 0, M = null, jobb = null, rafNr = 0, versjon = 0, FUNN_GEO = null;
   const STAT = { bygget: 0, biter: 0, lengst: 0, gjenbrukt: 0, kastet: 0, steg: {}, sist: null };
   // stoffene i hovednettet og hvor mange meter mønsteret dekker
-  const STOFFER = ['glatt', 'parkett', 'flis', 'betong', 'malt', 'panel', 'tre', 'tøy'], NR = Object.fromEntries(STOFFER.map((n, i) => [n, i]));
+  // (runde 12) 'planke': brede, loddrette bord med sprekker, kvister og ulik tone – låver og uthus (vegger, gulv og himling)
+  const STOFFER = ['glatt', 'parkett', 'flis', 'betong', 'malt', 'panel', 'tre', 'tøy', 'planke'], NR = Object.fromEntries(STOFFER.map((n, i) => [n, i]));
   const TRE = [.56, .4, .25], LYST_TRE = [.8, .66, .46], HVIT = [.93, .93, .91], GRÅ = [.55, .56, .57], MØRK = [.16, .16, .18], STÅL = [.66, .68, .7], MESSING = [.8, .68, .3];
   const TØY = [[.36, .42, .54], [.56, .32, .3], [.42, .48, .36], [.62, .56, .46], [.3, .33, .38], [.68, .5, .32], [.5, .4, .52], [.75, .7, .62]];
   const PARKETT = [[.82, .64, .44], [.64, .46, .3], [.88, .76, .58], [.52, .37, .25]];
@@ -50,6 +51,16 @@
       g.globalAlpha = .07; g.fillStyle = '#3a2512'; for (let k = 0; k < 200; k++) g.fillRect(r() * n, r() * n, 30 + r() * 70, 1); g.globalAlpha = 1; },
     tre: (g, n, r) => { g.fillStyle = grå(236); g.fillRect(0, 0, n, n); g.fillStyle = '#3a2512'; for (let k = 0; k < 420; k++) { g.globalAlpha = .012 + r() * .03; g.fillRect(r() * n, r() * n, 40 + r() * 120, 1 + r()); } g.globalAlpha = 1; },
     tøy: (g, n) => { g.fillStyle = grå(232); g.fillRect(0, 0, n, n); for (let j = 0; j < n; j += 4) for (let i = 0; i < n; i += 4) { g.fillStyle = (i + j) % 8 ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.1)'; g.fillRect(i, j, 2, 4); g.fillRect(i + 2, j + 2, 2, 2); } },
+    // (runde 12, kritikken: «flate brune vegger uten tekstur» i låven) seks bord per rute (ca. 20 cm), mørk sprekk mellom, årer
+    // langs bordet, kvister, værslitt lysere/mørkere tone per bord og en skjøt på tvers her og der
+    planke: (g, n, r) => { const N = 6, w = n / N;
+      for (let i = 0; i < N; i++) { const v = 214 + (r() - .5) * 46, x = i * w; g.fillStyle = `rgb(${v | 0},${v * .96 | 0},${v * .9 | 0})`; g.fillRect(x, 0, w, n);
+        g.fillStyle = 'rgba(40,24,10,.08)'; for (let k = 0; k < 26; k++) { const ax = x + 2 + r() * (w - 4); g.fillRect(ax, 0, .8 + r() * .8, n); }
+        let q = g.createLinearGradient(x, 0, x + w, 0); q.addColorStop(0, 'rgba(0,0,0,.16)'); q.addColorStop(.12, 'rgba(0,0,0,0)'); q.addColorStop(.85, 'rgba(255,255,255,.05)'); q.addColorStop(1, 'rgba(0,0,0,.2)'); g.fillStyle = q; g.fillRect(x, 0, w, n);
+        g.fillStyle = 'rgba(25,14,6,.85)'; g.fillRect(x, 0, 2.2, n);
+        for (let k = 0; k < 2; k++) if (r() > .45) { const kx = x + w * (.25 + r() * .5), ky = r() * n; g.fillStyle = 'rgba(70,40,15,.5)'; g.beginPath(); g.ellipse(kx, ky, 3 + r() * 2, 5 + r() * 4, 0, 0, 6.3); g.fill(); g.fillStyle = 'rgba(40,20,8,.6)'; g.beginPath(); g.ellipse(kx, ky, 1.4, 2.4, 0, 0, 6.3); g.fill(); }
+        if (r() > .6) { const sy = r() * n; g.fillStyle = 'rgba(25,14,6,.7)'; g.fillRect(x, sy, w, 1.6); } }
+      g.globalAlpha = .05; g.fillStyle = '#000'; for (let k = 0; k < 900; k++) g.fillRect(r() * n, r() * n, 1 + r() * 2, 1 + r() * 3); g.globalAlpha = 1; },
     // utsikten i vinduene: himmel, åser og mark
     utsikt: (g, n) => { let q = g.createLinearGradient(0, 0, 0, n * .62); q.addColorStop(0, '#a9cbea'); q.addColorStop(1, '#e9f1f6'); g.fillStyle = q; g.fillRect(0, 0, n, n);
       g.fillStyle = '#8fa89a'; g.beginPath(); g.moveTo(0, n); for (let x = 0; x <= n; x += 4) g.lineTo(x, n * (.58 - .06 * Math.sin(x * .05) - .04 * Math.sin(x * .13 + 1))); g.lineTo(n, n); g.fill();
@@ -60,7 +71,7 @@
     skygge: (g, n) => { g.clearRect(0, 0, n, n); let q = g.createLinearGradient(0, 0, n / 2, 0); q.addColorStop(0, 'rgba(0,0,0,.5)'); q.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = q; g.fillRect(0, 0, n / 2, n);
       g.save(); g.beginPath(); g.rect(n / 2, 0, n / 2, n); g.clip(); g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = n * .13; g.shadowOffsetX = n; g.fillStyle = '#000'; g.fillRect(n * .5 + n * .13 - n, n * .26, n * .24, n * .48); g.restore(); },
   };
-  const METER = { glatt: 1, parkett: 1, flis: 1.2, betong: 2.4, malt: 2, panel: 1.12, tre: 1, tøy: .4 };
+  const METER = { glatt: 1, parkett: 1, flis: 1.2, betong: 2.4, malt: 2, panel: 1.12, tre: 1, tøy: .4, planke: 1.2 };
   // stoffene lages første gang et interiør bygges – ett mønster per bit (de tegnes i koden og tar litt tid)
   function* stoffeneG() {
     if (M) return M;
@@ -270,7 +281,8 @@
       case 'butikk': case 'terminal': S.gulv = ['flis', [.86, .85, .82]]; S.vegg = ['malt', [.95, .95, .93]]; S.lampe = 2; break;
       case 'lager': case 'verksted': case 'lagerhall': case 'hangar': S.gulv = ['betong', [.64, .64, .62]]; S.vegg = ['betong', [.76, .76, .74]]; S.lampe = 2; break;
       case 'garasje': S.gulv = ['betong', [.6, .6, .58]]; S.vegg = ['panel', [.72, .6, .44]]; break;
-      case 'låve': case 'bod': S.gulv = ['parkett', [.5, .4, .28]]; S.vegg = ['panel', [.6, .46, .32]]; S.lampe = r.rolle === 'låve' ? 2 : 1; break;
+      // (runde 12) låven og boden: plankevegger og plankegulv (mørkere, slitt)
+      case 'låve': case 'bod': S.gulv = ['planke', [.52, .42, .3]]; S.vegg = ['planke', [.7, .54, .38]]; S.lampe = r.rolle === 'låve' ? 2 : 1; break;
       case 'kirke': S.gulv = ['parkett', [.46, .32, .22]]; S.vegg = ['malt', [.95, .93, .87]]; S.lampe = 2; break;
       case 'brakke': S.gulv = ['parkett', [.62, .52, .38]]; S.vegg = ['panel', [.78, .76, .62]]; break;
       case 'kontrollrom': S.gulv = ['betong', [.5, .54, .56]]; S.vegg = ['malt', [.86, .88, .86]]; S.lampe = 2; break;
@@ -371,7 +383,7 @@
       const xy = p => [p[0] * A.ux + p[1] * A.vx, p[0] * A.uy + p[1] * A.vy, g0];
       for (const [a, b, c] of T) tri(g, xy(S[a]), xy(S[b]), xy(S[c]), f, f, f, [S[a][0] / m, S[a][1] / m], [S[b][0] / m, S[b][1] / m], [S[c][0] / m, S[c][1] / m]); }
     // himlingen
-    { const T = THREE.ShapeUtils.triangulateShape(P.map(p => new THREE.Vector2(p[0], p[1])), []), g = G[NR.malt], f = kl === 'låve' || kl === 'uthus' ? [.5, .4, .3] : [.96, .96, .94];
+    { const T = THREE.ShapeUtils.triangulateShape(P.map(p => new THREE.Vector2(p[0], p[1])), []), g = G[kl === 'låve' || kl === 'uthus' ? NR.planke : NR.malt], f = kl === 'låve' || kl === 'uthus' ? [.5, .4, .3] : [.96, .96, .94];
       for (const [a, b, c] of T) tri(g, [P[a][0], P[a][1], g0 + tak], [P[c][0], P[c][1], g0 + tak], [P[b][0], P[b][1], g0 + tak], f, f, f, [P[a][0] / 2, P[a][1] / 2], [P[c][0] / 2, P[c][1] / 2], [P[b][0] / 2, P[b][1] / 2]); }
 
     // ytterveggenes innside (3 cm innenfor veggen), delt der skilleveggene møter dem, med åpning ved inngangen og vinduer
@@ -461,7 +473,9 @@
     if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = pl.trapp / n;
       for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, ute - g0 - .4, (ute - g0) + (pl.gulv - ute) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
     // møblene, med skygge under og teppe under salongbordet
-    for (const m of pl.møbler) { yield 'møbel'; let nK = 0; for (const K of deler(m)) { kasse(m.x, m.y, m.a, K); if (++nK % 48 === 0) yield 'møbeldel'; }
+    // (runde 12) høyballene og traktoren i låven tegnes avrundet av spill/lave3d.js (Lave3d.tegner) – her bare skyggen under dem
+    const låvenTegner = !!(window.Lave3d && Lave3d.tegner && Lave3d.slag(pl) === 'låve');
+    for (const m of pl.møbler) { yield 'møbel'; if (låvenTegner && Lave3d.tegner[m.type]) { blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22); continue; } let nK = 0; for (const K of deler(m)) { kasse(m.x, m.y, m.a, K); if (++nK % 48 === 0) yield 'møbeldel'; }
       if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger') blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
       if (m.type === 'salongbord') { const tf = TØY[Math.floor(hash(pl.i, 41) * TØY.length)], tw = Math.min(1.1, m.b / 2 + .5), td2 = .8;
         kasse(m.x, m.y, m.a, [-tw, tw, -td2, td2, .004, .014, tf, 'tøy']); kasse(m.x, m.y, m.a, [-tw + .12, tw - .12, -td2 + .12, td2 - .12, .014, .017, mørk(tf, 1.25), 'tøy']); } }

@@ -492,25 +492,56 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     else if (S && S.leir) { const [x, y] = tilSkjerm(S.leir.x, S.leir.y, vx0, vy1); if (x > -60 && y > -60 && x < VW + 60 && y < VH + 60) tegnLeir(g, x, y, true, S.fraksjon.navn + (typeof leirTillegg === 'function' ? leirTillegg() : '')); }
   });
   KROKER.tegn3d.push((g, proj3) => {
-    if (!S || !S.leir) return; const p = proj3(S.leir.x, S.leir.y); if (!p) return;
+    if (!S || !S.leir) return;
+    // (runde 12, pakke 3d) til fots nær leiren viser flagget i 3D hvem som bor her – navnet hang midt i lufta ved stanga
+    { const R = typeof R3 !== 'undefined' ? R3 : null; if (R && R.fot && R.ut && Math.hypot(S.leir.x - R.ut.cx - R.cam.position.x, S.leir.y - R.ut.cy - R.cam.position.y) < 150) return; }
+    const p = proj3(S.leir.x, S.leir.y); if (!p) return;
     g.save(); g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, S.fraksjon.navn, p[0], p[1] + 18, 1) : p[1] + 18; g.strokeText(S.fraksjon.navn, p[0], ny); g.fillStyle = '#f2ead6'; g.fillText(S.fraksjon.navn, p[0], ny); g.restore();
   });
-  // 3D: flaggstangen fra leirmodellene (spill/modeller.js) med ditt flagg som duk
-  let stang = [];
+  // 3D: flaggstanga med ditt flagg som duk
+  // (runde 12, pakke 3d, kritikken: «flaggstanga viser et flatt ikon i stedet for et ekte 3D-flagg») – stanga lages her (sokkel i betong,
+  // hvit stang som smalner, gullknapp, snor), og duka med flaggbildet BLAFRER: bølgen går fra stanga og utover, sterkere jo mer det
+  // blåser (VAER.vind), og flagget snur seg med vinden. Det flate merket og navnet over leiren vises ikke når du står ved stanga
+  // (okonomi-visning.js og tegn3d over). Tallene er Claudes forslag:
+  const FLAGG3D = { H: 8, bredde: 1.8, høyde: 1.2, NU: 14, NV: 4, bølge: .16, fart: 3.2 };
+  let stang = [], duk = null;
   KROKER.sett3d.push((u, R) => {
     // (18. nov: flaggets bilde – CanvasTexture – frigjøres også; før ble ett nytt bilde liggende på grafikkortet for hvert nytt utsnitt)
-    for (const m of stang) { R.scene.remove(m); m.geometry.dispose(); if (m.material.map) m.material.map.dispose(); m.material.dispose(); } stang = [];
-    if (!S || !S.leir || !window.MODELLER) return; const x = S.leir.x - u.cx, y = S.leir.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) return;
-    const z = (hoyde3d(S.leir.x, S.leir.y, u) - u.h0) * R.EX, st2 = new THREE.Mesh(MODELLER.flaggstang({ farge: O.hovedfarge(S.fraksjon.flagg), merke: 'ingen' }), MODELLER.materiale().clone());
-    st2.position.set(x, y, z); R.scene.add(st2); stang.push(st2);
-    // duken med flaggbildet: samme bølge som i modellen (H 8 m, 1,8 × 1,2 m), litt utenpå på begge sider
-    const H = 8, fb = 1.8, fh = 1.2, P = (uu, v, sd) => [.06 + uu * fb, Math.sin(uu * 5.5) * .08 * uu + sd * .015, H - .1 - fh + v * fh - .12 * uu * uu], pos = [], uv = [];
-    for (const sd of [1, -1]) for (let i = 0; i < 12; i++) { const a = i / 12, b = (i + 1) / 12, q = [P(a, 0, sd), P(b, 0, sd), P(b, 1, sd), P(a, 1, sd)], t = [[a, 0], [b, 0], [b, 1], [a, 1]];
-      for (const k of sd > 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]) { pos.push(...q[k]); uv.push(sd > 0 ? t[k][0] : t[k][0], t[k][1]); } }
-    const gd = new THREE.BufferGeometry(); gd.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gd.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); gd.computeVertexNormals();
-    const tex = new THREE.CanvasTexture(flaggLerret(S.fraksjon.flagg, 240, 160)), duk = new THREE.Mesh(gd, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
-    duk.position.set(x, y, z); R.scene.add(duk); stang.push(duk);
+    for (const m of stang) { if (m.parent) m.parent.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); } } stang = []; duk = null;
+    if (!S || !S.leir) return; const x = S.leir.x - u.cx, y = S.leir.y - u.cy; if (Math.abs(x) > u.S || Math.abs(y) > u.S) return;
+    const z = (hoyde3d(S.leir.x, S.leir.y, u) - u.h0) * R.EX, F = FLAGG3D, H = F.H, legg = m => { R.scene.add(m); stang.push(m); return m; };
+    const sokkel = legg(new THREE.Mesh(new THREE.BoxGeometry(.7, .7, .32), new THREE.MeshLambertMaterial({ color: 0x8c8981 }))); sokkel.position.set(x, y, z + .1);
+    const sg = new THREE.CylinderGeometry(.04, .068, H - .2, 10); sg.rotateX(Math.PI / 2); const st = legg(new THREE.Mesh(sg, new THREE.MeshLambertMaterial({ color: 0xe4e1d8 }))); st.position.set(x, y, z + .2 + (H - .2) / 2);
+    const kn = legg(new THREE.Mesh(new THREE.SphereGeometry(.085, 10, 7), new THREE.MeshLambertMaterial({ color: 0xc9a227 }))); kn.position.set(x, y, z + H + .06);
+    // snora langs stanga (tynn, litt ut fra stanga)
+    const sn = new THREE.CylinderGeometry(.007, .007, H - .6, 4); sn.rotateX(Math.PI / 2); const snor = legg(new THREE.Mesh(sn, new THREE.MeshLambertMaterial({ color: 0x6d6a62 }))); snor.position.set(x + .06, y, z + .5 + (H - .6) / 2);
+    // duka: et rutenett NU × NV (begge sider samme hjørner, DoubleSide), plassen i hjørnene regnes i ramme3d
+    const NU = F.NU, NV = F.NV, pos = new Float32Array((NU + 1) * (NV + 1) * 3), uv = [], idx = [];
+    for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) uv.push(i / NU, j / NV);
+    for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + 1, c = a + NU + 2, d = a + NU + 1; idx.push(a, b, c, a, c, d); }
+    const gd = new THREE.BufferGeometry(); gd.setAttribute('position', new THREE.BufferAttribute(pos, 3)); gd.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); gd.setIndex(idx);
+    const tex = new THREE.CanvasTexture(flaggLerret(S.fraksjon.flagg, 240, 160)); tex.anisotropy = 4;
+    duk = legg(new THREE.Mesh(gd, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); duk.position.set(x, y, z); duk.frustumCulled = false; duk.userData.sist = -1;
+    blafre(duk, 0);
   });
+  // flagget blafrer: u = 0 ved stanga, 1 ytterst; bølgen vandrer utover og er størst ytterst; flagget heller litt ned når det er stille
+  function blafre(m, t) {
+    const F = FLAGG3D, P = m.geometry.attributes.position, A = P.array, V = window.VAER, vind = V && V.vind ? Math.max(.15, Math.min(1.4, (V.vind.fart || 4) / 8)) : .6;
+    const ret = V && V.vind && typeof V.vind.retning === 'number' ? V.vind.retning : .4, c = Math.cos(ret), s = Math.sin(ret);
+    let k = 0;
+    for (let j = 0; j <= F.NV; j++) for (let i = 0; i <= F.NU; i++) { const u = i / F.NU, v = j / F.NV;
+      const bølge = Math.sin(u * 7 - t * F.fart * (.6 + vind * .6) + v * .9) * F.bølge * u * (.5 + vind * .5) + Math.sin(u * 13 - t * F.fart * 1.7) * .03 * u;
+      const fall = (1 - Math.min(1, vind)) * .35 * u * u, lx = .07 + u * F.bredde * (1 - fall * .3), ly = bølge;
+      A[k++] = lx * c - ly * s; A[k++] = lx * s + ly * c; A[k++] = F.H - .12 - F.høyde + v * F.høyde - fall - .08 * u * u; }
+    P.needsUpdate = true; m.geometry.computeVertexNormals(); m.geometry.computeBoundingSphere();
+  }
+  KROKER.ramme3d.push(R => {
+    if (!duk || !duk.parent) return; const t = performance.now() / 1000;
+    // høyst 30 ganger i sekundet, og bare når du er innen 1,5 km (ellers ser du ikke bølgene)
+    if (t - duk.userData.sist < 1 / 30) return; const c = R.cam.position; if (Math.hypot(c.x - duk.position.x, c.y - duk.position.y) > 1500 && duk.userData.sist > 0) return;
+    duk.userData.sist = t; blafre(duk, t);
+  });
+  window.Flagg3d = { duk: () => duk, deler: () => stang.length };
 
   // ---------- «Nytt spill» i ☰ ----------
   const nyKnapp = document.createElement('button'); nyKnapp.textContent = 'Nytt spill'; nyKnapp.hidden = true;

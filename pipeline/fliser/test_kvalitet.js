@@ -5,7 +5,19 @@ let s = { nivå: 'høy' };
 ok(K.neste(s, 30, 1, 10) === 'høy', 'treg, men oppløsningen er ikke senket ennå: blir på høy');
 s = { nivå: 'høy' }; s.nivå = K.neste(s, 30, .6, 10); ok(s.nivå === 'middels', 'treg med lav oppløsning: ned til middels');
 ok(K.neste(s, 30, .6, 12) === 'middels', 'venter minst 4 s før neste endring');
-s.nivå = 'middels'; ok(K.neste(s, 45, 1, 15) === 'lav', 'svært treg (45 ms): ned uansett oppløsning');
+s.nivå = 'middels'; ok(K.neste(s, 45, 1, 15) === 'middels', '(runde 12) svært treg, men full oppløsning: oppløsningen senkes først');
+s.nivå = 'middels'; ok(K.neste(s, 45, .6, 15) === 'lav', 'svært treg med lav oppløsning: ned');
+s = { nivå: 'høy' }; ok(K.neste(s, 30, .6, 10, false) === 'høy', 'ikke tregt lenge nok (varig = false): blir på høy');
+// vedvarende: 10 s sammenhengende tregt mens noe skjer, ikke under bygging eller rett etter
+{ const v = { nivå: 'høy' }, T = (nå, ms, o = {}) => K.vedvarende(v, { ms, skala: .6, nå, aktiv: true, bygger: false, ...o });
+  ok(!T(0, 30) && !T(5, 30) && T(10.5, 30), 'tregt i over 10 s: vedvarende');
+  ok(!T(11, 16) && !T(15, 30) && !T(24, 30) && T(25.5, 30), 'et lett bilde i mellom: begynner å telle på nytt');
+  ok(!T(30, 30, { bygger: true }) && !T(35, 30) && !T(39, 30), 'under bygging og 8 s etter: aldri');
+  ok(!T(50, 30, { skala: 1 }) && !T(55, 30, { skala: 1 }) && !T(62, 30, { skala: 1 }), 'full oppløsning: ikke tregt nok (oppløsningen senkes først)');
+  ok(!T(70, 30, { aktiv: false }) && !T(90, 30, { aktiv: false }), 'i ro (tida står, kameraet står): aldri'); }
+// programvare: Auto går ikke over maks
+{ const v = { nivå: 'lav', maks: 'lav' }; let n = 'lav'; for (let t = 0; t <= 60; t++) n = v.nivå = K.neste(v, 16, 1, t); ok(n === 'lav', 'maks Lav (programvare): går ikke opp'); }
+ok(K.NIVÅ.lav.gress > 0 && K.NIVÅ.lav.blomster, '(runde 12) Lav har litt gress og blomster');
 s.nivå = 'lav'; ok(K.neste(s, 60, .6, 30) === 'lav', 'lav er laveste');
 s = { nivå: 'lav' }; let n = s.nivå; for (let t = 0; t <= 30; t++) n = s.nivå = K.neste(s, 16.7, 1, t); ok(n === 'middels', 'jevne 60 bilder/s i over 20 s: opp et nivå');
 s = { nivå: 'høy' }; K.neste(s, 30, .6, 10); s.nivå = 'middels'; let m = 'middels'; for (let t = 11; t <= 50; t++) m = s.nivå = K.neste(s, 16.7, 1, t); ok(m === 'middels', 'ikke opp igjen til et nivå som var for tungt det siste minuttet');
