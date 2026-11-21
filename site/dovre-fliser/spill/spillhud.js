@@ -54,7 +54,7 @@ body.spill #varsler button, body.spill #varsler > *{ border-radius:3px; }
 body:not(.spill):not(.kort) .stats > div[data-ord]::after{ display:none; }
 body.spill .stats > div[hidden], body .stats > div[data-ord][hidden]{ display:none; } body.spill .stats{ flex-wrap:wrap; } body.spill .stats > div[data-mer]{ display:none; }
 body.spill .stats[data-trang="1"] #sAar, body.spill .stats[data-trang="2"] #sAar, body.spill .stats[data-trang="2"] #sVind{ display:none; }
-#flismer{ display:none; cursor:pointer; order:60; } body.spill #flismer.på{ display:flex; } #flismer b{ font-size:15px; color:#d9c27a; } #flismer.åpen{ border-color:#e8d48a; }
+#flismer{ display:none; cursor:pointer; order:60; } .stats > div#flismer b{ order:0; margin-left:3px; } .stats > div#flismer[data-ord]::after{ order:1; text-transform:none; letter-spacing:.02em; font-size:13px; } body.kort .stats > div#flismer[data-ord]::after{ font-size:11px; } body.spill #flismer.på{ display:flex; } #flismer b{ font-size:15px; color:#d9c27a; } #flismer.åpen{ border-color:#e8d48a; }
 #flismerliste{ position:fixed; z-index:9; display:none; min-width:210px; padding:5px; background:linear-gradient(180deg,#241c10,#17120a); border:1px solid #8a7440; box-shadow:0 0 0 1px #0d0a06, 0 10px 28px rgba(0,0,0,.65); border-radius:4px; }
 #flismerliste.på{ display:block; animation:flisned .14s ease-out; } @keyframes flisned{ from{ opacity:0; transform:translateY(-5px); } }
 #flismerliste button{ display:flex; align-items:center; gap:8px; width:100%; padding:6px 9px; background:none; border:0; border-bottom:1px solid #3a3223; color:var(--ink,#e7dcc3); font:inherit; font-size:14.5px; text-align:left; cursor:pointer; } #flismerliste button:last-child{ border-bottom:0; }
@@ -130,15 +130,19 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   document.addEventListener('pointerdown', e => { if (komMerÅpen && !kommer.contains(e.target) && !mkommer.contains(e.target) && !merKn.includes(e.target)) åpneKomMer(false); });
   // tilleggene som finnes nå, flyttes inn i raden bak «Mer» når de er flere enn én (én alene står i linja)
   function fordel() { const T = KN.filter(K => K.tillegg && !K.el.hidden), samle = T.length > 1; for (const K of KN) if (K.tillegg) { const f1 = samle ? kommer : bar, f2 = samle ? mkommer : mbar; if (K.el.parentNode !== f1) f1.insertBefore(K.el, f1 === bar ? merKn[0] : null); if (K.el2.parentNode !== f2) f2.insertBefore(K.el2, f2 === mbar ? merKn[1] : null); }
-    const noePå = samle && T.some(K => K.el.classList.contains('på')); for (const b of merKn) { b.hidden = !samle; b.classList.toggle('på', noePå || komMerÅpen); let m = b.querySelector('.merke'); if (samle) { if (!m) { m = document.createElement('span'); m.className = 'merke'; m.style.background = '#5a4a2a'; b.appendChild(m); } if (m.textContent !== String(T.length)) m.textContent = String(T.length); } else if (m) m.remove(); } }
+    const noePå = samle && T.some(K => K.el.classList.contains('på'));     // RUNDE 13 (kritiker G: «MER +8» øverst og «Mer 4» nederst betyr to ulike ting): knappen nederst heter «Mer» uten tall (tallet så ut som
+    // fire uleste meldinger); forklaringen sier hvor mange kommandoer og hvilke. Flisa øverst heter «+8 tall».
+    const hva = `Mer|${T.length} kommandoer til: ${T.map(K => K.navn).join(', ')}`;
+    for (const b of merKn) { b.hidden = !samle; b.classList.toggle('på', noePå || komMerÅpen); const m = b.querySelector('.merke'); if (m) m.remove(); if (samle) { b.setAttribute('aria-label', hva.split('|')[1]); if (b === merKn[0] && b.dataset.tips !== hva) b.dataset.tips = hva; } } }
   // paneler som ligger nederst eller dekker skjermen på telefon: mens ett av dem vises, viker raden
   const DEKKER = ['panel', 'leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'stridpanel', 'sekk', 'hjelp', 'kontrollrom', 'hendelse', 'lagmeny', 'byggvalg', 'byggesett', 'alarm', 'degmeny', 'region', 'samfunnmeny', 'personkort', 'samfunnkort', 'krigpanel', 'verdenpanel', 'sjopanel', 'evpanel', 'flytkort', 'flytgruppe', 'marsjvalg', 'formkort', 'krigkort', 'etterspill'];
   // (runde 10) lutpanelet (inventar og beholdere) tar hele skjermen på telefon – bunnmenyen lå oppå det nederste
   const HELSKJERM = ['hjelp', 'kontrollrom', 'byggesett', 'etterspill', 'krigkort', 'formkort', 'oppstart', 'lutpanel'];
   const vises = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).opacity !== '0';
   // «MER»-FLISA (18. nov): ressursene skal stå på én rad. Får de ikke plass, går de minst viktige inn bak en flis «+3» som åpner resten.
-  const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sFolk', 'sStrom', 'sDiesel'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };
-  const mer = document.createElement('div'); mer.id = 'flismer'; mer.dataset.ikon = 'mer'; mer.setAttribute('role', 'button'); mer.setAttribute('aria-label', 'Flere tall'); mer.dataset.tips = 'Flere tall|Tallene som ikke fikk plass på raden. Trykk for å se dem.'; mer.dataset.ord = 'Mer'; const merTall = document.createElement('b'); mer.appendChild(merTall);
+  // RUNDE 13 (kritiker H: «i 3D forsvinner Folk fra toppstripa»): Folk er viktig og går sist inn bak flisa (før: foran strøm og diesel)
+  const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sStrom', 'sDiesel', 'sFolk'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };
+  const mer = document.createElement('div'); mer.id = 'flismer'; mer.dataset.ikon = 'mer'; mer.setAttribute('role', 'button'); mer.setAttribute('aria-label', 'Flere tall'); mer.dataset.tips = 'Flere tall|Tallene som ikke fikk plass på raden. Trykk for å se dem.'; mer.dataset.ord = 'tall'; const merTall = document.createElement('b'); mer.appendChild(merTall);
   const merListe = document.createElement('div'); merListe.id = 'flismerliste'; document.body.appendChild(merListe); let merSig = '', merÅpen = false;
   function fyllMer() { const S = document.querySelector('.stats'); if (!S) return; const rader = [...S.children].filter(d => d.dataset.mer && !d.hidden && !d.dataset.tom && !d.dataset.teknisk), sig = rader.map(d => d.textContent).join('|'); if (sig === merListe.dataset.sig) return; merListe.dataset.sig = sig; merListe.textContent = '';
     for (const d of rader) { const b = document.createElement('button'), o = d.querySelector('span:not([id])'), v = d.querySelector('b'); if (d.dataset.ikon) b.dataset.ikon = d.dataset.ikon; const n = document.createElement('span'); n.textContent = d.dataset.ord || (o ? o.textContent.trim() : ''); const t = document.createElement('b'); t.textContent = v ? v.textContent : ''; if (v && v.style.color) t.style.color = v.style.color; b.append(n, t); if (d.dataset.tips) b.dataset.tips = d.dataset.tips; b.onclick = () => { åpneMer(false); d.click(); }; merListe.appendChild(b); } }
@@ -148,7 +152,9 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
     const sig = window.innerWidth + '|' + document.body.className.length + '|' + barn.map(d => (d.hidden || d.dataset.tom || d.dataset.teknisk ? 0 : d.textContent.length)).join(','); if (sig === merSig) { if (merÅpen) fyllMer(); return; } merSig = sig;
     // PC: alt på én rad; telefon (runde 6): raden skal ikke rulles eller kuttes («ingen t…») – det som ikke får plass, står bak «Mer»
     const enRad = () => { if (kort) return S.scrollWidth <= S.clientWidth + 1; let t = null; for (const d of S.children) { if (!d.getClientRects().length) continue; if (t === null) t = d.offsetTop; else if (Math.abs(d.offsetTop - t) > 4) return false; } return true; };
-    const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) ant++; } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merTall.textContent = '+' + ant; return ant; };
+    const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const navn = []; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) { ant++; navn.push(d.dataset.ord || ETIKETT[d.dataset.s] || ''); } } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merTall.textContent = '+' + ant;
+      // (runde 13) forklaringen sier hvilke tall som står bak flisa
+      const tips = `Flere tall|${ant} tall fikk ikke plass på raden${navn.filter(Boolean).length ? ': ' + navn.filter(Boolean).join(', ').toLowerCase() : ''}. Trykk for å se dem.`; if (mer.dataset.tips !== tips) mer.dataset.tips = tips; mer.setAttribute('aria-label', `${ant} tall til`); return ant; };
     let n = 0; sett(0); while (!enRad() && n < ut.length + 2) sett(++n);
     if (merÅpen) { if (!mer.classList.contains('på')) åpneMer(false); else fyllMer(); } }
   const går = () => typeof R3 !== 'undefined' && R3 && R3.fot && typeof på3d !== 'undefined' && på3d;
@@ -160,13 +166,18 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   // telefonen: rekkefølgen på raden (de viktigste først), og hvilke flisene som går inn bak «Mer» først når raden ikke får plass
   const REKKE_TLF = ['sDag', 'sPenger', 'sFolk', 'sDiesel', 'sMaal', 'sKrig', 'sStrom', 'sTre', 'sBetong', 'sStaal', 'sOlje', 'sVaer', 'sHvor', 'sH', 'sFps', 'sKB'];
   const UT_TLF = ['sH', 'sHvor', 'sVaer', 'sOlje', 'sStaal', 'sBetong', 'sTre', 'sStrom', 'sKrig', 'sMaal', 'sDiesel', 'sFolk'];
-  function merkStats(bred) { const S = document.querySelector('.stats'); if (!S) return; const kort = document.body.classList.contains('kort');
+  // RUNDE 13 (kritiker G: «OLJE 0 t» i topplinja i steg 3): før leiren er lagt, står bare klokka og været der. Spilleren: også når det ikke
+  // finnes noen leir ennå; i testene bare mens startskjermen eller leirvalget står (de bygger ofte ikke leir først).
+  const FØR_LEIR = ['sDag', 'sVaer', 'sVind', 'sAar'];
+  const førLeir = () => { const st = $('oppstart'), lv = $('leirvalg'); if ((st && st.classList.contains('på')) || (lv && lv.classList.contains('på'))) return true;
+    return !navigator.webdriver && !!window.OppstartSpill && !!OppstartSpill.tilstand && !OppstartSpill.tilstand(); };
+  function merkStats(bred) { const S = document.querySelector('.stats'); if (!S) return; const kort = document.body.classList.contains('kort'), før = førLeir();
     for (const d of S.children) { if (d === mer) continue; const b = d.querySelector('b[id]') || d.querySelector('[id]'); if (!b) continue; if (d.dataset.s !== b.id) d.dataset.s = b.id;
       // «0 %» og «ute» sier ingenting alene: de får ordet sitt foran tallet (også på telefon) – og (runde 6) alle de andre flisene også
       const ord = kort && b.id === 'sDag' ? '' : ORD[b.id] || ETIKETT[b.id]; if ((d.dataset.ord || '') !== ord) { if (ord) d.dataset.ord = ord; else delete d.dataset.ord; }
       { const v = b.textContent.trim(), e = ENHET[b.id] && /^[\d\s.,/\u00a0\u202f−-]+$/.test(v) ? ENHET[b.id] : ''; if ((b.dataset.enhet || '') !== e) { if (e) b.dataset.enhet = e; else delete b.dataset.enhet; } }
       // en flis uten tall (bare en strek) sier ingenting: den vises først når den har noe å si
-      { const tom = /^[–-]?$/.test(b.textContent.trim()) ? '1' : ''; if ((d.dataset.tom || '') !== tom) { if (tom) d.dataset.tom = tom; else delete d.dataset.tom; } }
+      { const tom = (før && !FØR_LEIR.includes(b.id)) || /^[–-]?$/.test(b.textContent.trim()) ? '1' : ''; if ((d.dataset.tom || '') !== tom) { if (tom) d.dataset.tom = tom; else delete d.dataset.tom; } }
       if (TEKNISK.includes(b.id) && d.dataset.teknisk !== '1') d.dataset.teknisk = '1';
       if (!bred) { const i = kort ? REKKE_TLF.indexOf(b.id) : -1, o = i >= 0 ? String(i - 20) : ''; if (d.style.order !== o) d.style.order = o; continue; }
       const i = REKKE.indexOf(b.id); const o = i >= 0 ? String(i) : '50'; if (d.style.order !== o) d.style.order = o;

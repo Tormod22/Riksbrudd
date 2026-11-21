@@ -19,7 +19,7 @@
     sStaal: ['Stål', 'Stål på lager, og hvor mye lageret rommer. Brukes i master, verksted og forsvarsverk.', 'Gul: lageret er fullt.'],
     sStrom: ['Strøm', 'Hvor mange kilowatt byggene bruker, og hvor mye aggregat, solceller og batteri kan gi.', 'Rød: byggene får ikke nok strøm – noen av dem står. Bygg mer strøm eller slå av bygg.'],
     sOlje: ['Olje til kjøretøyene', 'Tonn olje på basen. Kolonner og stridsvogner fyller her. Dette er ikke leirens diesel.', ''],
-    sFolk: ['Folk', 'Hvor mange som bor i leiren. De bygger, hogger, står vakt og lager mat.', 'Varseltrekant: noe mangler – mat, senger, varme eller moral. Åpne Folk for å se hva.'],
+    sFolk: ['Folk', 'Hvor mange som bor i leiren. De bygger, hogger, står vakt og lager mat.', 'Varseltrekant: noe mangler. Hva det er, står over (Nå).'],
     sMaal: ['Mål', 'Hvor mange av målene dere har nådd. Målene viser neste fornuftige steg.', ''],
     sKrig: ['Kontroll over området', 'Hvor stor del av folket i området som bor i tettsteder dere holder. Dere vinner på 60 %.', 'Varseltrekant: en motstander nærmer seg seier.'],
     sHvor: ['Hvor du er', 'Karakteren din er ute, i kontrollrommet eller ute med nettbrett. Ute ser du bare det du selv ser; i kontrollrommet ser du alt lagene melder.', ''],
@@ -64,8 +64,19 @@
     if (/\btomt\b/.test(d.className) || (c && +c[0] > 180 && +c[1] < 150 && +c[2] < 150)) kl = 'rod'; else if (/\b(lite|fullt)\b/.test(d.className) || /⚠/.test(d.textContent)) kl = 'gul';
     if (id === 'sVaer') { const v = $('sVind'), a = $('sAar'); nå = [b && b.textContent, v && v.textContent && 'vind ' + v.textContent, a && a.textContent].filter(Boolean).join(' · '); }
     if (nå === F[0] || /^Mål: trykk/.test(nå) || !/\s/.test(nå)) nå = '';
+    if (id === 'sFolk') { const å = folkÅrsak(); if (å) { nå = å; kl = 'gul'; } }
     return { tittel: F[0], hva: F[1], farge: F[2], nå, kl, påvirkes: PÅVIRKES[id] || '' };
   }
+  // RUNDE 13 (kritiker H: varseltrekanten på Folk sa bare «noe mangler»): selve årsaken, med de samme reglene som setter trekanten
+  // (folk-visning.js visStatus): «ingen seng: 4 sover i telt», «maten rekker under ett døgn» …
+  function folkÅrsak() { try { const F = window.FolkSpill && FolkSpill.tilstand(), L = window.LeirSpill && LeirSpill.tilstand(); if (!F || !L || !window.FolkRegler) return '';
+      const B = FolkRegler.behov(F, L, FolkSpill.valg ? FolkSpill.valg() : {}), a = [], tall = v => Math.round(v).toLocaleString('nb-NO');
+      if (B.utenSeng) a.push(`ingen seng: ${B.utenSeng} sover i telt – bygg en brakke`);
+      if (F.sist && F.sist.sult) a.push('maten er tom: folk sulter – kjøp mat i Folk');
+      else if (B.dager < 1) a.push(`maten rekker ${B.dager * 24 < 1 ? 'under en time' : 'bare ' + tall(B.dager * 24) + ' timer'} – kjøp mat i Folk`);
+      if (F.sist && F.sist.kald > .05) a.push('folk fryser: for lite ved eller diesel til fyring');
+      if (F.moral < 35) a.push(`lav moral (${tall(F.moral)}): under 25 i et døgn går folk sin vei`);
+      return a.length ? a.join(' · ') + '.' : ''; } catch (e) { return ''; } }
   function vis(d) { const T = tekst(d); if (!T) return false; boks.textContent = '';
     const el = (n, t, k) => { const e = document.createElement(n); e.textContent = t; if (k) e.className = k; boks.appendChild(e); };
     el('b', T.tittel); boks.appendChild(document.createTextNode(T.hva)); if (T.nå) el('i', 'Nå: ' + T.nå, 'naa ' + T.kl); if (T.farge) el('i', T.farge); if (T.påvirkes) el('i', 'Påvirkes av: ' + T.påvirkes, 'pv');
@@ -80,13 +91,15 @@
     boks.classList.add('på'); viser = d; return true; }
   function skjul() { boks.classList.remove('på'); viser = null; clearTimeout(lukk); }
   const mål = e => e.target && e.target.closest ? e.target.closest('[data-tips], .stats > div') : null;
-  document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const d = mål(e); if (d && d !== viser) vis(d); else if (!d && viser) skjul(); });
+  // (runde 13) med mus: etter et klikk på flisa (som åpnet lista eller panelet) kommer ruta ikke tilbake før pekeren har vært et annet sted
+  let stille = null;
+  document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const d = mål(e); if (d && d === stille) return; stille = null; if (d && d !== viser) vis(d); else if (!d && viser) skjul(); });
   // telefon: ruta kommer ved et TRYKK (ikke når du sveiper raden bortover), og står i noen sekunder
   // RUNDE 4: LANGT TRYKK (0,45 s uten å flytte fingeren) viser ruta uten at flisa gjør det den ellers gjør (åpne Folk, fanen Lager …);
   // et kort trykk gjør begge deler som før. Ruta står så lenge fingeren er nede, og 6 s etter.
   const LANGT = { ms: 450, rom: 10, står: 6000 };
   let finger = false, holdT = 0, holdD = null, holdXY = null, sperrKlikk = 0;
-  document.addEventListener('pointerdown', e => { finger = e.pointerType === 'touch'; const d = mål(e); if (!finger || !d) skjul();
+  document.addEventListener('pointerdown', e => { finger = e.pointerType === 'touch'; const d = mål(e); if (!finger || !d) skjul(); if (!finger && d) stille = d;
     clearTimeout(holdT); holdD = null; if (finger && d) { holdD = d; holdXY = [e.clientX, e.clientY]; holdT = setTimeout(() => { if (holdD === d && vis(d)) { sperrKlikk = performance.now(); clearTimeout(lukk); d.classList.add('holdt'); } }, LANGT.ms); } }, true);
   document.addEventListener('pointermove', e => { if (holdD && holdXY && Math.hypot(e.clientX - holdXY[0], e.clientY - holdXY[1]) > LANGT.rom) { clearTimeout(holdT); holdD = null; } }, true);
   const slipp = () => { clearTimeout(holdT); if (holdD) holdD.classList.remove('holdt'); holdD = null; if (sperrKlikk && viser) { clearTimeout(lukk); lukk = setTimeout(skjul, LANGT.står); } };
@@ -94,8 +107,18 @@
   // nettleserens egen meny ved langt trykk skal ikke komme over flisa
   document.addEventListener('contextmenu', e => { if (mål(e) && (finger || performance.now() - sperrKlikk < 1500)) e.preventDefault(); }, true);
   document.addEventListener('click', e => { if (sperrKlikk && performance.now() - sperrKlikk < 1500 && mål(e)) { sperrKlikk = 0; e.preventDefault(); e.stopPropagation(); return; } sperrKlikk = 0;
-    if (!finger) return; const d = mål(e); if (d && vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, true);
+    if (!finger) return; const d = mål(e); if (!d) return;
+    // RUNDE 13 (kritiker G: «forklaringsboblen legger seg oppå panelet den forklarer»): et kort trykk som åpner noe (Folk, Leir, lista bak
+    // «+8 tall», en kommando) viser ingen boble – langt trykk gjør det fortsatt. Flis uten egen handling (klokka, været) forklares som før.
+    if (HANDLING.test(d.id || '') || HANDLING.test(d.dataset.s || '') || d.dataset.k) { if (viser) skjul(); return; }
+    const før = åpnePaneler().join(); setTimeout(() => { if (åpnePaneler().join() !== før) { if (viser === d) skjul(); return; } if (vis(d)) { clearTimeout(lukk); lukk = setTimeout(skjul, 4500); } }, ÅPNER_MS); }, true);
   window.addEventListener('blur', skjul);
+  // panelene et trykk kan åpne (skjermlaget har lista; reserven er de vanligste), og hvor lenge vi venter på at de kommer (Claudes tall)
+  // flisene som åpner noe når du trykker (panelpynt.js, lager-visning.js, maal-visning.js, strategi-visning.js og «+8 tall»)
+  const HANDLING = /^(sFolk|sPenger|sStrom|sDiesel|sTre|sBetong|sStaal|sMaal|sKrig|flismer)$/;
+  const ÅPNER_MS = 140, PANELER = ['leirmeny', 'folkmeny', 'krig', 'karakterark', 'tropppanel', 'flismerliste', 'kommer', 'mkommer', 'degmeny', 'region', 'sekk', 'lagmeny', 'hjelp'];
+  const åpnePaneler = () => { const ids = [...new Set([...(window.Skjermlag && Skjermlag.SELV ? Skjermlag.SELV : []), ...PANELER])];
+    return ids.filter(id => { const e = $(id); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none'; }); };
   // titlene ryddes jevnlig (andre deler setter dem på nytt hvert sekund), og ruta følger med mens den står oppe
   setInterval(() => { for (const d of document.querySelectorAll('.stats > div[title]')) if (FORKLAR[d.dataset.s || ((d.querySelector('b[id]') || {}).id)]) taTittel(d); if (viser && !viser.isConnected) skjul(); }, 700);
 
