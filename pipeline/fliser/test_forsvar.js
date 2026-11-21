@@ -43,3 +43,19 @@ console.log('ok   forsvar (runde 8): glattet anslag, spenn, «røverlaget» i en
 { const r = F.sluttRapport({ hvem: 'Røverne', nr: 2, utfall: 'slått', falne: 1, sårede: 1, falneNavn: ['Håkon Rønning (Leirvakta)'], sårNavn: ['Kari (deg)'], skadet: 2, skadetNavn: ['Brakke', 'Kjøkken'] });
   require('assert')(/Håkon Rønning \(Leirvakta\) falt, og Kari \(deg\) ble såret\./.test(r.tekst) && /Brakke og Kjøkken skadet\./.test(r.tekst), JSON.stringify(r)); console.log('ok   rapporten har navn på sårede, falne og bygg'); }
 
+// (runde 13, kritiker G) anslaget kan bare minke når angriperne ikke har snudd, og uten syn står det når de trolig kommer, ikke minutter
+{ let e = F.monoton(null, 40, 0, true); assert.strictEqual(e.v, 40);
+  e = F.monoton(e, 300, 10, false); assert.strictEqual(e.v, 30, 'et større rått anslag drar det ikke opp');
+  e = F.monoton(e, 12, 15, false); assert.strictEqual(e.v, 12, 'et mindre rått anslag gjelder');
+  e = F.monoton(e, 200, 20, true); assert.strictEqual(e.v, 200, 'har de snudd, gjelder det nye');
+  assert.ok(F.harSnudd(1000, 1300, false) && !F.harSnudd(1000, 1200, false) && F.harSnudd(1000, 900, true), 'snudd = 250 m lenger unna enn nærmest, eller de trekker seg');
+  // 01:22 dag 3 (G sitt angrep)
+  const t = (48 + 1 + 22 / 60 - 6) * 60;
+  assert.deepStrictEqual(F.klokke(t).dag, 3); assert.ok(Math.abs(F.klokke(t).time - 1.3667) < .01);
+  assert.ok(/^trolig i natt \(ca\. kl\. 0\d–0\d\)$/.test(F.når(t, t + 200)), F.når(t, t + 200));
+  assert.strictEqual(F.når(t, t + 30), 'trolig innen en time');
+  const t2 = (24 + 14 - 6) * 60; assert.ok(/^trolig i kveld/.test(F.når(t2, t2 + 300))); assert.ok(/^trolig i morgen tidlig/.test(F.når(t2, t2 + 900)));
+  assert.ok(!/\(/.test(F.når(t2, t2 + 1300)), 'ingen klokkeslett så langt fram');
+  assert.ok(!/\d+ min/.test(F.når(t, t + 200)), 'ingen minutter når ingen ser dem');
+  assert.strictEqual(F.nedtelling(1060), '17 t 40 min'); assert.strictEqual(F.nedtelling(45), '45 min'); assert.strictEqual(F.nedtelling(.4), 'under 1 min'); }
+console.log('ok   forsvar (runde 13): anslaget går ikke baklengs, «ikke sett – kommer trolig i natt», nedtelling');
