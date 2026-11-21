@@ -532,8 +532,8 @@
     }
     // trapp foran døra når gulvet ligger over bakken: trinn på ca. 18 cm, så langt ut som trappa går
     // (runde 15) trapp foran alle dørene
-    for (const [I, ute, trappQ] of [[pl.inngang, ute, pl.trapp], ...(pl.innganger || []).filter(q => q !== pl.inngang && q.ute !== undefined).map(q => [q, q.ute, q.trapp])]) if (pl.gulv - ute > .12) { const n = Math.max(1, Math.round((pl.gulv - ute) / .18)), a = Math.atan2(I.uy, I.ux), dl = trappQ / n;
-      for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, ute - g0 - .4, (ute - g0) + (pl.gulv - ute) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
+    for (const [I, uteQ, trappQ] of [[pl.inngang, ute, pl.trapp], ...(pl.innganger || []).filter(q => q !== pl.inngang && q.ute !== undefined).map(q => [q, q.ute, q.trapp])]) if (pl.gulv - uteQ > .12) { const n = Math.max(1, Math.round((pl.gulv - uteQ) / .18)), a = Math.atan2(I.uy, I.ux), dl = trappQ / n;
+      for (let j = 0; j < n; j++) kasse(I.x + I.nx * dl * (j + .5), I.y + I.ny * dl * (j + .5), a, [-I.w / 2 - .15, I.w / 2 + .15, -dl / 2, dl / 2, uteQ - g0 - .4, (uteQ - g0) + (pl.gulv - uteQ) * (1 - (j + .5) / n), [.62, .62, .6], 'betong']); }
     // møblene, med skygge under og teppe under salongbordet
     // (runde 12) høyballene og traktoren i låven tegnes avrundet av spill/lave3d.js (Lave3d.tegner) – her bare skyggen under dem
     const låvenTegner = !!(window.Lave3d && Lave3d.tegner && Lave3d.slag(pl) === 'låve');
