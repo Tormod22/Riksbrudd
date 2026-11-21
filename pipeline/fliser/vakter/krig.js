@@ -389,7 +389,45 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   const ok13 = d13.uten || (!d13.feil && d13.ettTall && d13.forsvar !== false && d13.sendtSpeider === false && d13.speidFare && d13.speidKnapp !== false && d13.ikkeForeslått && d13.speid && d13.leirFare && d13.tall
     && d13.troppTall !== false && d13.forkl !== false && d13.leirTall !== false && d13.tankbil && d13.tankbilLukket && d13.scenario !== false && d13.region !== false && d13.tilbake);
   const tekst13 = `RUNDE 13: ${d13.uten ? 'ikke prøvd' : `ett tall ${d13.ettTall}, forsvaret i Neste trekk ${d13.forsvar}, speidere advares ${d13.speidFare}/${d13.speidKnapp}, «når heller ikke fram» ${d13.ikkeForeslått}, speid og meld stopper før ${d13.speid}, leiren uten vakt ${d13.leirFare}, falne/sårede trukket fra ${d13.tall}/${d13.troppTall}, tegnforklaring ${d13.forkl}, lagtall uten deg ${d13.leirTall}, tankbilvarsel ${d13.tankbil}/${d13.tankbilLukket}, scenariet ${d13.scenario}, regionen ${d13.region}, satt tilbake ${d13.tilbake}`}${d13.feil ? ' FEIL ' + d13.feil : ''} · `;
-  Object.assign(d, { r4: d4, r5: d5, r6: d6, r7: d7, r8: d8, r12: d12, r13: d13 });
+  // RUNDE 14 (kritiker I og J): scenariet navngir byen og har ring/panel, telleren 24 t = 1,0 og nullstilles ikke av ukjent eier, tapt by
+  // gir loggen, varselet viser forsvaret i mann og aldri «tar stedet» mot et større forsvar (rød Send), laget ved et forsvart sted sier hvorfor,
+  // lag på marsj er ikke garnison, speiderbilen kan velges
+  const d14 = await pg.evaluate(async () => {
+    const ut = {}; if (!window.ScenarioSpill || !window.StrategiSpill || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted || !INFRA.tettsted.length) return { uten: true };
+    const S = OppstartSpill.tilstand(), regler0 = S.regler, tid0 = tid, ant0 = ENHETER.length, by = INFRA.tettsted[0], id = by.e.id, T0 = TETTSTEDER.has(id) ? { ...TETTSTEDER.get(id) } : null, logg0 = loggLinjer.length;
+    const sp0 = localStorage.getItem('riksbrudd-spillform'), sc0 = ScenarioSpill.tilstand() ? JSON.stringify(ScenarioSpill.tilstand().sc) : null, test0 = [ScenarioSpill.test, StrategiSpill.test], åpen0 = StrategiSpill.erÅpen();
+    const mx = (by.bb[0] + by.bb[2]) / 2, my = (by.bb[1] + by.bb[3]) / 2, nye = [];
+    try {
+      S.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: 'hold' }; ScenarioSpill.settRegler(); StrategiSpill.test = true;
+      if (ScenarioSpill.tilstand()) ScenarioSpill.tilstand().sc = {};
+      TETTSTEDER.set(id, { eier: 'rød', inntar: null });
+      for (let i = 0; i < 3; i++) { const f = nyttLag('Vakt14 rød ' + i, mx + i * 30, my, 'rød'); ENHETER.push(f); nye.push(f); }
+      const sc = ScenarioSpill.scenario(); ut.navn = !!sc && sc.tekst.includes(by.e.navn) && /Kystalliansens|fiendens|\d+ km/.test(sc.tekst);
+      ut.ring = typeof SCENARIO_BY === 'function' && String(SCENARIO_BY()) === String(id);
+      StrategiSpill.åpne(); StrategiSpill.velg(id); await new Promise(r => setTimeout(r, 50));
+      const boks = document.getElementById('krigscenario'); ut.boks = !!boks && boks.textContent.includes(by.e.navn);
+      const rad = document.querySelector(`#krig [data-trekk="${id}"]`); ut.forsvarMann = !!rad && /Forsvar: ca\. \d+ mann/.test(rad.textContent);
+      const blå = nyttLag('Vakt14 blå', mx + 3000, my, 'blå'); blå.menn.length = 4; ENHETER.push(blå); nye.push(blå);
+      const B = StrategiSpill.område().find(q => q.id === id), fa = StrategiSpill.farer(B, [blå], { minst: 3, mann: 5, eier: 'rød', by: B });
+      ut.ikkeTar = fa.length > 0 && !fa.some(f => /tar stedet/.test(f.tekst)) && fa.some(f => f.id === 'svak');
+      // laget ved byen: grunnen i loggen
+      blå.x = mx + 150; blå.y = my + 80; blå.sti = null; const g = StrategiSpill.hvorforIkkeTar(blå, B); ut.hvorfor = !!g && /holdes av 3 lag/.test(g);
+      // telleren: 24 t = 1,0; ukjent eier nullstiller ikke; tapt gir loggen
+      TETTSTEDER.set(id, { eier: 'blå', inntar: null }); const tA = tid; ScenarioSpill.scenarioSteg(); tid = tA + 1440;
+      ut.teller = /1,0 av 3 døgn/.test(ScenarioSpill.scenario().tekst);
+      TETTSTEDER.delete(id); ScenarioSpill.scenario(); ut.omlast = ScenarioSpill.tilstand().sc.holdtFra != null;
+      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); const ScS = window.SPILLREGLER; ScenarioSpill.test = true; ScenarioSpill.scenarioSteg();
+      ut.tapt = loggLinjer.slice(0, 6).some(l => /Scenariet: .+ er tapt – telleren starter på nytt/.test(l));
+    } catch (e) { ut.feil = e.message; }
+    finally {
+      for (const f of nye) { const i = ENHETER.indexOf(f); if (i >= 0) ENHETER.splice(i, 1); }
+      if (T0) TETTSTEDER.set(id, T0); else TETTSTEDER.delete(id); tid = tid0; S.regler = regler0; ScenarioSpill.settRegler();
+      if (ScenarioSpill.tilstand() && sc0 !== null) ScenarioSpill.tilstand().sc = JSON.parse(sc0); if (sp0 === null) localStorage.removeItem('riksbrudd-spillform'); else localStorage.setItem('riksbrudd-spillform', sp0);
+      [ScenarioSpill.test, StrategiSpill.test] = test0; if (!åpen0) StrategiSpill.lukk(); skitten = true; }
+    return ut; });
+  const ok14 = d14.uten || (!d14.feil && d14.navn && d14.ring && d14.boks && d14.forsvarMann && d14.ikkeTar && d14.hvorfor && d14.teller && d14.omlast && d14.tapt);
+  const tekst14 = `RUNDE 14: ${d14.uten ? 'ikke prøvd' : `byen navngis ${d14.navn}/${d14.boks}, ring ${d14.ring}, forsvar i mann ${d14.forsvarMann}, aldri «tar stedet» ${d14.ikkeTar}, laget sier hvorfor ${d14.hvorfor}, 24 t = 1,0 ${d14.teller}, omlasting nullstiller ikke ${d14.omlast}, tapt i loggen ${d14.tapt}${d14.feil ? ', FEIL ' + d14.feil : ''}`} · `;
+  Object.assign(d, { r4: d4, r5: d5, r6: d6, r7: d7, r8: d8, r12: d12, r13: d13, r14: d14 });
   const ok6 = d6.uten || (!d6.feil && d6.i3d !== false && (d6.ettLag === undefined || (d6.ettLag && d6.treLag && d6.trenger && d6.boks && d6.entall)) && d6.tidlig && d6.fred && (d6.anslag === undefined || (d6.anslag && d6.underIld && d6.lagretSatt && d6.gjenopprett)));
   const tekst6 = `RUNDE 6: storby med ett lag tatt: ${d6.ettLag === false ? 'JA (feil)' : 'nei'}, med tre lag: ${d6.treLag}, «${d6.krav}», boksen ${d6.boks}, entall ${d6.entall}, ingen vinner dag 1: ${d6.tidlig}, fred/lagtak ${d6.fred}, banner med anslag ${d6.anslag}, under ild ${d6.underIld}, forsvaret lagres ${d6.lagretSatt}/${d6.gjenopprett}${d6.feil ? ' FEIL ' + d6.feil : ''} · `;
   const ok4 = !d4.feil && d4.dekning < .7 && Math.abs(d4.dekningAv - 1) < 1e-9 && d4.dekningTekst && d4.bytt && (d4.byttEgne === undefined || (d4.byttEgne && d4.arbeid && d4.ikkeEnnå && d4.spør && d4.forslag)) && d4.lagring && d4.krig3d && d4.ryddet && (d4.svarer === undefined || (d4.svarer && d4.ikkeUtenGrunn));
@@ -398,5 +436,5 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
   const tekst4 = ` · RUNDE 4: dekning bak egen brakke ×${(d4.dekning || 0).toFixed(2)}, bytte ${!!d4.bytt}/${d4.byttEgne}, fanger i arbeid ${d4.arbeid}, rekruttering ${d4.spør}, forslag om bytte ${d4.forslag}, svarer kjøretøy som skyter ${d4.svarer}, lagring ${d4.lagring}${d4.feil ? ' FEIL ' + d4.feil : ''}`;
   const ok5 = d5.uten || (!d5.feil && (!d5.skjult || (d5.meldt && d5.skuddMeldt === 0 && d5.skuddNabo > 0)) && (d5.pakket === undefined || (d5.pakket && d5.settTilbake && d5.marsjIgjen)) && (d5.stripe === undefined || (d5.stripe && d5.visIgjen && d5.høyStripe < 120)));
   const tekst5 = ` · RUNDE 5: stridsvogna skyter på et meldt mål den ikke ser: ${d5.skuddMeldt === 0 ? 'nei' : d5.skuddMeldt} (meldt: ${d5.meldt}), med et eget lag ved som ser det: ${d5.skuddNabo}${d5.skjult === false ? ' (fant ikke skjult punkt)' : ''}, fienden lagres («sist sett» ${d5.settTilbake}, marsjen fortsetter ${d5.marsjIgjen}), krigskartet kan skjules: ${d5.stripe === undefined ? 'ikke prøvd (ingen tettsteder)' : d5.stripe && d5.visIgjen ? 'ja (' + d5.høyStripe + ' px)' : 'NEI'}${d5.feil ? ' FEIL ' + d5.feil : ''}`;
-  d.deler = { ok, ok4, ok5, ok6, ok7, ok8, ok12, ok13 }; return { ok: ok && ok4 && ok5 && ok6 && ok7 && ok8 && ok12 && ok13, tekst: tekst13 + tekst12 + tekst8 + tekst7 + tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
+  d.deler = { ok, ok4, ok5, ok6, ok7, ok8, ok12, ok13, ok14 }; return { ok: ok && ok4 && ok5 && ok6 && ok7 && ok8 && ok12 && ok13 && ok14, tekst: tekst14 + tekst13 + tekst12 + tekst8 + tekst7 + tekst6 + tekst5.slice(3) + tekst4 + ' · ' + `ild i ryggen ×${(d.flanke || 0).toFixed(2)} (av i testene: ×${(d.av || 0).toFixed(2)}), laget snur seg: ${d.snudd}, to sårede gir fart ×${(d.fart || 0).toFixed(2)}, natt gir sikt ×${(d.natt || 0).toFixed(2)}, røyk ×${(d.røyk || 0).toFixed(2)}, knust lag ga seg: ${d.gaSeg}, fanger levert og avhørt: ${d.levert && d.avhørt}, etterretning: ${d.etter}, våpenhvile: ${d.fred && d.fredIld && d.brutt}, ${d.fører}, ${d.panel} tiltak, fienden lagres: ${d.lagret}, bak ekte hus ×${(d.hus || 0).toFixed(2)}, eget lag gir seg bare når valgt: ${d.holdt && d.egetGaSeg}, røvere som trekker seg unna avslutter bølgen: ${d.bølgeOver}`, data: d };
 } };

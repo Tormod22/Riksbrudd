@@ -116,7 +116,7 @@
       if (e && e !== 'blå' && f.side === e && ref && G.inni(ref, f.x, f.y)) { anslag += st; lagA++; } }
     const v = vern(by), vm = v && v.mann > 0 ? v.mann : 0, a = anslag ? Math.max(5, Math.round(anslag / 5) * 5) : 0;
     return { mann: Math.round(sett + a + vm), sett: Math.round(sett), lagSett, anslag: a, lagA, vern: vm, eier: e }; }
-  function forsvarTekst(k) { const d = []; if (k.vern) d.push(`bygdevern ${k.vern} mann`); if (k.sett) d.push(`${k.lagSett === 1 ? '1 lag' : k.lagSett + ' lag'} sett (ca. ${k.sett} mann)`);
+  function forsvarTekst(k) { const d = []; if (k.vern) d.push(`bygdevernet: ${k.vern} mann`); if (k.sett) d.push(`${k.lagSett === 1 ? '1 lag' : k.lagSett + ' lag'} sett (ca. ${k.sett} mann)`);
     if (k.anslag) d.push(`garnison ${k.lagA === 1 ? '1 lag' : k.lagA + ' lag'}, anslått ca. ${k.anslag} mann`); return d.join(' + '); }
   // fredstiden: motstanderne slåss ikke om tettsteder før den er over (spill/fraksjoner-visning.js, AI.regionFred)
   const fredSlutt = () => { if (!window.Fraksjoner || !Fraksjoner.fredDøgn || !window.AI || AI.på === false || (navigator.webdriver && !AI.test && !api.test)) return 0; const f = (window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende) || 1; return Fraksjoner.fredDøgn(f) * 1440; };
