@@ -39,7 +39,7 @@ Reglene i `spill/kyst.js` (uten DOM, `Kyst.KAI` = alle tallene, Claudes forslag)
   stige 22 %, lykt 30 %, to fendere (ikke på trefront). Småbåthavner: steinsetting (fire steiner per kystpunkt fra 1,5 m på land til 3 m ut).
   Ferjeterminaler med egen ferjekai (infra3d.js) hoppes over. Tak: PC 900 biter / 1400 steiner, mobil 320 / 500.
 - `Kyst.påKai(biter, x, y)`: ligger punktet på et kaidekke (naust, brygger og båter flyttes ikke oppå kaia).
-- `kyst3d.js kaiPlass(u, kv, ferjekaier)` (i bygg3d-kroken, FØR båtene): dekket går inn til 10 m (30 m i tettsted) og stopper 1,5 m før en
+- `kyst3d.js kaiPlass(u, kv, ferjekaier)` (i bygg3d-kroken, FØR båtene): dekket går inn til 10 m (20 m i tettsted) og stopper 1,5 m før en
   veg eller et hus (vegene er alt lagt av liv3d.js); dybden jevnes ut (minste innen 18 m). Høydegitteret u.H HEVES under dekket (til
   0,12 m under dekket, aldri senket, ikke inntil hus) og SENKES til −0,4 moh. de første 3 m foran fronten – terrenget skrår ikke lenger ned
   i sjøen der det er kai. u.nett nullstilles så nettHoyde lages på nytt.

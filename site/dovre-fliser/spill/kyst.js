@@ -96,7 +96,7 @@
     rute: 12,                      // kystpunktene ligger i et rutenett på 12 m (som båtene over)
     bit: 16,                       // én kaibit er 16 m lang langs kysten (overlapper naboen, så det ikke blir hull på skrå)
     dybde: 10,                     // dekket går 10 m inn på land fra fronten (kyst3d.js stopper det før en veg eller et hus) …
-    dybdeBy: 30,                   // … og i et tettsted inntil 30 m – byhavnene er brolagt helt bort til gata (Skagenkaien, Bryggen)
+    dybdeBy: 20,                   // … og i et tettsted inntil 20 m – byhavnene er brolagt helt bort til gata (Skagenkaien, Bryggen)
     front: 4.5,                    // fronten går 4,5 m ned fra dekket (under vannflaten)
     høyde: [1.3, 2.6],             // dekket ligger 1,3–2,6 moh. (Skagenkaien ca. 1,5–2 m over vannet)
     bratt: 3.5,                    // stiger terrenget mer enn 3,5 m over dekket rett bak fronten, er det berg – ingen kai der

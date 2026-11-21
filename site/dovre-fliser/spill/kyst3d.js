@@ -52,7 +52,7 @@
 
   // ---------- KAIENE (runde 15) ----------
   // Kaipunktene fra spill/kaier.js i utsnittet -> Kyst.plasserKaiG. Hver kaibit får dybden (hvor langt dekket går inn på land): det
-  // stopper før en veg eller et hus (vegbanen og husene ligger alt på terrenget), minst 2,2 m (betongkanten). Så heves høydegitteret
+  // stopper før en veg, et hus eller der bakken stiger over dekket (vegbanen og husene ligger alt på terrenget), minst 2,2 m (betongkanten). Så heves høydegitteret
   // u.H under dekket til like under dekkets høyde, og senkes like foran fronten, så terrenget ikke skrår ned i sjøen der det er kai.
   const KANT = 2.2;
   async function kaiPlass(u, kv, ferjeKaier) {
@@ -73,7 +73,7 @@
       if ((++n & 31) === 0 && børPuste()) await pust();
       const c = Math.cos(b.a), s = Math.sin(b.a), maks = b.by ? Kyst.KAI.dybdeBy : Kyst.KAI.dybde; let d = maks;
       for (let t = KANT; t <= maks; t += 1) { let stopp = false;
-        for (const q of [-5, 0, 5]) { const x = b.x - c * t - s * q, y = b.y - s * t + c * q; if (veg(x, y) || hus(x, y)) { stopp = true; break; } }
+        for (const q of [-5, 0, 5]) { const x = b.x - c * t - s * q, y = b.y - s * t + c * q; if (veg(x, y) || hus(x, y) || kv.moh(x, y) > b.z + .1) { stopp = true; break; } }
         if (stopp) { d = Math.max(KANT, t - .8); break; } }
       b.d = d;
       // en veg ut i sjøen (bru, rampe, kulvert): ingen kai her
@@ -92,10 +92,12 @@
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
         const x = -u.S + i * st, y = u.S - j * st, dx = x - b.x, dy = y - b.y, l = dx * c + dy * s, q = -dx * s + dy * c; if (Math.abs(q) > B2) continue;
         const k = j * N + i;
-        if (l <= 0 && l >= -b.d) { const z = b.z - .12; if (H[k] < z && !hus(x, y)) { H[k] = z; endret++; } }
+        // de nærmeste punktene (inntil én rute bak fronten, men under dekket) og 3 m ut senkes til −0,4 moh.: bakken mellom dette punktet
+        // og det neste skrår da under dekket, ikke foran fronten (gitteret har 2–8 m mellom punktene)
+        if (l > -Math.min(st, b.d) && l <= 3 && (l <= 0 || kv.sjø(x, y))) { if (H[k] > -.4) { H[k] = -.4; endret++; } }
+        else if (l <= 0 && l >= -b.d) { const z = b.z - .12; if (H[k] < z && !hus(x, y)) { H[k] = z; endret++; } }
         // bak dekket skrår bakken ned igjen over 10 m (12 cm per meter), så dekket ikke står som en heller oppå bakken – men ikke under en veg
         else if (l < -b.d && l >= -b.d - 10) { const z = b.z - .12 - (-b.d - l) * .12; if (H[k] < z && !hus(x, y) && !veg(x, y)) { H[k] = z; endret++; } }
-        else if (l > 0 && l <= 3 && kv.sjø(x, y) && H[k] > -.4) { H[k] = -.4; endret++; }
       }
     }
     // nettHoyde sitt nett lages på nytt fra det endrede gitteret

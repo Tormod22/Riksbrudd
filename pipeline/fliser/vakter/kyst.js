@@ -4,7 +4,7 @@
 // dekket og senker det rett foran fronten (terrenget skrår ikke ned i sjøen der det er kai), og dekket stopper før en veg.
 // Alt settes tilbake (kaidataene).
 module.exports = { navn: 'kysten og kaiene', kjør: async (pg, profil) => {
-  const data = await pg.evaluate(async () => {
+  const data = await pg.evaluate(async (profil) => {
     const o = { feil: [] }, ok = (b, t) => { if (!b) o.feil.push(t); };
     if (!window.Kyst || !Kyst.plasserKai || !window.Kyst3d || !Kyst3d.kaiPlass || !window.KaierSpill) { o.feil.push('modulene mangler'); return o; }
     const K0 = KaierSpill.data();
@@ -28,10 +28,13 @@ module.exports = { navn: 'kysten og kaiene', kjør: async (pg, profil) => {
       const kai = await Kyst3d.kaiPlass(u, kv, []);
       ok(kai && kai.biter.length >= 6, '3D: kaibiter i prøveutsnittet: ' + (kai ? kai.biter.length : 0));
       if (kai) { o.endret = kai.endret;
-        let under = 0, foran = 0, n = 0;
-        for (const b of kai.biter) { const c = Math.cos(b.a), s = Math.sin(b.a), hv = (l) => kv.moh(b.x + c * l, b.y + s * l);
-          n++; if (hv(-1.5) < b.z - .5) under++; if (hv(1.5) > 0) foran++; }
-        ok(n && under === 0, `3D: terrenget under dekket er hevet (${under} av ${n} for lavt)`);
+        // bilineært som hoyde3d: bakken under dekket stikker ikke opp gjennom det, og 1,5 m foran fronten er den under vannflaten
+        const bil = (x, y) => { const fx = (x + S) / steg, fy = (S - y) / steg, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j, k = j * N + i;
+          return (H[k] * (1 - a) + H[k + 1] * a) * (1 - b) + (H[k + N] * (1 - a) + H[k + N + 1] * a) * b; };
+        let gjennom = 0, foran = 0, n = 0;
+        for (const b of kai.biter) { const c = Math.cos(b.a), s = Math.sin(b.a), hv = l => bil(b.x + c * l, b.y + s * l);
+          n++; for (let l = -b.d + .5; l <= 0; l += .5) if (hv(l) > b.z + .01) { gjennom++; break; } if (hv(1.5) > .05) foran++; }
+        ok(n && gjennom === 0, `3D: bakken stikker ikke opp gjennom dekket (${gjennom} av ${n})`);
         ok(n && foran === 0, `3D: terrenget rett foran fronten er under vannflaten (${foran} av ${n} over)`);
         // dekket stopper før vegen (8 m inn) der vegen går
         const vegBiter = kai.biter.filter(b => b.y > 70 && b.y < 130); o.vegDybde = vegBiter.map(b => b.d);
@@ -41,6 +44,6 @@ module.exports = { navn: 'kysten og kaiene', kjør: async (pg, profil) => {
     } catch (e) { o.feil.push('unntak: ' + e.message); }
     finally { KaierSpill.settData(K0); }
     return o;
-  });
+  }, profil);
   return { ok: !data.feil.length, tekst: data.feil.length ? data.feil.join('; ') : `kaier: ${data.biter} biter, gitter endret ${data.endret} punkter`, data };
 } };
