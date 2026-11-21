@@ -55,7 +55,7 @@
     const rad = N / 20; let s = 1;
     const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
     for (let r = 0; r < 20; r++) { let x = (r % 2) * rad * .5 - rad;
-      while (x < N + rad) { const w = rad * (.75 + rnd() * .5), l = 118 + rnd() * 40, t = rnd() * 14 - 7;
+      while (x < N + rad) { const w = rad * (.75 + rnd() * .5), l = 104 + rnd() * 34, t = rnd() * 12 - 6;
         g.fillStyle = `rgb(${l + t + 6},${l + t},${l + t - 10})`;
         const y0 = r * rad + 2, h = rad - 4; g.beginPath(); const rr = 4;
         g.moveTo(x + rr, y0); g.lineTo(x + w - 2 - rr, y0); g.quadraticCurveTo(x + w - 2, y0, x + w - 2, y0 + rr); g.lineTo(x + w - 2, y0 + h - rr); g.quadraticCurveTo(x + w - 2, y0 + h, x + w - 2 - rr, y0 + h);
@@ -76,7 +76,8 @@
     for (const g of gater) { const m = g.m, o = pos.length / 3;
       for (let i = 0; i < m.length; i++) { const p = m[i];
         for (const q of Q) { const d = q > 0 ? q * g.b.vl[i] : q * g.b.vh[i], x = p.x + p.nx * d, y = p.y + p.ny * d; pos.push(x, y, zf(x, y)); uv.push(p.t / TEX_M, d / TEX_M); } }
-      for (let i = 1; i < m.length; i++) for (let j = 0; j < 4; j++) { const a = o + (i - 1) * 5 + j, b = a + 1, c = a + 5, d = c + 1; idx.push(a, c, b, b, c, d); } }
+      // (rekkefølgen gir trekanter som vender opp – ellers ble flaten skjult sett ovenfra)
+      for (let i = 1; i < m.length; i++) for (let j = 0; j < 4; j++) { const a = o + (i - 1) * 5 + j, b = a + 1, c = a + 5, d = c + 1; idx.push(a, b, c, b, d, c); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
     return geo;
   }
@@ -107,5 +108,6 @@
     const par = new THREE.ConeGeometry(1.4, .5, 8); par.rotateX(Math.PI / 2); par.translate(0, 0, 2.45);
     instans(R, par, new THREE.MeshLambertMaterial({ color: 0xe4ddd0, side: THREE.DoubleSide }), D.bord);
   });
+  G3.nett = () => mesh.map(m => ({ type: m.type, n: m.count || (m.geometry.index ? m.geometry.index.count / 3 : 0), synlig: m.visible, iScene: !!m.parent }));
   window.Gagate3d = G3;
 })();
