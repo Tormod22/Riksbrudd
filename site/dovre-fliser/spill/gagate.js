@@ -19,7 +19,8 @@
 (function (rot) {
   // Alle tallene her er Claudes forslag.
   const REGLER = {
-    TETT: 40, VEGG: 9, ANDEL: .6, SMAL: 15, LENGDE: [25, 700],
+    // (21. nov) strammet inn etter første prøve i Stavanger: 108 gatebiter ble gågater, også smale bilgater. Strengere til g = 2 kommer i dataene.
+    TETT: 60, VEGG: 7, ANDEL: .8, SMAL: 12, LENGDE: [40, 450],
     // avstanden mellom målepunktene langs gata og lengste stråle mot veggen
     STEG: 4, MAKS: 14,
     // flaten: aldri smalere enn dette på hver side av midten, og så nær veggen (m)

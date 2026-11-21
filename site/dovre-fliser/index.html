@@ -252,7 +252,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=f95b50741d');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=1efa792aed');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -3629,7 +3629,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7f6e8f0460"></script>
 <script src="/dovre-fliser/spill/parkering.js?v=7b8d0b5227"></script>
 <script src="/dovre-fliser/spill/parkering3d.js?v=0297e77c40"></script>
-<script src="/dovre-fliser/spill/gagate.js?v=602891135f"></script>
+<script src="/dovre-fliser/spill/gagate.js?v=a462959446"></script>
 <script src="/dovre-fliser/spill/gagate3d.js?v=fcb7f8654f"></script>
 <script src="/dovre-fliser/spill/nvebiter.js?v=250ea66d28"></script>
 <script src="/dovre-fliser/spill/bekker.js?v=d369e11659"></script>
