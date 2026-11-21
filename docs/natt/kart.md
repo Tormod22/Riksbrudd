@@ -133,3 +133,68 @@ Kritiker E (liggende telefon, Rogaland) og F (PC, Svorkmo). Alle nye tall er Cla
 - Klyngen langt ute kan ikke trykkes på (trykk på bygg virker som før bare nær). Gjerder og veger i leiren tegnes ikke i klyngen.
 - Skriftbyttet gjelder bare hovedkartet i 2D – navn i 3D-overlegget er som før.
 - Krigskartet utenfor området (øst for sirkelen) er fortsatt mørkere enn inne i det.
+
+## Runde 13 (21. nov, kritikk G/H) – grenen claude/natt18-spillform
+
+Kritiker G (liggende telefon, Lærdal på /norge) og H (PC, Rogaland). Alle nye tall er Claudes forslag og står i REGLER/konstanter som nevnt.
+
+1. **Navn oppå hverandre ved leiren – RETTET.** `Etikett.samleSted(S)` (spill/etikett.js): egne lag og kjøretøy med merket innen
+   `REGLER.samle.r` = 56 punkter fra leiren blir én lapp «Leiren: 3 lag, 2 kjøretøy ›» `samle.dy` = 47 punkter under leiren (gull, viktighet som
+   egne lag), når minst `samle.min` = 2 står der. Det valgte laget og fiender har alltid sitt eget navn. Regelen `Etikett.samle(lapper, S)` og
+   `Etikett.samleTekst(n)` er rene (test_etikett.js); `Etikett.samling()` gir lappen i siste ramme. spill/kartlapper.js setter stedet hver ramme
+   fra 1,6 m per punkt til NAVN_UTE (14; lenger ute står tallet bak leirens navn som før), og i 3D (KROKER.tegn3d, uten «›»). Trykk på lappen
+   (KROKER.trykk, lagt først) zoomer inn på leiren til 1,2 m per punkt (`KartLapper.SAMLE`). Prøvd: Dovre (mobil 3/8/12 m), /norge Lærdal, Rogaland
+   og 3D ovenfra – 0 overlapp.
+2. **Brakka nesten usynlig på 100 m-målestokk – RETTET.** spill/leir2d.js: små bygg forstørres om midten til minst `REGLER.flat` 8 × 12,5
+   punkter (høyst ×2) fra 0,6 m per punkt (`tegneM`, `forstørr`; ikke skissen, ikke mens du bygger). Med flate farger (fra 1,2 m per punkt) og i
+   klyngen er taket blandet med leirens farge (`leirTak`, `REGLER.leirTak` 0,6) og bygget har mørk kant under den lyse (`mørkKant` 2,4).
+   Klyngens minstemål er 6,5 × 10,5 (før 5 × 8,5). Hogstfeltene og ruinene (ressurser-visning.js) tegnes nå FØRST (KROKER.tegn.unshift), under
+   byggene – den stiplede sirkelen i kritikerens bilde var et hogstfelt (hogstlaget begynner ofte rett ved leiren). Hurtiglageret i bygg() regner
+   med forstørringen.
+3. **Velge bygg zoomet til 20 m – RETTET.** spill/byggevisning.js: `KAMERA = { nærmest: .5, lengst: .9, godNok: 1.2 }` (før 0,2–0,6 og 0,8) –
+   kartet går til ca. 50–100 m-målestokk, og står du nærmere enn 1,2 m per punkt med leiren i bildet, beholdes zoomen. test_byggevisning.js.
+4. **Uskarpt og pikselert i leirvalget – RETTET.** index.html (tegnReserve): en reserve to eller flere nivåer opp tegnes fra en glattet kopi
+   (`flisGlatt`: dobbel størrelse, uskarp 1,6 punkter, høyst 14 kopier – `GLATT`) med høy kvalitet. Ingen ruter og ingen synlige skjøter
+   inne i den grove flisen (bilder s4-uten/med). Den myke kanten mot ferdige fliser er som før.
+5. **Diamantene uten navn – RETTET.** spill/spillet-visning.js (oppdragsmerkene): navnet sto bare under 6 m per punkt (derfor «etter
+   omlasting» – kameraet sto lenger ute). Nå alltid, gjennom Etikett (lav viktighet lenger ute, så det bare skjules når det ikke er plass), og
+   ruta har en lys kjerne og lysere kant. Prøvd før og etter omlasting.
+6. **Leirvalget – RETTET.** spill/leirvalg.js: over tregrensen står «skog: bare nede i dalen (innen 2,5 km)» (eller ingenting når det ikke er
+   skog) – aldri «skog: mye» (test_leirvalg.js). index.html: mens du velger leirplass (ingen leir ennå, `velgerLeir()`) vises oljeinnretninger,
+   felt og rør bare nærmere enn `LEIRVALG_OLJE` = 300 m per punkt (500 km-målestokk på telefon er ca. 5000). Ikke i testene (webdriver) uten
+   INFRA_FOKUS.test.
+7. **Striper i lia – ÅRSAK FUNNET OG RETTET.** Det var høydekurvene: i Lærdal er lia ca. 45°, så 5 m-kurvene sto 4–5 punkter fra hverandre
+   (bilder s7b: med kurver striper, uten kurver glatt; høydene er glatte – ingen terrasser i dataene, skyggen er glatt). kartflis.js `koter`:
+   der kurvene står tettere enn `KOTE_TETT.svak` = 9 flisepunkter tegnes de svakere, under `bort` = 5 bare hver femte (og tynt), under `tykk` =
+   2,2 (stup) ingen. test_koter.js (ny).
+8. **Vegnettet på /rogaland – DELVIS.** spill/kjoretoy-visning.js: på et mindre spillkart (window.SPILLOMRÅDE) beholdes bare vegene i området
+   ± 20 km, også på PC (`VEG_TLF.område`, `VEG_TLF.boks`): 240 775 vegstrekninger i stedet for 2,03 mill. (mye mindre minne), og meldingen sier
+   «Laster vegnettet (24 MB) – bare vegene i Rogaland beholdes …». NEDLASTINGEN er fortsatt hele fila (24 MB): den er én gzip-fil for hele
+   landet. Svarene fra /api/kart har `immutable` i ett år, så nettleseren bør ha bitene lagret etter første gang. Det som må til for bare
+   fylket: vegnett.py må skrive én fil per fylke (eller per blokk med et manifest), vegnett.yml må lage en ny release, og lastVegnett må hente
+   fila for SPILLOMRÅDE. Lastingen ble ikke satt i gang av seg selv de første 25 s på /rogaland (PC, tempo 0) – den kommer når fienden vil
+   kjøre (fraksjoner-visning.js), når kartet er zoomet langt ut / regionpanelet er åpent (region-visning.js), eller ved første ordre.
+
+### Filer (runde 13)
+- `spill/etikett.js` – samleSted/samle/samleTekst/samling, REGLER.samle. Test: test_etikett.js (+4).
+- `spill/kartlapper.js` – samlelappen i 2D og 3D, trykk, KartLapper.SAMLE/hvem.
+- `spill/leir2d.js` – leirTak, forstørr, tegneM, REGLER.leirTak/mørkKant/flat, klynge.kort/lang. Test: test_leir2d.js (+4).
+- `spill/ressurser-visning.js` – feltene i egen krok først i KROKER.tegn.
+- `spill/leirvalg.js` – skogteksten over tregrensen. Test: test_leirvalg.js (+2).
+- `kartflis.js` – KOTE_TETT, koteAvstand, koter. Test: test_koter.js (ny).
+- Vakt: `pipeline/fliser/vakter/kart.js` del 8 (samlelapp på 1 km uten overlapp og trykk zoomer inn; brakka synlig på 1,3 m per punkt med
+  hogstfelt og forstørret; kurvene i bratt li; olje i leirvalget; vegnettets boks; glattet reserve). Selvtest: med samle.min 99, flat.maks 1 og
+  KOTE_TETT 0 feiler tre deler. Rekkefølgen hogstfelt/bygg fanges IKKE (fargen gjennom feltet er nesten lik).
+
+### Endret i fellesfiler (runde 13)
+- `index.html`: (1) tegnReserve + ny `GLATT`/`flisGlatt` rett over (flistegningen); (2) `LEIRVALG_OLJE`, `velgerLeir()` og en løkke som pakker
+  VISES.olje/felt/ror, rett under løkka for bru/tunnel/kraft (etter KAI_VIKTIG). Ingen skript-tagger lagt til.
+- `spill/byggevisning.js`: KAMERA-konstantene i ramme() (og i api). test_byggevisning.js oppdatert.
+- `spill/spillet-visning.js`: oppdragsmerkene i kartkroken (én blokk).
+- `spill/kjoretoy-visning.js`: VEG_TLF.område/boks og meldingene i lastVegnett.
+
+### Ikke gjort / svakheter (runde 13)
+- Vegnettet lastes fortsatt som hele landet (se punkt 8).
+- Samlelappen i 3D kan ikke trykkes på.
+- Bygg nær leiren er litt større enn i virkeligheten fra 0,6 m per punkt – trykk på et bygg treffer fortsatt det ekte fotavtrykket.
+- Topplinja viser «OLJE 0 t» i steg 3 (ikke min pakke).
