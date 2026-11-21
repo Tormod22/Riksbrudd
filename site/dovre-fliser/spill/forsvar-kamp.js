@@ -207,7 +207,9 @@
   const flyttet = new Set();
   KROKER.sim.push(() => { if (!auto()) return; const L = leir(); if (!L) return;
     for (const e of ENHETER) { if (!e.raid || e.raid < KV.BØLGE.fra || flyttet.has(e.navn) || !/\.2$/.test(e.navn) || !Number.isFinite(e.startTid) || tid - e.startTid > 1) continue;
-      flyttet.add(e.navn); if (!ENHETER.some(q => q !== e && q.raid === e.raid)) continue;
+      flyttet.add(e.navn);
+      // (bare når lagene starter på samme sted – krig.js sin taktikk «fra to kanter» sprer dem selv)
+      if (!ENHETER.some(q => q !== e && q.raid === e.raid && Math.hypot(q.x - e.x, q.y - e.y) < 300)) continue;
       const a = Math.atan2(e.y - L.y, e.x - L.x) + (Math.random() < .5 ? -1 : 1) * KV.BØLGE.vinkel, r = Math.hypot(e.x - L.x, e.y - L.y), x = L.x + Math.cos(a) * r, y = L.y + Math.sin(a) * r;
       // ikke i vann (hoydeVed under 1 moh. regnes som sjø/vann her) – da blir laget der det var
       const h = typeof hoydeVed === 'function' ? hoydeVed(x, y) : NaN; if (!(h > 1)) continue;
