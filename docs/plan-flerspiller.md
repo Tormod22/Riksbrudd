@@ -32,6 +32,7 @@ over en enkel database), mens grunnmuren for A bygges.
 
 ### M0 – Grunnmur i koden (ingen tjener ennå)
 Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, færre feil).
+
 1. **Kommandoer:** alt spilleren gjør (ordre, bygg, kjøp, folk på oppgaver, kontrakter, valg i morgenmøtet) går gjennom én funksjon
    `kommando(side, { type, … })`. Da kan de samme kommandoene sendes over nettet senere.
 2. **Verden uten nettleser:** simuleringen i `sim(dt)` og krokene den kaller skilles ut i `spill/verden.js`, som kan kjøres i Node
@@ -64,10 +65,10 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 
 ## 4. Teknisk
 - **Vert:** Vercel kan ikke kjøre en tjener som går hele tiden. Alternativer:
-  - **Fly.io / Railway / Render / en liten VPS:** vanlig Node-tjener, samme JavaScript som i dag.
-  - **Cloudflare Durable Objects:** én «verden» per objekt med WebSocket og lagring innebygd. Passer godt, men har egne begrensninger
-    på hvor lenge koden kan regne om gangen – må prøves før den velges.
-  Kostnaden for en liten tjener er trolig fra under 100 til noen hundre kroner i måneden (grovt anslag – sjekkes når verten velges).
+    - **Fly.io / Railway / Render / en liten VPS:** vanlig Node-tjener, samme JavaScript som i dag.
+    - **Cloudflare Durable Objects:** én «verden» per objekt med WebSocket og lagring innebygd. Passer godt, men har egne begrensninger
+      på hvor lenge koden kan regne om gangen – må prøves før den velges.
+- **Pris:** en liten tjener koster trolig fra under 100 til noen hundre kroner i måneden (grovt anslag – sjekkes når verten velges).
 - **Hemmeligheter:** nøkler og passord legges hos verten, aldri i koden. Brukeren har sagt at han ikke vil gi nøkler – derfor må vi
   velge en løsning der han oppretter kontoen selv og legger inn nøkkelen i vertens innstillinger.
 - **Nettrafikk:** bare endringer sendes, og bare det spilleren ser. 3D, trær, hus og vær regnes fortsatt i nettleseren.
