@@ -7,7 +7,7 @@
   const css = document.createElement('style');
   css.textContent = `#psub{ display:flex; flex-wrap:wrap; gap:4px; } #psub .skille{ display:none; }
 #psub .brikke{ background:#241e14; border:1px solid #3a3226; padding:1px 7px; white-space:nowrap; line-height:1.5; }
-#psub .brikke.varsel{ border-color:#8a4a3a; color:#e7b3a3; } #psub .brikke.bra{ border-color:#56703a; color:#cfe0b0; }
+#psub .brikke.lang{ white-space:normal; max-width:100%; } #psub .brikke.varsel{ border-color:#8a4a3a; color:#e7b3a3; } #psub .brikke.bra{ border-color:#56703a; color:#cfe0b0; }
 #pmaal{ display:none; gap:10px; margin:6px 0 2px; } #pmaal.på{ display:flex; } #pmaal div{ flex:1; min-width:0; font-size:12px; color:var(--ink-dim); letter-spacing:.05em; text-transform:uppercase; }
 #pmaal i{ display:block; height:6px; margin-top:2px; background:#2a2318; border:1px solid #3a3226; } #pmaal i b{ display:block; height:100%; background:#7c9a4e; } #pmaal i b.lav{ background:#c9a24a; } #pmaal i b.kritisk{ background:#c0563e; }`;
   document.head.appendChild(css);
@@ -19,7 +19,7 @@
     try {
       if (!sub.querySelector('.brikke') && sub.childNodes.length === 1 && sub.firstChild.nodeType === 3 && sub.textContent.includes(' · ')) {
         const deler = sub.textContent.split(' · '); sub.textContent = '';
-        deler.forEach((t, i) => { const b = document.createElement('span'); b.className = 'brikke' + (VARSEL.test(t) ? ' varsel' : BRA.test(t) && !/uten/.test(t) ? ' bra' : ''); b.textContent = t; sub.appendChild(b);
+        deler.forEach((t, i) => { const b = document.createElement('span'); b.className = 'brikke' + (VARSEL.test(t) ? ' varsel' : BRA.test(t) && !/uten/.test(t) ? ' bra' : '') + (t.length > 36 ? ' lang' : ''); b.textContent = t; sub.appendChild(b);
           if (i < deler.length - 1) { const s = document.createElement('span'); s.className = 'skille'; s.textContent = ' · '; sub.appendChild(s); } });
       }
       // målere for et valgt lag
