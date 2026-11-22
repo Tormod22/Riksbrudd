@@ -64,6 +64,21 @@
       (lue ? `<path d='M11.500 14c0-9 17-9 17 0l-1 1.500h-15z' fill='${jakke}' ${S}/>` : `<path d='M12.300 15c-1-9 16-10 15.500 0-3-4-10-5-15.500 0z' fill='${hår}' ${S}/>`) +
       (skjegg ? `<path d='M13.500 21c1 7 12 7 13 0-3 2-10 2-13 0z' fill='${hår}' ${S} stroke-width='.7'/>` : `<path d='M17.500 22.500c1.500 1 3.500 1 5 0' ${L} stroke-width='.8'/>`) + `<circle cx='17' cy='17.500' r='.9' fill='#1a140a'/><circle cx='23' cy='17.500' r='.9' fill='#1a140a'/></svg>`); }
   const bilde = s => 'data:image/svg+xml,' + encodeURIComponent(s);
-  const Tegninger = { bygg, våpen, person, bilde, har: t => !!BYGG[t], BYGG: Object.keys(BYGG), VÅPEN: Object.keys(VÅPEN) };
+  // Enkel tegning ut fra målene (22. nov: de 66 nye leirbyggene fra modeller-leir2.js fikk ingen tegning, og byggekortet viste
+  // standardhuset). fot = [x0, x1, y0, y1] i meter (fronten mot +x, så bredden sett forfra er y-utstrekningen), h = høyde i meter,
+  // tak = takfarge, form 'sal' = saltak, ellers flatt. Målestokken velges så bygget fyller tegningen.
+  function enkel(o) {
+    const f = o.fot || [-2, 2, -2, 2], bm = Math.max(.3, f[3] - f[2]), hm = Math.max(.3, o.h || 3), salt = o.form === 'sal';
+    const k = Math.min(46 / bm, 30 / (hm * (salt ? 1.45 : 1))), w = Math.max(6, bm * k), h = Math.max(4, hm * k), x = 32 - w / 2, tak = o.tak || '#5a5f58';
+    const vegg = o.vegg || '#7d7a6c', t = salt ? Math.min(12, w * .3) : 0;
+    let svg = salt ? hus(x, w, h, t, vegg, tak) : `<path d='M${x} 39.5v-${h}h${w}v${h}z' fill='${vegg}' ${S}/><path d='M${x - 1} ${39.5 - h}h${w + 2}v2.2h-${w + 2}z' fill='${tak}' ${S}/>`;
+    const liten = bm < 2.5 && hm < 2.5;   // små ting (fat, kasser, skap): ingen dør eller vinduer
+    if (!liten && h >= 10 && w >= 12) svg += dør(32 - 2.5, Math.min(9, h * .6));
+    if (!liten && h >= 14 && w >= 22) svg += vindu(x + 4, 39.5 - h + 5) + vindu(x + w - 9, 39.5 - h + 5);
+    return svg;
+  }
+  // andre moduler kan legge inn tegninger for egne bygg: Tegninger.leggTil(type, () => '<svg-innhold>')
+  const leggTil = (t, fn) => { if (typeof fn === 'function' && !BYGG[t]) BYGG[t] = fn; };
+  const Tegninger = { bygg, våpen, person, bilde, enkel, leggTil, har: t => !!BYGG[t], get BYGG() { return Object.keys(BYGG); }, VÅPEN: Object.keys(VÅPEN) };
   if (typeof module !== 'undefined' && module.exports) module.exports = Tegninger; else rot.Tegninger = Tegninger;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

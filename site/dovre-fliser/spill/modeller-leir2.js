@@ -2034,6 +2034,9 @@
       if (!LB.BYGG[id]) LB.BYGG[id] = Object.assign({ modell: id }, o.bygg);
       if (window.Ikoner && Ikoner.BYGG && !Ikoner.BYGG[id]) Ikoner.BYGG[id] = o.ikon;
       if (window.Leir2d && Leir2d.STIL && !Leir2d.STIL[id] && o.stil) Leir2d.STIL[id] = o.stil;
+      // en enkel tegning til byggekortet ut fra målene og 2D-stilen (tegninger.js), til de får en egen
+      if (window.Tegninger && Tegninger.leggTil && !Tegninger.har(id)) { const st = o.stil || {}, B = LB.BYGG[id];
+        Tegninger.leggTil(id, () => Tegninger.enkel({ fot: B.fot, h: st.h, tak: st.tak, form: st.form })); }
       if (!grupper.has(o.gruppe)) grupper.set(o.gruppe, []); grupper.get(o.gruppe).push(id);
     }
     window.LEIR2_GRUPPER = [...grupper];
