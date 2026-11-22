@@ -3,6 +3,9 @@
 Brukeren: «lag en plan for hvordan vi kan legge til multiplayer». Tidligere besluttet: 1–5 spillere i samme Norge, hver med sitt
 eget private militærselskap (plan-kollaps.md §10, plan-wardogs.md). Alt her er Claudes forslag til brukeren har bestemt noe annet.
 
+**Bestemt av brukeren 22. nov:** det skal være gratis, og foreløpig kjører tjeneren på **spillerens egen PC** (se kapittel 4).
+Senere kan den samme tjeneren flyttes til Cloudflare uten å skrive spillet om.
+
 ## 1. Hvor vi står i dag (målt i koden 22. nov)
 
 | Hva | I dag | Hva det betyr for flerspiller |
@@ -21,12 +24,12 @@ eget private militærselskap (plan-kollaps.md §10, plan-wardogs.md). Alt her er
 
 | Modell | Slik virker det | For | Mot |
 |---|---|---|---|
-| **A. Autoritativ tjener** (anbefalt) | En tjener kjører verden døgnet rundt. Nettleseren sender bare ordre og viser det spilleren får se. | Vanskelig å jukse, verden går mens du er borte (passer «1× er sanntid»), tåka regnes på tjeneren | Simuleringen må skilles ut fra index.html; tjeneren koster litt hver måned |
+| **A. Autoritativ tjener** (valgt) | En tjener kjører verden – foreløpig på spillerens egen PC. Nettleseren sender bare ordre og viser det spilleren får se. | Vanskelig å jukse, verden går mens du er borte (passer «1× er sanntid»), tåka regnes på tjeneren | Simuleringen må skilles ut fra index.html |
 | B. Én spiller er vert | Vertens nettleser kjører verden, de andre kobler seg til (WebRTC). | Ingen tjener som går hele tiden | Verden stopper når verten går; lett å jukse for verten; vanskelig nettverk på mobil |
 | C. Etter tur / postkasse | Hver spiller spiller alene; handlinger mellom spillere (handel, angrep, kontrakter) går via en enkel database. | Enklest, billigst | Ikke ekte samtidig spill; kamper mellom spillere blir «rapporter» |
 
-**Anbefaling:** A, men bygget slik at C kommer først som et billig mellomsteg (handel, meldinger og kontrakter mellom spillere
-over en enkel database), mens grunnmuren for A bygges.
+**Valgt:** A, med tjeneren på spillerens egen PC. C (postkasse for handel, meldinger og kontrakter) kan komme først som et
+mellomsteg; postkassen kan da også ligge på PC-en.
 
 ## 3. Faser
 
@@ -43,16 +46,16 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 6. **Test:** samme kommandoer på samme frø gir nøyaktig samme verden, i Node (`test_verden.js`).
 
 ### M1 – Spillere møtes uten tjener som går hele tiden (billig mellomsteg)
-- En enkel database (for eksempel en liten nøkkel/verdi-tjeneste) holder «postkasser» per selskap.
+- Postkassene per selskap ligger i en fil på vertens PC (eller senere hos Cloudflare).
 - Handel og meldinger mellom spillere, kontrakter fra én spiller til en annen, og vennenes leirer og rykte i kartet.
 - Ingen sanntidskamp ennå. Angrep på en annen spillers leir blir en kamp som regnes ut når den angrepne er innlogget, med rapport.
 
 ### M2 – Første delte verden (2 spillere, tjener)
-- Tjeneren: Node med WebSocket (for eksempel Colyseus eller «ws»), kjører `verden.js` i 1× sanntid.
+- Tjeneren: et lite Node-program med WebSocket («ws») på vertens PC, kjører `verden.js` i 1× sanntid (se kapittel 4).
 - Nettleseren i «nettmodus»: sender kommandoer, får tilstanden 2–5 ganger i sekundet, bare det spilleren ser (tåka regnes på tjeneren).
 - Felles klokke: ingen spoling. ⏭ og 10× blir «foreslå fart», som bare gjelder når alle i verden sier ja (eller tas bort i flerspiller).
 - Innlogging: invitasjonslenke med kode (ingen konto i første versjon). Spilleren velger selskap, flagg og leir som i dag.
-- Lagring på tjeneren, og gjenoppkobling hvis nettet faller ut.
+- Lagring på vertens PC (med sikkerhetskopi), og gjenoppkobling hvis nettet faller ut.
 
 ### M3 – 1–5 spillere
 - Diplomati: allianse, våpenhvile, krig; handel og kontrakter mellom spillere; chat og radio mellom selskaper.
@@ -60,36 +63,72 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 - «Mens du var borte»: rapport ved innlogging (finnes i enspiller fra runde 13–14).
 
 ### M4 – Vedvarende verdener
-- Verden går døgnet rundt. Leiren forsvarer seg selv når du er borte (K8 i plan-kollaps.md).
+- Verden «går» døgnet rundt: står PC-en av, regnes tiden fram når den starter igjen. Leiren forsvarer seg selv når du er borte
+  (K8 i plan-kollaps.md). Skal verden gå hele tiden uten en PC som står på, flyttes tjeneren til Cloudflare.
 - Flere verdener samtidig, egne regler per verden (fart, vanskelighetsgrad), enkel administrasjon.
 
-## 4. Teknisk
-- **Vert:** Vercel kan ikke kjøre en tjener som går hele tiden. Alternativer:
-    - **Fly.io / Railway / Render / en liten VPS:** vanlig Node-tjener, samme JavaScript som i dag.
-    - **Cloudflare Durable Objects:** én «verden» per objekt med WebSocket og lagring innebygd. Passer godt, men har egne begrensninger
-      på hvor lenge koden kan regne om gangen – må prøves før den velges.
-- **Pris:** en liten tjener koster trolig fra under 100 til noen hundre kroner i måneden (grovt anslag – sjekkes når verten velges).
-- **Hemmeligheter:** nøkler og passord legges hos verten, aldri i koden. Brukeren har sagt at han ikke vil gi nøkler – derfor må vi
-  velge en løsning der han oppretter kontoen selv og legger inn nøkkelen i vertens innstillinger.
+## 4. Drift: gratis, på din egen PC (valgt 22. nov)
+
+**Slik blir det:** Én spiller er vert. Verten starter et lite tjenerprogram på sin PC (Windows). Programmet kjører verden
+(`verden.js`, de samme reglene som i spillet) og lagrer den i en fil på PC-en. De andre åpner spillet på riksbrudd.vercel.app som
+før og kobler seg til vertens PC med en invitasjonslenke. Kartene hentes som i dag fra kartlageret – PC-en sender bare spillets
+tilstand, ikke kart.
+
+**Når PC-en er av eller sover:** verden står stille. Når tjeneren starter igjen, regnes tiden som har gått fram på noen sekunder
+(som ⏭ og «mens du var borte» i dag), og alle får en rapport. Slik «går» verden døgnet rundt uten at PC-en må stå på.
+
+**Hvordan vennene når PC-en** (å åpne porter i ruteren er vanskelig og usikkert, så det unngår vi). Begge er gratis:
+
+| Måte | Slik virker det | Hake |
+|---|---|---|
+| **Cloudflare-tunnel** (anbefalt) | Tjenerprogrammet starter en tunnel og får en https-adresse. Vennene trenger ingenting ekstra – lenken virker også på iPhone. | Uten konto får adressen et tilfeldig navn som skifter hver gang; med en gratis Cloudflare-konto kan den være fast. |
+| Tailscale | Et privat nett mellom vennenes maskiner. | Alle må installere appen og bli lagt til. |
+
+**Det tjenerprogrammet må kunne** (bygges i M2):
+
+- Startes med ett dobbeltklikk på Windows (senere som én fil som ikke krever at Node er installert).
+- Vise invitasjonslenken og hvem som er koblet til.
+- Lagre verden jevnlig, ta sikkerhetskopi, og regne tiden fram ved start.
+- Hindre at PC-en sovner mens noen spiller (bare mens tjeneren går).
+
+**Kraft:** en vanlig bærbar holder for 1–5 spillere (Claudes anslag – måles med belastningstesten i M2). Verten spiller selv i
+nettleseren på samme PC.
+
+**Senere, også gratis: Cloudflare Durable Objects.** Gratisplanen har hatt Durable Objects siden april 2025 (100 000 forespørsler
+per døgn, 5 GB lagring). Da kan verden ligge på nett uten at noen PC står på. Fordi tjeneren skrives som `verden.js` + et tynt lag
+for nettverk og lagring, er flyttingen bare et nytt tynt lag. Hvor mye regning gratisplanen tåler per døgn er ikke bekreftet – det
+må måles med en prøve før vi flytter. Andre gratisvalg er vurdert og valgt bort: Render (sovner etter 15 min og mister filene) og
+Oracle «Always Free» (krever betalingskort, kvoten ble halvert i 2026).
+
+## 5. Teknisk
+- **Vert:** vertens egen PC (kapittel 4). Vercel kan ikke kjøre en tjener som går hele tiden; der ligger fortsatt selve spillet og
+  kartlageret.
+- **Pris:** 0 kr. Strømmen til PC-en er det eneste.
+- **Hemmeligheter:** ingen nøkler i koden. Trengs en Cloudflare-konto for fast adresse, oppretter verten den selv.
 - **Nettrafikk:** bare endringer sendes, og bare det spilleren ser. 3D, trær, hus og vær regnes fortsatt i nettleseren.
 - **Juks:** tjeneren sjekker hver kommando (har spilleren råd, er laget ditt, har det radiokontakt …).
-- **Personvern:** bare spillernavn og invitasjonskode lagres; ingen e-post i første versjon.
+- **Personvern:** bare spillernavn og invitasjonskode lagres; ingen e-post i første versjon. Vertens IP-adresse vises ikke for de
+  andre når tunnelen brukes.
 - **Enspiller blir som før:** uten nett kjører verden i nettleseren som i dag.
 
-## 5. Risiko
+## 6. Risiko
 - **index.html er stor og sammenvevd:** å skille ut simuleringen er hovedjobben i M0. Gjøres i små biter med full kontroll mellom hver.
 - **Tjenerens kraft:** veisøk (A*), kartdata og AI for 5 spillere må måles – vi lager en belastningstest i M2.
 - **Tid i sanntid:** spillerne er ikke på samtidig. Morgenmøtet, kort og angrep må fungere når du ikke er der (K8).
 - **Mobilnett:** gjenoppkobling og lite trafikk er viktig fordi brukeren spiller på telefon.
+- **Vertens PC:** står den av, kan ingen spille sammen før den starter. Filen med verden må tas sikkerhetskopi av.
+- **Vertens fordel:** verten har tjeneren hos seg og kan i prinsippet jukse. Mellom venner er det greit; for åpne verdener
+  flyttes tjeneren til Cloudflare.
 
-## 6. Det brukeren må bestemme
+## 7. Det brukeren må bestemme
 1. Skal M1 (handel og meldinger uten tjener) komme først, eller rett på M2 (delt verden)?
 2. Samarbeid først (venner mot AI) eller mot hverandre først?
-3. Skal verden gå når ingen er innlogget (M4), eller bare når noen spiller?
-4. Hvilken vert (Fly.io, Railway, Render, VPS eller Cloudflare), og hvor mye kan den koste i måneden?
+3. Hvilken vert, og hva kan den koste? **Bestemt 22. nov: gratis, på spillerens egen PC.** Når PC-en er av, regnes tiden fram
+   ved neste start.
+4. Cloudflare-tunnel (vennene trenger ingenting) eller Tailscale (alle installerer en app)? Claude anbefaler tunnelen.
 5. Hvordan skal fart fungere i flerspiller: alltid sanntid, eller fart som alle må si ja til?
 
-## 7. Omfang (grovt)
+## 8. Omfang (grovt)
 M0 er størst: anslagsvis 3–5 runder med hjelpere (simuleringen ut av index.html i biter, kommandoer, frø, tester). M1: 1–2 runder.
-M2: 2–3 runder pluss oppsett hos verten. M3 og M4: flere runder hver. W1–W4 (selskap, anlegg, kamp, kjøretøy) kan bygges samtidig,
+M2: 2–3 runder, inkludert tjenerprogrammet for Windows. M3 og M4: flere runder hver. W1–W4 (selskap, anlegg, kamp, kjøretøy) kan bygges samtidig,
 så lenge alt nytt følger M0-reglene (kommandoer, ren tilstand, side-id, frø).
