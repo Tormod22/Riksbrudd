@@ -42,3 +42,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   verkstedhall for tunge kjøretøy med portalkran, vaskeplass, fyllestasjon). Felles hjelpere `modul()` og `port()`.
 - Del 6: B47–B56 (vannrenseanlegg, avfallsplass, stort feltsykehus, medevac-plass, observasjonspost, betongbunker, skyttergrav
   rett og hjørne/ende – vollene står oppå bakken, terrenget graves ikke –, jordfylte kurver, T-vegger).
+- Del 7: B57–B66 (piggtrådrull, kryss mot kjøretøy, kjøretøysluse, mobil lysmast, sirenemast, generatorhus, transformator med gjerde,
+  klimaenheter, kontorcontainer, møtetelt med kartbord).
