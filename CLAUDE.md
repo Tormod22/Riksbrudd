@@ -1537,3 +1537,15 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   «riksbrudd-selskap» (ikke hos en gjest i flerspiller). I testene skjer ingenting av seg selv (SelskapSpill.test); å åpne panelet uten
   tilbud gir de første. Motstanderne heter fortsatt Kystalliansen/Folkefronten i resten av spillet (panelet viser «i kartet: …»). VAKT
   pipeline/fliser/vakter/selskap.js. Tallene er Claudes forslag.
+  LEIRVALG OG TROPPER, R17-2a (22. nov, funn 9, 11, 12, 14 og 15 i docs/natt/funn-r16-spilltest.md): (9) Garnison.avstand(by, x, y)
+  (0 inne, ellers meter til omrisset) og Garnison.nærmeste(byer, x, y); leirvalget måler til omrisset (før rektangelet bb – «Ålgård/Figgjo
+  0 m») og Oppstart.gyldigLeir avviser leir inne i eller nærmere enn Oppstart.LEIR_FRA_BY = 400 m fra et tettsted (v.nærTettsted; Claudes
+  tall) – «Flytt hit» finner et sted utenfor. (11) Helling.grunnen(høyde, tørt, x, y): andelen grønt/gult/rødt/vann for brakka innen
+  REGLER.nær (80 m) med samme regel som fargene -> «grunnen: flat / litt skrå / blandet – 53 % byggbart, 47 % for bratt / mest for bratt».
+  (12) Leir.kanBygge: v.veger (bilveger og gang- og sykkelveger fra vektorflisene z13, LeirSpill.kartveger) er hindringer – «Brakke står på
+  vegen» (halv vegbredde + 0,5 m; Leir.påKartveg, Leir.VEGBREDDE). Gjerder, egne grusveger (linje) og porter kan krysse; byggesettet bruker
+  det samme. (14) Tropper.advarsler: «Leiren står igjen med 2 personer – ett byggelag (nå 2) til 3 jobber: 2 står i kø …» når troppen gir
+  færre byggelag enn det står jobber; advarselen står nå rett over «Opprett» (#troppadvar i .opprett). (15) En tropp om bord har «Kjør dit»
+  i stedet for «Marsjer» (index.html; panelpynt.js regner den som ordreknapp): window.OMBORD_ORDRE(s, X, Y) i tropper-visning.js gir ordren
+  til kjøretøyet (kjørTil) og setter s.avstigning, så troppen går av ved målet. Kjøretøyvalget i skjemaet settes med sb.value og linja
+  #troppbiltekst sier om troppen går om bord. Tester: test_oppstart, test_helling, test_leir, test_tropper; VAKT vakter/leirvalg-r17.js.

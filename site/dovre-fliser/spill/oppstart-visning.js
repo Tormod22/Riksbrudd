@@ -287,13 +287,16 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
   // klassen (vann = 3, utenfor kartet = 255) i 32 m-rutenettet rundt punktet
   async function klasseVed(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false); const [i, j] = Terreng.rute(v, x, y); return v.K[j * v.w + i]; } catch (e) { return undefined; } }
   const iTettsted = (x, y) => { const by = ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []).find(b => b.bb[0] <= x && x <= b.bb[2] && b.bb[1] <= y && y <= b.bb[3] && window.Garnison && Garnison.inni(b, x, y)); return by ? by.e.navn : null; };
+  // (R17 funn 9) nærmeste tettsted målt til selve omrisset (ikke det omsluttende rektangelet): { navn, m }
+  const nærTettsted = (x, y) => { const byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []; if (!byer.length || !window.Garnison || !Garnison.nærmeste) return null;
+    const r = Garnison.nærmeste(byer, x, y); return r ? { navn: r.navn, m: r.m } : null; };
   const riksgrense = () => (typeof RIKSGRENSE !== 'undefined' && RIKSGRENSE && window.Riksgrense ? RIKSGRENSE : null);   // RIKSGRENSE er en let i index.html
   // Kan leiren ligge her (uten å se på arealklassen – den sjekkes for seg)? Brukes for forslagene (Flytt hit).
   function lovligLeir(X, Y) { const rg = riksgrense();
-    return !O.gyldigLeir(X, Y, { iTettsted, klasse: () => 2, iNorge: rg ? (A, B) => Riksgrense.iNorge(rg, A, B) : null }) && !(window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, X, Y)); }
+    return !O.gyldigLeir(X, Y, { iTettsted, nærTettsted, klasse: () => 2, iNorge: rg ? (A, B) => Riksgrense.iNorge(rg, A, B) : null }) && !(window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, X, Y)); }
   async function prøvLeir(x, y) {
     const rg = riksgrense();
-    const kl = await klasseVed(x, y); let grunn = O.gyldigLeir(x, y, { iTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
+    const kl = await klasseVed(x, y); let grunn = O.gyldigLeir(x, y, { iTettsted, nærTettsted, klasse: () => kl, iNorge: rg ? (X, Y) => Riksgrense.iNorge(rg, X, Y) : null });
     // et mindre spillkart (/rogaland): leiren må ligge innenfor
     if (!grunn && window.SPILLOMRÅDE && !Omraade.inni(SPILLOMRÅDE, x, y)) grunn = `Leiren må ligge i ${SPILLOMRÅDE.navn}. Dette er utenfor spillkartet.`;
     // (runde 8) for vanlige spillere kan leiren først bekreftes når terrenget er sjekket (sjekker = true til da); testene som før
@@ -323,7 +326,7 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     let hv = null; try { hv = await lagVindu([x - nær, y - nær, x + nær, y + nær], false, 11); } catch (e) { return null; }
     const høyde = HL.høydeFra(hv), r = HL.førsteBygg(høyde, tørt, x, y, { flatFørst: true });
     // uten høyder midt på stedet kan vi ikke si noe – leiren godtas som før
-    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde };
+    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde, tørt };
     const S = R.søk + nær; let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
     const f = hs ? HL.finnPlass(HL.høydeFra(hs), tørt, x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
     return { ok: false, r, f, søkt: true };
@@ -356,8 +359,8 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     // høyden fra vinduet når kartet ikke hadde den (stedet utenfor bildet eller ikke lastet ennå)
     if (h == null && v && window.Terreng) try { const [i, j] = Terreng.rute(v, x, y), z = v.H[j * v.w + i]; if (z === z) h = z; } catch (e) { /* utenfor vinduet */ }
     const m = Leirvalg.måle(v, x, y), tg = window.Vegetasjon && Vegetasjon.tregrense ? Vegetasjon.tregrense(y, x) : null;
-    let by = null; for (const b of ((typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [])) { const dx = Math.max(b.bb[0] - x, 0, x - b.bb[2]), dy = Math.max(b.bb[1] - y, 0, y - b.bb[3]), d = Math.hypot(dx, dy);
-      if (!by || d < by.m) by = { navn: b.e.navn, m: d }; }
+    // (R17 funn 9) avstanden til tettstedets omriss – før til rektangelet rundt, så faktalinja kunne si «Ålgård/Figgjo 0 m»
+    const by = nærTettsted(x, y);
     const vu = Leirvalg.vurder(m, { h, tregrense: tg, by }), HL = window.Helling;
     // grunnen der leiren står (flat / skrå med grunnmur) står først i faktalinja; går det ikke, kan leiren ikke bekreftes her
     let stopp = null, flytt = null;
@@ -368,9 +371,14 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
       if (b0 && m0 > 1 && (fl.r.nivå === HL.BRATT || fl.r.nivå === HL.VANN || skråHer)) { const g = { x: b0.x, y: b0.y, m: m0, retning: HL.retning(b0.x - x, b0.y - y) };
         const hva = fl.r.nivå === HL.VANN ? 'vått' : fl.r.nivå === HL.BRATT ? 'bratt' : 'skrått (byggene får grunnmur)';
         if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${hva} der flagget står, men ${skråHer ? 'flatt' : 'flatt nok'} ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
-        vu.fakta.unshift(skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved'); }
-      else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
-      else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); }
+        // (R17 funn 11) også her: hvor mye av området rundt flagget som er byggbart (samme regel som fargene)
+        const gr = HL.grunnen ? HL.grunnen(fl.høyde, fl.tørt, x, y) : null, byggbart = gr && gr.andel ? ` – ${Math.round((gr.andel.flatt + gr.andel.skrått) * 100)} % byggbart innen ${HL.meter(HL.REGLER.nær)}` : '';
+        vu.fakta.unshift((skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved') + byggbart); }
+      // (R17 funn 11) ellers: grunnen i et område rundt flagget med samme regel som fargene (før bare punktet – «flat» midt i rødt)
+      else { const gr = HL.grunnen ? HL.grunnen(fl.høyde, fl.tørt, x, y) : null;
+        if (gr && gr.tekst) vu.fakta.unshift(gr.tekst);
+        else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
+        else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); } }
     if (fl && !fl.ok) { stopp = HL.brattTekst(fl.r); f.ok = false; f.bratt = true;
       if (fl.f) { fl.f.h = høydeHer(fl.f.x, fl.f.y); f.flytt = fl.f; flytt = { ...fl.f, tekst: flyttTekst(fl.f, 'Nærmeste flate sted') }; }
       else vu.advarsler.unshift(`Fant ikke noe flatt nok sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted – en dalbunn eller et platå.`); }

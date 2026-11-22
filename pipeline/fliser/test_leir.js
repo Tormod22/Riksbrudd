@@ -231,4 +231,20 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   ok(betalt === pris, `prisen før kjøpet (${pris}) = det som ble betalt (${betalt})`);
   ok(L0.manglerPris(L, mat) === 0 && Object.keys(L0.manglerMat(L, mat)).length === 0, 'etter kjøpet mangler ingenting');
   L.lager.tre = 24.99; ok(L0.manglerPris(L, { tre: 25 }) === Math.round(0.1 * L0.MATERIALER.tre.pris), '0,01 m³ som mangler, koster en tidel'); }
+// (R17 funn 12) bilvegene i kartet er hindringer: brakka kan ikke stå på vegen, men egne grusveger og gjerder kan krysse den
+{ const LV = L0.ny(), veger = [{ k: 'R', P: [[-200, 1000], [200, 1000]] }, { k: 'K', g: 1, P: [[-200, 1200], [200, 1200]] }], kv = { klasse: () => 2, veger };
+  const på = L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1000, ret: 0 }, kv);
+  ok(/står på vegen/.test(på || ''), 'brakke midt på riksvegen: ' + på);
+  const kant = L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1000 + 3.75 + 3, ret: 0 }, kv);
+  ok(/står på vegen/.test(kant || ''), 'brakke med kanten inn i vegbanen: avvist');
+  ok(L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1040, ret: 0 }, kv) === null, 'brakke 40 m fra vegen: godkjent');
+  ok(/står på vegen/.test(L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1200, ret: 0 }, kv) || ''), 'gang- og sykkelvegen er også veg');
+  // en lang, smal veg tvers gjennom bygget uten hjørner på vegen (bygget er bredere enn vegen)
+  const stor = Object.keys(L0.BYGG).find(t => !L0.BYGG[t].linje && (L0.BYGG[t].fot[1] - L0.BYGG[t].fot[0]) > 15);
+  ok(!stor || /står på vegen/.test(L0.kanBygge(LV, { type: stor, x: 0, y: 1000, ret: 0 }, kv) || ''), 'stort bygg over vegen: avvist (' + stor + ')');
+  ok(L0.kanBygge(LV, { type: 'veg', punkter: [[0, 900], [0, 1100]] }, kv) === null, 'egen grusveg kan krysse bilvegen');
+  ok(L0.kanBygge(LV, { type: 'gjerde', punkter: [[20, 900], [20, 1100]] }, kv) === null, 'gjerdet kan krysse vegen');
+  const port = Object.keys(L0.BYGG).find(t => L0.BYGG[t].port);
+  ok(!port || L0.kanBygge(LV, { type: port, x: 0, y: 1000, ret: 0 }, kv) === null, 'porten kan stå i vegen (' + port + ')');
+  ok(L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1000, ret: 0 }, { klasse: () => 2 }) === null, 'uten vegdata: som før'); }
 process.exit(feil ? 1 : 0);

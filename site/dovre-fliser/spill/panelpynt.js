@@ -53,7 +53,7 @@
   // (ORDRE: marsj, stopp, grav ned, gå av … og STRID: stridsregler, formasjon, tiltak), resten ligger bak «Mer (n)» som bretter dem
   // ut (valget huskes). En knapp som er slått på, står alltid framme. I testene (navigator.webdriver) skjules ingenting – kontrollen
   // trykker på knappene etter teksten – før window.LAGKNAPPER_TEST = true.
-  { const H = document.getElementById('handl'), ORDRE = /^(Marsjer|Stopp|Styres av|Grav|Gå av|Om bord|Avbryt|Fortsett|Lag \(|Oppløs|Bekreft: oppløs|Send hjem og oppløs)/, STRID = /^(Stridsregler|Formasjon|Tiltak|Forsvar)/;
+  { const H = document.getElementById('handl'), ORDRE = /^(Marsjer|Kjør dit|Velg mål|Stopp|Styres av|Grav|Gå av|Om bord|Avbryt|Fortsett|Lag \(|Oppløs|Bekreft: oppløs|Send hjem og oppløs)/, STRID = /^(Stridsregler|Formasjon|Tiltak|Forsvar)/;
     if (H) { const css5 = document.createElement('style'); css5.textContent = '#handl button.bakmer{ display:none; } #handl.utbrettet button.bakmer{ display:inline-block; } #handl button.gr-ordre{ order:1; } #handl button.gr-strid{ order:2; border-color:#6a5a34; } #handl button.gr-mer{ order:4; } #handl #lagmer{ order:3; background:none; border-style:dashed; color:var(--ink-dim,#a69b82); }'; document.head.appendChild(css5);
       let åpen = false; try { åpen = localStorage.getItem('riksbrudd-lagmer') === '1'; } catch (e) { åpen = false; } let ordner = false, obs = null;
       const ordne = () => { if (ordner) return; ordner = true; try { const gammel = H.querySelector('#lagmer'); if (gammel) gammel.remove(); H.classList.remove('utbrettet');

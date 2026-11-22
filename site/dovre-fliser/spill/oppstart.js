@@ -98,11 +98,18 @@
   }
   // Leirplassen: v = { iTettsted(x, y) -> navn | null, klasse(x, y) -> arealklasse (3 = vann, 255 = utenfor kartet) | undefined,
   //                    iNorge(x, y) -> false utenfor riksgrensa (valgfri) }
+  // minste avstand (meter) fra leiren til omrisset av et tettsted – Claudes forslag (R17, 22. nov)
+  const LEIR_FRA_BY = 400;
   function gyldigLeir(x, y, v) {
     if (!isFinite(x) || !isFinite(y)) return 'Ugyldig sted.';
     // riksgrensa (v.iNorge finnes når grensedataene er hentet): leiren kunne legges 5 km inn i Sverige (12. nov)
     if (v.iNorge && !v.iNorge(x, y)) return 'Leiren må ligge i Norge. Dette er på den andre siden av riksgrensa.';
     const by = v.iTettsted && v.iTettsted(x, y); if (by) return `Leiren kan ikke ligge inne i et tettsted (${by}).`;
+    // (22. nov, R17 funn 9) heller ikke helt inntil: lagene og troppene som lages i leiren, havnet inne i tettstedet og i kamp med
+    // bygdevernet. v.nærTettsted(x, y) -> { navn, m } (meter til omrisset). Avstanden er Claudes forslag (LEIR_FRA_BY).
+    const nb = v.nærTettsted && v.nærTettsted(x, y);
+    if (nb && nb.m < LEIR_FRA_BY) return nb.m <= 0 ? `Leiren kan ikke ligge inne i et tettsted (${nb.navn}).`
+      : `Leiren ligger for nær tettstedet ${nb.navn} (${Math.round(nb.m)} m fra bebyggelsen). Legg den minst ${LEIR_FRA_BY} m utenfor, ellers havner lagene dine inne i tettstedet og i kamp med bygdevernet.`;
     const k = v.klasse && v.klasse(x, y);
     // Svalbard (nord for 8150 km) vises i kartet, men har ikke arealdata: da er «her finnes det ikke kart» feil beskjed
     if (k === 255 || k === undefined) return y > 8150000 ? 'Svalbard er med i kartet, men kan ikke brukes til leir ennå. Velg et sted på fastlandet.' : 'Her finnes det ikke kart. Velg et sted i Norge.';
@@ -231,7 +238,7 @@
     }
     g.restore();
   }
-  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, KJØNN, byttKjønn, tilfeldigPortrett, rettKjønn, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, startplasser, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
+  const api = { STARTPENGER, BAKGRUNNER, PORTRETT, portrett, P, KJØNN, byttKjønn, tilfeldigPortrett, rettKjønn, FARGER, MØNSTER, SYMBOL, standard, feil, gyldigLeir, LEIR_FRA_BY, startplasser, fullfør, bonus, kroner, tilJSON, fraJSON, nyanse, hovedfarge, tegnFlagg, tegnSymbol };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Oppstart = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -91,4 +91,17 @@ const tørt = () => true;
   const kf = H.klasseFra(v), tf = H.tørtFra(kf); ok(kf(44, 36) === 3 && !tf(44, 36) && tf(10, 10) && !tf(-1, 10), 'klasseFra/tørtFra: vann og utenfor kartet');
   ok(H.retning(1, 1) === 'nordøst' && H.retning(0, -1) === 'sør' && H.retning(-1, 0) === 'vest', 'retning');
 }
-console.log(feil ? `${feil} FEIL` : 'alt ok'); process.exit(feil ? 1 : 0);
+console.log(feil ? `${feil} FEIL` : 'alt ok'); // (R17 funn 11) grunnen beskriver området rundt flagget, ikke bare punktet: flatt i en liten flekk, bratt li rundt
+{ const flekk = (x, y) => { const r = Math.hypot(x, y); return r < 18 ? 100 : 100 + 1.5 * (r - 18); };
+  const midt = H.vurder({ type: 'brakke', x: 0, y: 0, ret: 0 }, flekk, tørt);
+  const g = H.grunnen(flekk, tørt, 0, 0);
+  ok(midt.nivå === H.FLATT, 'punktet ved flagget alene er flatt (det var det den gamle teksten så på)');
+  ok(/mest for bratt/.test(g.tekst) && g.andel.bratt > .5, 'området rundt er mest for bratt: ' + g.tekst);
+  const gf = H.grunnen(flatt, tørt, 0, 0); ok(/grunnen: flat/.test(gf.tekst) && gf.andel.flatt === 1, 'helt flatt: ' + gf.tekst);
+  const halv = (x, y) => (x < 0 ? 100 : 100 + 1.5 * x), gh = H.grunnen(halv, tørt, 0, 0);
+  ok(/blandet/.test(gh.tekst), 'flatt på den ene siden, bratt på den andre: ' + gh.tekst);
+  const vått = (x, y) => x < 30, gv = H.grunnen(flatt, vått, 0, 0); ok(/vann/.test(gv.tekst) || /flat/.test(gv.tekst), 'vann regnes med: ' + gv.tekst);
+  // samme regel som fargene: andelene er de samme som i hellingskartet over samme ruter
+  const v = H.vurderer('brakke', 0, flekk, tørt); let b = 0, n = 0; for (const [dx, dy] of H.ringer(H.REGLER.nær, H.REGLER.celle)) { n++; if (v(dx, dy) === H.BRATT) b++; }
+  ok(Math.abs(b / n - g.andel.bratt) < 1e-9, 'andelen rødt er den samme som fargeregelen gir'); }
+process.exit(feil ? 1 : 0);

@@ -61,6 +61,13 @@
     if (!e.igjen) ut.push('Leiren blir tom: ingen igjen til å bygge, lage mat eller holde vakt.');
     else if (!e.bygg && (e.byggFør || jobber)) ut.push(`Ingen igjen på «bygg»: ${jobber ? (jobber === 1 ? 'jobben i leiren stopper' : `de ${jobber} jobbene i leiren stopper`) : 'ingenting blir bygget'}. La minst to stå på «bygg».`);
     else if (e.bygg === 1 && e.byggFør >= 2) ut.push('Bare én igjen på «bygg»: byggingen går halvt så fort.');
+    // (R17 funn 14: «Stormtropp (8)» lot to stå igjen – ett byggelag til tre bygg i kø, og byggingen nesten stoppet) – når troppen gir
+    // færre byggelag enn det står jobber, sies det hvor mange lag som blir igjen og hvor mange jobber som må vente. To på «bygg» = ett
+    // byggelag (som Folk regner det).
+    { const lag = n => Math.ceil(n / 2), før = lag(e.byggFør), etter = lag(e.bygg), kø = jobber - etter;
+      if (e.bygg && jobber > etter && etter < før) ut.push(`Leiren står igjen med ${e.igjen} ${e.igjen === 1 ? 'person' : 'personer'}`
+        + ` – ${etter === 1 ? 'ett byggelag' : etter + ' byggelag'}${før > etter ? ` (nå ${før})` : ''} til ${jobber} ${jobber === 1 ? 'jobb' : 'jobber'}: ${kø} står i kø`
+        + ` til et byggelag blir ledig. Ta færre med, eller rekrutter flere i Folk.`); }
     if (e.igjen && e.kjøkkenFør && !e.kjøkken && o.kjøkken !== false) ut.push('Ingen kokk igjen: maten lages på bål (mer svinn).');
     return ut; }
   // Prisen for våpnene (liste med våpen-id-er) og utstyret (liste med utstyr-id-er).
