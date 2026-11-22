@@ -121,7 +121,12 @@
   // ---------- gjesten ----------
   function brukBilde(d) {
     if (typeof ENHETER === 'undefined') return;
+    const før = new Map(); for (const s of ENHETER) if (s.nid != null) før.set(s.nid, [s.x, s.y]);
     const r = F.brukBilde(d, ENHETER, q => nyttLag(q.navn, q.x, q.y, q.side, !!q.speider)); if (!r.ok) return;
+    // glatt bevegelse: laget glir fra der det sto til det nye stedet i løpet av tiden til neste bilde (ikke ved store hopp)
+    const t0 = performance.now();
+    for (const s of ENHETER) { const p = før.get(s.nid); if (!p) continue; const dx = s.x - p[0], dy = s.y - p[1], d2 = Math.hypot(dx, dy);
+      if (d2 > .05 && d2 < 400) { s.glatt = { fx: p[0], fy: p[1], tx: s.x, ty: s.y, t0 }; s.x = p[0]; s.y = p[1]; } else delete s.glatt; }
     if (Array.isArray(d.kj) && window.KJORETOY && window.Kjoretoy) {
       const før = new Map(KJORETOY.map(k => [k.navn, k])), ny = [];
       for (const q of d.kj) { let k = før.get(q.navn); if (!k) { try { k = Kjoretoy.ny({ navn: q.navn, type: q.type, antall: q.antall, x: q.x, y: q.y, retning: q.r }); } catch (e) { continue; } }
@@ -137,6 +142,12 @@
     if (typeof valgt !== 'undefined' && valgt && !ENHETER.includes(valgt)) { valgt = null; try { visPanel(); } catch (e) { /* ok */ } }
     skitten = true;
   }
+  (function glid() {
+    if (N.gjest && typeof ENHETER !== 'undefined') { const nå = performance.now(); let n = 0;
+      for (const s of ENHETER) { const g = s.glatt; if (!g) continue; const k = Math.min(1, (nå - g.t0) / BILDE_MS); s.x = g.fx + (g.tx - g.fx) * k; s.y = g.fy + (g.ty - g.fy) * k; if (k >= 1) delete s.glatt; n++; }
+      if (n) skitten = true; }
+    requestAnimationFrame(glid);
+  })();
   function settFartKnapp(v) {
     const id = { 0: 'sp0', 1: 'sp1', 10: 'sp2', 60: 'sp3', 600: 'sp4' }[v];
     for (const b of document.querySelectorAll('.knapper button[id^="sp"]')) b.classList.toggle('på', b.id === id);

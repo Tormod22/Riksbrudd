@@ -60,12 +60,12 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 
 1. **Kommandoer:** alt spilleren gjør (ordre, bygg, kjøp, folk på oppgaver, kontrakter, valg i morgenmøtet) går gjennom én funksjon
    `kommando(side, { type, … })`. Da kan de samme kommandoene sendes over nettet senere.
-2. **Verden uten nettleser:** simuleringen i `sim(dt)` og krokene den kaller skilles ut i `spill/verden.js`, som kan kjøres i Node
+2. **Verden uten nettleser:** simuleringen i `sim(dt)` og krokene den kaller skilles ut i `spill/simulering.js` (navnet `verden.js` er tatt av «verden som gjør noe»), som kan kjøres i Node
    med kartdataene. Visningen (2D, 3D, paneler) leser bare tilstanden. Gjøres i biter, én modul om gangen, med tester.
 3. **Ren tilstand:** all tilstand som betyr noe for spillet, kan lagres og leses som JSON (lagring.js gjør mye av dette alt).
 4. **Felles tilfeldighet:** `Math.random` byttes med en frø-basert tilfeldighet per verden (`Tilfeldig(frø)`).
 5. **Side-id overalt:** ingen regel antar at spilleren er «blå» (selskap.js og strategi.js gjør det alt riktig).
-6. **Test:** samme kommandoer på samme frø gir nøyaktig samme verden, i Node (`test_verden.js`).
+6. **Test:** samme kommandoer på samme frø gir nøyaktig samme verden, i Node (`test_simulering.js`).
 
 ### M1 – Spillere møtes uten tjener som går hele tiden (billig mellomsteg)
 - Postkassene per selskap ligger i en fil på vertens PC (eller senere hos Cloudflare).
@@ -73,7 +73,7 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 - Ingen sanntidskamp ennå. Angrep på en annen spillers leir blir en kamp som regnes ut når den angrepne er innlogget, med rapport.
 
 ### M2 – Første delte verden (2 spillere, tjener)
-- Tjeneren: et lite Node-program med WebSocket («ws») på vertens PC, kjører `verden.js` i 1× sanntid (se kapittel 4).
+- Tjeneren: et lite Node-program med WebSocket («ws») på vertens PC, kjører `simulering.js` i 1× sanntid (se kapittel 4).
 - Nettleseren i «nettmodus»: sender kommandoer, får tilstanden 2–5 ganger i sekundet, bare det spilleren ser (tåka regnes på tjeneren).
 - Felles klokke: ingen spoling. ⏭ og 10× blir «foreslå fart», som bare gjelder når alle i verden sier ja (eller tas bort i flerspiller).
 - Innlogging: invitasjonslenke med kode (ingen konto i første versjon). Spilleren velger selskap, flagg og leir som i dag.
@@ -92,7 +92,7 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 ## 4. Drift: gratis, på din egen PC (valgt 22. nov)
 
 **Slik blir det:** Én spiller er vert. Verten starter et lite tjenerprogram på sin PC (Windows). Programmet kjører verden
-(`verden.js`, de samme reglene som i spillet) og lagrer den i en fil på PC-en. De andre åpner spillet på riksbrudd.vercel.app som
+(`simulering.js` – foreløpig nettleseren hos verten, se kapittel 0 –, de samme reglene som i spillet) og lagrer den i en fil på PC-en. De andre åpner spillet på riksbrudd.vercel.app som
 før og kobler seg til vertens PC med en invitasjonslenke. Kartene hentes som i dag fra kartlageret – PC-en sender bare spillets
 tilstand, ikke kart.
 
@@ -117,7 +117,7 @@ tilstand, ikke kart.
 nettleseren på samme PC.
 
 **Senere, også gratis: Cloudflare Durable Objects.** Gratisplanen har hatt Durable Objects siden april 2025 (100 000 forespørsler
-per døgn, 5 GB lagring). Da kan verden ligge på nett uten at noen PC står på. Fordi tjeneren skrives som `verden.js` + et tynt lag
+per døgn, 5 GB lagring). Da kan verden ligge på nett uten at noen PC står på. Fordi tjeneren skrives som `simulering.js` + et tynt lag
 for nettverk og lagring, er flyttingen bare et nytt tynt lag. Hvor mye regning gratisplanen tåler per døgn er ikke bekreftet – det
 må måles med en prøve før vi flytter. Andre gratisvalg er vurdert og valgt bort: Render (sovner etter 15 min og mister filene) og
 Oracle «Always Free» (krever betalingskort, kvoten ble halvert i 2026).
