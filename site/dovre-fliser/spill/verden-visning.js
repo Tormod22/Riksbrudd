@@ -11,6 +11,9 @@
 //   Hendelsen «riksbrudd-brann» på window sendes hver gang listene er endret (listene er de samme objektene hele tiden).
 //   window.VERDEN_SONER() = [{ type: 'flom' | 'ras', x, y, r, til }], window.VERDEN_IS = true når isen bærer.
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const W = Verden, R = W.REGLER, NØKKEL = 'riksbrudd-natur', api = { test: false };
   let V = W.ny(), leirId = '', klar = false, sistT = null, sistTime = null, sistBrann = null, sistSkade = null, skittenLagring = false, åpen = false, sistHtml = '';
   const auto = () => !navigator.webdriver || api.test;
@@ -268,13 +271,13 @@
   async function finnFlomsted() {
     const l = leir(); if (!l || !window.BEKKER || !BEKKER.hent) return null; const D = 12000; let biter = [];
     try { biter = await BEKKER.hent([l.x - D, l.y - D, l.x + D, l.y + D], [0, 1]); } catch (e) { return null; }
-    const kand = []; for (const b of biter) for (const ln of (b && b.linjer) || []) if (ln.orden >= 3 && ln.P.length > 1) { const p = ln.P[Math.floor(Math.random() * ln.P.length)]; if (Math.hypot(p[0] - l.x, p[1] - l.y) < D && !iSoneV(p[0], p[1])) kand.push({ x: p[0], y: p[1], orden: ln.orden, navn: ln.navn }); }
-    return kand.length ? kand[Math.floor(Math.random() * kand.length)] : null;
+    const kand = []; for (const b of biter) for (const ln of (b && b.linjer) || []) if (ln.orden >= 3 && ln.P.length > 1) { const p = ln.P[Math.floor(tilfV() * ln.P.length)]; if (Math.hypot(p[0] - l.x, p[1] - l.y) < D && !iSoneV(p[0], p[1])) kand.push({ x: p[0], y: p[1], orden: ln.orden, navn: ln.navn }); }
+    return kand.length ? kand[Math.floor(tilfV() * kand.length)] : null;
   }
   async function finnRassted() {
     const l = leir(); if (!l) return null; const g = window.VEGNETT;
     for (let t = 0; t < 40; t++) {
-      const a = Math.random() * 6.283, d = 800 + Math.random() * 11000; let x = l.x + Math.cos(a) * d, y = l.y + Math.sin(a) * d;
+      const a = tilfV() * 6.283, d = 800 + tilfV() * 11000; let x = l.x + Math.cos(a) * d, y = l.y + Math.sin(a) * d;
       if (g) { const n = g.naermeste([x, y], 1500); if (n === -1) continue; [x, y] = g.punkt(n); }
       const p = await punktA(x, y); if (!p || p.h == null || p.k === 3 || iSoneV(x, y) || Math.hypot(x - l.x, y - l.y) < 300) continue; let bratt = 0;
       for (const [dx, dy] of [[96, 0], [-96, 0], [0, 96], [0, -96]]) { const q = await punktA(x + dx, y + dy); if (q && q.h != null) bratt = Math.max(bratt, (q.h - p.h) / 96); }
@@ -283,7 +286,7 @@
     return null;
   }
   async function regnHendelse() {
-    const hva = W.trekkHendelse(V, 1, Math.random); if (!hva) return;
+    const hva = W.trekkHendelse(V, 1, tilfV); if (!hva) return;
     if (hva === 'ras') { const p = await finnRassted(); if (p) { ras(p.x, p.y); return; } }
     const p = await finnFlomsted(); if (p) flom(p.x, p.y, p.orden, p.navn);
   }
@@ -319,7 +322,7 @@
     const l = leir(), C = V.brann.celler; if (!l || !C) return 0; const r = R.brann.rute; let ute = 0, iLeir = 0;
     const p = 1 - Math.pow(1 - Math.min(LEIRBRANN.maks, LEIRBRANN.perPerson * slokkere()), dt / 10);
     for (const k of Object.keys(C)) { const [i, j] = k.split(',').map(Number), x = (i + .5) * r, y = (j + .5) * r; if (Math.hypot(x - l.x, y - l.y) >= LEIRBRANN.slokkR) continue;
-      iLeir++; if (Math.random() < p) { delete C[k]; V.brann.brent[k] = Math.round(tid); ute++; } }
+      iLeir++; if (tilfV() < p) { delete C[k]; V.brann.brent[k] = Math.round(tid); ute++; } }
     if (iLeir && !leirBrannMeldt) { leirBrannMeldt = true; const n = slokkere();
       logg(`Brann i leiren! ${n ? `${n} på vakt og bygg prøver å slokke.` : 'Ingen er hjemme på vakt eller bygg til å slokke – sett folk på det under Folk.'}`);
       try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'brann', tekst: 'brann i leiren' } })); } catch (e) { /* eldre nettleser */ } }
@@ -392,7 +395,7 @@
     for (const s of ENHETER) { const j = s.jakt; if (!j) continue;
       if (!levende(s) || Math.hypot(s.x - j.x, s.y - j.y) > 150) { s.jakt = null; if (s.side === 'blå') logg(`${s.navn} avbrøt jakta.`); continue; }
       if (tid < j.til) continue; s.jakt = null;
-      const u = W.jaktUtbytte(V, j.art, s.menn.filter(m => m.hp >= 1).length, s.x, s.y, tid, Math.random); endret(); const F = FF(); if (F && u.mat) F.mat += u.mat;
+      const u = W.jaktUtbytte(V, j.art, s.menn.filter(m => m.hp >= 1).length, s.x, s.y, tid, tilfV); endret(); const F = FF(); if (F && u.mat) F.mat += u.mat;
       logg(u.dyr ? `${s.navn} felte ${u.dyr} ${j.art === 'rein' ? 'rein' : 'elg'}: ${u.mat} rasjoner kjøtt til leiren.` : `${s.navn} kom tomhendt fra jakta.`); if (valgt === s) visPanel(); }
   }
   // du selv: skuddene dine står i SKUDD (a = der du står, b = 80 m fram); dyrene finnes i 3D (spill/dyr3d.js)
@@ -410,7 +413,7 @@
           if (F) F.mat += mat;
           logg(`Du felte en ${navn} på ${Math.round(t.avst)} m: ${mat} rasjoner kjøtt til leiren.`); } }
       // skudd i knusktørr skog kan tenne (ikke av seg selv i testene)
-      else if (auto() && v && W.brannfare(V, v) >= .6 && Math.random() < R.brann.skudd) tenn(b.x, b.y, 'Skuddvekslingen').catch(() => {});
+      else if (auto() && v && W.brannfare(V, v) >= .6 && tilfV() < R.brann.skudd) tenn(b.x, b.y, 'Skuddvekslingen').catch(() => {});
     }
   }
 
@@ -458,7 +461,7 @@
     for (const b of byer()) { const e = eier(b.id); if (e && e !== 'blå' && Math.hypot(b.x - l.x, b.y - l.y) < 60000 && window.Fraksjoner && Fraksjoner.FRAKSJONER[e]) ut.push(`Melding: ${Fraksjoner.FRAKSJONER[e].navn} holder ${b.navn}.`); }
     return ut;
   }
-  function radioNå() { const v = vær(), l = leir(), steder = l ? byer().filter(b => Math.hypot(b.x - l.x, b.y - l.y) < 80000).map(b => b.navn) : []; const m = W.radioInn(V, W.radioMelding(sanne(v), steder, Math.random), tid, Math.random); endret(); logg('Radio: ' + m.tekst); return m; }
+  function radioNå() { const v = vær(), l = leir(), steder = l ? byer().filter(b => Math.hypot(b.x - l.x, b.y - l.y) < 80000).map(b => b.navn) : []; const m = W.radioInn(V, W.radioMelding(sanne(v), steder, tilfV), tid, tilfV); endret(); logg('Radio: ' + m.tekst); return m; }
 
   // ---------- 38 tog ----------
   // Har tettstedet jernbanespor innen 1 km? Leses fra jernbanen i kartet (utveg-flisene, laget «bane», z9). spor: id -> true | false |
@@ -517,7 +520,7 @@
     if (sistTime == null) sistTime = time;
     if (time !== sistTime) { const timer = Math.min(6, Math.max(1, time - sistTime)); sistTime = time; kuldeTime(v, timer); regnHendelse().catch(e => console.error(e));
       // lynet tenner når det er knusktørt (tørken, ikke regnet som nettopp har begynt, avgjør) og det er torden eller tunge skyer
-      if (v.årstid !== 'vinter' && V.tørke >= (R.tørke.fra + R.tørke.full) / 2 && (v.torden > 0 || v.sky > .7) && Math.random() < 1 - Math.pow(1 - R.brann.lyn, timer)) { const l = leir(); if (l) { const a = Math.random() * 6.283, d = 1000 + Math.random() * 7000; tenn(l.x + Math.cos(a) * d, l.y + Math.sin(a) * d, 'Lynet', true).catch(() => {}); } }
+      if (v.årstid !== 'vinter' && V.tørke >= (R.tørke.fra + R.tørke.full) / 2 && (v.torden > 0 || v.sky > .7) && tilfV() < 1 - Math.pow(1 - R.brann.lyn, timer)) { const l = leir(); if (l) { const a = tilfV() * 6.283, d = 1000 + tilfV() * 7000; tenn(l.x + Math.cos(a) * d, l.y + Math.sin(a) * d, 'Lynet', true).catch(() => {}); } }
       if (harRadio() && tid >= V.radio.neste) radioNå();
       visForhold(); }
   });

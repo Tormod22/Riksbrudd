@@ -9,6 +9,7 @@
   const NØKKEL = 'riksbrudd-nett', BILDE_MS = 500, BILDE_ALENE_MS = 5000, PING_MS = 15000;
   const les = () => { try { return JSON.parse(localStorage.getItem(NØKKEL) || '{}') || {}; } catch (e) { return {}; } };
   const skriv = o => { try { localStorage.setItem(NØKKEL, JSON.stringify(Object.assign(les(), o))); } catch (e) { /* privat vindu */ } };
+  // Math.random med vilje (bare utseende): spiller-id-en i nettverket er ikke en del av verden.
   const lagId = () => { let id = les().id; if (!id) { id = Math.random().toString(36).slice(2, 10); skriv({ id }); } return id; };
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const sikkerLogg = t => { try { logg(t); } catch (e) { /* før spillet er klart */ } };

@@ -6,6 +6,9 @@
  */
 (function (rot) {
   'use strict';
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const E = rot.Eventyr; if (!E || typeof document === 'undefined') return;
   const R = E.REGLER, NØKKEL = 'riksbrudd-eventyr', SLØR = 'riksbrudd-kartslor';
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
@@ -102,10 +105,10 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function behandle(id) { const t = ting(); if (!t) return false; const g = E.Skader.behandle(T.skader, id, t); if (g) { logg(g); return false; }
     lagreSekk(); lagre(); logg(id === 'bein' ? 'Beinet er spjelket. Du går nesten som før, og det gror fortere.' : 'Såret er renset og forbundet. Infeksjonen går tilbake.'); if (id === 'infeksjon') T.tellere.behandlet = (T.tellere.behandlet || 0) + 1; oppdater(); return true; }
   function fall(v) { if (!auto() || !klar) return; const f = E.Skader.fall(v, har('seig')); if (!f) return; const K = helse(); if (K) { K.hp = Math.max(5, K.hp - f.helse); K.skadd = performance.now(); }
-    logg(`Du falt hardt (−${f.helse} helse).`); if (Math.random() < f.bein) fåSkade('bein', 'Du landet stygt'); }
-  function truffet(tap) { if (!auto() || !klar) return; if (Math.random() < E.Skader.skudd(tap)) fåSkade('infeksjon', 'Et skuddsår har blitt betent'); hundTruffet(tap); }
+    logg(`Du falt hardt (−${f.helse} helse).`); if (tilfV() < f.bein) fåSkade('bein', 'Du landet stygt'); }
+  function truffet(tap) { if (!auto() || !klar) return; if (tilfV() < E.Skader.skudd(tap)) fåSkade('infeksjon', 'Et skuddsår har blitt betent'); hundTruffet(tap); }
   // (runde 4) hunden ved siden av deg kan også bli truffet
-  function hundTruffet(tap) { const H = T.hund; if (!H || !går()) return 0; const s = E.Hund.truffet(H, tap, Math.random()); if (!s) return 0; E.Hund.fyll(H); H.hp = Math.max(0, H.hp - s);
+  function hundTruffet(tap) { const H = T.hund; if (!H || !går()) return 0; const s = E.Hund.truffet(H, tap, tilfV()); if (!s) return 0; E.Hund.fyll(H); H.hp = Math.max(0, H.hp - s);
     if (H.hp <= 0) { logg(`${H.navn} ble skutt og døde. Den fulgte deg til det siste.`); T.hund = null; hundPos = null; } else engang('hundSkadet', true, `${H.navn} ble truffet og halter (${Math.round(H.hp)} %). Den gror i leiren.`); lagre(); return s; }
   // gi hunden en rasjon fra sekken
   function matHund() { const t = ting(); if (!t) return false; const g = E.Hund.mat(T.hund, t); if (g) { logg(g); return false; } delete meldt.hundSulten; lagreSekk(); lagre(); logg(`${T.hund.navn} fikk en rasjon og logrer.`); return true; }
@@ -127,14 +130,14 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     t.felle--; if (!t.felle) delete t.felle; T.feller.push({ x: Math.round(p.x), y: Math.round(p.y), tid: typeof tid !== 'undefined' ? tid : 0, ekte: T.ekte, skog: skogHer() });
     lagreSekk(); lagre(); logg('Fella er satt ut. Kom tilbake om noen timer.'); skitten = true; oppdater(); return true; }
   const nærFelle = () => { const p = deg(); if (!p) return -1; return T.feller.findIndex(f => Math.hypot(f.x - p.x, f.y - p.y) <= R.felle.nær); };
-  function sjekkFelle(nr, r1, r2) { const f = T.feller[nr === undefined ? nærFelle() : nr]; if (!f) return null; const n = E.Felle.sjekk(f, typeof tid !== 'undefined' ? tid : 0, T.ekte, r1 === undefined ? Math.random() : r1, r2 === undefined ? Math.random() : r2);
+  function sjekkFelle(nr, r1, r2) { const f = T.feller[nr === undefined ? nærFelle() : nr]; if (!f) return null; const n = E.Felle.sjekk(f, typeof tid !== 'undefined' ? tid : 0, T.ekte, r1 === undefined ? tilfV() : r1, r2 === undefined ? tilfV() : r2);
     if (n === null) { logg(`Fella er tom ennå (${Math.round(E.Felle.igjen(f, tid, T.ekte) * 100)} % av ventetiden er gått).`); return null; }
     T.feller.splice(T.feller.indexOf(f), 1); const t = ting();
     if (n > 0) { if (t) t.rasjon = (t.rasjon || 0) + n; T.tellere.fangst++; logg(`Fangst i fella! Du får ${n} rasjon${n > 1 ? 'er' : ''}. Fella er oppbrukt.`); } else logg('Fella var utløst, men tom. Den er ødelagt.');
     lagreSekk(); lagre(); skitten = true; oppdater(); return n; }
 
   // ---------- hunden ----------
-  function fåHund(tekst) { if (T.hund) return false; T.hund = E.Hund.fyll({ navn: E.Hund.NAVN[Math.floor(Math.random() * E.Hund.NAVN.length)] }); hundPos = null; lagre(); si(`${T.hund.navn} følger deg`, (tekst || 'En hund har slått følge med deg.') + ' Den knurrer når fiender du ikke ser, er i nærheten.'); oppdater(); return true; }
+  function fåHund(tekst) { if (T.hund) return false; T.hund = E.Hund.fyll({ navn: E.Hund.NAVN[Math.floor(tilfV() * E.Hund.NAVN.length)] }); hundPos = null; lagre(); si(`${T.hund.navn} følger deg`, (tekst || 'En hund har slått følge med deg.') + ' Den knurrer når fiender du ikke ser, er i nærheten.'); oppdater(); return true; }
 
   // ---------- sniking og dekning ----------
   // mørket: 3D-natta (spill/natt3d.js), ellers krigens natt etter klokka (spill/krig.js)
@@ -201,7 +204,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     // interiøret i huset bygges straks (ellers er huset en massiv kloss til du har stått der litt), og du settes på et fritt sted på gulvet
     if (rot.Interior3d && Interior3d.oppdater) { try { for (let n = 0; n < 14 && !Interior3d.inne(x, y); n++) Interior3d.oppdater(true); } catch (e) { /* bygges av seg selv etterpå */ }
       if (typeof hindring3d === 'function' && hindring3d(x, y)) { let funnet = false; for (let r = .5; r <= 8 && !funnet; r += .5) for (let v = 0; v < 6.28 && !funnet; v += .52) { const px = x + Math.cos(v) * r, py = y + Math.sin(v) * r; if (Interior3d.inne(px, py) && !hindring3d(px, py) && !hindring3d(px + .4, py) && !hindring3d(px - .4, py) && !hindring3d(px, py + .4) && !hindring3d(px, py - .4)) { Gange.flytt(px, py, false); funnet = true; } } } } if (Gange.ligg) Gange.ligg(false); snik = new WeakMap();
-    si('Du kom deg unna', `Såret slepte du deg til tilfluktsstedet ${Math.round(q.meter)} m unna. Hvil eller sov her.`); if (auto() && Math.random() < .35) fåSkade('infeksjon', 'Såret har blitt betent'); return true; }
+    si('Du kom deg unna', `Såret slepte du deg til tilfluktsstedet ${Math.round(q.meter)} m unna. Hvil eller sov her.`); if (auto() && tilfV() < .35) fåSkade('infeksjon', 'Såret har blitt betent'); return true; }
 
   // ---------- historien ----------
   const bakgrunn = () => { const S = spill(); return (S && S.karakter && S.karakter.bakgrunn) || 'soldat'; };
@@ -305,9 +308,9 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
       if (Object.keys(T.skader).length) { const r = E.Skader.steg(T.skader, timer, 1, { leir: iLeiren(), sykestue: iLeiren() && sykestue(), seig: har('seig') }); if (r.helse > 0 && K && K.hp > 5) K.hp = Math.max(5, K.hp - r.helse);
         for (const id of r.friske) logg(`${E.Skader.LISTE[id].navn}: du er frisk igjen${iLeiren() && sykestue() ? ' (behandlet i sykestua)' : ''}.`); if (r.friske.length) lagre(); }
       // kulde: ute i vinter eller nedbør
-      if (ute && !inne() && timer > 0 && rot.VAER) { const reg = VAER.regel || VAER, vått = (reg.regn || 0) + (reg.snø || 0) > .3; if (Math.random() < E.Skader.kulde(timer, VAER.årstid === 'vinter', vått, tempHer())) fåSkade('infeksjon', 'Du har blitt syk av kulde og væte'); }
+      if (ute && !inne() && timer > 0 && rot.VAER) { const reg = VAER.regel || VAER, vått = (reg.regn || 0) + (reg.snø || 0) > .3; if (tilfV() < E.Skader.kulde(timer, VAER.årstid === 'vinter', vått, tempHer())) fåSkade('infeksjon', 'Du har blitt syk av kulde og væte'); }
       // en hund slår følge
-      if (!T.hund && ute && gikk && t && t.rasjon > 0) { const sikkert = (E.Historie.kapittel(bakgrunn(), T.hist) || { mål: {} }).mål.slag === 'hund'; if (E.Hund.kommer(T.hundGått, gikk, Math.random(), sikkert)) { t.rasjon--; if (!t.rasjon) delete t.rasjon; lagreSekk(); fåHund('En hund har fulgt etter deg en stund. Du ga den en rasjon, og nå blir den hos deg.'); } }
+      if (!T.hund && ute && gikk && t && t.rasjon > 0) { const sikkert = (E.Historie.kapittel(bakgrunn(), T.hist) || { mål: {} }).mål.slag === 'hund'; if (E.Hund.kommer(T.hundGått, gikk, tilfV(), sikkert)) { t.rasjon--; if (!t.rasjon) delete t.rasjon; lagreSekk(); fåHund('En hund har fulgt etter deg en stund. Du ga den en rasjon, og nå blir den hos deg.'); } }
       if (p) snikSteg(p, 1);
       // (runde 4) hunden trenger mat: i leiren spiser den av leirens mat, ute må du gi den en rasjon
       if (T.hund) { const H = T.hund, h = E.Hund.steg(H, timer, 1, { leir: iLeiren(), mat: () => { const F = rot.FolkSpill && FolkSpill.tilstand(); if (F && F.mat >= 1) { F.mat -= 1; return true; } return false; } });
@@ -405,7 +408,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
     fart: () => (klar ? E.Skader.fart(T.skader) : 1), kanLøpe: () => !klar || E.Skader.kanLøpe(T.skader), fall,
     // spillet-visning.js
     fiendeFaktor, truffet, slåttUt, skudd: W => { sistSkudd = performance.now(); stilleSkudd = !!(W && W.stille); }, felt: () => { if (klar) T.tellere.felt++; },
-    treff: () => (klar && har('stødig') && stilling() !== 'stå' ? R.stødig : 1), hodeskudd: () => klar && har('hodeskudd') && Math.random() < R.hodeskudd,
+    treff: () => (klar && har('stødig') && stilling() !== 'stå' ? R.stødig : 1), hodeskudd: () => klar && har('hodeskudd') && tilfV() < R.hodeskudd,
     // leting-visning.js
     lettHus(kl, i, tomt) { if (!klar) return ''; const d = []; if (!tomt) { const f = E.Handverk.funn(kl, i, har('finner')), I = sekk(), fikk = {}; if (I) for (const [id, n] of Object.entries(f)) { const g = Utstyr.leggTil(I, id, n); if (g) fikk[id] = g; } lagreSekk(); const t = E.Handverk.tekst(fikk); if (t) d.push(t); }
       if (!T.hund && E.Hund.iHus(i) && fåHund('En hund gjemte seg i huset. Den vil bli med deg.')) d.push('En hund blir med deg!'); return d.join(' '); },

@@ -69,4 +69,27 @@ ok(LG.fraJSON('{"versjon":99}', leir) === null && LG.fraJSON('ødelagt', leir) =
 { const s = nyttLag('Vaktlaget', 100, 200); s.ordreMål = [1500, 2500]; const d = LG.pakkLag(s); ok(d.mål && d.mål[0] === 1500 && d.mål[1] === 2500, 'ordre under planlegging lagres (mål)');
   const t = nyttLag('Vaktlaget', 0, 0); LG.brukLag(t, JSON.parse(JSON.stringify(d))); ok(t.målLagret && t.målLagret[0] === 1500 && t.x === 100, 'og leses inn som målLagret (laget går videre)');
   s.sti = [[100, 200], [900, 900]]; ok(LG.pakkLag(s).mål[0] === 900, 'en ferdig rute går foran ordreMål'); }
+// R16-E (22. nov): kjøreordre, køen på basen, minefelt og droner – pakk -> JSON -> les gir det samme, gamle lagringer virker
+{ const leir = { x: 5, y: 6 };
+  const kj = { navn: 'Kolonne 1', type: 'lastebil', antall: 3, x: 10, y: 20, retning: 1, drivstoff: .5, sti: { P: [10, 20, 400, 500, 812.34, 901.26], V: [1, 1] } };
+  const kjOpp = { navn: 'Kolonne 2', type: 'lastebil', antall: 1, x: 0, y: 0, retning: 0, sti: { P: [0, 0, 9, 9] }, oppdrag: { type: 'olje' } };
+  const base = { navn: 'Basen', x: 0, y: 0, beholdning: 3, bygget: 2, kø: [{ type: 'lag', igjen: 1200.5, total: 3600 }, { type: 'stridsvogn', igjen: 7200, total: 7200 }] };
+  const tom = { navn: 'Tom base', kø: [], bygget: 0 };
+  const mine = { navn: 'Minefelt 1', x: 300.04, y: 400, side: 'blå', ladninger: 4 }, bruktMine = { navn: 'Minefelt 2', x: 1, y: 1, side: 'blå', ladninger: 0 };
+  const drone = { navn: 'Drone 1', x: 50, y: 60, mål: [900, 1000], igjen: 1500, retning: .5, fase: 'flyr' }, tomDrone = { navn: 'Drone 2', x: 0, y: 0, mål: [0, 0], igjen: 0, fase: 'tom' };
+  const d = LG.fraJSON(JSON.stringify(LG.pakk({ tid: 5, leir, kjøretøy: [kj, kjOpp], baser: [base, tom], minefelt: [mine, bruktMine], droner: [drone, tomDrone] })), leir);
+  ok(d && d.kjøretøy[0].mål && d.kjøretøy[0].mål[0] === 812.3 && d.kjøretøy[0].mål[1] === 901.3, 'kjøreordren lagres som målet (siste punkt på ruta)');
+  ok(d && !d.kjøretøy[1].mål, 'en kolonne med oppdrag lagrer ikke kjøreordren (oppdraget styrer den)');
+  const k2 = { navn: 'Kolonne 1', type: 'lastebil', antall: 1, x: 0, y: 0 }; LG.brukKj(k2, d.kjøretøy[0]);
+  ok(k2.målLagret && k2.målLagret[0] === 812.3 && k2.sti === null && k2.x === 10, 'kjøreordren leses inn som målLagret (kolonnen planlegger på nytt)');
+  ok(d.baser.length === 1 && d.baser[0].navn === 'Basen' && d.baser[0].kø.length === 2 && d.baser[0].kø[0].igjen === 1200.5 && d.baser[0].kø[1].type === 'stridsvogn' && d.baser[0].bygget === 2, 'køen på basen lagres (bare baser med noe i køen)');
+  const b2 = { navn: 'Basen', kø: [], bygget: 0 }; ok(LG.brukBaser([b2], d.baser) === 1 && b2.kø.length === 2 && b2.kø[0].total === 3600 && b2.bygget === 2, 'køen legges tilbake på basen med samme navn');
+  ok(d.minefelt.length === 1 && JSON.stringify(d.minefelt[0]) === JSON.stringify({ navn: 'Minefelt 1', x: 300, y: 400, side: 'blå', ladninger: 4 }), 'minefeltet lagres (brukte felt tas ikke med)');
+  ok(d.droner.length === 1 && d.droner[0].navn === 'Drone 1' && d.droner[0].mål[0] === 900 && d.droner[0].igjen === 1500 && d.droner[0].fase === 'flyr', 'dronen lagres (tomme droner tas ikke med)');
+  const gammel = LG.pakk({ tid: 5, leir, kjøretøy: [kj] }); delete gammel.baser; delete gammel.minefelt; delete gammel.droner; delete gammel.kjøretøy[0].mål;
+  const g = LG.fraJSON(JSON.stringify(gammel), leir);
+  ok(g && g.baser.length === 0 && g.minefelt.length === 0 && g.droner.length === 0 && !g.kjøretøy[0].mål, 'gammel lagring uten feltene virker (tomme lister)');
+  const k3 = { navn: 'Kolonne 1', type: 'lastebil', antall: 1, x: 0, y: 0, målLagret: [1, 1] }; LG.brukKj(k3, g.kjøretøy[0]); ok(!k3.målLagret, 'og kolonnen står da stille som før');
+  const rar = LG.fraJSON(JSON.stringify({ ...LG.pakk({ tid: 1, leir }), minefelt: [{ navn: 'x', x: 'a' }, null, 7], droner: 'tull', baser: [{ navn: 'B', kø: [{ type: '<script>', igjen: 5 }] }] }), leir);
+  ok(rar && rar.minefelt.length === 0 && rar.droner.length === 0 && rar.baser[0].kø.length === 0, 'ødelagte felt i lagringen hoppes over'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for lagring.js er ok'); process.exit(feil ? 1 : 0);

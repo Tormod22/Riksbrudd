@@ -7,6 +7,9 @@
 //  - Minnesmerket er et nytt bygg i leiren (Leir.BYGG.minnesmerke, MODELLER.minnesmerke).
 // Lagres i «riksbrudd-samfunn» per leir. I de automatiske testene (navigator.webdriver) sover hele samfunnet til SamfunnSpill.test = true.
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const SR = window.Samfunn, FR = window.FolkRegler, LB = window.Leir; if (!SR || !FR || !LB) return;
   const api = { test: false }, auto = () => !navigator.webdriver || api.test;
   // Claudes forslag: ett ekte minutt teller som minst én time i samfunnet (ellers ville et døgn ta et døgn når spillet går i sanntid)
@@ -298,14 +301,14 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
   // en rekrutt fra en by (region-visning.js): får et sted i historien. Stedet = det største tettstedet dere holder (ellers «byen»).
   function ankommet(p) { if (!S || !p || !auto()) return null; let navn = '';
     try { const B = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || []; let best = -1; for (const b of B) { if (!b.e || Garnison.tilstand(TETTSTEDER, b.e.id).eier !== 'blå') continue; const n = b.e.folk || b.e.innb || b.e.n || 0; if (n > best) { best = n; navn = b.e.navn || ''; } } } catch (e) { navn = ''; }
-    const q = SR.ankommet(p, navn, Math.random); if (q && q.spes) logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}!`); lagre(); return q; }
+    const q = SR.ankommet(p, navn, tilfV); if (q && q.spes) logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}!`); lagre(); return q; }
   // fanger i leiren (krig-visning.js: KrigSpill.T().fanger) kan få bli – de er lite trofaste i starten
   const fanger = () => { try { return window.KrigSpill && KrigSpill.T && KrigSpill.T() ? KrigSpill.T().fanger || [] : []; } catch (e) { return []; } };
   function taFanger(i) { const T = fanger(), q = T[i], f = F(); if (!S || !q || !f) return false; const navn = window.Fraksjoner && Fraksjoner.FRAKSJONER[q.side] ? Fraksjoner.FRAKSJONER[q.side].navn : 'røverne';
     const nye = SR.fangerInn(f, Math.min(6, q.n || 1), navn, r()); T.splice(i, 1); if (KrigSpill.lagre) KrigSpill.lagre();
     logg(`${nye.length} ${nye.length === 1 ? 'fange' : 'fanger'} fra ${navn} får bli i leiren: ${nye.map(p => p.navn.split(' ')[0]).join(', ')}. De er lite trofaste – følg med på dem.`); lagre(); vis(); if (window.FolkSpill) FolkSpill.vis(); return nye; }
   // en overlevende funnet ved leting (leting-visning.js): av og til en spesialist
-  function funnet(p) { if (!S || !p) return null; const q = SR.funnet(p, Math.random); if (q) { logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}! ${SR.SPES[q.spes].tekst}`); lagre(); } return q; }
+  function funnet(p) { if (!S || !p) return null; const q = SR.funnet(p, tilfV); if (q) { logg(`${p.navn} viser seg å være ${SR.SPES[q.spes].navn.toLowerCase()}! ${SR.SPES[q.spes].tekst}`); lagre(); } return q; }
 
   // ---------- spesialister fra oppdrag (spillet-visning.js sender «riksbrudd-oppdrag» når et oppdrag er fullført) ----------
   // Redningsoppdrag: en av dem dere fikk med, er spesialisten (står i oppdragslista på forhånd). Røverpost: fangen røverne holdt, blir med.
@@ -316,7 +319,7 @@ body.kort #samfunnmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(
     if (!S || !o || !auto()) return null; const type = SR.oppdragSpes(o, leirFrø()), f = F(), l = L(); if (!type || !f) return null;
     let p = null;
     if (o.type === 'redd') { p = (nye || [])[0] || null; if (!p) { logg(`Blant dem dere reddet, var en ${spesNavn(type)} – men det var ingen ledig seng, så hen dro videre.`); return null; } }
-    else { const r = l ? FR.rekrutter(f, l, () => true) : {}; p = r.person || null; if (!p) { logg(`Røverne holdt en ${spesNavn(type)} som fange. Hen ville bli med, men det var ingen ledig seng.`); return null; } p.lojal = Math.round((.55 + Math.random() * .25) * 100) / 100; }
+    else { const r = l ? FR.rekrutter(f, l, () => true) : {}; p = r.person || null; if (!p) { logg(`Røverne holdt en ${spesNavn(type)} som fange. Hen ville bli med, men det var ingen ledig seng.`); return null; } p.lojal = Math.round((.55 + tilfV() * .25) * 100) / 100; }
     SR.gjørSpesialist(p, type); logg(`${p.navn} er ${spesNavn(type)} – en spesialist! ${SR.SPES[type].tekst}`); lagre(); if (window.FolkSpill) FolkSpill.vis(); return p;
   }
   window.addEventListener('riksbrudd-oppdrag', ev => { try { const d = ev.detail || {}; fraOppdrag(d.o, d.nye); } catch (e) { /* et oppdrag skal aldri stoppe av samfunnet */ } });

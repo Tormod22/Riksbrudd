@@ -5,6 +5,9 @@
  */
 (function () {
   'use strict';
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner. Bare lyden (smell) bruker Math.random med vilje – den bare pynter.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const R = window.Spillet; if (!R) return; const { Trussel, Marked, Oppdrag, Kamp, Hendelser, Deling } = R, LB = window.Leir, FR = window.FolkRegler;
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null), S = () => window.OppstartSpill && OppstartSpill.tilstand(), L = () => window.LeirSpill && LeirSpill.tilstand(), F = () => window.FolkSpill && FolkSpill.tilstand();
   const api = { test: false }, auto = () => !navigator.webdriver || api.test, kr = v => (LB ? LB.kroner(v) : v + ' kr');
@@ -39,11 +42,11 @@
     const egne = ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e)), soldater = egne.reduce((t, e) => t + e.menn.filter(m => m.hp >= 1).length, 0);
     const tunge = (window.KJORETOY || []).filter(k => k.side === 'blå' && (k.type === 'stridsvogn' || k.type === 'rakettartilleri')).length;
     const n = Trussel.lagFor(nr, { soldater, tunge, dag: Math.floor(tid / 1440), faktor: window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1 }); let s = null;
-    for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, Math.random(), Math.random()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
+    for (let k = 0; k < 10 && !s; k++) { const q = Trussel.start(leir, tilfV(), tilfV()); if (await påLand(q.x, q.y)) s = q; } if (!s) { planlegg(); return false; }
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     const mann = Trussel.menn(nr, soldater, n, window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1);
     const planer = [], nye = [];
-    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); nye.push(e); const p = ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); if (p && p.then) planer.push(p.catch(() => {})); }
+    for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; if (!navigator.webdriver && e.menn.length > mann) { e.menn = e.menn.slice(0, mann); e.leder = 0; } ENHETER.push(e); nye.push(e); const p = ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); if (p && p.then) planer.push(p.catch(() => {})); }
     // (19. nov) anslaget i varselet: tida ruta deres tar (venter høyst 3 s på ruta), ellers Trussel.anslag – så varselet og banneret sier det samme
     if (planer.length) await Promise.race([Promise.all(planer), new Promise(r => setTimeout(r, 3000))]);
     const ruter = nye.filter(e => e.sti && e.timerIgjen > 0).map(e => e.timerIgjen * 60), min = ruter.length ? Math.min(...ruter) : Trussel.anslag(s.meter, 0);
@@ -67,13 +70,13 @@
   // bort fra leiren: samme vei som de kom (der finnes det en rute), ellers rett ut fra leiren
   function bort(e, tilfeldig) { const leir = S().leir, H = Trussel.HERJ;
     if (e.fra && !tilfeldig) { ordre(e, e.fra.x, e.fra.y, true); return; }
-    const a = !tilfeldig && Math.hypot(e.x - leir.x, e.y - leir.y) > 5 ? Math.atan2(e.y - leir.y, e.x - leir.x) : Math.random() * 6.2832;
+    const a = !tilfeldig && Math.hypot(e.x - leir.x, e.y - leir.y) > 5 ? Math.atan2(e.y - leir.y, e.x - leir.x) : tilfV() * 6.2832;
     ordre(e, leir.x + Math.cos(a) * (H.borte + 400), leir.y + Math.sin(a) * (H.borte + 400), true); }
   // lag som trekker seg ut: fjernes når de er langt nok unna (eller har brukt for lang tid); står de fast, prøver de en annen vei
   function utSteg() { const leir = S().leir, H = Trussel.HERJ;
     for (const e of ENHETER.filter(q => q.trekker || q.flykter)) { const d = Math.hypot(e.x - leir.x, e.y - leir.y);
       if (!levende(e) || d > H.borte || tid - (e.trekkerFra || 0) > H.maksMin) { if (e.raid > 0 && e.raid === T.aktiv) continue; const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); skitten = true; continue; }
-      if (!e.sti && !e.planlegger && Math.random() < .25) bort(e, Math.random() < .5); } }
+      if (!e.sti && !e.planlegger && tilfV() < .25) bort(e, tilfV() < .5); } }
   // (runde 8, PC-kritikeren: «bølge 2 fikk ingen melding om hvordan det gikk») når bølgen er over, gir spill/forsvar-visning.js én rapport
   // (utfallet, det dere tok eller tapte, tapene hos oss og byggene) i loggen og i banneret – også under spoling. Uten den: varselet som før.
   const sumBytte = lag => { const s = { penger: 0, lager: {}, diesel: 0, mat: 0 }; let n = 0;
@@ -104,7 +107,7 @@
       else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
       for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
-    for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && Math.random() < .03) ordre(e, leir.x + (Math.random() - .5) * 80, leir.y + (Math.random() - .5) * 80, true); }
+    for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && tilfV() < .03) ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); }
 
   // ================= MARKED =================
   let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;
@@ -127,7 +130,7 @@
     FR.kjøpMat = (f, rasjoner, betal) => { if (!knapt()) return kf(f, rasjoner, betal); const kan = Marked.kan(M, 'mat', rasjoner); if (!(kan > 0)) return { feil: Marked.tomt('mat') };
       const r = kf(f, kan, betal); if (!r.feil) { Marked.ta(M, 'mat', r.rasjoner); husk(); } return r; };
   }
-  function markedSteg() { if (!auto() || !M) return; const d = Math.floor(tid / 1440); if (d === M.spilldag && ekte - M.ekte < 600) return; M.spilldag = d; M.ekte = ekte; Marked.steg(M, Math.random); settPriser(); skriv('riksbrudd-marked', M); logg(Marked.tekst(M)); meny(); }
+  function markedSteg() { if (!auto() || !M) return; const d = Math.floor(tid / 1440); if (d === M.spilldag && ekte - M.ekte < 600) return; M.spilldag = d; M.ekte = ekte; Marked.steg(M, tilfV); settPriser(); skriv('riksbrudd-marked', M); logg(Marked.tekst(M)); meny(); }
 
   // ================= OPPDRAG =================
   let O = null, lager = false;
@@ -138,8 +141,8 @@
     if (!start && O.nesteSpill !== undefined && tid < O.nesteSpill && ekte < (O.nesteEkte || 0)) return;
     lager = true; try { const leir = S().leir, mål = start ? T.start : O.liste.length + 1;
       // høyst én ledig røverpost om gangen – ellers kunne tre poster sperre for trygge oppdrag i tre døgn (gjennomspillingen 19. nov)
-      for (let k = 0; k < 12 && O.liste.length < mål; k++) { const o = Oppdrag.lag(leir, ++O.nr, Math.random, tid); if (o.type === 'post' && O.liste.some(q => q.type === 'post' && !q.tatt)) continue; if (await påLand(o.x, o.y)) O.liste.push(o); }
-      if (!start) { const v = Oppdrag.vent(Math.random); O.nesteSpill = tid + v.spill; O.nesteEkte = ekte + v.ekte; }
+      for (let k = 0; k < 12 && O.liste.length < mål; k++) { const o = Oppdrag.lag(leir, ++O.nr, tilfV, tid); if (o.type === 'post' && O.liste.some(q => q.type === 'post' && !q.tatt)) continue; if (await påLand(o.x, o.y)) O.liste.push(o); }
+      if (!start) { const v = Oppdrag.vent(tilfV); O.nesteSpill = tid + v.spill; O.nesteEkte = ekte + v.ekte; }
       skriv('riksbrudd-oppdrag', O); meny(); } finally { lager = false; } }
   function ta(id) { const o = O.liste.find(q => q.id === id); if (!o || o.tatt) return false; o.tatt = true; o.frist = Math.max(o.frist, tid + 2 * 1440);
     if (o.type === 'post') for (let i = 0; i < o.fiender; i++) { const e = nyttLag(`Røverpost ${o.id}${o.fiender > 1 ? '.' + (i + 1) : ''}`, o.x + i * 40, o.y + i * 25, 'rød'); e.post = o.id; ENHETER.push(e); }
@@ -169,6 +172,7 @@
     get mag() { return A().v.mag; }, set mag(n) { A().v.mag = Math.max(0, Math.min(A().def.magasin, n)); },
     get res() { return A().reserve; }, set res(n) { if (U()) { U().tilstand().ting[A().def.ammo] = Math.max(0, Math.round(n)); } else reserveV.res = n; } };
   let lydK = null;
+  // Math.random med vilje (bare utseende): støyen i skuddlyden bestemmer ikke hva som skjer.
   function smell() { try { if (localStorage.getItem('riksbrudd-lyd') === 'av') return; lydK = lydK || new (window.AudioContext || window.webkitAudioContext)(); const n = lydK.sampleRate * .12, b = lydK.createBuffer(1, n, lydK.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); const s = lydK.createBufferSource(), g = lydK.createGain(); g.gain.value = .25; s.buffer = b; s.connect(g).connect(lydK.destination); s.start(); } catch (e) { /* ingen lyd */ } }
   function lad() { const nå = performance.now(), a = A(); if (K.lader > nå || a.v.mag === a.def.magasin || !a.reserve) return; K.lader = nå + a.def.lade * 1000; const v = a.v; setTimeout(() => { if (U()) U().lad(v); else { const t = Math.min(a.def.magasin - v.mag, reserveV.res); v.mag += t; reserveV.res -= t; } }, a.def.lade * 1000); }
   function skyt() { const Q = r3(), d = deg(), nå = performance.now(); if (!Q || !d || (window.KjorSpill && KjorSpill.fører()) || (window.MoblerSpill && MoblerSpill.hender()) || nå < K.lader || nå - K.sist < A().def.takt * 1000) return false; if (!K.mag) { lad(); return false; } const W = A().def;
@@ -179,7 +183,7 @@
     // hvert hagl (ett for de fleste våpen, seks for hagla) kan treffe en mann
     // ferdigheten Skyting vokser når du skyter mot en fiende, mest når du treffer (spill/overlev.js)
     if (best && window.OverlevSpill) OverlevSpill.øk('skyting', 1);
-    if (best) for (let h = 0; h < (W.hagl || 1); h++) if (Math.random() < sj(bd)) { const m = best.menn.find(q => q.hp > 0); if (m) { const sk = W.skade * (window.EventyrSpill && EventyrSpill.hodeskudd && EventyrSpill.hodeskudd() ? 2 : 1); m.hp = m.hp - sk < .05 ? 0 : m.hp - sk; if (!m.hp && window.EventyrSpill && EventyrSpill.felt) EventyrSpill.felt(); K.treff = nå; if (window.OverlevSpill) OverlevSpill.øk('skyting', 2); if (!levende(best)) { logg(`${best.navn} er slått ut.`); } skitten = true; } }
+    if (best) for (let h = 0; h < (W.hagl || 1); h++) if (tilfV() < sj(bd)) { const m = best.menn.find(q => q.hp > 0); if (m) { const sk = W.skade * (window.EventyrSpill && EventyrSpill.hodeskudd && EventyrSpill.hodeskudd() ? 2 : 1); m.hp = m.hp - sk < .05 ? 0 : m.hp - sk; if (!m.hp && window.EventyrSpill && EventyrSpill.felt) EventyrSpill.felt(); K.treff = nå; if (window.OverlevSpill) OverlevSpill.øk('skyting', 2); if (!levende(best)) { logg(`${best.navn} er slått ut.`); } skitten = true; } }
     if (!K.mag) lad(); return true; }
   function slåttUt() {
     // et tilfluktssted i nærheten: du våkner der i stedet for i leiren (spill/eventyr-visning.js)
@@ -226,10 +230,10 @@
   function tilstand() { const f = F(), s = S(); return { folk: f ? f.personer.length : 0, mat: f ? f.mat : 0, penger: s ? s.penger : 0 }; }
   // annenhver gang et kort fra samfunnet (krangler og ønsker med følger som varer, spill/samfunn-visning.js)
   function hendelse() { const f = F(); if (!f || !f.personer.length) return false;
-    if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && Math.random() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; return true; }
+    if (window.SamfunnSpill && SamfunnSpill.våken && SamfunnSpill.våken() && tilfV() < .5 && SamfunnSpill.nyttKort('kort')) { const w = 18 + tilfV() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + tilfV() * 8) * 60; return true; }
     // RUNDE 13 (kritiker H): bare folk som er i leiren nå (ikke på speidertur, jakt eller annet ærend – p.borte), og to forskjellige når kortet gjelder to
     const hjemme = f.personer.filter(q => q && q.navn && !q.borte); if (!hjemme.length) return false;
-    const h = Hendelser.velg(Math.random, tilstand(), H.sist); if (!h || (h.to && hjemme.length < 2)) return false; const p = hjemme[Math.floor(Math.random() * hjemme.length)], andre = hjemme.filter(q => q !== p), p2 = h.to ? andre[Math.floor(Math.random() * andre.length)] : null;
+    const h = Hendelser.velg(tilfV, tilstand(), H.sist); if (!h || (h.to && hjemme.length < 2)) return false; const p = hjemme[Math.floor(tilfV() * hjemme.length)], andre = hjemme.filter(q => q !== p), p2 = h.to ? andre[Math.floor(tilfV() * andre.length)] : null;
     H.åpen = { id: h.id, navn: p.navn, ...(p2 ? { navn2: p2.navn } : {}) }; H.sist = h.id; skriv('riksbrudd-hendelser', H); visHendelse(); return true; }
   function visHendelse() { kort.innerHTML = ''; const å = H && H.åpen, h = å && Hendelser.LISTE.find(q => q.id === å.id); if (!h) { kort.classList.remove('på'); if (window.Kortkø && Kortkø.ferdig) Kortkø.ferdig('hendelse'); return; }
     // én kortkø for alle kortene med valg (spill/samfunn-visning.js): vent på tur, så står aldri to kort oppå hverandre
@@ -244,7 +248,7 @@
       if (v.folk > 0) { const r = l && FR ? FR.rekrutter(f, l, () => true) : {}; ut = r.person ? ` ${r.person.navn} er blitt med i gjengen.` : ' Det var ingen ledig seng, så vandreren gikk videre.'; } }
     // (runde 14) et valg kan ha sin egen setning i loggen (summen i kassa)
     if (h.valg[i].logg) ut += ' ' + h.valg[i].logg;
-    logg(`${h.tekst(å.navn, å.navn2)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + Math.random() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + Math.random() * 8) * 60; skriv('riksbrudd-hendelser', H);
+    logg(`${h.tekst(å.navn, å.navn2)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + tilfV() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + tilfV() * 8) * 60; skriv('riksbrudd-hendelser', H);
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
   // kortkøen (samfunn-visning.js): ett kort om gangen, med pause mellom
   function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (window.Kortkø && !Kortkø.ledig() && (tid >= H.nesteSpill || ekte >= H.nesteEkte)) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }

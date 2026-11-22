@@ -1477,3 +1477,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   kameravakt, forsvar-kamp, forsvar-hjemme og trussel-lagring bruker Tilfeldig.verden i stedet for Math.random (nye regler: gjør det
   samme). lagring.js lagrer strømmen (rng). I nettleseren får hvert nytt spill et eget frø (crypto); i Node er frøet 1.
   oppstart.js låner strømmen til portrett-motor.js (brukerens fil, uendret) ved å bytte Math.random mens portrettet lages.
+  LAGRING AV ALT (22. nov, R16-E): spill/lagring.js lagrer nå også kjøreordre for egne kjøretøy (kjøretøy[].mål = siste punkt på
+  ruta; ved lasting k.målLagret, og fortsettOrdre() kaller kjørTil på nytt – kolonner med oppdrag tas ikke med), køen på basene
+  (baser: [{ navn, bygget, kø: [{ type, igjen, total }] }], Lagring.brukBaser), minefeltene (minefelt, MINEFELT) og dronene (droner,
+  DRONER) – ett felt per slag, gamle lagringer uten feltene gir tomme lister. Røverne i et angrep som er i gang, lagres fortsatt av
+  spill/trussel-lagring.js («riksbrudd-angrep»), ikke i lagring.js (ellers kom de tilbake to ganger). Ikke lagret: salvene i lufta
+  (SALVER) og kolonner med oppdrag. Test: test_lagring.js; VAKT vakter/lagring-alt.js («lagring av alt»: lager kjøreordre, minefelt,
+  drone, bestilling og angrep, lagrer, åpner samme side i en ny fane og ser at alt er der). FELLES TILFELDIGHET I VISNINGEN: de elleve
+  *-visning.js-filene med spillregler (spillet, eventyr, morgen, samfunn, eskalering, tropper, garnison, forsvar, region, verden, sjø)
+  bruker tilfV = Tilfeldig.verden; bare lyden i spillet-visning.js og id-en i flerspiller-visning.js har Math.random, merket «Math.random
+  med vilje». test_tilfeldig.js feiler når Math.random dukker opp i en fil som ikke står i BARE_UTSEENDE (lyd, effekter3d, vind3d,
+  folk3d, dyr3d, natt3d, liv3d, portrett-motor) – nye regler skal bruke Tilfeldig.verden.

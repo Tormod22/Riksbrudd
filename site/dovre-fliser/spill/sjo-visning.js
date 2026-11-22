@@ -6,6 +6,9 @@
  */
 (function () {
   'use strict';
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const SJ = window.Sjo; if (!SJ || typeof KROKER === 'undefined') return;
   const R = SJ.REGLER, TY = SJ.TYPER, NØKKEL = 'riksbrudd-sjo';
   const ut = { test: false }, auto = () => !navigator.webdriver || ut.test;
@@ -63,7 +66,7 @@
   // nærmeste land ved punktet (laget skal ikke settes i vannet)
   async function landVed(x, y) { try { const v = await lagVindu([x - 400, y - 400, x + 400, y + 400], false); let best = null, bd = Infinity; for (let j = 0; j < v.h; j++) for (let i = 0; i < v.w; i++) { const c = v.K[j * v.w + i]; if (c === 3 || c === 255) continue; const cx = v.x0 + (i + .5) * v.r, cy = v.y0 - (j + .5) * v.r, d = Math.hypot(cx - x, cy - y); if (d < bd) { bd = d; best = [cx, cy]; } } return bd <= 400 ? best : null; } catch (e) { return null; } }
   async function gåILand(s) { const b = s.påBåt; if (!b) return false; if (b.sti) { logg(`${b.navn} er underveis – vent til båten ligger ved kai.`); return false; } if (b.kai < 0) { logg(`${b.navn} ligger ikke ved en kai. Seil til en kai først.`); return false; }
-    const p = (await landVed(b.x, b.y)) || [b.x + 8, b.y + 6]; if (s.påBåt !== b) return false; s.påBåt = null; s.x = p[0] + (Math.random() - .5) * 12; s.y = p[1] + (Math.random() - .5) * 12; s.sti = null; s.siktSkitten = true;
+    const p = (await landVed(b.x, b.y)) || [b.x + 8, b.y + 6]; if (s.påBåt !== b) return false; s.påBåt = null; s.x = p[0] + (tilfV() - .5) * 12; s.y = p[1] + (tilfV() - .5) * 12; s.sti = null; s.siktSkitten = true;
     // landgang: fienden i et tettsted like ved er ikke forberedt på folk fra sjøen
     const fi = byerNær(b.x, b.y, R.landgangNær).find(o => { const e = eier(o.by); return e && e !== 'blå'; });
     if (fi) { s.landgang = tid + R.landgangMin; logg(`${s.navn} går i land ved ${fi.by.e.navn}. Landgang fra sjøen: fienden er overrasket i ${R.landgangMin} minutter.`); } else logg(`${s.navn} har gått i land ved ${kaiNavn(b.kai)}.`);
@@ -81,7 +84,7 @@
     if (kjOmBord(b).length >= T.kj) return si(`${b.navn} er full (${T.kj} kjøretøy).`); if (k.oppdrag) return si('kjøretøyet er på oppdrag.'); if (Math.hypot(k.x - b.x, k.y - b.y) > R.ombord) return si(`må stå innen ${R.ombord} m fra båten.`);
     if (k.sti && window.Kjoretoy) Kjoretoy.stopp(k); k.sti = null; k.påBåt = b; k.x = b.x; k.y = b.y; logg(`${k.navn} er kjørt om bord i ${b.navn}.`); merk(); return true; }
   async function kjørILand(k) { const b = k.påBåt; if (!b) return false; if (b.sti || b.kai < 0) { logg(`${b.navn} må ligge ved en kai før kjøretøyene kan kjøre i land.`); return false; } const p = (await landVed(b.x, b.y)) || [b.x + 10, b.y + 8]; if (k.påBåt !== b) return false;
-    k.påBåt = null; k.x = p[0] + (Math.random() - .5) * 14; k.y = p[1] + (Math.random() - .5) * 14; k.sti = null; logg(`${k.navn} har kjørt i land ved ${kaiNavn(b.kai)}.`); merk(); tegnPanel(true); return true; }
+    k.påBåt = null; k.x = p[0] + (tilfV() - .5) * 14; k.y = p[1] + (tilfV() - .5) * 14; k.sti = null; logg(`${k.navn} har kjørt i land ved ${kaiNavn(b.kai)}.`); merk(); tegnPanel(true); return true; }
 
   // ---------- Regionen (spill/region.js) ----------
   // Regionen frakter alt et tettsted gir, over land til leiren. For at havnebyene ikke skal gi dobbelt, gir sjøen da bare DET VEGEN
@@ -260,7 +263,7 @@
   function egenSenket(q, f) { const i = S.båter.indexOf(q); if (i < 0) return; S.båter.splice(i, 1); if (valg && valg.båt === q) valg = null; endret = true; skitten = true;
     const om = omBord(q), tap = [], kj = kjOmBord(q);
     for (const s of om) { s.påBåt = null; s.sti = null; s.x = q.x; s.y = q.y; s.siktSkitten = true; const lev = s.menn.filter(m => m.hp > 0).sort((a, c) => a.hp - c.hp), n = SJ.drukner(lev.length); lev.slice(0, n).forEach(m => { m.hp = 0; }); tap.push(`${s.navn} mistet ${n}`);
-      landVed(q.x, q.y).then(p => { if (p && !s.påBåt) { s.x = p[0] + (Math.random() - .5) * 12; s.y = p[1] + (Math.random() - .5) * 12; s.siktSkitten = true; } }); }
+      landVed(q.x, q.y).then(p => { if (p && !s.påBåt) { s.x = p[0] + (tilfV() - .5) * 12; s.y = p[1] + (tilfV() - .5) * 12; s.siktSkitten = true; } }); }
     for (const k of kj) { const j = (window.KJORETOY || []).indexOf(k); if (j >= 0) KJORETOY.splice(j, 1); k.påBåt = null; if (window.Kjoretoy && k.sti) Kjoretoy.stopp(k); }
     logg(`${q.navn} er senket${f ? ` av ${f.ai ? f.navn.toLowerCase() : 'forsyningsbåten til ' + f.byNavn}` : ''}. Lasten er tapt.` + (om.length ? ` ${om.map(s => s.navn).join(' og ')} svømte i land (${tap.join(', ')}).` : '') + (kj.length ? ` ${kj.map(k => k.navn).join(' og ')} gikk ned med båten.` : ''));
     window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'båt', tekst: q.navn + ' er senket' } })); lagre(); tegnPanel(true); }
@@ -297,7 +300,7 @@
     if (synlig(s) || serFrakt(b)) logg(`${s.navn} har gått om bord i en båt ved ${kaiNavn(p.ia)}.`); return b; }
   function iLandAI(b) { const om = ENHETER.filter(e => e.påBåt === b); endret = true; skitten = true;
     for (const s of om) { s.påBåt = null; s.x = b.x; s.y = b.y; s.sti = null; s.siktSkitten = true; if (s.ai) { s.ai.neste = 0; s.ai.mål = null; s.ai.ingenBåt = tid + 240; }
-      landVed(b.x, b.y).then(p => { if (p && !s.påBåt) { s.x = p[0] + (Math.random() - .5) * 12; s.y = p[1] + (Math.random() - .5) * 12; s.siktSkitten = true; } }); }
+      landVed(b.x, b.y).then(p => { if (p && !s.påBåt) { s.x = p[0] + (tilfV() - .5) * 12; s.y = p[1] + (tilfV() - .5) * 12; s.siktSkitten = true; } }); }
     if (om.some(s => synlig(s))) logg(`${om.map(s => s.navn).join(' og ')} går i land ved ${kaiNavn(b.mål)} – fra sjøen.`); }
 
   // ---------- lagring ----------
