@@ -19,6 +19,8 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     await A.evaluate(a => NETT.koble('vert', a, null, 'Ola'), adr);
     sjekk(await til(A, () => NETT.tilkoblet && /^[A-Z0-9]{6}$/.test(NETT.kode || '')), 'verten åpner en verden med kode');
     const kode = await A.evaluate(() => NETT.kode);
+    // gjesten som en EKTE ny spiller uten eget spill: startskjermens gjemming av lag er på (spilltest R16, funn 1)
+    await B.evaluate(() => { OppstartSpill.test = true; OppstartSpill.gjemStart(); });
     await B.evaluate(([a, k]) => NETT.koble('gjest', a, k, 'Kari'), [adr, kode]);
     sjekk(await til(B, () => NETT.tilkoblet && NETT.spillere.length === 2), 'gjesten kommer inn og ser to spillere');
     sjekk(await til(A, () => NETT.spillere.length === 2), 'verten ser gjesten');
@@ -27,6 +29,9 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     const gid = await B.evaluate(() => NETT.id);
     const lagNavn = await A.evaluate(g => { const s = ENHETER.find(q => q.side === 'blå' && !q.karakter); s.eier = g; NETT.sistBilde = 0; return s.navn; }, gid);
     sjekk(await til(B, n => { const s = ENHETER.find(q => q.navn === n); return s && s.eier === NETT.id; }, lagNavn), 'gjesten ser at laget er hennes');
+    await vent(1500);
+    sjekk(await B.evaluate(n => { const s = ENHETER.find(q => q.navn === n); return !!(s && s.eier === NETT.id); }, lagNavn), 'laget blir værende hos gjesten (startskjermen gjemmer det ikke)');
+    sjekk(await B.evaluate(() => !ENHETER.some(s => s.karakter) && !ENHETER.some(s => / \(deg\)$/.test(s.navn))), 'vertens figur er ikke gjestens karakter og heter ikke «(deg)»');
     // et lag gjesten ikke eier: ordren avvises lokalt
     const avvist = await B.evaluate(() => { const s = ENHETER.find(q => q.side === 'blå' && q.eier !== NETT.id); if (!s) return null; ordre(s, s.x + 200, s.y); return document.getElementById('logg').textContent.includes('styres av'); });
     sjekk(avvist !== false, 'ordre til et lag gjesten ikke har, avvises');
@@ -75,7 +80,7 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     sjekk(await B.evaluate(() => localStorage.getItem('riksbrudd-verden') === 'MERKE'), 'gjestens eget spill skrives ikke over');
     // panelet og invitasjonslenken
     await A.evaluate(() => NETT.åpen(true)); await vent(300);
-    sjekk(await A.evaluate(k => { const t = document.getElementById('nett').textContent; return t.includes(k) && t.includes('#spill='); }, kode), 'verten ser koden og lenken');
+    sjekk(await A.evaluate(k => { const t = document.getElementById('nett').textContent; return t.includes(k) && !t.includes('#spill=') && t.includes('Ingen tunnel'); }, kode), 'verten ser koden, og uten tunnel ingen lenke (bare forklaring)');
     const C = await b.newPage(); C.on('pageerror', e => feilSide.push('lenke: ' + e.message));
     await C.goto(`http://localhost:${PORT}/dovre-fliser/#spill=${encodeURIComponent(adr)}&kode=${kode}`);
     sjekk(await til(C, () => document.getElementById('nett') && document.getElementById('nett').classList.contains('på') && /kode=/.test(document.getElementById('nlenke').value)), 'invitasjonslenken åpner «Bli med» med lenken fylt inn');

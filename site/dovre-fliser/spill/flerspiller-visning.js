@@ -32,13 +32,13 @@
   function åpne() {
     let ws; try { ws = new WebSocket(N.adresse); } catch (e) { status('Fikk ikke koblet til: ' + e.message); return; }
     N.ws = ws; status('Kobler til ' + N.adresse + ' …');
-    ws.onopen = () => { N.forsøk = 0; send({ t: 'hei', rolle: N.rolle, kode: N.kode || undefined, navn: N.navn, id: N.id }); };
+    ws.onopen = () => { N.forsøk = 0; if (N.opptatt && N.tilkoblet) N.opptatt = 0; send({ t: 'hei', rolle: N.rolle, kode: N.kode || undefined, navn: N.navn, id: N.id }); };
     ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } motta(m); };
     ws.onclose = () => {
       if (N.ws !== ws) return; const var_ = N.tilkoblet; N.tilkoblet = false; N.ws = null; vis();
       if (!N.ønsket) return;
       if (var_) sikkerLogg('Mistet forbindelsen med tjeneren. Prøver igjen …');
-      const vent = Math.min(30, 2 ** Math.min(5, ++N.forsøk)); status(`Ingen forbindelse – prøver igjen om ${vent} s.`);
+      const vent = N.opptatt ? 20 : Math.min(30, 2 ** Math.min(5, ++N.forsøk)); status(`Ingen forbindelse – prøver igjen om ${vent} s.`);
       clearTimeout(N.igjen); N.igjen = setTimeout(() => { if (N.ønsket && !N.ws) åpne(); }, vent * 1000);
     };
     ws.onerror = () => { /* onclose kommer etterpå */ };
@@ -49,13 +49,14 @@
     const varGjest = N.rolle === 'gjest';
     N.rolle = null; N.tilkoblet = false; N.spillere = []; N.vertBorte = false; N.sett = false; skriv({ vertNå: false });
     if (typeof ENHETER !== 'undefined') for (const s of ENHETER) if (s.eier) s.eier = null;
+    document.body.classList.remove('nettgjest');
     if (!stille) { sikkerLogg('Koblet fra flerspilleren.'); if (varGjest) sikkerLogg('Last siden på nytt for å fortsette ditt eget spill.'); }
     vis();
   }
   function motta(m) {
     switch (m.t) {
       case 'velkommen': {
-        N.tilkoblet = true; statusTekst = ''; N.id = m.id || N.id; N.kode = m.kode; N.spillere = m.spillere || []; skriv({ id: N.id });
+        N.tilkoblet = true; statusTekst = ''; N.opptatt = 0; N.id = m.id || N.id; N.kode = m.kode; N.spillere = m.spillere || []; skriv({ id: N.id });
         if (N.rolle === 'vert') { skriv({ kode: N.kode, adresse: N.adresse, vertNå: true }); hentTunnel(); sikkerLogg(`Verden ${N.kode} er åpen. Del invitasjonslenken under «Spill sammen».`);
           const fram = m.lagret ? F.framTid(m.lagret.borteSek) : 0; if (fram > 0) regnFram(fram); }
         else { sikkerLogg(`Du er med i verden ${N.kode}. Verten styrer tiden; du styrer lagene verten gir deg.`); lukkStart(); }
@@ -75,7 +76,12 @@
       case 'melding': sikkerLogg(`${m.navn || 'Spiller'}: «${m.tekst}»`); break;
       case 'vertBorte': N.vertBorte = true; sikkerLogg('Verten er borte. Verden står stille til verten kommer tilbake.'); break;
       case 'vertTilbake': N.vertBorte = false; sikkerLogg('Verten er tilbake.'); break;
-      case 'feil': status(m.tekst || 'Feil fra tjeneren.'); sikkerLogg(m.tekst || 'Feil fra tjeneren.'); if (!N.tilkoblet) { N.ønsket = false; } break;
+      case 'feil': {
+        // verden har fortsatt en vert: forrige forbindelse er ikke merket som død ennå (tjeneren venter opptil 60 s) – prøv igjen (funn 8)
+        if (!N.tilkoblet && N.rolle === 'vert' && /alt en vert/i.test(m.tekst || '') && (N.opptatt = (N.opptatt || 0) + 1) <= 5) {
+          status('Verden er fortsatt opptatt av forrige forbindelse – prøver igjen om 20 s …'); break; }
+        status(m.tekst || 'Feil fra tjeneren.'); sikkerLogg(m.tekst || 'Feil fra tjeneren.'); if (!N.tilkoblet) { N.ønsket = false; } break;
+      }
       default: break;
     }
     vis();
@@ -159,7 +165,7 @@
         k.x = q.x; k.y = q.y; k.retning = q.r; k.antall = q.antall; k.side = q.side; ny.push(k); }
       KJORETOY.length = 0; for (const k of ny) KJORETOY.push(k);
     }
-    tid = d.tid; if (tempo !== d.tempo) { tempo = d.tempo; settFartKnapp(d.tempo); }
+    tid = d.tid; tempo = d.tempo; settFartKnapp(d.tempo); document.body.classList.add('nettgjest');
     const nå = performance.now();
     if (d.vær && window.VaerSpill && nå - (N.sistVær || 0) > 10000) { N.sistVær = nå; try { Object.assign(VaerSpill.S, d.vær); } catch (e) { /* ok */ } }
     // første bilde: kartet går til vertens leir (ellers står gjesten der hennes eget spill var)
@@ -265,6 +271,7 @@
 #nett .rad{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; } #nett button{ background:var(--panel); border:1px solid var(--rule); color:var(--ink); padding:6px 10px; cursor:pointer; font:inherit; font-weight:600; }
 #nett button:hover{ color:var(--hover); } #nett .kode{ font-family:'JetBrains Mono', monospace; font-size:22px; letter-spacing:.2em; color:var(--hover); }
 #nett .lenke{ font-family:'JetBrains Mono', monospace; font-size:11px; word-break:break-all; background:#0f0c08; border:1px solid var(--rule); padding:6px; }
+body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ display:none; }
 #nett ul{ margin:0; padding-left:18px; } #nett .status{ color:var(--hover); min-height:1em; } #nett .advar{ color:#e0a060; }`;
   document.head.appendChild(css);
   const P = document.createElement('div'); P.id = 'nett'; P.setAttribute('role', 'dialog'); P.setAttribute('aria-label', 'Spill sammen'); document.body.appendChild(P);
@@ -272,14 +279,18 @@
   function status(t) { statusTekst = t; const el = P.querySelector('.status'); if (el) el.textContent = t; }
   function åpen(på) { P.classList.toggle('på', på); if (på) vis(); }
   function lenke() {
-    const adr = N.tunnel || N.adresse; if (!adr || !N.kode) return null;
+    const adr = N.tunnel || (/^wss:/i.test(N.adresse || '') ? N.adresse : null); if (!adr || !N.kode) return null;   // ws://localhost virker aldri for en venn (funn 3)
     return F.lagLenke(location.origin + location.pathname, adr, N.kode);
   }
   function vis() {
     if (!P.classList.contains('på')) return;
-    const l = les(), navn = esc(N.navn || l.navn || '');
+    const l = les(), kar = (() => { try { const t = window.OppstartSpill && OppstartSpill.tilstand(); return t && t.karakter ? t.karakter.navn : ''; } catch (e) { return ''; } })(), navn = esc(N.navn || l.navn || kar || '');
     let h = `<div class="topp"><b>Spill sammen</b><button data-n="lukk" aria-label="Lukk">×</button></div>`;
-    if (!N.rolle) {
+    if (!N.rolle && N.lenkeInn) {
+      h += `<section><h3>Bli med i en delt verden</h3><p>Du er invitert. Skriv navnet ditt og trykk «Bli med». Ditt eget spill røres ikke.</p>
+        <label for="nnavn">Navnet ditt</label><input id="nnavn" value="${navn}" maxlength="24"><input id="nlenke" type="hidden" value="${esc(N.lenkeInn)}">
+        <div class="rad"><button data-n="gjest">Bli med</button><button data-n="ikkelenke">Avbryt</button></div></section>`;
+    } else if (!N.rolle) {
       h += `<section><h3>Vær vert</h3><p>Start tjeneren på PC-en din først: <a href="/tjener/riksbrudd-tjener.zip" download style="color:var(--hover)">last ned tjeneren</a>, pakk ut og dobbeltklikk <b>start-tjener.bat</b> (LESMEG.md forklarer alt). Tjeneren åpner spillet for deg med riktig adresse – trykk så knappen under.</p>
         <label for="nnavn">Navnet ditt</label><input id="nnavn" value="${navn}" maxlength="24">
         <label for="nadr">Tjeneren (tunneladressen fra det svarte vinduet, https://….trycloudflare.com – eller ws://localhost:8787)</label><input id="nadr" value="${esc(l.adresse || 'ws://localhost:8787')}">
@@ -293,7 +304,7 @@
       if (N.rolle === 'vert' && N.tilkoblet) {
         const ln = lenke();
         h += `<section><h3>Invitasjonslenke</h3>${ln ? `<div class="lenke">${esc(ln)}</div><div class="rad"><button data-n="kopier">Kopier lenken</button></div>` : ''}
-          ${N.tunnel ? '<p>Lenken går gjennom tunnelen og virker hvor som helst, også på telefon.</p>' : '<p class="advar">Ingen tunnel: lenken virker bare for maskiner på samme nett, og bare hvis spillet er lastet over http. Legg cloudflared ved siden av tjeneren for en lenke som virker overalt.</p>'}
+          ${N.tunnel ? '<p>Lenken går gjennom tunnelen og virker hvor som helst, også på telefon.</p>' : '<p class="advar">Ingen tunnel, så det finnes ingen lenke vennene kan bruke: spillet ligger på en https-side, og da slipper nettleseren ikke en venn inn til PC-en din uten tunnelen. Legg cloudflared.exe ved siden av start-tjener.bat og start tjeneren på nytt (se LESMEG.md).</p>'}
           <p>Gi lag til gjestene: velg et lag og trykk «Styres av». Gjestene kan gi marsjordre, grave ned, bytte formasjon og stridsregler for lagene sine; leiren styrer du.</p></section>`;
       }
       if (N.rolle === 'gjest') h += `<section><p>Verten styrer tiden og hvem som har hvilke lag. Lagene dine står med «styres av deg» i panelet – velg et og trykk i kartet for å sende det.</p></section>`;
@@ -313,6 +324,7 @@
     else if (n === 'gjest') { const l = F.lesLenke(v('nlenke')); if (!l) { status('Fant ingen adresse og kode i lenken.'); return; } koble('gjest', l.adresse, l.kode, v('nnavn') || les().navn || 'Gjest'); }
     else if (n === 'kopier') { const ln = lenke(); if (ln && navigator.clipboard) navigator.clipboard.writeText(ln).then(() => status('Lenken er kopiert.'), () => status('Kunne ikke kopiere – merk teksten og kopier selv.')); }
     else if (n === 'fra') koblFra(false);
+    else if (n === 'ikkelenke') { N.lenkeInn = null; vis(); }
   });
   P.addEventListener('keydown', e => {
     e.stopPropagation();

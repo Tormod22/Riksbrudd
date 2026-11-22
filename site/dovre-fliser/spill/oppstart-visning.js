@@ -404,6 +404,8 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
   const GJEMT = { lag: [], kj: [], base: null };
   function gjemStart(tving) {
     if (!tving && (S || !ekte())) return 0; let n = 0;
+    // i en delt verden (flerspiller) er lagene vertens – de skal ikke gjemmes hos en gjest som ikke har eget spill (spilltest R16, funn 1)
+    if (window.NETT && NETT.gjest) return 0;
     for (let i = ENHETER.length - 1; i >= 0; i--) { const e = ENHETER[i]; if (e.side !== 'blå' || e.karakter) continue; GJEMT.lag.push([i, e]); ENHETER.splice(i, 1); n++; if (valgt === e) { valgt = null; visPanel(); } }
     if (window.KJORETOY) for (let i = KJORETOY.length - 1; i >= 0; i--) { const k = KJORETOY[i]; if (k.side !== 'blå') continue; GJEMT.kj.push([i, k]); KJORETOY.splice(i, 1); n++; if (valgt === k) { valgt = null; visPanel(); } }
     const B = window.OLJE && OLJE.BASER && OLJE.BASER[0]; if (B && !GJEMT.base && B.x > -1e6) { GJEMT.base = { x: B.x, y: B.y }; B.x = B.y = -9e6; n++; }
@@ -416,7 +418,7 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     const B = window.OLJE && OLJE.BASER && OLJE.BASER[0]; if (B && GJEMT.base) Object.assign(B, GJEMT.base); GJEMT.base = null; skitten = true;
   }
   // nye lag som modulene legger inn senere (mens startskjermen står), gjemmes også – sjekkes i tegnekroken, billig
-  KROKER.tegn.push(() => { if (!S && (GJEMT.lag.length || GJEMT.kj.length || GJEMT.base) && (ENHETER.some(e => e.side === 'blå' && !e.karakter) || (window.KJORETOY || []).some(k => k.side === 'blå'))) gjemStart(); });
+  KROKER.tegn.push(() => { if (!S && !(window.NETT && NETT.gjest) && (GJEMT.lag.length || GJEMT.kj.length || GJEMT.base) && (ENHETER.some(e => e.side === 'blå' && !e.karakter) || (window.KJORETOY || []).some(k => k.side === 'blå'))) gjemStart(); });
 
   // ---------- valgene tas i bruk: fraksjonen tar over «blå», basen og lagene flytter til leiren ----------
   // START UTEN FERDIGE LAG (natt 18. nov): et nytt spill har bare deg, de ti personene og et lite vaktlag (4 mann av 1. lag) – resten av

@@ -53,7 +53,7 @@
     return ut;
   }
   function pakkLag(s) {
-    const d = { id: s.nid, navn: s.navn, side: s.side || 'blå', x: r1(s.x), y: r1(s.y), r: +(+s.retning || 0).toFixed(2), l: s.leder || 0,
+    const d = { id: s.nid, navn: String(s.navn).replace(/ \(deg\)$/, ''), side: s.side || 'blå', x: r1(s.x), y: r1(s.y), r: +(+s.retning || 0).toFixed(2), l: s.leder || 0,
       m: s.menn.map(m => [m.navn, m.rolle, +(+m.hp).toFixed(2)]) };
     const sti = tynnSti(s); if (sti) { d.sti = sti; d.t = +(+s.timerIgjen || 0).toFixed(2); }
     if (s.eier) d.eier = s.eier; if (s.speider) d.speider = 1; if (s.ingeniør) d.ing = 1; if (s.nedgravd) d.ned = 1; if (s.karakter) d.kar = 1;
@@ -89,7 +89,7 @@
       s.navn = String(q.navn); s.side = String(q.side || 'blå'); s.x = tall(q.x, s.x); s.y = tall(q.y, s.y); s.retning = tall(q.r, 0); s.leder = tall(q.l, 0);
       s.menn = (q.m || []).map((m, i) => Object.assign(s.menn[i] || {}, { navn: String(m[0]), rolle: String(m[1]), hp: tall(m[2], 1) }));
       if (q.sti && q.sti.length > 1) { s.sti = q.sti; s.steg = q.sti.map(() => 1); s.seg = 0; s.prog = 0; s.timerIgjen = tall(q.t, 0); } else { s.sti = null; s.steg = null; }
-      s.eier = q.eier || null; s.speider = !!q.speider; s.ingeniør = !!q.ing; s.nedgravd = !!q.ned; s.karakter = !!q.kar;
+      s.eier = q.eier || null; s.speider = !!q.speider; s.ingeniør = !!q.ing; s.nedgravd = !!q.ned; s.karakter = false; s.figur = !!q.kar;   // en annen spillers figur – aldri gjestens egen karakter (funn 2)
       if (q.ammo !== undefined) s.ammo = tall(q.ammo, 1); if (q.form) s.formasjon = q.form;
       if (q.strid && typeof q.strid === 'object') s.strid = Object.assign({}, q.strid);
       if (flytt > 60) s.siktSkitten = true;
