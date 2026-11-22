@@ -677,6 +677,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   };
   function modell(b) {
     const B = LB.BYGG[b.type], M = window.MODELLER; if (!M) return null;
+    // (22. nov) de nye og bedre leirmodellene i spill/modeller-leir2.js går foran (de får bygget, så nivået kan synes)
+    if (M.LEIR2 && M.LEIR2[B.modell]) return M.LEIR2[B.modell](b);
     if (EGNE[B.modell]) return M.samle(EGNE[B.modell]());
     if (B.modell === 'port') return M.port(false); if (B.modell === 'verksted') return M.verksted([false, false]); if (B.modell === 'container') return M.container('utstyr');
     if (B.modell === 'sandsekkvoll') return M.sandsekkvoll(8, 2);
