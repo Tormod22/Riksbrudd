@@ -18,6 +18,6 @@
     // fiendens lag: linje når de angriper, spredt når de holder en stilling, ellers kile
     for (const s of ENHETER) if (s.ai) { const f = s.ai.hva === 'angrip' || s.ai.hva === 'leir' ? 'linje' : s.ai.hva === 'hold' ? 'spredt' : 'kile'; if (s.formasjon !== f) { s.formasjon = f; skitten = true; } } });
   KROKER.lagTekst.push(s => { if (!Array.isArray(s.menn) || s.karakter) return null; const d = [], t = F.erfTekst(s.menn); if (s.formasjon && s.formasjon !== 'kile') d.push(F.type(s.formasjon).navn.toLowerCase()); if (t && t !== 'rekrutter') d.push(t + (s.side === 'blå' ? ` (treff ×${F.erfFaktor(s.menn).toFixed(2).replace('.', ',')})` : '')); return d.length ? d.join(' · ') : null; });
-  KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter || s.ombord) return; const T = F.type(s.formasjon), b = knapp(`Formasjon: ${T.navn}`, false, () => { s.formasjon = F.neste(s.formasjon); const N = F.type(s.formasjon); logg(`${s.navn} går i ${N.navn.toLowerCase()}. ${N.tekst}`); skitten = true; visPanel(); }); b.id = 'formknapp'; b.title = T.tekst + ' Trykk for å bytte.'; H.appendChild(b); });
+  KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter || s.ombord) return; const T = F.type(s.formasjon), b = knapp(`Formasjon: ${T.navn}`, false, () => KOMMANDO({ type: 'formasjon', lag: KOMMANDO.nid(s), id: F.neste(s.formasjon) })); b.id = 'formknapp'; b.title = T.tekst + ' Trykk for å bytte.'; H.appendChild(b); });
   window.FormasjonSpill = { sett: (s, id) => { s.formasjon = F.TYPER[id] ? id : 'kile'; skitten = true; } };
 })();

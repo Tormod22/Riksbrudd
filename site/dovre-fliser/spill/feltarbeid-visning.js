@@ -39,10 +39,8 @@
   KROKER.lagTekst.push(s => s.minelegging ? `legger miner (${Math.round(100 * (1 - s.minelegging.igjen / R.mine.tid))} %)` : null);
   KROKER.lagKnapper.push((s, H) => {
     if (s.sti) return;
-    if (!s.nedgravd && s.graver == null) H.appendChild(knapp('Grav ned', false, () => { const r = FA.startGrav(s);
-      logg(r.feil ? `${s.navn}: ${r.feil}` : `${s.navn} graver seg ned (${(s.ingeniør ? R.gravIngeniør : R.grav) / 60} min).`); visPanel(); }));
-    if (s.ingeniør && !s.minelegging) H.appendChild(knapp('Legg miner her', false, () => { s.minelegging = { igjen: R.mine.tid };
-      logg(`${s.navn} legger miner der laget står (${R.mine.tid / 60} min). Fiender som går eller kjører gjennom, kan løse dem ut.`); visPanel(); }));
+    if (!s.nedgravd && s.graver == null) H.appendChild(knapp('Grav ned', false, () => KOMMANDO({ type: 'grav', lag: KOMMANDO.nid(s) })));
+    if (s.ingeniør && !s.minelegging) H.appendChild(knapp('Legg miner her', false, () => KOMMANDO({ type: 'miner', lag: KOMMANDO.nid(s) })));
   });
 
   // ---------- tegning: skyttergrav under nedgravde lag, minefeltene (bare våre egne) ----------

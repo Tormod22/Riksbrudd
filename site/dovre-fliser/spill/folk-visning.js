@@ -150,7 +150,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       const best = Object.entries(p.ferd).sort((a, b) => b[1] - a[1])[0];
       // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
       const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
-      velg.onchange = () => { FR.sett(F, p.id, velg.value); endret(); };
+      velg.onchange = () => { KOMMANDO({ type: 'folk', person: p.id, oppgave: velg.value }); endret(); };
       // trykk på navnet åpner personkortet (ansikt, historie, ønske – spill/samfunn-visning.js)
       const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
       navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
@@ -169,7 +169,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (F.personer.some(p => p.oppgave === 'fri')) return 'fri'; const t = FR.OPPGAVER.filter(q => q !== o && q !== 'fri').map(q => [q, F.personer.filter(p => p.oppgave === q).length]).sort((a, b) => b[1] - a[1]); return t[0] && t[0][1] ? t[0][0] : null; }
   const plussHjelp = o => { if (!F) return ''; const k = plussKilde(o); return !k ? 'Ingen å flytte' : k === 'fri' ? `Tar en som har fri` : `Ingen har fri – tar en fra ${oNavn(k)}`; };
   const minusHjelp = o => (o === 'fri' ? 'Den beste av de frie går til Bygg' : 'Den svakeste her får fri');
-  function flytt(o, fn) { const før = new Map(F.personer.map(p => [p.id, p.oppgave])), p = fn(F, o);
+  function flytt(o, fn) { const før = new Map(F.personer.map(p => [p.id, p.oppgave])), p = KOMMANDO({ type: 'folkFlytt', oppgave: o, retning: fn === FR.minus ? 'minus' : 'pluss' }).svar;
     flyttet = p && før.get(p.id) !== p.oppgave ? `Flyttet: ${p.navn} fra ${oNavn(før.get(p.id))} til ${oNavn(p.oppgave)}.` : '';
     if (flyttet && før.get(p.id) !== 'fri' && p.oppgave !== 'fri') flyttet += ' (ingen hadde fri)';
     if (flyttet) logg(flyttet.replace(/^Flyttet: /, '')); endret(); }

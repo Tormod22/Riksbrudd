@@ -43,9 +43,28 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     sjekk(await B.evaluate(() => tempo === 60), 'gjesten kan ikke endre farten');
     // gjestens lagpanel: bare Marsjer/Stopp; Stopp stanser laget hos verten
     const knappene = await B.evaluate(n => { valgt = ENHETER.find(q => q.navn === n); visPanel(); return [...document.querySelectorAll('#handl button')].map(b => b.textContent); }, lagNavn);
-    sjekk(knappene.includes('Marsjer') && knappene.includes('Stopp') && knappene.length === 2, 'gjestens lagpanel: ' + knappene.join(', '));
+    sjekk(knappene.includes('Marsjer') && knappene.includes('Stopp') && knappene.some(t => /^Formasjon:/.test(t)) && knappene.includes('Stridsregler'), 'gjestens lagpanel: ' + knappene.join(', '));
     await B.evaluate(() => [...document.querySelectorAll('#handl button')].find(b => b.textContent === 'Stopp').click());
     sjekk(await til(A, n => !ENHETER.find(q => q.navn === n).sti, lagNavn), 'Stopp fra gjesten stanser laget hos verten');
+    // KOMMANDOLAGET (R16-A): formasjon fra gjestens knapp virker hos verten, og gjesten ser den nye formasjonen
+    const formFør = await A.evaluate(n => ENHETER.find(q => q.navn === n).formasjon || 'kile', lagNavn);
+    const formNy = await B.evaluate(n => { valgt = ENHETER.find(q => q.navn === n); visPanel(); const b = document.getElementById('formknapp'); if (!b) return null; b.click(); return Formasjon.neste(valgt.formasjon); }, lagNavn);
+    sjekk(formNy && formNy !== formFør && await til(A, ([n, f]) => ENHETER.find(q => q.navn === n).formasjon === f, [lagNavn, formNy]), `formasjon fra gjesten virker hos verten (${formFør} -> ${formNy})`);
+    sjekk(await til(B, ([n, f]) => ENHETER.find(q => q.navn === n).formasjon === f, [lagNavn, formNy]), 'gjesten ser den nye formasjonen');
+    // stridsregler (holdning) fra gjesten
+    await B.evaluate(n => KOMMANDO({ type: 'strid', lag: ENHETER.find(q => q.navn === n).nid, endring: Strid.HOLDNING.forsiktig.regel }), lagNavn);
+    sjekk(await til(A, n => { const s = ENHETER.find(q => q.navn === n); return s.strid && s.strid.ild === 'besvar' && s.strid.underlegen === 'unngå'; }, lagNavn), 'stridsregler fra gjesten virker hos verten');
+    sjekk(await til(B, n => { const s = ENHETER.find(q => q.navn === n); return s.strid && s.strid.ild === 'besvar'; }, lagNavn), 'gjesten ser de nye stridsreglene');
+    // grav ned fra gjesten (laget står): verten begynner å grave
+    await B.evaluate(n => { valgt = ENHETER.find(q => q.navn === n); visPanel(); const b = [...document.querySelectorAll('#handl button')].find(x => x.textContent === 'Grav ned'); if (b) b.click(); }, lagNavn);
+    sjekk(await til(A, n => { const s = ENHETER.find(q => q.navn === n); return s.graver != null || s.nedgravd; }, lagNavn), 'grav ned fra gjesten virker hos verten');
+    // et lag gjesten ikke eier: verten avviser kommandoen også når den kommer over nettet
+    const annet = await A.evaluate(() => { const s = ENHETER.find(q => q.side === 'blå' && !q.eier && !q.karakter); return s ? [s.nid, s.formasjon || 'kile'] : null; });
+    if (annet) { await B.evaluate(id => NETT.send({ t: 'kommando', k: { type: 'formasjon', lag: id, id: 'spredt' } }), annet[0]); await vent(1200);
+      sjekk(await A.evaluate(([id, f]) => (ENHETER.find(q => q.nid === id).formasjon || 'kile') === f, annet), 'verten avviser kommando til et lag gjesten ikke har'); }
+    // leirkommandoer fra gjesten avvises med en forståelig tekst
+    const leirSvar = await B.evaluate(() => KOMMANDO({ type: 'bygg', bygg: { type: 'brakke', x: 0, y: 0, ret: 0 } }));
+    sjekk(!leirSvar.ok && /Leiren styres av verten/.test(leirSvar.feil), 'leirkommando fra gjesten avvises: ' + leirSvar.feil);
     // hvor spillerne er: gjesten ser verten, verten ser gjesten (sendes hvert 2. s)
     sjekk(await til(B, () => (NETT.andre || []).some(p => p.navn === 'Ola')), 'gjesten ser hvor verten er');
     sjekk(await til(A, () => NETT.bildeNå().sp.some(p => p.navn === 'Kari')), 'verten ser hvor gjesten er');

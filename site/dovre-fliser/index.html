@@ -1212,7 +1212,7 @@ function trykkPå(cx, cy) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
   for (const f of KROKER.trykk) if (f(X, Y, cx, cy)) return;
   // KROKER.kanOrdre (K3): ordren når ikke fram uten radiokontakt
-  if (modus === 'marsj' && valgt) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) ordre(valgt, X, Y); visPanel(); return; }
+  if (modus === 'marsj' && valgt) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) KOMMANDO({ type: 'ordre', lag: KOMMANDO.nid(valgt), x: X, y: Y }); visPanel(); return; }
   let best = null, bd = 28;
   for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const d = Math.hypot(s.x - X, s.y - Y) / kam.m; if (d < bd) { bd = d; best = s; } }
   valgt = best; modus = null; visPanel(); skitten = true;
@@ -1247,15 +1247,15 @@ function visPanel() {
   if (window.NETT && NETT.gjest) { if (s.side === 'blå' && levende(s)) NETT.lagPanel(s, H); }
   else if (s.side === 'blå' && levende(s)) {
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
-    H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => { s.speider = !s.speider; s.siktSkitten = true; visPanel(); }));
-    if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.kø = null; s.køSlutt = null; s.køSiste = false; s.siktSkitten = true; visPanel(); skitten = true; }));
+    H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => KOMMANDO({ type: 'speider', lag: KOMMANDO.nid(s), på: !s.speider })));
+    if (s.sti) H.appendChild(knapp('Stopp', false, () => KOMMANDO({ type: 'stopp', lag: KOMMANDO.nid(s) })));
     for (const f of KROKER.lagKnapper) f(s, H);
   }
   const M = document.getElementById('menn'); M.innerHTML = '';
   s.menn.forEach((q, i) => { const b = document.createElement('button'); b.className = i === s.leder ? 'leder' : '';
     b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + (q.hp <= 0 ? ' · falt' : q.hp < 1 ? ' · såret' : ' · lojalitet ' + Math.round(q.loy * 100) + ' %');
     if (q.hp <= 0) b.style.opacity = '.45';
-    b.appendChild(sp); if (s.side === 'blå') b.onclick = () => { s.leder = i; visPanel(); skitten = true; }; M.appendChild(b); });
+    b.appendChild(sp); if (s.side === 'blå') b.onclick = () => KOMMANDO({ type: 'lagfører', lag: KOMMANDO.nid(s), mann: i }); M.appendChild(b); });
   document.getElementById('hint').textContent = s.side !== 'blå' ? (s.ai && window.Fraksjoner ? Fraksjoner.FRAKSJONER[s.side].navn + ' – motstander, styrt av AI-en.' : 'Fiendtlig patrulje.') : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :
     modus === 'marsj' ? 'Trykk hvor som helst på kartet. Ruten følger veger og terreng.' : 'Trykk på en soldat for å velge ny lagfører. Gult felt er hva laget ser.';
   P.classList.add('på');
@@ -3519,7 +3519,7 @@ function framdrift(tekst, andel) {
       let best = null, bd = 28; for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const q = proj3(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - nå[0], q[1] - nå[1]); if (d < bd) { bd = d; best = s; } }
       if (modus === 'marsj' && valgt) {
         R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
-        if (hit) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) ordre(valgt, u.cx + hit.point.x, u.cy + hit.point.y); visPanel(); }
+        if (hit) { modus = null; if (KROKER.kanOrdre.every(f => f(valgt))) KOMMANDO({ type: 'ordre', lag: KOMMANDO.nid(valgt), x: u.cx + hit.point.x, y: u.cy + hit.point.y }); visPanel(); }
       } else { valgt = best; modus = null; visPanel(); const o = !best && finnInfra3d(nå[0], nå[1]); if (o) visInfo(o);
         else if (!best) { R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObjects([R3.mesh, ...(R3.husMesh || [])])[0]; if (hit) visByggVed(u.cx + hit.point.x, u.cy + hit.point.y); } }
     }
@@ -3641,7 +3641,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fraksjoner.js?v=62cffccd40"></script>
 <script src="/dovre-fliser/spill/fraksjoner-visning.js?v=7b115f9340"></script>
 <script src="/dovre-fliser/spill/feltarbeid.js?v=38086b61ff"></script>
-<script src="/dovre-fliser/spill/feltarbeid-visning.js?v=c097075033"></script>
+<script src="/dovre-fliser/spill/feltarbeid-visning.js?v=12f55c02f5"></script>
 <script src="/dovre-fliser/spill/flom.js?v=47a26f294e"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=e2fde254be"></script>
@@ -3694,8 +3694,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/helling.js?v=efa66faf44"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=dfcc1e195f"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=756f965973"></script>
-<script src="/dovre-fliser/spill/folk-visning.js?v=0a308de092"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=92053db439"></script>
+<script src="/dovre-fliser/spill/folk-visning.js?v=44dd921206"></script>
 <script src="/dovre-fliser/spill/strom-visning.js?v=bec1ea0553"></script>
 <script src="/dovre-fliser/spill/ressurser.js?v=3fa960afc6"></script>
 <script src="/dovre-fliser/spill/ressurser-visning.js?v=fc1f096ea4"></script>
@@ -3749,7 +3749,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/panelpynt.js?v=8e7180270d"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
 <script src="/dovre-fliser/spill/strid.js?v=76235e3a9c"></script>
-<script src="/dovre-fliser/spill/strid-visning.js?v=2df0cae0a2"></script>
+<script src="/dovre-fliser/spill/strid-visning.js?v=55f8e71edb"></script>
 <script src="/dovre-fliser/spill/forsvar.js?v=17bdd6c571"></script>
 <script src="/dovre-fliser/spill/forsvar-visning.js?v=699f7138da"></script>
 <script src="/dovre-fliser/spill/forsvar-kamp.js?v=9cbc728d0e"></script>
@@ -3771,7 +3771,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/samfunn.js?v=594eec0211"></script>
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=b9ffab8eee"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
-<script src="/dovre-fliser/spill/formasjon-visning.js?v=bb808bd838"></script>
+<script src="/dovre-fliser/spill/formasjon-visning.js?v=0139de1651"></script>
 <script src="/dovre-fliser/spill/krig.js?v=e0b189956d"></script>
 <script src="/dovre-fliser/spill/krig-visning.js?v=08da908522"></script>
 <script src="/dovre-fliser/spill/eskalering.js?v=b6265a0689"></script>
@@ -3788,8 +3788,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=ef1ff01690"></script>
-<script src="/dovre-fliser/spill/flerspiller.js?v=85937a9de5"></script>
-<script src="/dovre-fliser/spill/flerspiller-visning.js?v=8bc4b22a86"></script>
+<script src="/dovre-fliser/spill/kommando.js?v=0e3c85fb1a"></script>
+<script src="/dovre-fliser/spill/kommando-visning.js?v=6e7670c458"></script>
+<script src="/dovre-fliser/spill/flerspiller.js?v=9eafb9d7ee"></script>
+<script src="/dovre-fliser/spill/flerspiller-visning.js?v=41c62354b3"></script>
 <script src="/dovre-fliser/spill/meny.js?v=62e553a6b1"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=089cd08f30"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
