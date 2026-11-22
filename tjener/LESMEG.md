@@ -30,9 +30,11 @@ La vinduet stå åpent så lenge dere spiller. Windows kan spørre om brannmuren
 
 ## 4. Lag verden og inviter
 
-1. Åpne spillet i nettleseren **på samme PC** (<https://riksbrudd.vercel.app/norge>), trykk ☰ → **Spill sammen** →
-   **Åpne en ny verden**. Feltet «Tjeneren» skal stå på `ws://localhost:8787`.
-2. Edge/Chrome kan spørre om siden får bruke «enheter på det lokale nettverket» – trykk **Tillat** (det er tjeneren din).
+1. Når tunnelen er klar, åpner tjeneren spillet i nettleseren av seg selv med en **vertslenke** (den står også i det svarte
+   vinduet: `https://riksbrudd.vercel.app/norge#vert=…`). Panelet «Spill sammen» er åpent med riktig adresse – skriv navnet ditt
+   og trykk **Åpne en ny verden**. (Har du startet et nytt spill, lag karakter og leir først, og åpne så vertslenken igjen.)
+2. Uten tunnel: ☰ → **Spill sammen**, skriv `ws://localhost:8787` i «Tjeneren». Edge/Chrome kan spørre om siden får bruke
+   «enheter på det lokale nettverket» – trykk **Tillat**. Noen nettlesere avviser dette helt; bruk da tunnelen.
 3. Panelet viser en **kode** (seks tegn) og en **invitasjonslenke**. Trykk «Kopier lenken».
 4. Send lenken til vennene dine (melding, Discord, e-post …). De trykker på den, skriver navnet sitt og trykker «Bli med».
 5. Gi vennene lag: velg et av lagene dine, og trykk «Styres av» i lagpanelet til navnet deres står der. De kan da sende

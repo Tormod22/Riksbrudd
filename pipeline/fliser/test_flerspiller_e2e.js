@@ -66,6 +66,10 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
       await B.setViewportSize({ width: 390, height: 844 }); await vent(800); await B.screenshot({ path: process.env.BILDE + '-gjest-mobil.png' });
       await C.setViewportSize({ width: 390, height: 844 }); await vent(800); await C.screenshot({ path: process.env.BILDE + '-lenke-mobil.png' });
     }
+    // vertslenken fra tjenerprogrammet: panelet åpnes med tjeneradressen fylt inn
+    const V = await b.newPage(); V.on('pageerror', e => feilSide.push('vertslenke: ' + e.message));
+    await V.goto(`http://localhost:${PORT}/dovre-fliser/#vert=${encodeURIComponent(adr)}`);
+    sjekk(await til(V, a => document.getElementById('nett') && document.getElementById('nett').classList.contains('på') && document.getElementById('nadr').value === a, adr), 'vertslenken fyller inn tjeneren');
     // verten går: gjesten får beskjed
     await A.evaluate(() => NETT.koblFra(true));
     sjekk(await til(B, () => NETT.vertBorte === true), 'gjesten får vite at verten er borte');

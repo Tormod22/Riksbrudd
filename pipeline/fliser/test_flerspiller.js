@@ -14,6 +14,8 @@ sjekk(F.rensAdresse('') === null, 'tom adresse');
 sjekk(F.statusAdresse('ws://localhost:8787') === 'http://localhost:8787/status', 'statusadresse');
 sjekk(F.kanKoble('https:', 'ws://localhost:8787') && F.kanKoble('https:', 'wss://a.b') && !F.kanKoble('https:', 'ws://192.168.1.20:8787') && F.kanKoble('http:', 'ws://192.168.1.20:8787'), 'kanKoble');
 sjekk(F.rensNavn('<b>Ola</b>') === 'bOla/b' && F.rensNavn('') === 'Spiller' && F.rensNavn('x'.repeat(40)).length === 24, 'rensNavn');
+const vl = F.lesVertLenke('https://riksbrudd.vercel.app/norge#vert=wss%3A%2F%2Fa-b.trycloudflare.com');
+sjekk(vl && vl.adresse === 'wss://a-b.trycloudflare.com' && F.lesVertLenke('#spill=x&kode=ABCDEF') === null, 'vertslenke');
 // bildet og bruken av det
 const mann = () => ({ navn: 'Per Dahl', rolle: 'rifle', hp: 1 });
 const sti = []; for (let i = 0; i < 1000; i++) sti.push([i * 3.3, 7]);

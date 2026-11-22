@@ -263,9 +263,9 @@
     const l = les(), navn = esc(N.navn || l.navn || '');
     let h = `<div class="topp"><b>Spill sammen</b><button data-n="lukk" aria-label="Lukk">×</button></div>`;
     if (!N.rolle) {
-      h += `<section><h3>Vær vert</h3><p>Start tjeneren på PC-en din først: <a href="/tjener/riksbrudd-tjener.zip" download style="color:var(--hover)">last ned tjeneren</a>, pakk ut og dobbeltklikk <b>start-tjener.bat</b> (LESMEG.md forklarer alt). Så åpner du verden her.</p>
+      h += `<section><h3>Vær vert</h3><p>Start tjeneren på PC-en din først: <a href="/tjener/riksbrudd-tjener.zip" download style="color:var(--hover)">last ned tjeneren</a>, pakk ut og dobbeltklikk <b>start-tjener.bat</b> (LESMEG.md forklarer alt). Tjeneren åpner spillet for deg med riktig adresse – trykk så knappen under.</p>
         <label for="nnavn">Navnet ditt</label><input id="nnavn" value="${navn}" maxlength="24">
-        <label for="nadr">Tjeneren</label><input id="nadr" value="${esc(l.adresse || 'ws://localhost:8787')}">
+        <label for="nadr">Tjeneren (tunneladressen fra det svarte vinduet, https://….trycloudflare.com – eller ws://localhost:8787)</label><input id="nadr" value="${esc(l.adresse || 'ws://localhost:8787')}">
         <div class="rad"><button data-n="vert">${l.kode ? 'Åpne verden ' + esc(l.kode) + ' igjen' : 'Åpne en ny verden'}</button>${l.kode ? '<button data-n="nyverden">Ny verden</button>' : ''}</div></section>
         <section><h3>Bli med</h3><p>Lim inn invitasjonslenken du har fått.</p><label for="nlenke">Invitasjonslenke</label><input id="nlenke" value="${esc(N.lenkeInn || '')}" placeholder="https://…#spill=wss://…&kode=…">
         <div class="rad"><button data-n="gjest">Bli med</button></div></section>`;
@@ -309,12 +309,16 @@
   if (meny) { const b = document.createElement('button'); b.id = 'vis-nett'; b.textContent = 'Spill sammen'; b.onclick = () => { åpen(!P.classList.contains('på')); }; meny.appendChild(b); }
   // invitasjonslenke i adressen: panelet åpnes med lenken fylt inn (spilleren skriver navnet og trykker «Bli med»)
   function fraAdressen() {
+    const v = F.lesVertLenke(location.hash || '');
+    if (v) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ok */ }
+      skriv({ adresse: v.adresse }); N.vertLenke = true; åpen(true);
+      status('Tjeneren på PC-en din er funnet. Trykk «' + (les().kode ? 'Åpne verden ' + les().kode + ' igjen' : 'Åpne en ny verden') + '».'); return; }
     const l = F.lesLenke(location.hash || ''); if (!l) return;
     N.lenkeInn = location.href; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ok */ }
     lukkStart(); åpen(true); status('Skriv navnet ditt og trykk «Bli med».');
   }
   // var denne nettleseren vert da siden ble lukket, åpnes verden igjen av seg selv (ikke i testene)
-  function vertIgjen() { const l = les(); if (navigator.webdriver || N.rolle || !l.vertNå || !l.kode || !l.adresse || /#spill=/.test(location.hash)) return;
+  function vertIgjen() { const l = les(); if (navigator.webdriver || N.rolle || !l.vertNå || !l.kode || !l.adresse || /#(spill|vert)=/.test(location.hash)) return;
     sikkerLogg(`Åpner verden ${l.kode} igjen …`); koble('vert', l.adresse, l.kode, l.navn || 'Vert'); }
   const start = () => { setTimeout(fraAdressen, 300); setTimeout(vertIgjen, 2500); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

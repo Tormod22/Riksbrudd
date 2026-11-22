@@ -21,6 +21,11 @@
     const adr = rensAdresse(p.spill), kode = rensKode(p.kode);
     return adr && kode ? { adresse: adr, kode } : null;
   }
+  // Vertslenken fra tjenerprogrammet: <side>#vert=<wss-adresse> (verten kobler seg til gjennom tunnelen)
+  function lesVertLenke(tekst) {
+    const t = String(tekst || ''); const m = /[#&]vert=([^&]+)/.exec(t); if (!m) return null;
+    const adr = rensAdresse(decodeURIComponent(m[1])); return adr ? { adresse: adr } : null;
+  }
   function lagLenke(side, adresse, kode) { return String(side).split('#')[0] + '#spill=' + encodeURIComponent(adresse) + '&kode=' + kode; }
   // http(s) -> ws(s); bare vertsnavn -> ws://navn:8787
   function rensAdresse(a) {
@@ -129,7 +134,7 @@
     const c = Math.cos(b.r || 0), s = Math.sin(b.r || 0);
     return [[fot[0], fot[2]], [fot[1], fot[2]], [fot[1], fot[3]], [fot[0], fot[3]]].map(([x, y]) => [b.x + x * c - y * s, b.y + x * s + y * c]);
   }
-  const F = { VERSJON, hjørner, lesLenke, lagLenke, rensAdresse, rensKode, statusAdresse, kanKoble, rensNavn, pakkLag, pakkKj, bilde, brukBilde,
+  const F = { VERSJON, hjørner, lesLenke, lesVertLenke, lagLenke, rensAdresse, rensKode, statusAdresse, kanKoble, rensNavn, pakkLag, pakkKj, bilde, brukBilde,
     sjekkKommando, nesteEier, framTid, tynnSti };
   if (typeof module !== 'undefined' && module.exports) module.exports = F; else rot.Flerspiller = F;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

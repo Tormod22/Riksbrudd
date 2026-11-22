@@ -20,7 +20,7 @@ function argVerdi(navn) {
 const PORT = parseInt(argVerdi('--port') || process.env.PORT || '8787', 10);
 const MAPPE = path.resolve(argVerdi('--mappe') || path.join(__dirname, 'verdener'));
 const MED_TUNNEL = process.argv.includes('--tunnel');
-const SPILL_ADRESSE = 'https://riksbrudd.vercel.app/norge/';
+const SPILL_ADRESSE = 'https://riksbrudd.vercel.app/norge';
 
 const MAKS_MELDING = 4 * 1024 * 1024;
 const MAKS_SPILLERE = 5;
@@ -357,6 +357,21 @@ function invitasjon(kode) {
   return SPILL_ADRESSE + '#spill=' + encodeURIComponent(wss) + '&kode=' + kode;
 }
 
+// Vertslenken åpner spillet og kobler verten til tjeneren GJENNOM TUNNELEN. (22. nov, test på brukerens Windows-PC: nettleseren
+// avviste ws://localhost fra den offentlige https-siden, mens tunneladressen virket.)
+// Åpner en adresse i standard nettleser (bare med --nettleser, som start-tjener.bat bruker)
+function åpneINettleser(url) {
+  try {
+    const { spawn: sp } = require('child_process');
+    if (process.platform === 'win32') sp('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+    else if (process.platform === 'darwin') sp('open', [url], { detached: true, stdio: 'ignore' }).unref();
+    else sp('xdg-open', [url], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+  } catch (e) { /* ikke viktig: lenken står i vinduet */ }
+}
+function vertslenke() {
+  if (!tunnelAdresse) return null;
+  return SPILL_ADRESSE + '#vert=' + encodeURIComponent(tunnelAdresse.replace(/^https:/, 'wss:'));
+}
 function skrivInvitasjon(kode) {
   const lenke = invitasjon(kode);
   if (lenke) {
@@ -399,7 +414,7 @@ function statusside() {
     'code{background:#22252b;padding:1px 5px;border-radius:3px;word-break:break-all}a{color:#9fc3e6;word-break:break-all}' +
     '.kort{background:#1d2026;border:1px solid #30343c;border-radius:6px;padding:4px 14px;margin:10px 0}.av{color:#d08a6a;font-size:.8em}' +
     '</style></head><body><h1>Riksbrudd-tjeneren</h1><p>Kjører på port ' + PORT + '.</p>' +
-    '<h2>Adresser</h2><ul>' + (tunnelAdresse ? '<li>Tunnel: <code>' + esc(tunnelAdresse) + '</code></li>' : '<li>Ingen tunnel (vennene må være på samme nett).</li>') + adr + '</ul>' +
+    '<h2>Adresser</h2><ul>' + (tunnelAdresse ? '<li>Tunnel: <code>' + esc(tunnelAdresse) + '</code></li><li>Vertslenke (åpne den selv): <a href="' + esc(vertslenke()) + '" style="color:#f0d79a">' + esc(vertslenke()) + '</a></li>' : '<li>Ingen tunnel (vennene må være på samme nett).</li>') + adr + '</ul>' +
     '<h2>Verdener</h2>' + vl + '</body></html>';
 }
 
@@ -476,6 +491,13 @@ function startTunnel() {
       console.log('==========================================================');
       console.log(' Tunnelen er klar: ' + tunnelAdresse);
       console.log('==========================================================');
+      const vl = vertslenke();
+      console.log('');
+      console.log(' DU SOM ER VERT: åpne denne lenken i nettleseren (den åpnes av seg selv nå):');
+      console.log(' ' + vl);
+      console.log(' Trykk så «Åpne en ny verden» (eller «Åpne verden … igjen»), og send invitasjonslenken til vennene.');
+      console.log('');
+      if (process.argv.includes('--nettleser')) åpneINettleser(vl);
       for (const v of verdener.values()) if (v.vert) { console.log('Verden ' + v.kode + ':'); skrivInvitasjon(v.kode); }
     }
   };

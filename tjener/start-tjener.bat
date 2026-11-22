@@ -11,5 +11,5 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-node "%~dp0riksbrudd-tjener.js" --tunnel
+node "%~dp0riksbrudd-tjener.js" --tunnel --nettleser
 pause
