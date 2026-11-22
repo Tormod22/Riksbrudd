@@ -46,3 +46,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   klimaenheter, kontorcontainer, møtetelt med kartbord).
 - Del 8: B67–B74 (lagerhall med reoler – 250 m³ lager –, kjølecontainer, hundegård, parkeringsplass, skilt, flaggrekke, porttårn,
   bålplass), C80–C81 (gassflasker i stativ, jerrykanner).
+- Del 9: C82–C91 (sandsekkstabel, kamuflasjenett, presenning over last, tømmerstabel, verktøytavle, arbeidsbenk, bærbar generator,
+  lyskaster på stativ, feltbord og klappstoler, feltkokeapparat). Tingene står i tabellen `TING` (navn, pris, fot, ikon, 2D-farge).

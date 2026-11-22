@@ -1596,6 +1596,89 @@
     return d;
   });
 
+  // =====================================================================================================================
+  // Del C, ting i leiren (høyst 300 trekanter hver). C82 Sandsekkstabel: fylte sekker stablet i kryss på en pall.
+  LEIR2.sekkestabel = lod((b) => {
+    const d = [boks(0, 0, 0, 1.2, 1, .12, F.treL)], r = frø(82 + ((b && b.id) || 0));
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 2; i++) { const kr = j % 2; d.push(sekk(kr ? (i - .5) * .5 : 0, kr ? 0 : (i - .5) * .46, .12 + j * .2, kr ? .95 : 1.1, kr ? 0 : Math.PI / 2, SEKKFARGE[(r() * 5) | 0])); }
+    return d;
+  });
+  // C83 Kamuflasjenett på fire stolper (6 × 6 m), ujevnt og flekkete
+  LEIR2.kamonett = lod((b) => {
+    const d = [];
+    for (const [x, y] of [[-2.6, -2.6], [2.6, -2.6], [2.6, 2.6], [-2.6, 2.6]]) d.push(stav([x, y, 0], [x, y, 2.4], .04, F.treM, 4));
+    d.push(M.H.flate(6, 6, (u, v) => [-3 + u * 6, -3 + v * 6, 2.4 + .25 * Math.sin(u * Math.PI) * Math.sin(v * Math.PI) - .18 * (Math.sin(u * 8) + Math.cos(v * 7)) * .5], (u, v) => ((u * 5.3 + v * 3.7) % 1 < .45 ? '#4b5a3a' : (u * 2.1 + v * 6.3) % 1 < .5 ? '#5d6a44' : '#6a5c42'), true));
+    return d;
+  });
+  // C84 Presenning over last: kasser på pall med en presenning som henger ned på sidene, stroppet fast
+  LEIR2.presenning = lod((b) => {
+    const d = [boks(0, 0, 0, 2.4, 1.2, .12, F.treL), boks(-.6, 0, .12, 1.1, 1, .8, '#6b5a43'), boks(.6, 0, .12, 1.1, 1, .6, '#5a4a36')];
+    d.push(M.H.flate(5, 4, (u, v) => { const x = -1.3 + u * 2.6, y = -.65 + v * 1.3, top = x < 0 ? .95 : .75, kant = Math.min(1, Math.min(v, 1 - v) * 6); return [x, y * (1 + .05 * (1 - kant)), .12 + (top + .03) * kant + .2 * (1 - kant)]; }, () => '#3d5a3a', true));
+    for (const x of [-.6, .6]) d.push(stav([x, -.66, .3], [x, -.66, x < 0 ? .96 : .76], .015, K.gul, 3), stav([x, .66, .3], [x, .66, x < 0 ? .96 : .76], .015, K.gul, 3));
+    return d;
+  });
+  // C85 Tømmerstabel: ti stokker i tre lag mellom stolper
+  LEIR2.tømmer = lod((b) => {
+    const d = [], r = frø(85);
+    for (let j = 0, k = 0; j < 3; j++) for (let i = 0; i < 4 - j; i++, k++) { const y = (i - (3 - j) / 2) * .34, z = .16 + j * .3, rr = .15 + r() * .03; d.push(stav([-1.8, y, z], [1.8 + r() * .3, y, z], rr, k % 2 ? '#7a5c3c' : '#8a6a45', 6)); }
+    for (const sx of [-1, 1]) d.push(stav([sx * 1.2, -.85, 0], [sx * 1.2, -.85, 1.1], .05, F.treM, 3), stav([sx * 1.2, .85, 0], [sx * 1.2, .85, 1.1], .05, F.treM, 3));
+    return d;
+  });
+  // C86 Verktøytavle: plate på to stolper med verktøy (spade, hakke, øks, sag, nøkler) og et lite tak
+  LEIR2.verktøytavle = lod((b) => {
+    const d = [boks(0, -1, 0, .1, .1, 2, F.treM), boks(0, 1, 0, .1, .1, 2, F.treM), boks(.06, 0, .6, .03, 2.2, 1.2, '#6e5b45'), boks(.15, 0, 1.85, .45, 2.4, .05, F.blikkM)];
+    const v = (y, z, h, w, f) => d.push(boks(.1, y, z, .03, w, h, f));
+    v(-.8, .7, .95, .05, F.treL); v(-.8, .7, .2, .2, K.stålG); v(-.45, .75, .85, .04, F.treL); v(-.45, 1.5, .08, .4, K.mørk);
+    v(-.1, .9, .6, .04, F.treL); v(-.1, 1.38, .14, .16, K.stålG); v(.3, 1, .6, .25, K.stålG); v(.3, 1.55, .05, .3, K.rød);
+    for (let i = 0; i < 4; i++) v(.65 + i * .1, 1.1 + (i % 2) * .05, .25 + i * .03, .025, K.galv);
+    return d;
+  });
+  // C87 Arbeidsbenk ute: benk med plate, skrustikke, hylle under, verktøykasse og et lite tak over
+  LEIR2.arbeidsbenk = lod((b) => {
+    const d = [];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) d.push(boks(sx * .85, sy * .3, 0, .07, .07, .85, F.treM));
+    d.push(boks(0, 0, .85, 2, .75, .06, F.treL), boks(0, 0, .2, 1.8, .6, .03, F.treL), boks(-.8, -.3, .91, .18, .14, .12, K.mørk), boks(-.8, -.42, .95, .2, .05, .08, K.stålG));
+    d.push(boks(.4, .1, .91, .5, .22, .2, K.rød), boks(.4, .1, 1.11, .45, .06, .03, K.mørk), boks(0, .1, .23, .5, .3, .2, '#2f3e52'), boks(-.2, -.1, .91, .3, .02, .02, K.stålG));
+    for (const sx of [-1, 1]) d.push(stav([sx * .95, .4, 0], [sx * .95, .4, 2.1], .03, K.galv, 3)); d.push(boks(0, .1, 2.1, 2.2, 1, .04, F.blikkM));
+    return d;
+  });
+  // C88 Liten bærbar generator: rørramme, motor og tank, kontrollpanel med uttak
+  LEIR2.bærbargenerator = lod((b) => {
+    const d = [], R = '#2b2e30';
+    for (const sy of [-1, 1]) { d.push(stav([-.35, sy * .25, .02], [.35, sy * .25, .02], .02, R, 4), stav([-.35, sy * .25, .6], [.35, sy * .25, .6], .02, R, 4)); for (const sx of [-1, 1]) d.push(stav([sx * .35, sy * .25, .02], [sx * .35, sy * .25, .6], .02, R, 4)); }
+    d.push(boks(-.05, 0, .05, .45, .38, .3, '#c9a227'), boks(-.05, 0, .38, .55, .4, .2, '#d1b33a'), syl(.15, -.08, .58, .05, .04, K.mørk, 6), boks(.3, 0, .15, .03, .3, .25, '#3a3f42'));
+    d.push(skive(.32, -.08, .25, .03, .02, K.rød, 'x', 6), skive(.32, .08, .25, .03, .02, K.mørk, 'x', 6), boks(-.32, .1, .3, .08, .1, .1, K.mørk));
+    return d;
+  });
+  // C89 Lyskaster på stativ: trefot, lampehode med glass og håndtak, kabel
+  LEIR2.lyskaster = lod((b) => {
+    const d = [];
+    for (let i = 0; i < 3; i++) { const a = i * 2.094; d.push(stav([Math.cos(a) * .55, Math.sin(a) * .55, 0], [0, 0, 1.2], .02, K.mørk, 4)); }
+    d.push(stav([0, 0, 1.2], [0, 0, 1.75], .025, K.mørk, 4), boks(0, 0, 1.68, .08, .5, .04, K.mørk));
+    const h = boks(0, 0, 0, .2, .45, .35, K.mørk); h.rotateY(.3); d.push(flytt(h, .05, 0, 1.75), skive(.16, 0, 1.92, .16, .02, K.lys, 'x', 10), boks(-.06, 0, 2.1, .05, .2, .04, K.mørk));
+    kabel(d, [[0, 0, 1.3], [.2, .3, .05], [.8, .6, .02]], .015);
+    return d;
+  });
+  // C90 Feltbord og klappstoler: sammenleggbart bord og fire stoler
+  LEIR2.feltbord = lod((b) => {
+    const d = [boks(0, 0, .72, 1.6, .8, .04, '#4b5a3f')];
+    for (const sx of [-1, 1]) d.push(stav([sx * .7, -.35, 0], [sx * .7, .35, .72], .02, K.galv, 3), stav([sx * .7, .35, 0], [sx * .7, -.35, .72], .02, K.galv, 3));
+    for (const [x, y, rz] of [[-.5, -.75, 0], [.5, -.75, 0], [-.5, .75, Math.PI], [.5, .75, Math.PI]]) {
+      const c = [boks(0, 0, .42, .42, .4, .03, '#3a3f42'), boks(0, -.21, .45, .42, .03, .4, '#3a3f42'), stav([0, -.2, 0], [0, .2, .43], .015, K.galv, 3), stav([0, .2, 0], [0, -.2, .85], .015, K.galv, 3)];
+      d.push(...flytt(c, x, y, 0, rz)); }
+    return d;
+  });
+  // C91 Feltkokeapparat: brenner på stativ med stor gryte, gassflaske med slange og et lite bord med kjeler
+  LEIR2.kokeapparat = lod((b) => {
+    const d = [];
+    for (let i = 0; i < 3; i++) { const a = i * 2.094; d.push(stav([Math.cos(a) * .33, Math.sin(a) * .33, 0], [Math.cos(a) * .26, Math.sin(a) * .26, .45], .02, K.mørk, 3)); }
+    d.push(syl(0, 0, .45, .3, .06, K.mørk, 8), syl(0, 0, .51, .32, .45, '#8d9193', 8), syl(0, 0, .96, .34, .03, '#6f7377', 8));
+    d.push(syl(.7, 0, 0, .14, .55, '#c23b2c', 8), syl(.7, 0, .55, .06, .08, K.mørk, 6)); kabel(d, [[.7, 0, .6], [.25, 0, .48]], .012);
+    d.push(boks(-.9, 0, .7, .7, .5, .04, K.galv)); for (const sx of [-1, 1]) d.push(boks(-.9 + sx * .3, 0, 0, .03, .45, .7, K.galv));
+    d.push(syl(-1, -.08, .74, .12, .15, '#8d9193', 6), syl(-.78, .1, .74, .09, .1, '#6f7377', 6));
+    return d;
+  });
+
   // ---------- nye leirbygg (del B): registreres i Leir.BYGG med ikon, 2D-stil og gruppe i byggelista ----------
   // Pris, tid (spilltimer), strøm (kW, minus = bruker) og materialer er Claudes forslag. De fleste har ingen egen virkning i
   // spillet ennå (bare strømforbruket); der det passer, gir de senger (plasser) eller lagerplass (lager) som andre bygg.
@@ -1713,6 +1796,21 @@
     jerrykanner: { gruppe: 'Ting i leiren', ikon: 'olje', stil: { form: 'kasse', tak: '#4d5540', h: .6 },
       bygg: { navn: 'Jerrykanner', pris: 20000, tid: .1, kw: 0, fot: [-.6, .6, -.5, .5], mat: {}, tekst: 'Seks kanner på pall (bare utseende)' } },
   };
+  // Ting i leiren: små pyntebygg (pris, fotavtrykk, ikon, 2D-farge og høyde). Alle i gruppen «Ting i leiren», bare utseende.
+  const TING = {
+    sekkestabel: ['Sandsekkstabel', 30000, [-.65, .65, -.55, .55], 'sandsekk', '#a8946f', .8, 'Fylte sandsekker på pall'],
+    kamonett: ['Kamuflasjenett', 50000, [-3.1, 3.1, -3.1, 3.1], 'telt', '#4b5a3a', 2.5, 'Nett på fire stolper'],
+    presenning: ['Presenning over last', 30000, [-1.3, 1.3, -.7, .7], 'kasse', '#3d5a3a', 1, 'Last på pall under presenning'],
+    tømmer: ['Tømmerstabel', 30000, [-1.9, 2.2, -.9, .9], 'blad', '#8a6a45', 1, 'Stokker i lag mellom stolper'],
+    verktøytavle: ['Verktøytavle', 20000, [-.3, .4, -1.25, 1.25], 'verktoy', '#6e5b45', 1.9, 'Tavle med verktøy under et lite tak'],
+    arbeidsbenk: ['Arbeidsbenk', 40000, [-1.1, 1.1, -.55, .6], 'hammer', '#8a7457', 2.1, 'Benk med skrustikke og verktøy'],
+    bærbargenerator: ['Bærbar generator', 60000, [-.45, .45, -.35, .35], 'motor', '#c9a227', .7, 'Liten generator i rørramme (bare utseende)'],
+    lyskaster: ['Lyskaster på stativ', 25000, [-.6, .6, -.6, .6], 'sol', '#2b2e30', 2, 'Lampe på trefot'],
+    feltbord: ['Feltbord og klappstoler', 20000, [-.9, .9, -1.05, 1.05], 'plan', '#4b5a3f', .9, 'Bord og fire stoler'],
+    kokeapparat: ['Feltkokeapparat', 30000, [-1.3, .9, -.4, .4], 'mat', '#8d9193', 1, 'Brenner med gryte, gassflaske og bord'],
+  };
+  for (const [id, [navn, pris, fot, ikon, tak, h, tekst]] of Object.entries(TING))
+    NYE[id] = { gruppe: 'Ting i leiren', ikon, stil: { form: 'kasse', tak, h }, bygg: { navn, pris, tid: .1, kw: 0, fot, mat: {}, tekst } };
   M.LEIR2_NYE = NYE;
   function registrer() {
     const LB = window.Leir; if (!LB || !LB.BYGG) return;
@@ -1777,6 +1875,7 @@
   for (const [nr, id, t] of [['B67', 'lagerhall', 'Lagerhall med reoler'], ['B68', 'kjølecontainer', 'Kjølecontainer'], ['B69', 'hundegård', 'Hundegård'], ['B70', 'parkering', 'Parkeringsplass'], ['B71', 'skilt', 'Skilt'],
     ['B72', 'flaggrekke', 'Flaggrekke'], ['B73', 'porttårn', 'Porttårn'], ['B74', 'bålplass', 'Bålplass'], ['C80', 'gassflasker', 'Gassflasker i stativ'], ['C81', 'jerrykanner', 'Jerrykanner']])
     ny(nr, 'l2-' + id, t, () => LEIR2[id]({ id: 2 }));
+  { let nr = 82; for (const id of ['sekkestabel', 'kamonett', 'presenning', 'tømmer', 'verktøytavle', 'arbeidsbenk', 'bærbargenerator', 'lyskaster', 'feltbord', 'kokeapparat']) ny('C' + nr++, 'l2-' + id, TING[id][0], () => LEIR2[id]({ id: 1 })); }
   registrer();
 
   // ---------- detaljnivå i spillet: bytt til den enkle utgaven lenger enn ca. 150 m unna ----------
