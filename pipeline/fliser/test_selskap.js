@@ -94,4 +94,6 @@ ok(S0.fraJSON(J, { x: 1, y: 2 }) === null && S0.fraJSON('tull') === null && S0.f
 ok(JSON.parse(J) && typeof JSON.parse(J).sider.blå.aktive === 'object', 'ren JSON');
 // rykte holder seg innen 0–100
 S0.endreRykte(S, 'blå', { pålitelig: 500, hardhendt: -500 }); ok(S.sider.blå.rykte.pålitelig === 100 && S.sider.blå.rykte.hardhendt === 0, 'rykte 0–100');
+// fristen som tekst (R16-D: «13 t 60 min» kom før)
+ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ frist: 90 }, 0) === '1 t 30 min igjen' && S0.fristTekst({ frist: 30.2 }, 0) === '31 min igjen', 'fristTekst: ' + S0.fristTekst({ frist: 839.6 }, 0));
 console.log(`Alle ${n} testene for selskap.js er ok`);

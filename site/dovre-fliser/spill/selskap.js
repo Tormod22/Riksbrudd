@@ -217,7 +217,7 @@
   // sivile tap, sprengninger o.l.: hardhendt opp
   const hardhendt = (S, id, n) => endreRykte(S, id, { hardhendt: n });
   function settPris(S, id, p) { if (!REGLER.pris[p]) return false; side(S, id).pris = p; return true; }
-  const fristTekst = (k, nå) => { const t = Math.max(0, k.frist - nå); return t >= 60 ? `${Math.floor(t / 60)} t ${Math.round(t % 60)} min igjen` : `${Math.round(t)} min igjen`; };
+  const fristTekst = (k, nå) => { const t = Math.max(0, k.frist - nå); const m = Math.ceil(t); return m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min igjen` : `${m} min igjen`; };
 
   // ---------- lagring (ren JSON, per leir) ----------
   const tilJSON = S => JSON.stringify(S);

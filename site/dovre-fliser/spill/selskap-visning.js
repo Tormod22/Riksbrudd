@@ -72,7 +72,7 @@
     STEDER = ut; stederAntall = n; return ut;
   }
   const dagNå = () => Math.floor((6 * 60 + tid) / 1440);
-  function nyeTilbud() { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, steder()); lagre(); return n; }
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, liste || steder()); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -180,6 +180,7 @@
 #selskap .bar{ height:8px; border-radius:4px; background:#2a2f35; overflow:hidden; position:relative; } #selskap .bar i{ position:absolute; left:0; top:0; bottom:0; border-radius:4px; }
 #selskap .maal span:last-child{ font-size:12.5px; color:#c8bfa9; text-align:right; }
 #selskap .tall{ font-family:ui-monospace, 'JetBrains Mono', Menlo, monospace; font-variant-numeric:tabular-nums; }
+#selskap button{ background:#1d2125; border:1px solid #454b52; color:#e9e4d6; border-radius:5px; cursor:pointer; } #selskap button:hover{ filter:brightness(1.2); }
 #selskap .valg{ display:flex; gap:4px; margin:4px 0; } #selskap .valg button{ flex:1; min-width:0; } #selskap .valg button.på{ background:#3b3220; border-color:#d9a441; color:#f2d68a; }
 #selskap .kort{ border:1px solid #31363c; border-left:3px solid #d9a441; border-radius:6px; padding:8px 10px; margin:6px 0; background:rgba(255,255,255,.025); }
 #selskap .kort.aktiv{ border-left-color:#3f6fb0; } #selskap .kort.klar{ border-left-color:#7c9a4e; background:rgba(124,154,78,.08); }
@@ -188,6 +189,7 @@
 #selskap .rad{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12.5px; color:#c8bfa9; margin:4px 0; } #selskap .rad .kr{ color:#f2d68a; } #selskap .rad .bot{ color:#e7a593; }
 #selskap .knapper{ display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; } #selskap .knapper button{ min-height:32px; padding:0 12px; }
 #selskap button.hoved{ background:#3b3220; border-color:#d9a441; color:#f2d68a; } #selskap button.fare{ border-color:#8a4a3a; color:#e7b3a3; background:#2a1a16; }
+#selskap .smerke{ flex:none; display:block; } #selskap .rival .smerke{ width:40px; height:40px; } #selskap .hode .smerke{ width:58px; height:58px; }
 #selskap .rival{ display:flex; gap:10px; align-items:flex-start; margin:6px 0; } #selskap .rival b{ font-family:'Cormorant Garamond', serif; font-size:16px; }
 #selskap .tom{ color:#8f8a7c; font-style:italic; font-size:13px; } #selskap .melding{ color:#f2c48a; font-size:13px; margin:6px 0; }
 #selskap .fram{ height:5px; background:#2a2f35; border-radius:3px; overflow:hidden; margin:4px 0; } #selskap .fram i{ display:block; height:100%; background:#3f6fb0; }
@@ -230,7 +232,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (S.tilbud.length ? S.tilbud.map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`);
     h += `<h3>De andre selskapene</h3>` + Object.keys(RIVALER).map(s => { const R = RIVALER[s], q = S.sider[s], fr = window.Fraksjoner && Fraksjoner.FRAKSJONER[s];
       const iKart = fr && fr.navn && fr.navn !== R.navn ? ` <span class="kode" style="letter-spacing:.04em">i kartet: ${esc(fr.navn)}</span>` : '';
-      return `<div class="rival" data-rival="${s}">${rivalMerke(s, 40)}<div><b>${esc(R.navn)}</b>${iKart}<div class="motto">${esc(R.motto)}</div><p style="margin:2px 0;font-size:13px;color:#d8d1bf">${esc(R.omtale)}</p><div class="rad"><span>${esc(SK.rykteTekst(q.rykte))}</span><span>Kontrakter <span class="tall">${q.sum.levert}</span></span></div></div></div>`; }).join('');
+      return `<div class="rival" data-rival="${s}">${rivalMerke(s, 40)}<div><b>${esc(R.navn)}</b>${iKart}<div class="motto">${esc(R.motto)}</div><p style="margin:2px 0;font-size:13px;color:#d8d1bf">${esc(R.omtale)}</p><div class="rad"><span>${esc(SK.rykteTekst(q.rykte).replace('dere er', 'de er'))}</span><span>Kontrakter <span class="tall">${q.sum.levert}</span></span></div></div></div>`; }).join('');
     const fer = sd.ferdige.slice(0, 3); if (fer.length) h += `<h3>Siste kontrakter</h3>` + fer.map(k => `<div class="rad"><span>${k.status === 'levert' ? '✓' : '✗'} ${esc(k.tittel)}</span><span class="${k.status === 'levert' ? 'kr' : 'bot'} tall">${k.status === 'levert' ? kr(k.betaling) : k.status === 'tapt' ? 'tapt' : '−' + kr(k.bot)}</span></div>`).join('');
     return h;
   }
