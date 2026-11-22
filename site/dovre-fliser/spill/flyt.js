@@ -495,6 +495,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     ikon: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><rect x="2" y="2" width="20" height="20" fill="none" stroke-dasharray="3 2"/>' });
 
   const api2 = { test: false, spol, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
-    utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
+    utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk,
+    stopp, fartGrunn: () => (grunnLapp.classList.contains('på') ? grunnLapp.textContent : ''), skjulFartGrunn: () => skjulGrunn() };
   rot.FlytSpill = api2;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
