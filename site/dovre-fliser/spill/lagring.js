@@ -7,8 +7,13 @@
  * startes på nytt) og oljen på basen.
  * Fra 18. nov lagres også: marsjordre i gang (målet – laget planlegger ruta på nytt og går videre), fiendens lag (motstandernes
  * lag og patruljen: sted, helse, hva de holdt på med), det motstanderne husker (AI.minne) og stillingene de har bygget.
- * IKKE lagret ennå (gjenstår): kjøreordre for kjøretøy, røverne i et angrep som er i gang, enheter i bestilling på basen,
- * minefelt og droner.
+ * Fra 22. nov (R16-E, «lagring av alt») lagres også: kjøreordre for kjøretøy (målet – kolonnen planlegger ruta på nytt, som lagene),
+ * enheter i bestilling på basene (køen med tid igjen), minefeltene (MINEFELT) og dronene (DRONER). Hvert slag har sitt eget felt
+ * (kjøretøy[].mål, baser, minefelt, droner); gamle lagringer uten feltene virker som før.
+ * Røverne i et angrep som er i gang, lagres av spill/trussel-lagring.js («riksbrudd-angrep», fra 19. nov) – ikke her, så de ikke kommer
+ * tilbake to ganger.
+ * IKKE lagret ennå: kolonner med oppdrag (økonomiens lastebiler, forsyning, ressursturer) starter oppdraget på nytt selv eller står,
+ * og salvene fra rakettartilleriet (SALVER) som er i lufta.
  */
 (function (rot) {
   'use strict';
@@ -49,15 +54,35 @@
   function pakkKj(k) {
     const d = { navn: k.navn, type: k.type, antall: k.antall, x: r1(k.x), y: r1(k.y), retning: +(+k.retning || 0).toFixed(3) };
     if (k.drivstoff !== undefined) d.drivstoff = +(+k.drivstoff).toFixed(4); if (k.forsyning) d.forsyning = r1(k.forsyning);
+    // (22. nov) kjøreordren i gang: siste punkt på ruta (kolonner med oppdrag styres av sin egen modul og tas ikke med)
+    const P = k.sti && !k.oppdrag && Array.isArray(k.sti.P) ? k.sti.P : null;
+    if (P && P.length >= 2 && Number.isFinite(P[P.length - 2]) && Number.isFinite(P[P.length - 1])) d.mål = [r1(P[P.length - 2]), r1(P[P.length - 1])];
     return d;
   }
-  // Kolonnen står stille der den var (ruten og oppdraget er ikke lagret)
+  // Kolonnen står der den var (oppdraget er ikke lagret). Hadde den en kjøreordre, står målet i k.målLagret til ruta planlegges på nytt.
   function brukKj(k, d) {
     k.x = tall(d.x, k.x); k.y = tall(d.y, k.y); k.retning = tall(d.retning, k.retning || 0); k.antall = mellom(Math.round(tall(d.antall, k.antall)), 0, 40);
     k.sti = null; k.oppdrag = null; k.framme = false;
     if (d.drivstoff !== undefined) k.drivstoff = mellom(tall(d.drivstoff, 1), 0, 1); if (d.forsyning) k.forsyning = Math.max(0, tall(d.forsyning, 0));
+    if (Array.isArray(d.mål) && Number.isFinite(d.mål[0]) && Number.isFinite(d.mål[1])) k.målLagret = [d.mål[0], d.mål[1]]; else delete k.målLagret;
     return k;
   }
+  // ---------- basene, minefeltene og dronene (22. nov) ----------
+  // basen: { navn, kø: [{ type, igjen, total }] (sekunder byggetid), bygget }. Bare baser med noe i køen tas med.
+  const navnOk = v => typeof v === 'string' && v.length > 0 && v.length <= 80, typeOk = v => typeof v === 'string' && /^[a-zæøåA-ZÆØÅ0-9_-]{1,40}$/.test(v);
+  function pakkBase(b) { return { navn: b.navn, bygget: Math.max(0, Math.round(tall(b.bygget, 0))), kø: (b.kø || []).filter(j => j && typeOk(j.type)).map(j => ({ type: j.type, igjen: r1(Math.max(0, tall(j.igjen, 0))), total: r1(Math.max(0, tall(j.total, 0))) })) }; }
+  function lesBase(d) { if (!d || !navnOk(d.navn) || !Array.isArray(d.kø)) return null;
+    return { navn: d.navn, bygget: Math.max(0, Math.round(tall(d.bygget, 0))), kø: d.kø.filter(j => j && typeOk(j.type) && Number.isFinite(j.igjen)).map(j => ({ type: j.type, igjen: Math.max(0, +j.igjen), total: Math.max(+j.igjen, tall(j.total, j.igjen)) })) }; }
+  // Legger køen tilbake på basen med samme navn. Gir antallet baser som fikk køen.
+  function brukBaser(baser, lagret) { let n = 0; for (const d of lagret || []) { const b = (baser || []).find(q => q.navn === d.navn); if (!b) continue; b.kø = d.kø.map(j => ({ ...j })); b.bygget = d.bygget; n++; } return n; }
+  // minefelt: { x, y, side, navn, ladninger } (spill/feltarbeid.js nyttMinefelt)
+  const pakkMine = f => ({ navn: f.navn, x: r1(f.x), y: r1(f.y), side: f.side, ladninger: Math.max(0, Math.round(tall(f.ladninger, 0))) });
+  const lesMine = d => (d && navnOk(d.navn) && Number.isFinite(d.x) && Number.isFinite(d.y) && typeOk(d.side) && d.ladninger > 0 ? { navn: d.navn, x: d.x, y: d.y, side: d.side, ladninger: Math.round(d.ladninger) } : null);
+  // drone: { navn, x, y, mål: [x, y], igjen (sekunder), retning, fase } (spill/enheter.js nyDrone)
+  const pakkDrone = q => ({ navn: q.navn, x: r1(q.x), y: r1(q.y), mål: [r1(q.mål[0]), r1(q.mål[1])], igjen: r1(Math.max(0, tall(q.igjen, 0))), retning: +(+q.retning || 0).toFixed(3), fase: q.fase === 'flyr' ? 'flyr' : 'over målet' });
+  const lesDrone = d => (d && navnOk(d.navn) && Number.isFinite(d.x) && Number.isFinite(d.y) && Array.isArray(d.mål) && Number.isFinite(d.mål[0]) && Number.isFinite(d.mål[1]) && d.igjen > 0
+    ? { navn: d.navn, x: d.x, y: d.y, mål: [d.mål[0], d.mål[1]], igjen: +d.igjen, retning: tall(d.retning, 0), fase: d.fase === 'flyr' ? 'flyr' : 'over målet' } : null);
+  const liste = (v, les) => (Array.isArray(v) ? v.map(q => { try { return les(q); } catch (e) { return null; } }).filter(Boolean) : []);
   // ---------- det hele ----------
   // o: { tid, vær (tilstanden fra spill/vaer.js), lag: [egne lag], kjøretøy: [egne kjøretøy], leir: { x, y } }
   function pakk(o) {
@@ -71,7 +96,11 @@
       fiender: (o.fiender || []).map(pakkLag), minne: pakkMinne(o.minne),
       stillinger: (o.stillinger || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => ({ x: r1(q.x), y: r1(q.y), side: q.side, kjent: !!q.kjent })),
       // (22. nov, M0) tilstanden til verdens felles tilfeldighet (spill/tilfeldig.js), så rekka fortsetter likt etter omlasting
-      rng: Number.isFinite(o.rng) ? o.rng >>> 0 : null };
+      rng: Number.isFinite(o.rng) ? o.rng >>> 0 : null,
+      // (22. nov, R16-E) køen på basene, minefeltene og dronene
+      baser: (o.baser || []).filter(b => b && navnOk(b.navn) && b.kø && b.kø.length).map(pakkBase),
+      minefelt: (o.minefelt || []).filter(f => f && navnOk(f.navn) && Number.isFinite(f.x) && Number.isFinite(f.y) && f.ladninger > 0).map(pakkMine),
+      droner: (o.droner || []).filter(q => q && navnOk(q.navn) && Number.isFinite(q.x) && Array.isArray(q.mål) && q.fase !== 'tom' && q.igjen > 0).map(pakkDrone) };
   }
   function pakkMinne(M) { if (!M) return null; const ut = {};
     for (const side of Object.keys(M)) { const m = M[side]; if (!m) continue; ut[side] = { leir: !!m.leir, hatt: [...(m.hatt || [])],
@@ -96,7 +125,9 @@
         minne: d.minne && typeof d.minne === 'object' ? d.minne : null,
         stillinger: (Array.isArray(d.stillinger) ? d.stillinger : []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && typeof q.side === 'string'),
         // gamle lagringer uten feltet gir null (tilfeldigheten fortsetter da som den var)
-        rng: Number.isFinite(d.rng) ? d.rng >>> 0 : null };
+        rng: Number.isFinite(d.rng) ? d.rng >>> 0 : null,
+        // (22. nov) gamle lagringer uten feltene gir tomme lister
+        baser: liste(d.baser, lesBase), minefelt: liste(d.minefelt, lesMine), droner: liste(d.droner, lesDrone) };
     } catch (e) { return null; }
   }
   // Legger det lagrede tilbake i listene. finnes: lista (lag eller kjøretøy) som allerede står i spillet; lagNy(d) lager det som mangler
@@ -159,7 +190,7 @@
     return ['riksbrudd', ren(plass && plass.info && plass.info.fraksjon) || 'spill', 'dag', plass && plass.info ? plass.info.dag : 1, d.toISOString().slice(0, 10)].join('-') + '.json';
   }
   const Plass = { REGLER: PLASS, SIDENAVN, info: plassInfo, pakk: pakkPlass, les: lesPlass, byttPlan, tilFil, filnavn, standardNavn };
-  const api = { VERSJON, pakk, fraJSON, pakkLag, brukLag, pakkKj, brukKj, settTilbake, pakkMinne, brukMinne, Plass };
+  const api = { VERSJON, pakk, fraJSON, pakkLag, brukLag, pakkKj, brukKj, settTilbake, pakkMinne, brukMinne, brukBaser, Plass };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Lagring = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -190,13 +221,17 @@
   if (rot.AI && AI.flytt) { const flytt = AI.flytt; AI.flytt = async function (...a) { const r = await flytt.apply(this, a); if (lagretFiender) { try { brukFiender(lagretFiender); } catch (e) { console.error(e); } } return r; }; }
   // marsjordrene som var i gang: planlegg på nytt (kartet må være lastet; prøver igjen litt senere når ruta ikke finnes ennå)
   function fortsettOrdre() { for (const s of ENHETER) { if (!s.målLagret || s.side !== 'blå') continue; const m = s.målLagret; delete s.målLagret;
-    if (levende(s) && Math.hypot(m[0] - s.x, m[1] - s.y) > 30) ordre(s, m[0], m[1], true).catch(() => {}); } }
+    if (levende(s) && Math.hypot(m[0] - s.x, m[1] - s.y) > 30) ordre(s, m[0], m[1], true).catch(() => {}); }
+    // (22. nov) kjøreordrene: kolonnen planlegger ruta på nytt (vegnettet lastes ved første ordre)
+    for (const k of egneKj()) { if (!k.målLagret) continue; const m = k.målLagret; delete k.målLagret;
+      if (k.antall > 0 && !k.oppdrag && Math.hypot(m[0] - k.x, m[1] - k.y) > 30 && typeof rot.kjørTil === 'function') { try { const p = rot.kjørTil(k, m[0], m[1]); if (p && p.catch) p.catch(() => {}); } catch (e) { /* prøves ikke igjen */ } } } }
   function lagre() {
     if (window.NETT && NETT.gjest) return;   // en gjest i en delt verden skal ikke skrive over sitt eget spill
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;
     try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir,
       tettsteder: rot.TETTSTEDER || null, infra: rot.INFRA_TILSTAND || null, olje: rot.OLJE && OLJE.BASER[0] ? OLJE.BASER[0].beholdning : null,
-      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [], rng: rot.Tilfeldig ? Tilfeldig.lagre() : null }))); sistOk = Date.now(); return true; } catch (e) { sistFeil = Date.now(); return false; }
+      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [], rng: rot.Tilfeldig ? Tilfeldig.lagre() : null,
+      baser: rot.OLJE && OLJE.BASER ? OLJE.BASER : [], minefelt: rot.MINEFELT || [], droner: rot.DRONER || [] }))); sistOk = Date.now(); return true; } catch (e) { sistFeil = Date.now(); return false; }
   }
   function les() {
     const S = spill(); if (!S || !S.leir) return false; let d = null;
@@ -213,6 +248,10 @@
     if (rot.TETTSTEDER) for (const [id, eier] of d.tettsteder) TETTSTEDER.set(id, { eier, inntar: null });
     if (rot.INFRA_TILSTAND) for (const k of d.infra) INFRA_TILSTAND.set(k, { tilstand: 'sprengt' });
     if (d.olje !== null && rot.OLJE && OLJE.BASER[0]) OLJE.BASER[0].beholdning = d.olje;
+    // (22. nov) køen på basene, minefeltene og dronene (listene byttes ut på stedet – modulene holder på samme liste)
+    if (rot.OLJE && OLJE.BASER) brukBaser(OLJE.BASER, d.baser);
+    if (Array.isArray(rot.MINEFELT)) { MINEFELT.length = 0; for (const f of d.minefelt) MINEFELT.push({ ...f }); }
+    if (Array.isArray(rot.DRONER)) { DRONER.length = 0; for (const q of d.droner) DRONER.push({ ...q, mål: q.mål.slice() }); }
     // (18. nov) fiendens lag, minnet og stillingene – og egne marsjordre som var i gang
     lagretFiender = d; try { brukFiender(d); } catch (e) { console.error(e); }
     setTimeout(fortsettOrdre, 1500);
