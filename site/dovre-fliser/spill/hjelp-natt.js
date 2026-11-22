@@ -77,6 +77,31 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Dekning når du går selv",
+"Står du bak en husvegg, en bil, en stein eller et tre (høyst 6 m fra deg, mellom deg og den som skyter), tar du mindre skade: vegg ca. en firedel, bil omtrent halvparten (mindre på huk), stein bare når du er på huk eller ligger, tre litt. «I dekning (vegg)» står under helsa nede til venstre når du er dekket mot den nærmeste fienden du ser.",
+"Lag og strid"
+],
+[
+"Siktekikkert",
+"Hold høyre museknapp (PC) eller trykk «Sikt» (telefon) for å sikte. Skarpskyttergeværet og jaktrifla har kikkert: bildet zoomes 3–4 ganger, musa går roligere, og du treffer bedre på langt hold. Andre våpen zoomer litt og hjelper lite.",
+"Lag og strid"
+],
+[
+"Håndgranater",
+"Trykk G (PC) eller «Granat» (telefon) for å kaste en granat dit du ser – sikter du høyere, kaster du lenger (ca. 25 m rett fram). Den går av etter ca. 3 sekunder og skader alle innen ca. 12 m – også dine egne og deg selv. Du har et granatbelte med plass til 6; nye leirer får to, og flere kjøpes i Leir-menyen (fanen Lager). Mens du går, kaster G en granat i stedet for å gå ut av gåmodus – bruk «Gå» eller Esc for å gå ut.",
+"Lag og strid"
+],
+[
+"Lagkamerater når du går",
+"Trykk J (PC) eller «Lag» (telefon) mens du går. Velg ett eller flere egne lag innen 400 m og gi en ordre: 1 «Følg meg» (laget går bak deg), 2 «Hold her» (laget stanser) eller 3 «Angrip dit» (laget går dit du ser, høyst 600 m). Lagene skyter selv etter de vanlige kampreglene og stridsreglene sine. Slutter du å gå, holder de stillingen.",
+"Lag og strid"
+],
+[
+"Treffmarkør og skadeindikator",
+"Et lite hvitt kryss midt i bildet betyr at du traff; rødt kryss betyr at en mann falt. En rød bue på kanten av bildet viser hvor skuddene mot deg kommer fra (øverst = rett fram, nederst = bak deg).",
+"Lag og strid"
+],
+[
 "Den første uka",
 "Bygg brakke, aggregat og dieseltank først, kjøp 500 l diesel, sett folk i arbeid og lag en tropp. Et vakttårn med en person på «Vakt» melder røverne før de er i leiren. Kontrollrommet (9 mill. kr) kan vente til leiren står. Den første røverbølgen kommer tidligst etter et døgn (eller en halv time spilling), og de tre første døgnene er det bare ett røverlag om gangen.",
 "Kom i gang"

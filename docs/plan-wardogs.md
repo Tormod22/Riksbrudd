@@ -31,6 +31,13 @@ Alle tall er Claudes forslag til brukeren har bestemt noe annet.
 - **Lagkamerater som følger deg** når du går. Enkle ordre: «følg meg», «hold her», «angrip dit».
 - **Treffmarkør og skadeindikator** som sier hvor skuddene kommer fra.
 - Bygger på gange.js, narhud.js, utstyr.js og strid.js. Fiendene i 3D bruker de samme kampreglene som i 2D.
+- **Status 22. nov (R17-3, grenen claude/r17-kamp): første versjon laget.** spill/bakkekamp.js (regler, test_bakkekamp.js) +
+  spill/bakkekamp-visning.js (BakkekampSpill). Gjort: dekning bak husvegg, bil, stein (på huk/liggende) og tre like ved deg, «I dekning»
+  under helsa; siktekikkert (høyre museknapp / «Sikt»: skarpskyttergevær 4×, jaktrifle 3×, andre 1,45×, bedre treff på langt hold);
+  håndgranater (G / «Granat», granatbelte med 6 plasser, to gratis i nye leirer, kjøp i Leir-menyen); lagkamerater (J / «Lag»:
+  «Følg meg», «Hold her», «Angrip dit» for egne lag innen 400 m, via KOMMANDO); treffmarkør og rød skadeindikator. Vakt «kamp på bakken».
+  IKKE gjort: maskingevær som eget våpen (rifle fantes fra før), fiendene kaster ikke granater, fiendene i 3D sikter fortsatt ikke
+  egentlig (skaden regnes som før i kampSteg), og dekningen gjelder bare deg – ikke lagene dine.
 
 ## W3 – Kjøretøy i kamp
 - **Kjøre og skyte** fra pansret bil eller stridsvogn i 3D: tårnet dreies med musa eller fingeren.
