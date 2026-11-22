@@ -20,3 +20,19 @@ modellene (MODELLER.LEIR2 tømt), etter = de nye. Skjermens tak er 60 bilder/s; 
 |---|---|---|---|---|
 | Før | 3,1–4,2 ms | 12 328 | 31 | 0,5 ms |
 | Etter del 1 (A1–A10) | 3,1–3,6 ms | 17 318 | 31 | 0,5 ms |
+| Del 2, 28 bygg: før (gamle modeller, de 5 nye usynlige) | 2,7–3,1 ms | 12 780 | 30 | −0,1 ms |
+| Del 2, 28 bygg: etter | 2,6–3,4 ms | 20 738 | 37 | 0,6 ms |
+
+## Nye leirbygg
+Registreres i `NYE` i modeller-leir2.js (Leir.BYGG med modell = id, Ikoner.BYGG, Leir2d.STIL og gruppe i byggelista via
+`window.LEIR2_GRUPPER`, som leir-visning.js leser). Pris, tid, strøm og materialer er Claudes forslag. De fleste har ingen egen
+virkning ennå (teksten sier det) – bare strømforbruk. Ting i leiren (del C) er billige pyntebygg i gruppen «Ting i leiren»; samme
+ting får fast variant etter byggets id (stående/liggende/stablede fat, antall paller …). `MODELLER.kasser`/`fatpall` (leirens løse
+ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
+
+## Gjort
+- Del 1: A1–A11 (kontrollrom, brakke nivå 1–3, vakttårn, port, aggregat, dieseltank, solceller, batteribank, kameramast nivå 1–3).
+- Del 2: A12–A16 (radiomast nivå 1–3, sykestue, verksted), B29–B33 (kommandosenter, dronehangar, oppskytingsrampe,
+  satellittterminal, radartårn).
+- Del 3: B34–B36 (ammunisjonsbunker, våpenlager, messe), A17–A18 (lagertelt, container), C75–C79 (paller, ammunisjonskasser,
+  medisinkasser, matkasser, oljefat).
