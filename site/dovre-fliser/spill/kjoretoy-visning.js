@@ -117,6 +117,10 @@
     } catch (e) { /* meldt i loggen */ } finally { if (valgtKj === kj) visKj(kj); skitten = true; }
   }
   window.kjørTil = kjørTil; window.visKjoretoy = k => visKj(k);
+  // KOMMANDOLAGET (R17-4): «Kjør til …» og «Stopp» går gjennom window.KOMMANDO (spill/kommandoer.js: kjør, kjørStopp); kjøretøyet sendes
+  // som nid. stoppRett er det kommandoen gjør.
+  const nidKj = k => (window.Kommando ? Kommando.nid(k, KJ) : k.navn);
+  window.KjoretoySpill = { stoppRett: k => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); skitten = true; } };
   const tidTekst = s => s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : nf.format(s / 3600) + ' t';
 
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
@@ -129,7 +133,7 @@
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------
   KROKER.trykk.push((X, Y) => {
     if (modus === 'marsj' && valgt) return false;   // lagets marsjordre går foran
-    if (valgtKj && kjørModus) { kjørModus = false; if (valgtKj.side === 'blå') kjørTil(valgtKj, X, Y); visKj(valgtKj); return true; }
+    if (valgtKj && kjørModus) { kjørModus = false; if (valgtKj.side === 'blå') KOMMANDO({ type: 'kjør', kjøretøy: nidKj(valgtKj), x: X, y: Y }); visKj(valgtKj); return true; }
     let best = null, bd = 22;
     for (const k of KJ) if (ses(k)) for (let i = 0; i < k.antall; i++) {
       const p = Kjoretoy.posisjon(k, i * Kjoretoy.TYPER[k.type].avstand), d = Math.hypot(p.x - X, p.y - Y) / kam.m;
@@ -154,7 +158,7 @@
     const H = document.getElementById('handl'); H.innerHTML = '';
     if (k.side !== 'blå') { H.appendChild(knapp('Lukk', false, () => { valgtKj = null; kjørModus = false; if (window.lukkPanel) lukkPanel(); skitten = true; })); P.classList.add('på'); return; }
     H.appendChild(knapp(kjørModus ? 'Velg mål på kartet …' : 'Kjør til …', kjørModus, () => { kjørModus = !kjørModus; if (kjørModus) lastVegnett(); visKj(k); }));
-    if (k.sti && !k.oppdrag) H.appendChild(knapp('Stopp', false, () => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); visKj(k); skitten = true; }));
+    if (k.sti && !k.oppdrag) H.appendChild(knapp('Stopp', false, () => { KOMMANDO({ type: 'kjørStopp', kjøretøy: nidKj(k) }); visKj(k); }));
     for (const f of window.KJ_PANEL) f(k, H);
     document.getElementById('menn').innerHTML = '';
     // (to slags drivstoff, brukeren 12. nov: kjøretøyene går på olje fra basen, leirens diesel er noe annet – si det der drivstoffet står)
