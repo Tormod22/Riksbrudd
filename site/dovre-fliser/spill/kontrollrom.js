@@ -35,7 +35,7 @@
   // Hvorfor laget ikke har kontakt: «12,4 km fra leiren – håndradioen når 3 km» (+ hva som hjelper)
   function utenKontakt(radio, mast, avstand) {
     const r = rekkevidde(radio, mast), felt = radio === 'felt', n = (RADIO[radio] || RADIO.hånd).navn.toLowerCase();
-    if (avstand <= r) return `${km(avstand)} fra leiren – ${n}en når ${km(r)}, men terrenget står i veien (da rekker den ${km(r * REGLER.terreng)})`;
+    if (avstand <= r) return `${km(avstand)} fra leiren – ${n}en når ${km(r)}, men terrenget står i veien: en ås eller fjellside ligger mellom laget og leiren, og da rekker den bare ${km(r * REGLER.terreng)}`;
     const nivå = LEIR.nivå.findIndex(v => v >= avstand), råd = !felt ? (avstand <= rekkevidde('felt', mast) ? 'kjøp feltradio' : 'kjøp feltradio og bygg ut radiomasten')
       : nivå < 0 ? 'for langt for radioen' : mast ? `oppgrader radiomasten til nivå ${nivå + 1}` : `bygg radiomast${nivå > 0 ? ` og oppgrader den til nivå ${nivå + 1}` : ''}`;
     return `${km(avstand)} fra leiren – ${n}en når ${km(r)} (${råd})`;

@@ -26,7 +26,8 @@
 
   // ---------- stil og panelet ----------
   const css = document.createElement('style');
-  css.textContent = `#ressursvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
+  css.textContent = `body:not(.på3d):not(.kort) #logg.vik:not(:hover):not(.hel){ opacity:.2; transition:opacity .4s; }
+#ressursvalg{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(70px + env(safe-area-inset-bottom,0px)); z-index:11; display:none; background:var(--panel);
   border:1px solid var(--hover); padding:10px 14px; color:var(--ink); max-width:min(600px,94vw); max-height:46vh; overflow-y:auto; text-align:center; box-sizing:border-box; }
 #ressursvalg.på{ display:block; } #ressursvalg small{ color:var(--ink-dim); display:block; margin-top:2px; line-height:1.35; }
 #ressursvalg button, #leirmeny .ressurs button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:40px; padding:4px 12px; cursor:pointer; font:inherit; margin:6px 3px 0; }
@@ -183,6 +184,12 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
       if (m < .9 || j.id === valgt) { const t = (j.type === 'hogst' ? 'hogst ' : 'riving ') + (j.stoppet ? 'stoppet' : `${Math.round(RS.fram(j) * 100)} %`) + (h > .05 ? ` · ${tall(h)} i haug` : '');
         g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#f2ead6'; g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 3;
         const ty = window.Etikett ? Etikett.tekst(g, t, sx(j.x), sy(j.y) - 9, -1, j.id === valgt ? Etikett.REGLER.prio.valgt : Etikett.REGLER.prio.sted) : sy(j.y) - 9; g.strokeText(t, sx(j.x), ty); g.fillText(t, sx(j.x), ty); } }
+    // (R17, funn 20: «hogst 3 % · 0,8 t haug» og sirkelen lå bak logglappene øverst til høyre) – ligger et felt (eller feltet du velger)
+    // under loggen, blir loggen nesten gjennomsiktig til du peker på den (#logg.vik)
+    { const lg = document.getElementById('logg'), lr = lg && lg.childElementCount && !document.body.classList.contains('kort') ? lg.getBoundingClientRect() : null;
+      const under = (x, y, r) => !!lr && sx(x) + r / m > lr.left && sx(x) - r / m < lr.right && sy(y) + r / m + 18 > lr.top && sy(y) - r / m - 18 < lr.bottom;
+      const vik = !!lr && (R.jobber.some(j => under(j.x, j.y, j.r || 20)) || !!(velg && velg.x !== null && under(velg.x, velg.y, velg.r || 20)));
+      if (lg && lg.classList.contains('vik') !== vik) lg.classList.toggle('vik', vik); }
     // det som velges nå
     const v = velg; if (v && v.x !== null) { const ok = !v.feil;
       if (v.type === 'hogst') { g.save(); g.beginPath(); g.arc(sx(v.x), sy(v.y), v.r / m, 0, 6.283); g.fillStyle = ok ? 'rgba(110,200,105,.3)' : 'rgba(224,96,74,.3)'; g.fill(); g.strokeStyle = ok ? '#7fd17a' : '#e0604a'; g.lineWidth = 2; g.stroke(); g.restore(); }

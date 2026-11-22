@@ -1549,3 +1549,15 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   i stedet for «Marsjer» (index.html; panelpynt.js regner den som ordreknapp): window.OMBORD_ORDRE(s, X, Y) i tropper-visning.js gir ordren
   til kjøretøyet (kjørTil) og setter s.avstigning, så troppen går av ved målet. Kjøretøyvalget i skjemaet settes med sb.value og linja
   #troppbiltekst sier om troppen går om bord. Tester: test_oppstart, test_helling, test_leir, test_tropper; VAKT vakter/leirvalg-r17.js.
+  R17-2b GRENSESNITT OG TRYGG TEGNING (22. nov, funn 10, 16–22 i docs/natt/funn-r16-spilltest.md + brukerens Windows-feil): (22) spill/trygtegn.js
+  (lastes først på siden og i kartflis-arbeider.js) pakker drawImage inn så en kilde med bredde/høyde 0 (vindu som krymper/minimeres) eller et
+  bilde som ikke kunne leses, hoppes over (TrygTegn.tom); tegn() venter når VW/VH eller lerretet er 0; tegneløkka (loop) bestiller alltid neste
+  bilde i finally – før stoppet hele løkka på én feil, og kartet ble svart. VAKT vakter/vindu.js (krymper til 0 og tilbake, krever 0 feil og at
+  kartet tegnes). (21) oppdaterSikt: w/h under 1 eller sikt NaN -> prøv igjen om 2 s (feil: 4 s). (10) flyt.js: lappen #fartgrunn under
+  fartsknappene sier hvorfor farten ble senket (bort ved trykk på en fartsknapp, på lappen, eller etter 90 s; FlytSpill.stopp/fartGrunn);
+  lange brikker i lagpanelet bryter linja (panelpynt.js), og Kontrollrom.utenKontakt sier «en ås eller fjellside ligger mellom laget og leiren».
+  (16) gange.js: «Gå» mens det første 3D-utsnittet bygges, huskes («Gå …», Gange.gåVenter) og går ned når 3D er klart. (17) leirens telt
+  (leir-visning.js opptatt) holder seg unna feltbil/helikopter (rotor 7 m), og Kjor.plasser sjekker rotorplassen. (18) telefon i 3D:
+  stedslappen (hvorLapp3d) står kort under minikartet; grafikkvarselet er kort og oppe til venstre (body.kort). (19) opplæringslinja viker
+  mens tropppanelet er åpent på stående telefon. (20) ressurser-visning.js: et hogst-/rivefelt under loggen i 2D gir #logg.vik (nesten
+  gjennomsiktig til du peker på den). VAKT vakter/r17-ui.js.

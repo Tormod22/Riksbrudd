@@ -176,6 +176,8 @@
   // ---------- spol til neste hendelse og automatisk stopp ----------
   const css = document.createElement('style');
   css.textContent = `#nesteh{ min-width:38px; } #nesteh.på{ background:#6a5a2e; color:#fff; }
+#fartgrunn{ position:fixed; z-index:13; display:none; max-width:min(300px,80vw); padding:3px 8px; font-size:12px; line-height:1.3; background:rgba(28,23,15,.94); color:#f0dfb4; border:1px solid #8a6a2e; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.4); pointer-events:auto; cursor:pointer; }
+#fartgrunn.på{ display:block; } body.foto #fartgrunn{ display:none !important; }
 body.kort .knapper #nesteh{ min-width:34px; padding:0 6px; }
 #flytkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; max-width:min(520px,94vw); padding:6px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; }
 #flytkort.liten{ padding:2px 6px 2px 9px; font-size:12.5px; gap:6px; flex-wrap:nowrap; max-width:min(440px,94vw); background:rgba(28,23,15,.92); border-color:#6a5a34; }
@@ -211,6 +213,28 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   }
   function merk() { if (spolKnapp) { spolKnapp.classList.toggle('på', spoler); spolKnapp.setAttribute('aria-pressed', String(spoler)); } }
   const NAVN = { sp1: '1×', sp2: '10×', sp3: '60×', sp4: '600×' }, sistAuto = {};
+  // (R17, funn 10: «600× ble satt tilbake til 1× av seg selv, uten at det sto hvorfor ved fartsknappen») – en liten lapp rett under
+  // fartsknappene sier hvorfor, til du trykker på en fartsknapp eller lappen selv, eller etter GRUNN_SEK sekunder (Claudes tall)
+  const GRUNN_SEK = 90, grunnLapp = el('div', { id: 'fartgrunn', role: 'status', title: 'Trykk for å lukke' }); document.body.append(grunnLapp);
+  let grunnTid = 0;
+  function plasserGrunn() {
+    const bs = [...document.querySelectorAll('.knapper [id^=sp]')].filter(b => b.offsetParent && b.getBoundingClientRect().width > 0);
+    if (!bs.length) { grunnLapp.style.left = '50%'; grunnLapp.style.top = 'calc(var(--topp,58px) + 4px)'; return; }
+    const r = bs.map(b => b.getBoundingClientRect()), venstre = Math.min(...r.map(q => q.left)), høyre = Math.max(...r.map(q => q.right)), bunn = Math.max(...r.map(q => q.bottom));
+    const w = grunnLapp.offsetWidth || 220, left = Math.max(6, Math.min(innerWidth - w - 6, (venstre + høyre) / 2 - w / 2));
+    // står stoppkortet (#flytkort) der lappen skulle ligge (telefon), legges lappen under kortet
+    const kr = kort.classList.contains('på') ? kort.getBoundingClientRect() : null, under = kr && kr.width > 0 && kr.left < left + w && kr.right > left && kr.bottom > bunn;
+    grunnLapp.style.top = Math.round((under ? kr.bottom : bunn) + 4) + 'px'; grunnLapp.style.left = Math.round(left) + 'px';
+  }
+  function visGrunn(tekst) {
+    grunnLapp.textContent = '⚠ ' + tekst; grunnLapp.classList.add('på'); plasserGrunn();
+    for (const id of FARTER) { const b = document.getElementById(id); if (b) b.title = tekst; }
+    clearTimeout(grunnTid); grunnTid = setTimeout(skjulGrunn, GRUNN_SEK * 1000);
+  }
+  function skjulGrunn() { grunnLapp.classList.remove('på'); clearTimeout(grunnTid); for (const id of FARTER) { const b = document.getElementById(id); if (b && /^Farten ble senket/.test(b.title)) b.removeAttribute('title'); } }
+  grunnLapp.onclick = skjulGrunn;
+  addEventListener('resize', () => { if (grunnLapp.classList.contains('på')) plasserGrunn(); });
+  for (const id of FARTER) { const b = document.getElementById(id); if (b) b.addEventListener('click', e => { if (e.isTrusted) skjulGrunn(); }); }
   function stopp(liste, hva) {
     // automatisk: bare ned (aldri opp), til 10× for et ferdig bygg og til 1× når det haster – og ingen melding når farten alt er så lav
     const mål = hva === 'auto' ? F.autoFart(liste) : R.sakteFart;
@@ -224,6 +248,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     // (runde 8) står grunnen alt øverst i loggen («Røverne er snart framme (ca. 9 min).»), skrives den ikke en gang til
     const nyLinje = !(typeof loggLinjer !== 'undefined' && liste.every(h => loggLinjer.slice(0, 3).some(l => l.toLowerCase().includes(h.tekst.toLowerCase()))));
     if (nyLinje) logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
+    if (hva === 'auto') visGrunn(`Farten ble senket til ${NAVN[mål]}: ${tekst}. Du kan sette den opp igjen.`);
   }
   function spol() {
     if (spoler) { spoler = false; merk(); settFart(R.sakteFart); return false; }
@@ -472,6 +497,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     ikon: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><rect x="2" y="2" width="20" height="20" fill="none" stroke-dasharray="3 2"/>' });
 
   const api2 = { test: false, spol, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
-    utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk };
+    utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk,
+    stopp, fartGrunn: () => (grunnLapp.classList.contains('på') ? grunnLapp.textContent : ''), skjulFartGrunn: () => skjulGrunn() };
   rot.FlytSpill = api2;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
