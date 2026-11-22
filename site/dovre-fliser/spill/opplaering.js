@@ -217,6 +217,9 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     if (!angrep) oppeAngrep = false;
     // RUNDE 12: under et angrep på liggende telefon viker ruta helt (banneret, stoppkortet og varslene trenger plassen) – til du åpner den med +
     if (angrep && !oppeAngrep && liggTlf() && !åpnetLigg) { skjul(); return; }
+    // (R17, funn 19: på stående telefon lå linja over bunnen av «Lag ny tropp», og lista synes under «Opprett») – tropppanelet er høyt og
+    // har knappen nederst: der viker linja helt mens panelet er åpent (stegene telles fortsatt)
+    if (tlf && !liggTlf() && synlig($('tropppanel'))) { skjul(); return; }
     // på telefon med en meny åpen: én linje nederst, og menyen får plass under den (body.oppliten); med lagpanelet o.l. åpent viker ruta helt
     const liten = (på) => { boks.classList.toggle('liten', på); document.body.classList.toggle('oppliten', på); };
     // (runde 6) et steg som nettopp ble gjort, står med ✓ en stund (før hoppet det videre før man rakk å lese, og et steg som alt var gjort,
