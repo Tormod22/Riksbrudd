@@ -66,6 +66,9 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
 
 1. **Kommandoer:** alt spilleren gjør (ordre, bygg, kjøp, folk på oppgaver, kontrakter, valg i morgenmøtet) går gjennom én funksjon
    `kommando(side, { type, … })`. Da kan de samme kommandoene sendes over nettet senere.
+   **Gjort (22. nov):** lagene (R16-A, `spill/kommando.js`) og leiren, folket, troppene og kjøretøyene (R17-4, `spill/kommandoer.js`, 23 typer
+   med sjekk av finnes/er din/har råd, og en kontroll i `test_kommando.js` som finner knapper som går forbi). **Gjenstår:** maler, sekk,
+   morgenmøtet, selskap, sjø og de andre panelene.
 2. **Verden uten nettleser:** simuleringen i `sim(dt)` og krokene den kaller skilles ut i `spill/simulering.js` (navnet `verden.js` er tatt av «verden som gjør noe»), som kan kjøres i Node
    med kartdataene. Visningen (2D, 3D, paneler) leser bare tilstanden. Gjøres i biter, én modul om gangen, med tester.
    **Første bit gjort (22. nov, R16-B):** marsjsteget for lagene, fiendens patrulje (patruljeMål) og kamprunden ligger nå i

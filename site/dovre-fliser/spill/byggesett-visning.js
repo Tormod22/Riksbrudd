@@ -163,8 +163,11 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (!A || B || V.fane === 'hus') { A = [X, Y]; B = null; } else B = [X, Y];
     oppdater(); return true;
   }
+  // KOMMANDOLAGET (R17-4): byggingen, rivingen og kjøpet går gjennom window.KOMMANDO (spill/kommandoer.js); svaret er det regelfunksjonen
+  // ga, eller { feil } når kommandoen ble avvist før den kom så langt
+  const kom = k => { const r = window.KOMMANDO ? KOMMANDO(k) : { ok: false, feil: 'Kommandolaget mangler.' }; return r.svar != null ? r.svar : r.ok ? r.svar : { feil: r.feil }; };
   // Kjøper det som mangler av materialene, gir true når alt finnes
-  function kjøpManglende(mat) { const l = L(); for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil((v - (l.lager[k] || 0)) * 10) / 10; if (m > 0) { const r = LB.kjøpMateriale(l, k, m, OppstartSpill.betal); if (r.feil) { logg(r.feil); return false; } } } return true; }
+  function kjøpManglende(mat) { const l = L(); for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil((v - (l.lager[k] || 0)) * 10) / 10; if (m > 0) { const r = kom({ type: 'kjøpMateriale', materiale: k, mengde: m }); if (r.feil) { logg(r.feil); return false; } } } return true; }
   function bekreft(kjøp) {
     const l = L(), o = opphav(); if (!l || V.fane === 'riv') return 0; const ok = forslag.filter(q => !q.feil); if (!ok.length) return 0;
     // (runde 8) det materialene kostet, står også i loggen (før sa den bare arbeidet, mens knappen sa prisen i alt)
@@ -173,10 +176,11 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const kjøpt = kjøp ? Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)) : 0;
     let n = 0, pris = 0, stopp = null;
     for (const q of ok) {
-      if (q.bytt) { const r = LB.riv(l, q.bytt); if (!r.feil) OppstartSpill.gi(r.penger); }
-      const r = LB.bygg(l, somBygg(o, q.d), OppstartSpill.betal, bonus(), kart || {});
+      if (q.bytt) kom({ type: 'riv', bygg: q.bytt });   // (riv gir pengene tilbake når det gikk)
+      // delens plass i rutenettet (bs) følger med kommandoen og settes på bygget
+      const r = kom({ type: 'bygg', bygg: somBygg(o, q.d), kart: kart || {}, bs: { i: q.d.i, j: q.d.j, a: q.d.a, n: q.d.n, ...(q.d.r !== undefined ? { r: q.d.r } : {}) } });
       if (r.feil) { stopp = r.feil; break; }
-      r.bygg.bs = { i: q.d.i, j: q.d.j, a: q.d.a, n: q.d.n, ...(q.d.r !== undefined ? { r: q.d.r } : {}) }; n++; pris += r.bygg.pris;
+      n++; pris += r.bygg.pris;
     }
     if (n) { const lag = LB.byggelag(l); logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} bestilt for ${kjøpt ? `${LB.kroner(pris + kjøpt)} i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(pris)} + materialer ${LB.kroner(kjøpt)})` : LB.kroner(pris)}` + (LB.jobber(l).length > lag ? ` – ${lag} byggelag tar dem etter tur.` : '.') + (stopp ? ` Resten venter: ${stopp}` : '')); }
     else if (stopp) logg(stopp);
@@ -184,7 +188,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   }
   function riv() {
     const l = L(); let n = 0, penger = 0;
-    for (const q of forslag) { const r = LB.riv(l, q.d.id); if (r.feil) continue; OppstartSpill.gi(r.penger); penger += r.penger; n++; }
+    for (const q of forslag) { const r = kom({ type: 'riv', bygg: q.d.id }); if (r.feil) continue; penger += r.penger; n++; }
     if (n) logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} revet, ${LB.kroner(penger)} tilbake.`);
     ferdigEndret(); A = null; B = null; forslag = []; oppdater(); return n;
   }

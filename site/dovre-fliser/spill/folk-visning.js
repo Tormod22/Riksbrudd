@@ -23,6 +23,8 @@
   const valg = () => (window.SamfunnSpill && SamfunnSpill.valg ? SamfunnSpill.valg(grunn()) : grunn());
   // maten koster mer når butikkene er tomme (forfallet, spill/overlev.js)
   const matF = () => (window.OverlevSpill && OverlevSpill.matFaktor ? OverlevSpill.matFaktor() : 1);
+  // KOMMANDOLAGET (R17-4): kjøp og rekruttering går gjennom window.KOMMANDO (spill/kommandoer.js); svaret er det folk.js ga, eller { feil }
+  const kom = k => { const r = window.KOMMANDO ? KOMMANDO(k) : { ok: false, feil: 'Kommandolaget mangler.' }; return r.svar != null ? r.svar : r.ok ? r.svar : { feil: r.feil }; };
   // RUNDE 13 (kritiker G: en ny fikk navnet til en som falt natta før): navnene en ny person ikke kan få – folk i egne lag (levende og
   // falne), karakteren, de døde og gravlagte i samfunnet, barna og de gamle (spill/folk.js tatteNavn)
   FR.opptatteNavn = () => { const ut = [];
@@ -118,8 +120,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     // lav skjerm (telefon): status som ett avsnitt og høyst to ting som mangler, så oppgavene synes uten å bla langt
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
     panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
-    const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(Math.round(matN * FR.R.matPris * matF()))})`, () => { const r = FR.kjøpMat(F, matN, OppstartSpill.betal, matF()); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
-    const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg());
+    const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(Math.round(matN * FR.R.matPris * matF()))})`, () => { const r = kom({ type: 'kjøpMat', rasjoner: matN }); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
+    const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = kom({ type: 'rekrutter' });
       logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
     // færre enn tre i gjengen: rekruttering er alltid mulig (FR.kanRekruttere), så spillet ikke låser seg
     // (runde 6, kritikken: «Rekrutter» var grå uten forklaring) – grunnen står nå som tekst under knappene, ikke bare i verktøytipset
@@ -287,8 +289,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   // (nødrekrutteringen i folk.js: ingen krav om seng når dere er færre enn tre, vanlig pris – gratis når kassa er tom). VALG: ingen
   // gratis «nødbyggelag» av seg selv – da kunne alle gjøres til soldater og nye arbeidere hentes gratis igjen og igjen.
   function hjelpBygg() { const Lr = L(); if (!F || !Lr) return { feil: 'Ingen leir.' }; const før = FR.arbeidere(F, 'bygg'), mål = 2; let flyttet = 0, nye = 0;
-    while (FR.arbeidere(F, 'bygg') < mål && F.personer.some(p => p.oppgave !== 'bygg' && FR.arbeidsfør(p))) { const p = FR.pluss(F, 'bygg'); if (!p) break; flyttet++; }
-    while (FR.arbeidere(F, 'bygg') < mål && FR.nød(F)) { const r = FR.rekrutter(F, Lr, OppstartSpill.betal, valg()); if (r.feil) break; if (r.person.oppgave !== 'bygg') r.person.oppgave = 'bygg'; nye++; }
+    while (FR.arbeidere(F, 'bygg') < mål && F.personer.some(p => p.oppgave !== 'bygg' && FR.arbeidsfør(p))) { const p = kom({ type: 'folkFlytt', oppgave: 'bygg', retning: 'pluss' }); if (!p || p.feil) break; flyttet++; }
+    while (FR.arbeidere(F, 'bygg') < mål && FR.nød(F)) { const r = kom({ type: 'rekrutter', bygg: true }); if (r.feil) break; nye++; }
     if (flyttet || nye) logg((flyttet ? `${flyttet} satt på «bygg»` : '') + (flyttet && nye ? ', og ' : '') + (nye ? `${nye} ${nye === 1 ? 'ny arbeider er' : 'nye arbeidere er'} med i gjengen` : '') + `: ${FR.byggelag(F)} byggelag.`);
     else logg(F.personer.length ? 'Ingen ledige å sette på «bygg» – rekrutter i Folk (krever ledig seng), eller oppløs en tropp ved leiren.' : 'Fikk ikke tak i arbeidere nå.');
     endret(); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); return { før, etter: FR.arbeidere(F, 'bygg'), flyttet, nye }; }
@@ -300,7 +302,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const rad = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); if (rad) rad.before(boks); else hode.appendChild(boks); });
   { const c2 = document.createElement('style'); c2.textContent = `#leirmeny .ingenbygger{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0 2px; padding:7px 9px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:14px; line-height:1.35; }
 #leirmeny .ingenbygger button{ min-height:36px; border-color:#e0804a; } #leirmeny .ingenbygger small{ color:#e8c0a0; }`; document.head.appendChild(c2); }
-  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
+  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, matFaktor: matF, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

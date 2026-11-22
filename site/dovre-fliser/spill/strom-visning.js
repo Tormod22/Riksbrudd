@@ -20,7 +20,7 @@
     boks.append(el('div', { klasse: 'tegn' }, el('span', {}, el('b', { klasse: 'sol' }), `sol ${tall(sol)}`), el('span', {}, el('b', { klasse: 'nett' }), `strømnettet ${tall(nett)}`), el('span', {}, el('b', { klasse: 'bat' }), `batteri ${tall(bat)}`), el('span', {}, el('b', { klasse: 'agg' }), `aggregat ${tall(agg)} av ${tall(s.aggInst === undefined ? s.aggMaks || 0 : s.aggInst)}` + (s.aggAntall ? ` (${s.aggAntall} stk)` : ''))));
     // (17. nov, brukeren: «det står 0 av 0 aggregat når jeg egentlig har 2») aggregatene står når dieselen er tom – si det, med knapp
     if (s.aggInst > 0 && !(L.drivstoff > 0)) boks.append(el('div', { klasse: 'bruker uten', id: 'aggtom' }, el('div', {}, el('b', {}, `${s.aggAntall} aggregat står: tom for diesel`), el('small', {}, `De kan gi ${tall(s.aggInst)} kW når tanken har diesel.`)),
-      knapp(`Kjøp 500 l (${Math.round(LB.DRIVSTOFF.prisPerLiter).toLocaleString('nb-NO')} kr/l)`, () => { const r = LB.kjøpDrivstoff(L, 500, OppstartSpill.betal); logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { id: 'aggkjop' })));
+      knapp(`Kjøp 500 l (${Math.round(LB.DRIVSTOFF.prisPerLiter).toLocaleString('nb-NO')} kr/l)`, () => { const k0 = KOMMANDO({ type: 'kjøpDiesel', liter: 500 }), r = k0.svar || { feil: k0.feil }; logg(r.feil || `Kjøpte ${r.liter} l diesel til leiren for ${LB.kroner(r.pris)}.`); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { id: 'aggkjop' })));
     if (s.batKap > 0) boks.append(el('div', {}, `Batteri: ${tall(s.batteri)} av ${tall(s.batKap)} kWt` + (s.batKW < -.05 ? ` (lader ${tall(-s.batKW)} kW)` : s.batKW > .05 ? ` (tappes ${tall(s.batKW)} kW – rekker ${timer(s.batteri / s.batKW)})` : '')), el('div', { klasse: 'linje' }, el('i', { klasse: 'bat', style: `width:${Math.min(100, s.batteri / s.batKap * 100)}%` })));
     else boks.append(el('small', {}, 'Ingen batteribank: overskudd fra sol og nett går tapt. En batteribank lagrer det til natta. '));
     // (runde 6) samme prognose som dagsrapporten, Lager og varslene (LeirSpill.diesel – forbruket det siste døgnet)
@@ -29,6 +29,6 @@
     const brukere = L.bygg.filter(b => LB.BYGG[b.type].kw < 0 && LB.virker(b)).sort((a, b) => LB.PRIORITET.indexOf(a.type) - LB.PRIORITET.indexOf(b.type));
     if (brukere.length) boks.append(el('small', {}, 'Byggene får strøm i denne rekkefølgen. Slå av det du kan unnvære når det er for lite:'));
     for (const b of brukere) { const uten = !b.av && s.mangler && s.mangler.has(b.id), rad = el('div', { klasse: 'bruker' + (b.av ? ' av' : uten ? ' uten' : '') }, el('div', {}, el('b', {}, LB.BYGG[b.type].navn), el('small', {}, `${tall(-LB.BYGG[b.type].kw)} kW · ${b.av ? 'slått av' : uten ? 'uten strøm' : 'i drift'}`)),
-        knapp(b.av ? 'Slå på' : 'Slå av', () => { LB.bryter(L, b.id); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { 'data-bryter': String(b.id) })); boks.append(rad); }
+        knapp(b.av ? 'Slå på' : 'Slå av', () => { KOMMANDO({ type: 'bryter', bygg: b.id }); LeirSpill.lagre(); if (LeirSpill.visMeny) LeirSpill.visMeny(); skitten = true; }, { 'data-bryter': String(b.id) })); boks.append(rad); }
     hode.append(boks); });
 })();
