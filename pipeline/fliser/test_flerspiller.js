@@ -43,6 +43,10 @@ sjekk(!k({ type: 'ordre', lag: 'l1', x: 'a', y: 2 }, 'g1').ok && !k({ type: 'spr
 sjekk(k({ type: 'stopp', lag: 'l1' }, 'g1').type === 'stopp' && !k({ type: 'stopp', lag: 'l1' }, 'g2').ok, 'stopp bare for eieren');
 sjekk(k({ type: 'pos', x: 1, y: 2, går: 1 }, 'gx').type === 'pos' && !k({ type: 'pos', x: 'a', y: 2 }, 'gx').ok, 'pos');
 sjekk(F.bilde({ lag: [], tid: 0, tempo: 1, ser: () => true, spillere: [{ id: 'a', navn: 'Ola', x: 1.4, y: 2, går: true }, { id: 'b', navn: 'x', x: NaN, y: 0 }] }).sp.length === 1, 'spillernes steder i bildet');
+const bb = F.bilde({ lag: [], tid: 0, tempo: 1, ser: () => true, bygg: [{ type: 'brakke', x: 10, y: 20, ret: Math.PI / 2, igjen: 0 }, { type: 'gjerde', x: 0, y: 0, punkter: [[0, 0], [10.4, 0]], igjen: 30 }] });
+sjekk(bb.bygg.length === 2 && bb.bygg[0].f === 1 && bb.bygg[1].f === 0 && bb.bygg[1].p[1][0] === 10, 'leirbygg i bildet');
+const hj = F.hjørner({ x: 10, y: 20, r: Math.PI / 2 }, [-1, 2, -3, 3]);
+sjekk(Math.abs(hj[0][0] - 13) < 1e-9 && Math.abs(hj[0][1] - 19) < 1e-9 && Math.abs(hj[1][1] - 22) < 1e-9, 'hjørnene dreies');
 // eier og tid
 const g = [{ id: 'a' }, { id: 'b' }];
 sjekk(F.nesteEier(null, g) === 'a' && F.nesteEier('a', g) === 'b' && F.nesteEier('b', g) === null && F.nesteEier('borte', g) === null, 'nesteEier');

@@ -11,7 +11,7 @@
   const VERSJON = 1;
   const r1 = v => Math.round(v * 10) / 10, tall = (v, d = 0) => (Number.isFinite(+v) ? +v : d);
   const MAKS_STI = 300;          // punkter av ruta som sendes (resten av marsjen, tynnet)
-  const MAKS_NAVN = 24;
+  const MAKS_NAVN = 24, MAKS_BYGG = 400;
 
   // ---------- lenke og adresse ----------
   // Invitasjonslenken: <side>#spill=<wss-adresse>&kode=<KODE>
@@ -65,6 +65,9 @@
     const d = { v: VERSJON, tid: +(+o.tid).toFixed(3), tempo: o.tempo, lag, kj };
     if (o.vær) d.vær = o.vær; if (o.leir) d.leir = { x: r1(o.leir.x), y: r1(o.leir.y), navn: String(o.leir.navn || 'Vertens leir') };
     if (o.selskap) d.selskap = String(o.selskap);
+    // vertens leirbygg (bare til tegning hos gjestene): type, sted, retning, ferdig; gjerder/veger som punkter. Høyst MAKS_BYGG.
+    if (Array.isArray(o.bygg)) d.bygg = o.bygg.slice(0, MAKS_BYGG).map(b => { const q = { t: String(b.type), x: r1(b.x), y: r1(b.y), r: +(+b.ret || 0).toFixed(2), f: b.igjen > 0 ? 0 : 1 };
+      if (Array.isArray(b.punkter)) q.p = b.punkter.slice(0, 60).map(([x, y]) => [Math.round(x), Math.round(y)]); return q; });
     // hvor spillerne er (kameraet, eller der de går i 3D): [{ id, navn, x, y, går }]
     if (Array.isArray(o.spillere)) d.sp = o.spillere.filter(p => Number.isFinite(+p.x) && Number.isFinite(+p.y)).map(p => ({ id: String(p.id), navn: rensNavn(p.navn), x: Math.round(p.x), y: Math.round(p.y), går: p.går ? 1 : 0 }));
     return d;
@@ -121,7 +124,12 @@
   // ingenting under 2 minutter.
   function framTid(borteSek) { const s = tall(borteSek, 0); if (s < 120) return 0; return Math.min(7 * 24 * 60, s / 60); }
 
-  const F = { VERSJON, lesLenke, lagLenke, rensAdresse, rensKode, statusAdresse, kanKoble, rensNavn, pakkLag, pakkKj, bilde, brukBilde,
+  // Hjørnene til et bygg i kartets meter (fot = [x0, x1, y0, y1] rundt modellens origo, fronten mot +x, dreid med r)
+  function hjørner(b, fot) {
+    const c = Math.cos(b.r || 0), s = Math.sin(b.r || 0);
+    return [[fot[0], fot[2]], [fot[1], fot[2]], [fot[1], fot[3]], [fot[0], fot[3]]].map(([x, y]) => [b.x + x * c - y * s, b.y + x * s + y * c]);
+  }
+  const F = { VERSJON, hjørner, lesLenke, lagLenke, rensAdresse, rensKode, statusAdresse, kanKoble, rensNavn, pakkLag, pakkKj, bilde, brukBilde,
     sjekkKommando, nesteEier, framTid, tynnSti };
   if (typeof module !== 'undefined' && module.exports) module.exports = F; else rot.Flerspiller = F;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

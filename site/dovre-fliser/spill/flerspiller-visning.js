@@ -92,6 +92,7 @@
     merk(); const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, fr = window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER.blå;
     return F.bilde({ lag: ENHETER, kj: window.KJORETOY || [], tid, tempo, ser: e => { try { return synlig(e); } catch (x) { return false; } },
       spillere: hvorAlle(),
+      bygg: L && Array.isArray(L.bygg) ? L.bygg : null,
       vær: window.VaerSpill ? VaerSpill.S : null, leir: L && L.midt ? { x: L.midt.x, y: L.midt.y, navn: fr ? fr.navn : 'Vertens leir' } : null, selskap: fr ? fr.navn : null });
   }
   // hvor denne spilleren er: der hun går i 3D, ellers midt i kartet/kameraet
@@ -153,7 +154,7 @@
     // første bilde: kartet går til vertens leir (ellers står gjesten der hennes eget spill var)
     if (!N.sett && d.leir && typeof kam !== 'undefined') { N.sett = true; kam.x = d.leir.x; kam.y = d.leir.y; kam.m = Math.min(kam.m, 8); }
     N.andre = Array.isArray(d.sp) ? d.sp.filter(p => p.id !== N.id) : [];
-    N.vertLeir = d.leir || null; N.selskap = d.selskap || null; N.sistBilde = nå; N.tellBilder++;
+    N.vertLeir = d.leir || null; N.vertBygg = Array.isArray(d.bygg) ? d.bygg : null; N.selskap = d.selskap || null; N.sistBilde = nå; N.tellBilder++;
     if (typeof valgt !== 'undefined' && valgt && !ENHETER.includes(valgt)) { valgt = null; try { visPanel(); } catch (e) { /* ok */ } }
     skitten = true;
   }
@@ -211,6 +212,20 @@
     for (const p of L) { const q = proj3(p.x, p.y); if (!q) continue; const t = p.navn, w = g.measureText(t).width + 14;
       g.fillStyle = 'rgba(11,13,16,.8)'; g.fillRect(q[0] - w / 2, q[1] - 34, w, 20); g.fillStyle = '#cfe7ff'; g.fillText(t, q[0], q[1] - 20);
       g.beginPath(); g.moveTo(q[0], q[1] - 14); g.lineTo(q[0], q[1]); g.strokeStyle = '#9fd0ff'; g.lineWidth = 2; g.stroke(); }
+    g.restore();
+  });
+  // gjesten ser vertens leirbygg i kartet (omriss; ferdige fylt, uferdige stiplet) når hun er nær nok
+  KROKER.tegn.push((g, vx0, vy1) => {
+    if (!N.gjest || !N.vertBygg || !window.Leir || kam.m > 6) return; const m = kam.m, S = (X, Y) => [(X - vx0) / m, (vy1 - Y) / m];
+    g.save(); g.lineWidth = 1.5;
+    for (const b of N.vertBygg) {
+      const B = Leir.BYGG[b.t]; if (!B) continue; g.setLineDash(b.f ? [] : [5, 4]); g.strokeStyle = b.f ? '#f0d79a' : 'rgba(240,215,154,.7)';
+      if (b.p && b.p.length > 1) { g.beginPath(); b.p.forEach(([x, y], i) => { const [sx, sy] = S(x, y); i ? g.lineTo(sx, sy) : g.moveTo(sx, sy); }); g.lineWidth = B.veg ? Math.max(2, 5 / m) : 1.5; g.stroke(); g.lineWidth = 1.5; continue; }
+      if (!B.fot) continue; const H = F.hjørner(b, B.fot).map(([x, y]) => S(x, y));
+      g.beginPath(); H.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
+      g.fillStyle = b.f ? 'rgba(150,128,82,.9)' : 'rgba(150,128,82,.3)'; g.fill(); g.stroke();
+      if (m < 1.2) { const [cx, cy] = S(b.x, b.y); g.setLineDash([]); g.font = '600 12px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.fillStyle = '#f0d79a'; g.fillText(B.navn || b.t, cx, cy + 4); }
+    }
     g.restore();
   });
   // gjesten ser vertens leir som et merke i kartet
