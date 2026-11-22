@@ -48,3 +48,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   bålplass), C80–C81 (gassflasker i stativ, jerrykanner).
 - Del 9: C82–C91 (sandsekkstabel, kamuflasjenett, presenning over last, tømmerstabel, verktøytavle, arbeidsbenk, bærbar generator,
   lyskaster på stativ, feltbord og klappstoler, feltkokeapparat). Tingene står i tabellen `TING` (navn, pris, fot, ikon, 2D-farge).
+- Del 10: C92–C101 (IBC-vanntank, søppelcontainer, lite telt, kamuflasjetelt, antenne på stativ, bærbart solcellepanel, stige,
+  stillas, mobilkran, betongblander). Stillaset (520) og mobilkranen (916) er større enn «små ting» – de regnes som bygg/kjøretøy.
