@@ -11,9 +11,19 @@
   const taster = new Set(); let sist = 0, spak = null, se = null, lagret = null, kropp = null, hoppVent = false, mobilHuk = false, fov = 50, kroppU = null, hoppHoldt = false, hukHoldt = false, fører = null, ligger = false, vedKar = null;
   const knapp = document.createElement('button'); knapp.id = 'gaaknapp'; knapp.textContent = 'Gå'; knapp.title = 'Gå selv i førsteperson'; knapp.hidden = true;
   document.querySelector('.knapper').insertBefore(knapp, document.getElementById('meny'));
-  setInterval(() => { knapp.hidden = !(typeof på3d !== 'undefined' && på3d); if (knapp.hidden && r3() && R3.fot) stopp(); if (knapp.hidden && valgÅpen() && !reise) lukkValg(); venteSteg(); dørKnapp(); kortVarsel(); pekerSteg(); innSteg(); }, 250);
+  setInterval(() => { knapp.hidden = !(typeof på3d !== 'undefined' && på3d); if (knapp.hidden && r3() && R3.fot) stopp(); if (knapp.hidden && valgÅpen() && !reise) lukkValg(); venteSteg(); dørKnapp(); kortVarsel(); pekerSteg(); innSteg(); venteGå(); }, 250);
   // (i testene – webdriver – starter knappen som før uten å spørre, utenom med Gange.test = true; sjekk.js trykker på «Gå»)
-  knapp.onclick = () => (r3() && R3.fot ? stopp() : valgÅpen() ? lukkValg() : navigator.webdriver && window.Gange.test !== true ? start() : startValg());
+  const gåNå = () => (r3() && R3.fot ? stopp() : valgÅpen() ? lukkValg() : navigator.webdriver && window.Gange.test !== true ? start() : startValg());
+  // (R17, funn 16: «Gå» trykket mens 3D bygges, ble glemt) – mens det første utsnittet bygges (kortet «Bygger 3D …»), huskes trykket:
+  // knappen viser «Gå …» og du går ned så snart 3D er klart. Et nytt trykk mens den venter, angrer.
+  let gåVenter = false;
+  { const st = document.createElement('style'); st.textContent = '#gaaknapp.venter{ border-color:#c9a24a; color:#f0dfb4; animation:gaaVent 1.2s ease-in-out infinite; } @keyframes gaaVent{ 50%{ opacity:.55; } }'; document.head.appendChild(st); }
+  const iBygging = () => typeof på3d !== 'undefined' && på3d && !(r3() && R3.ut);
+  function settVent(på) { gåVenter = på; knapp.classList.toggle('venter', på); knapp.textContent = på ? 'Gå …' : 'Gå';
+    knapp.title = på ? '3D bygges – du går ned så snart det er klart (trykk igjen for å angre)' : 'Gå selv i førsteperson'; }
+  function venteGå() { if (!gåVenter) return; if (typeof på3d === 'undefined' || !på3d) { settVent(false); return; }
+    if (!iBygging() && !R3.bygger) { settVent(false); gåNå(); } }
+  knapp.onclick = () => { if (gåVenter) { settVent(false); return; } if (iBygging()) { settVent(true); if (typeof logg === 'function') logg('Du går ned så snart 3D er klart.'); return; } gåNå(); };
   // knappene for hopp og huk på smale skjermer, valget «Hvor vil du gå?», døra og kortvarselet
   // (runde 8, kritikken: «angrepsbanneret dekker en tredjedel av bildet i førsteperson på telefon») – mens du går er banneret én linje:
   // hva som kommer og fra hvor, og «Forsvar leiren»; avstanden står bare på PC (kuttes med … når den er lang), «Vis» er borte.
@@ -608,7 +618,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
   // (runde 8) gåInn(h) – reis til huset og gå inn; venter() – kartet rundt deg bygges før du går; inngangPil() – pila mot nærmeste inngang
   // ({ d, rel, vender, vis, tekst } eller null); klarGå(X, Y, ferdig) – bygg utsnittet for gange først når det trengs
-  window.Gange = { vedKarakter: () => vedKar, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
+  window.Gange = { vedKarakter: () => vedKar, gåVenter: () => gåVenter, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
     inngangPil: () => { const n = pekerNå; if (!n || !kropp || !r3() || !R3.fot) return null; return pilNå(n); }, oppdaterPil: pekerSteg, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
