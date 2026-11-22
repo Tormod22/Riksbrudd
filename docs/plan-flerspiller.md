@@ -11,8 +11,12 @@ Senere kan den samme tjeneren flyttes til Cloudflare uten å skrive spillet om.
 **Bygget (M2a – første delte verden):** tjenerprogrammet for vertens PC (`tjener/riksbrudd-tjener.js`, ingen avhengigheter,
 `start-tjener.bat`, `LESMEG.md`; kan lastes ned fra spillet som `site/tjener/riksbrudd-tjener.zip`) og flerspilleren i
 nettleseren (`spill/flerspiller.js` regler, `spill/flerspiller-visning.js` panelet «Spill sammen» i ☰). Gjestene kan sende lagene sine på marsj og stanse dem,
-alle ser hvor de andre spillerne er (i kartet og i 3D), og alle kan skrive meldinger. Prøvd med to ekte
+alle ser hvor de andre spillerne er (i kartet og i 3D), og alle kan skrive meldinger. Gjestene ser vertens leirbygg i kartet. Prøvd med to ekte
 nettlesere mot tjeneren (`pipeline/fliser/test_flerspiller_e2e.js`) og tunnelen med en falsk cloudflared.
+
+**Også gjort (M0, punkt 4):** felles tilfeldighet – `spill/tilfeldig.js` (frø-basert strøm som kan lagres), og `Math.random`
+er byttet ut i regelmodulene (morgen, verden, oppstart, vær, overlevelse, kameravakt, forsvar, trussel). Strømmen lagres med
+spillet; hvert nytt spill får sitt eget frø. Laget av en egen skysesjon, kontrollert og flettet.
 
 **Snarveien i M2a:** simuleringen er ikke skilt ut fra index.html ennå (det er M0). Derfor regner **vertens nettleser** verden
 som før; tjeneren kobler sammen, videresender og lagrer. Gjestenes nettlesere regner ikke selv – de viser et bilde fra verten
@@ -26,7 +30,7 @@ uten at protokollen endres mye.
 3. **Cloudflare-tunnel** (rask tunnel uten konto, `cloudflared` ved siden av tjeneren). Uten den: bare samme nett.
 4. **Verten styrer farten** for alle i M2a (gjestenes fartsknapper gjør ingenting). Avstemning om fart kommer med flere spillere.
 
-**Gjenstår (neste runder):** M0 (simuleringen ut av index.html, kommandoer for alt, felles tilfeldighet), flere kommandoer for
+**Gjenstår (neste runder):** resten av M0 (simuleringen ut av index.html, kommandoer for alt, tilfeldigheten i *-visning.js), flere kommandoer for
 gjestene (grav ned, bygg, leir), gjestens egen leir og selskap i vertens verden, mot hverandre (M3), og å prøve på ekte med
 brukerens PC og cloudflared.
 

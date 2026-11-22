@@ -1472,3 +1472,8 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   for egne lag, ellers «Styres av …». Kommandoen 'pos' (hvert 2. s fra gjesten) + bildet.sp: alle ser hvor de andre spillerne er
   (KROKER.tegn og KROKER.tegn3d, navn i blått; minPos = der du går i 3D, ellers kartets midte). Lagene glir hos gjesten (s.glatt).
   Gjestene ser vertens leir bare som et merke; leirbyggene, folk og økonomi deles ikke ennå.
+  FELLES TILFELDIGHET (M0 punkt 4, 22. nov natt, egen skysesjon): spill/tilfeldig.js (mulberry32; Tilfeldig.lag(frø), Tilfeldig.verden =
+  én felles strøm, nyVerden/lagre/les, heltall/velg/sjanse; test_tilfeldig.js). Regelmodulene morgen, verden, oppstart, vaer, overlev,
+  kameravakt, forsvar-kamp, forsvar-hjemme og trussel-lagring bruker Tilfeldig.verden i stedet for Math.random (nye regler: gjør det
+  samme). lagring.js lagrer strømmen (rng). I nettleseren får hvert nytt spill et eget frø (crypto); i Node er frøet 1.
+  oppstart.js låner strømmen til portrett-motor.js (brukerens fil, uendret) ved å bytte Math.random mens portrettet lages.
