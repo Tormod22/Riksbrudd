@@ -78,10 +78,11 @@
   // så nær målet som det kommer, og troppen går av der (s.avstigning – strategi-visning.js lar den gå av når kjøretøyet står).
   // Svarer true når ordren er tatt hånd om (også når den ble avvist, f.eks. uten radiokontakt).
   window.OMBORD_ORDRE = (s, X, Y) => {
-    const k = s && s.ombord; if (!k || typeof window.kjørTil !== 'function') return false;
+    const k = s && s.ombord; if (!k) return false;
     if (!KROKER.kanOrdre.filter(f => f !== ombordKrok).every(f => f(s))) return true;
     s.avstigning = { x: X, y: Y, navn: 'målet', t: tid };
-    if (window.KOMMANDO && window.Kommando) KOMMANDO({ type: 'kjør', kjøretøy: Kommando.nid(k, window.KJORETOY || []), x: X, y: Y }); else window.kjørTil(k, X, Y);
+    if (!window.KOMMANDO || !window.Kommando) return false;
+    KOMMANDO({ type: 'kjør', kjøretøy: Kommando.nid(k, window.KJORETOY || []), x: X, y: Y });
     logg(`${s.navn} kjører med ${k.navn} og går av ved målet.`); skitten = true; return true; };
   KROKER.lagTekst.push(s => (s.ombord ? `om bord i ${s.ombord.navn}` : s.fraFolk ? 'egen tropp' : null));
   KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }

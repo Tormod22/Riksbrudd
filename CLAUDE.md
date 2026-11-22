@@ -1561,3 +1561,18 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   stedslappen (hvorLapp3d) står kort under minikartet; grafikkvarselet er kort og oppe til venstre (body.kort). (19) opplæringslinja viker
   mens tropppanelet er åpent på stående telefon. (20) ressurser-visning.js: et hogst-/rivefelt under loggen i 2D gir #logg.vik (nesten
   gjennomsiktig til du peker på den). VAKT vakter/r17-ui.js.
+  KAMP PÅ BAKKEN W2 (22. nov, R17-3; docs/plan-wardogs.md W2, notat docs/natt/bakkekamp.md): spill/bakkekamp.js (regler uten DOM:
+  Dekning, Kikkert, Granat, Følge, Indikator; test_bakkekamp.js) + spill/bakkekamp-visning.js (window.BakkekampSpill, lastes etter
+  selskap-visning.js). DEKNING når du går: husvegg/bil/stein/tre innen 6 m mellom deg og skytteren (R3.hindre, u.hus.biler, u.smått.stein,
+  KJORETOY) ganger skaden i kampSteg (dekF i spillet-visning.js) – vegg 0,25, bil 0,5/0,3 på huk, stein bare på huk/liggende, tre 0,7;
+  eventyr-visning.js bruker da ikke sin egen «vegg». «I dekning (vegg)» og antall granater under helsa (#nhud .dekn). SIKTEKIKKERT: høyre
+  museknapp / «Sikt»: rifle 4×, jaktrifle 3×, andre 1,45× (gange.js spør BakkekampSpill.fov/følsomhet), treff × opptil 1,4 på langt hold
+  (skyt() ganger med BakkekampSpill.treff), svart ring #kikkertring (eget lag, z-index 1), våpenet i hånda skjult (narhud.js). GRANATER: G /
+  «Granat», eget granatbelte (Utstyr.TING.granat med del: true, høyst 6, to gratis i nye leirer – «riksbrudd-bakkekamp», kjøp i Leir-menyen
+  under «Håndgranater»); buen og lunta (3,2 s) i Granat.steg med egen klokke, scenens z = (moh. − u.h0) × EX, smellet med Effekter3d,
+  skader alle lag innen 12 m (også egne) og deg. G går altså IKKE ut av gåmodus mens du går. LAGKAMERATER: J / «Lag» – egne lag innen
+  400 m: «Følg meg» (ny ordre via KOMMANDO når laget er > 16 m fra plassen bak deg, høyst hvert 4. s), «Hold her», «Angrip dit» (dit du
+  ser, høyst 600 m); slutter du å gå i 3 s, holder de stillingen. TREFFMARKØR (kryss, rødt når en mann faller) og SKADEINDIKATOR (rød bue
+  mot skytterne, fra kandidatene kampSteg sendte inn) i KROKER.tegn3d. I testene ingen gratis granater (BakkekampSpill.test). VAKT
+  vakter/bakkekamp.js («kamp på bakken»: prøvevegg, kampSteg, selvtest, kikkert, granat, kast, følg/hold). Tallene er Claudes forslag.
+  IKKE GJORT: maskingevær, fiender som kaster granater, dekning for lagene dine.
