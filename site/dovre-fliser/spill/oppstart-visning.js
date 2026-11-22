@@ -371,7 +371,9 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
       if (b0 && m0 > 1 && (fl.r.nivå === HL.BRATT || fl.r.nivå === HL.VANN || skråHer)) { const g = { x: b0.x, y: b0.y, m: m0, retning: HL.retning(b0.x - x, b0.y - y) };
         const hva = fl.r.nivå === HL.VANN ? 'vått' : fl.r.nivå === HL.BRATT ? 'bratt' : 'skrått (byggene får grunnmur)';
         if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${hva} der flagget står, men ${skråHer ? 'flatt' : 'flatt nok'} ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
-        vu.fakta.unshift(skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved'); }
+        // (R17 funn 11) også her: hvor mye av området rundt flagget som er byggbart (samme regel som fargene)
+        const gr = HL.grunnen ? HL.grunnen(fl.høyde, fl.tørt, x, y) : null, byggbart = gr && gr.andel ? ` – ${Math.round((gr.andel.flatt + gr.andel.skrått) * 100)} % byggbart innen ${HL.meter(HL.REGLER.nær)}` : '';
+        vu.fakta.unshift((skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved') + byggbart); }
       // (R17 funn 11) ellers: grunnen i et område rundt flagget med samme regel som fargene (før bare punktet – «flat» midt i rødt)
       else { const gr = HL.grunnen ? HL.grunnen(fl.høyde, fl.tørt, x, y) : null;
         if (gr && gr.tekst) vu.fakta.unshift(gr.tekst);
