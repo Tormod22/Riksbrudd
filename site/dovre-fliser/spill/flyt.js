@@ -221,8 +221,10 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     const bs = [...document.querySelectorAll('.knapper [id^=sp]')].filter(b => b.offsetParent && b.getBoundingClientRect().width > 0);
     if (!bs.length) { grunnLapp.style.left = '50%'; grunnLapp.style.top = 'calc(var(--topp,58px) + 4px)'; return; }
     const r = bs.map(b => b.getBoundingClientRect()), venstre = Math.min(...r.map(q => q.left)), høyre = Math.max(...r.map(q => q.right)), bunn = Math.max(...r.map(q => q.bottom));
-    const w = grunnLapp.offsetWidth || 220; grunnLapp.style.top = Math.round(bunn + 4) + 'px';
-    grunnLapp.style.left = Math.round(Math.max(6, Math.min(innerWidth - w - 6, (venstre + høyre) / 2 - w / 2))) + 'px';
+    const w = grunnLapp.offsetWidth || 220, left = Math.max(6, Math.min(innerWidth - w - 6, (venstre + høyre) / 2 - w / 2));
+    // står stoppkortet (#flytkort) der lappen skulle ligge (telefon), legges lappen under kortet
+    const kr = kort.classList.contains('på') ? kort.getBoundingClientRect() : null, under = kr && kr.width > 0 && kr.left < left + w && kr.right > left && kr.bottom > bunn;
+    grunnLapp.style.top = Math.round((under ? kr.bottom : bunn) + 4) + 'px'; grunnLapp.style.left = Math.round(left) + 'px';
   }
   function visGrunn(tekst) {
     grunnLapp.textContent = '⚠ ' + tekst; grunnLapp.classList.add('på'); plasserGrunn();
