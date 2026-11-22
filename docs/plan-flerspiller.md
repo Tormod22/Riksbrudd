@@ -30,7 +30,7 @@ uten at protokollen endres mye.
 3. **Cloudflare-tunnel** (rask tunnel uten konto, `cloudflared` ved siden av tjeneren). Uten den: bare samme nett.
 4. **Verten styrer farten** for alle i M2a (gjestenes fartsknapper gjør ingenting). Avstemning om fart kommer med flere spillere.
 
-**Gjenstår (neste runder):** resten av M0 (simuleringen ut av index.html, kommandoer for alt, tilfeldigheten i *-visning.js), flere kommandoer for
+**Gjenstår (neste runder):** resten av M0 (resten av simuleringen ut av index.html – marsj, patrulje og kamprunde er flyttet til `spill/simulering.js` –, kommandoer for alt, tilfeldigheten i *-visning.js), flere kommandoer for
 gjestene (grav ned, bygg, leir), gjestens egen leir og selskap i vertens verden, mot hverandre (M3), og å prøve på ekte med
 brukerens PC og cloudflared.
 
@@ -68,6 +68,13 @@ Dette gjør spillet klart, og er nyttig også for enspiller (testing, lagring, f
    `kommando(side, { type, … })`. Da kan de samme kommandoene sendes over nettet senere.
 2. **Verden uten nettleser:** simuleringen i `sim(dt)` og krokene den kaller skilles ut i `spill/simulering.js` (navnet `verden.js` er tatt av «verden som gjør noe»), som kan kjøres i Node
    med kartdataene. Visningen (2D, 3D, paneler) leser bare tilstanden. Gjøres i biter, én modul om gangen, med tester.
+   **Første bit gjort (22. nov, R16-B):** marsjsteget for lagene, fiendens patrulje (patruljeMål) og kamprunden ligger nå i
+   `spill/simulering.js` (`Simulering.lag({ … })` -> `{ steg, kamprunde }`); index.html har bare tynne innpakninger (`sim`,
+   `kamprunde`, `patruljeMål`) og tilbakekall for det som vises. Samme oppførsel som før (testet mot en kopi av den gamle koden i
+   `pipeline/fliser/test_simulering.js`, som også kjører et spilldøgn i Node uten nettleser). **Gjenstår:** modulene i `KROKER.sim`
+   (AI-en i fraksjoner-visning.js, økonomi, forsyning, garnison, leir, folk, krig …) og `KROKER.ild`/`KROKER.fart`-krokene kjører fortsatt
+   i siden; `ordre()` (ruteplan via `lagVindu`) og siktfeltene (`s.sikt`) trenger kartdata som tjeneren må kunne lese; kampens
+   tilfeldighet (`KRNG = Terreng.frø(1987)`) bør bli `Tilfeldig.verden` og lagres med spillet.
 3. **Ren tilstand:** all tilstand som betyr noe for spillet, kan lagres og leses som JSON (lagring.js gjør mye av dette alt).
 4. **Felles tilfeldighet:** `Math.random` byttes med en frø-basert tilfeldighet per verden (`Tilfeldig(frø)`).
 5. **Side-id overalt:** ingen regel antar at spilleren er «blå» (selskap.js og strategi.js gjør det alt riktig).
