@@ -113,8 +113,28 @@
     if (r.mangler === LB.BYGG[REGLER.første[0]].navn) return `Bratt – ingen flat plass for en ${r.mangler.toLowerCase()} her` + (r.d > 0 && r.nivå === BRATT ? ` (${Math.round(r.d)} m høydeforskjell under den)` : '') + '.';
     return `For lite flat plass: det er ikke plass til ${r.mangler.toLowerCase()} ved siden av brakka innen ${meter(REGLER.nær)}.`;
   }
+  // (22. nov, R17 funn 11) Hvordan er grunnen der leiren skal stå – et område, ikke bare flagget? Faktalinja sa «grunnen: flat» mens
+  // kartet rundt flagget var rødt, fordi den bare så på punktet. Her brukes samme regel som fargene (vurderer for brakka, ret 0) i
+  // rutene innen o.radius (standard REGLER.nær) rundt (x, y). -> { andel: { flatt, skrått, bratt, vann }, n (ruter med høyde), tekst }
+  // Grensene for teksten (Claudes forslag): høyst 15 % rødt/vått = flat (minst 60 % grønt) eller litt skrå; opptil halvparten = blandet;
+  // mer enn det = mest for bratt.
+  function grunnen(høyde, tørt, x, y, o = {}) {
+    const radius = o.radius || REGLER.nær, celle = o.celle || REGLER.celle, v = vurderer(o.type || REGLER.første[0], o.ret || 0, høyde, tørt);
+    const t = [0, 0, 0, 0, 0];
+    for (const [dx, dy] of ringer(radius, celle)) t[v(x + dx, y + dy)]++;
+    const n = t[FLATT] + t[SKRÅTT] + t[BRATT] + t[VANN];
+    if (!n) return { andel: null, n: 0, tekst: '' };
+    const a = { flatt: t[FLATT] / n, skrått: t[SKRÅTT] / n, bratt: t[BRATT] / n, vann: t[VANN] / n }, ille = a.bratt + a.vann;
+    const pst = q => Math.round(q * 100) + ' %', r = meter(radius);
+    let tekst;
+    if (ille <= .15) tekst = a.flatt >= .6 ? `grunnen: flat innen ${r} fra flagget` : `grunnen: litt skrå innen ${r} (byggene får grunnmur)`;
+    else if (ille <= .5) tekst = `grunnen: blandet innen ${r} – ${pst(a.flatt + a.skrått)} byggbart` + (a.bratt >= .05 ? `, ${pst(a.bratt)} for bratt` : '') + (a.vann >= .05 ? `, ${pst(a.vann)} vann` : '');
+    else tekst = a.vann > a.bratt ? `grunnen: mest vått innen ${r} (${pst(a.vann)} vann) – lite plass til bygg`
+      : `grunnen: mest for bratt innen ${r} (${pst(a.bratt)} rødt) – bare små flekker er flate`;
+    return { andel: a, n, tekst };
+  }
   const FORKLARING = 'Grønt = flatt, gult = skrått (bygget får grunnmur), rødt = for bratt for dette bygget.';
-  const api = { REGLER, FLATT, SKRÅTT, BRATT, UKJENT, VANN, høydeFra, klasseFra, tørtFra, vurder, vurderer, kart, ringer, førsteBygg, finnPlass, retning, meter, brattTekst, FORKLARING };
+  const api = { REGLER, FLATT, SKRÅTT, BRATT, UKJENT, VANN, høydeFra, klasseFra, tørtFra, vurder, vurderer, kart, ringer, førsteBygg, finnPlass, retning, meter, brattTekst, grunnen, FORKLARING };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Helling = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

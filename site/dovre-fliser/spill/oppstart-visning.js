@@ -326,7 +326,7 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     let hv = null; try { hv = await lagVindu([x - nær, y - nær, x + nær, y + nær], false, 11); } catch (e) { return null; }
     const høyde = HL.høydeFra(hv), r = HL.førsteBygg(høyde, tørt, x, y, { flatFørst: true });
     // uten høyder midt på stedet kan vi ikke si noe – leiren godtas som før
-    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde };
+    if (r.ok || r.nivå === HL.UKJENT) return { ok: true, r, høyde, tørt };
     const S = R.søk + nær; let hs = null; try { hs = await lagVindu([x - S, y - S, x + S, y + S], false, 11); } catch (e) { hs = null; }
     const f = hs ? HL.finnPlass(HL.høydeFra(hs), tørt, x, y, { lovlig: lovligLeir, flatFørst: true }) : null;
     return { ok: false, r, f, søkt: true };
@@ -372,8 +372,11 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
         const hva = fl.r.nivå === HL.VANN ? 'vått' : fl.r.nivå === HL.BRATT ? 'bratt' : 'skrått (byggene får grunnmur)';
         if (lovligLeir(g.x, g.y)) { g.h = høydeHer(g.x, g.y); f.flytt = g; flytt = { ...g, tekst: `Det er ${hva} der flagget står, men ${skråHer ? 'flatt' : 'flatt nok'} ${HL.meter(m0)} ${g.retning} – der kan brakka stå. Du kan flytte flagget dit.` }; }
         vu.fakta.unshift(skråHer ? 'grunnen: litt skrå ved flagget, flat like ved' : 'grunnen: bratt ved flagget, flat like ved'); }
-      else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
-      else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); }
+      // (R17 funn 11) ellers: grunnen i et område rundt flagget med samme regel som fargene (før bare punktet – «flat» midt i rødt)
+      else { const gr = HL.grunnen ? HL.grunnen(fl.høyde, fl.tørt, x, y) : null;
+        if (gr && gr.tekst) vu.fakta.unshift(gr.tekst);
+        else if (fl.r.nivå === HL.SKRÅTT) vu.fakta.unshift('grunnen: litt skrå (byggene får grunnmur)');
+        else if (fl.r.nivå === HL.FLATT) vu.fakta.unshift('grunnen: flat'); } }
     if (fl && !fl.ok) { stopp = HL.brattTekst(fl.r); f.ok = false; f.bratt = true;
       if (fl.f) { fl.f.h = høydeHer(fl.f.x, fl.f.y); f.flytt = fl.f; flytt = { ...fl.f, tekst: flyttTekst(fl.f, 'Nærmeste flate sted') }; }
       else vu.advarsler.unshift(`Fant ikke noe flatt nok sted innen ${HL.meter(HL.REGLER.søk)}. Trykk et annet sted – en dalbunn eller et platå.`); }
