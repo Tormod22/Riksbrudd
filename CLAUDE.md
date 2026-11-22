@@ -1455,3 +1455,17 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   TILGANG, ALDRI_VED_DØR, MØBELSETT, STILER – takhøyde per type, gang først, flere innganger (pl.innganger), stil eldre/nyere/moderne, butikk,
   fjøs, industri (sag/metall/olje), sykehjem/legevakt; P.bygg.tett/k fra hus3d. LOGOER v2 og pitch/plan (PDF) i scratchpad/pitch,
   docs/designretning.md. Hjelpen: 295 emner. Kontroll: mobil 138/138, PC 137/138 (ui «fanene i Leir-menyen» – grønn alene, ustabil under last).
+  FLERSPILLER M2a (22. nov natt, brukeren: «gjør alt etter en plan du lager», frist 2 t; plan: docs/plan-flerspiller.md, kapittel 0):
+  gratis, tjeneren på VERTENS EGEN PC (brukerens valg). tjener/riksbrudd-tjener.js (Node uten avhengigheter: HTTP + egen
+  WebSocket, verdener med kode på 6 tegn, høyst 5 spillere, lagring i verdener/KODE.json + .bak, /status med PNA-svar,
+  --tunnel starter cloudflared og leser trycloudflare-adressen), start-tjener.bat, LESMEG.md; test pipeline/fliser/test_tjener.js
+  (laget av en egen skysesjon). site/tjener/riksbrudd-tjener.zip lages av pipeline/fliser/pakk_tjener.py (--sjekk = lik tjener/).
+  Nettleseren: spill/flerspiller.js (regler uten DOM: lenke #spill=<ws>&kode=, bilde/brukBilde, sjekkKommando, nesteEier,
+  framTid; test_flerspiller.js) + flerspiller-visning.js (window.NETT, panelet #nett fra ☰ «Spill sammen»). VERTENS NETTLESER
+  REGNER VERDEN (simuleringen er ikke skilt ut ennå – M0): verten sender F.bilde (lag med nid, rute, eier; kjøretøy; tid, tempo,
+  vær, leir; fiender bare når synlig()) hvert 0,5 s, gjesten bytter ut ENHETER/KJORETOY på stedet og regner ikke (sim() går bare
+  klokka når NETT.gjest; lagring.js lagrer ikke). Ordre fra en gjest: ordre() spør NETT.fangOrdre -> kommando til verten, som
+  sjekker eieren (s.eier = gjestens id, «Styres av» i lagpanelet) og kaller ordre(). Verten styrer farten. Verden som har stått
+  (borteSek fra tjeneren) regnes fram med 600×. Verten åpner verden igjen av seg selv ved omlasting (vertNå i «riksbrudd-nett»).
+  Ende til ende: node pipeline/fliser/test_flerspiller_e2e.js (to nettlesere + tjeneren; BILDE=<sti> gir skjermbilder).
+  Gjestene kan foreløpig bare gi marsjordre og ser vertens leir som et merke.

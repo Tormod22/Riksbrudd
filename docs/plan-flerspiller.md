@@ -6,6 +6,28 @@ eget private militærselskap (plan-kollaps.md §10, plan-wardogs.md). Alt her er
 **Bestemt av brukeren 22. nov:** det skal være gratis, og foreløpig kjører tjeneren på **spillerens egen PC** (se kapittel 4).
 Senere kan den samme tjeneren flyttes til Cloudflare uten å skrive spillet om.
 
+## 0. Status og Claudes valg (22. nov natt, brukeren: «gjør alt etter en plan du lager … frist 2 timer»)
+
+**Bygget (M2a – første delte verden):** tjenerprogrammet for vertens PC (`tjener/riksbrudd-tjener.js`, ingen avhengigheter,
+`start-tjener.bat`, `LESMEG.md`; kan lastes ned fra spillet som `site/tjener/riksbrudd-tjener.zip`) og flerspilleren i
+nettleseren (`spill/flerspiller.js` regler, `spill/flerspiller-visning.js` panelet «Spill sammen» i ☰). Prøvd med to ekte
+nettlesere mot tjeneren (`pipeline/fliser/test_flerspiller_e2e.js`) og tunnelen med en falsk cloudflared.
+
+**Snarveien i M2a:** simuleringen er ikke skilt ut fra index.html ennå (det er M0). Derfor regner **vertens nettleser** verden
+som før; tjeneren kobler sammen, videresender og lagrer. Gjestenes nettlesere regner ikke selv – de viser et bilde fra verten
+to ganger i sekundet (bare det verten ser – tåka gjelder) og sender ordre. Når M0 er ferdig, flyttes regningen inn i tjeneren
+uten at protokollen endres mye.
+
+**Claudes valg for spørsmålene som sto åpne** (kan endres av brukeren):
+1. Rett på delt verden (M2), ikke postkasse først – det er det som gjør det til flerspiller.
+2. **Samarbeid først:** alle spillerne er på samme side; verten gir lag til gjestene («Styres av» i lagpanelet).
+3. **Cloudflare-tunnel** (rask tunnel uten konto, `cloudflared` ved siden av tjeneren). Uten den: bare samme nett.
+4. **Verten styrer farten** for alle i M2a (gjestenes fartsknapper gjør ingenting). Avstemning om fart kommer med flere spillere.
+
+**Gjenstår (neste runder):** M0 (simuleringen ut av index.html, kommandoer for alt, felles tilfeldighet), flere kommandoer for
+gjestene (grav ned, bygg, leir), gjestens egen leir og selskap i vertens verden, mot hverandre (M3), og å prøve på ekte med
+brukerens PC og cloudflared.
+
 ## 1. Hvor vi står i dag (målt i koden 22. nov)
 
 | Hva | I dag | Hva det betyr for flerspiller |

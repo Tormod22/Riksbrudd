@@ -30,16 +30,20 @@ La vinduet stå åpent så lenge dere spiller. Windows kan spørre om brannmuren
 
 ## 4. Lag verden og inviter
 
-1. Åpne spillet i nettleseren og velg å være vert.
-2. I det svarte vinduet står nå en **kode** (seks tegn) og en **invitasjonslenke**.
-3. Send lenken til vennene dine (melding, Discord, e-post …). De trykker på den og er med.
+1. Åpne spillet i nettleseren **på samme PC** (<https://riksbrudd.vercel.app/norge>), trykk ☰ → **Spill sammen** →
+   **Åpne en ny verden**. Feltet «Tjeneren» skal stå på `ws://localhost:8787`.
+2. Edge/Chrome kan spørre om siden får bruke «enheter på det lokale nettverket» – trykk **Tillat** (det er tjeneren din).
+3. Panelet viser en **kode** (seks tegn) og en **invitasjonslenke**. Trykk «Kopier lenken».
+4. Send lenken til vennene dine (melding, Discord, e-post …). De trykker på den, skriver navnet sitt og trykker «Bli med».
+5. Gi vennene lag: velg et av lagene dine, og trykk «Styres av» i lagpanelet til navnet deres står der. De kan da sende
+   laget på marsj. Du styrer tiden (pause og fart) for alle.
 
 Du kan også se alt på statussiden: <http://localhost:8787/>.
 
 ## 5. Avslutte
 
-Trykk **Ctrl+C** i det svarte vinduet (eller lukk det). Verden lagres først. Neste gang du starter og er vert
-med samme kode, fortsetter verden der den slapp – tiden som har gått, regnes fram.
+Trykk **Ctrl+C** i det svarte vinduet (eller lukk det). Verden lagres først. Neste gang du starter tjeneren og åpner
+spillet, åpnes verden igjen av seg selv (eller trykk «Åpne verden … igjen»), og tiden som har gått, regnes fram.
 
 ## Godt å vite
 
@@ -48,3 +52,5 @@ med samme kode, fortsetter verden der den slapp – tiden som har gått, regnes 
 - Tunneladressen skifter hver gang du starter. Send en ny lenke til vennene da.
 - Når PC-en er av eller sover, står verden stille.
 - Annen port: åpne et kommandovindu i mappa og skriv `node riksbrudd-tjener.js --port 8788 --tunnel`.
+- Dette er første utgave (M2a): det er nettleseren din som regner verden, så hold spillet åpent mens dere spiller. Vennene
+  kan foreløpig bare gi marsjordre til lagene du gir dem, og de ser din leir som et merke i kartet. Se docs/plan-flerspiller.md.

@@ -46,7 +46,7 @@
     N.ønsket = false; clearTimeout(N.igjen); const ws = N.ws; N.ws = null;
     if (ws) try { ws.close(); } catch (e) { /* ok */ }
     const varGjest = N.rolle === 'gjest';
-    N.rolle = null; N.tilkoblet = false; N.spillere = []; N.vertBorte = false;
+    N.rolle = null; N.tilkoblet = false; N.spillere = []; N.vertBorte = false; N.sett = false; skriv({ vertNå: false });
     if (typeof ENHETER !== 'undefined') for (const s of ENHETER) if (s.eier) s.eier = null;
     if (!stille) { sikkerLogg('Koblet fra flerspilleren.'); if (varGjest) sikkerLogg('Last siden på nytt for å fortsette ditt eget spill.'); }
     vis();
@@ -55,7 +55,7 @@
     switch (m.t) {
       case 'velkommen': {
         N.tilkoblet = true; statusTekst = ''; N.id = m.id || N.id; N.kode = m.kode; N.spillere = m.spillere || []; skriv({ id: N.id });
-        if (N.rolle === 'vert') { skriv({ kode: N.kode, adresse: N.adresse }); hentTunnel(); sikkerLogg(`Verden ${N.kode} er åpen. Del invitasjonslenken under «Spill sammen».`);
+        if (N.rolle === 'vert') { skriv({ kode: N.kode, adresse: N.adresse, vertNå: true }); hentTunnel(); sikkerLogg(`Verden ${N.kode} er åpen. Del invitasjonslenken under «Spill sammen».`);
           const fram = m.lagret ? F.framTid(m.lagret.borteSek) : 0; if (fram > 0) regnFram(fram); }
         else { sikkerLogg(`Du er med i verden ${N.kode}. Verten styrer tiden; du styrer lagene verten gir deg.`); lukkStart(); }
         break;
@@ -129,6 +129,8 @@
     tid = d.tid; if (tempo !== d.tempo) { tempo = d.tempo; settFartKnapp(d.tempo); }
     const nå = performance.now();
     if (d.vær && window.VaerSpill && nå - (N.sistVær || 0) > 10000) { N.sistVær = nå; try { Object.assign(VaerSpill.S, d.vær); } catch (e) { /* ok */ } }
+    // første bilde: kartet går til vertens leir (ellers står gjesten der hennes eget spill var)
+    if (!N.sett && d.leir && typeof kam !== 'undefined') { N.sett = true; kam.x = d.leir.x; kam.y = d.leir.y; kam.m = Math.min(kam.m, 8); }
     N.vertLeir = d.leir || null; N.selskap = d.selskap || null; N.sistBilde = nå; N.tellBilder++;
     if (typeof valgt !== 'undefined' && valgt && !ENHETER.includes(valgt)) { valgt = null; try { visPanel(); } catch (e) { /* ok */ } }
     skitten = true;
@@ -195,7 +197,7 @@
     const l = les(), navn = esc(N.navn || l.navn || '');
     let h = `<div class="topp"><b>Spill sammen</b><button data-n="lukk" aria-label="Lukk">×</button></div>`;
     if (!N.rolle) {
-      h += `<section><h3>Vær vert</h3><p>Start tjeneren på PC-en din først (dobbeltklikk <b>tjener/start-tjener.bat</b>). Så åpner du verden her.</p>
+      h += `<section><h3>Vær vert</h3><p>Start tjeneren på PC-en din først: <a href="/tjener/riksbrudd-tjener.zip" download style="color:var(--hover)">last ned tjeneren</a>, pakk ut og dobbeltklikk <b>start-tjener.bat</b> (LESMEG.md forklarer alt). Så åpner du verden her.</p>
         <label for="nnavn">Navnet ditt</label><input id="nnavn" value="${navn}" maxlength="24">
         <label for="nadr">Tjeneren</label><input id="nadr" value="${esc(l.adresse || 'ws://localhost:8787')}">
         <div class="rad"><button data-n="vert">${l.kode ? 'Åpne verden ' + esc(l.kode) + ' igjen' : 'Åpne en ny verden'}</button>${l.kode ? '<button data-n="nyverden">Ny verden</button>' : ''}</div></section>
@@ -245,6 +247,10 @@
     N.lenkeInn = location.href; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ok */ }
     lukkStart(); åpen(true); status('Skriv navnet ditt og trykk «Bli med».');
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(fraAdressen, 300)); else setTimeout(fraAdressen, 300);
+  // var denne nettleseren vert da siden ble lukket, åpnes verden igjen av seg selv (ikke i testene)
+  function vertIgjen() { const l = les(); if (navigator.webdriver || N.rolle || !l.vertNå || !l.kode || !l.adresse || /#spill=/.test(location.hash)) return;
+    sikkerLogg(`Åpner verden ${l.kode} igjen …`); koble('vert', l.adresse, l.kode, l.navn || 'Vert'); }
+  const start = () => { setTimeout(fraAdressen, 300); setTimeout(vertIgjen, 2500); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   N.åpen = åpen; N.koble = koble; N.koblFra = koblFra; N.send = send; N.bildeNå = bildeNå;
 })();
