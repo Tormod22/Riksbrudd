@@ -86,12 +86,13 @@
   css.textContent = `.bkknapp{ position:fixed; z-index:5; display:none; width:58px; height:58px; border-radius:50%; border:2px solid rgba(231,220,195,.6); background:rgba(20,16,10,.55); color:#f0e2b0; font:600 12px sans-serif; touch-action:none; padding:0; }
 .bkknapp.på{ display:block; } .bkknapp.aktiv{ background:rgba(201,178,106,.55); color:#1c170f; } .bkknapp small{ display:block; font-size:10px; opacity:.85; }
 #siktknapp{ right:160px; bottom:calc(132px + env(safe-area-inset-bottom,0px)); } #granatknapp{ right:160px; bottom:calc(198px + env(safe-area-inset-bottom,0px)); } #lagkamknapp{ right:160px; bottom:calc(264px + env(safe-area-inset-bottom,0px)); }
-body.kort #siktknapp{ right:auto; left:calc(170px + env(safe-area-inset-left,0px)); bottom:calc(14px + env(safe-area-inset-bottom,0px)); } body.kort #granatknapp{ right:auto; left:calc(234px + env(safe-area-inset-left,0px)); bottom:calc(14px + env(safe-area-inset-bottom,0px)); } body.kort #lagkamknapp{ right:auto; left:calc(298px + env(safe-area-inset-left,0px)); bottom:calc(14px + env(safe-area-inset-bottom,0px)); }
+body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom:calc(140px + env(safe-area-inset-bottom,0px)); } body.kort #granatknapp{ right:calc(12px + env(safe-area-inset-right,0px)); bottom:calc(206px + env(safe-area-inset-bottom,0px)); } body.kort #lagkamknapp{ right:calc(12px + env(safe-area-inset-right,0px)); bottom:calc(140px + env(safe-area-inset-bottom,0px)); }
+@media (orientation: landscape){ body.kort #siktknapp{ right:calc(82px + env(safe-area-inset-right,0px)); bottom:calc(206px + env(safe-area-inset-bottom,0px)); } }
 #lagkam{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(168px + env(safe-area-inset-bottom,0px)); z-index:12; display:none; width:min(360px,92vw); padding:8px 10px; background:rgba(28,23,15,.94); border:1px solid #c9b26a; color:#e7dcc3; font-size:14px; }
 #lagkam.på{ display:block; } #lagkam h3{ margin:0 0 4px; font-size:14px; letter-spacing:.05em; text-transform:uppercase; color:#c9b26a; } #lagkam .lag{ display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 8px; }
 #lagkam button{ background:#2a2318; border:1px solid #4a4030; color:#e7dcc3; min-height:36px; padding:3px 10px; font:inherit; cursor:pointer; } #lagkam .lag button.valgt{ border-color:#c9b26a; background:#4a3d22; }
 #lagkam .ordre{ display:flex; gap:6px; } #lagkam .ordre button{ flex:1; font-weight:600; } #lagkam small{ display:block; color:#a99; margin-top:6px; }
-#kikkertring{ position:fixed; inset:0; z-index:3; pointer-events:none; display:none; background:radial-gradient(circle closest-side at 50% 50%, transparent 0 87%, rgba(0,0,0,.55) 88%, rgba(0,0,0,.96) 90%); } #kikkertring.på{ display:block; } body.foto #kikkertring{ display:none !important; }
+#kikkertring{ position:fixed; inset:0; z-index:1; pointer-events:none; display:none; background:radial-gradient(circle closest-side at 50% 50%, transparent 0 87%, rgba(0,0,0,.55) 88%, rgba(0,0,0,.96) 90%); } #kikkertring.på{ display:block; } body.foto #kikkertring{ display:none !important; }
 #nhud .dekn{ margin-top:4px; font-size:12.5px; color:#cfe3a8; letter-spacing:.03em; } #nhud .dekn:empty{ display:none; }`;
   document.head.appendChild(css);
   const siktKnapp = el('button', { id: 'siktknapp', klasse: 'bkknapp', type: 'button', title: 'Sikt (høyre museknapp)' }, 'Sikt');
@@ -203,6 +204,6 @@ body.kort #siktknapp{ right:auto; left:calc(170px + env(safe-area-inset-left,0px
     granatKnapp.innerHTML = ''; granatKnapp.append('Granat', el('small', {}, String(antallGranater())));
     if (!kanSikte() && sikter) api.sikt(false); ring.classList.toggle('på', api.kikkertPå()); if (!g && menyÅpen) api.meny(false); markørSteg(); dekningTekst(); visMeny(); }, 100);
   setInterval(() => følgSteg(false), 1000);
-  Object.assign(api, { følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater });
+  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater });
   rot.BakkekampSpill = api;
 })(typeof window !== 'undefined' ? window : globalThis);
