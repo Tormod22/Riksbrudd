@@ -91,7 +91,19 @@
   function bildeNå() {
     merk(); const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, fr = window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER.blå;
     return F.bilde({ lag: ENHETER, kj: window.KJORETOY || [], tid, tempo, ser: e => { try { return synlig(e); } catch (x) { return false; } },
+      spillere: hvorAlle(),
       vær: window.VaerSpill ? VaerSpill.S : null, leir: L && L.midt ? { x: L.midt.x, y: L.midt.y, navn: fr ? fr.navn : 'Vertens leir' } : null, selskap: fr ? fr.navn : null });
+  }
+  // hvor denne spilleren er: der hun går i 3D, ellers midt i kartet/kameraet
+  function minPos() {
+    try { if (typeof R3 !== 'undefined' && R3 && på3d && R3.ut && R3.bane) return { x: R3.ut.cx + R3.bane.x, y: R3.ut.cy + R3.bane.y, går: !!R3.fot }; } catch (e) { /* ok */ }
+    return typeof kam !== 'undefined' ? { x: kam.x, y: kam.y, går: false } : null;
+  }
+  N.pos = new Map();
+  function hvorAlle() {
+    const ut = [], m = minPos(); if (m) ut.push({ id: N.id, navn: N.navn, x: m.x, y: m.y, går: m.går });
+    const nå = Date.now(); for (const [id, p] of N.pos) if (nå - p.t < 15000 && N.spillere.some(q => q.id === id)) ut.push({ id, navn: navnPå(id), x: p.x, y: p.y, går: p.går });
+    return ut;
   }
   function sendBilde() {
     if (N.rolle !== 'vert' || !N.tilkoblet) return; const nå = performance.now();
@@ -101,6 +113,7 @@
   function kommando(m) {
     merk(); const r = F.sjekkKommando(m.k, m.fra, ENHETER);
     if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
+    if (r.type === 'pos') { N.pos.set(m.fra, { x: r.x, y: r.y, går: r.går, t: Date.now() }); return; }
     if (r.type === 'stopp') { const q = r.lag; q.sti = null; q.kø = null; q.køSlutt = null; q.køSiste = false; q.siktSkitten = true; skitten = true;
       sikkerLogg(`${m.navn || navnPå(m.fra)} stanser ${q.navn}.`); send({ t: 'svar', til: m.fra, tekst: `${q.navn} står.` }); N.sistBilde = 0; return; }
     ordre(r.lag, r.x, r.y); sikkerLogg(`${m.navn || navnPå(m.fra)} sender ${r.lag.navn} av gårde.`);
@@ -117,6 +130,7 @@
     if (N.framTil != null && typeof tid !== 'undefined' && tid >= N.framTil) { N.framTil = null; const b = document.getElementById('sp1'); if (b) b.click(); sikkerLogg('Tiden er regnet fram.'); }
   }, 100);
   setInterval(() => { if (N.tilkoblet) send({ t: 'ping' }); }, PING_MS);
+  setInterval(() => { if (N.gjest && N.tilkoblet) { const p = minPos(); if (p) send({ t: 'kommando', k: { type: 'pos', x: Math.round(p.x), y: Math.round(p.y), går: p.går } }); } }, 2000);
 
   // ---------- gjesten ----------
   function brukBilde(d) {
@@ -138,6 +152,7 @@
     if (d.vær && window.VaerSpill && nå - (N.sistVær || 0) > 10000) { N.sistVær = nå; try { Object.assign(VaerSpill.S, d.vær); } catch (e) { /* ok */ } }
     // første bilde: kartet går til vertens leir (ellers står gjesten der hennes eget spill var)
     if (!N.sett && d.leir && typeof kam !== 'undefined') { N.sett = true; kam.x = d.leir.x; kam.y = d.leir.y; kam.m = Math.min(kam.m, 8); }
+    N.andre = Array.isArray(d.sp) ? d.sp.filter(p => p.id !== N.id) : [];
     N.vertLeir = d.leir || null; N.selskap = d.selskap || null; N.sistBilde = nå; N.tellBilder++;
     if (typeof valgt !== 'undefined' && valgt && !ENHETER.includes(valgt)) { valgt = null; try { visPanel(); } catch (e) { /* ok */ } }
     skitten = true;
@@ -181,7 +196,24 @@
       H.appendChild(knapp('Styres av: ' + (s.eier ? navnPå(s.eier) : 'deg'), !!s.eier, () => {
         s.eier = F.nesteEier(s.eier || null, gjester()); sikkerLogg(`${s.navn} styres nå av ${s.eier ? navnPå(s.eier) : 'deg'}.`); N.sistBilde = 0; visPanel(); }));
     });
-    // gjesten ser vertens leir som et merke i kartet
+    // de andre spillerne: et merke med navnet der de er (i 2D og 3D)
+  const andre = () => !N.tilkoblet ? [] : N.rolle === 'vert' ? hvorAlle().filter(p => p.id !== N.id) : (N.andre || []);
+  KROKER.tegn.push((g, vx0, vy1) => {
+    const L = andre(); if (!L.length) return; const m = kam.m; g.save(); g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'left';
+    for (const p of L) { const x = (p.x - vx0) / m, y = (vy1 - p.y) / m;
+      g.fillStyle = '#9fd0ff'; g.strokeStyle = '#0b0d10'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, p.går ? 5 : 7, 0, Math.PI * 2); g.fill(); g.stroke();
+      if (!p.går) { g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.strokeStyle = 'rgba(159,208,255,.6)'; g.stroke(); }
+      g.lineWidth = 3; g.strokeStyle = 'rgba(11,13,16,.85)'; const t = p.navn + (p.går ? ' (til fots)' : ''); g.strokeText(t, x + 14, y + 4); g.fillStyle = '#cfe7ff'; g.fillText(t, x + 14, y + 4); }
+    g.restore();
+  });
+  if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj3) => {
+    const L = andre(); if (!L.length) return; g.save(); g.font = '600 13px "Cormorant Garamond", serif'; g.textAlign = 'center';
+    for (const p of L) { const q = proj3(p.x, p.y); if (!q) continue; const t = p.navn, w = g.measureText(t).width + 14;
+      g.fillStyle = 'rgba(11,13,16,.8)'; g.fillRect(q[0] - w / 2, q[1] - 34, w, 20); g.fillStyle = '#cfe7ff'; g.fillText(t, q[0], q[1] - 20);
+      g.beginPath(); g.moveTo(q[0], q[1] - 14); g.lineTo(q[0], q[1]); g.strokeStyle = '#9fd0ff'; g.lineWidth = 2; g.stroke(); }
+    g.restore();
+  });
+  // gjesten ser vertens leir som et merke i kartet
     KROKER.tegn.push((g, vx0, vy1) => {
       if (!N.gjest || !N.vertLeir) return; const m = kam.m, x = (N.vertLeir.x - vx0) / m, y = (vy1 - N.vertLeir.y) / m;
       g.save(); g.strokeStyle = '#f0d79a'; g.fillStyle = 'rgba(22,18,12,.85)'; g.lineWidth = 2;

@@ -46,6 +46,9 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     sjekk(knappene.includes('Marsjer') && knappene.includes('Stopp') && knappene.length === 2, 'gjestens lagpanel: ' + knappene.join(', '));
     await B.evaluate(() => [...document.querySelectorAll('#handl button')].find(b => b.textContent === 'Stopp').click());
     sjekk(await til(A, n => !ENHETER.find(q => q.navn === n).sti, lagNavn), 'Stopp fra gjesten stanser laget hos verten');
+    // hvor spillerne er: gjesten ser verten, verten ser gjesten (sendes hvert 2. s)
+    sjekk(await til(B, () => (NETT.andre || []).some(p => p.navn === 'Ola')), 'gjesten ser hvor verten er');
+    sjekk(await til(A, () => NETT.bildeNå().sp.some(p => p.navn === 'Kari')), 'verten ser hvor gjesten er');
     // meldinger
     await B.evaluate(() => NETT.send({ t: 'melding', tekst: 'Hei fra Kari' }));
     sjekk(await til(A, () => document.getElementById('logg').textContent.includes('Hei fra Kari')), 'melding kommer fram til verten');

@@ -50,7 +50,7 @@
   function pakkLag(s) {
     const d = { id: s.nid, navn: s.navn, side: s.side || 'blå', x: r1(s.x), y: r1(s.y), r: +(+s.retning || 0).toFixed(2), l: s.leder || 0,
       m: s.menn.map(m => [m.navn, m.rolle, +(+m.hp).toFixed(2)]) };
-    const sti = tynnSti(s); if (sti) d.sti = sti;
+    const sti = tynnSti(s); if (sti) { d.sti = sti; d.t = +(+s.timerIgjen || 0).toFixed(2); }
     if (s.eier) d.eier = s.eier; if (s.speider) d.speider = 1; if (s.ingeniør) d.ing = 1; if (s.nedgravd) d.ned = 1; if (s.karakter) d.kar = 1;
     if (s.ammo !== undefined) d.ammo = +(+s.ammo).toFixed(2); if (s.formasjon) d.form = s.formasjon;
     return d;
@@ -65,6 +65,8 @@
     const d = { v: VERSJON, tid: +(+o.tid).toFixed(3), tempo: o.tempo, lag, kj };
     if (o.vær) d.vær = o.vær; if (o.leir) d.leir = { x: r1(o.leir.x), y: r1(o.leir.y), navn: String(o.leir.navn || 'Vertens leir') };
     if (o.selskap) d.selskap = String(o.selskap);
+    // hvor spillerne er (kameraet, eller der de går i 3D): [{ id, navn, x, y, går }]
+    if (Array.isArray(o.spillere)) d.sp = o.spillere.filter(p => Number.isFinite(+p.x) && Number.isFinite(+p.y)).map(p => ({ id: String(p.id), navn: rensNavn(p.navn), x: Math.round(p.x), y: Math.round(p.y), går: p.går ? 1 : 0 }));
     return d;
   }
   // Gjesten: lagene i bildet settes inn i lista (samme objekt når id-en finnes), resten tas ut. lag(id) lager et nytt lag.
@@ -77,7 +79,7 @@
       const flytt = Math.hypot(tall(q.x) - s.x, tall(q.y) - s.y);
       s.navn = String(q.navn); s.side = String(q.side || 'blå'); s.x = tall(q.x, s.x); s.y = tall(q.y, s.y); s.retning = tall(q.r, 0); s.leder = tall(q.l, 0);
       s.menn = (q.m || []).map((m, i) => Object.assign(s.menn[i] || {}, { navn: String(m[0]), rolle: String(m[1]), hp: tall(m[2], 1) }));
-      if (q.sti && q.sti.length > 1) { s.sti = q.sti; s.steg = q.sti.map(() => 1); s.seg = 0; s.prog = 0; } else { s.sti = null; s.steg = null; }
+      if (q.sti && q.sti.length > 1) { s.sti = q.sti; s.steg = q.sti.map(() => 1); s.seg = 0; s.prog = 0; s.timerIgjen = tall(q.t, 0); } else { s.sti = null; s.steg = null; }
       s.eier = q.eier || null; s.speider = !!q.speider; s.ingeniør = !!q.ing; s.nedgravd = !!q.ned; s.karakter = !!q.kar;
       if (q.ammo !== undefined) s.ammo = tall(q.ammo, 1); if (q.form) s.formasjon = q.form;
       if (flytt > 60) s.siktSkitten = true;
@@ -98,6 +100,10 @@
       if (s.side !== 'blå') return { ok: false, feil: 'Det er ikke vårt lag.' };
       if (s.eier !== fra) return { ok: false, feil: `${s.navn} styres av ${s.eier ? 'en annen spiller' : 'verten'}.` };
       return { ok: true, type: 'ordre', lag: s, x, y };
+    }
+    if (k.type === 'pos') {
+      const x = +k.x, y = +k.y; if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, feil: 'Ugyldig sted.' };
+      return { ok: true, type: 'pos', x, y, går: !!k.går };
     }
     if (k.type === 'stopp') {
       const s = lag.find(q => q.nid === k.lag); if (!s) return { ok: false, feil: 'Fant ikke laget.' };
