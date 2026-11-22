@@ -42,5 +42,9 @@
   const sjanse = (p, r = verden) => r() < p;
 
   const api = { lag, hash, verden, nyVerden, lagre, les, heltall, velg, sjanse };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Tilfeldig = api;
+  // I nettleseren får hvert nytt spill sitt eget frø (ellers ble været, hendelsene og portrettforslagene like i alle nye spill);
+  // et lagret spill setter tilstanden tilbake (spill/lagring.js), og i en delt verden er det vertens strøm som gjelder.
+  // I Node (testene) står frøet på 1, så testene gir samme svar hver gang.
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else { rot.Tilfeldig = api; try { const a = new Uint32Array(1); rot.crypto.getRandomValues(a); nyVerden(a[0]); } catch (e) { nyVerden(Date.now() >>> 0); } }
 })(typeof globalThis !== 'undefined' ? globalThis : this);
