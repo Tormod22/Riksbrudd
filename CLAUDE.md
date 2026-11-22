@@ -1468,4 +1468,7 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   sjekker eieren (s.eier = gjestens id, «Styres av» i lagpanelet) og kaller ordre(). Verten styrer farten. Verden som har stått
   (borteSek fra tjeneren) regnes fram med 600×. Verten åpner verden igjen av seg selv ved omlasting (vertNå i «riksbrudd-nett»).
   Ende til ende: node pipeline/fliser/test_flerspiller_e2e.js (to nettlesere + tjeneren; BILDE=<sti> gir skjermbilder).
-  Gjestene kan foreløpig bare gi marsjordre og ser vertens leir som et merke.
+  Gjestens lagpanel (index.html visPanel -> NETT.lagPanel når NETT.gjest): bare Marsjer og Stopp (kommandoene 'ordre'/'stopp')
+  for egne lag, ellers «Styres av …». Kommandoen 'pos' (hvert 2. s fra gjesten) + bildet.sp: alle ser hvor de andre spillerne er
+  (KROKER.tegn og KROKER.tegn3d, navn i blått; minPos = der du går i 3D, ellers kartets midte). Lagene glir hos gjesten (s.glatt).
+  Gjestene ser vertens leir bare som et merke; leirbyggene, folk og økonomi deles ikke ennå.

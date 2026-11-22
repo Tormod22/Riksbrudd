@@ -10,7 +10,8 @@ Senere kan den samme tjeneren flyttes til Cloudflare uten å skrive spillet om.
 
 **Bygget (M2a – første delte verden):** tjenerprogrammet for vertens PC (`tjener/riksbrudd-tjener.js`, ingen avhengigheter,
 `start-tjener.bat`, `LESMEG.md`; kan lastes ned fra spillet som `site/tjener/riksbrudd-tjener.zip`) og flerspilleren i
-nettleseren (`spill/flerspiller.js` regler, `spill/flerspiller-visning.js` panelet «Spill sammen» i ☰). Prøvd med to ekte
+nettleseren (`spill/flerspiller.js` regler, `spill/flerspiller-visning.js` panelet «Spill sammen» i ☰). Gjestene kan sende lagene sine på marsj og stanse dem,
+alle ser hvor de andre spillerne er (i kartet og i 3D), og alle kan skrive meldinger. Prøvd med to ekte
 nettlesere mot tjeneren (`pipeline/fliser/test_flerspiller_e2e.js`) og tunnelen med en falsk cloudflared.
 
 **Snarveien i M2a:** simuleringen er ikke skilt ut fra index.html ennå (det er M0). Derfor regner **vertens nettleser** verden
@@ -19,6 +20,7 @@ to ganger i sekundet (bare det verten ser – tåka gjelder) og sender ordre. N�
 uten at protokollen endres mye.
 
 **Claudes valg for spørsmålene som sto åpne** (kan endres av brukeren):
+
 1. Rett på delt verden (M2), ikke postkasse først – det er det som gjør det til flerspiller.
 2. **Samarbeid først:** alle spillerne er på samme side; verten gir lag til gjestene («Styres av» i lagpanelet).
 3. **Cloudflare-tunnel** (rask tunnel uten konto, `cloudflared` ved siden av tjeneren). Uten den: bare samme nett.
