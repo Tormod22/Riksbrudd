@@ -5,8 +5,10 @@
  * Kommandoene (k er et rent objekt som kan sendes som JSON; lag = lagets nid, KOMMANDO.nid(s) gir den):
  *   lag:  ordre { lag, x, y, stille }, stopp { lag }, speider { lag, på }, lagfører { lag, mann }, grav { lag }, miner { lag },
  *         formasjon { lag, id }, strid { lag, endring, alle }
- *   leir: bygg { bygg, kart }, riv { bygg }, prioriter { bygg }, folk { person, oppgave }, folkFlytt { oppgave, retning: 'pluss'|'minus' }
- * Leirkommandoene avvises foreløpig fra gjester (de har ikke vertens leir).
+ *   leir, folk, tropper og kjøretøy (R17-4): reglene og lista står i spill/kommandoer.js; her får de miljøet i denne nettleseren
+ *         (leiren, kassa og folket til MIN_SIDE, TropperSpill.rett, kjørTil, KjoretoySpill.stoppRett).
+ * Leirkommandoene avvises foreløpig fra gjester (de har ikke vertens leir). Kjøretøy (kjør, kjørStopp) kan gjester styre når de eier dem.
+ * Kommandoer med lag: true eller meld: true skriver avvisningen i loggen; de andre lar visningen si det (som før).
  */
 (function () {
   'use strict';

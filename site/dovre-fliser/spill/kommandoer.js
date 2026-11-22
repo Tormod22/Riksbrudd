@@ -22,7 +22,7 @@
  *   kjør(kj, x, y), kjørStopp(kj)          handlingene for kjøretøy (kjoretoy-visning.js)
  *
  * Kommandoene (k er et rent objekt som kan sendes som JSON):
- *   leir:  bygg { bygg, kart }, byggPlan { pids }, plan { handling: 'legg'|'flytt'|'fjern', bygg, pid, til, kart }, riv { bygg },
+ *   leir:  bygg { bygg, kart }, byggPlan { pids }, plan { handling: 'legg'|'flytt'|'fjern'|'tøm', bygg, pid, til, kart }, riv { bygg },
  *          flytt { bygg, til: { x, y, ret }, kart }, oppgrader { bygg }, reparer { bygg }, prioriter { bygg }, bryter { bygg, av },
  *          kjøpDiesel { liter }, kjøpMateriale { materiale, mengde }, selgMateriale { materiale, mengde }
  *   folk:  folk { person, oppgave }, folkFlytt { oppgave, retning: 'pluss'|'minus' }, rekrutter { bygg: true = på «bygg» },
@@ -87,10 +87,11 @@
     K.registrer('plan', { leir: true,
       sjekk: (k, c) => utenLeir(c) || (k.handling === 'legg' ? gyldigBygg(k.bygg)
         : k.handling === 'flytt' ? (!LB().planFinn(leir(c), k.pid) ? 'Fant ikke skissen.' : !k.til || !tall(+k.til.x) || !tall(+k.til.y) ? 'Ugyldig plass.' : null)
-          : k.handling === 'fjern' ? (!LB().planFinn(leir(c), k.pid) ? 'Fant ikke skissen.' : null) : 'Ukjent planendring.'),
+          : k.handling === 'fjern' ? (!LB().planFinn(leir(c), k.pid) ? 'Fant ikke skissen.' : null) : k.handling === 'tøm' ? null : 'Ukjent planendring.'),
       utfør: (k, c) => { const L = leir(c), Lr = LB();
         if (k.handling === 'legg') return Lr.planLegg(L, k.bygg, k.kart || {});
         if (k.handling === 'flytt') return Lr.planFlytt(L, k.pid, k.til, k.kart || {});
+        if (k.handling === 'tøm') { const n = (L.plan || []).length; L.plan = []; return { fjernet: n }; }
         return { fjernet: Lr.planFjern(L, k.pid) }; } });
     K.registrer('riv', { leir: true, sjekk: (k, c) => utenLeir(c) || ukjentBygg(c, k.bygg),
       utfør: (k, c) => { const r = LB().riv(leir(c), k.bygg); if (!r.feil) gi(c)(r.penger); return r; }, beskriv: () => 'river et bygg' });

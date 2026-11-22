@@ -266,7 +266,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       const planReise = Math.max(0, ...L.plan.map(a => LB.reiseFor(L, a).min));
       hode.appendChild(el('div', { klasse: 'igang' }, `Planen: ${pk.antall} bygg, ${LB.kroner(pk.pris)}, ${tidTekst(pk.timer * 60)} byggetid i alt` + (planReise > 0 ? ` + opptil ${tidTekst(planReise)} reise til utposten` : '') + (matTekst(pk.mat) ? ` · ${matTekst(pk.mat)}` : '') + (mangler ? ` (materialer mangler for ${LB.kroner(mangler)})` : '')));
       hode.appendChild(rad(knapp(`Bygg hele planen (${LB.kroner(pk.pris + mangler)})`, () => byggFraPlan(null, true), { id: 'byggplan' }),
-        knapp('Tøm planen', () => { if (!confirm('Fjerne alle skissene i planen?')) return; husk(); L.plan = []; lagre(); bygg3dPåNytt(); skitten = true; visMeny(); })));
+        knapp('Tøm planen', () => { if (!confirm('Fjerne alle skissene i planen?')) return; husk(); kom({ type: 'plan', handling: 'tøm' }); lagre(); bygg3dPåNytt(); skitten = true; visMeny(); })));
     }
     hode.appendChild(rad(knapp('Lagre leiren som mal', () => { const n = prompt('Navn på malen:', `Leir ${maler().length + 1}`); if (n === null) return; lagreMal(n); logg(`Malen «${n}» er lagret.`); visMeny(); }, (L.bygg.length || L.plan.length) ? {} : { disabled: '' })));
     maler().forEach((m, i) => hode.appendChild(rad(el('span', {}, `${m.navn} (${m.bygg.length} bygg)`),

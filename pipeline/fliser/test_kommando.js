@@ -212,5 +212,43 @@ KJ[0].eier = 'g1'; gyldig({ type: 'kjør', kjøretøy: 'Bil 1', x: 1, y: 1 }, 'g
 sjekk([{ type: 'bygg', bygg: { type: 'brakke', x: 1, y: 2 }, kart: {} }, { type: 'troppOpprett', personer: [1, 2], navn: 'A', bev: 'standard', kjøretøy: 'l3', våpen: { 1: 'hagle' }, utstyr: ['kikkert'] },
   { type: 'kjør', kjøretøy: 'l4', x: 1, y: 2 }].every(k => K.kanSendes(k)), 'kommandoene kan sendes');
 
+gyldig({ type: 'plan', handling: 'legg', bygg: { type: 'container', x: -500, y: -500 } }, 'plan legg 3'); gyldig({ type: 'plan', handling: 'tøm' }, 'plan tøm'); sjekk(Lb.plan.length === 0, 'planen er tømt');
+
+// ---------- KONTROLL: knapper som endrer spilltilstand uten å gå gjennom KOMMANDO (enkel tekstsøk-regel) ----------
+// Søker i visningsfilene for leir, byggesett, strøm, folk, tropper og kjøretøy etter direkte kall til regelfunksjonene som endrer
+// leiren, folket, troppene, kjøretøyene eller kassa, og etter direkte endring av planen. Alt som treffer, må gå via KOMMANDO – eller stå i
+// UNNTAK med en forklaring (hvor = en bit av linja). Et unntak som ikke treffer noe lenger, er også en feil (lista skal være riktig).
+const fs = require('fs'), path = require('path'), SPILL = path.join(__dirname, '../../site/dovre-fliser/spill');
+const FILER = ['leir-visning.js', 'byggesett-visning.js', 'strom-visning.js', 'folk-visning.js', 'tropper-visning.js', 'kjoretoy-visning.js'];
+const FORBUDT = /\b(?:LB|Leir)\.(?:bygg|riv|flytt|oppgrader|reparer|prioriter|bryter|kjøpMateriale|kjøpDrivstoff|selgMateriale|byggPlan|planLegg|planFlytt|planFjern|planMal|leggInn|skad|skade)\(|\b(?:FR|FolkRegler)\.(?:sett|pluss|minus|rekrutter|kjøpMat|fjern)\(|\bKjoretoy\.stopp\(|\bkjørTil\(|\bOppstartSpill\.(?:betal|gi)\(|\b(?:TR|Tropper)\.(?:opprett|oppløs|utrust)\(|\bL\.(?:plan|nestePlan|midt|lager|drivstoff|bygg)\s*=(?!=)|\bF\.(?:personer|mat|moral)\s*=(?!=)|\bF\.personer\.(?:push|splice)\(/g;
+const UNNTAK = [
+  ['leir-visning.js', 'LB.skad(L, b.id, .08 * dt / 60)', 'fiender som står i leiren skader byggene i simuleringen (KROKER.sim), ikke en knapp'],
+  ['leir-visning.js', 'LB.planMal(L, p.mal', 'malene ligger i nettleseren (localStorage) og gir bare gratis skisser; blir en egen kommando når maler kan deles'],
+  ['leir-visning.js', 'L.plan = o.plan; L.nestePlan = o.nestePlan', 'angre/gjør om i planen: et øyeblikksbilde av de gratis skissene i denne nettleseren'],
+  ['leir-visning.js', 'L.midt = { x: S.leir.x', 'oppstart: leirens midte settes fra OppstartSpill når spillet starter (ikke en knapp)'],
+  ['folk-visning.js', 'FR.fjern(F, FR.personId(m))', 'de som faller, går ut av folket i simuleringen (ikke en knapp)'],
+  ['tropper-visning.js', 'r = TR.opprett(P, navnet)', 'inne i opprettRett – den rette funksjonen kommandoen troppOpprett kaller (TropperSpill.rett.opprett)'],
+  ['tropper-visning.js', 'OppstartSpill.betal(alt)', 'betalingen inne i opprettRett (kommandoen har sjekket at det er råd)'],
+  ['tropper-visning.js', 'if (egen) TR.utrust(s,', 'våpnene settes inne i opprettRett'],
+  ['tropper-visning.js', 'F.personer = F.personer.filter(p => !ider.includes(p.id))', 'personene går ut av folket inne i opprettRett'],
+  ['tropper-visning.js', 'const hjem = TR.oppløs(s,', 'inne i oppløsRett (kommandoen troppOppløs, og hjemSteg når en tropp som er sendt hjem kommer fram)'],
+  ['tropper-visning.js', 'OppstartSpill.betal(sum))) return { feil: `Ikke råd', 'betalingen inne i brukEndringRett – den rette funksjonen kommandoen troppUtstyr kaller'],
+  ['tropper-visning.js', 'F.personer.push(p); } const i = ENHETER', 'de som lever, kommer tilbake i folket inne i oppløsRett'],
+  ['tropper-visning.js', "const prøve = TR.opprett(VP, 'x')", 'bare et regnestykke for panelet (ildkraften til en prøvetropp) – endrer ingenting'],
+  ['kjoretoy-visning.js', 'async function kjørTil(', 'definisjonen av kjørTil, som kommandoen kjør kaller'],
+  ['kjoretoy-visning.js', 'stoppRett: k => { Kjoretoy.stopp(k)', 'den rette funksjonen kommandoen kjørStopp kaller'],
+];
+const brukt = new Set(), treff = [];
+for (const fil of FILER) {
+  const linjer = fs.readFileSync(path.join(SPILL, fil), 'utf8').split('\n');
+  linjer.forEach((l, i) => { for (const m of l.matchAll(FORBUDT)) {
+    const u = UNNTAK.findIndex(([f, hvor]) => f === fil && l.includes(hvor) && Math.abs(l.indexOf(hvor) - m.index) < hvor.length + 40);
+    if (u >= 0) brukt.add(u); else treff.push(`${fil}:${i + 1}: ${m[0]}  …${l.slice(Math.max(0, m.index - 40), m.index + 60).trim()}…`); } });
+}
+sjekk(!treff.length, 'kontroll: alt som endrer spilltilstanden i knappene går gjennom KOMMANDO\n  ' + treff.join('\n  '));
+const ubrukt = UNNTAK.filter((u, i) => !brukt.has(i)); sjekk(!ubrukt.length, 'kontroll: unntak som ikke treffer noe lenger: ' + ubrukt.map(u => u[0] + ' «' + u[1] + '»').join(', '));
+// og kontrollen virker: en linje med et direkte kall blir funnet
+sjekk([...'knapp(() => LB.riv(L, b.id))'.matchAll(FORBUDT)].length === 1 && [...'KOMMANDO({ type: \'riv\' })'.matchAll(FORBUDT)].length === 0, 'kontroll: regelen finner direkte kall');
+
 console.log(feil ? `${feil} FEIL` : 'kommandolaget: alt ok');
 process.exit(feil ? 1 : 0);
