@@ -1,5 +1,12 @@
 # Arbeidsplan natt og formiddag 22. nov (ca. 03:00–12:30 norsk tid)
 
+**Endret kl. 02:30 (brukeren: «får du ikke gjort mer?»):** blokkene kjøres SAMTIDIG på egne skymaskiner i stedet for etter hverandre.
+Runde R16 (startet 02:26): A kommandolaget, B simuleringen ut av index.html, D selskapet (W1), E lagre alt + tilfeldighet i
+visningen, G spilltest som ny spiller (også flerspiller). Claude kontrollerer og fletter. Runde R17 (når R16 er inne, ca. 05–08):
+gjestekommandoer og egne tropper for gjester (på A), mot hverandre (egne sider per spiller, på B), kamp på bakken (W2), rettinger
+fra spilltesten. Runde R18 (ca. 08–11): kjøretøy i kamp (W3), bygg og ødelegg (W4) og ny spilltest. Til slutt rapport (11–12:30).
+
+
 Brukeren: «lag en plan til hva du kan jobbe med etter dette – arbeid som varer fram til klokken 12:30». Rekkefølgen og innholdet er
 Claudes forslag. Ingenting publiseres før brukeren sier «Publiser». Arbeidet deles mellom Claude og egne skymaskiner (brukerens ønske);
 hver hjelper får en smal oppgave med egne filer, og Claude kontrollerer og fletter alt på `claude/nattfiks`.
