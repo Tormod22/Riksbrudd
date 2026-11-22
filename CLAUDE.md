@@ -1488,3 +1488,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   bruker tilfV = Tilfeldig.verden; bare lyden i spillet-visning.js og id-en i flerspiller-visning.js har Math.random, merket «Math.random
   med vilje». test_tilfeldig.js feiler når Math.random dukker opp i en fil som ikke står i BARE_UTSEENDE (lyd, effekter3d, vind3d,
   folk3d, dyr3d, natt3d, liv3d, portrett-motor) – nye regler skal bruke Tilfeldig.verden.
+  SIMULERINGEN (22. nov, R16-B – M0 punkt 2, første bit): marsjsteget, fiendens patrulje og kamprunden er flyttet fra index.html til
+  spill/simulering.js (uten DOM; lastes rett etter terreng.js). Simulering.lag({ lag, Terreng, kroker, rng, TIME, hentTid, settTid, logg,
+  ordre, ser, synlig, levende, patruljelag, patruljeMål, patruljeAntall, hvile, herjer, treffMelding, skudd, framme, flyttet, etterKamp })
+  -> { steg(dt), kamprunde(), patrulje(tid), marsj(dt), tilstand: { patruljeNr } }; Simulering.patruljeMål(fi, nr, punkter, maks).
+  index.html beholder sim(dt), kamprunde() og patruljeMål(fi, nr) som tynne innpakninger (samme navn – sjekk.js og modulene kaller dem),
+  simulering() lager modulen første gang. «if (window.NETT && NETT.gjest) …» står fortsatt øverst i sim(), og panelet som oppdateres
+  hvert sekund, er igjen i sim(). Det som viser noe (visPanel, skitten, SKUDD med performance.now) gjøres i tilbakekallene. Oppførselen er
+  den samme som før: samme rekkefølge (KROKER.sim, klokka, kamprunde, patrulje, marsj) og samme bruk av KRNG. Test:
+  node pipeline/fliser/test_simulering.js (to lag og kunstig sikt i Node, et spilldøgn, samme frø = samme verden, og en kopi av den gamle
+  koden som fasit). GJENSTÅR: KROKER.sim-modulene (AI i fraksjoner-visning, økonomi, forsyning, garnison, leir …) kjører fortsatt i siden,
+  ordre() (ruteplan med lagVindu) og sikt (s.sikt fra terrengfliser) trenger kartdata, og KRNG (Terreng.frø(1987)) lagres ikke med spillet.

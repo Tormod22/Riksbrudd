@@ -125,6 +125,7 @@ function skjulMelding(type) {
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/kartflis.js?v=65c4d067c4"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
+<script src="/dovre-fliser/spill/simulering.js?v=38153ba0fc"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script src="/dovre-fliser/spill/kartbilde.js?v=3eddf8856b"></script>
@@ -952,43 +953,31 @@ const ENHETER = [nyttLag('1. lag, Dombås', 198629, 6897378, 'blå'), nyttLag('2
   nyttLag('Speiderlag', 197251, 6902031, 'blå', true), nyttLag('Kystalliansens patrulje', 213280, 6908986, 'rød')];
 // patruljelaget huskes for seg: et nytt spill kan ta bort startlagene (spill/scenario-visning.js), så plassen i lista er ikke fast
 const PATRULJELAG = ENHETER[3];
-const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]]; let patruljeNr = 0;
+const PATRULJE = [[213280, 6908986], [217000, 6906831], [214817, 6902811], [210853, 6905592]];   // patruljens nummer i runden: simulering().tilstand.patruljeNr
 
 // ---------- tid: 1 spilltime = 60 s ved 1× ----------
 let tid = 0, tempo = 1; const TIME = 60;   // tid i spillminutter (TIME per spilltime); 1× = sanntid: 1 spillminutt = 1 minutt (brukeren 9. nov)
 function klokke() { const h = 6 + tid / TIME, d = Math.floor(h / 24) + 1; return d + ' · ' + String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
-// Patruljens neste punkt. Står patruljen langt fra Dovre (motstanderne flyttes til leiren, AI.flytt), går den samme runden rundt
-// stedet den står på; lag som AI-en styrer (s.ai), patruljerer ikke.
-function patruljeMål(fi, nr) {
-  if (fi.ai) return null;
-  const p0 = PATRULJE[0];
-  if (!fi.patruljeBase || Math.hypot(fi.x - fi.patruljeBase[0], fi.y - fi.patruljeBase[1]) > MARSJ_MAKS) fi.patruljeBase = Math.hypot(fi.x - p0[0], fi.y - p0[1]) > MARSJ_MAKS ? [fi.x, fi.y] : p0;
-  return [fi.patruljeBase[0] + PATRULJE[nr][0] - p0[0], fi.patruljeBase[1] + PATRULJE[nr][1] - p0[1]];
+// Patruljens neste punkt (reglene i spill/simulering.js, Simulering.patruljeMål).
+function patruljeMål(fi, nr) { return Simulering.patruljeMål(fi, nr, PATRULJE, MARSJ_MAKS); }
+// SIMULERINGEN (22. nov, R16-B): marsjen, patruljen og kamprunden regnes i spill/simulering.js (uten DOM, virker i Node).
+// Her sendes det den trenger fra siden inn; det som viser noe (panelet, skitten, SKUDD), gjøres i tilbakekallene.
+let SIMULERING = null;
+function simulering() {
+  return SIMULERING || (SIMULERING = Simulering.lag({
+    lag: () => ENHETER, Terreng, kroker: KROKER, rng: KRNG, TIME, hentTid: () => tid, settTid: t => { tid = t; },
+    logg, ordre, ser, synlig, levende, patruljelag: () => PATRULJELAG, patruljeMål, patruljeAntall: PATRULJE.length,
+    hvile: (a, b) => !!(window.AI && AI.hvile && AI.hvile(a, b)), herjer: () => window.HERJER || null,
+    treffMelding: (m, b, hva) => { if (window.treffLogg) treffLogg(m, b, hva); else logg(m.navn + ' (' + b.navn + ') er ' + hva + '.'); },
+    skudd: (a, b) => SKUDD.push({ a, b, til: performance.now() + 1400 }),
+    framme: s => { if (valgt === s) visPanel(); }, flyttet: () => { skitten = true; },
+    etterKamp: () => { if (valgt) visPanel(); skitten = true; }
+  }));
 }
 function sim(dt) {
   // flerspiller (spill/flerspiller-visning.js): hos en gjest regner verten verden – her går bare klokka mellom bildene fra verten
   if (window.NETT && NETT.gjest) { tid += dt; return; }
-  for (const f of KROKER.sim) f(dt);
-  const før = tid; tid += dt; const fi = PATRULJELAG;
-  if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // kamprunde hvert KAMPRUNDE_MIN spillminutt
-  if (!Terreng.slattUt(fi.menn)) {
-    const fiende = ENHETER.find(b => b.side === 'blå' && levende(b) && Math.hypot(b.x - fi.x, b.y - fi.y) < 900 && ser(fi, b.x, b.y));
-    if (fiende) { if (fi.sti) { fi.sti = null; fi.siktSkitten = true; } fi.roligTil = tid + 30; }   // stopper og tar kampen; patruljerer igjen etter 30 rolige minutter
-    else if (!fi.sti && !fi.planlegger && tid > (fi.roligTil || 0)) { patruljeNr = (patruljeNr + 1) % PATRULJE.length; const pm = patruljeMål(fi, patruljeNr); if (pm) ordre(fi, pm[0], pm[1], true); }
-  }
-  for (const s of ENHETER) {
-    if (!s.sti) continue;
-    // KROKER.fart (spill/formasjon-visning.js, spill/krig-visning.js): faktor på marsjfarten per lag
-    let igjen = dt / TIME * (KROKER.fart ? KROKER.fart.reduce((v, f) => v * f(s), 1) : 1); s.timerIgjen -= igjen;
-    while (igjen > 0 && s.seg < s.sti.length - 1) {
-      const [ax, ay] = s.sti[s.seg], [bx, by] = s.sti[s.seg + 1], t = s.steg[s.seg] || 1e-9, rest = (1 - s.prog) * t;
-      s.retning = Math.atan2(by - ay, bx - ax);
-      if (igjen >= rest) { igjen -= rest; s.seg++; s.prog = 0; s.x = bx; s.y = by; }
-      else { s.prog += igjen / t; igjen = 0; s.x = ax + (bx - ax) * s.prog; s.y = ay + (by - ay) * s.prog; }
-    }
-    if (s.seg >= s.sti.length - 1) { s.sti = null; s.siktSkitten = true; if (s.side === 'blå') logg(s.navn + ' er framme.'); if (valgt === s) visPanel(); }
-    skitten = true;
-  }
+  simulering().steg(dt);
   if (valgt && valgt.sti && performance.now() - (sim.panel || 0) > 1000 && !pekerNede(document.getElementById('panel'))) { sim.panel = performance.now(); visPanel(); }   // panelet oppdateres hvert sekund
 }
 // ---------- kamp og tåke ----------
@@ -1000,39 +989,7 @@ function ser(s, X, Y) { const v = s.sikt; if (!v) return false; const i = Math.f
   return i >= 0 && j >= 0 && i < v.mw && j < v.mh && v.m[j * v.mw + i] === 1; }
 // KROKER.innsyn (K3): om det et eget lag ser, når fram til deg nå (radiokontakt og hvor du er)
 function synlig(e) { return e.side === 'blå' || ENHETER.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y) && KROKER.innsyn.every(f => f(s))) || KROKER.ser.some(f => f(e)); }
-function kamprunde() {
-  for (const a of ENHETER) {
-    a.skyterPå = a.skyterPå || new Set(); const nå = new Set();
-    if (!Terreng.slattUt(a.menn)) for (const b of ENHETER) {
-      if (a.side === b.side || !levende(b)) continue;
-      // våpenhvile (spill/krig-visning.js, AI.hvile): ingen ild, og ingen krok kalles – Forsyning.skyt brukte ellers ammunisjon uten skudd
-      if (window.AI && AI.hvile && AI.hvile(a.side, b.side)) continue;
-      // HERJER (spill/leir-visning.js): fiender som står inne i leiren og ødelegger bygg. De høres og ses av alle innen 300 m, selv om
-      // en bakketopp står i veien – ellers kunne et røverlag rasere hele leiren mens egne lag sto 75 m unna uten å løsne skudd.
-      const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 1150 || (!ser(a, b.x, b.y) && !(d < 300 && window.HERJER && (HERJER.has(a) || HERJER.has(b))))) continue;
-      const f = { målISkog: !!b.her && b.her.k === 1, målPåMarsj: !!b.sti, skytterPåMarsj: !!a.sti, høydefordel: a.her && b.her ? a.her.h - b.her.h : 0 };
-      if (!a.menn.some(m => m.hp >= 1 && Terreng.treffsjanse(m.våpen || m.rolle, d, f) > 0)) continue;   // ingen når fram
-      // ammunisjonen trekkes i en krok (Forsyning.skyt) – blir det ikke noe skudd (f.eks. «Ild: bare svar» uten å være beskutt), legges den tilbake
-      const ammo0 = a.ammo, ildf = KROKER.ild.reduce((v, h) => v * h(a, b), 1); if (ildf <= 0) { a.ammo = ammo0; continue; }   // f.eks. tom for ammunisjon (S4)
-      let treff = Terreng.ildrunde(a.menn, d, f, KRNG);
-      if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (KRNG() < ildf) t++; treff = t; }
-      // over 1 (bonus, f.eks. bakgrunnen «soldat» i K1): hvert treff kan gi ett til
-      else if (ildf > 1) { let t = treff; for (let i = 0; i < treff; i++) if (KRNG() < ildf - 1) t++; treff = t; }
-      SKUDD.push({ a, b, til: performance.now() + 1400 }); nå.add(b);
-      if (!a.skyterPå.has(b)) { if (a.side === 'blå') logg(a.navn + ' skyter mot ' + (synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
-      if (!treff) continue;
-      for (const [m, hva] of Terreng.fordelTreff(b.menn, treff, KRNG)) if (b.side === 'blå') { if (window.treffLogg) treffLogg(m, b, hva); else logg(m.navn + ' (' + b.navn + ') er ' + hva + '.'); }
-      if (b.side !== 'blå' && synlig(b)) logg(b.navn + ': ' + treff + ' treff.');
-      if (b.menn[b.leder].hp < 1) { const ny = b.menn.findIndex(m => m.hp >= 1); if (ny >= 0) { b.leder = ny; if (b.side === 'blå') logg(b.menn[ny].navn + ' tar over som lagfører i ' + b.navn + '.'); } }
-      if (Terreng.slattUt(b.menn) && !b.slattUtMeldt) { b.slattUtMeldt = true;
-        logg(b.navn + ' er slått ut av kamp (' + Terreng.uteAvKamp(b.menn) + ' av 12 falt eller såret).');
-        if (b.side !== 'blå') { const ang = Math.atan2(b.y - a.y, b.x - a.x); ordre(b, b.x + Math.cos(ang) * 3000, b.y + Math.sin(ang) * 3000, true); } }
-    }
-    a.skyterPå = nå;   // meldes på nytt bare når kampen tar seg opp igjen
-  }
-  if (valgt) visPanel();
-  skitten = true;
-}
+function kamprunde() { simulering().kamprunde(); }   // reglene i spill/simulering.js
 
 // MARSJ_MAKS: lengste marsj i én ordre (luftlinje). (15. nov, brukeren på iPhone: 3D ble stående på 50 % – kortet viste 5521 vegfliser
 // i kø. Fiendens patrulje var flyttet til leiren i Ryfylke og fikk marsjordre til patruljepunktene på Dovre, 350 km unna: ruteplanen
