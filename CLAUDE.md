@@ -1512,3 +1512,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   Gjestens lagpanel har nå Marsjer, Stopp, Grav ned, Formasjon og Stridsregler; bildet sender s.strid. Nye knapper for lag og leir: lag
   en kommando her i stedet for å gjøre jobben i knappen. Ikke gjort: oppgradering/reparasjon/flytting av bygg, plan og maler, kjøp,
   tropper, bevæpning (koster penger), kjøretøy og resten av panelene går fortsatt rett på; AI-en og reglene kaller ordre() direkte.
+  SELSKAPET W1 (22. nov, R16-D; docs/plan-wardogs.md): spill/selskap.js (regler uten DOM, test_selskap.js – hentet fra grenen claude/natt18-krig)
+  + spill/selskap-visning.js (window.SelskapSpill, lastes rett før meny.js). Panelet #selskap fra kommandolinja (KOMMANDO_TILLEGG k 'selskap'),
+  ☰ «Selskapet» (gruppen Oversikt) og fanen Mål i Leir-menyen: merket (SVG – skjold i flaggets farger med bokstavene; ravn for Ravnsund
+  Sikkerhet, gran i sikte for Mosevakt Feltoperasjoner), ryktet (pålitelig/hardhendt/billig som målere), pris (lav/vanlig/høy), aktive og
+  ledige kontrakter (Ta, Avslå, Lever, Avbryt, Vis i kartet) og de andre selskapene. Stedene er tettstedene og de navngitte bruene i INFRA
+  (2,5–22 km fra leiren, OMRÅDE_OK). Eskorte lager en lastebil i KJORETOY (k.bil), rydd et rødt lag på seks (s.sperre, s.kontrakt), hent tas
+  av et eget lag innen 80 m og leveres i leiren, hold teller tid med eget lag og uten fiender innen 350 m. Betaling via OppstartSpill.gi,
+  bot via betal; sprengning (KROKER.ødelagt) gjør selskapet hardhendt; hendelsen «riksbrudd-kontrakt» ved levering. Lagres per leir i
+  «riksbrudd-selskap» (ikke hos en gjest i flerspiller). I testene skjer ingenting av seg selv (SelskapSpill.test); å åpne panelet uten
+  tilbud gir de første. Motstanderne heter fortsatt Kystalliansen/Folkefronten i resten av spillet (panelet viser «i kartet: …»). VAKT
+  pipeline/fliser/vakter/selskap.js. Tallene er Claudes forslag.
