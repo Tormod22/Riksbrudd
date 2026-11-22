@@ -80,7 +80,7 @@
         // verden har fortsatt en vert: forrige forbindelse er ikke merket som død ennå (tjeneren venter opptil 60 s) – prøv igjen (funn 8)
         if (!N.tilkoblet && N.rolle === 'vert' && /alt en vert/i.test(m.tekst || '') && (N.opptatt = (N.opptatt || 0) + 1) <= 5) {
           status('Verden er fortsatt opptatt av forrige forbindelse – prøver igjen om 20 s …'); break; }
-        status(m.tekst || 'Feil fra tjeneren.'); sikkerLogg(m.tekst || 'Feil fra tjeneren.'); if (!N.tilkoblet) { N.ønsket = false; } break;
+        status(m.tekst || 'Feil fra tjeneren.'); if (!(N.vertBorte && /ikke tilkoblet/i.test(m.tekst || ''))) sikkerLogg(m.tekst || 'Feil fra tjeneren.'); if (!N.tilkoblet) { N.ønsket = false; } break;
       }
       default: break;
     }
@@ -93,6 +93,21 @@
   }
 
   // ---------- verten ----------
+  // Hvem som styrer hvilke lag, huskes per verden (lagets navn -> spillerens id), så det overlever at verten laster siden på nytt
+  // eller at en gjest faller ut en stund (Windows-test 22. nov: gjesten mistet laget da verten lastet på nytt).
+  const eiere = () => { const l = les(); return (l.eiere && N.kode && l.eiere[N.kode]) || {}; };
+  function huskEier(s) { if (!N.kode) return; const l = les(), alle = l.eiere || {}, e = Object.assign({}, alle[N.kode] || {});
+    if (s.eier) e[s.navn] = s.eier; else delete e[s.navn]; alle[N.kode] = e; skriv({ eiere: alle }); }
+  function brukEiere() {
+    if (N.rolle !== 'vert' || typeof ENHETER === 'undefined') return; const e = eiere(), med = new Set(N.spillere.map(p => p.id));
+    let ny = false;
+    for (const s of ENHETER) if (s.side === 'blå' && !s.karakter) {
+      if (s.eier && !med.has(s.eier)) s.eier = null;                                   // spilleren er ikke med nå (huskes likevel)
+      else if (s.eier && e[s.navn] !== s.eier) { e[s.navn] = s.eier; ny = true; }       // gitt bort på en annen måte: husk det
+      else if (!s.eier && e[s.navn] && med.has(e[s.navn])) s.eier = e[s.navn];         // tilbake: verten lastet på nytt / gjesten kom igjen
+    }
+    if (ny && N.kode) { const l = les(), alle = l.eiere || {}; alle[N.kode] = e; skriv({ eiere: alle }); }
+  }
   let nid = 0;
   // nid fra kommandolaget (spill/kommando.js) når det finnes, så knappene og bildet bruker de samme
   const merk = () => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) if (s.nid == null) { if (window.Kommando) Kommando.nid(s, ENHETER); else s.nid = 'l' + (++nid); } };
@@ -117,7 +132,7 @@
   function sendBilde() {
     if (N.rolle !== 'vert' || !N.tilkoblet) return; const nå = performance.now();
     if (nå - N.sistBilde < (gjester().length ? BILDE_MS : BILDE_ALENE_MS)) return;
-    N.sistBilde = nå; try { send({ t: 'tilstand', data: bildeNå(), tid }); N.tellBilder++; } catch (e) { console.warn('flerspiller: bildet', e); }
+    N.sistBilde = nå; brukEiere(); try { send({ t: 'tilstand', data: bildeNå(), tid }); N.tellBilder++; } catch (e) { console.warn('flerspiller: bildet', e); }
   }
   // KOMMANDOLAGET (R16-A): verten kjører gjestens kommando med Kommando.utfør og gjestens id (laget må ha s.eier === gjestens id;
   // leirkommandoer avvises foreløpig). 'pos' og kommandoer uten kommandolag går som før (Flerspiller.sjekkKommando).
@@ -148,7 +163,7 @@
     if (N.framTil != null && typeof tid !== 'undefined' && tid >= N.framTil) { N.framTil = null; const b = document.getElementById('sp1'); if (b) b.click(); sikkerLogg('Tiden er regnet fram.'); }
   }, 100);
   setInterval(() => { if (N.tilkoblet) send({ t: 'ping' }); }, PING_MS);
-  setInterval(() => { if (N.gjest && N.tilkoblet) { const p = minPos(); if (p) send({ t: 'kommando', k: { type: 'pos', x: Math.round(p.x), y: Math.round(p.y), går: p.går } }); } }, 2000);
+  setInterval(() => { if (N.gjest && N.tilkoblet && !N.vertBorte) { const p = minPos(); if (p) send({ t: 'kommando', k: { type: 'pos', x: Math.round(p.x), y: Math.round(p.y), går: p.går } }); } }, 2000);
 
   // ---------- gjesten ----------
   function brukBilde(d) {
@@ -173,6 +188,8 @@
     N.andre = Array.isArray(d.sp) ? d.sp.filter(p => p.id !== N.id) : [];
     N.vertLeir = d.leir || null; N.vertBygg = Array.isArray(d.bygg) ? d.bygg : null; N.selskap = d.selskap || null; N.sistBilde = nå; N.tellBilder++;
     if (typeof valgt !== 'undefined' && valgt && !ENHETER.includes(valgt)) { valgt = null; try { visPanel(); } catch (e) { /* ok */ } }
+    else if (typeof valgt !== 'undefined' && valgt && nå - (N.sistPanel || 0) > 1000) {
+      const P0 = document.getElementById('panel'); if (!(window.pekerNede && P0 && pekerNede(P0))) { N.sistPanel = nå; try { visPanel(); } catch (e) { /* ok */ } } }
     skitten = true;
   }
   (function glid() {
@@ -218,7 +235,7 @@
     KROKER.lagKnapper.push((s, H) => {
       if (N.rolle !== 'vert' || !N.tilkoblet || s.side !== 'blå' || s.karakter || !gjester().length) return;
       H.appendChild(knapp('Styres av: ' + (s.eier ? navnPå(s.eier) : 'deg'), !!s.eier, () => {
-        s.eier = F.nesteEier(s.eier || null, gjester()); sikkerLogg(`${s.navn} styres nå av ${s.eier ? navnPå(s.eier) : 'deg'}.`); N.sistBilde = 0; visPanel(); }));
+        s.eier = F.nesteEier(s.eier || null, gjester()); huskEier(s); sikkerLogg(`${s.navn} styres nå av ${s.eier ? navnPå(s.eier) : 'deg'}.`); N.sistBilde = 0; visPanel(); }));
     });
     // de andre spillerne: et merke med navnet der de er (i 2D og 3D)
   const andre = () => !N.tilkoblet ? [] : N.rolle === 'vert' ? hvorAlle().filter(p => p.id !== N.id) : (N.andre || []);
@@ -227,7 +244,7 @@
     for (const p of L) { const x = (p.x - vx0) / m, y = (vy1 - p.y) / m;
       g.fillStyle = '#9fd0ff'; g.strokeStyle = '#0b0d10'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, p.går ? 5 : 7, 0, Math.PI * 2); g.fill(); g.stroke();
       if (!p.går) { g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.strokeStyle = 'rgba(159,208,255,.6)'; g.stroke(); }
-      g.lineWidth = 3; g.strokeStyle = 'rgba(11,13,16,.85)'; const t = p.navn + (p.går ? ' (til fots)' : ''); g.strokeText(t, x + 14, y + 4); g.fillStyle = '#cfe7ff'; g.fillText(t, x + 14, y + 4); }
+      g.lineWidth = 3; g.strokeStyle = 'rgba(11,13,16,.85)'; g.textAlign = 'center'; const t = p.navn + (p.går ? ' (til fots)' : ''), ty = window.Etikett ? Etikett.tekst(g, t, x, y - 16, -1, Etikett.REGLER.prio.egne) : y - 16; g.strokeText(t, x, ty); g.fillStyle = '#cfe7ff'; g.fillText(t, x, ty); }
     g.restore();
   });
   if (KROKER.tegn3d) KROKER.tegn3d.push((g, proj3) => {
@@ -256,7 +273,7 @@
       if (!N.gjest || !N.vertLeir) return; const m = kam.m, x = (N.vertLeir.x - vx0) / m, y = (vy1 - N.vertLeir.y) / m;
       g.save(); g.strokeStyle = '#f0d79a'; g.fillStyle = 'rgba(22,18,12,.85)'; g.lineWidth = 2;
       g.beginPath(); g.moveTo(x, y - 11); g.lineTo(x + 10, y + 7); g.lineTo(x - 10, y + 7); g.closePath(); g.fill(); g.stroke();
-      g.font = '600 13px "Cormorant Garamond", serif'; g.fillStyle = '#f0d79a'; g.textAlign = 'center'; g.fillText(N.vertLeir.navn, x, y + 22); g.restore();
+      g.font = '600 13px "Cormorant Garamond", serif'; g.fillStyle = '#f0d79a'; g.textAlign = 'center'; const ly = window.Etikett ? Etikett.tekst(g, N.vertLeir.navn, x, y + 22, 1, Etikett.REGLER.prio.leir) : y + 22; g.fillText(N.vertLeir.navn, x, ly); g.restore();
     });
   }
 
@@ -332,6 +349,8 @@ body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ dis
     if (e.key === 'Escape') åpen(false);
   });
   setInterval(() => { if (P.classList.contains('på') && N.rolle) vis(); }, 2000);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && P.classList.contains('på')) åpen(false); });
+  if (typeof KROKER !== 'undefined') KROKER.trykk.unshift(() => { if (P.classList.contains('på') && innerWidth < 1200) åpen(false); return false; });
 
   // knappen i ☰ (meny.js legger den i gruppen «Spill sammen»)
   const meny = document.getElementById('lagmeny');

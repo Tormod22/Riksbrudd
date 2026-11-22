@@ -36,9 +36,11 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     const avvist = await B.evaluate(() => { const s = ENHETER.find(q => q.side === 'blå' && q.eier !== NETT.id); if (!s) return null; ordre(s, s.x + 200, s.y); return document.getElementById('logg').textContent.includes('styres av'); });
     sjekk(avvist !== false, 'ordre til et lag gjesten ikke har, avvises');
     // ordre fra gjesten -> verten planlegger ruta
-    await B.evaluate(n => { const s = ENHETER.find(q => q.navn === n); ordre(s, s.x + 400, s.y + 300); }, lagNavn);
+    await B.evaluate(n => { const s = ENHETER.find(q => q.navn === n); valgt = s; visPanel(); ordre(s, s.x + 400, s.y + 300); }, lagNavn);
     sjekk(await til(A, n => { const s = ENHETER.find(q => q.navn === n); return !!(s && s.sti); }, lagNavn, 40000), 'vertens lag får ordren og en rute');
     sjekk(await til(B, n => { const s = ENHETER.find(q => q.navn === n); return !!(s && s.sti && s.sti.length > 1); }, lagNavn), 'gjesten ser ruta');
+    sjekk(await til(B, () => [...document.querySelectorAll('#handl button')].some(b => b.textContent === 'Stopp')), 'gjestens lagpanel oppdateres av seg selv (Stopp kommer)');
+    sjekk(await B.evaluate(n => ENHETER.find(q => q.navn === n).menn.every(m => Number.isFinite(m.loy)), lagNavn) && !(await B.evaluate(() => document.getElementById('menn').textContent.includes('NaN'))), 'lojaliteten er med hos gjesten (ingen NaN)');
     // farten: verten setter 60×, gjesten følger; gjestens knapper gjør ingenting
     await A.evaluate(() => document.getElementById('sp3').click());
     sjekk(await til(B, () => tempo === 60), 'gjesten følger vertens fart');
@@ -97,6 +99,10 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     // verten går: gjesten får beskjed
     await A.evaluate(() => NETT.koblFra(true));
     sjekk(await til(B, () => NETT.vertBorte === true), 'gjesten får vite at verten er borte');
+    // verten kommer tilbake (som når siden lastes på nytt): gjesten skal få laget sitt igjen
+    await A.evaluate(([a, k]) => NETT.koble('vert', a, k, 'Ola'), [adr, kode]);
+    sjekk(await til(B, n => { const s = ENHETER.find(q => q.navn === n); return NETT.vertBorte === false && !!(s && s.eier === NETT.id); }, lagNavn, 40000), 'gjesten har laget sitt igjen når verten kommer tilbake');
+    await A.evaluate(() => NETT.koblFra(true));
     sjekk(fs.readdirSync(mappe).some(f => f === kode + '.json'), 'tjeneren har lagret verden på disk');
     sjekk(feilSide.length === 0, 'ingen feil i nettleserne' + (feilSide.length ? ': ' + feilSide.join(' | ') : ''));
   } catch (e) { sjekk(false, 'unntak: ' + e.message); }
