@@ -7,6 +7,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const klem = (v, a, b) => Math.max(a, Math.min(b, v));
   // ---------- (3) ferdigheter ----------
   const FERDIGHETER = {
@@ -80,7 +83,7 @@
   function bruk() { if (rot.Utstyr) Utstyr.ekstraVekt = Ferdigheter.kg(F); if (rot.Bevegelse && Bevegelse.REGLER) { if (!bruk.løp0) bruk.løp0 = Bevegelse.REGLER.løpTid; Bevegelse.REGLER.løpTid = bruk.løp0 * Ferdigheter.løp(F); } }
   function øk(id, p) { if (!klar) return; const n = Ferdigheter.øk(F, id, p); if (n) { bruk(); logg(`${FERDIGHETER[id].navn} er nå på nivå ${n}: du ${FERDIGHETER[id].gir(n)}.`); { const å = Ferdigheter.åpnes(id, n); if (å) logg(`NY EVNE – ${å[1]}: ${å[2]}.`); } if (rot.UtstyrSpill) UtstyrSpill.vis(); } }
   function start() { const s = S0(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); F = { ...Ferdigheter.ny(), ...(les('riksbrudd-ferdigheter') || {}) }; T = (les('riksbrudd-tilflukt') || []).filter(q => q && typeof q.x === 'number');
-    const d = les('riksbrudd-forfall'); D = d && d.strøm && d.vann ? d : Forfall.ny(tid, Math.random(), Math.random()); ekte = d && d.ekteBrukt ? d.ekteBrukt : 0; if (!D.mer) D.mer = Forfall.nyMer(tid, ekte, Math.random);
+    const d = les('riksbrudd-forfall'); D = d && d.strøm && d.vann ? d : Forfall.ny(tid, tilf(), tilf()); ekte = d && d.ekteBrukt ? d.ekteBrukt : 0; if (!D.mer) D.mer = Forfall.nyMer(tid, ekte, tilf);
     if (rot.FolkRegler) FolkRegler.oppgaveF = o => (o === 'frakt' && auto() && Forfall.nedeMer(D, 'veg') ? Forfall.FRAKT_TREGERE : 1); if (LB) LB.nettKW = () => (auto() ? Forfall.nettKW(D) : 0); klar = true; bruk(); }
   rot.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   const master = () => { const l = L(); return l && LB ? l.bygg.filter(b => b.type === 'radiomast' && LB.virker(b)).length : 0; };

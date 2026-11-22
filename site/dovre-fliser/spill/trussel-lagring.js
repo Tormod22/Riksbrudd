@@ -9,6 +9,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const LB = typeof module !== 'undefined' && module.exports ? require('./lagring') : rot.Lagring;
   const VERSJON = 1;
   const tall = (v, reserve = 0) => (Number.isFinite(+v) ? +v : reserve), r1 = v => Math.round(v * 10) / 10;
@@ -124,7 +127,7 @@
     // ordren på nytt når kartet rundt er lastet: de som trakk seg ut eller flyktet, går samme vei ut; de andre fortsetter mot leiren
     setTimeout(() => { const S = spill(); if (!S || !S.leir) return;
       for (const s of nye) { if (!ENHETER.includes(s) || !levende(s)) continue; const m = s.målLagret; delete s.målLagret;
-        let X, Y; if ((s.trekker || s.flykter) && s.fra) { X = s.fra.x; Y = s.fra.y; } else if (m) { X = m[0]; Y = m[1]; } else { X = S.leir.x + (Math.random() - .5) * 80; Y = S.leir.y + (Math.random() - .5) * 80; }
+        let X, Y; if ((s.trekker || s.flykter) && s.fra) { X = s.fra.x; Y = s.fra.y; } else if (m) { X = m[0]; Y = m[1]; } else { X = S.leir.x + (tilf() - .5) * 80; Y = S.leir.y + (tilf() - .5) * 80; }
         if (Math.hypot(X - s.x, Y - s.y) > 30) { try { const p = ordre(s, X, Y, true); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ruta finnes ikke ennå – angrepSteg sender dem på nytt */ } } }
       skitten = true; }, 1500);
     if (n && !navigator.webdriver) logg(`Angrepet fortsetter: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} i bølge ${aktiv} er fortsatt ved leiren.`);

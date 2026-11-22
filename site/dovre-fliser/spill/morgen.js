@@ -11,6 +11,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const klem = (v, a, b) => Math.max(a, Math.min(b, v));
   const des = (v, n = 1) => (Math.round(v * 10 ** n) / 10 ** n).toFixed(n).replace('.', ',').replace(/,0+$/, '');
   const kr = v => { const a = Math.abs(Math.round(v)); return (v < 0 ? '−' : '') + (a >= 1e6 ? des(a / 1e6) + ' mill. kr' : a >= 1000 ? Math.round(a / 1000).toLocaleString('nb-NO') + ' 000 kr' : a + ' kr'); };
@@ -80,7 +83,7 @@
   //   (salgspris per m³), lager: { tre }, diesel, dieselPlass, røverTimer (spilltimer til neste bølge, 0 = pågår, null = ukjent),
   //   bølge, post (et ledig oppdrag «Ta en røverpost»: { id, gir, meter, retning } eller null), sted (navn på nærmeste tettsted), årstid }
   // Gir [{ id, t (knappen), følge (hva det koster og gir), vekt }] – 2 eller 3 valg, de viktigste først.
-  function dagensValg(s, rng = Math.random) {
+  function dagensValg(s, rng = tilf) {
     const R = REGLER, ut = [], kan = s.arbeidsføre >= R.borte + 2, legg = (vekt, v) => ut.push({ vekt: vekt + rng() * .01, ...v });
     const matKr = Math.round((s.matPris || 3000) * R.kjøp);
     // RUNDE 14: røverne kommer snart (eller angriper) – forsvaret først
@@ -139,7 +142,7 @@
   const erStorDag = (dag, sist) => dag >= REGLER.stor.første && (sist === null || sist === undefined || dag - sist >= REGLER.stor.hver);
   // s som over, pluss dieselPris (kr/l). sist = id-en på den forrige (kommer ikke to ganger på rad). hist = { id: dagen den sist kom } (RUNDE 13:
   // pausen per slag, REGLER.stor.pause; brytes når ingenting annet passer). Gir { id, tittel, tekst, valg } eller null.
-  function storBeslutning(s, rng = Math.random, sist = null, hist = null) {
+  function storBeslutning(s, rng = tilf, sist = null, hist = null) {
     const R = REGLER, mulige = [];
     if (s.folk > 0) mulige.push({ id: 'nabo', tittel: 'Et nabogårdsfolk vil bli med', tekst: `${R.nabo.folk} fra en nabogård har gitt opp gården og vil slå seg sammen med dere. De har med seg litt mat, men de trenger senger og skal ha mat hver dag.`,
       valg: [{ id: 'alle', t: `Ta dem inn (folk +${R.nabo.folk}, mat +${R.nabo.mat})`, følge: `${R.nabo.folk} nye arbeidere i dag. Uten ledige senger faller moralen, og maten går fortere.` },
@@ -182,7 +185,7 @@
   // ---------- HVORDAN DET GIKK (regnes neste morgen) ----------
   // p: { id ('jakt' | 'leie' | 'speid' | 'tankbil'), folk: [{ navn, ferd: { hogst } }] }, o: { årstid, røverTimer }. Gir { mat, penger, diesel,
   // tre, stål, skadet: [navn], borte: [navn] (kom ikke tilbake), tekst }.
-  function utfall(p, o = {}, rng = Math.random) {
+  function utfall(p, o = {}, rng = tilf) {
     const R = REGLER, u = { mat: 0, penger: 0, diesel: 0, tre: 0, stål: 0, erf: 0, skadet: [], borte: [], helse: 0 }, f = p.folk || [], navn = f.map(q => q.navn.split(' ')[0]), hvem = () => f[Math.floor(rng() * f.length)];
     const og = a => (a.length > 1 ? a.slice(0, -1).join(', ') + ' og ' + a[a.length - 1] : a[0] || 'De');
     if (p.id === 'jakt') { const å = R.jakt.årstid[o.årstid] || 1; u.mat = Math.round(f.reduce((s, q) => s + mellom(rng, R.jakt.per) * klem((q.ferd && q.ferd.hogst) || 1, .7, 1.45), 0) * å);

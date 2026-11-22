@@ -9,6 +9,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const TYPER = [
     { navn: 'Bevegelseskamera', kort: 'bevegelse', tekst: 'Filmer bare når noe rører seg. Klippene må ses gjennom.', opptak: false, selv: false, minutter: 6 },
     { navn: 'Kamera med fast opptak', kort: 'fast opptak', tekst: 'Filmer hele tiden: sporet av hvor folk har gått, lagres. Klippene må ses gjennom.', opptak: true, selv: false, minutter: 4 },
@@ -34,7 +37,7 @@
   // o: { tempo: summen av tempoet til dem som ser gjennom (0 = ingen), vind (m/s), rng() }.
   // Gir { nye: [klipp], varsler: [klipp som viste seg å være folk], avvist: antall }.
   function steg(K, kameraer, fiender, tid, dt, o = {}) {
-    const R = REGLER, rng = o.rng || Math.random, ut = { nye: [], varsler: [], avvist: 0 }, tempo = Math.max(0, o.tempo || 0);
+    const R = REGLER, rng = o.rng || tilf, ut = { nye: [], varsler: [], avvist: 0 }, tempo = Math.max(0, o.tempo || 0);
     const nytt = (c, hva, f) => { const T = type(c.nivå), k = { id: ++K.nr, kam: c.id, t: tid, hva, x: f ? f.x : c.x + (rng() - .5) * c.r, y: f ? f.y : c.y + (rng() - .5) * c.r, antall: f ? f.antall || 1 : 0, status: 'venter', minutter: T.minutter };
       k.meter = Math.round(Math.hypot(k.x - c.x, k.y - c.y)); k.retning = retning(k.x - c.x, k.y - c.y); K.klipp.push(k); ut.nye.push(k); return k; };
     const bekreft = (k, c) => { k.status = k.hva; k.sett = tid; if (k.hva === 'folk') { K.sett[k.kam] = tid + R.synlig; ut.varsler.push(k); if (c && !type(c.nivå).opptak) K.hist.push({ t: k.t, x: k.x, y: k.y, kam: k.kam, f: 'k' + k.id }); } else ut.avvist++; };

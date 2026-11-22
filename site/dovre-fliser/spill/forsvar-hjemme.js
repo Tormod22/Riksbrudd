@@ -11,6 +11,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const REGLER = {
     // innen så mange meter fra leirens midte er laget «hjemme»; ingen fiende (levende, annen side) nærmere laget enn «fiende» m
     radius: 250, fiende: 800,
@@ -71,7 +74,7 @@
       if (s.sti || s.planlegger) { stilleFra.delete(s); sendt.delete(s); continue; } if (!stilleFra.has(s)) stilleFra.set(s, tid);
       if (sendt.has(s)) continue; const d = Math.hypot(s.x - S.leir.x, s.y - S.leir.y), fi = fiender.reduce((m, e) => Math.min(m, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
       if (!børHjem(s, d, tid - stilleFra.get(s), fi) || !kanStille(s)) continue;
-      sendt.add(s); const a = Math.random() * 6.2832; try { const p = ordre(s, S.leir.x + Math.cos(a) * 40, S.leir.y + Math.sin(a) * 40, true); if (p && p.catch) p.catch(() => {}); } catch (e) { continue; }
+      sendt.add(s); const a = tilf() * 6.2832; try { const p = ordre(s, S.leir.x + Math.cos(a) * 40, S.leir.y + Math.sin(a) * 40, true); if (p && p.catch) p.catch(() => {}); } catch (e) { continue; }
       logg(`${s.navn} er hardt skadet eller har lite ammunisjon og går hjem til leiren for å hvile og fylle opp.`); if (++n >= 3) break; }
     return n; }
   KROKER.sim.push(dt => { if (!auto()) return; akk += dt; if (akk < 10) return; const m = akk; akk = 0; steg(m); hjemSteg(); });

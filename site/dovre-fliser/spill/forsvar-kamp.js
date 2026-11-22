@@ -12,6 +12,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   // Claudes forslag:
   const REGLER = {
     slutt: 30,        // spillminutter uten skudd eller tap før kampen regnes som over
@@ -210,10 +213,10 @@
       flyttet.add(e.navn);
       // (bare når lagene starter på samme sted – krig.js sin taktikk «fra to kanter» sprer dem selv)
       if (!ENHETER.some(q => q !== e && q.raid === e.raid && Math.hypot(q.x - e.x, q.y - e.y) < 300)) continue;
-      const a = Math.atan2(e.y - L.y, e.x - L.x) + (Math.random() < .5 ? -1 : 1) * KV.BØLGE.vinkel, r = Math.hypot(e.x - L.x, e.y - L.y), x = L.x + Math.cos(a) * r, y = L.y + Math.sin(a) * r;
+      const a = Math.atan2(e.y - L.y, e.x - L.x) + (tilf() < .5 ? -1 : 1) * KV.BØLGE.vinkel, r = Math.hypot(e.x - L.x, e.y - L.y), x = L.x + Math.cos(a) * r, y = L.y + Math.sin(a) * r;
       // ikke i vann (hoydeVed under 1 moh. regnes som sjø/vann her) – da blir laget der det var
       const h = typeof hoydeVed === 'function' ? hoydeVed(x, y) : NaN; if (!(h > 1)) continue;
-      e.x = x; e.y = y; e.fra = { x, y }; e.sti = null; const p = ordre(e, L.x + (Math.random() - .5) * 80, L.y + (Math.random() - .5) * 80, true); if (p && p.catch) p.catch(() => {});
+      e.x = x; e.y = y; e.fra = { x, y }; e.sti = null; const p = ordre(e, L.x + (tilf() - .5) * 80, L.y + (tilf() - .5) * 80, true); if (p && p.catch) p.catch(() => {});
       if (flyttet.size > 60) flyttet.delete(flyttet.values().next().value); } });
 
   // navnet på en side i loggen: fraksjonen, «røverne» for røverlag

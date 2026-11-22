@@ -5,6 +5,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   // regn/snø: nedbør (0–1), vind: ekstra vind (m/s), dt: tåke i dalbunnen om morgenen (faktor), dh: tåke i dalen hele dagen
   const VÆR = {
     klart: { navn: 'Klart', sikt: 1, dis: 1, sky: .1, nedbør: null, vind: 0, dt: 1, dh: 0 },
@@ -50,7 +53,7 @@
   // Hvor langt overgangen er kommet (0–1; 1 = ferdig eller ingen overgang)
   function overgang(S, t) { if (!S.fra || !S.varighet || t == null) return 1; return Math.max(0, Math.min(1, (t - S.start) / S.varighet)); }
   // Ett steg: t i spillminutter. Gir true når været skiftet. Bakken blir våt i regnet (ca. 25 min) og tørker sakte (ca. 2,5 t).
-  function steg(S, t, rnd = Math.random) {
+  function steg(S, t, rnd = tilf) {
     const dt = S.sistT == null ? 0 : Math.max(0, Math.min(600, t - S.sistT)); S.sistT = t;
     const b = blandet(S, t), mål = b.regn * (.55 + .45 * S.styrke);
     S.våt = S.våt < mål ? Math.min(mål, S.våt + dt / 25) : Math.max(mål, S.våt - dt / 150);

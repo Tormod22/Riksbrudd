@@ -5,6 +5,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   // Natt til 18. nov (gjennomgangen: «100 mill. kr er for mye, spilleren kan kjøpe seg ut av alt»): NYE spill starter med 40 mill. kr
   // (Claudes forslag: kontrollrom 15 + aggregat 8 + brakke 4 + dieseltank 3 = 30, og 10 igjen til materialer, diesel og mat) –
   // resten må komme fra tettstedene, oppdrag og det du finner. Lagrede spill beholder pengene sine (S.penger er lagret).
@@ -47,9 +50,11 @@
     return p;
   }
   // Tilfeldig utseende: motorens tilfeldige portrett, men militært og med frisyre og skjegg som passer kjønnet.
-  // Kvinner får aldri skjegg; menn får skjegg i ca. halvparten av tilfellene (Claudes forslag). rnd = Math.random (tester kan gi sin egen).
-  function tilfeldigPortrett(rnd = Math.random, antrekk = ['feltuniform', 'arbeidsjakke', 'skinnjakke', 'jakke', 'genser', 'frakk', 'hoyhalset']) {
-    const t = P.randomCharacter(), K = KJØNN[t.gender] || KJØNN.mann, pick = a => a[Math.floor(rnd() * a.length) % a.length];
+  // Kvinner får aldri skjegg; menn får skjegg i ca. halvparten av tilfellene (Claudes forslag). rnd = tilf, felles verden-strøm (tester kan gi sin egen).
+  function tilfeldigPortrett(rnd = tilf, antrekk = ['feltuniform', 'arbeidsjakke', 'skinnjakke', 'jakke', 'genser', 'frakk', 'hoyhalset']) {
+    // portrett-motor.js (brukerens fil, uendret) bruker Math.random selv: den låner strømmen rnd bare mens portrettet lages
+    const lån = Math.random; let t; Math.random = rnd; try { t = P.randomCharacter(); } finally { Math.random = lån; }
+    const K = KJØNN[t.gender] || KJØNN.mann, pick = a => a[Math.floor(rnd() * a.length) % a.length];
     t.role = 'militaer'; t.outfit = pick(antrekk);
     if (!K.hår.includes(t.hair)) t.hair = pick(K.hår);
     t.facialHair = t.gender === 'kvinne' ? 'ingen' : rnd() < .5 ? 'ingen' : pick(P.allowed.facialHair.filter(f => f !== 'ingen'));
