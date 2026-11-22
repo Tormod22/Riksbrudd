@@ -15,6 +15,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : () => .5;
   // ---------- tallene (alle er Claudes forslag) ----------
   const REGLER = {
     versjon: 1,
@@ -157,7 +160,7 @@
     const sd = side(S, id), i = S.tilbud.findIndex(q => q.id === kId);
     if (i < 0) return { ok: false, grunn: 'Tilbudet finnes ikke lenger.' };
     if (sd.aktive.length >= REGLER.maksAktive) return { ok: false, grunn: `Dere har alt ${REGLER.maksAktive} kontrakter. Lever eller avbryt en først.` };
-    const k = S.tilbud.splice(i, 1)[0], r = rand || Math.random;
+    const k = S.tilbud.splice(i, 1)[0], r = rand || tilf;
     Object.assign(k, { status: 'aktiv', side: id, godtatt: Math.round(nå), frist: Math.round(nå + k.timer * 60), framdrift: 0, pris: sd.pris });
     if (k.type === 'eskorte' && r() < REGLER.rival.angrep) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
     sd.aktive.push(k); return { ok: true, k };

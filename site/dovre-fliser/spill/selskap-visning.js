@@ -126,7 +126,7 @@
         const grunn = h.grunn === 'frist' ? 'fristen gikk ut' : h.grunn === 'tapt' ? (k.type === 'eskorte' ? 'bilen gikk tapt' : 'laget med personen ble slått ut') : 'dere avbrøt den';
         logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); }
       else if (h.type === 'rivalFørst') { logg(`${navnFor(h.rival)} kom først: ${k.tittel}. Kontrakten er tapt, men uten bot.`); rydd(k); }
-      else if (h.type === 'angrep') { const b = bilFor(k); if (b) { const v = Math.random() * Math.PI * 2, a = nyttLag(`${navnFor(h.rival)}, angrepslag`, b.x + Math.cos(v) * 700, b.y + Math.sin(v) * 700, h.rival);
+      else if (h.type === 'angrep') { const b = bilFor(k); if (b) { const v = (window.Tilfeldig ? Tilfeldig.verden() : .5) * Math.PI * 2, a = nyttLag(`${navnFor(h.rival)}, angrepslag`, b.x + Math.cos(v) * 700, b.y + Math.sin(v) * 700, h.rival);
         a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; ENHETER.push(a); try { ordre(a, b.x, b.y, true); } catch (e) { /* uten ordre */ }
         logg(`${navnFor(h.rival)} angriper ${k.bil}! Beskytt bilen.`); } }
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
