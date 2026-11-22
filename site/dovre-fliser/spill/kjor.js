@@ -232,7 +232,9 @@
   function plasser(R, u) { const L = rot.LeirSpill && LeirSpill.tilstand();
     for (const k of K) { if (!k.ny) continue; let x = k.X - u.cx, y = k.Y - u.cy; if (Math.abs(x) > u.S * .9 || Math.abs(y) > u.S * .9) return false;
       const hp = k.type === 'heli' && L && L.bygg.find(b => b.type === 'helikopterplass' && rot.Leir.ferdig(b)); if (hp) { k.X = hp.x; k.Y = hp.y; k.ny = false; continue; }
-      const V = verdenFor(R, u, k), fri = (px, py) => ![[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5], [2, 2], [-2, -2], [2, -2], [-2, 2]].some(([dx, dy]) => V.hindring(px + dx, py + dy) || V.vann(px + dx, py + dy)) && !(rot.Interior3d && Interior3d.iLeirbygg(px, py));
+      // (R17, funn 17) helikopteret trenger plass til rotoren (ca. 6 m ut), ellers sto det inne i byggeteltene – feltbilen 2,5 m
+      const rk = k.type === 'heli' ? 2.4 : 1, PRØVE = [[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5], [2, 2], [-2, -2], [2, -2], [-2, 2]].map(([a, b]) => [a * rk, b * rk]);
+      const V = verdenFor(R, u, k), fri = (px, py) => !PRØVE.some(([dx, dy]) => V.hindring(px + dx, py + dy) || V.vann(px + dx, py + dy)) && !(rot.Interior3d && Interior3d.iLeirbygg(px, py));
       let ok = fri(x, y); for (let r = 3; r <= 90 && !ok; r += 3) for (let q = 0; q < 12 && !ok; q++) { const v = q / 12 * 6.283, px = x + Math.cos(v) * r, py = y + Math.sin(v) * r; if (fri(px, py)) { x = px; y = py; ok = true; } }
       k.X = u.cx + x; k.Y = u.cy + y; k.ny = false; }
     lagre(); return true; }

@@ -732,11 +732,14 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     const vann = window.Gange && Gange.vannVed ? Gange.vannVed(u) : null, sx = S.leir.x, sy = S.leir.y;
     const bygg = L.bygg.filter(b => !LB.BYGG[b.type].linje).map(b => ({ b, f: LB.BYGG[b.type].fot || [-2, 2, -2, 2], c: Math.cos(b.ret || 0), s: Math.sin(b.ret || 0) }));
     const plan = (L.plan || []).filter(a => !LB.BYGG[a.type].linje).map(b => ({ b, f: LB.BYGG[b.type].fot || [-2, 2, -2, 2], c: Math.cos(b.ret || 0), s: Math.sin(b.ret || 0) }));
+    const kjøretøy = window.KjorSpill && KjorSpill.liste ? KjorSpill.liste().filter(k => Number.isFinite(k.X) && Number.isFinite(k.Y)) : [];
     // opptatt: bygg og skisser (fotavtrykket + tingens radius + 1,5 m til stillaset), flaggstanga, vann og vegen
     const opptatt = (x, y, r) => { const X = sx + x, Y = sy + y; if (Math.hypot(x, y) < r + 1.5) return true;
       for (const q of [...bygg, ...plan]) { const dx = X - q.b.x, dy = Y - q.b.y, a = dx * q.c + dy * q.s, d = -dx * q.s + dy * q.c, m = r + 2.5;
         if (a > q.f[0] - m && a < q.f[1] + m && d > q.f[2] - m && d < q.f[3] + m) return true; }
       if (vann && vann(X - u.cx, Y - u.cy)) return true;
+      // (R17, funn 17: helikopteret sto inne i byggeteltene) – feltbilen og helikopteret (spill/kjor.js) holdes fri: rotoren ca. 7 m
+      if (kjøretøy.some(k => Math.hypot(X - k.X, Y - k.Y) < r + (k.type === 'heli' ? 7 : 3.5))) return true;
       return !!(L.bygg.some(b => LB.BYGG[b.type].veg) && LB.vegAvstand && LB.vegAvstand(L, X, Y, false) < LB.BYGG.veg.bredde / 2 + r); };
     leirTing = BP.lagLeir(u, R, [sx, sy], BP.antallTelt(brakker), BP.hash(Math.round(sx), Math.round(sy)), opptatt);
   }
