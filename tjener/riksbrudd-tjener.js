@@ -405,8 +405,16 @@ function statusside() {
 
 const tjener = http.createServer((req, res) => {
   const sti = (req.url || '/').split('?')[0];
+  // Spillet ligger på en offentlig https-side og spør tjeneren på denne PC-en (localhost). Chrome/Edge spør da om lov først
+  // (Private Network Access / «lokalt nettverk»): svar ja på forespørselen før selve hentingen.
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Allow-Headers': '*',
+      'Access-Control-Allow-Private-Network': 'true', 'Access-Control-Max-Age': '600' });
+    res.end();
+    return;
+  }
   if (req.method === 'GET' && sti === '/status') {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Private-Network': 'true', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(statusJSON()));
     return;
   }

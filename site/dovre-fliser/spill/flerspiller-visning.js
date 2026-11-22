@@ -54,7 +54,7 @@
   function motta(m) {
     switch (m.t) {
       case 'velkommen': {
-        N.tilkoblet = true; N.id = m.id || N.id; N.kode = m.kode; N.spillere = m.spillere || []; skriv({ id: N.id });
+        N.tilkoblet = true; statusTekst = ''; N.id = m.id || N.id; N.kode = m.kode; N.spillere = m.spillere || []; skriv({ id: N.id });
         if (N.rolle === 'vert') { skriv({ kode: N.kode, adresse: N.adresse }); hentTunnel(); sikkerLogg(`Verden ${N.kode} er åpen. Del invitasjonslenken under «Spill sammen».`);
           const fram = m.lagret ? F.framTid(m.lagret.borteSek) : 0; if (fram > 0) regnFram(fram); }
         else { sikkerLogg(`Du er med i verden ${N.kode}. Verten styrer tiden; du styrer lagene verten gir deg.`); lukkStart(); }
@@ -171,7 +171,7 @@
 
   // ---------- panelet «Spill sammen» ----------
   const css = document.createElement('style');
-  css.textContent = `#nett{ position:fixed; z-index:40; right:12px; top:calc(var(--topp, 56px) + 8px); width:min(380px, calc(100vw - 24px)); max-height:calc(100vh - 120px); overflow:auto;
+  css.textContent = `#nett{ position:fixed; z-index:40; box-sizing:border-box; right:12px; top:calc(var(--topp, 56px) + 8px); width:min(380px, calc(100vw - 24px)); max-height:calc(100vh - 120px); overflow:auto;
   background:var(--panel); border:1px solid var(--rule); color:var(--ink); padding:10px 12px 12px; display:none; font-size:14px; line-height:1.35; }
 #nett.på{ display:block; } #nett h3{ margin:0 0 6px; font-size:12.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); font-weight:600; }
 #nett .topp{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; } #nett .topp b{ font-size:18px; }
