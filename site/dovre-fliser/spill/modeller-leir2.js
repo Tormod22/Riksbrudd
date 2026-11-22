@@ -1027,6 +1027,192 @@
     return d;
   });
 
+  // ---------- felles for modulbygg: plate, kropp, rammer, sømmer og tak ----------
+  // o: { B, L (x × y), H, s (sokkel), V, VM (farger), tak: 'flat' | 'sal', h (takhøyde for saltak), steg (sømmer), dørY }
+  function modul(d, o, e) {
+    const { B, L, H, s, V, VM } = o;
+    d.push(boks(0, 0, 0, B + .2, L + .2, s, K.betong), boks(0, 0, s, B, L, H, V));
+    for (const z of [s, s + H - .14]) d.push(boks(0, 0, z, B + .06, L + .06, .14, VM));
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) d.push(boks(sx * (B / 2 - .04), sy * (L / 2 - .04), s, .14, .14, H, VM));
+    if (!e && o.steg) sømmer(d, B, L, s + .14, H - .28, o.steg, VM, o.dørY);
+    if (o.tak === 'sal') d.push(flytt(gavl(L, B, o.h, V), 0, 0, s + H, Math.PI / 2), flytt(saltak(L, B, o.h, o.takF || F.blikk, .35), 0, 0, s + H, Math.PI / 2));
+    else d.push(boks(0, 0, s + H, B + .12, L + .12, .1, K.mørkM));
+  }
+  // Rull-/leddport på en vegg (side), bredde b, høyde h, med karm; opp = hvor mye den er åpnet (m)
+  function port(x, y, z, b, h, side, f, opp) {
+    const p = [boks(.03, 0, h, .08, b + .3, .16, F.blikkM), boks(.03, -(b / 2 + .08), 0, .08, .14, h, F.blikkM), boks(.03, b / 2 + .08, 0, .08, .14, h, F.blikkM)];
+    const o = opp || 0; if (o) p.push(boks(.02, 0, 0, .03, b, o, '#1d1f1e'));
+    p.push(boks(.04, 0, o, .06, b, h - o, f)); for (let k = o + .5; k < h; k += .5) p.push(boks(.075, 0, k, .02, b, .03, tone(f, .8)));
+    return påVegg(p, x, y, z, side);
+  }
+
+  // =====================================================================================================================
+  // B37 Offisersbrakke: mindre og bedre – mørk kledning med sandfarget list, saltak, platting med rekkverk, AC og navneskilt.
+  LEIR2.offisersbrakke = lod((b, e) => {
+    const d = [], B = 6, L = 9, s = .45, H = 2.7, V = '#4a5050', VM = '#383c3c';
+    modul(d, { B, L, H, s, V, VM, tak: 'sal', h: 1.2, takF: '#2f3235', steg: e ? 0 : .9, dørY: 0 }, e);
+    d.push(boks(0, 0, s + H - .3, B + .05, L + .05, .1, K.sand));
+    for (const y of [-3, -1.5, 1.5, 3]) d.push(vind(B / 2, y, s + .9, 1, 1.2, 'x+', e));
+    for (const y of [-2.5, 0, 2.5]) d.push(vind(-B / 2, y, s + .9, 1, 1.2, 'x-', e));
+    d.push(dør(B / 2, 0, s, 1, 2.1, 'x+', K.mørk, K.sand), selskapsskilt(B / 2, 0, s + 2.2, .9, .25, 'x+'));
+    d.push(boks(B / 2 + .75, 0, 0, 1.5, 3.2, s, F.treL), boks(B / 2 + 1.64, 0, 0, .28, 1.2, s * .5, F.treL));
+    if (!e) { for (const sy of [-1, 1]) { d.push(boks(B / 2 + .75, sy * 1.56, s + .9, 1.5, .06, .06, F.treM)); for (const x of [B / 2 + .08, B / 2 + 1.45]) d.push(boks(x, sy * 1.56, s, .07, .07, .95, F.treM)); }
+      d.push(ac(-B / 2, -1.2, s + 1.1, 'x-'), syl(-1.2, 2.5, s + H + .5, .09, 1.1, F.svart, 6)); }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B38 Dusj- og vaskebrakke: container med høye matte vinduer, dør med rist, lufterør, varmtvannsbereder med pipe, rist i bakken.
+  LEIR2.dusjbrakke = lod((b, e) => {
+    const d = [], B = 3, L = 6, s = .3, H = 2.5, V = '#b9bdb6', VM = '#9a9e97';
+    modul(d, { B, L, H, s, V, VM, tak: 'flat', steg: e ? 0 : .75, dørY: 0 }, e);
+    for (const y of [-2.2, -1.2, 1.2, 2.2]) d.push(vind(B / 2, y, s + 1.9, .6, .35, 'x+', e, VM));
+    for (const y of [-2, 0, 2]) d.push(vind(-B / 2, y, s + 1.9, .6, .35, 'x-', e, VM));
+    d.push(dør(B / 2, 0, s, .9, 2.05, 'x+', VM, K.mørkM), påVegg([boks(.09, 0, .2, .02, .5, .2, K.mørk)], B / 2, 0, s, 'x+'));
+    d.push(boks(B / 2 + .3, 0, 0, .6, 1.2, s - .02, F.treL), boks(B / 2 + .7, 0, 0, .25, 1, s * .5, F.treL));
+    d.push(syl(-.6, -2.2, s + H + .1, .07, .6, K.galv, 6), syl(.6, 2.2, s + H + .1, .07, .6, K.galv, 6));
+    d.push(syl(-B / 2 - .45, 2, 0, .35, 1.6, '#e3e3de', 10), stav([-B / 2 - .45, 2, 1.6], [-B / 2 - .45, 2, s + H + .8], .06, K.galv, 6), boks(B / 2 + .6, 1.4, 0, .5, .5, .02, K.mørk));
+    if (!e) for (let i = 0; i < 4; i++) d.push(boks(B / 2 + .6, 1.22 + i * .12, .02, .45, .03, .01, K.galv));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B39 Toalettcontainer: tre dører på langsiden mot +x med lufteluker, trinn, skilt, lufterør på taket.
+  LEIR2.toalett = lod((b, e) => {
+    const d = [], B = 2.4, L = 6, s = .25, H = 2.5, V = '#3f6a8a', VM = '#2f526b';
+    modul(d, { B, L, H, s, V, VM, tak: 'flat', steg: 0 }, e);
+    for (const y of [-1.8, 0, 1.8]) { d.push(dør(B / 2, y, s, .8, 2, 'x+', '#e8e6df', VM), påVegg([boks(.08, 0, 1.7, .02, .4, .18, K.mørk), boks(.09, .25, .95, .03, .05, .12, K.rød)], B / 2, y, s, 'x+'));
+      d.push(boks(B / 2 + .3, y, 0, .5, .9, s * .7, K.galv)); }
+    d.push(påVegg([boks(.02, 0, 0, .02, .6, .3, '#f2efe6'), boks(.03, -.15, .07, .01, .12, .16, K.mørk), boks(.03, .15, .07, .01, .12, .16, K.mørk)], B / 2, 0, s + 2.15, 'x+'));
+    for (const y of [-1.8, 0, 1.8]) d.push(syl(-.6, y, s + H + .1, .06, .5, K.mørk, 6));
+    if (!e) d.push(syl(-B / 2 - .5, -2.2, 0, .5, 1.1, '#1f1f20', 10), stav([-B / 2 - .1, -2.2, .7], [-B / 2, -2.2, .7], .05, K.mørk, 4));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B40 Vaskeri: container med vaskemaskiner bak glassdør, tørkeutløp, klessnorer på stativ med tøy, kurver og benk.
+  LEIR2.vaskeri = lod((b, e) => {
+    const d = [], B = 3, L = 6, s = .3, H = 2.5, V = '#7d8a72', VM = '#636e59';
+    modul(d, { B, L, H, s, V, VM, tak: 'flat', steg: e ? 0 : .75, dørY: -1.5 }, e);
+    d.push(påVegg([boks(.02, 0, 0, .04, 1, 2.1, K.mørkM), boks(.05, 0, .1, .03, .85, 1.9, K.glassL)], B / 2, -1.5, s, 'x+'));
+    d.push(vind(B / 2, 1, s + 1, 1.6, 1, 'x+', e));
+    if (!e) for (const y of [.5, 1.5]) d.push(boks(B / 2 - .35, y, s, .6, .6, .85, '#e8e6df'), skive(B / 2 - .04, y, s + .45, .18, .02, K.glassL, 'x', 10));
+    d.push(stav([-B / 2 - .3, 2, s + 2], [-B / 2 - .05, 2, s + 2], .06, K.galv, 6), boks(B / 2 + .4, -1.5, 0, .7, 1.2, s - .02, F.treL));
+    // klessnorer på to T-stativ med tøy
+    for (const x of [2.3, 5]) d.push(stav([x, -2.5, 0], [x, -2.5, 1.9], .04, K.galv, 4), stav([x, 2.5, 0], [x, 2.5, 1.9], .04, K.galv, 4), stav([x - .4, -2.5, 1.85], [x + .4, -2.5, 1.85], .03, K.galv, 4), stav([x - .4, 2.5, 1.85], [x + .4, 2.5, 1.85], .03, K.galv, 4));
+    for (const x of [2.3, 5]) for (const dx of [-.4, .4]) d.push(stav([x + dx, -2.5, 1.85], [x + dx, 2.5, 1.85], .006, '#e8e6df', 3));
+    const TØY = ['#4d5540', '#2f3e52', '#e8e6df', '#6b3a2c', '#9a8f75', '#3a3f42'];
+    if (!e) for (let i = 0; i < 10; i++) { const x = [1.9, 2.7, 4.6, 5.4][i % 4], y = -2 + (i % 5) * .95; d.push(boks(x, y, 1.15, .02, .5, .65, TØY[i % 6])); }
+    d.push(boks(1.9, -2.9, 0, .5, .35, .35, '#b9a27a'), boks(5.6, 2.9, 0, .5, .35, .35, '#b9a27a'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B41 Treningstelt: buetelt (åpen front mot +x), vektstativ og benk ute, stang for pullups, dekk og kettlebells.
+  LEIR2.treningstelt = lod((b, e) => {
+    const d = [], L = 10, B = 6, P = '#5d6450', PM = '#474d3c';
+    d.push(boks(0, 0, 0, L, B, .06, '#3a3a36'), prisme(bueProfil(B, 3.2, e ? 7 : 12), L, P));
+    if (!e) for (let x = -L / 2; x <= L / 2 + .01; x += L / 4) d.push(flytt(prisme([...bueProfil(B + .12, 3.28, 12), ...bueProfil(B - .02, 3.18, 12).reverse()], .1, PM), x, 0, 0));
+    d.push(boks(L / 2 + .01, 0, 0, .02, 3, 2.4, '#1d1f1a'), skive(L / 2 + .15, 0, 2.5, .17, 3.3, PM, 'y', 8));
+    // ute: vektstativ med stang og skiver, benk, pullup-stang, dekk, kettlebells
+    const x0 = L / 2 + 1.6;
+    for (const y of [-.7, .7]) d.push(boks(x0, y, 0, .1, .1, 1.6, K.mørk), boks(x0, y, 0, .7, .1, .06, K.mørk));
+    d.push(stav([x0 + .05, -1.1, 1.35], [x0 + .05, 1.1, 1.35], .02, K.stålG, 6)); for (const y of [-.95, .95]) d.push(skive(x0 + .05, y, 1.35, .22, .06, '#1c1c1d', 'y', 10));
+    d.push(boks(x0 + 1.3, 0, .4, .35, 1.3, .1, '#2b2e30'), boks(x0 + 1.3, -.5, 0, .2, .1, .4, K.mørk), boks(x0 + 1.3, .5, 0, .2, .1, .4, K.mørk));
+    for (const y of [-2.6, -1.2]) d.push(stav([x0 + .5, y, 0], [x0 + .5, y, 2.3], .05, K.galv, 6)); d.push(stav([x0 + .5, -2.8, 2.25], [x0 + .5, -1, 2.25], .025, K.galv, 6));
+    d.push(farg(new THREE.TorusGeometry(.45, .17, 5, 12).translate(x0 + .6, 2.2, .17), K.gummi));
+    if (!e) for (let i = 0; i < 3; i++) d.push(kule(x0 + 1.3 + i * .3, 1.4, .14, .13, '#2b2e30', 6), boks(x0 + 1.3 + i * .3, 1.4, .24, .14, .04, .1, '#2b2e30'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B42 Arrest/celle: lav betongblokk med små vinduer med sprosser, tung ståldør med luke, lampe, inngjerdet luftegård foran.
+  LEIR2.arrest = lod((b, e) => {
+    const d = [], B = 4, L = 5, H = 2.6, s = .2;
+    d.push(boks(0, 0, 0, B + .2, L + .2, s, F.betongM), boks(0, 0, s, B, L, H, '#8a8883'), boks(0, 0, s + H, B + .2, L + .2, .2, F.betongM));
+    if (!e) for (let z = s + .3; z < s + H; z += .3) d.push(boks(0, 0, z, B + .02, L + .02, .02, '#7d7b76'));
+    for (const y of [-1.4, 1.4]) for (const side of ['y+', 'y-']) d.push(påVegg([boks(.03, 0, 0, .05, .6, .35, K.glass), boks(.07, -.15, 0, .03, .03, .35, K.mørk), boks(.07, 0, 0, .03, .03, .35, K.mørk), boks(.07, .15, 0, .03, .03, .35, K.mørk)], y * .7, side === 'y+' ? L / 2 : -L / 2, s + 1.9, side));
+    d.push(påVegg([boks(.02, 0, 0, .04, 1.1, 2.1, K.mørkM), boks(.05, 0, 0, .05, .95, 2.05, '#4a4f4b'), boks(.09, 0, 1.4, .02, .3, .15, K.mørk), boks(.09, .35, 1, .05, .06, .2, K.stålG)], B / 2, 0, s, 'x+'));
+    d.push(boks(B / 2 + .15, 0, s + 2.25, .25, .35, .15, K.mørk), boks(B / 2 + .15, 0, s + 2.23, .2, .3, .02, K.lys));
+    // luftegården: gjerde rundt et felt foran (x 2,2–5,4)
+    const G = [[B / 2 + .2, -2.6], [5.4, -2.6], [5.4, 2.6], [B / 2 + .2, 2.6]];
+    for (let i = 0; i < 3; i++) { const [x0, y0] = G[i], [x1, y1] = G[i + 1], l = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(l / 1.3);
+      for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n, y = y0 + (y1 - y0) * k / n; d.push(boks(x, y, 0, .06, .06, 2.4, '#6f7476')); }
+      d.push(bjelke([x0, y0, 2.35], [x1, y1, 2.35], .04, '#6f7476'), bjelke([x0, y0, 1.2], [x1, y1, 1.2], .02, '#9ba1a4'));
+      if (!e) for (let k = 1; k < n * 3; k++) { const t = k / (n * 3), x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t; d.push(boks(x, y, .05, .01, .01, 2.3, '#9ba1a4')); } }
+    if (!e) d.push(boks(3.6, 1.8, 0, .4, 1.5, .45, F.treL));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B43 Garasje/kjøretøyhall: hall i stålplate med to leddporter mot +x, flatt tak med takrenne, lys over portene, forplass.
+  LEIR2.garasje = lod((b, e) => {
+    const d = [], B = 7, L = 10, H = 4.4, s = .15, V = '#6b7366', VM = '#555c51';
+    modul(d, { B, L, H, s, V, VM, tak: 'flat', steg: e ? 0 : 1.2 }, e);
+    for (const y of [-2.5, 2.5]) { d.push(port(B / 2, y, s, 3.6, 3.6, 'x+', '#8a918c', y < 0 ? 0 : 1.3)); d.push(boks(B / 2 + .2, y, s + 3.9, .3, .5, .15, K.mørk), boks(B / 2 + .2, y, s + 3.88, .25, .45, .02, K.lys)); }
+    d.push(dør(-B / 2, 3.5, s, .9, 2.05, 'x-', VM, K.mørkM), boks(B / 2 + 1.25, 0, 0, 2.5, L, .1, K.betong));
+    for (const y of [-2.5, 2.5]) d.push(boks(B / 2 + 2.3, y, .1, .1, 3.6, .012, K.gul));
+    d.push(stav([-B / 2 - .1, -L / 2 - .1, s + H], [-B / 2 - .1, -L / 2 - .1, .1], .05, K.mørk, 6));
+    if (!e) for (const y of [-2, 2]) d.push(vind(-B / 2, y, s + 2.6, 1.6, .7, 'x-', e));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B44 Verkstedhall for tunge kjøretøy: høy hall med 6 m høy port mot +x, portalkran (traverskran) på skinner over forplassen
+  // med løpekatt og krok, lysbånd, ventilasjon og en sidedør.
+  LEIR2.tungverksted = lod((b, e) => {
+    const d = [], B = 14, L = 18, H = 8, s = .2, V = '#5a6658', VM = '#465045';
+    modul(d, { B, L, H, s, V, VM, tak: 'sal', h: 1.6, takF: F.blikk, steg: e ? 0 : 1.5 }, e);
+    d.push(port(B / 2, -3, s, 6, 6.2, 'x+', '#7b827c', 0), port(B / 2, 5, s, 4.5, 4.6, 'x+', '#7b827c', 2.4));
+    for (const y of [-3, 5]) d.push(boks(B / 2 + .3, y, s + (y < 0 ? 6.6 : 5), .4, .6, .2, K.mørk), boks(B / 2 + .3, y, s + (y < 0 ? 6.58 : 4.98), .35, .55, .02, K.lys));
+    d.push(dør(-B / 2, -6, s, 1, 2.1, 'x-', VM, K.mørkM));
+    if (!e) for (const sx of [-1, 1]) for (let y = -6; y <= 6; y += 4) d.push(vind(sx * B / 2, y, s + 5.5, 2.6, .9, sx > 0 ? 'x+' : 'x-', e));
+    // forplassen og portalkranen (to bein på hver side, bjelke på tvers, løpekatt med krok)
+    d.push(boks(B / 2 + 3, 0, 0, 6, L, .12, K.betong));
+    const kx = B / 2 + 3.5, KF = '#c9a227';
+    for (const y of [-8.2, 8.2]) { d.push(boks(kx - 2.5, y, .12, .4, .4, 7, KF), boks(kx + 2.5, y, .12, .4, .4, 7, KF), boks(kx, y, 7.1, 5.4, .45, .45, KF)); if (!e) d.push(bjelke([kx - 2.5, y, 3], [kx + 2.5, y, 6], .12, KF), boks(kx, y, 0, 6, .3, .12, K.stålG)); }
+    d.push(boks(kx, 0, 7.15, .6, 16.9, .6, KF), boks(kx, -2, 6.8, .9, 1.1, .45, K.mørk), stav([kx, -2, 6.8], [kx, -2, 3.2], .02, K.mørk, 4), boks(kx, -2, 3, .25, .15, .25, K.gul));
+    // varselstriper nederst på kranbeina
+    for (const sx of [-1, 1]) for (const y of [-8.2, 8.2]) for (let i = 0; i < 3; i++) d.push(boks(kx + sx * 2.5, y, .12 + i * .3, .42, .42, .3, i % 2 ? K.gul : K.svartgul));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B45 Vaskeplass for kjøretøy: betongplate med fall mot en rist, kantstein, høytrykksvasker med slangetrommel, lysmast og
+  // kum for oljeutskiller.
+  LEIR2.vaskeplass = lod((b, e) => {
+    const d = [], L = 8, B = 6;
+    d.push(boks(0, 0, 0, L, B, .12, K.betong), boks(0, 0, .12, L - .4, .5, .01, K.mørk));
+    if (!e) for (let x = -3.6; x <= 3.6; x += .2) d.push(boks(x, 0, .125, .04, .45, .01, K.galv));
+    for (const sy of [-1, 1]) d.push(boks(0, sy * (B / 2 - .1), .12, L, .2, .15, F.betongM)); d.push(boks(-L / 2 + .1, 0, .12, .2, B, .15, F.betongM));
+    d.push(boks(-3.3, -3.6, 0, 1.1, .7, 1.3, '#c23b2c'), boks(-3.3, -3.6, 1.3, 1.15, .75, .06, K.mørk), skive(-3.3, -3.25, .8, .3, .2, K.mørk, 'y', 10));
+    if (!e) kabel(d, [[-3, -3.25, .8], [-2.4, -2.6, .13], [-.8, -1.8, .13], [-.5, -1.2, .6]], .02); d.push(boks(-.5, -1.2, .6, .4, .05, .05, K.gul));
+    d.push(stav([3.7, -3.4, 0], [3.7, -3.4, 5], .06, K.galv, 6), boks(3.4, -3.4, 4.9, .6, .3, .18, K.mørk), boks(3.4, -3.4, 4.88, .5, .25, .02, K.lys));
+    d.push(syl(3.2, 2.3, .12, .35, .04, F.stålM, 10), syl(3.2, 2.3, .12, .3, .05, K.mørk, 8));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B46 Fyllestasjon for drivstoff: tak på fire søyler med lys under, pumpeøy med to pumper og påkjørselsvern, liggende tank bak
+  // i et kar, skilt og nødstopp.
+  LEIR2.fyllestasjon = lod((b, e) => {
+    const d = [], S = selskap();
+    d.push(boks(0, 0, 0, 10, 8, .1, K.betong));
+    for (const [x, y] of [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]]) d.push(syl(x, y, .1, .14, 4.5, '#d9d8d2', 8));
+    d.push(boks(0, 0, 4.6, 7, 7, .5, '#d9d8d2'), boks(0, 0, 4.6, 7.05, 7.05, .16, S.farge));
+    if (!e) for (const [x, y] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) d.push(boks(x, y, 4.56, .9, .9, .04, K.lys));
+    d.push(boks(0, 0, .1, 1.2, 4, .2, F.betongM));
+    for (const y of [-1, 1]) { d.push(boks(0, y, .3, .5, .8, 1.7, '#e3e3de'), boks(0, y, 2, .55, .85, .1, S.farge), boks(.26, y, 1.3, .02, .5, .3, K.glassL), boks(-.26, y, 1.3, .02, .5, .3, K.glassL));
+      if (!e) d.push(stav([.25, y + .35, 1.5], [.45, y + .5, .6], .02, K.gummi, 4), stav([-.25, y - .35, 1.5], [-.45, y - .5, .6], .02, K.gummi, 4)); }
+    for (const y of [-2.1, 2.1]) d.push(syl(0, y, .1, .1, .9, K.gul, 6), syl(0, y, .6, .105, .1, K.svartgul, 6));
+    // tanken bak (−x) i kar, rør til pumpeøya, nødstopp og skilt
+    d.push(boks(-4.2, 0, .1, 1.8, 5, .4, F.betongM));
+    const tk = syl(0, 0, 0, .7, 4.2, '#5b6447', 12); tk.rotateX(Math.PI / 2); tk.translate(-4.2, 2.1, 1.1); d.push(tk);
+    d.push(stav([-3.5, 0, .3], [-.6, 0, .3], .05, F.stålM, 4), boks(2.9, -3.6, 0, .1, .1, 1.3, K.galv), boks(2.9, -3.62, 1.1, .2, .02, .2, K.gul), skive(2.9, -3.64, 1.2, .06, .03, K.rød, 'y', 8));
+    d.push(stav([4.6, 3.6, 0], [4.6, 3.6, 3.2], .06, K.galv, 6), boks(4.6, 3.6, 2.4, .1, 1.2, .9, S.farge), boks(4.66, 3.6, 2.5, .02, .9, .2, '#f2efe6'));
+    return d;
+  });
+
   // ---------- nye leirbygg (del B): registreres i Leir.BYGG med ikon, 2D-stil og gruppe i byggelista ----------
   // Pris, tid (spilltimer), strøm (kW, minus = bruker) og materialer er Claudes forslag. De fleste har ingen egen virkning i
   // spillet ennå (bare strømforbruket); der det passer, gir de senger (plasser) eller lagerplass (lager) som andre bygg.
@@ -1063,6 +1249,26 @@
       bygg: { navn: 'Skytebane', pris: 2e6, tid: 2, kw: 0, fot: [-2, 33.8, -6.6, 6.6], mat: { tre: 10, betong: 6 }, tekst: 'Standplass med tak, skiver på 25 m og kulefang (virkningen kommer senere)' } },
     hinderløype: { gruppe: 'Trening', ikon: 'gjerde', stil: { form: 'pad', tak: '#7f786b', h: .1 },
       bygg: { navn: 'Hinderløype', pris: 1.2e6, tid: 1.5, kw: 0, fot: [-.5, 33, -2, 2], mat: { tre: 12, stål: 2 }, tekst: 'Krypehinder, vegg, bom, hengestige, nett og dekk (virkningen kommer senere)' } },
+    offisersbrakke: { gruppe: 'Bo og leve', ikon: 'seng', stil: { form: 'sal', tak: '#2f3235', h: 4.4 },
+      bygg: { navn: 'Offisersbrakke', pris: 3e6, tid: 2, kw: -1, fot: [-3.3, 4.8, -4.8, 4.8], mat: { tre: 18, betong: 4 }, plasser: 4, tekst: 'Fire sengeplasser i en mindre og bedre brakke' } },
+    dusjbrakke: { gruppe: 'Bo og leve', ikon: 'vann', stil: { form: 'kasse', tak: '#9a9e97', h: 2.9 },
+      bygg: { navn: 'Dusj- og vaskebrakke', pris: 1.8e6, tid: 1, kw: -1.5, fot: [-2.3, 2.6, -3.3, 3.3], mat: { stål: 2, tre: 4 }, tekst: 'Dusjer og vasker (virkningen kommer senere)' } },
+    toalett: { gruppe: 'Bo og leve', ikon: 'hus', stil: { form: 'kasse', tak: '#2f526b', h: 2.8 },
+      bygg: { navn: 'Toalettcontainer', pris: 900000, tid: .5, kw: -.3, fot: [-2.2, 2, -3.2, 3.2], mat: { stål: 2 }, tekst: 'Tre toaletter (virkningen kommer senere)' } },
+    vaskeri: { gruppe: 'Bo og leve', ikon: 'vann', stil: { form: 'kasse', tak: '#636e59', h: 2.8 },
+      bygg: { navn: 'Vaskeri', pris: 1.4e6, tid: 1, kw: -2, fot: [-1.9, 5.6, -3.3, 3.3], mat: { stål: 2, tre: 3 }, tekst: 'Vaskemaskiner og klessnorer (virkningen kommer senere)' } },
+    treningstelt: { gruppe: 'Trening', ikon: 'telt', stil: { form: 'telt', tak: '#5d6450', h: 3.2 },
+      bygg: { navn: 'Treningstelt', pris: 900000, tid: .5, kw: 0, fot: [-5, 9.5, -3.4, 3.4], mat: { tre: 4, stål: 1 }, tekst: 'Telt med vekter og stang ute (virkningen kommer senere)' } },
+    arrest: { gruppe: 'Forsvar', ikon: 'port', stil: { form: 'flat', tak: '#8f8d87', h: 2.8 },
+      bygg: { navn: 'Arrest', pris: 2e6, tid: 1.5, kw: -.5, fot: [-2.2, 5.5, -2.7, 2.7], mat: { betong: 18, stål: 2 }, tekst: 'Celle i betong med luftegård (virkningen kommer senere)' } },
+    garasje: { gruppe: 'Lager og arbeid', ikon: 'bil', stil: { form: 'flat', tak: '#555c51', h: 4.6 },
+      bygg: { navn: 'Garasje', pris: 3.5e6, tid: 2, kw: -1, fot: [-3.7, 6, -5.1, 5.1], mat: { stål: 10, betong: 12 }, tekst: 'Hall med to porter for kjøretøy (virkningen kommer senere)' } },
+    tungverksted: { gruppe: 'Lager og arbeid', ikon: 'verktoy', stil: { form: 'sal', tak: '#7b8083', h: 9.8 },
+      bygg: { navn: 'Verkstedhall for tunge kjøretøy', pris: 12e6, tid: 5, kw: -6, fot: [-7.2, 13, -9.2, 9.2], mat: { stål: 30, betong: 40 }, tekst: 'Høy hall med 6 m port og portalkran (virkningen kommer senere)' } },
+    vaskeplass: { gruppe: 'Lager og arbeid', ikon: 'vann', stil: { form: 'pad', tak: '#8f8d87', h: .15 },
+      bygg: { navn: 'Vaskeplass for kjøretøy', pris: 800000, tid: .5, kw: -.5, fot: [-4, 4, -4, 3], mat: { betong: 8 }, tekst: 'Plate med rist og høytrykksvasker (virkningen kommer senere)' } },
+    fyllestasjon: { gruppe: 'Strøm og diesel', ikon: 'tank', stil: { form: 'flat', tak: '#d9d8d2', h: 5.1 },
+      bygg: { navn: 'Fyllestasjon', pris: 3e6, tid: 1.5, kw: -.5, fot: [-5.1, 5, -4, 4], mat: { stål: 6, betong: 8 }, tekst: 'Tak, pumper og tank for kjøretøyene (virkningen kommer senere)' } },
   };
   M.LEIR2_NYE = NYE;
   function registrer() {
@@ -1116,6 +1322,9 @@
   ny('A26', 'l2-vegsperring', 'Vegsperring (ny)', () => LEIR2.vegsperring({}));
   ny('A27', 'l2-skytebane', 'Skytebane (ny)', () => LEIR2.skytebane({}));
   ny('A28', 'l2-hinderløype', 'Hinderløype (ny)', () => LEIR2.hinderløype({}));
+  for (const [nr, id, t] of [['B37', 'offisersbrakke', 'Offisersbrakke'], ['B38', 'dusjbrakke', 'Dusj- og vaskebrakke'], ['B39', 'toalett', 'Toalettcontainer'], ['B40', 'vaskeri', 'Vaskeri'],
+    ['B41', 'treningstelt', 'Treningstelt'], ['B42', 'arrest', 'Arrest'], ['B43', 'garasje', 'Garasje'], ['B44', 'tungverksted', 'Verkstedhall for tunge kjøretøy'], ['B45', 'vaskeplass', 'Vaskeplass'], ['B46', 'fyllestasjon', 'Fyllestasjon']])
+    ny(nr, 'l2-' + id, t, () => LEIR2[id]({}));
   registrer();
 
   // ---------- detaljnivå i spillet: bytt til den enkle utgaven lenger enn ca. 150 m unna ----------

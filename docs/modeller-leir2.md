@@ -38,3 +38,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   medisinkasser, matkasser, oljefat).
 - Del 4: A19–A28 (drivhus, helikopterplass, sandsekkvoll, gjerde – MODELLER.gjerde byttet ut –, kjøkken, brønn, flaggsokkel ved
   leiren, vegsperring, skytebane og hinderløype; de tre siste som nye bygg).
+- Del 5: B37–B46 (offisersbrakke – 4 senger –, dusj- og vaskebrakke, toalettcontainer, vaskeri, treningstelt, arrest, garasje,
+  verkstedhall for tunge kjøretøy med portalkran, vaskeplass, fyllestasjon). Felles hjelpere `modul()` og `port()`.
