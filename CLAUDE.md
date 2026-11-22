@@ -1510,8 +1510,22 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   folk-visning.js kaller KOMMANDO({ type, lag: KOMMANDO.nid(s), … }) – oppførselen i enspiller er som før. Hos en gjest (NETT.gjest)
   sendes kommandoen til verten ({ t: 'kommando', k }), og verten kjører NETT.utførFra(k, gjestens id) og logger «Kari setter Lag 1 i linje».
   Gjestens lagpanel har nå Marsjer, Stopp, Grav ned, Formasjon og Stridsregler; bildet sender s.strid. Nye knapper for lag og leir: lag
-  en kommando her i stedet for å gjøre jobben i knappen. Ikke gjort: oppgradering/reparasjon/flytting av bygg, plan og maler, kjøp,
-  tropper, bevæpning (koster penger), kjøretøy og resten av panelene går fortsatt rett på; AI-en og reglene kaller ordre() direkte.
+  en kommando her i stedet for å gjøre jobben i knappen. AI-en og reglene kaller fortsatt ordre() direkte.
+  DEL 2 (22. nov, R17-4): leir, folk, tropper og kjøretøy. Reglene i spill/kommandoer.js (uten DOM; Kommandoer.registrer(Kommando, M) med
+  et miljø M: leir(side), penger/betal/gi(side), folk(side), leirPunkt(side), tropp = TropperSpill.rett, kjør, kjørStopp …), miljøet for
+  nettleseren i kommando-visning.js (MIN_SIDE = 'blå' er siden som har leiren og kassa i denne nettleseren – ALT slås opp via ctx.side).
+  Typene: bygg (også bs for byggesettet), byggPlan, plan (legg/flytt/fjern/tøm), riv, flytt, oppgrader, reparer, prioriter, bryter,
+  kjøpDiesel, kjøpMateriale, selgMateriale, folk, folkFlytt, rekrutter (bygg: true = på «bygg»), kjøpMat, troppOpprett, troppOppløs,
+  troppUtstyr, omBord, gåAv, kjør, kjørStopp (kjøretøy = nid fra Kommando.nid(k, KJORETOY), eller navnet; gjester kan kjøre kjøretøy de eier).
+  Hver sjekk() avviser med norsk tekst (finnes, er din, har råd) i samme rekkefølge og med samme tekst som regelfunksjonen, så enspiller
+  er som før; svaret er det regelfunksjonen ga ({ feil, mangler } også). Visningene bruker kom(k) = svaret eller { feil } og skriver
+  meldingene selv; lag- og meld-kommandoer skriver avvisningen i loggen. tropper-visning.js: TropperSpill.opprett/oppløs/gåOmBord/gåAv/
+  brukEndring går via KOMMANDO, de «rette» funksjonene i TropperSpill.rett (hjemSteg kaller oppløsRett direkte). kjoretoy-visning.js:
+  window.KjoretoySpill.stoppRett. FolkSpill.matFaktor er nytt. KONTROLL i test_kommando.js: tekstsøk (FORBUDT) i leir-, byggesett-,
+  strøm-, folk-, tropper- og kjøretøyvisningen etter direkte kall som endrer tilstanden; UNNTAK har forklaringen (simulering, de rette
+  funksjonene, maler og angre i planen, prøvetroppen) – et unntak som ikke treffer lenger, er også en feil. Nye knapper i de filene:
+  lag en kommando. IKKE GJORT: maler (planMal) og angre i planen, «Kjør mot …» (enheter-visning.js), kjøp av våpen i Leir-menyen, sekk,
+  morgenmøtet, selskap, sjø og de andre panelene; flerspiller-visning.js ctxFra bør få kjøretøy: KJORETOY (ellers brukes M.kjøretøy()).
   SELSKAPET W1 (22. nov, R16-D; docs/plan-wardogs.md): spill/selskap.js (regler uten DOM, test_selskap.js – hentet fra grenen claude/natt18-krig)
   + spill/selskap-visning.js (window.SelskapSpill, lastes rett før meny.js). Panelet #selskap fra kommandolinja (KOMMANDO_TILLEGG k 'selskap'),
   ☰ «Selskapet» (gruppen Oversikt) og fanen Mål i Leir-menyen: merket (SVG – skjold i flaggets farger med bokstavene; ravn for Ravnsund
