@@ -101,6 +101,8 @@
   function kommando(m) {
     merk(); const r = F.sjekkKommando(m.k, m.fra, ENHETER);
     if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
+    if (r.type === 'stopp') { const q = r.lag; q.sti = null; q.kø = null; q.køSlutt = null; q.køSiste = false; q.siktSkitten = true; skitten = true;
+      sikkerLogg(`${m.navn || navnPå(m.fra)} stanser ${q.navn}.`); send({ t: 'svar', til: m.fra, tekst: `${q.navn} står.` }); N.sistBilde = 0; return; }
     ordre(r.lag, r.x, r.y); sikkerLogg(`${m.navn || navnPå(m.fra)} sender ${r.lag.navn} av gårde.`);
     send({ t: 'svar', til: m.fra, tekst: `${r.lag.navn}: ordren er mottatt.` });
   }
@@ -146,6 +148,12 @@
     if (s.eier !== N.id) { if (!stille) sikkerLogg(`${s.navn} styres av ${s.eier ? navnPå(s.eier) : 'verten'}. Be verten gi deg laget.`); return true; }
     send({ t: 'kommando', k: { type: 'ordre', lag: s.nid, x: Math.round(X), y: Math.round(Y) } });
     if (!stille) sikkerLogg(`${s.navn}: ordren er sendt til verten …`); return true;
+  };
+  // lagpanelet hos gjesten (index.html visPanel): marsj og stopp for egne lag, ellers hvem som styrer laget
+  N.lagPanel = (s, H) => {
+    if (s.eier !== N.id) { const p = document.createElement('p'); p.style.margin = '4px 0'; p.textContent = `Styres av ${s.eier ? navnPå(s.eier) : 'verten'}.`; H.appendChild(p); return; }
+    H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
+    if (s.sti) H.appendChild(knapp('Stopp', false, () => { send({ t: 'kommando', k: { type: 'stopp', lag: s.nid } }); sikkerLogg(`${s.navn}: stopp er sendt til verten …`); }));
   };
   // Farten styres av verten: knappene og ⏭ gjør ingenting hos gjesten
   document.addEventListener('click', e => {

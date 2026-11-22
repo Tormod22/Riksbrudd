@@ -40,6 +40,7 @@ sjekk(k({ type: 'ordre', lag: 'l1', x: 1, y: 2 }, 'g1').ok, 'eier kan gi ordre')
 sjekk(!k({ type: 'ordre', lag: 'l1', x: 1, y: 2 }, 'g2').ok, 'annen gjest kan ikke');
 sjekk(!k({ type: 'ordre', lag: 'l2', x: 1, y: 2 }, 'g1').ok, 'ikke fiendens lag');
 sjekk(!k({ type: 'ordre', lag: 'l1', x: 'a', y: 2 }, 'g1').ok && !k({ type: 'sprenge' }, 'g1').ok && !k(null, 'g1').ok, 'ugyldige kommandoer');
+sjekk(k({ type: 'stopp', lag: 'l1' }, 'g1').type === 'stopp' && !k({ type: 'stopp', lag: 'l1' }, 'g2').ok, 'stopp bare for eieren');
 // eier og tid
 const g = [{ id: 'a' }, { id: 'b' }];
 sjekk(F.nesteEier(null, g) === 'a' && F.nesteEier('a', g) === 'b' && F.nesteEier('b', g) === null && F.nesteEier('borte', g) === null, 'nesteEier');

@@ -41,6 +41,11 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     sjekk(await til(B, ([n, x]) => Math.abs(ENHETER.find(q => q.navn === n).x - x) > 20, [lagNavn, x0], 30000), 'laget flytter seg hos gjesten');
     await B.evaluate(() => document.getElementById('sp1').click()); await vent(700);
     sjekk(await B.evaluate(() => tempo === 60), 'gjesten kan ikke endre farten');
+    // gjestens lagpanel: bare Marsjer/Stopp; Stopp stanser laget hos verten
+    const knappene = await B.evaluate(n => { valgt = ENHETER.find(q => q.navn === n); visPanel(); return [...document.querySelectorAll('#handl button')].map(b => b.textContent); }, lagNavn);
+    sjekk(knappene.includes('Marsjer') && knappene.includes('Stopp') && knappene.length === 2, 'gjestens lagpanel: ' + knappene.join(', '));
+    await B.evaluate(() => [...document.querySelectorAll('#handl button')].find(b => b.textContent === 'Stopp').click());
+    sjekk(await til(A, n => !ENHETER.find(q => q.navn === n).sti, lagNavn), 'Stopp fra gjesten stanser laget hos verten');
     // meldinger
     await B.evaluate(() => NETT.send({ t: 'melding', tekst: 'Hei fra Kari' }));
     sjekk(await til(A, () => document.getElementById('logg').textContent.includes('Hei fra Kari')), 'melding kommer fram til verten');

@@ -89,7 +89,7 @@
   }
 
   // ---------- kommandoer fra gjestene ----------
-  // Bare marsjordre i første trinn. Svaret: { ok, lag, feil }.
+  // Marsjordre og stopp i første trinn. Svaret: { ok, type, lag, x, y, feil }.
   function sjekkKommando(k, fra, lag) {
     if (!k || typeof k !== 'object') return { ok: false, feil: 'Ugyldig kommando.' };
     if (k.type === 'ordre') {
@@ -97,7 +97,12 @@
       const s = lag.find(q => q.nid === k.lag); if (!s) return { ok: false, feil: 'Fant ikke laget.' };
       if (s.side !== 'blå') return { ok: false, feil: 'Det er ikke vårt lag.' };
       if (s.eier !== fra) return { ok: false, feil: `${s.navn} styres av ${s.eier ? 'en annen spiller' : 'verten'}.` };
-      return { ok: true, lag: s, x, y };
+      return { ok: true, type: 'ordre', lag: s, x, y };
+    }
+    if (k.type === 'stopp') {
+      const s = lag.find(q => q.nid === k.lag); if (!s) return { ok: false, feil: 'Fant ikke laget.' };
+      if (s.side !== 'blå' || s.eier !== fra) return { ok: false, feil: `${s.navn} styres ikke av deg.` };
+      return { ok: true, type: 'stopp', lag: s };
     }
     return { ok: false, feil: 'Ukjent kommando.' };
   }

@@ -1243,7 +1243,9 @@ function visPanel() {
     s.planlegger ? 'planlegger rute' : s.sti ? 'marsjerer, ' + nf.format(Math.max(0, s.timerIgjen)) + ' t igjen' : null,
     s.siktVidde ? 'sikt ' + nf.format(s.siktVidde / 1000) + ' km' : null, ...KROKER.lagTekst.map(h => h(s))].filter(Boolean).join(' · ');
   const H = document.getElementById('handl'); H.innerHTML = '';
-  if (s.side === 'blå' && levende(s)) {
+  // flerspiller: en gjest får bare knappene som virker over nettet (spill/flerspiller-visning.js)
+  if (window.NETT && NETT.gjest) { if (s.side === 'blå' && levende(s)) NETT.lagPanel(s, H); }
+  else if (s.side === 'blå' && levende(s)) {
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
     H.appendChild(knapp(s.speider ? 'Speider (8 km sikt)' : 'Lag (4 km sikt)', false, () => { s.speider = !s.speider; s.siktSkitten = true; visPanel(); }));
     if (s.sti) H.appendChild(knapp('Stopp', false, () => { s.sti = null; s.kø = null; s.køSlutt = null; s.køSiste = false; s.siktSkitten = true; visPanel(); skitten = true; }));
@@ -3785,8 +3787,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=ef1ff01690"></script>
-<script src="/dovre-fliser/spill/flerspiller.js?v=5759487216"></script>
-<script src="/dovre-fliser/spill/flerspiller-visning.js?v=7f57b55f09"></script>
+<script src="/dovre-fliser/spill/flerspiller.js?v=60d2f3165e"></script>
+<script src="/dovre-fliser/spill/flerspiller-visning.js?v=a0a1949401"></script>
 <script src="/dovre-fliser/spill/meny.js?v=62e553a6b1"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=089cd08f30"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
