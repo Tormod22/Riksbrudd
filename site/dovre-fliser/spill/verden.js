@@ -12,6 +12,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js, M0 i docs/plan-flerspiller.md): samme frø gir samme svar på alle maskiner
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;
   const klem = (v, a, b) => Math.max(a, Math.min(b, v));
   // Claudes forslag – alle tallene i pakka
   const REGLER = {
@@ -218,7 +221,7 @@
   function nyBrann() { return { celler: {}, brent: {} }; }
   const rute = (x, y) => [Math.floor(x / REGLER.brann.rute), Math.floor(y / REGLER.brann.rute)];
   const midt = (i, j) => [(i + .5) * REGLER.brann.rute, (j + .5) * REGLER.brann.rute];
-  function tenn(B, x, y, t, rnd = Math.random) {
+  function tenn(B, x, y, t, rnd = tilf) {
     const [i, j] = rute(x, y), k = i + ',' + j; if (B.celler[k] || B.brent[k]) return false;
     const [a, b] = REGLER.brann.brenner; B.celler[k] = { fra: t, til: t + a + (b - a) * rnd() }; return true;
   }
@@ -226,7 +229,7 @@
   const erBrent = (B, x, y) => { const [i, j] = rute(x, y); return !!B.brent[i + ',' + j]; };
   // Ett steg: dtMin spillminutter. vær: { regn, våt, vind: { fart, retning } }, fare: brannfaren 0–1 (brannfare()),
   // brennbar(x, y) -> 0–1 (0 = brenner ikke: vann, snø, utenfor). Gir { nye, ut } (antall ruter).
-  function brannSteg(B, t, dtMin, vær, fare, brennbar, rnd = Math.random) {
+  function brannSteg(B, t, dtMin, vær, fare, brennbar, rnd = tilf) {
     const R = REGLER.brann, nøkler = Object.keys(B.celler); let nye = 0, ut = 0;
     const vx = Math.cos(vær.vind ? vær.vind.retning : 0), vy = Math.sin(vær.vind ? vær.vind.retning : 0), vf = vær.vind ? vær.vind.fart : 0, steg10 = dtMin / 10;
     const slokk = 1 - Math.pow(1 - R.slokk * klem(vær.regn || 0, 0, 1), steg10);

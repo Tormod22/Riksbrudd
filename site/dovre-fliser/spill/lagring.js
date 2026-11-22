@@ -69,7 +69,9 @@
       olje: o.olje === undefined || o.olje === null ? null : Math.max(0, r1(tall(o.olje, 0))),
       // (18. nov) fiendens lag, det fraksjonene husker ({ side: { sist, hatt: [id], leir } }) og stillingene deres
       fiender: (o.fiender || []).map(pakkLag), minne: pakkMinne(o.minne),
-      stillinger: (o.stillinger || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => ({ x: r1(q.x), y: r1(q.y), side: q.side, kjent: !!q.kjent })) };
+      stillinger: (o.stillinger || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => ({ x: r1(q.x), y: r1(q.y), side: q.side, kjent: !!q.kjent })),
+      // (22. nov, M0) tilstanden til verdens felles tilfeldighet (spill/tilfeldig.js), så rekka fortsetter likt etter omlasting
+      rng: Number.isFinite(o.rng) ? o.rng >>> 0 : null };
   }
   function pakkMinne(M) { if (!M) return null; const ut = {};
     for (const side of Object.keys(M)) { const m = M[side]; if (!m) continue; ut[side] = { leir: !!m.leir, hatt: [...(m.hatt || [])],
@@ -92,7 +94,9 @@
         olje: Number.isFinite(d.olje) && d.olje >= 0 ? d.olje : null,
         fiender: (Array.isArray(d.fiender) ? d.fiender : []).filter(q => q && q.navn && typeof q.side === 'string' && q.side !== 'blå' && Number.isFinite(q.x) && Number.isFinite(q.y)),
         minne: d.minne && typeof d.minne === 'object' ? d.minne : null,
-        stillinger: (Array.isArray(d.stillinger) ? d.stillinger : []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && typeof q.side === 'string') };
+        stillinger: (Array.isArray(d.stillinger) ? d.stillinger : []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && typeof q.side === 'string'),
+        // gamle lagringer uten feltet gir null (tilfeldigheten fortsetter da som den var)
+        rng: Number.isFinite(d.rng) ? d.rng >>> 0 : null };
     } catch (e) { return null; }
   }
   // Legger det lagrede tilbake i listene. finnes: lista (lag eller kjøretøy) som allerede står i spillet; lagNy(d) lager det som mangler
@@ -192,7 +196,7 @@
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;
     try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir,
       tettsteder: rot.TETTSTEDER || null, infra: rot.INFRA_TILSTAND || null, olje: rot.OLJE && OLJE.BASER[0] ? OLJE.BASER[0].beholdning : null,
-      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [] }))); sistOk = Date.now(); return true; } catch (e) { sistFeil = Date.now(); return false; }
+      fiender: fiendeLag(), minne: rot.AI && AI.minne ? AI.minne : null, stillinger: rot.STILLINGER || [], rng: rot.Tilfeldig ? Tilfeldig.lagre() : null }))); sistOk = Date.now(); return true; } catch (e) { sistFeil = Date.now(); return false; }
   }
   function les() {
     const S = spill(); if (!S || !S.leir) return false; let d = null;
@@ -201,6 +205,7 @@
     // (runde 13) klokka går aldri tilbake: den lille klokkenøkkelen skrives oftere enn verden og kan være litt nyere
     tid = Math.max(d.tid, klokkeLest(S.leir));
     if (d.vær && rot.VaerSpill) { Object.assign(VaerSpill.S, d.vær); VaerSpill.straks(); }
+    if (d.rng !== null && rot.Tilfeldig) Tilfeldig.les(d.rng);
     settTilbake(d.lag, egneLag(), brukLag, q => { const s = q.ingeniør && rot.nyttIngeniørlag ? nyttIngeniørlag(q.navn, q.x, q.y) : nyttLag(q.navn, q.x, q.y, 'blå', !!q.speider); if (!ENHETER.includes(s)) ENHETER.push(s); return s; });
     settTilbake(d.kjøretøy, egneKj(), brukKj, q => { if (!rot.Kjoretoy || !Kjoretoy.TYPER[q.type] || !(q.antall >= 1)) return null;
       try { const k = Kjoretoy.ny({ navn: q.navn, type: q.type, antall: Math.min(40, Math.round(q.antall)), x: q.x, y: q.y, retning: q.retning || 0 }); KJORETOY.push(k); return k; } catch (e) { return null; } });
