@@ -1474,6 +1474,128 @@
     return d;
   });
 
+  // =====================================================================================================================
+  // B67 Lagerhall med reoler: hall i stålplate med stor port mot +x og pallereoler under et tak langs langsiden (+y).
+  LEIR2.lagerhall = lod((b, e) => {
+    const d = [], B = 12, L = 20, H = 6, s = .15, V = '#7c8279', VM = '#62675f';
+    modul(d, { B, L, H, s, V, VM, tak: 'sal', h: 1.4, steg: e ? 0 : 1.25 }, e);
+    d.push(port(B / 2, -4, s, 5, 5, 'x+', '#8a918c', 1.6), boks(B / 2 + .3, -4, s + 5.4, .4, .6, .2, K.mørk), dør(B / 2, 5, s, 1, 2.1, 'x+', VM, K.mørkM));
+    // utereoler under tak langs +y: stolper, bjelker og paller med last
+    const y0 = L / 2 + 1.1;
+    d.push(boks(0, y0, 5, L - 4, 2.4, .08, F.blikkM));
+    for (let x = -8; x <= 8.01; x += 2.7) { d.push(boks(x, y0 - .55, 0, .1, .1, 5, '#2f5a8a'), boks(x, y0 + .55, 0, .1, .1, 5, '#2f5a8a')); }
+    for (const z of [.15, 1.7, 3.25]) { d.push(boks(0, y0 - .55, z, 16.2, .08, .12, '#cf5f1f'), boks(0, y0 + .55, z, 16.2, .08, .12, '#cf5f1f'));
+      if (!e) for (let x = -6.65; x < 8; x += 2.7) { const f = ['#4b5a3f', '#a9875a', '#3a3f42', '#8a7457'][((x * 3 + z * 2) | 0) & 3]; d.push(boks(x, y0, z + .12, 1.15, 1, .14, F.treL), boks(x, y0, z + .26, 1.05, .95, 1.1, f)); } }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B68 Kjølecontainer: hvit 20 fots kjølecontainer med kjøleaggregat (rist, vifte, display) i −x-enden og strømkabel.
+  LEIR2.kjølecontainer = lod((b, e) => {
+    const L = 6.06, B = 2.44, H = 2.59, d = [], f = '#e6e7e3', m = '#c9cbc6';
+    d.push(boks(0, 0, .1, L, B, H - .1, f)); for (const sy of [-1, 1]) for (const sx of [-1, 1]) d.push(boks(sx * (L / 2 - .08), sy * (B / 2 - .08), 0, .18, .18, H, m));
+    if (!e) for (let i = 1; i < 16; i++) d.push(boks(-L / 2 + i * L / 16, 0, .3, .06, B + .04, H - .5, m));
+    d.push(boks(0, 0, H - .14, L + .02, B + .04, .16, m), boks(0, 0, 0, L + .02, B + .04, .16, m));
+    d.push(boks(L / 2 + .01, 0, .16, .02, .02, H - .3, '#202224')); for (const y of [-.85, -.35, .35, .85]) d.push(stav([L / 2 + .06, y, .2], [L / 2 + .06, y, H - .2], .025, F.stålM, 4));
+    d.push(boks(-L / 2 - .08, 0, .2, .16, B - .1, H - .4, '#d1d3cf'), skive(-L / 2 - .17, -.5, 1.6, .45, .02, '#3d4143', 'x', 14), boks(-L / 2 - .17, .6, .5, .02, .7, 1.6, '#8d9193'));
+    d.push(boks(-L / 2 - .17, .6, 2.1, .02, .4, .2, '#1d2a20'), boks(-L / 2 - .18, .6, 2.15, .01, .2, .08, K.grønnLys));
+    if (!e) kabel(d, [[-L / 2 - .2, -1, .5], [-L / 2 - .6, -1.3, .05], [-L / 2 - 2, -1.4, .05]], .025);
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B69 Hundegård med hundehus: inngjerdet løpegård med port, hundehus med saltak, vannskål og matskål.
+  LEIR2.hundegård = lod((b, e) => {
+    const d = [boks(0, 0, 0, 6, 4, .04, '#7f786b')];
+    const G = [[-3, -2], [3, -2], [3, 2], [-3, 2]];
+    for (let i = 0; i < 4; i++) { const [x0, y0] = G[i], [x1, y1] = G[(i + 1) % 4], n = Math.round(Math.hypot(x1 - x0, y1 - y0) / 1.5);
+      for (let k = 0; k <= n; k++) d.push(boks(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, 0, .06, .06, 1.8, '#6f7476'));
+      d.push(bjelke([x0, y0, 1.78], [x1, y1, 1.78], .03, '#6f7476'));
+      if (!e) for (let k = 1; k < n * 4; k++) { const t = k / (n * 4); d.push(boks(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, .04, .01, .01, 1.72, '#9ba1a4')); } }
+    d.push(boks(3.02, .4, .05, .06, .9, 1.7, '#7d8285'));
+    d.push(boks(-1.8, 0, 0, 1.3, 1, .8, F.tre), flytt(gavl(1.3, 1, .45, F.tre), -1.8, 0, .8), flytt(saltak(1.3, 1, .45, '#3a3a38', .12), -1.8, 0, .8), boks(-1.14, 0, .1, .02, .4, .5, '#1a1a1a'));
+    d.push(syl(.5, -1.2, 0, .14, .08, '#2f5a8a', 10), syl(.9, -1.2, 0, .14, .08, '#a8241f', 10));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B70 Parkeringsplass med oppmerking: asfalt med seks plasser (2,5 × 5 m), hvite linjer, hjulstoppere og P-skilt.
+  LEIR2.parkering = lod((b, e) => {
+    const d = [boks(0, 0, 0, 12, 20, .06, '#3c3d3e')];
+    for (const sx of [-1, 1]) { for (let i = 0; i <= 6; i++) d.push(boks(sx * 3.4, -7.5 + i * 2.5, .06, 5, .1, .01, '#e8e6df'));
+      for (let i = 0; i < 6; i++) d.push(boks(sx * 5.3, -6.25 + i * 2.5, .06, .2, 1.6, .12, K.gul)); }
+    d.push(boks(0, -9.5, .06, 1.2, .15, .01, '#e8e6df'), stav([5.8, 9.6, 0], [5.8, 9.6, 2.4], .04, K.galv, 4), boks(5.8, 9.62, 1.8, .6, .02, .6, '#2f5a8a'), boks(5.8, 9.64, 1.95, .2, .01, .35, '#e8e6df'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B71 Skilt: inngangsskilt med selskapsmerket på to stolper, fareskilt, fartsgrense 20 og skilt mot leiren.
+  LEIR2.skilt = lod((b, e) => {
+    const d = [];
+    d.push(stav([0, -3.6, 0], [0, -3.6, 2.4], .06, K.galv, 6), stav([0, -1.6, 0], [0, -1.6, 2.4], .06, K.galv, 6), selskapsskilt(0, -2.6, 1.3, 2.2, .9, 'x+'));
+    d.push(stav([0, .6, 0], [0, .6, 2], .04, K.galv, 4), varsel(.05, .6, 1.4, .6, 'x+'));
+    d.push(stav([0, 2.2, 0], [0, 2.2, 2], .04, K.galv, 4), skive(.06, 2.2, 1.7, .32, .03, '#e8e6df', 'x', 14), farg(new THREE.TorusGeometry(.28, .04, 4, 14).rotateY(Math.PI / 2).translate(.09, 2.2, 1.7), '#c0392b'));
+    d.push(boks(.09, 2.1, 1.62, .01, .05, .18, K.mørk), boks(.09, 2.3, 1.62, .01, .1, .18, K.mørk));
+    d.push(stav([0, 3.7, 0], [0, 3.7, 2.2], .04, K.galv, 4), boks(.05, 3.7, 1.7, .03, 1, .3, '#2f5a3a'), boks(.07, 3.6, 1.79, .01, .6, .1, '#e8e6df'), prisme([[0, 0], [.25, .15], [0, .3]], .03, '#2f5a3a').translate(.05, 4.2, 1.7));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B72 Flaggrekke med selskapets flagg: fem stenger på en lav mur, dukene i selskapets farger (ett mønster per stang).
+  LEIR2.flaggrekke = lod((b, e) => {
+    const S = selskap(), d = [boks(0, 0, 0, 1.2, 10, .5, K.betong), boks(0, 0, .5, 1.3, 10.1, .06, F.betongM)];
+    const FA = [S.farge, S.detalj, S.tredje, S.farge, S.detalj];
+    for (let i = 0; i < 5; i++) { const y = -4 + i * 2, H = 7 - Math.abs(i - 2) * .6;
+      d.push(syl(0, y, .5, .05, H, '#e2e0d9', 6, .035), syl(0, y, .5 + H, .07, .1, F.gull, 6));
+      const P = (u, v) => [.06 + u * 1.5, y + Math.sin(u * 5 + i) * .08 * u, .5 + H - .2 - 1 + v * 1 - .1 * u * u];
+      d.push(M.H.flate(e ? 4 : 10, 1, P, (u, v) => (v > .38 && v < .62 && u > .1 ? FA[(i + 1) % 5] : FA[i]), true)); }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B73 Porttårn: to vakttårn i stål på hver side av innkjøringen med en bjelke over porten (selskapsskilt), lys og sandsekker.
+  LEIR2.porttårn = lod((b, e) => {
+    const d = [], Z = 4.5, r = frø(73);
+    for (const sy of [-1, 1]) { const y = sy * 5.2, t = [];
+      for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) t.push(boks(ax * 1, ay * 1, 0, .3, .3, .2, K.betong), bjelke([ax * 1, ay * 1, 0], [ax * .85, ay * .85, Z + 2.2], .12, K.olivenM));
+      t.push(boks(0, 0, Z, 2.2, 2.2, .15, K.olivenM), boks(0, 0, Z + 2.2, 2.6, 2.6, .12, '#4a4f4a'));
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) for (const [x, yy, rz] of [[.95, -.75 + i * .5, 0], [-.95, -.75 + i * .5, 0], [-.75 + i * .5, .95, Math.PI / 2]]) if (!e || (i + j) % 2) t.push(sekk(x, yy, Z + .15 + j * .19, .48, rz, SEKKFARGE[(r() * 5) | 0]));
+      for (let k = 1; k <= 8; k++) t.push(boks(-.6, -1.15 + k * .01, Z * k / 9, .4, .05, .04, K.galv));
+      t.push(boks(.9, -.9 * sy, Z + 1.05, .25, .35, .25, K.mørk), boks(1.03, -.9 * sy, Z + 1.05, .01, .3, .2, K.lys));
+      d.push(...flytt(t, 0, y, 0)); }
+    d.push(boks(0, 0, Z + 2.35, .5, 12.4, .6, K.olivenM), selskapsskilt(.25, 0, Z + 2.4, 4.5, .5, 'x+'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B74 Bålplass/samlingsplass: steinring med bål, stokker som benker rundt, gryte på trefot, vedstabel.
+  LEIR2.bålplass = lod((b, e) => {
+    const d = [syl(0, 0, 0, 3.2, .02, '#5e564a', 16)], r = frø(74);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; d.push(kule(Math.cos(a) * .75, Math.sin(a) * .75, .08, .14 + r() * .05, i % 2 ? '#7d7b76' : '#6c6a66', 5)); }
+    d.push(syl(0, 0, .02, .55, .05, '#1c1a18', 10)); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + .4; d.push(stav([Math.cos(a) * .4, Math.sin(a) * .4, .05], [-Math.cos(a) * .1, -Math.sin(a) * .1, .4], .05, '#3a2c20', 5)); }
+    for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + .2; d.push(stav([Math.cos(a) * .7, Math.sin(a) * .7, 0], [0, 0, 1.5], .03, F.treM, 4)); }
+    d.push(stav([0, 0, 1.5], [0, 0, .75], .008, K.mørk, 3), syl(0, 0, .5, .2, .25, '#2b2b2a', 8));
+    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + .78, x = Math.cos(a) * 2.3, y = Math.sin(a) * 2.3; d.push(stav([x - Math.sin(a) * .9, y + Math.cos(a) * .9, .2], [x + Math.sin(a) * .9, y - Math.cos(a) * .9, .2], .2, F.tre, 7)); }
+    if (!e) for (let i = 0; i < 9; i++) d.push(stav([2.6, -2.2 + (i % 3) * .26, .12 + ((i / 3) | 0) * .24], [3.2, -2.2 + (i % 3) * .26, .12 + ((i / 3) | 0) * .24], .12, '#8a6a45', 6));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // C80 Gassflasker i stativ: seks flasker i et stativ med kjetting og tak. C81 Jerrykanner: seks kanner (diesel/vann).
+  LEIR2.gassflasker = lod((b) => {
+    const d = [boks(0, 0, 0, 1.4, .6, .06, K.galv)], v = variant(b, 2);
+    for (let i = 0; i < 5; i++) { const x = -.5 + i * .25, f = v ? '#9aa1a6' : ['#3d6b3d', '#9aa1a6', '#c9a227'][i % 3]; d.push(syl(x, 0, .06, .1, 1.2, f, 5), syl(x, 0, 1.26, .1, .14, f, 5, .03)); }
+    for (const sx of [-1, 1]) d.push(boks(sx * .68, -.25, 0, .04, .04, 1.6, K.galv), boks(sx * .68, .25, 0, .04, .04, 1.6, K.galv));
+    d.push(boks(0, 0, 1.6, 1.45, .65, .03, K.galv), boks(0, -.27, .9, 1.4, .02, .03, K.mørk));
+    return d;
+  });
+  LEIR2.jerrykanner = lod((b) => {
+    const d = [boks(0, 0, 0, 1.2, 1, .1, F.treL)], v = variant(b, 2);
+    for (let i = 0; i < 6; i++) { const x = (i % 3 - 1) * .36, y = ((i / 3) | 0) * .5 - .25, f = v && i > 2 ? '#2f5a8a' : '#4d5540';
+      d.push(boks(x, y, .1, .17, .35, .47, f), boks(x, y + .12, .57, .06, .06, .05, '#2b2e30'), boks(x, y - .05, .57, .04, .16, .03, f)); }
+    return d;
+  });
+
   // ---------- nye leirbygg (del B): registreres i Leir.BYGG med ikon, 2D-stil og gruppe i byggelista ----------
   // Pris, tid (spilltimer), strøm (kW, minus = bruker) og materialer er Claudes forslag. De fleste har ingen egen virkning i
   // spillet ennå (bare strømforbruket); der det passer, gir de senger (plasser) eller lagerplass (lager) som andre bygg.
@@ -1570,6 +1692,26 @@
       bygg: { navn: 'Kontorcontainer', pris: 1.2e6, tid: .5, kw: -.8, fot: [-1.6, 2.05, -3.1, 3.1], mat: { stål: 2, tre: 2 }, tekst: 'Kontor i container med vinduer (virkningen kommer senere)' } },
     møtetelt: { gruppe: 'Oversikt og samband', ikon: 'telt', stil: { form: 'telt', tak: '#5d6450', h: 3 },
       bygg: { navn: 'Møtetelt', pris: 500000, tid: .3, kw: 0, fot: [-3, 5.4, -3.5, 3.5], mat: { tre: 2 }, tekst: 'Orienteringstelt med kartbord og tavle (virkningen kommer senere)' } },
+    lagerhall: { gruppe: 'Lager og arbeid', ikon: 'kasse', stil: { form: 'sal', tak: '#7b8083', h: 7.4 },
+      bygg: { navn: 'Lagerhall med reoler', pris: 6e6, tid: 3, kw: -1, fot: [-8.2, 8.2, -10.2, 12.4], mat: { stål: 20, betong: 20 }, lager: 250, tekst: '250 m³ lagerplass i hall og pallereoler' } },
+    kjølecontainer: { gruppe: 'Bo og leve', ikon: 'container', stil: { form: 'kasse', tak: '#e6e7e3', h: 2.6 },
+      bygg: { navn: 'Kjølecontainer', pris: 1.2e6, tid: .3, kw: -3, fot: [-3.4, 3.1, -1.5, 1.3], mat: { stål: 2 }, tekst: 'Kjølelager for mat (virkningen kommer senere)' } },
+    hundegård: { gruppe: 'Bo og leve', ikon: 'hus', stil: { form: 'pad', tak: '#7f786b', h: 1.8 },
+      bygg: { navn: 'Hundegård', pris: 250000, tid: .5, kw: 0, fot: [-3.05, 3.1, -2.05, 2.05], mat: { tre: 2, stål: 1 }, tekst: 'Løpegård med hundehus (virkningen kommer senere)' } },
+    parkering: { gruppe: 'Veger', ikon: 'bil', stil: { form: 'pad', tak: '#3c3d3e', h: .06 },
+      bygg: { navn: 'Parkeringsplass', pris: 600000, tid: .5, kw: 0, fot: [-6, 6, -10, 10], mat: { betong: 10 }, tekst: 'Asfalt med seks oppmerkede plasser' } },
+    skilt: { gruppe: 'Ting i leiren', ikon: 'varsel', stil: { form: 'mast', tak: '#2f5a3a', h: 2.4 },
+      bygg: { navn: 'Skilt', pris: 40000, tid: .1, kw: 0, fot: [-.2, .4, -3.8, 4.3], mat: {}, tekst: 'Inngangsskilt med selskapsmerket, fareskilt og fartsgrense' } },
+    flaggrekke: { gruppe: 'Ting i leiren', ikon: 'maal', stil: { form: 'mast', tak: '#e2e0d9', h: 7.5 },
+      bygg: { navn: 'Flaggrekke', pris: 200000, tid: .3, kw: 0, fot: [-.65, 1.6, -5.05, 5.05], mat: { betong: 2 }, tekst: 'Fem stenger med selskapets flagg' } },
+    porttårn: { gruppe: 'Forsvar', ikon: 'taarn', stil: { form: 'tårn', tak: '#4a4f4a', h: 7.3, bein: 1 },
+      bygg: { navn: 'Porttårn', pris: 6e6, tid: 2, kw: 0, fot: [-1.4, 1.4, -6.4, 6.4], mat: { stål: 10, tre: 6 }, tekst: 'To tårn over innkjøringen med skilt (virkningen kommer senere)' } },
+    bålplass: { gruppe: 'Bo og leve', ikon: 'folk', stil: { form: 'pad', tak: '#5e564a', h: .3 },
+      bygg: { navn: 'Bålplass', pris: 60000, tid: .2, kw: 0, fot: [-3.2, 3.35, -3.2, 3.2], mat: { tre: 1 }, tekst: 'Steinring, stokker og gryte – et samlingssted (virkningen kommer senere)' } },
+    gassflasker: { gruppe: 'Ting i leiren', ikon: 'tank', stil: { form: 'kasse', tak: '#9aa1a6', h: 1.6 },
+      bygg: { navn: 'Gassflasker i stativ', pris: 40000, tid: .1, kw: 0, fot: [-.75, .75, -.35, .35], mat: {}, tekst: 'Fem flasker i stativ (bare utseende)' } },
+    jerrykanner: { gruppe: 'Ting i leiren', ikon: 'olje', stil: { form: 'kasse', tak: '#4d5540', h: .6 },
+      bygg: { navn: 'Jerrykanner', pris: 20000, tid: .1, kw: 0, fot: [-.6, .6, -.5, .5], mat: {}, tekst: 'Seks kanner på pall (bare utseende)' } },
   };
   M.LEIR2_NYE = NYE;
   function registrer() {
@@ -1632,6 +1774,9 @@
   for (const [nr, id, t] of [['B57', 'piggtråd', 'Piggtrådrull'], ['B58', 'stålkryss', 'Kryss mot kjøretøy'], ['B59', 'sluse', 'Kjøretøysluse'], ['B60', 'lysmast', 'Lysmast (mobil)'], ['B61', 'sirenemast', 'Sirenemast'],
     ['B62', 'generatorhus', 'Generatorhus'], ['B63', 'trafo', 'Transformator'], ['B64', 'klima', 'Klimaenheter'], ['B65', 'kontor', 'Kontorcontainer'], ['B66', 'møtetelt', 'Møtetelt']])
     ny(nr, 'l2-' + id, t, () => LEIR2[id]({}));
+  for (const [nr, id, t] of [['B67', 'lagerhall', 'Lagerhall med reoler'], ['B68', 'kjølecontainer', 'Kjølecontainer'], ['B69', 'hundegård', 'Hundegård'], ['B70', 'parkering', 'Parkeringsplass'], ['B71', 'skilt', 'Skilt'],
+    ['B72', 'flaggrekke', 'Flaggrekke'], ['B73', 'porttårn', 'Porttårn'], ['B74', 'bålplass', 'Bålplass'], ['C80', 'gassflasker', 'Gassflasker i stativ'], ['C81', 'jerrykanner', 'Jerrykanner']])
+    ny(nr, 'l2-' + id, t, () => LEIR2[id]({ id: 2 }));
   registrer();
 
   // ---------- detaljnivå i spillet: bytt til den enkle utgaven lenger enn ca. 150 m unna ----------

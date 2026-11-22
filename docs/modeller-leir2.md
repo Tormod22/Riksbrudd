@@ -44,3 +44,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   rett og hjørne/ende – vollene står oppå bakken, terrenget graves ikke –, jordfylte kurver, T-vegger).
 - Del 7: B57–B66 (piggtrådrull, kryss mot kjøretøy, kjøretøysluse, mobil lysmast, sirenemast, generatorhus, transformator med gjerde,
   klimaenheter, kontorcontainer, møtetelt med kartbord).
+- Del 8: B67–B74 (lagerhall med reoler – 250 m³ lager –, kjølecontainer, hundegård, parkeringsplass, skilt, flaggrekke, porttårn,
+  bålplass), C80–C81 (gassflasker i stativ, jerrykanner).
