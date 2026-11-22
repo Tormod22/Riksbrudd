@@ -276,6 +276,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     // byggene i grupper (16. nov: lista var 17 bygg uten inndeling); et bygg som ikke står i noen gruppe, havner under «Annet»
     const liste = el('div', { klasse: 'liste' }), GR = [['Bo og leve', ['brakke', 'kjøkken', 'drivhus', 'sykestue'].concat(LB.BYGG.brønn ? ['brønn'] : [])], ['Strøm og diesel', ['drivstofftank', 'aggregat', 'solcelle', 'batteri']],
       ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']], ['Veger', ['veg']]];
+    // (22. nov) de nye leirbyggene i spill/modeller-leir2.js sier selv hvilken gruppe de hører til
+    for (const [g, ider] of window.LEIR2_GRUPPER || []) { const f = GR.find(x => x[0] === g); if (f) f[1] = f[1].concat(ider.filter(i => !f[1].includes(i))); else GR.push([g, ider.slice()]); }
     const iGruppe = new Set(GR.flatMap(g => g[1])), rekke = [...GR.flatMap(([navn, ider]) => ider.filter(id => LB.BYGG[id] && !LB.BYGG[id].del).map((id, n) => [id, n ? null : navn])),
       ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
     for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
@@ -694,6 +696,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   };
   function modell(b) {
     const B = LB.BYGG[b.type], M = window.MODELLER; if (!M) return null;
+    // (22. nov) de nye og bedre leirmodellene i spill/modeller-leir2.js går foran (de får bygget, så nivået kan synes)
+    if (M.LEIR2 && M.LEIR2[B.modell]) return M.LEIR2[B.modell](b);
     if (EGNE[B.modell]) return M.samle(EGNE[B.modell]());
     if (B.modell === 'port') return M.port(false); if (B.modell === 'verksted') return M.verksted([false, false]); if (B.modell === 'container') return M.container('utstyr');
     if (B.modell === 'sandsekkvoll') return M.sandsekkvoll(8, 2);

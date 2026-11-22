@@ -544,6 +544,8 @@
   // ---------- Felles ----------
   M.samle = samle;
   M.FARGER = F;
+  // hjelperne brukes også av spill/modeller-leir2.js (22. nov: modellene i docs/modeller-liste.md del A–C)
+  M.H = { F, rgb, tone, farg, samle, ferdig, boks, syl, langs, lengde, bjelke, stav, prisme, saltak, gavl, flytt, SIDE, påVegg, vindu, dør, rødtKors, flate, frø };
   M.trekanter = g => g.attributes.position.count / 3;
   let MAT = null;
   M.materiale = () => MAT || (MAT = new THREE.MeshLambertMaterial({ vertexColors: true }));

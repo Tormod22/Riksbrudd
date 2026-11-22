@@ -1576,3 +1576,11 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   mot skytterne, fra kandidatene kampSteg sendte inn) i KROKER.tegn3d. I testene ingen gratis granater (BakkekampSpill.test). VAKT
   vakter/bakkekamp.js («kamp på bakken»: prøvevegg, kampSteg, selvtest, kikkert, granat, kast, følg/hold). Tallene er Claudes forslag.
   IKKE GJORT: maskingevær, fiender som kaster granater, dekning for lagene dine.
+  LEIRMODELLER RUNDE 2 (22. nov, økta på brukerens PC, gren claude/lokal-modeller; docs/modeller-liste.md del A–C, punkt 1–114, alle
+  laget): spill/modeller-leir2.js – detaljer i docs/modeller-leir2.md. MODELLER.LEIR2[modell](b) går foran EGNE/MODELLER i leir-visning.js
+  modell() (nivå 1–3 synes på brakke, kameramast, radiomast); modeller.js eksporterer hjelperne (MODELLER.H). Detaljnivå: over 1000
+  trekanter har geometry.userData.fjern, byttet inn over 165 m av en ramme3d-krok. 66 nye bygg registreres fra fila (NYE og TING: Leir.BYGG,
+  Ikoner.BYGG, Leir2d.STIL, gruppe via window.LEIR2_GRUPPER som byggelista leser); de fleste har ingen virkning ennå («virkningen kommer
+  senere»), unntak: offisersbrakke 4 senger, lagerhall 250 m³ lager. MODELLER.gjerde, kasser, fatpall og flaggstang er byttet ut; sokkel ved
+  flaggstanga i 3D. Selskapets farger fra OppstartSpill.tilstand().fraksjon.flagg. Testsiden spill/modeller-visning.html viser alle.
+  WINDOWS: git har core.autocrlf=false i denne klonen; versjon.py må kjøres med LF (Python på Windows skriver ellers CRLF og feil hasher).
