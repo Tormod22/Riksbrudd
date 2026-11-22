@@ -1499,3 +1499,16 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   node pipeline/fliser/test_simulering.js (to lag og kunstig sikt i Node, et spilldøgn, samme frø = samme verden, og en kopi av den gamle
   koden som fasit). GJENSTÅR: KROKER.sim-modulene (AI i fraksjoner-visning, økonomi, forsyning, garnison, leir …) kjører fortsatt i siden,
   ordre() (ruteplan med lagVindu) og sikt (s.sikt fra terrengfliser) trenger kartdata, og KRNG (Terreng.frø(1987)) lagres ikke med spillet.
+  KOMMANDOLAGET (22. nov, R16-A – M0 punkt 1 i docs/plan-flerspiller.md): alt spilleren gjør med lag og leir går gjennom ÉN funksjon,
+  window.KOMMANDO(k), så de samme handlingene kan sendes over nettet. spill/kommando.js (regler uten DOM, test_kommando.js):
+  Kommando.registrer(type, { lag, leir, vertAlene, sjekk(k, ctx, s), utfør(k, ctx, s), beskriv(k, s) }), Kommando.utfør(k, ctx) -> { ok,
+  feil?, svar? } (en handling som svarer { feil } regnes som avvist), Kommando.tillatt (bare de felles sjekkene), Kommando.nid(s, liste)
+  (lagets nid, samme som flerspilleren sender), typer(), kanSendes(k). ctx = { lag: ENHETER, side, spiller, erVert }; en gjest (spiller satt,
+  ikke vert) må eie laget (s.eier) og får ikke bruke leirkommandoer. spill/kommando-visning.js registrerer de ekte handlingene: ordre,
+  stopp, speider, lagfører, grav, miner, formasjon, strid (bare Strid.VALG; «alle» bare for verten) og i leiren bygg, riv, prioriter,
+  folk, folkFlytt. Knappene i index.html (marsjmål i 2D/3D, speider, Stopp, lagfører), feltarbeid-, formasjon-, strid-, leir- og
+  folk-visning.js kaller KOMMANDO({ type, lag: KOMMANDO.nid(s), … }) – oppførselen i enspiller er som før. Hos en gjest (NETT.gjest)
+  sendes kommandoen til verten ({ t: 'kommando', k }), og verten kjører NETT.utførFra(k, gjestens id) og logger «Kari setter Lag 1 i linje».
+  Gjestens lagpanel har nå Marsjer, Stopp, Grav ned, Formasjon og Stridsregler; bildet sender s.strid. Nye knapper for lag og leir: lag
+  en kommando her i stedet for å gjøre jobben i knappen. Ikke gjort: oppgradering/reparasjon/flytting av bygg, plan og maler, kjøp,
+  tropper, bevæpning (koster penger), kjøretøy og resten av panelene går fortsatt rett på; AI-en og reglene kaller ordre() direkte.

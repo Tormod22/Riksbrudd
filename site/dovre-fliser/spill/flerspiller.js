@@ -58,6 +58,7 @@
     const sti = tynnSti(s); if (sti) { d.sti = sti; d.t = +(+s.timerIgjen || 0).toFixed(2); }
     if (s.eier) d.eier = s.eier; if (s.speider) d.speider = 1; if (s.ingeniør) d.ing = 1; if (s.nedgravd) d.ned = 1; if (s.karakter) d.kar = 1;
     if (s.ammo !== undefined) d.ammo = +(+s.ammo).toFixed(2); if (s.formasjon) d.form = s.formasjon;
+    if (s.strid && typeof s.strid === 'object') d.strid = Object.assign({}, s.strid);
     return d;
   }
   function pakkKj(k) {
@@ -90,6 +91,7 @@
       if (q.sti && q.sti.length > 1) { s.sti = q.sti; s.steg = q.sti.map(() => 1); s.seg = 0; s.prog = 0; s.timerIgjen = tall(q.t, 0); } else { s.sti = null; s.steg = null; }
       s.eier = q.eier || null; s.speider = !!q.speider; s.ingeniør = !!q.ing; s.nedgravd = !!q.ned; s.karakter = !!q.kar;
       if (q.ammo !== undefined) s.ammo = tall(q.ammo, 1); if (q.form) s.formasjon = q.form;
+      if (q.strid && typeof q.strid === 'object') s.strid = Object.assign({}, q.strid);
       if (flytt > 60) s.siktSkitten = true;
       ny.push(s);
     }

@@ -88,7 +88,8 @@
 
   // ---------- verten ----------
   let nid = 0;
-  const merk = () => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) if (s.nid == null) s.nid = 'l' + (++nid); };
+  // nid fra kommandolaget (spill/kommando.js) når det finnes, så knappene og bildet bruker de samme
+  const merk = () => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) if (s.nid == null) { if (window.Kommando) Kommando.nid(s, ENHETER); else s.nid = 'l' + (++nid); } };
   function bildeNå() {
     merk(); const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, fr = window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER.blå;
     return F.bilde({ lag: ENHETER, kj: window.KJORETOY || [], tid, tempo, ser: e => { try { return synlig(e); } catch (x) { return false; } },
@@ -112,7 +113,16 @@
     if (nå - N.sistBilde < (gjester().length ? BILDE_MS : BILDE_ALENE_MS)) return;
     N.sistBilde = nå; try { send({ t: 'tilstand', data: bildeNå(), tid }); N.tellBilder++; } catch (e) { console.warn('flerspiller: bildet', e); }
   }
+  // KOMMANDOLAGET (R16-A): verten kjører gjestens kommando med Kommando.utfør og gjestens id (laget må ha s.eier === gjestens id;
+  // leirkommandoer avvises foreløpig). 'pos' og kommandoer uten kommandolag går som før (Flerspiller.sjekkKommando).
+  const ctxFra = fra => ({ lag: ENHETER, side: 'blå', spiller: fra, erVert: false });
+  function utførFra(k, fra) { merk(); return window.Kommando ? Kommando.utfør(k, ctxFra(fra)) : { ok: false, feil: 'Ukjent kommando.' }; }
   function kommando(m) {
+    if (m.k && m.k.type !== 'pos' && window.Kommando && Kommando.finnes(m.k.type)) {
+      const r = utførFra(m.k, m.fra); if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
+      const b = Kommando.beskriv(m.k, ctxFra(m.fra)); if (b) sikkerLogg(`${m.navn || navnPå(m.fra)} ${b}.`);
+      send({ t: 'svar', til: m.fra, tekst: typeof r.svar === 'string' ? r.svar : 'Kommandoen er utført.' }); N.sistBilde = 0; return;
+    }
     merk(); const r = F.sjekkKommando(m.k, m.fra, ENHETER);
     if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
     if (r.type === 'pos') { N.pos.set(m.fra, { x: r.x, y: r.y, går: r.går, t: Date.now() }); return; }
@@ -177,11 +187,17 @@
     send({ t: 'kommando', k: { type: 'ordre', lag: s.nid, x: Math.round(X), y: Math.round(Y) } });
     if (!stille) sikkerLogg(`${s.navn}: ordren er sendt til verten …`); return true;
   };
-  // lagpanelet hos gjesten (index.html visPanel): marsj og stopp for egne lag, ellers hvem som styrer laget
+  // lagpanelet hos gjesten (index.html visPanel): for egne lag marsj, stopp, grav ned, formasjon og stridsregler (alt går som
+  // kommandoer til verten, window.KOMMANDO), ellers hvem som styrer laget
   N.lagPanel = (s, H) => {
     if (s.eier !== N.id) { const p = document.createElement('p'); p.style.margin = '4px 0'; p.textContent = `Styres av ${s.eier ? navnPå(s.eier) : 'verten'}.`; H.appendChild(p); return; }
     H.appendChild(knapp(modus === 'marsj' ? 'Velg mål på kartet …' : 'Marsjer', modus === 'marsj', () => { modus = modus === 'marsj' ? null : 'marsj'; visPanel(); skitten = true; }));
-    if (s.sti) H.appendChild(knapp('Stopp', false, () => { send({ t: 'kommando', k: { type: 'stopp', lag: s.nid } }); sikkerLogg(`${s.navn}: stopp er sendt til verten …`); }));
+    const K = window.KOMMANDO;
+    if (s.sti) H.appendChild(knapp('Stopp', false, () => (K ? K({ type: 'stopp', lag: s.nid }) : send({ t: 'kommando', k: { type: 'stopp', lag: s.nid } }))));
+    if (!K) return;
+    if (!s.sti && !s.nedgravd && !s.karakter && window.Feltarbeid) H.appendChild(knapp('Grav ned', false, () => K({ type: 'grav', lag: s.nid })));
+    if (window.Formasjon && !s.karakter && !s.ombord) { const T = Formasjon.type(s.formasjon), b = knapp(`Formasjon: ${T.navn}`, false, () => K({ type: 'formasjon', lag: s.nid, id: Formasjon.neste(s.formasjon) })); b.id = 'formknapp'; b.title = T.tekst + ' Trykk for å bytte.'; H.appendChild(b); }
+    if (window.StridSpill && StridSpill.åpne && !s.karakter) H.appendChild(knapp('Stridsregler', false, () => StridSpill.åpne(s)));
   };
   // Farten styres av verten: knappene og ⏭ gjør ingenting hos gjesten
   document.addEventListener('click', e => {
@@ -278,7 +294,7 @@
         const ln = lenke();
         h += `<section><h3>Invitasjonslenke</h3>${ln ? `<div class="lenke">${esc(ln)}</div><div class="rad"><button data-n="kopier">Kopier lenken</button></div>` : ''}
           ${N.tunnel ? '<p>Lenken går gjennom tunnelen og virker hvor som helst, også på telefon.</p>' : '<p class="advar">Ingen tunnel: lenken virker bare for maskiner på samme nett, og bare hvis spillet er lastet over http. Legg cloudflared ved siden av tjeneren for en lenke som virker overalt.</p>'}
-          <p>Gi lag til gjestene: velg et lag og trykk «Styres av». Gjestene kan foreløpig gi marsjordre; resten styrer du.</p></section>`;
+          <p>Gi lag til gjestene: velg et lag og trykk «Styres av». Gjestene kan gi marsjordre, grave ned, bytte formasjon og stridsregler for lagene sine; leiren styrer du.</p></section>`;
       }
       if (N.rolle === 'gjest') h += `<section><p>Verten styrer tiden og hvem som har hvilke lag. Lagene dine står med «styres av deg» i panelet – velg et og trykk i kartet for å sende det.</p></section>`;
       h += `<section><h3>Melding til alle</h3><div class="rad"><input id="nmld" maxlength="300" placeholder="Skriv og trykk Enter"></div></section>
@@ -323,5 +339,5 @@
     sikkerLogg(`Åpner verden ${l.kode} igjen …`); koble('vert', l.adresse, l.kode, l.navn || 'Vert'); }
   const start = () => { setTimeout(fraAdressen, 300); setTimeout(vertIgjen, 2500); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
-  N.åpen = åpen; N.koble = koble; N.koblFra = koblFra; N.send = send; N.bildeNå = bildeNå;
+  N.åpen = åpen; N.koble = koble; N.koblFra = koblFra; N.send = send; N.bildeNå = bildeNå; N.utførFra = utførFra;
 })();

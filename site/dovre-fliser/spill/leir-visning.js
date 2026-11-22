@@ -495,7 +495,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       if (r.feil) { angre.pop(); visBanner(r.feil); return; } if (!p.pid) logg(`${LB.BYGG[p.type].navn} lagt i planen.`); return ferdigPlassert(p); }
     if (p.flytt) { const r = LB.flytt(L, p.flytt, { x: p.x, y: p.y, ret: p.ret }, OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
       logg(`${LB.BYGG[p.type].navn} flyttes: ${LB.kroner(r.pris)}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); }
-    else { const r = LB.bygg(L, sp(p), OppstartSpill.betal, bonus(), p.kart || {}); if (r.feil) { visBanner(r.feil); return; }
+    else { const kr = KOMMANDO({ type: 'bygg', bygg: sp(p), kart: p.kart || {} }), r = kr.svar || { feil: kr.feil }; if (r.feil) { visBanner(r.feil); return; }
       const kø = LB.jobber(L).length > LB.byggelag(L);
       const kjøpt = p.kjøpt > 0 ? p.kjøpt : 0; p.kjøpt = 0;
       logg(`${LB.BYGG[p.type].navn} bestilt: ${kjøpt ? `${LB.kroner(r.bygg.pris + kjøpt)} i alt (${(LB.PRISDEL || {}).navn || 'utstyr og deler'} ${LB.kroner(r.bygg.pris)} + materialer ${LB.kroner(kjøpt)})` : `${LB.kroner(r.bygg.pris)} (${(LB.PRISDEL || {}).navn || 'utstyr og deler'})`}, ${tidTekst(r.bygg.totalt)} byggetid for byggelagene dine` + (r.reise.min > 0 ? ` + ${tidTekst(r.reise.min)} reise (${LB.kmTekst(r.reise.meter)} fra leiren)` : '') + `${kø ? ' – venter i kø på et ledig byggelag' : ''}.`); }
@@ -543,7 +543,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     // radiomasten: se hvor langt feltradioene når (sirkelen tegnes av byggevisning.js så lenge masten er valgt)
     if (b.type === 'radiomast' && window.BYGGEVISNING && BYGGEVISNING.visRekkevidde) banner.appendChild(knapp(BYGGEVISNING.radioZoom() ? 'Tilbake til leiren' : `Vis rekkevidden (${LB.kmTekst(BYGGEVISNING.radioRekkevidde(b))})`, () => { BYGGEVISNING.visRekkevidde(b); visByggPanel(); }, { id: 'visradio' }));
     // delegere: denne jobben først (byggelagene tar køen i rekkefølge)
-    if (jobb && ji > 0) banner.appendChild(knapp('Bygg dette først', () => { LB.prioriter(L, b.id); logg(`${B.navn}: byggelaget tar denne jobben først.`); lagre(); visByggPanel(); if (meny) visMeny(); skitten = true; }, { id: 'byggforst' }));
+    if (jobb && ji > 0) banner.appendChild(knapp('Bygg dette først', () => { KOMMANDO({ type: 'prioriter', bygg: b.id }); logg(`${B.navn}: byggelaget tar denne jobben først.`); lagre(); visByggPanel(); if (meny) visMeny(); skitten = true; }, { id: 'byggforst' }));
     if (ok) { const k = knapp(`Oppgrader til nivå ${ok.til} (${LB.kroner(ok.pris)}${reise})`, () => { const r = LB.oppgrader(L, b.id, OppstartSpill.betal, bonus());
         if (r.feil && r.mangler && confirm(`${r.feil} Kjøpe det som mangler for ${LB.kroner(matPris(r.mangler))}?`) && kjøpManglende(r.mangler)) return k.onclick();
         logg(r.feil || `${B.navn} oppgraderes til nivå ${r.til}.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); lagre(); visByggPanel(); });
@@ -555,7 +555,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       // drivstoff som ikke får plass i de andre tankene når denne rives, selges tilbake (Leir.riv) – si fra før og etter
       const over = Math.max(0, L.drivstoff - LB.kapasitet({ bygg: L.bygg.filter(q => q !== b) })), liter = v => Math.round(v).toLocaleString('nb-NO');
       if (!confirm(`Rive ${B.navn.toLowerCase()}?` + (over >= 1 ? ` ${liter(over)} l diesel får ikke plass i de andre tankene og selges tilbake for ${LB.kroner(Math.round(over * LB.DRIVSTOFF.prisPerLiter))}.` : ''))) return;
-      const r = LB.riv(L, b.id); OppstartSpill.gi(r.penger);
+      const kr = KOMMANDO({ type: 'riv', bygg: b.id }); if (!kr.ok) { logg(kr.feil); return; } const r = kr.svar;
       logg(`${B.navn} er revet. ${LB.kroner(r.bygg)} tilbake${r.uferdig ? ', og materialene' : ''}.` + (r.drivstoff >= 1 ? ` ${liter(r.drivstoff)} l diesel uten plass er solgt tilbake for ${LB.kroner(r.drivstoffPenger)}.` : '')); valgtBygg = null; banner.classList.remove('på'); lagre(); bygg3dPåNytt(); skitten = true; }));
     banner.appendChild(knapp('Lukk', () => { valgtBygg = null; banner.classList.remove('på'); skitten = true; }));
   }
