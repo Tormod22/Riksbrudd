@@ -22,6 +22,12 @@ modellene (MODELLER.LEIR2 tømt), etter = de nye. Skjermens tak er 60 bilder/s; 
 | Etter del 1 (A1–A10) | 3,1–3,6 ms | 17 318 | 31 | 0,5 ms |
 | Del 2, 28 bygg: før (gamle modeller, de 5 nye usynlige) | 2,7–3,1 ms | 12 780 | 30 | −0,1 ms |
 | Del 2, 28 bygg: etter | 2,6–3,4 ms | 20 738 | 37 | 0,6 ms |
+| Alt, 114 bygg: før (gamle modeller, de 66 nye usynlige) | 3,6–4,2 ms | 14 324 | 34 | 0,5 ms |
+| Alt, 114 bygg: etter | 4,7 ms | 62 480 | 122 | 1,6 ms |
+
+Med alle 114 bygg (en svært stor leir) koster leiren 1,6 ms per tegning – bildet tar 4,7 ms, langt under skjermens tak (16,7 ms).
+Det som vokser, er tegnekallene: ett per bygg (leir-visning.js lager ett nett per bygg). Flere like ting (paller, fat, kjegler …) kunne
+vært ett instansnett hver; det er ikke gjort, fordi leir-visning.js skalerer og bytter nettet per bygg (byggeplass, framdrift).
 
 ## Nye leirbygg
 Registreres i `NYE` i modeller-leir2.js (Leir.BYGG med modell = id, Ikoner.BYGG, Leir2d.STIL og gruppe i byggelista via
@@ -50,3 +56,17 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   lyskaster på stativ, feltbord og klappstoler, feltkokeapparat). Tingene står i tabellen `TING` (navn, pris, fot, ikon, 2D-farge).
 - Del 10: C92–C101 (IBC-vanntank, søppelcontainer, lite telt, kamuflasjetelt, antenne på stativ, bærbart solcellepanel, stige,
   stillas, mobilkran, betongblander). Stillaset (520) og mobilkranen (916) er større enn «små ting» – de regnes som bygg/kjøretøy.
+- Del 11: C102–C114 (gravemaskin – regnes som kjøretøy, 684 –, kabeltrommel, rørstabel, strømskap, lysstolpe, skiltstolpe,
+  trafikkjegler, sperrebånd, førstehjelpsskap, brannstasjon, radiostasjon, kartbord, våpenstativ).
+
+Alle 114 punktene i del A–C er laget. Kontroll på testsiden: ingen ting i del C over 300 trekanter (unntatt stillas, mobilkran og
+gravemaskin), ingen bygg over 5000, alle modeller over 1000 har enkel utgave. I spillet: alle 66 nye bygg registrert med ikon, 114 bygg
+satt opp i testleiren uten feil i konsollen.
+
+## Ikke gjort / kjent
+- De fleste nye bygg har ingen egen virkning i spillet ennå (teksten sier «virkningen kommer senere»).
+- Nye bygg har ikke interiør og stopper deg ikke når du går (bare LEIRBYGG i interior3d.js gjør det).
+- Byggekortet (tegninger.js) har ingen egen tegning for de nye byggene – det viser standardhuset.
+- Skyttergravene graver ikke i terrenget (vollene står oppå); den ekte gravingen er anleggsarbeid.js.
+- sjekk.js (Playwright) er ikke kjørt på denne maskinen; node --check og test_leir.js er kjørt.
+- Like ting i leiren er ikke instansnett (se målingene over).
