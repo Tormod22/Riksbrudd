@@ -6,6 +6,9 @@
  * I TESTENE (navigator.webdriver) skjer ingenting av seg selv: RegionSpill.test = true slår det på.
  */
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const RG = window.Region, G = window.Garnison, LB = window.Leir, FR = window.FolkRegler; if (!RG || !G || typeof KROKER === 'undefined') return;
   const R = RG.REGLER, api = { test: false }, auto = () => !navigator.webdriver || api.test;
   const Sp = () => window.OppstartSpill && OppstartSpill.tilstand(), L = () => window.LeirSpill && LeirSpill.tilstand(), F = () => window.FolkSpill && FolkSpill.tilstand();
@@ -130,7 +133,7 @@
     if (mine().length) { const t = RG.girTekst(S.sist, kr); logg(t === 'ingenting' ? 'Regionen: ingenting kom fram til leiren det siste døgnet.' : `Regionen ga det siste døgnet: ${t}.`); }
     S.sist = {};
     // svartebørsen: gårsdagens selger drar, kanskje kommer en ny
-    S.børs = { tilbud: RG.Bors.tilbud(Math.random, S.har), dag: Math.floor(S.døgn) };
+    S.børs = { tilbud: RG.Bors.tilbud(tilfV, S.har), dag: Math.floor(S.døgn) };
     // (runde 6, kritikken: «Se «Region»», men ingen knapp het Region i bunnmenyen, og meldingen midt øverst dekket leiren) – nå bare i
     // loggen, med veien dit (Mer → Region), og en liten varselbrikke øverst til venstre som åpner panelet (se VARSEL_TILLEGG under)
     if (S.børs.tilbud.length) { børsSett = false; logg(`Svartebørsen: en selger er i leiren i dag med ${S.børs.tilbud.map(id => RG.Bors.VARER[id].navn.toLowerCase()).join(' og ')}. Se Mer → Region (eller trykk «Svartebørsen» øverst til venstre).`); }

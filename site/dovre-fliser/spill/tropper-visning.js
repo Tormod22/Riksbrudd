@@ -7,6 +7,9 @@
  * og settes sammen på nytt. window.TropperSpill.
  */
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const TR = window.Tropper; if (!TR) return; const R = TR.R;
   const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
   const kn = (tekst, fn, a = {}) => { const b = el('button', a, tekst); b.onclick = fn; return b; };
@@ -36,7 +39,7 @@
     // våpen valgt mann for mann og utstyr til troppen betales samlet – ellers en ferdig bevæpning som før
     const egen = o.våpen && Object.keys(o.våpen).length > 0, ut = (o.utstyr || []).filter(u => TR.UTSTYR[u]), sum = TR.pris(egen ? P.map(q => o.våpen[q.id] || 'rifle') : [], ut);
     const B = !egen && window.Strid && Strid.BEVÆPNING[bevId], alt = sum + (B && B.pris > 0 ? B.pris : 0); if (alt > 0 && !(window.OppstartSpill && OppstartSpill.betal(alt))) return { feil: `Ikke råd til våpnene og utstyret (${alt.toLocaleString('nb-NO')} kr).` };
-    F.personer = F.personer.filter(p => !ider.includes(p.id)); const v = Math.random() * 6.283, s = nyttLag(r.navn, k ? k.x : L.x + Math.cos(v) * 25, k ? k.y : L.y + Math.sin(v) * 25, 'blå'); s.menn = r.menn; s.leder = 0; s.fraFolk = true;
+    F.personer = F.personer.filter(p => !ider.includes(p.id)); const v = tilfV() * 6.283, s = nyttLag(r.navn, k ? k.x : L.x + Math.cos(v) * 25, k ? k.y : L.y + Math.sin(v) * 25, 'blå'); s.menn = r.menn; s.leder = 0; s.fraFolk = true;
     if (egen) TR.utrust(s, Object.fromEntries(P.map(q => [q.id, o.våpen[q.id] || 'rifle']))); if (ut.length) { s.utstyr = {}; for (const u of ut) s.utstyr[u] = true; }
     if (window.StridSpill) { const st = StridSpill.regel(s); if (egen) { s.strid = { ...st, bev: 'egen' }; StridSpill.regel(s); } else if (B && bevId !== 'standard') { s.strid = { ...st, bev: bevId }; StridSpill.regel(s); } } if (k) s.ombord = k; if (o.mal) s.mal = o.mal; ENHETER.push(s);
     if (s.utstyr && s.utstyr.feltradio) { if (window.KontrollromSpill && KontrollromSpill.girRadio) KontrollromSpill.girRadio(s, 'felt'); else s.radio = 'felt'; } lagre(); skitten = true;
@@ -74,7 +77,7 @@
   const BEKREFT_MS = 6000; let spør = null;
   const kanOppløses = s => s.side === 'blå' && !s.karakter && !s.leirvakt && !s.ai && levende(s);
   function sendHjem(s) { const L = leir(); if (!L || !kanOppløses(s)) return false; if (vedLeir(s)) return !oppløs(s).feil;
-    if (s.ombord) gåAv(s); const v = Math.random() * 6.283; s.hjemOppløs = true;
+    if (s.ombord) gåAv(s); const v = tilfV() * 6.283; s.hjemOppløs = true;
     try { const p = ordre(s, L.x + Math.cos(v) * 30, L.y + Math.sin(v) * 30); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ordren feilet: laget blir stående */ }
     logg(`${s.navn} går hjem til leiren og oppløses når de er framme (en ny ordre avbryter det).`); if (valgt === s) visPanel(); return true; }
   KROKER.lagKnapper.push((s, H) => { if (!kanOppløses(s)) return; const n = TR.friske(s), nær = vedLeir(s), klar = spør && spør.s === s && performance.now() < spør.til;

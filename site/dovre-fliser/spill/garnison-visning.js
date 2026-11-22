@@ -2,13 +2,16 @@
 // S7 i kartet: tettstedene (INFRA.tettsted) tas med lag, garnisonen forsterkes, tettstedene sender olje til basen.
 // Strøm fra kraftverkene (INFRA.kraft, sabotert i INFRA_TILSTAND = uten strøm). Regler: spill/garnison.js.
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const G = Garnison, R = G.REGLER, S = G.ny(), byer = () => (INFRA && INFRA.tettsted) || [];
   let akk = 0; const LOGG = new Map();   // tettsted-id -> sist meldt inntak (så loggen ikke fylles)
   window.TETTSTEDER = S;
   const kraft = () => (INFRA && INFRA.kraft || []).map(k => ({ x: k.deler[0][0], y: k.deler[0][1], hel: !window.INFRA_TILSTAND || Odeleggelse.tilstand(INFRA_TILSTAND, 'kraft', k.e.id) === 'hel' }));
   const strømFor = by => G.harStrøm(by, kraft());
   const eierTekst = e => e === 'blå' ? 'ditt' : e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].eieform : 'fiendens') : 'nøytralt';
-  const nyMann = rolle => ({ navn: FORNAVN[Math.floor(Math.random() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(Math.random() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + Math.random() * .3 });
+  const nyMann = rolle => ({ navn: FORNAVN[Math.floor(tilfV() * FORNAVN.length)] + ' ' + ETTERNAVN[Math.floor(tilfV() * ETTERNAVN.length)], rolle, hp: 1, loy: .6 + tilfV() * .3 });
   const hvem = side => window.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'Fienden';
   const byFor = s => byer().find(by => G.inni(by, s.x, s.y));
   // (runde 14, kritiker J: «Vaktlaget ble garnison i Røysland ×3 på vei forbi») et lag på marsj gjennom et tettsted (målet ligger utenfor)

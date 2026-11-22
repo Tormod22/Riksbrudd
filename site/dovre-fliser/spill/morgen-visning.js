@@ -14,6 +14,9 @@
  */
 (function (rot) {
   'use strict';
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const M = rot.Morgen; if (!M || typeof document === 'undefined' || typeof KROKER === 'undefined') return;
   const R = M.REGLER, api = { test: false }, auto = () => !navigator.webdriver || api.test === true;
   const NØKKEL = 'riksbrudd-morgen', BORTE = 1e12, dag = t => Math.floor(t / 1440) + 1;
@@ -88,7 +91,7 @@
       if (!['jakt', 'leie', 'speid', 'tankbil', 'øv'].includes(p.id)) continue;
       if (p.id === 'speid' && p.fiende && p.xy) { const fi = ENHETER.filter(e => e.side !== 'blå' && !e.raid && levende(e) && Math.hypot(e.x - p.xy[0], e.y - p.xy[1]) < 2500), mn = fi.reduce((a, e) => a + e.menn.filter(m => m.hp >= 1).length, 0);
         p.fiendeTekst = fi.length ? `I ${p.sted} telte de ${fi.length} fiendtlige lag (ca. ${mn} mann).` : `De så ingen fiendtlige lag i ${p.sted} – byen kan være lett å ta tilbake.`; }
-      const u = M.utfall({ ...p, folk }, { årstid: (rot.VAER && VAER.årstid) || 'sommer', røverTimer: T.timer }, Math.random);
+      const u = M.utfall({ ...p, folk }, { årstid: (rot.VAER && VAER.årstid) || 'sommer', røverTimer: T.timer }, tilfV);
       for (const q of folk) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
       if (f && u.mat) f.mat += u.mat; if (u.penger) OppstartSpill.gi(u.penger);
       if (l && Lb) { if (u.tre) Lb.leggInn(l, 'tre', u.tre); if (u.stål) Lb.leggInn(l, 'stål', u.stål);
@@ -124,7 +127,7 @@
     else if (v.id === 'krise' || v.id === 'leiesold') { const T = R.tap, n = v.id === 'krise' ? R.krise.menn : T.leie.menn, o = O();
       if (v.id === 'leiesold' && !OppstartSpill.betal(T.leie.pris)) t = `Ikke nok penger (${kr(T.leie.pris)}).`;
       else if (!o || !o.leir || typeof nyttLag !== 'function') t = 'Ingen leir å komme til.';
-      else { const a = Math.random() * 6.283, navn = (v.id === 'krise' ? 'Frivillige' : 'Leiesoldater') + ' ' + (ENHETER.filter(e => e.side === 'blå' && e.navn && e.navn.startsWith(v.id === 'krise' ? 'Frivillige' : 'Leiesoldater')).length + 1);
+      else { const a = tilfV() * 6.283, navn = (v.id === 'krise' ? 'Frivillige' : 'Leiesoldater') + ' ' + (ENHETER.filter(e => e.side === 'blå' && e.navn && e.navn.startsWith(v.id === 'krise' ? 'Frivillige' : 'Leiesoldater')).length + 1);
         const e = nyttLag(navn, o.leir.x + Math.cos(a) * 30, o.leir.y + Math.sin(a) * 30, 'blå'); e.menn = e.menn.slice(0, n); e.leder = 0;
         if (v.id === 'krise' && rot.Strid && Strid.bevæpn) { try { Strid.bevæpn(e.menn, 'lett'); e.strid = { ...(e.strid || {}), bev: 'lett' }; } catch (x) { /* bevæpningen finnes ikke */ } }
         ENHETER.push(e); skitten = true; if (v.id === 'krise') S.kriseSist = dag(tid);
@@ -142,8 +145,8 @@
   async function påLand(x, y) { try { const v = await lagVindu([x - 64, y - 64, x + 64, y + 64], false), [i, j] = Terreng.rute(v, x, y), k = v.K[j * v.w + i]; return k !== 3 && k !== 255 && k !== undefined; } catch (e) { return false; } }
   const RETN = ['øst', 'nordøst', 'nord', 'nordvest', 'vest', 'sørvest', 'sør', 'sørøst'], retning = (dx, dy) => RETN[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
   async function plasserTankbil() { const s = O(); if (!s || !s.leir) return null; const T = R.tankbil;
-    for (let k = 0; k < 12; k++) { const v = Math.random() * 6.2832, d = T.avst[0] + Math.random() * (T.avst[1] - T.avst[0]), x = Math.round(s.leir.x + Math.cos(v) * d), y = Math.round(s.leir.y + Math.sin(v) * d);
-      if (await påLand(x, y)) return { x, y, meter: Math.round(d), retning: retning(Math.cos(v), Math.sin(v)), diesel: Math.round((T.diesel[0] + Math.random() * (T.diesel[1] - T.diesel[0])) / 10) * 10, frist: tid + T.frist, fare: Math.random() < T.røvere, røvere: false }; }
+    for (let k = 0; k < 12; k++) { const v = tilfV() * 6.2832, d = T.avst[0] + tilfV() * (T.avst[1] - T.avst[0]), x = Math.round(s.leir.x + Math.cos(v) * d), y = Math.round(s.leir.y + Math.sin(v) * d);
+      if (await påLand(x, y)) return { x, y, meter: Math.round(d), retning: retning(Math.cos(v), Math.sin(v)), diesel: Math.round((T.diesel[0] + tilfV() * (T.diesel[1] - T.diesel[0])) / 10) * 10, frist: tid + T.frist, fare: tilfV() < T.røvere, røvere: false }; }
     return null; }
   function brukStor(st, v) { const f = F(), l = L(), Lb = LB(), Fr = FR(); let t = '';
     if (st.id === 'nabo') { const n = v.id === 'alle' ? R.nabo.folk : v.id === 'to' ? 2 : 0;
@@ -309,8 +312,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     if ((tap || taptTekst) && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').replace(/(\d+ (ny såret|nye sårede)(, \d+ falt)?|\d+ falt)\.\s*/, '').replace(/^Siste døgn:\s*$/, '').trim() || null;
     if (taptTekst) rapport.push(taptTekst); if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
     S.storHist = S.storHist || {};
-    let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, Math.random, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, Math.random, null); if (stor && stor.id !== o.stor) stor = null; } }
-    S.kort = { dag: d, rapport, valg: M.dagensValg(s, Math.random).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };
+    let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, tilfV, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, tilfV, null); if (stor && stor.id !== o.stor) stor = null; } }
+    S.kort = { dag: d, rapport, valg: M.dagensValg(s, tilfV).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };
     S.taptBy = []; S.taptLag = [];
     lagre(); vistNøkkel = ''; vis(); return { igår, kort: S.kort };
   }
@@ -378,7 +381,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     if (e.sti) { const t = Math.max(0, e.timerIgjen || 0); return `${e.navn} på vei (${t < 1 ? Math.max(1, Math.round(t * 60)) + ' min' : String(Math.round(t * 10) / 10).replace('.', ',') + ' t'})`; }
     return `${e.navn} står ${meter(d)} fra tankbilen`; }
   function hjemFraTankbil(b) { const e = sendtLag(b), o = rot.OppstartSpill && OppstartSpill.tilstand(); if (!e || !o || !o.leir || typeof ordre !== 'function') return;
-    const v = Math.random() * 6.283; ordre(e, o.leir.x + Math.cos(v) * 30, o.leir.y + Math.sin(v) * 30, true); logg(`${e.navn} går hjem til leiren.`); }
+    const v = tilfV() * 6.283; ordre(e, o.leir.x + Math.cos(v) * 30, o.leir.y + Math.sin(v) * 30, true); logg(`${e.navn} går hjem til leiren.`); }
 
   // ---------- Leir-menyen (fanen Mål): det morgenmøtet bestemte for i dag ----------
   const PLANTEKST = { øv: 'på våpenøvelse', jakt: 'på jakt og fiske', speid: 'på speidertur', leie: 'leid ut som vakter', tankbil: 'til fots mot tankbilen', vakt: 'på dobbel vakt' };

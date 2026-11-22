@@ -6,6 +6,9 @@
 // etterretning i god tid. I testene (navigator.webdriver) skjer ingenting av seg selv før EskaleringSpill.test = true.
 // Lagres per leir i «riksbrudd-eskalering». window.EskaleringSpill.
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const E = window.Eskalering, F = window.Fraksjoner; if (!E || !F || !window.AI) return;
   const ER = E.REGLER, SIDER = ['rød', 'grønn'], NØKKEL = 'riksbrudd-eskalering';
   const api = { test: false };
@@ -55,7 +58,7 @@
   }
   const medlemmer = G => ENHETER.filter(e => e.ai && kjemper(e) && G.lag.includes(e.navn));
   const intel = (G, side) => { if (!window.KrigSpill || !KrigSpill.T || !window.Krig || !Krig.meld) return; const T = KrigSpill.T(); if (!T || !T.etter) return;
-    for (const e of medlemmer(G)) Krig.meld(T.etter, { navn: e.navn, side, x: G.sted.x + (Math.random() - .5) * 600, y: G.sted.y + (Math.random() - .5) * 600, t: tid, kilde: 'speidere', hva: `samles ved ${G.sted.navn || 'samlingsstedet'} mot ${G.mål.navn}`, varer: 8 * 60 }); };
+    for (const e of medlemmer(G)) Krig.meld(T.etter, { navn: e.navn, side, x: G.sted.x + (tilfV() - .5) * 600, y: G.sted.y + (tilfV() - .5) * 600, t: tid, kilde: 'speidere', hva: `samles ved ${G.sted.navn || 'samlingsstedet'} mot ${G.mål.navn}`, varer: 8 * 60 }); };
 
   // ---------- planleggingen: én gang i timen per motstander ----------
   function planlegg(side, o = {}) {
@@ -150,7 +153,7 @@
   function rute(side, o = {}) {
     const gr = g(), L = leir(); if (!L || S.rute[side] || hvile(side, 'blå')) return null;
     if (!o.tving && (tid < fredSlutt() || tid - S.sistRute[side] < ER.rute.hver)) return null;
-    S.sistRute[side] = tid; if (!o.tving && Math.random() >= gr.rute) return null;
+    S.sistRute[side] = tid; if (!o.tving && tilfV() >= gr.rute) return null;
     const frie = fri(side, byer(side)); if (frie.length < (o.tving ? 1 : 2)) return null;   // det siste frie laget holdes igjen
     let best = null; for (const r of ruter(L)) for (const f of frie) { const d = avst(f, r.p); if (d <= ER.rute.avstand && (!best || d < best.d)) best = { r, f, d }; }
     if (!best) return null;
@@ -176,7 +179,7 @@
     const vogner = KJORETOY.filter(k => k.side === side && k.type === 'stridsvogn').length;
     const hva = E.kjøp(Ø, { lag, tak, lastebiler: biler, stridsvogner: vogner, døgn: døgn(), g: gr }); if (!hva) return null;
     const st = stedFor(side); let ut = null;
-    if (hva === 'lag') { ut = AI.nytt(side, st.x + (Math.random() - .5) * 200, st.y + (Math.random() - .5) * 200); if (synlig(ut)) logg(`${navn(side)} har rekruttert et nytt lag: ${ut.navn}.`); }
+    if (hva === 'lag') { ut = AI.nytt(side, st.x + (tilfV() - .5) * 200, st.y + (tilfV() - .5) * 200); if (synlig(ut)) logg(`${navn(side)} har rekruttert et nytt lag: ${ut.navn}.`); }
     else { const n = (Ø.kjøpt[hva] || 0) + 1, eier = F.FRAKSJONER[side].eieform; ut = lagBil(side, hva, st.x + 30, st.y + 20, hva === 'lastebil' ? `${eier} lastebil ${n + 1}` : `${eier} stridsvogn${n > 1 ? ' ' + n : ''}`); if (!ut) return null;
       S.biler.push(ut.navn); if (hva === 'stridsvogn') logg(`Etterretning: ${navn(side)} har fått en stridsvogn${st.navn ? ' i ' + st.navn : ''}.`); }
     E.betal(Ø, hva); lagre(); skitten = true; return hva;

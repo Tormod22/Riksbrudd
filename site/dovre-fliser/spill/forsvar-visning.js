@@ -10,6 +10,9 @@
  *   hjemme det selv (autoForsvar).
  */
 (function () {
+  // Felles tilfeldighet (M0 punkt 4, R16-E): alt som bestemmer hva som skjer, trekker fra verdens strøm (spill/tilfeldig.js),
+  // så verden kan lagres og regnes likt på flere maskiner.
+  const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const FO = window.Forsvar; if (!FO) return;
   const R = FO.R, HOLD = { ild: 'fri', underlegen: 'kjemp', tap: 0, fram: 'nei' };
   const el = (t, a = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'klasse') e.className = v; else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
@@ -363,7 +366,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     for (const s of egne()) { const v = s.egetValg; if (!v || !/^trakk/.test(v.hva) || s.sti || s.planlegger || s.ombord || s.hjemSendt === v.t || tid - v.t < R.hjem.vent) continue;
       const d = Math.hypot(s.x - L.x, s.y - L.y); if (d < R.hjem.fra || d > R.hent) continue;
       if (ENHETER.some(e => e.side !== 'blå' && levende(e) && Math.hypot(e.x - s.x, e.y - s.y) < R.hjem.fiende)) continue;
-      if (!kanStille(s)) continue; s.hjemSendt = v.t; const a = Math.random() * 6.2832; ordre(s, L.x + Math.cos(a) * 40, L.y + Math.sin(a) * 40, true);
+      if (!kanStille(s)) continue; s.hjemSendt = v.t; const a = tilfV() * 6.2832; ordre(s, L.x + Math.cos(a) * 40, L.y + Math.sin(a) * 40, true);
       logg(`${s.navn} trakk seg tilbake tidligere og går nå hjem til leiren igjen.`); if (++n >= 3) break; } }
 
   // ---------- (runde 4) REPARASJON: byggelagene reparerer skadde bygg når de ikke har annet å gjøre ----------

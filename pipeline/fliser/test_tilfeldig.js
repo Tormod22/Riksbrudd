@@ -80,5 +80,33 @@ ok(!lik(rekke(T.lag('a'), 20), rekke(T.lag('b'), 20)), 'ulike tekster gir ulike 
   const gammel = { ...LG.pakk({ tid: 10, leir: { x: 1, y: 2 } }) }; delete gammel.rng;
   const g = LG.fraJSON(JSON.stringify(gammel), { x: 1, y: 2 }); ok(g && g.rng === null && g.tid === 10, 'lagring.js: gammel lagring uten rng virker (rng = null)'); }
 
+// VAKT: ingen nye regler med Math.random. Bare filene i BARE_UTSEENDE (lyd, bilde, figurer i 3D og brukerens portrettmotor) kan bruke
+// den fritt. Ellers godtas bare: reserven når Tilfeldig mangler («TILFELDIG ? TILFELDIG.verden : Math.random» og
+// «Tilfeldig.verden) || Math.random»), lånet i oppstart.js (Math.random byttes ut mens portrettet lages), kommentarer, og en linje
+// rett under en kommentar som sier «Math.random med vilje».
+const BARE_UTSEENDE = ['lyd.js', 'effekter3d.js', 'vind3d.js', 'folk3d.js', 'dyr3d.js', 'natt3d.js', 'liv3d.js', 'portrett-motor.js'];
+function mathRandomFeil(navn, tekst) {
+  if (BARE_UTSEENDE.includes(navn)) return [];
+  const L = tekst.split('\n'), ut = [];
+  for (let i = 0; i < L.length; i++) {
+    let l = L[i];
+    if (!l.includes('Math.random')) continue;
+    const t = l.trim();
+    if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) continue;
+    if (i > 0 && /Math\.random med vilje/.test(L[i - 1])) continue;
+    l = l.replace(/TILFELDIG\s*\?\s*TILFELDIG\.verden\s*:\s*Math\.random/g, '').replace(/Tilfeldig\.verden\)\s*\|\|\s*Math\.random/g, '')
+      .replace(/lån\s*=\s*Math\.random/g, '').replace(/Math\.random\s*=\s*(rnd|lån)\b/g, '');
+    if (l.includes('Math.random')) ut.push(`${navn}:${i + 1}`);
+  }
+  return ut;
+}
+{ const fs = require('fs'), path = require('path'), dir = path.join(__dirname, '../../site/dovre-fliser/spill');
+  const funn = []; for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort()) funn.push(...mathRandomFeil(f, fs.readFileSync(path.join(dir, f), 'utf8')));
+  ok(!funn.length, 'ingen Math.random i spillregler utenom «bare utseende»' + (funn.length ? ' – fant: ' + funn.join(', ') : ''));
+  // sjekken må fange en feil lagt inn med vilje, og godta de lovlige formene
+  ok(mathRandomFeil('ny-regel.js', 'const x = 1;\nif (Math.random() < .5) angrip();').length === 1, 'sjekken fanger Math.random i en ny regelfil');
+  ok(mathRandomFeil('ny-regel.js', "const tilf = TILFELDIG ? TILFELDIG.verden : Math.random;\n// Math.random med vilje (bare utseende): støy\nlet s = Math.random();").length === 0, 'sjekken godtar reserven og merkede linjer');
+  ok(mathRandomFeil('lyd.js', 'Math.random()').length === 0, 'sjekken godtar «bare utseende»-filene'); }
+
 console.log(feil ? `${feil} FEIL` : 'Alle testene for tilfeldig.js er ok');
 process.exit(feil ? 1 : 0);
