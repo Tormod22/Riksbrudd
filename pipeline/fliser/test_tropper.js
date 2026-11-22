@@ -39,5 +39,11 @@ assert.ok(/kjører/.test(T.ombordFeil({ menn: t.menn.slice(0, 3) }, { ...bil, st
   const b = T.advarsler(seks, [3, 4, 1], { jobber: 2 }); assert.ok(b.some(t => /«bygg»/.test(t) && /2 jobbene/.test(t)), 'byggerne tas: advarsel ' + b);
   assert.ok(T.advarsler(seks, [1, 2], { jobber: 1, kjøkken: true }).some(t => /kokk/.test(t)) && !T.advarsler(seks, [1, 2], { jobber: 1, kjøkken: false }).length, 'kokken: bare når leiren har kjøkken');
   assert.deepStrictEqual(T.advarsler(seks, [1, 5, 6], { jobber: 3 }), [], 'byggerne og kokken blir igjen: ingen advarsel');
-  assert.ok(T.advarsler(seks, [3, 1], {}).some(t => /halvt så fort/.test(t)), 'én bygger igjen: halvt så fort'); }
+  assert.ok(T.advarsler(seks, [3, 1], {}).some(t => /halvt så fort/.test(t)), 'én bygger igjen: halvt så fort');
+  // (R17 funn 14) stormtroppen tar åtte av ti: to igjen på «bygg» = ett byggelag mot tre jobber – si det før «Opprett»
+  { const ti = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, navn: 'P' + (i + 1), oppgave: i < 4 ? 'bygg' : 'fri' })), valgt = [3, 4, 5, 6, 7, 8, 9, 10];
+    const a14 = T.advarsler(ti, valgt, { jobber: 3 }), t14 = a14.find(t => /byggelag/.test(t)) || '';
+    assert.ok(/ett byggelag/.test(t14) && /nå 2/.test(t14) && /3 jobber/.test(t14) && /2 står i kø/.test(t14) && /med 2 personer/.test(t14), 'to igjen, tre jobber: ' + t14);
+    assert.ok(!T.advarsler(ti, valgt, { jobber: 1 }).some(t => /byggelag/.test(t)), 'én jobb og ett byggelag: ingen kø-advarsel');
+    assert.ok(!T.advarsler(ti, [9, 10], { jobber: 3 }).some(t => /byggelag/.test(t)), 'byggerne blir: ingen kø-advarsel'); } }
 console.log('ok   tropper: sammensetning, roller, oppløsning og plass i kjøretøy; forslagene lar to bygge (runde 8)');

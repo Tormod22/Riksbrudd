@@ -63,7 +63,16 @@
   function gåAv(s) { if (!s.ombord) return; const k = s.ombord; s.ombord = null; delete s.ombordNavn; s.x = k.x + 6; s.y = k.y + 4; s.siktSkitten = true; logg(`${s.navn} har gått av ${k.navn}.`); if (valgt === s) visPanel(); skitten = true; }
   KROKER.sim.push(() => { for (const s of ENHETER) { if (s.ombordNavn && !s.ombord) { const k = (window.KJORETOY || []).find(q => q.navn === s.ombordNavn && q.side === 'blå'); if (k) s.ombord = k; delete s.ombordNavn; }
       if (!s.ombord) continue; const k = s.ombord; if (!(window.KJORETOY || []).includes(k) || !levende(s)) { s.ombord = null; continue; } if (Math.hypot(s.x - k.x, s.y - k.y) > 2) { s.x = k.x; s.y = k.y; skitten = true; } s.sti = null; s.retning = k.retning || s.retning; } });
-  KROKER.kanOrdre.push(s => { if (!s.ombord) return true; logg(`${s.navn} sitter i ${s.ombord.navn}: gi kjøretøyet ordre, eller la troppen gå av først.`); return false; });
+  const ombordKrok = s => { if (!s.ombord) return true; logg(`${s.navn} sitter i ${s.ombord.navn}: trykk «Kjør dit», eller la troppen gå av først.`); return false; };
+  KROKER.kanOrdre.push(ombordKrok);
+  // (R17 funn 15) «Marsjer» heter «Kjør dit» når troppen sitter på (index.html), og ordren går til kjøretøyet: det kjører langs vegene
+  // så nær målet som det kommer, og troppen går av der (s.avstigning – strategi-visning.js lar den gå av når kjøretøyet står).
+  // Svarer true når ordren er tatt hånd om (også når den ble avvist, f.eks. uten radiokontakt).
+  window.OMBORD_ORDRE = (s, X, Y) => {
+    const k = s && s.ombord; if (!k || typeof window.kjørTil !== 'function') return false;
+    if (!KROKER.kanOrdre.filter(f => f !== ombordKrok).every(f => f(s))) return true;
+    s.avstigning = { x: X, y: Y, navn: 'målet', t: tid }; window.kjørTil(k, X, Y);
+    logg(`${s.navn} kjører med ${k.navn} og går av ved målet.`); skitten = true; return true; };
   KROKER.lagTekst.push(s => (s.ombord ? `om bord i ${s.ombord.navn}` : s.fraFolk ? 'egen tropp' : null));
   KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }
     if (!s.leirvakt && vedLeir(s)) { const b = knapp('Våpen og utstyr', false, () => endre(s)); b.id = 'utstyrknapp'; H.appendChild(b); }
@@ -171,7 +180,13 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
         : `Forslagene lar ${navnH.join(' og ')} bli igjen og bygge i leiren. Vil du ha dem med, kryss dem av selv.`)); }
     if (window.Strid && !Object.keys(våpen).length) { const sel = el('select', { id: 'troppbev' }); for (const id of Strid.VALGBARE) { const B = Strid.BEVÆPNING[id], o = el('option', { value: id }, `${B.navn} – ${B.kort}${B.pris ? ' (' + B.pris.toLocaleString('nb-NO') + ' kr)' : ''}`); if (id === bev) o.selected = true; sel.append(o); } sel.onchange = () => { bev = sel.value; }; kol1.append(el('label', {}, el('span', {}, 'Bevæpning'), sel)); }
     const ledige = biler().filter(k => !bærer(k) && bilNær(k, L)), sb = el('select', { id: 'troppbil' }); sb.append(el('option', { value: '' }, 'Til fots')); for (const k of ledige) { const o = el('option', { value: k.navn }, `${k.navn} (plass til ${TR.plass(k)})`); if (k.navn === bil) o.selected = true; sb.append(o); }
-    for (const k of (window.KJORETOY || []).filter(q => q.side === 'blå' && TR.plass(q) > 0 && !ledige.includes(q))) sb.append(el('option', { value: '', disabled: '' }, `${k.navn} – ${bilGrunn(k, L) || 'ikke ledig'}`)); sb.onchange = () => { bil = sb.value; vis(true); }; kol1.append(el('label', {}, el('span', {}, 'Kjøretøy'), sb));
+    for (const k of (window.KJORETOY || []).filter(q => q.side === 'blå' && TR.plass(q) > 0 && !ledige.includes(q))) sb.append(el('option', { value: '', disabled: '' }, `${k.navn} – ${bilGrunn(k, L) || 'ikke ledig'}`)); sb.onchange = () => { bil = sb.value; vis(true); };
+    // (R17 funn 15: skjemaet sto på «Til fots», men malen satte troppen om bord) – lista viser alltid det som brukes ved «Opprett»: et
+    // kjøretøy som ikke lenger er ledig, nullstilles, og verdien settes på lista selv (ikke bare på valget)
+    if (bil && !ledige.some(q => q.navn === bil)) bil = ''; sb.value = bil;
+    kol1.append(el('label', {}, el('span', {}, 'Kjøretøy'), sb));
+    { const kv = ledige.find(q => q.navn === bil); kol1.append(el('small', { klasse: 'hold', id: 'troppbiltekst', style: 'display:block;margin-top:3px;line-height:1.35' }, kv
+      ? `Troppen går om bord i ${kv.navn}. Da gir du ordre med «Kjør dit», og troppen går av ved målet (eller med «Gå av»).` : 'Troppen går til fots.')); }
     const P = F ? F.personer.filter(p => !window.FolkRegler || FolkRegler.arbeidsfør(p)) : []; valgte = new Set([...valgte].filter(id => P.some(p => p.id === id)));
     const k = ledige.find(q => q.navn === bil), tak = k ? Math.min(R.maks, TR.plass(k)) : R.maks; kol2.append(el('h3', {}, `Folk (${valgte.size} valgt${k ? ', høyst ' + tak + ' i ' + k.navn : ''})`));
     if (!P.length) kol2.append(el('small', {}, 'Ingen arbeidsføre i leiren. Rekrutter flere i Folk.'));
