@@ -802,8 +802,13 @@ function hvorLapp3d(g) {
   const R = R3, u = R.ut; if (!u || R.fot || (window.KjorSpill && KjorSpill.fører && KjorSpill.fører())) return;
   const X = u.cx + R.bane.x, Y = u.cy + R.bane.y;
   if (!R.hvor || Math.hypot(X - R.hvor.X, Y - R.hvor.Y) > HVOR3D.flytt || (!R.hvor.tekst && performance.now() - R.hvor.t > 2000)) { const t = nærmesteTettsted(X, Y); R.hvor = { X, Y, t: performance.now(), tekst: t ? (t.d < 300 ? 'Du er i ' + t.navn : `Nærmeste tettsted: ${t.navn} · ${avstTekst(t.d)} ${kompassRetning(t.dx, t.dy)}`) : '' }; }
-  const tekst = R.hvor.tekst; if (!tekst) return;
-  g.save(); g.font = (VW < 900 ? '13' : '14') + 'px "Cormorant Garamond",serif'; const w = g.measureText(tekst).width + 18, y = (window.UI_TOPP3D || 0) + (VW < 900 ? 6 : 10), x = VW / 2;
+  let tekst = R.hvor.tekst; if (!tekst) return;
+  // (R17, funn 18: på telefon lå lappen bak loggen og minikartet – bare «m» av «km» synes) – på smale skjermer står en kort lapp
+  // («Dombås · 13 km V») rett under minikartet, høyrejustert; uten minikart som før midt under kompasset
+  const mk = VW < 700 ? document.getElementById('minikart') : null, mr = mk && getComputedStyle(mk).display !== 'none' ? mk.getBoundingClientRect() : null, smal = !!(mr && mr.width > 0 && mr.bottom < VH * .6);
+  if (smal) tekst = tekst.replace(/^Nærmeste tettsted: /, '');
+  g.save(); g.font = (VW < 900 ? '13' : '14') + 'px "Cormorant Garamond",serif'; const w = g.measureText(tekst).width + 18;
+  const y = smal ? Math.round(mr.bottom + 6) : (window.UI_TOPP3D || 0) + (VW < 900 ? 6 : 10), x = smal ? Math.max(w / 2 + 6, Math.min(VW - 6, mr.right) - w / 2) : VW / 2;
   g.fillStyle = 'rgba(20,16,10,.72)'; g.strokeStyle = 'rgba(214,190,130,.55)'; g.lineWidth = 1; g.beginPath(); g.rect(x - w / 2, y, w, 22); g.fill(); g.stroke();
   g.fillStyle = '#eadfc4'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tekst, x, y + 11.5); g.restore();
 }
@@ -3642,7 +3647,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=1d64575941"></script>
-<script src="/dovre-fliser/spill/kvalitet.js?v=7d897f33a3"></script>
+<script src="/dovre-fliser/spill/kvalitet.js?v=e39a2df16d"></script>
 <script src="/dovre-fliser/spill/vegetasjon.js?v=ba29a3df5b"></script>
 <script src="/dovre-fliser/spill/vegetasjon3d.js?v=b6a120575f"></script>
 <script src="/dovre-fliser/spill/lave3d.js?v=807b267441"></script>
