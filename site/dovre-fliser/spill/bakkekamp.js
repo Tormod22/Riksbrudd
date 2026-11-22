@@ -22,7 +22,7 @@
     // GRANATER – Claudes forslag: kastefart (m/s), kastevinkel over blikket, tyngde, lunte (s), sprett, dødelig radius og ytre radius (m),
     // skade på en mann i lag (1 = en mann ute) og på deg (helsepoeng av 100) midt i, avtagende utover. Vekt og pris i sekken.
     granat: { fart: 16, løft: .32, g: 9.81, lunte: 3.2, sprett: .35, friksjon: .6, dødelig: 4, radius: 12, skadeMann: 1.2, skadeDeg: 110,
-      vekt: .45, pris: 25000, pakke: 2, startAntall: 2, ventMellom: 1.2 },
+      vekt: .45, pris: 25000, pakke: 2, startAntall: 2, belte: 6, ventMellom: 1.2 },
     // LAGKAMERATER – Claudes forslag: hvor nær et lag må være for å kunne få ordre (m), hvor langt bak deg de går, hvor langt unna før
     // de får ny ordre, og hvor ofte (s). «Angrip dit» går høyst «angrepMaks» meter fram.
     følge: { nær: 400, bak: 9, slakk: 16, hvert: 4, angrepMaks: 600 },

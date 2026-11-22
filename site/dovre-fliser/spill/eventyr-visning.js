@@ -156,7 +156,7 @@ body.smal #evpanel, body.kort #evpanel{ left:0; right:0; top:auto; bottom:0; tra
   function bakke(d, e) { const D = R.dekning, n = D.prøver, h = new Array(n), Q = r3(), u = Q && Q.ut; if (typeof hoyde3d !== 'function' || !u) return false;
     for (let i = 0; i < n; i++) { const t = i / (n - 1), x = d.x + (e.x - d.x) * t, y = d.y + (e.y - d.y) * t; if (Math.abs(x - u.cx) > u.S || Math.abs(y - u.cy) > u.S) return false; const v = hoyde3d(x, y); if (typeof v !== 'number' || !isFinite(v)) return false; h[i] = v; }
     return E.Snik.bakkeImellom(h, D.øye[stilling()] || D.øye.stå); }
-  function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), vegg(d, e), bakke(d, e)); }
+  function fiendeFaktor(d, e) { if (!auto() || !klar) return 1; const s = snik.get(e); if (!s || !s.sett) return 0; return E.Snik.dekning(stilling(), rot.BakkekampSpill ? false : vegg(d, e), bakke(d, e)); }
   function snikSteg(p, dt) { const rekk0 = snikRekkevidde(), rekkN = snikRekkevidde(true); let høyest = 0, nær = Infinity, rekk = rekk0;
     for (const e of fiender()) { const a = Math.hypot(e.x - p.x, e.y - p.y); if (a > 900) { snik.delete(e); continue; } const s = snik.get(e) || { nivå: 0, sett: false }; rekk = harNattsikt(e) ? rekkN : rekk0; s.nivå = E.Snik.steg(s.nivå, a, rekk, dt); const før = s.sett; s.sett = E.Snik.sett(s.sett, s.nivå); snik.set(e, s);
       if (s.sett && !før) logg(`${e.navn} har oppdaget deg!`); høyest = Math.max(høyest, s.nivå); nær = Math.min(nær, a); }

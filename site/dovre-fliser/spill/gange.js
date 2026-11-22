@@ -387,7 +387,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     c.position.set(k.kx, k.ky, k.kz); c.up.set(0, 0, 1);
     c.lookAt(k.kx - Math.sin(f.a) * Math.cos(f.pitch), k.ky + Math.cos(f.a) * Math.cos(f.pitch), k.kz + Math.sin(f.pitch));
     // litt større synsfelt når du løper
-    fov += ((kropp.løper && kropp.fart > Bevegelse.REGLER.gå * 1.5 ? 74 : 68) - fov) * Math.min(1, dt * 6);
+    // (22. nov, W2) siktekikkerten (spill/bakkekamp-visning.js) deler synsfeltet på zoomen
+    { const BK = window.BakkekampSpill, mål = kropp.løper && kropp.fart > Bevegelse.REGLER.gå * 1.5 ? 74 : 68; fov += ((BK ? BK.fov(mål) : mål) - fov) * Math.min(1, dt * (BK && BK.sikter() ? 14 : 6)); }
     R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = fov; c.aspect = VW / VH; c.near = .2; c.far = u.S * 4 + 3000; c.updateProjectionMatrix();
     b.yaw = f.a;
   }
@@ -414,7 +415,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
       const G = window.Gaavalg, erSpak = G ? G.erSpak(x, y, VW, VH) : x < VW * .45 && y > VH * .5;
       if (VW < 900 && erSpak && !spak) spak = { id: e.pointerId, x0: x, y0: y, dx: 0, dy: 0 }; else if (!låst) se = { id: e.pointerId, x, y, x0: x, y0: y, a0: R3.fot.a, berøring: e.pointerType !== 'mouse', t: e.timeStamp, el: e.target }; }
     else if (e.type === 'pointermove') {
-      if (låst) { R3.fot.a -= e.movementX * .0025; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - e.movementY * .0025)); if (e.movementX || e.movementY) snuRask(); }
+      if (låst) { const fs = .0025 * (window.BakkekampSpill ? BakkekampSpill.følsomhet() : 1); R3.fot.a -= e.movementX * fs; R3.fot.pitch = Math.max(-1.3, Math.min(1.3, R3.fot.pitch - e.movementY * fs)); if (e.movementX || e.movementY) snuRask(); }
       else if (spak && spak.id === e.pointerId) { spak.dx = Math.max(-60, Math.min(60, x - spak.x0)); spak.dy = Math.max(-60, Math.min(60, y - spak.y0)); }
       else if (se && se.id === e.pointerId) blikk(x, y, e.timeStamp); }
     else { if (spak && spak.id === e.pointerId) spak = null;
