@@ -405,7 +405,21 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     const høyde = (x, y) => { if (!hv) return null; const fx = (x - hv.x0) / hv.r - .5, fy = (hv.y0 - y) / hv.r - .5, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j;
       if (i < 0 || j < 0 || i + 1 >= hv.w || j + 1 >= hv.h) return null; const H = (ii, jj) => hv.H[jj * hv.w + ii];
       const z = H(i, j) * (1 - a) * (1 - b) + H(i + 1, j) * a * (1 - b) + H(i, j + 1) * (1 - a) * b + H(i + 1, j + 1) * a * b; return z === z ? z : null; };
-    return { klasse: (x, y) => kl.get(x + ',' + y), iHus: (x, y) => hus.has(x + ',' + y), høyde };
+    // (R17 funn 12) bilvegene og gang- og sykkelvegene fra kartet rundt bygget – Leir.kanBygge sier «står på vegen»
+    let veger = null; try { veger = await kartveger(punkter); } catch (e) { veger = null; }
+    return { klasse: (x, y) => kl.get(x + ',' + y), iHus: (x, y) => hus.has(x + ',' + y), høyde, veger };
+  }
+  // Vegene (vektorflisene z13, alle veger og gang- og sykkelveger, ikke ferjer) innen 20 m av punktene: [{ k, g, P: [[x, y] …] }]
+  async function kartveger(punkter) {
+    if (typeof hentFlis !== 'function' || typeof span !== 'function' || typeof flisområde !== 'function') return null;
+    const xs = punkter.map(p => p[0]), ys = punkter.map(p => p[1]), bb = [Math.min(...xs) - 20, Math.min(...ys) - 20, Math.max(...xs) + 20, Math.max(...ys) + 20];
+    const z = 13, sp = span(z), [x0, y0, x1, y1] = flisområde(bb, z), ut = [], jobber = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(hentFlis('vektor', z, x, y).then(t => {
+      if (!t || !t.veg) return; const mx = G.x0 + x * sp, my = G.y0 - y * sp, e = t.veg.ext;
+      for (const o of t.veg.obj) { if (o.e.t === 4) continue;
+        for (const d of o.deler) ut.push({ k: o.e.k, g: o.e.g === 1 ? 1 : 0, P: d.map(([a, c]) => [mx + a / e * sp, my - c / e * sp]) }); }
+    }).catch(() => {}));
+    await Promise.all(jobber); return ut;
   }
   const pip = (P, x, y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; };
   const sp = p => (LB.BYGG[p.type].linje ? { type: p.type, punkter: p.punkter, lukket: p.lukket } : { type: p.type, x: p.x, y: p.y, ret: p.ret });
@@ -828,7 +842,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     L.midt = { x: S.leir.x, y: S.leir.y };
     siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
-  window.LeirSpill = { kjøpDiesel, totalPris: type => { const k = LB.kostnad(type, 1, bonus()); return k ? totalPris(k) : null; },
+  window.LeirSpill = { kartveger, kjøpDiesel, totalPris: type => { const k = LB.kostnad(type, 1, bonus()); return k ? totalPris(k) : null; },
     // dieselprognosen (Leir.dieselRekker): { timer, perDøgn, målt } – samme tall i dagsrapporten, Lager og varselbrikkene
     diesel: () => (L ? LB.dieselRekker(L, siste ? siste.agg * LB.DRIVSTOFF.literPerKWt : 0) : null),
     påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },

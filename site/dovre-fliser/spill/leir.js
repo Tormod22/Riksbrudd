@@ -113,6 +113,26 @@
   // GRUNNMUR: bygget legges i høyde med det høyeste punktet under seg, og muren fyller ned til bakken. Derfor tåler byggingen nå
   // 8 m høydeforskjell (før 3 m). grunn(b, høyde) gir topp, bunn og forskjell for et bygg.
   const BRATT = 8;
+  // (22. nov, R17 funn 12) Bilveger og gang- og sykkelveger fra kartet er hindringer: en brakke ble godtatt midt på bilvegen ved
+  // leiren. v.veger = [{ k (vegkategori E/R/F/K/P/S), g (1 = gang- og sykkelveg), P: [[x, y] …] (midtlinja) }] fra vektorflisene.
+  // Halve bredden + VEG_KLARING meter rundt midtlinja er vegen. Egne grusveger (Leir.BYGG.veg) og porter er ikke med (de kan krysse).
+  // Breddene er de samme som i bruer.js/vegetasjon.js; gangvegen og klaringen er Claudes forslag.
+  const VEGBREDDE = { E: 8, R: 7.5, F: 6.5, K: 5.5, P: 4, S: 3.5 }, GANGVEG = 2.5, VEG_KLARING = .5;
+  const vegHalv = r => (r.g ? GANGVEG : VEGBREDDE[r.k] || 4) / 2 + VEG_KLARING;
+  const tilStrek = (x, y, a, c) => { const vx = c[0] - a[0], vy = c[1] - a[1], l2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / l2));
+    return Math.hypot(a[0] + vx * t - x, a[1] + vy * t - y); };
+  // står mangekanten P (bygget) på en av vegene? -> vegen eller null
+  function påKartveg(P, veger) {
+    if (!veger || !veger.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    for (const r of veger) { const w = vegHalv(r), Q = r.P; if (!Q || Q.length < 2) continue;
+      for (let i = 1; i < Q.length; i++) { const a = Q[i - 1], c = Q[i];
+        if (Math.max(a[0], c[0]) < x0 - w || Math.min(a[0], c[0]) > x1 + w || Math.max(a[1], c[1]) < y0 - w || Math.min(a[1], c[1]) > y1 + w) continue;
+        if (linjeGjennom(a, c, P)) return r;
+        for (let j = 0; j < P.length; j++) { const p = P[j], q = P[(j + 1) % P.length];
+          if (tilStrek(p[0], p[1], a, c) < w || tilStrek(a[0], a[1], p, q) < w || tilStrek(c[0], c[1], p, q) < w) return r; } } }
+    return null;
+  }
   function kanBygge(L, b, v = {}, unntatt = null, o = {}) {
     const B = BYGG[b.type]; if (!B) return 'Ukjent bygg.';
     if (B.linje) { if (!b.punkter || b.punkter.length < 2) return 'Gjerdet trenger minst to punkter.'; const l = lengde(b.punkter, b.lukket); if (l < 2) return 'Gjerdet er for kort.'; if (l > 3000) return 'Gjerdet er for langt (høyst 3 km om gangen).'; }
@@ -126,6 +146,7 @@
     // delene i byggesettet (del: true) står inntil og oppå hverandre; plassene deres sjekkes i byggesett.js
     if (!B.linje) for (const a of L.bygg) if (a.id !== unntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær ${BYGG[a.type].navn.toLowerCase()}.`;
     if (!B.linje) for (const a of L.plan || []) if (a.pid !== o.planUnntatt && !BYGG[a.type].linje && !(B.del && BYGG[a.type].del) && overlapper(P, hjørner(a))) return `For nær planlagt ${BYGG[a.type].navn.toLowerCase()}.`;
+    if (!B.linje && !B.port && v.veger && påKartveg(P, v.veger)) return `${B.navn} står på vegen. Flytt bygget til siden av vegen.`;
     if (!B.linje && v.høyde) { const { d, grense } = bratt(b, v.høyde);
       if (d > grense) return `For bratt her (${Math.round(d)} m høydeforskjell under bygget).`; }
     return null;
@@ -472,7 +493,7 @@
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

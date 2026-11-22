@@ -112,7 +112,9 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const hus = new Set(), sett = new Set();
     await Promise.all(punkter.map(async ([x, y]) => { const k = Math.round(x) + ',' + Math.round(y); if (sett.has(k)) return; sett.add(k);
       try { const h = typeof finnBygg === 'function' ? await finnBygg(x, y) : null; if (h && pip(h.P, x, y)) hus.add(k); } catch (e) { /* ingen husdata */ } }));
-    return { klasse, høyde, iHus: (x, y) => hus.has(Math.round(x) + ',' + Math.round(y)) };
+    // (R17 funn 12) vegene i kartet (LeirSpill.kartveger) – delene kan ikke stå på en bilveg
+    let veger = null; try { veger = window.LeirSpill && LeirSpill.kartveger ? await LeirSpill.kartveger(punkter) : null; } catch (e) { veger = null; }
+    return { klasse, høyde, veger, iHus: (x, y) => hus.has(Math.round(x) + ',' + Math.round(y)) };
   }
   const pip = (P, x, y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; };
   const somBygg = (o, d) => ({ type: d.type, ...BS.midt(o, d) });
