@@ -40,3 +40,5 @@ ting ved flaggstanga, byggeplass3d.js) bruker de nye modellene.
   leiren, vegsperring, skytebane og hinderløype; de tre siste som nye bygg).
 - Del 5: B37–B46 (offisersbrakke – 4 senger –, dusj- og vaskebrakke, toalettcontainer, vaskeri, treningstelt, arrest, garasje,
   verkstedhall for tunge kjøretøy med portalkran, vaskeplass, fyllestasjon). Felles hjelpere `modul()` og `port()`.
+- Del 6: B47–B56 (vannrenseanlegg, avfallsplass, stort feltsykehus, medevac-plass, observasjonspost, betongbunker, skyttergrav
+  rett og hjørne/ende – vollene står oppå bakken, terrenget graves ikke –, jordfylte kurver, T-vegger).

@@ -1213,6 +1213,134 @@
     return d;
   });
 
+  // =====================================================================================================================
+  // B47 Vanntank og vannrenseanlegg: stående tank med stige og nivåmåler, rensecontainer med UV-enhet, pumpe og rør, kran ute.
+  LEIR2.vannrens = lod((b, e) => {
+    const d = [boks(0, 0, 0, 7, 5, .15, K.betong)];
+    d.push(syl(-1.8, 0, .15, 1.5, 3.4, '#5d7a8c', 16), syl(-1.8, 0, 3.55, 1.52, .12, '#4a6474', 16, 1.2));
+    if (!e) for (const z of [1.2, 2.4]) d.push(farg(new THREE.CylinderGeometry(1.52, 1.52, .06, 16, 1, true).rotateX(Math.PI / 2).translate(-1.8, 0, .15 + z), '#4a6474'));
+    for (const dy of [-.22, .22]) d.push(bjelke([-.25, dy, .15], [-.25, dy, 3.7], .05, K.galv)); if (!e) for (let i = 1; i < 12; i++) d.push(boks(-.25, 0, .15 + i * .3, .04, .44, .04, K.galv));
+    d.push(boks(-3.35, 0, .6, .06, .12, 2.6, '#e3e3de'));
+    // rensecontainer: dør, vindu, UV-rør, pumpe og rør mellom
+    d.push(boks(1.9, 0, .15, 2.4, 4.2, 2.4, '#c9ccc8'), boks(1.9, 0, 2.55, 2.5, 4.3, .1, K.mørkM), dør(3.1, -1, .15, .9, 2, 'x+', '#a9adaa', K.mørkM), vind(3.1, 1, 1.1, .9, .7, 'x+', e));
+    d.push(stav([-.3, .6, .6], [.7, .6, .6], .08, '#2f4a64', 6), stav([-.3, -.6, 2.8], [.4, -.6, 2.8], .06, '#2f4a64', 6), stav([.4, -.6, 2.8], [.7, -.6, 2.3], .06, '#2f4a64', 6));
+    d.push(syl(.3, 1.6, .15, .25, .5, '#2f4a64', 8), boks(.3, 1.6, .65, .3, .3, .3, K.mørk));
+    d.push(stav([3.3, 2, .15], [3.3, 2, 1.1], .04, K.galv, 4), stav([3.3, 2, 1.1], [3.5, 2, 1], .03, K.galv, 4), varsel(3.1, 0, 1.6, .2, 'x+'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B48 Avfallsplass med forbrenningsovn: inngjerdet plass med to åpne avfallscontainere, liten ovn med pipe, askedunker.
+  LEIR2.avfall = lod((b, e) => {
+    const d = [boks(0, 0, 0, 8, 6, .1, '#6a665c')];
+    const skip = (x, y, f) => { d.push(flytt(prisme([[-.9, 0], [.9, 0], [1.2, 1.1], [-1.2, 1.1]], 3.2, f), x, y, .1, Math.PI / 2)); d.push(boks(x, y, 1.05, 2.1, 3, .08, '#3b3a35')); if (!e) d.push(boks(x - .5, y + .3, 1.12, .5, .6, .3, '#5a5245'), boks(x + .4, y - .6, 1.12, .4, .5, .25, '#2f3e52')); };
+    skip(-2.3, 0, '#2f5a3a'); skip(0, 0, '#5a4a2a');
+    d.push(syl(2.7, 1, .1, .7, 1.3, '#4a4a48', 10), syl(2.7, 1, 1.4, .25, 3.2, K.mørk, 8), boks(3.35, 1, .3, .1, .6, .5, '#2b2b2a'));
+    for (let i = 0; i < 2; i++) d.push(syl(2.5 + i * .65, -1.6, .1, .28, .8, '#5d5d5a', 8));
+    const G = [[-4, -3], [4, -3], [4, 3], [-4, 3]];
+    for (let i = 0; i < 4; i++) { const [x0, y0] = G[i], [x1, y1] = G[(i + 1) % 4]; if (i === 0) continue; const n = Math.round(Math.hypot(x1 - x0, y1 - y0) / 2);
+      for (let k = 0; k <= n; k++) d.push(boks(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, 0, .06, .06, 1.8, '#6f7476'));
+      d.push(bjelke([x0, y0, 1.75], [x1, y1, 1.75], .03, '#6f7476'), bjelke([x0, y0, .9], [x1, y1, .9], .012, '#9ba1a4')); }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B49 Stort feltsykehus: tre buetelt i rekke koblet med en gang i tvertelt, røde kors på teltene, aggregat og
+  // aircondition-kanaler, oppmerket ambulanseinngang mot +x.
+  LEIR2.feltsykehus = lod((b, e) => {
+    const d = [], P = '#c9cbc2', PM = '#a9aba2';
+    for (const y of [-5, 0, 5]) { const t = prisme(bueProfil(4, 3, e ? 6 : 10), 12, P); t.translate(-1.5, y, 0); d.push(t);
+      d.push(...rødtKors(4.5, y, 1.2, 1, 'x+', true));
+      if (!e) for (const x of [-7.5, -1.5, 4.5]) d.push(flytt(prisme([...bueProfil(4.12, 3.06, 10), ...bueProfil(3.98, 2.98, 10).reverse()], .1, PM), x, y, 0)); }
+    const gang = prisme(bueProfil(2.4, 2.3, e ? 5 : 8), 14, PM); gang.rotateZ(Math.PI / 2); gang.translate(-4, 0, 0); d.push(gang);
+    // inngang med baldakin og ambulanseplass
+    d.push(boks(5.2, 0, 2.2, 1.6, 2.4, .08, PM)); for (const sy of [-1, 1]) d.push(stav([5.9, sy * 1.1, 0], [5.9, sy * 1.1, 2.2], .04, K.stålG, 4));
+    for (const [x, y, sx, sy] of [[7.5, -2.2, 3, .12], [7.5, 2.2, 3, .12], [8.95, 0, .12, 4.5]]) d.push(boks(x, y, 0, sx, sy, .012, K.gul));
+    // aggregat og AC-kanaler
+    d.push(boks(-8.8, -6, 0, 2.6, 1.4, 1.6, '#4f5a3c'), syl(-9.6, -6, 1.6, .08, .7, K.mørk, 6));
+    for (const y of [-5, 5]) { d.push(boks(-8.5, y + 1.8, 0, 1.2, .8, 1, '#d4d4cf')); if (!e) d.push(stav([-8.1, y + 1.4, .9], [-7.5, y + 1, 1.6], .2, '#bfc1b8', 8)); }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B50 Medevac-plass: oppmerket flate (rødt kors i hvit sirkel, H), røde kantlys, liten vindpølse og en båre på tralle.
+  LEIR2.medevac = lod((b, e) => {
+    const d = [syl(0, 0, 0, 7.5, .12, K.betong, 20)];
+    const r1 = new THREE.RingGeometry(5, 5.6, 24); r1.translate(0, 0, .125); d.push(farg(r1, '#e8e6df'));
+    d.push(boks(0, 0, .12, 3.2, 1, .01, K.rød), boks(0, 0, .12, 1, 3.2, .01, K.rød));
+    for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; d.push(syl(Math.cos(a) * 7.2, Math.sin(a) * 7.2, .1, .1, .12, '#d62a1e', 6)); }
+    d.push(stav([8.2, 6, 0], [8.2, 6, 3.5], .04, K.galv, 6)); const p = new THREE.CylinderGeometry(.14, .2, .9, 8, 1, true); p.rotateZ(-Math.PI / 2); d.push(flytt(farg(p, '#cf5f1f'), 8.7, 6, 3.4));
+    d.push(boks(-7.8, -5, .55, .6, 2, .06, '#3f5a3c'), boks(-7.8, -5, .5, .66, 2.1, .05, K.aluminium));
+    if (!e) for (const sx of [-1, 1]) for (const sy of [-1, 1]) d.push(stav([-7.8 + sx * .27, -5 + sy * .9, .08], [-7.8 + sx * .27, -5 + sy * .9, .5], .02, K.aluminium, 4), skive(-7.8 + sx * .27, -5 + sy * .9, .08, .08, .04, K.gummi, 'y', 6));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B51 Observasjonspost (OP): ring av sandsekker, kamuflasjenett på stolper over, kikkert på stativ og radio.
+  LEIR2.op = lod((b, e) => {
+    const d = [], r = frø(51);
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 14; i++) { const a = (i + (j % 2) * .5) / 14 * Math.PI * 2; if (a > 2.7 && a < 3.6) continue; d.push(sekk(Math.cos(a) * 2, Math.sin(a) * 2, j * .19, .82, a, SEKKFARGE[(r() * 5) | 0])); }
+    for (const [x, y] of [[-2.4, -2.4], [2.4, -2.4], [2.4, 2.4], [-2.4, 2.4], [0, 0]]) d.push(stav([x, y, 0], [x, y, x || y ? 1.9 : 2.3], .04, F.treM, 4));
+    // nettet: ujevn flate med flekker
+    const net = (u, v) => [-2.6 + u * 5.2, -2.6 + v * 5.2, 1.9 + .4 * Math.sin(u * Math.PI) * Math.sin(v * Math.PI) - .1 * Math.sin(u * 9 + v * 7)];
+    d.push(M.H.flate(e ? 4 : 8, e ? 4 : 8, net, (u, v) => ((u * 7 + v * 5) % 1 < .5 ? '#4b5a3a' : '#5d6a44'), true));
+    d.push(stav([.6, .4, 0], [.6, .4, 1.2], .02, K.mørk, 4), stav([.9, .4, 0], [.7, .4, 1.2], .02, K.mørk, 4), stav([.6, .7, 0], [.65, .45, 1.2], .02, K.mørk, 4), boks(.7, .45, 1.2, .35, .12, .12, '#2b2e30'));
+    d.push(boks(-1, -.6, 0, .5, .35, .4, '#424b31'), stav([-1, -.5, .4], [-1, -.5, 1.6], .008, K.mørk, 3));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B52 Betongbunker: lav bunker med skyteskår på tre sider, jord og gress oppå og mot sidene, inngang med trapp ned bakfra (−x).
+  LEIR2.betongbunker = lod((b, e) => {
+    const d = [], B = 4, L = 5, H = 1.9;
+    d.push(boks(0, 0, 0, B, L, H, '#7d7b76'), boks(0, 0, H, B + .3, L + .3, .3, '#6f6d68'));
+    // jord og gress oppå, skråninger mot langsidene (y±)
+    d.push(boks(0, 0, H + .3, B + .2, L + .2, .25, '#5a6b3e'));
+    d.push(prisme([[0, 0], [1.4, 0], [0, H + .3]], B + .2, '#5a6b3e').translate(0, L / 2 + .1, 0), prisme([[-1.4, 0], [0, 0], [0, H + .3]], B + .2, '#5a6b3e').translate(0, -L / 2 - .1, 0));
+    // skyteskår: mørke slisser med skrå åpning
+    for (const [x, y, side] of [[B / 2, -1.2, 'x+'], [B / 2, 1.2, 'x+'], [0, L / 2, 'y+'], [0, -L / 2, 'y-']]) d.push(påVegg([boks(.03, 0, 0, .06, 1, .2, '#121314'), boks(.08, 0, .2, .1, 1.3, .08, '#6f6d68'), boks(.08, 0, -.08, .1, 1.3, .08, '#6f6d68')], x, y, 1.2, side));
+    d.push(boks(-B / 2 - .6, 0, -.01, 1.2, 1.4, .02, '#2b2b2a'), boks(-B / 2 - .6, -.75, 0, 1.2, .12, .5, F.betongM), boks(-B / 2 - .6, .75, 0, 1.2, .12, .5, F.betongM), påVegg([boks(.02, 0, 0, .05, .9, 1.7, '#4a4f4b')], -B / 2, 0, 0, 'x-'));
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B53–B54 Skyttergrav: graven er en mørk bunn med ganglem (duckboards) og tømmerkledde sider; jordvollen (brystvernet)
+  // foran mot +x har sandsekker og skyteskår, bakvernet er lavere. Bakken graves ikke (terrenget i leiren er fast):
+  // vollene står oppå. Rett del 8 m langs y, og hjørne + ende (L-form).
+  function grav(d, x0, y0, x1, y1, e, r) {
+    const l = Math.hypot(x1 - x0, y1 - y0), rz = Math.atan2(y1 - y0, x1 - x0) - Math.PI / 2, mx = (x0 + x1) / 2, my = (y0 + y1) / 2, g = [];
+    g.push(boks(0, 0, 0, 1.1, l, .02, '#2b261e'), boks(0, 0, .02, .5, l - .1, .04, F.treM));
+    g.push(flytt(prisme([[-1.4, 0], [1.4, 0], [.6, .85], [-.4, .85]], l, '#6b5a43'), 1.5, 0, 0, Math.PI / 2), flytt(prisme([[-1.1, 0], [1.1, 0], [.3, .5], [-.3, .5]], l, '#6b5a43'), -1.35, 0, 0, Math.PI / 2));
+    for (const sx of [-1, 1]) g.push(boks(sx * .57, 0, 0, .06, l, .45, '#5a4a36'));
+    if (!e) { for (let y = -l / 2 + .3; y < l / 2; y += .6) for (const sx of [-1, 1]) g.push(boks(sx * .6, y, 0, .08, .08, .55, F.treM));
+      for (let y = -l / 2 + .3; y < l / 2 - .2; y += .55) if (Math.abs((y + l / 2) % 2.2 - 1.1) > .35) g.push(sekk(.95, y, .85, .5, 0, SEKKFARGE[(r() * 5) | 0])); }
+    d.push(...g.map(q => { q.rotateZ(rz); q.translate(mx, my, 0); return q; }));
+  }
+  LEIR2.skyttergrav = lod((b, e) => { const d = []; grav(d, 0, -4, 0, 4, e, frø(53)); return d; });
+  LEIR2.skyttergravHjørne = lod((b, e) => { const d = [], r = frø(54); grav(d, 0, -4, 0, .6, e, r); grav(d, .6, .6 - .55, 4, .6 - .55, e, r);
+    d.push(boks(-.1, -4.15, 0, 1.3, .3, .5, '#6b5a43'), boks(4.1, .05, 0, .3, 1.3, .5, '#6b5a43')); return d; });
+
+  // =====================================================================================================================
+  // B55 Jordfylte kurver (barrierer i stålnett og duk): fire kurver 1 × 1 × 1,4 m i en rad langs y, sand oppå, nett i rutene.
+  LEIR2.kurver = lod((b, e) => {
+    const d = [];
+    for (let i = 0; i < 4; i++) { const y = -1.5 + i * 1.02;
+      d.push(boks(0, y, 0, 1, 1, 1.4, '#a59a7c'), boks(0, y, 1.38, .94, .94, .06, '#8d7f5f'));
+      if (!e) { for (const k of [-.33, 0, .33]) d.push(boks(k, y, 0, .015, 1.02, 1.42, '#6f7476'), boks(0, y + k, 0, 1.02, .015, 1.42, '#6f7476'));
+        for (const z of [.47, .94]) d.push(boks(0, y, z, 1.02, 1.02, .015, '#6f7476')); } }
+    return d;
+  });
+
+  // =====================================================================================================================
+  // B56 T-vegger i betong: tre høye barrierer (3,6 m) side om side langs y, med løftebøyler og nummer.
+  LEIR2.tvegger = lod((b, e) => {
+    const d = [];
+    for (let i = 0; i < 3; i++) { const y = -1.25 + i * 1.25;
+      d.push(boks(0, y, 0, 1.6, 1.2, .35, K.betong), boks(0, y, .35, .3, 1.2, 3.25, K.betong), boks(0, y, 3.55, .34, 1.2, .05, F.betongM));
+      if (!e) d.push(farg(new THREE.TorusGeometry(.08, .02, 4, 8).rotateY(Math.PI / 2).translate(0, y - .3, 3.65), K.stålG), farg(new THREE.TorusGeometry(.08, .02, 4, 8).rotateY(Math.PI / 2).translate(0, y + .3, 3.65), K.stålG), boks(.16, y, 2.4, .01, .3, .2, '#e8e6df')); }
+    return d;
+  });
+
   // ---------- nye leirbygg (del B): registreres i Leir.BYGG med ikon, 2D-stil og gruppe i byggelista ----------
   // Pris, tid (spilltimer), strøm (kW, minus = bruker) og materialer er Claudes forslag. De fleste har ingen egen virkning i
   // spillet ennå (bare strømforbruket); der det passer, gir de senger (plasser) eller lagerplass (lager) som andre bygg.
@@ -1269,6 +1397,26 @@
       bygg: { navn: 'Vaskeplass for kjøretøy', pris: 800000, tid: .5, kw: -.5, fot: [-4, 4, -4, 3], mat: { betong: 8 }, tekst: 'Plate med rist og høytrykksvasker (virkningen kommer senere)' } },
     fyllestasjon: { gruppe: 'Strøm og diesel', ikon: 'tank', stil: { form: 'flat', tak: '#d9d8d2', h: 5.1 },
       bygg: { navn: 'Fyllestasjon', pris: 3e6, tid: 1.5, kw: -.5, fot: [-5.1, 5, -4, 4], mat: { stål: 6, betong: 8 }, tekst: 'Tak, pumper og tank for kjøretøyene (virkningen kommer senere)' } },
+    vannrens: { gruppe: 'Bo og leve', ikon: 'vann', stil: { form: 'tank', tak: '#5d7a8c', h: 3.6 },
+      bygg: { navn: 'Vanntank og vannrenseanlegg', pris: 2.5e6, tid: 1.5, kw: -1.5, fot: [-3.5, 3.6, -2.5, 2.5], mat: { stål: 6, betong: 4 }, tekst: 'Stående tank og rensecontainer (virkningen kommer senere)' } },
+    avfall: { gruppe: 'Bo og leve', ikon: 'kasse', stil: { form: 'pad', tak: '#6a665c', h: 1.2 },
+      bygg: { navn: 'Avfallsplass', pris: 800000, tid: .5, kw: 0, fot: [-4, 4, -3, 3], mat: { stål: 3, betong: 2 }, tekst: 'Avfallscontainere og forbrenningsovn (virkningen kommer senere)' } },
+    feltsykehus: { gruppe: 'Bo og leve', ikon: 'kors', stil: { form: 'telt', tak: '#c9cbc2', h: 3 },
+      bygg: { navn: 'Stort feltsykehus', pris: 10e6, tid: 3, kw: -5, fot: [-10.1, 9.1, -7.2, 7.2], mat: { tre: 10, stål: 6 }, tekst: 'Tre telt koblet sammen med en gang (virkningen kommer senere)' } },
+    medevac: { gruppe: 'Bo og leve', ikon: 'kors', stil: { form: 'pad', tak: '#8f8d87', h: .12 },
+      bygg: { navn: 'Medevac-plass', pris: 2e6, tid: 1.5, kw: 0, fot: [-8.2, 9.2, -7.6, 7.6], mat: { betong: 20 }, tekst: 'Merket landingsplass for sårede (virkningen kommer senere)' } },
+    op: { gruppe: 'Forsvar', ikon: 'sikte', stil: { form: 'voll', tak: '#4b5a3a', h: 2 },
+      bygg: { navn: 'Observasjonspost', pris: 400000, tid: .5, kw: 0, fot: [-2.6, 2.6, -2.6, 2.6], mat: { tre: 1 }, tekst: 'Sandsekker under kamuflasjenett, kikkert og radio (virkningen kommer senere)' } },
+    betongbunker: { gruppe: 'Forsvar', ikon: 'skjold', stil: { form: 'voll', tak: '#5a6b3e', h: 2.4 },
+      bygg: { navn: 'Betongbunker', pris: 3.5e6, tid: 2, kw: 0, fot: [-3.2, 2.3, -4, 4], mat: { betong: 25, stål: 3 }, tekst: 'Lav bunker med skyteskår (virkningen kommer senere)' } },
+    skyttergrav: { gruppe: 'Forsvar', ikon: 'sandsekk', stil: { form: 'voll', tak: '#6b5a43', h: .9 },
+      bygg: { navn: 'Skyttergrav, rett', pris: 300000, tid: 1, kw: 0, fot: [-2.5, 2.9, -4, 4], mat: { tre: 3 }, tekst: '8 m grav med brystvern og sandsekker (virkningen kommer senere)' } },
+    skyttergravHjørne: { gruppe: 'Forsvar', ikon: 'sandsekk', stil: { form: 'voll', tak: '#6b5a43', h: .9 },
+      bygg: { navn: 'Skyttergrav, hjørne og ende', pris: 300000, tid: 1, kw: 0, fot: [-2.5, 4.3, -4.3, 3.1], mat: { tre: 3 }, tekst: 'Grav som svinger, med lukket ende (virkningen kommer senere)' } },
+    kurver: { gruppe: 'Forsvar', ikon: 'sandsekk', stil: { form: 'voll', tak: '#8d7f5f', h: 1.4 },
+      bygg: { navn: 'Jordfylte kurver', pris: 250000, tid: .5, kw: 0, fot: [-.55, .55, -2.05, 2.05], mat: { stål: 1 }, tekst: 'Fire kurver i stålnett fylt med jord (virkningen kommer senere)' } },
+    tvegger: { gruppe: 'Forsvar', ikon: 'gjerde', stil: { form: 'voll', tak: '#8f8d87', h: 3.6 },
+      bygg: { navn: 'T-vegger', pris: 600000, tid: .5, kw: 0, fot: [-.85, .85, -1.9, 1.9], mat: { betong: 8 }, tekst: 'Tre høye betongvegger (virkningen kommer senere)' } },
   };
   M.LEIR2_NYE = NYE;
   function registrer() {
@@ -1324,6 +1472,9 @@
   ny('A28', 'l2-hinderløype', 'Hinderløype (ny)', () => LEIR2.hinderløype({}));
   for (const [nr, id, t] of [['B37', 'offisersbrakke', 'Offisersbrakke'], ['B38', 'dusjbrakke', 'Dusj- og vaskebrakke'], ['B39', 'toalett', 'Toalettcontainer'], ['B40', 'vaskeri', 'Vaskeri'],
     ['B41', 'treningstelt', 'Treningstelt'], ['B42', 'arrest', 'Arrest'], ['B43', 'garasje', 'Garasje'], ['B44', 'tungverksted', 'Verkstedhall for tunge kjøretøy'], ['B45', 'vaskeplass', 'Vaskeplass'], ['B46', 'fyllestasjon', 'Fyllestasjon']])
+    ny(nr, 'l2-' + id, t, () => LEIR2[id]({}));
+  for (const [nr, id, t] of [['B47', 'vannrens', 'Vanntank og vannrenseanlegg'], ['B48', 'avfall', 'Avfallsplass'], ['B49', 'feltsykehus', 'Stort feltsykehus'], ['B50', 'medevac', 'Medevac-plass'],
+    ['B51', 'op', 'Observasjonspost'], ['B52', 'betongbunker', 'Betongbunker'], ['B53', 'skyttergrav', 'Skyttergrav, rett'], ['B54', 'skyttergravHjørne', 'Skyttergrav, hjørne og ende'], ['B55', 'kurver', 'Jordfylte kurver'], ['B56', 'tvegger', 'T-vegger']])
     ny(nr, 'l2-' + id, t, () => LEIR2[id]({}));
   registrer();
 
