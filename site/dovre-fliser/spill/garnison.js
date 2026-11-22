@@ -50,6 +50,26 @@
       if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; }
     return inn;
   }
+  // (22. nov, R17 funn 9) Meter fra punktet til tettstedets omriss: 0 inne i det, ellers korteste vei til en kant. Før målte leirvalget
+  // avstanden til det omsluttende rektangelet (bb), så en leir rett utenfor (eller i en bukt av) tettstedet fikk «0 m».
+  function avstand(by, x, y) {
+    if (inni(by, x, y)) return 0;
+    let best = Infinity;
+    for (const a of by.deler) for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) {
+      const ax = a[j], ay = a[j + 1], bx = a[i], by_ = a[i + 1], dx = bx - ax, dy = by_ - ay, L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L)) : 0;
+      const d = Math.hypot(x - ax - t * dx, y - ay - t * dy); if (d < best) best = d; }
+    return best;
+  }
+  // nærmeste tettsted i lista og avstanden til omrisset: { by, navn, m } | null. Rektangelet (bb) brukes bare til å hoppe over dem som
+  // uansett er lenger unna enn det beste så langt.
+  function nærmeste(byer, x, y) {
+    let r = null;
+    for (const b of byer || []) { const dx = Math.max(b.bb[0] - x, 0, x - b.bb[2]), dy = Math.max(b.bb[1] - y, 0, y - b.bb[3]);
+      if (r && Math.hypot(dx, dy) >= r.m) continue;
+      const m = avstand(b, x, y); if (!r || m < r.m) r = { by: b, navn: b.e && b.e.navn, m }; }
+    return r;
+  }
   const kanHolde = s => s.menn.some(m => m.hp > 0) && s.menn.filter(m => m.hp < 1).length < 6;
   // Lagene i tettstedet som kan holde det (levende og ikke slått ut).
   const lagI = (by, lag) => lag.filter(s => kanHolde(s) && inni(by, s.x, s.y));
@@ -93,7 +113,7 @@
   // Strøm: et helt kraftverk innen radien. kraft: [{ x, y, hel }].
   const harStrøm = (by, kraft) => { const x = (by.bb[0] + by.bb[2]) / 2, y = (by.bb[1] + by.bb[3]) / 2;
     return kraft.some(k => k.hel && Math.hypot(k.x - x, k.y - y) <= REGLER.strøm.radius); };
-  const api = { REGLER, ny, tilstand, inni, lagI, steg, forsterk, produksjon, harStrøm, rate, mannFor, minstFor, inntaTid, mann, fart, tidMed };
+  const api = { REGLER, ny, tilstand, inni, avstand, nærmeste, lagI, steg, forsterk, produksjon, harStrøm, rate, mannFor, minstFor, inntaTid, mann, fart, tidMed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Garnison = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

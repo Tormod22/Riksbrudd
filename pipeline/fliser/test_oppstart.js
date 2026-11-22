@@ -83,4 +83,19 @@ ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'por
   const L2 = O.fraJSON(O.tilJSON(G)); ok(L2.karakter.portrett.facialHair === 'ingen' && L2.karakter.portrett.hair === O.KJØNN.kvinne.hair, 'gammel lagring: kvinnen mister skjeggstubben og får ' + L2.karakter.portrett.hair);
   const M = O.standard(); M.karakter.navn = 'Ola'; M.fraksjon.navn = 'Har'; O.fullfør(M, { x: 1, y: 1 }); const L3 = O.fraJSON(O.tilJSON(M));
   ok(L3.karakter.portrett.facialHair === 'skjeggstubb' && L3.karakter.portrett.hair === 'short', 'gammel lagring: mannen er uendret'); }
+// (R17 funn 9) avstanden til selve omrisset, ikke rektangelet: en L-formet by der leiren ligger i «bukta» (inne i rektangelet, utenfor omrisset)
+{ const G = require('../../site/dovre-fliser/spill/garnison.js');
+  // L: 0–2000 i x langs bunnen (y 0–500) og 0–500 i x opp til y 2000
+  const L = { e: { navn: 'Ålgård', id: 1 }, bb: [0, 0, 2000, 2000], deler: [[0, 0, 2000, 0, 2000, 500, 500, 500, 500, 2000, 0, 2000]] };
+  ok(G.avstand(L, 100, 100) === 0, 'inne i omrisset: 0 m');
+  ok(Math.abs(G.avstand(L, 1500, 1500) - 1000) < 1e-6, 'i bukta: 1000 m til omrisset (rektangelet ville gitt 0 m)');
+  ok(Math.abs(G.avstand(L, 2300, 250) - 300) < 1e-6, 'utenfor til høyre: 300 m');
+  const r = G.nærmeste([L, { e: { navn: 'Langt', id: 2 }, bb: [9000, 9000, 9100, 9100], deler: [[9000, 9000, 9100, 9000, 9100, 9100, 9000, 9100]] }], 1500, 1500);
+  ok(r && r.navn === 'Ålgård' && Math.round(r.m) === 1000, 'nærmeste: Ålgård 1000 m');
+  const vb = { iTettsted: (x, y) => (G.inni(L, x, y) ? 'Ålgård' : null), nærTettsted: (x, y) => { const q = G.nærmeste([L], x, y); return q && { navn: q.navn, m: q.m }; }, klasse: () => 2 };
+  ok(/inne i et tettsted \(Ålgård\)/.test(O.gyldigLeir(100, 100, vb)), 'inne i omrisset: avvist');
+  const nær = O.gyldigLeir(2300, 250, vb);
+  ok(/for nær tettstedet Ålgård \(300 m/.test(nær || '') && /tettsted/.test(nær), 'like utenfor (300 m): avvist med avstanden – ' + nær);
+  ok(O.gyldigLeir(1500, 1500, vb) === null, 'i bukta, 1000 m fra bebyggelsen: godkjent');
+  ok(O.gyldigLeir(2000 + O.LEIR_FRA_BY + 1, 250, vb) === null, `like over ${O.LEIR_FRA_BY} m: godkjent`); }
 process.exit(feil ? 1 : 0);
