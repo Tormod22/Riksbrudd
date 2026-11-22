@@ -966,6 +966,8 @@ function patruljeMål(fi, nr) {
   return [fi.patruljeBase[0] + PATRULJE[nr][0] - p0[0], fi.patruljeBase[1] + PATRULJE[nr][1] - p0[1]];
 }
 function sim(dt) {
+  // flerspiller (spill/flerspiller-visning.js): hos en gjest regner verten verden – her går bare klokka mellom bildene fra verten
+  if (window.NETT && NETT.gjest) { tid += dt; return; }
   for (const f of KROKER.sim) f(dt);
   const før = tid; tid += dt; const fi = PATRULJELAG;
   if (Math.floor(tid / Terreng.KAMPRUNDE_MIN) !== Math.floor(før / Terreng.KAMPRUNDE_MIN)) kamprunde();   // kamprunde hvert KAMPRUNDE_MIN spillminutt
@@ -1037,6 +1039,8 @@ function kamprunde() {
 // ba om kart for hele strekket, og alt annet ventet bak i køen.)
 const MARSJ_MAKS = 30000;
 async function ordre(s, X, Y, stille) {
+  // flerspiller: en gjest sender ordren til verten i stedet (spill/flerspiller-visning.js)
+  if (window.NETT && NETT.fangOrdre && NETT.fangOrdre(s, X, Y, stille)) return;
   // et mindre spillkart (/rogaland, spill/omraade.js): ingen marsj ut av området
   if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { if (!stille) logg(s.navn + ': det ligger utenfor spillkartet.'); return; }
   // en ny ordre tømmer køen av ordre (spill/flyt.js setter s.køGår når ordren kommer fra køen selv)
@@ -3698,7 +3702,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leir2d.js?v=9806cfb596"></script>
 <script src="/dovre-fliser/spill/kontrollrom-visning.js?v=20629545e4"></script>
 <script src="/dovre-fliser/spill/kamera-visning.js?v=e82bbd3b67"></script>
-<script src="/dovre-fliser/spill/lagring.js?v=1794485625"></script>
+<script src="/dovre-fliser/spill/lagring.js?v=3121310808"></script>
 <script src="/dovre-fliser/spill/lagringsmeny.js?v=1ce3cf1959"></script>
 <script src="/dovre-fliser/spill/fps.js?v=b6aed9d1fc"></script>
 <script src="/dovre-fliser/spill/ytelse.js?v=845f0a5982"></script>
@@ -3781,7 +3785,9 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
 <script src="/dovre-fliser/spill/eventyr-visning.js?v=ef1ff01690"></script>
-<script src="/dovre-fliser/spill/meny.js?v=0bd4381b6a"></script>
+<script src="/dovre-fliser/spill/flerspiller.js?v=5759487216"></script>
+<script src="/dovre-fliser/spill/flerspiller-visning.js?v=d0263e64f9"></script>
+<script src="/dovre-fliser/spill/meny.js?v=62e553a6b1"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=089cd08f30"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=8a7d90cede"></script>

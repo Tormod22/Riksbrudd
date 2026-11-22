@@ -188,6 +188,7 @@
   function fortsettOrdre() { for (const s of ENHETER) { if (!s.målLagret || s.side !== 'blå') continue; const m = s.målLagret; delete s.målLagret;
     if (levende(s) && Math.hypot(m[0] - s.x, m[1] - s.y) > 30) ordre(s, m[0], m[1], true).catch(() => {}); } }
   function lagre() {
+    if (window.NETT && NETT.gjest) return;   // en gjest i en delt verden skal ikke skrive over sitt eget spill
     const S = spill(); if (!aktiv || av || !S || !S.leir) return false;
     try { localStorage.setItem(NØKKEL, JSON.stringify(pakk({ tid, vær: rot.VaerSpill ? VaerSpill.S : null, lag: egneLag(), kjøretøy: egneKj(), leir: S.leir,
       tettsteder: rot.TETTSTEDER || null, infra: rot.INFRA_TILSTAND || null, olje: rot.OLJE && OLJE.BASER[0] ? OLJE.BASER[0].beholdning : null,

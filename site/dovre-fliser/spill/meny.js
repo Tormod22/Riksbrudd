@@ -10,6 +10,7 @@
   const GRUPPER = [
     ['Kartet', 'Hva som tegnes i kartet og i 3D', ['Skygge', 'Høydekurver', 'Trær', 'Veger', 'Jernbane', 'Bygg', 'Infrastruktur', 'Kraftledninger', 'Kaier', 'Kartmerker']],
     ['Oversikt', 'Hjelp til å lese situasjonen', ['Siktfelt', 'Tåke', 'Motstandere', 'Kompass', 'Minikart']],
+    ['Spill sammen', 'Flere spillere i samme verden', ['Spill sammen']],
     ['Vær og årstid', 'Automatisk, eller lås et vær', ['Årstid', 'Vær']],
     ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
     ['Måling', 'Tall du kan sende hvis noe går tregt', ['FPS-teller', 'Tekniske tall', 'Mål ytelse', 'Mål hakk']],
