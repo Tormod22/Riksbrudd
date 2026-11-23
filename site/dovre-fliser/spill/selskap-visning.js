@@ -345,7 +345,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   KROKER.tegn.push((g, vx0, vy1) => {
     if (!S || !klar) return; const m = kam.m, P = (x, y) => [(x - vx0) / m, (vy1 - y) / m];
     g.save(); g.font = '600 12px "Cormorant Garamond", serif'; g.textAlign = 'center';
-    for (const k of S.sider[ID].aktive) {
+    // (R18-A) den første kontrakten vises i kartet også før den er tatt, så spilleren ser hvor det bærer
+    for (const k of [...S.sider[ID].aktive, ...S.tilbud.filter(q => q.første)]) {
       const [x, y] = P(k.sted.x, k.sted.y), r = k.type === 'hold' ? Math.max(8, SK.REGLER.nær.hold / m) : 9;
       g.strokeStyle = '#d9a441'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.setLineDash([]);
       g.fillStyle = '#d9a441'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fill();
