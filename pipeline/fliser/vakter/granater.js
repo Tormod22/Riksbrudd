@@ -16,6 +16,8 @@ module.exports = {
       const B = window.Bakkekamp, BK = window.BakkekampSpill;
       ok(B && BK && B.Lagkamp && BK.fiendeKast, 'Bakkekamp/BakkekampSpill (R18-C) mangler'); if (!B || !BK || !B.Lagkamp) return ut;
       const test0 = BK.test, tempo0 = tempo, tid0 = tid, nye = [], gamle = ENHETER.slice(), AIpå = window.AI ? AI.på : null; if (window.AI) AI.på = false;
+      // granaten kan ramme egne lag ved siden av deg: helsa, granatene og undertrykkingen til alle lag settes tilbake etterpå
+      const lagFør = gamle.map(s => ({ s, hp: (s.menn || []).map(m => m.hp), utMeldt: s.slattUtMeldt, leder: s.leder, gr: s.granater, und: s.undertrykt }));
       const R = typeof R3 !== 'undefined' ? R3 : null, lagt = [];
       try {
         BK.test = true; tempo = 0;
@@ -49,11 +51,14 @@ module.exports = {
           // det lette maskingeværet holder laget nede
           const u0 = B.Undertrykk.styrke(e, tid); BK.skudd(Utstyr.VÅPEN.lmg, e); ut.lmg = +(B.Undertrykk.styrke(e, tid) - u0).toFixed(3); ok(Utstyr.VÅPEN.lmg && ut.lmg > 0 && BK.ildkraft(e, 25) < ut.ildkraft.lag, 'maskingeværet undertrykker ikke: ' + ut.lmg);
           // kastet
-          K.hp = 100; const b0 = BK.buer().length, n0 = B.Lagkamp.antall(e), g = BK.fiendeKast(e); await vent(150);
-          ut.kast = { g: !!g, flyr: BK.flyr().filter(q => q.fiende).length, varsel: performance.now() / 1000 - BK.varselTid() < 2, bue: BK.buer().length >= Math.min(1, b0 + 1), brukt: n0 - e.granater };
+          K.hp = 100; const b0 = BK.buer().length, n0 = B.Lagkamp.antall(e), g = BK.fiendeKast(e);
+          // fast landing 3 m foran deg (ellers kan den tilfeldige landingen havne bak en stein eller et tre)
+          if (g) { const n = B.Fiende3d.kast(g.x, g.y, g.z, R.bane.x + fx * 3, R.bane.y + fy * 3, g.z - B.REGLER.fiende3d.høyde); Object.assign(g, { vx: n.vx, vy: n.vy, vz: n.vz, t: n.t }); }
+          const sm0 = BK.smellTall(); await vent(150);
+          ut.kast = { g: !!g, flyr: BK.flyr().filter(q => q.fiende).length, varsel: performance.now() / 1000 - BK.varselTid() < 8, bue: BK.buer().length >= Math.min(1, b0 + 1), brukt: n0 - e.granater };
           ok(ut.kast.g && ut.kast.flyr === 1 && ut.kast.varsel && ut.kast.bue && ut.kast.brukt === 1, 'fiendens kast: ' + JSON.stringify(ut.kast));
           for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100);
-          ut.smell = { igjen: BK.flyr().filter(q => q.fiende).length, hp: Math.round(K.hp) }; ok(ut.smell.igjen === 0 && K.hp < 100, 'fiendens granat gikk ikke av eller skadet deg ikke: ' + JSON.stringify(ut.smell)); K.hp = 100;
+          ut.smell = { igjen: BK.flyr().filter(q => q.fiende).length, hp: Math.round(K.hp), smell: BK.smellTall() - sm0 }; ok(ut.smell.igjen === 0 && ut.smell.smell === 1 && K.hp < 100, 'fiendens granat gikk ikke av eller skadet deg ikke: ' + JSON.stringify(ut.smell)); K.hp = 100;
           // dekning: prøvevegg 2 m foran deg, smellet 8 m foran (bak veggen) og 8 m bak deg
           const lx = R.bane.x + fx * 2, ly = R.bane.y + fy * 2, P = [[lx - rx * 4, ly - ry * 4], [lx + rx * 4, ly + ry * 4], [lx + rx * 4 + fx * .4, ly + ry * 4 + fy * .4], [lx - rx * 4 + fx * .4, ly - ry * 4 + fy * .4]];
           const o = { P, bb: [Math.min(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[0])), Math.max(...P.map(p => p[1]))] };
@@ -71,6 +76,7 @@ module.exports = {
       } catch (err) { ut.feil.push('kastet: ' + (err && err.message)); }
       finally {
         for (const s of nye) { const i = ENHETER.indexOf(s); if (i >= 0) ENHETER.splice(i, 1); }
+        for (const q of lagFør) { (q.s.menn || []).forEach((m, i) => { m.hp = q.hp[i]; }); q.s.slattUtMeldt = q.utMeldt; q.s.leder = q.leder; if (q.gr === undefined) delete q.s.granater; else q.s.granater = q.gr; if (q.und === undefined) delete q.s.undertrykt; else q.s.undertrykt = q.und; }
         BK.test = test0; tempo = tempo0; tid = Math.max(tid, tid0); if (window.AI) AI.på = AIpå; if (typeof skitten !== 'undefined') skitten = true; delete ut.tilbake3d;
       }
       return ut;

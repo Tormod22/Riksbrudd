@@ -119,7 +119,8 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     g.ut = Q.ut; flyr.push(g); if (rot.EventyrSpill && EventyrSpill.skudd) EventyrSpill.skudd({}); return true; };
   // bakkens høyde i scenen (lokale meter; scenens z = (moh. − utsnittets h0) × EX)
   function bakke(x, y) { const Q = r3(); if (!Q || !Q.ut || typeof hoyde3d !== 'function') return 0; const v = hoyde3d(x + Q.ut.cx, y + Q.ut.cy); return Number.isFinite(v) ? (v - (Q.ut.h0 || 0)) * (Q.EX || 1) : 0; }
-  function smell(g) { const Q = r3(), u = g.ut, X = g.x + u.cx, Y = g.y + u.cy, G = REGLER.granat; let rammet = 0, falt = 0;
+  let smellTall = 0;
+  function smell(g) { smellTall++; const Q = r3(), u = g.ut, X = g.x + u.cx, Y = g.y + u.cy, G = REGLER.granat; let rammet = 0, falt = 0;
     try { if (rot.Effekter3d) { Effekter3d.eksplosjon(X, Y, 5); if (Effekter3d.krater) Effekter3d.krater(X, Y, 1.4, true); } } catch (e) { /* effekten er ikke viktig */ }
     // laget som kastet granaten (g.fra), kaster den bort fra seg og rammes ikke
     if (typeof ENHETER !== 'undefined') for (const s of ENHETER) { if (!s || s.karakter || !s.menn || !levende(s) || s === g.fra) continue; const d = Math.hypot(s.x - X, s.y - Y); if (d > G.radius + 4) continue;
@@ -289,6 +290,6 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     // pila peker dit granaten er (opp = foran deg)
     g.translate(cx, cy + 48); g.rotate(th); g.fillStyle = fare ? '#ff4a36' : '#ffd27a'; g.beginPath(); g.moveTo(0, -16); g.lineTo(10, 6); g.lineTo(0, 1); g.lineTo(-10, 6); g.closePath(); g.stroke(); g.fill(); g.restore(); });
 
-  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater, varselTid: () => varselTid });
+  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater, varselTid: () => varselTid, smellTall: () => smellTall });
   rot.BakkekampSpill = api;
 })(typeof window !== 'undefined' ? window : globalThis);
