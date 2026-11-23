@@ -211,6 +211,8 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     // (runde 13) stegene sjekkes også mens et kort eller hjelpen står oppe (før ble et steg som ble gjort da, først merket senere)
     const bl = bilde(), nye = Opplaering.oppdater(T, bl); sisteBilde = bl; if (nye.length) { lagre(); gjortKø.push(...nye); }
     if (kort) { skjul(); return; }
+    // (R18-A) mens den første kontrakten leder spilleren (lappen «Neste» i spill/selskap-visning.js), venter opplæringsruta – én ting om gangen
+    if (rot.SelskapSpill && SelskapSpill.trådAktiv && SelskapSpill.trådAktiv()) { skjul(); return; }
     // (runde 6) over «Mer»-raden når den er åpen (den la seg oppå ruta)
     { const km = [$('kommer'), $('mkommer')].find(e => e && e.classList.contains('på') && synlig(e)), b = km ? Math.round(window.innerHeight - km.getBoundingClientRect().top + 8) + 'px' : ''; if (boks.style.bottom !== b) boks.style.bottom = b; }
     const tlf = document.body.classList.contains('kort'), meny = MENYER.some(id => synlig($(id))), dekker = tlf && !meny && DEKKER.some(id => synlig($(id))), angrep = angrepNå();

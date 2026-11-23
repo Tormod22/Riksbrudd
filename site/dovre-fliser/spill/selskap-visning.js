@@ -72,7 +72,9 @@
     STEDER = ut; stederAntall = n; return ut;
   }
   const dagNå = () => Math.floor((6 * 60 + tid) / 1440);
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, liste || steder()); lagre(); return n; }
+  // prisstigningen i markedet (spill/spillet.js) ganges inn i betalingen (R18-A: markedet følger kontraktene)
+  const infl = () => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } };
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, liste || steder(), null, { infl: infl() }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -107,6 +109,12 @@
     if (k.type === 'hold') { const lag = egneLag().filter(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= N.hold), fi = fiender().some(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= N.hold);
       return { i: lag.length > 0 && !fi, lag: lag.length, fiender: fi }; }
     if (k.type === 'rydd') { const sp = sperreFor(k); return { i: !sp || !levende(sp) }; }
+    // forsyning (den første kontrakten, R18-A): et eget lag henter forsyningene ved stedet og tar dem med hjem
+    if (k.type === 'forsyning') { let bær = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
+      if (k.hentet && (!bær || !levende(bær))) return { tapt: true };
+      if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= SK.REGLER.første.nær); if (her) { k.bærer = her.navn;
+        logg(`${her.navn} har lastet forsyningene. Gi troppen ordre hjem til leiren – da betaler ${k.giver.navn}.`); return { hentet: true }; } return {}; }
+      return { i: !!(L && bær && Math.hypot(bær.x - L.x, bær.y - L.y) <= N.leir), hentet: true }; }
     // hent: et eget lag henter personen ved stedet og tar vedkommende med hjem
     let bærer = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
     if (k.hentet && (!bærer || !levende(bærer))) return { tapt: true };
@@ -116,11 +124,71 @@
   }
   function klarTilLevering(k) { if (k.type === 'hold') return k.framdrift >= k.hold * 60; const v = vurder(k); return !!v.i; }
 
+  // ---------- R18-A: DEN RØDE TRÅDEN ----------
+  // det leiren har til kravene i Selskap.kanTa: friske i det største egne laget, og egne kjøretøy uten kontrakt
+  function har() {
+    let størsteLag = 0; for (const q of egneLag()) størsteLag = Math.max(størsteLag, q.menn.filter(m => m.hp >= 1).length);
+    const kjøretøy = (window.KJORETOY || []).filter(q => q.side !== 'rød' && q.side !== 'grønn' && !q.kontrakt && q.antall >= 1).length;
+    return { størsteLag, kjøretøy };
+  }
+  const nivåNå = () => (S ? SK.nivå(S.sider[ID]) : SK.REGLER.NIVÅER[0]);
+  // koblingene ved levering: tettsted dere holder (ekstra), nytt nivå, motangrep mot leiren (forsvaret), en ny person vil bli med (folk)
+  function kobling(h) {
+    const k = h.k;
+    try { if (k.sted && k.sted.slag === 'tettsted' && k.sted.id != null && window.Garnison && typeof TETTSTEDER !== 'undefined' && Garnison.tilstand(TETTSTEDER, k.sted.id).eier === ID) {
+      const ekstra = Math.round(k.betaling * SK.REGLER.egetSted / 10000) * 10000; if (ekstra > 0) { OppstartSpill.gi(ekstra); logg(`${k.sted.navn} er deres: folket la til ${kr(ekstra)}.`); } } } catch (e) { /* krigskartet er ikke klart */ }
+    if (h.nivåOpp) logg(`Nytt nivå for selskapet: ${h.nivåOpp.nr} «${h.nivåOpp.navn}». Større og bedre betalte kontrakter er låst opp.`);
+    if (h.rekrutt && auto()) { try { const F = window.FolkSpill && FolkSpill.tilstand(), Lr = window.LeirSpill && LeirSpill.tilstand();
+      if (F && Lr && window.FolkRegler) { const r = FolkRegler.rekrutter(F, Lr, () => true); if (!r.feil && r.person) logg(`${r.person.navn} (${r.person.yrke}) hørte om ${egetNavn()} og vil bli med – gratis.`); } } catch (e) { /* uten folk */ } }
+    if (h.motangrep && auto() && window.SpilletSpill && SpilletSpill.angrep) {
+      try { const T = SpilletSpill.T && SpilletSpill.T(); if (!(T && T.aktiv)) { logg(`Noen vil ha hevn for «${k.tittel}»: røvere er på vei mot leiren.`); SpilletSpill.angrep(); } } catch (e) { /* uten angrep */ } }
+    if (k.første) { nyeTilbud(); logg('Nye kontrakter står i Selskapet. De større krever bedre rykte, kjøretøy eller sterkere lag.'); }
+  }
+  const førsteK = () => (S && S.tråd ? (S.tilbud.find(q => q.id === S.tråd.k) || S.sider[ID].aktive.find(q => q.id === S.tråd.k) || S.sider[ID].ferdige.find(q => q.id === S.tråd.k)) : null);
+  // øyeblikksbildet til Selskap.oppdaterTråd
+  function trådBilde() {
+    const k = førsteK(), sd = S.sider[ID], Lr = window.LeirSpill && LeirSpill.tilstand();
+    return { tatt: !!k && k.status !== 'tilbud', tropper: egneLag().filter(q => q.fraFolk).length, framme: !!(k && k.hentet), levert: !!(k && k.status === 'levert'),
+      brutt: !!(k && (k.status === 'brutt' || k.status === 'tapt')) || (!k && !!S.tråd), bygg: Lr && Lr.bygg ? Lr.bygg.length : 0,
+      nyKontrakt: sd.aktive.some(q => !q.første) || sd.ferdige.some(q => !q.første) };
+  }
+  function tråd() {
+    if (!S || !S.tråd || S.tråd.slutt) return; const nye = SK.oppdaterTråd(S, trådBilde()); if (!nye.length) return; lagre();
+    const st = SK.trådSteg(S), k = førsteK();
+    if (st && k && !navigator.webdriver) logg(`Kontrakten: ${st.tekst(k)}`);
+    if (!st) logg('Første kontrakt er fullført. Fra nå av er det Selskapet som gir dere arbeid – ryktet låser opp større kontrakter.');
+  }
+  const trådAktiv = () => !!(klar && S && S.tråd && !S.tråd.slutt && SK.trådSteg(S));
+  // hva «Neste»-lappen sier: { tekst, pek, k } – tråden først, så den aktive kontrakten med kortest frist, så ledige tilbud
+  function lapp() {
+    if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
+    if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk) };
+    const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
+    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
+    const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
+    return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
+  }
+  // trykk på lappen: gjør det som står (åpner panelet, Tropper, Leir – eller viser stedet og velger laget)
+  function følgLapp() {
+    const l = lapp(); if (!l) return;
+    if (l.pek === 'selskap') { vis(true); return; }
+    if (l.pek === 'tropper') { if (window.TropperSpill && TropperSpill.åpne) TropperSpill.åpne(); return; }
+    if (l.pek === 'leir') { const b = document.getElementById('leirknapp'); if (b) b.click(); return; }
+    const k = l.k; if (!k) return; let p = k.sted;
+    if (k.type === 'rydd' && k.sperre) p = k.sperre; else if (k.type === 'eskorte' && bilFor(k)) p = bilFor(k);
+    const bær = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID && levende(q)) : null;
+    // tråden: velg troppen så «Marsjer» ligger klar
+    const lag = bær || egneLag().filter(q => q.fraFolk).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0] || null;
+    if ((k.hentet || l.steg === 'hjem') && Sp() && Sp().leir) p = Sp().leir;
+    gåTil(p.x, p.y);
+    if (lag) try { valgt = lag; if (typeof visPanel === 'function') visPanel(); } catch (e) { /* uten valg */ }
+  }
+
   // ---------- hendelsene fra reglene: penger, logg, ting som ryddes ----------
   function hendelser(ut) {
     for (const h of ut) {
       const k = h.k;
-      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k);
+      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h);
         try { window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert', id: k.id, kr: h.kr } })); } catch (e) { /* gammel nettleser */ } }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
         const grunn = h.grunn === 'frist' ? 'fristen gikk ut' : h.grunn === 'tapt' ? (k.type === 'eskorte' ? 'bilen gikk tapt' : 'laget med personen ble slått ut') : 'dere avbrøt den';
@@ -144,13 +212,16 @@
     const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = vurder(k);
     hendelser(SK.steg(S, ID, tid, d, mål));
     const dag = dagNå();
-    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
+    // (R18-A) mens den første kontrakten pågår, kommer ingen nye tilbud – én ting om gangen
+    const tidlig = S.tråd && !S.tråd.slutt && !S.tråd.gjort.includes('bygg');
+    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = tidlig ? [] : nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
+    tråd();
     if (performance.now() - lagreTid > 20000) { lagreTid = performance.now(); lagre(); }
   }
 
   // ---------- handlingene ----------
   function ta(id) {
-    if (!S) return { ok: false }; const r = SK.godta(S, ID, id, tid); if (!r.ok) { melding = r.grunn; tegn(true); return r; }
+    if (!S) return { ok: false }; const r = SK.godta(S, ID, id, tid, null, har()); if (!r.ok) { melding = r.grunn; tegn(true); if (!åpen) logg(r.grunn); return r; }
     const k = r.k; if (k.type === 'rydd') { lagSperre(k); k.sperreSatt = true; } if (k.type === 'eskorte') { lagBil(k); k.bilSatt = true; }
     logg(`Kontrakt tatt: ${k.tittel}. Frist om ${k.timer} timer.`); melding = ''; lagre(); skitten = true; tegn(true); return r;
   }
@@ -194,6 +265,11 @@
 #selskap .tom{ color:#8f8a7c; font-style:italic; font-size:13px; } #selskap .melding{ color:#f2c48a; font-size:13px; margin:6px 0; }
 #selskap .fram{ height:5px; background:#2a2f35; border-radius:3px; overflow:hidden; margin:4px 0; } #selskap .fram i{ display:block; height:100%; background:#3f6fb0; }
 body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); width:auto; top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); max-height:none; }
+#selskap .kort.låst{ opacity:.62; border-left-color:#5b5f66; } #selskap .kort.første{ border-left-color:#7c9a4e; } #selskap button[disabled]{ opacity:.5; cursor:not-allowed; }
+#selskap .krav{ color:#e7a593; } #selskap .krav.ok{ color:#a9c27a; }
+#selskap .nivaa{ font-size:13px; color:#d8d1bf; line-height:1.35; margin:2px 0 4px; } #selskap .nivaa b{ color:#f2d68a; }
+#selskap .traad{ border:1px solid #6a5a2e; background:#2a2416; border-radius:6px; padding:7px 10px; margin:8px 0; } #selskap .traad small{ display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#b48a3c; }
+#selskap .traad b{ font-family:'Cormorant Garamond', serif; font-size:18px; color:#f0e2b0; } #selskap .traad p{ margin:3px 0 0; font-size:13px; color:#d8d1bf; }
 @media (max-width:420px){ #selskap .maal{ grid-template-columns:76px 1fr 80px; } #selskap .hode h2{ font-size:21px; } }`;
   document.head.appendChild(css);
   const panel = document.createElement('div'); panel.id = 'selskap'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Selskapet'); document.body.appendChild(panel);
@@ -204,10 +280,14 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   function avstand(k) { const s = Sp(); if (!s || !s.leir) return ''; return meter(Math.hypot(k.sted.x - s.leir.x, k.sted.y - s.leir.y)) + ' fra leiren'; }
   function tilbudKort(k) {
     const igjen = Math.max(0, k.utløper - tid), går = igjen >= 60 ? `${Math.round(igjen / 60)} t` : `${Math.round(igjen)} min`;
-    return `<div class="kort" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
+    // (R18-A) kravet: låst nivå gir en grå knapp; mangler leiren noe, står det rødt (knappen forklarer det når du trykker)
+    const kt = SK.kanTa(k, har(), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr;
+    const kravLinje = k.første ? `<div class="rad"><span class="krav ok">Din første kontrakt – vi viser deg hvert steg.</span></div>`
+      : `<div class="rad"><span class="krav${kt.ok ? ' ok' : ''}">${kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
+    return `<div class="kort${låst ? ' låst' : ''}${k.første ? ' første' : ''}" data-kontrakt="${k.id}"><b>${låst ? '🔒 ' : ''}${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot ved brudd <span class="bot tall">${kr(k.bot)}</span></span><span>Frist <span class="tall">${k.timer} t</span> etter at dere tar den</span></div>`
       + (k.konkurrent ? `<div class="rad"><span>${esc(navnFor(k.konkurrent))} vil også ha den – vær raske.</span></div>` : '')
-      + `<div class="rad"><span>Tilbudet står i ${går} til.</span></div><div class="knapper"><button class="hoved" data-s="ta" data-id="${k.id}">Ta kontrakten</button><button data-s="avslå" data-id="${k.id}">Avslå</button><button data-s="vis" data-id="${k.id}">Vis i kartet</button></div></div>`;
+      + kravLinje + `<div class="rad"><span>Tilbudet står i ${går} til.</span></div><div class="knapper"><button class="hoved" data-s="ta" data-id="${k.id}"${låst ? ' disabled title="Låst til selskapet når nivå ' + K.nivå + '"' : ''}>Ta kontrakten</button><button data-s="avslå" data-id="${k.id}">Avslå</button><button data-s="vis" data-id="${k.id}">Vis i kartet</button></div></div>`;
   }
   function aktivKort(k) {
     const klarNå = klarTilLevering(k), v = vurder(k); let status = '', andel = 0;
@@ -224,6 +304,12 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     if (!S) return `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><p class="tom">Selskapet kommer når leiren er lagt.</p>`;
     const sd = S.sider[ID], r = sd.rykte, sum = sd.sum;
     let h = `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><div class="hode">${egetMerke(58)}<div><div class="kode">Privat militærselskap · blå</div><h2>${esc(egetNavn())}</h2><div class="motto">${esc(SK.rykteTekst(r))}</div></div></div>`;
+    { const nv = nivåNå(), nn = SK.nesteNivå(sd);
+      h += `<h3>Nivå ${nv.nr} · ${esc(nv.navn)} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
+        + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.</div>`
+          : `<div class="nivaa">Øverste nivå – de beste kontraktene er deres.</div>`);
+      const st = SK.trådSteg(S), fk = førsteK();
+      if (st && fk) h += `<div class="traad"><small>Første kontrakt · steg ${S.tråd.gjort.length + 1} av ${SK.TRÅD.length}</small><b>${esc(st.tittel)}</b><p>${esc(st.tekst(fk))}</p></div>`; }
     h += `<h3>Rykte <small>styrer hvilke tilbud som kommer</small></h3>${måler('pålitelig', r.pålitelig)}${måler('hardhendt', r.hardhendt)}${måler('billig', r.billig)}`;
     h += `<h3>Pris <small>høy pris gir mer betaling, men færre bygder vil ha dere</small></h3><div class="valg">${Object.entries(SK.REGLER.pris).map(([id, p]) => `<button data-s="pris" data-id="${id}" class="${sd.pris === id ? 'på' : ''}">${p.navn} <span class="tall">×${String(p.faktor).replace('.', ',')}</span></button>`).join('')}</div>`;
     h += `<div class="rad"><span>Levert <span class="tall">${sum.levert}</span></span><span>Brutt <span class="tall">${sum.brutt}</span></span><span>Tjent <span class="kr tall">${kr(sum.tjent)}</span></span><span>Bøter <span class="bot tall">${kr(sum.bøter)}</span></span></div>`;
@@ -241,7 +327,9 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     const h = html(); if (h === sistHtml && !tving) return; sistHtml = h; const rull = panel.scrollTop; panel.innerHTML = h; panel.scrollTop = rull;
   }
   panel.addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; e.stopPropagation(); const id = b.dataset.id, s = b.dataset.s;
-    if (s === 'lukk') vis(false); else if (s === 'ta') ta(id); else if (s === 'avslå') avslå(id); else if (s === 'lever') lever(id); else if (s === 'avbryt') avbryt(id); else if (s === 'pris') pris(id);
+    // (R18-A) handlingene går gjennom kommandolaget (window.KOMMANDO, spill/kommando-visning.js); uten det kalles de rett
+    const K = window.KOMMANDO, kom = (type, f) => (K ? K({ type, id, stille: true }) : f(id));
+    if (s === 'lukk') vis(false); else if (s === 'ta') kom('kontraktTa', ta); else if (s === 'avslå') kom('kontraktAvslå', avslå); else if (s === 'lever') kom('kontraktLever', lever); else if (s === 'avbryt') kom('kontraktAvbryt', avbryt); else if (s === 'pris') kom('kontraktPris', pris);
     else if (s === 'vis') { const k = S && (S.tilbud.find(q => q.id === id) || S.sider[ID].aktive.find(q => q.id === id)); if (k) { const p = k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && bilFor(k) ? bilFor(k) : k.sted; gåTil(p.x, p.y); } } });
   function vis(på) {
     åpen = på === undefined ? !åpen : !!på; panel.classList.toggle('på', åpen);
@@ -281,14 +369,76 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     hode.appendChild(el('div', { klasse: 'igang' }, `${sd.aktive.length} aktive kontrakter, ${S.tilbud.length} ledige tilbud. ${SK.rykteTekst(sd.rykte)}`));
     hode.appendChild(knapp('Åpne «Selskapet»', () => vis(true), { id: 'selskapknapp' })); });
 
+  // ---------- R18-A: «NESTE»-LAPPEN nederst (over kommandolinja på PC og bunnmenyen på telefon) ----------
+  // Én linje som alltid sier hva den aktive kontrakten venter på. Trykk = gjør det (åpner panelet / Tropper / Leir, eller viser stedet).
+  // Står bare når bunnmenyen står (ikke mens du går, bygger eller har et dekkende panel oppe), og legger seg over opplæringsruta.
+  const lappCss = document.createElement('style');
+  lappCss.textContent = `#nestelapp{ position:fixed; left:50%; transform:translateX(-50%); z-index:9; display:none; align-items:center; gap:8px; max-width:min(600px, calc(100vw - 24px));
+  padding:5px 6px 5px 10px; background:linear-gradient(180deg,rgba(42,36,22,.96),rgba(24,20,12,.97)); border:1px solid #8a7440; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.45);
+  color:#f0e2b0; font-size:13.5px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#nestelapp.på{ display:flex; } #nestelapp small{ flex:none; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#b48a3c; }
+#nestelapp b{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+#nestelapp span.gå{ flex:none; min-width:30px; height:28px; line-height:28px; text-align:center; border-radius:5px; background:#3b3220; border:1px solid #d9a441; color:#f2d68a; font-size:16px; }
+#nestelapp:hover{ border-color:#d9a441; } body.kort #nestelapp{ font-size:12.5px; max-width:calc(100vw - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)); }
+body.kort #nestelapp small{ display:none; }
+.traadpek{ outline:2px solid #e8d48a !important; outline-offset:2px; animation:traadpek 1.4s ease-in-out infinite; }
+@keyframes traadpek{ 50%{ outline-color:rgba(232,212,138,.25); } }`;
+  document.head.appendChild(lappCss);
+  const lappEl = document.createElement('div'); lappEl.id = 'nestelapp'; lappEl.setAttribute('role', 'button'); lappEl.setAttribute('aria-live', 'polite');
+  lappEl.innerHTML = '<small>Neste</small><b></b><span class="gå" aria-hidden="true">›</span>'; document.body.appendChild(lappEl);
+  lappEl.addEventListener('click', e => { e.stopPropagation(); følgLapp(); });
+  const synligEl = e => !!(e && e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height > 0);
+  let pekt = null;
+  function pekPå(l) {
+    let m = null; const kn = k => { const a = document.querySelector(`#kommando [data-k="${k}"]`), b = document.querySelector(`#mkom [data-k="${k}"]`); return synligEl(a) ? a : synligEl(b) ? b : null; };
+    if (l && l.steg && !document.getElementById('selskap').classList.contains('på')) {
+      if (l.pek === 'selskap') m = kn('selskap'); else if (l.pek === 'tropper') m = kn('tropper') || document.getElementById('nytropp'); else if (l.pek === 'leir') m = kn('leir') || document.getElementById('leirknapp'); }
+    if (l && l.steg === 'ta' && document.getElementById('selskap').classList.contains('på')) m = panel.querySelector(`[data-s="ta"][data-id="${l.k.id}"]`);
+    if (m === pekt) return; if (pekt) pekt.classList.remove('traadpek'); pekt = m; if (m) m.classList.add('traadpek');
+  }
+  function plasserLapp() {
+    const b = document.body, l = (auto() && !gjest()) ? lapp() : null;
+    const bar = [document.getElementById('kommando'), document.getElementById('mkom')].find(e => e && e.classList.contains('på') && synligEl(e));
+    const vis = !!(l && bar && !b.classList.contains('gaar') && !b.classList.contains('foto'));
+    lappEl.classList.toggle('på', vis); pekPå(vis || åpen ? l : null); if (!vis) return;
+    const t = lappEl.querySelector('b'); if (t.textContent !== l.tekst) { t.textContent = l.tekst; lappEl.title = l.hjelp || l.tekst; }
+    let topp = bar.getBoundingClientRect().top; for (const id of ['opplaering', 'kommer', 'mkommer']) { const e = document.getElementById(id); if (e && e.classList.contains('på') && synligEl(e)) topp = Math.min(topp, e.getBoundingClientRect().top); }
+    const bunn = Math.round(window.innerHeight - topp + 6) + 'px'; if (lappEl.style.bottom !== bunn) lappEl.style.bottom = bunn;
+  }
+  setInterval(() => { try { plasserLapp(); } catch (e) { /* neste runde */ } }, 500);
+
+  // ---------- R18-A: krigskartet viser kontraktene ved tettstedet ----------
+  { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; (KT.by = KT.by || []).push((by, eier) => {
+    if (!S || !by || !by.e) return null; const navn = by.e.navn, id = by.e.id;
+    const her = [...S.sider[ID].aktive, ...S.tilbud].filter(k => k.sted && (k.sted.id === id || k.sted.navn === navn)); if (!her.length) return null;
+    const k = her[0], akt = k.status === 'aktiv';
+    return `Kontrakt${akt ? '' : 'tilbud'} her: ${k.tittel} – ${kr(k.betaling)}${eier === ID ? ` (+${Math.round(SK.REGLER.egetSted * 100)} % når stedet er deres)` : ''}. Se «Selskapet».`; }); }
+
   // ---------- start ----------
   function start() {
     const s = Sp(); if (!s || !s.leir) return; const id = Math.round(s.leir.x) + ',' + Math.round(s.leir.y);
     if (klar && id === leirId) return; leirId = id;
-    S = les(s.leir) || SK.ny(s.leir, {}); settNavn(); klar = true; sistHtml = ''; if (åpen) tegn(true);
+    S = les(s.leir) || SK.ny(s.leir, {}); settNavn(); klar = true; sistHtml = '';
+    // (R18-A) et nytt spill (selskapet har aldri hatt en kontrakt) får den første kontrakten med en gang
+    if (S.nr === 0 && !S.tråd && auto()) førsteKontrakt();
+    if (åpen) tegn(true);
+  }
+  // den første kontrakten: nærmeste tettsted/bru rundt 2 km, ellers et forsyningslager på land 1,6 km fra leiren
+  function førsteKontrakt(nullstill) {
+    const s = Sp(); if (!s || !s.leir) return null; if (nullstill) { S = SK.ny(s.leir, {}); settNavn(); }
+    const F = SK.REGLER.første, L = s.leir; let reserve = null;
+    for (let i = 0; i < 16 && !reserve; i++) { const v = i * Math.PI / 8 + .3, x = L.x + Math.cos(v) * F.reserve, y = L.y + Math.sin(v) * F.reserve;
+      const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null, vann = hh !== null && hh <= 1; const lov = typeof OMRÅDE_OK !== 'function' || OMRÅDE_OK(x, y); if (!vann && lov) reserve = { x, y, navn: 'forsyningslageret' }; }
+    if (!reserve) reserve = { x: L.x + F.reserve, y: L.y, navn: 'forsyningslageret' };
+    const k = SK.førsteKontrakt(S, ID, tid, steder(), reserve); if (!k) return null;
+    if (S.dag < 0) S.dag = dagNå(); lagre(); skitten = true;
+    if (!navigator.webdriver) setTimeout(() => logg(`${k.giver.navn} har en jobb til dere: ${k.tittel} (${kr(k.betaling)}). Trykk på lappen nederst.`), 1200);
+    sistHtml = ''; if (åpen) tegn(true); return k;
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
-    vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
+    vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
+    førsteKontrakt, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
+    rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
   window.SelskapSpill = api;
 })();

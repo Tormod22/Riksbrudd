@@ -41,6 +41,10 @@
     if (!klar) return; const s = Maal.stilling(ferdige); let T = null; try { T = bilde(); } catch (e) { T = null; }
     const neste = el('div', { klasse: 'nestemaal fast', title: s.neste ? s.neste.hjelp : '' }, el('small', {}, s.neste ? `Neste mål (${s.navn.toLowerCase()}, ${s.gjort} av ${s.av}): ` : 'Mål: '), el('b', {}, s.neste ? Maal.tekstNå(s.neste, T) : 'alle målene er nådd'));
     neste.onclick = () => { if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); };
+    // (R18-A) den første kontrakten er den røde tråden: mens den pågår, står kontraktens neste steg øverst (målene kommer etterpå)
+    const SS = window.SelskapSpill, l = SS && SS.trådAktiv && SS.trådAktiv() ? SS.lapp() : null;
+    if (l) { const t = el('div', { klasse: 'nestemaal fast', id: 'nestekontrakt', title: l.hjelp || '' }, el('small', {}, 'Første kontrakt – neste steg: '), el('b', {}, l.tekst));
+      t.onclick = () => SS.følgLapp(); hode.appendChild(t); } else
     hode.appendChild(neste);
     hode.appendChild(el('h3', {}, 'Mål'));
     Maal.KAPITLER.forEach((k, i) => { if (k.krig && !s.krigÅpen) return; const gjort = k.mål.filter(m => ferdige.has(m.id)).length;
