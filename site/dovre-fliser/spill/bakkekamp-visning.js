@@ -219,7 +219,7 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
   // smellet: lavt drønn med et skarpt knall først, svakere langt unna (egen lydkilde, som skuddene i spillet-visning.js)
   let lydK = null;
   function smellLyd(dd) { try { if (localStorage.getItem('riksbrudd-lyd') === 'av' || navigator.webdriver) return; lydK = lydK || new (rot.AudioContext || rot.webkitAudioContext)(); const ac = lydK, n = Math.floor(ac.sampleRate * 1.4), b = ac.createBuffer(1, n, ac.sampleRate), q = b.getChannelData(0);
-    // støyen her er bare lyd (utseende), ikke en spillregel
+    // Math.random med vilje (bare utseende): støyen i smellet bestemmer ikke hva som skjer
     for (let i = 0; i < n; i++) q[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.4);
     const kilde = ac.createBufferSource(), lp = ac.createBiquadFilter(), gn = ac.createGain(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(2400, ac.currentTime); lp.frequency.exponentialRampToValueAtTime(120, ac.currentTime + 1.2);
     gn.gain.value = Math.max(.05, Math.min(.7, 9 / Math.max(6, dd))); kilde.buffer = b; kilde.connect(lp).connect(gn).connect(ac.destination); kilde.start(); } catch (e) { /* ingen lyd */ } }
