@@ -9,7 +9,7 @@
  * med k.lag = lagets nid (Kommando.nid(s) gir laget en nid når det mangler; flerspiller.js sender lagene med samme nid).
  * ctx = { lag: lista med lag (ENHETER), side: 'blå', spiller: id-en til den som spør (null = denne nettleseren), erVert }.
  * Fjern = ctx.spiller er satt og ikke verten selv (en gjest i flerspiller): da må laget ha s.eier === ctx.spiller, og
- * leirkommandoer (leir: true) avvises foreløpig. Handlingene selv gjør ingen sjekk av hvem som spør – det gjør utfør().
+ * leirkommandoer (leir: true) avvises – med mindre ctx.leirTillatt(type) svarer null (verten har gitt gjestene lov, R18-D). Handlingene selv gjør ingen sjekk av hvem som spør – det gjør utfør().
  */
 (function (rot) {
   'use strict';
@@ -58,7 +58,8 @@
         if (s.eier !== ctx.spiller) return { feil: TEKST.styresAv(s.navn, !!s.eier) };
       }
     }
-    if (def.leir && fjern(ctx)) return { feil: TEKST.leir };
+    // leirkommandoer fra en gjest: avvises, med mindre verten har gitt lov (R18-D: ctx.leirTillatt(type) -> null = lov, ellers feiltekst)
+    if (def.leir && fjern(ctx)) { const f = typeof ctx.leirTillatt === 'function' ? ctx.leirTillatt(k.type) : TEKST.leir; if (f) return { feil: f }; }
     if (def.vertAlene && fjern(ctx)) return { feil: def.vertAlene === true ? 'Bare verten kan gjøre dette.' : def.vertAlene };
     return { def, s };
   }

@@ -302,7 +302,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const rad = [...hode.children].find(n => n.querySelector && n.querySelector('#folkknapp')); if (rad) rad.before(boks); else hode.appendChild(boks); });
   { const c2 = document.createElement('style'); c2.textContent = `#leirmeny .ingenbygger{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:8px 0 2px; padding:7px 9px; border:1px solid #c0603a; background:#3a1d12; color:#f2c9a8; font-size:14px; line-height:1.35; }
 #leirmeny .ingenbygger button{ min-height:36px; border-color:#e0804a; } #leirmeny .ingenbygger small{ color:#e8c0a0; }`; document.head.appendChild(c2); }
-  window.FolkSpill = { start, åpne, vis, menyRad, tilstand: () => F, valg, matFaktor: matF, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
+  // R18-D (flerspiller): en gjest viser vertens folk (L.folk i speilet av vertens leir, se LeirSpill.speil). null = eget spill igjen.
+  function speil(Fo) { const Lr = L(); if (!Fo || !Lr) { start(); return; } F = FR.fraJSON(Fo) || F; Lr.folk = F; visStatus(); if (åpen) vis(); }
+  window.FolkSpill = { speil, start, åpne, vis, menyRad, tilstand: () => F, valg, matFaktor: matF, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

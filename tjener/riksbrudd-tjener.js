@@ -49,7 +49,7 @@ function gyldigKode(kode) { return typeof kode === 'string' && /^[A-Z0-9]{4,12}$
 function normKode(kode) { return typeof kode === 'string' ? kode.trim().toUpperCase() : ''; }
 
 function nyVerden(kode) {
-  return { kode, vert: null, gjester: new Set(), tilstand: null, endret: false, sistLagret: 0 };
+  return { kode, vert: null, gjester: new Set(), tilstand: null, leir: null, endret: false, sistLagret: 0 };
 }
 
 // Leser en verden fra fila (dovent: først når en vert ber om koden).
@@ -262,6 +262,13 @@ function håndter(k, m) {
       v.endret = true;
       tilGjester(v, { t: 'tilstand', data: m.data });
       return;
+    case 'leir':
+      // vertens leir (R18-D): gjestene viser den i Leir-menyen, Folk og Tropper. Sendes bare når noe er endret; den siste huskes
+      // (bare i minnet) så en gjest som kommer inn, får den straks.
+      if (v.vert !== k) return;
+      v.leir = m.data;
+      tilGjester(v, { t: 'leir', data: m.data });
+      return;
     case 'kommando':
       if (v.vert === k) return;
       if (!v.vert) { k.feil('Verten er ikke tilkoblet.', false); return; }
@@ -323,6 +330,7 @@ function hei(k, m) {
   }
   k.sendJSON({ t: 'velkommen', id: k.id, kode: v.kode, rolle, spillere: spillere(v), lagret });
   if (rolle === 'gjest' && v.tilstand) k.sendJSON({ t: 'tilstand', data: v.tilstand.data });
+  if (rolle === 'gjest' && v.leir) k.sendJSON({ t: 'leir', data: v.leir });
   if (rolle === 'vert') {
     if (v.gjester.size) tilGjester(v, { t: 'vertTilbake' });
     console.log('');

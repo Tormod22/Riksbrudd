@@ -131,12 +131,91 @@
   // ingenting under 2 minutter.
   function framTid(borteSek) { const s = tall(borteSek, 0); if (s < 120) return 0; return Math.min(7 * 24 * 60, s / 60); }
 
+
+  // ---------- gjester i vertens leir (R18-D, 23. nov – brukeren: «gjester må kunne styre leir») ----------
+  // Verten bestemmer hva gjestene får gjøre i leiren. Nivåene (Claudes forslag – kan endres av brukeren):
+  //   se    – gjestene ser leiren (Leir-menyen, Folk, Tropper), men kan ikke endre noe
+  //   bygg  – bygge, planlegge, flytte, oppgradere, reparere, kjøpe materialer/diesel/mat og sette folk på oppgaver
+  //   alt   – også rive, selge, rekruttere og sette opp, endre og oppløse tropper
+  // Kassa er felles: det gjestene kjøper, betales av vertens kasse. Standard er «alt» (Claudes valg: brukeren ba om at gjester
+  // skal kunne styre leiren – verten kan stramme inn i «Spill sammen»).
+  const TILLAT_STANDARD = 'alt';
+  const TILLAT = {
+    se: { navn: 'Bare se', tekst: 'Gjestene ser leiren, men kan ikke endre noe.', typer: [] },
+    bygg: { navn: 'Bygge og folk', tekst: 'Gjestene kan bygge, planlegge, reparere, kjøpe materialer og sette folk på oppgaver.',
+      typer: ['bygg', 'byggPlan', 'plan', 'flytt', 'oppgrader', 'reparer', 'prioriter', 'bryter', 'kjøpMateriale', 'kjøpDiesel', 'kjøpMat', 'folk', 'folkFlytt'] },
+    alt: { navn: 'Alt', tekst: 'Gjestene kan også rive, selge, rekruttere og lage tropper.', typer: null },
+  };
+  const rensTillat = v => (TILLAT[v] ? v : TILLAT_STANDARD);
+  // null = lov, ellers teksten gjesten får
+  function leirLov(nivå, type) {
+    const n = rensTillat(nivå), T = TILLAT[n];
+    if (n === 'se') return 'Verten har satt leiren til «bare se» for gjester. Be verten endre det under «Spill sammen».';
+    if (T.typer && !T.typer.includes(type)) return `Verten lar gjestene bare bygge og sette folk på oppgaver – ${HANDLING[type] || 'dette'} må verten gjøre.`;
+    return null;
+  }
+  // Hva handlingen heter i tekstene over («å rive bygg må verten gjøre»)
+  const HANDLING = { riv: 'å rive bygg', selgMateriale: 'å selge materialer', rekrutter: 'å rekruttere', troppOpprett: 'å sette opp tropper',
+    troppOppløs: 'å oppløse tropper', troppUtstyr: 'å bytte våpen og utstyr på tropper' };
+  // Kommandoene en gjest ikke kjører på speilet sitt først (de lager eller tar bort lag – det skal bare verten gjøre)
+  const BARE_HOS_VERTEN = ['troppOpprett', 'troppOppløs', 'troppUtstyr'];
+
+  // Leirens tilstand fra verten til gjestene. L er leirens JSON (Leir.tilJSON – byggene med type, nivå, hp, jobber og framdrift,
+  // lager, diesel, planen og folket med oppgavene). Sendes bare når noe er endret (ver øker), og høyst hvert REGLER_LEIR.ms.
+  // kvitt: { gjest-id: nummeret på siste kommando verten har kjørt fra gjesten } – gjesten venter med å ta i bruk et eldre speil.
+  const REGLER_LEIR = { ms: 1500, ventMaks: 4000 };   // Claudes forslag
+  function pakkLeir(o) {
+    if (!o || typeof o.L !== 'string') return null;
+    const d = { v: VERSJON, ver: tall(o.ver, 0), L: o.L, penger: Math.round(tall(o.penger, 0)), tillat: rensTillat(o.tillat) };
+    if (o.leir) d.leir = { x: r1(o.leir.x), y: r1(o.leir.y) };
+    if (o.navn) d.navn = String(o.navn).slice(0, 60);
+    if (o.bonus && typeof o.bonus === 'object') d.bonus = o.bonus;
+    if (o.flagg && typeof o.flagg === 'object') d.flagg = o.flagg;
+    if (o.kvitt && typeof o.kvitt === 'object') d.kvitt = Object.assign({}, o.kvitt);
+    return d;
+  }
+  // Skal gjesten ta i bruk dette speilet? Nei hvis verten ennå ikke har kjørt gjestens siste kommando (ellers blinker det gamle
+  // tilbake et øyeblikk) – men aldri lenger enn REGLER_LEIR.ventMaks.
+  function brukLeirNå(d, id, sendtNr, sendtKl, nå) {
+    if (!d || d.v !== VERSJON || typeof d.L !== 'string') return false;
+    const kv = d.kvitt && Number.isFinite(+d.kvitt[id]) ? +d.kvitt[id] : 0;
+    if (!(sendtNr > kv)) return true;
+    return nå - (sendtKl || 0) > REGLER_LEIR.ventMaks;
+  }
+  // Loggteksten hos verten: «Kari bygger en brakke». info = { bygg: byggets navn, person, oppgave, lag } slått opp av visningen.
+  function leirTekst(k, info) {
+    const i = info || {}, bn = (i.bygg || 'et bygg').toLowerCase();
+    switch (k && k.type) {
+      case 'bygg': return `bygger ${i.ny ? 'en ' : ''}${bn}`;
+      case 'byggPlan': return 'bygger fra planen';
+      case 'plan': return k.handling === 'legg' ? `legger ${bn} i planen` : k.handling === 'flytt' ? 'flytter en skisse i planen' : k.handling === 'tøm' ? 'tømmer planen' : 'fjerner en skisse fra planen';
+      case 'riv': return `river ${bn}`;
+      case 'flytt': return `flytter ${bn}`;
+      case 'oppgrader': return `oppgraderer ${bn}`;
+      case 'reparer': return `reparerer ${bn}`;
+      case 'prioriter': return `ber byggelaget ta ${bn} først`;
+      case 'bryter': return `slår ${bn} ${k.av === false ? 'på' : k.av === true ? 'av' : 'av eller på'}`;
+      case 'kjøpDiesel': return `kjøper ${k.liter} l diesel`;
+      case 'kjøpMateriale': return `kjøper ${String(k.mengde).replace('.', ',')} ${k.materiale}`;
+      case 'selgMateriale': return `selger ${k.materiale}`;
+      case 'kjøpMat': return `kjøper ${k.rasjoner} rasjoner mat`;
+      case 'folk': return `setter ${i.person || 'en person'} på ${i.oppgave || k.oppgave}`;
+      case 'folkFlytt': return `${k.retning === 'minus' ? 'tar en av' : 'setter en til på'} ${i.oppgave || k.oppgave}`;
+      case 'rekrutter': return 'rekrutterer en ny i gjengen';
+      case 'troppOpprett': return `setter opp ${k.navn || 'en tropp'}`;
+      case 'troppOppløs': return `oppløser ${i.lag || 'en tropp'}`;
+      case 'troppUtstyr': return `gir ${i.lag || 'en tropp'} nye våpen og utstyr`;
+      default: return null;
+    }
+  }
+
   // Hjørnene til et bygg i kartets meter (fot = [x0, x1, y0, y1] rundt modellens origo, fronten mot +x, dreid med r)
   function hjørner(b, fot) {
     const c = Math.cos(b.r || 0), s = Math.sin(b.r || 0);
     return [[fot[0], fot[2]], [fot[1], fot[2]], [fot[1], fot[3]], [fot[0], fot[3]]].map(([x, y]) => [b.x + x * c - y * s, b.y + x * s + y * c]);
   }
   const F = { VERSJON, hjørner, lesLenke, lesVertLenke, lagLenke, rensAdresse, rensKode, statusAdresse, kanKoble, rensNavn, pakkLag, pakkKj, bilde, brukBilde,
-    sjekkKommando, nesteEier, framTid, tynnSti };
+    sjekkKommando, nesteEier, framTid, tynnSti,
+    TILLAT, TILLAT_STANDARD, rensTillat, leirLov, BARE_HOS_VERTEN, REGLER_LEIR, pakkLeir, brukLeirNå, leirTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = F; else rot.Flerspiller = F;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

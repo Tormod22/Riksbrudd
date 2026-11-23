@@ -852,7 +852,19 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     L.midt = { x: S.leir.x, y: S.leir.y };
     siste = LB.steg(L, 0, solNå()); visStatus(); bygg3dPåNytt();
   }
-  window.LeirSpill = { kartveger, kjøpDiesel, totalPris: type => { const k = LB.kostnad(type, 1, bonus()); return k ? totalPris(k) : null; },
+  // R18-D (flerspiller): en gjest viser vertens leir – et speil fra spill/flerspiller-visning.js (Leir.fraJSON av vertens leir).
+  // Leir-menyen, byggpanelet, 2D og 3D leser L som før. Reglene (KROKER.sim) går ikke hos en gjest, og en gjest lagrer ikke.
+  // 3D lages bare på nytt når byggene er endret (framdriften følges av tidtakeren over). speil(null) = tilbake til eget spill.
+  let speilNøkkel = '';
+  function speil(Ny) {
+    if (!Ny) { const var_ = speilNøkkel; speilNøkkel = ''; if (var_) { L = null; start(); } return; }
+    const S = spill(); L = Ny; if (S && S.leir) L.midt = { x: S.leir.x, y: S.leir.y }; leirKnapp.hidden = false;
+    siste = LB.steg(L, 0, solNå()); visStatus(); skitten = true;
+    const n = 'S' + L.bygg.map(b => [b.id, b.type, Math.round(b.x || 0), Math.round(b.y || 0), b.ret || 0, b.nivå || 1, b.igjen > 0 ? 0 : 1, b.hp < .5 ? 0 : 1, b.punkter ? b.punkter.length : 0].join(',')).join(';');
+    if (n !== speilNøkkel) { speilNøkkel = n; bygg3dPåNytt(true); }
+    if (meny) visMeny(); if (valgtBygg != null && banner.classList.contains('på') && !plassering) visByggPanel();
+  }
+  window.LeirSpill = { speil, erSpeil: () => !!speilNøkkel, kartveger, kjøpDiesel, totalPris: type => { const k = LB.kostnad(type, 1, bonus()); return k ? totalPris(k) : null; },
     // dieselprognosen (Leir.dieselRekker): { timer, perDøgn, målt } – samme tall i dagsrapporten, Lager og varselbrikkene
     diesel: () => (L ? LB.dieselRekker(L, siste ? siste.agg * LB.DRIVSTOFF.literPerKWt : 0) : null),
     påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },

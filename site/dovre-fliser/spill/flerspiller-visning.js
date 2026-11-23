@@ -47,6 +47,7 @@
     N.ønsket = false; clearTimeout(N.igjen); const ws = N.ws; N.ws = null;
     if (ws) try { ws.close(); } catch (e) { /* ok */ }
     const varGjest = N.rolle === 'gjest';
+    if (varGjest) { N.varGjest = true; slippSpeil(); }
     N.rolle = null; N.tilkoblet = false; N.spillere = []; N.vertBorte = false; N.sett = false; skriv({ vertNå: false });
     if (typeof ENHETER !== 'undefined') for (const s of ENHETER) if (s.eier) s.eier = null;
     document.body.classList.remove('nettgjest');
@@ -64,13 +65,14 @@
       }
       case 'spillere': {
         const før = new Set(N.spillere.map(p => p.id)), nå = m.spillere || [];
-        for (const p of nå) if (!før.has(p.id) && p.id !== N.id) sikkerLogg(`${p.navn} er med i verden.`);
+        for (const p of nå) if (!før.has(p.id) && p.id !== N.id) { sikkerLogg(`${p.navn} er med i verden.`); N.leirTvang = true; }
         for (const id of før) if (!nå.some(p => p.id === id) && id !== N.id) { sikkerLogg(`${navnPå(id)} gikk ut.`);
           // lagene til en som går, går tilbake til verten
           if (N.rolle === 'vert' && typeof ENHETER !== 'undefined') for (const s of ENHETER) if (s.eier === id) s.eier = null; }
         N.spillere = nå; break;
       }
       case 'tilstand': if (N.rolle === 'gjest') brukBilde(m.data); break;
+      case 'leir': if (N.rolle === 'gjest') brukLeir(m.data); break;
       case 'kommando': if (N.rolle === 'vert') kommando(m); break;
       case 'svar': if (m.feil) sikkerLogg(m.feil); else if (m.tekst) sikkerLogg(m.tekst); break;
       case 'melding': sikkerLogg(`${m.navn || 'Spiller'}: «${m.tekst}»`); break;
@@ -134,15 +136,47 @@
     if (nå - N.sistBilde < (gjester().length ? BILDE_MS : BILDE_ALENE_MS)) return;
     N.sistBilde = nå; brukEiere(); try { send({ t: 'tilstand', data: bildeNå(), tid }); N.tellBilder++; } catch (e) { console.warn('flerspiller: bildet', e); }
   }
-  // KOMMANDOLAGET (R16-A): verten kjører gjestens kommando med Kommando.utfør og gjestens id (laget må ha s.eier === gjestens id;
-  // leirkommandoer avvises foreløpig). 'pos' og kommandoer uten kommandolag går som før (Flerspiller.sjekkKommando).
-  const ctxFra = fra => ({ lag: ENHETER, side: 'blå', spiller: fra, erVert: false });
-  function utførFra(k, fra) { merk(); return window.Kommando ? Kommando.utfør(k, ctxFra(fra)) : { ok: false, feil: 'Ukjent kommando.' }; }
+  // KOMMANDOLAGET (R16-A): verten kjører gjestens kommando med Kommando.utfør og gjestens id (laget må ha s.eier === gjestens id).
+  // Leirkommandoene (R18-D) slippes gjennom når verten har gitt lov (tillat(): «bare se», «bygge og folk» eller «alt»); kassa er
+  // vertens. 'pos' og kommandoer uten kommandolag går som før (Flerspiller.sjekkKommando).
+  const tillat = () => { const l = les(); return F.rensTillat(l.tillat && N.kode ? l.tillat[N.kode] : null); };
+  function settTillat(v) { if (!N.kode) return; const l = les(), t = Object.assign({}, l.tillat || {}); t[N.kode] = F.rensTillat(v); skriv({ tillat: t });
+    sikkerLogg(`Gjestene kan nå: ${F.TILLAT[t[N.kode]].navn.toLowerCase()} i leiren.`); N.leirTvang = true; vis(); }
+  const ctxFra = fra => ({ lag: ENHETER, kjøretøy: window.KJORETOY || [], side: 'blå', spiller: fra, erVert: false, leirTillatt: type => F.leirLov(tillat(), type) });
+  function utførFra(k, fra) {
+    merk(); if (!window.Kommando) return { ok: false, feil: 'Ukjent kommando.' };
+    // troppene (oppløs, nytt utstyr) er lagkommandoer, men hører til leiren: tillatelsen gjelder dem også
+    if (F.BARE_HOS_VERTEN.includes(k.type) && !(Kommando.def(k.type) || {}).leir) { const f = F.leirLov(tillat(), k.type); if (f) return { ok: false, feil: f }; }
+    return Kommando.utfør(k, ctxFra(fra));
+  }
+  // det loggen trenger om en leirkommando (slås opp før den kjøres – et revet bygg finnes ikke etterpå)
+  function leirInfo(k) {
+    const i = {}, L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, B = window.Leir ? Leir.BYGG : {};
+    if (k.bygg && typeof k.bygg === 'object' && B[k.bygg.type]) { i.bygg = B[k.bygg.type].navn; i.ny = true; }
+    else if (Number.isInteger(k.bygg) && L) { const b = L.bygg.find(q => q.id === k.bygg); if (b && B[b.type]) i.bygg = B[b.type].navn; }
+    if (k.oppgave && window.FolkRegler && FolkRegler.OPPGAVE && FolkRegler.OPPGAVE[k.oppgave]) i.oppgave = `«${FolkRegler.OPPGAVE[k.oppgave].navn.toLowerCase()}»`;
+    if (k.person != null && window.FolkSpill) { const Fo = FolkSpill.tilstand(), p = Fo && Fo.personer.find(q => q.id === k.person); if (p) i.person = p.navn; }
+    if (k.lag != null) { const s = ENHETER.find(q => q.nid === k.lag); if (s) i.lag = s.navn; }
+    return i;
+  }
+  // etter en leirkommando fra en gjest: lagre leiren, tegn den på nytt (2D, 3D, menyene) og send et nytt speil straks
+  function etterLeir(k, r) {
+    try { if (window.LeirSpill) { LeirSpill.lagre(); if (/^(bygg|byggPlan|riv|flytt|oppgrader|reparer)$/.test(k.type)) LeirSpill.oppdater3d(true); if (LeirSpill.visMeny) LeirSpill.visMeny(); } } catch (e) { /* ok */ }
+    try { if (window.FolkSpill && FolkSpill.vis) FolkSpill.vis(); } catch (e) { /* ok */ }
+    if (k.type === 'troppOpprett' && r && r.svar && r.svar.lag) { const s = r.svar.lag; s.eier = N.leirFra; merk(); huskEier(s); }
+    skitten = true; N.leirTvang = true; N.sistBilde = 0;
+  }
+  N.kvitt = {};
   function kommando(m) {
+    if (m.k && Number.isFinite(+m.k.nr)) { N.kvitt[m.fra] = Math.max(N.kvitt[m.fra] || 0, +m.k.nr); N.leirTvang = true; }
     if (m.k && m.k.type !== 'pos' && window.Kommando && Kommando.finnes(m.k.type)) {
-      const r = utførFra(m.k, m.fra); if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
-      const b = Kommando.beskriv(m.k, ctxFra(m.fra)); if (b) sikkerLogg(`${m.navn || navnPå(m.fra)} ${b}.`);
-      send({ t: 'svar', til: m.fra, tekst: typeof r.svar === 'string' ? r.svar : 'Kommandoen er utført.' }); N.sistBilde = 0; return;
+      const def = Kommando.def(m.k.type) || {}, erLeir = !!def.leir || F.BARE_HOS_VERTEN.includes(m.k.type), info = erLeir ? leirInfo(m.k) : null;
+      N.leirFra = m.fra; const r = utførFra(m.k, m.fra); if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
+      const hvem = m.navn || navnPå(m.fra), b = erLeir ? F.leirTekst(m.k, info) : Kommando.beskriv(m.k, ctxFra(m.fra));
+      if (b) sikkerLogg(`${hvem} ${b}.`);
+      if (erLeir) etterLeir(m.k, r);
+      const svar = typeof r.svar === 'string' ? r.svar : erLeir && b ? `Verten har fått det: du ${b}.` : 'Kommandoen er utført.';
+      send({ t: 'svar', til: m.fra, tekst: svar }); N.sistBilde = 0; return;
     }
     merk(); const r = F.sjekkKommando(m.k, m.fra, ENHETER);
     if (!r.ok) { send({ t: 'svar', til: m.fra, feil: r.feil }); return; }
@@ -152,6 +186,24 @@
     ordre(r.lag, r.x, r.y); sikkerLogg(`${m.navn || navnPå(m.fra)} sender ${r.lag.navn} av gårde.`);
     send({ t: 'svar', til: m.fra, tekst: `${r.lag.navn}: ordren er mottatt.` });
   }
+  // LEIREN TIL GJESTENE (R18-D): vertens leir (Leir.tilJSON med folket), kassa, leirens plass, selskapets navn og flagg, bonusen og
+  // tillatelsen. Sendes bare når noe er endret (eller tvunget: ny gjest, en kommando, ny tillatelse), og høyst hvert 1,5 s.
+  N.leirVer = 0; N.sistLeir = 0; N.sistLeirTekst = '';
+  function leirBilde() {
+    const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, S = window.OppstartSpill && OppstartSpill.tilstand ? OppstartSpill.tilstand() : null;
+    if (!L || !S || !window.Leir) return null;
+    let bonus = {}; try { bonus = OppstartSpill.bonus ? OppstartSpill.bonus() || {} : {}; } catch (e) { bonus = {}; }
+    return { L: Leir.tilJSON(L), penger: S.penger, leir: S.leir, navn: S.fraksjon ? S.fraksjon.navn : '', flagg: S.fraksjon ? S.fraksjon.flagg : null, bonus, tillat: tillat(), kvitt: N.kvitt };
+  }
+  function sendLeir() {
+    if (N.rolle !== 'vert' || !N.tilkoblet || !gjester().length) return; const nå = performance.now();
+    if (!N.leirTvang && nå - N.sistLeir < F.REGLER_LEIR.ms) return;
+    const o = leirBilde(); if (!o) return;
+    const tekst = JSON.stringify(o); N.sistLeir = nå;
+    if (tekst === N.sistLeirTekst && !N.leirTvang) return;
+    N.leirTvang = false; N.sistLeirTekst = tekst; o.ver = ++N.leirVer;
+    try { send({ t: 'leir', data: F.pakkLeir(o) }); } catch (e) { console.warn('flerspiller: leiren', e); }
+  }
   // Tiden som har gått mens verden sto, regnes fram med 600× (som ⏭), så går farten tilbake til 1×
   function regnFram(min) {
     N.framTil = tid + min; const t = min >= 60 ? Math.round(min / 6) / 10 + ' t' : Math.round(min) + ' min';
@@ -159,7 +211,7 @@
     const b = document.getElementById('sp4'); if (b) b.click();
   }
   setInterval(() => {
-    sendBilde();
+    sendBilde(); sendLeir(); if (N.ventLeir) brukLeir(N.ventLeir);
     if (N.framTil != null && typeof tid !== 'undefined' && tid >= N.framTil) { N.framTil = null; const b = document.getElementById('sp1'); if (b) b.click(); sikkerLogg('Tiden er regnet fram.'); }
   }, 100);
   setInterval(() => { if (N.tilkoblet) send({ t: 'ping' }); }, PING_MS);
@@ -192,6 +244,59 @@
       const P0 = document.getElementById('panel'); if (!(window.pekerNede && P0 && pekerNede(P0))) { N.sistPanel = nå; try { visPanel(); } catch (e) { /* ok */ } } }
     skitten = true;
   }
+  // ---------- gjesten i vertens leir (R18-D) ----------
+  // Speilet: vertens leir (Leir.fraJSON), folket og kassa. LeirSpill.speil/FolkSpill.speil viser det i Leir-menyen, Folk, Tropper,
+  // byggpanelet, 2D og 3D. OppstartSpill.tilstand/betal/gi/bonus svarer med vertens kasse og leir mens speilet står (gjestens eget
+  // spill i minnet røres ikke). Leirkommandoene kjøres først på speilet (svaret straks), så hos verten (kommando-visning.js).
+  N.sendtNr = 0; N.sendtKl = 0; N.speilS = null; N.leirData = null;
+  N.nesteNr = () => { N.sendtNr++; N.sendtKl = Date.now(); return N.sendtNr; };
+  N.speilet = () => N.gjest && !!N.speilS;
+  N.bareHosVerten = type => F.BARE_HOS_VERTEN.includes(type);
+  N.leirTillatt = type => (!N.leirData ? 'Vertens leir er ikke kommet fram ennå – vent litt (verten må ha lagt en leir).' : F.leirLov(N.leirData.tillat, type));
+  let OS0 = null;
+  function pakkInnOppstart() {
+    const O = window.OppstartSpill; if (!O || OS0) return; OS0 = { tilstand: O.tilstand, betal: O.betal, gi: O.gi, bonus: O.bonus };
+    O.tilstand = () => (N.speilet() ? N.speilS : OS0.tilstand());
+    O.betal = b => { if (!N.speilet()) return OS0.betal(b); if (!(b >= 0) || N.speilS.penger < b) return false; N.speilS.penger -= b; visKasse(); return true; };
+    O.gi = b => { if (!N.speilet()) return OS0.gi(b); if (b > 0) { N.speilS.penger += b; visKasse(); } };
+    O.bonus = () => (N.speilet() ? (N.leirData && N.leirData.bonus) || {} : OS0.bonus ? OS0.bonus() : {});
+  }
+  function pakkUtOppstart() { const O = window.OppstartSpill; if (!O || !OS0) return; Object.assign(O, OS0); OS0 = null; }
+  function visKasse() {
+    const el = document.getElementById('sPenger'); if (!el || !N.speilS) return;
+    el.textContent = window.Leir ? Leir.kroner(N.speilS.penger) : Math.round(N.speilS.penger) + ' kr'; if (el.parentElement) el.parentElement.hidden = false;
+    el.title = 'Vertens kasse – felles for alle i verden';
+  }
+  function brukLeir(d) {
+    if (!d || !window.Leir || !window.LeirSpill || !LeirSpill.speil) return;
+    // verten har ikke kjørt gjestens siste kommando ennå: vent (ellers blinker det gamle tilbake)
+    if (!F.brukLeirNå(d, N.id, N.sendtNr, N.sendtKl, Date.now())) { N.ventLeir = d; return; }
+    N.ventLeir = null; if (N.leirData && d.ver != null && N.leirData.ver === d.ver && N.speilS) return;
+    const Ln = Leir.fraJSON(d.L); if (!Ln) return;
+    const før = N.leirData; N.leirData = d; pakkInnOppstart();
+    const egen = OS0 && OS0.tilstand ? OS0.tilstand() : null, std = window.Oppstart && Oppstart.standard ? Oppstart.standard() : { karakter: {}, fraksjon: { flagg: {} } };
+    const base = egen || std;
+    N.speilS = Object.assign(N.speilS || {}, base, { leir: d.leir || { x: Ln.midt ? Ln.midt.x : 0, y: Ln.midt ? Ln.midt.y : 0 }, penger: d.penger,
+      fraksjon: Object.assign({}, base.fraksjon || {}, { navn: d.navn || 'Vertens leir', flagg: d.flagg || (base.fraksjon || {}).flagg }),
+      karakter: Object.assign({}, base.karakter || {}, { navn: (base.karakter && base.karakter.navn) || N.navn }) });
+    try { LeirSpill.speil(Ln); if (window.FolkSpill && FolkSpill.speil && Ln.folk) FolkSpill.speil(Ln.folk); } catch (e) { console.warn('flerspiller: speilet', e); }
+    visKasse();
+    if (!før) sikkerLogg(`Du ser leiren til ${d.navn || 'verten'}. ${F.TILLAT[d.tillat].tekst} Kassa er felles.`);
+    else if (før.tillat !== d.tillat) sikkerLogg(`Verten har endret hva gjestene kan i leiren: ${F.TILLAT[d.tillat].navn.toLowerCase()}.`);
+  }
+  function slippSpeil() {
+    if (!N.speilS && !N.leirData) return; N.speilS = null; N.leirData = null; N.ventLeir = null; pakkUtOppstart();
+    try { if (window.LeirSpill && LeirSpill.speil) LeirSpill.speil(null); if (window.FolkSpill && FolkSpill.speil) FolkSpill.speil(null); } catch (e) { /* ok */ }
+  }
+  // En gjest skal aldri skrive over sitt eget lagrede spill: mens denne nettleseren er (eller har vært) gjest, lagres ingenting
+  // under «riksbrudd-…» utenom flerspillerens egne innstillinger. Etter «Koble fra» lastes siden på nytt for å spille eget spill.
+  (function vernLagring() {
+    const P0 = window.Storage && Storage.prototype; if (!P0 || P0.setItem.rbNett) return;
+    const sperret = k => (N.gjest || N.varGjest) && /^riksbrudd-/.test(String(k)) && !/^riksbrudd-nett(@|$)/.test(String(k));
+    const set0 = P0.setItem, fjern0 = P0.removeItem;
+    P0.setItem = function (k, v) { if (sperret(k)) return; return set0.call(this, k, v); }; P0.setItem.rbNett = true;
+    P0.removeItem = function (k) { if (sperret(k)) return; return fjern0.call(this, k); };
+  })();
   (function glid() {
     if (N.gjest && typeof ENHETER !== 'undefined') { const nå = performance.now(); let n = 0;
       for (const s of ENHETER) { const g = s.glatt; if (!g) continue; const k = Math.min(1, (nå - g.t0) / BILDE_MS); s.x = g.fx + (g.tx - g.fx) * k; s.y = g.fy + (g.ty - g.fy) * k; if (k >= 1) delete s.glatt; n++; }
@@ -254,9 +359,10 @@
       g.beginPath(); g.moveTo(q[0], q[1] - 14); g.lineTo(q[0], q[1]); g.strokeStyle = '#9fd0ff'; g.lineWidth = 2; g.stroke(); }
     g.restore();
   });
-  // gjesten ser vertens leirbygg i kartet (omriss; ferdige fylt, uferdige stiplet) når hun er nær nok
+  // gjesten ser vertens leirbygg i kartet (omriss; ferdige fylt, uferdige stiplet) når hun er nær nok – bare til speilet av
+  // vertens leir er kommet (da tegner leir-visning.js byggene som hos verten)
   KROKER.tegn.push((g, vx0, vy1) => {
-    if (!N.gjest || !N.vertBygg || !window.Leir || kam.m > 6) return; const m = kam.m, S = (X, Y) => [(X - vx0) / m, (vy1 - Y) / m];
+    if (!N.gjest || !N.vertBygg || !window.Leir || kam.m > 6 || (window.LeirSpill && LeirSpill.erSpeil && LeirSpill.erSpeil())) return; const m = kam.m, S = (X, Y) => [(X - vx0) / m, (vy1 - Y) / m];
     g.save(); g.lineWidth = 1.5;
     for (const b of N.vertBygg) {
       const B = Leir.BYGG[b.t]; if (!B) continue; g.setLineDash(b.f ? [] : [5, 4]); g.strokeStyle = b.f ? '#f0d79a' : 'rgba(240,215,154,.7)';
@@ -286,7 +392,7 @@
 #nett section{ margin:0 0 12px; } #nett p{ margin:0 0 6px; color:var(--ink-dim); } #nett label{ display:block; font-size:12px; color:var(--ink-dim); margin:4px 0 2px; }
 #nett input{ width:100%; box-sizing:border-box; background:#0f0c08; color:var(--ink); border:1px solid var(--rule); padding:6px 8px; font:inherit; }
 #nett .rad{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; } #nett button{ background:var(--panel); border:1px solid var(--rule); color:var(--ink); padding:6px 10px; cursor:pointer; font:inherit; font-weight:600; }
-#nett button:hover{ color:var(--hover); } #nett .kode{ font-family:'JetBrains Mono', monospace; font-size:22px; letter-spacing:.2em; color:var(--hover); }
+#nett button:hover{ color:var(--hover); } #nett .valg button.på{ border-color:var(--hover); color:var(--hover); background:#1d1810; } #nett .kode{ font-family:'JetBrains Mono', monospace; font-size:22px; letter-spacing:.2em; color:var(--hover); }
 #nett .lenke{ font-family:'JetBrains Mono', monospace; font-size:11px; word-break:break-all; background:#0f0c08; border:1px solid var(--rule); padding:6px; }
 body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ display:none; }
 #nett ul{ margin:0; padding-left:18px; } #nett .status{ color:var(--hover); min-height:1em; } #nett .advar{ color:#e0a060; }`;
@@ -322,9 +428,14 @@ body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ dis
         const ln = lenke();
         h += `<section><h3>Invitasjonslenke</h3>${ln ? `<div class="lenke">${esc(ln)}</div><div class="rad"><button data-n="kopier">Kopier lenken</button></div>` : ''}
           ${N.tunnel ? '<p>Lenken går gjennom tunnelen og virker hvor som helst, også på telefon.</p>' : '<p class="advar">Ingen tunnel, så det finnes ingen lenke vennene kan bruke: spillet ligger på en https-side, og da slipper nettleseren ikke en venn inn til PC-en din uten tunnelen. Legg cloudflared.exe ved siden av start-tjener.bat og start tjeneren på nytt (se LESMEG.md).</p>'}
-          <p>Gi lag til gjestene: velg et lag og trykk «Styres av». Gjestene kan gi marsjordre, grave ned, bytte formasjon og stridsregler for lagene sine; leiren styrer du.</p></section>`;
+          <p>Gi lag til gjestene: velg et lag og trykk «Styres av». Gjestene kan gi marsjordre, grave ned, bytte formasjon og stridsregler for lagene sine.</p></section>`;
+        const tv = tillat();
+        h += `<section><h3>Gjester kan i leiren</h3><div class="rad valg" role="group" aria-label="Hva gjestene kan i leiren">${Object.entries(F.TILLAT).map(([id, T]) => `<button data-n="tillat" data-v="${id}" class="${id === tv ? 'på' : ''}" aria-pressed="${id === tv}">${esc(T.navn)}</button>`).join('')}</div>
+          <p>${esc(F.TILLAT[tv].tekst)} Kassa er din og felles: det gjestene kjøper, betales herfra. Loggen sier hvem som gjorde hva.</p></section>`;
       }
-      if (N.rolle === 'gjest') h += `<section><p>Verten styrer tiden og hvem som har hvilke lag. Lagene dine står med «styres av deg» i panelet – velg et og trykk i kartet for å sende det.</p></section>`;
+      if (N.rolle === 'gjest') { const d = N.leirData;
+        h += `<section><p>Verten styrer tiden og hvem som har hvilke lag. Lagene dine står med «styres av deg» i panelet – velg et og trykk i kartet for å sende det.</p>
+          <h3>Vertens leir</h3><p>${d ? `Leir-menyen, Folk og Tropper viser leiren til ${esc(d.navn || 'verten')}. Verten lar gjestene: <b>${esc(F.TILLAT[d.tillat].navn.toLowerCase())}</b> – ${esc(F.TILLAT[d.tillat].tekst.toLowerCase())} Kassa er felles.` : 'Vertens leir er ikke kommet fram ennå (verten må ha lagt en leir).'}</p></section>`; }
       h += `<section><h3>Melding til alle</h3><div class="rad"><input id="nmld" maxlength="300" placeholder="Skriv og trykk Enter"></div></section>
         <div class="rad"><button data-n="fra">Koble fra</button></div>`;
     }
@@ -341,6 +452,7 @@ body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ dis
     else if (n === 'gjest') { const l = F.lesLenke(v('nlenke')); if (!l) { status('Fant ingen adresse og kode i lenken.'); return; } koble('gjest', l.adresse, l.kode, v('nnavn') || les().navn || 'Gjest'); }
     else if (n === 'kopier') { const ln = lenke(); if (ln && navigator.clipboard) navigator.clipboard.writeText(ln).then(() => status('Lenken er kopiert.'), () => status('Kunne ikke kopiere – merk teksten og kopier selv.')); }
     else if (n === 'fra') koblFra(false);
+    else if (n === 'tillat') settTillat(b.dataset.v);
     else if (n === 'ikkelenke') { N.lenkeInn = null; vis(); }
   });
   P.addEventListener('keydown', e => {
@@ -371,4 +483,5 @@ body.nettgjest :is(#kommando,#kommer,#mkom,#mkommer) button[data-k="lagre"]{ dis
   const start = () => { setTimeout(fraAdressen, 300); setTimeout(vertIgjen, 2500); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   N.åpen = åpen; N.koble = koble; N.koblFra = koblFra; N.send = send; N.bildeNå = bildeNå; N.utførFra = utførFra;
+  N.tillat = tillat; N.settTillat = settTillat; N.leirBilde = leirBilde; N.brukLeir = brukLeir;
 })();
