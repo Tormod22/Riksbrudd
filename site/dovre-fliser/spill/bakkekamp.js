@@ -47,7 +47,7 @@
     // FIENDENS GRANATER I 3D (R18-C) – Claudes forslag: et fiendelag som har oppdaget deg, kaster på «fra»–«til» meter med «sjanse» per
     // sekund (ganget med undertrykkingen), høyst én gang per «mellom» sekunder per lag. Granaten lander innen «spredning» meter fra deg,
     // er «fly» sekunder i lufta (etter avstanden) og går av «påBakken» sekunder etter at den lander (minst «varsel» sekunder etter kastet).
-    fiende3d: { fra: 15, til: 35, sjanse: .06, mellom: 8, spredning: 4.5, flyFart: 13, flyMin: 1, flyMaks: 2.2, påBakken: 1.3, varsel: 2.6, høyde: 1.5, sprett: .2, friksjon: .25 },
+    fiende3d: { fra: 15, til: 35, sjanse: .06, mellom: 8, spredning: 7, flyFart: 13, flyMin: 1, flyMaks: 2.2, påBakken: 1.3, varsel: 2.6, høyde: 1.5, sprett: .2, friksjon: .25 },
   };
 
   // ---------------- dekning ----------------

@@ -240,7 +240,7 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     KROKER.ild.push(a => (auto() ? Undertrykk.ild(a, nåTid()) : 1));
     (KROKER.fart = KROKER.fart || []).push(s => (auto() ? Undertrykk.fart(s, nåTid()) : 1));
     // granatene fylles når laget får ammunisjon (forsyning fra base, leir eller tettsted – spill/forsyning.js hever s.ammo)
-    KROKER.sim.push(() => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) { if (!s || s.karakter) continue; const am = s.ammo === undefined ? 1 : s.ammo;
+    KROKER.sim.push(api.fyllSteg = () => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) { if (!s || s.karakter) continue; const am = s.ammo === undefined ? 1 : s.ammo;
       if (s.grAmmo !== undefined && am > s.grAmmo + 1e-3 && Number.isFinite(s.granater) && s.granater < Lagkamp.start(s)) { Lagkamp.fyll(s); if (s.side === 'blå' && typeof logg === 'function') logg(`${s.navn} har fått nye granater (${s.granater}).`); }
       s.grAmmo = am; } });
     KROKER.lagTekst.push(s => { if (!s || s.karakter || !s.menn) return null; const t = []; if (s.side === 'blå' || Number.isFinite(s.granater)) { const n = Lagkamp.antall(s); if (s.side === 'blå') t.push(n ? `${n} granat${n === 1 ? '' : 'er'}` : 'ingen granater'); }
