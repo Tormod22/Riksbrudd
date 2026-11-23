@@ -119,7 +119,7 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     g.ut = Q.ut; flyr.push(g); if (rot.EventyrSpill && EventyrSpill.skudd) EventyrSpill.skudd({}); return true; };
   // bakkens høyde i scenen (lokale meter; scenens z = (moh. − utsnittets h0) × EX)
   function bakke(x, y) { const Q = r3(); if (!Q || !Q.ut || typeof hoyde3d !== 'function') return 0; const v = hoyde3d(x + Q.ut.cx, y + Q.ut.cy); return Number.isFinite(v) ? (v - (Q.ut.h0 || 0)) * (Q.EX || 1) : 0; }
-  let smellTall = 0;
+  let smellTall = 0, sisteSmell = null;
   function smell(g) { smellTall++; const Q = r3(), u = g.ut, X = g.x + u.cx, Y = g.y + u.cy, G = REGLER.granat; let rammet = 0, falt = 0;
     try { if (rot.Effekter3d) { Effekter3d.eksplosjon(X, Y, 5); if (Effekter3d.krater) Effekter3d.krater(X, Y, 1.4, true); } } catch (e) { /* effekten er ikke viktig */ }
     // laget som kastet granaten (g.fra), kaster den bort fra seg og rammes ikke
@@ -127,7 +127,7 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
       const før = s.menn.filter(m => m.hp > 0).length, n = Granat.rammLag(s.menn, d, tilfV, 6), etter = s.menn.filter(m => m.hp > 0).length; rammet += n; falt += før - etter;
       if (n && s.side !== 'blå' && !g.fiende) { const k = K(); if (k) k.treff = performance.now(); if (før > etter) drapTid = sek(); if (rot.EventyrSpill && EventyrSpill.felt) for (let i = 0; i < før - etter; i++) EventyrSpill.felt(); }
       if (n && typeof logg === 'function') logg(`Granaten rammet ${n} mann i ${s.navn}${levende(s) ? '' : ' – laget er slått ut'}.`); }
-    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), dek = granatDekning(d, X, Y, dd), s0 = Math.round(Granat.skadeDeg(dd) * dek.faktor); smellLyd(dd);
+    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), dek = granatDekning(d, X, Y, dd), s0 = Math.round(Granat.skadeDeg(dd) * dek.faktor); smellLyd(dd); sisteSmell = { dd: Math.round(dd * 10) / 10, skade: s0, dekning: dek.type };
       // helsa går aldri under 5 av en granat; meldingen sier det du faktisk mistet
       const hpFør = k.hp, s = s0 > 0 ? Math.round(hpFør - Math.max(5, hpFør - s0)) : 0;
       if (s0 > 0) { k.hp = Math.max(5, k.hp - s0); k.skadd = performance.now(); Indikator.legg(buer, Math.atan2(Y - d.y, X - d.x), 1, sek()); if (typeof logg === 'function') logg(`Du ble skadet av granaten${g.fra ? ' fra ' + g.fra.navn : ''} (−${s} helse)${dek.type ? ' – ' + (Dekning.REGLER_NAVN(dek.type)) + ' tok av for det verste' : ''}.`); }
@@ -290,6 +290,6 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     // pila peker dit granaten er (opp = foran deg)
     g.translate(cx, cy + 48); g.rotate(th); g.fillStyle = fare ? '#ff4a36' : '#ffd27a'; g.beginPath(); g.moveTo(0, -16); g.lineTo(10, 6); g.lineTo(0, 1); g.lineTo(-10, 6); g.closePath(); g.stroke(); g.fill(); g.restore(); });
 
-  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater, varselTid: () => varselTid, smellTall: () => smellTall });
+  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater, varselTid: () => varselTid, smellTall: () => smellTall, bakke, sisteSmell: () => sisteSmell });
   rot.BakkekampSpill = api;
 })(typeof window !== 'undefined' ? window : globalThis);
