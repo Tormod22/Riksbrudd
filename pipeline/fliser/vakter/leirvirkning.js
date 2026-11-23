@@ -18,7 +18,7 @@ module.exports = { navn: 'virkning i leirbyggene: tekst for alle bygg og fem må
     const X = S.x + 2500, Y = S.y + 2500; let nr = 900000;
     const legg = (type, dx, dy) => { const b = { id: ++nr, nr, type, x: X + dx, y: Y + dy, ret: 0, igjen: 0, totalt: 1, hp: 1, nivå: 1, arbeid: null, mat: {} }; L.bygg.push(b); return b; };
     const fiende = (dx, dy, sti) => ({ navn: 'Prøvefiende', side: 'rød', x: X + dx, y: Y + dy, sti: sti ? [[X, Y]] : null, menn: [{ hp: 1 }] });
-    const ild = (a, b) => KROKER.ild.reduce((v, f) => v * f(a, b), 1), fart = s => (KROKER.fart || []).reduce((v, f) => v * f(s), 1), ser = e => KROKER.ser.some(f => f(e));
+    const ild = (a, b) => KROKER.ild.reduce((v, f) => v * f(a, b), 1), fart = s => (KROKER.fart || []).reduce((v, f) => v * f(s), 1), ser = e => { LS.oppdater(); return !!LV.ser(null, Leir, null, e, LS.aktive()); };   // bare byggenes egen sikt (andre vakter kan ha latt droner/kameraer stå)
     try {
       LS.kobl();
       krev(lag && kj, 'fant ikke et eget lag og et kjøretøy'); if (!lag || !kj) return ut;
