@@ -212,7 +212,9 @@
   // en: kan bare kjøpes så mange ganger. Virkningen står i visningen (region-visning.js).
   const BØRS = {
     medisin: { navn: 'Medisiner', pris: 2.5e6, tekst: 'Antibiotika og smertestillende: seks sårede soldater blir kampklare, og de syke i leiren blir friske.', sårede: 6 },
-    nattsikt: { navn: 'Nattsikt', pris: 6e6, en: 1, tekst: 'Nattbriller til lagene: de ser 40 % lenger mellom kl. 22 og 05.', sikt: 1.4, fra: 22, til: 5 },
+    // (R18, balansen – Claudes forslag) nattsikt 6 → 2 mill.: troppebyggeren selger nattsikt til én tropp for 400 000 kr (og den ser like
+    // langt som om dagen), så 6 mill. for +40 % til alle lagene var et dårlig kjøp. 2 mill. ≈ fem tropper.
+    nattsikt: { navn: 'Nattsikt', pris: 2e6, en: 1, tekst: 'Nattbriller til lagene: de ser 40 % lenger mellom kl. 22 og 05.', sikt: 1.4, fra: 22, til: 5 },
     våpen: { navn: 'Kasse med tunge våpen', pris: 5e6, en: 2, tekst: 'Maskingevær og panservåpen: lagene dine treffer 15 % bedre (kan kjøpes to ganger).', treff: .15 },
     // (runde 6: dieselen i markedet er satt ned til 3 000 kr literen, så smuglerdieselen koster nå 3 mill. for 800 l = 3 750 kr literen –
     // dyrere enn markedet, men den finnes når hyllene er tomme. Claudes forslag.)

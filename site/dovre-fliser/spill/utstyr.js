@@ -8,17 +8,23 @@
   'use strict';
   const klem = (v, a, b) => Math.max(a, Math.min(b, v));
   // rekkevidde i meter, skade per treff (1 = en mann ute), bredde = hvor lett det er å sikte, hagl = antall prosjektiler per skudd
+  // PRISENE (R18, balansen – docs/balanse-r18.md, Claudes forslag): før kostet ett automatgevær i sekken 600 000 kr, mens en hel tropp
+  // fikk maskinpistoler og hagler for 200 000 kr (spill/strid.js) og troppebyggeren tok 25 000 kr for en maskinpistol – 15 ganger så
+  // dyrt for deg som for lagene. Nå koster et våpen i sekken omtrent det dobbelte av troppebyggerens pris (du kjøper ett og ett i
+  // leiren, lagene kjøper i parti): pistol 30 000, maskinpistol 50 000, hagle 40 000, automatgevær 60 000, skarpskyttergevær 160 000 kr.
   const VÅPEN = {
-    pistol: { navn: 'Pistol', ammo: 'a9', magasin: 15, takt: .25, lade: 1.6, rekkevidde: 80, skade: .45, bredde: 1, hagl: 1, vekt: 1, pris: 150000, tekst: 'Lett reservevåpen på kort hold' },
-    mp: { navn: 'Maskinpistol', ammo: 'a9', magasin: 30, takt: .08, lade: 2, rekkevidde: 120, skade: .35, bredde: 1.3, hagl: 1, vekt: 3, pris: 400000, tekst: 'Skyter fort, best nær' },
-    gevær: { navn: 'Automatgevær', ammo: 'a556', magasin: 30, takt: .14, lade: 2.2, rekkevidde: 350, skade: .6, bredde: 1, hagl: 1, vekt: 4, pris: 600000, tekst: 'Allsidig på alle hold' },
-    hagle: { navn: 'Hagle', ammo: 'ahagl', magasin: 6, takt: .8, lade: 3, rekkevidde: 60, skade: .5, bredde: 2.2, hagl: 6, vekt: 3.5, pris: 300000, tekst: 'Seks hagl per skudd – farlig helt nær' },
-    rifle: { navn: 'Skarpskyttergevær', ammo: 'a762', magasin: 5, takt: 1.4, lade: 3, rekkevidde: 700, skade: 1, bredde: .7, hagl: 1, vekt: 6, pris: 1200000, tekst: 'Ett skudd, én mann – på langt hold' },
+    pistol: { navn: 'Pistol', ammo: 'a9', magasin: 15, takt: .25, lade: 1.6, rekkevidde: 80, skade: .45, bredde: 1, hagl: 1, vekt: 1, pris: 30000, tekst: 'Lett reservevåpen på kort hold' },
+    mp: { navn: 'Maskinpistol', ammo: 'a9', magasin: 30, takt: .08, lade: 2, rekkevidde: 120, skade: .35, bredde: 1.3, hagl: 1, vekt: 3, pris: 50000, tekst: 'Skyter fort, best nær' },
+    gevær: { navn: 'Automatgevær', ammo: 'a556', magasin: 30, takt: .14, lade: 2.2, rekkevidde: 350, skade: .6, bredde: 1, hagl: 1, vekt: 4, pris: 60000, tekst: 'Allsidig på alle hold' },
+    hagle: { navn: 'Hagle', ammo: 'ahagl', magasin: 6, takt: .8, lade: 3, rekkevidde: 60, skade: .5, bredde: 2.2, hagl: 6, vekt: 3.5, pris: 40000, tekst: 'Seks hagl per skudd – farlig helt nær' },
+    rifle: { navn: 'Skarpskyttergevær', ammo: 'a762', magasin: 5, takt: 1.4, lade: 3, rekkevidde: 700, skade: 1, bredde: .7, hagl: 1, vekt: 6, pris: 160000, tekst: 'Ett skudd, én mann – på langt hold' },
   };
+  // ammunisjonen (R18): ca. en firedel av før, så en pakke ikke koster like mye som et våpen (30 skudd 5,56 mm = 4 500 kr);
+  // førstehjelp 20 000 kr (før 50 000 – en pakke kostet nesten like mye som en maskinpistol)
   const TING = {
-    a9: { navn: '9 mm', enhet: 'skudd', vekt: .012, pris: 300, pakke: 30 }, a556: { navn: '5,56 mm', enhet: 'skudd', vekt: .012, pris: 500, pakke: 30 },
-    ahagl: { navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, pris: 600, pakke: 12 }, a762: { navn: '7,62 mm', enhet: 'skudd', vekt: .025, pris: 900, pakke: 10 },
-    forbinding: { navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, pris: 50000, pakke: 1, helse: 45 }, rasjon: { navn: 'Feltrasjon', enhet: 'stk.', vekt: .6, pris: 3000, pakke: 1, helse: 10 },
+    a9: { navn: '9 mm', enhet: 'skudd', vekt: .012, pris: 100, pakke: 30 }, a556: { navn: '5,56 mm', enhet: 'skudd', vekt: .012, pris: 150, pakke: 30 },
+    ahagl: { navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, pris: 200, pakke: 12 }, a762: { navn: '7,62 mm', enhet: 'skudd', vekt: .025, pris: 300, pakke: 10 },
+    forbinding: { navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, pris: 20000, pakke: 1, helse: 45 }, rasjon: { navn: 'Feltrasjon', enhet: 'stk.', vekt: .6, pris: 3000, pakke: 1, helse: 10 },
   };
   // (18. nov) Deler til håndverk, det du lager selv og vannet i feltflaska legges inn av spill/eventyr-visning.js (del: true = kan ikke
   // kjøpes); armbrøsten (selges: false) lager du selv.

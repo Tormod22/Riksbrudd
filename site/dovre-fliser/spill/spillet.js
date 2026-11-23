@@ -87,11 +87,14 @@
   const Marked = {
     VARER, SALG: .8,
     ny: () => ({ f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, infl: 1, dag: 0 }),
-    // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er 0,4 % per døgn
-    steg(M, rng) { M.før = { ...M.f }; M.solgt = {}; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * 1.004); M.dag++; Marked.fyll(M, 1); return M; },
+    // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er INFL per døgn (høyst × 3).
+    // (R18, balansen – Claudes forslag) 0,4 % → 1 % per døgn: plan-kollaps.md sier at kronen taper 1–2 % hver dag etter Kronekrakket,
+    // og 0,4 % merktes ikke (4 % på ti døgn). Nå 10 % på ti døgn og ca. 35 % på en måned – det lønner seg å bruke pengene.
+    INFL: 1.01,
+    steg(M, rng) { M.før = { ...M.f }; M.solgt = {}; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * Marked.INFL); M.dag++; Marked.fyll(M, 1); return M; },
     pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * M.f[vare] * M.infl / 100) * 100),
     // endringen siden i går i prosent (med inflasjonen)
-    endring: (M, vare) => Math.round((M.f[vare] * 1.004 / M.før[vare] - 1) * 100),
+    endring: (M, vare) => Math.round((M.f[vare] * Marked.INFL / M.før[vare] - 1) * 100),
     // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
     // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
     LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 60, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
@@ -138,9 +141,11 @@
     // halvdelen av avstanden (700–1650 m), så en ny spiller har en trygg inntekt å gå etter de første døgnene. Claudes forslag.
     lag(leir, nr, rng, tid) { const type = nr <= 1 ? 'hent' : ['hent', 'redd', 'post'][Math.floor(rng() * 3)], T = OPPDRAG[type], v = rng() * 6.2832, d = T.avst[0] + rng() * (T.avst[1] - T.avst[0]) * (nr <= 1 ? .5 : 1);
       const o = { id: nr, type, x: Math.round(leir.x + Math.cos(v) * d), y: Math.round(leir.y + Math.sin(v) * d), meter: Math.round(d), retning: retning(Math.cos(v), Math.sin(v)), frist: tid + 3 * 1440, tatt: false };
-      if (type === 'hent') o.gir = { penger: Math.round((4e5 + d * 300) / 1e5) * 1e5, mat: 4 + Math.floor(rng() * 8), tre: Math.floor(rng() * 6), stål: Math.round(rng() * 20) / 10 };
+      // BELØNNINGEN (R18, balansen – Claudes forslag): et ufarlig «hent» betalte 0,6–1,2 mill. kr og en røverpost opptil 6,6 mill. – mer enn
+      // kontraktene (0,5–1,2 mill.), som skal være den røde tråden (plan-r18.md, spor A). Nå hent 0,3–0,6 mill. og røverpost 1,2–1,7 mill. per lag.
+      if (type === 'hent') o.gir = { penger: Math.round((2e5 + d * 150) / 1e5) * 1e5, mat: 4 + Math.floor(rng() * 8), tre: Math.floor(rng() * 6), stål: Math.round(rng() * 20) / 10 };
       if (type === 'redd') o.gir = { folk: 1 + Math.floor(rng() * 3), penger: 3e5 };
-      if (type === 'post') { o.fiender = 1 + (rng() < .35 ? 1 : 0); o.gir = { penger: Math.round((1.5e6 + d * 500) * o.fiender / 1e5) * 1e5 }; }
+      if (type === 'post') { o.fiender = 1 + (rng() < .35 ? 1 : 0); o.gir = { penger: Math.round((8e5 + d * 250) * o.fiender / 1e5) * 1e5 }; }
       return o; },
     // framme: et av punktene (lag, deg selv) er innen 60 m
     framme: (o, punkter) => punkter.some(p => Math.hypot(p.x - o.x, p.y - o.y) <= 60),
