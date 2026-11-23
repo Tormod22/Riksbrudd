@@ -24,31 +24,32 @@
  */
 (function (rot) {
   'use strict';
+  // Priser justert 23. nov (docs/balanse-r18.md, «Forslag for leirbyggene»): startleiren kostet 76 % av startpengene.
   // fot: omrisset i meter rundt modellens origo [x0, x1, y0, y1] (fronten mot +x); kw: + produserer, − bruker; tid i spilltimer;
   // mat: materialer { tre, betong, stål }; nivå: verdiene for nivå 1, 2, 3 (bare byggene som kan oppgraderes)
   const BYGG = {
     // (balansen 18. nov, Claudes forslag: 15 → 9 mill. kr – brakke, aggregat, dieseltank og kontrollrom med materialer og 500 l
     // diesel kostet 39 av 40 mill.; nå ca. 33 mill. Betonghylla i markedet er større, så de 48 m³ fås første dag.)
-    kontrollrom: { navn: 'Kontrollrom', pris: 9e6, tid: 6, kw: -8, modell: 'hovedhus', fot: [-5.1, 5.8, -6.5, 6.5], mat: { tre: 10, betong: 40, stål: 8 }, tekst: 'Kartet, kameraene og radioen' },
+    kontrollrom: { navn: 'Kontrollrom', pris: 6e6, tid: 3, kw: -8, modell: 'hovedhus', fot: [-5.1, 5.8, -6.5, 6.5], mat: { tre: 10, betong: 40, stål: 8 }, tekst: 'Kartet, kameraene og radioen' },
     brakke: { navn: 'Brakke', pris: 4e6, tid: 2, kw: -1, modell: 'brakke', fot: [-3.4, 4.2, -6.4, 6.4], mat: { tre: 25, betong: 5 }, nivå: { plasser: [8, 14, 20] }, tekst: 'Sengeplasser og ett byggelag til' },
-    vakttårn: { navn: 'Vakttårn', pris: 5e6, tid: 1, kw: 0, modell: 'vakttårn', fot: [-1.6, 1.6, -1.9, 1.6], mat: { tre: 12, stål: 1 }, tekst: 'Utsikt og lyskaster' },
+    vakttårn: { navn: 'Vakttårn', pris: 1.5e6, tid: 1, kw: 0, modell: 'vakttårn', fot: [-1.6, 1.6, -1.9, 1.6], mat: { tre: 12, stål: 1 }, tekst: 'Utsikt og lyskaster' },
     port: { navn: 'Port med vaktbu', pris: 1.5e6, tid: 1, kw: 0, modell: 'port', fot: [-2.3, 2.3, -7.1, 3.9], mat: { stål: 3, betong: 2 }, port: true, tekst: 'Settes i gjerdet og lager en åpning' },
     // BATTERI (brukeren 16. nov: «bedre system for strøm»): lagrer overskudd fra sol og nett og gir det tilbake når det trengs
     batteri: { navn: 'Batteribank', pris: 3e6, tid: 1.5, kw: 0, modell: 'batteri', fot: [-2, 2, -1.2, 1.2], mat: { stål: 2, betong: 1 }, nivå: { kwt: [40, 80, 160] }, tekst: 'Lagrer strøm: sol om dagen, lys om natta' },
     // VEG (brukeren 16. nov: «gjør det mulig å bygge veier»): grusveg punkt for punkt som gjerdet. Feltbilen kjører fort på den.
     veg: { navn: 'Grusveg', prisPerMeter: 6000, tidPerMeter: .008, kw: 0, modell: 'veg', linje: true, veg: true, bredde: 5, matPerMeter: {}, tekst: 'Trykk punkt for punkt. Bilen kjører fort på veg, og skogen ryddes' },
-    gjerde: { navn: 'Gjerde', prisPerMeter: 50000, tidPerMeter: .02, kw: 0, modell: 'gjerde', linje: true, matPerMeter: { stål: .02 }, tekst: 'Trykk punkt for punkt; «Lukk ringen» for et gjerde rundt' },
+    gjerde: { navn: 'Gjerde', prisPerMeter: 8000, tidPerMeter: .02, kw: 0, modell: 'gjerde', linje: true, matPerMeter: { stål: .02 }, tekst: 'Trykk punkt for punkt; «Lukk ringen» for et gjerde rundt' },
     lagertelt: { navn: 'Lagertelt', pris: 2e6, tid: 1, kw: 0, modell: 'lagertelt', fot: [-4.3, 4.3, -3.8, 3.8], mat: { tre: 4, stål: 1 }, nivå: { lager: [100, 200, 300] }, tekst: 'Lager for materialer' },
     container: { navn: 'Container', pris: 5e5, tid: .5, kw: 0, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { stål: 2 }, nivå: { lager: [40, 70, 100] }, tekst: 'Lite lager for materialer' },
     verksted: { navn: 'Verksted', pris: 7e6, tid: 3, kw: -4, modell: 'verksted', fot: [-6.3, 12, -7.3, 7.3], mat: { tre: 10, betong: 25, stål: 10 }, tekst: 'Reparerer kjøretøy' },
     sykestue: { navn: 'Sykestue', pris: 6e6, tid: 3, kw: -3, modell: 'sykestue', fot: [-3.9, 7.5, -5.9, 5.9], mat: { tre: 15, betong: 10, stål: 2 }, tekst: 'Stell av sårede' },
-    drivstofftank: { navn: 'Dieseltank', pris: 3e6, tid: 1, kw: 0, modell: 'drivstofftank', fot: [-2.2, 3.7, -4, 4], mat: { stål: 6, betong: 3 }, nivå: { liter: [5000, 10000, 20000] }, tekst: 'Rommer leirens diesel (til aggregat og fyring – ikke til kjøretøyene)' },
-    aggregat: { navn: 'Aggregat', pris: 8e6, tid: 1, kw: 20, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { stål: 4 }, nivå: { kw: [20, 35, 50] }, tekst: 'Gir strøm, bruker diesel fra leirens tank' },
-    solcelle: { navn: 'Solcellepaneler', pris: 3e6, tid: .5, kw: 5, modell: 'solcelle', fot: [-4, 4, -2, 2], mat: { stål: 2 }, sol: true, nivå: { kw: [5, 9, 14] }, tekst: 'Gir strøm i dagslys' },
+    drivstofftank: { navn: 'Dieseltank', pris: 1.5e6, tid: 1, kw: 0, modell: 'drivstofftank', fot: [-2.2, 3.7, -4, 4], mat: { stål: 6, betong: 3 }, nivå: { liter: [5000, 10000, 20000] }, tekst: 'Rommer leirens diesel (til aggregat og fyring – ikke til kjøretøyene)' },
+    aggregat: { navn: 'Aggregat', pris: 3.5e6, tid: 1, kw: 20, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { stål: 4 }, nivå: { kw: [20, 35, 50] }, tekst: 'Gir strøm, bruker diesel fra leirens tank' },
+    solcelle: { navn: 'Solcellepaneler', pris: 2e6, tid: .5, kw: 5, modell: 'solcelle', fot: [-4, 4, -2, 2], mat: { stål: 2 }, sol: true, nivå: { kw: [5, 9, 14] }, tekst: 'Gir strøm i dagslys' },
     kameramast: { navn: 'Kameramast', pris: 5e5, tid: .5, kw: -.5, modell: 'kameramast', fot: [-.5, .5, -.5, .5], mat: { stål: 1 }, nivå: { rekkevidde: [300, 500, 800] }, tekst: 'Kamera (K4)' },
     radiomast: { navn: 'Radiomast', pris: 2e6, tid: 2, kw: -1, modell: 'radiomast', fot: [-1, 1, -1, 1], mat: { stål: 5, betong: 2 }, nivå: { rekkevidde: [15000, 25000, 40000] }, tekst: 'Feltradioene når 15, 25 og 40 km (nivå 1–3) i stedet for 8 km' },
     drivhus: { navn: 'Drivhus', pris: 2.5e6, tid: 2, kw: -1, modell: 'drivhus', fot: [-3, 3, -5, 5], mat: { tre: 6, stål: 2 }, tekst: 'Dyrker mat' },
-    helikopterplass: { navn: 'Helikopterplass', pris: 10e6, tid: 4, kw: 0, modell: 'helikopterplass', fot: [-10.9, 15.6, -10.9, 10.9], mat: { betong: 60 }, tekst: 'Landingsplass' },
+    helikopterplass: { navn: 'Helikopterplass', pris: 4e6, tid: 2, kw: 0, modell: 'helikopterplass', fot: [-10.9, 15.6, -10.9, 10.9], mat: { betong: 60 }, tekst: 'Landingsplass' },
     sandsekkvoll: { navn: 'Sandsekkvoll', pris: 2e5, tid: .5, kw: 0, modell: 'sandsekkvoll', fot: [-.3, .2, -4, 4], mat: {}, tekst: 'Dekning' },
   };
   // RUNDE 13 (kritiker H: «arbeid 8 mill. kr» av 8,4 mill. kr for et aggregat – «men arbeidet gjøres av mine egne folk»): grunnprisen

@@ -455,7 +455,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           LeirSpill.rutenett(true); for (const m of ['tre', 'betong', 'stål']) Leir.kjøpMateriale(LeirSpill.tilstand(), m, 60, OppstartSpill.betal);
           for (const [t, dx] of [['kontrollrom', 40], ['aggregat', -25], ['drivstofftank', -50]]) { LeirSpill.startPlassering(t); LeirSpill.trykk(LX + dx, LY + 10); await LeirSpill.prøv(); k2.push(LeirSpill.plassering().feil || 'ok'); LeirSpill.bekreft(); }
           LeirSpill.startPlassering('brakke'); LeirSpill.trykk(LX + 40, LY + 10); await LeirSpill.prøv(); const opptatt = LeirSpill.plassering().feil; document.querySelector('#byggvalg button:last-child').click();
-          const L = LeirSpill.tilstand(); r.k2 = { k2, opptatt, penger: OppstartSpill.tilstand().penger, bygg: L.bygg.length };
+          const L = LeirSpill.tilstand(); r.k2 = { k2, opptatt, penger: OppstartSpill.tilstand().penger, bygg: L.bygg.length, priser: ['kontrollrom', 'aggregat', 'drivstofftank'].map(t => Leir.BYGG[t].pris), rivF: Leir.REGLER.rivFerdig };
           for (const b of L.bygg) b.igjen = 0; sim(.1); for (let i = 0; i < 12; i++) sim(.1);
           r.k2.ferdig = L.bygg.every(b => b.igjen === 0); const kj = Leir.kjøpDrivstoff(L, 100, OppstartSpill.betal); sim(.1); const st = LeirSpill.siste();
           r.k2.strøm = [st.prod, st.behov, st.mangler.size]; r.k2.drivstoff = kj.liter; LeirSpill.lagre(); r.k2.lagret = (Leir.fraJSON(localStorage.getItem('riksbrudd-k2')) || { bygg: [] }).bygg.length;
@@ -614,9 +614,9 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           localStorage.removeItem(OppstartSpill.NØKKEL); localStorage.removeItem('riksbrudd-k2'); localStorage.removeItem('riksbrudd-k3'); localStorage.removeItem('riksbrudd-ressurser'); localStorage.removeItem('riksbrudd-verden'); return r; });
         const k1ok = k1.på && /tettsted/.test(k1.iBy || '') && k1.ute === null && k1.ferdig && k1.penger.replace(/\s/g, ' ') === '100 mill. kr' && k1.lagret && k1.fraksjon === 'Dovrefolket' && k1.base === 0 && k1.lag < 600 && k1.skjult && Math.abs(k1.sikt - 1.15) < 1e-9;
         if (!k1ok) { feil++; console.log(JSON.stringify(k1)); }
-        const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 6.6e6 - 9e6 - 8e6 - 3e6 && k2.bygg === 3 && k2.ferdig
+        const k2 = k1.k2 || {}, k2ok = k2.k2 && k2.k2.every(v => v === 'ok') && /kontrollrom/.test(k2.opptatt || '') && k2.penger === 100e6 - 6.6e6 - (k2.priser || []).reduce((a, b) => a + b, 0)   /* prisene leses fra spillet (justert 23. nov) */ && k2.bygg === 3 && k2.ferdig
           && k2.drivstoff === 100 && k2.strøm[1] === 8 && k2.strøm[0] === 8 && k2.strøm[2] === 0 && k2.lagret === 3
-          && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === .9e6 && k2.gjerde === 'ok' && k2.port && k2.fps && k2.bla;
+          && /Oppgrader/.test(k2.panel) && /Riv/.test(k2.panel) && /Flytt/.test(k2.panel) && k2.nivå === 2 && k2.riv === Math.round((k2.priser || [])[2] * k2.rivF) && k2.gjerde === 'ok' && k2.port && k2.fps && k2.bla;
         if (!k2ok) { feil++; console.log(JSON.stringify(k2)); }
         const rs = k1.res || {}, rsok = rs.panel && rs.tre > 0 && rs.betong > 0 && rs.hogd === 1 && rs.hogdHer && rs.revet && rs.jobber === 0 && rs.del && rs.lagret; if (!rsok) feil++;
         console.log(`${rsok ? 'ok  ' : 'FEIL'} ${navn} materialer fra verden: panelet viser utbytte og kjøpspris ${rs.panel}, hogst og riving ga ${rs.tre} m³ tre og ${rs.betong} m³ betong, hogd felt huskes ${rs.hogdHer}, revet hus borte ${rs.revet}, menyen har delen ${rs.del}, lagret ${rs.lagret}`);

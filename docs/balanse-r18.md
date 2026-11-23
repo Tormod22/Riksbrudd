@@ -148,6 +148,9 @@ knappe ressurser (se egen del), drivhuset dekker minst 80 % av strømmen det bru
 
 ## Forslag for leirbyggene (spor B eier spill/leir.js og spill/modeller-leir2.js – ikke endret)
 
+**Lagt inn av Claude 23. nov etter fletting:** aggregat 3,5 mill., kontrollrom 6 mill. og 3 t, vakttårn 1,5 mill., dieseltank 1,5 mill.,
+helikopterplass 4 mill. og 2 t, gjerde 8 000 kr/m, solceller 2 mill. (test_leir.js tester reglene med de gamle tallene; vakta K2 leser prisene).
+
 Prisene under er grunnpris (utstyr og deler); materialene kommer i tillegg (× 1,5 i spillet).
 
 | Bygg | Nå (med materialer) | Forslag | Hvorfor |

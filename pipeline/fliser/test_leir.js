@@ -1,6 +1,10 @@
 // Test for spill/leir.js (K2 og det forbedrede byggesystemet): node pipeline/fliser/test_leir.js
 const L0 = require('../../site/dovre-fliser/spill/leir.js');
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
+// Testen sjekker reglene med faste tall: prisene og tidene fra før justeringen 23. nov (docs/balanse-r18.md) settes her,
+// så regnestykkene under står seg uansett hva spillet bruker.
+Object.assign(L0.BYGG.kontrollrom, { pris: 9e6, tid: 6 }); L0.BYGG.vakttårn.pris = 5e6; L0.BYGG.gjerde.prisPerMeter = 50000;
+L0.BYGG.drivstofftank.pris = 3e6; L0.BYGG.aggregat.pris = 8e6; L0.BYGG.solcelle.pris = 3e6; Object.assign(L0.BYGG.helikopterplass, { pris: 10e6, tid: 4 });
 let penger = 300e6; const betal = p => (p <= penger ? (penger -= p, true) : false);
 const L = L0.ny(), kart = { klasse: (x, y) => (x < -500 ? 3 : 2), iHus: (x, y) => x > 900 && x < 920 };
 const fyll = () => { for (const k of ['tre', 'betong', 'stål']) L0.kjøpMateriale(L, k, 1000, betal); };
