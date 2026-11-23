@@ -27,6 +27,8 @@ hvilke deler han liker best – spør før noe stort bygges på dette.
   stemningen – tett tåke og mørke der du ser lite, tomme og forlatte steder som føles feil, lyd og radiostøy som varsler fare før du
   ser den, lommelykt, få og verdifulle ressurser, og en uro som bygger seg opp. Inspirasjon, ikke kopi: ingen navn, steder, figurer,
   monstre, musikk, symboler, «den andre verden» eller utseende derfra. Spør brukeren hva som skal inn før noe stort bygges.
+  **Brukerens valg (23. nov):** «Forlatte steder» og «Knappe ressurser», og ellers den gode atmosfæren og stemningen generelt
+  («jeg liker bare at de har gjort det generelt bra med atmosfæren»). Ikke valgt: tettere tåke/mørke og radiostøy som eget system.
 
 ## Hvorfor dette passer Norge
 - **Få veger, mange flaskehalser:** én E6, smale dalfører, lange tunneler, store bruer. Én sprengt bru kan kutte en landsdel.

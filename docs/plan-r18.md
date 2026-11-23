@@ -15,3 +15,5 @@ Spor (egne skymaskiner, Claude fletter og kontrollerer; ingen publisering før �
   river, setter folk på oppgaver og lager tropper via kommandolaget; verten kan begrense hva gjestene får lov til.
 - **E Tallene:** gjennomgang av Claudes tall (priser, lønn, fart, treff, behov). De som virker rare, endres med begrunnelse i
   docs/balanse-r18.md (leirbyggene eies av B).
+- **F Forlatte steder og stemning (Silent Hill som inspirasjon, brukerens valg 23. nov):** hus, skoler, sykehus og tettsteder forteller
+  hva som skjedde (lapper, spor, rot, stillhet, lyd), og stemningen i tomme steder blir bedre. Knappe ressurser tas i spor E.

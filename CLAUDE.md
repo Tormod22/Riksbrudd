@@ -1586,4 +1586,5 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   WINDOWS: git har core.autocrlf=false i denne klonen; versjon.py må kjøres med LF (Python på Windows skriver ellers CRLF og feil hasher).
   INSPIRASJON SILENT HILL (23. nov, brukeren: «Silent Hill også en inspirasjon»): bare stemning og sjangergrep (tåke, mørke, forlatte
   steder, lyd/radiostøy som varsler fare, lommelykt, knappe ressurser) – ingen navn, steder, figurer, monstre, musikk, symboler eller
-  utseende derfra. Se docs/plan-spillmekanikk.md. Spør brukeren hva som skal inn før noe stort bygges.
+  utseende derfra. Se docs/plan-spillmekanikk.md. Brukeren valgte (23. nov) FORLATTE STEDER og KNAPPE RESSURSER, og god stemning
+  generelt – ikke tettere tåke eller radiostøy som eget system (R18-F og R18-E).
