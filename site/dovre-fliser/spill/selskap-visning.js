@@ -113,7 +113,7 @@
     if (k.type === 'forsyning') { let bær = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
       if (k.hentet && (!bær || !levende(bær))) return { tapt: true };
       if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= SK.REGLER.første.nær); if (her) { k.bærer = her.navn;
-        logg(`${her.navn} har lastet forsyningene. Gi troppen ordre hjem til leiren – da betaler ${k.giver.navn}.`); return { hentet: true }; } return {}; }
+        logg(`${her.navn} har lastet nødlageret. Gi troppen ordre hjem til leiren – da betaler ${k.giver.navn}.`); return { hentet: true }; } return {}; }
       return { i: !!(L && bær && Math.hypot(bær.x - L.x, bær.y - L.y) <= N.leir), hentet: true }; }
     // hent: et eget lag henter personen ved stedet og tar vedkommende med hjem
     let bærer = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
@@ -387,13 +387,15 @@ body.kort #nestelapp small{ display:none; }
   const lappEl = document.createElement('div'); lappEl.id = 'nestelapp'; lappEl.setAttribute('role', 'button'); lappEl.setAttribute('aria-live', 'polite');
   lappEl.innerHTML = '<small>Neste</small><b></b><span class="gå" aria-hidden="true">›</span>'; document.body.appendChild(lappEl);
   lappEl.addEventListener('click', e => { e.stopPropagation(); følgLapp(); });
-  const synligEl = e => !!(e && e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height > 0);
+  const synligEl = e => { if (!e) return false; const c = getComputedStyle(e), r = e.getBoundingClientRect(); return c.display !== 'none' && c.visibility !== 'hidden' && r.height > 0 && r.width > 0; };
   let pekt = null;
   function pekPå(l) {
     let m = null; const kn = k => { const a = document.querySelector(`#kommando [data-k="${k}"]`), b = document.querySelector(`#mkom [data-k="${k}"]`); return synligEl(a) ? a : synligEl(b) ? b : null; };
     if (l && l.steg && !document.getElementById('selskap').classList.contains('på')) {
-      if (l.pek === 'selskap') m = kn('selskap'); else if (l.pek === 'tropper') m = kn('tropper') || document.getElementById('nytropp'); else if (l.pek === 'leir') m = kn('leir') || document.getElementById('leirknapp'); }
+      if (l.pek === 'selskap') m = kn('selskap') || kn('mer'); else if (l.pek === 'tropper') m = kn('tropper') || document.getElementById('nytropp'); else if (l.pek === 'leir') m = kn('leir') || document.getElementById('leirknapp'); }
     if (l && l.steg === 'ta' && document.getElementById('selskap').classList.contains('på')) m = panel.querySelector(`[data-s="ta"][data-id="${l.k.id}"]`);
+    // send/hjem: «Marsjer» i lagpanelet når en egen tropp er valgt
+    if (l && (l.steg === 'send' || l.steg === 'hjem')) { const p = document.getElementById('panel'); if (p && p.classList.contains('på') && typeof valgt !== 'undefined' && valgt && valgt.fraFolk) m = [...p.querySelectorAll('button')].find(b => /^(Marsjer|Kjør dit)/.test(b.textContent.trim())) || null; }
     if (m === pekt) return; if (pekt) pekt.classList.remove('traadpek'); pekt = m; if (m) m.classList.add('traadpek');
   }
   function plasserLapp() {
@@ -405,7 +407,8 @@ body.kort #nestelapp small{ display:none; }
     let topp = bar.getBoundingClientRect().top; for (const id of ['opplaering', 'kommer', 'mkommer']) { const e = document.getElementById(id); if (e && e.classList.contains('på') && synligEl(e)) topp = Math.min(topp, e.getBoundingClientRect().top); }
     const bunn = Math.round(window.innerHeight - topp + 6) + 'px'; if (lappEl.style.bottom !== bunn) lappEl.style.bottom = bunn;
   }
-  setInterval(() => { try { plasserLapp(); } catch (e) { /* neste runde */ } }, 500);
+  // tråden sjekkes også her (steget i KROKER.sim går bare hvert spillminutt – ett minutt ekte tid på 1×), så lappen svarer straks
+  setInterval(() => { try { if (klar && !gjest() && !document.hidden) tråd(); plasserLapp(); } catch (e) { /* neste runde */ } }, 500);
 
   // ---------- R18-A: krigskartet viser kontraktene ved tettstedet ----------
   { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; (KT.by = KT.by || []).push((by, eier) => {
@@ -428,8 +431,8 @@ body.kort #nestelapp small{ display:none; }
     const s = Sp(); if (!s || !s.leir) return null; if (nullstill) { S = SK.ny(s.leir, {}); settNavn(); }
     const F = SK.REGLER.første, L = s.leir; let reserve = null;
     for (let i = 0; i < 16 && !reserve; i++) { const v = i * Math.PI / 8 + .3, x = L.x + Math.cos(v) * F.reserve, y = L.y + Math.sin(v) * F.reserve;
-      const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null, vann = hh !== null && hh <= 1; const lov = typeof OMRÅDE_OK !== 'function' || OMRÅDE_OK(x, y); if (!vann && lov) reserve = { x, y, navn: 'forsyningslageret' }; }
-    if (!reserve) reserve = { x: L.x + F.reserve, y: L.y, navn: 'forsyningslageret' };
+      const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null, vann = hh !== null && hh <= 1; const lov = typeof OMRÅDE_OK !== 'function' || OMRÅDE_OK(x, y); if (!vann && lov) reserve = { x, y, navn: 'nødlageret' }; }
+    if (!reserve) reserve = { x: L.x + F.reserve, y: L.y, navn: 'nødlageret' };
     const k = SK.førsteKontrakt(S, ID, tid, steder(), reserve); if (!k) return null;
     if (S.dag < 0) S.dag = dagNå(); lagre(); skitten = true;
     if (!navigator.webdriver) setTimeout(() => logg(`${k.giver.navn} har en jobb til dere: ${k.tittel} (${kr(k.betaling)}). Trykk på lappen nederst.`), 1200);

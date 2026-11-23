@@ -66,7 +66,7 @@
     egetSted: .25,
   };
   // den første kontrakten er en egen type som aldri kommer blant de vanlige tilbudene (typeVekter har den ikke)
-  REGLER.TYPER.forsyning = { navn: 'Hent forsyninger', betaling: REGLER.første.betaling, timer: REGLER.første.timer, hardhendt: 0, givere: ['bygd'] };
+  REGLER.TYPER.forsyning = { navn: 'Hent nødlageret', betaling: REGLER.første.betaling, timer: REGLER.første.timer, hardhendt: 0, givere: ['bygd'] };
   const SIDER = ['blå', 'rød', 'grønn'];
   // oppdiktede firmaer (Claudes forslag; ikke ekte firmaer)
   const FIRMA = ['Gråfjell Frakt', 'Tindvik Drivstoff', 'Brattli Mineral', 'Dalsnes Kraftlag', 'Kvernhaug Mølle', 'Storlia Tømmer', 'Ytterø Sjømat'];
@@ -169,7 +169,7 @@
     if (k.type === 'eskorte') return `Eskorter ${k.last === 'tankbil' ? 'tankbilen' : 'lastebilen'} fra ${k.fra.navn} til ${k.sted.navn}`;
     if (k.type === 'hold') return `Hold ${k.sted.slag === 'bru' ? k.sted.navn : k.sted.navn} i ${k.hold} timer`;
     if (k.type === 'rydd') return `Rydd vegsperra ved ${k.sted.navn}`;
-    if (k.type === 'forsyning') return `Hent forsyninger i ${k.sted.navn}`;
+    if (k.type === 'forsyning') return `Hent nødlageret i ${k.sted.navn}`;
     return `Hent ${k.person} i ${k.sted.navn}`;
   }
   // kravet med enkle ord
@@ -178,7 +178,7 @@
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`;
     if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.`;
     if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.`;
-    if (k.type === 'forsyning') return `${k.giver.navn} har samlet mat og utstyr ved ${k.sted.navn}, men tør ikke kjøre det selv. Send en tropp dit (innen ${REGLER.første.nær} m) og ta forsyningene med hjem til leiren (innen ${N.leir} m).`;
+    if (k.type === 'forsyning') return `${k.giver.navn} har et nødlager med mat og utstyr ved ${k.sted.navn}, men tør ikke hente det selv. Send en tropp dit (innen ${REGLER.første.nær} m) og bær lageret hjem til leiren (innen ${N.leir} m).`;
     return `Send et lag til ${k.person} (merket i kartet ved ${k.sted.navn}) og ta vedkommende med til leiren (innen ${N.leir} m). Blir laget slått ut, er kontrakten brutt.`;
   }
 
@@ -284,7 +284,7 @@
     if (S.tråd) return null; const F = REGLER.første, L = S.leir || { x: 0, y: 0 };
     const kand = (steder || []).filter(q => q && q.navn && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) }))
       .filter(q => q.d >= F.min && q.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket) || (a.slag === 'bru') - (b.slag === 'bru'));
-    const sted = kand[0] || (reserve ? { navn: reserve.navn || 'forsyningslageret', x: reserve.x, y: reserve.y, slag: 'lager' } : null);
+    const sted = kand[0] || (reserve ? { navn: reserve.navn || 'nødlageret', x: reserve.x, y: reserve.y, slag: 'lager' } : null);
     if (!sted) return null;
     const kr = avrund(F.betaling), k = { id: 'k' + (++S.nr), type: 'forsyning', første: true, giver: { slag: 'bygd', navn: `Bygdelaget i ${sted.slag === 'lager' ? 'nærheten' : sted.navn}` },
       status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + 14 * 1440), timer: F.timer, hold: 0, betaling: kr, bot: 0,
@@ -300,13 +300,13 @@
   // pek = hvor spilleren skal trykke: 'selskap' | 'tropper' | 'kart' | 'leir'.
   const TRÅD = [
     { id: 'ta', tittel: 'Ta din første kontrakt', pek: 'selskap', lapp: k => `Ta kontrakten «${k.tittel}»`,
-      tekst: k => `${k.giver.navn} tilbyr ${kroner(k.betaling)} for å hente forsyninger i ${k.sted.navn}. Åpne Selskapet og trykk «Ta kontrakten».`, ferdig: b => b.tatt },
+      tekst: k => `${k.giver.navn} tilbyr ${kroner(k.betaling)} for å hente nødlageret i ${k.sted.navn}. Åpne Selskapet og trykk «Ta kontrakten».`, ferdig: b => b.tatt },
     { id: 'tropp', tittel: 'Lag en tropp', pek: 'tropper', lapp: () => 'Lag en tropp av folkene dine',
       tekst: () => 'Åpne Tropper og trykk «Lag ny tropp». Velg 2–4 personer – la minst to stå igjen på Bygg.', ferdig: b => b.tropper > 0 || b.framme },
     { id: 'send', tittel: 'Send troppen', pek: 'kart', lapp: k => `Send troppen til ${k.sted.navn}`,
       tekst: k => `Velg troppen i kartet, trykk «Marsjer» og så på det gule merket ved ${k.sted.navn}.`, ferdig: b => b.framme },
-    { id: 'hjem', tittel: 'Kom tilbake', pek: 'kart', lapp: () => 'Ta forsyningene med hjem til leiren',
-      tekst: () => 'Troppen har forsyningene. Gi den ordre tilbake til leiren – da betaler bygdelaget.', ferdig: b => b.levert },
+    { id: 'hjem', tittel: 'Kom tilbake', pek: 'kart', lapp: () => 'Ta nødlageret med hjem til leiren',
+      tekst: () => 'Troppen bærer nødlageret. Gi den ordre tilbake til leiren – da betaler bygdelaget.', ferdig: b => b.levert },
     { id: 'bygg', tittel: 'Bygg noe for pengene', pek: 'leir', lapp: () => 'Bygg noe for pengene (Leir → Bygg)',
       tekst: k => `Bygdelaget betalte ${kroner(k.betaling)}. Åpne Leir og bygg noe – en brakke eller et vakttårn er et godt valg.`, ferdig: b => b.byggVed !== null && b.bygg > b.byggVed },
     { id: 'neste', tittel: 'Neste kontrakt', pek: 'selskap', lapp: () => 'Ta en ny kontrakt i Selskapet',
@@ -331,7 +331,7 @@
       return v.fiender ? `Fiender ved ${st} – rydd dem bort (holdt ${h} t ${m} min av ${k.hold} t)` : v.lag ? `Hold ${st}: ${h} t ${m} min av ${k.hold} t` : `Send et lag (${kravFor(k).menn}+) til ${st} og hold stedet`; }
     if (k.type === 'eskorte') return v.i ? `Lever: tankbilen er framme i ${st}` : `Kjør ${k.bil || 'bilen'} til ${st}` + (Number.isFinite(v.igjen) ? ` (${v.igjen >= 1000 ? (Math.round(v.igjen / 100) / 10).toString().replace('.', ',') + ' km' : Math.round(v.igjen) + ' m'} igjen)` : '');
     if (k.type === 'rydd') return v.i ? `Lever: sperra ved ${st} er slått ut` : `Slå ut vegsperra ved ${st}`;
-    if (k.type === 'forsyning') return k.hentet ? 'Ta forsyningene med hjem til leiren' : `Send en tropp til ${st} og hent forsyningene`;
+    if (k.type === 'forsyning') return k.hentet ? 'Ta nødlageret med hjem til leiren' : `Send en tropp til ${st} og hent nødlageret`;
     return k.hentet ? `Ta ${k.person} med til leiren` : `Hent ${k.person} i ${st}`;
   }
 

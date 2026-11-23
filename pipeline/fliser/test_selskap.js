@@ -122,7 +122,7 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
   const T5 = S0.ny(L0), f = S0.førsteKontrakt(T5, 'blå', 0, st); ok(S0.godta(T5, 'blå', f.id, 10).ok, 'første kontrakt kan tas uten krav');
   S0.steg(T5, 'blå', 20, 1, { [f.id]: { hentet: true } }); ok(f.hentet && f.status === 'aktiv', 'forsyningene hentet');
   const lv = S0.steg(T5, 'blå', 30, 1, { [f.id]: { i: true, hentet: true } }); ok(lv[0].type === 'levert' && lv[0].kr === 400000 && !lv[0].motangrep && !lv[0].rekrutt, 'levert: 400 000 kr, ingen motangrep for den første');
-  ok(/forsyningene/.test(S0.lappFor(f, {}, 0)), 'lapp for forsyning');
+  ok(/nødlageret/.test(S0.lappFor(f, {}, 0)), 'lapp for forsyning');
   // nivåene
   const sd = S0.side(S0.ny(L0), 'blå'); ok(S0.nivå(sd).nr === 1 && S0.nesteNivå(sd).mangler.length === 2, 'nivå 1, to ting mangler for nivå 2');
   sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
