@@ -167,7 +167,7 @@
     let plasser = Math.round(stellere.length * R.perStell);
     for (const p of F.personer) {
       let dh = -(sult ? R.helseSult : 0) - kald * R.helseKulde;
-      if (!sult && kald < .5) dh += R.helseNatur * (p.oppgave === 'fri' ? 2 : 1);
+      if (!sult && kald < .5) dh += R.helseNatur * (p.oppgave === 'fri' ? 2 : 1) + (o.helseTillegg > 0 ? o.helseTillegg : 0);   // helseTillegg: leirbyggene (spill/leirvirkning.js)
       if (p.helse < 1 && plasser > 0 && syke.includes(p) && stellere.length && !stellere.includes(p)) { dh += R.helseStell * stellKraft / stellere.length; plasser--; }
       const før = p.helse; p.helse = Math.max(0, Math.min(1, p.helse + dh * d));
       if (før >= R.arbeidsfør && p.helse < R.arbeidsfør) H.push(`${p.navn} er syk og kan ikke arbeide.`);

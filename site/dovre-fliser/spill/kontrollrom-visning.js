@@ -61,7 +61,11 @@
 
   // ---------- radioen ----------
   // rekkevidden til den beste radiomasten med strøm (0 uten)
-  function mast() { const L = window.LeirSpill && LeirSpill.tilstand(); return L ? L.bygg.filter(b => b.type === 'radiomast' && Leir.virker(b) && harStrøm(b)).reduce((m, b) => Math.max(m, Leir.effekt(b).rekkevidde), 0) : 0; }
+  function mast() { const L = window.LeirSpill && LeirSpill.tilstand(); const m = L ? L.bygg.filter(b => b.type === 'radiomast' && Leir.virker(b) && harStrøm(b)).reduce((m, b) => Math.max(m, Leir.effekt(b).rekkevidde), 0) : 0;
+    // (R18-B) kommandosenteret og antennene i leiren (spill/leirvirkning.js) gir feltradioene lengre rekkevidde
+    const ekstra = L && window.LeirvirkningSpill ? LeirvirkningSpill.leiren().radio : 0; return ekstra > 0 ? Math.max(m, K.LEIR.uten) + ekstra : m; }
+  // (R18-B) satellittterminalen: terrenget stopper ikke feltradioen
+  const satellitt = s => (s.radio || 'hånd') === 'felt' && !!(window.LeirvirkningSpill && LeirvirkningSpill.leiren().satellitt);
   const stor = t => t.charAt(0).toUpperCase() + t.slice(1);
   // «12 km fra leiren – håndradioen når 3 km (kjøp feltradio)»
   const hvorfor = s => { const S = spill(); return K.utenKontakt(s.radio || 'hånd', mast(), Math.hypot(s.x - S.leir.x, s.y - S.leir.y)); };
@@ -80,7 +84,7 @@
     // (runde 12) garnisonen i et tettsted dere holder, melder seg over tettstedets radio
     if (!k && garnisonI(s)) { if (!I.kontakt && I.før) radio(s, `Kontakt over radioen i ${garnisonI(s).e.navn}.`, true); I.kontakt = true; I.garnison = garnisonI(s).e.navn; I.rekkevidde = r; return; }
     I.garnison = null;
-    if (k && d > 1200) { try {
+    if (k && d > 1200 && !satellitt(s)) { try {
       const v = await lagVindu([Math.min(s.x, L.x) - 300, Math.min(s.y, L.y) - 300, Math.max(s.x, L.x) + 300, Math.max(s.y, L.y) + 300], false, 7), n = 24, P = [];
       for (let i = 0; i <= n; i++) P.push(høyde(v, s.x + (L.x - s.x) * i / n, s.y + (L.y - s.y) * i / n));
       k = K.kontakt(d, r, K.blokkert(P, P[0] + R.antenne, P[n] + (m ? R.mastHøyde : 4), d));

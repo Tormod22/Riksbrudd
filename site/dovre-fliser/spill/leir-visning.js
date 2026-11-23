@@ -287,8 +287,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
       const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
-      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.tekst}` }, tegn,
-        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris', title: B.linje ? '' : mp ? `Arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)}` : 'Materialene har du på lageret' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris + mp) + (mp ? ' i alt' : '')), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.tekst)), b));
+      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.virkning && B.virkning !== B.tekst ? B.tekst + '. Virkning: ' + B.virkning : B.tekst}` }, tegn,
+        el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris', title: B.linje ? '' : mp ? `Arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)}` : 'Materialene har du på lageret' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris + mp) + (mp ? ' i alt' : '')), el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.virkning || B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
     // er delt på Bygg (jobbene, byggene, byggesettet), Lager (diesel, materialer, hogst og riving) og Plan (skisser og maler).
@@ -552,10 +552,12 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       !LB.ferdig(b) ? 'byggeplass: kan skades av fiender' : null].filter(Boolean).join(' · ');
     // radiomasten: hva nivået gir lagene (brukeren 12. nov), og de to slagene drivstoff ved tank og aggregat
     const ekstra = b.type === 'radiomast' ? radioTekst(b) : b.type === 'drivstofftank' || b.type === 'aggregat' ? `Leiren har ${Math.floor(L.drivstoff).toLocaleString('nb-NO')} l diesel. ${DIESEL}` : '';
-    const nøkkel = [ji, b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise, window.BYGGEVISNING && BYGGEVISNING.radioZoom ? BYGGEVISNING.radioZoom() : ''].join('|');
+    // (R18-B) hva bygget gjør, og om det virker nå (spill/leirvirkning-visning.js)
+    const virk = window.LeirvirkningSpill ? LeirvirkningSpill.panel(b) : '';
+    const nøkkel = [virk, ji, b.id, b.nivå, status, Math.round(b.hp * 100), verdier, ekstra, ok ? ok.pris + '>' + ok.til : '', rk ? rk.pris : '', b.igjen > 0, !!b.arbeid, planModus, reise, window.BYGGEVISNING && BYGGEVISNING.radioZoom ? BYGGEVISNING.radioZoom() : ''].join('|');
     if (banner.firstChild && banner.firstChild.byggNøkkel === nøkkel && banner.classList.contains('på')) return;
     banner.innerHTML = ''; banner.classList.add('på');
-    banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '');
+    banner.append(el('div', {}, el('b', {}, B.navn + (LB.maksNivå(b.type) > 1 ? ` (nivå ${b.nivå})` : '')), ` – ${status}, ${Math.round(b.hp * 100)} % helt`), verdier ? el('small', {}, verdier) : '', ekstra ? el('small', { klasse: 'forklar' }, ekstra) : '', virk ? el('small', { klasse: 'virkning', id: 'byggvirkning' }, 'Virkning: ' + virk) : '');
     banner.firstChild.byggNøkkel = nøkkel;
     // runde 4 (pakke «ui»): tegningen av bygget i panelet (spill/tegninger.js; utseendet i spillhud.js, .byggtegn)
     if (window.Tegninger) { const t = el('img', { klasse: 'byggtegn', alt: '', draggable: 'false' }); t.src = Tegninger.bilde(Tegninger.bygg(b.type)); banner.firstChild.prepend(t); }
