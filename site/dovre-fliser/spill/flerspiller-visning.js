@@ -1,6 +1,12 @@
 /* Flerspiller i nettleseren (M2a, 22. nov – docs/plan-flerspiller.md). Reglene: spill/flerspiller.js. Tjeneren: tjener/riksbrudd-tjener.js.
  * window.NETT: rolle (null | 'vert' | 'gjest'), id, kode, spillere, gjest (true når denne nettleseren er gjest), fangOrdre(s, X, Y, stille).
  * index.html: sim() regner bare klokka når NETT.gjest, ordre() spør NETT.fangOrdre først. lagring.js lagrer ikke verden når NETT.gjest.
+ * GJESTER I VERTENS LEIR (R18-D, 23. nov): verten sender leirens tilstand ({ t: 'leir' }: Leir.tilJSON med folket, kassa, leirens
+ * plass, selskapets navn og flagg, bonus, tillatelsen og kvitteringer for gjestenes kommandoer) når noe er endret, høyst hvert 1,5 s.
+ * Gjesten viser den som et speil (LeirSpill.speil, FolkSpill.speil, OppstartSpill.tilstand/betal/gi/bonus pakket inn) og sender
+ * leirkommandoene gjennom kommandolaget (kommando-visning.js kjører dem på speilet først). Verten velger hva gjestene kan («bare
+ * se» / «bygge og folk» / «alt», per verden i «riksbrudd-nett».tillat) og logger hvem som gjorde hva. En gjest lagrer aldri noe
+ * under «riksbrudd-…» (utenom «riksbrudd-nett») – heller ikke etter «Koble fra», før siden er lastet på nytt.
  * Ingenting skjer før spilleren trykker «Spill sammen» i ☰ eller åpner en invitasjonslenke (#spill=…&kode=…).
  */
 (function () {
@@ -271,7 +277,7 @@
     if (!d || !window.Leir || !window.LeirSpill || !LeirSpill.speil) return;
     // verten har ikke kjørt gjestens siste kommando ennå: vent (ellers blinker det gamle tilbake)
     if (!F.brukLeirNå(d, N.id, N.sendtNr, N.sendtKl, Date.now())) { N.ventLeir = d; return; }
-    N.ventLeir = null; if (N.leirData && d.ver != null && N.leirData.ver === d.ver && N.speilS) return;
+    N.ventLeir = null; if (N.leirData && N.speilS && N.leirData.ver === d.ver && N.leirData.L === d.L && N.leirData.penger === d.penger && N.leirData.tillat === d.tillat) return;
     const Ln = Leir.fraJSON(d.L); if (!Ln) return;
     const før = N.leirData; N.leirData = d; pakkInnOppstart();
     const egen = OS0 && OS0.tilstand ? OS0.tilstand() : null, std = window.Oppstart && Oppstart.standard ? Oppstart.standard() : { karakter: {}, fraksjon: { flagg: {} } };

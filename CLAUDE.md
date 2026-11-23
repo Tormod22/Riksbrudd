@@ -1471,7 +1471,25 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   Gjestens lagpanel (index.html visPanel -> NETT.lagPanel når NETT.gjest): bare Marsjer og Stopp (kommandoene 'ordre'/'stopp')
   for egne lag, ellers «Styres av …». Kommandoen 'pos' (hvert 2. s fra gjesten) + bildet.sp: alle ser hvor de andre spillerne er
   (KROKER.tegn og KROKER.tegn3d, navn i blått; minPos = der du går i 3D, ellers kartets midte). Lagene glir hos gjesten (s.glatt).
-  Gjestene ser vertens leir bare som et merke; leirbyggene, folk og økonomi deles ikke ennå.
+  GJESTER STYRER LEIREN (R18-D, 23. nov, brukeren: «gjester må kunne styre leir»): samarbeid i VERTENS leir. Verten sender
+  { t: 'leir', data: Flerspiller.pakkLeir(...) } (Leir.tilJSON med folket, kassa, leirens plass, selskapets navn/flagg, bonus, tillat,
+  kvitt) når noe er endret, høyst hvert 1,5 s (tvunget ved ny gjest, kommando eller ny tillatelse); tjeneren husker siste leir i minnet
+  (v.leir) og gir den til gjester som kommer inn. Gjesten viser et SPEIL: LeirSpill.speil(L) / FolkSpill.speil(F) (leir-visning.js og
+  folk-visning.js; speil(null) = eget spill igjen, LeirSpill.erSpeil()), og OppstartSpill.tilstand/betal/gi/bonus pakkes inn mens
+  speilet står (vertens kasse og leir – Leir-menyen, byggpanelet, Folk, Tropper, 2D og 3D viser vertens leir som hos verten).
+  Leirkommandoene går gjennom kommandolaget: hos gjesten kjøres de først på speilet (svaret straks), så sendes de med et løpenummer
+  (k.nr); verten kjører dem med ctx.leirTillatt (ny krok i kommando.js) og svarer med kvitt[gjest] = nr, og gjesten venter med eldre
+  speil (Flerspiller.brukLeirNå, høyst 4 s). troppOpprett/troppOppløs/troppUtstyr kjøres BARE hos verten (BARE_HOS_VERTEN); en tropp
+  gjesten setter opp, styres av gjesten (s.eier). Tillatelsen (Flerspiller.TILLAT, «Gjester kan i leiren» i «Spill sammen», per verden
+  i «riksbrudd-nett».tillat, standard «alt» – Claudes valg): se = ingenting, bygg = bygge/planlegge/flytte/oppgradere/reparere/
+  prioritere/bryter/kjøpe materialer, diesel og mat/folk på oppgaver, alt = også rive, selge, rekruttere og tropper. Vertens logg sier
+  hvem («Kari bygger en brakke», «Kari setter Bjørn Lund på «vakt»» – Flerspiller.leirTekst). VERN: mens en nettleser er (eller har
+  vært) gjest, lagres ingenting under «riksbrudd-…» utenom «riksbrudd-nett» (Storage.prototype pakkes inn i flerspiller-visning.js) –
+  etter «Koble fra» må siden lastes på nytt for å spille eget spill. IKKE GJORT: kjøp utenom kommandolaget (våpen i Sekk, selskap,
+  morgenmøtet …) trekker bare fra speilets kasse hos gjesten og når aldri verten; maler/angre i planen og byggesettet (bs) er ikke prøvd
+  hos gjesten; gjesten har ingen egen leir i vertens verden. Test: test_flerspiller_e2e.js (verten legger en leir; gjesten som ny
+  spiller bygger en brakke, setter en person på vakt, setter opp en tropp; «bare se» og «bygge og folk» avviser), test_tjener.js
+  (leir-meldingen), test_flerspiller.js (reglene).
   FELLES TILFELDIGHET (M0 punkt 4, 22. nov natt, egen skysesjon): spill/tilfeldig.js (mulberry32; Tilfeldig.lag(frø), Tilfeldig.verden =
   én felles strøm, nyVerden/lagre/les, heltall/velg/sjanse; test_tilfeldig.js). Regelmodulene morgen, verden, oppstart, vaer, overlev,
   kameravakt, forsvar-kamp, forsvar-hjemme og trussel-lagring bruker Tilfeldig.verden i stedet for Math.random (nye regler: gjør det
