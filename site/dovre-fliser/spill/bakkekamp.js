@@ -134,7 +134,8 @@
   const levendeMenn = s => (s.menn || []).filter(m => m.hp >= 1).length;
   const Lagkamp = {
     // bevæpningen til et lag (s.strid.bev settes av StridSpill.regel for både egne og fiendens lag)
-    bev: s => (s && s.strid && s.strid.bev) || 'standard',
+    // (uten stridsregler: samme valg som fiendeBev i spill/strid-visning.js – røvere lett, grønn avstand, ellers standard)
+    bev: s => (s && s.strid && s.strid.bev) || (s && s.side !== 'blå' && (s.raid || s.post || /røver/i.test(s.navn || '')) ? 'lett' : s && s.side === 'grønn' ? 'avstand' : 'standard'),
     start: s => { const S = REGLER.lagGranat.start; const b = Lagkamp.bev(s); return b in S ? S[b] : S.standard; },
     // granatene laget har nå (settes første gang fra bevæpningen)
     antall(s) { if (!s || s.karakter) return 0; if (!Number.isFinite(s.granater)) s.granater = Lagkamp.start(s); return s.granater; },

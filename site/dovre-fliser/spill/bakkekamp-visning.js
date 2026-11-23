@@ -121,12 +121,15 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
   function bakke(x, y) { const Q = r3(); if (!Q || !Q.ut || typeof hoyde3d !== 'function') return 0; const v = hoyde3d(x + Q.ut.cx, y + Q.ut.cy); return Number.isFinite(v) ? (v - (Q.ut.h0 || 0)) * (Q.EX || 1) : 0; }
   function smell(g) { const Q = r3(), u = g.ut, X = g.x + u.cx, Y = g.y + u.cy, G = REGLER.granat; let rammet = 0, falt = 0;
     try { if (rot.Effekter3d) { Effekter3d.eksplosjon(X, Y, 5); if (Effekter3d.krater) Effekter3d.krater(X, Y, 1.4, true); } } catch (e) { /* effekten er ikke viktig */ }
-    if (typeof ENHETER !== 'undefined') for (const s of ENHETER) { if (!s || s.karakter || !s.menn || !levende(s)) continue; const d = Math.hypot(s.x - X, s.y - Y); if (d > G.radius + 4) continue;
+    // laget som kastet granaten (g.fra), kaster den bort fra seg og rammes ikke
+    if (typeof ENHETER !== 'undefined') for (const s of ENHETER) { if (!s || s.karakter || !s.menn || !levende(s) || s === g.fra) continue; const d = Math.hypot(s.x - X, s.y - Y); if (d > G.radius + 4) continue;
       const før = s.menn.filter(m => m.hp > 0).length, n = Granat.rammLag(s.menn, d, tilfV, 6), etter = s.menn.filter(m => m.hp > 0).length; rammet += n; falt += før - etter;
       if (n && s.side !== 'blå' && !g.fiende) { const k = K(); if (k) k.treff = performance.now(); if (før > etter) drapTid = sek(); if (rot.EventyrSpill && EventyrSpill.felt) for (let i = 0; i < før - etter; i++) EventyrSpill.felt(); }
       if (n && typeof logg === 'function') logg(`Granaten rammet ${n} mann i ${s.navn}${levende(s) ? '' : ' – laget er slått ut'}.`); }
-    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), dek = granatDekning(d, X, Y, dd), s = Math.round(Granat.skadeDeg(dd) * dek.faktor); smellLyd(dd);
-      if (s > 0) { k.hp = Math.max(5, k.hp - s); k.skadd = performance.now(); Indikator.legg(buer, Math.atan2(Y - d.y, X - d.x), 1, sek()); if (typeof logg === 'function') logg(`Du ble skadet av granaten${g.fra ? ' fra ' + g.fra.navn : ''} (−${s} helse)${dek.type ? ' – ' + (Dekning.REGLER_NAVN(dek.type)) + ' tok av for det verste' : ''}.`); }
+    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), dek = granatDekning(d, X, Y, dd), s0 = Math.round(Granat.skadeDeg(dd) * dek.faktor); smellLyd(dd);
+      // helsa går aldri under 5 av en granat; meldingen sier det du faktisk mistet
+      const hpFør = k.hp, s = s0 > 0 ? Math.round(hpFør - Math.max(5, hpFør - s0)) : 0;
+      if (s0 > 0) { k.hp = Math.max(5, k.hp - s0); k.skadd = performance.now(); Indikator.legg(buer, Math.atan2(Y - d.y, X - d.x), 1, sek()); if (typeof logg === 'function') logg(`Du ble skadet av granaten${g.fra ? ' fra ' + g.fra.navn : ''} (−${s} helse)${dek.type ? ' – ' + (Dekning.REGLER_NAVN(dek.type)) + ' tok av for det verste' : ''}.`); }
       else if (g.fiende && dd < REGLER.granat.radius + 6 && dek.type && typeof logg === 'function') logg(`Granaten gikk av ${Math.round(dd)} m unna – ${Dekning.REGLER_NAVN(dek.type)} tok trykket.`); }
     if (typeof skitten !== 'undefined') skitten = true; return { rammet, falt }; }
   api.smell = (X, Y) => { const Q = r3(); if (!Q || !Q.ut) return null; return smell({ x: X - Q.ut.cx, y: Y - Q.ut.cy, ut: Q.ut }); };
@@ -282,7 +285,7 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     const th = Indikator.vinkel(best.x - Q.bane.x, best.y - Q.bane.y, Q.fot.a), fare = bd < REGLER.granat.radius, blink2 = (sek() * 4) % 2 < 1.2;
     g.save(); g.textAlign = 'center'; g.font = '700 26px sans-serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = fare ? (blink2 ? '#ff4a36' : '#ffb04a') : '#ffd27a';
     g.strokeText('GRANAT!', cx, cy); g.fillText('GRANAT!', cx, cy);
-    g.font = '600 14px sans-serif'; const t2 = `${Math.round(bd)} m · ${Fiende3d.igjen(best).toFixed(1)} s${fare ? ' – løp!' : ''}`; g.strokeText(t2, cx, cy + 20); g.fillText(t2, cx, cy + 20);
+    g.font = '600 14px sans-serif'; const t2 = `${Math.round(bd)} m · ${Fiende3d.igjen(best).toFixed(1).replace('.', ',')} s${fare ? ' – løp!' : ''}`; g.strokeText(t2, cx, cy + 20); g.fillText(t2, cx, cy + 20);
     // pila peker dit granaten er (opp = foran deg)
     g.translate(cx, cy + 48); g.rotate(th); g.fillStyle = fare ? '#ff4a36' : '#ffd27a'; g.beginPath(); g.moveTo(0, -16); g.lineTo(10, 6); g.lineTo(0, 1); g.lineTo(-10, 6); g.closePath(); g.stroke(); g.fill(); g.restore(); });
 

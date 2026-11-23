@@ -57,6 +57,7 @@ const ROLLER = ['lagfører', 'nestlagfører', 'skarpskytter', 'sanitet', 'radio'
 const lag = (side, bev, ekstra) => ({ side, navn: side + ' lag', strid: bev ? { bev } : undefined, menn: ROLLER.map(rolle => ({ rolle, hp: 1 })), ...(ekstra || {}) });
 { const røver = lag('rød', 'lett'), selskap = lag('rød', 'standard'), nær = lag('blå', 'nærstrid');
   ok(Lagkamp.antall(røver) < Lagkamp.antall(selskap) && Lagkamp.antall(selskap) < Lagkamp.antall(nær), `røvere har færrest granater (${Lagkamp.antall(røver)} / ${Lagkamp.antall(selskap)} / ${Lagkamp.antall(nær)})`);
+  ok(Lagkamp.antall({ side: 'rød', raid: 1, navn: 'R', menn: [] }) === REGLER.lagGranat.start.lett && Lagkamp.antall({ side: 'grønn', navn: 'G', menn: [] }) === REGLER.lagGranat.start.avstand, 'uten stridsregler: røvere lett, grønn avstand');
   let brukt = 0; const rng = () => { brukt++; return .1; };
   const langt = Lagkamp.runde(selskap, nær, 120, {}, rng); ok(langt.kastet === 0 && brukt === 0 && selskap.granater === 4, 'ingen granater på 120 m, og tilfeldigheten brukes ikke');
   const kort = Lagkamp.runde(selskap, nær, 40, {}, rng); ok(kort.kastet === 2 && kort.treff >= 2 && selskap.granater === 2, `på 40 m kastes to granater (${kort.treff} treff), to igjen`);
