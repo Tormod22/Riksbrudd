@@ -1605,3 +1605,13 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   salve – uten den er kampen nøyaktig som før. bakkekamp-visning.js: fiender innen 15–35 m kaster granater mot deg når du går («GRANAT!»,
   pil, nedtelling, dekning bare når veggen er mellom), blink i kartet, granatene fylles med ammunisjonen. Utstyr.VÅPEN.lmg = lett maskingevær.
   Alt sover i testene (BakkekampSpill.test). VAKT vakter/granater.js («fiendens granater»). Tallene er Claudes forslag.
+  KONTRAKTENE SOM DEN RØDE TRÅDEN (23. nov, R18-A; detaljer i docs/natt/kontrakter.md): et nytt spill får straks den første kontrakten
+  «Hent nødlageret i <tettsted ca. 2 km unna>» (Selskap.førsteKontrakt, type 'forsyning', 400 000 kr, ingen bot). TRÅDEN (Selskap.TRÅD,
+  S.tråd lagret med selskapet) leder ett steg om gangen: ta kontrakten → lag en tropp → send den → hjem (betalt) → bygg noe → ta neste
+  kontrakt. «Neste»-lappen #nestelapp over kommandolinja/bunnmenyen (SelskapSpill.lapp/følgLapp) sier alltid hva den aktive kontrakten
+  venter på; knappen steget gjelder får klassen traadpek. Opplæringsruta og «Neste mål» viker for tråden mens den går. NIVÅER (Ukjent,
+  Kjent i bygda, Etablert, Ettertraktet: leverte kontrakter + «pålitelig») gir høyere betaling og større jobber; krav per tilbud
+  (Selskap.kravFor/kanTa: lagstørrelse for hold/rydd, eget kjøretøy for eskorte, nivå – låste tilbud fra neste nivå vises med 🔒).
+  Koblinger: prisstigningen i markedet i betalingen, +25 % i egne tettsteder, kontrakter i krigskartet (KRIG_TILLEGG.by), motangrep
+  mot leiren etter rydd/hold (SpilletSpill.angrep), nye folk fra nivå 2. Knappene går via KOMMANDO (kontraktTa/Avslå/Lever/Avbryt/Pris i
+  kommando-visning.js). I testene sover alt til SelskapSpill.test = true. VAKT vakter/kontrakter.js («den røde tråden»). Tallene er Claudes.

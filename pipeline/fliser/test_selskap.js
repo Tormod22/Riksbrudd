@@ -96,4 +96,51 @@ ok(JSON.parse(J) && typeof JSON.parse(J).sider.blå.aktive === 'object', 'ren JS
 S0.endreRykte(S, 'blå', { pålitelig: 500, hardhendt: -500 }); ok(S.sider.blå.rykte.pålitelig === 100 && S.sider.blå.rykte.hardhendt === 0, 'rykte 0–100');
 // fristen som tekst (R16-D: «13 t 60 min» kom før)
 ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ frist: 90 }, 0) === '1 t 30 min igjen' && S0.fristTekst({ frist: 30.2 }, 0) === '31 min igjen', 'fristTekst: ' + S0.fristTekst({ frist: 839.6 }, 0));
+// ---------- R18-A: den første kontrakten, tråden, nivåene og kravene ----------
+{
+  const L0 = { x: 200000, y: 6900000 }, T = S0.ny(L0);
+  const st = [{ navn: 'Langt unna', x: L0.x + 20000, y: L0.y, slag: 'tettsted' }, { navn: 'Nabobygda', x: L0.x + 2100, y: L0.y, slag: 'tettsted', id: 7 }, { navn: 'Nær bru', x: L0.x + 300, y: L0.y, slag: 'bru' }];
+  const k = S0.førsteKontrakt(T, 'blå', 0, st);
+  ok(k && k.type === 'forsyning' && k.første && k.sted.navn === 'Nabobygda' && T.tilbud[0] === k && T.tråd && T.tråd.k === k.id, 'første kontrakt: nærmeste sted rundt 2 km, øverst');
+  ok(S0.førsteKontrakt(T, 'blå', 0, st) === null, 'første kontrakt lages bare én gang');
+  const T2 = S0.ny(L0); ok(S0.førsteKontrakt(T2, 'blå', 0, [], { x: L0.x + 1600, y: L0.y, navn: 'forsyningslageret' }).sted.slag === 'lager', 'reserve uten steder');
+  ok(S0.trådSteg(T).id === 'ta', 'tråden starter med «ta»');
+  const b = { tatt: false, tropper: 0, framme: false, levert: false, bygg: 3, nyKontrakt: false };
+  ok(!S0.oppdaterTråd(T, b).length && S0.trådSteg(T).id === 'ta', 'ingenting gjort');
+  b.tatt = true; ok(S0.oppdaterTråd(T, b).join() === 'ta' && S0.trådSteg(T).id === 'tropp', 'tatt -> lag en tropp');
+  b.tropper = 1; S0.oppdaterTråd(T, b); ok(S0.trådSteg(T).id === 'send', 'tropp -> send');
+  b.framme = true; S0.oppdaterTråd(T, b); ok(S0.trådSteg(T).id === 'hjem', 'framme -> hjem');
+  b.levert = true; S0.oppdaterTråd(T, b); ok(S0.trådSteg(T).id === 'bygg' && T.tråd.byggVed === 3, 'levert -> bygg (husker antall bygg)');
+  S0.oppdaterTråd(T, b); ok(S0.trådSteg(T).id === 'bygg', 'samme antall bygg: ikke ferdig');
+  b.bygg = 4; S0.oppdaterTråd(T, b); ok(S0.trådSteg(T).id === 'neste', 'nytt bygg -> neste kontrakt');
+  b.nyKontrakt = true; S0.oppdaterTråd(T, b); ok(S0.trådSteg(T) === null && T.tråd.slutt, 'tråden er ferdig');
+  // brudd: hopper fram til «neste»
+  const T3 = S0.ny(L0); S0.førsteKontrakt(T3, 'blå', 0, st); S0.oppdaterTråd(T3, { brutt: true }); ok(S0.trådSteg(T3).id === 'neste', 'brutt første kontrakt -> neste');
+  // lagring av tråden
+  const T4 = S0.fraJSON(S0.tilJSON(T), L0); ok(T4.tråd && T4.tråd.slutt && T4.tilbud.some(q => q.type === 'forsyning') === T.tilbud.some(q => q.type === 'forsyning'), 'tråden lagres');
+  // forsyning: godta, hentet, levert i leiren
+  const T5 = S0.ny(L0), f = S0.førsteKontrakt(T5, 'blå', 0, st); ok(S0.godta(T5, 'blå', f.id, 10).ok, 'første kontrakt kan tas uten krav');
+  S0.steg(T5, 'blå', 20, 1, { [f.id]: { hentet: true } }); ok(f.hentet && f.status === 'aktiv', 'forsyningene hentet');
+  const lv = S0.steg(T5, 'blå', 30, 1, { [f.id]: { i: true, hentet: true } }); ok(lv[0].type === 'levert' && lv[0].kr === 400000 && !lv[0].motangrep && !lv[0].rekrutt, 'levert: 400 000 kr, ingen motangrep for den første');
+  ok(/nødlageret/.test(S0.lappFor(f, {}, 0)), 'lapp for forsyning');
+  // nivåene
+  const sd = S0.side(S0.ny(L0), 'blå'); ok(S0.nivå(sd).nr === 1 && S0.nesteNivå(sd).mangler.length === 2, 'nivå 1, to ting mangler for nivå 2');
+  sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
+  sd.sum.levert = 20; sd.rykte.pålitelig = 99; ok(S0.nivå(sd).nr === 4 && S0.nesteNivå(sd) === null, 'øverste nivå');
+  // kravene
+  const hold = { type: 'hold', nivå: 1 }, esk = { type: 'eskorte', nivå: 1 }, stor = { type: 'hold', nivå: 2 }, sd1 = S0.side(S0.ny(L0), 'blå');
+  ok(S0.kanTa(hold, { størsteLag: 3, kjøretøy: 0 }, sd1).ok && !S0.kanTa(hold, { størsteLag: 2, kjøretøy: 0 }, sd1).ok, 'hold krever et lag på 3');
+  ok(!S0.kanTa(esk, { størsteLag: 9, kjøretøy: 0 }, sd1).ok && S0.kanTa(esk, { størsteLag: 0, kjøretøy: 1 }, sd1).ok, 'eskorte krever et kjøretøy');
+  ok(!S0.kanTa(stor, { størsteLag: 9, kjøretøy: 2 }, sd1).ok && /nivå 2/.test(S0.kanTa(stor, {}, sd1).mangler[0]), 'nivå 2-kontrakt er låst på nivå 1');
+  const T6 = S0.ny(L0); T6.tilbud.push({ ...hold, id: 'h1', timer: 10, betaling: 1, bot: 1, sted: { navn: 'X', x: 0, y: 0 }, utløper: 99 });
+  const gg = S0.godta(T6, 'blå', 'h1', 0, null, { størsteLag: 1, kjøretøy: 0 }); ok(!gg.ok && /minst 3/.test(gg.grunn) && T6.tilbud.length === 1, 'godta med for lite lag avvises');
+  // høyere nivå betaler mer, prisstigningen også
+  ok(S0.betaling('hold', { pålitelig: 50 }, 'vanlig', 5000, 6, 1.8) > S0.betaling('hold', { pålitelig: 50 }, 'vanlig', 5000, 6) && S0.betaling('hent', { pålitelig: 50 }, 'vanlig', 5000, 0, 1, 1.2) > S0.betaling('hent', { pålitelig: 50 }, 'vanlig', 5000, 0), 'nivå og prisstigning gir mer');
+  // tilbudene får nivå; noen er fra neste nivå
+  const T7 = S0.ny(L0); let neste = 0; for (let i = 0; i < 20; i++) neste += S0.lagTilbud(T7, 'blå', i, steder.map(q => ({ ...q, x: q.x - 205000 + L0.x, y: q.y - 6900000 + L0.y })), S0.lagRand(i + 3)).filter(q => q.nivå === 2).length;
+  ok(neste > 0 && T7.tilbud.every(q => q.nivå >= 1), 'låste tilbud fra neste nivå: ' + neste);
+  // motangrep og rekruttering ved levering (med fast tilfeldighet)
+  const T8 = S0.ny(L0); T8.sider.blå.sum.levert = 5; T8.sider.blå.rykte.pålitelig = 80; const ry = { id: 'r1', type: 'rydd', timer: 10, betaling: 1, bot: 1, sted: { navn: 'X', x: 0, y: 0 }, utløper: 99 };
+  T8.tilbud.push(ry); S0.godta(T8, 'blå', 'r1', 0); const hv = S0.lever(T8, 'blå', ry, 1, () => .01); ok(hv.motangrep && hv.rekrutt, 'motangrep og rekruttering');
+}
 console.log(`Alle ${n} testene for selskap.js er ok`);

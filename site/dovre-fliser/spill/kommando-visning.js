@@ -79,6 +79,14 @@
     kjørStopp: kj => (window.KjoretoySpill && KjoretoySpill.stoppRett ? KjoretoySpill.stoppRett(kj) : null),
   });
 
+  // KONTRAKTENE (R18-A): knappene i «Selskapet» (spill/selskap-visning.js). Selskapet er vertens eget (lagres ikke hos gjester),
+  // så kommandoene er leirkommandoer; arbeidet gjøres av SelskapSpill.rett, og svaret { ok: false, grunn } blir en feil.
+  for (const [type, hva] of [['kontraktTa', 'tar en kontrakt'], ['kontraktAvslå', 'avslår et kontrakttilbud'], ['kontraktLever', 'leverer en kontrakt'], ['kontraktAvbryt', 'avbryter en kontrakt'], ['kontraktPris', 'endrer selskapets pris']])
+    K.registrer(type, { leir: true,
+      sjekk: () => (window.SelskapSpill && SelskapSpill.rett ? null : 'Selskapet er ikke klart.'),
+      utfør: k => { const r = SelskapSpill.rett[type](k.id); return r && r.ok === false && r.grunn ? { feil: r.grunn } : r; },
+      beskriv: () => hva });
+
   // ---------- den ene funksjonen knappene kaller ----------
   const nid = s => K.nid(s, ENHETER);
   const lokal = () => ({ lag: ENHETER, kjøretøy: window.KJORETOY || [], side: MIN_SIDE, spiller: null, erVert: true });

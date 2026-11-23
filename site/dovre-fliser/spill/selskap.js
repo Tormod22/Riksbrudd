@@ -46,7 +46,27 @@
     // de andre selskapene: sjansen per døgn for at de tar et åpent tilbud; andelen tilbud med en konkurrent; når konkurrenten er
     // ferdig (andel av fristen); sjansen for at konkurrenten angriper eskorten din
     rival: { tarPerDag: .35, konkurrent: .35, førstEtter: .55, angrep: .45, angrepVed: .35 },
+    // ---------- R18-A: DEN RØDE TRÅDEN (23. nov, brukeren: «det må være én tydelig rød tråd») – alle tallene er Claudes forslag ----------
+    // Den første kontrakten: hent forsyninger i et tettsted (eller en bru) nær leiren. Stedet: nærmest ønsket avstand innenfor min–maks;
+    // finnes ingen, legger visningen et forsyningslager reserve meter fra leiren. Fristen er romslig (1× er sanntid).
+    første: { betaling: 400000, timer: 72, min: 600, maks: 6000, ønsket: 2000, reserve: 1600, nær: 150 },
+    // NIVÅENE: leverte kontrakter og «pålitelig» låser opp større kontrakter. faktor = på betalingen; menn = minste lagstørrelse for
+    // hold/rydd på det nivået; teaser = sjansen for at ett av dagens tilbud er fra neste nivå (låst, men synlig)
+    NIVÅER: [
+      { nr: 1, navn: 'Ukjent', levert: 0, pålitelig: 0, faktor: 1, menn: 3 },
+      { nr: 2, navn: 'Kjent i bygda', levert: 2, pålitelig: 55, faktor: 1.35, menn: 5 },
+      { nr: 3, navn: 'Etablert', levert: 5, pålitelig: 65, faktor: 1.8, menn: 7 },
+      { nr: 4, navn: 'Ettertraktet', levert: 10, pålitelig: 78, faktor: 2.4, menn: 9 },
+    ],
+    teaser: .5,
+    // koblingene til resten av spillet ved levering: motangrep mot leiren (sjanse per type), en ny person vil bli med (fra nivå 2),
+    // ekstra betaling når stedet er et tettsted dere holder
+    motangrep: { rydd: .5, hold: .2, eskorte: .1, hent: .1, forsyning: 0 },
+    rekrutt: { fraNivå: 2, sjanse: .35 },
+    egetSted: .25,
   };
+  // den første kontrakten er en egen type som aldri kommer blant de vanlige tilbudene (typeVekter har den ikke)
+  REGLER.TYPER.forsyning = { navn: 'Hent nødlageret', betaling: REGLER.første.betaling, timer: REGLER.første.timer, hardhendt: 0, givere: ['bygd'] };
   const SIDER = ['blå', 'rød', 'grønn'];
   // oppdiktede firmaer (Claudes forslag; ikke ekte firmaer)
   const FIRMA = ['Gråfjell Frakt', 'Tindvik Drivstoff', 'Brattli Mineral', 'Dalsnes Kraftlag', 'Kvernhaug Mølle', 'Storlia Tømmer', 'Ytterø Sjømat'];
@@ -99,20 +119,25 @@
     return v;
   }
   function antallTilbud(r) { return REGLER.tilbudPerDag + (r.pålitelig >= 70 ? 1 : 0) - (r.pålitelig < 25 ? 1 : 0); }
-  function betaling(typ, r, prisId, meter, timer) {
+  // nivå: faktoren fra REGLER.NIVÅER (1 når den mangler); infl: prisstigningen i markedet (spill/spillet.js Marked, 1 når den mangler)
+  function betaling(typ, r, prisId, meter, timer, nivåFaktor = 1, infl = 1) {
     const T = REGLER.TYPER[typ], p = (REGLER.pris[prisId] || REGLER.pris.vanlig).faktor;
     const ekstra = typ === 'hold' ? timer / 6 : 1;
-    return avrund(T.betaling * (.75 + r.pålitelig / 200) * p * ekstra * (1 + meter / 40000));
+    return avrund(T.betaling * (.75 + r.pålitelig / 200) * p * ekstra * (1 + meter / 40000) * nivåFaktor * (Number.isFinite(infl) && infl > 0 ? infl : 1));
   }
   // steder: [{ navn, x, y, slag: 'tettsted' | 'bru', id, folk }] – visningen finner dem i kartet. Gir de nye tilbudene (lagt i S.tilbud).
-  function lagTilbud(S, id, nå, steder, rand) {
+  // o: { infl } – prisstigningen i markedet ganges inn i betalingen
+  function lagTilbud(S, id, nå, steder, rand, o = {}) {
     const r = rand || lagRand(S.nr * 7919 + Math.floor(nå) + 1), sd = side(S, id), R = sd.rykte, L = S.leir || { x: 0, y: 0 };
+    const nv = nivå(sd), NV = REGLER.NIVÅER, teaser = nv.nr < NV.length && r() < REGLER.teaser;
     const iNærheten = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
       .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= REGLER.avstand.min && q.d <= REGLER.avstand.maks);
     const nye = [];
     if (!iNærheten.length) return nye;
     const byer = iNærheten.filter(q => q.slag !== 'bru'), bruer = iNærheten.filter(q => q.slag === 'bru');
     for (let n = antallTilbud(R); n > 0; n--) {
+      // det siste tilbudet kan være fra neste nivå: låst til ryktet er godt nok, men synlig (så spilleren ser hva som venter)
+      const kNivå = teaser && n === 1 ? NV[nv.nr] : nv;
       const typ = vektet(typeVekter(R), r), giverSlag = vektet(giverVekter(R, typ), r), T = REGLER.TYPER[typ];
       let sted = velg(byer.length ? byer : iNærheten, r), fra = null, timer = T.timer, hold = 0, person = null, last = null;
       if (typ === 'hold' && bruer.length && r() < .55) sted = velg(bruer, r);
@@ -126,14 +151,14 @@
       if (typ === 'hent') person = `${velg(ROLLER, r)} ${velg(FORNAVN, r)} ${velg(ETTERNAVN, r)}`;
       const giver = giverSlag === 'firma' ? { slag: 'firma', navn: velg(FIRMA, r) } : giverSlag === 'by' ? { slag: 'by', navn: `Kommunen i ${(byer.length ? velg(byer, r) : sted).navn}` } : { slag: 'bygd', navn: `Bygdelaget i ${sted.navn}` };
       const meter = Math.hypot(sted.x - L.x, sted.y - L.y) + (fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : 0);
-      const kr = betaling(typ, R, sd.pris, meter, hold);
+      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl);
       // vegsperra står litt utenfor stedet (visningen flytter den til nærmeste veg)
       const v = r() * Math.PI * 2, sperre = typ === 'rydd' ? { x: Math.round(sted.x + Math.cos(v) * 900), y: Math.round(sted.y + Math.sin(v) * 900) } : null;
       const andreSider = SIDER.filter(q => q !== id);
       const konkurrent = (typ === 'rydd' || typ === 'hent') && r() < REGLER.rival.konkurrent ? velg(andreSider, r) : null;
       const k = { id: 'k' + (++S.nr), type: typ, giver, status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + REGLER.tilbudVarer), timer, hold, betaling: kr,
         bot: avrund(kr * REGLER.bot), sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
-        fra: fra ? { navn: fra.navn, x: Math.round(fra.x), y: Math.round(fra.y) } : null, last, person, sperre, konkurrent, side: null, for: id };
+        fra: fra ? { navn: fra.navn, x: Math.round(fra.x), y: Math.round(fra.y) } : null, last, person, sperre, konkurrent, side: null, for: id, nivå: kNivå.nr };
       k.tittel = tittel(k); nye.push(k);
     }
     S.tilbud.push(...nye);
@@ -144,6 +169,7 @@
     if (k.type === 'eskorte') return `Eskorter ${k.last === 'tankbil' ? 'tankbilen' : 'lastebilen'} fra ${k.fra.navn} til ${k.sted.navn}`;
     if (k.type === 'hold') return `Hold ${k.sted.slag === 'bru' ? k.sted.navn : k.sted.navn} i ${k.hold} timer`;
     if (k.type === 'rydd') return `Rydd vegsperra ved ${k.sted.navn}`;
+    if (k.type === 'forsyning') return `Hent nødlageret i ${k.sted.navn}`;
     return `Hent ${k.person} i ${k.sted.navn}`;
   }
   // kravet med enkle ord
@@ -152,26 +178,60 @@
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`;
     if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.`;
     if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.`;
+    if (k.type === 'forsyning') return `${k.giver.navn} har et nødlager med mat og utstyr ved ${k.sted.navn}, men tør ikke hente det selv. Send en tropp dit (innen ${REGLER.første.nær} m) og bær lageret hjem til leiren (innen ${N.leir} m).`;
     return `Send et lag til ${k.person} (merket i kartet ved ${k.sted.navn}) og ta vedkommende med til leiren (innen ${N.leir} m). Blir laget slått ut, er kontrakten brutt.`;
   }
 
+  // ---------- NIVÅER OG KRAV (R18-A) ----------
+  // nivået selskapet har nådd: alle kravene (leverte kontrakter og «pålitelig») må holde
+  function nivå(sd) { const NV = REGLER.NIVÅER; let n = NV[0]; for (const q of NV) if (tall(sd.sum && sd.sum.levert) >= q.levert && tall(sd.rykte && sd.rykte.pålitelig) >= q.pålitelig) n = q; return n; }
+  // hva som trengs for neste nivå: { nivå, mangler: [tekst] } – null på øverste nivå
+  function nesteNivå(sd) {
+    const nå = nivå(sd), q = REGLER.NIVÅER[nå.nr]; if (!q) return null; const mangler = [], lev = tall(sd.sum && sd.sum.levert), pål = tall(sd.rykte && sd.rykte.pålitelig);
+    if (lev < q.levert) mangler.push(`${q.levert - lev} ${q.levert - lev === 1 ? 'levert kontrakt' : 'leverte kontrakter'} til (${lev} av ${q.levert})`);
+    if (pål < q.pålitelig) mangler.push(`«pålitelig» ${q.pålitelig} (nå ${Math.round(pål)})`);
+    return { nivå: q, mangler };
+  }
+  // kravet for å ta en kontrakt (avledet av typen og nivået, så gamle lagrede tilbud også får det):
+  // nivå = selskapets nivå; menn = minst så mange friske i ett lag (hold, rydd); kjøretøy = et eget kjøretøy til eskorten
+  function kravFor(k) {
+    const NV = REGLER.NIVÅER, n = NV[Math.max(0, Math.min(NV.length, k.nivå || 1) - 1)], K = { nivå: n.nr, menn: 0, kjøretøy: 0 };
+    if (k.type === 'hold') K.menn = n.menn; if (k.type === 'rydd') K.menn = n.menn + 1; if (k.type === 'eskorte') K.kjøretøy = 1;
+    return K;
+  }
+  // har: { størsteLag (friske i det største egne laget), kjøretøy (egne kjøretøy uten kontrakt) } – fra visningen. Gir { ok, mangler: [tekst] }
+  function kanTa(k, har, sd) {
+    const K = kravFor(k), m = [], nv = sd ? nivå(sd).nr : 99;
+    if (K.nivå > nv) m.push(`nivå ${K.nivå} «${REGLER.NIVÅER[K.nivå - 1].navn}» (dere er på nivå ${nv})`);
+    if (har && K.menn && tall(har.størsteLag) < K.menn) m.push(`et lag med minst ${K.menn} friske (største lag nå: ${tall(har.størsteLag)})`);
+    if (har && K.kjøretøy && tall(har.kjøretøy) < K.kjøretøy) m.push('et eget kjøretøy til eskorten (bestill et ved basen: trykk på basen i kartet)');
+    return { ok: !m.length, mangler: m };
+  }
+  const kravKort = k => { const K = kravFor(k), d = []; if (K.nivå > 1) d.push(`nivå ${K.nivå}`); if (K.menn) d.push(`lag på ${K.menn}+`); if (K.kjøretøy) d.push('kjøretøy'); return d.join(', '); };
+
   // ---------- godta, levere, bryte ----------
-  function godta(S, id, kId, nå, rand) {
+  // har (valgfri): det leiren har (se kanTa) – uten har sjekkes bare nivået når sd finnes
+  function godta(S, id, kId, nå, rand, har) {
     const sd = side(S, id), i = S.tilbud.findIndex(q => q.id === kId);
     if (i < 0) return { ok: false, grunn: 'Tilbudet finnes ikke lenger.' };
     if (sd.aktive.length >= REGLER.maksAktive) return { ok: false, grunn: `Dere har alt ${REGLER.maksAktive} kontrakter. Lever eller avbryt en først.` };
+    if (har) { const kt = kanTa(S.tilbud[i], har, sd); if (!kt.ok) return { ok: false, grunn: 'Dere mangler: ' + kt.mangler.join(' og ') + '.', mangler: kt.mangler }; }
     const k = S.tilbud.splice(i, 1)[0], r = rand || tilf;
     Object.assign(k, { status: 'aktiv', side: id, godtatt: Math.round(nå), frist: Math.round(nå + k.timer * 60), framdrift: 0, pris: sd.pris });
     if (k.type === 'eskorte' && r() < REGLER.rival.angrep) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
     sd.aktive.push(k); return { ok: true, k };
   }
   function avslutt(S, id, k, status) { const sd = side(S, id); sd.aktive = sd.aktive.filter(q => q.id !== k.id); k.status = status; sd.ferdige.unshift(k); sd.ferdige.length = Math.min(sd.ferdige.length, 12); }
-  // gir { kr, rykte } – pengene settes inn av visningen
-  function lever(S, id, k, nå) {
-    const sd = side(S, id), T = REGLER.TYPER[k.type], P = REGLER.pris[k.pris] || REGLER.pris.vanlig;
+  // gir { kr, rykte } – pengene settes inn av visningen. R18-A: også { motangrep, rekrutt, nivåOpp } (koblingene til resten av spillet)
+  function lever(S, id, k, nå, rand) {
+    const sd = side(S, id), T = REGLER.TYPER[k.type], P = REGLER.pris[k.pris] || REGLER.pris.vanlig, før = nivå(sd).nr, r = rand || tilf;
     endreRykte(S, id, { pålitelig: REGLER.levert.pålitelig, hardhendt: T.hardhendt, billig: P.billig });
     k.ferdig = Math.round(nå); avslutt(S, id, k, 'levert'); sd.sum.levert++; sd.sum.tjent += k.betaling;
-    return { type: 'levert', k, kr: k.betaling };
+    const nv = nivå(sd), h = { type: 'levert', k, kr: k.betaling };
+    if (nv.nr > før) h.nivåOpp = nv;
+    if (!k.første && r() < (REGLER.motangrep[k.type] || 0)) h.motangrep = true;
+    if (!k.første && nv.nr >= REGLER.rekrutt.fraNivå && r() < REGLER.rekrutt.sjanse) h.rekrutt = true;
+    return h;
   }
   // grunn: 'frist' | 'tapt' | 'avbrutt' | 'rivalFørst'. Gir { kr: bot }
   function bryt(S, id, k, grunn, nå) {
@@ -217,6 +277,64 @@
     for (const id of SIDER) endreRykte(S, id, { hardhendt: REGLER.hardDrift });
     return ut;
   }
+  // ---------- DEN FØRSTE KONTRAKTEN OG TRÅDEN (R18-A) ----------
+  // Lager den første kontrakten (et tilbud øverst i lista) når selskapet er nytt. steder som i lagTilbud; reserve = { x, y, navn } når
+  // ingen steder ligger innenfor REGLER.første.min–maks. Gir kontrakten, eller null når den alt er laget.
+  function førsteKontrakt(S, id, nå, steder, reserve) {
+    if (S.tråd) return null; const F = REGLER.første, L = S.leir || { x: 0, y: 0 };
+    const kand = (steder || []).filter(q => q && q.navn && Number.isFinite(q.x) && Number.isFinite(q.y)).map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) }))
+      .filter(q => q.d >= F.min && q.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket) || (a.slag === 'bru') - (b.slag === 'bru'));
+    const sted = kand[0] || (reserve ? { navn: reserve.navn || 'nødlageret', x: reserve.x, y: reserve.y, slag: 'lager' } : null);
+    if (!sted) return null;
+    const kr = avrund(F.betaling), k = { id: 'k' + (++S.nr), type: 'forsyning', første: true, giver: { slag: 'bygd', navn: `Bygdelaget i ${sted.slag === 'lager' ? 'nærheten' : sted.navn}` },
+      status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + 14 * 1440), timer: F.timer, hold: 0, betaling: kr, bot: 0,
+      sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
+      fra: null, last: null, person: null, sperre: null, konkurrent: null, side: null, for: id, nivå: 1 };
+    k.tittel = tittel(k); S.tilbud.unshift(k);
+    S.tråd = { k: k.id, gjort: [], byggVed: null, slutt: false };
+    return k;
+  }
+  // Stegene i den første kontrakten, ett om gangen. b = øyeblikksbildet fra visningen:
+  //   { tatt, tropper (egne tropper du har laget), framme (et lag har hentet forsyningene), levert, bygg (antall bygg i leiren, også bestilte),
+  //     byggVed (antallet da betalingen kom – settes av oppdater), nyKontrakt (en kontrakt nr. 2 er tatt) }
+  // pek = hvor spilleren skal trykke: 'selskap' | 'tropper' | 'kart' | 'leir'.
+  const TRÅD = [
+    { id: 'ta', tittel: 'Ta din første kontrakt', pek: 'selskap', lapp: k => `Ta kontrakten «${k.tittel}»`,
+      tekst: k => `${k.giver.navn} tilbyr ${kroner(k.betaling)} for å hente nødlageret i ${k.sted.navn}. Åpne Selskapet og trykk «Ta kontrakten».`, ferdig: b => b.tatt },
+    { id: 'tropp', tittel: 'Lag en tropp', pek: 'tropper', lapp: () => 'Lag en tropp av folkene dine',
+      tekst: () => 'Åpne Tropper og trykk «Lag ny tropp». Velg 2–4 personer – la minst to stå igjen på Bygg.', ferdig: b => b.tropper > 0 || b.framme },
+    { id: 'send', tittel: 'Send troppen', pek: 'kart', lapp: k => `Send troppen til ${k.sted.navn}`,
+      tekst: k => `Velg troppen i kartet, trykk «Marsjer» og så på det gule merket ved ${k.sted.navn}.`, ferdig: b => b.framme },
+    { id: 'hjem', tittel: 'Kom tilbake', pek: 'kart', lapp: () => 'Ta nødlageret med hjem til leiren',
+      tekst: () => 'Troppen bærer nødlageret. Gi den ordre tilbake til leiren – da betaler bygdelaget.', ferdig: b => b.levert },
+    { id: 'bygg', tittel: 'Bygg noe for pengene', pek: 'leir', lapp: () => 'Bygg noe for pengene (Leir → Bygg)',
+      tekst: k => `Bygdelaget betalte ${kroner(k.betaling)}. Åpne Leir og bygg noe – en brakke eller et vakttårn er et godt valg.`, ferdig: b => b.byggVed !== null && b.bygg > b.byggVed },
+    { id: 'neste', tittel: 'Neste kontrakt', pek: 'selskap', lapp: () => 'Ta en ny kontrakt i Selskapet',
+      tekst: () => 'Ryktet ditt har vokst. Nye kontrakter står i Selskapet – de større krever bedre rykte, kjøretøy eller sterkere lag.', ferdig: b => b.nyKontrakt },
+  ];
+  const kroner = v => Math.round(v).toLocaleString('nb-NO').replace(/\u00a0/g, ' ') + ' kr';
+  // går gjennom bildet og merker stegene som er gjort (ett om gangen, så lenge de holder). Svarer id-ene som ble gjort nå.
+  // Brytes den første kontrakten (frist, troppen slått ut, avbrutt), hoppes stegene fram til «neste».
+  function oppdaterTråd(S, b) {
+    const T = S && S.tråd; if (!T || T.slutt) return []; const nye = [];
+    if (b.brutt) for (const s of TRÅD) if (s.id !== 'neste' && !T.gjort.includes(s.id)) { T.gjort.push(s.id); nye.push(s.id); }
+    for (const s of TRÅD) { if (T.gjort.includes(s.id)) continue; let f = false; try { f = !!s.ferdig({ ...b, byggVed: T.byggVed }); } catch (e) { f = false; } if (!f) break;
+      T.gjort.push(s.id); nye.push(s.id); if (s.id === 'hjem') T.byggVed = tall(b.bygg, 0); }
+    if (TRÅD.every(s => T.gjort.includes(s.id))) T.slutt = true;
+    return nye;
+  }
+  const trådSteg = S => (S && S.tråd && !S.tråd.slutt ? TRÅD.find(s => !S.tråd.gjort.includes(s.id)) || null : null);
+  // «Neste»-lappen for en aktiv kontrakt: hva den venter på nå. v = vurderingen fra visningen ({ i, hentet, lag, fiender, igjen, tapt }).
+  function lappFor(k, v, nå) {
+    v = v || {}; const st = k.sted.navn;
+    if (k.type === 'hold') { const h = Math.floor(tall(k.framdrift) / 60), m = Math.round(tall(k.framdrift) % 60);
+      return v.fiender ? `Fiender ved ${st} – rydd dem bort (holdt ${h} t ${m} min av ${k.hold} t)` : v.lag ? `Hold ${st}: ${h} t ${m} min av ${k.hold} t` : `Send et lag (${kravFor(k).menn}+) til ${st} og hold stedet`; }
+    if (k.type === 'eskorte') return v.i ? `Lever: tankbilen er framme i ${st}` : `Kjør ${k.bil || 'bilen'} til ${st}` + (Number.isFinite(v.igjen) ? ` (${v.igjen >= 1000 ? (Math.round(v.igjen / 100) / 10).toString().replace('.', ',') + ' km' : Math.round(v.igjen) + ' m'} igjen)` : '');
+    if (k.type === 'rydd') return v.i ? `Lever: sperra ved ${st} er slått ut` : `Slå ut vegsperra ved ${st}`;
+    if (k.type === 'forsyning') return k.hentet ? 'Ta nødlageret med hjem til leiren' : `Send en tropp til ${st} og hent nødlageret`;
+    return k.hentet ? `Ta ${k.person} med til leiren` : `Hent ${k.person} i ${st}`;
+  }
+
   // sivile tap, sprengninger o.l.: hardhendt opp
   const hardhendt = (S, id, n) => endreRykte(S, id, { hardhendt: n });
   function settPris(S, id, p) { if (!REGLER.pris[p]) return false; side(S, id).pris = p; return true; }
@@ -228,7 +346,8 @@
     try {
       const d = typeof t === 'string' ? JSON.parse(t) : t; if (!d || d.versjon !== REGLER.versjon || !d.sider) return null;
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
-      const S = ny(d.leir, {}); S.nr = tall(d.nr, 0); S.dag = tall(d.dag, -1); S.rivalDag = tall(d.rivalDag, -1);
+      const S = ny(d.leir, {}); S.nr = tall(d.nr, 0);
+      if (d.tråd && typeof d.tråd === 'object') S.tråd = { k: String(d.tråd.k || ''), gjort: (Array.isArray(d.tråd.gjort) ? d.tråd.gjort : []).filter(x => TRÅD.some(s => s.id === x)), byggVed: Number.isFinite(d.tråd.byggVed) ? d.tråd.byggVed : null, slutt: !!d.tråd.slutt }; S.dag = tall(d.dag, -1); S.rivalDag = tall(d.rivalDag, -1);
       S.tilbud = (Array.isArray(d.tilbud) ? d.tilbud : []).filter(k => k && k.id && REGLER.TYPER[k.type] && k.sted && Number.isFinite(k.sted.x));
       for (const id of Object.keys(d.sider)) { const q = d.sider[id]; if (!q || typeof q !== 'object') continue; const sd = side(S, id);
         sd.navn = String(q.navn || id); sd.pris = REGLER.pris[q.pris] ? q.pris : 'vanlig';
@@ -241,7 +360,7 @@
   }
 
   const api = { REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst,
-    godta, lever, bryt, avbryt, steg, dagSteg, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
+    godta, lever, bryt, avbryt, steg, dagSteg, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
