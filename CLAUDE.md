@@ -1633,3 +1633,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   Koblinger: prisstigningen i markedet i betalingen, +25 % i egne tettsteder, kontrakter i krigskartet (KRIG_TILLEGG.by), motangrep
   mot leiren etter rydd/hold (SpilletSpill.angrep), nye folk fra nivå 2. Knappene går via KOMMANDO (kontraktTa/Avslå/Lever/Avbryt/Pris i
   kommando-visning.js). I testene sover alt til SelskapSpill.test = true. VAKT vakter/kontrakter.js («den røde tråden»). Tallene er Claudes.
+  FORLATTE STEDER (R18-F, 23. nov, brukeren: Silent Hill som inspirasjon for stemningen, valgte «forlatte steder»; bare stemning – ingen navn,
+  figurer, monstre eller noe overnaturlig): spill/spor.js (regler uten DOM, test_spor.js: Spor.historie(kl, i) – karantene, flukt, barrikade,
+  venting, syk, plyndret, stille …; LAPPER = 50 lapper per byggtype og tema, noen peker til et gjemt lager; dato(i) = kalenderen; gate();
+  plater(); lydInne()) + spill/spor-visning.js (window.SporSpill). interior3d.js kaller SporSpill.inne(c) (generator) etter FORLATT-blokka:
+  karantenelapp med teip på døra, barnetegning, halvpakket koffert, planker for bakdøra, madrass i stua, åpne tomme skap, kalender, brev,
+  madrasser, lys, papir, sperrebånd, handlekurver (pl.spor; sperrer ikke). «Les lappen (N)» (#leseknapp i #inneknapper), #lapppanel,
+  «Lapper du har funnet» i sekken (SEKK_TILLEGG), «Gjemt lager?» i 2D, leting-visning.js gir ekstra via SporSpill.medGjemt; lagres per leir
+  i «riksbrudd-spor». Stemningslinja #sporlapp én gang per hus (sover i testene til SporSpill.test). Tettstedene i 3D (S ≤ 2200, u.spor):
+  forlatte biler med åpen dør, møbelbarrikader, håndmalte skilt (CanvasTexture), plater for vinduene. lyd.js: bylyden × 0,15 (t.tomt),
+  vind i knust vindu (kanal «glipe»), knirk/tikk/drypp inne, hund langt unna og dør som slår ute. VAKT vakter/forlatt.js (selvtester).
+  Målt i Dombås: huset + 1,7 % trekanter, gatene ca. 7 400 trekanter. Notat: docs/natt/forlatt.md. Tallene er Claudes forslag.

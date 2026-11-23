@@ -19,7 +19,10 @@
       // bølger: høres bare nær sjøen og lavt, sterkere når det blåser
       hav: ute * (t.hav || 0) * (1 - trinn(60, 400, t.høyde || 0)) * (.35 + .65 * trinn(1, 14, v)),
       innsjø: ute * (t.innsjø || 0) * (1 - trinn(30, 200, t.høyde || 0)) * (.25 + .35 * trinn(1, 10, v)),
-      regn: (t.inne ? .6 : 1) * (t.regn || 0) * (1 - oppe * .5), by: ute * (t.by || 0) * (1 - oppe) * (.5 + .5 * dag),
+      // (R18-F) tettstedene er tomme etter kollapsen (t.tomt): bare et svakt sus igjen av bylyden
+      regn: (t.inne ? .6 : 1) * (t.regn || 0) * (1 - oppe * .5), by: ute * (t.by || 0) * (1 - oppe) * (.5 + .5 * dag) * (t.tomt ? .15 : 1),
+      // (R18-F) vind i et knust vindu i et forlatt hus (t.glipe): en svak tone som stiger med vinden
+      glipe: t.inne && t.glipe ? trinn(2, 14, v) : 0,
       // fugler: om dagen, ikke om vinteren, ikke i regn/sterk vind, mest i skog og kratt
       fugler: vinter ? 0 : (t.inne ? .12 : 1) * dag * stille * (1 - trinn(8, 14, v)) * (1 - oppe) * (.25 + .75 * Math.max(t.skog || 0, (1 - (t.by || 0)) * .4)) * (t.årstid === 'høst' ? .4 : 1),
       måker: ute * dag * (t.hav || 0) * (1 - oppe) * (1 - trinn(10, 16, v)) * (vinter ? .5 : 1),
@@ -55,7 +58,7 @@
     måler = ac.createAnalyser(); måler.fftSize = 2048; ut.connect(måler);
     støy = lagStøy(false); brun = lagStøy(true);
     kanal('vind', 'bandpass', 420, .7); kanal('plyst', 'bandpass', 1300, 9); kanal('hav', 'lowpass', 520, .5, true); kanal('bølge', 'lowpass', 900, .4);
-    kanal('innsjø', 'bandpass', 700, 1.2); kanal('regn', 'highpass', 1800, .3); kanal('regnLav', 'lowpass', 900, .4); kanal('by', 'lowpass', 160, .6, true);
+    kanal('glipe', 'bandpass', 950, 11); kanal('innsjø', 'bandpass', 700, 1.2); kanal('regn', 'highpass', 1800, .3); kanal('regnLav', 'lowpass', 900, .4); kanal('by', 'lowpass', 160, .6, true);
   }
   // korte lyder: støyslag (fottrinn, torden) og fløytetoner (fugler, måker)
   let sistInne = null;
@@ -114,6 +117,14 @@
   }
 
   // ---------- hver ramme ----------
+  // (R18-F) FORLATTE STEDER: inne i et forlatt hus – stillhet, knirk, en klokke som tikker, et rør som drypper (Spor.lydInne per hus);
+  // ute i et tomt tettsted – ingen bylyd, en hund som gjør langt unna, en dør som slår i vinden. Diskret: lave nivåer, sjeldne lyder.
+  let nesteKnirk = 0, nesteTikk = 0, nesteDrypp = 0, nesteHund = 0, nesteDør = 0, husLyd = null, husFor = null;
+  function knirk(t0, s) { tone(t0, .45 + Math.random() * .4, 210 + Math.random() * 90, 150 + Math.random() * 40, s * .02, 'sawtooth'); slag(t0 + .05, .3, 'bandpass', 600, 4, s * .05); }
+  function tikk(t0, s) { slag(t0, .015, 'highpass', 3500, .7, s * .05); }
+  function drypp(t0, s) { tone(t0, .08, 1500 + Math.random() * 500, 650, s * .03); }
+  function hund(t0, s) { let t = t0; const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { tone(t, .13, 480 + Math.random() * 60, 300, s * .02, 'sawtooth'); slag(t, .12, 'lowpass', 700, 1, s * .04); t += .32 + Math.random() * .25; } }
+  function dørSlag(t0, s) { slag(t0, .3, 'lowpass', 170, 1.3, s * .18, true); slag(t0 + .02, .07, 'bandpass', 900, 1.2, s * .05); }
   let sistMål = 0, om = { hav: 0, innsjø: 0, skog: 0, by: 0 }, nesteFugl = 0, nesteMåke = 0, sistLyn = 0, sistPos = null, steg = 0, sistT = 0, bølgeFase = 0;
   const NV = {};
   KROKER.ramme3d.push(R => {
@@ -122,7 +133,9 @@
     const V = window.VAER || {}, VI = window.Vind3d ? Vind3d.VIND : { fart: 3 }, c = R.cam.position, u = R.ut;
     if (t - sistMål > .5) { sistMål = t; om = omgivelser(R); }
     const høyde = c.z - ((hoyde3d(c.x + u.cx, c.y + u.cy, u) - u.h0) * R.EX);
-    const N = nivåer({ vind: VI.fart, høyde, hav: om.hav, innsjø: om.innsjø, regn: V.regn || 0, snø: V.snø || 0, mørke: window.NATT ? NATT.mørke : 0, årstid: V.årstid, skog: om.skog, by: om.by, inne: !!(R.fot && window.Interior3d && Interior3d.inne(c.x, c.y)) });
+    const huset = R.fot && window.Interior3d ? Interior3d.inne(c.x, c.y) : null;
+    if (huset !== husFor) { husFor = huset; husLyd = huset && !huset.leir && huset.bygg && window.Spor ? Spor.lydInne(huset.bygg.kl, huset.bygg.i) : null; }
+    const N = nivåer({ vind: VI.fart, høyde, hav: om.hav, innsjø: om.innsjø, regn: V.regn || 0, snø: V.snø || 0, mørke: window.NATT ? NATT.mørke : 0, årstid: V.årstid, skog: om.skog, by: om.by, inne: !!huset, tomt: !!window.Spor, glipe: !!(husLyd && husLyd.glipe) });
     Object.assign(NV, N, { omgivelser: om, høyde });
     const sett = (k, v, tid) => kan[k].g.gain.setTargetAtTime(v, nå, tid || .4);
     sett('vind', N.vind * .32); kan.vind.f.frequency.setTargetAtTime(280 + 500 * Math.min(1, (VI.fart || 0) / 16) * (VI.kast || 1), nå, .6);
@@ -130,7 +143,15 @@
     // bølgene kommer inn i drag: en langsom puls (ca. 6–9 s) med brenning på toppen
     bølgeFase += dt * 2 * Math.PI / (9 - Math.min(3, (VI.fart || 0) / 4)); const puls = Math.pow(.5 + .5 * Math.sin(bølgeFase), 2.2);
     sett('hav', N.hav * (.25 + .35 * puls), .3); sett('bølge', N.hav * .22 * puls, .25); sett('innsjø', N.innsjø * (.05 + .05 * Math.sin(t * 2.3) ** 2), .2);
-    sett('regn', N.regn * .16); sett('regnLav', N.regn * .1); sett('by', N.by * .22);
+    sett('regn', N.regn * .16); sett('regnLav', N.regn * .1); sett('by', N.by * .22); sett('glipe', N.glipe * .03, .8); kan.glipe.f.frequency.setTargetAtTime(850 + 300 * (VI.kast || 1), nå, 1.2);
+    // (R18-F) lydene i forlatte hus og tomme tettsteder
+    if (husLyd) { if (nå > nesteKnirk) { if (nesteKnirk) knirk(nå + .05, 1); nesteKnirk = nå + husLyd.knirk[0] + Math.random() * (husLyd.knirk[1] - husLyd.knirk[0]); }
+      if (husLyd.klokke && nå > nesteTikk) { tikk(nå + .02, 1); nesteTikk = Math.max(nå, nesteTikk) + 1; }
+      if (husLyd.drypp && nå > nesteDrypp) { drypp(nå + .02, 1); nesteDrypp = nå + 1.4 + Math.random() * 2.6; } NV.inneLyd = husLyd; }
+    else { nesteKnirk = nå + 6; NV.inneLyd = null;
+      if (R.fot && om.by > .25 && window.Spor) { const SL = Spor.REGLER.lyd;
+        if (nå > nesteHund) { if (nesteHund) { hund(nå + .05, 1); NV.hund = (NV.hund || 0) + 1; } nesteHund = nå + SL.hund[0] + Math.random() * (SL.hund[1] - SL.hund[0]); }
+        if ((VI.fart || 0) > SL.dørVind && nå > nesteDør) { if (nesteDør) { dørSlag(nå + .05, 1); NV.dørSlag = (NV.dørSlag || 0) + 1; } nesteDør = nå + SL.dør[0] + Math.random() * (SL.dør[1] - SL.dør[0]); } } }
     if (N.fugler > .02 && nå > nesteFugl) { fugl(nå + .05, Math.min(1, N.fugler) * .5); nesteFugl = nå + (2 + Math.random() * 7) / (.3 + N.fugler); }
     if (N.måker > .05 && nå > nesteMåke) { måke(nå + .05, N.måker * .5); nesteMåke = nå + 6 + Math.random() * 18; }
     // torden 1–5 s etter lynet (lyden går 340 m/s)

@@ -555,6 +555,9 @@
       if (rh(2) < .5) { const p = punkt(11); if (p) blob(p[0], p[1], rh(3) * 6.28, .5 + rh(4) * .6, .35 + rh(5) * .5, .008); }
       const esker = /stue|soverom|bod|lager|kontor|garasje|verksted/.test(r.rolle) ? Math.floor(rh(6) * 3) : 0;
       for (let q = 0; q < esker; q++) { const p = punkt(20 + q); if (!p) continue; const e = .2 + rh(60 + q) * .15, v = rh(50 + q) * 6.28; kasse(p[0], p[1], v, [-e, e, -e * .8, e * .8, 0, e * 1.3, [.66, .52, .36], 'tøy']); kasse(p[0], p[1], v, [-e, e, -.025, .025, e * 1.3, e * 1.3 + .004, [.82, .72, .52]]); blob(p[0], p[1], v, e + .12, e * .8 + .12); } }
+    // (R18-F) FORLATTE STEDER: spor som forteller hva som skjedde i huset (karantenelapp, barnetegning, koffert, planker, seng i stua,
+    // tomme skap, kalender, brev …) og lappen du kan lese – spill/spor-visning.js; planen får pl.spor
+    if (!P.leir && window.SporSpill && SporSpill.inne) yield* SporSpill.inne({ pl, P, kasse, blob, tak, dørH });
     // takbjelker i hytter, låver og uthus (rom som er hele firkanter)
     if (/^(hytte|låve|uthus)$/.test(kl)) for (const r of pl.rom) { if (r.andel < .97) continue; const lv = r.v1 - r.v0, vb = Math.atan2(A.vy, A.vx);
       for (let pu = r.u0 + .8; pu < r.u1 - .4; pu += 1.5) { const pv = (r.v0 + r.v1) / 2; kasse(pu * A.ux + pv * A.vx, pu * A.uy + pv * A.vy, vb, [-lv / 2 + .04, lv / 2 - .04, -.06, .06, tak - .17, tak - .005, [.36, .26, .17], 'tre']); } }
