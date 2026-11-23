@@ -22,6 +22,8 @@
   const ved = (x, y) => { oppdater(); return A.length ? LV.ved(null, LB, null, x, y, natt(), A) : null; };
 
   // ---------- Leir.BYGG: lager, senger, strøm og teksten ----------
+  // den korte linja på kortene i byggelista (leir-visning.js legger den under prisen)
+  { const st = document.createElement('style'); st.textContent = '#leirmeny .bygg.kort .virk{ display:block; font-size:11.5px; line-height:1.15; color:#c9bd96; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }'; document.head.appendChild(st); }
   const bruk = () => LV.brukPå(LB.BYGG);
   bruk(); window.addEventListener('riksbrudd-spill', bruk);
   LB.nettFaktor = () => leiren().nett;

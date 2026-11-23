@@ -90,3 +90,7 @@ if (!gamle.g) delete LB.BYGG.generatorhus; if (!gamle.s) delete LB.BYGG.bærbars
 // alle nøklene i NØKLER brukes av minst ett bygg
 for (const k of LV.NØKLER) ok(Object.values(LV.VIRKNING).some(v => v[k] !== undefined), 'nøkkelen brukes: ' + k);
 console.log(`test_leirvirkning: ${n} ok`);
+// korttekstene: alle bygg har en, og de er korte
+for (const k of Object.keys(LV.VIRKNING)) { const t = LV.kort(k); assert.ok(t && t.length <= 40, 'kort for ' + k + ': ' + t); }
+assert.strictEqual(LV.kort('messe'), 'moral +4 · mindre matsvinn'); assert.strictEqual(LV.kort('betongbunker'), 'vern 75 %'); assert.strictEqual(LV.kort('gassflasker'), 'bare utseende');
+console.log('test_leirvirkning: korttekster ok');

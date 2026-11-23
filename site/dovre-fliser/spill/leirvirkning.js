@@ -162,6 +162,27 @@
     if (B && B.tekst && !/kommer senere/.test(B.tekst)) return B.tekst;
     return PYNT;
   }
+  // KORT (to–tre ord på kortet i byggelista): «moral +4 · mindre matsvinn». Eldre bygg uten tall i tabellen har sin egen.
+  const KORT_ELDRE = { kontrollrom: 'kart, kamera, radio', brakke: 'senger · byggelag', vakttårn: 'sikt · treff · varsling', port: 'åpning i gjerdet', batteri: 'lagrer strøm',
+    veg: 'rask kjøring', gjerde: 'stenger leiren', lagertelt: 'lagerplass', container: 'lagerplass', sykestue: 'leger sårede', drivstofftank: 'rommer diesel',
+    aggregat: 'strøm av diesel', solcelle: 'strøm av sol', kameramast: 'ser fiender', radiomast: 'radio 15–40 km', drivhus: 'dyrker mat', sandsekkvoll: 'vern 40 %',
+    kjøkken: 'varm mat · moral', brønn: 'vann' };
+  const pst = f => Math.round(Math.abs(1 - f) * 100);
+  function kort(id, B) {
+    const v = VIRKNING[id] || {}, d = [];
+    if (KORT_ELDRE[id]) d.push(KORT_ELDRE[id]);
+    else {
+      if (v.kw > 0) d.push(`+${v.kw} kW`); if (v.plasser) d.push(`${v.plasser} senger`); if (v.lager) d.push(`lager +${v.lager}`);
+      if (v.moral) d.push(`moral +${v.moral}`); if (v.vern) d.push(`vern ${pst(v.vern)} %`); if (v.ser) d.push(`ser ${v.ser >= 1000 ? v.ser / 1000 + ' km' : v.ser + ' m'}`);
+      if (v.sinke) d.push('sinker fiender'); if (v.erf) d.push('trening'); if (v.ammo) d.push('ammunisjon'); if (v.leging) d.push('leger sårede');
+      if (v.reparer) d.push('reparerer kjøretøy'); if (v.fyll) d.push('fyller kjøretøy'); if (v.radio) d.push(`radio +${v.radio / 1000} km`); if (v.satellitt) d.push('radio over fjell');
+      if (v.drone) d.push('vaktdrone'); if (v.tempo) d.push(`arbeid +${pst(v.tempo)} %`); if (v.mat) d.push('mindre matsvinn'); if (v.helse) d.push('helse');
+      if (v.vann) d.push('vann'); if (v.varsling) d.push('varsling'); if (v.bytte) d.push('mindre plyndring'); if (v.fangevakt) d.push('vokter fanger');
+      if (v.nett) d.push('mer fra nettet'); if (v.sikt && !v.vern) d.push(v.natt ? 'sikt om natta' : 'sikt');
+    }
+    if (!d.length) return B && B.del ? 'del til rom' : 'bare utseende';
+    return d.slice(0, 2).join(' · ');
+  }
   // Teksten med nivåer der bygget har dem (B.nivå = { nøkkel: [n1, n2, n3] }) – «Nivå 2 av 3»
   function panelTekst(id, B, nivå) {
     const t = tekst(id, B), N = B && B.nivå ? Object.keys(B.nivå) : [];
@@ -243,7 +264,7 @@
   // setter B.virkning = teksten. Gjør ingenting med bygg som ikke finnes.
   function brukPå(BYGG) {
     for (const [id, B] of Object.entries(BYGG || {})) {
-      const v = VIRKNING[id]; B.virkning = tekst(id, B); if (!v) continue;
+      const v = VIRKNING[id]; B.virkning = tekst(id, B); B.virkningKort = kort(id, B); if (!v) continue;
       if (v.lager && !B.nivå) B.lager = v.lager; if (v.plasser && !B.nivå) B.plasser = v.plasser;
       if (v.kw > 0) { B.kw = v.kw; if (v.diesel) B.diesel = true; if (v.sol) B.sol = true; }
     }
@@ -252,7 +273,7 @@
   // Hvilke ulike slag virkning tabellen har (vakta i sjekk.js teller dem)
   const NØKLER = ['moral', 'helse', 'mat', 'tempo', 'vann', 'radio', 'satellitt', 'nett', 'bytte', 'fangevakt', 'varsling', 'drone', 'lager', 'plasser', 'kw',
     'vern', 'sikt', 'ser', 'sinke', 'erf', 'ammo', 'leging', 'reparer', 'fyll', 'skjerm'];
-  const api = { REGLER, VIRKNING, PYNT, NØKLER, tekst, panelTekst, styrke, aktive, leiren, ved, ser, erNatt, trening, fylling, brukPå };
+  const api = { REGLER, VIRKNING, PYNT, NØKLER, KORT_ELDRE, kort, tekst, panelTekst, styrke, aktive, leiren, ved, ser, erNatt, trening, fylling, brukPå };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leirvirkning = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
