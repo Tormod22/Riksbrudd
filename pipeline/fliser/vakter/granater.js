@@ -17,6 +17,8 @@ module.exports = {
       ok(B && BK && B.Lagkamp && BK.fiendeKast, 'Bakkekamp/BakkekampSpill (R18-C) mangler'); if (!B || !BK || !B.Lagkamp) return ut;
       const test0 = BK.test, tempo0 = tempo, tid0 = tid, nye = [], gamle = ENHETER.slice(), AIpå = window.AI ? AI.på : null; if (window.AI) AI.på = false;
       // granaten kan ramme egne lag ved siden av deg: helsa, granatene og undertrykkingen til alle lag settes tilbake etterpå
+      // den felles tilfeldighetsstrømmen settes tilbake etterpå (ellers får vaktene etter denne andre tilfeldige navn og væremåter)
+      const rng0 = window.Tilfeldig ? Tilfeldig.lagre() : null;
       const lagFør = gamle.map(s => ({ s, hp: (s.menn || []).map(m => m.hp), utMeldt: s.slattUtMeldt, leder: s.leder, gr: s.granater, und: s.undertrykt }));
       const R = typeof R3 !== 'undefined' ? R3 : null, lagt = [];
       try {
@@ -77,6 +79,7 @@ module.exports = {
       finally {
         for (const s of nye) { const i = ENHETER.indexOf(s); if (i >= 0) ENHETER.splice(i, 1); }
         for (const q of lagFør) { (q.s.menn || []).forEach((m, i) => { m.hp = q.hp[i]; }); q.s.slattUtMeldt = q.utMeldt; q.s.leder = q.leder; if (q.gr === undefined) delete q.s.granater; else q.s.granater = q.gr; if (q.und === undefined) delete q.s.undertrykt; else q.s.undertrykt = q.und; }
+        if (rng0 !== null) Tilfeldig.les(rng0);
         BK.test = test0; tempo = tempo0; tid = Math.max(tid, tid0); if (window.AI) AI.på = AIpå; if (typeof skitten !== 'undefined') skitten = true; delete ut.tilbake3d;
       }
       return ut;
