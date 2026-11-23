@@ -19,9 +19,9 @@
     // sjansen for at et bygg har en lapp du kan lese, per gruppe
     lapp: { bolig: .32, skole: .55, sykehus: .6, butikk: .45, kirke: .6, kontor: .35, gård: .3, annet: .2 },
     // tettstedene: forlatt bil per prøvepunkt (hver 55. m langs vegen), barrikade, skilt; og høyst så mange per utsnitt [PC, mobil]
-    gate: { steg: 55, bil: .11, barrikade: .035, skilt: .05, minBil: 45, minBarrikade: 220, minSkilt: 120, tak: { bil: [26, 10], barrikade: [5, 2], skilt: [8, 3], plate: [160, 60] } },
+    gate: { steg: 55, bil: .065, barrikade: .035, skilt: .05, minBil: 70, minBarrikade: 220, minSkilt: 120, tak: { bil: [14, 6], barrikade: [4, 2], skilt: [7, 3], plate: [110, 45] } },
     // andelen hus i tettsted som har plater for vinduene, og høyst så mange plater per hus
-    plater: { andel: .16, maks: 3 },
+    plater: { andel: .13, maks: 3 },
     // lyd inne: andelen hus med tikkende klokke, dryppende rør, knust vindu (vinden uler i glipa); knirk hvert 18–55 s
     lyd: { klokke: .35, drypp: .4, glipe: .3, knirk: [18, 55], hund: [45, 130], dør: [60, 170], dørVind: 4 },
   };
@@ -135,7 +135,7 @@
   // Teksten med stedet og datoen satt inn
   const fyll = (l, i, sted) => l.tekst.replace(/\{sted\}/g, sted || 'byen').replace(/\{dato\}/g, dato(i).tekst);
   // Lappen ligger ute (på døra) når den er en karantenelapp eller et oppslag på døra
-  const ute = l => !!l && /døra|porten|vinduet/.test(l.tittel);
+  const UTE = new Set(['Lapp på døra', 'Oppslag på døra', 'Skilt på døra', 'Lapp på porten', 'Lapp i vinduet', 'Lapp på fjøsdøra']), ute = l => !!l && UTE.has(l.tittel);
 
   // Hvilket bygg pekerlappen peker på: blant kandidatene [{ i, x, y, kl }] (ikke lappens eget), 30–600 m unna, et av de fire nærmeste
   // som er bolig, uthus, låve eller lager; null når ingen passer. Samme lapp gir samme bygg.

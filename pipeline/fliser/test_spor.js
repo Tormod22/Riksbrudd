@@ -39,7 +39,7 @@ ok(S.ute(S.finn('b1')) && !S.ute(S.finn('b5')), 'lappen på døra henger ute, br
   const V = [veg('K', true, 200, 0), veg('R', true, 200, 100), veg('F', false, 200, 300), veg('K', true, 200, 500)];
   const a = S.gate(V, { cx: 1000, cy: 6000000 }), b = S.gate(V, { cx: 1000, cy: 6000000 });
   ok(JSON.stringify(a) === JSON.stringify(b), 'samme sted gir samme gatebilde');
-  ok(a.bil.length / 6 > 3 && a.bil.length / 6 <= S.REGLER.gate.tak.bil[0], `forlatte biler: ${a.bil.length / 6}`);
+  ok(a.bil.length / 6 > 2 && a.bil.length / 6 <= S.REGLER.gate.tak.bil[0], `forlatte biler: ${a.bil.length / 6}`);
   let utenfor = 0; for (let q = 0; q < a.bil.length; q += 6) if (Math.abs(a.bil[q + 1] - 300) < 20) utenfor++; ok(utenfor === 0, 'ingen forlatte biler utenfor tettstedet');
   const m = S.gate(V, { cx: 1000, cy: 6000000, mobil: true }); ok(m.bil.length / 6 <= S.REGLER.gate.tak.bil[1] && m.skilt.length / 5 <= S.REGLER.gate.tak.skilt[1], 'færre på telefon');
   ok(/^VI HAR DRATT TIL DOMBÅS$/.test(S.skiltTekst(2, 'Dombås')), 'skiltet: ' + S.skiltTekst(2, 'Dombås'));
@@ -49,7 +49,7 @@ ok(S.ute(S.finn('b1')) && !S.ute(S.finn('b5')), 'lappen på døra henger ute, br
 // platene: på ytterveggene, utover
 { let n = 0, med = 0, galt = 0; const P = [[0, 0], [10, 0], [10, 8], [0, 8]]; for (let i = 0; i < 2000; i++) { const p = S.plater(P, i); if (p.length) med++; n += p.length / 4;
     for (let q = 0; q < p.length; q += 4) { const x = p[q], y = p[q + 1], a = p[q + 2], ux = x + Math.cos(a) * .5, uy = y + Math.sin(a) * .5; if (ux > 0 && ux < 10 && uy > 0 && uy < 8) galt++; } }
-  ok(med / 2000 > .1 && med / 2000 < .22 && galt === 0, `plater på ${Math.round(med / 20)} % av husene, normalen peker ut av huset (feil: ${galt})`); }
+  ok(med / 2000 > .08 && med / 2000 < .2 && galt === 0, `plater på ${Math.round(med / 20)} % av husene, normalen peker ut av huset (feil: ${galt})`); }
 // lyden inne
 { let k = 0; for (let i = 0; i < 1000; i++) if (S.lydInne('hus', i).klokke) k++; ok(k > 250 && k < 450 && !S.lydInne('låve', 3).klokke, `klokke tikker i ${k / 10} % av boligene, aldri i låven`); }
 // lyden (spill/lyd.js): tomme tettsteder har nesten ingen bylyd, og vinden uler i et knust vindu bare inne i huset

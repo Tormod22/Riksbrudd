@@ -162,7 +162,7 @@
 #lapppanel.på{ display:block; } #lapppanel h3{ margin:0 26px 8px 0; font-size:19px; font-weight:700; color:#3a2f1e; } #lapppanel p{ margin:0 0 10px; font-size:18px; line-height:1.35; font-style:italic; }
 #lapppanel small{ display:block; color:#6b5d44; font-size:13.5px; font-family:inherit; } #lapppanel .peker{ margin-top:8px; padding-top:6px; border-top:1px dashed #a8987a; font-style:normal; font-size:15px; }
 #lapppanel .x{ position:absolute; right:4px; top:2px; background:none; border:0; color:#3a2f1e; font-size:22px; min-width:36px; min-height:36px; cursor:pointer; }
-#sporlapp{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 116px); z-index:5; padding:4px 14px; color:#e9dfc6; font-family:"Cormorant Garamond",serif; font-style:italic; font-size:18px;
+#sporlapp{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 116px); z-index:7; padding:4px 14px; color:#e9dfc6; font-family:"Cormorant Garamond",serif; font-style:italic; font-size:18px;
   text-shadow:0 1px 3px #000, 0 0 10px #000; pointer-events:none; opacity:0; transition:opacity 1.6s; max-width:86vw; text-align:center; } #sporlapp.på{ opacity:1; }
 body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.bærermøbel #lapppanel{ display:none; }`;
   document.head.appendChild(css);
