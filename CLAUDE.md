@@ -1584,3 +1584,6 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   senere»), unntak: offisersbrakke 4 senger, lagerhall 250 m³ lager. MODELLER.gjerde, kasser, fatpall og flaggstang er byttet ut; sokkel ved
   flaggstanga i 3D. Selskapets farger fra OppstartSpill.tilstand().fraksjon.flagg. Testsiden spill/modeller-visning.html viser alle.
   WINDOWS: git har core.autocrlf=false i denne klonen; versjon.py må kjøres med LF (Python på Windows skriver ellers CRLF og feil hasher).
+  INSPIRASJON SILENT HILL (23. nov, brukeren: «Silent Hill også en inspirasjon»): bare stemning og sjangergrep (tåke, mørke, forlatte
+  steder, lyd/radiostøy som varsler fare, lommelykt, knappe ressurser) – ingen navn, steder, figurer, monstre, musikk, symboler eller
+  utseende derfra. Se docs/plan-spillmekanikk.md. Spør brukeren hva som skal inn før noe stort bygges.

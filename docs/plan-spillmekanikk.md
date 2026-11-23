@@ -23,6 +23,10 @@ hvilke deler han liker best – spør før noe stort bygges på dette.
   figur (sult, tørst, tretthet, skader som må stelles), ferdigheter som vokser med bruk, bæreevne og hva du har på deg, lyd som
   lokker fiender (skudd og motor høres), strøm og vann som blir borte etter hvert, og at hus må sikres (barrikader). Inspirasjon,
   ikke kopi: ingen navn, figurer, kart eller utseende derfra, og fiendene her er røvere og rivaler, ikke zombier.
+- **Silent Hill** (psykologisk skrekkspill; brukeren 23. nov: «Silent Hill også en inspirasjon»): det som kan passe her, er
+  stemningen – tett tåke og mørke der du ser lite, tomme og forlatte steder som føles feil, lyd og radiostøy som varsler fare før du
+  ser den, lommelykt, få og verdifulle ressurser, og en uro som bygger seg opp. Inspirasjon, ikke kopi: ingen navn, steder, figurer,
+  monstre, musikk, symboler, «den andre verden» eller utseende derfra. Spør brukeren hva som skal inn før noe stort bygges.
 
 ## Hvorfor dette passer Norge
 - **Få veger, mange flaskehalser:** én E6, smale dalfører, lange tunneler, store bruer. Én sprengt bru kan kutte en landsdel.
