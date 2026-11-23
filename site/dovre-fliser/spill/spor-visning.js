@@ -177,22 +177,22 @@ body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.
   const himmel = (dx, dy) => ['øst', 'nordøst', 'nord', 'nordvest', 'vest', 'sørvest', 'sør', 'sørøst'][((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
   function lukk() { panel.classList.remove('på'); panel.replaceChildren(); }
   // vis lappen: id, byggets nummer, stedet og klassen (fra lista eller fra huset du står i); pek = { tekst } om den peker videre
-  function vis(id, i, sted, kl, pek) { const l = S.finn(id); if (!l) return false;
+  function vis(id, i, sted, kl, pek, målsted) { const l = S.finn(id); if (!l) return false;
     const x = el('button', '×', 'x'); x.type = 'button'; x.setAttribute('aria-label', 'Lukk'); x.onclick = lukk;
-    const n = T.lest.findIndex(r => r[0] === id && r[1] === i), deler = [x, el('h3', l.tittel), el('p', S.fyll(l, i, sted)), el('small', `Funnet i ${NAVN[kl] || 'et bygg'}${sted ? ' ved ' + sted : ''} · lapp ${n >= 0 ? n + 1 : T.lest.length} av ${T.lest.length} du har funnet`)];
+    const n = T.lest.findIndex(r => r[0] === id && r[1] === i), deler = [x, el('h3', l.tittel), el('p', S.fyll(l, i, målsted || sted)), el('small', `Funnet i ${NAVN[kl] || 'et bygg'}${sted ? ' ved ' + sted : ''} · lapp ${n >= 0 ? n + 1 : T.lest.length} av ${T.lest.length} du har funnet`)];
     if (pek) deler.push(el('small', pek, 'peker'));
     panel.replaceChildren(...deler); panel.classList.add('på'); if (document.pointerLockElement) document.exitPointerLock(); return true; }
   // les lappen i huset P (fra planen): legg den i lista, og finn huset den peker på
   function lesHer(P, sp) { if (!klar) start(); const R = r3(), u = R && R.ut, i = P.bygg.i, kl = P.bygg.kl, l = S.finn(sp.lapp.id); if (!l || !u) return false;
-    const X = u.cx + sp.lapp.x, Y = u.cy + sp.lapp.y, sted = stedVed(X, Y);
-    const ny = !T.lest.some(r => r[0] === l.id && r[1] === i); if (ny) { T.lest.push([l.id, i, sted, kl]); if (S.LAPPER.length) logg(`Du fant en lapp: «${l.tittel}». Den ligger under Lapper i sekken.`); }
+    const X = u.cx + sp.lapp.x, Y = u.cy + sp.lapp.y, sted = stedVed(X, Y), målsted = /til \{sted\}/.test(l.tekst) ? stedVed(X, Y, 1) : sted;
+    const ny = !T.lest.some(r => r[0] === l.id && r[1] === i); if (ny) { T.lest.push([l.id, i, sted, kl, målsted]); if (S.LAPPER.length) logg(`Du fant en lapp: «${l.tittel}». Den ligger under Lapper i sekken.`); }
     let pek = null;
     if (l.peker === 'gjemt') { let m = T.mål.find(q => q.fra === i);
       if (!m && u.hus && u.hus.omriss) { const ferdig = window.LeteSpill && LeteSpill.lett ? LeteSpill.lett() : null, K = [];
         for (const Q of u.hus.omriss) { if (!Q || !Q.bygg || Q.leir) continue; let sx = 0, sy = 0; for (const p of Q) { sx += p[0]; sy += p[1]; } K.push({ i: Q.bygg.i, kl: Q.bygg.kl, x: u.cx + sx / Q.length, y: u.cy + sy / Q.length }); }
         const mm = S.pekerMål(i, X, Y, K, ferdig); if (mm) { m = { i: mm.i, x: Math.round(mm.x), y: Math.round(mm.y), lapp: l.id, fra: i }; T.mål.push(m); logg(`Lappen peker mot et hus ${Math.round(Math.hypot(mm.x - X, mm.y - Y))} m ${himmel(mm.x - X, mm.y - Y)} herfra – merket «Gjemt lager?» i kartet.`); if (typeof skitten !== 'undefined') skitten = true; } }
       pek = m ? (m.funnet ? 'Du har alt funnet det som lå gjemt.' : `Lappen peker mot et hus ca. ${Math.round(Math.hypot(m.x - X, m.y - Y) / 10) * 10} m ${himmel(m.x - X, m.y - Y)} herfra. Det er merket «Gjemt lager?» i kartet.`) : 'Du finner ikke huset lappen snakker om.'; }
-    lagre(); return vis(l.id, i, sted, kl, pek); }
+    lagre(); const r = T.lest.find(q => q[0] === l.id && q[1] === i); return vis(l.id, i, sted, kl, pek, r && r[4] || målsted); }
   // nærmeste lapp du kan lese nå: inne i huset du står i, eller på døra når du står ved den (innen 3,5 m)
   function lesbar(R) { if (!R || !R.fot || !window.Interior3d) return null; const c = R.cam.position, P0 = Interior3d.inne(c.x, c.y);
     if (P0 && P0.inne && P0.inne.spor && P0.inne.spor.lapp) return [P0, P0.inne.spor];
@@ -215,8 +215,8 @@ body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.
   (window.SEKK_TILLEGG = window.SEKK_TILLEGG || []).push((p, e, kn) => { if (!klar) start();
     p.append(e('h3', {}, `Lapper du har funnet (${T.lest.length} av ${S.LAPPER.length})`));
     if (!T.lest.length) { p.append(e('small', {}, 'Ingen ennå. Noen hus har en lapp eller et brev – se etter «Les lappen» når du er inne.')); return; }
-    for (const [id, i, sted, kl] of T.lest.slice().reverse().slice(0, 30)) { const l = S.finn(id); if (!l) continue;
-      p.append(e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, l.tittel), e('small', {}, `${NAVN[kl] ? NAVN[kl].replace(/^(en|et) /, '') : 'bygg'}${sted ? ' ved ' + sted : ''}`)), kn('Les', () => vis(id, i, sted, kl)))); } });
+    for (const [id, i, sted, kl, målsted] of T.lest.slice().reverse().slice(0, 30)) { const l = S.finn(id); if (!l) continue;
+      p.append(e('div', { klasse: 'rad' }, e('div', {}, e('b', {}, l.tittel), e('small', {}, `${NAVN[kl] ? NAVN[kl].replace(/^(en|et) /, '') : 'bygg'}${sted ? ' ved ' + sted : ''}`)), kn('Les', () => vis(id, i, sted, kl, null, målsted)))); } });
 
   // ---------- DET GJEMTE LAGERET ----------
   // leting-visning.js: f = SporSpill.medGjemt(P, f) før funnet legges i leiren

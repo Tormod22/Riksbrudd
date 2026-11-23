@@ -282,6 +282,21 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Forlatte hus",
+"Husene forteller hva som skjedde da folk dro: en karantenelapp på døra, en halvpakket koffert, sengen i stua, tomme matskap, en kalender som stoppet en bestemt dato. Første gang du går inn i et hus med slike spor, står én stille linje øverst på skjermen. Sporene sperrer deg ikke – det er bare stemning.",
+"I 3D"
+],
+[
+"Lapper og brev",
+"Noen hus har en lapp, et brev eller et oppslag på døra. Står du inne i huset (eller ved døra), kommer knappen «Les lappen (N)». Lappene du har lest, står under «Lapper du har funnet» i sekken, og du kan lese dem igjen der. Noen lapper sier hvor noe er gjemt – da merkes huset «Gjemt lager?» i kartet, og leter du gjennom det huset, finner du litt mer enn vanlig.",
+"I 3D"
+],
+[
+"Tomme tettsteder",
+"I tettstedene står det forlatte biler med åpne dører i gata, barrikader av møbler, håndmalte skilt og plater for vinduene. Det er stille: ingen bylyd, bare en hund som gjør langt unna og en dør som slår i vinden. Inne i husene hører du knirk, en klokke som fortsatt tikker, et rør som drypper og vind i et knust vindu.",
+"Vær, lyd og bilde"
+],
+[
 "Gå hit eller gå her",
 "Trykk «Gå» (G) i 3D. Ser kameraet på et sted langt fra karakteren din, får du velge: «Reis hit» – karakteren går dit, og spilltiden går så lenge turen tar (ca. 4 km/t, litt omveg regnet med) – eller «Gå her, der du står». Merket «Hit» midt i bildet viser hvor du havner. Lenger enn 6 km går du i etapper. Har du valgt et lag, starter du ved laget.",
 "I 3D"
