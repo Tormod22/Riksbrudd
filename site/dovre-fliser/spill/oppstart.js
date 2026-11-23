@@ -20,7 +20,9 @@
     lege: { navn: 'Lege', tekst: 'Sårede blir friske dobbelt så fort', bonus: { helse: 2 } },
     ingeniør: { navn: 'Ingeniør', tekst: 'Bygger 20 % raskere', bonus: { bygg: 1.2 } },
     bonde: { navn: 'Bonde', tekst: 'Mat 25 % billigere', bonus: { mat: .75 } },
-    forretningsmann: { navn: 'Forretningsmann', tekst: '+10 millioner kr ved start', bonus: { penger: 10e6 } },
+    // (R18, balansen – Claudes forslag) 10 → 5 mill.: med 40 mill. i start var 10 mill. en firedel av kassa – langt sterkere enn bondens
+    // billigere mat (sparer ca. 8 000 kr i døgnet). 5 mill. er en åttendedel, omtrent som før da starten var 100 mill. og bonusen 10.
+    forretningsmann: { navn: 'Forretningsmann', tekst: '+5 millioner kr ved start', bonus: { penger: 5e6 } },
     politi: { navn: 'Politi', tekst: '+15 % sikt for lagene dine', bonus: { sikt: 1.15 } },
   };
   // Utseendet er et portrett fra portrettmotoren i Karakterstudio v3 (spill/portrett-motor.js, brukerens egen, 11. nov):

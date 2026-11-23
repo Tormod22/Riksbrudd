@@ -80,16 +80,19 @@
     v_pistol: { navn: 'Pistol', enhet: 'stk.', vekt: 1, kat: 'våpen', våpen: 'pistol', w: .8, n: [1, 1], b: { nattbord: 2, skranke: 1.5 }, k: { kontor: 2 }, tekst: 'Lett reservevåpen.' },
     v_gevær: { navn: 'Automatgevær (Heimevernet)', enhet: 'stk.', vekt: 4, kat: 'våpen', våpen: 'gevær', w: .5, n: [1, 1], b: { skap: 2 }, k: { hangar: 3 }, tekst: 'Mange i Heimevernet hadde geværet hjemme.' },
     // ammunisjon (typene i spill/utstyr.js)
-    a762: { finnes: true, navn: '7,62 mm', enhet: 'skudd', vekt: .025, kat: 'ammo', w: 3, n: [5, 20], b: { skap: 2, hylle: 1.5, nattbord: 1 }, k: { hytte: 2.5, låve: 2, uthus: 1.5, hus: 1.2 }, tekst: 'Riflepatroner – til jaktrifla og skarpskyttergeværet.' },
-    ahagl: { finnes: true, navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, kat: 'ammo', w: 3, n: [5, 25], b: { skap: 2, hylle: 1.5 }, k: { hytte: 2.5, låve: 2, uthus: 1.5 }, tekst: 'Til hagla.' },
-    a9: { finnes: true, navn: '9 mm', enhet: 'skudd', vekt: .012, kat: 'ammo', w: 1, n: [8, 30], tekst: 'Til pistol og maskinpistol.' },
-    a556: { finnes: true, navn: '5,56 mm', enhet: 'skudd', vekt: .012, kat: 'ammo', w: .8, n: [10, 30], k: { hangar: 3 }, tekst: 'Til automatgeværet.' },
+    // MENGDENE (R18, «knappe ressurser» – docs/balanse-r18.md, Claudes forslag): ammunisjon i esker på 3–15 skudd (før opptil 30),
+    // førstehjelp sjeldnere (ca. hvert femte hus, før annethvert), smertestillende og batterier litt sjeldnere. Sykehus og hytter er
+    // fortsatt stedene å lete. Målt på 300 prøvehus: et vanlig hus gir nå ca. 0,4 skudd 5,56 mm og 0,2 førstehjelp.
+    a762: { finnes: true, navn: '7,62 mm', enhet: 'skudd', vekt: .025, kat: 'ammo', w: 3, n: [3, 10], b: { skap: 2, hylle: 1.5, nattbord: 1 }, k: { hytte: 2.5, låve: 2, uthus: 1.5, hus: 1.2 }, tekst: 'Riflepatroner – til jaktrifla og skarpskyttergeværet.' },
+    ahagl: { finnes: true, navn: 'Haglpatroner', enhet: 'skudd', vekt: .04, kat: 'ammo', w: 3, n: [3, 12], b: { skap: 2, hylle: 1.5 }, k: { hytte: 2.5, låve: 2, uthus: 1.5 }, tekst: 'Til hagla.' },
+    a9: { finnes: true, navn: '9 mm', enhet: 'skudd', vekt: .012, kat: 'ammo', w: 1, n: [4, 15], tekst: 'Til pistol og maskinpistol.' },
+    a556: { finnes: true, navn: '5,56 mm', enhet: 'skudd', vekt: .012, kat: 'ammo', w: .8, n: [5, 15], k: { hangar: 3 }, tekst: 'Til automatgeværet.' },
     // medisin (førstehjelp finnes i spill/utstyr.js; helse = det «Bruk» gir)
-    forbinding: { finnes: true, navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, kat: 'medisin', helse: 45, w: 2, n: [1, 2], b: { vask: 2, skap: .5, bil: 1.5 }, k: { sykehus: 3, skole: 1.5 }, tekst: 'Forbinding og plaster.' },
-    smertestillende: { navn: 'Smertestillende (paracetamol)', enhet: 'stk.', vekt: .03, kat: 'medisin', helse: 15, w: 3, n: [1, 3], b: { vask: 3, nattbord: 2 }, k: { sykehus: 3 }, tekst: 'Demper smerten litt.' },
+    forbinding: { finnes: true, navn: 'Førstehjelp', enhet: 'stk.', vekt: .5, kat: 'medisin', helse: 45, w: 1.2, n: [1, 1], b: { vask: 2, skap: .5, bil: 1.5 }, k: { sykehus: 3, skole: 1.5 }, tekst: 'Forbinding og plaster.' },
+    smertestillende: { navn: 'Smertestillende (paracetamol)', enhet: 'stk.', vekt: .03, kat: 'medisin', helse: 15, w: 2, n: [1, 2], b: { vask: 3, nattbord: 2 }, k: { sykehus: 3 }, tekst: 'Demper smerten litt.' },
     // utstyr (tau finnes i spill/eventyr.js)
     lommelykt: { navn: 'Lommelykt', enhet: 'stk.', vekt: .3, kat: 'utstyr', w: 2, n: [1, 1], b: { nattbord: 2, skap: 1, arbeidsbenk: 1.5, bil: 2 }, tekst: 'Lys i mørket: L slår den på. Du ser mer om natta – men fiendene ser deg også.' },
-    batterier: { navn: 'Batterier (AA)', enhet: 'stk.', vekt: .1, kat: 'utstyr', w: 2, n: [1, 3], b: { kasse: 3, tvbenk: 2, arbeidsbenk: 1 }, tekst: 'Nye batterier til lommelykta (8 timer lys).' },
+    batterier: { navn: 'Batterier (AA)', enhet: 'stk.', vekt: .1, kat: 'utstyr', w: 1.5, n: [1, 2], b: { kasse: 3, tvbenk: 2, arbeidsbenk: 1 }, tekst: 'Nye batterier til lommelykta (8 timer lys).' },
     tau: { finnes: true, navn: 'Tau', enhet: 'stk.', vekt: .4, kat: 'utstyr', w: 1.5, n: [1, 2], b: { arbeidsbenk: 2, hylle: 2, bil: 1.5 }, k: { låve: 2, uthus: 1.5 }, tekst: 'Til håndverk og feller.' },
     verktøy: { navn: 'Verktøykasse', enhet: 'stk.', vekt: 4.5, kat: 'utstyr', w: 2, n: [1, 1], b: { arbeidsbenk: 4, verktøyvogn: 4, hylle: 2, bil: 1 }, k: { industri: 2, uthus: 2, låve: 1.5 }, tekst: 'Hammer, sag, tang og skrutrekkere.' },
     sovepose: { navn: 'Sovepose', enhet: 'stk.', vekt: 1.6, kat: 'utstyr', w: 1.5, n: [1, 1], b: { skap: 3 }, k: { hytte: 2 }, tekst: 'Varm natt ute.' },

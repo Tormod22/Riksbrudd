@@ -26,7 +26,9 @@
   // (18. nov kveld) spill/lut-visning.js kan bytte ut vekt og plass med lommer og sekk på ryggen: api.krok = { maks, vekt, plassTil, våpenOk }
   const krok = () => (typeof api !== 'undefined' && api.krok) || {};
   const maks = () => (krok().maks ? krok().maks() : GRUNNVEKT + ((typeof api !== 'undefined' && api.ekstraVekt) || 0));
-  const ny = () => ({ våpen: [{ id: 'gevær', mag: 30 }, { id: 'pistol', mag: 15 }], aktiv: 0, ting: { a556: 90, a9: 30, forbinding: 1, rasjon: 2 } });
+  // STARTSEKKEN (R18, «knappe ressurser» – docs/balanse-r18.md, Claudes forslag): 60 skudd i reserve til geværet (før 90) og 15 til pistolen
+  // (før 30) – to fulle magasiner til hvert våpen i tillegg til det som sitter i. Hver kule skal telle når du går alene.
+  const ny = () => ({ våpen: [{ id: 'gevær', mag: 30 }, { id: 'pistol', mag: 15 }], aktiv: 0, ting: { a556: 60, a9: 15, forbinding: 1, rasjon: 2 } });
   const råVekt = I => Math.round((I.våpen.reduce((s, v) => s + VÅPEN[v.id].vekt, 0) + Object.entries(I.ting).reduce((s, [id, n]) => s + (TING[id] ? TING[id].vekt * n : 0), 0)) * 100) / 100;
   const vekt = I => (krok().vekt ? krok().vekt(I) : råVekt(I));
   // så mange av en ting du får plass til (etter vekt)

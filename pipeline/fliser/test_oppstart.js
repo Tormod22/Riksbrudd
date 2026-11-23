@@ -22,12 +22,12 @@ ok(O.gyldigLeir(500, 0, v) === null, 'utenfor tettstedet på land: godkjent');
   ok(/Svalbard/.test(O.gyldigLeir(514000, 8680000, { iTettsted: () => null, klasse: () => undefined, iNorge: vg.iNorge })), 'Svalbard: egen beskjed (kartet finnes, men ikke arealdata)'); }
 // fullfør: pengene og bonusen
 S.karakter.bakgrunn = 'forretningsmann'; ok(O.fullfør(S, { x: 500.4, y: 7.6 }).length === 0 && S.ferdig, 'fullført');
-ok(S.penger === 110e6 && O.kroner(S.penger) === '110 mill. kr', 'forretningsmann starter med ' + O.kroner(S.penger));
+ok(S.penger === 105e6 && O.kroner(S.penger) === '105 mill. kr', 'forretningsmann starter med ' + O.kroner(S.penger));
 ok(S.karakter.navn === 'Kari Nordmann' && S.fraksjon.flagg.bokstaver === 'DØ' && S.leir.x === 500, 'navnet ryddet, bokstavene store, leiren avrundet');
 const T = O.standard(); T.karakter.navn = 'Ola'; T.fraksjon.navn = 'Ulvene'; O.fullfør(T, { x: 1, y: 1 });
 ok(T.penger === 100e6 && O.kroner(T.penger) === '100 mill. kr', 'soldat starter med 100 mill. kr og bonus treff ×' + O.bonus(T).treff);
 // lagring
-const L = O.fraJSON(O.tilJSON(S)); ok(L && L.ferdig && L.fraksjon.navn === 'Dovrefolket' && L.penger === 110e6, 'lagret og lest inn igjen');
+const L = O.fraJSON(O.tilJSON(S)); ok(L && L.ferdig && L.fraksjon.navn === 'Dovrefolket' && L.penger === 105e6, 'lagret og lest inn igjen');
 ok(O.fraJSON('{ødelagt') === null && O.fraJSON('{"versjon":9}') === null, 'ødelagt eller ukjent lagring gir ny start');
 ok(O.kroner(2.5e6) === '2,5 mill. kr' && O.kroner(15000).replace(/\s/g, ' ') === '15 000 kr', 'kronetekst: ' + O.kroner(2.5e6) + ', ' + O.kroner(15000));
 ok(O.hovedfarge({ farger: ['#f2efe6', '#1d3557', '#000000'] }) === '#1d3557', 'hovedfargen hopper over hvitt');

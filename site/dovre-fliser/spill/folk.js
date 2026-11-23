@@ -46,7 +46,9 @@
     rasjon: 1, rasjonVinter: 1.2, // per person per døgn
     kjøkkenSvinn: .85,          // med bemannet kjøkken spises det mindre (mindre svinn)
     perKokk: 8,                 // én på kjøkkenet holder til åtte personer
-    drivhus: 3,                 // rasjoner per døgn per drivhus med strøm (sommer; vår/høst 60 %, vinter 30 %)
+    // (R18, balansen – Claudes forslag) 3 → 6: drivhuset bruker 1 kW, det er ca. 7 l diesel = 21 600 kr i døgnet med aggregat, og tre
+    // rasjoner var bare verdt 9 000 kr – drivhuset tapte penger hver dag. Seks rasjoner (18 000 kr) metter seks personer om sommeren.
+    drivhus: 6,                 // rasjoner per døgn per drivhus med strøm (sommer; vår/høst 60 %, vinter 30 %)
     matPris: 3000,              // kr per rasjon (kjøpt)
     rekruttPris: 5e5,
     varmeEnhet: 8,              // ett fyringssted per åtte personer
