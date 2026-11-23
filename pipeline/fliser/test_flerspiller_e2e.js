@@ -15,6 +15,10 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
   try {
     const A = await side('vert'), B = await side('gjest');
     await B.evaluate(() => localStorage.setItem('riksbrudd-verden', 'MERKE'));
+    // R18-D: verten har en leir (et nytt spill med leir ved Dombås), så gjesten har noe å se og styre
+    await A.evaluate(async () => { if (window.AI) AI.på = false; OppstartSpill.nytt(); const u = OppstartSpill.utkast(); u.karakter.navn = 'Ola'; u.fraksjon.navn = 'Olas vakt'; OppstartSpill.vis(3);
+      const k = [...document.querySelectorAll('#oppstart button')].find(b => /kartet/.test(b.textContent)); if (k) k.click(); await OppstartSpill.prøvLeir(196400, 6898900); OppstartSpill.bekreft(); });
+    sjekk(await til(A, () => !!(LeirSpill.tilstand() && FolkSpill.tilstand() && OppstartSpill.tilstand())), 'verten har en leir med folk');
     const adr = `ws://localhost:${TP}`;
     await A.evaluate(a => NETT.koble('vert', a, null, 'Ola'), adr);
     sjekk(await til(A, () => NETT.tilkoblet && /^[A-Z0-9]{6}$/.test(NETT.kode || '')), 'verten åpner en verden med kode');
@@ -69,9 +73,60 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     const annet = await A.evaluate(() => { const s = ENHETER.find(q => q.side === 'blå' && !q.eier && !q.karakter); return s ? [s.nid, s.formasjon || 'kile'] : null; });
     if (annet) { await B.evaluate(id => NETT.send({ t: 'kommando', k: { type: 'formasjon', lag: id, id: 'spredt' } }), annet[0]); await vent(1200);
       sjekk(await A.evaluate(([id, f]) => (ENHETER.find(q => q.nid === id).formasjon || 'kile') === f, annet), 'verten avviser kommando til et lag gjesten ikke har'); }
-    // leirkommandoer fra gjesten avvises med en forståelig tekst
-    const leirSvar = await B.evaluate(() => KOMMANDO({ type: 'bygg', bygg: { type: 'brakke', x: 0, y: 0, ret: 0 } }));
-    sjekk(!leirSvar.ok && /Leiren styres av verten/.test(leirSvar.feil), 'leirkommando fra gjesten avvises: ' + leirSvar.feil);
+    // ---------- R18-D: gjester styrer leiren ----------
+    sjekk(await til(B, () => !!(NETT.leirData && LeirSpill.tilstand() && LeirSpill.erSpeil() && FolkSpill.tilstand())), 'gjesten får speilet av vertens leir');
+    const vL = await A.evaluate(() => ({ bygg: LeirSpill.tilstand().bygg.length, folk: FolkSpill.tilstand().personer.length, penger: OppstartSpill.tilstand().penger, leir: OppstartSpill.tilstand().leir }));
+    sjekk(await B.evaluate(v => LeirSpill.tilstand().bygg.length === v.bygg && FolkSpill.tilstand().personer.length === v.folk && OppstartSpill.tilstand().penger === v.penger && Math.abs(OppstartSpill.tilstand().leir.x - v.leir.x) < 1, vL),
+      `gjesten ser samme bygg (${vL.bygg}), folk (${vL.folk}) og kasse som verten`);
+    sjekk(await B.evaluate(() => !document.getElementById('leirknapp').hidden && /kr/.test(document.getElementById('sPenger').textContent)), 'Leir-knappen og vertens kasse vises hos gjesten');
+    await B.evaluate(() => { const k = document.getElementById('leirknapp'); if (!k.classList.contains('på')) k.click(); });
+    sjekk(await til(B, () => document.getElementById('leirmeny').classList.contains('på') && /Leiren/.test(document.getElementById('leirmeny').textContent)), 'gjesten åpner Leir-menyen med vertens leir');
+    await B.evaluate(() => { const k = document.getElementById('leirknapp'); if (k.classList.contains('på')) k.click(); });
+    // gjesten bygger en brakke i vertens leir på vanlig måte (plassering, sjekk mot kartet, bekreft)
+    const kasseFør = vL.penger;
+    const bygd = await B.evaluate(async v => { LeirSpill.startPlassering('brakke'); LeirSpill.trykk(v.leir.x + 40, v.leir.y + 10); await LeirSpill.prøv(); const f = LeirSpill.plassering() && LeirSpill.plassering().feil;
+      // som en spiller: knappen i banneret (kjøper materialene som mangler, og bygger)
+      const kn = [...document.querySelectorAll('#byggvalg button')].find(x => /Kjøp materialene og bygg/.test(x.textContent)); if (kn) kn.click(); else LeirSpill.bekreft();
+      return { feil: f || null, lokalt: LeirSpill.tilstand().bygg.some(b => b.type === 'brakke'), logg: document.getElementById('logg').textContent.slice(-300) }; }, vL);
+    sjekk(!bygd.feil && bygd.lokalt, 'gjesten bestiller en brakke (vises straks hos gjesten)' + (bygd.feil || !bygd.lokalt ? ': ' + (bygd.feil || bygd.logg) : ''));
+    sjekk(await til(A, () => LeirSpill.tilstand().bygg.some(b => b.type === 'brakke')), 'verten ser brakka gjesten bestilte');
+    sjekk(await til(A, () => /Kari bygger en brakke/.test(document.getElementById('logg').textContent)), 'vertens logg: «Kari bygger en brakke»');
+    sjekk(await til(A, k => OppstartSpill.tilstand().penger < k, kasseFør), 'brakka er betalt av vertens kasse');
+    sjekk(await til(B, () => LeirSpill.tilstand().bygg.filter(b => b.type === 'brakke').length === 1 && !NETT.ventLeir), 'gjesten har én brakke etter neste speil (ingen dobbel)');
+    sjekk(await til(B, () => OppstartSpill.tilstand().penger === NETT.leirData.penger), 'gjestens kasse følger vertens');
+    // gjesten setter en person på en oppgave
+    const pers = await B.evaluate(() => { const p = FolkSpill.tilstand().personer.find(q => q.oppgave !== 'vakt'); const r = KOMMANDO({ type: 'folk', person: p.id, oppgave: 'vakt' }); return { id: p.id, navn: p.navn, ok: r.ok, lokalt: FolkSpill.tilstand().personer.find(q => q.id === p.id).oppgave }; });
+    sjekk(pers.ok && pers.lokalt === 'vakt', `gjesten setter ${pers.navn} på vakt`);
+    sjekk(await til(A, id => FolkSpill.tilstand().personer.find(q => q.id === id).oppgave === 'vakt', pers.id), 'verten ser at personen er satt på vakt');
+    sjekk(await til(A, n => document.getElementById('logg').textContent.includes(`Kari setter ${n} på «vakt»`), pers.navn), 'vertens logg sier hvem som flyttet personen');
+    // Folk-panelet hos gjesten viser vertens folk
+    const folkTekst = await B.evaluate(() => { FolkSpill.åpne(true); const v = [...document.querySelectorAll('#folkmeny button')].find(b => /Vis folkene/.test(b.textContent)); if (v) v.click(); const t = document.getElementById('folkmeny').textContent; FolkSpill.åpne(false); return t; });
+    const folkNavn = await A.evaluate(() => FolkSpill.tilstand().personer.map(p => p.navn));
+    sjekk(folkNavn.slice(0, 3).every(n => folkTekst.includes(n)), 'Folk-panelet hos gjesten viser vertens folk' + (folkNavn.slice(0, 3).every(n => folkTekst.includes(n)) ? '' : ': ' + folkTekst.slice(0, 200)));
+    // gjesten setter opp en tropp av vertens folk: verten lager laget, og gjesten styrer det
+    const tr = await B.evaluate(() => { const P = FolkSpill.tilstand().personer.filter(p => p.oppgave !== 'vakt' && p.helse > .5).slice(0, 3).map(p => p.id); return { r: TropperSpill.opprett(P, 'Karis tropp', 'standard', null, {}), P }; });
+    sjekk(tr.r && !tr.r.feil, 'gjesten sender «sett opp tropp» til verten' + (tr.r && tr.r.feil ? ': ' + tr.r.feil : ''));
+    sjekk(await til(A, () => ENHETER.some(s => s.navn === 'Karis tropp')), 'verten setter opp troppen av vertens folk');
+    sjekk(await til(A, () => { const s = ENHETER.find(q => q.navn === 'Karis tropp'); return !!(s && s.eier && s.eier === NETT.spillere.find(p => p.navn === 'Kari').id); }), 'troppen styres av gjesten som laget den');
+    sjekk(await til(B, ids => { const s = ENHETER.find(q => q.navn === 'Karis tropp'); return !!(s && s.eier === NETT.id) && !FolkSpill.tilstand().personer.some(p => ids.includes(p.id)); }, tr.P), 'gjesten ser troppen som sin, og folkene er gått ut av leiren');
+    // kjøp utenom kommandolaget (f.eks. i Sekk) blir ikke gratis hos gjesten
+    sjekk(await B.evaluate(() => { const før = OppstartSpill.tilstand().penger; const ok = OppstartSpill.betal(1000); return !ok && OppstartSpill.tilstand().penger === før; }), 'gjesten kan ikke betale utenom kommandolaget (ingen gratis kjøp)');
+    // «bare se»: verten strammer inn, gjestens bygg avvises med forståelig tekst
+    await A.evaluate(() => NETT.settTillat('se'));
+    sjekk(await til(B, () => NETT.leirData && NETT.leirData.tillat === 'se'), 'gjesten får vite at verten har satt «bare se»');
+    const se = await B.evaluate(() => KOMMANDO({ type: 'bygg', bygg: { type: 'lagertelt', x: 0, y: 0, ret: 0 } }));
+    sjekk(!se.ok && /bare se/.test(se.feil), 'med «bare se» avvises bygging hos gjesten: ' + se.feil);
+    const antall = await A.evaluate(() => LeirSpill.tilstand().bygg.length);
+    await B.evaluate(id => NETT.send({ t: 'kommando', k: { type: 'folk', person: id, oppgave: 'bygg', nr: 999 } }), pers.id); await vent(1200);
+    sjekk(await A.evaluate(([id, n]) => FolkSpill.tilstand().personer.find(q => q.id === id).oppgave === 'vakt' && LeirSpill.tilstand().bygg.length === n, [pers.id, antall]), 'verten avviser leirkommandoer over nettet med «bare se»');
+    // «bygge og folk»: riving er bare for verten
+    await A.evaluate(() => NETT.settTillat('bygg'));
+    sjekk(await til(B, () => NETT.leirData && NETT.leirData.tillat === 'bygg'), 'gjesten får «bygge og folk»');
+    const riv = await B.evaluate(() => { const b = LeirSpill.tilstand().bygg[0]; return b ? KOMMANDO({ type: 'riv', bygg: b.id }) : { ok: false, feil: 'ingen bygg å rive' }; });
+    sjekk(!riv.ok && /rive/.test(riv.feil), 'med «bygge og folk» kan gjesten ikke rive: ' + riv.feil);
+    await A.evaluate(() => NETT.settTillat('alt'));
+    // gjestens eget spill er ikke rørt av speilet (leiren, folket og kassa lagres ikke hos gjesten)
+    sjekk(await B.evaluate(() => !localStorage.getItem('riksbrudd-k2') && !localStorage.getItem('riksbrudd-k1')), 'gjesten lagrer ikke vertens leir som sin egen');
     // hvor spillerne er: gjesten ser verten, verten ser gjesten (sendes hvert 2. s)
     sjekk(await til(B, () => (NETT.andre || []).some(p => p.navn === 'Ola')), 'gjesten ser hvor verten er');
     sjekk(await til(A, () => NETT.bildeNå().sp.some(p => p.navn === 'Kari')), 'verten ser hvor gjesten er');
@@ -89,7 +144,14 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     if (process.env.BILDE) {   // skjermbilder av panelet: PC (1400 px) og telefon (390 px)
       await B.evaluate(() => NETT.åpen(true)); await vent(400);
       await A.screenshot({ path: process.env.BILDE + '-vert.png' }); await B.screenshot({ path: process.env.BILDE + '-gjest.png' });
+      // R18-D: vertens leir hos begge – kartet nær leiren og Leir-menyen
+      for (const [pg, n] of [[A, 'vert'], [B, 'gjest']]) { await pg.evaluate(() => { NETT.åpen(false); const S = OppstartSpill.tilstand(); kam.x = S.leir.x + 30; kam.y = S.leir.y; kam.m = .35; skitten = true;
+        const k = document.getElementById('leirknapp'); if (!k.classList.contains('på')) k.click(); }); await vent(1500); await pg.screenshot({ path: process.env.BILDE + '-' + n + '-leir.png' }); }
+      await B.evaluate(() => { const k = document.getElementById('leirknapp'); if (k.classList.contains('på')) k.click(); FolkSpill.åpne(true); }); await vent(800); await B.screenshot({ path: process.env.BILDE + '-gjest-folk.png' });
+      await B.evaluate(() => FolkSpill.åpne(false));
       await B.setViewportSize({ width: 390, height: 844 }); await vent(800); await B.screenshot({ path: process.env.BILDE + '-gjest-mobil.png' });
+      await B.evaluate(() => { NETT.åpen(false); const k = document.getElementById('leirknapp'); if (!k.classList.contains('på')) k.click(); }); await vent(900); await B.screenshot({ path: process.env.BILDE + '-gjest-mobil-leir.png' });
+      await B.evaluate(() => { const k = document.getElementById('leirknapp'); if (k.classList.contains('på')) k.click(); }); await vent(500); await B.screenshot({ path: process.env.BILDE + '-gjest-mobil-kart.png' });
       await C.setViewportSize({ width: 390, height: 844 }); await vent(800); await C.screenshot({ path: process.env.BILDE + '-lenke-mobil.png' });
     }
     // vertslenken fra tjenerprogrammet: panelet åpnes med tjeneradressen fylt inn

@@ -133,6 +133,8 @@ async function main() {
 
   // Tilstand (liten) før gjesten kommer.
   vert.send({ t: 'tilstand', data: { runde: 1, navn: 'Ålesund' }, tid: 100 });
+  // R18-D: vertens leir (huskes i minnet og gis til gjester som kommer inn)
+  vert.send({ t: 'leir', data: { ver: 1, L: '{"bygg":[]}' } });
   await vent(100);
 
   // Gjest kobler til og får siste tilstand, uten id -> tjeneren lager en.
@@ -141,12 +143,18 @@ async function main() {
   påstå(typeof gv.id === 'string' && gv.id.length === 8 && gv.rolle === 'gjest' && gv.lagret === null, 'velkommen for gjest');
   const gt = await gjest.vent('tilstand', 'tilstand til gjest');
   påstå(gt.data.runde === 1 && gt.data.navn === 'Ålesund', 'gjest fikk siste tilstand');
+  const gl = await gjest.vent('leir', 'leir til gjest');
+  påstå(gl.data.ver === 1 && gl.data.L === '{"bygg":[]}', 'gjest fikk vertens leir');
   const sp = await vert.vent((m) => m.t === 'spillere' && m.spillere.length === 2, 'spillere med gjest');
   påstå(sp.spillere.some((p) => p.navn === 'Ola' && p.rolle === 'gjest' && p.id === gv.id), 'spillerlista har gjesten');
 
   // Gjest kan ikke sende tilstand.
   gjest.send({ t: 'tilstand', data: { juks: true } });
   await gjest.ingen((m) => m.t === 'tilstand' && m.data.juks);
+  gjest.send({ t: 'leir', data: { juks: true } });
+  await gjest.ingen((m) => m.t === 'leir' && m.data.juks);
+  vert.send({ t: 'leir', data: { ver: 2, L: '{}' } });
+  påstå((await gjest.vent('leir', 'ny leir')).data.ver === 2, 'ny leir videresendes til gjesten');
 
   // Kommando gjest -> vert.
   gjest.send({ t: 'kommando', k: { ordre: 'flytt', lag: 3 } });

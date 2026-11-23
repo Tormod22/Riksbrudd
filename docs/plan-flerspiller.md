@@ -14,6 +14,13 @@ nettleseren (`spill/flerspiller.js` regler, `spill/flerspiller-visning.js` panel
 alle ser hvor de andre spillerne er (i kartet og i 3D), og alle kan skrive meldinger. Gjestene ser vertens leirbygg i kartet. Prøvd med to ekte
 nettlesere mot tjeneren (`pipeline/fliser/test_flerspiller_e2e.js`) og tunnelen med en falsk cloudflared.
 
+**Gjester styrer leiren (R18-D, 23. nov – brukeren: «gjester må kunne styre leir»):** samarbeid i vertens leir. Verten sender
+leirens tilstand (bygg med nivå, helse, jobber og framdrift, lager, diesel, planen, folket med oppgavene, kassa) bare når noe er
+endret, og tjeneren gir den siste til gjester som kommer inn. Gjesten ser Leir-menyen, byggpanelet, Folk og Tropper med vertens
+tilstand (et speil – gjestens eget lagrede spill røres ikke), og vertens bygg i 2D og 3D som hos verten. Gjesten bygger, river,
+setter folk på oppgaver og setter opp tropper gjennom kommandolaget; kassa er vertens. Verten velger i «Spill sammen» hva gjestene
+kan i leiren: **bare se**, **bygge og folk** eller **alt** (standard «alt» – Claudes valg), og loggen sier hvem som gjorde hva.
+
 **Også gjort (M0, punkt 4):** felles tilfeldighet – `spill/tilfeldig.js` (frø-basert strøm som kan lagres), og `Math.random`
 er byttet ut i regelmodulene (morgen, verden, oppstart, vær, overlevelse, kameravakt, forsvar, trussel). Strømmen lagres med
 spillet; hvert nytt spill får sitt eget frø. Laget av en egen skysesjon, kontrollert og flettet.
@@ -30,8 +37,8 @@ uten at protokollen endres mye.
 3. **Cloudflare-tunnel** (rask tunnel uten konto, `cloudflared` ved siden av tjeneren). Uten den: bare samme nett.
 4. **Verten styrer farten** for alle i M2a (gjestenes fartsknapper gjør ingenting). Avstemning om fart kommer med flere spillere.
 
-**Gjenstår (neste runder):** resten av M0 (resten av simuleringen ut av index.html – marsj, patrulje og kamprunde er flyttet til `spill/simulering.js` –, kommandoer for alt, tilfeldigheten i *-visning.js), flere kommandoer for
-gjestene (grav ned, bygg, leir), gjestens egen leir og selskap i vertens verden, mot hverandre (M3), og å prøve på ekte med
+**Gjenstår (neste runder):** resten av M0 (resten av simuleringen ut av index.html – marsj, patrulje og kamprunde er flyttet til `spill/simulering.js` –, kommandoer for alt, tilfeldigheten i *-visning.js), kjøp utenom kommandolaget hos gjestene
+(våpen i Sekk, selskap, morgenmøtet – avvises hos gjestene i dag) som kommandoer, gjestens egen leir og selskap i vertens verden, mot hverandre (M3), og å prøve på ekte med
 brukerens PC og cloudflared.
 
 ## 1. Hvor vi står i dag (målt i koden 22. nov)

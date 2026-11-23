@@ -7,7 +7,7 @@
  *         formasjon { lag, id }, strid { lag, endring, alle }
  *   leir, folk, tropper og kjøretøy (R17-4): reglene og lista står i spill/kommandoer.js; her får de miljøet i denne nettleseren
  *         (leiren, kassa og folket til MIN_SIDE, TropperSpill.rett, kjørTil, KjoretoySpill.stoppRett).
- * Leirkommandoene avvises foreløpig fra gjester (de har ikke vertens leir). Kjøretøy (kjør, kjørStopp) kan gjester styre når de eier dem.
+ * Leirkommandoene fra gjester (R18-D): kjøres på speilet av vertens leir og sendes til verten, når verten har gitt lov (NETT.leirTillatt). Kjøretøy (kjør, kjørStopp) kan gjester styre når de eier dem.
  * Kommandoer med lag: true eller meld: true skriver avvisningen i loggen; de andre lar visningen si det (som før).
  */
 (function () {
@@ -95,11 +95,22 @@
     const N = NETT();
     // gjest i flerspiller: de felles sjekkene her (raskt svar), så går kommandoen til verten
     if (N && N.gjest) {
-      const t = K.tillatt(k, { lag: ENHETER, kjøretøy: window.KJORETOY || [], side: MIN_SIDE, spiller: N.id, erVert: false });
+      const t = K.tillatt(k, { lag: ENHETER, kjøretøy: window.KJORETOY || [], side: MIN_SIDE, spiller: N.id, erVert: false, leirTillatt: N.leirTillatt });
       if (t.feil) { if (!k.stille) logg(t.def && t.def.leir ? t.feil : t.feil + (t.feil.includes('styres av') ? ' Be verten gi deg laget.' : '')); return { ok: false, feil: t.feil }; }
+      // troppene (oppløs, bytt utstyr) er lagkommandoer, men hører til leiren: vertens tillatelse gjelder dem også (R18-D)
+      const lov = t.def.leir || (N.bareHosVerten && N.bareHosVerten(k.type)) ? (N.leirTillatt ? N.leirTillatt(k.type) : null) : null;
+      if (lov) { if (!k.stille) logg(lov); return { ok: false, feil: lov }; }
       if (!N.tilkoblet) { if (!k.stille) logg('Ingen forbindelse med verten.'); return { ok: false, feil: 'Ingen forbindelse med verten.' }; }
-      N.send({ t: 'kommando', k }); if (!k.stille && t.s) logg(`${t.s.navn}: sendt til verten …`);
-      return { ok: true, sendt: true };
+      const nr = N.nesteNr ? N.nesteNr() : 0, ut = Object.assign({}, k, { nr });
+      // R18-D: leirkommandoer kjøres først på speilet av vertens leir (samme regler, svaret kommer straks og panelene viser det
+      // nye), så hos verten. Neste speil fra verten tar over. Det som lager eller tar bort lag, kjøres bare hos verten.
+      if (t.def.leir && N.speilet && N.speilet() && !(N.bareHosVerten && N.bareHosVerten(k.type))) {
+        N.iKommando = true; let r; try { r = K.utfør(k, lokal()); } finally { N.iKommando = false; } if (!r.ok) return r;
+        N.send({ t: 'kommando', k: ut }); return r;
+      }
+      N.send({ t: 'kommando', k: ut }); if (!k.stille && t.s) logg(`${t.s.navn}: sendt til verten …`);
+      else if (!k.stille && t.def.leir) logg('Sendt til verten …');
+      return { ok: true, sendt: true, svar: { sendt: true } };
     }
     const r = K.utfør(k, lokal());
     if (!r.ok && r.feil && !k.stille && K.def(k.type) && (K.def(k.type).lag || K.def(k.type).meld)) logg(r.feil);

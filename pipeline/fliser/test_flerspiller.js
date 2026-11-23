@@ -53,4 +53,14 @@ sjekk(Math.abs(hj[0][0] - 13) < 1e-9 && Math.abs(hj[0][1] - 19) < 1e-9 && Math.a
 const g = [{ id: 'a' }, { id: 'b' }];
 sjekk(F.nesteEier(null, g) === 'a' && F.nesteEier('a', g) === 'b' && F.nesteEier('b', g) === null && F.nesteEier('borte', g) === null, 'nesteEier');
 sjekk(F.framTid(60) === 0 && F.framTid(3600) === 60 && F.framTid(1e9) === 7 * 24 * 60, 'framTid');
+// R18-D: gjester i vertens leir – tillatelsen, leirbildet og loggtekstene
+sjekk(F.rensTillat('tull') === 'alt' && F.rensTillat('se') === 'se' && F.TILLAT_STANDARD === 'alt', 'tillatelsen renses (standard «alt»)');
+sjekk(/bare se/.test(F.leirLov('se', 'bygg')) && F.leirLov('bygg', 'bygg') === null && F.leirLov('bygg', 'folk') === null, 'bare se avviser, bygge og folk slipper bygg og folk');
+sjekk(/rive/.test(F.leirLov('bygg', 'riv')) && /tropper/.test(F.leirLov('bygg', 'troppOpprett')) && F.leirLov('alt', 'riv') === null && F.leirLov('alt', 'troppOpprett') === null, 'riving og tropper bare med «alt»');
+const pl = F.pakkLeir({ L: '{"versjon":2,"bygg":[]}', ver: 3, penger: 1234.6, tillat: 'x', leir: { x: 1.26, y: 2 }, navn: 'Olas vakt', kvitt: { g1: 4 } });
+sjekk(pl.ver === 3 && pl.penger === 1235 && pl.tillat === 'alt' && pl.leir.x === 1.3 && pl.kvitt.g1 === 4 && F.pakkLeir({}) === null, 'pakkLeir');
+sjekk(F.brukLeirNå(pl, 'g1', 4, 0, 1e9) && !F.brukLeirNå(pl, 'g1', 5, 1000, 2000) && F.brukLeirNå(pl, 'g1', 5, 1000, 1000 + F.REGLER_LEIR.ventMaks + 1) && F.brukLeirNå(pl, 'g2', 0, 0, 0) && !F.brukLeirNå({ v: 0 }, 'g1', 0, 0, 0), 'brukLeirNå venter på kvitteringen, men ikke for alltid');
+sjekk(F.leirTekst({ type: 'bygg' }, { bygg: 'Brakke', ny: true }) === 'bygger en brakke' && F.leirTekst({ type: 'folk', oppgave: 'vakt' }, { person: 'Kari Nilsen', oppgave: '«vakt»' }) === 'setter Kari Nilsen på «vakt»'
+  && F.leirTekst({ type: 'riv' }, { bygg: 'Brakke' }) === 'river brakke' && F.leirTekst({ type: 'ukjent' }) === null, 'leirTekst');
+sjekk(F.BARE_HOS_VERTEN.includes('troppOpprett') && !F.BARE_HOS_VERTEN.includes('bygg'), 'tropper kjøres bare hos verten');
 if (feil) { console.log(feil + ' feil'); process.exit(1); } console.log('ok');
