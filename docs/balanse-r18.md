@@ -19,7 +19,7 @@ er **ikke** endret her – forslagene står i egen del nederst.
   kontrollrom 14). Det passer spor A («betaling gir neste steg i leiren») – men bare når leirbyggene blir billigere, ellers er de første
   døgnene for trange (se forslagene).
 - **Mot loren:** Kronekrakket gjør kronen nesten verdiløs. Spillets prisnivå er omtrent **× 20–30 av 2020-priser** for mat (3 000 kr per
-  rasjon), våpen i sekken (nå) og materialer (20 000–60 000 kr), men **× 130 for diesel** (3 000 kr/l) – diesel er knapp etter
+  rasjon), våpen i sekken og materialer (20 000–60 000 kr) – lagenes våpen er på 2020-nivå –, men **× 130 for diesel** (3 000 kr/l) – diesel er knapp etter
   kollapsen, så det er greit at den er dyrest. Inflasjonen var 0,4 % i døgnet; plan-kollaps.md sier 1–2 % – nå **1 %**.
 
 Regnestykket ligger i `pipeline/fliser/test_balanse.js` (`BALANSE_VIS=1` skriver døgn for døgn).
@@ -28,10 +28,10 @@ Regnestykket ligger i `pipeline/fliser/test_balanse.js` (`BALANSE_VIS=1` skriver
 
 | # | Tall | Fra | Til | Hvorfor |
 |---|------|-----|-----|---------|
-| 1 | Automatgevær i sekken (spill/utstyr.js:18) | 600 000 kr | 60 000 kr | Troppebyggeren tok 25 000 kr for en maskinpistol, og en hel tropp fikk maskinpistoler og hagler for 200 000 kr (spill/strid.js) – samme våpen kostet 15 × så mye for deg som for lagene. Nå ca. 2 × troppens pris (du kjøper ett og ett, lagene i parti). |
-| 2 | Maskinpistol / hagle / pistol / skarpskyttergevær i sekken (utstyr.js:16–20) | 400 000 / 300 000 / 150 000 / 1 200 000 kr | 50 000 / 40 000 / 30 000 / 160 000 kr | Samme grunn som 1. |
-| 3 | Ammunisjon (utstyr.js:25–26) | 9 mm 300, 5,56 mm 500, hagl 600, 7,62 mm 900 kr per skudd | 100 / 150 / 200 / 300 kr | En pakke på 30 skudd kostet 15 000 kr – en firedel av et gevær med de nye prisene. Nå 4 500 kr. |
-| 4 | Førstehjelp (utstyr.js:27) | 50 000 kr | 20 000 kr | Kostet nesten like mye som en maskinpistol. |
+| 1 | Reserveammunisjon i startsekken (spill/utstyr.js:29) | 90 skudd 5,56 mm + 30 skudd 9 mm | 60 + 15 | «Knappe ressurser» (se egen del): to fulle magasiner til hvert våpen i tillegg til det som sitter i. |
+| 2 | Ammunisjon i husene (spill/lut.js:83–86) | esker på 5–30 skudd | 3–15 skudd | Et vanlig hus ga 0,7 skudd 5,56 mm og 3–4 skudd hagl/7,62 i snitt; hyttene 10 av hver. Nå ca. halvparten. |
+| 3 | Førstehjelp i husene (lut.js:88) | vekt 2, 1–2 stk. | vekt 1,2, 1 stk. | Annethvert hus hadde førstehjelp (0,5 i snitt). Nå ca. hvert fjerde (0,3); sykehuset gir fortsatt over fem. |
+| 4 | Smertestillende og batterier i husene (lut.js:89, 92) | 1–3 stk. | 1–2 stk., litt sjeldnere | Batteriene (8 t lys hver) lå i nesten hvert hus; nå ca. annethvert. Lyset skal også telle. |
 | 5 | Inflasjon (spill/spillet.js:93) | 0,4 % per døgn | 1 % per døgn (Marked.INFL) | Loren sier 1–2 %; 0,4 % merktes ikke (4 % på ti døgn). Nå 10 % på ti døgn, ca. 35 % på en måned – det lønner seg å bruke pengene. |
 | 6 | Oppdraget «Hent forsyninger» (spillet.js:146) | 0,6–1,2 mill. kr | 0,3–0,6 mill. kr | Et ufarlig oppdrag 0,7–2,6 km unna betalte mer enn en eskortekontrakt over 8 km med røvere. Kontraktene skal være den røde tråden (spor A). |
 | 7 | Oppdraget «Ta en røverpost» (spillet.js:148) | 1,5 mill. + 500 kr/m per røverlag (opptil 6,6 mill.) | 0,8 mill. + 250 kr/m per røverlag (1,2–1,7 mill. per lag) | Var opptil 8 × en kontrakt og 4 × det største røverbyttet (1,5 mill.). |
@@ -39,7 +39,8 @@ Regnestykket ligger i `pipeline/fliser/test_balanse.js` (`BALANSE_VIS=1` skriver
 | 9 | Nattsikt på svartebørsen (spill/region.js:217) | 6 mill. kr | 2 mill. kr | Troppebyggeren selger nattsikt til én tropp for 400 000 kr (og den ser like langt som om dagen). 6 mill. for +40 % til alle lag var et dårlig kjøp. |
 | 10 | Bakgrunnen «Forretningsmann» (spill/oppstart.js:25) | +10 mill. kr | +5 mill. kr | Med 40 mill. i start var bonusen en firedel av kassa – langt sterkere enn de andre (bonden sparer ca. 8 000 kr i døgnet). Nå en åttendedel, som da starten var 100 mill. og bonusen 10. |
 
-Testene som sjekket tallene med vilje er oppdatert: `test_oppstart.js` (forretningsmann 105 mill. i testene, der starten er 100 mill.).
+Testene som sjekket tallene med vilje er oppdatert: `test_oppstart.js` (forretningsmann 105 mill. i testene, der starten er 100 mill.) og
+`test_utstyr.js` (startsekken 60 skudd i reserve).
 De andre testene (spillet, folk, region, utstyr, tropper, strid, dagbok, lut) gikk uten endring.
 
 ## Tabellen
@@ -96,10 +97,12 @@ Vurdering: **greit** = henger sammen med resten; **rart** = hvorfor i kolonnen; 
 
 | Tall | Hvor | Hva | Vurdering |
 |------|------|-----|-----------|
-| Pistol 30 000, maskinpistol 50 000, automatgevær 60 000, hagle 40 000, skarpskyttergevær 160 000 kr | spill/utstyr.js:16–20 | Våpen i sekken | **Endret** (var 150 000–1 200 000). |
-| 9 mm 100, 5,56 mm 150, hagl 200, 7,62 mm 300 kr per skudd | utstyr.js:25–26 | Ammunisjon | **Endret**. |
-| Førstehjelp 20 000, feltrasjon 3 000 kr | utstyr.js:27 | Ting i sekken | **Endret** / greit (rasjonen = matprisen). |
-| Maskinpistol 25 000, hagle 20 000, presisjonsrifle 80 000, maskingevær 150 000 kr | spill/tropper.js:24–25 | Troppebyggeren, per våpen | Greit nå (lav, men lik pakkeprisen). Se forslag om et høyere våpennivå. |
+| Pistol 150 000, maskinpistol 400 000, automatgevær 600 000, hagle 300 000, skarpskyttergevær 1 200 000 kr | spill/utstyr.js:12–16 | Våpen i sekken | **Rart**: 15 × troppebyggerens pris for samme våpen. Spor C eier våpnene – se forslag. |
+| 9 mm 300, 5,56 mm 500, hagl 600, 7,62 mm 900 kr per skudd | utstyr.js:19–20 | Ammunisjon i butikken | Greit med knappe ressurser (dyrt er riktig), men kjøpet har ingen grense – se forslag. |
+| Førstehjelp 50 000, feltrasjon 3 000 kr | utstyr.js:21 | Ting i sekken | Greit (rasjonen = matprisen; førstehjelpen skal være dyr). |
+| Startsekken: 60 + 30 skudd 5,56 mm, 15 + 15 skudd 9 mm, 1 førstehjelp, 2 rasjoner | utstyr.js:29 | Det du starter med | **Endret** (reserven 90/30 → 60/15). |
+| Ammunisjon i esker på 3–15 skudd, førstehjelp 1 stk. med vekt 1,2 | lut.js:83–92 | Det du finner | **Endret**. |
+| Maskinpistol 25 000, hagle 20 000, presisjonsrifle 80 000, maskingevær 150 000 kr | spill/tropper.js:24–25 | Troppebyggeren, per våpen | Rart: på 2020-nivå, mens resten er × 20 (lik pakkeprisen i strid.js). Se forslag. |
 | Nærstrid 200 000, avstand 400 000, tung 600 000 kr | spill/strid.js:19–21 | Bevæpning for hele laget | Greit, men lav for Kronekrakket – låst av sjekk.js (se forslag). |
 | Riflen [600 m, 0,05], maskingevær [900 m, 0,09], skarpskytter [900 m, 0,08] per skudd | terreng.js:127 | Treffsjanse | Greit. Kampreglene er Claudes forslag – CLAUDE.md sier spør før store endringer. Ikke rørt. |
 | Maskinpistol [300 m, 0,11], hagle [150 m, 0,16], pistol [120 m, 0,05], presisjonsrifle [1100 m, 0,07] | strid.js:15 | Treffsjanse | Greit (samme). |
@@ -140,8 +143,8 @@ kjøpes når det er under tre døgn igjen, diesel fylles til 500 l når tanken e
 
 Rammene i testen (med forklaring i fila): startleiren 35–85 % av startpengene, drift 0,05–1,2 mill. om sommeren og 0,1–2 mill. om
 vinteren, leiren klarer ti døgn uten inntekt, drifta tar minst 2 % av startpengene på ti døgn, en kontrakt = 1–15 døgn med drift, et nytt
-grunnbygg = 2–20 døgn med kontrakter, en ny person ≤ én kontrakt, «hent» ≤ én eskorte, røverpost ≤ 2,5 eskorter per lag, samme våpen
-1–3 × dyrere i sekken enn i troppebyggeren, drivhuset dekker minst 80 % av strømmen det bruker.
+grunnbygg = 2–20 døgn med kontrakter, en ny person ≤ én kontrakt, «hent» ≤ én eskorte, røverpost ≤ 2,5 eskorter per lag,
+knappe ressurser (se egen del), drivhuset dekker minst 80 % av strømmen det bruker.
 
 ## Forslag for leirbyggene (spor B eier spill/leir.js og spill/modeller-leir2.js – ikke endret)
 
@@ -163,7 +166,34 @@ Prisene under er grunnpris (utstyr og deler); materialene kommer i tillegg (× 1
 Med forslagene for aggregat, kontrollrom og dieseltank koster startleiren ca. **21,3 mill. = 53 %** av 40 mill. (i stedet for 76 %), og
 et nytt grunnbygg tar ca. 3–11 døgn med kontrakter. test_balanse.js tåler begge.
 
+## Knappe ressurser (tillegg fra hovedøkta: brukeren valgte «knappe ressurser», med Silent Hill som stemning)
+
+Målet: ammunisjon, førstehjelp og lys skal føles verdifulle når du går alene – knapt, men ikke umulig. Målt med de ekte reglene
+(lut.js + interior.js) på 300 prøvehus før og etter:
+
+| Per bygg i snitt | Før | Nå |
+|---|---|---|
+| Vanlig hus: førstehjelp / smertestillende | 0,50 / 1,64 | 0,28 / 1,22 |
+| Vanlig hus: skudd 5,56 mm / 9 mm / hagl / 7,62 mm | 0,7 / 1,1 / 3,7 / 3,4 | 0,3 / 0,7 / 1,7 / 1,9 |
+| Vanlig hus: batterier / lommelykt | 0,96 / 0,45 | 0,56 / 0,49 |
+| Hytte: hagl / 7,62 mm (jaktvåpnene) | 10,1 / 9,8 | 5,0 / 5,2 |
+| Sykehus: førstehjelp / smertestillende | 9,8 / 24,3 | 5,4 / 17,4 |
+| Startsekken: reserve 5,56 mm / 9 mm | 90 / 30 | 60 / 15 |
+
+Valget: geværammunisjon (5,56 mm) er det knappeste – den finnes nesten bare i startsekken, i hangarer og i butikken. Jaktammunisjon
+(hagl, 7,62 mm) finnes i hytter og uthus, så jaktrifla og hagla blir våpnene du klarer deg med ute. Førstehjelp må letes etter (3–4
+hus for én), men sykehus og legevakter er verdt turen. Boligene nærmest en ny leir har fortsatt alltid noe (lut.js, «første hus»), så
+starten er ikke umulig. test_balanse.js har rammene (0,1–0,4 førstehjelp og 0,1–1,5 skudd 5,56 mm per hus, minst 3 førstehjelp på et
+sykehus, høyst ett batteri per hus).
+
+Ikke gjort (spor C eier utstyr.js): **butikken i Leir-menyen selger ammunisjon og førstehjelp uten grense** (en pakke 5,56 mm =
+15 000 kr). Forslag: la ammunisjonen gå gjennom markedets hyller (spillet.js Marked.LAGER, f.eks. 300 skudd 5,56 mm og 5 førstehjelp,
+påfyll en tredel per døgn), så knappheten også gjelder kjøp. Lagenes ammunisjon (påfyll hjemme, forsvar-hjemme.js) er ikke rørt.
+
 ## Andre forslag som krever filer jeg ikke skulle røre
+
+- **Samme våpen, samme prisnivå** (spill/utstyr.js eies av spor C): sekkens våpen koster 15 × troppebyggerens (automatgevær 600 000 kr
+  mot maskinpistol 25 000 kr for et lag). Forslag: sekken ca. 2 × troppens pris når våpennivået for lagene er hevet (under).
 
 - **Høyere våpennivå for lagene** (spill/strid.js BEVÆPNING og spill/tropper.js VÅPEN): pakkene for hele laget (0,2–0,6 mill.) og
   troppebyggerens priser (20 000–150 000 kr) ligger på 2020-nivå, mens resten av spillet er × 20. Forslag: × 3 (nærstrid 0,6, avstand

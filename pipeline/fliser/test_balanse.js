@@ -13,7 +13,6 @@ const FolkR = require('../../site/dovre-fliser/spill/folk.js');
 const { Marked, Oppdrag } = require('../../site/dovre-fliser/spill/spillet.js');
 const Selskap = require('../../site/dovre-fliser/spill/selskap.js');
 const Utstyr = require('../../site/dovre-fliser/spill/utstyr.js');
-const Tropper = require('../../site/dovre-fliser/spill/tropper.js');
 
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
 const mill = v => (v / 1e6).toFixed(2).replace('.', ',') + ' mill.';
@@ -41,8 +40,6 @@ const RAMME = {
   byggDøgn: [2, 20],
   // en ny person skal koste mindre enn én vanlig kontrakt (folk er det viktigste du har)
   rekruttMaksKontrakter: 1,
-  // samme våpen skal koste omtrent det samme for deg (sekken) og for lagene (troppebyggeren): sekken 1–3 ganger troppens pris
-  våpenForhold: [1, 3],
 };
 
 // materialene kjøpes med påslaget (spillet: Marked.kjøpspris med «dyrt» utenfor testene)
@@ -117,12 +114,19 @@ ok(SB.kasse > SB.etterStart, `med én kontrakt i døgnet vokser kassa: ${mill(SB
   ok(hentMaks <= en, `oppdraget «hent» betaler høyst ${mill(hentMaks)} – ikke mer enn en eskorte`);
   ok(postMaks <= 2.5 * en, `en røverpost betaler høyst ${mill(postMaks)} per røverlag (høyst 2,5 eskorter)`); }
 
-// ---------- våpenprisene henger sammen ----------
-{ const PAR = [['mp', 'maskinpistol'], ['hagle', 'hagle'], ['rifle', 'presisjonsrifle']], linjer = [];
-  let alle = true;
-  for (const [s, t] of PAR) { const a = Utstyr.VÅPEN[s].pris, b = Tropper.VÅPEN[t].pris, f = a / b; linjer.push(`${Utstyr.VÅPEN[s].navn} ${a / 1000}k / ${b / 1000}k`); alle = alle && f >= RAMME.våpenForhold[0] && f <= RAMME.våpenForhold[1]; }
-  ok(alle, `samme våpen koster 1–3 ganger så mye i sekken som i troppebyggeren: ${linjer.join(', ')}`);
-  const pakke = Utstyr.TING.a556.pris * Utstyr.TING.a556.pakke; ok(pakke < Utstyr.VÅPEN.gevær.pris / 5, `en pakke 5,56 mm (${pakke} kr) koster under en femdel av geværet (${Utstyr.VÅPEN.gevær.pris} kr)`); }
+// ---------- knappe ressurser (R18: «hver kule og hver førstehjelpspakke skal telle», med Silent Hill som stemning) ----------
+// Prisene på våpen og ammunisjon eies av spor C (utstyr.js) – her sjekkes bare mengdene du starter med og finner.
+{ const Lut = require('../../site/dovre-fliser/spill/lut.js'), Int = require('../../site/dovre-fliser/spill/interior.js');
+  const I = Utstyr.ny(), mag = Utstyr.VÅPEN.gevær.magasin;
+  ok(I.ting.a556 <= 2 * mag && I.ting.a556 >= mag && (I.ting.forbinding || 0) === 1, `startsekken: ${I.ting.a556} skudd i reserve til geværet (1–2 magasiner) og én førstehjelp`);
+  const hus = (kl, i, w, d) => Int.plan([[0, 0], [w, 0], [w, d], [0, d]], { i, kl, h: 6, dør: { x: w / 2, y: 0, ux: 1, uy: 0, w: 1 } });
+  const snitt = (kl, w, d) => { const sum = {}, N = 150; for (let n = 1; n <= N; n++) { const i = n * 37 + 11; for (const b of Lut.beholdere(hus(kl, i, w, d), i)) for (const [id, q] of Object.entries(Lut.innhold(kl, b.type, i, b.k).t)) sum[id] = (sum[id] || 0) + q; } for (const k of Object.keys(sum)) sum[k] /= N; return sum; };
+  const H = snitt('hus', 10, 8), S = snitt('sykehus', 24, 16), tall = v => (v || 0).toFixed(2).replace('.', ',');
+  // RAMMENE: et vanlig hus gir 0,1–0,4 førstehjelp (du må lete i 3–10 hus for én) og 0,1–1,5 skudd 5,56 mm; et sykehus minst tre
+  ok(H.forbinding >= .1 && H.forbinding <= .4, `et vanlig hus gir i snitt ${tall(H.forbinding)} førstehjelp (ramme 0,1–0,4: knapt, men ikke umulig)`);
+  ok(H.a556 >= .1 && H.a556 <= 1.5, `et vanlig hus gir i snitt ${tall(H.a556)} skudd 5,56 mm (ramme 0,1–1,5)`);
+  ok(S.forbinding >= 3, `et sykehus gir i snitt ${tall(S.forbinding)} førstehjelp – det er der du leter etter medisin`);
+  ok((H.batterier || 0) <= 1, `batterier: ${tall(H.batterier)} per hus (høyst ett – lyset skal også telle)`); }
 
 // ---------- drivhuset lønner seg ----------
 { const kwKr = -Leir.BYGG.drivhus.kw * 24 * Leir.DRIVSTOFF.literPerKWt * Leir.DRIVSTOFF.prisPerLiter, mat = FolkR.R.drivhus * FolkR.R.matPris;
