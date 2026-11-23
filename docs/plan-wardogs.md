@@ -38,6 +38,11 @@ Alle tall er Claudes forslag til brukeren har bestemt noe annet.
   «Følg meg», «Hold her», «Angrip dit» for egne lag innen 400 m, via KOMMANDO); treffmarkør og rød skadeindikator. Vakt «kamp på bakken».
   IKKE gjort: maskingevær som eget våpen (rifle fantes fra før), fiendene kaster ikke granater, fiendene i 3D sikter fortsatt ikke
   egentlig (skaden regnes som før i kampSteg), og dekningen gjelder bare deg – ikke lagene dine.
+- **Status 23. nov (R18-C, grenen claude/r18-granater):** fiendene kaster granater mot deg når du går (15–35 m, «GRANAT!» med pil og
+  nedtelling, dekning bare når veggen er mellom), lagene bruker granater i kamprunden under 60 m (mer virkning mot nedgravde/skog, begrenset
+  antall etter bevæpningen – røvere færrest –, fylles med ammunisjonen, blink i kartet), lett maskingevær i sekken og undertrykking fra
+  maskingevær (treffer dårligere og går saktere en stund) for både lagene og deg, og skaden fiendene gjør på deg i 3D regnes med 2D-kampens
+  våpentabell. Se docs/natt/bakkekamp.md. Gjenstår: dekning for lagene dine i 3D, fiendens maskingevær som holder deg nede.
 
 ## W3 – Kjøretøy i kamp
 - **Kjøre og skyte** fra pansret bil eller stridsvogn i 3D: tårnet dreies med musa eller fingeren.

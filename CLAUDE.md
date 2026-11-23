@@ -1584,3 +1584,9 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   senere»), unntak: offisersbrakke 4 senger, lagerhall 250 m³ lager. MODELLER.gjerde, kasser, fatpall og flaggstang er byttet ut; sokkel ved
   flaggstanga i 3D. Selskapets farger fra OppstartSpill.tilstand().fraksjon.flagg. Testsiden spill/modeller-visning.html viser alle.
   WINDOWS: git har core.autocrlf=false i denne klonen; versjon.py må kjøres med LF (Python på Windows skriver ellers CRLF og feil hasher).
+  FIENDENS GRANATER OG MASKINGEVÆR (23. nov, R18-C, grenen claude/r18-granater; detaljer i docs/natt/bakkekamp.md): spill/bakkekamp.js har nå
+  Lagkamp (granater per lag etter bevæpningen, runde() under 60 m), Undertrykk (maskingevær: treff og fart ned en stund) og Fiende3d (ildkraft
+  mot deg med Terreng.treffsjanse, fiendens kast). spill/simulering.js har den valgfrie kroken KROKER.salve(a, b, d, f, rng, tid) etter hver
+  salve – uten den er kampen nøyaktig som før. bakkekamp-visning.js: fiender innen 15–35 m kaster granater mot deg når du går («GRANAT!»,
+  pil, nedtelling, dekning bare når veggen er mellom), blink i kartet, granatene fylles med ammunisjonen. Utstyr.VÅPEN.lmg = lett maskingevær.
+  Alt sover i testene (BakkekampSpill.test). VAKT vakter/granater.js («fiendens granater»). Tallene er Claudes forslag.
