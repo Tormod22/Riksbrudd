@@ -867,6 +867,31 @@ window.HJELP_TILLEGG = [
 "Vær, lyd og bilde"
 ],
 [
+"Hva leirbyggene gjør",
+"Alle bygg i leiren har nå en virkning. Kortet i byggelista har en kort linje (for eksempel «moral +4 · mindre matsvinn» eller «vern 75 %»), og trykker du på et bygg, sier byggpanelet «Virkning: …» og om bygget virker akkurat nå (uten strøm, slått av eller hardt skadet virker det ikke eller bare halvt). Flere av samme slag gir ikke mer moral, helse eller mat – det er de forskjellige byggene som teller.",
+"Leiren"
+],
+[
+"Bo og leve: moral, helse og mat",
+"Messe, dusj, toalett, vaskeri, bålplass, flaggrekke, skilt, klimaenheter, hundegård og offisersbrakke gir moral (høyst +15 til sammen). Dusj, toalett, vaskeri, avfallsplass, vannrens og førstehjelpsskap gir helse hver dag. Kjølecontainer og messe gir mindre matsvinn. Vannrenseanlegget gir vann som en brønn når vannverket svikter.",
+"Leiren"
+],
+[
+"Forsvar: vern, hindringer og utsikt",
+"Betongbunker, skyttergrav, jordfylte kurver, T-vegger, observasjonspost og porttårn gir egne lag som står helt inntil dem færre treff (bunker 75 % færre). Piggtråd, kryss mot kjøretøy, vegsperring og kjøretøysluse sinker fiender som kommer nær. Observasjonsposten ser fiender 900 m unna, porttårnet 500 m, og radartårnet ser alt som beveger seg innen 5 km (ikke i skog). Lysmasten lar lagene se lenger om natta. Hundegård og sirenemast lar vaktene se fiender lenger unna.",
+"Leiren"
+],
+[
+"Trening, sykehus og ammunisjon",
+"Lag som står i ro ved skytebanen, hinderløypa eller treningsteltet, får erfaring hver time (høyst veteran – elite krever ekte kamp). Feltsykehus og medevac-plass leger sårede soldater i nærheten. Ammunisjonsbunker og våpenlager fyller ammunisjonen til lagene ved leiren, og røverne får mindre med seg når de herjer.",
+"Leiren"
+],
+[
+"Kjøretøy, strøm og samband",
+"Garasje, verkstedhall og vaskeplass reparerer egne kjøretøy som står inntil, og fyllestasjonen fyller tanken med leirens diesel. På parkeringsplassen tar kjøretøyene halv skade. Generatorhuset gir 30 kW på diesel, og transformatoren dobler strømmen fra nettet mens det virker. Kommandosenteret gir feltradioene 10 km lenger rekkevidde, og satellittterminalen gjør at åser og fjell ikke stopper dem. Dronehangaren holder en vaktdrone over leiren (oppskytingsrampen gir én til). Kontor og møtetelt gjør alt arbeid litt raskere, og arresten vokter fangene.",
+"Leiren"
+],
+[
 "Lut i husene",
 "Inne i husene ligger det ting i møblene: mat og drikke i kjøleskapet og kjøkkenskapene, klær, sekker og av og til et jaktvåpen i garderoben, medisin i baderomsskapet og på nattbordet, verktøy på verktøybenken, mye mat i butikkenes reoler. Står du ved et møbel, kommer knappen «Åpne kjøleskapet (E)». Hvert møbel har sitt eget innhold, og det du legger igjen der, blir liggende. Ransakede hus har lite igjen.",
 "I 3D"

@@ -18,9 +18,11 @@ module.exports = { navn: 'virkning i leirbyggene: tekst for alle bygg og fem må
     const X = S.x + 2500, Y = S.y + 2500; let nr = 900000;
     const legg = (type, dx, dy) => { const b = { id: ++nr, nr, type, x: X + dx, y: Y + dy, ret: 0, igjen: 0, totalt: 1, hp: 1, nivå: 1, arbeid: null, mat: {} }; L.bygg.push(b); return b; };
     const fiende = (dx, dy, sti) => ({ navn: 'Prøvefiende', side: 'rød', x: X + dx, y: Y + dy, sti: sti ? [[X, Y]] : null, menn: [{ hp: 1 }] });
-    const ild = (a, b) => KROKER.ild.reduce((v, f) => v * f(a, b), 1), fart = s => (KROKER.fart || []).reduce((v, f) => v * f(s), 1), ser = e => KROKER.ser.some(f => f(e));
+    const ild = (a, b) => KROKER.ild.reduce((v, f) => v * f(a, b), 1), fart = s => (KROKER.fart || []).reduce((v, f) => v * f(s), 1), ser = e => { LS.oppdater(); return !!LV.ser(null, Leir, null, e, LS.aktive()); };   // bare byggenes egen sikt (andre vakter kan ha latt droner/kameraer stå)
     try {
       LS.kobl();
+      // målingen gjøres i en tom leir (andre vakter kan ha latt bygg stå som alt gir moral, vern …); byggene settes tilbake til slutt
+      L.bygg.length = 0; LS.oppdater();
       krev(lag && kj, 'fant ikke et eget lag og et kjøretøy'); if (!lag || !kj) return ut;
       lag.x = X; lag.y = Y; lag.sti = null; kj.x = X + 400; kj.y = Y; kj.skade = .5;
       const e0 = fiende(30, 0), eR = fiende(3000, 0, true), eP = fiende(1200, 5);
@@ -46,7 +48,7 @@ module.exports = { navn: 'virkning i leirbyggene: tekst for alle bygg og fem må
       const st = Leir.steg(K, 60, 0); if (st.aggAntall === 1 && st.agg > 7.9 && !st.mangler.size) ut.målt.strøm = st.agg;
       // byggpanelet sier hva bygget gjør
       if (window.LeirSpill.velg) { LeirSpill.velg(nr - 1); const v = document.getElementById('byggvirkning'); krev(v && /Virkning: .*erfaring/.test(v.textContent), 'byggpanelet viser ikke virkningen for skytebanen: ' + (v ? v.textContent : 'mangler')); ut.panel = v ? v.textContent : ''; }
-      for (const k of ['moral', 'vern', 'radar', 'sinke', 'lager', 'radio', 'reparer', 'strøm']) krev(k in ut.målt, 'virkningen ble ikke målt: ' + k);
+      for (const k of ['moral', 'vern', 'radar', 'sinke', 'lager', 'radio', 'reparer', 'strøm']) krev(k in ut.målt, 'virkningen ble ikke målt: ' + k + ` (før ${JSON.stringify(før)}, etter ${JSON.stringify(etter)}, samfunn ${!!(window.SamfunnSpill && SamfunnSpill.__lvValg)}, leiren ${JSON.stringify(LS.leiren())})`);
       const n = Object.keys(ut.målt).length; krev(n >= 5, `bare ${n} virkninger kunne måles: ${JSON.stringify(ut.målt)} (før ${JSON.stringify(før)}, etter ${JSON.stringify(etter)})`);
     } catch (e) { krev(false, 'feil: ' + e.message); }
     finally {
