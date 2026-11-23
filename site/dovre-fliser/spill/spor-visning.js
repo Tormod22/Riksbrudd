@@ -163,7 +163,7 @@
 #lapppanel small{ display:block; color:#6b5d44; font-size:13.5px; font-family:inherit; } #lapppanel .peker{ margin-top:8px; padding-top:6px; border-top:1px dashed #a8987a; font-style:normal; font-size:15px; }
 #lapppanel .x{ position:absolute; right:4px; top:2px; background:none; border:0; color:#3a2f1e; font-size:22px; min-width:36px; min-height:36px; cursor:pointer; }
 #sporlapp{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 116px); z-index:7; padding:4px 14px; color:#e9dfc6; font-family:"Cormorant Garamond",serif; font-style:italic; font-size:18px;
-  text-shadow:0 1px 3px #000, 0 0 10px #000; pointer-events:none; opacity:0; transition:opacity 1.6s; max-width:86vw; text-align:center; } #sporlapp.på{ opacity:1; }
+  text-shadow:0 1px 3px #000, 0 0 10px #000; background:rgba(12,10,7,.42); border-radius:4px; pointer-events:none; opacity:0; max-width:86vw; text-align:center; display:none; } #sporlapp.på{ display:block; }
 body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.bærermøbel #lapppanel{ display:none; }`;
   document.head.appendChild(css);
   const lk = document.createElement('button'); lk.id = 'leseknapp'; lk.type = 'button'; lk.title = 'Les lappen (tast N)';
@@ -202,14 +202,16 @@ body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.
   lk.addEventListener('click', e => { e.preventDefault(); if (nåLesbar) lesHer(nåLesbar[0], nåLesbar[1]); });
   window.addEventListener('keydown', e => { if ((e.key === 'n' || e.key === 'N') && nåLesbar && !/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) { if (panel.classList.contains('på')) lukk(); else lesHer(nåLesbar[0], nåLesbar[1]); } if (e.key === 'Escape' && panel.classList.contains('på')) lukk(); });
   // stemningslinja: én gang per hus (de to mest talende sporene), tones bort etter 7 s
-  const sett = new Set(); let stemningTil = 0, sistP = null;
-  function visStemning(sp, i) { if (SKJULT() || sett.has(i) || !sp.tekst.length) return; sett.add(i); const t = sp.tekst.slice(0, 2).join(' '); stemning.textContent = t; stemning.classList.add('på'); stemningTil = performance.now() + 7000; }
+  const sett = new Set(); let stemningTil = 0, stemningFra = 0, sistP = null;
+  function visStemning(sp, i) { if (SKJULT() || sett.has(i) || !sp.tekst.length) return; sett.add(i); const t = sp.tekst.slice(0, 2).join(' '); stemning.textContent = t; stemning.classList.add('på'); stemningFra = performance.now(); stemningTil = stemningFra + (window.SporSpill.varighet || 7000); }
   if (typeof KROKER !== 'undefined') KROKER.ramme3d.push(R => {
     const L = lesbar(R); nåLesbar = L;
     const t = L ? 'Les lappen' + (L[1].lapp.ute ? ' på døra' : '') + ' (N)' : ''; if (lk.textContent !== t) lk.textContent = t; lk.classList.toggle('på', !!L && !(window.MoblerSpill && MoblerSpill.bærer && MoblerSpill.bærer()));
     if (!L && panel.classList.contains('på') && !(R && R.fot)) lukk();
     if (R && R.fot && window.Interior3d) { const P = Interior3d.inne(R.cam.position.x, R.cam.position.y); if (P !== sistP) { sistP = P; if (P && P.inne && P.inne.spor && P.bygg) visStemning(P.inne.spor, P.bygg.i); } }
-    if (stemningTil && performance.now() > stemningTil) { stemningTil = 0; stemning.classList.remove('på'); } });
+    // tones inn på 0,8 s og ut det siste 1,5 s (styrt herfra – en CSS-overgang ble stående på 0 i Chromium med programvare-grafikk)
+    if (stemningTil) { const nå = performance.now(); if (nå > stemningTil) { stemningTil = 0; stemning.classList.remove('på'); stemning.style.opacity = '0'; }
+      else stemning.style.opacity = String(Math.round(Math.min(1, (nå - stemningFra) / 800, (stemningTil - nå) / 1500) * 100) / 100); } });
 
   // LISTA i sekken: lappene du har funnet (nyeste først), trykk = les igjen
   (window.SEKK_TILLEGG = window.SEKK_TILLEGG || []).push((p, e, kn) => { if (!klar) start();
@@ -257,8 +259,9 @@ body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.
     const n = gs.reduce((a, g) => a + g.attributes.position.count, 0), p = new Float32Array(n * 3), no = new Float32Array(n * 3), c = new Float32Array(n * 3); let o = 0;
     for (const g of gs) { p.set(g.attributes.position.array, o * 3); no.set(g.attributes.normal.array, o * 3); c.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; g.dispose(); }
     const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(p, 3)); out.setAttribute('normal', new THREE.BufferAttribute(no, 3)); out.setAttribute('color', new THREE.BufferAttribute(c, 3)); return out; }
-  const BILF = [[.55, .56, .55], [.24, .27, .32], [.52, .14, .12], [.72, .72, .68], [.18, .25, .2], [.13, .13, .14], [.4, .36, .3], [.25, .32, .45]];
-  function modeller() { const M = {}, H = [1, 1, 1], GL = [.16, .18, .2], ST = [.2, .2, .2];
+  // støvete, falmede farger (ingen helt mørke – vinduene og hjulene er mørke i seg selv)
+  const BILF = [[.62, .62, .6], [.36, .4, .46], [.6, .2, .16], [.78, .77, .72], [.3, .4, .32], [.46, .46, .47], [.55, .48, .38], [.34, .42, .58]];
+  function modeller() { const M = {}, H = [1, 1, 1], GL = [.42, .5, .58], ST = [.3, .3, .3];
     // forlatt bil med døra på venstre (+y) eller høyre side åpen, panseret litt opp
     const bil = s => [boks(0, 0, .32, 4.2, 1.74, .62, H), boks(-.25, 0, .94, 2.1, 1.58, .56, GL), boks(-.25, 0, 1.49, 2.0, 1.5, .04, H), boks(2.06, 0, .45, .08, 1.6, .2, ST), boks(-2.06, 0, .5, .08, 1.6, .2, ST),
       hjul(1.3, .82), hjul(1.3, -.82), hjul(-1.35, .82), hjul(-1.35, -.82), boks(.55, s * .87, .34, .06, .06, .9, H), boks(.55 - .5 * Math.cos(.9), s * (.87 + .5 * Math.sin(.9)), .34, 1.05, .05, .85, H, -s * .9),
@@ -303,7 +306,7 @@ body.kort #sporlapp{ top:calc(var(--topp,40px) + 104px); font-size:15px; } body.
     if (g) { ut.bil = g.bil.length / 6; ut.barrikade = g.barrikade.length / 5; ut.skilt = g.skilt.length / 5; ut.plate = g.plate.length / 5; }
     for (const m of LG.mesh) { ut.mesh++; const geo = m.geometry, n = geo.index ? geo.index.count / 3 : geo.attributes.position.count / 3; ut.trekanter += n * (m.isInstancedMesh ? m.count : 1); } return ut; }
 
-  window.SporSpill = { test: false, inne, medGjemt, lest: () => (klar || start(), T.lest.slice()), mål: () => (klar || start(), T.mål.slice()), lesHer, vis, lukk, lesbar: () => nåLesbar, antall,
+  window.SporSpill = { test: false, varighet: 7000, inne, medGjemt, lest: () => (klar || start(), T.lest.slice()), mål: () => (klar || start(), T.mål.slice()), lesHer, vis, lukk, lesbar: () => nåLesbar, antall,
     // til vakta: nullstill / sett tilstanden (setter den tilbake etterpå)
     tilstand: () => JSON.parse(JSON.stringify(T)), settTilstand: t => { T = JSON.parse(JSON.stringify(t)); lagre(); }, stemning: () => stemning.textContent };
 })();
