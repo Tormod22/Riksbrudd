@@ -1588,3 +1588,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   steder, lyd/radiostøy som varsler fare, lommelykt, knappe ressurser) – ingen navn, steder, figurer, monstre, musikk, symboler eller
   utseende derfra. Se docs/plan-spillmekanikk.md. Brukeren valgte (23. nov) FORLATTE STEDER og KNAPPE RESSURSER, og god stemning
   generelt – ikke tettere tåke eller radiostøy som eget system (R18-F og R18-E).
+  VIRKNING I LEIRBYGGENE (R18-B, 23. nov, brukeren: «vi må legge til funksjoner og virkning i alle leirbyggene»; gren claude/r18-leirvirkning,
+  notat docs/natt/leirvirkning.md): spill/leirvirkning.js (regler uten DOM, test_leirvirkning.js) har ÉN tabell VIRKNING med hva hvert
+  leirbygg gjør (moral, helse, matsvinn, arbeidstempo, vann, radio/satellitt, strømnett, vern, sikt, radar/poster, hindringer som sinker
+  fiender, trening, ammunisjon, leging, reparasjon/fylling av kjøretøy, parkering, vaktdroner, fangevakter, røvernes bytte, lager, senger,
+  strøm) – nye bygg: legg en linje der. spill/leirvirkning-visning.js (window.LeirvirkningSpill, lastes etter modeller-leir2.js) kobler det
+  på SamfunnSpill.valg/varsling (Folk: moralTillegg, helseTillegg – nytt i folk.js –, matFaktor, tempoFaktor), Leir.nettFaktor, KROKER.ild/
+  sikt/ser/fart/sim, Spillet.Trussel.bytte, Krig.rømmer og Enheter.skad; leir.js lar bygg med B.diesel/B.sol lage strøm (generatorhus 30 kW),
+  kontrollrom-visning.js mast() tar radiotillegget og satellitten hopper over terrengsjekken. Byggpanelet viser «Virkning: …» (#byggvirkning,
+  med «uten strøm»/«hardt skadet»), kortene i byggelista en kort linje (.virk, Leirvirkning.kort). Hvert slag teller én gang (moral høyst
+  +15). Prisene på generatorhus (9 mill.), bærbar generator og solpanel ble satt opp fordi de nå gir strøm. Alle tall er Claudes forslag.
+  VAKT vakter/leirvirkning.js («virkning i leirbyggene»: tekst for alle bygg, åtte målte virkninger).

@@ -399,7 +399,9 @@
       else { b.arbeid.igjen = Math.max(0, b.arbeid.igjen - db);
         if (b.arbeid.igjen === 0) { if (hva === 'oppgrader') b.nivå = (b.nivå || 1) + 1; if (hva === 'reparer') b.hp = 1; ferdigArbeid.push([b, hva]); b.arbeid = null; } }
     }
-    const klare = L.bygg.filter(virker), agg = klare.filter(b => b.type === 'aggregat'), sc = klare.filter(b => b.type === 'solcelle');
+    // (R18-B) andre bygg kan også lage strøm: B.diesel (generatorhus, bærbar generator) går som aggregat, B.sol som solceller
+    // (spill/leirvirkning.js setter flaggene); nettFaktor (transformatoren) ganges med strømmen fra nettet
+    const klare = L.bygg.filter(virker), agg = klare.filter(b => b.type === 'aggregat' || (BYGG[b.type].diesel && BYGG[b.type].kw > 0)), sc = klare.filter(b => b.type === 'solcelle' || (BYGG[b.type].sol && BYGG[b.type].kw > 0));
     const solKW = sc.reduce((s, b) => s + effekt(b).kw, 0) * Math.max(0, Math.min(1, sol));
     // BRYTERE: et bygg som er slått av (b.av), bruker ikke strøm og virker ikke (det står i «mangler» som de uten strøm)
     const avslått = klare.filter(b => BYGG[b.type].kw < 0 && b.av);
@@ -408,7 +410,7 @@
     L.drivstoff = Math.min(L.drivstoff, tank);
     // aggregatene dekker det sola ikke klarer, så lenge det er drivstoff
     // strømnettet (spill/overlev.js: virker de første døgnene) dekker litt før aggregatene må gå
-    const nett = api.nettKW ? api.nettKW(L) : 0;
+    const nett = (api.nettKW ? api.nettKW(L) : 0) * (api.nettFaktor ? api.nettFaktor(L) || 1 : 1);
     // BATTERIET: overskudd fra sol og nett lader det, underskudd tappes derfra før aggregatene må gå (dt i spillminutter -> kWt)
     const batKap = klare.reduce((s, b) => s + effekt(b).kwt, 0); L.batteri = Math.max(0, Math.min(batKap, L.batteri || 0));
     const fritt = solKW + nett - behov; let batKW = 0;
@@ -423,7 +425,7 @@
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)
-  const kapasitet = L => L.bygg.filter(ferdig).reduce((s, b) => s + (b.type === 'drivstofftank' ? BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1] : 0) + (b.type === 'aggregat' ? DRIVSTOFF.iAggregat : 0), 0);
+  const kapasitet = L => L.bygg.filter(ferdig).reduce((s, b) => s + (b.type === 'drivstofftank' ? BYGG.drivstofftank.nivå.liter[(b.nivå || 1) - 1] : 0) + (b.type === 'aggregat' || (BYGG[b.type].diesel && BYGG[b.type].kw > 0) ? DRIVSTOFF.iAggregat : 0), 0);
   // Kjøp drivstoff: så mye som får plass, gir { liter, pris } eller { feil }
   // Selg overskudd av et materiale: gir mengden som ble solgt og pengene (REGLER.salg av innkjøpsprisen). gi(kr) legger pengene i kassa.
   function selgMateriale(L, type, mengde, gi) {

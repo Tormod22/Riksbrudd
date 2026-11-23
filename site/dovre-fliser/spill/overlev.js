@@ -95,7 +95,7 @@
     'veg-varsel': () => 'Ingen brøyter eller rydder vegene lenger. Snart gror småvegene igjen.',
     'veg-nede': () => 'Småvegene gror igjen og er fulle av vindfall: folk på «frakt» går saktere.',
   };
-  const brønner = () => { const l = L(); return l && LB ? l.bygg.filter(b => b.type === 'brønn' && LB.ferdig(b)).length : 0; };
+  const brønner = () => { const l = L(); return l && LB ? l.bygg.filter(b => b.type === 'brønn' && LB.ferdig(b)).length + (rot.LeirvirkningSpill && LeirvirkningSpill.leiren().vann ? 1 : 0) : 0; };   // (R18-B) vannrenseanlegget gir også vann
   // hvert sekund: forfallet, og ferdighetene som vokser av å gå og løpe
   setInterval(() => { if (!klar || !S0() || !S0().leir) return; if (tempo > 0 && !document.hidden) ekte++;
     if (auto() && tempo > 0 && D) for (const h of Forfall.steg(D, tid, ekte)) { const t = { 'strøm-varsel': 'Strømmen i området flimrer. Strømnettet holder ikke lenge til – sørg for aggregat eller solceller.', 'strøm-nede': 'Strømnettet er nede for godt. Leiren har bare sin egen strøm nå.',
