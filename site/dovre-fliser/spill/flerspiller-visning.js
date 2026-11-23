@@ -263,7 +263,10 @@
   function pakkInnOppstart() {
     const O = window.OppstartSpill; if (!O || OS0) return; OS0 = { tilstand: O.tilstand, betal: O.betal, gi: O.gi, bonus: O.bonus };
     O.tilstand = () => (N.speilet() ? N.speilS : OS0.tilstand());
-    O.betal = b => { if (!N.speilet()) return OS0.betal(b); if (!(b >= 0) || N.speilS.penger < b) return false; N.speilS.penger -= b; visKasse(); return true; };
+    // Kjøp utenom kommandolaget (våpen i Sekk, selskap, morgenmøtet …) når ikke verten ennå – de avvises hos gjesten i stedet for å
+    // bli gratis (bare speilets kasse ville gått ned). Kommandolaget setter N.iKommando mens det kjører på speilet.
+    O.betal = b => { if (!N.speilet()) return OS0.betal(b); if (!N.iKommando) { sikkerLogg('Som gjest kan du bare kjøpe det som går gjennom vertens leir (bygg, materialer, diesel, mat, folk og tropper).'); return false; }
+      if (!(b >= 0) || N.speilS.penger < b) return false; N.speilS.penger -= b; visKasse(); return true; };
     O.gi = b => { if (!N.speilet()) return OS0.gi(b); if (b > 0) { N.speilS.penger += b; visKasse(); } };
     O.bonus = () => (N.speilet() ? (N.leirData && N.leirData.bonus) || {} : OS0.bonus ? OS0.bonus() : {});
   }

@@ -1486,7 +1486,7 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   hvem («Kari bygger en brakke», «Kari setter Bjørn Lund på «vakt»» – Flerspiller.leirTekst). VERN: mens en nettleser er (eller har
   vært) gjest, lagres ingenting under «riksbrudd-…» utenom «riksbrudd-nett» (Storage.prototype pakkes inn i flerspiller-visning.js) –
   etter «Koble fra» må siden lastes på nytt for å spille eget spill. IKKE GJORT: kjøp utenom kommandolaget (våpen i Sekk, selskap,
-  morgenmøtet …) trekker bare fra speilets kasse hos gjesten og når aldri verten; maler/angre i planen og byggesettet (bs) er ikke prøvd
+  morgenmøtet …) avvises hos gjesten («Som gjest kan du bare kjøpe …»; N.iKommando settes mens kommandolaget kjører på speilet); maler/angre i planen og byggesettet (bs) er ikke prøvd
   hos gjesten; gjesten har ingen egen leir i vertens verden. Test: test_flerspiller_e2e.js (verten legger en leir; gjesten som ny
   spiller bygger en brakke, setter en person på vakt, setter opp en tropp; «bare se» og «bygge og folk» avviser), test_tjener.js
   (leir-meldingen), test_flerspiller.js (reglene).

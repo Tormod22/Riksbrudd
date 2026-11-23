@@ -97,7 +97,7 @@
       // R18-D: leirkommandoer kjøres først på speilet av vertens leir (samme regler, svaret kommer straks og panelene viser det
       // nye), så hos verten. Neste speil fra verten tar over. Det som lager eller tar bort lag, kjøres bare hos verten.
       if (t.def.leir && N.speilet && N.speilet() && !(N.bareHosVerten && N.bareHosVerten(k.type))) {
-        const r = K.utfør(k, lokal()); if (!r.ok) return r;
+        N.iKommando = true; let r; try { r = K.utfør(k, lokal()); } finally { N.iKommando = false; } if (!r.ok) return r;
         N.send({ t: 'kommando', k: ut }); return r;
       }
       N.send({ t: 'kommando', k: ut }); if (!k.stille && t.s) logg(`${t.s.navn}: sendt til verten …`);

@@ -109,6 +109,8 @@ async function til(pg, fn, arg, ms = 30000) { const t0 = Date.now(); while (Date
     sjekk(await til(A, () => ENHETER.some(s => s.navn === 'Karis tropp')), 'verten setter opp troppen av vertens folk');
     sjekk(await til(A, () => { const s = ENHETER.find(q => q.navn === 'Karis tropp'); return !!(s && s.eier && s.eier === NETT.spillere.find(p => p.navn === 'Kari').id); }), 'troppen styres av gjesten som laget den');
     sjekk(await til(B, ids => { const s = ENHETER.find(q => q.navn === 'Karis tropp'); return !!(s && s.eier === NETT.id) && !FolkSpill.tilstand().personer.some(p => ids.includes(p.id)); }, tr.P), 'gjesten ser troppen som sin, og folkene er gått ut av leiren');
+    // kjøp utenom kommandolaget (f.eks. i Sekk) blir ikke gratis hos gjesten
+    sjekk(await B.evaluate(() => { const før = OppstartSpill.tilstand().penger; const ok = OppstartSpill.betal(1000); return !ok && OppstartSpill.tilstand().penger === før; }), 'gjesten kan ikke betale utenom kommandolaget (ingen gratis kjøp)');
     // «bare se»: verten strammer inn, gjestens bygg avvises med forståelig tekst
     await A.evaluate(() => NETT.settTillat('se'));
     sjekk(await til(B, () => NETT.leirData && NETT.leirData.tillat === 'se'), 'gjesten får vite at verten har satt «bare se»');
